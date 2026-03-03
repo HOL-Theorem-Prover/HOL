@@ -343,12 +343,18 @@ val defined_types : (string * string) Redblackset.set ref =
              EQUAL => String.compare(n1,n2)
            | ord => ord))
 
+(* Declared here (before reset_for_new_session) so the closure
+   can capture it. Initialized properly in the output helpers
+   section below. *)
+val stale_checked = ref false
+
 val _ = reset_for_new_session := (fn () => (
   ty_map := Redblackmap.mkDict ty_desc_compare;
   tm_map := Redblackmap.mkDict tm_desc_compare;
   ty_counter := 0;
   tm_counter := 0;
   tm_cache := Array.array(CACHE_SIZE, NONE);
+  stale_checked := false;
   defined_consts := Redblackset.empty
     (fn ((t1,n1),(t2,n2)) =>
       case String.compare(t1,t2) of
@@ -361,182 +367,192 @@ val _ = reset_for_new_session := (fn () => (
       | ord => ord)
 ))
 
-(* ------- Parent reference: kernel trace_id ------- *)
+(* ------- Output helpers ------- *)
 
-fun pi thm = its (Thm.trace_id thm)
+(* Write directly to the buffered stream, avoiding intermediate
+   string allocation from ^ concatenation. Each TextIO.output
+   call copies bytes into the internal buffer with no heap
+   allocation (except for Int.toString results). *)
 
-(* ------- Record a line ------- *)
+fun outs s str = TextIO.output(s, str)
+fun outi s n = TextIO.output(s, Int.toString n)
 
+fun ensure_stream () =
+  if !stale_checked then out_strm ()
+  else (check_stale (); stale_checked := true; out_strm ())
+
+(* Write the "P <id> " prefix that starts most entries *)
+fun outp s r = (outs s "P "; outi s (Thm.trace_id r))
+
+(* Write a theorem parent reference: " <trace_id>" *)
+fun outth s th = (outs s " "; outi s (Thm.trace_id th))
+
+(* Write a term intern reference: " <term_id>" *)
+fun outtm s tm = (outs s " "; outi s (iT tm))
+
+(* Write a type intern reference: " <type_id>" *)
+fun outty s ty = (outs s " "; outi s (iY ty))
+
+(* Record a line for C/O entries and other non-hot-path uses *)
 fun record_line line =
-  let val s = out_strm ()
-  in TextIO.output(s, line ^ "\n") end
+  let val s = ensure_stream ()
+  in outs s line; outs s "\n" end
 
 (* ------- Trace hook ------- *)
 
 fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
-  (check_stale ();
+  let val s = ensure_stream () in
   case step of
     Thm.TR_ASSUME (r, tm) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " ASSUME " ^ its (iT tm))
+      (outp s r; outs s " ASSUME"; outtm s tm; outs s "\n")
   | Thm.TR_REFL (r, tm) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " REFL " ^ its (iT tm))
+      (outp s r; outs s " REFL"; outtm s tm; outs s "\n")
   | Thm.TR_BETA_CONV (r, tm) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " BETA_CONV " ^ its (iT tm))
+      (outp s r; outs s " BETA_CONV"; outtm s tm; outs s "\n")
   | Thm.TR_ALPHA (r, t1, t2) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " ALPHA " ^
-        its (iT t1) ^ " " ^ its (iT t2))
+      (outp s r; outs s " ALPHA"; outtm s t1; outtm s t2; outs s "\n")
   | Thm.TR_ABS (r, th, v) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " ABS " ^
-        pi th ^ " " ^ its (iT v))
+      (outp s r; outs s " ABS"; outth s th; outtm s v; outs s "\n")
   | Thm.TR_MK_COMB (r, f, x) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " MK_COMB " ^
-        pi f ^ " " ^ pi x)
+      (outp s r; outs s " MK_COMB"; outth s f; outth s x; outs s "\n")
   | Thm.TR_AP_TERM (r, th, f) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " AP_TERM " ^
-        pi th ^ " " ^ its (iT f))
+      (outp s r; outs s " AP_TERM"; outth s th; outtm s f; outs s "\n")
   | Thm.TR_AP_THM (r, th, tm) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " AP_THM " ^
-        pi th ^ " " ^ its (iT tm))
+      (outp s r; outs s " AP_THM"; outth s th; outtm s tm; outs s "\n")
   | Thm.TR_SYM (r, th) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " SYM " ^ pi th)
+      (outp s r; outs s " SYM"; outth s th; outs s "\n")
   | Thm.TR_TRANS (r, a, b) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " TRANS " ^
-        pi a ^ " " ^ pi b)
+      (outp s r; outs s " TRANS"; outth s a; outth s b; outs s "\n")
   | Thm.TR_EQ_MP (r, a, b) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " EQ_MP " ^
-        pi a ^ " " ^ pi b)
+      (outp s r; outs s " EQ_MP"; outth s a; outth s b; outs s "\n")
   | Thm.TR_EQ_IMP_RULE1 (r, th) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " EQ_IMP_RULE1 " ^ pi th)
+      (outp s r; outs s " EQ_IMP_RULE1"; outth s th; outs s "\n")
   | Thm.TR_EQ_IMP_RULE2 (r, th) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " EQ_IMP_RULE2 " ^ pi th)
+      (outp s r; outs s " EQ_IMP_RULE2"; outth s th; outs s "\n")
   | Thm.TR_MP (r, a, b) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " MP " ^
-        pi a ^ " " ^ pi b)
+      (outp s r; outs s " MP"; outth s a; outth s b; outs s "\n")
   | Thm.TR_DISCH (r, th, w) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " DISCH " ^
-        pi th ^ " " ^ its (iT w))
+      (outp s r; outs s " DISCH"; outth s th; outtm s w; outs s "\n")
   | Thm.TR_INST_TYPE (r, th, theta) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " INST_TYPE " ^ pi th ^
-        String.concat (map (fn {redex,residue} =>
-          " " ^ its (iY redex) ^ " " ^ its (iY residue)) theta))
+      (outp s r; outs s " INST_TYPE"; outth s th;
+       List.app (fn {redex,residue} =>
+         (outty s redex; outty s residue)) theta;
+       outs s "\n")
   | Thm.TR_INST (r, th, theta) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " INST " ^ pi th ^
-        String.concat (map (fn {redex,residue} =>
-          " " ^ its (iT redex) ^ " " ^ its (iT residue)) theta))
+      (outp s r; outs s " INST"; outth s th;
+       List.app (fn {redex,residue} =>
+         (outtm s redex; outtm s residue)) theta;
+       outs s "\n")
   | Thm.TR_SUBST (r, repls, template, th) =>
-      let val pairs =
-            let fun go [] = ""
-                  | go ({redex, residue} :: rest) =
-                      " " ^ its (iT redex) ^ " " ^ pi residue ^ go rest
-            in go repls end
-      in record_line ("P " ^ its (Thm.trace_id r) ^ " SUBST " ^ pi th ^
-           " " ^ its (iT template) ^ pairs)
-      end
+      (outp s r; outs s " SUBST"; outth s th; outtm s template;
+       List.app (fn {redex, residue} =>
+         (outtm s redex; outth s residue)) repls;
+       outs s "\n")
   | Thm.TR_SPEC (r, th, t) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " SPEC " ^
-        pi th ^ " " ^ its (iT t))
+      (outp s r; outs s " SPEC"; outth s th; outtm s t; outs s "\n")
   | Thm.TR_Specialize (r, th, t) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " Specialize " ^
-        pi th ^ " " ^ its (iT t))
+      (outp s r; outs s " Specialize"; outth s th; outtm s t; outs s "\n")
   | Thm.TR_Specialize_thm (r, th_arg, th) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " Specialize_thm " ^
-        pi th_arg ^ " " ^ pi th)
+      (outp s r; outs s " Specialize_thm"; outth s th_arg; outth s th;
+       outs s "\n")
   | Thm.TR_GEN (r, th, x) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " GEN " ^
-        pi th ^ " " ^ its (iT x))
+      (outp s r; outs s " GEN"; outth s th; outtm s x; outs s "\n")
   | Thm.TR_GENL (r, th, vs) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " GENL " ^ pi th ^
-        String.concat (map (fn v => " " ^ its (iT v)) vs))
+      (outp s r; outs s " GENL"; outth s th;
+       List.app (fn v => outtm s v) vs;
+       outs s "\n")
   | Thm.TR_GEN_ABS (r, th, opt, vs) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " GEN_ABS " ^ pi th ^ " " ^
-        (case opt of SOME t => its (iT t) | NONE => "~") ^
-        String.concat (map (fn v => " " ^ its (iT v)) vs))
+      (outp s r; outs s " GEN_ABS"; outth s th;
+       outs s " ";
+       (case opt of SOME t => outi s (iT t) | NONE => outs s "~");
+       List.app (fn v => outtm s v) vs;
+       outs s "\n")
   | Thm.TR_EXISTS (r, th, w, t) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " EXISTS " ^
-        pi th ^ " " ^ its (iT w) ^ " " ^ its (iT t))
+      (outp s r; outs s " EXISTS"; outth s th; outtm s w; outtm s t;
+       outs s "\n")
   | Thm.TR_CHOOSE (r, xth, bth, v) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " CHOOSE " ^
-        pi xth ^ " " ^ pi bth ^ " " ^ its (iT v))
+      (outp s r; outs s " CHOOSE"; outth s xth; outth s bth; outtm s v;
+       outs s "\n")
   | Thm.TR_CONJ (r, a, b) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " CONJ " ^
-        pi a ^ " " ^ pi b)
+      (outp s r; outs s " CONJ"; outth s a; outth s b; outs s "\n")
   | Thm.TR_CONJUNCT1 (r, th) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " CONJUNCT1 " ^ pi th)
+      (outp s r; outs s " CONJUNCT1"; outth s th; outs s "\n")
   | Thm.TR_CONJUNCT2 (r, th) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " CONJUNCT2 " ^ pi th)
+      (outp s r; outs s " CONJUNCT2"; outth s th; outs s "\n")
   | Thm.TR_DISJ1 (r, th, w) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " DISJ1 " ^
-        pi th ^ " " ^ its (iT w))
+      (outp s r; outs s " DISJ1"; outth s th; outtm s w; outs s "\n")
   | Thm.TR_DISJ2 (r, th, w) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " DISJ2 " ^
-        pi th ^ " " ^ its (iT w))
+      (outp s r; outs s " DISJ2"; outth s th; outtm s w; outs s "\n")
   | Thm.TR_DISJ_CASES (r, d, a, b) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " DISJ_CASES " ^
-        pi d ^ " " ^ pi a ^ " " ^ pi b)
+      (outp s r; outs s " DISJ_CASES"; outth s d; outth s a; outth s b;
+       outs s "\n")
   | Thm.TR_NOT_INTRO (r, th) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " NOT_INTRO " ^ pi th)
+      (outp s r; outs s " NOT_INTRO"; outth s th; outs s "\n")
   | Thm.TR_NOT_ELIM (r, th) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " NOT_ELIM " ^ pi th)
+      (outp s r; outs s " NOT_ELIM"; outth s th; outs s "\n")
   | Thm.TR_CCONTR (r, fth, w) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " CCONTR " ^
-        pi fth ^ " " ^ its (iT w))
+      (outp s r; outs s " CCONTR"; outth s fth; outtm s w; outs s "\n")
   | Thm.TR_Beta (r, th) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " Beta " ^ pi th)
+      (outp s r; outs s " Beta"; outth s th; outs s "\n")
   | Thm.TR_Mk_comb (r, orig, f, x) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " Mk_comb " ^
-        pi orig ^ " " ^ pi f ^ " " ^ pi x)
+      (outp s r; outs s " Mk_comb"; outth s orig; outth s f; outth s x;
+       outs s "\n")
   | Thm.TR_Mk_abs (r, orig, body, _) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " Mk_abs " ^
-        pi orig ^ " " ^ pi body)
+      (outp s r; outs s " Mk_abs"; outth s orig; outth s body; outs s "\n")
   | Thm.TR_REFL_RATOR (r, parent) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " REFL_RATOR " ^ pi parent)
+      (outp s r; outs s " REFL_RATOR"; outth s parent; outs s "\n")
   | Thm.TR_REFL_RAND (r, parent) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " REFL_RAND " ^ pi parent)
+      (outp s r; outs s " REFL_RAND"; outth s parent; outs s "\n")
   | Thm.TR_REFL_BODY (r, parent) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " REFL_BODY " ^ pi parent)
+      (outp s r; outs s " REFL_BODY"; outth s parent; outs s "\n")
   | Thm.TR_DEF_TYOP (r, wit, thy, tyop) =>
       (defined_types :=
          Redblackset.add(!defined_types, (thy, tyop));
-       record_line ("P " ^ its (Thm.trace_id r) ^ " DEF_TYOP " ^
-         pi wit ^ " " ^ esc thy ^ " " ^ esc tyop))
+       outp s r; outs s " DEF_TYOP"; outth s wit;
+       outs s " "; outs s (esc thy);
+       outs s " "; outs s (esc tyop); outs s "\n")
   | Thm.TR_DEF_SPEC (r, wit, thyname, cnames) =>
       (List.app (fn c =>
          defined_consts :=
            Redblackset.add(!defined_consts, (thyname, c))) cnames;
-       record_line ("P " ^ its (Thm.trace_id r) ^ " DEF_SPEC " ^ pi wit ^
-         " " ^ esc thyname ^
-         String.concat (map (fn c => " " ^ esc c) cnames)))
+       outp s r; outs s " DEF_SPEC"; outth s wit;
+       outs s " "; outs s (esc thyname);
+       List.app (fn c => (outs s " "; outs s (esc c))) cnames;
+       outs s "\n")
   | Thm.TR_COMPUTE (r, code_eqs, tm) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " COMPUTE " ^
-        its (iT tm) ^
-        String.concat (map (fn eq => " " ^ pi eq) code_eqs))
+      (outp s r; outs s " COMPUTE"; outtm s tm;
+       List.app (fn eq => outth s eq) code_eqs;
+       outs s "\n")
   | Thm.TR_COMPUTE_INIT (cval_terms, cval_type, num_type, char_eqns) =>
-      record_line ("I " ^ its (iY cval_type) ^ " " ^
-        its (iY num_type) ^
-        String.concat (map (fn (name, tm) =>
-          " " ^ esc name ^ " " ^ its (iT tm)) cval_terms) ^
-        String.concat (map (fn (name, th) =>
-          " " ^ esc name ^ " " ^ pi th) char_eqns))
+      (outs s "I"; outty s cval_type; outty s num_type;
+       List.app (fn (name, tm) =>
+         (outs s " "; outs s (esc name); outtm s tm)) cval_terms;
+       List.app (fn (name, th) =>
+         (outs s " "; outs s (esc name); outth s th)) char_eqns;
+       outs s "\n")
   | Thm.TR_ORACLE (r, tg) =>
-      let val (hs, c) = Thm.dest_thm r
-      in record_line ("P " ^ its (Thm.trace_id r) ^ " ORACLE " ^
-           esc tg ^ " " ^ its (iT c) ^
-           String.concat (map (fn h => " " ^ its (iT h)) hs))
+      let val (hyps, c) = Thm.dest_thm r
+      in outp s r; outs s " ORACLE ";
+         outs s (esc tg); outtm s c;
+         List.app (fn h => outtm s h) hyps;
+         outs s "\n"
       end
   | Thm.TR_AXIOM (r, c) =>
       let val name = case Tag.axioms_of (Thm.tag r) of
                        [n] => Nonce.dest n
                      | _ => raise ERR "record_hook"
                               "AXIOM: expected exactly one axiom nonce"
-      in record_line ("P " ^ its (Thm.trace_id r) ^ " AXIOM " ^
-           esc name ^ " " ^ its (iT c))
+      in outp s r; outs s " AXIOM ";
+         outs s (esc name); outtm s c;
+         outs s "\n"
       end
   | Thm.TR_NAME (r, src_thy, name) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " NAME " ^
-        esc src_thy ^ " " ^ esc name)
+      (outp s r; outs s " NAME ";
+       outs s (esc src_thy); outs s " "; outs s (esc name); outs s "\n")
   | Thm.TR_LOAD (r, src_thy, src_trace_id) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " LOAD " ^
-        esc src_thy ^ " " ^ its src_trace_id))
+      (outp s r; outs s " LOAD ";
+       outs s (esc src_thy); outs s " "; outi s src_trace_id; outs s "\n")
+  end
 
 (* ------- Cleanup and reset ------- *)
 
@@ -615,28 +631,30 @@ fun activate () = (
   Theory.register_hook (
     "TraceRecord.new_const_type",
     fn TheoryDelta.NewConstant {Thy, Name} =>
-         (check_stale ();
+         (ignore (ensure_stream ());
           if Redblackset.member(!defined_consts, (Thy, Name))
           then ()
           else
-            let val ty = Term.type_of
-                           (Term.prim_mk_const {Thy=Thy, Name=Name})
-                val tyid = iY ty
-            in record_line ("C " ^ esc Thy ^ " " ^ esc Name ^
-                            " " ^ its tyid)
+            let val s = out_strm ()
+                val tyid = iY (Term.type_of
+                           (Term.prim_mk_const {Thy=Thy, Name=Name}))
+            in outs s "C "; outs s (esc Thy); outs s " ";
+               outs s (esc Name); outs s " "; outi s tyid;
+               outs s "\n"
             end)
      | TheoryDelta.NewTypeOp {Thy, Name} =>
-         (check_stale ();
+         (ignore (ensure_stream ());
           if Redblackset.member(!defined_types, (Thy, Name))
           then ()
           else
-            let val arity = Type.op_arity {Thy=Thy, Tyop=Name}
-            in case arity of
-                 SOME a =>
-                   record_line ("O " ^ esc Thy ^ " " ^ esc Name ^
-                                " " ^ its a)
-               | NONE => ()
-            end)
+            (case Type.op_arity {Thy=Thy, Tyop=Name} of
+               SOME a =>
+                 let val s = out_strm ()
+                 in outs s "O "; outs s (esc Thy); outs s " ";
+                    outs s (esc Name); outs s " "; outi s a;
+                    outs s "\n"
+                 end
+             | NONE => ()))
      | _ => ()
   );
   OS.Process.atExit cleanup

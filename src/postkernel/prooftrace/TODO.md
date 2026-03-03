@@ -161,14 +161,6 @@ layers: `Term.hash` reads from the ref (hash changes),
 pointer-eq cache misses (different hash slot), and the
 descriptor map produces a different key (mangled name).
 
-### [stale-check] Avoid per-step stale stream check
-
-Every `record_hook` call starts with `check_stale()`, which
-attempts a zero-byte `TextIO.output` to probe the stream.
-After the first successful write in a session, this always
-succeeds. A boolean flag set after the first successful check
-would eliminate this per-step overhead.
-
 ### [set-assoc-cache] Set-associative intern cache
 
 The term intern pointer-eq cache is currently direct-mapped
