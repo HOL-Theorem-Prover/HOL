@@ -111,6 +111,56 @@ A dedicated `TraceParse` module would be cleaner.
 The `Redblackset.empty` with inline comparison functions is
 copy-pasted 3 times in `TraceRecord`. Extract once.
 
+### [deletion] Trace recording and constant/type deletion
+
+Trace recording does not handle `delete_const` / `delete_type`
+correctly. Several issues:
+
+1. **No delete entries in the trace format**: The trace records
+   DEF_SPEC, C, O for constant/type creation but has no entry
+   for deletion. If a theory script deletes a constant and
+   redefines it, the replay would see two creations with no
+   intervening deletion, and the second would fail.
+
+2. **Stale `defined_consts`/`defined_types` sets**: These sets
+   track which constants/types were introduced by DEF_SPEC /
+   DEF_TYOP, so that the `NewConstant`/`NewTypeOp` TheoryDelta
+   hook can suppress redundant C/O lines. However, the sets are
+   never pruned on `DelConstant`/`DelTypeOp` deltas. If a
+   constant is defined (added to `defined_consts`), deleted,
+   then re-introduced via `new_constant` (not `new_definition`),
+   the hook suppresses the C line because the name is still in
+   `defined_consts`. The replay would then have no introduction
+   for the re-created constant.
+
+3. **Interned terms with mutated names**: `retire_id` mutates
+   the `kernelid` ref in place, changing the Name to a mangled
+   form (e.g., `old0->foo<-old`). Any term interned before
+   deletion has a trace entry with the original name, but the
+   ML value now carries the mangled name. If the same ML value
+   is re-encountered after deletion, it would be re-interned
+   with the mangled name (since `dest_thy_const` reads from
+   the mutated ref), producing a second trace entry for the
+   "same" constant. This is not incorrect per se (the two are
+   genuinely different constants at the kernel level), but the
+   original trace entry becomes unreplayable if the constant
+   no longer exists.
+
+**Practical impact**: delete operations during `--trace` builds
+are rare — they are primarily an interactive convenience. If
+this becomes an issue, the fix would be:
+- Handle `DelConstant`/`DelTypeOp` in the TheoryDelta hook to
+  clean up the `defined_consts`/`defined_types` sets
+- Add a trace format entry for deletions so replay can mirror
+  the delete-and-recreate sequence
+
+Note: the proposed intern caching change (descriptor maps +
+hash-indexed pointer-eq cache) is *not* affected by deletion.
+The kernelid ref mutation naturally invalidates all cache
+layers: `Term.hash` reads from the ref (hash changes),
+pointer-eq cache misses (different hash slot), and the
+descriptor map produces a different key (mangled name).
+
 ### [stale-check] Avoid per-step stale stream check
 
 Every `record_hook` call starts with `check_stale()`, which
