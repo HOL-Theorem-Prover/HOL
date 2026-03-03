@@ -563,6 +563,12 @@ in
          end
 end
 
+(* djb2-style string hash returning a non-negative int.
+   Used by Term.hash and similar bounded-depth hashing. *)
+fun hash_string s =
+  CharVector.foldl (fn (c, h) => (h * 33 + Char.ord c) mod 1000000007)
+                   5381 s
+
 (*---------------------------------------------------------------------------
       Refs
  ---------------------------------------------------------------------------*)

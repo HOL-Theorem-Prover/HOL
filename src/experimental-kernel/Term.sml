@@ -1032,8 +1032,18 @@ fun size acc tlist =
 
 fun term_size t = size 0 [t]
 
-
-
+local
+  val M = 1000000007
+  val hs = Portable.hash_string
+  fun hd 0 _ = 0
+    | hd d (Var(s, _)) = hs s
+    | hd d (Const(id, _)) =
+        (hs (KernelSig.name_of id) * 31 + hs (KernelSig.seg_of id)) mod M
+    | hd d (App(f, x)) = (hd (d-1) f * 31 + hd (d-1) x + 7) mod M
+    | hd d (Abs(v, b)) = (hd (d-1) v * 37 + hd (d-1) b + 59) mod M
+in
+  fun hash tm = hd 4 tm
+end
 
 val imp = let
   val k = {Name = "==>", Thy = "min"}

@@ -218,6 +218,7 @@ fun mlower s m =
 
 
 fun pp_struct hash (info_record : struct_info_record) = let
+  val thyHash = hash
   open Term Thm
   val {theory=name, parents=parents0, thydata, mldeps, all_thms,
        types,constants} = info_record
@@ -313,7 +314,7 @@ fun pp_struct hash (info_record : struct_info_record) = let
                   ) >> add_break (1,0) >>
                   block INCONSISTENT 2 (
                     add_string "hash =" >> add_break(1,2) >>
-                    add_string (mlquote hash ^ ",")
+                    add_string (mlquote thyHash ^ ",")
                   ) >> add_break (1,0) >>
                   block INCONSISTENT 2 (
                     add_string "path = path"

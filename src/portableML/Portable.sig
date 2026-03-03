@@ -156,6 +156,7 @@ sig
   val str_all : (char -> bool) -> string -> bool
 
   val hash : int -> string -> int * int -> int
+  val hash_string : string -> int
 
   val with_flag : 'a ref * 'a -> ('b -> 'c) -> 'b -> 'c
   val genwith_flag : {get: unit -> 'a, set : 'a -> unit} * 'a -> ('b -> 'c) ->

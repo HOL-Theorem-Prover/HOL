@@ -290,6 +290,39 @@ P entry IDs are `Thm.trace_id` values from the kernel's monotonic
 counter. Parent references are also `Thm.trace_id` values of the
 parent thm values.
 
+### Term/type interning
+
+The intern maps use lightweight **descriptor keys** containing
+only ints and strings — not term/type ML values. Type descriptors
+are `TyV(name)` or `TyO(thy, tyop, [sub_type_ids])`. Term
+descriptors are `TmV(name, type_id)`, `TmC(thy, name, type_id)`,
+`TmA(fun_id, arg_id)`, or `TmL(var_id, body_id)`. Descriptors
+are built by recursively interning sub-terms first (which was
+already required), then using the resulting integer IDs. The map
+never holds a reference to the original term/type value, so GC
+can collect intermediate proof terms as usual.
+
+Term interning is fronted by a **hash-indexed pointer-equality
+cache** (direct-mapped, 64K entries). On each `intern_term` call,
+`Term.hash` (a bounded-depth O(1) structural hash implemented in
+the kernel) is computed, and the corresponding cache slot is
+checked via `Portable.pointer_eq`. Cache hits return immediately
+with no recursive descent — O(1). Cache misses fall through to
+the descriptor path: recursively intern sub-terms, build the
+descriptor, and look up the descriptor map.
+
+This design avoids two performance pitfalls:
+- **No quadratic comparisons**: `Term.compare` on deep application
+  spines is O(spine_depth) per comparison, making red-black tree
+  operations O(n² log n) for a spine of depth n. Descriptor
+  comparisons are O(1) (int/string comparisons).
+- **No pinning**: the descriptor map holds no term references,
+  so no periodic clearing is needed and GC pressure is minimal.
+  The cache pins at most 64K terms.
+
+Type interning uses descriptor maps directly without a cache,
+since types are small and few.
+
 There are two kinds of theorems loaded from `.dat` files:
 
 **Named exports** are loaded via `SharingTables.read_thm`, which

@@ -86,6 +86,7 @@ sig
   val empty_varset  : term set
 
   val term_size     : term -> int
+  val hash          : term -> int
 
   (* theory segment related functionality *)
   val uptodate_term     : term -> bool

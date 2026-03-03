@@ -1008,6 +1008,29 @@ fun size acc tlist =
 fun term_size t = size 0 [t]
 
 (*---------------------------------------------------------------------------*
+ *  Bounded-depth hash for use in hash-table-style caches.                   *
+ *  Visits at most 2^depth leaf positions (16 at depth 4).                   *
+ *  Both children of Comb/Abs are hashed symmetrically — no                  *
+ *  directional bias. Clos is unwrapped without decrementing depth           *
+ *  (Clos never nests: body is always Comb or Abs).                          *
+ *---------------------------------------------------------------------------*)
+
+local
+  val M = 1000000007
+  val hs = Portable.hash_string
+  fun hd 0 _ = 0
+    | hd d (Fv(s, _)) = hs s
+    | hd d (Bv i) = (i + 97) mod M
+    | hd d (Const(id, _)) =
+        (hs (KernelSig.name_of id) * 31 + hs (KernelSig.seg_of id)) mod M
+    | hd d (Comb(f, x)) = (hd (d-1) f * 31 + hd (d-1) x + 7) mod M
+    | hd d (Abs(v, b)) = (hd (d-1) v * 37 + hd (d-1) b + 59) mod M
+    | hd d (Clos(_, t)) = hd d t
+in
+  fun hash tm = hd 4 tm
+end
+
+(*---------------------------------------------------------------------------*
  *  Raw syntax prettyprinter for terms.                                      *
  *---------------------------------------------------------------------------*)
 

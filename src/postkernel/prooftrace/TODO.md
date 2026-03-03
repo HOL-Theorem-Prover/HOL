@@ -169,6 +169,17 @@ After the first successful write in a session, this always
 succeeds. A boolean flag set after the first successful check
 would eliminate this per-step overhead.
 
+### [set-assoc-cache] Set-associative intern cache
+
+The term intern pointer-eq cache is currently direct-mapped
+(1-way): each hash slot holds one entry. If two frequently-used
+terms hash to the same slot, they evict each other on every
+access, falling through to the descriptor path. A 2-way or
+4-way set-associative cache (checking 2–4 entries per slot via
+pointer_eq) would improve hit rates for such collisions at
+negligible extra cost per lookup. Worth benchmarking on large
+theories to see if collision-induced misses are significant.
+
 ### [replay-fail-fast] Replay should fail fast on errors
 
 `process_line`'s `handle e` catches all exceptions, prints
@@ -176,27 +187,6 @@ would eliminate this per-step overhead.
 silently poisons all downstream thm lookups. Better: fail
 fast, or insert a sentinel in `thm_map` that raises a clear
 error on lookup.
-
-### [intern-gen] Generational intern maps
-
-The intern maps are periodically cleared to bound memory.
-Currently a single map is cleared every 50K term entries,
-which drops all entries including frequently-used ones
-(bool, ==>, common variables) that are immediately
-re-interned. Consider a two-generation scheme:
-
-- **young map**: actively inserted into
-- **old map**: the previous young generation
-- Lookup checks old then young
-- When young hits N entries, swap: `old := young`,
-  `young := empty` (O(1) swap, no promotion cost)
-- Any entry survives between N and 2N insertions
-- Frequently-used terms get re-inserted into young
-  naturally; large dead terms die after at most 2N
-
-Also worth tuning the threshold — 50K is conservative,
-200K–500K may be better (fewer duplicate Y/T entries,
-still well within memory budget).
 
 ### [cache-file-deps] Cache liveness-filtered deps for topo sort
 
