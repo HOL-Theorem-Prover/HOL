@@ -34,6 +34,12 @@ type result = {
   body: DString.dstring,
   events: events }
 
+fun simpleParseError (start, stop) s =
+    TextIO.output (
+        TextIO.stdErr,
+        "parse error at " ^
+        Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n")
+
 fun parseSML file read parseError: scope -> result = let
   val pos = ref 0
   val body = DString.new 1024

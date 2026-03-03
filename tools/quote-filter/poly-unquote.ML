@@ -58,9 +58,7 @@ fun main() = let
     val {read, ...} = mkPullTranslator {
       read = read,
       filename = infilename,
-      parseError = fn (start, stop) => fn s =>
-        TextIO.output (TextIO.stdErr,
-          "parse error at " ^ Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n"),
+      parseError = HOLParser.simpleParseError,
       quietOpen = quietOpen }
     fun loop () = case read () of "" => () | s => (write s; loop ())
     in loop () end

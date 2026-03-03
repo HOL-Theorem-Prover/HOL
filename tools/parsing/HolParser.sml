@@ -72,19 +72,24 @@ fun file_to_parser ({quietOpen}:args) fname = let
   val instrm = openIn fname
   (* val isscript = String.isSuffix "Script.sml" fname *)
   val {fileline, read} = ToSML.mkPullTranslator
-    {read = fn _ => input instrm, filename = fname, parseError = K (K ()), quietOpen = quietOpen}
+    {read = fn _ => input instrm,
+     filename = fname,
+     parseError = HOLParser.simpleParseError,
+     quietOpen = quietOpen}
   in {read = read, fileline = fileline, close = fn () => closeIn instrm} end
 
 fun string_to_parser ({quietOpen}:args) s = let
   val sr = ref s
   fun str_read _ = (!sr before sr := "")
   val {fileline, read} = ToSML.mkPullTranslator
-    {read = str_read, filename = "", parseError = K (K ()), quietOpen = quietOpen}
+    {read = str_read, filename = "",
+     parseError = HOLParser.simpleParseError, quietOpen = quietOpen}
   in {read = read, fileline = fileline, close = I} end
 
 fun input_to_parser ({quietOpen}:args) fname inp = let
   val {fileline, read} = ToSML.mkPullTranslator
-    {read = inp, filename = fname, parseError = K (K ()), quietOpen = quietOpen}
+    {read = inp, filename = fname,
+     parseError = HOLParser.simpleParseError, quietOpen = quietOpen}
   in {read = read, fileline = fileline, close = I} end
 
 fun stream_to_parser args fname strm =

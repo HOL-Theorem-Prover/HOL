@@ -21,9 +21,7 @@ else let
   val read = mkPushTranslator {
     read = read,
     filename = infilename,
-    parseError = fn (start, stop) => fn s =>
-      TextIO.output (TextIO.stdErr,
-        "parse error at " ^ Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n"),
+    parseError = HOLParser.simpleParseError,
     quietOpen = qopn
   } (mkStrcode write)
 
