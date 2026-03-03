@@ -339,14 +339,17 @@ trace_id from that process. These are recorded as
 ### Stale stream handling
 
 When a process loads a saved heap, TraceRecord's output stream
-is stale (from the heap build's session). On first write attempt,
-the stale stream is detected and a new output is opened:
+is stale (from the heap build's session). The new process is
+detected by comparing the current PID (`Posix.ProcEnv.getpid()`)
+against a saved `session_pid` ref — after heap restore, the PID
+differs. On mismatch, the stale stream is closed and a new
+output is opened:
 - If `-o <path>` is in the command line args → heap build,
   open `<path>.pft`
 - Otherwise → theory script, open a temp file
 
-The intern tables (ty_map, tm_map) are reset for the new session.
-Type/term IDs restart from 0.
+The intern tables (ty_map, tm_map) and caches are reset for the
+new session. Type/term IDs restart from 0.
 
 ### Theory export
 

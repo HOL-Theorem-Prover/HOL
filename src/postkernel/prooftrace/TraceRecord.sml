@@ -51,7 +51,7 @@ fun find_arg flag args =
 fun find_heap_output () = find_arg "-o" (CommandLine.arguments())
 
 (* Parent heap path derived from stale output path during heap restore.
-   Set by check_stale when recovering from a stale stream. *)
+   Set by recover_stale when detecting a new process via PID change. *)
 val stale_parent_heap = ref (NONE : string option)
 
 fun find_heap_input () =
@@ -71,6 +71,10 @@ fun find_heap_input () =
 val output_strm : TextIO.outstream option ref = ref NONE
 val output_path_ref : string option ref = ref NONE
 val keep_on_exit : bool ref = ref false
+
+(* Cached output stream for fast path in ensure_stream.
+   Reset to NONE by close_output and reset_for_new_session. *)
+val cached_strm : TextIO.outstream option ref = ref NONE
 
 (* Reset function ref — set after intern tables are defined *)
 val reset_for_new_session = ref (fn () => ())
@@ -117,45 +121,55 @@ fun open_heap_file path =
     s
   end
 
-(* Detect and recover from stale stream after heap restore.
-   Must be called BEFORE any intern_type/intern_term calls to avoid
-   corrupting intern state mid-recursion. Also re-registers atExit
-   since the handler from the original process doesn't survive
-   heap save/restore.
-
-   Called at the entry to record_hook and the C/O TheoryDelta hook —
-   the only two code paths that lead to intern + write sequences. *)
 val cleanup_ref : (unit -> unit) ref = ref (fn () => ())
 
-fun check_stale () =
-  case !output_strm of
-    NONE => ()
-  | SOME s =>
-      (TextIO.output(s, ""); ())
-      handle _ =>
-        let val stale = !output_path_ref
-            fun is_tmp p = String.isSuffix ".tmp" p
-            fun strip_pft p =
-              if String.isSuffix ".pft" p then
-                SOME (String.substring(p, 0, size p - 4))
-              else NONE
-        in output_strm := NONE; output_path_ref := NONE;
-           (!reset_for_new_session) ();
-           (* Remember the parent heap for the H line *)
-           stale_parent_heap :=
-             (case stale of
-                SOME p => if is_tmp p then NONE else strip_pft p
-              | NONE => NONE);
-           (case stale of
-              SOME p => if is_tmp p then
-                          (OS.FileSys.remove p handle _ => ())
-                        else ()
-            | NONE => ());
-           (case find_heap_output () of
-              SOME path => ignore (open_heap_file path)
-            | NONE => ignore (open_temp_file ()));
-           OS.Process.atExit (fn () => (!cleanup_ref) ())
-        end
+(* Detect new process after heap restore by comparing PIDs.
+   After heap restore, the output stream from the heap build is
+   stale (closed fd). The old approach (zero-byte TextIO.output
+   probe) was unreliable: buffered I/O may never touch the fd
+   for an empty write, so it silently succeeds on a stale stream.
+   PID comparison is robust — after heap restore, getpid() returns
+   the new process's PID, which differs from the saved one.
+
+   recover_stale closes the stale stream, resets all intern state,
+   remembers the parent heap path for the H line, re-registers the
+   atExit handler (which doesn't survive heap save/restore), and
+   opens a new output file. Called from ensure_stream on PID
+   mismatch, which is the entry point for all output paths
+   (record_hook and the C/O TheoryDelta hook). *)
+val session_pid =
+  ref (Posix.Process.pidToWord (Posix.ProcEnv.getpid ()))
+
+fun recover_stale () =
+  let val stale = !output_path_ref
+      fun is_tmp p = String.isSuffix ".tmp" p
+      fun strip_pft p =
+        if String.isSuffix ".pft" p then
+          SOME (String.substring(p, 0, size p - 4))
+        else NONE
+  in
+    (case !output_strm of
+       SOME s => ((TextIO.flushOut s; TextIO.closeOut s) handle _ => ())
+     | NONE => ());
+    output_strm := NONE; output_path_ref := NONE;
+    (!reset_for_new_session) ();
+    (* Remember the parent heap for the H line *)
+    stale_parent_heap :=
+      (case stale of
+         SOME p => if is_tmp p then NONE else strip_pft p
+       | NONE => NONE);
+    (case stale of
+       SOME p => if is_tmp p then
+                   (OS.FileSys.remove p handle _ => ())
+                 else ()
+     | NONE => ());
+    (case find_heap_output () of
+       SOME path => ignore (open_heap_file path)
+     | NONE => ignore (open_temp_file ()));
+    OS.Process.atExit (fn () => (!cleanup_ref) ())
+  end
+
+
 
 fun out_strm () =
   case !output_strm of
@@ -166,7 +180,8 @@ fun close_output () =
   (case !output_strm of
      SOME s => ((TextIO.flushOut s; TextIO.closeOut s) handle _ => ())
    | NONE => ();
-   output_strm := NONE)
+   output_strm := NONE;
+   cached_strm := NONE)
 
 (* ------- Intern map key types ------- *)
 
@@ -343,18 +358,13 @@ val defined_types : (string * string) Redblackset.set ref =
              EQUAL => String.compare(n1,n2)
            | ord => ord))
 
-(* Declared here (before reset_for_new_session) so the closure
-   can capture it. Initialized properly in the output helpers
-   section below. *)
-val stale_checked = ref false
-
 val _ = reset_for_new_session := (fn () => (
   ty_map := Redblackmap.mkDict ty_desc_compare;
   tm_map := Redblackmap.mkDict tm_desc_compare;
   ty_counter := 0;
   tm_counter := 0;
   tm_cache := Array.array(CACHE_SIZE, NONE);
-  stale_checked := false;
+  cached_strm := NONE;
   defined_consts := Redblackset.empty
     (fn ((t1,n1),(t2,n2)) =>
       case String.compare(t1,t2) of
@@ -378,8 +388,17 @@ fun outs s str = TextIO.output(s, str)
 fun outi s n = TextIO.output(s, Int.toString n)
 
 fun ensure_stream () =
-  if !stale_checked then out_strm ()
-  else (check_stale (); stale_checked := true; out_strm ())
+  let val cur_pid = Posix.Process.pidToWord (Posix.ProcEnv.getpid ())
+  in if cur_pid = !session_pid then
+       (case !cached_strm of
+          SOME s => s
+        | NONE => let val s = out_strm ()
+                  in cached_strm := SOME s; s end)
+     else
+       (session_pid := cur_pid; recover_stale ();
+        let val s = out_strm ()
+        in cached_strm := SOME s; s end)
+  end
 
 (* Write the "P <id> " prefix that starts most entries *)
 fun outp s r = (outs s "P "; outi s (Thm.trace_id r))
