@@ -106,6 +106,8 @@ in
           | _ => raise Fail "cache_tac: miss");
 end;
 
+(* Not using goalStack.note_tac because this intentionally omits the newline,
+   allowing it to be used as a progress indicator (e.g., print_tac "-") *)
 fun print_tac s goal = (print s; ALL_TAC goal);
 
 (* ------------------------------------------------------------------------- *)

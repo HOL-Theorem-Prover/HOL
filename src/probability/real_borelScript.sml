@@ -3997,6 +3997,165 @@ Proof
         MATCH_MP_TAC hyperbola_lemma4 >> art [] ] ]
 QED
 
+(* ------------------------------------------------------------------------- *)
+(*  More Measurability Results                                               *)
+(* ------------------------------------------------------------------------- *)
+
+(*
+These are the results from my own accumulated library for borel measurable functions
+that I believe stand on their own as something useful for future users.
+- Jared Yeager
+*)
+
+(* This first batch of results has to do with sets derived from borel measurable
+   functions being measurable sets
+*)
+
+Theorem in_borel_measurable_ge_imp:
+    ∀a f. sigma_algebra a ∧ f ∈ borel_measurable a ⇒
+        ∀c. {x | c ≤ f x} ∩ space a ∈ subsets a
+Proof
+    rw[] >> drule_all_then mp_tac $ cj 2 $ SRULE [AND_IMP_INTRO] $ iffLR in_borel_measurable_ge >>
+    rw[INTER_DEF] >> pop_assum $ qspec_then ‘c’ mp_tac >>
+    qmatch_goalsub_abbrev_tac ‘s ∈ _ ⇒ t ∈ _’ >> ‘s = t’ suffices_by simp[] >>
+    simp[EXTENSION,Abbr ‘s’,Abbr ‘t’] >> metis_tac[]
+QED
+
+Theorem in_borel_measurable_gt_imp:
+    ∀a f. sigma_algebra a ∧ f ∈ borel_measurable a ⇒
+        ∀c. {x | c < f x} ∩ space a ∈ subsets a
+Proof
+    rw[] >> drule_all_then mp_tac $ cj 2 $ SRULE [AND_IMP_INTRO] $ iffLR in_borel_measurable_gr >>
+    rw[INTER_DEF] >> pop_assum $ qspec_then ‘c’ mp_tac >>
+    qmatch_goalsub_abbrev_tac ‘s ∈ _ ⇒ t ∈ _’ >> ‘s = t’ suffices_by simp[] >>
+    simp[EXTENSION,Abbr ‘s’,Abbr ‘t’] >> metis_tac[]
+QED
+
+Theorem in_borel_measurable_le_imp:
+    ∀a f. sigma_algebra a ∧ f ∈ borel_measurable a ⇒
+        ∀c. {x | f x ≤ c} ∩ space a ∈ subsets a
+Proof
+    rw[] >> drule_all_then mp_tac $ cj 2 $ SRULE [AND_IMP_INTRO] $ iffLR in_borel_measurable_le >>
+    rw[INTER_DEF] >> pop_assum $ qspec_then ‘c’ mp_tac >>
+    qmatch_goalsub_abbrev_tac ‘s ∈ _ ⇒ t ∈ _’ >> ‘s = t’ suffices_by simp[] >>
+    simp[EXTENSION,Abbr ‘s’,Abbr ‘t’] >> metis_tac[]
+QED
+
+Theorem in_borel_measurable_lt_imp:
+    ∀a f. sigma_algebra a ∧ f ∈ borel_measurable a ⇒
+        ∀c. {x | f x < c} ∩ space a ∈ subsets a
+Proof
+    rw[] >> drule_all_then mp_tac $ cj 2 $ SRULE [AND_IMP_INTRO] $ iffLR in_borel_measurable_less >>
+    rw[INTER_DEF] >> pop_assum $ qspec_then ‘c’ mp_tac >>
+    qmatch_goalsub_abbrev_tac ‘s ∈ _ ⇒ t ∈ _’ >> ‘s = t’ suffices_by simp[] >>
+    simp[EXTENSION,Abbr ‘s’,Abbr ‘t’] >> metis_tac[]
+QED
+
+Theorem in_borel_measurable_le2_imp:
+    ∀a f g. sigma_algebra a ∧ f ∈ borel_measurable a ∧ g ∈ borel_measurable a ⇒
+        {x | f x ≤ g x} ∩ space a ∈ subsets a
+Proof
+    rw[] >> qspecl_then [‘a’,‘f’,‘g’] mp_tac in_borel_measurable_le2 >> simp[INTER_DEF] >>
+    qmatch_goalsub_abbrev_tac ‘s ∈ _ ⇒ t ∈ _’ >> ‘s = t’ suffices_by simp[] >>
+    simp[EXTENSION,Abbr ‘s’,Abbr ‘t’] >> metis_tac[]
+QED
+
+Theorem in_borel_measurable_lt2_imp:
+    ∀a f g. sigma_algebra a ∧ f ∈ borel_measurable a ∧ g ∈ borel_measurable a ⇒
+        {x | f x < g x} ∩ space a ∈ subsets a
+Proof
+    rw[] >> qspecl_then [‘a’,‘f’,‘g’] mp_tac in_borel_measurable_lt2 >> simp[INTER_DEF] >>
+    qmatch_goalsub_abbrev_tac ‘s ∈ _ ⇒ t ∈ _’ >> ‘s = t’ suffices_by simp[] >>
+    simp[EXTENSION,Abbr ‘s’,Abbr ‘t’] >> metis_tac[]
+QED
+
+(* This second batch of results has to do with functions being borel measurable *)
+
+(* name conflict *)
+Theorem in_borel_measurable_ainv':
+    ∀a f g. sigma_algebra a ∧ f ∈ borel_measurable a ∧
+        (∀x. x ∈ space a ⇒ g x = -f x) ⇒ g ∈ borel_measurable a
+Proof
+    rw[] >> irule $ INST_TYPE [“:β”|->“:γ”] IN_MEASURABLE_COMP >>
+    qexistsl [‘borel’,‘f’,‘λx. -x’] >> simp[] >>
+    irule in_borel_measurable_mul >> simp[sigma_algebra_borel,space_borel] >>
+    qexistsl [‘λx. -1r’,‘I’] >>
+    simp[sigma_algebra_borel,MEASURABLE_I,borel_measurable_sets,borel_measurable_const]
+QED
+
+Theorem in_borel_measurable_abs:
+    ∀a f g. sigma_algebra a ∧ f ∈ borel_measurable a ∧
+        (∀x. x ∈ space a ⇒ g x = abs (f x)) ⇒ g ∈ borel_measurable a
+Proof
+    rw[] >> irule $ INST_TYPE [“:β”|->“:γ”] IN_MEASURABLE_COMP >>
+    qexistsl [‘borel’,‘f’,‘abs’] >> simp[] >>
+    ‘abs = λr:real. max (I r) ((λrr. -rr) r)’ by (
+        simp[FUN_EQ_THM,abs,max_def] >> strip_tac >> Cases_on ‘0 ≤ r’ >> simp[]
+        >- (Cases_on ‘r = 0’ >> simp[] >> ‘0 < r’ by simp[REAL_LT_LE] >>
+            ‘¬(r ≤ -r)’ suffices_by simp[] >> simp[REAL_NOT_LE])
+        >- (‘r ≤ -r’ suffices_by simp[] >> gs[REAL_NOT_LE])) >>
+    pop_assum SUBST1_TAC >> irule in_borel_measurable_max >>
+    simp[sigma_algebra_borel,MEASURABLE_I] >>
+    irule in_borel_measurable_ainv' >> simp[sigma_algebra_borel] >>
+    qexists ‘I’ >> simp[sigma_algebra_borel,MEASURABLE_I]
+QED
+
+Theorem in_borel_measurable_sum:
+    ∀a f g s. FINITE s ∧ sigma_algebra a ∧ (∀i. i ∈ s ⇒ f i ∈ borel_measurable a) ∧
+        (∀x. x ∈ space a ⇒ g x = REAL_SUM_IMAGE (λi. f i x) s) ⇒ g ∈ borel_measurable a
+Proof
+    simp[Once $ GSYM AND_IMP_INTRO] >> rpt gen_tac >> map_every qid_spec_tac [‘f’,‘g’] >>
+    simp[RIGHT_FORALL_IMP_THM] >> Induct_on ‘s’ >> rw[]
+    >- (irule in_borel_measurable_const >> simp[] >> qexists ‘0’ >> simp[]) >>
+    gs[REAL_SUM_IMAGE_THM] >> irule in_borel_measurable_add >> simp[] >>
+    qexistsl [‘f e’,‘λx. REAL_SUM_IMAGE (λi. f i x) (s DELETE e)’] >> simp[] >>
+    last_x_assum irule >> qexists ‘f’ >> simp[DELETE_NON_ELEMENT_RWT]
+QED
+
+Theorem in_borel_measurable_inv:
+    ∀a f g. sigma_algebra a ∧ f ∈ borel_measurable a ∧
+        (∀x. x ∈ space a ⇒ g x = (f x)⁻¹) ⇒ g ∈ borel_measurable a
+Proof
+    rw[] >> irule $ INST_TYPE [“:β”|->“:γ”] IN_MEASURABLE_COMP >>
+    qexistsl [‘borel’,‘f’,‘λx. x⁻¹’] >> simp[] >>
+    simp[sigma_algebra_borel,in_borel_measurable_le,FUNSET,space_borel] >>
+    qx_gen_tac ‘c’ >> Cases_on ‘c < 0’
+    >- (‘{x | x⁻¹ ≤ c} = {x | c⁻¹ ≤ x ∧ x < 0}’ suffices_by
+            simp[borel_measurable_sets,Excl "RMUL_LEQNORM"] >>
+        rw[EXTENSION] >> Cases_on ‘x < 0’ >> simp[REAL_NEG_NZ,nonzerop_EQ1_I] >>
+        gs[REAL_NOT_LT,REAL_NOT_LE] >> irule REAL_LTE_TRANS >>
+        qexists ‘0’ >> simp[]) >>
+    reverse $ gs[REAL_NOT_LT,Once REAL_LE_LT]
+    >- (‘{x | x⁻¹ ≤ 0r} = {x | x ≤ 0}’ suffices_by simp[borel_measurable_sets] >>
+        rw[EXTENSION,REAL_LE_LT]) >>
+    ‘{x | x⁻¹ ≤ c} = {x | x ≤ 0} ∪ {x | c⁻¹ ≤ x}’ suffices_by (
+        disch_then SUBST1_TAC >> irule SIGMA_ALGEBRA_UNION >>
+        simp[sigma_algebra_borel,borel_measurable_sets,Excl "RMUL_LEQNORM"]) >>
+    rw[EXTENSION] >> Cases_on ‘x ≤ 0’ >> simp[]
+    >- (irule REAL_LE_TRANS >> qexists ‘0’ >> gs[REAL_LE_LT]) >>
+    gs[REAL_NOT_LE] >> simp[REAL_POS_NZ,nonzerop_EQ1_I]
+QED
+
+Theorem in_borel_measurable_div:
+    ∀a f g h. sigma_algebra a ∧ f ∈ borel_measurable a ∧ g ∈ borel_measurable a ∧
+        (∀x. x ∈ space a ⇒ h x = f x / g x) ⇒ h ∈ borel_measurable a
+Proof
+    rw[] >> irule in_borel_measurable_mul >> simp[real_div] >>
+    qexistsl [‘f’,‘λx. (g x)⁻¹’] >> simp[] >>
+    irule in_borel_measurable_inv >> simp[] >> qexists ‘g’ >> simp[]
+QED
+
+Theorem in_borel_measurable_pow:
+    ∀a n f g.
+       sigma_algebra a ∧ f ∈ borel_measurable a ∧
+       (∀x. x ∈ space a ⇒ g x = (f x) pow n) ⇒
+       g ∈ borel_measurable a
+Proof
+    Induct_on ‘n’ >> rw[pow] >- (metis_tac[in_borel_measurable_const]) >>
+    irule in_borel_measurable_mul >> simp[] >> qexistsl [‘f’,‘λx. f x pow n’] >>
+    simp[] >> last_x_assum $ irule_at Any >> simp[] >> qexists ‘f’ >> simp[]
+QED
+
 (* References:
 
   [1] Schilling, R.L.: Measures, Integrals and Martingales (Second Edition).

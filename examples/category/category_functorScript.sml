@@ -4,7 +4,7 @@ Ancestors
 
 val _ = ParseExtras.temp_loose_equality()
 
-val _ = remove_termtok { term_name = combinpp.toplevel_updname, tok = "(|" }
+val _ = combinpp.remove_paren_syntax "(|"
 
 val _ = type_abbrev_pp("functor",
 ``:((α,β) category, (γ,δ) category, (α,β) mor -> (γ,δ) mor)

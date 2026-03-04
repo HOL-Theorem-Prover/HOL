@@ -48,7 +48,7 @@ in
    fun add_numposrep_compset cmp = computeLib.add_thms thms cmp
 end
 
-val () = add_numposrep_compset computeLib.the_compset
+val () = computeLib.the_compset := add_numposrep_compset (!computeLib.the_compset)
 
 (* ------------------------------------------------------------------------- *)
 

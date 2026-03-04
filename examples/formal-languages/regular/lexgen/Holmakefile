@@ -14,5 +14,5 @@ all: $(TARGETS) # mustbuild
 # EXTRA_CLEANS = regexp2dfa.o regexp2dfa
 
 # regexp2dfa : regexp2dfa.sml Regexp_Match.uo regexpSyntax.uo regexp_compilerTheory.uo regexpLib.uo
-#	$(protect $(HOLDIR)/bin/buildheap) regexpLib regexp2dfa.sml -o $@ --exe main
+#	$(protect $(HOLDIR)/bin/hol) buildheap regexpLib regexp2dfa.sml -o $@ --exe main
 

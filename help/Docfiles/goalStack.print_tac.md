@@ -25,4 +25,5 @@ usual interactive goal-stack is not available.
 
 ### See also
 
-[`Tactical.ALL_TAC`](#Tactical.ALL_TAC)
+[`goalStack.note_tac`](#goalStack.note_tac),
+[`Tactical.ALL_TAC`](#Tactical.ALL_TAC).

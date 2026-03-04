@@ -49,21 +49,30 @@ This is important because the compilation and creation of executables differs so
 Once this determination is made, actual configuration work is done in either `tools-poly/configure.sml` or `tools/configure.sml`
 (See [Sources](#sources) below for more on how these sources are organised.)
 
-## Building `Holmake`
+## Building (and Rebuilding) `Holmake`
 
 Because `Holmake` is not assumed to exist when `Holmake` is built, the configuration script is responsible for assembling the constituent sources.
 In the case of Moscow\ ML, this means that it makes the successive calls to `mosmlc` as necessary.
-With Poly/ML, the work is orchestrated by `tools-poly/Holmake/poly-Holmake.ML`.
-That script is a sequence of calls to `use`, followed by the boilerplate necessary to create an object-code file.
-The configuration script then calls the C compiler to link that object code into the final executable.
+With Poly/ML, the work is orchestrated by `tools/Holmake/poly/poly-Holmake.ML`.
+That file is a sequence of calls to `use`, followed by a simple definition of a `main` function.
+This can then be compiled with `polyc`.
 
 Note that we can’t simplify the Moscow\ ML build in a way analogous to what happens with Poly/ML because the complicated sequence of instructions are command-line invocations of `mosmlc`, rather than calls to `use` within a Poly/ML program.
 We might attempt to create a shell-script containing the calls to `mosmlc`, but it seems more OS-independent to invoke `OS.Process.system` from within `configure.sml`.
 
+Quick rebuilds of Poly/ML `Holmake` are possible by making the call
+
+    polyc -o ../../../bin/Holmake poly-Holmake.ML
+
+in the `tools/Holmake/poly` directory.
+It *is* necessary to specify the output path (with the `-o` option) to replace the old `Holmake` if one is going to test/use the new tool in the existing `HOL` sources.
+Without doing this, the new implementation will see that it is in a HOL source–tree and then switch to call the `Holmake` in that source-tree’s `bin` directory.
+
+
 # Build
 
 The standard options to build are described in its help documentation, which is accessible by invoking `build --help` (or `build -h`, or `build -?`, but not `build help` because this builds the HOL documentation).
-The file containing this information about options is located at `tools/buildhelp.txt`.
+The file containing this information about options is located at `tools/build/buildhelp.txt`.
 
 The most frequently used options to build are those to do with “selftest” level, and the selection of kernel.
 
@@ -84,14 +93,15 @@ There are two standard ways to the install a test that can be run by `build`:
          ifdef HOLSELFTESTLEVEL
          endif
 
-    block to get the executable to be run.  Just checking if the variable is set, will cause execution at all non-zero levels. To fire a test only at particular levels, use the `ifeq` and related commands. It may also be a good idea to have this block produce a log-file recording the execution of the selftest; this can be done effectively with the `Holmake` function `$(tee ...)`.
+    block to get the executable to be run.  Just checking if the variable is set, will cause execution at all non-zero levels. To fire a test only at particular levels, use the `ifeq` and related commands. 
+    It may also be a good idea to have this block produce a log-file recording the execution of the selftest; this can be done effectively with the `Holmake` function `$(tee ...)`.
 
     There are a number of examples of constructing `selftest.exe` executables in the sources.
     See for example `src/boss/selftest.sml` and `src/boss/Holmakefile`.
     Though the `Holmakefile` gives build commands in terms of `$(HOLMOSMLC)`, the `selftest.exe` executable will also be built correctly if running Poly/ML.
 
 2.  Create a new directory for build to operate on.
-    This directory can be inserted into the early stages of the build sequence, as explained in the documentation at the head of `tools/build-sequence`.
+    This directory can be inserted into the early stages of the build sequence, as explained in the documentation at the head of `tools/build/build-sequence`.
     If the testing happens after `bossLib` and (in Poly/ML) the creation of the standard `hol.state` heap, the directory should be included in the `Holmakefile` in `src/parallel_builds/core`.
     The various tests in that file can be used to insert regression test directories into the big parallel build of all the post-`bossLib` directories.
     Using a test-directory is necessary if the tests need to examine behaviours to do with theory export and loading.
@@ -115,10 +125,10 @@ This kernel can be selected by passing the `--otknl` option to `build`.
 ## Build Sequences
 
 When `build` runs, it choreographs its calls to `Holmake` by referring to a specified sequence of directories.
-By default this sequence is that specified in the file `tools/build-sequence`, which in turn refers to other files *via* `#include` directives.
+By default this sequence is that specified in the file `tools/build/build-sequence`, which in turn refers to other files *via* `#include` directives.
 It is possible to provide a different sequence by using the `--seq` commandline option to `build`.
 Such sequences can be constructed more easily by referring to sequence fragments in the `tools/sequences` directory, and including these with `#include` commands.
-The details of the required format for sequence files is spelled out in a comment at the head of the `tools/build-sequence` file.
+The details of the required format for sequence files is spelled out in a comment at the head of the `tools/build/build-sequence` file.
 
 Past the initial prefix of this process, most directories in the build sequence are actually listed in the `Holmakefile` in `src/parallel_builds/core`.
 This arrangement allows parallel processing of lots of directories at once.
@@ -136,16 +146,16 @@ The build process deposits various tools in the `bin` directory.
 Under both Moscow&nbsp;ML and Poly/ML the following are created:
 
 `build`
-: the build tool as above
+: The build tool as above
 
 `hol`
-: the standard executable, which loads a `bossLib` based logical context. This is designed for use by “every user”.
+: The standard executable, which loads a `bossLib` based logical context. This is designed for use by “every user”.
 
-`hol.bare`
-: the “bare” executable, which includes `boolLib` and the goalstack infrastructure but no theories past `bool`.
+`hol --bare`
+: the “bare” mode, which includes `boolLib` and the goalstack infrastructure but no theories past `bool`.
 
 `Holmake`
-: the Holmake tool, again designed for every user.
+: The Holmake tool, again designed for every user.
 
 `linkToSigobj`
 : When the multi-directory, potentially parallel, build begins, this special-purpose tool is run in every directory after that directory’s build completes. It is responsible for linking to relevant `src` files in the `sigobj` directory, allowing HOL users to see/find those files without needing to explicitly mention the original `src` directory in an `INCLUDES`-directive.
@@ -154,26 +164,32 @@ Under both Moscow&nbsp;ML and Poly/ML the following are created:
 : This tool creates LaTeX mungers, as described in the *DESCRIPTION* manual.
 
 `unquote`
-: This is the quotation filter embodied as a Unix filter, with a variety of options to specify behaviour. Note that this is not used by Poly/ML HOL, but can be useful there to see what the filter (as embodied by the `HolParser` module) is doing when it messes with user input.
+: This is the quotation filter embodied as a Unix filter, with a variety of options to specify behaviour. 
+  Note that this is not used by Poly/ML HOL, but can be useful there to see what the filter (as embodied by the `HolParser` module) is doing when it messes with user input.
 
 Under Poly/ML, the following additional files will appear:
 
-`buildheap`
-:   this is the core execution engine of all Poly/ML HOL (but not `Holmake` or `build`). It will appear as the process name for HOL executions when working interactively, or when scripts are run to generate a theory file. It embodies the quotation handling by implementing a copy of the standard Poly/ML REPL that fiddles with the lexer.
+`hol`
+:   this is the main Poly/ML HOL executable with subcommand-based CLI. It supports the following subcommands:
+
+    - `hol` or `hol repl`: Start an interactive REPL (default)
+    - `hol --bare`: Start REPL with minimal heap (hol.state0)
+    - `hol lsp`: Start LSP server
+    - `hol buildheap -o <file>`: Build a heap from object files
+    - `hol run`: Run script files for side effects (used by Holmake)
+    - `hol heapname`: Print the heap path (reads HOLHEAP from Holmakefile)
+
+    It embodies the quotation handling by implementing a copy of the standard Poly/ML REPL that fiddles with the lexer.
 
 `genscriptdep`
 :   Given a filename, this utility executable will generate a list of a script files dependencies.
 
-`heapname`
-:   this little executable reads the startup directory’s `Holmakefile` (if present) to determine which heap should be used as the basis for interactive execution in this directory.  It is called by `hol`, but *not* `hol.bare`.
-
-    `Holmake` reads `Holmakefile`s for `HOLHEAP` information for every invocation, so interactive execution of HOL in directories such as `src/pred_set/src` and `src/list/src` will have to use `hol.bare` (these are before bossLib), and will not get to use the `numheap` executable created in `src/num/termination`, even though non-interactive builds do get that benefit.
-
 `hol.state`
-:   the Poly/ML heap used by `hol` by default. This embodies `bossLib` and is created in `src/boss`.
+:   The Poly/ML heap used by `hol` by default. 
+    This embodies `bossLib` and is created in `src/boss`.
 
 `hol.state0`
-:   the Poly/ML heap used by `hol.bare`. This is built in `src/proofman`.
+:   the Poly/ML heap used by `hol --bare`. This is built in `src/proofman`.
 
 # Sources and Their Organisation {#sources}
 
@@ -189,8 +205,8 @@ Unless otherwise noted, they are built by the configuration process.
 
 `build`
 :   Described [above](#build).
-    The top-level driver code is in files called `build.sml` in `tools` and `tools-poly`.
-    Shared code is in `tools/buildutils.sml`.
+    The top-level driver code is in files called `build.sml` in `tools/build` and `tools-poly`.
+    Shared code is in `tools/build/buildutils.sml`.
     The executable is in `bin/`.
 
 `cmp`

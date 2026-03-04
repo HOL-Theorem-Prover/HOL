@@ -1,6 +1,6 @@
 Theory ordNotationSemantics
 Ancestors
-  ordinal cardinal ordinalNotation
+  ordinalBasic ordinal cardinal ordinalNotation
 
 val _ = export_rewrites ["ordinalNotation.finp_def", "ordinalNotation.tail_def",
                          "ordinalNotation.is_ord_equations",

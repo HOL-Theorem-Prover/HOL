@@ -40,4 +40,4 @@ string-selftest.log: ./selftest.exe
 
 endif
 
-EXTRA_CLEANS += string-selftest.log
+EXTRA_CLEANS += string-selftest.log selftest.exe

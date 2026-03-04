@@ -171,9 +171,7 @@ fun fail () = failwith "fail";
 
 (* Here are some useful tactics, that are not included in the standard HOL: *)
 
-val PRINT_TAC :tactic = fn (asl,gl) =>
-     (print_goal (asl,gl);
-      ALL_TAC (asl,gl));
+val PRINT_TAC :tactic = goalStack.print_tac ""
 
 val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
 

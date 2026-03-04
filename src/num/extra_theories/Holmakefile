@@ -19,3 +19,5 @@ all: num-extra-theories-selftest.log
 num-extra-theories-selftest.log: selftest.exe
 	@$(tee ./$<, $@)
 endif
+
+EXTRA_CLEANS = selftest.exe num-extra-theories-selftest.log

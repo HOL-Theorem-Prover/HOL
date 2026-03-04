@@ -14,7 +14,6 @@ struct
              "tcTheory"]; *)
 
 open Parse HolKernel boolLib bossLib;
-val _ = set_trace "Unicode" 0;
 
 open enumTacs fmapalTacs tcTheory;
 

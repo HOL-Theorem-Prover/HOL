@@ -138,7 +138,7 @@ signature Parse = sig
   (* adding and removing user parsers and printers to the grammar *)
 
   val add_user_printer : (string * term) -> unit
-  val remove_user_printer : string -> (term * term_grammar.userprinter) option
+  val remove_user_printer : string * term -> unit
   val constant_string_printer : string -> term_grammar.userprinter
 
  (* the following functions affect the grammar, but not so that the
@@ -184,7 +184,7 @@ signature Parse = sig
 
   val temp_add_user_printer : (string * term * term_grammar.userprinter) ->
                               unit
-  val temp_remove_user_printer : string ->
+  val temp_remove_user_printer : string * term ->
                                  (term * term_grammar.userprinter) option
 
   val try_grammar_extension : ('a -> 'b) -> 'a -> 'b

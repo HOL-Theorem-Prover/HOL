@@ -3,6 +3,7 @@ sig
 
 type t = {
   holstate : string option,
+  maxheap : int option,
   multithread : int option,
   poly : string option,
   polymllibdir : string option,

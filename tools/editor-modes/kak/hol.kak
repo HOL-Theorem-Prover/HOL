@@ -42,10 +42,13 @@ hol-start: start HOL instance in new terminal window, from HOLDIR' %{
         printf "set-option current holfifodir '%s'" "$holfifodir"
     }
     set-option current holfifo %sh{printf "%s/fifo" "$kak_opt_holfifodir"}
-    terminal sh -i -c %sh{
-        printf "%s\n\n" "cat > $kak_opt_holfifo & echo \$! > $kak_opt_holfifodir/pid & (tee -i >($HOLDIR/bin/hol --zero)) < $kak_opt_holfifo"
+    evaluate-commands %sh{
+        # Save entire environment to a temp file, to be sourced by the spawned shell
+        envfile=$(mktemp)
+        export -p > "$envfile"
+        printf "terminal sh -i -c '. %s; rm -f %s; cat > %s & echo \$! > %s/pid & (tee -i >(%s/bin/hol --zero)) < %s'\n" \
+            "$envfile" "$envfile" "$kak_opt_holfifo" "$kak_opt_holfifodir" "$HOLDIR" "$kak_opt_holfifo"
     }
-
     hol-load-deps-all
 }
 

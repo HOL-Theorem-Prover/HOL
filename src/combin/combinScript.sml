@@ -39,36 +39,24 @@ val _ = Parse.Unicode.unicode_version {tmnm = "o", u = UTF8.chr 0x2218}
 val _ = TeX_notation {hol = "o", TeX = ("\\HOLTokenCompose", 1)}
 val _ = TeX_notation {hol = UTF8.chr 0x2218, TeX = ("\\HOLTokenCompose", 1)}
 
-val _ = let
-  open combinpp
-  fun addlform l r =
-      add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
-                fixity = Suffix 2100,
-                paren_style = OnlyIfNecessary,
-                pp_elements = [
-                  TOK l,
-                  ListForm {
-                    separator = [TOK ";", BreakSpace(1,0)],
-                    block_info = (PP.CONSISTENT, 1),
-                    cons = internal_consupd,
-                    nilstr = internal_idupd
-                  },
-                  TOK r],
-                term_name = toplevel_updname};
-in
-  set_mapped_fixity {fixity = Infix(NONASSOC,100),
-                     term_name = mapsto_special,
-                     tok = "|->"};
-  set_mapped_fixity {fixity = Infix(NONASSOC,100),
-                     term_name = mapsto_special,
-                     tok = "↦"};
-  addlform "(|" "|)";
-  addlform UnicodeChars.lensel UnicodeChars.lenser;
-  add_ML_dependency "combinpp";
-  add_absyn_postprocessor "combin.UPDATE";
-  inferior_overload_on (update_constname, ``UPDATE``);
-  add_user_printer ("combin.updpp", “UPDATE k v f”)
-end;
+
+val _ = add_ML_dependency "combinpp";
+val _ = combinpp.enable_dictsyntax()
+
+val _ = combinpp.new_form {
+  left = "(|", right = "|)",
+  upd_term_name = (“UPDATE k v f”, "UPDATE"),
+  lookup_term_name = NONE
+  }
+
+val _ = combinpp.new_form {
+  left = UnicodeChars.lensel, right = UnicodeChars.lenser,
+  upd_term_name = (“UPDATE k v f”, "UPDATE"),
+  lookup_term_name = NONE
+  }
+
+val s = term_to_string “UPDATE k v f”
+val _ = print ("Printing of term gives: \"" ^ s ^ "\"\n")
 
 val _ = TeX_notation {TeX = ("\\llparenthesis", 1), hol = UnicodeChars.lensel}
 val _ = TeX_notation {TeX = ("\\llparenthesis", 1), hol = "(|"}
@@ -77,13 +65,16 @@ val _ = TeX_notation {TeX = ("\\rrparenthesis", 1), hol = "|)"}
 val _ = TeX_notation {TeX = ("\\HOLTokenMapto{}", 1), hol = "↦"}
 val _ = TeX_notation {TeX = ("\\HOLTokenMapto{}", 1), hol = "|->"}
 
-local open OpenTheoryMap in
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="K"},name=(["Function"],"const")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="C"},name=(["Function"],"flip")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="I"},name=(["Function"],"id")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="o"},name=(["Function"],"o")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="S"},name=(["Function","Combinator"],"s")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="W"},name=(["Function","Combinator"],"w")}
+local
+open OpenTheoryMap
+fun cnm s nm = OpenTheory_const_name {const={Thy="combin",Name = s}, name = nm}
+in
+  val _ = cnm "K" (["Function"],"const")
+  val _ = cnm "C" (["Function"],"flip")
+  val _ = cnm "I" (["Function"],"id")
+  val _ = cnm "o" (["Function"],"o")
+  val _ = cnm "S" (["Function","Combinator"],"s")
+  val _ = cnm "W" (["Function","Combinator"],"w")
 end
 
 (*---------------------------------------------------------------------------*

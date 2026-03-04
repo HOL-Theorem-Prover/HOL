@@ -23,12 +23,12 @@ goal `(A ?- t)`:
     A ?- t1
 ```
 
-then applying `(X_CHOOSE_THEN "y" f (A1 |- ?x. w))` to the goal
+then applying `(X_CHOOSE_THEN “y” f (A1 |- ?x. w))` to the goal
 `(A ?- t)` produces the subgoal:
 
 ``` hol4
     A ?- t
-   =========  X_CHOOSE_THEN y f (A1 |- ?x. w)
+   =========  X_CHOOSE_THEN “y” f (A1 |- ?x. w)
     A ?- t1         (y not free anywhere)
 ```
 
@@ -55,7 +55,7 @@ the following theorem may be applied:
    th = [n < m] |- ?p. m = n + p
 ```
 
-by the tactic `` (X_CHOOSE_THEN (Term`q:num`) SUBST1_TAC th) `` giving
+by the tactic `X_CHOOSE_THEN “q:num” SUBST1_TAC th` giving
 the subgoal:
 
 ``` hol4

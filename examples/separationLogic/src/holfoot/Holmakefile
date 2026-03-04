@@ -3,7 +3,7 @@ MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
 EXTRA_CLEANS = holfoot.grm-sig.sml holfoot.grm.sml holfoot.lex.sig \
-               holfoot.lex.sml holfoot.grm.sig
+               holfoot.lex.sml holfoot.grm.sig selftest.exe holfoot-selftest.log
 
 all: $(DEFAULT_TARGETS) holfootLib.ui selftest.exe
 .PHONY: all clean-lib

@@ -238,10 +238,10 @@ fun sptree_print Gs B syspr ppfns (pg, _, _) d t =
              | NONE => raise term_pp_types.UserPP_Failed)
    end
 
+val xspt = mk_var("x", mk_sptree_ty alpha)
 fun temp_add_sptree_printer () =
-   Parse.temp_add_user_printer ("sptree", ``x: 'a sptree$spt``, sptree_print)
+   Parse.temp_add_user_printer ("sptree", xspt, sptree_print)
 
-fun remove_sptree_printer () =
-   General.ignore (Parse.remove_user_printer "sptree")
+fun remove_sptree_printer () = Parse.remove_user_printer ("sptree", xspt)
 
 end

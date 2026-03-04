@@ -14,10 +14,16 @@ sig
 
   val mk_bool_size : term -> term
   val mk_pair_size : term * term * term -> term
-  val mk_sum_size : term * term * term -> term
-  val mk_one_size : term -> term
+  val mk_sum_size  : term * term * term -> term
+  val mk_one_size  : term -> term
   val mk_itself_size : term -> term
   val mk_option_size : term * term -> term
+
+  (* convenient for synthesizing measures *)
+  val mk_pair_size2: term * term -> term
+  val mk_sum_size2 : term * term -> term
+  val mk_min_pair_size2: term * term  -> term
+  val mk_full_sum_size2 : term * term -> term
 
   val dest_bool_size : term -> term
   val dest_pair_size : term -> term * term * term

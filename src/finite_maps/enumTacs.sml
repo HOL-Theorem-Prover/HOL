@@ -12,7 +12,6 @@ struct
 
 open Parse HolKernel boolLib;
 
-val _ = set_trace "Unicode" 0;
 open totoTheory reduceLib bossLib
  relationTheory listTheory pairTheory optionTheory enumeralTheory pred_setLib
  totoTacs finite_mapTheory;

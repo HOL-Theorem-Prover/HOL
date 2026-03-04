@@ -8,7 +8,9 @@
 ignoring fact that it should really only occur at the beginning of the line.")
 
 (defconst holscript-font-lock-keywords
-  (list '("^\\(Theorem\\|Triviality\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[ :]"
+  (list '("^\\(Theorem\\|Triviality\\|Resume\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[ :]"
+          (1 'holscript-theorem-syntax) (2 'holscript-thmname-syntax))
+        '("^\\(Finalise\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)"
           (1 'holscript-theorem-syntax) (2 'holscript-thmname-syntax))
         '("^\\(Theory\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[:space:]]*"
           (1 'holscript-theorem-syntax) (2 'holscript-thmname-syntax))
@@ -753,7 +755,9 @@ a store_thm equivalent.")
       (decls (decls ";" decls) (decl))
       (decl ("^Theorem" theorem-contents "^QED")
             ("^Triviality" theorem-contents "^QED")
+            ("^Resume" resume-contents "^QED")
             ("^Theorem=" sml-expr)
+            ("^Finalise" sml-expr)
             ("^Triviality=" id)
             ("^Definition" definition-contents "^End")
             ("^Quote" id-quoted "^End")
@@ -767,6 +771,7 @@ a store_thm equivalent.")
             ("open" id)
             ("datatype" id)
             ("structure" id))
+      (resume-contents (id "SML:" tactic))
       (theorem-contents (id-quoted "^Proof" tactic)
                         (id-quoted "^Proof" "PF[" attributes "PF]" tactic))
       (attributes (attribute) (attributes "," attributes))
@@ -885,10 +890,10 @@ class characters.")
   (regexp-opt '("Definition" "Datatype" "Theorem" "Triviality" "Type"
                 "Proof" "Quote" "Theory" "Ancestors" "Libs"
                 "Termination" "End" "QED" "Inductive" "CoInductive"
-                "Overload")))
+                "Overload" "Resume" "Finalise")))
 (defconst holscript-column0-declbegin-keyword
-  (regexp-opt '("Definition" "Datatype" "Theorem" "Triviality" "Quote"
-                "Type" "Inductive" "CoInductive" "Overload")))
+  (regexp-opt '("Definition" "Datatype" "Theorem" "Triviality" "Resume" "Quote"
+                "Type" "Inductive" "CoInductive" "Overload" "Finalise")))
 
 (defconst holscript-sml-declaration-keyword
   (regexp-opt '("open" "val" "datatype" "local" "fun" "infix" "infixl" "infixr"
@@ -939,7 +944,9 @@ class characters.")
                (save-excursion (skip-chars-backward " \t") (bolp)))
           (goto-char (match-end 1))
           (let ((ms (match-string-no-properties 1)))
-            (if (or (string= ms "Theorem") (string= ms "Triviality"))
+            (if (or (string= ms "Theorem")
+                    (string= ms "Triviality")
+                    (string= ms "Resume"))
                 (let ((eolpoint (save-excursion (end-of-line) (point))))
                   (save-excursion
                     (if (re-search-forward ":" eolpoint t) (concat "^" ms)

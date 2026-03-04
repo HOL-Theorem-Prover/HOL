@@ -1535,7 +1535,7 @@ Testing:
 
 open reduceLib computeLib;
 
-val compset1 = num_compset();
+val compset1 = num_compset;
 
 val _ = add_thms [numeral_root2,numeral_sqrt2,FST,SND,iSQRT0_def,iSQRT1_def,
                   iSQRT2_def,iSQRT3_def] compset1;
@@ -1552,7 +1552,7 @@ time (map (fn x => CBV_CONV compset1 (mk_comb(``ROOT 2``,x)))) list;
 time (map (fn x => CBV_CONV compset2 (mk_comb(``SQRT``,x)))) list;
 
 
-val compset2 = num_compset();
+val compset2 = num_compset;
 
 val SQRT_def = Define `SQRT x = ROOT 2 x`;
 

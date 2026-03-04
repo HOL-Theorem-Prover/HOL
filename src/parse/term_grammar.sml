@@ -234,15 +234,22 @@ fun fupdate_user_printers f g =
 
 fun user_printers (GCONS g) = #1 (#user_printers g)
 
-fun remove_user_printer k (GCONS g) = let
+fun samepat t1 t2 =
+    can (Term.match_term t1) t2 andalso can (Term.match_term t2) t1
+
+fun remove_user_printer (nm,pat) (GCONS g) = let
   val (net, keyset) = #user_printers g
 in
-  if HOLset.member(keyset,k) then let
-      fun foldthis (t,nm,f) (olddata,newnet) =
-          if nm = k then (SOME (t,f), newnet)
-          else (olddata, FCNet.insert(t,(t,nm,f)) newnet)
-      val (data, newnet) = FCNet.itnet foldthis net (NONE, FCNet.empty)
-      val newkeys = HOLset.delete(keyset, k)
+  if HOLset.member(keyset,nm) then let
+      fun foldthis (t,nm',f) (olddata,newnet,newkeyset) =
+          if nm = nm' andalso samepat pat t then (SOME (t,f), newnet, newkeyset)
+          else
+            (olddata,
+             FCNet.insert(t,(t,nm',f)) newnet,
+             HOLset.add(newkeyset,nm'))
+      val (data, newnet, newkeys) =
+          FCNet.itnet foldthis net
+                      (NONE, FCNet.empty, HOLset.empty String.compare)
     in
       (GCONS (update_G g (U #user_printers (newnet,newkeys)) $$),
        data)
@@ -251,7 +258,7 @@ in
 end
 
 fun add_user_printer (k,pat,v) g = let
-  val (g', _) = remove_user_printer k g
+  val (g', _) = remove_user_printer (k,pat) g
   fun upd (net,keys) =
     (FCNet.insert(pat, (pat,k,v)) net, HOLset.add(keys, k))
 in
@@ -1080,6 +1087,8 @@ fun add_delta ud G =
       end
     | ADD_STRLIT r => add_strlit_injector r G
     | RM_STRLIT r => remove_strlit_injector r G
+    | RM_UPRINTER {codename,pattern} =>
+      #1 (remove_user_printer (codename,pattern) G)
 
 fun add_deltas uds G = List.foldl (uncurry add_delta) G uds
 

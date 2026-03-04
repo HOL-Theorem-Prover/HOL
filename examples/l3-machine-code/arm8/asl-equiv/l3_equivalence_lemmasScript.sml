@@ -497,6 +497,7 @@ Proof
 QED
 
 Theorem returnS_bindS_unit = returnS_bindS |> INST_TYPE [gamma |-> ``:unit``]
+Theorem returnS_bindS_word64 = returnS_bindS |> INST_TYPE [gamma |-> ``:word64``]
 
 Theorem seqS_bindS_assoc[simp]:
   ∀x f g. seqS (bindS x (λx. f x)) g = bindS x (λx. seqS (f x) g)
@@ -1447,4 +1448,3 @@ Proof
 QED
 
 (****************************************)
-

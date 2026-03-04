@@ -1,0 +1,11 @@
+ifdef POLY
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+endif
+
+cachekey-selftest.log: selftest.exe
+	@$(tee ./$<, $@)
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe cachekey-selftest.log

@@ -15,7 +15,7 @@ DEPS = holTheory.uo bossLib.uo $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(boss_deps)
 all: $(TARGET)
 
 $(TARGET): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $(TARGET) -b $(HOLHEAP) $(boss_deps) bossLib holTheory
+	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) -o $(TARGET) -b $(HOLHEAP) $(boss_deps) bossLib holTheory
 
 endif
 

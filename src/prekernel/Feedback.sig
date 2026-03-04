@@ -49,6 +49,7 @@ sig
     val WARNING_to_string : (string -> string -> string -> string) ref
     val exn_to_string     : exn -> string
 
+    val display_uncaught  : exn -> 'a
     val Raise             : exn -> 'a
     val fail              : unit -> 'a
     val failwith          : string -> 'a
@@ -81,5 +82,6 @@ sig
     val reset_trace       : string -> unit
     val reset_traces      : unit -> unit
     val trace             : string * int -> ('a -> 'b) -> 'a -> 'b
+    val with_traces       : (string * int) list -> ('a -> 'b) -> 'a -> 'b
 
 end

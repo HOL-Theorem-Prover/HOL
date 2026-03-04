@@ -1,10 +1,12 @@
 open HolKernel Parse boolLib bossLib sptreeSyntax sptreeLib testutils
 open totoTheory  totoTacs tcTacs enumTacs fmapalTacs;
-open alist_treeLib
+open alist_treeLib patriciaLib
 
 fun optionToString f NONE = "NONE"
   | optionToString f (SOME x) = "SOME("^f x^")"
 fun pairToString f g (x,y) = "(" ^ f x ^ ", " ^ g y ^ ")"
+
+val _ = app tpp ["fm⟨k⟩", "fm⟨k1 ↦ v1; k2 ↦ v2⟩"]
 
 val _ = tprint "Check that finite maps have plausible size in TypeBase"
 val _ = require_msg

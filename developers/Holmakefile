@@ -12,7 +12,7 @@ all: genUseScript
 comparelogs: poly-comparelogs.ML comparelogs.sml
 	$(POLYC) $< -o $@
 
-genUseScript: genUseScript.sml $(dprot $(HOLDIR)/tools/Holmake/GetOpt.sml)
+genUseScript: genUseScript.sml $(dprot $(HOLDIR)/tools/util/GetOpt.sml)
 	$(POLYC) $< -o $@
 
 else

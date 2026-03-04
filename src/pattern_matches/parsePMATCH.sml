@@ -82,8 +82,9 @@ val when_ar = {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                pp_elements = [RE (TOK "when")],
                term_name = PMATCH_when}
 
-fun mk_dtcase ar = map_tok_add_record (fn "case" => "dtcase" | s => s) ar
-fun mk_pmcase ar = ar_name_fupd (K PMATCH_case_special) ar
+fun mk_pmatch_rule ar =
+  ar |> map_tok_add_record (fn "case" => "pmatch" | s => s)
+     |> ar_name_fupd (K PMATCH_case_special)
 
 
 (* ----------------------------------------------------------------------
@@ -284,30 +285,20 @@ fun pmatch_case G recursor a =
 
 fun add_pmatch actions (G:'a) =
   let
-    val {get, arule : add_record -> 'a -> 'a, rmtmtok,
+    val {get, arule : add_record -> 'a -> 'a,
          add_ptmproc: string * int -> preterm_processor -> 'a -> 'a,
          addup, up} =
         actions
     val crules = grammar_tok_rules "case" (get G)
-    val dtcrules0 = grammar_tok_rules "dtcase" (get G)
-    val do_dtc = null dtcrules0
-    val do_pm =
-        case crules of
-            [] => raise mk_HOL_ERR "parsePMATCH" "ADD_PMATCH"
-                        "No existing case rules?"
-          | c :: _ => #term_name c <> PMATCH_case_special
-    val _ = set_trace "pp_cases_dt" 1
-    val G =
-        if do_pm then rmtmtok {term_name = GrammarSpecials.core_case_special,
-                               tok = "case"} G
-        else G
-    val G =
-        if do_dtc then
-          List.foldl (fn (ar, G) => arule (mk_dtcase ar) G) G crules
-        else G
+    val pmrules = grammar_tok_rules "pmatch" (get G)
+    val do_pm = null pmrules (* only add if pmatch rules don't exist yet *)
+    val _ =
+        if null crules then
+          raise mk_HOL_ERR "parsePMATCH" "add_pmatch" "No existing case rules?"
+        else ()
     val G =
         if do_pm then
-          List.foldl (fn (ar, G) => arule (mk_pmcase ar) G) G crules
+          List.foldl (fn (ar, G) => arule (mk_pmatch_rule ar) G) G crules
         else G
     val G = if do_pm then
               G |> arule when_ar |> arule endbinding_ar

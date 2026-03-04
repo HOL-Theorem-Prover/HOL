@@ -14,7 +14,7 @@ all: $(TARGETS) $(HOLHEAP)
 .PHONY: all
 
 $(HOLHEAP): ../../l3-heap $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -b $< -o $(HOLHEAP) $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/hol) buildheap -b $< -o $(HOLHEAP) $(BARE_THYS)
 
 endif
 

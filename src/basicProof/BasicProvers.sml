@@ -66,12 +66,11 @@ fun name_eq s M = ((s = fst(dest_var M)) handle HOL_ERR _ => false)
  * of a SUBST1_TAC.                                                          *
  *---------------------------------------------------------------------------*)
 
-val VAR_INTRO_TAC = REPEAT_TCL STRIP_THM_THEN
+val VAR_INTRO_TAC = STRIP_ALL_THEN
                       (fn th => SUBST_ALL_TAC th ORELSE ASSUME_TAC th);
 
-val TERM_INTRO_TAC =
- REPEAT_TCL STRIP_THM_THEN
-     (fn th => TRY (SUBST_ALL_TAC th) THEN ASSUME_TAC th);
+val TERM_INTRO_TAC = STRIP_ALL_THEN
+                      (fn th => TRY (SUBST_ALL_TAC th) THEN ASSUME_TAC th);
 
 fun away gfrees0 bvlist =
   rev(fst

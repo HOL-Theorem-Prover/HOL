@@ -18,7 +18,7 @@ The listing omits constructors, but can include constants that
 effectively act as constructors for rewrites in the compset.
 
 ``` hol4
-   > val compset = reduceLib.num_compset();
+   > val compset = reduceLib.num_compset;
    val compset = <compset>: computeLib.compset
 
    > computeLib.unmapped compset;
@@ -47,7 +47,7 @@ adding functions that get "called" by it:
            in
            QSORT ord l1 ++ [h] ++ QSORT ord l2) : thm
 
-   > val () = computeLib.add_thms [sortingTheory.QSORT_DEF] compset;
+   > val compset = computeLib.add_thms [sortingTheory.QSORT_DEF] compset;
 
    > computeLib.unmapped compset;
    val it =

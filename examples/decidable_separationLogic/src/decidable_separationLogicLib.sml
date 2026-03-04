@@ -38,13 +38,11 @@ fun DUMMY_CONV t =
 
 
 
-val swap_cs = reduceLib.num_compset ();
-val _ = computeLib.add_thms [SWAP_REWRITES, APPEND]
-   swap_cs;
+val swap_cs = computeLib.add_thms [SWAP_REWRITES, APPEND]
+   reduceLib.num_compset;
 
-val ds_direct_cs = reduceLib.num_compset ();
-val _ = computeLib.add_thms [MAP, PF_TURN_EQ_def, SAFE_MAP_THM]
-   ds_direct_cs;
+val ds_direct_cs = computeLib.add_thms [MAP, PF_TURN_EQ_def, SAFE_MAP_THM]
+   reduceLib.num_compset;
 
 
 (*
@@ -603,9 +601,8 @@ end;
 
 
 
-val reflexive_cs = computeLib.bool_compset();
-val _ = computeLib.add_thms [POS_FILTER_THM, PF_TRIVIAL_FILTER_PRED_def,
-   SF_TRIVIAL_FILTER_PRED_THM, pairTheory.FST, pairTheory.SND] reflexive_cs;
+val reflexive_cs = computeLib.add_thms [POS_FILTER_THM, PF_TRIVIAL_FILTER_PRED_def,
+   SF_TRIVIAL_FILTER_PRED_THM, pairTheory.FST, pairTheory.SND] computeLib.bool_compset;
 
 
 fun ds_inference_REMOVE_TRIVIAL___CONV t =
@@ -635,8 +632,7 @@ val t = ``LIST_DS_ENTAILS (e1::c1,c2) ([pf1;pf_unequal e3 e;pf2],[sf_points_to e
 val t = ``LIST_DS_ENTAILS (e1::e45::e6::e45::dse_nil::c1,c2) ([pf1;pf_unequal e e;pf2],[sf_points_to e3 []; sf_points_to dse_nil [];sf_bin_tree (f1, f2) e1]) ([],[])``
 *)
 
-val inconsistent_cs = reduceLib.num_compset ();
-val _ = computeLib.add_thms [SWAP_REWRITES] inconsistent_cs;
+val inconsistent_cs = computeLib.add_thms [SWAP_REWRITES] reduceLib.num_compset;
 
 fun ds_inference_INCONSISTENT___CONV___UNEQUAL t =
    let
@@ -796,10 +792,9 @@ val t = ``LIST_DS_ENTAILS ([dse_var 4], [(dse_var 1, dse_var 4)]) ([pf_unequal (
 
 
 
-val subst_cs = reduceLib.num_compset ();
-val _ = computeLib.add_thms [PF_SUBST_def, MAP, SF_SUBST_THM, DS_VAR_SUBST_def, DS_VAR_SUBST_NIL,
+val subst_cs = computeLib.add_thms [PF_SUBST_def, MAP, SF_SUBST_THM, DS_VAR_SUBST_def, DS_VAR_SUBST_NIL,
    SWAP_REWRITES, pairTheory.FST, pairTheory.SND]
-   subst_cs;
+   reduceLib.num_compset;
 
 
 fun is_pf_equal_subst pf =
@@ -935,9 +930,8 @@ end;
 
 
 
-val hypothesis_cs = reduceLib.num_compset ();
-val _ = computeLib.add_thms [HYPOTHESIS_RULE_MAP_def, SWAP_REWRITES, PF_TURN_EQ_def, HYPOTHESIS_RULE_COND_THM]
-   hypothesis_cs;
+val hypothesis_cs = computeLib.add_thms [HYPOTHESIS_RULE_MAP_def, SWAP_REWRITES, PF_TURN_EQ_def, HYPOTHESIS_RULE_COND_THM]
+   reduceLib.num_compset;
 
 fun ds_inference_HYPOTHESIS___CONV t =
    let
@@ -1016,11 +1010,13 @@ fun pred_frame___points_to sf1 sf2 =
    end;
 
 
-val frame_cs = reduceLib.num_compset ();
-val _ = listSimps.list_rws frame_cs;
-val _ = computeLib.add_thms [SWAP_REWRITES, pairTheory.FST, listTheory.ALL_DISTINCT] frame_cs;
-val _ = computeLib.add_conv (``$=``, 2, stringLib.string_EQ_CONV) frame_cs;
-val _ = computeLib.add_conv (``$=``, 2, stringLib.char_EQ_CONV) frame_cs;
+val frame_cs =
+  let val cs = reduceLib.num_compset
+      val cs = listSimps.list_rws cs
+      val cs = computeLib.add_thms [SWAP_REWRITES, pairTheory.FST, listTheory.ALL_DISTINCT] cs
+      val cs = computeLib.add_conv (``$=``, 2, stringLib.string_EQ_CONV) cs
+  in computeLib.add_conv (``$=``, 2, stringLib.char_EQ_CONV) cs
+  end;
 
 
 
@@ -1261,12 +1257,14 @@ fun map_restrict_points_to_list_cond_filter pfL cL [] _ = [] |
 
 
 
-val sf_points_to_list_cs = reduceLib.num_compset ();
-val _ = computeLib.add_thms
-[SF_POINTS_TO_LIST_def,
-   SAFE_FILTER_THM, SF_POINTS_TO_LIST_COND_FILTER_def, SF_POINTS_TO_LIST_COND_THM,
-   SWAP_REWRITES] sf_points_to_list_cs;
-val _ = listSimps.list_rws sf_points_to_list_cs;
+val sf_points_to_list_cs =
+  let val cs = reduceLib.num_compset
+      val cs = computeLib.add_thms
+        [SF_POINTS_TO_LIST_def,
+         SAFE_FILTER_THM, SF_POINTS_TO_LIST_COND_FILTER_def, SF_POINTS_TO_LIST_COND_THM,
+         SWAP_REWRITES] cs
+  in listSimps.list_rws cs
+  end;
 
 
 fun ds_inference_NIL_NOT_LVAL___CONV___overeager over t =
@@ -1311,11 +1309,13 @@ val product_term = ``
                   DISJOINT_LIST_PRODUCT
                     (SF_POINTS_TO_LIST_COND_FILTER pfL f2 (sfL:('c, 'b, 'a) ds_spatial_formula list))``;
 
-val partial_cs = reduceLib.num_compset ();
-val _ = computeLib.add_thms [SF_POINTS_TO_LIST_def,
-   SAFE_FILTER_THM, LIST_PRODUCT_def, DISJOINT_LIST_PRODUCT_def, pairTheory.UNCURRY_DEF,
-   SF_POINTS_TO_LIST_COND_FILTER_def, SF_POINTS_TO_LIST_COND_THM, SWAP_REWRITES] partial_cs
-val _ = listSimps.list_rws partial_cs;
+val partial_cs =
+  let val cs = reduceLib.num_compset
+      val cs = computeLib.add_thms [SF_POINTS_TO_LIST_def,
+        SAFE_FILTER_THM, LIST_PRODUCT_def, DISJOINT_LIST_PRODUCT_def, pairTheory.UNCURRY_DEF,
+        SF_POINTS_TO_LIST_COND_FILTER_def, SF_POINTS_TO_LIST_COND_THM, SWAP_REWRITES] cs
+  in listSimps.list_rws cs
+  end;
 
 
 
@@ -1414,8 +1414,7 @@ fun find_strengthen_uneq_pairs___helper accu n1 n2 pfLorg [] pfL = accu
 fun find_strengthen_uneq_pairs cL pfL =
    find_strengthen_uneq_pairs___helper [] 0 0 pfL cL pfL;
 
-val strengthen_cs = reduceLib.num_compset ();
-val _ = computeLib.add_thms [SWAP_REWRITES] strengthen_cs;
+val strengthen_cs = computeLib.add_thms [SWAP_REWRITES] reduceLib.num_compset;
 
 
 fun ds_inference_PRECONDITION_STRENGTHEN___SINGLE_CONV (n1,n2,turn,e1,e2) t =
@@ -1529,11 +1528,13 @@ val ds_inference_PRECONDITION_STRENGTHEN___CONV =
 val t = ``LIST_DS_ENTAILS ([e1],[(e2,e3);(e3,e4);(e4,e2);(e9,e10);(e4,e2);(e9,e10)]) ([pf_unequal e3 e4;pf1;pf_unequal e2 e4; pf3],[sf_ls "g" e5 e7; sf_ls "f" dse_nil e3;sf1;sf_ls "f" e1 e2;sf2]) ([],[])``
 *)
 
-val unroll_cs = reduceLib.num_compset ();
-val _ = listSimps.list_rws unroll_cs;
-val _ = computeLib.add_thms [SWAP_REWRITES, pairTheory.FST, listTheory.ALL_DISTINCT] unroll_cs;
-val _ = computeLib.add_conv (``$=``, 2, stringLib.string_EQ_CONV) unroll_cs;
-val _ = computeLib.add_conv (``$=``, 2, stringLib.char_EQ_CONV) unroll_cs;
+val unroll_cs =
+  let val cs = reduceLib.num_compset
+      val cs = listSimps.list_rws cs
+      val cs = computeLib.add_thms [SWAP_REWRITES, pairTheory.FST, listTheory.ALL_DISTINCT] cs
+      val cs = computeLib.add_conv (``$=``, 2, stringLib.string_EQ_CONV) cs
+  in computeLib.add_conv (``$=``, 2, stringLib.char_EQ_CONV) cs
+  end;
 
 
 

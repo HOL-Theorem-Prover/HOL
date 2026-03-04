@@ -1189,7 +1189,7 @@ Proof
 QED
 
 (*
-val cs = listLib.list_compset()
+val cs = listLib.list_compset
 val () = stringLib.add_string_compset cs;
 val () = pairLib.add_pair_compset cs;
 val () = combinLib.add_combin_compset cs;

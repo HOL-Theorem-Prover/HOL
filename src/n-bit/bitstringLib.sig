@@ -2,7 +2,7 @@ signature bitstringLib =
 sig
     include Abbrev
 
-    val add_bitstring_compset : computeLib.compset -> unit
+    val add_bitstring_compset : computeLib.compset -> computeLib.compset
 
     val BITSTRING_GROUND_CONV : Conv.conv
     val BITSTRING_GROUND_ss : simpLib.ssfrag

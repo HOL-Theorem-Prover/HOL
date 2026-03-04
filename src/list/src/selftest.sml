@@ -131,11 +131,10 @@ val _ = Lib.appi (fn i => fn t =>
                   (``FOLDR $* 1 []``, SOME ``1``)]
 
 local
-  val cs = listSimps.list_compset()
-  val () = List.app (fn f => f cs)
-             [indexedListsSimps.add_indexedLists_compset,
-              numposrepLib.add_numposrep_compset,
-              bitLib.add_bit_compset]
+  val cs = listSimps.list_compset
+           |> indexedListsSimps.add_indexedLists_compset
+           |> numposrepLib.add_numposrep_compset
+           |> bitLib.add_bit_compset
 in
   fun ct(s,inp,out) =
     testutils.convtest
@@ -274,3 +273,25 @@ in
   convtest("simplify with MAP_CONG; get eta-redex?",
            SIMP_CONV (quietly srw_ss()) [Cong MAP_CONG'], t, expected)
 end
+
+fun subst_parse_test (s, t) =
+    (tprint ("Parse \"" ^ s ^ "\"");
+     require_msg (check_result (aconv t))
+                 term_to_string
+                 Parse.Term
+                 [QUOTE s])
+
+val _ = List.app subst_parse_test [
+      ("EL i (l:'a list)", “list$EL i (l:'a list)”),
+      ("EL i (l:bool list)", “list$EL i (l:bool list)”),
+      ("(l:'a list)❲i❳", “list$EL i (l:'a list)”),
+      ("l❲2 ↦ T; 3 ↦ F❳", “list$LUPDATE T 2 (list$LUPDATE F 3 l)”),
+      ("l❲2 ↦ T; 3 ↦ F❳❲i❳",
+       “list$EL i (list$LUPDATE T 2 (list$LUPDATE F 3 l))”)
+    ]
+
+val _ = set_trace "PP.avoid_unicode" 0
+val _ = List.app tpp [
+      "l❲i❳", "l❲2 ↦ T; 3 ↦ F❳",
+      "l❲2 ↦ T; 3 ↦ F❳❲i❳"
+    ]

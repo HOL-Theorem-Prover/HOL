@@ -305,7 +305,7 @@ fun var_occurs M =
 
 val mk_var = Fv
 
-fun inST s = not(null(KernelSig.listName termsig s))
+fun inST s = KernelSig.nameExists termsig s
 
 (*---------------------------------------------------------------------------*
  *   "genvars" are a Lisp-style "gensym" for HOL variables.                  *

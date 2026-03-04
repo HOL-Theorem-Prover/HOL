@@ -51,6 +51,7 @@ sig
   val triv_defn  : defn -> bool
   val fetch_eqns : defn -> thm
 
+  val sort_eqns : term -> term list
 
   val been_stored: string * thm -> unit
   val store      : string * thm * thm -> unit

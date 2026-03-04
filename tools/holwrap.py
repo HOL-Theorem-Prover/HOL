@@ -10,7 +10,7 @@
 #   e.g., pip3 install prompt_toolkit, pexpect
 # Usage: ./holwrap.py hol <hol flags>
 #   or: python3 holwrap.py hol <hol flags>
-#   you could also substitute hol.bare or something here if you wanted.
+#   you could also use "hol --bare" or similar here if you wanted.
 # If hol is not in your path you will need to write the full path instead.
 #   e.g., python3 holwrap.py /path/to/HOL/bin/hol
 

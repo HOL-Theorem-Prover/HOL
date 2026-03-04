@@ -7111,6 +7111,26 @@ Proof
  >> MATCH_MP_TAC FINITE_IMP_SIGMA_FINITE >> art []
 QED
 
+(* Helper lemmas for later results *)
+
+Theorem measure_absolutely_continuous_self:
+    ∀m. measure m ≪ m
+Proof
+    simp[measure_absolutely_continuous_def]
+QED
+
+Theorem measure_absolutely_continuous_trans:
+    ∀m u v. u << m ∧ v << (m_space m,measurable_sets m,u) ⇒ v << m
+Proof
+    simp[measure_absolutely_continuous_def]
+QED
+
+Theorem sigma_finite_measure_space_measure_space:
+    ∀m. sigma_finite_measure_space m ⇒ measure_space m
+Proof
+    simp[sigma_finite_measure_space_def]
+QED
+
 (* References:
 
   [1] Schilling, R.L.: Measures, Integrals and Martingales (Second Edition).

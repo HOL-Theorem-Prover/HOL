@@ -479,7 +479,7 @@ fun gen_disable_syntax rr rup rpp =
   (rr {term_name = monad_lform_name, tok = "do"};
    rr {term_name = monadassign_special, tok = "<-"};
    rr {term_name = monadmlet_special, tok = "<<-"};
-   rup "monadsyntax.print_monads";
+   ignore (rup ("monadsyntax.print_monads", mk_var("x", alpha)));
    rpp "monadsyntax.transform_absyn")
 
 fun disable_monadsyntax () =

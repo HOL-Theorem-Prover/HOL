@@ -13,13 +13,13 @@ holfoot.state: build-state.hol ../holfootLib.uo ../holfootLib.ui ../holfootTheor
 	$(HOLDIR)/bin/hol < $<
 
 holfoot: holfoot.ML corecl.ML holfoot.state $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -b holfoot.state -o $@ corecl.ML $< --exe main
+	$(protect $(HOLDIR)/bin/hol) buildheap -b holfoot.state -o $@ corecl.ML $< --exe main
 
 holfoot-full: holfoot-full.ML corecl.ML holfoot.state $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -b holfoot.state -o $@ corecl.ML $< --exe main
+	$(protect $(HOLDIR)/bin/hol) buildheap -b holfoot.state -o $@ corecl.ML $< --exe main
 
 holfoot-web: holfoot-web.ML corecl.ML holfoot.state $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -b holfoot.state -o $@ corecl.ML $< --exe main
+	$(protect $(HOLDIR)/bin/hol) buildheap -b holfoot.state -o $@ corecl.ML $< --exe main
 
 
 sample_tests.log: holfoot $(wildcard ../EXAMPLES/automatic/*.sf)

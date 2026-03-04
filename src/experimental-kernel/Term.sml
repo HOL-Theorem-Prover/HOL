@@ -38,7 +38,7 @@ val const_table = KernelSig.new_table()
 
 fun prim_delete_const kn = ignore (KernelSig.retire_name(const_table, kn))
 
-fun inST s = not (null (KernelSig.listName const_table s))
+fun inST s = KernelSig.nameExists const_table s
 
 fun prim_new_const (k as {Thy,Name}) ty = let
   val id = KernelSig.insert(const_table, k, ty)

@@ -21,7 +21,6 @@ structure Parse = struct
 end
 open Parse
 
-val _ = set_trace "Unicode" 0;
 open totoTheory reduceLib relationTheory
      listTheory pairTheory optionTheory pred_setLib stringLib;
 

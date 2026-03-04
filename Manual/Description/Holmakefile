@@ -2,7 +2,8 @@ INCLUDES = ../Tools ../../examples/probability $(HOLDIR)/src/integer
 
 TEX_CORES = description title preface system conv drules tactics \
 	theories math definitions libraries misc HolSat PatternMatchesLib \
-        enumfset simplifier latex-munger modern-syntax-chapter
+        enumfset simplifier latex-munger modern-syntax-chapter advanced_tactics \
+        suspension-resumption-subsection
 
 TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex $(patsubst %,%.tex,$(TEX_CORES))
 
@@ -19,6 +20,10 @@ description.pdf: $(TEX_SOURCES)
 	latexmk -pdf description
 
 definitions.tex: definitions.stex $(PS_STUFF)
+	$(PS_COMMAND)
+
+
+advanced_tactics.tex: advanced_tactics.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
 conv.tex: conv.stex $(PS_STUFF)
@@ -81,8 +86,11 @@ modern-syntax.md: modern-syntax.smd $(PS_STUFF)
 modern-syntax-chapter.tex: modern-syntax.md pdf-macros.lua
 	(printf '\\chapter{\\texorpdfstring{\\HOL{} Source File Syntax}{HOL Source File Syntax}}\\label{chap:modern-syntax}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
 
-foo:
-	(echo hello ; echo world) > $@
+suspension-resumption.md: suspension-resumption.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+suspension-resumption-subsection.tex: suspension-resumption.md pdf-macros.lua
+	(printf '\\subsection{Proof Suspension and Resumption}\\label{sec:suspend-resume}\n' ; pandoc --top-level-division=section --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
 
 # This builds figs/0.mps, figs/1.mps, ...
 figures:

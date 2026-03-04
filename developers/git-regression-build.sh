@@ -1,8 +1,12 @@
 #!/bin/bash
 
+from="Michael Norrish <michael.norrish@anu.edu.au>"
+holid="UNKNOWN-HOL"
+gbs="$HOME/generateBuildSummary"
+
 die ()
 {
-    echo "$1" >&2
+    echo "git-regression-build error: $1" | $gbs "$from" "$holid"
     exit 1
 }
 
@@ -45,11 +49,11 @@ else
   die "HOL directory \"$holdir\" doesn't exist or is inaccessible."
 fi
 
-if [ -r std.prelude -a -d sigobj -a -r tools/smart-configure.sml ]
+if [ -r tools/std.prelude -a -d sigobj -a -r tools/smart-configure.sml ]
 then
     :
 else
-    die "Directory \"$holdir\" unlikely (no std.prelude, sigobj or configure.sml)"
+    die "Directory \"$holdir\" unlikely (no tools/std.prelude, sigobj or configure.sml)"
 fi
 
 if [ -d .git ]
@@ -129,7 +133,7 @@ maybeBuild ()
         # reliable in practice.
         if ((now - brtime < 60 * 60 * 24))
         then
-            echo "Another build appears to be running - giving up"
+            die "Another build appears to be running - giving up"
             return 0
         fi
     fi

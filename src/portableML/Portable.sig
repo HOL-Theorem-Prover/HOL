@@ -263,4 +263,5 @@ sig
   end
 
   val reraise : exn -> 'a
+  val display_exn : (exn -> unit) -> exn -> 'a
 end

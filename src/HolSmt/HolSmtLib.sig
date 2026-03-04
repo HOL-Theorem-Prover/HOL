@@ -7,16 +7,19 @@ signature HolSmtLib = sig
   val GENERIC_SMT_TAC : (goal -> SolverSpec.result) -> tactic
 
   val CVC_ORACLE_TAC : tactic
+  val CVC_TAC : tactic
   val YICES_TAC : tactic
   val Z3_ORACLE_TAC : tactic
   val Z3_TAC : tactic
 
   (* The tactics below accept a list of theorems, like metis_tac[] *)
   val cvco_tac : thm list -> tactic
+  val cvc_tac : thm list -> tactic
   val z3_tac : thm list -> tactic
   val z3o_tac : thm list -> tactic
 
   val CVC_ORACLE_PROVE : term -> thm
+  val CVC_PROVE : term -> thm
   val YICES_PROVE : term -> thm
   val Z3_ORACLE_PROVE : term -> thm
   val Z3_PROVE : term -> thm

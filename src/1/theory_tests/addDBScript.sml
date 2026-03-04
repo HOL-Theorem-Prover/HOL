@@ -31,6 +31,8 @@ val bar_def = new_definition("bar_def", “bar x <=> x /\ foo x”);
 
 val _ = delete_const "bar"
 
-val _ = length (DB.definitions "-") = 1 orelse raise Fail "bad DB.definitions"
+val _ = length (DB.definitions "-") = 2 orelse raise Fail "bad DB.definitions"
 
+val _ = new_constant ("foo", “:bool”)
 
+val _ = length (DB.definitions "-") = 2 orelse raise Fail "bad DB.definitions"

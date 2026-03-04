@@ -26,6 +26,18 @@ fun mk_sum_size (f,g,s) =
 fun mk_option_size (f,tm) =
  list_mk_comb(inst [alpha |-> dom f]option_size_tm,[f,tm]);
 
+fun mk_pair_size2 (f,g) =
+ list_mk_comb(inst[alpha |-> dom f, beta |-> dom g] pair_size_tm,[f,g]);
+
+fun mk_min_pair_size2 (f,g) =
+ list_mk_comb(inst[alpha |-> dom f, beta |-> dom g] min_pair_size_tm,[f,g]);
+
+fun mk_sum_size2 (f,g) =
+ list_mk_comb(inst[alpha |-> dom f, beta |-> dom g] sum_size_tm,[f,g]);
+
+fun mk_full_sum_size2 (f,g) =
+ list_mk_comb(inst[alpha |-> dom f, beta |-> dom g] full_sum_size_tm,[f,g]);
+
 val dest_bool_size = dest_monop bool_size_tm  (ERR "dest_bool_size" "");
 val dest_one_size = dest_monop one_size_tm    (ERR "dest_one_size" "");
 val dest_itself_size = dest_monop itself_size_tm (ERR "dest_itself_size" "");

@@ -109,3 +109,8 @@ tac
 ) HOL__GOAL__foo));
 
 val _ = Parse.overload_on("", term);
+val bar = markerLib.resume{label_name="label",suspension_name="foo"}(BasicProvers.with_simpset_updates (simpLib.remove_simps ["AND_CLAUSES"]) (fn HOL__GOAL__foo => (
+  tactic
+) HOL__GOAL__foo))
+val foo = boolLib.finalise_suspended_thm(DB_dtype.mkloc ("foo.sml", 33, true))"foo"
+val bar = boolLib.finalise_suspended_thm(DB_dtype.mkloc ("foo.sml", 34, true))"bar"

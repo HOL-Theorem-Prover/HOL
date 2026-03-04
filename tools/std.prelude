@@ -1,0 +1,243 @@
+(* tools/std.prelude - Moscow ML Interactive Session Prelude
+   ==========================================================
+
+   This file is loaded when starting an interactive HOL session with Moscow ML.
+   It establishes the basic environment including:
+   - Loading the HOL kernel and basic libraries
+   - Installing pretty-printers for terms, types, theorems, etc.
+   - Setting up help paths
+   - Defining the HOL_Interactive structure
+
+   For Poly/ML, the equivalent is tools-poly/prelude.ML.
+
+   After this file loads, one of the following "end-init" files is loaded:
+   - tools/end-init.sml (bare HOL) - just resets quietdec
+   - tools/end-init-boss.sml (full HOL) - loads bossLib and extras
+*)
+
+val _ = quietdec := true;
+
+(* ----------------------------------------------------------------------
+    Establish the basic environment and bring in the HOL kernel
+   ---------------------------------------------------------------------- *)
+load "PP";
+structure MosmlPP = PP
+
+(* ----------------------------------------------------------------------
+    Set interactive flag to true
+   ---------------------------------------------------------------------- *)
+
+val _ = load "Globals";
+val _ = Globals.interactive := true;
+
+val _ = app load
+  ["Mosml", "Process", "Path", "boolLib", "proofManagerLib", "Arbrat"];
+
+open HolKernel Parse boolLib proofManagerLib;
+
+(* Loading HolKernel installs the "standard" set of infixes, which are
+   set up in src/0/Overlay.sml *)
+
+(*---------------------------------------------------------------------------*
+ *   Install prettyprinters                                                  *
+ *---------------------------------------------------------------------------*)
+
+local
+  fun pp_from_stringfn sf pps x = PP.add_string (sf x)
+  fun gprint0 g t = let
+    val tyg = Parse.type_grammar()
+    val (_, ppt) = Parse.print_from_grammars (tyg,g)
+  in
+    ppt t
+  end
+  val gprint = (fn g => fn t => smpp.lift (gprint0 g) t)
+  fun ppg g = Parse.mlower (term_grammar.prettyprint_grammar gprint g)
+  fun ppgrules grs =
+    Parse.mlower (term_grammar.prettyprint_grammar_rules gprint grs)
+  fun timepp t = PP.add_string (Time.toString t ^ "s")
+  fun locpp l = PP.add_string (locn.toShortString l)
+  structure MPP = MosmlPP
+  open PrettyImpl
+in
+  fun mosmlpp ppfn pps x = let
+    val slist = ref ([] : string list)
+    fun output_slist () = (app (MPP.add_string pps) (List.rev (!slist));
+                           slist := [])
+    fun consume_string s = let
+      open Substring
+      val (pfx,sfx) = splitl (fn c => c <> #"\n") (full s)
+    in
+      if size sfx = 0 then slist := s :: !slist
+      else
+        (output_slist();
+         MPP.add_newline pps;
+         if size sfx > 1 then consume_string (string (triml 1 sfx))
+         else ())
+    end
+  in
+    MPP.begin_block pps MPP.INCONSISTENT 0;
+    HOLPP.prettyPrint(consume_string, !Globals.linewidth) (ppfn x);
+    MPP.end_block pps;
+    output_slist()
+  end
+  val _ = installPP (mosmlpp Pretype.pp_pretype)
+  val _ = installPP (mosmlpp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
+  val _ = installPP (mosmlpp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
+  val _ = installPP (mosmlpp Hol_pp.pp_thm)
+  val _ = installPP (mosmlpp Hol_pp.pp_theory)
+  val _ = installPP (mosmlpp type_grammar.prettyprint_grammar)
+  val _ = installPP (mosmlpp ppg)
+  val _ = installPP (mosmlpp ppgrules)
+  val _ = installPP (mosmlpp proofManagerLib.pp_proof)
+  val _ = installPP (mosmlpp proofManagerLib.pp_proofs)
+  val _ = installPP (mosmlpp Rewrite.pp_rewrites)
+  val _ = installPP (mosmlpp TypeBasePure.pp_tyinfo)
+  val _ = installPP (mosmlpp Arbnum.pp_num)
+  val _ = installPP (mosmlpp Arbint.pp_int)
+  val _ = installPP (mosmlpp Arbrat.pp_rat)
+  val _ = installPP (mosmlpp timepp)
+  val _ = installPP (mosmlpp locpp)
+  val _ = installPP (mosmlpp Feedback.pp_trace_elt)
+  val _ = installPP (mosmlpp Feedback.pp_hol_error)
+end;
+
+
+(*---------------------------------------------------------------------------*
+ * Set up the help paths.                                                    *
+ *---------------------------------------------------------------------------*)
+
+local
+  open Path
+  fun HELP s = toString(fromString(concat(HOLDIR, concat("help",s))))
+  val SIGOBJ = toString(fromString(concat(HOLDIR, "sigobj")))
+in
+  val () = indexfiles := HELP "HOL.Help" :: !indexfiles
+  val () = helpdirs   := HOLDIR :: SIGOBJ :: !helpdirs
+  val () = Help.specialfiles :=
+             {file = "help/Docfiles/HOL.help",
+              term = "hol", title = "HOL Overview"}
+             :: !Help.specialfiles
+end
+
+
+(*---------------------------------------------------------------------------*
+ *  Set parameters for parsing and help.                                     *
+ *---------------------------------------------------------------------------*)
+
+val _ = quotation := true
+val _ = Help.displayLines := 60;
+
+(*---------------------------------------------------------------------------*
+ *  Set up compile_theory function                                           *
+ *---------------------------------------------------------------------------*)
+
+fun compile_theory () = let
+  val name = current_theory()
+  val signame = name^"Theory.sig"
+  val smlname = name^"Theory.sml"
+  fun readable f = FileSys.access(f, [FileSys.A_READ])
+in
+  if readable signame andalso readable smlname then let
+  in
+     Meta.compileStructure ["Overlay"] signame;
+     Meta.compileStructure ["Overlay"] smlname;
+     print ("Compiled "^name^" theory files.\n")
+  end
+  else
+     print "No theory files on disk; perhaps export_theory() required.\n"
+end
+
+
+(*---------------------------------------------------------------------------*
+ * Print a banner.                                                           *
+ *---------------------------------------------------------------------------*)
+
+val build_stamp =
+ let open TextIO Path
+     val stampstr = openIn (concat(HOLDIR, concat("tools", "build-stamp")))
+     val stamp = inputAll stampstr before closeIn stampstr
+ in
+     stamp
+ end handle _ => "";
+
+val exit_string =
+    if Systeml.OS = "winNT" then
+      "To exit type <Control>-Z <Return>  (*not* quit();)"
+    else
+      "To exit type <Control>-D (*not* quit();)"
+
+
+(* ----------------------------------------------------------------------
+    if present, look at a Holmakefile in the current directory to see
+    if we should extend the loadPath
+   ---------------------------------------------------------------------- *)
+
+structure HOL_Interactive : sig
+  val toggle_quietdec : unit -> bool
+  val amquiet : unit -> bool
+  val print_banner : unit -> unit
+  val setquietp : bool -> bool (* returns old value *)
+  val start_open : unit -> unit
+  val end_open : unit -> unit
+  val noisy_open : bool ref
+end =
+struct
+  val quietp_stack = ref [true]
+  fun toggle_quietdec () = (
+    Meta.quietdec := not (!Meta.quietdec) ;
+    !Meta.quietdec
+  )
+  fun amquiet () = !Meta.quietdec
+  val noisy_open = ref false
+  fun print_banner () =
+    TextIO.output(TextIO.stdOut,
+     "\n---------------------------------------------------------------------\n"
+     ^"     HOL4 ["
+     ^Globals.release^" "^Lib.int_to_string(Globals.version)
+     ^" ("^Thm.kernelid^", "^build_stamp
+     ^")]\n\n"
+     ^"     For introductory HOL help, type: help \"hol\";\n"
+     ^"     "^exit_string
+     ^"\n---------------------------------------------------------------------\
+      \\n\n")
+  fun setquietp b = if b = amquiet() then b else (toggle_quietdec(); not b)
+  fun start_open () =
+      let
+        val old = amquiet()
+        val verdict = old orelse not (!noisy_open)
+      in
+        ignore (setquietp verdict);
+        quietp_stack := old :: (!quietp_stack)
+      end
+  fun end_open () = (
+    setquietp (hd (!quietp_stack));
+    quietp_stack := tl (!quietp_stack)
+  )
+end;
+
+val _ = HOL_Interactive.print_banner()
+
+local
+  open Path
+in
+  val _ = loadPath := concat (HOLDIR, concat ("tools", "Holmake")) :: !loadPath
+  val _ = load "ReadHMF.uo"
+  val _ = loadPath := tl (!loadPath)
+end;
+
+val _ = let
+  val lpsize0 = length (!loadPath)
+in
+  ReadHMF.extend_path_with_includes {verbosity = 0, lpref = loadPath};
+  if length (!loadPath) <> lpsize0 then
+    print ("** Load path (see loadPath variable) now contains " ^
+           Int.toString (length (!loadPath)) ^
+           " entries\n** after consulting Holmakefiles\n\n")
+  else ()
+end;
+
+use (Path.concat(Globals.HOLDIR, "tools/check-intconfig.sml"));
+
+(* Local variables: *)
+(* mode: sml *)
+(* end: *)

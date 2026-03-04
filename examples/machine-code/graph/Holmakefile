@@ -31,7 +31,7 @@ BARE_THYS = $(HOLDIR)/examples/l3-machine-code/common/utilsLib \
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/hol) buildheap -o $(HOLHEAP) $(BARE_THYS)
 endif
 
 ifeq ($(KERNELID),otknl)

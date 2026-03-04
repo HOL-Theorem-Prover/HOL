@@ -9854,6 +9854,30 @@ Proof
  >> MATCH_MP_TAC flat_areas_countable >> art []
 QED
 
+(* Helper lemmas for later results *)
+
+Theorem FN_PLUS_MUL:
+    ∀f g. (λx. f x * g x)⁺ = (λx. f⁺ x * g⁺ x + f⁻ x * g⁻ x)
+Proof
+    rw[FUN_EQ_THM,FN_PLUS_ALT',extreal_max_def,fn_minus_def,extreal_lt_def] >>
+    Cases_on `0 ≤ f x` >> Cases_on `0 ≤ g x` >> simp[]
+    >- simp[le_mul] >> fs[GSYM extreal_lt_def]
+    >- (Cases_on `f x = 0` >> simp[] >> `0 < f x` by simp[lt_le] >> simp[GSYM extreal_not_lt,mul_lt])
+    >- (Cases_on `g x = 0` >> simp[] >> `0 < g x` by simp[lt_le] >> simp[GSYM extreal_not_lt,mul_lt2])
+    >- simp[lt_mul_neg,le_lt,neg_mul2]
+QED
+
+Theorem FN_MINUS_MUL:
+    ∀f g. (λx. f x * g x)⁻ = (λx. f⁺ x * g⁻ x + f⁻ x * g⁺ x)
+Proof
+    rw[FUN_EQ_THM,FN_PLUS_ALT',extreal_max_def,fn_minus_def,extreal_lt_def] >>
+    Cases_on `0 ≤ f x` >> Cases_on `0 ≤ g x` >> simp[]
+    >- simp[le_mul] >> fs[GSYM extreal_lt_def]
+    >- (Cases_on `f x = 0` >> simp[] >> `0 < f x` by simp[lt_le] >> simp[mul_lt,mul_rneg])
+    >- (Cases_on `g x = 0` >> simp[] >> `0 < g x` by simp[lt_le] >> simp[mul_lt2,mul_lneg])
+    >- (simp[lt_le] >> simp[GSYM extreal_not_lt,lt_mul_neg])
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Backwards compatibility: export all theorems moved to extreal_baseTheory  *)
 (* ------------------------------------------------------------------------- *)

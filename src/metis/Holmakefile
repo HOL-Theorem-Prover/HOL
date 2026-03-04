@@ -8,7 +8,7 @@ ifeq ($(KERNELID),otknl)
 all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 endif
 
-EXTRA_CLEANS = metis-selftest.log
+EXTRA_CLEANS = metis-selftest.log selftest.exe
 
 ifdef HOLSELFTESTLEVEL
 all: metis-selftest.log

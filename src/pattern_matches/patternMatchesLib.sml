@@ -3268,22 +3268,23 @@ fun PMATCH_COMPLETE_CONV_WITH_EXH_PROOF use_guards =
 
 (*
 
+val _ = temp_enable_pmatch()
+
 val tm = ``(P2 /\ Q ==> (
-  (case xx of
+  (pmatch xx of
     | (x, y::ys) => (x + y)
     | (0, []) => 9
     | (x, []) when x > 3 => x
     | (x, []) => 0) = 5))``
 
 val tm = ``
-  (case xx of
+  (pmatch xx of
     | (x, y::ys) => (x + y)
     | (0, []) => 9
     | (x, []) when x > 3 => x
     | (x, []) => 0) = 5``
 
-val _ = ENABLE_PMATCH_CASES()
-val OPT_PAIR_def = TotalDefn.Define `OPT_PAIR xy = case xy of
+val OPT_PAIR_def = TotalDefn.Define `OPT_PAIR xy = pmatch xy of
  | (NONE, _) => NONE
  | (_, NONE) => NONE
  | (SOME x, SOME y) => SOME (x, y)`

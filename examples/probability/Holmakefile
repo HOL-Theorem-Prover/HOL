@@ -21,7 +21,7 @@ FULL_OBJPATHS = $(patsubst %,$(HOLDIR)/src/%.uo,$(OBJS)) \
 all: $(HOLHEAP)
 
 $(HOLHEAP): $(FULL_OBJPATHS) $(HOLDIR)/bin/hol.state
-	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $@ \
+	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) -o $@ \
             -b $(protect $(HOLDIR)/src/real/analysis/realheap) $(FULL_OBJPATHS)
 endif
 

@@ -260,6 +260,7 @@ in
    "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n"),
    "val MV =" -->       ("val MV = "^quote MV^"\n"),
    "val CP =" -->       ("val CP = "^quote CP^"\n"),
+   "val SHASUM ="   --> ("val SHASUM = "^quote SHASUM^"\n"),
    "val haveWord64 ="-->("val haveWord64 = "^
                          Bool.toString
                            (List.exists (fn (s, _) => s = "Word64")
@@ -428,9 +429,9 @@ val _ = work_in_dir
 (* Holmake *)
 val _ = work_in_dir
           "Holmake" (fullPath [HOLDIR, "tools", "Holmake", "poly"])
-          (fn () => (OS.FileSys.chDir "..";
+          (fn () => (OS.FileSys.chDir "../../parsing";
                      systeml [lexer, "HolLex"];
-                     OS.FileSys.chDir "poly";
+                     OS.FileSys.chDir "../Holmake/poly";
                      polyc_compile (SOME "../mlton/Holmake.mlb")
                                    "poly-Holmake.ML" hmakebin))
 
@@ -439,7 +440,7 @@ val _ = work_in_dir "unquote" qfdir
                     (fn () => (polyc_compile NONE "poly-unquote.ML" qfbin))
 
 (* holdeptool *)
-val _ = work_in_dir "holdeptool" (fullPath [HOLDIR, "tools", "Holmake"])
+val _ = work_in_dir "holdeptool" (fullPath [HOLDIR, "tools", "Holmake", "poly"])
                     (fn () =>
                         polyc_compile NONE
                           "poly-holdeptool.ML"
@@ -447,20 +448,15 @@ val _ = work_in_dir "holdeptool" (fullPath [HOLDIR, "tools", "Holmake"])
 
 (* build *)
 val _ = work_in_dir "build" toolsdir
-                    (fn () => polyc_compile (SOME "../tools/build.mlb")
+                    (fn () => polyc_compile (SOME "../tools/build/build.mlb")
                                             "poly-build.ML" buildbin)
 
-(* heapname *)
+(* hol - the main HOL executable *)
+(* Note: heapname functionality is now available via 'hol heapname' subcommand *)
 val _ = work_in_dir
-          "heapname" toolsdir
-          (fn () => polyc_compile NONE "heapname.ML"
-                                        (fullPath [HOLDIR,"bin","heapname"]))
-
-(* buildheap *)
-val _ = work_in_dir
-          "buildheap" toolsdir
-          (fn () => polyc_compile NONE "buildheap.ML"
-                                        (fullPath [HOLDIR, "bin", "buildheap"]))
+          "hol" toolsdir
+          (fn () => polyc_compile NONE "hol.ML"
+                                        (fullPath [HOLDIR, "bin", "hol"]))
 
 (* genscriptdep *)
 val _ = work_in_dir "genscriptdep"
@@ -548,22 +544,14 @@ val _ =
       Generate shell scripts for running HOL.
  ---------------------------------------------------------------------------*)
 
-val _ =
-   let
-      val _ = echo "Generating bin/hol."
-      val target      = fullPath [holdir, "bin", "hol.bare"]
-      val target_boss = fullPath [holdir, "bin", "hol"]
-      val hol0_heap   = protect(fullPath[HOLDIR,"bin", "hol.state0"])
-      val hol_heapcalc=
-            "`" ^ protect(fullPath[HOLDIR,"bin","heapname"]) ^ "`"
-      fun TP s = protect(fullPath[HOLDIR, "tools-poly", s])
-      val prelude = ["Arbint", "Arbrat", TP "prelude.ML"]
-      val prelude2 = prelude @ [TP "prelude2.ML"]
-   in
-      (* "unquote" scripts use the unquote executable to provide nice
-         handling of double-backquote characters *)
-      emit_hol_script target hol0_heap prelude;
-      emit_hol_script target_boss hol_heapcalc prelude2
-   end
+(* Shell wrapper scripts for bin/hol and bin/hol.bare are no longer needed.
+   The bin/hol executable now handles all modes directly via subcommands:
+   - hol repl (default)
+   - hol --bare (for minimal heap)
+   - hol lsp
+   - hol buildheap
+   - hol run
+   - hol heapname
+*)
 
 val _ = print "\nFinished configuration!\n"

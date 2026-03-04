@@ -3,10 +3,10 @@
 *)
 Theory cv_std
 Ancestors
-  cv cv_type arithmetic words cv_rep cv_prim pair list option sum
+  cv cv_type arithmetic words byte cv_rep cv_prim pair list option sum
   alist indexedLists rich_list sptree finite_set
 Libs
-  dep_rewrite cv_typeLib cv_repLib cv_transLib
+  dep_rewrite wordsLib cv_typeLib cv_repLib cv_transLib
 
 Overload Num[local] = “cv$Num”
 Overload Pair[local] = “cv$Pair”
@@ -258,6 +258,23 @@ QED
 
 val res = cv_trans UNZIP_eq
 
+val lcp2_pre_def = cv_trans_pre "lcp2_pre" rich_listTheory.lcp2_thm;
+
+Theorem lcp2_pre[cv_pre]:
+  !xs ys. lcp2_pre xs ys
+Proof
+  Induct \\ rw[] \\ simp[Once lcp2_pre_def] \\
+  Cases_on `ys` \\ simp[Once lcp2_pre_def]
+QED
+
+val lcp_pre_def = cv_trans_pre "lcp_pre" rich_listTheory.lcp_oneline;
+
+Theorem lcp_pre[cv_pre]:
+  lcp_pre ls
+Proof
+  completeInduct_on `LENGTH ls` \\ rw[Once lcp_pre_def]
+QED
+
 Definition genlist_def:
   genlist i f 0 = [] /\
   genlist i f (SUC n) = f i :: genlist (i+1:num) f n
@@ -477,6 +494,17 @@ Proof
   \\ rw[finite_mapTheory.DOMSUB_FLOOKUP_THM]
 QED
 
+Theorem cv_rep_FUNION[cv_rep]:
+  from_fmap f (FUNION m1 m2) = cv_union (from_fmap f m1) (from_fmap f m2)
+Proof
+  rw[from_fmap_def, GSYM (theorem "cv_union_thm")]
+  \\ AP_TERM_TAC
+  \\ DEP_REWRITE_TAC[sptreeTheory.spt_eq_thm]
+  \\ simp[sptreeTheory.wf_union, sptreeTheory.wf_fromAList]
+  \\ simp[sptreeTheory.lookup_union, sptreeTheory.lookup_fromAList]
+  \\ simp[finite_mapTheory.FLOOKUP_FUNION]
+QED
+
 (*----------------------------------------------------------*
    num fset
  *----------------------------------------------------------*)
@@ -610,3 +638,137 @@ Proof
   \\ Cases_on`x` \\ Cases_on`z` \\ gvs[]
   \\ gvs[Q.SPEC`Pair x y`cv_size'_def]
 QED
+
+(*----------------------------------------------------------*
+   byte: word_of_bytes / word_to_bytes
+ *----------------------------------------------------------*)
+
+val _ = cv_trans num_of_bytes_def;
+val _ = cv_trans bytes_of_num_def;
+val _ = cv_trans be_bytes_def;
+
+(* Theorem connecting word_of_bytes (little-endian, starting at 0w) to num_of_bytes.
+   This can be instantiated at any word type and then cv_trans'd. *)
+Theorem word_of_bytes_le_eq_num_of_bytes:
+  8 ≤ dimindex(:'a) ∧ divides 8 (dimindex(:'a)) ⇒
+  word_of_bytes_le bs = n2w (num_of_bytes bs) : 'a word
+Proof
+  rewrite_tac[word_of_bytes_le_def] \\ strip_tac
+  \\ drule_then (drule_then irule) word_eq_of_get_byte
+  \\ qexists_tac `F`
+  \\ qx_gen_tac `j` \\ strip_tac
+  \\ drule_then drule get_byte_word_of_bytes_le
+  \\ simp[] \\ disch_then kall_tac
+  \\ DEP_REWRITE_TAC[first_byte_at_0w]
+  \\ conj_tac >- gvs[DIV_LE_X,dimindex_lt_dimword]
+  \\ DEP_REWRITE_TAC[get_byte_n2w_le]
+  \\ simp[]
+  \\ qmatch_assum_abbrev_tac`j < k`
+  \\ `dimword(:'a) = 256 ** k`
+  by (simp[dimword_def] \\ gvs[dividesTheory.DIV_MULT_EQ]
+      \\ qpat_x_assum`_ * _ = _`(SUBST_ALL_TAC o SYM)
+      \\ simp[EXP_EXP_MULT] )
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac`x MOD _ DIV _`
+  \\ qspecl_then[`x`,`256 ** j`,`256 ** (k - j)`]mp_tac DIV_MOD_MOD_DIV
+  \\ impl_tac >- rw[]
+  \\ simp[GSYM EXP_ADD]
+  \\ disch_then $ SUBST_ALL_TAC o SYM
+  \\ qmatch_goalsub_abbrev_tac`l = _`
+  \\ Cases_on`l` \\ simp[dimword_8]
+  \\ qspecl_then[`256 ** (k - j - 1)`,`256`]mp_tac MOD_MULT_MOD
+  \\ impl_tac >- gvs[]
+  \\ simp[GSYM EXP, ADD1]
+  \\ disch_then kall_tac
+  \\ simp[Abbr`x`, num_of_bytes_DIV_EXP_MOD]
+  \\ rw[] \\ gvs[]
+QED
+
+(* Theorem connecting word_of_bytes (big-endian, starting at 0w) to num_of_bytes via be_bytes *)
+Theorem word_of_bytes_be_eq_num_of_bytes:
+  8 ≤ dimindex(:'a) ∧ divides 8 (dimindex (:'a)) ⇒
+  word_of_bytes_be bs =
+    n2w (num_of_bytes (be_bytes (dimindex(:'a) DIV 8) [] bs)) : 'a word
+Proof
+  rewrite_tac[word_of_bytes_be_def] \\ strip_tac
+  \\ drule_then (drule_then irule) word_eq_of_get_byte
+  \\ qexists_tac `T`
+  \\ qx_gen_tac `j` \\ strip_tac
+  \\ drule_then drule get_byte_word_of_bytes_be
+  \\ simp[] \\ disch_then kall_tac
+  \\ DEP_REWRITE_TAC[first_byte_at_0w]
+  \\ qmatch_assum_abbrev_tac `j < k`
+  \\ conj_tac >- gvs[DIV_LE_X, dimindex_lt_dimword, Abbr`k`]
+  \\ DEP_REWRITE_TAC[get_byte_n2w_be]
+  \\ simp[LENGTH_be_bytes]
+  \\ `dimword(:'a) = 256 ** k`
+  by (simp[dimword_def] \\ gvs[dividesTheory.DIV_MULT_EQ]
+      \\ qpat_x_assum`_ * _ = _`(SUBST_ALL_TAC o SYM)
+      \\ simp[EXP_EXP_MULT] )
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac `x MOD _ DIV _`
+  \\ qspecl_then[`x`,`256 ** (k - 1 - j)`,`256 ** (j + 1)`]mp_tac DIV_MOD_MOD_DIV
+  \\ impl_tac >- rw[]
+  \\ simp[GSYM EXP_ADD]
+  \\ disch_then $ SUBST_ALL_TAC o SYM
+  \\ qmatch_goalsub_abbrev_tac `l = _`
+  \\ Cases_on `l` \\ simp[dimword_8]
+  \\ qspecl_then[`256 ** j`,`256`]mp_tac MOD_MULT_MOD
+  \\ impl_tac >- gvs[]
+  \\ simp[GSYM EXP, ADD1]
+  \\ disch_then kall_tac
+  \\ simp[Abbr`x`, num_of_bytes_DIV_EXP_MOD, LENGTH_be_bytes]
+  \\ simp[be_bytes_thm, EL_REVERSE, LENGTH_TAKE_EQ, EL_TAKE, EL_APPEND_EQN, EL_REPLICATE]
+  \\ rw[] \\ gvs[PRE_SUB1]
+QED
+
+(* Theorem connecting word_to_bytes (little-endian) to bytes_of_num.
+   No precondition needed since output length is fixed by dimindex. *)
+Theorem word_to_bytes_le_eq_bytes_of_num:
+  word_to_bytes_le (w:'a word) = bytes_of_num (dimindex(:'a) DIV 8) (w2n w)
+Proof
+  rewrite_tac[word_to_bytes_le_def] \\
+  reverse $ Cases_on`8 ≤ dimindex(:'a)` >- (
+    gvs[GSYM DIV_EQ_0, NOT_LESS_EQUAL]
+    \\ rw[bytes_of_num_def, word_to_bytes_def, word_to_bytes_aux_def])
+  \\ rw[word_to_bytes_def, LIST_EQ_REWRITE]
+  \\ rw[EL_bytes_of_num, EL_word_to_bytes_aux]
+  \\ rw[get_byte_n2w_le]
+QED
+
+(* Theorem connecting word_to_bytes (big-endian) to bytes_of_num.
+   No precondition needed since output length is fixed by dimindex. *)
+Theorem word_to_bytes_be_eq_bytes_of_num:
+  word_to_bytes_be (w:'a word) =
+    REVERSE (bytes_of_num (dimindex(:'a) DIV 8) (w2n w))
+Proof
+  rewrite_tac[word_to_bytes_be_def] \\
+  reverse $ Cases_on`8 ≤ dimindex(:'a)` >- (
+    gvs[GSYM DIV_EQ_0, NOT_LESS_EQUAL]
+    \\ rw[bytes_of_num_def, word_to_bytes_def, word_to_bytes_aux_def])
+  \\ rw[word_to_bytes_def, LIST_EQ_REWRITE, EL_REVERSE, PRE_SUB1]
+  \\ rw[EL_bytes_of_num, EL_word_to_bytes_aux]
+  \\ rw[get_byte_n2w_be]
+QED
+
+(* Translate at common word sizes: 32 and 64 bits *)
+val () = cv_trans (word_of_bytes_le_eq_num_of_bytes
+                   |> INST_TYPE [alpha |-> “:32”]
+                   |> SRULE[dividesTheory.compute_divides]);
+val () = cv_trans (word_of_bytes_le_eq_num_of_bytes
+                   |> INST_TYPE [alpha |-> “:64”]
+                   |> SRULE[dividesTheory.compute_divides]);
+val () = cv_trans (word_of_bytes_be_eq_num_of_bytes
+                   |> INST_TYPE [alpha |-> “:32”]
+                   |> SRULE[dividesTheory.compute_divides]);
+val () = cv_trans (word_of_bytes_be_eq_num_of_bytes
+                   |> INST_TYPE [alpha |-> “:64”]
+                   |> SRULE[dividesTheory.compute_divides]);
+val () = cv_trans (word_to_bytes_le_eq_bytes_of_num
+                   |> INST_TYPE [alpha |-> “:32”]);
+val () = cv_trans (word_to_bytes_le_eq_bytes_of_num
+                   |> INST_TYPE [alpha |-> “:64”]);
+val () = cv_trans (word_to_bytes_be_eq_bytes_of_num
+                   |> INST_TYPE [alpha |-> “:32”]);
+val () = cv_trans (word_to_bytes_be_eq_bytes_of_num
+                   |> INST_TYPE [alpha |-> “:64”])

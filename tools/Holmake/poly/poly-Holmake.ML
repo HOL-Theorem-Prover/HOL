@@ -15,12 +15,12 @@ fun useS f = use ("../" ^ f ^ ".sml")
 
 val _ = use "../hmcore.ML";
 
-val _ = useC "tailbuffer";
-val _ = useC "GetOpt";
-val _ = useS "FunctionalRecordUpdate";
-val _ = useC "HM_Core_Cline";
-val _ = useC "HM_DepGraph";
-val _ = useC "HM_GraphBuildJ1";
+val _ = useC "util/tailbuffer";
+val _ = (use "../../util/GetOpt.sig"; use "../../util/GetOpt.sml");
+val _ = use "../../util/FunctionalRecordUpdate.sml";
+val _ = useC "core/HM_Core_Cline";
+val _ = useC "deps/HM_DepGraph";
+val _ = useC "core/HM_GraphBuildJ1";
 val _ = useC "poly/HM_Cline";
 val _ = useC "poly/GraphExtra";
 val _ = useC "poly/HM_BaseEnv";
@@ -29,7 +29,7 @@ val _ = useC "poly/ProcessMultiplexor";
 val _ = useC "poly/MB_Monitor";
 val _ = useS "poly/multibuild";
 val _ = useS "poly/BuildCommand";
-val _ = useS "Holmake";
+val _ = useS "core/Holmake";
 
 val die_with = Holmake.die_with
 

@@ -1,13 +1,11 @@
 open HolKernel Parse boolLib testutils
 
 local
-val sorteval = let
-  val cs = listLib.list_compset()
-  val _ = pairLib.add_pair_compset cs;
-  val _ = sortingLib.add_sorting_compset cs;
-in
-  computeLib.CBV_CONV cs
-end
+val sorteval =
+  computeLib.CBV_CONV
+    (computeLib.copy listLib.list_compset
+     |> pairLib.add_pair_compset
+     |> sortingLib.add_sorting_compset)
 val sort = ``QSORT $<``
 
 fun sorttest ns =

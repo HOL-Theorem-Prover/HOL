@@ -56,3 +56,5 @@ install: hol4-floating-point.thy hol4-floating-point.art
 
 binary_ieee.art: binary_ieee.otd
 endif
+
+EXTRA_CLEANS = selftest.exe floating-point-selftest.log

@@ -1033,9 +1033,9 @@ in
   term_grammar_changed := true
 end
 
-fun temp_remove_user_printer name = let
+fun temp_remove_user_printer namepat = let
   val (newg, printfnopt) =
-      term_grammar.remove_user_printer name (term_grammar())
+      term_grammar.remove_user_printer namepat (term_grammar())
 in
   the_term_grammar := newg;
   term_grammar_changed := true;
@@ -1046,12 +1046,8 @@ end
 val add_user_printer =
   mk_perm (fn (s,t) => [ADD_UPRINTER {codename=s,pattern=t}])
 
-fun remove_user_printer name = let
-in
-  update_grms "remove_user_printer"
-              ("(ignore o temp_remove_user_printer)", mlquote name);
-  temp_remove_user_printer name
-end;
+val remove_user_printer =
+    mk_perm (fn (n,p) => [RM_UPRINTER {codename=n,pattern=p}])
 
 
 (* ----------------------------------------------------------------------

@@ -484,12 +484,19 @@ fun indSuffix stem =
                else stem ^ s
     end
 
+(*---------------------------------------------------------------------------*)
+(* If theorems to be stored have been proved with cheats or oracles, say so. *)
+(* Otherwise say nothing.                                                    *)
+(*---------------------------------------------------------------------------*)
 
 fun store_at loc (stem,eqs,ind) =
   let val eqs_bind = defSuffix stem
       val ind_bind = indSuffix stem
-      fun save x = Feedback.trace ("Theory.save_thm_reporting", 0)
-                                  (save_thm_at loc) x
+      fun save x =
+         case Theory.oracle_string_of (snd x)
+          of NONE => Feedback.trace ("Theory.save_thm_reporting", 0)
+                                    (save_thm_at loc) x
+           | SOME _ => save_thm_at loc x
       val   _  = save (ind_bind, ind)
       val eqns = save (eqs_bind, eqs)
       val _ = add_defs_to_EVAL [(eqs_bind,eqs)]
@@ -1093,7 +1100,7 @@ fun pairf (stem, eqs0) =
      then (tuple_args [(f, (f, argtys))] eqs0, stem, I)
    else
      let
-       val stem'name = stem ^ "_tupled"
+       val stem'name = stem ^ DefnBase.tupled_suffix
        val rng_ty = type_of rhs
        val tuple_dom = list_mk_prod_type argtys
        val stem' = mk_var (stem'name, tuple_dom --> rng_ty)
@@ -1125,7 +1132,7 @@ fun pairf (stem, eqs0) =
                    (SPEC tm (Rewrite.PURE_REWRITE_RULE [GSYM def] induction)))
              end
          in
-           (rules', induction') before Theory.delete_const stem'name
+           (rules', induction')
          end
      in
        (tuple_args [(f, (stem', argtys))] eqs0, stem'name, untuple_args)

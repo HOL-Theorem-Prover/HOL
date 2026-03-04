@@ -30,5 +30,5 @@ sig
     val REDUCE_RULE : thm -> thm
     val REDUCE_TAC  : tactic
 
-    val num_compset : unit -> computeLib.compset
+    val num_compset : computeLib.compset
 end

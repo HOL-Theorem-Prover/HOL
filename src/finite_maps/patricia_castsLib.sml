@@ -38,13 +38,13 @@ fun mk_word_ptree (n, t) =
 (* ------------------------------------------------------------------------- *)
 
 val the_ptree_compset =
-  new_compset [THE_PTREE_def, THE_PTREE_SOME_PTREE, WordEmpty_def];
+  ref (new_compset [THE_PTREE_def, THE_PTREE_SOME_PTREE, WordEmpty_def]);
 
-val THE_PTREE_CONV = CBV_CONV the_ptree_compset;
+fun THE_PTREE_CONV tm = CBV_CONV (!the_ptree_compset) tm;
 
 fun add_cast_ptree_compset compset =
 let open listTheory pred_setTheory in
-  add_thms [IMAGE_EMPTY, IMAGE_INSERT, IMAGE_UNION,
+  compset |> add_thms [IMAGE_EMPTY, IMAGE_INSERT, IMAGE_UNION,
             ADD_INSERT_WORD, ADD_INSERT_STRING,
             stringTheory.ORD_CHR_COMPUTE, stringTheory.CHAR_EQ_THM, SKIP1_def,
             string_to_num_def, num_to_string_def, num_to_string_string_to_num,
@@ -55,19 +55,15 @@ let open listTheory pred_setTheory in
             TRAVERSEw_def, KEYSw_def, TRANSFORMw_def, EVERY_LEAFw_def,
             EXISTS_LEAFw_def, SIZEw_def, DEPTHw_def, IN_PTREEw_def,
             INSERT_PTREEw_def, WORDSET_OF_PTREE_def, PTREE_OF_WORDSET_def]
-          compset;
-  add_conv (the_ptree_tm, 1, THE_PTREE_CONV) compset
+          |> add_conv (the_ptree_tm, 1, THE_PTREE_CONV)
 end;
 
-fun cast_ptree_compset () =
-let val compset = wordsLib.words_compset()
-    val _ = add_ptree_compset compset
-    val _ = add_cast_ptree_compset compset
-in
-  compset
-end;
+val cast_ptree_compset =
+  wordsLib.words_compset
+  |> add_ptree_compset
+  |> add_cast_ptree_compset
 
-val CAST_PTREE_CONV = CBV_CONV (cast_ptree_compset());
+val CAST_PTREE_CONV = CBV_CONV cast_ptree_compset;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -76,8 +72,8 @@ let val _ = mk_word_ptree (n,t)
     val thm1 = Define_mk_ptree s2 t
     val tree = mk_some_ptree(fcpLib.index_type n, lhs (concl thm1))
     val thm2 = Definition.new_definition(s1^"_def", mk_eq(mk_var(s1,Term.type_of tree), tree))
-    val _ = add_thms [thm2] the_compset
-    val _ = add_thms [thm2] the_ptree_compset
+    val () = add_funs [thm2]
+    val () = the_ptree_compset := add_thms [thm2] (!the_ptree_compset)
 in
   (thm2, thm1)
 end;

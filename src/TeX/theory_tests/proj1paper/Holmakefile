@@ -15,7 +15,7 @@ BARE_THYS = ../proj1/proj1ATheory
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/hol) buildheap -o $(HOLHEAP) $(BARE_THYS)
 
 holtexbasic.sty: $(HOLDIR)/src/TeX/holtexbasic.sty
 	$(CP) $< $@

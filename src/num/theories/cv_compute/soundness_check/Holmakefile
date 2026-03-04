@@ -1,4 +1,4 @@
-EXTRA_CLEANS = soundness_check-selftest.log
+EXTRA_CLEANS = soundness_check-selftest.log selftest.exe
 
 soundness_check-selftest.log: selftest.exe
 	$(tee ./$<,$@)

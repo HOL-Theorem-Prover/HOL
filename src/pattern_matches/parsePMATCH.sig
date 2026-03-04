@@ -11,7 +11,6 @@ sig
   val add_pmatch :
     { get : 'a -> term_grammar.grammar,
       arule : add_record -> 'a -> 'a,
-      rmtmtok : {term_name :string, tok : string} -> 'a -> 'a,
       add_ptmproc : string * int -> term_grammar.preterm_processor -> 'a -> 'a,
       addup : 'b -> 'a -> 'a, (* user printer *)
       up : 'b } -> 'a -> 'a

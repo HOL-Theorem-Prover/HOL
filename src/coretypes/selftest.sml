@@ -356,4 +356,36 @@ val _ = let
           orelse test_fail "wrong output from DefnBase.one_line_ify_mutrec"
   in () end;
 
+
+val tyg = type_grammar()
+open bnfBase
+
+fun nmf2s (n,b) = "(\"" ^ n ^ "\"," ^ bnfBase_dtype.bnftor_toString b ^ ")"
+
+fun testq2bnf (s,expected) =
+    let val _ = tprint ("parse_bnf: \"" ^ s ^ "\"")
+    in
+      require_msg
+        (check_result (equal expected))
+        (fn nmfs => "[" ^ String.concatWith "," (map nmf2s nmfs) ^ "]")
+        (parse_bnf.parse2ftor o ParseDatatype.hparse tyg)
+        [QUOTE s]
+    end
+
+infix 2 ++
+infix 3 **
+val K = constty
+fun bty1 ++ bty2 = ftor({Thy="sum", Name="sum"}, [bty1,bty2])
+fun bty1 ** bty2 = ftor({Thy="pair", Name="prod"}, [bty1,bty2])
+val _ = List.app testq2bnf [
+      ("foo = C num | D", [("foo",constty “:num + unit”)]),
+      ("foo = C num foo | D bool | E (foo list)",
+       [("foo", K “:num” ** the_arg ++ K “:bool” ++
+                ftor({Thy="scratch",Name="list"}, [the_arg]))]),
+      ("foo = C num | D bar ; bar = barC (bool -> foo)",
+       [("foo", K“:num” ++ mutrec_var "bar"),
+        ("bar", ftor({Thy = "min", Name = "fun"},
+                     [K“:bool”, mutrec_var "foo"]))])
+    ]
+
 val _ = Process.exit Process.success

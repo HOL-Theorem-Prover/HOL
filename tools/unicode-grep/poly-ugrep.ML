@@ -12,9 +12,9 @@ exception Interrupt = SML90.Interrupt
 val _ = use "../../tools/Holmake/Systeml.sig"
 val _ = use "../../tools-poly/Holmake/Systeml.sml";
 use "../../tools/Holmake/hmcore.ML";
-use "../../tools/Holmake/FunctionalRecordUpdate.sml";
-use "../../tools/Holmake/GetOpt.sig";
-use "../../tools/Holmake/GetOpt.sml";
+use "../../tools/util/FunctionalRecordUpdate.sml";
+use "../../tools/util/GetOpt.sig";
+use "../../tools/util/GetOpt.sml";
 use "../../src/portableML/UTF8.sig";
 use "../../src/portableML/UTF8.sml";
 use "ugrep.sml";

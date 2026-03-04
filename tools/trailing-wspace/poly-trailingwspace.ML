@@ -1,4 +1,4 @@
-use "../Holmake/GetOpt.sig";
-use "../Holmake/GetOpt.sml";
+use "../util/GetOpt.sig";
+use "../util/GetOpt.sml";
 use "trailingwspace.sml";
 val main = trailingwspace.main;

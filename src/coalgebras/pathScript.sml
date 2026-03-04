@@ -164,10 +164,10 @@ Proof
     Q.ISPECL_THEN [`p_2`,`p_2`] (STRIP_ASSUME_TAC o
                                  REWRITE_RULE []) LLIST_BISIMULATION THEN
     Q.EXISTS_TAC `R` THEN SRW_TAC [][] THEN
-    Q.ISPEC_THEN `p_2''` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
+    Q.ISPEC_THEN `p_2''` (STRIP_ALL_THEN SUBST_ALL_TAC)
                  llist_CASES THEN
     SRW_TAC [][] THEN
-    Q.ISPEC_THEN `p_2'''` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
+    Q.ISPEC_THEN `p_2'''` (STRIP_ALL_THEN SUBST_ALL_TAC)
                  llist_CASES THEN SRW_TAC [][]
     THENL [
       RES_TAC THEN FULL_SIMP_TAC (srw_ss()) [LHD_THM],
@@ -261,7 +261,7 @@ Proof
         THEN1 METIS_TAC [] THEN
   CONJ_TAC THEN HO_MATCH_MP_TAC finite_path_ind THEN
   SRW_TAC [][] THEN
-  Q.ISPEC_THEN `p0` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
+  Q.ISPEC_THEN `p0` (STRIP_ALL_THEN SUBST_ALL_TAC)
                path_cases THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []
 QED
@@ -1166,7 +1166,7 @@ Proof
   Q.EXISTS_TAC
     `\x y. ~finite x /\ (y = pgenerate (\n. el n x) (\n. nth_label n x))` THEN
   ASM_SIMP_TAC (srw_ss()) [] THEN REPEAT STRIP_TAC THEN
-  Q.SPEC_THEN `q1` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) path_cases THEN
+  Q.SPEC_THEN `q1` (STRIP_ALL_THEN SUBST_ALL_TAC) path_cases THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [pgenerate_def])) THEN
   SRW_TAC [][el_def, nth_label_def, combinTheory.o_DEF]
@@ -1248,7 +1248,7 @@ Proof
         `!p. (?p0. okpath R p0 /\ (p = pmap f g p0)) ==> okpath R p` THEN1
         METIS_TAC[] THEN
   HO_MATCH_MP_TAC okpath_co_ind THEN SRW_TAC [][] THEN
-  Q.SPEC_THEN `p0` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) path_cases THEN
+  Q.SPEC_THEN `p0` (STRIP_ALL_THEN SUBST_ALL_TAC) path_cases THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []
 QED
 
@@ -1304,7 +1304,7 @@ Proof
                         !p1 p2. (p = plink p1 p2) ==> finite p1 /\ finite p2`
      THEN1 PROVE_TAC [] THEN CONJ_TAC THEN
   HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][] THEN
-  Q.SPEC_THEN `p1` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) path_cases THEN
+  Q.SPEC_THEN `p1` (STRIP_ALL_THEN SUBST_ALL_TAC) path_cases THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
   SRW_TAC [][] THEN PROVE_TAC []
 QED

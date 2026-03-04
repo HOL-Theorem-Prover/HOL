@@ -45,28 +45,11 @@ Theorem EQ_IMP        = boolTheory.EQ_IMPLIES
 
 Theorem FINITE_SUBSET = pred_setTheory.SUBSET_FINITE_I
 
-Theorem FINITE_INDUCT_STRONG :
-   !P:('a->bool)->bool.
-        P {} /\ (!x s. P s /\ ~(x IN s) /\ FINITE s ==> P(x INSERT s))
-        ==> !s. FINITE s ==> P s
-Proof
-   METIS_TAC [FINITE_INDUCT]
-QED
-
 val REPLICATE_TAC = NTAC;
 val ANTS_TAC = impl_tac;
 
-Theorem LEFT_AND_EXISTS_THM :
-   !P Q. (?(x :'a). P x) /\ Q <=> (?(x :'a). P x /\ Q)
-Proof
-   METIS_TAC []
-QED
-
-Theorem RIGHT_AND_EXISTS_THM :
-   !P Q. P /\ (?(x :'a). Q x) <=> (?(x :'a). P /\ Q x)
-Proof
-   METIS_TAC []
-QED
+Theorem LEFT_AND_EXISTS_THM = GSYM LEFT_EXISTS_AND_THM
+Theorem RIGHT_AND_EXISTS_THM = GSYM RIGHT_EXISTS_AND_THM
 
 Theorem FORALL_UNWIND_THM2 :
    !P (a :'a). (!x. x = a ==> P x) <=> P a
@@ -1352,7 +1335,7 @@ QED
 (* The ARBITRARY and FINITE cases of UNION_OF / INTERSECTION_OF              *)
 (* ------------------------------------------------------------------------- *)
 
-Definition ARBITRARY :
+Definition ARBITRARY[simp] :
     ARBITRARY (s:('a->bool)->bool) <=> T
 End
 
@@ -3884,6 +3867,20 @@ Proof
  >> Q.EXISTS_TAC ‘y’ >> fs [IN_APP]
 QED
 
+Theorem limpt_alt :
+    !top x s. limpt top x s <=> x IN top derived_set_of s
+Proof
+    simp [derived_set_of_alt_limpt]
+QED
+
+Theorem limpt_mono :
+    !top x s t. limpt top x s /\ s SUBSET t ==> limpt top x t
+Proof
+    rw [limpt_alt]
+ >> Suff ‘top derived_set_of s SUBSET top derived_set_of t’ >- rw [SUBSET_DEF]
+ >> MATCH_MP_TAC DERIVED_SET_OF_MONO >> art []
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Compact sets and compact topological spaces (from HOL-Light's metric.ml)  *)
 (* ------------------------------------------------------------------------- *)
@@ -4072,6 +4069,73 @@ Proof
   MATCH_MP_TAC CLOSED_COMPACT_IN THEN EXISTS_TAC “topspace (top :'a topology)” THEN
   ASM_MESON_TAC[CLOSED_IN_SUBSET]
 QED
+
+(* ----------------------------------------------------------------------
+    Topological bases (c.f. HOL Light's "metric.ML")
+   ---------------------------------------------------------------------- *)
+
+Theorem EMPTY_IN_ARBITRARY_UNION_OF[simp]:
+  ∅ ∈ ARBITRARY UNION_OF P
+Proof
+  dsimp[UNION_OF, IN_DEF]
+QED
+
+Theorem BIGUNION_IN_ARBITRARY_UNION_OF:
+  A ⊆ ARBITRARY UNION_OF P ⇒ BIGUNION A ∈ ARBITRARY UNION_OF P
+Proof
+  rw[IN_DEF] >> irule ARBITRARY_UNION_OF_UNIONS >>
+  gvs[SUBSET_DEF, IN_DEF]
+QED
+
+Theorem ISTOPOLOGY_BASE_ALT:
+  istopology (ARBITRARY UNION_OF P) ⇔
+    ∀s t. s ∈ ARBITRARY UNION_OF P ∧ t ∈ ARBITRARY UNION_OF P ⇒
+          s ∩ t ∈ ARBITRARY UNION_OF P
+Proof
+  simp[istopology] >> qmatch_abbrev_tac ‘Pp ∧ Qq ⇔ Pp’ >>
+  ‘Qq’ suffices_by simp[EQ_IMP_THM] >>
+  rw[Abbr‘Pp’, Abbr‘Qq’, BIGUNION_IN_ARBITRARY_UNION_OF]
+QED
+
+Theorem ISTOPOLOGY_BASE_EQ:
+  istopology (ARBITRARY UNION_OF P) ⇔
+    ∀s t. s ∈ P ∧ t ∈ P ⇒ s ∩ t ∈ ARBITRARY UNION_OF P
+Proof
+  simp[ISTOPOLOGY_BASE_ALT, ARBITRARY_UNION_OF_INTER_EQ, IN_DEF]
+QED
+
+Theorem ISTOPOLOGY_BASE:
+  (∀s t. s ∈ B ∧ t ∈ B ⇒ s ∩ t ∈ B) ⇒
+  istopology (ARBITRARY UNION_OF B)
+Proof
+  simp[ISTOPOLOGY_BASE_EQ] >> simp[ARBITRARY_UNION_OF_INC, IN_DEF]
+QED
+
+Theorem OPEN_IN_TOPOLOGY_BASE:
+  open_in top = ARBITRARY UNION_OF B ⇔
+  (∀v. v ∈ B ⇒ open_in top v) ∧
+  ∀u x. open_in top u /\ x ∈ u ⇒ ∃v. v ∈ B ∧ x ∈ v /\ v ⊆ u
+Proof
+  rw[EQ_IMP_THM]
+  >- gvs[ARBITRARY_UNION_OF_INC, IN_DEF]
+  >- (gvs[ARBITRARY, UNION_OF] >> irule_at Any SUBSET_BIGUNION_I >>
+      gvs[IN_DEF] >> metis_tac[]) >>
+  simp[FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM, FORALL_UNION_OF] >> conj_tac
+  >- (rw[UNION_OF, ARBITRARY] >> rename [‘open_in top u’] >>
+      qexists ‘{ v | v ∈ B ∧ v ⊆ u}’ >> simp[IN_DEF] >> ASM_SET_TAC[]) >>
+  rw[] >> irule OPEN_IN_UNIONS >> ASM_SET_TAC[]
+QED
+
+Theorem TOPOLOGY_BASE_UNIQUE:
+  (∀s. s ∈ P ⇒ open_in top s) ∧
+  (∀u x. open_in top u ∧ x ∈ u ⇒ ∃b. b ∈ P ∧ x ∈ b ∧ b ⊆ u) ⇒
+  topology (ARBITRARY UNION_OF P) = top
+Proof
+  rpt strip_tac >>
+  match_mp_tac (MESON[topology_tybij] “open_in top = P ⇒ topology P = top”) >>
+  simp[OPEN_IN_TOPOLOGY_BASE]
+QED
+
 
 (* References:
 

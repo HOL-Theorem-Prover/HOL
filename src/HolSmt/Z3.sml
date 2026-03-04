@@ -140,6 +140,7 @@ structure Z3 = struct
                 val thm = Z3_ProofReplay.check_proof (As, g, proof)
                 val thm = Thm.CCONTR g thm
                 val thm = validation [thm]
+                val () = Library.check_oracle_tags "Z3_SMT_Prover" thm
               in
                 SolverSpec.UNSAT (SOME thm)
               end

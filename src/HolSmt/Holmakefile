@@ -36,6 +36,6 @@ DEPS = $(patsubst %,%.uo,$(BARE_DEPS))
 all: $(HOLHEAP) selftest.exe
 
 $(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/src/real/analysis/realheap)
-	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $@ \
+	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) -o $@ \
 		-b $(protect $(HOLDIR)/src/real/analysis/realheap) $(BARE_DEPS)
 endif

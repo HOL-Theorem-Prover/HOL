@@ -26,7 +26,7 @@ The regular expression data structure only allows epsilon, a symbol of type α, 
 
 1. Compile the example by:
   * running `Holmake` in this directory, or
-  * build HOL using selftest level 1 by using `bin/build -t` (HOL's `tools/build-sequence` file guides the build process here as usual).
+  * build HOL using selftest level 1 by using `bin/build -t` (HOL's `tools/build/build-sequence` file guides the build process here as usual).
 1. Run a selftest using `./selftest.exe` to check for conformance of the emitted code with respect to the reference library.
 1. Run a performance test by running `hol < test/performance.sml > test/performance.log` in the project root directory.
 

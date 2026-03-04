@@ -1355,18 +1355,20 @@ fun temp_add_holfoot_pp () =
     print "HOLFOOT pretty printing activated!\n");
 
 fun temp_remove_holfoot_pp () =
-   (map (temp_remove_user_printer o #1) pretty_printer_list_trace;
+   (List.app (fn (s,t,_) => ignore (temp_remove_user_printer (s,t)))
+             pretty_printer_list_trace;
     print "HOLFOOT pretty printing deactivated!\n");
 
 fun add_holfoot_pp_quiet () =
-   (map aup pretty_printer_list_trace;());
+   (List.app aup pretty_printer_list_trace;());
 
 fun add_holfoot_pp () =
     (add_holfoot_pp_quiet();
      print "HOLFOOT pretty printing activated!\n");
 
 fun remove_holfoot_pp_quiet () =
-   (map (remove_user_printer o #1) pretty_printer_list_trace;());
+   List.app (fn (s,t,_) => remove_user_printer (s,t))
+            pretty_printer_list_trace;
 
 fun remove_holfoot_pp () =
    (remove_holfoot_pp_quiet ();

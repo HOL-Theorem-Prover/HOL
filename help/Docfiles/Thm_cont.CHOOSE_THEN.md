@@ -70,6 +70,10 @@ which can then be finished off quite easily, by, for example:
                MULT_CLAUSES, ADD_CLAUSES, LESS_0]
 ```
 
+### Comments
+
+As `CHOOSE_THEN` scans a theorem’s hypotheses as it generates a fresh name to replace the existential, and then internally produces a fresh theorem with an additional hypothesis, this function can be inefficient if used repeatedly within code; in such cases, code should probably use `X_CHOOSE_THEN` instead.
+
 ### See also
 
 [`Tactic.CHOOSE_TAC`](#Tactic.CHOOSE_TAC),

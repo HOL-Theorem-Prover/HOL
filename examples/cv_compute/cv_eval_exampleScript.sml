@@ -14,7 +14,7 @@ End
 val _ = cv_trans test_def;
 
 (* The following example demonstrates that the given pattern,
-   Some (Tuple ...), instructs cv_eval_pat what to do with the
+   cvSome (cvTuple ...), instructs cv_eval_pat what to do with the
    result of evaluation. In this example, we can see that the
    result must be a SOME containing a tuple and the elements
    of the tuple are handled as follows.
@@ -24,7 +24,7 @@ val _ = cv_trans test_def;
       can be used in subsequent calls to cv_trans, cv_eval, etc.
 *)
 val res = cv_eval_pat
-            (Some (Tuple [Eval EVAL, Raw, Name "big_replicate"]))
+            (cvSome (cvTuple [cvEval EVAL, cvRaw, cvName "big_replicate"]))
             “test 10000”;
 (* returns:
      ⊢ test 10000 = SOME (10001,cv$c2n (Num 10002),big_replicate)

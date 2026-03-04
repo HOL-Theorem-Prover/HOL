@@ -1,7 +1,7 @@
 ifdef POLY
 CLINE_OPTIONS = --holstate=$(HOLDIR)/bin/hol.state0
 
-HOL = $(protect $(HOLDIR)/bin/hol.bare) --zero --noconfig
+HOL = $(protect $(HOLDIR)/bin/hol) --bare --zero --noconfig
 INCLUDES = $(HOLDIR)/tools/cmp
 
 all: $(DEFAULT_TARGETS)

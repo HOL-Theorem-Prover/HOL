@@ -21,12 +21,12 @@ val add_finite_map_compset = computeLib.add_thms
   ,FDOM_FEMPTY
   ]
 
-val FEVERY_cs = computeLib.bool_compset ()
-val _         = computeLib.add_thms
+val FEVERY_cs = computeLib.bool_compset
+                |> computeLib.add_thms
                            [FEVERY_FEMPTY, DRESTRICT_FEMPTY,
                             FEVERY_FUPDATE, IN_INSERT,
                             NOT_IN_EMPTY,
-                            FEVERY_DRESTRICT_COMPL] FEVERY_cs;
+                            FEVERY_DRESTRICT_COMPL]
 
 fun fevery_EXPAND_CONV t =
 let

@@ -961,28 +961,30 @@ Proof
 QED
 
 (* ----------------------------------------------------------------------
-    PAIR_SET : ('a -> 'c set) -> ('b -> 'c set) -> 'a # 'b -> 'c set
+    "set" functions
+
+      setFST : ('a # 'b) -> 'a set
+      setSND : ('a # 'b) -> 'b set
    ---------------------------------------------------------------------- *)
 
-val PAIR_SET_def = new_definition(
-  "PAIR_SET_def",
-  “PAIR_SET f g = \(a:'a, b:'b) c:'c. c IN f a \/ c IN g b”);
+val setFST_def = new_definition(
+  "setFST_def[compute]",
+  “setFST p = λx. x = FST p”);
 
-Theorem IN_PAIR_SET:
-  c IN PAIR_SET f g (a,b) <=> c IN f a \/ c IN g b
+val setSND_def = new_definition(
+  "setSND_def[compute]",
+  “setSND p = λx. x = SND p”);
+
+Theorem setFST_thm[simp]:
+  setFST (a,b) = λx. x = a
 Proof
-  SIMP_TAC (srw_ss()) [PAIR_SET_def, IN_DEF]
+  simp[setFST_def]
 QED
 
-Overload setFST = “PAIR_SET $= (K (\x. F))”
-Overload setSND = “PAIR_SET (K (\x. F)) $=”
-
-Theorem IN_setFSTSND[simp]:
-  (a IN setFST ab <=> FST ab = a) /\
-  (b IN setSND ab <=> SND ab = b)
+Theorem setSND_thm[simp]:
+  setSND (a,b) = λx. x = b
 Proof
-  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_PROD, IN_PAIR_SET] >>
-  SIMP_TAC (srw_ss()) [IN_DEF]
+  simp[setSND_def]
 QED
 
 Theorem PAIR_MAP_CONG:
@@ -990,15 +992,14 @@ Theorem PAIR_MAP_CONG:
   (!b:'b. b IN setSND ab ==> g1 b = g2 b :'d) ==>
   (f1 ## g1) ab = (f2 ## g2) ab
 Proof
-  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_PROD]
+  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_PROD, IN_DEF]
 QED
 
 Theorem PAIR_MAP_SET:
-  (c IN setFST ((f ## g) ab) <=> ?a:'a. c:'c = f a /\ a IN setFST ab) /\
-  (d IN setSND ((f ## g) ab) <=> ?b:'b. d:'d = g b /\ b IN setSND ab)
+  (setFST ((f ## g) ab) = λc. ?a:'a. c:'c = f a /\ a IN setFST ab) /\
+  (setSND ((f ## g) ab) = λd. ?b:'b. d:'d = g b /\ b IN setSND ab)
 Proof
-  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_PROD] >>
-  METIS_TAC[]
+  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_PROD, IN_DEF]
 QED
 
 (* ----------------------------------------------------------------------

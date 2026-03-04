@@ -1,6 +1,6 @@
 open HolKernel Parse bossLib boolLib;
 
-open simpLib realSimps isqrtLib RealArith RealField bitArithLib;
+open simpLib realSimps isqrtLib RealArith RealField NLArith bitArithLib;
 open intrealTheory
 
 open testutils;
@@ -448,6 +448,95 @@ val _ = convtest("Testing real_mul_conv on ``64 * 128``",
                   real_mul_conv,
                  ``64 * (128:real)``,
                  ``8192:real``)
+
+(* ================================================================ *)
+(* Tests for NLArith (REAL_NLA)                                     *)
+(*                                                                  *)
+(* E2E: REAL_NLA closes the goal directly.                          *)
+(* FAIL: REAL_NLA raises HOL_ERR on false goals.                    *)
+(* SHAPE: REAL_NLA returns thm with expected conclusion.            *)
+(* TACTIC: NLA_TAC closes a goal state.                             *)
+(* ================================================================ *)
+
+(* -- E2E tests: REAL_NLA proves nonlinear goals -- *)
+
+val _ = List.app (real_arith_test REAL_NLA) [
+      (* Simple square nonneg *)
+      ("NLA_E2E_01", “!x:real. x * x >= &0”),
+      ("NLA_E2E_02", “!x:real. x pow 2 >= &0”),
+
+      (* Difference-of-variables square *)
+      ("NLA_E2E_03", “!x y:real. (x - y) * (x - y) >= &0”),
+
+      (* AM-GM: x^2 + y^2 >= 2xy *)
+      ("NLA_E2E_04", “!x y:real. x * x + y * y >= &2 * x * y”),
+
+      (* Product bounds from hypotheses *)
+      ("NLA_E2E_05", “!x y:real. x >= &5 /\ y >= &5 ==> x * y >= &25”),
+      ("NLA_E2E_06", “!x y:real. x >= &0 /\ y >= &0 ==> x * y >= &0”),
+      ("NLA_E2E_07", “!a b:real. a >= &3 /\ b >= &4 ==> a * b >= &12”),
+
+      (* Linear fallback still works *)
+      ("NLA_E2E_08", “!x:real. x + &1 > x”),
+      ("NLA_E2E_09", “!x:real. &0 < x ==> &0 <= x”),
+
+      (* Sum of nonneg products *)
+      ("NLA_E2E_10",
+       “!x y z:real. x >= &0 /\ y >= &0 /\ z >= &0 ==> x*y + y*z + x*z >= &0”),
+
+      (* Sum of squares *)
+      ("NLA_E2E_11", “!x y:real. x * x + y * y >= &0”),
+
+      (* Strict product bound *)
+      ("NLA_E2E_12", “!x y:real. x > &0 /\ y > &0 ==> x * y > &0”),
+
+      (* Combined linear + nonlinear *)
+      ("NLA_E2E_13", “!x:real. x >= &1 ==> x * x >= x”)
+    ];
+
+(* -- FAIL test: clean HOL_ERR on false goals -- *)
+
+val _ = List.app (shouldfail {
+      testfn = REAL_NLA,
+      printresult = thm_to_string,
+      printarg = fn t => "NLA should fail: " ^ term_to_string t,
+      checkexn = fn HOL_ERR _ => true | _ => false})
+    [
+      “!x:real. x * x <= ~(&1)”,
+      “!x:real. x * x < &0”
+    ];
+
+(* -- SHAPE test: REAL_NLA returns thm with correct conclusion -- *)
+
+val _ = let
+  val _ = tprint "NLA_SHAPE: conclusion matches input"
+  val tm = “!x y:real. x >= &5 /\ y >= &5 ==> x * y >= &25”
+  val th = REAL_NLA tm
+in
+  if aconv (concl th) tm then OK()
+  else die ("FAILED: concl = " ^ term_to_string (concl th))
+end;
+
+(* -- TACTIC test: NLA_TAC closes a goal -- *)
+
+val _ = let
+  val _ = tprint "NLA_TAC closes x^2 >= 0"
+  val goal : goal = ([], “!x:real. x * x >= &0”)
+  val (sgs, vf) = NLA_TAC goal
+in
+  if null sgs then OK()
+  else die ("FAILED: " ^ Int.toString (length sgs) ^ " subgoals remain")
+end;
+
+val _ = let
+  val _ = tprint "NLA_ASM_TAC closes product bound with assumptions"
+  val asms = map ASSUME [“x >= &5 :real”, “y >= &5 :real”]
+  val goal : goal = (map concl asms, “x * y >= &25 :real”)
+  val (sgs, vf) = NLA_ASM_TAC goal
+in
+  if null sgs then OK()
+  else die ("FAILED: " ^ Int.toString (length sgs) ^ " subgoals remain")
+end;
 
 val _ = print "\n"
 val _ = exit_count0 errc

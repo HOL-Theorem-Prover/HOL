@@ -42,28 +42,8 @@ Definition lift_opt_def:
 End
 
 Theorem bind_cong[defncong]:
-  (s = s') ∧
-  (f s' = f' s') ∧
-  (∀x t. f' s' = (INL x, t) ==> g x t = g' x t)
-  ⇒
-  bind f g s = bind f' g' s'
-Proof
-  rw[bind_def] \\ CASE_TAC \\ CASE_TAC \\ gs[]
-QED
-
-Theorem bind_cong_implicit:
-  (!s. f s = f' s) ∧
-  (∀s x t. f' s = (INL x, t) ==> g x t = g' x t)
-  ⇒
-  bind f g = bind f' g'
-Proof
-  rw[bind_def, FUN_EQ_THM] \\ CASE_TAC \\ CASE_TAC \\ gs[]
-  \\ first_x_assum irule \\ goal_assum drule
-QED
-
-Theorem bind_cong_implicit_hyp[defncong]:
   (f = f') ∧
-  (∀s x. FST $ f s = INL x ==> g x = g' x)
+  (∀s x t. f' s = (INL x, t) ==> g x t = g' x t)
   ⇒
   bind f g = bind f' g'
 Proof
@@ -153,4 +133,3 @@ End
 
   Then the proof would measure the total size of all the dats in ns
 *)
-

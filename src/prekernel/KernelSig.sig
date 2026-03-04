@@ -32,6 +32,8 @@ sig
   val listItems : 'a symboltable -> (kernelname * (kernelid * 'a)) list
   val listThy : 'a symboltable -> string -> (kernelname * (kernelid * 'a)) list
   val listName : 'a symboltable -> string -> (kernelname * (kernelid * 'a)) list
+  val nameExists : 'a symboltable -> string -> bool
+  val thyExists : 'a symboltable -> string -> bool
 
   val app : (kernelname * (kernelid * 'a) -> unit) -> 'a symboltable -> unit
   val foldl : (kernelname * (kernelid * 'a) * 'b -> 'b) -> 'b ->

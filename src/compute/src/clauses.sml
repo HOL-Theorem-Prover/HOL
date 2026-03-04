@@ -136,7 +136,7 @@ fun inst_type_dterm ([],v) = v
 
 datatype action =
     Rewrite of rewrite list
-  | Conv of (term -> Thm.thm * db fterm)
+  | Conv of (term -> Thm.thm)
 
 (*
    Database of actions for a single constant. There is a linked list through the
@@ -191,29 +191,59 @@ fun partition_skip (SOME n) Args =
    TO-DO: We should try to factorize the rules (cf. discrimination nets). Rules
    are packed according to their head constant, and then sorted according to the
    width of their lhs.
+
+   The compset type is functional at the outer level (no ref wrapping the dict),
+   but the per-constant entries are still refs to keep the treatment of recursive
+   equations straightforward.
+
+   A compset can be "sealed" to prevent mutation of existing constant entries.
+   This allows base compsets (like bool_compset) to be shared safely as values.
+   Adding rules for NEW constants to a sealed compset works fine.
+   Adding rules for EXISTING constants in a sealed compset raises an exception.
+   Use `copy` to create an unsealed copy if you need to extend existing constants.
 *)
 datatype compset
-   = Compset of (string * string, (db * int option) ref) Redblackmap.dict ref;
+   = Compset of { sealed: bool,
+                  dict: (string * string, (db * int option) ref) Redblackmap.dict };
 
 fun lex_string_comp ((s1, s2), (s3, s4)) =
   case String.compare (s1, s3) of
     EQUAL => String.compare (s2, s4)
   | x => x
 
-fun empty_rws () = Compset (ref (Redblackmap.mkDict lex_string_comp));
+val empty_rws = Compset { sealed = true,
+                          dict = Redblackmap.mkDict lex_string_comp };
+
+(* Seal a compset, preventing mutation of existing constant entries. *)
+fun seal (Compset {dict, ...}) = Compset {sealed = true, dict = dict}
+
+(* Create an unsealed copy of a compset with fresh refs for all constants.
+   Use this when you need to extend rules for existing constants. *)
+fun copy (Compset {dict, ...}) =
+  Compset { sealed = false,
+            dict = Redblackmap.transform (fn r => ref (!r)) dict }
 
 (*
    Look up the per-constant database of `cst` in the given compset. If it does
    not exist, create an empty database for this constant. The constant is given
-   as a pair `(const_name, theory_name)`.
+   as a pair `(const_name, theory_name)`. Returns the (possibly updated) compset
+   and the ref to the per-constant database.
 *)
-fun assoc_clause (Compset rws) cst =
-  case Redblackmap.peek (!rws, cst)
-   of SOME rl => rl
+fun assoc_clause (Compset {sealed, dict}) cst =
+  case Redblackmap.peek (dict, cst)
+   of SOME rl => (Compset {sealed=sealed, dict=dict}, rl)
     | NONE => let val mt = ref (EndDb, NONE)
-              in rws := Redblackmap.insert (!rws,cst,mt)
-               ; mt
+              in (Compset {sealed=false, dict=Redblackmap.insert (dict,cst,mt)}, mt)
               end;
+
+(* Check if modifying this constant would violate sealing.
+   Returns true if the compset is sealed AND the constant already has rules.
+   Empty entries (created by from_term for RHS constants) don't count. *)
+fun is_sealed_existing (Compset {sealed, dict}) cst =
+  sealed andalso
+  (case Redblackmap.peek (dict, cst) of
+     SOME r => (case !r of (EndDb, _) => false | _ => true)
+   | NONE => false)
 
 fun add_in_db (n,cst,act,EndDb) =
       funpow n NeedArg (Try{Hcst=cst, Rws=act, Tail=EndDb})
@@ -229,26 +259,39 @@ fun add_in_db (n,cst,act,EndDb) =
       NeedArg(add_in_db(n-1,cst,act,tail));
 
 fun add_in_db_upd compset (name,arity,hcst) action =
-  let val rl = assoc_clause compset name
-    val (db, sk) = !rl
+  let val _ = if is_sealed_existing compset name then
+                raise CL_ERR "add_in_db_upd"
+                  ("cannot add rules for existing constant " ^ #2 name ^ "$" ^ #1 name ^
+                   " in sealed compset; use copy to create an unsealed copy")
+              else ()
+      val (compset', rl) = assoc_clause compset name
+      val (db, sk) = !rl
   in rl := (add_in_db (arity,hcst,action,db), sk)
+   ; compset'
   end;
 
-fun set_skip (compset as Compset htbl) p sk =
-  let val rl = assoc_clause compset p
-    val (db,_) = !rl
+fun set_skip compset p sk =
+  let val _ = if is_sealed_existing compset p then
+                raise CL_ERR "set_skip"
+                  ("cannot modify skip for existing constant " ^ #2 p ^ "$" ^ #1 p ^
+                   " in sealed compset; use copy to create an unsealed copy")
+              else ()
+      val (compset', rl) = assoc_clause compset p
+      val (db,_) = !rl
   in rl := (db,sk)
+   ; compset'
   end;
 
-fun scrub_const (Compset htbl) c =
+fun scrub_const (Compset {sealed, dict}) c =
   let val {Thy,Name,Ty} = dest_thy_const c
-  in htbl := #1 (Redblackmap.remove (!htbl,(Name,Thy)))
+  in Compset {sealed=false, dict = #1 (Redblackmap.remove (dict,(Name,Thy)))}
   end;
 
 (*
    `from_term(compset,env,t)` converts the HOL term `t` into a shadow term with
    the given compset. `env` is the environments of variables free in `t` when
-   `t` is a subterm encounterd descending on a term. Modifies `compset` to add
+   `t` is a subterm encounterd descending on a term. Returns the (possibly
+   updated) compset along with the shadow term; the compset is updated to add
    an empty entry for any constant that does not exist in the compset.
 
    Combinations nested in the left in the HOL term are translated into a single
@@ -256,24 +299,28 @@ fun scrub_const (Compset htbl) c =
 *)
 fun from_term (rws,env,t) =
   let
-    (* `c`: explicit representation of continuation. *)
-    fun down (env,t,c) =
+    (* `c`: explicit representation of continuation.
+       `rws`: threaded compset that may be updated when constants are found. *)
+    fun down (rws,env,t,c) =
       case dest_term t of
-        VAR _ => up((Bv (index (aconv t) env) handle HOL_ERR _ => Fv), c)
-      | CONST{Name,Thy,...} => up(Cst (t,assoc_clause rws (Name,Thy)),c)
+        VAR _ => up(rws, (Bv (index (aconv t) env) handle HOL_ERR _ => Fv), c)
+      | CONST{Name,Thy,...} =>
+          let val (rws',rl) = assoc_clause rws (Name,Thy)
+          in up(rws', Cst (t,rl), c)
+          end
       (* Descend immediately into operator. Descend into operand in the
       continuation. If this is a left-nested combination, it is composed in a
       single `App` when ascending back from the operand. *)
-      | COMB(Rator,Rand) => down(env,Rator,Zrator{Rand=(env,Rand),Ctx=c})
-      | LAMB(Bvar,Body) => down(Bvar :: env, Body, Zabs{Bvar=(), Ctx=c})
+      | COMB(Rator,Rand) => down(rws,env,Rator,Zrator{Rand=(env,Rand),Ctx=c})
+      | LAMB(Bvar,Body) => down(rws, Bvar :: env, Body, Zabs{Bvar=(), Ctx=c})
     (* `dt`: shadow term. *)
-    and up (dt, Ztop) = dt
-      | up (dt, Zrator{Rand=(env,arg), Ctx=c}) =
-          down (env,arg,Zrand{Rator=dt, Ctx=c})
-      | up (dt, Zrand{Rator=dr, Ctx=c}) = up (appl(dr,dt), c)
-      | up (dt, Zabs{Ctx=c,...}) = up(Abs dt, c)
+    and up (rws, dt, Ztop) = (rws, dt)
+      | up (rws, dt, Zrator{Rand=(env,arg), Ctx=c}) =
+          down (rws,env,arg,Zrand{Rator=dt, Ctx=c})
+      | up (rws, dt, Zrand{Rator=dr, Ctx=c}) = up (rws, appl(dr,dt), c)
+      | up (rws, dt, Zabs{Ctx=c,...}) = up(rws, Abs dt, c)
   in
-    down (env,t,Ztop)
+    down (rws,env,t,Ztop)
   end;
 
 (*---------------------------------------------------------------------------
@@ -288,15 +335,22 @@ fun mk_rewrite compset thm =
     val (fv,cst,pats) = check_arg_form lhs
     val gen_thm = foldr (uncurry GEN) thm fv
     val env = rev fv
-    val rhsc = from_term (compset, env, rhs)
-    val ants_in_db = List.map (fn t => from_term (compset, env, t)) ants
+    val (compset', rhsc) = from_term (compset, env, rhs)
+    val (compset'', ants_in_db) =
+        foldl (fn (t, (cs, acc)) =>
+                  let val (cs', dt) = from_term (cs, env, t)
+                  in (cs', dt::acc)
+                  end)
+              (compset', []) ants
+    val ants_in_db = rev ants_in_db
   in
-    RW{ cst=cst,
-        ants=ants_in_db,
-        lhs=pats,
-        rhs=rhsc,
-        npv=length fv,
-        thm=gen_thm }
+    (compset'',
+     RW{ cst=cst,
+         ants=ants_in_db,
+         lhs=pats,
+         rhs=rhsc,
+         npv=length fv,
+         thm=gen_thm })
   end;
 
 fun unsuitable t = let
@@ -313,10 +367,10 @@ val eqf_intro_conv =
 fun enter_thm compset thm0 = let
   val t = concl thm0
   val (ants, conseq) = strip_imp_only t
-  fun add thm =
+  fun add cs thm =
     let
       val rw_option =
-        SOME (mk_rewrite compset thm)
+        SOME (mk_rewrite cs thm)
         handle Not_suitable => NONE
         handle HOL_ERR hol_err =>
           raise (wrap_exn "clauses"
@@ -325,10 +379,9 @@ fun enter_thm compset thm0 = let
                           (HOL_ERR hol_err))
     in
       case rw_option of
-        SOME rw => add_in_db_upd compset (key_of rw) (Rewrite [rw])
-      | NONE => ()
+        SOME (cs', rw) => add_in_db_upd cs' (key_of rw) (Rewrite [rw])
+      | NONE => cs
     end
-in
   (*
      First try to add an useful rewrite. After stripping antencedents:
 
@@ -338,24 +391,26 @@ in
      * Any other proposition `P` is added as a rewrite `P` to `T`, except in the
        case that `P` is `T`.
   *)
-  if is_eq conseq then
-    if unsuitable conseq then
-      ()
+  val compset' =
+    if is_eq conseq then
+      if unsuitable conseq then
+        compset
+      else
+        add compset thm0
+    else if is_neg conseq then
+      add compset (CONV_RULE (funpow (length ants) RAND_CONV eqf_intro_conv) thm0)
+    else if conseq ~~ T then
+      (* Do not add a rewrite `T <=> T` which causes a loop when reducing. *)
+      compset
     else
-      add thm0
-  else if is_neg conseq then
-    add (CONV_RULE (funpow (length ants) RAND_CONV eqf_intro_conv) thm0)
-  else if conseq ~~ T then
-    (* Do not add a rewrite `T <=> T` which causes a loop when reducing. *)
-    ()
-  else
-    add (CONV_RULE (funpow (length ants) RAND_CONV eqt_intro_conv) thm0);
+      add compset (CONV_RULE (funpow (length ants) RAND_CONV eqt_intro_conv) thm0)
   (* If `thm0` is an implication then add a rewrite of the implication itself to
   `T`. *)
+in
   if not (List.null ants) then
-    add (EQT_INTRO thm0)
+    add compset' (EQT_INTRO thm0)
   else
-    ()
+    compset'
 end
 
 (* Like `BODY_CONJUNCTS` but descends into the consequent of implications. *)
@@ -387,13 +442,15 @@ fun split_conjuncts thm =
   end
 
 fun add_thms lthm compset =
-  List.app (List.app (enter_thm compset) o split_conjuncts) lthm;
+  foldl (fn (thm, cs) =>
+            foldl (fn (t, cs') => enter_thm cs' t) cs (split_conjuncts thm))
+        compset lthm;
 
 fun add_thmset setname compset = let
   open ThmSetData
   val data = all_data {settype = setname}
 in
-  app (fn (s, deltas) => add_thms (added_thms deltas) compset) data
+  foldl (fn ((s, deltas), cs) => add_thms (added_thms deltas) cs) compset data
 end
 
 fun add_extern (cst,arity,fconv) compset =
@@ -401,22 +458,15 @@ fun add_extern (cst,arity,fconv) compset =
   add_in_db_upd compset ((Name,Thy),arity,cst) (Conv fconv)
   end;
 
-fun new_rws () =
-  let val compset = empty_rws()
-  in add_thms [boolTheory.REFL_CLAUSE] compset
-   ; compset
-  end;
+val new_rws =
+  add_thms [boolTheory.REFL_CLAUSE] empty_rws;
 
-fun from_list lthm =
-  let val compset = new_rws()
-  in add_thms lthm compset
-   ; compset
-  end;
+fun from_list lthm = add_thms lthm new_rws;
 
 fun scrub_thms lthm compset =
  let val tmlist = map (concl o hd o BODY_CONJUNCTS) lthm
      val clist = map (fst o strip_comb o lhs o snd o strip_forall) tmlist
- in List.app (scrub_const compset) clist
+ in foldl (fn (c, cs) => scrub_const cs c) compset clist
  end
  handle e => raise wrap_exn "clauses" "del_list" e;
 
@@ -424,9 +474,8 @@ fun scrub_thms lthm compset =
 (* Support for analysis of compsets                                          *)
 (*---------------------------------------------------------------------------*)
 
-fun rws_of (Compset rrbmap) =
- let val rbmap = !rrbmap
-     val thinglist = Redblackmap.listItems rbmap
+fun rws_of (Compset {dict, ...}) =
+ let val thinglist = Redblackmap.listItems dict
      fun db_of_entry (ss, r) = let val (db,opt) = !r in db end
      val dblist = List.map db_of_entry thinglist
      fun get_actions db =
@@ -444,7 +493,7 @@ fun rws_of (Compset rrbmap) =
  end;
 
 datatype transform
-  = Conversion of (term -> thm * db fterm)
+  = Conversion of (term -> thm)
   | RRules of thm list;
 
 (*---------------------------------------------------------------------------*)
@@ -454,9 +503,8 @@ datatype transform
 (* Otherwise, one would have to do a transitive closure sort of construction *)
 (* to make all the dependencies explicit.                                    *)
 (*---------------------------------------------------------------------------*)
-fun deplist (Compset rrbmap) =
- let val rbmap = !rrbmap
-     val thinglist = Redblackmap.listItems rbmap
+fun deplist (Compset {dict, ...}) =
+ let val thinglist = Redblackmap.listItems dict
      fun db_of_entry (ss, r) = let val (db,opt) = !r in (ss,db) end
      val dblist = List.map db_of_entry thinglist
      fun get_actions db =

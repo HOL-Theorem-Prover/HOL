@@ -1,0 +1,84 @@
+<!-- PolyML code for extracting stuff from structures and printing types etc -->
+>>__ structure PNV = PolyML.NameSpace.Values
+>>__ fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n"); OS.Process.exit OS.Process.failure)
+>>__ fun printNameAndType0 qp (indent:FixedInt.int) str nm =
+       let val sinfo = valOf $ #lookupStruct PolyML.globalNameSpace str
+                       handle Option => raise Fail ("Structure " ^ str ^ " not found")
+           val f2i = FixedInt.toInt
+           val snames = PolyML.NameSpace.Structures.contents sinfo
+           val sval = valOf (#lookupVal snames nm)
+                       handle Option => raise Fail ("Name " ^ nm ^ " not found in structure " ^ str)
+           val ctxt = if qp then NONE else SOME snames
+           val typ_p = PNV.printType(PNV.typeof sval, 100, ctxt)
+           val spaces = CharVector.tabulate(f2i indent, fn _ => #" ")
+           open PolyML
+       in
+           PP.prettyPrint(TextIO.print, 70-f2i indent)
+            (PrettyBlock(indent,true,[],[PrettyString (spaces ^ nm^" :"), PrettyBreak(1,2), typ_p]))
+       end
+>>__ val printNameAndType = printNameAndType0 false
+>>__ val (pushLineWidth,popLineWidth) = let
+     val lwstk = ref [65]
+     val _ = linewidth := 65
+   in
+     ((fn i => (linewidth := i; lwstk := i :: !lwstk)),
+      (fn () => case !lwstk of [_] => ()
+                  | i::is => (linewidth := i; lwstk := is))
+     )
+   end
+
+HOL’s proof suspension and resumption facilities offer users the ability to structure large source files and proof effort by separating out sub-goals to be proved in separate `Theorem`-`Proof`-`QED` blocks.
+The first step of the process is to use the `suspend` tactic to “solve” a subgoal arising in the middle of a normal proof.
+This tactic has type:
+```
+>>__ printNameAndType0 true 4 "bossLib" "suspend"
+```
+The `suspend` tactic’s `string` argument is the label for the subgoal that is being suspended.
+When applied, this tactic immediately ends work on this subgoal as if it had been genuinely proved.
+Interactively, the goal stack will move on to any remaining subgoals in the proof.
+Theorems that have been ‘proved’ with the help of this tactic are not stored/saved to the current segment (as they are incomplete), and instead a message is emitted indicating as much:
+
+    >> Theorem to_suspend:
+          p /\ q ==> q /\ p
+       Proof
+           strip_tac >> conj_tac
+           >- suspend "rtp_q"
+           >- simp[]
+       QED
+
+Here the user has decided to suspend the subgoal that has assumptions `p` and `q` (these are produced through the `strip_tac` application) and conclusion `q` (the first goal produced by `conj_tac`).
+A theorem is bound to the provided name in the SML namespace, but is not yet saved for export (it is incomplete).
+\index{theorem resumption}
+\index{special syntactic forms for scripts!Resume@\ml{Resume}}
+To resume work on the unproven subgoal, it is necessary to use the `Resume` form, specifying the theorem name first, and then providing the subgoal name as if it were a theorem/proof attribute.
+```{=latex}
+(See Chapter~\ref{chap:modern-syntax} for more on the syntax of attributes.)
+```
+
+Thus:
+
+    >>__ show_assums := true
+    >> Resume to_suspend[rtp_q,smlname=qsubgoal]:
+         first_assum ACCEPT_TAC
+       QED
+
+The optional `smlname` attribute allows for inspection of the theorem corresponding to the sub-goal.
+\index{special syntactic forms for scripts!Finalise@\ml{Finalise}}
+To finish their work on the whole theorem, the user must now ‘finalise’ it.
+This step checks that the theorem has indeed had all of its subgoals proved and saves it, possibly alongside the usual collection of attributes:
+
+    >> Finalise to_suspend[simp]
+
+If the subgoals associated with a name have not all been proved, the `Finalise` step will fail.
+Also, if a theorem has not been finalised by the end of the containing script-file, the theory-saving process will fail with an exception.
+
+### Suspension and Resumption Niceties
+
+- If the `suspend` tactic is called multiple times with the same name within the same goal, resumption at that label will present the user with a complicated looking encoding of multiple goals within just one.
+  In order to convert this one goal back into the multiple goals that were originally saved, the user should use the `RESUME_TAC` tactic.
+  \index{RESUME_TAC@\ml{RESUME\_TAC}}
+- Goals that have been resumed can again be `suspend`-ed, reusing subgoal names, or not.
+- Editor modes should make it easy to create appropriate goals when working interactively; this functionality is in turn making use of the underlying function
+  ```
+         >>__ printNameAndType 4 "markerLib" "set_suspended_goal"
+  ```

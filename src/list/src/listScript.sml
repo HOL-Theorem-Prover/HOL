@@ -235,19 +235,6 @@ Proof
   REWRITE_TAC[EL_def]
 QED
 
-(* array subscript style brackets are U+2772 and U+2773 *)
-val _ = add_rule {
-  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
-  fixity = Suffix 2100, paren_style = OnlyIfNecessary,
-  pp_elements = [TOK "❲", BreakSpace(0,2),TM, BreakSpace(0,0), TOK "❳"],
-  term_name = "flipEL"
-};
-Overload flipEL = “λl n. EL n l”
-
-val _ = TeX_notation { hol = "❲", TeX = ("\\HOLTokenLeftELbracket{}", 1)}
-val _ = TeX_notation { hol = "❳", TeX = ("\\HOLTokenRightELbracket{}", 1)}
-
-
 (* ---------------------------------------------------------------------*)
 (* Definition of a function                                             *)
 (*                                                                      *)
@@ -1092,7 +1079,8 @@ Proof
       Cases_on ‘p’ >> fs[])
 QED
 
-Theorem MEM_SPLIT:
+(* tfl_termsolve: useful for proving termination in fold and rose-tree settings *)
+Theorem MEM_SPLIT[tfl_termsolve]:
   !x l. (MEM x l) = ?l1 l2. (l = l1 ++ x::l2)
 Proof
  Induct_on ‘l’ THEN SRW_TAC [] [] THEN EQ_TAC THENL [
@@ -2031,8 +2019,11 @@ Definition LAST_DEF[nocompute]:
 End
 
 Definition FRONT_DEF[nocompute]:
+  FRONT [] = [] /\
   FRONT (h::t) = if t = [] then [] else h :: FRONT t
 End
+
+Theorem FRONT_NIL[simp] = cj 1 FRONT_DEF
 
 Theorem LAST_CONS[simp]:
    (!x:'a. LAST [x] = x) /\
@@ -2067,6 +2058,12 @@ Theorem LENGTH_FRONT_CONS[simp]:
  !x xs. LENGTH (FRONT (x::xs)) = LENGTH xs
 Proof
 Induct_on ‘xs’ THEN ASM_SIMP_TAC bool_ss [FRONT_CONS, LENGTH]
+QED
+
+Theorem LENGTH_FRONT:
+  !xs. LENGTH (FRONT xs) = LENGTH xs - 1
+Proof
+  Cases >> simp[LENGTH_FRONT_CONS]
 QED
 
 Theorem FRONT_CONS_EQ_NIL[simp]:
@@ -2321,10 +2318,10 @@ Proof   Induct \\ simp[DROP_def] \\ rw[]
 QED
 
 Theorem MAP_FRONT:
-  !ls. ls <> [] ==> (MAP f (FRONT ls) = FRONT (MAP f ls))
-Proof  Induct \\ simp[] \\ Cases_on‘ls’\\fs[]
+  !ls. MAP f (FRONT ls) = FRONT (MAP f ls)
+Proof
+  Induct >> simp[] >> Cases_on ‘ls’ >> fs[]
 QED
-
 (* More functions for operating on pairs of lists *)
 
 Definition FOLDL2_def[simp]:
@@ -2363,6 +2360,8 @@ Proof
   METIS_TAC[]
 QED
 
+Theorem LIST_REL_cong = EVERY2_cong
+
 Theorem MAP_EQ_EVERY2:
   !f1 f2 l1 l2. (MAP f1 l1 = MAP f2 l2) <=>
                   (LENGTH l1 = LENGTH l2) /\
@@ -2374,6 +2373,8 @@ Cases_on ‘l2’ THEN SRW_TAC [] [MAP] THEN
 PROVE_TAC[]
 QED
 
+Theorem MAP_EQ_LIST_REL = MAP_EQ_EVERY2
+
 Theorem EVERY2_EVERY:
   !l1 l2 f. EVERY2 f l1 l2 <=>
             LENGTH l1 = LENGTH l2 /\ EVERY (UNCURRY f) (ZIP (l1,l2))
@@ -2381,6 +2382,8 @@ Proof
 Induct THEN1 SRW_TAC [] [LENGTH_NIL_SYM, EQ_IMP_THM, ZIP] THEN
 GEN_TAC THEN Cases THEN SRW_TAC [] [ZIP, EQ_IMP_THM]
 QED
+
+Theorem LIST_REL_EVERY = EVERY2_EVERY
 
 Theorem EVERY2_LENGTH:
  !P l1 l2. EVERY2 P l1 l2 ==> (LENGTH l1 = LENGTH l2)
@@ -3833,6 +3836,18 @@ Proof
   simp[LUPDATE_DEF]
 QED
 
+Overload fLUPDATE = “λk v l. LUPDATE v k l”
+Overload fEL = “λl i. EL i l”
+(* array subscript style brackets are U+2772 and U+2773 *)
+val _ = combinpp.new_form {
+  left = "❲", right = "❳",
+  upd_term_name = (“LUPDATE v k l”, "fLUPDATE"),
+  lookup_term_name = SOME (“EL i l”, "fEL")
+  }
+val _ = TeX_notation { hol = "❲", TeX = ("\\HOLTokenLeftELbracket{}", 1)}
+val _ = TeX_notation { hol = "❳", TeX = ("\\HOLTokenRightELbracket{}", 1)}
+
+
 val _ = DefnBase.register_indn $ Prim_rec.gen_indthm
            {lookup_ind = TypeBase.induction_of} LUPDATE_DEF
 
@@ -4646,6 +4661,8 @@ Proof
    >> ASM_SIMP_TAC (arith_ss) []
 QED
 
+Theorem LIST_REL_REVERSE = EVERY2_REVERSE
+
 Theorem SUM_MAP_PLUS:
     !f g ls. SUM (MAP (\x. f x + g x) ls) = SUM (MAP f ls) + SUM (MAP g ls)
 Proof
@@ -4693,6 +4710,8 @@ Proof
    THEN METIS_TAC []
 QED
 
+Theorem LIST_REL_trans_same = EVERY2_trans
+
 Theorem EVERY2_sym:
     (!x y. R1 x y ==> R2 y x) ==> !x y. EVERY2 R1 x y ==> EVERY2 R2 y x
 Proof
@@ -4701,6 +4720,8 @@ Proof
    THEN STRIP_TAC
    THEN FULL_SIMP_TAC (srw_ss()++DNF_ss) [MEM_ZIP]
 QED
+
+Theorem LIST_REL_sym = EVERY2_sym
 
 Theorem EVERY2_LUPDATE_same:
     !P l1 l2 v1 v2 n.
@@ -4716,11 +4737,15 @@ Proof
    THEN FULL_SIMP_TAC (srw_ss()) [LUPDATE_def]
 QED
 
+Theorem LIST_REL_LUPDATE_same = EVERY2_LUPDATE_same
+
 Theorem EVERY2_refl:
     (!x. MEM x ls ==> R x x) ==> (EVERY2 R ls ls)
 Proof
    Induct_on‘ls’ >> rw []
 QED
+
+Theorem LIST_REL_refl = EVERY2_refl
 
 Theorem EVERY2_THM[simp]:
     (!P ys. EVERY2 P [] ys = (ys = [])) /\
@@ -4738,6 +4763,8 @@ Proof
    THEN Cases
    THEN SRW_TAC [] [EVERY2_EVERY]
 QED
+
+Theorem LIST_REL_THM = EVERY2_THM
 
 Theorem LIST_REL_trans:
     !l1 l2 l3.
@@ -5012,6 +5039,8 @@ Proof
    >> SRW_TAC [DNF_ss] [pairTheory.FORALL_PROD, LENGTH_MAP, MEM_ZIP]
 QED
 
+Theorem LIST_REL_MAP = EVERY2_MAP
+
 Theorem exists_list_GENLIST:
     (?ls. P ls) = (?n f. P (GENLIST f n))
 Proof
@@ -5036,6 +5065,8 @@ Theorem EVERY2_MEM_MONO:
 Proof
    rw [EVERY2_EVERY] >> MATCH_MP_TAC EVERY_MEM_MONO >> PROVE_TAC []
 QED
+
+Theorem LIST_REL_MEM_MONO = EVERY2_MEM_MONO
 
 Theorem mem_exists_set:
     !x y l. MEM (x,y) l ==> ?z. (x = FST z) /\ z IN set l

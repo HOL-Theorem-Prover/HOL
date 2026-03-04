@@ -12,8 +12,8 @@ struct
 
 open Feedback Lib Term;
 
-val ERR = mk_HOL_ERR "Compute";
-val WARN = HOL_WARNING "Compute";
+val ERR = mk_HOL_ERR "Thm";
+val WARN = HOL_WARNING "Thm";
 
 type num = Arbnum.num;
 
@@ -137,7 +137,7 @@ local
   fun do_sub x y = Num (to_num x - to_num y);
   fun do_mul x y = Num (to_num x * to_num y);
   fun do_div x y = Num (to_num x div to_num y) handle Div => cv_zero
-  fun do_mod x y = Num (to_num x mod to_num y) handle Div => x
+  fun do_mod x y = Num (to_num x mod to_num y) handle Div => Num (to_num x)
   fun do_eq x y = if x = y then cv_one else cv_zero;
   fun do_less x y =
     case x of Pair _ => cv_zero | Num n =>
@@ -405,6 +405,9 @@ in
       val (f, vs) = dest_lhs ct l
       val fns = HOLset.addList (empty_tmset, fns)
       val vars = HOLset.addList (empty_varset, vs)
+      val _ =
+        length vs = HOLset.numItems vars orelse
+        raise ERR "dest_code_eqn" "duplicate variables in LHS"
     in
       if List.all (fn tm => HOLset.member (fns, tm)) (consts f) then
         if List.all (fn tm => HOLset.member (vars, tm)) (free_vars r) then
@@ -535,7 +538,7 @@ local
        ("cv_lt4",     CV_LT (CV_PAIR P_ Q_) (CV_PAIR R_ S_) === CV_NUM ZERO),
        ("cv_if1",     CV_IF (CV_NUM (SUC M_)) P_ Q_ === P_),
        ("cv_if2",     CV_IF (CV_NUM ZERO) P_ Q_ === Q_),
-       ("cv_if3",     CV_IF (CV_PAIR R_ S_) P_ Q_ === Q_),
+       ("cv_if3",     CV_IF (CV_PAIR R_ S_) P_ Q_ === P_),
        ("cv_fst1",    CV_FST (CV_PAIR P_ Q_) === P_),
        ("cv_fst2",    CV_FST (CV_NUM M_) === CV_NUM ZERO),
        ("cv_snd1",    CV_SND (CV_PAIR P_ Q_) === Q_),

@@ -1,6 +1,6 @@
 OPTIONS = NO_OVERLAY
 
-UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml)) SHA1_ML.uo
 
 all: $(UOFILES)
 
@@ -9,3 +9,13 @@ MLSYSPortable.uo: Susp.ui
 Multithreading.uo: ConcIsaLib.uo
 
 ConcIsaLib.uo: Exn.uo Thread_Attributes.uo Thread_Data.uo
+
+ifdef HAVE_WORD64
+SHA1_ML.sml: w64-SHA1.ML
+	$(CP) $< $@
+else
+SHA1_ML.sml: SHA1-byexec.ML
+	$(CP) $< $@
+endif
+
+EXTRA_CLEANS = SHA1_ML.sml

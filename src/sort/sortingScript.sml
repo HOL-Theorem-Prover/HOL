@@ -2012,3 +2012,9 @@ Proof
   first_x_assum(qspec_then`b::rss` mp_tac)>>
   simp[]
 QED
+
+Theorem lcp_PERM:
+  PERM l1 l2 ==> lcp l1 = lcp l2
+Proof
+  rw[lcp_def] >> AP_TERM_TAC >> irule PERM_LIST_TO_SET >> simp[]
+QED

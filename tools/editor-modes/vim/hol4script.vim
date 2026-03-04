@@ -236,7 +236,7 @@ syn sync fromstart
 hi     link HOLSymbol    Type
 hi     link HOLOperator  Underlined
 hi     link HOLVars      NonText
-hi     link HOLIdents    Ignore
+hi     link HOLIdents    Normal
 hi     link HOLKeywords  PreProc
 hi     link HOLComment   Comment
 hi     link HOLString    String

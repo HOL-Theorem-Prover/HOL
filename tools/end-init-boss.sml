@@ -1,3 +1,16 @@
+(* end-init-boss.sml - Moscow ML Full HOL Finale
+   ==============================================
+
+   This file is loaded at the end of full HOL session initialization
+   (the default, without --bare). It:
+   - Loads additional theories and proof tools (bossLib, etc.)
+   - Installs pretty-printers for simpsets, defns, etc.
+   - Opens bossLib for convenience
+
+   For bare HOL sessions, the simpler end-init.sml is loaded instead.
+   For Poly/ML, the equivalent is tools-poly/prelude2.ML.
+*)
+
 let
   val s = "[loading theories and proof tools "
   val l = ["optionTheory", "pairLib", "sumTheory", "numTheory",

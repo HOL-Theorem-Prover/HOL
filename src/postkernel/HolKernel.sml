@@ -569,11 +569,19 @@ local
             (insts', (env, ctm, vtm)::homs)
           end
         else let
-            val (lv, rv) = dest_comb vtm
-            val (lc, rc) = dest_comb ctm
-            val sofar' = term_pmatch lconsts env lv lc sofar
+            (* Avoid doing the head check multiple times *)
+            fun term_pmatch' lconsts env vtm ctm sofar =
+              if is_comb vtm then
+                let
+                  val (lv, rv) = dest_comb vtm
+                  val (lc, rc) = dest_comb ctm
+                  val sofar' = term_pmatch' lconsts env lv lc sofar
+                in
+                  term_pmatch lconsts env rv rc sofar'
+                end
+              else term_pmatch lconsts env vtm ctm sofar
           in
-            term_pmatch lconsts env rv rc sofar'
+            term_pmatch' lconsts env vtm ctm sofar
           end
       end
 

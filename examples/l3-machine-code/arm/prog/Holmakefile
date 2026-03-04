@@ -11,7 +11,7 @@ all: $(DEFAULT_TARGETS) $(HOLHEAP)
 .PHONY: all
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -b ../step/arm-heap -o $(HOLHEAP) $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/hol) buildheap -b ../step/arm-heap -o $(HOLHEAP) $(BARE_THYS)
 
 endif
 

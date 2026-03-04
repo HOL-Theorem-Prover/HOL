@@ -40,8 +40,8 @@ fun STE_CONV_RULE theorem thm_list =
 
     let
         val TrajConv = computeLib.CBV_CONV (computeLib.new_compset thm_list)
-        val NC = computeLib.CBV_CONV (reduceLib.num_compset())
-        val BC = computeLib.CBV_CONV (computeLib.bool_compset())
+        val NC = computeLib.CBV_CONV (reduceLib.num_compset)
+        val BC = computeLib.CBV_CONV computeLib.bool_compset
     in
         CONV_RULE(EVERY_CONV [TrajConv, NC, TrajConv, BC]) theorem
     end;

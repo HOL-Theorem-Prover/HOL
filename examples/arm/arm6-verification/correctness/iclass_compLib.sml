@@ -22,13 +22,6 @@ val ERR = mk_HOL_ERR "iclass_compLib"
 
 (* ------------------------------------------------------------------------- *)
 
-fun add_rws f rws =
-  let val cmp_set = f()
-      val _ = add_thms rws cmp_set
-  in
-    cmp_set
-end;
-
 fun conv_rec nm cnv tm =
   {name = nm, trace = 3, key = SOME([], tm), conv = K (K cnv)};
 
@@ -36,15 +29,16 @@ fun conv_rec nm cnv tm =
 
 val GEQF_INTRO = (GEN_ALL o EQF_INTRO o SPEC_ALL);
 
-fun barm_rws () = add_rws bool_compset
+val barm_rws = add_thms
   [iseq_distinct,GSYM iseq_distinct,iclass_EQ_iclass,iclass2num_thm,
    FST,SND,LET_THM,UNCURRY_DEF, EXEC_INST_def,EXCEPTION_def,
    SWP_def,DECODE_SWP_def, MSR_def,DECODE_MSR_def,
    MRS_def,DECODE_MRS_def, DATA_PROCESSING_def,DECODE_DATAP_def,
    MLA_MUL_def,DECODE_MLA_MUL_def, LDR_STR_def,DECODE_LDR_STR_def,
-   LDM_STM_def,DECODE_LDM_STM_def, BRANCH_def,DECODE_BRANCH_def];
+   LDM_STM_def,DECODE_LDM_STM_def, BRANCH_def,DECODE_BRANCH_def]
+  (copy bool_compset);
 
-val BARM_CONV = CBV_CONV (barm_rws ());
+val BARM_CONV = CBV_CONV barm_rws;
 val BARM_ss = simpLib.SSFRAG
   {convs = [conv_rec "BARM_CONV" BARM_CONV ``EXEC_INST a b c``],
    name = SOME "BARM",
@@ -94,19 +88,20 @@ val [constant_fold,constant_fold_ldm_stm,constant_fold_mul] =
    [constant_fold,constant_fold_ldm_stm,constant_fold_mul];
 
 val inst_convs = map (fn rws =>
-  CBV_CONV (add_rws reduceLib.num_compset (rws @ basic_rws))) constant_fold;
+  CBV_CONV (add_thms (rws @ basic_rws) reduceLib.num_compset)) constant_fold;
 
-fun core_rws () =
-  add_rws reduceLib.num_compset
+val core_rws =
+  add_thms
     (basic_rws @ [PCCHANGE_def,DECODE_PSR_def,ABORTINST_def,IC_def,IS_def,
        NXTIC_def,INTSEQ_def,ENDINST_def,DATAABT1_def,DATAABT_def,
        REWRITE_RULE [PIPEAWRITE_def,PIPEBWRITE_def,PIPECWRITE_def,
          PIPEALL_def,PIPEAVAL_def,IREGVAL_def,DINWRITE_def,
          PIPESTATIREGWRITE_def,PIPESTATAWRITE_def,PIPESTATBWRITE_def,
          PIPEAABT_def,RESETLATCH_def,IREGABT2_def,NCPI_def,
-         COPROC1_def,FIQACT_def,IRQACT_def,RESETSTART_def] NEXT_ARM6_def]);
+         COPROC1_def,FIQACT_def,IRQACT_def,RESETSTART_def] NEXT_ARM6_def])
+    reduceLib.num_compset;
 
-val CORE_CONV = CBV_CONV (core_rws());
+val CORE_CONV = CBV_CONV core_rws;
 
 fun conv_rec2 nm cnv cnst trm =
   {name = nm, trace = 3, key = SOME([cnst]@[``tn``,``tm``], trm),
@@ -140,10 +135,10 @@ val [UNEXEC_TAC,SWP_TAC,MRS_MSR_TAC,DATA_PROC_TAC,REG_SHIFT_TAC,LDR_TAC,
      LDM_TAC,STM_TAC,MLA_MUL_TAC] = map inst_tac inst_simpsets;
 
 val [LDM_ITER_CONV,STM_ITER_CONV] = map (fn rws =>
-  CBV_CONV (add_rws core_rws (rws @ basic_rws))) constant_fold_ldm_stm;
+  CBV_CONV (add_thms (rws @ basic_rws) core_rws)) constant_fold_ldm_stm;
 
 val MLA_MUL_CONV =
-  CBV_CONV (add_rws core_rws ((hd constant_fold_mul) @ basic_rws));
+  CBV_CONV (add_thms ((hd constant_fold_mul) @ basic_rws) core_rws);
 
 (* ------------------------------------------------------------------------- *)
 end;

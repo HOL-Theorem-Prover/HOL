@@ -443,8 +443,7 @@ Proof
  >> simp [sets_lborel]
  >> Suff ‘A IN subsets borel’
  >- (simp [] >> DISCH_TAC \\
-     STRONG_CONJ_TAC >- (MATCH_MP_TAC countable_imp_borel_measurable >> art []) \\
-     DISCH_TAC \\
+     CONJ_ASM1_TAC >- (MATCH_MP_TAC countable_imp_borel_measurable >> art []) \\
      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [])
  >> rw [Abbr ‘A’, borel_measurable_real_set]
 QED
@@ -904,6 +903,12 @@ Proof
  >> SIMP_TAC real_ss [REAL_SUB_RZERO, POW_ONE]
 QED
 
+Theorem std_normal_density_neg :
+    !x. std_normal_density (-x) = std_normal_density x
+Proof
+    rw [std_normal_density_def]
+QED
+
 Theorem normal_density_nonneg :
     !mu sig x. 0 <= normal_density mu sig x
 Proof
@@ -924,6 +929,10 @@ Proof
   [MATCH_MP_TAC REAL_LT_MUL THEN SIMP_TAC real_ss [PI_POS], ALL_TAC] THEN
   MATCH_MP_TAC REAL_POW_LT >> art []
 QED
+
+(* |- !x. 0 < std_normal_density x *)
+Theorem std_normal_density_pos =
+            normal_density_pos |> Q.SPECL [‘0’, ‘1’] |> SRULE []
 
 Theorem std_normal_density_decreasing :
     !x y. 0 <= x /\ x <= y ==> std_normal_density y <= std_normal_density x
@@ -954,6 +963,14 @@ Proof
  >> AP_TERM_TAC
  >> simp [real_div]
 QED
+
+(* |- !mu sig x.
+        0 < sig ==>
+        normal_density mu sig x =
+        realinv sig * std_normal_density ((x - mu) * realinv sig)
+ *)
+Theorem normal_density_affine =
+        normal_density_alt_std |> REWRITE_RULE [real_div, Once REAL_MUL_COMM]
 
 Theorem normal_density_continuous_on :
     !mu sig s. normal_density mu sig continuous_on s

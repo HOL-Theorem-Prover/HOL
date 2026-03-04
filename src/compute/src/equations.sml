@@ -136,7 +136,7 @@ val stoppers = ref NONE : (term -> bool) option ref;
  *---------------------------------------------------------------------------*)
 
 (*
-   `reduce_cst (thm, cl) --> (reduced_p, t', cl', ants, mk_thm)`
+   `reduce_cst rws (thm, cl) --> (reduced_p, t', cl', ants, mk_thm)`
 
    Reduce an application of a constant in the compset. `thm` must be of the form
    `|- lhs = rhs`. `cl` is information about `rhs`. If `cl` is an application of
@@ -145,10 +145,10 @@ val stoppers = ref NONE : (term -> bool) option ref;
    `rhs`. `cl'` is information about `t'`. `ants` is a list of the antecedents
    to be reduced to `T` where each element is of the form `(t'', cl'')`. If
    `reduced_p` is true then `mk_thm` takes a list of theorems of the form
-   `ant <=> T’ where `ant` is the correponding term of `ants` and returns
-   `lhs = t'`.
+   `ant <=> T` where `ant` is the correponding term of `ants` and returns
+   `lhs = t'`. `rws` is the compset, needed for wrapping conversion results.
 *)
-fun reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip}) =
+fun reduce_cst rws (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip}) =
     (let
        val _ = (case !stoppers of
                   NONE => ()
@@ -171,17 +171,19 @@ fun reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip}) =
        (true, new_rhs, cl, ants, mk_thm)
      end
      handle No_match
-     => reduce_cst (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
-  | reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Conv fconv,Tail},Skip}) =
+     => reduce_cst rws (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
+  | reduce_cst rws (th,{Head, Args, Rws=Try{Hcst,Rws=Conv conv,Tail},Skip}) =
     (let
-       val (thm, cl) = fconv (rhs (concl th))
+       val thm = conv (rhs (concl th))
+       val (_, dt) = from_term(rws, [], rhs (concl thm))
+       val cl = mk_clos([], dt)
        val mk_thm = K (TRANS th thm)
      in
        (true, rhs (concl thm), cl, [], mk_thm)
      end
      handle HOL_ERR _
-     => reduce_cst (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
-  | reduce_cst (th,cst) =
+     => reduce_cst rws (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
+  | reduce_cst _ (th,cst) =
     (false, rhs (concl th), CST cst, [], K th)
 
 end;

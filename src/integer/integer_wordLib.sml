@@ -50,7 +50,7 @@ val add_integer_word_compset =
    end
 
 val integer_word_conv =
-  computeLib.compset_conv (reduceLib.num_compset())
+  computeLib.compset_conv (reduceLib.num_compset)
     [computeLib.Extenders
        [intReduce.add_int_compset, wordsLib.add_words_compset true,
         add_integer_word_compset]]

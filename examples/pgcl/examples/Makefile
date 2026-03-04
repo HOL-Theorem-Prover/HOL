@@ -3,7 +3,7 @@
 #  Created by Joe Hurd, June 2002
 ###############################################################################
 
-HOL = ../../../bin/hol.bare
+HOL = ../../../bin/hol --bare
 HOLMAKE = Holmake
 
 .PHONY: all

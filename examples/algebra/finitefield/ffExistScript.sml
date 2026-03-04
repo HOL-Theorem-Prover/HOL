@@ -7,7 +7,8 @@
 Theory ffExist
 Ancestors
   arithmetic pred_set list number divides combinatorics gcd
-  gcdset prime cardinal ffBasic ffAdvanced ffPoly ffUnity ffCyclo
+  gcdset prime cardinal listCardinality
+  ffBasic ffAdvanced ffPoly ffUnity ffCyclo
   ffMinimal ffMaster ffConjugate monoid group ring field
   fieldOrder fieldInstances polynomial polyWeak polyRing
   polyDivision polyBinomial polyMonic polyEval polyDivides
