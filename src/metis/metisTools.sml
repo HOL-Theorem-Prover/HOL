@@ -416,7 +416,7 @@ in
   fun classify fms = order (First,empty) fms
     handle HOL_ERR e => (
         print "metisTools.classify: error in classifying:\n";
-        HOLPP.prettyPrint (print, 1) (pp_hol_error e);
+        print (format_ERR e);
         raise BUG "metisTools.classify" "shouldn't fail"
     );
 end;
