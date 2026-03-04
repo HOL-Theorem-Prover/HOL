@@ -22,6 +22,51 @@ open HolKernel
 
 val ERR = mk_HOL_ERR "MergeTrace"
 fun its i = Int.toString i
+
+(* ------- Memory instrumentation ------- *)
+
+(* Read VmRSS from /proc/self/status, return in MB *)
+fun get_rss_mb () : int =
+  let val s = TextIO.openIn "/proc/self/status"
+      fun scan () =
+        case TextIO.inputLine s of
+          NONE => (TextIO.closeIn s; 0)
+        | SOME line =>
+          if String.isPrefix "VmRSS:" line then
+            let val toks = String.tokens Char.isSpace line
+                val kb = case toks of
+                           [_, n, _] => (case Int.fromString n of
+                                           SOME v => v | NONE => 0)
+                         | _ => 0
+            in TextIO.closeIn s; kb div 1024 end
+          else scan ()
+  in scan () handle _ => 0 end
+
+val mem_log : TextIO.outstream option ref = ref NONE
+
+fun open_mem_log output_path =
+  let val log_path = output_path ^ ".memlog"
+      val s = TextIO.openOut log_path
+  in mem_log := SOME s;
+     TextIO.output(TextIO.stdErr,
+       "  memory log: " ^ log_path ^ "\n");
+     s
+  end
+
+fun mem (msg : string) =
+  case !mem_log of
+    NONE => ()
+  | SOME s =>
+    let val rss = get_rss_mb ()
+    in TextIO.output(s, its rss ^ " MB\t" ^ msg ^ "\n");
+       TextIO.flushOut s
+    end
+
+fun close_mem_log () =
+  case !mem_log of
+    NONE => ()
+  | SOME s => (TextIO.closeOut s handle _ => ();
+               mem_log := NONE)
 (* Current file, line, and phase for error reporting.
    Set by each scan/process loop before parsing a line. *)
 val parse_file = ref ""
@@ -490,7 +535,9 @@ fun get_deps (data : file_data) : file_deps =
     SOME d => d
   | NONE =>
     (* Deps not yet built, or were cleared. Build via dep scan. *)
-    (read_file_deps data;
+    (mem ("get_deps building " ^ OS.Path.file (#path data));
+     read_file_deps data;
+     mem ("get_deps built " ^ OS.Path.file (#path data));
      case !(#deps data) of
        SOME d => d
      | NONE => raise ERR "get_deps"
@@ -812,6 +859,8 @@ fun merge {trace_paths : (string * string) list,
     (* ============================================================
        Pass 1: Determine live entries across all needed files
        ============================================================ *)
+    val _ = open_mem_log output_path
+    val _ = mem "start"
     val _ = err "Pass 1: determining live entries...\n"
 
     (* Cache of loaded file data, keyed by canonical path *)
@@ -834,6 +883,8 @@ fun merge {trace_paths : (string * string) list,
             val p_range = if #p_min_id data < 0 then 0
                           else #p_max_id data - #p_min_id data + 1
         in file_cache := Redblackmap.insert(!file_cache, path, data);
+           mem ("load_file " ^ OS.Path.file path ^
+                " p_range=" ^ its p_range);
            data
         end
 
@@ -925,6 +976,8 @@ fun merge {trace_paths : (string * string) list,
 
     fun process_file path needed_thm_ids =
       let
+        val _ = mem ("process_file " ^ OS.Path.file path ^
+                     " ids=" ^ its (length needed_thm_ids))
         val data = load_file path
         val _ = if not (Redblackset.member(!processed_files, path))
                 then (if #is_heap data
@@ -1073,7 +1126,8 @@ fun merge {trace_paths : (string * string) list,
        No-op if already cleared. *)
     fun release_file path =
       case Redblackmap.peek(!file_cache, path) of
-        SOME data => clear_deps data
+        SOME data => (clear_deps data;
+                      mem ("release " ^ OS.Path.file path))
       | NONE => ()
 
     (* Drain worklist *)
@@ -1098,6 +1152,7 @@ fun merge {trace_paths : (string * string) list,
             process_file path ids)) items;
          drain ())
     val _ = drain ()
+    val _ = mem "drain complete"
 
     (* --- Resolve C/O for live constants/types ---
 
@@ -1312,10 +1367,12 @@ fun merge {trace_paths : (string * string) list,
                  its n_live_total ^ " live theorems\n")
 
     (* Free heavy dependency data no longer needed after Pass 1 *)
+    val _ = mem "before clear_deps (pass 1 done)"
     val _ = Redblackmap.app (fn (_, data) => clear_deps data)
               (!file_cache)
     (* Remove decompressed temp files — seeking is done *)
     val _ = TraceCompress.cleanup_temps ()
+    val _ = mem "after clear_deps + cleanup_temps"
 
     (* ============================================================
        Pass 2: Write merged trace with global dedup and remapping
@@ -1709,6 +1766,8 @@ fun merge {trace_paths : (string * string) list,
                " not found in merged output\n")) desired_exports
 
     val _ = TextIO.closeOut ostrm
+    val _ = mem "done"
+    val _ = close_mem_log ()
   in
     err ("Merged trace: " ^ its (!global_ty_id) ^ " types, " ^
          its (!global_tm_id) ^ " terms, " ^
