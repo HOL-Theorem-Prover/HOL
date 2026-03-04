@@ -1026,27 +1026,60 @@ fun merge {trace_paths : (string * string) list,
                       mem ("release " ^ OS.Path.file path))
       | NONE => ()
 
+    (* Is this a heap file? Heap deps are kept alive during drain
+       because heap files are accessed repeatedly (every theory's
+       unresolved parent IDs bounce through the heap chain). *)
+    fun is_heap_file path =
+      case Redblackmap.peek(!file_cache, path) of
+        SOME data => #is_heap data
+      | NONE => false
+
+    (* Batch worklist items by file path, merging ID lists.
+       Deduplicates IDs within each file to avoid redundant
+       mark_live calls (mark_live short-circuits on already-live
+       entries, but dedup avoids the overhead entirely). *)
+    fun batch_worklist items =
+      let val m = List.foldl (fn ((path, ids), acc) =>
+            let val prev = case Redblackmap.peek(acc, path) of
+                             SOME s => s | NONE => PIntMap.empty
+                val merged = List.foldl
+                  (fn (id, s) => PIntMap.add id () s) prev ids
+            in Redblackmap.insert(acc, path, merged) end)
+            (Redblackmap.mkDict String.compare) items
+      in map (fn (path, idmap) =>
+           (path, PIntMap.fold (fn (k,_,acc) => k::acc) [] idmap))
+         (Redblackmap.listItems m)
+      end
+
     (* Drain worklist *)
     val last_seek_path = ref (NONE : string option)
 
     fun drain () =
       case !worklist of
         [] => (case !last_seek_path of
-                 SOME p => (release_file p; last_seek_path := NONE)
+                 SOME p => (if is_heap_file p then ()
+                            else release_file p;
+                            last_seek_path := NONE)
                | NONE => ())
       | items =>
-        (worklist := [];
-         List.app (fn (path, ids) =>
-           (* Release previous file's seeking temp before
-              processing the next, so at most one decompressed
-              temp exists at a time. *)
-           ((case !last_seek_path of
-               SOME p => if p = path then ()
-                         else (release_file p;
-                               last_seek_path := SOME path)
-             | NONE => last_seek_path := SOME path);
-            process_file path ids)) items;
-         drain ())
+        let
+          (* Batch: merge all pending IDs for the same file *)
+          val _ = worklist := []
+          val batched = batch_worklist items
+        in
+          List.app (fn (path, ids) =>
+            (* Release previous non-heap file's seeking temp.
+               Keep heap file deps alive — they're accessed
+               repeatedly and rebuilding is expensive. *)
+            ((case !last_seek_path of
+                SOME p => if p = path then ()
+                          else if is_heap_file p then ()
+                          else (release_file p;
+                                last_seek_path := SOME path)
+              | NONE => last_seek_path := SOME path);
+             process_file path ids)) batched;
+          drain ()
+        end
     val _ = drain ()
     val _ = mem "drain complete"
 
