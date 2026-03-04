@@ -264,6 +264,4 @@ sig
 
   val reraise : exn -> 'a
   val display_exn : (exn -> unit) -> exn -> 'a
-
-  val export : string * 'a -> unit
 end
