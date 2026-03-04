@@ -138,6 +138,20 @@ fu! HOLExpand()
   keepjumps normal G$a) HOLgoal)
 endf
 
+fu! HOLExpandAll()
+  silent keepjumps normal pgg0
+  " The regex below in Perl syntax:
+  " ^ \s* (($stripBoth|$stripStart)(\b|$delim) | ($stripBothWords $delim))
+  while search('\%^\_s*\%(\%('.s:stripBoth.'\|'.s:stripStart.'\)\%(\<\|'.s:delim.'\)\|\%('.s:stripBothWords.s:delim.'\)\)\ze','cWe')
+    silent keepjumps normal vgg0"_d
+  endw
+  while search('\%(\%('.s:stripBoth.'\|'.s:stripEnd.'\)\|'.s:delim.'\zs\%('.s:stripBothWords.'\)\)\_s*\%$','cW')
+    silent keepjumps normal vG$"_dgg0
+  endw
+  keepjumps normal iproofManagerLib.expand_list(fn HOLgoal => (ALL_LT THEN
+  keepjumps normal G$a) HOLgoal)
+endf
+
 fu! HOLSubgoal()
   keepjumps normal iproofManagerLib.expand(bossLib.sg(
   silent normal p
@@ -226,6 +240,7 @@ vn <buffer><silent> <LocalLeader>u :call YankThenHOLCall(function("HOLSendQuiet"
 vn <buffer><silent> <LocalLeader>g :call YankThenHOLCall(function("HOLGoal"),[])<CR>
 vn <buffer><silent> <LocalLeader>G :call YankThenHOLCall(function("HOLUQGoal"),[])<CR>
 vn <buffer><silent> <LocalLeader>e :call YankThenHOLCall(function("HOLExpand"),[])<CR>
+vn <buffer><silent> <LocalLeader>E :call YankThenHOLCall(function("HOLExpandAll"),[])<CR>
 vn <buffer><silent> <LocalLeader>S :call YankThenHOLCall(function("HOLSubgoal"),[])<CR>
 vn <buffer><silent> <LocalLeader>F :call YankThenHOLCall(function("HOLSuffices"),[])<CR>
 vn <buffer><silent> <LocalLeader>P :call YankThenHOLCall(function("HOLPattern"),[])<CR>
@@ -235,6 +250,7 @@ nm <buffer><silent><expr> <LocalLeader>u "V".maplocalleader."u"
 nm <buffer><silent><expr> <LocalLeader>g "V".maplocalleader."g"
 nm <buffer><silent><expr> <LocalLeader>G "V".maplocalleader."G"
 nm <buffer><silent><expr> <LocalLeader>e "V".maplocalleader."e"
+nm <buffer><silent><expr> <LocalLeader>E "V".maplocalleader."E"
 nm <buffer><silent><expr> <LocalLeader>S "V".maplocalleader."S"
 nm <buffer><silent><expr> <LocalLeader>F "V".maplocalleader."F"
 nm <buffer><silent><expr> <LocalLeader>P "V".maplocalleader."P"
