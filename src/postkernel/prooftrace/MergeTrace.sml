@@ -264,165 +264,61 @@ fun scan_file path phase process_line =
      TraceCompress.release_temp path
   end
 
-(* --- Metadata scan: extracts everything except dep arrays --- *)
+(* --- Convert TraceMetadata.metadata to file_data --- *)
+
+fun metadata_to_file_data path (m : TraceMetadata.metadata) : file_data =
+  let
+    fun build_dict cmp items =
+      List.foldl (fn ((k,v), d) => Redblackmap.insert(d, k, v))
+        (Redblackmap.mkDict cmp) items
+  in
+    { path = path,
+      heap_parent = #heap_parent m,
+      is_heap = #thy_name m = "",
+      thy_name = #thy_name m,
+      n_terms = #n_terms m,
+      n_types = #n_types m,
+      exports = build_dict String.compare (#exports m),
+      name_refs = #name_refs m,
+      load_refs = #load_refs m,
+      const_defs = List.foldl (fn ((id, thy, names), d) =>
+          List.foldl (fn (c, d') =>
+            Redblackmap.insert(d', (thy, c), id)) d names)
+        (Redblackmap.mkDict thyname_cmp) (#const_defs m),
+      type_defs = List.foldl (fn ((id, thy, tyop), d) =>
+          Redblackmap.insert(d, (thy, tyop), id))
+        (Redblackmap.mkDict thyname_cmp) (#type_defs m),
+      const_decls = List.foldl (fn ((thy, name, tyid), d) =>
+          Redblackmap.insert(d, (thy, name), tyid))
+        (Redblackmap.mkDict thyname_cmp) (#const_decls m),
+      type_decls = List.foldl (fn ((thy, name, arity), d) =>
+          Redblackmap.insert(d, (thy, name), arity))
+        (Redblackmap.mkDict thyname_cmp) (#type_decls m),
+      t_const_refs = map (fn (id,thy,nm) => (id,(thy,nm)))
+                       (#t_const_refs m),
+      y_tyop_refs = map (fn (id,thy,nm) => (id,(thy,nm)))
+                      (#y_tyop_refs m),
+      p_min_id = #p_min_id m,
+      p_max_id = #p_max_id m,
+      compute_ids = List.foldl (fn (id, m) => PIntMap.add id () m)
+                      PIntMap.empty (#compute_ids m),
+      c_deps = #c_deps m,
+      deps = ref NONE }
+  end
+
+(* --- Load file metadata: .pftm if available, else scan .pft --- *)
 
 fun read_file_metadata path : file_data =
   let
-    val ty_count = ref 0
-    val tm_count = ref 0
-    val heap_parent = ref (NONE : string option)
-    val thy_name = ref ""
-    val has_name = ref false
-    val exports_ref = ref (Redblackmap.mkDict String.compare
-      : (string, int) Redblackmap.dict)
-    val name_refs_rev = ref ([] : (int * string * string) list)
-    val load_refs_rev = ref ([] : (int * string * int) list)
-    val const_defs_ref = ref (Redblackmap.mkDict thyname_cmp
-      : (string * string, int) Redblackmap.dict)
-    val type_defs_ref = ref (Redblackmap.mkDict thyname_cmp
-      : (string * string, int) Redblackmap.dict)
-    val const_decls_ref = ref (Redblackmap.mkDict thyname_cmp
-      : (string * string, int) Redblackmap.dict)
-    val type_decls_ref = ref (Redblackmap.mkDict thyname_cmp
-      : (string * string, int) Redblackmap.dict)
-    val t_const_refs_rev = ref ([] : (int * (string * string)) list)
-    val y_tyop_refs_rev = ref ([] : (int * (string * string)) list)
-    val compute_ids_ref = ref (PIntMap.empty : unit PIntMap.t)
-    val c_deps_ref = ref (NONE : (int list * int list * int list) option)
-    val p_min_id = ref ~1
-    val p_max_id = ref ~1
-
-    fun process_line _ line =
-      let val toks = tokenize line in
-      case toks of
-        [] => ()
-      | ["V", _] => ()
-      | ("H" :: hp :: _) =>
-          heap_parent := SOME (unescape hp)
-      | ("Y" :: id_s :: "V" :: _) =>
-          ty_count := Int.max(!ty_count, int_of id_s + 1)
-      | ("Y" :: id_s :: "O" :: thy_s :: name_s :: _) =>
-          let val id = int_of id_s
-              val thy = unescape thy_s
-              val name = unescape name_s
-          in ty_count := Int.max(!ty_count, id + 1);
-             if thy <> "min" then
-               y_tyop_refs_rev := (id, (thy, name))
-                                  :: !y_tyop_refs_rev
-             else ()
-          end
-      | ("T" :: id_s :: "V" :: _) =>
-          tm_count := Int.max(!tm_count, int_of id_s + 1)
-      | ("T" :: id_s :: "C" :: thy_s :: name_s :: _) =>
-          let val id = int_of id_s
-              val thy = unescape thy_s
-              val name = unescape name_s
-          in tm_count := Int.max(!tm_count, id + 1);
-             if thy <> "min" then
-               t_const_refs_rev := (id, (thy, name))
-                                   :: !t_const_refs_rev
-             else ()
-          end
-      | ("T" :: id_s :: "A" :: _) =>
-          tm_count := Int.max(!tm_count, int_of id_s + 1)
-      | ("T" :: id_s :: "L" :: _) =>
-          tm_count := Int.max(!tm_count, int_of id_s + 1)
-      | ("P" :: id_s :: rule :: args) =>
-          let val id = int_of id_s
-          in (if !p_min_id < 0 orelse id < !p_min_id
-              then p_min_id := id else ());
-             (if id > !p_max_id then p_max_id := id else ());
-             (case rule of
-                "NAME" =>
-                  name_refs_rev := (id, unescape (List.nth(args, 0)),
-                                    unescape (List.nth(args, 1)))
-                                   :: !name_refs_rev
-              | "LOAD" =>
-                  load_refs_rev := (id, unescape (List.nth(args, 0)),
-                                    int_of (List.nth(args, 1)))
-                                   :: !load_refs_rev
-              | "DEF_SPEC" =>
-                  let val thyname = unescape (List.nth(args, 1))
-                      val cnames = map unescape (List.drop(args, 2))
-                  in List.app (fn c =>
-                       const_defs_ref :=
-                         Redblackmap.insert(!const_defs_ref,
-                                            (thyname, c), id))
-                     cnames
-                  end
-              | "DEF_TYOP" =>
-                  let val thy = unescape (List.nth(args, 1))
-                      val tyop = unescape (List.nth(args, 2))
-                  in type_defs_ref :=
-                       Redblackmap.insert(!type_defs_ref,
-                                          (thy, tyop), id)
-                  end
-              | "COMPUTE" =>
-                  compute_ids_ref :=
-                    PIntMap.add id () (!compute_ids_ref)
-              | _ => ())
-          end
-      | ("I" :: args) =>
-          let
-            fun ai n = int_of (List.nth(args, n))
-            val type_ids = [ai 0, ai 1]
-            val rest = List.drop(args, 2)
-            val term_ids = List.tabulate(29, fn i =>
-              int_of (List.nth(rest, 2*i + 1)))
-            val rest2 = List.drop(rest, 58)
-            fun get_parents [] = []
-              | get_parents (_::p::r) = int_of p :: get_parents r
-              | get_parents _ = []
-            val parent_ids = get_parents rest2
-          in
-            c_deps_ref := SOME (parent_ids, term_ids, type_ids)
-          end
-      | ("C" :: thy_s :: name_s :: ty_s :: _) =>
-          let val thy = unescape thy_s
-              val name = unescape name_s
-              val tyid = int_of ty_s
-          in const_decls_ref :=
-               Redblackmap.insert(!const_decls_ref,
-                                   (thy, name), tyid)
-          end
-      | ("O" :: thy_s :: name_s :: arity_s :: _) =>
-          let val thy = unescape thy_s
-              val name = unescape name_s
-              val arity = int_of arity_s
-          in type_decls_ref :=
-               Redblackmap.insert(!type_decls_ref,
-                                   (thy, name), arity)
-          end
-      | ("N" :: name :: _) =>
-          (thy_name := unescape name; has_name := true)
-      | ("E" :: name :: id_s :: _) =>
-          exports_ref := Redblackmap.insert(!exports_ref,
-                          unescape name, int_of id_s)
-      | _ => ()
-      end
-
-    val _ = scan_file path "metadata-scan" process_line
+    (* Try .pftm first *)
+    val pftm = TraceMetadata.metadata_path path
   in
-    { path = path,
-      heap_parent = !heap_parent,
-      is_heap = not (!has_name),
-      thy_name = !thy_name,
-      n_terms = !tm_count,
-      n_types = !ty_count,
-      exports = !exports_ref,
-      name_refs = rev (!name_refs_rev),
-      load_refs = rev (!load_refs_rev),
-      const_defs = !const_defs_ref,
-      type_defs = !type_defs_ref,
-      const_decls = !const_decls_ref,
-      type_decls = !type_decls_ref,
-      t_const_refs = rev (!t_const_refs_rev),
-      y_tyop_refs = rev (!y_tyop_refs_rev),
-      p_min_id = !p_min_id,
-      p_max_id = !p_max_id,
-      compute_ids = !compute_ids_ref,
-      c_deps = !c_deps_ref,
-      deps = ref NONE }
+    case TraceMetadata.read pftm of
+      SOME m => metadata_to_file_data path m
+    | NONE =>
+        (* Fallback: expensive full scan *)
+        (* TODO: write .pftm after extract so future runs skip the scan *)
+        metadata_to_file_data path (TraceMetadata.extract path)
   end
 
 (* --- Dep scan: builds only the heavy dep structures --- *)

@@ -382,6 +382,53 @@ Output: single self-contained `.pft` with only entries reachable
 from the desired exports, types/terms globally deduplicated, all
 NAME and LOAD cross-file references resolved. No N line.
 
+### Metadata Files (`.pftm`)
+
+Large trace files (CakeML backend theories can be 12GB+
+decompressed, 330M+ lines) are expensive to scan for metadata.
+The merge tool needs only lightweight metadata from each file
+(exports, NAME/LOAD refs, const/type defs and decls, T/Y
+const/type refs, counts, P ID range) — not the bulk P/T/Y
+entries.
+
+**`.pftm` files** store this metadata in a compact text format
+(a few KB per theory). When available, the merge tool reads the
+`.pftm` instead of scanning the full trace, avoiding multi-GB
+decompression and parsing. This reduces metadata loading from
+minutes to milliseconds per file.
+
+The `TraceMetadata` module provides:
+- `write`: emit a `.pftm` file from a metadata record
+- `read`: parse a `.pftm` file (returns NONE if not found)
+- `extract`: scan a `.pft` file to build metadata (expensive
+  fallback)
+
+**Generation**: `.pftm` files can be generated in two ways:
+1. **At recording time**: `TraceRecord.export_hook` writes the
+   `.pftm` alongside the `.pft` at theory close (planned).
+2. **From existing traces**: `prooftrace extract-metadata -d DIR`
+   scans directories for `.pft` files and writes `.pftm` files.
+   Files are processed one at a time (no memory accumulation),
+   and up-to-date `.pftm` files are skipped.
+
+**Format**: text lines reusing `.pft` syntax where possible.
+```
+S ny=N nt=N pmin=N pmax=N       summary counts/range
+H <path>                         heap parent
+C <thy> <name> <tyid>            const declaration
+O <thy> <name> <arity>           type declaration
+I P <ids...> T <ids...> Y <ids...>  compute init deps (simplified)
+P <id> NAME <thy> <name>         NAME ref
+P <id> LOAD <thy> <src_id>       LOAD ref
+P <id> DEF_SPEC <thy> <names...> const definition
+P <id> DEF_TYOP <thy> <tyop>     type definition
+P <id> COMPUTE                   compute entry
+TC <tid> <thy> <name>            T entry const ref
+YO <yid> <thy> <tyop>            Y entry type ref
+N <name>                         theory name
+E <name> <id>                    export
+```
+
 ### Pass 1: Determine what's needed
 
 Starting from the desired exports, work backward to discover all
@@ -390,14 +437,17 @@ needed theorems, terms, types, and ancestor theories/heaps.
 For each trace file (starting with files containing desired
 exports, loading ancestors on demand as discovered):
 
-1. Stream through the trace file, building lightweight metadata:
-   for each Y entry, record sub-type dependencies; for each T
-   entry, record sub-term and sub-type dependencies; for each P
-   entry, record only its byte offset in the file (not its
-   dependencies — those are read lazily). Also record E, NAME,
-   LOAD, DEF_SPEC, DEF_TYOP, C, and O entries. A Posix file
-   descriptor is kept open for random-access seeking to P entry
-   byte offsets during the reachability walk.
+1. Load file metadata: read the `.pftm` file if available, otherwise
+   fall back to scanning the full `.pft` file. Metadata includes
+   exports, NAME/LOAD refs, DEF_SPEC/DEF_TYOP, C/O declarations,
+   T/Y const/type refs, counts, and P ID range. **No dependency
+   arrays or byte offset arrays are built at this stage** — those
+   are loaded lazily only for files that undergo liveness marking.
+   When liveness marking requires dependency data (P byte offsets,
+   T/Y sub-dependency arrays), a second scan of the `.pft` file
+   builds only those structures. This is released after marking
+   completes, so at most one file's heavy data is in memory at
+   a time.
 2. Walk backward from the needed theorem IDs, marking live P
    entries, then transitively marking the T and Y entries they
    reference as live. When a T entry for a non-primitive
@@ -772,14 +822,15 @@ end
 
 ### Where decompression happens
 
-- **MergeTrace**: uses two access patterns per file.
-  Pass 1: `TraceCompress.open_trace` for sequential reading,
-  plus `TraceCompress.ensure_decompressed` to obtain a file
-  path for Posix fd-based random access (seeking to P entry
-  byte offsets during backward reachability).
+- **MergeTrace**: uses up to three access patterns per file.
+  Metadata loading: reads `.pftm` if available (no decompression);
+  otherwise scans the full `.pft` via `TraceCompress.open_trace`.
+  Pass 1 (liveness): for files needing `mark_live`, a dep scan
+  via `TraceCompress.open_trace` builds byte offset and dependency
+  arrays, then `TraceCompress.ensure_decompressed` provides a
+  path for Posix fd-based random access seeking. Decompressed
+  temp files are released after each file's liveness marking.
   Pass 2: `TraceCompress.open_trace` for sequential re-reading.
-  Decompressed temp files are cached across both passes
-  (decompress once) and cleaned up after.
 - **ReplayTrace**: calls `TraceCompress.open_trace`.
 - **File discovery**: merge tool uses `TraceCompress.find_trace`
   and `TraceCompress.trace_suffixes` when scanning `-d`

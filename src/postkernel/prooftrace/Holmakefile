@@ -1,13 +1,13 @@
-all: $(DEFAULT_TARGETS) TraceCompress.uo TraceRecord.uo ReplayTrace.uo MergeTrace.uo
+all: $(DEFAULT_TARGETS) TraceCompress.uo TraceRecord.uo ReplayTrace.uo TraceMetadata.uo MergeTrace.uo
 .PHONY: all
 
 ifdef POLY
 MINSTATE = $(dprot $(HOLDIR)/bin/hol.state.min)
 
-$(MINSTATE): TraceCompress.uo ReplayTrace.uo MergeTrace.uo $(dprot $(HOLDIR)/bin/hol)
+$(MINSTATE): TraceCompress.uo ReplayTrace.uo TraceMetadata.uo MergeTrace.uo $(dprot $(HOLDIR)/bin/hol)
 	$(protect $(HOLDIR)/bin/hol) buildheap --poly -o $@ \
 	  $(protect $(SIGOBJ)/HolKernel) \
-	  TraceCompress ReplayTrace MergeTrace
+	  TraceCompress ReplayTrace TraceMetadata MergeTrace
 
 PROOFTRACE = $(dprot $(HOLDIR)/bin/prooftrace)
 EXTRA_CLEANS += $(PROOFTRACE)

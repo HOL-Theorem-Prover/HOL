@@ -21,8 +21,9 @@ fun main () =
       out "Usage: prooftrace <command> [options] [args...]\n\
           \\n\
           \Commands:\n\
-          \  merge     Merge per-theory traces for specified theorems\n\
-          \  replay    Replay a trace, verify exports\n\
+          \  merge              Merge per-theory traces for specified theorems\n\
+          \  replay             Replay a trace, verify exports\n\
+          \  extract-metadata   Generate .pftm files for faster merge\n\
           \\n\
           \Building with traces:\n\
           \  bin/build --trace                   (HOL sources)\n\
@@ -46,10 +47,18 @@ fun main () =
           \  --interactive   drop into HOL REPL after replay with\n\
           \                  exports bound as prooftrace_exports\n\
           \\n\
+          \Extract metadata:\n\
+          \  prooftrace extract-metadata [-d DIR]...\n\
+          \\n\
+          \  Scans .pft files and writes .pftm summary files alongside\n\
+          \  them. The merge command reads .pftm files when available,\n\
+          \  avoiding expensive full scans of large trace files.\n\
+          \\n\
           \Examples:\n\
           \  prooftrace replay merged.pft\n\
           \  prooftrace replay --concise merged.pft\n\
-          \  prooftrace replay --interactive merged.pft\n";
+          \  prooftrace replay --interactive merged.pft\n\
+          \  prooftrace extract-metadata -d /path/to/cakeml\n";
       OS.Process.exit OS.Process.success)
     fun die s = (
       err ("prooftrace: " ^ s ^ "\n");
@@ -264,6 +273,75 @@ fun main () =
         end
       end
 
+    (* --- extract-metadata command --- *)
+    fun do_extract_metadata args =
+      let
+        val dirs = ref ([] : string list)
+        val quiet = ref false
+
+        fun parse [] = ()
+          | parse ("--help" :: _) = usage ()
+          | parse ("-h" :: _) = usage ()
+          | parse ("-q" :: rest) =
+              (quiet := true; parse rest)
+          | parse ("-d" :: d :: rest) =
+              (dirs := d :: !dirs; parse rest)
+          | parse ("-d" :: []) =
+              die "extract-metadata: -d requires an argument"
+          | parse (arg :: _) =
+              die ("extract-metadata: unknown option: " ^ arg)
+
+        val _ = parse args
+        val search_dirs =
+          let val ds = rev (!dirs)
+          in if null ds then ["."] else ds end
+
+        val all_traces = List.concat
+          (map ReplayTrace.find_traces search_dirs)
+        val _ = if null all_traces then
+                  die "extract-metadata: no .pft files found"
+                else if not (!quiet) then
+                  err ("Found " ^ Int.toString (length all_traces) ^
+                       " trace files\n")
+                else ()
+
+        val n_written = ref 0
+        val n_skipped = ref 0
+      in
+        List.app (fn (_, path) =>
+          let
+            val pftm = TraceMetadata.metadata_path path
+            val trace_time =
+              case TraceCompress.find_trace path of
+                SOME actual => (OS.FileSys.modTime actual
+                                handle _ => Time.zeroTime)
+              | NONE => Time.zeroTime
+            val up_to_date =
+              OS.FileSys.access(pftm, [OS.FileSys.A_READ]) andalso
+              Time.>=(OS.FileSys.modTime pftm, trace_time)
+          in
+            if up_to_date
+            then (n_skipped := !n_skipped + 1)
+            else
+              (if not (!quiet) then
+                 err ("  extracting " ^ OS.Path.file path ^ "...\n")
+               else ();
+               let val m = TraceMetadata.extract path
+               in TraceMetadata.write pftm m;
+                  n_written := !n_written + 1
+               end
+               handle e =>
+                 err ("WARNING: failed on " ^ path ^ ": " ^
+                      General.exnMessage e ^ "\n"))
+          end) all_traces;
+        if not (!quiet) then
+          err ("Wrote " ^ Int.toString (!n_written) ^ " .pftm files" ^
+               (if !n_skipped > 0
+                then " (" ^ Int.toString (!n_skipped) ^ " up to date)"
+                else "") ^ "\n")
+        else ()
+      end
+
     (* --- dispatch --- *)
   in
     (case args of
@@ -272,6 +350,7 @@ fun main () =
     | ["-h"] => usage ()
     | ("merge" :: rest) => do_merge rest
     | ("replay" :: rest) => do_replay rest
+    | ("extract-metadata" :: rest) => do_extract_metadata rest
     | (cmd :: _) => die ("unknown command: " ^ cmd))
     handle e =>
       (err ("prooftrace: unhandled exception: " ^

@@ -180,6 +180,24 @@ silently poisons all downstream thm lookups. Better: fail
 fast, or insert a sentinel in `thm_map` that raises a clear
 error on lookup.
 
+### [pftm-at-record] Write .pftm at recording time
+
+TraceRecord should write a `.pftm` metadata file alongside
+the `.pft` at theory export time (`export_hook`). This requires
+accumulating metadata during recording (p_min_id, p_max_id,
+name_refs, load_refs, const_defs, type_defs, const_decls,
+type_decls, t_const_refs, y_tyop_refs, compute_ids, c_deps,
+n_terms, n_types, exports) and calling `TraceMetadata.write`
+after writing N/E lines. This eliminates the need to run
+`prooftrace extract-metadata` as a separate step.
+
+### [pftm-on-fallback] Write .pftm after fallback extract in merge
+
+When `read_file_metadata` falls back to `TraceMetadata.extract`
+(no `.pftm` file), it should write the extracted metadata to
+the `.pftm` path so subsequent merge runs skip the expensive
+scan. Currently the extracted metadata is used but not persisted.
+
 ### [cache-file-deps] Cache liveness-filtered deps for topo sort
 
 `file_deps` (for topo sort in Pass 2) iterates over
