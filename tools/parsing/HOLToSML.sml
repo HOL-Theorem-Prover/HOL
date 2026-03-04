@@ -336,13 +336,20 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
       | push b x (p as (SOME (b2, ns), acc)) =
         if b = b2 then (SOME (b2, x :: ns), acc) else (SOME (b, [x]), finish p)
     fun process [] acc = finish acc
-      | process (HOLAncestors {elems, ...} :: ls) acc = processList true elems ls acc
-      | process (HOLLibs {elems, ...} :: ls) acc = processList false elems ls acc
-    and processList _ [] ls acc = process ls acc
-      | processList isThy ({id, attrs} :: thys) ls acc = let
+      | process (HOLAncestors {attrs, elems, ...} :: ls) acc = processList true attrs elems ls acc
+      | process (HOLLibs {attrs, elems, ...} :: ls) acc = processList false attrs elems ls acc
+    and processList _ _ [] ls acc = process ls acc
+      | processList isThy header_attrs ({id, attrs} :: thys) ls acc = let
         val aliases = ref []
         val qualified = ref false
         val ignoreGrammar = ref false
+        (* Process attributes on header *)
+        val _ = app (fn x => case (x, isThy) of
+            ({key = (_, "qualified"), bind = NONE}, _) => qualified := true
+          | ({key = (_, "ignore_grammar"), bind = NONE}, true) => ignoreGrammar := true
+          | ({key = (p, s), ...}, _) => parseError (p, p + size s) "unknown header attribute"
+          ) (case header_attrs of NONE => [] | SOME v => #args (#attrs v))
+        (* Process attributes on theory/library *)
         val _ = app (fn x => case (x, isThy) of
             ({key = (_, "alias"), bind = SOME {vals = [tgt], ...}}, _) => aliases := tgt :: !aliases
           | ({key = (_, "qualified"), bind = NONE}, _) => qualified := true
@@ -359,7 +366,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
           val elems = {args = [s], delims = [], stop = stop}
           val d = DecStructure {structure_ = #1 tgt, elems = elems}
           in (NONE, d :: finish acc) end) acc (rev (!aliases))
-        in processList isThy thys ls acc end
+        in processList isThy header_attrs thys ls acc end
     val lhs = if !bare then NONE else SOME (false,
       map (fn s => (theory_, s)) ["Parse", "bossLib", "boolLib", "HolKernel", "holTheory"])
     val acc = []
