@@ -3,6 +3,9 @@ open HOLAst
 
 fun mem x = List.exists (fn y => x = y)
 
+fun isQuote s = mem s
+  ["`", "``", "\226\128\152", "\226\128\153", "\226\128\156", "\226\128\157"]
+
 exception Unreachable
 type scope = (string, int * bool) Binarymap.dict
 
@@ -764,7 +767,16 @@ fun parseSML file read parseError: scope -> result = let
       | (p, StrongEndTk) => (
         if mem (ident p) s then () else parseError (start, p) (expected ());
         (rev (push i p acc), p))
-      | (p, EndTk) => if mem (ident p) s then (rev (push i p acc), p) else go i acc
+      | (p, EndTk) =>
+        let val s' = ident p in
+        (* We came across a valid end for the quote body *)
+        if mem s' s then (rev (push i p acc), p)
+        (* We came across a quote that is different from the ones we expected *)
+        else if List.all isQuote s andalso isQuote s' then (
+          parseError (start, p) "unexpected ending quote";
+          (rev (push i p acc), p))
+        (* Continue - for example, when there is a quote within a Proof body *)
+        else go i acc end
       | (p, AntiqIdent) => let
         val acc = push i p acc
         val exp = case identKind (p + 1) of
