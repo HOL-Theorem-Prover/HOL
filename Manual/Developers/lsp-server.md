@@ -53,8 +53,8 @@ In addition to the usual LSP commands, the server supports the following extensi
   Parameters:
   * `uri: URI` - The file (or virtual path) associated to this chunk
   * `code: string` - The HOL text to compile
-  * `incr: Incr` where `enum Incr { None = 0, Chunk = 1, Stream = 2 }`
-  * `holdep: HoldepKind` where `enum HoldepKind { None = 0, Quiet = 1, List = 2 }` - controls whether it should first call `holdep` to collect and preload any `open`s and other qualified names, and whether to print bindings (`List`) or not (`Quiet`).
+  * `incr?: Incr` where `enum Incr { None = 0, Chunk = 1, Stream = 2 }` (default: `None`)
+  * `holdep?: HoldepKind` where `enum HoldepKind { None = 0, Quiet = 1, List = 2 }` (default: `Quiet`) - controls whether it should first call `holdep` to collect and preload any `open`s and other qualified names, and whether to print bindings (`List`) or not (`Quiet`).
 
   Depending on the options set, it will send various notifications back, in the following order:
 
@@ -108,5 +108,18 @@ In addition to the usual LSP commands, the server supports the following extensi
 * The `$/compileCompleted` notification is sent when an asynchronous compile caused by a file open or modification event is completed.
     * `uri: URI` - the file being compiled
 
-* The `$/compileInterrupted` notification is sent when an asynchronous compile caused by a file open or modification event is interrupteds.
+* The `$/compileInterrupted` notification is sent when an asynchronous compile caused by a file open or modification event is interrupted.
     * `uri: URI` - the file being compiled
+
+* > **TODO** unimplemented; this is an API proposal
+
+  `$/getState` request to get the current goal view state:
+  * `uri: URI` - the file being compiled
+  * `pos: Range` - the selection
+
+  The response is either `null` if it is not in a proof, or an object containing:
+  * `tactic: Range`
+  * `goals: [Goal]` where `struct Goal { asms: [string], concl: string }`
+
+  `goals` contains the list of goals that would be operated on by a tactic at this position.
+
