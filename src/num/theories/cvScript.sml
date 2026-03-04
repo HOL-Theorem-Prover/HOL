@@ -163,14 +163,14 @@ Proof
 QED
 
 (* helpers/auxiliaries *)
-val c2b_def = new_definition ("c2b_def", “c2b x <=> x ≠ Num 0”);
+val c2b_def = new_definition ("c2b_def", “c2b x = ?k. x = Num (SUC k)”);
 val cv_if_def0 = new_definition(
   "cv_if_def0",
   “cv_if p (q:cv) (r:cv) = if c2b p then q else r”);
 Theorem cv_if_def:
   cv_if (Num (SUC m)) (p:cv) (q:cv) = p /\
   cv_if (Num 0) p q = q /\
-  cv_if (Pair r s) p q = p
+  cv_if (Pair r s) p q = q
 Proof
   simp[c2b_def, cv_if_def0, Num_11, cv_distinct]
 QED
@@ -180,12 +180,15 @@ Theorem c2b_thm[simp]:
   (c2b (Num 1) = T) /\
   (c2b (Num 0) = F) /\
   (c2b (Num (NUMERAL ZERO)) = F) /\
-  (c2b (Pair x y) = T)
+  (c2b (Pair x y) = F)
 Proof
-  rewrite_tac [c2b_def,Num_11,prim_recTheory.INV_SUC_EQ, numTheory.NOT_SUC,
-               NORM_0, simple_inequalities]
+  rewrite_tac [c2b_def,Num_11,prim_recTheory.INV_SUC_EQ]
+  \\ rewrite_tac [GSYM boolTheory.EXISTS_REFL,NORM_0]
+  \\ rewrite_tac [SUC_NOT]
   \\ once_rewrite_tac [EQ_SYM_EQ]
   \\ rewrite_tac [cv_distinct]
+  \\ EXISTS_TAC “0:num”
+  \\ rewrite_tac [ADD1,ADD_CLAUSES]
 QED
 
 val cv_case_def = Prim_rec.new_recursive_definition {
@@ -549,12 +552,11 @@ Theorem cv_exp_eq:
           (Num 1)
 Proof
   Cases_on ‘e’
-  \\ rewrite_tac [c2n_def,cv_exp_def,cv_if_def,EXP,cv_mod_def,cv_div_def,
-                  LET_THM]
-  \\ CONV_TAC (DEPTH_CONV BETA_CONV)
-  \\ rewrite_tac [cv_mul_def, MULT_CLAUSES]
+  \\ rewrite_tac [c2n_def,cv_exp_def,cv_if_def,EXP]
   \\ Cases_on ‘m’
-  \\ rewrite_tac [cv_mul_def,cv_mod_def,cv_if_def, EXP]
+  \\ rewrite_tac [c2n_def,cv_exp_def,cv_if_def,EXP,LET_THM]
+  \\ CONV_TAC (DEPTH_CONV BETA_CONV)
+  \\ rewrite_tac [cv_mul_def,cv_mod_def,cv_if_def]
   \\ Cases_on ‘SUC n MOD 2’
   \\ rewrite_tac [cv_if_def,Num_11,GSYM EXP_ADD, GSYM TIMES2,cv_div_def,cv_sub_def,
        GSYM PRE_SUB1,prim_recTheory.PRE,c2n_def]
@@ -610,4 +612,3 @@ val _ = app Parse.permahide [“c2n”,“c2b”,“Num”,“Pair”];
 
 val _ = app delete_const ["P0", "N0", "iscv", "cvrel", "cvrelf",
                           "cv_ABS", "cv_REP", "cvnum_map2", "cvnumval"];
-
