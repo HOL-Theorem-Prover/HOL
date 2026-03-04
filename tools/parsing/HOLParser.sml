@@ -546,7 +546,7 @@ fun parseSML file read parseError: scope -> result = let
       | #"\t" => findColon (i + 1)
       | _ => NONE
     val type_q = if full then SOME (findColon 0) else NONE
-    val (quote, right) = parseQuoteBody sc start left false [s]
+    val (quote, right) = parseQuoteBody sc start left false [s] true
     val end_tok = case ident right of
       "" => NONE
     | s => SOME (right, s)
@@ -678,7 +678,7 @@ fun parseSML file read parseError: scope -> result = let
     val exp = parseExp sc false
     in parseArmList sc ({bar = bar, pat = pat, arrow = arrow, exp = exp} :: acc) end
 
-  and parseQuoteBody sc start qstart brack (s:string list) = let
+  and parseQuoteBody sc start qstart brack (s:string list) mk_strong = let
     datatype qtoken = EOF | EndTk | StrongEndTk | AntiqIdent | AntiqParen | OpenBrack
     fun checkKW kw i =
       case SOME (String.sub (kw, i)) handle Subscript => NONE of
@@ -764,7 +764,12 @@ fun parseSML file read parseError: scope -> result = let
       | (p, StrongEndTk) => (
         if mem (ident p) s then () else parseError (start, p) (expected ());
         (rev (push i p acc), p))
-      | (p, EndTk) => if mem (ident p) s then (rev (push i p acc), p) else go i acc
+      | (p, EndTk) =>
+        if mem (ident p) s then (rev (push i p acc), p)
+        else if mk_strong then (
+          parseError (start, p) (expected ());
+          (rev (push i p acc), p))
+        else go i acc
       | (p, AntiqIdent) => let
         val acc = push i p acc
         val exp = case identKind (p + 1) of
@@ -859,7 +864,7 @@ fun parseSML file read parseError: scope -> result = let
     fun parseInductive start co = let
       val id = parseIdentifierOrKw true
       val (colon, qstart) = parseStop (parseKeyword ":") 1 "expected ':'"
-      val (qbody, right) = parseQuoteBody sc qstart qstart true ["End"]
+      val (qbody, right) = parseQuoteBody sc qstart qstart true ["End"] false
       val (end_, stop) = if ident right = "End" then (SOME right, right+3) else (NONE, right)
       in HOLInductiveDecl {
         co = co, inductive_ = start, id = id, colon = colon,
@@ -881,7 +886,7 @@ fun parseSML file read parseError: scope -> result = let
       val r = case parseKeyword ":" NONE of
         SOME colon => let
         val qstart = colon+1
-        val (qbody, right) = parseQuoteBody sc qstart qstart false ["Proof"]
+        val (qbody, right) = parseQuoteBody sc qstart qstart false ["Proof"] false
         val proof_ = if ident right <> "Proof" then NONE else
           SOME {proof_ = right, attrs = parseAttrs parseKVals}
         val tac = parseExp sc false
@@ -1019,7 +1024,8 @@ fun parseSML file read parseError: scope -> result = let
         val id = parseIdentifier true
         val attrs = parseAttrs parseKVals
         val (colon, qstart) = parseStop (parseKeyword ":") 1 "expected ':'"
-        val (qbody, right) = parseQuoteBody sc qstart qstart false ["End", "Termination"]
+        val (qbody, right) =
+          parseQuoteBody sc qstart qstart false ["End", "Termination"] false
         val (term, (end_, stop)) = if ident right = "Termination" then
           (SOME {termination_ = right, tac = parseExp sc false},
            (parseStop (parseHolKeyword "End") 3 "expected 'End'"))
@@ -1031,7 +1037,7 @@ fun parseSML file read parseError: scope -> result = let
         end)
       | ("Datatype", HolKeyword) => SOME (sc, let
         val (colon, qstart) = parseStop (parseKeyword ":") 1 "expected ':'"
-        val (qbody, right) = parseQuoteBody sc qstart qstart true ["End"]
+        val (qbody, right) = parseQuoteBody sc qstart qstart true ["End"] false
         val (end_, stop) = if ident right = "End" then (SOME right, right+3) else (NONE, right)
         val _ = case end_ of NONE => parseHolKeyword "QED" NONE | _ => NONE
         in HOLDatatype {
@@ -1043,7 +1049,7 @@ fun parseSML file read parseError: scope -> result = let
         val bind = Option.map (fn eq => {eq = eq, exp = parseAtomic sc false true})
           (parseKeyword "=" NONE)
         val (colon, qstart) = parseStop (parseKeyword ":") 1 "expected ':'"
-        val (qbody, right) = parseQuoteBody sc qstart qstart false ["End"]
+        val (qbody, right) = parseQuoteBody sc qstart qstart false ["End"] false
         val (end_, stop) = if ident right = "End" then (SOME right, right+3) else (NONE, right)
         val _ = case end_ of NONE => parseHolKeyword "QED" NONE | _ => NONE
         in HOLQuoteDecl {
