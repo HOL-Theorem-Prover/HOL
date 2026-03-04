@@ -269,99 +269,189 @@ fun extract path =
     val p_min_id = ref ~1
     val p_max_id = ref ~1
 
+    (* Fast integer extraction: parse non-negative int starting at
+       position i in string s, skipping leading spaces. Returns
+       (value, position_after) or NONE if no int found. *)
+    fun scan_int s i =
+      let val len = size s
+          fun skip_sp j = if j >= len then j
+                          else if Char.isSpace (String.sub(s, j))
+                          then skip_sp (j+1) else j
+          val j = skip_sp i
+          fun go k acc =
+            if k >= len then
+              if k > j then SOME (acc, k) else NONE
+            else let val c = String.sub(s, k)
+                 in if Char.isDigit c
+                    then go (k+1) (acc * 10 + Char.ord c - 48)
+                    else if k > j then SOME (acc, k) else NONE
+                 end
+      in if j >= len then NONE else go j 0 end
+
+    (* Check whether line contains a substring starting at position i *)
+    fun has_prefix line i prefix =
+      let val plen = size prefix
+      in i + plen <= size line andalso
+         String.substring(line, i, plen) = prefix
+      end
+
     fun process_line line =
-      let val toks = tokenize line in
-      case toks of
-        [] => ()
-      | ["V", _] => ()
-      | ("H" :: hp :: _) =>
-          heap_parent := SOME (unescape hp)
-      | ("Y" :: id_s :: "V" :: _) =>
-          ty_count := Int.max(!ty_count, int_of id_s + 1)
-      | ("Y" :: id_s :: "O" :: thy_s :: name_s :: _) =>
-          let val id = int_of id_s
-              val thy = unescape thy_s
-              val name = unescape name_s
-          in ty_count := Int.max(!ty_count, id + 1);
-             if thy <> "min" then
-               y_tyop_refs_rev := (id, thy, name)
-                                  :: !y_tyop_refs_rev
-             else ()
+      if size line < 2 then ()
+      else
+      let val c0 = String.sub(line, 0)
+      in
+        if c0 = #"P" then
+          (* P lines: fast-path for the common case (most rules).
+             Only tokenize for NAME/LOAD/DEF_SPEC/DEF_TYOP/COMPUTE. *)
+          (case scan_int line 2 of
+             NONE => ()
+           | SOME (id, pos) =>
+               let
+                 val _ = if !p_min_id < 0 orelse id < !p_min_id
+                         then p_min_id := id else ()
+                 val _ = if id > !p_max_id then p_max_id := id else ()
+               in
+                 (* Check for special rules by prefix *)
+                 if has_prefix line pos " NAME " then
+                   let val toks = tokenize line in
+                   (case toks of
+                     ("P" :: _ :: "NAME" :: args) =>
+                       name_refs_rev :=
+                         (id, unescape (List.nth(args, 0)),
+                              unescape (List.nth(args, 1)))
+                         :: !name_refs_rev
+                   | _ => ())
+                   end
+                 else if has_prefix line pos " LOAD " then
+                   let val toks = tokenize line in
+                   (case toks of
+                     ("P" :: _ :: "LOAD" :: args) =>
+                       load_refs_rev :=
+                         (id, unescape (List.nth(args, 0)),
+                              int_of (List.nth(args, 1)))
+                         :: !load_refs_rev
+                   | _ => ())
+                   end
+                 else if has_prefix line pos " DEF_SPEC " then
+                   let val toks = tokenize line in
+                   (case toks of
+                     ("P" :: _ :: "DEF_SPEC" :: args) =>
+                       let val thyname = unescape (List.nth(args, 1))
+                           val cnames =
+                             map unescape (List.drop(args, 2))
+                       in const_defs_rev :=
+                            (id, thyname, cnames)
+                            :: !const_defs_rev
+                       end
+                   | _ => ())
+                   end
+                 else if has_prefix line pos " DEF_TYOP " then
+                   let val toks = tokenize line in
+                   (case toks of
+                     ("P" :: _ :: "DEF_TYOP" :: args) =>
+                       let val thy = unescape (List.nth(args, 1))
+                           val tyop = unescape (List.nth(args, 2))
+                       in type_defs_rev :=
+                            (id, thy, tyop) :: !type_defs_rev
+                       end
+                   | _ => ())
+                   end
+                 else if has_prefix line pos " COMPUTE" then
+                   compute_ids_rev := id :: !compute_ids_rev
+                 else () (* common case: no tokenize needed *)
+               end)
+        else if c0 = #"T" then
+          let val toks = tokenize line in
+          (case toks of
+            ("T" :: id_s :: "V" :: _) =>
+              tm_count := Int.max(!tm_count, int_of id_s + 1)
+          | ("T" :: id_s :: "C" :: thy_s :: name_s :: _) =>
+              let val id = int_of id_s
+                  val thy = unescape thy_s
+                  val name = unescape name_s
+              in tm_count := Int.max(!tm_count, id + 1);
+                 if thy <> "min" then
+                   t_const_refs_rev := (id, thy, name)
+                                      :: !t_const_refs_rev
+                 else ()
+              end
+          | ("T" :: id_s :: "A" :: _) =>
+              tm_count := Int.max(!tm_count, int_of id_s + 1)
+          | ("T" :: id_s :: "L" :: _) =>
+              tm_count := Int.max(!tm_count, int_of id_s + 1)
+          | _ => ())
           end
-      | ("T" :: id_s :: "V" :: _) =>
-          tm_count := Int.max(!tm_count, int_of id_s + 1)
-      | ("T" :: id_s :: "C" :: thy_s :: name_s :: _) =>
-          let val id = int_of id_s
-              val thy = unescape thy_s
-              val name = unescape name_s
-          in tm_count := Int.max(!tm_count, id + 1);
-             if thy <> "min" then
-               t_const_refs_rev := (id, thy, name)
-                                   :: !t_const_refs_rev
-             else ()
+        else if c0 = #"Y" then
+          let val toks = tokenize line in
+          (case toks of
+            ("Y" :: id_s :: "V" :: _) =>
+              ty_count := Int.max(!ty_count, int_of id_s + 1)
+          | ("Y" :: id_s :: "O" :: thy_s :: name_s :: _) =>
+              let val id = int_of id_s
+                  val thy = unescape thy_s
+                  val name = unescape name_s
+              in ty_count := Int.max(!ty_count, id + 1);
+                 if thy <> "min" then
+                   y_tyop_refs_rev := (id, thy, name)
+                                      :: !y_tyop_refs_rev
+                 else ()
+              end
+          | _ => ())
           end
-      | ("T" :: id_s :: "A" :: _) =>
-          tm_count := Int.max(!tm_count, int_of id_s + 1)
-      | ("T" :: id_s :: "L" :: _) =>
-          tm_count := Int.max(!tm_count, int_of id_s + 1)
-      | ("P" :: id_s :: rule :: args) =>
-          let val id = int_of id_s
-          in (if !p_min_id < 0 orelse id < !p_min_id
-              then p_min_id := id else ());
-             (if id > !p_max_id then p_max_id := id else ());
-             (case rule of
-                "NAME" =>
-                  name_refs_rev := (id, unescape (List.nth(args, 0)),
-                                    unescape (List.nth(args, 1)))
-                                   :: !name_refs_rev
-              | "LOAD" =>
-                  load_refs_rev := (id, unescape (List.nth(args, 0)),
-                                    int_of (List.nth(args, 1)))
-                                   :: !load_refs_rev
-              | "DEF_SPEC" =>
-                  (* .pft format: P <id> DEF_SPEC <wit_id> <thy> <names...> *)
-                  let val thyname = unescape (List.nth(args, 1))
-                      val cnames = map unescape (List.drop(args, 2))
-                  in const_defs_rev := (id, thyname, cnames)
-                                       :: !const_defs_rev
-                  end
-              | "DEF_TYOP" =>
-                  (* .pft format: P <id> DEF_TYOP <wit_id> <thy> <tyop> *)
-                  let val thy = unescape (List.nth(args, 1))
-                      val tyop = unescape (List.nth(args, 2))
-                  in type_defs_rev := (id, thy, tyop)
-                                      :: !type_defs_rev
-                  end
-              | "COMPUTE" =>
-                  compute_ids_rev := id :: !compute_ids_rev
-              | _ => ())
+        else if c0 = #"H" then
+          let val toks = tokenize line in
+          (case toks of ("H" :: hp :: _) =>
+            heap_parent := SOME (unescape hp)
+          | _ => ())
           end
-      | ("I" :: args) =>
-          let
-            fun ai n = int_of (List.nth(args, n))
-            val type_ids = [ai 0, ai 1]
-            val rest = List.drop(args, 2)
-            val term_ids = List.tabulate(29, fn i =>
-              int_of (List.nth(rest, 2*i + 1)))
-            val rest2 = List.drop(rest, 58)
-            fun get_parents [] = []
-              | get_parents (_::p::r) = int_of p :: get_parents r
-              | get_parents _ = []
-            val parent_ids = get_parents rest2
-          in
-            c_deps_ref := SOME (parent_ids, term_ids, type_ids)
+        else if c0 = #"N" then
+          let val toks = tokenize line in
+          (case toks of ("N" :: name :: _) =>
+            thy_name := unescape name
+          | _ => ())
           end
-      | ("C" :: thy_s :: name_s :: ty_s :: _) =>
-          const_decls_rev := (unescape thy_s, unescape name_s,
-                              int_of ty_s) :: !const_decls_rev
-      | ("O" :: thy_s :: name_s :: arity_s :: _) =>
-          type_decls_rev := (unescape thy_s, unescape name_s,
-                             int_of arity_s) :: !type_decls_rev
-      | ("N" :: name :: _) =>
-          thy_name := unescape name
-      | ("E" :: name :: id_s :: _) =>
-          exports_rev := (unescape name, int_of id_s) :: !exports_rev
-      | _ => ()
+        else if c0 = #"E" then
+          let val toks = tokenize line in
+          (case toks of ("E" :: name :: id_s :: _) =>
+            exports_rev := (unescape name, int_of id_s)
+                           :: !exports_rev
+          | _ => ())
+          end
+        else if c0 = #"I" then
+          let val toks = tokenize line in
+          (case toks of ("I" :: args) =>
+            let
+              fun ai n = int_of (List.nth(args, n))
+              val type_ids = [ai 0, ai 1]
+              val rest = List.drop(args, 2)
+              val term_ids = List.tabulate(29, fn i =>
+                int_of (List.nth(rest, 2*i + 1)))
+              val rest2 = List.drop(rest, 58)
+              fun get_parents [] = []
+                | get_parents (_::p::r) =
+                    int_of p :: get_parents r
+                | get_parents _ = []
+              val parent_ids = get_parents rest2
+            in
+              c_deps_ref := SOME (parent_ids, term_ids, type_ids)
+            end
+          | _ => ())
+          end
+        else if c0 = #"C" then
+          let val toks = tokenize line in
+          (case toks of ("C" :: thy_s :: name_s :: ty_s :: _) =>
+            const_decls_rev := (unescape thy_s, unescape name_s,
+                                int_of ty_s) :: !const_decls_rev
+          | _ => ())
+          end
+        else if c0 = #"O" then
+          let val toks = tokenize line in
+          (case toks of ("O" :: thy_s :: name_s :: arity_s :: _) =>
+            type_decls_rev := (unescape thy_s, unescape name_s,
+                               int_of arity_s) :: !type_decls_rev
+          | _ => ())
+          end
+        else ()
       end
 
     fun read_all () =

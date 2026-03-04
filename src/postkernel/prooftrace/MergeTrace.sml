@@ -341,45 +341,77 @@ fun read_file_deps (data : file_data) : unit =
     val t_term_deps_rev = ref ([] : (int * int list) list)
     val t_type_deps_rev = ref ([] : (int * int list) list)
 
+    (* Fast integer extraction: parse non-negative int starting at
+       position i in string s, skipping leading spaces. Returns
+       (value, position_after) or NONE if no int found. *)
+    fun scan_int s i =
+      let val len = size s
+          fun skip_sp j = if j >= len then j
+                          else if Char.isSpace (String.sub(s, j))
+                          then skip_sp (j+1) else j
+          val j = skip_sp i
+          fun go k acc =
+            if k >= len then
+              if k > j then SOME (acc, k) else NONE
+            else let val c = String.sub(s, k)
+                 in if Char.isDigit c
+                    then go (k+1) (acc * 10 + Char.ord c - 48)
+                    else if k > j then SOME (acc, k) else NONE
+                 end
+      in if j >= len then NONE else go j 0 end
+
     fun process_line byte_offset line =
-      let val toks = tokenize line in
-      case toks of
-        ("Y" :: id_s :: "V" :: _) =>
-          y_deps_rev := (int_of id_s, []) :: !y_deps_rev
-      | ("Y" :: id_s :: "O" :: _ :: _ :: arg_ids) =>
-          let val id = int_of id_s
-              val deps = List.mapPartial Int.fromString arg_ids
-          in y_deps_rev := (id, deps) :: !y_deps_rev end
-      | ("T" :: id_s :: "V" :: _ :: ty_s :: _) =>
-          let val id = int_of id_s
-          in t_term_deps_rev := (id, []) :: !t_term_deps_rev;
-             t_type_deps_rev := (id, [int_of ty_s]) :: !t_type_deps_rev
+      if size line < 2 then ()
+      else
+      let val c0 = String.sub(line, 0)
+      in
+        if c0 = #"P" then
+          (* Fast path for P lines (83% of lines): extract only
+             the ID, skip tokenizing the rest of the line. *)
+          (case scan_int line 2 of
+             SOME (id, _) =>
+               let val i = id - p_min_id
+               in if i >= 0 andalso i < p_range
+                  then Array.update(p_off_arr, i, byte_offset)
+                  else ()
+               end
+           | NONE => ())
+        else if c0 = #"T" orelse c0 = #"Y" then
+          let val toks = tokenize line in
+          (case toks of
+            ("Y" :: id_s :: "V" :: _) =>
+              y_deps_rev := (int_of id_s, []) :: !y_deps_rev
+          | ("Y" :: id_s :: "O" :: _ :: _ :: arg_ids) =>
+              let val id = int_of id_s
+                  val deps = List.mapPartial Int.fromString arg_ids
+              in y_deps_rev := (id, deps) :: !y_deps_rev end
+          | ("T" :: id_s :: "V" :: _ :: ty_s :: _) =>
+              let val id = int_of id_s
+              in t_term_deps_rev := (id, []) :: !t_term_deps_rev;
+                 t_type_deps_rev := (id, [int_of ty_s])
+                                    :: !t_type_deps_rev
+              end
+          | ("T" :: id_s :: "C" :: _ :: _ :: ty_s :: _) =>
+              let val id = int_of id_s
+              in t_term_deps_rev := (id, []) :: !t_term_deps_rev;
+                 t_type_deps_rev := (id, [int_of ty_s])
+                                    :: !t_type_deps_rev
+              end
+          | ("T" :: id_s :: "A" :: f_s :: x_s :: _) =>
+              let val id = int_of id_s
+              in t_term_deps_rev := (id, [int_of f_s, int_of x_s])
+                                    :: !t_term_deps_rev;
+                 t_type_deps_rev := (id, []) :: !t_type_deps_rev
+              end
+          | ("T" :: id_s :: "L" :: v_s :: b_s :: _) =>
+              let val id = int_of id_s
+              in t_term_deps_rev := (id, [int_of v_s, int_of b_s])
+                                    :: !t_term_deps_rev;
+                 t_type_deps_rev := (id, []) :: !t_type_deps_rev
+              end
+          | _ => ())
           end
-      | ("T" :: id_s :: "C" :: _ :: _ :: ty_s :: _) =>
-          let val id = int_of id_s
-          in t_term_deps_rev := (id, []) :: !t_term_deps_rev;
-             t_type_deps_rev := (id, [int_of ty_s]) :: !t_type_deps_rev
-          end
-      | ("T" :: id_s :: "A" :: f_s :: x_s :: _) =>
-          let val id = int_of id_s
-          in t_term_deps_rev := (id, [int_of f_s, int_of x_s])
-                                :: !t_term_deps_rev;
-             t_type_deps_rev := (id, []) :: !t_type_deps_rev
-          end
-      | ("T" :: id_s :: "L" :: v_s :: b_s :: _) =>
-          let val id = int_of id_s
-          in t_term_deps_rev := (id, [int_of v_s, int_of b_s])
-                                :: !t_term_deps_rev;
-             t_type_deps_rev := (id, []) :: !t_type_deps_rev
-          end
-      | ("P" :: id_s :: _) =>
-          let val id = int_of id_s
-              val i = id - p_min_id
-          in if i >= 0 andalso i < p_range
-             then Array.update(p_off_arr, i, byte_offset)
-             else ()
-          end
-      | _ => ()
+        else ()
       end
 
     val _ = scan_file path "dep-scan" process_line
