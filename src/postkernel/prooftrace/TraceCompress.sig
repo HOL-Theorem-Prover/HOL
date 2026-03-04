@@ -22,6 +22,14 @@ sig
      (possibly with compression extension), or NONE. *)
   val find_trace : string -> string option
 
+  (* Release the decompressed temp file for one trace file.
+     The file is deleted and removed from the cache.
+     No-op if the file was not compressed. *)
+  val release_temp : string -> unit
+
+  (* Remove all decompressed temp files and clear the cache. *)
+  val cleanup_temps : unit -> unit
+
   (* File suffixes to search for when scanning directories,
      e.g. ["Theory.pft", "Theory.pft.zst", ...] *)
   val trace_suffixes : string list

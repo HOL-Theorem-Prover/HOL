@@ -152,7 +152,7 @@ type file_deps = {
      ~1 means no P entry at that index (gap). *)
   p_base_id : int,
   p_offsets : int Array.array,
-  p_fd : Posix.IO.file_desc,   (* open fd for seeking *)
+  p_fd : Posix.IO.file_desc option ref, (* lazy: opened on first seek *)
   (* T entry deps: sequential id -> (sub_term_ids, sub_type_ids) *)
   t_term_deps : int list Array.array,
   t_type_deps : int list Array.array,
@@ -398,6 +398,9 @@ fun read_file_data path : file_data =
           end
     val _ = read_all ()
     val _ = close_instrm ()
+    (* Release the decompressed temp file. The seeking fd will
+       be opened lazily (re-decompressing) if mark_live needs it. *)
+    val _ = TraceCompress.release_temp path
     val _ = parse_phase := "post-scan"
 
     val ny = !ty_count
@@ -436,11 +439,7 @@ fun read_file_data path : file_data =
               Array.update(p_off_arr, id - base_id, off))
             (!p_offsets_rev)
 
-    (* Open an fd for seeking during mark_live *)
-    val file_path = TraceCompress.ensure_decompressed path
-    val p_fd = Posix.FileSys.openf(file_path,
-                 Posix.FileSys.O_RDONLY,
-                 Posix.FileSys.O.flags [])
+    (* fd for seeking is opened lazily on first read_p_deps_at *)
   in
     { path = path,
       heap_parent = !heap_parent,
@@ -460,7 +459,7 @@ fun read_file_data path : file_data =
       deps = ref (SOME {
         p_base_id = base_id,
         p_offsets = p_off_arr,
-        p_fd = p_fd,
+        p_fd = ref NONE,
         t_term_deps = list_to_array nt (!t_term_deps_rev) [],
         t_type_deps = list_to_array nt (!t_type_deps_rev) [],
         y_deps = list_to_array ny (!y_deps_rev) [],
@@ -477,15 +476,26 @@ fun read_file_data path : file_data =
 fun get_deps (data : file_data) : file_deps =
   case !(#deps data) of
     SOME d => d
-  | NONE => raise ERR "get_deps"
-              ("deps already cleared for " ^ #path data)
+  | NONE =>
+    (* Deps were cleared (temp file released). Re-load by
+       re-reading the file. This re-decompresses if needed. *)
+    let val fresh = read_file_data (#path data)
+    in case !(#deps fresh) of
+         SOME d => (#deps data := SOME d; d)
+       | NONE => raise ERR "get_deps"
+                   ("failed to re-load deps for " ^ #path data)
+    end
 
 fun clear_deps (data : file_data) =
   case !(#deps data) of
     NONE => ()
   | SOME dp =>
-      (Posix.IO.close (#p_fd dp) handle _ => ();
-       #deps data := NONE)
+      ((case !(#p_fd dp) of
+          SOME fd => (Posix.IO.close fd handle _ => ())
+        | NONE => ());
+       #p_fd dp := NONE;
+       #deps data := NONE;
+       TraceCompress.release_temp (#path data))
 
 (* Check whether a trace_id has a P entry in this file *)
 fun p_has_id (dp : file_deps) (id : int) =
@@ -496,10 +506,20 @@ fun p_has_id (dp : file_deps) (id : int) =
 
 (* Read and parse a single P line's deps by seeking to its
    byte offset. Returns (parent_ids, term_ids, type_ids). *)
+fun ensure_fd (dp : file_deps) (path : string) : Posix.IO.file_desc =
+  case !(#p_fd dp) of
+    SOME fd => fd
+  | NONE =>
+    let val file_path = TraceCompress.ensure_decompressed path
+        val fd = Posix.FileSys.openf(file_path,
+                   Posix.FileSys.O_RDONLY,
+                   Posix.FileSys.O.flags [])
+    in #p_fd dp := SOME fd; fd end
+
 fun read_p_deps_at (dp : file_deps) (path : string) (id : int) =
   let val i = id - #p_base_id dp
       val offset = Array.sub(#p_offsets dp, i)
-      val fd = #p_fd dp
+      val fd = ensure_fd dp path
       val _ = Posix.IO.lseek(fd,
                 LargeInt.fromInt offset, Posix.IO.SEEK_SET)
       (* Read the P line. Start with 4KB; grow if no newline found. *)
@@ -1037,13 +1057,33 @@ fun merge {trace_paths : (string * string) list,
                   " not found\n")
         end) desired_exports
 
+    (* Release seeking resources for a file (fd + temp).
+       No-op if already cleared. *)
+    fun release_file path =
+      case Redblackmap.peek(!file_cache, path) of
+        SOME data => clear_deps data
+      | NONE => ()
+
     (* Drain worklist *)
+    val last_seek_path = ref (NONE : string option)
+
     fun drain () =
       case !worklist of
-        [] => ()
+        [] => (case !last_seek_path of
+                 SOME p => (release_file p; last_seek_path := NONE)
+               | NONE => ())
       | items =>
         (worklist := [];
-         List.app (fn (path, ids) => process_file path ids) items;
+         List.app (fn (path, ids) =>
+           (* Release previous file's seeking temp before
+              processing the next, so at most one decompressed
+              temp exists at a time. *)
+           ((case !last_seek_path of
+               SOME p => if p = path then ()
+                         else (release_file p;
+                               last_seek_path := SOME path)
+             | NONE => last_seek_path := SOME path);
+            process_file path ids)) items;
          drain ())
     val _ = drain ()
 
@@ -1262,6 +1302,8 @@ fun merge {trace_paths : (string * string) list,
     (* Free heavy dependency data no longer needed after Pass 1 *)
     val _ = Redblackmap.app (fn (_, data) => clear_deps data)
               (!file_cache)
+    (* Remove decompressed temp files — seeking is done *)
+    val _ = TraceCompress.cleanup_temps ()
 
     (* ============================================================
        Pass 2: Write merged trace with global dedup and remapping

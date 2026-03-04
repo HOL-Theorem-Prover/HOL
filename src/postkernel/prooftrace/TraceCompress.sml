@@ -84,6 +84,36 @@ fun get_tool () =
        end
   end
 
+(* ------- Temp directory ------- *)
+
+(* Temp file location for decompression. Defaults to system
+   temp directory (usually /tmp). Override with HOL_PFT_TMPDIR
+   to use a location with more space (e.g., /home/user/tmp).
+
+   The system temp dir is often a tmpfs with limited size (e.g.,
+   16GB). Large trace files (CakeML theories can be 12GB+
+   decompressed) may overflow it. *)
+
+val temp_dir : string option ref = ref
+  (OS.Process.getEnv "HOL_PFT_TMPDIR")
+
+fun make_temp_file () =
+  case !temp_dir of
+    NONE => OS.FileSys.tmpName ()
+  | SOME dir =>
+    let
+      (* Ensure dir exists *)
+      val _ = if OS.FileSys.access(dir, []) then ()
+              else OS.FileSys.mkDir dir handle _ => ()
+      (* Generate a unique name in the specified directory *)
+      val base = OS.FileSys.tmpName ()
+      val name = OS.Path.file base
+    in
+      (* Remove the system tmpdir file we just created *)
+      (OS.FileSys.remove base handle _ => ());
+      OS.Path.concat(dir, name)
+    end
+
 (* ------- Temp file tracking for cleanup ------- *)
 
 (* Cache: base_path -> decompressed temp path.
@@ -98,6 +128,25 @@ val active_temps : string list ref = ref []
 val _ = OS.Process.atExit (fn () =>
   List.app (fn p => OS.FileSys.remove p handle _ => ())
            (!active_temps))
+
+(* Remove a single temp file and evict it from the cache. *)
+fun release_temp base_path =
+  case Redblackmap.peek(!decomp_cache, base_path) of
+    NONE => ()
+  | SOME tmp =>
+    ((OS.FileSys.remove tmp handle _ => ());
+     decomp_cache :=
+       (#1 (Redblackmap.remove(!decomp_cache, base_path))
+        handle Redblackmap.NotFound => !decomp_cache);
+     active_temps :=
+       List.filter (fn p => p <> tmp) (!active_temps))
+
+(* Remove all decompressed temp files and clear the cache. *)
+fun cleanup_temps () =
+  (List.app (fn p => OS.FileSys.remove p handle _ => ())
+            (!active_temps);
+   active_temps := [];
+   decomp_cache := Redblackmap.mkDict String.compare)
 
 (* ------- Compress ------- *)
 
@@ -150,9 +199,24 @@ fun ensure_decompressed base_path =
     | SOME tool =>
         let
           fun do_decompress () =
-            let val t = OS.FileSys.tmpName ()
+            let val t = make_temp_file ()
                 val cmd = decompress_cmd tool actual_path t
-            in if OS.Process.isSuccess (OS.Process.system cmd)
+                val ok = OS.Process.isSuccess (OS.Process.system cmd)
+                         handle e =>
+                           (OS.FileSys.remove t handle _ => ();
+                            raise ERR "ensure_decompressed"
+                              ("decompression of " ^ actual_path ^
+                               " failed (exception: " ^
+                               exnMessage e ^ ")." ^
+                               (case !temp_dir of
+                                  NONE =>
+                                    " Temp directory may be full" ^
+                                    " (set HOL_PFT_TMPDIR to use" ^
+                                    " a larger location)"
+                                | SOME d =>
+                                    " Temp directory " ^ d ^
+                                    " may be full")))
+            in if ok
                then (decomp_cache :=
                        Redblackmap.insert(!decomp_cache,
                                           base_path, t);
@@ -160,7 +224,14 @@ fun ensure_decompressed base_path =
                      t)
                else (OS.FileSys.remove t handle _ => ();
                      raise ERR "ensure_decompressed"
-                       ("decompression failed: " ^ actual_path))
+                       ("decompression failed for " ^ actual_path ^
+                        ". The temp directory" ^
+                        (case !temp_dir of
+                           NONE => " (/tmp or similar)"
+                         | SOME d => " (" ^ d ^ ")") ^
+                        " may be full or out of quota." ^
+                        " Set HOL_PFT_TMPDIR to use" ^
+                        " a larger location."))
             end
         in
           case Redblackmap.peek(!decomp_cache, base_path) of
