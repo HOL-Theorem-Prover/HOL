@@ -1011,19 +1011,40 @@ fun parse_with_goal t (asms, g) =
       Parse.parse_in_context ctxt t
    end
 
-
 (*---------------------------------------------------------------------------
- * A tactical that parses in the context of a goal, a la the Q library.
+ * A tactical that parses in the context of a goal, a la the Q library. It is
+ * slightly complicated.
+ *
  * Steps
  * 1. Build sequence of parses of q under given traces
  * 2. Step through parses until one succeeds
  * 3. Try the tactic (under given traces) on that term. If it succeeds,
  *    great. Otherwise store the error and go to 2
- * 4. If no parse has succeeded, say that.
+ * 4. If no parse has succeeded, use the non-stream parser on the quotation
+ *    to elicit and report a typechecking error
  * 5. If only one parse succeeded and the tactic failed on it, raise the error.
  * 6. It can happen that multiple parses succeed and the tactic application
  *    fails on all of them. That needs to be distinguished from 4.
  *---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------*)
+(* Parse in setting where failure is expected                                *)
+(*---------------------------------------------------------------------------*)
+
+fun elicit_parse_failure ctxt q tyopt =
+    let open Parse
+        fun smashErrm m =
+          case m Pretype.Env.empty
+           of errormonad.Error e => raise Preterm.mkExn e
+            | errormonad.Some _ => raise
+              ERR "elicit_parse_failure" "unexpected successful parse"
+    in
+      errormonad.bind
+       (TermParse.ctxt_absyn_to_preterm (term_grammar()) ctxt (Absyn q),
+        TermParse.ctxt_preterm_to_term Parse.stdprinters tyopt ctxt)
+      |> smashErrm
+    end
+    handle e => raise wrap_exn "Tactical" "elicit_parse_failure" e
 
 fun Q_TAC0 {traces} tyopt (tac : term -> tactic) q (g as (asl,w)) =
   let open Parse
@@ -1039,7 +1060,8 @@ fun Q_TAC0 {traces} tyopt (tac : term -> tactic) q (g as (asl,w)) =
       val tactic_failures = ref [] : exn list ref
       fun failure() =
         case !tactic_failures
-         of [] => raise ERR "Q_TAC0" "unable to parse quotation"
+         of [] => (* no parses to even try the tactic on *)
+            elicit_parse_failure ctxt q tyopt
           | [e] => (* one quotation parsed, but tactic failed *)
             raise wrap_exn "Tactical" "Q_TAC0" e
           | fails => (* multiple parses, tactic fails on all *)
