@@ -22,9 +22,17 @@ open HolKernel
 
 val ERR = mk_HOL_ERR "MergeTrace"
 fun its i = Int.toString i
+(* Current file, line, and phase for error reporting.
+   Set by each scan/process loop before parsing a line. *)
+val parse_file = ref ""
+val parse_line = ref 0
+val parse_phase = ref ""
+
 fun int_of s = case Int.fromString s of
     SOME n => n
-  | NONE => raise ERR "int_of" ("not an int: " ^ s)
+  | NONE => raise ERR "int_of" ("not an int: " ^ s ^
+      " [" ^ !parse_phase ^ "] " ^
+      !parse_file ^ ":" ^ Int.toString (!parse_line))
 val esc = TraceRecord.escape_string
 val tokenize = ReplayTrace.tokenize
 val unescape = ReplayTrace.unescape
@@ -201,6 +209,8 @@ fun list_to_array n items default =
 
 fun read_file_data path : file_data =
   let
+    val _ = (parse_file := path; parse_line := 0;
+             parse_phase := "scan")
     val (instrm, close_instrm) = TraceCompress.open_trace path
     val ty_count = ref 0
     val tm_count = ref 0
@@ -379,7 +389,8 @@ fun read_file_data path : file_data =
         NONE => ()
       | SOME line =>
           let val pos = !byte_pos
-          in byte_pos := pos + size line;
+          in parse_line := !parse_line + 1;
+             byte_pos := pos + size line;
              process_line pos
                (String.substring(line, 0, size line - 1)
                 handle Subscript => line);
@@ -387,6 +398,7 @@ fun read_file_data path : file_data =
           end
     val _ = read_all ()
     val _ = close_instrm ()
+    val _ = parse_phase := "post-scan"
 
     val ny = !ty_count
     val nt = !tm_count
@@ -484,7 +496,7 @@ fun p_has_id (dp : file_deps) (id : int) =
 
 (* Read and parse a single P line's deps by seeking to its
    byte offset. Returns (parent_ids, term_ids, type_ids). *)
-fun read_p_deps_at (dp : file_deps) (id : int) =
+fun read_p_deps_at (dp : file_deps) (path : string) (id : int) =
   let val i = id - #p_base_id dp
       val offset = Array.sub(#p_offsets dp, i)
       val fd = #p_fd dp
@@ -501,6 +513,11 @@ fun read_p_deps_at (dp : file_deps) (id : int) =
                   else read_line (sz * 4)
         end
       val line = read_line 4096
+      val _ = (parse_file := path;
+               parse_line := offset;
+               parse_phase := "seek-deps P " ^ its id ^
+                              " @byte " ^ its offset ^
+                              " line: " ^ line)
       val toks = tokenize line
   in case toks of
        ("P" :: _ :: rule :: args) =>
@@ -553,7 +570,7 @@ fun mark_live (data : file_data) (prev : liveness)
         unresolved := PIntMap.add id () (!unresolved)
       else
         let val (parents, term_deps, type_deps) =
-              read_p_deps_at dp id
+              read_p_deps_at dp (#path data) id
             val _ = live_p := PIntMap.add id () (!live_p)
             val _ = if PIntMap.mem id (#compute_ids dp)
                     then found_compute := true else ()
@@ -1307,6 +1324,8 @@ fun merge {trace_paths : (string * string) list,
         val live_p = #live_p lv
 
         val (instrm, close_instrm) = TraceCompress.open_trace path
+        val _ = (parse_file := path; parse_line := 0;
+                 parse_phase := "write")
 
         (* Local -> global remap: arrays for Y/T (sequential),
            map for P (sparse trace_ids) *)
@@ -1562,7 +1581,8 @@ fun merge {trace_paths : (string * string) list,
           case TextIO.inputLine instrm of
             NONE => ()
           | SOME line =>
-              (process_line (String.substring(line, 0, size line - 1)
+              (parse_line := !parse_line + 1;
+               process_line (String.substring(line, 0, size line - 1)
                              handle Subscript => line);
                read_all ())
       in
