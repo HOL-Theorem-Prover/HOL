@@ -400,12 +400,6 @@ fun outp s r = (outs s "P "; outi s (Thm.trace_id r))
 (* Write a theorem parent reference: " <trace_id>" *)
 fun outth s th = (outs s " "; outi s (Thm.trace_id th))
 
-(* Write a term intern reference: " <term_id>" *)
-fun outtm s tm = (outs s " "; outi s (iT tm))
-
-(* Write a type intern reference: " <type_id>" *)
-fun outty s ty = (outs s " "; outi s (iY ty))
-
 (* Record a line for C/O entries and other non-hot-path uses *)
 fun record_line line =
   let val s = ensure_stream ()
@@ -417,21 +411,36 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
   let val s = ensure_stream () in
   case step of
     Thm.TR_ASSUME (r, tm) =>
-      (outp s r; outs s " ASSUME"; outtm s tm; outs s "\n")
+      let val t = iT tm
+      in outp s r; outs s " ASSUME "; outi s t; outs s "\n" end
   | Thm.TR_REFL (r, tm) =>
-      (outp s r; outs s " REFL"; outtm s tm; outs s "\n")
+      let val t = iT tm
+      in outp s r; outs s " REFL "; outi s t; outs s "\n" end
   | Thm.TR_BETA_CONV (r, tm) =>
-      (outp s r; outs s " BETA_CONV"; outtm s tm; outs s "\n")
+      let val t = iT tm
+      in outp s r; outs s " BETA_CONV "; outi s t; outs s "\n" end
   | Thm.TR_ALPHA (r, t1, t2) =>
-      (outp s r; outs s " ALPHA"; outtm s t1; outtm s t2; outs s "\n")
+      let val i1 = iT t1 val i2 = iT t2
+      in outp s r; outs s " ALPHA "; outi s i1;
+         outs s " "; outi s i2; outs s "\n"
+      end
   | Thm.TR_ABS (r, th, v) =>
-      (outp s r; outs s " ABS"; outth s th; outtm s v; outs s "\n")
+      let val vid = iT v
+      in outp s r; outs s " ABS"; outth s th;
+         outs s " "; outi s vid; outs s "\n"
+      end
   | Thm.TR_MK_COMB (r, f, x) =>
       (outp s r; outs s " MK_COMB"; outth s f; outth s x; outs s "\n")
   | Thm.TR_AP_TERM (r, th, f) =>
-      (outp s r; outs s " AP_TERM"; outth s th; outtm s f; outs s "\n")
+      let val fid = iT f
+      in outp s r; outs s " AP_TERM"; outth s th;
+         outs s " "; outi s fid; outs s "\n"
+      end
   | Thm.TR_AP_THM (r, th, tm) =>
-      (outp s r; outs s " AP_THM"; outth s th; outtm s tm; outs s "\n")
+      let val t = iT tm
+      in outp s r; outs s " AP_THM"; outth s th;
+         outs s " "; outi s t; outs s "\n"
+      end
   | Thm.TR_SYM (r, th) =>
       (outp s r; outs s " SYM"; outth s th; outs s "\n")
   | Thm.TR_TRANS (r, a, b) =>
@@ -445,47 +454,79 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
   | Thm.TR_MP (r, a, b) =>
       (outp s r; outs s " MP"; outth s a; outth s b; outs s "\n")
   | Thm.TR_DISCH (r, th, w) =>
-      (outp s r; outs s " DISCH"; outth s th; outtm s w; outs s "\n")
+      let val wid = iT w
+      in outp s r; outs s " DISCH"; outth s th;
+         outs s " "; outi s wid; outs s "\n"
+      end
   | Thm.TR_INST_TYPE (r, th, theta) =>
-      (outp s r; outs s " INST_TYPE"; outth s th;
-       List.app (fn {redex,residue} =>
-         (outty s redex; outty s residue)) theta;
-       outs s "\n")
+      let val pairs = map (fn {redex,residue} =>
+            (iY redex, iY residue)) theta
+      in outp s r; outs s " INST_TYPE"; outth s th;
+         List.app (fn (a,b) =>
+           (outs s " "; outi s a; outs s " "; outi s b)) pairs;
+         outs s "\n"
+      end
   | Thm.TR_INST (r, th, theta) =>
-      (outp s r; outs s " INST"; outth s th;
-       List.app (fn {redex,residue} =>
-         (outtm s redex; outtm s residue)) theta;
-       outs s "\n")
+      let val pairs = map (fn {redex,residue} =>
+            (iT redex, iT residue)) theta
+      in outp s r; outs s " INST"; outth s th;
+         List.app (fn (a,b) =>
+           (outs s " "; outi s a; outs s " "; outi s b)) pairs;
+         outs s "\n"
+      end
   | Thm.TR_SUBST (r, repls, template, th) =>
-      (outp s r; outs s " SUBST"; outth s th; outtm s template;
-       List.app (fn {redex, residue} =>
-         (outtm s redex; outth s residue)) repls;
-       outs s "\n")
+      let val tid = iT template
+          val rpairs = map (fn {redex, residue} =>
+            (iT redex, Thm.trace_id residue)) repls
+      in outp s r; outs s " SUBST"; outth s th;
+         outs s " "; outi s tid;
+         List.app (fn (a,b) =>
+           (outs s " "; outi s a; outs s " "; outi s b)) rpairs;
+         outs s "\n"
+      end
   | Thm.TR_SPEC (r, th, t) =>
-      (outp s r; outs s " SPEC"; outth s th; outtm s t; outs s "\n")
+      let val tid = iT t
+      in outp s r; outs s " SPEC"; outth s th;
+         outs s " "; outi s tid; outs s "\n"
+      end
   | Thm.TR_Specialize (r, th, t) =>
-      (outp s r; outs s " Specialize"; outth s th; outtm s t; outs s "\n")
+      let val tid = iT t
+      in outp s r; outs s " Specialize"; outth s th;
+         outs s " "; outi s tid; outs s "\n"
+      end
   | Thm.TR_Specialize_thm (r, th_arg, th) =>
       (outp s r; outs s " Specialize_thm"; outth s th_arg; outth s th;
        outs s "\n")
   | Thm.TR_GEN (r, th, x) =>
-      (outp s r; outs s " GEN"; outth s th; outtm s x; outs s "\n")
+      let val xid = iT x
+      in outp s r; outs s " GEN"; outth s th;
+         outs s " "; outi s xid; outs s "\n"
+      end
   | Thm.TR_GENL (r, th, vs) =>
-      (outp s r; outs s " GENL"; outth s th;
-       List.app (fn v => outtm s v) vs;
-       outs s "\n")
+      let val vids = map iT vs
+      in outp s r; outs s " GENL"; outth s th;
+         List.app (fn v => (outs s " "; outi s v)) vids;
+         outs s "\n"
+      end
   | Thm.TR_GEN_ABS (r, th, opt, vs) =>
-      (outp s r; outs s " GEN_ABS"; outth s th;
-       outs s " ";
-       (case opt of SOME t => outi s (iT t) | NONE => outs s "~");
-       List.app (fn v => outtm s v) vs;
-       outs s "\n")
+      let val oid = Option.map iT opt
+          val vids = map iT vs
+      in outp s r; outs s " GEN_ABS"; outth s th;
+         outs s " ";
+         (case oid of SOME t => outi s t | NONE => outs s "~");
+         List.app (fn v => (outs s " "; outi s v)) vids;
+         outs s "\n"
+      end
   | Thm.TR_EXISTS (r, th, w, t) =>
-      (outp s r; outs s " EXISTS"; outth s th; outtm s w; outtm s t;
-       outs s "\n")
+      let val wid = iT w val tid = iT t
+      in outp s r; outs s " EXISTS"; outth s th;
+         outs s " "; outi s wid; outs s " "; outi s tid; outs s "\n"
+      end
   | Thm.TR_CHOOSE (r, xth, bth, v) =>
-      (outp s r; outs s " CHOOSE"; outth s xth; outth s bth; outtm s v;
-       outs s "\n")
+      let val vid = iT v
+      in outp s r; outs s " CHOOSE"; outth s xth; outth s bth;
+         outs s " "; outi s vid; outs s "\n"
+      end
   | Thm.TR_CONJ (r, a, b) =>
       (outp s r; outs s " CONJ"; outth s a; outth s b; outs s "\n")
   | Thm.TR_CONJUNCT1 (r, th) =>
@@ -493,9 +534,15 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
   | Thm.TR_CONJUNCT2 (r, th) =>
       (outp s r; outs s " CONJUNCT2"; outth s th; outs s "\n")
   | Thm.TR_DISJ1 (r, th, w) =>
-      (outp s r; outs s " DISJ1"; outth s th; outtm s w; outs s "\n")
+      let val wid = iT w
+      in outp s r; outs s " DISJ1"; outth s th;
+         outs s " "; outi s wid; outs s "\n"
+      end
   | Thm.TR_DISJ2 (r, th, w) =>
-      (outp s r; outs s " DISJ2"; outth s th; outtm s w; outs s "\n")
+      let val wid = iT w
+      in outp s r; outs s " DISJ2"; outth s th;
+         outs s " "; outi s wid; outs s "\n"
+      end
   | Thm.TR_DISJ_CASES (r, d, a, b) =>
       (outp s r; outs s " DISJ_CASES"; outth s d; outth s a; outth s b;
        outs s "\n")
@@ -504,7 +551,10 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
   | Thm.TR_NOT_ELIM (r, th) =>
       (outp s r; outs s " NOT_ELIM"; outth s th; outs s "\n")
   | Thm.TR_CCONTR (r, fth, w) =>
-      (outp s r; outs s " CCONTR"; outth s fth; outtm s w; outs s "\n")
+      let val wid = iT w
+      in outp s r; outs s " CCONTR"; outth s fth;
+         outs s " "; outi s wid; outs s "\n"
+      end
   | Thm.TR_Beta (r, th) =>
       (outp s r; outs s " Beta"; outth s th; outs s "\n")
   | Thm.TR_Mk_comb (r, orig, f, x) =>
@@ -533,21 +583,30 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
        List.app (fn c => (outs s " "; outs s (esc c))) cnames;
        outs s "\n")
   | Thm.TR_COMPUTE (r, code_eqs, tm) =>
-      (outp s r; outs s " COMPUTE"; outtm s tm;
-       List.app (fn eq => outth s eq) code_eqs;
-       outs s "\n")
+      let val tid = iT tm
+      in outp s r; outs s " COMPUTE "; outi s tid;
+         List.app (fn eq => outth s eq) code_eqs;
+         outs s "\n"
+      end
   | Thm.TR_COMPUTE_INIT (cval_terms, cval_type, num_type, char_eqns) =>
-      (outs s "I"; outty s cval_type; outty s num_type;
-       List.app (fn (name, tm) =>
-         (outs s " "; outs s (esc name); outtm s tm)) cval_terms;
-       List.app (fn (name, th) =>
-         (outs s " "; outs s (esc name); outth s th)) char_eqns;
-       outs s "\n")
+      let val cyid = iY cval_type
+          val nyid = iY num_type
+          val cv_pairs = map (fn (name, tm) => (name, iT tm)) cval_terms
+      in outs s "I "; outi s cyid; outs s " "; outi s nyid;
+         List.app (fn (name, tid) =>
+           (outs s " "; outs s (esc name); outs s " "; outi s tid))
+           cv_pairs;
+         List.app (fn (name, th) =>
+           (outs s " "; outs s (esc name); outth s th)) char_eqns;
+         outs s "\n"
+      end
   | Thm.TR_ORACLE (r, tg) =>
       let val (hyps, c) = Thm.dest_thm r
-      in outp s r; outs s " ORACLE ";
-         outs s (esc tg); outtm s c;
-         List.app (fn h => outtm s h) hyps;
+          val cid = iT c
+          val hids = map iT hyps
+      in outp s r; outs s " ORACLE "; outs s (esc tg);
+         outs s " "; outi s cid;
+         List.app (fn h => (outs s " "; outi s h)) hids;
          outs s "\n"
       end
   | Thm.TR_AXIOM (r, c) =>
@@ -555,9 +614,9 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
                        [n] => Nonce.dest n
                      | _ => raise ERR "record_hook"
                               "AXIOM: expected exactly one axiom nonce"
-      in outp s r; outs s " AXIOM ";
-         outs s (esc name); outtm s c;
-         outs s "\n"
+          val cid = iT c
+      in outp s r; outs s " AXIOM "; outs s (esc name);
+         outs s " "; outi s cid; outs s "\n"
       end
   | Thm.TR_NAME (r, src_thy, name) =>
       (outp s r; outs s " NAME ";

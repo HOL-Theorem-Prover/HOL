@@ -292,7 +292,7 @@ parent thm values.
 
 ### Term/type interning
 
-The intern maps use lightweight **descriptor keys** containing
+Type interning uses lightweight **descriptor keys** containing
 only ints and strings — not term/type ML values. Type descriptors
 are `TyV(name)` or `TyO(thy, tyop, [sub_type_ids])`.
 
