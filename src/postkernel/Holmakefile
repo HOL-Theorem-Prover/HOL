@@ -1,5 +1,26 @@
 all: $(DEFAULT_TARGETS)
 .PHONY: all
 
+ifdef POLY
+MINSTATE = $(dprot $(HOLDIR)/bin/hol.state.min)
+
+$(MINSTATE): $(dprot $(HOLDIR)/bin/hol) $(dprot $(SIGOBJ)/HolKernel.uo)
+	$(protect $(HOLDIR)/bin/hol) buildheap --poly -o $@ \
+	  $(protect $(SIGOBJ)/HolKernel)
+
+all: $(MINSTATE)
+
+minstate-selftest.exe: minstate-selftest.uo $(dprot $(SIGOBJ)/testutils.uo)
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+minstate-selftest.log: minstate-selftest.exe $(MINSTATE)
+	./minstate-selftest.exe > $@ 2>&1
+all: minstate-selftest.log
+endif
+
+EXTRA_CLEANS = $(MINSTATE) minstate-selftest.log minstate-selftest.exe
+endif
+
 Termtab.uo Termtab.ui: Termtab.sml $(dprot $(SIGOBJ)/Table.ui)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
