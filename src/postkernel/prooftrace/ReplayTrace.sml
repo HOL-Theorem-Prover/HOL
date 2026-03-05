@@ -146,6 +146,39 @@ fun replay_file path =
 
     fun int_of s = valOf (Int.fromString s)
 
+    (* Read-side stacks for resolving ~k / ^k references *)
+    val STACK_DEPTH = 16
+    val r_tstack = Array.array(STACK_DEPTH, ~1)
+    val r_tptr = ref 0
+    val r_pstack = Array.array(STACK_DEPTH, ~1)
+    val r_pptr = ref 0
+
+    fun push_t id =
+      (Array.update(r_tstack, !r_tptr, id);
+       r_tptr := (!r_tptr + 1) mod STACK_DEPTH)
+    fun push_p id =
+      (Array.update(r_pstack, !r_pptr, id);
+       r_pptr := (!r_pptr + 1) mod STACK_DEPTH)
+
+    fun resolve_t k =
+      Array.sub(r_tstack, (!r_tptr - 1 - k + STACK_DEPTH) mod STACK_DEPTH)
+    fun resolve_p k =
+      Array.sub(r_pstack, (!r_pptr - 1 - k + STACK_DEPTH) mod STACK_DEPTH)
+
+    (* Parse a term ref: ~k resolves via stack, else int *)
+    fun tref s =
+      if size s >= 2 andalso String.sub(s, 0) = #"~"
+         andalso Char.isDigit(String.sub(s, 1))
+      then resolve_t (int_of (String.extract(s, 1, NONE)))
+      else int_of s
+
+    (* Parse a theorem ref: ^k resolves via stack, else int *)
+    fun pref s =
+      if size s >= 2 andalso String.sub(s, 0) = #"^"
+         andalso Char.isDigit(String.sub(s, 1))
+      then resolve_p (int_of (String.extract(s, 1, NONE)))
+      else int_of s
+
     val compute_fn = ref (NONE : (thm list -> term -> thm) option)
     val exports = ref ([] : (string * thm) list)
 
@@ -182,17 +215,26 @@ fun replay_file path =
 
       (* --- Term entries (stored lazily) --- *)
       | ["T", id_s, "V", name_s, ty_s] =>
-          set_tm_desc (int_of id_s)
-            (TmVar (unescape name_s, int_of ty_s))
+          let val id = int_of id_s
+          in set_tm_desc id (TmVar (unescape name_s, int_of ty_s));
+             push_t id
+          end
       | ["T", id_s, "C", thy_s, name_s, ty_s] =>
-          set_tm_desc (int_of id_s)
-            (TmConst (unescape thy_s, unescape name_s, int_of ty_s))
+          let val id = int_of id_s
+          in set_tm_desc id
+               (TmConst (unescape thy_s, unescape name_s, int_of ty_s));
+             push_t id
+          end
       | ["T", id_s, "A", f_s, x_s] =>
-          set_tm_desc (int_of id_s)
-            (TmApp (int_of f_s, int_of x_s))
+          let val id = int_of id_s
+          in set_tm_desc id (TmApp (tref f_s, tref x_s));
+             push_t id
+          end
       | ["T", id_s, "L", v_s, b_s] =>
-          set_tm_desc (int_of id_s)
-            (TmLam (int_of v_s, int_of b_s))
+          let val id = int_of id_s
+          in set_tm_desc id (TmLam (tref v_s, tref b_s));
+             push_t id
+          end
 
       (* --- Theorem entries --- *)
       | ("P" :: id_s :: rule :: args) =>
@@ -200,24 +242,26 @@ fun replay_file path =
             val id = int_of id_s
             fun a n = List.nth(args, n)
             fun ai n = int_of (a n)
+            fun ti n = tref (a n)  (* term ref: resolves ~k *)
+            fun pi n = pref (a n)  (* thm ref: resolves ^k *)
             val result = case rule of
-              "REFL" => Thm.REFL (tm (ai 0))
-            | "ASSUME" => Thm.ASSUME (tm (ai 0))
-            | "BETA_CONV" => Thm.BETA_CONV (tm (ai 0))
-            | "ALPHA" => Thm.ALPHA (tm (ai 0)) (tm (ai 1))
-            | "ABS" => Thm.ABS (tm (ai 1)) (th (ai 0))
-            | "MK_COMB" => Thm.MK_COMB (th (ai 0), th (ai 1))
-            | "AP_TERM" => Thm.AP_TERM (tm (ai 1)) (th (ai 0))
-            | "AP_THM" => Thm.AP_THM (th (ai 0)) (tm (ai 1))
-            | "SYM" => Thm.SYM (th (ai 0))
-            | "TRANS" => Thm.TRANS (th (ai 0)) (th (ai 1))
-            | "EQ_MP" => Thm.EQ_MP (th (ai 0)) (th (ai 1))
-            | "EQ_IMP_RULE1" => #1 (Thm.EQ_IMP_RULE (th (ai 0)))
-            | "EQ_IMP_RULE2" => #2 (Thm.EQ_IMP_RULE (th (ai 0)))
-            | "MP" => Thm.MP (th (ai 0)) (th (ai 1))
-            | "DISCH" => Thm.DISCH (tm (ai 1)) (th (ai 0))
+              "REFL" => Thm.REFL (tm (ti 0))
+            | "ASSUME" => Thm.ASSUME (tm (ti 0))
+            | "BETA_CONV" => Thm.BETA_CONV (tm (ti 0))
+            | "ALPHA" => Thm.ALPHA (tm (ti 0)) (tm (ti 1))
+            | "ABS" => Thm.ABS (tm (ti 1)) (th (pi 0))
+            | "MK_COMB" => Thm.MK_COMB (th (pi 0), th (pi 1))
+            | "AP_TERM" => Thm.AP_TERM (tm (ti 1)) (th (pi 0))
+            | "AP_THM" => Thm.AP_THM (th (pi 0)) (tm (ti 1))
+            | "SYM" => Thm.SYM (th (pi 0))
+            | "TRANS" => Thm.TRANS (th (pi 0)) (th (pi 1))
+            | "EQ_MP" => Thm.EQ_MP (th (pi 0)) (th (pi 1))
+            | "EQ_IMP_RULE1" => #1 (Thm.EQ_IMP_RULE (th (pi 0)))
+            | "EQ_IMP_RULE2" => #2 (Thm.EQ_IMP_RULE (th (pi 0)))
+            | "MP" => Thm.MP (th (pi 0)) (th (pi 1))
+            | "DISCH" => Thm.DISCH (tm (ti 1)) (th (pi 0))
             | "INST_TYPE" =>
-                let val parent = th (ai 0)
+                let val parent = th (pi 0)
                     val rest = List.drop(args, 1)
                     fun pairs [] = []
                       | pairs (a::b::r) =
@@ -226,84 +270,85 @@ fun replay_file path =
                       | pairs _ = raise ERR "replay" "INST_TYPE: odd args"
                 in Thm.INST_TYPE (pairs rest) parent end
             | "INST" =>
-                let val parent = th (ai 0)
+                let val parent = th (pi 0)
                     val rest = List.drop(args, 1)
                     fun pairs [] = []
                       | pairs (a::b::r) =
-                          {redex = tm (int_of a),
-                           residue = tm (int_of b)} :: pairs r
+                          {redex = tm (tref a),
+                           residue = tm (tref b)} :: pairs r
                       | pairs _ = raise ERR "replay" "INST: odd args"
                 in Thm.INST (pairs rest) parent end
             | "SUBST" =>
-                let val orig = th (ai 0)
-                    val template = tm (ai 1)
+                let val orig = th (pi 0)
+                    val template = tm (ti 1)
                     val rest = List.drop(args, 2)
                     fun pairs [] = []
                       | pairs (v::r::rest) =
-                          {redex = tm (int_of v),
-                           residue = th (int_of r)} :: pairs rest
+                          {redex = tm (tref v),
+                           residue = th (pref r)} :: pairs rest
                       | pairs _ = raise ERR "replay" "SUBST: odd args"
                 in Thm.SUBST (pairs rest) template orig end
-            | "SPEC" => Thm.SPEC (tm (ai 1)) (th (ai 0))
+            | "SPEC" => Thm.SPEC (tm (ti 1)) (th (pi 0))
             | "SPECL" =>
-                let val parent = th (ai 0)
-                    val terms = map (tm o int_of) (List.drop(args, 1))
+                let val parent = th (pi 0)
+                    val terms = map (tm o tref) (List.drop(args, 1))
                 in List.foldl (fn (t, th) => Thm.SPEC t th)
                               parent terms
                 end
-            | "Specialize" => Thm.Specialize (tm (ai 1)) (th (ai 0))
+            | "Specialize" => Thm.Specialize (tm (ti 1)) (th (pi 0))
             | "SPECIALIZEL" =>
-                let val parent = th (ai 0)
-                    val terms = map (tm o int_of) (List.drop(args, 1))
+                let val parent = th (pi 0)
+                    val terms = map (tm o tref) (List.drop(args, 1))
                 in List.foldl (fn (t, th) => Thm.Specialize t th)
                               parent terms
                 end
-            | "Specialize_thm" => Thm.Specialize_thm (th (ai 0)) (th (ai 1))
-            | "GEN" => Thm.GEN (tm (ai 1)) (th (ai 0))
+            | "Specialize_thm" =>
+                Thm.Specialize_thm (th (pi 0)) (th (pi 1))
+            | "GEN" => Thm.GEN (tm (ti 1)) (th (pi 0))
             | "GENL" =>
-                let val parent = th (ai 0)
-                    val vs = map (tm o int_of) (List.drop(args, 1))
+                let val parent = th (pi 0)
+                    val vs = map (tm o tref) (List.drop(args, 1))
                 in Thm.GENL vs parent end
             | "GEN_ABS" =>
-                let val parent = th (ai 0)
+                let val parent = th (pi 0)
                     val opt_s = a 1
                     val opt = if opt_s = "~" then NONE
-                              else SOME (tm (int_of opt_s))
-                    val vs = map (tm o int_of) (List.drop(args, 2))
+                              else SOME (tm (tref opt_s))
+                    val vs = map (tm o tref) (List.drop(args, 2))
                 in Thm.GEN_ABS opt vs parent end
             | "EXISTS" =>
-                Thm.EXISTS (tm (ai 1), tm (ai 2)) (th (ai 0))
+                Thm.EXISTS (tm (ti 1), tm (ti 2)) (th (pi 0))
             | "CHOOSE" =>
-                Thm.CHOOSE (tm (ai 2), th (ai 0)) (th (ai 1))
-            | "CONJ" => Thm.CONJ (th (ai 0)) (th (ai 1))
-            | "CONJUNCT1" => Thm.CONJUNCT1 (th (ai 0))
-            | "CONJUNCT2" => Thm.CONJUNCT2 (th (ai 0))
-            | "DISJ1" => Thm.DISJ1 (th (ai 0)) (tm (ai 1))
-            | "DISJ2" => Thm.DISJ2 (tm (ai 1)) (th (ai 0))
+                Thm.CHOOSE (tm (ti 2), th (pi 0)) (th (pi 1))
+            | "CONJ" => Thm.CONJ (th (pi 0)) (th (pi 1))
+            | "CONJUNCT1" => Thm.CONJUNCT1 (th (pi 0))
+            | "CONJUNCT2" => Thm.CONJUNCT2 (th (pi 0))
+            | "DISJ1" => Thm.DISJ1 (th (pi 0)) (tm (ti 1))
+            | "DISJ2" => Thm.DISJ2 (tm (ti 1)) (th (pi 0))
             | "DISJ_CASES" =>
-                Thm.DISJ_CASES (th (ai 0)) (th (ai 1)) (th (ai 2))
-            | "NOT_INTRO" => Thm.NOT_INTRO (th (ai 0))
-            | "NOT_ELIM" => Thm.NOT_ELIM (th (ai 0))
-            | "CCONTR" => Thm.CCONTR (tm (ai 1)) (th (ai 0))
-            | "Beta" => Thm.Beta (th (ai 0))
+                Thm.DISJ_CASES (th (pi 0)) (th (pi 1)) (th (pi 2))
+            | "NOT_INTRO" => Thm.NOT_INTRO (th (pi 0))
+            | "NOT_ELIM" => Thm.NOT_ELIM (th (pi 0))
+            | "CCONTR" => Thm.CCONTR (tm (ti 1)) (th (pi 0))
+            | "Beta" => Thm.Beta (th (pi 0))
             | "REFL_RATOR" =>
-                Thm.REFL (rator (rand (Thm.concl (th (ai 0)))))
+                Thm.REFL (rator (rand (Thm.concl (th (pi 0)))))
             | "REFL_RAND" =>
-                Thm.REFL (rand (rand (Thm.concl (th (ai 0)))))
+                Thm.REFL (rand (rand (Thm.concl (th (pi 0)))))
             | "REFL_BODY" =>
-                Thm.REFL (snd (dest_abs (rand (Thm.concl (th (ai 0))))))
+                Thm.REFL (snd (dest_abs (rand (Thm.concl (th (pi 0))))))
             | "Mk_comb" =>
-                let val (_, _, mkthm) = Thm.Mk_comb (th (ai 0))
-                in mkthm (th (ai 1)) (th (ai 2)) end
+                let val (_, _, mkthm) = Thm.Mk_comb (th (pi 0))
+                in mkthm (th (pi 1)) (th (pi 2)) end
             | "Mk_abs" =>
-                let val (_, _, mkthm) = Thm.Mk_abs (th (ai 0))
-                in mkthm (th (ai 1)) end
+                let val (_, _, mkthm) = Thm.Mk_abs (th (pi 0))
+                in mkthm (th (pi 1)) end
             | "DEF_TYOP" =>
                 Thm.prim_type_definition
                   ({Thy = unescape (a 1), Tyop = unescape (a 2)},
-                   th (ai 0))
+                   th (pi 0))
             | "DEF_SPEC" =>
-                let val witness = th (ai 0)
+                let val witness = th (pi 0)
                     val thyname = unescape (a 1)
                     val cnames = map unescape (List.drop(args, 2))
                     val has_hyps = not (null (Thm.hyp witness))
@@ -312,8 +357,8 @@ fun replay_file path =
                    else Thm.prim_specification thyname cnames witness
                 end
             | "COMPUTE" =>
-                let val input = tm (ai 0)
-                    val code_eqs = map (th o int_of)
+                let val input = tm (ti 0)
+                    val code_eqs = map (th o pref)
                                        (List.drop(args, 1))
                 in case !compute_fn of
                      SOME cached => cached code_eqs input
@@ -321,11 +366,12 @@ fun replay_file path =
                        "COMPUTE before COMPUTE_INIT"
                 end
             | "AXIOM" =>
-                Thm.mk_axiom_thm (Nonce.mk (unescape (a 0)), tm (ai 1))
+                Thm.mk_axiom_thm (Nonce.mk (unescape (a 0)),
+                                  tm (ti 1))
             | "ORACLE" =>
                 let val tag = unescape (a 0)
-                    val c = tm (ai 1)
-                    val hs = map (tm o int_of) (List.drop(args, 2))
+                    val c = tm (ti 1)
+                    val hs = map (tm o tref) (List.drop(args, 2))
                 in Thm.mk_oracle_thm tag (hs, c) end
             | "NAME" =>
                 (* Per-theory trace: unresolved named ancestor ref.
@@ -346,7 +392,7 @@ fun replay_file path =
                                       Type.bool))
                 end
             | other => raise ERR "replay" ("unknown rule: " ^ other)
-          in set_th id result end
+          in set_th id result; push_p id end
 
       (* --- Compute init --- *)
       | ("I" :: args) =>
@@ -358,12 +404,12 @@ fun replay_file path =
             (* First 29 pairs are cval (name, term_id) *)
             val cval_terms = List.tabulate(29, fn i =>
               (unescape (List.nth(rest, 2*i)),
-               tm (int_of (List.nth(rest, 2*i + 1)))))
+               tm (tref (List.nth(rest, 2*i + 1)))))
             val rest2 = List.drop(rest, 58)
             (* Remaining pairs are char_eqn (name, thm_id) *)
             fun pairs [] = []
               | pairs (n :: p :: r) =
-                  (unescape n, th (int_of p)) :: pairs r
+                  (unescape n, th (pref p)) :: pairs r
               | pairs _ = raise ERR "replay" "I: odd char_eqn args"
             val char_eqns = pairs rest2
             val cached = Thm.compute {

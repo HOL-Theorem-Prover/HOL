@@ -781,101 +781,106 @@ fun tm_desc_compare (TmV(n1,t1), TmV(n2,t2)) =
 
 (* ------- Remap a P line's args ------- *)
 
-fun remap_args (ry : int -> int) (rt : int -> int) (rp : int -> int)
-               rule args =
+(* remap_args: remap and render P entry arguments.
+   ory: type ID -> string (always explicit)
+   ort: term ID -> string (may produce ~k)
+   orp: thm ID -> string (may produce ^k)
+   All input args have been resolved to explicit IDs already. *)
+fun remap_args (ory : int -> string) (ort : int -> string)
+               (orp : int -> string) rule args =
   case rule of
-    "REFL" => [its (rt (int_of (hd args)))]
-  | "ASSUME" => [its (rt (int_of (hd args)))]
-  | "BETA_CONV" => [its (rt (int_of (hd args)))]
-  | "ALPHA" => map (its o rt o int_of) args
-  | "ABS" => [its (rp (int_of (List.nth(args,0)))),
-              its (rt (int_of (List.nth(args,1))))]
-  | "MK_COMB" => map (its o rp o int_of) args
-  | "AP_TERM" => [its (rp (int_of (List.nth(args,0)))),
-                  its (rt (int_of (List.nth(args,1))))]
-  | "AP_THM" => [its (rp (int_of (List.nth(args,0)))),
-                 its (rt (int_of (List.nth(args,1))))]
-  | "SYM" => [its (rp (int_of (hd args)))]
-  | "TRANS" => map (its o rp o int_of) args
-  | "EQ_MP" => map (its o rp o int_of) args
-  | "EQ_IMP_RULE1" => [its (rp (int_of (hd args)))]
-  | "EQ_IMP_RULE2" => [its (rp (int_of (hd args)))]
-  | "MP" => map (its o rp o int_of) args
-  | "DISCH" => [its (rp (int_of (List.nth(args,0)))),
-                its (rt (int_of (List.nth(args,1))))]
+    "REFL" => [ort (int_of (hd args))]
+  | "ASSUME" => [ort (int_of (hd args))]
+  | "BETA_CONV" => [ort (int_of (hd args))]
+  | "ALPHA" => map (ort o int_of) args
+  | "ABS" => [orp (int_of (List.nth(args,0))),
+              ort (int_of (List.nth(args,1)))]
+  | "MK_COMB" => map (orp o int_of) args
+  | "AP_TERM" => [orp (int_of (List.nth(args,0))),
+                  ort (int_of (List.nth(args,1)))]
+  | "AP_THM" => [orp (int_of (List.nth(args,0))),
+                 ort (int_of (List.nth(args,1)))]
+  | "SYM" => [orp (int_of (hd args))]
+  | "TRANS" => map (orp o int_of) args
+  | "EQ_MP" => map (orp o int_of) args
+  | "EQ_IMP_RULE1" => [orp (int_of (hd args))]
+  | "EQ_IMP_RULE2" => [orp (int_of (hd args))]
+  | "MP" => map (orp o int_of) args
+  | "DISCH" => [orp (int_of (List.nth(args,0))),
+                ort (int_of (List.nth(args,1)))]
   | "INST_TYPE" =>
-      its (rp (int_of (hd args))) ::
-      map (its o ry o int_of) (tl args)
+      orp (int_of (hd args)) ::
+      map (ory o int_of) (tl args)
   | "INST" =>
-      its (rp (int_of (hd args))) ::
-      map (its o rt o int_of) (tl args)
+      orp (int_of (hd args)) ::
+      map (ort o int_of) (tl args)
   | "SUBST" =>
-      let val orig = its (rp (int_of (List.nth(args,0))))
-          val tmpl = its (rt (int_of (List.nth(args,1))))
+      let val orig = orp (int_of (List.nth(args,0)))
+          val tmpl = ort (int_of (List.nth(args,1)))
           val rest = List.drop(args, 2)
           fun pairs [] = []
             | pairs (v::r::t) =
-                its (rt (int_of v)) :: its (rp (int_of r)) :: pairs t
+                ort (int_of v) :: orp (int_of r) :: pairs t
             | pairs _ = []
       in orig :: tmpl :: pairs rest end
-  | "SPEC" => [its (rp (int_of (List.nth(args,0)))),
-               its (rt (int_of (List.nth(args,1))))]
+  | "SPEC" => [orp (int_of (List.nth(args,0))),
+               ort (int_of (List.nth(args,1)))]
   | "SPECL" =>
-      its (rp (int_of (hd args))) ::
-      map (its o rt o int_of) (tl args)
-  | "Specialize" => [its (rp (int_of (List.nth(args,0)))),
-                     its (rt (int_of (List.nth(args,1))))]
+      orp (int_of (hd args)) ::
+      map (ort o int_of) (tl args)
+  | "Specialize" => [orp (int_of (List.nth(args,0))),
+                     ort (int_of (List.nth(args,1)))]
   | "SPECIALIZEL" =>
-      its (rp (int_of (hd args))) ::
-      map (its o rt o int_of) (tl args)
-  | "Specialize_thm" => [its (rp (int_of (List.nth(args,0)))),
-                          its (rp (int_of (List.nth(args,1))))]
-  | "GEN" => [its (rp (int_of (List.nth(args,0)))),
-              its (rt (int_of (List.nth(args,1))))]
+      orp (int_of (hd args)) ::
+      map (ort o int_of) (tl args)
+  | "Specialize_thm" => [orp (int_of (List.nth(args,0))),
+                          orp (int_of (List.nth(args,1)))]
+  | "GEN" => [orp (int_of (List.nth(args,0))),
+              ort (int_of (List.nth(args,1)))]
   | "GENL" =>
-      its (rp (int_of (hd args))) ::
-      map (its o rt o int_of) (tl args)
+      orp (int_of (hd args)) ::
+      map (ort o int_of) (tl args)
   | "GEN_ABS" =>
-      its (rp (int_of (List.nth(args,0)))) ::
+      orp (int_of (List.nth(args,0))) ::
       (if List.nth(args,1) = "~" then "~"
-       else its (rt (int_of (List.nth(args,1))))) ::
-      map (its o rt o int_of) (List.drop(args, 2))
-  | "EXISTS" => [its (rp (int_of (List.nth(args,0)))),
-                 its (rt (int_of (List.nth(args,1)))),
-                 its (rt (int_of (List.nth(args,2))))]
-  | "CHOOSE" => [its (rp (int_of (List.nth(args,0)))),
-                 its (rp (int_of (List.nth(args,1)))),
-                 its (rt (int_of (List.nth(args,2))))]
-  | "CONJ" => map (its o rp o int_of) args
-  | "CONJUNCT1" => [its (rp (int_of (hd args)))]
-  | "CONJUNCT2" => [its (rp (int_of (hd args)))]
-  | "DISJ1" => [its (rp (int_of (List.nth(args,0)))),
-                its (rt (int_of (List.nth(args,1))))]
-  | "DISJ2" => [its (rp (int_of (List.nth(args,0)))),
-                its (rt (int_of (List.nth(args,1))))]
-  | "DISJ_CASES" => map (its o rp o int_of) args
-  | "NOT_INTRO" => [its (rp (int_of (hd args)))]
-  | "NOT_ELIM" => [its (rp (int_of (hd args)))]
-  | "CCONTR" => [its (rp (int_of (List.nth(args,0)))),
-                 its (rt (int_of (List.nth(args,1))))]
-  | "Beta" => [its (rp (int_of (hd args)))]
-  | "REFL_RATOR" => [its (rp (int_of (hd args)))]
-  | "REFL_RAND" => [its (rp (int_of (hd args)))]
-  | "REFL_BODY" => [its (rp (int_of (hd args)))]
-  | "Mk_comb" => map (its o rp o int_of) args
-  | "Mk_abs" => map (its o rp o int_of) args
-  | "DEF_TYOP" => [its (rp (int_of (List.nth(args,0)))),
+       else ort (int_of (List.nth(args,1)))) ::
+      map (ort o int_of) (List.drop(args, 2))
+  | "EXISTS" => [orp (int_of (List.nth(args,0))),
+                 ort (int_of (List.nth(args,1))),
+                 ort (int_of (List.nth(args,2)))]
+  | "CHOOSE" => [orp (int_of (List.nth(args,0))),
+                 orp (int_of (List.nth(args,1))),
+                 ort (int_of (List.nth(args,2)))]
+  | "CONJ" => map (orp o int_of) args
+  | "CONJUNCT1" => [orp (int_of (hd args))]
+  | "CONJUNCT2" => [orp (int_of (hd args))]
+  | "DISJ1" => [orp (int_of (List.nth(args,0))),
+                ort (int_of (List.nth(args,1)))]
+  | "DISJ2" => [orp (int_of (List.nth(args,0))),
+                ort (int_of (List.nth(args,1)))]
+  | "DISJ_CASES" => map (orp o int_of) args
+  | "NOT_INTRO" => [orp (int_of (hd args))]
+  | "NOT_ELIM" => [orp (int_of (hd args))]
+  | "CCONTR" => [orp (int_of (List.nth(args,0))),
+                 ort (int_of (List.nth(args,1)))]
+  | "Beta" => [orp (int_of (hd args))]
+  | "REFL_RATOR" => [orp (int_of (hd args))]
+  | "REFL_RAND" => [orp (int_of (hd args))]
+  | "REFL_BODY" => [orp (int_of (hd args))]
+  | "Mk_comb" => map (orp o int_of) args
+  | "Mk_abs" => map (orp o int_of) args
+  | "DEF_TYOP" => [orp (int_of (List.nth(args,0))),
                    List.nth(args,1), List.nth(args,2)]
   | "DEF_SPEC" =>
-      its (rp (int_of (hd args))) :: tl args
+      orp (int_of (hd args)) :: tl args
   | "COMPUTE" =>
-      its (rt (int_of (hd args))) ::
-      map (its o rp o int_of) (tl args)
-  | "AXIOM" => [List.nth(args,0), its (rt (int_of (List.nth(args,1))))]
+      ort (int_of (hd args)) ::
+      map (orp o int_of) (tl args)
+  | "AXIOM" => [List.nth(args,0), ort (int_of (List.nth(args,1)))]
   | "ORACLE" =>
       List.nth(args,0) ::
-      its (rt (int_of (List.nth(args,1)))) ::
-      map (its o rt o int_of) (List.drop(args, 2))
+      ort (int_of (List.nth(args,1))) ::
+      map (ort o int_of) (List.drop(args, 2))
   | _ => args
 
 (* ------- Main merge ------- *)
@@ -1517,10 +1522,17 @@ fun merge {trace_paths : (string * string) list,
            map for P (sparse trace_ids) *)
         val y_remap = Array.array(#n_types data, ~1)
         val t_remap = Array.array(#n_terms data, ~1)
-        val p_remap = ref (PIntMap.empty : int PIntMap.t)
+        (* P remap: array indexed by (trace_id - p_min_id) *)
+        val p_min = #p_min_id data
+        val p_max = #p_max_id data
+        val p_rng = if p_min < 0 then 0 else p_max - p_min + 1
+        val p_remap = Array.array(p_rng, ~1)
 
-        fun rp_peek i = SOME (PIntMap.find i (!p_remap))
-                        handle PIntMap.NotFound => NONE
+        fun rp_peek i =
+          if i >= p_min andalso i <= p_max then
+            let val g = Array.sub(p_remap, i - p_min)
+            in if g >= 0 then SOME g else NONE end
+          else NONE
         fun ry i = Array.sub(y_remap, i)
         fun rt i = Array.sub(t_remap, i)
         fun rp i =
@@ -1545,6 +1557,32 @@ fun merge {trace_paths : (string * string) list,
                          | NONE => search hpft
                   end
             in search path end
+
+        (* Write-side stacks for outputting ~k/^k in merged trace *)
+        val w_tstack = mk_stack ()
+        val w_pstack = mk_stack ()
+
+        fun w_push_t gid = stack_push w_tstack gid
+        fun w_push_p gid = stack_push w_pstack gid
+
+        (* Output renderers: produce ~k/^k when on stack *)
+        fun ory i = its (ry i)
+        fun ort i =
+          let val gid = rt i
+              fun find k =
+                if k >= STACK_DEPTH then its gid
+                else if stack_resolve w_tstack k = gid
+                then "~" ^ its k
+                else find (k + 1)
+          in find 0 end
+        fun orp i =
+          let val gid = rp i
+              fun find k =
+                if k >= STACK_DEPTH then its gid
+                else if stack_resolve w_pstack k = gid
+                then "^" ^ its k
+                else find (k + 1)
+          in find 0 end
 
         fun process_line line =
           let val toks = tokenize line in
@@ -1603,6 +1641,15 @@ fun merge {trace_paths : (string * string) list,
                      SOME gid => Array.update(t_remap, id, gid)
                    | NONE =>
                      let val gid = !global_tm_id
+                         (* Render global term ID, using ~k if on
+                            write-side stack *)
+                         fun wt gid2 =
+                           let fun find k =
+                                 if k >= STACK_DEPTH then its gid2
+                                 else if stack_resolve w_tstack k = gid2
+                                 then "~" ^ its k
+                                 else find (k + 1)
+                           in find 0 end
                      in global_tm_id := gid + 1;
                         global_tm_map :=
                           Redblackmap.insert(!global_tm_map, desc, gid);
@@ -1615,11 +1662,12 @@ fun merge {trace_paths : (string * string) list,
                             "T " ^ its gid ^ " C " ^ esc t ^ " " ^
                             esc n ^ " " ^ its tyid ^ "\n"
                         | TmA (f,x) =>
-                            "T " ^ its gid ^ " A " ^ its f ^
-                            " " ^ its x ^ "\n"
+                            "T " ^ its gid ^ " A " ^ wt f ^
+                            " " ^ wt x ^ "\n"
                         | TmL (v,b) =>
-                            "T " ^ its gid ^ " L " ^ its v ^
-                            " " ^ its b ^ "\n")
+                            "T " ^ its gid ^ " L " ^ wt v ^
+                            " " ^ wt b ^ "\n");
+                        w_push_t gid
                      end
                 end
               else ()
@@ -1672,8 +1720,7 @@ fun merge {trace_paths : (string * string) list,
                 in case Redblackmap.peek(!ancestor_exports,
                                          (anc_thy, anc_name)) of
                      SOME gid =>
-                       p_remap :=
-                         PIntMap.add id gid (!p_remap)
+                       Array.update(p_remap, id - p_min, gid)
                    | NONE =>
                      err ("WARNING: unresolved NAME " ^
                           anc_thy ^ "." ^ anc_name ^ "\n")
@@ -1715,8 +1762,7 @@ fun merge {trace_paths : (string * string) list,
                           in search anc_path end
                 in case gid_opt of
                      SOME gid =>
-                       (p_remap :=
-                          PIntMap.add id gid (!p_remap);
+                       (Array.update(p_remap, id - p_min, gid);
                         prov_g := (anc_thy, anc_trace_id, gid)
                                   :: !prov_g)
                    | NONE =>
@@ -1732,15 +1778,15 @@ fun merge {trace_paths : (string * string) list,
                 let val gid = !global_thm_id
                     val resolved =
                       resolve_args r_tstack r_pstack rule args
-                    val remapped = remap_args ry rt rp rule resolved
+                    val remapped = remap_args ory ort orp rule resolved
                 in global_thm_id := gid + 1;
-                   p_remap :=
-                     PIntMap.add id gid (!p_remap);
+                   Array.update(p_remap, id - p_min, gid);
                    TextIO.output(ostrm, "P " ^ its gid ^ " " ^
                      rule ^
                      (if null remapped then ""
                       else " " ^ String.concatWith " " remapped) ^
-                     "\n")
+                     "\n");
+                   w_push_p gid
                 end
               else ()
               end
@@ -1753,13 +1799,13 @@ fun merge {trace_paths : (string * string) list,
                 val rest = List.drop(args, 2)
                 val cvals = List.tabulate(29, fn i =>
                   List.nth(rest, 2*i) ^ " " ^
-                  its (rt (resolve_tref r_tstack
-                             (List.nth(rest, 2*i + 1)))))
+                  ort (resolve_tref r_tstack
+                         (List.nth(rest, 2*i + 1))))
                 val rest2 = List.drop(rest, 58)
                 val char_pairs =
                   let fun go [] = []
                         | go (n::p::r) =
-                            (n ^ " " ^ its (rp (resolve_pref r_pstack p)))
+                            (n ^ " " ^ orp (resolve_pref r_pstack p))
                             :: go r
                         | go _ = []
                   in go rest2 end
