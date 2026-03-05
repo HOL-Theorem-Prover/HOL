@@ -9,7 +9,7 @@ type trees = PolyML.parseTree list
 val initialize:
   { text: string,
     filename: string,
-    parseError: int * int -> string -> unit,
+    parseError: string -> int * int -> string -> unit,
     compilerOut: string -> unit,
     toplevelOut: string -> unit,
     progress: int -> unit,
