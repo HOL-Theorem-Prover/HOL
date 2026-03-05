@@ -37,10 +37,18 @@ UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack \
          $(protect $(SIGOBJ)/Inttab) $(protect $(SIGOBJ)/HOLsexp) \
 	 $(protect $(SIGOBJ)/ThmSetData)
 
-EXTRA_CLEANS = $(TARGET)
+MINSTATE = $(dprot $(HOLDIR)/bin/hol.state.min)
+
+$(MINSTATE): $(dprot $(HOLDIR)/bin/hol) $(dprot $(SIGOBJ)/HolKernel.uo)
+	$(protect $(HOLDIR)/bin/hol) buildheap --poly -o $@ \
+	  $(protect $(SIGOBJ)/HolKernel)
+
+EXTRA_CLEANS = $(TARGET) $(MINSTATE)
 
 $(TARGET): $(DEPS)
 	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) --poly -o $@ $(UOARGS) && \
 	rm -f $(protect $(HOLDIR)/bin/hol.state)
+
+all: $(TARGET) $(MINSTATE)
 
 endif

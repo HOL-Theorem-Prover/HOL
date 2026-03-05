@@ -9,11 +9,18 @@ selftest.exe: selftest.uo gh725
 gh725: gh725Theory.dat gh725_expected.html $(HOLDIR)/tools/cmp/cmp.exe
 	$(protect $(HOLDIR)/tools/cmp/cmp.exe) gh725_expected.html gh725Theory.html
 
-EXTRA_CLEANS = selftest.exe gh725Theory.html proofman-selftest.log
+minstate-selftest.exe: minstate-selftest.uo $(dprot $(SIGOBJ)/testutils.uo)
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe gh725Theory.html proofman-selftest.log \
+               minstate-selftest.exe minstate-selftest.log
 
 ifdef HOLSELFTESTLEVEL
-all: proofman-selftest.log
+all: proofman-selftest.log minstate-selftest.log
 
 proofman-selftest.log: selftest.exe
 	$(tee ./selftest.exe 2>&1, $@)
+
+minstate-selftest.log: minstate-selftest.exe $(dprot $(HOLDIR)/bin/hol.state.min)
+	$(tee ./minstate-selftest.exe 2>&1, $@)
 endif
