@@ -9,9 +9,8 @@ overhead is acceptable.
 ## Status
 
 **A (stack refs)**: ✅ Implemented and committed.
-**B (lazy T output)**: ✅ Implemented (uncommitted).
-**C (peephole)**: ✅ Implemented (SPECL/SPECIALIZEL).
-**Replayer/merge updates**: ❌ Not yet started.
+**B (peephole)**: ✅ Implemented and committed.
+**Anonymous T entries / Td**: ❌ Tried and rejected (see below).
 
 ## Motivation
 
@@ -33,9 +32,7 @@ dependency arrays, liveness tracking). The trace format can be
 made substantially more compact by exploiting the fact that
 most entries are consumed by nearby entries.
 
-## Three Improvements
-
-The improvements are complementary.
+## Two Improvements
 
 ### A. Stack-Based References (✅ done)
 
@@ -69,62 +66,20 @@ P 985432 TRANS ^0 985428
 The replayer maintains matching stacks and resolves `~k`/`^k`
 to actual term/theorem values.
 
-Entries that are referenced from outside the stack window get
-explicit IDs. Stack refs and explicit IDs can be freely mixed
-within a single entry.
+Every T entry carries an explicit ID. Every P entry carries
+its trace_id. Stack refs and explicit IDs can be freely mixed
+at reference sites within a single entry.
 
-**P entries always carry their trace_id.** Theorem IDs are
-kernel-assigned and always available. The `^k` notation saves
-space only at *reference* sites (other entries pointing to a
-theorem), not at the P entry itself. There are no anonymous
-P entries — see "Design Decision" below.
-
-### B. Lazy T Line Output (✅ done)
-
-The intern map is maintained as today: every new term is
-hashed, looked up, and inserted into the map. This ensures
-proper dedup for the 52% of terms that are referenced
-multiple times.
-
-The change is: **the T line is not written at intern time.**
-Instead, the T entry is pushed onto a buffer. The buffer is
-flushed before each P entry is written:
-
-- If all references to the term (from later buffer entries
-  and from the upcoming P entry) are within stack depth →
-  **write anonymous** (no ID in the output).
-- Otherwise → **write with ID** (`T <id> ...`), as today.
-
-Anonymous entries still push onto the replayer's term stack
-and are reachable via `~k` references.
-
-**Td fallback (late materialization):** If a term was written
-anonymous but is later referenced by explicit ID (because a
-far-away entry looked it up in the intern map), a `Td` line
-is emitted: `Td <id> <kind> <args>`. Td defines the term by
-ID without pushing onto the term stack, preserving stack sync
-with the replayer. Anonymous sub-terms are recursively
-materialised via Td first (bounded by term depth).
-
-**Implementation:** Each intern map entry tracks a
-`written_status ref` (UNWRITTEN | WRITTEN_ANON | WRITTEN_ID).
-The T buffer is a list of `{id, status, term_refs,
-render_body}` entries. `can_be_anonymous` scans later buffer
-entries + external refs, counting intervening T entries to
-verify stack positions.
-
-**Scope:** The buffer spans a single proof step (terms
-interned between consecutive P entries). Cross-step anonymous
-entries would require buffering P entries, but P entries
-cannot be anonymous (see below), so a wider window provides
-diminishing returns.
-
-### C. Peephole Optimisation (✅ done, partial)
+### B. Peephole Optimisation (✅ done)
 
 Consecutive SPEC (or Specialize) entries where each uses the
 previous result as its parent are collapsed into a single
 SPECL (or SPECIALIZEL) compound entry. Mixed chains flush at
 kind boundary.
+
+A `spec_chain` accumulator tracks the current chain. It is
+flushed when a non-matching entry arrives, or at close/export
+time.
 
 **Implemented:**
 - SPECL for SPEC chains
@@ -135,47 +90,66 @@ kind boundary.
 - INST_TYPE followed by INST → combined substitution
 - Iterated AP_TERM / AP_THM
 
-Compound rules reduce the number of P entries (fewer entries
-for merge to track, fewer kernel calls at replay).
+## Design Decision: No Anonymous T Entries
 
-## Design Decision: No Anonymous P Entries
+An earlier design deferred T line output to a buffer and wrote
+some T entries without IDs ("anonymous"), using `Td` lines for
+late materialisation when anonymous terms were later referenced
+by explicit ID. This was tried and rejected:
 
-Unlike terms, theorems cannot be reconstructed from their
-values — a `thm` is just hypotheses + conclusion, not the
-derivation that produced it. There is no `dest_thm_derivation`
-analogous to `dest_term`.
+1. **High fallback rate**: With a per-step buffer, 61% of
+   anonymous T entries in numeralTheory needed Td fallback.
+   A wider buffer (unified T/P buffer) would reduce this but
+   adds significant implementation complexity.
 
-If a P entry were written anonymous and a later step
-(outside the buffer window) referenced it by trace_id, there
-would be no way to emit a `Pd` fallback line: we don't retain
-the rule and arguments after the entry is written.
+2. **Format complexity**: Anonymous T entries required 8 extra
+   grammar productions (4 anonymous T + 4 Td). The replayer
+   and merge tool would need to handle both forms plus Td,
+   plus maintain `written_status` tracking.
 
-For terms, the `Td` fallback works because `dest_term` on the
-intern map entry reconstructs the T line body. No such
-mechanism exists for theorems.
+3. **Marginal benefit over ~k refs**: Anonymous entries save
+   a few digits per T entry (the ID field). But `~k` refs
+   already save digits at every *reference* site, and there
+   are typically more references than definitions. The
+   marginal benefit of omitting IDs from definitions is small.
 
-Therefore: **P entries always carry their trace_id.** The
-`^k` notation saves space at reference sites (86% of P-entry
-references in numeralTheory use `^k`), which captures most
-of the benefit.
+4. **Merge tool doesn't need anonymous entries**: The merge
+   tool can detect `~k`-only terms (terms whose ID never
+   appears at a reference site) by scanning reference sites
+   during the dep pass. These terms are purely local and
+   don't need global IDs, dedup, or offset tracking —
+   regardless of whether the T entry carries an ID in the
+   trace. The same applies to `^k`-only theorems.
 
-**Merge tool optimisation:** When a theorem is only ever
-referenced via `^k` (never by explicit ID anywhere in the
-file), the merge tool knows it is purely local — no need for
-a global ID, no cross-file dependency tracking, no entry in
-offset/liveness tables. This gives the merge tool the memory
-benefit of anonymous entries without requiring them in the
-format. The 62% single-use-next theorems fall into this
-category.
+Therefore: every T entry carries an explicit ID, every P entry
+carries its trace_id. The recording logic writes T and P lines
+immediately (no buffering). The `~k`/`^k` notation captures
+the locality benefit at reference sites.
 
-## New Format Elements
+## Merge Tool Optimisations
+
+The stack encoding enables two merge tool optimisations that
+don't require format changes:
+
+**`^k`-only theorems**: If a theorem's trace_id never appears
+as an explicit ID at any reference site in the file (all
+references use `^k`), the merge tool knows it is purely local.
+No global ID allocation, no cross-file dependency tracking,
+no entry in offset/liveness tables. ~62% of theorems fall
+into this category.
+
+**`~k`-only terms**: If a term's ID never appears as an
+explicit ID at any reference site (all references use `~k`),
+the merge tool can skip global ID allocation and dedup for
+that term. ~47% of terms fall into this category.
+
+Both are detected by scanning reference sites during the dep
+pass — a simple check with no format or recording changes.
+
+## Format Elements
 
 - `~k` — term stack reference (k = 0 for most recent)
 - `^k` — theorem stack reference (k = 0 for most recent)
-- T entry without leading ID — anonymous term, pushes onto
-  term stack only, reachable only via `~k`
-- `Td <id> <kind> <args>` — define a previously-anonymous
-  term by explicit ID without pushing onto the stack
 - `SPECL` / `SPECIALIZEL` — compound rules
 
 **No `~` vs `~k` conflict:** In GEN_ABS, bare `~` (no digit
@@ -183,8 +157,6 @@ follows) means NONE. `~0`, `~1`, etc. (digit follows) are
 stack refs. The parser distinguishes by lookahead.
 
 ## Empirical Results (numeralTheory)
-
-After implementing A + C (stack refs + peephole):
 
 | Metric | Value |
 |--------|-------|
@@ -196,22 +168,17 @@ After implementing A + C (stack refs + peephole):
 | SPECL entries | 64 |
 | P entries eliminated by peephole | ~12,000 |
 
-Phase B (lazy T output) expected to make ~47% of T entries
-anonymous, based on single-use-within-8 data.
-
 ## Remaining Work
 
 1. **Update replayer** (`ReplayTrace.sml`): parse `~k`/`^k`
-   refs, maintain term/theorem stacks, handle anonymous T
-   entries, implement SPECL/SPECIALIZEL replay, handle `Td`
-   lines.
+   refs, maintain term/theorem stacks, implement
+   SPECL/SPECIALIZEL replay.
 2. **Update merge tool** (`MergeTrace.sml`): handle `~k`/`^k`
-   and SPECL/SPECIALIZEL in dep scanning; for ^k-only theorems
-   skip global ID allocation; preserve stack encoding in
-   merged output.
+   and SPECL/SPECIALIZEL in dep scanning; for `^k`-only
+   theorems skip global ID allocation; for `~k`-only terms
+   skip global ID allocation and dedup; preserve stack
+   encoding in merged output.
 3. **Update TraceMetadata** (`TraceMetadata.sml`): handle
    SPECL/SPECIALIZEL and `~k`/`^k` tokens in `extract`.
-4. **Measure lazy T impact**: run tracing build, count
-   anonymous vs ID'd T entries, measure size reduction.
-5. **Additional peephole patterns**: CONJUNCT indexing,
+4. **Additional peephole patterns**: CONJUNCT indexing,
    combined INST_TYPE+INST, etc.
