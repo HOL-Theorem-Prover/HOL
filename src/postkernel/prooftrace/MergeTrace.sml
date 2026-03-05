@@ -646,11 +646,13 @@ fun find_heap_trace_file heap_path =
 (* ------- Pass 1: Backward reachability ------- *)
 
 (* Liveness sets for a file. Y and T use arrays (sequential IDs),
-   P uses a set (sparse trace_ids). *)
+   P uses a bool array indexed by (trace_id - p_min_id). *)
 type liveness = {
   live_y : bool Array.array,
   live_t : bool Array.array,
-  live_p : unit PIntMap.t
+  live_p : bool Array.array,
+  live_p_min : int,  (* p_min_id for this file *)
+  live_p_count : int ref  (* count of live P entries *)
 }
 
 fun mark_live (data : file_data) (prev : liveness)
@@ -662,8 +664,10 @@ fun mark_live (data : file_data) (prev : liveness)
   let
     val live_y = #live_y prev
     val live_t = #live_t prev
-    val live_p = ref (#live_p prev)
-    val unresolved = ref (PIntMap.empty : unit PIntMap.t)
+    val live_p = #live_p prev
+    val p_min = #live_p_min prev
+    val live_p_count = #live_p_count prev
+    val unresolved = ref ([] : int list)
     val found_compute = ref false
 
     val dp = get_deps data
@@ -673,14 +677,22 @@ fun mark_live (data : file_data) (prev : liveness)
     val t_nc = #t_nc dp
     val y_def = #y_def dp
 
+    fun p_is_live id =
+      let val idx = id - p_min
+      in idx >= 0 andalso idx < Array.length live_p
+         andalso Array.sub(live_p, idx)
+      end
+
     fun mark_thm id =
-      if PIntMap.mem id (!live_p) then ()
+      if p_is_live id then ()
       else if not (p_has_id dp id) then
-        unresolved := PIntMap.add id () (!unresolved)
+        unresolved := id :: !unresolved
       else
         let val (parents, term_deps, type_deps) =
               read_p_deps dp id
-            val _ = live_p := PIntMap.add id () (!live_p)
+            val idx = id - p_min
+            val _ = Array.update(live_p, idx, true)
+            val _ = live_p_count := !live_p_count + 1
             val _ = if PIntMap.mem id (#compute_ids dp)
                     then found_compute := true else ()
         in List.app mark_thm parents;
@@ -734,8 +746,9 @@ fun mark_live (data : file_data) (prev : liveness)
           if Array.sub(live_t, tid) then SOME key else NONE)
           (#t_unresolved_defs dp)
     in
-      ({live_y = live_y, live_t = live_t, live_p = !live_p},
-       PIntMap.fold (fn (k,_,acc) => k::acc) [] (!unresolved),
+      ({live_y = live_y, live_t = live_t, live_p = live_p,
+        live_p_min = p_min, live_p_count = live_p_count},
+       !unresolved,
        !found_compute,
        unresolved_tyops,
        unresolved_consts)
@@ -931,6 +944,14 @@ fun merge {trace_paths : (string * string) list,
            data
         end
 
+    fun lv_p_mem (lv : liveness) id =
+      let val idx = id - #live_p_min lv
+      in idx >= 0 andalso idx < Array.length (#live_p lv)
+         andalso Array.sub(#live_p lv, idx)
+      end
+
+    fun lv_p_size (lv : liveness) = !(#live_p_count lv)
+
     (* Per-file liveness results, keyed by path *)
     val file_liveness : (string, liveness) Redblackmap.dict ref =
       ref (Redblackmap.mkDict String.compare)
@@ -941,9 +962,14 @@ fun merge {trace_paths : (string * string) list,
         SOME lv => lv
       | NONE =>
         let val data = load_file path
+            val p_min = #p_min_id data
+            val p_max = #p_max_id data
+            val p_rng = if p_min < 0 then 0 else p_max - p_min + 1
             val lv = {live_y = Array.array(#n_types data, false),
                       live_t = Array.array(#n_terms data, false),
-                      live_p = PIntMap.empty}
+                      live_p = Array.array(p_rng, false),
+                      live_p_min = p_min,
+                      live_p_count = ref 0}
         in file_liveness :=
              Redblackmap.insert(!file_liveness, path, lv);
            lv
@@ -1031,14 +1057,14 @@ fun merge {trace_paths : (string * string) list,
         val prev_lv = get_liveness path
         (* Skip if all requested IDs are already live *)
         val dominated = List.all
-          (fn id => PIntMap.mem id (#live_p prev_lv)) needed_thm_ids
+          (fn id => lv_p_mem prev_lv id) needed_thm_ids
       in if dominated then () else
       let
         val (lv, unresolved, found_compute,
              unresolved_tyops, unresolved_consts) =
           mark_live data prev_lv needed_thm_ids
-        val prev_live_count = PIntMap.size (#live_p prev_lv)
-        val new_live_count = PIntMap.size (#live_p lv)
+        val prev_live_count = lv_p_size prev_lv
+        val new_live_count = lv_p_size lv
       in
         pass1_live_thms :=
           !pass1_live_thms + (new_live_count - prev_live_count);
@@ -1076,12 +1102,12 @@ fun merge {trace_paths : (string * string) list,
 
         (* Only enqueue NAME/LOAD for NEWLY live entries
            (not in prev_lv but in lv) to avoid redundant re-processing *)
-        let val prev_live_p = #live_p prev_lv
+        let val _ = ()
         in
         (* Enqueue NAME ancestor exports *)
         List.app (fn (id, anc_thy, anc_name) =>
-          if PIntMap.mem id (#live_p lv) andalso
-             not (PIntMap.mem id prev_live_p) then
+          if lv_p_mem lv id andalso
+             not (lv_p_mem prev_lv id) then
             case Redblackmap.peek(thy_path_map, anc_thy) of
               SOME anc_path =>
                 let val anc_data = load_file anc_path
@@ -1098,8 +1124,8 @@ fun merge {trace_paths : (string * string) list,
 
         (* Enqueue LOAD ancestor theorems by trace_id *)
         List.app (fn (id, anc_thy, anc_trace_id) =>
-          if PIntMap.mem id (#live_p lv) andalso
-             not (PIntMap.mem id prev_live_p) then
+          if lv_p_mem lv id andalso
+             not (lv_p_mem prev_lv id) then
             case Redblackmap.peek(thy_path_map, anc_thy) of
               SOME anc_path =>
                 enqueue (anc_path, [anc_trace_id])
@@ -1375,13 +1401,13 @@ fun merge {trace_paths : (string * string) list,
             SOME lv => lv | NONE => raise ERR "merge" "no liveness"
         (* NAME deps -> theory file paths *)
         val thm_file_deps = List.mapPartial (fn (id, anc_thy, _) =>
-          if PIntMap.mem id (#live_p lv) then
+          if lv_p_mem lv id then
             Redblackmap.peek(thy_to_path, anc_thy)
           else NONE)
           (#name_refs data)
         (* LOAD deps -> theory file paths *)
         val dep_file_deps = List.mapPartial (fn (id, anc_thy, _) =>
-          if PIntMap.mem id (#live_p lv) then
+          if lv_p_mem lv id then
             Redblackmap.peek(thy_to_path, anc_thy)
           else NONE)
           (#load_refs data)
@@ -1431,7 +1457,7 @@ fun merge {trace_paths : (string * string) list,
     val n_live_total =
       List.foldl (fn (path, acc) =>
         case Redblackmap.peek(!file_liveness, path) of
-          SOME lv => acc + PIntMap.size (#live_p lv)
+          SOME lv => acc + lv_p_size lv
         | NONE => acc) 0 topo
 
     val _ = if not quiet then
@@ -1509,6 +1535,12 @@ fun merge {trace_paths : (string * string) list,
         val live_y = #live_y lv
         val live_t = #live_t lv
         val live_p = #live_p lv
+        val live_p_min = #live_p_min lv
+        fun p_is_live id =
+          let val idx = id - live_p_min
+          in idx >= 0 andalso idx < Array.length live_p
+             andalso Array.sub(live_p, idx)
+          end
 
         val (instrm, close_instrm) = TraceCompress.open_trace path
         val _ = (parse_file := path; parse_line := 0;
@@ -1714,7 +1746,7 @@ fun merge {trace_paths : (string * string) list,
           | ("P" :: id_s :: "NAME" :: args) =>
               let val id = int_of id_s
                   val _ = stack_push r_pstack id
-              in if PIntMap.mem id live_p then
+              in if p_is_live id then
                 let val anc_thy = unescape (List.nth(args, 0))
                     val anc_name = unescape (List.nth(args, 1))
                 in case Redblackmap.peek(!ancestor_exports,
@@ -1730,7 +1762,7 @@ fun merge {trace_paths : (string * string) list,
           | ("P" :: id_s :: "LOAD" :: args) =>
               let val id = int_of id_s
                   val _ = stack_push r_pstack id
-              in if PIntMap.mem id live_p then
+              in if p_is_live id then
                 let val anc_thy = unescape (List.nth(args, 0))
                     val anc_trace_id = int_of (List.nth(args, 1))
                     (* First try the ancestor theory's own trace *)
@@ -1774,7 +1806,7 @@ fun merge {trace_paths : (string * string) list,
           | ("P" :: id_s :: rule :: args) =>
               let val id = int_of id_s
                   val _ = stack_push r_pstack id
-              in if PIntMap.mem id live_p then
+              in if p_is_live id then
                 let val gid = !global_thm_id
                     val resolved =
                       resolve_args r_tstack r_pstack rule args
@@ -1847,28 +1879,37 @@ fun merge {trace_paths : (string * string) list,
         (* Register this file's P entries for cross-file resolution.
            Theory traces: register in ancestor_thm_map (for LOAD resolution).
            Heap traces: register in heap_thm_map (for parent trace_id resolution). *)
+        let fun for_live_p f =
+              let val len = Array.length live_p
+                  fun loop i =
+                    if i >= len then ()
+                    else (if Array.sub(live_p, i)
+                          then f (i + live_p_min)
+                          else ();
+                          loop (i + 1))
+              in loop 0 end
+        in
         if #is_heap data then
-          PIntMap.app (fn (trace_id, ()) =>
+          for_live_p (fn trace_id =>
             case rp_peek trace_id of
               SOME gid => heap_thm_insert (path, trace_id, gid)
             | NONE => ())
-            live_p
         else
-          PIntMap.app (fn (trace_id, ()) =>
+          for_live_p (fn trace_id =>
             case rp_peek trace_id of
               SOME gid =>
                 ancestor_thm_map :=
                   Redblackmap.insert(!ancestor_thm_map,
                                      (#thy_name data, trace_id), gid)
             | NONE => ())
-            live_p
+        end
       end
 
     val _ = List.app (fn path =>
       let val data = load_file path
           val lv = case Redblackmap.peek(!file_liveness, path) of
               SOME lv => lv | NONE => raise ERR "merge" "no liveness"
-          val n_live = PIntMap.size (#live_p lv)
+          val n_live = lv_p_size lv
           val label = if #is_heap data
                       then OS.Path.file path
                       else #thy_name data

@@ -1,29 +1,25 @@
 # Proof Trace TODO
 
-### [replay-stack] Update replayer for stack encoding
+### ~~[replay-stack]~~ Update replayer for stack encoding — DONE
 
-ReplayTrace needs to handle the new format elements:
-- Parse `~k` / `^k` references (term and theorem stack refs)
-- Maintain term and theorem stacks (circular buffers, depth 16)
-- Implement SPECL / SPECIALIZEL replay (iterated SPEC/Specialize)
-- Resolve `~k` / `^k` to actual values via stack lookup
+- Read-side stacks (depth 16), tref/pref parsers, ti/pi helpers
+- SPECL/SPECIALIZEL replay (iterated SPEC/Specialize)
+- All P rules use tref/pref for proper ~k/^k resolution
 
-### [merge-stack] Update merge tool for stack encoding
+### ~~[merge-stack]~~ Update merge tool for stack encoding — DONE
 
-MergeTrace needs to handle the new format in both passes:
-- Parse `~k` / `^k` references and SPECL/SPECIALIZEL in dep scan
-- For `^k`-only theorems (never referenced by explicit ID), skip
-  global ID allocation — they are purely local
-- For `~k`-only terms (never referenced by explicit ID), skip
-  global ID allocation and dedup
-- Preserve stack encoding in merged output (use `~k`/`^k` and
-  compound rules, don't expand to explicit IDs)
+- Read-side stacks in dep scan (Pass 1) and write (Pass 2)
+- Write-side stacks in Pass 2: ort/orp emit ~k/^k in merged output
+- remap_args takes string-producing ory/ort/orp functions
+- p_remap PIntMap replaced with range-indexed array
+- SPECL/SPECIALIZEL in extract_parent_ids, extract_term_ids, remap_args
+- ^k-only / ~k-only global ID skipping: not needed — array-based
+  p_remap has fixed cost regardless; write-side stacks handle output
 
-### [metadata-stack] Update TraceMetadata for stack encoding
+### ~~[metadata-stack]~~ Update TraceMetadata for stack encoding — DONE
 
-TraceMetadata.extract needs to handle:
-- `~k` / `^k` tokens (skip or resolve during metadata scan)
-- SPECL / SPECIALIZEL rule names
+- is_stack_ref filter skips ~k/^k tokens in I line parsing
+- SPECL/SPECIALIZEL handled implicitly (no I line impact)
 
 ### [regression] Regression testing
 
@@ -115,13 +111,13 @@ string) would replace all four functions and make it impossible
 to have inconsistencies between them (e.g., adding a rule to
 one but forgetting another).
 
-### [p-liveness-array] Dense array for P liveness in merge
+### ~~[p-liveness-array]~~ Dense array for P liveness in merge — DONE
 
-`mark_live` uses `PIntMap` (Patricia trees) for P liveness
-and `p_remap`. Since `p_base_id` and `p_max_id` are known,
-a bool array of size `(max - base + 1)` would give O(1)
-operations and better cache behavior. The `p_offsets` array
-already uses this scheme.
+`live_p` converted from `unit PIntMap.t` to `bool Array.array`
+indexed by `(trace_id - p_min_id)`. `p_remap` also converted
+from `int PIntMap.t` to `int Array.array`. Both use O(1) lookup,
+no GC pressure from functional map nodes. `lv_p_mem`/`lv_p_size`
+helpers, `live_p_count` ref for O(1) size queries.
 
 ### [trace-parse] Factor out shared parsing utilities
 
