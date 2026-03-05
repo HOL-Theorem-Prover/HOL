@@ -494,12 +494,13 @@ local
   (* Returns a proof of `t` using arithmetic decision procedures. This function
      is used by both `z3_th_lemma_arith` and `z3_rewrite`. *)
   fun arith_prove t =
-    (* nonlinear: try NLArith/SOSLib first if the goal is nonlinear,
-       before the linear tactic chain which can mangle the goal *)
+    arith_prove_linear t
+    handle Feedback.HOL_ERR _ =>
+    (* nonlinear fallback: only after linear tactics fail, to avoid
+       expensive SOS certificate search on goals linear tactics handle *)
     if Library.is_nonlinear t then
-      (profile "arith_prove(nla)" Library.nla_prove t
-       handle Feedback.HOL_ERR _ => arith_prove_linear t)
-    else arith_prove_linear t
+      profile "arith_prove(nla)" Library.nla_prove t
+    else raise ERR "arith_prove" (Hol_pp.term_to_string t)
 
   and arith_prove_linear t =
     let
