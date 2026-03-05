@@ -1,5 +1,40 @@
 # Proof Trace TODO
 
+### [replay-stack] Update replayer for stack encoding
+
+ReplayTrace needs to handle the new format elements:
+- Parse `~k` / `^k` references (term and theorem stack refs)
+- Maintain term and theorem stacks (circular buffers, depth 16)
+- Handle anonymous T entries (no leading ID — push to stack only)
+- Handle `Td` lines (define-without-push for late materialisation)
+- Implement SPECL / SPECIALIZEL replay (iterated SPEC/Specialize)
+- Resolve `~k` / `^k` to actual values via stack lookup
+
+### [merge-stack] Update merge tool for stack encoding
+
+MergeTrace needs to handle the new format in both passes:
+- Parse `~k` / `^k` references and SPECL/SPECIALIZEL in dep scan
+- For `^k`-only theorems (never referenced by explicit ID), skip
+  global ID allocation — they are purely local
+- Preserve stack encoding in merged output (use `~k`/`^k` and
+  compound rules, don't expand to explicit IDs)
+- Handle anonymous T entries and Td lines in Pass 2 remapping
+
+### [metadata-stack] Update TraceMetadata for stack encoding
+
+TraceMetadata.extract needs to handle:
+- `~k` / `^k` tokens (skip or resolve during metadata scan)
+- SPECL / SPECIALIZEL rule names
+- Anonymous T entries (no leading ID)
+- Td lines
+
+### [measure-lazy-t] Measure lazy T output impact
+
+Run a tracing build with the lazy T implementation and count:
+- Anonymous vs ID'd T entries
+- Td materialisations (late fallbacks)
+- Total trace size reduction vs previous stack-encoding-only traces
+
 ### [regression] Regression testing
 
 Figure out how to add automated regression tests for the

@@ -49,23 +49,76 @@ type_entry   ::= "Y " y " V " s "\n"
 
 term_entry   ::= "T " t " V " s y "\n"
                | "T " t " C " s s y "\n"
-               | "T " t " A " t t "\n"
-               | "T " t " L " t t "\n"
+               | "T " t " A " tref tref "\n"
+               | "T " t " L " tref tref "\n"
+               | "T V " s y "\n"
+               | "T C " s s y "\n"
+               | "T A " tref tref "\n"
+               | "T L " tref tref "\n"
+
+term_define  ::= "Td " t " V " s y "\n"
+               | "Td " t " C " s s y "\n"
+               | "Td " t " A " t t "\n"
+               | "Td " t " L " t t "\n"
 
 thm_entry    ::= "P " p " " rule args "\n"
 
-compute_init ::= "I " y y (s t){29} (s p)* "\n"
+tref         ::= t | "~" int
+pref         ::= p | "^" int
+
+compute_init ::= "I " y y (s tref){29} (s pref)* "\n"
 ```
 
 Fields:
 - **y**: type ID (non-negative integer, sequential from 0)
 - **t**: term ID (non-negative integer, sequential from 0)
 - **p**: theorem ID (kernel trace_id — see below)
+- **tref**: term reference — either an explicit term ID or `~k`
+  (a stack reference, where k=0 is the most recently written T
+  entry, k=1 the one before, etc.)
+- **pref**: theorem reference — either an explicit theorem ID or
+  `^k` (a stack reference, where k=0 is the most recently written
+  P entry, k=1 the one before, etc.)
 - **s**: unquoted token or quoted string (`"..."` with `\"`, `\\`,
   `\n`, `\xNN` escapes)
 - IDs are scoped per namespace (Y, T, P)
 - Y, T, P, I entries are interleaved in dependency order
   (as recorded during the build)
+
+### Stack Encoding
+
+T and P entries maintain implicit stacks (depth 16). Each T
+entry pushes onto the term stack; each P entry pushes onto the
+theorem stack. References to recent entries use `~k` (terms) or
+`^k` (theorems) instead of explicit IDs. Explicit IDs and stack
+refs can be freely mixed within a single entry.
+
+**Anonymous T entries**: T entries without a leading ID (e.g.,
+`T V x 5` instead of `T 42 V x 5`) are anonymous — they push
+onto the term stack but are reachable only via `~k` references.
+P entries always carry their trace_id (never anonymous).
+
+**Td (term define-without-push)**: If a previously anonymous
+term is later referenced by explicit ID, a `Td` line materialises
+the term by ID without pushing onto the term stack. This
+preserves stack synchronisation. Sub-term references in Td lines
+use explicit IDs (not `~k`), since the term is off the stack.
+Td lines appear just before the entry that needs the explicit ID.
+
+**`~` vs `~k` in GEN_ABS**: Bare `~` (no following digit) means
+NONE in GEN_ABS. `~0`, `~1`, etc. (digit follows) are stack
+refs. The parser distinguishes by lookahead.
+
+### Compound Rules
+
+Consecutive SPEC (or Specialize) entries where each uses the
+previous result as its parent are collapsed:
+
+- `SPECL p t+` — chain of SPEC applications
+- `SPECIALIZEL p t+` — chain of Specialize applications
+
+The first argument is the parent of the first SPEC in the chain.
+Subsequent term arguments are applied in order.
 - V is the first line; H (if present) is second; C, O, Y, T,
   P, and I entries are interleaved in dependency order; N
   appears after all entries; F and G (provenance, merged traces
@@ -103,7 +156,9 @@ extend to end of line.
 | `INST` | `p (t t)*` |
 | `SUBST` | `p t (t p)*` — original, template, (var, residue) pairs |
 | `SPEC` | `p t` |
+| `SPECL` | `p t+` — collapsed SPEC chain |
 | `Specialize` | `p t` — lazy-beta SPEC |
+| `SPECIALIZEL` | `p t+` — collapsed Specialize chain |
 | `Specialize_thm` | `p p` — arg\_thm, parent; term from `rand(concl(arg\_thm))` |
 | `GEN` | `p t` |
 | `GENL` | `p t*` |
@@ -132,6 +187,12 @@ extend to end of line.
 | `ORACLE` | `s t t*` — tag, concl, hyps |
 | `NAME` | `s s` — theory, name (per-theory traces only) |
 | `LOAD` | `s p` — theory, ancestor trace_id (per-theory traces only) |
+
+In the table above, `t` and `p` arguments may be stack
+references (`~k` or `^k` respectively) instead of explicit IDs.
+Exceptions: NAME and LOAD always use explicit IDs (they are
+cross-file references). INST_TYPE type arguments (`y`) are
+always explicit (no type stack).
 
 **REFL\_RATOR / REFL\_RAND / REFL\_BODY**: `Mk_comb` and `Mk_abs`
 internally produce REFL theorems for the sub-terms of the parent's
@@ -281,14 +342,51 @@ script — the trace is written to a temp file under `.hol/objs/`
 ### Recording steps
 
 On each kernel inference rule:
-1. Intern new types/terms, writing Y/T entries to the output
-   immediately
-2. Write the P entry with kernel trace_ids for both the entry's
-   own ID and parent references — no remapping
+1. Intern new types/terms — Y entries are written immediately;
+   T entries are deferred in a buffer (see Lazy T Output below)
+2. Flush the T buffer (writing T entries to output)
+3. Write the P entry with kernel trace_ids for the entry's own
+   ID and `^k`/explicit ID for parent references
+4. Push the P entry's trace_id onto the theorem stack
 
 P entry IDs are `Thm.trace_id` values from the kernel's monotonic
 counter. Parent references are also `Thm.trace_id` values of the
-parent thm values.
+parent thm values, but may be written as `^k` if the parent is
+within stack depth.
+
+### Lazy T output
+
+T lines are not written at intern time. Instead, each new term
+creates a buffer entry with a render closure. The buffer is
+flushed before each P entry is written. At flush time:
+
+- If all references to a term (from later buffer entries and
+  the upcoming P entry) are within STACK_DEPTH positions on the
+  term stack → write anonymous (no ID).
+- Otherwise → write with explicit ID.
+
+Each intern map entry tracks a `written_status ref`:
+- UNWRITTEN: in the buffer, not yet written
+- WRITTEN_ANON: written without ID (anonymous)
+- WRITTEN_ID: written with explicit ID
+
+If a previously-anonymous term is later referenced by explicit
+ID (cache/map hit with WRITTEN_ANON status), a `Td` line is
+emitted to define the term by ID without pushing onto the stack.
+Sub-terms are recursively materialised via Td if needed.
+
+### Peephole optimisation
+
+Consecutive SPEC (or Specialize) entries where each uses the
+previous result as its parent are accumulated in a `spec_chain`
+buffer. When a non-matching entry arrives (or at close/export
+time), the chain is flushed:
+- Single entry → normal SPEC/Specialize line
+- Multiple entries → SPECL/SPECIALIZEL compound line
+
+The spec chain is flushed before the T buffer flush (so the
+compound entry's term references participate in the anonymous
+decision for T entries).
 
 ### Term/type interning
 
