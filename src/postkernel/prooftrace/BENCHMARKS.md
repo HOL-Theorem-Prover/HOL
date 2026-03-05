@@ -7,8 +7,8 @@ performance of the merge and replay tools.
 
 ## Commits
 
-- **Baseline (origin/develop):** `81c9003b5` — TFL: print cheated Modern Syntax termination proofs
-- **PR (proof-traces):** `641a2703d` — Add Specialize_thm to otknl
+- **Baseline (origin/develop):** `0047dead8` — Mention our kernel bugs in the release notes
+- **PR (proof-traces):** `5a8bc7454` — prooftrace merge: replace PIntMap with array for P liveness
 
 ## Target theorems
 
@@ -29,7 +29,7 @@ All commands are below are in the HOL directory.
 Fresh full HOL build from the develop branch.
 
 ```
-git checkout 81c9003b5
+git checkout 0047dead8
 git clean -xdf
 poly --script tools/smart-configure.sml
 /usr/bin/time -v bin/build --nograph &| tee /tmp/bench-a.log
@@ -40,7 +40,7 @@ poly --script tools/smart-configure.sml
 Fresh full HOL build from the PR branch, without `--trace`.
 
 ```
-git checkout 641a2703d
+git checkout 5a8bc7454
 git clean -xdf
 poly --script tools/smart-configure.sml
 /usr/bin/time -v bin/build --nograph &| tee /tmp/bench-b.log
@@ -96,7 +96,7 @@ Replay the merged trace.
   &| tee /tmp/bench-e.log
 ```
 
-## Results
+## Results (previous run: `641a2703d`)
 
 | Run | Description | Wall time | Peak RSS | Notes |
 |-----|-------------|-----------|----------|-------|
@@ -106,6 +106,17 @@ Replay the merged trace.
 | (c') | regexp_compiler (tracing on) | 2m46s | 1.48G | |
 | (d) | Merge | 4m37s | 15.63G | merged: raw (304M) / zstd (68M) (ratio 4.47) |
 | (e) | Replay | 32s | 7.55G | |
+
+## Results (current run: `5a8bc7454`)
+
+| Run | Description | Wall time | Peak RSS | Notes |
+|-----|-------------|-----------|----------|-------|
+| (a) | Baseline build | | | |
+| (b) | PR build, tracing off | | | |
+| (c) | PR build, tracing on | | | |
+| (c') | regexp_compiler (tracing on) | | | |
+| (d) | Merge | | | |
+| (e) | Replay | | | |
 
 **Overhead (b vs a):** kernel changes with tracing off
 essentially nothing
