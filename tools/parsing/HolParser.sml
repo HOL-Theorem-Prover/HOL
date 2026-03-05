@@ -11,7 +11,7 @@ structure ToSML = struct
   type args = {
     read: int -> string,
     filename: string,
-    parseError: string -> int * int -> string -> unit,
+    parseError: int * int -> string -> unit,
     quietOpen: bool
   }
   type printer = {str: string -> unit, startSpan: int * int -> unit, stopSpan: unit -> unit}
@@ -29,7 +29,7 @@ structure ToSML = struct
       | SOME dec => case expandDec dec of
           HOLAst.DecExpansion {result = [], ...} => false
         | dec => (
-          HOLPrinter.printDecs (parseError filename) (rev (HOLToSML.mkSemi [dec])) pr';
+          HOLPrinter.printDecs parseError (rev (HOLToSML.mkSemi [dec])) pr';
           #str pr "\n"; false)
     in {fileline = fileline, push = push} end
 

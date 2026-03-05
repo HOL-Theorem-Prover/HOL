@@ -330,7 +330,7 @@ structure ToSML = struct
   type args = {
     read: int -> string,
     filename: string,
-    parseError: string -> int * int -> string -> unit,
+    parseError: int * int -> string -> unit,
     quietOpen: bool
   }
 
@@ -644,12 +644,8 @@ structure ToSML = struct
     val full = Substring.full
     val cat = Substring.concat
     val filename = ref filename
-    val parseError = fn loc => fn msg => (parseError (!filename) loc msg)
     val {read, readAt} = mkDoubleReader read 0
-    val feed = mkParser {
-      read = read,
-      pos = ~1 (* fix for mllex bug *),
-      parseError = parseError}
+    val feed = mkParser {read = read, pos = ~1 (* fix for mllex bug *), parseError = parseError}
     val inThmVal = ref false
     fun finishThmVal () = if !inThmVal then (aux ");"; inThmVal := false) else ()
     val line = ref (0, 0)

@@ -158,12 +158,9 @@ fun expandExp true (e as Wild _) = e
   | expandExp false (Wild p) = mkFail (p, "_")
   | expandExp _ (e as IntegerConstant _) = e
   | expandExp _ (e as WordConstant _) = e
-  | expandExp _ (StringConstant (p, s)) = let
-    val filename = #file (fileline p)
-    in mkString (p, decodeStr (parseError filename) s 1 (size s - 1)) end
+  | expandExp _ (StringConstant (p, s)) = mkString (p, decodeStr parseError s 1 (size s - 1))
   | expandExp _ (CharConstant (p, s)) = let
-    val filename = #file (fileline p)
-    val s = decodeStr (parseError filename) s 2 (size s - 1)
+    val s = decodeStr parseError s 2 (size s - 1)
     in CharConstant (p, encodeStr (Substring.full s) "#\"" "\"") end
   | expandExp _ (e as RealConstant _) = e
   | expandExp _ (e as Unit _) = e
@@ -273,8 +270,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     fun f {rec_, pat, eq} = let
       val pat = expandExp true pat handle HasOrPat => let
         val (start, stop) = expSpan pat
-        val _ = parseError (#file (fileline start)) (start, stop)
-          "or patterns not supported here"
+        val _ = parseError (start, stop) "or patterns not supported here"
         in ExpBad {start = start, stop = stop} end
       val eq = Option.map (fn {eq, exp} => {eq = eq, exp = expandExp false exp}) eq
       in {rec_ = rec_, pat = pat, eq = eq} end
@@ -323,8 +319,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val _ = app (fn
         {key = (_, "bare"), bind = NONE} => bare := true
       | {key = (_, "no_sig_docs"), bind = NONE} => ()  (* considered in HOLTheoryEnd *)
-      | {key = (p, s), ...} =>
-        parseError (#file (fileline p)) (p, p + size s) "unknown theory attribute"
+      | {key = (p, s), ...} => parseError (p, p + size s) "unknown theory attribute"
       ) (case attrs of NONE => [] | SOME v => #args (#attrs v))
     val grammar = ref (if !bare then [] else [mkString (theory_, "hol")])
     fun finish (NONE, acc) = acc
@@ -352,16 +347,14 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
         val _ = app (fn x => case (x, isThy) of
             ({key = (_, "qualified"), bind = NONE}, _) => qualified := true
           | ({key = (_, "ignore_grammar"), bind = NONE}, true) => ignoreGrammar := true
-          | ({key = (p, s), ...}, _) =>
-            parseError (#file (fileline p)) (p, p + size s) "unknown header attribute"
+          | ({key = (p, s), ...}, _) => parseError (p, p + size s) "unknown header attribute"
           ) (case header_attrs of NONE => [] | SOME v => #args (#attrs v))
         (* Process attributes on theory/library *)
         val _ = app (fn x => case (x, isThy) of
             ({key = (_, "alias"), bind = SOME {vals = [tgt], ...}}, _) => aliases := tgt :: !aliases
           | ({key = (_, "qualified"), bind = NONE}, _) => qualified := true
           | ({key = (_, "ignore_grammar"), bind = NONE}, true) => ignoreGrammar := true
-          | ({key = (p, s), ...}, _) =>
-            parseError (#file (fileline p)) (p, p + size s) "unknown header attribute"
+          | ({key = (p, s), ...}, _) => parseError (p, p + size s) "unknown header attribute"
           ) (case attrs of NONE => [] | SOME v => #args (#attrs v))
         val id' = if isThy then (#1 id, #2 id ^ "Theory") else id
         val acc = push (!qualified) id' acc
@@ -408,9 +401,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
         {key = (p, s as "induction"), bind} =>
         (case bind of
           SOME {vals = [tgt], ...} => indThm := SOME tgt
-         | _ =>
-           parseError (#file (fileline p)) (p, p + size s)
-             "unexpected arguments to [induction] attribute")
+        | _ => parseError (p, p + size s) "unexpected arguments to [induction] attribute")
       | _ => ()
       ) (case attrs of NONE => [] | SOME v => #args (#attrs v))
     val indThm = case !indThm of
@@ -481,8 +472,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
       | f _ (_, "local") = local_ := true
       | f false (_, "pp") = pp := true
       | f true (_, "by_nametype") = by_nametype := true
-      | f _ (p, sk) =
-        parseError (#file (fileline p)) (p, p + size sk) ("unexpected attribute '"^sk^"'")
+      | f _ (p, sk) = parseError (p, p + size sk) ("unexpected attribute '"^sk^"'")
     val _ = Option.app (app (f overload) o #args o #attrs) attrs
     val name = "Parse." ^
       (if !local_ then "temp_" else "") ^
@@ -529,8 +519,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
       (mkIdent tgt, rest)
     | SOME ({key = (p, s), ...}, rest)  => (
       (* bad smlname attr: report error, use wildcard and return rest of attributes *)
-        parseError (#file (fileline p)) (p, p + size s)
-          "unexpected arguments to [smlname] attribute";
+      parseError (p, p + size s) "unexpected arguments to [smlname] attribute";
       (Wild (#1 label), rest))
     val e = mkIdent (resume_, "markerLib.resume")
     val e = App (e, mkRecord (resume_, [

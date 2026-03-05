@@ -532,7 +532,7 @@ fun start {diag} = let
     val _ = HOL_IDE.initialize {
       text = code,
       filename = uri,
-      parseError = fn fname => fn pos => fn s => report (Error {hard = true, pos = pos, msg = encString s}),
+      parseError = fn pos => fn s => report (Error {hard = true, pos = pos, msg = encString s}),
       compilerOut = fn s => report (CompilerOut (!lastPos, [s])),
       toplevelOut = fn s => report (ToplevelOut (!lastPos, [s])),
       progress = fn i => (lastPos := i; report (Progress i)),

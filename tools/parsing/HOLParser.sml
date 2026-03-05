@@ -34,14 +34,13 @@ type result = {
   body: DString.dstring,
   events: events }
 
-fun simpleParseError filename (start, stop) s =
-    TextIO.output (TextIO.stdErr, String.concat [
-        if filename = "" then "" else filename ^ ": ",
-        "parse error at ", Int.toString start, "-", Int.toString stop,
-        ": ", s, "\n"])
+fun simpleParseError (start, stop) s =
+    TextIO.output (
+        TextIO.stdErr,
+        "parse error at " ^
+        Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n")
 
 fun parseSML file read parseError: scope -> result = let
-  val parseError = parseError file
   val pos = ref 0
   val body = DString.new 1024
   val evts = DArray.new (1, LineEvent (0, 0))

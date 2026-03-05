@@ -10,10 +10,9 @@ type result = {
   body: DString.dstring,
   events: HOLAst.events }
 
-(* filename -> start * stop -> message -> unit *)
-val simpleParseError: string -> int * int -> string -> unit
+val simpleParseError: int * int -> string -> unit
 
-val parseSML: string -> (int -> string) -> (string -> int * int -> string -> unit) ->
+val parseSML: string -> (int -> string) -> (int * int -> string -> unit) ->
   scope -> result
 
 end

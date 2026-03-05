@@ -8,7 +8,7 @@ structure ToSML: sig
   type args = {
     read: int -> string,
     filename: string,
-    parseError: string -> int * int -> string -> unit,
+    parseError: int * int -> string -> unit,
     quietOpen: bool
   }
 
