@@ -16,11 +16,15 @@ EXTRA_CLEANS = selftest.exe gh725Theory.html proofman-selftest.log \
                minstate-selftest.exe minstate-selftest.log
 
 ifdef HOLSELFTESTLEVEL
-all: proofman-selftest.log minstate-selftest.log
+all: proofman-selftest.log
 
 proofman-selftest.log: selftest.exe
 	$(tee ./selftest.exe 2>&1, $@)
 
+ifdef POLY
+all: minstate-selftest.log
+
 minstate-selftest.log: minstate-selftest.exe $(dprot $(HOLDIR)/bin/hol.state.min)
 	$(tee ./minstate-selftest.exe 2>&1, $@)
+endif
 endif
