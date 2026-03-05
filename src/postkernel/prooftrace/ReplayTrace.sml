@@ -245,7 +245,19 @@ fun replay_file path =
                       | pairs _ = raise ERR "replay" "SUBST: odd args"
                 in Thm.SUBST (pairs rest) template orig end
             | "SPEC" => Thm.SPEC (tm (ai 1)) (th (ai 0))
+            | "SPECL" =>
+                let val parent = th (ai 0)
+                    val terms = map (tm o int_of) (List.drop(args, 1))
+                in List.foldl (fn (t, th) => Thm.SPEC t th)
+                              parent terms
+                end
             | "Specialize" => Thm.Specialize (tm (ai 1)) (th (ai 0))
+            | "SPECIALIZEL" =>
+                let val parent = th (ai 0)
+                    val terms = map (tm o int_of) (List.drop(args, 1))
+                in List.foldl (fn (t, th) => Thm.Specialize t th)
+                              parent terms
+                end
             | "Specialize_thm" => Thm.Specialize_thm (th (ai 0)) (th (ai 1))
             | "GEN" => Thm.GEN (tm (ai 1)) (th (ai 0))
             | "GENL" =>

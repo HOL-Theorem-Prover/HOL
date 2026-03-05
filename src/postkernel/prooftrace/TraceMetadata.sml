@@ -421,15 +421,24 @@ fun extract path =
           let val toks = tokenize line in
           (case toks of ("I" :: args) =>
             let
+              (* Skip ~k/^k stack refs — only collect explicit IDs *)
+              fun is_stack_ref s = size s > 0 andalso
+                (String.sub(s, 0) = #"~" orelse String.sub(s, 0) = #"^")
               fun ai n = int_of (List.nth(args, n))
               val type_ids = [ai 0, ai 1]
               val rest = List.drop(args, 2)
-              val term_ids = List.tabulate(29, fn i =>
-                int_of (List.nth(rest, 2*i + 1)))
+              val term_ids =
+                List.mapPartial (fn i =>
+                  let val s = List.nth(rest, 2*i + 1)
+                  in if is_stack_ref s then NONE
+                     else SOME (int_of s)
+                  end)
+                (List.tabulate(29, fn i => i))
               val rest2 = List.drop(rest, 58)
               fun get_parents [] = []
                 | get_parents (_::p::r) =
-                    int_of p :: get_parents r
+                    if is_stack_ref p then get_parents r
+                    else int_of p :: get_parents r
                 | get_parents _ = []
               val parent_ids = get_parents rest2
             in

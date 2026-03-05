@@ -82,6 +82,129 @@ val esc = TraceRecord.escape_string
 val tokenize = ReplayTrace.tokenize
 val unescape = ReplayTrace.unescape
 
+(* ------- Stack ref resolution ------- *)
+
+(* Read-side stacks for resolving ~k / ^k references.
+   These are used during sequential scans (dep scan and Pass 2)
+   to map stack-relative references back to explicit IDs. *)
+
+val STACK_DEPTH = 16
+
+fun mk_stack () = (Array.array(STACK_DEPTH, ~1), ref 0)
+
+fun stack_push (arr, ptr) id =
+  (Array.update(arr, !ptr, id);
+   ptr := (!ptr + 1) mod STACK_DEPTH)
+
+fun stack_resolve (arr, ptr) k =
+  if k < 0 orelse k >= STACK_DEPTH then ~1
+  else Array.sub(arr, (!ptr - 1 - k + STACK_DEPTH) mod STACK_DEPTH)
+
+fun stack_reset (arr, ptr) =
+  (Array.modify (fn _ => ~1) arr; ptr := 0)
+
+(* Check if a token is a stack ref (~k or ^k) *)
+fun is_tilde_ref s = size s >= 2 andalso String.sub(s, 0) = #"~"
+                     andalso Char.isDigit(String.sub(s, 1))
+fun is_caret_ref s = size s >= 2 andalso String.sub(s, 0) = #"^"
+                     andalso Char.isDigit(String.sub(s, 1))
+
+(* Parse a stack ref token: "~3" -> 3, "^0" -> 0 *)
+fun stack_ref_k s = int_of (String.extract(s, 1, NONE))
+
+(* Resolve a term ref token: if ~k, resolve via term stack;
+   otherwise parse as int *)
+fun resolve_tref tstack s =
+  if is_tilde_ref s then stack_resolve tstack (stack_ref_k s)
+  else int_of s
+
+(* Resolve a theorem ref token: if ^k, resolve via thm stack;
+   otherwise parse as int *)
+fun resolve_pref pstack s =
+  if is_caret_ref s then stack_resolve pstack (stack_ref_k s)
+  else int_of s
+
+(* Resolve all ~k/^k refs in a token list, given knowledge of
+   which positions are t-refs, p-refs, or other.
+   This is used in Pass 2 before remap_args. *)
+fun resolve_args tstack pstack rule args =
+  let
+    fun rt s = if is_tilde_ref s
+               then its (stack_resolve tstack (stack_ref_k s))
+               else s
+    fun rp s = if is_caret_ref s
+               then its (stack_resolve pstack (stack_ref_k s))
+               else s
+    val nargs = length args
+  in case rule of
+      "REFL" => [rt (hd args)]
+    | "ASSUME" => [rt (hd args)]
+    | "BETA_CONV" => [rt (hd args)]
+    | "ALPHA" => map rt args
+    | "ABS" => [rp (List.nth(args,0)), rt (List.nth(args,1))]
+    | "MK_COMB" => map rp args
+    | "AP_TERM" => [rp (List.nth(args,0)), rt (List.nth(args,1))]
+    | "AP_THM" => [rp (List.nth(args,0)), rt (List.nth(args,1))]
+    | "SYM" => [rp (hd args)]
+    | "TRANS" => map rp args
+    | "EQ_MP" => map rp args
+    | "EQ_IMP_RULE1" => [rp (hd args)]
+    | "EQ_IMP_RULE2" => [rp (hd args)]
+    | "MP" => map rp args
+    | "DISCH" => [rp (List.nth(args,0)), rt (List.nth(args,1))]
+    | "INST_TYPE" => rp (hd args) :: tl args  (* y refs are never ~k *)
+    | "INST" => rp (hd args) :: map rt (tl args)
+    | "SUBST" =>
+        let val rest = List.drop(args, 2)
+            fun pairs [] = []
+              | pairs (v::r::t) = rt v :: rp r :: pairs t
+              | pairs _ = []
+        in rp (List.nth(args,0)) :: rt (List.nth(args,1)) :: pairs rest
+        end
+    | "SPEC" => [rp (List.nth(args,0)), rt (List.nth(args,1))]
+    | "SPECL" => rp (hd args) :: map rt (tl args)
+    | "Specialize" => [rp (List.nth(args,0)), rt (List.nth(args,1))]
+    | "SPECIALIZEL" => rp (hd args) :: map rt (tl args)
+    | "Specialize_thm" => [rp (List.nth(args,0)), rp (List.nth(args,1))]
+    | "GEN" => [rp (List.nth(args,0)), rt (List.nth(args,1))]
+    | "GENL" => rp (hd args) :: map rt (tl args)
+    | "GEN_ABS" =>
+        rp (List.nth(args,0)) ::
+        (let val a1 = List.nth(args,1)
+         in if a1 = "~" then "~" else rt a1 end) ::
+        map rt (List.drop(args, 2))
+    | "EXISTS" => [rp (List.nth(args,0)), rt (List.nth(args,1)),
+                   rt (List.nth(args,2))]
+    | "CHOOSE" => [rp (List.nth(args,0)), rp (List.nth(args,1)),
+                   rt (List.nth(args,2))]
+    | "CONJ" => map rp args
+    | "CONJUNCT1" => [rp (hd args)]
+    | "CONJUNCT2" => [rp (hd args)]
+    | "DISJ1" => [rp (List.nth(args,0)), rt (List.nth(args,1))]
+    | "DISJ2" => [rp (List.nth(args,0)), rt (List.nth(args,1))]
+    | "DISJ_CASES" => map rp args
+    | "NOT_INTRO" => [rp (hd args)]
+    | "NOT_ELIM" => [rp (hd args)]
+    | "CCONTR" => [rp (List.nth(args,0)), rt (List.nth(args,1))]
+    | "Beta" => [rp (hd args)]
+    | "REFL_RATOR" => [rp (hd args)]
+    | "REFL_RAND" => [rp (hd args)]
+    | "REFL_BODY" => [rp (hd args)]
+    | "Mk_comb" => map rp args
+    | "Mk_abs" => map rp args
+    | "DEF_TYOP" => [rp (List.nth(args,0)),
+                     List.nth(args,1), List.nth(args,2)]
+    | "DEF_SPEC" => rp (hd args) :: tl args
+    | "COMPUTE" => rt (hd args) :: map rp (tl args)
+    | "AXIOM" => [List.nth(args,0), rt (List.nth(args,1))]
+    | "ORACLE" =>
+        List.nth(args,0) :: rt (List.nth(args,1)) ::
+        map rt (List.drop(args, 2))
+    | "NAME" => args  (* always explicit IDs *)
+    | "LOAD" => args  (* always explicit IDs *)
+    | _ => args
+  end
+
 (* ------- Per-rule argument parsing ------- *)
 
 (* Extract parent (theorem) IDs from a P entry's args.
@@ -98,7 +221,9 @@ fun extract_parent_ids rule args =
     (* Single parent at position 0 *)
     | "ABS" => [ai 0] | "AP_TERM" => [ai 0] | "AP_THM" => [ai 0]
     | "SYM" => [ai 0] | "DISCH" => [ai 0] | "SPEC" => [ai 0]
-    | "Specialize" => [ai 0] | "Specialize_thm" => [ai 0, ai 1]
+    | "SPECL" => [ai 0]
+    | "Specialize" => [ai 0] | "SPECIALIZEL" => [ai 0]
+    | "Specialize_thm" => [ai 0, ai 1]
     | "GEN" => [ai 0]
     | "EQ_IMP_RULE1" => [ai 0] | "EQ_IMP_RULE2" => [ai 0]
     | "CONJUNCT1" => [ai 0] | "CONJUNCT2" => [ai 0]
@@ -141,6 +266,8 @@ fun extract_term_ids rule args =
     | "ALPHA" => [ai 0, ai 1] | "AXIOM" => [ai 1]
     | "ABS" => [ai 1] | "AP_TERM" => [ai 1] | "AP_THM" => [ai 1]
     | "DISCH" => [ai 1] | "SPEC" => [ai 1] | "Specialize" => [ai 1]
+    | "SPECL" => List.tabulate(nargs - 1, fn i => ai (1 + i))
+    | "SPECIALIZEL" => List.tabulate(nargs - 1, fn i => ai (1 + i))
     | "GEN" => [ai 1] | "CCONTR" => [ai 1]
     | "DISJ1" => [ai 1] | "DISJ2" => [ai 1]
     | "EXISTS" => [ai 1, ai 2]
@@ -191,8 +318,13 @@ fun thyname_cmp ((t1,n1) : string*string, (t2,n2)) =
    Built lazily by read_file_deps, cleared by clear_deps. *)
 type file_deps = {
   p_base_id : int,
-  p_offsets : int Array.array,
-  p_fd : Posix.IO.file_desc option ref,
+  (* Resolved deps per P entry, indexed by (id - p_base_id).
+     Each entry is (parent_ids, term_ids, type_ids) with all
+     ~k/^k refs resolved to explicit IDs during the sequential
+     dep scan. p_seen[i] is true iff the entry was present in
+     the trace file. *)
+  p_deps : (int list * int list * int list) Array.array,
+  p_seen : bool Array.array,
   t_term_deps : int list Array.array,
   t_type_deps : int list Array.array,
   y_deps : int list Array.array,
@@ -329,54 +461,90 @@ fun read_file_deps (data : file_data) : unit =
     val nt = #n_terms data
     val ny = #n_types data
 
-    (* Growable array for P entry byte offsets *)
+    (* Array for resolved P entry deps, indexed by (id - p_min_id).
+       Sentinel ([], [], []) for entries not yet seen. *)
     val p_min_id = #p_min_id data
     val p_max_id = #p_max_id data
     val p_range = if p_min_id < 0 then 0
                   else p_max_id - p_min_id + 1
-    val p_off_arr = Array.array(p_range, ~1)
+    val p_deps_arr : (int list * int list * int list) Array.array =
+      Array.array(p_range, ([], [], []))
+    (* Track which P entries have been seen (to distinguish
+       empty deps from unseen entries). *)
+    val p_seen = Array.array(p_range, false)
 
     (* Y and T deps accumulated as lists, arrays built at end *)
     val y_deps_rev = ref ([] : (int * int list) list)
     val t_term_deps_rev = ref ([] : (int * int list) list)
     val t_type_deps_rev = ref ([] : (int * int list) list)
 
-    (* Fast integer extraction: parse non-negative int starting at
-       position i in string s, skipping leading spaces. Returns
-       (value, position_after) or NONE if no int found. *)
-    fun scan_int s i =
-      let val len = size s
-          fun skip_sp j = if j >= len then j
-                          else if Char.isSpace (String.sub(s, j))
-                          then skip_sp (j+1) else j
-          val j = skip_sp i
-          fun go k acc =
-            if k >= len then
-              if k > j then SOME (acc, k) else NONE
-            else let val c = String.sub(s, k)
-                 in if Char.isDigit c
-                    then go (k+1) (acc * 10 + Char.ord c - 48)
-                    else if k > j then SOME (acc, k) else NONE
-                 end
-      in if j >= len then NONE else go j 0 end
+    (* Read-side stacks for resolving ~k/^k during sequential scan *)
+    val tstack = mk_stack ()
+    val pstack = mk_stack ()
 
-    fun process_line byte_offset line =
+    fun process_line (_:int) line =
       if size line < 2 then ()
       else
       let val c0 = String.sub(line, 0)
       in
         if c0 = #"P" then
-          (* Fast path for P lines (83% of lines): extract only
-             the ID, skip tokenizing the rest of the line. *)
-          (case scan_int line 2 of
-             SOME (id, _) =>
-               let val i = id - p_min_id
-               in if i >= 0 andalso i < p_range
-                  then Array.update(p_off_arr, i, byte_offset)
-                  else ()
-               end
-           | NONE => ())
-        else if c0 = #"T" orelse c0 = #"Y" then
+          let val toks = tokenize line in
+          (case toks of
+            ("P" :: id_s :: rule :: args) =>
+              let val id = int_of id_s
+                  val i = id - p_min_id
+                  (* Resolve ~k/^k refs to explicit IDs *)
+                  val resolved = resolve_args tstack pstack rule args
+                  val parents = extract_parent_ids rule resolved
+                  val terms = extract_term_ids rule resolved
+                  val types = extract_type_ids rule resolved
+              in if i >= 0 andalso i < p_range then
+                   (Array.update(p_deps_arr, i,
+                      (parents, terms, types));
+                    Array.update(p_seen, i, true))
+                 else ();
+                 stack_push pstack id
+              end
+          | _ => ())
+          end
+        else if c0 = #"T" then
+          let val toks = tokenize line in
+          (case toks of
+            ("T" :: id_s :: "V" :: _ :: ty_s :: _) =>
+              let val id = int_of id_s
+              in t_term_deps_rev := (id, []) :: !t_term_deps_rev;
+                 t_type_deps_rev := (id, [int_of ty_s])
+                                    :: !t_type_deps_rev;
+                 stack_push tstack id
+              end
+          | ("T" :: id_s :: "C" :: _ :: _ :: ty_s :: _) =>
+              let val id = int_of id_s
+              in t_term_deps_rev := (id, []) :: !t_term_deps_rev;
+                 t_type_deps_rev := (id, [int_of ty_s])
+                                    :: !t_type_deps_rev;
+                 stack_push tstack id
+              end
+          | ("T" :: id_s :: "A" :: f_s :: x_s :: _) =>
+              let val id = int_of id_s
+                  val fid = resolve_tref tstack f_s
+                  val xid = resolve_tref tstack x_s
+              in t_term_deps_rev := (id, [fid, xid])
+                                    :: !t_term_deps_rev;
+                 t_type_deps_rev := (id, []) :: !t_type_deps_rev;
+                 stack_push tstack id
+              end
+          | ("T" :: id_s :: "L" :: v_s :: b_s :: _) =>
+              let val id = int_of id_s
+                  val vid = resolve_tref tstack v_s
+                  val bid = resolve_tref tstack b_s
+              in t_term_deps_rev := (id, [vid, bid])
+                                    :: !t_term_deps_rev;
+                 t_type_deps_rev := (id, []) :: !t_type_deps_rev;
+                 stack_push tstack id
+              end
+          | _ => ())
+          end
+        else if c0 = #"Y" then
           let val toks = tokenize line in
           (case toks of
             ("Y" :: id_s :: "V" :: _) =>
@@ -385,30 +553,6 @@ fun read_file_deps (data : file_data) : unit =
               let val id = int_of id_s
                   val deps = List.mapPartial Int.fromString arg_ids
               in y_deps_rev := (id, deps) :: !y_deps_rev end
-          | ("T" :: id_s :: "V" :: _ :: ty_s :: _) =>
-              let val id = int_of id_s
-              in t_term_deps_rev := (id, []) :: !t_term_deps_rev;
-                 t_type_deps_rev := (id, [int_of ty_s])
-                                    :: !t_type_deps_rev
-              end
-          | ("T" :: id_s :: "C" :: _ :: _ :: ty_s :: _) =>
-              let val id = int_of id_s
-              in t_term_deps_rev := (id, []) :: !t_term_deps_rev;
-                 t_type_deps_rev := (id, [int_of ty_s])
-                                    :: !t_type_deps_rev
-              end
-          | ("T" :: id_s :: "A" :: f_s :: x_s :: _) =>
-              let val id = int_of id_s
-              in t_term_deps_rev := (id, [int_of f_s, int_of x_s])
-                                    :: !t_term_deps_rev;
-                 t_type_deps_rev := (id, []) :: !t_type_deps_rev
-              end
-          | ("T" :: id_s :: "L" :: v_s :: b_s :: _) =>
-              let val id = int_of id_s
-              in t_term_deps_rev := (id, [int_of v_s, int_of b_s])
-                                    :: !t_term_deps_rev;
-                 t_type_deps_rev := (id, []) :: !t_type_deps_rev
-              end
           | _ => ())
           end
         else ()
@@ -443,8 +587,8 @@ fun read_file_deps (data : file_data) : unit =
   in
     #deps data := SOME {
       p_base_id = p_min_id,
-      p_offsets = p_off_arr,
-      p_fd = ref NONE,
+      p_deps = p_deps_arr,
+      p_seen = p_seen,
       t_term_deps = list_to_array nt (!t_term_deps_rev) [],
       t_type_deps = list_to_array nt (!t_type_deps_rev) [],
       y_deps = list_to_array ny (!y_deps_rev) [],
@@ -474,63 +618,23 @@ fun get_deps (data : file_data) : file_deps =
 fun clear_deps (data : file_data) =
   case !(#deps data) of
     NONE => ()
-  | SOME dp =>
-      ((case !(#p_fd dp) of
-          SOME fd => (Posix.IO.close fd handle _ => ())
-        | NONE => ());
-       #p_fd dp := NONE;
-       #deps data := NONE;
+  | SOME _ =>
+      (#deps data := NONE;
        TraceCompress.release_temp (#path data))
 
 (* Check whether a trace_id has a P entry in this file *)
 fun p_has_id (dp : file_deps) (id : int) =
   let val i = id - #p_base_id dp
-  in i >= 0 andalso i < Array.length (#p_offsets dp) andalso
-     Array.sub(#p_offsets dp, i) >= 0
+  in i >= 0 andalso i < Array.length (#p_seen dp) andalso
+     Array.sub(#p_seen dp, i)
   end
 
 (* Read and parse a single P line's deps by seeking to its
    byte offset. Returns (parent_ids, term_ids, type_ids). *)
-fun ensure_fd (dp : file_deps) (path : string) : Posix.IO.file_desc =
-  case !(#p_fd dp) of
-    SOME fd => fd
-  | NONE =>
-    let val file_path = TraceCompress.ensure_decompressed path
-        val fd = Posix.FileSys.openf(file_path,
-                   Posix.FileSys.O_RDONLY,
-                   Posix.FileSys.O.flags [])
-    in #p_fd dp := SOME fd; fd end
-
-fun read_p_deps_at (dp : file_deps) (path : string) (id : int) =
+(* Look up resolved deps for a P entry by ID *)
+fun read_p_deps (dp : file_deps) (id : int) =
   let val i = id - #p_base_id dp
-      val offset = Array.sub(#p_offsets dp, i)
-      val fd = ensure_fd dp path
-      val _ = Posix.IO.lseek(fd,
-                LargeInt.fromInt offset, Posix.IO.SEEK_SET)
-      (* Read the P line. Start with 4KB; grow if no newline found. *)
-      fun read_line sz =
-        let val _ = Posix.IO.lseek(fd,
-                      LargeInt.fromInt offset, Posix.IO.SEEK_SET)
-            val chunk = Byte.bytesToString(Posix.IO.readVec(fd, sz))
-        in case String.fields (fn c => c = #"\n") chunk of
-             (l :: _ :: _) => l  (* found newline *)
-           | _ => if sz >= 1048576 then chunk (* 1MB safety limit *)
-                  else read_line (sz * 4)
-        end
-      val line = read_line 4096
-      val _ = (parse_file := path;
-               parse_line := offset;
-               parse_phase := "seek-deps P " ^ its id ^
-                              " @byte " ^ its offset ^
-                              " line: " ^ line)
-      val toks = tokenize line
-  in case toks of
-       ("P" :: _ :: rule :: args) =>
-         (extract_parent_ids rule args,
-          extract_term_ids rule args,
-          extract_type_ids rule args)
-     | _ => ([], [], [])
-  end
+  in Array.sub(#p_deps dp, i) end
 
 (* ------- Heap trace file discovery ------- *)
 
@@ -575,7 +679,7 @@ fun mark_live (data : file_data) (prev : liveness)
         unresolved := PIntMap.add id () (!unresolved)
       else
         let val (parents, term_deps, type_deps) =
-              read_p_deps_at dp (#path data) id
+              read_p_deps dp id
             val _ = live_p := PIntMap.add id () (!live_p)
             val _ = if PIntMap.mem id (#compute_ids dp)
                     then found_compute := true else ()
@@ -716,8 +820,14 @@ fun remap_args (ry : int -> int) (rt : int -> int) (rp : int -> int)
       in orig :: tmpl :: pairs rest end
   | "SPEC" => [its (rp (int_of (List.nth(args,0)))),
                its (rt (int_of (List.nth(args,1))))]
+  | "SPECL" =>
+      its (rp (int_of (hd args))) ::
+      map (its o rt o int_of) (tl args)
   | "Specialize" => [its (rp (int_of (List.nth(args,0)))),
                      its (rt (int_of (List.nth(args,1))))]
+  | "SPECIALIZEL" =>
+      its (rp (int_of (hd args))) ::
+      map (its o rt o int_of) (tl args)
   | "Specialize_thm" => [its (rp (int_of (List.nth(args,0)))),
                           its (rp (int_of (List.nth(args,1))))]
   | "GEN" => [its (rp (int_of (List.nth(args,0)))),
@@ -1399,6 +1509,10 @@ fun merge {trace_paths : (string * string) list,
         val _ = (parse_file := path; parse_line := 0;
                  parse_phase := "write")
 
+        (* Read-side stacks for resolving ~k/^k during Pass 2 *)
+        val r_tstack = mk_stack ()
+        val r_pstack = mk_stack ()
+
         (* Local -> global remap: arrays for Y/T (sequential),
            map for P (sparse trace_ids) *)
         val y_remap = Array.array(#n_types data, ~1)
@@ -1469,6 +1583,7 @@ fun merge {trace_paths : (string * string) list,
               end
           | ("T" :: id_s :: rest) =>
               let val id = int_of id_s
+                  val _ = stack_push r_tstack id
               in if id < Array.length live_t andalso
                     Array.sub(live_t, id) then
                 let val desc = case rest of
@@ -1478,9 +1593,11 @@ fun merge {trace_paths : (string * string) list,
                         TmC (unescape thy_s, unescape name_s,
                              ry (int_of ty_s))
                     | ["A", f_s, x_s] =>
-                        TmA (rt (int_of f_s), rt (int_of x_s))
+                        TmA (rt (resolve_tref r_tstack f_s),
+                             rt (resolve_tref r_tstack x_s))
                     | ["L", v_s, b_s] =>
-                        TmL (rt (int_of v_s), rt (int_of b_s))
+                        TmL (rt (resolve_tref r_tstack v_s),
+                             rt (resolve_tref r_tstack b_s))
                     | _ => raise ERR "write_file" "bad T entry"
                 in case Redblackmap.peek(!global_tm_map, desc) of
                      SOME gid => Array.update(t_remap, id, gid)
@@ -1548,6 +1665,7 @@ fun merge {trace_paths : (string * string) list,
               end
           | ("P" :: id_s :: "NAME" :: args) =>
               let val id = int_of id_s
+                  val _ = stack_push r_pstack id
               in if PIntMap.mem id live_p then
                 let val anc_thy = unescape (List.nth(args, 0))
                     val anc_name = unescape (List.nth(args, 1))
@@ -1564,6 +1682,7 @@ fun merge {trace_paths : (string * string) list,
               end
           | ("P" :: id_s :: "LOAD" :: args) =>
               let val id = int_of id_s
+                  val _ = stack_push r_pstack id
               in if PIntMap.mem id live_p then
                 let val anc_thy = unescape (List.nth(args, 0))
                     val anc_trace_id = int_of (List.nth(args, 1))
@@ -1608,9 +1727,12 @@ fun merge {trace_paths : (string * string) list,
               end
           | ("P" :: id_s :: rule :: args) =>
               let val id = int_of id_s
+                  val _ = stack_push r_pstack id
               in if PIntMap.mem id live_p then
                 let val gid = !global_thm_id
-                    val remapped = remap_args ry rt rp rule args
+                    val resolved =
+                      resolve_args r_tstack r_pstack rule args
+                    val remapped = remap_args ry rt rp rule resolved
                 in global_thm_id := gid + 1;
                    p_remap :=
                      PIntMap.add id gid (!p_remap);
@@ -1631,12 +1753,14 @@ fun merge {trace_paths : (string * string) list,
                 val rest = List.drop(args, 2)
                 val cvals = List.tabulate(29, fn i =>
                   List.nth(rest, 2*i) ^ " " ^
-                  its (rt (int_of (List.nth(rest, 2*i + 1)))))
+                  its (rt (resolve_tref r_tstack
+                             (List.nth(rest, 2*i + 1)))))
                 val rest2 = List.drop(rest, 58)
                 val char_pairs =
                   let fun go [] = []
                         | go (n::p::r) =
-                            (n ^ " " ^ its (rp (int_of p))) :: go r
+                            (n ^ " " ^ its (rp (resolve_pref r_pstack p)))
+                            :: go r
                         | go _ = []
                   in go rest2 end
               in TextIO.output(ostrm, "I " ^ cy ^ " " ^ ny' ^ " " ^
