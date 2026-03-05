@@ -12,12 +12,6 @@
    Stack encoding: T and P entries maintain implicit stacks.
    Recent entries are referenced by stack position (~k for terms,
    ^k for theorems) instead of explicit IDs, reducing trace size.
-
-   Lazy T output: T lines are deferred in a buffer. At flush time,
-   entries referenced only via ~k are written anonymous (no ID).
-   If a previously-anonymous term is later referenced by explicit
-   ID, a Td (define-without-push) line is emitted.
-
    Peephole: consecutive SPEC/Specialize chains are collapsed
    into SPECL/SPECIALIZEL compound entries.
 
@@ -135,7 +129,20 @@ fun open_heap_file path =
 
 val cleanup_ref : (unit -> unit) ref = ref (fn () => ())
 
-(* Detect new process after heap restore by comparing PIDs. *)
+(* Detect new process after heap restore by comparing PIDs.
+   After heap restore, the output stream from the heap build is
+   stale (closed fd). The old approach (zero-byte TextIO.output
+   probe) was unreliable: buffered I/O may never touch the fd
+   for an empty write, so it silently succeeds on a stale stream.
+   PID comparison is robust — after heap restore, getpid() returns
+   the new process's PID, which differs from the saved one.
+
+   recover_stale closes the stale stream, resets all intern state,
+   remembers the parent heap path for the H line, re-registers the
+   atExit handler (which doesn't survive heap save/restore), and
+   opens a new output file. Called from ensure_stream on PID
+   mismatch, which is the entry point for all output paths
+   (record_hook and the C/O TheoryDelta hook). *)
 val session_pid =
   ref (Posix.Process.pidToWord (Posix.ProcEnv.getpid ()))
 
@@ -152,6 +159,7 @@ fun recover_stale () =
      | NONE => ());
     output_strm := NONE; output_path_ref := NONE;
     (!reset_for_new_session) ();
+    (* Remember the parent heap for the H line *)
     stale_parent_heap :=
       (case stale of
          SOME p => if is_tmp p then NONE else strip_pft p
@@ -167,6 +175,8 @@ fun recover_stale () =
     OS.Process.atExit (fn () => (!cleanup_ref) ())
   end
 
+
+
 fun out_strm () =
   case !output_strm of
     NONE => open_temp_file ()
@@ -181,10 +191,23 @@ fun close_output () =
 
 (* ------- Output primitives ------- *)
 
+(* Write directly to the buffered stream, avoiding intermediate
+   string allocation from ^ concatenation. Each TextIO.output
+   call copies bytes into the internal buffer with no heap
+   allocation (except for Int.toString results). *)
+
 fun outs s str = TextIO.output(s, str)
 fun outi s n = TextIO.output(s, Int.toString n)
 
 (* ------- Intern map key types ------- *)
+
+(* Descriptor-based keys: contain only ints and strings, not
+   term/type values. This avoids pinning large terms alive in
+   the intern maps, allowing GC to collect intermediate proof
+   terms that are no longer referenced elsewhere. Type and term
+   comparisons on descriptors are O(1) (int/string comparisons),
+   eliminating the O(spine_depth) structural comparisons that
+   made Term.compare quadratic on deep application spines. *)
 
 datatype ty_desc = TyV of string | TyO of string * string * int list
 
@@ -198,40 +221,51 @@ fun ty_desc_compare (TyV a, TyV b) = String.compare(a, b)
         | ord => ord)
       | ord => ord)
 
+(* Term map: keyed by (hash, term). Comparisons resolve by hash
+   first (O(1) int compare), falling back to Term.compare only on
+   hash collision.  This avoids the O(spine_depth) comparisons
+   that made the old pure Term.compare approach quadratic on deep
+   application spines, without needing to decompose terms into
+   descriptors (which required O(body_size) dest_abs for lambdas). *)
 fun tm_keyed_compare ((h1, t1 : Term.term), (h2, t2)) =
   case Int.compare(h1, h2) of
     EQUAL => Term.compare(t1, t2)
   | ord => ord
 
-(* ------- Written status for lazy T output ------- *)
-
-(* Tracks whether a term's T line has been output:
-   UNWRITTEN — in the T buffer, not yet written
-   WRITTEN_ANON — written without an ID (anonymous)
-   WRITTEN_ID — written with an explicit ID *)
-datatype written_status = UNWRITTEN | WRITTEN_ANON | WRITTEN_ID
-
 (* ------- Hash-indexed pointer-equality cache ------- *)
+
+(* Direct-mapped cache checked via pointer equality, used as a
+   fast front-end for the descriptor-based term intern map.
+   Indexed by Term.hash, which is a bounded-depth O(1) structural
+   hash computed inside the kernel (with access to internal term
+   constructors, including Abs binder names without substitution).
+   Avoids the O(term_size) recursive descent for terms that are
+   pointer-identical to recently interned values. Pins at most
+   CACHE_SIZE terms, bounding its memory footprint. *)
 
 val CACHE_SIZE = 65536
 
-(* Cache entry: (term, id, written_status ref) *)
-val tm_cache : (Term.term * int * written_status ref) option Array.array ref =
+val tm_cache : (Term.term * int) option Array.array ref =
   ref (Array.array(CACHE_SIZE, NONE))
 
 fun cache_lookup tm =
   let val i = Term.hash tm mod CACHE_SIZE
   in case Array.sub(!tm_cache, i) of
-       SOME(t, id, st) =>
-         if Portable.pointer_eq(t, tm) then SOME(id, st) else NONE
+       SOME(t, id) => if Portable.pointer_eq(t, tm) then SOME id else NONE
      | NONE => NONE
   end
 
-fun cache_insert tm id st =
+fun cache_insert tm id =
   let val i = Term.hash tm mod CACHE_SIZE
-  in Array.update(!tm_cache, i, SOME(tm, id, st)) end
+  in Array.update(!tm_cache, i, SOME(tm, id)) end
 
 (* ------- Write-side stacks for stack encoding ------- *)
+
+(* Term and theorem stacks maintain the last STACK_DEPTH IDs
+   written, enabling ~k (term) and ^k (theorem) references.
+   Each T entry pushes onto the term stack; each P entry pushes
+   onto the theorem stack. References within STACK_DEPTH of the
+   top use the compact ~k/^k notation instead of explicit IDs. *)
 
 val STACK_DEPTH = 16
 
@@ -285,89 +319,10 @@ fun out_pref s id =
     SOME k => (outs s "^"; outi s k)
   | NONE => outi s id
 
-(* ------- T-entry buffer for lazy output ------- *)
-
-(* Deferred T entries accumulate here. The buffer is flushed
-   before any P entry is written (maintaining dependency order).
-   At flush time, each T entry is checked: if all references to
-   it within the buffer are from entries that can use ~k, it is
-   written anonymous (no ID). Otherwise it is written with ID.
-
-   If a term written anonymous is later referenced by explicit ID
-   (map hit for a term off the stack), a Td line is emitted:
-   Td defines the term by ID without pushing onto the term stack,
-   preserving stack synchronisation with the replayer. *)
-
-type t_buf_entry = {
-  id: int,
-  status: written_status ref,
-  (* IDs of sub-terms referenced by this T entry (for COMB/LAMB) *)
-  term_refs: int list,
-  (* Writes the T line body: "V name tyid\n", "A fref xref\n", etc.
-     Called at flush time; uses out_tref for sub-term refs. *)
-  render_body: TextIO.outstream -> unit
-}
-
-val t_buf : t_buf_entry list ref = ref []
-  (* Reversed: newest first. Flushed in reverse (oldest first). *)
-
-fun reset_t_buf () = t_buf := []
-
-(* Check whether T entry with the given id can be written anonymous.
-   entries_after: the T buffer entries that come AFTER this entry
-   (in output order, i.e., will be flushed after this one).
-   external_refs: term IDs referenced by entries outside the buffer
-   (the upcoming P entry / SPECL).
-   A T entry is anonymous if every reference to its ID — from later
-   buffer entries and from external_refs — would be at a stack
-   position < STACK_DEPTH when rendered. *)
-fun can_be_anonymous (tid: int) (entries_after: t_buf_entry list)
-                     (external_refs: int list) =
-  let
-    (* Count T entries flushed between this entry and each reference.
-       At render time, each intervening T entry pushes to write_tstack,
-       moving this entry further down. *)
-    val t_count = ref 0
-    val ok = ref true
-    fun scan [] =
-          (* Check external refs: they're rendered after ALL buffer
-             entries, so stack position = total T entries after this. *)
-          if List.exists (fn r => r = tid) external_refs then
-            (if !t_count >= STACK_DEPTH then ok := false else ())
-          else ()
-      | scan ({term_refs, ...} :: rest) =
-          (* This is a T entry: check if it references tid *)
-          (if List.exists (fn r => r = tid) term_refs then
-             (if !t_count >= STACK_DEPTH then ok := false else ())
-           else ();
-           (* This T entry will push to stack, moving tid down *)
-           t_count := !t_count + 1;
-           if !ok then scan rest else ())
-  in scan entries_after; !ok end
-
-(* Flush the T buffer: write all deferred T entries to output.
-   external_refs: term IDs referenced by the upcoming P entry
-   (used for the anonymous decision on the last few T entries). *)
-fun flush_t_buf s (external_refs: int list) =
-  let
-    val entries = rev (!t_buf)  (* oldest first *)
-    val _ = t_buf := []
-    fun flush_entries [] = ()
-      | flush_entries (e :: rest) =
-          let val {id, status, render_body, ...} = e
-          in
-            if can_be_anonymous id rest external_refs then
-              (outs s "T "; render_body s;
-               status := WRITTEN_ANON)
-            else
-              (outs s "T "; outi s id; outs s " "; render_body s;
-               status := WRITTEN_ID);
-            push_tstack id;
-            flush_entries rest
-          end
-  in flush_entries entries end
-
 (* ------- Type interning (writes Y entries inline) ------- *)
+
+(* Types are small and few — descriptor maps without caching.
+   No stack encoding for types (Y entries are ~1% of lines). *)
 
 val ty_map = ref (Redblackmap.mkDict ty_desc_compare)
 val ty_counter = ref 0
@@ -401,122 +356,60 @@ fun intern_type ty =
 
 val iY = intern_type
 
-(* ------- Term interning (defers T lines to buffer) ------- *)
+(* ------- Term interning (writes T entries, pushes term stack) ------- *)
 
-(* Intern map: (hash, term) -> {id, status ref} *)
+(* Hash-keyed term map fronted by a pointer-eq cache.
+   Fast path: cache hit via pointer equality → O(1).
+   Slow path: map lookup via (hash, term) key → O(log N) int
+   comparisons, with rare Term.compare fallback on hash collision.
+   Each newly written T entry pushes onto the term stack. *)
+
 val tm_map = ref (Redblackmap.mkDict tm_keyed_compare)
 val tm_counter = ref 0
 
-(* Materialize a previously-anonymous term: emit Td line(s) so
-   that the term's ID is defined in the output. Td lines define
-   the term by ID without pushing onto the term stack, preserving
-   stack sync with the replayer. Recursively materializes any
-   anonymous sub-terms first (dependency order). *)
-fun materialize s tm =
-  let val key = (Term.hash tm, tm)
-  in case Redblackmap.peek(!tm_map, key) of
-       NONE => raise ERR "materialize" "term not in intern map"
-     | SOME {id, status} =>
-       (case !status of
-          WRITTEN_ID => id
-        | UNWRITTEN => id  (* still in buffer; will be flushed *)
-        | WRITTEN_ANON =>
-            (case Term.dest_term tm of
-               Term.VAR (name, ty) =>
-                 let val tyid = intern_type ty
-                 in outs s "Td "; outi s id; outs s " V ";
-                    outs s (esc name); outs s " "; outi s tyid;
-                    outs s "\n";
-                    status := WRITTEN_ID; id
-                 end
-             | Term.CONST {Thy, Name, Ty} =>
-                 let val tyid = intern_type Ty
-                 in outs s "Td "; outi s id; outs s " C ";
-                    outs s (esc Thy); outs s " "; outs s (esc Name);
-                    outs s " "; outi s tyid; outs s "\n";
-                    status := WRITTEN_ID; id
-                 end
-             | Term.COMB (f, x) =>
-                 let val fid = materialize s f
-                     val xid = materialize s x
-                 in outs s "Td "; outi s id; outs s " A ";
-                    outi s fid; outs s " "; outi s xid;
-                    outs s "\n";
-                    status := WRITTEN_ID; id
-                 end
-             | Term.LAMB (v, b) =>
-                 let val vid = materialize s v
-                     val bid = materialize s b
-                 in outs s "Td "; outi s id; outs s " L ";
-                    outi s vid; outs s " "; outi s bid;
-                    outs s "\n";
-                    status := WRITTEN_ID; id
-                 end))
-  end
-
 fun intern_term tm =
   case cache_lookup tm of
-    SOME (id, st) =>
-      (case !st of
-         WRITTEN_ANON =>
-           let val s = out_strm ()
-           in materialize s tm; id end
-       | _ => id)
+    SOME id => id
   | NONE =>
     let val key = (Term.hash tm, tm)
     in
       case Redblackmap.peek(!tm_map, key) of
-        SOME {id, status} =>
-          (cache_insert tm id status;
-           case !status of
-             WRITTEN_ANON =>
-               let val s = out_strm ()
-               in materialize s tm; id end
-           | _ => id)
+        SOME id => (cache_insert tm id; id)
       | NONE =>
         let val id = !tm_counter
             val _ = tm_counter := id + 1
-            val status = ref UNWRITTEN
-            val _ = tm_map := Redblackmap.insert(!tm_map, key,
-                      {id=id, status=status})
-            val _ = cache_insert tm id status
-            (* Build render closure and buffer entry.
-               Sub-terms are interned recursively first (may push
-               their own buffer entries before this one). *)
-            val (term_refs, render_body) =
-              case Term.dest_term tm of
-                Term.VAR (name, ty) =>
-                  let val tyid = intern_type ty
-                  in ([], fn s =>
-                        (outs s "V "; outs s (esc name);
-                         outs s " "; outi s tyid; outs s "\n"))
-                  end
-              | Term.CONST {Thy, Name, Ty} =>
-                  let val tyid = intern_type Ty
-                  in ([], fn s =>
-                        (outs s "C "; outs s (esc Thy);
-                         outs s " "; outs s (esc Name);
-                         outs s " "; outi s tyid; outs s "\n"))
-                  end
-              | Term.COMB (f, x) =>
-                  let val fid = intern_term f
-                      val xid = intern_term x
-                  in ([fid, xid], fn s =>
-                        (outs s "A "; out_tref s fid;
-                         outs s " "; out_tref s xid; outs s "\n"))
-                  end
-              | Term.LAMB (v, b) =>
-                  let val vid = intern_term v
-                      val bid = intern_term b
-                  in ([vid, bid], fn s =>
-                        (outs s "L "; out_tref s vid;
-                         outs s " "; out_tref s bid; outs s "\n"))
-                  end
-        in
-          t_buf := {id=id, status=status,
-                    term_refs=term_refs,
-                    render_body=render_body} :: !t_buf;
-          id
+            val _ = tm_map := Redblackmap.insert(!tm_map, key, id)
+            val _ = cache_insert tm id
+            val s = out_strm ()
+        in (case Term.dest_term tm of
+              Term.VAR (name, ty) =>
+                let val tyid = intern_type ty
+                in outs s "T "; outi s id; outs s " V ";
+                   outs s (esc name); outs s " "; outi s tyid;
+                   outs s "\n"
+                end
+            | Term.CONST {Thy, Name, Ty} =>
+                let val tyid = intern_type Ty
+                in outs s "T "; outi s id; outs s " C ";
+                   outs s (esc Thy); outs s " "; outs s (esc Name);
+                   outs s " "; outi s tyid; outs s "\n"
+                end
+            | Term.COMB (f, x) =>
+                let val fid = intern_term f
+                    val xid = intern_term x
+                in outs s "T "; outi s id; outs s " A ";
+                   out_tref s fid; outs s " "; out_tref s xid;
+                   outs s "\n"
+                end
+            | Term.LAMB (v, b) =>
+                let val vid = intern_term v
+                    val bid = intern_term b
+                in outs s "T "; outi s id; outs s " L ";
+                   out_tref s vid; outs s " "; out_tref s bid;
+                   outs s "\n"
+                end);
+           push_tstack id;
+           id
         end
     end
 
@@ -524,6 +417,7 @@ val iT = intern_term
 
 (* ------- DEF_SPEC/DEF_TYOP tracking for C/O filtering ------- *)
 
+(* Constants introduced by DEF_SPEC — keyed by (thy, name) *)
 val defined_consts : (string * string) Redblackset.set ref =
   ref (Redblackset.empty
          (fn ((t1,n1),(t2,n2)) =>
@@ -531,6 +425,7 @@ val defined_consts : (string * string) Redblackset.set ref =
              EQUAL => String.compare(n1,n2)
            | ord => ord))
 
+(* Type operators introduced by DEF_TYOP — keyed by (thy, tyop) *)
 val defined_types : (string * string) Redblackset.set ref =
   ref (Redblackset.empty
          (fn ((t1,n1),(t2,n2)) =>
@@ -546,7 +441,6 @@ val _ = reset_for_new_session := (fn () => (
   tm_cache := Array.array(CACHE_SIZE, NONE);
   cached_strm := NONE;
   reset_stacks ();
-  reset_t_buf ();
   defined_consts := Redblackset.empty
     (fn ((t1,n1),(t2,n2)) =>
       case String.compare(t1,t2) of
@@ -585,31 +479,38 @@ fun record_line line =
   let val s = ensure_stream ()
   in outs s line; outs s "\n" end
 
-(* Flush T buffer before writing a P entry.
-   Collects term IDs from the P entry's arguments so the
-   anonymous decision can account for external references. *)
-fun flush_before_p s (term_refs: int list) =
-  flush_t_buf s term_refs
-
 (* ------- Peephole: SPEC/Specialize chain accumulator ------- *)
+
+(* Consecutive SPEC (or Specialize) entries where each uses the
+   previous result as its parent are collapsed into a single
+   SPECL (or SPECIALIZEL) compound entry. This reduces the
+   number of P entries in the trace. The replayer executes the
+   compound by applying SPEC (or Specialize) repeatedly.
+
+   The chain accumulator holds the state of the current chain
+   being built. It is flushed when a non-matching entry arrives,
+   or at close/export time. *)
 
 datatype spec_kind = SK_SPEC | SK_Specialize
 
 type spec_chain_state = {
-  first_parent_id: int,
-  term_ids_rev: int list,
-  result_id: int,
+  first_parent_id: int,    (* trace_id of the first SPEC's parent *)
+  term_ids_rev: int list,  (* term IDs in reverse order *)
+  result_id: int,          (* trace_id of the most recent result *)
   kind: spec_kind
 }
 
 val spec_chain : spec_chain_state option ref = ref NONE
 
+(* Add spec_chain reset to session reset (spec_chain defined after
+   the initial reset_for_new_session assignment, so patch it here) *)
 val prev_reset = !reset_for_new_session
 val _ = reset_for_new_session :=
   (fn () => (prev_reset (); spec_chain := NONE))
 
 (* Flush the accumulated SPEC chain to the output stream.
-   Flushes the T buffer first (with chain's term refs). *)
+   For a single entry, writes a normal SPEC/Specialize line.
+   For multiple entries, writes SPECL/SPECIALIZEL. *)
 fun flush_spec_chain s =
   case !spec_chain of
     NONE => ()
@@ -617,7 +518,6 @@ fun flush_spec_chain s =
     let val terms = rev term_ids_rev
     in
       spec_chain := NONE;
-      flush_t_buf s terms;
       outs s "P "; outi s result_id;
       (case (kind, terms) of
         (SK_SPEC, [t]) =>
@@ -636,6 +536,9 @@ fun flush_spec_chain s =
       push_pstack result_id
     end
 
+(* Try to extend the current SPEC chain with a new SPEC/Specialize
+   entry. If the new entry's parent matches the chain's result and
+   the kind matches, extend. Otherwise flush and start new chain. *)
 fun push_spec_chain s (rid, parent_id, term_id, kind) =
   case !spec_chain of
     NONE =>
@@ -670,95 +573,95 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
   case step of
     Thm.TR_ASSUME (r, tm) =>
       let val t = iT tm val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [t];
+      in flush_spec_chain s;
          outp s r; outs s " ASSUME "; out_tref s t; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_REFL (r, tm) =>
       let val t = iT tm val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [t];
+      in flush_spec_chain s;
          outp s r; outs s " REFL "; out_tref s t; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_BETA_CONV (r, tm) =>
       let val t = iT tm val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [t];
+      in flush_spec_chain s;
          outp s r; outs s " BETA_CONV "; out_tref s t; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_ALPHA (r, t1, t2) =>
       let val i1 = iT t1 val i2 = iT t2 val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [i1, i2];
+      in flush_spec_chain s;
          outp s r; outs s " ALPHA "; out_tref s i1;
          outs s " "; out_tref s i2; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_ABS (r, th, v) =>
       let val vid = iT v val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [vid];
+      in flush_spec_chain s;
          outp s r; outs s " ABS"; outth s th;
          outs s " "; out_tref s vid; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_MK_COMB (r, f, x) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " MK_COMB"; outth s f; outth s x; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_AP_TERM (r, th, f) =>
       let val fid = iT f val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [fid];
+      in flush_spec_chain s;
          outp s r; outs s " AP_TERM"; outth s th;
          outs s " "; out_tref s fid; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_AP_THM (r, th, tm) =>
       let val t = iT tm val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [t];
+      in flush_spec_chain s;
          outp s r; outs s " AP_THM"; outth s th;
          outs s " "; out_tref s t; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_SYM (r, th) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " SYM"; outth s th; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_TRANS (r, a, b) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " TRANS"; outth s a; outth s b; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_EQ_MP (r, a, b) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " EQ_MP"; outth s a; outth s b; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_EQ_IMP_RULE1 (r, th) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " EQ_IMP_RULE1"; outth s th; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_EQ_IMP_RULE2 (r, th) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " EQ_IMP_RULE2"; outth s th; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_MP (r, a, b) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " MP"; outth s a; outth s b; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_DISCH (r, th, w) =>
       let val wid = iT w val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [wid];
+      in flush_spec_chain s;
          outp s r; outs s " DISCH"; outth s th;
          outs s " "; out_tref s wid; outs s "\n";
          push_pstack rid
@@ -767,7 +670,7 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
       let val pairs = map (fn {redex,residue} =>
             (iY redex, iY residue)) theta
           val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " INST_TYPE"; outth s th;
          List.app (fn (a,b) =>
            (outs s " "; outi s a; outs s " "; outi s b)) pairs;
@@ -777,9 +680,8 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
   | Thm.TR_INST (r, th, theta) =>
       let val pairs = map (fn {redex,residue} =>
             (iT redex, iT residue)) theta
-          val trefs = List.concat (map (fn (a,b) => [a,b]) pairs)
           val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s trefs;
+      in flush_spec_chain s;
          outp s r; outs s " INST"; outth s th;
          List.app (fn (a,b) =>
            (outs s " "; out_tref s a;
@@ -791,9 +693,8 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
       let val tid = iT template
           val rpairs = map (fn {redex, residue} =>
             (iT redex, Thm.trace_id residue)) repls
-          val trefs = tid :: map #1 rpairs
           val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s trefs;
+      in flush_spec_chain s;
          outp s r; outs s " SUBST"; outth s th;
          outs s " "; out_tref s tid;
          List.app (fn (a,b) =>
@@ -814,21 +715,21 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
       end
   | Thm.TR_Specialize_thm (r, th_arg, th) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " Specialize_thm"; outth s th_arg; outth s th;
          outs s "\n";
          push_pstack rid
       end
   | Thm.TR_GEN (r, th, x) =>
       let val xid = iT x val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [xid];
+      in flush_spec_chain s;
          outp s r; outs s " GEN"; outth s th;
          outs s " "; out_tref s xid; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_GENL (r, th, vs) =>
       let val vids = map iT vs val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s vids;
+      in flush_spec_chain s;
          outp s r; outs s " GENL"; outth s th;
          List.app (fn v => (outs s " "; out_tref s v)) vids;
          outs s "\n";
@@ -837,9 +738,8 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
   | Thm.TR_GEN_ABS (r, th, opt, vs) =>
       let val oid = Option.map iT opt
           val vids = map iT vs
-          val trefs = (case oid of SOME t => [t] | NONE => []) @ vids
           val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s trefs;
+      in flush_spec_chain s;
          outp s r; outs s " GEN_ABS"; outth s th;
          outs s " ";
          (case oid of SOME t => out_tref s t | NONE => outs s "~");
@@ -849,7 +749,7 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
       end
   | Thm.TR_EXISTS (r, th, w, t) =>
       let val wid = iT w val tid = iT t val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [wid, tid];
+      in flush_spec_chain s;
          outp s r; outs s " EXISTS"; outth s th;
          outs s " "; out_tref s wid;
          outs s " "; out_tref s tid; outs s "\n";
@@ -857,110 +757,110 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
       end
   | Thm.TR_CHOOSE (r, xth, bth, v) =>
       let val vid = iT v val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [vid];
+      in flush_spec_chain s;
          outp s r; outs s " CHOOSE"; outth s xth; outth s bth;
          outs s " "; out_tref s vid; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_CONJ (r, a, b) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " CONJ"; outth s a; outth s b; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_CONJUNCT1 (r, th) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " CONJUNCT1"; outth s th; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_CONJUNCT2 (r, th) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " CONJUNCT2"; outth s th; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_DISJ1 (r, th, w) =>
       let val wid = iT w val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [wid];
+      in flush_spec_chain s;
          outp s r; outs s " DISJ1"; outth s th;
          outs s " "; out_tref s wid; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_DISJ2 (r, th, w) =>
       let val wid = iT w val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [wid];
+      in flush_spec_chain s;
          outp s r; outs s " DISJ2"; outth s th;
          outs s " "; out_tref s wid; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_DISJ_CASES (r, d, a, b) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " DISJ_CASES"; outth s d; outth s a; outth s b;
          outs s "\n";
          push_pstack rid
       end
   | Thm.TR_NOT_INTRO (r, th) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " NOT_INTRO"; outth s th; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_NOT_ELIM (r, th) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " NOT_ELIM"; outth s th; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_CCONTR (r, fth, w) =>
       let val wid = iT w val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [wid];
+      in flush_spec_chain s;
          outp s r; outs s " CCONTR"; outth s fth;
          outs s " "; out_tref s wid; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_Beta (r, th) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " Beta"; outth s th; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_Mk_comb (r, orig, f, x) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " Mk_comb"; outth s orig; outth s f; outth s x;
          outs s "\n";
          push_pstack rid
       end
   | Thm.TR_Mk_abs (r, orig, body, _) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " Mk_abs"; outth s orig; outth s body;
          outs s "\n";
          push_pstack rid
       end
   | Thm.TR_REFL_RATOR (r, parent) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " REFL_RATOR"; outth s parent; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_REFL_RAND (r, parent) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " REFL_RAND"; outth s parent; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_REFL_BODY (r, parent) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " REFL_BODY"; outth s parent; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_DEF_TYOP (r, wit, thy, tyop) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          defined_types :=
            Redblackset.add(!defined_types, (thy, tyop));
          outp s r; outs s " DEF_TYOP"; outth s wit;
@@ -970,7 +870,7 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
       end
   | Thm.TR_DEF_SPEC (r, wit, thyname, cnames) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          List.app (fn c =>
            defined_consts :=
              Redblackset.add(!defined_consts, (thyname, c))) cnames;
@@ -982,7 +882,7 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
       end
   | Thm.TR_COMPUTE (r, code_eqs, tm) =>
       let val tid = iT tm val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [tid];
+      in flush_spec_chain s;
          outp s r; outs s " COMPUTE "; out_tref s tid;
          List.app (fn eq => outth s eq) code_eqs;
          outs s "\n";
@@ -992,8 +892,7 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
       let val cyid = iY cval_type
           val nyid = iY num_type
           val cv_pairs = map (fn (name, tm) => (name, iT tm)) cval_terms
-          val trefs = map #2 cv_pairs
-      in flush_spec_chain s; flush_before_p s trefs;
+      in flush_spec_chain s;
          outs s "I "; outi s cyid; outs s " "; outi s nyid;
          List.app (fn (name, tid) =>
            (outs s " "; outs s (esc name); outs s " "; out_tref s tid))
@@ -1006,9 +905,8 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
       let val (hyps, c) = Thm.dest_thm r
           val cid = iT c
           val hids = map iT hyps
-          val trefs = cid :: hids
           val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s trefs;
+      in flush_spec_chain s;
          outp s r; outs s " ORACLE "; outs s (esc tg);
          outs s " "; out_tref s cid;
          List.app (fn h => (outs s " "; out_tref s h)) hids;
@@ -1022,21 +920,21 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
                               "AXIOM: expected exactly one axiom nonce"
           val cid = iT c
           val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [cid];
+      in flush_spec_chain s;
          outp s r; outs s " AXIOM "; outs s (esc name);
          outs s " "; out_tref s cid; outs s "\n";
          push_pstack rid
       end
   | Thm.TR_NAME (r, src_thy, name) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " NAME ";
          outs s (esc src_thy); outs s " "; outs s (esc name); outs s "\n";
          push_pstack rid
       end
   | Thm.TR_LOAD (r, src_thy, src_trace_id) =>
       let val rid = Thm.trace_id r
-      in flush_spec_chain s; flush_before_p s [];
+      in flush_spec_chain s;
          outp s r; outs s " LOAD ";
          outs s (esc src_thy); outs s " "; outi s src_trace_id;
          outs s "\n";
@@ -1048,8 +946,7 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
 
 fun flush_before_close () =
   case !output_strm of
-    SOME s => ((flush_spec_chain s;
-                flush_t_buf s []) handle _ => ())
+    SOME s => (flush_spec_chain s handle _ => ())
   | NONE => ()
 
 fun cleanup () =
@@ -1060,6 +957,7 @@ fun cleanup () =
        SOME p => (OS.FileSys.remove p handle _ => ())
      | NONE => ()
    else
+     (* Heap trace: compress the completed .pft file *)
      case !output_path_ref of
        SOME p => (ignore (TraceCompress.compress p) handle _ => ())
      | NONE => ())
@@ -1086,18 +984,23 @@ fun export_hook thyname (_:string list) all_thms =
     if temp = "" then () else
     let
       val final_name = thyname ^ "Theory.pft"
+
+      (* Write N and E lines to the temp file *)
       val s = TextIO.openAppend temp
       val _ = TextIO.output(s, "N " ^ esc thyname ^ "\n")
       val _ = List.app (fn (name, th) =>
         TextIO.output(s, "E " ^ esc name ^ " " ^
           its (Thm.trace_id th) ^ "\n")) all_thms
       val _ = TextIO.closeOut s
+
+      (* Put theory trace files in .hol/objs/ if it exists *)
       val actual_path =
         let val objdir = ".hol/objs"
         in if OS.FileSys.access(objdir, []) andalso OS.FileSys.isDir objdir
            then OS.Path.concat(objdir, final_name)
            else final_name
         end
+
       val _ = OS.FileSys.rename {old = temp, new = actual_path}
       val final = TraceCompress.compress actual_path
       val _ = Feedback.HOL_MESG ("Proof trace: " ^ final)
@@ -1119,6 +1022,8 @@ fun trace_step_count () = !Thm.trace_counter
 fun activate () = (
   Thm.trace_hook := SOME record_hook;
   Thm.trace_export_hook := SOME export_hook;
+  (* Emit C/O for constants/types not already defined by
+     DEF_SPEC/DEF_TYOP *)
   Theory.register_hook (
     "TraceRecord.new_const_type",
     fn TheoryDelta.NewConstant {Thy, Name} =>
