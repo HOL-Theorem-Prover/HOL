@@ -660,7 +660,8 @@ fun mark_live (data : file_data) (prev : liveness)
   : liveness * int list (* unresolved parent trace_ids *)
     * bool (* true if any COMPUTE entry was newly marked live *)
     * (string * string) list (* unresolved type defs: (thy, tyop) *)
-    * (string * string) list (* unresolved const defs: (thy, name) *) =
+    * (string * string) list (* unresolved const defs: (thy, name) *)
+    * int list (* newly live P trace_ids *) =
   let
     val live_y = #live_y prev
     val live_t = #live_t prev
@@ -669,6 +670,7 @@ fun mark_live (data : file_data) (prev : liveness)
     val live_p_count = #live_p_count prev
     val unresolved = ref ([] : int list)
     val found_compute = ref false
+    val newly_live_p = ref ([] : int list)
 
     val dp = get_deps data
 
@@ -693,6 +695,7 @@ fun mark_live (data : file_data) (prev : liveness)
             val idx = id - p_min
             val _ = Array.update(live_p, idx, true)
             val _ = live_p_count := !live_p_count + 1
+            val _ = newly_live_p := id :: !newly_live_p
             val _ = if PIntMap.mem id (#compute_ids dp)
                     then found_compute := true else ()
         in List.app mark_thm parents;
@@ -751,7 +754,8 @@ fun mark_live (data : file_data) (prev : liveness)
        !unresolved,
        !found_compute,
        unresolved_tyops,
-       unresolved_consts)
+       unresolved_consts,
+       !newly_live_p)
     end
   end
 
@@ -1055,15 +1059,16 @@ fun merge {trace_paths : (string * string) list,
                 else ()
         val _ = pass1_progress ()
         val prev_lv = get_liveness path
+        val prev_live_count = lv_p_size prev_lv
         (* Skip if all requested IDs are already live *)
         val dominated = List.all
           (fn id => lv_p_mem prev_lv id) needed_thm_ids
       in if dominated then () else
       let
         val (lv, unresolved, found_compute,
-             unresolved_tyops, unresolved_consts) =
+             unresolved_tyops, unresolved_consts,
+             newly_live) =
           mark_live data prev_lv needed_thm_ids
-        val prev_live_count = lv_p_size prev_lv
         val new_live_count = lv_p_size lv
       in
         pass1_live_thms :=
@@ -1100,14 +1105,29 @@ fun merge {trace_paths : (string * string) list,
           | NONE => ())
           unresolved_consts;
 
-        (* Only enqueue NAME/LOAD for NEWLY live entries
-           (not in prev_lv but in lv) to avoid redundant re-processing *)
-        let val _ = ()
+        (* Enqueue NAME/LOAD for newly-live entries *)
+        let
+          val newly_live_set =
+            let val s = Array.array(
+                  if #p_min_id data < 0 then 0
+                  else #p_max_id data - #p_min_id data + 1, false)
+                val base = #p_min_id data
+            in List.app (fn id =>
+                 let val idx = id - base
+                 in if idx >= 0 andalso idx < Array.length s
+                    then Array.update(s, idx, true) else ()
+                 end) newly_live;
+               s
+            end
+          fun is_newly_live id =
+            let val idx = id - #p_min_id data
+            in idx >= 0 andalso idx < Array.length newly_live_set
+               andalso Array.sub(newly_live_set, idx)
+            end
         in
         (* Enqueue NAME ancestor exports *)
         List.app (fn (id, anc_thy, anc_name) =>
-          if lv_p_mem lv id andalso
-             not (lv_p_mem prev_lv id) then
+          if is_newly_live id then
             case Redblackmap.peek(thy_path_map, anc_thy) of
               SOME anc_path =>
                 let val anc_data = load_file anc_path
@@ -1124,8 +1144,7 @@ fun merge {trace_paths : (string * string) list,
 
         (* Enqueue LOAD ancestor theorems by trace_id *)
         List.app (fn (id, anc_thy, anc_trace_id) =>
-          if lv_p_mem lv id andalso
-             not (lv_p_mem prev_lv id) then
+          if is_newly_live id then
             case Redblackmap.peek(thy_path_map, anc_thy) of
               SOME anc_path =>
                 enqueue (anc_path, [anc_trace_id])
