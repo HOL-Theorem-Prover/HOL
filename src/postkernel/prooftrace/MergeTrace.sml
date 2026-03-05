@@ -1653,8 +1653,7 @@ fun merge {trace_paths : (string * string) list,
               end
           | ("T" :: id_s :: rest) =>
               let val id = int_of id_s
-                  val _ = stack_push r_tstack id
-              in if id < Array.length live_t andalso
+              in (if id < Array.length live_t andalso
                     Array.sub(live_t, id) then
                 let val desc = case rest of
                       ["V", name, ty_s] =>
@@ -1702,7 +1701,8 @@ fun merge {trace_paths : (string * string) list,
                         w_push_t gid
                      end
                 end
-              else ()
+              else ());
+              stack_push r_tstack id
               end
           | ("C" :: thy_s :: name_s :: ty_s :: _) =>
               let val thy = unescape thy_s
@@ -1745,8 +1745,7 @@ fun merge {trace_paths : (string * string) list,
               end
           | ("P" :: id_s :: "NAME" :: args) =>
               let val id = int_of id_s
-                  val _ = stack_push r_pstack id
-              in if p_is_live id then
+              in (if p_is_live id then
                 let val anc_thy = unescape (List.nth(args, 0))
                     val anc_name = unescape (List.nth(args, 1))
                 in case Redblackmap.peek(!ancestor_exports,
@@ -1757,12 +1756,12 @@ fun merge {trace_paths : (string * string) list,
                      err ("WARNING: unresolved NAME " ^
                           anc_thy ^ "." ^ anc_name ^ "\n")
                 end
-              else ()
+              else ());
+              stack_push r_pstack id
               end
           | ("P" :: id_s :: "LOAD" :: args) =>
               let val id = int_of id_s
-                  val _ = stack_push r_pstack id
-              in if p_is_live id then
+              in (if p_is_live id then
                 let val anc_thy = unescape (List.nth(args, 0))
                     val anc_trace_id = int_of (List.nth(args, 1))
                     (* First try the ancestor theory's own trace *)
@@ -1801,12 +1800,12 @@ fun merge {trace_paths : (string * string) list,
                      err ("WARNING: unresolved LOAD " ^
                           anc_thy ^ ".#" ^ its anc_trace_id ^ "\n")
                 end
-              else ()
+              else ());
+              stack_push r_pstack id
               end
           | ("P" :: id_s :: rule :: args) =>
               let val id = int_of id_s
-                  val _ = stack_push r_pstack id
-              in if p_is_live id then
+              in (if p_is_live id then
                 let val gid = !global_thm_id
                     val resolved =
                       resolve_args r_tstack r_pstack rule args
@@ -1820,7 +1819,8 @@ fun merge {trace_paths : (string * string) list,
                      "\n");
                    w_push_p gid
                 end
-              else ()
+              else ());
+              stack_push r_pstack id
               end
           | ("I" :: args) =>
               if !live_c then
