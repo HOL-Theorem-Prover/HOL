@@ -153,7 +153,7 @@ and proof =
 | Def_const_list_prf of string * (string * hol_type) list * thm
 | Def_spec_prf of term list * thm
 | deductAntisym_prf of thm * thm
-| compute_prf
+| compute_prf of thm list * term
 
 fun proof (THM(_,_,_,p)) = !p
 fun delete_proof (THM(_,_,_,p)) = p := deleted_prf
@@ -1439,8 +1439,9 @@ in
             let
               val tm' = tc1 tm
               val eqn = safe_mk_eq tm tm'
+              val prf = compute_prf (code_eqs, tm)
             in
-              make_thm Count.Compute (tag1, empty_hyp, eqn, compute_prf)
+              make_thm Count.Compute (tag1, empty_hyp, eqn, prf)
             end
         end
     end;

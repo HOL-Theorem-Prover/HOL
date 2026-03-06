@@ -47,7 +47,7 @@ sig
   | Mk_comb_prf of thm * thm * thm
   | Specialize_prf of term * thm
   | deductAntisym_prf of thm * thm
-  | compute_prf
+  | compute_prf of thm list * term
 
   val proof : thm -> proof
   val delete_proof : thm -> unit
