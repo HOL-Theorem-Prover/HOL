@@ -390,7 +390,7 @@ fixedPointTheory  floatTheory  integerTheory  limTheory
 optionTheory  probTheory  ratTheory  realTheory
 relationTheory  rich_listTheory  ringTheory  seqTheory
 sortingTheory  state_transformerTheory  stringTheory  sumTheory
-topologyTheory  transcTheory  whileTheory
+topologyTheory  transcTheory  WhileTheory
 \end{code}
 The library theories are conveniently browsed using the following HTML reference page (created when HOL4 is compiled).
 Replace {\tt <path>} with the path to your HOL4 installation.

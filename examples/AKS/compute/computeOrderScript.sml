@@ -4,24 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "computeOrder";
+Theory computeOrder
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  logroot prime group ring fieldInstances computeBasic
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory logrootTheory primeTheory;
-
-open groupTheory ringTheory fieldInstancesTheory;
-
-open computeBasicTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -209,18 +201,20 @@ When c = m, all j = 1 to (m - 1) are tested. If no MOD equal to 1, return 0.
 (* Theorem: ordz_seek m n c j = if c <= j then 0
             else if (n ** j) MOD m = 1 then j else ordz_seek m n c (j + 1) *)
 (* Proof: by ordz_seek_def *)
-val ordz_seek_alt = store_thm(
-  "ordz_seek_alt",
-  ``!m n c j. ordz_seek m n c j = if c <= j then 0
-             else if (n ** j) MOD m = 1 then j else ordz_seek m n c (j + 1)``,
-  rw[Once ordz_seek_def, ADD1]);
+Theorem ordz_seek_alt:
+    !m n c j. ordz_seek m n c j = if c <= j then 0
+             else if (n ** j) MOD m = 1 then j else ordz_seek m n c (j + 1)
+Proof
+  rw[Once ordz_seek_def, ADD1]
+QED
 
 (* Theorem: c <= j ==> (ordz_seek m n c j = 0) *)
 (* Proof: by ordz_seek_def. *)
-val ordz_seek_over = store_thm(
-  "ordz_seek_over",
-  ``!m n c j. c <= j ==> (ordz_seek m n c j = 0)``,
-  rw[Once ordz_seek_def]);
+Theorem ordz_seek_over:
+    !m n c j. c <= j ==> (ordz_seek m n c j = 0)
+Proof
+  rw[Once ordz_seek_def]
+QED
 
 (* Theorem: ordz_seek 1 n c j = 0 *)
 (* Proof:
@@ -238,13 +232,14 @@ val ordz_seek_over = store_thm(
             = ordz_seek 1 n c (SUC j)        by ordz_seek_def, n ** j MOD 1 <> 1
             = 0                              by induction hypothesis
 *)
-val ordz_seek_1_n = store_thm(
-  "ordz_seek_1_n",
-  ``!n c j. ordz_seek 1 n c j = 0``,
+Theorem ordz_seek_1_n:
+    !n c j. ordz_seek 1 n c j = 0
+Proof
   rpt strip_tac >>
   Induct_on `c - j` >-
   rw[Once ordz_seek_def] >>
-  rw[Once ordz_seek_def]);
+  rw[Once ordz_seek_def]
+QED
 
 (* Theorem: 0 < m ==> (ordz_seek m 0 c j = 0) *)
 (* Proof:
@@ -264,14 +259,15 @@ val ordz_seek_1_n = store_thm(
           = ordz_seek m 0 c (SUC j)          by ordz_seek_def, n ** j MOD m <> 1
           = 0                                by induction hypothesis
 *)
-val ordz_seek_m_0 = store_thm(
-  "ordz_seek_m_0",
-  ``!m c j. 0 < m ==> (ordz_seek m 0 c j = 0)``,
+Theorem ordz_seek_m_0:
+    !m c j. 0 < m ==> (ordz_seek m 0 c j = 0)
+Proof
   rpt strip_tac >>
   Induct_on `c - j` >-
   rw[Once ordz_seek_def] >>
   rw[Once ordz_seek_def] >>
-  metis_tac[ZERO_EXP, ZERO_MOD, ONE_NOT_ZERO]);
+  metis_tac[ZERO_EXP, ZERO_MOD, ONE_NOT_ZERO]
+QED
 
 (* Theorem: 1 < m /\ j < c ==> (ordz_seek m 1 c j = j) *)
 (* Proof:
@@ -281,10 +277,11 @@ val ordz_seek_m_0 = store_thm(
       = 1                                 by ONE_MOD, 1 < m
    Thus ordz_seek m 1 c j = SUC (c - j)   by ordz_seek_def
 *)
-val ordz_seek_m_1 = store_thm(
-  "ordz_seek_m_1",
-  ``!m c j. 1 < m /\ j < c ==> (ordz_seek m 1 c j = j)``,
-  rw[Once ordz_seek_def]);
+Theorem ordz_seek_m_1:
+    !m c j. 1 < m /\ j < c ==> (ordz_seek m 1 c j = j)
+Proof
+  rw[Once ordz_seek_def]
+QED
 
 (* Theorem: 0 < m ==> (ordz_seek m n c 0 = 0) *)
 (* Proof:
@@ -299,36 +296,40 @@ val ordz_seek_m_1 = store_thm(
       = 1                                by ONE_MOD, 1 < m
    Thus ordz_seek m n c 0 = 0.
 *)
-val ordz_seek_from_0 = store_thm(
-  "ordz_seek_from_0",
-  ``!m n c. 0 < m ==> (ordz_seek m n c 0 = 0)``,
+Theorem ordz_seek_from_0:
+    !m n c. 0 < m ==> (ordz_seek m n c 0 = 0)
+Proof
   rpt strip_tac >>
   (Cases_on `m = 1` >> simp[ordz_seek_1_n]) >>
   `n ** 0 MOD m = 1` by rw[EXP_0, ONE_MOD] >>
-  rw[Once ordz_seek_def]);
+  rw[Once ordz_seek_def]
+QED
 
 (* Theorem: ordz_seek m n c j <> 0 ==> j < c *)
 (* Proof: by ordz_seek_def *)
-val ordz_seek_not_0 = store_thm(
-  "ordz_seek_not_0",
-  ``!m n c j. ordz_seek m n c j <> 0 ==> j < c``,
-  rw[Once ordz_seek_def]);
+Theorem ordz_seek_not_0:
+    !m n c j. ordz_seek m n c j <> 0 ==> j < c
+Proof
+  rw[Once ordz_seek_def]
+QED
 
 (* Theorem: 0 < m /\ j < c /\ (n ** j MOD m = 1) ==> (ordz_seek m n c j = j) *)
 (* Proof: by ordz_seek_def *)
-val ordz_seek_exit = store_thm(
-  "ordz_seek_exit",
-  ``!m n c j. 0 < m /\ j < c /\ (n ** j MOD m = 1) ==> (ordz_seek m n c j = j)``,
-  rw[Once ordz_seek_def]);
+Theorem ordz_seek_exit:
+    !m n c j. 0 < m /\ j < c /\ (n ** j MOD m = 1) ==> (ordz_seek m n c j = j)
+Proof
+  rw[Once ordz_seek_def]
+QED
 
 (* Theorem: 0 < m /\ j < c /\
             (n ** j MOD m <> 1) ==> (ordz_seek m n c j = ordz_seek m n c (SUC j)) *)
 (* Proof: by ordz_seek_def *)
-val ordz_seek_next = store_thm(
-  "ordz_seek_next",
-  ``!m n c j. 0 < m /\ j < c /\
-             (n ** j MOD m <> 1) ==> (ordz_seek m n c j = ordz_seek m n c (SUC j))``,
-  rw[Once ordz_seek_def]);
+Theorem ordz_seek_next:
+    !m n c j. 0 < m /\ j < c /\
+             (n ** j MOD m <> 1) ==> (ordz_seek m n c j = ordz_seek m n c (SUC j))
+Proof
+  rw[Once ordz_seek_def]
+QED
 
 (* Theorem: 0 < m /\ ordz_seek m n c j <> 0 ==> j <= ordz_seek m n c j *)
 (* Proof:
@@ -344,28 +345,30 @@ val ordz_seek_next = store_thm(
          >= SUC j                           by induction hypothesis
          >= j                               by arithmetic
 *)
-val ordz_seek_not_0_lower = store_thm(
-  "ordz_seek_not_0_lower",
-  ``!m n c j. 0 < m /\ ordz_seek m n c j <> 0 ==> j <= ordz_seek m n c j``,
+Theorem ordz_seek_not_0_lower:
+    !m n c j. 0 < m /\ ordz_seek m n c j <> 0 ==> j <= ordz_seek m n c j
+Proof
   ho_match_mp_tac (theorem "ordz_seek_ind") >>
   rw[] >>
   imp_res_tac ordz_seek_not_0 >>
   Cases_on `n ** j MOD m = 1` >-
   rw[ordz_seek_exit] >>
   `ordz_seek m n c j = ordz_seek m n c (SUC j)` by rw[GSYM ordz_seek_next] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (ordz_seek m n c j = SUC j) ==> j < c *)
 (* Proof:
    Note ordz_seek m n c j <> 0          by 0 < SUC j
     ==> j < c                           by ordz_seek_not_0
 *)
-val ordz_seek_when_next = store_thm(
-  "ordz_seek_when_next",
-  ``!m n c j. (ordz_seek m n c j = SUC j) ==> j < c``,
+Theorem ordz_seek_when_next:
+    !m n c j. (ordz_seek m n c j = SUC j) ==> j < c
+Proof
   rpt strip_tac >>
   `ordz_seek m n c j <> 0` by fs[] >>
-  imp_res_tac ordz_seek_not_0);
+  imp_res_tac ordz_seek_not_0
+QED
 
 (* Theorem: 0 < m /\ 0 < j /\ (ordz_seek m n c j = j) ==> (n ** j MOD m = 1) *)
 (* Proof:
@@ -377,15 +380,16 @@ val ordz_seek_when_next = store_thm(
     ==> SUC j <= j                                     by ordz_seek m n c j = j
     This contradicts j < SUC j                         by LESS_SUC
 *)
-val ordz_seek_when_found = store_thm(
-  "ordz_seek_when_found",
-  ``!m n c j. 0 < m /\ 0 < j /\ (ordz_seek m n c j = j) ==> (n ** j MOD m = 1)``,
+Theorem ordz_seek_when_found:
+    !m n c j. 0 < m /\ 0 < j /\ (ordz_seek m n c j = j) ==> (n ** j MOD m = 1)
+Proof
   spose_not_then strip_assume_tac >>
   `ordz_seek m n c j <> 0` by fs[] >>
   imp_res_tac ordz_seek_not_0 >>
   `ordz_seek m n c j = ordz_seek m n c (SUC j)` by rw[GSYM ordz_seek_next] >>
   `SUC j <= ordz_seek m n c (SUC j)` by rw[ordz_seek_not_0_lower] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* This is a special case of the next theorem when u = 0. *)
 
@@ -413,9 +417,9 @@ val ordz_seek_when_found = store_thm(
          = n ** (v + SUC j) MOD m           by above
          = 1                                by induction hypothesis
 *)
-val ordz_seek_found_imp_1 = store_thm(
-  "ordz_seek_found_imp_1",
-  ``!m n c j u. 0 < m /\ 0 < j /\ (ordz_seek m n c j = j + u) ==> (n ** (j + u) MOD m = 1)``,
+Theorem ordz_seek_found_imp_1:
+    !m n c j u. 0 < m /\ 0 < j /\ (ordz_seek m n c j = j + u) ==> (n ** (j + u) MOD m = 1)
+Proof
   ho_match_mp_tac (theorem "ordz_seek_ind") >>
   rw[] >>
   `ordz_seek m n c j <> 0` by decide_tac >>
@@ -429,7 +433,8 @@ val ordz_seek_found_imp_1 = store_thm(
     qabbrev_tac `v = u - 1` >>
     `v + SUC j = j + u` by rw[Abbr`v`] >>
     metis_tac[NOT_ZERO, NOT_LESS]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < m /\ 0 < j /\ (ordz_seek m n c j = j + u) ==>
            !v. v < u ==> n ** (j + v) MOD m <> 1 *)
@@ -456,10 +461,10 @@ val ordz_seek_found_imp_1 = store_thm(
        ==> n ** (j + v) MOD m <> 1          by induction hypothesis
       This contradicts n ** (j + v) MOD m = 1.
 *)
-val ordz_seek_found_imp_2 = store_thm(
-  "ordz_seek_found_imp_2",
-  ``!m n c j u. 0 < m /\ 0 < j /\ (ordz_seek m n c j = j + u) ==>
-         !v. v < u ==> n ** (j + v) MOD m <> 1``,
+Theorem ordz_seek_found_imp_2:
+    !m n c j u. 0 < m /\ 0 < j /\ (ordz_seek m n c j = j + u) ==>
+         !v. v < u ==> n ** (j + v) MOD m <> 1
+Proof
   ho_match_mp_tac (theorem "ordz_seek_ind") >>
   spose_not_then strip_assume_tac >>
   `ordz_seek m n c j <> 0` by decide_tac >>
@@ -477,18 +482,20 @@ val ordz_seek_found_imp_2 = store_thm(
     `h < k` by rw[Abbr`h`, Abbr`k`] >>
     `0 < SUC j` by decide_tac >>
     metis_tac[NOT_ZERO, NOT_LESS]
-  ]);
+  ]
+QED
 
 (* Combine to form a major result *)
 
 (* Theorem: 0 < m /\ 0 < j /\ (ordz_seek m n c j = j + u) ==>
             ((n ** (j + u) MOD m = 1) /\ !v. v < u ==> n ** (j + v) MOD m <> 1) *)
 (* Proof: by ordz_seek_found_imp_1, ordz_seek_found_imp_2 *)
-val ordz_seek_found_imp = store_thm(
-  "ordz_seek_found_imp",
-  ``!m n c j u. 0 < m /\ 0 < j /\ (ordz_seek m n c j = j + u) ==>
-             ((n ** (j + u) MOD m = 1) /\ !v. v < u ==> n ** (j + v) MOD m <> 1)``,
-  metis_tac[ordz_seek_found_imp_1, ordz_seek_found_imp_2]);
+Theorem ordz_seek_found_imp:
+    !m n c j u. 0 < m /\ 0 < j /\ (ordz_seek m n c j = j + u) ==>
+             ((n ** (j + u) MOD m = 1) /\ !v. v < u ==> n ** (j + v) MOD m <> 1)
+Proof
+  metis_tac[ordz_seek_found_imp_1, ordz_seek_found_imp_2]
+QED
 
 (* Theorem: 0 < m /\ 0 < ordz_seek m n c 1 ==> (ordz_seek m n c 1 = ordz m n) *)
 (* Proof:
@@ -501,9 +508,9 @@ val ordz_seek_found_imp = store_thm(
    Also 1 < m                                     by ordz_seek_1_n, k <> 0
    Thus k = ordz m n                              by ZN_order_test_1
 *)
-val ordz_seek_from_1_nonzero = store_thm(
-  "ordz_seek_from_1_nonzero",
-  ``!m n c. 0 < m /\ 0 < ordz_seek m n c 1 ==> (ordz_seek m n c 1 = ordz m n)``,
+Theorem ordz_seek_from_1_nonzero:
+    !m n c. 0 < m /\ 0 < ordz_seek m n c 1 ==> (ordz_seek m n c 1 = ordz m n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `k = ordz_seek m n c 1` >>
   `k <> 0 /\ 0 < 1` by decide_tac >>
@@ -515,7 +522,8 @@ val ordz_seek_from_1_nonzero = store_thm(
   `v < u` by decide_tac >>
   metis_tac[]) >>
   `m <> 1` by metis_tac[ordz_seek_1_n] >>
-  rw[ZN_order_test_1]);
+  rw[ZN_order_test_1]
+QED
 
 (* Theorem: 0 < m /\ 0 < j /\ (ordz_seek m n c j = 0) ==>
             (c <= j \/ (!k. j <= k /\ k < c ==> (n ** k) MOD m <> 1)) *)
@@ -568,10 +576,10 @@ val ordz_seek_from_1_nonzero = store_thm(
    Also j <= k /\ k <> j means j < k, tus SUC j <= k.
    With k < c, this leads to n ** k MOD <> 1, a contradiction.
 *)
-val ordz_seek_eq_0_if = store_thm(
-  "ordz_seek_eq_0_if",
-  ``!m n c j. 0 < m /\ 0 < j /\ (ordz_seek m n c j = 0) ==>
-             (c <= j \/ (!k. j <= k /\ k < c ==> (n ** k) MOD m <> 1))``,
+Theorem ordz_seek_eq_0_if:
+    !m n c j. 0 < m /\ 0 < j /\ (ordz_seek m n c j = 0) ==>
+             (c <= j \/ (!k. j <= k /\ k < c ==> (n ** k) MOD m <> 1))
+Proof
   ho_match_mp_tac (theorem "ordz_seek_ind") >>
   spose_not_then strip_assume_tac >>
   `j < c /\ j <> 0 /\ 0 < SUC j` by decide_tac >>
@@ -581,18 +589,20 @@ val ordz_seek_eq_0_if = store_thm(
   first_x_assum (drule_all_then strip_assume_tac) >-
   decide_tac >>
   `SUC j <= k` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* An alternative expression of the same theorem. *)
 
 (* Theorem: 0 < m /\ 0 < j /\ j < c /\ (ordz_seek m n c j = 0) ==>
              !k. j <= k /\ k < c ==> (n ** k) MOD m <> 1 *)
 (* Proof: by ordz_seek_eq_0_if. *)
-val ordz_seek_eq_0_if_alt = store_thm(
-  "ordz_seek_eq_0_if_alt",
-  ``!m n c j. 0 < m /\ 0 < j /\ j < c /\ (ordz_seek m n c j = 0) ==>
-             !k. j <= k /\ k < c ==> (n ** k) MOD m <> 1``,
-  metis_tac[ordz_seek_eq_0_if, NOT_LESS]);
+Theorem ordz_seek_eq_0_if_alt:
+    !m n c j. 0 < m /\ 0 < j /\ j < c /\ (ordz_seek m n c j = 0) ==>
+             !k. j <= k /\ k < c ==> (n ** k) MOD m <> 1
+Proof
+  metis_tac[ordz_seek_eq_0_if, NOT_LESS]
+QED
 
 (* Theorem: 0 < m /\
             (c <= j \/ (0 < j /\ !k. j <= k /\ k < c ==> (n ** k) MOD m <> 1)) ==>
@@ -614,11 +624,11 @@ val ordz_seek_eq_0_if_alt = store_thm(
            ==> ordz_seek m n c (SUC j) = 0       by induction hypothesis
           This contradicts ordz_seek m n c j <> 0.
 *)
-val ordz_seek_eq_0_only_if = store_thm(
-  "ordz_seek_eq_0_only_if",
-  ``!m n c j. 0 < m /\
+Theorem ordz_seek_eq_0_only_if:
+    !m n c j. 0 < m /\
              (c <= j \/ (0 < j /\ !k. j <= k /\ k < c ==> (n ** k) MOD m <> 1)) ==>
-             (ordz_seek m n c j = 0)``,
+             (ordz_seek m n c j = 0)
+Proof
   ho_match_mp_tac (theorem "ordz_seek_ind") >>
   spose_not_then strip_assume_tac >-
   fs[Once ordz_seek_def] >>
@@ -628,7 +638,8 @@ val ordz_seek_eq_0_only_if = store_thm(
   `ordz_seek m n c j = ordz_seek m n c (SUC j)` by rw[ordz_seek_next] >>
   `~(c <= SUC j)` by decide_tac >>
   `ordz_seek m n c (SUC j) = 0` by fs[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < m /\ m <= c ==> (ordz_seek m n c 1 = ordz m n) *)
 (* Proof:
@@ -640,9 +651,9 @@ val ordz_seek_eq_0_only_if = store_thm(
    If ordz_seek m n c 1 <> 0,
       Then ordz_seek m n c 1 = ordz m n   by ordz_seek_from_1_nonzero
 *)
-val ordz_seek_eq_order = store_thm(
-  "ordz_seek_eq_order",
-  ``!m n c. 1 < m /\ m <= c ==> (ordz_seek m n c 1 = ordz m n)``,
+Theorem ordz_seek_eq_order:
+    !m n c. 1 < m /\ m <= c ==> (ordz_seek m n c 1 = ordz m n)
+Proof
   rpt strip_tac >>
   Cases_on `ordz_seek m n c 1 = 0` >| [
     `0 < m /\ 0 < 1 /\ 1 < c` by decide_tac >>
@@ -650,24 +661,26 @@ val ordz_seek_eq_order = store_thm(
     `!k. 0 < k /\ k < c ==> n ** k MOD m <> 1` by metis_tac[ordz_seek_eq_0_if_alt] >>
     rw[ZN_order_eq_0_test],
     rw[ordz_seek_from_1_nonzero]
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < m ==> (ordz_seek m n m 1 = ordz m n) *)
 (* Proof: by ordz_seek_eq_order, c = m <= m. *)
-val ordz_seek_thm = store_thm(
-  "ordz_seek_thm",
-  ``!m n. 1 < m ==> (ordz_seek m n m 1 = ordz m n)``,
-  rw[ordz_seek_eq_order]);
+Theorem ordz_seek_thm:
+    !m n. 1 < m ==> (ordz_seek m n m 1 = ordz m n)
+Proof
+  rw[ordz_seek_eq_order]
+QED
 
 (* Compute ordz m n, the simplest way *)
-val ordz_compute_def = Define`
+Definition ordz_compute_def:
     ordz_compute m n =
          if m = 0 then ordz 0 n  (* MOD 0 is undefined *)
     else if m = 1 then 1         (* ordz 1 n = 1 by ZN_order_mod_1 *)
     else ordz_seek m n m 1
          (* just the least k from 1 such that n ** k MOD m = 1 when 1 < m *)
          (* if n = 0, ordz m 0 = 0 by ZN_order_0, and ordz_seek m 0 c j = 0 by ordz_seek_m_0 *)
-`;
+End
 
 (* Examples:
 > EVAL ``ordz_compute 2 10``; = 0     1/2 = 0.5 terminating.
@@ -697,10 +710,11 @@ val ordz_compute_def = Define`
       = ordz_seek m n m 1          by ordz_compute_def
       = ordz m n                   by ordz_seek_eq_order, 1 < m
 *)
-val ordz_compute_eqn = store_thm(
-  "ordz_compute_eqn",
-  ``!m n. ordz_compute m n = ordz m n``,
-  rw[ordz_compute_def, ZN_order_mod_1, ordz_seek_eq_order]);
+Theorem ordz_compute_eqn:
+    !m n. ordz_compute m n = ordz m n
+Proof
+  rw[ordz_compute_def, ZN_order_mod_1, ordz_seek_eq_order]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Order Computation -- with optimisation                                    *)
@@ -750,14 +764,14 @@ val order_search_def = |- !n m k c. order_search m n c k =
 *)
 
 (* Compute ordz m n *)
-val order_compute_def = Define`
+Definition order_compute_def:
     order_compute m n =
          if n = 0 then ordz m 0   (* order is defined for nonzero only *)
     else if m = 0 then ordz m n  (* MOD 0 is undefined *)
     else if (gcd_compute m n = 1) (* For coprimes, search from 1 ... *)
          then order_search m (n MOD m) (phi_compute m) 1 (* ordz m n = ordz m (n MOD m), divisor of phi m *)
          else 0 (* not coprime: order is 0 *)
-`;
+End
 
 (* Examples:
 > EVAL ``order_compute 10 3``; --> 4
@@ -779,44 +793,49 @@ Since phi(10) = 4, ordz 10 n is a divisior of 4.
 (* Theorem: order_search m n c k = if c <= k then k
             else if (n ** k) MOD m = 1 then k else order_search m n c (k + 1) *)
 (* Proof: by order_search_def, exp_mod_compute_eqn *)
-val order_search_alt = store_thm(
-  "order_search_alt",
-  ``!m n c k. order_search m n c k = if c <= k then k
-             else if (n ** k) MOD m = 1 then k else order_search m n c (k + 1)``,
-  rw[Once order_search_def, exp_mod_compute_eqn]);
+Theorem order_search_alt:
+    !m n c k. order_search m n c k = if c <= k then k
+             else if (n ** k) MOD m = 1 then k else order_search m n c (k + 1)
+Proof
+  rw[Once order_search_def, exp_mod_compute_eqn]
+QED
 
 (* Theorem: order_compute m n = if n = 0 then ordz m 0
                                 else if m = 0 then ordz m n
                                 else if coprime m n then order_search m (n MOD m) (phi m) 1 else 0 *)
 (* Proof: by order_compute_def, gcd_compute_eqn, phi_compute_eqn *)
-val order_compute_alt = store_thm(
-  "order_compute_alt",
-  ``!m n. order_compute m n =
+Theorem order_compute_alt:
+    !m n. order_compute m n =
      if n = 0 then ordz m 0
      else if m = 0 then ordz m n
-     else if coprime m n then order_search m (n MOD m) (phi m) 1 else 0``,
-  rw[order_compute_def, gcd_compute_eqn, phi_compute_eqn]);
+     else if coprime m n then order_search m (n MOD m) (phi m) 1 else 0
+Proof
+  rw[order_compute_def, gcd_compute_eqn, phi_compute_eqn]
+QED
 
 (* Theorem: order_search m n c c = c *)
 (* Proof: order_search_def *)
-val order_search_id = store_thm(
-  "order_search_id",
-  ``!m n c. order_search m n c c = c``,
-  rw[Once order_search_def]);
+Theorem order_search_id:
+    !m n c. order_search m n c c = c
+Proof
+  rw[Once order_search_def]
+QED
 
 (* Theorem: c <= k ==> (order_search m n c k = k) *)
 (* Proof: order_search_def *)
-val order_search_over = store_thm(
-  "order_search_over",
-  ``!m n c k. c <= k ==> (order_search m n c k = k)``,
-  rw[Once order_search_def]);
+Theorem order_search_over:
+    !m n c k. c <= k ==> (order_search m n c k = k)
+Proof
+  rw[Once order_search_def]
+QED
 
 (* Theorem: k < c /\ ((n ** k) MOD m = 1) ==> (order_search m n c k = k) *)
 (* Proof: by order_search_alt *)
-val order_search_success = store_thm(
-  "order_search_success",
-  ``!m n c k. k < c /\ ((n ** k) MOD m = 1) ==> (order_search m n c k = k)``,
-  rw[Once order_search_alt]);
+Theorem order_search_success:
+    !m n c k. k < c /\ ((n ** k) MOD m = 1) ==> (order_search m n c k = k)
+Proof
+  rw[Once order_search_alt]
+QED
 
 (* Theorem: k <= order_search m n c k *)
 (* Proof:
@@ -842,9 +861,9 @@ val order_search_success = store_thm(
          >= k + 1                      by induction hypothesis
          >= k                          by arithmetic
 *)
-val order_search_lower = store_thm(
-  "order_search_lower",
-  ``!m n c k. k <= order_search m n c k``,
+Theorem order_search_lower:
+    !m n c k. k <= order_search m n c k
+Proof
   rpt strip_tac >>
   Induct_on `c - k` >| [
     rpt strip_tac >>
@@ -853,7 +872,8 @@ val order_search_lower = store_thm(
     `v = c - (k + 1)` by decide_tac >>
     rw[Once order_search_alt] >>
     metis_tac[LESS_EQ_TRANS, DECIDE``k <= k + 1``]
-  ]);
+  ]
+QED
 
 (* Theorem: order_search m n c k <= MAX k c *)
 (* Proof:
@@ -881,9 +901,9 @@ val order_search_lower = store_thm(
          <= MAX k c                    by k < c ==> (k + 1) <= c
         Indeed, MAX (k + 1) c = c = MAX k c   by MAX_DEF
 *)
-val order_search_upper = store_thm(
-  "order_search_upper",
-  ``!m n c k. order_search m n c k <= MAX k c``,
+Theorem order_search_upper:
+    !m n c k. order_search m n c k <= MAX k c
+Proof
   rpt strip_tac >>
   Induct_on `c - k` >| [
     rpt strip_tac >>
@@ -894,7 +914,8 @@ val order_search_upper = store_thm(
     rw_tac bool_ss[Once order_search_alt] >>
     `MAX (k + 1) c = MAX k c` by rw[MAX_DEF] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: k <= c /\ ((n ** c) MOD m = 1) ==> (n ** (order_search m n c k) MOD m = 1) *)
 (* Proof:
@@ -925,9 +946,9 @@ val order_search_upper = store_thm(
               Then k + 1 < c           by k < c
                ==> n ** t MOD m = 1    by induction hypothesis, k + 1 < c
 *)
-val order_search_property = store_thm(
-  "order_search_property",
-  ``!m n c k. k <= c /\ ((n ** c) MOD m = 1) ==> (n ** (order_search m n c k) MOD m = 1)``,
+Theorem order_search_property:
+    !m n c k. k <= c /\ ((n ** c) MOD m = 1) ==> (n ** (order_search m n c k) MOD m = 1)
+Proof
   rpt strip_tac >>
   Induct_on `c - k` >| [
     rpt strip_tac >>
@@ -941,7 +962,8 @@ val order_search_property = store_thm(
     Cases_on `c = k + 1` >-
     rw[order_search_id] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: k <= c ==> !j. k <= j /\ j < order_search m n c k ==> n ** j MOD m <> 1 *)
 (* Proof:
@@ -986,9 +1008,9 @@ val order_search_property = store_thm(
                 or k + 1 < c         by j < c
               Thus giving F          by induction hypothesis
 *)
-val order_search_minimal = store_thm(
-  "order_search_minimal",
-  ``!m n c k. k <= c ==> !j. k <= j /\ j < order_search m n c k ==> n ** j MOD m <> 1``,
+Theorem order_search_minimal:
+    !m n c k. k <= c ==> !j. k <= j /\ j < order_search m n c k ==> n ** j MOD m <> 1
+Proof
   rpt strip_tac >>
   Cases_on `k = c` >| [
     `order_search m n c k = k` by rw[order_search_id] >>
@@ -1013,7 +1035,8 @@ val order_search_minimal = store_thm(
         metis_tac[]
       ]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: order_compute m n = ordz m n *)
 (* Proof:
@@ -1045,9 +1068,9 @@ val order_search_minimal = store_thm(
        Note 0 < m                     by arithmetic
        Thus ordz m n = 0              by ZN_order_eq_0, 0 < m.
 *)
-val order_compute_eqn = store_thm(
-  "order_compute_eqn",
-  ``!m n. order_compute m n = ordz m n``,
+Theorem order_compute_eqn:
+    !m n. order_compute m n = ordz m n
+Proof
   rw[order_compute_alt] >| [
     `0 < m` by decide_tac >>
     qabbrev_tac `k = order_search m (n MOD m) (phi m) 1` >>
@@ -1070,7 +1093,8 @@ val order_compute_eqn = store_thm(
       rw[]
     ],
     rw[ZN_order_eq_0]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Efficient Order Computation                                               *)
@@ -1122,14 +1146,14 @@ val ordz_search_def = |- !n m k c. ordz_search m n c k =
 *)
 
 (* Compute ordz m n *)
-val ordz_fast_def = Define`
+Definition ordz_fast_def:
     ordz_fast m n =
          if n = 0 then ordz m 0  (* order is defined for nonzero only *)
     else if m = 0 then ordz m n  (* MOD 0 is undefined *)
     else if (gcd_compute m n = 1) (* For coprimes, search from 1 ... *)
          then ordz_search m (n MOD m) (phi_compute m) 1 (* ordz m n = ordz m (n MOD m), divisor of phi m *)
          else 0 (* not coprime: order is 0 *)
-`;
+End
 
 (* Examples:
 > EVAL ``ordz_fast 10 3``; --> 4
@@ -1147,44 +1171,49 @@ Since phi(10) = 4, ordz 10 n is a divisior of 4.
 (* Theorem: ordz_search m n c k = if c <= k then k
             else if k divides c /\ ((n ** k) MOD m = 1) then k else ordz_search m n c (k + 1) *)
 (* Proof: by ordz_search_def, exp_mod_compute_eqn *)
-val ordz_search_alt = store_thm(
-  "ordz_search_alt",
-  ``!m n c k. ordz_search m n c k = if c <= k then k
-             else if k divides c /\ ((n ** k) MOD m = 1) then k else ordz_search m n c (k + 1)``,
-  rw[Once ordz_search_def, exp_mod_compute_eqn]);
+Theorem ordz_search_alt:
+    !m n c k. ordz_search m n c k = if c <= k then k
+             else if k divides c /\ ((n ** k) MOD m = 1) then k else ordz_search m n c (k + 1)
+Proof
+  rw[Once ordz_search_def, exp_mod_compute_eqn]
+QED
 
 (* Theorem: ordz_fast m n = if n = 0 then ordz m 0
                                else if m = 0 then ordz m n
                                else if coprime m n then ordz_search m (n MOD m) (phi m) 1 else 0 *)
 (* Proof: by ordz_fast_def, gcd_compute_eqn, phi_compute_eqn *)
-val ordz_fast_alt = store_thm(
-  "ordz_fast_alt",
-  ``!m n. ordz_fast m n =
+Theorem ordz_fast_alt:
+    !m n. ordz_fast m n =
      if n = 0 then ordz m 0
      else if m = 0 then ordz m n
-     else if coprime m n then ordz_search m (n MOD m) (phi m) 1 else 0``,
-  rw[ordz_fast_def, gcd_compute_eqn, phi_compute_eqn]);
+     else if coprime m n then ordz_search m (n MOD m) (phi m) 1 else 0
+Proof
+  rw[ordz_fast_def, gcd_compute_eqn, phi_compute_eqn]
+QED
 
 (* Theorem: ordz_search m n c c = c *)
 (* Proof: ordz_search_def *)
-val ordz_search_id = store_thm(
-  "ordz_search_id",
-  ``!m n c. ordz_search m n c c = c``,
-  rw[Once ordz_search_def]);
+Theorem ordz_search_id:
+    !m n c. ordz_search m n c c = c
+Proof
+  rw[Once ordz_search_def]
+QED
 
 (* Theorem: c <= k ==> (ordz_search m n c k = k) *)
 (* Proof: ordz_search_def *)
-val ordz_search_over = store_thm(
-  "ordz_search_over",
-  ``!m n c k. c <= k ==> (ordz_search m n c k = k)``,
-  rw[Once ordz_search_def]);
+Theorem ordz_search_over:
+    !m n c k. c <= k ==> (ordz_search m n c k = k)
+Proof
+  rw[Once ordz_search_def]
+QED
 
 (* Theorem: k < c /\ k divides c /\ ((n ** k) MOD m = 1) ==> (ordz_search m n c k = k) *)
 (* Proof: by ordz_search_alt *)
-val ordz_search_success = store_thm(
-  "ordz_search_success",
-  ``!m n c k. k < c /\ k divides c /\ ((n ** k) MOD m = 1) ==> (ordz_search m n c k = k)``,
-  rw[Once ordz_search_alt]);
+Theorem ordz_search_success:
+    !m n c k. k < c /\ k divides c /\ ((n ** k) MOD m = 1) ==> (ordz_search m n c k = k)
+Proof
+  rw[Once ordz_search_alt]
+QED
 
 (* Theorem: k <= ordz_search m n c k *)
 (* Proof:
@@ -1210,9 +1239,9 @@ val ordz_search_success = store_thm(
          >= k + 1                      by induction hypothesis
          >= k                          by arithmetic
 *)
-val ordz_search_lower = store_thm(
-  "ordz_search_lower",
-  ``!m n c k. k <= ordz_search m n c k``,
+Theorem ordz_search_lower:
+    !m n c k. k <= ordz_search m n c k
+Proof
   rpt strip_tac >>
   Induct_on `c - k` >| [
     rpt strip_tac >>
@@ -1221,7 +1250,8 @@ val ordz_search_lower = store_thm(
     `v = c - (k + 1)` by decide_tac >>
     rw[Once ordz_search_alt] >>
     metis_tac[LESS_EQ_TRANS, DECIDE``k <= k + 1``]
-  ]);
+  ]
+QED
 
 (* Theorem: ordz_search m n c k <= MAX k c *)
 (* Proof:
@@ -1249,9 +1279,9 @@ val ordz_search_lower = store_thm(
          <= MAX k c                    by k < c ==> (k + 1) <= c
         Indeed, MAX (k + 1) c = c = MAX k c   by MAX_DEF
 *)
-val ordz_search_upper = store_thm(
-  "ordz_search_upper",
-  ``!m n c k. ordz_search m n c k <= MAX k c``,
+Theorem ordz_search_upper:
+    !m n c k. ordz_search m n c k <= MAX k c
+Proof
   rpt strip_tac >>
   Induct_on `c - k` >| [
     rpt strip_tac >>
@@ -1262,7 +1292,8 @@ val ordz_search_upper = store_thm(
     rw_tac bool_ss[Once ordz_search_alt] >>
     `MAX (k + 1) c = MAX k c` by rw[MAX_DEF] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: k <= c /\ ((n ** c) MOD m = 1) ==>
             (ordz_search m n c k) divides c /\ (n ** (ordz_search m n c k) MOD m = 1) *)
@@ -1301,10 +1332,10 @@ val ordz_search_upper = store_thm(
                ==> t divides c
                and n ** t MOD m = 1    by induction hypothesis, k + 1 < c
 *)
-val ordz_search_property = store_thm(
-  "ordz_search_property",
-  ``!m n c k. k <= c /\ ((n ** c) MOD m = 1) ==>
-    (ordz_search m n c k) divides c /\ (n ** (ordz_search m n c k) MOD m = 1)``,
+Theorem ordz_search_property:
+    !m n c k. k <= c /\ ((n ** c) MOD m = 1) ==>
+    (ordz_search m n c k) divides c /\ (n ** (ordz_search m n c k) MOD m = 1)
+Proof
   ntac 5 strip_tac >>
   Cases_on `k = c` >-
   metis_tac[ordz_search_id, DIVIDES_REFL] >>
@@ -1321,7 +1352,8 @@ val ordz_search_property = store_thm(
     Cases_on `c = k + 1` >-
     rw[ordz_search_id] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: k <= c ==> !j. k <= j /\ j < ordz_search m n c k ==> ~(j divides c /\ (n ** j MOD m = 1)) *)
 (* Proof:
@@ -1366,9 +1398,9 @@ val ordz_search_property = store_thm(
                 or k + 1 < c           by j < c
               Thus giving F            by induction hypothesis
 *)
-val ordz_search_minimal = store_thm(
-  "ordz_search_minimal",
-  ``!m n c k. k <= c ==> !j. k <= j /\ j < ordz_search m n c k ==> ~(j divides c /\ (n ** j MOD m = 1))``,
+Theorem ordz_search_minimal:
+    !m n c k. k <= c ==> !j. k <= j /\ j < ordz_search m n c k ==> ~(j divides c /\ (n ** j MOD m = 1))
+Proof
   rpt strip_tac >>
   Cases_on `k = c` >| [
     `ordz_search m n c k = k` by rw[ordz_search_id] >>
@@ -1393,7 +1425,8 @@ val ordz_search_minimal = store_thm(
         metis_tac[]
       ]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: ordz_fast m n = ordz m n *)
 (* Proof:
@@ -1429,9 +1462,9 @@ val ordz_search_minimal = store_thm(
        Note ~(m <= 1) means 1 < m     by NOT_LESS_EQUAL
        Thus ordz m n = 0              by ZN_order_eq_0, 0 < m.
 *)
-val ordz_fast_eqn = store_thm(
-  "ordz_fast_eqn",
-  ``!m n. ordz_fast m n = ordz m n``,
+Theorem ordz_fast_eqn:
+    !m n. ordz_fast m n = ordz m n
+Proof
   rw[ordz_fast_alt] >| [
     `0 < m` by decide_tac >>
     qabbrev_tac `k = ordz_search m (n MOD m) (phi m) 1` >>
@@ -1454,11 +1487,8 @@ val ordz_fast_eqn = store_thm(
       rw[]
     ],
     rw[ZN_order_eq_0]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

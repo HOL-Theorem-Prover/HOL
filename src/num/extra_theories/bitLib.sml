@@ -6,7 +6,7 @@ open bitTheory numeral_bitTheory
 
 structure Parse = struct
   open Parse
-  val (Type, Term) = parse_from_grammars bitTheory.bit_grammars
+  val (Type, Term) = parse_from_grammars $ valOf $ grammarDB {thyname="bit"}
 end
 open Parse
 
@@ -51,7 +51,7 @@ in
    fun add_bit_compset cmp = computeLib.add_thms thms cmp
 end
 
-val () = add_bit_compset computeLib.the_compset
+val () = computeLib.the_compset := add_bit_compset (!computeLib.the_compset)
 
 (* ------------------------------------------------------------------------- *)
 

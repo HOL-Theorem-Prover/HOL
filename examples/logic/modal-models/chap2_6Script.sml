@@ -1,35 +1,16 @@
-open HolKernel Parse boolLib bossLib;
-open chap1Theory;
-open pred_setTheory;
-open relationTheory;
-open arithmeticTheory;
-open set_relationTheory;
+Theory chap2_6
+Ancestors
+  chap1 pred_set relation arithmetic set_relation chap2_1 chap2_2
+  chap2_4 chap2_5 equiv_on_partition prim_rec list rich_list
+  finite_map combin folModels folLang folCanon ultrafilter
+  ultraproduct lemma2_73 pair
 
-open chap2_1Theory;
-open chap2_2Theory;
-open chap2_4Theory;
-open chap2_5Theory;
-open equiv_on_partitionTheory;
-open prim_recTheory;
-open listTheory;
-open rich_listTheory;
-open finite_mapTheory;
-open combinTheory;
-open folModelsTheory;
-open folLangTheory;
-open folCanonTheory;
-open ultrafilterTheory;
-open ultraproductTheory;
-open lemma2_73Theory;
-open pairTheory;
-
-
-val _ = new_theory "chap2_6";
 val _ = temp_delsimps ["satis_def"]
 
-val L1tau_def = Define`
-L1tau phi <=> form_functions phi = {} /\
-              form_predicates phi ⊆ (0,2) INSERT {(p,1)| p IN (univ (:num))}`
+Definition L1tau_def:
+  L1tau phi <=> form_functions phi = {} /\
+                form_predicates phi ⊆ (0,2) INSERT {(p,1)| p IN (univ (:num))}
+End
 
 Theorem ST_L1tau:
 !phi x. L1tau (ST x phi)
@@ -38,11 +19,12 @@ Induct_on `phi` (* 5 *) >>
 fs[L1tau_def,fDISJ_def,fNOT_def,fAND_def]
 QED
 
-val folm2mm_def = Define`
+Definition folm2mm_def:
 folm2mm FM = <| frame := <| world := FM.Dom ;
                               rel := \w1 w2. (FM.Pred 0 [w1;w2] /\
                                               w1 IN FM.Dom /\ w2 IN FM.Dom) |>;
-                 valt := \v w. (FM.Pred v [w] /\ w IN FM.Dom) |>`;
+                 valt := \v w. (FM.Pred v [w] /\ w IN FM.Dom) |>
+End
 
 
 Theorem MAP_LIST_EQ :
@@ -76,11 +58,11 @@ Proof
   Cases_on `t` >> fs[FCT_def,termval_def] >> Cases_on `l = []` >> fs[] >>
   `(MAP (termval M1 σ) l) = (MAP (termval M2 σ) l)` suffices_by metis_tac[] >>
   irule MAP_LIST_EQ >> rw[] >> Cases_on `m` >> rw[termval_def] >>
-  `term_size (Fn n' l') < 1 + (n + term1_size l)` by fs[term_size_lemma] >>
+  `term_size (Fn n' l') < 1 + (n + list_size term_size l)` by fs[term_size_lemma] >>
   first_x_assum (qspec_then `term_size (Fn n' l')` assume_tac) >>
-  `1 + (n + term1_size l) = n + (term1_size l + 1)` by fs[] >>
+  `1 + (n + list_size term_size l) = n + (list_size term_size l + 1)` by fs[] >>
   fs[] >> first_x_assum drule >> rw[] >>
-  first_x_assum (qspec_then `Fn n' l'` assume_tac) >> fs[term_size_def] >>
+  first_x_assum (qspec_then `Fn n' l'` assume_tac) >> fs[] >>
   Cases_on `l' = []`
   >- (fs[] >> `MEM (FCT (Fn n' [])) (MAP (λa. FCT a) l)` by (fs[MEM_MAP] >>
      qexists_tac `Fn n' []` >> fs[FCT_def]) >>
@@ -121,18 +103,20 @@ QED
 
 
 
-val ST_form_functions_EMPTY = store_thm(
-  "ST_form_functions_EMPTY",
-  ``!f x. form_functions (ST x f) = {}``,
+Theorem ST_form_functions_EMPTY:
+    !f x. form_functions (ST x f) = {}
+Proof
   Induct_on `f` >>
- rw[ST_def,form_functions_def,fNOT_def,fAND_def,fDISJ_def,Exists_def]);
+ rw[ST_def,form_functions_def,fNOT_def,fAND_def,fDISJ_def,Exists_def]
+QED
 
 
-val ST_FV_singleton = store_thm(
-  "ST_FV_singleton",
-  ``!f x. (FV (ST x f)) SUBSET {x}``,
+Theorem ST_FV_singleton:
+    !f x. (FV (ST x f)) SUBSET {x}
+Proof
   Induct_on `f` >> rw[ST_def,FV_def,fNOT_def,fAND_def,fDISJ_def] >>
-  fs[SUBSET_DEF] >> metis_tac[]);
+  fs[SUBSET_DEF] >> metis_tac[]
+QED
 
 Theorem term_functions_EMPTY_termval:
 !t. term_functions t = {} ==>
@@ -410,13 +394,14 @@ Proof
           metis_tac[prop_2_47_i]))
 QED
 
-val thm_2_65_corollary = store_thm(
-  "thm_2_65_corollary",
-  ``∀M M' w:'b w':'c.
+Theorem thm_2_65_corollary:
+    ∀M M' w:'b w':'c.
        countably_saturated (mm2folm M) /\ countably_saturated (mm2folm M') ∧ w ∈ M.frame.world ∧ w' ∈ M'.frame.world ⇒
        modal_eq M M' w w' ⇒
-       bisim_world M M' w w'``,
-   rw[] >> `M_sat M /\ M_sat M'` by metis_tac[thm_2_65] >> metis_tac[prop_2_54_DIST_TYPE]);
+       bisim_world M M' w w'
+Proof
+   rw[] >> `M_sat M /\ M_sat M'` by metis_tac[thm_2_65] >> metis_tac[prop_2_54_DIST_TYPE]
+QED
 
 
 
@@ -920,8 +905,6 @@ irule holds_valuation >> rw[] >>
 rw[EXTENSION,EQ_IMP_THM] >> metis_tac[Uequiv_SYM]
 QED
 
-
-
 Theorem mm2folm_folm2mm_Pred0:
 !M wl.
     (LENGTH wl = 2 /\
@@ -1127,7 +1110,7 @@ fs[Abbr`MS`,Abbr`MS'`] >>
 fs[models2worlds_def,folm2mm_def,mm2folm_def]
 QED
 
-val invar4bisim_def = Define`
+Definition invar4bisim_def:
   invar4bisim x (t1: μ itself) (t2: ν itself) phi <=>
      (FV phi ⊆ {x} /\ L1tau phi /\
      !(M:μ modalBasics$model) (N:ν modalBasics$model) v w.
@@ -1135,7 +1118,8 @@ val invar4bisim_def = Define`
            (!(σm: num -> μ) (σn: num -> ν).
              (valuation (mm2folm M) σm /\ valuation (mm2folm N) σn) ==>
                     (fsatis (mm2folm M) σm(|x |-> w|) phi <=>
-                    fsatis (mm2folm N) σn(|x |-> v|) phi )))`
+                    fsatis (mm2folm N) σn(|x |-> v|) phi )))
+End
 
 Theorem invar4bisim_def':
  ∀x phi.
@@ -1786,4 +1770,3 @@ Proof
   rw[] >> drule thm_2_68_half1 >>  rw[feq_def] >> metis_tac[]
 QED
 
-val _ = export_theory();

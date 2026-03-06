@@ -27,7 +27,7 @@ fun pair1 pm (a, b) = seq.map (fn (a',res) => ((a',b), res)) (pm a)
 fun pair2 pm (a, b) = seq.map (fn (b',res) => ((a,b'), res)) (pm b)
 
 fun optional p = (p >- return o SOME) ++ (return NONE)
-fun mmap f [] =  return []
+fun mmap f [] = return []
   | mmap f (x::xs) = let
     in
       f x >-            (fn x' =>

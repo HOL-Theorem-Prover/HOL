@@ -7,4 +7,4 @@ selftest.exe: selftest.uo
 EXTRA_CLEANS = selftest.exe Iflag-selftest.log \
   $(patsubst %,testdir/BTheory.%,uo ui dat sig sml) \
   $(patsubst %,testdir/includethis/ATheory.%,uo ui dat sig sml) \
-  $(patsubst %,%/.hollogs/ %/.HOLMK/,testdir testdir/includethis)
+  $(patsubst %,%/.hol/,testdir testdir/includethis)

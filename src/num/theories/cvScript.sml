@@ -1,11 +1,12 @@
-open HolKernel Parse boolLib IndDefLib DefnBase
-
-open arithmeticTheory BasicProvers simpLib
+Theory cv[bare]
+Ancestors
+  arithmetic numeral[qualified]
+Libs
+  HolKernel Parse boolLib IndDefLib DefnBase BasicProvers simpLib
+  newtypeTools[qualified] metisLib[qualified]
 
 fun simp ths = ASM_SIMP_TAC (srw_ss()) ths
 fun SRULE ths = SIMP_RULE (srw_ss()) ths
-
-val _ = new_theory "cv";
 
 val N0_def = new_definition("N0_def",
   “N0 (m:num) n = if n = 0 then m+1 else 0”);
@@ -162,14 +163,14 @@ Proof
 QED
 
 (* helpers/auxiliaries *)
-val c2b_def = new_definition ("c2b_def", “c2b x = ?k. x = Num (SUC k)”);
+val c2b_def = new_definition ("c2b_def", “c2b x <=> x ≠ Num 0”);
 val cv_if_def0 = new_definition(
   "cv_if_def0",
   “cv_if p (q:cv) (r:cv) = if c2b p then q else r”);
 Theorem cv_if_def:
   cv_if (Num (SUC m)) (p:cv) (q:cv) = p /\
   cv_if (Num 0) p q = q /\
-  cv_if (Pair r s) p q = q
+  cv_if (Pair r s) p q = p
 Proof
   simp[c2b_def, cv_if_def0, Num_11, cv_distinct]
 QED
@@ -179,15 +180,12 @@ Theorem c2b_thm[simp]:
   (c2b (Num 1) = T) /\
   (c2b (Num 0) = F) /\
   (c2b (Num (NUMERAL ZERO)) = F) /\
-  (c2b (Pair x y) = F)
+  (c2b (Pair x y) = T)
 Proof
-  rewrite_tac [c2b_def,Num_11,prim_recTheory.INV_SUC_EQ]
-  \\ rewrite_tac [GSYM boolTheory.EXISTS_REFL,NORM_0]
-  \\ rewrite_tac [SUC_NOT]
+  rewrite_tac [c2b_def,Num_11,prim_recTheory.INV_SUC_EQ, numTheory.NOT_SUC,
+               NORM_0, simple_inequalities]
   \\ once_rewrite_tac [EQ_SYM_EQ]
   \\ rewrite_tac [cv_distinct]
-  \\ EXISTS_TAC “0:num”
-  \\ rewrite_tac [ADD1,ADD_CLAUSES]
 QED
 
 val cv_case_def = Prim_rec.new_recursive_definition {
@@ -433,7 +431,7 @@ QED
  * Theorems used in automation
  * ------------------------------------------------------------------------- *)
 
-Triviality c2b_if:
+Theorem c2b_if[local]:
   c2b (Num (if b then SUC 0 else 0)) = b
 Proof
   Cases_on ‘b’
@@ -551,11 +549,12 @@ Theorem cv_exp_eq:
           (Num 1)
 Proof
   Cases_on ‘e’
-  \\ rewrite_tac [c2n_def,cv_exp_def,cv_if_def,EXP]
-  \\ Cases_on ‘m’
-  \\ rewrite_tac [c2n_def,cv_exp_def,cv_if_def,EXP,LET_THM]
+  \\ rewrite_tac [c2n_def,cv_exp_def,cv_if_def,EXP,cv_mod_def,cv_div_def,
+                  LET_THM]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
-  \\ rewrite_tac [cv_mul_def,cv_mod_def,cv_if_def]
+  \\ rewrite_tac [cv_mul_def, MULT_CLAUSES]
+  \\ Cases_on ‘m’
+  \\ rewrite_tac [cv_mul_def,cv_mod_def,cv_if_def, EXP]
   \\ Cases_on ‘SUC n MOD 2’
   \\ rewrite_tac [cv_if_def,Num_11,GSYM EXP_ADD, GSYM TIMES2,cv_div_def,cv_sub_def,
        GSYM PRE_SUB1,prim_recTheory.PRE,c2n_def]
@@ -580,9 +579,35 @@ Proof
   rewrite_tac [c2n_def,cv_exp_def]
 QED
 
+(* Properties that can help with manual termination proofs *)
+
+Theorem cv_ispair_cv_add[simp]:
+  cv_ispair (cv_add x y) = Num 0
+Proof
+  Cases_on`x` \\ Cases_on`y` \\ simp[]
+QED
+
+Theorem c2n_cv_add[simp]:
+  c2n (cv_add v1 v2) = c2n v1 + c2n v2
+Proof
+  Cases_on`v1` \\ Cases_on`v2` \\ simp[ADD_CLAUSES]
+QED
+
+Theorem c2n_cv_mul[simp]:
+  c2n (cv_mul v1 v2) = c2n v1 * c2n v2
+Proof
+  Cases_on`v1` \\ Cases_on`v2` \\ simp[]
+QED
+
+Theorem cv_lt_Num_0:
+  (c2b $ cv_lt (Num 0) x) = ∃n. x = Num (SUC n)
+Proof
+  Cases_on`x` \\ simp[cv_lt_def]
+  \\ Cases_on`m` \\ simp[LT, LESS_0_CASES]
+QED
+
 val _ = app Parse.permahide [“c2n”,“c2b”,“Num”,“Pair”];
 
 val _ = app delete_const ["P0", "N0", "iscv", "cvrel", "cvrelf",
                           "cv_ABS", "cv_REP", "cvnum_map2", "cvnumval"];
 
-val _ = export_theory();

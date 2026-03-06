@@ -271,8 +271,10 @@ fun parse_harg G qb =
         end
       else
         (parse_atom G qb
-         handle HOL_ERR {origin_structure = "Parse", message, ...} =>
-                raise ERR "parse_harg" message)
+         handle e as HOL_ERR herr =>
+            if top_structure_of herr = "Parse" then
+                raise ERR "parse_harg" (message_of herr)
+            else raise e)
     | (base_tokens.BT_AQ ty, _) => (qbuf.advance qb; dAQ ty)
     | (_, locn) => raise ERRloc "parse_harg" locn
                          "Unexpected token in constructor's argument"
@@ -350,11 +352,13 @@ end
 fun hide_tynames q G0 =
   List.foldl (uncurry type_grammar.hide_tyop) G0 (extract_tynames q)
 
+val parse_listener : AST list Listener.t = Listener.new_listener ()
 
 fun core_parse G0 phrase_p q = let
   val G = hide_tynames q G0
   val qb = qbuf.new_buffer q
   val result = termsepby1 ";" base_tokens.BT_EOI (parse_g G phrase_p) qb
+  val _ = Listener.call_listener parse_listener result
 in
   case qbuf.current qb of
       (base_tokens.BT_EOI,_) => result

@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib
-
-val _ = new_theory "gh179a";
+Theory gh179a[bare]
+Libs
+  HolKernel Parse boolLib
 
 val tyexists = store_thm("tyexists", “?x:bool. (\x. T) x”,
   BETA_TAC >> REWRITE_TAC[]
@@ -22,6 +22,3 @@ val A_neq_B = store_thm("A_neq_B", “A <> B”,
 );
 
 val _ = delete_type "foo"
-
-
-val _ = export_theory();

@@ -1,10 +1,9 @@
 (*
   Define cv_rep and prove a few lemmas used in proof automation
 *)
-open HolKernel Parse boolLib bossLib;
-open cvTheory cv_typeTheory;
-
-val _ = new_theory "cv_rep";
+Theory cv_rep
+Ancestors
+  cv cv_type
 
 Overload c2n[local] = “cv$c2n”
 Overload c2b[local] = “cv$c2b”
@@ -74,10 +73,9 @@ Theorem cv_eval[compute]:
   c2n (Num n) = n /\
   c2n (Pair x y) = 0 /\
   c2b (Num n) = (n <> 0) /\
-  c2b (Pair x y) = F
+  c2b (Pair x y) = T
 Proof
   gvs [cvTheory.c2n_def,cvTheory.c2b_def]
-  \\ Cases_on ‘n’ \\ gvs []
 QED
 
 Theorem UNCURRY_pair_case:
@@ -142,4 +140,3 @@ Proof
   fs [cv_if_def]
 QED
 
-val _ = export_theory();

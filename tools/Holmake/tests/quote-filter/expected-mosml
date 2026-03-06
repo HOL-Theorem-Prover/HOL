@@ -93,3 +93,24 @@ val x = 92 + 10;
 val   y = 11
 val s = ""  
 val s' = "foo.sml" (* #(FILE) *)
+
+val thm = Q.store_thm_at (DB_dtype.mkloc ("foo.sml", 15, true)) ("thm[foo, simp , key = val1 val2]", [QUOTE " (*#loc 15 42*)\n\
+\  p /\\ q"], (fn HOL__GOAL__foo => (
+
+  cheat
+) HOL__GOAL__foo));
+
+val thm2 = boolLib.save_thm_at (DB_dtype.mkloc ("foo.sml", 21, true))("thm2[foo, simp , key = val1 val2]", exp
+
+);val th3 = Q.store_thm_at (DB_dtype.mkloc ("foo.sml", 23, true)) ("th3[*,bar]", [QUOTE " (*#loc 23 20*)\n\
+\  stmt"], (fn HOL__GOAL__foo => (
+
+tac
+) HOL__GOAL__foo));
+
+val _ = Parse.overload_on("", term);
+val bar = markerLib.resume{label_name="label",suspension_name="foo"}(BasicProvers.with_simpset_updates (simpLib.remove_simps ["AND_CLAUSES"]) (fn HOL__GOAL__foo => (
+  tactic
+) HOL__GOAL__foo))
+val foo = boolLib.finalise_suspended_thm(DB_dtype.mkloc ("foo.sml", 33, true))"foo"
+val bar = boolLib.finalise_suspended_thm(DB_dtype.mkloc ("foo.sml", 34, true))"bar"

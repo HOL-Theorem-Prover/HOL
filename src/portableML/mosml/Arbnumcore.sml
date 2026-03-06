@@ -146,6 +146,9 @@ fun (xn <= yn) = xn = yn orelse xn < yn
 fun (xn >= yn) = yn <= xn
 fun (xn > yn) = yn < xn
 
+fun max (x, y) = if x < y then y else x
+fun min (x, y) = if x < y then x else y
+
 fun compare(x,y) = if x < y then LESS else if y < x then GREATER else EQUAL
 
 fun normalise [] = [0]
@@ -398,6 +401,8 @@ fun gcd(i,j) = if i = zero then j
                else if i < j then gcd' j i
                else gcd' i j
 end
+
+fun lcm (x, y) = (x * y) div (gcd (x, y))
 
 fun intexp(base,exponent) = let
   fun recurse acc b n =

@@ -3,9 +3,16 @@ open testutils
 
 val _ = print "\n"
 
-fun listprint pr xs =
-    "[" ^ String.concatWith "," (map pr xs) ^ "]"
+val goal_compare = pair_compare(list_compare Term.compare, Term.compare)
+val goals_compare = list_compare goal_compare
+fun goals_eq gs1 gs2 = goals_compare (gs1, gs2) = EQUAL
 
+fun listp p xs = "[" ^ String.concatWith ", " (map p xs) ^ "]"
+fun pairp (p1, p2) (x,y) = "(" ^ p1 x ^ ", " ^ p2 y ^ ")"
+
+val goal_toString =
+    pairp (listp term_to_string, term_to_string)
+val goals_toString = listp goal_toString
 
 fun test_CONV (c,nm) (t, expected) = let
   val _ = tprint (nm^" on `"^term_to_string t^"`")
@@ -34,10 +41,11 @@ val tydef_th = prove(
 val _ = tprint "new_type_definition error message"
 val _ =
     ignore (new_type_definition("mytydef", tydef_th))
-    handle HOL_ERR {origin_function, message, origin_structure, ...} =>
-           if origin_function <> "new_type_definition" orelse
-              origin_structure <> "Theory.Definition" orelse
-              message <> "at Thm.prim_type_definition:\nexpected a theorem of the form \"?x. P x\""
+    handle HOL_ERR herr =>
+           if top_function_of herr <> "new_type_definition" orelse
+              top_structure_of herr <> "Theory.Definition" orelse
+              message_of herr <>
+              "expected a theorem of the form \"?x. P x\""
            then
              die "FAILED"
            else OK()
@@ -218,41 +226,41 @@ end
 
 val _ = tprint "find num->num includes SUC"
 val _ = require_msg (check_result (tmem numSyntax.suc_tm))
-                    (listprint term_to_string)
+                    (listp term_to_string)
                     find_consts “:num->num”
 val _ = tprint "find 'a includes SUC"
 val _ = require_msg (check_result (tmem numSyntax.suc_tm))
-                    (listprint term_to_string)
+                    (listp term_to_string)
                     find_consts “:'a”
 val _ = tprint "find 'a->'a includes SUC"
 val _ = require_msg (check_result (tmem numSyntax.suc_tm))
-                    (listprint term_to_string)
+                    (listp term_to_string)
                     find_consts “:'a->'a”
 val _ = tprint "find 'b->'b includes SUC"
 val _ = require_msg (check_result (tmem numSyntax.suc_tm))
-                    (listprint term_to_string)
+                    (listp term_to_string)
                     find_consts “:'b->'b”
 val _ = tprint "find 'a -> 'b -> 'c doesn't include SUC"
 val _ = require_msg (check_result (not o tmem numSyntax.suc_tm))
-                    (listprint term_to_string)
+                    (listp term_to_string)
                     find_consts “:'a->'b->'c”
 val _ = tprint "find_thy [bool,relation] 'a -> 'a doesn't include SUC"
 val _ = require_msg (check_result (not o tmem numSyntax.suc_tm))
-                    (listprint term_to_string)
+                    (listp term_to_string)
                     (find_consts_thy ["bool", "relation"]) “:'a->'a”
 val _ = tprint "find_thy [bool,relation] 'a -> 'a includes RTC"
 val _ = require_msg (check_result (tmem “relation$RTC”))
-                    (listprint term_to_string)
+                    (listp term_to_string)
                     (find_consts_thy ["bool", "relation"]) “:'a->'a”
 val _ = tprint "find_thy [bool,relation] num -> num doesn't include RTC"
 val _ = require_msg (check_result (not o tmem “relation$RTC”))
-                    (listprint term_to_string)
+                    (listp term_to_string)
                     (find_consts_thy ["bool", "relation"]) “:num->num”
 
 val _ = new_constant("foo", “:'a -> num”)
 
 val _ = tprint "find 'a finds new constant"
-val _ = require_msg (check_result (tmem “foo”)) (listprint term_to_string)
+val _ = require_msg (check_result (tmem “foo”)) (listp term_to_string)
                     find_consts “:'a”
 
 
@@ -384,7 +392,7 @@ val _ = test_tac_Case "list ind" (K true)
 val _ = test_tac_Case "OLEAST deep intro" (K true)
   `THE (OLEAST n. n > SUC 3) < 8`
   (DEEP_INTRO_TAC
-      (name_ind_cases [] whileTheory.OLEAST_INTRO)
+      (name_ind_cases [] WhileTheory.OLEAST_INTRO)
     \\ rpt strip_tac)
 
 val (is_rev_rules, is_rev_ind, is_rev_cases) = Hol_reln`
@@ -437,3 +445,70 @@ val _ = tprint "Tactic simp[] on set comprehension"
 val _ = require_msg (check_result (aconv “y < 10” o #2 o hd o #1))
                     (term_to_string o #2 o hd o #1)
                     (simp[]) ([], “y IN {x | x < 10}”)
+
+val _ = tprint "CONG_TAC on a set comprehension with numeral"
+val expected = [([], “c * d = 10n”)]
+val _ = require_msg (check_result (goals_eq expected o #1))
+                    (goals_toString o #1)
+                    (CONG_TAC NONE)
+                    ([], “{n | n < c * d} = {x | x < 10}”);
+
+val _ = hide "f"
+val _ = tprint "CONG_TAC with MAP congruence used"
+val expected = [([“MEM (x:'a) l2”], “f (x:'a) + 1 = g x”),
+                ([], “l1 : 'a list = l2”)]
+val _ = require_msg
+          (check_result (goals_eq expected o #1))
+          (goals_toString o #1)
+          (CONG_TAC NONE)
+          ([], “MAP (λa. f a + 1) (l1:'a list) = MAP g (l2:'a list)”);
+
+val _ = tprint "CONG_TAC (SOME 0) = ALL_TAC"
+val gt = “x < 10n”
+val _ = require_msg
+          (check_result (goals_eq [([], gt)] o #1))
+          (goals_toString o #1)
+          (CONG_TAC (SOME 0))
+          ([], gt)
+
+val _ = shouldfail {
+      checkexn = is_struct_HOL_ERR "bossLib",
+      printarg = K "CONG_TAC NONE failure 1",
+      printresult = goals_toString o #1,
+      testfn = CONG_TAC NONE
+    } ([], “x < 10n”);
+
+fun goalhc t (sgs, vf) =
+    case sgs of
+        [(asl, c)] => t ~~ c andalso null asl
+      | _ => false
+fun prgl (sgs, vf) =
+    case sgs of
+        [] => "[]"
+      | [sg] => PP.pp_to_string 70 goalStack.pp_goal sg
+      | _ => "Too many subgoals"
+
+val _ = tprint "simp[] ?- “p ∧ T”"
+val _ = require_msg
+          (check_result (goalhc “p:bool”))
+          prgl
+          (fn g => simp [] g)
+          ([], “p ∧ T”)
+
+val _ = tprint "above w/simpset_updates removing"
+val _ = require_msg
+          (check_result (goalhc “p /\ T”)) prgl
+          (BasicProvers.with_simpset_updates
+             (simpLib.remove_simps ["AND_CLAUSES"])
+             (fn g => simp[] g))
+          ([], “p ∧ T”)
+
+val _ = tprint "Back to original"
+val _ = require_msg
+          (check_result (goalhc “p:bool”)) prgl
+          (fn g => simp[] g)
+          ([], “p ∧ T”)
+
+(*
+val _ = convtest("Original again", SIMP_CONV (srw_ss()) [], “p ∧ T”, “p:bool”)
+*)

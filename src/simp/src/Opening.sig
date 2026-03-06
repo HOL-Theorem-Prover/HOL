@@ -70,8 +70,8 @@ signature Opening = sig
     * ---------------------------------------------------------------------*)
 
    include Abbrev
-   type congproc = {relation: term,
-                    solver : term -> thm,
+   type congproc = term -> (* relation *)
+                   {solver : term -> thm,
                     freevars: term list,
                     depther : (thm list * term) -> conv} -> conv
    val samerel            : term -> term -> bool

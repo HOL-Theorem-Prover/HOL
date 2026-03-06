@@ -1,8 +1,10 @@
-open HolKernel Parse boolLib boolTheory;
+Theory num[bare]
+Ancestors
+  bool
+Libs
+  HolKernel Parse boolLib
 
 infix THEN THENL;
-
-val _ = new_theory "num";
 
 val _ = if !Globals.interactive then () else Feedback.emit_WARNING := false;
 
@@ -14,13 +16,15 @@ val SUC_REP_DEF = new_specification
    ("SUC_REP_DEF",["SUC_REP"], boolTheory.INFINITY_AX);
 
 
-val ZERO_REP_EXISTS = prove(
-  Term`?z. !y. ~(z = SUC_REP y)`,
+Theorem ZERO_REP_EXISTS[local]:
+   ?z. !y. ~(z = SUC_REP y)
+Proof
   Q.X_CHOOSE_THEN `zrep` ASSUME_TAC ((CONV_RULE NOT_FORALL_CONV o
                                       REWRITE_RULE [ONTO_THM] o
                                       CONJUNCT2) SUC_REP_DEF) THEN
   POP_ASSUM (ASSUME_TAC o CONV_RULE NOT_EXISTS_CONV) THEN
-  Q.EXISTS_TAC `zrep` THEN POP_ASSUM ACCEPT_TAC);
+  Q.EXISTS_TAC `zrep` THEN POP_ASSUM ACCEPT_TAC
+QED
 
 (*---------------------------------------------------------------------------
  * `ZERO_REP:ind` represents `0:num`
@@ -59,7 +63,7 @@ val num_ISO_DEF = define_new_type_bijections
                    {name = "num_ISO_DEF",
                     ABS = "ABS_num",
                     REP = "REP_num",
-                    tyax =  num_TY_DEF};
+                    tyax = num_TY_DEF};
 
 val R_11   = prove_rep_fn_one_one num_ISO_DEF
 and R_ONTO = prove_rep_fn_onto    num_ISO_DEF
@@ -131,26 +135,30 @@ val NOT_SUC_ZERO = GSYM ZERO_REP_DEF;
 (* Proof of NOT_SUC : |- !n. ~(SUC n = ZERO)                            *)
 (* ---------------------------------------------------------------------*)
 
-val NOT_SUC = store_thm("NOT_SUC",
-    “!n. ~(SUC n = 0)”,
+Theorem NOT_SUC:
+     !n. ~(SUC n = 0)
+Proof
      PURE_REWRITE_TAC [SUC_DEF,ZERO_DEF] THEN GEN_TAC THEN
      MP_TAC (SPECL [“SUC_REP(REP_num n)”,“ZERO_REP”] A_11) THEN
      REWRITE_TAC [IS_NUM_REP_ZERO,IS_NUM_REP_SUC_REP] THEN
      DISCH_THEN SUBST1_TAC THEN
-     MATCH_ACCEPT_TAC NOT_SUC_ZERO);
+     MATCH_ACCEPT_TAC NOT_SUC_ZERO
+QED
 
 (* ---------------------------------------------------------------------*)
 (* Prove that |-  !m n. (SUC m = SUC n) ==> (m = n)                     *)
 (* ---------------------------------------------------------------------*)
 
-val INV_SUC = store_thm("INV_SUC",
-    “!m n. (SUC m = SUC n) ==> (m = n)”,
+Theorem INV_SUC:
+     !m n. (SUC m = SUC n) ==> (m = n)
+Proof
      REPEAT GEN_TAC THEN REWRITE_TAC [SUC_DEF] THEN
      MP_TAC (SPECL [“SUC_REP(REP_num m)”,
                     “SUC_REP(REP_num n)”] A_11) THEN
      REWRITE_TAC [IS_NUM_REP_SUC_REP] THEN DISCH_THEN SUBST1_TAC THEN
      DISCH_THEN (MP_TAC o MATCH_MP SUC_REP_11) THEN
-     REWRITE_TAC [R_11]);
+     REWRITE_TAC [R_11]
+QED
 
 (* ---------------------------------------------------------------------*)
 (* Prove induction theorem.                                             *)
@@ -190,8 +198,9 @@ val lemma1 =
       STRIP_GOAL_THEN (STRIP_THM_THEN SUBST1_TAC) THEN
       ASM_REWRITE_TAC []]);
 
-val INDUCTION = store_thm("INDUCTION",
-    “!P. P 0 /\ (!n. P n ==> P(SUC n)) ==> !n. P n”,
+Theorem INDUCTION:
+     !P. P 0 /\ (!n. P n ==> P(SUC n)) ==> !n. P n
+Proof
      GEN_TAC THEN STRIP_TAC THEN
      MP_TAC (SPEC “\i. ((P(ABS_num i)):bool)” ind_lemma2) THEN
      CONV_TAC(DEPTH_CONV BETA_CONV) THEN
@@ -201,6 +210,6 @@ val INDUCTION = store_thm("INDUCTION",
       REWRITE_TAC [R_ONTO] THEN
       GEN_TAC THEN  CONV_TAC ANTE_CONJ_CONV THEN
       DISCH_THEN (STRIP_THM_THEN SUBST1_TAC) THEN
-      ASM_REWRITE_TAC [num_ISO_DEF,SYM (SPEC_ALL SUC_DEF)]]);
+      ASM_REWRITE_TAC [num_ISO_DEF,SYM (SPEC_ALL SUC_DEF)]]
+QED
 
-val _ = export_theory();

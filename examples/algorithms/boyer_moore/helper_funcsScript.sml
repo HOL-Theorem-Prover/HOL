@@ -1,21 +1,11 @@
-open HolKernel boolLib bossLib Parse;
-
-open listTheory;
-open rich_listTheory;
-open prim_recTheory;
-open arithmeticTheory;
-open pred_setTheory;
-open pairTheory;
-open boolTheory;
-
-
-val _ = new_theory"helper_funcs";
+Theory helper_funcs
+Ancestors
+  list rich_list prim_rec arithmetic pred_set pair bool
 
 (* -- EXTRACT FUNCTION -- *)
 (* General Purpose Sublist extract function *)
-val extract_def =
-    Define
-    `
+Definition extract_def:
+
     (extract _ [] = []) /\
     (extract (0,0) (x::xs) = []) /\
     (extract (SUC n, 0) (x::xs) = []) /\
@@ -25,13 +15,13 @@ val extract_def =
     (extract (SUC n, SUC m) (x::xs) =
         extract (n,m) xs
     )
-    `;
+End
 
 (* Basic Extract Properties *)
-val EXTRACT_THM = store_thm(
-    "EXTRACT_THM",
-    ``!i j. j <= LENGTH l
-           ==> (extract (i,j) l = GENLIST (\a. EL (a+i) l) (j-i))``,
+Theorem EXTRACT_THM:
+      !i j. j <= LENGTH l
+           ==> (extract (i,j) l = GENLIST (\a. EL (a+i) l) (j-i))
+Proof
     Induct_on `l`
     >- rw[extract_def]
     >> map_every Cases_on [`i`,`j`]
@@ -39,35 +29,34 @@ val EXTRACT_THM = store_thm(
     >> rw[GENLIST_CONS]
     >> simp[combinTheory.o_DEF]
     >> simp[ADD_CLAUSES]
-    );
+QED
 
-val EXTRACT_BIG_THM = store_thm(
-    "EXTRACT_BIG_THM",
-    ``! i j. j >= LENGTH l
-            ==> (extract (i,j) l = GENLIST (\a. EL (a+i) l) (LENGTH l - i))``,
+Theorem EXTRACT_BIG_THM:
+      ! i j. j >= LENGTH l
+            ==> (extract (i,j) l = GENLIST (\a. EL (a+i) l) (LENGTH l - i))
+Proof
     Induct_on `l`
     >- rw[extract_def]
     >> map_every Cases_on [`i`,`j`]
     >> rw[extract_def,GENLIST_CONS]
     >> simp[combinTheory.o_DEF,ADD_CLAUSES,EL]
-    );
+QED
 
-val EXTRACT_GEN_THM = store_thm(
-    "EXTRACT_GEN_THM",
-    ``! i j. extract (i,j) l = GENLIST (\a. EL (a+i) l) (MIN (j - i) (LENGTH l - i))``,
+Theorem EXTRACT_GEN_THM:
+      ! i j. extract (i,j) l = GENLIST (\a. EL (a+i) l) (MIN (j - i) (LENGTH l - i))
+Proof
     rpt STRIP_TAC
     >> Cases_on `j<= LENGTH l`
     >- (`MIN (j - i) (LENGTH l - i) = j - i` by simp[MIN_DEF]
         >> rw[EXTRACT_THM])
     >- (`MIN (j - i) (LENGTH l - i) = LENGTH l - i` by simp[MIN_DEF]
         >> rw[EXTRACT_BIG_THM])
-    );
+QED
 
 (* -- UNIQUE ELEMS FUNCTION -- *)
 (* Find all unqiue elements in a list *)
-val uniqueElems_def =
-    Define
-    `
+Definition uniqueElems_def:
+
     (uniqueElems [] = []) /\
     (uniqueElems (x::rst) =
         let
@@ -80,13 +69,13 @@ val uniqueElems_def =
             else
                 x::uniTail
     )
-    `;
+End
 
 (* Confirming uniqueElems contains everything in the list *)
-val UNIQUE_ELEMS_THM = store_thm(
-    "UNIQUE_ELEMS_THM",
-    ``!i inString. i < LENGTH inString
-                  ==> MEM (EL i inString) (uniqueElems inString)``,
+Theorem UNIQUE_ELEMS_THM:
+      !i inString. i < LENGTH inString
+                  ==> MEM (EL i inString) (uniqueElems inString)
+Proof
     Induct_on `inString`
     >- simp[uniqueElems_def]
     >- (rw[LENGTH]
@@ -100,13 +89,12 @@ val UNIQUE_ELEMS_THM = store_thm(
             >- simp[EL,uniqueElems_def]
             >- simp[])
         )
-    );
+QED
 
 (* -- FIND ELEMS FUNCTION -- *)
 (* Find first index of element in list. Returns past end of list if no elem *)
-val findElem_def =
-    Define
-    `
+Definition findElem_def:
+
     (findElem [] _ = 0) /\
     (findElem (x::rst) e =
         if
@@ -116,14 +104,14 @@ val findElem_def =
         else
             1 + findElem rst e
     )
-    `;
+End
 
 (* Confirming findElem checks lst for element e and
    find an occurrence *)
-val FIND_ELEM_THM = store_thm(
-    "FIND_ELEM_THM",
-    ``((findElem lst e) < LENGTH lst)
-      ==> ((EL (findElem lst e) lst) = e)``,
+Theorem FIND_ELEM_THM:
+      ((findElem lst e) < LENGTH lst)
+      ==> ((EL (findElem lst e) lst) = e)
+Proof
     strip_tac
     >> Induct_on `lst`
     >- simp[findElem_def]
@@ -138,14 +126,14 @@ val FIND_ELEM_THM = store_thm(
             >> rw[EL]
             )
         )
-    );
+QED
 
 (* Confirming findElem returns end of list if and only
    if element not present in list *)
-val FIND_ELEM_NO_MATCH = store_thm(
-    "FIND_ELEM_NO_MATCH",
-    ``((findElem lst e) = LENGTH lst)
-     <=> ~(MEM e lst)``,
+Theorem FIND_ELEM_NO_MATCH:
+      ((findElem lst e) = LENGTH lst)
+     <=> ~(MEM e lst)
+Proof
     Induct_on `lst`
     >- simp[findElem_def,MEM]
     >- (strip_tac
@@ -153,22 +141,21 @@ val FIND_ELEM_NO_MATCH = store_thm(
         >> Cases_on `h=e`
         >> simp[ADD1]
         )
-    );
+QED
 
 (* Placing a bound on findElem value *)
-val FIND_ELEM_BND = store_thm(
-    "FIND_ELEM_BND",
-    ``(findElem lst e) <= LENGTH lst``,
+Theorem FIND_ELEM_BND:
+      (findElem lst e) <= LENGTH lst
+Proof
     Induct_on `lst`
     >> rw[findElem_def]
-    );
+QED
 
 (* -- CHECK PAIRS FUNCTION -- *)
 (* check if pat is prefix of search from left to right and return failure point.
    Returns LENGTH pat if perfect match *)
-val checkPairs_def =
-    Define
-    `
+Definition checkPairs_def:
+
     (checkPairs [] = 0) /\
     (checkPairs (p::ps) =
         if
@@ -178,16 +165,16 @@ val checkPairs_def =
         else
             0
     )
-    `;
+End
 
 (* Checking that checkPairs correctly finds first point of mismatch *)
-val CHECK_PAIRS_THM = store_thm(
-    "CHECK_PAIRS_THM",
-    ``(checkPairs ps < LENGTH ps)
+Theorem CHECK_PAIRS_THM:
+      (checkPairs ps < LENGTH ps)
      ==> ((!i. i < checkPairs ps
                ==> (FST (EL i ps) = SND (EL i ps)))
           /\ (FST (EL (checkPairs ps) ps)
-              <> SND (EL (checkPairs ps) ps)))``,
+              <> SND (EL (checkPairs ps) ps)))
+Proof
     Induct_on `ps`
     >- fs[checkPairs_def,LENGTH_NIL]
     >- (strip_tac
@@ -212,13 +199,13 @@ val CHECK_PAIRS_THM = store_thm(
         >- (`checkPairs (h::ps) = 0`
                 by fs[checkPairs_def]
             >> fs[]))
-    );
+QED
 
 (* Checking that checkPairs returns end of ps if and only if all pairs match *)
-val CHECK_PAIRS_MATCH = store_thm(
-    "CHECK_PAIRS_MATCH",
-    ``(checkPairs ps = LENGTH ps)
-     <=> (!i. (i < LENGTH ps) ==> (FST (EL i ps) = SND (EL i ps)))``,
+Theorem CHECK_PAIRS_MATCH:
+      (checkPairs ps = LENGTH ps)
+     <=> (!i. (i < LENGTH ps) ==> (FST (EL i ps) = SND (EL i ps)))
+Proof
     Induct_on `ps`
     >- simp[LENGTH_NIL,checkPairs_def]
     >- (strip_tac
@@ -246,26 +233,25 @@ val CHECK_PAIRS_MATCH = store_thm(
                         by rw[]
                 >> simp[ADD1])
         )
-    );
+QED
 
 (* Placing a bound on checkPairs value *)
-val CHECK_PAIRS_BND = store_thm(
-    "CHECK_PAIRS_BND",
-    ``checkPairs ps <= LENGTH ps``,
+Theorem CHECK_PAIRS_BND:
+      checkPairs ps <= LENGTH ps
+Proof
     Induct_on `ps`
     >- fs[checkPairs_def]
     >- (strip_tac
         >> Cases_on `FST h = SND h`
         >> fs[checkPairs_def])
-    );
+QED
 
 (* -- CHECK PREFIX RL FUNCTION -- *)
 (* check if pat is prefix of search from right to left and return failure point.
    Returns LENGTH pat if perfect match. Returns LENGTH pat + 1 if search string
    is too short. *)
-val checkPrefixRL_def =
-    Define
-    `
+Definition checkPrefixRL_def:
+
     checkPrefixRL pat search =
         let
             (L = LENGTH pat);
@@ -286,18 +272,18 @@ val checkPrefixRL_def =
                         L
                     else
                         L - (1 + jLR)
-    `;
+End
 
 (* Confirming checkPrefixRL checks pat matches search from right
    to left correctly returning first point of failure *)
-val CHECK_PREFIX_RL_THM = store_thm(
-    "CHECK_PREFIX_RL_THM",
-    ``checkPrefixRL pat search < LENGTH pat
+Theorem CHECK_PREFIX_RL_THM:
+      checkPrefixRL pat search < LENGTH pat
      ==> (!i. ((checkPrefixRL pat search) < i
                 /\ i < LENGTH pat)
               ==> (EL i pat = EL i search))
          /\ (EL (checkPrefixRL pat search) pat
-             <> EL (checkPrefixRL pat search) search)``,
+             <> EL (checkPrefixRL pat search) search)
+Proof
     fs[checkPrefixRL_def]
     >> strip_tac
     >> Cases_on `LENGTH search < LENGTH pat`
@@ -371,14 +357,14 @@ val CHECK_PREFIX_RL_THM = store_thm(
                 by metis_tac[Abbr `ps`, Abbr `patR`,
                              LENGTH_REVERSE, LENGTH_ZIP]
         >> fs[])
-    );
+QED
 
 (* Confirming checkPrefixRL returns end of string if and only
    if no point of failure *)
-val CHECK_PREFIX_RL_MATCH = store_thm(
-    "CHECK_PREFIX_RL_MATCH",
-    ``(checkPrefixRL pat search = LENGTH pat)
-     <=> (pat = TAKE (LENGTH pat) search)``,
+Theorem CHECK_PREFIX_RL_MATCH:
+      (checkPrefixRL pat search = LENGTH pat)
+     <=> (pat = TAKE (LENGTH pat) search)
+Proof
     rw[EQ_IMP_THM]
     >- (qabbrev_tac `ps = ZIP ((REVERSE pat),
                                (REVERSE (TAKE (LENGTH pat) search)))`
@@ -430,36 +416,35 @@ val CHECK_PREFIX_RL_MATCH = store_thm(
             >> fs[CHECK_PAIRS_MATCH]
             )
         )
-    );
+QED
 
 (* Confirming checkPrefixRL returns one past end of string if and only
    length search < length pattern making prefix check non-sensical *)
-val CHECK_PREFIX_RL_ERROR = store_thm(
-    "CHECK_PREFIX_RL_ERROR",
-    ``(checkPrefixRL pat search = SUC (LENGTH pat))
-     <=> (LENGTH search < LENGTH pat)``,
+Theorem CHECK_PREFIX_RL_ERROR:
+      (checkPrefixRL pat search = SUC (LENGTH pat))
+     <=> (LENGTH search < LENGTH pat)
+Proof
     fs[checkPrefixRL_def]
-    );
+QED
 
 (* Placing a total bound on checkPrefixRL value *)
-val CHECK_PREFIX_RL_ABS_BND = store_thm(
-    "CHECK_PREFIX_RL_ABS_BND",
-    ``checkPrefixRL pat search <= SUC (LENGTH pat)``,
+Theorem CHECK_PREFIX_RL_ABS_BND:
+      checkPrefixRL pat search <= SUC (LENGTH pat)
+Proof
     fs[checkPrefixRL_def,CHECK_PAIRS_BND]
-    );
+QED
 
 (* Placing a bound on normal values of checkPrefixRL
    for sensible inputs *)
-val CHECK_PREFIX_RL_BND = store_thm(
-    "CHECK_PREFIX_RL_BND",
-    ``(LENGTH pat <= LENGTH search)
-     ==> (checkPrefixRL pat search <= LENGTH pat)``,
+Theorem CHECK_PREFIX_RL_BND:
+      (LENGTH pat <= LENGTH search)
+     ==> (checkPrefixRL pat search <= LENGTH pat)
+Proof
     strip_tac
     >> `checkPrefixRL pat search <> SUC (LENGTH pat)`
             by rw[CHECK_PREFIX_RL_ERROR]
     >> `checkPrefixRL pat search <= SUC (LENGTH pat)`
             by rw[CHECK_PREFIX_RL_ABS_BND]
     >> fs[]
-    );
+QED
 
-val _ = export_theory();

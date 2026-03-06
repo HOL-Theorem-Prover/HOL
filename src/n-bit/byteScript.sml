@@ -1,13 +1,13 @@
 (*
   A theory about byte-level manipulation of machine words.
 *)
+Theory byte
+Ancestors
+  arithmetic list[qualified] words rich_list
+Libs
+  dep_rewrite
 
-open HolKernel boolLib bossLib dep_rewrite Parse
-     arithmeticTheory rich_listTheory wordsTheory
 
-val _ = new_theory "byte";
-
-val _ = set_grammar_ancestry ["arithmetic", "list", "words"];
 val _ = temp_tight_equality();
 
 (* Get and set bytes in a word *)
@@ -79,12 +79,80 @@ Proof
   \\ ‘w2n a MOD 8 < 8’ by fs [MOD_LESS] \\ rw []
 QED
 
+Theorem set_byte_bit_field_insert:
+  set_byte a b w be = bit_field_insert (byte_index a be + 7) (byte_index a be) b w
+Proof
+  asm_simp_tac (boss_ss () ++ fcpLib.FCP_ss) [set_byte_def, bit_field_insert_def, word_modify_def, w2w, word_lsl_def, word_slice_alt_def, word_or_def]
+  >> rpt strip_tac
+  >> IF_CASES_TAC
+  >> fs []
+QED
+
 Theorem set_byte_change_a:
   w2n (a:'a word) MOD (dimindex(:'a) DIV 8) = w2n a' MOD (dimindex(:'a) DIV 8)
   ==>
     set_byte a b w be = set_byte a' b w be
 Proof
   rw[set_byte_def,byte_index_def]
+QED
+
+Theorem set_byte_eq_or:
+  (!j. j < 8n ==> ~ w ' (byte_index ix bige + j)) ==>
+  set_byte ix b w bige = (w || (w2w b << byte_index ix bige))
+Proof
+  simp [set_byte_bit_field_insert, wordsTheory.bit_field_insert_def,
+        wordsTheory.word_modify_def, wordsTheory.word_or_def, wordsTheory.word_lsl_def]
+  \\ simp_tac (std_ss ++ fcpLib.FCP_ss) [wordsTheory.w2w]
+  \\ rw []
+  \\ iff_tac \\ CCONTR_TAC \\ gs [wordsTheory.w2w]
+  \\ first_x_assum (qspec_then `i - byte_index ix bige` assume_tac)
+  \\ gs []
+QED
+
+Theorem lt_or_gt[local]:
+  (a: num) <> b ==> a < b \/ b < a
+Proof
+  simp []
+QED
+
+Theorem num_bytes_nonzero[local]:
+  8 <= dimindex (:'a) <=> 0 < dimindex (:'a) DIV 8
+Proof
+  iff_tac
+  >- (rpt strip_tac
+      >> `8 DIV 8 <= dimindex (:'a) DIV 8` by simp [DIV_LE_MONOTONE]
+      >> fs [])
+  >- (rpt strip_tac
+      >> irule LE_TRANS
+      >> qexists `dimindex (:'a) DIV 8 * 8`
+      >> simp [dividesTheory.DIV_MULT_LE])
+QED
+
+Theorem byte_index_lt_or_gt:
+  w2n (n: 'a word) MOD (dimindex (:'a) DIV 8) <> w2n (m: 'a word) MOD (dimindex (:'a) DIV 8)
+  /\ 8 <= dimindex (:'a)
+  ==> byte_index n be + 8 <= byte_index m be \/ byte_index m be + 8 <= byte_index n be
+Proof
+  rpt strip_tac
+  >> drule_then strip_assume_tac lt_or_gt
+  >> Cases_on `be`
+  >> fs [byte_index_def, num_bytes_nonzero]
+  >> qabbrev_tac `bytes = dimindex (:'a) DIV 8`
+  >> `w2n m MOD bytes < bytes` by simp []
+  >> `w2n n MOD bytes < bytes` by simp []
+  >> simp []
+QED
+
+Theorem set_byte_transpose:
+  w2n n MOD (dimindex (:'a) DIV 8) <> w2n m MOD (dimindex (:'a) DIV 8)
+  /\ 8 <= dimindex (:'a)
+  ==> set_byte n x (set_byte m y (w: 'a word) be) be = set_byte m y (set_byte n x w be) be
+Proof
+  rpt strip_tac
+  >> simp [set_byte_bit_field_insert]
+  >> irule bit_field_insert_transpose
+  >> drule_all_then (qspec_then `be` assume_tac) byte_index_lt_or_gt
+  >> simp []
 QED
 
 Theorem get_byte_set_byte:
@@ -131,6 +199,79 @@ Definition word_of_bytes_def:
   (word_of_bytes be a (b::bs) =
      set_byte a b (word_of_bytes be (a+1w) bs) be)
 End
+
+Theorem word_of_bytes_SNOC:
+  LENGTH bs < dimindex (:'a) DIV 8 /\ w2n (n: 'a word) + LENGTH bs < dimword (:'a) ==>
+  word_of_bytes be n (SNOC b bs) = set_byte (n + n2w (LENGTH bs)) b (word_of_bytes be n bs) be
+Proof
+  qid_spec_tac `n`
+  >> Induct_on `bs`
+  >- simp [word_of_bytes_def]
+  >- (rpt strip_tac
+      >> last_x_assum (qspec_then `n + 1w` assume_tac)
+      >> rfs [w2n_add_2, word_of_bytes_def, ADD1, GSYM word_add_n2w]
+      >> irule set_byte_transpose
+      >> qspecl_then [`dimindex (:'a) DIV 8`, `LENGTH bs + 1`, `0`, `w2n n`] assume_tac ADD_MOD
+      >> rfs [w2n_add_2, num_bytes_nonzero])
+QED
+
+Theorem word_of_bytes_eq_or_helper[local]:
+  !bs n w. (!j. j < LENGTH bs ==> ~ (f (EL j bs) (j + n) ' ix)) /\
+  ~ ((w : 'a word) ' ix) /\ ix < dimindex (: 'a) ==>
+  ~ FOLDRi (\x b w. w || (f b (n + x))) w bs ' ix
+Proof
+  Induct
+  \\ simp []
+  \\ rw []
+  \\ ONCE_REWRITE_TAC [wordsTheory.word_or_def]
+  \\ simp [fcpTheory.FCP_BETA]
+  \\ conj_tac
+  >- (
+    first_x_assum (qspec_then `0n` mp_tac)
+    \\ simp []
+  )
+  \\ simp [combinTheory.o_DEF]
+  \\ last_x_assum (qspec_then `SUC n` mp_tac)
+  \\ simp [arithmeticTheory.ADD1]
+  \\ disch_then irule
+  \\ rw []
+  \\ first_x_assum (qspec_then `SUC j` mp_tac)
+  \\ simp [arithmeticTheory.ADD1]
+QED
+
+Theorem word_of_bytes_eq_or_helper2[local] =
+    word_of_bytes_eq_or_helper |> Q.SPECL [`bs`, `0n`]
+    |> SIMP_RULE std_ss []
+
+Theorem w2n_increment[local]:
+  w2n (x + 1w) = (if x = UINT_MAXw then 0n else w2n x + 1)
+Proof
+  qspec_then `x` mp_tac wordsTheory.w2n_plus1
+  \\ rw []
+QED
+
+Theorem word_of_bytes_eq_or:
+  !bs ix.
+  (w2n ix + LENGTH bs) * 8 <= dimindex (: 'a) /\
+  EVERYi (\i _. ix + n2w i <> -1w) bs ==>
+  word_of_bytes F ix bs =
+    FOLDRi (\i b w. (w2w b << ((w2n ix + i) * 8)) || w) (0w : 'a word) bs
+Proof
+  Induct
+  \\ simp [word_of_bytes_def]
+  \\ rw []
+  \\ first_x_assum (qspec_then `ix + 1w` mp_tac)
+  \\ fs [listTheory.EVERYi_def, w2n_increment]
+  \\ fs [combinTheory.o_DEF, wordsTheory.n2w_SUC]
+  \\ rw []
+  \\ dep_rewrite.DEP_ONCE_REWRITE_TAC [set_byte_eq_or]
+  \\ simp [byte_index_def]
+  \\ simp [arithmeticTheory.LESS_MOD, arithmeticTheory.X_LT_DIV]
+  \\ rw [arithmeticTheory.ADD1]
+  \\ ho_match_mp_tac word_of_bytes_eq_or_helper2
+  \\ rw [wordsTheory.word_0]
+  \\ simp [wordsTheory.word_lsl_def, wordsTheory.w2w, fcpTheory.FCP_BETA]
+QED
 
 Definition words_of_bytes_def:
   (words_of_bytes be [] = ([]:'a word list)) /\
@@ -310,6 +451,29 @@ Definition word_to_bytes_def:
   word_to_bytes (w:'a word) be =
   word_to_bytes_aux (dimindex (:'a) DIV 8) w be
 End
+
+Theorem LENGTH_word_to_bytes_aux[simp]:
+  LENGTH (word_to_bytes_aux n w b) = n
+Proof
+  Induct_on`n` \\ rw[word_to_bytes_aux_def]
+QED
+
+Theorem LENGTH_word_to_bytes[simp]:
+  LENGTH (word_to_bytes (w:'a word) be) = dimindex(:'a) DIV 8
+Proof
+  rw[word_to_bytes_def]
+QED
+
+Theorem EL_word_to_bytes_aux:
+  i < n ==> EL i (word_to_bytes_aux n w be) = get_byte (n2w i) w be
+Proof
+  map_every qid_spec_tac [`i`,`n`]
+  \\ Induct \\ rw[word_to_bytes_aux_def]
+  \\ Cases_on `i < n`
+  >- simp[EL_APPEND1]
+  \\ `i = n` by gvs[]
+  \\ simp[EL_APPEND2]
+QED
 
 Theorem byte_index_cycle:
   8 <= dimindex (:'a) ==>
@@ -680,45 +844,6 @@ Proof
          simp[MULT_DIV])>>simp[]
 QED
 
-(*
-Theorem word_to_bytes_word_of_bytes_32:
-  LENGTH bs = dimindex (:32) DIV 8 ==>
-  word_to_bytes (word_of_bytes be (0w:word32) bs) be = bs
-Proof
-  simp[word_to_bytes_def]>>
-  rewrite_tac[numLib.num_CONV “4”,numLib.num_CONV “3”,TWO,ONE,
-              word_to_bytes_aux_def]>>
-  simp[]>>
-  Cases_on ‘bs’>>simp[]>>
-  rename1 ‘_ ==> _ /\ _ = bs’>>Cases_on ‘bs’>>simp[]>>
-  ntac 2 (SIMP_TAC std_ss [Once CONJ_ASSOC]>>
-       rename1 ‘_ /\ _ = bs’>>Cases_on ‘bs’>>simp[])>>
-  rewrite_tac[numLib.num_CONV “4”,numLib.num_CONV “3”,TWO,ONE]>>
-  fs[]>>strip_tac>>
-  simp[word_of_bytes_def,get_byte_set_byte_irrelevant,get_byte_set_byte]
-QED
-
-Theorem word_to_bytes_word_of_bytes_64:
-  LENGTH bs = dimindex (:64) DIV 8 ==>
-  word_to_bytes (word_of_bytes be (0w:word64) bs) be = bs
-Proof
-  simp[word_to_bytes_def]>>
-  rewrite_tac[numLib.num_CONV “8”,numLib.num_CONV “7”,numLib.num_CONV “6”,
-              numLib.num_CONV “5”,numLib.num_CONV “4”,numLib.num_CONV “3”,
-              TWO,ONE,word_to_bytes_aux_def]>>
-  simp[]>>
-  Cases_on ‘bs’>>simp[]>>
-  rename1 ‘_ /\ _ = bs’>>Cases_on ‘bs’>>simp[]>>
-  ntac 6 (SIMP_TAC std_ss [Once CONJ_ASSOC]>>
-       rename1 ‘_ /\ _ = bs’>>Cases_on ‘bs’>>simp[])>>
-  rewrite_tac[numLib.num_CONV “8”,numLib.num_CONV “7”,numLib.num_CONV “6”,
-              numLib.num_CONV “5”,numLib.num_CONV “4”,numLib.num_CONV “3”,
-              TWO,ONE]>>
-  fs[]>>strip_tac>>
-  simp[word_of_bytes_def,get_byte_set_byte_irrelevant,get_byte_set_byte]
-QED
-*)
-
 Theorem set_byte_get_byte:
   8 <= dimindex (:'a) ==>
   set_byte a (get_byte (a:'a word) (w:'a word) be) w be = w
@@ -805,34 +930,352 @@ Proof
   srw_tac[wordsLib.WORD_BIT_EQ_ss][word_slice_alt_def]
 QED
 
-Theorem word_to_bytes_word_of_bytes_32:
-  word_of_bytes be (0w:word32) (word_to_bytes (w:word32) be) = w
+Theorem word_slice_alt_empty:
+  h <= l ==> word_slice_alt h l w = 0w
 Proof
-  ‘8 <= dimindex (:32)’ by simp[]>>
-  simp[word_to_bytes_def]>>
-  rewrite_tac[numLib.num_CONV “4”,numLib.num_CONV “3”,TWO,ONE,
-              word_to_bytes_aux_def]>>
-  simp[]>>
-  simp[word_of_bytes_def]>>
-  simp[set_byte_get_byte_copy]>>
-  rpt (CASE_TAC>>fs[byte_index_def])>>
-  srw_tac[wordsLib.WORD_BIT_EQ_ss][word_slice_alt_def]
+  asm_simp_tac (boss_ss () ++ fcpLib.FCP_ss) [word_slice_alt_def, word_0]
+  >> rpt strip_tac
+  >> spose_not_then assume_tac
+  >> simp []
 QED
 
-Theorem word_to_bytes_word_of_bytes_64:
-  word_of_bytes be (0w:word64) (word_to_bytes (w:word64) be) = w
+Theorem word_slice_alt_full:
+  dimindex (:'a) <= h ==> word_slice_alt h 0 (w: 'a word) = w
 Proof
-  ‘8 <= dimindex (:64)’ by simp[]>>
-  simp[word_to_bytes_def]>>
-  rewrite_tac[numLib.num_CONV “8”,numLib.num_CONV “7”,
-              numLib.num_CONV “6”,numLib.num_CONV “5”,
-              numLib.num_CONV “4”,numLib.num_CONV “3”,
-              TWO,ONE,word_to_bytes_aux_def]>>
-  simp[]>>
-  simp[word_of_bytes_def]>>
-  simp[set_byte_get_byte_copy]>>
-  rpt (CASE_TAC>>fs[byte_index_def])>>
-  srw_tac[wordsLib.WORD_BIT_EQ_ss][word_slice_alt_def]
+  asm_simp_tac (boss_ss () ++ fcpLib.FCP_ss) [word_slice_alt_def]
 QED
 
-val _ = export_theory();
+Theorem bit_field_insert_self_word_slice_alt:
+  l1 <= h2 /\ l2 <= SUC h1 ==>
+  bit_field_insert h1 l1 (w >>> l1) (word_slice_alt h2 l2 w) = word_slice_alt (MAX (SUC h1) h2) (MIN l1 l2) w
+Proof
+  asm_simp_tac (boss_ss () ++ fcpLib.FCP_ss) [bit_field_insert_def, word_slice_alt_def, word_modify_def, word_lsr_def, LT_SUC_LE]
+  >> rpt strip_tac
+  >> IF_CASES_TAC
+  >- simp []
+  >- fs [NOT_LE]
+QED
+
+Theorem word_of_bytes_word_to_bytes_aux_le:
+  n <= dimindex (:'a) DIV 8 /\ 8 <= dimindex (:'a)
+  ==> word_of_bytes F 0w (word_to_bytes_aux n (w: 'a word) F) = word_slice_alt (8 * n) 0 w
+Proof
+  Induct_on `n`
+  >- simp [word_to_bytes_aux_def, word_of_bytes_def, word_slice_alt_empty]
+  >- (strip_tac
+      >> `dimindex (:'a) DIV 8 <= dimindex (:'a)` by simp [DIV_LESS_EQ]
+      >> `n < dimword (:'a)` by simp [dimindex_lt_dimword, LESS_TRANS, LESS_LESS_EQ_TRANS]
+      >> simp [word_to_bytes_aux_def, GSYM SNOC_APPEND, word_of_bytes_SNOC, set_byte_bit_field_insert, get_byte_def, bit_field_insert_w2w, byte_index_def, bit_field_insert_self_word_slice_alt, MAX_DEF, ADD1, LEFT_ADD_DISTRIB])
+QED
+
+Theorem word_of_bytes_word_to_bytes_aux_be:
+  n <= dimindex (:'a) DIV 8 /\ 8 <= dimindex (:'a)
+  ==> word_of_bytes T 0w (word_to_bytes_aux n (w: 'a word) T) = word_slice_alt (8 * (dimindex (:'a) DIV 8)) (8 * (dimindex (:'a) DIV 8 - n)) w
+Proof
+  Induct_on `n`
+  >- simp [word_to_bytes_aux_def, word_of_bytes_def, word_slice_alt_empty]
+  >- (rpt strip_tac
+      >> `dimindex (:'a) DIV 8 <= dimindex (:'a)` by simp [DIV_LESS_EQ]
+      >> `n < dimword (:'a)` by simp [dimindex_lt_dimword, LESS_TRANS, LESS_LESS_EQ_TRANS]
+      >> simp [word_to_bytes_aux_def, GSYM SNOC_APPEND, word_of_bytes_SNOC, set_byte_bit_field_insert, get_byte_def, bit_field_insert_w2w, byte_index_def, bit_field_insert_self_word_slice_alt, MAX_EQ_GE, MIN_EQ_LE, ADD1])
+QED
+
+Theorem word_of_bytes_word_to_bytes:
+  8 <= dimindex (:'a) /\ divides 8 (dimindex (:'a))
+  ==> word_of_bytes be 0w (word_to_bytes (w: 'a word) be) = w
+Proof
+  simp [word_to_bytes_def]
+  >> Cases_on `be`
+  >- simp [word_of_bytes_word_to_bytes_aux_be, dividesTheory.DIVIDES_DIV, word_slice_alt_full]
+  >- simp [word_of_bytes_word_to_bytes_aux_le, dividesTheory.DIVIDES_DIV, word_slice_alt_full]
+QED
+
+Theorem word_to_bytes_word_of_bytes_32 = word_of_bytes_word_to_bytes |> INST_TYPE [``:'a`` |-> ``:32``] |> SRULE [dividesTheory.compute_divides]
+Theorem word_to_bytes_word_of_bytes_64 = word_of_bytes_word_to_bytes |> INST_TYPE [``:'a`` |-> ``:64``] |> SRULE [dividesTheory.compute_divides]
+
+(* ------------------------------------------------------------------- *)
+(*  Helper functions for cv translation of word_of_bytes/word_to_bytes *)
+(* ------------------------------------------------------------------- *)
+
+(* Convert a list of bytes to a natural number (little-endian) *)
+Definition num_of_bytes_def:
+  num_of_bytes [] = 0 /\
+  num_of_bytes ((b:word8)::bs) = w2n b + 256 * num_of_bytes bs
+End
+
+(* Convert a natural number to a list of bytes (little-endian) *)
+Definition bytes_of_num_def:
+  bytes_of_num 0 n = [] /\
+  bytes_of_num (SUC k) n = (n2w n : word8) :: bytes_of_num k (n DIV 256)
+End
+
+(* Pad and reverse a byte list for big-endian conversion.
+   be_bytes k res bs pads bs with zeros to length k and reverses,
+   accumulating the result in res. *)
+Definition be_bytes_def:
+  be_bytes 0 res bs = res /\
+  be_bytes (SUC l) res [] = be_bytes l ((0w:word8)::res) [] /\
+  be_bytes (SUC l) res (x::xs) = be_bytes l (x::res) xs
+End
+
+(* Basic properties of helper functions *)
+
+Theorem LENGTH_bytes_of_num[simp]:
+  ∀k n. LENGTH (bytes_of_num k n) = k
+Proof
+  Induct \\ rw[bytes_of_num_def]
+QED
+
+Theorem EL_bytes_of_num:
+  i < k ==> EL i (bytes_of_num k n) = n2w (n DIV 256 ** i)
+Proof
+  map_every qid_spec_tac [`n`,`i`,`k`]
+  \\ Induct \\ rw[bytes_of_num_def]
+  \\ Cases_on `i` \\ gvs[]
+  \\ simp[DIV_DIV_DIV_MULT, EXP]
+QED
+
+Theorem LENGTH_be_bytes:
+  !l res bs. LENGTH (be_bytes l res bs) = l + LENGTH res
+Proof
+  Induct \\ rw[be_bytes_def] \\ Cases_on ‘bs’ \\ rw[be_bytes_def]
+QED
+
+Theorem be_bytes_thm:
+  !l res bs. be_bytes l res bs =
+    REVERSE (TAKE l (bs ++ REPLICATE l 0w)) ++ res
+Proof
+  Induct
+  \\ rw[be_bytes_def]
+  \\ Cases_on ‘bs’ \\ rw[be_bytes_def]
+  \\ rw[TAKE_APPEND]
+  \\ rw[listTheory.LIST_EQ_REWRITE, listTheory.LENGTH_TAKE_EQ]
+  \\ rw[listTheory.EL_TAKE, EL_REPLICATE]
+  \\ qmatch_goalsub_rename_tac`EL x _`
+  \\ Cases_on ‘x’ \\ rw[listTheory.EL_TAKE, EL_REPLICATE]
+QED
+
+Theorem num_of_bytes_REPLICATE_0w[simp]:
+  ∀n. num_of_bytes (REPLICATE n 0w) = 0
+Proof
+  Induct \\ rw[num_of_bytes_def]
+QED
+
+Theorem num_of_bytes_APPEND:
+  ∀xs ys. num_of_bytes (xs ++ ys) =
+          num_of_bytes xs + 256 ** LENGTH xs * num_of_bytes ys
+Proof
+  Induct \\ rw[num_of_bytes_def, EXP]
+QED
+
+Theorem num_of_bytes_DIV_EXP_MOD:
+  ∀bs j.
+  (num_of_bytes bs DIV (256 ** j)) MOD 256 =
+  if j < LENGTH bs then w2n (EL j bs) else 0
+Proof
+  Induct \\ simp[num_of_bytes_def]
+  \\ qx_gen_tac `b` \\ Cases \\ gvs[]
+  \\ `w2n b < 256`
+  by (qspec_then`b`mp_tac w2n_lt \\ rw[dimword_def])
+  \\ simp[EXP]
+  \\ qmatch_goalsub_abbrev_tac`(c * a + bb)`
+  \\ qspecl_then[`c`,`c ** n`]mp_tac(GSYM DIV_DIV_DIV_MULT)
+  \\ impl_tac >- rw[Abbr`c`]
+  \\ simp[] \\ disch_then kall_tac
+  \\ `(bb + a * c) DIV c = a` by (
+    qspecl_then[`c`,`bb`]mp_tac DIV_MULT
+    \\ simp[] \\ disch_then(qspec_then`a`mp_tac) \\ rw[])
+  \\ rw[]
+QED
+
+(* first_byte_at k j a bs finds the first byte in bs that lands at position j
+   when bytes are written starting at address a, with k byte positions (wrapping). *)
+Definition first_byte_at_def:
+  first_byte_at k j a [] = (0w:word8) /\
+  first_byte_at k j a (b::bs) =
+    if w2n a MOD k = j then b else first_byte_at k j (a + 1w) bs
+End
+
+(* Connecting get_byte and word_of_bytes for little-endian *)
+Theorem get_byte_word_of_bytes_le:
+  ∀bs j a.
+  8 <= dimindex(:'a) /\ j < dimindex(:'a) DIV 8 ==>
+  get_byte (n2w j) (word_of_bytes F a bs : 'a word) F =
+    first_byte_at (dimindex(:'a) DIV 8) j a bs
+Proof
+  Induct \\ rw[]
+  >- rw[word_of_bytes_def, first_byte_at_def, get_byte_def]
+  \\ rw[word_of_bytes_def]
+  \\ Cases_on`j = w2n a MOD (dimindex (:'a) DIV 8)`
+  >- (
+    simp[first_byte_at_def] \\ gvs[]
+    \\ qmatch_goalsub_abbrev_tac`get_byte a'`
+    \\ qmatch_goalsub_abbrev_tac`set_byte a h w`
+    \\ `set_byte a h w F = set_byte a' h w F`
+    by ( irule set_byte_change_a \\ gvs[Abbr`a'`]
+         \\ qmatch_goalsub_abbrev_tac`x = _`
+         \\ qmatch_goalsub_abbrev_tac`x MOD k`
+         \\ `x < k` by gvs[Abbr`k`,dimindex_lt_dimword,X_LT_DIV]
+         \\ simp[LESS_MOD] )
+    \\ rw[get_byte_set_byte] )
+  \\ rw[first_byte_at_def]
+  \\ reverse $ Cases_on`16 ≤ dimindex (:'a)`
+  >- (
+    gvs[X_LT_DIV] \\ Cases_on`j` \\ gvs[]
+    \\ `1 ≤ dimindex (:'a) DIV 8` by gvs[X_LE_DIV]
+    \\ `dimindex (:'a) DIV 8 ≤ 1` by gvs[DIV_LE_X]
+    \\ `dimindex (:'a) DIV 8 = 1` by gvs[]
+    \\ gvs[X_LT_DIV] )
+  \\ DEP_REWRITE_TAC[get_byte_set_byte_irrelevant]
+  \\ simp[]
+  \\ gvs[LESS_MOD, X_LT_DIV, dimindex_lt_dimword]
+QED
+
+(* Helper lemma: first_byte_at with offset starting address.
+   This generalizes first_byte_at_0w to handle starting at n2w m instead of 0w. *)
+Theorem first_byte_at_offset:
+  ∀bs m k j.
+  0 < k /\ j < k /\ m < k /\ m <= j /\ k <= dimword(:'a) ==>
+  first_byte_at k j (n2w m : 'a word) bs =
+  if j - m < LENGTH bs then EL (j - m) bs else 0w
+Proof
+  Induct
+  >- rw[first_byte_at_def]
+  \\ simp[first_byte_at_def]
+  \\ rpt gen_tac \\ strip_tac
+  \\ IF_CASES_TAC
+  >- rw[]
+  \\ Cases_on`m < j` \\ gvs[]
+  \\ first_x_assum(qspec_then`m + 1`mp_tac)
+  \\ simp[word_add_n2w]
+  \\ rw[EL_CONS, PRE_SUB1]
+  \\ gvs[ADD1]
+QED
+
+(* Evaluating first_byte_at at starting index 0w.
+   Immediate corollary of first_byte_at_offset with m = 0. *)
+Theorem first_byte_at_0w:
+  0 < k /\ j < k /\ k <= dimword(:'a) ==>
+  first_byte_at k j (0w:'a word) bs = if j < LENGTH bs then EL j bs else 0w
+Proof
+  rw[]
+  \\ qspecl_then [`bs`, `0`] mp_tac first_byte_at_offset
+  \\ simp[]
+QED
+
+(* Connecting get_byte and word_of_bytes for big-endian.
+   Note: both get_byte and set_byte with big-endian flag T access byte_index 8*(k-1-j)
+   for address n2w j, so they operate on the same byte position. Therefore the
+   first_byte_at lookup uses j directly, same as the little-endian case. *)
+Theorem get_byte_word_of_bytes_be:
+  ∀bs j a.
+  8 <= dimindex(:'a) /\ j < dimindex(:'a) DIV 8 ==>
+  get_byte (n2w j) (word_of_bytes T a bs : 'a word) T =
+    first_byte_at (dimindex(:'a) DIV 8) j a bs
+Proof
+  Induct \\ rw[]
+  >- rw[word_of_bytes_def, first_byte_at_def, get_byte_def]
+  \\ rw[word_of_bytes_def]
+  \\ Cases_on `j = w2n a MOD (dimindex (:'a) DIV 8)`
+  >- (
+    simp[first_byte_at_def] \\ gvs[]
+    \\ qmatch_goalsub_abbrev_tac `get_byte a'`
+    \\ qmatch_goalsub_abbrev_tac `set_byte a h w`
+    \\ `set_byte a h w T = set_byte a' h w T`
+    by ( irule set_byte_change_a \\ gvs[Abbr`a'`]
+         \\ qmatch_goalsub_abbrev_tac `x = _`
+         \\ qmatch_goalsub_abbrev_tac `x MOD k`
+         \\ `x < k` by gvs[Abbr`k`, dimindex_lt_dimword, X_LT_DIV]
+         \\ simp[LESS_MOD] )
+    \\ rw[get_byte_set_byte] )
+  \\ rw[first_byte_at_def]
+  \\ reverse $ Cases_on `16 ≤ dimindex (:'a)`
+  >- (
+    gvs[X_LT_DIV] \\ Cases_on `j` \\ gvs[]
+    \\ `1 ≤ dimindex (:'a) DIV 8` by gvs[X_LE_DIV]
+    \\ `dimindex (:'a) DIV 8 ≤ 1` by gvs[DIV_LE_X]
+    \\ `dimindex (:'a) DIV 8 = 1` by gvs[]
+    \\ gvs[X_LT_DIV] )
+  \\ DEP_REWRITE_TAC[get_byte_set_byte_irrelevant]
+  \\ simp[]
+  \\ gvs[LESS_MOD, X_LT_DIV, dimindex_lt_dimword]
+QED
+
+(* get_byte extracts the right byte from a word (little-endian) *)
+Theorem get_byte_n2w_le:
+  8 <= dimindex(:'a) /\ i < dimindex(:'a) DIV 8 ==>
+  get_byte (n2w i : 'a word) w F = n2w ((w2n w) DIV (256 ** i))
+Proof
+  rw[get_byte_def, byte_index_def]
+  \\ gvs[LESS_MOD, dimindex_lt_dimword, X_LT_DIV]
+  \\ rw[w2w_def, w2n_lsr, EXP_EXP_MULT]
+QED
+
+(* get_byte extracts the right byte from a word (big-endian) *)
+Theorem get_byte_n2w_be:
+  8 <= dimindex(:'a) /\ i < dimindex(:'a) DIV 8 ==>
+  get_byte (n2w i : 'a word) w T =
+    n2w ((w2n w) DIV (256 ** (dimindex(:'a) DIV 8 - 1 - i)))
+Proof
+  rw[get_byte_def, byte_index_def]
+  \\ gvs[LESS_MOD, dimindex_lt_dimword, X_LT_DIV]
+  \\ rw[w2w_def, w2n_lsr, EXP_EXP_MULT]
+QED
+
+(* Two words are equal if all their bytes are equal.
+   Requires dimindex divisible by 8 so that bytes cover all bits. *)
+Theorem word_eq_of_get_byte:
+  8 <= dimindex(:'a) /\ divides 8 (dimindex(:'a)) ==>
+  ((!j. j < dimindex(:'a) DIV 8 ==> get_byte (n2w j) w1 be = get_byte (n2w j) w2 be) ==>
+   (w1:'a word) = w2)
+Proof
+  simp[GSYM WORD_EQ, word_bit_def]
+  \\ ntac 2 strip_tac
+  \\ qx_gen_tac`i` \\ strip_tac
+  \\ qspec_then`8`mp_tac DIVISION
+  \\ impl_tac >- rw[]
+  \\ disch_then(qspec_then`i`strip_assume_tac)
+  \\ `i DIV 8 < dimindex(:'a) DIV 8` by (
+    gvs[X_LT_DIV,DIV_LT_X,MULT_DIV]
+    \\ gvs[dividesTheory.DIV_MULT_EQ] )
+  \\ `dimindex(:'a) DIV 8 - 1 - i DIV 8 < dimindex(:'a) DIV 8`
+  by ( gvs[X_LT_DIV] \\ Cases_on`i DIV 8 = 0` \\ gvs[] \\ rw[X_LT_DIV] )
+  \\ first_assum drule
+  \\ pop_assum kall_tac
+  \\ first_x_assum drule
+  \\ disch_then drule \\ strip_tac
+  \\ disch_then drule \\ strip_tac
+  \\ qmatch_asmsub_abbrev_tac`j * 8 + r`
+  \\ `r < 8` by rw[Abbr`r`]
+  \\ Cases_on`be=F`
+  >- (
+    qpat_x_assum`get_byte (n2w j) _ _ ' _ = _`mp_tac
+    \\ simp[get_byte_def, byte_index_def]
+    \\ gvs[LESS_MOD, dimindex_lt_dimword]
+    \\ simp[w2w, word_lsr_def]
+    \\ srw_tac[wordsLib.WORD_BIT_EQ_ss][] )
+  \\ gvs[]
+  \\ qpat_x_assum`_ <=> _`mp_tac
+  \\ qmatch_goalsub_abbrev_tac`k - _`
+  \\ `k - 1 - j < k` by gvs[]
+  \\ `k - 1 - j < dimword(:'a)` by gvs[Abbr`k`,DIV_LT_X,dimindex_lt_dimword]
+  \\ `w2n(n2w(k - 1 - j)) = k - 1 - j` by simp[]
+  \\ simp[get_byte_def, byte_index_def, word_lsr_def, w2w]
+  \\ srw_tac[wordsLib.WORD_BIT_EQ_ss][]
+QED
+
+Definition word_of_bytes_le_def:
+  word_of_bytes_le = word_of_bytes F 0w
+End
+
+Definition word_of_bytes_be_def:
+  word_of_bytes_be = word_of_bytes T 0w
+End
+
+Definition word_to_bytes_le_def:
+  word_to_bytes_le w = word_to_bytes w F
+End
+
+Definition word_to_bytes_be_def:
+  word_to_bytes_be w = word_to_bytes w T
+End

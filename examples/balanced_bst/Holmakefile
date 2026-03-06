@@ -1,3 +1,0 @@
-INCLUDES = \
-  $(HOLDIR)/src/finite_maps \
-  $(HOLDIR)/src/string

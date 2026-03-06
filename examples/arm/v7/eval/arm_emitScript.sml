@@ -8,15 +8,13 @@
   app load ["arm_evalTheory", "wordsLib", "pred_setSyntax", "emitLib",
             "EmitTeX", "extended_emitTheory"];
 *)
+Theory arm_emit
+Ancestors
+  arm_coretypes arm_ast arm_seq_monad arm_decoder arm_opsem arm
+  arm_eval extended_emit
+Libs
+  wordsLib EmitML
 
-open HolKernel boolLib bossLib Parse wordsLib;
-
-open arm_coretypesTheory arm_astTheory arm_seq_monadTheory
-     arm_decoderTheory arm_opsemTheory armTheory arm_evalTheory;
-
-open EmitML extended_emitTheory;
-
-val _ = new_theory "arm_emit";
 
 (* ------------------------------------------------------------------------ *)
 
@@ -109,20 +107,25 @@ in
         end
 end;
 
-val i2bits_itself_def = Define`
-  i2bits_itself (i,N,(:'a)) = (i2bits (i,N)) : 'a word`;
+Definition i2bits_itself_def:
+  i2bits_itself (i,N,(:'a)) = (i2bits (i,N)) : 'a word
+End
 
-val signed_sat_itself_def = Define`
-  signed_sat_itself (i,N,(:'a)) = (signed_sat (i,N)) : 'a word`;
+Definition signed_sat_itself_def:
+  signed_sat_itself (i,N,(:'a)) = (signed_sat (i,N)) : 'a word
+End
 
-val unsigned_sat_itself_def = Define`
-  unsigned_sat_itself (i,N,(:'a)) = (unsigned_sat (i,N)) : 'a word`;
+Definition unsigned_sat_itself_def:
+  unsigned_sat_itself (i,N,(:'a)) = (unsigned_sat (i,N)) : 'a word
+End
 
-val signed_sat_q_itself_def = Define`
-  signed_sat_q_itself (i,N,(:'a)) = (signed_sat_q (i,N)) : 'a word # bool`;
+Definition signed_sat_q_itself_def:
+  signed_sat_q_itself (i,N,(:'a)) = (signed_sat_q (i,N)) : 'a word # bool
+End
 
-val unsigned_sat_q_itself_def = Define`
-  unsigned_sat_q_itself (i,N,(:'a)) = (unsigned_sat_q (i,N)) : 'a word # bool`;
+Definition unsigned_sat_q_itself_def:
+  unsigned_sat_q_itself (i,N,(:'a)) = (unsigned_sat_q (i,N)) : 'a word # bool
+End
 
 val _ = type_pp.pp_num_types := false;
 val _ = type_pp.pp_array_types := false;
@@ -307,4 +310,3 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = export_theory ();

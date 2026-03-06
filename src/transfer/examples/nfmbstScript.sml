@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory finite_mapTheory transferTheory transferLib
-
-val _ = new_theory "nfmbst";
+Theory nfmbst
+Ancestors
+  pred_set finite_map transfer
+Libs
+  transferLib
 
 Datatype:
   bst = Lf | Nd bst num 'a bst
@@ -377,4 +377,3 @@ QED
 *)
 
 
-val _ = export_theory();

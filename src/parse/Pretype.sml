@@ -184,10 +184,15 @@ fun clean ty =
       Type.mk_thy_type{Tyop = s, Thy = Thy, Args = map clean Args}
   | _ => raise Fail "Don't expect to see links remaining at this stage"
 
+val typecheck_listener = ref (fn _:pretype => fn _:Env.t => ());
+
 fun toTypeM ty : Type.hol_type in_env =
   remove_made_links ty >-
   (fn ty => tyvars ty >-
-  (fn vs => lift (clean o #2) (addState vs (replace_null_links ty))))
+  (fn vs => addState vs (replace_null_links ty) >-
+  (fn (_, pty) => fn e => (
+    !typecheck_listener pty e;
+    return (clean pty) e))))
 
 fun toType pty =
   case toTypeM pty Env.empty of

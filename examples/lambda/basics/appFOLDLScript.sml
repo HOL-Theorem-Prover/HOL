@@ -5,15 +5,13 @@
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (*         : 2023-2024 Michael Norrish and Chun Tian                          *)
 (* ========================================================================== *)
+Theory appFOLDL
+Ancestors
+  arithmetic list rich_list pred_set finite_map pair term
+  basic_swap
+Libs
+  hurdUtils listLib binderLib NEWLib
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory listTheory rich_listTheory pred_setTheory finite_mapTheory
-     hurdUtils listLib pairTheory;
-
-open termTheory binderLib basic_swapTheory NEWLib;
-
-val _ = new_theory "appFOLDL"
 
 val _ = set_fixity "@*" (Infixl 901)
 val _ = Unicode.unicode_version { u = "··", tmnm = "@*"}
@@ -40,14 +38,15 @@ Proof
   Cases_on `args` using SNOC_CASES >> simp[FOLDL_SNOC] >> metis_tac[]
 QED
 
-val app_eq_appstar = store_thm(
-  "app_eq_appstar",
-  ``∀args f M N.
+Theorem app_eq_appstar:
+    ∀args f M N.
        (M @@ N = f ·· args) ⇔
        (args = []) ∧ (f = M @@ N) ∨
-       (args ≠ []) ∧ (M = f ·· FRONT args) ∧ (N = LAST args)``,
+       (args ≠ []) ∧ (M = f ·· FRONT args) ∧ (N = LAST args)
+Proof
   Induct THEN SRW_TAC [][] THEN1 METIS_TAC [] THEN
-  Cases_on `args` THEN SRW_TAC [][] THEN1 METIS_TAC []);
+  Cases_on `args` THEN SRW_TAC [][] THEN1 METIS_TAC []
+QED
 
 Theorem lam_eq_appstar[simp]:
   ∀args f. (LAM v t = f ·· args) ⇔ (args = []) ∧ (f = LAM v t)
@@ -55,12 +54,13 @@ Proof
   Induct THEN SRW_TAC [][] THEN METIS_TAC []
 QED
 
-val app_eq_varappstar = store_thm(
-  "app_eq_varappstar",
-  ``∀M N args.
+Theorem app_eq_varappstar:
+    ∀M N args.
        (M @@ N = VAR v ·· args) ⇔ args ≠ [] ∧ (M = VAR v ·· FRONT args) ∧
-                                  (N = LAST args)``,
-  SRW_TAC [][app_eq_appstar]);
+                                  (N = LAST args)
+Proof
+  SRW_TAC [][app_eq_appstar]
+QED
 
 val take_lemma = prove(
   ``∀l n. 0 < n ∧ n ≤ LENGTH l ⇒ TAKE n l ≠ []``,
@@ -68,9 +68,8 @@ val take_lemma = prove(
 
 val _ = augment_srw_ss[rewrites[TAKE_def, DROP_def]];
 
-val appstar_eq_appstar = store_thm(
-  "appstar_eq_appstar",
-  ``∀a₁ f₁ f₂ a₂.
+Theorem appstar_eq_appstar:
+    ∀a₁ f₁ f₂ a₂.
        (f₁ ·· a₁ = f₂ ·· a₂) ⇔
          (a₁ = a₂) ∧ (f₁ = f₂) ∨
          (LENGTH a₁ < LENGTH a₂ ∧
@@ -78,7 +77,8 @@ val appstar_eq_appstar = store_thm(
           (a₁ = DROP (LENGTH a₂ - LENGTH a₁) a₂)) ∨
          (LENGTH a₂ < LENGTH a₁ ∧
           (f₂ = f₁ ·· TAKE (LENGTH a₁ - LENGTH a₂) a₁) ∧
-          (a₂ = DROP (LENGTH a₁ - LENGTH a₂) a₁))``,
+          (a₂ = DROP (LENGTH a₁ - LENGTH a₂) a₁))
+Proof
   Induct THEN SRW_TAC [][] THENL [
     Cases_on `a₂` THEN SRW_TAC [][rich_listTheory.BUTFIRSTN_LENGTH_NIL],
     Cases_on `a₂` THEN SRW_TAC [][] THEN
@@ -132,7 +132,8 @@ val appstar_eq_appstar = store_thm(
         FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []
       ]
     ]
-  ]);
+  ]
+QED
 
 Theorem varappstar_11[simp]:
   (VAR v₁ ·· a₁ = VAR v₂ ·· a₂) ⇔ (v₁ = v₂) ∧ (a₁ = a₂)
@@ -202,17 +203,28 @@ Proof
  >> simp [LIST_TO_SET_SNOC] >> SET_TAC []
 QED
 
+Theorem BIGUNION_IMAGE_FV_MAP_VAR[simp] :
+    BIGUNION (IMAGE FV (set (MAP VAR vs))) = set vs
+Proof
+    rw [Once EXTENSION, IN_BIGUNION_IMAGE]
+ >> reverse EQ_TAC >> rpt STRIP_TAC
+ >- (Q.EXISTS_TAC ‘VAR x’ >> rw [MEM_MAP])
+ >> rename1 ‘x IN FV t’
+ >> gs [MEM_MAP]
+QED
+
 (* A special case of FV_appstar *)
 Theorem FV_appstar_MAP_VAR[simp] :
     FV (M @* MAP VAR vs) = FV M UNION set vs
 Proof
     rw [FV_appstar]
- >> Suff ‘BIGUNION (IMAGE FV (set (MAP VAR vs))) = set vs’ >- rw []
- >> rw [Once EXTENSION, IN_BIGUNION_IMAGE]
- >> reverse EQ_TAC >> rpt STRIP_TAC
- >- (Q.EXISTS_TAC ‘VAR x’ >> rw [MEM_MAP])
- >> rename1 ‘x IN FV t’
- >> gs [MEM_MAP]
+QED
+
+Theorem size_appstar :
+    !args. size (t @* args) = size t + SUM (MAP size args) + LENGTH args
+Proof
+    SNOC_INDUCT_TAC
+ >> rw [size_thm, MAP_SNOC, SUM_SNOC]
 QED
 
 (*---------------------------------------------------------------------------*
@@ -304,10 +316,18 @@ Proof
 QED
 
 Theorem tpm_LAMl:
-  tpm π (LAMl vs M) = LAMl (listpm string_pmact π vs) (tpm π M)
+    !vs pi M. tpm pi (LAMl vs M) = LAMl (listpm string_pmact pi vs) (tpm pi M)
 Proof
-  Induct_on ‘vs’ >> simp[]
+    Induct_on ‘vs’ >> simp[]
 QED
+
+(* |- !vs pi M.
+        LAMl vs (tpm pi M) =
+        tpm pi (LAMl (listpm string_pmact (REVERSE pi) vs) M)
+ *)
+Theorem LAMl_tpm = tpm_LAMl |> Q.SPECL [‘vs’, ‘REVERSE pi’, ‘tpm pi M’]
+                            |> SRULE [tpm_eql]
+                            |> Q.GENL [‘vs’, ‘pi’, ‘M’]
 
 Theorem tpm_appstar:
   tpm π (M ·· Ms) = tpm π M ·· listpm term_pmact π Ms
@@ -371,10 +391,23 @@ Proof
   ]
 QED
 
+Theorem LAMl_ALPHA_tpm :
+    !xs ys M. LENGTH xs = LENGTH ys /\ ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
+              DISJOINT (set ys) (set xs UNION FV M) ==>
+              LAMl xs M = LAMl ys (tpm (ZIP (xs,ys)) M)
+Proof
+    rpt STRIP_TAC
+ >> Know ‘LAMl xs M = LAMl ys (M ISUB REVERSE (ZIP (MAP VAR ys, xs)))’
+ >- (MATCH_MP_TAC LAMl_ALPHA >> art [])
+ >> Rewr'
+ >> fs [DISJOINT_UNION']
+ >> simp [fresh_tpm_isub, REVERSE_ZIP, MAP_REVERSE]
+QED
+
 Theorem LAMl_ALPHA_ssub :
     !vs vs' M.
        LENGTH vs = LENGTH vs' /\ ALL_DISTINCT vs /\ ALL_DISTINCT vs' /\
-       DISJOINT (LIST_TO_SET vs') (LIST_TO_SET vs UNION FV M) ==>
+       DISJOINT (set vs') (set vs UNION FV M) ==>
        LAMl vs M = LAMl vs' ((FEMPTY |++ ZIP (vs, MAP VAR vs')) ' M)
 Proof
     rpt STRIP_TAC
@@ -448,5 +481,4 @@ Proof
   SRW_TAC [ARITH_ss][FUNPOW_SUC, LEFT_ADD_DISTRIB, MULT_CLAUSES]
 QED
 
-val _ = export_theory ()
 val _ = html_theory "appFOLDL";

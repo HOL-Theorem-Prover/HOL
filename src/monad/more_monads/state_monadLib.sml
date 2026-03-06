@@ -7,7 +7,7 @@ open state_transformerTheory
 structure Parse = struct
   open Parse
   val (Type, Term) =
-    parse_from_grammars state_transformerTheory.state_transformer_grammars
+    parse_from_grammars $ valOf $ grammarDB {thyname="state_transformer"}
 end
 open Parse
 

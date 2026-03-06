@@ -1,7 +1,6 @@
-open HolKernel boolLib bossLib
-open mmTheory
-
-val () = new_theory "arm8_common"
+Theory arm8_common
+Ancestors
+  mm
 
 (* -------------------------------------------------------------------------
    Common Armv8 Memory Model Definitions
@@ -146,4 +145,3 @@ End
    End
    ------------------------------------------------------------------------- *)
 
-val () = export_theory()

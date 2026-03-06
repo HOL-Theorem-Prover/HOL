@@ -16,8 +16,8 @@ open switching_lemma_helperTheory user_lemma_basicsTheory;
 structure Parse =
 struct
 open Parse
-val (Type,Term) = parse_from_grammars
-                    user_lemma_basicsTheory.user_lemma_basics_grammars
+val (Type,Term) =
+    parse_from_grammars $ valOf $ grammarDB {thyname="user_lemma_basics"}
 end;
 
 

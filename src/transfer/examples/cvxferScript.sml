@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open transferLib transferTheory cvTheory arithmeticTheory
-
-val _ = new_theory "cvxfer";
+Theory cvxfer
+Ancestors
+  transfer cv arithmetic
+Libs
+  transferLib
 
 Overload Num = “cv$Num”
 Overload Pair = “cv$Pair”
@@ -337,4 +337,3 @@ Proof
   Cases_on ‘xs’ >> gvs[]
 QED
 
-val _ = export_theory();

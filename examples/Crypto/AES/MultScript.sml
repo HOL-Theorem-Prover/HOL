@@ -9,28 +9,31 @@
   open wordsTheory bitTheory wordsLib arithmeticTheory;
   quietdec := false;
 *)
+Theory Mult
+Ancestors
+  words bit arithmetic
+Libs
+  wordsLib
 
-open HolKernel Parse boolLib bossLib
-     wordsTheory bitTheory wordsLib arithmeticTheory;
-
-val _ = new_theory "Mult";
 
 (*---------------------------------------------------------------------------
     Multiply a byte (representing a polynomial) by x.
  ---------------------------------------------------------------------------*)
 
-val xtime_def = Define
-  `xtime (w : word8) =
-     w << 1 ?? (if word_msb w then 0x1Bw else 0w)`;
+Definition xtime_def:
+   xtime (w : word8) =
+     w << 1 ?? (if word_msb w then 0x1Bw else 0w)
+End
 
 val MSB_lem = Q.prove (
   `!a b. word_msb (a ?? b) = ~(word_msb a = word_msb b)`,
   SRW_TAC [WORD_BIT_EQ_ss] []);
 
-val xtime_distrib = Q.store_thm
-("xtime_distrib",
- `!a b. xtime (a ?? b) = xtime a ?? xtime b`,
-  SRW_TAC [] [xtime_def, MSB_lem] THEN FULL_SIMP_TAC std_ss []);
+Theorem xtime_distrib:
+  !a b. xtime (a ?? b) = xtime a ?? xtime b
+Proof
+  SRW_TAC [] [xtime_def, MSB_lem] THEN FULL_SIMP_TAC std_ss []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Multiplication by a constant                                              *)
@@ -46,24 +49,25 @@ Definition ConstMult_def:
          else       ((b1 >>> 1) ** xtime b2)
 End
 
-val ConstMultDistrib = Q.store_thm
-("ConstMultDistrib",
- `!x y z. x ** (y ?? z) = (x ** y) ?? (x ** z)`,
+Theorem ConstMultDistrib:
+  !x y z. x ** (y ?? z) = (x ** y) ?? (x ** z)
+Proof
  recInduct (theorem "ConstMult_ind")
    THEN REPEAT STRIP_TAC
    THEN ONCE_REWRITE_TAC [ConstMult_def]
-   THEN SRW_TAC [] [xtime_distrib]);
+   THEN SRW_TAC [] [xtime_distrib]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Iterative version                                                         *)
 (*---------------------------------------------------------------------------*)
 
-val IterConstMult_def =
- Define
-   `IterConstMult (b1,b2,acc) =
+Definition IterConstMult_def:
+    IterConstMult (b1,b2,acc) =
        if b1 = 0w:word8 then (b1,b2,acc)
        else IterConstMult (b1 >>> 1, xtime b2,
-                           if word_lsb b1 then (b2 ?? acc) else acc)`;
+                           if word_lsb b1 then (b2 ?? acc) else acc)
+End
 
 val _ = computeLib.add_persistent_funs ["IterConstMult_def"];
 
@@ -71,12 +75,13 @@ val _ = computeLib.add_persistent_funs ["IterConstMult_def"];
 (* Equivalence between recursive and iterative forms.                        *)
 (*---------------------------------------------------------------------------*)
 
-val ConstMultEq = Q.store_thm
-("ConstMultEq",
- `!b1 b2 acc. (b1 ** b2) ?? acc = SND(SND(IterConstMult (b1,b2,acc)))`,
+Theorem ConstMultEq:
+  !b1 b2 acc. (b1 ** b2) ?? acc = SND(SND(IterConstMult (b1,b2,acc)))
+Proof
  recInduct (theorem "IterConstMult_ind") THEN RW_TAC std_ss []
    THEN ONCE_REWRITE_TAC [ConstMult_def,IterConstMult_def]
-   THEN FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [] []);
+   THEN FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [] []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Tabled versions                                                           *)
@@ -143,9 +148,8 @@ val _ = save_thm ("mult_ifs", mult_ifs)
 (* Exponentiation                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val PolyExp_def =
- Define
-   `PolyExp x n = if n=0 then 1w else x ** PolyExp x (n-1)`;
+Definition PolyExp_def:
+    PolyExp x n = if n=0 then 1w else x ** PolyExp x (n-1)
+End
 
 
-val _ = export_theory();

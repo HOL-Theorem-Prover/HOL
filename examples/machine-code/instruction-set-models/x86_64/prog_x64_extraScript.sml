@@ -1,22 +1,19 @@
 
-open HolKernel Parse boolLib bossLib;
+Theory prog_x64_extra
+Ancestors
+  prog_x64 prog set_sep address temporal words list arithmetic
+  While pair relation combin option
+Libs
+  prog_x64Lib x64_encodeLib helperLib wordsLib
 
-val _ = new_theory "prog_x64_extra";
 val _ = ParseExtras.temp_loose_equality()
-
-open prog_x64Theory prog_x64Lib x64_encodeLib;
-open helperLib progTheory set_sepTheory addressTheory temporalTheory;
-
-open wordsTheory wordsLib listTheory arithmeticTheory;
-open whileTheory pairTheory relationTheory combinTheory optionTheory;
-
-infix \\ val op \\ = op THEN;
 
 (* generic code gen infrastructure *)
 
-val zCODE_HEAP_RAX_def = Define `
+Definition zCODE_HEAP_RAX_def:
   zCODE_HEAP_RAX b a n code =
-    zCODE_HEAP b a code n * zR 0w (a + n2w (LENGTH code))`;
+    zCODE_HEAP b a code n * zR 0w (a + n2w (LENGTH code))
+End
 
 val SNOC_R1 = let
   val (_,_,sts,_) = x64_tools
@@ -112,9 +109,10 @@ val LUPDATE_IMM = let
   val th = MP th lemma
   in th end;
 
-val IMM32_def = Define `
+Definition IMM32_def:
   IMM32 (w:word32) =
-    [w2w w; w2w (w >>> 8); w2w (w >>> 16); w2w (w >>> 24)]:word8 list`;
+    [w2w w; w2w (w >>> 8); w2w (w >>> 16); w2w (w >>> 24)]:word8 list
+End
 
 val IMM32_INTRO = prove(
   ``[w2w r1; w2w (r1 >>> 8); w2w (r1 >>> 16); w2w (r1 >>> 24)] =
@@ -142,27 +140,31 @@ val SNOC_IMM32 = let
     - SPEC is setup to say nothing if RSP hits Ghost_stack_top
  *)
 
-val stack_list_def = Define `
+Definition stack_list_def:
   (stack_list a [] = emp) /\
-  (stack_list a (x::xs) = one (a,x:word64) * stack_list (a+8w) xs)`;
+  (stack_list a (x::xs) = one (a,x:word64) * stack_list (a+8w) xs)
+End
 
-val stack_list_rev_def = Define `
+Definition stack_list_rev_def:
   (stack_list_rev a [] = emp) /\
-  (stack_list_rev a (x::xs) = one (a-8w,x:word64) * stack_list_rev (a-8w) xs)`;
+  (stack_list_rev a (x::xs) = one (a-8w,x:word64) * stack_list_rev (a-8w) xs)
+End
 
-val stack_ok_def = Define `
+Definition stack_ok_def:
   stack_ok (rsp:word64) top base stack dm m =
     (rsp && 7w = 0w) /\ (top && 7w = 0w) /\ (base && 7w = 0w) /\
     (rsp + n2w (8 * LENGTH stack) = base) /\
     ?rest. (stack_list top (rest ++ stack)) (fun2set (m,dm)) /\
            (top + n2w (8 * LENGTH (rest ++ stack)) = base) /\
-           8 * LENGTH (rest ++ stack) < 2 ** 64 /\ rest <> []`;
+           8 * LENGTH (rest ++ stack) < 2 ** 64 /\ rest <> []
+End
 
-val zSTACK_def = Define `
+Definition zSTACK_def:
   zSTACK (base,stack) =
     SEP_EXISTS rsp top dm m.
       zR1 RSP rsp * zR1 zGhost_stack_top top * zR1 zGhost_stack_bottom base *
-      zMEMORY64 dm m * cond (stack_ok rsp top base stack dm m)`;
+      zMEMORY64 dm m * cond (stack_ok rsp top base stack dm m)
+End
 
 val x0 = ("r0",``0w:word4``,``r0:word64``)
 val x1 = ("r1",``1w:word4``,``r1:word64``)
@@ -555,9 +557,10 @@ val stack_list_rev_APPEND = prove(
   \\ FULL_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM,LENGTH,
        GSYM WORD_SUB_PLUS,word_add_n2w,MULT_CLAUSES]);
 
-val stack_ok_POPS = store_thm("stack_ok_POPS",
-  ``stack_ok rsp top base stack dm m /\ k <= LENGTH stack ==>
-    stack_ok (rsp + n2w (8 * k)) top base (DROP k stack) dm m``,
+Theorem stack_ok_POPS:
+    stack_ok rsp top base stack dm m /\ k <= LENGTH stack ==>
+    stack_ok (rsp + n2w (8 * k)) top base (DROP k stack) dm m
+Proof
   SIMP_TAC std_ss [stack_ok_thm] \\ STRIP_TAC
   \\ IMP_RES_TAC LENGTH_LESS_EQ \\ FULL_SIMP_TAC std_ss []
   \\ POP_ASSUM (ASSUME_TAC o GSYM)
@@ -573,7 +576,8 @@ val stack_ok_POPS = store_thm("stack_ok_POPS",
   \\ FULL_SIMP_TAC std_ss [AC ADD_COMM ADD_ASSOC,word_mul_n2w]
   \\ ONCE_REWRITE_TAC [GSYM LENGTH_REVERSE]
   \\ ASM_SIMP_TAC std_ss [stack_list_rev_REVERSE]
-  \\ FULL_SIMP_TAC std_ss [REVERSE_REVERSE,AC STAR_COMM STAR_ASSOC,LENGTH_REVERSE]);
+  \\ FULL_SIMP_TAC std_ss [REVERSE_REVERSE,AC STAR_COMM STAR_ASSOC,LENGTH_REVERSE]
+QED
 
 val imm32_lemma = prove(
   ``(k:num) < 2 ** 28 ==>
@@ -715,13 +719,14 @@ val EL_LENGTH = prove(
   ``!xs y ys. EL (LENGTH xs) (xs ++ y::ys) = y``,
   Induct \\ FULL_SIMP_TAC std_ss [LENGTH,EL,APPEND,HD,TL]);
 
-val stack_ok_EL = store_thm("stack_ok_EL",
-  ``stack_ok rsp top base stack dm m /\
+Theorem stack_ok_EL:
+    stack_ok rsp top base stack dm m /\
     w2n r8 DIV 8 < LENGTH stack /\ (w2n r8 MOD 8 = 0) ==>
     (r8 + rsp IN dm /\ (r8 + rsp && 0x7w = 0x0w)) /\
     stack_ok rsp top base (LUPDATE r0 (w2n r8 DIV 8) stack) dm
       ((r8 + rsp =+ r0) m) /\
-    (m (r8 + rsp) = EL (w2n r8 DIV 8) stack)``,
+    (m (r8 + rsp) = EL (w2n r8 DIV 8) stack)
+Proof
   SIMP_TAC std_ss [stack_ok_thm] \\ STRIP_TAC
   \\ Cases_on `r8` \\ FULL_SIMP_TAC (srw_ss()) []
   \\ MP_TAC (DIVISION |> SIMP_RULE std_ss [PULL_FORALL]
@@ -739,21 +744,23 @@ val stack_ok_EL = store_thm("stack_ok_EL",
   \\ SEP_R_TAC \\ STRIP_TAC
   THEN1 (SIMP_TAC std_ss [GSYM word_mul_n2w]
          \\ Q.PAT_X_ASSUM `0x7w && rsp = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC)
-  \\ SEP_W_TAC \\ FULL_SIMP_TAC (std_ss++star_ss) []);
+  \\ SEP_W_TAC \\ FULL_SIMP_TAC (std_ss++star_ss) []
+QED
 
 val LENGTH_LESS_REV = prove(
   ``!xs m. m < LENGTH xs ==> ?ys z zs. (xs = ys ++ z::zs) /\ (LENGTH zs = m)``,
   recInduct SNOC_INDUCT \\ SIMP_TAC std_ss [LENGTH,LENGTH_SNOC]
-  \\ SIMP_TAC (srw_ss()) [] \\ REPEAT STRIP_TAC
+  \\ SIMP_TAC (srw_ss()) [SNOC_APPEND] \\ REPEAT STRIP_TAC
   \\ Cases_on `m` \\ FULL_SIMP_TAC std_ss [LENGTH_NIL,APPEND,CONS_11,APPEND_NIL]
   THEN1 (METIS_TAC []) \\ RES_TAC \\ Q.LIST_EXISTS_TAC [`ys`,`z`,`zs ++ [x]`]
   \\ FULL_SIMP_TAC std_ss [APPEND,LENGTH,GSYM APPEND_ASSOC,LENGTH_APPEND,ADD1]);
 
-val stack_ok_REV_EL = store_thm("stack_ok_REV_EL",
-  ``stack_ok rsp top base stack dm m /\
+Theorem stack_ok_REV_EL:
+    stack_ok rsp top base stack dm m /\
     w2n r8 DIV 8 < LENGTH stack /\ (w2n r8 MOD 8 = 0) ==>
     (base - 8w - r8 IN dm /\ (base - 8w - r8 && 0x7w = 0x0w)) /\
-    (m (base - 8w - r8) = EL (w2n r8 DIV 8) (REVERSE stack))``,
+    (m (base - 8w - r8) = EL (w2n r8 DIV 8) (REVERSE stack))
+Proof
   SIMP_TAC std_ss [stack_ok_thm] \\ STRIP_TAC
   \\ Cases_on `r8` \\ FULL_SIMP_TAC std_ss [w2n_n2w]
   \\ MP_TAC (DIVISION |> SIMP_RULE std_ss [PULL_FORALL]
@@ -782,7 +789,8 @@ val stack_ok_REV_EL = store_thm("stack_ok_REV_EL",
   \\ SEP_R_TAC \\ FULL_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [GSYM word_mul_n2w]
   \\ Q.PAT_X_ASSUM `rsp && 0x7w = 0x0w` MP_TAC
-  \\ blastLib.BBLAST_TAC);
+  \\ blastLib.BBLAST_TAC
+QED
 
 val x64_el_r0_r8 = save_thm("x64_el_r0_r8",let
   val ((th,_,_),_) = x64_spec_memory64 (x64_encode "mov [rsp+r8], r0")
@@ -1001,8 +1009,9 @@ val IO_ASSUMS_def = Define `
   IO_ASSUMS ^IO = ^(genall io_getchar_tm IO) /\ ^(genall io_putchar_tm IO)`
   |> RW [STAR_ASSOC];
 
-val zIO_def = Define `
-  zIO x = SEP_EXISTS IO. ^IO x * cond (IO_ASSUMS ^IO)`;
+Definition zIO_def:
+  zIO x = SEP_EXISTS IO. ^IO x * cond (IO_ASSUMS ^IO)
+End
 
 val x64_putchar_thm = prove(
   io_putchar_tm |> subst [IO|->``zIO``],
@@ -1026,4 +1035,3 @@ val _ = save_thm("x64_getchar_r1_thm",
 val _ = save_thm("x64_putchar_r1_thm",
   SPEC_COMPOSE_RULE [fetch "-" "x64_call_r1",x64_putchar_thm] |> RW [STAR_ASSOC]);
 
-val _ = export_theory();

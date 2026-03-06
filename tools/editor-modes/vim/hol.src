@@ -58,19 +58,15 @@ endf
 
 fu! HOLLoadSetup()
   keepjumps silent normal P
-  keepjumps silent %s/\s/\r/ge
-  keepjumps silent %s/\<local\>\|\<open\>\|\<in\>\|\<end\>\|;//ge
-  keepjumps silent g/^\s*$/d_
+  let l:temp = tempname()
+  silent exe "w" . l:temp
+  keepjumps %d_
+  silent exe "read !" .. $HOLDIR .. "/bin/holdeptool.exe" l:temp
   keepjumps silent g/./normal ival _ = load"
   keepjumps silent g/./normal $a";
 endf
 
 fu! HOLLoad()
-  call HOLLoadSetup()
-  call HOLLoadMessage("HOLLoad",line("$"))
-endf
-
-fu! HOLLoadSendQuiet()
   call HOLLoadSetup()
   exe "keepjumps normal Go" . s:holtogglequiet
   let l:l = line(".")-1
@@ -130,7 +126,9 @@ let s:delim          = '\_[[:space:]()]'
 
 fu! HOLExpand()
   silent keepjumps normal pgg0
-  while search('\%^\_s*\%(\%('.s:stripBoth.'\|'.s:stripStart.'\)\|\%('.s:stripBothWords.'\)\)\ze'.s:delim,'cWe')
+  " The regex below in Perl syntax:
+  " ^ \s* (($stripBoth|$stripStart)(\b|$delim) | ($stripBothWords $delim))
+  while search('\%^\_s*\%(\%('.s:stripBoth.'\|'.s:stripStart.'\)\%(\<\|'.s:delim.'\)\|\%('.s:stripBothWords.s:delim.'\)\)\ze','cWe')
     silent keepjumps normal vgg0"_d
   endw
   while search('\%(\%('.s:stripBoth.'\|'.s:stripEnd.'\)\|'.s:delim.'\zs\%('.s:stripBothWords.'\)\)\_s*\%$','cW')
@@ -222,8 +220,7 @@ endf
 if !(exists("maplocalleader"))
   let maplocalleader = "\\"
 endif
-vn <buffer><silent> <LocalLeader>l :call YankThenHOLCall(function("HOLLoadSendQuiet"),[])<CR>
-vn <buffer><silent> <LocalLeader>L :call YankThenHOLCall(function("HOLLoad"),[])<CR>
+vn <buffer><silent> <LocalLeader>l :call YankThenHOLCall(function("HOLLoad"),[])<CR>
 vn <buffer><silent> <LocalLeader>s :call YankThenHOLCall(function("HOLSend"),[])<CR>
 vn <buffer><silent> <LocalLeader>u :call YankThenHOLCall(function("HOLSendQuiet"),[])<CR>
 vn <buffer><silent> <LocalLeader>g :call YankThenHOLCall(function("HOLGoal"),[])<CR>
@@ -233,7 +230,6 @@ vn <buffer><silent> <LocalLeader>S :call YankThenHOLCall(function("HOLSubgoal"),
 vn <buffer><silent> <LocalLeader>F :call YankThenHOLCall(function("HOLSuffices"),[])<CR>
 vn <buffer><silent> <LocalLeader>P :call YankThenHOLCall(function("HOLPattern"),[])<CR>
 nm <buffer><silent><expr> <LocalLeader>l "V".maplocalleader."l"
-nm <buffer><silent><expr> <LocalLeader>L "V".maplocalleader."L"
 nm <buffer><silent><expr> <LocalLeader>s "V".maplocalleader."s"
 nm <buffer><silent><expr> <LocalLeader>u "V".maplocalleader."u"
 nm <buffer><silent><expr> <LocalLeader>g "V".maplocalleader."g"

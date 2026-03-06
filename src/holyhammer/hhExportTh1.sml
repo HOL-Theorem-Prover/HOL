@@ -207,7 +207,7 @@ fun th1_preambule oc tml =
     val cvl1 = mk_term_set (List.concat (map (find_terms is_const) tml))
     val cvl2 = map fst cval_extra
     val cvl3 = mk_term_set (map mgc_of (cvl1 @ cvl2))
-    val tyopl =  mk_fast_set ida_compare
+    val tyopl = mk_fast_set ida_compare
       (List.concat (tyopl_extra :: map collect_tyop tml))
   in
     app (th1_tyopdef oc) tyopl;

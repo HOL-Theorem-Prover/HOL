@@ -11,6 +11,7 @@ sig
    val expand_list  : list_tactic -> gstk -> gstk
    val expand_listf : list_tactic -> gstk -> gstk
    val print_tac    : string -> tactic
+   val note_tac     : string -> tactic
    val extract_thm  : gstk -> thm
    val initial_goal : gstk -> goal
    val finalizer    : gstk -> thm -> thm
@@ -24,6 +25,7 @@ sig
    val goal_size    : goal -> int
    val gstk_size    : gstk -> int
 
+   val pr_goal      : goal -> unit term_pp_types.printer
    val std_pp_goal  : goal Parse.pprinter
    val pp_goal      : goal Parse.pprinter
    val pp_gstk      : gstk Parse.pprinter

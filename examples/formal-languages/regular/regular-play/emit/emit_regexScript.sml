@@ -1,16 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-
-open EmitML;
-open basis_emitTheory;
-
-open regexExecutableTheory;
-open regexMarkedTheory;
-open regexCachedMarkedTheory;
-
-
-val _ = new_theory "emit_regex";
-
+Theory emit_regex
+Ancestors
+  basis_emit regexExecutable regexMarked regexCachedMarked
+Libs
+  EmitML
 
 val emitDir = OS.FileSys.getDir()
 
@@ -72,4 +64,3 @@ val _ = List.app copyDep ["combin","pair" ,"num" ,"list" ,"rich_list"]
 
 
 
-val _ = export_theory ();

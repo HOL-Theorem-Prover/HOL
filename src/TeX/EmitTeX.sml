@@ -53,6 +53,7 @@ fun definition_prefix() = prefix_string() ^ "Definitions";
 fun theorem_prefix()    = prefix_string() ^ "Theorems";
 fun date_prefix()       = prefix_string() ^ "Date";
 fun time_prefix()       = prefix_string() ^ "Time";
+fun hash_prefix()       = prefix_string() ^ "Hash";
 
 (* ------------------------------------------------------------------------- *)
 (* datatype_theorems : string -> (string * thm) list                         *)
@@ -672,7 +673,11 @@ fun pp_theory_as_tex name =
       val typs = datatype_theorems name
       val defns = non_type_definitions name
       val thms = non_type_theorems name
-      val time = Date.fromTimeLocal (stamp name handle HOL_ERR _ => Time.now())
+      val hash = Theory.hash name
+                 handle HOL_ERR _ => "<exporting current theory: no hash>"
+      val time = Date.fromTimeLocal $
+                                    (Theory.mod_time name
+                                     handle NotFound => Time.now())
       val u = current_trace "Unicode"
       val _ = set_trace "Unicode" 0
   in
@@ -684,6 +689,7 @@ fun pp_theory_as_tex name =
         S (Date.fmt "%d %B %Y" time), S "}", NL,
         pp_newcommand (time_prefix()),
         S (Date.fmt "%H:%M" time), S "}", NL,
+        pp_newcommand (hash_prefix()), S hash, S "}", NL,
         pp_datatypes_as_tex typs,
         pp_defnitions_as_tex defns,
         pp_theorems_as_tex thms
@@ -721,6 +727,7 @@ fun pp_parents_as_tex_doc names =
       else [
         S "\\begin{flushleft}", NL,
         S ("\\textbf{Built:} " ^ "\\" ^ date_prefix() ^ " \\\\[2pt]"), NL,
+        S ("\\textbf{Hash:} " ^ "\\" ^ hash_prefix() ^ " \\\\[2pt]"), NL,
         S "\\textbf{Parent Theories:} ",
         B (PP.pr_list S [S ",", PP.add_break(1,0)] names), NL,
        S "\\end{flushleft}", NL
@@ -798,6 +805,7 @@ fun pp_theories_as_tex_doc names =
   B [
     S "\\documentclass[", S texOptions, S "]{article}", NL,
     S "\\usepackage{holtex}", NL, NL,
+    S "\\usepackage{makeidx}", NL, NL,
     S "\\makeindex", NL, NL,
     S "\\begin{document}", NL, NL,
     B (PP.pr_list (fn x => (S ("\\input{" ^ (prefix_escape x) ^ "}")))

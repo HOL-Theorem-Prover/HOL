@@ -1,17 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-open kolmogorov_complexityTheory
-open pred_setTheory
-open kraft_ineqTheory
-open invarianceResultsTheory
-open boolListsTheory
-open kolmog_incomputableTheory
-open recursivefnsTheory
-open primrecfnsTheory
-open unary_recfnsTheory
-open kolmog_inequalitiesTheory
-
-val _ = new_theory "prefix_free_kolmog";
-
+Theory prefix_free_kolmog
+Ancestors
+  kolmogorov_complexity pred_set kraft_ineq invarianceResults
+  boolLists kolmog_incomputable recursivefns primrecfns
+  unary_recfns kolmog_inequalities
 
 (* Prefix Universal Turing Machine *)
 
@@ -573,6 +564,4 @@ QED
 *)
 
 
-
-val _ = export_theory();
 

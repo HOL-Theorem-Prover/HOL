@@ -13,26 +13,18 @@
 (*                                                                           *)
 (*                                                                           *)
 (* ========================================================================= *)
-(*---------------------*)
-(*app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory",
-          "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory",
-          "real_probabilityTheory", "numTheory", "dep_rewrite", "transcTheory",
-          "rich_listTheory", "pairTheory", "combinTheory","limTheory","sortingTheory",
-          "realLib", "optionTheory","satTheory", "util_probTheory", "extrealTheory",
-          "real_measureTheory", "real_lebesgueTheory","real_sigmaTheory","RBDTheory",
-          "FT_deepTheory","VDCTheory","ASN_gatewayTheory","extra_pred_setTools"];*)
+Theory transform_FT_RBD
+Ancestors
+  lim arithmetic real prim_rec real_probability seq pred_set
+  res_quan sorting list transc rich_list pair combin option
+  extreal real_measure real_lebesgue real_sigma sat num RBD
+  FT_deep VDC ASN_gateway
+Libs
+  res_quanTools realLib dep_rewrite extra_pred_setTools
 
-open HolKernel Parse boolLib bossLib limTheory arithmeticTheory realTheory prim_recTheory real_probabilityTheory
-     seqTheory pred_setTheory res_quanTheory sortingTheory res_quanTools listTheory transcTheory
-     rich_listTheory pairTheory combinTheory realLib  optionTheory dep_rewrite
-      util_probTheory extrealTheory real_measureTheory real_lebesgueTheory real_sigmaTheory satTheory numTheory
-      RBDTheory FT_deepTheory VDCTheory ASN_gatewayTheory extra_pred_setTools;
-open HolKernel boolLib bossLib Parse;
-val _ = new_theory "transform_FT_RBD";
-(*--------------------*)
+
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-(*---------------------------*)
 
 (*--------AND_to_series-------------------*)
 Theorem AND_to_series :
@@ -68,7 +60,6 @@ Theorem OR_AND_to_parallel_series :
 !p L. (FTree p ((OR of (\a. AND (gate_list a))) L) =
           rbd_struct p ((parallel of (\a. series (rbd_list a))) L))
 Proof
-
 GEN_TAC >> Induct
 >- (RW_TAC list_ss[of_DEF,o_DEF,gate_list_def,FTree_def,gate_list_def,rbd_list_def,rbd_struct_def])
 >> RW_TAC list_ss[of_DEF,o_DEF,gate_list_def,FTree_def,gate_list_def,rbd_list_def,rbd_struct_def]
@@ -90,7 +81,6 @@ Theorem NOR_gate_transform :
 !p L. p_space p DIFF FTree p (OR (gate_list L)) =
           p_space p DIFF rbd_struct p (parallel (rbd_list L))
 Proof
-
 GEN_TAC >> Induct
 >- (RW_TAC std_ss[gate_list_def,FTree_def,gate_list_def,rbd_list_def,rbd_struct_def])
 >> RW_TAC std_ss[gate_list_def,FTree_def,gate_list_def,rbd_list_def,rbd_struct_def]
@@ -127,4 +117,3 @@ Proof
 RW_TAC std_ss[majority_voting_FT_gate_def,K_out_N_struct_def]
 QED
 
-val _ = export_theory();

@@ -41,11 +41,23 @@ fun fpluck f [] = NONE
                           NONE => Option.map (fn (v,r) => (v,h::r)) (fpluck f t)
                         | SOME v => SOME ((h,v),t)
 
+fun purge_redundants pfn thynames =
+    let
+      fun getAncs thy = HOLset.delete(ancestry pfn {thyname=thy}, thy)
+      val ancs = map (fn thy => (thy, getAncs thy)) thynames
+        fun isRedundant thy =
+            List.exists (fn (_, set) => smem set thy) ancs
+    in
+      List.mapPartial (fn n => if isRedundant n then NONE else SOME n) thynames
+    end
+
 fun merge (info : ('d,'v) info) thys : 'v option =
     let
       val _ = DPRINT ("Calling " ^ #tag info ^ ":merge[" ^
                       String.concatWith ", " thys ^ "]")
       val {parents,get_deltas,apply_delta,...} = info
+      fun par_g s = #parents info {thyname = s}
+      val thys = purge_redundants par_g thys
       fun recurse (A, aset) worklist =
           case worklist of
               [] => SOME A
@@ -69,12 +81,8 @@ fun merge (info : ('d,'v) info) thys : 'v option =
           case fpluck (fn thy => #dblookup info {thyname=thy}) thys of
               NONE => NONE
             | SOME ((h,v0),rest) =>
-              let
-                fun par_g s = #parents info {thyname = s}
-              in
                 recurse (v0, sadd h (ancestry par_g {thyname=h}))
                         (map Visit rest)
-              end
         )
     end
 

@@ -60,4 +60,5 @@ dupop20171208: dupop20171208_input dupop20171208_expected munge_d20171208.exe $(
 
 EXTRA_CLEANS = \
   munge.exe tymunge.exe utymunge.exe munge_d20171208.exe munge248.exe \
-  output utyabb_output tyabb_output gh242_output dupop20171208_output
+  output utyabb_output tyabb_output gh242_output dupop20171208_output \
+  HOLghOneSixOneTwoA.tex evenReport.tex

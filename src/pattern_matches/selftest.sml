@@ -20,7 +20,7 @@ val quiet = false;
 val _ = Parse.current_backend := PPBackEnd.emacs_terminal;
 
 *)
-val _ = patternMatchesLib.ENABLE_PMATCH_CASES ();
+val _ = patternMatchesLib.temp_enable_pmatch ();
 val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
 
 fun pterm_to_string pfx t = pfx ^ " " ^ UnicodeChars.ldquo ^ term_to_string t ^
@@ -75,51 +75,51 @@ fun test(inp, expected) =
   end
 
 val _ = app test [
-  ("case b of T => F | F => T",
+  ("pmatch b of T => F | F => T",
    “PMATCH (b:bool) [PMATCH_ROW (\u:one. T) (\u:one. T) (\u:one. F);
                       PMATCH_ROW (\u:one. F) (\u:one. T) (\u:one. T)]”),
 
-  ("case x of 0 => 3 | SUC n => n + 1",
+  ("pmatch x of 0 => 3 | SUC n => n + 1",
    “PMATCH x [PMATCH_ROW (\u:one. 0) (\u:one. T) (\u:one. 3);
                PMATCH_ROW (\n. SUC n) (\n:num. T) (\n. n + 1)]”),
 
-  ("case x of 0 => 3 | SUC _ => 4",
+  ("pmatch x of 0 => 3 | SUC _ => 4",
    “PMATCH x [PMATCH_ROW (\u:one. 0) (\u:one. T) (\u:one. 3);
                PMATCH_ROW (\n:num. SUC n) (\n:num. T) (\n:num. 4)]”),
 
-  ("case (x : bool list) of [] => F | (x,xs) .| x::xs => x",
+  ("pmatch (x : bool list) of [] => F | (x,xs) .| x::xs => x",
    “PMATCH x [PMATCH_ROW (\u:one. []:bool list) (\u:one. T) (\u:one. F);
                PMATCH_ROW (\ (x:bool,xs:bool list). x::xs)
                           (\ (x:bool,xs:bool list). T)
                           (\ (x:bool,xs:bool list). x)]”),
 
-  ("(n:num) + case m of 0 => 3 | () .| SUC n => 10 | z => z",
+  ("(n:num) + pmatch m of 0 => 3 | () .| SUC n => 10 | z => z",
    “(n:num) +
      PMATCH m [PMATCH_ROW (\u:one. 0n) (\u:one. T) (\u:one. 3n);
                PMATCH_ROW (\u:one. SUC n) (\u:one. T) (\u:one. 10);
                PMATCH_ROW (\z:num. z) (\z:num. T) (\z:num. z)]”),
 
-  ("case x of 0 => 3 | () .| n => 4 | _ => 100",
+  ("pmatch x of 0 => 3 | () .| n => 4 | _ => 100",
    “PMATCH (x:num) [PMATCH_ROW (\u:one. 0n) (\u:one. T) (\u:one. 3n);
                      PMATCH_ROW (\u:one. n:num) (\u:one. T) (\u:one. 4n);
                      PMATCH_ROW (\x:num. x) (\x:num. T) (\x:num. 100n)]”),
 
-  ("n + case b of T => 1 | n => 2",
+  ("n + pmatch b of T => 1 | n => 2",
    “n + PMATCH (b:bool)
                 [PMATCH_ROW (\u:one. T) (\u:one. T) (\u:one. 1n);
                  PMATCH_ROW (\n:bool. n) (\n:bool. T) (\n:bool. 2n)]”),
 
-  ("n + case x of 0 => 1 | m .| m + n => m * 2",
+  ("n + pmatch x of 0 => 1 | m .| m + n => m * 2",
    “n + PMATCH (x:num)
                 [PMATCH_ROW (\u:one. 0) (\u:one. T) (\u:one. 1);
                  PMATCH_ROW (\m:num. m + n) (\m:num. T) (\m:num. m * 2)]”),
 
-  ("case x of 0 => 3 | () .| n => 4 | x => 100",
+  ("pmatch x of 0 => 3 | () .| n => 4 | x => 100",
    “PMATCH (x:num) [PMATCH_ROW (\u:one. 0n) (\u:one. T) (\u:one. 3n);
                      PMATCH_ROW (\u:one. n:num) (\u:one. T) (\u:one. 4n);
                      PMATCH_ROW (\x:num. x) (\x:num. T) (\x:num. 100n)]”),
 
-  ("case (y,x) of\
+  ("pmatch (y,x) of\
    \ | (NONE,[]) => 0\
    \ | (NONE,[T]) => 1\
    \ | (SOME T,[]) => 2\
@@ -154,19 +154,21 @@ val _ = app test [
          (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). LENGTH z3 > 5n)
          (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). 7n)]”),
 
-  ("case x of NONE => y | SOME (z:'foo) => (f z : 'bar)",
+  ("pmatch x of NONE => y | SOME (z:'foo) => (f z : 'bar)",
    “PMATCH (x:'foo option) [
        PMATCH_ROW (\_uv:unit. NONE) (\_uv:unit. T) (\_uv:unit. y:'bar);
        PMATCH_ROW (\z:'foo. SOME z) (\z:'foo. T) (\z:'foo. f z : 'bar)
      ]”),
 
-  ("case x of NONE => y | z:'foo .| SOME z => (f z : 'bar)",
+  ("pmatch x of NONE => y | z:'foo .| SOME z => (f z : 'bar)",
    “PMATCH (x:'foo option) [
        PMATCH_ROW (\_uv:unit. NONE) (\_uv:unit. T) (\_uv:unit. y:'bar);
        PMATCH_ROW (\z:'foo. SOME z) (\z:'foo. T) (\z:'foo. f z : 'bar)
      ]”),
 
-  ("dtcase x of NONE => 3 | SOME y => y + 1",
+
+  (* decision-tree case still works *)
+  ("case x of NONE => 3 | SOME y => y + 1",
    “option_CASE (x : num option) 3n (\z:num. z + 1)”)
 
 ]
@@ -179,7 +181,7 @@ val parsefails =
                                        [QUOTE s]};
 
 val _ = app parsefails [
-      "case x of NONE => F | y .| SOME(x,y) => x < y"
+      "pmatch x of NONE => F | y .| SOME(x,y) => x < y"
 ]
 
 (* ----------------------------------------------------------------------
@@ -187,21 +189,21 @@ val _ = app parsefails [
    ---------------------------------------------------------------------- *)
 
 val _ = app (raw_backend tpp) [
+  "pmatch x of 0 => 3 | SUC n => n",
   "case x of 0 => 3 | SUC n => n",
-  "dtcase x of 0 => 3 | SUC n => n",
-  "(case x of 0 => 3 | SUC n => n) > 5",
-  "(dtcase x of 0 => 3 | SUC n => n) = 3",
-  "case SUC 5 of 0 => 3 | SUC n => n",
-  "dtcase SUC (SUC 5) of 0 => 3 | SUC n => n",
-  "case x of 0 => 4 | SUC _ => 10",
-  "case (x,y) of (NONE,_) => 10 | (SOME n,0) when n < 10 => 11",
-  "case x of 0 => 3 | () .| n => 4 | x => 100",
-  "case x of NONE => 3 | () .| SOME n => n | SOME x => x + 1",
-  "dtcase (x,y) of (NONE,z) => SUC z | (SOME n,z) => n",
+  "(pmatch x of 0 => 3 | SUC n => n) > 5",
+  "(case x of 0 => 3 | SUC n => n) = 3",
+  "pmatch SUC 5 of 0 => 3 | SUC n => n",
+  "case SUC (SUC 5) of 0 => 3 | SUC n => n",
+  "pmatch x of 0 => 4 | SUC _ => 10",
+  "pmatch (x,y) of (NONE,_) => 10 | (SOME n,0) when n < 10 => 11",
+  "pmatch x of 0 => 3 | () .| n => 4 | x => 100",
+  "pmatch x of NONE => 3 | () .| SOME n => n | SOME x => x + 1",
+  "case (x,y) of (NONE,z) => SUC z | (SOME n,z) => n",
+  "SUC (pmatch x of 0 => 3 | SUC n => n)",
   "SUC (case x of 0 => 3 | SUC n => n)",
-  "SUC (dtcase x of 0 => 3 | SUC n => n)",
-  "case x of z .| 0 => z | SUC _ => 10",
-  "case x of (z,y) .| 0 => z | SUC _ => 10"
+  "pmatch x of z .| 0 => z | SUC _ => 10",
+  "pmatch x of (z,y) .| 0 => z | SUC _ => 10"
 ]
 
 
@@ -211,13 +213,13 @@ val _ = app (raw_backend tpp) [
 
 val tc = test_conv "PMATCH_INTRO_CONV" PMATCH_INTRO_CONV
 
-val t = “dtcase x of (NONE, []) => 0”;
+val t = “case x of (NONE, []) => 0”;
 val r_thm = SOME “PMATCH (x :'a option # 'b list)
     [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),([] :'b list)))
        (\(_uv :unit). T) (\(_uv :unit). (0 :num))]”
 val _ = tc (t, r_thm);
 
-val t = “dtcase x of
+val t = “case x of
    (NONE, []) => 0
  | (SOME 2, []) => 2
  | (SOME 3, (x :: xs)) => 3 + x
@@ -240,7 +242,7 @@ val _ = tc (t, r_thm);
 
 val tcn = test_conv "PMATCH_INTRO_CONV_NO_OPTIMISE" PMATCH_INTRO_CONV_NO_OPTIMISE
 
-val t = “dtcase x of (NONE, []) => 0”
+val t = “case x of (NONE, []) => 0”
 val r_thm = SOME “PMATCH x
      [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),([] :'b list)))
         (\(_uv :unit). T) (\(_uv :unit). (0 :num));
@@ -252,7 +254,7 @@ val r_thm = SOME “PMATCH x
         (\((v2 :'a),(v1 :'b list)). (ARB :num))]”
 val _ = tcn (t, r_thm);
 
-val t = “dtcase x of
+val t = “case x of
    (NONE, []) => 0
  | (SOME 2, []) => 2
  | (SOME 3, (x :: xs)) => 3 + x
@@ -279,8 +281,8 @@ val r_thm = SOME “
 val _ = tcn (t, r_thm);
 
 
-val t = “dtcase x of 0 => 0 | SUC x => if (x+1 = 2) then 1 else 2”;
-val r_thm = SOME “case x of 0 => 0 | SUC x => (if x + 1 = 2 then 1 else 2)”
+val t = “case x of 0 => 0 | SUC x => if (x+1 = 2) then 1 else 2”;
+val r_thm = SOME “pmatch x of 0 => 0 | SUC x => (if x + 1 = 2 then 1 else 2)”
 val _ = tc (t, r_thm);
 
 
@@ -288,7 +290,7 @@ val _ = tc (t, r_thm);
 (* Simplification                                                             *)
 (******************************************************************************)
 
-val test =  test_conv "PMATCH_CLEANUP_PVARS_CONV" PMATCH_CLEANUP_PVARS_CONV (“PMATCH (x:('b # 'c) option) [
+val test = test_conv "PMATCH_CLEANUP_PVARS_CONV" PMATCH_CLEANUP_PVARS_CONV (“PMATCH (x:('b # 'c) option) [
      PMATCH_ROW (\x:'a. NONE) (\x. T) (\x. 5);
      PMATCH_ROW (\ (x,y). SOME (x,z)) (\ (x,y). T) (\ (x,y). 8);
      PMATCH_ROW (\ (x,z). SOME (x,z)) (\_. T) (\ (a,y). 8)]”,
@@ -309,15 +311,15 @@ SOME “PMATCH (x,y,z)
       PMATCH_ROW (\(x,yz_0,yz_1). (x,yz_0,yz_1)) (\(x,yz_0,yz_1). T)
         (\(x,yz_0,yz_1). x)]”)
 
-val test = test_conv "PMATCH_EXPAND_COLS_CONV" PMATCH_EXPAND_COLS_CONV (“case xy of
+val test = test_conv "PMATCH_EXPAND_COLS_CONV" PMATCH_EXPAND_COLS_CONV (“pmatch xy of
     | (SOME x, SOME y) => SOME (x + y)
-    | _ => NONE”, SOME (“case xy of
+    | _ => NONE”, SOME (“pmatch xy of
         (SOME x,SOME y) => SOME (x + y) | (_,_) => NONE”))
 
-val test = test_conv "PMATCH_EXPAND_COLS_CONV" PMATCH_EXPAND_COLS_CONV (“case (x,y) of
+val test = test_conv "PMATCH_EXPAND_COLS_CONV" PMATCH_EXPAND_COLS_CONV (“pmatch (x,y) of
     | (SOME x, SOME y) => SOME (x + y)
     | _ => NONE”, SOME (“
-      case (x,y) of
+      pmatch (x,y) of
         (SOME x,SOME y) => SOME (x + y) | (_,_) => NONE”))
 
 val test = test_conv "PMATCH_INTRO_WILDCARDS_CONV" PMATCH_INTRO_WILDCARDS_CONV (“PMATCH (x,y,z)
@@ -328,10 +330,10 @@ val test = test_conv "PMATCH_INTRO_WILDCARDS_CONV" PMATCH_INTRO_WILDCARDS_CONV (
       PMATCH_ROW (\(x,_0,z). (x,_0,z)) (\(x,_0,z). z) (\(x,_0,z). x)]”)
 
 
-val test = test_conv "PMATCH_CLEANUP_CONV" PMATCH_CLEANUP_CONV (“case (SUC x) of
+val test = test_conv "PMATCH_CLEANUP_CONV" PMATCH_CLEANUP_CONV (“pmatch (SUC x) of
      x => x + 5”, SOME “SUC x + 5”)
 
-val test = test_conv "PMATCH_CLEANUP_CONV" PMATCH_CLEANUP_CONV (“case (SOME (x:'a),y) of
+val test = test_conv "PMATCH_CLEANUP_CONV" PMATCH_CLEANUP_CONV (“pmatch (SOME (x:'a),y) of
      (NONE, y) => 0
    | (x, 0) => 1
    | (SOME x, y) => 2
@@ -339,18 +341,18 @@ val test = test_conv "PMATCH_CLEANUP_CONV" PMATCH_CLEANUP_CONV (“case (SOME (x
      [PMATCH_ROW (\x. (x,0)) (\x. T) (\x. 1);
       PMATCH_ROW (\(x,y). (SOME x,y)) (\(x,y). T) (\(x,y). 2)]”)
 
-val test = test_conv "PMATCH_CLEANUP_CONV" PMATCH_CLEANUP_CONV (“case (SOME (x:'a),y) of
+val test = test_conv "PMATCH_CLEANUP_CONV" PMATCH_CLEANUP_CONV (“pmatch (SOME (x:'a),y) of
      (NONE, y) => 0
    | (SOME x, y) => 2
    | (x, y) => 3”, SOME “2”)
 
-val test = test_conv "PMATCH_SIMP_COLS_CONV" PMATCH_SIMP_COLS_CONV (“case (SOME x,y) of
+val test = test_conv "PMATCH_SIMP_COLS_CONV" PMATCH_SIMP_COLS_CONV (“pmatch (SOME x,y) of
    | (SOME x, 1) => x+y
    | (x, y) => 3”, SOME “PMATCH y
      [PMATCH_ROW (\(_uv:unit). 1) (\_uv. T) (\_uv. x + y);
       PMATCH_ROW (\y. y) (\y. T) (\y. 3)]”)
 
-val test = test_conv "PMATCH_SIMP_COLS_CONV" PMATCH_SIMP_COLS_CONV (“case (SOME x,y) of
+val test = test_conv "PMATCH_SIMP_COLS_CONV" PMATCH_SIMP_COLS_CONV (“pmatch (SOME x,y) of
    | (SOME x, 1) => x+y
    | (SOME 2, 2) => y
    | (x, y) => 3”, SOME “PMATCH (x,y)
@@ -359,53 +361,53 @@ val test = test_conv "PMATCH_SIMP_COLS_CONV" PMATCH_SIMP_COLS_CONV (“case (SOM
       PMATCH_ROW (\(x_0,y). (x_0,y)) (\(x_0,y). T) (\(x_0,y). 3)]”)
 
 
-val test =  test_conv "PMATCH_REMOVE_FAST_REDUNDANT_CONV" PMATCH_REMOVE_FAST_REDUNDANT_CONV (“case xy of
+val test = test_conv "PMATCH_REMOVE_FAST_REDUNDANT_CONV" PMATCH_REMOVE_FAST_REDUNDANT_CONV (“pmatch xy of
    | (SOME x, y) => 1
    | (SOME 2, 3) => 2
    | (NONE, y) => 3
    | (NONE, y) => 4
    | (x, 5) => 5”, SOME “
-  case xy of
+  pmatch xy of
    | (SOME (x:num), y) => 1
    | (NONE, y) => 3
    | (x, 5) => 5”)
 
-val test =  test_conv "PMATCH_REMOVE_REDUNDANT_CONV" PMATCH_REMOVE_REDUNDANT_CONV (“case xy of
+val test = test_conv "PMATCH_REMOVE_REDUNDANT_CONV" PMATCH_REMOVE_REDUNDANT_CONV (“pmatch xy of
    | (SOME x, y) => 1
    | (SOME 2, 3) => 2
    | (NONE, y) => 3
    | (NONE, y) => 4
    | (x, 5) => 5”, SOME “
-  case xy of
+  pmatch xy of
    | (SOME (x:num), (y:num)) => 1
    | (NONE, y) => 3”)
 
 
-val test =  test_conv "PMATCH_REMOVE_FAST_SUBSUMED_CONV true" (PMATCH_REMOVE_FAST_SUBSUMED_CONV true) (“case xy of
+val test = test_conv "PMATCH_REMOVE_FAST_SUBSUMED_CONV true" (PMATCH_REMOVE_FAST_SUBSUMED_CONV true) (“pmatch xy of
    | (SOME 2, _) => 2
    | (NONE, 3) => 1
    | (SOME x, _) => x
    | (NONE, y) => y
    | (x, 5) => ARB”, SOME
-“case xy of
+“pmatch xy of
    | (NONE, 3) => 1
    | (SOME x, _) => x
    | (NONE, y) => y”)
 
-val test =  test_conv "PMATCH_REMOVE_FAST_SUBSUMED_CONV false" (PMATCH_REMOVE_FAST_SUBSUMED_CONV false) (“case xy of
+val test = test_conv "PMATCH_REMOVE_FAST_SUBSUMED_CONV false" (PMATCH_REMOVE_FAST_SUBSUMED_CONV false) (“pmatch xy of
    | (SOME 2, _) => 2
    | (NONE, 3) => 1
    | (SOME x, _) => x
    | (NONE, y) => y
    | (x, 5) => ARB”, SOME
-“case xy of
+“pmatch xy of
    | (NONE, 3) => 1
    | (SOME x, _) => x
    | (NONE, y) => y
    | (x, 5) => ARB”)
 
-val test =  test_conv "PMATCH_SIMP_CONV" PMATCH_SIMP_CONV
-val test_fast =  test_conv "PMATCH_FAST_SIMP_CONV" PMATCH_FAST_SIMP_CONV
+val test = test_conv "PMATCH_SIMP_CONV" PMATCH_SIMP_CONV
+val test_fast = test_conv "PMATCH_FAST_SIMP_CONV" PMATCH_FAST_SIMP_CONV
 
 val t =
    “PMATCH ((a :num option),(x :num),(xs :num list))
@@ -605,17 +607,17 @@ val t2 = “
 
 val _ = test_conv "PMATCH_REMOVE_DOUBLE_BIND_CONV" PMATCH_REMOVE_DOUBLE_BIND_CONV (t0, SOME t1);
 
-val _ = test_conv "PMATCH_REMOVE_DOUBLE_BIND_CONV" PMATCH_REMOVE_DOUBLE_BIND_CONV (“case xy of
+val _ = test_conv "PMATCH_REMOVE_DOUBLE_BIND_CONV" PMATCH_REMOVE_DOUBLE_BIND_CONV (“pmatch xy of
    | (x, x) when x > 0 => x + x
    | x.| (x, y) => x
    | (x, _) => SUC x”, SOME “
-case xy of
+pmatch xy of
      (x,x') when (x' = x) /\ x > 0 => x + x
    | (x,y') when (y' = y) => x
    | (x,_) => SUC x”)
 
 
-val _ = test_conv "PMATCH_REMOVE_DOUBLE_BIND_CONV" PMATCH_REMOVE_DOUBLE_BIND_CONV (“case (xx:('a # 'a)) of (x, x) => T | _ => F”, SOME “case (xx:('a # 'a)) of (x, x') when (x' = x) => T | _ => F”) ;
+val _ = test_conv "PMATCH_REMOVE_DOUBLE_BIND_CONV" PMATCH_REMOVE_DOUBLE_BIND_CONV (“pmatch (xx:('a # 'a)) of (x, x) => T | _ => F”, SOME “pmatch (xx:('a # 'a)) of (x, x') when (x' = x) => T | _ => F”) ;
 
 val _ = test_conv "PMATCH_REMOVE_GUARDS_CONV" PMATCH_REMOVE_GUARDS_CONV (t1, SOME t2);
 
@@ -648,33 +650,33 @@ val t' = “   PMATCH (y,l)
 val _ = test_conv "PMATCH_REMOVE_GUARDS_CONV" PMATCH_REMOVE_GUARDS_CONV (t, SOME t');
 
 
-val _ = test_conv "PMATCH_REMOVE_GUARDS_CONV" PMATCH_REMOVE_GUARDS_CONV (“case (x, y) of
+val _ = test_conv "PMATCH_REMOVE_GUARDS_CONV" PMATCH_REMOVE_GUARDS_CONV (“pmatch (x, y) of
   | (x, 2) when EVEN x => x + x
   | (SUC x, y) when ODD x => y + x + SUC x
   | (SUC x, 1) => x
-  | (x, _) => x+3”, SOME “case (x,y) of
+  | (x, _) => x+3”, SOME “pmatch (x,y) of
      (x,2) =>
           if EVEN x then x + x
-          else (case x of SUC x when ODD x => 2 + x + SUC x | x => x + 3)
+          else (pmatch x of SUC x when ODD x => 2 + x + SUC x | x => x + 3)
    | (SUC x,y) =>
           if ODD x then y + x + SUC x
-          else (case y of 1 => x | _ => SUC x + 3)
+          else (pmatch y of 1 => x | _ => SUC x + 3)
    | (x,_) => x + 3”);
 
 
 
-val _ = test_conv "PMATCH_REMOVE_GUARDS_CONV" PMATCH_REMOVE_GUARDS_CONV (“case (x, y) of
+val _ = test_conv "PMATCH_REMOVE_GUARDS_CONV" PMATCH_REMOVE_GUARDS_CONV (“pmatch (x, y) of
   | (x, 0) when EVEN x => (SOME x, T)
   | (x, 0) => (SOME x, F)
   | (0, _) => (NONE, T)
-  | (_, _) => (NONE, F)”, SOME “case (x,y) of
+  | (_, _) => (NONE, F)”, SOME “pmatch (x,y) of
      (x,0) => if EVEN x then (SOME x,T) else (SOME x,F)
    | (0,_) => (NONE,T)
    | (_,_) => (NONE,F)”);
 
 
 val _ = test_conv "SIMP_CONV (numLib.std_ss ++ PMATCH_REMOVE_GUARDS_ss) []" (SIMP_CONV (numLib.std_ss ++ PMATCH_REMOVE_GUARDS_ss) []) (
-  “case x of
+  “pmatch x of
   | _ when x < 5 => 0
   | _ when x < 10 => 1
   | _ when x < 15 => 2
@@ -686,7 +688,7 @@ val _ = test_conv "SIMP_CONV (numLib.std_ss ++ PMATCH_REMOVE_GUARDS_ss) []" (SIM
 (*************************************)
 
 
-val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false)" (DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false)) (“P1 /\ (P (case (l1:'a list, l2) of
+val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false)" (DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false)) (“P1 /\ (P (pmatch (l1:'a list, l2) of
   | ([], _) => []
   | (_, []) => []
   | (x::xs, y::ys) => [(x, y)])):bool”,
@@ -700,7 +702,7 @@ val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false)" (DEPTH_CONV (PMATCH
     P ARB))”)
 
 
-val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true)" (DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true)) (“P1 /\ (P (case (l1:'a list, l2) of
+val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true)" (DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true)) (“P1 /\ (P (pmatch (l1:'a list, l2) of
   | ([], _) => []
   | (_, []) => []
   | (x::xs, y::ys) => [(x, y)])):bool”,
@@ -708,7 +710,7 @@ val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true)" (DEPTH_CONV (PMATCH_
    (!x xs y ys. (l1 = x::xs) /\ (l2 = y::ys) ==> P [(x,y)]))”)
 
 
-val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false)" (DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false)) (“P1 /\ (P (case (l1:'a list, l2:'c list) of
+val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false)" (DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false)) (“P1 /\ (P (pmatch (l1:'a list, l2:'c list) of
   | ([], _) => ([]:'b list)
   | (_, []) => [])):bool”,
   SOME “P1 /\ ((l1 = ([] :'a list)) ==> P ([] :'b list)) /\
@@ -720,7 +722,7 @@ val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false)" (DEPTH_CONV (PMATCH
           (\(_0 :'a list). T) (\(_0 :'a list). ([] :'b list))] ==>
     P (ARB :'b list))”)
 
-val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true)" (DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true)) (“P1 /\ (P (case (l1:'a list, l2:'c list) of
+val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true)" (DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true)) (“P1 /\ (P (pmatch (l1:'a list, l2:'c list) of
   | ([], _) => ([]:'b list)
   | (_, []) => [])):bool”,
   SOME “P1 /\ (((l1:'a list) = []) ==> P ([]:'b list)) /\ (((l2:'c list) = []) ==> P []) /\
@@ -736,7 +738,7 @@ val _ = Datatype.Datatype ‘
 
 
 val balance_black_def = TotalDefn.Define ‘balance_black a n b =
-   case (a,b) of
+   pmatch (a,b) of
        | (Red (Red a x b) y c,d) =>
             (Red (Black a x b) y (Black c n d))
        | (Red a x (Red b y c),d) =>
@@ -801,16 +803,16 @@ val _ = test_conv "PMATCH_LIFT_BOOL_CONV true" (PMATCH_LIFT_BOOL_CONV true) (tm,
 (* Pattern Compilation           *)
 (*********************************)
 
-val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
-  “case l of NONE => 0 | SOME x => x”, SOME “option_CASE l 0 (\x'. x')”)
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  “pmatch l of NONE => 0 | SOME x => x”, SOME “option_CASE l 0 (\x'. x')”)
 
-val t = “case xyz of
+val t = “pmatch xyz of
   | (_, F, T) => 1
   | (F, T, _) => 2
   | (_, _, F) => 3
   | (_, _, T) => 4”
 
-val test =  test_conv "PMATCH_CASE_SPLIT_CONV_HEU colHeu_first_col" (PMATCH_CASE_SPLIT_CONV_HEU colHeu_first_col) (t, SOME
+val test = test_conv "PMATCH_CASE_SPLIT_CONV_HEU colHeu_first_col" (PMATCH_CASE_SPLIT_CONV_HEU colHeu_first_col) (t, SOME
   “pair_CASE xyz
      (\v v'.
         pair_CASE v'
@@ -823,7 +825,7 @@ val test =  test_conv "PMATCH_CASE_SPLIT_CONV_HEU colHeu_first_col" (PMATCH_CASE
              else if v''' then 1
              else 3))”)
 
-val test =  test_conv "PMATCH_CASE_SPLIT_CONV_HEU colHeu_last_col" (PMATCH_CASE_SPLIT_CONV_HEU colHeu_last_col) (t, SOME
+val test = test_conv "PMATCH_CASE_SPLIT_CONV_HEU colHeu_last_col" (PMATCH_CASE_SPLIT_CONV_HEU colHeu_last_col) (t, SOME
   “pair_CASE xyz
      (\v v'.
         pair_CASE v'
@@ -832,7 +834,7 @@ val test =  test_conv "PMATCH_CASE_SPLIT_CONV_HEU colHeu_last_col" (PMATCH_CASE_
              else if v'' then if v then 3 else 2
              else 3))”)
 
-val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (t, SOME
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (t, SOME
   “pair_CASE xyz
      (\v v'.
         pair_CASE v'
@@ -841,7 +843,7 @@ val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (t, SOME
              else if v''' then 1
              else 3))”)
 
-val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (t, SOME
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (t, SOME
   “pair_CASE xyz
      (\v v'.
         pair_CASE v'
@@ -850,62 +852,62 @@ val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (t, SOME
              else if v''' then 1
              else 3))”)
 
-val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
-  “case l of (SOME x, SOME y) => SOME (x+y) | _ => NONE”, SOME “pair_CASE l
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  “pmatch l of (SOME x, SOME y) => SOME (x+y) | _ => NONE”, SOME “pair_CASE l
      (\v v'.
         option_CASE v NONE
           (\x'. option_CASE v' NONE (\x''. SOME (x' + x''))))”
 )
 
-val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
-  “case x of 3 => 1 | _ => 0”, SOME “literal_case (\v. if v = 3 then 1 else 0) x”)
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  “pmatch x of 3 => 1 | _ => 0”, SOME “literal_case (\v. if v = 3 then 1 else 0) x”)
 
-val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
-  “case x of 0 => 1 | 1 => 1 | 2 => 2”, SOME “   literal_case
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  “pmatch x of 0 => 1 | 1 => 1 | 2 => 2”, SOME “   literal_case
      (\x.
         if x = 0 then 1
         else if x = 1 then 1
         else if x = 2 then 2
         else ARB) x”)
 
-val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
-  “case x of 1 => 1 | 0 => 1 | 2 => 2”, SOME “   literal_case
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  “pmatch x of 1 => 1 | 0 => 1 | 2 => 2”, SOME “   literal_case
      (\x.
         if x = 1 then 1
         else if x = 0 then 1
         else if x = 2 then 2
         else ARB) x”)
 
-val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
-  “case x of 1 => 1 | ().| c => 1”, SOME “   literal_case
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  “pmatch x of 1 => 1 | ().| c => 1”, SOME “   literal_case
      (\x.
         if x = 1 then 1
         else if x = c then 1
         else ARB) x”)
 
-val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
-  “case x of 1 => 1 | ().| c => 2 | ().| d => 3”, SOME “   literal_case
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  “pmatch x of 1 => 1 | ().| c => 2 | ().| d => 3”, SOME “   literal_case
      (\x.
         if x = 1 then 1
         else if x = c then 2
         else if x = d then 3
         else ARB) x”)
 
-val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
-  “case x of 0 => 1 | SUC 0 => 1 | SUC (SUC 0) => 2”, SOME “
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  “pmatch x of 0 => 1 | SUC 0 => 1 | SUC (SUC 0) => 2”, SOME “
         num_CASE x 1
           (\n. num_CASE n 1 (\n'. num_CASE n' 2 (\n''. ARB)))”)
 
 
-val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
-  “case l of [] => 1 | [_;_] => 2 | [3] => 3 |  [_] => 4 | _ => 5”, SOME “
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  “pmatch l of [] => 1 | [_;_] => 2 | [3] => 3 |  [_] => 4 | _ => 5”, SOME “
     list_CASE l 1
      (\h t.
         list_CASE t (literal_case (\x. if x = 3 then 3 else 4) h)
           (\h' t'. list_CASE t' 2 (\h'' t''. 5)))”)
 
-val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
-  “case xy of (0,0) => 1 | (1,1) => 1 | (1,2) => 2”, SOME “pair_CASE xy
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  “pmatch xy of (0,0) => 1 | (1,1) => 1 | (1,2) => 2”, SOME “pair_CASE xy
      (\v v'.
         literal_case
           (\x.
@@ -917,8 +919,8 @@ val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
              else ARB) v)”)
 
 
-val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
-  “case xy of (0,0) => 1 | (1,1) => 1 | ().| (c,3) => 3 | (1,2) => 2 | ().| (c, 4) => 2”, SOME “pair_CASE xy
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  “pmatch xy of (0,0) => 1 | (1,1) => 1 | ().| (c,3) => 3 | (1,2) => 2 | ().| (c, 4) => 2”, SOME “pair_CASE xy
      (\v v'.
         literal_case
           (\x.
@@ -966,25 +968,25 @@ val cf = mk_constructorFamily (cl, “list_REVCASE”,
 val _ = pmatch_compile_db_register_constrFam cf
 
 val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
- “case l of
+ “pmatch l of
   | [] => 0
   | SNOC x _ => x”, SOME “list_REVCASE l 0 (\x' xs. x')”)
 
 val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
- “case lx of
+ “pmatch lx of
   | (_, NONE) => 0
   | (SNOC x _, SOME y) => x + y”, SOME “pair_CASE lx
      (\v v'.
         option_CASE v' 0 (\x'. list_REVCASE v ARB (\x'' xs. x'' + x')))”)
 
 val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
- “case lx of
+ “pmatch lx of
   | [] => 0
   | x::_ => x + y
   ”, SOME “list_CASE lx 0 (\h t. h + y)”)
 
 val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
- “case lx of
+ “pmatch lx of
   | [] => 0
   | SNOC x _ => x
   | x::_ => x + y
@@ -1019,13 +1021,13 @@ val cf = mk_constructorFamily (cl, “tree_red_CASE”,
 val _ = pmatch_compile_db_register_constrFam cf;
 
 val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
- “case (t:'a tree) of
+ “pmatch (t:'a tree) of
   | Red _ _ _ => T
   | _ => F
   ”, SOME (“tree_red_CASE (t:'a tree) (\t a t0. T) (\x. F)”))
 
 val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
- “case (t:'a tree) of
+ “pmatch (t:'a tree) of
   | Black _ _ _ => T
   | _ => F
   ”, SOME (“tree_CASE (t:'a tree) F (\t a t0. F) (\t' a' t0'. T)”))
@@ -1045,13 +1047,13 @@ fun test_nchot (inp,out) =
                   inp
     end
 
-val _ =  test_nchot ([“\x:unit. (NONE : num option)”,
+val _ = test_nchot ([“\x:unit. (NONE : num option)”,
    “\x:num. SOME x”] , “!x. (x = NONE) \/ ?v1:num. x = SOME v1”)
 
-val _ =  test_nchot ([“\x:num. x”, “\x:num. x”],
+val _ = test_nchot ([“\x:num. x”, “\x:num. x”],
   “!x. ?v0:num. x = v0”)
 
-val _ =  test_nchot ([
+val _ = test_nchot ([
    “\v:bool. (v, F, T)”,
    “\v:bool. (F, T, v)”,
    “\(v1:bool, v2:bool). (v1, v2, F)”,
@@ -1060,17 +1062,17 @@ val _ =  test_nchot ([
      (x = (T,T,T)) \/ (x = (T,T,F)) \/ (x = (F,T,T)) \/ (x = (F,T,F)) \/
      (?v0. x = (v0,F,T)) \/ ?v0. x = (v0,F,F)”)
 
-val _ =  test_nchot ([
+val _ = test_nchot ([
    “\(x:num, y:num). (SOME x, SOME y)”,
    “\(x : num option, y : num option). (x, y)”],
    “!x.
      (?v1. x = (NONE,v1)) \/ (?v2. x = (SOME v2,NONE)) \/
      ?(v2:num) (v3:num). x = (SOME v2,SOME v3)”)
 
-val _ =  test_nchot ([“\_:unit. 3”, “\x:num. x”],
+val _ = test_nchot ([“\_:unit. 3”, “\x:num. x”],
   “!x. (x = 3) \/ ?v1. v1 <> 3 /\ (x = v1)”)
 
-val _ =  test_nchot ([“\_:unit. 0”, “\_:unit. SUC 0”, “\_:unit. SUC (SUC 0)”],
+val _ = test_nchot ([“\_:unit. 0”, “\_:unit. SUC 0”, “\_:unit. SUC (SUC 0)”],
   “!x. (x = 0) \/ (x = SUC 0) \/ (x = SUC (SUC 0)) \/
      ?v3. x = SUC (SUC (SUC v3))”)
 
@@ -1347,42 +1349,42 @@ val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK" PMATCH_IS_EXHAUSTIVE_COMPI
 (*********************************)
 
 val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
-  (“case t of [] => 0 | x::_ => x”, NONE)
+  (“pmatch t of [] => 0 | x::_ => x”, NONE)
 
 val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
-  (“SUC (case t of [] => 0 | x::_ => x)”, SOME
-   “case t of [] => SUC 0 | x::_ => SUC x”)
+  (“SUC (pmatch t of [] => 0 | x::_ => x)”, SOME
+   “pmatch t of [] => SUC 0 | x::_ => SUC x”)
 
 val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
-  (“SUC ((\c. (case t of [] => 0 | x::_ => x) + c) 5)”, SOME
-   “case t of [] => SUC ((\c. 0 + c) 5) | x::_ => SUC ((\c. x + c) 5)”)
+  (“SUC ((\c. (pmatch t of [] => 0 | x::_ => x) + c) 5)”, SOME
+   “pmatch t of [] => SUC ((\c. 0 + c) 5) | x::_ => SUC ((\c. x + c) 5)”)
 
 val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
-  (“(\c. (case t of [] => 0 | x::_ => x) + c)”, SOME
-   “case t of [] => (\c. 0 + c) | x::_ => (\c. x + c)”)
+  (“(\c. (pmatch t of [] => 0 | x::_ => x) + c)”, SOME
+   “pmatch t of [] => (\c. 0 + c) | x::_ => (\c. x + c)”)
 
 val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
-  (“SUC ((\c. (case t of [] => c | x::_ => x) + c) 5)”, NONE)
+  (“SUC ((\c. (pmatch t of [] => c | x::_ => x) + c) 5)”, NONE)
 
 val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
-  (“(\c. (case t of [] => c | x::_ => x) + c)”, NONE)
+  (“(\c. (pmatch t of [] => c | x::_ => x) + c)”, NONE)
 
 val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
-  (“SUC (case t of [] => 0)”, SOME
-   “case t of [] => SUC 0 | v1::v2 => SUC ARB”)
+  (“SUC (pmatch t of [] => 0)”, SOME
+   “pmatch t of [] => SUC 0 | v1::v2 => SUC ARB”)
 
 val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
-  (“SUC ((\c. (case t of [] => 0) + c) 5)”, SOME
-   “case t of [] => SUC ((\c. 0 + c) 5) | _::_ => SUC ((\c. ARB + c) 5)”)
+  (“SUC ((\c. (pmatch t of [] => 0) + c) 5)”, SOME
+   “pmatch t of [] => SUC ((\c. 0 + c) 5) | _::_ => SUC ((\c. ARB + c) 5)”)
 
 val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
-  (“(\c. (case t of [] => 0) + c)”, SOME
-   “case t of [] => (\c. 0 + c) | _::_ => (\c. ARB + c)”)
+  (“(\c. (pmatch t of [] => 0) + c)”, SOME
+   “pmatch t of [] => (\c. 0 + c) | _::_ => (\c. ARB + c)”)
 
 
 val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
-  (“(\c. (case t of [] => 0) + c + 2 * (case t of [] => 0))”, SOME
-   “case t of [] => (\c. 0 + c + 2 * 0) | _::_ => (\c. ARB + c + 2 * ARB)”)
+  (“(\c. (pmatch t of [] => 0) + c + 2 * (pmatch t of [] => 0))”, SOME
+   “pmatch t of [] => (\c. 0 + c + 2 * 0) | _::_ => (\c. ARB + c + 2 * ARB)”)
 
 
 (*********************************)
@@ -1390,7 +1392,7 @@ val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
 (*********************************)
 
 val _ = test_conv "PMATCH_EXTEND_INPUT_CONV" (PMATCH_EXTEND_INPUT_CONV “(n:num, l:num list)”)
-  (“case (l, n) of ([], _) => c | (x::_, SUC m) => x + m”, SOME
+  (“pmatch (l, n) of ([], _) => c | (x::_, SUC m) => x + m”, SOME
    “PMATCH ((n :num),(l :num list))
      [PMATCH_ROW (\(_0 :num). (_0,([] :num list))) (\(_0 :num). T)
         (\(_0 :num). c);
@@ -1400,7 +1402,7 @@ val _ = test_conv "PMATCH_EXTEND_INPUT_CONV" (PMATCH_EXTEND_INPUT_CONV “(n:num
 
 
 val _ = test_conv "PMATCH_EXTEND_INPUT_CONV" (PMATCH_EXTEND_INPUT_CONV “(x1: 'a, n:num, x2:'b, l:num list, x3:'c)”)
-  (“case (l, n) of ([], _) => c | (x::_, SUC m) => x + m”, SOME
+  (“pmatch (l, n) of ([], _) => c | (x::_, SUC m) => x + m”, SOME
    “PMATCH ((x1 :'a),n,(x2 :'b),l,(x3 :num))
      [PMATCH_ROW
         (\((_0 :num),(_1 :'a),(_2 :'b),(_3 :num)).
@@ -1420,7 +1422,7 @@ val _ = test_conv "PMATCH_EXTEND_INPUT_CONV" (PMATCH_EXTEND_INPUT_CONV “(x1: '
 
 
 val _ = test_conv "PMATCH_EXTEND_INPUT_CONV" (PMATCH_EXTEND_INPUT_CONV “(x1: 'a, n:num, n, x2:'b, l:num list, x3:'c)”)
-  (“case (l, n) of ([], _) => c | (x::_, SUC m) => x + m”, SOME
+  (“pmatch (l, n) of ([], _) => c | (x::_, SUC m) => x + m”, SOME
    “PMATCH ((x1 :'a),n,n,(x2 :'b),l,(x3 :num))
      [PMATCH_ROW
         (\((_0 :num),(_1 :'a),(_2 :num),(_3 :'b),(_4 :num)).
@@ -1440,7 +1442,7 @@ val _ = test_conv "PMATCH_EXTEND_INPUT_CONV" (PMATCH_EXTEND_INPUT_CONV “(x1: '
 
 
 val _ = test_conv "PMATCH_EXTEND_INPUT_CONV" (PMATCH_EXTEND_INPUT_CONV “(c:num, n:num, l:num list)”)
-  (“case (l, n) of ([], _) => c | (x::_, SUC m) => x + m + n”, SOME
+  (“pmatch (l, n) of ([], _) => c | (x::_, SUC m) => x + m + n”, SOME
    “PMATCH (c,n,l)
      [PMATCH_ROW (\(_0,c). (c,_0,[])) (\(_0,c). T) (\(_0,c). c);
       PMATCH_ROW (\(x,_0,m,_1). (_1,SUC m,x::_0)) (\(x,_0,m,_1). T)
@@ -1452,8 +1454,8 @@ val _ = test_conv "PMATCH_EXTEND_INPUT_CONV" (PMATCH_EXTEND_INPUT_CONV “(c:num
 (*********************************)
 
 val _ = test_conv "PMATCH_FLATTEN_CONV false" (PMATCH_FLATTEN_CONV false)
-  (“case (x, y) of ([], x::xs) => (
-           case xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (_, []) => 1”,
+  (“pmatch (x, y) of ([], x::xs) => (
+           pmatch xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (_, []) => 1”,
    SOME “PMATCH (x,y)
      [PMATCH_ROW (\x. ([],[x])) (\x. T) (\x. 1 + x);
       PMATCH_ROW (\(x,xs,_0). ([],_0::x::xs)) (\(x,xs,_0). T)
@@ -1461,8 +1463,8 @@ val _ = test_conv "PMATCH_FLATTEN_CONV false" (PMATCH_FLATTEN_CONV false)
       PMATCH_ROW (\_0. (_0,[])) (\_0. T) (\_0. 1)]”)
 
 val _ = test_conv "PMATCH_FLATTEN_CONV true" (PMATCH_FLATTEN_CONV true)
-  (“case (x, y) of ([], x::xs) => (
-           case xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (_, []) => 1”,
+  (“pmatch (x, y) of ([], x::xs) => (
+           pmatch xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (_, []) => 1”,
    SOME “PMATCH (x,y)
      [PMATCH_ROW (\x. ([],[x])) (\x. T) (\x. 1 + x);
       PMATCH_ROW (\(x,xs,_0). ([],_0::x::xs)) (\(x,xs,_0). T)
@@ -1470,14 +1472,14 @@ val _ = test_conv "PMATCH_FLATTEN_CONV true" (PMATCH_FLATTEN_CONV true)
       PMATCH_ROW (\_0. (_0,[])) (\_0. T) (\_0. 1)]”)
 
 val _ = test_conv "PMATCH_FLATTEN_CONV false" (PMATCH_FLATTEN_CONV false)
-  (“case (x, y) of ([], x::xs) => SUC (
-           case xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (_, []) => 1”,
+  (“pmatch (x, y) of ([], x::xs) => SUC (
+           pmatch xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (_, []) => 1”,
    NONE)
 
 
 val _ = test_conv "PMATCH_FLATTEN_CONV true" (PMATCH_FLATTEN_CONV true)
-  (“case (x, y) of ([], x::xs) => SUC (
-       case xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (_, []) => 1”,
+  (“pmatch (x, y) of ([], x::xs) => SUC (
+       pmatch xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (_, []) => 1”,
    SOME “PMATCH (x,y)
      [PMATCH_ROW (\x. ([],[x])) (\x. T) (\x. SUC (1 + x));
       PMATCH_ROW (\(x,xs,_0). ([],_0::x::xs)) (\(x,xs,_0). T)
@@ -1486,8 +1488,8 @@ val _ = test_conv "PMATCH_FLATTEN_CONV true" (PMATCH_FLATTEN_CONV true)
 
 
 val _ = test_conv "PMATCH_FLATTEN_CONV true" (PMATCH_FLATTEN_CONV true)
-  (“case (x, y) of ([], x::xs) => SUC (
-       case xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (y::ys, []) => (case y of 0 => 1 | _ => 2)”,
+  (“pmatch (x, y) of ([], x::xs) => SUC (
+       pmatch xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (y::ys, []) => (pmatch y of 0 => 1 | _ => 2)”,
    SOME “PMATCH (x,y)
      [PMATCH_ROW (\x. ([],[x])) (\x. T) (\x. SUC (1 + x));
       PMATCH_ROW (\(x,xs,_0). ([],_0::x::xs)) (\(x,xs,_0). T)
@@ -1497,8 +1499,8 @@ val _ = test_conv "PMATCH_FLATTEN_CONV true" (PMATCH_FLATTEN_CONV true)
 
 
 val _ = test_conv "PMATCH_FLATTEN_CONV true" (PMATCH_FLATTEN_CONV true)
-  (“case (x, y) of ([], x::xs) => SUC (
-       case xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (y::ys, []) => (case z of 0 => 1 | _ => 2)”,
+  (“pmatch (x, y) of ([], x::xs) => SUC (
+       pmatch xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (y::ys, []) => (pmatch z of 0 => 1 | _ => 2)”,
    SOME “PMATCH (x,y)
      [PMATCH_ROW (\x. ([],[x])) (\x. T) (\x. SUC (1 + x));
       PMATCH_ROW (\(x,xs,_0). ([],_0::x::xs)) (\(x,xs,_0). T)
@@ -1547,16 +1549,16 @@ val _ = run_test (“(4::3::l) : num list”, “PMATCH ((4 :num)::(3 :num)::l)
         (\((x :num),(y :num),(_3 :num list)). T)
         (\((x :num),(y :num),(_3 :num list)). x + y)]”);
 
-val _ = test_conv "EVAL_CONV" EVAL_CONV (“case [] of x::xs => SUC x”, SOME “ARB:num”);
+val _ = test_conv "EVAL_CONV" EVAL_CONV (“pmatch [] of x::xs => SUC x”, SOME “ARB:num”);
 
-val _ = test_conv "EVAL_CONV" EVAL_CONV (“case [] of SNOC x xs => SUC x”, SOME “ARB:num”);
+val _ = test_conv "EVAL_CONV" EVAL_CONV (“pmatch [] of SNOC x xs => SUC x”, SOME “ARB:num”);
 
-val _ = test_conv "EVAL_CONV" EVAL_CONV (“case [] of [] => 0 | SNOC x xs => SUC x”, SOME “0”);
+val _ = test_conv "EVAL_CONV" EVAL_CONV (“pmatch [] of [] => 0 | SNOC x xs => SUC x”, SOME “0”);
 
-val _ = test_conv "EVAL_CONV" EVAL_CONV (“case SNOC x xs of [] => 0 | SNOC x xs => SUC x”, SOME “SUC x”);
+val _ = test_conv "EVAL_CONV" EVAL_CONV (“pmatch SNOC x xs of [] => 0 | SNOC x xs => SUC x”, SOME “SUC x”);
 
 val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
- “case lx of
+ “pmatch lx of
   | [] => 0
   | SNOC x _ => x
   | x::_ => x + y

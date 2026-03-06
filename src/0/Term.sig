@@ -13,7 +13,6 @@ sig
   val prim_mk_imp    : term -> term -> term
   val break_const    : term -> KernelTypes.id * hol_type
   val break_abs      : term -> term
-  val trav           : (term -> unit) -> term -> unit
   val is_bvar        : term -> bool
   val kernelid       : string
 

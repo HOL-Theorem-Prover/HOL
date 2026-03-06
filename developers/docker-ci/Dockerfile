@@ -24,15 +24,26 @@ COPY --link . .
 ARG Z3_VERSION
 ARG CVC_VERSION
 ARG YICES_VERSION
+ARG CSDP_VERSION
+
+# this overrides the PATH environment from upstream images
+ENV PATH=/ML/HOL/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # if --build-arg Z3_VERSION=anything, set HOL4_Z3_EXECUTABLE to system-installed z3
-ENV HOL4_Z3_EXECUTABLE=${Z3_VERSION:+/usr/bin/z3}
+ENV HOL4_Z3_EXECUTABLE=${Z3_VERSION:+/ML/z3-${Z3_VERSION}/bin/z3}
 RUN if [ "" != "${Z3_VERSION}" ]; then \
     echo "Using Z3 solver: `${HOL4_Z3_EXECUTABLE} -version`"; \
 fi
 
-# if --build-arg CVC_VERSION=5, set HOL4_CVC_EXECUTABLE to system-installed cvc5
-ENV HOL4_CVC_EXECUTABLE=${CVC_VERSION:+/usr/bin/cvc5}
+# if --build-arg CVC_VERSION=5, install cvc5 1.3.2 and set HOL4_CVC_EXECUTABLE
+RUN if [ "5" = "${CVC_VERSION}" ] && [ "linux/amd64" = "${TARGETPLATFORM:-linux/amd64}" ]; then \
+    wget -q -O /tmp/cvc5.zip \
+      https://github.com/cvc5/cvc5/releases/download/cvc5-1.3.2/cvc5-Linux-x86_64-static.zip && \
+    unzip -o /tmp/cvc5.zip -d /ML && \
+    ln -sf /ML/cvc5-Linux-x86_64-static/bin/cvc5 /ML/cvc5-Linux && \
+    rm /tmp/cvc5.zip; \
+fi
+ENV HOL4_CVC_EXECUTABLE=${CVC_VERSION:+/ML/cvc5-Linux}
 RUN if [ "" != "${CVC_VERSION}" ]; then \
     echo "Using CVC solver: `${HOL4_CVC_EXECUTABLE} --version | head -1`"; \
 fi
@@ -44,15 +55,26 @@ RUN if [ "" != "${YICES_VERSION}" ]; then \
     echo "Using Yices solver: `${HOL4_YICES_EXECUTABLE} --version`"; \
 fi
 
+# if --build-arg CSDP_VERSION=1, install coinor-csdp (for SOSLib Positivstellensatz)
+RUN if [ "" != "${CSDP_VERSION}" ]; then \
+    apt-get update -qy && apt-get install -qy coinor-csdp && apt-get clean && \
+    echo "Using CSDP solver: `csdp 2>&1 | head -1`"; \
+fi
+
 # remove potential local poly-includes.ML for docker builds
 RUN rm -f tools-poly/poly-includes.ML
 
-# Building HOL itself
-RUN ${SML} < tools/smart-configure.sml 
+# Building HOL itself (PolyML is now installed in non-system directories)
+RUN if [ "poly" = "$SML" ]; then \
+    /ML/polyml/bin/${SML} < tools/smart-configure.sml; \
+else \
+    ${SML} < tools/smart-configure.sml; \
+fi
+
 RUN bin/build ${BUILDOPTS}
 
 # Building HOL manuals when PolyML is used
-RUN if [ "poly" = "${SML}" ]; then \
+RUN if [ "poly" = "${SML}" ] && [ "linux/amd64" = "$TARGETPLATFORM" ]; then \
     if echo ${BUILDOPTS} | grep -q "otknl"; then \
        echo Skip manual building; \
     else \

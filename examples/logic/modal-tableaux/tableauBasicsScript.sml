@@ -1,9 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open pairTheory pred_setTheory
-open modalBasicsTheory
-
-val _ = new_theory "tableauBasics";
+Theory tableauBasics
+Ancestors
+  pair pred_set modalBasics
 
 Overload gsize = “λl. SUM (MAP nnfform_size l)”
 Overload form_size = “nnfform_size”
@@ -183,10 +180,8 @@ QED
 Datatype: tmodel = Nd (num list) (tmodel list)
 End
 
-Theorem tmodel_size_def[simp,allow_rebind] = definition "tmodel_size_def"
-
 Theorem MEM_tmodel_size:
-  MEM t ts ⇒ tmodel_size t < tmodel1_size ts
+  MEM t ts ⇒ tmodel_size t < list_size tmodel_size ts
 Proof
   Induct_on ‘ts’ >> rw[] >> res_tac >> simp[]
 QED
@@ -255,4 +250,3 @@ QED
 
 
 
-val _ = export_theory();

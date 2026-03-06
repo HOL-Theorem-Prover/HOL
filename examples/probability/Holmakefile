@@ -12,14 +12,16 @@ EXTRA_CLEANS = heap \
 
 ifdef POLY
 HOLHEAP = heap
-OBJS = real/realLib n-bit/fcpLib probability/probabilityTheory
+OBJS = real/realLib n-bit/fcpLib probability/probabilityTheory \
+       probability/lebesgue_measureTheory
+
 FULL_OBJPATHS = $(patsubst %,$(HOLDIR)/src/%.uo,$(OBJS)) \
                 $(HOLDIR)/sigobj/posetTheory.uo
 
 all: $(HOLHEAP)
 
 $(HOLHEAP): $(FULL_OBJPATHS) $(HOLDIR)/bin/hol.state
-	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $@ \
+	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) -o $@ \
             -b $(protect $(HOLDIR)/src/real/analysis/realheap) $(FULL_OBJPATHS)
 endif
 

@@ -16,6 +16,6 @@ all: $(TARGETS) $(HOLHEAP)
 
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -b ../step/m0-heap -o $(HOLHEAP) $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/hol) buildheap -b ../step/m0-heap -o $(HOLHEAP) $(BARE_THYS)
 
 endif

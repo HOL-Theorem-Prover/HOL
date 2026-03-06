@@ -1,18 +1,30 @@
 (*===========================================================================*)
 (* Basic automata theory: nfas, dfas, their equivalence via the subset       *)
-(* construction, closure constructions, etc. The approach taken is           *)
-(* set-oriented, rather than computational.                                  *)
+(* construction, closure constructions, Myhill-Nerode, etc. The approach     *)
+(* taken is set-oriented, rather than computational.                         *)
 (*===========================================================================*)
 
-open HolKernel Parse boolLib bossLib;
-open combinTheory pairTheory listTheory
-     mp_then nlistTheory numpairTheory
-     pred_setTheory relationTheory
-     rich_listTheory prim_recTheory
-     arithmeticTheory FormalLangTheory;
+Theory regular
+Ancestors
+  combin relation pred_set pair numpair
+  prim_rec arithmetic list rich_list nlist
+  FormalLang dirGraph dft
+Libs
+  mp_then
 
-infix byA;
-val op byA = BasicProvers.byA;
+
+(*---------------------------------------------------------------------------*)
+(* Syntax support                                                            *)
+(*---------------------------------------------------------------------------*)
+
+Overload "\206\181"[local] = listSyntax.nil_tm  (* epsilon = UTF8.chr 0x03B5 *)
+Overload "\226\138\136"[local] = “λx y. ~(x ⊆ y)” (* not_subset = UTF8.chr 0x2288 *)
+
+Overload "RTC"[local] = “λs. KSTAR{[a] | a ∈ s}”
+Overload "RTC"[local] = “KSTAR”
+Overload "TC"[local]  = “KPLUS”
+
+val _ = set_fixity (UTF8.chr 0x2288) (Infix(NONASSOC, 450))
 
 val sym = SYM
 val subst_all_tac = SUBST_ALL_TAC
@@ -20,12 +32,10 @@ val sym_subst_all_tac = subst_all_tac o sym
 val pop_subst_tac = pop_assum subst_all_tac;
 val pop_sym_subst_tac = pop_assum sym_subst_all_tac;
 val pop_keep_tac = pop_assum mp_tac
-val qpat_keep_tac = Lib.C qpat_x_assum mp_tac;
+val qpat_stage_tac = Lib.C qpat_x_assum mp_tac;
 val pop_forget_tac = pop_assum kall_tac
 val qpat_forget_tac = Lib.C qpat_x_assum kall_tac;
 val forget_tac = WEAKEN_TAC
-
-fun obtain_then q tac ttac = ttac (Q.prove(q,tac))
 
 val PUSH_EXISTS = LIST_CONJ
   [GSYM RIGHT_OR_EXISTS_THM,
@@ -37,10 +47,6 @@ val PUSH_EXISTS = LIST_CONJ
    EXISTS_OR_THM];
 
 
-val epsilon = UTF8.chr 0x03B5;
-
-val _ = temp_overload_on (epsilon,listSyntax.nil_tm);
-
 fun dty_metis_tac list =
   let open TypeBasePure
       val dtys =  TypeBase.elts()
@@ -48,8 +54,6 @@ fun dty_metis_tac list =
       val one_one  = List.mapPartial one_one_of dtys
    in metis_tac (list @ distinct @ one_one)
    end
-
-val _ = new_theory "regular";
 
 (* NOTE: duplicate theorems:
 
@@ -66,10 +70,22 @@ pred_setTheory.X_LE_MAX_SET (THEOREM)
 (* Local lemmas, possibly of wider use. Start with sets                      *)
 (*---------------------------------------------------------------------------*)
 
+Theorem forall_emptyset[local]:
+ (∀x. x ∉ s) ⇔ s = ∅
+Proof
+ rw[EXTENSION]
+QED
+
 Theorem ELT_SUBSET:
   a ∈ s ⇔ {a} ⊆ s
 Proof
  rw[EQ_IMP_THM]
+QED
+
+Theorem gspec_lemma[local]:
+  {f x | x = y} = {f y}
+Proof
+  rw [EXTENSION,EQ_IMP_THM]
 QED
 
 Theorem SUBSET_SKOLEM_THM :
@@ -78,19 +94,19 @@ Proof
  metis_tac[]
 QED
 
-Triviality SUBSET_UNION_RIGHT:
+Theorem SUBSET_UNION_RIGHT[local]:
  x ⊆ y ⇒ x ⊆ y ∪ z
 Proof
   rw[SUBSET_DEF]
 QED
 
-Triviality UNION_EQ_DIFF:
+Theorem UNION_EQ_DIFF[local]:
  A ∪ B = C ⇒ A DIFF B = C DIFF B
 Proof
   rw [EXTENSION] >> metis_tac[]
 QED
 
-Triviality DIFF_EQ_UNION:
+Theorem DIFF_EQ_UNION[local]:
  A DIFF B = C ⇒ A ∪ B = C ∪ B
 Proof
   rw [EXTENSION] >> metis_tac[]
@@ -108,65 +124,74 @@ Proof
  rw[] >> spose_not_then assume_tac >> drule_all X_LE_MAX_SET >> decide_tac
 QED
 
+Theorem finite_image_range[local]:
+  FINITE t ⇒ (∀x. x ∈ s ⇒ f x ∈ t) ⇒ FINITE(IMAGE f s)
+Proof
+  rw [] >>
+  ‘IMAGE f s ⊆ t’ by
+    (rw[SUBSET_DEF] >> metis_tac[]) >>
+  irule SUBSET_FINITE >> metis_tac[]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* List destructors: HD, TL, and LAST                                        *)
 (*---------------------------------------------------------------------------*)
 
-Triviality HD_APPEND[simp]:
+Theorem HD_APPEND[local,simp]:
  ∀l1 l2. l1 ≠ [] ⇒ HD (l1 ++ l2) = HD l1
 Proof
  Cases >> rw[]
 QED
 
-Triviality HD_SNOC[simp]:
+Theorem HD_SNOC[local,simp]:
  ∀l x. l ≠ [] ⇒ HD (SNOC x l) = HD l
 Proof
   Cases >> rw[]
 QED
 
-Triviality HD_FRONT[simp]:
+Theorem HD_FRONT[local,simp]:
  ∀l. 1 < LENGTH l ⇒ HD (FRONT l) = HD l
 Proof
   Cases >> rw[FRONT_DEF]
 QED
 
-Triviality HD_MAP[simp]:
+Theorem HD_MAP[local,simp]:
  l ≠ [] ⇒ HD (MAP f l) = f (HD l)
 Proof
  Cases_on ‘l’ >> rw[]
 QED
 
-Triviality TL_APPEND[simp]:
+Theorem TL_APPEND[local,simp]:
  ∀l1 l2. l1 ≠ [] ⇒ TL (l1 ++ l2) = TL l1 ++ l2
 Proof
  Cases >> rw[]
 QED
 
-Triviality LAST_MAP[simp]:
+Theorem LAST_MAP[local,simp]:
  l ≠ [] ⇒ LAST (MAP f l) = f (LAST l)
 Proof
  Cases_on ‘l’ >> rw[]
 QED
 
-Triviality LAST_TL[simp]:
+Theorem LAST_TL[local,simp]:
   ∀l. TL l ≠ [] ⇒ LAST (TL l) = LAST l
 Proof
  Cases >> rw[LAST_DEF]
 QED
 
-Triviality EL_TL[simp]:
+Theorem EL_TL[local,simp]:
   ∀l. l ≠ [] ⇒ EL n (TL l) = EL (n+1) l
 Proof
  Cases >> rw[GSYM ADD1]
 QED
 
-Triviality LENGTH_TL_ALT:
+Theorem LENGTH_TL_ALT[local]:
  n < LENGTH l ⇒ LENGTH (TL l) = LENGTH l − 1
 Proof
  rw [LENGTH_TL]
 QED
 
-Triviality LESS_FRONT_LENGTH[simp]:
+Theorem LESS_FRONT_LENGTH[local,simp]:
  ∀l n. 0 < n ∧ n < LENGTH l ⇒ n-1 < LENGTH (FRONT l)
 Proof
   Cases >> rw[FRONT_DEF]
@@ -198,7 +223,7 @@ Proof
  rw[EVERY_EL] >> metis_tac [EL,NOT_NIL_EQ_LENGTH_NOT_0]
 QED
 
-Triviality EVERY_TL:
+Theorem EVERY_TL[local]:
   l ≠ [] ∧ EVERY P l ⇒ EVERY P (TL l)
 Proof
  Cases_on ‘l’ >> rw[]
@@ -216,7 +241,7 @@ Proof
   Induct_on ‘l’ >> rw[]
 QED
 
-Triviality POS_LENGTH_NOT_NIL:
+Theorem POS_LENGTH_NOT_NIL[local]:
   n < LENGTH list ⇒ list ≠ []
 Proof
  Cases_on ‘list’ >> rw[]
@@ -226,7 +251,7 @@ QED
 (* FLAT                                                                      *)
 (*---------------------------------------------------------------------------*)
 
-Triviality FLAT_NOT_NIL:
+Theorem FLAT_NOT_NIL[local]:
   ll ≠ [] ∧ LAST ll ≠ [] ⇒ FLAT ll ≠ []
 Proof
   rw [FLAT_EQ_NIL,o_DEF,EXISTS_EL] >> rfs [LAST_EL] >>
@@ -254,7 +279,7 @@ QED
 (* EL                                                                        *)
 (*---------------------------------------------------------------------------*)
 
-Triviality el_last[simp]:
+Theorem el_last[local,simp]:
  EL (LENGTH list) (list ⧺ [a]) = a
 Proof
   MATCH_ACCEPT_TAC
@@ -269,14 +294,14 @@ Proof
   rw [EL_APPEND_EQN]
 QED
 
-Triviality EL_LENGTH_LAST:
+Theorem EL_LENGTH_LAST[local]:
  ∀l1 l2. LENGTH l1 = LENGTH l2 + 1 ⇒ EL (LENGTH l2) l1 = LAST l1
 Proof
  ho_match_mp_tac SNOC_INDUCT >> rw[ADD1] >>
  pop_assum (SUBST_ALL_TAC o GSYM) >> rw [EL_LENGTH_SNOC]
 QED
 
-Triviality LAST_MAP2:
+Theorem LAST_MAP2[local]:
   ∀l1 l2 f.
     l1 ≠ [] ∧ l2 ≠ [] ∧ LENGTH l1 = LENGTH l2
     ⇒ LAST (MAP2 f l1 l2) = f (LAST l1) (LAST l2)
@@ -286,7 +311,13 @@ Proof
   rw [LAST_EL] >> irule EL_MAP2 >> Cases_on ‘l2’ >> fs[]
 QED
 
-Triviality snoc2:
+(*---------------------------------------------------------------------------*)
+(* SNOC                                                                      *)
+(*---------------------------------------------------------------------------*)
+
+Theorem snoc_induct = SNOC_INDUCT |> SRULE [SNOC_APPEND]
+
+Theorem snoc2[local]:
  ∀list n. LENGTH list = n+2 ⇒ ∃z f. list = SNOC z f ∧ f ≠ []
 Proof
   rpt strip_tac >> Cases_on ‘list = []’
@@ -301,9 +332,10 @@ QED
 (*---------------------------------------------------------------------------*)
 
 Theorem KSTAR_FLAT:
-  KSTAR L = {FLAT ls | ∀w. MEM w ls ⇒ w ∈ L}
+  KSTAR L = {FLAT list | ∀w. MEM w list ⇒ w ∈ L ∧ w ≠ ε}
 Proof
- rw[EXTENSION,IN_KSTAR_LIST,EVERY_MEM] >> metis_tac[]
+  simp [EXTENSION,IN_KSTAR_LIST,EVERY_MEM] >>
+  metis_tac[]
 QED
 
 Theorem KSTAR_DEF_ALT:
@@ -316,12 +348,12 @@ Proof
     >> metis_tac[]
 QED
 
-Triviality RTC_LIST_LR:
+Theorem RTC_LIST_LR[local]:
   ∀x y. RTC R x y ⇒
         ∃l. l ≠ [] ∧ HD l = x ∧ LAST l = y ∧
             ∀n. n < LENGTH l - 1 ⇒ R (EL n l) (EL (n + 1) l)
 Proof
-  Induct_on ‘RTC’ >> rw[]
+  Induct_on ‘RTC R’ >> rw[]
   >- (rename [‘HD _ = q’] >> qexists_tac ‘[q]’ >> simp[])
   >- (rename [‘R q (HD l)’] >> qexists_tac ‘q::l’ >> simp[] >>
       conj_tac
@@ -329,7 +361,7 @@ Proof
       >- (Cases >> simp[arithmeticTheory.ADD_CLAUSES]))
 QED
 
-Triviality RTC_LIST_RL:
+Theorem RTC_LIST_RL[local]:
   ∀l. l ≠ [] ∧
       (∀n. n < LENGTH l - 1 ⇒ R (EL n l) (EL (n + 1) l))
      ⇒ RTC R (HD l) (LAST l)
@@ -482,13 +514,13 @@ Definition DFA_LANGS_def:
   DFA_LANGS = {nfa_lang N | is_dfa N}
 End
 
-Triviality IN_NFA_LANGS:
+Theorem IN_NFA_LANGS[local]:
   L ∈ NFA_LANGS <=> ∃N. wf_nfa N ∧ L = nfa_lang N
 Proof
   rw[EXTENSION,NFA_LANGS_def] >> metis_tac[]
 QED
 
-Triviality IN_DFA_LANGS:
+Theorem IN_DFA_LANGS[local]:
   L ∈ DFA_LANGS <=> ∃N. is_dfa N ∧ L = nfa_lang N
 Proof
   rw[EXTENSION,DFA_LANGS_def] >> metis_tac[]
@@ -638,7 +670,7 @@ Proof
   rpt strip_tac >> drule is_exec_TL >> rw[] >> res_tac >> fs[]
 QED
 
-Triviality is_exec_drop_right:
+Theorem is_exec_drop_right[local]:
   wf_nfa N ∧ is_exec N (qs ++ [q]) (w ++ [a]) ⇒ is_exec N qs w
 Proof
   rpt strip_tac >> rw [is_exec_def]
@@ -654,7 +686,7 @@ Proof
       simp[EL_APPEND1])
 QED
 
-Triviality is_exec_extend_right:
+Theorem is_exec_extend_right[local]:
   wf_nfa N ∧ is_exec N qs w ∧
   a ∈ N.Sigma ∧ q ∈ N.delta (LAST qs) a
     ⇒
@@ -699,18 +731,6 @@ Proof
       simp_tac bool_ss [GSYM APPEND_ASSOC,APPEND] >>
       simp_tac bool_ss [EL_LENGTH_APPEND_0,EL_LENGTH_APPEND_1])
 QED
-
-(*
-Theorem is_exec_append:
-  wf_nfa N ∧ w2 ≠ ε ∧
-  is_exec N qs1 w1 ∧ is_exec N qs2 w2 ∧
-  HD qs2 ∈ N.delta (LAST qs1) (HD w2)
-    ⇒
-  is_exec N (qs1 ++ qs1) (w1 ++ w2)
-Proof
- cheat
-QED
-*)
 
 Theorem is_exec_extend_left:
   wf_nfa N ∧
@@ -875,6 +895,7 @@ Proof
       ‘LENGTH Q1 = LENGTH w + 2 ∧ LENGTH Q2 = LENGTH w + 2’ by decide_tac >>
       ‘∃qs1 q1. Q1 = SNOC q1 qs1 ∧ qs1 ≠ []’ by metis_tac[snoc2] >>
       ‘∃qs2 q2. Q2 = SNOC q2 qs2 ∧ qs2 ≠ []’ by metis_tac[snoc2] >> fs[] >>
+      ONCE_REWRITE_TAC [CONJ_SYM] \\
       irule (METIS_PROVE [] “(b' ⇒ a=a') ∧ (a' ⇒ b=b') ∧ a' ∧ b' ⇒ a ∧ b”) >>
       qexists_tac ‘qs1 = qs2’ >> qexists_tac ‘T’ >> simp[] >> conj_tac
       >- (first_x_assum irule >> rw[LENGTH_FRONT] >> fs[GSYM SNOC_APPEND]
@@ -884,7 +905,8 @@ Proof
           >- (‘EL (n+1) (SNOC q2 qs2) ∈
                N.delta (EL n (SNOC q2 qs2)) (EL n (SNOC a w))’ by rw[] >>
                rpt(forget_tac is_forall) >> pop_assum mp_tac >> simp[EL_SNOC]))
-      >- (rw[] >> forget_tac is_neg >> forget_tac is_eq >>
+      >- (fs [SNOC_APPEND] \\
+          rw[] >> forget_tac is_neg >> forget_tac is_eq >>
           fs [GSYM SNOC_APPEND] >> ‘LENGTH w < SUC (LENGTH w)’ by decide_tac >>
           first_x_assum drule >> fs [Once BOUNDED_FORALL_THM] >>
           ‘LENGTH w + 1 = LENGTH qs1’ by decide_tac >>
@@ -892,7 +914,8 @@ Proof
           ‘EL (LENGTH w) qs1 ∈ N.Q’ by
             (irule nfa_execution_last_state >> rw[] >> fs [is_dfa_def]) >>
           fs [is_dfa_def] >>
-          ‘∃qf. N.delta (EL (LENGTH w) qs1) a = {qf}’ by metis_tac[] >> gvs[])
+          ‘∃qf. N.delta (EL (LENGTH w) qs1) a = {qf}’ by metis_tac[] >>
+          gvs[])
      )
 QED
 
@@ -909,7 +932,7 @@ Definition nfa_to_dfa_def:
       final   := {enc s | s ⊆ N.Q ∧ s ∩ N.final ≠ ∅} |>
 End
 
-Triviality nfa_to_dfa_builtin_simps[simp]:
+Theorem nfa_to_dfa_builtin_simps[local,simp]:
   (nfa_to_dfa N).Sigma = N.Sigma ∧
   (nfa_to_dfa N).initial = {enc N.initial} ∧
   (nfa_to_dfa N).final   = {enc s | s ⊆ N.Q ∧ s ∩ N.final ≠ ∅} ∧
@@ -1243,7 +1266,7 @@ Proof
   >- (fs[] >> metis_tac[])
 QED
 
-Triviality nfa_dot_builtin_simps[simp]:
+Theorem nfa_dot_builtin_simps[local,simp]:
   (∀q. q ∈ (nfa_dot N1 N2).Q <=> q ∈ N1.Q ∨ q ∈ N2.Q) ∧
   (∀a. a ∈ (nfa_dot N1 N2).Sigma ⇔ a ∈ N1.Sigma ∧ a ∈ N2.Sigma) ∧
   (nfa_dot N1 N2).initial = N1.initial ∧
@@ -1252,7 +1275,7 @@ Proof
   rw[nfa_dot_def]
 QED
 
-Triviality nfa_plus_builtin_simps[simp]:
+Theorem nfa_plus_builtin_simps[local,simp]:
   (nfa_plus N).Sigma = N.Sigma ∧
   (nfa_plus N).Q = N.Q ∧
   (nfa_plus N).initial = N.initial ∧
@@ -1460,6 +1483,12 @@ Proof
   rw [IN_REGULAR,SUBSET_DEF] >> metis_tac [wf_nfa_def]
 QED
 
+Theorem REGULAR_IS_FORMAL_LANG:
+  (L,A) ∈ REGULAR ⇒ IS_FORMAL_LANG(L,A)
+Proof
+  metis_tac [IS_FORMAL_LANG_def,REGULAR_BOUNDED,REGULAR_SIGMA_FINITE]
+QED
+
 Theorem EMPTYSET_IN_REGULAR:
   FINITE A ⇒ ({},A) ∈ REGULAR
 Proof
@@ -1471,7 +1500,7 @@ Proof
   rw [wf_nfa_def,EXTENSION,in_nfa_lang]
 QED
 
-Theorem EPSILON_LANG_IN_REGULAR:
+Theorem EPSILONSET_IN_REGULAR:
   FINITE A ⇒ ({ε},A) ∈ REGULAR
 Proof
   rw [IN_REGULAR] >>
@@ -1748,11 +1777,11 @@ QED
 Theorem TRIVIAL_DOT_TRIVIAL_IN_REGULAR:
  L1 ⊆ {ε} ∧ L2 ⊆ {ε} ∧ FINITE A ⇒ (L1 dot L2,A) ∈ REGULAR
 Proof
-  rw [SUBSET_SING] >> simp [DOT_EMPTYSET, DOT_EPSILON] >>
-  metis_tac [EMPTYSET_IN_REGULAR,EPSILON_LANG_IN_REGULAR]
+  rw [SUBSET_SING] >> simp [DOT_EMPTYSET, DOT_EPSILONSET] >>
+  metis_tac [EMPTYSET_IN_REGULAR,EPSILONSET_IN_REGULAR]
 QED
 
-Triviality TRIVIAL_DOT_EPSILON_FREE_IN_REGULAR:
+Theorem TRIVIAL_DOT_EPSILON_FREE_IN_REGULAR[local]:
   (L,A) ∈ REGULAR ∧
   s1 ⊆ {ε} ∧ s2 ⊆ {ε}
   ⇒
@@ -1760,7 +1789,7 @@ Triviality TRIVIAL_DOT_EPSILON_FREE_IN_REGULAR:
   (L = s1 ∪ (L DIFF {ε}) ⇒ ((L DIFF {ε}) dot s2,A) ∈ REGULAR)
 Proof
   rw [SUBSET_SING] >>
-  fs [DOT_EMPTYSET, DOT_EPSILON] >>
+  fs [DOT_EMPTYSET, DOT_EPSILONSET] >>
   metis_tac [EMPTYSET_IN_REGULAR, REGULAR_CLOSED_UNDER_EPSILON_DELETION,
              UNION_COMM,REGULAR_SIGMA_FINITE]
 QED
@@ -1870,7 +1899,7 @@ Proof
       rw[NULL_EQ,is_accepting_exec_def,in_nfa_lang]
       >- (drule is_exec_Sigma >> rw[])
       >- (qpat_forget_tac ‘_ ∈ nfa_lang _’ >>
-          qpat_keep_tac ‘HD qs ∈ _’ >> qpat_keep_tac ‘LAST qs ∈ _’ >>
+          qpat_stage_tac ‘HD qs ∈ _’ >> qpat_stage_tac ‘LAST qs ∈ _’ >>
           rw [rename_states_def] >> rename [‘qi ∈ N.initial’, ‘qf ∈ N.final’] >>
           qabbrev_tac ‘oldFn = LINV (newFn base) N.Q’ >>
           qexists_tac ‘MAP oldFn qs’ >> rw[]
@@ -1917,7 +1946,7 @@ Proof
  qexists_tac ‘rename_states N (MAX_SET (Q ∪ N.Q) + 1)’ >> rw[]
  >- (rw [rename_states_def,EXTENSION, Once (GSYM IMP_DISJ_THM),newFn_def] >>
      CCONTR_TAC >> pop_forget_tac >>
-     ‘FINITE N.Q’ by metis_tac [wf_nfa_def] >> qpat_keep_tac ‘_ ∈ _’ >>
+     ‘FINITE N.Q’ by metis_tac [wf_nfa_def] >> qpat_stage_tac ‘_ ∈ _’ >>
      rw [MAX_SET_UNION,MAX_DEF] >> irule MAX_SET_BOUNDED >> rw[])
  >- metis_tac [wf_nfa_rename_states]
  >- metis_tac [is_dfa_rename_states]
@@ -1957,7 +1986,7 @@ Proof
           rw[EL_APPEND1] >> rw [nfa_dot_def]
           >- metis_tac [is_exec_delta,is_dfa_def]
           >- metis_tac [is_exec_delta,is_dfa_def]
-          >- (qpat_keep_tac ‘EVERY _ qs1’ >> rw[EVERY_EL] >> metis_tac[]))
+          >- (qpat_stage_tac ‘EVERY _ qs1’ >> rw[EVERY_EL] >> metis_tac[]))
       >- (rw[] >> rfs[] >> rev_drule is_exec_length >>
           disch_then(assume_tac o SYM) >> ONCE_ASM_REWRITE_TAC[] >>
           rw[SRULE [NULL_EQ] EL_LENGTH_APPEND] >>
@@ -2001,7 +2030,7 @@ Proof
   metis_tac[is_accepting_exec_paste]
 QED
 
-Triviality nfa_dot_delta_states:
+Theorem nfa_dot_delta_states[local]:
   wf_nfa M1 ∧ wf_nfa M2 ∧
   M1.Sigma = M2.Sigma ∧ a ∈ M1.Sigma ∧ q ∈ M1.Q ∪ M2.Q
   ⇒
@@ -2010,7 +2039,7 @@ Proof
   rw [wf_nfa_def, nfa_dot_def,SUBSET_DEF] >> metis_tac[]
 QED
 
-Triviality nfa_dot_delta_second_states:
+Theorem nfa_dot_delta_second_states[local]:
   wf_nfa M1 ∧ wf_nfa M2 ∧ M1.Q ∩ M2.Q = ∅ ∧
   M1.Sigma = M2.Sigma ∧ a ∈ M1.Sigma ∧ q ∈ M2.Q ∧
   q' ∈ (nfa_dot M1 M2).delta q a
@@ -2020,7 +2049,7 @@ Proof
   rw [wf_nfa_def, nfa_dot_def,EXTENSION,SUBSET_DEF] >> metis_tac[]
 QED
 
-Triviality nfa_dot_states:
+Theorem nfa_dot_states[local]:
    wf_nfa M1 ∧ wf_nfa M2 ∧ M1.Sigma = M2.Sigma ∧
    is_exec (nfa_dot M1 M2) qs w
    ⇒
@@ -2229,32 +2258,28 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
-(* Closure under Kleene                                                      *)
+(* Closure under Kleene Star. From                                           *)
+(*                                                                           *)
+(*  wlist = [w1 ; ... ; wn]                                                  *)
+(*                                                                           *)
+(* obtain                                                                    *)
+(*                                                                           *)
+(*  qslist = [qs1 ; ... ; qsn]                                               *)
+(*                                                                           *)
+(* where                                                                     *)
+(*                                                                           *)
+(*  is_accepting_exec qsi wi holds, for i < LENGTH wlist                     *)
+(*                                                                           *)
+(* To then build the execution for the nfa_plus machine, we basically want   *)
+(* to build the full nfa_plus state list as "FLAT qslist". But, as for the   *)
+(* nfa_dot pasting lemma, we have to arrange for the branching back from     *)
+(* accept states to skip over the initial state. Thus for every qsi,         *)
+(* i > 1, drop the HD:                                                       *)
+(*                                                                           *)
+(*  nfa_plus_qs = qs1 ++ TL qs2 ++ ... ++ TL qsn                             *)
 (*---------------------------------------------------------------------------*)
 
-(*
-  From
-
-    wlist = [w1 ; ... ; wn]
-
-  obtain
-
-    qslist = [qs1 ; ... ; qsn]
-
-  where
-
-    is_accepting_exec qsi wi holds, for i < LENGTH wlist
-
-  To then build the execution for the nfa_plus machine, we basically want
-  to build the full nfa_plus state list as "FLAT qslist". But, as for the
-  nfa_dot pasting lemma, we have to arrange for the branching back from
-  accept states to skip over the initial state. Thus for every qsi, i > 1,
-  drop the HD:
-
-        nfa_plus_qs = qs1 ++ TL qs2 ++ ... ++ TL qsn
-*)
-
-Triviality qslist_length:
+Theorem qslist_length[local]:
   ∀wlist qslist.
   LIST_REL (is_accepting_exec M) qslist wlist
   ⇒
@@ -2266,7 +2291,7 @@ Proof
  metis_tac [is_accepting_exec_def,is_exec_length]
 QED
 
-Triviality length_flat_tl_lem:
+Theorem length_flat_tl_lem[local]:
   EVERY (λlist. list ≠ []) ll
   ⇒
   LENGTH (FLAT (MAP TL ll)) + LENGTH ll = LENGTH (FLAT ll)
@@ -2278,7 +2303,7 @@ Proof
   fs[NOT_NIL_EQ_LENGTH_NOT_0,LENGTH_TL]
 QED
 
-Triviality LAST_APPEND_FLAT:
+Theorem LAST_APPEND_FLAT[local]:
   ll ≠ [] ∧ LAST ll ≠ []
   ⇒
   LAST (list ++ FLAT ll) = LAST (LAST ll)
@@ -2383,7 +2408,7 @@ Theorem KPLUS_SUBSET_NFA_PLUS:
   KPLUS (nfa_lang M) ⊆ nfa_lang (nfa_plus M)
 Proof
   rw [SUBSET_DEF] >>
-  drule_all (iffLR IN_KPLUS_LIST_EPSILON_FREE) >> rw[] >>
+  drule_all (iffLR IN_KPLUS_LIST) >> rw[] >>
   ‘wf_nfa M ∧ wf_nfa (nfa_plus M)’ by
      metis_tac [is_dfa_def,wf_nfa_plus] >>
   ‘∃qslist. LIST_REL (is_accepting_exec M) qslist wlist’ by
@@ -2411,45 +2436,7 @@ Proof
   irule is_accepting_exec_nfa_plus_paste_list >> rw[]
 QED
 
-(*
-Triviality SPLITP_EXISTS:
-  EXISTS P list ⇒ ∃prefix h t. SPLITP P list = (prefix,h::t)
-Proof
-  Induct_on ‘list’ >> rw[SPLITP] >> gvs[]
-QED
-
-Theorem zip_expand_id:
- ZIP (MAP FST plist, MAP SND plist) = plist
-Proof
- Induct_on ‘plist’ >> rw[]
-QED
-
-Theorem pair_list_as_zip:
-  ∀plist:('a # 'b) list. ∃l1 l2. LENGTH l1 = LENGTH l2 ∧ plist = ZIP (l1,l2)
-Proof
- Induct_on ‘plist’ >> rw[]
- >- (ntac 2 (qexists_tac ‘[]’) >> rw[])
- >- (namedCases_on ‘h’ ["a b"] >>
-     qexists_tac ‘a::l1’ >> qexists_tac ‘b::l2’ >> rw[])
-QED
-
-Triviality UNZIP_APPEND:
- ∀L1 L2. UNZIP (L1 ++ L2) = (FST (UNZIP L1) ++ FST (UNZIP L2),
-                             SND (UNZIP L1) ++ SND (UNZIP L2))
-Proof
- Induct >> rw[]
-QED
-
-Theorem ZIP_EQ_NIL_OR:
- ZIP(l1,l2) = [] ⇔ l1 = [] ∨ l2 = []
-Proof
- Induct_on ‘l1’ >> Induct_on ‘l2’ >> rw[ZIP_def]
-QED
-
-
-*)
-
-Triviality nfa_plus_diff:
+Theorem nfa_plus_diff[local]:
   is_dfa M ∧
   a ∈ M.Sigma ∧
   q2 ∈ (nfa_plus M).delta q1 a ∧
@@ -2484,7 +2471,7 @@ Definition cronch_def:
      else ([a], b::w, [q1], q2::qs)
 End
 
-Triviality cronch_splits_input:
+Theorem cronch_splits_input[local]:
  ∀M w qs wpref wsuff qpref qsuff.
    LENGTH qs = LENGTH w ∧
    cronch M w qs = (wpref,wsuff,qpref,qsuff)
@@ -2495,10 +2482,10 @@ Triviality cronch_splits_input:
    LENGTH wsuff = LENGTH qsuff
 Proof
   recInduct cronch_ind >>
-  rw [cronch_def,AllCaseEqs()] >> simp[]
+  rw[AllCaseEqs(),cronch_def] >> gvs[]
 QED
 
-Triviality cronch_consumes_lem:
+Theorem cronch_consumes_lem[local]:
  ∀M w qs wpref wsuff qpref qsuff a q w' qs'.
    LENGTH qs = LENGTH w ∧
    w = a::w' ∧ qs = q::qs' ∧
@@ -2576,7 +2563,8 @@ Proof
           >- metis_tac [IN_INSERT,SUBSET_DEF,wf_nfa_def,is_dfa_def]
           >- (‘b ∈ M.Sigma’ by gvs [is_exec_def] >>
               drule_all nfa_plus_diff >> rw[nfa_plus_def] >>
-              irule (iffRL ELT_SUBSET) >> pop_sym_subst_tac >>
+              irule (iffRL ELT_SUBSET) >>
+              qpat_x_assum ‘BIGUNION _ = _’ sym_subst_all_tac >>
               simp[SUBSET_DEF])))
   >> gvs[cronch_def, is_exec_def]
 QED
@@ -2603,7 +2591,7 @@ Proof
      metis_tac [NOT_CONS_NIL,LAST_APPEND_NOT_NIL,APPEND_ASSOC,APPEND])
 QED
 
-Triviality cronch_accepting_exec_alt:
+Theorem cronch_accepting_exec_alt[local]:
   is_dfa M ∧ M.initial = {q0} ∧ is_accepting_exec (nfa_plus M) qs w ∧
   cronch M (ARB::w) qs = (wprefix,wsuffix,qprefix,qsuffix)
   ⇒
@@ -2694,13 +2682,13 @@ Proof
   metis_tac [cronch_all_thm,ABS_PAIR_THM,is_dfa_def]
 QED
 
-Triviality LIST_REL_EVERY:
+Theorem LIST_REL_EVERY[local]:
   LIST_REL R l1 l2 ⇒ EVERY (λx. ∃y. R x y) l1
 Proof
   rw[EVERY_MEM] >> drule_all LIST_REL_MEM_IMP >> metis_tac[]
 QED
 
-Triviality LIST_REL_EVERY_R:
+Theorem LIST_REL_EVERY_R[local]:
   LIST_REL R l1 l2 ⇒ EVERY (λy. ∃x. R x y) l2
 Proof
   rw[EVERY_MEM] >> drule_all LIST_REL_MEM_IMP_R >> metis_tac[]
@@ -2738,10 +2726,12 @@ Proof
   strip_tac >>
   strip_assume_tac (isolate_trivial_cases |> Q.ISPEC ‘L:num list->bool’) >>
   rename1 ‘s ⊆ {ε}’ >> ONCE_ASM_REWRITE_TAC[] >>
-  rw [KSTAR_UNION,KSTAR_TRIVIAL,DOT_EPSILON] >>
-  rw [GSYM KPLUS_UNION_EPSILON_EQ_KSTAR] >>
+  rw [KSTAR_UNION] >>
+  rw [GSYM KPLUS_UNION_EPSILONSET] >>
+  ‘KPLUS s ∪ {ε} = {ε}’ by
+     rw[KPLUS_UNION_EPSILONSET] >> rw[] >>
   irule REGULAR_CLOSED_UNDER_UNION >> reverse conj_tac
-  >- metis_tac [EPSILON_LANG_IN_REGULAR,REGULAR_SIGMA_FINITE]
+  >- metis_tac [EPSILONSET_IN_REGULAR,REGULAR_SIGMA_FINITE]
   >- (irule REGULAR_CLOSED_UNDER_EPSILON_FREE_KPLUS >> rw[] >>
       metis_tac [REGULAR_CLOSED_UNDER_EPSILON_DELETION])
 QED
@@ -2762,7 +2752,7 @@ Definition nfa_lang_from_def:
   nfa_lang_from N qset = nfa_lang (N with <| initial := qset |>)
 End
 
-Triviality finite_image_states:
+Theorem finite_image_states[local]:
   wf_nfa N ⇒ FINITE{f N qset | qset | qset ⊆ N.Q}
 Proof
   rw [GSPEC_IMAGE, o_DEF,LAMBDA_PROD,wf_nfa_def] >>
@@ -2778,7 +2768,7 @@ Theorem FOLDL_IND:
        ⇒
       ∀f a l. P f a l
 Proof
-  gen_tac >> strip_tac >> Induct_on ‘l’  >> simp[]
+  gen_tac >> strip_tac >> Induct_on ‘l’ >> simp[]
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -2867,7 +2857,7 @@ Proof
   >- (qexists_tac ‘{q'}’ >> rw[])
 QED
 
-(* NB: The statement of this "Theorem" is not true: nfa_eval relies on
+(* NB: The following Theorem statement is not true: nfa_eval relies on
    the input word having all its symbols drawn from the alphabet. The
    N.delta q a transition is not defined when a is not in the alphabet. But,
    in HOL such an expression has a "value"---an unspecified value---which,
@@ -3028,19 +3018,19 @@ QED
 (* and working through the bijection.                                        *)
 (*---------------------------------------------------------------------------*)
 
-Triviality LEFT_QUOTIENTS_OF_CONS:
+Theorem LEFT_QUOTIENTS_OF_CONS[local]:
   ∃t. LEFT_QUOTIENTS_OF x L = L::t
 Proof
   Cases_on ‘x’ >> simp[LEFT_QUOTIENTS_OF_def]
 QED
 
-Triviality LENGTH_LEFT_QUOTIENTS_OF:
+Theorem LENGTH_LEFT_QUOTIENTS_OF[local]:
   ∀x L. LENGTH (LEFT_QUOTIENTS_OF x L) = LENGTH x + 1
 Proof
   Induct >> simp[LEFT_QUOTIENTS_OF_def]
 QED
 
-Triviality LAST_LEFT_QUOTIENTS_OF:
+Theorem LAST_LEFT_QUOTIENTS_OF[local]:
   ∀x L.
   LAST(LEFT_QUOTIENTS_OF x L) = LEFT_QUOTIENT x L
 Proof
@@ -3049,7 +3039,7 @@ Proof
   dty_metis_tac [LEFT_QUOTIENTS_OF_CONS]
 QED
 
-Triviality LEFT_QUOTIENTS_OF_TAKE:
+Theorem LEFT_QUOTIENTS_OF_TAKE[local]:
   ∀x n L.
     n < LENGTH x
     ⇒
@@ -3059,7 +3049,7 @@ Proof
   Cases_on ‘n’ >> gvs[LEFT_QUOTIENT_REC]
 QED
 
-Triviality EL_LEFT_QUOTIENTS_OF:
+Theorem EL_LEFT_QUOTIENTS_OF[local]:
   ∀x n L.
     n < LENGTH x ⇒
     EL (SUC n) (LEFT_QUOTIENTS_OF x L) =
@@ -3141,7 +3131,7 @@ QED
 Theorem FINITE_STATE_EQ_REGULAR:
   FINITE_STATE = REGULAR
 Proof
-  simp[SET_EQ_SUBSET,
+  metis_tac[SET_EQ_SUBSET,
        REGULAR_SUBSET_FINITE_STATE,
        FINITE_STATE_SUBSET_REGULAR]
 QED
@@ -3151,12 +3141,8 @@ QED
 (*                                                                           *)
 (* This theorem is about various equivalences over A*, and how they relate.  *)
 (* The two principal equivalences are based on (1) nfa evaluation and (2)    *)
-(* a purely language-level operation (concatenation).                        *)
+(* a purely language-level operation.                                        *)
 (*===========================================================================*)
-
-(*---------------------------------------------------------------------------*)
-(* Work with relations relativized to sets, typically A*                     *)
-(*---------------------------------------------------------------------------*)
 
 Definition nfa_eval_equiv_def:
   nfa_eval_equiv N x y ⇔
@@ -3172,7 +3158,7 @@ Definition lang_equiv_def:
    (∀z. z ∈ KSTAR{[a] | a ∈ A} ⇒ (x ++ z ∈ L ⇔ y ++ z ∈ L))
 End
 
-Theorem nfa_eval_equiv_refines_lang_equiv:
+Theorem nfa_eval_equiv_refines_lang_equiv[local]:
   wf_nfa N ∧ nfa_eval_equiv N x y
   ⇒
   lang_equiv (nfa_lang N,N.Sigma) x y
@@ -3217,21 +3203,73 @@ Proof
   rw[nfa_eval_append]
 QED
 
+(*---------------------------------------------------------------------------*)
+(* Lemmas on partitions                                                      *)
+(*---------------------------------------------------------------------------*)
+
 Theorem partition_def_alt:
   partition R s = {equiv_class R s x | x | x ∈ s}
 Proof
   rw[EXTENSION,partition_def,EQ_IMP_THM,PULL_EXISTS] >> metis_tac[]
 QED
 
-(*---------------------------------------------------------------------------*)
-(* Not used here, but perhaps useful somewhere                               *)
-(*---------------------------------------------------------------------------*)
-
 Theorem partition_def_as_image:
   partition R s = IMAGE (λx y. y ∈ s ∧ R x y) s
 Proof
   rw[partition_def_alt,GSPEC_IMAGE,combinTheory.o_DEF] >>
   simp[IN_DEF,ETA_THM]
+QED
+
+Theorem in_partition[local]:
+ class ∈ partition R s ⇔
+  ∃x. x ∈ s ∧ ∀y. y ∈ class ⇔ y ∈ s ∧ R x y
+Proof
+  rw [partition_def,EQ_IMP_THM,EXTENSION]
+QED
+
+Theorem in_partition_alt[local]:
+ class ∈ partition R s ⇔ ∃x. x ∈ s ∧ class = equiv_class R s x
+Proof
+  rw [partition_def,EQ_IMP_THM,EXTENSION]
+QED
+
+Theorem partition_empty[local]:
+  partition R s = ∅ ⇔ s = ∅
+Proof
+ rw [EQ_IMP_THM]
+ >- (gvs [EXTENSION,in_partition] >>
+     gen_tac >> disch_tac >> gvs [GSYM IMP_DISJ_THM] >>
+     first_x_assum drule >> simp[] >>
+     qexists_tac ‘equiv_class R s x’ >> simp[])
+ >- simp[partition_def]
+QED
+
+Theorem kstar_partition_inhab_word[local]:
+ E equiv_on (KSTAR{[a] | a ∈ A}) ∧
+ class ∈ partition E (KSTAR{[a] | a ∈ A}) ⇒
+ ∃w. w ∈ class ∧ equiv_class E (KSTAR{[a] | a ∈ A}) w = class
+Proof
+ rw[in_partition_alt] >> qexists_tac ‘x’ >> gvs[equiv_on_def]
+QED
+
+Theorem partition_elts:
+  R equiv_on s ∧
+  t1 ∈ partition R s ∧
+  t2 ∈ partition R s ∧
+  w ∈ t1 ∧ w ∈ t2 ⇒ t1 = t2
+Proof
+  rw [in_partition_alt] >>
+  gvs[EXTENSION,equiv_on_def] >>
+  rw [EQ_IMP_THM] >> metis_tac[]
+QED
+
+Theorem partition_emptylang[local]:
+  partition (lang_equiv({},A)) (KSTAR{[a] | a ∈ A}) = {KSTAR{[a] | a ∈ A}}
+Proof
+ simp [EXTENSION, in_partition, lang_equiv_def] >> rw [EQ_IMP_THM]
+  >- metis_tac[]
+  >- metis_tac[]
+  >- (qexists_tac ‘ε’ >> rw[])
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -3244,14 +3282,14 @@ Definition words_of_state_def:
 End
 
 Theorem in_words_of_state:
-  w ∈ words_of_state N q
+  w ∈ words_of_state M q
    ⇔
-  EVERY (λa. a ∈ N.Sigma) w ∧ nfa_eval N N.initial w = {q}
+  EVERY (λa. a ∈ M.Sigma) w ∧ nfa_eval M M.initial w = {q}
 Proof
   rw[words_of_state_def]
 QED
 
-Triviality words_of_state_in_partition:
+Theorem words_of_state_in_partition[local]:
   EVERY (λa. a ∈ M.Sigma) x ∧
   nfa_eval M M.initial x = {q}
   ⇒
@@ -3264,24 +3302,16 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
-(* An eval-partition is defined by words_of_state                            *)
+(* Create an injective map from E-classes to machine states                  *)
+(*                                                                           *)
+(* state_of_class_def:                                                       *)
+(*  |- ∀M. is_dfa M ⇒                                                        *)
+(*         ∀class.                                                           *)
+(*           class ∈ partition (nfa_eval_equiv M) (KSTAR{[a] | a ∈ M.Sigma}) *)
+(*           ⇒                                                               *)
+(*           state_of_class M class ∈ M.Q ∧                                  *)
+(*           class = words_of_state M (state_of_class M class)               *)
 (*---------------------------------------------------------------------------*)
-
-Theorem exists_state_class[local]:
-   is_dfa M ⇒
-    ∀class.
-      class ∈ partition (nfa_eval_equiv M) (KSTAR{[a] | a ∈ M.Sigma})
-      ⇒ ∃q. q ∈ M.Q ∧ class = words_of_state M q
-Proof
-  rw [partition_def_alt] >>
-  rename1 ‘EVERY (λa. a ∈ M.Sigma) w’ >>
-  rw [words_of_state_def] >>
-  ‘∃q. nfa_eval M M.initial w = {q}’ by
-     metis_tac [dfa_eval_final_state] >>
-  rw [nfa_eval_equiv_def] >>
-  qexists_tac ‘q’ >> rw [EXTENSION] >>
-  metis_tac [dfa_eval_states_closed]
-QED
 
 Theorem state_of_class_witness[local]:
 ∃state_of_class.
@@ -3292,22 +3322,16 @@ Theorem state_of_class_witness[local]:
        state_of_class M class ∈ M.Q ∧
        class = words_of_state M (state_of_class M class)
 Proof
-  qexists_tac ‘λM class. @q. q ∈ M.Q ∧ class = words_of_state M q’ >>
-  rw[] >> SELECT_ELIM_TAC >>
-  metis_tac[exists_state_class]
+  rw[GSYM SKOLEM_THM,PUSH_EXISTS] >>
+  gvs [partition_def_alt] >>
+  rename1 ‘EVERY (λa. a ∈ M.Sigma) w’ >>
+  rw [words_of_state_def] >>
+  ‘∃q. nfa_eval M M.initial w = {q}’ by
+     metis_tac [dfa_eval_final_state] >>
+  rw [nfa_eval_equiv_def] >>
+  qexists_tac ‘q’ >> rw [EXTENSION] >>
+  metis_tac [dfa_eval_states_closed]
 QED
-
-(*---------------------------------------------------------------------------*)
-(* So can make a map from classes to states                                  *)
-(*                                                                           *)
-(* state_of_class_def:                                                       *)
-(*  |- ∀M. is_dfa M ⇒                                                        *)
-(*         ∀class.                                                           *)
-(*           class ∈ partition (nfa_eval_equiv M) (KSTAR{[a] | a ∈ M.Sigma}) *)
-(*           ⇒                                                               *)
-(*           state_of_class M class ∈ M.Q ∧                                  *)
-(*           class = words_of_state M (state_of_class M class)               *)
-(*---------------------------------------------------------------------------*)
 
 val state_of_class_def =
   new_specification
@@ -3330,7 +3354,7 @@ Proof
   metis_tac[]
 QED
 
-Triviality state_of_class_words_of_state_id:
+Theorem state_of_class_words_of_state_id[local]:
   is_dfa M ∧ EVERY (λa. a ∈ M.Sigma) x ∧
   nfa_eval M M.initial x = {q}
    ⇒
@@ -3345,8 +3369,8 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
-(* The partition is finite because state_of_class is an injection from the   *)
-(* partition into the set of states.                                         *)
+(* The "nfa-eval"-partition is finite because state_of_class is an injection *)
+(* from the partition into the (finite) set of states.                       *)
 (*---------------------------------------------------------------------------*)
 
 Theorem finite_nfa_eval_equiv_partition:
@@ -3419,60 +3443,6 @@ Proof
      )
 QED
 
-Triviality forall_emptyset:
- (∀x. x ∉ s) ⇔ s = ∅
-Proof
- rw[EXTENSION]
-QED
-
-Triviality in_partition:
- class ∈ partition R s ⇔
-  ∃x. x ∈ s ∧ ∀y. y ∈ class ⇔ y ∈ s ∧ R x y
-Proof
-  rw [partition_def,EQ_IMP_THM,EXTENSION]
-QED
-
-Triviality in_partition_alt:
- class ∈ partition R s ⇔ ∃x. x ∈ s ∧ class = equiv_class R s x
-Proof
-  rw [partition_def,EQ_IMP_THM,EXTENSION]
-QED
-
-Triviality partition_empty:
-  partition R s = ∅ ⇔ s = ∅
-Proof
- rw [EQ_IMP_THM]
- >- (gvs [EXTENSION,in_partition] >>
-     gen_tac >> disch_tac >> gvs [GSYM IMP_DISJ_THM] >>
-     first_x_assum drule >> simp[] >>
-     qexists_tac ‘equiv_class R s x’ >> simp[])
- >- simp[partition_def]
-QED
-
-Triviality KSTAR_NONEMPTY:
-  KSTAR A ≠ ∅
-Proof
- rw[EXTENSION] >> metis_tac[EPSILON_IN_KSTAR]
-QED
-
-Triviality kstar_partition_inhab_word:
- E equiv_on (KSTAR{[a] | a ∈ A}) ∧
- class ∈ partition E (KSTAR{[a] | a ∈ A}) ⇒
- ∃w. w ∈ class ∧ equiv_class E (KSTAR{[a] | a ∈ A}) w = class
-Proof
- rw[in_partition_alt] >> qexists_tac ‘x’ >>
- gvs[equiv_on_def]
-QED
-
-Triviality partition_emptylang:
-  partition (lang_equiv({},A)) (KSTAR{[a] | a ∈ A}) = {KSTAR{[a] | a ∈ A}}
-Proof
- simp [EXTENSION, in_partition, lang_equiv_def] >> rw [EQ_IMP_THM]
-  >- metis_tac[]
-  >- metis_tac[]
-  >- (qexists_tac ‘ε’ >> rw[])
-QED
-
 (*---------------------------------------------------------------------------*)
 (* Every right-invariant equivalence on A* is a refinement of language       *)
 (* equivalence.                                                              *)
@@ -3498,8 +3468,7 @@ Proof
      metis_tac [SUBSET_DEF] >> pop_keep_tac >>
   rw[in_partition]
      >- (‘EVERY (λa. a ∈ A) (x++z) ∧ E x' (x++z)’ by metis_tac[] >>
-         simp[] >>
-         qpat_x_assum ‘_ equiv_on _’ mp_tac >>
+         simp[] >> qpat_x_assum ‘_ equiv_on _’ mp_tac >>
          simp[equiv_on_def] >>
          disch_then (irule o last o CONJUNCTS) >> rw[] >>
          first_x_assum (irule_at Any) >> simp[])
@@ -3525,54 +3494,8 @@ Proof
   metis_tac [SUBSET_DEF]
 QED
 
-Triviality finite_image_range:
-  FINITE t ⇒ (∀x. x ∈ s ⇒ f x ∈ t) ⇒ FINITE(IMAGE f s)
-Proof
-  rw [] >>
-  ‘IMAGE f s ⊆ t’ by
-    (rw[SUBSET_DEF] >> metis_tac[]) >>
-  irule SUBSET_FINITE >> metis_tac[]
-QED
-
-Triviality from_above:
-  ∀A classes class'.
-    E equiv_on (KSTAR{[a] | a ∈ A}) ∧
-    right_invar (KSTAR{[a] | a ∈ A}) E ∧
-    classes ⊆ partition E (KSTAR{[a] | a ∈ A}) ∧
-    class' ∈ partition (lang_equiv(BIGUNION classes,A)) (KSTAR{[a] | a ∈ A})
-    ⇒
-    ∃p. p ∈ partition E (KSTAR{[a] | a ∈ A}) ∧ p ⊆ class'
-Proof
- rw[] >>
- ‘lang_equiv (BIGUNION classes,A) equiv_on KSTAR{[a] | a ∈ A}’ by
-    metis_tac[equiv_on_lang_equiv] >>
-  drule_all kstar_partition_inhab_word >> strip_tac >>
-  ‘w ∈ KSTAR{[a] | a ∈ A}’ by
-    gvs [in_partition_alt] >>
-  drule_all equiv_class_subset >> ASM_REWRITE_TAC[] >> disch_tac >>
-  first_x_assum (irule_at Any) >> rw[in_partition_alt] >>
-  gvs[] >> metis_tac[]
-QED
-
-Triviality from_above_witness:
-  ∃E_part.
-   ∀A E classes class'.
-    E equiv_on (KSTAR{[a] | a ∈ A}) ∧
-    right_invar (KSTAR{[a] | a ∈ A}) E ∧
-    classes ⊆ partition E (KSTAR{[a] | a ∈ A}) ∧
-    class' ∈ partition (lang_equiv(BIGUNION classes,A)) (KSTAR{[a] | a ∈ A})
-    ⇒
-    E_part A E classes class' ∈ partition E (KSTAR{[a] | a ∈ A}) ∧
-    E_part A E classes class' ⊆ class'
-Proof
-  qexists_tac ‘λA E classes class'.
-                 @part. part ∈ partition E (KSTAR{[a] | a ∈ A}) ∧
-                        part ⊆ class'’ >>
- rw[] >> SELECT_ELIM_TAC >> metis_tac[from_above]
-QED
-
 (*---------------------------------------------------------------------------*)
-(* So can make an injective map from L-classes to some E-classes             *)
+(* Create an injective map from L-classes to (some) E-classes                *)
 (*                                                                           *)
 (* E_class_def:                                                              *)
 (* |- ∀A E classes class'.                                                   *)
@@ -3586,8 +3509,30 @@ QED
 (*     E_class A E classes class' ⊆ class'                                   *)
 (*---------------------------------------------------------------------------*)
 
+Theorem E_class_witness[local]:
+ ∃E_part.
+   ∀A E classes class'.
+    E equiv_on (KSTAR{[a] | a ∈ A}) ∧
+    right_invar (KSTAR{[a] | a ∈ A}) E ∧
+    classes ⊆ partition E (KSTAR{[a] | a ∈ A}) ∧
+    class' ∈ partition (lang_equiv(BIGUNION classes,A)) (KSTAR{[a] | a ∈ A})
+    ⇒
+    E_part A E classes class' ∈ partition E (KSTAR{[a] | a ∈ A}) ∧
+    E_part A E classes class' ⊆ class'
+Proof
+  rw [GSYM SKOLEM_THM,PUSH_EXISTS] >>
+  ‘lang_equiv (BIGUNION classes,A) equiv_on KSTAR{[a] | a ∈ A}’ by
+     metis_tac[equiv_on_lang_equiv] >>
+  drule_all kstar_partition_inhab_word >> strip_tac >>
+  ‘w ∈ KSTAR{[a] | a ∈ A}’ by
+    gvs [in_partition_alt] >>
+  drule_all equiv_class_subset >> ASM_REWRITE_TAC[] >> disch_tac >>
+  first_x_assum (irule_at Any) >> rw[in_partition_alt] >>
+  gvs[] >> metis_tac[]
+QED
+
 val E_class_def =
-  new_specification ("E_class_def", ["E_class"], from_above_witness);
+  new_specification ("E_class_def", ["E_class"], E_class_witness);
 
 Theorem E_class_inj:
   E equiv_on (KSTAR{[a] | a ∈ A}) ∧
@@ -3612,9 +3557,9 @@ QED
 
 (*---------------------------------------------------------------------------*)
 (* The injection is into a subset of the E-partition, which is finite. Thus  *)
-(* the source L-partition is finite. NB: I was confused for a while about    *)
-(* the role of the "classes" subset of the E-partition in the argument, but  *)
-(* it doesn't figure at this stage. (It does get used in the crucial         *)
+(* the source L-partition is finite. NB: one can become confused about the   *)
+(* role of the "classes" subset of the E-partition, but it doesn't figure at *)
+(* this stage of the argument. (It is only needed in the crucial             *)
 (* lang_equiv_refinement lemma.)                                             *)
 (*---------------------------------------------------------------------------*)
 
@@ -3628,12 +3573,585 @@ Theorem Myhill_Nerode_B:
   FINITE (partition (lang_equiv(L,A)) (KSTAR{[a] | a ∈ A}))
 Proof
   rw[] >>
-  irule (iffLR (FINITE_IMAGE_INJ_EQ
-    |> Q.ISPEC ‘f : (α list -> bool) -> (α list -> bool)’)) >>
+  irule (iffLR
+    (FINITE_IMAGE_INJ_EQ
+       |> Q.ISPEC ‘f : (α list -> bool) -> (α list -> bool)’)) >>
   qexists_tac ‘E_class A E classes’ >> rw[]
   >- (irule E_class_inj >> metis_tac[])
-  >- (irule finite_image_range >> first_x_assum (irule_at Any) >>
-      rw[E_class_def])
+  >- (irule finite_image_range >>
+      first_x_assum (irule_at Any) >> rw[E_class_def])
 QED
 
-val _ = export_theory();
+val cong_tac = REFL_TAC ORELSE MK_COMB_TAC ORELSE ABS_TAC
+
+Theorem lang_equiv_abs[local]:
+  lang_equiv (L,A) x y
+   ⇒
+  lang_equiv (L,A) x = lang_equiv (L,A) y
+Proof
+  strip_tac >>
+  ‘lang_equiv (L,A) equiv_on KSTAR{[a] | a ∈ A}’ by
+      metis_tac[equiv_on_lang_equiv] >>
+  ‘x ∈ KSTAR{[a] | a ∈ A} ∧
+   y ∈ KSTAR{[a] | a ∈ A}’ by
+      metis_tac [lang_equiv_def] >>
+  rw[EXTENSION,IN_DEF,EQ_IMP_THM] >>
+  ‘x' ∈ KSTAR{[a] | a ∈ A}’ by
+    metis_tac [lang_equiv_def] >>
+  gvs [equiv_on_def] >> metis_tac[]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* Construct a DFA from a finite lang_equiv partition of A*. States are,     *)
+(* again, not numbers in this construction, so work via a bijection to a     *)
+(* "count" set.                                                              *)
+(*---------------------------------------------------------------------------*)
+
+Theorem Myhill_Nerode_C:
+  IS_FORMAL_LANG(L,A) ∧
+  FINITE (partition (lang_equiv(L,A)) (KSTAR{[a] | a ∈ A}))
+  ⇒
+  (L,A) ∈ REGULAR
+Proof
+  rw[IN_REGULAR, IS_FORMAL_LANG_def] >>
+  qabbrev_tac ‘Qparts = partition (lang_equiv (L,A)) (KSTAR {[a] | a ∈ A})’ >>
+  ‘∃partOf k. BIJ partOf (count k) Qparts’ by metis_tac [FINITE_BIJ_COUNT] >>
+  imp_res_tac BIJ_LINV_INV >>
+  qabbrev_tac ‘numOf = LINV partOf (count k)’ >>
+  ‘INJ numOf Qparts (count k)’ by
+    (imp_res_tac BIJ_LINV_BIJ >> gvs [BIJ_DEF]) >>
+  qabbrev_tac ‘Lclass = equiv_class (lang_equiv (L,A)) (KSTAR {[a] | a ∈ A})’ >>
+  ‘lang_equiv (L,A) equiv_on KSTAR{[a] | a ∈ A}’ by
+     metis_tac[equiv_on_lang_equiv] >>
+  ‘∃start. start ∈ Qparts ∧ start = Lclass ε’ by
+     (qexists_tac ‘Lclass ε’ >> simp[] >>
+      qunabbrev_tac ‘Qparts’ >>
+      rw [in_partition_alt] >>
+      irule_at Any EQ_REFL >> simp[]) >>
+  ‘∃finals. finals ⊆ Qparts ∧ finals = IMAGE Lclass L’ by
+     (qexists_tac ‘IMAGE Lclass L’ >> rw[] >>
+      qunabbrev_tac ‘Lclass’ >>
+      qunabbrev_tac ‘Qparts’ >>
+      gvs [SUBSET_DEF] >> rw [in_partition_alt] >> metis_tac[]) >>
+  qexists_tac
+   ‘<| Sigma := A;
+       Q := IMAGE numOf Qparts;
+       initial := {numOf start};
+       final   := IMAGE numOf finals;
+       delta   := (λnq a. {numOf (Lclass ((@w. w ∈ partOf nq) ++ [a]))})
+   |>’ >> simp[] >> conj_asm1_tac
+  >- (rw [wf_nfa_def] >> rw[] >> irule_at Any EQ_REFL >>
+      SELECT_ELIM_TAC >> rename1 ‘state ∈ Qparts’ >>
+      qunabbrev_tac ‘Qparts’ >>
+      drule_all kstar_partition_inhab_word >> rw[]
+      >- metis_tac[]
+      >- (rw[in_partition] >>
+          qunabbrev_tac ‘Lclass’ >> gvs[] >>
+          qexists_tac ‘w ++ [a]’ >> rw[] >>
+          (cong_tac >> cong_tac >> TRY REFL_TAC) >>
+          ‘lang_equiv (L,A) (w ⧺ [a]) (x' ⧺ [a])’ by
+             (mp_tac (right_invar_lang_equiv |> INST_TYPE[alpha |-> “:num”]) >>
+              rw [right_invar_def] >> first_x_assum irule >> simp[]) >>
+          metis_tac [lang_equiv_abs]))
+   >>
+   qabbrev_tac
+    ‘M = <|Q := IMAGE numOf Qparts; Sigma := A;
+           delta := (λnq a. {numOf (Lclass ((@w. w ∈ partOf nq) ⧺ [a]))});
+           initial := {numOf (Lclass ε)}; final := IMAGE numOf (IMAGE Lclass L) |>’ >>
+   (* Following lemma could be stated and proved separately, but we would have
+      to pull a lot of context out to state it. *)
+   ‘∀x y. x ∈ KSTAR {[a] | a ∈ A} ∧ y ∈ KSTAR {[a] | a ∈ A}
+          ⇒ nfa_eval M {numOf(Lclass x)} y = {numOf (Lclass (x++y))}’ by
+      (gen_tac >> recInduct SNOC_INDUCT >> rw[]
+       >- rw[nfa_eval_eqns] >>
+       gvs [EVERY_SNOC] >> rw [SNOC_APPEND] >>
+       drule nfa_eval_append >> rename1 ‘a ∈ A’ >>
+       disch_then (mp_tac o Q.SPEC ‘[a]’ o Q.SPEC ‘l’) >>
+       ‘{numOf (Lclass x)} ⊆ M.Q’ by
+           (‘M.Q = IMAGE numOf Qparts’ by gvs[Abbr‘M’] >>
+            simp[SUBSET_DEF] >> irule_at Any EQ_REFL >>
+            qunabbrev_tac ‘Qparts’ >> rw [in_partition_alt] >>
+            metis_tac[]) >>
+       ‘M.Sigma = A’ by gvs[Abbr‘M’] >> pop_subst_tac >>
+       simp[] >> disch_then kall_tac >> rw[nfa_eval_eqns] >>
+       ‘M.delta = λnq a. {numOf (Lclass ((@w. w ∈ partOf nq) ⧺ [a]))}’ by
+           gvs [Abbr‘M’] >> pop_subst_tac >>
+       simp[Once EXTENSION] >> gen_tac >>
+       irule (METIS_PROVE[] “A = B ⇒ (x = A ⇔ x = B)”) >>
+       AP_TERM_TAC >>
+       ‘Lclass (x ⧺ l) ∈ Qparts’ by
+          (qunabbrev_tac ‘Qparts’ >>
+           rw [in_partition_alt] >>
+           irule_at Any EQ_REFL >> simp[]) >>
+       SELECT_ELIM_TAC >> rw[]
+       >- (qexists_tac ‘x ++ l’ >> rw [Abbr ‘Lclass’] >>
+           ‘(x ++ l) ∈ KSTAR {[a] | a ∈ A}’ by simp [] >>
+           metis_tac [EVERY_APPEND,equiv_on_def])
+       >- (pop_keep_tac >> qunabbrev_tac ‘Lclass’ >>
+           rw[EXTENSION] >> (ntac 2 cong_tac >> TRY REFL_TAC) >>
+           irule lang_equiv_abs >>
+           irule (iffLR right_invar_def) >> conj_tac
+           >- gvs [equiv_on_def]
+           >- (irule_at Any right_invar_lang_equiv >> rw[]))
+      )
+   >>
+   pop_assum (mp_tac o Q.SPEC ‘ε’) >> rw[] >>
+   simp [EXTENSION,in_nfa_lang_nfa_eval_alt] >>
+   ‘M.Sigma = A ∧ M.initial = {numOf (Lclass ε)}’ by
+      gvs[Abbr‘M’] >> ntac 2 pop_subst_tac >>
+   rw [EQ_IMP_THM,PULL_EXISTS]
+   >- (‘EVERY (λa. a ∈ A) x’ by
+          gvs[SUBSET_DEF] >>
+       qexists_tac ‘numOf (Lclass x)’ >> rw[] >>
+       qunabbrev_tac ‘M’ >> rw[])
+   >- (ntac 2 pop_keep_tac >> rw[Abbr‘M’] >>
+        rename1 ‘numOf (Lclass x) = numOf (Lclass y)’ >>
+        ‘Lclass x ∈ Qparts ∧ Lclass y ∈ Qparts’ by
+           (qunabbrev_tac ‘Qparts’ >> gvs [SUBSET_DEF] >>
+            rw[in_partition_alt] >> metis_tac[]) >>
+        ‘Lclass x = Lclass y’ by
+            metis_tac [INJ_DEF] >>
+        ‘EVERY (λa. a ∈ A) y’ by
+           (gvs[SUBSET_DEF] >> metis_tac[]) >>
+        drule (iffLR equiv_class_eq) >> simp[] >>
+        disch_then drule_all >>
+        simp[lang_equiv_def] >>
+        metis_tac [EVERY_DEF,APPEND_NIL])
+QED
+
+Theorem Myhill_Nerode:
+  IS_FORMAL_LANG (L,A)
+  ⇒
+  ((L,A) ∈ REGULAR ⇔ FINITE(partition(lang_equiv(L,A)) (KSTAR{[a] | a ∈ A})))
+Proof
+  metis_tac [Myhill_Nerode_A,Myhill_Nerode_B, Myhill_Nerode_C]
+QED
+
+(*===========================================================================*)
+(* DFA state minimization. This is accomplished by removing all              *)
+(* non-accessible states, then coalescing all non-distinguishable states.    *)
+(* Both of these operations preserve the language originally recognized.     *)
+(*===========================================================================*)
+
+Definition accessible_states_def:
+  accessible_states M =
+     {q | ∃w. w ∈ KSTAR {[a] | a ∈ M.Sigma} ∧
+              nfa_eval M M.initial w = {q}}
+End
+
+Definition accessible_nfa_def:
+  accessible_nfa M ⇔ M.Q ⊆ accessible_states M
+End
+
+Theorem accessible_states_subset:
+  wf_nfa M ⇒ accessible_states M ⊆ M.Q
+Proof
+  rw[accessible_states_def,SUBSET_DEF] >>
+  REWRITE_TAC[ELT_SUBSET] >> pop_sym_subst_tac >>
+  irule nfa_eval_states_closed >>
+  metis_tac[wf_nfa_def]
+QED
+
+Theorem nfa_eval_subset_accessible:
+  is_dfa M ∧ w ∈ KSTAR {[a] | a ∈ M.Sigma}
+  ⇒
+  nfa_eval M M.initial w ⊆ accessible_states M
+Proof
+  rw[accessible_states_def,SUBSET_DEF] >>
+  drule_all dfa_eval_final_state >>
+  rw[] >> gvs[] >> metis_tac[]
+QED
+
+Theorem initial_subset_accessible:
+  is_dfa M ⇒ M.initial ⊆ accessible_states M
+Proof
+ strip_tac >>
+ ‘ε ∈ KSTAR {[a] | a ∈ M.Sigma}’ by rw[] >>
+ metis_tac [nfa_eval_eqns,nfa_eval_subset_accessible]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* Remove inaccessible states from a DFA                                     *)
+(*---------------------------------------------------------------------------*)
+
+Definition mk_accessible_def:
+ mk_accessible M =
+    M with
+      <| Q := accessible_states M;
+         final := M.final ∩ accessible_states M |>
+End
+
+Theorem mk_accessible_simps[simp]:
+  (mk_accessible M).Q = accessible_states M ∧
+  (mk_accessible M).final = (M.final ∩ accessible_states M) ∧
+  (mk_accessible M).initial = M.initial ∧
+  (mk_accessible M).Sigma = M.Sigma ∧
+  (mk_accessible M).delta = M.delta
+Proof
+  rw [mk_accessible_def]
+QED
+
+Theorem is_dfa_mk_accessible:
+  is_dfa M ⇒ is_dfa (mk_accessible M)
+Proof
+  rw [mk_accessible_def] >> reverse (rw [is_dfa_def])
+  >- (gvs [accessible_states_def,is_dfa_def] >>
+      first_x_assum irule >> simp[] >>
+      irule (nfa_eval_states_closed |> SRULE[SUBSET_DEF]) >>
+      rw[] >> qexists_tac ‘{q_0}’ >> qexists_tac ‘w’ >> rw[] >>
+      metis_tac [ELT_SUBSET,wf_nfa_def])
+  >-  metis_tac [is_dfa_def]
+  >- (gvs [is_dfa_def] >> rw [wf_nfa_def]
+      >- (irule SUBSET_FINITE >>
+          metis_tac [accessible_states_subset,wf_nfa_def])
+      >- metis_tac [wf_nfa_def]
+      >- metis_tac [ELT_SUBSET,initial_subset_accessible,is_dfa_def]
+      >- (‘q ∈ M.Q’ by
+             metis_tac [SUBSET_DEF, accessible_states_subset] >>
+          ‘∃q'. M.delta q a = {q'}’ by
+            metis_tac[] >>
+          gvs [accessible_states_def] >>
+          qexists_tac ‘w ++ [a]’ >> rw[] >>
+          dep_rewrite.DEP_REWRITE_TAC [nfa_eval_append] >>
+          rw[]
+          >- metis_tac [ELT_SUBSET,wf_nfa_def]
+          >- (rw [nfa_eval_eqns] >> simp [gspec_lemma])))
+QED
+
+Theorem nfa_eval_mk_accessible:
+   is_dfa M
+   ⇒
+   ∀w. EVERY (λa. a ∈ M.Sigma) w ⇒
+       nfa_eval (mk_accessible M) M.initial w = nfa_eval M M.initial w
+Proof
+  disch_tac >>
+ ‘is_dfa (mk_accessible M) ∧ wf_nfa M ∧ wf_nfa (mk_accessible M)’ by
+     metis_tac[is_dfa_mk_accessible,is_dfa_def] >>
+  recInduct snoc_induct >> rw[]
+  >- rw[nfa_eval_eqns] >>
+  rename [‘a ∈ M.Sigma’, ‘EVERY (λa. a ∈ M.Sigma) w’] >> gvs[] >>
+  dep_rewrite.DEP_REWRITE_TAC [nfa_eval_append] >> rw[]
+  >- metis_tac[initial_subset_accessible]
+  >- metis_tac [wf_nfa_def]
+  >- (drule_all dfa_eval_final_state >> rw[] >> rw[] >>
+      simp [nfa_eval_eqns])
+QED
+
+Theorem dfa_mk_accessible_is_accessible:
+  is_dfa M ⇒ accessible_nfa (mk_accessible M)
+Proof
+  rw [accessible_nfa_def,SUBSET_DEF] >>
+  rename1 ‘q ∈ accessible_states M’ >>
+  gvs [accessible_states_def] >>
+  first_assum (irule_at Any) >>
+  metis_tac [nfa_eval_mk_accessible]
+QED
+
+Theorem nfa_lang_mk_accessible:
+  is_dfa M ⇒ nfa_lang (mk_accessible M) = nfa_lang M
+Proof
+  rw [EXTENSION] >>
+  dep_rewrite.DEP_REWRITE_TAC [in_nfa_lang_nfa_eval_alt] >> rw[]
+  >- metis_tac [is_dfa_mk_accessible,is_dfa_def]
+  >- metis_tac [is_dfa_def]
+  >- (rw [EQ_IMP_THM,EXTENSION]
+      >- metis_tac [nfa_eval_mk_accessible]
+      >- (rw [nfa_eval_mk_accessible] >>
+          rpt (first_assum (irule_at Any)) >>
+          drule_all (nfa_eval_subset_accessible |> SRULE[]) >>
+          metis_tac[ELT_SUBSET,SUBSET_TRANS]))
+QED
+
+(*---------------------------------------------------------------------------*)
+(* Sub-automata and automata isomorphism (equivalence up to renaming of      *)
+(* states).                                                                  *)
+(*---------------------------------------------------------------------------*)
+
+Definition preserves_nfa_structure_def:
+  preserves_nfa_structure fn N1 N2 ⇔
+    (∀q. q ∈ N1.initial ⇔ fn q ∈ N2.initial) ∧
+    (∀q. q ∈ N1.final ⇔ fn q ∈ N2.final) ∧
+    (∀q1 q2 a. q1 ∈ N1.Q ∧ a ∈ N1.Sigma ⇒
+               (q2 ∈ N1.delta q1 a ⇔ fn q2 ∈ N2.delta (fn q1) a))
+End
+
+Definition sub_nfa_def:
+  sub_nfa N1 N2 ⇔
+    N1.Sigma = N2.Sigma ∧
+    ∃fn. INJ fn N1.Q N2.Q ∧
+         preserves_nfa_structure fn N1 N2
+End
+
+Definition isomorphic_nfas_def:
+  isomorphic_nfas N1 N2 ⇔
+    N1.Sigma = N2.Sigma ∧
+    ∃fn. INJ fn N1.Q N2.Q ∧
+         preserves_nfa_structure fn N1 N2 ∧
+         preserves_nfa_structure (LINV fn N1.Q) N2 N1
+End
+
+Theorem finite_inj_inj_bij:
+   FINITE s ∧ FINITE t ∧
+   INJ f s t ∧ INJ g t s ⇒ BIJ f s t
+Proof
+  rw [] >>
+  drule_all INJ_CARD >>
+  rev_drule_all INJ_CARD >> rw[] >>
+  ‘CARD s = CARD t’ by decide_tac >>
+  irule FINITE_SURJ_BIJ >> rw[] >>
+  ‘IMAGE f s ⊆ t’ by
+    (gvs [SUBSET_DEF,INJ_DEF] >> rw[] >> metis_tac[]) >>
+  drule_all SURJECTIVE_IFF_INJECTIVE_GEN >>
+  gvs [INJ_DEF] >> rw[SURJ_DEF]
+QED
+
+(*
+Theorem sub_nfas_initial:
+  wf_nfa N1 ∧ wf_nfa N2 ∧
+  sub_nfa N1 N2 ∧ sub_nfa N2 N1
+  ⇒
+  CARD N1.initial = CARD N2.initial
+Proof
+  rw [sub_nfa_def] >>
+  qpat_forget_tac ‘_ = _’ >>
+  rw[isomorphic_nfas_def] >>
+  pop_forget_tac >>
+  rpt (first_assum (irule_at Any)) >>
+  ‘BIJ fn N1.Q N2.Q’ by
+    metis_tac [wf_nfa_def,finite_inj_inj_bij] >>
+  drule BIJ_LINV_INV >>
+  gvs [preserves_nfa_structure_def] >> rw[]
+  >- (rw [EQ_IMP_THM]
+      >- metis_tac[wf_nfa_def,SUBSET_DEF]
+      >- (qabbrev_tac ‘a = LINV fn N1.Q q’ >>
+          ‘a ∈ N1.initial’ by metis_tac[] >>
+QED
+
+Theorem finite_initial_final[local,simp]:
+  wf_nfa N ⇒ FINITE N.initial ∧ FINITE N.final
+Proof
+  metis_tac [wf_nfa_def,SUBSET_FINITE]
+QED
+
+STOP
+
+Theorem sub_nfas_isomorphic:
+  wf_nfa N1 ∧ wf_nfa N2 ∧
+  sub_nfa N1 N2 ∧ sub_nfa N2 N1
+  ⇒
+  isomorphic_nfas N1 N2
+Proof
+  rw [sub_nfa_def] >>
+  qpat_forget_tac ‘_ = _’ >>
+  rw[isomorphic_nfas_def] >>
+  pop_forget_tac >>
+  rpt (first_assum (irule_at Any)) >>
+  ‘BIJ fn N1.Q N2.Q’ by
+    metis_tac [wf_nfa_def,finite_inj_inj_bij] >>
+  rw[preserves_nfa_structure_def]
+  drule BIJ_LINV_INV
+  >- (‘N2.initial = IMAGE fn N1.initial’ by
+        (gvs [preserves_nfa_structure_def] >>
+         reverse (rw[EXTENSION,EQ_IMP_THM])
+         >- metis_tac[] >>
+         drule BIJ_LINV_INV >>
+         ‘x ∈ N2.Q’ by metis_tac[wf_nfa_def,SUBSET_DEF] >>
+         disch_then drule >> metis_tac[]) >>
+       rw[EQ_IMP_THM]
+       >- (drule BIJ_LINV_INV >>
+           ‘fn x ∈ N2.Q’ by cheat >>
+           disch_then drule >> gvs [INJ_DEF]
+
+  ‘N2.final = IMAGE fn N1.final’ by
+    (gvs [preserves_nfa_structure_def] >>
+     reverse(rw[EXTENSION,EQ_IMP_THM])
+     >- metis_tac[] >>
+     drule BIJ_LINV_INV >>
+     ‘x ∈ N2.Q’ by metis_tac[wf_nfa_def,SUBSET_DEF] >>
+     disch_then drule >> metis_tac[]) >>
+‘BIJ fn N1.initial N2.initial’ byA all_tac
+     (irule finite_inj_inj_bij >> rw[]
+      >- (irule INJ_SUBSET >>
+          first_assum (irule_at Any) >>
+          metis_tac[wf_nfa_def]
+
+     gvs[wf_nfa_def]
+
+  gvs [preserves_nfa_structure_def] >> rw[]
+  >- (rw [EQ_IMP_THM]
+      >- metis_tac[wf_nfa_def,SUBSET_DEF]
+      >- (qabbrev_tac ‘a = LINV fn N1.Q q’ >>
+          ‘a ∈ N1.initial’ by metis_tac[] >>
+QED
+*)
+
+(*---------------------------------------------------------------------------*)
+(* Accessibility is computed by an instance of depth-first traversal,        *)
+(* violating our policy of avoiding computational aspects.                   *)
+(*---------------------------------------------------------------------------*)
+
+Definition kidlist_def:
+  kidlist N q =
+    if q ∈ N.Q then
+      SET_TO_LIST(BIGUNION{N.delta q a | a | a ∈ N.Sigma})
+    else []
+End
+
+Theorem nfa_parents_finite:
+  wf_nfa N ⇒ FINITE (Parents (kidlist N))
+Proof
+  strip_tac >> irule SUBSET_FINITE >>
+  qexists_tac ‘N.Q’ >>
+  gvs [wf_nfa_def] >>
+  rw[Parents_def, kidlist_def,SUBSET_DEF] >>
+  pop_keep_tac >> IF_CASES_TAC >> rw[]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* Invocation:  reachable_states N [] (SET_TO_LIST N.initial) []             *)
+(*---------------------------------------------------------------------------*)
+
+Definition reachable_states_def:
+  reachable_states N = DFT (kidlist N) (list$CONS)
+End
+
+Theorem reachable_states_eqns:
+  wf_nfa N
+  ⇒
+  reachable_states N seen [] acc = acc ∧
+  reachable_states N seen (h::t) acc =
+   if MEM h seen
+     then reachable_states N seen t acc
+     else reachable_states N (h::seen) (kidlist N h ++ t) (h::acc)
+Proof
+  PURE_REWRITE_TAC[reachable_states_def] >> strip_tac >>
+  imp_res_tac nfa_parents_finite >>
+  rw[DFT_def]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* A state is accessible iff reachable_states finds it                       *)
+(*---------------------------------------------------------------------------*)
+
+Theorem reachable_states:
+  wf_nfa N ⇒
+  ∀q. q ∈ REACH_LIST (kidlist N) (SET_TO_LIST N.initial)
+      ⇔
+      q ∈ set(reachable_states N [] (SET_TO_LIST N.initial) [])
+Proof
+  PURE_REWRITE_TAC[reachable_states_def] >>
+  strip_tac >>
+  imp_res_tac nfa_parents_finite >>
+  irule DFT_REACH_THM >> metis_tac[]
+QED
+
+Theorem reachable_accessible[local]:
+  is_dfa M ⇒
+  ∀p q. (λx y. set (kidlist M x) y)꙳ p q ⇒ p ∈ M.initial ⇒ q ∈ accessible_states M
+Proof
+ strip_tac >>
+ ho_match_mp_tac RTC_INDUCT_RIGHT1 >>
+ gvs [is_dfa_def] >> rw[accessible_states_def]
+ >- (qexists_tac ‘ε’ >> rw[nfa_eval_eqns])
+ >- (qpat_x_assum ‘set(kidlist M x) q’ mp_tac >>
+     ‘FINITE(BIGUNION {M.delta x a | a | a ∈ M.Sigma})’ by
+       (rw[GSPEC_IMAGE,combinTheory.o_DEF]
+        >- (irule IMAGE_FINITE >> rw[IN_DEF] >> metis_tac[wf_nfa_def])
+        >- (irule SUBSET_FINITE >> drule nfa_eval_states_closed >>
+            disch_then drule >>
+            ‘{q_0} ⊆ M.Q’ by metis_tac [wf_nfa_def] >>
+            disch_then drule >> rw[] >> metis_tac[wf_nfa_def])) >>
+     rw [kidlist_def,SET_TO_LIST_INV] >>
+     qexists_tac ‘w ++ [a]’ >>
+     ‘{q_0} ⊆ M.Q’ by metis_tac [wf_nfa_def] >>
+     rw [nfa_eval_append] >> rw [nfa_eval_eqns] >>
+     first_x_assum drule_all >> rw[] >> gvs[] >>
+     pop_assum sym_subst_all_tac >>
+     rw[EXTENSION,GSPECIFICATION] >> metis_tac[])
+QED
+
+Theorem accessible_reachable[local]:
+  ∀w p q.
+    is_dfa M ∧
+    M.initial = {p} ∧
+    q ∈ accessible_states M
+    ⇒
+    (λx y. set (kidlist M x) y)꙳ p q
+Proof
+   simp [accessible_states_def,PULL_EXISTS] >>
+   CONV_TAC (RESORT_FORALL_CONV List.rev) >>
+   recInduct SNOC_INDUCT >> rw[]
+   >- gvs [nfa_eval_eqns] >>
+   gvs [EVERY_SNOC,SNOC_APPEND] >>
+   pop_keep_tac >>
+   ‘{p} ⊆ M.Q’ by
+      metis_tac [is_dfa_def,wf_nfa_def] >>
+   drule_all dfa_eval_final_state >>
+   gvs [is_dfa_def] >> rw[nfa_eval_append] >> gvs[] >>
+   simp [Once RTC_CASES2] >> disj2_tac >>
+   first_x_assum (irule_at Any) >>
+   rw [kidlist_def]
+   >- (‘FINITE(BIGUNION {M.delta q' a | a | a ∈ M.Sigma})’ by
+         (rw[GSPEC_IMAGE,combinTheory.o_DEF]
+          >- (irule IMAGE_FINITE >> rw[IN_DEF] >> metis_tac[wf_nfa_def])
+          >- (irule SUBSET_FINITE >> drule nfa_eval_states_closed >>
+              disch_then drule >>
+              ‘{p} ⊆ M.Q’ by metis_tac [wf_nfa_def] >>
+              disch_then drule >> rw[] >> metis_tac[wf_nfa_def])) >>
+      rw [SET_TO_LIST_INV,PULL_EXISTS] >>
+      first_assum (irule_at Any) >>
+      qpat_x_assum ‘nfa_eval _ _ [_] = _’ mp_tac >>
+      simp [nfa_eval_eqns,EXTENSION] >> metis_tac[])
+  >- (‘{p} ⊆ M.Q’ by
+         metis_tac [wf_nfa_def] >>
+      drule_all nfa_eval_states_closed >> rw[])
+QED
+
+Theorem accessible_state_reach_list:
+  is_dfa M
+  ⇒
+  (q ∈ accessible_states M
+    ⇔
+   REACH_LIST (kidlist M) (SET_TO_LIST M.initial) q)
+Proof
+  strip_tac >>
+  ‘FINITE M.initial’ by
+     metis_tac [is_dfa_def,wf_nfa_def,SUBSET_FINITE] >>
+  rw [REACH_LIST_def,REACH_def,MEM_SET_TO_LIST] >>
+  rw [EQ_IMP_THM]
+  >- (‘∃p. M.initial = {p}’ by
+        metis_tac [is_dfa_def] >> simp[] >>
+      simp[IN_DEF] >> irule_at Any accessible_reachable >> simp[])
+  >- (irule reachable_accessible >> simp [] >>
+      first_x_assum (irule_at Any) >> gvs[IN_DEF])
+QED
+
+Theorem accessible_state_eq_reachable_states:
+  is_dfa M ⇒
+  (accessible_states M
+    =
+   set(reachable_states M [] (SET_TO_LIST M.initial) []))
+Proof
+  metis_tac [accessible_state_reach_list,reachable_states,
+             is_dfa_def, EXTENSION,IN_DEF]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* States q1 and q2 are distinguishable if there is at least one string w    *)
+(* s.t. executing M on w from one of q1 or q2 ends in an accepting state but *)
+(* executing from the other ends in a non-accepting state.                   *)
+(*---------------------------------------------------------------------------*)
+
+Definition distinguishable_states_def:
+  distinguishable_states M q1 q2 ⇔
+    {q1; q2} ⊆ M.Q ∧
+    ∃w. w ∈ KSTAR {[a] | a ∈ M.Sigma} ∧
+        (nfa_eval M {q1} w ⊆ M.final
+          ⇔
+         nfa_eval M {q2} w ⊈ M.final)
+End
+
+Definition distinguishable_nfa_def:
+  distinguishable_nfa M ⇔
+    ∀q1 q2. {q1; q2} ⊆ M.Q ∧ q1 ≠ q2 ⇒ distinguishable_states M q1 q2
+End

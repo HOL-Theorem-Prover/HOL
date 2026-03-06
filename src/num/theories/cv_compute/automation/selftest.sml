@@ -158,11 +158,11 @@ val cond_def_lemma = Q.prove (
 val cond_def = new_specification("cond_sub_def",["cond_sub"],cond_def_lemma);
 
 val res = cv_trans fac_def;
-val res = cv_trans_pre foo_def;
-val res = cv_trans_pre use_foo_def;
-val res = cv_trans_pre risky_def;
+val res = cv_trans_pre "" foo_def;
+val res = cv_trans_pre "" use_foo_def;
+val res = cv_trans_pre "" risky_def;
 val res = cv_trans inc_def;
-val res = cv_trans_pre cond_def;
+val res = cv_trans_pre "" cond_def;
 
 val _ = Datatype `
   a_type = A_cons | B_cons | C_cons num num | D_cons (a_type list)
@@ -191,7 +191,7 @@ val num_sum_def = Define `
 
 val res = cv_trans num_sum_def;
 val res = cv_trans listTheory.LENGTH;
-(* val res = cv_trans_pre lookup_def; *)
+(* val res = cv_trans_pre "" lookup_def; *)
 
 val f1_def = Define `
   f1 (n:num) = 1:num
@@ -232,7 +232,7 @@ val even_def = Define `
   odd (SUC n) = even n
 `
 
-val res = cv_trans_pre even_def
+val res = cv_trans_pre "even_pre odd_pre" even_def
 
 val _ = store_thm("even_pre[local,cv_pre]",
   ``(!a0. even_pre a0) /\ (!a1. odd_pre a1)``,
@@ -303,6 +303,10 @@ val _ = Datatype `
         | Op num clos_op (c_exp list)
 `
 
+(*---------------------------------------------------------------------------*)
+(* Prim rec, so no termination proof needed ... what is going on here?       *)
+(*---------------------------------------------------------------------------*)
+
 val exp_size_alt_def = tDefine "exp_size_alt" `
   exp_size_alt ((Var x y) : c_exp) = 1:num /\
   exp_size_alt (If a b c d) = 1 + exp_size_alt b + exp_size_alt c + exp_size_alt d /\
@@ -316,9 +320,9 @@ val exp_size_alt_def = tDefine "exp_size_alt" `
   exp_size_alt (Op a0 a1 a2) = 1 + exp_sizes_alt a2 /\
   exp_sizes_alt [] = 0 /\
   exp_sizes_alt (x::xs) = exp_size_alt x + exp_sizes_alt xs`
-  cheat;
+ cheat
 
-val pre = cv_auto_trans_pre_rec exp_size_alt_def cheat;
+val pre = cv_auto_trans_pre_rec "" exp_size_alt_def cheat;
 
 val can_raise_def = Define ` can_raise x = T `
 
@@ -336,7 +340,9 @@ val dest_handle_If_def = Define `
   dest_handle_If _ = NONE `
 
 val _ = cv_trans can_raise_def;
+(*
 val _ = cv_trans dest_handle_If_def;
+*)
 
 (*
 val mem_test_def = Define `mem_test n = MEM n ["test1"; "test2"]`

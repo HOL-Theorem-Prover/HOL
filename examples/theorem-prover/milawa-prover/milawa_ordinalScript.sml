@@ -1,10 +1,8 @@
 
-open HolKernel Parse boolLib bossLib; val _ = new_theory "milawa_ordinal";
+Theory milawa_ordinal
+Ancestors
+  lisp_sexp arithmetic pred_set ordinalNotation
 
-open lisp_sexpTheory arithmeticTheory pred_setTheory ordinalNotationTheory;
-
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE
 
 
@@ -43,12 +41,14 @@ val ORDP_def = tDefine "ORDP" `
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [isDot_thm] \\ Cases_on `a`
   \\ FULL_SIMP_TAC std_ss [CAR_def,CDR_def,LSIZE_def] \\ DECIDE_TAC);
 
-val ORD_LESS_def = Define `
-  ORD_LESS x y = ORDP x /\ ORDP y /\ ORD_LT x y`;
+Definition ORD_LESS_def:
+  ORD_LESS x y = ORDP x /\ ORDP y /\ ORD_LT x y
+End
 
-val ord2sexp_def = Define `
+Definition ord2sexp_def:
   (ord2sexp (End n) = Val n) /\
-  (ord2sexp (Plus x n y) = Dot (Dot (ord2sexp x) (Val n)) (ord2sexp y))`;
+  (ord2sexp (Plus x n y) = Dot (Dot (ord2sexp x) (Val n)) (ord2sexp y))
+End
 
 val NOT_ord2sexp_Val_0 = prove(
   ``!x. ~(ord2sexp x = Val 0) = ~(x = End 0)``,
@@ -71,9 +71,10 @@ val oless_IMP_ORD_LT = prove(
        DECIDE ``n<m ==> ~(n=m:num)``]
   \\ Cases_on `ord2sexp x = ord2sexp y` \\ FULL_SIMP_TAC std_ss [ORD_LT_IRREFL]);
 
-val ord_size_def = Define `
+Definition ord_size_def:
   (ord_size (End k) = 0:num) /\
-  (ord_size (Plus x n y) = 1 + ord_size x + ord_size y)`;
+  (ord_size (Plus x n y) = 1 + ord_size x + ord_size y)
+End
 
 val sexp2ord_def = tDefine "sexp2ord" `
   sexp2ord x = if ~(isDot x) then End (getVal x) else
@@ -148,14 +149,15 @@ val ord2sexp_sexp2ord = prove(
   \\ Q.PAT_ASSUM `!x. bbb` MATCH_MP_TAC
   \\ ASM_SIMP_TAC std_ss [LSIZE_def] \\ DECIDE_TAC);
 
-val WF_ORD_LESS = store_thm("WF_ORD_LESS",
-  ``WF ORD_LESS``,
+Theorem WF_ORD_LESS:
+    WF ORD_LESS
+Proof
   ASSUME_TAC WF_ord_less
   \\ FULL_SIMP_TAC std_ss [prim_recTheory.WF_IFF_WELLFOUNDED,
        prim_recTheory.wellfounded_def,ord_less_def,is_ord_EQ_ORDP,oless_EQ_ord2sexp]
   \\ FULL_SIMP_TAC std_ss [ORD_LESS_def] \\ REPEAT STRIP_TAC
   \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [`sexp2ord o f`])
   \\ FULL_SIMP_TAC std_ss [] \\ Q.EXISTS_TAC `n`
-  \\ CCONTR_TAC \\ FULL_SIMP_TAC std_ss [ord2sexp_sexp2ord]);
+  \\ CCONTR_TAC \\ FULL_SIMP_TAC std_ss [ord2sexp_sexp2ord]
+QED
 
-val _ = export_theory();

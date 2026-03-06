@@ -360,7 +360,7 @@ fun save_proof name a tacs =
     in
         case str of
             "y\n" =>
-            let val _ =  store_thm (((term_to_string (name)) ^ "_thm"), ``preserve_relation_mmu ^a``, tacs)
+            let val _ = store_thm (((term_to_string (name)) ^ "_thm"), ``preserve_relation_mmu ^a``, tacs)
             in
                 store_thm (((term_to_string (name)) ^ "_ut_thm"), ``preserve_relation_mmu ^a``, tacs)
             end

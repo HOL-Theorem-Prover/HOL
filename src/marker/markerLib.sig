@@ -71,8 +71,14 @@ sig
   val find_labelled_assumption : thm -> term list -> thm
 
   val ASSUME_NAMED_TAC : string -> thm -> tactic
+  val assume_named_tac : string -> thm -> tactic
+  val mk_asm           : string -> thm -> tactic
   val LABEL_ASSUM      : string -> thm_tactic -> tactic
+  val label_assum      : string -> thm_tactic -> tactic
+  val asm              : string -> thm_tactic -> tactic
   val LABEL_X_ASSUM    : string -> thm_tactic -> tactic
+  val label_x_assum    : string -> thm_tactic -> tactic
+  val asm_x            : string -> thm_tactic -> tactic
   val LLABEL_RESOLVE   : thm list -> term list -> thm list
   val LLABEL_RES_THEN  : (thm list -> tactic) -> thm list -> tactic
 
@@ -101,7 +107,22 @@ sig
 
   val process_taclist_then : {arg: thm list} -> (thm list -> tactic) -> tactic
 
-end
+  val suspend : string -> tactic
+  val prim_resume : (thm * string * tactic) -> {updated_main: thm, subresult:thm}
+  val resume : {suspension_name:string, label_name:string} -> tactic -> thm
+  val prim_set_suspended_goal :
+      Manager.tacmodifier -> {suspension_name:string, label_name:string} ->
+      proofManagerLib.proofs
+  val set_suspended_goal :
+      {suspension_name:string, label_name:string} -> proofManagerLib.proofs
+      (* provides id_tacm for the tactic modifier value *)
+
+  val add_suspension_label : string -> thm -> thm
+  val resumption_to_goal : (int * term) list -> (term list * term)
+  val extract_suspended_goal : thm -> string -> (int * term) list
+  val RESUME_TAC : tactic
+
+end (* sig *)
 
 (*
    [stmark_term t] wraps term t in a "short term marker".

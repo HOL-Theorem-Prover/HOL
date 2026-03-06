@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "cps";
+Theory cps
 
 Definition cwc_def:
   cwc v k = k v
@@ -70,4 +68,3 @@ Proof
   Cases_on ‘ov’ >> simp[contify_def]
 QED
 
-val _ = export_theory();

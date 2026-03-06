@@ -286,7 +286,7 @@ fun tf1_preambule oc tml =
   let
     val cval = mk_fast_set tma_compare
       (List.concat (cval_extra :: map collect_arity_noapp tml))
-    val tyopl =  mk_fast_set ida_compare
+    val tyopl = mk_fast_set ida_compare
       (List.concat (tyopl_extra :: map collect_tyop tml))
   in
     app (tf1_tyopdef oc) tyopl;

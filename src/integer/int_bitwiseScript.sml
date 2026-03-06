@@ -1,52 +1,61 @@
-open HolKernel Parse boolLib bossLib;
-open integerTheory arithmeticTheory bitTheory intLib listTheory;
+Theory int_bitwise
+Ancestors
+  integer arithmetic bit list
+Libs
+  intLib
 
-infix \\
-val op \\ = op THEN;
-
-val _ = new_theory "int_bitwise";
 val _ = ParseExtras.temp_loose_equality()
 
-val int_not_def = Define `
-  int_not i = 0 - i - 1`;
+Definition int_not_def:
+  int_not i = 0 - i - 1
+End
 
-val int_not_not = store_thm("int_not_not",
-  ``!i. int_not (int_not i) = i``,
-  srw_tac [] [int_not_def] \\ fs [] \\ intLib.COOPER_TAC);
+Theorem int_not_not:
+    !i. int_not (int_not i) = i
+Proof
+  srw_tac [] [int_not_def] \\ fs [] \\ intLib.COOPER_TAC
+QED
 
-val int_bit_def = Define `
+Definition int_bit_def:
   int_bit b (i:int) =
-    if i < 0 then ~(BIT b (Num (int_not i))) else BIT b (Num i)`;
+    if i < 0 then ~(BIT b (Num (int_not i))) else BIT b (Num i)
+End
 
-val int_bit_not = store_thm("int_bit_not",
-  ``!b i. int_bit b (int_not i) = ~(int_bit b i)``,
+Theorem int_bit_not:
+    !b i. int_bit b (int_not i) = ~(int_bit b i)
+Proof
   srw_tac [] [int_bit_def,int_not_not]
-  \\ fs [int_not_def] \\ `F` by intLib.COOPER_TAC);
+  \\ fs [int_not_def] \\ `F` by intLib.COOPER_TAC
+QED
 
-val bits_of_num_def = Define `
+Definition bits_of_num_def:
   bits_of_num (n:num) =
     if n = 0 then []
-    else ODD n :: bits_of_num (n DIV 2)`;
+    else ODD n :: bits_of_num (n DIV 2)
+End
 
-val bits_of_int_def = Define `
+Definition bits_of_int_def:
   bits_of_int i =
     if i < 0 then
       (MAP (~) (bits_of_num (Num (int_not i))),T)
     else
-      (bits_of_num (Num i), F)`;
+      (bits_of_num (Num i), F)
+End
 
-val num_of_bits_def = Define `
+Definition num_of_bits_def:
   (num_of_bits [] = 0:num) /\
   (num_of_bits (F::bs) = 2 * num_of_bits bs) /\
-  (num_of_bits (T::bs) = 1 + 2 * num_of_bits bs)`;
+  (num_of_bits (T::bs) = 1 + 2 * num_of_bits bs)
+End
 
-val int_of_bits_def = Define `
+Definition int_of_bits_def:
   int_of_bits (bs,rest) =
     if rest then
       int_not (& (num_of_bits (MAP (~) bs)))
-    else & (num_of_bits bs)`;
+    else & (num_of_bits bs)
+End
 
-val bits_bitwise_def = Define `
+Definition bits_bitwise_def:
   (bits_bitwise f ([],r1) ([],r2) = ([],f r1 r2)) /\
   (bits_bitwise f ([],r1) (b2::bs2,r2) =
      let (bs,r) = bits_bitwise f ([],r1) (bs2,r2) in
@@ -56,29 +65,37 @@ val bits_bitwise_def = Define `
        (f b1 r2 :: bs, r)) /\
   (bits_bitwise f (b1::bs1,r1) (b2::bs2,r2) =
      let (bs,r) = bits_bitwise f (bs1,r1) (bs2,r2) in
-       (f b1 b2 :: bs, r))`
+       (f b1 b2 :: bs, r))
+End
 
-val int_bitwise_def = Define `
+Definition int_bitwise_def:
   int_bitwise f i j =
-    int_of_bits (bits_bitwise f (bits_of_int i) (bits_of_int j))`;
+    int_of_bits (bits_bitwise f (bits_of_int i) (bits_of_int j))
+End
 
-val int_and_def = Define `
-  int_and = int_bitwise (/\)`;
+Definition int_and_def:
+  int_and = int_bitwise (/\)
+End
 
-val int_or_def = Define `
-  int_or = int_bitwise (\/)`;
+Definition int_or_def:
+  int_or = int_bitwise (\/)
+End
 
-val int_xor_def = Define `
-  int_xor = int_bitwise (<>)`;
+Definition int_xor_def:
+  int_xor = int_bitwise (<>)
+End
 
-val MOD2 = prove(
-  ``n MOD 2 = if ODD n then 1 else 0``,
+Theorem MOD2[local]:
+    n MOD 2 = if ODD n then 1 else 0
+Proof
   srw_tac [] [] \\ fs [ODD_EVEN,EVEN_MOD2]
   \\ STRIP_ASSUME_TAC (Q.SPEC `n` (MATCH_MP DIVISION (DECIDE ``0<2:num``)))
-  \\ decide_tac);
+  \\ decide_tac
+QED
 
-val num_of_bits_bits_of_num = prove(
-  ``!n. num_of_bits (bits_of_num n) = n``,
+Theorem num_of_bits_bits_of_num[local]:
+    !n. num_of_bits (bits_of_num n) = n
+Proof
   completeInduct_on `n`
   \\ ONCE_REWRITE_TAC [bits_of_num_def]
   \\ Cases_on `n = 0` \\ fs [num_of_bits_def]
@@ -89,67 +106,85 @@ val num_of_bits_bits_of_num = prove(
   \\ Q.PAT_X_ASSUM `n = kkk:num` (fn th => CONV_TAC
        (RAND_CONV (ONCE_REWRITE_CONV [th])))
   \\ ASSUME_TAC MOD2
-  \\ fs []);
+  \\ fs []
+QED
 
-val bits_bitwise_NIL = prove(
-  ``!xs rest f. bits_bitwise f ([],F) (xs,rest) = (MAP (f F) xs,f F rest)``,
-  Induct \\ fs [bits_bitwise_def,LET_DEF]);
+Theorem bits_bitwise_NIL[local]:
+    !xs rest f. bits_bitwise f ([],F) (xs,rest) = (MAP (f F) xs,f F rest)
+Proof
+  Induct \\ fs [bits_bitwise_def,LET_DEF]
+QED
 
-val int_not = store_thm("int_not",
-  ``int_not = int_bitwise (\x y. ~y) 0``,
+Theorem int_not:
+    int_not = int_bitwise (\x y. ~y) 0
+Proof
   fs [int_bitwise_def,FUN_EQ_THM,EVAL ``bits_of_int 0``]
   \\ fs [bits_of_int_def] \\ srw_tac [] [bits_bitwise_NIL]
   \\ fs [MAP_MAP_o,combinTheory.o_DEF,int_of_bits_def,num_of_bits_bits_of_num]
-  \\ fs [int_not_def] \\ intLib.COOPER_TAC);
+  \\ fs [int_not_def] \\ intLib.COOPER_TAC
+QED
 
-val int_shift_left_def = Define `
+Definition int_shift_left_def:
   int_shift_left n i =
     let (bs,r) = bits_of_int i in
-      int_of_bits (GENLIST (K F) n ++ bs,r)`;
+      int_of_bits (GENLIST (K F) n ++ bs,r)
+End
 
-val int_shift_right_def = Define `
+Definition int_shift_right_def:
   int_shift_right n i =
     let (bs,r) = bits_of_int i in
-      int_of_bits (DROP n bs,r)`;
+      int_of_bits (DROP n bs,r)
+End
 
-val int_not_lemma = prove(
-  ``!n. int_not (& n) < 0``,
-  fs [int_not_def] \\ intLib.COOPER_TAC);
+Theorem int_not_lemma[local]:
+    !n. int_not (& n) < 0
+Proof
+  fs [int_not_def] \\ intLib.COOPER_TAC
+QED
 
-val BIT_lemmas = prove(
-  ``(BIT 0 (2 * k) = F) /\
+Theorem BIT_lemmas[local]:
+    (BIT 0 (2 * k) = F) /\
     (BIT 0 (1 + 2 * k) = T) /\
     (BIT (SUC n) (2 * k) = BIT n k) /\
-    (BIT (SUC n) (1 + 2 * k) = BIT n k)``,
+    (BIT (SUC n) (1 + 2 * k) = BIT n k)
+Proof
   simp_tac (srw_ss()) [GSYM BIT_DIV2]
   \\ ONCE_REWRITE_TAC [ADD_COMM]
   \\ ONCE_REWRITE_TAC [MULT_COMM]
   \\ simp_tac (srw_ss()) [DIV_MULT,MULT_DIV]
   \\ simp_tac (srw_ss()) [BIT_def,BITS_THM]
-  \\ rw [MOD_TIMES,MOD_EQ_0]);
+  \\ rw [MOD_TIMES,MOD_EQ_0]
+QED
 
-val BIT_num_of_bits = prove(
-  ``!bs n. BIT n (num_of_bits bs) = n < LENGTH bs /\ EL n bs``,
+Theorem BIT_num_of_bits[local]:
+    !bs n. BIT n (num_of_bits bs) = n < LENGTH bs /\ EL n bs
+Proof
   Induct \\ srw_tac [] [num_of_bits_def,BIT_ZERO]
   \\ Cases_on `h` \\ srw_tac [] [num_of_bits_def]
-  \\ Cases_on `n` \\ fs [BIT_lemmas]);
+  \\ Cases_on `n` \\ fs [BIT_lemmas]
+QED
 
-val int_bit_int_of_bits = store_thm("int_bit_int_of_bits",
-  ``int_bit n (int_of_bits b) =
-      if n < LENGTH (FST b) then EL n (FST b) else SND b``,
+Theorem int_bit_int_of_bits:
+    int_bit n (int_of_bits b) =
+      if n < LENGTH (FST b) then EL n (FST b) else SND b
+Proof
   Cases_on `b` \\ Cases_on `r` \\ fs [int_of_bits_def]
   \\ fs [int_bit_def,int_not_not]
   \\ fs [int_not_def,int_not_lemma,BIT_num_of_bits]
-  \\ Cases_on `n < LENGTH q` \\ fs [EL_MAP]);
+  \\ Cases_on `n < LENGTH q` \\ fs [EL_MAP]
+QED
 
-val int_of_bits_bits_of_int = store_thm("int_of_bits_bits_of_int",
-  ``!i. int_of_bits (bits_of_int i) = i``,
+Theorem int_of_bits_bits_of_int:
+    !i. int_of_bits (bits_of_int i) = i
+Proof
   srw_tac [] [int_of_bits_def,bits_of_int_def]
   \\ fs [MAP_MAP_o,combinTheory.o_DEF,int_of_bits_def,num_of_bits_bits_of_num]
-  \\ fs [int_not_def] \\ intLib.COOPER_TAC);
+  \\ fs [int_not_def] \\ intLib.COOPER_TAC
+QED
 
-val int_bit_bitwise = store_thm("int_bit_bitwise",
-  ``!n f i j. int_bit n (int_bitwise f i j) = f (int_bit n i) (int_bit n j)``,
+Theorem int_bit_bitwise:
+    !n f i j. int_bit n (int_bitwise f i j) = f (int_bit n i) (int_bit n j)
+Proof
   fs [int_bitwise_def,int_bit_int_of_bits] \\ REPEAT STRIP_TAC
   \\ CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GSYM int_of_bits_bits_of_int]))
   \\ fs [int_bit_int_of_bits]
@@ -173,23 +208,25 @@ val int_bit_bitwise = store_thm("int_bit_bitwise",
   THEN1
    (Cases_on `bits_bitwise f (p_1,p_2) (t,p_2')`
     \\ fs [LET_DEF] \\ Cases_on `n` \\ fs []
-    \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`p_2`,`t`,`p_2'`,`f`,`n'`]) \\ fs []));
+    \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`p_2`,`t`,`p_2'`,`f`,`n'`]) \\ fs [])
+QED
 
-val int_bit_and = save_thm("int_bit_and",
+Theorem int_bit_and =
   ``int_bit n (int_and i j)``
-  |> SIMP_CONV std_ss [int_and_def,int_bit_bitwise] |> Q.GENL [`j`,`i`,`n`]);
+  |> SIMP_CONV std_ss [int_and_def,int_bit_bitwise] |> Q.GENL [`j`,`i`,`n`];
 
-val int_bit_or = save_thm("int_bit_or",
+Theorem int_bit_or =
   ``int_bit n (int_or i j)``
-  |> SIMP_CONV std_ss [int_or_def,int_bit_bitwise] |> Q.GENL [`j`,`i`,`n`]);
+  |> SIMP_CONV std_ss [int_or_def,int_bit_bitwise] |> Q.GENL [`j`,`i`,`n`];
 
-val int_bit_xor = save_thm("int_bit_xor",
+Theorem int_bit_xor =
   ``int_bit n (int_xor i j)``
-  |> SIMP_CONV std_ss [int_xor_def,int_bit_bitwise] |> Q.GENL [`j`,`i`,`n`]);
+  |> SIMP_CONV std_ss [int_xor_def,int_bit_bitwise] |> Q.GENL [`j`,`i`,`n`];
 
-val LAST_bits_of_num = prove(
-  ``!n. LENGTH (bits_of_num n) <> 0 ==>
-        EL (LENGTH (bits_of_num n) - 1) (bits_of_num n)``,
+Theorem LAST_bits_of_num[local]:
+    !n. LENGTH (bits_of_num n) <> 0 ==>
+        EL (LENGTH (bits_of_num n) - 1) (bits_of_num n)
+Proof
   HO_MATCH_MP_TAC (fetch "-" "bits_of_num_ind")
   \\ REPEAT STRIP_TAC \\ ONCE_REWRITE_TAC [bits_of_num_def]
   \\ Cases_on `n = 0` \\ fs [EVAL ``bits_of_num 0``]
@@ -197,30 +234,38 @@ val LAST_bits_of_num = prove(
   \\ Cases_on `n = 1` \\ fs []
   \\ fs[Once bits_of_num_def]
   \\ `~(n < 2)` by decide_tac
-  \\ fs [DIV_EQ_X]);
+  \\ fs [DIV_EQ_X]
+QED
 
-val int_not_lemma = prove(
-  ``(int_not (& n) <> & m) /\ ((int_not i = int_not j) <=> (i = j))``,
-  fs [int_not_def] \\ COOPER_TAC);
+Theorem int_not_lemma[local]:
+    (int_not (& n) <> & m) /\ ((int_not i = int_not j) <=> (i = j))
+Proof
+  fs [int_not_def] \\ COOPER_TAC
+QED
 
-val int_of_bits_11_lemma = prove(
-  ``(int_of_bits (bits_of_int i) = int_of_bits (bits_of_int j)) <=>
-    (bits_of_int i = bits_of_int j)``,
+Theorem int_of_bits_11_lemma[local]:
+    (int_of_bits (bits_of_int i) = int_of_bits (bits_of_int j)) <=>
+    (bits_of_int i = bits_of_int j)
+Proof
   eq_tac \\ srw_tac [] [] \\ fs [bits_of_int_def]
   \\ srw_tac [] [] \\ fs [] \\ fs [int_of_bits_def,int_not_lemma]
-  \\ fs [MAP_MAP_o,combinTheory.o_DEF,int_of_bits_def,num_of_bits_bits_of_num]);
+  \\ fs [MAP_MAP_o,combinTheory.o_DEF,int_of_bits_def,num_of_bits_bits_of_num]
+QED
 
-val bits_of_int_LAST = prove(
-  ``!i bs r. (bits_of_int i = (bs,r)) /\ (bs <> []) ==>
-             EL (LENGTH bs - 1) bs <> r``,
+Theorem bits_of_int_LAST[local]:
+    !i bs r. (bits_of_int i = (bs,r)) /\ (bs <> []) ==>
+             EL (LENGTH bs - 1) bs <> r
+Proof
   srw_tac [] [bits_of_int_def,EL_MAP,LENGTH_MAP]
   \\ fs [MAP_EQ_NIL] \\ full_simp_tac std_ss [GSYM LENGTH_NIL]
   \\ imp_res_tac (DECIDE ``n <> 0 ==> n - 1 < n:num``)
   \\ fs [bits_of_int_def,EL_MAP,LENGTH_MAP]
-  \\ match_mp_tac LAST_bits_of_num \\ fs []);
+  \\ match_mp_tac LAST_bits_of_num \\ fs []
+QED
 
-val int_bit_equiv = store_thm("int_bit_equiv",
-  ``!i j. (i = j) <=> !n. int_bit n i = int_bit n j``,
+Theorem int_bit_equiv:
+    !i j. (i = j) <=> !n. int_bit n i = int_bit n j
+Proof
   ONCE_REWRITE_TAC [GSYM int_of_bits_bits_of_int]
   \\ fs [int_bit_int_of_bits,int_of_bits_11_lemma]
   \\ srw_tac [] [] \\ Cases_on `bits_of_int i` \\ Cases_on `bits_of_int j`
@@ -243,40 +288,47 @@ val int_bit_equiv = store_thm("int_bit_equiv",
     \\ fs [] \\ srw_tac [] [] \\ `F` by intLib.COOPER_TAC)
   THEN1 (Cases_on `bs1 = []` \\ fs [LENGTH]
     \\ FIRST_X_ASSUM (MP_TAC o Q.SPEC `LENGTH (bs1:bool list) - 1`)
-    \\ fs [] \\ srw_tac [] [] \\ `F` by intLib.COOPER_TAC));
+    \\ fs [] \\ srw_tac [] [] \\ `F` by intLib.COOPER_TAC)
+QED
 
-val int_bit_shift_left_lemma1 = prove(
-  ``!b n i. int_bit (b + n) (int_shift_left n i) = int_bit b i``,
+Theorem int_bit_shift_left_lemma1[local]:
+    !b n i. int_bit (b + n) (int_shift_left n i) = int_bit b i
+Proof
   fs [int_shift_left_def] \\ rpt strip_tac
   \\ Cases_on `bits_of_int i`
   \\ CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GSYM int_of_bits_bits_of_int]))
   \\ fs [LET_DEF,int_bit_int_of_bits]
-  \\ srw_tac [] [LENGTH_GENLIST,rich_listTheory.EL_APPEND2]);
+  \\ srw_tac [] [LENGTH_GENLIST,rich_listTheory.EL_APPEND2]
+QED
 
-val int_bit_shift_left_lemma2 = prove(
-  ``!b n i. b < n ==> ~int_bit b (int_shift_left n i)``,
+Theorem int_bit_shift_left_lemma2[local]:
+    !b n i. b < n ==> ~int_bit b (int_shift_left n i)
+Proof
   fs [int_shift_left_def] \\ rpt strip_tac
   \\ Cases_on `bits_of_int i`
   \\ fs [LET_DEF,int_bit_int_of_bits]
   \\ `b < n + LENGTH q` by decide_tac \\ fs []
   \\ qpat_x_assum `EL _ _` MP_TAC
-  \\ fs [rich_listTheory.EL_APPEND1,LENGTH_GENLIST]);
+  \\ fs [rich_listTheory.EL_APPEND1,LENGTH_GENLIST]
+QED
 
-val int_bit_shift_left = store_thm("int_bit_shift_left",
-  ``!b n i. int_bit b (int_shift_left n i) = n <= b /\ int_bit (b - n) i``,
+Theorem int_bit_shift_left:
+    !b n i. int_bit b (int_shift_left n i) = n <= b /\ int_bit (b - n) i
+Proof
   REPEAT STRIP_TAC \\ Cases_on `b < n`
   \\ asm_simp_tac (srw_ss()) [int_bit_shift_left_lemma2] THEN1 decide_tac
   \\ fs [NOT_LESS] \\ imp_res_tac LESS_EQUAL_ADD
   \\ fs [] \\ ONCE_REWRITE_TAC [ADD_COMM]
-  \\ simp_tac (srw_ss()) [int_bit_shift_left_lemma1]);
+  \\ simp_tac (srw_ss()) [int_bit_shift_left_lemma1]
+QED
 
-val int_bit_shift_right = store_thm("int_bit_shift_right",
-  ``!b n i. int_bit b (int_shift_right n i) = int_bit (b + n) i``,
+Theorem int_bit_shift_right:
+    !b n i. int_bit b (int_shift_right n i) = int_bit (b + n) i
+Proof
   fs [int_shift_right_def] \\ rpt strip_tac
   \\ Cases_on `bits_of_int i`
   \\ CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GSYM int_of_bits_bits_of_int]))
   \\ fs [LET_DEF,int_bit_int_of_bits]
   \\ srw_tac [] [rich_listTheory.EL_DROP]
-  \\ fs [NOT_LESS] \\ `F` by decide_tac);
-
-val _ = export_theory();
+  \\ fs [NOT_LESS] \\ `F` by decide_tac
+QED

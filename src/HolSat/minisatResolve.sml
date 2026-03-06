@@ -66,7 +66,7 @@ fun dualise lfn orc clauseth ci =
             else (* [~p0,...,~pn,tm] |- F *)
               let val th2 = MP (INST [A|->t1] AND_INV_IMP2) (ASSUME t1)
                             (*[tm,t] |- ~t ==> F *)
-                  val dth =  dualise' th2 (* [~x0,...,~xn,tm,t] |- F *)
+                  val dth = dualise' th2 (* [~x0,...,~xn,tm,t] |- F *)
               in
                 PROVE_HYP th1 (INSTANTIATE_UNDERLYING lfn dth)
               end (* [~p0,...,~pn,tm] |- F *)

@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib
-
-open gh294aTheory gh294bTheory testutils
-
-val _ = new_theory "gh168d";
+Theory gh168d[bare]
+Ancestors
+  gh294a gh294b
+Libs
+  HolKernel Parse boolLib testutils
 
 val b2b = bool --> bool
 val b2b2b = bool --> b2b
@@ -12,4 +12,3 @@ val ty2 = ``:gh294b$foo``
 val _ = assert (equal b2b) ty1
 val _ = assert (equal b2b2b) ty2
 
-val _ = export_theory();

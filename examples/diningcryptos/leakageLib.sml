@@ -14,7 +14,7 @@ open HolKernel Parse boolTheory boolLib bossLib metisLib arithmeticTheory
 open real_sigmaTheory;
 structure Parse = struct
 open Parse
-val (Type,Term) = parse_from_grammars leakage_grammars
+val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="leakage"}
 end
 open Parse
 

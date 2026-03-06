@@ -1,14 +1,10 @@
-open HolKernel boolLib bossLib Parse;
-
-open dep_rewrite pairTheory pred_setTheory listTheory rich_listTheory bagTheory
-     gcdsetTheory numberTheory combinatoricsTheory;
-
-open ringTheory polynomialTheory polyWeakTheory polyRingTheory polyEvalTheory
-     polyFieldTheory;
-
-open monoidTheory groupTheory;
-
-val _ = new_theory "multipoly";
+Theory multipoly
+Ancestors
+  pair pred_set list rich_list bag gcdset number combinatorics
+  ring polynomial polyWeak polyRing polyEval polyField monoid
+  group
+Libs
+  dep_rewrite
 
 Theorem GBAG_IMAGE_GBAG_BAG_OF_SET:
   AbelianMonoid g ==>
@@ -5678,4 +5674,3 @@ Proof
   \\ simp[FUN_EQ_THM]
 QED
 
-val _ = export_theory();

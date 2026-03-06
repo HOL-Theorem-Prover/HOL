@@ -1,4 +1,7 @@
-HOL = $(protect $(HOLDIR)/bin/hol.bare) --zero
+ifdef POLY
+CLINE_OPTIONS = --holstate=$(HOLDIR)/bin/hol.state0
+
+HOL = $(protect $(HOLDIR)/bin/hol) --bare --zero --noconfig
 INCLUDES = $(HOLDIR)/tools/cmp
 
 all: $(DEFAULT_TARGETS)
@@ -9,8 +12,7 @@ all: $(DEFAULT_TARGETS)
 # CMP = $(protect $(HOLDIR)/tools/cmp/cmp.exe)
 CMP = diff -a
 
-ifdef POLY
-DEPS = test1.out test2.out test3.out test4.out test5.out
+DEPS = test1.out test2.out test3.out test4.out test5.out test6.out
 
 all: $(DEPS)
 
@@ -32,6 +34,11 @@ test4.out: test4.input test4.expected
 	$(CMP) $@ $(patsubst %.input,%.expected,$<)
 
 test5.out: test5.input test5.expected
+	$(HOL) < $< | tail -n +8 > $@
+	$(CMP) $@ $(patsubst %.input,%.expected,$<)
+
+# Test error recovery: commands after static errors should still work
+test6.out: test6.input test6.expected
 	$(HOL) < $< | tail -n +8 > $@
 	$(CMP) $@ $(patsubst %.input,%.expected,$<)
 

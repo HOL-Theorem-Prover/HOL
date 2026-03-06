@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "modalBasics";
+Theory modalBasics
 
 Datatype:
   form = VAR num | DISJ form form | FALSE | NOT form | DIAM form
@@ -39,7 +37,6 @@ Datatype:
     Var num | NVar num | Conj nnfform nnfform | Disj nnfform nnfform |
     Box nnfform | Dia nnfform
 End
-val _ = export_rewrites ["nnfform_size_def"]
 
 Definition forces_def[simp]:
   (forces M w (Var n)      ⇔ w ∈ M.frame.world ∧ w ∈ M.valt n) ∧
@@ -119,4 +116,3 @@ Definition transitive_M:
             m.frame.rel u w
 End
 
-val _ = export_theory();

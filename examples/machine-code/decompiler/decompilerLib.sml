@@ -9,13 +9,14 @@ open set_sepTheory progTheory helperLib addressTheory;
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars addressTheory.address_grammars
+   val (Type, Term) = parse_from_grammars $ valOf $ grammarDB {thyname="address"}
 end
 
 fun allow_rebinds f x = Feedback.trace ("Theory.allow_rebinds", 1) f x
 val new_definition =
     allow_rebinds Definition.new_definition (* not boolSyntax! *)
 val save_thm = allow_rebinds save_thm
+val mk_pabs = pairSyntax.mk_pabs
 
 
 (* -------------------------------------------------------------------------- *)
@@ -1261,7 +1262,7 @@ fun SUBST_EXISTS_CONV vs cs =
   THENC SUBST_EXISTS_CONV_AUX vs cs
   THENC REWRITE_CONV [];
 
-(*
+(* Consider using goalStack.print_tac instead if this is re-enabled
 fun PRINT_GOAL_TAC s (hs,goal) = let
   val _ = print "\n\n"
   val _ = print s

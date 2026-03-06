@@ -1,21 +1,16 @@
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_symbols";
+Theory lisp_symbols
+Ancestors
+  lisp_sexp lisp_cons lisp_inv words arithmetic list pred_set
+  pair combin finite_map address set_sep bit fcp string
+  stop_and_copy prog_x64 prog lisp_parse
+Libs
+  wordsLib helperLib codegenLib decompilerLib prog_x64Lib
+
 val _ = ParseExtras.temp_loose_equality()
-open lisp_sexpTheory lisp_consTheory lisp_invTheory;
-
 (* --- *)
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib;
-open set_sepTheory bitTheory fcpTheory stringTheory;
 
 val wstd_ss = std_ss ++ SIZES_ss ++ rewrites [DECIDE ``n<256 ==> (n:num)<18446744073709551616``,ORD_BOUND];
 
-open stop_and_copyTheory;
-open codegenLib decompilerLib prog_x64Lib prog_x64Theory progTheory;
-open lisp_parseTheory;
-
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 fun SUBGOAL q = REVERSE (sg q)
@@ -142,8 +137,9 @@ val (thm,mc_string_lt_def) = basic_decompile x64_tools "mc_string_lt"
   B80B000000    (* TRUE:  mov r0d,11                *)
                 (* EXIT:                            *)`;
 
-val one_string_def = Define `
-  one_string a s = one_byte_list a (MAP (n2w o ORD) s)`;
+Definition one_string_def:
+  one_string a s = one_byte_list a (MAP (n2w o ORD) s)
+End
 
 val one_string_CONS = ``one_string a (x::xs)``
   |> (SIMP_CONV std_ss [one_string_def,MAP,one_byte_list_def] THENC
@@ -265,14 +261,15 @@ val lisp_inv_NIL = lisp_inv_Sym
 val lisp_inv_T = save_thm("lisp_inv_T",lisp_inv_Sym
   |> CONJUNCTS |> tl |> hd |> UNDISCH |> CONJUNCTS |> hd |> DISCH_ALL |> GEN_ALL);
 
-val mc_symbol_less_thm = store_thm("mc_symbol_less_thm",
-  ``lisp_inv ^STAT (x0,x1,x2,x3,x4,x5,^VAR_REST)
+Theorem mc_symbol_less_thm:
+    lisp_inv ^STAT (x0,x1,x2,x3,x4,x5,^VAR_REST)
        (w0,w1,w2,w3,w4,w5,df,f,^REST) ==> isSym x0 /\ isSym x1 ==>
     ?fi w0i w1i w2i w3i.
       mc_symbol_less_pre (w2w w0,w2w w1,sp,df,f,dg,g) /\
       (mc_symbol_less (w2w w0,w2w w1,sp,df,f,dg,g) = (tw0,w2w w0i,w2w w1i,w2w w2i,w2w w3i,sp,df,fi,dg,g)) /\
       lisp_inv ^STAT (LISP_SYMBOL_LESS x0 x1,Sym "NIL",Sym "NIL",Sym "NIL",x4,x5,^VAR_REST)
-        (w0i,w1i,w2i,w3i,w4,w5,df,fi,^REST)``,
+        (w0i,w1i,w2i,w3i,w4,w5,df,fi,^REST)
+Proof
   SIMP_TAC std_ss [AND_IMP_INTRO]
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(b1 ==> b1 /\ b2 /\ b3 ==> b4) ==> (b1 /\ b2 /\ b3 ==> b4)``)
   \\ STRIP_TAC \\ SIMP_TAC std_ss [Once lisp_inv_def]
@@ -347,7 +344,8 @@ val mc_symbol_less_thm = store_thm("mc_symbol_less_thm",
   THEN1 (MATCH_MP_TAC lisp_inv_T \\ Q.LIST_EXISTS_TAC [`x0`,`w0`]
          \\ FULL_SIMP_TAC std_ss [])
   THEN1 (MATCH_MP_TAC lisp_inv_NIL \\ Q.LIST_EXISTS_TAC [`x0`,`w0`]
-         \\ FULL_SIMP_TAC std_ss []));
+         \\ FULL_SIMP_TAC std_ss [])
+QED
 
 
 (* helper function *)
@@ -365,57 +363,71 @@ fun make_code_set code = let
     ``(p + (n2w n):word64,xs:word8 list)``
   fun foos n [] = pred_setSyntax.mk_empty(type_of (foo 0 (listw (hd ns))))
     | foos n (w::ws) = pred_setSyntax.mk_insert(foo n (listw w),foos (n+length w) ws)
-  fun post_pc n [] = (fst (dest_pair (foo n (listw (hd ns)))),n)
+  fun post_pc n [] = (fst (pairSyntax.dest_pair (foo n (listw (hd ns)))),n)
     | post_pc n (w::ws) = post_pc (n+length w) ws
   in (foos 0 ns, post_pc 0 ns) end;
 
 
 (* reading and writing io *)
 
-val IO_READ_def = Define `
+Definition IO_READ_def:
   (IO_READ (IO_STREAMS [] ys) = ~0w:word64) /\
-  (IO_READ (IO_STREAMS (x::xs) ys) = n2w (ORD x))`;
+  (IO_READ (IO_STREAMS (x::xs) ys) = n2w (ORD x))
+End
 
-val IO_NEXT_def = Define `
+Definition IO_NEXT_def:
   (IO_NEXT (IO_STREAMS  [] ys) = IO_STREAMS [] ys) /\
-  (IO_NEXT (IO_STREAMS (x::xs) ys) = IO_STREAMS xs ys)`;
+  (IO_NEXT (IO_STREAMS (x::xs) ys) = IO_STREAMS xs ys)
+End
 
-val IO_WRITE_def = Define `
-  IO_WRITE (IO_STREAMS xs ys) zs = IO_STREAMS xs (ys ++ zs)`;
+Definition IO_WRITE_def:
+  IO_WRITE (IO_STREAMS xs ys) zs = IO_STREAMS xs (ys ++ zs)
+End
 
-val IO_STATS_def = Define `
-  IO_STATS (n:num) (IO_STREAMS xs ys) = (IO_STREAMS xs ys)`;
+Definition IO_STATS_def:
+  IO_STATS (n:num) (IO_STREAMS xs ys) = (IO_STREAMS xs ys)
+End
 
-val REPLACE_INPUT_IO_def = Define `
-  REPLACE_INPUT_IO x (IO_STREAMS xs ys) = IO_STREAMS x ys`;
+Definition REPLACE_INPUT_IO_def:
+  REPLACE_INPUT_IO x (IO_STREAMS xs ys) = IO_STREAMS x ys
+End
 
-val getINPUT_def = Define `
-  getINPUT (IO_STREAMS xs ys) = xs`;
+Definition getINPUT_def:
+  getINPUT (IO_STREAMS xs ys) = xs
+End
 
-val IO_INPUT_APPLY_def = Define `
-  IO_INPUT_APPLY f io = REPLACE_INPUT_IO (f (getINPUT io)) io`;
+Definition IO_INPUT_APPLY_def:
+  IO_INPUT_APPLY f io = REPLACE_INPUT_IO (f (getINPUT io)) io
+End
 
-val IO_INPUT_LEMMA = store_thm("IO_INPUT_LEMMA",
-  ``(IO_READ (REPLACE_INPUT_IO (w::ws) io) = n2w (ORD w)) /\
+Theorem IO_INPUT_LEMMA:
+    (IO_READ (REPLACE_INPUT_IO (w::ws) io) = n2w (ORD w)) /\
     (IO_NEXT (REPLACE_INPUT_IO (w::ws) io) = REPLACE_INPUT_IO ws io) /\
     (IO_READ (REPLACE_INPUT_IO [] io) = ~0w) /\
-    (REPLACE_INPUT_IO (getINPUT io) io = io)``,
-  Cases_on `io` \\ SIMP_TAC std_ss [REPLACE_INPUT_IO_def,IO_READ_def,IO_NEXT_def,getINPUT_def]);
+    (REPLACE_INPUT_IO (getINPUT io) io = io)
+Proof
+  Cases_on `io` \\ SIMP_TAC std_ss [REPLACE_INPUT_IO_def,IO_READ_def,IO_NEXT_def,getINPUT_def]
+QED
 
-val IO_WRITE_APPEND = store_thm("IO_WRITE_APPEND",
-  ``!io x1 x2. IO_WRITE (IO_WRITE io x1) x2 = IO_WRITE io (x1 ++ x2)``,
-  Cases \\ ASM_SIMP_TAC std_ss [IO_WRITE_def,APPEND_ASSOC,MAP_APPEND]);
+Theorem IO_WRITE_APPEND:
+    !io x1 x2. IO_WRITE (IO_WRITE io x1) x2 = IO_WRITE io (x1 ++ x2)
+Proof
+  Cases \\ ASM_SIMP_TAC std_ss [IO_WRITE_def,APPEND_ASSOC,MAP_APPEND]
+QED
 
-val null_term_str_def = Define `
+Definition null_term_str_def:
   null_term_str a df f str =
     ?p. (one_string a (str ++ [CHR 0]) * p) (fun2set (f,df)) /\
-        EVERY (\x. ~(x = CHR 0)) str`;
+        EVERY (\x. ~(x = CHR 0)) str
+End
 
-val exists_null_term_str_def = Define `
-  exists_null_term_str a df f = ?str. null_term_str a df f str`;
+Definition exists_null_term_str_def:
+  exists_null_term_str a df f = ?str. null_term_str a df f str
+End
 
-val mem2string_def = Define `
-  mem2string a df f = @str. null_term_str a df f str`;
+Definition mem2string_def:
+  mem2string a df f = @str. null_term_str a df f str
+End
 
 
 (* IO assumpiptions *)
@@ -492,27 +504,32 @@ val io_stats_tm =
 fun genall tm v =
     foldr mk_forall tm (filter (fn x => x !~ v) (free_vars tm));
 
-val io_assums_def = Define `
+Definition io_assums_def:
   io_assums ^IO = ^(genall io_stats_tm IO) /\
                   ^(genall io_write_tm IO) /\
                   ^(genall io_read_tm IO) /\
-                  ^(genall io_next_tm IO)`;
+                  ^(genall io_next_tm IO)
+End
 
-val zIO_def = Define `
+Definition zIO_def:
   zIO (iow,ior,iod,ioi) io =
-    SEP_EXISTS IO. ^IO (iow,ior,iod,ioi) io * cond (io_assums ^IO)`;
+    SEP_EXISTS IO. ^IO (iow,ior,iod,ioi) io * cond (io_assums ^IO)
+End
 
-val zIO_R_def = Define `
+Definition zIO_R_def:
   zIO_R (iow,ior,iod) io =
-     SEP_EXISTS ioi. zR 0x1w ioi * zIO (iow,ior,iod,ioi) io`;
+     SEP_EXISTS ioi. zR 0x1w ioi * zIO (iow,ior,iod,ioi) io
+End
 
-val SPEC_EXISTS_EXISTS = store_thm("SPEC_EXISTS_EXISTS",
-  ``(!x. SPEC m (P x) c (Q x)) ==> SPEC m (SEP_EXISTS x. P x) c (SEP_EXISTS x. Q x)``,
+Theorem SPEC_EXISTS_EXISTS:
+    (!x. SPEC m (P x) c (Q x)) ==> SPEC m (SEP_EXISTS x. P x) c (SEP_EXISTS x. Q x)
+Proof
   SIMP_TAC std_ss [GSYM progTheory.SPEC_PRE_EXISTS]
   \\ REPEAT STRIP_TAC \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `x`)
   \\ IMP_RES_TAC progTheory.SPEC_WEAKEN
   \\ POP_ASSUM MATCH_MP_TAC
-  \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM] \\ METIS_TAC []);
+  \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM] \\ METIS_TAC []
+QED
 
 val ff = subst [IO |-> ``zIO``,
                 IOR |-> ``zIO_R``]
@@ -708,13 +725,13 @@ START:
        not r8
        jmp START
 EXIT:
-     `)
+     `);
 
 val PUSH_IF = METIS_PROVE []
   ``((if b then mc_read_num (x1,y) else mc_read_num (x2,y)) =
      mc_read_num (if b then x1 else x2,y)) /\
     ((if b then mc_read_num_pre (x1,y) else mc_read_num_pre (x2,y)) =
-     mc_read_num_pre (if b then x1 else x2,y))``
+     mc_read_num_pre (if b then x1 else x2,y))``;
 
 val mc_read_num_lemma = prove(
   ``!cs cs2 n.
@@ -758,7 +775,7 @@ val mc_read_num_lemma = prove(
   \\ REVERSE (Cases_on `n < 1073741824`) THEN1
    (ASM_SIMP_TAC std_ss [EVAL ``~0w:word64``,word_mul_n2w,word_add_n2w]
     \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [w2w_def,w2n_n2w,word_lo_n2w]
-    \\ ONCE_REWRITE_TAC [MATCH_MP (GSYM MOD_PLUS) (DECIDE ``0 < 18446744073709551616:num``)]
+    \\ ONCE_REWRITE_TAC [GSYM MOD_PLUS]
     \\ SIMP_TAC std_ss []
     \\ `(ORD h - 48) < 18446744073709551616` by DECIDE_TAC
     \\ `(18446744073709551606 + (ORD h - 48)) < 18446744073709551616` by DECIDE_TAC
@@ -791,10 +808,10 @@ val ORD_BOUND_LEMMA = prove(
 val mc_read_num_thm = mc_read_num_lemma
   |> Q.SPECL [`cs1`,`cs2`,`ORD h - 48`]
   |> SIMP_RULE std_ss [RW1[MULT_COMM](GSYM str2num_def)]
-  |> SIMP_RULE std_ss [ORD_BOUND_LEMMA] |> GEN_ALL
+  |> SIMP_RULE std_ss [ORD_BOUND_LEMMA] |> GEN_ALL;
 
 val mc_read_num_thm0 = mc_read_num_lemma
-  |> Q.SPECL [`cs1`,`cs2`,`0`] |> SIMP_RULE std_ss []
+  |> Q.SPECL [`cs1`,`cs2`,`0`] |> SIMP_RULE std_ss [];
 
 val read_while_SPLIT_lemma = prove(
   ``!xs ys P.
@@ -2694,8 +2711,9 @@ val (thm,mc_sym2str_def) = basic_decompile_strings x64_tools "mc_sym2str"
      insert mc_sym2str_main
   `)
 
-val upper_identifier_char_def = Define `
-  upper_identifier_char c = identifier_char c /\ ~(is_lower_case c)`;
+Definition upper_identifier_char_def:
+  upper_identifier_char c = identifier_char c /\ ~(is_lower_case c)
+End
 
 val mc_sym2str_ok_loop_thm = prove(
   ``!s n p a.
@@ -2980,12 +2998,13 @@ val (mc_print_nl_spec,mc_print_nl_def) = basic_decompile_strings x64_tools "mc_p
 
 val _ = save_thm("mc_print_nl_spec",mc_print_nl_spec);
 
-val mc_print_nl_thm = store_thm("mc_print_nl_thm",
-  ``^LISP ==>
+Theorem mc_print_nl_thm:
+    ^LISP ==>
     ?g2. mc_print_nl_pre (EL 0 cs,sp,df,f,dg,g,io) /\
          (mc_print_nl (EL 0 cs,sp,df,f,dg,g,io) =
            (EL 0 cs,tw0,tw1,sp,df,f,dg,g2,IO_WRITE io "\n")) /\
-         let (g,io) = (g2,IO_WRITE io "\n") in ^LISP``,
+         let (g,io) = (g2,IO_WRITE io "\n") in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_nl_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3005,7 +3024,8 @@ val mc_print_nl_thm = store_thm("mc_print_nl_thm",
    (FULL_SIMP_TAC std_ss [null_term_str_def,one_string_def,MAP,APPEND,
       ORD_CHR_RWT,EVERY_DEF,CHR_11] \\ METIS_TAC [])
   \\ IMP_RES_TAC null_term_str_IMP
-  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]);
+  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]
+QED
 
 
 (* print num *)
@@ -3371,12 +3391,13 @@ val (mc_print_sp_spec,mc_print_sp_def) = basic_decompile_strings x64_tools "mc_p
 
 val _ = save_thm("mc_print_sp_spec",mc_print_sp_spec);
 
-val mc_print_sp_thm = store_thm("mc_print_sp_thm",
-  ``^LISP ==>
+Theorem mc_print_sp_thm:
+    ^LISP ==>
     ?g2. mc_print_sp_pre (EL 0 cs,sp,df,f,dg,g,io) /\
          (mc_print_sp (EL 0 cs,sp,df,f,dg,g,io) =
            (EL 0 cs,tw0,tw1,sp,df,f,dg,g2,IO_WRITE io " ")) /\
-         let (g,io) = (g2,IO_WRITE io " ") in ^LISP``,
+         let (g,io) = (g2,IO_WRITE io " ") in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_sp_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3396,7 +3417,8 @@ val mc_print_sp_thm = store_thm("mc_print_sp_thm",
    (FULL_SIMP_TAC std_ss [null_term_str_def,one_string_def,MAP,APPEND,
       ORD_CHR_RWT,EVERY_DEF,CHR_11] \\ METIS_TAC [])
   \\ IMP_RES_TAC null_term_str_IMP
-  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]);
+  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]
+QED
 
 
 (* print "'" *)
@@ -3415,12 +3437,13 @@ val (mc_print_qt_spec,mc_print_qt_def) = basic_decompile_strings x64_tools "mc_p
 
 val _ = save_thm("mc_print_qt_spec",mc_print_qt_spec);
 
-val mc_print_qt_thm = store_thm("mc_print_qt_thm",
-  ``^LISP ==>
+Theorem mc_print_qt_thm:
+    ^LISP ==>
     ?g2. mc_print_qt_pre (EL 0 cs,sp,df,f,dg,g,io) /\
          (mc_print_qt (EL 0 cs,sp,df,f,dg,g,io) =
            (EL 0 cs,tw0,tw1,sp,df,f,dg,g2,IO_WRITE io "'")) /\
-         let (g,io) = (g2,IO_WRITE io "'") in ^LISP``,
+         let (g,io) = (g2,IO_WRITE io "'") in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_qt_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3440,7 +3463,8 @@ val mc_print_qt_thm = store_thm("mc_print_qt_thm",
    (FULL_SIMP_TAC std_ss [null_term_str_def,one_string_def,MAP,APPEND,
       ORD_CHR_RWT,EVERY_DEF,CHR_11] \\ METIS_TAC [])
   \\ IMP_RES_TAC null_term_str_IMP
-  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]);
+  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]
+QED
 
 
 (* print "(" *)
@@ -3459,12 +3483,13 @@ val (mc_print_open_spec,mc_print_open_def) = basic_decompile_strings x64_tools "
 
 val _ = save_thm("mc_print_open_spec",mc_print_open_spec);
 
-val mc_print_open_thm = store_thm("mc_print_open_thm",
-  ``^LISP ==>
+Theorem mc_print_open_thm:
+    ^LISP ==>
     ?g2. mc_print_open_pre (EL 0 cs,sp,df,f,dg,g,io) /\
          (mc_print_open (EL 0 cs,sp,df,f,dg,g,io) =
            (EL 0 cs,tw0,tw1,sp,df,f,dg,g2,IO_WRITE io "(")) /\
-         let (g,io) = (g2,IO_WRITE io "(") in ^LISP``,
+         let (g,io) = (g2,IO_WRITE io "(") in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_open_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3484,7 +3509,8 @@ val mc_print_open_thm = store_thm("mc_print_open_thm",
    (FULL_SIMP_TAC std_ss [null_term_str_def,one_string_def,MAP,APPEND,
       ORD_CHR_RWT,EVERY_DEF,CHR_11] \\ METIS_TAC [])
   \\ IMP_RES_TAC null_term_str_IMP
-  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]);
+  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]
+QED
 
 
 (* print ")" *)
@@ -3503,12 +3529,13 @@ val (mc_print_close_spec,mc_print_close_def) = basic_decompile_strings x64_tools
 
 val _ = save_thm("mc_print_close_spec",mc_print_close_spec);
 
-val mc_print_close_thm = store_thm("mc_print_close_thm",
-  ``^LISP ==>
+Theorem mc_print_close_thm:
+    ^LISP ==>
     ?g2. mc_print_close_pre (EL 0 cs,sp,df,f,dg,g,io) /\
          (mc_print_close (EL 0 cs,sp,df,f,dg,g,io) =
            (EL 0 cs,tw0,tw1,sp,df,f,dg,g2,IO_WRITE io ")")) /\
-         let (g,io) = (g2,IO_WRITE io ")") in ^LISP``,
+         let (g,io) = (g2,IO_WRITE io ")") in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_close_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3528,7 +3555,8 @@ val mc_print_close_thm = store_thm("mc_print_close_thm",
    (FULL_SIMP_TAC std_ss [null_term_str_def,one_string_def,MAP,APPEND,
       ORD_CHR_RWT,EVERY_DEF,CHR_11] \\ METIS_TAC [])
   \\ IMP_RES_TAC null_term_str_IMP
-  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]);
+  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]
+QED
 
 
 (* print " . " *)
@@ -3549,12 +3577,13 @@ val (mc_print_dot_spec,mc_print_dot_def) = basic_decompile_strings x64_tools "mc
 
 val _ = save_thm("mc_print_dot_spec",mc_print_dot_spec);
 
-val mc_print_dot_thm = store_thm("mc_print_dot_thm",
-  ``^LISP ==>
+Theorem mc_print_dot_thm:
+    ^LISP ==>
     ?g2. mc_print_dot_pre (EL 0 cs,sp,df,f,dg,g,io) /\
          (mc_print_dot (EL 0 cs,sp,df,f,dg,g,io) =
            (EL 0 cs,tw0,tw1,sp,df,f,dg,g2,IO_WRITE io " . ")) /\
-         let (g,io) = (g2,IO_WRITE io " . ") in ^LISP``,
+         let (g,io) = (g2,IO_WRITE io " . ") in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_dot_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3575,7 +3604,8 @@ val mc_print_dot_thm = store_thm("mc_print_dot_thm",
    (FULL_SIMP_TAC std_ss [null_term_str_def,one_string_def,MAP,APPEND,
       ORD_CHR_RWT,EVERY_DEF,CHR_11] \\ METIS_TAC [])
   \\ IMP_RES_TAC null_term_str_IMP
-  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]);
+  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]
+QED
 
 
 (* call stats function 1 *)
@@ -3600,12 +3630,13 @@ val (mc_print_stats1_spec,mc_print_stats1_def) = basic_decompile_strings x64_too
 
 val _ = save_thm("mc_print_stats1_spec",mc_print_stats1_spec);
 
-val mc_print_stats1_thm = store_thm("mc_print_stats1_thm",
-  ``^LISP ==>
+Theorem mc_print_stats1_thm:
+    ^LISP ==>
     ?g2. mc_print_stats1_pre (EL 2 cs,tw0,bp,sp,w2w w0,wi,we,df,f,io) /\
          (mc_print_stats1 (EL 2 cs,tw0,bp,sp,w2w w0,wi,we,df,f,io) =
            (EL 2 cs,tw0,tw1,we >>> 1,bp,sp,w2w w0,wi,we,df,f,IO_STATS 1 io)) /\
-         let (io,tw2) = (IO_STATS 1 io,we >>> 1) in ^LISP``,
+         let (io,tw2) = (IO_STATS 1 io,we >>> 1) in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_stats1_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3615,7 +3646,8 @@ val mc_print_stats1_thm = store_thm("mc_print_stats1_thm",
   THEN1 (METIS_TAC [lisp_inv_ignore_io,lisp_inv_ignore_tw2])
   \\ FULL_SIMP_TAC wstd_ss [w2n_n2w]
   \\ FULL_SIMP_TAC std_ss [lisp_inv_def,GSYM word_mul_n2w]
-  \\ Q.SPEC_TAC (`(n2w i):word64`,`w`) \\ blastLib.BBLAST_TAC);
+  \\ Q.SPEC_TAC (`(n2w i):word64`,`w`) \\ blastLib.BBLAST_TAC
+QED
 
 
 (* call stats function 2 *)
@@ -3640,12 +3672,13 @@ val (mc_print_stats2_spec,mc_print_stats2_def) = basic_decompile_strings x64_too
 
 val _ = save_thm("mc_print_stats2_spec",mc_print_stats2_spec);
 
-val mc_print_stats2_thm = store_thm("mc_print_stats2_thm",
-  ``^LISP ==>
+Theorem mc_print_stats2_thm:
+    ^LISP ==>
     ?g2. mc_print_stats2_pre (EL 2 cs,tw0,bp,sp,w2w w0,wi,we,df,f,io) /\
          (mc_print_stats2 (EL 2 cs,tw0,bp,sp,w2w w0,wi,we,df,f,io) =
            (EL 2 cs,tw0,tw1,we >>> 1,bp,sp,w2w w0,wi,we,df,f,IO_STATS 2 io)) /\
-         let (io,tw2) = (IO_STATS 2 io,we >>> 1) in ^LISP``,
+         let (io,tw2) = (IO_STATS 2 io,we >>> 1) in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_stats2_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3655,6 +3688,6 @@ val mc_print_stats2_thm = store_thm("mc_print_stats2_thm",
   THEN1 (METIS_TAC [lisp_inv_ignore_io,lisp_inv_ignore_tw2])
   \\ FULL_SIMP_TAC wstd_ss [w2n_n2w]
   \\ FULL_SIMP_TAC std_ss [lisp_inv_def,GSYM word_mul_n2w]
-  \\ Q.SPEC_TAC (`(n2w i):word64`,`w`) \\ blastLib.BBLAST_TAC);
+  \\ Q.SPEC_TAC (`(n2w i):word64`,`w`) \\ blastLib.BBLAST_TAC
+QED
 
-val _ = export_theory();

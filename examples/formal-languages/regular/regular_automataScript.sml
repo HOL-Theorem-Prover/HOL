@@ -1,14 +1,3 @@
-open HolKernel Parse boolLib bossLib;
-open combinTheory
-     listTheory
-     mp_then
-     nlistTheory
-     numpairTheory
-     pred_setTheory
-     relationTheory
-     rich_listTheory
-     arithmeticTheory;
-
 (* This material was first developed as part of a HOL reading group in a
    separate repository by
 
@@ -22,7 +11,12 @@ open combinTheory
    the Theory of Computation".                           [22 January 2024]
 *)
 
-val _ = new_theory "regular_automata";
+Theory regular_automata
+Ancestors
+ combin pair relation pred_set arithmetic
+ list rich_list numpair nlist
+Libs
+  mp_then
 
 (* a finite automaton is a 5-tuple of
      Q : set of states
@@ -1279,7 +1273,7 @@ Proof
   rw[munge_def,rich_listTheory.REPLICATE_APPEND]
   >> pop_assum mp_tac
   >> map_every qid_spec_tac [‘n2’, ‘n1’, ‘xnlist2’, ‘xnlist1’]
-  >> ho_match_mp_tac SNOC_INDUCT >> rw[Excl"APPEND_ASSOC"]
+  >> ho_match_mp_tac SNOC_INDUCT >> rw[Excl"APPEND_ASSOC", SNOC_APPEND]
   >> Cases_on‘xnlist1’ >> fs[]
   >> rename [‘SOME (FST cn)’] >> Cases_on‘cn’ >>
   simp[rich_listTheory.REPLICATE_APPEND]
@@ -1528,14 +1522,14 @@ Proof
   simp[munge_def, EQ_SYM_EQ]
 QED
 
-Triviality EXISTS_NUM:
+Theorem EXISTS_NUM[local]:
   (∃n. P n) ⇔ P 0 ∨ (∃n. P (SUC n))
 Proof
   rw[EQ_IMP_THM] >- (Cases_on ‘n’ >> metis_tac[]) >>
   metis_tac[]
 QED
 
-Triviality FORALL_NUM:
+Theorem FORALL_NUM[local]:
   (∀n. P n) ⇔ P 0 ∧ ∀n. P (SUC n)
 Proof
   rw[EQ_IMP_THM] >> Cases_on ‘n’ >> simp[]
@@ -1549,7 +1543,7 @@ Proof
   Cases >> simp[]
 QED
 
-Triviality REPLICATE_NIL'[simp]:
+Theorem REPLICATE_NIL'[local,simp]:
   [] = REPLICATE n e ⇔ n = 0
 Proof
   metis_tac[REPLICATE_NIL]
@@ -2446,6 +2440,3 @@ Proof
   ‘EL (LENGTH s) ss = LAST ss’ suffices_by simp[] >>
   simp[LAST_EL, GSYM ADD1]
 QED
-
-
-val _ = export_theory();

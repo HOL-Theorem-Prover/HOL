@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory listTheory
-open boolSimps combinTheory
-open folLangTheory folModelsTheory
-
-val _ = new_theory "folPrenex";
+Theory folPrenex
+Ancestors
+  pred_set list combin folLang folModels
+Libs
+  boolSimps
 
 Definition qfree_def:
   (qfree False ⇔ T) ∧
@@ -570,4 +568,3 @@ Proof
 QED
 
 
-val _ = export_theory();

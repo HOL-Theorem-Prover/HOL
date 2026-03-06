@@ -15,6 +15,7 @@ local
 
   val op ++ = bossLib.++
   val op >> = Tactical.>>
+  val op |-> = Lib.|->
 
   val ERR = Feedback.mk_HOL_ERR "Z3_ProofReplay"
   val WARNING = Feedback.HOL_WARNING "Z3_ProofReplay"
@@ -28,6 +29,8 @@ local
   val F_OR = HolSmtTheory.F_OR
   val CONJ_CONG = HolSmtTheory.CONJ_CONG
   val NOT_NOT_ELIM = HolSmtTheory.NOT_NOT_ELIM
+  val NOT_NOT_INTRO = HolSmtTheory.NOT_NOT_INTRO
+  val NOT_REVERSE = HolSmtTheory.NOT_REVERSE
   val NOT_FALSE = HolSmtTheory.NOT_FALSE
   val NNF_CONJ = HolSmtTheory.NNF_CONJ
   val NNF_DISJ = HolSmtTheory.NNF_DISJ
@@ -46,10 +49,18 @@ local
 
   (* a simplification prover that deals with function (i.e., array)
      updates when the indices are integer or word literals *)
-  val SIMP_PROVE_UPDATE = simpLib.SIMP_PROVE (simpLib.&& (simpLib.++
+  val SIMP_PROVE_UPDATE =
+  let
+    val word_type = wordsSyntax.mk_word_type Type.alpha
+    val x = Term.mk_var ("x", word_type)
+    val y = Term.mk_var ("y", word_type)
+    val pat = boolSyntax.mk_eq (x, y)
+  in
+    simpLib.SIMP_PROVE (simpLib.&& (simpLib.++
     (intSimps.int_ss, simpLib.std_conv_ss {name = "word_EQ_CONV",
-      pats = [``(x :'a word) = y``], conv = wordsLib.word_EQ_CONV}),
+      pats = [pat], conv = wordsLib.word_EQ_CONV}),
     [combinTheory.UPDATE_def, boolTheory.EQ_SYM_EQ])) []
+  end
 
   (***************************************************************************)
   (* functions that manipulate/access "global" state                         *)
@@ -200,8 +211,10 @@ local
       val Tl = boolSyntax.mk_conj (boolSyntax.T, l)
       val Tr = boolSyntax.mk_conj (boolSyntax.T, r)
       val Tl_eq_Tr = Drule.CONJUNCTS_AC (Tl, Tr)
+      val p = Term.mk_var ("p", Type.bool)
+      val q = Term.mk_var ("q", Type.bool)
     in
-      Thm.MP (Drule.SPECL [l, r] T_AND) Tl_eq_Tr
+      Thm.MP (Thm.INST [p |-> l, q |-> r] T_AND) Tl_eq_Tr
     end
     handle Feedback.HOL_ERR _ =>
       if Feq r then
@@ -224,8 +237,10 @@ local
       val Fl = boolSyntax.mk_disj (boolSyntax.F, l)
       val Fr = boolSyntax.mk_disj (boolSyntax.F, r)
       val Fl_eq_Fr = Drule.DISJUNCTS_AC (Fl, Fr)
+      val p = Term.mk_var ("p", Type.bool)
+      val q = Term.mk_var ("q", Type.bool)
     in
-      Thm.MP (Drule.SPECL [l, r] F_OR) Fl_eq_Fr
+      Thm.MP (Thm.INST [p |-> l, q |-> r] F_OR) Fl_eq_Fr
     end
     handle Feedback.HOL_ERR _ =>
       if Teq r then
@@ -245,6 +260,8 @@ local
        in 'disj' *)
     val conj_dict = List.foldl (fn (th, dict) => Redblackmap.insert
       (dict, Thm.concl th, th)) (Redblackmap.mkDict Term.compare) conj_ths
+    val var_p = Term.mk_var ("p", Type.bool)
+    val var_q = Term.mk_var ("q", Type.bool)
     (* we map over equivalences in 'disj', possibly obtaining the
        negation of each one by forward reasoning from a suitable
        theorem in 'conj_dict' *)
@@ -257,7 +274,7 @@ local
           val th = Redblackmap.find (conj_dict, boolSyntax.mk_eq (p, neg_q))
         in
           (* l |- ~(p <=> q) *)
-          Thm.MP (Drule.SPECL [p, q] NEG_IFF_2_1) th
+          Thm.MP (Thm.INST [var_p |-> p, var_q |-> q] NEG_IFF_2_1) th
         end
         handle Redblackmap.NotFound =>
           let
@@ -265,7 +282,7 @@ local
             val th = Redblackmap.find (conj_dict, boolSyntax.mk_eq (q, p))
           in
             (* l |- ~(p <=> ~q) *)
-            Thm.MP (Drule.SPECL [p, q] NEG_IFF_1_1) th
+            Thm.MP (Thm.INST [var_p |-> p, var_q |-> q] NEG_IFF_1_1) th
           end
       end)) (boolSyntax.strip_disj disj)
     (* [l, disj] |- F *)
@@ -298,14 +315,16 @@ local
           let
             val _ = Redblackmap.find (conj_dict, boolSyntax.mk_eq (p, neg_q))
             (* ~disjunction |- p <=> ~q *)
-            val th1 = Thm.MP (Drule.SPECL [p, q] NEG_IFF_2_2) th
+            val subst = [var_p |-> p, var_q |-> q]
+            val th1 = Thm.MP (Thm.INST subst NEG_IFF_2_2) th
             val dict = Redblackmap.insert (dict, Thm.concl th1, th1)
           in
             let
               val q = boolSyntax.dest_neg q  (* may fail *)
               val _ = Redblackmap.find (conj_dict, boolSyntax.mk_eq (q, p))
               (* ~disjunction |- q <=> p *)
-              val th1 = Thm.MP (Drule.SPECL [p, q] NEG_IFF_1_2) th
+              val subst = [var_p |-> p, var_q |-> q]
+              val th1 = Thm.MP (Thm.INST subst NEG_IFF_1_2) th
             in
               Redblackmap.insert (dict, Thm.concl th1, th1)
             end
@@ -320,7 +339,8 @@ local
               val q = boolSyntax.dest_neg q  (* may fail *)
               val _ = Redblackmap.find (conj_dict, boolSyntax.mk_eq (q, p))
               (* ~disjunction |- q <=> p *)
-              val th1 = Thm.MP (Drule.SPECL [p, q] NEG_IFF_1_2) th
+              val subst = [var_p |-> p, var_q |-> q]
+              val th1 = Thm.MP (Thm.INST subst NEG_IFF_1_2) th
             in
               Redblackmap.insert (dict, Thm.concl th1, th1)
             end
@@ -400,7 +420,11 @@ local
       (* |- ALL_DISTINCT t = rhs *)
       val th3 = ALL_DISTINCT_CONV alldistinct
       val rhs = boolSyntax.rhs (Thm.concl th3)
-      val th4 = Drule.SPECL [notmem, something, alldistinct, rhs] CONJ_CONG
+      val var_names = ["p", "q", "r", "s"]
+      val redexes = List.map (fn v => Term.mk_var (v, Type.bool)) var_names
+      val residues = [notmem, something, alldistinct, rhs]
+      val substs = List.map Lib.|-> (ListPair.zip (redexes, residues))
+      val th4 = Thm.INST substs CONJ_CONG
       (* |- ~MEM h t /\ ALL_DISTINCT t = something /\ rhs *)
       val th5 = Thm.MP (Thm.MP th4 th2) th3
       (* |- ALL_DISTINCT (h::t) = something /\ rhs *)
@@ -411,7 +435,7 @@ local
     end
     handle Feedback.HOL_ERR _ =>  (* 'list' is not a cons *)
       (* |- ALL_DISTINCT [] = T *)
-      Thm.INST_TYPE [{redex = Type.alpha, residue = listSyntax.dest_nil list}]
+      Thm.INST_TYPE [Type.alpha |-> listSyntax.dest_nil list]
         ALL_DISTINCT_NIL
   end
 
@@ -733,6 +757,8 @@ local
         let
           val concl = Thm.concl th
           val th1 = Thm.DISCH neg_lit th
+          val p = Term.mk_var ("p", Type.bool)
+          val q = Term.mk_var ("q", Type.bool)
         in
           if is_neg then (
             if Feq concl then
@@ -740,14 +766,14 @@ local
               Thm.NOT_INTRO th1
             else
               (* [...] |- ~neg_lit \/ concl *)
-              Thm.MP (Drule.SPECL [neg_lit, concl] IMP_DISJ_1) th1
+              Thm.MP (Thm.INST [p |-> neg_lit, q |-> concl] IMP_DISJ_1) th1
           ) else
             if Feq concl then
               (* [...] |- lit *)
               Thm.MP (Thm.SPEC lit IMP_FALSE) th1
             else
               (* [...] |- lit \/ concl *)
-              Thm.MP (Drule.SPECL [lit, concl] IMP_DISJ_2) th1
+              Thm.MP (Thm.INST [p |-> lit, q |-> concl] IMP_DISJ_2) th1
         end
       else
         raise ERR "z3_lemma" ""
@@ -800,7 +826,10 @@ local
         let
           val (xy, z) = boolSyntax.dest_imp l
           val (x, y) = boolSyntax.dest_conj xy
-          val th1 = Drule.SPECL [x, y, z] AND_IMP_INTRO_SYM
+          val var_names = ["p", "q", "r"]
+          val redexes = List.map (fn v => Term.mk_var (v, Type.bool)) var_names
+          val substs = List.map Lib.|-> (ListPair.zip (redexes, [x, y, z]))
+          val th1 = Thm.INST substs AND_IMP_INTRO_SYM
           val l' = Lib.snd (boolSyntax.dest_eq (Thm.concl th1))
         in
           Thm.TRANS th1 (make_equal (l', r))
@@ -860,7 +889,7 @@ local
     val t1 = Lib.fst (boolSyntax.dest_disj t)
     val t2 = boolSyntax.dest_neg t1
     val p_term = Term.mk_var ("p", Type.bool)
-    val thm1 = Thm.INST [{redex = p_term, residue = t2}] HolSmtTheory.NOT_P_OR_P
+    val thm1 = Thm.INST [p_term |-> t2] HolSmtTheory.NOT_P_OR_P
     val thm2 = Thm.ASSUME t1
     val thm3_quant = Thm.ASSUME t2
     val thm3 = Drule.SPECL terms thm3_quant
@@ -987,10 +1016,14 @@ local
             handle Conv.UNCHANGED => raise ERR "" "") ()
         handle Feedback.HOL_ERR _ =>
 
-        profile "rewrite(10)(BBLAST)" blastLib.BBLAST_PROVE t
+        (profile "rewrite(10)(BBLAST)" (Feedback.trace("print blast counterexamples", 0) blastLib.BBLAST_PROVE) t
+
         handle Feedback.HOL_ERR _ =>
 
         profile "rewrite(11)(arith)" arith_prove t
+
+        | HolSatLib.SAT_cex _ => profile "rewrite(11)(arith)" arith_prove t)
+
     in
       (state_cache_thm state thm, thm)
     end
@@ -1024,11 +1057,40 @@ local
 
     let
       val (lhs, rhs) = boolSyntax.dest_eq t
-      val thm = profile "rewrite(12)(unification)" Library.gen_instantiation
+      val thm = profile "rewrite(12.1)(unification)" Library.gen_instantiation
         (lhs, rhs, #var_set state)
       val asl = Thm.hyp thm
     in
       (state_define (state_cache_thm state thm) asl, thm)
+    end
+
+    handle Feedback.HOL_ERR _ =>
+
+    let
+      val (lhs, rhs) = boolSyntax.dest_eq t
+      val rhs = boolSyntax.dest_neg (boolSyntax.dest_neg rhs)
+      val thm = profile "rewrite(12.2)(unification)" Library.gen_instantiation
+        (lhs, rhs, #var_set state)
+      fun not_not_conv tm = Thm.SPEC tm NOT_NOT_INTRO
+      val thm = Conv.CONV_RULE (Conv.RHS_CONV not_not_conv) thm
+      val asl = Thm.hyp thm
+    in
+      (state_define (state_cache_thm state thm) asl, thm)
+    end
+
+    handle Feedback.HOL_ERR _ =>
+
+    let
+      val (lhs, rhs) = boolSyntax.dest_eq t
+      val neg_lhs = boolSyntax.mk_neg lhs
+      val var = boolSyntax.dest_neg rhs
+      val def = boolSyntax.mk_eq (var, neg_lhs)
+      val p = Term.mk_var ("p", Type.bool)
+      val q = Term.mk_var ("q", Type.bool)
+      val thm' = Thm.INST [p |-> var, q |-> lhs] NOT_REVERSE
+      val thm = Drule.UNDISCH thm'
+    in
+      (state_define (state_cache_thm state thm) [def], thm)
     end
   end
 
@@ -1047,7 +1109,7 @@ local
     val substs = Term.match_term t (Thm.concl thm3)
     val {redex, residue} = List.hd (Lib.fst substs)
     val thm4 = Thm.SYM (Thm.ASSUME (boolSyntax.mk_eq (redex, residue)))
-    val thm5 = Drule.SUBST_CONV [{redex = redex, residue = thm4}] t
+    val thm5 = Drule.SUBST_CONV [redex |-> thm4] t
       (Thm.concl thm3)
     val thm = Thm.EQ_MP thm5 thm3
     val asl = Thm.hyp thm
@@ -1176,11 +1238,11 @@ local
 
   fun check_thm (name, thm, concl) =
     if Thm.concl thm !~ concl then
-      raise ERR "check_thm" (name ^ ": conclusion is " ^ Hol_pp.term_to_string
-        (Thm.concl thm) ^ ", expected: " ^ Hol_pp.term_to_string concl)
+      raise ERR "check_thm" (name ^ ": conclusion is " ^ Library.term_to_string
+        (Thm.concl thm) ^ ", expected: " ^ Library.term_to_string concl)
     else if !Library.trace > 2 then
       Feedback.HOL_MESG
-        ("HolSmtLib: " ^ name ^ " proved: " ^ Hol_pp.thm_to_string thm)
+        ("HolSmtLib: " ^ name ^ " proved: " ^ Library.thm_to_string thm)
     else ()
 
   fun zero_prems (state : state, proof : proof)
@@ -1348,7 +1410,11 @@ local
         (case Redblackmap.peek (Lib.fst proof, id) of
           SOME (THEOREM thm) =>
             continuation ((state, proof), thm)
-        | SOME pt =>
+        | SOME pt => (
+            if !Library.trace > 2 then
+              Feedback.HOL_MESG ("HolSmtLib: replaying proof at ID " ^ Int.toString id)
+            else
+              ();
             thm_of_proofterm ((state, proof), pt) (continuation o
               (* update the proof, replacing the original proofterm with
                  the theorem just derived *)
@@ -1360,6 +1426,7 @@ local
                   else ();
                   ((state, (Redblackmap.insert (steps, id, THEOREM thm), vars)), thm)
                 )))
+        )
         | NONE =>
             raise ERR "thm_of_proofterm"
               ("proof has no proofterm for ID " ^ Int.toString id))
@@ -1476,7 +1543,7 @@ local
         val inst = List.hd defs_to_remove
 
         (* Instantiate the variable with the definition *)
-        val thm = Thm.INST [{redex = var, residue = inst}] thm
+        val thm = Thm.INST [var |-> inst] thm
 
         (* For each definition corresponding to this variable, create a theorem
            that can eliminate the definition from the set of hypotheses of `thm` *)

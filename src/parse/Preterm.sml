@@ -4,6 +4,8 @@ struct
 open Feedback Lib GrammarSpecials;
 open errormonad typecheck_error
 
+infix >> >-
+
 val ERR = mk_HOL_ERR "Preterm"
 val ERRloc = mk_HOL_ERRloc "Preterm"
 
@@ -17,7 +19,7 @@ fun tmlist_tyvs tlist =
 
 type 'a in_env = 'a Pretype.in_env
 
-val show_typecheck_errors = ref true
+val show_typecheck_errors = ref false
 val _ = register_btrace ("show_typecheck_errors", show_typecheck_errors)
 fun tcheck_say s = if !show_typecheck_errors then Lib.say s else ()
 
@@ -148,21 +150,9 @@ fun infoeq {base_type=bt1,actual_ops=ops1,tyavoids=tya1}
    bt1 = bt2 andalso tya1 = tya2 andalso
    ListPair.allEq (fn (t1,t2) => Term.aconv t1 t2) (ops1, ops2)
 
-fun eq (Var{Name=Name,Ty=Ty,...}) (Var{Name=Name',Ty=Ty',...}) =
-     Name=Name' andalso Ty=Ty'
-  | eq (Const{Name=Name,Thy=Thy,Ty=Ty,...})
-       (Const{Name=Name',Thy=Thy',Ty=Ty',...}) =
-     Name=Name' andalso Thy=Thy' andalso Ty=Ty'
-  | eq (Overloaded{Name=Name,Ty=Ty,Info=Info,...})
-       (Overloaded{Name=Name',Ty=Ty',Info=Info',...}) =
-     Name=Name' andalso Ty=Ty' andalso infoeq Info Info'
-  | eq (Comb{Rator=Rator,Rand=Rand,...})           (Comb{Rator=Rator',Rand=Rand',...})            = eq Rator Rator' andalso eq Rand Rand'
-  | eq (Abs{Bvar=Bvar,Body=Body,...})              (Abs{Bvar=Bvar',Body=Body',...})               = eq Bvar Bvar' andalso eq Body Body'
-  | eq (Constrained{Ptm=Ptm,Ty=Ty,...})            (Constrained{Ptm=Ptm',Ty=Ty',...})             = eq Ptm Ptm' andalso Ty=Ty'
-  | eq (Antiq{Tm=Tm,...})                          (Antiq{Tm=Tm',...})                            = Term.aconv Tm Tm'
-  | eq (Pattern{Ptm,...})                           (Pattern{Ptm=Ptm',...})
-                  = eq Ptm Ptm'
-  | eq  _                                           _                                             = false
+fun veq (Var{Name=n1,Ty=ty1,...}) (Var{Name=n2,Ty=ty2,...}) =
+    n1=n2 andalso ty1 = ty2
+  | veq _ _ = false
 
 fun isolate_var ptv =
   case ptv of
@@ -179,12 +169,12 @@ fun ptfvs pt =
           case Rator of
               Comb{Rator=Const{Name,...}, Rand = l, ...} =>
               if Name = GrammarSpecials.case_arrow_special then
-                op_set_diff eq (ptfvs r) (ptfvs l)
+                op_set_diff veq (ptfvs r) (ptfvs l)
               else
-                op_union eq (ptfvs Rator) (ptfvs r)
-            | _ => op_union eq (ptfvs Rator) (ptfvs r)
+                op_union veq (ptfvs Rator) (ptfvs r)
+            | _ => op_union veq (ptfvs Rator) (ptfvs r)
         end
-      | Abs{Bvar,Body,...} => op_set_diff eq (ptfvs Body) [isolate_var Bvar]
+      | Abs{Bvar,Body,...} => op_set_diff veq (ptfvs Body) [isolate_var Bvar]
       | Constrained{Ptm,...} => ptfvs Ptm
       | _ => []
 
@@ -609,14 +599,7 @@ in
 fun typecheck_phase1 printers = let
   val (ptm, pty) =
       case printers of
-        SOME (x,y) => let
-          val typrint = y
-          fun tmprint tm =
-              if Term.is_const tm then x tm ^ " " ^ y (Term.type_of tm)
-              else x tm
-        in
-          (tmprint, typrint)
-        end
+        SOME (x,y) => (x,y)
       | NONE => (default_tmprinter, default_typrinter)
   fun check(Comb{Rator, Rand, Locn}) =
     check Rator >> check Rand >>
@@ -625,36 +608,14 @@ fun typecheck_phase1 printers = let
     Pretype.new_uvar >- (fn range_var =>
     (Pretype.unify rator_ty (rand_ty --> range_var)) ++?
      (fn unify_error => fn env =>
-          let val tmp = !Globals.show_types
-              val _   = Globals.show_types := true
-              val Rator' = smashTm Rator env
-                handle e => (Globals.show_types := tmp; raise e)
+          let val Rator' = smashTm Rator env
               val Rand'  = smashTm Rand env
-                handle e => (Globals.show_types := tmp; raise e)
-              val message =
-                  String.concat
-                      [
-                       "\nType inference failure: unable to infer a type \
-                       \for the application of\n\n",
-                       ptm Rator',
-                       "\n\n"^locn.toString (locn Rator)^"\n\n",
-                       if is_atom Rator then ""
-                       else ("which has type\n\n" ^
-                             pty(Term.type_of Rator') ^ "\n\n"),
-
-                       "to\n\n",
-                       ptm Rand',
-                       "\n\n"^locn.toString (locn Rand)^"\n\n",
-
-                       if is_atom Rand then ""
-                       else ("which has type\n\n" ^
-                             pty(Term.type_of Rand') ^ "\n\n"),
-
-                       "unification failure message: " ^
-                       errorMsg (#1 unify_error) ^ "\n"]
+              val message = String.concat
+                  ["\nType error in function application.\n",
+                   "  Function: ", ptm Rator', " ", pty(Term.type_of Rator'), "\n",
+                   "  Argument: ", ptm Rand',  " ", pty(Term.type_of Rand'), "\n",
+                   "  Reason: ",   errorMsg (#1 unify_error), "\n"]
           in
-            Globals.show_types := tmp;
-            tcheck_say message;
             Error (AppFail(Rator',Rand',message), locn Rand)
           end))))
     | check (Abs{Bvar, Body, Locn}) = (check Bvar >> check Body)
@@ -662,28 +623,15 @@ fun typecheck_phase1 printers = let
         check Ptm >> ptype_of Ptm >- (fn ptyp =>
         (Pretype.unify ptyp Ty ++
          (fn env =>
-             let val tmp = !Globals.show_types
-                 val _ = Globals.show_types := true
-                 val real_term = smashTm Ptm env
-                   handle e => (Globals.show_types := tmp; raise e)
-                 val real_type = Pretype.toType Ty
-                   handle e => (Globals.show_types := tmp; raise e)
-                 val message =
-                  String.concat
-                      [
-                       "\nType inference failure: the term\n\n",
-                       ptm real_term,
-                       "\n\n", locn.toString (locn Ptm), "\n\n",
-                       if is_atom Ptm then ""
-                       else("which has type\n\n" ^
-                            pty(Term.type_of real_term) ^ "\n\n"),
-                       "can not be constrained to be of type\n\n",
-                       pty real_type,
-                       "\n\nunification failure message: ???\n"]
+             let val real_term = smashTm Ptm env
+                 val rty = Term.type_of real_term
+                 val constraint = Pretype.toType Ty
+                 val message = String.concat
+                     ["\nType constraint failure: \n",
+                      "  Term: ", ptm real_term, " ", pty rty, "\n",
+                      "  Constraint: ", pty constraint, "\n"]
              in
-               Globals.show_types := tmp;
-               tcheck_say message;
-               Error(ConstrainFail(real_term, real_type, message), Locn)
+               Error(ConstrainFail(real_term, constraint, message), Locn)
              end)))
     | check _ = ok
 in
@@ -858,7 +806,8 @@ fun remove_case_magic tm =
     else tm
 
 val post_process_term = ref (I : term -> term);
-val typecheck_listener = ref (fn _:preterm => fn _:Pretype.Env.t => ());
+val typecheck_listener : (preterm * Pretype.Env.t) Listener.t =
+    Listener.new_listener()
 
 fun typecheck pfns ptm0 =
   let
@@ -869,7 +818,7 @@ fun typecheck pfns ptm0 =
           overloading_resolution ptm0 >-                     (fn (ptm,b) =>
           (report_ovl_ambiguity b >> to_term ptm) >-         (fn t =>
          fn e => (
-          !typecheck_listener ptm e;
+          ignore (Listener.call_listener typecheck_listener (ptm, e));
           errormonad.Some(e, !post_process_term t)))))
   end
 
@@ -881,7 +830,7 @@ fun typecheckS ptm =
     lift (!post_process_term o remove_case_magic)
          (fromErr TC' >> overloading_resolutionS ptm >-
           (fn ptm' => fromErr (errormonad.bind (to_term ptm', fn t => fn e => (
-            !typecheck_listener ptm' e;
+            ignore (Listener.call_listener typecheck_listener (ptm', e));
             errormonad.Some(e, t))))))
   end
 

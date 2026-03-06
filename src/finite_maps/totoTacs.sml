@@ -17,11 +17,10 @@ open Parse HolKernel boolLib bossLib;
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars totoTheory.toto_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname = "toto"}
 end
 open Parse
 
-val _ = set_trace "Unicode" 0;
 open totoTheory reduceLib relationTheory
      listTheory pairTheory optionTheory pred_setLib stringLib;
 
@@ -109,9 +108,9 @@ val refl_clause_num = MATCH_MP TO_refl TO_numOrd;
 
 val TLA_ZERO = GSYM arithmeticTheory.ALT_ZERO;
 
-val num_pre_CONV =  REWR_CONV arithmeticTheory.NUMERAL_DEF ORELSEC
-                    REWR_CONV TLA_ZERO ORELSEC
-                    ALL_CONV;
+val num_pre_CONV = REWR_CONV arithmeticTheory.NUMERAL_DEF ORELSEC
+                   REWR_CONV TLA_ZERO ORELSEC
+                   ALL_CONV;
 
 val numeral_lt_CONV = BINOP_CONV num_pre_CONV THENC
                       REWRITE_CONV [numeralTheory.numeral_lt];

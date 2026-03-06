@@ -1,15 +1,15 @@
 
 (* Definitions for AMBA SoC bus protocol. See AMBA Specification v2.0 from ARM for details  *)
 (* This file mainly demos composing of model checked APB and AHB theorems using HOL *)
+Theory amba
+Ancestors
+  amba_ahb amba_apb mod16 ks muSyntax setLemmas env
+Libs
+  boolSyntax Ho_Rewrite Tactical Tactic PairRules pairSyntax
+  Drule amba_common bddTools commonTools decompTools
 
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory "amba"
 
 (* app load ["bddTools","amba_apb_def","mod16Theory","amba_ahb_def","decompTools","envTheory"]; *)
-
-open boolSyntax bossLib Ho_Rewrite Tactical Tactic PairRules pairSyntax Drule
-open amba_ahbTheory amba_apbTheory amba_common bddTools mod16Theory commonTools decompTools ksTheory muSyntaxTheory setLemmasTheory envTheory
 
 val ahb_nm = 8;  (* 1..16 *)
 val ahb_ns = 16; (* 1..16 *)
@@ -22,21 +22,23 @@ val Rb_state' = ksTools.mk_primed_state Rb_state
 (* AHB-APB bridge is just the conjunction of the APB master with a generic AHB slave *)
 (* Note that the actual bridging code has been abstracted out. We just assume the master and slave handle their
    syncing correctly. This code can be added in later, if required: all its signals can be hidden, so it doesn't matter *)
-val Rb = Define `TRANS_B (^Rb_state,^Rb_state') =
+Definition Rb:   TRANS_B (^Rb_state,^Rb_state') =
          TRANS_APB_M (^Rpm_state,^Rpm_state') /\
          TRANS_AHB_S ^(fromMLnum (ahb_ns-1)) (^Rs_state,^Rs_state')
-`;
+End
 
-val Ib = Define `INIT_B (^Rb_state) = T`;
+Definition Ib:   INIT_B (^Rb_state) = T
+End
 
-val I1pb = Define `INIT_APB_B (^Rb_state) = ^(rhs(concl(Drule.SPEC_ALL INIT_APB_def)))`;
+Definition I1pb:   INIT_APB_B (^Rb_state) = ^(rhs(concl(Drule.SPEC_ALL INIT_APB_def)))
+End
 
 (* APB transition relation with master substituted by the bridge with ahb vars hidden away by exists quant*)
-val R1pb = Define `TRANS_APB_B (^Rp_state,^Rp_state') =
+Definition R1pb:   TRANS_APB_B (^Rp_state,^Rp_state') =
 (^(list_mk_exists((strip_pair Rs_state)@(strip_pair Rs_state'),lhs(concl(Drule.SPEC_ALL Rb))))) /\
 ^(list_mk_conj(List.tabulate(num_apb_slaves,fn n => lhs(concl(Drule.SPEC_ALL (SPEC (fromMLnum n) TRANS_APB_S_def))))))  /\
 ^(list_mk_conj(List.tabulate(num_apb_slaves,fn n => lhs(concl(Drule.SPEC_ALL (SPEC (fromMLnum n) TRANS_BUS_def))))))
-`;
+End
 
 val r1hbt = (list_mk_exists
     ((strip_pair bbv)@(strip_pair bbv')@(strip_pair hwsv)@(strip_pair hwsv'),
@@ -64,7 +66,8 @@ val r1hbt = (list_mk_exists
     ))))]))]))
 
 (* AHB transition relation with one generic slave replaced by the bridge with apb signals hidden *)
-val R1hb = Define `TRANS_AHB_B (^R1h_state,^R1h_state') = ^r1hbt`; (*FIXME: ML chokes if I put the term itself here*)
+Definition R1hb:   TRANS_AHB_B (^R1h_state,^R1h_state') = ^r1hbt
+End(*FIXME: ML chokes if I put the term itself here*)
 
 (* theorems *)
 
@@ -156,4 +159,3 @@ mk_par_sync_comp_thm (amba_gpscth,amba_ks1_def,
 for some APB property f
 *)
 
-val _ = export_theory()

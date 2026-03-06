@@ -1,7 +1,8 @@
-open HolKernel boolLib bossLib Parse stringTheory ramanaLib bagTheory
-     commonUnifTheory;
-
-val _ = new_theory "term";
+Theory term
+Ancestors
+  string bag commonUnif
+Libs
+  ramanaLib
 
 Datatype:   term = Var num | Pair term term | Const 'a
 End
@@ -37,4 +38,3 @@ Proof
   Induct_on `t` THEN SRW_TAC [][]
 QED
 
-val _ = export_theory ();

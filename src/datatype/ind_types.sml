@@ -27,7 +27,8 @@ val ERR = mk_HOL_ERR "ind_types";
 (* Fix the grammar used by this file *)
 structure Parse = struct
 open Parse
-val (Type,Term) = parse_from_grammars ind_typeTheory.ind_type_grammars
+val SOME ind_type_grammars = grammarDB {thyname="ind_type"}
+val (Type,Term) = parse_from_grammars ind_type_grammars
 end
 open Parse;
 
@@ -40,7 +41,7 @@ fun chop_list 0 l      = ([], l)
   | chop_list n (h::t) = let val (m,l') = chop_list (n-1) t in (h::m, l') end;
 
 val lhand = rand o rator;
-val LAND_CONV = RATOR_CONV o RAND_CONV;
+val LAND_CONV = Conv.LAND_CONV;
 val RIGHT_BETAS = rev_itlist(fn a=>CONV_RULE(RAND_CONV BETA_CONV) o C AP_THM a)
 
 fun sucivate n = funpow n numSyntax.mk_suc numSyntax.zero_tm;
@@ -765,7 +766,7 @@ val OUTL = sumTheory.OUTL;
 val OUTR = sumTheory.OUTR;
 
 (* ------------------------------------------------------------------------- *)
-(* Generalize the recursion theorem to multiple domain types.                *)
+(* Generalize the recursion theorem to multiple range types.                 *)
 (* (We needed to use a single type to justify it via a proforma theorem.)    *)
 (*                                                                           *)
 (* NB! Before this is called nontrivially (i.e. more than one new type)      *)

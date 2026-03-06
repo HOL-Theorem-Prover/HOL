@@ -1,0 +1,84 @@
+=============================
+Simple Theorem + Termination
+=============================
+
+Theorem foo:
+  ∀x. x = x
+Proof
+  gvs []
+QED
+
+---
+
+(source_file
+  (hol_theorem_with_proof
+    (hol_thmname)
+    (hol_thmstmt
+      (hol_binder
+        (hol_bvar
+          (hol_alphanumeric))
+        (hol_binary_term
+          (hol_identifier)
+          (hol_identifier))))
+    (tactic
+      (app_exp
+        (vid_exp
+          (longvid
+            (vid)))
+        (list_exp)))))
+
+
+=====
+THEN
+=====
+
+Theorem foo:
+  foo
+Proof
+  tac1 \\ tac2 \\ tac3
+QED
+
+---
+
+(source_file
+  (hol_theorem_with_proof
+    (hol_thmname)
+    (hol_thmstmt
+      (hol_identifier))
+    (tactic
+      (THEN
+        (vid_exp
+          (longvid
+            (vid)))
+        (vid_exp
+          (longvid
+            (vid)))
+        (vid_exp
+          (longvid
+            (vid)))))))
+
+
+==========
+Attribute
+==========
+
+Theorem foo[bar,foobar]:
+  T
+Proof
+  tac1
+QED
+
+---
+
+(source_file
+  (hol_theorem_with_proof
+    (hol_thmname)
+    (hol_attributes
+      (attribute)
+      (attribute))
+    (hol_thmstmt
+      (hol_true))
+    (tactic
+      (vid_exp
+          (longvid
+            (vid))))))

@@ -70,7 +70,7 @@ structure IntGrammar : INTGRAMMAR =
                 structure SymbolAssoc = Table(type key = symbol
                                               val gt = gtSymbol)
 
-                structure NontermAssoc = Table(type key =  nonterm
+                structure NontermAssoc = Table(type key = nonterm
                                                val gt = gtNonterm)
 
                 val DEBUG = false

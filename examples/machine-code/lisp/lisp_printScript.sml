@@ -1,25 +1,18 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_print";
-val _ = ParseExtras.temp_loose_equality()
+Theory lisp_print
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  string lisp_gc lisp_type lisp_inv set_sep divide lisp_parse
+Libs
+  wordsLib compilerLib helperLib decompilerLib prog_armLib
+  prog_ppcLib prog_x86Lib
 
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open compilerLib;
-
-open combinTheory finite_mapTheory addressTheory stringTheory helperLib;;
-open lisp_gcTheory;
-open lisp_typeTheory lisp_invTheory;
-open set_sepTheory;
-open divideTheory;
-open lisp_parseTheory;
-
-open decompilerLib prog_armLib prog_ppcLib prog_x86Lib;
+val _ = ParseExtras.temp_loose_equality();
 
 val decompile_arm = decompile prog_armLib.arm_tools;
 val decompile_ppc = decompile prog_ppcLib.ppc_tools;
 val decompile_x86 = decompile prog_x86Lib.x86_tools;
 
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 val bool_ss = bool_ss -* ["lift_disj_eq", "lift_imp_disj"]
@@ -80,16 +73,19 @@ val (thms,arm_str_reverse_def,arm_str_reverse_pre_def) = compile_all ``
     let (r7,df,f) = arm_string_rev(r3,r6,r7,df,f) in
       (r7,df,f)``
 
-val one_list_def = Define `
+Definition one_list_def:
   (one_list a [] b = cond (b = a)) /\
-  (one_list a (x::xs) b = one (a,x) * one_list (a + 1w) xs b)`;
+  (one_list a (x::xs) b = one (a,x) * one_list (a + 1w) xs b)
+End
 
-val one_space_def = Define `
+Definition one_space_def:
   (one_space a 0 b = cond (b = a)) /\
-  (one_space a (SUC n) b = SEP_EXISTS y. one (a,y) * one_space (a + 1w) n b)`;
+  (one_space a (SUC n) b = SEP_EXISTS y. one (a,y) * one_space (a + 1w) n b)
+End
 
-val one_string_def = Define `
-  one_string a (s:string) b = one_list a (MAP (n2w o ORD) s) b`;
+Definition one_string_def:
+  one_string a (s:string) b = one_list a (MAP (n2w o ORD) s) b
+End
 
 val one_list_SNOC = prove(
   ``!a xs x b. one_list a (xs ++ [x]) b =
@@ -444,11 +440,12 @@ val arm_copy_symbol_lemma = prove(
 
 (* lisp_inv ==> lisp_tree *)
 
-val lisp_tree_def = Define `
+Definition lisp_tree_def:
   (lisp_tree (Val k) (a,dm,m) sym = (a = n2w (k * 4 + 2)) /\ k < 2 ** 30) /\
   (lisp_tree (Sym s) (a,dm,m) sym = ALIGNED (a - 3w) /\ (a - 3w,s) IN sym) /\
   (lisp_tree (Dot x y) (a,dm,m) sym = a IN dm /\ (a + 4w) IN dm /\ ALIGNED a /\
-    lisp_tree x (m a,dm,m) sym /\ lisp_tree y (m (a+4w),dm,m) sym)`;
+    lisp_tree x (m a,dm,m) sym /\ lisp_tree y (m (a+4w),dm,m) sym)
+End
 
 val lisp_x_IMP_lisp_tree = prove(
   ``!t w a i n sym.
@@ -687,17 +684,20 @@ val (thms,arm_print_loop_def,arm_print_loop_pre_def) = compile_all ``
 
 
 
-val arm_print_loop1_def = Define `arm_print_loop1 = arm_print_loop`;
-val arm_print_loop1_pre_def = Define `arm_print_loop1_pre = arm_print_loop_pre`;
+Definition arm_print_loop1_def:   arm_print_loop1 = arm_print_loop
+End
+Definition arm_print_loop1_pre_def:   arm_print_loop1_pre = arm_print_loop_pre
+End
 
 val lisp_tree_SUBSET = prove(
   ``!t w. lisp_tree t (w,d,h) sym /\ d SUBSET dh ==>
           lisp_tree t (w,dh,h) sym``,
   Induct \\ SIMP_TAC std_ss [lisp_tree_def] \\ METIS_TAC [SUBSET_DEF]);
 
-val stack_slots_def = Define `
+Definition stack_slots_def:
   (stack_slots (a:word32) 0 = emp) /\
-  (stack_slots a (SUC n) = SEP_EXISTS u1 u2. one (a,u1:word32) * one (a+4w,u2) * stack_slots (a+8w) n)`;
+  (stack_slots a (SUC n) = SEP_EXISTS u1 u2. one (a,u1:word32) * one (a+4w,u2) * stack_slots (a+8w) n)
+End
 
 val stack_slots_ADD = prove(
   ``!n a m. ?fr. stack_slots a (n + m) = stack_slots a n * fr``,
@@ -752,7 +752,8 @@ val stack_slots_MAX = prove(
   \\ SIMP_TAC std_ss [stack_slots_ADD]
   \\ METIS_TAC [stack_slots_ADD]);
 
-val fun_eq_def = Define `fun_eq d h1 h2 = !w. w IN d ==> (h1 w = h2 w)`;
+Definition fun_eq_def:   fun_eq d h1 h2 = !w. w IN d ==> (h1 w = h2 w)
+End
 
 val fun_eq_lisp_tree = prove(
   ``!d h hi.
@@ -1505,14 +1506,15 @@ val DIFF_DIFF_EQ = prove(
   FULL_SIMP_TAC std_ss [EXTENSION,DISJOINT_DEF,IN_INTER,NOT_IN_EMPTY,
      SUBSET_DEF,IN_DIFF] \\ METIS_TAC []);
 
-val arm_print_sexp_lemma = store_thm("arm_print_sexp_lemma",
-  ``(one_space r7 (STRLEN (sexp2string t1) + 1) c) (fun2set (f,df)) /\
+Theorem arm_print_sexp_lemma:
+    (one_space r7 (STRLEN (sexp2string t1) + 1) c) (fun2set (f,df)) /\
     lisp_inv (t1,t2,t3,t4,t5,t6,l) (w1,w2,w3,w4,w5,w6,r9,dh,h,sym,rest) ==>
     ?r4i r7i r8i hi fi.
       arm_print_sexp_pre (w1,r7,r9,dh,h,df,f,rest) /\
       (arm_print_sexp (w1,r7,r9,dh,h,df,f,rest) =
         (r7,r4i,r7i,r8i,r9,dh,hi,df,fi,rest)) /\
-      (one_string r7 (STRCAT (sexp2string t1) null_string) c) (fun2set (fi,df))``,
+      (one_string r7 (STRCAT (sexp2string t1) null_string) c) (fun2set (fi,df))
+Proof
   STRIP_TAC
   \\ IMP_RES_TAC one_space_LESS_EQ
   \\ REPEAT (POP_ASSUM MP_TAC)
@@ -1772,7 +1774,8 @@ val arm_print_sexp_lemma = store_thm("arm_print_sexp_lemma",
   \\ REPEAT (Q.PAT_X_ASSUM `bbb (fun2set(ff,fff))` (K ALL_TAC))
   \\ SIMP_TAC std_ss [APPLY_UPDATE_THM]
   \\ ASM_SIMP_TAC std_ss [word_sub_def,word_2comp_n2w]
-  \\ SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_CANCEL,n2w_11]);
+  \\ SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_CANCEL,n2w_11]
+QED
 
 (*
 
@@ -1803,6 +1806,3 @@ fun save_all prefix postfix =
 val _ = save_all "" "_sexp2string_thm"
   ([("arm",arm_sexp2string_th),("ppc",ppc_sexp2string_th)] @
    filter (fn (n,th) => n = "x86") arm_print_sexp_thms);
-
-
-val _ = export_theory();

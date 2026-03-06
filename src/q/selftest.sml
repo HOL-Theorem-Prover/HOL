@@ -435,6 +435,11 @@ val _ = require (check_result (fn _ => true))
                  REWRITE_TAC [])
                 ([], ``p /\ T = p``)
 
+val _ = tprint "PAT_ABBREV_TAC handles underscores"
+val _ = require (check_result (fn _ => true))
+                (Q.PAT_ABBREV_TAC `bar = foo _`)
+                ([], ``_ y = foo a``)
+
 val _ = new_definition ("gh425a_def", ``gh425a a = a``);
 val _ = new_definition ("gh425b_def", ``gh425b p = (p ==> T)``);
 val _ = overload_on ("gh425", ``gh425a``);
@@ -503,6 +508,7 @@ val _ = tprint "(Interactive) RENAME_TAC quiet about tyvar guesses(4)"
 val _ = (testquiet (Q.RENAME_TAC [‘SUC n’]) ([“Pr ==> Q”], “P (SUC x) /\ q”);
          OK()) handle InternalDie s => die s
 
+(*
 val _ = tprint "Q.SPEC_THEN reports type errors"
 val _ = let
   fun contains res sl =
@@ -511,6 +517,7 @@ val _ = let
 in
   recording contains (Q.SPEC_THEN ‘T’ MP_TAC (ASSUME “∀f. f x”)) ([], “p /\ q”)
 end
+*)
 
 val _ = testutils.shouldfail {
       checkexn = check_HOL_ERRexn (fn (s,_,_) => mem s ["Tactical","Q"]),

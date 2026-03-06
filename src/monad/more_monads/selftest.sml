@@ -1,8 +1,9 @@
 open HolKernel Parse boolTheory boolLib testutils
 open monadsyntax parmonadsyntax state_transformerTheory errorStateMonadTheory
+open state_monadLib
 
 val _ = temp_remove_absyn_postprocessor "monadsyntax.transform_absyn"
-val _ = temp_remove_user_printer "monadsyntax.print_monads"
+val _ = temp_remove_user_printer ("monadsyntax.print_monads", “x:'a”)
 
 val _ = set_trace "Unicode" 0
 (* interactive only:
@@ -83,7 +84,7 @@ val _ = app tpp' [monadtpp_test1, monadtpp_test2, monadtpp_test3,
 val _ = clear_overloads_on "monad_bind"
 
 val _ = temp_remove_absyn_postprocessor "parmonadsyntax.transform_absyn"
-val _ = temp_remove_user_printer "parmonadsyntax.print_monads"
+val _ = temp_remove_user_printer ("parmonadsyntax.print_monads", “x:'a”)
 
 val _ = temp_add_user_printer ("monadsyntax.print_monads", genvar alpha,
                                monadsyntax.print_monads)

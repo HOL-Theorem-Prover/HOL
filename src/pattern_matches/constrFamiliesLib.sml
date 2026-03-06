@@ -7,8 +7,9 @@ open boolLib simpLib patternMatchesSyntax numLib
 structure Parse =
 struct
   open Parse
+  val SOME patternMatches_grammars = grammarDB {thyname="patternMatches"}
   val (Type,Term) =
-      parse_from_grammars patternMatchesTheory.patternMatches_grammars
+      parse_from_grammars patternMatches_grammars
 end
 open Parse
 
@@ -383,7 +384,7 @@ fun mk_case_const_cong_thm_term case_const (constrL : constructorList) = let
           List.rev (t_full :: acc)
         end
       | ((CONSTR (c, vns))::crs', al::als', ar::ars') => let
-          val arg_ts =  mk_arg_vars [] [al, ar] (type_of al, vns)
+          val arg_ts = mk_arg_vars [] [al, ar] (type_of al, vns)
           val eq_t = mk_eq (list_mk_comb (al, arg_ts),
                             list_mk_comb (ar, arg_ts))
 

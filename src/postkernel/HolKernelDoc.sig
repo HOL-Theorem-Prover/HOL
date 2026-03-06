@@ -16,6 +16,7 @@ sig
   val dest_monop: term -> exn -> term -> term
   val dest_quadop: term -> exn -> term -> term * term * term * term
   val dest_triop: term -> exn -> term -> term * term * term
+  val is_binder: term -> term -> bool
   val disch: term * term list -> term list
   val find_maximal_terms: (term -> bool) -> term -> term set
   val find_term: (term -> bool) -> term -> term

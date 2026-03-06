@@ -1,6 +1,7 @@
 structure TheoryDelta =
 struct
 
+ type thminfo = DB_dtype.thminfo
  datatype t =
    NewTheory of {oldseg: string, newseg: string}
  | ExportTheory of string
@@ -9,7 +10,8 @@ struct
  | NewTypeOp of KernelSig.kernelname
  | DelConstant of KernelSig.kernelname
  | DelTypeOp of KernelSig.kernelname
- | NewBinding of string * (Thm.thm * DB_dtype.thminfo)
+ | NewBinding of string * (Thm.thm * thminfo)
+ | UpdBinding of string * {thm:Thm.thm, old: thminfo, new:thminfo}
  | DelBinding of string
 
 local
@@ -27,8 +29,11 @@ fun toString t =
     | NewTypeOp n => ksOp "NewTypeOp" n
     | DelConstant n => ksOp "DelConstant" n
     | DelTypeOp n => ksOp "DelTypeOp" n
-    | NewBinding (s,_) => sOp "NewBinding" s
+    | NewBinding (s,(_ (* th *), i)) =>
+        "NewBinding(\"" ^ String.toString s ^ "\", " ^
+        DB_dtype.thminfo_toString i ^ ")"
     | DelBinding s => sOp "DelBinding" s
+    | UpdBinding (s, _) => sOp "UpdBinding" s
 end (* local *)
 
 end

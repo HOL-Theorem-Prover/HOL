@@ -1,16 +1,13 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "OverloadSQB";
+Theory OverloadSQB
 
 Overload "[.]" = “(+)”
 
-Overload "↝₁" = “$*”  (* UOK *)
+Overload "↝₁" = “$*”
 
 Theorem foo:
-  [.] 4 (↝₁ 5 2) = 14   (* UOK *)
+  [.] 4 (↝₁ 5 2) = 14
 Proof
   EVAL_TAC
 QED
 
 
-val _ = export_theory();

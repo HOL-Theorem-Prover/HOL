@@ -1,44 +1,19 @@
-open HolKernel Parse boolLib;
-
+Theory lift
+Ancestors
+  prim_rec pair list rich_list combin pred_set num arithmetic
+  more_list more_set variable term alpha
+Libs
+  pairLib listLib pred_setLib numLib Mutual ind_rel dep_rewrite
+  quotientLib tactics Rsyntax
 
 (* --------------------------------------------------------------------- *)
 (* Lifting the lambda calculus syntax to the abstract level.             *)
 (* --------------------------------------------------------------------- *)
 
 
-val _ = new_theory "lift";
-
 (* In interactive sessions, do:
 val _ = map load ["more_listTheory","more_setTheory","variableTheory","termTheory","alphaTheory"];
 *)
-
-open prim_recTheory;
-open pairTheory;
-open pairLib;
-open listTheory;
-open rich_listTheory;
-open combinTheory;
-open listLib;
-open pred_setTheory;
-open pred_setLib;
-open numTheory;
-open numLib;
-open arithmeticTheory;
-open bossLib;
-open Mutual;
-open ind_rel;
-open dep_rewrite;
-open more_listTheory;
-open more_setTheory;
-open variableTheory;
-open termTheory;
-open alphaTheory;
-
-open quotientLib;
-
-open tactics;
-open Rsyntax;
-
 
 val _ = associate_restriction ("?!!",  "RES_EXISTS_EQUIV");
 
@@ -51,47 +26,47 @@ val subs = ty_antiq (``:(var # 'a term1) list``);
 (* respect alpha-equivalence.                                            *)
 (* ===================================================================== *)
 
-val Con1_ALPHA = store_thm
-  ("Con1_ALPHA",
-   “!a. ALPHA (Con1 a :^term) (Con1 a)”,
+Theorem Con1_ALPHA:
+    !a. ALPHA (Con1 a :^term) (Con1 a)
+Proof
    REWRITE_TAC[ALPHA_term_pos]
-  );
+QED
 
-val Var1_ALPHA = store_thm
-   ("Var1_ALPHA",
-    “!x. ALPHA (Var1 x :^term) (Var1 x)”,
+Theorem Var1_ALPHA:
+     !x. ALPHA (Var1 x :^term) (Var1 x)
+Proof
     REWRITE_TAC[ALPHA_term_pos]
-   );
+QED
 
-val App1_ALPHA = store_thm
-   ("App1_ALPHA",
-    “!t1 :^term t2 u1 u2. ALPHA t1 t2 /\ ALPHA u1 u2 ==>
-                      ALPHA (App1 t1 u1) (App1 t2 u2)”,
+Theorem App1_ALPHA:
+     !t1 :^term t2 u1 u2. ALPHA t1 t2 /\ ALPHA u1 u2 ==>
+                      ALPHA (App1 t1 u1) (App1 t2 u2)
+Proof
     REWRITE_TAC[ALPHA_term_pos]
-   );
+QED
 
-val Lam1_ALPHA = store_thm
-   ("Lam1_ALPHA",
-    “!x t1:^term t2. ALPHA t1 t2 ==>
-                      ALPHA (Lam1 x t1) (Lam1 x t2)”,
+Theorem Lam1_ALPHA:
+     !x t1:^term t2. ALPHA t1 t2 ==>
+                      ALPHA (Lam1 x t1) (Lam1 x t2)
+Proof
     REPEAT STRIP_TAC
     THEN ASM_REWRITE_TAC[ALPHA_Lam]
-   );
+QED
 
 
 val ALPHA_SYM' = GEN_ALL (CONJUNCT2 (SPEC_ALL
                    (REWRITE_RULE[EQ_IMP_THM] ALPHA_SYM)));
 
-val ALPHA_EQUIV = save_thm("ALPHA_EQUIV",
-    refl_sym_trans_equiv ALPHA_REFL ALPHA_SYM' ALPHA_TRANS);
+Theorem ALPHA_EQUIV =
+    refl_sym_trans_equiv ALPHA_REFL ALPHA_SYM' ALPHA_TRANS;
 
-val ALPHA_PEQUIV = store_thm
-   ("ALPHA_PEQUIV",
-    “(?t:^term. ALPHA t t) /\
+Theorem ALPHA_PEQUIV:
+     (?t:^term. ALPHA t t) /\
         (!t u:^term. ALPHA t u <=>
-                     ALPHA t t /\ ALPHA u u /\ (ALPHA t = ALPHA u))”,
+                     ALPHA t t /\ ALPHA u u /\ (ALPHA t = ALPHA u))
+Proof
     REWRITE_TAC[REWRITE_RULE[EQUIV_def]ALPHA_EQUIV]
-   );
+QED
 
 (*
 val op_EQUIVs = [LIST_EQUIV,PAIR_EQUIV];
@@ -104,18 +79,18 @@ val SUBST_EQUIV = make_equiv [ALPHA_EQUIV] [LIST_EQUIV, PAIR_EQUIV]
 
 
 
-val vsubst1_RSP = store_thm
-   ("vsubst1_RSP",
-    “!xs ys.
-          LIST_REL ($= ### ALPHA) (xs // ys) ((xs // ys):^subs)”,
+Theorem vsubst1_RSP:
+     !xs ys.
+          LIST_REL ($= ### ALPHA) (xs // ys) ((xs // ys):^subs)
+Proof
     REPEAT GEN_TAC
     THEN REWRITE_TAC[REWRITE_RULE[EQUIV_def]SUBST_EQUIV]
-   );
+QED
 
-val ALPHA_SUB1 = store_thm
-   ("ALPHA_SUB1",
-    “!s1:^subs s2 x. LIST_REL ($= ### ALPHA) s1 s2 ==>
-                        ALPHA (SUB1 s1 x) (SUB1 s2 x)”,
+Theorem ALPHA_SUB1:
+     !s1:^subs s2 x. LIST_REL ($= ### ALPHA) s1 s2 ==>
+                        ALPHA (SUB1 s1 x) (SUB1 s2 x)
+Proof
     LIST_INDUCT_TAC
     THENL [ALL_TAC, GEN_TAC]
     THEN LIST_INDUCT_TAC
@@ -134,7 +109,7 @@ val ALPHA_SUB1 = store_thm
     THEN ASM_REWRITE_TAC[]
     THEN COND_CASES_TAC
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 (*
 val SUB1_RSP = store_thm
@@ -174,11 +149,11 @@ val FV_subst_RSP = store_thm
    );
 *)
 
-val FV_subst_RSP = store_thm
-   ("FV_subst_RSP",
-    “!s1:^subs s2 xs.
+Theorem FV_subst_RSP:
+     !s1:^subs s2 xs.
          LIST_REL ($= ### ALPHA) s1 s2 ==>
-         (FV_subst1 s1 xs = FV_subst1 s2 xs)”,
+         (FV_subst1 s1 xs = FV_subst1 s2 xs)
+Proof
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[FV_subst1]
     THEN AP_TERM_TAC
@@ -190,15 +165,15 @@ val FV_subst_RSP = store_thm
     THEN MATCH_MP_TAC ALPHA_FV
     THEN MATCH_MP_TAC ALPHA_SUB1
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 
-val ALPHA_subst_ALL = store_thm
-   ("ALPHA_subst_ALL",
-    “!s1:^subs s2 (t:var -> bool).
+Theorem ALPHA_subst_ALL:
+     !s1:^subs s2 (t:var -> bool).
          LIST_REL ($= ### ALPHA) s1 s2 ==>
-         ALPHA_subst t s1 s2”,
+         ALPHA_subst t s1 s2
+Proof
     REPEAT GEN_TAC
     THEN DISCH_TAC
     THEN REWRITE_TAC[ALPHA_subst]
@@ -206,26 +181,26 @@ val ALPHA_subst_ALL = store_thm
     THEN DISCH_TAC
     THEN MATCH_MP_TAC ALPHA_SUB1
     THEN FIRST_ASSUM ACCEPT_TAC
-   );
+QED
 
 
-val SUBt_RSP = store_thm
-   ("SUBt_RSP",
-    “!t1:^term t2 s1 s2.
+Theorem SUBt_RSP:
+     !t1:^term t2 s1 s2.
          ALPHA t1 t2 /\ LIST_REL ($= ### ALPHA) s1 s2 ==>
-         ALPHA (t1 <[ s1) (t2 <[ s2)”,
+         ALPHA (t1 <[ s1) (t2 <[ s2)
+Proof
     REPEAT STRIP_TAC
     THEN MATCH_MP_TAC ALPHA_SUB_CONTEXT
     THEN IMP_RES_TAC ALPHA_subst_ALL
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
-val ALPHA_subst_RSP = store_thm
-   ("ALPHA_subst_RSP",
-    “!s1:^subs s2 t1 t2 (t:var -> bool).
+Theorem ALPHA_subst_RSP:
+     !s1:^subs s2 t1 t2 (t:var -> bool).
          LIST_REL ($= ### ALPHA) s1 s2 /\
          LIST_REL ($= ### ALPHA) t1 t2 ==>
-         (ALPHA_subst t s1 t1 = ALPHA_subst t s2 t2)”,
+         (ALPHA_subst t s1 t1 = ALPHA_subst t s2 t2)
+Proof
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN REWRITE_TAC[ALPHA_subst]
@@ -237,15 +212,15 @@ val ALPHA_subst_RSP = store_thm
     THEN IMP_RES_THEN (ASSUME_TAC o SPEC_ALL) ALPHA_SUB1
     THEN IMP_RES_TAC ALPHA_SYM
     THEN IMP_RES_TAC ALPHA_TRANS
-   );
+QED
 
 
-val BV_subst_RSP = store_thm
-   ("BV_subst_RSP",
-    “!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+Theorem BV_subst_RSP:
+     !R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
          !s1 s2.
           (LIST_REL ($= ### R)) s1 s2 ==>
-          (BV_subst s1 = BV_subst s2)”,
+          (BV_subst s1 = BV_subst s2)
+Proof
     REPEAT GEN_TAC
     THEN DISCH_TAC
     THEN Induct
@@ -262,12 +237,12 @@ val BV_subst_RSP = store_thm
         FIRST_ASSUM MATCH_MP_TAC
         THEN FIRST_ASSUM ACCEPT_TAC
       ]
-   );
+QED
 
-val BV_subst_PRS = store_thm
-   ("BV_subst_PRS",
-    “!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         !s. BV_subst s = BV_subst (MAP (I ## rep) s)”,
+Theorem BV_subst_PRS:
+     !R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !s. BV_subst s = BV_subst (MAP (I ## rep) s)
+Proof
     REPEAT GEN_TAC
     THEN DISCH_TAC
     THEN Induct
@@ -277,7 +252,7 @@ val BV_subst_PRS = store_thm
     THEN REWRITE_TAC[PAIR_MAP_THM,I_THM,FST]
     THEN AP_TERM_TAC
     THEN FIRST_ASSUM ACCEPT_TAC
-   );
+QED
 
 
 val term_EQ_IS_ALPHA =
@@ -292,11 +267,11 @@ val term_EQ_IS_ALPHA =
                      ALPHA_term_pos,ALPHA_term_neg]
    );
 
-val FV_subst_EQ1' = store_thm
-   ("FV_subst_EQ1'",
-    “!s1:^subs s2 t.
+Theorem FV_subst_EQ1':
+     !s1:^subs s2 t.
           (!x. (x IN t) ==> ALPHA (SUB1 s1 x) (SUB1 s2 x)) ==>
-          (FV_subst1 s1 t = FV_subst1 s2 t)”,
+          (FV_subst1 s1 t = FV_subst1 s2 t)
+Proof
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[FV_subst1]
     THEN AP_TERM_TAC
@@ -317,17 +292,17 @@ val FV_subst_EQ1' = store_thm
         THEN MATCH_MP_TAC ALPHA_FV
         THEN RES_TAC
       ]
-   );
+QED
 
 
 val TAUT_PROVE = EQT_ELIM o tautLib.TAUT_CONV;
 val OR_IMP = TAUT_PROVE “(a \/ b ==> c) = ((a ==> c) /\ (b ==> c))”;
 
-val subst_EQ1' = store_thm
-   ("subst_EQ1'",
-    “!a:^term s1 s2.
+Theorem subst_EQ1':
+     !a:^term s1 s2.
             (!x. (x IN FV1 a) ==> ALPHA (SUB1 s1 x) (SUB1 s2 x)) ==>
-                  ALPHA (a <[ s1) (a <[ s2)”,
+                  ALPHA (a <[ s1) (a <[ s2)
+Proof
     Induct
     THEN REWRITE_TAC[FV1_def,IN_UNION,IN]
     THEN REWRITE_TAC[OR_IMP]
@@ -359,11 +334,11 @@ val subst_EQ1' = store_thm
         THEN FIRST_ASSUM MATCH_MP_TAC
         THEN ASM_REWRITE_TAC[IN_DIFF,IN]
       ]
-   );
+QED
 
-val BV_subst_IDENT1 = store_thm
-   ("BV_subst_IDENT1",
-    “!s:^subs x. ~(x IN (BV_subst s)) ==> (SUB1 s x = Var1 x)”,
+Theorem BV_subst_IDENT1:
+     !s:^subs x. ~(x IN (BV_subst s)) ==> (SUB1 s x = Var1 x)
+Proof
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[BV_subst_def,SUB1_def]
     THEN REWRITE_TAC[IN,DE_MORGAN_THM]
@@ -372,12 +347,12 @@ val BV_subst_IDENT1 = store_thm
     THEN ONCE_REWRITE_TAC[GSYM PAIR]
     THEN CONV_TAC (DEPTH_CONV let_CONV)
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
-val BV_vsubst1 = store_thm
-   ("BV_vsubst1",
-    “!xs ys. (LENGTH xs = LENGTH ys) ==>
-                (BV_subst ((xs // ys) :^subs) = SL xs)”,
+Theorem BV_vsubst1:
+     !xs ys. (LENGTH xs = LENGTH ys) ==>
+                (BV_subst ((xs // ys) :^subs) = SL xs)
+Proof
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[BV_subst_def,vsubst1,SL]
     THEN GEN_TAC
@@ -387,12 +362,12 @@ val BV_vsubst1 = store_thm
     THEN REPEAT STRIP_TAC
     THEN RES_TAC
     THEN ASM_REWRITE_TAC[BV_subst_def,vsubst1,FST]
-   );
+QED
 
-val HEIGHT1_SUB1_var = store_thm
-   ("HEIGHT1_SUB1_var",
-    “!xs ys v.
-          HEIGHT1 (SUB1 ((xs // ys):^subs) v) = 0”,
+Theorem HEIGHT1_SUB1_var:
+     !xs ys v.
+          HEIGHT1 (SUB1 ((xs // ys):^subs) v) = 0
+Proof
     Induct
     THENL [ ALL_TAC, GEN_TAC ]
     THEN Cases
@@ -400,12 +375,12 @@ val HEIGHT1_SUB1_var = store_thm
     THEN ASM_REWRITE_TAC[vsubst1,SUB1,HEIGHT1_def]
     THEN COND_CASES_TAC
     THEN ASM_REWRITE_TAC[HEIGHT1_def]
-   );
+QED
 
-val HEIGHT1_var_list_subst = store_thm
-   ("HEIGHT1_var_list_subst",
-    “!t:^term xs ys.
-          HEIGHT1 (t <[ (xs // ys)) = HEIGHT1 t”,
+Theorem HEIGHT1_var_list_subst:
+     !t:^term xs ys.
+          HEIGHT1 (t <[ (xs // ys)) = HEIGHT1 t
+Proof
     Induct
     THEN REPEAT GEN_TAC
     THEN ASM_REWRITE_TAC[SUB_term1_def,SUB1,HEIGHT1_def]
@@ -416,20 +391,19 @@ val HEIGHT1_var_list_subst = store_thm
         THEN ONCE_REWRITE_TAC[GSYM vsubst1]
         THEN ASM_REWRITE_TAC[HEIGHT1_def]
       ]
-   );
+QED
 
-val HEIGHT1_var_subst = store_thm
-   ("HEIGHT1_var_subst",
-    “!t:^term x y.
-          HEIGHT1 (t <[ [x, Var1 y]) = HEIGHT1 t”,
+Theorem HEIGHT1_var_subst:
+     !t:^term x y.
+          HEIGHT1 (t <[ [x, Var1 y]) = HEIGHT1 t
+Proof
     REWRITE_TAC[GSYM vsubst1]
     THEN REWRITE_TAC[HEIGHT1_var_list_subst]
-   );
+QED
 
 
-val term1_distinct' = store_thm
-   ("term1_distinct'",
-    “((!a x.     ~(ALPHA (Con1 a)   (Var1 x   : ^term))) /\
+Theorem term1_distinct':
+     ((!a x.     ~(ALPHA (Con1 a)   (Var1 x   : ^term))) /\
          (!a t u.   ~(ALPHA (Con1 a)   (App1 t u : ^term))) /\
          (!a y u.   ~(ALPHA (Con1 a)   (Lam1 y u : ^term))) /\
          (!x a.     ~(ALPHA (Var1 x)   (Con1 a   : ^term))) /\
@@ -440,17 +414,18 @@ val term1_distinct' = store_thm
          (!t u y v. ~(ALPHA (App1 t u) (Lam1 y v : ^term))) /\
          (!y u a.   ~(ALPHA (Lam1 y u) (Con1 a   : ^term))) /\
          (!y u x.   ~(ALPHA (Lam1 y u) (Var1 x   : ^term))) /\
-         (!y v t u. ~(ALPHA (Lam1 y v) (App1 t u : ^term))))”,
+         (!y v t u. ~(ALPHA (Lam1 y v) (App1 t u : ^term))))
+Proof
     REWRITE_TAC[ALPHA_term,ALPHA1_term_neg]
-   );
+QED
 
 
-val term1_cases' = store_thm
-   ("term1_cases'",
-    “!t:^term. (?a. ALPHA t (Con1 a)) \/
+Theorem term1_cases':
+     !t:^term. (?a. ALPHA t (Con1 a)) \/
                   (?v. ALPHA t (Var1 v)) \/
                   (?t' t0. ALPHA t (App1 t' t0)) \/
-                  (?v t'. ALPHA t (Lam1 v t'))”,
+                  (?v t'. ALPHA t (Lam1 v t'))
+Proof
     GEN_TAC
     THEN STRIP_ASSUME_TAC (SPEC “t:^term” term1_cases)
     THENL (* four subgoals *)
@@ -477,46 +452,46 @@ val term1_cases' = store_thm
             THEN EXISTS_TAC “t':^term”
             THEN ASM_REWRITE_TAC[ALPHA_term_pos,ALPHA_REFL]
           ]
-    );
+QED
 
 
-val term1_one_one' = store_thm
-   ("term1_one_one'",
-    “(!a:'a a'. ALPHA (Con1 a) (Con1 a') = (a = a')) /\
+Theorem term1_one_one':
+     (!a:'a a'. ALPHA (Con1 a) (Con1 a') = (a = a')) /\
         (!x t t':^term. ALPHA (Lam1 x t) (Lam1 x t') = ALPHA t t') /\
         (!x x'. ALPHA (Var1 x :^term) (Var1 x') = (x = x')) /\
         (!t u t' u':^term. ALPHA (App1 t u) (App1 t' u') <=>
-                              ALPHA t t' /\ ALPHA u u')”,
+                              ALPHA t t' /\ ALPHA u u')
+Proof
     REWRITE_TAC[ALPHA_term_pos,ALPHA_Lam_one_one,subst_SAME_ONE1]
-   );
+QED
 
-val CHANGE_VAR1 = store_thm
-   ("CHANGE_VAR1",
-    “!x v t:'a term1.
+Theorem CHANGE_VAR1:
+     !x v t:'a term1.
          ~(x IN FV1 (Lam1 v t)) ==>
-         ALPHA (Lam1 v t) (Lam1 x (t <[ [(v,Var1 x)]))”,
+         ALPHA (Lam1 v t) (Lam1 x (t <[ [(v,Var1 x)]))
+Proof
     REWRITE_TAC[FV1_def]
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC ALPHA_CHANGE_ONE_VAR
     THEN ONCE_REWRITE_TAC[ALPHA_SYM]
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 (* AXIOM 3 *)
 
 (* Melham and Gordon's third axiom, on alpha-equivalence. *)
 
-val CHANGE_ONE_VAR1 = store_thm
-   ("CHANGE_ONE_VAR1",
-    “!x v t:'a term1.
+Theorem CHANGE_ONE_VAR1:
+     !x v t:'a term1.
          ~(x IN FV1 (Lam1 v t)) ==>
-         ALPHA (Lam1 v t) (Lam1 x (t <[ [(v,Var1 x)]))”,
+         ALPHA (Lam1 v t) (Lam1 x (t <[ [(v,Var1 x)]))
+Proof
     REWRITE_TAC[FV1_def]
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC ALPHA_CHANGE_ONE_VAR
     THEN ONCE_REWRITE_TAC[ALPHA_SYM]
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 
@@ -653,9 +628,8 @@ val term1_hom_RSP = TAC_PROOF(([],
     THEN REWRITE_TAC[LESS_EQ_REFL]
    );
 
-val term1_respects_Axiom_exists = store_thm(
-    "term1_respects_Axiom_exists",
-    “!(con : 'a -> 'b) var
+Theorem term1_respects_Axiom_exists:
+     !(con : 'a -> 'b) var
          (app :: respects($= ===> $= ===> ALPHA ===> ALPHA ===> $=))
          (abs :: respects($= ===> ($= ===> ALPHA) ===> $=)) .
          ?hom :: respects(ALPHA ===> $=).
@@ -663,7 +637,8 @@ val term1_respects_Axiom_exists = store_thm(
            (!x.   hom (Var1 x) = var x) /\
            (!t u. hom (App1 t u) = app (hom t) (hom u) t u) /\
            (!x u. hom (Lam1 x u) = abs (\y. hom (u <[ [x, Var1 y]))
-                                       (\y. u <[ [x, Var1 y]))”,
+                                       (\y. u <[ [x, Var1 y]))
+Proof
     CONV_TAC (DEPTH_CONV res_quanLib.RES_FORALL_CONV)
     THEN CONV_TAC (DEPTH_CONV res_quanLib.RES_EXISTS_CONV)
     THEN REWRITE_TAC[SPECIFICATION]
@@ -672,7 +647,7 @@ val term1_respects_Axiom_exists = store_thm(
     THEN REWRITE_TAC[term1_hom_eqns]
     THEN MATCH_MP_TAC term1_hom_RSP
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 val term1_respects_Axiom_11_LEMMA = TAC_PROOF(([],
@@ -745,9 +720,8 @@ val term1_respects_Axiom_11_LEMMA2 = TAC_PROOF(([],
     THEN ASM_REWRITE_TAC[]
    );
 
-val term1_respects_Axiom_11 = store_thm(
-    "term1_respects_Axiom_11",
-    “!(con : 'a -> 'b) var app abs.
+Theorem term1_respects_Axiom_11:
+     !(con : 'a -> 'b) var app abs.
         !hom1 hom2 :: respects(ALPHA ===> $=).
           ((!a.   hom1 (Con1 a) = con a) /\
            (!x.   hom1 (Var1 x) = var x) /\
@@ -760,18 +734,18 @@ val term1_respects_Axiom_11 = store_thm(
            (!x u. hom2 (Lam1 x u) = abs (\y. hom2 (u <[ [x, Var1 y]))
                                         (\y. u <[ [x, Var1 y])))
            ==>
-           (hom1 = hom2)”,
+           (hom1 = hom2)
+Proof
     REPEAT GEN_TAC
     THEN REPEAT res_quanLib.RESQ_GEN_TAC
     THEN STRIP_TAC
     THEN MATCH_MP_TAC (SPEC_ALL term1_respects_Axiom_11_LEMMA2)
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
-val term1_respects_Axiom = store_thm(
-    "term1_respects_Axiom",
-    “!(con : 'a -> 'b) var
+Theorem term1_respects_Axiom:
+     !(con : 'a -> 'b) var
          (app :: respects ($= ===> $= ===> ALPHA ===> ALPHA ===> $=))
          (abs :: respects ($= ===> ($= ===> ALPHA) ===> $=)).
          ?!hom :: respects(ALPHA ===> $=).
@@ -779,25 +753,26 @@ val term1_respects_Axiom = store_thm(
            (!x.   hom (Var1 x) = var x) /\
            (!t u. hom (App1 t u) = app (hom t) (hom u) t u) /\
            (!x u. hom (Lam1 x u) = abs (\y. hom (u <[ [x, Var1 y]))
-                                       (\y. u <[ [x, Var1 y]))”,
+                                       (\y. u <[ [x, Var1 y]))
+Proof
     CONV_TAC (DEPTH_CONV res_quanLib.RES_EXISTS_UNIQUE_CONV)
     THEN REPEAT GEN_TAC
     THEN REPEAT res_quanLib.RESQ_GEN_TAC
     THEN IMP_RES_TAC (res_quanLib.RESQ_REWR_CANON term1_respects_Axiom_exists)
     THEN ASM_REWRITE_TAC[term1_respects_Axiom_11]
-   );
+QED
 
 
 (* Now we develop the last of the Gordon-Melham axioms, that states *)
 (* the existence of a function `Abs' such that                      *)
 (*         Lam v t = Abs (\y. t <[ [v, Var y])                      *)
 
-val Abs1_def =
-    Define
-    `Abs1 (f : var -> ^term) =
+Definition Abs1_def:
+     Abs1 (f : var -> ^term) =
         let x = VAR "x" 0 in
         let v = variant x (FV1 (f x)) in
-           Lam1 v (f v)`;
+           Lam1 v (f v)
+End
 
 (* Prove Abs1 is respectful. *)
 
@@ -810,11 +785,11 @@ val Lam1_ALPHA1 = TAC_PROOF(([],
     THEN ASM_REWRITE_TAC[]
    );
 
-val Abs1_ALPHA_LEMMA = store_thm
-   ("Abs1_ALPHA_LEMMA",
-    “!f1 f2 x.
+Theorem Abs1_ALPHA_LEMMA:
+     !f1 f2 x.
           ($= ===> ALPHA) f1 f2  ==>
-          (variant x (FV1 ((f1 x):^term)) = variant x (FV1 (f2 x)))”,
+          (variant x (FV1 ((f1 x):^term)) = variant x (FV1 (f2 x)))
+Proof
     REPEAT GEN_TAC
     THEN REWRITE_TAC[FUN_REL]
     THEN DISCH_TAC
@@ -822,13 +797,13 @@ val Abs1_ALPHA_LEMMA = store_thm
     THEN MATCH_MP_TAC ALPHA_FV
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN REFL_TAC
-   );
+QED
 
-val Abs1_ALPHA = store_thm
-   ("Abs1_ALPHA",
-    “!f1 f2 :var->^term.
+Theorem Abs1_ALPHA:
+     !f1 f2 :var->^term.
           ($= ===> ALPHA) f1 f2  ==>
-          ALPHA (Abs1 f1) (Abs1 f2)”,
+          ALPHA (Abs1 f1) (Abs1 f2)
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC Abs1_ALPHA_LEMMA
     THEN ASM_REWRITE_TAC[Abs1_def]
@@ -837,7 +812,7 @@ val Abs1_ALPHA = store_thm
     THEN REWRITE_ALL_TAC[FUN_REL]
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN REFL_TAC
-   );
+QED
 
 val SINGLE_vsubst = TAC_PROOF(([],
     “!x y:var.
@@ -855,10 +830,10 @@ val SINGLE_SL = TAC_PROOF(([],
 
 (* Melham and Gordon's fifth and final axiom. *)
 
-val Lam1_Abs1 = store_thm
-   ("Lam1_Abs1",
-    “!v t:^term.
-           ALPHA (Lam1 v t) (Abs1 (\y. t <[ [v, Var1 y]))”,
+Theorem Lam1_Abs1:
+     !v t:^term.
+           ALPHA (Lam1 v t) (Abs1 (\y. t <[ [v, Var1 y]))
+Proof
     REPEAT GEN_TAC
     THEN REWRITE_TAC[Abs1_def]
     THEN CONV_TAC (DEPTH_CONV let_CONV)
@@ -869,7 +844,7 @@ val Lam1_Abs1 = store_thm
     THEN REWRITE_TAC[FINITE_FV1]
     THEN REWRITE_TAC[SINGLE_vsubst,SINGLE_SL]
     THEN REWRITE_TAC[FV_vsubst1]
-   );
+QED
 
 
 val equivs = [ALPHA_EQUIV];
@@ -1203,8 +1178,7 @@ val term = ty_antiq (==`:'a term`==);
 val subs = ty_antiq (==`:(var # 'a term) list`==);
 
 
-val _ = map (fn t => overload_on("<[", t))
-            [“$SUBt:'a term -> ^subs -> 'a term”];
+Overload "<[" = “$SUBt:'a term -> ^subs -> 'a term”
 
 
 
@@ -1212,17 +1186,17 @@ val _ = map (fn t => overload_on("<[", t))
 (* Save the (important) theorems lifted by the quotient operations. *)
 (* ---------------------------------------------------------------- *)
 
-val HEIGHT = save_thm ("HEIGHT", HEIGHT); (* was 12 lines *)
+Theorem HEIGHT = HEIGHT; (* was 12 lines *)
 
-val HEIGHT_LESS_EQ_ZERO = save_thm("HEIGHT_LESS_EQ_ZERO", HEIGHT_LESS_EQ_ZERO);
+Theorem HEIGHT_LESS_EQ_ZERO = HEIGHT_LESS_EQ_ZERO;
 (* was 12 lines *)
 
 (* AXIOM 1 of Gordon and Melham *)
-val FV_term = save_thm ("FV_term", FV_term); (* was 11 lines *)
+Theorem FV_term = FV_term; (* was 11 lines *)
 
-val FINITE_FV = save_thm ("FINITE_FV", FINITE_FV); (* was 10 lines *)
+Theorem FINITE_FV = FINITE_FV; (* was 10 lines *)
 
-val SUB = save_thm ("SUB", SUB); (* was 12 lines *)
+Theorem SUB = SUB; (* was 12 lines *)
 
 (* val SUB_def = save_thm ("SUB_def",SUB_def); (* was not lifted *) *)
 
@@ -1238,7 +1212,7 @@ val SUB = save_thm ("SUB", SUB); (* was 12 lines *)
 (* val SUB_FREE_vsubst = save_thm ("SUB_FREE_vsubst", SUB_FREE_vsubst); *)
 (* was 21 lines *)
 
-val FV_subst = save_thm ("FV_subst", FV_subst);
+Theorem FV_subst = FV_subst;
 (* was 7 lines *)
 
 (* val FINITE_FV_subst = save_thm ("FINITE_FV_subst", FINITE_FV_subst); *)
@@ -1254,26 +1228,26 @@ val FV_subst = save_thm ("FV_subst", FV_subst);
 (* val FV_subst_NIL = save_thm ("FV_subst_NIL", FV_subst_NIL); *)
 (* was 7 lines *)
 
-val SUB_term    = save_thm ("SUB_term", SUB_term);
+Theorem SUB_term = SUB_term;
 (* was 19 lines *)
 (* Glory to God!  Soli Deo Gloria! *)
 
-val Lam_EQ = save_thm ("Lam_EQ", Lam_EQ);
+Theorem Lam_EQ = Lam_EQ;
 (* was not lifted *)
 
-val subst_SAME_ONE = save_thm ("subst_SAME_ONE", subst_SAME_ONE);
+Theorem subst_SAME_ONE = subst_SAME_ONE;
 (* was 10 lines *)
 
-val subst_SAME_TWO = save_thm ("subst_SAME_TWO", subst_SAME_TWO);
+Theorem subst_SAME_TWO = subst_SAME_TWO;
 (* was not lifted *)
 
-val subst_EQ = save_thm ("subst_EQ", subst_EQ);
+Theorem subst_EQ = subst_EQ;
 (* was 31 lines *)
 
 (* val FREE_SUB = save_thm ("FREE_SUB", FREE_SUB); *)
 (* was not lifted *)
 
-val BV_subst_IDENT = save_thm ("BV_subst_IDENT", BV_subst_IDENT);
+Theorem BV_subst_IDENT = BV_subst_IDENT;
 (* was 11 lines *)
 
 (* val BV_vsubst = save_thm ("BV_vsubst", BV_vsubst); *)
@@ -1286,57 +1260,57 @@ val BV_subst_IDENT = save_thm ("BV_subst_IDENT", BV_subst_IDENT);
 (* val FREE_IDENT_SUBST = save_thm ("FREE_IDENT_SUBST", FREE_IDENT_SUBST); *)
 (* was not lifted *)
 
-val subst_IDENT = save_thm ("subst_IDENT", subst_IDENT);
+Theorem subst_IDENT = subst_IDENT;
 (* was 32 lines *)
 
 (* val subst_NIL = save_thm ("subst_NIL", subst_NIL); *)
 (* was 7 lines *)
 
 
-val HEIGHT_SUB_var = save_thm ("HEIGHT_SUB_var", HEIGHT_SUB_var);
+Theorem HEIGHT_SUB_var = HEIGHT_SUB_var;
 
-val HEIGHT_var_list_subst = save_thm ("HEIGHT_var_list_subst",
-                                       HEIGHT_var_list_subst);
+Theorem HEIGHT_var_list_subst =
+                                       HEIGHT_var_list_subst;
 
-val HEIGHT_var_subst = save_thm ("HEIGHT_var_subst", HEIGHT_var_subst);
+Theorem HEIGHT_var_subst = HEIGHT_var_subst;
 
-val term_distinct = save_thm("term_distinct", term_distinct);
+Theorem term_distinct = term_distinct;
 (* was 12 lines (now 11) *)
 
 (* val term_cases = save_thm("term_cases", term_cases); *)
 (* was 36 lines (now 25 lines) *)
 
-val term_one_one = save_thm("term_one_one", term_one_one);
+Theorem term_one_one = term_one_one;
 (* was 38 lines, now 9 lines *)
 
 (* val vsubst_def = save_thm("vsubst_def", vsubst_def); *)
 (* was not lifted *)
 
-val vsubst = save_thm("vsubst", vsubst);
+Theorem vsubst = vsubst;
 (* was not lifted *)
 
 (* val SUB_APPEND_FREE_vsubst = save_thm("SUB_APPEND_FREE_vsubst",
                                        SUB_APPEND_FREE_vsubst);    *)
 (* was 24 lines *)
 
-val EQ_SUBST = save_thm("EQ_SUBST", EQ_SUBST);
+Theorem EQ_SUBST = EQ_SUBST;
 
-val EQ_SUBST_CONTEXT = save_thm("EQ_SUBST_CONTEXT", EQ_SUBST_CONTEXT);
+Theorem EQ_SUBST_CONTEXT = EQ_SUBST_CONTEXT;
 
-val LAMBDA_CHANGE_VAR = save_thm("LAMBDA_CHANGE_VAR", LAMBDA_CHANGE_VAR);
+Theorem LAMBDA_CHANGE_VAR = LAMBDA_CHANGE_VAR;
 (* was 22 lines *)
 
-val LAMBDA_CHANGE_ONE_VAR = save_thm("LAMBDA_CHANGE_ONE_VAR",
-                                      LAMBDA_CHANGE_ONE_VAR);
+Theorem LAMBDA_CHANGE_ONE_VAR =
+                                      LAMBDA_CHANGE_ONE_VAR;
 
 (* AXIOM 3 of Gordon and Melham. *)
-val CHANGE_ONE_VAR = save_thm("CHANGE_ONE_VAR", CHANGE_ONE_VAR);
+Theorem CHANGE_ONE_VAR = CHANGE_ONE_VAR;
 
 (* val Lam_subst = save_thm("Lam_subst", Lam_subst); *)
 (* was not lifted *)
 
 (* AXIOM 5 of Gordon and Melham. *)
-val Lam_Abs = save_thm("Lam_Abs", Lam_Abs);
+Theorem Lam_Abs = Lam_Abs;
 (* was not lifted *)
 
 
@@ -1349,12 +1323,12 @@ term1_induction;
          !t. P t
 *)
 
-val term_induct = save_thm("term_induct", term_induct);
+Theorem term_induct = term_induct;
 (* was 17 lines *)
 (* Glory to God!  Soli Deo Gloria! *)
 
 (* AXIOM 4 for Gordon and Melham. *)
-val term_Axiom = save_thm("term_Axiom", term_Axiom);
+Theorem term_Axiom = term_Axiom;
 (* was not lifted *)
 
 (* ---------------------------------------------------------------- *)
@@ -1368,15 +1342,15 @@ val term_Axiom = save_thm("term_Axiom", term_Axiom);
 
 
 (* AXIOM 2 for Gordon and Melham. *)
-val SUBSTITUTION = store_thm
-   ("SUBSTITUTION",
-    “(!a:'a x u. Con a <[ [x,u] = Con a) /\
+Theorem SUBSTITUTION:
+     (!a:'a x u. Con a <[ [x,u] = Con a) /\
         (!x u:'a term. Var x <[ [x,u] = u) /\
         (!x u:'a term y. ~(x = y) ==> (Var y <[ [x,u] = Var y)) /\
         (!t:'a term u v x. App t u <[ [x,v] = App (t <[ [x,v]) (u <[ [x,v])) /\
         (!x t:'a term u. Lam x t <[ [x,u] = Lam x t) /\
         (!x y u:'a term. ~(x = y) /\ ~(y IN FV u) ==>
-                 !t. Lam y t <[ [x,u] = Lam y (t <[ [x,u]))”,
+                 !t. Lam y t <[ [x,u] = Lam y (t <[ [x,u]))
+Proof
     REWRITE_TAC[SUB_term,SUB]
     THEN REPEAT STRIP_TAC
     THENL
@@ -1453,7 +1427,7 @@ val SUBSTITUTION = store_thm
               ]
           ]
       ]
-   );
+QED
 
 val SUBSTITUTION_CONJS = CONJUNCTS SUBSTITUTION;
 val Var_SUBST_NOT_EQUAL = el 3 SUBSTITUTION_CONJS;
@@ -1462,39 +1436,39 @@ val Lam_SUBST_NOT_EQUAL = last SUBSTITUTION_CONJS;
 
 
 
-val Lam_one_one = store_thm
-   ("Lam_one_one",
-    “!(a:'a term) b x y. (Lam x a = Lam y b) =
+Theorem Lam_one_one:
+     !(a:'a term) b x y. (Lam x a = Lam y b) =
                                 ((a <[ [x,Var y] = b) /\
-                                 (b <[ [y,Var x] = a))”,
+                                 (b <[ [y,Var x] = a))
+Proof
     REPEAT GEN_TAC
     THEN CONV_TAC (RAND_CONV (RAND_CONV (REWR_CONV EQ_SYM_EQ)))
     THEN REWRITE_TAC[Lam_one_one']
-   );
+QED
 (* was 16 lines, now 10 *)
 
-val Lam_one_one_RENAME = store_thm
-   ("Lam_one_one_RENAME",
-    “!a:'a term b x y. (Lam x a = Lam y b) ==>
-                              (b = a <[ [x,Var y])”,
+Theorem Lam_one_one_RENAME:
+     !a:'a term b x y. (Lam x a = Lam y b) ==>
+                              (b = a <[ [x,Var y])
+Proof
     REWRITE_TAC[Lam_one_one]
     THEN REPEAT STRIP_TAC
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 
 (* Now test the higher term induction principle: *)
 
-val term_height_induct_LEMMA = store_thm
-   ("term_height_induct_LEMMA",
-    “!n term_Prop:'a term -> bool.
+Theorem term_height_induct_LEMMA:
+     !n term_Prop:'a term -> bool.
          (!a. term_Prop (Con a)) /\
          (!x. term_Prop (Var x)) /\
          (!t u. term_Prop t /\ term_Prop u ==> term_Prop (App t u)) /\
          (!t. (!t'. (HEIGHT t = HEIGHT t') ==> term_Prop t') ==>
                (!v. term_Prop (Lam v t))) ==>
-         (!t. (HEIGHT t <= n) ==> term_Prop t)”,
+         (!t. (HEIGHT t <= n) ==> term_Prop t)
+Proof
     INDUCT_TAC
     THEN REPEAT GEN_TAC
     THEN STRIP_TAC
@@ -1529,17 +1503,17 @@ val term_height_induct_LEMMA = store_thm
             THEN FIRST_ASSUM REWRITE_THM
           ]
       ]
-   );
+QED
 
-val term_height_induct = store_thm
-   ("term_height_induct",
-    “!term_Prop:'a term -> bool.
+Theorem term_height_induct:
+     !term_Prop:'a term -> bool.
          (!a. term_Prop (Con a)) /\
          (!x. term_Prop (Var x)) /\
          (!t u. term_Prop t /\ term_Prop u ==> term_Prop (App t u)) /\
          (!t. (!t'. (HEIGHT t = HEIGHT t') ==> term_Prop t') ==>
                (!v. term_Prop (Lam v t))) ==>
-         (!t. term_Prop t)”,
+         (!t. term_Prop t)
+Proof
     REPEAT STRIP_TAC
     THEN MP_TAC (SPEC_ALL
            (SPEC “HEIGHT (t:'a term)” term_height_induct_LEMMA))
@@ -1547,39 +1521,39 @@ val term_height_induct = store_thm
     THEN REPEAT STRIP_TAC
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN REWRITE_TAC[LESS_EQ_REFL]
-   );
+QED
 
 
 (* Variable-for-variable substitutions *)
 
 
-val HEIGHT_SUB_vsubst = store_thm
-   ("HEIGHT_SUB_vsubst",
-    “!xs ys x.
-         HEIGHT (SUB ((xs / ys):^subs) x) = 0”,
+Theorem HEIGHT_SUB_vsubst:
+     !xs ys x.
+         HEIGHT (SUB ((xs / ys):^subs) x) = 0
+Proof
     REPEAT GEN_TAC
     THEN STRIP_ASSUME_TAC (SPEC_ALL SUB_vsubst_Var)
     THEN ASM_REWRITE_TAC[HEIGHT]
-   );
+QED
 
 
 
-val subst_EMPTY = store_thm
-   ("subst_EMPTY",
-    “!t:'a term x u. ~(x IN FV t) ==> ((t <[ [x,u]) = t)”,
+Theorem subst_EMPTY:
+     !t:'a term x u. ~(x IN FV t) ==> ((t <[ [x,u]) = t)
+Proof
     REPEAT STRIP_TAC
     THEN MATCH_MP_TAC subst_IDENT
     THEN REWRITE_TAC[SUB]
     THEN GEN_TAC
     THEN COND_CASES_TAC
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 
-val FV_term_subst = store_thm
-   ("FV_term_subst",
-    “!t:'a term s. FV (t <[ s) = FV_subst s (FV t)”,
+Theorem FV_term_subst:
+     !t:'a term s. FV (t <[ s) = FV_subst s (FV t)
+Proof
     REWRITE_TAC[FV_subst]
     THEN MUTUAL_INDUCT_THEN term_induct ASSUME_TAC
     THEN REWRITE_TAC[SUB_term]
@@ -1649,14 +1623,14 @@ val FV_term_subst = store_thm
               ]
           ]
       ]
-   );
+QED
 
 
-val NOT_IN_FV_subst = store_thm
-   ("NOT_IN_FV_subst",
-    “!y x t:'a term s.
+Theorem NOT_IN_FV_subst:
+     !y x t:'a term s.
          ~(y IN FV t) /\ ~(y IN s)
-          ==> ~(y IN FV_subst [x,t] s)”,
+          ==> ~(y IN FV_subst [x,t] s)
+Proof
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN REWRITE_TAC[FV_subst]
@@ -1671,14 +1645,14 @@ val NOT_IN_FV_subst = store_thm
         ASM_REWRITE_TAC[FV_term,IN]
         THEN IMP_RES_THEN (IMP_RES_THEN (REWRITE_THM o GSYM)) IN_NOT_IN
       ]
-   );
+QED
 
 
-val NOT_IN_FV_subst2 = store_thm
-   ("NOT_IN_FV_subst2",
-    “!y x1 (t1:^term) x2 t2 s.
+Theorem NOT_IN_FV_subst2:
+     !y x1 (t1:^term) x2 t2 s.
          ~(y IN FV t1) /\ ~(y IN FV t2) /\ ~(y IN s)
-          ==> ~(y IN FV_subst [(x1,t1);(x2,t2)] s)”,
+          ==> ~(y IN FV_subst [(x1,t1);(x2,t2)] s)
+Proof
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN REWRITE_TAC[FV_subst]
@@ -1698,16 +1672,16 @@ val NOT_IN_FV_subst2 = store_thm
             THEN IMP_RES_THEN (IMP_RES_THEN (REWRITE_THM o GSYM)) IN_NOT_IN
           ]
       ]
-   );
+QED
 
 
 
-val LAMBDA_CHANGE_BOUND_VAR = store_thm
-   ("LAMBDA_CHANGE_BOUND_VAR",
-    “!y x t:'a term.
+Theorem LAMBDA_CHANGE_BOUND_VAR:
+     !y x t:'a term.
          ~(y IN (FV t DIFF {x})) ==>
          (Lam x t =
-          Lam y (t <[ [x, Var y]))”,
+          Lam y (t <[ [x, Var y]))
+Proof
     REPEAT STRIP_TAC
     THEN ASSUME_TAC (SPECL [“t:'a term”,“x:var”] subst_SAME_ONE)
     THEN FIRST_ASSUM (SUBST1_TAC o SYM)
@@ -1715,14 +1689,14 @@ val LAMBDA_CHANGE_BOUND_VAR = store_thm
     THEN MATCH_MP_TAC LAMBDA_CHANGE_VAR
     THEN ASM_REWRITE_TAC[FV_subst_NIL]
     THEN REWRITE_TAC[IN_DIFF,IN,DE_MORGAN_THM]
-   );
+QED
 
 
-val LAMBDA_RENAME = store_thm
-   ("LAMBDA_RENAME",
-    “!t1:'a term t2:'a term t1' x y.
+Theorem LAMBDA_RENAME:
+     !t1:'a term t2:'a term t1' x y.
           (Lam x t1 = Lam y t1') /\ (FV t2 SUBSET FV t1) ==>
-          (Lam x t2 = Lam y (t2 <[ [x, Var y]))”,
+          (Lam x t2 = Lam y (t2 <[ [x, Var y]))
+Proof
     REPEAT STRIP_TAC
     THEN MATCH_MP_TAC LAMBDA_CHANGE_BOUND_VAR
     THEN IMP_RES_TAC SUBSET_DIFF
@@ -1732,17 +1706,17 @@ val LAMBDA_RENAME = store_thm
     THEN IMP_RES_THEN MATCH_MP_TAC NOT_IN_SUBSET
     THEN ASM_REWRITE_TAC[GSYM FV_term]
     THEN REWRITE_TAC[FV_term,IN_DIFF,IN]
-   );
+QED
 
 
 
-val LAMBDA_CLEAN_VAR = store_thm
-   ("LAMBDA_CLEAN_VAR",
-    “!s x t:'a term. FINITE s ==>
+Theorem LAMBDA_CLEAN_VAR:
+     !s x t:'a term. FINITE s ==>
          ?x' t'.
           ~(x' IN (FV t DIFF {x})) /\ ~(x' IN s) /\
           (HEIGHT t = HEIGHT t') /\
-          (Lam x t = Lam x' t')”,
+          (Lam x t = Lam x' t')
+Proof
     REPEAT STRIP_TAC
     THEN MP_TAC (SPECL [“variant x ((FV (t:'a term) DIFF {x}) UNION s)”,
                         “x:var”,“t:'a term”]
@@ -1762,7 +1736,7 @@ val LAMBDA_CLEAN_VAR = store_thm
     THEN EXISTS_TAC
          “t <[ [x,Var (variant x ((FV (t:'a term) DIFF {x}) UNION s))]”
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 
@@ -1856,15 +1830,15 @@ val EVERY_MAP = TAC_PROOF(([],
     THEN ASM_REWRITE_TAC[o_THM]
    );
 
-val LAMBDA_LIST_CLEAN_VAR = store_thm
-   ("LAMBDA_LIST_CLEAN_VAR",
-    “!s x os. FINITE s ==>
+Theorem LAMBDA_LIST_CLEAN_VAR:
+     !s x os. FINITE s ==>
          ?z os'.
           ~(z IN s) /\
           EVERY (\t:'a term. ~(z IN (FV t DIFF {x}))) os /\
           EVERY I (MAP2 (\t t'. HEIGHT t = HEIGHT t') os os') /\
           EVERY I (MAP2 (\t t'. Lam x t = Lam z t') os os') /\
-          (LENGTH os' = LENGTH os)”,
+          (LENGTH os' = LENGTH os)
+Proof
 
     let val s = “FOLDR (\t':'a term s. (FV t' DIFF {x}) UNION s) s os”
         val z = “variant x ^s”
@@ -1887,34 +1861,33 @@ val LAMBDA_LIST_CLEAN_VAR = store_thm
     THEN ASM_REWRITE_TAC[EVERY_MAP,I_o_ID]
     THEN IMP_RES_TAC EVERY_HEIGHT_LEMMA
     end
-   );
+QED
 
 
 
-val EQ_subst =
-    new_definition
-    ("EQ_subst",
-     “EQ_subst t (s1:^subs) s2 =
+Definition EQ_subst[nocompute]:
+     EQ_subst t (s1:^subs) s2 =
         (!x. (x IN t) ==>
-             (SUB s1 x = SUB s2 x))”);
+             (SUB s1 x = SUB s2 x))
+End
 
 
-val SUB_CONTEXT = store_thm
-   ("SUB_CONTEXT",
-    “!t:'a term s1 s2.
-         EQ_subst (FV t) s1 s2 ==> ((t <[ s1) = (t <[ s2))”,
+Theorem SUB_CONTEXT:
+     !t:'a term s1 s2.
+         EQ_subst (FV t) s1 s2 ==> ((t <[ s1) = (t <[ s2))
+Proof
     REPEAT GEN_TAC
     THEN REWRITE_TAC[EQ_subst,subst_EQ]
-   );
+QED
 
 
 
-val LAMBDA_SUBST_SIMPLE = store_thm
-   ("LAMBDA_SUBST_SIMPLE",
-    “!x t:'a term s.
+Theorem LAMBDA_SUBST_SIMPLE:
+     !x t:'a term s.
          ~(x IN FV_subst s (FV t DIFF {x})) /\
          ~(x IN BV_subst s) ==>
-         (Lam x t <[ s = Lam x (t <[ s))”,
+         (Lam x t <[ s = Lam x (t <[ s))
+Proof
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[SUB_term]
     THEN DEP_REWRITE_TAC[variant_ident,FINITE_FV_subst,FINITE_DIFF]
@@ -1929,7 +1902,7 @@ val LAMBDA_SUBST_SIMPLE = store_thm
     THEN REWRITE_TAC[SUB]
     THEN COND_CASES_TAC
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 (*
@@ -1997,8 +1970,6 @@ val ALL_LAMBDA_OBJ_EQ = store_thm
 
 
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "-" "lift.lst";
 

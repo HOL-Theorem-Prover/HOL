@@ -1,9 +1,7 @@
-
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory listTheory llistTheory pairTheory finite_mapTheory;
-open source_valuesTheory source_syntaxTheory stringTheory lprefix_lubTheory;
-
-val _ = new_theory "source_semantics";
+Theory source_semantics
+Ancestors
+  arithmetic list llist pair finite_map
+  source_values source_syntax string lprefix_lub
 
 
 (* types *)
@@ -227,9 +225,12 @@ Definition eval_def:
        | (Err v, s2) => (Err v, s2)
        | (Res vs, s2) => (Res (v::vs), s2))
 Termination
-  WF_REL_TAC ‘inv_image (measure I LEX measure I)
-                (λx. case x of INL (env,x,s) => (s.clock,exp_size x)
-                             | INR (env,xs,s) => (s.clock,exp1_size xs))’
+  WF_REL_TAC
+    ‘inv_image
+       (measure I LEX measure I)
+       (λx. case x of
+              INL (env,x,s) => (s.clock,exp_size x)
+            | INR (env,xs,s) => (s.clock,list_size exp_size xs))’
   \\ rw [] \\ fs [fix_def,CaseEq"bool"] \\ rw [] \\ fs []
   \\ fs [take_branch_def,AllCaseEqs(),return_def,fail_def,get_env_and_body_def]
   \\ rw [] \\ fs []
@@ -246,7 +247,7 @@ Proof
   \\ rw [] \\ fs []
 QED
 
-Triviality fix_eval:
+Theorem fix_eval[local]:
   fix s (eval env x s) = eval env x s ∧
   fix s (evals env xs s) = evals env xs s
 Proof
@@ -338,5 +339,3 @@ Definition prog_diverges_def:
     (∀k. prog_timesout k input prog) ∧
     output = build_lprefix_lub { prog_output k input prog | k IN UNIV }
 End
-
-val _ = export_theory();

@@ -28,48 +28,46 @@ I did try this approach, but it became rather gruesome.  The eventual,
 successful approach instead is very much in the style of Andy Pitts'
 original after all.
 *)
+Theory type_schemas
+Ancestors
+  nomset pred_set
+Libs
+  binderLib boolSimps BasicProvers
 
-open HolKernel boolLib Parse bossLib
 
-open binderLib boolSimps BasicProvers
+Datatype:
+  type = tyvar string
+       | tyfun type type
+       | tyforall (string set) type
+End
 
-open nomsetTheory
-open pred_setTheory
-
-val _ = new_theory "type_schemas"
-
-val _ = Hol_datatype`
-  type = tyvar of string
-       | tyfun of type => type
-       | tyforall of string set => type
-`;
-
-val fv_def = Define`
+Definition fv_def:
   (fv (tyvar s) = {s}) /\
   (fv (tyfun ty1 ty2) = fv ty1 UNION fv ty2) /\
   (fv (tyforall vs ty) = fv ty DIFF vs)
-`;
+End
 val _ = export_rewrites ["fv_def"]
 
-val FINITE_fv = store_thm(
-  "FINITE_fv",
-  ``!ty. FINITE (fv ty)``,
-  Induct THEN SRW_TAC [][pred_setTheory.FINITE_DIFF]);
+Theorem FINITE_fv:
+    !ty. FINITE (fv ty)
+Proof
+  Induct THEN SRW_TAC [][pred_setTheory.FINITE_DIFF]
+QED
 val _ = export_rewrites ["FINITE_fv"]
 
-val raw_rtypm_def = Define`
+Definition raw_rtypm_def:
   (raw_rtypm pi (tyvar s) = tyvar (stringpm pi s)) /\
   (raw_rtypm pi (tyfun ty1 ty2) = tyfun (raw_rtypm pi ty1) (raw_rtypm pi ty2)) /\
   (raw_rtypm pi (tyforall vs ty) = tyforall (ssetpm pi vs) (raw_rtypm pi ty))
-`;
+End
 val _ = export_rewrites["raw_rtypm_def"];
 
 val _ = overload_on("rty_pmact", ``mk_pmact raw_rtypm``);
 val _ = overload_on("rtypm", ``pmact rty_pmact``);
 
-val rtypm_raw = store_thm(
-  "rtypm_raw",
-  ``rtypm = raw_rtypm``,
+Theorem rtypm_raw:
+    rtypm = raw_rtypm
+Proof
   SRW_TAC [][GSYM pmact_bijections] THEN
   SRW_TAC [][is_pmact_def] THENL [
     Induct_on `x` THEN SRW_TAC [][],
@@ -77,7 +75,8 @@ val rtypm_raw = store_thm(
     FULL_SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN
     Induct THEN SRW_TAC [][] THEN
     METIS_TAC [pmact_permeq]
-  ]);
+  ]
+QED
 
 val rtypm_thm = save_thm(
 "rtypm_thm",
@@ -88,11 +87,11 @@ val fv_rtypm = prove(
   ``fv (rtypm pi ty) = ssetpm pi (fv ty)``,
   Induct_on `ty` THEN SRW_TAC [][pmact_INSERT, pmact_UNION, pmact_DIFF]);
 
-val okpm_def = Define`
+Definition okpm_def:
   okpm pi bvs avds t ⇔
      (!s. s IN bvs /\ s IN fv t ==> ~(stringpm pi s IN avds)) /\
      (!s. ~(s IN bvs) /\ s IN fv t ==> (stringpm pi s = s))
-`;
+End
 
 fun Prove(t,tac) = let val th = prove(t,tac)
                    in
@@ -354,9 +353,9 @@ val aeq_rtypm_eqn = prove(
   ``aeq (rtypm pi ty1) (rtypm pi ty2) = aeq ty1 ty2``,
   METIS_TAC [pmact_inverse, aeq_rtypm])
 
-val okpm_exists = store_thm(
-  "okpm_exists",
-  ``!s. FINITE s ==> ?pi. okpm pi bvs s ty``,
+Theorem okpm_exists:
+    !s. FINITE s ==> ?pi. okpm pi bvs s ty
+Proof
   SIMP_TAC (srw_ss()) [okpm_def] THEN
   HO_MATCH_MP_TAC FINITE_INDUCT THEN SRW_TAC [][] THENL [
     Q.EXISTS_TAC `[]` THEN SRW_TAC [][],
@@ -385,7 +384,8 @@ val okpm_exists = store_thm(
         `~(e = s')` by METIS_TAC [] THEN SRW_TAC [][]
       ]
     ]
-  ]);
+  ]
+QED
 
 val aeq_trans = prove(
   ``!t1 t2. aeq t1 t2 ==> !t3. aeq t2 t3 ==> aeq t1 t3``,
@@ -612,9 +612,9 @@ Proof
   ]
 QED
 
-val tys_fresh = store_thm(
-  "tys_fresh",
-  ``!ty a b. ~(a IN tysFV ty) /\ ~(b IN tysFV ty) ==> (tyspm [(a,b)] ty = ty)``,
+Theorem tys_fresh:
+    !ty a b. ~(a IN tysFV ty) /\ ~(b IN tysFV ty) ==> (tyspm [(a,b)] ty = ty)
+Proof
   HO_MATCH_MP_TAC tys_ind THEN SRW_TAC [][] THENL [
     SRW_TAC [][] THEN MATCH_MP_TAC (last (CONJUNCTS tyseq_rule)) THEN
     SRW_TAC [][] THEN
@@ -691,6 +691,5 @@ val tys_fresh = store_thm(
       ],
       SRW_TAC [][pmact_decompose]
     ]
-  ]);
-
-val _ = export_theory ();
+  ]
+QED

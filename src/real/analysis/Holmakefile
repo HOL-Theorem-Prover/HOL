@@ -23,7 +23,7 @@ DEPS = $(patsubst %,%.uo,$(BARE_DEPS))
 all: $(HOLHEAP) selftest.exe
 
 $(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state)
-	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $@ $(BARE_DEPS)
+	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) -o $@ $(BARE_DEPS)
 endif
 
 ifeq ($(KERNELID),otknl)

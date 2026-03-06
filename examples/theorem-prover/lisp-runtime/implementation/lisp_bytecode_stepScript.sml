@@ -1,19 +1,16 @@
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_bytecode_step";
+Theory lisp_bytecode_step
+Ancestors
+  lisp_sexp lisp_inv lisp_ops lisp_bigops lisp_codegen lisp_init
+  lisp_symbols lisp_sexp lisp_inv lisp_parse lisp_semantics
+  lisp_compiler lisp_compiler_op prog prog_x64 words arithmetic
+  list pred_set pair combin finite_map address sum set_sep bit
+  fcp string option relation stop_and_copy lisp_cons
+Libs
+  compilerLib decompilerLib codegenLib prog_x64Lib wordsLib
+  helperLib
+
 val _ = ParseExtras.temp_loose_equality()
 
-open lisp_sexpTheory lisp_invTheory lisp_opsTheory lisp_bigopsTheory;
-open lisp_codegenTheory lisp_initTheory lisp_symbolsTheory;
-open lisp_sexpTheory lisp_invTheory lisp_parseTheory;
-open lisp_semanticsTheory lisp_compilerTheory lisp_compiler_opTheory progTheory;
-open compilerLib decompilerLib codegenLib prog_x64Lib prog_x64Theory;
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib sumTheory;
-open set_sepTheory bitTheory fcpTheory stringTheory optionTheory relationTheory;
-open stop_and_copyTheory lisp_consTheory;
-
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
@@ -29,7 +26,7 @@ fun MERGE_CODE th = let
   in MERGE_CODE th end handle HOL_ERR _ => th;
 
 
-val zLISP_BYTECODE_def = Define `
+Definition zLISP_BYTECODE_def:
   zLISP_BYTECODE (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu) (xs,p,rs,bc) (stack,input,xbp,rstack,amnt,w) =
     (SEP_EXISTS x1 x2 x3 x4.
       zLISP (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu)
@@ -37,7 +34,8 @@ val zLISP_BYTECODE_def = Define `
                TL (xs ++ Sym "NIL"::stack),bc.consts,
                IO_STREAMS input bc.io_out,xbp,rs ++ rstack,
                BC_CODE (bc.code,bc.code_end),amnt,bc.ok) * zPC p * ~zS *
-      cond (bc_inv bc)) \/ zLISP_FAIL (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu)`;
+      cond (bc_inv bc)) \/ zLISP_FAIL (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu)
+End
 
 val SPEC_PULL_EXISTS = prove(
   ``(?x. SPEC m p c (q x)) ==> SPEC m p c (SEP_EXISTS x. q x)``,
@@ -74,14 +72,15 @@ val UPDATE_NTH_APPEND1 = prove(
   \\ FULL_SIMP_TAC std_ss [APPEND,CONS_11]
   \\ Q.PAT_X_ASSUM `!ys.bbb` MATCH_MP_TAC \\ DECIDE_TAC);
 
-val code_abbrevs_def = Define `
+Definition code_abbrevs_def:
   code_abbrevs cs =
     abbrev_code_for_compile_inst (cs,EL 9 cs) UNION
     abbrev_code_for_compile (cs,EL 8 cs) UNION
     abbrev_code_for_parse (cs,EL 3 cs) UNION
     abbrev_code_for_print (EL 7 cs) UNION
     abbrev_code_for_equal (EL 6 cs) UNION
-    abbrev_code_for_cons (EL 5 cs)`;
+    abbrev_code_for_cons (EL 5 cs)
+End
 
 val SPEC_CODE_ABBREV = prove(
   ``SPEC m p (c INSERT d) q ==> !d2. d SUBSET d2 ==> SPEC m p (c INSERT d2) q``,
@@ -579,16 +578,18 @@ val CODE_POOL_UNION_LEMMA = prove(
   \\ SIMP_TAC std_ss [SPLIT_def,cond_def,UNION_EMPTY,DISJOINT_EMPTY]
   \\ FULL_SIMP_TAC std_ss [FUN_EQ_THM] \\ METIS_TAC []);
 
-val SPEC_CODE_UNION = store_thm("SPEC_CODE_UNION",
-  ``!x p c d q. SPEC x p (c UNION d) q ==>
+Theorem SPEC_CODE_UNION:
+    !x p c d q. SPEC x p (c UNION d) q ==>
                 SPEC x (CODE_POOL ((FST (SND (SND x))):'a -> 'b -> bool) c * p) d
-                       (CODE_POOL (FST (SND (SND x))) c * q)``,
+                       (CODE_POOL (FST (SND (SND x))) c * q)
+Proof
   STRIP_TAC \\ `?x1 x2 x3 x4 x5. x = (x1,x2,x3,x4,x5)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [SPEC_def,RUN_def] \\ REPEAT STRIP_TAC
   \\ MP_TAC (Q.ISPEC `x3:'a->'b->bool` (Q.SPECL [`c`,`d`] (GSYM CODE_POOL_UNION_LEMMA)))
   \\ REPEAT STRIP_TAC
   \\ Q.PAT_X_ASSUM `!state. bbb` (MP_TAC o Q.SPECL [`state`,`r * r'`])
-  \\ FULL_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]);
+  \\ FULL_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]
+QED
 
 val SPEC_zCODE_SPLIT_UNION = prove(
   ``SPEC X64_MODEL p (c UNION d) q ==>
@@ -1086,13 +1087,14 @@ val zLISP_BYTECODE_PC_BOUND = prove(
   \\ IMP_RES_TAC zLISP_BOUND \\ POP_ASSUM (fn th => SIMP_TAC std_ss [Once th])
   \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [SPEC_MOVE_COND]);
 
-val X64_LISP_iSTEP = store_thm("X64_LISP_iSTEP",
-  ``!xs1 p1 r1 bc1 xs2 p2 r2 bc2.
+Theorem X64_LISP_iSTEP:
+    !xs1 p1 r1 bc1 xs2 p2 r2 bc2.
       iSTEP (xs1,p1,r1,bc1) (xs2,p2,r2,bc2) ==>
       SPEC X64_MODEL
         (zLISP_BYTECODE (a1,a2,sl,sl1,e,ex,cs,rbp,SOME T,NONE) (xs1,EL 4 cs + n2w p1,MAP (\n. EL 4 cs + n2w n) r1,bc1) (stack,input,xbp,rstack,amnt,EL 4 cs))
         (code_abbrevs cs)
-        (zLISP_BYTECODE (a1,a2,sl,sl1,e,ex,cs,rbp,SOME T,NONE) (xs2,EL 4 cs + n2w p2,MAP (\n. EL 4 cs + n2w n) r2,bc2) (stack,input,xbp,rstack,amnt,EL 4 cs))``,
+        (zLISP_BYTECODE (a1,a2,sl,sl1,e,ex,cs,rbp,SOME T,NONE) (xs2,EL 4 cs + n2w p2,MAP (\n. EL 4 cs + n2w n) r2,bc2) (stack,input,xbp,rstack,amnt,EL 4 cs))
+Proof
   NTAC 8 STRIP_TAC \\ Cases_on `bc1.code p1 = SOME iCOMPILE`
   THEN1 (STRIP_TAC \\ MATCH_MP_TAC X64_LISP_iSTEP_COMPILE \\ ASM_SIMP_TAC std_ss [])
   \\ Cases_on `?s. bc1.code p1 = SOME (iCONST_SYM s)` THEN1
@@ -1116,7 +1118,8 @@ val X64_LISP_iSTEP = store_thm("X64_LISP_iSTEP",
   \\ `bc_ref (p1,syms) xx = bc_ref (p1,syms) (THE (bc1.code p1))` by
        FULL_SIMP_TAC std_ss []
   \\ ONCE_ASM_REWRITE_TAC []
-  \\ MATCH_MP_TAC X64_LISP_iSTEP_MOST_CASES \\ ASM_SIMP_TAC std_ss []);
+  \\ MATCH_MP_TAC X64_LISP_iSTEP_MOST_CASES \\ ASM_SIMP_TAC std_ss []
+QED
 
 val X64_LISP_RTC_iSTEP = prove(
   ``!x y. RTC iSTEP x y ==>
@@ -1395,11 +1398,12 @@ val X64_LISP_BYTECODE_JNIL2 = prove(
 
 (* compose together *)
 
-val zLISP_BYTECODE_SHORT_def = Define `
+Definition zLISP_BYTECODE_SHORT_def:
   zLISP_BYTECODE_SHORT
     (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu,x,p,rs,bc,stack,input,xbp,rstack,amnt,w) =
   zLISP_BYTECODE (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu) ([x],p,rs,bc)
-    (stack,input,xbp,rstack,amnt,w)`;
+    (stack,input,xbp,rstack,amnt,w)
+End
 
 val f1 = PURE_REWRITE_RULE [AND_IMP_INTRO] o
          (fn th => if is_imp (concl th) then th else DISCH T th) o
@@ -1455,4 +1459,3 @@ val (READ_EVAL_PRINT_LOOP_BASE,READ_EVAL_PRINT_LOOP_STEP) = let
 val _ = save_thm("READ_EVAL_PRINT_LOOP_BASE",READ_EVAL_PRINT_LOOP_BASE);
 val _ = save_thm("READ_EVAL_PRINT_LOOP_STEP",READ_EVAL_PRINT_LOOP_STEP);
 
-val _ = export_theory();

@@ -2,7 +2,9 @@ signature pairLib =
 sig
  include Abbrev
 
- val add_pair_compset : computeLib.compset -> unit
+ val add_pair_compset : computeLib.compset -> computeLib.compset
+
+ val pair_rws : thm list
 
  (* from pairSyntax *)
 

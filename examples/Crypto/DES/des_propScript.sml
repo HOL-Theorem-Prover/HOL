@@ -3,21 +3,15 @@
 (*                                                                           *)
 (*  Author: Ruofan Yang                                                      *)
 (*===========================================================================*)
+Theory des_prop
+Ancestors
+  arithmetic pair fcp words list sorting pred_set combin des
+  measure probability extreal
+Libs
+  numLib fcpLib wordsLib listLib hurdUtils realLib
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory numLib pairTheory fcpTheory fcpLib wordsTheory wordsLib
-     listTheory listLib sortingTheory pred_setTheory combinTheory hurdUtils;
-
-open desTheory;
-
-open measureTheory probabilityTheory;
-open extrealTheory;
-open realLib;
 
 val _ = guessing_word_lengths := true;
-val _ = new_theory "des_prop";
-
 val fcp_ss = std_ss ++ fcpLib.FCP_ss;
 
 Theorem compl_IIP:
@@ -203,8 +197,7 @@ Proof
       rw[])
   >> RW_TAC fcp_ss[RoundKey_def,GENLIST,roundk_supp,REVERSE_DEF,roundk_R,roundk_L]
   >> Suff `HD ks = (c',c)`
-  >- (rw []\\
-      rw[Abbr `ks`])
+  >- rw[SNOC_APPEND, Abbr `ks`]
   >> rw[Abbr `ks`]
   >- (Q.PAT_X_ASSUM ‘HD (REVERSE (SNOC (c',c) (GENLIST (λi. (RK_L i k,RK_R i k)) n))) = _’ MP_TAC \\
       rw[HD_REVERSE])
@@ -1334,7 +1327,6 @@ End
 Theorem prob_space_word6x6:
    prob_space word6x6
 Proof
-
      MATCH_MP_TAC prob_uniform_on_finite_set
   >> rw[]
 
@@ -1368,7 +1360,6 @@ End
 Theorem prob_space_word6p:
    prob_space word6p
 Proof
-
      MATCH_MP_TAC prob_uniform_on_finite_set
   >> rw[]
 
@@ -1534,7 +1525,6 @@ End
 Theorem prob_space_word48p:
    prob_space word48p
 Proof
-
      MATCH_MP_TAC prob_uniform_on_finite_set
   >> rw[]
 
@@ -1847,5 +1837,4 @@ Definition characterDES_def:
       XorR= GENLIST (λi. charapairDES X Yl i) (LENGTH Yl) in (X,XorR,Y)
 End
 
-val _ = export_theory();
 val _ = html_theory "des_prop";

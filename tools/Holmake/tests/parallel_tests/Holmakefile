@@ -11,6 +11,7 @@ DIRNAMES = \
   nullary_tgt \
   phony_tgt \
   quote-filter \
+  cachekey \
   theorytarget \
   commandmacros \
   doublecrnl \
@@ -26,12 +27,14 @@ DIRNAMES = \
   gh1353 \
   ignore_errors/j1 \
   qfreadTheoremsyntax \
-  use-fnf
+  use-fnf \
+  time-logging
 
 ifdef POLY
 DIRNAMES += cheatspotting \
             depchain_heap/ \
             depchain_heap/dir2 \
+            heap-size \
             ignore_errors/j4 \
             hollogs
 endif

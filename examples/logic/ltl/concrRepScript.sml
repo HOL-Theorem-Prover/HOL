@@ -1,69 +1,77 @@
-open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory pred_setTheory rich_listTheory sortingTheory relationTheory
-
-open alterATheory sptreeTheory ltlTheory generalHelpersTheory
-
-val _ = new_theory "concrRep";
+Theory concrRep
+Ancestors
+  gfg list option pred_set rich_list sorting relation alterA
+  sptree ltl generalHelpers
 
 val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
-val _ = Datatype`
+Datatype:
   edgeLabelAA = <| edge_grp : num ;
                    pos_lab : (α list) ;
                    neg_lab : (α list)
-                 |>`;
+                 |>
+End
 
-val _ = Datatype`
+Datatype:
   nodeLabelAA = <| frml : α ltl_frml ;
                    is_final : bool ;
                    true_labels : (α edgeLabelAA) list
-               |>`;
+               |>
+End
 
-val _ = Datatype`
+Datatype:
   concrAA = <| graph : (α nodeLabelAA, α edgeLabelAA) gfg ;
                init : (num list) list ;
                atomicProp : α list
-            |>`;
+            |>
+End
 
-val concr2Abstr_states_def = Define`
+Definition concr2Abstr_states_def:
   concr2Abstr_states graph =
      { x.frml | SOME x ∈
-                (IMAGE (\n. lookup n graph.nodeInfo) (domain graph.nodeInfo))}`;
+                (IMAGE (\n. lookup n graph.nodeInfo) (domain graph.nodeInfo))}
+End
 
-val concr2Abstr_init_def = Define`
+Definition concr2Abstr_init_def:
   concr2Abstr_init concrInit graph =
      LIST_TO_SET
          (MAP
           (\l. {x.frml |
                 MEM x (CAT_OPTIONS (MAP (\n. lookup n graph.nodeInfo) l)) })
-          concrInit)`;
+          concrInit)
+End
 
-val concr2Abstr_final_def = Define`
+Definition concr2Abstr_final_def:
   concr2Abstr_final graph =
      {x.frml | SOME x ∈
                  (IMAGE (\n. lookup n graph.nodeInfo) (domain graph.nodeInfo))
-               ∧ x.is_final}`;
+               ∧ x.is_final}
+End
 
-val _ = Datatype`
+Datatype:
   concrEdge = <| pos : (α list) ;
                  neg : (α list) ;
-                 sucs : (α ltl_frml) list |>`;
+                 sucs : (α ltl_frml) list |>
+End
 
-val cE_equiv_def = Define `
+Definition cE_equiv_def:
   cE_equiv cE1 cE2 =
       ((MEM_EQUAL cE1.pos cE2.pos)
      ∧ (MEM_EQUAL cE1.neg cE2.neg)
-     ∧ (MEM_EQUAL cE1.sucs cE2.sucs))`;
+     ∧ (MEM_EQUAL cE1.sucs cE2.sucs))
+End
 
-val transformLabel_def = Define`
+Definition transformLabel_def:
   transformLabel aP pos neg =
    FOLDR (\a sofar. (char (POW aP) a) ∩ sofar)
-         (FOLDR (\a sofar. (char_neg (POW aP) a) ∩ sofar) (POW aP) neg) pos`;
+         (FOLDR (\a sofar. (char_neg (POW aP) a) ∩ sofar) (POW aP) neg) pos
+End
 
-val TRANSFORMLABEL_AP = store_thm
-  ("TRANSFORMLABEL_AP",
-   ``!aP pos neg. transformLabel aP pos neg ⊆ POW aP``,
+Theorem TRANSFORMLABEL_AP:
+     !aP pos neg. transformLabel aP pos neg ⊆ POW aP
+Proof
    simp[transformLabel_def]>> Induct_on `neg`
    >- (Induct_on `pos` >> fs[] >> rpt strip_tac
        >> fs[char_def]
@@ -76,14 +84,14 @@ val TRANSFORMLABEL_AP = store_thm
            metis_tac[INTER_SUBSET,SUBSET_TRANS,INTER_ASSOC]
        >> simp[char_neg_def]
       )
-  );
+QED
 
-val TRANSFORMLABEL_SUBSET = store_thm
-  ("TRANSFORMLABEL_SUBSET",
-   ``!aP pos1 neg1 pos2 neg2.
+Theorem TRANSFORMLABEL_SUBSET:
+     !aP pos1 neg1 pos2 neg2.
   MEM_SUBSET pos1 pos2 ∧ MEM_SUBSET neg1 neg2
   ==>
-  (transformLabel aP pos2 neg2 ⊆ transformLabel aP pos1 neg1)``,
+  (transformLabel aP pos2 neg2 ⊆ transformLabel aP pos1 neg1)
+Proof
    simp[transformLabel_def] >> Induct_on `pos1`
    >- (Induct_on `neg1` >> fs[MEM_SUBSET_def] >> rpt strip_tac
     >- metis_tac[TRANSFORMLABEL_AP,transformLabel_def]
@@ -92,23 +100,23 @@ val TRANSFORMLABEL_SUBSET = store_thm
    >- (rpt strip_tac >> fs[MEM_SUBSET_def]
        >> metis_tac[FOLDR_INTER,SUBSET_TRANS]
       )
-  );
+QED
 
-val TRANSFORMLABEL_POS = store_thm
-  ("TRANSFORMLABEL_POS",
-   ``!aP s p x. (s ⊆ POW aP) ==>
+Theorem TRANSFORMLABEL_POS:
+     !aP s p x. (s ⊆ POW aP) ==>
          ((set p) ⊆ aP ∧ (set p ⊆ x) ∧ x ∈ s)
-           = (x ∈ FOLDR (λa sofar. char (POW aP) a ∩ sofar) s p)``,
+           = (x ∈ FOLDR (λa sofar. char (POW aP) a ∩ sofar) s p)
+Proof
    gen_tac >> Induct_on `p` >> fs[IN_POW] >> rpt strip_tac >> fs[]
    >> fs[char_def,IN_POW,EQ_IMP_THM] >> rpt strip_tac
    >> metis_tac[SUBSET_DEF,IN_POW]
-  );
+QED
 
-val TRANSFORMLABEL_NEG = store_thm
-  ("TRANSFORMLABEL_NEG",
-   ``!aP n x. ((set n) ⊆ aP) ==>
+Theorem TRANSFORMLABEL_NEG:
+     !aP n x. ((set n) ⊆ aP) ==>
          (((x ⊆ (aP DIFF set n)) ∧ x ⊆ aP)
-      = (x ∈ FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) n))``,
+      = (x ∈ FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) n))
+Proof
    gen_tac >> Induct_on `n` >> fs[IN_POW] >> rpt strip_tac >> fs[]
    >> fs[char_neg_def,char_def,IN_POW,EQ_IMP_THM] >> rpt strip_tac
    >- (fs[DIFF_DEF,SUBSET_DEF] >> metis_tac[])
@@ -123,14 +131,14 @@ val TRANSFORMLABEL_NEG = store_thm
        >- metis_tac[SUBSET_DEF]
        >- (fs[SUBSET_DEF,DIFF_DEF] >> metis_tac[])
       )
-  );
+QED
 
-val TRANSFORMLABEL_EMPTY = store_thm
-  ("TRANSFORMLABEL_EMPTY",
-   ``!aP pos neg. (set pos) ⊆ aP ∧ (set neg) ⊆ aP
+Theorem TRANSFORMLABEL_EMPTY:
+     !aP pos neg. (set pos) ⊆ aP ∧ (set neg) ⊆ aP
   ==>
   ~((set pos) ∩ (set neg) = {})
-     = (transformLabel aP pos neg = {})``,
+     = (transformLabel aP pos neg = {})
+Proof
    rpt strip_tac >> simp[EQ_IMP_THM] >> rpt strip_tac
    >- (simp[transformLabel_def] >> CCONTR_TAC
        >> `?x. x ∈ (FOLDR (λa sofar. char (POW aP) a ∩ sofar)
@@ -162,17 +170,17 @@ val TRANSFORMLABEL_EMPTY = store_thm
            >> metis_tac[MEMBER_NOT_EMPTY]
           )
       )
-  );
+QED
 
-val TRANSFORMLABEL_SUBSET2 = store_thm
-  ("TRANSFORMLABEL_SUBSET2",
-  ``!aP pos1 neg1 pos2 neg2.
+Theorem TRANSFORMLABEL_SUBSET2:
+    !aP pos1 neg1 pos2 neg2.
   (!x. (MEM x pos1 \/ MEM x pos2 \/ MEM x neg1 \/ MEM x neg2)
        ==> x ∈ aP
   )
   ∧ ~(transformLabel aP pos2 neg2 = {})
   ∧ (transformLabel aP pos2 neg2 ⊆ transformLabel aP pos1 neg1)
-   ==> MEM_SUBSET pos1 pos2 ∧ MEM_SUBSET neg1 neg2``,
+   ==> MEM_SUBSET pos1 pos2 ∧ MEM_SUBSET neg1 neg2
+Proof
   rpt strip_tac >> CCONTR_TAC
   >> `set pos2 ⊆ aP ∧ set neg2 ⊆ aP`
       by (fs[SUBSET_DEF] >> rpt strip_tac >> metis_tac[MEM])
@@ -245,7 +253,7 @@ val TRANSFORMLABEL_SUBSET2 = store_thm
        )
        >> metis_tac[SUBSET_DEF]
       )
-  );
+QED
 
 
 (* val TRANSFORM_LABEL_POS = store_thm *)
@@ -477,15 +485,15 @@ val TRANSFORMLABEL_SUBSET2 = store_thm
 (* ) *)
 
 
-val TRANSFORMLABEL_FOLDR = store_thm
-  ("TRANSFORMLABEL_FOLDR",
-   ``!aP l x.
+Theorem TRANSFORMLABEL_FOLDR:
+     !aP l x.
        (!e. MEM e l ==> x ∈ transformLabel aP e.pos e.neg)
        ∧ (x ∈ (POW aP))
        ==> x ∈
             transformLabel aP
             (FOLDR (λe pr. e.pos ++ pr) [] l)
-            (FOLDR (λe pr. e.neg ++ pr) [] l)``,
+            (FOLDR (λe pr. e.neg ++ pr) [] l)
+Proof
    Induct_on `l` >> fs[transformLabel_def] >> rpt strip_tac
    >> `x ∈
         FOLDR (λa sofar. char (POW aP) a ∩ sofar)
@@ -497,23 +505,24 @@ val TRANSFORMLABEL_FOLDR = store_thm
                (FOLDR (λe pr. e.neg ⧺ pr) [] l))
         (FOLDR (λe pr. e.pos ⧺ pr) [] l)` by metis_tac[]
    >> rw[FOLDR_LEMM5]
-  );
+QED
 
-val concr2AbstractEdge_def = Define`
+Definition concr2AbstractEdge_def:
   concr2AbstractEdge aP (concrEdge pos neg sucs) =
-      (transformLabel aP pos neg, set sucs)`;
+      (transformLabel aP pos neg, set sucs)
+End
 
-val C2A_EDGE_CE_EQUIV = store_thm
-  ("C2A_EDGE_CE_EQUIV",
-   ``!aP cE1 cE2. cE_equiv cE1 cE2
-       ==> (concr2AbstractEdge aP cE1 = concr2AbstractEdge aP cE2)``,
+Theorem C2A_EDGE_CE_EQUIV:
+     !aP cE1 cE2. cE_equiv cE1 cE2
+       ==> (concr2AbstractEdge aP cE1 = concr2AbstractEdge aP cE2)
+Proof
    rpt strip_tac >> Cases_on `cE1` >> Cases_on `cE2` >> fs[cE_equiv_def]
    >> simp[concr2AbstractEdge_def] >> strip_tac >> fs[MEM_EQUAL_SET]
    >> simp[transformLabel_def]
    >> metis_tac[FOLDR_INTER_MEMEQUAL]
-  );
+QED
 
-val extractTrans_def = Define`
+Definition extractTrans_def:
   extractTrans graph s =
      let sucs =
             OPTION_TO_LIST
@@ -536,58 +545,63 @@ val extractTrans_def = Define`
                  ∧ ~(labelSucs = {})
                  ∧ edge = (label.edge_grp, label.pos_lab,
                            label.neg_lab, labelSucs) }
-      ∪ { (0,l.pos_lab,l.neg_lab,{}) | MEM l trueLabels }`;
+      ∪ { (0,l.pos_lab,l.neg_lab,{}) | MEM l trueLabels }
+End
 
-val concrTrans_def = Define `
+Definition concrTrans_def:
   concrTrans g prop f =
-    IMAGE (λ(i,p,n,e). (transformLabel prop p n,e)) (extractTrans g f)`;
+    IMAGE (λ(i,p,n,e). (transformLabel prop p n,e)) (extractTrans g f)
+End
 
-val concr2AbstrAA_def = Define`
+Definition concr2AbstrAA_def:
   concr2AbstrAA (concrAA g init prop) =
     ALTER_A
         (concr2Abstr_states g)
         (POW (LIST_TO_SET prop))
         (concrTrans g (set prop))
         (concr2Abstr_init init g)
-        (concr2Abstr_final g)`;
+        (concr2Abstr_final g)
+End
 
-val graphStatesWithId_def = Define`
+Definition graphStatesWithId_def:
   graphStatesWithId g =
-        MAP (λ(id,label). (id, label.frml)) (toAList g.nodeInfo)`;
+        MAP (λ(id,label). (id, label.frml)) (toAList g.nodeInfo)
+End
 
-val GRAPH_STATES_WITH_ID_LEMM = store_thm
-  ("GRAPH_STATES_WITH_ID_LEMM",
-   ``!g id q. MEM (id,q) (toAList g.nodeInfo)
-                ==> MEM (id,q.frml) (graphStatesWithId g)``,
+Theorem GRAPH_STATES_WITH_ID_LEMM:
+     !g id q. MEM (id,q) (toAList g.nodeInfo)
+                ==> MEM (id,q.frml) (graphStatesWithId g)
+Proof
    rpt strip_tac >> fs[graphStatesWithId_def,MEM_MAP]
    >> qexists_tac `(id,q)` >> fs[]
-  );
+QED
 
-val GRAPHSTATES_WITH_ID_EMPTY = store_thm
-  ("GRAPHSTATES_WITH_ID_EMPTY",
-   ``graphStatesWithId empty = []``,
+Theorem GRAPHSTATES_WITH_ID_EMPTY:
+     graphStatesWithId empty = []
+Proof
    simp[graphStatesWithId_def,toAList_def,empty_def,foldi_def]
-  );
+QED
 
-val unique_node_formula_def = Define`
+Definition unique_node_formula_def:
   unique_node_formula g =
    ∀id h.
     MEM (id,h) (graphStatesWithId g) ⇒
-     ∀oId. MEM (oId,h) (graphStatesWithId g) ⇒ (id = oId)`;
+     ∀oId. MEM (oId,h) (graphStatesWithId g) ⇒ (id = oId)
+End
 
-val UNIQUE_NODE_FORM_EMPTY = store_thm
-  ("UNIQUE_NODE_FORM_EMPTY",
-   ``unique_node_formula empty``,
+Theorem UNIQUE_NODE_FORM_EMPTY:
+     unique_node_formula empty
+Proof
    fs[unique_node_formula_def] >> rpt strip_tac
    >> fs[GRAPHSTATES_WITH_ID_EMPTY]
-  );
+QED
 
-val UNIQUE_NODE_FORM_LEMM = store_thm
-  ("UNIQUE_NODE_FORM_LEMM",
-   ``!g f. unique_node_formula g
+Theorem UNIQUE_NODE_FORM_LEMM:
+     !g f. unique_node_formula g
              ==> (OPTION_MAP (λ(id,label). (id,label.frml))
                       (findNode (λ(n,l). l.frml = f) g)
-                   = FIND (λa. SND a = f) (graphStatesWithId g))``,
+                   = FIND (λa. SND a = f) (graphStatesWithId g))
+Proof
    rpt strip_tac >> fs[findNode_def,graphStatesWithId_def]
    >> Cases_on
        `FIND (λa. SND a = f)
@@ -641,14 +655,14 @@ val UNIQUE_NODE_FORM_LEMM = store_thm
        )
        >> metis_tac[]
       )
-  );
+QED
 
-val UNIQUE_NODE_FORM_LEMM2 = store_thm
-  ("UNIQUE_NODE_FORM_LEMM2",
-   ``!g. unique_node_formula g
+Theorem UNIQUE_NODE_FORM_LEMM2:
+     !g. unique_node_formula g
          ==> (!f x. (SND x = f) ∧ MEM x (graphStatesWithId g)
                ==> !y. (SND y = f) ∧ MEM y (graphStatesWithId g)
-                    ==> (x = y))``,
+                    ==> (x = y))
+Proof
    rpt strip_tac >> fs[graphStatesWithId_def,unique_node_formula_def]
    >> Cases_on `x` >> Cases_on `y`
    >> first_x_assum (qspec_then `q` mp_tac) >> rpt strip_tac
@@ -661,12 +675,12 @@ val UNIQUE_NODE_FORM_LEMM2 = store_thm
    >> `MEM (q',f) (MAP (λ(id,label). (id,label.frml)) (toAList g.nodeInfo))`
       by (fs[MEM_MAP] >> qexists_tac `y'` >> Cases_on `y'` >> fs[])
    >> simp[] >> fs[]
-  );
+QED
 
-val UNIQUE_NODE_FIND_LEMM = store_thm
-  ("UNIQUE_NODE_FIND_LEMM",
-   ``!g id node f. unique_node_formula g ∧ (lookup id g.nodeInfo = SOME node)
-       ==> (findNode (λ(n,l). l.frml = node.frml) g = SOME (id,node))``,
+Theorem UNIQUE_NODE_FIND_LEMM:
+     !g id node f. unique_node_formula g ∧ (lookup id g.nodeInfo = SOME node)
+       ==> (findNode (λ(n,l). l.frml = node.frml) g = SOME (id,node))
+Proof
    rpt strip_tac >> fs[unique_node_formula_def,findNode_def]
    >> `?x. FIND (λ(n,l). l.frml = node.frml) (toAList g.nodeInfo) = SOME x` by (
         `?x. MEM x (toAList g.nodeInfo) ∧ (λ(n,l). l.frml = node.frml) x`
@@ -686,12 +700,11 @@ val UNIQUE_NODE_FIND_LEMM = store_thm
        by metis_tac[GRAPH_STATES_WITH_ID_LEMM,MEM_toAList]
    >> `id = id2` by (rw[] >> metis_tac[])
    >> rw[] >> metis_tac[MEM_toAList,SOME_11]
-  );
+QED
 
 
-val EXTR_TRANS_LEMM = store_thm
-  ("EXTR_TRANS_LEMM",
-   ``!g sucId suc id label fls q.
+Theorem EXTR_TRANS_LEMM:
+     !g sucId suc id label fls q.
        (lookup id g.nodeInfo = SOME q)
      ∧ (lookup id g.followers = SOME fls)
      ∧ (lookup sucId g.nodeInfo = SOME suc)
@@ -700,7 +713,8 @@ val EXTR_TRANS_LEMM = store_thm
      ∧ (0 < label.edge_grp)
      ==> (?s. (label.edge_grp,label.pos_lab,label.neg_lab,s)
                  ∈ extractTrans g q.frml
-            ∧ (suc.frml ∈ s))``,
+            ∧ (suc.frml ∈ s))
+Proof
    rpt strip_tac >> simp[extractTrans_def] >> CCONTR_TAC
    >> fs[]
    >> qabbrev_tac `P = λlabel:α edgeLabelAA.
@@ -744,20 +758,21 @@ val EXTR_TRANS_LEMM = store_thm
        >> qexists_tac `sucId` >> fs[OPTION_TO_LIST_MEM]
        >> qexists_tac `fls` >> fs[]
       )
-  );
+QED
 
-val graphStates_def = Define
- `graphStates g = MAP ((\l. l.frml) o SND) (toAList g.nodeInfo)`;
+Definition graphStates_def:
+  graphStates g = MAP ((\l. l.frml) o SND) (toAList g.nodeInfo)
+End
 
-val GRAPHSTATES_EMPTY = store_thm
-  ("GRAPHSTATES_EMPTY",
-   ``graphStates empty = []``,
+Theorem GRAPHSTATES_EMPTY:
+     graphStates empty = []
+Proof
    simp[graphStates_def,toAList_def,empty_def,foldi_def]
-  );
+QED
 
-val GRAPHSTATES_CONCR_LEMM = store_thm
-  ("GRAPHSTATES_CONCR_LEMM",
-   ``!g. set (graphStates g) = concr2Abstr_states g``,
+Theorem GRAPHSTATES_CONCR_LEMM:
+     !g. set (graphStates g) = concr2Abstr_states g
+Proof
    rpt strip_tac >> simp[graphStates_def,concr2Abstr_states_def]
    >> simp[SET_EQ_SUBSET,SUBSET_DEF,MEM_MAP] >> rpt strip_tac
     >- (qexists_tac `SND y` >> simp[]
@@ -765,13 +780,13 @@ val GRAPHSTATES_CONCR_LEMM = store_thm
         >> Cases_on `y` >> fs[MEM_toAList] >> metis_tac[]
        )
     >- (qexists_tac `(n,x')` >> simp[] >> simp[MEM_toAList])
-  );
+QED
 
-val GRAPH_STATES_ID_IMP_GRAPH_STATES = store_thm
-  ("GRAPH_STATES_ID_IMP_GRAPH_STATES",
-   ``!g1 g2.
+Theorem GRAPH_STATES_ID_IMP_GRAPH_STATES:
+     !g1 g2.
       set (graphStatesWithId g1) = set (graphStatesWithId g2)
-        ==> (set (graphStates g1) = set (graphStates g2))``,
+        ==> (set (graphStates g1) = set (graphStates g2))
+Proof
    rpt strip_tac >> fs[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
    >> fs[graphStates_def,MEM_MAP] >> Cases_on `y`
    >- (`MEM (q,r.frml) (graphStatesWithId  g2)`
@@ -784,21 +799,23 @@ val GRAPH_STATES_ID_IMP_GRAPH_STATES = store_thm
        >> POP_ASSUM mp_tac >> simp[graphStatesWithId_def,MEM_MAP]
        >> rpt strip_tac >> qexists_tac `y` >> Cases_on `y` >> fs[]
       )
-  );
+QED
 
-val autoStates_def = Define`
-  autoStates (concrAA g i aP) = graphStates g`;
+Definition autoStates_def:
+  autoStates (concrAA g i aP) = graphStates g
+End
 
-val inAuto_def = Define`
-  inAuto aut f = MEM f (autoStates aut)`;
+Definition inAuto_def:
+  inAuto aut f = MEM f (autoStates aut)
+End
 
-val IN_AUTO_FINITE = store_thm
-  ("IN_AUTO_FINITE",
-   ``!aut. FINITE (LIST_TO_SET (autoStates aut))``,
+Theorem IN_AUTO_FINITE:
+     !aut. FINITE (LIST_TO_SET (autoStates aut))
+Proof
    rpt strip_tac >> metis_tac[FINITE_LIST_TO_SET]
-  );
+QED
 
-val addFrmlToGraph_def = Define`
+Definition addFrmlToGraph_def:
    (addFrmlToGraph g (U f1 f2) =
        if MEM (U f1 f2) (MAP ((λl. l.frml) ∘ SND) (toAList g.nodeInfo))
        then g
@@ -807,11 +824,12 @@ val addFrmlToGraph_def = Define`
  ∧ (addFrmlToGraph g f =
        if MEM f (MAP ((λl. l.frml) ∘ SND) (toAList g.nodeInfo))
        then g
-       else addNode <| frml := f; is_final := F ; true_labels := []|> g)`;
+       else addNode <| frml := f; is_final := F ; true_labels := []|> g)
+End
 
-val ADDFRML_LEMM = store_thm
-  ("ADDFRML_LEMM",
-   ``!g f. MEM f (graphStates (addFrmlToGraph g f))``,
+Theorem ADDFRML_LEMM:
+     !g f. MEM f (graphStates (addFrmlToGraph g f))
+Proof
    rpt strip_tac >> Cases_on `MEM f (graphStates g)`
     >- (Cases_on `f` >> fs[addFrmlToGraph_def,graphStates_def])
     >- (Cases_on `?f1 f2. f = U f1 f2`
@@ -833,15 +851,15 @@ val ADDFRML_LEMM = store_thm
              >> rw[] >> metis_tac[]
             )
        )
-  );
+QED
 
-val ADDFRML_LEMM_AUT = store_thm
-  ("ADDFRML_LEMM_AUT",
-   ``!g i aP f. inAuto (concrAA (addFrmlToGraph g f) i aP) f``,
+Theorem ADDFRML_LEMM_AUT:
+     !g i aP f. inAuto (concrAA (addFrmlToGraph g f) i aP) f
+Proof
    metis_tac[inAuto_def,autoStates_def,ADDFRML_LEMM]
-  );
+QED
 
-val addEdgeToGraph_def = Define`
+Definition addEdgeToGraph_def:
   addEdgeToGraph f (concrEdge pos neg sucs) g =
     if sucs = []
     then do (nodeId,nodeLabel) <- findNode (λ(n,l). l.frml = f) g;
@@ -868,29 +886,31 @@ val addEdgeToGraph_def = Define`
                                SOME newGraph
                             od)
                  (SOME g) unfolded_edges
-        od`;
+        od
+End
 
-val empty_followers_def = Define`
+Definition empty_followers_def:
   empty_followers g f =
     !id node. (lookup id g.nodeInfo = SOME node
             ∧ node.frml = f)
                ==> (lookup id g.followers = SOME []
-                  ∧ node.true_labels = [])`;
+                  ∧ node.true_labels = [])
+End
 
-val EMPTY_FLWS_GRAPHSTATES = store_thm
-  ("EMPTY_FLWS_GRAPHSTATES",
-   ``!g x. ~(MEM x (graphStates g)) ==> empty_followers g x``,
+Theorem EMPTY_FLWS_GRAPHSTATES:
+     !g x. ~(MEM x (graphStates g)) ==> empty_followers g x
+Proof
    rpt strip_tac >> fs[graphStates_def,empty_followers_def] >> rpt strip_tac
    >> fs[MEM_MAP]
    >> `MEM (id,node) (toAList g.nodeInfo)`
       by metis_tac[MEM_toAList]
    >>  `(SND (id,node)).frml = x` by fs[]
    >> metis_tac[]
-  );
+QED
 
-val EMPTY_FLWS_LEMM = store_thm
-  ("EMPTY_FLWS_LEMM",
-   ``!f g. empty_followers g f ==> extractTrans g f = {}``,
+Theorem EMPTY_FLWS_LEMM:
+     !f g. empty_followers g f ==> extractTrans g f = {}
+Proof
    rpt strip_tac >> fs[empty_followers_def]
    >> `!x. ~(x ∈ extractTrans g f)` suffices_by metis_tac[MEMBER_NOT_EMPTY]
    >> simp[extractTrans_def] >> rpt strip_tac
@@ -922,33 +942,35 @@ val EMPTY_FLWS_LEMM = store_thm
         )
        >> rw[] >> Cases_on `l'` >> fs[]
       )
-  );
+QED
 
-val flws_sorted_def = Define `
+Definition flws_sorted_def:
   flws_sorted g =
     (!x_id fls. x_id ∈ domain g.nodeInfo
    ∧ (lookup x_id g.followers = SOME fls)
    ==> (SORTED (λf1 f2. (FST f2).edge_grp <= (FST f1).edge_grp) fls
       ∧ (!x y. (MEM x fls ∧ MEM y fls ∧ ((FST x).edge_grp = (FST y).edge_grp))
             ==> (FST x = FST y))
-      ∧ (!x. MEM x fls ==> (0 < (FST x).edge_grp))))`;
+      ∧ (!x. MEM x fls ==> (0 < (FST x).edge_grp))))
+End
 
-val FLWS_SORTED_EMPTY = store_thm
-  ("FLWS_SORTED_EMPTY",
-   ``flws_sorted empty``,
+Theorem FLWS_SORTED_EMPTY:
+     flws_sorted empty
+Proof
    fs[flws_sorted_def] >> rpt strip_tac >> fs[empty_def,domain_def,foldi_def]
-  );
+QED
 
-val first_flw_has_max_counter_def = Define`
+Definition first_flw_has_max_counter_def:
   first_flw_has_max_counter g =
      (!x_id fls fl. x_id ∈ domain g.nodeInfo
                ∧ (lookup x_id g.followers = SOME (fl::fls))
                ==> (!y. MEM y fls
-                        ==> ((FST y).edge_grp <= (FST fl).edge_grp)))`;
+                        ==> ((FST y).edge_grp <= (FST fl).edge_grp)))
+End
 
-val FLWS_SORTED_IMP_FFHMC = store_thm
-  ("FLWS_SORTED_IMP_FFHMC",
-   ``!g. flws_sorted g ==> first_flw_has_max_counter g``,
+Theorem FLWS_SORTED_IMP_FFHMC:
+     !g. flws_sorted g ==> first_flw_has_max_counter g
+Proof
    fs[flws_sorted_def,first_flw_has_max_counter_def] >> rpt strip_tac
    >> first_x_assum (qspec_then `x_id` mp_tac) >> simp[] >> rpt strip_tac
    >> qabbrev_tac `P =
@@ -957,37 +979,37 @@ val FLWS_SORTED_IMP_FFHMC = store_thm
    >> `transitive P` by (qunabbrev_tac `P` >> simp[transitive_def])
    >> `!y. MEM y fls ==> P fl y` by metis_tac[SORTED_EQ]
    >> `P fl y` by metis_tac[] >> qunabbrev_tac `P` >> fs[]
-  );
+QED
 
-val FIRST_FLW_EMPTY = store_thm
-  ("FIRST_FLW_EMPTY",
-   ``first_flw_has_max_counter empty``,
+Theorem FIRST_FLW_EMPTY:
+     first_flw_has_max_counter empty
+Proof
    fs[first_flw_has_max_counter_def] >> rpt strip_tac
    >> fs[empty_def,domain_def,foldi_def]
-  );
+QED
 
-val FIRST_FLW_LEMM = store_thm
-  ("FIRST_FLW_LEMM",
-   ``!g g2. (g.followers = g2.followers)
+Theorem FIRST_FLW_LEMM:
+     !g g2. (g.followers = g2.followers)
           ∧ (domain g.nodeInfo = domain g2.nodeInfo)
             ==> (first_flw_has_max_counter g
-                 = first_flw_has_max_counter g2)``,
+                 = first_flw_has_max_counter g2)
+Proof
    simp[first_flw_has_max_counter_def,EQ_IMP_THM] >> rpt strip_tac
    >> metis_tac[]
-  );
+QED
 
-val ADDFRML_WFG = store_thm
-  ("ADDFRML_WFG",
-   ``!g f. wfg g ==> wfg (addFrmlToGraph g f)``,
+Theorem ADDFRML_WFG:
+     !g f. wfg g ==> wfg (addFrmlToGraph g f)
+Proof
    rpt strip_tac >> Cases_on `MEM f (graphStates g)`
    >> Cases_on `f` >> fs[addFrmlToGraph_def,graphStates_def]
-  );
+QED
 
-val ADDFRML_FLW_LEMM = store_thm
-  ("ADDFRML_FLW_LEMM",
-  ``!g f. wfg g
+Theorem ADDFRML_FLW_LEMM:
+    !g f. wfg g
         ∧ flws_sorted g
-           ==> flws_sorted (addFrmlToGraph g f)``,
+           ==> flws_sorted (addFrmlToGraph g f)
+Proof
    rpt strip_tac >> fs[flws_sorted_def] >> rpt strip_tac
    >> `wfg (addFrmlToGraph g f)` by metis_tac[ADDFRML_WFG]
    >> Cases_on `fls` >> fs[SORTED_NIL]
@@ -1000,16 +1022,16 @@ val ADDFRML_FLW_LEMM = store_thm
    )
    >> rw[] >> first_x_assum (qspec_then `x_id` mp_tac) >> rpt strip_tac
    >> first_x_assum (qspec_then `(h::t)` mp_tac) >> simp[]
-  );
+QED
 
-val until_iff_final_def = Define`
+Definition until_iff_final_def:
     until_iff_final g =
            !id node. (lookup id g.nodeInfo = SOME node)
-               ==> ((?f1 f2. node.frml = U f1 f2) = node.is_final)`;
+               ==> ((?f1 f2. node.frml = U f1 f2) = node.is_final)
+End
 
-val ADDFRML_LEMM2 = store_thm
-  ("ADDFRML_LEMM2",
-   ``!g f. wfg g ==>
+Theorem ADDFRML_LEMM2:
+     !g f. wfg g ==>
       (set (graphStates (addFrmlToGraph g f)) = set (graphStates g) ∪ {f}
     ∧ (!id. IS_SOME (lookup id g.nodeInfo)
             ==> ((lookup id g.nodeInfo
@@ -1017,7 +1039,8 @@ val ADDFRML_LEMM2 = store_thm
                ∧ (lookup id g.followers
                   = lookup id (addFrmlToGraph g f).followers))
       )
-    ∧ (until_iff_final g ==> until_iff_final (addFrmlToGraph g f)))``,
+    ∧ (until_iff_final g ==> until_iff_final (addFrmlToGraph g f)))
+Proof
    simp[SET_EQ_SUBSET] >> rpt strip_tac
     >- (simp[SUBSET_DEF,UNION_DEF] >> rpt strip_tac
         >> Cases_on `MEM x (graphStates g)` >> fs[]
@@ -1086,12 +1109,12 @@ val ADDFRML_LEMM2 = store_thm
                  )
              )
        )
-  );
+QED
 
-val ADDFRML_UNIQUENODE_LEMM = store_thm
-  ("ADDFRML_UNIQUENODE_LEMM",
-   ``!g g2 f. (wfg g ∧ unique_node_formula g ∧ (addFrmlToGraph g f = g2))
-           ==> (unique_node_formula g2)``,
+Theorem ADDFRML_UNIQUENODE_LEMM:
+     !g g2 f. (wfg g ∧ unique_node_formula g ∧ (addFrmlToGraph g f = g2))
+           ==> (unique_node_formula g2)
+Proof
    fs[unique_node_formula_def] >> rpt strip_tac
    >> Cases_on `MEM f (MAP ((λl. l.frml) ∘ SND) (toAList g.nodeInfo))`
    >- (Cases_on `f` >> fs[addFrmlToGraph_def] >> metis_tac[])
@@ -1203,14 +1226,14 @@ val ADDFRML_UNIQUENODE_LEMM = store_thm
            )
           )
       )
-  );
+QED
 
-val ADDFRML_EXTRTRANS_LEMM = store_thm
-  ("ADDFRML_EXTRTRANS_LEMM",
-   ``!g1 g2 f props. (wfg g1
+Theorem ADDFRML_EXTRTRANS_LEMM:
+     !g1 g2 f props. (wfg g1
                     ∧ addFrmlToGraph g1 f = g2
                     ∧ unique_node_formula g1)
-                ==> !x. extractTrans g1 x = extractTrans g2 x``,
+                ==> !x. extractTrans g1 x = extractTrans g2 x
+Proof
    rpt strip_tac
    >> `!id. (IS_SOME (lookup id g1.nodeInfo))
             ==> (lookup id g2.followers = lookup id g1.followers)` by (
@@ -1428,11 +1451,10 @@ val ADDFRML_EXTRTRANS_LEMM = store_thm
        )
        >> metis_tac[]
       )
-  );
+QED
 
-val ADDFRML_FOLDR_LEMM = store_thm
-  ("ADDFRML_FOLDR_LEMM",
-   ``!g fs. wfg g ==>
+Theorem ADDFRML_FOLDR_LEMM:
+     !g fs. wfg g ==>
       (set (graphStates g) ∪ set fs =
          set (graphStates (FOLDR (\f g. addFrmlToGraph g f) g fs))
          ∧ wfg (FOLDR (\f g. addFrmlToGraph g f) g fs)
@@ -1455,7 +1477,8 @@ val ADDFRML_FOLDR_LEMM = store_thm
          ∧ (wfg g ∧ unique_node_formula g ==>
                 (!x. extractTrans g x =
                        extractTrans (FOLDR (\f g. addFrmlToGraph g f) g fs) x))
-      )``,
+      )
+Proof
    gen_tac >> Induct_on `fs` >> rpt strip_tac
    >> fs[FOLDR]
     >- (`set (graphStates
@@ -1474,14 +1497,14 @@ val ADDFRML_FOLDR_LEMM = store_thm
      >- metis_tac[ADDFRML_UNIQUENODE_LEMM]
      >- metis_tac[ADDFRML_FLW_LEMM]
      >- metis_tac[ADDFRML_EXTRTRANS_LEMM]
-  );
+QED
 
-val ADDFRML_EMPTYFLW_LEMM = store_thm
-  ("ADDFRML_EMPTYFLW_LEMM",
-   ``!(g:(α nodeLabelAA, α edgeLabelAA) gfg) fs f.
+Theorem ADDFRML_EMPTYFLW_LEMM:
+     !(g:(α nodeLabelAA, α edgeLabelAA) gfg) fs f.
         wfg g ∧ MEM f fs
      ∧ (~MEM f (graphStates g) \/ empty_followers g f)
-               ==> empty_followers (FOLDR (\f g. addFrmlToGraph g f) g fs) f``,
+               ==> empty_followers (FOLDR (\f g. addFrmlToGraph g f) g fs) f
+Proof
    `!(g:(α nodeLabelAA, α edgeLabelAA) gfg) fs f.
           wfg g ∧ MEM f fs
         ∧ (~MEM f (graphStates g)
@@ -1637,18 +1660,18 @@ val ADDFRML_EMPTYFLW_LEMM = store_thm
          )
        )
       )
-  );
+QED
 
-val ADD_0EDGE_LEMM = store_thm
-  ("ADD_0EDGE_LEMM",
-   ``!g g2 nId lab edge.
+Theorem ADD_0EDGE_LEMM:
+     !g g2 nId lab edge.
         let NEW_LAB =
               nodeLabelAA lab.frml lab.is_final (edge::lab.true_labels)
         in
         (lookup nId g.nodeInfo = SOME lab)
         ∧ unique_node_formula g
         ∧ (updateNode nId NEW_LAB g = SOME g2)
-        ==> unique_node_formula g2``,
+        ==> unique_node_formula g2
+Proof
    fs[unique_node_formula_def,updateNode_def,graphStatesWithId_def]
    >> rpt strip_tac >> fs[MEM_MAP]
    >> first_x_assum (qspec_then `id` mp_tac) >> rpt strip_tac
@@ -1683,7 +1706,7 @@ val ADD_0EDGE_LEMM = store_thm
         ∧ MEM y (toAList g.nodeInfo)` by (
        qexists_tac `(oId,z2)` >> fs[MEM_toAList]
    ) >> metis_tac[]
-  );
+QED
 
 Theorem ADDEDGE_COUNTER_LEMM:
    ∀g e f g2.
@@ -1903,11 +1926,11 @@ Proof
    )
 QED
 
-val ADDEDGE_FINAL_LEMM = store_thm
-  ("ADDEDGE_FINAL_LEMM",
-   ``!g g2 f e. (wfg g ∧ (addEdgeToGraph f e g = SOME g2)
+Theorem ADDEDGE_FINAL_LEMM:
+     !g g2 f e. (wfg g ∧ (addEdgeToGraph f e g = SOME g2)
                ∧ until_iff_final g)
-              ==> until_iff_final g2``,
+              ==> until_iff_final g2
+Proof
    rpt strip_tac >> Cases_on `e` >> fs[addEdgeToGraph_def]
    >> Cases_on `l1` >> fs[]
    >> Cases_on `x` >> fs[updateNode_def]
@@ -1943,10 +1966,12 @@ val ADDEDGE_FINAL_LEMM = store_thm
        >> fs[until_iff_final_def] >> rpt strip_tac
        >> metis_tac[]
       )
-  );
+QED
 
 val _ = set_trace "BasicProvers.var_eq_old" 1
 val _ = diminish_srw_ss ["ABBREV"]
+val _ = augment_srw_ss [rewrites [SNOC_APPEND]]
+
 Theorem ADDEDGE_LEMM:
    !g f e aP. wfg g ∧ MEM f (graphStates g)
             ∧ unique_node_formula g
@@ -3216,9 +3241,8 @@ Proof
    )
 QED
 
-val ADDEDGE_FOLDR_LEMM = store_thm
-  ("ADDEDGE_FOLDR_LEMM",
-   ``!g1 f. MEM f (graphStates g1)
+Theorem ADDEDGE_FOLDR_LEMM:
+     !g1 f. MEM f (graphStates g1)
            ∧ wfg g1
            ∧ unique_node_formula g1
            ∧ flws_sorted g1
@@ -3237,7 +3261,8 @@ val ADDEDGE_FOLDR_LEMM = store_thm
               then IMAGE SND (extractTrans g2 h) =
                    IMAGE SND (extractTrans g1 h)
                          ∪ { (e.pos,e.neg,set e.sucs) | MEM e ls}
-              else extractTrans g2 h = extractTrans g1 h))``,
+              else extractTrans g2 h = extractTrans g1 h))
+Proof
    strip_tac >> strip_tac >> strip_tac
    >> Induct_on `ls` >> fs[] >> strip_tac
    >> Q.HO_MATCH_ABBREV_TAC `?g. A ==> ((?x. B g x) ∧ C g) ∧ D g`
@@ -3306,6 +3331,5 @@ val ADDEDGE_FOLDR_LEMM = store_thm
           )
       )
    >- metis_tac[]
-  );
+QED
 
-val _ = export_theory ();

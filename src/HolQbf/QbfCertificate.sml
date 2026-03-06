@@ -7,7 +7,7 @@
    http://www.cprover.org/qbv/download/qbcformat.pdf).
 
    Also see "A First Step Towards a Unified Proof Checker for QBF" by Toni
-   Jussila, Armin Biere, Carsten Sinz, Daniel Kröning and Christoph    (UOK)
+   Jussila, Armin Biere, Carsten Sinz, Daniel Kröning and Christoph
    Wintersteiger, published at SAT 2007 (vol. 4501 of LNCS).
 
    We additionally require that certificates of validity contain "extensions"

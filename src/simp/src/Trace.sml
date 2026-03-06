@@ -24,8 +24,8 @@ val say = Lib.say
            | IGNORE of (string * Thm.thm)
            | MORE_CONTEXT of Thm.thm;
 
-   val trace_hook : ((int * action) -> unit) ref = ref (fn (n,s) => ());
-   fun trace x = (!trace_hook) x
+   val trace_hook : (int * action) Listener.t = Listener.new_listener()
+   fun trace x = ignore (Listener.call_listener trace_hook x)
 
 val trace_level = ref 0;
 val _ = Feedback.register_trace("simplifier", trace_level, 7);
@@ -57,14 +57,15 @@ fun tty_trace (LZ_TEXT fs) = (say "  "; say (fs ()); say "\n")
 *)
 fun fudge t = Time.+(t, Time.fromSeconds 10)
 
-val _ = trace_hook :=
-        (fn (n,a) => if (n <= !trace_level) then
-                       (say "[";
-                        say ((Arbnum.toString o #usec o Portable.dest_time o
-                              fudge)
-                             (#usr (Timer.checkCPUTimer Globals.hol_clock)));
-                        say "]: ";
-                        tty_trace a)
-                     else ())
+val _ = Listener.add_listener trace_hook
+        ("default",
+         (fn (n,a) => if (n <= !trace_level) then
+                        (say "[";
+                         say ((Arbnum.toString o #usec o Portable.dest_time o
+                               fudge)
+                                (#usr (Timer.checkCPUTimer Globals.hol_clock)));
+                         say "]: ";
+                         tty_trace a)
+                      else ()))
 
 end (* struct *)

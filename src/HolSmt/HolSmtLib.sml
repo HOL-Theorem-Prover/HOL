@@ -33,6 +33,7 @@ structure HolSmtLib :> HolSmtLib = struct
   end
 
   val CVC_ORACLE_TAC = GENERIC_SMT_TAC CVC.CVC_SMT_Oracle
+  val CVC_TAC = GENERIC_SMT_TAC CVC.CVC_SMT_Prover
   val YICES_TAC = GENERIC_SMT_TAC Yices.Yices_Oracle
   val Z3_ORACLE_TAC = GENERIC_SMT_TAC Z3.Z3_SMT_Oracle
   val Z3_TAC = GENERIC_SMT_TAC Z3.Z3_SMT_Prover
@@ -42,11 +43,13 @@ structure HolSmtLib :> HolSmtLib = struct
 
   (* The tactics below accept a list of theorems, like metis_tac[] *)
   fun cvco_tac thms = assume_thms thms THEN CVC_ORACLE_TAC
+  fun cvc_tac thms = assume_thms thms THEN CVC_TAC
   fun z3_tac thms = assume_thms thms THEN Z3_TAC
   fun z3o_tac thms = assume_thms thms THEN Z3_ORACLE_TAC
 
   fun prove (tm, tac) = Tactical.TAC_PROOF(([], tm), tac)
   fun CVC_ORACLE_PROVE tm = prove (tm, CVC_ORACLE_TAC)
+  fun CVC_PROVE tm = prove (tm, CVC_TAC)
   fun YICES_PROVE tm = prove (tm, YICES_TAC)
   fun Z3_ORACLE_PROVE tm = prove (tm, Z3_ORACLE_TAC)
   fun Z3_PROVE tm = prove (tm, Z3_TAC)
@@ -63,13 +66,14 @@ structure HolSmtLib :> HolSmtLib = struct
         )
       fun provoke_err prove_fn =
         ignore (prove_fn boolSyntax.T)  (* should fail *)
-          handle Feedback.HOL_ERR {message, ...} =>
-            Feedback.HOL_MESG ("HolSmtLib: " ^ message)
+          handle Feedback.HOL_ERR herr =>
+            Feedback.HOL_MESG ("HolSmtLib: " ^ Feedback.message_of herr)
     in
       Feedback.set_trace "HolSmtLib" 0;
-      if CVC.is_configured () then
-        check_available CVC_ORACLE_PROVE "cvc5 (oracle)"
-      else
+      if CVC.is_configured () then (
+        check_available CVC_ORACLE_PROVE "cvc5 (oracle)";
+        check_available CVC_PROVE "cvc5 (with proofs)"
+      ) else
         provoke_err CVC_ORACLE_PROVE;
       if Yices.is_configured () then
         check_available YICES_PROVE "Yices"

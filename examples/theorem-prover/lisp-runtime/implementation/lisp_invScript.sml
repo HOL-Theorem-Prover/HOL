@@ -1,16 +1,13 @@
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_inv";
+Theory lisp_inv
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  set_sep bit fcp lisp_sexp lisp_cons stop_and_copy lisp_bytecode
+Libs
+  wordsLib helperLib
+
 val _ = ParseExtras.temp_loose_equality()
 
 
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib;
-open set_sepTheory bitTheory fcpTheory;
-
-open lisp_sexpTheory lisp_consTheory stop_and_copyTheory lisp_bytecodeTheory;
-
-
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 fun SUBGOAL q = REVERSE (sg q)
@@ -19,66 +16,77 @@ val wstd_ss = std_ss ++ SIZES_ss ++ rewrites [DECIDE ``n<256 ==> (n:num)<1844674
 
 (* I/O definition *)
 
-val _ = Hol_datatype `
-  io_streams = IO_STREAMS of string (* input *) => string (* output *)`;
+Datatype:
+  io_streams = IO_STREAMS string (* input *) string (* output *)
+End
 
 val io_streams_11 = fetch "-" "io_streams_11"
 
 (* symbol table definition *)
 
-val one_byte_list_def = Define `
+Definition one_byte_list_def:
   (one_byte_list a [] = emp) /\
-  (one_byte_list a (x::xs) = one (a:word64,x:word8) * one_byte_list (a + 1w) xs)`;
+  (one_byte_list a (x::xs) = one (a:word64,x:word8) * one_byte_list (a + 1w) xs)
+End
 
-val one_byte_list_APPEND = store_thm("one_byte_list_APPEND",
-  ``!a xs ys.
-      one_byte_list a (xs++ys) = one_byte_list a xs * one_byte_list (a + n2w (LENGTH xs)) ys``,
+Theorem one_byte_list_APPEND:
+    !a xs ys.
+      one_byte_list a (xs++ys) = one_byte_list a xs * one_byte_list (a + n2w (LENGTH xs)) ys
+Proof
   Induct_on `xs` \\ ASM_SIMP_TAC std_ss [one_byte_list_def,APPEND,SEP_CLAUSES,
     LENGTH,WORD_ADD_0,word_arith_lemma1,ADD1,AC ADD_COMM ADD_ASSOC]
-  \\ SIMP_TAC (std_ss++star_ss) []);
+  \\ SIMP_TAC (std_ss++star_ss) []
+QED
 
-val string_data_def = Define `
-  string_data str = n2w (LENGTH str + 1) :: MAP ((n2w:num->word8) o ORD) str`;
+Definition string_data_def:
+  string_data str = n2w (LENGTH str + 1) :: MAP ((n2w:num->word8) o ORD) str
+End
 
-val symbol_list_def = Define `
+Definition symbol_list_def:
   (symbol_list [] = [0w]) /\
-  (symbol_list (str::xs) = string_data str ++ symbol_list xs)`;
+  (symbol_list (str::xs) = string_data str ++ symbol_list xs)
+End
 
-val one_symbol_list_def = Define `
+Definition one_symbol_list_def:
   one_symbol_list a xs k =
     SEP_EXISTS ys.
       one_byte_list a (symbol_list xs ++ ys) *
       cond (EVERY (\x. LENGTH x < 255) xs /\ (LENGTH (symbol_list xs ++ ys) = k) /\
             ALL_DISTINCT xs /\ 520 <= LENGTH ys /\
-            LENGTH xs < 536870912)`;
+            LENGTH xs < 536870912)
+End
 
-val symtable_inv_def = Define `
+Definition symtable_inv_def:
   symtable_inv (sa1:word64,sa2:word64,sa3:word64,dg,g) xs =
     (one_symbol_list sa1 xs (w2n sa3 - w2n sa1)) (fun2set (g,dg)) /\
-    (sa2 = sa1 + n2w (LENGTH (symbol_list xs)))`;
+    (sa2 = sa1 + n2w (LENGTH (symbol_list xs)))
+End
 
 
 (* top-level stack declaration *)
 
-val ref_stack_space_above_def = Define `
+Definition ref_stack_space_above_def:
   (ref_stack_space_above sp 0 = emp) /\
   (ref_stack_space_above sp (SUC n) =
-     ref_stack_space_above (sp + 4w) n * SEP_EXISTS w. one (sp + 4w:word64,w:word32))`;
+     ref_stack_space_above (sp + 4w) n * SEP_EXISTS w. one (sp + 4w:word64,w:word32))
+End
 
-val ref_full_stack_def = Define `
+Definition ref_full_stack_def:
   ref_full_stack sp wsp xs xs_rest ys n_rest =
     ref_stack (sp + 4w * wsp) (xs ++ xs_rest) *
     ref_stack_space (sp + 4w * wsp) (w2n wsp + 6) *
     ref_static (sp - 256w) ys *
-    ref_stack_space_above (sp + 4w * wsp + n2w (4 * LENGTH (xs ++ xs_rest))) n_rest`;
+    ref_stack_space_above (sp + 4w * wsp + n2w (4 * LENGTH (xs ++ xs_rest))) n_rest
+End
 
 (* definition of code heap *)
 
-val IMMEDIATE32_def = Define `
+Definition IMMEDIATE32_def:
   IMMEDIATE32 (w:word32) =
-    [w2w w; w2w (w >>> 8); w2w (w >>> 16); w2w (w >>> 24)]:word8 list`;
+    [w2w w; w2w (w >>> 8); w2w (w >>> 16); w2w (w >>> 24)]:word8 list
+End
 
-val bc_ref_def = Define `
+Definition bc_ref_def:
   (bc_ref (i,sym) iPOP =
     [0x44w; 0x8Bw; 0x4w; 0x9Fw; 0x48w; 0xFFw; 0xC3w]) /\
   (bc_ref (i,sym) (iCONST_NUM n) =
@@ -232,24 +240,29 @@ val bc_ref_def = Define `
       0x1w; 0x0w; 0x0w; 0x0w; 0xBAw; 0xBw; 0x0w; 0x0w; 0x0w; 0x48w;
       0xFFw; 0xA7w; 0x38w; 0xFFw; 0xFFw; 0xFFw; 0x49w; 0x8Bw; 0xD2w;
       0x48w; 0xC1w; 0xEAw; 0x2w; 0x48w; 0x3w; 0x97w; 0x60w; 0xFFw;
-      0xFFw; 0xFFw; 0x48w; 0xFFw; 0xD2w])`;
+      0xFFw; 0xFFw; 0x48w; 0xFFw; 0xD2w])
+End
 
-val bc_length_def = Define `
-  bc_length x = LENGTH (bc_ref (0,[]) x)`;
+Definition bc_length_def:
+  bc_length x = LENGTH (bc_ref (0,[]) x)
+End
 
-val bs2bytes_def = Define `
+Definition bs2bytes_def:
   (bs2bytes (i,sym) [] = []) /\
-  (bs2bytes (i,sym) (x::xs) = bc_ref (i,sym) x ++ bs2bytes (i+bc_length x,sym) xs)`;
+  (bs2bytes (i,sym) (x::xs) = bc_ref (i,sym) x ++ bs2bytes (i+bc_length x,sym) xs)
+End
 
-val _ = Hol_datatype `
-  code_type = BC_CODE of (num -> bc_inst_type option) # num`;
+Datatype:
+  code_type = BC_CODE ((num -> bc_inst_type option) # num)
+End
 
-val WRITE_CODE_def = Define `
+Definition WRITE_CODE_def:
   (WRITE_CODE (BC_CODE (code,ptr)) [] = BC_CODE (code,ptr)) /\
   (WRITE_CODE (BC_CODE (code,ptr)) (c::cs) =
-     WRITE_CODE (BC_CODE ((ptr =+ SOME c) code,ptr+bc_length c)) cs)`;
+     WRITE_CODE (BC_CODE ((ptr =+ SOME c) code,ptr+bc_length c)) cs)
+End
 
-val bc_symbols_ok_def = Define `
+Definition bc_symbols_ok_def:
   (bc_symbols_ok sym [] = T) /\
   (bc_symbols_ok sym (iCONST_NUM i::xs) = i < 2**30 /\ bc_symbols_ok sym xs) /\
   (bc_symbols_ok sym (iCONST_SYM s::xs) = MEM s sym /\ bc_symbols_ok sym xs) /\
@@ -259,32 +272,38 @@ val bc_symbols_ok_def = Define `
   (bc_symbols_ok sym (iSTORE i::xs) = i < 2**29 /\ bc_symbols_ok sym xs) /\
   (bc_symbols_ok sym (iLOAD i::xs) = i < 2**29 /\ bc_symbols_ok sym xs) /\
   (bc_symbols_ok sym (iPOPS i::xs) = i < 2**30 /\ bc_symbols_ok sym xs) /\
-  (bc_symbols_ok sym (_::xs) = bc_symbols_ok sym xs)`;
+  (bc_symbols_ok sym (_::xs) = bc_symbols_ok sym xs)
+End
 
-val code_ptr_def = Define `code_ptr (BC_CODE (_,p)) = p`;
-val code_mem_def = Define `code_mem (BC_CODE (m,_)) = m`;
+Definition code_ptr_def:   code_ptr (BC_CODE (_,p)) = p
+End
+Definition code_mem_def:   code_mem (BC_CODE (m,_)) = m
+End
 
-val code_heap_def = Define `
+Definition code_heap_def:
   code_heap code (sym,base_ptr,curr_ptr,space_left,dh,h) =
     ?bs hs.
       (WRITE_CODE (BC_CODE ((\x. NONE),0)) bs = code) /\
       (curr_ptr = base_ptr + n2w (code_ptr code)) /\
       (one_byte_list base_ptr (bs2bytes (0,sym) bs ++ hs)) (fun2set (h,dh)) /\
       code_ptr code + w2n space_left < 2**30 /\ (LENGTH hs = w2n (space_left:word64)) /\
-      bc_symbols_ok sym bs`;
+      bc_symbols_ok sym bs
+End
 
 
 (* definition of main invariant *)
 
-val INIT_SYMBOLS_def = Define `
+Definition INIT_SYMBOLS_def:
   INIT_SYMBOLS = ["NIL";"T";"QUOTE";"CONS";"CAR";"CDR";"EQUAL";"<";"SYMBOL-<";
                   "+";"-";"ATOMP";"CONSP";"NATP";"SYMBOLP";"DEFINE";"IF";
                   "LAMBDA";"FUNCALL";"ERROR";"PRINT";"LET";"LET*";"COND";"OR";
-                  "AND";"FIRST";"SECOND";"THIRD";"FOURTH";"FIFTH";"LIST";"DEFUN"]`;
+                  "AND";"FIRST";"SECOND";"THIRD";"FOURTH";"FIFTH";"LIST";"DEFUN"]
+End
 
-val IS_TRUE_def = Define `IS_TRUE ok = (ok = T)`;
+Definition IS_TRUE_def:   IS_TRUE ok = (ok = T)
+End
 
-val lisp_inv_def = Define `
+Definition lisp_inv_def:
   lisp_inv (* pointers and bounds that are constant throughout execution *)
            (a1,a2,sl,sl1,e,ex,cs,ok)
            (* high-level data that is held in the heap *)
@@ -311,7 +330,8 @@ val lisp_inv_def = Define `
        ref_full_stack sp wsp ss ss1
          ([a1;a2;n2w e;bp2;sa1;sa2;sa3;ex] ++ cs ++ ds) (sl1 - LENGTH ss1)) (fun2set (f,df)) /\
       symtable_inv (sa1:word64,sa2:word64,sa3:word64,dg,g) (INIT_SYMBOLS++sym) /\
-      code_heap code (INIT_SYMBOLS++sym,EL 4 cs,EL 2 ds,EL 3 ds,dd,d)`;
+      code_heap code (INIT_SYMBOLS++sym,EL 4 cs,EL 2 ds,EL 3 ds,dd,d)
+End
 
 val LISP = lisp_inv_def |> SPEC_ALL |> concl |> dest_eq |> fst
 
@@ -708,31 +728,37 @@ val lisp_inv_top = prove(
   \\ Q.PAT_X_ASSUM `sp && 3w = 0w` MP_TAC \\ blastLib.BBLAST_TAC)
   |> SIMP_RULE std_ss [LET_DEF];
 
-val SPLIT_LIST_LESS_EQ = store_thm("SPLIT_LIST_LESS_EQ",
-  ``!xs j. j <= LENGTH xs ==>
+Theorem SPLIT_LIST_LESS_EQ:
+    !xs j. j <= LENGTH xs ==>
            ?xs1 xs2. (xs = xs1 ++ xs2) /\
-                     (LENGTH xs1 = j)``,
+                     (LENGTH xs1 = j)
+Proof
   Induct \\ SIMP_TAC std_ss [LENGTH] \\ REPEAT STRIP_TAC
   THEN1 (Q.LIST_EXISTS_TAC [`[]`,`[]`] \\ ASM_SIMP_TAC std_ss [LENGTH,APPEND])
   \\ Cases_on `j` \\ FULL_SIMP_TAC std_ss [ADD1,LENGTH_NIL,APPEND,CONS_11]
   \\ RES_TAC \\ Q.EXISTS_TAC `h::xs1`
   \\ ASM_SIMP_TAC std_ss [LENGTH,APPEND_11,APPEND,CONS_11]
-  \\ ASM_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND_11,APPEND,CONS_11,ADD1]);
+  \\ ASM_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND_11,APPEND,CONS_11,ADD1]
+QED
 
-val ZIP_APPEND = store_thm("ZIP_APPEND",
-  ``!xs1 ys1 xs2 ys2.
+Theorem ZIP_APPEND:
+    !xs1 ys1 xs2 ys2.
       (LENGTH ys1 = LENGTH xs1) ==>
-      (ZIP (xs1 ++ xs2, ys1 ++ ys2) = ZIP (xs1,ys1) ++ ZIP (xs2,ys2))``,
+      (ZIP (xs1 ++ xs2, ys1 ++ ys2) = ZIP (xs1,ys1) ++ ZIP (xs2,ys2))
+Proof
   Induct \\ SIMP_TAC std_ss [LENGTH,LENGTH_NIL,ZIP,APPEND]
-  \\ Cases_on `ys1` \\ FULL_SIMP_TAC std_ss [ADD1,LENGTH,ZIP,APPEND]);
+  \\ Cases_on `ys1` \\ FULL_SIMP_TAC std_ss [ADD1,LENGTH,ZIP,APPEND]
+QED
 
-val ref_stack_APPEND = store_thm("ref_stack_APPEND",
-  ``!xs ys a.
+Theorem ref_stack_APPEND:
+    !xs ys a.
       ref_stack a (xs ++ ys) =
       SEP_ARRAY (\a x. one (a,ref_heap_addr x)) 4w a xs *
-      ref_stack (a + n2w (4 * LENGTH xs)) ys``,
+      ref_stack (a + n2w (4 * LENGTH xs)) ys
+Proof
   Induct \\ ASM_SIMP_TAC std_ss [APPEND,ref_stack_def,LENGTH,SEP_ARRAY_def,
-    SEP_CLAUSES,WORD_ADD_0,STAR_ASSOC,MULT_CLAUSES,GSYM word_add_n2w,WORD_ADD_ASSOC]);
+    SEP_CLAUSES,WORD_ADD_0,STAR_ASSOC,MULT_CLAUSES,GSYM word_add_n2w,WORD_ADD_ASSOC]
+QED
 
 val ref_stack_space_LEMMA = prove(
   ``!k n p.
@@ -864,15 +890,17 @@ val _ = save_thm("lisp_inv_pops_lemma",lisp_inv_pops_lemma);
 
 (* store and load from stack *)
 
-val SPLIT_LIST = store_thm("SPLIT_LIST",
-  ``!xs j. j < LENGTH xs ==>
+Theorem SPLIT_LIST:
+    !xs j. j < LENGTH xs ==>
            ?xs1 x xs2. (xs = xs1 ++ x::xs2) /\
-                       (LENGTH xs1 = j)``,
+                       (LENGTH xs1 = j)
+Proof
   Induct \\ SIMP_TAC std_ss [LENGTH] \\ REPEAT STRIP_TAC
   \\ Cases_on `j` \\ FULL_SIMP_TAC std_ss [ADD1,LENGTH_NIL,APPEND,CONS_11]
   \\ RES_TAC \\ Q.EXISTS_TAC `h::xs1`
   \\ ASM_SIMP_TAC std_ss [LENGTH,APPEND_11,APPEND,CONS_11]
-  \\ ASM_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND_11,APPEND,CONS_11,ADD1]);
+  \\ ASM_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND_11,APPEND,CONS_11,ADD1]
+QED
 
 val lisp_inv_load_blast = prove(
   ``(w + 4w * x && 3w = 0w) = (w && 3w = 0w:word64)``,
@@ -914,9 +942,11 @@ val lisp_inv_load = prove(
   Cases_on `j` \\ FULL_SIMP_TAC std_ss [w2n_n2w,w2w_def,LET_DEF]
   \\ METIS_TAC [lisp_inv_load_lemma]) |> SIMP_RULE std_ss [LET_DEF];
 
-val LENGTH_UPDATE_NTH = store_thm("LENGTH_UPDATE_NTH",
-  ``!xs n x. (LENGTH (UPDATE_NTH n x xs) = LENGTH xs)``,
-  Induct \\ Cases_on `n` \\ ASM_SIMP_TAC std_ss [UPDATE_NTH_def,LENGTH]);
+Theorem LENGTH_UPDATE_NTH:
+    !xs n x. (LENGTH (UPDATE_NTH n x xs) = LENGTH xs)
+Proof
+  Induct \\ Cases_on `n` \\ ASM_SIMP_TAC std_ss [UPDATE_NTH_def,LENGTH]
+QED
 
 val UPDATE_NTH_APPEND = prove(
   ``!xs ys zs y x n.
@@ -1067,8 +1097,9 @@ val lisp_inv_eq = prove(
   ``~isDot x0 \/ ~isDot x1 ==> ^LISP ==> ((w0 = w1) = (x0 = x1))``,
   METIS_TAC [lisp_inv_eq_lemma,lisp_inv_swap1]);
 
-val lisp_inv_eq_zero = store_thm("lisp_inv_eq_zero",
-  ``^LISP ==> ((tw1 = w2w w0) = (x0 = Val 0))``,
+Theorem lisp_inv_eq_zero:
+    ^LISP ==> ((tw1 = w2w w0) = (x0 = Val 0))
+Proof
   REPEAT STRIP_TAC \\ IMP_RES_TAC lisp_inv_swap1
   \\ IMP_RES_TAC (Q.SPEC `0w` lisp_inv_Val)
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w]
@@ -1078,7 +1109,8 @@ val lisp_inv_eq_zero = store_thm("lisp_inv_eq_zero",
   \\ `tw1 = 1w` by FULL_SIMP_TAC std_ss [lisp_inv_def]
   \\ FULL_SIMP_TAC std_ss []
   \\ Q.PAT_X_ASSUM `xxx = (x0 = Val 0)` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
-  \\ blastLib.BBLAST_TAC);
+  \\ blastLib.BBLAST_TAC
+QED
 
 val lisp_inv_eq_lucky = prove(
   ``!x0 x1 w0 w1. (w0 = w1) /\ ^LISP ==> (x0 = x1)``,
@@ -1445,11 +1477,12 @@ val _ = save_thm("lisp_inv_div2",lisp_inv_div2);
 
 (* depth limit *)
 
-val addr_path_def = Define `
+Definition addr_path_def:
   (addr_path s [] sym m = ~isDot s) /\
   (addr_path s (a::xs) sym m =
      lisp_x (m,sym) (H_ADDR a,s) /\ (LDEPTH s = SUC (LENGTH xs)) /\
-     (addr_path (CAR s) xs sym m \/ addr_path (CDR s) xs sym m))`;
+     (addr_path (CAR s) xs sym m \/ addr_path (CDR s) xs sym m))
+End
 
 val lisp_x_IMP_addr_path = prove(
   ``!s a. lisp_x (m,sym) (a,s) ==>
@@ -1599,18 +1632,20 @@ val gc_w2w_lemma = prove(
         (w2w ((w2w (bp >>> 32)):word32) << 32 !! w2w ((w2w bp):word32) = bp:word64)``,
   blastLib.BBLAST_TAC);
 
-val lisp_inv_error = store_thm("lisp_inv_error",
-  ``^LISP ==>
+Theorem lisp_inv_error:
+    ^LISP ==>
     (w2w (f (sp - 0xC4w)) << 32 !! w2w (f (sp - 0xC8w)) = ex) /\
     {sp - 0xC4w; sp - 0xC8w} SUBSET df /\
-    (sp - 0xC4w && 0x3w = 0x0w) /\ (sp - 0xC8w && 0x3w = 0x0w)``,
+    (sp - 0xC4w && 0x3w = 0x0w) /\ (sp - 0xC8w && 0x3w = 0x0w)
+Proof
   SIMP_TAC std_ss [lisp_inv_def,ref_full_stack_def,APPEND]
   \\ NTAC 8 (ONCE_REWRITE_TAC [ref_static_def]) \\ STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [ref_full_stack_def,word64_3232_def,LET_DEF]
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC,word_arith_lemma1,SEP_CLAUSES]
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC,word_arith_lemma3,INSERT_SUBSET,EMPTY_SUBSET]
   \\ SEP_R_TAC \\ ASM_SIMP_TAC std_ss [gc_w2w_lemma]
-  \\ Q.PAT_X_ASSUM `sp && 0x3w = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC);
+  \\ Q.PAT_X_ASSUM `sp && 0x3w = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC
+QED
 
 
 (* I/O *)
@@ -1624,9 +1659,10 @@ val _ = save_thm("lisp_inv_ignore_io",lisp_inv_ignore_io);
 
 (* read cs and ds, writing ds *)
 
-val expand_list = store_thm("expand_list",
-  ``!cs. (LENGTH cs = 10) ==>
-         ?c0 c1 c2 c3 c4 c5 c6 c7 c8 c9. cs = [c0;c1;c2;c3;c4;c5;c6;c7;c8;c9]``,
+Theorem expand_list:
+    !cs. (LENGTH cs = 10) ==>
+         ?c0 c1 c2 c3 c4 c5 c6 c7 c8 c9. cs = [c0;c1;c2;c3;c4;c5;c6;c7;c8;c9]
+Proof
   Cases \\ SIMP_TAC std_ss [LENGTH,ADD1,CONS_11]
   \\ Cases_on `t` \\ SIMP_TAC std_ss [LENGTH,ADD1,CONS_11]
   \\ Cases_on `t'` \\ SIMP_TAC std_ss [LENGTH,ADD1,CONS_11]
@@ -1638,11 +1674,14 @@ val expand_list = store_thm("expand_list",
   \\ Cases_on `t'` \\ SIMP_TAC std_ss [LENGTH,ADD1,CONS_11]
   \\ Cases_on `t` \\ SIMP_TAC std_ss [LENGTH,ADD1,CONS_11]
   \\ Cases_on `t'` \\ SIMP_TAC std_ss [LENGTH,ADD1,CONS_11,NOT_CONS_NIL]
-  \\ DECIDE_TAC);
+  \\ DECIDE_TAC
+QED
 
-val EL_CONS = store_thm("EL_CONS",
-  ``!n x xs. (EL n (x::xs)) = if n = 0 then x else EL (n-1) xs``,
-  Cases \\ SIMP_TAC std_ss [EL,HD,TL,ADD1]);
+Theorem EL_CONS:
+    !n x xs. (EL n (x::xs)) = if n = 0 then x else EL (n-1) xs
+Proof
+  Cases \\ SIMP_TAC std_ss [EL,HD,TL,ADD1]
+QED
 
 val lisp_inv_cs_read_blast = blastLib.BBLAST_PROVE
   ``(w2w (w1:word32) << 32 !! w2w (w2:word32) = w:word64) =
@@ -1695,16 +1734,20 @@ val lisp_inv_cs_read = prove(
     \\ IMP_RES_TAC one_fun2set_IMP \\ FULL_SIMP_TAC std_ss [DIFF_UNION]
     \\ FULL_SIMP_TAC std_ss [IN_DIFF]) |> SIMP_RULE std_ss [];
 
-val ref_static_APPEND = store_thm("ref_static_APPEND",
-  ``!xs ys a.
+Theorem ref_static_APPEND:
+    !xs ys a.
       ref_static a (xs ++ ys) =
-      ref_static a xs * ref_static (a + n2w (8 * LENGTH xs)) ys``,
+      ref_static a xs * ref_static (a + n2w (8 * LENGTH xs)) ys
+Proof
   Induct \\ ASM_SIMP_TAC std_ss [APPEND,ref_static_def,SEP_CLAUSES,LENGTH,
-    WORD_ADD_0,word64_3232_def,LET_DEF,word_arith_lemma1,MULT_CLAUSES,STAR_ASSOC]);
+    WORD_ADD_0,word64_3232_def,LET_DEF,word_arith_lemma1,MULT_CLAUSES,STAR_ASSOC]
+QED
 
-val UPDATE_NTH_CONS = store_thm("UPDATE_NTH_CONS",
-  ``UPDATE_NTH n x (y::ys) = if n = 0 then x::ys else y::UPDATE_NTH (n-1) x ys``,
-  Cases_on `n` \\ SIMP_TAC std_ss [UPDATE_NTH_def,ADD1]);
+Theorem UPDATE_NTH_CONS:
+    UPDATE_NTH n x (y::ys) = if n = 0 then x::ys else y::UPDATE_NTH (n-1) x ys
+Proof
+  Cases_on `n` \\ SIMP_TAC std_ss [UPDATE_NTH_def,ADD1]
+QED
 
 val lisp_inv_cs_write = prove(
   ``^LISP ==>
@@ -2344,12 +2387,11 @@ val bc_symbols_ok_IMP = prove(
   \\ ASM_SIMP_TAC std_ss [bc_symbols_ok_def,bs2bytes_def,bc_ref_def,
        MEM_LIST_FIND_LEMMA,MEM_APPEND]);
 
-val code_heap_add_symbol = store_thm("code_heap_add_symbol",
-  ``code_heap code (sym,base_ptr,curr_ptr,space_left,dh,h) ==>
-    code_heap code (sym ++ [s],base_ptr,curr_ptr,space_left,dh,h)``,
+Theorem code_heap_add_symbol:
+    code_heap code (sym,base_ptr,curr_ptr,space_left,dh,h) ==>
+    code_heap code (sym ++ [s],base_ptr,curr_ptr,space_left,dh,h)
+Proof
   Cases_on `code` \\ SIMP_TAC std_ss [code_heap_def] \\ REPEAT STRIP_TAC
   \\ Q.LIST_EXISTS_TAC [`bs`,`hs`] \\ FULL_SIMP_TAC std_ss []
-  \\ IMP_RES_TAC bc_symbols_ok_IMP \\ ASM_SIMP_TAC std_ss []);
-
-
-val _ = export_theory();
+  \\ IMP_RES_TAC bc_symbols_ok_IMP \\ ASM_SIMP_TAC std_ss []
+QED

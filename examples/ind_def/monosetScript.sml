@@ -8,17 +8,16 @@
 (* DATE         : 2006.09.08                                            *)
 (* =====================================================================*)
 
-(*
-  app load ["IndDefLib", "Datatype", "clTheory"] ;
-*)
+Theory monoset
+Ancestors
+  list
+Libs
+  listLib IndDefLib
 
-open HolKernel Parse boolLib listLib listTheory IndDefLib bossLib
 
 (* --------------------------------------------------------------------- *)
 (* Open a new theory.                                                    *)
 (* --------------------------------------------------------------------- *)
-
-val _ = new_theory"monoset";
 
 (* ---------------------------------------------------------------------
 
@@ -45,7 +44,8 @@ val _ = new_theory"monoset";
 
 (* our example tests whether or not every number occurring in a t-value
    is even *)
-val _ = Hol_datatype `t = v of num | app of t list`
+Datatype: t = v num | app (t list)
+End
 
 val (alleven_rules, alleven_ind, alleven_cases) = Hol_reln `
   (!n. EVEN n ==> alleven (v n)) /\
@@ -61,15 +61,17 @@ val strong_alleven_ind = save_thm(
     different order just to be perverse.
    ---------------------------------------------------------------------- *)
 
-val every_def = Define`(every [] P <=> T) /\
-                       (every (h :: t) P <=> P h /\ every t P)`
+Definition every_def:  (every [] P <=> T) /\
+                       (every (h :: t) P <=> P h /\ every t P)
+End
 (* note how we could have defined this relation inductively too *)
 
 (* now we have to prove that this operator is monotone *)
-val mono_every = store_thm(
-  "mono_every",
-  ``(!x. P x ==> Q x) ==> (every l P ==> every l Q)``,
-  Induct_on `l` THEN SRW_TAC [][every_def])
+Theorem mono_every:
+    (!x. P x ==> Q x) ==> (every l P ==> every l Q)
+Proof
+  Induct_on `l` THEN SRW_TAC [][every_def]
+QED
 
 (* and export it, so that Hol_reln knows all about it *)
 val _ = export_mono "mono_every"
@@ -90,5 +92,3 @@ val strong_allbigger_ind = save_thm(
 (* --------------------------------------------------------------------- *)
 (* End of example.                                                       *)
 (* --------------------------------------------------------------------- *)
-
-val _ = export_theory();

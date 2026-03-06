@@ -30,11 +30,14 @@ structure CMap :> sig
   val insert : ('a dict * term * 'a) -> 'a dict
   val peek : 'a dict * term -> 'a option
   val exact_peek : 'a dict * term -> 'a option
+  val listItems : 'a dict -> ({Name:string,Thy:string} * (hol_type * 'a) list) list
 end =
 struct
   structure RBM = Redblackmap
   fun tstamp () = Time.toReal (Time.now())
   type 'a dict = ({Name:string,Thy:string}, ('a * real) TypeNet.typenet)RBM.dict
+  fun listItems d =
+      RBM.listItems d |> map (fn (k,v) => (k, map (apsnd #1) (TypeNet.listItems v)))
   fun insert (d,k,v) = let
     val v = (v,tstamp())
     val {Name,Thy,Ty} = dest_thy_const k
@@ -99,6 +102,7 @@ end (* struct *)
 open CMap
 
 type constmap = (bool*string*string*hol_type)dict
+val cmap_items = listItems
 
 
 (*---------------------------------------------------------------------------*)
@@ -106,45 +110,72 @@ type constmap = (bool*string*string*hol_type)dict
 (* otherwise could just use Term.compare.                                    *)
 (*---------------------------------------------------------------------------*)
 
-val initConstMap : constmap = empty()
+val empty_ConstMap : constmap = empty()
 
-local val equality = prim_mk_const{Name="=",Thy="min"}
-      val negation = prim_mk_const{Name="~",Thy="bool"}
-      val T        = prim_mk_const{Name="T",Thy="bool"}
-      val F        = prim_mk_const{Name="F",Thy="bool"}
-      val conj     = prim_mk_const{Name="/\\",Thy="bool"}
-      val disj     = prim_mk_const{Name="\\/",Thy="bool"}
+val equality = prim_mk_const{Name="=",Thy="min"}
+val negation = prim_mk_const{Name="~",Thy="bool"}
+val T        = prim_mk_const{Name="T",Thy="bool"}
+val F        = prim_mk_const{Name="F",Thy="bool"}
+val conj     = prim_mk_const{Name="/\\",Thy="bool"}
+val disj     = prim_mk_const{Name="\\/",Thy="bool"}
+
+type delta = term * (bool * string * string * hol_type)
+fun uptodate ((tm, (_, _, _, ty)):delta) =
+    Term.uptodate_term tm andalso Type.uptodate_type ty
+fun apply_delta ((k,v):delta) d = insert(d,k,v)
+val initConstMap =
+    itlist apply_delta [
+       (equality, (false,"","=",    eq_alpha-->eq_alpha-->bool)),
+       (negation, (false,"","not",  bool-->bool)),
+       (T,        (false,"","true", bool)),
+       (F,        (false,"","false",bool)),
+       (conj,     (false,"","andalso",bool-->bool-->bool)),
+       (disj,     (false,"","orelse", bool-->bool-->bool))
+     ] empty_ConstMap
+
+val adinfo : (delta, constmap)AncestryData.adata_info = {
+  tag = "ConstMapML",
+  initial_values = [("bool", initConstMap)],
+  apply_delta = apply_delta
+};
+val delta_sexps = let
+  open ThyDataSexp
 in
-val ConstMapRef = ref
-  (insert(insert(insert(insert(insert(insert
-    (initConstMap,
-     equality, (false,"","=",    eq_alpha-->eq_alpha-->bool)),
-     negation, (false,"","not",  bool-->bool)),
-     T,        (false,"","true", bool)),
-     F,        (false,"","false",bool)),
-     conj,     (false,"","andalso",bool-->bool-->bool)),
-     disj,     (false,"","orelse", bool-->bool-->bool)))
-end;
+  { dec = pair_decode(
+      term_decode,
+      pair4_decode(bool_decode, string_decode, string_decode, type_decode)
+    ),
+    enc = pair_encode(
+      Term,
+      pair4_encode(Bool,String,String,Type)
+    )
+  }
+end
+val cmap_opns = AncestryData.fullmake {
+  adinfo = adinfo,
+  uptodate_delta = uptodate,
+  sexps = delta_sexps,
+  globinfo = {apply_to_global = apply_delta, thy_finaliser = NONE,
+              initial_value = initConstMap}
+}
 
-fun theConstMap () = !ConstMapRef;
+val theConstMap = #get_global_value cmap_opns
+fun check_name(is_type_cons,Thy,Name,Ty) =
+    let val Name' = if String.sub(Name,0) = #"*" orelse
+                       String.sub(Name,String.size Name -1) = #"*"
+                    then " "^Name^" "
+                    else Name
+    in (is_type_cons,Thy,Name',Ty)
+    end
 
-(*---------------------------------------------------------------------------*)
-(* Checks for "*" are to avoid situation where prefix multiplication has an  *)
-(* open paren just before it ... which is interpreted as beginning of a      *)
-(* comment.                                                                  *)
-(*---------------------------------------------------------------------------*)
 
-local fun check_name(is_type_cons,Thy,Name,Ty) =
-       let val Name' = if String.sub(Name,0) = #"*" orelse
-                          String.sub(Name,String.size Name -1) = #"*"
-                       then " "^Name^" "
-                       else Name
-       in (is_type_cons,Thy,Name',Ty)
-       end
-in
-fun prim_insert (c,t) = (ConstMapRef := insert(theConstMap(),c,check_name t))
-end;
-
+fun prim_insert (k,v) =
+    let
+      val d = (k, check_name v)
+    in
+      #update_global_value cmap_opns (apply_delta d);
+      #record_delta cmap_opns d
+    end
 
 fun insert c =
  let val {Name,Thy,Ty} = dest_thy_const c

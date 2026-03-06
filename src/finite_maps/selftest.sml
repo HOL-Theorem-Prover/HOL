@@ -1,10 +1,12 @@
 open HolKernel Parse boolLib bossLib sptreeSyntax sptreeLib testutils
 open totoTheory  totoTacs tcTacs enumTacs fmapalTacs;
-open alist_treeLib
+open alist_treeLib patriciaLib
 
 fun optionToString f NONE = "NONE"
   | optionToString f (SOME x) = "SOME("^f x^")"
 fun pairToString f g (x,y) = "(" ^ f x ^ ", " ^ g y ^ ")"
+
+val _ = app tpp ["fm⟨k⟩", "fm⟨k1 ↦ v1; k2 ↦ v2⟩"]
 
 val _ = tprint "Check that finite maps have plausible size in TypeBase"
 val _ = require_msg
@@ -105,7 +107,7 @@ val tsar_tc = ``(FMAP_TO_RELN ^(rand (concl RomH)))^+``;
 val tsar_anc_thm = Count.apply (TC_CONV tsarto_CONV) tsar_tc;
 (* 21401 primitive inferences *)
 
-val tsar_enum_fmap =  Count.apply (FMAPAL_TO_fmap_CONV tsarto_CONV)
+val tsar_enum_fmap = Count.apply (FMAPAL_TO_fmap_CONV tsarto_CONV)
               (rand (rand (concl tsar_anc_thm)));
 (* 912 primitive inferences *)
 

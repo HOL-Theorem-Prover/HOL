@@ -4,23 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "SpanSpace";
+Theory SpanSpace
+Ancestors
+  pred_set arithmetic list number combinatorics VectorSpace
+  monoid group field
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory listTheory numberTheory combinatoricsTheory;
-
-open VectorSpaceTheory;
-open monoidTheory groupTheory fieldTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Span Space Documentation                                                  *)
 (* ------------------------------------------------------------------------- *)
@@ -143,10 +136,10 @@ val _ = temp_overload_on ("-", ``stick_sub r``);
 (* Note: pural of basis is bases, singular of bases is basis. *)
 
 (* Basis checks a list of vectors *)
-val basis_def = Define`
+Definition basis_def:
   (basis (g:'b group) [] <=> T) /\
   (basis (g:'b group) (h::t) <=> (h IN V) /\ basis g t)
-`;
+End
 
 (* Theorem: basis g [] = T *)
 val basis_nil = save_thm("basis_nil", basis_def |> CONJUNCT1);
@@ -169,14 +162,15 @@ val basis_cons = save_thm("basis_cons", basis_def |> CONJUNCT2);
      If x = h, x IN V.
      If MEM x b, still x IN V                  by induction hypothesis
 *)
-val basis_member = store_thm(
-  "basis_member",
-  ``!(g:'b group) (b:'b list). basis g b <=> !x. MEM x b ==> x IN V``,
+Theorem basis_member:
+    !(g:'b group) (b:'b list). basis g b <=> !x. MEM x b ==> x IN V
+Proof
   strip_tac >>
   Induct >-
   rw[basis_nil] >>
   rw[basis_cons] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: basis g b ==> !n. basis g (TAKE n b ++ DROP (SUC n) b)) *)
 (* Proof: by induction on b.
@@ -198,9 +192,9 @@ val basis_member = store_thm(
      = basis g (h::(TAKE n' b ++ DROP (SUC n') b))            by APPEND
      = T if h IN R /\ basis b (TAKE n' b ++ DROP (SUC n') b)  by induction hypothesis, basis_cons
 *)
-val basis_contract_basis = store_thm(
-  "basis_contract_basis",
-  ``!(g:'b group) b. basis g b ==> !n. basis g (TAKE n b ++ DROP (SUC n) b)``,
+Theorem basis_contract_basis:
+    !(g:'b group) b. basis g b ==> !n. basis g (TAKE n b ++ DROP (SUC n) b)
+Proof
   ntac 3 strip_tac >>
   Induct_on `b` >| [
     rw[basis_nil],
@@ -209,7 +203,8 @@ val basis_contract_basis = store_thm(
       rw[],
       rw[basis_cons]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: basis g b ==> !n. n < LENGTH b ==> TAKE n b IN V /\ EL n b IN V /\ DROP (SUC n) b IN V *)
 (* Proof:
@@ -229,10 +224,10 @@ val basis_contract_basis = store_thm(
           If n = 0, basis g (DROP 0 b) = basis g b = T                    by basis_cons
           If n = SUC j < SUC (LENGTH b), basis g (DROP (SUC j) b) = T     by induction hypothesis.
 *)
-val basis_components_basis = store_thm(
-  "basis_components_basis",
-  ``!(g:'b group) b. basis g b ==>
-    !n. n < LENGTH b ==> (EL n b) IN V /\ basis g (TAKE n b) /\ basis g (DROP (SUC n) b)``,
+Theorem basis_components_basis:
+    !(g:'b group) b. basis g b ==>
+    !n. n < LENGTH b ==> (EL n b) IN V /\ basis g (TAKE n b) /\ basis g (DROP (SUC n) b)
+Proof
   ntac 3 strip_tac >>
   Induct_on `b` >| [
     rw[],
@@ -242,7 +237,8 @@ val basis_components_basis = store_thm(
       Cases_on `n` >> rw[basis_def],
       Cases_on `n`>> rw[]
     ]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Vector Sum, sum of vectors composed with scalars, for linear combination. *)
@@ -255,10 +251,10 @@ val VectorSum_def = Define`
   (VectorSum (r:'a field) (g:'b group) (op:'a -> 'b -> 'b) ((h:'b)::(t:'b list)) = h || VectorSum r g op t)
 `;
 *)
-val VectorSum_def = Define`
+Definition VectorSum_def:
   (VectorSum (g:'b group) [] = |0|) /\
   (VectorSum (g:'b group) ((h:'b)::(t:'b list)) = h || VectorSum g t)
-`;
+End
 
 (* overloads for convenience *)
 val _ = overload_on ("VSUM", ``VectorSum (g:'b group)``);
@@ -300,10 +296,10 @@ val _ = set_fixity "|o|" (Infixl 500); (* same as + in arithmeticScript.sml *)
        and t |o| b IN V                                by induction hypothesis
      Hence k o h || t |o| b IN V                       by vspace_vadd_vector
 *)
-val vsum_basis_stick_vector = store_thm(
-  "vsum_basis_stick_vector",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-   !b. basis g b ==> !n. n IN (sticks r (LENGTH b)) ==> n |o| b IN V``,
+Theorem vsum_basis_stick_vector:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+   !b. basis g b ==> !n. n IN (sticks r (LENGTH b)) ==> n |o| b IN V
+Proof
   ntac 4 strip_tac >>
   Induct >| [
     rw[] >>
@@ -313,7 +309,8 @@ val vsum_basis_stick_vector = store_thm(
     rw[basis_cons, stick_cons] >>
     rw[vsum_cons] >>
     metis_tac[vspace_vadd_vector, vspace_cmult_vector]
-  ]);
+  ]
+QED
 
 (* Theorem: basis g b ==>
             !n1 n2. n1 IN (sticks r (LENGTH b)) /\ n2 IN (sticks r (LENGTH b)) ==>
@@ -351,11 +348,11 @@ val vsum_basis_stick_vector = store_thm(
       = (k1 o h || k2 o h) || (t1 + t2) |o| b           by induction hypothesis
       = (k1 + k2) o h || (t1 + t2) |o| b                by vspace_cmult_ladd
 *)
-val vsum_basis_stick_add = store_thm(
-  "vsum_basis_stick_add",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
+Theorem vsum_basis_stick_add:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
    !b. basis g b ==> !n1 n2. n1 IN (sticks r (LENGTH b)) /\ n2 IN (sticks r (LENGTH b)) ==>
-      ((n1 |o| b) || (n2 |o| b) = (n1 + n2) |o| b)``,
+      ((n1 |o| b) || (n2 |o| b) = (n1 + n2) |o| b)
+Proof
   ntac 4 strip_tac >>
   Induct >| [
     rw[] >>
@@ -377,7 +374,8 @@ val vsum_basis_stick_add = store_thm(
     `_ = u1 || (u2 || (v1 || v2))` by rw_tac std_ss[group_assoc] >>
     `_ = u1 || u2 || (v1 || v2)` by rw[group_assoc] >>
     metis_tac[vspace_cmult_ladd]
-  ]);
+  ]
+QED
 
 (* Theorem: basis g b ==> !n. n IN (sticks r (LENGTH b)) ==> -#1 o (n |o| b) = ($- n) |o| b *)
 (* Proof:
@@ -408,10 +406,10 @@ val vsum_basis_stick_add = store_thm(
       = (-k :: $- t) |o| (h :: b)           by vsum_cons, MAP2
       = ($- n) |o| (h::b))                  by n = k::t
 *)
-val vsum_basis_stick_neg = store_thm(
-  "vsum_basis_stick_neg",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-   !b. basis g b ==> !n. n IN (sticks r (LENGTH b)) ==> (-#1 o (n |o| b) = ($- n) |o| b)``,
+Theorem vsum_basis_stick_neg:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+   !b. basis g b ==> !n. n IN (sticks r (LENGTH b)) ==> (-#1 o (n |o| b) = ($- n) |o| b)
+Proof
   ntac 4 strip_tac >>
   `Field r` by metis_tac[vspace_has_field] >>
   `#1 IN R /\ -#1 IN R` by rw[] >>
@@ -425,7 +423,8 @@ val vsum_basis_stick_neg = store_thm(
     `h' o h IN V` by metis_tac[vspace_cmult_vector] >>
     `t |o| b IN V` by metis_tac[vsum_basis_stick_vector] >>
     metis_tac[vspace_cmult_radd, vspace_cmult_cmult, field_mult_lneg, field_mult_lone]
-  ]);
+  ]
+QED
 
 (* Theorem: basis g b ==> !c. c IN R ==> (c o (n |o| b) = (c * n) |o| b) *)
 (* Proof:
@@ -454,10 +453,10 @@ val vsum_basis_stick_neg = store_thm(
       = (c * (k::t)) |o| (h :: b)         by stick_cmult_cons
       = (c * n) |o| (h::b)                by n = k::t
 *)
-val vsum_basis_stick_cmult = store_thm(
-  "vsum_basis_stick_cmult",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
-   !n. n IN (sticks r (LENGTH b)) ==> !c. c IN R ==> (c o (n |o| b) = (c * n) |o| b)``,
+Theorem vsum_basis_stick_cmult:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+   !n. n IN (sticks r (LENGTH b)) ==> !c. c IN R ==> (c o (n |o| b) = (c * n) |o| b)
+Proof
   ntac 4 strip_tac >>
   Induct >| [
     rw[] >>
@@ -469,7 +468,8 @@ val vsum_basis_stick_cmult = store_thm(
     `h' o h IN V` by metis_tac[vspace_cmult_vector] >>
     `t |o| b IN V` by metis_tac[vsum_basis_stick_vector] >>
     metis_tac[vspace_cmult_radd, vspace_cmult_cmult]
-  ]);
+  ]
+QED
 
 (* Theorem: basis g b ==> (VSUM (MAP2 op (GENLIST (\j. #0) (LENGTH b)) b) = |0|) *)
 (* Proof:
@@ -490,16 +490,17 @@ val vsum_basis_stick_cmult = store_thm(
         = |0| || |0|                                                by induction hypothesis
         = |0|                                                       by vspace_vadd_lzero
 *)
-val vsum_basis_stick_zero = store_thm(
-  "vsum_basis_stick_zero",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-   !b. basis g b ==> ((GENLIST (\j. #0) (LENGTH b)) |o| b = |0|)``,
+Theorem vsum_basis_stick_zero:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+   !b. basis g b ==> ((GENLIST (\j. #0) (LENGTH b)) |o| b = |0|)
+Proof
   ntac 4 strip_tac >>
   Induct >-
   rw[vsum_nil] >>
   `(\j. #0) o SUC = (\j. #0)` by rw[FUN_EQ_THM] >>
   rw[basis_cons, GENLIST_CONS] >>
-  metis_tac[vspace_cmult_lzero, vsum_cons, vspace_vadd_lzero, vspace_has_zero]);
+  metis_tac[vspace_cmult_lzero, vsum_cons, vspace_vadd_lzero, vspace_has_zero]
+QED
 
 (* Theorem: A vector sum can split into 3 components
    basis g b ==> !n. n IN sticks r (LENGTH b) ==> !k. k < LENGTH b ==>
@@ -545,12 +546,12 @@ val vsum_basis_stick_zero = store_thm(
          = h' o h || (tv || ej || dv                      by group_assoc
          = h' o h || v                                    by given v
 *)
-val vsum_basis_split = store_thm(
-  "vsum_basis_split",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+Theorem vsum_basis_split:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
    !n. n IN sticks r (LENGTH b) ==> !k. k < LENGTH b ==>
    (n |o| b =
-    ((TAKE k n) |o| (TAKE k b)) || (EL k n o EL k b) || ((DROP (SUC k) n) |o| (DROP (SUC k) b)))``,
+    ((TAKE k n) |o| (TAKE k b)) || (EL k n o EL k b) || ((DROP (SUC k) n) |o| (DROP (SUC k) b)))
+Proof
   ntac 4 strip_tac >>
   Induct >-
   rw[] >>
@@ -579,32 +580,34 @@ val vsum_basis_split = store_thm(
     `Group g` by metis_tac[vspace_has_group] >>
     `h' o h || tv || EL k (h'::t) o EL k (h::b) || dv = h' o h || tv || ej || dv` by metis_tac[] >>
     rw[group_assoc]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Spanning Space, the vector subspace generated by a basis.                 *)
 (* ------------------------------------------------------------------------- *)
 
 (* Spanning space by a basis (list of vectors), will be a subgroup of g (the vectors). *)
-val SpanSpace_def = Define`
+Definition SpanSpace_def:
   SpanSpace (r:'a field) (g:'b group) (op:'a -> 'b -> 'b) (b:'b list) :'b group =
     <| carrier := IMAGE (\n. n |o| b) (sticks r (LENGTH b)); (* |o| hides op *)
             op := g.op; (* type: 'b -> 'b -> 'b *)
             id := g.id
      |>
-`;
+End
 
 (* Theorem: properties of SpanSpace. *)
 (* Proof: by SpanSpace_def. *)
-val vspace_span_property = store_thm(
-  "vspace_span_property",
-  ``!(r:'a field) (g:'b group) op (b:'b list).
+Theorem vspace_span_property:
+    !(r:'a field) (g:'b group) op (b:'b list).
    ((SpanSpace r g op b).carrier = IMAGE (\n. n |o| b) (sticks r (LENGTH b))) /\
    ((SpanSpace r g op b).op = g.op) /\ ((SpanSpace r g op b).id = g.id) /\
    (!n. n IN (sticks r (LENGTH b)) ==> (n |o| b) IN (SpanSpace r g op b).carrier) /\
-   (!v. v IN (SpanSpace r g op b).carrier ==> ?n. n IN sticks r (LENGTH b) /\ (v = n |o| b))``,
+   (!v. v IN (SpanSpace r g op b).carrier ==> ?n. n IN sticks r (LENGTH b) /\ (v = n |o| b))
+Proof
   rw[SpanSpace_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: basis g b ==> !x. x IN (SpanSpace r g op b).carrier ==> x IN V  *)
 (* Proof:
@@ -612,20 +615,22 @@ val vspace_span_property = store_thm(
       basis g b ==> !n. n IN sticks r (LENGTH b) ==> n |o| b IN V
    which is true by vsum_basis_stick_vector.
 *)
-val vspace_span_vector = store_thm(
-  "vspace_span_vector",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-   !b. basis g b ==> !x. x IN (SpanSpace r g op b).carrier ==> x IN V``,
+Theorem vspace_span_vector:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+   !b. basis g b ==> !x. x IN (SpanSpace r g op b).carrier ==> x IN V
+Proof
   rw[SpanSpace_def] >>
-  metis_tac[vsum_basis_stick_vector]);
+  metis_tac[vsum_basis_stick_vector]
+QED
 
 (* Theorem: basis g b ==> (SpanSpace r g op b).carrier SUBSET V *)
 (* Proof: by vspace_span_vector, SUBSET_DEF. *)
-val vspace_span_subspace = store_thm(
-  "vspace_span_subspace",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-   !b. basis g b ==> (SpanSpace r g op b).carrier SUBSET V``,
-  metis_tac[vspace_span_vector, SUBSET_DEF]);
+Theorem vspace_span_subspace:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+   !b. basis g b ==> (SpanSpace r g op b).carrier SUBSET V
+Proof
+  metis_tac[vspace_span_vector, SUBSET_DEF]
+QED
 
 (* Theorem: Closure for Group (SpanSpace r g op b)
             x IN (SpanSpace r g op b).carrier /\ y IN (SpanSpace r g op b).carrier ==>
@@ -637,13 +642,14 @@ val vspace_span_subspace = store_thm(
    Let n'' = n + n' IN sticks r (LENGTH b)        by stick_add_length
     and (n |o| b) || (n' |o| b) = (n + n') |o| b  by vsum_basis_stick_add
 *)
-val vspace_span_closure = store_thm(
-  "vspace_span_closure",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+Theorem vspace_span_closure:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
    !x y. x IN (SpanSpace r g op b).carrier /\ y IN (SpanSpace r g op b).carrier ==>
-           x || y IN (SpanSpace r g op b).carrier``,
+           x || y IN (SpanSpace r g op b).carrier
+Proof
   rw[SpanSpace_def] >>
-  metis_tac[vspace_has_field, stick_add_length, vsum_basis_stick_add]);
+  metis_tac[vspace_has_field, stick_add_length, vsum_basis_stick_add]
+QED
 
 (* Theorem: Inverse for Group (SpanSpace r g op b)
             x IN (SpanSpace r g op b).carrier ==> ?y. y IN (SpanSpace r g op b) /\ (y || x = |0|) *)
@@ -660,17 +666,18 @@ val vspace_span_closure = store_thm(
        = (- #1) o (n |o| b) || (n |o| b)
        = |0|                                   by vspace_vsub_eq_zero_alt
 *)
-val vspace_span_negative = store_thm(
-  "vspace_span_negative",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
-   !x. x IN (SpanSpace r g op b).carrier ==> ?y. y IN (SpanSpace r g op b).carrier /\ (y || x = |0|)``,
+Theorem vspace_span_negative:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+   !x. x IN (SpanSpace r g op b).carrier ==> ?y. y IN (SpanSpace r g op b).carrier /\ (y || x = |0|)
+Proof
   rw[SpanSpace_def] >>
   qexists_tac `(- #1) o (n |o| b)` >>
   rpt strip_tac >| [
     qexists_tac `$- n` >>
     metis_tac[vsum_basis_stick_neg, stick_neg_length, vspace_has_field],
     metis_tac[vsum_basis_stick_vector, vspace_vsub_eq_zero_alt]
-  ]);
+  ]
+QED
 
 (* Theorem: basis g b ==> |0| IN (SpanSpace r g op b).carrier *)
 (* Proof:
@@ -682,15 +689,16 @@ val vspace_span_negative = store_thm(
       = |0|                                                 by vsum_basis_stick_zero
     and GENLIST (\j. #0) (LENGTH b) IN sticks r (LENGTH b)  by stick_all_zero
 *)
-val vspace_span_has_zero = store_thm(
-  "vspace_span_has_zero",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-   !b. basis g b ==> |0| IN (SpanSpace r g op b).carrier``,
+Theorem vspace_span_has_zero:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+   !b. basis g b ==> |0| IN (SpanSpace r g op b).carrier
+Proof
   rw[SpanSpace_def] >>
   qexists_tac `GENLIST (\j. #0) (LENGTH b)` >>
   rpt strip_tac >-
   rw[vsum_basis_stick_zero] >>
-  metis_tac[stick_all_zero]);
+  metis_tac[stick_all_zero]
+QED
 
 (* Theorem: basis g b ==> Group (SpanSpace r g op b) *)
 (* Proof:
@@ -706,16 +714,17 @@ val vspace_span_has_zero = store_thm(
    (5) x IN (SpanSpace r g op b).carrier ==> ?y. y IN (SpanSpace r g op b).carrier /\ (y || x = |0|)
        True by vspace_span_negative.
 *)
-val vspace_span_group = store_thm(
-  "vspace_span_group",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==> Group (SpanSpace r g op b)``,
+Theorem vspace_span_group:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==> Group (SpanSpace r g op b)
+Proof
   rw_tac std_ss[group_def_alt] >| [
     metis_tac[vspace_span_closure, vspace_span_property],
     metis_tac[vspace_has_group, group_assoc, vspace_span_vector, vspace_span_property],
     metis_tac[vspace_span_has_zero, vspace_span_property],
     metis_tac[vspace_has_group, group_lid, vspace_span_vector, vspace_span_property],
     metis_tac[vspace_span_negative, vspace_span_property]
-  ]);
+  ]
+QED
 
 (* Theorem: basis g b ==> AbelianGroup (SpanSpace r g op b) *)
 (* Proof:
@@ -724,12 +733,13 @@ val vspace_span_group = store_thm(
    (2) x IN (SpanSpace r g op b).carrier /\ y IN (SpanSpace r g op b).carrier ==> x || y = y || x
        True by vspace_has_abelian_group, vspace_span_vector.
 *)
-val vspace_span_abelian_group = store_thm(
-  "vspace_span_abelian_group",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==> AbelianGroup (SpanSpace r g op b)``,
+Theorem vspace_span_abelian_group:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==> AbelianGroup (SpanSpace r g op b)
+Proof
   rw_tac std_ss[AbelianGroup_def, vspace_span_group] >>
   `AbelianGroup g` by metis_tac[vspace_has_abelian_group] >>
-  metis_tac[vspace_span_vector, AbelianGroup_def, vspace_span_property]);
+  metis_tac[vspace_span_vector, AbelianGroup_def, vspace_span_property]
+QED
 
 (* Theorem: Scalar Multiplication for SpanSpace
             c IN R /\ x IN (SpanSpace r g op b).carrier ==> c o x IN (SpanSpace r g op b).carrier *)
@@ -741,13 +751,14 @@ val vspace_span_abelian_group = store_thm(
         = (c * n) |o| b                       by n' = c * n
         = c o (n |o| b)                       by vsum_basis_stick_cmult
 *)
-val vspace_span_cmult = store_thm(
-  "vspace_span_cmult",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
-     !c x. c IN R /\ x IN (SpanSpace r g op b).carrier ==> c o x IN (SpanSpace r g op b).carrier``,
+Theorem vspace_span_cmult:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+     !c x. c IN R /\ x IN (SpanSpace r g op b).carrier ==> c o x IN (SpanSpace r g op b).carrier
+Proof
   rw[SpanSpace_def] >>
   qexists_tac `c * n` >>
-  metis_tac[vsum_basis_stick_cmult, stick_cmult_length, vspace_has_field]);
+  metis_tac[vsum_basis_stick_cmult, stick_cmult_length, vspace_has_field]
+QED
 
 (* Theorem: !b. VSpace r (SpanSpace r g op b) op *)
 (* Proof:
@@ -767,9 +778,9 @@ val vspace_span_cmult = store_thm(
    (7) a IN R /\ b' IN R /\ v IN (SpanSpace r g op b).carrier ==> (a + b') o v = (a o v) || (b' o v)
        True by vspace_span_vector, vspace_cmult_ladd.
 *)
-val vspace_span_vspace = store_thm(
-  "vspace_span_vspace",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==> VSpace r (SpanSpace r g op b) op``,
+Theorem vspace_span_vspace:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==> VSpace r (SpanSpace r g op b) op
+Proof
   rpt strip_tac >>
   rw[VSpace_def] >| [
     metis_tac[vspace_has_field],
@@ -779,7 +790,8 @@ val vspace_span_vspace = store_thm(
     metis_tac[vspace_span_vector, vspace_cmult_lone],
     metis_tac[vspace_span_vector, vspace_cmult_radd, vspace_span_property],
     metis_tac[vspace_span_vector, vspace_cmult_ladd, vspace_span_property]
-  ]);
+  ]
+QED
 
 (* Theorem: basis g b ==> ?z. z IN sticks r (LENGTH b) /\ (z |o| b = |0|) *)
 (* Proof:
@@ -787,11 +799,12 @@ val vspace_span_vspace = store_thm(
    Then z IN sticks r (LENGTH b)     by stick_all_zero
     and z |o| b = |0|                by vsum_basis_stick_zero
 *)
-val vspace_zero_stick = store_thm(
-  "vspace_zero_stick",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-   !b. basis g b ==> ?z. z IN sticks r (LENGTH b) /\ (z |o| b = |0|)``,
-  metis_tac[stick_all_zero, vsum_basis_stick_zero]);
+Theorem vspace_zero_stick:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+   !b. basis g b ==> ?z. z IN sticks r (LENGTH b) /\ (z |o| b = |0|)
+Proof
+  metis_tac[stick_all_zero, vsum_basis_stick_zero]
+QED
 
 (* Theorem: n IN sticks r (LENGTH b) /\ !k. k < LENGTH b ==> (EL k n = #0) ==> n |o| b = |0| *)
 (* Proof:
@@ -819,10 +832,10 @@ val vspace_zero_stick = store_thm(
       Hence n |o| (h::b)
           = |0| || |0| = |0|           by vspace_vadd_lzero
 *)
-val vspace_stick_zero = store_thm(
-  "vspace_stick_zero",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
-   !n. n IN sticks r (LENGTH b) /\ (!k. k < LENGTH b ==> (EL k n = #0)) ==> (n |o| b = |0|)``,
+Theorem vspace_stick_zero:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+   !n. n IN sticks r (LENGTH b) /\ (!k. k < LENGTH b ==> (EL k n = #0)) ==> (n |o| b = |0|)
+Proof
   ntac 4 strip_tac >>
   Induct >| [
     rw[] >>
@@ -839,7 +852,8 @@ val vspace_stick_zero = store_thm(
     `!k y. SUC k < SUC y <=> k < y` by decide_tac >>
     `!k h t. EL (SUC k) (h::t) = EL k t` by rw[] >>
     metis_tac[vspace_vadd_lzero, vspace_has_zero]
-  ]);
+  ]
+QED
 
 (* Theorem: basis g b ==> !x. MEM x b ==> ?n. n IN sticks r (LENGTH b) /\ (x = n |o| b) *)
 (* Proof:
@@ -873,10 +887,10 @@ val vspace_stick_zero = store_thm(
          = |0| || x                                          by induction hypothesis
          = x                                                 by vspace_vadd_lzero
 *)
-val vspace_basis_stick = store_thm(
-  "vspace_basis_stick",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
-   !x. MEM x b ==> ?n. n IN sticks r (LENGTH b) /\ (x = n |o| b)``,
+Theorem vspace_basis_stick:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+   !x. MEM x b ==> ?n. n IN sticks r (LENGTH b) /\ (x = n |o| b)
+Proof
   ntac 4 strip_tac >>
   `Field r` by metis_tac[vspace_has_field] >>
   `#0 IN R /\ #1 IN R` by rw[] >>
@@ -891,17 +905,19 @@ val vspace_basis_stick = store_thm(
     qexists_tac `#0::t` >>
     rw[vsum_cons, stick_cons] >>
     metis_tac[vspace_cmult_lzero, vsum_basis_stick_vector, vspace_vadd_lzero]
-  ]);
+  ]
+QED
 
 (* Theorem: n1 IN sticks r (LENGTH b) /\ n2 IN sticks r (LENGTH b) ==>
             (n1 + n2) |o| b = (n1 |o| b) || (n2 |o| b) *)
 (* Proof: by vsum_basis_stick_add. *)
-val vsum_stick_add = store_thm(
-  "vsum_stick_add",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+Theorem vsum_stick_add:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
    !n1 n2. n1 IN sticks r (LENGTH b) /\ n2 IN sticks r (LENGTH b) ==>
-            ((n1 + n2) |o| b = (n1 |o| b) || (n2 |o| b))``,
-  rw[vsum_basis_stick_add]);
+            ((n1 + n2) |o| b = (n1 |o| b) || (n2 |o| b))
+Proof
+  rw[vsum_basis_stick_add]
+QED
 
 (* Theorem: n IN sticks r (LENGTH b) ==> g.inv (n |o| b) = ($- n) |o| b *)
 (* Proof:
@@ -914,10 +930,10 @@ val vsum_stick_add = store_thm(
     With Group g                          by vspace_has_group
    Hence u = g.inv v                      by group_linv_unique
 *)
-val vsum_stick_neg = store_thm(
-  "vsum_stick_neg",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
-   !n. n IN sticks r (LENGTH b) ==> (g.inv (n |o| b) = ($- n) |o| b)``,
+Theorem vsum_stick_neg:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+   !n. n IN sticks r (LENGTH b) ==> (g.inv (n |o| b) = ($- n) |o| b)
+Proof
   rpt strip_tac >>
   qabbrev_tac `v = n |o| b` >>
   qabbrev_tac `u = ($- n) |o| b` >>
@@ -925,7 +941,8 @@ val vsum_stick_neg = store_thm(
   `u IN V /\ v IN V` by metis_tac[vsum_basis_stick_vector, stick_neg_length] >>
   `u || v = (-#1 o v) || v` by rw[vsum_basis_stick_neg, Abbr`v`, Abbr`u`] >>
   `_ = |0|` by rw[GSYM vspace_vsub_eq_zero_alt] >>
-  metis_tac[group_linv_unique, vspace_has_group]);
+  metis_tac[group_linv_unique, vspace_has_group]
+QED
 
 (* Theorem: n1 IN sticks r (LENGTH b) /\ n2 IN sticks r (LENGTH b) ==>
             (n1 - n2) |o| b = (n1 |o| b) || g.inv (n2 |o| b) *)
@@ -935,23 +952,25 @@ val vsum_stick_neg = store_thm(
    = (n1 |o| b) || (($- n2) |o| b)    by vsum_stick_add
    = (n1 |o| b) || g.inv (n2 |o| b)   by vsum_stick_neg
 *)
-val vsum_stick_sub = store_thm(
-  "vsum_stick_sub",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+Theorem vsum_stick_sub:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
    !n1 n2. n1 IN sticks r (LENGTH b) /\ n2 IN sticks r (LENGTH b) ==>
-            ((n1 - n2) |o| b = (n1 |o| b) || g.inv (n2 |o| b))``,
+            ((n1 - n2) |o| b = (n1 |o| b) || g.inv (n2 |o| b))
+Proof
   rpt strip_tac >>
   `Field r` by metis_tac[vspace_has_field] >>
   `(n1 - n2) |o| b = (n1 + $- n2) |o| b` by metis_tac[stick_sub_alt] >>
-  rw[vsum_stick_add, stick_neg_length, GSYM vsum_stick_neg]);
+  rw[vsum_stick_add, stick_neg_length, GSYM vsum_stick_neg]
+QED
 
 (* Theorem: c IN R /\ n IN sticks r (LENGTH b) ==> c o (n |o| b) = (c * n) |o| b *)
 (* Proof: by vsum_basis_stick_cmult. *)
-val vsum_stick_cmult = store_thm(
-  "vsum_stick_cmult",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
-   !c n. c IN R /\ n IN sticks r (LENGTH b) ==> (c o (n |o| b) = (c * n) |o| b)``,
-  rw[vsum_basis_stick_cmult]);
+Theorem vsum_stick_cmult:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+   !c n. c IN R /\ n IN sticks r (LENGTH b) ==> (c o (n |o| b) = (c * n) |o| b)
+Proof
+  rw[vsum_basis_stick_cmult]
+QED
 
 
 (*
@@ -970,12 +989,13 @@ val it = |- !x1 x2 l1 l2. (LENGTH l1 = LENGTH l2) ==>
 (* Theorem: basis g b ==> !n. n IN sticks r (LENGTH b) ==>
             !h v. h IN R /\ v IN V ==> ((h o v) || (n |o| b) = (h::n) |o| (v::b)) *)
 (* Proof: by vsum_cons, MAP2 *)
-val vsum_stick_cons = store_thm(
-  "vsum_stick_cons",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+Theorem vsum_stick_cons:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
     !n. n IN sticks r (LENGTH b) ==>
-    !h v. h IN R /\ v IN V ==> ((h o v) || (n |o| b) = (h::n) |o| (v::b))``,
-  rw[vsum_cons]);
+    !h v. h IN R /\ v IN V ==> ((h o v) || (n |o| b) = (h::n) |o| (v::b))
+Proof
+  rw[vsum_cons]
+QED
 
 (* Theorem: n IN sticks r (LENGTH b) ==> !h v. h IN R /\ v IN V ==>
             (SNOC h n) |o| (SNOC v b) = h o v || (n |o| b) *)
@@ -1004,11 +1024,11 @@ val vsum_stick_cons = store_thm(
      = h'' o v || ((h' o h || u)                    by vspace_vadd_assoc
      = h'' o v || (h'::t) |o| (h::b)                by vsum_cons, MAP2
 *)
-val vsum_stick_snoc = store_thm(
-  "vsum_stick_snoc",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+Theorem vsum_stick_snoc:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
    !n. n IN sticks r (LENGTH b) ==> !h v. h IN R /\ v IN V ==>
-   ((SNOC h n) |o| (SNOC v b) = h o v || (n |o| b))``,
+   ((SNOC h n) |o| (SNOC v b) = h o v || (n |o| b))
+Proof
   ntac 4 strip_tac >>
   Induct >| [
     rw[] >>
@@ -1020,7 +1040,8 @@ val vsum_stick_snoc = store_thm(
     `h' o h IN V /\ h'' o v IN V` by metis_tac[vspace_cmult_vector] >>
     `u IN V` by metis_tac[vsum_basis_stick_vector] >>
     metis_tac[vspace_vadd_assoc, vspace_vadd_comm]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* More on SpanSpace.                                                        *)
@@ -1046,11 +1067,11 @@ val vsum_stick_snoc = store_thm(
        then ?n'. (x = n' |o| b1) /\ n' IN sticks r (LENGTH b1)  by monoid_component_equality
        Let n = h'::n', result follows                           by vsum_cons
 *)
-val vspace_span_cons = store_thm(
-  "vspace_span_cons",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
+Theorem vspace_span_cons:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
      !b1 b2. basis g b1 /\ basis g b2 /\ (SpanSpace r g op b1 = SpanSpace r g op b2) ==>
-      !h. h IN V ==> (SpanSpace r g op (h::b1) = SpanSpace r g op (h::b2))``,
+      !h. h IN V ==> (SpanSpace r g op (h::b1) = SpanSpace r g op (h::b2))
+Proof
   rw[SpanSpace_def, monoid_component_equality, stick_cons, EXTENSION, EQ_IMP_THM] >| [
     qabbrev_tac `x = t |o| b1` >>
     `?n'. (x = n' |o| b2) /\ n' IN sticks r (LENGTH b2)` by metis_tac[] >>
@@ -1060,7 +1081,8 @@ val vspace_span_cons = store_thm(
     `?n'. (x = n' |o| b1) /\ n' IN sticks r (LENGTH b1)` by metis_tac[] >>
     qexists_tac `h'::n'` >>
     rw[vsum_cons]
-  ]);
+  ]
+QED
 
 (* Theorem: u IN V /\ v IN V ==> (SpanSpace r g op [u; v] = SpanSpace r g op [v; u]) *)
 (* Proof:
@@ -1092,10 +1114,10 @@ val vspace_span_cons = store_thm(
           = [t; h] |o| [u; v]                by vsum_cons, vsum_nil, MAP2
           = n' |o| [u; v]                    by n' = [t; h]
 *)
-val vspace_span_exchange_two = store_thm(
-  "vspace_span_exchange_two",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-   !u v. u IN V /\ v IN V ==> (SpanSpace r g op [u; v] = SpanSpace r g op [v; u])``,
+Theorem vspace_span_exchange_two:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+   !u v. u IN V /\ v IN V ==> (SpanSpace r g op [u; v] = SpanSpace r g op [v; u])
+Proof
   rpt strip_tac >>
   `AbelianGroup g` by metis_tac[vspace_has_abelian_group] >>
   `Group g /\ !x y. x IN V /\ y IN V ==> (x || y = y || x)` by metis_tac[AbelianGroup_def] >>
@@ -1112,7 +1134,8 @@ val vspace_span_exchange_two = store_thm(
     qexists_tac `[t;h]` >>
     `[t;h] IN sticks r 2` by metis_tac[stick_cons, sticks_0, IN_SING] >>
     rw[vsum_nil, vsum_cons]
-  ]);
+  ]
+QED
 (* First thought is to prove the next one by induction, then exchange_two is the Base case. *)
 
 (* Theorem: SpanSpace r g op (u::v::b) = SpanSpace r g op (v::u::b) *)
@@ -1146,10 +1169,10 @@ val vspace_span_exchange_two = store_thm(
            = y o u || (x o v || w)          by vspace_vadd_assoc
            = n' |o| (u::v::b))              by n' = y::x::t
 *)
-val vspace_span_exchange = store_thm(
-  "vspace_span_exchange",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
-   !u v. u IN V /\ v IN V ==> (SpanSpace r g op (u::v::b) = SpanSpace r g op (v::u::b))``,
+Theorem vspace_span_exchange:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+   !u v. u IN V /\ v IN V ==> (SpanSpace r g op (u::v::b) = SpanSpace r g op (v::u::b))
+Proof
   rpt strip_tac >>
   rw[SpanSpace_def, monoid_component_equality, EXTENSION, EQ_IMP_THM] >| [
     `?x t1. x IN R /\ t1 IN sticks r (SUC (LENGTH b)) /\ (n = x::t1)` by metis_tac[stick_cons] >>
@@ -1170,7 +1193,8 @@ val vspace_span_exchange = store_thm(
     `w IN V` by metis_tac[vsum_basis_stick_vector] >>
     `x o v IN V /\ y o u IN V` by metis_tac[vspace_cmult_vector] >>
     metis_tac[vspace_vadd_comm, vspace_vadd_assoc]
-  ]);
+  ]
+QED
 
 (* Theorem: v IN (SpanSpace r g op b).carrier ==> SpanSpace r g op b = SpanSpace r g op (v::b) *)
 (* Proof:
@@ -1218,10 +1242,10 @@ val vspace_span_exchange = store_thm(
            = (#0::t) |o| (v::b)
    hence u IN (SpanSpace r g op (v::b)).carrier
 *)
-val vspace_span_with_member = store_thm(
-  "vspace_span_with_member",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
-   !v. v IN (SpanSpace r g op b).carrier ==> (SpanSpace r g op b = SpanSpace r g op (v::b))``,
+Theorem vspace_span_with_member:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+   !v. v IN (SpanSpace r g op b).carrier ==> (SpanSpace r g op b = SpanSpace r g op (v::b))
+Proof
   rpt strip_tac >>
   `Group g` by metis_tac[vspace_has_group] >>
   `Field r` by metis_tac[vspace_has_field] >>
@@ -1241,18 +1265,20 @@ val vspace_span_with_member = store_thm(
     qabbrev_tac `tv = t |o| b` >>
     qexists_tac `k * m + t` >>
     metis_tac[vsum_stick_add, vsum_stick_cmult, stick_cmult_length, stick_add_length]
-  ]);
+  ]
+QED
 
 (* Theorem: SpanSpace r g op b = SpanSpace r g op ( |0|::b) *)
 (* Proof:
    Since |0| IN (SpanSpace r g op b).carrier  by vspace_span_has_zero
    True by vspace_span_with_member.
 *)
-val vspace_span_with_zero = store_thm(
-  "vspace_span_with_zero",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-   !b. basis g b ==> (SpanSpace r g op b = SpanSpace r g op ( |0|::b))``,
-  rw[vspace_span_has_zero, vspace_span_with_member]);
+Theorem vspace_span_with_zero:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+   !b. basis g b ==> (SpanSpace r g op b = SpanSpace r g op ( |0|::b))
+Proof
+  rw[vspace_span_has_zero, vspace_span_with_member]
+QED
 
 (* Theorem: h IN (SpanSpace r g op b).carrier /\ v IN (SpanSpace r g op (h::b)).carrier ==>
             v IN (SpanSpace r g op b).carrier *)
@@ -1266,21 +1292,18 @@ val vspace_span_with_zero = store_thm(
      = ((h' * n) |o| b) || (t |o| b)   by vsum_stick_add
      = h' o (n |o| b) || u             by vsum_stick_cmult
 *)
-val vspace_span_add_member = store_thm(
-  "vspace_span_add_member",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+Theorem vspace_span_add_member:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
    !h v. h IN (SpanSpace r g op b).carrier /\ v IN (SpanSpace r g op (h::b)).carrier ==>
-         v IN (SpanSpace r g op b).carrier``,
+         v IN (SpanSpace r g op b).carrier
+Proof
   rw[SpanSpace_def, stick_cons] >>
   rw[vsum_cons] >>
   qexists_tac `h' * n + t` >>
   `Field r` by metis_tac[vspace_has_field] >>
-  metis_tac[vsum_stick_add, vsum_stick_cmult, stick_cmult_length, stick_add_length]);
+  metis_tac[vsum_stick_add, vsum_stick_cmult, stick_cmult_length, stick_add_length]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

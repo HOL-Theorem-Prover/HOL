@@ -1,8 +1,8 @@
-open HolKernel boolLib bossLib
-open relation_extraTheory mmTheory
-open relation_extraLib
-
-val () = new_theory "mm_lemmas"
+Theory mm_lemmas
+Ancestors
+  relation_extra mm
+Libs
+  relation_extraLib
 
 (* -------------------------------------------------------------------------
    Helper tactics
@@ -1741,7 +1741,7 @@ Proof
   metis_tac [rsubset_trans, rmw_in_fri, fri_in_fr]
 QED
 
-Triviality rf_rmw_in_co_helper:
+Theorem rf_rmw_in_co_helper[local]:
   WellFormed G /\ sc_per_loc G ==> G.rf ⨾ rmw G RSUBSET G.co RUNION inv G.co
 Proof
   wf_tac [wf_co_total_def, wf_rfl_def, wf_rmwl_def, is_total]
@@ -2050,4 +2050,3 @@ QED
    End
    ------------------------------------------------------------------------- *)
 
-val () = export_theory()

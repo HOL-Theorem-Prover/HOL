@@ -35,17 +35,11 @@ We shall define and investigate the "cycle" operation on a list.
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "cycle";
+Theory cycle
+Ancestors
+  arithmetic gcd pred_set list rich_list combinatorics
 
 (* ------------------------------------------------------------------------- *)
-
-(* open dependent theories *)
-open arithmeticTheory gcdTheory pred_setTheory listTheory rich_listTheory
-     combinatoricsTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Cycle Theory Documentation                                                *)
@@ -823,8 +817,4 @@ QED
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

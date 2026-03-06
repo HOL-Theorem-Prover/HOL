@@ -4,25 +4,14 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "corner";
+Theory corner
+Ancestors
+  arithmetic pred_set divides gcdset number pair combinatorics
+  helperTwosq quarity involute involuteFix
 
 (* ------------------------------------------------------------------------- *)
 
-open arithmeticTheory pred_setTheory dividesTheory gcdsetTheory numberTheory
-     pairTheory combinatoricsTheory;
-
-open helperTwosqTheory;
-
-open quarityTheory;
-
 (* val _ = load "involuteFixTheory"; *)
-open involuteTheory;
-open involuteFixTheory;
-
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
 val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
@@ -1061,8 +1050,4 @@ https://medium.com/cantors-paradise/the-one-sentence-proof-in-multiple-sentences
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

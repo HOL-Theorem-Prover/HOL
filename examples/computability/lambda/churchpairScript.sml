@@ -1,14 +1,8 @@
-open HolKernel boolLib bossLib Parse binderLib
-
-open chap3Theory
-open pred_setTheory
-open termTheory
-open boolSimps
-open normal_orderTheory
-open churchboolTheory
-open reductionEval
-
-val _ = new_theory "churchpair"
+Theory churchpair
+Ancestors
+  chap3 pred_set term normal_order churchbool
+Libs
+  binderLib boolSimps reductionEval
 
 Definition cvpr_def:
   cvpr M N = let v = NEW (FV M ∪ FV N)
@@ -149,7 +143,4 @@ Proof
   SRW_TAC [NORMSTAR_ss][cB_behaviour]
 QED
 val _ = export_betarwt "csnd_cvpr"
-
-val _ = export_theory()
-
 

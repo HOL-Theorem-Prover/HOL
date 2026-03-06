@@ -48,9 +48,10 @@ type binder_in_env = string -> bvar_in_env
  * Top level parse terms                                                     *
  *---------------------------------------------------------------------------*)
 
-fun make_preterm (tm_in_e : preterm_in_env) =
+fun make_preterm {next_uscore} (tm_in_e : preterm_in_env) =
   fn e => let
-    val (pt, env:env) = tm_in_e (fupd_ptyE (K e) empty_env)
+    val (pt, env:env) =
+        tm_in_e (fupd_ptyE (K e) $ fupd_uscore_cnt (K next_uscore) $ empty_env)
   in
     errormonad.Some(#ptyE env, pt)
   end
@@ -122,10 +123,18 @@ end
  * Binding occurrences of variables
  *---------------------------------------------------------------------------*)
 
-fun make_binding_occ lAbs lVar s E = let
+fun all_uscores s = let
+  fun check i = i < 0 orelse (String.sub(s,i) = #"_" andalso check (i - 1))
+in
+  check (size s - 1)
+end
+
+fun make_binding_occ lAbs lVar s0 E = let
   open Preterm
   val (ntv,E') = ptylift Pretype.new_uvar E
-  val E'' = add_scope((s,ntv),E')
+  val (s,E'') = if all_uscores s0 then
+                  ("_" ^ Int.toString (#uscore_cnt E'), new_uscore E')
+                else (s0, add_scope((s0,ntv),E'))
 in
   ((fn b => Abs{Bvar=Var{Name=s, Ty=ntv, Locn=lVar},Body=b,
                 Locn=locn.near lAbs}), E'')
@@ -145,12 +154,6 @@ end
 (*---------------------------------------------------------------------------
  * Free occurrences of variables.
  *---------------------------------------------------------------------------*)
-
-fun all_uscores s = let
-  fun check i = i < 0 orelse (String.sub(s,i) = #"_" andalso check (i - 1))
-in
-  check (size s - 1)
-end
 
 fun make_free_var l (s,E) = let
   open Preterm

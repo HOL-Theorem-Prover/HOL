@@ -1,6 +1,5 @@
-open HolKernel Parse boolLib bossLib;
+Theory register_indnA
 
-val _ = new_theory "register_indnA";
 val _ = add_ML_dependency "Werror"
 
 Definition foo_def:
@@ -30,4 +29,3 @@ Definition baz_def[notuserdef]:
 End
 
 
-val _ = export_theory();

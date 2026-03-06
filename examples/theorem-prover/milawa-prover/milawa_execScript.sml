@@ -1,14 +1,7 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "milawa_exec";
-
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open optionTheory arithmeticTheory relationTheory combinTheory;
-
-open lisp_sexpTheory lisp_semanticsTheory;
-open milawa_logicTheory milawa_defsTheory;
-
-infix \\
-val op \\ = op THEN;
-
+Theory milawa_exec
+Ancestors
+  string finite_map pred_set list sum option arithmetic relation
+  combin lisp_sexp lisp_semantics milawa_logic milawa_defs
 
 (* We define an intermediate language MR_ev -- a language which is
    very much like the runtime's specification R_ev. The difference is
@@ -291,15 +284,17 @@ val MR_ev_CTXT = store_thm("MR_ev_CTXT",
 
 end
 
-val add_def_lemma = store_thm("add_def_lemma",
-  ``(FDOM (add_def k x) = FDOM k UNION {FST x}) /\
+Theorem add_def_lemma:
+    (FDOM (add_def k x) = FDOM k UNION {FST x}) /\
     (add_def k x ' n = if n IN FDOM k then k ' n else
-                       if n = FST x then SND x else FEMPTY ' n)``,
+                       if n = FST x then SND x else FEMPTY ' n)
+Proof
   Cases_on `x`
   \\ ASM_SIMP_TAC std_ss [SUBMAP_DEF,add_def_def,
     FUNION_DEF,FAPPLY_FUPDATE_THM,
     FDOM_FUPDATE,IN_UNION,FDOM_FUPDATE,
-    FDOM_FEMPTY]);
+    FDOM_FEMPTY]
+QED
 
 local
 
@@ -492,21 +487,24 @@ end
 
 (* definition of term2term *)
 
-val ISORT_INSERT_def = Define `
+Definition ISORT_INSERT_def:
   (ISORT_INSERT ord x [] = [x]) /\
   (ISORT_INSERT ord x (y::ys) =
-     if ord y x then y::ISORT_INSERT ord x ys else x::y::ys)`;
+     if ord y x then y::ISORT_INSERT ord x ys else x::y::ys)
+End
 
-val ISORT_def = Define `
+Definition ISORT_def:
   (ISORT ord [] = []) /\
-  (ISORT ord (x::xs) = ISORT_INSERT ord x (ISORT ord xs))`;
+  (ISORT ord (x::xs) = ISORT_INSERT ord x (ISORT ord xs))
+End
 
-val REMOVE_DUPLICATES_def = Define `
+Definition REMOVE_DUPLICATES_def:
   (REMOVE_DUPLICATES [] = []) /\
   (REMOVE_DUPLICATES (x::xs) =
-     if MEM x xs then REMOVE_DUPLICATES xs else x::REMOVE_DUPLICATES xs)`;
+     if MEM x xs then REMOVE_DUPLICATES xs else x::REMOVE_DUPLICATES xs)
+End
 
-val logic_sym2prim_def = Define `
+Definition logic_sym2prim_def:
   logic_sym2prim s =
     if s = "CONS" then SOME logic_CONS else
     if s = "EQUAL" then SOME logic_EQUAL else
@@ -523,9 +521,10 @@ val logic_sym2prim_def = Define `
     if s = "RANK" then SOME logic_RANK else
     if s = "IF" then SOME logic_IF else
     if s = "ORDP" then SOME logic_ORDP else
-    if s = "ORD<" then SOME logic_ORD_LESS else NONE`;
+    if s = "ORD<" then SOME logic_ORD_LESS else NONE
+End
 
-val prim2p_def = Define `
+Definition prim2p_def:
   (prim2p opCONS = logic_CONS) /\
   (prim2p opEQUAL = logic_EQUAL) /\
   (prim2p opLESS = logic_LESS) /\
@@ -536,9 +535,10 @@ val prim2p_def = Define `
   (prim2p opNATP = logic_NATP) /\
   (prim2p opSYMBOLP = logic_SYMBOLP) /\
   (prim2p opCAR = logic_CAR) /\
-  (prim2p opCDR = logic_CDR)`;
+  (prim2p opCDR = logic_CDR)
+End
 
-val func2f_def = Define `
+Definition func2f_def:
   (func2f (PrimitiveFun opCONS) = mPrimitiveFun logic_CONS) /\
   (func2f (PrimitiveFun opEQUAL) = mPrimitiveFun logic_EQUAL) /\
   (func2f (PrimitiveFun opLESS) = mPrimitiveFun logic_LESS) /\
@@ -559,29 +559,51 @@ val func2f_def = Define `
   (func2f Define = mFun "DEFINE") /\
   (func2f Print = mFun "PRINT") /\
   (func2f Error = mFun "ERROR") /\
-  (func2f Funcall = mFun "FUNCALL")`
+  (func2f Funcall = mFun "FUNCALL")
+End
 
-val SUM_def = Define `
+Definition SUM_def:
   (SUM [] = 0:num) /\
-  (SUM (x::xs) = x + SUM xs)`;
+  (SUM (x::xs) = x + SUM xs)
+End
 
-val MEM_term5_size = prove(
-  ``!xs a. MEM a xs ==> term_size a < term5_size xs``,
+Theorem pair_size_def[local] = #2 (TypeBase.size_of “:'a # 'b”)
+
+Theorem MEM_term5_size[local]:
+  !xs a. MEM a xs ==> term_size a < list_size term_size xs
+Proof
   Induct \\ FULL_SIMP_TAC std_ss [MEM,term_size_def] \\ REPEAT STRIP_TAC
-  \\ RES_TAC \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC);
+  \\ RES_TAC \\ FULL_SIMP_TAC std_ss [list_size_def] \\ DECIDE_TAC
+QED
 
-val MEM_term3_size = prove(
-  ``!xs a. MEM a xs ==> term_size (FST a) < term3_size xs /\
-                        term_size (SND a) < term3_size xs``,
+Theorem MEM_term3_size[local]:
+  !xs a. MEM a xs ==>
+         term_size (FST a) < list_size (pair_size term_size term_size) xs /\
+         term_size (SND a) < list_size (pair_size term_size term_size) xs
+Proof
   Induct \\ FULL_SIMP_TAC std_ss [MEM,term_size_def] \\ REPEAT STRIP_TAC
-  \\ Cases_on `h` \\ RES_TAC \\ FULL_SIMP_TAC std_ss [term_size_def] \\ DECIDE_TAC);
+  \\ Cases_on `h` \\ RES_TAC
+  \\ FULL_SIMP_TAC std_ss [term_size_def, list_size_def, pair_size_def]
+  \\ DECIDE_TAC
+QED
 
-val MEM_term1_size = prove(
-  ``!xs a. MEM a xs ==> term_size (SND a) <= term1_size xs``,
-  Induct \\ FULL_SIMP_TAC std_ss [MEM,term_size_def] \\ REPEAT STRIP_TAC
-  \\ Cases_on `h` \\ RES_TAC \\ FULL_SIMP_TAC std_ss [term_size_def] \\ DECIDE_TAC);
+Theorem MEM_term3_size[local]:
+  !xs a. MEM a xs ==>
+         term_size (FST a) < list_size (pair_size term_size term_size) xs /\
+         term_size (SND a) < list_size (pair_size term_size term_size) xs
+Proof
+  simp[pairTheory.FORALL_PROD] >> rw [MEM_SPLIT] >> rw [list_size_append]
+QED
 
-val term_cost_def = tDefine "term_cost" `
+Theorem MEM_term1_size[local]:
+  !xs a. MEM a xs ==>
+         term_size (SND a) <=
+         list_size (pair_size (list_size char_size) term_size) xs
+Proof
+  simp[pairTheory.FORALL_PROD] >> rw [MEM_SPLIT] >> rw [list_size_append]
+QED
+
+Definition term_cost_def:
   (term_cost (Const c) = 1) /\
   (term_cost (Var v) = 1) /\
   (term_cost (If x1 x2 x3) = 1 + term_cost x1 + term_cost x2 + term_cost x3) /\
@@ -601,10 +623,15 @@ val term_cost_def = tDefine "term_cost" `
   (term_cost (Let zs x) = SUM (MAP term_cost (MAP SND zs)) +
                           LENGTH zs + term_cost x + 5) /\
   (term_cost (LetStar zs x) = 5 * SUM (MAP term_cost (MAP SND zs)) +
-                              10 * LENGTH zs + term_cost x + 5)`
- (WF_REL_TAC `measure term_size` \\ REPEAT STRIP_TAC
-  \\ FULL_SIMP_TAC std_ss [PULL_IMP,MEM_MAP] \\ IMP_RES_TAC MEM_term1_size
-  \\ IMP_RES_TAC MEM_term3_size \\ IMP_RES_TAC MEM_term5_size \\ DECIDE_TAC)
+                              10 * LENGTH zs + term_cost x + 5)
+Termination
+  WF_REL_TAC `measure term_size`
+  \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [PULL_IMP,MEM_MAP]
+  \\ IMP_RES_TAC MEM_term1_size
+  \\ IMP_RES_TAC MEM_term3_size
+  \\ IMP_RES_TAC MEM_term5_size \\ DECIDE_TAC
+End
 
 val MEM_term_cost = prove(
   ``!xs a. MEM a xs ==> term_cost a <= SUM (MAP (\a. term_cost a) xs)``,
@@ -703,7 +730,7 @@ val MR_ev_VARS = prove(
 
 end
 
-val logic_prim2sym_def = Define `
+Definition logic_prim2sym_def:
   (logic_prim2sym logic_CONS = "CONS") /\
   (logic_prim2sym logic_EQUAL = "EQUAL") /\
   (logic_prim2sym logic_LESS = "<") /\
@@ -719,34 +746,38 @@ val logic_prim2sym_def = Define `
   (logic_prim2sym logic_RANK = "RANK") /\
   (logic_prim2sym logic_IF = "IF") /\
   (logic_prim2sym logic_ORDP = "ORDP") /\
-  (logic_prim2sym logic_ORD_LESS = "ORD<")`;
+  (logic_prim2sym logic_ORD_LESS = "ORD<")
+End
 
 val bad_names_tm =
   ``["NIL"; "QUOTE"; "CONS"; "EQUAL"; "<"; "SYMBOL-<"; "+"; "-"; "CONSP";
      "NATP"; "SYMBOLP"; "CAR"; "CDR"; "NOT"; "RANK"; "IF"; "ORDP"; "ORD<"]``
 
-val INDEX_OF_def = Define `
+Definition INDEX_OF_def:
   (INDEX_OF n x [] = NONE) /\
-  (INDEX_OF n x (y::xs) = if x = y then SOME n else INDEX_OF (n+1:num) x xs)`;
+  (INDEX_OF n x (y::xs) = if x = y then SOME n else INDEX_OF (n+1:num) x xs)
+End
 
-val logic_func2sexp_def = Define `
+Definition logic_func2sexp_def:
   (logic_func2sexp (mPrimitiveFun p) = Sym (logic_prim2sym p)) /\
   (logic_func2sexp (mFun f) =
-     if MEM f ^bad_names_tm then Val (THE (INDEX_OF 0 f ^bad_names_tm)) else Sym f)`
+     if MEM f ^bad_names_tm then Val (THE (INDEX_OF 0 f ^bad_names_tm)) else Sym f)
+End
 
-val t2sexp_def = tDefine "t2sexp" `
+Definition t2sexp_def:
   (t2sexp (mConst s) = list2sexp [Sym "QUOTE"; s]) /\
   (t2sexp (mVar v) = Sym v) /\
   (t2sexp (mApp fc vs) = list2sexp (logic_func2sexp fc :: MAP t2sexp vs)) /\
-  (t2sexp (mLamApp xs z ys) = list2sexp (list2sexp [Sym "LAMBDA"; list2sexp (MAP Sym xs); t2sexp z]::MAP t2sexp ys))`
- (WF_REL_TAC `measure (logic_term_size)`);
+  (t2sexp (mLamApp xs z ys) = list2sexp (list2sexp [Sym "LAMBDA"; list2sexp (MAP Sym xs); t2sexp z]::MAP t2sexp ys))
+End
 
-val f2sexp_def = Define `
+Definition f2sexp_def:
   (f2sexp (Or x y) = list2sexp [Sym "POR*"; f2sexp x; f2sexp y]) /\
   (f2sexp (Not x) = list2sexp [Sym "PNOT*"; f2sexp x]) /\
-  (f2sexp (Equal t1 t2) = list2sexp [Sym "PEQUAL*"; t2sexp t1; t2sexp t2])`;
+  (f2sexp (Equal t1 t2) = list2sexp [Sym "PEQUAL*"; t2sexp t1; t2sexp t2])
+End
 
-val let2t_def = Define `
+Definition let2t_def:
   let2t ts body =
     let vars = MAP Sym (MAP FST ts) in
     let terms = MAP SND ts in
@@ -755,9 +786,10 @@ val let2t_def = Define `
                     (FILTER (\x. ~MEM x vars) body_vars) in
     let formals = MAP getSym (id_vars ++ vars) in
     let actuals = MAP (mVar o getSym) id_vars ++ terms in
-      mLamApp formals body actuals`;
+      mLamApp formals body actuals
+End
 
-val or2t_def = Define `
+Definition or2t_def:
   (or2t [] = mConst (Sym "NIL")) /\
   (or2t [x] = x) /\
   (or2t (x::y::xs) =
@@ -769,7 +801,8 @@ val or2t_def = Define `
        else
          let2t [("SPECIAL-VAR-FOR-OR",x)]
             (mApp (mPrimitiveFun logic_IF)
-               [mVar "SPECIAL-VAR-FOR-OR"; mVar "SPECIAL-VAR-FOR-OR"; else_term]))`
+               [mVar "SPECIAL-VAR-FOR-OR"; mVar "SPECIAL-VAR-FOR-OR"; else_term]))
+End
 
 val term2t_def = tDefine "term2t" `
   (term2t (Const c) = mConst c) /\
@@ -802,11 +835,6 @@ val term2t_def = tDefine "term2t" `
   \\ FULL_SIMP_TAC std_ss [term_cost_def,LENGTH_MAP,LENGTH,MAP,SUM_def]
   \\ FULL_SIMP_TAC std_ss [LEFT_ADD_DISTRIB,MULT_CLAUSES] \\ REPEAT DECIDE_TAC);
 
-val MEM_logic_term_size = prove(
-  ``!xs x. MEM x xs ==> logic_term_size x < logic_term1_size xs``,
-  Induct \\ SIMP_TAC std_ss [MEM] \\ REPEAT STRIP_TAC \\ RES_TAC
-  \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC \\ DECIDE_TAC)
-
 val LENGTH_EQ_3 = prove(
   ``(LENGTH xs = 3) = ?x1 x2 x3. xs = [x1;x2;x3]``,
   Cases_on `xs` \\ SIMP_TAC (srw_ss()) []
@@ -815,7 +843,7 @@ val LENGTH_EQ_3 = prove(
   \\ Cases_on `t` \\ SIMP_TAC (srw_ss()) []
   \\ DECIDE_TAC)
 
-val f2func_def = Define `
+Definition f2func_def:
   (f2func (mPrimitiveFun logic_CONS) = PrimitiveFun opCONS) /\
   (f2func (mPrimitiveFun logic_EQUAL) = PrimitiveFun opEQUAL) /\
   (f2func (mPrimitiveFun logic_LESS) = PrimitiveFun opLESS) /\
@@ -836,29 +864,40 @@ val f2func_def = Define `
                         if name = "PRINT" then Print else
                         if name = "ERROR" then Error else
                         if name = "FUNCALL" then Funcall else
-                          Fun name)`
+                          Fun name)
+End
 
-val t2term_def = tDefine "t2term" `
+Theorem MEM_logic_term_size[local]:
+  !xs x. MEM x xs ==> logic_term_size x < list_size logic_term_size xs
+Proof
+  rw [MEM_SPLIT] >> rw [list_size_append]
+QED
+
+Definition t2term_def:
   (t2term (mConst c) = Const c) /\
   (t2term (mVar v) = Var v) /\
   (t2term (mApp f xs) =
      if (f = mPrimitiveFun logic_IF) /\ (LENGTH xs = 3) then
        If (t2term (EL 0 xs)) (t2term (EL 1 xs)) (t2term (EL 2 xs))
      else App (f2func f) (MAP t2term xs)) /\
-  (t2term (mLamApp vs x xs) = LamApp vs (t2term x) (MAP t2term xs))`
- (WF_REL_TAC `measure logic_term_size` \\ REPEAT STRIP_TAC
+  (t2term (mLamApp vs x xs) = LamApp vs (t2term x) (MAP t2term xs))
+Termination
+  WF_REL_TAC `measure logic_term_size` \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [LENGTH_EQ_3] \\ FULL_SIMP_TAC (srw_ss()) []
   \\ IMP_RES_TAC MEM_logic_term_size
-  \\ EVAL_TAC \\ DECIDE_TAC);
+  \\ EVAL_TAC \\ DECIDE_TAC
+End
 
-val term2term_def = Define `term2term x = t2term (term2t x)`;
+Definition term2term_def:   term2term x = t2term (term2t x)
+End
 
 
 (* MR_ev (term2term x,...) ==> MR_ev (x,...) *)
 
-val func_name_ok_def = Define `
+Definition func_name_ok_def:
   func_name_ok f =
-    ~MEM f [Fun "IF"; Fun "DEFINE"; Fun "FUNCALL"; Fun "PRINT"; Fun "ERROR"]`;
+    ~MEM f [Fun "IF"; Fun "DEFINE"; Fun "FUNCALL"; Fun "PRINT"; Fun "ERROR"]
+End
 
 val f2func_func2f = prove(
   ``!f. func_name_ok f ==> (f2func (func2f f) = f) /\
@@ -890,15 +929,17 @@ val funcs_ok_def = tDefine "funcs_ok" `
   \\ FULL_SIMP_TAC std_ss [term_cost_def,LENGTH_MAP,LENGTH,MAP,SUM_def]
   \\ FULL_SIMP_TAC std_ss [LEFT_ADD_DISTRIB,MULT_CLAUSES] \\ REPEAT DECIDE_TAC);
 
-val funcs_ok_sexp2term = store_thm("funcs_ok_sexp2term",
-  ``!x. funcs_ok (sexp2term x)``,
+Theorem funcs_ok_sexp2term:
+    !x. funcs_ok (sexp2term x)
+Proof
   HO_MATCH_MP_TAC sexp2term_ind \\ SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ ONCE_REWRITE_TAC [sexp2term_def] \\ SIMP_TAC std_ss [LET_DEF]
   \\ SRW_TAC [] [] \\ SIMP_TAC std_ss [funcs_ok_def]
   \\ FULL_SIMP_TAC std_ss [EVERY_MEM,MEM_MAP,PULL_IMP]
   \\ ASM_SIMP_TAC (srw_ss()) [func_name_ok_def,MEM]
   \\ Cases_on `CAR x` \\ FULL_SIMP_TAC std_ss [getSym_def]
-  \\ FULL_SIMP_TAC (srw_ss()) []);
+  \\ FULL_SIMP_TAC (srw_ss()) []
+QED
 
 val MR_ev_CAR = prove(
   ``MR_ev (App (PrimitiveFun opCAR) [x],a,ctxt,fns,ok) (s,ok2) =
@@ -1275,11 +1316,12 @@ val term2term_Or = prove(
   \\ FULL_SIMP_TAC std_ss [MEM_MAP,EVERY_MEM,PULL_IMP]
   \\ METIS_TAC [free_vars_term_vars,MEM]);
 
-val MR_ev_term2term = store_thm("MR_ev_term2term",
-  ``!x res ok2 ok a.
+Theorem MR_ev_term2term:
+    !x res ok2 ok a.
       funcs_ok x /\ term_ok ctxt5 (term2t x) /\
       MR_ev (term2term x,a,ctxt,fns,ok) (res,ok2) ==>
-      MR_ev (x,a,ctxt,fns,ok) (res,ok2)``,
+      MR_ev (x,a,ctxt,fns,ok) (res,ok2)
+Proof
   HO_MATCH_MP_TAC (fetch "-" "term2t_ind") \\ REPEAT STRIP_TAC
   THEN1 (FULL_SIMP_TAC (srw_ss()) [term2term_def,t2term_def,term2t_def,LENGTH])
   THEN1 (FULL_SIMP_TAC (srw_ss()) [term2term_def,t2term_def,term2t_def,LENGTH])
@@ -1388,7 +1430,8 @@ val MR_ev_term2term = store_thm("MR_ev_term2term",
          \\ FULL_SIMP_TAC std_ss [term2term_def,term2t_def,funcs_ok_def,EVERY_DEF])
   THEN1 (SIMP_TAC (srw_ss()) [Once MR_ev_cases] \\ POP_ASSUM MP_TAC
          \\ FULL_SIMP_TAC (srw_ss()) [term2term_def,term2t_def,t2term_def,
-               funcs_ok_def,EVERY_DEF,f2func_def]));
+               funcs_ok_def,EVERY_DEF,f2func_def])
+QED
 
 (* M_ev ==> MR_ev *)
 
@@ -1410,18 +1453,20 @@ val VarBind_CONS = prove(
   \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC VarBindAux_lemma
   \\ FULL_SIMP_TAC std_ss [LENGTH_REVERSE,LENGTH,MEM_REVERSE]);
 
-val params_lemma = store_thm("params_lemma",
-  ``!params args (v:string).
+Theorem params_lemma:
+    !params args (v:string).
        MEM v params /\ (LENGTH args = LENGTH params) /\ ALL_DISTINCT params ==>
        v IN FDOM (VarBind params args) /\
-       (VarBind params args ' v = FunVarBind params args v)``,
+       (VarBind params args ' v = FunVarBind params args v)
+Proof
   Induct \\ SIMP_TAC std_ss [MEM]
   \\ Cases_on `args` \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1]
   \\ FULL_SIMP_TAC std_ss [FunVarBind_def,APPLY_UPDATE_THM]
   \\ ASM_SIMP_TAC std_ss [VarBind_CONS,ALL_DISTINCT]
   \\ FULL_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM,
         FDOM_FUPDATE,IN_INSERT]
-  \\ METIS_TAC []);
+  \\ METIS_TAC []
+QED
 
 val LENGTH_EQ_1 = prove(
   ``(1 = LENGTH xs) = ?x1. xs = [x1]``,
@@ -1480,24 +1525,27 @@ val ordp_lemma = prove(
   \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss [isTrue_def,getVal_def]
   \\ FULL_SIMP_TAC std_ss [GSYM ord__lemma,LISP_TEST_def]);
 
-val fake_ftbl_entries_def = Define `
+Definition fake_ftbl_entries_def:
   fake_ftbl_entries =
     ["IF"; "EQUAL"; "SYMBOLP"; "SYMBOL-<"; "NATP"; "<"; "+"; "-";
      "CONSP"; "CONS"; "CAR"; "CDR"; "ERROR"; "PRINT"; "DEFINE";
      "DEFUN"; "FUNCALL"; "LOOKUP-SAFE"; "DEFINE-SAFE";
-     "DEFINE-SAFE-LIST"; "MILAWA-INIT"; "MILAWA-MAIN"]`;
+     "DEFINE-SAFE-LIST"; "MILAWA-INIT"; "MILAWA-MAIN"]
+End
 
-val MilawaTrueFun_def = Define `
+Definition MilawaTrueFun_def:
   MilawaTrueFun ctxt f args result =
-    MilawaTrue ctxt (Equal (mApp (mFun f) (MAP mConst args)) (mConst result))`;
+    MilawaTrue ctxt (Equal (mApp (mFun f) (MAP mConst args)) (mConst result))
+End
 
-val runtime_inv_def = Define `
+Definition runtime_inv_def:
   runtime_inv (ctxt:context_type) k =
     !name params body sem args ok.
       name IN FDOM ctxt /\ (ctxt ' name = (params,body,sem)) /\
       (LENGTH args = LENGTH params) ==>
       ?ok2. MR_ap (Fun name,args,ARB,ctxt,k,ok) (sem args,ok2) /\
-            (ok2 ==> MilawaTrueFun ctxt name args (sem args))`;
+            (ok2 ==> MilawaTrueFun ctxt name args (sem args))
+End
 
 val MR_ap_CTXT = prove(
   ``MR_ap (Fun fc,args,a,ctxt \\ name,k,ok) (sem args,ok2) ==>
@@ -1817,64 +1865,67 @@ val MilawaTrue_or_not_equal_list = prove(
 
 val M_ev_induct = IndDefLib.derive_strong_induction(M_ev_rules,M_ev_ind);
 
-val inst_term_def = Define `
-  inst_term a exp = term_sub (MAP (\v. (v,mConst (a v))) (free_vars exp)) exp`;
+Definition inst_term_def:
+  inst_term a exp = term_sub (MAP (\v. (v,mConst (a v))) (free_vars exp)) exp
+End
 
 val MAP_EQ = prove(
   ``!xs f g. (MAP f xs = MAP g xs) = EVERY (\x. f x = g x) xs``,
   Induct \\ SRW_TAC [] []);
 
-val term_sub_EQ = store_thm("term_sub_EQ",
-  ``!x xs. (set (free_vars x) SUBSET set xs) ==>
-           (term_sub (MAP (\v. (v,f v)) xs) x =
-            term_sub (MAP (\v. (v,f v)) (free_vars x)) x)``,
-  STRIP_TAC \\ completeInduct_on `logic_term_size x`
+Theorem term_sub_EQ:
+  !x xs. (set (free_vars x) SUBSET set xs) ==>
+         (term_sub (MAP (\v. (v,f v)) xs) x =
+          term_sub (MAP (\v. (v,f v)) (free_vars x)) x)
+Proof
+  STRIP_TAC \\ completeInduct_on ‘logic_term_size x’
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [PULL_IMP]
-  \\ Cases_on `x` \\ FULL_SIMP_TAC std_ss [term_sub_def,free_vars_def] THEN1
+  \\ Cases_on ‘x’ \\ FULL_SIMP_TAC std_ss [term_sub_def,free_vars_def] THEN1
    (FULL_SIMP_TAC std_ss [LOOKUP_def,SUBSET_DEF,MEM]
     \\ POP_ASSUM MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
-    \\ Induct_on `xs` \\ FULL_SIMP_TAC (srw_ss()) [LOOKUP_def] \\ METIS_TAC [])
+    \\ Induct_on ‘xs’ \\ FULL_SIMP_TAC (srw_ss()) [LOOKUP_def] \\ METIS_TAC [])
   \\ FULL_SIMP_TAC (srw_ss()) [MAP_EQ,EVERY_MEM] \\ REPEAT STRIP_TAC
   THEN1
    (FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
-    \\ Q.PAT_X_ASSUM `!x.bbb` (fn th => MP_TAC (Q.SPECL [`a`,`xs`] th)
-         THEN MP_TAC (Q.SPECL [`a`,`(FLAT (MAP (\a. free_vars a) l))`] th))
+    \\ Q.PAT_X_ASSUM ‘!x.bbb’ (fn th => MP_TAC (Q.SPECL [‘a’,‘xs’] th)
+         THEN MP_TAC (Q.SPECL [‘a’,‘(FLAT (MAP (\a. free_vars a) l))’] th))
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
      (IMP_RES_TAC MEM_logic_term_size
-      \\ FULL_SIMP_TAC std_ss [logic_term_size_def] \\ STRIP_TAC THEN1 DECIDE_TAC
+      \\ FULL_SIMP_TAC std_ss [] \\ STRIP_TAC THEN1 simp[logic_term_size_def]
       \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
-      \\ Induct_on `l` \\ FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] \\ METIS_TAC [])
+      \\ Induct_on ‘l’ \\ FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] \\ METIS_TAC [])
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
      (POP_ASSUM (K ALL_TAC) \\ IMP_RES_TAC MEM_logic_term_size
       \\ FULL_SIMP_TAC std_ss [logic_term_size_def] \\ STRIP_TAC THEN1 DECIDE_TAC
       \\ MATCH_MP_TAC SUBSET_TRANS
-      \\ Q.EXISTS_TAC `set (FLAT (MAP (\a. free_vars a) l))`
+      \\ Q.EXISTS_TAC ‘set (FLAT (MAP (\a. free_vars a) l))’
       \\ ASM_SIMP_TAC std_ss []
       \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
-      \\ Induct_on `l` \\ FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] \\ METIS_TAC [])
+      \\ Induct_on ‘l’ \\ FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] \\ METIS_TAC [])
     \\ FULL_SIMP_TAC std_ss [])
   THEN1
-   (Q.ABBREV_TAC `vs = l` \\ POP_ASSUM (K ALL_TAC)
-    \\ Q.ABBREV_TAC `l = l0` \\ POP_ASSUM (K ALL_TAC)
+   (Q.ABBREV_TAC ‘vs = l’ \\ POP_ASSUM (K ALL_TAC)
+    \\ Q.ABBREV_TAC ‘l = l0’ \\ POP_ASSUM (K ALL_TAC)
     \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
-    \\ Q.PAT_X_ASSUM `!x.bbb` (fn th => MP_TAC (Q.SPECL [`a`,`xs`] th)
-         THEN MP_TAC (Q.SPECL [`a`,`(FLAT (MAP (\a. free_vars a) l))`] th))
+    \\ Q.PAT_X_ASSUM ‘!x.bbb’ (fn th => MP_TAC (Q.SPECL [‘a’,‘xs’] th)
+         THEN MP_TAC (Q.SPECL [‘a’,‘(FLAT (MAP (\a. free_vars a) l))’] th))
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
      (IMP_RES_TAC MEM_logic_term_size
       \\ FULL_SIMP_TAC std_ss [logic_term_size_def] \\ STRIP_TAC THEN1 DECIDE_TAC
       \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
-      \\ Induct_on `l` \\ FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] \\ METIS_TAC [])
+      \\ Induct_on ‘l’ \\ FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] \\ METIS_TAC [])
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
      (POP_ASSUM (K ALL_TAC) \\ IMP_RES_TAC MEM_logic_term_size
       \\ FULL_SIMP_TAC std_ss [logic_term_size_def] \\ STRIP_TAC THEN1 DECIDE_TAC
       \\ MATCH_MP_TAC SUBSET_TRANS
-      \\ Q.EXISTS_TAC `set (FLAT (MAP (\a. free_vars a) l))`
+      \\ Q.EXISTS_TAC ‘set (FLAT (MAP (\a. free_vars a) l))’
       \\ ASM_SIMP_TAC std_ss []
       \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
-      \\ Induct_on `l` \\ FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] \\ METIS_TAC [])
-    \\ FULL_SIMP_TAC std_ss []));
+      \\ Induct_on ‘l’ \\ FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] \\ METIS_TAC [])
+    \\ FULL_SIMP_TAC std_ss [])
+QED
 
 val inst_term_thm = prove(
   ``(inst_term a (mConst c) = mConst c) /\
@@ -1937,32 +1988,37 @@ val MEM_ZIP_IMP = prove(
   Induct \\ Cases_on `ys` \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,ZIP,MAP,MEM]
   \\ METIS_TAC []);
 
-val MAP_LOOKUP_LEMMA = store_thm("MAP_LOOKUP_LEMMA",
-  ``!args params.
+Theorem MAP_LOOKUP_LEMMA:
+    !args params.
       (LENGTH args = LENGTH params) /\ ALL_DISTINCT params ==>
       (MAP mConst args =
-       MAP (\x. LOOKUP x (ZIP (params,MAP mConst args)) (mVar x)) params)``,
+       MAP (\x. LOOKUP x (ZIP (params,MAP mConst args)) (mVar x)) params)
+Proof
   Induct \\ Cases_on `params` \\ SIMP_TAC (srw_ss()) [LENGTH,ADD1,LOOKUP_def]
   \\ REPEAT STRIP_TAC \\ RES_TAC
   \\ POP_ASSUM (fn th => CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [th])))
   \\ SIMP_TAC std_ss [MAP_EQ,EVERY_MEM] \\ REPEAT STRIP_TAC
-  \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss []);
+  \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss []
+QED
 
-val MAP_FunVarBind_LEMMA = store_thm("MAP_FunVarBind_LEMMA",
-  ``!params args.
+Theorem MAP_FunVarBind_LEMMA:
+    !params args.
       (LENGTH params = LENGTH args) /\ ALL_DISTINCT params ==>
       (MAP (\v. (v,mConst (FunVarBind params args v))) params =
-       ZIP (params,MAP mConst args))``,
+       ZIP (params,MAP mConst args))
+Proof
   Induct \\ Cases_on `args` \\ SIMP_TAC (srw_ss()) [LENGTH,ADD1,FunVarBind_def]
   \\ SIMP_TAC std_ss [APPLY_UPDATE_THM] \\ REPEAT STRIP_TAC
   \\ sg `MAP (\v. (v,mConst (if h' = v then h else FunVarBind params t v)))
       params = MAP (\v. (v,mConst (FunVarBind params t v))) params`
-  \\ SIMP_TAC std_ss [MAP_EQ,EVERY_MEM] \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC []);
+  \\ SIMP_TAC std_ss [MAP_EQ,EVERY_MEM] \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC []
+QED
 
-val inst_term_EQ_term_sub = prove(
-  ``!xs sl.
-      set (free_vars e) SUBSET set xs /\ (LENGTH xs = LENGTH sl) ==>
-      (inst_term (FunVarBind xs sl) e = term_sub (ZIP (xs,MAP mConst sl)) e)``,
+Theorem inst_term_EQ_term_sub:
+  !xs sl.
+    set (free_vars e) SUBSET set xs /\ (LENGTH xs = LENGTH sl) ==>
+    (inst_term (FunVarBind xs sl) e = term_sub (ZIP (xs,MAP mConst sl)) e)
+Proof
   completeInduct_on `logic_term_size e` \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [PULL_IMP] \\ Cases_on `e`
   THEN1 (SIMP_TAC std_ss [inst_term_thm,term_sub_def,MilawaTrue_REFL,term_ok_def])
@@ -1980,47 +2036,49 @@ val inst_term_EQ_term_sub = prove(
     \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
     \\ Q.PAT_X_ASSUM `!x.bbb` MATCH_MP_TAC \\ FULL_SIMP_TAC std_ss []
     \\ IMP_RES_TAC MEM_logic_term_size
-    \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
+    \\ STRIP_TAC THEN1 (simp[] \\ DECIDE_TAC)
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,MEM_FLAT,PULL_IMP,MEM_MAP]
-    \\ METIS_TAC []));
+    \\ METIS_TAC [])
+QED
 
 val MEM_ZIP_ID = prove(
   ``!xs x y. MEM (x,y) (ZIP(xs,xs)) ==> (x = y)``,
   Induct \\ SIMP_TAC (srw_ss()) [ZIP] \\ METIS_TAC []);
 
-val Equal_term_sub = prove(
-  ``!vs xs ys.
-      context_ok ctxt /\
-      term_ok ctxt x /\ (LENGTH vs = LENGTH ys) /\ (LENGTH vs = LENGTH xs) /\
-      (!x y. MEM (x,y) (ZIP(xs,ys)) ==> MilawaTrue ctxt (Equal x y)) ==>
-      MilawaTrue ctxt (Equal (term_sub (ZIP (vs,xs)) x) (term_sub (ZIP(vs,ys)) x))``,
-  completeInduct_on `logic_term_size x` \\ REPEAT STRIP_TAC
-  \\ FULL_SIMP_TAC std_ss [PULL_IMP] \\ Cases_on `x`
+Theorem Equal_term_sub:
+  !vs xs ys.
+    context_ok ctxt /\
+    term_ok ctxt x /\ (LENGTH vs = LENGTH ys) /\ (LENGTH vs = LENGTH xs) /\
+    (!x y. MEM (x,y) (ZIP(xs,ys)) ==> MilawaTrue ctxt (Equal x y)) ==>
+    MilawaTrue ctxt (Equal (term_sub (ZIP (vs,xs)) x) (term_sub (ZIP(vs,ys)) x))
+Proof
+  completeInduct_on ‘logic_term_size x’ \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [PULL_IMP] \\ Cases_on ‘x’
   THEN1 (SIMP_TAC std_ss [term_sub_def,MilawaTrue_REFL,term_ok_def])
   THEN1
    (POP_ASSUM MP_TAC \\ POP_ASSUM MP_TAC \\ POP_ASSUM MP_TAC
     \\ REPEAT (POP_ASSUM (K ALL_TAC))
-    \\ Q.SPEC_TAC (`xs`,`xs`) \\ Q.SPEC_TAC (`ys`,`ys`) \\ Q.SPEC_TAC (`vs`,`vs`)
-    \\ Induct \\ Cases_on `xs` \\ Cases_on `ys`
+    \\ Q.SPEC_TAC (‘xs’,‘xs’) \\ Q.SPEC_TAC (‘ys’,‘ys’) \\ Q.SPEC_TAC (‘vs’,‘vs’)
+    \\ Induct \\ Cases_on ‘xs’ \\ Cases_on ‘ys’
     \\ FULL_SIMP_TAC (srw_ss()) [LENGTH,ADD1,term_sub_def,LOOKUP_def]
     THEN1 (SIMP_TAC std_ss [term_sub_def,MilawaTrue_REFL,term_ok_def])
-    \\ REPEAT STRIP_TAC \\ Cases_on `s = h''` \\ ASM_SIMP_TAC std_ss [])
+    \\ REPEAT STRIP_TAC \\ Cases_on ‘s = h''’ \\ ASM_SIMP_TAC std_ss [])
   THEN1
    (SIMP_TAC std_ss [term_sub_def]
     \\ MATCH_MP_TAC MilawaTrue_or_not_equal_list
-    \\ Q.LIST_EXISTS_TAC [`ZIP (MAP (\a. term_sub (ZIP (vs,xs)) a) l,
-                                MAP (\a. term_sub (ZIP (vs,ys)) a) l)`]
+    \\ Q.LIST_EXISTS_TAC [‘ZIP (MAP (\a. term_sub (ZIP (vs,xs)) a) l,
+                                MAP (\a. term_sub (ZIP (vs,ys)) a) l)’]
     \\ ASM_SIMP_TAC std_ss []
     \\ STRIP_TAC THEN1
      (SIMP_TAC std_ss [ZIP_MAP,MEM_MAP,pairTheory.EXISTS_PROD,PULL_IMP]
       \\ REPEAT STRIP_TAC
       \\ IMP_RES_TAC MEM_ZIP_ID \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
-      \\ Q.PAT_X_ASSUM `!x1 x2 x3. bbb` MATCH_MP_TAC \\ IMP_RES_TAC MEM_ZIP_IMP
+      \\ Q.PAT_X_ASSUM ‘!x1 x2 x3. bbb’ MATCH_MP_TAC \\ IMP_RES_TAC MEM_ZIP_IMP
       \\ FULL_SIMP_TAC std_ss [term_ok_def,EVERY_MEM]
-      \\ IMP_RES_TAC MEM_logic_term_size \\ EVAL_TAC \\ DECIDE_TAC)
+      \\ IMP_RES_TAC MEM_logic_term_size \\ simp[])
     \\ MATCH_MP_TAC (MilawaTrue_rules |> CONJUNCTS |> el 6)
-    \\ Q.LIST_EXISTS_TAC [`l0`,`ZIP (MAP (\a. term_sub (ZIP (vs,xs)) a) l,
-                                     MAP (\a. term_sub (ZIP (vs,ys)) a) l)`]
+    \\ Q.LIST_EXISTS_TAC [‘l0’,‘ZIP (MAP (\a. term_sub (ZIP (vs,xs)) a) l,
+                                     MAP (\a. term_sub (ZIP (vs,ys)) a) l)’]
     \\ FULL_SIMP_TAC std_ss [MAP_FST_ZIP,MAP_SND_ZIP,LENGTH_MAP]
     \\ MATCH_MP_TAC formula_ok_or_not_equal_list
     \\ FULL_SIMP_TAC std_ss [formula_ok_def,term_ok_def,LENGTH_MAP,EVERY_ZIP]
@@ -2028,8 +2086,8 @@ val Equal_term_sub = prove(
     \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC term_ok_sub
     \\ ASM_SIMP_TAC std_ss [EVERY_MEM,MEM_MAP,pairTheory.EXISTS_PROD,PULL_IMP]
     \\ REPEAT STRIP_TAC
-    \\ `LENGTH ys = LENGTH xs` by METIS_TAC []
-    \\ `LENGTH vs = LENGTH ys` by METIS_TAC []
+    \\ ‘LENGTH ys = LENGTH xs’ by METIS_TAC []
+    \\ ‘LENGTH vs = LENGTH ys’ by METIS_TAC []
     \\ IMP_RES_TAC MEM_ZIP_IMP
     THENL [IMP_RES_TAC MEM_ZIP, IMP_RES_TAC MEM_ZIP2]
     \\ RES_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
@@ -2037,33 +2095,33 @@ val Equal_term_sub = prove(
   THEN1
    (SIMP_TAC std_ss [term_sub_def]
     \\ MATCH_MP_TAC (MilawaTrue_AX2 |> SIMP_RULE std_ss [AND_IMP_INTRO])
-    \\ Q.ABBREV_TAC `xs1 = MAP (\a. term_sub (ZIP (vs,xs)) a) l0`
-    \\ Q.ABBREV_TAC `ys1 = MAP (\a. term_sub (ZIP (vs,ys)) a) l0`
-    \\ Q.LIST_EXISTS_TAC [`term_sub (ZIP(l1,ys1)) l`,`term_sub (ZIP(l1,xs1)) l`]
+    \\ Q.ABBREV_TAC ‘xs1 = MAP (\a. term_sub (ZIP (vs,xs)) a) l0’
+    \\ Q.ABBREV_TAC ‘ys1 = MAP (\a. term_sub (ZIP (vs,ys)) a) l0’
+    \\ Q.LIST_EXISTS_TAC [‘term_sub (ZIP(l1,ys1)) l’,‘term_sub (ZIP(l1,xs1)) l’]
     \\ ASM_SIMP_TAC std_ss []
     \\ REPEAT STRIP_TAC THEN1
      (MATCH_MP_TAC MilawaTrue_Sym \\ ASM_SIMP_TAC std_ss []
       \\ MATCH_MP_TAC (MilawaTrue_rules |> CONJUNCTS |> el 8)
       \\ FULL_SIMP_TAC std_ss [formula_ok_def,term_ok_def]
-      \\ Q.UNABBREV_TAC `xs1` \\ Q.UNABBREV_TAC `ys1`
+      \\ Q.UNABBREV_TAC ‘xs1’ \\ Q.UNABBREV_TAC ‘ys1’
       \\ FULL_SIMP_TAC std_ss [EVERY_MEM,MEM_MAP,PULL_IMP,LENGTH_MAP]
       \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC term_ok_sub
       \\ FULL_SIMP_TAC std_ss [EVERY_MEM,MEM_MAP,pairTheory.EXISTS_PROD,PULL_IMP]
       \\ REPEAT STRIP_TAC
-      \\ `LENGTH ys = LENGTH xs` by METIS_TAC []
-      \\ `LENGTH vs = LENGTH ys` by METIS_TAC []
+      \\ ‘LENGTH ys = LENGTH xs’ by METIS_TAC []
+      \\ ‘LENGTH vs = LENGTH ys’ by METIS_TAC []
       THEN1
        (IMP_RES_TAC MEM_ZIP_IMP \\ IMP_RES_TAC MEM_ZIP
         \\ RES_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
         \\ FULL_SIMP_TAC std_ss [formula_ok_def,term_ok_def,LENGTH_MAP])
-      \\ Q.PAT_X_ASSUM `MEM (p_1,e) (ZIP (l1,MAP (\a. term_sub (ZIP (vs,xs)) a) l0))` MP_TAC
+      \\ Q.PAT_X_ASSUM ‘MEM (p_1,e) (ZIP (l1,MAP (\a. term_sub (ZIP (vs,xs)) a) l0))’ MP_TAC
       \\ ASM_SIMP_TAC std_ss [MEM_MAP,pairTheory.EXISTS_PROD,
-          ZIP_MAP |> Q.SPECL [`xs`,`ys`] |> Q.ISPEC `I` |> SIMP_RULE std_ss [MAP_ID]]
+          ZIP_MAP |> Q.SPECL [‘xs’,‘ys’] |> Q.ISPEC ‘I’ |> SIMP_RULE std_ss [MAP_ID]]
       \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
       \\ MATCH_MP_TAC term_ok_sub
       \\ IMP_RES_TAC MEM_ZIP_IMP \\ FULL_SIMP_TAC std_ss []
       \\ FULL_SIMP_TAC std_ss [EVERY_MEM,MEM_MAP,pairTheory.EXISTS_PROD,PULL_IMP]
-      \\ REPEAT STRIP_TAC \\ `LENGTH vs = LENGTH xs` by METIS_TAC []
+      \\ REPEAT STRIP_TAC \\ ‘LENGTH vs = LENGTH xs’ by METIS_TAC []
       \\ IMP_RES_TAC MEM_ZIP_IMP \\ FULL_SIMP_TAC std_ss []
       \\ IMP_RES_TAC MEM_ZIP_IMP \\ IMP_RES_TAC MEM_ZIP
       \\ RES_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
@@ -2072,41 +2130,42 @@ val Equal_term_sub = prove(
      (MATCH_MP_TAC MilawaTrue_Sym \\ ASM_SIMP_TAC std_ss []
       \\ MATCH_MP_TAC (MilawaTrue_rules |> CONJUNCTS |> el 8)
       \\ FULL_SIMP_TAC std_ss [formula_ok_def,term_ok_def]
-      \\ Q.UNABBREV_TAC `xs1` \\ Q.UNABBREV_TAC `ys1`
+      \\ Q.UNABBREV_TAC ‘xs1’ \\ Q.UNABBREV_TAC ‘ys1’
       \\ FULL_SIMP_TAC std_ss [EVERY_MEM,MEM_MAP,PULL_IMP,LENGTH_MAP]
       \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC term_ok_sub
       \\ FULL_SIMP_TAC std_ss [EVERY_MEM,MEM_MAP,pairTheory.EXISTS_PROD,PULL_IMP]
       \\ REPEAT STRIP_TAC
-      \\ `LENGTH ys = LENGTH xs` by METIS_TAC []
-      \\ `LENGTH vs = LENGTH ys` by METIS_TAC []
+      \\ ‘LENGTH ys = LENGTH xs’ by METIS_TAC []
+      \\ ‘LENGTH vs = LENGTH ys’ by METIS_TAC []
       THEN1
        (IMP_RES_TAC MEM_ZIP_IMP \\ IMP_RES_TAC MEM_ZIP2
         \\ RES_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
         \\ FULL_SIMP_TAC std_ss [formula_ok_def,term_ok_def,LENGTH_MAP])
-      \\ Q.PAT_X_ASSUM `MEM (p_1,e) (ZIP (l1,MAP (\a. term_sub (ZIP (vs,ys)) a) l0))` MP_TAC
+      \\ Q.PAT_X_ASSUM ‘MEM (p_1,e) (ZIP (l1,MAP (\a. term_sub (ZIP (vs,ys)) a) l0))’ MP_TAC
       \\ ASM_SIMP_TAC std_ss [MEM_MAP,pairTheory.EXISTS_PROD,
-          ZIP_MAP |> Q.SPECL [`xs`,`ys`] |> Q.ISPEC `I` |> SIMP_RULE std_ss [MAP_ID]]
+          ZIP_MAP |> Q.SPECL [‘xs’,‘ys’] |> Q.ISPEC ‘I’ |> SIMP_RULE std_ss [MAP_ID]]
       \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
       \\ MATCH_MP_TAC term_ok_sub
       \\ IMP_RES_TAC MEM_ZIP_IMP \\ FULL_SIMP_TAC std_ss []
       \\ FULL_SIMP_TAC std_ss [EVERY_MEM,MEM_MAP,pairTheory.EXISTS_PROD,PULL_IMP]
-      \\ REPEAT STRIP_TAC \\ `LENGTH vs = LENGTH ys` by METIS_TAC []
+      \\ REPEAT STRIP_TAC \\ ‘LENGTH vs = LENGTH ys’ by METIS_TAC []
       \\ IMP_RES_TAC MEM_ZIP_IMP \\ FULL_SIMP_TAC std_ss []
       \\ IMP_RES_TAC MEM_ZIP_IMP \\ IMP_RES_TAC MEM_ZIP2
       \\ RES_TAC \\ IMP_RES_TAC MilawaTrue_IMP_formula_ok
       \\ FULL_SIMP_TAC std_ss [formula_ok_def,term_ok_def,LENGTH_MAP])
     \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
-    \\ Q.PAT_X_ASSUM `!x1 x2 x3. bbb` (fn th => ASSUME_TAC th THEN MATCH_MP_TAC th)
+    \\ Q.PAT_X_ASSUM ‘!x1 x2 x3. bbb’ (fn th => ASSUME_TAC th THEN MATCH_MP_TAC th)
     \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
-    \\ Q.UNABBREV_TAC `xs1` \\ Q.UNABBREV_TAC `ys1`
+    \\ Q.UNABBREV_TAC ‘xs1’ \\ Q.UNABBREV_TAC ‘ys1’
     \\ FULL_SIMP_TAC std_ss [term_ok_def,LENGTH_MAP,ZIP_MAP,MEM_MAP,
          PULL_IMP,pairTheory.FORALL_PROD] \\ REPEAT STRIP_TAC
     \\ IMP_RES_TAC MEM_ZIP_ID \\ FULL_SIMP_TAC std_ss []
-    \\ Q.PAT_X_ASSUM `!x1 x2 x3. bbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM ‘!x1 x2 x3. bbb’ MATCH_MP_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ IMP_RES_TAC MEM_ZIP_IMP
     \\ FULL_SIMP_TAC std_ss [EVERY_MEM]
     \\ IMP_RES_TAC MEM_logic_term_size
-    \\ EVAL_TAC \\ DECIDE_TAC));
+    \\ simp[])
+QED
 
 val MEM_ZIP_MAP_EQ = prove(
   ``!xs ys.
@@ -2116,15 +2175,17 @@ val MEM_ZIP_MAP_EQ = prove(
   Induct \\ Cases_on `ys`
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH,ADD1] \\ METIS_TAC []);
 
-val term_funs_def = Define `
+Definition term_funs_def:
   term_funs ctxt =
     !name params body sem.
       name IN FDOM ctxt /\ (ctxt ' name = (params,BODY_FUN body,sem)) ==>
-      MilawaTrue ctxt (Equal (mApp (mFun name) (MAP mVar params)) body)`;
+      MilawaTrue ctxt (Equal (mApp (mFun name) (MAP mVar params)) body)
+End
 
-val proof_in_full_ctxt_def = Define `
+Definition proof_in_full_ctxt_def:
   proof_in_full_ctxt ctxt full_ctxt =
-    !x. MilawaTrue ctxt x ==> MilawaTrue full_ctxt x`;
+    !x. MilawaTrue ctxt x ==> MilawaTrue full_ctxt x
+End
 
 val ind =
   M_ev_induct
@@ -2396,4 +2457,3 @@ val MR_ap_thm = save_thm("MR_ap_thm",M_ev_IMP_R_ev_lemma
   |> CONJUNCTS |> el 2 |> Q.SPECL [`(f,args,ctxt)`,`result`]
   |> SIMP_RULE std_ss [PULL_IMP,AND_IMP_INTRO] |> GEN_ALL);
 
-val _ = export_theory();

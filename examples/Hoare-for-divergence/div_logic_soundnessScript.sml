@@ -1,7 +1,9 @@
-open preamble while_langTheory while_lang_lemmasTheory div_logicTheory
-     std_logicTheory std_logic_soundnessTheory;
-
-val _ = new_theory "div_logic_soundness";
+Theory div_logic_soundness
+Ancestors
+  while_lang while_lang_lemmas div_logic std_logic
+  std_logic_soundness
+Libs
+  preamble
 
 Theorem lprefix_chain_IMAGE_GENLIST:
   lprefix_chain (IMAGE (fromList ∘ FLAT ∘ GENLIST f) univ(:nat))
@@ -130,7 +132,8 @@ Proof
        \\ drule terminates_history \\ fs []
        \\ disch_then (qspec_then ‘SND t’ assume_tac) \\ fs []
        \\ goal_assum (first_assum o mp_then (Pos hd) mp_tac) \\ fs []
-       \\ Cases_on ‘s'’ \\ Cases_on ‘t’ \\ fs [guard_def,output_of_def,ADD1]
+       \\ Cases_on ‘s'’ \\ Cases_on ‘t’
+       \\ fs [guard_def,output_of_def,ADD1,SNOC_APPEND]
        \\ fs [ignores_output_def] \\ metis_tac [])
     \\ last_x_assum (qspec_then ‘i’ kall_tac)
     \\ conj_tac
@@ -260,4 +263,3 @@ Proof
   \\ metis_tac []
 QED
 
-val _ = export_theory();

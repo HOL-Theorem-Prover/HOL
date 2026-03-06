@@ -1,10 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory github416
 
-val _ = new_theory "github416";
+Datatype:  exp = Const num num | Downcast num exp
+End
 
-val _ = Datatype `exp = Const num num | Downcast num exp`;
-
-val test_def = Define `
+Definition test_def:
   test (e:exp) (map: exp -> num option) : bool =
     case e of
      | Const m n => (case map e of
@@ -13,7 +12,8 @@ val test_def = Define `
      | Downcast m e1 => (case map e, map e1 of
                            | SOME m', SOME m1 => (m' = m) /\ test e1 map
                            | _, _ => F)
-     | _ => F`;
+     | _ => F
+End
 
 
 val test_THM = (store_thm ("test_THM", ``!m e m' m1 map.
@@ -28,4 +28,3 @@ SIMP_TAC (srw_ss()) [Once test_def])) handle HOL_ERR _ => (
 
 val _ = print "Test-case OK\n";
 
-val _ = export_theory();

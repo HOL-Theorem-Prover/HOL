@@ -8,7 +8,8 @@ open pred_setTheory combinTheory x64_progTheory listTheory decompilerLib
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars x64_progTheory.x64_prog_grammars
+   val (Type, Term) =
+       parse_from_grammars $ valOf $ grammarDB {thyname="x64_prog"}
 end
 
 open Parse

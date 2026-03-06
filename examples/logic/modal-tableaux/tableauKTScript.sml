@@ -5,13 +5,10 @@
    for inspiration
 
 *)
+Theory tableauKT
+Ancestors
+  pair pred_set list relation modalBasics tableauBasics
 
-open HolKernel Parse boolLib bossLib;
-
-open pairTheory pred_setTheory listTheory relationTheory;
-open modalBasicsTheory tableauBasicsTheory
-
-val _ = new_theory "tableauKT";
 
 Definition trule_def[simp]:
   trule Σ (Box f :: rest) = (Box f::Σ, f::rest) ∧
@@ -247,14 +244,11 @@ Theorem disjsplit_degree_p1:
            degree (Σ,p1) = degree (Σ,Γ) ∧ gsize p1 < gsize Γ
 Proof
   Induct_on `Γ` >> simp[] >> Cases_on `h` >> rw[] >>
-  fs[pairTheory.PAIR_MAP, pairTheory.PAIR_FST_SND_EQ, pairTheory.PAIR]
+  fs[]
   >- (first_x_assum (qspec_then `Σ` assume_tac) >>
-      `disjsplit Γ = SOME (FST z,SND z)` by fs[] >>
       drule disjsplit_size >> simp[arithmeticTheory.MAX_DEF])
-  >- (Cases_on `0 < modal_size f0` >> simp[] >>
-      fs[arithmeticTheory.NOT_LESS, arithmeticTheory.MAX_DEF])
+  >- (fs[arithmeticTheory.NOT_LESS, arithmeticTheory.MAX_DEF])
   >> first_x_assum (qspec_then `Σ` assume_tac) >>
-  `disjsplit Γ = SOME (FST z,SND z)` by fs[] >>
   drule disjsplit_size >> simp[arithmeticTheory.MAX_DEF]
 QED
 
@@ -264,14 +258,11 @@ Theorem disjsplit_degree_p2:
            degree (Σ,p2) = degree (Σ,Γ) ∧ gsize p2 < gsize Γ
 Proof
   Induct_on `Γ` >> simp[] >> Cases_on `h` >> rw[] >>
-  fs[pairTheory.PAIR_MAP, pairTheory.PAIR_FST_SND_EQ, pairTheory.PAIR]
+  fs[]
   >- (first_x_assum (qspec_then `Σ` assume_tac) >>
-      `disjsplit Γ = SOME (FST z,SND z)` by fs[] >>
       drule disjsplit_size >> simp[arithmeticTheory.MAX_DEF])
-  >- (Cases_on `0 < modal_size f0` >> simp[] >>
-      fs[arithmeticTheory.NOT_LESS, arithmeticTheory.MAX_DEF])
+  >- (fs[arithmeticTheory.NOT_LESS, arithmeticTheory.MAX_DEF])
   >> first_x_assum (qspec_then `Σ` assume_tac) >>
-  `disjsplit Γ = SOME (FST z,SND z)` by fs[] >>
   drule disjsplit_size >> simp[arithmeticTheory.MAX_DEF]
 QED
 
@@ -754,4 +745,3 @@ Theorem tableau_KT_satisfies =
         tableau_KT_sound |> Q.SPEC ‘[]’
                          |> SRULE [reflexive_sequent_def]
 
-val _ = export_theory();

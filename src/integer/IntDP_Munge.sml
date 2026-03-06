@@ -1,14 +1,15 @@
 structure IntDP_Munge :> IntDP_Munge =
 struct
 
-structure Parse = struct
-  open Parse
-  val (Type,Term) = parse_from_grammars int_arithTheory.int_arith_grammars
-end
-open Parse
 
 open HolKernel boolLib intSyntax boolSyntax CooperSyntax integerTheory
      int_arithTheory intReduce
+
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="int_arith"}
+end
+open Parse
 
 val ERR = mk_HOL_ERR "IntDP_Munge";
 
@@ -234,9 +235,11 @@ in
       LAND_CONV eliminate_nat_quants THENC
       RATOR_CONV (RATOR_CONV (RAND_CONV eliminate_nat_quants))
     else ALL_CONV
-end tm handle HOL_ERR {origin_function = "REWR_CONV", ...} =>
-  raise ERR "IntDP_Munge" "Uneliminable natural number term remains"
-
+end tm
+handle (e as HOL_ERR herr) =>
+    if top_function_of herr = "REWR_CONV" then
+       raise ERR "IntDP_Munge" "Uneliminable natural number term remains"
+    else raise e
 
 fun tacTHEN t1 t2 tm = let
   val (g1, v1) = t1 tm

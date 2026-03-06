@@ -1,20 +1,21 @@
-open HolKernel Parse bossLib boolLib pairTheory relationTheory set_relationTheory pred_setTheory arithmeticTheory whileTheory
+Theory waaSimpl
+Ancestors
+  pair relation set_relation pred_set arithmetic While alterA ltl
+  ltl2waa
 
-open alterATheory ltlTheory ltl2waaTheory
-
-val _ = new_theory "waaSimpl"
 val _ = ParseExtras.temp_loose_equality()
 
 (*
   Reducing the amount of transitions
 *)
 
-val trans_implies_def = Define`
-  trans_implies (a1,q1) (a2,q2) = a2 ⊆ a1 ∧ q1 ⊆ q2`;
+Definition trans_implies_def:
+  trans_implies (a1,q1) (a2,q2) = a2 ⊆ a1 ∧ q1 ⊆ q2
+End
 
-val TRANS_IMPL_PO = store_thm
-  ("TRANS_IMPL_PO",
-  ``!d. partial_order (rrestrict (rel_to_reln trans_implies) d) d``,
+Theorem TRANS_IMPL_PO:
+    !d. partial_order (rrestrict (rel_to_reln trans_implies) d) d
+Proof
   fs[partial_order_def, rrestrict_def, rel_to_reln_def] >> rpt strip_tac
     >- (fs[domain_def,SUBSET_DEF] >> rpt strip_tac)
     >- (fs[range_def, SUBSET_DEF] >> rpt strip_tac)
@@ -26,25 +27,25 @@ val TRANS_IMPL_PO = store_thm
     >- (fs[antisym_def,SUBSET_DEF,trans_implies_def] >> rpt strip_tac
         >> Cases_on `x` >> Cases_on `y`
         >> fs[trans_implies_def] >> metis_tac[SUBSET_ANTISYM])
-  );
+QED
 
-val TRANS_IMPL_FINITE = store_thm
-  ("TRANS_IMPL_FINITE",
-   ``!d. FINITE d ==> finite_prefixes (rrestrict (rel_to_reln trans_implies) d) d``,
+Theorem TRANS_IMPL_FINITE:
+     !d. FINITE d ==> finite_prefixes (rrestrict (rel_to_reln trans_implies) d) d
+Proof
    fs[finite_prefixes_def, rrestrict_def, rel_to_reln_def] >> rpt strip_tac
    >> `FINITE {e' | e' ∈ (\x. trans_implies x e) ∧ e' ∈ d }` suffices_by fs[IN_DEF]
    >> metis_tac[INTER_DEF, INTER_FINITE,INTER_COMM]
-  );
+QED
 
-val TRANS_IMPL_MIN_LEMM = store_thm
-  ("TRANS_IMPL_MIN_LEMM",
-   ``!run q aut w i. validAARunFor aut run w ∧ q ∈ run.V i ∧ isValidAlterA aut
+Theorem TRANS_IMPL_MIN_LEMM:
+     !run q aut w i. validAARunFor aut run w ∧ q ∈ run.V i ∧ isValidAlterA aut
   ∧ FINITE aut.states ∧ FINITE aut.alphabet
   ==> ?t. t ∈ minimal_elements (aut.trans q)
   (rrestrict (rel_to_reln trans_implies) (aut.trans q)) ∧
   trans_implies t
   ((@a. (a,run.E (i,q)) ∈ aut.trans q ∧ at w i ∈ a),
-   run.E (i,q))``,
+   run.E (i,q))
+Proof
     rpt strip_tac
     >> `FINITE (aut.trans q)`
         by metis_tac[FINITE_LEMM,SUBSET_DEF,validAARunFor_def]
@@ -69,25 +70,27 @@ val TRANS_IMPL_MIN_LEMM = store_thm
         >> qunabbrev_tac `trans_impl_r`
         >> metis_tac[SUBSET_DEF,SELECT_THM,TRANS_IMPL_FINITE,TRANS_IMPL_PO]
        )
-  );
+QED
 
-val removeImplied_def = Define`
+Definition removeImplied_def:
   removeImplied trans x =
-    (trans x) DIFF {t | ?t'. ~(t = t') ∧ t' ∈ (trans x) ∧ trans_implies t' t}`;
+    (trans x) DIFF {t | ?t'. ~(t = t') ∧ t' ∈ (trans x) ∧ trans_implies t' t}
+End
 
-val reduceTransSimpl_def = Define`
+Definition reduceTransSimpl_def:
   reduceTransSimpl (ALTER_A s a trans i f) =
-     ALTER_A s a (removeImplied trans) i f`;
+     ALTER_A s a (removeImplied trans) i f
+End
 
-val REDUCE_IS_WEAK = store_thm
-  ("REDUCE_IS_WEAK",
-   ``!aut. isVeryWeakAlterA aut ==> isVeryWeakAlterA (reduceTransSimpl aut)``,
+Theorem REDUCE_IS_WEAK:
+     !aut. isVeryWeakAlterA aut ==> isVeryWeakAlterA (reduceTransSimpl aut)
+Proof
    rpt strip_tac >> fs[isVeryWeakAlterA_def] >> qexists_tac `ord`
    >> fs[isVeryWeakWithOrder_def] >> Cases_on `aut` >> fs[reduceTransSimpl_def]
    >> fs[removeImplied_def] >> metis_tac[]
-  );
+QED
 
-val reduced_E_def = Define`
+Definition reduced_E_def:
   reduced_E run trans word (i,q) =
     let a = $@ (\a. (a,run.E (i,q)) ∈ trans q ∧ at word i ∈ a)
     in if ?a' q'. (a',q') ∈ trans q ∧ trans_implies (a',q') (a,run.E (i,q))
@@ -96,17 +99,19 @@ val reduced_E_def = Define`
                     (trans q)
                     (rrestrict (rel_to_reln trans_implies) (trans q)))
            ∧ trans_implies t (a,run.E (i,q)))
-       else run.E(i,q)`;
+       else run.E(i,q)
+End
 
-val reduced_run_def = Define`
+Definition reduced_run_def:
   reduced_run run w trans =
-            run_restr (run.V 0) (ALTERA_RUN run.V (reduced_E run trans w))`;
+            run_restr (run.V 0) (ALTERA_RUN run.V (reduced_E run trans w))
+End
 
-val REDUCE_TRANS_CORRECT = store_thm
-  ("REDUCE_TRANS_CORRECT",
-   ``!aut. FINITE aut.states ∧ FINITE aut.alphabet ∧ isValidAlterA aut
+Theorem REDUCE_TRANS_CORRECT:
+     !aut. FINITE aut.states ∧ FINITE aut.alphabet ∧ isValidAlterA aut
          ∧ isVeryWeakAlterA aut
-      ==> (alterA_lang aut = alterA_lang (reduceTransSimpl aut))``,
+      ==> (alterA_lang aut = alterA_lang (reduceTransSimpl aut))
+Proof
    rw[SET_EQ_SUBSET, SUBSET_DEF] >> rpt strip_tac >> fs[alterA_lang_def]
     >- (qexists_tac `reduced_run run x aut.trans` >> fs[runForAA_def]
         >> `(validAARunFor (reduceTransSimpl aut) (reduced_run run x aut.trans) x ∧
@@ -297,13 +302,13 @@ val REDUCE_TRANS_CORRECT = store_thm
             )
          >- (Cases_on `aut` >> fs[reduceTransSimpl_def])
        )
-  );
+QED
 
 (*
   Remove unreachable states
 *)
 
-val removeStatesSimpl_def = Define`
+Definition removeStatesSimpl_def:
    removeStatesSimpl (ALTER_A s a t i f) =
      (ALTER_A
       (s ∩ reachRelFromSet (ALTER_A s a t i f) (BIGUNION i))
@@ -313,12 +318,13 @@ val removeStatesSimpl_def = Define`
           else {})
       i
       (f ∩ reachRelFromSet (ALTER_A s a t i f) (BIGUNION i))
-      )`;
+      )
+End
 
-val REACHREL_LEMM = store_thm
-  ("REACHREL_LEMM",
-   ``!x f qs. (x ∈ reachRelFromSet (ltl2vwaa f) qs) ∧ (qs ⊆ tempSubForms f)
-            ==> (x ∈ tempSubForms f)``,
+Theorem REACHREL_LEMM:
+     !x f qs. (x ∈ reachRelFromSet (ltl2vwaa f) qs) ∧ (qs ⊆ tempSubForms f)
+            ==> (x ∈ tempSubForms f)
+Proof
     simp[reachRelFromSet_def,reachRel_def]
     >> `!f x y. (oneStep (ltl2vwaa f))^* x y
                      ==> (!qs. x ∈ qs ∧ (qs ⊆ tempSubForms f)
@@ -330,12 +336,12 @@ val REACHREL_LEMM = store_thm
                       >> `(x',x) ∈ TSF` by metis_tac[TRANS_REACHES_SUBFORMS]
                       >> metis_tac[TSF_def,TSF_TRANS_LEMM,transitive_def,IN_DEF]
        )
-  );
+QED
 
-val REDUCE_STATE_IS_WEAK = store_thm
-  ("REDUCE_STATE_IS_WEAK",
-   ``!aut. (isVeryWeakAlterA aut ∧ isValidAlterA aut)
-               ==> isVeryWeakAlterA (removeStatesSimpl aut)``,
+Theorem REDUCE_STATE_IS_WEAK:
+     !aut. (isVeryWeakAlterA aut ∧ isValidAlterA aut)
+               ==> isVeryWeakAlterA (removeStatesSimpl aut)
+Proof
    simp[isVeryWeakAlterA_def,isVeryWeakWithOrder_def] >> rpt strip_tac
    >> Cases_on `aut`
    >> simp[removeStatesSimpl_def,ALTER_A_component_equality]
@@ -362,11 +368,11 @@ val REDUCE_STATE_IS_WEAK = store_thm
            >- metis_tac[]
           )
       )
-  );
+QED
 
-val REDUCE_STATE_IS_VALID = store_thm
-  ("REDUCE_STATE_IS_VALID",
-   ``!aut. isValidAlterA aut ==> isValidAlterA (removeStatesSimpl aut)``,
+Theorem REDUCE_STATE_IS_VALID:
+     !aut. isValidAlterA aut ==> isValidAlterA (removeStatesSimpl aut)
+Proof
    rpt strip_tac >> simp[isValidAlterA_def] >> rpt strip_tac
    >> fs[isValidAlterA_def,removeStatesSimpl_def]
    >- (Cases_on `aut` >> simp[removeStatesSimpl_def] >> fs[]
@@ -403,11 +409,11 @@ val REDUCE_STATE_IS_VALID = store_thm
       )
    >- (Cases_on `aut` >> fs[removeStatesSimpl_def]
        >> rfs[] >> metis_tac[])
-  );
+QED
 
-val REDUCE_STATE_CORRECT = store_thm
-  ("REDUCE_STATE_CORRECT",
-   ``!aut. alterA_lang aut = alterA_lang (removeStatesSimpl aut)``,
+Theorem REDUCE_STATE_CORRECT:
+     !aut. alterA_lang aut = alterA_lang (removeStatesSimpl aut)
+Proof
    rw[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[alterA_lang_def]
      >- (qexists_tac `run` >> fs[runForAA_def] >> rpt strip_tac
           >- (simp[validAARunFor_def]
@@ -485,50 +491,54 @@ val REDUCE_STATE_CORRECT = store_thm
             )
          >- (Cases_on `aut` >> fs[removeStatesSimpl_def])
         )
-  );
+QED
 
 (*
   Merge equivalent states
 *)
 
-val equivalentStates_def = Define`
+Definition equivalentStates_def:
   equivalentStates final trans s s' =
-            (trans s = trans s') ∧ (s ∈ final = s' ∈ final)`;
+            (trans s = trans s') ∧ (s ∈ final = s' ∈ final)
+End
 
-val EQUIV_STATES_SYMM = store_thm
-  ("EQUIV_STATES_SYMM",
-   ``!f t x y. equivalentStates f t x y = equivalentStates f t y x``,
+Theorem EQUIV_STATES_SYMM:
+     !f t x y. equivalentStates f t x y = equivalentStates f t y x
+Proof
    metis_tac[equivalentStates_def]
-  );
+QED
 
-val EQUIV_STATES_REFL = store_thm
-  ("EQUIV_STATES_REFL",
-  ``!f t x. equivalentStates f t x x``,
+Theorem EQUIV_STATES_REFL:
+    !f t x. equivalentStates f t x x
+Proof
    metis_tac[equivalentStates_def]
-  );
+QED
 
-val replaceSingleTrans_def = Define`
+Definition replaceSingleTrans_def:
   replaceSingleTrans s s' (a,e) =
             if s ∈ e
             then (a, (e DIFF {s}) ∪ {s'})
-            else (a,e)`;
+            else (a,e)
+End
 
-val replaceState_def = Define`
+Definition replaceState_def:
   replaceState s s' qs =
                  if s ∈ qs
                  then qs DIFF {s} ∪ {s'}
-                 else qs`;
+                 else qs
+End
 
-val REPL_STATE_LEMM = store_thm
-  ("REPL_STATE_LEMM",
-   ``!x s d1 d2. d1 ⊆ d2 ==> replaceState x s d1 ⊆ replaceState x s d2``,
+Theorem REPL_STATE_LEMM:
+     !x s d1 d2. d1 ⊆ d2 ==> replaceState x s d1 ⊆ replaceState x s d2
+Proof
    rpt strip_tac >> fs[replaceState_def] >> Cases_on `x ∈ d1`
    >> Cases_on `x ∈ d2` >> fs[SUBSET_DEF, IN_DIFF, IN_UNION] >> rpt strip_tac
    >> metis_tac[]
-  );
+QED
 
-val replaceBy_def = Define`
-  replaceBy trans s s' q = IMAGE (replaceSingleTrans s s') (trans q)`;
+Definition replaceBy_def:
+  replaceBy trans s s' q = IMAGE (replaceSingleTrans s s') (trans q)
+End
 
 (* val REPLACE_TRANS_REACHABLE_LEMM = store_thm *)
 (*   ("REPLACE_TRANS_LEMM", *)
@@ -566,7 +576,7 @@ val replaceBy_def = Define`
 (* ) *)
 
 
-val mergeState_def = Define`
+Definition mergeState_def:
   mergeState x (ALTER_A states a trans i f) =
             if ?s. s ∈ states ∧ ~(s = x) ∧ equivalentStates f trans s x
             then
@@ -578,10 +588,12 @@ val mergeState_def = Define`
                        (replaceBy trans x s')
                        (IMAGE (replaceState x s') i)
                        (replaceState x s' f)
-            else (ALTER_A states a trans i f)`;
+            else (ALTER_A states a trans i f)
+End
 
-val mergeStatesSimpl = Define`
-  mergeStatesSimpl aut = ITSET mergeState aut.states aut`;
+Definition mergeStatesSimpl:
+  mergeStatesSimpl aut = ITSET mergeState aut.states aut
+End
 
 (* val MERGE_STATE_COMMUTES = store_thm *)
 (*  ("MERGE_STATE_COMMUTES", *)
@@ -646,13 +658,14 @@ val mergeStatesSimpl = Define`
 
 (* ) *)
 
-val replace_run_def = Define`
+Definition replace_run_def:
   replace_run old_run x_old x_new =
     ALTERA_RUN
         (replaceState x_old x_new o old_run.V)
         (λ(i,q). if (q = x_new) ∧ ~(x_new ∈ old_run.V i)
                  then replaceState x_old x_new (old_run.E (i,x_old))
-                 else replaceState x_old x_new (old_run.E (i,q)))`;
+                 else replaceState x_old x_new (old_run.E (i,q)))
+End
 
 
 
@@ -1828,4 +1841,3 @@ val replace_run_def = Define`
 (* ) *)
 
 
-val _ = export_theory();

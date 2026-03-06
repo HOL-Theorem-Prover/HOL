@@ -9,17 +9,14 @@
 (*                                                                           *)
 (*   NOTE (TODO): "Linear algebra works over any field." [2]                 *)
 (* ========================================================================= *)
+Theory vector
+Ancestors
+  arithmetic combin pred_set pair fcp list rich_list topology
+  real iterate real_sigma cardinal permutes
+Libs
+  PairedLambda pred_setLib fcpLib tautLib numLib
+  InductiveDefinition realLib RealArith mesonLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory combinTheory pred_setTheory pairTheory PairedLambda
-     pred_setLib fcpTheory fcpLib tautLib numLib listTheory rich_listTheory
-     topologyTheory InductiveDefinition;
-
-open realTheory realLib iterateTheory real_sigmaTheory RealArith mesonLib;
-open hurdUtils cardinalTheory permutesTheory;
-
-val _ = new_theory "vector";
 
 val bool_ss' = bool_ss -* ["lift_disj_eq", "lift_imp_disj"];
 
@@ -2337,7 +2334,6 @@ Proof
 QED
 
 
-val _ = export_theory ();
 val _ = html_theory "vector";
 
 (* References:

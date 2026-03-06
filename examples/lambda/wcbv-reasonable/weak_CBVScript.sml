@@ -8,15 +8,10 @@
     due to the difference between
       how substitutions are defined
         in HOL library and in Forster etc.'s Coq proof *)
+Theory weak_CBV
+Ancestors
+  arithmetic list combin Prelims pure_dB
 
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory;
-open listTheory combinTheory;
-
-open PrelimsTheory;
-open pure_dBTheory;
-
-val _ = new_theory "weak_CBV";
 
 (* ------------------
               CBV LC
@@ -527,4 +522,3 @@ Proof
   metis_tac[spaceBS_correctL, spaceBS_correctR]
 QED
 
-val _ = export_theory ()

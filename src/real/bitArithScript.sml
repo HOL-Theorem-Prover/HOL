@@ -4,11 +4,11 @@
   Used in inital attempt to speed up computations, used by evaluation of the
   first phase
 **)
-open HolKernel Parse BasicProvers listTheory arithmeticTheory;
-open realTheory;
-open boolLib bossLib;
-
-val _ = new_theory "bitArith";
+Theory bitArith
+Ancestors
+  list arithmetic real
+Libs
+  BasicProvers
 
 val _ = numLib.temp_prefer_num();
 
@@ -306,7 +306,7 @@ Definition mulpow2_def:
 End
 
 Theorem mulpow2_thm:
-  ! bs k. bleval (mulpow2 bs k) =  bleval bs * 2 ** k
+  ! bs k. bleval (mulpow2 bs k) = bleval bs * 2 ** k
 Proof
   ho_match_mp_tac mulpow2_ind >> gs[mulpow2_def, bleval_def, EXP]
 QED
@@ -543,4 +543,3 @@ Proof
   >> gs[REAL_INV_MUL']
 QED
 
-val _ = export_theory();

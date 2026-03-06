@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib
-
-val _ = new_theory "ndatatype_ind0";
+Theory ndatatype_ind0[bare]
+Libs
+  HolKernel Parse boolLib BasicProvers
 
 (* set up a type (that is a copy of lists, basically), with an
    induction and cases theorems, and register this type in the TypeBase.
@@ -33,7 +33,6 @@ fun check (tac, t) = (tac([], t) before ignore (save_thm(
   "OK" ^ Int.toString (!c) before c := !c + 1,
   TRUTH)))
 
-open BasicProvers
 val _ = map check [
   (Induct_on `t`, ``foonil <> foocons (a:'a) t``),
   (Induct_on `t`, ``!t. foonil <> foocons (a:'a) t``),
@@ -41,4 +40,3 @@ val _ = map check [
   (Induct, ``!t. foonil <> foocons (a:'a) t``)
 ]
 
-val _ = export_theory();

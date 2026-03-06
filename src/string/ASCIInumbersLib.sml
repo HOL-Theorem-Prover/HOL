@@ -7,7 +7,7 @@ open numposrepLib ASCIInumbersTheory
 structure Parse = struct
   open Parse
   val (Type, Term) =
-     parse_from_grammars ASCIInumbersTheory.ASCIInumbers_grammars
+     parse_from_grammars $ valOf $ grammarDB {thyname = "ASCIInumbers"}
 end
 open Parse
 
@@ -25,7 +25,7 @@ in
    fun add_ASCIInumbers_compset cmp = computeLib.add_thms thms cmp
 end
 
-val () = add_ASCIInumbers_compset computeLib.the_compset
+val () = computeLib.the_compset := add_ASCIInumbers_compset (!computeLib.the_compset)
 
 (* ------------------------------------------------------------------------- *)
 

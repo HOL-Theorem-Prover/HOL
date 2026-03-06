@@ -1,9 +1,9 @@
-
-open HolKernel Parse boolLib bossLib BasicProvers;
-open wordsTheory wordsLib arithmeticTheory listTheory pairTheory mp_then
-     combinTheory x64asm_syntaxTheory x64asm_semanticsTheory relationTheory;
-
-val _ = new_theory "x64asm_properties";
+Theory x64asm_properties
+Ancestors
+  arithmetic list pair words
+  combin x64asm_syntax x64asm_semantics relation
+Libs
+  wordsLib BasicProvers mp_then
 
 Inductive steps:
   (∀s (n:num).
@@ -164,7 +164,7 @@ Proof
   \\ imp_res_tac step_determ \\ rw [] \\ res_tac
 QED
 
-Triviality steps_NRC:
+Theorem steps_NRC[local]:
   ∀s1 n1 s2 n2.
     steps (s1,n1) (s2,n2) ⇒ ∃k. NRC step (n1 - n2 + k) s1 s2 ∧ n2 ≤ n1
 Proof
@@ -216,5 +216,3 @@ Proof
   \\ metis_tac [NRC_ADD_E,NRC_step_determ,NRC_step_mono,
                 rich_listTheory.IS_PREFIX_TRANS]
 QED
-
-val _ = export_theory();

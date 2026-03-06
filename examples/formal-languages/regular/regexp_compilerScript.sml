@@ -1,22 +1,16 @@
-(*---------------------------------------------------------------------------*)
-(* Set up context                                                            *)
-(*---------------------------------------------------------------------------*)
-
-open HolKernel Parse boolLib bossLib numLib;
-open optionTheory pairTheory relationTheory arithmeticTheory
-     pred_setTheory bagTheory containerTheory
-     listTheory rich_listTheory stringTheory sortingTheory mergesortTheory
-     comparisonTheory balanced_mapTheory regexp_mapTheory osetTheory
-     finite_mapTheory vec_mapTheory charsetTheory regexpTheory
-;
-
+Theory regexp_compiler
+Ancestors
+  option pair relation arithmetic
+  pred_set bag container
+  list rich_list string sorting mergesort
+  comparison balanced_map regexp_map oset
+  finite_map vec_map charset regexp
+Libs
+  boolLib numLib pred_setLib
 
 val _ = numLib.temp_prefer_num();
 
 fun pat_elim q = Q.PAT_X_ASSUM q (K ALL_TAC);
-
-val byA = BasicProvers.byA;
-infix byA;
 
 val subst_all_tac = SUBST_ALL_TAC;
 val simp_rule = SIMP_RULE;
@@ -33,20 +27,20 @@ val comparison_distinct = TypeBase.distinct_of ``:ordering``
 (* Trivial lemmas                                                            *)
 (*---------------------------------------------------------------------------*)
 
-Triviality INTER_DELETE :
+Theorem INTER_DELETE[local] :
   !A a. A INTER (A DELETE a) = A DELETE a
 Proof
   SET_TAC []
 QED
 
-Triviality IN_SET_UNION :
+Theorem IN_SET_UNION[local] :
  !x s t.
    x IN s ==> (s UNION t = s UNION (x INSERT t))
 Proof
  SET_TAC []
 QED
 
-Triviality leq_thm :
+Theorem leq_thm[local] :
   transitive (<=) /\ total (<=) /\ antisymmetric (<=)
 Proof
    srw_tac [ARITH_ss] [transitive_def, total_def, antisymmetric_def]
@@ -64,13 +58,13 @@ Proof
   Cases THEN METIS_TAC [optionTheory.IS_SOME_DEF]
 QED
 
-Triviality length_mergesort :
+Theorem length_mergesort[local] :
   !l R. LENGTH (mergesort R l) = LENGTH l
 Proof
   metis_tac[mergesort_perm,PERM_LENGTH]
 QED
 
-Triviality LENGTH_NIL_SYM =
+Theorem LENGTH_NIL_SYM[local] =
    GEN_ALL (CONV_RULE (LHS_CONV SYM_CONV) (SPEC_ALL LENGTH_NIL));
 
 Theorem string_to_numlist[local] :
@@ -99,13 +93,12 @@ QED
 (* Let's get started                                                         *)
 (*---------------------------------------------------------------------------*)
 
-val _ = new_theory "regexp_compiler";
-
 (*---------------------------------------------------------------------------*)
 (* Output of the compiler is in terms of vectors.                            *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `vector = Vector of 'a list`;
+Datatype: vector = Vector ('a list)
+End
 
 Definition fromList_def : fromList l = Vector l
 End
@@ -213,7 +206,7 @@ Definition Empty_arcs_def :
    (246,Empty); (247,Empty); (248,Empty); (249,Empty);
    (250,Empty); (251,Empty); (252,Empty); (253,Empty);
    (254,Empty); (255,Empty)]
-End;
+End
 
 Theorem Empty_arcs_thm :
   MAP (\c. (c,smart_deriv c Empty)) ALPHABET = Empty_arcs
@@ -1107,7 +1100,7 @@ QED
 
 
 Theorem extend_states_thm :
- !next_state state_map table states next_state' state_map' table'.
+ ∀next_state state_map table states next_state' state_map' table'.
     (extend_states next_state state_map table states
        = (next_state',state_map',table')) /\
     invariant regexp_compare state_map
@@ -1143,12 +1136,8 @@ Proof
       >> `good_cmp regexp_compare` by metis_tac [regexp_compare_good]
       >> rw [lookup_insert_thm,regexp_compare_eq]
       >> metis_tac [THE_DEF])
-  >- (pat_elim `$! M` >> rw[]
-       >> qpat_x_assum `submap _ __ ___` mp_tac
-      >> rw_tac set_ss [submap_def,fapply_def]
-      >> pop_assum (mp_tac o Q.SPEC `r'`)
-      >> rw [fdom_def]
-      >> metis_tac [THE_DEF])
+  >- (gvs[submap_def,fapply_def,fdom_def,EXTENSION,PULL_EXISTS] >>
+      first_x_assum drule >> disch_then (SUBST_ALL_TAC o SYM) >> rw[])
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -2164,5 +2153,3 @@ Proof
 QED
 
 (* val _ = EmitTeX.tex_theory"-"; *)
-
-val _ = export_theory();

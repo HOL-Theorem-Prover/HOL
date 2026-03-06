@@ -1,22 +1,15 @@
-open HolKernel Parse boolLib bossLib;
+Theory basic_leakage_examples
+Ancestors
+  arithmetic pred_set list state_transformer extra_num combin
+  pair real num seq subtype transc lim string rich_list
+  information leakage words extra_bool extra_pred_set extra_real
+  extra_list extra_string real_sigma sigma_algebra real_measure
+  real_lebesgue real_probability
+Libs
+  metisLib pred_setLib stringLib realLib jrhUtils realSimps
+  simpLib stringSimps listSimps leakageLib wordsLib
+  extra_stringLib hurdUtils
 
-open metisLib arithmeticTheory pred_setTheory
-     pred_setLib stringLib listTheory state_transformerTheory
-     extra_numTheory combinTheory
-     pairTheory realTheory realLib jrhUtils
-     realSimps numTheory simpLib seqTheory subtypeTheory
-     transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps
-     informationTheory leakageTheory leakageLib wordsTheory wordsLib;
-
-open extra_boolTheory extra_pred_setTheory extra_realTheory extra_listTheory
-     extra_stringTheory extra_stringLib;
-
-open real_sigmaTheory;
-
-open hurdUtils util_probTheory real_measureTheory real_lebesgueTheory
-     real_probabilityTheory;
-
-val _ = new_theory "basic_leakage_examples";
 val _ = temp_set_fixity "CROSS" (Infixl 600)
 
 val safe_set_ss = (simpLib.++ (bool_ss, PRED_SET_ss));
@@ -30,24 +23,24 @@ fun TRY2_TAC t1 t2 state = let
  in if length a1 = 0 then (a1,f1) else t2 state end;
 
 
-Triviality lem1:
+Theorem lem1[local]:
   !(s:string) (n:num) (m:num).
     ((\s'. (if s' = s then n else 0)) = (\s'. (if s' = s then m else 0))) =
     (n = m)
 Proof METIS_TAC []
 QED
 
-Triviality lem2:
+Theorem lem2[local]:
   !(s:string) (n:num). ((\s'. (if s' = s then n else 0)) = (\s'. 0)) = (n = 0)
 Proof METIS_TAC []
 QED
 
-Triviality lem3:
+Theorem lem3[local]:
   !(s:string) (n:num). ((\s'. 0) = (\s'. (if s' = s then n else 0))) = (n = 0)
 Proof METIS_TAC []
 QED
 
-Triviality lem4:
+Theorem lem4[local]:
   !(n1:num)(n2:num)(m1:num)(m2:num).
     ((\s'. (if s' = "h2" then m1 else (if s' = "h1" then n1 else 0))) =
      (\s'. (if s' = "h2" then m2 else (if s' = "h1" then n2 else 0)))) =
@@ -70,7 +63,7 @@ Proof
   >> RW_TAC std_ss []
 QED
 
-Triviality lem5:
+Theorem lem5[local]:
   !(m1:num)(m2:num)(n2:num).
     ((\s'. (if s' = "h2" then m1 else 0)) =
      (\s'. (if s' = "h2" then m2 else (if s' = "h1" then n2 else 0)))) =
@@ -91,7 +84,7 @@ Proof
   >> RW_TAC std_ss []
 QED
 
-Triviality lem6:
+Theorem lem6[local]:
   !(n:num)(m:num).
     ((\s'. (if s' = "h2" then m else (if s' = "h1" then n else 0))) =
      (\s'. 0)) =
@@ -110,7 +103,7 @@ Proof
   >> RW_TAC std_ss []
 QED
 
-Triviality lem7:
+Theorem lem7[local]:
   !(s:string) (n:num) (m:num). ((\s'. (if s' = s then [n] else [])) =
                                 (\s'. (if s' = s then [m] else []))) =
                                (n = m)
@@ -121,7 +114,7 @@ Proof
   >> RW_TAC std_ss []
 QED
 
-Triviality lem8:
+Theorem lem8[local]:
   !(n1:num) (n2:num) (n3:num) (m1:num) (m2:num) (m3:num).
     ((\s'. (if (s' = "out") then [n1;n2] else
               (if (s' = "low") then [n3] else []))) =
@@ -171,7 +164,7 @@ Proof
                                    “low (SUC (SUC (SUC 0)))”,
                                    “random”)
              [high, low, random, lem1, lem2, lem3]
-             [M1, H_def, L_def, FST, SND]
+             [M1, high_state_def, low_state_def, FST, SND]
              example1_conv example1_conv example1_conv
              example1_conv example1_conv example1_conv example1_conv))
   >> SIMP_TAC real_ss [lg_1, lg_inv, GSYM REAL_INV_1OVER]
@@ -211,7 +204,7 @@ Proof
                                    “low (SUC (SUC (SUC 0)))”,
                                    “random”)
              [high, low, random, lem1, lem2, lem3, w2n_11]
-             [M2, H_def, L_def, FST, SND]
+             [M2, high_state_def, low_state_def, FST, SND]
              example2_input_conv example2_input_conv example2_input_conv
              example2_input_conv example2_input_conv example2_input_conv
              example2_output_conv))
@@ -230,14 +223,16 @@ QED
 (* 2 BITS: match of bits of h1 and h2 *)
 (* ********************************** *)
 
-val h1 = Define
-   ‘(h1 0 = {(\s:string. if s = "h1" then 0 else 0)}) /\
-    (h1 (SUC n) = (\s:string. if s = "h1" then SUC n else 0)INSERT(h1 n))’;
+Definition h1:
+    (h1 0 = {(\s:string. if s = "h1" then 0 else 0)}) /\
+    (h1 (SUC n) = (\s:string. if s = "h1" then SUC n else 0)INSERT(h1 n))
+End
 
-val h2 = Define
-   ‘(h2 l 0 = IMAGE (\s: num state. (\s':string. if s' = "h2" then 0 else s s')) l) /\
+Definition h2:
+    (h2 l 0 = IMAGE (\s: num state. (\s':string. if s' = "h2" then 0 else s s')) l) /\
     (h2 l (SUC n) = (IMAGE (\s: num state. (\s':string. if s' = "h2" then (SUC n) else s s')) l) UNION
-                    (h2 l n))’;
+                    (h2 l n))
+End
 
 Definition high[allow_rebind]: high n = h2 (h1 n) n
 End
@@ -248,9 +243,10 @@ End
 Definition random[allow_rebind]: random = {(\s:string. (0:num))}
 End
 
-val M3 = Define
-   ‘M3 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
-                then w2n (((n2w (H s "h1")):word2) ?? (n2w (H s "h2"))) else 0))’;
+Definition M3:
+    M3 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
+                then w2n (((n2w (H s "h1")):word2) ?? (n2w (H s "h2"))) else 0))
+End
 
 val example3_output_conv = SIMP_CONV string_ss [lem1, lem2, lem3, lem4, lem5, lem6, w2n_11]
                            THENC (TRY_CONV (FIND_CONV “(x:string)=(y:string)” string_EQ_CONV))
@@ -267,14 +263,14 @@ THENC  (FIND_CONV “x UNION y”
 
 val example3_lr_input_conv = SIMP_CONV set_ss [low, random];
 
-val leakage_example3 = store_thm
-  ("leakage_example3",
-   “leakage (unif_prog_space (high (SUC (SUC (SUC 0)))) low random) M3 = 2”,
+Theorem leakage_example3:
+    leakage (unif_prog_space (high (SUC (SUC (SUC 0)))) low random) M3 = 2
+Proof
 CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)))”,
                               “low”,
                               “random”)
                         [high, low, random, h1, h2, lem1, lem2, lem3, lem4, lem5, lem6, w2n_11]
-                        [M3, H_def, L_def, FST, SND, w2n_11]
+                        [M3, high_state_def, low_state_def, FST, SND, w2n_11]
                         example3_h_input_conv example3_lr_input_conv example3_lr_input_conv
                         example3_h_conv example3_lr_conv example3_lr_conv
                         example3_output_conv)))
@@ -284,16 +280,18 @@ CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)
 >> ‘lg 16 = 4’
         by (‘16 = 2 pow 4’ by RW_TAC real_ss [pow] >> POP_ORW >> RW_TAC std_ss [lg_pow])
 >> ONCE_REWRITE_TAC [REAL_MUL_COMM]
->> RW_TAC real_ss [GSYM real_div]);
+>> RW_TAC real_ss [GSYM real_div]
+QED
 
 (* *************************** *)
 (* Example 4:    out = h1 + h2 *)
 (* PARTIAL LEAKAGE             *)
 (* *************************** *)
 
-val M4 = Define
-   ‘M4 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
-   then (H s "h1") + (H s "h2") else 0))’;
+Definition M4:
+    M4 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
+   then (H s "h1") + (H s "h2") else 0))
+End
 
 val example4_output_conv = SIMP_CONV string_ss [lem1, lem2, lem3, lem4, lem5, lem6]
                            THENC (TRY_CONV (FIND_CONV “(x:string)=(y:string)” string_EQ_CONV));
@@ -306,14 +304,14 @@ THENC  (FIND_CONV “x UNION y”
 
 val example4_lr_input_conv = SIMP_CONV set_ss [low, random];
 
-val leakage_example4 = store_thm
-  ("leakage_example4",
-   “leakage (unif_prog_space ((high (SUC (SUC (SUC 0))))) low random) M4 = inv 16 * (52 - 6 * lg 3)”,
+Theorem leakage_example4:
+    leakage (unif_prog_space ((high (SUC (SUC (SUC 0))))) low random) M4 = inv 16 * (52 - 6 * lg 3)
+Proof
 CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)))”,
                               “low”,
                               “random”)
                         [high, low, random, h1, h2, lem1, lem2, lem3, lem4, lem5, lem6]
-                        [M4, H_def, L_def, FST, SND, w2n_11]
+                        [M4, high_state_def, low_state_def, FST, SND, w2n_11]
                         example4_h_input_conv example4_lr_input_conv example4_lr_input_conv
                         example4_dup_conv example4_dup_conv example4_dup_conv
                         example4_output_conv)))
@@ -323,7 +321,8 @@ CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)
 >> ‘lg 16 = 4’ by (‘16 = 2 pow 4’ by RW_TAC real_ss [pow] >> POP_ORW >> RW_TAC std_ss [lg_pow])
 >> RW_TAC real_ss [REAL_INV_EQ_0]
 >> REPEAT (POP_ASSUM (K ALL_TAC))
->> REAL_ARITH_TAC);
+>> REAL_ARITH_TAC
+QED
 
 (* *************************** *)
 (* Example 5:  intermed. leak  *)
@@ -342,8 +341,9 @@ Definition assign2[allow_rebind]:
                             then (L s "low") else 0))
 End
 
-val M5 = Define
-   ‘M5 = (\s: ((num,num,num) prog_state). assign2 ((H s, assign1 s), R s))’;
+Definition M5:
+    M5 = (\s: ((num,num,num) prog_state). assign2 ((H s, assign1 s), R s))
+End
 
 Definition high[allow_rebind]:
    (high 0 = {(\s:string. if s = "high" then 0 else 0)}) /\
@@ -363,19 +363,20 @@ val example5_conv = SIMP_CONV arith_ss [high, low, random, lem1,lem2,lem3];
 val example5_output_conv = SIMP_CONV arith_ss [high, low, random, lem1,lem2,lem3]
                            THENC (TRY_CONV (FIND_CONV “(x:string)=(y:string)” string_EQ_CONV));
 
-val leakage_example5 = store_thm
-  ("leakage_example5",
-   “leakage (unif_prog_space (high (SUC (SUC (SUC 0)))) (low (SUC (SUC (SUC 0)))) random) M5 = 0”,
+Theorem leakage_example5:
+    leakage (unif_prog_space (high (SUC (SUC (SUC 0)))) (low (SUC (SUC (SUC 0)))) random) M5 = 0
+Proof
 CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)))”,
                               “low (SUC (SUC (SUC 0)))”,
                               “random”)
                         [high, low, random, lem1, lem2, lem3]
-                        [M5, assign1, assign2, H_def, L_def, FST, SND]
+                        [M5, assign1, assign2, high_state_def, low_state_def, FST, SND]
                         example5_conv example5_conv example5_conv
 
                         example5_conv example5_conv example5_conv
                         example5_output_conv)))
->> RW_TAC real_ss [REAL_DIV_REFL, lg_1]);
+>> RW_TAC real_ss [REAL_DIV_REFL, lg_1]
+QED
 
 (* *************************** *)
 (* Example 5': intermed. leak  *)
@@ -404,8 +405,9 @@ Definition assign2[allow_rebind]:
                state_append "out" (L s "low") (L s))
 End
 
-val M5' = Define
-   ‘M5' = (\s: ((num list,num list,num list) prog_state). assign2 ((H s, assign1 s), R s))’;
+Definition M5':
+    M5' = (\s: ((num list,num list,num list) prog_state). assign2 ((H s, assign1 s), R s))
+End
 
 Definition high[allow_rebind]:
   (high 0 = {(\s:string. if s = "high" then [0] else [])}) /\
@@ -427,15 +429,15 @@ val example5'_output_conv = SIMP_CONV list_string_ss [high, low, random, lem7, l
                             THENC (TRY_CONV (FIND_CONV “(x:string)=(y:string)” string_EQ_CONV))
                             THENC SIMP_CONV list_string_ss [high, low, random, lem7, lem8, APPEND];
 
-val leakage_example5' = store_thm
-  ("leakage_example5'",
-   “leakage (unif_prog_space (high (SUC (SUC (SUC 0)))) (low (SUC (SUC (SUC 0)))) random) M5' = 2”,
+Theorem leakage_example5':
+    leakage (unif_prog_space (high (SUC (SUC (SUC 0)))) (low (SUC (SUC (SUC 0)))) random) M5' = 2
+Proof
 PURE_REWRITE_TAC [M5', state_update, state_append, assign1, assign2]
 >> CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)))”,
                               “low (SUC (SUC (SUC 0)))”,
                               “random”)
                         [high, low, random, lem7, lem8, APPEND]
-                        [H_def, L_def, FST, SND, APPEND]
+                        [high_state_def, low_state_def, FST, SND, APPEND]
                         example5'_conv example5'_conv example5'_conv
                         example5'_output_conv example5'_output_conv example5'_output_conv
                         example5'_output_conv)))
@@ -444,7 +446,8 @@ PURE_REWRITE_TAC [M5', state_update, state_append, assign1, assign2]
 >> RW_TAC real_ss []
 >> ONCE_REWRITE_TAC [REAL_MUL_COMM] >> RW_TAC std_ss [GSYM real_div]
 >> (MP_TAC o Q.SPECL [‘32’,‘2’,‘16’]) REAL_EQ_LDIV_EQ
->> RW_TAC real_ss []);
+>> RW_TAC real_ss []
+QED
 
 (* *********************************** *)
 (* Example 8:    out = high XOR random *)
@@ -465,9 +468,10 @@ End
 Definition low[allow_rebind]: low = {(\s:string. (0:num))}
 End
 
-val M8 = Define
-   ‘M8 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
-        then w2n (((n2w (H s "high")):word2) ?? (n2w (R s "random"))) else 0))’;
+Definition M8:
+    M8 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
+        then w2n (((n2w (H s "high")):word2) ?? (n2w (R s "random"))) else 0))
+End
 
 val example8_conv = SIMP_CONV arith_ss [high, low, random, lem1, lem2, lem3, w2n_11];
 
@@ -476,14 +480,14 @@ val example8_output_conv = SIMP_CONV arith_ss [high, low, random, lem1, lem2, le
                             THENC (TRY_CONV (FIND_CONV “w2n(a ?? b)” WORD_EVAL_CONV))
                             THENC SIMP_CONV arith_ss [high, low, random, lem1, lem2, lem3, w2n_11];
 
-val leakage_example8 = store_thm
-  ("leakage_example8",
-   “leakage (unif_prog_space (high (SUC (SUC (SUC 0)))) low (random (SUC (SUC (SUC 0))))) M8 = 0”,
+Theorem leakage_example8:
+    leakage (unif_prog_space (high (SUC (SUC (SUC 0)))) low (random (SUC (SUC (SUC 0))))) M8 = 0
+Proof
 CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)))”,
                               “low”,
                               “random (SUC (SUC (SUC 0)))”)
                         [high, low, random, lem1,lem2]
-                        [M8, H_def, R_def, FST, SND, lem1,lem2, lem3]
+                        [M8, high_state_def, random_state_def, FST, SND, lem1,lem2, lem3]
                         example8_conv example8_conv example8_conv
                         example8_output_conv example8_conv example8_output_conv
                         example8_output_conv)))
@@ -493,7 +497,8 @@ CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)
 >> ‘lg 16 = 4’
         by (‘16 = 2 pow 4’ by RW_TAC real_ss [pow] >> POP_ORW >> RW_TAC std_ss [lg_pow])
 >> ONCE_REWRITE_TAC [REAL_MUL_COMM]
->> RW_TAC real_ss [GSYM real_div]);
+>> RW_TAC real_ss [GSYM real_div]
+QED
 
 (* *********************************** *)
 (* Example 8':   out = high XOR random *)
@@ -514,9 +519,9 @@ val random_thm = prove
                 (\s:string. if s = "random" then n else 0)INSERT(random (n-1))”,
      Induct >> RW_TAC arith_ss [random]);
 
-val leakage_example8' = store_thm
-  ("leakage_example8'",
-   “visible_leakage (unif_prog_space (high 3) low (random 3)) M8 = 2”,
+Theorem leakage_example8':
+    visible_leakage (unif_prog_space (high 3) low (random 3)) M8 = 2
+Proof
 ‘FINITE (high 3)’
    by (NTAC 4 (ONCE_REWRITE_TAC [high_thm])
        >> RW_TAC set_ss [])
@@ -535,7 +540,7 @@ val leakage_example8' = store_thm
 >> NTAC 4 (ONCE_REWRITE_TAC [high_thm, random_thm, low])
 >> RW_TAC set_ss [CROSS_EQNS, lem1, lem2]
 >> CONV_TAC (FIND_CONV “x UNION y” (UNION_CONV (SIMP_CONV set_ss [lem1,lem2])))
->> RW_TAC set_ss [CROSS_EQNS, lem1, lem2, M8, H_def, R_def]
+>> RW_TAC set_ss [CROSS_EQNS, lem1, lem2, M8, high_state_def, random_state_def]
 >> CONV_TAC (FIND_CONV “x UNION y”
                         (UNION_CONV (SIMP_CONV set_ss [lem1,lem2, w2n_11]
                                      THENC (FIND_CONV “(a ?? b) = (c ?? d)” WORD_EVAL_CONV))))
@@ -550,22 +555,24 @@ val leakage_example8' = store_thm
 >> ‘lg 4 = 2’
         by (‘4 = 2 pow 2’ by RW_TAC real_ss [pow] >> POP_ORW >> RW_TAC std_ss [lg_pow])
 >> ONCE_REWRITE_TAC [REAL_MUL_COMM]
->> RW_TAC real_ss [GSYM real_div]);
+>> RW_TAC real_ss [GSYM real_div]
+QED
 
 (* *********************************** *)
 
 val flip_example_lem = prove
   (“!(s:string). ~((\s'. s' = s) = (\s'. F))”,METIS_TAC []);
 
-val M = Define
-   ‘M = (\s: ((bool,bool,bool) prog_state). (\s':string. if (s' = "out")
-   then (if (R s "r") then (L s "l") else (H s "h")) else F))’;
+Definition M:
+    M = (\s: ((bool,bool,bool) prog_state). (\s':string. if (s' = "out")
+   then (if (R s "r") then (L s "l") else (H s "h")) else F))
+End
 
-val hidden_flip_example = store_thm
-  ("hidden_flip_example",
-   “leakage (unif_prog_space {(\s:string. s = "h");(\s:string.F)}
+Theorem hidden_flip_example:
+    leakage (unif_prog_space {(\s:string. s = "h");(\s:string.F)}
                               {(\s:string. s = "l");(\s:string.F)}
-                              {(\s:string. s = "r");(\s:string.F)}) M = 3/2 - (3 * lg 3)/4”,
+                              {(\s:string. s = "r");(\s:string.F)}) M = 3/2 - (3 * lg 3)/4
+Proof
 ‘~ ({(\s:string. s = "h");(\s:string.F)} CROSS
         {(\s:string. s = "l");(\s:string.F)} CROSS
         {(\s:string. s = "r");(\s:string.F)} = {})’
@@ -576,7 +583,7 @@ val hidden_flip_example = store_thm
    [unif_prog_space_leakage_computation_reduce]
 >> RW_TAC set_ss [CROSS_EQNS, lem1, flip_example_lem]
 >> CONV_TAC (FIND_CONV “x UNION y” (UNION_CONV (SIMP_CONV set_ss [flip_example_lem, lem1])))
->> RW_TAC set_ss [CROSS_EQNS, lem1, M, H_def, L_def, R_def]
+>> RW_TAC set_ss [CROSS_EQNS, lem1, M, high_state_def, low_state_def, random_state_def]
 >> CONV_TAC (FIND_CONV “x UNION y” (UNION_CONV (SIMP_CONV set_ss [flip_example_lem, lem1])))
 >> CONV_TAC (REPEATC (SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]
                       THENC (FIND_CONV “x DELETE y”
@@ -599,14 +606,15 @@ val hidden_flip_example = store_thm
 >> RW_TAC std_ss [real_div, Once (GSYM REAL_MUL_ASSOC)]
 >> ‘inv 4 * 8 = 2’ by (ONCE_REWRITE_TAC [REAL_MUL_COMM] >> RW_TAC real_ss [GSYM real_div])
 >> POP_ORW
->> REAL_ARITH_TAC);
+>> REAL_ARITH_TAC
+QED
 
 
-val visible_flip_example = store_thm
-  ("visible_flip_example",
-   “visible_leakage (unif_prog_space {(\s:string. s = "h");(\s:string.F)}
+Theorem visible_flip_example:
+    visible_leakage (unif_prog_space {(\s:string. s = "h");(\s:string.F)}
                               {(\s:string. s = "l");(\s:string.F)}
-                              {(\s:string. s = "r");(\s:string.F)}) M = 1/2”,
+                              {(\s:string. s = "r");(\s:string.F)}) M = 1/2
+Proof
 ‘~ ({(\s:string. s = "h");(\s:string.F)} CROSS
         {(\s:string. s = "l");(\s:string.F)} CROSS
         {(\s:string. s = "r");(\s:string.F)} = {})’
@@ -617,12 +625,12 @@ val visible_flip_example = store_thm
    [unif_prog_space_visible_leakage_computation_reduce]
 >> RW_TAC set_ss [CROSS_EQNS, flip_example_lem]
 >> CONV_TAC (FIND_CONV “x UNION y” (UNION_CONV (SIMP_CONV set_ss [flip_example_lem])))
->> RW_TAC set_ss [CROSS_EQNS, lem1, M, H_def, L_def, R_def]
+>> RW_TAC set_ss [CROSS_EQNS, lem1, M, high_state_def, low_state_def, random_state_def]
 >> CONV_TAC (FIND_CONV “x UNION y” (UNION_CONV (SIMP_CONV set_ss [flip_example_lem])))
 >> CONV_TAC (REPEATC (SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]
                       THENC (FIND_CONV “x DELETE y”
                                         (DELETE_CONV (SIMP_CONV arith_ss [PAIR_EQ, flip_example_lem])))
                       THENC SIMP_CONV arith_ss [flip_example_lem]))
 >> SIMP_TAC real_ss [lg_1, lg_inv, GSYM REAL_INV_1OVER, lg_2, REAL_MUL_LINV]
->> ONCE_REWRITE_TAC [REAL_MUL_COMM] >> RW_TAC real_ss [GSYM real_div, REAL_INV_1OVER]);
-val _ = export_theory ();
+>> ONCE_REWRITE_TAC [REAL_MUL_COMM] >> RW_TAC real_ss [GSYM real_div, REAL_INV_1OVER]
+QED

@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib simpLib BasicProvers
-
-val _ = new_theory "exclSimps";
+Theory exclSimps[bare]
+Libs
+  HolKernel Parse boolLib simpLib BasicProvers
 
 fun simp ths g = simpLib.SIMP_TAC (srw_ss()) ths g
 
@@ -11,7 +11,3 @@ Proof[exclude_simps=BETA_CONV]
   >- (CONV_TAC (RAND_CONV BETA_CONV) >>
       ASM_REWRITE_TAC [])
 QED
-
-
-
-val _ = export_theory();

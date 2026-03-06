@@ -1,0 +1,437 @@
+Theory oset
+Ancestors
+  option pair string arithmetic pred_set list finite_map alist
+  sorting balanced_map comparison
+Libs
+  BasicProvers
+
+val _ = temp_tight_equality ();
+
+(* oset for ordered set *)
+val _ = type_abbrev_pp ("oset", ``:('a,unit) balanced_map``);
+
+(* Basic definitions, that correspond directly to balanced tree operations *)
+Definition good_oset_def:
+good_oset cmp (s:'a oset) ⇔ good_cmp cmp ∧ invariant cmp s
+End
+
+Definition oempty_def:
+oempty = empty:'a oset
+End
+
+Definition osingleton_def:
+osingleton v = singleton v ()
+End
+
+Definition oin_def:
+oin cmp (v:'a) (s:'a oset) ⇔  member cmp v s
+End
+
+Definition oinsert_def:
+oinsert cmp v s = insert cmp v () s
+End
+
+Definition odelete_def:
+odelete cmp (s:'a oset) (v:'a) = delete cmp v s
+End
+
+Definition ounion_def:
+ounion cmp (s1:'a oset) s2 = union cmp s1 s2
+End
+
+Definition oimage_def:
+oimage cmp f (s:'a oset) = map_keys cmp f s
+End
+
+Definition osubset_def:
+osubset cmp (s1:'a oset) (s2:'a oset) ⇔ isSubmapOf cmp s1 s2
+End
+
+Definition ocompare_def:
+ocompare cmp (s1:'a oset) (s2:'a oset) = compare cmp (\x y. Equal) s1 s2
+End
+
+Definition oevery_def:
+oevery f (s:'a oset) ⇔  every (\x y. f x) s
+End
+
+Definition oexists_def:
+oexists f (s:'a oset) ⇔  exists (\x y. f x) s
+End
+
+Definition oset_def:
+oset cmp l = FOLDR (λx t. oinsert cmp x t) oempty l
+End
+
+Definition oresp_equiv_def:
+oresp_equiv cmp f = resp_equiv cmp (λx y:unit. f x)
+End
+
+(* operations preserve good_set *)
+
+Theorem good_oset_oempty:
+ !cmp. good_cmp cmp ⇒ good_oset cmp oempty
+Proof
+ rw [empty_thm, good_oset_def, oempty_def]
+QED
+
+Theorem good_oset_osingleton:
+ !cmp x. good_cmp cmp ⇒ good_oset cmp (osingleton x)
+Proof
+ rw [singleton_thm, good_oset_def, osingleton_def]
+QED
+
+Theorem good_oset_oinsert:
+ !cmp s x. good_oset cmp s ⇒ good_oset cmp (oinsert cmp x s)
+Proof
+ rw [oinsert_def, good_oset_def] >>
+ metis_tac [insert_thm]
+QED
+
+Theorem good_oset_odelete:
+ !cmp s x. good_oset cmp s ⇒ good_oset cmp (odelete cmp s x)
+Proof
+ rw [good_oset_def, odelete_def] >>
+ metis_tac [delete_thm]
+QED
+
+Theorem good_oset_ounion:
+ !cmp s1 s2. good_oset cmp s1 ∧ good_oset cmp s2 ⇒ good_oset cmp (ounion cmp s1 s2)
+Proof
+ rw [good_oset_def, ounion_def] >>
+ metis_tac [union_thm]
+QED
+
+(*
+val good_oset_oimage = Q.store_thm ("good_oset_oimage",
+`!cmp f s. good_cmp cmp ⇒ good_oset cmp (oimage cmp f s)`,
+ cheat);
+ *)
+
+Theorem good_cmp_ocompare:
+ !cmp f s. good_cmp cmp ⇒ good_cmp (ocompare cmp)
+Proof
+ rw [] >>
+ `good_cmp (\(x:unit) (y:unit). Equal)`
+            by (rw [good_cmp_def, LAMBDA_PROD, FORALL_PROD] >>
+                metis_tac [good_cmp_def]) >>
+ imp_res_tac compare_good_cmp >>
+ rw [ocompare_def, good_cmp_def] >>
+ metis_tac [good_cmp_def]
+QED
+
+val good_oset_oset_help = Q.prove (
+`!cmp s l. good_oset cmp s ⇒ good_oset cmp (FOLDR (λx t. oinsert cmp x t) s l)`,
+ Induct_on `l` >>
+ rw [] >>
+ match_mp_tac good_oset_oinsert >>
+ metis_tac []);
+
+Theorem good_oset_oset:
+ !cmp l. good_cmp cmp ⇒ good_oset cmp (oset cmp l)
+Proof
+ rw [oset_def] >>
+ metis_tac [good_oset_oset_help, good_oset_oempty]
+QED
+
+(* oempty theorems *)
+
+Theorem oin_oempty[simp]:
+ !cmp x. oin cmp x oempty = F
+Proof
+ rw [oin_def, oempty_def, empty_def, member_def]
+QED
+
+Theorem oimage_oempty[simp]:
+ !cmp f. oimage cmp f oempty = oempty
+Proof
+ rw [oimage_def, oempty_def, map_keys_def, empty_def, fromList_def,
+     toAscList_def, foldrWithKey_def]
+QED
+
+Theorem oinsert_oempty[simp]:
+ !cmp x. oinsert cmp x oempty = osingleton x
+Proof
+ rw [oinsert_def, oempty_def, osingleton_def, insert_def, empty_def, singleton_def]
+QED
+
+Theorem odelete_oempty[simp]:
+ !cmp x. odelete cmp oempty x = oempty
+Proof
+ rw [odelete_def, oempty_def, delete_def, empty_def]
+QED
+
+Theorem ounion_oempty[simp]:
+ !cmp s. ounion cmp oempty s = s ∧ ounion cmp s oempty = s
+Proof
+ rw [ounion_def, oempty_def, union_def, empty_def] >>
+ Cases_on `s` >>
+ rw [union_def]
+QED
+
+Theorem oempty_subset[simp]:
+ !cmp s. (osubset cmp oempty s ⇔ T) ∧ (osubset cmp s oempty ⇔ s = oempty)
+Proof
+ rw [osubset_def, oempty_def, isSubmapOf_def, isSubmapOfBy_def, empty_def,
+     submap'_def, size_def] >>
+ Cases_on `s` >>
+ rw [submap'_def, size_def]
+QED
+
+Theorem oevery_oempty[simp]:
+ !f. oevery f oempty = T
+Proof
+ rw [oevery_def, oempty_def, every_def, empty_def]
+QED
+
+Theorem oexists_oempty[simp]:
+ !f. oexists f oempty = F
+Proof
+ rw [oexists_def, oempty_def, exists_def, empty_def]
+QED
+
+Theorem oset_empty[simp]:
+ !cmp. oset cmp [] = oempty
+Proof
+ rw [oset_def, oempty_def]
+QED
+
+(* singleton theorems *)
+
+Theorem oin_singleton[simp]:
+ ∀cmp x y. oin cmp x (osingleton y) ⇔ cmp x y = Equal
+Proof
+ rw [oin_def, osingleton_def, member_def, singleton_def] >>
+ EVERY_CASE_TAC
+QED
+
+Theorem oimage_osingleton[simp]:
+ !cmp f x. oimage cmp f (osingleton x) = osingleton (f x)
+Proof
+ rw [oimage_def, osingleton_def, map_keys_def, singleton_def, fromList_def,
+     toAscList_def, foldrWithKey_def, empty_def, insert_def]
+QED
+
+Theorem odelete_osingleton[simp]:
+ !cmp x y. good_cmp cmp ⇒ odelete cmp (osingleton x) y = if cmp x y = Equal then oempty else osingleton x
+Proof
+ rw [odelete_def, oempty_def, delete_def, empty_def, singleton_def, osingleton_def] >>
+ EVERY_CASE_TAC >>
+ rw [balanceR_def, balanceL_def, glue_def] >>
+ metis_tac [cmp_thms]
+QED
+
+Theorem oevery_osingleton[simp]:
+ !f x. oevery f (osingleton x) = f x
+Proof
+ rw [oevery_def, osingleton_def, every_def, singleton_def]
+QED
+
+Theorem oexists_osingleton[simp]:
+ !f x. oexists f (osingleton x) = f x
+Proof
+ rw [oexists_def, osingleton_def, exists_def, singleton_def]
+QED
+
+Theorem oset_singleton[simp]:
+ !cmp x. oset cmp [x] = osingleton x
+Proof
+ rw [oset_def, osingleton_def]
+QED
+
+(* How oin interacts with other operations *)
+
+Theorem oin_oinsert:
+ ∀cmp x y s. good_oset cmp s ⇒ (oin cmp x (oinsert cmp y s) ⇔ cmp x y = Equal ∨ oin cmp x s)
+Proof
+ rw [good_oset_def, oin_def, oinsert_def] >>
+ imp_res_tac insert_thm >>
+ last_x_assum (qspecl_then [`()`, `y`] assume_tac) >>
+ imp_res_tac member_thm >>
+ rw [FLOOKUP_UPDATE] >>
+ rfs [key_set_eq] >>
+ metis_tac [good_cmp_def]
+QED
+
+Theorem oin_odelete:
+ !cmp s x y. good_oset cmp s ⇒ (oin cmp x (odelete cmp s y) ⇔ oin cmp x s ∧ cmp x y ≠ Equal)
+Proof
+ rw [oin_def, odelete_def] >>
+ imp_res_tac good_oset_odelete >>
+ pop_assum (qspecl_then [`y`] assume_tac) >>
+ fs [good_oset_def, odelete_def] >>
+ imp_res_tac delete_thm >>
+ imp_res_tac member_thm >>
+ rw [FDOM_DRESTRICT, key_set_eq] >>
+ eq_tac >>
+ rw []
+QED
+
+Theorem oin_ounion:
+ !cmp x s1 s2. good_oset cmp s1 ∧ good_oset cmp s2 ⇒ (oin cmp x (ounion cmp s1 s2) ⇔ oin cmp x s1 ∨ oin cmp x s2)
+Proof
+ rw [oin_def] >>
+ `good_oset cmp (ounion cmp s1 s2)` by metis_tac [good_oset_ounion] >>
+ fs [good_oset_def, ounion_def] >>
+ imp_res_tac member_thm >>
+ rw [] >>
+ `to_fmap cmp (union cmp s1 s2) = to_fmap cmp s1 ⊌ to_fmap cmp s2` by metis_tac [union_thm] >>
+ rw []
+QED
+
+(*
+val oin_oimage = Q.store_thm ("oin_oimage",
+`!cmp y s f. good_cmp cmp ⇒ (oin cmp y (oimage cmp f s) ⇔ ?x. cmp y (f x) = Equal ∧ oin cmp x s)`,
+ cheat);
+ *)
+
+Theorem osubset_thm:
+ !cmp s1 s2. good_oset cmp s1 ∧ good_oset cmp s2 ⇒ (osubset cmp s1 s2 ⇔ (!x. oin cmp x s1 ⇒ oin cmp x s2))
+Proof
+ rw [osubset_def, good_oset_def, isSubmapOf_thm, oin_def] >>
+ rw [member_thm, lookup_thm, FLOOKUP_DEF] >>
+ eq_tac >>
+ rw []
+QED
+
+Theorem oextension:
+ !cmp s1 s2.
+  good_oset cmp s1 ∧ good_oset cmp s2
+  ⇒
+  (ocompare cmp s1 s2 = Equal ⇔ (!x. oin cmp x s1 ⇔ oin cmp x s2))
+Proof
+ rw [good_oset_def, ocompare_def] >>
+ `good_cmp (\(x:unit) (y:unit). Equal)`
+            by (rw [good_cmp_def, LAMBDA_PROD, FORALL_PROD] >>
+                metis_tac [good_cmp_def]) >>
+ rw [compare_thm] >>
+ rw [oin_def, member_thm, fmap_rel_OPTREL_FLOOKUP, OPTREL_def, FLOOKUP_DEF] >>
+ eq_tac >>
+ rw []
+ >- metis_tac [] >>
+ CCONTR_TAC >>
+ fs [] >>
+ imp_res_tac to_fmap_key_set >>
+ fs [] >>
+ metis_tac []
+QED
+
+Theorem oevery_oin:
+ !cmp f s.
+  good_oset cmp s ∧
+  oresp_equiv cmp f
+  ⇒
+  (oevery f s ⇔ (!x. oin cmp x s ⇒ f x))
+Proof
+ rw [good_oset_def, oevery_def, oin_def, oresp_equiv_def] >>
+ imp_res_tac every_thm >>
+ rw [lookup_thm, flookup_thm, member_thm]
+QED
+
+Theorem oexists_oin:
+ !cmp f s.
+  good_oset cmp s ∧
+  oresp_equiv cmp f
+  ⇒
+  (oexists f s ⇔ (?x. oin cmp x s ∧ f x))
+Proof
+ rw [oresp_equiv_def, good_oset_def, oexists_def, oin_def] >>
+ imp_res_tac exists_thm >>
+ rw [lookup_thm, flookup_thm, member_thm]
+QED
+
+val oin_oset_help = Q.prove (
+`!cmp l x s.
+  good_oset cmp s
+  ⇒
+  (oin cmp x (FOLDR (λx t. oinsert cmp x t) s l)
+   ⇔
+   oin cmp x s ∨ ?y. MEM y l ∧ cmp x y = Equal)`,
+ Induct_on `l` >>
+ rw [] >>
+ imp_res_tac good_oset_oset_help >>
+ rw [oin_oinsert] >>
+ eq_tac >>
+ rw [] >>
+ res_tac >>
+ fs [] >>
+ metis_tac []);
+
+Theorem oin_oset:
+ !cmp l x. good_cmp cmp ⇒ (oin cmp x (oset cmp l) ⇔ ?y. MEM y l ∧ cmp x y = Equal)
+Proof
+ rw [oset_def] >>
+ metis_tac [oin_oset_help, good_oset_oempty, oin_oempty]
+QED
+
+(* Theorems about oevery and oexists *)
+
+Theorem oevery_oinsert:
+ !f cmp x s.
+  good_oset cmp s ∧
+  oresp_equiv cmp f
+  ⇒
+  (oevery f (oinsert cmp x s) ⇔ f x ∧ oevery f s)
+Proof
+ rw [] >>
+ `good_oset cmp (oinsert cmp x s)` by metis_tac [good_oset_oinsert] >>
+ imp_res_tac oevery_oin >>
+ rw [oin_oinsert] >>
+ eq_tac >>
+ rw [] >>
+ fs [oresp_equiv_def, resp_equiv_def] >>
+ metis_tac [good_oset_def, cmp_thms]
+QED
+
+Theorem oexists_oinsert:
+ !f cmp x s.
+  good_oset cmp s ∧
+  oresp_equiv cmp f
+  ⇒
+  (oexists f (oinsert cmp x s) ⇔ f x ∨ oexists f s)
+Proof
+ rw [] >>
+ `good_oset cmp (oinsert cmp x s)` by metis_tac [good_oset_oinsert] >>
+ imp_res_tac oexists_oin >>
+ rw [oin_oinsert] >>
+ eq_tac >>
+ rw [] >>
+ fs [oresp_equiv_def, resp_equiv_def] >>
+ metis_tac [good_oset_def, cmp_thms]
+QED
+
+Theorem oevery_ounion:
+ !f cmp s1 s2.
+  good_oset cmp s1 ∧
+  good_oset cmp s2 ∧
+  oresp_equiv cmp f
+  ⇒
+  (oevery f (ounion cmp s1 s2) ⇔ oevery f s1 ∧ oevery f s2)
+Proof
+ rw [] >>
+ `good_oset cmp (ounion cmp s1 s2)` by metis_tac [good_oset_ounion] >>
+ imp_res_tac oevery_oin >>
+ rw [oin_ounion] >>
+ eq_tac >>
+ rw [] >>
+ fs [oresp_equiv_def, resp_equiv_def]
+QED
+
+Theorem oexists_ounion:
+ !f cmp s1 s2.
+  good_oset cmp s1 ∧
+  good_oset cmp s2 ∧
+  oresp_equiv cmp f
+  ⇒
+  (oexists f (ounion cmp s1 s2) ⇔ oexists f s1 ∨ oexists f s2)
+Proof
+ rw [] >>
+ `good_oset cmp (ounion cmp s1 s2)` by metis_tac [good_oset_ounion] >>
+ imp_res_tac oexists_oin >>
+ rw [oin_ounion] >>
+ eq_tac >>
+ rw [] >>
+ fs [oresp_equiv_def, resp_equiv_def] >>
+ metis_tac []
+QED
+

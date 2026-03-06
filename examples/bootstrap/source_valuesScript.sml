@@ -1,8 +1,6 @@
-
-open HolKernel Parse boolLib bossLib term_tactic;
-open arithmeticTheory listTheory stringTheory;
-
-val _ = new_theory "source_values";
+Theory source_values
+Ancestors
+  arithmetic list string
 
 (* Values in the source semantics are binary trees where the
    leaves are natural numbers (num) *)
@@ -129,5 +127,3 @@ End
 Definition otherwise_def[simp]:
   otherwise x = x
 End
-
-val _ = export_theory();

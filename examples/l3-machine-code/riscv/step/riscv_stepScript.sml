@@ -1,14 +1,13 @@
 (* ------------------------------------------------------------------------
    Definitions and theorems used by RISC-V step evaluator (riscv_stepLib)
    ------------------------------------------------------------------------ *)
+Theory riscv_step
+Ancestors
+  alignment riscv
+Libs
+  utilsLib wordsLib blastLib
 
-open HolKernel boolLib bossLib
 
-open utilsLib
-open wordsLib blastLib alignmentTheory
-open riscvTheory
-
-val () = Theory.new_theory "riscv_step"
 val _ = ParseExtras.temp_loose_equality()
 
 val ERR = mk_HOL_ERR "riscv_stepTheory";
@@ -26,17 +25,20 @@ fun uprove a b = utilsLib.STRIP_UNDISCH (Q.prove (a, b))
    Simplified Fetch and Next functions
    ------------------------------------------------------------------------ *)
 
-val Fetch_def = Define`
+Definition Fetch_def:
   Fetch s =
   let (w, s) = translateAddr (PC s, Instruction, Read) s in
-    (rawReadInst (THE w) s)`
+    (rawReadInst (THE w) s)
+End
 
-val update_pc_def = Define `update_pc v s = SOME (write'PC v s)`
+Definition update_pc_def:   update_pc v s = SOME (write'PC v s)
+End
 
-val DecodeAny_def = Define `
-  DecodeAny f = case f of Half h => DecodeRVC h | Word w => Decode w`
+Definition DecodeAny_def:
+  DecodeAny f = case f of Half h => DecodeRVC h | Word w => Decode w
+End
 
-val NextRISCV_def = Define`
+Definition NextRISCV_def:
   NextRISCV s =
   let (f, s) = Fetch s in
   let s = Run (DecodeAny f) s in
@@ -47,60 +49,65 @@ val NextRISCV_def = Define`
     case NextFetch s of
        NONE => update_pc (pc + Skip s) s
      | SOME (BranchTo a) => update_pc a (write'NextFetch NONE s)
-     | _ => NONE`
+     | _ => NONE
+End
 
 (* ------------------------------------------------------------------------
    Evaluation theorem
    ------------------------------------------------------------------------ *)
 
-val NextRISCV = Q.store_thm("NextRISCV",
-  `(Fetch s = (w, s')) /\
+Theorem NextRISCV:
+   (Fetch s = (w, s')) /\
    (DecodeAny w = i) /\
    (Run i s' = nxt) /\
    (nxt.exception = NoException) /\
    (nxt.c_NextFetch nxt.procID = NONE) ==>
-   (NextRISCV s = update_pc (nxt.c_PC nxt.procID + Skip nxt) nxt)`,
+   (NextRISCV s = update_pc (nxt.c_PC nxt.procID + Skip nxt) nxt)
+Proof
   lrw [NextRISCV_def, PC_def, NextFetch_def, write'NextFetch_def]
-  )
+QED
 
-val NextRISCV_branch = Q.store_thm("NextRISCV_branch",
-  `(Fetch s = (w, s')) /\
+Theorem NextRISCV_branch:
+   (Fetch s = (w, s')) /\
    (DecodeAny w = i) /\
    (Run i s' = nxt) /\
    (nxt.exception = NoException) /\
    (nxt.c_NextFetch nxt.procID = SOME (BranchTo a)) ==>
    (NextRISCV s =
       update_pc a
-        (nxt with c_NextFetch := (nxt.procID =+ NONE) nxt.c_NextFetch))`,
+        (nxt with c_NextFetch := (nxt.procID =+ NONE) nxt.c_NextFetch))
+Proof
   lrw [NextRISCV_def, PC_def, NextFetch_def, write'NextFetch_def]
   \\ Cases_on `Run (Decode w) s'`
   \\ fs []
-  )
+QED
 
-val NextRISCV_cond_branch = Q.store_thm("NextRISCV_cond_branch",
-  `(Fetch s = (w, s')) /\
+Theorem NextRISCV_cond_branch:
+   (Fetch s = (w, s')) /\
    (DecodeAny w = i) /\
    (Run i s' = nxt) /\
    (nxt.exception = NoException) /\
    (nxt.c_NextFetch nxt.procID = if b then SOME (BranchTo a) else NONE) ==>
    (NextRISCV s =
       update_pc (if b then a else nxt.c_PC nxt.procID + Skip nxt)
-        (nxt with c_NextFetch := (nxt.procID =+ NONE) nxt.c_NextFetch))`,
+        (nxt with c_NextFetch := (nxt.procID =+ NONE) nxt.c_NextFetch))
+Proof
   lrw [NextRISCV_def, PC_def, NextFetch_def, write'NextFetch_def]
   \\ Cases_on `Run (DecodeAny w) s'`
   \\ fs [update_pc_def, write'PC_def, riscv_state_component_equality,
          combinTheory.UPDATE_APPLY_IMP_ID]
-  )
+QED
 
 (* ------------------------------------------------------------------------
    Sub-word select operation (temporary)
    ------------------------------------------------------------------------ *)
 
-val select_def = zDefine`
+Definition select_def[nocompute]:
   select (p:'a word) (w: word64) =
   let sz = 64 DIV (2 ** dimindex(:'a)) in
   let l = w2n p * sz in
-    (l + sz - 1 >< l) w : 'b word`
+    (l + sz - 1 >< l) w : 'b word
+End
 
 (* ------------------------------------------------------------------------
    Word extend abbreviations
@@ -120,10 +127,12 @@ val () = List.app Parse.temp_overload_on
    Simplifying Rewrites
    ------------------------------------------------------------------------ *)
 
-val word_bit_1_0 = store_thm("word_bit_1_0[simp]",
-  ``(word_bit 1 ((v2w [x0; x1; x2; x3; x4; x5; x6; x7]):word8) = x6) /\
-    (word_bit 0 ((v2w [x0; x1; x2; x3; x4; x5; x6; x7]):word8) = x7)``,
-  blastLib.BBLAST_TAC);
+Theorem word_bit_1_0[simp]:
+    (word_bit 1 ((v2w [x0; x1; x2; x3; x4; x5; x6; x7]):word8) = x6) /\
+    (word_bit 0 ((v2w [x0; x1; x2; x3; x4; x5; x6; x7]):word8) = x7)
+Proof
+  blastLib.BBLAST_TAC
+QED
 
 val cond_lem1 = Q.prove(
   `(if b1 then (if b2 then x else y1) else (if b2 then x else y2)) =
@@ -137,10 +146,12 @@ val cond_rand_shift = Q.prove(
   rw []
   )
 
-val word_bit_0_lemmas = Q.store_thm("word_bit_0_lemmas",
-  `!w. ¬word_bit 0 (0xFFFFFFFFFFFFFFFEw && w:word64) /\
-       word_bit 0 ((0xFFFFFFFFFFFFFFFEw && w:word64) + v) = word_bit 0 v`,
-  blastLib.BBLAST_TAC)
+Theorem word_bit_0_lemmas:
+   !w. ¬word_bit 0 (0xFFFFFFFFFFFFFFFEw && w:word64) /\
+       word_bit 0 ((0xFFFFFFFFFFFFFFFEw && w:word64) + v) = word_bit 0 v
+Proof
+  blastLib.BBLAST_TAC
+QED
 
 val cond_rand_thms =
   utilsLib.mk_cond_rand_thms
@@ -159,16 +170,17 @@ val cond_rand_thms =
 
 val ifTF = Q.prove(`(if b then T else F) = b`, rw [])
 
-val v2w_0_rwts = Q.store_thm("v2w_0_rwts",
-  `((v2w [F; F; F; F; T] = 1w: word5)) /\
+Theorem v2w_0_rwts:
+   ((v2w [F; F; F; F; T] = 1w: word5)) /\
    ((v2w [F; F; F; F; F] = 0w: word5)) /\
    ((v2w [T; b3; b2; b1; b0] = 0w: word5) = F) /\
    ((v2w [b3; T; b2; b1; b0] = 0w: word5) = F) /\
    ((v2w [b3; b2; T; b1; b0] = 0w: word5) = F) /\
    ((v2w [b3; b2; b1; T; b0] = 0w: word5) = F) /\
-   ((v2w [b3; b2; b1; b0; T] = 0w: word5) = F)`,
+   ((v2w [b3; b2; b1; b0; T] = 0w: word5) = F)
+Proof
    blastLib.BBLAST_TAC
-   )
+QED
 
 val aligned2 = Q.prove(
   `(!w: word64. ((1 >< 0) w = 0w: word2) = aligned 2 w)`,
@@ -526,21 +538,29 @@ val jalr = uprove
   \\ blastLib.FULL_BBLAST_TAC
   )
 
-val Decode_IMP_DecodeAny = store_thm("Decode_IMP_DecodeAny",
-  ``(Decode w = i) ==> (DecodeAny (Word w) = i)``,
-  fs [DecodeAny_def]);
+Theorem Decode_IMP_DecodeAny:
+    (Decode w = i) ==> (DecodeAny (Word w) = i)
+Proof
+  fs [DecodeAny_def]
+QED
 
-val DecodeRVC_IMP_DecodeAny = store_thm("DecodeRVC_IMP_DecodeAny",
-  ``(DecodeRVC h = i) ==> (DecodeAny (Half h) = i)``,
-  fs [DecodeAny_def]);
+Theorem DecodeRVC_IMP_DecodeAny:
+    (DecodeRVC h = i) ==> (DecodeAny (Half h) = i)
+Proof
+  fs [DecodeAny_def]
+QED
 
-val avoid_signalAddressException = store_thm("avoid_signalAddressException",
-  ``~b ==> ((if b then signalAddressException t u else s) = s)``,
-  fs []);
+Theorem avoid_signalAddressException:
+    ~b ==> ((if b then signalAddressException t u else s) = s)
+Proof
+  fs []
+QED
 
-val word_bit_add_lsl_simp = store_thm("word_bit_add_lsl_simp",
-  ``word_bit 0 (x + w << 1) = word_bit 0 (x:word64)``,
-  blastLib.BBLAST_TAC);
+Theorem word_bit_add_lsl_simp:
+    word_bit 0 (x + w << 1) = word_bit 0 (x:word64)
+Proof
+  blastLib.BBLAST_TAC
+QED
 
 (* ------------------------------------------------------------------------
    Evaluation setup
@@ -647,8 +667,8 @@ val Fetch =
       write'Skip_def] [[aligned]] []
     ``Fetch``
 
-val Fetch32 = store_thm("Fetch32",
-  ``!xs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF
+Theorem Fetch32:
+    !xs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF
         y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 yA yB yC yD yE yF.
        (xs = [y0; y1; y2; y3; y4; y5; y6; y7; y8; y9; yA; yB; yC; yD; yE; yF;
               x0; x1; x2; x3; x4; x5; x6; x7; x8; x9; xA; xB; xC; xD; xE; xF]) /\
@@ -659,19 +679,23 @@ val Fetch32 = store_thm("Fetch32",
        (s.MEM8 (s.c_PC s.procID) = v2w [x8; x9; xA; xB; xC; xD; xE; xF]) ∧
        xE ∧ xF ⇒
        (Fetch s =
-        (Word (v2w xs), s with c_Skip := (s.procID =+ 4w) s.c_Skip))``,
-  simp [Fetch |> DISCH_ALL] \\ rw [] \\ blastLib.BBLAST_TAC);
+        (Word (v2w xs), s with c_Skip := (s.procID =+ 4w) s.c_Skip))
+Proof
+  simp [Fetch |> DISCH_ALL] \\ rw [] \\ blastLib.BBLAST_TAC
+QED
 
-val Fetch16 = store_thm("Fetch16",
-  ``!xs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF.
+Theorem Fetch16:
+    !xs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF.
        (xs = [x0; x1; x2; x3; x4; x5; x6; x7; x8; x9; xA; xB; xC; xD; xE; xF]) /\
        ((s.c_MCSR s.procID).mstatus.VM = 0w) ∧
        (s.MEM8 (s.c_PC s.procID + 1w) = v2w [x0; x1; x2; x3; x4; x5; x6; x7]) ∧
        (s.MEM8 (s.c_PC s.procID) = v2w [x8; x9; xA; xB; xC; xD; xE; xF]) ∧
        ~(xE ∧ xF) ⇒
        (Fetch s =
-        (Half (v2w xs), s with c_Skip := (s.procID =+ 2w) s.c_Skip))``,
-  simp [Fetch |> DISCH_ALL] \\ rw [] \\ blastLib.BBLAST_TAC);
+        (Half (v2w xs), s with c_Skip := (s.procID =+ 2w) s.c_Skip))
+Proof
+  simp [Fetch |> DISCH_ALL] \\ rw [] \\ blastLib.BBLAST_TAC
+QED
 
 (* ------------------------------------------------------------------------
    Memory Store Rewrites
@@ -780,7 +804,6 @@ local
   val hyp_eq_rule =
     utilsLib.ALL_HYP_CONV_RULE (Conv.DEPTH_CONV wordsLib.word_EQ_CONV)
 in
-  val () = utilsLib.reset_thms()
   fun class args avoid n =
     let
       val name = "dfn'" ^ n
@@ -893,7 +916,5 @@ val SB  = store [] "SB"
 
 (* ------------------------------------------------------------------------ *)
 
-val () = ( Theory.delete_const "select"
-         ; utilsLib.adjoin_thms ()
-         ; export_theory ()
-         )
+val () = Theory.delete_const "select";
+

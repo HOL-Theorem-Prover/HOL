@@ -24,6 +24,21 @@
 \usepackage{../../src/TeX/holtexbasic}
 \usepackage{fancyvrb}
 \usepackage[format=hang,justification=raggedright]{caption}  % multi-line figure caption
+\usepackage{desc-unicode}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{etoolbox} % For patchcmd
+
+% Remove top and bottom horizontal lines from tables:
+\newlength{\toprulewidth}
+\setlength{\toprulewidth}{0.ex}
+\patchcmd{\toprule}{\heavyrulewidth}{\toprulewidth}{}{}
+
+\newlength{\bottomrulewidth}
+\setlength{\bottomrulewidth}{0.ex}
+\patchcmd{\bottomrule}{\heavyrulewidth}{\bottomrulewidth}{}{}
+
+
 
 \hyphenation{docu-ments}
 
@@ -57,7 +72,7 @@
 
 \theoremstyle{definition}
 \newtheorem{definition}[equation]{Definition}
-
+\newcounter{none}
 
 \makeindex[intoc]
 \begin{document}
@@ -103,10 +118,12 @@
    \include{drules}                      % derived rules
    \include{conv}                        % conversions
    \include{tactics}                     % tactics
+     \include{advanced_tactics}          % a section within tactics chapter
    \include{theories}
    \include{math}                        % math theories
    \include{definitions}
    \include{libraries}
+   \include{modern-syntax-chapter}
    \include{misc}
 
    % ---------------------------------------------------------------------

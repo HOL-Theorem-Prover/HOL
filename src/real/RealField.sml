@@ -36,7 +36,7 @@ list_mk_abs([x, y],
 end
 structure Parse = struct
   open Parse
-  local val (rtyg, rtmg0) = realTheory.real_grammars
+  local val (rtyg, rtmg0) = valOf $ grammarDB {thyname = "real"}
         val rtmg = term_grammar.fupdate_overload_info
                      (Overload.add_overloading("DECIMAL", decimal_tm))
                      rtmg0
@@ -77,12 +77,6 @@ val _ = RealArith.verbose_level := 0;
 (* ------------------------------------------------------------------------- *)
 (* Syntax operations on integer constants of type “:real”.                   *)
 (* ------------------------------------------------------------------------- *)
-
-(* NOTE: HOL-Light's gcd_num function accepts negative numbers, but their gcd
-   is always positive. It looks like having abs first, then gcd. *)
-local open Arbint in
-fun gcd a b = fromNat (Arbnum.gcd (toNat (abs a), toNat (abs b)))
-end (* local *)
 
 type aint = Arbint.int
 
@@ -306,7 +300,7 @@ val REAL_RAT_ADD_CONV = let
     and x2n = dest_realintconst x2' and y2n = dest_realintconst y2';
     val x3n = x1n * y2n + x2n * y1n
     and y3n = y1n * y2n;
-    val d = gcd x3n y3n;
+    val d = gcd (x3n, y3n);
     val x3n' = quot (x3n,d) and y3n' = quot (y3n,d);
     val (x3n'',y3n'') = if y3n' > zero then (x3n',y3n') else (~x3n',~y3n');
     val x3' = mk_realintconst x3n'' and y3' = mk_realintconst y3n'';
@@ -367,8 +361,8 @@ val REAL_RAT_MUL_CONV = let
     and (x2',y2') = dest_div r2;
     val x1n = dest_realintconst x1' and y1n = dest_realintconst y1'
     and x2n = dest_realintconst x2' and y2n = dest_realintconst y2';
-    val d1n = gcd x1n y2n
-    and d2n = gcd x2n y1n;
+    val d1n = gcd (x1n, y2n)
+    and d2n = gcd (x2n, y1n);
   in
     if d1n = one andalso d2n = one then
       let val th0 = INST [x1 |-> x1', y1 |-> y1', x2 |-> x2', y2 |-> y2'] pth_nocancel;
@@ -452,37 +446,30 @@ val sgn_tm = “real_sgn :real -> real”;
 val max_tm = “max :real -> real -> real”;
 val min_tm = “min :real -> real -> real”;
 
-fun real_rat_compset () = let
-  open computeLib
-  val compset = num_compset()
-  val _ = add_conv (leq_tm,     2, REAL_RAT_LE_CONV) compset
-  val _ = add_conv (less_tm,    2, REAL_RAT_LT_CONV) compset
-  val _ = add_conv (geq_tm,     2, REAL_RAT_GE_CONV) compset
-  val _ = add_conv (greater_tm, 2, REAL_RAT_GT_CONV) compset
-  val _ = add_conv (real_eq_tm, 2, REAL_RAT_EQ_CONV) compset
-  val _ = add_conv (negate_tm,  1, CHANGED_CONV REAL_RAT_NEG_CONV) compset
-  val _ = add_conv (sgn_tm,     1, REAL_RAT_SGN_CONV) compset
-  val _ = add_conv (absval_tm,  1, REAL_RAT_ABS_CONV) compset
-  val _ = add_conv (inv_tm,     1, REAL_RAT_INV_CONV) compset
-  val _ = add_conv (plus_tm,    2, REAL_RAT_ADD_CONV) compset
-  val _ = add_conv (minus_tm,   2, REAL_RAT_SUB_CONV) compset
-  val _ = add_conv (mult_tm,    2, REAL_RAT_MUL_CONV) compset
-  val _ = add_conv (div_tm,     2, REAL_RAT_DIV_CONV) compset
-  val _ = add_conv (exp_tm,     2, REAL_RAT_POW_CONV) compset
-  val _ = add_conv (max_tm,     2, REAL_RAT_MAX_CONV) compset
-  val _ = add_conv (min_tm,     2, REAL_RAT_MIN_CONV) compset
-in
-  compset
-end;
+fun real_rat_compset () =
+  reduceLib.num_compset
+  |> computeLib.add_conv (leq_tm,     2, REAL_RAT_LE_CONV)
+  |> computeLib.add_conv (less_tm,    2, REAL_RAT_LT_CONV)
+  |> computeLib.add_conv (geq_tm,     2, REAL_RAT_GE_CONV)
+  |> computeLib.add_conv (greater_tm, 2, REAL_RAT_GT_CONV)
+  |> computeLib.add_conv (real_eq_tm, 2, REAL_RAT_EQ_CONV)
+  |> computeLib.add_conv (negate_tm,  1, CHANGED_CONV REAL_RAT_NEG_CONV)
+  |> computeLib.add_conv (sgn_tm,     1, REAL_RAT_SGN_CONV)
+  |> computeLib.add_conv (absval_tm,  1, REAL_RAT_ABS_CONV)
+  |> computeLib.add_conv (inv_tm,     1, REAL_RAT_INV_CONV)
+  |> computeLib.add_conv (plus_tm,    2, REAL_RAT_ADD_CONV)
+  |> computeLib.add_conv (minus_tm,   2, REAL_RAT_SUB_CONV)
+  |> computeLib.add_conv (mult_tm,    2, REAL_RAT_MUL_CONV)
+  |> computeLib.add_conv (div_tm,     2, REAL_RAT_DIV_CONV)
+  |> computeLib.add_conv (exp_tm,     2, REAL_RAT_POW_CONV)
+  |> computeLib.add_conv (max_tm,     2, REAL_RAT_MAX_CONV)
+  |> computeLib.add_conv (min_tm,     2, REAL_RAT_MIN_CONV)
 
-val REAL_RAT_REDUCE_CONV = let
-  val cs = real_rat_compset ();
-  val _ = computeLib.set_skip cs boolSyntax.conditional NONE
-          (* ensure that REDUCE_CONV will look at all of a term, even
-             conditionals' branches *)
-in
-  computeLib.CBV_CONV cs
-end
+val REAL_RAT_REDUCE_CONV =
+  (* ensure that REDUCE_CONV will look at all of a term, even
+     conditionals' branches *)
+  computeLib.CBV_CONV
+    (computeLib.set_skip (real_rat_compset ()) boolSyntax.conditional NONE)
 
 (* ------------------------------------------------------------------------- *)
 (* Real normalizer dealing with rational constants.                          *)

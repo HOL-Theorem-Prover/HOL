@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib
-open blastLib stateLib
-open set_sepTheory progTheory temporal_stateTheory arm_stepTheory
+Theory arm_prog
+Ancestors
+  set_sep prog temporal_state arm_step
+Libs
+  blastLib stateLib
 
-val () = new_theory "arm_prog"
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
@@ -12,16 +13,18 @@ val _ =
       [["undefined"], ["CurrentCondition"], ["Encoding"]]
       arm_stepTheory.NextStateARM_def
 
-val arm_instr_def = Define`
+Definition arm_instr_def:
    arm_instr (a, i: word32) =
    { (arm_c_MEM a, arm_d_word8 ((7 >< 0) i));
      (arm_c_MEM (a + 1w), arm_d_word8 ((15 >< 8) i));
      (arm_c_MEM (a + 2w), arm_d_word8 ((23 >< 16) i));
-     (arm_c_MEM (a + 3w), arm_d_word8 ((31 >< 24) i)) }`
+     (arm_c_MEM (a + 3w), arm_d_word8 ((31 >< 24) i)) }
+End
 
-val ARM_MODEL_def = Define`
+Definition ARM_MODEL_def:
    ARM_MODEL = (STATE arm_proj, NEXT_REL (=) NextStateARM, arm_instr,
-                ($= :arm_state -> arm_state -> bool), (K F: arm_state -> bool))`
+                ($= :arm_state -> arm_state -> bool), (K F: arm_state -> bool))
+End
 
 val ARM_IMP_SPEC = Theory.save_thm ("ARM_IMP_SPEC",
    stateTheory.IMP_SPEC
@@ -53,82 +56,93 @@ val (arm_REGISTERS_def, arm_REGISTERS_INSERT) =
 val (arm_MEMORY_def, arm_MEMORY_INSERT) =
    stateLib.define_map_component ("arm_MEMORY", "mem", arm_MEM_def)
 
-val arm_WORD_def = Define`
+Definition arm_WORD_def:
    arm_WORD a (i: word32) =
    arm_MEM a ((7 >< 0) i) *
    arm_MEM (a + 1w) ((15 >< 8) i) *
    arm_MEM (a + 2w) ((23 >< 16) i) *
-   arm_MEM (a + 3w) ((31 >< 24) i)`;
+   arm_MEM (a + 3w) ((31 >< 24) i)
+End
 
-val arm_BE_WORD_def = Define`
+Definition arm_BE_WORD_def:
    arm_BE_WORD a (i: word32) =
    arm_MEM a ((31 >< 24) i) *
    arm_MEM (a + 1w) ((23 >< 16) i) *
    arm_MEM (a + 2w) ((15 >< 8) i) *
-   arm_MEM (a + 3w) ((7 >< 0) i)`;
+   arm_MEM (a + 3w) ((7 >< 0) i)
+End
 
-val arm_WORD_MEMORY_def = Define`
+Definition arm_WORD_MEMORY_def:
   arm_WORD_MEMORY dmem mem =
-  {BIGUNION { BIGUNION (arm_WORD a (mem a)) | a IN dmem /\ aligned 2 a}}`
+  {BIGUNION { BIGUNION (arm_WORD a (mem a)) | a IN dmem /\ aligned 2 a}}
+End
 
-val arm_BE_WORD_MEMORY_def = Define`
+Definition arm_BE_WORD_MEMORY_def:
   arm_BE_WORD_MEMORY dmem mem =
-  {BIGUNION { BIGUNION (arm_BE_WORD a (mem a)) | a IN dmem /\ aligned 2 a}}`
+  {BIGUNION { BIGUNION (arm_BE_WORD a (mem a)) | a IN dmem /\ aligned 2 a}}
+End
 
-val arm_CONFIG_def = Define`
+Definition arm_CONFIG_def:
    arm_CONFIG (vfp, arch, bigend, thumb, mode) =
       arm_VFPExtension vfp *
       arm_Extensions Extension_Security F *
       arm_Architecture arch *
       arm_exception NoException * arm_CPSR_J F *
       arm_CPSR_E bigend * arm_CPSR_T thumb *
-      arm_CPSR_M mode * cond (GoodMode mode)`;
+      arm_CPSR_M mode * cond (GoodMode mode)
+End
 
-val arm_PC_def = Define`
-   arm_PC pc = arm_REG RName_PC pc * cond (aligned 2 pc)`;
+Definition arm_PC_def:
+   arm_PC pc = arm_REG RName_PC pc * cond (aligned 2 pc)
+End
 
-val aS_def = Define `
-   aS (n,z,c,v) = arm_CPSR_N n * arm_CPSR_Z z * arm_CPSR_C c * arm_CPSR_V v`;
+Definition aS_def:
+   aS (n,z,c,v) = arm_CPSR_N n * arm_CPSR_Z z * arm_CPSR_C c * arm_CPSR_V v
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val aS_HIDE = Q.store_thm("aS_HIDE",
-   `~aS = ~arm_CPSR_N * ~arm_CPSR_Z * ~arm_CPSR_C * ~arm_CPSR_V`,
+Theorem aS_HIDE:
+    ~aS = ~arm_CPSR_N * ~arm_CPSR_Z * ~arm_CPSR_C * ~arm_CPSR_V
+Proof
    SIMP_TAC std_ss [SEP_HIDE_def, aS_def, SEP_CLAUSES, FUN_EQ_THM]
    \\ SIMP_TAC std_ss [SEP_EXISTS]
    \\ METIS_TAC [aS_def, pairTheory.PAIR]
-   )
+QED
 
-val arm_CPSR_T_F = Q.store_thm("arm_CPSR_T_F",
-   `( n ==> (arm_CPSR_N T = arm_CPSR_N n)) /\
+Theorem arm_CPSR_T_F:
+    ( n ==> (arm_CPSR_N T = arm_CPSR_N n)) /\
     (~n ==> (arm_CPSR_N F = arm_CPSR_N n)) /\
     ( z ==> (arm_CPSR_Z T = arm_CPSR_Z z)) /\
     (~z ==> (arm_CPSR_Z F = arm_CPSR_Z z)) /\
     ( c ==> (arm_CPSR_C T = arm_CPSR_C c)) /\
     (~c ==> (arm_CPSR_C F = arm_CPSR_C c)) /\
     ( v ==> (arm_CPSR_V T = arm_CPSR_V v)) /\
-    (~v ==> (arm_CPSR_V F = arm_CPSR_V v))`,
+    (~v ==> (arm_CPSR_V F = arm_CPSR_V v))
+Proof
     simp []
-    )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val arm_PC_INTRO = Q.store_thm("arm_PC_INTRO",
-   `SPEC m (p1 * arm_PC pc) code (p2 * arm_REG RName_PC pc') ==>
+Theorem arm_PC_INTRO:
+    SPEC m (p1 * arm_PC pc) code (p2 * arm_REG RName_PC pc') ==>
     (aligned 2 pc ==> aligned 2 pc') ==>
-    SPEC m (p1 * arm_PC pc) code (p2 * arm_PC pc')`,
+    SPEC m (p1 * arm_PC pc) code (p2 * arm_PC pc')
+Proof
    REPEAT STRIP_TAC
    \\ FULL_SIMP_TAC std_ss [arm_PC_def, SPEC_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
-   )
+QED
 
-val arm_TEMPORAL_PC_INTRO = Q.store_thm("arm_TEMPORAL_PC_INTRO",
-   `TEMPORAL_NEXT m (p1 * arm_PC pc) code (p2 * arm_REG RName_PC pc') ==>
+Theorem arm_TEMPORAL_PC_INTRO:
+    TEMPORAL_NEXT m (p1 * arm_PC pc) code (p2 * arm_REG RName_PC pc') ==>
     (aligned 2 pc ==> aligned 2 pc') ==>
-    TEMPORAL_NEXT m (p1 * arm_PC pc) code (p2 * arm_PC pc')`,
+    TEMPORAL_NEXT m (p1 * arm_PC pc) code (p2 * arm_PC pc')
+Proof
    REPEAT STRIP_TAC
    \\ FULL_SIMP_TAC std_ss
          [arm_PC_def, TEMPORAL_NEXT_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
-   )
+QED
 
 fun mk_addr (b, s) =
    List.tabulate
@@ -140,12 +154,13 @@ fun mk_addr (b, s) =
 val x = mk_addr (boolSyntax.T, "x")
 val y = mk_addr (boolSyntax.F, "y")
 
-val Aligned_Branch = Q.store_thm("Aligned_Branch",
-   `(aligned 2 (pc:word32) ==>
-     aligned 2 (if b then pc - (^x + 1w) else pc + ^y)) = T`,
+Theorem Aligned_Branch:
+    (aligned 2 (pc:word32) ==>
+     aligned 2 (if b then pc - (^x + 1w) else pc + ^y)) = T
+Proof
    rw [alignmentTheory.aligned_extract]
    \\ blastLib.FULL_BBLAST_TAC
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -192,31 +207,33 @@ val be_v4 = ``[(31 >< 24) v; (23 >< 16) v;
 
 
 (* Need ``(\a. ..) c`` below for automation to work *)
-val arm_WORD_MEMORY_INSERT = Q.store_thm("arm_WORD_MEMORY_INSERT",
-   `!f df c d.
+Theorem arm_WORD_MEMORY_INSERT:
+    !f df c d.
      c IN df /\ (\a. aligned 2 a) c ==>
      (arm_WORD c d * arm_WORD_MEMORY (df DELETE c) f =
-      arm_WORD_MEMORY df ((c =+ d) f))`,
+      arm_WORD_MEMORY df ((c =+ d) f))
+Proof
    match_mp_tac (thm v4 `arm_WORD` `arm_WORD_MEMORY`)
    \\ rw [arm_WORD_MEMORY_def]
    \\ `(i = j) = (n2w i = n2w j: word32)` by simp []
    \\ asm_rewrite_tac []
    \\ match_mp_tac lem2
    \\ simp [lem1]
-   )
+QED
 
-val arm_BE_WORD_MEMORY_INSERT = Q.store_thm("arm_BE_WORD_MEMORY_INSERT",
-   `!f df c d.
+Theorem arm_BE_WORD_MEMORY_INSERT:
+    !f df c d.
      c IN df /\ (\a. aligned 2 a) c ==>
      (arm_BE_WORD c d * arm_BE_WORD_MEMORY (df DELETE c) f =
-      arm_BE_WORD_MEMORY df ((c =+ d) f))`,
+      arm_BE_WORD_MEMORY df ((c =+ d) f))
+Proof
    match_mp_tac (thm be_v4 `arm_BE_WORD` `arm_BE_WORD_MEMORY`)
    \\ rw [arm_BE_WORD_MEMORY_def]
    \\ `(i = j) = (n2w i = n2w j: word32)` by simp []
    \\ asm_rewrite_tac []
    \\ match_mp_tac lem2
    \\ simp [lem1]
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -256,9 +273,8 @@ val arm_instr_star_not_disjoint = Q.prove(
    \\ fs [pred_setTheory.INSERT_INTER]
    )
 
-val MOVE_TO_TEMPORAL_ARM_CODE_POOL = Q.store_thm
-  ("MOVE_TO_TEMPORAL_ARM_CODE_POOL",
-   `!a w c p q.
+Theorem MOVE_TO_TEMPORAL_ARM_CODE_POOL:
+    !a w c p q.
        TEMPORAL_NEXT ARM_MODEL
         (p *
          arm_MEM a ((7 >< 0) w) *
@@ -274,7 +290,8 @@ val MOVE_TO_TEMPORAL_ARM_CODE_POOL = Q.store_thm
        TEMPORAL_NEXT ARM_MODEL
         (cond (DISJOINT (arm_instr (a, w)) (BIGUNION (IMAGE arm_instr c))) * p)
         ((a, w) INSERT c)
-        q`,
+        q
+Proof
     REPEAT strip_tac
     \\ once_rewrite_tac [GSYM temporal_stateTheory.TEMPORAL_NEXT_CODE]
     \\ rewrite_tac [ARM_MODEL_def, stateTheory.CODE_POOL,
@@ -290,10 +307,10 @@ val MOVE_TO_TEMPORAL_ARM_CODE_POOL = Q.store_thm
     \\ fs [set_sepTheory.SEP_CLAUSES,
            temporal_stateTheory.TEMPORAL_NEXT_FALSE_PRE,
            AC set_sepTheory.STAR_ASSOC set_sepTheory.STAR_COMM]
-    )
+QED
 
-val MOVE_TO_ARM_CODE_POOL = Q.store_thm("MOVE_TO_ARM_CODE_POOL",
-   `!a w c p q.
+Theorem MOVE_TO_ARM_CODE_POOL:
+    !a w c p q.
        SPEC ARM_MODEL
         (p *
          arm_MEM a ((7 >< 0) w) *
@@ -309,7 +326,8 @@ val MOVE_TO_ARM_CODE_POOL = Q.store_thm("MOVE_TO_ARM_CODE_POOL",
        SPEC ARM_MODEL
         (cond (DISJOINT (arm_instr (a, w)) (BIGUNION (IMAGE arm_instr c))) * p)
         ((a, w) INSERT c)
-        q`,
+        q
+Proof
     REPEAT strip_tac
     \\ once_rewrite_tac [GSYM progTheory.SPEC_CODE]
     \\ rewrite_tac [ARM_MODEL_def, stateTheory.CODE_POOL,
@@ -324,7 +342,7 @@ val MOVE_TO_ARM_CODE_POOL = Q.store_thm("MOVE_TO_ARM_CODE_POOL",
     \\ imp_res_tac arm_instr_star_not_disjoint
     \\ fs [set_sepTheory.SEP_CLAUSES, progTheory.SPEC_FALSE_PRE,
            AC set_sepTheory.STAR_ASSOC set_sepTheory.STAR_COMM]
-    )
+QED
 
 val sub_intro = Theory.save_thm("sub_intro",
    simpLib.SIMP_PROVE (srw_ss()) []
@@ -338,10 +356,11 @@ val tac = asm_simp_tac (srw_ss()++wordsLib.WORD_CANCEL_ss)
 val top = utilsLib.rhsc (wordsLib.WORD_EVAL_CONV ``word_T - 2w : word32``)
 *)
 
-val DISJOINT_arm_instr = Q.store_thm("DISJOINT_arm_instr",
-   `!a pc x y.
+Theorem DISJOINT_arm_instr:
+    !a pc x y.
       3w <+ a /\ a <+ 0xFFFFFFFDw ==>
-      DISJOINT (arm_instr (pc + a, x)) (arm_instr (pc, y))`,
+      DISJOINT (arm_instr (pc + a, x)) (arm_instr (pc, y))
+Proof
    rw [arm_instr_def, pred_setTheory.DISJOINT_DEF]
    \\ `a + 1w <> 0w` by blastLib.FULL_BBLAST_TAC
    \\ `a + 2w <> 0w` by blastLib.FULL_BBLAST_TAC
@@ -351,7 +370,7 @@ val DISJOINT_arm_instr = Q.store_thm("DISJOINT_arm_instr",
    \\ `2w <> a` by blastLib.FULL_BBLAST_TAC
    \\ `1w <> a` by blastLib.FULL_BBLAST_TAC
    \\ tac
-   )
+QED
 
 val lem = Q.prove(
    `!a x y. arm_instr (a + 4w, x) INTER arm_instr (a, y) = {}`,
@@ -402,4 +421,3 @@ val disjoint_arm_instr_thms = Theory.save_thm("disjoint_arm_instr_thms",
 
 (* ------------------------------------------------------------------------ *)
 
-val () = export_theory()

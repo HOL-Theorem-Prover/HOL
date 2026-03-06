@@ -1,0 +1,1052 @@
+---
+header-includes: |
+  \usepackage{amssymb}
+  \usepackage{stmaryrd}
+  \usepackage{bbm}
+  \usepackage{accsupp}
+  \newcommand*{\llbrace}{%
+    \BeginAccSupp{method=hex,unicode,ActualText=2983}%
+      \textnormal{\usefont{OMS}{lmr}{m}{n}\char102}%
+      \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
+      \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
+    \EndAccSupp{}%
+  }
+  \newcommand*{\rrbrace}{%
+    \BeginAccSupp{method=hex,unicode,ActualText=2984}%
+      \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
+      \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
+      \textnormal{\usefont{OMS}{lmr}{m}{n}\char103}%
+    \EndAccSupp{}%
+  }
+  \DeclareUnicodeCharacter{393}{\ensuremath{\Gamma}}
+  \DeclareUnicodeCharacter{394}{\ensuremath{\Delta}}
+  \DeclareUnicodeCharacter{3B1}{$\alpha$}
+  \DeclareUnicodeCharacter{3B2}{$\beta$}
+  \DeclareUnicodeCharacter{3BB}{$\lambda$}
+  \DeclareUnicodeCharacter{3C3}{\ensuremath{\sigma}}
+  \DeclareUnicodeCharacter{3C4}{\ensuremath{\tau}}
+  \DeclareUnicodeCharacter{1D40}{\ensuremath{{}\sp{\top}}}
+  \DeclareUnicodeCharacter{1D62}{\ensuremath{{}\sb{i}}}
+  \DeclareUnicodeCharacter{1D63}{\ensuremath{{}\sb{r}}}
+  \DeclareUnicodeCharacter{201C}{\mbox{\textrm{\textquotedblleft}}}
+  \DeclareUnicodeCharacter{201D}{\mbox{\textrm{\textquotedblright}}}
+  \DeclareUnicodeCharacter{207A}{\ensuremath{{}\sp{+}}}
+  \DeclareUnicodeCharacter{2081}{\ensuremath{{}\sb{1}}}
+  \DeclareUnicodeCharacter{2082}{\ensuremath{{}\sb{2}}}
+  \DeclareUnicodeCharacter{2099}{\ensuremath{{}\sb{n}}}
+  \DeclareUnicodeCharacter{21A6}{$\mapsto$}
+  \DeclareUnicodeCharacter{21CE}{\ensuremath{\not\Leftrightarrow}}
+  \DeclareUnicodeCharacter{21D2}{$\Rightarrow$}
+  \DeclareUnicodeCharacter{21D4}{$\Leftrightarrow$}
+  \DeclareUnicodeCharacter{2200}{$\forall$}
+  \DeclareUnicodeCharacter{2203}{$\exists$}
+  \DeclareUnicodeCharacter{2208}{\ensuremath{\in}}
+  \DeclareUnicodeCharacter{2209}{\ensuremath{\not\in}}
+  \DeclareUnicodeCharacter{2212}{\ensuremath{{-}}}
+  \DeclareUnicodeCharacter{2218}{\ensuremath{\circ}}
+  \DeclareUnicodeCharacter{2227}{$\land$}
+  \DeclareUnicodeCharacter{2228}{$\lor$}
+  \DeclareUnicodeCharacter{2229}{\ensuremath{\cap}}
+  \DeclareUnicodeCharacter{222A}{\ensuremath{\cup}}
+  \DeclareUnicodeCharacter{2260}{\ensuremath{\ne}}
+  \DeclareUnicodeCharacter{2264}{\ensuremath{\le}}
+  \DeclareUnicodeCharacter{2265}{\ensuremath{\ge}}
+  \DeclareUnicodeCharacter{227C}{\ensuremath{\preceq}}
+  \DeclareUnicodeCharacter{2282}{\ensuremath{\subset}}
+  \DeclareUnicodeCharacter{2286}{$\subseteq$}
+  \DeclareUnicodeCharacter{2294}{\ensuremath{\sqcup}}
+  \DeclareUnicodeCharacter{2297}{\ensuremath{\otimes}}
+  \DeclareUnicodeCharacter{22A2}{$\vdash$}
+  \DeclareUnicodeCharacter{2983}{$\llbrace$}
+  \DeclareUnicodeCharacter{2984}{$\rrbrace$}
+  \DeclareUnicodeCharacter{2987}{\ensuremath{\llparenthesis}}
+  \DeclareUnicodeCharacter{2988}{\ensuremath{\rrparenthesis}}
+  \DeclareUnicodeCharacter{29FA}{\ensuremath{{+}\!\!{+}}}
+  \DeclareUnicodeCharacter{A673}{\ensuremath{\sp{*}}}
+  \DeclareUnicodeCharacter{1D49F}{\ensuremath{{\cal D}}}
+  \DeclareUnicodeCharacter{1D4A2}{\ensuremath{{\cal M}}}
+  \DeclareUnicodeCharacter{1D4AF}{\ensuremath{{\cal T}}}
+  \DeclareUnicodeCharacter{03B5}{\ensuremath{\varepsilon}}
+  \DeclareUnicodeCharacter{2026}{\ensuremath{\ldots}}
+---
+
+
+<!-- PolyML code for extracting stuff from structures and printing types etc -->
+>>__ structure PNV = PolyML.NameSpace.Values
+>>__ fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n"); OS.Process.exit OS.Process.failure)
+>>__ fun printNameAndType0 qp indent str nm =
+       let val sinfo = valOf $ #lookupStruct PolyML.globalNameSpace str
+                       handle Option => raise Fail ("Structure " ^ str ^ " not found")
+           val snames = PolyML.NameSpace.Structures.contents sinfo
+           val sval = valOf (#lookupVal snames nm)
+                       handle Option => raise Fail ("Name " ^ nm ^ " not found in structure " ^ str)
+           val ctxt = if qp then NONE else SOME snames
+           val typ_p = PNV.printType(PNV.typeof sval, 100, ctxt)
+           val spaces = CharVector.tabulate(indent, fn _ => #" ")
+           open PolyML
+       in
+           PP.prettyPrint(TextIO.print, 70-indent)
+            (PrettyBlock(indent,true,[],[PrettyString (spaces ^ nm^" :"), PrettyBreak(1,2), typ_p]))
+       end
+>>__ val printNameAndType = printNameAndType0 false
+>>__ val (pushLineWidth,popLineWidth) = let
+     val lwstk = ref [65]
+     val _ = linewidth := 65
+   in
+     ((fn i => (linewidth := i; lwstk := i :: !lwstk)),
+      (fn () => case !lwstk of [_] => ()
+                  | i::is => (linewidth := i; lwstk := is))
+     )
+   end
+
+# Derived Inference Rules
+
+In this section, HOL proofs and theorems are made concrete. The notion
+of *proof* is defined abstractly in the manual §LOGIC: a proof of a
+sequent $(\Gamma,t)$ from a set of sequents $\Delta$ (with respect to
+a deductive system $\mathcal{D}$) was defined to be a chain of sequents
+culminating in $(\Gamma,t)$, such that every element of the chain
+either belongs to $\Delta$ or else follows from $\Delta$ and earlier
+elements of the chain by deduction.  The notion of a *theorem* was
+also defined in §LOGIC: a theorem of a deductive system is a sequent
+that follows from the empty set of sequents by deduction; *i.e.*, it
+is the last element of a proof in the deductive system from the empty
+set of sequents.
+
+The deductive system of HOL was sketched in
+Section[§Rules](#primitive-rules-of-inference-of-the-hol-logic), where
+the eight families of primitive inferences making up the deductive
+system were specified by diagrams. It was explained that these
+families of inferences are represented in HOL via ML functions, and
+that theorems are represented by an ML abstract type called `thm`. The
+eight ML functions corresponding to the inferences are operations of
+the type `thm`, and each of the eight returns a value of type
+`thm`. It was explained that the type `thm` has primitive destructors,
+but no primitive constructor; and that, in that way, the logic is
+protected against the computation of theorems except by functions
+representing primitive inferences, or compositions of these.
+
+Finally, the primitive HOL logic was supplemented by three primitive
+constants and four axioms, to form the basic logic.  The primitive
+inferences, together with the primitive constants, the five axioms,
+and a collection of definitions, give a starting point for
+constructing proofs, and hence computing theorems. However, proving
+even the simplest theorems from this minimal basis costs considerable
+effort. The basis does not immediately provide the transitivity of
+equality, for example, or a means of universal quantification; both of
+these themselves have to be derived.
+
+## Simple Derivations
+
+As an illustration of a proof in HOL, the following chain of
+theorems forms a proof (from the empty set, in the HOL deductive
+system), for the particular terms $\mathtt{t}_1$ and $\mathtt{t}_2$,
+both of HOL type `:bool`
+
+1. $t_1 \Rightarrow t_2 \vdash t_1 \Rightarrow t_2$
+
+2. $t_1\; |- t_1$
+
+3. $t_1 \Rightarrow t_2, \; t_1 \vdash t_2$
+
+That is, the third theorem follows from the first and second.
+
+In the session below, the proof is performed in the HOL system,
+using the ML functions `ASSUME` and `MP`.
+
+```
+>> show_assums := true;
+
+>> val th1 = ASSUME ``t1 ==> t2``
+
+>> val th2 = ASSUME ``t1:bool``
+
+>> MP th1 th2;
+```
+
+In the following, the `Count.inferences` function is used to count the
+number of primitive inferences performed in the course of applying the
+function to the argument.  In the first invocation, this means that
+only the *modus ponens* step is counted.  We create an artificial
+function to see the count of all three inference steps in the second
+interaction:
+
+```
+>> Count.inferences (MP (ASSUME ``t1 ==> t2``)) (ASSUME ``t1:bool``);
+
+>> fun f () = MP (ASSUME ``t1 ==> t2``) (ASSUME ``t1:bool``);
+
+>> Count.inferences f ();
+```
+
+Each of the three inference steps of the abstract proof corresponds to
+the application of an ML function in the performance of the proof in
+HOL; and each of the ML functions corresponds to a primitive
+inference of the deductive system.
+
+It is worth emphasising that, in either case, every primitive
+inference in the proof chain is *made*, in the sense that for each
+inference, the corresponding ML function is evaluated.  That is, HOL
+permits no short-cut around the necessity of performing complete
+proofs.  The short-cut provided by derived inference rules (as
+implemented in ML) is around the necessity of *specifying* every step;
+something that would be impossible for a proof of any length. It can
+be seen from this that the derived rule, and its representation as an
+ML function, is essential to the HOL methodology; theorem proving
+would be otherwise impossible.
+
+There are, of course, an infinite number of proofs of the *form*
+shown in the example that can be conducted in HOL: one for every
+pair of `:bool`-typed terms. Moreover, every time a theorem of the form
+
+$$t_1 \Rightarrow \ t_2, \ t_1 \ \vdash \ t_2$$
+
+is required, its proof must be constructed anew. To capture the
+general pattern of inference, an ML function can be written to
+implement an inference rule as a derivation from the primitive
+inferences.  Abstractly, a *derived inference rule* is a rule that can
+be justified on the basis of the primitive inference rules (and/or the
+axioms).  In the present case, the rule required undischarged
+assumptions.  It is specified for HOL by
+
+```
+      Γ |- t1 ==> t2
+     -----------------
+      Γ ∪ {t1} |-  t2
+```
+
+This general rule is valid because, from a HOL theorem of the form
+$\Gamma \vdash t_1 \Rightarrow t_2$, the theorem $\Gamma \cup\{t_1\}
+\vdash t_2$ can be derived as in the specific instance above. The
+rule can be implemented in ML as a function (`UNDISCH`, say) that calls
+the appropriate sequence of primitive inferences. The ML definition of
+`UNDISCH` is simply
+```
+>> fun UNDISCH th = MP th (ASSUME $ fst $ dest_imp $ concl th);
+```
+
+This code provides a function that maps a theorem to a theorem; that
+is, performs proofs in HOL.  The following session illustrates the use
+of the derived rule on a consequence of the axiom
+`IMP_ANTISYM_AX`. (The inferences are counted. Assume that the
+printing of theorems has been adjusted as above and `th` is bound as
+shown below:
+
+```
+>> val th = SPEC ``t2:bool`` $ SPEC ``t1:bool`` IMP_ANTISYM_AX;
+
+>> Count.inferences UNDISCH th;
+
+>> Count.inferences UNDISCH it;
+```
+
+Each successful application of `UNDISCH` to a theorem invokes an
+application of `ASSUME`, followed by an application of `MP`; `UNDISCH`
+constructs the 2-step proof for any given theorem of the appropriate
+form. As can be seen, it relies on the class of ML functions that
+access HOL syntax: in particular, `concl` to produce the conclusion
+of the theorem, `dest_imp` to separate the implication, and the
+selector `fst` to choose the antecedent.
+
+This particular example is very simple, but a derived inference rule
+can perform proofs of arbitrary length.  It can also make use of
+previously defined rules.  In this way, the normal inference patterns
+can be developed much more quickly and easily; transitivity,
+generalization, and so on, support the familiar patterns of inference.
+
+A number of derived inference rules are pre-defined when the HOL
+system is entered (`UNDISCH` is one of the first).  In
+[Section](standard-rule-derivation), the abstract derivations are given for
+the pre-defined rules that reflect the more usual inference patterns
+of the predicate (and lambda) calculi.  Like those shown, some of the
+pre-defined derived rules in HOL generate relatively short proofs.
+Others invoke thousands of primitive inferences, and clearly save a
+great deal of effort. Furthermore, rules can be defined by the user to
+make still larger steps, or to implement more specialized patterns.
+
+All of the pre-defined derived rules in HOL are described
+in §REFERENCE.
+
+## Derivation of the Standard Rules
+
+The HOL system provides all the standard introduction and elimination
+rules of the predicate calculus pre-defined as derived inferences.  It
+is these derived rules, rather than the primitive rules, that one
+normally uses in practice.  In this section, the derivations of some
+of the standard rules are given, in sequence.  These derivations only
+use the axioms and definitions in the theory `bool` (see
+[Section](boolfull), the eight primitive inferences of the HOL logic,
+and inferences defined earlier in the sequence.
+
+Theorems, in accordance with the definition given at the beginning of
+this chapter, are treated as rules without hypotheses; thus the
+derivation of a theorem resembles the derivation of a rule except in
+not having hypotheses. (The derivation of `TRUTH`, [Section](sec:T),
+is the only example given of this, but there are several others in
+HOL.)  There are also some rules that are intrinsically more general
+than theorems.  For example, for any two terms $t_1$ and $t_2$, the
+theorem $\vdash(\lambda{x}.t_1)t_2 = t_1[t_2/x]$ follows by the
+primitive rule `BETA_CONV`. The rule `BETA_CONV` returns a theorem for
+each pair of terms $t_1$ and $t_2$, and is therefore equivalent to an
+infinite family of theorems. No single theorem can be expressed in the
+HOL logic that is equivalent to `BETA_CONV`.See [Chapter](avra-conv)
+for further discussion of this point.  Note that `UNDISCH` is not a
+rule of this sort, as it can, in fact, be expresed as a theorem.
+
+For each derivation given below, there is an ML function definition
+in the HOL system that implements the derived rule as a procedure in
+ML. The actual implementation in the HOL system differs in some
+cases from the derivations given here, since the system code has been
+optimised for improved performance.
+
+In addition, for reasons that are mostly historical, not all the
+inferences that are derived in terms of the abstract logic are
+actually derived in the current version of the HOL system.  That is,
+there are currently a number of rules that are installed in the system
+on an "axiomatic" basis, all of which should be derived by explicit
+inference.  These rules' status does not actually compromise the
+consistency of the logic.  In effect, the existing HOL system has a
+deductive system more comprehensive than the one presented abstractly,
+but the model outlined in §LOGIC would easily extend to cover it.
+The derivations that follow consist of sequences of numbered steps each of
+which
+
+1. is an axiom, or
+2. is a hypothesis of the rule being derived, or
+3. follows from preceding steps by a rule of inference (either primitive
+or previously derived).
+
+### Adding an assumption
+
+```
+   ADD_ASSUM : term -> thm -> thm
+
+   Γ |- t
+  ---------------
+   Γ ∪ {t'} |- t
+```
+&nbsp;
+
+|  |  |
+| :--- | ---: |
+|1. $t'\vdash t'$ |  [`ASSUME`] |
+|2. $\Gamma\vdash t$ | [`Hypothesis`] |
+|3. $\Gamma\vdash t' \Rightarrow t$ | [`DISCH` 2] |
+|4. $\Gamma,\ t'\vdash t$ |  [`MP` 3,1] |
+
+### Undischarging
+
+```
+   UNDISCH : thm -> thm
+
+   Γ |- t1 ==> t2
+  ---------------
+   Γ ∪ {t1} |- t2
+```
+&nbsp;
+
+|  |  |
+| :--- | ---: |
+|1. $t_1\vdash t_1$  |  [`ASSUME`] |
+|2. $\Gamma\vdash t_1\Rightarrow t_2$ | [`Hypothesis`] |
+|3. $\Gamma,\ t_1\vdash t_2$ | [`MP` 2,1] |
+
+
+### Symmetry of equality
+
+```
+   SYM : thm -> thm
+
+   Γ |- t1 = t2
+  ---------------
+   Γ |- t2 = t1
+```
+&nbsp;
+
+|  |  |
+| :--- | ---: |
+|1. $\Gamma\vdash t_1=t_2$ | [`Hypothesis`] |
+|2. $\vdash t_1=t_1$ | [`REFL`] |
+|3. $\Gamma\vdash t_2=t_1$ | [`SUBST` 1,2] |
+
+
+### Transitivity of equality
+
+```
+   TRANS : thm -> thm -> thm
+
+   Γ₁ |- t₁ = t₂ ,   Γ₂ |- t₂ = t3
+  ---------------------------------
+     Γ₁ ∪ Γ₂ |- t₁ = t3
+```
+&nbsp;
+
+|  |  |
+| :--- | ---: |
+|1. $\Gamma_2\vdash t_2=t_3$ | [`Hypothesis`] |
+|2. $\Gamma_1\vdash t_1=t_2$  | [`Hypothesis`] |
+|3. $\Gamma_1\cup\Gamma_2\vdash t_1=t_3$ | [`SUBST` 1,2] |
+
+### Application of a term to a theorem
+
+```
+   AP_TERM : term -> thm -> thm
+
+   Γ |- t₁ = t₂
+  ------------------
+   Γ |- t t₁ = t t₂
+```
+&nbsp;
+
+|  |  |
+| :--- | ---: |
+|1. $\Gamma\vdash t_1=t_2$ | [`Hypothesis`] |
+|2. $\vdash t\ t_1 = t\ t_1$ | [`REFL`] |
+|3. $\Gamma\vdash t\ t_1 = t\ t_2$ | [`SUBST` 1,2] |
+
+
+### Application of a theorem to a term
+
+```
+   AP_THM : thm -> conv
+
+   Γ |- t₁ = t₂
+  ------------------
+   Γ |- t₁ t = t₂ t
+```
+&nbsp;
+
+|  |  |
+| :--- | ---: |
+|1. $\Gamma\vdash t_1=t_2$ | [`Hypothesis`] |
+|2. $\vdash t_1\ t = t_1\ t$ | [`REFL`] |
+|3. $\Gamma\vdash t_1\ t = t_2\ t$ | [`SUBST` 1,2] |
+
+### Modus Ponens for equality
+
+```
+   EQ_MP : thm -> thm -> thm
+
+   Γ₁ |- t₁ = t₂ ,   Γ₂ |- t₁
+  ---------------------------
+     Γ₁ ∪ Γ₂ |- t₁ = t₂
+```
+&nbsp;
+
+|  |  |
+| :--- | ---: |
+|1. $\Gamma_1\vdash t_1=t_2$  | [`Hypothesis`] |
+|2. $\Gamma_2\vdash t_1$ | [`Hypothesis`] |
+|3. $\Gamma_1\cup\Gamma_2\vdash t_2$ | [`SUBST` 1,2] |
+
+
+### Implication from equality
+
+```
+   EQ_IMP_RULE : thm -> thm * thm
+
+          Γ |- t₁ = t₂
+  ----------------------------------
+   Γ |- t₁ ==> t₂ ,   Γ |- t₂ ==> t₁
+```
+&nbsp;
+
+|                                      |                |
+| :-----                               | --:            |
+|1. $\Gamma\vdash t_1=t_2$             | [`Hypothesis`] |
+|2. $t_1\vdash t_1$                    | [`ASSUME`]     |
+|3. $\Gamma,\ t_1\vdash t_2$           | [`EQ_MP` 1,2]  |
+|4. $\Gamma\vdash t_1\Rightarrow t_2$  | [`DISCH` 3]    |
+|5. $\Gamma\vdash t_2=t_1$             | [`SYM` 1]      |
+|6. $t_2\vdash t_2$                    | [`ASSUME`]     |
+|7. $\Gamma,\ t_2\vdash t_1$           | [`EQ_MP` 5,6]  |
+|8. $\Gamma\vdash t_2\Rightarrow t_1$  | [`DISCH` 7]    |
+|9. $\Gamma\vdash t_1\Rightarrow t_2$ and $\Gamma\vdash t_2\Rightarrow t_1$ | [4,8] |
+
+
+### $\mathsf{T}$-introduction
+
+```
+   TRUTH : thm
+
+  ------------
+     |- T
+```
+&nbsp;
+
+|  |  |
+| :--- | ---: |
+|1. $\vdash \mathsf{T} = ((\lambda x.\; x) = (\lambda x.\; x))$ | [Definition of `T`] |
+|2. $\vdash ((\lambda x.\; x) = (\lambda x.\; x)) = \mathsf{T}$ | [`SYM` 1] |
+|3. $\vdash (\lambda x.\; x) = (\lambda x.\; x)$ | [`REFL`] |
+|4. $\vdash \mathsf{T}$ | [`EQ_MP` 2,3] |
+
+
+### Equality-with-$\mathsf{T}$ elimination
+
+```
+   EQT_ELIM : thm -> thm
+
+   Γ |- t = T
+  -------------
+   Γ |- t
+```
+&nbsp;
+
+|      |      |
+| :--- | ---: |
+| 1. $\Gamma\vdash t = \mathsf{T}$ | [`Hypothesis`] |
+| 2. $\Gamma\vdash \mathsf{T} = t$ | [`SYM` 1] |
+| 3. $\vdash \mathsf{T}$ | [`TRUTH`] |
+| 4. $\Gamma\vdash t$ | [`EQ_MP` 2, 3] |
+
+
+### Specialization ($\forall$-elimination)
+
+```
+   SPEC : term -> thm -> thm
+
+   Γ |- ∀x. t
+  -------------------
+   Γ |- t[t'/x]
+```
+
+&nbsp;
+
+The notation $t[t'/x]$ denotes the result of replacing each free
+occurrence of $x$ in $t$ by $t'$. Renaming ensures that no free
+variables in a resulting occurrence of $t'$ will become bound.
+
+|  |  |
+| :------ | --: |
+|1. $\vdash \forall = (\lambda P.\; P = (\lambda x. \mathsf{T}))$ | [`INST_TYPE` on definition of $\forall$] |
+|2. $\Gamma\vdash \forall(\lambda x.\;t)$ | [`Hypothesis`] |
+|3. $\Gamma\vdash (\lambda{P}.\; P = (\lambda{x}.\;\mathsf{T})) (\lambda{x}.\;t)$ | [`SUBST` 1,2] |
+|4. $\vdash (\lambda{P}.\; P= (\lambda{x}.\;\mathsf{T}))(\lambda{x}.\;t) = ((\lambda{x}.\;t) = (\lambda{x}.\;\mathsf{T}))$ | [`BETA_CONV`] |
+|5. $\Gamma\vdash (\lambda{x}.\;t)=(\lambda{x}.\;\mathsf{T})$ |  [`EQ_MP` 4,3] |
+|6. $\Gamma\vdash (\lambda{x}.\;t)\ t' = (\lambda{x}.\;\mathsf{T})\ t'$ | [`AP_THM` 5] |
+|7. $\vdash (\lambda{x}.\;t)\ t' = t[t'/x]$ | [`BETA_CONV`] |
+|8. $\Gamma\vdash t[t'/x] = (\lambda{x}.\;t)\ t'$ | [`SYM` 7] |
+|9. $\Gamma\vdash t[t'/x] = (\lambda{x}.\;\mathsf{T})\ t'$ | [`TRANS` 8,6] |
+|10. $\vdash (\lambda{x}.\;\mathsf{T})\ t' = \mathsf{T}$ | [`BETA_CONV`] |
+|11. $\Gamma\vdash t[t'/x] = \mathsf{T}$ | [`TRANS` 9,10] |
+|12. $\Gamma\vdash t[t'/x]$ | [`EQT_ELIM` 11] |
+
+
+### Equality-with-$\mathsf{T}$\ introduction
+
+```
+   EQT_INTRO : thm -> thm
+
+   Γ |- t
+  -------------
+   Γ |- t = T
+```
+&nbsp;
+
+|  |  |
+| :------ | --: |
+|1. $\vdash\forall{b_1\ b_2}.\; (b_1\Rightarrow b_2) \Rightarrow (b_2\Rightarrow b_1) \Rightarrow(b_1=b_2)$ | [`Axiom`] |
+|2. $\vdash\forall{b_2}.\; (t\Rightarrow b_2)\Rightarrow(b_2\Rightarrow t)\Rightarrow(t=b_2)$ | [`SPEC` 1] |
+|3. $\vdash(t\Rightarrow\mathsf{T})\Rightarrow(\mathsf{T}\Rightarrow t)\Rightarrow(t=\mathsf{T})$ | [`SPEC` 2] |
+|4. $\vdash\mathsf{T}$ | [`TRUTH`] |
+|5. $\vdash t\Rightarrow\mathsf{T}$ |  [`DISCH` 4] |
+|6. $\vdash(\mathsf{T}\Rightarrow t)\Rightarrow(t=\mathsf{T})$ | [`MP` 3,5] |
+|7. $\Gamma \vdash t$ | [`Hypothesis`] |
+|8. $\Gamma\vdash\mathsf{T}\Rightarrow t$ | [`DISCH` 7] |
+|9. $\Gamma\vdash t=\mathsf{T}$ | [`MP` 6,8] |
+
+
+### Generalization ($\forall$-introduction)
+
+```
+   GEN : term -> thm -> thm
+
+   Γ |- t
+  ---------------
+   Γ |- ∀x. t
+```
+*Restriction*: variable $x$ can not occur free in $\Gamma$.
+
+*Remark*: The conventional notation for universal quantification,
+*i.e.* $\forall x.\; t$, is, in HOL, surface syntax for the underlying
+*term structure $\forall(\lambda{x}.\;t)$. This underlying structure
+is used to give clarity to some derivations in the following.
+
+&nbsp;
+
+|      |      |
+| :------ | --: |
+|1. $\Gamma\vdash t$ | [`Hypothesis`] |
+|2. $\Gamma\vdash t = \mathsf{T}$ | [`EQT_INTRO` 1] |
+|3. $\Gamma\vdash(\lambda{x}.\;t)=(\lambda{x}.\;\mathsf{T})$ |  [`ABS` 2] |
+|4. $\vdash \forall(\lambda{x}.\;t) = \forall(\lambda{x}.\;t)$ | [`REFL`] |
+|5. $\vdash \forall = (\lambda{P}.\;P =(\lambda{x}.\;\mathsf{T}))$ | [`INST_TYPE` on definition of $\forall$] |
+|6. $\vdash\forall(\lambda{x}.\;t)=(\lambda{P}.\;P=(\lambda{x}.\;\mathsf{T}))(\lambda{x}.\;t)$ | [`SUBST` 5,4] |
+|7. $\vdash(\lambda{P}.\;P=(\lambda{x}.\;\mathsf{T}))(\lambda{x}.\;t)=((\lambda{x}.\;t) = (\lambda{x}.\;\mathsf{T}))$ | [`BETA_CONV`] |
+|8. $\vdash\forall(\lambda{x}t) = ((\lambda{x}.\;t)=(\lambda{x}.\;\mathsf{T}))$ | [`TRANS` 6,7] |
+|9. $\vdash((\lambda{x}.\;t)=(\lambda{x}.\;\mathsf{T})) = \forall(\lambda{x}.\;\mathsf{T})$ | [`SYM` 8] |
+|10. $\Gamma\vdash\forall(\lambda{x}.\;t)$ | [`EQ_MP` 9,3] |
+
+
+### Simple $\alpha$-conversion
+
+```
+   SIMPLE_ALPHA
+
+  ----------------------------------
+   |- (λx₁. t) x₁ = (λx₂. t) x₂
+```
+
+*Restriction*: neither $x_1$ nor $x_2$ may occur free in $t$.
+
+*Remark*: `SIMPLE_ALPHA` is not actually defined in the HOL system, as
+it is subsumed by other rules. It is included here just to support
+a later derivation in this section.
+
+&nbsp;
+
+|      |      |
+| :------ | --: |
+|1. $\vdash(\lambda{x_1}.\;t\ x_1)\ x = t\ x$ | [`BETA_CONV`] |
+|2. $\vdash(\lambda{x_2}.\;t\ x_2)\ x = t\ x$  | [`BETA_CONV`] |
+|3. $\vdash t\ x = (\lambda{x_2}.\;t\ x_2)\ x$  | [`SYM` 2] |
+|4. $\vdash (\lambda{x_1}.\;t\ x_1)\ x = (\lambda{x_2}.\;t\ x_2)\ x$ | [`TRANS` 1,3] |
+|5. $\vdash(\lambda{x}(\lambda{x_1}.\;t\ x_1)\ x) = (\lambda{x}.\;(\lambda{x_2}.\;t\ x_2)\ x)$ | [`ABS` 4] |
+|6. $\vdash\forall{f}.\;(\lambda{x}.\;f\ x) = f$ | [Type-instantiate `ETA_AX`] |
+|7. $\vdash(\lambda{x}(\lambda{x_1}.\;t\ x_1)x) = \lambda{x_1}.\;t\ x_1$ | [`SPEC` 6] |
+|8. $\vdash(\lambda{x}(\lambda{x_2}.\;t\ x_2)x) = \lambda{x_2}.\;t\ x_2$ | [`SPEC` 6] |
+|9. $\vdash (\lambda{x_1}.\;t\ x_1) = (\lambda{x}.\;(\lambda{x_1}.\;t\ x_1)x)$ | [`SYM` 7] |
+|10. $\vdash (\lambda{x_1}.\;t\ x_1) = (\lambda{x}.\;(\lambda{x_2}.\;t\ x_2)x)$ | [`TRANS` 9,5] |
+|11. $\vdash(\lambda{x_1}.\;t\ x_1)=(\lambda{x_2}.\;t\ x_2)$ | [`TRANS` 10,8] |
+
+
+### $\eta$-conversion
+
+```
+   ETA_CONV : conv
+
+  -------------------
+   |- (λx'. t x') = t
+```
+
+*Restriction*: $x'$ does not occur free in $t$.
+
+*Remark*: we use $x'$ rather than just $x$ to motivate the use of `SIMPLE_ALPHA`
+in the derivation below.
+
+*Remark*: In the HOL system, the type abbreviation `conv = term ->
+thm` describes SML functions that, when given a term $t_1$, return a
+theorem $\vdash t_1 = t_2$.
+
+&nbsp;
+
+|        |      |
+| :----- | ---: |
+|1. $\vdash\forall{f}.\;(\lambda{x}.\;f\ x) = f$ | [Type-instantiate `ETA_AX`] |
+|2. $\vdash(\lambda{x}.\;t\ x) = t$ | [`SPEC` 1] |
+|3. $\vdash(\lambda{x'}.\;t\ x') = (\lambda{x}.\;t\ x)$ | [`SIMPLE_ALPHA`] |
+|4. $\vdash(\lambda{x'}.\;t\ x') = t$ |  [`TRANS` 3,2] |
+
+
+### Extensionality
+
+```
+   EXT : thm -> thm
+
+   Γ |- ∀x. t₁ x = t₂ x
+  ----------------------
+   Γ |- t₁ = t₂
+```
+
+*Restriction*: $x$ must not occur free in $t_1$ or $t_2$.
+
+&nbsp;
+
+|        |      |
+| :----- | ---: |
+|1. $\Gamma\vdash\forall{x}.\;t_1\ x=t_2\ x$ | [`Hypothesis`] |
+|2. $\Gamma\vdash t_1\ x'=t_2\ x'$ | [`SPEC` 1 ($x'$ is a fresh var)] |
+|3. $\Gamma\vdash(\lambda{x'}.\;t_1\ x') = (\lambda{x'}.\;t_2\ x')$ | [`ABS` 2] |
+|4. $\vdash(\lambda{x'}.\;t_1\ x') = t_1$ | [`ETA_CONV`] |
+|5. $\vdash t_1 = (\lambda{x'}.\;t_1\ x')$ | [`SYM` 4] |
+|6. $\Gamma\vdash t_1 = (\lambda{x'}.\;t_2\ x')$ | [`TRANS` 5,3] |
+|7. $\vdash(\lambda{x'}.\;t_2\ x') = t_2$ | [`ETA_CONV`] |
+|8. $\Gamma\vdash t_1=t_2$ | [`TRANS` 6,7] |
+
+
+### Choice introduction
+
+```
+   SELECT_INTRO : thm -> thm
+
+   Γ |- t₁ t₂
+  ----------------
+   Γ |- t₁ (ε t₁)
+```
+
+&nbsp;
+
+|        |      |
+| :----- | ---: |
+|1. $\vdash\forall{P\ x}.\;P\ x\Rightarrow P(\varepsilon\; P)$ | [Type-instantiate `SELECT_AX`] |
+|2. $\vdash t_1\ t_2 \Rightarrow t_1(\varepsilon\ t_1)$ | [`SPEC` 1 (twice)] |
+|3. $\Gamma\vdash t_1\ t_2$ | [`Hypothesis`] |
+|4. $\Gamma\vdash t_1(\varepsilon\ t_1)$ | [`MP` 2,3] |
+
+
+### Choice elimination
+
+```
+   SELECT_ELIM : thm -> term * thm -> thm
+
+
+   Γ₁ |- t₁ (ε t₁) ,  Γ₂,t₁(v) |- t
+  ----------------------------------
+   Γ₁ ∪ Γ₂ |- t
+```
+
+*Restriction*: $v$ occurs nowhere except in the assumption $t_1\ v$ of the second
+hypothesis.
+
+&nbsp;
+
+|      |      |
+| :--- | ---: |
+|1. $\Gamma_2,\ t_1\ v\vdash t$ | [Hypothesis] |
+|2. $\Gamma_2\vdash t_1\ v\Rightarrow t$ | [`DISCH` 1] |
+|3. $\Gamma_2\vdash\forall{v}.\;t_1\ v\Rightarrow t$ | [`GEN` 2] |
+|4. $\Gamma_2\vdash t_1(\varepsilon\ t_1)\Rightarrow t$ | [`SPEC` 3] |
+|5. $\Gamma_1\vdash t_1(\varepsilon\ t_1)$ | [`Hypothesis`] |
+|6. $\Gamma_1\cup\Gamma_2\vdash t$ | [`MP` 4,5] |
+
+### Existential introduction
+
+```
+   EXISTS : term * term -> thm -> thm
+
+   Γ |- t₁[t₂]
+  ---------------
+   Γ |- ∃x. t₁[x]
+```
+
+*Notation*: $t_1[t_2]$ denotes a term $t_1$ with some free occurrences
+of $t_2$ singled out, and $t_1[x]$ denotes the result of replacing
+these occurrences of $t_1$ by $x$.
+
+&nbsp;
+
+|         |      |
+| :------ | --: |
+|1. $\vdash(\lambda{x}.\;t_1[x])t_2= t_1[t_2]$ | [`BETA_CONV`] |
+|2. $\vdash t_1[t_2] = (\lambda{x}.\;t_1[x])t_2$ | [`SYM` 1] |
+|3. $\Gamma\vdash t_1[t_2]$ | [`Hypothesis`] |
+|4. $\Gamma\vdash(\lambda{x}.\;t_1[x])t_2$ | [`EQ_MP` 2,3] |
+|5. $\Gamma\vdash(\lambda{x}.\;t_1[x])(\varepsilon(\lambda{x}.\;t_1[x]))$ | [`SELECT_INTRO` 4] |
+|6. $\vdash \exists = \lambda{P}.\;P(\varepsilon\ P)$ | [`INST_TYPE` on definition of $\exists$] |
+|7. $\vdash\exists(\lambda{x}.\;t_1[x]) = (\lambda{P}.\;P(\varepsilon\ P))(\lambda{x}.\;t_1[x])$ | [`AP_THM` 6] |
+|8. $\vdash(\lambda{P}.\;P(\varepsilon\ P))(\lambda{x}.\;t_1[x]) = (\lambda{x}.\;t_1[x])(\varepsilon(\lambda{x}.\;t_1[x]))$ | [`BETA_CONV`] |
+|9. $\vdash\exists(\lambda{x}.\;t_1[x]) = (\lambda{x}.\;t_1[x])(\varepsilon(\lambda{x}.\;t_1[x]))$ | [`TRANS` 7,8] |
+|10. $\vdash(\lambda{x}.\;t_1[x])(\varepsilon(\lambda{x}.\;t_1[x])) = \exists(\lambda{x}.\;t_1[x])$ | [`SYM` 9] |
+|11. $\Gamma\vdash\exists(\lambda{x}.\;t_1[x])$ | [`EQ_MP` 10,5] |
+
+
+### Existential elimination
+
+```
+   CHOOSE : term * thm -> thm -> thm
+
+   Γ₁ |- ∃x. t[x] ,  Γ₂,t[v] |- t'
+  ----------------------------------
+   Γ₁ ∪ Γ₂ |- t'
+```
+
+*Restrictions*: $v$ must not be free in $Γ_1,Γ_2$ or $t$.
+
+&nbsp;
+
+|         |     |
+| :------ | --: |
+|1. $\vdash \exists = \lambda{P}.\; P(\varepsilon\ P)$ | [`INST_TYPE` on definition of $\exists$] |
+|2. $\vdash\exists(\lambda{x}.\;t[x]) = (\lambda{P}.\;P(\varepsilon\ P))(\lambda{x}.\;t[x])$ | [`AP_THM` 1] |
+|3. $\Gamma_1\vdash\exists(\lambda{x}t[x])$ | [`Hypothesis`] |
+|4. $\Gamma_1\vdash (\lambda{P}.\;P(\varepsilon\ P))(\lambda{x}.\;t[x])$ | [`EQ_MP` 2,3] |
+|5. $\vdash(\lambda{P}.\;P(\varepsilon\ P))(\lambda{x}.\;t[x]) = (\lambda{x}.\;t[x])(\varepsilon(\lambda{x}.\;t[x]))$ | [`BETA_CONV`] |
+|6. $\Gamma_1\vdash(\lambda{x}.\;t[x])(\varepsilon(\lambda{x}.\;t[x])$ | [`EQ_MP` 5,4] |
+|7. $\vdash(\lambda{x}.\;t[x])v = t[v]$ | [`BETA_CONV`] |
+|8. $\vdash t[v] =(\lambda{x}.\;t[x])v$ | [`SYM` 7] |
+|9. $\Gamma_2,\ t[v]\vdash t'$ | [`Hypothesis`] |
+|10. $\Gamma_2\vdash t[v]\Rightarrow t'$ | [`DISCH` 9] |
+|11. $\Gamma_2\vdash(\lambda{x}.\;t[x])v\Rightarrow t'$ | [`SUBST` 8,10] |
+|12. $\Gamma_2,\ (\lambda{x}.\;t[x])v\vdash t'$ | [`UNDISCH` 11] |
+|13. $\Gamma_1\cup\Gamma_2\vdash t'$ | [`SELECT_ELIM` 6,12] |
+
+### Applying a definition to one argument
+
+Given an equation where the right-hand sde is a lambda-abstraction,
+one can derive an equation characterising the application of the
+function to a specified argument.
+
+```
+   RIGHT_BETA : thm -> thm
+
+   Γ |- t = (λx. t₁ x) t₂
+  ----------------------------------
+   Γ |- t = t₁[t₂]
+```
+
+&nbsp;
+
+|        |      |
+| :----- | ---: |
+|1. $\Gamma\vdash t = (\lambda{x}.\; t_1) t_2$ | [`Hypothesis`] |
+|2. $\vdash (\lambda{x}.\; t_1) t_2 = t_1[t_2]$ | [`BETA_CONV`] |
+|3. $\Gamma\vdash t = t_1[t_2]$ | [`TRANS` 1,2] |
+
+
+### Applying a definition to multiple arguments
+
+```
+   RIGHT_LIST_BETA : thm -> thm
+
+   Γ |- t = (λx₁…xₙ. t'[x₁,…,xₙ]) t₁ … tₙ
+  -------------------------------------------------
+   Γ |- t = t'[t₁,…,tₙ]
+```
+
+&nbsp;
+
+For readability, let $\mathcal{M} = \lambda{x_1\cdots x_n}.\; t'[x_1,\ldots,x_n]$ in the following:
+
+|         |      |
+| :------ | --: |
+|1. $\Gamma\vdash t = \mathcal{M} \;t_1 \cdots t_n$ | [`Hypothesis`] |
+|2. $\vdash \mathcal{M} = \mathcal{M}$ | [`REFL`] |
+|3. $\vdash \mathcal{M}\;t_1 = \mathcal{M}\;t_1$ | [`AP_THM` 2] |
+|4. $\vdash \mathcal{M}\;t_1 = (\lambda{x_2\cdots x_n}.\;t'[t_1,x_2,\ldots,x_n])$ | [`RIGHT_BETA` 3] |
+|5. $\vdash \mathcal{M}\;t_1 \cdots t_n = t'[t_1,\ldots,t_n]$ | [repeat 3,4 for $t_2,...,t_n$] |
+|6. $\Gamma\vdash t = t'[t_1,\ldots,t_n]$ | [`TRANS` 1,5] |
+
+
+### Conjunction introduction
+
+```
+   CONJ : thm -> thm -> thm
+
+   Γ₁ |- t₁  ,  Γ₂ |- t₂
+  -----------------------
+   Γ₁ ∪ Γ₂ |- t₁ ∧ t₂
+```
+
+&nbsp;
+
+|         |     |
+| :------ | --: |
+|0. $\vdash \land = \lambda{b_1\ b_2}.\;\forall{b}.\;(b_1\Rightarrow(b_2\Rightarrow b))\Rightarrow b$ | [Definition] |
+|1. $\vdash \land\;t_1\;t_2 = (\lambda{b_1\ b_2}.\;\forall{b}.\;(b_1\Rightarrow(b_2\Rightarrow b))\Rightarrow b)\;t_1\;t_2$ | [`AP_THM` 0 (twice)] |
+|2. $\vdash t_1\land t_2 = \forall{b}.\;(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$ | [`RIGHT_LIST_BETA` 1] |
+|3. $t_1\Rightarrow(t_2\Rightarrow b)\vdash t_1\Rightarrow(t_2\Rightarrow b)$ | [`ASSUME`] |
+|4. $\Gamma_1\vdash t_1$ | [`Hypothesis`] |
+|5. $\Gamma_1,\ t_1\Rightarrow(t_2\Rightarrow b)\vdash t_2\Rightarrow b$ | [`MP` 3,4] |
+|6. $\Gamma_2\vdash t_2$ | [`Hypothesis`] |
+|7. $\Gamma_1\cup\Gamma_2,\ t_1\Rightarrow(t_2\Rightarrow b)\vdash b$ | [`MP` 5,6] |
+|8. $\Gamma_1\cup \Gamma_2\vdash(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$ | [`DISCH` 7] |
+|9. $\Gamma_1\cup \Gamma_2\vdash \forall{b}.\;(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$ | [`GEN` 8] |
+|10. $\Gamma_1\cup \Gamma_2\vdash t_1 \land t_2$ | [`EQ_MP` (`SYM` 2),9] |
+
+
+### Conjunction elimination
+
+```
+   CONJUNCT1 : thm -> thm
+   CONJUNCT2 : thm -> thm
+
+   Γ |- t₁ ∧ t₂
+  -----------------------
+   Γ |- t₁  ,  Γ |- t₂
+```
+
+&nbsp;
+
+|        |      |
+| :----- | ---: |
+|1. $\vdash \land = \lambda{b_1\ b_2}.\;\forall{b}.\;(b_1\Rightarrow(b_2\Rightarrow b))\Rightarrow b$ | [Definition] |
+|2. $\vdash t_1\land t_2 = \forall{b}.\;(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$ | [`RIGHT_LIST_BETA` 1] |
+|3. $\Gamma\vdash t_1\land t_2$ | [`Hypothesis`] |
+|4. $\Gamma\vdash \forall{b}.\;(t_1\Rightarrow(t_2\Rightarrow b))\Rightarrow b$ | [`EQ_MP` 2,3] |
+|5. $\Gamma\vdash (t_1\Rightarrow(t_2\Rightarrow t_1))\Rightarrow t_1$ | [`SPEC` 4] |
+|6. $t_1\vdash t_1$ | [`ASSUME`] |
+|7. $t_1 \vdash t_2\Rightarrow t_1$ | [`DISCH` 6] |
+|8. $\vdash t_1\Rightarrow(t_2\Rightarrow t_1)$ | [`DISCH` 7] |
+|9. $\Gamma\vdash t_1$  | [`MP` 5,8] |
+|10. $\Gamma\vdash (t_1\Rightarrow(t_2\Rightarrow t_2))\Rightarrow t_2$ | [`SPEC` 4] |
+|11. $t_2\vdash t_2$ | [`ASSUME`] |
+|12. $\vdash t_2\Rightarrow t_2$  | [`DISCH` 11] |
+|13. $\vdash t_1\Rightarrow(t_2\Rightarrow t_2)$ | [`DISCH` 12] |
+|14. $\Gamma\vdash t_2$ | [`MP` 10,13] |
+|15. $\Gamma\vdash t_1$ and $\Gamma\vdash t_2$ | [9,14] |
+
+
+### Right disjunction introduction
+
+```
+   DISJ1 : thm -> conv
+
+   Γ |- t₁
+  --------------
+   Γ |- t₁ ∨ t₂
+```
+
+&nbsp;
+
+|        |      |
+| :----- | ---: |
+|1. $\vdash \lor = \lambda{b_1\ b_2}.\;\forall{b}.\;(b_1\Rightarrow b)\Rightarrow(b_2\Rightarrow b)\Rightarrow b$ | [Definition of $\lor$] |
+|2. $\vdash t_1\lor t_2 = \forall{b}.\;(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`RIGHT_LIST_BETA` 1] |
+|3. $\Gamma\vdash t_1$ | [Hypothesis] |
+|4. $t_1\Rightarrow b\vdash t_1\Rightarrow b$ | [`ASSUME`] |
+|5. $\Gamma,\ t_1\Rightarrow b\vdash b$ | [`MP` 4,3] |
+|6. $\Gamma,\ t_1\Rightarrow b\vdash(t_2\Rightarrow b)\Rightarrow b$ | [`DISCH` 5] |
+|7. $\Gamma\vdash (t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`DISCH` 6] |
+|8. $\Gamma\vdash \forall{b}.\;(t_1\Rightarrow b) \Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`GEN` 7] |
+|9. $\Gamma\vdash t_1\lor t_2$ | [`EQ_MP` (`SYM` 2),8] |
+
+### Left disjunction introduction
+
+```
+   DISJ2 : term -> thm -> thm
+
+   Γ |- t₂
+  --------------
+   Γ |- t₁ ∨ t₂
+```
+
+&nbsp;
+
+|        |      |
+| :----- | ---: |
+|1. $\vdash \lor = \lambda{b_1\ b_2}.\;\forall{b}.\;(b_1\Rightarrow b)\Rightarrow(b_2\Rightarrow b)\Rightarrow b$ | [Definition] |
+|2. $\vdash t_1\lor t_2 = \forall{b}.\;(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`RIGHT_LIST_BETA` 1] |
+|3. $\Gamma\vdash t_2$ | [`Hypothesis`] |
+|4. $t_2\Rightarrow b\vdash t_2\Rightarrow b$ | [`ASSUME`] |
+|5. $\Gamma,\ t_2\Rightarrow b\vdash b$ | [`MP` 4,3] |
+|6. $\Gamma\vdash(t_2\Rightarrow b)\Rightarrow b$ | [`DISCH` 5] |
+|7. $\Gamma\vdash (t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`DISCH` 6] |
+|8. $\Gamma\vdash \forall{b}.\;(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`GEN` 7] |
+|9. $\Gamma\vdash t_1\lor t_2$ | [`EQ_MP` (`SYM` 2),8] |
+
+
+### Disjunction elimination
+
+```
+   DISJ_CASES : thm -> thm -> thm -> thm
+
+   Γ |- t₁ ∨ t₂  ,  Γ₁,t₁ |- t  ,  Γ₂,t₂ |- t
+  --------------------------------------------
+   Γ ∪ Γ₁ ∪ Γ₂ |- t
+```
+
+&nbsp;
+
+|        |      |
+| :----- | ---: |
+|1. $\vdash \lor =\lambda{b_1\ b_2}.\;\forall{b}.\;(b_1\Rightarrow b)\Rightarrow(b_2\Rightarrow b)\Rightarrow b$ | [Definition] |
+|2. $\vdash t_1\lor t_2 = \forall{b}.\;(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`RIGHT_LIST_BETA` 1] |
+|3. $\Gamma\vdash t_1\lor t_2$ | [Hypothesis] |
+|3. $\Gamma\vdash\forall{b}.\;(t_1\Rightarrow b)\Rightarrow(t_2\Rightarrow b)\Rightarrow b$ | [`EQ_MP` 2,3] |
+|5. $\Gamma\vdash(t_1\Rightarrow t)\Rightarrow(t_2\Rightarrow t)\Rightarrow t$ | [`SPEC` 4] |
+|6. $\Gamma_1,\ t_1\vdash t$ | [Hypothesis] |
+|7. $\Gamma_1\vdash t_1\Rightarrow t$ | [`DISCH` 6] |
+|8. $\Gamma\cup \Gamma_1\vdash (t_2\Rightarrow t)\Rightarrow t$ | [`MP` 5,7] |
+|9. $\Gamma_2,\ t_2\vdash t$ | [Hypothesis] |
+|10. $\Gamma_2\vdash t_2\Rightarrow t$ | [`DISCH` 9] |
+|11. $\Gamma\cup \Gamma_1\cup \Gamma_2\vdash t$ | [`MP` 8,10] |
+
+### Classical contradiction rule
+
+```
+   CCONTR : term -> thm -> thm
+
+   Γ, ¬t |- F
+  ------------
+   Γ |- t
+```
+
+&nbsp;
+
+|        |      |
+| :----- | ---: |
+|1. $\vdash \neg = \lambda{b}.\;b\Rightarrow\mathsf{F}$ | [Definition] |
+|2. $\vdash \neg t = t\Rightarrow\mathsf{F}$ | [`RIGHT_LIST_BETA` 1] |
+|3. $\Gamma,\ \neg t\vdash\mathsf{F}$ | [Hypothesis] |
+|4. $\Gamma\vdash \neg t\Rightarrow\mathsf{F}$ |  [`DISCH` 3] |
+|5. $\Gamma\vdash (t\Rightarrow\mathsf{F})\Rightarrow\mathsf{F}$ |  [`SUBST` 2,4] |
+|6. $t = \mathsf{F}\vdash t = \mathsf{F}$ | [`ASSUME`] |
+|7. $\Gamma,\ t=\mathsf{F}\vdash (\mathsf{F}\Rightarrow\mathsf{F})\Rightarrow\mathsf{F}$ | [`SUBST` 6,5] |
+|8. $\mathsf{F}\vdash\mathsf{F}$ | [`ASSUME`] |
+|9. $\vdash \mathsf{F}\Rightarrow\mathsf{F}$ | [`DISCH` 8] |
+|10. $\Gamma,\ t=\mathsf{F}\vdash\mathsf{F}$ | [`MP` 7,9] |
+|11. $\vdash \mathsf{F} = \forall{b}.\;b$ | [Definition] |
+|12. $\Gamma,\ t=\mathsf{F}\vdash \forall{b}.\;b$ | [`SUBST` 11,10] |
+|13. $\Gamma,\ t=\mathsf{F}\vdash t$ | [`SPEC` 12] |
+|14. $\vdash \forall{b}.\; (b = \mathsf{T})\lor(b = \mathsf{F})$ | [Axiom] |
+|15. $\vdash (t = \mathsf{T})\lor(t = \mathsf{F})$ | [`SPEC` 14] |
+|16. $t=\mathsf{T}\vdash t=\mathsf{T}$ | [`ASSUME`] |
+|17. $t=\mathsf{T}\vdash t$ | [`EQT_ELIM` 16] |
+|18. $\Gamma\vdash t$ | [`DISJ_CASES` 15,17,13] |
+
+## Rewriting
+
+Included in the set of derived inferences provided in HOL is a group
+of rules with complex definitions that do a limited amount of
+"automatic" theorem-proving in the form of rewriting.  The ideas and
+implementation were originally developed by Milner and Wadsworth for
+Edinburgh LCF, and were later implemented more flexibly and
+efficiently by Paulson and Huet for Cambridge LCF.  One basic
+rewriting rule, `REWRITE_RULE`, is illustrated here. Although HOL
+proofs typically feature more elaborate rewriters (such as
+`SIMP_RULE`, documented in [Section](??)), the underlying ideas are
+the same.
+
+`REWRITE_RULE` uses a list of equational theorems (theorems whose
+conclusions can be regarded as having the form $t_1 = t_2$) to replace
+any subterms of an object theorem that "match" $t_1$ by the
+corresponding instance of $t_2$. The rule matches recursively and to
+any depth, until no more replacements can be made, using internally
+defined search, matching and instantiation algorithms.  The validity
+of `REWRITE_RULE` rests ultimately on the primitive rules `SUBST` (for
+making the substitutions); `INST_TYPE` (for instantiating types); and
+the derived rules for generalization and specialization (see
+[Section](sec:gen) and [Section](sec:spec) for instantiating terms.
+The definition of `REWRITE_RULE` in ML also relies on a large number
+of general and HOL-oriented SML functions.
+
+In practice, derived rules like `REWRITE_RULE` can play a central role
+in proofs, because they can perform a very large number of inferences
+which may happen in a complex and unpredictable order.  This power is
+increased by the fact that any existing equational theorem can be
+supplied as a `rewrite rule', including a standard HOL set of
+pre-proved tautologies; and these rewrite rules can interact with each
+other in the rewriting process to transform the original theorem.
+
+The application of `REWRITE_RULE`, in the session below, illustrates
+that replacements are made at all levels of the structure of a term.
+The example is a formula of natural number arithmetic: the infixes `>`
+and `<` are the usual "greater than" and "less than" relations,
+respectively, and `SUC` names the usual successor function on natural
+numbers.  Use is made of the pre-existing definition of `>`, bound to
+`arithmeticTheory.GREATER_DEF` in SML (see §REFERENCE).  The inference
+counting facility is used again, and the printing of theorems is
+adjusted as above.
+
+```
+>> Count.inferences
+     (REWRITE_RULE [arithmeticTheory.GREATER_DEF])
+     (ASSUME ``SUC 3 > 0 /\ SUC 2 > 0 /\ SUC 1 > 0 /\ SUC 0 > 0``);
+```
+
+Notice that rewriting equations can be extracted from universally
+quantified theorems. To construct the proof step-wise, with all of the
+instantiations, substitutions, uses of transitivity, *etc*, would be a
+lengthy process. The rewriting rules make it easy, and do so whilst
+still generating the entire chain of inferences.

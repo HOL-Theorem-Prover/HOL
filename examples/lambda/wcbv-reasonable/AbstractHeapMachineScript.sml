@@ -8,17 +8,10 @@
     due to the difference between
       how substitutions are defined
         in HOL library and in Forster etc.'s Coq proof *)
+Theory AbstractHeapMachine
+Ancestors
+  arithmetic list relation combin Prelims weak_CBV Programs
 
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory;
-open listTheory relationTheory combinTheory;
-
-open PrelimsTheory;
-open weak_CBVTheory;
-open ProgramsTheory;
-
-
-val _ = new_theory "AbstractHeapMachine";
 
 (* ------------------
         Heaps
@@ -745,4 +738,3 @@ QED
    For the ones who are interested,
    please refer to Forster etc.'s Coq formalisation *)
 
-val _ = export_theory ()

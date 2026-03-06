@@ -107,7 +107,7 @@ fun SBAG_SOLVE thms tm = let
   val goal_thm1 = MP goal_thm0 (LIST_CONJ newasms)
   val goal_thm2 = EQT_INTRO (GEN gvar goal_thm1)
   val thm = TRANS newgoal_thm goal_thm2
-  val _  =  Trace.trace(1,Trace.PRODUCE(tm,"SBAG_SOLVE",thm))
+  val _ = Trace.trace(1,Trace.PRODUCE(tm,"SBAG_SOLVE",thm))
 in
   thm
 end

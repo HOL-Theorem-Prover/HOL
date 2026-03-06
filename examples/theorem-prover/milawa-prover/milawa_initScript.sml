@@ -1,18 +1,15 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "milawa_init";
+Theory milawa_init
+Ancestors
+  lisp_extract string finite_map pred_set list sum option
+  arithmetic relation lisp_sexp lisp_semantics lisp_parse
+  milawa_core
+Libs
+  lisp_extractLib
+
 val _ = ParseExtras.temp_loose_equality()
 
-open lisp_extractLib lisp_extractTheory;
-
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open optionTheory arithmeticTheory relationTheory;
-
-open lisp_sexpTheory lisp_semanticsTheory lisp_parseTheory;
-
-open milawa_coreTheory;
 val _ = max_print_depth := 20;
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
@@ -188,10 +185,13 @@ val xs = concl init_fns_def
          |> find_terms (can (match_term ``add_def x (y:'a # 'b)``))
          |> map rand |> (fn tms => listSyntax.mk_list(tms,type_of (hd tms)))
 
-val init_assum_def = Define `init_assum k = fns_assum k ^xs`
-val init_assum_thm = store_thm("init_assum_thm",
-  ``init_assum init_fns``,
-  EVAL_TAC \\ SRW_TAC [] [FUNION_DEF]);
+Definition init_assum_def:   init_assum k = fns_assum k ^xs
+End
+Theorem init_assum_thm:
+    init_assum init_fns
+Proof
+  EVAL_TAC \\ SRW_TAC [] [FUNION_DEF]
+QED
 
 val _ = install_assum_eq init_assum_def
 
@@ -221,18 +221,22 @@ val term_tac = NONE
 val milawa_init_def = impure_extract name term_tac
 
 
-val define_safe_list_side_thm = store_thm("define_safe_list_side_thm",
-  ``!ftbl defs k io ok. define_safe_list_side ftbl defs k io ok = T``,
+Theorem define_safe_list_side_thm:
+    !ftbl defs k io ok. define_safe_list_side ftbl defs k io ok = T
+Proof
   Induct_on `defs` \\ SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [fetch "-" "define_safe_list_side_def"]
   \\ ASM_SIMP_TAC std_ss [LET_DEF,fetch "-" "define_safe_side_def",
        isTrue_CLAUSES,isDot_def,CDR_def]
-  \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV) \\ SIMP_TAC std_ss []);
+  \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV) \\ SIMP_TAC std_ss []
+QED
 
-val milawa_init_side_thm = store_thm("milawa_init_side_thm",
-  ``!k io ok. milawa_init_side k io ok = T``,
+Theorem milawa_init_side_thm:
+    !k io ok. milawa_init_side k io ok = T
+Proof
   SIMP_TAC std_ss [fetch "-" "milawa_init_side_def",
-    define_safe_list_side_thm]);
+    define_safe_list_side_thm]
+QED
 
 
 
@@ -363,9 +367,11 @@ val (list_of_defs_tm,core_fun_names) = let
   val list_of_defs_tm = listSyntax.mk_list(xs,type_of (hd xs))
   in (list_of_defs_tm,core_fun_names) end
 
-val core_assum_def = Define `core_assum k = fns_assum k ^list_of_defs_tm`;
-val core_assum_thm = store_thm("core_assum_thm",
-  ``core_assum core_funs``,
+Definition core_assum_def:   core_assum k = fns_assum k ^list_of_defs_tm
+End
+Theorem core_assum_thm:
+    core_assum core_funs
+Proof
   REWRITE_TAC [init_fns_def,core_funs_def,core_assum_def]
   \\ REPEAT
     (MATCH_MP_TAC fns_assum_add_def
@@ -373,7 +379,7 @@ val core_assum_thm = store_thm("core_assum_thm",
          (REWRITE_TAC [IN_FDOM_add_def]
           \\ CONV_TAC (DEPTH_CONV stringLib.string_EQ_CONV)
           \\ REWRITE_TAC [] \\ SIMP_TAC (srw_ss()) []))
-  \\ SIMP_TAC std_ss [fns_assum_def,EVERY_DEF]);
+  \\ SIMP_TAC std_ss [fns_assum_def,EVERY_DEF]
+QED
 
 
-val _ = export_theory();

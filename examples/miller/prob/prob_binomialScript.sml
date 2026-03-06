@@ -1,14 +1,11 @@
-open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
-     listTheory sequenceTheory state_transformerTheory
-     hurdUtils extra_numTheory combinTheory
-     pairTheory realTheory realLib extra_boolTheory
-     extra_pred_setTheory extra_realTheory extra_pred_setTools numTheory
-     simpLib seqTheory sequenceTools subtypeTheory res_quanTheory
-     binomialTheory sumTheory;
-
-open real_measureTheory real_probabilityTheory prob_algebraTheory probTheory;
-
-val _ = new_theory "prob_binomial";
+Theory prob_binomial
+Ancestors
+  arithmetic pred_set list sequence state_transformer extra_num
+  combin pair real extra_bool extra_pred_set extra_real num seq
+  subtype res_quan binomial sum real_measure real_probability
+  prob_algebra prob
+Libs
+  hurdUtils realLib extra_pred_setTools simpLib sequenceTools
 
 infixr 0 ++ << || ORELSEC ## --> THENC;
 infix 1 >> |->;
@@ -55,11 +52,12 @@ val Cond =
 (* The definition of the binomial random number generator.                   *)
 (* ------------------------------------------------------------------------- *)
 
-val prob_binomial_def = Define
-  `(prob_binomial 0 = UNIT 0) /\
+Definition prob_binomial_def:
+   (prob_binomial 0 = UNIT 0) /\
    (prob_binomial (SUC n) =
     BIND (prob_binomial n)
-    (\m. BIND sdest (\b. UNIT (if b then SUC m else m))))`;
+    (\m. BIND sdest (\b. UNIT (if b then SUC m else m))))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)
@@ -68,18 +66,19 @@ val prob_binomial_def = Define
 (*      prob bern {s | FST (prob_binomial n s) = m} = binomial n m / 2 pow n *)
 (* ------------------------------------------------------------------------- *)
 
-val INDEP_FN_PROB_BINOMIAL = store_thm
-  ("INDEP_FN_PROB_BINOMIAL",
-   ``!n. prob_binomial n IN indep_fn``,
+Theorem INDEP_FN_PROB_BINOMIAL:
+     !n. prob_binomial n IN indep_fn
+Proof
    Induct
    ++ RW_TAC std_ss [prob_binomial_def, INDEP_FN_SDEST, INDEP_FN_BIND,
-                     INDEP_FN_UNIT]);
+                     INDEP_FN_UNIT]
+QED
 
-val PROB_BERN_BINOMIAL = store_thm
-  ("PROB_BERN_BINOMIAL",
-   ``!n m.
+Theorem PROB_BERN_BINOMIAL:
+     !n m.
        prob bern {s | FST (prob_binomial n s) = m} =
-       &(binomial n m) * (1 / 2) pow n``,
+       &(binomial n m) * (1 / 2) pow n
+Proof
    Induct
    >> (Cases
        ++ RW_TAC arith_ss [prob_binomial_def, UNIT_DEF, binomial_def,
@@ -137,9 +136,6 @@ val PROB_BERN_BINOMIAL = store_thm
    ++ Know `!a b c d : real. (a = b) /\ (c = d) ==> (a + c = d + b)`
    >> REAL_ARITH_TAC
    ++ DISCH_THEN MATCH_MP_TAC
-   ++ PROVE_TAC [REAL_MUL_ASSOC, REAL_MUL_SYM]);
-
-val _ = export_theory ();
-
-
+   ++ PROVE_TAC [REAL_MUL_ASSOC, REAL_MUL_SYM]
+QED
 

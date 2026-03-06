@@ -1,13 +1,13 @@
 (*---------------------------------------------------------------------------*
- * Beta-equivalence and combinators (Chapter 2 of Hankin [2])
+ * Beta-equivalence and combinators (Chapter 2 of Barendregt [1] & Hankin [2])
  *---------------------------------------------------------------------------*)
+Theory chap2
+Ancestors
+  pred_set list rich_list finite_map arithmetic string_num pair
+  basic_swap term nomset appFOLDL
+Libs
+  BasicProvers pred_setLib hurdUtils listLib binderLib
 
-open HolKernel Parse boolLib bossLib BasicProvers;
-
-open pred_setTheory pred_setLib listTheory rich_listTheory finite_mapTheory
-     arithmeticTheory string_numTheory hurdUtils pairTheory;
-
-open basic_swapTheory termTheory nomsetTheory binderLib appFOLDLTheory;
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
 val std_ss = std_ss ++ rewrites [LET_THM]
@@ -15,20 +15,46 @@ val std_ss = std_ss ++ rewrites [LET_THM]
 structure NewQ = Q
 structure Q = struct open Q open OldAbbrevTactics end;
 
-val _ = new_theory "chap2";
+(* Definition 2.1.18 [1, p.29] *)
+Inductive ctxt :
+[~VAR:]
+    !s. ctxt (\x. VAR s)
+[~I:]
+    ctxt (\x. x)
+[~APP:]
+    !c1 c2. ctxt c1 /\ ctxt c2 ==> ctxt (\x. c1 x @@ c2 x)
+[~LAM:]
+    !v c. ctxt c ==> ctxt (\x. LAM v (c x))
+End
 
-val (ctxt_rules, ctxt_indn, ctxt_cases) =  (* p. 10 *)
-  Hol_reln`(!s. ctxt (\x. VAR s))                       /\
-           ctxt (\x. x)                                 /\
-           (!c1 c2. ctxt c1 /\ ctxt c2 ==>
-                    ctxt (\x. c1 x @@ c2 x))            /\
-           (!v c.   ctxt c ==> ctxt (\x. LAM v (c x)))`;
-
-val constant_contexts_exist = store_thm(
-  "constant_contexts_exist",
-  ``!t. ctxt (\x. t)``,
+Theorem constant_contexts_exist:
+    !t. ctxt (\x. t)
+Proof
   HO_MATCH_MP_TAC simple_induction THEN REPEAT STRIP_TAC THEN
-  SRW_TAC [][ctxt_rules]);
+  SRW_TAC [][ctxt_rules]
+QED
+
+Theorem ctxt_LAMl :
+    !vs c. ctxt c ==> ctxt (\x. LAMl vs (c x))
+Proof
+    Induct_on ‘vs’ >> rw [ETA_AX]
+ >> HO_MATCH_MP_TAC ctxt_LAM
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
+
+Theorem ctxt_APPL :
+    !c t. ctxt c ==> ctxt (\x. c x @@ t)
+Proof
+    rpt STRIP_TAC
+ >> HO_MATCH_MP_TAC ctxt_APP >> rw [constant_contexts_exist]
+QED
+
+Theorem ctxt_APPR :
+    !c t. ctxt c ==> ctxt (\x. t @@ c x)
+Proof
+    rpt STRIP_TAC
+ >> HO_MATCH_MP_TAC ctxt_APP >> rw [constant_contexts_exist]
+QED
 
 val (one_hole_context_rules, one_hole_context_ind, one_hole_context_cases) =
   Hol_reln`one_hole_context (\x.x) /\
@@ -36,36 +62,41 @@ val (one_hole_context_rules, one_hole_context_ind, one_hole_context_cases) =
            (!x c. one_hole_context c ==> one_hole_context (\t. c t @@ x)) /\
            (!v c. one_hole_context c ==> one_hole_context (\t. LAM v (c t)))`;
 
-val leftctxt = store_thm(
-  "leftctxt",
-  ``!z. one_hole_context (APP z)``,
+Theorem leftctxt:
+    !z. one_hole_context (APP z)
+Proof
   Q_TAC SUFF_TAC `!z. one_hole_context (\t. z @@ (\x. x) t)` THEN1
      SRW_TAC [boolSimps.ETA_ss][] THEN
-  SRW_TAC [][one_hole_context_rules]);
+  SRW_TAC [][one_hole_context_rules]
+QED
 
-val rightctxt_def = Define`rightctxt z = \t. t @@ z`;
-val rightctxt_thm = store_thm(
-  "rightctxt_thm",
-  ``!t z. rightctxt z t = t @@ z``,
-  SRW_TAC [][rightctxt_def]);
+Definition rightctxt_def:  rightctxt z = \t. t @@ z
+End
+Theorem rightctxt_thm:
+    !t z. rightctxt z t = t @@ z
+Proof
+  SRW_TAC [][rightctxt_def]
+QED
 
-val rightctxt = store_thm(
-  "rightctxt",
-  ``!z. one_hole_context (rightctxt z)``,
+Theorem rightctxt:
+    !z. one_hole_context (rightctxt z)
+Proof
   Q_TAC SUFF_TAC `!z. one_hole_context (\t. (\x. x) t @@ z)` THEN1
      SRW_TAC [boolSimps.ETA_ss][rightctxt_def] THEN
-  SRW_TAC [][one_hole_context_rules]);
+  SRW_TAC [][one_hole_context_rules]
+QED
 
-val absctxt = store_thm(
-  "absctxt",
-  ``!v. one_hole_context (LAM v)``,
+Theorem absctxt:
+    !v. one_hole_context (LAM v)
+Proof
   Q_TAC SUFF_TAC `!v. one_hole_context (\t. LAM v ((\x. x) t))` THEN1
      SRW_TAC [boolSimps.ETA_ss][] THEN
-  SRW_TAC [][one_hole_context_rules]);
+  SRW_TAC [][one_hole_context_rules]
+QED
 
-val one_hole_is_normal = store_thm(
-  "one_hole_is_normal",
-  ``!c. one_hole_context c ==> ctxt c``,
+Theorem one_hole_is_normal:
+    !c. one_hole_context c ==> ctxt c
+Proof
   MATCH_MP_TAC one_hole_context_ind THEN SRW_TAC [][ctxt_rules] THEN
   `ctxt (\y. x)` by Q.SPEC_THEN `x` ACCEPT_TAC constant_contexts_exist THEN
   `!c1 c2. ctxt c1 /\ ctxt c2 ==> ctxt (\t. c1 t @@ c2 t)` by
@@ -76,7 +107,8 @@ val one_hole_is_normal = store_thm(
                     POP_ASSUM (fn th =>
                                   MP_TAC (MATCH_MP imp (CONJ th cth)) THEN
                                   MP_TAC (MATCH_MP imp (CONJ cth th))))) THEN
-  SIMP_TAC std_ss []);
+  SIMP_TAC std_ss []
+QED
 
 Inductive lameq :
 [~BETA:]
@@ -94,6 +126,12 @@ Inductive lameq :
 [~ABS:]
   !M N x. M == N ==> LAM x M == LAM x N
 End
+
+(* lameq *)
+val _ = TeX_notation { hol = "==", TeX = ("\\HOLTokenLameq", 1) };
+
+Overload "=/=" = “λ(M:term) N. ¬(M == N)”
+val _ = set_fixity "=/=" (Infix(NONASSOC, 450))
 
 Theorem lameq_refl[simp] = lameq_REFL
 
@@ -144,15 +182,21 @@ Theorem lameq_ind_X =
                        |> Q.INST[‘Q’ |-> ‘P’]
                        |> Q.GENL [‘P’, ‘X’]
 
-val lameq_app_cong = store_thm(
-  "lameq_app_cong",
-  ``M1 == M2 ==> N1 == N2 ==> M1 @@ N1 == M2 @@ N2``,
-  METIS_TAC [lameq_rules]);
+(* NOTE: The previous proof (by METIS_TAC [lameq_rules]) is a bit slow *)
+Theorem lameq_app_cong :
+    M1 == M2 ==> N1 == N2 ==> M1 @@ N1 == M2 @@ N2
+Proof
+    rpt STRIP_TAC
+ >> Q_TAC (TRANS_TAC lameq_TRANS) ‘M2 @@ N1’
+ >> CONJ_TAC >- (MATCH_MP_TAC lameq_APPL >> art [])
+ >> MATCH_MP_TAC lameq_APPR >> art []
+QED
 
-val lameq_weaken_cong = store_thm(
-  "lameq_weaken_cong",
-  ``(M1:term) == M2 ==> N1 == N2 ==> (M1 == N1 <=> M2 == N2)``,
-  METIS_TAC [lameq_rules]);
+Theorem lameq_weaken_cong:
+    (M1:term) == M2 ==> N1 == N2 ==> (M1 == N1 <=> M2 == N2)
+Proof
+  METIS_TAC [lameq_rules]
+QED
 
 Theorem fixed_point_thm:
   !f. ?x. f @@ x == x ∧ FV x = FV f
@@ -168,28 +212,31 @@ QED
 
 (* properties of substitution - p19 *)
 
-val lemma2_11 = store_thm(
-  "lemma2_11",
-  ``!t. ~(v = u)  /\ ~(v IN FV M) ==>
-        ([M/u] ([N/v] t) = [[M/u]N/v] ([M/u] t))``,
+Theorem lemma2_11:
+    !t. ~(v = u)  /\ ~(v IN FV M) ==>
+        ([M/u] ([N/v] t) = [[M/u]N/v] ([M/u] t))
+Proof
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN
   Q.EXISTS_TAC `{u;v} UNION FV M UNION FV N` THEN
   SRW_TAC [][SUB_THM, SUB_VAR, lemma14b] THEN
-  Cases_on `u IN FV N` THEN SRW_TAC [][SUB_THM, lemma14b, lemma14c]);
+  Cases_on `u IN FV N` THEN SRW_TAC [][SUB_THM, lemma14b, lemma14c]
+QED
 
 val substitution_lemma = save_thm("substitution_lemma", lemma2_11);
 
-val NOT_IN_FV_SUB = store_thm(
-  "NOT_IN_FV_SUB",
-  ``!x t u v. x NOTIN FV u /\ (x <> v ==> x NOTIN FV t) ==>
-              x NOTIN FV ([t/v]u)``,
-  SRW_TAC [][FV_SUB] THEN METIS_TAC []);
+Theorem NOT_IN_FV_SUB:
+    !x t u v. x NOTIN FV u /\ (x <> v ==> x NOTIN FV t) ==>
+              x NOTIN FV ([t/v]u)
+Proof
+  SRW_TAC [][FV_SUB] THEN METIS_TAC []
+QED
 
-val lemma2_12 = store_thm( (* p. 19 *)
-  "lemma2_12",
-  ``(M == M' ==> [N/x]M == [N/x]M') /\
+(* p. 19 *)
+Theorem lemma2_12:
+    (M == M' ==> [N/x]M == [N/x]M') /\
     (N == N' ==> [N/x]M == [N'/x]M) /\
-    (M == M' /\ N == N' ==> [N/x]M == [N'/x]M')``,
+    (M == M' /\ N == N' ==> [N/x]M == [N'/x]M')
+Proof
   Q.SUBGOAL_THEN `(!M M'. M == M' ==> !N x. [N/x]M == [N/x]M') /\
                   (!N N'. N == N' ==> !M x. [N/x]M == [N'/x]M)`
      (fn th => STRIP_ASSUME_TAC th THEN SRW_TAC[][])
@@ -206,7 +253,8 @@ val lemma2_12 = store_thm( (* p. 19 *)
       SRW_TAC [][SUB_THM, SUB_VAR] THEN PROVE_TAC [lameq_rules]
     ],
     PROVE_TAC [lameq_rules]
-  ]);
+  ]
+QED
 
 (* |- M == M' ==> N == N' ==> [N/x] M == [N'/x] M' *)
 val lameq_sub_cong = save_thm(
@@ -225,13 +273,16 @@ Proof
  >> MATCH_MP_TAC (cj 1 lemma2_12) >> art []
 QED
 
-val lemma2_13 = store_thm( (* p.20 *)
-  "lemma2_13",
-  ``!c n n'. ctxt c ==> (n == n') ==> (c n == c n')``,
+(* This is also Proposition 2.1.19 [1, p.29] *)
+(* [2, p.20] *)
+Theorem lemma2_13:
+    !c n n'. ctxt c ==> (n == n') ==> (c n == c n')
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   MAP_EVERY Q.ID_SPEC_TAC [`n`, `n'`] THEN
   POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `c` THEN
-  HO_MATCH_MP_TAC ctxt_indn THEN PROVE_TAC [lameq_rules]);
+  HO_MATCH_MP_TAC ctxt_ind THEN PROVE_TAC [lameq_rules]
+QED
 
 Theorem lameq_LAMl_cong :
     !vs M N. M == N ==> LAMl vs M == LAMl vs N
@@ -270,9 +321,26 @@ Inductive lameta : (* p. 21 *)
   !M x. ~(x IN FV M) ==> lameta (LAM x (M @@ VAR x)) M
 End
 
-val lemma2_14 = store_thm(
-  "lemma2_14",
-  ``!M N. lameta M N = lamext M N``,
+(* lameta *)
+val _ = set_fixity "===" (Infix(NONASSOC, 450))
+val _ = overload_on("===", “lameta”);
+val _ = TeX_notation { hol = "===", TeX = ("\\HOLTokenLameta", 1) };
+
+Theorem lameta_subst :
+    !M N P x. lameta M N ==> lameta ([P/x] M) ([P/x] N)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC lameta_TRANS
+ >> Q.EXISTS_TAC ‘LAM x N @@ P’
+ >> simp [lameta_rules]
+ >> MATCH_MP_TAC lameta_TRANS
+ >> Q.EXISTS_TAC ‘LAM x M @@ P’
+ >> simp [lameta_rules]
+QED
+
+Theorem lemma2_14:
+    !M N. lameta M N = lamext M N
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN
   MAP_EVERY Q.ID_SPEC_TAC [`N`, `M`] THENL [
     (* eta ==> ext *)
@@ -289,7 +357,8 @@ val lemma2_14 = store_thm(
        FULL_SIMP_TAC (srw_ss()) [] THEN
        PROVE_TAC [lameta_rules]) THEN
     PROVE_TAC [lameta_rules]
-  ]);
+  ]
+QED
 
 (* Definition 2.1.30 [1, p.33]: "Let tt be a formal theory with equations as
    formulas. Then tt is consistent (notation Con(tt)) if tt does not prove every
@@ -352,6 +421,36 @@ Proof
  >> simp [asmlam_rules]
 QED
 
+Theorem asmlam_app_cong :
+    !M1 M2 N1 N2. asmlam eqns M1 M2 /\ asmlam eqns N1 N2 ==>
+                  asmlam eqns (M1 @@ N1) (M2 @@ N2)
+Proof
+    rpt STRIP_TAC
+ >> Q_TAC (TRANS_TAC asmlam_trans) ‘M2 @@ N1’
+ >> CONJ_TAC >- (MATCH_MP_TAC asmlam_lcong >> art [])
+ >> MATCH_MP_TAC asmlam_rcong >> art []
+QED
+
+Theorem asmlam_ctxt_cong :
+    !c. ctxt c ==> !M N. asmlam eqns M N ==> asmlam eqns (c M) (c N)
+Proof
+    HO_MATCH_MP_TAC ctxt_ind >> rw [asmlam_refl] (* 2 subgoals *)
+ >- (MATCH_MP_TAC asmlam_app_cong >> rw [])
+ >> MATCH_MP_TAC asmlam_abscong >> rw []
+QED
+
+Theorem asmlam_absorb :
+    !M N. M == N ==> asmlam {(M,N)} = (==)
+Proof
+    rpt STRIP_TAC
+ >> simp [FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM]
+ >> CONJ_TAC
+ >- (HO_MATCH_MP_TAC asmlam_ind >> simp [] \\
+     METIS_TAC [lameq_rules])
+ >> HO_MATCH_MP_TAC lameq_ind
+ >> METIS_TAC [asmlam_rules]
+QED
+
 (* Definition 2.1.32 [1, p.33]
 
    cf. also Definition 2.1.30 (iii): If t is a set of equations, then lambda + t
@@ -368,10 +467,11 @@ End
 (* NOTE: in termTheory, ‘v # M’ also denotes ‘v NOTIN FV M’ *)
 Overload "#" = “incompatible”
 
-val S_def =
-    Define`S = LAM "x" (LAM "y" (LAM "z"
+Definition S_def:
+    S = LAM "x" (LAM "y" (LAM "z"
                                      ((VAR "x" @@ VAR "z") @@
-                                      (VAR "y" @@ VAR "z"))))`;
+                                      (VAR "y" @@ VAR "z"))))
+End
 Theorem FV_S[simp]: FV S = {}
 Proof
   SRW_TAC [][S_def, EXTENSION] THEN METIS_TAC []
@@ -383,7 +483,8 @@ Theorem FV_K[simp]: FV K = {}
 Proof SRW_TAC [][K_def, EXTENSION]
 QED
 
-val I_def = Define`I = LAM "x" (VAR "x")`;
+Definition I_def:  I = LAM "x" (VAR "x")
+End
 Theorem FV_I[simp]: FV I = {}
 Proof SRW_TAC [][I_def]
 QED
@@ -415,30 +516,33 @@ Proof
  >> Cases_on ‘X = Y’ >> fs [LAM_eq_thm]
 QED
 
-val Omega_def =
-    Define`Omega = (LAM "x" (VAR "x" @@ VAR "x")) @@
-                     (LAM "x" (VAR "x" @@ VAR "x"))`
+Definition Omega_def:
+    Omega = (LAM "x" (VAR "x" @@ VAR "x")) @@
+                     (LAM "x" (VAR "x" @@ VAR "x"))
+End
 val _ = Unicode.unicode_version {tmnm = "Omega", u = UnicodeChars.Omega}
 Theorem FV_Omega[simp]: FV Omega = {}
 Proof
   SRW_TAC [][Omega_def, EXTENSION]
 QED
 
-val SUB_LAM_RWT = store_thm(
-  "SUB_LAM_RWT",
-  ``!x y v body. [x/y] (LAM v body) =
+Theorem SUB_LAM_RWT:
+    !x y v body. [x/y] (LAM v body) =
                  let n = NEW (y INSERT FV x UNION FV body)
                  in
-                   LAM n ([x/y]([VAR n/v] body))``,
+                   LAM n ([x/y]([VAR n/v] body))
+Proof
   SIMP_TAC std_ss [] THEN REPEAT GEN_TAC THEN
   NEW_ELIM_TAC THEN Q.X_GEN_TAC `z` THEN STRIP_TAC THEN
   `LAM v body = LAM z ([VAR z/v] body)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
-val lameq_asmlam = store_thm(
-  "lameq_asmlam",
-  ``!M N. M == N ==> asmlam eqns M N``,
-  HO_MATCH_MP_TAC lameq_ind THEN METIS_TAC [asmlam_rules]);
+Theorem lameq_asmlam:
+    !M N. M == N ==> asmlam eqns M N
+Proof
+  HO_MATCH_MP_TAC lameq_ind THEN METIS_TAC [asmlam_rules]
+QED
 
 fun betafy ss =
     simpLib.add_relsimp {refl = GEN_ALL lameq_refl,
@@ -453,22 +557,25 @@ fun betafy ss =
                              lameq_sub_cong],
                     dprocs = [], filter = NONE, name = NONE}
 
-val lameq_S = store_thm(
-  "lameq_S",
-  ``S @@ A @@ B @@ C == (A @@ C) @@ (B @@ C)``,
+Theorem lameq_S:
+    S @@ A @@ B @@ C == (A @@ C) @@ (B @@ C)
+Proof
   SIMP_TAC (srw_ss()) [S_def] THEN FRESH_TAC THEN
-  ASM_SIMP_TAC (betafy (srw_ss())) [lemma14b]);
+  ASM_SIMP_TAC (betafy (srw_ss())) [lemma14b]
+QED
 
-val lameq_K = store_thm(
-  "lameq_K",
-  ``K @@ A @@ B == A``,
+Theorem lameq_K:
+    K @@ A @@ B == A
+Proof
   REWRITE_TAC [K_def] THEN FRESH_TAC THEN
-  ASM_SIMP_TAC (betafy (srw_ss())) [lemma14b]);
+  ASM_SIMP_TAC (betafy (srw_ss())) [lemma14b]
+QED
 
-val lameq_I = store_thm(
-  "lameq_I",
-  ``I @@ A == A``,
-  PROVE_TAC [lameq_rules, I_def, SUB_THM]);
+Theorem lameq_I:
+    I @@ A == A
+Proof
+  PROVE_TAC [lameq_rules, I_def, SUB_THM]
+QED
 
 Theorem I_appstar' :
     !Is. (!e. MEM e Is ==> e = I) ==> I @* Is == I
@@ -485,71 +592,78 @@ Proof
  >> rw [Abbr ‘Is’, MEM_GENLIST]
 QED
 
-val B_def = Define`B = S @@ (K @@ S) @@ K`;
+Definition B_def:  B = S @@ (K @@ S) @@ K
+End
 Theorem FV_B[simp]:
   FV B = {}
 Proof
   SRW_TAC [][B_def]
 QED
 
-val lameq_B = store_thm(
-  "lameq_B",
-  ``B @@ f @@ g @@ x == f @@ (g @@ x)``,
-  SIMP_TAC (betafy (srw_ss())) [lameq_S, lameq_K, B_def]);
+Theorem lameq_B:
+    B @@ f @@ g @@ x == f @@ (g @@ x)
+Proof
+  SIMP_TAC (betafy (srw_ss())) [lameq_S, lameq_K, B_def]
+QED
 
-val C_def = Define`
+Definition C_def:
   C = S @@ (B @@ B @@ S) @@ (K @@ K)
-`;
+End
 Theorem FV_C[simp]: FV C = {}
 Proof SRW_TAC [][C_def]
 QED
 
-val lameq_C = store_thm(
-  "lameq_C",
-  ``C @@ f @@ x @@ y == f @@ y @@ x``,
-  SIMP_TAC (betafy (srw_ss())) [C_def, lameq_S, lameq_K, lameq_B]);
+Theorem lameq_C:
+    C @@ f @@ x @@ y == f @@ y @@ x
+Proof
+  SIMP_TAC (betafy (srw_ss())) [C_def, lameq_S, lameq_K, lameq_B]
+QED
 
-val Y_def = Define`
+Definition Y_def:
   Y = LAM "f" (LAM "x" (VAR "f" @@ (VAR "x" @@ VAR "x")) @@
                LAM "x" (VAR "f" @@ (VAR "x" @@ VAR "x")))
-`;
+End
 Theorem FV_Y[simp]: FV Y = {}
 Proof SRW_TAC [][Y_def, EXTENSION] THEN METIS_TAC []
 QED
 
-val Yf_def = Define`
+Definition Yf_def:
   Yf f = let x = NEW (FV f)
          in
            LAM x (f @@ (VAR x @@ VAR x)) @@
            LAM x (f @@ (VAR x @@ VAR x))
-`;
+End
 
-val YYf = store_thm(
-  "YYf",
-  ``Y @@ f == Yf f``,
+Theorem YYf:
+    Y @@ f == Yf f
+Proof
   ONCE_REWRITE_TAC [lameq_cases] THEN DISJ1_TAC THEN
   SRW_TAC [boolSimps.DNF_ss][Yf_def, Y_def, LAM_eq_thm] THEN
   DISJ1_TAC THEN NEW_ELIM_TAC THEN SRW_TAC [][SUB_LAM_RWT] THEN
-  NEW_ELIM_TAC THEN SRW_TAC [][LAM_eq_thm, supp_fresh]);
+  NEW_ELIM_TAC THEN SRW_TAC [][LAM_eq_thm, supp_fresh]
+QED
 
-val YffYf = store_thm(
-  "YffYf",
-  ``Yf f == f @@ Yf f``,
+Theorem YffYf:
+    Yf f == f @@ Yf f
+Proof
   SRW_TAC [][Yf_def] THEN NEW_ELIM_TAC THEN SRW_TAC [][Once lameq_cases] THEN
   DISJ1_TAC THEN MAP_EVERY Q.EXISTS_TAC [`v`, `f @@ (VAR v @@ VAR v)`] THEN
-  SRW_TAC [][lemma14b]);
+  SRW_TAC [][lemma14b]
+QED
 
-val lameq_Y = store_thm(
-  "lameq_Y",
-  ``Y @@ f == f @@ (Y @@ f)``,
-  METIS_TAC [lameq_rules, YYf, YffYf]);
+Theorem lameq_Y:
+    Y @@ f == f @@ (Y @@ f)
+Proof
+  METIS_TAC [lameq_rules, YYf, YffYf]
+QED
 
-val Yf_fresh = store_thm(
-  "Yf_fresh",
-  ``v ∉ FV f ⇒
-    (Yf f = LAM v (f @@ (VAR v @@ VAR v)) @@ LAM v (f @@ (VAR v @@ VAR v)))``,
+Theorem Yf_fresh:
+    v ∉ FV f ⇒
+    (Yf f = LAM v (f @@ (VAR v @@ VAR v)) @@ LAM v (f @@ (VAR v @@ VAR v)))
+Proof
   SRW_TAC [][Yf_def, LET_THM] THEN
-  binderLib.NEW_ELIM_TAC THEN SRW_TAC [][LAM_eq_thm, supp_fresh]);
+  binderLib.NEW_ELIM_TAC THEN SRW_TAC [][LAM_eq_thm, supp_fresh]
+QED
 
 Theorem Yf_SUB[simp]:
   [N/x] (Yf f) = Yf ([N/x] f)
@@ -579,9 +693,9 @@ Proof
   NEW_ELIM_TAC THEN METIS_TAC []
 QED
 
-val Yf_cong = store_thm(
-  "Yf_cong",
-  ``f == g ⇒ Yf f == Yf g``,
+Theorem Yf_cong:
+    f == g ⇒ Yf f == Yf g
+Proof
   Q_TAC (NEW_TAC "fv") `FV f ∪ FV g` THEN
   `(Yf f = LAM fv (f @@ (VAR fv @@ VAR fv)) @@
            LAM fv (f @@ (VAR fv @@ VAR fv))) ∧
@@ -589,7 +703,8 @@ val Yf_cong = store_thm(
            LAM fv (g @@ (VAR fv @@ VAR fv)))`
      by SRW_TAC [][Yf_fresh] THEN
   STRIP_TAC THEN ASM_SIMP_TAC (srw_ss()) [] THEN
-  METIS_TAC [lameq_rules]);
+  METIS_TAC [lameq_rules]
+QED
 
 (* This is Example 2.1.33 [1, p.33] and Example 2.18 [2, p23] *)
 Theorem SK_incompatible :
@@ -610,9 +725,10 @@ Proof
   PROVE_TAC [asmlam_rules]
 QED
 
-val xx_xy_incompatible = store_thm( (* example 2.20, p24 *)
-  "xx_xy_incompatible",
-  ``~(x = y) ==> incompatible (VAR x @@ VAR x) (VAR x @@ VAR y)``,
+(* example 2.20, p24 *)
+Theorem xx_xy_incompatible:
+    ~(x = y) ==> incompatible (VAR x @@ VAR x) (VAR x @@ VAR y)
+Proof
   STRIP_TAC THEN
   Q_TAC SUFF_TAC
         `!M N.
@@ -653,7 +769,8 @@ val xx_xy_incompatible = store_thm( (* example 2.20, p24 *)
   `!D. [D/y]I = I` by SRW_TAC [][lemma14b, FV_I] THEN
   `!D. xx_xy D I`
       by PROVE_TAC [asmlam_beta, asmlam_trans, asmlam_sym] THEN
-  METIS_TAC [asmlam_trans, asmlam_sym]);
+  METIS_TAC [asmlam_trans, asmlam_sym]
+QED
 
 val (is_abs_thm, _) = define_recursive_term_function
   `(is_abs (VAR s) = F) /\
@@ -722,6 +839,7 @@ Proof
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
+(* cf. LAMl_ALPHA_tpm *)
 Theorem EQ_LAML_bodies_permute:
   ∀us vs M N. (LAMl us M = LAMl vs N) ∧ ¬is_abs M ∧ ¬is_abs N ⇒
               ∃pi. N = tpm pi M
@@ -757,25 +875,6 @@ Proof
     Q.X_GEN_TAC ‘t’
  >> Q.SPEC_THEN ‘t’ STRUCT_CASES_TAC term_CASES
  >> SRW_TAC [][]
-QED
-
-(* accessor for retrieving ‘y’ from ‘VAR y’ *)
-local
-    val th1 = prove (“!t. is_var t ==> ?y. t = VAR y”, rw [is_var_cases]);
-    val th2 = SIMP_RULE std_ss [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] th1;
-in
-   (* |- !t. is_var t ==> t = VAR (THE_VAR t) *)
-    val THE_VAR_def = new_specification ("THE_VAR_def", ["THE_VAR"], th2);
-end;
-
-Theorem THE_VAR_thm[simp] :
-    !y. THE_VAR (VAR y) = y
-Proof
-    rpt STRIP_TAC
- >> qabbrev_tac ‘t = (VAR y :term)’ >> simp []
- >> ‘is_var t’ by rw [Abbr ‘t’]
- >> Suff ‘VAR (THE_VAR t) = (VAR y :term)’ >- rw []
- >> ASM_SIMP_TAC std_ss [GSYM THE_VAR_def]
 QED
 
 Theorem term_cases :
@@ -931,10 +1030,11 @@ val _ = export_rewrites ["rand_thm"]
 val (rator_thm, _) = define_recursive_term_function `rator (t1 @@ t2) = t1`;
 val _ = export_rewrites ["rator_thm"]
 
-val is_comb_APP_EXISTS = store_thm(
-  "is_comb_APP_EXISTS",
-  ``!t. is_comb t = (?u v. t = u @@ v)``,
-  PROVE_TAC [term_CASES, is_comb_thm]);
+Theorem is_comb_APP_EXISTS:
+    !t. is_comb t = (?u v. t = u @@ v)
+Proof
+  PROVE_TAC [term_CASES, is_comb_thm]
+QED
 
 Theorem is_comb_appstar_exists :
     !M. is_comb M <=> ?t args. (M = t @* args) /\ args <> [] /\ ~is_comb t
@@ -946,31 +1046,34 @@ Proof
  >> qexistsl_tac [‘t’, ‘SNOC M' args’] >> rw []
 QED
 
-val is_comb_rator_rand = store_thm(
-  "is_comb_rator_rand",
-  ``!t. is_comb t ==> (rator t @@ rand t = t)``,
+Theorem is_comb_rator_rand:
+    !t. is_comb t ==> (rator t @@ rand t = t)
+Proof
   SIMP_TAC (srw_ss()) [is_comb_APP_EXISTS, GSYM LEFT_FORALL_IMP_THM,
-                       rator_thm, rand_thm]);
+                       rator_thm, rand_thm]
+QED
 
-val rand_subst_commutes = store_thm(
-  "rand_subst_commutes",
-  ``!t u v. is_comb t ==> ([u/v] (rand t) = rand ([u/v] t))``,
+Theorem rand_subst_commutes:
+    !t u v. is_comb t ==> ([u/v] (rand t) = rand ([u/v] t))
+Proof
   REPEAT STRIP_TAC THEN
-  FULL_SIMP_TAC (srw_ss()) [is_comb_APP_EXISTS, SUB_THM, rand_thm]);
+  FULL_SIMP_TAC (srw_ss()) [is_comb_APP_EXISTS, SUB_THM, rand_thm]
+QED
 
-val rator_subst_commutes = store_thm(
-  "rator_subst_commutes",
-  ``!t u x. is_comb t ==> ([u/v] (rator t) = rator ([u/v] t))``,
+Theorem rator_subst_commutes:
+    !t u x. is_comb t ==> ([u/v] (rator t) = rator ([u/v] t))
+Proof
   SRW_TAC [][is_comb_APP_EXISTS, rator_thm, SUB_THM] THEN
-  SRW_TAC [][is_comb_APP_EXISTS, rator_thm, SUB_THM]);
+  SRW_TAC [][is_comb_APP_EXISTS, rator_thm, SUB_THM]
+QED
 
 
-val extra_LAM_DISJOINT = store_thm(
-  "extra_LAM_DISJOINT",
-  ``(!t v u b t1 t2. ~(t1 @@ t2 = [t/v] (LAM u b))) /\
+Theorem extra_LAM_DISJOINT:
+    (!t v u b t1 t2. ~(t1 @@ t2 = [t/v] (LAM u b))) /\
     (!R u b t1 t2.   ~(t1 @@ t2 = (LAM u b) ISUB R)) /\
     (!t v u b s.     ~(VAR s = [t/v] (LAM u b))) /\
-    (!R u b s.       ~(VAR s = (LAM u b) ISUB R))``,
+    (!R u b s.       ~(VAR s = (LAM u b) ISUB R))
+Proof
   REPEAT (GEN_TAC ORELSE CONJ_TAC) THENL [
     Q_TAC (NEW_TAC "z") `{u;v} UNION FV t UNION FV b`,
     Q_TAC (NEW_TAC "z") `{u} UNION DOM R UNION FV b UNION FVS R`,
@@ -978,7 +1081,8 @@ val extra_LAM_DISJOINT = store_thm(
     Q_TAC (NEW_TAC "z") `{s;u} UNION DOM R UNION FV b UNION FVS R`
   ] THEN
   `LAM u b = LAM z ([VAR z/u] b)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-  SRW_TAC [][SUB_THM, ISUB_LAM]);
+  SRW_TAC [][SUB_THM, ISUB_LAM]
+QED
 val _ = export_rewrites ["extra_LAM_DISJOINT"]
 
 val tpm_eq_var = prove(
@@ -993,11 +1097,12 @@ val (enf_thm, _) = define_recursive_term_function
                                 v IN FV (rator t)))`
 val _ = export_rewrites ["enf_thm"]
 
-val subst_eq_var = store_thm(
-  "subst_eq_var",
-  ``[v/u] t = VAR s <=> t = VAR u ∧ v = VAR s ∨ t = VAR s ∧ u ≠ s``,
+Theorem subst_eq_var:
+    [v/u] t = VAR s <=> t = VAR u ∧ v = VAR s ∨ t = VAR s ∧ u ≠ s
+Proof
   Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
-  SRW_TAC [][SUB_VAR, SUB_THM] THEN PROVE_TAC []);
+  SRW_TAC [][SUB_VAR, SUB_THM] THEN PROVE_TAC []
+QED
 
 Theorem enf_vsubst_invariant[simp]:
   !t. enf ([VAR v/u] t) = enf t
@@ -1032,6 +1137,7 @@ Proof
   Induct_on ‘Ns’ using SNOC_INDUCT >> rw [appstar_SNOC, lameq_APPL]
 QED
 
+(* Lemma 2.1.23 [1, p.30] *)
 Theorem lameq_LAMl_appstar_VAR[simp] :
     !xs. LAMl xs t @* (MAP VAR xs) == t
 Proof
@@ -1043,6 +1149,96 @@ Proof
  >> MATCH_MP_TAC lameq_appstar_cong
  >> rw [Once lameq_cases]
  >> DISJ1_TAC >> qexistsl_tac [‘h’, ‘M’] >> rw []
+QED
+
+(* Lemma 2.1.20 (i) [1, p.29] *)
+Theorem lameq_ctxt_app_lemma :
+    !vs c. ctxt c ==> ?f. !M. FV M SUBSET set vs ==> c M == f @@ (LAMl vs M)
+Proof
+    Q.X_GEN_TAC ‘vs’
+ >> HO_MATCH_MP_TAC ctxt_ind >> rw [] (* 4 subgoals *)
+ (* ?f. !M. FV M SUBSET set vs ==> VAR s == f @@ LAMl vs M *)
+ >- (Q_TAC (NEW_TAC "x") ‘{s}’ \\
+     Q.EXISTS_TAC ‘LAM x (VAR s)’ >> rw [] \\
+     MATCH_MP_TAC lameq_SYM \\
+     qabbrev_tac ‘N = LAMl vs M’ \\
+     Q_TAC (TRANS_TAC lameq_TRANS) ‘[N/x] (VAR s)’ >> rw [lameq_BETA])
+ (* ?f. !M. FV M SUBSET set vs ==> M == f @@ LAMl vs M *)
+ >- (Q_TAC (NEW_TAC "x") ‘set vs’ \\
+     Q.EXISTS_TAC ‘LAM x (VAR x @* MAP VAR vs)’ >> rw [] \\
+     MATCH_MP_TAC lameq_SYM \\
+     qmatch_abbrev_tac ‘LAM x N @@ P == M’ \\
+     Q_TAC (TRANS_TAC lameq_TRANS) ‘[P/x] N’ >> rw [lameq_BETA] \\
+     simp [Abbr ‘N’, appstar_SUB] \\
+     Know ‘MAP [P/x] (MAP VAR vs) = MAP VAR vs’
+     >- (REWRITE_TAC [MAP_MAP_o] \\
+         simp [LIST_EQ_REWRITE, EL_MAP] \\
+         Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
+         MATCH_MP_TAC lemma14b \\
+         Q.PAT_X_ASSUM ‘~MEM x vs’ MP_TAC \\
+         rw [MEM_EL] >> METIS_TAC []) >> Rewr' \\
+     simp [Abbr ‘P’])
+ (* ?f. !M. FV M SUBSET set vs ==> c M @@ c' M == f @@ LAMl vs M *)
+ >- (Q_TAC (NEW_TAC "x") ‘set vs UNION FV f UNION FV f'’ \\
+     Q.EXISTS_TAC ‘LAM x ((f @@ VAR x) @@ (f' @@ VAR x))’ >> rw [] \\
+     NTAC 2 (Q.PAT_X_ASSUM ‘!M. FV M SUBSET set vs ==> _’
+               (MP_TAC o Q.SPEC ‘M’)) >> rw [] \\
+     Q_TAC (TRANS_TAC lameq_TRANS) ‘(f @@ LAMl vs M) @@ (f' @@ LAMl vs M)’ \\
+     CONJ_TAC >- (irule lameq_app_cong >> art []) \\
+     qmatch_abbrev_tac ‘_ == LAM x N @@ P’ \\
+     MATCH_MP_TAC lameq_SYM \\
+     Suff ‘f @@ P @@ (f' @@ P) = [P/x] N’
+     >- (Rewr' >> rw [lameq_BETA]) \\
+     simp [Abbr ‘N’, SUB_THM] \\
+     ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     CONJ_TAC >> MATCH_MP_TAC lemma14b >> rw [])
+ (* ?f. !M. FV M SUBSET set vs ==> LAM v (c M) == f @@ LAMl vs M
+
+    LAM v (c M)
+ == LAM v (f @@ LAMl vs M)
+ == g @@ LAMl vs M ==> g = LAM x (LAM v (f @@ VAR x))
+  *)
+ >> Q_TAC (NEW_TAC "x") ‘{v} UNION (set vs) UNION FV f’
+ >> Q.EXISTS_TAC ‘LAM x (LAM v (f @@ VAR x))’ >> rw []
+ >> Q.PAT_X_ASSUM ‘!M. FV M SUBSET set vs ==> _’ (MP_TAC o Q.SPEC ‘M’) >> rw []
+ >> Q_TAC (TRANS_TAC lameq_TRANS) ‘LAM v (f @@ LAMl vs M)’
+ >> CONJ_TAC >- (MATCH_MP_TAC lameq_ABS >> art [])
+ >> POP_ASSUM K_TAC (* c M == ... *)
+ >> qmatch_abbrev_tac ‘_ == LAM x N @@ P’
+ >> MATCH_MP_TAC lameq_SYM
+ >> Suff ‘LAM v (f @@ P) = [P/x] N’ >- rw [lameq_BETA]
+ >> simp [Abbr ‘N’]
+ >> qabbrev_tac ‘t = f @@ VAR x’
+ >> Know ‘[P/x] (LAM v t) = LAM v ([P/x] t)’
+ >- (MATCH_MP_TAC SUB_LAM >> rw [Abbr ‘P’] \\
+     simp [FV_LAMl] \\
+     STRONG_DISJ_TAC >> fs [SUBSET_DEF])
+ >> Rewr'
+ >> simp [Abbr ‘t’, SUB_THM, Once EQ_SYM_EQ]
+ >> MATCH_MP_TAC lemma14b >> art []
+QED
+
+Theorem lameq_ctxt_app_closed :
+    !c. ctxt c ==> ?f. !M. closed M ==> c M == f @@ M
+Proof
+    rw [closed_def]
+ >> MP_TAC (Q.SPECL [‘[]’, ‘c’] lameq_ctxt_app_lemma) >> rw []
+QED
+
+(* Lemma 2.1.20 (ii) [1, p.29] *)
+Theorem lameq_ctxt_app :
+    !c M. ctxt c ==> ?vs f. c M == f @@ (LAMl vs M)
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘X = FV M’
+ >> qabbrev_tac ‘vs = SET_TO_LIST X’
+ >> Know ‘FV M = set vs’
+ >- (simp [Abbr ‘vs’, Once EQ_SYM_EQ] \\
+     MATCH_MP_TAC SET_TO_LIST_INV >> rw [Abbr ‘X’])
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘vs’, ‘c’] lameq_ctxt_app_lemma) >> rw []
+ >> qexistsl_tac [‘vs’, ‘f’]
+ >> POP_ASSUM MATCH_MP_TAC >> rw []
 QED
 
 Theorem lameq_LAMl_appstar_reduce :
@@ -1454,6 +1650,48 @@ QED
 (* |- !i n. i < n ==> FV (selector i n) = {} *)
 Theorem FV_selector[simp] = REWRITE_RULE [closed_def] closed_selector
 
+Theorem selector_alt :
+    !X i n. FINITE X /\ i < n ==>
+            ?vs v. LENGTH vs = n /\ ALL_DISTINCT vs /\ DISJOINT X (set vs) /\
+                   v = EL i vs /\ selector i n = LAMl vs (VAR v)
+Proof
+    RW_TAC std_ss [selector_def]
+ >> qabbrev_tac ‘Z = GENLIST n2s n’
+ >> ‘ALL_DISTINCT Z /\ LENGTH Z = n’ by rw [Abbr ‘Z’, ALL_DISTINCT_GENLIST]
+ >> ‘Z <> []’ by rw [NOT_NIL_EQ_LENGTH_NOT_0]
+ >> qabbrev_tac ‘z = EL i Z’
+ >> ‘MEM z Z’ by rw [Abbr ‘z’, EL_MEM]
+ >> ‘n2s i = z’ by rw [Abbr ‘z’, Abbr ‘Z’, EL_GENLIST]
+ >> POP_ORW
+ (* preparing for LAMl_ALPHA_ssub *)
+ >> qabbrev_tac ‘Y = NEWS n (set Z UNION X)’
+ >> ‘FINITE (set Z UNION X)’ by rw []
+ >> ‘ALL_DISTINCT Y /\ DISJOINT (set Y) (set Z UNION X) /\ LENGTH Y = n’
+       by rw [NEWS_def, Abbr ‘Y’]
+ >> fs []
+ >> qabbrev_tac ‘M = VAR z’
+ >> Know ‘LAMl Z M = LAMl Y ((FEMPTY |++ ZIP (Z,MAP VAR Y)) ' M)’
+ >- (MATCH_MP_TAC LAMl_ALPHA_ssub >> rw [Abbr ‘M’] \\
+     Q.PAT_X_ASSUM ‘DISJOINT (set Z) (set Y)’ MP_TAC \\
+     rw [DISJOINT_ALT])
+ >> Rewr'
+ >> ‘Y <> []’ by rw [NOT_NIL_EQ_LENGTH_NOT_0]
+ >> REWRITE_TAC [GSYM fromPairs_def]
+ >> qabbrev_tac ‘fm = fromPairs Z (MAP VAR Y)’
+ >> ‘FDOM fm = set Z’ by rw [FDOM_fromPairs, Abbr ‘fm’]
+ >> qabbrev_tac ‘y = EL i Y’
+ >> Know ‘fm ' M = VAR y’
+ >- (simp [Abbr ‘M’, ssub_appstar] \\
+     rw [Abbr ‘fm’, Abbr ‘z’] \\
+     Know ‘fromPairs Z (MAP VAR Y) ' (EL i Z) = EL i (MAP VAR Y)’
+     >- (MATCH_MP_TAC fromPairs_FAPPLY_EL >> rw []) >> Rewr' \\
+     rw [EL_MAP, Abbr ‘y’])
+ >> Rewr'
+ >> Q.EXISTS_TAC ‘Y’
+ >> rw [Abbr ‘y’]
+QED
+
+(* TODO: rework this proof by (the new) selector_alt *)
 Theorem selector_thm :
     !i n Ns. i < n /\ LENGTH Ns = n ==> selector i n @* Ns == EL i Ns
 Proof
@@ -1531,9 +1769,13 @@ QED
 
 (* By prefixing a list of abstractions of FVs, any term can be "closed". The
    set ‘closures M’ represent such closures with different order of FVs.
+
+   NOTE: The condition “set vs = FV M” was replaced with “FV M SUBSET set vs”,
+   which allows more flexible binding variable lists. This is useful for
+   constructing a share binding variable list closing a finite list of terms.
  *)
 Definition closures_def :
-    closures M = {LAMl vs M | vs | ALL_DISTINCT vs /\ set vs = FV M}
+    closures M = {LAMl vs M | vs | ALL_DISTINCT vs /\ FV M SUBSET set vs}
 End
 
 Theorem closures_not_empty :
@@ -1547,48 +1789,51 @@ Proof
  >> rw [SET_TO_LIST_INV]
 QED
 
-Theorem closures_of_closed[simp] :
-    !M. closed M ==> closures M = {M}
+Theorem closures_of_closed :
+    !M. closed M ==> M IN closures M
 Proof
     rw [closures_def, closed_def]
- >> rw [Once EXTENSION]
+ >> Q.EXISTS_TAC ‘[]’ >> rw []
 QED
 
 Theorem closures_of_open_sing :
-    !M v. FV M = {v} ==> closures M = {LAM v M}
+    !M v. FV M = {v} ==> LAM v M IN closures M
 Proof
     rw [closures_def, LIST_TO_SET_SING]
- >> rw [Once EXTENSION]
+ >> Q.EXISTS_TAC ‘[v]’ >> rw []
 QED
 
-(* ‘closure M’ is just one arbitrary element in ‘closures M’. *)
-Overload closure = “\M. CHOICE (closures M)”
+(* ‘closure M’ is the canonical element in ‘closures M’. *)
+Definition closure_def :
+    closure M = LAMl (SET_TO_LIST (FV M)) M
+End
 
 Theorem closure_in_closures :
     !M. closure M IN closures M
 Proof
-    rw [CHOICE_DEF, closures_not_empty]
+    rw [closure_def, closures_def]
+ >> Q.EXISTS_TAC ‘SET_TO_LIST (FV M)’
+ >> rw [ALL_DISTINCT_SET_TO_LIST]
+ >> rw [SUBSET_DEF]
 QED
 
 Theorem closure_idem[simp] :
-    !M. closed M ==> closure M = M
+    closed M ==> closure M = M
 Proof
-    rw [closures_of_closed]
+    rw [closure_def, closed_def]
 QED
 
 Theorem closure_open_sing :
     !M v. FV M = {v} ==> closure M = LAM v M
 Proof
-    rpt STRIP_TAC
- >> ‘closures M = {LAM v M}’ by PROVE_TAC [closures_of_open_sing]
- >> rw []
+    rw [closure_def]
 QED
 
 Theorem closed_closure[simp]:
   closed (closure M)
 Proof
   qspec_then ‘M’ assume_tac closure_in_closures >> gvs[closures_def] >>
-  simp[closed_def, appFOLDLTheory.FV_LAMl]
+  simp[closed_def, appFOLDLTheory.FV_LAMl] >> ASM_SET_TAC []
 QED
 
 (*---------------------------------------------------------------------------*
@@ -1604,13 +1849,48 @@ End
 Theorem solvable_alt_closed :
     !M. closed M ==> (solvable M <=> ?Ns. M @* Ns == I)
 Proof
-    rw [solvable_def, closed_def]
+    rw [solvable_def, closures_def, closed_def]
+ >> reverse EQ_TAC
+ >- (STRIP_TAC \\
+     qexistsl_tac [‘M’, ‘Ns’] >> art [] \\
+     Q.EXISTS_TAC ‘[]’ >> rw [])
+ >> rw []
+ (* stage work *)
+ >> rpt (POP_ASSUM MP_TAC)
+ >> qid_spec_tac ‘M’
+ >> qid_spec_tac ‘vs’
+ >> SNOC_INDUCT_TAC
+ >- (rw [] \\
+     Q.EXISTS_TAC ‘Ns’ >> art [])
+ >> rw [LAMl_SNOC, ALL_DISTINCT_SNOC]
+ >> qabbrev_tac ‘N = LAM x M’
+ >> ‘FV N = {}’ by rw [Abbr ‘N’]
+ >> Know ‘?Ps. N @* Ps == I’
+ >- (FIRST_X_ASSUM irule >> art [])
+ >> STRIP_TAC
+ >> Cases_on ‘Ps’ >> fs [Abbr ‘N’]
+ >- (‘LAM x M @@ I == I @@ I’ by rw [lameq_APPL] \\
+     ‘I @@ I == I’ by rw [lameq_I] \\
+     ‘LAM x M @@ I == I’ by PROVE_TAC [lameq_TRANS] \\
+     ‘LAM x M @@ I == [I/x] M’ by rw [lameq_BETA] \\
+     ‘[I/x] M = M’ by rw [lemma14b] \\
+     POP_ASSUM (fs o wrap) \\
+    ‘M == I’ by PROVE_TAC [lameq_TRANS, lameq_SYM] \\
+     Q.EXISTS_TAC ‘[]’ >> rw [])
+ >> ‘LAM x M @@ h == [h/x] M’ by rw [lameq_BETA]
+ >> ‘[h/x] M = M’ by rw [lemma14b]
+ >> POP_ASSUM (fs o wrap)
+ >> qabbrev_tac ‘N = LAM x M’
+ >> Know ‘N @@ h @* t == M @* t’
+ >- (MATCH_MP_TAC lameq_appstar_cong >> art [])
+ >> DISCH_TAC
+ >> ‘M @* t == I’ by PROVE_TAC [lameq_TRANS, lameq_SYM]
+ >> Q.EXISTS_TAC ‘t’ >> art []
 QED
 
 (* 8.3.1 (iii) [1, p.171] *)
 Overload unsolvable = “\M. ~solvable M”
 
-val _ = export_theory()
 val _ = html_theory "chap2";
 
 (* References:

@@ -1089,7 +1089,7 @@ automatically (and internally).
 its constituent conjuncts.)  There are also a number
 of standard equations (representing common tautologies) held in
 the \ML\ variable
-\ml{basic\_rewrites},\index{basic-rewrites@\ml{basic-rewrites}} and these
+\ml{basic\_rewrites},\index{basic_rewrites@\ml{basic\_rewrites}} and these
 are used by some of the rewriting tools. All the
 built-in rewriting tools are listed below, for
 reference, beginning with the rules.

@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib
+Theory loadDatatypeB[bare]
+Ancestors
+  loadDatatypeA
+Libs
+  HolKernel Parse boolLib
 
-open loadDatatypeATheory
+Theorem T = TRUTH
 
-val _ = new_theory "loadDatatypeB";
-
-val _ = save_thm("T", TRUTH)
-
-val _ = export_theory();

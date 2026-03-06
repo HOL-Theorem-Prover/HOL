@@ -46,28 +46,40 @@ in
        | (l, _) => (unsolved_list := l; raise ERR "TAC_PROOF" "unsolved goals")
 end
 
-fun default_prover (t, tac) = TAC_PROOF (([], t), tac)
+fun default_prover (t, tac) = TAC_PROOF(([], t), tac)
 
 local
+  fun goal_to_string (asms, t) =
+      case asms of
+          [] => Parse.term_to_string t
+        | _ => "([" ^ CharVector.tabulate(length asms, fn _ => #".") ^ "], " ^
+               Parse.term_to_string t ^ ")"
    val mesg = Lib.with_flag (Feedback.MESG_to_string, Lib.I) Feedback.HOL_MESG
-   fun provide_feedback f (t, tac: tactic) =
-      f (t, tac)
-      handle (e as HOL_ERR {message = m, origin_function = f, ...}) =>
-           (mesg ("Proof of \n\n" ^ Parse.term_to_string t ^ "\n\nfailed.\n")
-            ; (case (m, f, unsolved ()) of
-                  ("unsolved goals", "TAC_PROOF", (_, u)::_) =>
-                      if Term.term_eq u t
-                         then ()
-                      else mesg ("First unsolved sub-goal is\n\n" ^
-                                 Parse.term_to_string u ^ "\n\n")
-                | _ => ())
-            ; raise e)
+   fun provide_feedback f (g, tac: tactic) =
+      f (g, tac)
+      handle e as HOL_ERR herr =>
+        let val m = message_of herr
+            val f = top_function_of herr
+        in
+           mesg ("Proof of \n\n" ^ goal_to_string g ^ "\n\nfailed.\n")
+           ;
+           (case (m, f, unsolved ())
+             of ("unsolved goals", "TAC_PROOF", (_, u)::_) =>
+                 if Term.term_eq u (snd g) then
+                    ()
+                 else mesg ("First unsolved sub-goal is\n\n" ^
+                            Parse.term_to_string u ^ "\n\n")
+              | otherwise => ())
+           ;
+           raise e
+        end
    val internal_prover =
-      ref (provide_feedback default_prover: Term.term * tactic -> Thm.thm)
+      ref (provide_feedback TAC_PROOF: goal * tactic -> Thm.thm)
 in
    fun set_prover f = internal_prover := provide_feedback f
-   fun restore_prover () = set_prover default_prover
-   fun prove (t, tac) = !internal_prover (t, tac)
+   fun restore_prover () = set_prover TAC_PROOF
+   fun prove (t, tac) = !internal_prover (([], t), tac)
+   fun prove_goal (g, tac) = !internal_prover (g, tac)
 end
 
 fun store_thm (name, tm, tac) =
@@ -205,7 +217,7 @@ fun (ltac1 ORELSE_LT ltac2) gl = ltac1 gl handle HOL_ERR _ => ltac2 gl
  *                  first subgoal of tac1
  *---------------------------------------------------------------------------*)
 
-fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
+fun op THEN1 (tac1, tac2) =
    fn g =>
       let
          val (gl, jf) = tac1 g
@@ -221,14 +233,22 @@ fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
          (t_gl, fn thl => jf (h_jf [] :: thl))
       end
 
+(* first argument can be a tactic or a list-tactic *)
+val _ = op THEN1 : tactic * tactic -> tactic ;
+val _ = op THEN1 : list_tactic * tactic -> list_tactic ;
+
 val op >- = op THEN1
+
 fun op>>-(tac1, n) tac2 g =
   op>- (tac1, tac2) g
-  handle e as HOL_ERR (er as {message,...}) =>
-         if is_substring "THEN1" message then raise e
+  handle e as HOL_ERR holerr =>
+         if is_substring "THEN1" (message_of holerr) then raise e
          else
            raise HOL_ERR (set_message
-             (message ^ " (THEN1 on line "^Int.toString n^")") er)
+              (String.concat
+                 [message_of holerr,
+                  " (THEN1 on line ", Int.toString n, ")"]) holerr)
+
 fun (f ?? x) = f x
 
 
@@ -387,12 +407,23 @@ local
    val validity_tag = "ValidityCheck"
    fun masquerade goal = Thm.mk_oracle_thm validity_tag goal
    datatype validity_failure = Concl of term | Hyp of term
+   fun hd_is_suspend t =
+       let val (f, _) = strip_comb t
+           val {Thy,Name,...} = dest_thy_const f
+       in
+         Thy = "marker" andalso Name = "suspendlabel"
+       end handle HOL_ERR _ => false
    fun bad_prf th (asl, w) =
-       if concl th !~ w then SOME (Concl (concl th))
-       else
-         case List.find (fn h => List.all (not o aconv h) asl) (hyp th) of
-             NONE => NONE
-           | SOME h => SOME (Hyp h)
+       let
+         fun goodhyp h = List.exists (aconv h) asl orelse
+                         hd_is_suspend h
+       in
+         if concl th !~ w then SOME (Concl (concl th))
+         else
+           case List.find (not o goodhyp) (hyp th) of
+               NONE => NONE
+             | SOME h => SOME (Hyp h)
+       end
    fun error f t e =
        let
          val pfx = "Invalid " ^ t ^ ": theorem has "
@@ -556,6 +587,7 @@ fun CONJ_VALIDATE tac (g as (asl,_)) =
     end
 
 end (* local *)
+
 (* could avoid duplication of code in the above by the following
 fun GEN_VALIDATE flag tac =
   ALL_TAC THEN_LT GEN_VALIDATE_LT flag (TACS_TO_LT [tac]) ;
@@ -625,6 +657,27 @@ fun FIRST [] g = NO_TAC g
 fun MAP_EVERY tacf lst = EVERY (map tacf lst)
 val map_every = MAP_EVERY
 fun MAP_FIRST tacf lst = FIRST (map tacf lst)
+
+(* ----------------------------------------------------------------------
+    IF : tactic -> tactic -> tactic -> tactic
+
+    IF g t e runs g on the goal; if it succeeds it continues with t,
+    if it fails it continues with e. This is not the same as
+
+      (g THEN t) ORELSE e
+
+    which catches errors in t as well as g.
+   ---------------------------------------------------------------------- *)
+
+fun IF gt tt et goal =
+      case Lib.total gt goal of
+          NONE => et goal
+        | SOME (sgs, vf) =>
+          let
+            val (gll,vfl) = unzip (map tt sgs)
+          in
+            (List.concat gll, vf o mapshape (map length gll) vfl)
+          end
 
 (* ----------------------------------------------------------------------
     FIRST_LT : tactic -> list_tactic
@@ -723,6 +776,8 @@ fun FIRST_PROVE tacl =
  *---------------------------------------------------------------------------*)
 
 val EVERY_ASSUM = ASSUM_LIST o MAP_EVERY
+
+val every_assum = EVERY_ASSUM
 
 (*---------------------------------------------------------------------------
  * Call a thm-tactic for the first assumption at which it succeeds.
@@ -850,8 +905,8 @@ local
    in
       (gl, (if is_neg w then NEG_DISCH ant else DISCH ant) o prf)
    end
-   handle HOL_ERR {message,origin_function, ...} =>
-          raise ERR "DISCH_THEN" (origin_function ^ ":" ^ message)
+   handle HOL_ERR e =>
+          raise ERR "DISCH_THEN" (top_function_of e ^ ":" ^ message_of e)
   val NOT_NOT_E = boolTheory.NOT_CLAUSES |> CONJUNCT1
   val NOT_NOT_I = NOT_NOT_E |> GSYM
   val NOT_IMP_F = IMP_ANTISYM_RULE (SPEC_ALL boolTheory.F_IMP)
@@ -949,10 +1004,6 @@ fun count_decreases m ((_,w), gl) =
       List.all (fn (_,w') => m w' < c0) gl
     end
 
-(*---------------------------------------------------------------------------
- * A tactical that parses in the context of a goal, a la the Q library.
- *---------------------------------------------------------------------------*)
-
 fun parse_with_goal t (asms, g) =
    let
       val ctxt = free_varsl (g :: asms)
@@ -960,31 +1011,81 @@ fun parse_with_goal t (asms, g) =
       Parse.parse_in_context ctxt t
    end
 
+(*---------------------------------------------------------------------------
+ * A tactical that parses in the context of a goal, a la the Q library. It is
+ * slightly complicated.
+ *
+ * Steps
+ * 1. Build sequence of parses of q under given traces
+ * 2. Step through parses until one succeeds
+ * 3. Try the tactic (under given traces) on that term. If it succeeds,
+ *    great. Otherwise store the error and go to 2
+ * 4. If no parse has succeeded, use the non-stream parser on the quotation
+ *    to elicit and report a typechecking error
+ * 5. If only one parse succeeded and the tactic failed on it, raise the error.
+ * 6. It can happen that multiple parses succeed and the tactic application
+ *    fails on all of them. That needs to be distinguished from 4.
+ *---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------*)
+(* Parse in setting where failure is expected                                *)
+(*---------------------------------------------------------------------------*)
+
+fun elicit_parse_failure ctxt q tyopt =
+    let open Parse
+        fun smashErrm m =
+          case m Pretype.Env.empty
+           of errormonad.Error e => raise Preterm.mkExn e
+            | errormonad.Some _ => raise
+              ERR "elicit_parse_failure" "unexpected successful parse"
+    in
+      errormonad.bind
+       (TermParse.ctxt_absyn_to_preterm (term_grammar()) ctxt (Absyn q),
+        TermParse.ctxt_preterm_to_term Parse.stdprinters tyopt ctxt)
+      |> smashErrm
+    end
+    handle e => raise wrap_exn "Tactical" "elicit_parse_failure" e
+
 fun Q_TAC0 {traces} tyopt (tac : term -> tactic) q (g as (asl,w)) =
-  let
-    open Parse
-    val ctxt = free_varsl (w::asl)
-    val ab =
+  let open Parse
+      val ttac = with_traces traces tac
+      val dest_seq = with_traces traces seq.cases
+      val ctxt = free_varsl (w::asl)
+      val ab =
         case tyopt of
             NONE => Absyn
           | SOME ty =>
             fn q => Absyn.TYPED(locn.Loc_None, Absyn q, Pretype.fromType ty)
-    val s = TermParse.prim_ctxt_termS ab (term_grammar()) ctxt q
-    fun cases s = List.foldl
-                    (fn (trpair,f) => Feedback.trace trpair f)
-                    seq.cases
-                    traces
-                    s
+      val terms_of = TermParse.prim_ctxt_termS ab (term_grammar()) ctxt
+      val tactic_failures = ref [] : exn list ref
+      fun failure() =
+        case !tactic_failures
+         of [] => (* no parses to even try the tactic on *)
+            elicit_parse_failure ctxt q tyopt
+          | [e] => (* one quotation parsed, but tactic failed *)
+            raise wrap_exn "Tactical" "Q_TAC0" e
+          | fails => (* multiple parses, tactic fails on all *)
+            raise ERR "Q_TAC0"
+              (String.concat
+                 [Int.toString (length fails),
+                  " parses for quotation, but tactic failed on all of them"])
+      fun search seq =
+        case dest_seq seq
+         of NONE => failure()
+          | SOME(tm,seq') =>
+            ttac tm g handle e =>
+              (tactic_failures := e :: !tactic_failures;
+               search seq')
   in
-    case cases s of
-        NONE => raise ERR "Q_TAC" "No parse for quotation"
-      | SOME _ =>
-        (case cases (seq.mapPartial (fn t => total (tac t) g) s) of
-             NONE => raise ERR "Q_TAC" "No parse of quotation leads to success"
-           | SOME (res,_) => res)
+    search (terms_of q)
   end
 
-val Q_TAC = Q_TAC0 {traces = []} NONE
-fun QTY_TAC ty = Q_TAC0 {traces = []} (SOME ty)
+fun Q_TAC tac q g =
+    Q_TAC0 {traces = []} NONE tac q g
+    handle e => raise wrap_exn "Tactical" "Q_TAC" e
+
+fun QTY_TAC ty tac q g =
+    Q_TAC0 {traces = []} (SOME ty) tac q g
+    handle e => raise wrap_exn "Tactical" "QTY_TAC" e
 
 end (* Tactical *)

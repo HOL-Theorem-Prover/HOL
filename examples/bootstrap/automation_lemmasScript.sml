@@ -1,12 +1,10 @@
-
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory;
-open source_valuesTheory source_syntaxTheory source_semanticsTheory codegenTheory
-     source_propertiesTheory mp_then parsingTheory x64asm_syntaxTheory
-     wordsTheory wordsLib;
-
-val _ = new_theory "automation_lemmas";
-
+Theory automation_lemmas
+Ancestors
+  arithmetic list pair finite_map string
+  source_values source_syntax source_semantics codegen
+  source_properties parsing x64asm_syntax words
+Libs
+  wordsLib
 
 (* theorems used in proof automation *)
 
@@ -641,12 +639,6 @@ Definition exp_def:
   exp (If t xs e1 e2) = list [Name "If"; test t; list (MAP exp xs); exp e1; exp e2] ∧
   exp (Let n e1 e2) = list [Name "Let"; Num n; exp e1; exp e2] ∧
   exp (Call n xs) = list [Name "Call"; Num n; list (MAP exp xs)]
-Termination
-  WF_REL_TAC ‘measure exp_size’ \\ rw []
-  \\ qsuff_tac ‘∀xs a. MEM a xs ⇒ exp_size a < exp1_size xs’
-  \\ TRY (rw []  \\ res_tac \\ fs [] \\ NO_TAC)
-  \\ Induct \\ fs [exp_size_def]
-  \\ rw [] \\ fs [] \\ res_tac \\ fs []
 End
 
 Theorem exp_def[simp,allow_rebind] =
@@ -737,5 +729,3 @@ Theorem inline_let: (* inline any let where the bound name doesn't fit 2**64 *)
 Proof
   rw [] \\ match_mp_tac (MP_CANON inline_let_thm) \\ fs []
 QED
-
-val _ = export_theory();

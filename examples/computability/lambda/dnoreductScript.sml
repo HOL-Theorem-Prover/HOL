@@ -1,24 +1,22 @@
-open HolKernel boolLib bossLib Parse
-
-open pure_dBTheory normal_orderTheory
+Theory dnoreduct
+Ancestors
+  pure_dB normal_order
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
-val _ = new_theory "dnoreduct"
-
-val dest_dabs_def = Define`
+Definition dest_dabs_def:
   (dest_dabs (dABS t) = t)
-`;
+End
 val _ = export_rewrites ["dest_dabs_def"]
 
-val dnoreduct_def = Define`
+Definition dnoreduct_def:
   (dnoreduct (dV i) = NONE) ∧
   (dnoreduct (dAPP t u) =
      if is_dABS t then SOME (nsub u 0 (dest_dabs t))
      else if dbnf t then OPTION_MAP (dAPP t) (dnoreduct u)
      else  SOME (dAPP (THE (dnoreduct t)) u)) ∧
   (dnoreduct (dABS t) = OPTION_MAP dABS (dnoreduct t))
-`;
+End
 val _ = export_rewrites ["dnoreduct_def"]
 
 val notbnf_noreduct = prove(
@@ -26,14 +24,15 @@ val notbnf_noreduct = prove(
   Cases_on `noreduct t` THEN1 FULL_SIMP_TAC (srw_ss()) [noreduct_bnf] THEN
   SRW_TAC [][]);
 
-val notbnf_dnoreduct = store_thm(
-  "notbnf_dnoreduct",
-  ``¬dbnf t ⇒ ∃u. dnoreduct t = SOME u``,
-  Induct_on `t` THEN SRW_TAC [][]);
+Theorem notbnf_dnoreduct:
+    ¬dbnf t ⇒ ∃u. dnoreduct t = SOME u
+Proof
+  Induct_on `t` THEN SRW_TAC [][]
+QED
 
-val dnoreduct_dbeta = store_thm(
-  "dnoreduct_dbeta",
-  ``∀t u. (dnoreduct t = SOME u) ⇒ dbeta t u``,
+Theorem dnoreduct_dbeta:
+    ∀t u. (dnoreduct t = SOME u) ⇒ dbeta t u
+Proof
   Induct_on `t` THEN SRW_TAC [][] THENL [
     Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     METIS_TAC [dbeta_rules],
@@ -41,17 +40,19 @@ val dnoreduct_dbeta = store_thm(
     IMP_RES_TAC notbnf_dnoreduct THEN SRW_TAC [][] THEN
     METIS_TAC [dbeta_rules],
     METIS_TAC [dbeta_rules]
-  ]);
+  ]
+QED
 
-val dnoreduct_FV = store_thm(
-  "dnoreduct_FV",
-  ``(dnoreduct t = SOME u) ∧ v ∈ dFV u ⇒ v ∈ dFV t``,
+Theorem dnoreduct_FV:
+    (dnoreduct t = SOME u) ∧ v ∈ dFV u ⇒ v ∈ dFV t
+Proof
   STRIP_TAC THEN IMP_RES_TAC dnoreduct_dbeta THEN
   FULL_SIMP_TAC (srw_ss()) [dbeta_dbeta'_eqn] THEN
   `∃tt uu. (t = fromTerm tt) ∧ (u = fromTerm uu)`
      by METIS_TAC [fromTerm_onto] THEN
   FULL_SIMP_TAC (srw_ss()) [IN_dFV, dbeta'_eq_ccbeta] THEN
-  METIS_TAC [chap3Theory.cc_beta_FV_SUBSET, pred_setTheory.SUBSET_DEF]);
+  METIS_TAC [chap3Theory.cc_beta_FV_SUBSET, pred_setTheory.SUBSET_DEF]
+QED
 
 val dpm_is_dABS = Store_thm(
   "dpm_is_dABS",
@@ -63,18 +64,20 @@ val dpm_dbnf = Store_thm(
   ``∀π. dbnf (dpm π t) = dbnf t``,
   Induct_on `t` THEN SRW_TAC [][]);
 
-val dest_dabs_dpm = store_thm(
-  "dest_dabs_dpm",
-  ``is_dABS d ⇒ (dest_dabs (dpm π d) = dpm (inc_pm 0 π) (dest_dabs d))``,
-  Cases_on `d` THEN SRW_TAC [][]);
+Theorem dest_dabs_dpm:
+    is_dABS d ⇒ (dest_dabs (dpm π d) = dpm (inc_pm 0 π) (dest_dabs d))
+Proof
+  Cases_on `d` THEN SRW_TAC [][]
+QED
 
-val dnoreduct_dpm = store_thm(
-  "dnoreduct_dpm",
-  ``∀d π. dnoreduct (dpm π d) = OPTION_MAP (dpm π) (dnoreduct d)``,
+Theorem dnoreduct_dpm:
+    ∀d π. dnoreduct (dpm π d) = OPTION_MAP (dpm π) (dnoreduct d)
+Proof
   Induct_on `d` THEN
   SRW_TAC [][dpm_nsub, optionTheory.OPTION_MAP_COMPOSE, combinTheory.o_DEF,
              dest_dabs_dpm] THEN
-  IMP_RES_TAC notbnf_dnoreduct THEN SRW_TAC [][]);
+  IMP_RES_TAC notbnf_dnoreduct THEN SRW_TAC [][]
+QED
 
 val dnoreduct_dLAM = Store_thm(
   "dnoreduct_dLAM",
@@ -103,9 +106,9 @@ val dnoreduct_dLAM = Store_thm(
      by SRW_TAC [][fresh_dpm_sub] THEN
   SRW_TAC [][]);
 
-val dnoreduct_correct = store_thm(
-  "dnoreduct_correct",
-  ``∀t. noreduct t = OPTION_MAP toTerm (dnoreduct (fromTerm t))``,
+Theorem dnoreduct_correct:
+    ∀t. noreduct t = OPTION_MAP toTerm (dnoreduct (fromTerm t))
+Proof
   HO_MATCH_MP_TAC termTheory.simple_induction THEN
   SRW_TAC [][noreduct_thm, optionTheory.OPTION_MAP_COMPOSE,
              combinTheory.o_DEF]
@@ -118,7 +121,8 @@ val dnoreduct_correct = store_thm(
 
     `¬dbnf (fromTerm t)` by SRW_TAC [][] THEN
     IMP_RES_TAC notbnf_dnoreduct THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 
 val omap_lemma = prove(``OPTION_MAP (λx. x) y = y``,
                        Cases_on `y` THEN SRW_TAC [][])
@@ -130,4 +134,3 @@ val dnoreduct_thm = Store_thm(
   SRW_TAC [][dnoreduct_correct, optionTheory.OPTION_MAP_COMPOSE,
              combinTheory.o_DEF, omap_lemma]);
 
-val _ = export_theory()

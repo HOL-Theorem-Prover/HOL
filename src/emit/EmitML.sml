@@ -53,9 +53,8 @@ val structSuffix = ref "ML.sml";
 val sigCamlSuffix = ref "ML.mli";
 val structCamlSuffix = ref "ML.ml";
 
-val is_int_literal_hook = ref (fn _:term => false);
-val int_of_term_hook = ref
-    (fn _:term => (raise ERR "EmitML" "integers not loaded") : Arbint.int)
+val is_int_literal_hook = ref intSyntax.is_int_literal
+val int_of_term_hook = ref intSyntax.int_of_term
 
 (*---------------------------------------------------------------------------*)
 (* Misc. syntax operations                                                   *)
@@ -94,6 +93,28 @@ local
 in
 val andalso_tm = list_mk_abs([a,b],mk_conj(a,b))
 val orelse_tm = list_mk_abs([a,b],mk_disj(a,b))
+end
+
+(* ----------------------------------------------------------------------
+    word definition reshaping
+   ---------------------------------------------------------------------- *)
+
+fun WORDS_EMIT_RULE thm =
+let
+  open wordsTheory pre_emitTheory boolTheory
+  val rws = List.map Conv.GSYM [word_index_def, n2w_itself_def, word_eq_def,
+              w2w_itself_def, sw2sw_itself_def, word_concat_itself_def,
+              word_extract_itself_def, literal_case_DEF] @
+             [BIT_UPDATE, fcp_n2w, word_T_def, word_L_def, word_H_def,
+              literal_case_THM]
+  val rule = Conv.CONV_RULE (Conv.STRIP_QUANT_CONV
+               (Conv.RHS_CONV (Rewrite.PURE_REWRITE_CONV rws)))
+  val thm = Rewrite.PURE_REWRITE_RULE [Conv.GSYM n2w_itself_def] thm
+in
+  Drule.LIST_CONJ (
+    List.map (Conv.BETA_RULE o rule)
+             (Drule.CONJUNCTS (Drule.SPEC_ALL thm))
+  )
 end
 
 (*---------------------------------------------------------------------------*)
@@ -224,12 +245,39 @@ fun vars_of_types alist =
 (* from.                                                                     *)
 (*---------------------------------------------------------------------------*)
 
-local val emit_tag = "EmitML"
-  val pseudo_constr_defs = ref [] : thm list ref;
+fun thm_adata_info tagnm =
+    {tag = tagnm, initial_values = [("min", [])],
+     apply_delta = cons}
+fun uptodate_thm th = Term.uptodate_term (concl th) andalso
+                      List.all Term.uptodate_term (hyp th)
+fun thml_fmake tagnm = {
+  adinfo = thm_adata_info tagnm,
+  uptodate_delta = uptodate_thm,
+  sexps = { dec = ThyDataSexp.thm_decode,
+            enc = ThyDataSexp.Thm },
+  globinfo = {
+    apply_to_global = cons,
+    thy_finaliser = NONE,
+    initial_value = []
+  }
+}
+
+
+
+local
+  val emit_tag = "EmitML"
+  val set_tag = "EmitML.pseudo_constructors"
+  val {get_global_value = get_pcs, record_delta = record_pc, ...} =
+      AncestryData.fullmake (thml_fmake set_tag)
 in
-fun pseudo_constr_rws() = map concl (!pseudo_constr_defs)
-val reshape_thm_hook = ref (fn th =>
-     pairLib.GEN_BETA_RULE (Rewrite.PURE_REWRITE_RULE (!pseudo_constr_defs) th))
+fun pseudo_constr_rws() = map concl (get_pcs())
+fun reshape1 th =
+    pairLib.GEN_BETA_RULE (Rewrite.PURE_REWRITE_RULE (get_pcs()) th)
+val reshape_thm_hook = ref (
+      WORDS_EMIT_RULE o
+      Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o
+      reshape1
+     )
 
 fun new_pseudo_constr (c,a) =
  let fun nstrip_fun 0 ty = ([],ty)
@@ -246,7 +294,7 @@ fun new_pseudo_constr (c,a) =
                  (args,mk_comb(pvar,pairSyntax.list_mk_pair args))
      val thm = mk_oracle_thm emit_tag ([],mk_eq(c,new))
  in
-    pseudo_constr_defs := thm :: !pseudo_constr_defs
+    record_pc thm
  end
 end;
 
@@ -1435,96 +1483,6 @@ fun install_consts _ [] k = k ([], [])
 
 
 (*---------------------------------------------------------------------------*)
-(* Append code to the theory file that will load the const map with the      *)
-(* definitions and datatype constructors exported as ML.                     *)
-(*---------------------------------------------------------------------------*)
-
-fun emit_adjoin_call thy (consts,pcs) = let
-  fun extern_pc (c,a) =
-      let val {Thy=thy,Name=n,...} = dest_thy_const c
-          val n' = mlquote n
-          val thy' = mlquote thy
-      in ("(prim_mk_const{Name="^n'^",Thy="^thy'^"},"^Int.toString a^")")
-     end
-  fun safetyprint ty = String.toString
-                        (trace ("Unicode",0)
-                           (HOLPP.pp_to_string 10000
-                              (Parse.mlower o
-                               type_pp.pp_type (fst Parse.min_grammars)
-                                               PPBackEnd.raw_terminal))
-                           ty)
-
-  fun pr3 ({Name,Thy,Ty}, (b,s2,ty)) = let
-    open PP smpp
-    val S = add_string
-    val BB = block INCONSISTENT 0
-    fun brk n = add_break (1,n)
-    fun ppty ty =
-      BB (S "typ" >> brk 0 >> S "\"" >> S (safetyprint Ty) >> S "\"")
-  in
-    S "(" >> BB (
-      S "{" >> BB (
-        BB (S "Name =" >> brk 0 >> S (mlquote Name ^ ",")) >> brk 0 >>
-        BB (S "Thy =" >> brk 0 >> S (mlquote Thy ^",")) >> brk 0 >>
-        BB (S "Ty =" >> brk 2 >> ppty Ty)
-      )  >> S "}," >> brk 0 >>
-     S "(" >> BB (
-       S (Bool.toString b ^ ",") >> brk 0 >>
-       S (Lib.mlquote s2 ^ ",") >> brk 0 >>
-       ppty ty
-      ) >> S ")"
-    ) >> S ")"
-  end
- in
-  Theory.adjoin_to_theory
-  {sig_ps = NONE,
-   struct_ps = SOME (fn _ =>
-    let open PP
-        val S = add_string
-        val BR = add_break
-        val B = PP.block PP.CONSISTENT 0
-        fun getdata c = let
-          val (b,pfx,s,ty) = ConstMapML.apply c
-        in
-          (b,s,ty)
-        end
-    in
-      B (
-        [
-        S "val _ = ", NL,
-        S "   let open Parse", NL,
-        S "       fun doit (r,(b,s,ty)) = ", NL,
-        S "         let val c = Term.mk_thy_const r", NL,
-        S ("         in ConstMapML.prim_insert(c,(b,"^Lib.quote thy^",s,ty))"),
-        NL,
-        S "         end", NL,
-        S "       fun typ s = Feedback.trace(\"Vartype Format Complaint\", 0)\n\
-          \                      (#1 (parse_from_grammars min_grammars))\n\
-          \                      [QUOTE (\":\"^s)]", NL,
-        S "   in", NL,
-        S "     List.app doit [", NL,
-        S "       ",
-        block INCONSISTENT 0 (
-          pr_list (Parse.mlower o pr3) [S",", BR(1,0)]
-                  (map (fn c => (dest_thy_const c, getdata c)) consts)
-        ), NL,
-        S "     ]", NL,
-        S "   end", NL, NL] @
-        (if null pcs then []
-         else [
-           S "val _ = List.app EmitML.new_pseudo_constr", NL,
-           S "                 [",
-           block INCONSISTENT 0 (
-             pr_list S [S",", BR(1,0)] (map extern_pc pcs)
-           ),
-           S"]", NL, NL
-         ])
-      )
-    end)}
-   handle e => raise ERR "emit_adjoin_call" ""
- end;
-
-(*---------------------------------------------------------------------------*)
 (* Write the ML out to a signature and structure file. We first run over the *)
 (* definitions and lift out the newly defined constants. These get inserted  *)
 (* into the "const map", which is accessed when prettyprinting the           *)
@@ -1546,6 +1504,7 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
        val structStrm = TextIO.openOut structfile
        val out = curry TextIO.output
        val (consts, usednames) = install_consts s elems (fn x => x)
+
    in
    (PP.prettyPrint(out sigStrm, 75) (Parse.mlower (pp_sig (s,elems)));
     PP.prettyPrint(out structStrm, 75)
@@ -1553,8 +1512,7 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
     TextIO.closeOut sigStrm;
     TextIO.closeOut structStrm;
     HOL_MESG ("emitML: " ^ s ^ "{" ^ sigSuffix ^ "," ^ structSuffix ^ "}\n\
-              \ written to directory "^path);
-    emit_adjoin_call s (consts,pcs)
+              \ written to directory "^path)
    )
    handle e => (List.app TextIO.closeOut [sigStrm, structStrm];
                 cleanFiles();

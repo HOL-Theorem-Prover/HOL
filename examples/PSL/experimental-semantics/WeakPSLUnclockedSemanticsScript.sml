@@ -29,17 +29,12 @@ intLib.deprecate_int();                   (* Set num as default numbers type *)
 quietdec := false;                        (* Restore output                  *)
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
-     UnclockedSemanticsTheory LemmasTheory ProjectionTheory
-     arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory;
+Theory WeakPSLUnclockedSemantics
+Ancestors
+  FinitePath Path Syntax SyntacticSugar UnclockedSemantics Lemmas
+  Projection arithmetic list rich_list res_quan
+Libs
+  res_quanLib
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers
@@ -49,12 +44,6 @@ val _ = intLib.deprecate_int();
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
-
-(*****************************************************************************)
-(* Start a new theory called WeakPSLUnclockedSemanticsTheory                 *)
-(*****************************************************************************)
-
-val _ = new_theory "WeakPSLUnclockedSemantics";
 
 (*****************************************************************************)
 (* N^f = { w | w is a finite list of states/letters } (the set of neutral    *)
@@ -83,13 +72,13 @@ val A_def =
 val A_11       = assoc "A_11"       (DB.theorems "-")
 and A_distinct = assoc "A_distinct" (DB.theorems "-");
 
-val A_ELEM_def =
- Define
-  `(A_ELEM (N l) n = EL n l)
+Definition A_ELEM_def:
+   (A_ELEM (N l) n = EL n l)
    /\
    (A_ELEM (W l) n = EL n l)
    /\
-   (A_ELEM (S l) n = EL n l)`;
+   (A_ELEM (S l) n = EL n l)
+End
 
 (*****************************************************************************)
 (* We define concatenation ( * ) on A: if v,w \in N then v*w is just the     *)
@@ -109,9 +98,8 @@ val _ = overload_on("++", ``APPEND``);
 (*****************************************************************************)
 val _ = set_fixity "CONC" (Infixl 500);
 
-val CONC_def =
- Define
-  `(N v CONC N w = N(v++w))
+Definition CONC_def:
+   (N v CONC N w = N(v++w))
    /\
    (N v CONC W w = W(v++w))
    /\
@@ -119,7 +107,8 @@ val CONC_def =
    /\
    (W v CONC a   = W v)
    /\
-   (S v CONC a   = S v)`;
+   (S v CONC a   = S v)
+End
 
 (*****************************************************************************)
 (* Overload "*" on to "CONC" for readability.                                *)
@@ -155,13 +144,13 @@ val ASSOC_CONC =
 (* Represent |w| by LEN w. HOL's built-in length function on lists           *)
 (* is LENGTH.                                                                *)
 (*****************************************************************************)
-val LEN_def =
- Define
-  `(LEN(N w) = LENGTH w)
+Definition LEN_def:
+   (LEN(N w) = LENGTH w)
    /\
    (LEN(W w) = LENGTH w)
    /\
-   (LEN(S w) = LENGTH w)`;
+   (LEN(S w) = LENGTH w)
+End
 
 (*****************************************************************************)
 (* we want to show that if w \in N then                                      *)
@@ -180,9 +169,11 @@ val LEN =
 (*****************************************************************************)
 (* We define (on A) w<=v (prefix) if there is u \in A such that w*u=v        *)
 (*****************************************************************************)
-val PREFIX_def = Define `PREFIX w v = ?u. w*u = v`;
+Definition PREFIX_def:   PREFIX w v = ?u. w*u = v
+End
 
-val STRICT_PREFIX_def = Define `STRICT_PREFIX w v = PREFIX w v /\ ~(w = v)`;
+Definition STRICT_PREFIX_def:   STRICT_PREFIX w v = PREFIX w v /\ ~(w = v)
+End
 
 (*****************************************************************************)
 (* u<w   is u is prefix of w and u/=w                                        *)
@@ -205,13 +196,13 @@ and IS_STRONG_def =
  Define
   `(IS_STRONG(W w) = F)  /\ (IS_STRONG(N w) = F)  /\ (IS_STRONG(S w) = T)`;
 
-val IS_LETTER_def =
- Define
-  `(IS_LETTER(N w) = ?l. w = [l])
+Definition IS_LETTER_def:
+   (IS_LETTER(N w) = ?l. w = [l])
    /\
    (IS_LETTER(W w) = ?l. w = [l])
    /\
-   (IS_LETTER(S w) = ?l. w = [l])`;
+   (IS_LETTER(S w) = ?l. w = [l])
+End
 
 (*****************************************************************************)
 (* WeakPSL Semantics of SEREs                                                *)
@@ -237,9 +228,8 @@ val IS_LETTER_def =
 #                     s.t. w=w_1w_2...w_j and for 1<=i<=j w_i|==wns r
 ######################################################################*)
 
-val WUS_SEM_def =
- Define
-  `(WUS_SEM v (S_BOOL b) =
+Definition WUS_SEM_def:
+   (WUS_SEM v (S_BOOL b) =
      (v = W[]) \/ (~(IS_STRONG v) /\ (LEN v = 1) /\ B_SEM (A_ELEM v 0) b))
    /\
    (WUS_SEM v (S_CAT(r1,r2)) =
@@ -259,7 +249,8 @@ val WUS_SEM_def =
    (WUS_SEM v S_EMPTY = (v = N[]) \/ (v = W[]))
    /\
    (WUS_SEM v (S_REPEAT r) =
-     ?vlist. (v = FOLDL $* (N[]) vlist) /\ EVERY (\v. WUS_SEM v r) vlist)`;
+     ?vlist. (v = FOLDL $* (N[]) vlist) /\ EVERY (\v. WUS_SEM v r) vlist)
+End
 
 (*****************************************************************************)
 (* We can now prove with fusion in the language                              *)
@@ -307,8 +298,9 @@ end;
 (*****************************************************************************)
 (* Weaken a word                                                             *)
 (*****************************************************************************)
-val WEAKEN_def =
- Define `(WEAKEN(N l) = W l) /\ (WEAKEN(W l) = W l) /\ (WEAKEN(S l) = S l)`;
+Definition WEAKEN_def:
+  (WEAKEN(N l) = W l) /\ (WEAKEN(W l) = W l) /\ (WEAKEN(S l) = S l)
+End
 
 val LEN_WEAKEN =
  prove
@@ -443,12 +435,12 @@ val PREFIX_REFL =
     THEN Q.EXISTS_TAC `N[]`
     THEN RW_TAC list_ss [CONC_def]);
 
-val APPEND_LEFT_CANCEL =
- store_thm
-  ("APPEND_LEFT_CANCEL",
-   ``(APPEND l l1 = APPEND l l2) = (l1 = l2)``,
+Theorem APPEND_LEFT_CANCEL:
+     (APPEND l l1 = APPEND l l2) = (l1 = l2)
+Proof
    Induct_on `l`
-    THEN ZAP_TAC list_ss []);
+    THEN ZAP_TAC list_ss []
+QED
 
 val PREFIX_CANCEL =
  prove
@@ -495,19 +487,19 @@ val FOLDL_N_NIL =
 (* Probably could get away with just the latter, but I'm too lazy to redo    *)
 (* the proofs!                                                               *)
 (*****************************************************************************)
-val WS_CATN_def =
- Define
-  `(WS_CATN 0 r = r) /\ (WS_CATN (SUC n) r = S_CAT(r, WS_CATN n r))`;
+Definition WS_CATN_def:
+   (WS_CATN 0 r = r) /\ (WS_CATN (SUC n) r = S_CAT(r, WS_CATN n r))
+End
 
 (*****************************************************************************)
 (* Theorem to connect WS_CATN and S_CATN in the LRM 1.1 semantics            *)
 (*****************************************************************************)
-val US_SEM_WS_CATN =
- store_thm
-  ("US_SEM_WS_CATN",
-   ``!n w r. US_SEM w (WS_CATN n r) = US_SEM w (S_CATN (SUC n) r)``,
+Theorem US_SEM_WS_CATN:
+     !n w r. US_SEM w (WS_CATN n r) = US_SEM w (S_CATN (SUC n) r)
+Proof
    Induct
-    THEN RW_TAC list_ss [US_SEM,WS_CATN_def,S_CATN_def]);
+    THEN RW_TAC list_ss [US_SEM,WS_CATN_def,S_CATN_def]
+QED
 
 val ASSOC_FOLDL =
  prove
@@ -520,10 +512,9 @@ val FOLDL_CONCAT_N =
   (``!vlist v. FOLDL $* v vlist = v * FOLDL $* (N []) vlist``,
    PROVE_TAC[ASSOC_FOLDL,ASSOC_CONC,CONC_IDENTITY]);
 
-val WUS_SEM_CAT_REPEAT_CATN =
- store_thm
-  ("WUS_SEM_CAT_REPEAT_CATN",
-   ``!v r. WUS_SEM v (S_CAT(S_REPEAT r, r)) = ?n. WUS_SEM v (WS_CATN n r)``,
+Theorem WUS_SEM_CAT_REPEAT_CATN:
+     !v r. WUS_SEM v (S_CAT(S_REPEAT r, r)) = ?n. WUS_SEM v (WS_CATN n r)
+Proof
    RW_TAC list_ss [WUS_SEM_def]
     THEN EQ_TAC
     THEN RW_TAC list_ss []
@@ -557,12 +548,13 @@ val WUS_SEM_CAT_REPEAT_CATN =
           THEN RW_TAC std_ss [CONC_ASSOC]
           THEN Q.EXISTS_TAC `v1::vlist`
           THEN RW_TAC list_ss [CONC_IDENTITY]
-          THEN PROVE_TAC[FOLDL_CONCAT_N]]]);
+          THEN PROVE_TAC[FOLDL_CONCAT_N]]]
+QED
 
-val FOLDLN_def =
- Define
-  `(FOLDLN 0 f e l = e) /\
-   (FOLDLN (SUC n) f e l = FOLDLN n f (f e (HD l)) (TL l))`;
+Definition FOLDLN_def:
+   (FOLDLN 0 f e l = e) /\
+   (FOLDLN (SUC n) f e l = FOLDLN n f (f e (HD l)) (TL l))
+End
 
 val FOLDLN_LENGTH =
  prove
@@ -594,12 +586,11 @@ val FOLDLN_CATN =
     THEN Q.EXISTS_TAC `FOLDLN m $* h l`
     THEN RW_TAC list_ss [FOLDLN_ASSOC]);
 
-val WUS_SEM_REPEAT_WS_CATN =
- store_thm
-  ("WUS_SEM_REPEAT_WS_CATN",
-   ``!v r. WUS_SEM v (S_REPEAT r) = (v = N[])
+Theorem WUS_SEM_REPEAT_WS_CATN:
+     !v r. WUS_SEM v (S_REPEAT r) = (v = N[])
            \/
-           ?n. WUS_SEM v (WS_CATN n r)``,
+           ?n. WUS_SEM v (WS_CATN n r)
+Proof
    RW_TAC list_ss []
     THEN EQ_TAC
     THENL
@@ -631,7 +622,8 @@ val WUS_SEM_REPEAT_WS_CATN =
              THEN RES_TAC
              THEN Q.EXISTS_TAC `v1::vlist`
              THEN RW_TAC list_ss [CONC_IDENTITY]
-             THEN PROVE_TAC[FOLDL_CONCAT_N]]]]);
+             THEN PROVE_TAC[FOLDL_CONCAT_N]]]]
+QED
 
 val NN_APPEND_PREFIX =
  prove
@@ -733,34 +725,34 @@ val TightPrefix_S_CAT =
           THEN RW_TAC std_ss []
           THEN RES_TAC]]);
 
-val CONC_WEAKEN =
- store_thm
-  ("CONC_WEAKEN",
-   ``!u v. WEAKEN u * v = WEAKEN u``,
+Theorem CONC_WEAKEN:
+     !u v. WEAKEN u * v = WEAKEN u
+Proof
    Cases_on `u`
-    THEN RW_TAC list_ss [CONC_def,WEAKEN_def]);
+    THEN RW_TAC list_ss [CONC_def,WEAKEN_def]
+QED
 
-val WEAKEN_CONC =
- store_thm
-  ("WEAKEN_CONC",
-   ``!v1 v2. WEAKEN(v1 * v2) = v1 * WEAKEN v2``,
+Theorem WEAKEN_CONC:
+     !v1 v2. WEAKEN(v1 * v2) = v1 * WEAKEN v2
+Proof
    REPEAT GEN_TAC
     THEN Cases_on `v1` THEN Cases_on `v2`
     THEN RW_TAC list_ss []
     THEN FULL_SIMP_TAC list_ss [WEAKEN_def]
-    THEN RW_TAC list_ss [CONC_def,WEAKEN_def]);
+    THEN RW_TAC list_ss [CONC_def,WEAKEN_def]
+QED
 
-val APPEND_NIL_CANCEL =
- store_thm
-  ("APPEND_NIL_CANCEL",
-   ``!l1 l2. (l1 = l1 ++ l2 ) = (l2 = [])``,
+Theorem APPEND_NIL_CANCEL:
+     !l1 l2. (l1 = l1 ++ l2 ) = (l2 = [])
+Proof
    RW_TAC list_ss []
     THEN EQ_TAC
     THEN RW_TAC list_ss []
     THEN `LENGTH l1 = LENGTH(l1 ++ l2)` by PROVE_TAC[]
     THEN FULL_SIMP_TAC list_ss []
     THEN `LENGTH l2 = 0` by DECIDE_TAC
-    THEN PROVE_TAC[LENGTH_NIL]);
+    THEN PROVE_TAC[LENGTH_NIL]
+QED
 
 (***********************************************************************
 * if w\in N and w finite and for some u,u', w*u=w*u' then u=u'
@@ -777,12 +769,12 @@ val APPEND_NIL_CANCEL =
 **       assumption.
 **
 ************************************************************************)
-val CONC_CANCEL =
- store_thm
-  ("CONC_CANCEL",
-   ``!w u u'. IS_NEUTRAL w ==> ((w * u = w * u') = (u = u'))``,
+Theorem CONC_CANCEL:
+     !w u u'. IS_NEUTRAL w ==> ((w * u = w * u') = (u = u'))
+Proof
    Cases_on `w` THEN Cases_on `u` THEN Cases_on `u'`
-    THEN FULL_SIMP_TAC list_ss [CONC_def,A_11,A_distinct,IS_NEUTRAL_def]);
+    THEN FULL_SIMP_TAC list_ss [CONC_def,A_11,A_distinct,IS_NEUTRAL_def]
+QED
 
 (***********************************************************************
 * For v,w in A if v<=w and w<=v then w=v (antisymmetry)
@@ -796,15 +788,15 @@ val CONC_CANCEL =
 **    if v \in W (\in S)
 **      then v*u1=v so v=w.
 ***********************************************************************)
-val PREFIX_ANTISYM =
- store_thm
-  ("PREFIX_ANTISYM",
-   ``!v w. PREFIX v w /\ PREFIX w v ==> (w = v)``,
+Theorem PREFIX_ANTISYM:
+     !v w. PREFIX v w /\ PREFIX w v ==> (w = v)
+Proof
    RW_TAC list_ss [PREFIX_def]
     THEN Cases_on `w` THEN Cases_on `u` THEN Cases_on `u'`
     THEN FULL_SIMP_TAC list_ss [CONC_def,A_distinct,A_11]
     THEN `l'' ++ l' = []` by PROVE_TAC[APPEND_NIL_CANCEL,APPEND_ASSOC]
-    THEN FULL_SIMP_TAC list_ss [APPEND_eq_NIL]);
+    THEN FULL_SIMP_TAC list_ss [APPEND_eq_NIL]
+QED
 
 (***********************************************************************
 * if l is a letter or \epsilon^- and v1*l*v2 \in A then
@@ -826,13 +818,12 @@ val PREFIX_ANTISYM =
 **    If v1 \in S U W. then v1*l=v1*l*v2=v1, by antisymmetry also u=v1
 **     let v2'=\epsilon then v1*l*v2'=u and l*v2'=l<=l*v2.
 ***********************************************************************)
-val PREFIX_FUSION_LEMMA =
- store_thm
-  ("PREFIX_FUSION_LEMMA",
-   ``!v1 v2 l.
+Theorem PREFIX_FUSION_LEMMA:
+     !v1 v2 l.
        PREFIX (v1 * l) u /\ PREFIX u (v1 * l * v2)
        ==>
-       ?v2'. (v1 * l * v2' = u) /\ PREFIX (l * v2') (l * v2)``,
+       ?v2'. (v1 * l * v2' = u) /\ PREFIX (l * v2') (l * v2)
+Proof
    RW_TAC list_ss []
     THEN Cases_on `IS_NEUTRAL v1`
     THEN FULL_SIMP_TAC list_ss [GSYM CONC_ASSOC,CONC_def]
@@ -850,7 +841,8 @@ val PREFIX_FUSION_LEMMA =
        THEN Cases_on `v2`
        THEN RW_TAC list_ss [CONC_def,CONC_CANCEL,IS_NEUTRAL_def]
        THEN Q.EXISTS_TAC `N[]`
-       THEN RW_TAC list_ss [CONC_def,CONC_CANCEL,IS_NEUTRAL_def]]);
+       THEN RW_TAC list_ss [CONC_def,CONC_CANCEL,IS_NEUTRAL_def]]
+QED
 
 val TightPrefix_S_FUSION =
  prove
@@ -910,10 +902,9 @@ val TightPrefix_WS_CATN =
     THEN RES_TAC
     THEN IMP_RES_TAC TightPrefix_S_CAT);
 
-val PREFIX_N_EMPTY =
- store_thm
-  ("PREFIX_N_EMPTY",
-   ``!w. PREFIX w (N[]) = (w = N[])``,
+Theorem PREFIX_N_EMPTY:
+     !w. PREFIX w (N[]) = (w = N[])
+Proof
    Cases_on `w`
     THEN RW_TAC list_ss [CONC_def,WEAKEN_def,PREFIX_def]
     THEN EQ_TAC
@@ -922,16 +913,17 @@ val PREFIX_N_EMPTY =
      [Cases_on `u`
        THEN FULL_SIMP_TAC list_ss [CONC_def,A_11,A_distinct],
       Q.EXISTS_TAC `N[]`
-       THEN RW_TAC list_ss [CONC_def]]);
+       THEN RW_TAC list_ss [CONC_def]]
+QED
 
-val PREFIX_W_EMPTY =
- store_thm
-  ("PREFIX_W_EMPTY",
-   ``!w. PREFIX w (W[]) ==> (WEAKEN w = W[])``,
+Theorem PREFIX_W_EMPTY:
+     !w. PREFIX w (W[]) ==> (WEAKEN w = W[])
+Proof
    Cases_on `w`
     THEN RW_TAC list_ss [CONC_def,WEAKEN_def,PREFIX_def]
     THEN Cases_on `u`
-    THEN FULL_SIMP_TAC list_ss [CONC_def,A_11,A_distinct]);
+    THEN FULL_SIMP_TAC list_ss [CONC_def,A_11,A_distinct]
+QED
 
 val TightPrefix_S_REPEAT =
  prove
@@ -993,12 +985,12 @@ val TightPrefix =
       (* S_CLOCK (r,c) *)
       RW_TAC std_ss [S_CLOCK_FREE_def]]);
 
-val NEUTRAL_CONC_EQ =
- store_thm
-  ("NEUTRAL_CONC_EQ",
-   ``!w v1 v2. (N w = v1 * v2) ==> ?w1 w2. (v1 = N w1) /\ (v2 = N w2)``,
+Theorem NEUTRAL_CONC_EQ:
+     !w v1 v2. (N w = v1 * v2) ==> ?w1 w2. (v1 = N w1) /\ (v2 = N w2)
+Proof
    Cases_on `v1` THEN Cases_on `v2`
-    THEN RW_TAC list_ss [CONC_def]);
+    THEN RW_TAC list_ss [CONC_def]
+QED
 
 
 val FOLDL_NW_FALSE =
@@ -1013,12 +1005,11 @@ val FOLDL_NS_FALSE =
    Induct_on `vlist`
     THEN RW_TAC list_ss [CONC_def]);
 
-val US_SEM_WUS_SEM_CATN =
- store_thm
-  ("US_SEM_WUS_SEM_CATN",
-   ``(!w. US_SEM w r = WUS_SEM (N w) r)
+Theorem US_SEM_WUS_SEM_CATN:
+     (!w. US_SEM w r = WUS_SEM (N w) r)
      ==>
-     !n w. US_SEM w (WS_CATN n r) = WUS_SEM (N w) (WS_CATN n r)``,
+     !n w. US_SEM w (WS_CATN n r) = WUS_SEM (N w) (WS_CATN n r)
+Proof
    DISCH_TAC
     THEN Induct
     THEN RW_TAC list_ss [WS_CATN_def,US_SEM,WUS_SEM_def]
@@ -1029,7 +1020,8 @@ val US_SEM_WUS_SEM_CATN =
        THEN PROVE_TAC[CONC_def],
       Cases_on `v1` THEN Cases_on `v2`
        THEN FULL_SIMP_TAC list_ss [CONC_def,A_11,A_distinct,TOP_FREE_APPEND]
-       THEN PROVE_TAC[]]);
+       THEN PROVE_TAC[]]
+QED
 
 (*****************************************************************************)
 (* Because this proof is tweaked from one for an earlier version with a      *)
@@ -1125,6 +1117,3 @@ val TightNeutralEquiv =
       (* S_CLOCK (r,c) *)
       RW_TAC std_ss [S_CLOCK_FREE_def]]);
 end;
-
-val _ = export_theory();
-

@@ -1,13 +1,15 @@
 (*
   Apply cv translator to standard theories list, pair, sptree, etc.
 *)
-open HolKernel Parse boolLib bossLib dep_rewrite;
-open cv_typeTheory cvTheory cv_typeLib cv_repLib;
-open arithmeticTheory wordsTheory cv_repTheory cv_primTheory cv_transLib;
-open pairTheory listTheory optionTheory sumTheory alistTheory indexedListsTheory;
-open rich_listTheory sptreeTheory finite_setTheory;
+Theory cv_std
+Ancestors
+  cv cv_type arithmetic words byte cv_rep cv_prim pair list option sum
+  alist indexedLists rich_list sptree finite_set
+Libs
+  dep_rewrite wordsLib cv_typeLib cv_repLib cv_transLib
 
-val _ = new_theory "cv_std";
+Overload Num[local] = “cv$Num”
+Overload Pair[local] = “cv$Pair”
 
 (*----------------------------------------------------------*
    pair
@@ -58,7 +60,7 @@ QED
 val res = cv_trans ISL;
 val res = cv_trans ISR;
 
-val res = cv_trans_pre OUTL;
+val res = cv_trans_pre "OUTL_pre" OUTL;
 
 Theorem OUTL_pre[cv_pre]:
   OUTL_pre x <=> ISL x
@@ -66,7 +68,7 @@ Proof
   Cases_on ‘x’ \\ fs [res]
 QED
 
-val res = cv_trans_pre OUTR;
+val res = cv_trans_pre "OUTR_pre" OUTR;
 
 Theorem OUTR_pre[cv_pre]:
   OUTR_pre x <=> ISR x
@@ -103,7 +105,7 @@ val res = cv_trans TAKE_def;
 
 val res = cv_trans DROP_def;
 
-val res = cv_trans_pre EL_def;
+val res = cv_trans_pre "EL_pre" EL_def;
 
 Theorem EL_pre[cv_pre]:
   !n xs. EL_pre n xs <=> n < LENGTH xs
@@ -126,7 +128,7 @@ Proof
   Cases_on ‘xs’ \\ gvs [FRONT_DEF]
 QED
 
-val res = cv_trans_pre FRONT;
+val res = cv_trans_pre "FRONT_pre" FRONT;
 
 Theorem FRONT_pre[cv_pre]:
   !xs. FRONT_pre xs <=> xs <> []
@@ -142,7 +144,7 @@ Proof
   Cases_on ‘xs’ \\ gvs [LAST_DEF]
 QED
 
-val res = cv_trans_pre LAST;
+val res = cv_trans_pre "LAST_pre" LAST;
 
 Theorem LAST_pre[cv_pre]:
   !xs. LAST_pre xs <=> xs <> []
@@ -170,13 +172,13 @@ Proof
   \\ Induct_on ‘xs’ \\ gvs [list_mem_def] \\ metis_tac []
 QED
 
-Triviality conj_eq_if:
+Theorem conj_eq_if[local]:
   x /\ y <=> if x then y else F
 Proof
   Cases_on ‘x’ \\ gvs []
 QED
 
-Triviality if_not:
+Theorem if_not[local]:
   (if ~b then x else y) = if b then y else x
 Proof
   Cases_on ‘b’ \\ gvs []
@@ -194,7 +196,7 @@ val res = cv_trans is_prefix;
 
 val res = cv_trans LUPDATE_DEF;
 
-Triviality index_of:
+Theorem index_of[local]:
   INDEX_OF x [] = NONE /\
   INDEX_OF x (y::ys) =
     if x = y then SOME 0 else
@@ -209,7 +211,13 @@ Proof
   \\ rename [‘_ = SOME y’] \\ PairCases_on ‘y’ \\ gvs []
 QED
 
-val res = cv_trans_pre index_of;
+val res = cv_trans_pre "INDEX_OF_pre" index_of;
+
+Theorem INDEX_OF_pre[cv_pre]:
+  ∀x y. INDEX_OF_pre x y
+Proof
+  Induct_on`y` \\ rw[Once res]
+QED
 
 Definition replicate_acc_def:
   replicate_acc n x acc =
@@ -249,6 +257,23 @@ Proof
 QED
 
 val res = cv_trans UNZIP_eq
+
+val lcp2_pre_def = cv_trans_pre "lcp2_pre" rich_listTheory.lcp2_thm;
+
+Theorem lcp2_pre[cv_pre]:
+  !xs ys. lcp2_pre xs ys
+Proof
+  Induct \\ rw[] \\ simp[Once lcp2_pre_def] \\
+  Cases_on `ys` \\ simp[Once lcp2_pre_def]
+QED
+
+val lcp_pre_def = cv_trans_pre "lcp_pre" rich_listTheory.lcp_oneline;
+
+Theorem lcp_pre[cv_pre]:
+  lcp_pre ls
+Proof
+  completeInduct_on `LENGTH ls` \\ rw[Once lcp_pre_def]
+QED
 
 Definition genlist_def:
   genlist i f 0 = [] /\
@@ -378,7 +403,7 @@ val toAList_foldi_eq = sptreeTheory.foldi_def
                   |> LIST_CONJ |> REWRITE_RULE [GSYM toAList_foldi_def]
                   |> SIMP_RULE std_ss [];
 
-val res = cv_trans_pre toAList_foldi_eq;
+val res = cv_trans_pre "toAList_foldi_pre" toAList_foldi_eq;
 
 Theorem toAList_foldi_pre[cv_pre]:
   !a0 a1 a2. toAList_foldi_pre a0 a1 a2
@@ -444,6 +469,40 @@ Proof
   \\ dep_rewrite.DEP_REWRITE_TAC [sptreeTheory.spt_eq_thm,sptreeTheory.wf_insert]
   \\ gvs [wf_fromAList,lookup_insert,lookup_fromAList,finite_mapTheory.FLOOKUP_SIMP]
   \\ rw []
+QED
+
+val FUPDATE_LIST_pre_def = finite_mapTheory.FUPDATE_LIST_THM
+ |> SRULE [FORALL_PROD]
+ |> INST_TYPE [alpha |-> “:num”]
+ |> cv_auto_trans_pre "FUPDATE_LIST_pre";
+
+Theorem FUPDATE_LIST_pre[cv_pre]:
+  ∀f ls. FUPDATE_LIST_pre f ls
+Proof
+  Induct_on`ls`
+  \\ rw[Once FUPDATE_LIST_pre_def]
+QED
+
+Theorem cv_rep_DOMSUB[cv_rep]:
+  from_fmap f (m \\ k) = cv_delete (Num k) (from_fmap f m)
+Proof
+  rw[from_fmap_def, GSYM (theorem "cv_delete_thm")]
+  \\ AP_TERM_TAC
+  \\ DEP_REWRITE_TAC[sptreeTheory.spt_eq_thm]
+  \\ rw[sptreeTheory.wf_fromAList, sptreeTheory.wf_delete]
+  \\ rw[sptreeTheory.lookup_delete, sptreeTheory.lookup_fromAList]
+  \\ rw[finite_mapTheory.DOMSUB_FLOOKUP_THM]
+QED
+
+Theorem cv_rep_FUNION[cv_rep]:
+  from_fmap f (FUNION m1 m2) = cv_union (from_fmap f m1) (from_fmap f m2)
+Proof
+  rw[from_fmap_def, GSYM (theorem "cv_union_thm")]
+  \\ AP_TERM_TAC
+  \\ DEP_REWRITE_TAC[sptreeTheory.spt_eq_thm]
+  \\ simp[sptreeTheory.wf_union, sptreeTheory.wf_fromAList]
+  \\ simp[sptreeTheory.lookup_union, sptreeTheory.lookup_fromAList]
+  \\ simp[finite_mapTheory.FLOOKUP_FUNION]
 QED
 
 (*----------------------------------------------------------*
@@ -538,4 +597,178 @@ QED
 
 val _ = cv_trans v2n_custom_def;
 
-val _ = export_theory();
+(*----------------------------------------------------------*
+   Help for manual termination proofs
+ *----------------------------------------------------------*)
+
+val cv_size'_def = theorem "cv_size'_def";
+val cv_mk_BN_def = definition "cv_mk_BN_def";
+val cv_mk_BS_def = definition "cv_mk_BS_def";
+
+Theorem cv_size'_Num[simp]:
+  cv_size' (Num m) = Num 0
+Proof
+  rw[Once cv_size'_def]
+QED
+
+Theorem cv_size'_cv_mk_BN[simp]:
+  cv_size' (cv_mk_BN x y) =
+  cv_add (cv_size' x) (cv_size' y)
+Proof
+  rw[cv_mk_BN_def]
+  \\ TRY (
+    rw[Once cv_size'_def]
+    \\ rw[Once cv_size'_def]
+    \\ Cases_on`x` \\ gs[]
+    \\ rw[Once cv_size'_def, SimpRHS]
+    \\ NO_TAC)
+  \\ rw[Once cv_size'_def]
+  \\ rw[Once cv_size'_def]
+  \\ Cases_on`y` \\ gs[]
+  \\ rw[Once cv_size'_def]
+  \\ rw[Once cv_size'_def]
+QED
+
+Theorem cv_size'_cv_mk_BS[simp]:
+  cv_size' (cv_mk_BS x y z) =
+  cv_add (cv_add (cv_size' x) (cv_size' z)) (Num 1)
+Proof
+  rw[cv_mk_BS_def]
+  \\ rw[Q.SPEC`Pair x y`cv_size'_def]
+  \\ Cases_on`x` \\ Cases_on`z` \\ gvs[]
+  \\ gvs[Q.SPEC`Pair x y`cv_size'_def]
+QED
+
+(*----------------------------------------------------------*
+   byte: word_of_bytes / word_to_bytes
+ *----------------------------------------------------------*)
+
+val _ = cv_trans num_of_bytes_def;
+val _ = cv_trans bytes_of_num_def;
+val _ = cv_trans be_bytes_def;
+
+(* Theorem connecting word_of_bytes (little-endian, starting at 0w) to num_of_bytes.
+   This can be instantiated at any word type and then cv_trans'd. *)
+Theorem word_of_bytes_le_eq_num_of_bytes:
+  8 ≤ dimindex(:'a) ∧ divides 8 (dimindex(:'a)) ⇒
+  word_of_bytes_le bs = n2w (num_of_bytes bs) : 'a word
+Proof
+  rewrite_tac[word_of_bytes_le_def] \\ strip_tac
+  \\ drule_then (drule_then irule) word_eq_of_get_byte
+  \\ qexists_tac `F`
+  \\ qx_gen_tac `j` \\ strip_tac
+  \\ drule_then drule get_byte_word_of_bytes_le
+  \\ simp[] \\ disch_then kall_tac
+  \\ DEP_REWRITE_TAC[first_byte_at_0w]
+  \\ conj_tac >- gvs[DIV_LE_X,dimindex_lt_dimword]
+  \\ DEP_REWRITE_TAC[get_byte_n2w_le]
+  \\ simp[]
+  \\ qmatch_assum_abbrev_tac`j < k`
+  \\ `dimword(:'a) = 256 ** k`
+  by (simp[dimword_def] \\ gvs[dividesTheory.DIV_MULT_EQ]
+      \\ qpat_x_assum`_ * _ = _`(SUBST_ALL_TAC o SYM)
+      \\ simp[EXP_EXP_MULT] )
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac`x MOD _ DIV _`
+  \\ qspecl_then[`x`,`256 ** j`,`256 ** (k - j)`]mp_tac DIV_MOD_MOD_DIV
+  \\ impl_tac >- rw[]
+  \\ simp[GSYM EXP_ADD]
+  \\ disch_then $ SUBST_ALL_TAC o SYM
+  \\ qmatch_goalsub_abbrev_tac`l = _`
+  \\ Cases_on`l` \\ simp[dimword_8]
+  \\ qspecl_then[`256 ** (k - j - 1)`,`256`]mp_tac MOD_MULT_MOD
+  \\ impl_tac >- gvs[]
+  \\ simp[GSYM EXP, ADD1]
+  \\ disch_then kall_tac
+  \\ simp[Abbr`x`, num_of_bytes_DIV_EXP_MOD]
+  \\ rw[] \\ gvs[]
+QED
+
+(* Theorem connecting word_of_bytes (big-endian, starting at 0w) to num_of_bytes via be_bytes *)
+Theorem word_of_bytes_be_eq_num_of_bytes:
+  8 ≤ dimindex(:'a) ∧ divides 8 (dimindex (:'a)) ⇒
+  word_of_bytes_be bs =
+    n2w (num_of_bytes (be_bytes (dimindex(:'a) DIV 8) [] bs)) : 'a word
+Proof
+  rewrite_tac[word_of_bytes_be_def] \\ strip_tac
+  \\ drule_then (drule_then irule) word_eq_of_get_byte
+  \\ qexists_tac `T`
+  \\ qx_gen_tac `j` \\ strip_tac
+  \\ drule_then drule get_byte_word_of_bytes_be
+  \\ simp[] \\ disch_then kall_tac
+  \\ DEP_REWRITE_TAC[first_byte_at_0w]
+  \\ qmatch_assum_abbrev_tac `j < k`
+  \\ conj_tac >- gvs[DIV_LE_X, dimindex_lt_dimword, Abbr`k`]
+  \\ DEP_REWRITE_TAC[get_byte_n2w_be]
+  \\ simp[LENGTH_be_bytes]
+  \\ `dimword(:'a) = 256 ** k`
+  by (simp[dimword_def] \\ gvs[dividesTheory.DIV_MULT_EQ]
+      \\ qpat_x_assum`_ * _ = _`(SUBST_ALL_TAC o SYM)
+      \\ simp[EXP_EXP_MULT] )
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac `x MOD _ DIV _`
+  \\ qspecl_then[`x`,`256 ** (k - 1 - j)`,`256 ** (j + 1)`]mp_tac DIV_MOD_MOD_DIV
+  \\ impl_tac >- rw[]
+  \\ simp[GSYM EXP_ADD]
+  \\ disch_then $ SUBST_ALL_TAC o SYM
+  \\ qmatch_goalsub_abbrev_tac `l = _`
+  \\ Cases_on `l` \\ simp[dimword_8]
+  \\ qspecl_then[`256 ** j`,`256`]mp_tac MOD_MULT_MOD
+  \\ impl_tac >- gvs[]
+  \\ simp[GSYM EXP, ADD1]
+  \\ disch_then kall_tac
+  \\ simp[Abbr`x`, num_of_bytes_DIV_EXP_MOD, LENGTH_be_bytes]
+  \\ simp[be_bytes_thm, EL_REVERSE, LENGTH_TAKE_EQ, EL_TAKE, EL_APPEND_EQN, EL_REPLICATE]
+  \\ rw[] \\ gvs[PRE_SUB1]
+QED
+
+(* Theorem connecting word_to_bytes (little-endian) to bytes_of_num.
+   No precondition needed since output length is fixed by dimindex. *)
+Theorem word_to_bytes_le_eq_bytes_of_num:
+  word_to_bytes_le (w:'a word) = bytes_of_num (dimindex(:'a) DIV 8) (w2n w)
+Proof
+  rewrite_tac[word_to_bytes_le_def] \\
+  reverse $ Cases_on`8 ≤ dimindex(:'a)` >- (
+    gvs[GSYM DIV_EQ_0, NOT_LESS_EQUAL]
+    \\ rw[bytes_of_num_def, word_to_bytes_def, word_to_bytes_aux_def])
+  \\ rw[word_to_bytes_def, LIST_EQ_REWRITE]
+  \\ rw[EL_bytes_of_num, EL_word_to_bytes_aux]
+  \\ rw[get_byte_n2w_le]
+QED
+
+(* Theorem connecting word_to_bytes (big-endian) to bytes_of_num.
+   No precondition needed since output length is fixed by dimindex. *)
+Theorem word_to_bytes_be_eq_bytes_of_num:
+  word_to_bytes_be (w:'a word) =
+    REVERSE (bytes_of_num (dimindex(:'a) DIV 8) (w2n w))
+Proof
+  rewrite_tac[word_to_bytes_be_def] \\
+  reverse $ Cases_on`8 ≤ dimindex(:'a)` >- (
+    gvs[GSYM DIV_EQ_0, NOT_LESS_EQUAL]
+    \\ rw[bytes_of_num_def, word_to_bytes_def, word_to_bytes_aux_def])
+  \\ rw[word_to_bytes_def, LIST_EQ_REWRITE, EL_REVERSE, PRE_SUB1]
+  \\ rw[EL_bytes_of_num, EL_word_to_bytes_aux]
+  \\ rw[get_byte_n2w_be]
+QED
+
+(* Translate at common word sizes: 32 and 64 bits *)
+val () = cv_trans (word_of_bytes_le_eq_num_of_bytes
+                   |> INST_TYPE [alpha |-> “:32”]
+                   |> SRULE[dividesTheory.compute_divides]);
+val () = cv_trans (word_of_bytes_le_eq_num_of_bytes
+                   |> INST_TYPE [alpha |-> “:64”]
+                   |> SRULE[dividesTheory.compute_divides]);
+val () = cv_trans (word_of_bytes_be_eq_num_of_bytes
+                   |> INST_TYPE [alpha |-> “:32”]
+                   |> SRULE[dividesTheory.compute_divides]);
+val () = cv_trans (word_of_bytes_be_eq_num_of_bytes
+                   |> INST_TYPE [alpha |-> “:64”]
+                   |> SRULE[dividesTheory.compute_divides]);
+val () = cv_trans (word_to_bytes_le_eq_bytes_of_num
+                   |> INST_TYPE [alpha |-> “:32”]);
+val () = cv_trans (word_to_bytes_le_eq_bytes_of_num
+                   |> INST_TYPE [alpha |-> “:64”]);
+val () = cv_trans (word_to_bytes_be_eq_bytes_of_num
+                   |> INST_TYPE [alpha |-> “:32”]);
+val () = cv_trans (word_to_bytes_be_eq_bytes_of_num
+                   |> INST_TYPE [alpha |-> “:64”])

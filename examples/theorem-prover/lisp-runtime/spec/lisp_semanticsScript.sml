@@ -1,9 +1,7 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_semantics";
-
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open optionTheory arithmeticTheory relationTheory;
-
-open lisp_sexpTheory lisp_parseTheory;
+Theory lisp_semantics
+Ancestors
+  string finite_map pred_set list sum option arithmetic relation
+  lisp_sexp lisp_parse
 
 infix \\
 val op \\ = op THEN;
@@ -11,24 +9,26 @@ val op \\ = op THEN;
 
 (* abstract syntax of well-formed Lisp prorams *)
 
-val _ = Hol_datatype `
-  func = PrimitiveFun of lisp_primitive_op
-       | Define | Print | Error | Funcall | Fun of string`;
+Datatype:
+  func = PrimitiveFun lisp_primitive_op
+       | Define | Print | Error | Funcall | Fun string
+End
 
-val _ = Hol_datatype `
-  term = Const of SExp
-       | Var of string
-       | App of func => term list
-       | If of term => term => term
-       | LamApp of string list => term => term list
+Datatype:
+  term = Const SExp
+       | Var string
+       | App func (term list)
+       | If term term term
+       | LamApp (string list) term (term list)
        (* only macros below *)
-       | Let of (string # term) list => term
-       | LetStar of (string # term) list => term
-       | Cond of (term # term) list
-       | Or of term list | And of term list
-       | First of term | Second of term | Third of term
-       | Fourth of term | Fifth of term | List of term list
-       | Defun of string => string list => SExp`;
+       | Let ((string # term) list) term
+       | LetStar ((string # term) list) term
+       | Cond ((term # term) list)
+       | Or (term list) | And (term list)
+       | First term | Second term | Third term
+       | Fourth term | Fifth term | List (term list)
+       | Defun string (string list) SExp
+End
 
 val term_11 = fetch "-" "term_11";
 val term_distinct = fetch "-" "term_distinct";
@@ -38,11 +38,12 @@ val func_11 = fetch "-" "func_11";
 
 (* reading a program, i.e. term, from an s-expression -- sexp2term *)
 
-val list2sexp_def = Define `
+Definition list2sexp_def:
   (list2sexp [] = Sym "NIL") /\
-  (list2sexp (x::xs) = Dot x (list2sexp xs))`;
+  (list2sexp (x::xs) = Dot x (list2sexp xs))
+End
 
-val sym2prim_def = Define `
+Definition sym2prim_def:
   sym2prim s =
     if s = "CONS" then SOME opCONS else
     if s = "EQUAL" then SOME opEQUAL else
@@ -54,12 +55,14 @@ val sym2prim_def = Define `
     if s = "NATP" then SOME opNATP else
     if s = "SYMBOLP" then SOME opSYMBOLP else
     if s = "CAR" then SOME opCAR else
-    if s = "CDR" then SOME opCDR else NONE`;
+    if s = "CDR" then SOME opCDR else NONE
+End
 
-val sexp2list_def = Define `
+Definition sexp2list_def:
   (sexp2list (Val n) = []) /\
   (sexp2list (Sym s) = []) /\
-  (sexp2list (Dot x y) = x::sexp2list y)`;
+  (sexp2list (Dot x y) = x::sexp2list y)
+End
 
 val IMP_isDot = prove(
   ``!x. ~isVal x /\ ~isSym x ==> isDot x``,
@@ -141,7 +144,7 @@ val sexp2term_def = tDefine "sexp2term" `
 
 (* a structural operational semantics *)
 
-val EVAL_DATA_OP_def = Define `
+Definition EVAL_DATA_OP_def:
   (EVAL_DATA_OP opCONS = ((\xs. LISP_CONS (EL 0 xs) (EL 1 xs)), 2)) /\
   (EVAL_DATA_OP opEQUAL = ((\xs. LISP_EQUAL (EL 0 xs) (EL 1 xs)), 2)) /\
   (EVAL_DATA_OP opLESS = ((\xs. LISP_LESS (EL 0 xs) (EL 1 xs)), 2)) /\
@@ -152,18 +155,22 @@ val EVAL_DATA_OP_def = Define `
   (EVAL_DATA_OP opNATP = ((\xs. LISP_NUMBERP (EL 0 xs)), 1)) /\
   (EVAL_DATA_OP opSYMBOLP = ((\xs. LISP_SYMBOLP (EL 0 xs)), 1)) /\
   (EVAL_DATA_OP opCAR = ((\xs. CAR (EL 0 xs)), 1)) /\
-  (EVAL_DATA_OP opCDR = ((\xs. CDR (EL 0 xs)), (1:num)))`;
+  (EVAL_DATA_OP opCDR = ((\xs. CDR (EL 0 xs)), (1:num)))
+End
 
-val VarBindAux_def = Define `
+Definition VarBindAux_def:
   (VarBindAux [] args = FEMPTY) /\
   (VarBindAux (p::ps) [] = FEMPTY) /\
-  (VarBindAux (p::ps) (a::as) = (VarBindAux ps as) |+ (p,a))`;
+  (VarBindAux (p::ps) (a::as) = (VarBindAux ps as) |+ (p,a))
+End
 
-val VarBind_def = Define `
-  VarBind params args = VarBindAux (REVERSE params) (REVERSE args)`;
+Definition VarBind_def:
+  VarBind params args = VarBindAux (REVERSE params) (REVERSE args)
+End
 
-val add_def_def = Define `
-  add_def fns x = FUNION fns (FEMPTY |+ x)`;
+Definition add_def_def:
+  add_def fns x = FUNION fns (FEMPTY |+ x)
+End
 
 val (R_ev_rules,R_ev_ind,R_ev_cases) = Hol_reln `
  (!s a fns io ok.
@@ -370,20 +377,26 @@ val R_ev_T_11_lemma = prove(
   \\ RES_TAC \\ FULL_SIMP_TAC std_ss [])
   |> SIMP_RULE std_ss [pairTheory.FORALL_PROD,PULL_FORALL_IMP];
 
-val R_ev_T_11 = store_thm("R_ev_T_11",
-  ``!x y. R_ev x (res,k,io,T) /\ R_ev x y ==> (y = (res,k,io,T))``,
+Theorem R_ev_T_11:
+    !x y. R_ev x (res,k,io,T) /\ R_ev x y ==> (y = (res,k,io,T))
+Proof
   FULL_SIMP_TAC std_ss [pairTheory.FORALL_PROD] \\ REPEAT STRIP_TAC
-  \\ IMP_RES_TAC R_ev_T_11_lemma \\ FULL_SIMP_TAC std_ss []);
+  \\ IMP_RES_TAC R_ev_T_11_lemma \\ FULL_SIMP_TAC std_ss []
+QED
 
-val R_ap_T_11 = store_thm("R_ap_T_11",
-  ``!x y. R_ap x (res,k,io,T) /\ R_ap x y ==> (y = (res,k,io,T))``,
+Theorem R_ap_T_11:
+    !x y. R_ap x (res,k,io,T) /\ R_ap x y ==> (y = (res,k,io,T))
+Proof
   FULL_SIMP_TAC std_ss [pairTheory.FORALL_PROD] \\ REPEAT STRIP_TAC
-  \\ IMP_RES_TAC R_ev_T_11_lemma \\ FULL_SIMP_TAC std_ss []);
+  \\ IMP_RES_TAC R_ev_T_11_lemma \\ FULL_SIMP_TAC std_ss []
+QED
 
-val R_ap_F_11 = store_thm("R_ap_F_11",
-  ``R_ap x (res,k,io,F) /\ R_ap x (res2,k2,io2,b) ==> ~b``,
+Theorem R_ap_F_11:
+    R_ap x (res,k,io,F) /\ R_ap x (res2,k2,io2,b) ==> ~b
+Proof
   REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ IMP_RES_TAC R_ap_T_11 \\ FULL_SIMP_TAC std_ss []);
+  \\ IMP_RES_TAC R_ap_T_11 \\ FULL_SIMP_TAC std_ss []
+QED
 
 Theorem R_ev_T_cases:
   (R_ev (x,env,k,io,ok) (r,k',io',T) ⇔
@@ -395,6 +408,3 @@ Theorem R_ev_T_cases:
 Proof REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
       \\ IMP_RES_TAC R_ev_OK \\ FULL_SIMP_TAC std_ss []
 QED
-
-
-val _ = export_theory();

@@ -16,7 +16,7 @@
 quietdec := true;                             (* suppress printing of output *)
 loadPath := "../ml" :: !loadPath;             (* add acl2/ml to load path    *)
 map                                           (* load infrastructure         *)
- load 
+ load
  ["sexp",
   "sexpTheory",
   "basic_defaxiomsTheory"];
@@ -70,18 +70,18 @@ use "example_axioms.lisp.ml";
 val [CAR_CDR_ELIM,CAR_CONS,CDR_CONS,CONS_EQUAL,BOOLEAN_CHARACTERP,
      ZERO,COMMUTATIVITY_OF_BINARY_ADD,DISTRIBUTIVITY,TRICHOTOMY,
      RATIONAL_IMPLIES2,LOWEST_TERMS,
-     COMPLETION_OF_SYMBOL_NAME, DEFAULT_SYMBOL_NAME, 
+     COMPLETION_OF_SYMBOL_NAME, DEFAULT_SYMBOL_NAME,
      COMPLETION_OF_SYMBOL_PACKAGE_NAME,
      INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME,
      SYMBOL_PACKAGE_NAME_PKG_WITNESS_NAME,NIL_IS_NOT_CIRCULAR,
-     COMPLETION_OF_BINARY_MULT] = 
- map 
-  (clean_acl2_term o #3 o def_to_term) 
+     COMPLETION_OF_BINARY_MULT] =
+ map
+  (clean_acl2_term o #3 o def_to_term)
   (!sexp.acl2_list_ref);
 
 (*
- map 
-  ((fn(x,y,z) => (x,y,clean_acl2_term z)) o def_to_term) 
+ map
+  ((fn(x,y,z) => (x,y,clean_acl2_term z)) o def_to_term)
   (!sexp.acl2_list_ref);
 
  map mk_def (!sexp.acl2_list_ref);
@@ -164,7 +164,7 @@ val DISTRIBUTIVITY_AX =
            ratTheory.RAT_SUB_LDISTRIB, ratTheory.RAT_SUB_RDISTRIB,
            ratTheory.RAT_LDISTRIB, ratTheory.RAT_RDISTRIB,
            complex_rationalTheory.complex_rational_11]
-    THEN METIS_TAC 
+    THEN METIS_TAC
           [ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_ADD_COMM,
            ratTheory.RAT_RSUB_EQ,ratTheory.RAT_LSUB_EQ,
            ratTheory.RAT_MUL_LZERO, ratTheory.RAT_MUL_RZERO]);
@@ -173,10 +173,10 @@ val TRICHOTOMY_AX =
  time store_thm
   ("TRICHOTOMY_AX",
    ``|= ^TRICHOTOMY``,
-   Cases_on `x` 
+   Cases_on `x`
     THEN ACL2_SIMP_TAC
           [rat_0,int_def,cpx_def,ratTheory.RAT_0,ratTheory.RAT_LES_REF]
-    THEN Cases_on `c` 
+    THEN Cases_on `c`
     THEN FULL_SIMP_TAC arith_ss (!acl2_simps)
 
     THEN FULL_SIMP_TAC arith_ss
@@ -188,7 +188,7 @@ val TRICHOTOMY_AX =
            ratTheory.RAT_SUB_LDISTRIB, ratTheory.RAT_SUB_RDISTRIB,
            ratTheory.RAT_LDISTRIB, ratTheory.RAT_RDISTRIB,
            complex_rationalTheory.complex_rational_11]
-    THEN METIS_TAC 
+    THEN METIS_TAC
           [ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_ADD_COMM,
            ratTheory.RAT_RSUB_EQ,ratTheory.RAT_LSUB_EQ,
            ratTheory.RAT_MUL_LZERO, ratTheory.RAT_MUL_RZERO]);
@@ -197,9 +197,9 @@ val RATIONAL_IMPLIES2_AX =
  time store_thm
   ("RATIONAL_IMPLIES2_AX",
    ``|= ^RATIONAL_IMPLIES2``,
-   Cases_on `x` 
+   Cases_on `x`
     THEN ACL2_SIMP_TAC[]
-    THEN Cases_on `c` 
+    THEN Cases_on `c`
     THEN FULL_SIMP_TAC arith_ss (!acl2_simps)
     THEN Cases_on `r0 = rat_0`
     THEN RW_TAC arith_ss []
@@ -213,7 +213,7 @@ val COMPLETION_OF_SYMBOL_NAME =
  time store_thm
   ("COMPLETION_OF_SYMBOL_NAME",
    ``|= ^COMPLETION_OF_SYMBOL_NAME``,
-   Cases_on `x` 
+   Cases_on `x`
     THEN ACL2_SIMP_TAC[]);
 
 val implies =
@@ -240,7 +240,7 @@ val DEFAULT_SYMBOL_NAME =
   ("DEFAULT_SYMBOL_NAME",
    ``|= ^DEFAULT_SYMBOL_NAME``,
    RW_TAC std_ss [implies,not]
-   Cases_on `x` 
+   Cases_on `x`
     THEN ACL2_SIMP_TAC[]
     THEN Cases_on `s = ""`
     THEN ACL2_SIMP_TAC[]
@@ -250,9 +250,9 @@ val COMPLETION_OF_SYMBOL_PACKAGE_NAME =
  time store_thm
   ("COMPLETION_OF_SYMBOL_PACKAGE_NAME",
    ``|= ^COMPLETION_OF_SYMBOL_PACKAGE_NAME``,
-   Cases_on `x` 
+   Cases_on `x`
     THEN SIMP_TAC std_ss [symbol_name_def,symbolp_def]
-    THEN SIMP_TAC std_ss [GSYM symbolp_def]
+    THEN SIMP_TAC std_ss [GSYM symbolp_def]);
 
 (*
    Should I try to prove:
@@ -323,14 +323,13 @@ val INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME_AX =
    ``|= ^INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME ``,
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC[]
-    THEN Cases_on `BASIC_INTERN s0 s = sym s s0` 
+    THEN Cases_on `BASIC_INTERN s0 s = sym s s0`
     THEN RW_TAC std_ss []
     THENL
      [POP_ASSUM(fn th => FULL_SIMP_TAC std_ss [th,sexp_11,T_NIL])
        THEN Cases_on `y`
-       THEN FULL_SIMP_TAC arith_ss (sexp_11::(!acl2_simps))
+       THEN FULL_SIMP_TAC arith_ss (sexp_11::(!acl2_simps))]);
 
-*)
 
 (*
 val _ = export_acl2_theory();

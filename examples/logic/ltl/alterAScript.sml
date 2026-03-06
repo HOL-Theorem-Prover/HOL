@@ -1,43 +1,47 @@
-open HolKernel Parse boolLib bossLib pred_setTheory arithmeticTheory relationTheory set_relationTheory pairTheory
+Theory alterA
+Ancestors
+  pred_set arithmetic relation set_relation pair generalHelpers
+  word
 
-open generalHelpersTheory wordTheory
-
-val _ = new_theory "alterA"
 val _ = ParseExtras.temp_loose_equality()
 
-val _ = Datatype
-  `ALTER_A = <| states      : 's set;
+Datatype:
+   ALTER_A = <| states      : 's set;
                alphabet     : 'a set;
                trans        : 's -> (('a set # 's set) set);
                initial      : ('s set) set;
                final        : 's set
-               |>`;
+               |>
+End
 
-val isValidAlterA_def =
-    Define `isValidAlterA (A: ('s,'a) ALTER_A) =
+Definition isValidAlterA_def:
+     isValidAlterA (A: ('s,'a) ALTER_A) =
              (A.initial ⊆ POW A.states)
           /\ (A.final ⊆ A.states)
           /\ (!s a d. (s ∈ A.states) /\ ((a, d) ∈ (A.trans s))
-                 ==> (d ⊆ A.states ∧ a ⊆ A.alphabet))`;
+                 ==> (d ⊆ A.states ∧ a ⊆ A.alphabet))
+End
 
 (* An alternating automata is very weak if there is a partial order po on
    the states s.t. for every state s all states appearing in trans(s)
    are lower or equal to s
 *)
 
-val isVeryWeakWithOrder_def = Define
-   `isVeryWeakWithOrder A ord =
+Definition isVeryWeakWithOrder_def:
+    isVeryWeakWithOrder A ord =
       partial_order ord A.states
       /\ !s a d. (s ∈ A.states) /\ ((a,d) ∈ (A.trans s))
-                   ==> (!s'. (s' ∈ d) ==> ((s',s) ∈ ord))`;
+                   ==> (!s'. (s' ∈ d) ==> ((s',s) ∈ ord))
+End
 
-val isVeryWeakAlterA_def =
-    Define `isVeryWeakAlterA A = ?ord. isVeryWeakWithOrder A ord`;
+Definition isVeryWeakAlterA_def:
+     isVeryWeakAlterA A = ?ord. isVeryWeakWithOrder A ord
+End
 
-val FINITE_LEMM = store_thm
-  ("FINITE_LEMM",
-  ``!aut. FINITE aut.alphabet ∧ FINITE aut.states ∧ isValidAlterA aut
-       ==> (!q. q ∈ aut.states ==> FINITE (aut.trans q))``,
+Theorem FINITE_LEMM:
+    !aut. FINITE aut.alphabet ∧ FINITE aut.states ∧ isValidAlterA aut
+       ==> (!q. q ∈ aut.states ==> FINITE (aut.trans q))
+Proof
   rpt strip_tac
   >> `aut.trans q ⊆ ((POW aut.alphabet) × (POW aut.states))` by (
       fs[isValidAlterA_def] >> simp[SUBSET_DEF] >> rpt strip_tac
@@ -45,106 +49,114 @@ val FINITE_LEMM = store_thm
         >- (Cases_on `x` >> metis_tac[IN_POW,SND])
   )
   >> metis_tac[FINITE_CROSS, FINITE_POW,PSUBSET_DEF,PSUBSET_FINITE]
-  );
+QED
 
 (*
    RUNs over the alternating automaton
 *)
 
-val _ = Hol_datatype
-   `ALTERA_RUN = <| V : num -> 's set;
+Datatype:
+    ALTERA_RUN = <| V : num -> 's set;
                     E : (num # 's) -> 's set
-                                         |>`;
+                                         |>
+End
 
 (*
   validity condition for runs over a given word
 *)
 
-val validAARunFor_def = Define
-`validAARunFor aut run word =
+Definition validAARunFor_def:
+ validAARunFor aut run word =
              (run.V 0 ∈ aut.initial)
              /\ (!i. run.V i ⊆ aut.states)
              /\ (!i q. (q ∈ run.V i)
                            ==> ?a. (a,run.E (i,q)) ∈ aut.trans q /\ (at word i ∈ a))
              /\ (!i q. run.E (i,q) ⊆ run.V (i+1))
              /\ (!i q. (q ∈ run.V i)
-                    ==> ((i = 0) \/ ?q'. (q ∈ run.E (i-1,q')) /\ (q' ∈ run.V (i-1))))`;
+                    ==> ((i = 0) \/ ?q'. (q ∈ run.E (i-1,q')) /\ (q' ∈ run.V (i-1))))
+End
 
 
 (*
   infinite branches of the run
 *)
 
-val infBranchOf_def = Define
-  `infBranchOf run b = (b 0 ∈ run.V 0) /\ !i. (b (i+1) ∈ run.E (i, b i))`;
+Definition infBranchOf_def:
+   infBranchOf run b = (b 0 ∈ run.V 0) /\ !i. (b (i+1) ∈ run.E (i, b i))
+End
 
-val branchFixP_def = Define
-`branchFixP b x = ?i. (b i = x) /\ !m. (m >= i) ==> (b m = x)`;
+Definition branchFixP_def:
+ branchFixP b x = ?i. (b i = x) /\ !m. (m >= i) ==> (b m = x)
+End
 
-val branchRange_def = Define
-`branchRange b = { x | ?i. b i = x }`
+Definition branchRange_def:
+ branchRange b = { x | ?i. b i = x }
+End
 
-val BRANCH_V_LEMM = store_thm
-  ("BRANCH_V_LEMM",
-  ``!run b aut w. validAARunFor aut run w /\ infBranchOf run b
-        ==> !i. (b i ∈ run.V i)``,
+Theorem BRANCH_V_LEMM:
+    !run b aut w. validAARunFor aut run w /\ infBranchOf run b
+        ==> !i. (b i ∈ run.V i)
+Proof
    rpt gen_tac >> strip_tac >> Induct_on `i` >> fs[infBranchOf_def]
    >> `SUC i = (i+1)` by simp[]
    >> `b (i+1) ∈ run.E (i, b i)` by metis_tac[]
    >> fs[validAARunFor_def]
    >> `run.E (i, b i) ⊆ run.V (i+1)` by metis_tac[]
    >> `SUC i = (i+1)` by simp[] >> metis_tac[SUBSET_DEF]
-  );
+QED
 
-val BRANCHRANGE_LEMM = store_thm
-  ("BRANCHRANGE_LEMM",
-  ``!b aut run w. validAARunFor aut run w /\ infBranchOf run b
-                                        ==> (branchRange b ⊆ aut.states)``,
+Theorem BRANCHRANGE_LEMM:
+    !b aut run w. validAARunFor aut run w /\ infBranchOf run b
+                                        ==> (branchRange b ⊆ aut.states)
+Proof
     rpt strip_tac
     >> `!i. (b i ∈ run.V i)` by metis_tac[BRANCH_V_LEMM]
     >> fs[validAARunFor_def, branchRange_def, SUBSET_DEF] >> rpt strip_tac
     >> metis_tac[]
-  );
+QED
 
-val BRANCHRANGE_NONEMPTY = store_thm
-  ("BRANCHRANGE_NONEMPTY",
-   ``!b run. infBranchOf run b ==> ~(branchRange b = {})``,
+Theorem BRANCHRANGE_NONEMPTY:
+     !b run. infBranchOf run b ==> ~(branchRange b = {})
+Proof
     rpt strip_tac
     >> `~(?x. x ∈ branchRange b)` by metis_tac[MEMBER_NOT_EMPTY]
     >> fs[]
     >> `?x. x ∈ branchRange b` suffices_by metis_tac[]
     >> qexists_tac `b 0` >> fs[branchRange_def]
-  );
+QED
 
 (*
   acceptance condition for a run over a given automaton (CO-BÜCHI condition)
 *)
 
-val acceptingAARun_def = Define
-`acceptingAARun aut run =
-    !b. infBranchOf run b ==> FINITE {i | b i ∈ aut.final }`
+Definition acceptingAARun_def:
+ acceptingAARun aut run =
+    !b. infBranchOf run b ==> FINITE {i | b i ∈ aut.final }
+End
 
 (*
   the language of the automaton
 *)
 
-val runForAA_def = Define
-`runForAA aut run word =
-             validAARunFor aut run word /\ acceptingAARun aut run`;
+Definition runForAA_def:
+ runForAA aut run word =
+             validAARunFor aut run word /\ acceptingAARun aut run
+End
 
-val alterA_lang_def = Define
-`alterA_lang aut = { w | ?run. runForAA aut run w
-                       /\ (word_range w ⊆ aut.alphabet) }`;
+Definition alterA_lang_def:
+ alterA_lang aut = { w | ?run. runForAA aut run w
+                       /\ (word_range w ⊆ aut.alphabet) }
+End
 
 (*
   Some properties of weak alternating automata
 *)
 
-val BRANCH_WAA_LEMM = store_thm
-  ("BRANCH_WAA_LEMM",
-  ``!b run aut w ord. validAARunFor aut run w /\ infBranchOf run b
+Theorem BRANCH_WAA_LEMM:
+    !b run aut w ord. validAARunFor aut run w /\ infBranchOf run b
                       /\ isVeryWeakWithOrder aut ord
-            ==> !i. (b (i+1), b i) ∈ ord``,
+            ==> !i. (b (i+1), b i) ∈ ord
+Proof
    rpt strip_tac
    >> `!i. b i ∈ run.V i` by metis_tac[BRANCH_V_LEMM]
    >> fs[isVeryWeakWithOrder_def, infBranchOf_def, validAARunFor_def]
@@ -154,13 +166,13 @@ val BRANCH_WAA_LEMM = store_thm
    >> `b i ∈ aut.states` by metis_tac[SUBSET_DEF]
    >> `∀s'. (s' ∈ run.E (i, b i)) ⇒ (s',b i) ∈ ord` by metis_tac[]
    >> metis_tac[]
-  );
+QED
 
-val BRANCH_LIN_ORD = store_thm
-  ("BRANCH_LIN_ORD",
-   ``!b run aut w ord. infBranchOf run b /\ validAARunFor aut run w
+Theorem BRANCH_LIN_ORD:
+     !b run aut w ord. infBranchOf run b /\ validAARunFor aut run w
                      /\ isVeryWeakWithOrder aut ord
-      ==> linear_order (rrestrict ord (branchRange b)) (branchRange b)``,
+      ==> linear_order (rrestrict ord (branchRange b)) (branchRange b)
+Proof
    rpt strip_tac
    >> `!i. b i ∈ run.V i` by metis_tac[BRANCH_V_LEMM]
    >> `!i. (b (i+1), b i) ∈ ord` by metis_tac[BRANCH_WAA_LEMM]
@@ -201,13 +213,13 @@ val BRANCH_LIN_ORD = store_thm
                   )
               )
         )
-  );
+QED
 
-val BRANCH_FIXP = store_thm
-  ("BRANCH_FIXP",
-    ``∀b run aut w ord.
+Theorem BRANCH_FIXP:
+      ∀b run aut w ord.
       infBranchOf run b ∧ validAARunFor aut run w ∧ isVeryWeakAlterA aut /\ FINITE aut.states ⇒
-              ∃x. branchFixP b x``,
+              ∃x. branchFixP b x
+Proof
     `∀b run aut w ord.
      infBranchOf run b ∧ validAARunFor aut run w ∧ isVeryWeakWithOrder aut ord
                   /\ FINITE aut.states ⇒
@@ -240,14 +252,14 @@ val BRANCH_FIXP = store_thm
                >> metis_tac[in_rrestrict]
               )
         )
-  );
+QED
 
-val BRANCH_ACC_LEMM = store_thm
-  ("BRANCH_ACC_LEMM",
-   ``!run w aut. validAARunFor aut run w /\ isVeryWeakAlterA aut
+Theorem BRANCH_ACC_LEMM:
+     !run w aut. validAARunFor aut run w /\ isVeryWeakAlterA aut
                       /\ FINITE aut.states
         ==> (acceptingAARun aut run =
-            (!b x. infBranchOf run b /\ branchFixP b x ==> ~(x ∈ aut.final)))``,
+            (!b x. infBranchOf run b /\ branchFixP b x ==> ~(x ∈ aut.final)))
+Proof
    rpt strip_tac >> rw[EQ_IMP_THM]
       >- (CCONTR_TAC >> fs[acceptingAARun_def, branchFixP_def]
           >> `FINITE {i | b i ∈ aut.final}` by metis_tac[]
@@ -271,35 +283,37 @@ val BRANCH_ACC_LEMM = store_thm
           >> fs[SUBSET_DEF] >> rpt strip_tac
           >> CCONTR_TAC >> `x' >= i` by simp[] >> metis_tac[]
          )
-  );
+QED
 
 (*
   infinite run suffixes
 *)
 
-val infBranchSuffOf_def = Define
-  `infBranchSuffOf run i b =
-             (b 0 ∈ run.V i) /\ !j. (b (j+1) ∈ run.E (j + i, b j))`;
+Definition infBranchSuffOf_def:
+   infBranchSuffOf run i b =
+             (b 0 ∈ run.V i) /\ !j. (b (j+1) ∈ run.E (j + i, b j))
+End
 
-val appendToBranchSuff_def = Define
-  `appendToBranchSuff b q = \n. if n = 0 then q else b (n-1)`;
+Definition appendToBranchSuff_def:
+   appendToBranchSuff b q = \n. if n = 0 then q else b (n-1)
+End
 
-val APPEND_LEMMA = store_thm
-  ("APPEND_LEMMA",
-   ``!r b q i aut w. infBranchSuffOf r i b /\ validAARunFor aut r w /\ ~(i=0)
+Theorem APPEND_LEMMA:
+     !r b q i aut w. infBranchSuffOf r i b /\ validAARunFor aut r w /\ ~(i=0)
                   /\ q ∈ r.V (i-1) /\ (b 0 ∈ r.E (i-1,q))
-        ==> infBranchSuffOf r (i-1) (appendToBranchSuff b q)``,
+        ==> infBranchSuffOf r (i-1) (appendToBranchSuff b q)
+Proof
    rpt strip_tac >> fs[appendToBranchSuff_def, infBranchSuffOf_def, validAARunFor_def]
    >> rpt strip_tac
    >> Induct_on `j` >> fs[]
    >> `b (j + 1) ∈ r.E (i + j,b j)` by metis_tac[]
    >> `SUC j = j + 1` by simp[] >> rw[]
-  );
+QED
 
-val BRANCH_SUFF_LEMM = store_thm
-  ("BRANCH_SUFF_LEMM",
-   ``!i q run aut w b. validAARunFor aut run w /\ infBranchSuffOf run i b
-         ==> ?b'. infBranchOf run b' /\ !j. (b j = b' (j+i))``,
+Theorem BRANCH_SUFF_LEMM:
+     !i q run aut w b. validAARunFor aut run w /\ infBranchSuffOf run i b
+         ==> ?b'. infBranchOf run b' /\ !j. (b j = b' (j+i))
+Proof
    Induct_on `i` >> rpt strip_tac
      >- (qexists_tac `b`
          >> fs[infBranchSuffOf_def, infBranchOf_def])
@@ -332,18 +346,21 @@ val BRANCH_SUFF_LEMM = store_thm
          >> `(i + SUC j) = (j + SUC i)` by simp[]
          >> metis_tac[]
        )
-  );
+QED
 
 (* reachable states *)
 
-val oneStep_def = Define`
-  oneStep aut = \x y. ?a qs. (a,qs) ∈ aut.trans x ∧ y ∈ qs ∧ x ∈ aut.states`;
+Definition oneStep_def:
+  oneStep aut = \x y. ?a qs. (a,qs) ∈ aut.trans x ∧ y ∈ qs ∧ x ∈ aut.states
+End
 
-val reachRel_def = Define`
-  reachRel aut = (oneStep aut)^*`;
+Definition reachRel_def:
+  reachRel aut = (oneStep aut)^*
+End
 
-val reachRelFromSet_def = Define`
-  reachRelFromSet aut s = { y | ?x. reachRel aut x y ∧ x ∈ s }`;
+Definition reachRelFromSet_def:
+  reachRelFromSet aut s = { y | ?x. reachRel aut x y ∧ x ∈ s }
+End
 
 (*TODO rewrite using different reach rel*)
 
@@ -427,35 +444,38 @@ val reachRelFromSet_def = Define`
   restricting a run to a subset of its initial states
 *)
 
-val run_restr_V_def = Define `
+Definition run_restr_V_def:
     (run_restr_V init r_old (SUC i) =
             BIGUNION { e | ?q. (e = r_old.E (i,q)) /\ (q ∈ run_restr_V init r_old i) })
- /\ (run_restr_V init r_old 0       = init)`;
+ /\ (run_restr_V init r_old 0       = init)
+End
 
-val run_restr_E_def = Define `
+Definition run_restr_E_def:
     (run_restr_E init r_old (i,q) =
-           if q ∈ run_restr_V init r_old i then r_old.E (i,q) else {})`;
+           if q ∈ run_restr_V init r_old i then r_old.E (i,q) else {})
+End
 
-val run_restr_def = Define `
-   (run_restr init r_old = ALTERA_RUN (run_restr_V init r_old) (run_restr_E init r_old))`;
+Definition run_restr_def:
+   (run_restr init r_old = ALTERA_RUN (run_restr_V init r_old) (run_restr_E init r_old))
+End
 
-val RUN_RESTR_LEMM = store_thm
-  ("RUN_RESTR_LEMM",
-   ``!r init aut w. (validAARunFor aut r w) /\ (init ⊆ r.V 0)
-                  ==> !i. run_restr_V init r i ⊆ r.V i``,
+Theorem RUN_RESTR_LEMM:
+     !r init aut w. (validAARunFor aut r w) /\ (init ⊆ r.V 0)
+                  ==> !i. run_restr_V init r i ⊆ r.V i
+Proof
    rpt strip_tac >> Induct_on `i` >> fs[run_restr_V_def]
    >> fs[validAARunFor_def, SUBSET_DEF] >> rpt strip_tac
    >> `(s = r.E (i,q)) ∧ q ∈ run_restr_V init r i` by metis_tac[]
    >> `x ∈ r.E (i,q)` by metis_tac[]
    >> `x ∈ r.V (i + 1)` by metis_tac[]
    >> `x ∈ r.V (i + 1)` suffices_by simp[SUC_ONE_ADD] >> fs[]
-  );
+QED
 
-val RUN_RESTR_FIXP_LEMM = store_thm
-  ("RUN_RESTR_FIXP_LEMM",
-   ``!r init aut w b. (validAARunFor aut r w) /\ (init ⊆ r.V 0)
+Theorem RUN_RESTR_FIXP_LEMM:
+     !r init aut w b. (validAARunFor aut r w) /\ (init ⊆ r.V 0)
                    /\ (infBranchOf (run_restr init r) b)
-                       ==> infBranchOf r b``,
+                       ==> infBranchOf r b
+Proof
    rpt strip_tac >> fs[infBranchOf_def] >> rpt strip_tac
    >> fs[run_restr_def, run_restr_V_def]
     >- (metis_tac[SUBSET_DEF])
@@ -463,13 +483,13 @@ val RUN_RESTR_FIXP_LEMM = store_thm
         >- metis_tac[]
         >- (metis_tac[NOT_IN_EMPTY])
        )
-  );
+QED
 
 (*
  conjoining two runs
 *)
 
-val conj_run_branch_cond_def = Define `
+Definition conj_run_branch_cond_def:
   conj_run_branch_cond r1 r2 s q i =
       if q ∈ s
       then (if q ∈ r1.V i
@@ -477,25 +497,29 @@ val conj_run_branch_cond_def = Define `
             else if q ∈ r2.V i
                  then r2.E (i,q)
                  else {})
-      else {}`;
+      else {}
+End
 
-val conj_run_V_def = Define `
+Definition conj_run_V_def:
      (conj_run_V r1 r2 (SUC i) =
           BIGUNION { e | ?q. (e = conj_run_branch_cond r1 r2 (conj_run_V r1 r2 i) q i)
                           /\ (q ∈ conj_run_V r1 r2 i)})
-  /\ (conj_run_V r1 r2 0       = r1.V 0 ∪ r2.V 0)`;
+  /\ (conj_run_V r1 r2 0       = r1.V 0 ∪ r2.V 0)
+End
 
-val conj_run_E_def = Define `
+Definition conj_run_E_def:
   (conj_run_E r1 r2 (i,q) =
-       conj_run_branch_cond r1 r2 (conj_run_V r1 r2 i) q i)`;
+       conj_run_branch_cond r1 r2 (conj_run_V r1 r2 i) q i)
+End
 
-val conj_run_def = Define `
-  conj_run r1 r2 = ALTERA_RUN (conj_run_V r1 r2) (conj_run_E r1 r2)`;
+Definition conj_run_def:
+  conj_run r1 r2 = ALTERA_RUN (conj_run_V r1 r2) (conj_run_E r1 r2)
+End
 
-val CONJ_RUN_V_LEMM = store_thm
-  ("CONJ_RUN_V_LEMM",
-   ``!r1 r2 i w1 w2 a1 a2. validAARunFor a1 r1 w1 /\ validAARunFor a2 r2 w2
-       ==> conj_run_V r1 r2 i ⊆ (r1.V i ∪ r2.V i)``,
+Theorem CONJ_RUN_V_LEMM:
+     !r1 r2 i w1 w2 a1 a2. validAARunFor a1 r1 w1 /\ validAARunFor a2 r2 w2
+       ==> conj_run_V r1 r2 i ⊆ (r1.V i ∪ r2.V i)
+Proof
    rpt strip_tac >> Induct_on `i` >> fs[conj_run_V_def]
    >> fs[SUBSET_DEF, BIGUNION, conj_run_V_def]
    >> rpt strip_tac >> fs[conj_run_E_def, conj_run_branch_cond_def]
@@ -507,13 +531,13 @@ val CONJ_RUN_V_LEMM = store_thm
               >> metis_tac[SUBSET_DEF])
           >- (fs[])
         )
-  );
+QED
 
-val CONJ_RUN_FIXP_LEMM = store_thm
-  ("CONJ_RUN_FIXP_LEMM",
-   ``!r1 r2 b x a1 a2 w. (validAARunFor a1 r1 w) /\ (validAARunFor a2 r2 w)
+Theorem CONJ_RUN_FIXP_LEMM:
+     !r1 r2 b x a1 a2 w. (validAARunFor a1 r1 w) /\ (validAARunFor a2 r2 w)
         /\ (infBranchOf (conj_run r1 r2) b) /\ (branchFixP b x)
-        ==> (?b'. (infBranchOf r1 b' \/ infBranchOf r2 b') /\ branchFixP b' x)``,
+        ==> (?b'. (infBranchOf r1 b' \/ infBranchOf r2 b') /\ branchFixP b' x)
+Proof
    rpt strip_tac
    >> `!i. conj_run_V r1 r2 i ⊆ (r1.V i ∪ r2.V i)` by metis_tac[CONJ_RUN_V_LEMM]
    >> fs[infBranchOf_def]
@@ -622,21 +646,21 @@ val CONJ_RUN_FIXP_LEMM = store_thm
                      )
               )
         )
-  );
+QED
 
 (*
   suffix run with replaced initial states
 *)
 
-val REPL_RUN_CONSTR_LEMM = store_thm
-  ("REPL_RUN_CONSTR_LEMM",
-  ``!aut run w e h j.
+Theorem REPL_RUN_CONSTR_LEMM:
+    !aut run w e h j.
   let run_int =
         ALTERA_RUN (\i. if i = 0 then e else run.V (i + j))
             (λ(i,q). if i = 0 then h q else run.E (i + j,q))
   in
   validAARunFor aut run w /\ (!q. q ∈ e ==> h q ⊆ run.V (j + 1))
-    ==> !i. (run_restr e run_int).V (i+1) ⊆ run.V (i+j+1)``,
+    ==> !i. (run_restr e run_int).V (i+1) ⊆ run.V (i+j+1)
+Proof
   fs[] >> rpt gen_tac >> rpt conj_tac >> strip_tac
   >> Induct_on `i` >> fs[run_restr_def, run_restr_V_def, run_restr_E_def, validAARunFor_def]
     >- (fs[SUBSET_DEF] >> rpt strip_tac
@@ -660,18 +684,18 @@ val REPL_RUN_CONSTR_LEMM = store_thm
         >> `j + (SUC i + 1) = i + (j + 1) + 1` by simp[]
         >> metis_tac[]
        )
-  );
+QED
 
-val REPL_LEMM_1 = store_thm
-  ("REPL_LEMM_1",
-   ``!aut run w e h b x j.
+Theorem REPL_LEMM_1:
+     !aut run w e h b x j.
       let run_int =
           ALTERA_RUN (\i. if i = 0 then e else run.V (i + j))
               (λ(i,q). if i = 0 then h q else run.E (i + j,q))
       in
           validAARunFor aut run w /\ (!q. q ∈ e ==> h q ⊆ run.V (1 + j))
           /\ infBranchOf (run_restr e run_int) b /\ branchFixP b x
-              ==> infBranchSuffOf run (1 + j) (\i. b (i + 1))``,
+              ==> infBranchSuffOf run (1 + j) (\i. b (i + 1))
+Proof
    fs[infBranchSuffOf_def] >> rpt strip_tac
      >- (fs[infBranchOf_def, run_restr_def]
            >> fs[run_restr_E_def]
@@ -722,18 +746,18 @@ val REPL_LEMM_1 = store_thm
                  >- metis_tac[NOT_IN_EMPTY]
              )
         )
-  );
+QED
 
-val REPL_RUN_CONSTR_LEMM2 = store_thm
-  ("REPL_RUN_CONSTR_LEMM2",
-  ``!aut run w e h b x j.
+Theorem REPL_RUN_CONSTR_LEMM2:
+    !aut run w e h b x j.
       let run_int =
           ALTERA_RUN (\i. if i = 0 then e else run.V (i + j))
               (λ(i,q). if i = 0 then h q else run.E (i + j,q))
       in
           validAARunFor aut run w /\ (!q. q ∈ e ==> h q ⊆ run.V (1 + j))
        /\ infBranchOf (run_restr e run_int) b /\ branchFixP b x
-            ==> ?b'. infBranchOf run b' /\ branchFixP b' x``,
+            ==> ?b'. infBranchOf run b' /\ branchFixP b' x
+Proof
   fs[] >> rpt strip_tac
   >> `(let run_int =
            ALTERA_RUN (λi. if i = 0 then e else run.V (i + j))
@@ -765,20 +789,21 @@ val REPL_RUN_CONSTR_LEMM2 = store_thm
         >> `b (k + 1) = x` by metis_tac[]
         >> rw[] >> metis_tac[]
        )
-  );
+QED
 
 
 (*
   step function of a run
 *)
 
-val step_def = Define
-  `step run (v,i) = (BIGUNION {run.E (i,q) | q ∈ v }, i+1)`;
+Definition step_def:
+   step run (v,i) = (BIGUNION {run.E (i,q) | q ∈ v }, i+1)
+End
 
-val STEP_THM = store_thm
-  ("STEP_THM",
-  ``!aut run. (?w. validAARunFor aut run w)
-      ==> !i. (FUNPOW (step run) i (run.V 0,0) = (run.V i,i))``,
+Theorem STEP_THM:
+    !aut run. (?w. validAARunFor aut run w)
+      ==> !i. (FUNPOW (step run) i (run.V 0,0) = (run.V i,i))
+Proof
   strip_tac >> strip_tac >> strip_tac
   >> Induct_on `i` >> fs[FUNPOW]
   >> fs[validAARunFor_def]
@@ -804,22 +829,23 @@ val STEP_THM = store_thm
          >> qexists_tac `run.E (i,q')` >> rpt strip_tac >> fs[]
          >> qexists_tac `q'` >> simp[]
         )
-  );
+QED
 
 
 (* An example alternating automata *)
 
-val A1_def = Define `A1 = ALTER_A {1;2} {T;F} (\_. {({T;F}, {1;2})}) {{1}} {2}`;
+Definition A1_def:   A1 = ALTER_A {1;2} {T;F} (\_. {({T;F}, {1;2})}) {{1}} {2}
+End
 
-val AUT_EX_1 = store_thm
-  ("AUT_EX_1",
-   ``isValidAlterA A1``,
+Theorem AUT_EX_1:
+     isValidAlterA A1
+Proof
    simp[isValidAlterA_def, A1_def, POW_DEF]
-  );
+QED
 
-val AUT_EX_2 = store_thm
-  ("AUT_EX_2",
-   ``~(isVeryWeakAlterA A1)``,
+Theorem AUT_EX_2:
+     ~(isVeryWeakAlterA A1)
+Proof
    simp[A1_def, isVeryWeakAlterA_def, isVeryWeakWithOrder_def] >> rw[] >>
    `partial_order ord {1;2}
       ==> (?s. ((s = 1) \/ (s = 2)) /\ ?s'. ((s' = 1) \/ (s' = 2)) /\ ~((s, s') ∈ ord))`
@@ -827,6 +853,5 @@ val AUT_EX_2 = store_thm
       >> rw[] >> CCONTR_TAC >> fs[] >> `((1,2) ∈ ord) /\ ((2,1) ∈ ord)` by metis_tac[]
       >> `1 <> 2 /\ {1;2} 1 /\ {1;2} 2`
          suffices_by metis_tac[partial_order_def, antisym_def] >> simp[]
-  );
+QED
 
-val _ = export_theory();

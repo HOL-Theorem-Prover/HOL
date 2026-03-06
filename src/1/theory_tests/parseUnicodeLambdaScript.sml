@@ -1,12 +1,11 @@
-open HolKernel Parse boolLib
-
-val _ = new_theory "parseUnicodeLambda";
+Theory parseUnicodeLambda[bare]
+Ancestors[qualified]
+  bool
+Libs
+  HolKernel Parse boolLib
 
 val _ = set_grammar_ancestry ["bool"]
 
-val t = ``λi. P i``;      (* UOK *)
+val t = ``λi. P i``;
 
-val th = save_thm("made_it", TRUTH);
-
-
-val _ = export_theory();
+Theorem made_it = TRUTH

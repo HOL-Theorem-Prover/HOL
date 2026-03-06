@@ -21,20 +21,22 @@ VOLUME /ML
 
 # Use this mode when you need zero interaction while installing or upgrading the system via apt
 ENV DEBIAN_FRONTEND=noninteractive
-ENV LD_LIBRARY_PATH=/usr/local/lib
-ENV PATH=/ML/HOL/bin:$PATH
+ENV LD_LIBRARY_PATH=/usr/local/lib:/ML/polyml/lib
+ENV PATH=/ML/polyml/bin:/ML/HOL/bin:$PATH
 
 # Some necessary Debian packages
 # NOTE: GCC 13 is necessary for building Moscow ML (default compiler is now GCC 14).
 RUN apt-get update -qy
-RUN apt-get install -qy build-essential git libgmp-dev wget curl procps file unzip vim gcc-13
-RUN apt-get clean
+RUN apt-get install -qy build-essential git libgmp-dev wget curl procps file unzip vim parallel
 
 # for Unicode display, learnt from Magnus Myreen
 RUN apt-get install -qy locales-all terminfo
 
 # Extra graphics-related tools
 RUN apt-get install -qy graphviz emacs-nox
+
+# GCC-13 for Moscow ML
+RUN apt-get install -qy gcc-13
 
 # clean up downloaded packages after installation (this reduces Docker image sizes)
 RUN apt-get clean
@@ -58,11 +60,13 @@ RUN if [ "master" = "$POLY_VERSION" ]; then \
     fi
 
 RUN if [ "linux/386" = "$TARGETPLATFORM" ]; then \
-       cd polyml-${POLY_VERSION} && ./configure --build=i686-pc-linux-gnu --enable-intinf-as-int; \
+       cd polyml-${POLY_VERSION} && \
+       ./configure --prefix=/ML/polyml --build=i686-pc-linux-gnu --enable-intinf-as-int; \
     elif [ "linux/riscv64" = "$TARGETPLATFORM" ]; then \
-       cd polyml-${POLY_VERSION} && ./configure --build=riscv64-pc-linux-gnu --enable-intinf-as-int; \
+       cd polyml-${POLY_VERSION} && \
+       ./configure --prefix=/ML/polyml --build=riscv64-pc-linux-gnu --enable-intinf-as-int; \
     else \
-       cd polyml-${POLY_VERSION} && ./configure --enable-intinf-as-int; \
+       cd polyml-${POLY_VERSION} && ./configure --prefix=/ML/polyml --enable-intinf-as-int; \
     fi
 
 RUN make -C polyml-${POLY_VERSION} -j4

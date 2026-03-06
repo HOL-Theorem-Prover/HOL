@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib
-
-open Datatype
-
-val _ = new_theory "loadDatatypeA";
+Theory loadDatatypeA[bare]
+Libs
+  HolKernel Parse boolLib Datatype
 
 val _ = Datatype`enum = EC1 | EC2 | EC3 | EC4`;
 
@@ -31,4 +29,3 @@ val _ = Datatype`
 *)
 
 
-val _ = export_theory();

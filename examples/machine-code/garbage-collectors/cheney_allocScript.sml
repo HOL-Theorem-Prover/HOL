@@ -1,30 +1,30 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory arithmeticTheory pairTheory listTheory combinTheory finite_mapTheory;
-open cheney_gcTheory;
+Theory cheney_alloc
+Ancestors
+  pred_set arithmetic pair list combin finite_map cheney_gc
 
-val _ = new_theory "cheney_alloc";
 val _ = ParseExtras.temp_loose_equality()
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
 
 (* -- definitions -- *)
 
-val cheney_alloc_gc_def = Define `
+Definition cheney_alloc_gc_def:
   cheney_alloc_gc (i,e,root,l,u,m) =
-    if i < e then (i,e,root,l,u,m) else cheney_collector(i,e,root,l,u,m)`;
+    if i < e then (i,e,root,l,u,m) else cheney_collector(i,e,root,l,u,m)
+End
 
-val cheney_alloc_aux_def = Define `
+Definition cheney_alloc_aux_def:
   cheney_alloc_aux (i,e,root,l,u,m) d =
     if i = e then (i,e,0::TL root,l,u,m) else
       let m = (i =+ DATA(HD root,HD (TL root),d)) m in
-        (i+1,e,i::TL root,l,u,m)`;
+        (i+1,e,i::TL root,l,u,m)
+End
 
-val cheney_alloc_def = Define `
-  cheney_alloc(i,e,root,l,u,m) d = cheney_alloc_aux (cheney_alloc_gc (i,e,root,l,u,m)) d`;
+Definition cheney_alloc_def:
+  cheney_alloc(i,e,root,l,u,m) d = cheney_alloc_aux (cheney_alloc_gc (i,e,root,l,u,m)) d
+End
 
 (* -- helper -- *)
 
@@ -40,7 +40,8 @@ fun FORCE_PBETA_CONV tm = let
 
 (* -- theorems -- *)
 
-val bijection_def = Define `bijection g = ONTO g /\ ONE_ONE g`;
+Definition bijection_def:   bijection g = ONTO g /\ ONE_ONE g
+End
 
 val bijection_swap = prove(
   ``!i j. bijection (swap i j)``,
@@ -63,21 +64,25 @@ val bijection_bijection = prove(
 
 val basic_abs = basic_abs_def
 
-val ok_abs_def = Define `
+Definition ok_abs_def:
   ok_abs (r,h:(num|->(num#num#'a)),l:num) =
     ~(0 IN FDOM h) /\ FEVERY (\(x,y,z,d). {y;z} SUBSET0 FDOM h) h /\
-    (!k. MEM k r /\ ~(k = 0) ==> k IN FDOM h)`;
+    (!k. MEM k r /\ ~(k = 0) ==> k IN FDOM h)
+End
 
-val ch_set_def = Define `ch_set h (x,y,z,d) = (h ' x = (y,z,d)) /\ x IN FDOM h`;
+Definition ch_set_def:   ch_set h (x,y,z,d) = (h ' x = (y,z,d)) /\ x IN FDOM h
+End
 
-val abstract_def = Define `
-  abstract(b,m) = { (b(x), b(y), b(z), d) |(x,y,z,d)| m(x) = DATA(y,z,d) }`;
+Definition abstract_def:
+  abstract(b,m) = { (b(x), b(y), b(z), d) |(x,y,z,d)| m(x) = DATA(y,z,d) }
+End
 
-val ch_inv_def = Define `
+Definition ch_inv_def:
   ch_inv (r,h,l) (i,e,c,l',u,m) =
     ok_state (i,e,c,l,u,m) /\ ok_abs (r,h,l) /\ (l = l') /\
     ?b. bijection b /\ (b 0 = 0) /\ (MAP b c = r) /\
-        reachables r (ch_set(h)) SUBSET abstract(b,m) /\ abstract(b,m) SUBSET ch_set(h)`;
+        reachables r (ch_set(h)) SUBSET abstract(b,m) /\ abstract(b,m) SUBSET ch_set(h)
+End
 
 val apply_abstract = prove(
   ``!b m. bijection b ==> (apply b (abstract(b,m)) = basic_abs m)``,
@@ -111,7 +116,8 @@ val INFINITE_num = prove(
   REWRITE_TAC [INFINITE_UNIV] \\ Q.EXISTS_TAC `SUC`
   \\ SIMP_TAC std_ss []  \\ Q.EXISTS_TAC `0` \\ DECIDE_TAC);
 
-val fresh_def = Define `fresh (h:num|->(num#num#'a)) = @x:num. ~(x IN 0 INSERT FDOM h)`;
+Definition fresh_def:   fresh (h:num|->(num#num#'a)) = @x:num. ~(x IN 0 INSERT FDOM h)
+End
 
 val fresh_NOT_IN_FDOM = (SIMP_RULE std_ss [IN_INSERT] o prove)(
   ``!h. ~(fresh h IN 0 INSERT FDOM h)``,
@@ -218,9 +224,10 @@ val apply_switch = prove(
   ``!f f' x x'. (f o f' = I) /\ (x' = apply f x) ==> (x = apply f' x')``,
   SIMP_TAC bool_ss [apply_apply,apply_I]);
 
-val ok_state_part_def = Define `
+Definition ok_state_part_def:
   ok_state_part (i,j,m) =
-    !k. if ~RANGE(i,j) k then m k = EMP else ?y z d. m k = DATA (y,z,d)`;
+    !k. if ~RANGE(i,j) k then m k = EMP else ?y z d. m k = DATA (y,z,d)
+End
 
 val WFS_part_IMP_CUT = prove(
   ``ok_state_part(i,j,m) ==> (m = CUT (i,j)m)``,
@@ -322,10 +329,11 @@ val FINITE_set = prove(
          METIS_PROVE [PAIR] ``!f g. (f = g) = !x y z d. f (x,y,z,d) = g (x,y,z,d)``]
     \\ Cases_on `y` \\ Cases_on `r` \\ METIS_TAC [PAIR_EQ]]);
 
-val cheney_alloc_gc_spec = store_thm("cheney_alloc_gc_spec",
-  ``(cheney_alloc_gc (i,e,c,l,u,m) = (i',e',c',l',u',m')) ==>
+Theorem cheney_alloc_gc_spec:
+    (cheney_alloc_gc (i,e,c,l,u,m) = (i',e',c',l',u',m')) ==>
     ch_inv (r,h,l) (i,e,c,l,u,m) /\ CARD (reachables r (ch_set h)) < l ==>
-    i' < e' /\ ch_inv (r,h,l) (i',e',c',l',u',m')``,
+    i' < e' /\ ch_inv (r,h,l) (i',e',c',l',u',m')
+Proof
   Cases_on `i < e` \\ ASM_SIMP_TAC bool_ss [PAIR_EQ,cheney_alloc_gc_def] THEN1 METIS_TAC []
   \\ POP_ASSUM (K ALL_TAC)
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC bool_ss [ch_inv_thm]
@@ -407,7 +415,8 @@ val cheney_alloc_gc_spec = store_thm("cheney_alloc_gc_spec",
     \\ Q.PAT_X_ASSUM `apply b (reachables r (ch_set h)) = apply f (basic_abs m')` (K ALL_TAC)
     \\ Q.PAT_X_ASSUM `apply f (reachables c (basic_abs m)) = basic_abs m'` (K ALL_TAC)
     \\ ASM_SIMP_TAC std_ss [GSYM apply_apply]
-    \\ METIS_TAC [apply_SUBSET,reachables_SUBSET,SUBSET_REFL]]);
+    \\ METIS_TAC [apply_SUBSET,reachables_SUBSET,SUBSET_REFL]]
+QED
 
 val PATH_INSERT = prove(
   ``(!y z d. ~((x:num,y:num,z:num,d:'a) IN s) /\ ~((z,x,y,d) IN s) /\ ~((y,z,x,d) IN s)) /\ ~(x = y) ==>
@@ -526,9 +535,10 @@ val ok_state_LESS = prove(
          (Cases_on `u` \\ FULL_SIMP_TAC bool_ss [RANGE_def] \\ DECIDE_TAC)
     \\ RES_TAC \\ METIS_TAC []]);
 
-val cheney_alloc_ok = store_thm("cheney_alloc_ok",
-  ``!i e t v r l u m d.
-        ok_state (i,e,t::v::r,l,u,m) ==> ok_state (cheney_alloc (i,e,t::v::r,l,u,m) (d:'a))``,
+Theorem cheney_alloc_ok:
+    !i e t v r l u m d.
+        ok_state (i,e,t::v::r,l,u,m) ==> ok_state (cheney_alloc (i,e,t::v::r,l,u,m) (d:'a))
+Proof
   REWRITE_TAC [cheney_alloc_def,cheney_alloc_gc_def] \\ REPEAT STRIP_TAC
   \\ Cases_on `i < e` \\ ASM_SIMP_TAC bool_ss [cheney_alloc_aux_def] THEN1
     (ASM_SIMP_TAC std_ss [LET_DEF,DECIDE ``n<m ==> ~(n=m:num)``,HD,TL]  \\ METIS_TAC [ok_state_LESS])
@@ -551,12 +561,14 @@ val cheney_alloc_ok = store_thm("cheney_alloc_ok",
   \\ Cases_on `root2` \\ FULL_SIMP_TAC std_ss [NOT_CONS_NIL]
   \\ Cases_on `t'` \\ FULL_SIMP_TAC std_ss [NOT_CONS_NIL,CONS_11]
   \\ FULL_SIMP_TAC std_ss [HD,TL] \\ MATCH_MP_TAC ok_state_LESS \\ ASM_SIMP_TAC bool_ss []
-  \\ Cases_on `u2` \\ FULL_SIMP_TAC bool_ss [ok_state_def,LET_DEF] \\ DECIDE_TAC);
+  \\ Cases_on `u2` \\ FULL_SIMP_TAC bool_ss [ok_state_def,LET_DEF] \\ DECIDE_TAC
+QED
 
-val cheney_alloc_spec = store_thm("cheney_alloc_spec",
-  ``(cheney_alloc s (d:'a) = s') ==>
+Theorem cheney_alloc_spec:
+    (cheney_alloc s (d:'a) = s') ==>
     ch_inv (t1::t2::ts,h,l) s /\ CARD (reachables (t1::t2::ts) (ch_set h)) < l ==>
-    ch_inv (fresh h::t2::ts, h |+ (fresh h,t1,t2,d),l) s'``,
+    ch_inv (fresh h::t2::ts, h |+ (fresh h,t1,t2,d),l) s'
+Proof
   `?i e root a l u m. s = (i,e,root,l,u,m)` by METIS_TAC [PAIR]
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ ASM_SIMP_TAC bool_ss []
   \\ STRIP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
@@ -710,10 +722,12 @@ val cheney_alloc_spec = store_thm("cheney_alloc_spec",
   \\ Cases_on `x = k ff` \\ FULL_SIMP_TAC bool_ss []
   \\ Cases_on `y = k ff` \\ FULL_SIMP_TAC bool_ss []
   \\ Cases_on `z = k ff` \\ FULL_SIMP_TAC bool_ss []
-  \\ METIS_TAC []);
+  \\ METIS_TAC []
+QED
 
-val cheney_init = store_thm("cheney_init",
-  ``!xs l. ch_inv (MAP (\x.0) xs,FEMPTY,l) (1,1+l,MAP (\x.0) (xs:num list),l,F,\x.EMP)``,
+Theorem cheney_init:
+    !xs l. ch_inv (MAP (\x.0) xs,FEMPTY,l) (1,1+l,MAP (\x.0) (xs:num list),l,F,\x.EMP)
+Proof
   SIMP_TAC bool_ss [ch_inv_thm,ok_state_def,ok_abs_def,FEVERY_FEMPTY,FDOM_FEMPTY,
     LESS_EQ_REFL,LET_DEF,FINITE_EMPTY,MEM_MAP,heap_type_distinct,NOT_IN_EMPTY,
     RANGE_lemmas,DECIDE ``1<=1+l:num``]
@@ -721,7 +735,8 @@ val cheney_init = store_thm("cheney_init",
    (Q.EXISTS_TAC `I` \\ SIMP_TAC std_ss [rich_listTheory.MAP_MAP_o,apply_I,
      bijection_def,ONTO_DEF,EXPAND_SUBSET,reachables_def,EMPTY_DEF,IN_DEF,
      basic_abs,heap_type_distinct,ONE_ONE_DEF,ch_set_def,FDOM_FEMPTY])
-  \\ METIS_TAC []);
+  \\ METIS_TAC []
+QED
 
 (* add to library? *)
 
@@ -743,14 +758,17 @@ val MAP_TAKE = prove(
 
 (* /add *)
 
-val LIST_DELETE_def = Define `
-  LIST_DELETE n xs = TAKE n xs ++ DROP (SUC n) xs`;
+Definition LIST_DELETE_def:
+  LIST_DELETE n xs = TAKE n xs ++ DROP (SUC n) xs
+End
 
-val LIST_INSERT_def = Define `
-  LIST_INSERT y n xs = TAKE n xs ++ [y] ++ DROP n xs`;
+Definition LIST_INSERT_def:
+  LIST_INSERT y n xs = TAKE n xs ++ [y] ++ DROP n xs
+End
 
-val LIST_UPDATE_def = Define `
-  LIST_UPDATE n y xs = LIST_DELETE n (LIST_INSERT y (SUC n) xs)`;
+Definition LIST_UPDATE_def:
+  LIST_UPDATE n y xs = LIST_DELETE n (LIST_INSERT y (SUC n) xs)
+End
 
 val MEM_LIST_DELETE = prove(
   ``!xs n x. MEM x (LIST_DELETE n xs) ==> MEM x xs``,
@@ -800,10 +818,11 @@ val cheney_UPDATE = prove(
   REPEAT STRIP_TAC \\ REWRITE_TAC [LIST_UPDATE_def]
   \\ MATCH_MP_TAC cheney_DELETE \\ MATCH_MP_TAC cheney_INSERT \\ ASM_REWRITE_TAC []);
 
-val cheney_0 = store_thm("cheney_0",
-  ``!xs ys n h l i e u m.
+Theorem cheney_0:
+    !xs ys n h l i e u m.
       ch_inv (xs,h,l) (i,e,ys,l,u,m) ==>
-      ch_inv (LIST_UPDATE n 0 xs,h,l) (i,e,LIST_UPDATE n 0 ys,l,u,m)``,
+      ch_inv (LIST_UPDATE n 0 xs,h,l) (i,e,LIST_UPDATE n 0 ys,l,u,m)
+Proof
   REPEAT STRIP_TAC \\ MATCH_MP_TAC cheney_UPDATE
   \\ FULL_SIMP_TAC bool_ss [ch_inv_thm,ok_abs_def,ok_state_def,LET_DEF,MEM]
   \\ REPEAT STRIP_TAC THEN1 METIS_TAC [] THEN1 METIS_TAC []
@@ -814,7 +833,8 @@ val cheney_0 = store_thm("cheney_0",
   THEN1 METIS_TAC []
   \\ Q.UNDISCH_TAC `x IN reachable r (ch_set h)` \\ ASM_SIMP_TAC std_ss [reachable_def,IN_DEF]
   \\ REPEAT STRIP_TAC THEN1 FULL_SIMP_TAC std_ss [IN_DEF,ch_set_def]
-  \\ Cases_on `p` \\ FULL_SIMP_TAC bool_ss [APPEND,PATH_def,IN_DEF,ch_set_def] \\ METIS_TAC []);
+  \\ Cases_on `p` \\ FULL_SIMP_TAC bool_ss [APPEND,PATH_def,IN_DEF,ch_set_def] \\ METIS_TAC []
+QED
 
 val MAP_MEM_ZIP = prove(
   ``!xs ys b x y. (MAP b ys = xs) /\ MEM (x,y) (ZIP (xs,ys)) ==> MEM x xs /\ MEM y ys /\ (b y = x)``,
@@ -828,10 +848,11 @@ val reachable_expand = prove(
   THENL [Q.EXISTS_TAC `[]`,Q.EXISTS_TAC `[]`,Q.EXISTS_TAC `y::p`,Q.EXISTS_TAC `y::p`]
   \\ ASM_SIMP_TAC std_ss [PATH_def,APPEND,IN_DEF] \\ METIS_TAC []);
 
-val cheney_move = store_thm("cheney_move",
-  ``!xs ys x y h l i e u m.
+Theorem cheney_move:
+    !xs ys x y h l i e u m.
       ch_inv (xs,h,l) (i,e,ys,l,u,m) /\ MEM (x,y) (ZIP (xs,ys)) ==>
-      ch_inv (LIST_UPDATE n x xs,h,l) (i,e,LIST_UPDATE n y ys,l,u,m)``,
+      ch_inv (LIST_UPDATE n x xs,h,l) (i,e,LIST_UPDATE n y ys,l,u,m)
+Proof
   REPEAT STRIP_TAC \\ MATCH_MP_TAC cheney_UPDATE
   \\ FULL_SIMP_TAC bool_ss [ch_inv_thm,ok_abs_def,ok_state_def,LET_DEF,MEM,MAP,CONS_11]
   \\ IMP_RES_TAC MAP_MEM_ZIP \\ REPEAT STRIP_TAC
@@ -840,18 +861,20 @@ val cheney_move = store_thm("cheney_move",
   \\ sg `reachables (x::xs) (ch_set h) = reachables xs (ch_set h)`
   \\ ASM_SIMP_TAC std_ss []
   \\ MATCH_MP_TAC (METIS_PROVE [PAIR] ``(!x y z q. f (x,y,z,q) = g (x,y,z,q)) ==> (f = g)``)
-  \\ SIMP_TAC bool_ss [reachables_def,MEM] \\ METIS_TAC []);
+  \\ SIMP_TAC bool_ss [reachables_def,MEM] \\ METIS_TAC []
+QED
 
 val CONS_LIST_UPDATE = prove(
   ``!n x y xs. x::LIST_UPDATE n y xs = LIST_UPDATE (SUC n) y (x::xs)``,
   REWRITE_TAC [LIST_UPDATE_def,LIST_DELETE_def,LIST_INSERT_def,rich_listTheory.BUTFIRSTN,
     rich_listTheory.FIRSTN,APPEND]);
 
-val cheney_move2 = store_thm("cheney_move2",
-  ``!xs ys x1 y1 n1 x2 y2 n2 h l i e u m.
+Theorem cheney_move2:
+    !xs ys x1 y1 n1 x2 y2 n2 h l i e u m.
       ch_inv (xs,h,l) (i,e,ys,l,u,m) /\ MEM (x1,y1) (ZIP (xs,ys)) /\ MEM (x2,y2) (ZIP (xs,ys)) ==>
       ch_inv (LIST_UPDATE n1 x1 (LIST_UPDATE n2 x2 xs),h,l)
-             (i,e,LIST_UPDATE n1 y1 (LIST_UPDATE n2 y2 ys),l,u,m)``,
+             (i,e,LIST_UPDATE n1 y1 (LIST_UPDATE n2 y2 ys),l,u,m)
+Proof
   REPEAT STRIP_TAC \\ MATCH_MP_TAC cheney_UPDATE
   \\ REWRITE_TAC [CONS_LIST_UPDATE] \\ MATCH_MP_TAC cheney_UPDATE
   \\ FULL_SIMP_TAC bool_ss [ch_inv_thm,ok_abs_def,ok_state_def,LET_DEF,MEM,MAP,CONS_11]
@@ -862,13 +885,15 @@ val cheney_move2 = store_thm("cheney_move2",
   \\ sg `reachables (x2::x1::xs) (ch_set h) = reachables xs (ch_set h)`
   \\ ASM_SIMP_TAC std_ss []
   \\ MATCH_MP_TAC (METIS_PROVE [PAIR] ``(!x y z q. f (x,y,z,q) = g (x,y,z,q)) ==> (f = g)``)
-  \\ SIMP_TAC bool_ss [reachables_def,MEM] \\ METIS_TAC []);
+  \\ SIMP_TAC bool_ss [reachables_def,MEM] \\ METIS_TAC []
+QED
 
-val cheney_car_cdr = store_thm("cheney_car_cdr",
-  ``!xs ys x y h l i e u m.
+Theorem cheney_car_cdr:
+    !xs ys x y h l i e u m.
       ch_inv (xs,h,l) (i,e,ys,l,u,m) /\ MEM (x,y) (ZIP (xs,ys)) /\ ~(y = 0) ==>
       ch_inv (LIST_UPDATE n (FST (h ' x)) xs,h,l) (i,e,LIST_UPDATE n (FST (getDATA (m y))) ys,l,u,m) /\
-      ch_inv (LIST_UPDATE n (FST (SND (h ' x))) xs,h,l) (i,e,LIST_UPDATE n (FST (SND (getDATA (m y)))) ys,l,u,m)``,
+      ch_inv (LIST_UPDATE n (FST (SND (h ' x))) xs,h,l) (i,e,LIST_UPDATE n (FST (SND (getDATA (m y)))) ys,l,u,m)
+Proof
   REPEAT STRIP_TAC \\ MATCH_MP_TAC cheney_UPDATE
   \\ FULL_SIMP_TAC bool_ss [ch_inv_thm,ok_abs_def,ok_state_def,LET_DEF,MEM,MAP,CONS_11]
   \\ IMP_RES_TAC MAP_MEM_ZIP
@@ -895,11 +920,13 @@ val cheney_car_cdr = store_thm("cheney_car_cdr",
   \\ (REVERSE (FULL_SIMP_TAC std_ss [apply_def,IN_DEF,reachables_def,MEM]) THEN1 METIS_TAC [])
   \\ Q.EXISTS_TAC `x` \\ ASM_SIMP_TAC bool_ss []
   \\ MATCH_MP_TAC reachable_expand
-  \\ Q.EXISTS_TAC `r'` \\ ASM_SIMP_TAC bool_ss [ch_set_def,IN_DEF,PAIR_EQ] \\ METIS_TAC []);
+  \\ Q.EXISTS_TAC `r'` \\ ASM_SIMP_TAC bool_ss [ch_set_def,IN_DEF,PAIR_EQ] \\ METIS_TAC []
+QED
 
-val cheney_data = store_thm("cheney_data",
-  ``ch_inv (xs,h,l) (i,e,ys,l,u,m) /\ MEM (x,y) (ZIP (xs,ys)) /\ ~(y = 0) ==>
-    (SND (SND (h ' x)) = SND (SND (getDATA (m y))))``,
+Theorem cheney_data:
+    ch_inv (xs,h,l) (i,e,ys,l,u,m) /\ MEM (x,y) (ZIP (xs,ys)) /\ ~(y = 0) ==>
+    (SND (SND (h ' x)) = SND (SND (getDATA (m y))))
+Proof
   REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC bool_ss [ch_inv_thm,ok_abs_def,ok_state_def,LET_DEF,MEM,MAP,CONS_11]
   \\ IMP_RES_TAC MAP_MEM_ZIP
@@ -916,7 +943,8 @@ val cheney_data = store_thm("cheney_data",
   \\ `basic_abs m (y,x3,y3,d)` by FULL_SIMP_TAC bool_ss [basic_abs]
   \\ `apply b (ch_set h) (y,x3,y3,d)` by METIS_TAC []
   \\ Q.PAT_X_ASSUM `b y = x` ASSUME_TAC
-  \\ FULL_SIMP_TAC std_ss [apply_def,ch_set_def,IN_DEF]);
+  \\ FULL_SIMP_TAC std_ss [apply_def,ch_set_def,IN_DEF]
+QED
 
 val ch_set_FUPDATE = prove(
   ``ch_set (h |+ (fresh h,v1,v2,x)) = (fresh h,v1,v2,x) INSERT ch_set h``,
@@ -925,8 +953,9 @@ val ch_set_FUPDATE = prove(
   \\ SIMP_TAC bool_ss [SIMP_RULE std_ss [IN_DEF] IN_INSERT,PAIR_EQ,ch_set_def]
   \\ METIS_TAC [PAIR_EQ,fresh_NOT_IN_FDOM]);
 
-val FINITE_ch_set = store_thm("FINITE_ch_set",
-  ``!h:num|->num#num#'a. FINITE (ch_set h)``,
+Theorem FINITE_ch_set:
+    !h:num|->num#num#'a. FINITE (ch_set h)
+Proof
   CONV_TAC (QUANT_CONV (UNBETA_CONV ``h:num|->num#num#'a``))
   \\ MATCH_MP_TAC fmap_INDUCT \\ SIMP_TAC bool_ss [] \\ REPEAT STRIP_TAC THENL [
     sg `ch_set (FEMPTY:num|->num#num#'a) = {}`
@@ -937,31 +966,37 @@ val FINITE_ch_set = store_thm("FINITE_ch_set",
     \\ ASM_SIMP_TAC std_ss [FINITE_INSERT]
     \\ FULL_SIMP_TAC bool_ss [ch_set_def,INSERT_THM,FAPPLY_FUPDATE_THM,FDOM_FUPDATE,IN_DEF,
          METIS_PROVE [PAIR] ``!f g. (f = g) = !x y z d. f (x,y,z,d) = g (x,y,z,d)``]
-    \\ Cases_on `y` \\ Cases_on `r` \\ METIS_TAC [PAIR_EQ]]);
+    \\ Cases_on `y` \\ Cases_on `r` \\ METIS_TAC [PAIR_EQ]]
+QED
 
-val FINITE_reachables = store_thm("FINITE_reachables",
-  ``!r h:num|->num#num#'a. FINITE (reachables r (ch_set h))``,
+Theorem FINITE_reachables:
+    !r h:num|->num#num#'a. FINITE (reachables r (ch_set h))
+Proof
   REPEAT STRIP_TAC
   \\ (MATCH_MP_TAC o RW [AND_IMP_INTRO] o Q.GEN `s` o DISCH_ALL o
       SPEC_ALL o UNDISCH o SPEC_ALL) SUBSET_FINITE
   \\ Q.EXISTS_TAC `ch_set h` \\ FULL_SIMP_TAC bool_ss [ok_abs_def,FINITE_ch_set]
   \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_DEF,FINITE_ch_set]
   \\ Cases \\ Cases_on `r'` \\ Cases_on `r''`
-  \\ FULL_SIMP_TAC std_ss [reachables_def,IN_DEF]);
+  \\ FULL_SIMP_TAC std_ss [reachables_def,IN_DEF]
+QED
 
-val reachables_EQ_EMPTY = store_thm("reachables_EQ_EMPTY",
-  ``!x h. ~(x IN FDOM h) ==> (reachables [x] (ch_set h) = {})``,
+Theorem reachables_EQ_EMPTY:
+    !x h. ~(x IN FDOM h) ==> (reachables [x] (ch_set h) = {})
+Proof
   REWRITE_TAC [METIS_PROVE [PAIR] ``(f = g) = (!a x y d. f (a,x,y,d) = g (a,x,y,d))``]
   \\ SIMP_TAC bool_ss [reachables_def,MEM,IN_DEF,EMPTY_DEF,ch_set_def,reachable_def]
   \\ REPEAT STRIP_TAC \\ Cases_on `a = x` \\ ASM_SIMP_TAC bool_ss []
   \\ DISJ2_TAC \\ CCONTR_TAC \\ FULL_SIMP_TAC bool_ss []
-  \\ Cases_on `p` \\ REPEAT (FULL_SIMP_TAC std_ss [ch_set_def,APPEND,PATH_def,IN_DEF]));
+  \\ Cases_on `p` \\ REPEAT (FULL_SIMP_TAC std_ss [ch_set_def,APPEND,PATH_def,IN_DEF])
+QED
 
-val reachables_NEXT = store_thm("reachables_NEXT",
-  ``!i x1 x2 d h.
+Theorem reachables_NEXT:
+    !i x1 x2 d h.
       i IN FDOM h /\ (h ' i = (x1,x2,d)) ==>
       (reachables [i] (ch_set h) =
-       {(i,x1,x2,d)} UNION reachables [x1] (ch_set h) UNION reachables [x2] (ch_set h))``,
+       {(i,x1,x2,d)} UNION reachables [x1] (ch_set h) UNION reachables [x2] (ch_set h))
+Proof
   REWRITE_TAC [METIS_PROVE [PAIR] ``(f = g) = (!a x y d. f (a,x,y,d) = g (a,x,y,d))``]
   \\ SIMP_TAC bool_ss [SIMP_RULE std_ss [IN_DEF] (CONJ IN_UNION IN_INSERT),EMPTY_DEF]
   \\ SIMP_TAC bool_ss [reachables_def,IN_DEF,MEM,reachable_def]
@@ -977,17 +1012,20 @@ val reachables_NEXT = store_thm("reachables_NEXT",
   THEN1 (DISJ2_TAC \\ Q.EXISTS_TAC `[]` \\
     FULL_SIMP_TAC bool_ss [APPEND,PATH_def,IN_DEF,ch_set_def,PAIR_EQ] \\ METIS_TAC [])
   THEN1 (DISJ2_TAC \\ Q.EXISTS_TAC `x2::p` \\
-    FULL_SIMP_TAC bool_ss [APPEND,PATH_def,IN_DEF,ch_set_def,PAIR_EQ] \\ METIS_TAC []));
+    FULL_SIMP_TAC bool_ss [APPEND,PATH_def,IN_DEF,ch_set_def,PAIR_EQ] \\ METIS_TAC [])
+QED
 
 
 
 
-val reachables_THM = store_thm("reachables_THM",
-  ``!x y xs h. (reachables [] h = {}) /\
-               (reachables (x::xs) h = reachables [x] h UNION reachables xs h)``,
+Theorem reachables_THM:
+    !x y xs h. (reachables [] h = {}) /\
+               (reachables (x::xs) h = reachables [x] h UNION reachables xs h)
+Proof
   REPEAT STRIP_TAC \\ REWRITE_TAC [EXTENSION,IN_UNION]
   \\ Cases \\ Cases_on `r` \\ Cases_on `r'`
-  \\ SIMP_TAC bool_ss [reachables_def,MEM,IN_DEF,EMPTY_DEF] \\ METIS_TAC []);
+  \\ SIMP_TAC bool_ss [reachables_def,MEM,IN_DEF,EMPTY_DEF] \\ METIS_TAC []
+QED
 
 val reachables_fresh_LEMMA = prove(
   ``reachables [fresh h] (ch_set (h |+ (fresh h,v1,v2,x))) =
@@ -1037,9 +1075,10 @@ val reachable_SUBSET = prove(
   ``!xs x s t. reachable x s y /\ s SUBSET t ==> reachable x t y``,
   METIS_TAC [reachable_def,PATH_SUBSET]);
 
-val reachables_fresh = store_thm("reachables_fresh",
-  ``reachables (fresh h::vs) (ch_set (h |+ (fresh h,v1,v2,x))) =
-    (fresh h,v1,v2,x) INSERT reachables (v1::v2::vs) (ch_set h)``,
+Theorem reachables_fresh:
+    reachables (fresh h::vs) (ch_set (h |+ (fresh h,v1,v2,x))) =
+    (fresh h,v1,v2,x) INSERT reachables (v1::v2::vs) (ch_set h)
+Proof
   NTAC 2 (ONCE_REWRITE_TAC [reachables_THM])
   \\ REWRITE_TAC [CONJUNCT1 (SPEC_ALL reachables_THM),UNION_EMPTY]
   \\ REWRITE_TAC [reachables_fresh_LEMMA,INSERT_UNION_EQ,UNION_EMPTY,GSYM UNION_ASSOC]
@@ -1074,6 +1113,6 @@ val reachables_fresh = store_thm("reachables_fresh",
       \\ FULL_SIMP_TAC bool_ss [APPEND,PATH_def,IN_INSERT,PAIR_EQ]
       \\ FULL_SIMP_TAC bool_ss [IN_DEF]
       \\ FULL_SIMP_TAC bool_ss [ch_set_def,fresh_NOT_IN_FDOM,fix_MEM]
-      \\ METIS_TAC [MEM,LEMMA3]]]);
+      \\ METIS_TAC [MEM,LEMMA3]]]
+QED
 
-val _ = export_theory();

@@ -1,0 +1,285 @@
+=============
+Alphanumeric
+=============
+
+Definition foo_def:
+  foo = 0
+End
+
+---
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_eqn
+        (hol_identifier)
+        (hol_term
+            (hol_number))))))
+
+
+==============
+Parenthesized
+==============
+
+Definition foo_def:
+  (foo = 0)
+End
+
+---
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_eqn
+        (hol_identifier)
+        (hol_term
+            (hol_number))))))
+
+
+========
+Dollars
+========
+
+Definition dollars_def:
+  $$ = 0
+End
+
+---
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_eqn
+        (hol_identifier)
+        (hol_term
+            (hol_number))))))
+
+
+============
+Bad Dollars
+
+:error
+============
+
+Definition dollars_def:
+  $dollar$dollar = 0
+End
+
+
+=========
+Symbolic
+=========
+
+Definition symbols_def:
+  #?+*/\=<>&%@!:|- = 0
+End
+
+---
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_eqn
+        (hol_identifier)
+        (hol_term
+            (hol_number))))))
+
+=========
+Variable
+=========
+
+Definition foo_def:
+  foo x = 0
+End
+
+---
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_eqn
+        (hol_identifier)
+        (hol_pat
+          (hol_variable))
+        (hol_term
+            (hol_number))))))
+
+=========
+Wildcard
+=========
+
+Definition foo_def:
+  foo _ x = 0
+End
+
+---
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_eqn
+        (hol_identifier)
+        (hol_pat
+          (hol_wildcard))
+        (hol_pat
+          (hol_variable))
+        (hol_term
+            (hol_number))))))
+
+
+=========================
+Alphanumeric Constructor
+=========================
+
+Definition foo_def:
+  foo NONE = 0
+End
+
+---
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_eqn
+        (hol_identifier)
+        (hol_pat
+          (hol_cname_alphanumeric))
+        (hol_term
+            (hol_number))))))
+
+
+==============
+Tuple Pattern
+==============
+
+Definition fst_def:
+  fst (a, b) = a
+End
+
+---
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_eqn
+        (hol_identifier)
+        (hol_pat
+          (hol_ptuple
+            (hol_pat
+              (hol_variable))
+            (hol_pat
+              (hol_variable))))
+        (hol_term
+            (hol_identifier))))))
+
+
+================
+Nested Patterns
+================
+
+Definition foo_def:
+  foo (SOME x) = 0
+End
+
+---
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_eqn
+        (hol_identifier)
+        (hol_pat
+          (hol_cname_alphanumeric)
+          (hol_pat
+            (hol_variable)))
+        (hol_term
+            (hol_number))))))
+
+
+===================
+Multiple Equations
+===================
+
+Definition foo_def:
+  foo (SOME x) = 0 ∧
+  foo NONE = 1
+End
+
+---
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_eqn
+        (hol_identifier)
+        (hol_pat
+          (hol_cname_alphanumeric)
+          (hol_pat
+            (hol_variable)))
+        (hol_term
+            (hol_number)))
+      (hol_eqn
+        (hol_identifier)
+        (hol_pat
+          (hol_cname_alphanumeric))
+        (hol_term
+            (hol_number))))))
+
+
+=================
+With Termination
+=================
+
+Definition foo_def:
+  foo = 0
+Termination
+  gvs
+End
+
+---
+
+(source_file
+  (hol_definition_with_proof
+    (hol_defname)
+    (hol_fn_spec
+      (hol_eqn
+        (hol_identifier)
+        (hol_term
+            (hol_number))))
+    (tactic
+      (vid_exp
+            (longvid
+              (vid))))))
+
+
+===========
+Attributes
+===========
+
+Definition foo_def[simp, bar]:
+  foo = 0
+End
+
+---
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_attributes
+      (attribute)
+      (attribute))
+    (hol_fn_spec
+      (hol_eqn
+        (hol_identifier)
+        (hol_term
+            (hol_number))))))

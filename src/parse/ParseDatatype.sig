@@ -41,4 +41,6 @@ val hparse : type_grammar.grammar -> Type.hol_type Portable.quotation ->
   or a type-constant of arity 0, or one of the types being defined.
 *)
 
+val parse_listener : (AST list) Listener.t
+
 end

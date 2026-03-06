@@ -135,10 +135,10 @@ passo, si consulti la Sezione~\ref{sec:editting-configure} di sotto.
 
 Il passo successivo è eseguire il programma \texttt{build}. Questo dovrebbe
 risultare in una grande quantità di output mentre il codice del sistema viene compilato
-e le teorie costruite. Alla fine è prodotto un sistema \HOL{}\footnote{Sono
-  prodotti quattro eseguibili \HOL{}: \textsf{hol}, \textsf{hol.noquote},
-  \textsf{hol.bare} e \textsf{hol.bare.noquote}. Il primo di questi
-	sarà usato per la maggior parte degli esempi nel \TUTORIAL{}.} nella
+e le teorie costruite. Alla fine è prodotto un sistema \HOL{}\footnote{L'eseguibile
+  \textsf{hol} supporta \texttt{--bare} per un ambiente minimale.
+  Con Moscow~ML, \texttt{--noquote} disabilita il filtro delle quotazioni;
+  con Poly/ML, \texttt{--poly} avvia senza stato HOL.} nella
 directory \texttt{bin/}.
 
 \begin{session}
@@ -256,7 +256,6 @@ Making bin/build.
 - Setting up the standard prelude.
 - Setting up src/0/Globals.sml.
 - Generating bin/hol.
-- Generating bin/hol.noquote.
 - Attempting to compile quote filter ... successful.
 - Setting up the muddy library Makefile.
 - Setting up the help Makefile.

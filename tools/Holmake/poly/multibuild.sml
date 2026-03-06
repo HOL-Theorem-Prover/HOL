@@ -25,7 +25,7 @@ fun lmap_insert k v m =
 
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
-val loggingdir = ".hollogs"
+val loggingdir = ".hol/logs"
 
 fun graph_dirinfo g =
     let
@@ -58,7 +58,7 @@ fun graphbuild optinfo g =
     val { build_command,
           mosml_build_command : GraphExtra.t mosml_build_command,
           warn, tgtfatal, diag,
-          keep_going, quiet, hmenv, jobs, info, time_limit,
+          keep_going, quiet, hmenv, jobs, info, time_limit, maxheap,
           relocbuild } = optinfo
     val _ = diag "Starting graphbuild"
     val dirmap = graph_dirinfo g
@@ -73,7 +73,7 @@ fun graphbuild optinfo g =
     fun genLF {tag, dir} =
         let
           val ldir = dir ++ loggingdir
-          val _ = HOLFileSys.mkDir ldir handle _ => ()
+          val _ = Holmake_tools.createDirIfNecessary ldir
         in
           ldir ++ safetag dir tag
         end

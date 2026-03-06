@@ -10,21 +10,13 @@
 (*   Wed Nov  7 11:29:35 GMT 2001 -- created file                            *)
 (*                                                                           *)
 (*****************************************************************************)
+Theory MachineTransition
+Ancestors
+  arithmetic list pair
+Libs
+  tautLib simpLib numLib pairLib Ho_Rewrite Num_conv
 
-open HolKernel Parse boolLib;
 
-open tautLib;
-open bossLib;
-open simpLib;
-open numLib;
-open pairLib;
-open arithmeticTheory;
-open listTheory;
-open pairTheory;
-open Ho_Rewrite;
-open Num_conv;
-
-val _ = new_theory "MachineTransition";
 val _ = ParseExtras.temp_loose_equality()
 
 (* These two don't seem to be used ...
@@ -41,27 +33,27 @@ fun prove_thm(_:string,tm,tac) = prove(tm,tac);
 (* a state satisfying B in one R-step                                        *)
 (*****************************************************************************)
 
-val Next_def =
- Define
-  `Next R B state =
-    ?state_. B state_ /\  R(state_,state)`;
+Definition Next_def:
+   Next R B state =
+    ?state_. B state_ /\  R(state_,state)
+End
 
 (*****************************************************************************)
 (* ``Prev R Q state'' is the set of states from which Q can be reached       *)
 (* in one transition                                                         *)
 (*****************************************************************************)
 
-val Prev_def =
- Define
-  `Prev R Q state = ?state'. R(state,state') /\ Q state'`;
+Definition Prev_def:
+   Prev R Q state = ?state'. R(state,state') /\ Q state'
+End
 
 (*****************************************************************************)
 (* Characteristic function of a set with just one state                      *)
 (*****************************************************************************)
 
-val Eq_def =
- Define
-  `Eq state0 state = (state0 = state)`;
+Definition Eq_def:
+   Eq state0 state = (state0 = state)
+End
 
 val Prev_Next_Eq =
  prove_thm
@@ -74,22 +66,22 @@ val Prev_Next_Eq =
 (* a state satisfying B in exactly n R-steps                                 *)
 (*****************************************************************************)
 
-val ReachIn_def =
- Define
-  `(ReachIn R B 0 = B)
+Definition ReachIn_def:
+   (ReachIn R B 0 = B)
    /\
-   (ReachIn R B (SUC n) = Next R (ReachIn R B n))`;
+   (ReachIn R B (SUC n) = Next R (ReachIn R B n))
+End
 
-val ReachIn_rec =
- store_thm
-  ("ReachIn_rec",
-   ``(!R B state.
+Theorem ReachIn_rec:
+     (!R B state.
        ReachIn R B 0 state = B state)
    /\
    (!R B n state.
      ReachIn R B (SUC n) state =
-     (?state_. ReachIn R B n state_ /\ R(state_,state)))``,
-   PROVE_TAC[ReachIn_def,Next_def]);
+     (?state_. ReachIn R B n state_ /\ R(state_,state)))
+Proof
+   PROVE_TAC[ReachIn_def,Next_def]
+QED
 
 val ReachIn_Next =
  prove_thm
@@ -116,9 +108,9 @@ val Next_ReachIn =
 (* state satisfying B in some finite number of R-steps                       *)
 (*****************************************************************************)
 
-val Reachable_def =
- Define
-  `Reachable R B state = ?n. ReachIn R B n state`;
+Definition Reachable_def:
+   Reachable R B state = ?n. ReachIn R B n state
+End
 
 val Reachable_eqn =
  prove_thm
@@ -135,10 +127,10 @@ val Reachable_eqn =
            THEN ASM_REWRITE_TAC[ReachIn_def],
           PROVE_TAC[ReachIn_Next]]);
 
-val ReachBy_def =
- Define
-  `ReachBy R B n state =
-    ?m. (m <= n) /\ ReachIn R B m state`;
+Definition ReachBy_def:
+   ReachBy R B n state =
+    ?m. (m <= n) /\ ReachIn R B m state
+End
 
 val ReachIn_IMPLIES_ReachBy =
  prove_thm
@@ -191,28 +183,27 @@ val ReachBy_lemma =
           THEN ASM_REWRITE_TAC
                 [GSYM(ReachIn_Next),DECIDE``(SUC m<=SUC n)=(m<=n)``]]]);
 
-val ReachBy_rec =
- store_thm
-  ("ReachBy_rec",
-   ``(!R B state.
+Theorem ReachBy_rec:
+     (!R B state.
        ReachBy R B 0 state = B state)
      /\
      (!R B n state.
        ReachBy R B (SUC n) state =
         ReachBy R B n state
         \/
-        ?state_. ReachBy R B n state_ /\ R (state_,state))``,
-   PROVE_TAC[ReachBy_lemma,Next_def]);
+        ?state_. ReachBy R B n state_ /\ R (state_,state))
+Proof
+   PROVE_TAC[ReachBy_lemma,Next_def]
+QED
 
-val ReachBy_ReachIn =
- store_thm
-  ("ReachBy_ReachIn",
-   ``(!R B state.
+Theorem ReachBy_ReachIn:
+     (!R B state.
        ReachBy R B 0 state = B state)
      /\
      (!R B n state.
        ReachBy R B (SUC n) state =
-        ReachBy R B n state \/ ReachIn R B (SUC n) state)``,
+        ReachBy R B n state \/ ReachIn R B (SUC n) state)
+Proof
    REWRITE_TAC[ReachBy_def,ReachIn_def,LESS_EQ_0]
     THEN CONJ_TAC
     THEN REPEAT GEN_TAC
@@ -229,13 +220,14 @@ val ReachBy_ReachIn =
           THEN PROVE_TAC[Next_ReachIn],
          PROVE_TAC[DECIDE ``m <= n ==> m <= SUC n``],
          EXISTS_TAC ``SUC n``
-          THEN ASM_REWRITE_TAC[LESS_EQ_REFL,GSYM Next_ReachIn]]]);
+          THEN ASM_REWRITE_TAC[LESS_EQ_REFL,GSYM Next_ReachIn]]]
+QED
 
-val Reachable_ReachBy =
- store_thm
-  ("Reachable_ReachBy",
-   ``Reachable R B state = ?n. ReachBy R B n state``,
-   PROVE_TAC[Reachable_def,ReachBy_def,LESS_EQ_REFL]);
+Theorem Reachable_ReachBy:
+     Reachable R B state = ?n. ReachBy R B n state
+Proof
+   PROVE_TAC[Reachable_def,ReachBy_def,LESS_EQ_REFL]
+QED
 
 val ReachBy_mono =
  prove_thm
@@ -350,13 +342,12 @@ val fixedpoint_lemma2 =
     THEN Induct
     THEN PROVE_TAC[ADD_CLAUSES,fixedpoint_lemma1]);
 
-val ReachBy_fixedpoint =
- store_thm
-  ("ReachBy_fixedpoint",
-   ``!R B n.
+Theorem ReachBy_fixedpoint:
+     !R B n.
       (ReachBy R B n = ReachBy R B (SUC n))
       ==>
-      (Reachable R B = ReachBy R B n)``,
+      (Reachable R B = ReachBy R B n)
+Proof
    REPEAT STRIP_TAC
     THEN CONV_TAC(DEPTH_CONV FUN_EQ_CONV)
     THEN REWRITE_TAC[Reachable_def]
@@ -371,13 +362,14 @@ val ReachBy_fixedpoint =
           THEN IMP_RES_TAC(ONCE_REWRITE_RULE[ADD_SYM]LESS_ADD)
           THEN IMP_RES_TAC ReachIn_IMPLIES_ReachBy
           THEN PROVE_TAC[fixedpoint_lemma2]],
-      PROVE_TAC[ReachBy_def]]);
+      PROVE_TAC[ReachBy_def]]
+QED
 
-val EXISTS_IMP_EQ =
- store_thm
-  ("EXISTS_IMP_EQ",
-   ``((?x. P x) ==> Q) = (!x. P x ==> Q)``,
-   PROVE_TAC[]);
+Theorem EXISTS_IMP_EQ:
+     ((?x. P x) ==> Q) = (!x. P x ==> Q)
+Proof
+   PROVE_TAC[]
+QED
 
 val LENGTH_EQ_CONS_EXISTS =
  prove_thm
@@ -393,39 +385,39 @@ val LENGTH_EQ_NIL_EXISTS =
    ``!P. (?l. (LENGTH l = 0) /\ P l) = P[]``,
    PROVE_TAC[LENGTH_NIL]);
 
-val EQ_COND =
- store_thm
-  ("EQ_COND",
-   ``((x = (if b then y else z)) = (if b then (x = y) else (x = z)))
+Theorem EQ_COND:
+     ((x = (if b then y else z)) = (if b then (x = y) else (x = z)))
      /\
-     (((if b then y else z) = x) = (if b then (y = x) else (z = x)))``,
-   ZAP_TAC std_ss []);
+     (((if b then y else z) = x) = (if b then (y = x) else (z = x)))
+Proof
+   ZAP_TAC std_ss []
+QED
 
-val COND_SIMP =
- store_thm
-  ("COND_SIMP",
-   ``((if b then  F  else  F)  =  F)        /\
+Theorem COND_SIMP:
+     ((if b then  F  else  F)  =  F)        /\
      ((if b then  F  else  T)  = ~b)        /\
      ((if b then  T  else  F)  =  b)        /\
      ((if b then  T  else  T)  =  T)        /\
      ((if b then  x  else  x)  =  x)        /\
      ((if b then  b' else ~b') =  (b = b')) /\
-     ((if b then ~b' else  b') =  (b = ~b'))``,
-   ZAP_TAC std_ss []);
+     ((if b then ~b' else  b') =  (b = ~b'))
+Proof
+   ZAP_TAC std_ss []
+QED
 
 (*****************************************************************************)
 (* IsTrace R B Q [s0;s1;...;sn] is true if B s0, Q sn and R(si,s(i+1)).      *)
 (* In addition [s0;...;sn] is of minimal length to get from B to Q.          *)
 (*****************************************************************************)
 
-val IsTrace_def =
- Define
-  `(IsTrace R B Q [] = F)
+Definition IsTrace_def:
+   (IsTrace R B Q [] = F)
    /\
    (IsTrace R B Q [s] = B s /\ Q s)
    /\
    (IsTrace R B Q (s0 :: (s1 :: tr)) =
-     B s0 /\ R(s0,s1) /\ IsTrace R (Eq s1) Q (s1 :: tr))`;
+     B s0 /\ R(s0,s1) /\ IsTrace R (Eq s1) Q (s1 :: tr))
+End
 
 
 (*****************************************************************************)
@@ -433,13 +425,13 @@ val IsTrace_def =
 (* are equal to state -- i.e. an R-step doesn't change the state             *)
 (*****************************************************************************)
 
-val Stable_def =
- Define
-  `Stable R state = !state'. R(state,state') ==> (state' = state)`;
+Definition Stable_def:
+   Stable R state = !state'. R(state,state') ==> (state' = state)
+End
 
-val Live_def =
- Define
-  `Live R = !state. ?state'. R(state,state')`;
+Definition Live_def:
+   Live R = !state. ?state'. R(state,state')
+End
 
 val ReachIn_Stable_SUC =
  prove_thm
@@ -487,15 +479,14 @@ val Stable_ADD =
        THEN RES_TAC
        THEN PROVE_TAC[Stable_def]]);
 
-val Reachable_Stable =
- store_thm
-  ("Reachable_Stable",
-   ``Live R
+Theorem Reachable_Stable:
+     Live R
      /\
      (!state. ReachIn R B n state ==> Stable R state)
      ==>
      (!state.
-       Reachable R B state /\ Stable R state = ReachIn R B n state)``,
+       Reachable R B state /\ Stable R state = ReachIn R B n state)
+Proof
    RW_TAC std_ss [Reachable_def]
     THEN EQ_TAC
     THEN REPEAT STRIP_TAC
@@ -509,32 +500,32 @@ val Reachable_Stable =
                 (fn [th1,th2,th3,th4,th5] => ASSUME_TAC(REWRITE_RULE[th1]th3))
           THEN IMP_RES_TAC Stable_ADD],
       PROVE_TAC[],
-      PROVE_TAC[]]);
+      PROVE_TAC[]]
+QED
 
-val TraceReachIn =
- store_thm
-  ("TraceReachIn",
-   ``!R B tr. B(tr 0) /\ (!n. R(tr n, tr(n+1))) ==> !n. ReachIn R B n (tr n)``,
+Theorem TraceReachIn:
+     !R B tr. B(tr 0) /\ (!n. R(tr n, tr(n+1))) ==> !n. ReachIn R B n (tr n)
+Proof
    REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN Induct
-    THEN PROVE_TAC[ReachIn_def,Next_def,ADD1]);
+    THEN PROVE_TAC[ReachIn_def,Next_def,ADD1]
+QED
 
-val ModelCheckAlways =
- store_thm
-  ("ModelCheckAlways",
-   ``!R B P.
+Theorem ModelCheckAlways:
+     !R B P.
       (!s. Reachable R B s ==> P s)
       ==>
-      !tr. B(tr 0) /\ (!t. R(tr t, tr(t+1)))  ==> !t. P(tr t)``,
-   PROVE_TAC[TraceReachIn,Reachable_def]);
+      !tr. B(tr 0) /\ (!t. R(tr t, tr(t+1)))  ==> !t. P(tr t)
+Proof
+   PROVE_TAC[TraceReachIn,Reachable_def]
+QED
 
-val ModelCheckAlwaysCor1 =
- store_thm
-  ("ModelCheckAlwaysCor1",
-   ``(!s1 s2. Reachable R B (s1,s2) ==> P s1)
+Theorem ModelCheckAlwaysCor1:
+     (!s1 s2. Reachable R B (s1,s2) ==> P s1)
      ==>
-     !tr. B (tr 0) /\ (!t. R (tr t,tr (t + 1))) ==> !t. P(FST(tr t))``,
+     !tr. B (tr 0) /\ (!t. R (tr t,tr (t + 1))) ==> !t. P(FST(tr t))
+Proof
  REWRITE_TAC
   [simpLib.SIMP_RULE
     bossLib.arith_ss
@@ -543,58 +534,60 @@ val ModelCheckAlwaysCor1 =
       [``R :('a1#'a2) # ('a1#'a2) -> bool``,
        ``B :('a1#'a2) -> bool``,
        ``\p:'a1#'a2. P(FST p):bool``]
-      ModelCheckAlways)]);
+      ModelCheckAlways)]
+QED
 
-val ModelCheckAlwaysCor2 =
- store_thm
-  ("ModelCheckAlwaysCor2",
-   ``!R B P.
+Theorem ModelCheckAlwaysCor2:
+     !R B P.
       (!s1 s2. Reachable R B (s1,s2) ==> P s1)
       ==>
-      !tr1. (?tr2. B(tr1 0,tr2 0) /\ !t. R((tr1 t,tr2 t), (tr1(t+1),tr2(t+1))))  ==> !t. P(tr1 t)``,
+      !tr1. (?tr2. B(tr1 0,tr2 0) /\ !t. R((tr1 t,tr2 t), (tr1(t+1),tr2(t+1))))  ==> !t. P(tr1 t)
+Proof
    REPEAT STRIP_TAC
     THEN IMP_RES_TAC ModelCheckAlwaysCor1
     THEN POP_ASSUM(ASSUME_TAC o
                    simpLib.SIMP_RULE bossLib.arith_ss [] o
                    ISPEC ``\n:num. (tr1 n:'a, tr2 n:'b)``)
-    THEN PROVE_TAC[]);
+    THEN PROVE_TAC[]
+QED
 
 
-val FnPair_def = Define `FnPair f g x = (f x, g x)`;
+Definition FnPair_def:   FnPair f g x = (f x, g x)
+End
 
-val FnPairAbs =
- store_thm
-  ("FnPairAbs",
-   ``(!tr:num->'a#'b. FnPair (\n. FST (tr n)) (\n. SND (tr n)) = tr)
+Theorem FnPairAbs:
+     (!tr:num->'a#'b. FnPair (\n. FST (tr n)) (\n. SND (tr n)) = tr)
      /\
-    (!(tr1:num->'a)(tr2:num->'b). (\n. (tr1 n,tr2 n)) = FnPair tr1 tr2)``,
+    (!(tr1:num->'a)(tr2:num->'b). (\n. (tr1 n,tr2 n)) = FnPair tr1 tr2)
+Proof
    CONJ_TAC
     THEN REPEAT GEN_TAC
     THEN CONV_TAC FUN_EQ_CONV
-    THEN simpLib.SIMP_TAC bossLib.arith_ss [FnPair_def]);
+    THEN simpLib.SIMP_TAC bossLib.arith_ss [FnPair_def]
+QED
 
-val FnPairExists =
- store_thm
-  ("FnPairExists",
-   ``!P. (?tr:num->'a#'b. P tr) = ?tr1 tr2. P(FnPair tr1 tr2)``,
+Theorem FnPairExists:
+     !P. (?tr:num->'a#'b. P tr) = ?tr1 tr2. P(FnPair tr1 tr2)
+Proof
    GEN_TAC
     THEN EQ_TAC
     THEN REPEAT STRIP_TAC
     THENL[EXISTS_TAC ``\n. FST((tr:num->'a#'b) n)``
            THEN EXISTS_TAC ``\n. SND((tr:num->'a#'b) n)``,
           EXISTS_TAC ``\n. ((tr1:num->'a) n, (tr2:num->'b) n)``]
-    THEN ASM_REWRITE_TAC[FnPairAbs]);
+    THEN ASM_REWRITE_TAC[FnPairAbs]
+QED
 
-val FnPairForall =
- store_thm
-  ("FnPairForall",
-   ``!P. (!tr:num->'a#'b. P tr) = !tr1 tr2. P(FnPair tr1 tr2)``,
+Theorem FnPairForall:
+     !P. (!tr:num->'a#'b. P tr) = !tr1 tr2. P(FnPair tr1 tr2)
+Proof
    GEN_TAC
     THEN EQ_TAC
     THEN REPEAT STRIP_TAC
     THENL[ALL_TAC,
           ONCE_REWRITE_TAC[GSYM(CONJUNCT1 FnPairAbs)]]
-    THEN PROVE_TAC[]);
+    THEN PROVE_TAC[]
+QED
 
 (*****************************************************************************)
 (*     |- !P rep.                                                            *)
@@ -640,40 +633,40 @@ val ABS_EXISTS_THM = (* Adapted from Hol sources *)
       REWRITE_RULE[GSYM th2](Q.GEN `P` (Q.GEN `rep` (DISCH_ALL eth1))))
    end;
 
-val FORALL_REP =
- store_thm
-  ("FORALL_REP",
-   ``!abs rep P Q.
+Theorem FORALL_REP:
+     !abs rep P Q.
       (!a. abs (rep a) = a) /\ (!r. P r = (rep (abs r) = r))
       ==>
-      ((!a. Q a) = (!r. P r ==> Q(abs r)))``,
-   PROVE_TAC[]);
+      ((!a. Q a) = (!r. P r ==> Q(abs r)))
+Proof
+   PROVE_TAC[]
+QED
 
-val EXISTS_REP =
- store_thm
-  ("EXISTS_REP",
-   ``!abs rep P Q.
+Theorem EXISTS_REP:
+     !abs rep P Q.
       (!a. abs (rep a) = a) /\ (!r. P r = (rep (abs r) = r))
       ==>
-      ((?a. Q a) = (?r. P r /\ Q(abs r)))``,
-   PROVE_TAC[]);
+      ((?a. Q a) = (?r. P r /\ Q(abs r)))
+Proof
+   PROVE_TAC[]
+QED
 
-val ABS_ONE_ONE =
- store_thm
-  ("ABS_ONE_ONE",
-   ``!abs rep.
+Theorem ABS_ONE_ONE:
+     !abs rep.
       ((!a. abs(rep a) = a) /\ (!r. range r = (rep(abs r) = r)))
       ==>
-      !r. range r /\ range r' ==> ((abs r = abs r') = (r = r'))``,
-   PROVE_TAC[]);
+      !r. range r /\ range r' ==> ((abs r = abs r') = (r = r'))
+Proof
+   PROVE_TAC[]
+QED
 
 (*****************************************************************************)
 (* Theorems relating paths and transition relations                          *)
 (*****************************************************************************)
 
-val Path_def =
- Define
-  `Path(R,s)f = (f 0 = s) /\ !n. R(f n, f(n+1))`;
+Definition Path_def:
+   Path(R,s)f = (f 0 = s) /\ !n. R(f n, f(n+1))
+End
 
 val ReachInPath1 =
  prove_thm
@@ -683,39 +676,39 @@ val ReachInPath1 =
     THEN REPEAT STRIP_TAC
     THEN PROVE_TAC[TraceReachIn]);
 
-val FinPath_def =
- Define
-  `(FinPath(R,s) f 0 = (f 0 = s))
+Definition FinPath_def:
+   (FinPath(R,s) f 0 = (f 0 = s))
    /\
-   (FinPath(R,s) f (SUC n) = FinPath(R,s) f n /\ R(f n, f(n+1)))`;
+   (FinPath(R,s) f (SUC n) = FinPath(R,s) f n /\ R(f n, f(n+1)))
+End
 
-val FinFunEq =
- store_thm
-  ("FinFunEq",
-   ``(!m. m <= n+1 ==> (f1 m = f2 m)) = (!m. m <= n ==> (f1 m = f2 m)) /\ (f1(n+1) = f2(n+1))``,
+Theorem FinFunEq:
+     (!m. m <= n+1 ==> (f1 m = f2 m)) = (!m. m <= n ==> (f1 m = f2 m)) /\ (f1(n+1) = f2(n+1))
+Proof
    REWRITE_TAC[ARITH_PROVE ``(m <= n+1) = (m <= n) \/ (m = n+1)``]
-    THEN PROVE_TAC[]);
+    THEN PROVE_TAC[]
+QED
 
-val FinPathThm =
- store_thm
-  ("FinPathThm",
-   ``!n. FinPath (R,s) f n = (f 0 = s) /\ !m. (m < n) ==> R(f m, f(m+1))``,
+Theorem FinPathThm:
+     !n. FinPath (R,s) f n = (f 0 = s) /\ !m. (m < n) ==> R(f m, f(m+1))
+Proof
    Induct
     THEN RW_TAC arith_ss [FinPath_def,ARITH_PROVE``(m < SUC n) = (m = n) \/ (m < n)``]
     THEN EQ_TAC
     THEN REPEAT STRIP_TAC
-    THEN RW_TAC std_ss []);
+    THEN RW_TAC std_ss []
+QED
 
-val FinPathLemma =
- store_thm
-  ("FinPathLemma",
-   ``!f1 f2 n.
-      (!m. m <= n ==> (f1 m = f2 m)) ==> (FinPath(R,s) f1 n = FinPath(R,s) f2 n)``,
+Theorem FinPathLemma:
+     !f1 f2 n.
+      (!m. m <= n ==> (f1 m = f2 m)) ==> (FinPath(R,s) f1 n = FinPath(R,s) f2 n)
+Proof
    STRIP_TAC
     THEN STRIP_TAC
     THEN Induct
     THEN RW_TAC std_ss [FinPath_def,LESS_EQ_REFL,ADD1,ARITH_PROVE``n <= n+1``]
-    THEN PROVE_TAC[FinFunEq]);
+    THEN PROVE_TAC[FinFunEq]
+QED
 
 local
 val th =
@@ -756,28 +749,27 @@ val ReachInFinPath2 =
     THEN REWRITE_TAC[FinPath_def,ReachIn_def,Next_def,ADD1]
     THEN PROVE_TAC[]);
 
-val ReachInFinPath =
- store_thm
-  ("ReachInFinPath",
-   ``!R B n s. ReachIn R B n s = ?f s0. B s0 /\ FinPath(R,s0) f n /\ (s = f n)``,
-   PROVE_TAC[ReachInFinPath1,ReachInFinPath2]);
+Theorem ReachInFinPath:
+     !R B n s. ReachIn R B n s = ?f s0. B s0 /\ FinPath(R,s0) f n /\ (s = f n)
+Proof
+   PROVE_TAC[ReachInFinPath1,ReachInFinPath2]
+QED
 
-val ReachableFinPath =
- store_thm
-  ("ReachableFinPath",
-   ``!R B s. Reachable R B s = ?f s0 n. B s0 /\ FinPath(R,s0) f n /\ (s = f n)``,
-   PROVE_TAC[ReachInFinPath,Reachable_def]);
+Theorem ReachableFinPath:
+     !R B s. Reachable R B s = ?f s0 n. B s0 /\ FinPath(R,s0) f n /\ (s = f n)
+Proof
+   PROVE_TAC[ReachInFinPath,Reachable_def]
+QED
 
 (* Another gross proof! *)
-val ReachIn_revrec =
- store_thm
-  ("ReachIn_revrec",
-   ``(!R B state.
+Theorem ReachIn_revrec:
+     (!R B state.
        ReachIn R B 0 state = B state)
    /\
    (!R B n state.
      ReachIn R B (SUC n) state =
-     (?state1 state2. B state1 /\ R(state1,state2) /\ ReachIn R (Eq state2) n state))``,
+     (?state1 state2. B state1 /\ R(state1,state2) /\ ReachIn R (Eq state2) n state))
+Proof
    SIMP_TAC std_ss [CONJUNCT1 ReachIn_rec,ReachInFinPath,FinPathThm,Eq_def]
     THEN REPEAT STRIP_TAC
     THEN EQ_TAC
@@ -795,25 +787,27 @@ val ReachIn_revrec =
       Q.EXISTS_TAC `\i. if (i=0) then state1 else f(i-1)`
        THEN RW_TAC std_ss [DECIDE ``(SUC n - 1 = n) /\ (n+1-1 = n)``]
        THEN FIRST_X_ASSUM (Q.SPEC_THEN `m - 1` MP_TAC)
-       THEN RW_TAC arith_ss []]);
+       THEN RW_TAC arith_ss []]
+QED
 
-val Total_def = Define `Total R = !s.?s'. R(s,s')`;
+Definition Total_def:   Total R = !s.?s'. R(s,s')
+End
 
-val ChoosePath_def =
- Define
-  `(ChoosePath R s 0 = s)
+Definition ChoosePath_def:
+   (ChoosePath R s 0 = s)
    /\
-   (ChoosePath R s (SUC n) = @s'. R(ChoosePath R s n, s'))`;
+   (ChoosePath R s (SUC n) = @s'. R(ChoosePath R s n, s'))
+End
 
-val TotalPathExists =
- store_thm
-  ("TotalPathExists",
-   ``Total R ==> !s. Path (R,s) (ChoosePath R s)``,
+Theorem TotalPathExists:
+     Total R ==> !s. Path (R,s) (ChoosePath R s)
+Proof
    REWRITE_TAC[Path_def,ChoosePath_def,GSYM ADD1]
     THEN REPEAT STRIP_TAC
     THEN CONV_TAC SELECT_CONV
     THEN IMP_RES_TAC Total_def
-    THEN POP_ASSUM(ACCEPT_TAC o SPEC ``ChoosePath R s n``));
+    THEN POP_ASSUM(ACCEPT_TAC o SPEC ``ChoosePath R s n``)
+QED
 
 (*****************************************************************************)
 (* val FinPathChoosePath =                                                   *)
@@ -830,13 +824,12 @@ val FinPathChoosePath =
                 `\m. if m <= n then (f:num->'a) m else ChoosePath R (f n) m`,
                 `n:num`] FinPathLemma));
 
-val FinPathPathExists =
- Q.store_thm
-  ("FinPathPathExists",
-   `!R B f s n.
+Theorem FinPathPathExists:
+    !R B f s n.
       Total R /\ FinPath(R,s) f n
       ==>
-      ?g. (!m. m <= n ==> (f m = g m)) /\ Path(R,s)g`,
+      ?g. (!m. m <= n ==> (f m = g m)) /\ Path(R,s)g
+Proof
    REPEAT STRIP_TAC
     THEN `Path (R, f n) (ChoosePath R (f n))` by PROVE_TAC [TotalPathExists]
     THEN Q.EXISTS_TAC `\m. if m <= n then f m else ChoosePath R (f n) (m-n)`
@@ -852,14 +845,14 @@ val FinPathPathExists =
          PROVE_TAC [DECIDE (Term`x+1 <=y /\ ~(x <= y) ==> F`)],
          `n < m` by DECIDE_TAC
            THEN `m + 1 - n = (m - n) + 1` by DECIDE_TAC
-           THEN PROVE_TAC [Path_def, ADD_CLAUSES]]]);
+           THEN PROVE_TAC [Path_def, ADD_CLAUSES]]]
+QED
 
-val ReachInPath =
- store_thm
-  ("ReachInPath",
-   ``!R B n s. Total R
+Theorem ReachInPath:
+     !R B n s. Total R
                 ==>
-               (ReachIn R B n s = ?f s0. B s0 /\ Path(R,s0)f /\ (s = f n))``,
+               (ReachIn R B n s = ?f s0. B s0 /\ Path(R,s0)f /\ (s = f n))
+Proof
    REWRITE_TAC[ReachInFinPath]
     THEN REPEAT STRIP_TAC
     THEN EQ_TAC
@@ -871,62 +864,63 @@ val ReachInPath =
        THEN PROVE_TAC[LESS_EQ_REFL],
       EXISTS_TAC ``f:num->'a``
        THEN EXISTS_TAC ``s0:'a``
-       THEN PROVE_TAC[FinPathThm,Path_def]]);
+       THEN PROVE_TAC[FinPathThm,Path_def]]
+QED
 
-val ReachablePath =
- store_thm
-  ("ReachablePath",
-   ``!R B s. Total R
+Theorem ReachablePath:
+     !R B s. Total R
               ==>
-             (Reachable R B s = ?f s0. B s0 /\ Path(R,s0)f /\ ?n. (s = f n))``,
-   PROVE_TAC[ReachInPath,Reachable_def]);
+             (Reachable R B s = ?f s0. B s0 /\ Path(R,s0)f /\ ?n. (s = f n))
+Proof
+   PROVE_TAC[ReachInPath,Reachable_def]
+QED
 
-val Totalise_def =
- Define
-  `Totalise R (s,s') = R(s,s') \/ (~(?s''. R(s,s'')) /\ (s = s'))`;
+Definition Totalise_def:
+   Totalise R (s,s') = R(s,s') \/ (~(?s''. R(s,s'')) /\ (s = s'))
+End
 
-val TotalTotalise =
- store_thm
-  ("TotalTotalise",
-   ``Total(Totalise R)``,
-   PROVE_TAC[Total_def,Totalise_def]);
+Theorem TotalTotalise:
+     Total(Totalise R)
+Proof
+   PROVE_TAC[Total_def,Totalise_def]
+QED
 
-val TotalImpTotaliseLemma =
- store_thm
-  ("TotalImpTotaliseLemma",
-   ``Total R ==> !s s'. R (s,s') = Totalise R (s,s')``,
-   PROVE_TAC[Total_def,Totalise_def]);
+Theorem TotalImpTotaliseLemma:
+     Total R ==> !s s'. R (s,s') = Totalise R (s,s')
+Proof
+   PROVE_TAC[Total_def,Totalise_def]
+QED
 
 (*****************************************************************************)
 (* val TotalImpTotalise = |- Total R ==> (Totalise R = R) : Thm.thm          *)
 (*****************************************************************************)
 
-val TotalImpTotalise =
- store_thm
-  ("TotalImpTotalise",
-   ``Total R ==> (Totalise R = R)``,
+Theorem TotalImpTotalise:
+     Total R ==> (Totalise R = R)
+Proof
    REPEAT STRIP_TAC
     THEN CONV_TAC FUN_EQ_CONV
     THEN REPEAT STRIP_TAC
     THEN Cases_on `p`
     THEN IMP_RES_TAC TotalImpTotaliseLemma
-    THEN RW_TAC std_ss []);
+    THEN RW_TAC std_ss []
+QED
 
-val TotaliseReachBy =
- store_thm
-  ("TotaliseReachBy",
-   ``!n s. ReachBy (Totalise R) B n s = ReachBy R B n s``,
+Theorem TotaliseReachBy:
+     !n s. ReachBy (Totalise R) B n s = ReachBy R B n s
+Proof
    Induct
     THEN RW_TAC std_ss [ReachBy_rec,Totalise_def,Next_def]
-    THEN PROVE_TAC[]);
+    THEN PROVE_TAC[]
+QED
 
-val ReachableTotalise =
- store_thm
-  ("ReachableTotalise",
-   ``Reachable (Totalise R) = Reachable R``,
+Theorem ReachableTotalise:
+     Reachable (Totalise R) = Reachable R
+Proof
    CONV_TAC (REDEPTH_CONV FUN_EQ_CONV)
     THEN RW_TAC std_ss [Reachable_ReachBy,TotaliseReachBy]
-    THEN PROVE_TAC[]);
+    THEN PROVE_TAC[]
+QED
 
 (*****************************************************************************)
 (*  val ReachablePathThm =                                                   *)
@@ -943,15 +937,15 @@ val ReachablePathThm =
     (REWRITE_RULE[ReachableTotalise,TotalTotalise]
                  (SPEC ``Totalise R`` ReachablePath)));
 
-val Moore_def =
- Define
-  `Moore nextfn ((inputs:num->'a),(states:num->'b)) =
-    !t. states(t+1) = nextfn(inputs t,states t)`;
+Definition Moore_def:
+   Moore nextfn ((inputs:num->'a),(states:num->'b)) =
+    !t. states(t+1) = nextfn(inputs t,states t)
+End
 
-val MooreTrans_def =
- Define
-  `MooreTrans nextfn (((input:'a),(state:'b)),((input':'a),(state':'b))) =
-    (state' = nextfn(input,state))`;
+Definition MooreTrans_def:
+   MooreTrans nextfn (((input:'a),(state:'b)),((input':'a),(state':'b))) =
+    (state' = nextfn(input,state))
+End
 
 (*****************************************************************************)
 (*   val MooreTransEq =                                                      *)
@@ -959,36 +953,36 @@ val MooreTrans_def =
 (*        (\((input,state),input',state'). state' = nextfn (input,state))    *)
 (*****************************************************************************)
 
-val MooreTransEq =
- store_thm
-  ("MooreTransEq",
-   ``MooreTrans nextfn =
-      \((input,state),input',state'). state' = nextfn (input,state)``,
+Theorem MooreTransEq:
+     MooreTrans nextfn =
+      \((input,state),input',state'). state' = nextfn (input,state)
+Proof
    CONV_TAC FUN_EQ_CONV
     THEN REPEAT GEN_TAC
     THEN Cases_on `p`
     THEN Cases_on `q`
     THEN Cases_on `r`
     THEN CONV_TAC(DEPTH_CONV PAIRED_BETA_CONV)
-    THEN RW_TAC std_ss [MooreTrans_def]);
+    THEN RW_TAC std_ss [MooreTrans_def]
+QED
 
-val MoorePath =
- store_thm
-  ("MoorePath",
-   ``Moore nextfn (inputs,states) =
+Theorem MoorePath:
+     Moore nextfn (inputs,states) =
      Path
       (MooreTrans nextfn, (inputs 0,states 0))
-      (\t. (inputs t, states t))``,
-   RW_TAC std_ss [Path_def,MooreTrans_def,Moore_def]);
+      (\t. (inputs t, states t))
+Proof
+   RW_TAC std_ss [Path_def,MooreTrans_def,Moore_def]
+QED
 
-val TotalMooreTrans =
- store_thm
-  ("TotalMooreTrans",
-   ``Total(MooreTrans nextfn)``,
+Theorem TotalMooreTrans:
+     Total(MooreTrans nextfn)
+Proof
    RW_TAC std_ss [Total_def]
     THEN Cases_on `s`
     THEN Q.EXISTS_TAC `(q',nextfn(q,r))`
-    THEN RW_TAC std_ss [MooreTrans_def]);
+    THEN RW_TAC std_ss [MooreTrans_def]
+QED
 
 (* NOTE: duplicated with the next theorem but let's keep the original code:
 val ReachableMooreTrans =
@@ -1014,14 +1008,13 @@ val ReachableMooreTrans =
 
 (* Problem with Q.SPECL? Too many type annotations needed. *)
 
-val MooreReachable1 =
- Q.store_thm
-  ("MooreReachable1",
-   `(!inputs states.
+Theorem MooreReachable1:
+    (!inputs states.
        B(inputs 0, states 0) /\ Moore nextfn (inputs,states)
        ==> !t. P(inputs t, states t))
      ==>
-     (!s. Reachable (MooreTrans nextfn) B s ==> P s)`,
+     (!s. Reachable (MooreTrans nextfn) B s ==> P s)
+Proof
    RW_TAC std_ss [ReachableMooreTrans,MoorePath]
     THEN Q.PAT_X_ASSUM `$! M`
          (MP_TAC o REWRITE_RULE [PAIR] o BETA_RULE o Q.SPECL
@@ -1031,16 +1024,16 @@ val MooreReachable1 =
    THEN `f:num->'a#'b = \t. if t=0 then s0 else f t`
         by (RW_TAC std_ss [FUN_EQ_THM] THEN PROVE_TAC [Path_def])
    THEN Q.PAT_X_ASSUM `Path x y` MP_TAC THEN ONCE_ASM_REWRITE_TAC[]
-   THEN BETA_TAC THEN PROVE_TAC []);
+   THEN BETA_TAC THEN PROVE_TAC []
+QED
 
-val MooreReachable2 =
- store_thm
-  ("MooreReachable2",
-   ``(!s. Reachable (MooreTrans nextfn) B s ==> P s)
+Theorem MooreReachable2:
+     (!s. Reachable (MooreTrans nextfn) B s ==> P s)
      ==>
      (!inputs states.
         B(inputs 0, states 0) /\ Moore nextfn (inputs,states)
-        ==> !t. P(inputs t, states t))``,
+        ==> !t. P(inputs t, states t))
+Proof
    RW_TAC std_ss [ReachableMooreTrans,MoorePath]
     THEN Q.PAT_X_ASSUM `$! M`
          (MP_TAC o BETA_RULE
@@ -1048,20 +1041,21 @@ val MooreReachable2 =
                  o Ho_Rewrite.REWRITE_RULE [GSYM LEFT_FORALL_IMP_THM]
                  o Q.SPEC `(inputs (t:num), states t)`)
     THEN RW_TAC std_ss []
-    THEN PROVE_TAC []);
+    THEN PROVE_TAC []
+QED
 
-val MooreReachable =
- store_thm
-  ("MooreReachable",
-   ``!B nextfn P.
+Theorem MooreReachable:
+     !B nextfn P.
       (!inputs states.
          B(inputs 0, states 0) /\ Moore nextfn (inputs,states)
          ==> !t. P(inputs t, states t))
       =
-      (!s. Reachable (MooreTrans nextfn) B s ==> P s)``,
+      (!s. Reachable (MooreTrans nextfn) B s ==> P s)
+Proof
    REPEAT GEN_TAC
     THEN EQ_TAC
-    THEN REWRITE_TAC[MooreReachable1,MooreReachable2]);
+    THEN REWRITE_TAC[MooreReachable1,MooreReachable2]
+QED
 
 
 (*****************************************************************************)
@@ -1086,16 +1080,15 @@ val MooreReachableExists =
           ``\p. ~(P :'a # 'b -> bool)p``])
    MooreReachable);
 
-val MooreReachableCor1 =
- store_thm
-  ("MooreReachableCor1",
-   ``!B nextfn.
+Theorem MooreReachableCor1:
+     !B nextfn.
       (!inputs states.
          B(inputs 0, states 0) /\
          (!t.  states (t + 1) = nextfn (inputs t,states t))
          ==> !t. P(inputs t, states t))
       =
-      (!s. Reachable (\((i,s),(i',s')). s' = nextfn(i,s)) B s ==> P s)``,
-   RW_TAC std_ss [GSYM MooreReachable,GSYM Moore_def,GSYM MooreTransEq]);
+      (!s. Reachable (\((i,s),(i',s')). s' = nextfn(i,s)) B s ==> P s)
+Proof
+   RW_TAC std_ss [GSYM MooreReachable,GSYM Moore_def,GSYM MooreTransEq]
+QED
 
-val _ = export_theory();

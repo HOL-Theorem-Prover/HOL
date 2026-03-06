@@ -22,14 +22,13 @@ val index_to_num = fcpSyntax.dest_numeric_type
 fun index_compset () =
    let
       open numeral_bitTheory
-      val compset = reduceLib.num_compset()
       val rule = REWRITE_RULE [arithmeticTheory.TIMES2, GSYM numeralTheory.iDUB]
-      val () = computeLib.add_thms
-                 [index_sum, index_one, rule index_bit0, rule index_bit1,
-                  finite_sum, finite_one, finite_bit0, finite_bit1,
-                  numeral_bitTheory.iDUB_NUMERAL] compset
    in
-      compset
+      reduceLib.num_compset
+      |> computeLib.add_thms
+           [index_sum, index_one, rule index_bit0, rule index_bit1,
+            finite_sum, finite_one, finite_bit0, finite_bit1,
+            numeral_bitTheory.iDUB_NUMERAL]
    end
 
 val INDEX_CONV = Conv.CHANGED_CONV (computeLib.CBV_CONV (index_compset()))
@@ -87,6 +86,13 @@ in
           in
              inst_fcp_lengths (Term.inst [theinst] tm)
           end
+end
+
+val _ = let
+  val tyi = TypeBasePure.gen_datatype_info
+    {ax = fcp_Axiom, ind = fcp_ind, case_defs = [fcp_case_def]}
+in
+  TypeBase.write tyi
 end
 
 end

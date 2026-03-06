@@ -1,22 +1,18 @@
 (* ----------------------------------------------------------------------
     Case Study: The Dining Cryptographers
    ---------------------------------------------------------------------- *)
+Theory dining_cryptos
+Ancestors
+  arithmetic pred_set state_transformer combin pair real
+  extra_pred_set num seq subtype transc lim string real_sigma
+  information leakage list rich_list extra_bool extra_num
+  extra_list extra_string extra_real sigma_algebra real_measure
+  real_lebesgue real_probability
+Libs
+  metisLib pred_setLib realLib jrhUtils realSimps simpLib
+  stringSimps listSimps extra_stringLib leakageLib hurdUtils
+  dep_rewrite
 
-open HolKernel Parse boolLib bossLib;
-
-open metisLib arithmeticTheory pred_setTheory pred_setLib
-     state_transformerTheory combinTheory pairTheory realTheory realLib jrhUtils
-     extra_pred_setTheory realSimps numTheory simpLib seqTheory subtypeTheory
-     transcTheory limTheory stringTheory stringSimps real_sigmaTheory
-     informationTheory leakageTheory listTheory rich_listTheory listSimps;
-
-open extra_boolTheory extra_numTheory extra_listTheory extra_stringLib
-     extra_stringTheory extra_realTheory leakageLib;
-
-open hurdUtils util_probTheory sigma_algebraTheory
-     real_measureTheory real_lebesgueTheory real_probabilityTheory;
-
-val _ = new_theory "dining_cryptos";
 
 val _ = temp_set_fixity "CROSS" (Infixl 600)
 
@@ -41,8 +37,8 @@ val set_ss = arith_ss ++ PRED_SET_ss;
 (* ----------------------------------------------------------------------
     Definitions
    ---------------------------------------------------------------------- *)
-val set_announcements_def = Define
-   `(set_announcements (high: bool state) (low:bool state)
+Definition set_announcements_def:
+    (set_announcements (high: bool state) (low:bool state)
                        (random:bool state) (n:num) (0:num) (s:string) =
                 if (s = (STRCAT "announces" (toString 0))) then
                         ((high (STRCAT "pays" (toString 0)))) xor
@@ -54,37 +50,44 @@ val set_announcements_def = Define
                         ((high (STRCAT "pays" (toString (SUC i))))) xor
                         ((random (STRCAT "coin" (toString (SUC i)))) xor
                          (random (STRCAT "coin" (toString i))))
-                else (set_announcements high low random n i) s)`;
+                else (set_announcements high low random n i) s)
+End
 
-val XOR_announces_def = Define
-  `(XOR_announces (low:bool state) (0:num) = low (STRCAT "announces" (toString 0))) /\
+Definition XOR_announces_def:
+   (XOR_announces (low:bool state) (0:num) = low (STRCAT "announces" (toString 0))) /\
    (XOR_announces low (SUC i) = (low (STRCAT "announces" (toString (SUC i)))) xor
-                                (XOR_announces low i))`;
+                                (XOR_announces low i))
+End
 
-val compute_result_def = Define
-   `compute_result (low:bool state) (n:num) (s:string) =
-        if (s = "result") then XOR_announces low n else low s`;
+Definition compute_result_def:
+    compute_result (low:bool state) (n:num) (s:string) =
+        if (s = "result") then XOR_announces low n else low s
+End
 
-val dcprog_def = Define
-   `dcprog (SUC(SUC(SUC n))) = (λ((high:bool state, low:bool state), random:bool state).
+Definition dcprog_def:
+    dcprog (SUC(SUC(SUC n))) = (λ((high:bool state, low:bool state), random:bool state).
         compute_result (set_announcements high low random (SUC(SUC n)) (SUC(SUC n)))
-                       (SUC(SUC n)))`;
+                       (SUC(SUC n)))
+End
 
-val dc_high_states_set_def = Define
-   `(dc_high_states_set (0:num) = {(\s:string. s = (STRCAT "pays" (toString 0)))}) /\
+Definition dc_high_states_set_def:
+    (dc_high_states_set (0:num) = {(\s:string. s = (STRCAT "pays" (toString 0)))}) /\
     (dc_high_states_set (SUC n) = (\s:string. s = (STRCAT "pays" (toString (SUC n))))
-                                  INSERT (dc_high_states_set n))`;
+                                  INSERT (dc_high_states_set n))
+End
 
-val dc_high_states_def = Define
-   `dc_high_states nsapays (SUC(SUC n)) =
+Definition dc_high_states_def:
+    dc_high_states nsapays (SUC(SUC n)) =
      if nsapays then {(\s: string. s = STRCAT "pays" (toString (SUC(SUC n))))}
-     else dc_high_states_set (SUC n)`;
+     else dc_high_states_set (SUC n)
+End
 
-val dc_low_states_def = Define
-   `dc_low_states = {(\s:string. F)}`;
+Definition dc_low_states_def:
+    dc_low_states = {(\s:string. F)}
+End
 
-val dc_random_states_def = Define
-  `(dc_random_states (0:num) = {(\s:string. s = (STRCAT "coin" (toString 0))); (\s:string. F)}) /\
+Definition dc_random_states_def:
+   (dc_random_states (0:num) = {(\s:string. s = (STRCAT "coin" (toString 0))); (\s:string. F)}) /\
    (dc_random_states (SUC n) = (IMAGE (\s:bool state.
                                         (\x:string. if x = (STRCAT "coin" (toString (SUC n))) then
                                                         T
@@ -95,21 +98,23 @@ val dc_random_states_def = Define
                                         (\x:string. if x = (STRCAT "coin" (toString (SUC n))) then
                                                         F
                                                     else (s x)))
-                                       (dc_random_states n)))`;
+                                       (dc_random_states n)))
+End
 
-val dc_prog_space_def = Define
-   `dc_prog_space (SUC(SUC n)) nsapays =
+Definition dc_prog_space_def:
+    dc_prog_space (SUC(SUC n)) nsapays =
       unif_prog_space
         (dc_high_states nsapays (SUC(SUC n)))
         dc_low_states
-        (dc_random_states (SUC n))`;
+        (dc_random_states (SUC n))
+End
 
 (* ************************************************************************* *)
 (* Case Study: The Dining Cryptographers - Basic Lemmas                      *)
 (* ************************************************************************* *)
 
-val set_announcements_alt = store_thm  ("set_announcements_alt",
-   ``!high low random n i.
+Theorem set_announcements_alt:
+     !high low random n i.
         (set_announcements high low random n 0 =
          (\s. if (s = (STRCAT "announces" (toString 0))) then
                         ((high (STRCAT "pays" (toString 0)))) xor
@@ -121,17 +126,23 @@ val set_announcements_alt = store_thm  ("set_announcements_alt",
                         ((high (STRCAT "pays" (toString (SUC i))))) xor
                         ((random (STRCAT "coin" (toString (SUC i)))) xor (random (STRCAT "coin" (toString i))))
                 else
-                        (set_announcements high low random n i) s))``,
-   RW_TAC std_ss [FUN_EQ_THM] >> RW_TAC std_ss [set_announcements_def]);
+                        (set_announcements high low random n i) s))
+Proof
+   RW_TAC std_ss [FUN_EQ_THM] >> RW_TAC std_ss [set_announcements_def]
+QED
 
-val compute_result_alt = store_thm  ("compute_result_alt",
-   ``!low n. compute_result low n = (\s. if (s = "result") then XOR_announces low n else low s)``,
-   RW_TAC std_ss [FUN_EQ_THM] >> RW_TAC std_ss [compute_result_def]);
+Theorem compute_result_alt:
+     !low n. compute_result low n = (\s. if (s = "result") then XOR_announces low n else low s)
+Proof
+   RW_TAC std_ss [FUN_EQ_THM] >> RW_TAC std_ss [compute_result_def]
+QED
 
-val dc_high_states_set_finite = store_thm  ("dc_high_states_set_finite",
-   ``!n. FINITE (dc_high_states_set n)``,
+Theorem dc_high_states_set_finite:
+     !n. FINITE (dc_high_states_set n)
+Proof
    Induct
-   >> FULL_SIMP_TAC safe_set_ss [dc_high_states_set_def]);
+   >> FULL_SIMP_TAC safe_set_ss [dc_high_states_set_def]
+QED
 
 val dc_low_states_finite = prove  (``FINITE dc_low_states``,
    RW_TAC set_ss [dc_low_states_def]);
@@ -140,17 +151,19 @@ val dc_random_states_finite = prove  (``!n. FINITE (dc_random_states n)``,
    Induct
    >> FULL_SIMP_TAC safe_set_ss [dc_random_states_def]);
 
-val IN_dc_high_states_set = store_thm  ("IN_dc_high_states_set",
-   ``!n x. x IN (dc_high_states_set n) <=>
-           (?i. i <= n /\ (x = (\s. s = STRCAT "pays" (toString i))))``,
+Theorem IN_dc_high_states_set:
+     !n x. x IN (dc_high_states_set n) <=>
+           (?i. i <= n /\ (x = (\s. s = STRCAT "pays" (toString i))))
+Proof
    Induct
    >> RW_TAC set_ss [dc_high_states_set_def]
-   >> METIS_TAC [DECIDE ``!(x:num) y. x <= SUC y <=> x <= y \/ (x = SUC y)``, STRCAT_toString_inj]);
+   >> METIS_TAC [DECIDE ``!(x:num) y. x <= SUC y <=> x <= y \/ (x = SUC y)``, STRCAT_toString_inj]
+QED
 
-val IN_dc_random_states = store_thm
-  ("IN_dc_random_states",
-   ``!n s. s IN (dc_random_states n) <=>
-           !x. ~(?i. i <= n /\ (x = STRCAT "coin" (toString i))) ==> (~(s x))``,
+Theorem IN_dc_random_states:
+     !n s. s IN (dc_random_states n) <=>
+           !x. ~(?i. i <= n /\ (x = STRCAT "coin" (toString i))) ==> (~(s x))
+Proof
    Induct
    >- (RW_TAC set_ss [dc_random_states_def] >> METIS_TAC [])
    >> RW_TAC set_ss [Once dc_random_states_def]
@@ -163,33 +176,38 @@ val IN_dc_random_states = store_thm
        >> METIS_TAC [DECIDE ``!(i:num) n. i <= SUC n <=> ((i = SUC n) \/ i <= n)``])
    >> DISJ2_TAC >> Q.EXISTS_TAC `s`
    >> RW_TAC std_ss [FUN_EQ_THM] >- METIS_TAC []
-   >> METIS_TAC [DECIDE ``!(i:num) n. i <= SUC n <=> ((i = SUC n) \/ i <= n)``]);
+   >> METIS_TAC [DECIDE ``!(i:num) n. i <= SUC n <=> ((i = SUC n) \/ i <= n)``]
+QED
 
-val dc_high_states_set_not_empty = store_thm
-  ("dc_high_states_set_not_empty",
-   ``!n. ~((dc_high_states_set n)={})``,
-   Induct >> RW_TAC set_ss [dc_high_states_set_def]);
+Theorem dc_high_states_set_not_empty:
+     !n. ~((dc_high_states_set n)={})
+Proof
+   Induct >> RW_TAC set_ss [dc_high_states_set_def]
+QED
 
-val dc_low_states_not_empty = store_thm
-  ("dc_low_states_not_empty",
-   ``~(dc_low_states={})``,
-   RW_TAC set_ss [dc_low_states_def]);
+Theorem dc_low_states_not_empty:
+     ~(dc_low_states={})
+Proof
+   RW_TAC set_ss [dc_low_states_def]
+QED
 
-val coin_out_of_range_eq_zero_dc_random_states = store_thm
-  ("coin_out_of_range_eq_zero_dc_random_states",
-   ``!n s. s IN (dc_random_states n) ==>
-                !i. (n < i) ==> ~ (s (STRCAT "coin" (toString i)))``,
+Theorem coin_out_of_range_eq_zero_dc_random_states:
+     !n s. s IN (dc_random_states n) ==>
+                !i. (n < i) ==> ~ (s (STRCAT "coin" (toString i)))
+Proof
    Induct
    >- (RW_TAC set_ss [dc_random_states_def]
        >> RW_TAC std_ss [STRCAT_toString_inj]
        >> POP_ASSUM MP_TAC >> DECIDE_TAC)
    >> RW_TAC set_ss [dc_random_states_def]
-   >> RW_TAC std_ss [STRCAT_toString_inj, DECIDE ``!i:num n. SUC n < i ==> ~(i = SUC n)``,                                        DECIDE ``!i:num n. SUC n < i ==> n < i``]);
+   >> RW_TAC std_ss [STRCAT_toString_inj, DECIDE ``!i:num n. SUC n < i ==> ~(i = SUC n)``,                                        DECIDE ``!i:num n. SUC n < i ==> n < i``]
+QED
 
-val dc_random_states_not_empty = store_thm
-  ("dc_random_states_not_empty",
-   ``!n. ~((dc_random_states n)={})``,
-   Induct >> RW_TAC set_ss [dc_random_states_def]);
+Theorem dc_random_states_not_empty:
+     !n. ~((dc_random_states n)={})
+Proof
+   Induct >> RW_TAC set_ss [dc_random_states_def]
+QED
 
 val CROSS_NON_EMPTY_IMP = prove
    (``!P Q. FINITE P /\ FINITE Q /\ ~(P={}) /\ ~(Q={}) ==> ~(P CROSS Q = {})``,
@@ -207,28 +225,31 @@ val CROSS_HLR_NON_EMPTY_IMP = prove
    (``!h l r. FINITE h /\ FINITE l /\ FINITE r /\ ~(h={}) /\ ~(l={}) /\ ~(r={}) ==> ~((h CROSS l) CROSS r = {})``,
     METIS_TAC [CROSS_NON_EMPTY_IMP, FINITE_CROSS]);
 
-val dc_states_cross_not_empty = store_thm
-  ("dc_states_cross_not_empty",
-   ``!n. ~((((dc_high_states_set (SUC(SUC n))) CROSS dc_low_states) CROSS (dc_random_states (SUC(SUC n))))={})``,
+Theorem dc_states_cross_not_empty:
+     !n. ~((((dc_high_states_set (SUC(SUC n))) CROSS dc_low_states) CROSS (dc_random_states (SUC(SUC n))))={})
+Proof
    RW_TAC std_ss [CROSS_HLR_NON_EMPTY_IMP, dc_high_states_set_finite, dc_random_states_finite,
                   dc_low_states_finite, dc_high_states_set_not_empty, dc_random_states_not_empty,
-                  dc_low_states_not_empty]);
+                  dc_low_states_not_empty]
+QED
 
-val dc_prog_space_F_set_thm = store_thm
-  ("dc_prog_space_F_set_thm",
-   ``!n. dc_prog_space (SUC(SUC n)) F =
+Theorem dc_prog_space_F_set_thm:
+     !n. dc_prog_space (SUC(SUC n)) F =
          unif_prog_space (dc_high_states_set (SUC n))
                          dc_low_states
-                         (dc_random_states (SUC n))``,
-   RW_TAC std_ss [dc_prog_space_def, dc_high_states_def]);
+                         (dc_random_states (SUC n))
+Proof
+   RW_TAC std_ss [dc_prog_space_def, dc_high_states_def]
+QED
 
-val dc_prog_space_T_set_thm = store_thm
-  ("dc_prog_space_T_set_thm",
-   ``!n. dc_prog_space (SUC(SUC n)) T =
+Theorem dc_prog_space_T_set_thm:
+     !n. dc_prog_space (SUC(SUC n)) T =
          unif_prog_space {(\s:string. s = STRCAT "pays" (toString (SUC(SUC n))))}
                          {(\s:string. F)}
-                         (dc_random_states (SUC n))``,
-   RW_TAC std_ss [dc_prog_space_def, dc_high_states_def, dc_low_states_def]);
+                         (dc_random_states (SUC n))
+Proof
+   RW_TAC std_ss [dc_prog_space_def, dc_high_states_def, dc_low_states_def]
+QED
 
 (* ************************************************************************* *)
 (* Case Study: The Dining Cryptographers - Computation for 3 cryptos         *)
@@ -236,54 +257,35 @@ val dc_prog_space_T_set_thm = store_thm
 
 val fun_eq_lem = METIS_PROVE [] ``!y z. (!x. (x = y) <=> (x = z)) <=> (y = z)``;
 
-val card_dc_high_states_set3 = store_thm
-  ("card_dc_high_states_set3",
-   ``& (CARD (dc_high_states_set (SUC (SUC 0)))) = 3``,
-   RW_TAC set_ss [dc_high_states_set_def, FUN_EQ_THM, fun_eq_lem, STRCAT_toString_inj]);
+Theorem card_dc_high_states_set3:
+     & (CARD (dc_high_states_set (SUC (SUC 0)))) = 3
+Proof
+   RW_TAC set_ss [dc_high_states_set_def, FUN_EQ_THM, fun_eq_lem, STRCAT_toString_inj]
+QED
 
 val fun_eq_lem5 = METIS_PROVE []
         ``!x a b P Q. (x = a) \/ ~ (x = b) /\ P \/ Q <=> (a = b) /\ ((x = a) \/ P)
                         \/ ~(x = b) /\ ((x = a) \/ P) \/ Q``;
 
-val CARD_dc_set_cross = store_thm
-  ("CARD_dc_set_cross",
-   ``1 / & (CARD (IMAGE (\s. (FST s,SND s,dcprog (SUC (SUC (SUC 0))) s))
-                ((dc_high_states_set (SUC (SUC 0)) CROSS dc_low_states) CROSS
-                   dc_random_states (SUC (SUC 0))))) = 1 / 24``,
-   RW_TAC set_ss [dcprog_def, dc_low_states_def, dc_high_states_def, dc_high_states_set_def, dc_random_states_def,
-                  CROSS_EQNS, compute_result_alt, XOR_announces_def, set_announcements_def, xor_def]
-   >> CONV_TAC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV set_ss [fun_eq_lem])))
-   >> RW_TAC set_ss [CROSS_EQNS, STRCAT_toString_inj]
-   >> CONV_TAC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV set_ss [fun_eq_lem])))
-   >> REPEAT (SIMP_TAC std_ss [FINITE_EMPTY, FINITE_INSERT, Once CARD_DEF]
-              >> CONV_TAC (FIND_CONV ``x IN y`` (IN_CONV (SIMP_CONV std_ss [FUN_EQ_THM]
-                                        THENC SIMP_CONV bool_ss [EQ_IMP_THM]
-                                        THENC SIMP_CONV bool_ss [DISJ_IMP_THM]
-                                        THENC EVAL
-                                        THENC SIMP_CONV bool_ss [LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
-                                        THENC EVAL
-                                        THENC SIMP_CONV bool_ss [fun_eq_lem5, GSYM LEFT_AND_OVER_OR]
-                                        THENC EVAL
-                                        THENC SIMP_CONV bool_ss [FORALL_AND_THM])))
-               >> SIMP_TAC std_ss []));
-
-val CARD_dc_high_states_set = store_thm
-  ("CARD_dc_high_states_set",
-   ``!n. CARD (dc_high_states_set n) = SUC n``,
+Theorem CARD_dc_high_states_set:
+     !n. CARD (dc_high_states_set n) = SUC n
+Proof
    Induct >> RW_TAC set_ss [dc_high_states_set_def, dc_high_states_set_finite, CARD_INSERT,
-                            IN_dc_high_states_set, FUN_EQ_THM, fun_eq_lem, STRCAT_toString_inj]);
+                            IN_dc_high_states_set, FUN_EQ_THM, fun_eq_lem, STRCAT_toString_inj]
+QED
 
-val CARD_DISJOINT_UNION = store_thm
-  ("CARD_DISJOINT_UNION",
-   ``!P Q. FINITE P /\ FINITE Q /\ DISJOINT P Q ==>
-                (CARD (P UNION Q) = CARD P + CARD Q)``,
+Theorem CARD_DISJOINT_UNION:
+     !P Q. FINITE P /\ FINITE Q /\ DISJOINT P Q ==>
+                (CARD (P UNION Q) = CARD P + CARD Q)
+Proof
    REPEAT STRIP_TAC >> ASM_SIMP_TAC std_ss [GSYM CARD_UNION]
    >> Suff `P INTER Q = {}` >> RW_TAC set_ss [] >> ONCE_REWRITE_TAC [EXTENSION]
-   >> FULL_SIMP_TAC set_ss [DISJOINT_DEF, EXTENSION]);
+   >> FULL_SIMP_TAC set_ss [DISJOINT_DEF, EXTENSION]
+QED
 
-val CARD_dc_random_states = store_thm
-  ("CARD_dc_random_states",
-   ``!n. CARD (dc_random_states n) = 2 ** (SUC n)``,
+Theorem CARD_dc_random_states:
+     !n. CARD (dc_random_states n) = 2 ** (SUC n)
+Proof
    Induct >> RW_TAC set_ss [dc_random_states_def, EXP, FUN_EQ_THM]
    >> `DISJOINT (IMAGE (\s x. (x = STRCAT "coin" (toString (SUC n))) \/ s x)
                         (dc_random_states n))
@@ -312,29 +314,55 @@ val CARD_dc_random_states = store_thm
            Q.EXISTS_TAC `s'` >> RW_TAC std_ss [])
        >> METIS_TAC [coin_out_of_range_eq_zero_dc_random_states, DECIDE ``!n:num. n < SUC n``])
    >> DISCH_TAC
-   >> RW_TAC arith_ss [EXP]);
+   >> RW_TAC arith_ss [EXP]
+QED
 
-val CARD_dc_low_states = store_thm
-  ("CARD_dc_low_states",
-   ``CARD dc_low_states = 1``,
-   RW_TAC set_ss [dc_low_states_def]);
+Theorem CARD_dc_low_states:
+     CARD dc_low_states = 1
+Proof
+   RW_TAC set_ss [dc_low_states_def]
+QED
 
-val dc_states3_cross_not_empty = store_thm
-  ("dc_states3_cross_not_empty",
-   ``~((((dc_high_states_set (SUC(SUC 0))) CROSS dc_low_states) CROSS (dc_random_states (SUC(SUC 0))))={})``,
+Theorem CARD_dc_set_cross:
+     1 / & (CARD (IMAGE (\s. (FST s,SND s,dcprog (SUC (SUC (SUC 0))) s))
+                ((dc_high_states_set (SUC (SUC 0)) CROSS dc_low_states) CROSS
+                   dc_random_states (SUC (SUC 0))))) = 1 / 24
+Proof
+   DEP_REWRITE_TAC[CARD_IMAGE] >>
+   CONJ_TAC >- (
+      PURE_REWRITE_TAC[GSYM PULL_EXISTS] >>
+      CONJ_TAC >- RW_TAC set_ss [dc_low_states_def, dc_high_states_def,
+                   dc_high_states_set_def, dc_random_states_def] >>
+      Q.EXISTS_TAC `UNIV` >>
+      RW_TAC set_ss [INJ_DEF] >>
+      rename1 `s' = s` >>
+      PairCases_on `s'` >>
+      PairCases_on `s` >>
+      full_simp_tac(set_ss)[]) >>
+   DEP_REWRITE_TAC[CARD_CROSS] >>
+   CONJ_TAC >- RW_TAC set_ss [dc_low_states_def, dc_high_states_def,
+    dc_high_states_set_def, dc_random_states_def] >>
+   SIMP_TAC set_ss [CARD_dc_high_states_set,CARD_dc_low_states,CARD_dc_random_states]
+QED
+
+Theorem dc_states3_cross_not_empty:
+     ~((((dc_high_states_set (SUC(SUC 0))) CROSS dc_low_states) CROSS (dc_random_states (SUC(SUC 0))))={})
+Proof
    ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [dc_high_states_set_def, dc_low_states_def, dc_random_states_def, CROSS_EQNS]
    >> Q.EXISTS_TAC `(((\s. s = STRCAT "pays" (toString 0)),(\s.F)),(\s.F))`
-   >> RW_TAC std_ss [FST,SND]);
+   >> RW_TAC std_ss [FST,SND]
+QED
 
 val fun_eq_lem6 = METIS_PROVE []
   ``!x a b P Q. (x = a) \/ ~ (x = b) /\ P <=>
         (a = b) /\ ((x = a) \/ P) \/ ~(x = b) /\ ((x = a) \/ P)``;
 
 val _ = print "Starting very long dc3_leakage_result (expect 10min)\n"
-(* NOTE: this theorem needs a long time (~10min) to finish *)
-val dc3_leakage_result = store_thm
-  ("dc3_leakage_result",
-   ``leakage (dc_prog_space (SUC (SUC (SUC 0))) F) (dcprog (SUC(SUC(SUC 0)))) = 0``,
+(* NOTE: this theorem needs a long time (~30seconds) to finish *)
+
+Theorem dc3_leakage_result:
+     leakage (dc_prog_space (SUC (SUC (SUC 0))) F) (dcprog (SUC(SUC(SUC 0)))) = 0
+Proof
    RW_TAC bool_ss [dc_prog_space_F_set_thm, unif_prog_space_leakage_computation_reduce,
                    dc_high_states_set_finite, dc_random_states_finite, dc_low_states_finite,
                    dc_states3_cross_not_empty, CARD_dc_high_states_set, CARD_dc_low_states,
@@ -345,32 +373,48 @@ val dc3_leakage_result = store_thm
    >> CONV_TAC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV set_ss [fun_eq_lem])))
    >> RW_TAC set_ss [CROSS_EQNS, STRCAT_toString_inj]
    >> CONV_TAC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV set_ss [fun_eq_lem])))
-   >> CONV_TAC
+   >> qabbrev_tac `coin_str = "coin"`
+   >> qabbrev_tac `announces_str = "announces"`
+   >> qabbrev_tac `pays_str = "pays"`
+   >> qabbrev_tac `result_str = "result"`
+   >> Q.SUBGOAL_THEN `!n. STRCAT announces_str n <> result_str` ASSUME_TAC
+   >- (UNABBREV_ALL_TAC >> EVAL_TAC >> simp[])
+   >> POP_ASSUM (fn asm => ASSUME_TAC asm >>
+      CONV_TAC
         (REPEATC ((SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]) THENC
                   ((ONCE_FIND_CONV ``x DELETE y``
                      (DELETE_CONV
-                       ((SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND,
-                                             EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM])
+                       (
+                        (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND,
+                                             EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM,
+                                             STRCAT_11,asm])
                         THENC EVAL
                         THENC (SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR,
-                                                  FORALL_AND_THM, DISJ_IMP_THM])
+                                                  FORALL_AND_THM, DISJ_IMP_THM,STRCAT_11,
+                                                  asm])
                         THENC EVAL
-                        THENC (REPEATC (T_F_UNCHANGED_CONV
+                        THENC (REPEATC (CHANGED_CONV
                                          ((SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR,
-                                                              FORALL_AND_THM])
+                                                              FORALL_AND_THM,STRCAT_11,asm])
                                           THENC EVAL)))))))
-                  THENC SIMP_CONV arith_ss []))
-   >> CONV_TAC (ONCE_FIND_CONV ``if (x=y) then (1:real) else 0``
+                  THENC SIMP_CONV arith_ss [])))
+   >> simp_tac arith_ss [STRCAT_11,toString_inj]
+   >> POP_ASSUM (fn asm => ASSUME_TAC asm >>
+      CONV_TAC (ONCE_FIND_CONV ``if (x=y) then (1:real) else 0``
                  (RATOR_CONV (RATOR_CONV (RAND_CONV
-        (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
+        (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM,
+                             FORALL_AND_THM, DISJ_IMP_THM, STRCAT_11,asm]
          THENC EVAL
-         THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
+         THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM,
+                             DISJ_IMP_THM, STRCAT_11,asm]
          THENC EVAL
          THENC (REPEATC (T_F_UNCHANGED_CONV
-         (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
+         (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM,
+                            asm]
          THENC EVAL))))))
-                THENC SIMP_CONV bool_ss []))
-   >> RW_TAC real_ss [REAL_ADD_ASSOC, GSYM REAL_NEG_ADD, GSYM REAL_ADD_RDISTRIB, REAL_MUL_ASSOC]);
+                THENC SIMP_CONV bool_ss [])))
+   >> RW_TAC real_ss [REAL_ADD_ASSOC, GSYM REAL_NEG_ADD, GSYM REAL_ADD_RDISTRIB, REAL_MUL_ASSOC]
+QED
 
 (* ************************************************************************* *)
 (* Case Study: The Dining Cryptographers - Updated Computation for 3 cryptos *)
@@ -405,9 +449,9 @@ fun dc_input_unroll (remove_dups_conv:Abbrev.term->Abbrev.thm) =
 
 val _ = print "Starting very long new_dc3_leakage_result (expect 10min)\n"
 (* NOTE: this theorem needs a long time (~10min) to finish *)
-val new_dc3_leakage_result = store_thm
-  ("new_dc3_leakage_result",
-   ``leakage (dc_prog_space (SUC (SUC (SUC 0))) F) (dcprog (SUC(SUC(SUC 0)))) = 0``,
+Theorem new_dc3_leakage_result:
+     leakage (dc_prog_space (SUC (SUC (SUC 0))) F) (dcprog (SUC(SUC(SUC 0)))) = 0
+Proof
    CONV_TAC
     (SIMP_CONV bool_ss [dc_prog_space_F_set_thm] THENC
      RATOR_CONV (RAND_CONV (
@@ -418,7 +462,8 @@ val new_dc3_leakage_result = store_thm
       (dc_input_unroll dc_hl_dup_conv) (dc_input_unroll dc_hl_dup_conv) (dc_input_unroll dc_dup_conv)
        dc_hl_dup_conv dc_hl_dup_conv dc_dup_conv dc_dup_conv))
     THENC SIMP_CONV real_ss [REAL_ADD_ASSOC, GSYM REAL_NEG_ADD,
-                             GSYM REAL_ADD_RDISTRIB, REAL_MUL_ASSOC]));
+                             GSYM REAL_ADD_RDISTRIB, REAL_MUL_ASSOC])
+QED
 
 (* ************************************************************************* *)
 (* Case Study: The Dining Cryptographers - Proofs                            *)
@@ -428,55 +473,61 @@ val new_dc3_leakage_result = store_thm
 (* Case Study: The Dining Cryptographers - Proofs (Correctness)              *)
 (* ************************************************************************* *)
 
-val dc_set_announcements_result1 = store_thm
-  ("dc_set_announcements_result1",
-   ``!h l r n. !i. i <= (SUC (SUC n)) ==>
+Theorem dc_set_announcements_result1:
+     !h l r n. !i. i <= (SUC (SUC n)) ==>
                 ((set_announcements h l r (SUC (SUC n)) i (STRCAT "announces" (toString 0)) =
                  ((h (STRCAT "pays" (toString 0)))) xor
-                 ((r (STRCAT "coin" (toString 0))) xor (r (STRCAT "coin" (toString (SUC (SUC n))))))))``,
+                 ((r (STRCAT "coin" (toString 0))) xor (r (STRCAT "coin" (toString (SUC (SUC n))))))))
+Proof
    NTAC 4 STRIP_TAC >> Induct
-   >> ASM_SIMP_TAC arith_ss [set_announcements_def, STRCAT_toString_inj]);
+   >> ASM_SIMP_TAC arith_ss [set_announcements_def, STRCAT_toString_inj]
+QED
 
-val dc_set_announcements_result2 = store_thm
-  ("dc_set_announcements_result2",
-   ``!h l r n. ((set_announcements h l r (SUC (SUC n)) (SUC (SUC n)) (STRCAT "announces" (toString 0)) =
+Theorem dc_set_announcements_result2:
+     !h l r n. ((set_announcements h l r (SUC (SUC n)) (SUC (SUC n)) (STRCAT "announces" (toString 0)) =
                ((h (STRCAT "pays" (toString 0)))) xor
-               ((r (STRCAT "coin" (toString 0))) xor (r (STRCAT "coin" (toString (SUC (SUC n))))))))``,
-   ASM_SIMP_TAC arith_ss [dc_set_announcements_result1]);
+               ((r (STRCAT "coin" (toString 0))) xor (r (STRCAT "coin" (toString (SUC (SUC n))))))))
+Proof
+   ASM_SIMP_TAC arith_ss [dc_set_announcements_result1]
+QED
 
-val dc_set_announcements_result3 = store_thm
-  ("dc_set_announcements_result3",
-   ``!h l r n m i. (SUC i) <= m /\ m < (SUC (SUC (SUC n))) ==>
+Theorem dc_set_announcements_result3:
+     !h l r n m i. (SUC i) <= m /\ m < (SUC (SUC (SUC n))) ==>
                   ((set_announcements h l r (SUC (SUC n)) m) (STRCAT "announces" (toString (SUC i))) =
                    ((h (STRCAT "pays" (toString (SUC i))))) xor
-                        ((r (STRCAT "coin" (toString (SUC i)))) xor (r (STRCAT "coin" (toString i)))))``,
+                        ((r (STRCAT "coin" (toString (SUC i)))) xor (r (STRCAT "coin" (toString i)))))
+Proof
    NTAC 4 STRIP_TAC >> Induct
    >- RW_TAC arith_ss []
    >> STRIP_TAC >> Cases_on `i = m`
-   >> ASM_SIMP_TAC arith_ss [set_announcements_def, STRCAT_toString_inj]);
+   >> ASM_SIMP_TAC arith_ss [set_announcements_def, STRCAT_toString_inj]
+QED
 
-val dc_set_announcements_result4 = store_thm
-  ("dc_set_announcements_result4",
-   ``!h l r n i. (SUC i) < (SUC (SUC (SUC n))) ==>
+Theorem dc_set_announcements_result4:
+     !h l r n i. (SUC i) < (SUC (SUC (SUC n))) ==>
                   ((set_announcements h l r (SUC (SUC n)) (SUC (SUC n))) (STRCAT "announces" (toString (SUC i))) =
                    ((h (STRCAT "pays" (toString (SUC i))))) xor
-                        ((r (STRCAT "coin" (toString (SUC i)))) xor (r (STRCAT "coin" (toString i)))))``,
-   ASM_SIMP_TAC arith_ss [dc_set_announcements_result3]);
+                        ((r (STRCAT "coin" (toString (SUC i)))) xor (r (STRCAT "coin" (toString i)))))
+Proof
+   ASM_SIMP_TAC arith_ss [dc_set_announcements_result3]
+QED
 
-val dc_set_announcements_result5 = store_thm
-  ("dc_set_announcements_result5",
-   ``!h l r n m s. m <= SUC (SUC n) /\ (!i. i <= m ==> ~(s = STRCAT "announces" (toString i))) ==>
-                 ((set_announcements h l r (SUC (SUC n)) m) s = l s)``,
+Theorem dc_set_announcements_result5:
+     !h l r n m s. m <= SUC (SUC n) /\ (!i. i <= m ==> ~(s = STRCAT "announces" (toString i))) ==>
+                 ((set_announcements h l r (SUC (SUC n)) m) s = l s)
+Proof
    NTAC 4 STRIP_TAC >> Induct
    >- (STRIP_TAC >> ASM_SIMP_TAC arith_ss [set_announcements_def, STRCAT_toString_inj])
-   >> STRIP_TAC >> ASM_SIMP_TAC arith_ss [set_announcements_def, STRCAT_toString_inj]);
+   >> STRIP_TAC >> ASM_SIMP_TAC arith_ss [set_announcements_def, STRCAT_toString_inj]
+QED
 
-val dc_set_announcements_result6 = store_thm
-  ("dc_set_announcements_result6",
-   ``!h l r n. ((set_announcements h l r (SUC (SUC n)) (SUC (SUC n))) (STRCAT "announces" (toString (SUC (SUC n)))) =
+Theorem dc_set_announcements_result6:
+     !h l r n. ((set_announcements h l r (SUC (SUC n)) (SUC (SUC n))) (STRCAT "announces" (toString (SUC (SUC n)))) =
                    ((h (STRCAT "pays" (toString (SUC (SUC n)))))) xor
-                        ((r (STRCAT "coin" (toString (SUC (SUC n))))) xor (r (STRCAT "coin" (toString (SUC n))))))``,
-   ASM_SIMP_TAC arith_ss [dc_set_announcements_result4]);
+                        ((r (STRCAT "coin" (toString (SUC (SUC n))))) xor (r (STRCAT "coin" (toString (SUC n))))))
+Proof
+   ASM_SIMP_TAC arith_ss [dc_set_announcements_result4]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -500,11 +551,11 @@ Proof
    >> METIS_TAC [DECIDE ``!(n:num) m. n < m ==> ~(n = m)``, xor_def]
 QED
 
-val dc_XOR_announces_result2 = store_thm
-  ("dc_XOR_announces_result2",
-   ``!high low random n i. i <= SUC (SUC n) /\ (high (STRCAT "pays" (toString i))) /\ (!j. (~(j = i)) ==> ~(high (STRCAT "pays" (toString j)))) ==>
+Theorem dc_XOR_announces_result2:
+     !high low random n i. i <= SUC (SUC n) /\ (high (STRCAT "pays" (toString i))) /\ (!j. (~(j = i)) ==> ~(high (STRCAT "pays" (toString j)))) ==>
         (XOR_announces (set_announcements high low random (SUC (SUC n)) (SUC (SUC n))) i =
-                 ~((random (STRCAT "coin" (toString i))) xor (random (STRCAT "coin" (toString (SUC (SUC n)))))))``,
+                 ~((random (STRCAT "coin" (toString i))) xor (random (STRCAT "coin" (toString (SUC (SUC n)))))))
+Proof
    REPEAT STRIP_TAC >> Cases_on `i`
    >- (SIMP_TAC bool_ss [XOR_announces_def, dc_set_announcements_result2]
        >> RW_TAC bool_ss [EQ_SYM_EQ, xor_def])
@@ -512,14 +563,15 @@ val dc_XOR_announces_result2 = store_thm
    >> (ASSUME_TAC o REWRITE_RULE [DECIDE ``!n:num. n < SUC n``] o Q.SPEC `n'` o UNDISCH_ALL o REWRITE_RULE [GSYM AND_IMP_INTRO]
        o Q.SPECL [`high`, `low`, `random`, `n`, `(SUC n')`]) dc_XOR_announces_result1
    >> FULL_SIMP_TAC bool_ss [DECIDE ``!(n:num) m. n <= m <=> n < SUC m``, dc_set_announcements_result4, DECIDE ``!(n:num) m. SUC n < m ==> n < m``]
-   >> RW_TAC bool_ss [xor_def] >> DECIDE_TAC);
+   >> RW_TAC bool_ss [xor_def] >> DECIDE_TAC
+QED
 
-val dc_XOR_announces_result3 = store_thm
-  ("dc_XOR_announces_result3",
-   ``!high low random n i. i <= SUC (SUC n) /\ (high (STRCAT "pays" (toString i))) /\ (!j. (~(j = i)) ==> ~(high (STRCAT "pays" (toString j)))) ==>
+Theorem dc_XOR_announces_result3:
+     !high low random n i. i <= SUC (SUC n) /\ (high (STRCAT "pays" (toString i))) /\ (!j. (~(j = i)) ==> ~(high (STRCAT "pays" (toString j)))) ==>
         !k. i <= k /\ k <= SUC (SUC n) ==>
                 (XOR_announces (set_announcements high low random (SUC (SUC n)) (SUC (SUC n))) k =
-                 ~((random (STRCAT "coin" (toString k))) xor (random (STRCAT "coin" (toString (SUC (SUC n)))))))``,
+                 ~((random (STRCAT "coin" (toString k))) xor (random (STRCAT "coin" (toString (SUC (SUC n)))))))
+Proof
    NTAC 6 (STRIP_TAC) >> Induct
    >- (RW_TAC arith_ss [XOR_announces_def, dc_set_announcements_result2]
        >> RW_TAC bool_ss [T_xor])
@@ -534,94 +586,105 @@ val dc_XOR_announces_result3 = store_thm
    >> STRIP_TAC >> ONCE_REWRITE_TAC [XOR_announces_def]
    >> `i <= k /\ k <= SUC (SUC n)` by FULL_SIMP_TAC arith_ss [] >> FULL_SIMP_TAC bool_ss []
    >> ASM_SIMP_TAC arith_ss [dc_set_announcements_result4, F_xor]
-   >> RW_TAC bool_ss [xor_def] >> DECIDE_TAC);
+   >> RW_TAC bool_ss [xor_def] >> DECIDE_TAC
+QED
 
-val dc_XOR_announces_result4 = store_thm
-  ("dc_XOR_announces_result4",
-   ``!high low random n i. i <= SUC (SUC n) /\ (high (STRCAT "pays" (toString i))) /\ (!j. (~(j = i)) ==> ~(high (STRCAT "pays" (toString j)))) ==>
-                (XOR_announces (set_announcements high low random (SUC (SUC n)) (SUC (SUC n))) (SUC (SUC n)))``,
+Theorem dc_XOR_announces_result4:
+     !high low random n i. i <= SUC (SUC n) /\ (high (STRCAT "pays" (toString i))) /\ (!j. (~(j = i)) ==> ~(high (STRCAT "pays" (toString j)))) ==>
+                (XOR_announces (set_announcements high low random (SUC (SUC n)) (SUC (SUC n))) (SUC (SUC n)))
+Proof
    NTAC 6 STRIP_TAC
    >> RW_TAC std_ss [(REWRITE_RULE [LESS_EQ_REFL] o UNDISCH o Q.SPEC `SUC (SUC n)`
                       o UNDISCH_ALL o REWRITE_RULE [GSYM AND_IMP_INTRO]
-                      o Q.SPECL [`high`, `low`, `random`, `n`, `i`]) dc_XOR_announces_result3, xor_refl]);
+                      o Q.SPECL [`high`, `low`, `random`, `n`, `i`]) dc_XOR_announces_result3, xor_refl]
+QED
 
-val dc_XOR_announces_result5 = store_thm
-  ("dc_XOR_announces_result5",
-   ``!high low random n. high IN dc_high_states F (SUC (SUC (SUC n)))  ==>
-                (XOR_announces (set_announcements high low random (SUC (SUC n)) (SUC (SUC n))) (SUC (SUC n)))``,
+Theorem dc_XOR_announces_result5:
+     !high low random n. high IN dc_high_states F (SUC (SUC (SUC n)))  ==>
+                (XOR_announces (set_announcements high low random (SUC (SUC n)) (SUC (SUC n))) (SUC (SUC n)))
+Proof
    NTAC 5 STRIP_TAC
    >> MATCH_MP_TAC dc_XOR_announces_result4
    >> FULL_SIMP_TAC bool_ss [dc_high_states_def, IN_dc_high_states_set, GSPECIFICATION, PAIR_EQ]
    >> Q.EXISTS_TAC `i`
    >> RW_TAC bool_ss []
-   >> RW_TAC std_ss [STRCAT_toString_inj]);
+   >> RW_TAC std_ss [STRCAT_toString_inj]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val dcprog_result1 = store_thm
-  ("dcprog_result1",
-   ``!high low random n. dcprog (SUC (SUC (SUC n))) ((high, low), random) "result" =
+Theorem dcprog_result1:
+     !high low random n. dcprog (SUC (SUC (SUC n))) ((high, low), random) "result" =
                          XOR_announces (set_announcements high low random
-                                        (SUC (SUC n)) (SUC (SUC n))) (SUC (SUC n))``,
-   RW_TAC std_ss [dcprog_def, compute_result_def]);
+                                        (SUC (SUC n)) (SUC (SUC n))) (SUC (SUC n))
+Proof
+   RW_TAC std_ss [dcprog_def, compute_result_def]
+QED
 
-val dcprog_result2 = store_thm
-  ("dcprog_result2",
-   ``!high low random n x. (~(x = "result")) ==>
+Theorem dcprog_result2:
+     !high low random n x. (~(x = "result")) ==>
         (dcprog (SUC (SUC (SUC n))) ((high, low), random) x =
-         (set_announcements high low random (SUC (SUC n)) (SUC (SUC n))) x)``,
-   RW_TAC std_ss [dcprog_def, compute_result_def]);
+         (set_announcements high low random (SUC (SUC n)) (SUC (SUC n))) x)
+Proof
+   RW_TAC std_ss [dcprog_def, compute_result_def]
+QED
 
-val dcprog_result3 = store_thm
-  ("dcprog_result3",
-   ``!high low random n i. XOR_announces (dcprog (SUC (SUC (SUC n))) ((high, low), random)) i =
+Theorem dcprog_result3:
+     !high low random n i. XOR_announces (dcprog (SUC (SUC (SUC n))) ((high, low), random)) i =
                          XOR_announces (set_announcements high low random
-                                        (SUC (SUC n)) (SUC (SUC n))) i``,
+                                        (SUC (SUC n)) (SUC (SUC n))) i
+Proof
    NTAC 4 STRIP_TAC >> Induct
    >- RW_TAC string_ss [XOR_announces_def, dcprog_result2]
    >> ONCE_REWRITE_TAC [XOR_announces_def]
-   >> RW_TAC string_ss [dcprog_result2]);
+   >> RW_TAC string_ss [dcprog_result2]
+QED
 
-val dcprog_result4 = store_thm
-  ("dcprog_result4",
-   ``!high low random n. XOR_announces (dcprog (SUC (SUC (SUC n))) ((high, low), random)) (SUC (SUC n)) =
-                         (dcprog (SUC (SUC (SUC n))) ((high, low), random)) "result"``,
+Theorem dcprog_result4:
+     !high low random n. XOR_announces (dcprog (SUC (SUC (SUC n))) ((high, low), random)) (SUC (SUC n)) =
+                         (dcprog (SUC (SUC (SUC n))) ((high, low), random)) "result"
+Proof
    REPEAT STRIP_TAC >> ONCE_REWRITE_TAC [dcprog_result3]
-   >> RW_TAC std_ss [dcprog_def, compute_result_def]);
+   >> RW_TAC std_ss [dcprog_def, compute_result_def]
+QED
 
-val dcprog_result5 = store_thm
-  ("dcprog_result5",
-   ``!high low random n. high IN dc_high_states F (SUC (SUC (SUC n))) ==>
-        ((dcprog (SUC (SUC (SUC n))) ((high, low), random)) "result")``,
-   RW_TAC std_ss [dcprog_def, compute_result_def, dc_XOR_announces_result5]);
+Theorem dcprog_result5:
+     !high low random n. high IN dc_high_states F (SUC (SUC (SUC n))) ==>
+        ((dcprog (SUC (SUC (SUC n))) ((high, low), random)) "result")
+Proof
+   RW_TAC std_ss [dcprog_def, compute_result_def, dc_XOR_announces_result5]
+QED
 
-val dcprog_result6 = store_thm
-  ("dcprog_result6",
-   ``!high low random n i.
+Theorem dcprog_result6:
+     !high low random n i.
         (dcprog (SUC (SUC (SUC n))) ((high, low), random) (STRCAT "announces" (toString i)) =
-         (set_announcements high low random (SUC (SUC n)) (SUC (SUC n))) (STRCAT "announces" (toString i)))``,
-   RW_TAC string_ss [dcprog_result2]);
+         (set_announcements high low random (SUC (SUC n)) (SUC (SUC n))) (STRCAT "announces" (toString i)))
+Proof
+   RW_TAC string_ss [dcprog_result2]
+QED
 
 (* ************************************************************************* *)
 (* Case Study: The Dining Cryptographers - Proofs (Anonymity)                *)
 (* ************************************************************************* *)
 
-val dc_valid_outputs_def = Define
-   `dc_valid_outputs n = {s: bool state | (s "result" = XOR_announces s n) /\
+Definition dc_valid_outputs_def:
+    dc_valid_outputs n = {s: bool state | (s "result" = XOR_announces s n) /\
                                           (XOR_announces s n) /\
                                           (!x. (~(x = "result")) /\
                                                (!i:num. i <= n ==>
                                                         ~(x = (STRCAT "announces" (toString i)))) ==>
-                                                ~ s x)}`;
+                                                ~ s x)}
+End
 
-val dc_random_witness_def = Define
-   `(dc_random_witness x (0:num) = (\s:string. if s = (STRCAT "coin" (toString 0)) then
+Definition dc_random_witness_def:
+    (dc_random_witness x (0:num) = (\s:string. if s = (STRCAT "coin" (toString 0)) then
                                                         ~(x (STRCAT "announces" (toString 0)))
                                                    else F)) /\
     (dc_random_witness x (SUC i) = (\s. if s = (STRCAT "coin" (toString (SUC i))) then
                                                 ~ (XOR_announces x (SUC i))
                                             else
-                                                dc_random_witness x i s))`;
+                                                dc_random_witness x i s))
+End
 
 val dc_random_witness_lem0 = prove
   (``!x n i. (SUC n) <= i ==> ~(dc_random_witness x n (STRCAT "coin" (toString i)))``,
@@ -664,12 +727,12 @@ val dc_random_witness_result = prove
    >> FULL_SIMP_TAC arith_ss [] >> ONCE_REWRITE_TAC [XOR_announces_def]
    >> RW_TAC bool_ss [xor_def] >> DECIDE_TAC);
 
-val dc_valid_outputs_eq_outputs = store_thm
-  ("dc_valid_outputs_eq_outputs",
-   ``!n. (IMAGE (λ(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
+Theorem dc_valid_outputs_eq_outputs:
+     !n. (IMAGE (λ(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
                (dc_high_states F (SUC (SUC (SUC n))) CROSS
                 dc_random_states (SUC (SUC n)))) =
-          dc_valid_outputs (SUC (SUC n))``,
+          dc_valid_outputs (SUC (SUC n))
+Proof
    RW_TAC std_ss [EXTENSION, IN_IMAGE, IN_CROSS, dc_valid_outputs_def, GSPECIFICATION]
    >> RW_TAC std_ss [GSYM EXTENSION]
    >> EQ_TAC
@@ -708,12 +771,13 @@ val dc_valid_outputs_eq_outputs = store_thm
    >- (ASM_REWRITE_TAC [] >> MATCH_MP_TAC dcprog_result5 >> ASM_REWRITE_TAC [])
    >> Cases_on `(!i. i <= SUC (SUC n) ==> ~(x' = STRCAT "announces" (toString i)))`
    >- FULL_SIMP_TAC arith_ss [dcprog_result2, dc_set_announcements_result5]
-   >> FULL_SIMP_TAC bool_ss [dc_random_witness_result]);
+   >> FULL_SIMP_TAC bool_ss [dc_random_witness_result]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val n_minus_1_announces_list = Define
-   `(n_minus_1_announces_list (0:num) = [(\s:string. s = (STRCAT "announces" (toString 0))); (\s:string. F)]) /\
+Definition n_minus_1_announces_list:
+    (n_minus_1_announces_list (0:num) = [(\s:string. s = (STRCAT "announces" (toString 0))); (\s:string. F)]) /\
     (n_minus_1_announces_list (SUC n) = (MAP (\s:bool state.
                                               (\x:string. if x = (STRCAT "announces" (toString (SUC n))) then
                                                                 T
@@ -723,16 +787,18 @@ val n_minus_1_announces_list = Define
                                               (\x:string. if x = (STRCAT "announces" (toString (SUC n))) then
                                                                 F
                                                           else s x))
-                                          (n_minus_1_announces_list n)))`;
+                                          (n_minus_1_announces_list n)))
+End
 
-val dc_valid_outputs_list = Define
-   `dc_valid_outputs_list (SUC(SUC(SUC n))) =
+Definition dc_valid_outputs_list:
+    dc_valid_outputs_list (SUC(SUC(SUC n))) =
         MAP (\l s. (s = "result") \/
                    (if (s = (STRCAT "announces" (toString (SUC(SUC n))))) then
                         ~(XOR_announces l (SUC n))
                     else
                         l s))
-             (n_minus_1_announces_list (SUC n))`;
+             (n_minus_1_announces_list (SUC n))
+End
 
 val MEM_n_minus_1_announces_list = prove
   (``!n x. MEM x (n_minus_1_announces_list n) =
@@ -855,29 +921,31 @@ val ALL_DISTINCT_dc_valid_outputs_list = prove
    >> POP_ASSUM (ASSUME_TAC o Q.SPEC `x'`)
    >> METIS_TAC [n_minus_1_announces_list_result, n_minus_1_announces_list_SUC_n, LESS_EQ_REFL]);
 
-val CARD_dc_valid_outputs = store_thm
-  ("CARD_dc_valid_outputs",
-   ``!n. CARD (IMAGE (λ(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
+Theorem CARD_dc_valid_outputs:
+     !n. CARD (IMAGE (λ(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
                (dc_high_states F (SUC (SUC (SUC n))) CROSS
                 dc_random_states (SUC (SUC n)))) =
-          2 ** (SUC(SUC n))``,
+          2 ** (SUC(SUC n))
+Proof
    RW_TAC std_ss [dc_valid_outputs_eq_outputs,
                   dc_valid_outputs_eq_dc_valid_outputs_list,
                   GSYM LENGTH_dc_valid_outputs_list,
                   ALL_DISTINCT_CARD_LIST_TO_SET,
                   ALL_DISTINCT_dc_valid_outputs_list,
-                  all_distinct_nub_id]);
+                  all_distinct_nub_id]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val valid_coin_assignment = Define
-  `(valid_coin_assignment r out h n (0:num) =
+Definition valid_coin_assignment:
+   (valid_coin_assignment r out h n (0:num) =
     (r (STRCAT "coin" (toString 0)) <=>
        ((r (STRCAT "coin" (toString (SUC (SUC n))))) xor (XOR_announces out (0:num)) xor ~((0:num) < h)))) /\
    (valid_coin_assignment r out h n (SUC i) =
        ((r (STRCAT "coin" (toString (SUC i))) <=>
         ((r (STRCAT "coin" (toString (SUC (SUC n))))) xor (XOR_announces out (SUC i)) xor ~((SUC i) < h))) /\
-        (valid_coin_assignment r out h n i)))`;
+        (valid_coin_assignment r out h n i)))
+End
 
 val valid_coin_assignment_result1 = prove
   (``!x out p n i j. j <= i /\ valid_coin_assignment x out p n i ==> valid_coin_assignment x out p n j``,
@@ -885,15 +953,15 @@ val valid_coin_assignment_result1 = prove
    >> REPEAT STRIP_TAC >> Cases_on `j = SUC i` >> FULL_SIMP_TAC arith_ss []
    >> Q.PAT_X_ASSUM `!j. b` MATCH_MP_TAC >> FULL_SIMP_TAC arith_ss [valid_coin_assignment]);
 
-val valid_coin_set_eq_valid_coin_assignment = store_thm
-  ("valid_coin_set_eq_valid_coin_assignment",
-   ``!n p out. p <= SUC (SUC n) /\
+Theorem valid_coin_set_eq_valid_coin_assignment:
+     !n p out. p <= SUC (SUC n) /\
                out IN (IMAGE (λ(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
                              (dc_high_states F (SUC (SUC (SUC n))) CROSS dc_random_states (SUC (SUC n)))) ==>
              ({r | r IN (dc_random_states (SUC (SUC n))) /\
                    (dcprog (SUC (SUC (SUC n))) (((\s. s = STRCAT "pays" (toString p)), (\s.F)), r) = out)} =
               {r | r IN (dc_random_states (SUC (SUC n))) /\
-                   valid_coin_assignment r out p n (SUC (SUC n))})``,
+                   valid_coin_assignment r out p n (SUC (SUC n))})
+Proof
    RW_TAC std_ss [EXTENSION, GSPECIFICATION]
    >> RW_TAC std_ss [GSYM EXTENSION]
    >> reverse (Cases_on `x IN dc_random_states (SUC (SUC n))`) >> ASM_REWRITE_TAC []
@@ -948,10 +1016,11 @@ val valid_coin_set_eq_valid_coin_assignment = store_thm
    >> POP_ASSUM (ASSUME_TAC o REWRITE_RULE [valid_coin_assignment, XOR_announces_def]) >> POP_ORW
    >> ONCE_REWRITE_TAC [XOR_announces_def]
    >> Cases_on `p = SUC (SUC n')` >- (FULL_SIMP_TAC arith_ss [xor_def] >> DECIDE_TAC)
-   >> FULL_SIMP_TAC arith_ss [xor_def] >> Cases_on `SUC (SUC n') < p` >> FULL_SIMP_TAC arith_ss [xor_def] >> DECIDE_TAC);
+   >> FULL_SIMP_TAC arith_ss [xor_def] >> Cases_on `SUC (SUC n') < p` >> FULL_SIMP_TAC arith_ss [xor_def] >> DECIDE_TAC
+QED
 
-val coin_assignment = Define
-   `(coin_assignment out h n choice (0:num) =
+Definition coin_assignment:
+    (coin_assignment out h n choice (0:num) =
         (\s. if s = (STRCAT "coin" (toString 0)) then
                 (choice xor (XOR_announces out (0:num)) xor ~((0:num) < h))
              else F)) /\
@@ -959,7 +1028,8 @@ val coin_assignment = Define
         (\s. if s = (STRCAT "coin" (toString (SUC i))) then
                 (choice xor (XOR_announces out (SUC i)) xor ~((SUC i) < h))
              else
-                coin_assignment out h n choice i s))`;
+                coin_assignment out h n choice i s))
+End
 
 Definition coin_assignment_set:
   coin_assignment_set out p n =
@@ -982,9 +1052,8 @@ val coin_assignment_result2 = prove
    >> RW_TAC std_ss [coin_assignment, STRCAT_toString_inj]
    >> FULL_SIMP_TAC arith_ss []);
 
-val valid_coin_assignment_eq_2_element_set = store_thm
-  ("valid_coin_assignment_eq_2_element_set",
-   ``!n p out.
+Theorem valid_coin_assignment_eq_2_element_set:
+     !n p out.
          p <= SUC (SUC n) /\
          out IN
          IMAGE (λ(h,r). dcprog (SUC (SUC (SUC n))) ((h,(\s. F)),r))
@@ -993,7 +1062,8 @@ val valid_coin_assignment_eq_2_element_set = store_thm
         ({r |
            r IN dc_random_states (SUC (SUC n)) /\
            valid_coin_assignment r out p n (SUC (SUC n))} =
-         coin_assignment_set out p n)``,
+         coin_assignment_set out p n)
+Proof
    RW_TAC std_ss [EXTENSION, GSPECIFICATION, coin_assignment_set]
    >> RW_TAC std_ss [GSYM EXTENSION, IN_INSERT, NOT_IN_EMPTY]
    >> EQ_TAC
@@ -1075,7 +1145,8 @@ val valid_coin_assignment_eq_2_element_set = store_thm
    >> ONCE_REWRITE_TAC [coin_assignment]
    >> FULL_SIMP_TAC arith_ss [STRCAT_toString_inj, T_xor, xor_T]
    >> REPEAT (POP_ASSUM MP_TAC)
-   >> RW_TAC std_ss [dc_valid_outputs_eq_outputs, dc_valid_outputs_def, GSPECIFICATION, T_xor, F_xor, xor_comm]);
+   >> RW_TAC std_ss [dc_valid_outputs_eq_outputs, dc_valid_outputs_def, GSPECIFICATION, T_xor, F_xor, xor_comm]
+QED
 
 val coin_assignment_result3 = prove
   (``!out p n i. i <= SUC (SUC n) ==>
@@ -1093,9 +1164,9 @@ val lg_times_compute_simp_lem = prove
    (``!x y. x * lg (y * x) = (\x. x * lg (y * x)) x``,
     RW_TAC std_ss []);
 
-val dc_leakage_result = store_thm
-  ("dc_leakage_result",
-   ``!n. leakage (dc_prog_space (SUC (SUC (SUC n))) F) (dcprog (SUC (SUC (SUC n)))) = 0``,
+Theorem dc_leakage_result:
+     !n. leakage (dc_prog_space (SUC (SUC (SUC n))) F) (dcprog (SUC (SUC (SUC n)))) = 0
+Proof
    RW_TAC bool_ss [dc_prog_space_F_set_thm, unif_prog_space_leakage_computation_reduce,
                      dc_high_states_set_finite, dc_random_states_finite, dc_low_states_finite,
                      dc_states_cross_not_empty, CARD_dc_high_states_set, CARD_dc_low_states, CARD_dc_random_states,
@@ -1746,7 +1817,8 @@ val dc_leakage_result = store_thm
    >> `inv (& (SUC (SUC (SUC n)))) * inv (2 pow SUC (SUC (SUC n))) * (2 * & (SUC (SUC (SUC n)))) =
             (& (SUC (SUC (SUC n))) * inv (& (SUC (SUC (SUC n))))) * inv (2 pow SUC (SUC (SUC n))) * 2`
                 by REAL_ARITH_TAC
-   >> POP_ORW >> RW_TAC real_ss [REAL_MUL_RINV]);
+   >> POP_ORW >> RW_TAC real_ss [REAL_MUL_RINV]
+QED
 
 (* ************************************************************************* *)
 (* Case Study: The Dining Cryptographers - From the view of a cryptographer  *)
@@ -1755,31 +1827,35 @@ val dc_leakage_result = store_thm
 (* arbitrary.                                                                *)
 (* ************************************************************************* *)
 
-val insider_high_states_set_def = Define
-  `(insider_high_states_set (0:num) = {}) /\
+Definition insider_high_states_set_def:
+   (insider_high_states_set (0:num) = {}) /\
    (insider_high_states_set (SUC n) = (\s:string. s = (STRCAT "pays" (toString (SUC n))))
-                                      INSERT (insider_high_states_set n))`;
+                                      INSERT (insider_high_states_set n))
+End
 
-val insider_high_states_def = Define
-   `insider_high_states nsapays (SUC(SUC n)) =
+Definition insider_high_states_def:
+    insider_high_states nsapays (SUC(SUC n)) =
      if nsapays then {(\s: string. s = STRCAT "pays" (toString (SUC(SUC n))))}
-     else insider_high_states_set (SUC n)`;
+     else insider_high_states_set (SUC n)
+End
 
-val insider_low_states_def = Define
-   `insider_low_states = {(\s:string. s = (STRCAT "coin" (toString 0))); (\s:string. F)}`;
+Definition insider_low_states_def:
+    insider_low_states = {(\s:string. s = (STRCAT "coin" (toString 0))); (\s:string. F)}
+End
 
-val insider_random_states_def = Define
-  `(insider_random_states (0:num) = {(\s:string. F)}) /\
+Definition insider_random_states_def:
+   (insider_random_states (0:num) = {(\s:string. F)}) /\
    (insider_random_states (SUC n) =
      (IMAGE (\s:bool state. (\x:string. if x = (STRCAT "coin" (toString (SUC n))) then T
                                         else s x))
             (insider_random_states n)) UNION
      (IMAGE (\s:bool state. (\x:string. if x = (STRCAT "coin" (toString (SUC n))) then F
                                         else s x))
-            (insider_random_states n)))`;
+            (insider_random_states n)))
+End
 
-val insider_set_announcements_def = Define
-  `(insider_set_announcements (high: bool state) (low:bool state)
+Definition insider_set_announcements_def:
+   (insider_set_announcements (high: bool state) (low:bool state)
                               (random:bool state) (n:num) (0:num) (s:string) =
        if (s = (STRCAT "announces" (toString 0))) then
           ((high (STRCAT "pays" (toString 0)))) xor
@@ -1798,11 +1874,11 @@ val insider_set_announcements_def = Define
           ((random (STRCAT "coin" (toString (SUC (SUC i))))) xor
            (random (STRCAT "coin" (toString (SUC i)))))
        else
-          (insider_set_announcements high low random n (SUC i)) s)`;
+          (insider_set_announcements high low random n (SUC i)) s)
+End
 
-val insider_set_announcements_alt = store_thm
-  ("insider_set_announcements_alt",
-   ``!high low random n i.
+Theorem insider_set_announcements_alt:
+     !high low random n i.
       (insider_set_announcements high low random n 0 =
          (\s. if (s = (STRCAT "announces" (toString 0))) then
                  ((high (STRCAT "pays" (toString 0)))) xor
@@ -1820,29 +1896,34 @@ val insider_set_announcements_alt = store_thm
                  ((random (STRCAT "coin" (toString (SUC(SUC i))))) xor
                   (random (STRCAT "coin" (toString (SUC i)))))
               else
-                 (insider_set_announcements high low random n (SUC i)) s))``,
-     RW_TAC std_ss [FUN_EQ_THM, insider_set_announcements_def]);
+                 (insider_set_announcements high low random n (SUC i)) s))
+Proof
+     RW_TAC std_ss [FUN_EQ_THM, insider_set_announcements_def]
+QED
 
-val insider_dcprog_def = Define
-   `insider_dcprog (SUC(SUC(SUC n))) =
+Definition insider_dcprog_def:
+    insider_dcprog (SUC(SUC(SUC n))) =
       (λ((high:bool state, low:bool state), random:bool state).
          compute_result (insider_set_announcements high low random (SUC(SUC n)) (SUC(SUC n)))
-                        (SUC(SUC n)))`;
+                        (SUC(SUC n)))
+End
 
-val insider_dc_prog_space_def = Define
-   `insider_dc_prog_space (SUC(SUC n)) nsapays =
+Definition insider_dc_prog_space_def:
+    insider_dc_prog_space (SUC(SUC n)) nsapays =
     unif_prog_space
       (insider_high_states nsapays (SUC(SUC n)))
       insider_low_states
-      (insider_random_states (SUC n))`;
+      (insider_random_states (SUC n))
+End
 
-val insider_dc_prog_space_F_set_thm = store_thm
-  ("insider_dc_prog_space_F_set_thm",
-   ``!n. insider_dc_prog_space (SUC(SUC n)) F =
+Theorem insider_dc_prog_space_F_set_thm:
+     !n. insider_dc_prog_space (SUC(SUC n)) F =
          unif_prog_space (insider_high_states_set (SUC n))
                          insider_low_states
-                         (insider_random_states (SUC n))``,
-   RW_TAC std_ss [insider_dc_prog_space_def, insider_high_states_def]);
+                         (insider_random_states (SUC n))
+Proof
+   RW_TAC std_ss [insider_dc_prog_space_def, insider_high_states_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1878,9 +1959,9 @@ val dc_dup_conv =
 
 val insider_hl_dup_conv = SIMP_CONV arith_ss [hl_dups_lemma, hl_dups_lemma2, STRCAT_toString_inj];
 
-val insider_dc3_leakage_result = store_thm
-  ("insider_dc3_leakage_result",
-   ``leakage (insider_dc_prog_space (SUC (SUC (SUC 0))) F) (insider_dcprog (SUC(SUC(SUC 0)))) = 0``,
+Theorem insider_dc3_leakage_result:
+     leakage (insider_dc_prog_space (SUC (SUC (SUC 0))) F) (insider_dcprog (SUC(SUC(SUC 0)))) = 0
+Proof
    CONV_TAC (SIMP_CONV bool_ss [insider_dc_prog_space_F_set_thm] THENC
              RATOR_CONV (RAND_CONV (
              LEAKAGE_COMPUTE_CONV (``insider_high_states_set (SUC(SUC 0))``,
@@ -1896,7 +1977,8 @@ val insider_dc3_leakage_result = store_thm
                                       GSYM REAL_ADD_RDISTRIB, REAL_MUL_ASSOC])
 >> RW_TAC real_ss [lg_1, lg_inv, GSYM REAL_INV_1OVER]
 >> `lg 4 = 2` by (`4 = 2 pow 2` by RW_TAC real_ss [pow] >> POP_ORW >> RW_TAC std_ss [lg_pow])
->> RW_TAC real_ss []);
+>> RW_TAC real_ss []
+QED
 
 (* ************************************************************************* *)
 (* Case Study: The Dining Cryptographers - Biased coins                      *)
@@ -1906,14 +1988,16 @@ val insider_dc3_leakage_result = store_thm
 (* Tampering w/ a visible coin doesn't create a leak                         *)
 (* ************************************************************************* *)
 
-val biased_high_states_def = Define
-   `biased_high_states n = insider_high_states_set n`;
+Definition biased_high_states_def:
+    biased_high_states n = insider_high_states_set n
+End
 
-val biased_low_states_def = Define
-   `biased_low_states = {(\s:string. s = (STRCAT "coin" (toString 0))); (\s:string. F)}`;
+Definition biased_low_states_def:
+    biased_low_states = {(\s:string. s = (STRCAT "coin" (toString 0))); (\s:string. F)}
+End
 
-val biased_random_states_def = Define
-   `(biased_random_states (0:num) = {(\s:string. F)}) /\
+Definition biased_random_states_def:
+    (biased_random_states (0:num) = {(\s:string. F)}) /\
     (biased_random_states (SUC n) = (IMAGE (\s:bool state.
                                               (\x:string. if x = (STRCAT "coin" (toString (SUC n))) then
                                                                 T
@@ -1924,24 +2008,27 @@ val biased_random_states_def = Define
                                               (\x:string. if x = (STRCAT "coin" (toString (SUC n))) then
                                                                 F
                                                           else s x))
-                                          (biased_random_states n)))`;
+                                          (biased_random_states n)))
+End
 
-val biased_dist_def = Define
-   `biased_dist high low random =
+Definition biased_dist_def:
+    biased_dist high low random =
         (\s. if L s = (\s:string. s = (STRCAT "coin" (toString 0))) then
                 (1 / 2) * (unif_prog_dist high low random s)
              else
-                (3 / 2) * (unif_prog_dist high low random s))`;
+                (3 / 2) * (unif_prog_dist high low random s))
+End
 
-val biased_dc_prog_space_def = Define
-   `biased_dc_prog_space (SUC(SUC n)) =
+Definition biased_dc_prog_space_def:
+    biased_dc_prog_space (SUC(SUC n)) =
         (((biased_high_states (SUC(SUC n))) CROSS biased_low_states) CROSS (biased_random_states (SUC (SUC n))),
          POW (((biased_high_states (SUC(SUC n))) CROSS biased_low_states) CROSS (biased_random_states (SUC (SUC n)))),
-         (\s. SIGMA (biased_dist (biased_high_states (SUC(SUC n))) biased_low_states (biased_random_states (SUC (SUC n)))) s))`;
+         (\s. SIGMA (biased_dist (biased_high_states (SUC(SUC n))) biased_low_states (biased_random_states (SUC (SUC n)))) s))
+End
 
-val prob_space_biased_dc_prog_space3 = store_thm
-  ("prob_space_biased_dc_prog_space3",
-   ``prob_space (biased_dc_prog_space (SUC(SUC 0)))``,
+Theorem prob_space_biased_dc_prog_space3:
+     prob_space (biased_dc_prog_space (SUC(SUC 0)))
+Proof
    (RW_TAC bool_ss [prob_space_def]
     >> `FINITE ((biased_high_states (SUC (SUC 0)) CROSS biased_low_states CROSS
                 biased_random_states (SUC (SUC 0))))`
@@ -2102,7 +2189,7 @@ val prob_space_biased_dc_prog_space3 = store_thm
       {s | L s = (\s. s = STRCAT "coin" (toString 0))}) =
        (biased_high_states (SUC (SUC 0)) CROSS {(\s. s = STRCAT "coin" (toString 0))} CROSS
       biased_random_states (SUC (SUC 0)))`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [IN_INTER, L_def, GSPECIFICATION, IN_CROSS, IN_SING, biased_low_states_def]
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [IN_INTER, low_state_def, GSPECIFICATION, IN_CROSS, IN_SING, biased_low_states_def]
             >> DECIDE_TAC)
    >> POP_ORW
    >> `(biased_high_states (SUC (SUC 0)) CROSS biased_low_states CROSS
@@ -2110,7 +2197,7 @@ val prob_space_biased_dc_prog_space3 = store_thm
       {s | ~(L s = (\s. s = STRCAT "coin" (toString 0)))}) =
        (biased_high_states (SUC (SUC 0)) CROSS {(\s:string. F)} CROSS
       biased_random_states (SUC (SUC 0)))`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [IN_INTER, L_def, GSPECIFICATION, IN_CROSS, IN_SING, biased_low_states_def]
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [IN_INTER, low_state_def, GSPECIFICATION, IN_CROSS, IN_SING, biased_low_states_def]
             >> METIS_TAC [])
    >> POP_ORW
   >> RW_TAC bool_ss [(COMPUTE_CARD ``(biased_high_states (SUC (SUC 0)) CROSS
@@ -2156,13 +2243,14 @@ val prob_space_biased_dc_prog_space3 = store_thm
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV dc_dup_conv)))))
                 dc_dup_conv)]
-   >> RW_TAC real_ss []);
+   >> RW_TAC real_ss []
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val biased_dc3_leakage_result = store_thm
-  ("biased_dc3_leakage_result",
-   ``(leakage (biased_dc_prog_space (SUC (SUC 0))) (insider_dcprog (SUC(SUC(SUC 0)))) = 0)``,
+Theorem biased_dc3_leakage_result:
+     (leakage (biased_dc_prog_space (SUC (SUC 0))) (insider_dcprog (SUC(SUC(SUC 0)))) = 0)
+Proof
    RW_TAC bool_ss [leakage_def]
    >> `FINITE ((biased_high_states (SUC (SUC 0)) CROSS biased_low_states CROSS
                 biased_random_states (SUC (SUC 0))))`
@@ -2201,12 +2289,12 @@ val biased_dc3_leakage_result = store_thm
                                                      THENC (TRY_CONV dc_dup_conv)))))
                 dc_dup_conv)]
    >> Q.ABBREV_TAC `foo = (SUC (SUC 0))`
-   >> RW_TAC std_ss [joint_distribution_def, L_def, H_def, PAIR, ETA_THM, FST, SND, PROB, PSPACE, distribution_def]
+   >> RW_TAC std_ss [joint_distribution_def, low_state_def, high_state_def, PAIR, ETA_THM, FST, SND, PROB, PSPACE, distribution_def]
    >> `IMAGE L
         (biased_high_states foo CROSS biased_low_states CROSS
          biased_random_states foo) =
         biased_low_states`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_IMAGE, IN_CROSS, L_def]
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_IMAGE, IN_CROSS, low_state_def]
             >> EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss []
             >> Q.UNABBREV_TAC `foo`
             >> Q.EXISTS_TAC `(((\s:string. s = STRCAT "pays" (toString (SUC (SUC 0)))),x),(\s:string. F))`
@@ -2274,7 +2362,7 @@ val biased_dc3_leakage_result = store_thm
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 (insider_dcprog (SUC foo) ((h,(\s. s = STRCAT "coin" (toString 0))),r) = x)}`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
-                                    IN_CROSS, L_def]
+                                    IN_CROSS, low_state_def]
                      >> (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
                      >- (Q.PAT_X_ASSUM `P = (\s:string. s = STRCAT "coin" (toString 0))` (ASSUME_TAC o GSYM)
                          >> Q.EXISTS_TAC `(FST(FST x'),SND x')`
@@ -2348,7 +2436,7 @@ val biased_dc3_leakage_result = store_thm
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 (insider_dcprog (SUC foo) ((h,(\s:string. F)),r) = x)}`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
-                                    IN_CROSS, L_def]
+                                    IN_CROSS, low_state_def]
                      >> (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
                      >- (Q.PAT_X_ASSUM `P = (\s:string. F)` (ASSUME_TAC o GSYM)
                          >> Q.EXISTS_TAC `(FST(FST x'),SND x')`
@@ -2418,7 +2506,7 @@ val biased_dc3_leakage_result = store_thm
                 >> Suff `PREIMAGE L {z} INTER (biased_high_states foo CROSS biased_low_states CROSS
                                                 biased_random_states foo) = {}`
                 >- RW_TAC bool_ss [INTER_EMPTY, REAL_SUM_IMAGE_THM]
-                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, L_def, IN_CROSS, IN_INTER, IN_PREIMAGE, IN_SING, biased_low_states_def]
+                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, low_state_def, IN_CROSS, IN_INTER, IN_PREIMAGE, IN_SING, biased_low_states_def]
                 >> METIS_TAC []])
    >> `!x z. (PREIMAGE (\x. (insider_dcprog (SUC foo) x,SND (FST x)))
            {(x,z)} INTER
@@ -2428,7 +2516,7 @@ val biased_dc3_leakage_result = store_thm
            PREIMAGE L {z} INTER
            (biased_high_states foo CROSS biased_low_states CROSS
             biased_random_states foo))`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, L_def])
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, low_state_def])
    >> POP_ORW
    >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
    >> `!x z.
@@ -2472,7 +2560,7 @@ val biased_dc3_leakage_result = store_thm
                  IMAGE (λ(h,r). ((h, (\s. s = STRCAT "coin" (toString 0))),r))
                         (biased_high_states foo CROSS biased_random_states foo)`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
-                                    IN_CROSS, L_def]
+                                    IN_CROSS, low_state_def]
                      >> (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
                      >- (Q.PAT_X_ASSUM `P = (\s:string. s = STRCAT "coin" (toString 0))` (ASSUME_TAC o GSYM)
                          >> Q.EXISTS_TAC `(FST(FST x),SND x)`
@@ -2527,7 +2615,7 @@ val biased_dc3_leakage_result = store_thm
                  IMAGE (λ(h,r). ((h, (\s:string. F)),r))
                         (biased_high_states foo CROSS biased_random_states foo)`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
-                                    IN_CROSS, L_def]
+                                    IN_CROSS, low_state_def]
                      >> (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
                      >- (Q.PAT_X_ASSUM `P = (\s:string. F)` (ASSUME_TAC o GSYM)
                          >> Q.EXISTS_TAC `(FST(FST x),SND x)`
@@ -2578,7 +2666,7 @@ val biased_dc3_leakage_result = store_thm
                 Suff `PREIMAGE L {z} INTER (biased_high_states foo CROSS biased_low_states CROSS
                                                 biased_random_states foo) = {}`
                 >- RW_TAC bool_ss [REAL_SUM_IMAGE_THM]
-                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, L_def, IN_CROSS, IN_INTER, IN_PREIMAGE, IN_SING, biased_low_states_def]
+                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, low_state_def, IN_CROSS, IN_INTER, IN_PREIMAGE, IN_SING, biased_low_states_def]
                 >> METIS_TAC []])
    >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
    >> `!x y z.
@@ -2721,7 +2809,7 @@ val biased_dc3_leakage_result = store_thm
            PREIMAGE FST {(y,z)} INTER
            (biased_high_states foo CROSS biased_low_states CROSS
             biased_random_states foo))`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, L_def])
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, low_state_def])
    >> POP_ORW
    >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
    >> `!x y z.
@@ -3347,9 +3435,9 @@ val biased_dc3_leakage_result = store_thm
    >> Q.ABBREV_TAC `s2 = (s1 CROSS biased_high_states (SUC (SUC 0)))`
    >> RW_TAC bool_ss [biased_high_states_def, biased_random_states_def, insider_high_states_set_def,
                       insider_dcprog_def, compute_result_alt, insider_set_announcements_alt, XOR_announces_def,
-                      H_def, L_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
+                      high_state_def, low_state_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
@@ -3366,19 +3454,19 @@ val biased_dc3_leakage_result = store_thm
    >> Q.UNABBREV_TAC `s2` >> Q.UNABBREV_TAC `s1`
    >> RW_TAC bool_ss [biased_high_states_def, biased_low_states_def, biased_random_states_def, insider_high_states_set_def,
                       insider_dcprog_def, compute_result_alt, insider_set_announcements_alt, XOR_announces_def,
-                      H_def, L_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
+                      high_state_def, low_state_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)
@@ -3413,29 +3501,32 @@ val biased_dc3_leakage_result = store_thm
    >> RW_TAC real_ss []
    >> `lg(1/4) = ~2` by (RW_TAC real_ss [GSYM REAL_INV_1OVER, lg_inv] >> `4 = 2 pow 2` by RW_TAC real_ss [pow] >> POP_ORW >> RW_TAC std_ss [lg_pow])
    >> POP_ORW
-   >> RW_TAC real_ss []);
+   >> RW_TAC real_ss []
+QED
 
 (* ************************************************************************* *)
 (* Biasing a hidden coin creates a partial leak                              *)
 (* ************************************************************************* *)
 
-val biased_dist2_def = Define
-   `biased_dist2 high low random =
+Definition biased_dist2_def:
+    biased_dist2 high low random =
         (\s. if R s (STRCAT "coin" (toString (SUC 0))) then
                 (1 / 2) * (unif_prog_dist high low random s)
              else
-                (3 / 2) * (unif_prog_dist high low random s))`;
+                (3 / 2) * (unif_prog_dist high low random s))
+End
 
-val biased_dc_prog_space2_def = Define
-   `biased_dc_prog_space2 (SUC(SUC n)) =
+Definition biased_dc_prog_space2_def:
+    biased_dc_prog_space2 (SUC(SUC n)) =
         (((biased_high_states (SUC(SUC n))) CROSS biased_low_states) CROSS (biased_random_states (SUC (SUC n))),
          POW (((biased_high_states (SUC(SUC n))) CROSS biased_low_states) CROSS (biased_random_states (SUC (SUC n)))),
          (\s. SIGMA (biased_dist2 (biased_high_states (SUC(SUC n)))
-   biased_low_states (biased_random_states (SUC (SUC n)))) s))`;
+   biased_low_states (biased_random_states (SUC (SUC n)))) s))
+End
 
-val prob_space_biased_dc_prog_space23 = store_thm
-  ("prob_space_biased_dc_prog_space23",
-   ``prob_space (biased_dc_prog_space2 (SUC(SUC 0)))``,
+Theorem prob_space_biased_dc_prog_space23:
+     prob_space (biased_dc_prog_space2 (SUC(SUC 0)))
+Proof
    (RW_TAC bool_ss [prob_space_def]
     >> `FINITE ((biased_high_states (SUC (SUC 0)) CROSS biased_low_states CROSS
                 biased_random_states (SUC (SUC 0))))`
@@ -3729,19 +3820,19 @@ val prob_space_biased_dc_prog_space23 = store_thm
                 dc_dup_conv)]
    >> RW_TAC bool_ss [biased_high_states_def, biased_low_states_def, biased_random_states_def, insider_high_states_set_def,
                       insider_dcprog_def, compute_result_alt, insider_set_announcements_alt, XOR_announces_def,
-                      H_def, L_def, R_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
+                      high_state_def, low_state_def, random_state_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   H_def, L_def, R_def, SND]
+                                                   high_state_def, low_state_def, random_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   H_def, L_def, R_def, SND]
+                                                   high_state_def, low_state_def, random_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   H_def, L_def, R_def, SND]
+                                                   high_state_def, low_state_def, random_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)
@@ -3762,13 +3853,14 @@ val prob_space_biased_dc_prog_space23 = store_thm
                                                         (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
                                                          THENC EVAL)))))))
                          THENC SIMP_CONV arith_ss []))
-   >> RW_TAC real_ss [STRCAT_toString_inj]);
+   >> RW_TAC real_ss [STRCAT_toString_inj]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val biased_dc3_leakage_result2 = store_thm
-  ("biased_dc3_leakage_result2",
-   ``(leakage (biased_dc_prog_space2 (SUC (SUC 0))) (insider_dcprog (SUC(SUC(SUC 0)))) = 3 / 4 * lg 3 - 1)``,
+Theorem biased_dc3_leakage_result2:
+     (leakage (biased_dc_prog_space2 (SUC (SUC 0))) (insider_dcprog (SUC(SUC(SUC 0)))) = 3 / 4 * lg 3 - 1)
+Proof
    RW_TAC bool_ss [leakage_def]
    >> Q.ABBREV_TAC `v = 3 / 4 * lg 3 - 1`
    >> `FINITE ((biased_high_states (SUC (SUC 0)) CROSS biased_low_states CROSS
@@ -3808,12 +3900,12 @@ val biased_dc3_leakage_result2 = store_thm
                                                      THENC (TRY_CONV dc_dup_conv)))))
                 dc_dup_conv)]
    >> Q.ABBREV_TAC `foo = (SUC (SUC 0))`
-   >> RW_TAC std_ss [joint_distribution_def, L_def, H_def, R_def, PAIR, ETA_THM, FST, SND, PROB, PSPACE, distribution_def]
+   >> RW_TAC std_ss [joint_distribution_def, low_state_def, high_state_def, random_state_def, PAIR, ETA_THM, FST, SND, PROB, PSPACE, distribution_def]
    >> `IMAGE L
         (biased_high_states foo CROSS biased_low_states CROSS
          biased_random_states foo) =
         biased_low_states`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_IMAGE, IN_CROSS, L_def]
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_IMAGE, IN_CROSS, low_state_def]
             >> EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss []
             >> Q.UNABBREV_TAC `foo`
             >> Q.EXISTS_TAC `(((\s:string. s = STRCAT "pays" (toString (SUC (SUC 0)))),x),(\s:string. F))`
@@ -3877,7 +3969,7 @@ val biased_dc3_leakage_result2 = store_thm
                 >> Suff `PREIMAGE L {z} INTER (biased_high_states foo CROSS biased_low_states CROSS
                                                 biased_random_states foo) = {}`
                 >- RW_TAC bool_ss [INTER_EMPTY, REAL_SUM_IMAGE_THM]
-                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, L_def, IN_CROSS, IN_INTER, IN_PREIMAGE]
+                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, low_state_def, IN_CROSS, IN_INTER, IN_PREIMAGE]
                 >> METIS_TAC [])
             >> `(PREIMAGE (insider_dcprog (SUC foo)) {x} INTER
                  PREIMAGE L {z} INTER
@@ -3892,7 +3984,7 @@ val biased_dc3_leakage_result2 = store_thm
                                 ~r (STRCAT "coin" (toString 1)) /\
                                 (insider_dcprog (SUC foo) ((h,z),r) = x)})`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
-                                    IN_CROSS, L_def, IN_UNION]
+                                    IN_CROSS, low_state_def, IN_UNION]
                      >> (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
                      >- (Cases_on `SND x' (STRCAT "coin" (toString 1))`
                          >- (DISJ1_TAC >> Q.EXISTS_TAC `(FST(FST x'), SND x')`
@@ -4029,7 +4121,7 @@ val biased_dc3_leakage_result2 = store_thm
            PREIMAGE L {z} INTER
            (biased_high_states foo CROSS biased_low_states CROSS
             biased_random_states foo))`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, L_def])
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, low_state_def])
    >> POP_ORW
    >> POP_ORW
    >> `!x z.
@@ -4068,7 +4160,7 @@ val biased_dc3_leakage_result2 = store_thm
             >- (Suff `PREIMAGE L {z} INTER (biased_high_states foo CROSS biased_low_states CROSS
                                                 biased_random_states foo) = {}`
                 >- RW_TAC bool_ss [INTER_EMPTY, REAL_SUM_IMAGE_THM]
-                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, L_def, IN_CROSS, IN_INTER, IN_PREIMAGE]
+                >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC set_ss [NOT_IN_EMPTY, low_state_def, IN_CROSS, IN_INTER, IN_PREIMAGE]
                 >> METIS_TAC [])
             >> `(PREIMAGE L {z} INTER
                 (biased_high_states foo CROSS biased_low_states CROSS
@@ -4080,7 +4172,7 @@ val biased_dc3_leakage_result2 = store_thm
                         {(h,r) | h IN biased_high_states foo /\ r IN biased_random_states foo /\
                                 ~r (STRCAT "coin" (toString 1))})`
                  by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_IMAGE, IN_PREIMAGE, IN_SING,
-                                    IN_CROSS, L_def, IN_UNION]
+                                    IN_CROSS, low_state_def, IN_UNION]
                      >> (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
                      >- (Cases_on `SND x (STRCAT "coin" (toString 1))`
                          >- (DISJ1_TAC >> Q.EXISTS_TAC `(FST(FST x), SND x)`
@@ -4363,7 +4455,7 @@ val biased_dc3_leakage_result2 = store_thm
            PREIMAGE FST {(y,z)} INTER
            (biased_high_states foo CROSS biased_low_states CROSS
             biased_random_states foo))`
-        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, L_def])
+        by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, IN_CROSS, IN_PREIMAGE, IN_SING, low_state_def])
    >> POP_ORW
    >> POP_ORW
    >> `!x y z.
@@ -4844,7 +4936,7 @@ val biased_dc3_leakage_result2 = store_thm
             >> POP_ORW
             >> Q.UNABBREV_TAC `foo` >> RW_TAC bool_ss [biased_random_states_def]
             >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)
@@ -4918,7 +5010,7 @@ val biased_dc3_leakage_result2 = store_thm
             >> POP_ORW
             >> Q.UNABBREV_TAC `foo` >> RW_TAC bool_ss [biased_random_states_def]
             >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)
@@ -5297,9 +5389,9 @@ val biased_dc3_leakage_result2 = store_thm
    >> Q.ABBREV_TAC `s3 = (s1 CROSS (biased_high_states (SUC (SUC 0)) CROSS biased_low_states))`
    >> RW_TAC bool_ss [biased_high_states_def, biased_random_states_def, insider_high_states_set_def,
                       insider_dcprog_def, compute_result_alt, insider_set_announcements_alt, XOR_announces_def,
-                      H_def, L_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
+                      high_state_def, low_state_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
@@ -5317,20 +5409,20 @@ val biased_dc3_leakage_result2 = store_thm
    >> Q.UNABBREV_TAC `s3` >> Q.UNABBREV_TAC `s2` >> Q.UNABBREV_TAC `s1`
    >> RW_TAC bool_ss [biased_high_states_def, biased_low_states_def, biased_random_states_def, insider_high_states_set_def,
                       insider_dcprog_def, compute_result_alt, insider_set_announcements_alt, XOR_announces_def,
-                      H_def, L_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
+                      high_state_def, low_state_def, PAIR, ETA_THM, xor_def, STRCAT_toString_inj]
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)))))
    >> RW_TAC std_ss []
    >> CONV_TAC (SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY, FST,
-                                                   L_def, SND]
+                                                   low_state_def, SND]
                                 THENC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV bool_ss [PAIR_EQ]
                                                      THENC (TRY_CONV insider_hl_dup_conv)
                                                      THENC (TRY_CONV insider_hl_dup_conv)
@@ -5379,6 +5471,5 @@ val biased_dc3_leakage_result2 = store_thm
                      REAL_ARITH ``!(y:real) c. y + c * y = (c + 1) * y``]
    >> RW_TAC real_ss [REAL_SUB_LDISTRIB, REAL_MUL_ASSOC, REAL_INV_1OVER,
                       REAL_ARITH ``!(x:real) y z a. x + (y - z) - a = y + (x - (z + a))``, GSYM real_sub]
-   >> Q.UNABBREV_TAC `v` >> RW_TAC std_ss []);
-
-val _ = export_theory ();
+   >> Q.UNABBREV_TAC `v` >> RW_TAC std_ss []
+QED

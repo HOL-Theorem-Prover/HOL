@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open errorMonadTheory
-val _ = new_theory "errorLogMonad";
+Theory errorLogMonad
+Ancestors
+  errorMonad
 
 Type M = “:('a,'e) error # 'w list”
   (* e for error, w for log or warning messages *)
@@ -82,4 +81,3 @@ val _ = monadsyntax.declare_monad ("errorLog", {
   ignorebind = NONE
   });
 
-val _ = export_theory();

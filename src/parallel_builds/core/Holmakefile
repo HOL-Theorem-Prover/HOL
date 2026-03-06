@@ -12,7 +12,7 @@ SRCRELNAMES = \
   monad/more_monads \
   n-bit \
   pred_set/src/more_theories probability \
-  rational real real/analysis res_quan/src ring/src \
+  rational real real/analysis res_quan/src \
   search sort string \
   TeX transfer \
   update
@@ -29,29 +29,39 @@ endif
 
 ifdef HOLSELFTESTLEVEL
 
+AXIOMATIC_THYDIRS = set-theory/vbg set-theory/zfset geometry
+AXIOMATIC_EXAMPLES = $(patsubst %,axiomatic-developments/%,$(AXIOMATIC_THYDIRS))
+
 # example directories to build at selftest level 1
 EXDIRS = algebra/aat \
          arm/arm6-verification arm/armv8-memory-model arm/experimental \
-         CCS Crypto/RSA Hoare-for-divergence MLsyntax \
+         $(AXIOMATIC_EXAMPLES) \
+	 bnf-datatypes \
+         CCS Crypto/RSA Crypto/SHA-2 Crypto/MD5 \
+         Crypto/pedersenCommitment Crypto/sigmaProtocol \
+         Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
-	 STE algorithms computability countchars dependability dev \
+	 STE algorithms computability countchars \
+         data-structures/ \
+         data-structures/AVL_tree \
+         dependability dev \
          developers/ThmSetData \
 	 fermat \
 	 formal-languages formal-languages/context-free \
-         formal-languages/contig \
+         formal-languages/contig formal-languages/json \
          formal-languages/lambek formal-languages/regular/regular-play \
-         fun-op-sem/lprefix_lub fun-op-sem/for \
+         formal-languages/pi-calculus \
+         pl-semantics/coimp pl-semantics/lprefix_lub pl-semantics/for \
          hardware hfs \
          imperative ind_def \
          l3-machine-code/common \
-         lambda \
+         lambda latex-generation/paper \
          logic logic/folcompactness logic/modal-models logic/modal-tableaux \
          logic/ncfolproofs logic/propositional_logic logic/relevant-logic \
          logic/temporal/src \
          misc \
-         padics parity \
-         rings set-theory/zfset set-theory/vbg \
-         zipper
+         padics parity probability \
+         rings
 
 # selftest directories under src/quotient
 QUOTDIRS = examples examples/lambda examples/sigma choice
@@ -60,7 +70,8 @@ SRCTESTDIRS = \
   integer/testing \
   string/theorytesting \
   TeX/theory_tests TeX/theory_tests/proj1paper \
-  tfl/examples transfer/examples
+  tfl/examples transfer/examples \
+  finite_maps/theory_tests
 
 ifdef POLY
 SRCTESTDIRS += n-bit/interactive_tests
@@ -83,19 +94,19 @@ EX2DIRS = AKS algebra algorithms/boyer_moore \
             algorithms/unification/triangular/first-order/compilation \
             arm/arm6-verification/correctness \
             arm/v4 arm/v7 \
-          balanced_bst \
           category computability/kolmog computability/lambda \
             computability/recdegrees \
             computability/register computability/turing Crypto \
+          data-structures/balanced_bst \
           decidable_separationLogic/src \
-          formal-languages/regular fun-op-sem \
+          formal-languages/regular pl-semantics \
           generic_graphs \
           lambda/other-models lambda/typing \
             logic/ltl logic/temporal_deep \
             logic/ltl-transformations \
             l3-machine-code/decompilers \
           probability/legacy miller \
-          probability vector \
+          vector \
           separationLogic/src separationLogic/src/holfoot simple_complexity
 
 ifdef POLY

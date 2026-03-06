@@ -91,6 +91,8 @@ fun compare(i,j) = if i < j then LESS
                    else if i = j then EQUAL
                         else GREATER
 
+fun sgn x = x >= zero
+
 fun divmod (i, j) = (i div j, i mod j)
 
 fun toString (true, n) = Arbnumcore.toString n ^ "i"
@@ -122,5 +124,10 @@ fun max (i,j) = if i < j then j else i
 fun abs (_, n) = (true, n)
 
 fun fromNat n = (true, n)
+
+(* NOTE: gcd is always positive *)
+fun gcd (a, b) = fromNat (Arbnumcore.gcd (toNat (abs a), toNat (abs b)))
+
+fun lcm (x, y) = (x * y) div gcd (x, y)
 
 end

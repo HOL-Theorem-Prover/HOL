@@ -1,14 +1,11 @@
-open HolKernel Parse boolLib bossLib;
-
-open mp_then
-
-open pred_setTheory set_relationTheory listTheory
-open folSkolemTheory folPrenexTheory folModelsTheory folLangTheory
-     folPropTheory
+Theory folCanon
+Ancestors
+  pred_set set_relation list folSkolem folPrenex folModels
+  folLang folProp
+Libs
+  mp_then
 
 fun f $ x = f x
-
-val _ = new_theory "folCanon";
 
 (* ========================================================================= *)
 (* Canonical models in FOL and their use to derive classic metatheorems.     *)
@@ -410,8 +407,6 @@ QED
 Definition tm_constify_def[simp]:
   (tm_constify kvs (V x) = if x ∈ kvs then V x else Fn (1 ⊗ x) []) ∧
   (tm_constify kvs (Fn f zs) = Fn (0 ⊗ f) (MAP (tm_constify kvs) zs))
-Termination
-  WF_REL_TAC ‘measure (term_size o SND)’ >> simp[]
 End
 
 Definition varify_map_def:
@@ -688,7 +683,6 @@ Proof
   simp[holds_valuation]
 QED
 
-
 Theorem not_entails:
   ¬entails (:α) H ϕ ⇔ satisfiable (:α) { FMC p | p ∈ Not ϕ INSERT H }
 Proof
@@ -769,4 +763,3 @@ Proof
   fs[SUBSET_DEF] >> rw[] >> first_x_assum drule >> simp[]
 QED
 
-val _ = export_theory()

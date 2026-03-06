@@ -27,7 +27,8 @@ val ERR = mk_HOL_ERR "numLib";
 
 (* Fix the grammar used by this file *)
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars
+val SOME arithmetic_grammars = grammarDB {thyname="arithmetic"}
+val _ = Parse.temp_set_grammars arithmetic_grammars
 
 val N = numSyntax.num;
 
@@ -273,7 +274,7 @@ fun BOUNDED_EXISTS_CONV cnv M =
     Picks an arbitrary LEAST-subterm if there are multiple such.
    ---------------------------------------------------------------------- *)
 
-val LEAST_ELIM_TAC = DEEP_INTRO_TAC whileTheory.LEAST_ELIM
+val LEAST_ELIM_TAC = DEEP_INTRO_TAC WhileTheory.LEAST_ELIM
 
 (*---------------------------------------------------------------------------
     Simplification set for numbers (and booleans).

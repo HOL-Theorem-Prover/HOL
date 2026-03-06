@@ -17,7 +17,8 @@ open HolKernel boolLib pred_setSyntax pred_setTheory;
 structure Parse =
 struct
   open Parse
-  val (Type,Term) = parse_from_grammars pred_setTheory.pred_set_grammars
+  val SOME pred_set_grammars = grammarDB {thyname="pred_set"}
+  val (Type,Term) = parse_from_grammars pred_set_grammars
 end
 open Parse
 

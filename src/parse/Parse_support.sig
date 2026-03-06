@@ -11,7 +11,7 @@ sig
 
   val gen_overloaded_const  : overload_info -> locn.locn -> string ->
                               preterm_in_env
-  val make_preterm          : preterm_in_env -> preterm Pretype.in_env
+  val make_preterm          : {next_uscore:int} -> preterm_in_env -> preterm Pretype.in_env
   val make_aq               : locn.locn -> term -> preterm_in_env
   val make_binding_occ      : locn.locn -> locn.locn -> string -> bvar_in_env
   val make_aq_binding_occ   : locn.locn -> locn.locn -> term -> bvar_in_env

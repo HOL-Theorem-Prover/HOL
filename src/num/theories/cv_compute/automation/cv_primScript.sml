@@ -1,12 +1,12 @@
 (*
   Prove theorems cv_transLib uses for its operation
 *)
-open HolKernel Parse boolLib bossLib dep_rewrite;
-open cv_typeTheory cvTheory cv_typeLib cv_repLib;
-open arithmeticTheory wordsTheory cv_repTheory integerTheory ratTheory
-     listTheory rich_listTheory bitstringTheory integer_wordTheory;
-
-val _ = new_theory "cv_prim";
+Theory cv_prim
+Ancestors
+  cv_type cv arithmetic words cv_rep integer rat list rich_list
+  bitstring integer_word
+Libs
+  dep_rewrite cv_typeLib cv_repLib
 
 Overload c2n[local] = “cv$c2n”
 Overload c2b[local] = “cv$c2b”
@@ -180,16 +180,14 @@ Proof
 QED
 
 Definition cv_gcd_def:
-  cv_gcd a b = cv_if a (cv_gcd (cv_mod b a) a) b
+  cv_gcd a b = cv_if (cv_lt (Num 0) a) (cv_gcd (cv_mod b a) a) b
 Termination
-  WF_REL_TAC `measure $ λ(a,b). c2n a + c2n b + (c2n a - c2n b)` >>
+  WF_REL_TAC ‘measure $ λ(a,b). c2n a + c2n b + (c2n a - c2n b)’ >>
   rpt gen_tac >> strip_tac >>
   simp[] >> gvs[c2b_def] >>
-  Cases_on `b` >> gvs[cv_mod_def] >>
-  `m MOD SUC k - SUC k = 0` by (
-    simp[] >> irule LESS_IMP_LESS_OR_EQ >> simp[]) >>
-  `m MOD SUC k < SUC k` by simp[] >>
-  simp[] >> DECIDE_TAC
+  map_every Cases_on [‘a’, ‘b’] >> gvs[cv_mod_def, AllCaseEqs()] >>
+  rename [‘m + n MOD m + _ < _’] >>
+  ‘n MOD m < m’ by simp[] >> simp[]
 End
 
 Theorem cv_gcd_thm[cv_rep]:
@@ -198,8 +196,7 @@ Proof
   qsuff_tac `!c d a b. c = Num a /\ d = Num b ==> Num (gcd a b) = cv_gcd c d`
   >- rw[] >>
   ho_match_mp_tac cv_gcd_ind >> rw[] >>
-  rw[Once gcdTheory.GCD_EFFICIENTLY, Once cv_gcd_def] >> gvs[] >>
-  gvs[c2b_def] >> Cases_on `a` >> gvs[]
+  rw[Once gcdTheory.GCD_EFFICIENTLY, Once cv_gcd_def] >> gvs[]
 QED
 
 Definition cv_log2_def:
@@ -731,7 +728,7 @@ Proof
 QED
 
 Theorem cv_rep_dimindex[cv_rep]:
-  Num (dimindex (:'a)) =  Num (dimindex (:'a))
+  Num (dimindex (:'a)) = Num (dimindex (:'a))
 Proof
   simp[]
 QED
@@ -894,8 +891,7 @@ Proof
   \\ Cases_on ‘w’ \\ gvs [word_lsl_n2w]
   \\ rw [] \\ gvs [dimword_def]
   \\ ‘0n < 2 ** dimindex (:'a)’ by gvs []
-  \\ drule MOD_TIMES2
-  \\ disch_then (fn th => once_rewrite_tac [GSYM th])
+  \\ once_rewrite_tac [GSYM MOD_TIMES2]
   \\ qsuff_tac ‘2 ** n MOD 2 ** dimindex (:'a) = 0’ \\ gvs []
   \\ ‘dimindex (:'a) <= n’ by fs []
   \\ gvs [LESS_EQ_EXISTS,EXP_ADD]
@@ -904,10 +900,16 @@ QED
 Theorem cv_rep_word_lsr[cv_rep]:
   from_word (word_lsr (w:'a word) n)
   =
-  cv_div (from_word w) (cv_exp (Num 2) (Num n))
+  let k = Num n in
+  cv_if (cv_lt k (Num (dimindex (:'a))))
+    (cv_div (from_word w) (cv_exp (Num 2) k))
+    (Num 0)
 Proof
   gvs [cv_rep_def] \\ rw [] \\ gvs []
-  \\ gvs [from_word_def,cv_exp_def,w2n_lsr]
+  >- gvs [from_word_def,cv_exp_def,w2n_lsr]
+  \\ gvs[from_word_def]
+  \\ irule LSR_LIMIT
+  \\ pop_assum mp_tac \\ rw[]
 QED
 
 Theorem word_asr_add[cv_inline]:
@@ -1044,7 +1046,7 @@ Proof
   irule LESS_LESS_EQ_TRANS >> goal_assum drule >> simp[]
 QED
 
-Triviality MIN_lemma:
+Theorem MIN_lemma[local]:
   l <> 0 ==> MIN k (l - 1) + 1 = MIN (k+1) l
 Proof
   rw [MIN_DEF] \\ gvs []
@@ -1090,7 +1092,7 @@ Theorem cv_word_extract[cv_rep] =
   “from_word (word_extract h l (w:'a word) : 'b word)”
   |> SIMP_CONV std_ss [word_extract_def,cv_rep_word_w2w,cv_word_bits_thm];
 
-Triviality word_join_add:
+Theorem word_join_add[local]:
   FINITE univ(:'a) /\ FINITE univ(:'b) ==>
   word_join (v:'a word) (w:'b word) =
   (w2w v << dimindex (:'b)) + w2w w
@@ -1239,9 +1241,6 @@ Proof
   \\ completeInduct_on ‘m’
   \\ simp [Once cv_word_and_loop_def]
   \\ Cases_on ‘m = 0’ \\ fs [wordsTheory.WORD_AND_CLAUSES]
-  >-
-   (qsuff_tac ‘!l n. BITWISE l $/\ 0 n = 0’ >- fs []
-    \\ Induct \\ fs [BITWISE])
   \\ gvs [PULL_FORALL,AND_IMP_INTRO] \\ rw []
   \\ Cases_on ‘l’ \\ gvs []
   \\ rename [‘n < 2 ** SUC l’]
@@ -1332,8 +1331,7 @@ Proof
   >- (gvs [] \\ irule_at Any arithmeticTheory.DIV_LE_MONOTONE \\ gvs [])
   \\ strip_tac \\ gvs [bitTheory.BITWISE_LT_2EXP,wordsTheory.dimword_def]
   \\ ‘0 < 2:num’ by fs []
-  \\ drule arithmeticTheory.MOD_PLUS
-  \\ disch_then (fn th => simp_tac std_ss [Once (GSYM th)])
+  \\ simp_tac std_ss [Once (GSYM arithmeticTheory.MOD_PLUS)]
   \\ Cases_on ‘ODD m’
   \\ Cases_on ‘ODD n’
   \\ imp_res_tac bitTheory.ODD_MOD2_LEM
@@ -1408,4 +1406,3 @@ Proof
   \\ asm_rewrite_tac [cv_rep_word_xor, cv_rep_word_uint_max]
 QED
 
-val _ = export_theory();

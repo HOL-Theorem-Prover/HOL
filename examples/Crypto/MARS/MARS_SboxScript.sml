@@ -1,8 +1,10 @@
-open HolKernel Parse boolLib bossLib wordsLib;
+Theory MARS_Sbox
+Ancestors
+  words
+Libs
+  wordsLib
 
-val _ = new_theory "MARS_Sbox";
-
-val Sbox_def = Define`
+Definition Sbox_def:
   Sbox i = case i : word32 of
     0x0w => 0x9D0C479w  | 0x1w => 0x28C8FFE0w | 0x2w => 0x84AA6C39w
   | 0x3w => 0x9DAD7287w | 0x4w => 0x7DFF9BE3w | 0x5w => 0xD4268361w
@@ -174,12 +176,13 @@ val Sbox_def = Define`
   | 0x1F5w => 0xB98B40Fw  | 0x1F6w => 0x3A4D0FE6w | 0x1F7w => 0xDF4FC26Bw
   | 0x1F8w => 0x159CF22Aw | 0x1F9w => 0xC298D6E2w | 0x1FAw => 0x2B78EF6Aw
   | 0x1FBw => 0x61A94AC0w | 0x1FCw => 0xAB561187w | 0x1FDw => 0x14EEA0F0w
-  | 0x1FEw => 0xDF0D4164w | 0x1FFw => 0x19AF70EEw`;
+  | 0x1FEw => 0xDF0D4164w | 0x1FFw => 0x19AF70EEw
+End
 
-val Sbox0_def = Define `
-  Sbox0 i = Sbox i`;
+Definition Sbox0_def:
+  Sbox0 i = Sbox i
+End
 
-val Sbox1_def = Define `
-  Sbox1 i = Sbox (i+0xffw)`;
-
-val _ = export_theory();
+Definition Sbox1_def:
+  Sbox1 i = Sbox (i+0xffw)
+End

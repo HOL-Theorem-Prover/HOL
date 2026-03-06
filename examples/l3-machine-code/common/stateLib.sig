@@ -38,6 +38,7 @@ sig
    val sep_array_intro: bool -> thm -> thm list -> rule
    val sep_definitions:
       string -> string list list -> string list list -> thm -> thm list
+   val sep_components : {thyname:string} -> thm list
    val set_temporal: bool -> unit
    val spec:
       thm -> thm -> thm list -> thm list -> thm list -> thm list -> thm list ->

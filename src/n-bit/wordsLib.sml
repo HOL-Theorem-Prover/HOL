@@ -2,6 +2,7 @@ structure wordsLib :> wordsLib =
 struct
 
 open HolKernel Parse boolLib bossLib computeLib
+open BasicProvers
 open wordsTheory wordsSyntax
 open bitTheory numeral_bitTheory bitLib
 open numposrepTheory numposrepLib
@@ -10,12 +11,11 @@ open stringSyntax
 
 (* Fix the grammar used by this file *)
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars wordsTheory.words_grammars
-
-val () = ignore (Lib.with_flag (Feedback.emit_MESG, false) bossLib.srw_ss ())
+val _ = Parse.temp_set_grammars $ valOf $ grammarDB {thyname = "words"}
 
 val ERR = mk_HOL_ERR "wordsLib"
 
+fun SRW_TAC xs ys = PRIM_SRW_TAC arith_ss xs ys
 (* ------------------------------------------------------------------------- *)
 
 fun is_word_literal t =
@@ -59,7 +59,7 @@ val TIMES_2EXP1 =
 
 local
   val cnv =
-    computeLib.compset_conv (reduceLib.num_compset())
+    computeLib.compset_conv (reduceLib.num_compset)
       [computeLib.Defs
          [NUMERAL_SFUNPOW_FDUB, NUMERAL_SFUNPOW_iDUB, iDUB_NUMERAL,
           FDUB_iDUB, FDUB_FDUB, NUMERAL_TIMES_2EXP]]
@@ -315,13 +315,13 @@ local
   val w2n_n2w_compute = Q.prove(
      `!n. w2n ((n2w n) : 'a word) =
           if n < dimword(:'a) then n else n MOD dimword(:'a)`,
-     SRW_TAC [boolSimps.LET_ss] [])
+     PRIM_SRW_TAC (bossLib.arith_ss) [boolSimps.LET_ss] [w2n_n2w])
 
   val word_2comp_compute = Q.prove(
      `!n. word_2comp (n2w n) : 'a word =
             let x = n MOD dimword (:'a) in
               if x = 0 then 0w else n2w (dimword (:'a) - x)`,
-     SRW_TAC [boolSimps.LET_ss] [word_2comp_n2w])
+     PRIM_SRW_TAC (bossLib.arith_ss)[boolSimps.LET_ss] [word_2comp_n2w,n2w_11])
 
   val word_lsl_compute = Q.prove(
      `!n m. (n2w m : 'a word) << n =
@@ -413,16 +413,11 @@ fun add_words_compset extras =
            wordsSyntax.uint_max_tm, wordsSyntax.int_min_tm,
            wordsSyntax.int_max_tm, pred_setSyntax.finite_tm])])
 
-val () = add_words_compset false computeLib.the_compset
+val () = computeLib.the_compset := add_words_compset false (!computeLib.the_compset)
 
-fun words_compset () =
-   let
-      val cmp = reduceLib.num_compset ()
-   in
-      add_words_compset true cmp; cmp
-   end
+val words_compset = computeLib.seal (add_words_compset true (computeLib.copy reduceLib.num_compset))
 
-val WORD_EVAL_CONV = computeLib.CBV_CONV (words_compset ())
+val WORD_EVAL_CONV = computeLib.CBV_CONV words_compset
 val WORD_EVAL_RULE = CONV_RULE WORD_EVAL_CONV
 val WORD_EVAL_TAC  = CONV_TAC WORD_EVAL_CONV
 
@@ -1138,7 +1133,7 @@ end
 
 val BITWISE_CONV =
   let open numeral_bitTheory in
-    computeLib.compset_conv (reduceLib.num_compset())
+    computeLib.compset_conv (reduceLib.num_compset)
       [computeLib.Defs [NUMERAL_BITWISE, iBITWISE, numeral_log2, numeral_ilog2],
        computeLib.Convs [(``fcp$dimindex:'a itself->num``, 1, SIZES_CONV)]]
   end
@@ -1407,7 +1402,7 @@ val ROL_ROR_MOD_RWT = Q.prove(
        words$word_rol w (arithmetic$MOD n (fcp$dimindex (:'a)))) /\
       (words$word_ror w n =
        words$word_ror w (arithmetic$MOD n (fcp$dimindex (:'a))))`,
-   SRW_TAC [] [Once (GSYM ROL_MOD), Once (GSYM ROR_MOD)])
+   BasicProvers.PRIM_SRW_TAC bossLib.arith_ss [] [Once (GSYM ROL_MOD), Once (GSYM ROR_MOD)])
 
 val ASR_ROR_ROL_UINT_MAX = Q.prove(
   `(!m n. (n2w n = -1w: 'a word) ==> (n2w n >> m = -1w: 'a word)) /\
@@ -1533,10 +1528,10 @@ fun WORD_SUB_CONV tm =
       THENC DEPTH_CONV WORD_LIT_CONV
       THENC PURE_REWRITE_CONV [WORD_SUB_INTRO, WORD_NEG_SUB, WORD_SUB_RNEG,
               WORD_NEG_NEG, WORD_MULT_CLAUSES, NEG1_WORD1]) tm
-   handle HOL_ERR (err as {origin_function, ...}) =>
-      if origin_function = "CHANGED_CONV"
+   handle (e as HOL_ERR herr) =>
+      if top_function_of herr = "CHANGED_CONV"
          then raise Conv.UNCHANGED
-      else raise HOL_ERR err
+      else raise e
 
 val WORD_SUB_ss =
    simpLib.name_ss "WORD_SUB"
@@ -1709,7 +1704,7 @@ val WORD_CONV = SIMP_CONV (std_ss++WORD_ss++WORD_EXTRACT_ss)
 local
    open listTheory
    val cnv =
-     computeLib.compset_conv (reduceLib.num_compset())
+     computeLib.compset_conv (reduceLib.num_compset)
        [computeLib.Defs
           [foldl_reduce_and, foldl_reduce_or, foldl_reduce_xor,
            foldl_reduce_nand, foldl_reduce_nor, foldl_reduce_xnor,
@@ -1829,8 +1824,10 @@ fun WORD_BIT_INDEX_CONV toindex =
          in
             Drule.ISPEC w (Drule.MATCH_MP thm lt)
          end
-         handle HOL_ERR {origin_function = "EQT_ELIM", ...} =>
-            raise ERR "WORD_BIT_INDEX_CONV" "index too large"
+         handle e as HOL_ERR herr =>
+           if top_function_of herr = "EQT_ELIM" then
+              raise ERR "WORD_BIT_INDEX_CONV" "index too large"
+           else raise e
    end
 
 (* ------------------------------------------------------------------------- *)
@@ -1888,7 +1885,7 @@ local
     `!m n. (n2w m = n2w n : 'a word) /\
            m < dimword(:'a) /\
            n < dimword(:'a) ==> (m = n)`,
-    SRW_TAC [] [] THEN FULL_SIMP_TAC arith_ss [])
+    SRW_TAC [] [n2w_11] THEN FULL_SIMP_TAC arith_ss [])
 
   val word_lt_imp_num_lt = Q.prove(
     `!m n. (n2w m) <+ (n2w n : 'a word) /\
@@ -1962,7 +1959,7 @@ local
 
   val word_extract_le = Q.prove(
     `!a:'a word h l. w2n ((h >< l) a : 'b word) <= w2n a`,
-    Cases THEN SRW_TAC [] [word_extract_n2w]
+    Cases THEN SRW_TAC [] [word_extract_n2w,w2n_n2w]
     THEN SRW_TAC [] [bitTheory.BITS_COMP_THM2, MOD_DIMINDEX]
     THEN SRW_TAC [] [arithmeticTheory.MIN_DEF, bitTheory.BITS_LEQ])
 
@@ -1980,7 +1977,8 @@ local
 
   val word_lsl_le = Q.prove(
     `!a:'a word b. w2n (a << b) <= w2n a * 2 ** b`,
-    Cases THEN SRW_TAC [] [word_lsl_n2w, bitTheory.MOD_LEQ, ZERO_LT_dimword])
+    Cases THEN SRW_TAC [] [word_lsl_n2w, w2n_n2w,
+           bitTheory.MOD_LEQ, ZERO_LT_dimword])
 
   val word_div_le = Q.prove(
     `!a:'a word b.
@@ -2660,7 +2658,7 @@ val dest_word_literal = fst o wordsSyntax.dest_mod_word_literal
 val Cases_word = Cases
 val Cases_on_word = Cases_on
 
-val LESS_CONV = computeLib.compset_conv (reduceLib.num_compset())
+val LESS_CONV = computeLib.compset_conv (computeLib.copy reduceLib.num_compset)
                   [computeLib.Defs [wordsTheory.NUMERAL_LESS_THM]]
 
 local
@@ -2705,7 +2703,7 @@ fun add_word_cast_printer () =
 
 fun remove_word_cast_printer () =
    ( set_trace "word cast printing" 0
-   ; Parse.remove_user_printer "wordspp.words_cast_printer"
+   ; Parse.remove_user_printer ("wordspp.words_cast_printer", “f:'b word”)
    ; ()
    )
 

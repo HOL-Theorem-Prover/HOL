@@ -14,6 +14,8 @@ local open TypeBase Ho_Rewrite Psyntax Rsyntax in end
 
 val parse_from_grammars = Parse.parse_from_grammars;
 
+val ERR = Feedback.mk_HOL_ERR "boolLib"
+
 (*---------------------------------------------------------------------------
       Stock the rewriter in Ho_Rewrite with some rules not yet
       proved in boolTheory.
@@ -23,6 +25,7 @@ local open HolKernel Ho_Rewrite  (* signature control *)
       structure Parse =
       struct
         open Parse
+        val bool_grammars = Option.valOf $ grammarDB {thyname="bool"}
         val (Type,Term) = parse_from_grammars bool_grammars
       end
       open Parse
@@ -103,11 +106,115 @@ val UNIQUE_SKOLEM_THM = prove
       ASM_REWRITE_TAC[],
       DISCH_THEN(MP_TAC o C AP_THM ``x:'a``) THEN REWRITE_TAC[BETA_THM]]])
 
-
-
 end (* local open *)
 
 val def_suffix = ref "_def"
+
+fun has_suspended_subgoals th =
+    let
+      open HolKernel
+      fun issusp_hyp t =
+          let
+            val (fx,_) = dest_comb t
+            val (sl_c, lnm) = dest_comb fx
+            val {Thy,Name,...} = dest_thy_const sl_c
+          in
+            Thy = "marker" andalso Name = "suspendlabel" andalso
+            is_var lnm
+          end handle HOL_ERR _ => false
+    in
+      isSome (HOLset.find issusp_hyp (hypset th))
+    end
+
+(* The label variable's name encodes a closure-variable count in the
+   format "N name". Decode to extract the user-visible name and count. *)
+fun decode_suspend_label s =
+    let val (prefix, rest) =
+            Substring.splitl (fn c => c <> #" ") (Substring.full s)
+    in
+      if Substring.isEmpty rest then (s, 0)
+      else case Int.fromString (Substring.string prefix) of
+               SOME n => (Substring.string (Substring.triml 1 rest), n)
+             | NONE => (s, 0)
+    end
+
+fun dest_suspended t =
+    let
+      open HolKernel
+      val (fx,y) = dest_comb t
+      val (sl_c, lnm) = dest_comb fx
+      val {Thy,Name,...} = dest_thy_const sl_c
+    in
+      if Thy = "marker" andalso Name = "suspendlabel" then
+        SOME (#1 (decode_suspend_label (#1 (dest_var lnm))), y)
+      else NONE
+    end handle Feedback.HOL_ERR _ => NONE
+
+fun get_suspended_names th =
+    let
+      fun foldthis (t,A) =
+          case dest_suspended t of NONE => A | SOME (nm,_) => nm::A
+    in
+      HOLset.foldl foldthis [] (Thm.hypset th)
+    end
+
+local
+  open HolKernel
+  val suspensionDBref = Sref.new (Symtab.empty)
+  fun check_DBempty thydelta =
+      let open TheoryDelta
+      in
+        case thydelta of
+            ExportTheory _ =>
+            let val keys = Symtab.keys (Sref.value suspensionDBref)
+            in
+              case keys of
+                  [] => ()
+                | _ =>
+                  raise mk_HOL_ERR "boolLib" "check_DBempty"
+                        ("Incomplete theorems (" ^
+                         String.concatWith ", " keys ^ ") remain")
+            end
+          | _ => ()
+      end
+  val _ = Theory.register_hook (
+        "Unfinished Suspension Check",
+        check_DBempty
+      )
+in
+fun printable_keys nms =
+    let val ctab =
+            List.foldl
+              (fn (nm,T) => Symtab.map_default (nm,0) (fn c => c + 1) T)
+              Symtab.empty
+              nms
+    in
+      Symtab.fold_rev
+        (fn (nm,c) => fn A =>
+            (if c = 1 then nm
+             else nm ^ "(" ^ Int.toString c ^ ")") ::
+            A)
+        ctab
+        []
+    end
+
+fun update_suspensionDB firstp (n,th) =
+    (if firstp then
+       case Symtab.lookup (Sref.value suspensionDBref) n of
+           NONE => ()
+         | SOME _ => Feedback.HOL_MESG (
+                      "Replacing stashed suspension theorem with name " ^
+                      n
+                    )
+     else ();
+     Sref.update suspensionDBref (Symtab.update(n,th)))
+
+(* don't eta-reduce *)
+fun find_suspension k = Symtab.lookup (Sref.value suspensionDBref) k
+
+fun remove_suspension k = Sref.update suspensionDBref (Symtab.delete k)
+
+end (* local *)
 
 local
 open Feedback Theory
@@ -117,17 +224,27 @@ fun prove_local loc privp (n,th) =
     else ();
     DB.store_local {private=privp,loc=loc,class=DB_dtype.Thm} n th;
     th)
+val _ = app ThmAttribute.reserve_word ["local", "unlisted", "allow_rebind"]
 fun extract_localpriv (loc,priv,rebindok,acc) attrs =
     case attrs of
         [] => (loc,priv,rebindok,List.rev acc)
-      | "unlisted" :: rest => extract_localpriv (loc,true,rebindok,acc) rest
-      | "local" :: rest => extract_localpriv (true,priv,rebindok,acc) rest
-      | "allow_rebind" :: rest => extract_localpriv (loc,priv,true,acc) rest
+      | ("unlisted",_) :: rest => extract_localpriv (loc,true,rebindok,acc) rest
+      | ("local",_) :: rest => extract_localpriv (true,priv,rebindok,acc) rest
+      | ("allow_rebind",_) :: rest => extract_localpriv (loc,priv,true,acc) rest
       | a :: rest => extract_localpriv (loc,priv,rebindok,a::acc) rest
 in
-fun save_thm_attrs loc (n, attrs, th) = let
-  val (localp,privp,rebindok,attrs) =
-      extract_localpriv (false,false,false,[]) attrs
+fun save_thm_attrs loc (attrblock:ThmAttribute.attrblock, th) = let
+  val {thmname=n,attrs,unknown,reserved} = attrblock
+  val _ = null unknown orelse
+          raise ERR "save_thm_attrs"
+                ("Unknown attributes: " ^
+                 String.concatWith ", " (map #1 unknown))
+  val (localp,privp,rebindok,reserved_leftover) =
+      extract_localpriv (false,false,false,[]) reserved
+  val _ = null reserved_leftover orelse
+          raise ERR "save_thm_attrs"
+                ("Unhandled attributes: " ^
+                 String.concatWith ", " (map #1 reserved_leftover))
   val save =
       if localp then prove_local loc privp
       else
@@ -136,24 +253,80 @@ fun save_thm_attrs loc (n, attrs, th) = let
               else ThmAttribute.store_at_attribute
   val storemod = if rebindok then trace("Theory.allow_rebinds", 1)
                  else (fn f => f)
-  fun do_attr a = attrf {thm = th, name = n, attrname = a}
+  fun do_attr (k,vs) = attrf {thm = th, name = n, attrname = k, args = vs}
 in
-  storemod save(n,th) before app do_attr attrs
+  case get_suspended_names th of
+      [] => storemod save(n,th) before app do_attr attrs
+    | susp_names =>
+      let
+      in
+        case printable_keys susp_names of
+            [nstr] =>
+            HOL_MESG (
+              "Stashing suspended theorem " ^ n ^
+              " with pending subgoal: " ^ nstr ^ "."
+            )
+          | strs =>
+            HOL_MESG (
+              "Stashing suspended theorem " ^ n ^
+              " with pending subgoals: " ^
+              String.concatWith ", " strs ^ "."
+            );
+        if localp orelse not (null attrs) then
+          HOL_WARNING "boolLib" "save_thm_attrs"
+                      "Ignoring attributes on suspended theorem"
+        else ();
+        update_suspensionDB true (n,th);
+        th
+      end
 end
-fun store_thm_at loc (n0,t,tac) = let
-  val (n, attrs) = ThmAttribute.extract_attributes n0
-  val th = Tactical.prove(t,tac)
-              handle e => (print ("Failed to prove theorem " ^ n ^ ".\n");
-                           Raise e)
+end (* local *)
+
+fun finalise_suspended_thm loc nm0 =
+    let val attrblock = ThmAttribute.extract_attributes nm0
+        val name = #thmname attrblock
+    in
+      case find_suspension name of
+          NONE => raise ERR "finalise_suspended_thm"
+                        ("No such suspended theorem: " ^ name)
+        | SOME th =>
+          case get_suspended_names th of
+              [] => (
+                remove_suspension name;
+                save_thm_attrs loc (attrblock, th)
+              )
+            | snms =>
+              raise ERR "finalise_suspended_thm"
+                    ("Theorem retains unproved subgoals: " ^
+                     String.concatWith ", " snms)
+    end
+
+local
+  open Feedback
+  fun tac_failure s1 s2 =
+      String.concat ["Failed to prove theorem ", Lib.quote s1, ":\n", s2]
 in
-  save_thm_attrs loc (n,attrs,th)
+fun store_thm_at loc (n0,t,tac) =
+  let val attrblock = ThmAttribute.extract_attributes n0
+      val name = #thmname attrblock
+      val th = Tactical.prove(t,tac)
+               handle HOL_ERR herr =>
+               let val err_mesg = tac_failure name (message_of herr)
+                   val err = HOL_ERR (set_message err_mesg herr)
+               in render_exn
+                    (wrap_exn "boolLib" "store_thm_at" err) end
+  in
+    save_thm_attrs loc (attrblock,th)
+    handle e => render_exn
+                    (wrap_exn "boolLib" "store_thm_at" e)
+  end
 end
+
 val store_thm = store_thm_at DB.Unknown
-fun save_thm_at loc (n0,th) = let
-  val (n,attrs) = ThmAttribute.extract_attributes n0
-in
-  save_thm_attrs loc (n,attrs,th)
-end
+
+fun save_thm_at loc (n0,th) =
+  save_thm_attrs loc (ThmAttribute.extract_attributes n0,th)
+
 val save_thm = save_thm_at DB.Unknown
 
 fun new_recursive_definition rcd =
@@ -189,7 +362,6 @@ fun variant_of_term vs t =
     (t', sub)
   end
 
-end (* local *)
 
 datatype pel = pLeft | pRight | pAbs
 fun term_diff t1 t2 =
@@ -233,6 +405,7 @@ fun tyvar_sequence n =
       pretty [] n
     end
 
-
+val Fld = FunctionalRecordUpdate.U
+val $$ = FunctionalRecordUpdate.$$
 
 end;

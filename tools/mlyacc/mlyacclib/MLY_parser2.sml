@@ -500,7 +500,7 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 
                    queue = a b c d e
                    findNth 0 = (e,a b c d)
-                   findNth 1 =  (d,a b c)
+                   findNth 1 = (d,a b c)
                    *)
 
                   val findNth = fn n =>

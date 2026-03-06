@@ -1,21 +1,12 @@
-open HolKernel Parse boolLib bossLib
+Theory recdegrees
+Ancestors
+  arithmetic While logroot pred_set list recursivefns prnlist
+  primrecfns prterm nlist recfuns recsets churchDB
+Libs
+  reductionEval
 
-open arithmeticTheory whileTheory logrootTheory pred_setTheory listTheory;
-open recursivefnsTheory;
-open prnlistTheory;
-open primrecfnsTheory;
-open prtermTheory;
-open nlistTheory;
-
-open recfunsTheory;
-open recsetsTheory;
-
-open reductionEval;
-open churchDBTheory;
-
-val _ = new_theory "recdegrees";
-
-val _ = Datatype`form = BASE num num | EXISTS num form | ALL num form`
+Datatype: form = BASE num num | EXISTS num form | ALL num form
+End
 
 Definition MKEA_0[simp]:
  (MKEA0 0 m R = BASE R (m+1)) ∧
@@ -458,21 +449,17 @@ QED
 Theorem thm1_3_iii1:
   rec_sigma A n ∧ rec_sigma B n ==> (rec_sigma (A ∪ B) n ∧ rec_sigma (A ∩ B) n)
 Proof
-
 QED
 
 Theorem thm1_3_iii2:
   rec_pi A n ∧ rec_pi B n ==> (rec_pi (A ∪ B) n ∧ rec_pi (A ∩ B) n)
 Proof
-
 QED
 
 Theorem thm1_3_iv:
   rec_sigma R n ∧ n>0 ∧ A = {x | ∃y. R (x,y)} ==> rec_sigma A n
 Proof
-
 QED
 
 
 *)
-val _ = export_theory()

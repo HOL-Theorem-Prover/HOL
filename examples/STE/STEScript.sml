@@ -3,22 +3,13 @@
 (* DESCRIPTION   : STE Embedding in HOL                                  *)
 (* AUTHOR        : Ashish Darbari                                        *)
 (* ===================================================================== *)
-(*
-(* For interactive running uncomment this part *)
-   val _ = load "stringLib";
-   val _ = load "mesonLib";
- *)
 
-local
-open boolLib Parse bossLib HolKernel;
-open arithmeticTheory stringLib;
-open listTheory mesonLib pairTheory;
+Theory STE
+Ancestors
+  arithmetic list pair string
+Libs
+  stringLib mesonLib
 
-in
-
-(* Creating a new theory that will be called STE *)
-
-val _ = new_theory "STE";
 val _ = ParseExtras.temp_loose_equality()
 infix THEN THENL;
 
@@ -30,20 +21,26 @@ val ARW_TAC = RW_TAC std_ss;
 
 (* Dual Rail Encoding of Lattice Values *)
 
-val Top_def  = Define `Top  = (F, F)`;
-val One_def  = Define `One  = (T, F)`;
-val Zero_def = Define `Zero = (F, T)`;
-val X_def    = Define `X    = (T, T)`;
+Definition Top_def:    Top  = (F, F)
+End
+Definition One_def:    One  = (T, F)
+End
+Definition Zero_def:   Zero = (F, T)
+End
+Definition X_def:      X    = (T, T)
+End
 
 (* Definition of least upper bound *)
 val _ = set_fixity "lub" (Infixl 510);
-val lub_def = Define `(a, b) lub (c, d) = (a /\ c, b /\ d)`;
+Definition lub_def:   (a, b) lub (c, d) = (a /\ c, b /\ d)
+End
 
 
 (* Definition of lub on states *)
 
-val lub_state_def = Define `lub_state state1 state2 node =
-                             (state1 node) lub (state2 node)`;
+Definition lub_state_def:   lub_state state1 state2 node =
+                             (state1 node) lub (state2 node)
+End
 
 (* Defintion of ordering *)
  (*              ---
@@ -52,66 +49,77 @@ val lub_state_def = Define `lub_state state1 state2 node =
                  ---  *)
 
 val _ = set_fixity "leq" (Infixl 510);
-val leq_def = Define `(a leq b  = (b = a lub b))`;
+Definition leq_def:   (a leq b  = (b = a lub b))
+End
 
 (* Ordering lifted over states *)
 
 val _ = set_fixity "leq_state" (Infixl 510);
-val leq_state_def = Define `state1 leq_state state2
-    = !node:string. (state1 node) leq (state2 node)`;
+Definition leq_state_def:   state1 leq_state state2
+    = !node:string. (state1 node) leq (state2 node)
+End
 
 (* Ordering lifted over sequences *)
 
 val _ = set_fixity "leq_seq" (Infixl 510);
-val leq_seq_def = Define `sigma1 leq_seq sigma2
-    = !node:string t:num. (sigma1 t node) leq (sigma2 t node)`;
+Definition leq_seq_def:   sigma1 leq_seq sigma2
+    = !node:string t:num. (sigma1 t node) leq (sigma2 t node)
+End
 
 (* Definition of suffix *)
 
-val Suffix_def = Define
-    `Suffix i (sigma: num->string->(bool # bool))
-    = \t node.(sigma (t+i) node)`;
+Definition Suffix_def:
+     Suffix i (sigma: num->string->(bool # bool))
+    = \t node.(sigma (t+i) node)
+End
 
 
 (* Dropping from Boolean to Lattice Values *)
 
-val drop_def = Define `(drop T = One) /\ (drop F = Zero)`;
+Definition drop_def:   (drop T = One) /\ (drop F = Zero)
+End
 
 (* Drop operation lifted over states *)
 
-val extended_drop_state_def = Define
-    `extended_drop_state (s_b:string->bool) = \node. drop (s_b node)`;
+Definition extended_drop_state_def:
+     extended_drop_state (s_b:string->bool) = \node. drop (s_b node)
+End
 
 
 (* Drop operation lifted over sequences *)
 
-val extended_drop_seq_def = Define
-    `extended_drop_seq (sigma_b:num->string->bool) = \t.
-    (extended_drop_state (sigma_b t))`;
+Definition extended_drop_seq_def:
+     extended_drop_seq (sigma_b:num->string->bool) = \t.
+    (extended_drop_state (sigma_b t))
+End
 
 (* Next state function is monotonic *)
 
-val Monotonic_def = Define `Monotonic Y_ckt =
+Definition Monotonic_def:   Monotonic Y_ckt =
     !s s'.
     s leq_state s' ==>
-        (Y_ckt s) leq_state (Y_ckt s')`;
+        (Y_ckt s) leq_state (Y_ckt s')
+End
 
 
 (* Sequence is in the STE language of a circuit  *)
 
-val in_STE_lang_def = Define `
+Definition in_STE_lang_def:
     in_STE_lang sigma Y_ckt =
-    !t. (Y_ckt (sigma t)) leq_state (sigma (t+1))`;
+    !t. (Y_ckt (sigma t)) leq_state (sigma (t+1))
+End
 
 
 (* Defining the abstract type of Trajectory formulas *)
 
-val _ = Hol_datatype
-    `TF = Is_0 of string
-  | Is_1 of string
-  | AND of TF => TF
-  | WHEN of TF => bool
-  | NEXT of TF`;
+Datatype:
+  TF =
+    Is_0 string
+  | Is_1 string
+  | AND TF TF
+  | WHEN TF bool
+  | NEXT TF
+End
 
 (* Defining the operators WHEN and AND to be left infix *)
 
@@ -120,7 +128,7 @@ val _ = set_fixity "AND" (Infixl 510);
 
 (* Semantics of trajectory formula - defined wrt a sequence *)
 
-val SAT_STE_def = Define `(SAT_STE (Is_0 n) = \sigma.
+Definition SAT_STE_def:   (SAT_STE (Is_0 n) = \sigma.
                            Zero leq (sigma 0 n))
 
     /\ (SAT_STE (Is_1 n) = \sigma.
@@ -133,11 +141,13 @@ val SAT_STE_def = Define `(SAT_STE (Is_0 n) = \sigma.
         (P ==> (SAT_STE tf sigma)))
 
     /\ (SAT_STE (NEXT tf) = \sigma.
-        (SAT_STE tf (Suffix 1 sigma)))`;
+        (SAT_STE tf (Suffix 1 sigma)))
+End
 
 (* Datatype of Assertions - leadsto operator *)
 
-val _ = Hol_datatype `Assertion = ==>> of TF => TF`;
+Datatype: Assertion = ==>> TF TF
+End
 
 (* leadsto is infix *)
 
@@ -146,7 +156,7 @@ val _ = set_fixity "==>>" (Infixl 470);
 
 (* Defining Sequence of a trajectory formula *)
 
-val DefSeq_def = Define `(DefSeq (Is_0 m) = \t n.
+Definition DefSeq_def:   (DefSeq (Is_0 m) = \t n.
                           (if ((n = m) /\ (t = 0)) then Zero else X))
 
     /\ (DefSeq (Is_1 m) = \t n.
@@ -159,88 +169,101 @@ val DefSeq_def = Define `(DefSeq (Is_0 m) = \t n.
         (P ==> FST(DefSeq tf t n),  P ==> SND(DefSeq tf t n)))
 
     /\ (DefSeq (NEXT tf) = \t n.
-        (if ~(t = 0) then (DefSeq tf (t-1) n) else X))`;
+        (if ~(t = 0) then (DefSeq tf (t-1) n) else X))
+End
 
 
 (* Collecting the nodes in the trajectory formula *)
 
-val Nodes_def = Define `(Nodes (Is_0 n) Acc =
+Definition Nodes_def:   (Nodes (Is_0 n) Acc =
                             if MEM n Acc then Acc else (n::Acc))
     /\ (Nodes (Is_1 n) Acc = if MEM n Acc then Acc else (n::Acc))
     /\ (Nodes (tf1 AND tf2) Acc =  Nodes tf2 (Nodes tf1 Acc))
     /\ (Nodes (tf WHEN P) Acc = Nodes tf Acc)
-    /\ (Nodes (NEXT tf) Acc = Nodes tf Acc)`;
+    /\ (Nodes (NEXT tf) Acc = Nodes tf Acc)
+End
 
 
 (* Useful properties about node membership *)
 
-val MEM_NODES1 = store_thm("MEM_NODES1",``!tf acc node.
+Theorem MEM_NODES1:  !tf acc node.
          MEM node (Nodes tf []) \/ MEM node acc =
-         MEM node (Nodes tf acc)``,
+         MEM node (Nodes tf acc)
+Proof
                               Induct THEN
                               fl [Nodes_def]
                               THEN REPEAT STRIP_TAC
                               THEN REPEAT COND_CASES_TAC
-                              THEN fl [] THEN PROVE_TAC []);
+                              THEN fl [] THEN PROVE_TAC []
+QED
 
 
 
-val MEM_NODES2 = store_thm("MEM_NODES2", ``!tf tf'.
+Theorem MEM_NODES2:   !tf tf'.
                               ~MEM node (Nodes tf' (Nodes tf [])) =
                               ~MEM node (Nodes tf [])
-                              /\ ~MEM node (Nodes tf' [])``,
-                              PROVE_TAC [MEM_NODES1]);
+                              /\ ~MEM node (Nodes tf' [])
+Proof
+                              PROVE_TAC [MEM_NODES1]
+QED
 
 
-val MAX_def = Define `MAX t1 t2 = (if t1 >= t2 then t1 else t2)`;;
+Definition MAX_def:   MAX t1 t2 = (if t1 >= t2 then t1 else t2)
+End
 
 (* Depth of a trajectory formula *)
 
-val Depth_def = Define `(Depth (Is_0 n) = 0)
+Definition Depth_def:   (Depth (Is_0 n) = 0)
     /\ (Depth (Is_1 n) = 0)
     /\ (Depth (tf1 AND tf2) = MAX (Depth tf1)(Depth tf2))
     /\ (Depth (tf WHEN P) = Depth tf)
-    /\ (Depth (NEXT tf) = SUC (Depth tf))`;
+    /\ (Depth (NEXT tf) = SUC (Depth tf))
+End
 
 
 (* Defining Trajectory *)
 
-val DefTraj_def = Define `(DefTraj tf Model 0 node = DefSeq tf 0 node)
+Definition DefTraj_def:   (DefTraj tf Model 0 node = DefSeq tf 0 node)
     /\ (DefTraj tf Model (SUC t) node
-        = (DefSeq tf (SUC t) node) lub (Model (DefTraj tf Model t) node))`;
+        = (DefSeq tf (SUC t) node) lub (Model (DefTraj tf Model t) node))
+End
 
 (* The STE implementation *)
 
-val STE_Impl_def = Define `STE_Impl (Ant ==>> Cons) Y_ckt =
+Definition STE_Impl_def:   STE_Impl (Ant ==>> Cons) Y_ckt =
     !t. (t <= Depth Cons ==>
          !n. MEM n
          (APPEND(Nodes Ant [])(Nodes Cons [])) ==>
-             (DefSeq Cons t n) leq (DefTraj Ant Y_ckt t n))`;
+             (DefSeq Cons t n) leq (DefTraj Ant Y_ckt t n))
+End
 
 (* Satisfiability of a Trajectory Assertion *)
 
-val SAT_CKT_def = Define `SAT_CKT (Ant ==>> Cons) Y_ckt
+Definition SAT_CKT_def:   SAT_CKT (Ant ==>> Cons) Y_ckt
     = !sigma. (in_STE_lang sigma Y_ckt )
     ==>  (SAT_STE Ant sigma)
-    ==> (SAT_STE Cons sigma)`;
+    ==> (SAT_STE Cons sigma)
+End
 
 (* Boolean valued world starts here *)
 
 (* Definition of suffix of a Boolean valued sequence *)
 
-val Suffix_b_def = Define
-    `Suffix_b i (sigma_b:num->string->bool)
-    = \t node.(sigma_b (t+i) node)`;
+Definition Suffix_b_def:
+     Suffix_b i (sigma_b:num->string->bool)
+    = \t node.(sigma_b (t+i) node)
+End
 
 (* Boolean Valued Sequence is in the relational model of a circuit  *)
 
-val in_BOOL_lang_def = Define `
+Definition in_BOOL_lang_def:
     in_BOOL_lang (sigma_b:num->string->bool) Yb_ckt
-    = !t. Yb_ckt (sigma_b t) (sigma_b (t+1))`;
+    = !t. Yb_ckt (sigma_b t) (sigma_b (t+1))
+End
 
 (* Boolean sequence satisfies a trajectory formula *)
 
-val SAT_BOOL_def = Define `(SAT_BOOL (Is_0 n) = \sigma_b.
+Definition SAT_BOOL_def:   (SAT_BOOL (Is_0 n) = \sigma_b.
                             ((sigma_b 0 n) = F))
 
     /\ (SAT_BOOL (Is_1 n)  = \sigma_b.
@@ -253,16 +276,18 @@ val SAT_BOOL_def = Define `(SAT_BOOL (Is_0 n) = \sigma_b.
         (P ==> (SAT_BOOL tf  sigma_b)))
 
     /\ (SAT_BOOL (NEXT(tf))  =  \sigma_b.
-        (SAT_BOOL tf (Suffix_b 1 sigma_b)))`;
+        (SAT_BOOL tf (Suffix_b 1 sigma_b)))
+End
 
 
 
 (* Linking the lattice and the Boolean Models *)
 
-val Okay_def = Define `Okay (Y_ckt, Yb_ckt) =
+Definition Okay_def:   Okay (Y_ckt, Yb_ckt) =
     !s_b:string->bool s_b':string->bool.
     (Yb_ckt s_b s_b') ==> ((Y_ckt (extended_drop_state s_b)) leq_state
-                         (extended_drop_state s_b'))`;
+                         (extended_drop_state s_b'))
+End
 
  (* Lemmas and Theorems *)
 
@@ -415,15 +440,16 @@ Proof of Theorem2:
 
 *)
 
-val Lemma1 =
-    store_thm ("Lemma1",
-               ``!Y_ckt Yb_ckt. Okay (Y_ckt, Yb_ckt)
+Theorem Lemma1:
+                 !Y_ckt Yb_ckt. Okay (Y_ckt, Yb_ckt)
                ==> !sigma_b.
                in_BOOL_lang sigma_b Yb_ckt
-               ==>  in_STE_lang (extended_drop_seq sigma_b) Y_ckt``,
+               ==>  in_STE_lang (extended_drop_seq sigma_b) Y_ckt
+Proof
                STRIP_TAC THEN fs [Okay_def, in_BOOL_lang_def,
                                   in_STE_lang_def,
-                                  extended_drop_seq_def]);
+                                  extended_drop_seq_def]
+QED
 
 (* Calculating the Suffix after calculating the
    drop of the Boolean valued sequence, results
@@ -551,10 +577,12 @@ val Lemma3_2 = prove(``!sigma_b:num->string->bool. (sigma_b 0 node = T)
 
 *)
 
-val lattice_X1_lemma = store_thm ("lattice_X1_lemma",
-                                  ``!elem. elem = X lub elem``,
+Theorem lattice_X1_lemma:
+                                    !elem. elem = X lub elem
+Proof
                                   STRIP_TAC THEN Cases_on `elem`
-                                  THEN fs [lub_def, X_def]);
+                                  THEN fs [lub_def, X_def]
+QED
 
 val lattice_X2_lemma = TAC_PROOF(([], ``!elem. elem = (T, T) lub elem``),
                                 STRIP_TAC THEN Cases_on `elem`
@@ -585,14 +613,16 @@ val TRANS_LEMMA =
 (* A rather obvious but useful lemma that the 0th suffix of the sequence
    gives the sequence itself *)
 
-val SUFFIX_0 = store_thm("SUFFIX_0", ``!sigma. Suffix 0 sigma = sigma``,
+Theorem SUFFIX_0:   !sigma. Suffix 0 sigma = sigma
+Proof
                           GEN_TAC THEN fs [Suffix_def]
                           THEN CONV_TAC(FUN_EQ_CONV)
                           THEN GEN_TAC
                           THEN Induct_on `n` THEN fs []
                           THEN (CONV_TAC(FUN_EQ_CONV))
                           THEN fs [] THEN (FULL_SIMP_TAC arith_ss [])
-                          THEN (CONV_TAC(FUN_EQ_CONV)) THEN fs []);
+                          THEN (CONV_TAC(FUN_EQ_CONV)) THEN fs []
+QED
 
 (* Suffix Closure Axiom: If a sequence is in the language of a lattice
    circuit model then every suffix of that sequence is in the language
@@ -602,10 +632,10 @@ val SUFFIX_0 = store_thm("SUFFIX_0", ``!sigma. Suffix 0 sigma = sigma``,
 *)
 
 (* Suffix closed -- Proposition *)
-val Proposition =
-    store_thm("Proposition",
-              ``!Y_ckt sigma. in_STE_lang sigma Y_ckt
-              ==> !t. in_STE_lang (Suffix t sigma) Y_ckt``,
+Theorem Proposition:
+                !Y_ckt sigma. in_STE_lang sigma Y_ckt
+              ==> !t. in_STE_lang (Suffix t sigma) Y_ckt
+Proof
               STRIP_TAC THEN STRIP_TAC THEN STRIP_TAC
               THEN Induct THENL [PROVE_TAC [SUFFIX_0],
                                  fs [in_STE_lang_def, Suffix_def]
@@ -620,7 +650,8 @@ val Proposition =
                                  FULL_SIMP_TAC bool_ss
                                  [ONE, ADD_CLAUSES]
                                  THEN RW_TAC std_ss [ADD_COMM]
-                                 THEN PROVE_TAC []]);
+                                 THEN PROVE_TAC []]
+QED
 
 
 
@@ -634,10 +665,12 @@ val Proposition =
  *)
 
 
-val Proposition1 =  store_thm("Proposition1",
-                              ``!Y_ckt sigma. in_STE_lang sigma Y_ckt
-                              ==> !t. in_STE_lang (Suffix 1 sigma) Y_ckt``,
-                              PROVE_TAC [Proposition]);
+Theorem Proposition1:
+                               !Y_ckt sigma. in_STE_lang sigma Y_ckt
+                             ==> !t. in_STE_lang (Suffix 1 sigma) Y_ckt
+Proof
+                             PROVE_TAC [Proposition]
+QED
 
 
 (* If a sequence sigma is less than or equal to another sequence sigma'
@@ -1213,31 +1246,32 @@ val SAT_CKT_IFF_TIME_SHIFT2 =
    consequent of the STE assertion
 *)
 
-val SAT_CKT_IFF_TIME_SHIFT =
-    store_thm ("SAT_CKT_IFF_TIME_SHIFT",
-               ``!Ant Cons Y_ckt.
+Theorem SAT_CKT_IFF_TIME_SHIFT:
+                 !Ant Cons Y_ckt.
                SAT_CKT (Ant ==>> Cons) Y_ckt
                    =
                    (!sigma. (in_STE_lang sigma Y_ckt )
                     ==> !t. SAT_STE Ant (Suffix t sigma)
-                    ==> SAT_STE Cons (Suffix t sigma))``,
+                    ==> SAT_STE Cons (Suffix t sigma))
+Proof
 
                    REPEAT STRIP_TAC THEN fs [SAT_CKT_def]
                    THEN PROVE_TAC [SAT_CKT_IFF_TIME_SHIFT1,
-                                   SAT_CKT_IFF_TIME_SHIFT2]);
+                                   SAT_CKT_IFF_TIME_SHIFT2]
+QED
 
 
 (* SAT_CKT_IFF_STE1 and SAT_CKT_IFF_STE2 are used in
    the proof of SAT_CKT_IFF_STE *)
 
 
-val SAT_CKT_IFF_STE1 =
-    store_thm ("SAT_CKT_IFF_STE1",
-               ``!Ant Cons Y_ckt.
+Theorem SAT_CKT_IFF_STE1:
+                 !Ant Cons Y_ckt.
                Monotonic Y_ckt ==>
                    (SAT_CKT (Ant ==>> Cons) Y_ckt
                        ==> !t. (DefSeq Cons t) leq_state
-                       (DefTraj Ant Y_ckt t))``,
+                       (DefTraj Ant Y_ckt t))
+Proof
                        let
                            val temp1 = SPECL [``Cons:TF``, ``DefTraj (Ant:TF)
                                               (Y_ckt:(string->bool#bool)->
@@ -1262,16 +1296,17 @@ val SAT_CKT_IFF_STE1 =
                                         (Y_ckt:(string->bool#bool)->
                                          string->bool#bool)``))
                            THEN fs [temp1, temp2, temp3, temp4]
-                       end);
+                       end
+QED
 
-val SAT_CKT_IFF_STE2 =
-    store_thm ("SAT_CKT_IFF_STE2",
-               ``!Ant Cons Y_ckt.
+Theorem SAT_CKT_IFF_STE2:
+                 !Ant Cons Y_ckt.
                Monotonic Y_ckt ==>
                    ((!t. (DefSeq Cons t) leq_state
                      (DefTraj Ant Y_ckt t))
                     ==>
-                    SAT_CKT (Ant ==>> Cons) Y_ckt)``,
+                    SAT_CKT (Ant ==>> Cons) Y_ckt)
+Proof
 
                    let
                        val temp = SPECL [``Ant:TF``,
@@ -1315,7 +1350,8 @@ val SAT_CKT_IFF_STE2 =
                                                 string->bool#bool``]))
                        THEN (STRIP_ASSUME_TAC DEFSEQ_LE_THAN_SAT_STE)
                        THEN fs [leq_state_def]
-                   end);
+                   end
+QED
 
 
 (* If the circuit model is monotonic then the circuit model
@@ -1324,22 +1360,22 @@ val SAT_CKT_IFF_STE2 =
    the state value returned by the defining trajectory for the
    antecedent wrt the given circuit model *)
 
-val SAT_CKT_IFF_STE =
-    store_thm("SAT_CKT_IFF_STE",
-               ``!Ant Cons Y_ckt.
+Theorem SAT_CKT_IFF_STE:
+                 !Ant Cons Y_ckt.
                Monotonic Y_ckt ==>
                    (SAT_CKT (Ant ==>> Cons) Y_ckt
                        = !t. (DefSeq Cons t) leq_state
-                       (DefTraj Ant Y_ckt t))``,
+                       (DefTraj Ant Y_ckt t))
+Proof
                        PROVE_TAC [SAT_CKT_IFF_STE1, SAT_CKT_IFF_STE2]
-                       );;
+QED
 
 
 (* Defining Sequence beyond the depth of a trajectory formula is X *)
 
-val DEFSEQ_X =
-    store_thm("DEFSEQ_X",
-              ``!tf i. i > Depth tf ==> !n. DefSeq tf i n = X``,
+Theorem DEFSEQ_X:
+                !tf i. i > Depth tf ==> !n. DefSeq tf i n = X
+Proof
 
               Induct THEN fs [DefSeq_def, Depth_def]
               THENL[
@@ -1363,35 +1399,38 @@ val DEFSEQ_X =
                      (FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``((i:num)-1)``))
                      THEN (FULL_SIMP_TAC arith_ss []))
                     ]
-              );;
+QED
 
 (* If a node doesn't occur in antecedent and it doesn't appear in NEXT Cons
    then it doesn't appear in Ant and it doesn't appear in Cons *)
-val NODE_LEMMA0 =
-    store_thm ("NODE_LEMMA0", ``!node Ant Cons.
+Theorem NODE_LEMMA0:   !node Ant Cons.
                ~MEM node (APPEND(Nodes Ant [])
                              (Nodes (NEXT Cons) [])) ==>
                ~MEM node (APPEND(Nodes Ant [])
                              (Nodes Cons []))
-               ``,
-               REPEAT STRIP_TAC THEN fs [Nodes_def]);
+Proof
+               REPEAT STRIP_TAC THEN fs [Nodes_def]
+QED
 
 
 
-val NODE_LEMMA1 = store_thm ("NODE_LEMMA1",
-                             ``!elem tf. ~MEM elem (Nodes (NEXT tf) [])
-                             = ~MEM elem (Nodes tf [])``,
+Theorem NODE_LEMMA1:
+                               !elem tf. ~MEM elem (Nodes (NEXT tf) [])
+                             = ~MEM elem (Nodes tf [])
+Proof
                              REPEAT STRIP_TAC THEN Induct_on `tf`
-                             THEN REPEAT STRIP_TAC THEN fs [Nodes_def]);
+                             THEN REPEAT STRIP_TAC THEN fs [Nodes_def]
+QED
 
 
 
 
 (* If a node doesn't appear in a trajectory formula, it takes on a value X *)
-val NODE_LEMMA2 = store_thm("NODE_LEMMA2",
-                            ``!tf (node:string).
+Theorem NODE_LEMMA2:
+                              !tf (node:string).
                                ~MEM node (Nodes tf []) ==>
-                            !t. DefSeq tf t node = X``,
+                            !t. DefSeq tf t node = X
+Proof
                                Induct THENL
                                [fl [Nodes_def, DefSeq_def],
                                 fl [Nodes_def, DefSeq_def],
@@ -1401,16 +1440,17 @@ val NODE_LEMMA2 = store_thm("NODE_LEMMA2",
                                 REPEAT STRIP_TAC
                                 THEN fl [Nodes_def, DefSeq_def]
                                 THEN Cases_on `b` THEN fl [X_def],
-                                fl [DefSeq_def, Nodes_def]]);
+                                fl [DefSeq_def, Nodes_def]]
+QED
 
 (* All nodes that don't appear in the antecedent or the consequent take on
  a value X *)
-val NODES_X =
-    store_thm ("NODES_X",
-               ``!Ant Cons. !(node:string).
+Theorem NODES_X:
+                 !Ant Cons. !(node:string).
                ~(MEM node (APPEND(Nodes Ant [])
                            (Nodes Cons [])))
-               ==> !t. (DefSeq Cons t node = X)``,
+               ==> !t. (DefSeq Cons t node = X)
+Proof
                Induct THENL
                [STRIP_TAC THEN Induct THEN fl [Nodes_def, DefSeq_def]
                 THENL [REPEAT STRIP_TAC THEN IMP_RES_TAC MEM_NODES2
@@ -1426,7 +1466,8 @@ val NODES_X =
                 IMP_RES_TAC MEM_NODES2 THEN RES_TAC
                 THEN fl [lub_def, X_def],
                 REPEAT STRIP_TAC THEN fl [Nodes_def],
-                REPEAT STRIP_TAC THEN fl [Nodes_def]]);
+                REPEAT STRIP_TAC THEN fl [Nodes_def]]
+QED
 
 
 (* AuxTheorem1 and Theorem1 are basically identical
@@ -1480,8 +1521,7 @@ SAT_CKT_IFF_STE1    \
 
 
 
-val AuxTheorem1 =
-    store_thm ("AuxTheorem1", ``!Ant Cons Y_ckt.
+Theorem AuxTheorem1:   !Ant Cons Y_ckt.
                Monotonic Y_ckt ==>
                    (SAT_CKT (Ant ==>> Cons) Y_ckt
                        =
@@ -1491,7 +1531,8 @@ val AuxTheorem1 =
                             MEM n (APPEND(Nodes Ant [])(Nodes Cons []))
                             ==>
                                 (DefSeq Cons t n) leq
-                                (DefTraj Ant Y_ckt t n)))``,
+                                (DefTraj Ant Y_ckt t n)))
+Proof
 
                        REPEAT STRIP_TAC THEN fl [SAT_CKT_IFF_STE]
                        THEN EQ_TAC THEN REPEAT STRIP_TAC THENL
@@ -1510,7 +1551,8 @@ val AuxTheorem1 =
                                       THEN fl [leq_def] THEN
                                       PROVE_TAC [lattice_X1_lemma]],
                                fl [leq_def]
-                               THEN PROVE_TAC [lattice_X1_lemma]]]);
+                               THEN PROVE_TAC [lattice_X1_lemma]]]
+QED
 
 (* Theorem1 *)
 
@@ -1518,20 +1560,20 @@ val AuxTheorem1 =
    satisfies an STE assertion Ant ==>> Cons if and only if
     the STE Implementation STE_Impl guarantees that *)
 
-val Theorem1 = store_thm ("Theorem1",
-                          ``!Ant Cons Y_ckt.
+Theorem Theorem1:
+                            !Ant Cons Y_ckt.
                           Monotonic Y_ckt ==>
                               (SAT_CKT (Ant ==>> Cons) Y_ckt
-                                  = STE_Impl (Ant ==>> Cons) Y_ckt)``,
+                                  = STE_Impl (Ant ==>> Cons) Y_ckt)
+Proof
                                   fs [STE_Impl_def] THEN
                                   PROVE_TAC [AuxTheorem1]
-                                  );
+QED
 
 (* Refer to explanation in the Big Picture section *)
 
-val SAT_CKT_IFF_STE_IMPL =
-    store_thm ("SAT_CKT_IFF_STE_IMPL",
-               ``!Ant Cons Y_ckt.
+Theorem SAT_CKT_IFF_STE_IMPL:
+                 !Ant Cons Y_ckt.
                Monotonic Y_ckt ==>
                    (
                     (!sigma.
@@ -1544,16 +1586,17 @@ val SAT_CKT_IFF_STE_IMPL =
                          !n.
                          MEM n (APPEND(Nodes Ant [])(Nodes Cons [])) ==>
                              (DefSeq Cons t n) leq (DefTraj Ant Y_ckt t n))
-                    )``,
+                    )
+Proof
                    REPEAT GEN_TAC
                    THEN fs [SYM(SPEC_ALL SAT_CKT_IFF_TIME_SHIFT)]
-                   THEN fs [AuxTheorem1]);
+                   THEN fs [AuxTheorem1]
+QED
 
 
 
 (* Refer for explanation to the Big Picture section *)
-val Theorem2 =
-    store_thm ("Theorem2", ``!Ant Cons.
+Theorem Theorem2:   !Ant Cons.
                !Y_ckt Yb_ckt. Okay (Y_ckt, Yb_ckt)
                ==>
                (
@@ -1566,7 +1609,8 @@ val Theorem2 =
                 !sigma_b. in_BOOL_lang sigma_b Yb_ckt
                 ==> !t. ((SAT_BOOL Ant (Suffix_b t sigma_b))
                          ==> (SAT_BOOL Cons (Suffix_b t sigma_b)))
-                )``,
+                )
+Proof
                REPEAT GEN_TAC THEN
                (STRIP_ASSUME_TAC (SPECL
                                   [``Y_ckt:(string->(bool#bool))
@@ -1584,15 +1628,15 @@ val Theorem2 =
                THEN (FIRST_ASSUM (STRIP_ASSUME_TAC o
                                   SPEC
                                   ``sigma_b:num->string->bool``))
-               THEN (fs []));
+               THEN (fs [])
+QED
 
 
 (* Same as Theorem2 except that the definition of SAT_CKT is
    uunfolded in Theorem2. This theorem has pure academic value.
    - succint representation. This is known as Theorem 2 in the Tech Report
    and also in the TPHOLS paper *)
-val AuxTheorem2 =
-    store_thm ("AuxTheorem2", ``!Ant Cons.
+Theorem AuxTheorem2:   !Ant Cons.
                !Y_ckt Yb_ckt. Okay (Y_ckt, Yb_ckt)
                ==>
                (SAT_CKT (Ant ==>> Cons) Y_ckt)
@@ -1601,13 +1645,14 @@ val AuxTheorem2 =
                     !sigma_b. in_BOOL_lang sigma_b Yb_ckt
                     ==> !t. ((SAT_BOOL Ant (Suffix_b t sigma_b))
                              ==> (SAT_BOOL Cons (Suffix_b t sigma_b)))
-                    )``, PROVE_TAC [SAT_CKT_IFF_TIME_SHIFT, Theorem2]);
+                    )
+Proof PROVE_TAC [SAT_CKT_IFF_TIME_SHIFT, Theorem2]
+QED
 
 (* Refer to explanation in the Big Picture section *)
 
-val BridgeTheorem =
-    store_thm ("BridgeTheorem",
-               ``!Ant Cons Y_ckt Yb_ckt.
+Theorem BridgeTheorem:
+                 !Ant Cons Y_ckt Yb_ckt.
                Okay (Y_ckt, Yb_ckt) ==>
                    Monotonic Y_ckt
                    ==>
@@ -1626,16 +1671,17 @@ val BridgeTheorem =
                          !t.
                          SAT_BOOL Ant (Suffix_b t sigma_b) ==>
                              SAT_BOOL Cons (Suffix_b t sigma_b))
-                    )``,
+                    )
+Proof
 
                    REPEAT STRIP_TAC
                    THEN IMP_RES_TAC (SPEC_ALL SAT_CKT_IFF_STE_IMPL)
                    THEN IMP_RES_TAC (SPEC_ALL Theorem2)
-                   );
+QED
 
 
-val BRIDGETHEOREM2 = store_thm ("BRIDGETHEOREM2",
-                                ``!Ant Cons Y_ckt Yb_ckt.
+Theorem BRIDGETHEOREM2:
+                                  !Ant Cons Y_ckt Yb_ckt.
                                 Okay (Y_ckt,Yb_ckt) ==>
                                     Monotonic Y_ckt ==>
                                         STE_Impl (Ant ==>> Cons) Y_ckt ==>
@@ -1645,13 +1691,11 @@ val BRIDGETHEOREM2 = store_thm ("BRIDGETHEOREM2",
                                                 SAT_BOOL Ant
                                                 (Suffix_b t sigma_b) ==>
                                                     SAT_BOOL Cons
-                                                    (Suffix_b t sigma_b)``,
+                                                    (Suffix_b t sigma_b)
+Proof
                                                     MATCH_ACCEPT_TAC (CONV_RULE
                                                     (SIMP_CONV std_ss
                                                      [(SYM o SPEC_ALL)
                                                       STE_Impl_def])
-                                                    BridgeTheorem));
-
-
-val _ = export_theory();
-end;
+                                                    BridgeTheorem)
+QED

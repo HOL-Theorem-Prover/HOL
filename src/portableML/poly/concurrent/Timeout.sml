@@ -4,13 +4,7 @@
 Execution with (relative) timeout.
 *)
 
-signature TIMEOUT =
-sig
-  exception TIMEOUT of Time.time
-  val apply: Time.time -> ('a -> 'b) -> 'a -> 'b
-end;
-
-structure Timeout: TIMEOUT =
+structure Timeout :> Timeout =
 struct
 
 exception TIMEOUT of Time.time;

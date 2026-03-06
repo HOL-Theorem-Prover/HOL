@@ -6,17 +6,13 @@
 (* START BOILERPLATE                                                         *)
 (*****************************************************************************)
 
-(******************************************************************************
- * Boilerplate needed for compilation. Batch mode.
- ******************************************************************************)
+Theory Fact
+Ancestors
+  arithmetic pair combin compose compile
+Libs
+  pairLib PairRules compile vsynth
 
-open HolKernel Parse boolLib bossLib;
 
-(******************************************************************************
- * Open theories. Batch mode.
- ******************************************************************************)
-open arithmeticTheory pairLib pairTheory PairRules combinTheory
-     composeTheory compile vsynth;
 infixr 3 THENR;
 infixr 3 ORELSER;
 
@@ -29,12 +25,6 @@ val _ = numLib.temp_prefer_num();
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
-
-(*****************************************************************************)
-(* Start new theory "Fact"                                                   *)
-(*****************************************************************************)
-
-val _ = new_theory "Fact";
 
 (*****************************************************************************)
 (* Define arithmetic operators used and associate them with their Verilog    *)
@@ -59,14 +49,15 @@ val (FactIter,FactIter_ind,FactIter_dev) =
 (* Lemma showing how FactIter computes factorial                             *)
 (*****************************************************************************)
 
-val FactIterRecThm =  (* proof from KXS *)
- Q.store_thm
-  ("FactIterRecThm",
-   `!n acc. SND(FactIter (n,acc)) = acc * FACT n`,
+(* proof from KXS *)
+Theorem FactIterRecThm:
+    !n acc. SND(FactIter (n,acc)) = acc * FACT n
+Proof
     recInduct FactIter_ind THEN RW_TAC arith_ss []
       THEN RW_TAC arith_ss [Once FactIter,FACT]
       THEN Cases_on `n`
-      THEN RW_TAC std_ss [FACT, AC MULT_ASSOC MULT_SYM]);
+      THEN RW_TAC std_ss [FACT, AC MULT_ASSOC MULT_SYM]
+QED
 
 (*****************************************************************************)
 (* Implement a function Fact to compute SND(FactIter (n,1))                  *)
@@ -78,11 +69,11 @@ val (Fact,_,Fact_dev) = hwDefine `Fact n = SND(FactIter (n,1))`;
 (* Verify Fact is indeed the factorial function                              *)
 (*****************************************************************************)
 
-val FactThm =
- Q.store_thm
-  ("FactThm",
-   `Fact = FACT`,
-   RW_TAC arith_ss [FUN_EQ_THM,Fact,FactIterRecThm]);
+Theorem FactThm:
+    Fact = FACT
+Proof
+   RW_TAC arith_ss [FUN_EQ_THM,Fact,FactIterRecThm]
+QED
 
 (*****************************************************************************)
 (* To implement ``$*`` we build a naive iterative multiplier function        *)
@@ -93,7 +84,6 @@ val (MultIter,MultIter_ind,MultIter_dev) =
  hwDefine
   `MultIter (m,n:num,acc:num) =
       if m = 0n then (0,n,acc) else MultIter(m-1,n,n + acc)`;
-
 
 (*****************************************************************************)
 (* Two argument multiplication, defined in terms of MultIter                 *)
@@ -107,39 +97,40 @@ val (Mult,_,Mult_dev) =
 (* Verify that MultIter does compute accumulator-style multiplication        *)
 (*****************************************************************************)
 
-val MultIterRecThm =  (* proof adapted from similar one from KXS *)
- Q.store_thm
-  ("MultIterRecThm",
-   `!m n acc. SND(SND(MultIter (m,n,acc))) = (m * n) + acc`,
+(* proof adapted from similar one from KXS *)
+Theorem MultIterRecThm:
+    !m n acc. SND(SND(MultIter (m,n,acc))) = (m * n) + acc
+Proof
     recInduct MultIter_ind THEN RW_TAC std_ss []
       THEN RW_TAC arith_ss [Once MultIter]
       THEN Cases_on `m`
-      THEN FULL_SIMP_TAC arith_ss [MULT]);
+      THEN FULL_SIMP_TAC arith_ss [MULT]
+QED
 
 (*****************************************************************************)
 (* Verify Mult is actually multiplication                                    *)
 (*****************************************************************************)
 
-val MultThm =
- Q.store_thm
-  ("MultThm",
-   `Mult = UNCURRY $*`,
-   RW_TAC arith_ss [FUN_EQ_THM,FORALL_PROD,Mult,MultIterRecThm]);
+Theorem MultThm:
+    Mult = UNCURRY $*
+Proof
+   RW_TAC arith_ss [FUN_EQ_THM,FORALL_PROD,Mult,MultIterRecThm]
+QED
 
 (*****************************************************************************)
 (* Theorem used in an example in the README file                             *)
 (*****************************************************************************)
 
-val FactIter_TOTAL =
- store_thm
-  ("FactIter_TOTAL",
-   ``TOTAL((\(n:num,acc:num). n = 0),
+Theorem FactIter_TOTAL:
+     TOTAL((\(n:num,acc:num). n = 0),
            (\(n:num,acc:num). (n,acc)),
-           (\(n:num,acc:num). (n - 1,n * acc)))``,
+           (\(n:num,acc:num). (n - 1,n * acc)))
+Proof
    RW_TAC list_ss [TOTAL_def]
     THEN Q.EXISTS_TAC `\(x,y).x`
     THEN GEN_BETA_TAC
-    THEN DECIDE_TAC);
+    THEN DECIDE_TAC
+QED
 
 (*****************************************************************************)
 (* Use Mult_dev to refine ``DEV (UNCURRY $* )`` in FactIter_dev              *)
@@ -221,5 +212,3 @@ val _ = PRINT_VERILOG FACT_cir;  (* N.B. FACT.vl overwritten by stuff below! *)
 (*****************************************************************************)
 
 val _ = temp_overload_on(" * ", numSyntax.mult_tm);
-
-val _ = export_theory();

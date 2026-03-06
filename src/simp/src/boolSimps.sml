@@ -8,7 +8,8 @@ infix THENQC
 
 (* Fix the grammar used by this file *)
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars combinTheory.combin_grammars
+val SOME combin_grammars = grammarDB {thyname="combin"}
+val _ = Parse.temp_set_grammars combin_grammars
 
 fun BETA_CONVS tm = (RATOR_CONV BETA_CONVS THENQC BETA_CONV) tm
 
@@ -267,7 +268,7 @@ fun COND_ABS_CONV tm = let
   infix |-> THENC
   val {Bvar=v,Body=bdy} = dest_abs tm
   val {cond,larm=x,rarm=y} = Rsyntax.dest_cond bdy
-  val b = assert (not o op_mem aconv v o free_vars) cond
+  val b = assert (not o var_occurs v) cond
   val xf = mk_abs{Bvar=v,Body=x}
   val yf = mk_abs{Bvar=v,Body=y}
   val th1 = INST_TYPE [alpha |-> type_of v, beta |-> type_of x] COND_ABS
@@ -311,7 +312,7 @@ val LIFT_COND_ss = SSFRAG
              key = SOME([], Term`\x:'a. COND p (q x:'b) (r x)`),
              trace = 2}],
    dprocs = [], filter = NONE,
-   rewrs = [(SOME {Thy = "bool", Name =  "COND_RATOR"}, boolTheory.COND_RATOR),
+   rewrs = [(SOME {Thy = "bool", Name = "COND_RATOR"}, boolTheory.COND_RATOR),
             (SOME {Thy = "", Name = "NESTED_COND"}, NESTED_COND)]
   }
 

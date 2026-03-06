@@ -20,7 +20,7 @@ fun get_subdirs d =
                 in
                   case categorise fname fname0 of
                       Other => recurse (smlp, subs)
-                    | GoodDir => recurse (smlp, fname :: subs)
+                    | GoodDir => recurse (smlp, (fname ^ "/") :: subs)
                     | SMLfile => recurse (true, subs)
                 end
     in
@@ -28,24 +28,27 @@ fun get_subdirs d =
     end
 
 
-fun traverse wlist A =
+fun traverse ignores wlist A =
     case wlist of
         [] => A
-      | [] :: ds => traverse ds A
+      | [] :: ds => traverse ignores ds A
       | (d::ds) :: Ds =>
-        let val (smlp, children) = get_subdirs d
+        let val (smlp, children0) = get_subdirs d
+            fun goodWRTIgnores d =
+                List.all (fn i => not (String.isSubstring i d)) ignores
+            val children = List.filter goodWRTIgnores children0
             open OS.FileSys
         in
           if smlp then
             let val dstrm =
-                    openDir (OS.Path.concat(d,".hollogs"))
-                    handle OS.SysErr _ => openDir(OS.Path.concat(d, ".holobjs"))
+                    openDir (OS.Path.concat(d,".hol/logs"))
+                    handle OS.SysErr _ => openDir(OS.Path.concat(d, ".hol/objs"))
             in
               closeDir dstrm;
-              traverse (children :: ds :: Ds) A
+              traverse ignores (children :: ds :: Ds) A
             end handle OS.SysErr _ =>
-                       traverse (children :: ds :: Ds) (d ^ "/" :: A)
-          else traverse (children :: ds :: Ds) A
+                       traverse ignores (children :: ds :: Ds) (d :: A)
+          else traverse ignores (children :: ds :: Ds) A
         end
 
 
@@ -71,6 +74,77 @@ fun commonPrefix slist =
       case slist of
           [] => ""
         | s::ss => recurse s ss
+    end
+
+fun usage_string() =
+    CommandLine.name() ^ " [-h|-?] dir1 dir2 .. dirn\n" ^
+    "  -h                  Show this message\n\
+    \  --ignoring file     Ignore directories with prefixes from <file>\n\
+    \  -?                  Show this message\n\n\
+    \With no directories scan current directory and its children\n"
+
+fun usage code =
+    (TextIO.output(TextIO.stdErr, usage_string());
+     OS.Process.exit code);
+
+fun handleArgs slist =
+    let
+      val d = OS.FileSys.getDir()
+      fun mkAbs s = OS.Path.mkAbsolute{path = s, relativeTo = d}
+    in
+      case slist of
+          [] => (NONE, [[d]])
+        | ["-h"] => usage OS.Process.success
+        | ["-?"] => usage OS.Process.success
+        | ["--ignoring"] => usage OS.Process.failure
+        | "--ignoring" :: file :: rest => (SOME file, [map mkAbs rest])
+        | "--" :: rest => (NONE, [map mkAbs rest])
+        | d::ds => if size d > 0 andalso String.sub(d, 0) = #"-" then
+                     usage OS.Process.failure
+                   else (NONE, [map mkAbs slist])
+    end
+
+fun splitAtI pfx n slist =
+    if n <= 0 then (pfx, slist)
+    else
+      case slist of
+          [] => (pfx, slist)
+        | s :: rest => splitAtI (s::pfx) (n - 1) rest
+
+fun merge l1 l2 =
+    case (l1, l2) of
+        ([], _) => l2
+      | (_, []) => l1
+      | (s1 :: rest1, s2 :: rest2) =>
+        case String.compare(s1,s2) of
+            GREATER => s2 :: merge l1 rest2
+         |  _ => s1 :: merge rest1 l2
+
+fun merge_sort slist =
+    case slist of
+        [] => []
+      | [s] => [s]
+      | _ =>
+        let
+          val (l1, l2) = splitAtI [] (length slist div 2) slist
+        in
+          merge (merge_sort l1) (merge_sort l2)
+        end
+
+fun readIgnores filename =
+    let val istrm = TextIO.openIn filename
+        fun doit A = case TextIO.inputLine istrm of
+                         NONE => (TextIO.closeIn istrm; A)
+                       | SOME s => doit (s :: A)
+        val lines = doit []
+        fun dropWS s =
+            let open Substring
+                val ss = full s
+            in
+              string (dropl Char.isSpace (dropr Char.isSpace ss))
+            end
+    in
+      map dropWS lines
     end
 
 

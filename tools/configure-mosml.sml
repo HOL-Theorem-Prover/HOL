@@ -61,8 +61,7 @@ in
   action 0; loop 0
 end;
 
-fun determining s =
-    (print (s^" "); delay 1 (fn _ => ()));
+fun determining s = print (s^" ");
 
 (* action starts here *)
 print "\nHOL smart configuration.\n\n";
@@ -165,7 +164,7 @@ val holdir = let
   val _ = determining "holdir"
   val cdir_files = readdir currentdir
 in
-  if mem "sigobj" cdir_files andalso mem "std.prelude" cdir_files then
+  if mem "sigobj" cdir_files andalso mem "tools" cdir_files then
     currentdir
   else if mem "smart-configure.sml" cdir_files andalso
           mem "configure.sml" cdir_files
@@ -186,6 +185,7 @@ val dynlib_available = (load "Dynlib"; true) handle _ => false;
 
 val DOT_PATH = SOME "";
 val GNUMAKE = "";
+val SHASUM = "";
 
 val _ = let
   val override = Path.concat(holdir, "config-override")
@@ -228,24 +228,44 @@ in
   | SOME c => if check_mosml c then c else mosml_from_loadpath ()
 end;
 
-fun find_in_bin_or_path s =
+fun find_in_likelies_or_path dirs s =
     let
-      val binpath = OS.Path.concat("/bin", s)
+      fun findexec s dir =
+          let
+            val p = OS.Path.concat(dir,s)
+          in
+            if OS.FileSys.access(p, [OS.FileSys.A_EXEC]) then
+              SOME p
+            else NONE
+          end
     in
-      if OS.FileSys.access (binpath, [OS.FileSys.A_EXEC]) then
-        (binpath, true)
-      else
-        case which s of
-            NONE => die ("Couldn't find `" ^ s ^
-                         "' executable. Please edit\n\
-                         \config-overrides to include\n\
-                         \  val " ^ String.translate (str o Char.toUpper) s ^
-                         " = \"...\"")
-          | SOME s => (s, false)
-    end;
+      case List.mapPartial (findexec s) dirs of
+          h :: _ => SOME (h, true)
+        | [] =>
+          case which s of
+              NONE => NONE
+            | SOME p => SOME (p, false)
+    end
 
+fun find_multinamed corename dirs names =
+    case List.mapPartial (find_in_likelies_or_path dirs) names of
+        [] => die ("Couldn't find `" ^ corename ^
+                   "' executable. Please edit\n\
+                   \tools-poly/poly-includes to include\n\
+                   \  val " ^ String.translate (str o Char.toUpper) corename ^
+                   " = \"...\"")
+      | h :: _ => h
 
-print "\n";
+fun find_in_bin_or_path s =
+    case find_in_likelies_or_path ["/bin"] s of
+        SOME r => r
+      | NONE => die ("Couldn't find `" ^ s ^
+                     "' executable. Please edit\n\
+                     \tools-poly/poly-includes to include\n\
+                     \  val " ^ String.translate (str o Char.toUpper) s ^
+                     " = \"...\"")
+
+val _ = print "\n";
 
 fun verdict (prompt, value) =
     (print (StringCvt.padRight #" " 20 (prompt^":"));
@@ -270,6 +290,13 @@ verdict ("GNUMAKE", GNUMAKE);
 optverdict ("DOT_PATH", DOT_PATH);
 val MV = dfltverdict ("MV", find_in_bin_or_path "mv");
 val CP = dfltverdict ("CP", find_in_bin_or_path "cp");
+val SHASUM =
+    if SHASUM = "" then
+      dfltverdict (
+        "SHASUM",
+        find_multinamed "shasum" ["/usr/bin", "/usr/sbin"] ["sha1sum", "shasum"]
+      )
+    else SHASUM;
 
 val _ = let
   val mosml' = if OS = "winNT" then "mosmlc.exe" else "mosmlc"

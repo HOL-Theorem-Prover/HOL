@@ -7,7 +7,7 @@ all: $(DEFAULT_TARGETS) euclid-OK thery-done
 euclid-OK: use-euclid.ML
 	$(protect $(HOLDIR)/bin/hol) < use-euclid.ML
 
-thery-done: Thery.sml
+thery-done: Thery.ML $(dprot $(HOLDIR)/src/integer/intLib.uo)
 	$(protect $(HOLDIR)/bin/hol) < $< | grep -q "Thery.*DONE"
 
 EXTRA_CLEANS = euclid-OK thery-done

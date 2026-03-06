@@ -1,14 +1,10 @@
-open HolKernel Parse boolLib bossLib
-
-open pegexecTheory
-
-val _ = new_theory "pegSample"
+Theory pegSample
+Ancestors
+  pegexec string[qualified]
 
 Datatype:
   tok = Plus | Times | Number num | LParen | RParen
 End
-
-local open stringTheory in end
 
 Datatype:
   expr = XN num
@@ -69,9 +65,9 @@ val testexp = “[Number 3; Plus; Number 4; Times; Number 5]”
 val _ = let
   open computeLib
 in
-  set_skip the_compset “evalcase_CASE” (SOME 1);
-  set_skip the_compset “option_CASE” (SOME 1);
-  set_skip the_compset “COND” (SOME 1)
+  set_EVAL_skip “evalcase_CASE” (SOME 1);
+  set_EVAL_skip “option_CASE” (SOME 1);
+  set_EVAL_skip “COND” (SOME 1)
 end
 
 Theorem pegexec_nt0 =
@@ -110,4 +106,3 @@ Theorem result2 =
                        Times; LParen; Number 3; Plus; Number 1; RParen] 0)
                       [] NONE [] done failed”
 
-val _ = export_theory()

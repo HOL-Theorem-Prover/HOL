@@ -149,18 +149,14 @@ fun mkbase (entries : Database.entry list) =
 (*---------------------------------------------------------------------------*)
 
 fun mk_HOLdocfile_entry (dir,s) =
- let val content =String.substring(s,0,size s - 4)
+ let val content = OS.Path.base s (* drop .md suffix *)
+     val comp = ParseDoc.decode_stem content
  in
-    {comp=Database.Term(ParseDoc.decode_stem content, SOME"HOL"),
+    {comp=Database.Term(comp, SOME"HOL"),
      file=normPath[dir,s], line=0}
  end
 
-local fun is_adocfile s =
-         String.size s>5 andalso
-         String.extract(s, String.size s - 4, NONE) = ".txt"
-      fun is_docfile s =
-         String.size s>4 andalso
-         String.extract(s, String.size s - 4, NONE) = ".doc"
+local fun is_adocfile s = OS.Path.ext s = SOME "txt"
 in
 fun docdir_to_entries path (endpath, entries) =
   let val L1 = List.filter is_adocfile
@@ -175,15 +171,16 @@ fun okay_sig s =
 
 fun dirToBase (sigdir, docdirs, filename) =
     let
-       val doc_entryl = List.foldl (docdir_to_entries HOLpath) [] docdirs
-       val ok_sigs = List.filter okay_sig (Htmlsigs.listDir sigdir)
-       val res = List.foldl (Parsspec.processfile stoplist sigdir)
-                             doc_entryl ok_sigs
-       val _ = print ("\nProcessed " ^ Int.toString (length res)
-                      ^ " entries in total.\n");
-       val _ = print ("Building database...\n");
-       val db = mkbase res
-       val _ = print ("Writing database to file " ^ filename ^ "\n");
+      val _ = print ("docdirs = " ^ String.concatWith ", " docdirs ^ "\n")
+      val doc_entryl = List.foldl (docdir_to_entries HOLpath) [] docdirs
+      val ok_sigs = List.filter okay_sig (Htmlsigs.listDir sigdir)
+      val res = List.foldl (Parsspec.processfile stoplist sigdir)
+                           doc_entryl ok_sigs
+      val _ = print ("\nProcessed " ^ Int.toString (length res)
+                     ^ " entries in total.\n");
+      val _ = print ("Building database...\n");
+      val db = mkbase res
+      val _ = print ("Writing database to file " ^ filename ^ "\n");
     in
        Database.writebase(filename, db)
     end

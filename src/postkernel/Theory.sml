@@ -64,95 +64,56 @@ type num = Arbnum.num
 val ERR  = mk_HOL_ERR "Theory";
 val WARN = HOL_WARNING "Theory";
 
-type thy_addon = {sig_ps    : (unit -> PP.pretty) option,
-                  struct_ps : (unit -> PP.pretty) option}
+(* Certain words cannot be the names of theories.
+   These forbidden words are stored in a text file that we read on
+   startup. *)
+val reserved_words_filename =
+    let
+      infix ++
+      val op++ = OS.Path.concat
+    in
+      Globals.HOLDIR ++ "src" ++ "prekernel" ++ "HOLkeywords.txt"
+    end
+val reserved_names = let
+  val chomp = Portable.remove_external_wspace
+  val istrm = TextIO.openIn reserved_words_filename
+  fun recurse A =
+      case TextIO.inputLine istrm of
+          NONE => (TextIO.closeIn istrm; A)
+        | SOME s => recurse (chomp s::A)
+in
+  recurse []
+end handle e => (print ("Exception raised reading reserved words file: " ^
+                        General.exnMessage e);
+                 OS.Process.exit OS.Process.failure);
+
 open DB_dtype
 
-local
-  val hooks =
-    (* hooks are stored in the order they are registered, with later
-       hooks earlier in the list.
-       The set component is the list of the disabled hooks.
-     *)
-      ref (HOLset.empty String.compare,
-           [] : (string * (TheoryDelta.t -> unit)) list)
-in
-fun call_hooks td = let
-  val (disabled, hooks) = !hooks
-  val hooks_rev = List.rev hooks
-  fun protect nm (f:TheoryDelta.t -> unit) td = let
-    fun error_pfx() =
-        "Hook "^nm^" failed on event " ^ TheoryDelta.toString td
-  in
-    f td
-    handle e as HOL_ERR _ =>
-           Feedback.HOL_WARNING
-               "Theory"
-               "callhooks"
-               (error_pfx() ^ " with problem " ^
-                Feedback.exn_to_string e)
-         | Match =>
-           Feedback.HOL_WARNING
-               "Theory"
-               "callhooks"
-               (error_pfx() ^ " with a Match exception")
-  end
-  fun recurse l =
-      case l of
+val delta_hook : TheoryDelta.t Listener.t = Listener.new_listener()
+
+fun register_hook sf = Listener.add_listener delta_hook sf
+
+fun call_hooks td =
+    let
+      fun error_report (s,_,e) =
+          Feedback.HOL_WARNING
+            "Theory"
+            "callhooks"
+            ("Hook " ^ s ^ " failed on event " ^ TheoryDelta.toString td ^
+             " with problem " ^ Feedback.exn_to_string e)
+    in
+      List.app error_report (Listener.call_listener delta_hook td)
+    end
+
+fun hooks_or_abort td =
+    case Listener.call_listener delta_hook td of
         [] => ()
-      | (nm, f) :: rest => let
-        in
-          if HOLset.member(disabled,nm) then ()
-          else protect nm f td;
-          recurse rest
-        end
-in
-  recurse hooks_rev
-end
-
-fun register_hook (nm, f) = let
-  val (disabled, hooks0) = !hooks
-  val hooks0 = List.filter (fn (nm',f) => nm' <> nm) hooks0
-in
-  hooks := (disabled, (nm,f) :: hooks0)
-end
-
-fun delete_hook nm = let
-  val (disabled, hookfns) = !hooks
-  val (deleting, remaining) = Lib.partition (fn (nm', _) => nm' = nm) hookfns
-in
-  case deleting of
-    [] => HOL_WARNING "Theory" "delete_hook" ("No hook with name: "^nm)
-  | _ => ();
-  hooks := (HOLset.delete(disabled,nm), remaining)
-end
-
-fun get_hooks () = #2 (!hooks)
-
-fun hook_modify act f x =
-  let
-    val (disabled0, fns) = !hooks
-    fun finish() = hooks := (disabled0, fns)
-    val _ = hooks := (act disabled0, fns)
-    val result = f x handle e => (finish(); raise e)
-  in
-    finish();
-    result
-  end
-
-fun disable_hook nm f x =
-  hook_modify (fn s => HOLset.add(s,nm)) f x
-
-fun safedel_fromset nm s =
-  HOLset.delete(s, nm) handle HOLset.NotFound => s
-fun enable_hook nm f x =
-  hook_modify (safedel_fromset nm) f x
-
-
-end (* local block enclosing declaration of hooks variable *)
+      | (s,_,e)::_ => raise ERR "hooks_or_abort"
+                         ("Hook " ^ s ^ " failed on event " ^
+                          TheoryDelta.toString td ^ " with problem " ^
+                          Feedback.exn_to_string e)
 
 (* This reference is set in course of loading the parsing library *)
-
 val pp_thm = ref (fn _:thm => PP.add_string "<thm>")
 
 (*---------------------------------------------------------------------------*
@@ -162,27 +123,22 @@ val pp_thm = ref (fn _:thm => PP.add_string "<thm>")
 local
   open Arbnum
 in
-abstype thyid = UID of {name:string, sec: num, usec : num}
+abstype thyid = UID of {name:string, hash:string}
 with
   fun thyid_eq x (y:thyid) = (x=y);
-  fun new_thyid s =
-      let val {sec,usec} = Portable.dest_time (Portable.timestamp())
-      in
-        UID{name=s, sec = sec, usec = usec}
-      end
 
-  fun dest_thyid (UID{name, sec, usec}) = (name,sec,usec)
+  fun dest_thyid (UID{name, hash}) = (name,hash)
 
   val thyid_name = #1 o dest_thyid;
+  val thyid_hash = #2 o dest_thyid;
 
-  fun make_thyid(s,i1,i2) = UID{name=s, sec=i1,usec=i2}
+  fun make_thyid(s,h) = UID{name=s, hash=h}
 
-  fun thyid_to_string (UID{name,sec,usec}) =
-     String.concat["(",Lib.quote name,",",toString sec, ",",
-                   toString usec, ")"]
+  fun thyid_to_string (UID{name,hash}) =
+     String.concat["(",Lib.quote name,",",hash,")"]
 
   val min_thyid =
-      UID{name="min", sec = fromInt 0, usec = fromInt 0}  (* Ur-theory *)
+      UID{name="min", hash=""}  (* Ur-theory *)
 
 end;
 end (* local *)
@@ -258,26 +214,24 @@ fun fact_thm (s, (th, _)) = th
 
 type thminfo = DB_dtype.thminfo
 type segment =
-     {thid    : thyid,                                         (* unique id  *)
+     {name    : string,
       facts   : (thm * thminfo) Symtab.table,                 (* stored thms *)
       thydata : ThyDataMap,                             (* extra theory data *)
-      adjoin  : thy_addon list,                        (*  extras for export *)
-      adjoinpc: (unit -> PP.pretty) list,
       mldeps  : string HOLset.set}
 local
   open FunctionalRecordUpdate
-  fun seg_mkUp z = makeUpdate6 z
+  fun seg_mkUp z = makeUpdate4 z
 in
   fun update_seg z = let
-    fun from adjoin adjoinpc facts mldeps thid thydata =
-      {adjoin=adjoin, adjoinpc = adjoinpc, facts=facts, mldeps=mldeps,
-       thid=thid, thydata=thydata}
+    fun from facts mldeps name thydata =
+      {facts=facts, mldeps=mldeps,
+       name=name, thydata=thydata}
     (* fields in reverse order to above *)
-    fun from' thydata thid mldeps facts adjoinpc adjoin =
-      {adjoin=adjoin, adjoinpc = adjoinpc, facts=facts, mldeps=mldeps,
-       thid=thid, thydata=thydata}
-    fun to f {adjoin, adjoinpc, facts, mldeps, thid, thydata} =
-      f adjoin adjoinpc facts mldeps thid thydata
+    fun from' thydata name mldeps facts =
+      {facts=facts, mldeps=mldeps,
+       name=name, thydata=thydata}
+    fun to f {facts, mldeps, name, thydata} =
+      f facts mldeps name thydata
   in
     seg_mkUp (from, from', to)
   end z
@@ -285,6 +239,12 @@ in
   val $$ = $$
 end (* local *)
 
+type metadata = {path: string, timestamp: Time.time}
+val metadata = ref ((Binarymap.mkDict String.compare):
+                    (string,metadata)Binarymap.dict)
+fun record_metadata thy md =
+  metadata := Binarymap.insert(!metadata, thy, md)
+fun thy_timestamp thy = #timestamp (Binarymap.find(!metadata, thy))
 
 
 (*---------------------------------------------------------------------------*
@@ -295,11 +255,11 @@ end (* local *)
  * gets created (the file is only created on export).                        *
  *---------------------------------------------------------------------------*)
 
-fun empty_segment_value thid =
-    {adjoin=[], adjoinpc = [], facts=Symtab.empty, thid=thid, thydata = empty_datamap,
+fun empty_segment_value name =
+    {facts=Symtab.empty, name=name, thydata = empty_datamap,
      mldeps = HOLset.empty String.compare}
 
-fun fresh_segment s :segment = empty_segment_value (new_thyid s)
+fun fresh_segment s :segment = empty_segment_value s
 
 local val CT = ref (fresh_segment "scratch")
 in
@@ -307,7 +267,7 @@ in
   fun makeCT seg = CT := seg
 end;
 
-val CTname = thyid_name o #thid o theCT;
+val CTname = #name o theCT;
 val current_theory = CTname;
 
 
@@ -323,20 +283,15 @@ local
 in
 fun thy_types thyname               = Type.thy_types thyname
 fun thy_constants thyname           = Term.thy_consts thyname
+fun thy_hash thyname                = thyid_hash (
+                                      fst (Graph.first
+                                           (equal thyname o thyid_name o fst)))
 fun thy_parents thyname             = snd (Graph.first
                                            (equal thyname o thyid_name o fst))
 fun thy_axioms (th:segment)   = filter is_axiom   (#facts th)
 fun thy_theorems (th:segment) = filter is_theorem (#facts th)
 fun thy_defns (th:segment)    = filter is_defn    (#facts th)
-fun thy_addons (th:segment)   = #adjoin th
 end
-
-fun stamp thyname =
-  let val (_,sec,usec) = dest_thyid (fst (Graph.first
-                          (equal thyname o thyid_name o fst)))
-  in
-    Portable.mk_time {sec = sec, usec = usec}
-  end;
 
 local fun norm_name "-" = CTname()
         | norm_name s = s
@@ -347,6 +302,8 @@ local fun norm_name "-" = CTname()
                       ("couldn't find "^style^" named "^Lib.quote name)
       val cleaned = List.mapPartial drop_pthmkind
 in
+ val hash             = thy_hash o norm_name
+ val mod_time         = thy_timestamp o norm_name
  val types            = thy_types o norm_name
  val constants        = thy_constants o norm_name
  fun get_parents s    = if norm_name s = CTname()
@@ -363,12 +320,10 @@ end;
  * Is a segment empty?                                                       *
  *---------------------------------------------------------------------------*)
 
-fun empty_segment ({thid,facts, ...}:segment) =
-  let val thyname = thyid_name thid
-  in null (thy_types thyname) andalso
-     null (thy_constants thyname) andalso
-     Symtab.is_empty facts
-  end;
+fun empty_segment ({name=thyname,facts, ...}:segment) =
+  null (thy_types thyname) andalso
+  null (thy_constants thyname) andalso
+  Symtab.is_empty facts;
 
 (*---------------------------------------------------------------------------*
  *              ADDING TO THE SEGMENT                                        *
@@ -394,20 +349,19 @@ fun add_fact th (seg : segment) =
       update_seg seg (U #facts (updator th (#facts seg))) $$
     end
 
-fun new_addon a (s as {adjoin, ...} : segment) =
-  update_seg s (U #adjoin (a::adjoin)) $$
-
-fun new_addonpc a (s as {adjoinpc, ...} : segment) =
-    update_seg s (U #adjoinpc (a::adjoinpc)) $$
-
 fun add_ML_dep s (seg as {mldeps, ...} : segment) =
   update_seg seg (U #mldeps (HOLset.add(mldeps, s))) $$
 
-fun upd_binding_p s f (seg as {facts,...} : segment) : segment option =
+type upddeltaty = {old:thminfo,new:thminfo,thm:thm}
+fun upd_binding_p s f (seg as {facts,...}:segment) : (segment*upddeltaty) option=
     case Symtab.lookup facts s of
         NONE => NONE
       | SOME (th, i) =>
-        SOME (update_seg seg (U #facts (Symtab.update(s,(th, f i)) facts)) $$)
+        let val new = f i
+        in
+          SOME (update_seg seg (U #facts (Symtab.update(s,(th, new)) facts)) $$,
+                {old=i,new=new,thm=th})
+        end
 
 local fun plucky k tab =
           case Symtab.lookup tab k of
@@ -448,7 +402,7 @@ fun del_binding name (s as {facts,...} : segment) =
 
 fun zap_segment s (thy : segment) =
     (Type.del_segment s; Term.del_segment s;
-     empty_segment_value (#thid thy)
+     empty_segment_value (#name thy)
      )
 
 (*---------------------------------------------------------------------------
@@ -457,6 +411,11 @@ fun zap_segment s (thy : segment) =
 
 local
   fun inCT f arg = makeCT(f arg (theCT()))
+  fun inCT' f arg = let val (seg',v) = f arg (theCT())
+                    in
+                      makeCT seg';
+                      v
+                    end
   open TheoryDelta
   fun add_factCT p = (inCT add_fact p;
                       call_hooks (TheoryDelta.NewBinding p))
@@ -480,36 +439,22 @@ in
   fun delete_binding s  = (inCT del_binding s; call_hooks (DelBinding s))
 
   fun set_MLname s1 s2  = inCT set_MLbind (s1,s2)
-  fun upd_binding s f   = inCT (fn f => fn seg =>
+  fun upd_binding s f   =
+      let val deltadata = inCT' (fn f => fn seg =>
                                    case upd_binding_p s f seg of
                                        NONE => raise ERR
                                                      "upd_binding"
                                                      ("No such binding: "^s)
-                                     | SOME seg' => seg')
-                               f
+                                     | SOME v => v)
+                                f
+      in
+        call_hooks(UpdBinding(s,deltadata))
+      end
 
 
-  val adjoin_to_theory  = inCT new_addon
-  val adjoin_after_completion = inCT new_addonpc
   val zapCT             = inCT zap_segment
 
 end;
-
-local
-  structure PP = HOLPP
-  fun pp_lines l =
-    PP.block PP.CONSISTENT 0
-       (List.concat (map (fn s => [PP.add_string s, PP.NL]) l))
-  val is_empty =
-    fn [] => true
-     | [s] => s = "none" orelse List.all Char.isSpace (String.explode s)
-     | _ => false
-  fun pp l = if is_empty l then NONE else SOME (fn _ => pp_lines l)
-  val qpp = pp o Portable.quote_to_string_list
-in
-  fun quote_adjoin_to_theory q1 q2 =
-    adjoin_to_theory {sig_ps = qpp q1, struct_ps = qpp q2}
-end
 
 (*---------------------------------------------------------------------------*
  *            INSTALLING CONSTANTS IN THE CURRENT SEGMENT                    *
@@ -540,44 +485,28 @@ fun install_type(s,a,thy)   = add_typeCT {name=s, arity=a, theory=thy};
 fun install_const(s,ty,thy) = add_termCT {name=s, htype=ty, theory=thy}
 
 
-(*---------------------------------------------------------------------------
- * Is an object wellformed (current) wrt the symtab, i.e., have none of its
- * constants been re-declared after it was built? A constant is
- * up-to-date if either 1) it was not declared in the current theory (hence
- * it was declared in an ancestor theory and is thus frozen); or 2) it was
- * declared in the current theory and its witness is up-to-date.
- *
- * When a new entry is made in the theory, it is checked to see if it is
- * uptodate (or if its witnesses are). The "overwritten" bit of a segment
- * tells whether any element of the theory has been overwritten. If
- * overwritten is false, then the theory is uptodate. If we want to add
- * something to an uptodate theory, then no processing need be done.
- * Otherwise, we have to examine the item, and recursively any item it
- * depends on, to see if any constant or type constant occurring in it,
- * or any theorem it depends on, is outofdate. If so, then the item
- * will not be added to the theory.
- *
- * To clean up a theory with outofdate elements, use "scrub".
- *
- * To tell if an object is uptodate, we can't just look at it; we have
- * to recursively examine its witness(es). We can't just accept a witness
- * that seems to be uptodate, since its constants may be flagged as uptodate,
- * but some may depend on outofdate witnesses. The solution taken
- * here is to first set all constants in the segment signature to be
- * outofdate. Then a bottom-up pass is made. The "utd" flag in each
- * signature entry is used to cut off repeated recursive traversal, as in
- * dynamic programming. It holds the value "true" when the witness is
- * uptodate.
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Is an object wellformed (current) wrt the symtab, i.e., have none
+    of its constants been re-declared after it was built? This is
+    handled by the kernelid type from KernelSig and the accompanying
+    symbol table type. If a constant (term or tyop) is deleted
+    outright, or replaced by a new one, all instances of the old
+    constant are flagged as out-of-date (by adjusting the one
+    appropriate reference underneath. Derived values like theorems are
+    out-of-date if they refer to any out-of-date constants/tyops.
 
-fun uptodate_thm thm =
-    Lib.all uptodate_term (Thm.concl thm::Thm.hyp thm)
-    andalso
-    uptodate_axioms (Tag.axioms_of (Thm.tag thm))
-and uptodate_axioms [] = true
+    When a new entry is made in the theory, it is checked to see if it is
+    uptodate (else it is not added).
+
+    When a theory is about to be exported it is also "scrubbed" clean of
+    theorems that may have been out-dated by actions after they were first
+    added; this is handled by the functions scrub and scrubCT below.
+   ---------------------------------------------------------------------- *)
+
+fun uptodate_axioms [] = true
   | uptodate_axioms rlist =
     let
-      fun get_axtag th = hd (Tag.axioms_of (Thm.tag th))
+      fun get_axtag th = hd (Tag.axioms_of (tag th))
       val axs = map (fn (_,(th,_)) => (get_axtag th,concl th))
                     (thy_axioms(theCT()))
     in
@@ -586,6 +515,12 @@ and uptodate_axioms [] = true
          axioms never have hypotheses (check type of new_axiom) *)
       Lib.all (uptodate_term o Lib.C Lib.assoc axs) rlist
     end handle HOL_ERR _ => false
+
+fun uptodate_thm thm =
+    List.all Term.uptodate_term (concl thm :: hyp thm) andalso
+    uptodate_axioms (Tag.axioms_of (Thm.tag thm))
+
+
 
 fun tabfilter P tab =
     Symtab.fold (fn nmv => fn A => if P nmv then Symtab.update nmv A else A)
@@ -618,6 +553,15 @@ fun format_name_message {pfx, name} =
      else StringCvt.padRight #"_" 21 (pfx ^ " ")) ^ " " ^
     Lib.quote name ^ "\n"
 
+fun oracle_string_of th  =
+  let val tags = Lib.set_diff (fst (Tag.dest_tag (Thm.tag th))) ["DISK_THM"]
+  in if List.null tags
+        then NONE
+      else if Lib.mem "cheat" tags then SOME "CHEAT"
+      else if Lib.mem "fast_proof" tags then SOME "FAST-CHEAT"
+      else SOME "ORACLE thm"
+  end
+
 local
   fun check_name tempok (fname,s) =
     if Lexis.ok_sml_identifier s andalso
@@ -631,15 +575,9 @@ local
   val _ = Feedback.register_trace ("Theory.save_thm_reporting",
                                    save_thm_reporting, 2)
   fun mesg_str th =
-    let
-      val tags = Lib.set_diff (fst (Tag.dest_tag (Thm.tag th))) ["DISK_THM"]
-    in
-      if List.null tags
-        then "theorem"
-      else if Lib.mem "cheat" tags then "CHEAT"
-      else if Lib.mem "fast_proof" tags then "FAST-CHEAT"
-      else "ORACLE thm"
-    end
+    case oracle_string_of th
+     of NONE => "theorem"
+      | SOME str => str
   val msgOut = with_flag(MESG_to_string,Lib.I) HOL_MESG
   fun save_mesg s name =
     if !save_thm_reporting = 0 orelse
@@ -730,10 +668,8 @@ fun incorporate_types thy tys =
   in List.app itype tys
   end;
 
-fun incorporate_consts thy tyvector consts =
-  let fun iconst(s,i) = (install_const(s,Vector.sub(tyvector,i),thy);())
-  in List.app iconst consts
-  end;
+fun incorporate_consts thy consts =
+    List.app (fn (s,ty) => ignore (install_const(s,ty,thy))) consts
 
 (* ----------------------------------------------------------------------
     Theory data functions
@@ -759,7 +695,7 @@ struct
                      (string, DataOps) Binarymap.dict)
 
   fun segment_data {thy,thydataty} = let
-    val {thydata,thid,...} = theCT()
+    val {thydata,name,...} = theCT()
     fun check_map m =
         case Binarymap.peek(m, thydataty) of
           NONE => NONE
@@ -767,7 +703,7 @@ struct
         | SOME (Pending _) => raise ERR "segment_data"
                                         "Can't interpret pending loads"
   in
-    if thyid_name thid = thy then
+    if name = thy then
       (DPRINT
          (fn _ => "segment_data for " ^ thydataty ^
                   " coming from current_theory\n");
@@ -838,7 +774,7 @@ struct
 
   fun temp_encoded_update (r as {thy,thydataty,data,shared_readmaps}) =
       let
-        val (s as {thydata, thid, ...}) = theCT()
+        val (s as {thydata, name, ...}) = theCT()
         open Binarymap
         fun updatemap inmap = let
           val baddecode = ERR "temp_encoded_update"
@@ -863,7 +799,7 @@ struct
           insert(inmap, thydataty, newdata)
         end
   in
-    if thy = thyid_name thid then
+    if thy = name then
       makeCT (update_seg s (U #thydata (updatemap thydata)) $$)
     else let
       val newsubmap =
@@ -936,13 +872,6 @@ fun theory_out p ostrm =
    TextIO.closeOut ostrm
  end;
 
-(* automatically reverses the list, which is what is needed. *)
-
-fun unadjzip [] A = A
-  | unadjzip ({sig_ps,struct_ps}::t) (l1,l2) =
-       unadjzip t (sig_ps::l1, struct_ps::l2)
-
-
 (*---------------------------------------------------------------------------
     We always export the theory, except if it is the initial theory (named
     "scratch") and the initial theory is empty. If the initial theory is
@@ -978,29 +907,30 @@ local
       end
     | NONE => ()
   end
+  fun fromHOLFS x = case HFS_NameMunge.HOLtoFS x
+                      of NONE => x
+                       | SOME {fullfile,...} => fullfile
 in
-fun export_theory () = let
-  val _ = call_hooks (TheoryDelta.ExportTheory (current_theory()))
-  val {thid,facts,adjoin,adjoinpc,thydata,mldeps,...} = scrubCT()
-  val all_thms = Symtab.fold(fn (s,(th,i)) => fn A => (s,th,i)::A) facts []
+fun export_theory_return_hash () = let
+  val _ = hooks_or_abort (TheoryDelta.ExportTheory (current_theory()))
+  val {name=thyname,facts,thydata,mldeps,...} = scrubCT()
+  fun foldthis (nm, (thm, info)) A =
+      if is_temp_binding nm then A else (nm,thm,info)::A
+  val all_thms = Symtab.fold foldthis facts []
   val concat = String.concat
-  val thyname = thyid_name thid
   val name = thyname^"Theory"
-  val (sig_ps, struct_ps) = unadjzip adjoin ([],[])
   val sigthry = {name = thyname,
                  parents = map thyid_name (Graph.fringe()),
-                 all_thms = all_thms,
-                 sig_ps = sig_ps}
+                 all_thms = all_thms}
   fun mungethydata dmap = let
     fun foldthis (k,v,acc as (strlist,tmlist,dict)) =
         case v of
           Loaded t =>
           let
             val {write,terms,strings,...} =
-                Binarymap.find(!LoadableThyData.dataops, k)
-                handle NotFound => raise ERR "export_theory"
-                                         ("Couldn't find thydata ops for "^k)
-
+              Binarymap.find(!LoadableThyData.dataops, k)
+              handle Binarymap.NotFound =>
+                raise ERR "export_theory" ("Couldn't find thydata ops for "^k)
           in
             (strings t @ strlist,
              terms t @ tmlist,
@@ -1011,13 +941,11 @@ fun export_theory () = let
     Binarymap.foldl foldthis ([], [], Binarymap.mkDict String.compare) dmap
   end
   val structthry =
-      {theory = dest_thyid thid,
+      {theory = thyname,
        parents = map dest_thyid (Graph.fringe()),
        types = thy_types thyname,
        constants = Lib.mapfilter Term.dest_const (thy_constants thyname),
        all_thms = all_thms,
-       struct_ps = struct_ps,
-       struct_pcps = adjoinpc,
        thydata = mungethydata thydata,
        mldeps = HOLset.listItems mldeps}
   fun filtP s = not (Lexis.ok_sml_identifier s) andalso
@@ -1025,22 +953,26 @@ fun export_theory () = let
  in
    case filter filtP (map #1 all_thms) of
      [] =>
-     (let val ostrm1 = Portable.open_out(concat["./",name,".sig"])
+     (let val holdatfile = concat["./",name,".dat"]
+          val ostrm1 = Portable.open_out(concat["./",name,".sig"])
           val ostrm2 = Portable.open_out(concat["./",name,".sml"])
-          val ostrm3 = Portable.open_out(concat["./",name,".dat"])
+          val ostrm3 = Portable.open_out(holdatfile)
           val time_now = total_cpu (Timer.checkCPUTimer Globals.hol_clock)
           val time_since = Time.-(time_now, !new_theory_time)
           val tstr = Lib.time_to_string time_since
+          val () = mesg ("Exporting theory "^Lib.quote thyname^" ... ");
+          val () = theory_out (TheoryPP.pp_thydata structthry) ostrm3;
+          val datfile = fromHOLFS holdatfile
+          val hash = SHA1.sha1_file {filename=datfile}
       in
-        mesg ("Exporting theory "^Lib.quote thyname^" ... ");
         theory_out (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
-        theory_out (TheoryPP.pp_struct structthry) ostrm2;
-        theory_out (TheoryPP.pp_thydata structthry) ostrm3;
+        theory_out (TheoryPP.pp_struct hash structthry) ostrm2;
         mesg "done.\n";
         if !report_times then
           (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^ " to build\n");
            maybe_log_time_to_disk thyname (Time.toString time_since))
-        else ()
+        else ();
+        hash
       end
         handle e => (Lib.say "\nFailure while writing theory!\n"; raise e))
 
@@ -1053,6 +985,8 @@ fun export_theory () = let
             "   Use `set_MLname <bad> <good>' to change each name."]);
         raise ERR "export_theory" "bad binding names")
 end
+fun export_theory () =
+  if !Globals.interactive then () else ignore (export_theory_return_hash ())
 end;
 
 
@@ -1074,9 +1008,12 @@ fun new_theory str =
     if not(Lexis.ok_identifier str) then
       raise ERR "new_theory"
                 ("proposed theory name "^Lib.quote str^" is not an identifier")
+    else if Portable.mem str reserved_names then
+      raise ERR "new_theory"
+            ("proposed theory name "^Lib.quote str^
+             " is not permitted as a theory name.")
     else let
-        val thy as {thid, ...} = theCT()
-        val thyname = thyid_name thid
+        val thy as {name=thyname, ...} = theCT()
         val tdelta = TheoryDelta.NewTheory{oldseg=thyname,newseg=str}
         fun mk_thy () = (HOL_MESG ("Created theory "^Lib.quote str);
                          makeCT(fresh_segment str);
@@ -1092,9 +1029,13 @@ fun new_theory str =
           raise ERR"new_theory" ("theory: "^Lib.quote str^" already exists.")
         else if thyname="scratch" andalso empty_segment thy then
           mk_thy()
-        else
-          (export_theory ();
-           Graph.add (thid, Graph.fringe()); mk_thy ())
+        else let
+          val hash = export_theory_return_hash ();
+          val thid = make_thyid(thyname, hash);
+          val () = Graph.add (thid, Graph.fringe())
+        in
+           mk_thy ()
+        end
       end
 
 
@@ -1102,9 +1043,9 @@ fun new_theory str =
     Function f tries to extend current theory. If that fails then
     revert to previous state.
 
-    We do not (yet) track changes to the state used by adjoin_to_theory or
-    any hooks, though the hooks should see the changes adding and
-    removing things from the "signature".
+    We do not (yet) track changes to the state used by any hooks, though the
+    hooks should see the changes adding and removing things from the
+    "signature".
    ---------------------------------------------------------------------- *)
 
 fun try_theory_extension f x =
@@ -1299,13 +1240,14 @@ fun located_new_definition0 fnm {name,def=M,loc} =
    gen_store_definition (name, post(V,def_th),loc) before
    call_hooks (TheoryDelta.NewConstant{Name=Name, Thy=Thy})
  end
- handle e => raise (wrap_exn "Definition" fnm e);
+ handle e => raise wrap_exn "Definition" fnm e
+;
+
 val located_new_definition =
     located_new_definition0 "located_new_definition"
+
 fun new_definition(n,def_t) =
     located_new_definition0 "new_definition" {loc=Unknown,def=def_t,name=n}
-
-
 
 end (* Definition struct *)
 

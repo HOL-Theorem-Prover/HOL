@@ -1,26 +1,28 @@
 (* a TFL bug *)
+Theory theory3
+Ancestors
+  option
+Libs
+  monadsyntax
 
-open HolKernel Parse boolLib bossLib
-
-open optionTheory
-open monadsyntax
-
-val _ = new_theory "theory3";
 
 val _ = temp_add_monadsyntax()
-val _ = overload_on ("monad_bind", ``OPTION_BIND``)
+Overload monad_bind = ``OPTION_BIND``
 
-val _ = Hol_datatype `nt = NT1 | NT2`;
+Datatype: nt = NT1 | NT2
+End
 
 val _ = new_type ("ast", 0)
 
-val _ = Hol_datatype`gtok = NT of nt | TOK of num`
+Datatype: gtok = NT nt | TOK num
+End
 
-val _ = Hol_datatype`ptree = Lf of gtok | Nd of nt => ptree list`
+Datatype: ptree = Lf gtok | Nd nt (ptree list)
+End
 
 val _ = new_constant("Ast_Tapp", ``:ast list -> num -> ast``);
 
-val works_ptree_Type_def = Define`
+Definition works_ptree_Type_def:
   works_ptree_Type ptree =
     case ptree of
       Nd nt args =>
@@ -34,7 +36,7 @@ val works_ptree_Type_def = Define`
                  | _ => NONE)
        | _ => NONE)
     | _ => NONE
-`
+End
 
 
 val fails_ptree_Type_def = Pmatch.with_classic_heuristic Define `
@@ -53,7 +55,3 @@ val fails_ptree_Type_def = Pmatch.with_classic_heuristic Define `
                  | _ => NONE)
        | _ => NONE)
 `
-
-
-
-val _ = export_theory()

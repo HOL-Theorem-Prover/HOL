@@ -1,6 +1,9 @@
 (* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
 (* Various theorems for HolSmtLib *)
+Theory HolSmt
+Ancestors[qualified]
+  bool realax real intreal combin words
 
   val op >> = Tactical.>>
 
@@ -31,7 +34,6 @@
 
   val s = Theory.save_thm
 
-  val _ = Theory.new_theory "HolSmt"
   val _ = ParseExtras.temp_loose_equality()
 
   (* constants used by Z3 *)
@@ -67,27 +69,28 @@
   val _ = s ("NOT_MEM_NIL", S ``!x. ~MEM x [] = T``)
   val _ = s ("NOT_MEM_CONS", S ``!x h t. ~MEM x (h::t) = (x <> h) /\ ~MEM x t``)
   val _ = s ("AND_T", T ``!p. p /\ T <=> p``)
-  val _ = s ("T_AND", T ``!p q. (T /\ p <=> T /\ q) ==> (p <=> q)``)
-  val _ = s ("F_OR", T ``!p q. (F \/ p <=> F \/ q) ==> (p <=> q)``)
-  val _ = s ("CONJ_CONG", T
-    ``!p q r s. (p <=> q) ==> (r <=> s) ==> (p /\ r <=> q /\ s)``)
+  val _ = s ("T_AND", T ``(T /\ p <=> T /\ q) ==> (p <=> q)``)
+  val _ = s ("F_OR", T ``(F \/ p <=> F \/ q) ==> (p <=> q)``)
+  val _ = s ("CONJ_CONG", T ``(p <=> q) ==> (r <=> s) ==> (p /\ r <=> q /\ s)``)
   val _ = s ("NOT_NOT_ELIM", T ``!p. ~~p ==> p``)
+  val _ = s ("NOT_NOT_INTRO", T ``!p. p <=> ~~p``)
+  val _ = s ("NOT_REVERSE", T ``(p <=> ~q) ==> (q <=> ~p)``)
   val _ = s ("NOT_FALSE", T ``!p. p ==> ~p ==> F``)
   val _ = s ("NNF_CONJ", T
     ``!p q r s. (~p <=> r) ==> (~q <=> s) ==> (~(p /\ q) <=> r \/ s)``)
   val _ = s ("NNF_DISJ", T
     ``!p q r s. (~p <=> r) ==> (~q <=> s) ==> (~(p \/ q) <=> r /\ s)``)
   val _ = s ("NNF_NOT_NOT", T ``!p q. (p <=> q) ==> (~~p <=> q)``)
-  val _ = s ("NEG_IFF_1_1", T ``!p q. (q <=> p) ==> ~(p <=> ~q)``)
-  val _ = s ("NEG_IFF_1_2", T ``!p q. ~(p <=> ~q) ==> (q <=> p)``)
-  val _ = s ("NEG_IFF_2_1", T ``!p q. (p <=> ~q) ==> ~(p <=> q)``)
-  val _ = s ("NEG_IFF_2_2", T ``!p q. ~(p <=> q) ==> (p <=> ~q)``)
+  val _ = s ("NEG_IFF_1_1", T ``(q <=> p) ==> ~(p <=> ~q)``)
+  val _ = s ("NEG_IFF_1_2", T ``~(p <=> ~q) ==> (q <=> p)``)
+  val _ = s ("NEG_IFF_2_1", T ``(p <=> ~q) ==> ~(p <=> q)``)
+  val _ = s ("NEG_IFF_2_2", T ``~(p <=> q) ==> (p <=> ~q)``)
   val _ = s ("DISJ_ELIM_1", T ``!p q r. (p \/ q ==> r) ==> p ==> r``)
   val _ = s ("DISJ_ELIM_2", T ``!p q r. (p \/ q ==> r) ==> q ==> r``)
-  val _ = s ("IMP_DISJ_1", T ``!p q. (p ==> q) ==> ~p \/ q``)
-  val _ = s ("IMP_DISJ_2", T ``!p q. (~p ==> q) ==> p \/ q``)
+  val _ = s ("IMP_DISJ_1", T ``(p ==> q) ==> ~p \/ q``)
+  val _ = s ("IMP_DISJ_2", T ``(~p ==> q) ==> p \/ q``)
   val _ = s ("IMP_FALSE", T ``!p. (~p ==> F) ==> p``)
-  val _ = s ("AND_IMP_INTRO_SYM", T ``!p q r. p /\ q ==> r <=> p ==> q ==> r``)
+  val _ = s ("AND_IMP_INTRO_SYM", T ``p /\ q ==> r <=> p ==> q ==> r``)
   val _ = s ("VALID_IFF_TRUE", T ``!p. p ==> (p <=> T)``)
   val _ = s ("NOT_P_OR_P", T ``~p \/ p``)
   val _ = s ("SKOLEM_FORALL", P ``?a. ~(!x. P x) <=> ~(P a)``)
@@ -568,5 +571,3 @@
   val _ = s ("p007", S ``FINITE univ(:30)``)
   val _ = s ("p008", S ``FINITE univ(:31)``)
   val _ = s ("p009", S ``dimindex (:8) <= dimindex (:32)``)
-
-  val _ = Theory.export_theory ()

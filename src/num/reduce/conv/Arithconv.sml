@@ -18,7 +18,8 @@ open HolKernel boolTheory boolLib Parse Rsyntax cvTheory cv_computeLib
      Num_conv numSyntax arithmeticTheory numeralTheory;
 
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars
+val SOME arithmetic_grammars = grammarDB {thyname="arithmetic"}
+val _ = Parse.temp_set_grammars arithmetic_grammars
 
 val cv_eval = cv_compute []
 val cv_eval_exp = cv_compute [cv_exp_eq]

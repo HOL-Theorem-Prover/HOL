@@ -1,4 +1,9 @@
-open HolKernel Parse boolLib bossLib;
+Theory temporal_deep_mixed
+Ancestors
+  pred_set pair arithmetic container list rich_list set_lemmata
+  bit
+Libs
+  tuerk_tacticsLib Sanity
 
 (*
 quietdec := true;
@@ -8,11 +13,6 @@ map load
   "containerTheory", "listTheory", "rich_listTheory", "set_lemmataTheory", "bitTheory"];
 *)
 
-
-open pred_setTheory pairTheory arithmeticTheory tuerk_tacticsLib
-    containerTheory listTheory rich_listTheory set_lemmataTheory
-    bitTheory;
-open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -27,7 +27,6 @@ quietdec := false;
 
 
 
-val _ = new_theory "temporal_deep_mixed";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -36,67 +35,66 @@ val _ = ParseExtras.temp_loose_equality()
 (* This described a function that can create a number of new elements         *)
 (******************************************************************************)
 
-val IS_ELEMENT_ITERATOR_def =
-Define
-    `IS_ELEMENT_ITERATOR f n S =
+Definition IS_ELEMENT_ITERATOR_def:
+     IS_ELEMENT_ITERATOR f n S =
       (!i j. (i < n /\ j < n) ==> ((f i = f j) = (i = j))) /\
-      (!i. (i < n) ==> ~(f i IN S))`
+      (!i. (i < n) ==> ~(f i IN S))
+End
 
-val IS_ELEMENT_ITERATOR_0 =
- store_thm
-  ("IS_ELEMENT_ITERATOR_0",
+Theorem IS_ELEMENT_ITERATOR_0:
 
-  ``!f S. IS_ELEMENT_ITERATOR f 0 S``,
-  SIMP_TAC arith_ss [IS_ELEMENT_ITERATOR_def]);
-
-
-val IS_ELEMENT_ITERATOR_SUBSET =
- store_thm
-  ("IS_ELEMENT_ITERATOR_SUBSET",
-
-  ``!f n S1 S2. (S2 SUBSET S1 /\ IS_ELEMENT_ITERATOR f n S1) ==> IS_ELEMENT_ITERATOR f n S2``,
-
-  SIMP_TAC arith_ss [IS_ELEMENT_ITERATOR_def, SUBSET_DEF] THEN PROVE_TAC[]);
+    !f S. IS_ELEMENT_ITERATOR f 0 S
+Proof
+  SIMP_TAC arith_ss [IS_ELEMENT_ITERATOR_def]
+QED
 
 
-val IS_ELEMENT_ITERATOR_GE =
- store_thm
-  ("IS_ELEMENT_ITERATOR_GE",
+Theorem IS_ELEMENT_ITERATOR_SUBSET:
 
-  ``!f n1 n2 S. (n2 <= n1 /\ IS_ELEMENT_ITERATOR f n1 S) ==> IS_ELEMENT_ITERATOR f n2 S``,
+    !f n S1 S2. (S2 SUBSET S1 /\ IS_ELEMENT_ITERATOR f n S1) ==> IS_ELEMENT_ITERATOR f n S2
+Proof
 
-  SIMP_TAC arith_ss [IS_ELEMENT_ITERATOR_def]);
+  SIMP_TAC arith_ss [IS_ELEMENT_ITERATOR_def, SUBSET_DEF] THEN PROVE_TAC[]
+QED
 
 
-val IS_ELEMENT_ITERATOR___IMPLIES___INJ =
- store_thm
-  ("IS_ELEMENT_ITERATOR___IMPLIES___INJ",
+Theorem IS_ELEMENT_ITERATOR_GE:
 
-    ``!f n S.
+    !f n1 n2 S. (n2 <= n1 /\ IS_ELEMENT_ITERATOR f n1 S) ==> IS_ELEMENT_ITERATOR f n2 S
+Proof
+
+  SIMP_TAC arith_ss [IS_ELEMENT_ITERATOR_def]
+QED
+
+
+Theorem IS_ELEMENT_ITERATOR___IMPLIES___INJ:
+
+      !f n S.
         IS_ELEMENT_ITERATOR f n S ==>
-        INJ f (count n) UNIV``,
+        INJ f (count n) UNIV
+Proof
 
     SIMP_TAC std_ss [IS_ELEMENT_ITERATOR_def, INJ_DEF,
-                     IN_COUNT, IN_UNIV]);
+                     IN_COUNT, IN_UNIV]
+QED
 
-val IS_ELEMENT_ITERATOR___INVERSE =
- store_thm
-  ("IS_ELEMENT_ITERATOR___INVERSE",
+Theorem IS_ELEMENT_ITERATOR___INVERSE:
 
-    ``!f n S.
+      !f n S.
         IS_ELEMENT_ITERATOR f n S ==>
-        (?g. !m. (m < n) ==> (g (f m) = m))``,
+        (?g. !m. (m < n) ==> (g (f m) = m))
+Proof
 
-    METIS_TAC[INJ_INVERSE, IN_COUNT, IS_ELEMENT_ITERATOR___IMPLIES___INJ]);
+    METIS_TAC[INJ_INVERSE, IN_COUNT, IS_ELEMENT_ITERATOR___IMPLIES___INJ]
+QED
 
 
-val IS_ELEMENT_ITERATOR_EXISTS___DIFF =
- store_thm
-  ("IS_ELEMENT_ITERATOR_EXISTS___DIFF",
+Theorem IS_ELEMENT_ITERATOR_EXISTS___DIFF:
 
-  ``!n S.
+    !n S.
       INFINITE (UNIV DIFF S) ==>
-      ?f. IS_ELEMENT_ITERATOR f n S``,
+      ?f. IS_ELEMENT_ITERATOR f n S
+Proof
 
   REPEAT STRIP_TAC THEN
   Induct_on `n` THENL [
@@ -138,18 +136,19 @@ val IS_ELEMENT_ITERATOR_EXISTS___DIFF =
         FULL_SIMP_TAC std_ss [IN_DIFF] THEN PROVE_TAC[IN_UNION]
       ]
     ]
-  ]);
+  ]
+QED
 
 
-val IS_ELEMENT_ITERATOR_EXISTS =
- store_thm
-  ("IS_ELEMENT_ITERATOR_EXISTS",
+Theorem IS_ELEMENT_ITERATOR_EXISTS:
 
-  ``!n S.
+    !n S.
       (FINITE (S:'a set) /\ INFINITE (UNIV:'a set)) ==>
-      ?f. IS_ELEMENT_ITERATOR f n S``,
+      ?f. IS_ELEMENT_ITERATOR f n S
+Proof
 
-    PROVE_TAC[FINITE_DIFF_down, IS_ELEMENT_ITERATOR_EXISTS___DIFF]);
+    PROVE_TAC[FINITE_DIFF_down, IS_ELEMENT_ITERATOR_EXISTS___DIFF]
+QED
 
 
 (************************************************************************)
@@ -181,11 +180,10 @@ SIMP_RULE std_ss [GSYM RIGHT_FORALL_IMP_THM,
 
 
 
-val DISJOINT_VARRENAMING_EXISTS =
- store_thm
-  ("DISJOINT_VARRENAMING_EXISTS",
-   ``!(S1:'a set) (S2:'a set) (S3:'a set). (FINITE S1 /\ FINITE S2 /\ FINITE S3 /\ (DISJOINT S1 S3) /\ INFINITE (UNIV:'a set)) ==>
-   (?f. INJ f UNIV UNIV /\ (DISJOINT (IMAGE f S1) S2) /\ (!x. (x IN S3) ==> (f x = x)))``,
+Theorem DISJOINT_VARRENAMING_EXISTS:
+     !(S1:'a set) (S2:'a set) (S3:'a set). (FINITE S1 /\ FINITE S2 /\ FINITE S3 /\ (DISJOINT S1 S3) /\ INFINITE (UNIV:'a set)) ==>
+   (?f. INJ f UNIV UNIV /\ (DISJOINT (IMAGE f S1) S2) /\ (!x. (x IN S3) ==> (f x = x)))
+Proof
 
    REPEAT STRIP_TAC THEN
    UNDISCH_TAC ``DISJOINT S1 S3`` THEN
@@ -215,18 +213,19 @@ val DISJOINT_VARRENAMING_EXISTS =
         `~(x' = e) /\ ~(f x' = x)` by PROVE_TAC[] THEN
         ASM_SIMP_TAC std_ss []
       ]
-   ]);
+   ]
+QED
 
 
-val POW_VARRENAMING_EXISTS =
- store_thm
-  ("POW_VARRENAMING_EXISTS",
-   ``!(S1:'a set) (S2:'a set). (FINITE S1 /\ FINITE S2 /\ INFINITE (UNIV:'a set)) ==>
-      (?f. INJ f (POW S1) UNIV /\ (DISJOINT (IMAGE f (POW S1)) S2))``,
+Theorem POW_VARRENAMING_EXISTS:
+     !(S1:'a set) (S2:'a set). (FINITE S1 /\ FINITE S2 /\ INFINITE (UNIV:'a set)) ==>
+      (?f. INJ f (POW S1) UNIV /\ (DISJOINT (IMAGE f (POW S1)) S2))
+Proof
 
    REPEAT STRIP_TAC THEN
    MATCH_MP_TAC FINITE_INJ_EXISTS THEN
-   ASM_REWRITE_TAC[FINITE_POW_IFF]);
+   ASM_REWRITE_TAC[FINITE_POW_IFF]
+QED
 
 
 
@@ -236,40 +235,42 @@ val POW_VARRENAMING_EXISTS =
 (* LIST_BIGUNION                                                              *)
 (******************************************************************************)
 
-val LIST_BIGUNION_def =
- Define
-   `(LIST_BIGUNION [] = EMPTY) /\
-    (LIST_BIGUNION (h::l) = (h UNION (LIST_BIGUNION l)))`;
+Definition LIST_BIGUNION_def:
+    (LIST_BIGUNION [] = EMPTY) /\
+    (LIST_BIGUNION (h::l) = (h UNION (LIST_BIGUNION l)))
+End
 
 
-val LIST_BIGUNION_APPEND =
- store_thm
-  ("LIST_BIGUNION_APPEND",
-    ``!l1 l2. LIST_BIGUNION (l1 ++ l2) = (LIST_BIGUNION l1 UNION LIST_BIGUNION l2)``,
+Theorem LIST_BIGUNION_APPEND:
+      !l1 l2. LIST_BIGUNION (l1 ++ l2) = (LIST_BIGUNION l1 UNION LIST_BIGUNION l2)
+Proof
 
       Induct_on `l1` THENL [
         SIMP_TAC list_ss [LIST_BIGUNION_def, UNION_EMPTY],
         ASM_SIMP_TAC list_ss [LIST_BIGUNION_def, UNION_ASSOC]
-      ]);
+      ]
+QED
 
 
-val IN_LIST_BIGUNION =
- store_thm
-  ("IN_LIST_BIGUNION",
+Theorem IN_LIST_BIGUNION:
 
-   ``!x l. (x IN LIST_BIGUNION l) = ?el. MEM el l /\ x IN el``,
+     !x l. (x IN LIST_BIGUNION l) = ?el. MEM el l /\ x IN el
+Proof
 
     Induct_on `l` THENL [
       SIMP_TAC list_ss [LIST_BIGUNION_def, NOT_IN_EMPTY],
       SIMP_TAC list_ss [LIST_BIGUNION_def, IN_UNION] THEN PROVE_TAC[]
-    ]);
+    ]
+QED
 
 (* Perhaps use this everywhere and get rid of LIST_BIGUNION *)
-val LIST_BIGUNION_ALT_DEF = store_thm ("LIST_BIGUNION_ALT_DEF",
-  ``!l. LIST_BIGUNION l = BIGUNION (set l)``,
+Theorem LIST_BIGUNION_ALT_DEF:
+    !l. LIST_BIGUNION l = BIGUNION (set l)
+Proof
 
 SIMP_TAC std_ss [EXTENSION, IN_LIST_BIGUNION, IN_BIGUNION] >>
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
 
@@ -277,11 +278,11 @@ METIS_TAC[]);
 (* Auxiliary arithmetic stuff                                                 *)
 (******************************************************************************)
 
-val SUC_MOD_CASES =
- store_thm ("SUC_MOD_CASES",
+Theorem SUC_MOD_CASES:
 
-  ``!n m. 0 < n ==>
-  ((((SUC m) MOD n) = 0) \/ (((SUC m) MOD n) = (SUC (m MOD n))))``,
+    !n m. 0 < n ==>
+  ((((SUC m) MOD n) = 0) \/ (((SUC m) MOD n) = (SUC (m MOD n))))
+Proof
 
   REPEAT STRIP_TAC THEN
   Cases_on `n = 1` THENL [
@@ -302,7 +303,8 @@ val SUC_MOD_CASES =
       `SUC (m MOD n) = n` by DECIDE_TAC THEN
       ASM_SIMP_TAC std_ss [DIVMOD_ID]
     ]
-  ]);
+  ]
+QED
 
 
 
@@ -310,15 +312,17 @@ val SUC_MOD_CASES =
 (* COND_IMP_EQ               *)
 (*****************************)
 
-val COND_IMP_EQ_def =
-  Define `COND_IMP_EQ c A B = if c then A=B else A ==> B`
+Definition COND_IMP_EQ_def:
+   COND_IMP_EQ c A B = if c then A=B else A ==> B
+End
 
-val COND_IMP_EQ___REWRITE =
-  store_thm ("COND_IMP_EQ___REWRITE",
-    ``!c A B. COND_IMP_EQ c A B =
-             ((A ==> B) /\ (c ==> (A = B)))``,
+Theorem COND_IMP_EQ___REWRITE:
+      !c A B. COND_IMP_EQ c A B =
+             ((A ==> B) /\ (c ==> (A = B)))
+Proof
       SIMP_TAC std_ss [COND_IMP_EQ_def] THEN
-      METIS_TAC[]);
+      METIS_TAC[]
+QED
 
 
 (****************************************************************************************)
@@ -327,44 +331,52 @@ val COND_IMP_EQ___REWRITE =
 (* Similar to count and COUNT_LIST, but have a starting point that might differ from 0  *)
 (****************************************************************************************)
 
-val INTERVAL_SET_def =
-  Define `
-    INTERVAL_SET (n1:num) (n2:num) = IMAGE (\x. n1 + x) (count ((SUC n2)-n1))`
+Definition INTERVAL_SET_def:
+
+    INTERVAL_SET (n1:num) (n2:num) = IMAGE (\x. n1 + x) (count ((SUC n2)-n1))
+End
 
 
-val INTERVAL_LIST_def =
-  Define `
+Definition INTERVAL_LIST_def:
+
     INTERVAL_LIST (n1:num) (n2:num) =
-      MAP (\x. n1 + x) (COUNT_LIST ((SUC n2) - n1))`
+      MAP (\x. n1 + x) (COUNT_LIST ((SUC n2) - n1))
+End
 
 
-val INTERVAL_SET_0 = store_thm ("INTERVAL_SET_0",
-  ``!n. INTERVAL_SET 0 n = count (SUC n)``,
-SIMP_TAC std_ss [INTERVAL_SET_def, EXTENSION, IN_IMAGE]);
+Theorem INTERVAL_SET_0:
+    !n. INTERVAL_SET 0 n = count (SUC n)
+Proof
+SIMP_TAC std_ss [INTERVAL_SET_def, EXTENSION, IN_IMAGE]
+QED
 
-val INTERVAL_LIST_0 = store_thm ("INTERVAL_LIST_0",
-  ``!n. INTERVAL_LIST 0 n = COUNT_LIST (SUC n)``,
-SIMP_TAC list_ss [INTERVAL_LIST_def, LIST_EQ_REWRITE, EL_MAP]);
+Theorem INTERVAL_LIST_0:
+    !n. INTERVAL_LIST 0 n = COUNT_LIST (SUC n)
+Proof
+SIMP_TAC list_ss [INTERVAL_LIST_def, LIST_EQ_REWRITE, EL_MAP]
+QED
 
 
-val LIST_TO_SET___INTERVAL_LIST =
-  store_thm ("LIST_TO_SET___INTERVAL_LIST",
-    ``!m0 m1. ((set (INTERVAL_LIST m0 m1)) = INTERVAL_SET m0 m1)``,
+Theorem LIST_TO_SET___INTERVAL_LIST:
+      !m0 m1. ((set (INTERVAL_LIST m0 m1)) = INTERVAL_SET m0 m1)
+Proof
 
 SIMP_TAC std_ss [INTERVAL_LIST_def, INTERVAL_SET_def,
-  LIST_TO_SET_MAP, COUNT_LIST_COUNT]);
+  LIST_TO_SET_MAP, COUNT_LIST_COUNT]
+QED
 
 
-val FINITE_INTERVAL_SET =
-  store_thm ("FINITE_INTERVAL_SET",
-    ``!n1 n2. FINITE (INTERVAL_SET n1 n2)``,
+Theorem FINITE_INTERVAL_SET:
+      !n1 n2. FINITE (INTERVAL_SET n1 n2)
+Proof
     SIMP_TAC std_ss [INTERVAL_SET_def, FINITE_COUNT,
-      IMAGE_FINITE]);
+      IMAGE_FINITE]
+QED
 
 
-val MEM_INTERVAL_LIST =
-  store_thm ("MEM_INTERVAL_LIST",
-    ``!n m0 m1. ((MEM n (INTERVAL_LIST m0 m1)) = (m0 <= n /\ n <= m1))``,
+Theorem MEM_INTERVAL_LIST:
+      !n m0 m1. ((MEM n (INTERVAL_LIST m0 m1)) = (m0 <= n /\ n <= m1))
+Proof
 
     SIMP_TAC std_ss [INTERVAL_LIST_def, MEM_MAP, MEM_COUNT_LIST] THEN
     REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -372,26 +384,28 @@ val MEM_INTERVAL_LIST =
       DECIDE_TAC,
       Q.EXISTS_TAC `n - m0` >> DECIDE_TAC
     ]
-  );
+QED
 
 
-val IN_INTERVAL_SET =
-  store_thm ("IN_INTERVAL_SET",
-    ``!n n1 n2. (n IN INTERVAL_SET n1 n2) = (n1 <= n /\ n <= n2)``,
-    SIMP_TAC std_ss [GSYM LIST_TO_SET___INTERVAL_LIST, MEM_INTERVAL_LIST]);
+Theorem IN_INTERVAL_SET:
+      !n n1 n2. (n IN INTERVAL_SET n1 n2) = (n1 <= n /\ n <= n2)
+Proof
+    SIMP_TAC std_ss [GSYM LIST_TO_SET___INTERVAL_LIST, MEM_INTERVAL_LIST]
+QED
 
 
-val INTERVAL_SET_SING =
-  store_thm ("INTERVAL_SET_SING",
-    ``!n. (INTERVAL_SET n n) = {n}``,
+Theorem INTERVAL_SET_SING:
+      !n. (INTERVAL_SET n n) = {n}
+Proof
     SIMP_TAC std_ss [EXTENSION, IN_SING, IN_INTERVAL_SET] THEN
-    DECIDE_TAC);
+    DECIDE_TAC
+QED
 
 
-val INTERVAL_LIST_THM =
-  store_thm ("INTERVAL_LIST_THM",
-    ``!n1 n2. ((n1 <= n2) ==> (INTERVAL_LIST n1 n2 = (n1::INTERVAL_LIST (SUC n1) n2))) /\
-              ((n2 < n1) ==> (INTERVAL_LIST n1 n2 = []))``,
+Theorem INTERVAL_LIST_THM:
+      !n1 n2. ((n1 <= n2) ==> (INTERVAL_LIST n1 n2 = (n1::INTERVAL_LIST (SUC n1) n2))) /\
+              ((n2 < n1) ==> (INTERVAL_LIST n1 n2 = []))
+Proof
 
       SIMP_TAC std_ss [INTERVAL_LIST_def] THEN
       REPEAT STRIP_TAC THENL [
@@ -403,7 +417,8 @@ val INTERVAL_LIST_THM =
 
         `(SUC n2 - n1 = 0) /\ (n2 - n1 = 0) /\ ~(n1 <= n2)` by DECIDE_TAC THEN
         ASM_SIMP_TAC list_ss [COUNT_LIST_def]
-      ]);
+      ]
+QED
 
 
 
@@ -414,33 +429,36 @@ val INTERVAL_LIST_THM =
 (* Encode sets of numbers as numbers. Each number in the original set of numbers
    sets the corresponding bit of the resulting number. *)
 
-val SET_BINARY_ENCODING_def =
-  Define `SET_BINARY_ENCODING =
-          SIGMA (\n:num. (2:num)**n)`;
+Definition SET_BINARY_ENCODING_def:
+   SET_BINARY_ENCODING =
+          SIGMA (\n:num. (2:num)**n)
+End
 
 
-val SET_BINARY_ENCODING_THM =
-  store_thm ("SET_BINARY_ENCODING_THM",
-``(SET_BINARY_ENCODING EMPTY = 0) /\
+Theorem SET_BINARY_ENCODING_THM:
+  (SET_BINARY_ENCODING EMPTY = 0) /\
   (!e s. (FINITE s /\ ~(e IN s)) ==>
-         (SET_BINARY_ENCODING (e INSERT s) = (2 ** e) + (SET_BINARY_ENCODING s)))``,
+         (SET_BINARY_ENCODING (e INSERT s) = (2 ** e) + (SET_BINARY_ENCODING s)))
+Proof
 
 SIMP_TAC std_ss [SET_BINARY_ENCODING_def, SUM_IMAGE_THM] THEN
-PROVE_TAC[DELETE_NON_ELEMENT]);
+PROVE_TAC[DELETE_NON_ELEMENT]
+QED
 
-val SET_BINARY_ENCODING_SING =
-  store_thm ("SET_BINARY_ENCODING_SING",
-``!e. SET_BINARY_ENCODING {e} = 2 ** e``,
+Theorem SET_BINARY_ENCODING_SING:
+  !e. SET_BINARY_ENCODING {e} = 2 ** e
+Proof
 
-SIMP_TAC std_ss [SET_BINARY_ENCODING_def, SUM_IMAGE_SING]);
+SIMP_TAC std_ss [SET_BINARY_ENCODING_def, SUM_IMAGE_SING]
+QED
 
 
-val SET_BINARY_ENCODING___UNION =
-  store_thm ("SET_BINARY_ENCODING___UNION",
+Theorem SET_BINARY_ENCODING___UNION:
 
-``!S1 S2. DISJOINT S1 S2 /\ FINITE S1 /\ FINITE S2 ==>
+  !S1 S2. DISJOINT S1 S2 /\ FINITE S1 /\ FINITE S2 ==>
 (SET_BINARY_ENCODING (S1 UNION S2) =
-(SET_BINARY_ENCODING S1 + SET_BINARY_ENCODING S2))``,
+(SET_BINARY_ENCODING S1 + SET_BINARY_ENCODING S2))
+Proof
 
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [SET_BINARY_ENCODING_def, SUM_IMAGE_UNION] THEN
@@ -448,15 +466,16 @@ ASM_SIMP_TAC std_ss [SET_BINARY_ENCODING_def, SUM_IMAGE_UNION] THEN
   SIMP_ALL_TAC std_ss [DISJOINT_DISJ_THM, IN_INTER, EXTENSION, NOT_IN_EMPTY] THEN
   ASM_REWRITE_TAC[]
 ) THEN
-ASM_SIMP_TAC std_ss [SUM_IMAGE_THM]);
+ASM_SIMP_TAC std_ss [SUM_IMAGE_THM]
+QED
 
 
 
-val SET_BINARY_ENCODING___SUBSET =
-  store_thm ("SET_BINARY_ENCODING___SUBSET", ``
+Theorem SET_BINARY_ENCODING___SUBSET:
 !S1 S2. S1 SUBSET S2 /\ FINITE S2 ==>
 (SET_BINARY_ENCODING S1 <=
-(SET_BINARY_ENCODING S2))``,
+(SET_BINARY_ENCODING S2))
+Proof
 
 REPEAT STRIP_TAC THEN
 Q.ABBREV_TAC `S3 = S2 DIFF S1` THEN
@@ -473,13 +492,14 @@ ASM_SIMP_TAC std_ss [] THEN
   Q.UNABBREV_TAC `S3` THEN
   METIS_TAC[DISJOINT_DIFF, FINITE_DIFF, SUBSET_FINITE]
 ) THEN
-ASM_SIMP_TAC std_ss []);
+ASM_SIMP_TAC std_ss []
+QED
 
 
 
-val SET_BINARY_ENCODING___COUNT =
-  store_thm ("SET_BINARY_ENCODING___COUNT",
-    ``!n. SET_BINARY_ENCODING (count n) = PRE (2**n)``,
+Theorem SET_BINARY_ENCODING___COUNT:
+      !n. SET_BINARY_ENCODING (count n) = PRE (2**n)
+Proof
 
     Induct_on `n` THENL [
       SIMP_TAC arith_ss [COUNT_ZERO, SET_BINARY_ENCODING_THM],
@@ -488,13 +508,13 @@ val SET_BINARY_ENCODING___COUNT =
         FINITE_INSERT, FINITE_COUNT, IN_COUNT] THEN
       ASM_SIMP_TAC arith_ss [EXP]
     ]
-  );
+QED
 
 
-val SET_BINARY_ENCODING___REDUCE =
-  store_thm ("SET_BINARY_ENCODING___REDUCE",
-  ``!n S. FINITE S ==> DISJOINT S (count n) ==>
-          ((SET_BINARY_ENCODING S) = (SET_BINARY_ENCODING (IMAGE (\x:num. x - n) S)) * (2 ** n))``,
+Theorem SET_BINARY_ENCODING___REDUCE:
+    !n S. FINITE S ==> DISJOINT S (count n) ==>
+          ((SET_BINARY_ENCODING S) = (SET_BINARY_ENCODING (IMAGE (\x:num. x - n) S)) * (2 ** n))
+Proof
 
 GEN_TAC THEN
 SET_INDUCT_TAC THENL [
@@ -512,12 +532,13 @@ SET_INDUCT_TAC THENL [
   ) THEN
   FULL_SIMP_TAC std_ss [SET_BINARY_ENCODING_THM, IMAGE_INSERT, FINITE_INSERT, IMAGE_FINITE] THEN
   ASM_SIMP_TAC arith_ss [RIGHT_ADD_DISTRIB, GSYM EXP_ADD]
-]);
+]
+QED
 
 
-val SET_BINARY_ENCODING___BITS =
-  store_thm ("SET_BINARY_ENCODING___BITS",
-  ``!n S. FINITE S ==> (BIT n (SET_BINARY_ENCODING S) = (n IN S))``,
+Theorem SET_BINARY_ENCODING___BITS:
+    !n S. FINITE S ==> (BIT n (SET_BINARY_ENCODING S) = (n IN S))
+Proof
 
   REPEAT STRIP_TAC THEN
   Q.ABBREV_TAC `S1 = S INTER count n` THEN
@@ -601,31 +622,33 @@ val SET_BINARY_ENCODING___BITS =
     ASM_SIMP_TAC std_ss [BIT_B],
     ASM_SIMP_TAC std_ss [BIT_ZERO]
   ]
-);
+QED
 
 
 
 
 
-val SET_BINARY_ENCODING___INJ =
-  store_thm ("SET_BINARY_ENCODING___INJ",
-  ``!S. FINITE S ==> INJ SET_BINARY_ENCODING (POW S) UNIV``,
+Theorem SET_BINARY_ENCODING___INJ:
+    !S. FINITE S ==> INJ SET_BINARY_ENCODING (POW S) UNIV
+Proof
 
   SIMP_TAC std_ss [INJ_DEF, IN_UNIV, IN_POW, EXTENSION] THEN
-  PROVE_TAC[SET_BINARY_ENCODING___BITS, SUBSET_FINITE]);
+  PROVE_TAC[SET_BINARY_ENCODING___BITS, SUBSET_FINITE]
+QED
 
 
 
 
-val SET_BINARY_ENCODING_SHIFT_def =
-  Define `
+Definition SET_BINARY_ENCODING_SHIFT_def:
+
     SET_BINARY_ENCODING_SHIFT n1 n2 S =
-      (SET_BINARY_ENCODING (IMAGE (\n. n - n1) S) + n2)`;
+      (SET_BINARY_ENCODING (IMAGE (\n. n - n1) S) + n2)
+End
 
 
-val SET_BINARY_ENCODING_SHIFT___INJ =
-  store_thm ("SET_BINARY_ENCODING_SHIFT___INJ",
-  ``!S n1 n2. (FINITE S /\ (!n. n IN S ==> n >= n1)) ==> INJ (SET_BINARY_ENCODING_SHIFT n1 n2) (POW S) UNIV``,
+Theorem SET_BINARY_ENCODING_SHIFT___INJ:
+    !S n1 n2. (FINITE S /\ (!n. n IN S ==> n >= n1)) ==> INJ (SET_BINARY_ENCODING_SHIFT n1 n2) (POW S) UNIV
+Proof
 
 
   SIMP_TAC std_ss [SET_BINARY_ENCODING_SHIFT_def, INJ_DEF, IN_UNIV] THEN
@@ -646,16 +669,17 @@ val SET_BINARY_ENCODING_SHIFT___INJ =
     PROVE_TAC[]
   ) THEN
   Q.UNABBREV_TAC `f` THEN
-  FULL_SIMP_TAC arith_ss []);
+  FULL_SIMP_TAC arith_ss []
+QED
 
 
 
 
-val SET_BINARY_ENCODING___IMAGE_THM =
-  store_thm ("SET_BINARY_ENCODING___IMAGE_THM",
+Theorem SET_BINARY_ENCODING___IMAGE_THM:
 
-  ``!n. IMAGE SET_BINARY_ENCODING (POW (INTERVAL_SET 0 n)) =
-        INTERVAL_SET 0 (PRE (2**(SUC n)))``,
+    !n. IMAGE SET_BINARY_ENCODING (POW (INTERVAL_SET 0 n)) =
+        INTERVAL_SET 0 (PRE (2**(SUC n)))
+Proof
 
     Induct_on `n` THENL [
       SIMP_TAC std_ss [INTERVAL_SET_0, EXTENSION, IN_IMAGE, IN_POW, IN_COUNT] THEN
@@ -712,17 +736,18 @@ val SET_BINARY_ENCODING___IMAGE_THM =
         Q_TAC EXISTS_TAC `x - (2 * 2**n)` THEN
         FULL_SIMP_TAC arith_ss []
       ]
-    ]);
+    ]
+QED
 
 
 
 
 
-val SET_BINARY_ENCODING_SHIFT___IMAGE_THM =
-  store_thm ("SET_BINARY_ENCODING_SHIFT___IMAGE_THM",
-  ``!n1 n2 n3. n1 <= n2 ==>
+Theorem SET_BINARY_ENCODING_SHIFT___IMAGE_THM:
+    !n1 n2 n3. n1 <= n2 ==>
               (IMAGE (SET_BINARY_ENCODING_SHIFT n1 n3) (POW (INTERVAL_SET n1 n2)) =
-               INTERVAL_SET n3 (n3 + (PRE (2**(SUC (n2 - n1))))))``,
+               INTERVAL_SET n3 (n3 + (PRE (2**(SUC (n2 - n1))))))
+Proof
 
     REPEAT STRIP_TAC THEN
 
@@ -753,17 +778,18 @@ val SET_BINARY_ENCODING_SHIFT___IMAGE_THM =
       GEN_TAC THEN STRIP_TAC THEN
       RES_TAC THEN
       DECIDE_TAC
-    ]);
+    ]
+QED
 
 
 
 
 
-val SET_BINARY_ENCODING_SHIFT___INSERT =
-  store_thm ("SET_BINARY_ENCODING_SHIFT___INSERT",
-``!i k l S. FINITE S /\ (i <= l) /\ ~(l IN S) /\ (!x. x IN S ==> i <= x) ==>
+Theorem SET_BINARY_ENCODING_SHIFT___INSERT:
+  !i k l S. FINITE S /\ (i <= l) /\ ~(l IN S) /\ (!x. x IN S ==> i <= x) ==>
 (SET_BINARY_ENCODING_SHIFT i k (l INSERT S) =
- SET_BINARY_ENCODING_SHIFT i (2**(l-i)+k) S)``,
+ SET_BINARY_ENCODING_SHIFT i (2**(l-i)+k) S)
+Proof
 
 SIMP_TAC arith_ss [SET_BINARY_ENCODING_SHIFT_def,
   SET_BINARY_ENCODING_def, SUM_IMAGE_THM, IMAGE_INSERT,
@@ -778,6 +804,6 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
   RES_TAC THEN
   `n = l` by DECIDE_TAC THEN
   PROVE_TAC[]
-]);
+]
+QED
 
-val _ = export_theory();

@@ -1,22 +1,24 @@
 
-open HolKernel Parse boolLib bossLib pairLib pairSyntax pairTheory PairRules;
+Theory ACF
+Ancestors
+  pair
+Libs
+  pairLib pairSyntax PairRules
 
 (*---------------------------------------------------------------------------------*)
-
-val _ = new_theory "ACF";
 
 (*---------------------------------------------------------------------------*)
 (* Convert HOL programs to combinator-based pseudo-ASTs                      *)
 (* Term programs is translated to equivalent A-Combinator Forms (ACF)        *)
 (*---------------------------------------------------------------------------*)
 
-val sc_def =
-  Define
-   `sc (f1:'a->'b) (f2:'b->'c) = \x. f2(f1 x)`;
+Definition sc_def:
+    sc (f1:'a->'b) (f2:'b->'c) = \x. f2(f1 x)
+End
 
-val cj_def =
- Define
-   `cj f1 f2 f3 = \x. if f1 x then f2 x else f3 x`;
+Definition cj_def:
+    cj f1 f2 f3 = \x. if f1 x then f2 x else f3 x
+End
 
 val tr_def =
  TotalDefn.DefineSchema
@@ -28,12 +30,12 @@ val tr_ind = fetch "-" "tr_ind";
 (* HOL programs is converted to sc, tr and cj structures                     *)
 (*---------------------------------------------------------------------------*)
 
-val tr_INTRO = store_thm
-("tr_INTRO",
- ``!f f1 f2.
+Theorem tr_INTRO:
+   !f f1 f2.
      (!x:'a. f x = if f1(x) then x else f(f2 x))
      ==> (?R. WF R /\ (!x. ~f1 x ==> R (f2 x) x))
-     ==> (f:'a->'a = tr f1 f2)``,
+     ==> (f:'a->'a = tr f1 f2)
+Proof
 
   REPEAT (GEN_TAC ORELSE STRIP_TAC) THEN
   ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
@@ -42,14 +44,14 @@ val tr_INTRO = store_thm
   IMP_RES_TAC (DISCH_ALL tr_def) THEN
   POP_ASSUM (fn th => ONCE_REWRITE_TAC[th]) THEN
   METIS_TAC[]
- );
+QED
 
-val rec_INTRO = store_thm
-("rec_INTRO",
- ``!f f1 f2 f3.
+Theorem rec_INTRO:
+   !f f1 f2 f3.
      (!x:'a. f x = if f1(x) then f2(x) else f(f3 x))
      ==> (?R. WF R /\ (!x. ~f1 x ==> R (f3 x) x))
-     ==> (f:'a->'b = sc (tr f1 f3) f2)``,
+     ==> (f:'a->'b = sc (tr f1 f3) f2)
+Proof
 
   REPEAT (GEN_TAC ORELSE STRIP_TAC) THEN
   ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
@@ -64,9 +66,8 @@ val rec_INTRO = store_thm
     IMP_RES_TAC (DISCH_ALL tr_def) THEN
     METIS_TAC [sc_def]
   ]
- );
+QED
 
 
 (*---------------------------------------------------------------------------------*)
 
-val _ = export_theory();

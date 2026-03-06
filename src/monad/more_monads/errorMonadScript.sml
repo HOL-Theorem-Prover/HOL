@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "errorMonad";
+Theory errorMonad
 
 Datatype: error = return 'a | error 'e
 End
@@ -22,6 +20,11 @@ QED
 Definition bind_def[simp]:
   bind (return v) f = f v /\
   bind (error e) f = error e
+End
+
+Definition try_def[simp]:
+  try (return v) f = return v ∧
+  try (error e) f = f e
 End
 
 Definition choice_def:
@@ -56,4 +59,3 @@ val _ = monadsyntax.declare_monad("error",
    guard = SOME “guard”, ignorebind = NONE, unit = “return”})
 
 
-val _ = export_theory();

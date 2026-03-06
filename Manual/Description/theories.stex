@@ -1754,7 +1754,7 @@ no way to define such infinite families of constants; instead, all
 numerals other than $0$ are actually built up from the constants
 introduced by the following definitions:
 \begin{alltt}
->>__ val np = valOf (temp_remove_user_printer "num.numeral_computations")
+>>__ temp_remove_user_printer ("num.numeral_computations",“n:num”)
 ##thm NUMERAL_DEF
 
 ##thm BIT1
@@ -2944,8 +2944,17 @@ Numbers can also be used to index into lists, extracting the element at the spec
 \end{hol}
 
 \noindent
-Note that the extraction of the $n$th element (\holtxt{EL}) of a list starts its indexing from 0.
-If the length of the list $\ell$ is less than or equal to $n$, the result of \holtxt{EL~$n$~$\ell$~} is unspecified.
+Note that the extraction of the $n$th element (as described in the theorem \ml{EL}) of a list starts its indexing from 0.
+If the length of the list $\ell$ is less than or equal to \texttt{n}, the result of
+\texttt{%
+##parsetm ℓ❲n❳
+}\!\! is unspecified.
+The special syntax with the brackets hides the underlying constant, which is \holtxt{EL} of type \texttt{%
+##parsetm :num -> 'a list -> 'a
+}\!\!.
+It is legal to use the constant explicitly, writing \texttt{%
+##parsetm EL n ℓ
+}\!\!.
 
 \index{GENLIST, the HOL constant@\ml{GENLIST}, the \HOL{} constant}
 The \holtxt{GENLIST} constant can be used to generate a list of a particular size, where the value of each element is independently determined by reference to a function that takes natural numbers (the set $\{0\dots n-1\}$) to element values:
@@ -3249,7 +3258,16 @@ The definition is given by primitive recursion over the index argument, in theor
    ##thm EL
 \end{alltt}
 \end{hol}
-Because of the use of \holtxt{HD} and \holtxt{TL}, the value of $\holtxt{EL}\;n\;\ell$ is unspecified when $n \geq \holtxt{LENGTH}\;\ell$.
+\index{EL, the HOL constant@\holtxt{EL}, the \HOL{} constant!array subscript notation}
+The term underlying the pretty presentation $\ell\lbrbrak{}n\rbrbrak$ is $\holtxt{EL}\;n\;\ell$; and both forms can be used when writing terms.
+If desired, the pretty-printing with the ``array-subscript'' notation can be turned off by the invocation
+\begin{hol}
+\begin{alltt}
+   val _ = clear_overloads_on "fEL"
+\end{alltt}
+\end{hol}
+
+Note that because of the use of \holtxt{HD} and \holtxt{TL}, the value of $\ell\lbrbrak{}n\rbrbrak$ is unspecified when $n \geq \holtxt{LENGTH}\;\ell$.
 Subsequently, many theorems involving \holtxt{EL} have preconditions to preclude this possibility.
 
 For example, these theorems describing the relationship between \holtxt{EL}, \holtxt{MAP} and \holtxt{MEM}:
@@ -3263,7 +3281,7 @@ For example, these theorems describing the relationship between \holtxt{EL}, \ho
 It is occasionally useful to be able to update lists at particular positions, viewing them as similar to programming language arrays.
 The relevant constant is \holtxt{LUPDATE}, where the term $\holtxt{LUPDATE}\;e\;n\;\ell$ has the same value as list $\ell$, except that the $n$-th element of the list is equal to $e$.%
 \index{LUPDATE, the HOL constant@\holtxt{LUPDATE}, the \HOL{} constant}
-The definition is given in three clauses:
+The definition illustrates the pretty syntax for the above ($\ell\lbrbrak{}n\mapsto e\rbrbrak$), and is given in three clauses:
 \begin{hol}
 \begin{alltt}
    ##thm LUPDATE_def
@@ -3278,6 +3296,12 @@ The basic characterisation of the link between \holtxt{EL} and \holtxt{LUPDATE} 
 \end{alltt}
 \end{hol}
 
+The pretty syntax supports chained or nested \holtxt{LUPDATE} applications using a list-like notation:
+\begin{hol}
+\begin{alltt}
+>> “LUPDATE v1 k1 (LUPDATE v2 k2 ℓ)”;
+\end{alltt}
+\end{hol}
 \paragraph{The \ml{indexedLists} theory} The \ml{indexedLists} theory defines a number of extra constants that are ``aware'' of lists as indexed values.
 Some of these constants are:
 \begin{hol}
@@ -4851,9 +4875,11 @@ main notions in the theory.
 
 The \HOL{} parser and printer will treat the syntax \holtxt{f\,'\,x} as
 the application of finite map \verb+f+ to argument \verb+x+, \ie, as
-\holtxt{FAPPLY\,f\,x}. The notation \holtxt{f\,|+\,(x,y)} represents
-\holtxt{FUPDATE\,f\,(x,y)}, \ie, the updating of finite map
-\verb+f+ by the pair \verb+(x,y)+.
+\holtxt{FAPPLY\,f\,x}. The notation \holtxt{f\,|+\,(k,v)} represents
+\holtxt{FUPDATE\,f\,(k,v)}, \ie, the updating of finite map
+\verb+f+ by the pair \verb+(k,v)+.
+These are purely ASCII syntaxes, but the \HOL{} printer and parser also support (and prefer, in the case of printing), \holtxt{f$\langle$k$\rangle$} for finite map application, and \holtxt{f$\langle$k$\mapsto$v$\rangle$} for \holtxt{FUPDATE}.
+As with lists (see Section~\ref{sec:indexed-lists}), the update syntax between angle brackets supports multiple updates, allowing $f\langle k_1 \mapsto v_1;\;k_2 \mapsto v_2; \dots\rangle$.
 
 The basic constants have obscure definitions, from which more useful
 properties are then derived. {\small\verb+FAPPLY_FUPDATE_THM+} relates
@@ -5005,11 +5031,11 @@ It is a curious fact that higher order logic, although a logic of
 total functions, allows the definition of functions that don't
 seem total, at least from a computational perspective. An example
 is \holtxt{WHILE}-loops. The following equation is derived in theory
-\theoryimp{while}:
+\theoryimp{While}:
 %
 \begin{hol}
 \begin{alltt}
->>__ open whileTheory
+>>__ open WhileTheory
 ##thm WHILE
 \end{alltt}
 \end{hol}
@@ -5104,7 +5130,7 @@ If one wants a specified result even when the predicate is everywhere false, the
 \end{alltt}
 \end{hol}
 
-More theorems for reasoning about \holtxt{LEAST}, \holtxt{OLEAST} and \holtxt{WHILE} may be found in theory \theoryimp{while}.
+More theorems for reasoning about \holtxt{LEAST}, \holtxt{OLEAST} and \holtxt{WHILE} may be found in theory \theoryimp{While}.
 
 
 %\section{Partial orders}

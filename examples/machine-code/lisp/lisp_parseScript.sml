@@ -1,15 +1,12 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_parse";
+Theory lisp_parse
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  string lisp_gc lisp_type lisp_inv set_sep lisp_ops
+Libs
+  wordsLib helperLib compilerLib
+
 val _ = ParseExtras.temp_loose_equality()
 
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory stringTheory helperLib;
-
-open compilerLib;
-open lisp_gcTheory lisp_typeTheory lisp_invTheory;
-
-
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 val bool_ss = bool_ss -* ["lift_disj_eq", "lift_imp_disj"]
@@ -46,13 +43,16 @@ val (th1,arm_readnum_def,arm_readnum_pre_def) = compile_all ``
     let (r3,r4,r5,r6,df,f) = arm_read_loop (r3,r4,r5,df,f) in
       (r3,r4,r5,r6,df,f)``;
 
-val number_char_def = Define `
-  number_char c = 48 <= ORD c /\ ORD c < 58`;
+Definition number_char_def:
+  number_char c = 48 <= ORD c /\ ORD c < 58
+End
 
-val is_number_string_def = Define `
-  is_number_string s = EVERY number_char (EXPLODE s)`;
+Definition is_number_string_def:
+  is_number_string s = EVERY number_char (EXPLODE s)
+End
 
-val dec2str_def = Define `dec2str n = STRING (CHR (n + 48)) ""`;
+Definition dec2str_def:   dec2str n = STRING (CHR (n + 48)) ""
+End
 
 val num2str_def = tDefine "num2str" `
   num2str n =
@@ -66,12 +66,14 @@ val num2str_def = tDefine "num2str" `
    \\ ASM_SIMP_TAC std_ss [DIV_MULT]
    \\ DECIDE_TAC);
 
-val str2dec_def = Define `
-  str2dec c = ORD c - 48`;
+Definition str2dec_def:
+  str2dec c = ORD c - 48
+End
 
-val str2num_def = Define `
+Definition str2num_def:
   (str2num "" = 0) /\
-  (str2num (STRING c s) = (ORD c - 48) * 10 ** (LENGTH s) + str2num s)`;
+  (str2num (STRING c s) = (ORD c - 48) * 10 ** (LENGTH s) + str2num s)
+End
 
 val str2num_dec2str = prove(
   ``!n. n < 10 ==> (str2num (dec2str n) = n) /\ ~(dec2str n = "") /\
@@ -81,14 +83,18 @@ val str2num_dec2str = prove(
   \\ IMP_RES_TAC ORD_CHR
   \\ ASM_SIMP_TAC std_ss [] \\ DECIDE_TAC);
 
-val EXPLODE_STRCAT = store_thm("EXPLODE_STRCAT",
-  ``!s t. EXPLODE (STRCAT s t) = EXPLODE s ++ EXPLODE t``,
-  Induct THEN ASM_SIMP_TAC std_ss [STRCAT_def,EXPLODE_def,APPEND])
+Theorem EXPLODE_STRCAT:
+    !s t. EXPLODE (STRCAT s t) = EXPLODE s ++ EXPLODE t
+Proof
+  Induct THEN ASM_SIMP_TAC std_ss [STRCAT_def,EXPLODE_def,APPEND]
+QED
 
-val LENGTH_STRCAT = store_thm("LENGTH_STRCAT",
-  ``!x y. LENGTH (STRCAT x y) = LENGTH x + LENGTH y``,
+Theorem LENGTH_STRCAT:
+    !x y. LENGTH (STRCAT x y) = LENGTH x + LENGTH y
+Proof
   Induct THEN ASM_SIMP_TAC std_ss [LENGTH,STRCAT_def,ADD_ASSOC,
-     DECIDE ``SUC n = 1 + n``]);
+     DECIDE ``SUC n = 1 + n``]
+QED
 
 val str2num_STRCAT = prove(
   ``!s c. str2num (STRCAT s (STRING c "")) = str2num s * 10 + str2num (STRING c "")``,
@@ -200,11 +206,13 @@ val arm_read_number_lemma = prove(
 
 (* --- READ STRING LENGTH --- *)
 
-val space_char_def = Define `
-  space_char c = ORD c <= 32`;
+Definition space_char_def:
+  space_char c = ORD c <= 32
+End
 
-val identifier_char_def = Define `
-  identifier_char c = ~(space_char c) /\ ~(MEM (STRING c "") ["(";")";"."])`;
+Definition identifier_char_def:
+  identifier_char c = ~(space_char c) /\ ~(MEM (STRING c "") ["(";")";"."])
+End
 
 val (th1,arm_strlen_def,arm_strlen_pre_def) = compile_all ``
   arm_strlen (r4:word32,r5:word32,df:word32 set,f:word32->word8) =
@@ -416,19 +424,21 @@ val (th1,arm_symbol_insert_def,arm_symbol_insert_pre_def) = compile_all ``
      let (r4,r5,r6,r8,df,dg,f,g) = arm_strcopy (r4,r5,r8,df,dg,f,g) in
        (r3,r4,r5,r6,r7,r8,df,dg,dm,f,g,m))``
 
-val word_shift_right_n2w = store_thm("word_shift_right_n2w",
-  ``!n k. n < dimword (:'a) ==> (n2w n >>> k = n2w (n DIV 2 ** k) :'a word)``,
+Theorem word_shift_right_n2w:
+    !n k. n < dimword (:'a) ==> (n2w n >>> k = n2w (n DIV 2 ** k) :'a word)
+Proof
   SIMP_TAC std_ss [GSYM w2n_11,w2n_lsr,w2n_n2w] \\ REPEAT STRIP_TAC
   \\ `n DIV 2 ** k <= n` by (MATCH_MP_TAC DIV_LESS_EQ \\ SIMP_TAC std_ss [ZERO_LT_EXP])
   \\ IMP_RES_TAC LESS_EQ_LESS_TRANS
-  \\ ASM_SIMP_TAC std_ss []);
+  \\ ASM_SIMP_TAC std_ss []
+QED
 
 val symbol_table_dom_ALIGNED = prove(
   ``!xs a dm dg. symbol_table_dom xs (a,dm,dg) ==> ALIGNED a``,
   Induct \\ SIMP_TAC std_ss [symbol_table_dom_def] \\ REPEAT STRIP_TAC \\ RES_TAC
   \\ Q.PAT_X_ASSUM `ALIGNED b` MP_TAC
   \\ ONCE_REWRITE_TAC [ALIGNED_MOD_4] \\ SIMP_TAC std_ss [WORD_ADD_0]
-  \\ ONCE_REWRITE_TAC [GSYM (MATCH_MP MOD_PLUS (DECIDE ``0<4:num``))]
+  \\ ONCE_REWRITE_TAC [GSYM MOD_PLUS]
   \\ REWRITE_TAC [EVAL ``8 MOD 4``]
   \\ SIMP_TAC std_ss [SIMP_RULE std_ss [] (Q.SPECL [`4`,`0`] MOD_MULT),WORD_ADD_0]);
 
@@ -513,9 +523,10 @@ val (th1,arm_symbol_add_def,arm_symbol_add_pre_def) = compile_all ``
            (let r3 = m (r3 + 0x4w) in
               arm_symbol_add (r3,r5,r8,df,dg,dm,f,g,m)))``;
 
-val add_symbol_def = Define `
+Definition add_symbol_def:
   (add_symbol y [] = [y]) /\
-  (add_symbol y (x::xs) = if y = x then x :: xs else x :: add_symbol y xs)`;
+  (add_symbol y (x::xs) = if y = x then x :: xs else x :: add_symbol y xs)
+End
 
 val add_symbol_thm = prove(
   ``!xs y. add_symbol y xs = if MEM y xs then xs else xs ++ [y]``,
@@ -587,7 +598,7 @@ val arm_symbol_add_lemma = prove(
      (IMP_RES_TAC symbol_table_dom_ALIGNED
       \\ Q.PAT_X_ASSUM `ALIGNED xxx` MP_TAC
       \\ ONCE_REWRITE_TAC [ALIGNED_MOD_4] \\ ASM_SIMP_TAC std_ss [WORD_ADD_0]
-      \\ ONCE_REWRITE_TAC [MATCH_MP(GSYM MOD_PLUS) (DECIDE ``0<4:num``)]
+      \\ ONCE_REWRITE_TAC [GSYM MOD_PLUS]
       \\ REWRITE_TAC [ADD,EVAL ``8 MOD 4``]
       \\ SIMP_TAC std_ss [MOD_EQ_0,WORD_ADD_0])
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [n2w_11]
@@ -771,11 +782,12 @@ val (th1,arm_lexer_def,arm_lexer_pre_def) = compile_all ``
          let r4 = w2w (f r5) in
            arm_lexer (r9,r3,r4,r5,r6,r7,r8,df,dg,dh,dm,f,g,h,m))``;
 
-val read_while_def = Define `
+Definition read_while_def:
   (read_while P "" s = (s,"")) /\
   (read_while P (STRING c cs) s =
      if P c then read_while P cs (STRCAT s (STRING c ""))
-            else (s,STRING c cs))`;
+            else (s,STRING c cs))
+End
 
 val read_while_thm = prove(
   ``!cs s cs' s'.
@@ -799,18 +811,21 @@ val sexp_lex_def = tDefine "sexp_lex" `
    \\ IMP_RES_TAC (GSYM read_while_thm)
    \\ FULL_SIMP_TAC std_ss [LENGTH] \\ DECIDE_TAC)
 
-val null_string_def = Define `null_string = STRING (CHR 0) ""`;
+Definition null_string_def:   null_string = STRING (CHR 0) ""
+End
 
-val identifier_string_def = Define `
+Definition identifier_string_def:
   identifier_string s =
     EVERY identifier_char (EXPLODE s) /\ ~(number_char (HD (EXPLODE s))) /\
-    ~(HD (EXPLODE s) = #"'")`;
+    ~(HD (EXPLODE s) = #"'")
+End
 
-val all_symbols_def = Define `
+Definition all_symbols_def:
   (all_symbols [] xs = xs) /\
   (all_symbols (c::cs) xs =
      if identifier_string c
-     then all_symbols cs (add_symbol c xs) else all_symbols cs xs)`;
+     then all_symbols cs (add_symbol c xs) else all_symbols cs xs)
+End
 
 val read_while_thm2_lemma = prove(
   ``!cs s P. ?t1 t2. (read_while P cs s = (t1,t2)) /\ (STRCAT s cs = STRCAT t1 t2) /\
@@ -846,9 +861,7 @@ val symbol_table_dom_IMPLIES = prove(
     \\ REPEAT STRIP_TAC \\ RES_TAC
     \\ ASM_SIMP_TAC std_ss []]);
 
-open set_sepTheory;
-
-val arm_token_def = Define `
+Definition arm_token_def:
   arm_token w str b x =
     if str = "(" then (w =  4w) else
     if str = ")" then (w =  8w) else
@@ -856,20 +869,23 @@ val arm_token_def = Define `
     if str = "'" then (w = 16w) else
     if EVERY number_char (EXPLODE str)
     then (w = ADDR32 (n2w (str2num str)) + 2w)
-    else (b + w - 3w, str) IN x /\ ALIGNED (w - 3w)`;
+    else (b + w - 3w, str) IN x /\ ALIGNED (w - 3w)
+End
 
-val arm_tokens_def = Define `
+Definition arm_tokens_def:
   (arm_tokens a [] b x y = cond (a = y)) /\
   (arm_tokens a (str::xs) b x y =
      SEP_EXISTS w1:word32 w2:word32. one (a,w1) * one (a+4w,w2) *
                        cond (arm_token w1 str b x) *
-                       arm_tokens (a + 8w:word32) xs b x y)`;
+                       arm_tokens (a + 8w:word32) xs b x y)
+End
 
-val token_slots_def = Define `
+Definition token_slots_def:
   (token_slots a 0 = emp) /\
   (token_slots a (SUC n) =
      SEP_EXISTS w1:word32 w2:word32. one (a,w1) * one (a+4w,w2) *
-                                     token_slots (a + 8w:word32) n)`;
+                                     token_slots (a + 8w:word32) n)
+End
 
 val symbol_table_IMP_ALIGNED = prove(
   ``!xs x r3 a y. (a,y) IN x /\ ALIGNED r3 /\
@@ -1142,9 +1158,10 @@ val arm_lexer_lemma = prove(
 
 (* --- PARSER --- *)
 
-val LIST_STRCAT_def = Define `
+Definition LIST_STRCAT_def:
   (LIST_STRCAT [] = "") /\
-  (LIST_STRCAT (x::xs) = STRCAT x (LIST_STRCAT xs))`;
+  (LIST_STRCAT (x::xs) = STRCAT x (LIST_STRCAT xs))
+End
 
 val sexp2string_aux_def = tDefine "sexp2string_aux" `
   (sexp2string_aux (Val n, b) = num2str n) /\
@@ -1161,7 +1178,8 @@ val sexp2string_aux_def = tDefine "sexp2string_aux" `
   \\ FULL_SIMP_TAC std_ss [isQuote_thm,SExp_11,CAR_def,LSIZE_def]
   \\ DECIDE_TAC);
 
-val sexp2string_def = Define `sexp2string x = sexp2string_aux (x, T)`;
+Definition sexp2string_def:   sexp2string x = sexp2string_aux (x, T)
+End
 
 val sexp2tokens_def = tDefine "sexp2tokens" `
   (sexp2tokens (Val n) b = [num2str n]) /\
@@ -1184,7 +1202,7 @@ val sexp2tokens_def = tDefine "sexp2tokens" `
     \\ FULL_SIMP_TAC std_ss [CAR_def,CDR_def,LSIZE_def,ADD1] \\ DECIDE_TAC)
   \\ REPEAT STRIP_TAC \\ DECIDE_TAC);
 
-val sexp_parse_def = Define `
+Definition sexp_parse_def:
   (sexp_parse [] exp stack = exp) /\
   (sexp_parse (t::ts) exp stack =
     if t = ")" then sexp_parse ts (Sym "nil") (exp::stack) else
@@ -1194,14 +1212,16 @@ val sexp_parse_def = Define `
     if t = "'" then (if isDot exp then sexp_parse ts (Dot (Dot (Sym "quote") (Dot (CAR exp) (Sym "nil"))) (CDR exp)) stack
                                   else sexp_parse ts exp stack) else
     if is_number_string t then sexp_parse ts (Dot (Val (str2num t)) exp) stack else
-                               sexp_parse ts (Dot (Sym t) exp) stack)`;
+                               sexp_parse ts (Dot (Sym t) exp) stack)
+End
 
-val sexp_inject_def = Define `
+Definition sexp_inject_def:
   (sexp_inject (Val m) x = Dot (Val m) x) /\
   (sexp_inject (Sym s) x = Dot (Sym s) x) /\
   (sexp_inject (Dot t1 t2) x =
      if x = Sym "nil" then Dot t1 t2 else
-     if t2 = Sym "nil" then Dot t1 x else Dot t1 (sexp_inject t2 x))`;
+     if t2 = Sym "nil" then Dot t1 x else Dot t1 (sexp_inject t2 x))
+End
 
 val parse_tac =
   REPEAT STRIP_TAC
@@ -1211,10 +1231,11 @@ val parse_tac =
   \\ ASM_SIMP_TAC std_ss [sexp_parse_def] \\ CONV_TAC (DEPTH_CONV stringLib.string_EQ_CONV)
   \\ SIMP_TAC std_ss [NOT_CONS_NIL,HD,TL,CAR_def]
 
-val sexp_ok_def = Define `
+Definition sexp_ok_def:
   (sexp_ok (Val m) = m < 2**30) /\
   (sexp_ok (Sym s) = identifier_string s /\ ~(s = "")) /\
-  (sexp_ok (Dot t1 t2) = sexp_ok t1 /\ sexp_ok t2)`;
+  (sexp_ok (Dot t1 t2) = sexp_ok t1 /\ sexp_ok t2)
+End
 
 val sexp_ok_Sym = prove(
   ``sexp_ok (Sym s) ==> ~(s = "(") /\ ~(s = ".") /\ ~(s = ")") /\
@@ -1309,8 +1330,9 @@ val sexp_parse_lemma = prove(
     \\ Q.PAT_X_ASSUM `isDot exp'` ASSUME_TAC \\ NTAC 2 (FULL_SIMP_TAC std_ss [isDot_thm])
     \\ ASM_SIMP_TAC bool_ss [sexp_inject_def,CAR_def]]);
 
-val string2sexp_def = Define `
-  string2sexp s = CAR (sexp_parse (REVERSE (sexp_lex s)) (Sym "nil") [])`;
+Definition string2sexp_def:
+  string2sexp s = CAR (sexp_parse (REVERSE (sexp_lex s)) (Sym "nil") [])
+End
 
 val EVERY_read_while = prove(
   ``!s t. EVERY P (EXPLODE s) ==> (read_while P s t = (STRCAT t s,""))``,
@@ -1318,8 +1340,9 @@ val EVERY_read_while = prove(
   \\ ASM_SIMP_TAC std_ss [read_while_def,STRCAT_def,STRCAT_EQNS,EVERY_DEF,EXPLODE_def]
   \\ REWRITE_TAC [GSYM STRCAT_ASSOC] \\ REWRITE_TAC [STRCAT_def]);
 
-val string_nil_or_not_def = Define `
-  string_nil_or_not P s = ~(s = "") ==> ~P (HD (EXPLODE s))`;
+Definition string_nil_or_not_def:
+  string_nil_or_not P s = ~(s = "") ==> ~P (HD (EXPLODE s))
+End
 
 val read_while_step = prove(
   ``!s t q. EVERY P (EXPLODE s) /\ string_nil_or_not P q ==>
@@ -1438,12 +1461,14 @@ val sexp_lex_sexp2str =
   (RW [string_nil_or_not_def,sexp_lex_def,APPEND_NIL,STRCAT_EQNS] o
    Q.SPECL [`exp`,`T`,`""`]) sexp2tokens_lemma;
 
-val string2sexp_sexp2string = store_thm("string2sexp_sexp2string",
-  ``!x. sexp_ok x ==> (string2sexp (sexp2string x) = x)``,
+Theorem string2sexp_sexp2string:
+    !x. sexp_ok x ==> (string2sexp (sexp2string x) = x)
+Proof
   REWRITE_TAC [string2sexp_def,sexp2string_def]
   \\ SIMP_TAC std_ss [sexp_lex_sexp2str,
        RW [APPEND_NIL] (Q.SPECL [`x`,`T`,`[]`] sexp_parse_lemma)]
-  \\ SIMP_TAC std_ss [sexp_parse_def,CAR_def]);
+  \\ SIMP_TAC std_ss [sexp_parse_def,CAR_def]
+QED
 
 
 (* PARSER IMPLEMENTATION *)
@@ -1553,11 +1578,13 @@ val (th,arm_parse_loop_def,arm_parse_loop_pre_def) = compile_all ``
       let r4 = r4 - 0x8w in
         arm_parse_loop1 (r4,r5,r6,r7,r8,dh,h)``;
 
-val sexp_list_def = Define `
+Definition sexp_list_def:
   (sexp_list [] = Sym "nil") /\
-  (sexp_list (x::xs) = Dot x (sexp_list xs))`;
+  (sexp_list (x::xs) = Dot x (sexp_list xs))
+End
 
-val add_set_def = Define `add_set x s (i,j) = (x + i,j) IN s`;
+Definition add_set_def:   add_set x s (i,j) = (x + i,j) IN s
+End
 
 val SPLIT_thm = prove(
   ``!x y z. SPLIT x (y,z) = (y = x DIFF z) /\ z SUBSET x``,
@@ -1573,12 +1600,13 @@ val SET_TAC =
   FULL_SIMP_TAC std_ss [DISJOINT_DEF,EXTENSION,NOT_IN_EMPTY,IN_INTER,
     IN_UNION,IN_INSERT,IN_DELETE,IN_DIFF,SUBSET_DEF,set_sepTheory.SPLIT_def] \\ METIS_TAC []
 
-val arm_tokens2_def = Define `
+Definition arm_tokens2_def:
   (arm_tokens2 a [] b x y = cond (a = y)) /\
   (arm_tokens2 a (str::xs) b x y =
      SEP_EXISTS w1:word32 w2:word32. one (a,w1) * one (a+4w,w2) *
                        cond (arm_token w1 str b x) *
-                       arm_tokens2 (a - 8w:word32) xs b x y)`;
+                       arm_tokens2 (a - 8w:word32) xs b x y)
+End
 
 val arm_tokens2_SNOC = prove(
   ``!xs a b x w. arm_tokens2 a (xs ++ [h]) b x w =
@@ -1602,9 +1630,10 @@ val arm_tokens_EQ_arm_tokens2 = prove(
   \\ SIMP_TAC std_ss [SEP_CLAUSES,arm_tokens2_def]
   \\ SIMP_TAC (std_ss++star_ss) []);
 
-val arm_tokens4_def = Define `
+Definition arm_tokens4_def:
   arm_tokens4 a xs b x y =
-    arm_tokens2 a xs b x y * one (y,40w) * SEP_EXISTS w. one (y+4w,w)`;
+    arm_tokens2 a xs b x y * one (y,40w) * SEP_EXISTS w. one (y+4w,w)
+End
 
 val arm_tokens4_thm = prove(
   ``arm_tokens4 a (str::xs) b x y =
@@ -1613,24 +1642,28 @@ val arm_tokens4_thm = prove(
   \\ REWRITE_TAC [STAR_ASSOC]
   \\ SIMP_TAC std_ss [SEP_CLAUSES]);
 
-val arm_tokens3_def = Define `
+Definition arm_tokens3_def:
   (arm_tokens3 a [] q = cond (a = q)) /\
   (arm_tokens3 a (str::xs) q =
      if str = "'" then SEP_EXISTS w3:word32 w4.
                        one (a,w3) * one (a+4w,w4) * arm_tokens3 (a + 8w) xs q
-     else arm_tokens3 a xs q)`;
+     else arm_tokens3 a xs q)
+End
 
-val lisp_exp_def = Define `
+Definition lisp_exp_def:
   (lisp_exp (Sym s) a (b,d) = cond (ALIGNED (a - 3w) /\ (b + a - 3w:word32,s) IN d)) /\
   (lisp_exp (Val n) a (b,d) = cond (a = ADDR32 (n2w n) + 2w)) /\
   (lisp_exp (Dot x y) a (b,d) = cond (ALIGNED a /\ (w2n (b - a) MOD 8 = 0)) *
-    SEP_EXISTS a1 a2. one (a,a1) * one (a+4w,a2) * lisp_exp x a1 (b,d) * lisp_exp y a2 (b,d))`;
+    SEP_EXISTS a1 a2. one (a,a1) * one (a+4w,a2) * lisp_exp x a1 (b,d) * lisp_exp y a2 (b,d))
+End
 
-val SEP_EXPS_def = Define `
+Definition SEP_EXPS_def:
   (SEP_EXPS [] (b,d) = emp) /\
-  (SEP_EXPS ((a,x)::xs) (b,d) = lisp_exp x a (b,d) * SEP_EXPS xs (b,d))`;
+  (SEP_EXPS ((a,x)::xs) (b,d) = lisp_exp x a (b,d) * SEP_EXPS xs (b,d))
+End
 
-val SEP_FILL_def = Define `SEP_FILL (b,d) = SEP_EXISTS xs. SEP_EXPS xs (b,d)`;
+Definition SEP_FILL_def:   SEP_FILL (b,d) = SEP_EXISTS xs. SEP_EXPS xs (b,d)
+End
 
 val lisp_exp_FILL = prove(
   ``!exp exp2 a a2 b d a.
@@ -1663,8 +1696,9 @@ val LENGTH_LEMMA2 = prove(
   \\ `8 * LENGTH xs < 4294967296` by DECIDE_TAC
   \\ ASM_SIMP_TAC std_ss [LENGTH_NIL] \\ DECIDE_TAC);
 
-val ALIGNED8_def = Define `
-  ALIGNED8 x = (w2n x MOD 8 = 0)`;
+Definition ALIGNED8_def:
+  ALIGNED8 x = (w2n x MOD 8 = 0)
+End
 
 val ALIGNED8_LEMMA = prove(
   ``!x:word32. ALIGNED8 (x + 0x8w) = ALIGNED8 x``,
@@ -2166,8 +2200,9 @@ val all_symbols_exists = prove(
   \\ Cases_on `h = h'` \\ FULL_SIMP_TAC std_ss [APPEND]
   \\ METIS_TAC []);
 
-val sexp_lex_space_def = Define `
-  sexp_lex_space s = LENGTH (sexp_lex s ++ FILTER (\x. x = "'") (sexp_lex s))`;
+Definition sexp_lex_space_def:
+  sexp_lex_space s = LENGTH (sexp_lex s ++ FILTER (\x. x = "'") (sexp_lex s))
+End
 
 val token_slots_FILTER = prove(
   ``!xs a n.
@@ -2615,19 +2650,22 @@ val set_lemma = prove(
   SIMP_TAC std_ss [EXTENSION,IN_UNION,IN_DIFF,SUBSET_DEF,
     DISJOINT_DEF,NOT_IN_EMPTY,IN_INTER] \\ METIS_TAC []);
 
-val fun2set_DIFF_IMP = store_thm("fun2set_DIFF_IMP",
-  ``!p x. (!y. p (fun2set (f,y)) ==> (x = y)) /\ (p * q) (fun2set (f,df)) ==>
-          q (fun2set (f,df DIFF x))``,
+Theorem fun2set_DIFF_IMP:
+    !p x. (!y. p (fun2set (f,y)) ==> (x = y)) /\ (p * q) (fun2set (f,df)) ==>
+          q (fun2set (f,df DIFF x))
+Proof
   SIMP_TAC std_ss [STAR_def,GSYM fun2set_DIFF] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [SPLIT_def]
   \\ IMP_RES_TAC set_lemma
   \\ IMP_RES_TAC SUBSET_fun2set
   \\ FULL_SIMP_TAC std_ss [] \\ RES_TAC
-  \\ FULL_SIMP_TAC std_ss []);
+  \\ FULL_SIMP_TAC std_ss []
+QED
 
-val ch_active_set2_def = Define `
+Definition ch_active_set2_def:
   ch_active_set2 (a,i,n) =
-    ch_active_set (a,i,n) UNION ch_active_set (a + 0x4w,i,n)`;
+    ch_active_set (a,i,n) UNION ch_active_set (a + 0x4w,i,n)
+End
 
 val ALIGNED8_EXISTS = prove(
   ``!w:word32. ALIGNED8 w ==> ?k. w = n2w (8 * k)``,
@@ -2763,8 +2801,8 @@ val SEP_EXPS_ok_data = prove(
   \\ FULL_SIMP_TAC std_ss [GSYM SEP_EXPS_def]
   \\ METIS_TAC [SUBSET_TRANS]);
 
-val arm_string2sexp_lemma = store_thm("arm_string2sexp_lemma",
-  ``32 <= w2n r5 /\ w2n r5 + 16 * l + 20 < 2 ** 32 /\ l <> 0 /\
+Theorem arm_string2sexp_lemma:
+    32 <= w2n r5 /\ w2n r5 + 16 * l + 20 < 2 ** 32 /\ l <> 0 /\
     sexp_lex_space (sexp2string s) <= l /\ sexp_ok s /\
     string_mem (STRCAT (sexp2string s) null_string) (r3,f,df) /\ ALIGNED r5 /\
     (token_slots (r5 - 32w) (l + l + 7)) (fun2set (h,dh)) /\
@@ -2775,7 +2813,8 @@ val arm_string2sexp_lemma = store_thm("arm_string2sexp_lemma",
       (arm_string2sexp' (r3,n2w l,r5,df,dg,dh,dm,f,g,h,m) =
         (r3i,3w,3w,3w,3w,3w,r5,df,dg,dh,dm,f,gi,hi,mi)) /\
       ?sym. lisp_inv (s,Sym "nil",Sym "nil",Sym "nil",Sym "nil",Sym "nil",l)
-              (r3i,3w,3w,3w,3w,3w,r5,dh,hi,sym,dm,mi,dg,gi)``,
+              (r3i,3w,3w,3w,3w,3w,r5,dh,hi,sym,dm,mi,dg,gi)
+Proof
   REWRITE_TAC [GSYM AND_IMP_INTRO]
   \\ SIMP_TAC std_ss [GSYM sexp_lex_sexp2str]
   \\ REWRITE_TAC [AND_IMP_INTRO,GSYM CONJ_ASSOC,GSYM sexp2string_def]
@@ -3087,24 +3126,26 @@ val arm_string2sexp_lemma = store_thm("arm_string2sexp_lemma",
     \\ ASM_SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,WORD_EQ_ADD_CANCEL]
     \\ `8 + (4 + 8 * (j - 1)) = 8 * j + 4`by DECIDE_TAC
     \\ ASM_SIMP_TAC std_ss [word_add_n2w,word_mul_n2w]
-    \\ DECIDE_TAC]);
+    \\ DECIDE_TAC]
+QED
 
 
 (* formulating the final theorem *)
 
-open lisp_opsTheory;
-
-val aSTRING_def = Define `
+Definition aSTRING_def:
   aSTRING a str = SEP_EXISTS df f. aBYTE_MEMORY df f *
-                    cond (string_mem (STRCAT str null_string) (a,f,df))`;
+                    cond (string_mem (STRCAT str null_string) (a,f,df))
+End
 
-val pSTRING_def = Define `
+Definition pSTRING_def:
   pSTRING a str = SEP_EXISTS df f. pBYTE_MEMORY df f *
-                    cond (string_mem (STRCAT str null_string) (a,f,df))`;
+                    cond (string_mem (STRCAT str null_string) (a,f,df))
+End
 
-val xSTRING_def = Define `
+Definition xSTRING_def:
   xSTRING a str = SEP_EXISTS df f. xBYTE_MEMORY df f *
-                    cond (string_mem (STRCAT str null_string) (a,f,df))`;
+                    cond (string_mem (STRCAT str null_string) (a,f,df))
+End
 
 fun AUTO_EXISTS_TAC (asm,tm) = let
     fun ex tm = let
@@ -3194,4 +3235,3 @@ val th = store_string2sexp_thm "x86" `emp`
     xSTRING r3 (sexp2string s) * xPC p * ~xS``
 
 
-val _ = export_theory();

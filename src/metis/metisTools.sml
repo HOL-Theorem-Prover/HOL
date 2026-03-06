@@ -209,8 +209,10 @@ fun const_scheme c =
 
 fun trap f g x =
   f x
-  handle e as HOL_ERR {message, ...} =>
-    (if not (contains "proof translation error" message) then raise e else
+  handle e as HOL_ERR herr =>
+    (if not (contains "proof translation error" (message_of herr)) then
+       raise e
+     else
        (chatting 1 andalso
         chat "metis: proof translation error: trying again with types.\n";
         g x));
@@ -412,7 +414,11 @@ local
     end;
 in
   fun classify fms = order (First,empty) fms
-    handle HOL_ERR _ => raise BUG "metisTools.classify" "shouldn't fail";
+    handle HOL_ERR e => (
+        print "metisTools.classify: error in classifying:\n";
+        HOLPP.prettyPrint (print, 1) (pp_hol_error e);
+        raise BUG "metisTools.classify" "shouldn't fail"
+    );
 end;
 
 fun METIS_TTAC (cs,ths) =

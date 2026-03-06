@@ -1,9 +1,9 @@
-open HolKernel boolLib bossLib Parse BasicProvers dep_rewrite
-open wordsTheory bitstringTheory integer_wordTheory listTheory rich_listTheory
-     integerTheory arithmeticTheory realTheory intrealTheory
-open wordsLib bitstringLib intLib
-
-val _ = new_theory "l3_equivalence_misc";
+Theory l3_equivalence_misc
+Ancestors
+  words bitstring integer_word list rich_list integer arithmetic
+  real intreal
+Libs
+  BasicProvers dep_rewrite wordsLib bitstringLib intLib
 
 val _ = wordsLib.output_words_as_bin();
 val _ = wordsLib.guess_lengths();
@@ -499,7 +499,7 @@ Proof
   \\ REWRITE_TAC [GSYM word_sub_def,WORD_SUB_ADD]
 QED
 
-Triviality v2n_add_less_limit:
+Theorem v2n_add_less_limit[local]:
   ∀xs. EXISTS I xs ⇒  v2n (MAP $¬ xs) + 1 < 2 ** LENGTH xs
 Proof
   rw[] >> gvs[] >>
@@ -572,7 +572,7 @@ Proof
   simp[n2v_2_POW, zero_extend_def, PAD_LEFT]
 QED
 
-Triviality LENGTH_ADD:
+Theorem LENGTH_ADD[local]:
   ∀m n. LENGTH xs = m + n ⇔
         ∃ys zs. LENGTH ys = m ∧ LENGTH zs = n ∧ xs = ys ++ zs
 Proof
@@ -660,7 +660,7 @@ Proof
   rpt $ pop_assum kall_tac >> map_every qid_spec_tac [`v`,`n`] >>
   Induct >> rw[v2n_lt] >>
   Cases_on `v` >> rw[v2n] >>
-  DEP_ONCE_REWRITE_TAC[GSYM bitTheory.MOD_PLUS_RIGHT] >> conj_tac >- simp[] >>
+  ONCE_REWRITE_TAC[GSYM bitTheory.MOD_PLUS_RIGHT] >>
   qsuff_tac `2 ** LENGTH t MOD 2 ** (LENGTH t - n) = 0`
   >- (disch_then SUBST_ALL_TAC >> simp[]) >>
   pop_assum kall_tac >>
@@ -710,6 +710,3 @@ QED
 
 
 (****************************************)
-
-val _ = export_theory();
-

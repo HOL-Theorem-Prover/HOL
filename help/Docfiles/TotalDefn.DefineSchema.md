@@ -1,0 +1,88 @@
+## `DefineSchema`
+
+``` hol4
+TotalDefn.DefineSchema : term quotation -> thm
+```
+
+------------------------------------------------------------------------
+
+Defines a recursion schema.
+
+`DefineSchema` may be used to declare so-called 'schematic' definitions,
+or 'recursion schemas'. These are just recursive functions with extra
+free variables (also called 'parameters') on the right-hand side of some
+clauses. Such schemas have been used as a basis for program
+transformation systems.
+
+`DefineSchema` takes its input in exactly the same format as `Define`.
+
+The termination constraints of a schematic definition are collected on
+the hypotheses of the definition, and also on the hypotheses of the
+automatically proved induction theorem, but a termination proof is only
+attempted when the termination conditions have no occurrences of
+parameters. This is because, in general, termination can only be proved
+after some of the parameters of the schema have been instantiated.
+
+### Failure
+
+`DefineSchema` fails in many of the same ways as `Define`. However, it
+will not fail if it cannot prove termination.
+
+### Example
+
+The following defines a schema for binary recursion.
+
+``` hol4
+   - DefineSchema
+          `binRec (x:'a) =
+              if atomic x then (A x:'b)
+                          else join (binRec (left x))
+                                    (binRec (right x))`;
+
+   <<HOL message: Definition is schematic in the following variables:
+       "A", "atomic", "join", "left", "right">>
+   Equations stored under "binRec_def".
+   Induction stored under "binRec_ind".
+
+   > val it =
+        [!x. ~atomic x ==> R (left x) x,
+         !x. ~atomic x ==> R (right x) x, WF R]
+       |- binRec A atomic join left right x =
+           if atomic x then A x
+           else
+             join (binRec A atomic join left right (left x))
+                  (binRec A atomic join left right (right x)) : thm
+```
+
+The following defines a schema in which a termination proof is attempted
+successfully.
+
+``` hol4
+   - DefineSchema `(map [] = []) /\ (map (h::t) = f h :: map t)`;
+
+   <<HOL message: inventing new type variable names: 'a, 'b>>
+   <<HOL message: Definition is schematic in the following variables:
+        "f">>
+
+   Equations stored under "map_def".
+   Induction stored under "map_ind".
+
+   > val it =  [] |- (map f [] = []) /\ (map f (h::t) = f h::map f t) : thm
+```
+
+The easy termination proof is attempted because the schematic variable
+`f` doesn't occur in the termination conditions.
+
+### Comments
+
+The original recursion equations, in which parameters only occur on
+right hand sides, is transformed into one in which the parameters become
+arguments to the function being defined. This is the expected behaviour.
+If an argument intended as a parameter occurs on the left hand side in
+the original recursion equations, it becomes universally quantified in
+the termination conditions, which is not desirable for a schema.
+
+### See also
+
+[`TotalDefn.Define`](#TotalDefn.Define),
+[`Defn.Hol_defn`](#Defn.Hol_defn)

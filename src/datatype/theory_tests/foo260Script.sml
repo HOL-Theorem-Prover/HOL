@@ -1,4 +1,5 @@
-open HolKernel Datatype
-val _ = new_theory"foo260";
+Theory foo260[bare]
+Libs
+  HolKernel Datatype
+
 val _ = Datatype`foo = <| f : bool |>`;
-val _ = export_theory();

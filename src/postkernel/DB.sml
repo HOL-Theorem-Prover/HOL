@@ -80,20 +80,36 @@ fun updrevmap f (DB{namemap,revmap,localmap}) =
 fun updlocalmap f (DB{namemap,revmap,localmap}) =
     DB {namemap = namemap, revmap = revmap, localmap = f localmap}
 
+fun add_to_submap m (newdata as ((s1, s2), x)) =
+    let val s2key = toLower s2
+        val oldvalue = case Map.peek(m, s2key) of
+                           NONE => []
+                         | SOME items => items
+    in
+      Map.insert(m, s2key,
+                 newdata :: List.filter (not o dataNameEq s2) oldvalue)
+    end
+
+fun insert_localmap_into_namemap thyname ltab nmap =
+    let
+      val sm0 = case Map.peek(nmap, thyname) of
+                    NONE => empty_sdata_map
+                  | SOME sm0 => sm0
+      fun foldthis (thname, th_thi) sm0 =
+          add_to_submap sm0 ((thyname,thname), th_thi)
+      val sm = Symtab.fold foldthis ltab sm0
+    in
+      Map.insert(nmap, thyname, sm)
+    end
+
+fun allnamemap cthy d =
+    insert_localmap_into_namemap cthy (localmap d) (namemap d)
+
 val empty_dbmap = DB {namemap = Map.mkDict String.compare,
                       localmap = Symtab.empty, revmap = Termtab.empty}
 
 local val DBref = ref empty_dbmap
       fun lemmas() = !DBref
-      fun add_to_submap m (newdata as ((s1, s2), x)) =
-          let val s2key = toLower s2
-              val oldvalue = case Map.peek(m, s2key) of
-                               NONE => []
-                             | SOME items => items
-          in
-            Map.insert(m, s2key,
-                       newdata :: List.filter (not o dataNameEq s2) oldvalue)
-          end
       fun functional_bindl_names thy blist namemap =
           (* used when a theory is loaded from disk *)
           let val submap =
@@ -162,9 +178,7 @@ local val DBref = ref empty_dbmap
             fun flat (n,(th,i)) = (n,th,i)
           in
             case thydelta of
-                DelConstant _ => purge_stale_bindings()
-              | DelTypeOp _ => purge_stale_bindings()
-              | NewBinding nb =>
+                NewBinding nb =>
                 (
                   if Theory.is_temp_binding (#1 nb) then ()
                   else
@@ -172,6 +186,11 @@ local val DBref = ref empty_dbmap
                                               [flat nb]
                 )
               | DelBinding s => delete_binding s
+              | UpdBinding(s,{old,new,thm}) =>
+                if Theory.is_temp_binding s then ()
+                else DBref := functional_bindl (!DBref)
+                                               (current_theory())
+                                               [(s,thm,new)]
               | _ => ()
           end
       val _ = Theory.register_hook("DB", hook)
@@ -254,13 +273,14 @@ fun matchp0 incprivate P thylist =
     let fun data_P (_, (th, {private,...})) =
             (incprivate orelse not private) andalso P th
         fun subfold (k, v, acc) = List.filter data_P v @ acc
+        val curr = current_theory()
     in
       case thylist of
         [] => let fun fold (k, m, acc) = Map.foldr subfold acc m
               in
-                Map.foldr fold [] (namemap (CT()))
+                Map.foldr fold [] (allnamemap curr (CT()))
               end
-      | _ => let val db = namemap (CT())
+      | _ => let val db = allnamemap curr (CT())
                  fun fold (thyn, acc) =
                      case Map.peek(db, norm_thyname thyn) of
                        NONE => acc

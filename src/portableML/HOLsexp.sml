@@ -17,6 +17,11 @@ struct
   val fromFile = HOLsexp_parser.raw_read_file
   val fromStream = HOLsexp_parser.raw_read_stream
 
+  fun map_decode f d = Option.map f o d
+  fun bind_decode d f x =
+      case d x of
+          NONE => NONE
+        | SOME y => f y
   fun r3_to_p12 (x,y,z) = (x, (y, z))
   fun p12_to_r3 (x,(y,z)) = (x,y,z)
   fun pair_encode (a,b) (x,y) = Cons(a x, b y)
@@ -32,7 +37,7 @@ struct
           Cons(Symbol s', rest) => if s = s' then SOME rest
                                    else NONE
         | _ => NONE
-  fun tagged_decode s dec t = Option.mapPartial dec (dest_tagged s t)
+  fun tagged_decode s dec = bind_decode (dest_tagged s) dec
 
   fun list_encode enc els = List (map enc els)
   fun break_list s =
@@ -70,13 +75,12 @@ struct
       (fn (u,v,w,x) => (u,(v,(w,x))))
   fun singleton [a] = SOME a
     | singleton _ = NONE
-  fun sing_decode d =
-      Option.mapPartial singleton o list_decode d
+  fun sing_decode d = bind_decode (list_decode d) singleton
   fun pair3_decode (a,b,c) =
-      Option.map p12_to_r3 o pair_decode(a, pair_decode(b,sing_decode c))
+      map_decode p12_to_r3 (pair_decode(a, pair_decode(b,sing_decode c)))
   fun pair4_decode (a,b,c,d) =
-      Option.map (fn (u,(v,(w,x))) => (u,v,w,x)) o
-      pair_decode(a,pair_decode(b,pair_decode(c,sing_decode d)))
+      map_decode (fn (u,(v,(w,x))) => (u,v,w,x))
+                 (pair_decode(a,pair_decode(b,pair_decode(c,sing_decode d))))
 
   fun is_list s =
       case s of

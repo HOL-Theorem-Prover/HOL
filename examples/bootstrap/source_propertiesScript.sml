@@ -1,9 +1,7 @@
-
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory llistTheory;
-open source_valuesTheory source_syntaxTheory source_semanticsTheory mp_then;
-
-val _ = new_theory "source_properties";
+Theory source_properties
+Ancestors
+  arithmetic list pair finite_map string llist
+  source_values source_syntax source_semantics
 
 
 (* In this file we prove that the big-step relational semantics (--->)
@@ -171,7 +169,7 @@ val thms =
    ‘(env,[If test xs y z],s1)’,
    ‘(env,[Call fname xs],s1)’]
 
-Triviality Call_eq:
+Theorem Call_eq[local]:
   (env,[Call fname xs],s1) ---> a1 ⇔
   ∃vs s2 v s3.
     (env,xs,s1) ---> (vs,s2) ∧
@@ -245,12 +243,6 @@ Definition free_vars_def[simp]:
   free_vars (If _ xs  y z) = FLAT (MAP free_vars xs) ++ free_vars y ++ free_vars z ∧
   free_vars (Let n x y) = free_vars x ++ FILTER (\k. k ≠ n) (free_vars y) ∧
   free_vars (Call _ xs) = FLAT (MAP free_vars xs)
-Termination
-  WF_REL_TAC ‘measure exp_size’ \\ rw []
-  \\ qsuff_tac ‘!xs a. MEM a xs ==> exp_size a <= exp1_size xs’
-  \\ TRY (rw [] \\ res_tac \\ fs [] \\ NO_TAC)
-  \\ Induct \\ fs [] \\ rw [] \\ fs [exp_size_def]
-  \\ res_tac \\ fs []
 End
 
 Theorem delete_env_update:
@@ -636,5 +628,3 @@ Proof
          take_branch_def,get_env_and_body_def]
   \\ rw [] \\ fs []
 QED
-
-val _ = export_theory();

@@ -15,7 +15,7 @@ sig
            | IGNORE              of (string * thm)
            | MORE_CONTEXT        of thm
 
-   val trace_hook  : (int * action -> unit) ref;
+   val trace_hook  : (int * action) Listener.t
    val trace       : int * action -> unit
    val trace_level : int ref
    val tty_trace   : action -> unit

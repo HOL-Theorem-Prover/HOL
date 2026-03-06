@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib Parse;
-open EmitML bagTheory gcdTheory llistTheory patriciaTheory patricia_castsTheory;
-open state_transformerTheory basis_emitTheory;
-
-val _ = new_theory "extended_emit";
+Theory extended_emit
+Ancestors
+  bag gcd llist patricia patricia_casts state_transformer
+  basis_emit
+Libs
+  EmitML
 
 (* == Bags ================================================================= *)
 
@@ -13,16 +14,18 @@ val _ = new_theory "extended_emit";
 
 fun ARITH q = EQT_ELIM (numLib.ARITH_CONV (Parse.Term q));
 
-val BAG_VAL_DEF = Q.new_definition
-("BAG_VAL_DEF",`BAG_VAL b x = b(x)`);
+Definition BAG_VAL_DEF[nocompute]:BAG_VAL b x = b(x)
+End
 
-val BAG_VAL_THM = Q.prove
-(`(!x. BAG_VAL EMPTY_BAG x = 0) /\
+Theorem BAG_VAL_THM[local]:
+  (!x. BAG_VAL EMPTY_BAG x = 0) /\
   (!x b e. BAG_VAL (BAG_INSERT e b) x =
-     if (e=x) then 1 + BAG_VAL b x else BAG_VAL b x)`,
+     if (e=x) then 1 + BAG_VAL b x else BAG_VAL b x)
+Proof
  CONJ_TAC THENL
  [RW_TAC arith_ss [EMPTY_BAG,BAG_VAL_DEF],
-  RW_TAC arith_ss [BAG_VAL_DEF] THEN METIS_TAC [BAG_VAL_DEF,BAG_INSERT]]);
+  RW_TAC arith_ss [BAG_VAL_DEF] THEN METIS_TAC [BAG_VAL_DEF,BAG_INSERT]]
+QED
 
 Theorem BAG_IN_EQNS[local]:
   (!x. BAG_IN x {||} <=> F) /\
@@ -30,55 +33,60 @@ Theorem BAG_IN_EQNS[local]:
 Proof METIS_TAC [NOT_IN_EMPTY_BAG,BAG_IN_BAG_INSERT]
 QED
 
-val BAG_INN_EQN = Q.prove
-(`BAG_INN e n b <=> BAG_VAL b e >= n`,
- RW_TAC arith_ss [BAG_VAL_DEF, BAG_INN]);
+Theorem BAG_INN_EQN[local]:
+  BAG_INN e n b <=> BAG_VAL b e >= n
+Proof
+ RW_TAC arith_ss [BAG_VAL_DEF, BAG_INN]
+QED
 
-val BAG_DIFF_EQNS = Q.store_thm
-("BAG_DIFF_EQNS",
- `(!b:'a bag. BAG_DIFF b {||} = b) /\
+Theorem BAG_DIFF_EQNS:
+  (!b:'a bag. BAG_DIFF b {||} = b) /\
   (!b:'a bag. BAG_DIFF {||} b = {||}) /\
   (!(x:'a) b (y:'a). BAG_DIFF (BAG_INSERT x b) {|y|} =
             if x = y then b else BAG_INSERT x (BAG_DIFF b {|y|})) /\
   (!(b1:'a bag) y (b2:'a bag).
-      BAG_DIFF b1 (BAG_INSERT y b2) = BAG_DIFF (BAG_DIFF b1 {|y|}) b2)`,
+      BAG_DIFF b1 (BAG_INSERT y b2) = BAG_DIFF (BAG_DIFF b1 {|y|}) b2)
+Proof
  RW_TAC arith_ss [BAG_DIFF,FUN_EQ_THM,BAG_INSERT,EMPTY_BAG] THEN
- RW_TAC arith_ss []);
+ RW_TAC arith_ss []
+QED
 
-val BAG_INTER_EQNS = Q.store_thm
-("BAG_INTER_EQNS",
- `(!b:'a bag. BAG_INTER {||} b = {||}) /\
+Theorem BAG_INTER_EQNS:
+  (!b:'a bag. BAG_INTER {||} b = {||}) /\
   (!b: 'a bag. BAG_INTER b {||} = {||}) /\
   (!(x:'a) b1 (b2:'a bag).
      BAG_INTER (BAG_INSERT x b1) b2 =
         if BAG_IN x b2
            then BAG_INSERT x (BAG_INTER b1 (BAG_DIFF b2 {|x|}))
-           else BAG_INTER b1 b2)`,
+           else BAG_INTER b1 b2)
+Proof
  RW_TAC arith_ss [BAG_INTER, EMPTY_BAG,FUN_EQ_THM,BAG_INSERT,BAG_DIFF]
  THEN RW_TAC arith_ss []
  THEN FULL_SIMP_TAC arith_ss []
  THEN RW_TAC arith_ss []
  THEN FULL_SIMP_TAC arith_ss [BAG_IN, BAG_INN]
  THEN REPEAT (POP_ASSUM MP_TAC)
- THEN RW_TAC arith_ss []);
+ THEN RW_TAC arith_ss []
+QED
 
-val BAG_MERGE_EQNS = Q.store_thm
-("BAG_MERGE_EQNS",
- `(!b:'a bag. BAG_MERGE {||} b = b) /\
+Theorem BAG_MERGE_EQNS:
+  (!b:'a bag. BAG_MERGE {||} b = b) /\
   (!b:'a bag. BAG_MERGE b {||} = b) /\
   (!x:'a. !b1 b2:'a bag.
          BAG_MERGE (BAG_INSERT x b1) b2 =
-             BAG_INSERT x (BAG_MERGE b1 (BAG_DIFF b2 {|x|})))`,
+             BAG_INSERT x (BAG_MERGE b1 (BAG_DIFF b2 {|x|})))
+Proof
  RW_TAC arith_ss [BAG_MERGE, EMPTY_BAG,FUN_EQ_THM,BAG_INSERT,BAG_DIFF]
  THEN RW_TAC arith_ss []
- THEN FULL_SIMP_TAC arith_ss []);
+ THEN FULL_SIMP_TAC arith_ss []
+QED
 
-val SUB_BAG_EQNS = Q.store_thm
-("SUB_BAG_EQNS",
- `(!b:'a bag. SUB_BAG {||} b <=> T) /\
+Theorem SUB_BAG_EQNS:
+  (!b:'a bag. SUB_BAG {||} b <=> T) /\
   (!x:'a. !b1 b2:'a bag.
       SUB_BAG (BAG_INSERT x b1) b2 <=>
-             BAG_IN x b2 /\ SUB_BAG b1 (BAG_DIFF b2 {|x|}))`,
+             BAG_IN x b2 /\ SUB_BAG b1 (BAG_DIFF b2 {|x|}))
+Proof
  RW_TAC arith_ss [SUB_BAG_EMPTY,SUB_BAG, BAG_INSERT, BAG_INN,
           BAG_IN, BAG_DIFF,EMPTY_BAG, ARITH`!m. 0 >= m <=> m=0n`]
   THEN REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RW_TAC arith_ss []
@@ -88,11 +96,14 @@ val SUB_BAG_EQNS = Q.store_thm
    THENL [RES_TAC THEN FULL_SIMP_TAC arith_ss [],
          `b1(x) >= n-1` by DECIDE_TAC THEN
          RES_THEN MP_TAC THEN REWRITE_TAC [] THEN DECIDE_TAC],
-  RES_THEN MP_TAC THEN ASM_REWRITE_TAC [] THEN DECIDE_TAC]);
+  RES_THEN MP_TAC THEN ASM_REWRITE_TAC [] THEN DECIDE_TAC]
+QED
 
-val PSUB_BAG_LEM = Q.prove
-(`!b1 b2.PSUB_BAG b1 b2 <=> SUB_BAG b1 b2 /\ ~SUB_BAG b2 b1`,
- METIS_TAC [SUB_BAG_PSUB_BAG,PSUB_BAG_ANTISYM]);
+Theorem PSUB_BAG_LEM[local]:
+  !b1 b2.PSUB_BAG b1 b2 <=> SUB_BAG b1 b2 /\ ~SUB_BAG b2 b1
+Proof
+ METIS_TAC [SUB_BAG_PSUB_BAG,PSUB_BAG_ANTISYM]
+QED
 
 Theorem SET_OF_BAG_EQNS[local]:
   (SET_OF_BAG ({||}:'a bag) = ({}:'a set)) /\
@@ -224,34 +235,45 @@ val llcases_LNIL = llcases_def |> SPEC_ALL |> Q.INST [`l` |-> `LNIL`]
 val llcases_LCONS = llcases_def |> SPEC_ALL |> Q.INST [`l` |-> `h:::t`]
                                |> SIMP_RULE (srw_ss()) []
 
-val LLCONS_def = Define`
-  LLCONS h t = LCONS h (t ())`;
+Definition LLCONS_def:
+  LLCONS h t = LCONS h (t ())
+End
 
-val LAPPEND_llcases = prove(
-  ``LAPPEND l1 l2 = llcases l2 (λ(h,t). LLCONS h (λ(). LAPPEND t l2)) l1``,
+Theorem LAPPEND_llcases[local]:
+    LAPPEND l1 l2 = llcases l2 (λ(h,t). LLCONS h (λ(). LAPPEND t l2)) l1
+Proof
   Q.SPEC_THEN `l1` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]
+QED
 
-val LMAP_llcases = prove(
-  ``LMAP f l = llcases LNIL (λ(h,t). LLCONS (f h) (λ(). LMAP f t)) l``,
+Theorem LMAP_llcases[local]:
+    LMAP f l = llcases LNIL (λ(h,t). LLCONS (f h) (λ(). LMAP f t)) l
+Proof
   Q.ISPEC_THEN `l` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]
+QED
 
-val LFILTER_llcases = prove(
-  ``LFILTER P l = llcases LNIL (λ(h,t). if P h then LLCONS h (λ(). LFILTER P t)
-                                        else LFILTER P t) l``,
+Theorem LFILTER_llcases[local]:
+    LFILTER P l = llcases LNIL (λ(h,t). if P h then LLCONS h (λ(). LFILTER P t)
+                                        else LFILTER P t) l
+Proof
   Q.ISPEC_THEN `l` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]
+QED
 
-val LHD_llcases = prove(
-  ``LHD ll = llcases NONE (λ(h,t). SOME h) ll``,
+Theorem LHD_llcases[local]:
+    LHD ll = llcases NONE (λ(h,t). SOME h) ll
+Proof
   Q.ISPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][llcases_LCONS, llcases_LNIL]
+QED
 
-val LTL_llcases = prove(
-  ``LTL ll = llcases NONE (λ(h,t). SOME t) ll``,
+Theorem LTL_llcases[local]:
+    LTL ll = llcases NONE (λ(h,t). SOME t) ll
+Proof
   Q.ISPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][llcases_LCONS, llcases_LNIL]
+QED
 
 Theorem LTAKE_thm[local]:
   !ll. LTAKE n ll =
@@ -268,10 +290,12 @@ Proof
   SRW_TAC [][]
 QED
 
-val toList_llcases = prove(
-  ``toList ll = llcases (SOME []) (λ(h,t). OPTION_MAP (\t. h::t) (toList t)) ll``,
+Theorem toList_llcases[local]:
+    toList ll = llcases (SOME []) (λ(h,t). OPTION_MAP (\t. h::t) (toList t)) ll
+Proof
   Q.ISPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [boolSimps.ETA_ss][llcases_LCONS, llcases_LNIL, toList_THM])
+  SRW_TAC [boolSimps.ETA_ss][llcases_LCONS, llcases_LNIL, toList_THM]
+QED
 
 fun insert_const c = let val t = Parse.Term [QUOTE c] in
   ConstMapML.prim_insert(t, (false, "", c, type_of t))
@@ -284,19 +308,6 @@ val _ = insert_const "LUNFOLD"
 val B = PP.block PP.CONSISTENT 0
 val S = PP.add_string
 val NL = PP.NL
-
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps =
- SOME (fn _ =>
-         B [S "fun insert_const c = let val t = Parse.Term [QUOTE c] in", NL,
-            S "  ConstMapML.prim_insert(t, (false, \"\", c, type_of t))", NL,
-            S "end", NL,
-            S "val _ = insert_const \"llcases\"", NL,
-            S "val _ = insert_const \"LLCONS\"", NL,
-            S "val _ = insert_const \"LCONS\"", NL,
-            S "val _ = insert_const \"LNIL\"", NL,
-            S "val _ = insert_const \"LUNFOLD\""])}
 
 val _ = eSML "llist"
         (MLSIG "type 'a llist" ::
@@ -385,20 +396,15 @@ val _ = eSML "patricia_casts"
           ADDs_def, fun_rule ADD_LISTs_def, REMOVEs_def, TRAVERSEs_def,
           KEYSs_def, IN_PTREEs_def, INSERT_PTREEs_def]);
 
-fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
-  struct_ps = SOME (fn _ => B (List.concat (map (fn s => [S s, NL]) l)))}
-
-val _ = adjoin_to_theory_struct
-  ["val _ = ConstMapML.insert (\
-   \Term.prim_mk_const{Name=\"SKIP1\",Thy=\"patricia_casts\"});",
-   "val _ = ConstMapML.insert (\
-   \Term.prim_mk_const{Name=\"string_to_num\",Thy=\"patricia_casts\"});"];
+val _ = ConstMapML.insert (
+  Term.prim_mk_const{Name="SKIP1",Thy="patricia_casts"});
+val _ = ConstMapML.insert (
+  Term.prim_mk_const{Name="string_to_num",Thy="patricia_casts"});
 
 (* == State transformer ==================================================== *)
 
-val defs = map DEFN [UNIT_DEF, BIND_DEF, IGNORE_BIND_DEF, MMAP_DEF, JOIN_DEF, READ_def, WRITE_def]
+val defs = map DEFN [UNIT_DEF, BIND_DEF, IGNORE_BIND_DEF, MMAP_DEF, JOIN_DEF,
+                     READ_def, WRITE_def]
 
 val _ = eSML "state_transformer" defs
 val _ = eCAML "state_transformer" defs;
-
-val _ = export_theory ();

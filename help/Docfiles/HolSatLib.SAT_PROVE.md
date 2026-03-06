@@ -1,0 +1,43 @@
+## `SAT_PROVE`
+
+``` hol4
+HolSatLib.SAT_PROVE : Term.term -> Thm.thm
+```
+
+------------------------------------------------------------------------
+
+Proves that the supplied term is a tautology, or provides a
+counterexample.
+
+The supplied term should be purely propositional, i.e., atoms must be
+Boolean variables or constants, and conditionals must be Boolean-valued.
+`SAT_PROVE` uses the MiniSat SAT solver's proof logging feature to
+construct and verify a resolution refutation for the negation of the
+supplied term.
+
+### Failure
+
+Fails if the supplied term is not a tautology. In this case, a theorem
+providing a satisfying assignment for the negation of the input term is
+returned, wrapped in an exception.
+
+### Example
+
+``` hol4
+- load "HolSatLib"; open HolSatLib;
+(* output omitted *)
+> val it = () : unit
+- SAT_PROVE ``(a ==> b) /\ (b ==> a) ==> (a=b)``;
+> val it = |- (a ==> b) /\ (b ==> a) ==> (a = b) : thm
+- SAT_PROVE ``~((a ==> b) /\ (b ==> a) ==> (a=b))``
+    handle HolSatLib.SAT_cex th => th;
+> val it = |- ~b /\ a ==> ~~((a ==> b) /\ (b ==> a) ==> (a = b)) : thm
+```
+
+### Comments
+
+If MiniSat terminates abnormally, or if the MiniSat binary cannot be
+located or executed, SAT_PROVE falls back to a slower propositional
+tautology prover implemented in SML. For low-level use of SAT solver
+facilities and other details, see the section on the HolSat library in
+the HOL Description.

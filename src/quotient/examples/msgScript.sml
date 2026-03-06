@@ -1,4 +1,8 @@
-open HolKernel Parse boolLib;
+Theory msg
+Ancestors
+  pred_set
+Libs
+  ind_rel quotientLib
 
 (* ------------------------------------------------------------------------ *)
 (* Representing cryptographic messages as a new datatype in the HOL logic.  *)
@@ -10,24 +14,7 @@ open HolKernel Parse boolLib;
 (* ------------------------------------------------------------------------ *)
 
 
-val _ = new_theory "msg";
 val _ = ParseExtras.temp_loose_equality()
-
-
-(* In interactive sessions, do:
-
-app load ["pred_setTheory",
-          "ind_rel",
-          "bossLib",
-          "quotientLib"];
-
-*)
-
-open pred_setTheory;
-open ind_rel;
-open bossLib;
-
-open quotientLib;
 
 
 val REWRITE_THM = fn th => REWRITE_TAC[th];
@@ -42,12 +29,13 @@ val REWRITE_THM = fn th => REWRITE_TAC[th];
 (* --------------------------------------------------------------------- *)
 
 
-val _ = Hol_datatype
+Datatype:
 
-        ` msg1 = Nonce1 of num
-               | Mpair1 of msg1 => msg1
-               | Crypt1 of num => msg1
-               | Decrypt1 of num => msg1 ` ;
+          msg1 = Nonce1 num
+               | Mpair1 msg1 msg1
+               | Crypt1 num msg1
+               | Decrypt1 num msg1
+End
 
 (* Notice: no nesting or mutual recursion; a simply recursive type. *)
 
@@ -60,10 +48,10 @@ val msg1_case_cong = theorem "msg1_case_cong";
 val msg1_induction = theorem "msg1_induction";
 val msg1_Axiom = theorem "msg1_Axiom";
 
-val msg1_distinct2 = save_thm("msg1_distinct2",
-                         CONJ msg1_distinct (GSYM msg1_distinct));
-val _ = save_thm("msg1_one_one", msg1_one_one);
-val _ = save_thm("msg1_cases", msg1_cases);
+Theorem msg1_distinct2 =
+                         CONJ msg1_distinct (GSYM msg1_distinct);
+Theorem msg1_one_one = msg1_one_one;
+Theorem msg1_cases = msg1_cases;
 
 
 
@@ -127,10 +115,10 @@ val msgrel_inv_thms = prove_inversion_theorems
 val msgrel_strong_ind = prove_strong_induction
     msgrel_rules_sat msgrel_ind_thm;
 
-val _ = save_thm ("msgrel_rules_sat", msgrel_rules_sat);
-val _ = save_thm ("msgrel_ind_thm", msgrel_ind_thm);
-val _ = save_thm ("msgrel_inv_thms", LIST_CONJ msgrel_inv_thms);
-val _ = save_thm ("msgrel_strong_ind", msgrel_strong_ind);
+Theorem msgrel_rules_sat = msgrel_rules_sat;
+Theorem msgrel_ind_thm = msgrel_ind_thm;
+Theorem msgrel_inv_thms = LIST_CONJ msgrel_inv_thms;
+Theorem msgrel_strong_ind = msgrel_strong_ind;
 
 
 val [CD, DC, NONCE, MPAIR, CRYPT, DECRYPT, msgSYM, msgTRANS]
@@ -140,24 +128,24 @@ val [CD, DC, NONCE, MPAIR, CRYPT, DECRYPT, msgSYM, msgTRANS]
 (* The cryptographic message equivalence relation is reflexive,    *)
 (* symmetric and transitive.                                       *)
 
-val msgrel_REFL = store_thm
-   ("msgrel_REFL",
-    “!X. msgrel X X”,
+Theorem msgrel_REFL:
+     !X. msgrel X X
+Proof
     Induct
     THEN RW_TAC std_ss [msgrel_rules_sat]
-   );
+QED
 
-val msgrel_SYM = store_thm
-   ("msgrel_SYM",
-    “!X Y. msgrel X Y ==> msgrel Y X”,
+Theorem msgrel_SYM:
+     !X Y. msgrel X Y ==> msgrel Y X
+Proof
     REWRITE_TAC [msgSYM]
-   );
+QED
 
-val msgrel_TRANS = store_thm
-   ("msgrel_TRANS",
-    “!X Y Z. msgrel X Y /\ msgrel Y Z ==> msgrel X Z”,
+Theorem msgrel_TRANS:
+     !X Y Z. msgrel X Y /\ msgrel Y Z ==> msgrel X Z
+Proof
     PROVE_TAC [msgTRANS]
-   );
+QED
 
 
 
@@ -169,65 +157,68 @@ val msgrel_TRANS = store_thm
 (* Definition of function to return all nonces from an expression.       *)
 (* --------------------------------------------------------------------- *)
 
-val freenonces1_def = Define
-   `(freenonces1 (Nonce1 n)      = {n})                                 /\
+Definition freenonces1_def:
+    (freenonces1 (Nonce1 n)      = {n})                                 /\
     (freenonces1 (Mpair1 x y)    = freenonces1 x UNION freenonces1 y)   /\
     (freenonces1 (Crypt1 k x)    = freenonces1 x)                       /\
-    (freenonces1 (Decrypt1 k x)  = freenonces1 x)`;
+    (freenonces1 (Decrypt1 k x)  = freenonces1 x)
+End
 
 (* Respectfulness theorem for the freenonces1 function. *)
 
-val freenonces_RSP = store_thm
-   ("freenonces_RSP",
-    “!V W. msgrel V W ==> (freenonces1 V = freenonces1 W)”,
+Theorem freenonces_RSP:
+     !V W. msgrel V W ==> (freenonces1 V = freenonces1 W)
+Proof
     rule_induct msgrel_ind_thm
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss [freenonces1_def]
-   );
+QED
 
 
 (* --------------------------------------------------------------------- *)
 (* Definition of left part of the uppermost Mpair1 constructor.          *)
 (* --------------------------------------------------------------------- *)
 
-val freeleft1_def = Define
-   `(freeleft1 (Nonce1 n)      = Nonce1 n)        /\
+Definition freeleft1_def:
+    (freeleft1 (Nonce1 n)      = Nonce1 n)        /\
     (freeleft1 (Mpair1 x y)    = x)               /\
     (freeleft1 (Crypt1 k x)    = freeleft1 x)     /\
-    (freeleft1 (Decrypt1 k x)  = freeleft1 x)`;
+    (freeleft1 (Decrypt1 k x)  = freeleft1 x)
+End
 
 (* Respectfulness theorem for the freeleft1 function. *)
 
-val freeleft_RSP = store_thm
-   ("freeleft_RSP",
-    “!V W. msgrel V W ==> msgrel (freeleft1 V) (freeleft1 W)”,
+Theorem freeleft_RSP:
+     !V W. msgrel V W ==> msgrel (freeleft1 V) (freeleft1 W)
+Proof
     rule_induct msgrel_strong_ind
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss[freeleft1_def,msgrel_REFL,msgrel_SYM]
     THEN IMP_RES_TAC msgrel_TRANS
-   );
+QED
 
 
 (* --------------------------------------------------------------------- *)
 (* Definition of right part of the uppermost Mpair1 constructor.         *)
 (* --------------------------------------------------------------------- *)
 
-val freeright1_def = Define
-   `(freeright1 (Nonce1 n)      = Nonce1 n)        /\
+Definition freeright1_def:
+    (freeright1 (Nonce1 n)      = Nonce1 n)        /\
     (freeright1 (Mpair1 x y)    = y)               /\
     (freeright1 (Crypt1 k x)    = freeright1 x)    /\
-    (freeright1 (Decrypt1 k x)  = freeright1 x)`;
+    (freeright1 (Decrypt1 k x)  = freeright1 x)
+End
 
 (* Respectfulness theorem for the freeright1 function. *)
 
-val freeright_RSP = store_thm
-   ("freeright_RSP",
-    “!V W. msgrel V W ==> msgrel (freeright1 V) (freeright1 W)”,
+Theorem freeright_RSP:
+     !V W. msgrel V W ==> msgrel (freeright1 V) (freeright1 W)
+Proof
     rule_induct msgrel_strong_ind
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss[freeright1_def,msgrel_REFL,msgrel_SYM]
     THEN IMP_RES_TAC msgrel_TRANS
-   );
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -235,21 +226,22 @@ val freeright_RSP = store_thm
 (* not Mpair.                                                            *)
 (* --------------------------------------------------------------------- *)
 
-val is_nonce1_def = Define
-   `(is_nonce1 (Nonce1 n)      = T)    /\
+Definition is_nonce1_def:
+    (is_nonce1 (Nonce1 n)      = T)    /\
     (is_nonce1 (Mpair1 x y)    = F)    /\
     (is_nonce1 (Crypt1 k x)    = is_nonce1 x)    /\
-    (is_nonce1 (Decrypt1 k x)  = is_nonce1 x)`;
+    (is_nonce1 (Decrypt1 k x)  = is_nonce1 x)
+End
 
 (* Respectfulness theorem for the is_nonce1 function. *)
 
-val is_nonce_RSP = store_thm
-   ("is_nonce_RSP",
-    “!V W. msgrel V W ==> (is_nonce1 V = is_nonce1 W)”,
+Theorem is_nonce_RSP:
+     !V W. msgrel V W ==> (is_nonce1 V = is_nonce1 W)
+Proof
     rule_induct msgrel_strong_ind
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss[is_nonce1_def]
-   );
+QED
 
 
 
@@ -258,8 +250,8 @@ val is_nonce_RSP = store_thm
 (* --------------------------------------------------------------------- *)
 
 
-val msgrel_EQUIV = save_thm("msgrel_EQUIV",
-    refl_sym_trans_equiv msgrel_REFL msgrel_SYM msgrel_TRANS);
+Theorem msgrel_EQUIV =
+    refl_sym_trans_equiv msgrel_REFL msgrel_SYM msgrel_TRANS;
 
 val equivs = [msgrel_EQUIV];
 
@@ -316,12 +308,10 @@ val [msg_cases,
 (* Save the theorems lifted by the quotient operations.             *)
 (* ---------------------------------------------------------------- *)
 
-val _ = map save_thm
-    [("msg_cases",msg_cases),
-     ("msgCD",msgCD),
-     ("msgDC",msgDC),
-     ("msg_induction",msg_induction)
-    ];
+Theorem msg_cases = msg_cases
+Theorem msgCD = msgCD
+Theorem msgDC = msgDC
+Theorem msg_induction = msg_induction
 
 (* Notice the important induction theorem for the lifted msg type:
 
@@ -351,15 +341,15 @@ to lift automatically.
 (* lower level.  That layer may now be completely forgotten.        *)
 (* ---------------------------------------------------------------- *)
 
-val Mpair_EQUALS = store_thm
-   ("Mpair_EQUALS",
-    “!X X' Y Y'. (Mpair X Y = Mpair X' Y') = (X = X') /\ (Y = Y')”,
+Theorem Mpair_EQUALS:
+     !X X' Y Y'. (Mpair X Y = Mpair X' Y') = (X = X') /\ (Y = Y')
+Proof
     PROVE_TAC[left_def,right_def]
-    );
+QED
 
-val Nonce_EQUALS = store_thm
-   ("Nonce_EQUALS",
-    “!n n'. (Nonce n = Nonce n') = (n = n')”,
+Theorem Nonce_EQUALS:
+     !n n'. (Nonce n = Nonce n') = (n = n')
+Proof
     REPEAT GEN_TAC
     THEN EQ_TAC
     THENL
@@ -369,35 +359,35 @@ val Nonce_EQUALS = store_thm
 
         DISCH_THEN REWRITE_THM
       ]
-    );
+QED
 
-val Crypt_EQUALS = store_thm
-   ("Crypt_EQUALS",
-    “!k X X'. (Crypt k X = Crypt k X') = (X = X')”,
+Theorem Crypt_EQUALS:
+     !k X X'. (Crypt k X = Crypt k X') = (X = X')
+Proof
     PROVE_TAC[msgDC]
-    );
+QED
 
-val Decrypt_EQUALS = store_thm
-   ("Decrypt_EQUALS",
-    “!k X X'. (Decrypt k X = Decrypt k X') = (X = X')”,
+Theorem Decrypt_EQUALS:
+     !k X X'. (Decrypt k X = Decrypt k X') = (X = X')
+Proof
     PROVE_TAC[msgCD]
-    );
+QED
 
-val Nonce_NOT_EQ_Mpair = store_thm
-   ("Decrypt_NOT_EQ_Mpair",
-    “!N X Y. ~(Nonce N = Mpair X Y)”,
+Theorem Decrypt_NOT_EQ_Mpair:
+     !N X Y. ~(Nonce N = Mpair X Y)
+Proof
     PROVE_TAC[is_nonce_def]
-    );
+QED
 
 (* Here is a proof using the lifted induction theorem for messages: *)
 
-val FINITE_nonces = store_thm
-   ("FINITE_nonces",
-    “!M. FINITE (nonces M)”,
+Theorem FINITE_nonces:
+     !M. FINITE (nonces M)
+Proof
     HO_MATCH_MP_TAC msg_induction
     THEN REWRITE_TAC[nonces_def]
     THEN REWRITE_TAC[FINITE_INSERT,FINITE_EMPTY,FINITE_UNION]
-   );
+QED
 
 
 
@@ -410,8 +400,6 @@ val FINITE_nonces = store_thm
 
 
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "-" "msg.lst";
 

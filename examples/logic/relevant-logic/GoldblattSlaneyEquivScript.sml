@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib stringTheory;
-
-open SlaneyRLTheory GoldblattRLTheory;
-
-val _ = new_theory "GoldblattSlaneyEquiv";
+Theory GoldblattSlaneyEquiv
+Ancestors
+  string SlaneyRL GoldblattRL
 
 Definition sg_translation_def:
   (sg_translation (s_VAR A) = g_VAR A) ∧
@@ -99,4 +97,3 @@ Proof
             g_trans_invarient]
 QED
 
-val _ = export_theory();

@@ -1,6 +1,8 @@
-open preamble while_langTheory while_lang_lemmasTheory std_logicTheory;
-
-val _ = new_theory "std_logic_soundness";
+Theory std_logic_soundness
+Ancestors
+  while_lang while_lang_lemmas std_logic
+Libs
+  preamble
 
 Theorem Hoare_soundness:
   ∀P c Q. Hoare P c Q ⇒ HoareSem P c Q
@@ -28,4 +30,3 @@ Proof
   \\ fs []
 QED
 
-val _ = export_theory();

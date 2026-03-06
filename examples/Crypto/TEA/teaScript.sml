@@ -14,15 +14,11 @@
 (*
 app load ["EmitML","wordsLib"];
 *)
-open HolKernel Parse boolLib bossLib;
-open wordsTheory wordsLib pairTheory pairLib basis_emitTheory;
-
-
-(*---------------------------------------------------------------------------*)
-(* Inititialize new theory for TEA                                           *)
-(*---------------------------------------------------------------------------*)
-
-val _ = new_theory "tea";
+Theory tea
+Ancestors
+  words pair basis_emit
+Libs
+  wordsLib pairLib
 
 (*---------------------------------------------------------------------------*)
 (* General stuff                                                             *)
@@ -48,47 +44,49 @@ val _ = type_abbrev("state", ``:block # key # word32``);
 (* Case analysis on a state                                                  *)
 (*---------------------------------------------------------------------------*)
 
-val FORALL_STATE = Q.store_thm
-("FORALL_STATE",
- `(!x:state. P x) = !v0 v1 k0 k1 k2 k3 sum. P((v0,v1),(k0,k1,k2,k3),sum)`,
-    METIS_TAC [PAIR]);
+Theorem FORALL_STATE:
+  (!x:state. P x) = !v0 v1 k0 k1 k2 k3 sum. P((v0,v1),(k0,k1,k2,k3),sum)
+Proof
+    METIS_TAC [PAIR]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Basic constants and operations.                                           *)
 (*---------------------------------------------------------------------------*)
 
-val DELTA_def = Define `DELTA = 0x9e3779b9w : word32`;
+Definition DELTA_def:   DELTA = 0x9e3779b9w : word32
+End
 
 (*---------------------------------------------------------------------------*)
 (* ?? = xor  (infix) and >>> is LSR                                          *)
 (*---------------------------------------------------------------------------*)
 
-val ShiftXor_def =
- Define
-   `ShiftXor (x:word32,s,k0,k1) =
-          ((x << 4) + k0) ?? (x + s) ?? ((x >>> 5) + k1)`;
+Definition ShiftXor_def:
+    ShiftXor (x:word32,s,k0,k1) =
+          ((x << 4) + k0) ?? (x + s) ?? ((x >>> 5) + k1)
+End
 
 (* --------------------------------------------------------------------------*)
 (*      One round forward computation                                        *)
 (* --------------------------------------------------------------------------*)
 
-val Round_def =
- Define
-   `Round ((y,z),(k0,k1,k2,k3),s):state =
+Definition Round_def:
+    Round ((y,z),(k0,k1,k2,k3),s):state =
       let s' = s + DELTA in let
           y' = y + ShiftXor(z, s', k0, k1) in let
           z' = z + ShiftXor(y', s', k2, k3)
       in
-        ((y',z'), (k0,k1,k2,k3), s')`;
+        ((y',z'), (k0,k1,k2,k3), s')
+End
 
 (*---------------------------------------------------------------------------*)
 (* Arbitrary number of cipher rounds                                         *)
 (*---------------------------------------------------------------------------*)
 
-val Rounds_def =
- Define
-   `Rounds (n:word32,s:state) =
-      if n=0w then s else Rounds (n-1w, Round s)`;
+Definition Rounds_def:
+    Rounds (n:word32,s:state) =
+      if n=0w then s else Rounds (n-1w, Round s)
+End
 
 val Rounds_ind = fetch "-" "Rounds_ind";   (* induction *)
 
@@ -96,11 +94,11 @@ val Rounds_ind = fetch "-" "Rounds_ind";   (* induction *)
 (* Encrypt  (32 rounds)                                                      *)
 (*---------------------------------------------------------------------------*)
 
-val teaEncrypt_def =
- Define
-   `teaEncrypt (keys,txt) =
+Definition teaEncrypt_def:
+    teaEncrypt (keys,txt) =
       let (cipheredtxt,keys,sum) = Rounds(32w,(txt,keys,0w)) in
-      cipheredtxt`;
+      cipheredtxt
+End
 
 (*===========================================================================*)
 (*      Decryption                                                           *)
@@ -111,34 +109,34 @@ val teaEncrypt_def =
 (*     One round backward computation                                        *)
 (*---------------------------------------------------------------------------*)
 
-val InvRound_def =
- Define
-   `InvRound((y,z),(k0,k1,k2,k3),sum) =
+Definition InvRound_def:
+    InvRound((y,z),(k0,k1,k2,k3),sum) =
       let z' = z - ShiftXor(y, sum, k2, k3) in
       let y' = y - ShiftXor(z',sum, k0, k1) in
       let sum' = sum-DELTA
       in
-         ((y',z'), (k0,k1,k2,k3), sum')`;
+         ((y',z'), (k0,k1,k2,k3), sum')
+End
 
 (*---------------------------------------------------------------------------*)
 (* Arbitrary number of decipher rounds                                       *)
 (*---------------------------------------------------------------------------*)
 
-val InvRounds_def =
- Define
-   `InvRounds (n:word32,s:state) =
-     if n=0w then s else InvRounds (n-1w, InvRound s)`;
+Definition InvRounds_def:
+    InvRounds (n:word32,s:state) =
+     if n=0w then s else InvRounds (n-1w, InvRound s)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Decrypt (32 rounds)                                                       *)
 (*---------------------------------------------------------------------------*)
 
-val teaDecrypt_def =
- Define
-   `teaDecrypt (keys,txt) =
+Definition teaDecrypt_def:
+    teaDecrypt (keys,txt) =
       let (plaintxt,keys,sum) = InvRounds(32w,(txt,keys,DELTA << 5))
       in
-        plaintxt`;
+        plaintxt
+End
 
 (*===========================================================================*)
 (* Correctness                                                               *)
@@ -148,11 +146,12 @@ val teaDecrypt_def =
 (* Basic inversion lemma                                                     *)
 (*---------------------------------------------------------------------------*)
 
-val OneRound_Inversion = Q.store_thm
-("OneRound_Inversion",
- `!s:state. InvRound (Round s) = s`,
+Theorem OneRound_Inversion:
+  !s:state. InvRound (Round s) = s
+Proof
  SIMP_TAC std_ss [FORALL_STATE] THEN
- RW_TAC list_ss [Round_def, InvRound_def,WORD_ADD_SUB, LET_THM]);
+ RW_TAC list_ss [Round_def, InvRound_def,WORD_ADD_SUB, LET_THM]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Tweaked version of Rounds induction is more useful for this proof.        *)
@@ -187,19 +186,20 @@ val lemma2 = Q.prove
    `?m. n = m + 1w` by METIS_TAC [WORD_PRED_EXISTS] THEN
    RW_TAC std_ss [WORD_ADD_SUB,WORD_MULT_CLAUSES]]);
 
-val DELTA_SHIFT = Q.store_thm
-("DELTA_SHIFT",
- `DELTA << 5 = DELTA * 32w`,
- REWRITE_TAC [DELTA_def] THEN WORD_EVAL_TAC);
+Theorem DELTA_SHIFT:
+  DELTA << 5 = DELTA * 32w
+Proof
+ REWRITE_TAC [DELTA_def] THEN WORD_EVAL_TAC
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Basic theorem about encryption/decryption                                 *)
 (*---------------------------------------------------------------------------*)
 
-val tea_correct = Q.store_thm
-("tea_correct",
- `!plaintext keys.
-     teaDecrypt (keys,teaEncrypt (keys,plaintext)) = plaintext`,
+Theorem tea_correct:
+  !plaintext keys.
+     teaDecrypt (keys,teaEncrypt (keys,plaintext)) = plaintext
+Proof
  RW_TAC list_ss [teaEncrypt_def, teaDecrypt_def, DELTA_SHIFT]
   THEN rename [‘Rounds(_,_,keys,_) = (_,keys_1,sum)’]
   THEN `(keys_1 = keys) /\ (sum = DELTA * 32w)`
@@ -209,7 +209,8 @@ val tea_correct = Q.store_thm
   THEN POP_ASSUM MP_TAC
   THEN computeLib.RESTR_EVAL_TAC
            (flatten(map decls ["Round", "InvRound", "DELTA"]))
-  THEN RW_TAC std_ss [OneRound_Inversion]);
+  THEN RW_TAC std_ss [OneRound_Inversion]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Generate ML code in current directory. The generated code depends on      *)
@@ -250,5 +251,3 @@ val _ =
  end
  handle _ => ();
 *)
-
-val _ = export_theory();

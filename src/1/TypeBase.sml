@@ -65,11 +65,7 @@ val bool_info =
       {ax=ORIG boolTheory.boolAxiom,
        induction = ORIG boolTheory.bool_INDUCT,
        case_def = boolTheory.bool_case_thm,
-       case_eq =
-         Prim_rec.prove_case_eq_thm{
-           case_def = boolTheory.bool_case_thm,
-           nchotomy = boolTheory.BOOL_CASES_AX
-         },
+       case_eq = boolTheory.bool_case_eq,
        case_elim =
          Prim_rec.prove_case_ho_elim_thm{
            case_def = boolTheory.bool_case_thm,
@@ -201,11 +197,11 @@ fun tyi_from_name s =
         let
           val tyg = Parse.type_grammar()
         in
-          case Binarymap.peek(privileged_abbrevs tyg, nm) of
+          case HOLdict.peek(privileged_abbrevs tyg, nm) of
               NONE => raise ERR "tyi_from_name"
                             ("Ty-grammar doesn't know name: "^nm)
             | SOME thy =>
-              (case Binarymap.peek(parse_map tyg, {Thy = thy, Name = nm}) of
+              (case HOLdict.peek(parse_map tyg, {Thy = thy, Name = nm}) of
                    NONE => raise ERR "tyi_from_name"
                                  ("Ty-grammar has bad abbrev-map for name: "^nm)
                  | SOME (TYOP {Thy,Tyop,...}) => tyi_from_kid Thy Tyop

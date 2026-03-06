@@ -1,10 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open padic_metricTheory metricTheory ratTheory realTheory pred_setTheory
-     fcpTheory;
-
-val _ = new_theory "padic";
-
+Theory padic
+Ancestors
+  padic_metric metric rat real pred_set fcp
 
 Definition primeits_def:
   primeits (:α) = let c = (CARD (univ (:α))) in
@@ -642,4 +638,3 @@ Theorem PADIC_MUL0 = MUL0
 Theorem PADIC_ADD_RINV = cj 1 ADD_INV_THM
 Theorem PADIC_ADD_LINV = cj 2 ADD_INV_THM
 
-val _ = export_theory();

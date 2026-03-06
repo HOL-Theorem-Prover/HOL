@@ -1,9 +1,10 @@
-open HolKernel boolLib bossLib Parse
+Theory redUnif
+Ancestors
+  pred_set relation finite_map term pair bag prim_rec subst walk
+  walkstar unifDef unifProps
+Libs
+  ramanaLib
 
-open pred_setTheory relationTheory finite_mapTheory termTheory ramanaLib
-     pairTheory bagTheory prim_recTheory substTheory walkTheory walkstarTheory
-
-val _ = new_theory "redUnif"
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
 Definition istep_def:
@@ -20,7 +21,7 @@ Definition istep_def:
     sr = sl |+ (v,t))
 End
 
-val tstep_def = Define`
+Definition tstep_def:
   tstep (sl,bl) (sr,br) <=>
   (∃t1 t2.
     (walk sl t1 = walk sl t2) ∧
@@ -35,38 +36,40 @@ val tstep_def = Define`
      (walk sl t1 = t) ∧ (walk sl t2 = Var v)) ∧
     ¬ oc sl t v ∧
     (br + {|(t1,t2)|} = bl) ∧
-    (sr = sl |+ (v,t)))`;
+    (sr = sl |+ (v,t)))
+End
 
-open unifDefTheory unifPropsTheory;
-
-val wfs_tstep = Q.store_thm(
-"wfs_tstep",
-`wfs sl ∧ tstep (sl,bl) (sr,br) ⇒ wfs sr`,
+Theorem wfs_tstep:
+ wfs sl ∧ tstep (sl,bl) (sr,br) ⇒ wfs sr
+Proof
 SRW_TAC [][tstep_def] THEN SRW_TAC [][] THEN
 IMP_RES_TAC walk_to_var THEN
 Q.PAT_ASSUM `wfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [oc_eq_vars_walkstar,walkstar_walk] THEN
 MATCH_MP_TAC wfs_extend THEN
-METIS_TAC [IN_DEF,walkstar_walk])
+METIS_TAC [IN_DEF,walkstar_walk]
+QED
 
-val walks_equal = Q.store_thm(
-"walks_equal",
-`wfs s ∧ (walk s t1 = walk s t2) ⇒ (t1 = t2) ∨ ∃v. (t1 = Var v) ∨ (t2 = Var v)`,
+Theorem walks_equal:
+ wfs s ∧ (walk s t1 = walk s t2) ⇒ (t1 = t2) ∨ ∃v. (t1 = Var v) ∨ (t2 = Var v)
+Proof
 Cases_on `t1 = t2` THEN ASM_SIMP_TAC (srw_ss()) [] THEN
 SIMP_TAC (srw_ss()) [GSYM AND_IMP_INTRO] THEN STRIP_TAC THEN
 MAP_EVERY Cases_on [`t1`,`t2`] THEN SRW_TAC [][] THEN
-METIS_TAC []);
+METIS_TAC []
+QED
 
-val NOTIN_vars_walk = Q.store_thm(
-"NOTIN_vars_walk",
-`wfs s ∧ (vwalk s v = walk s t) ∧ (t ≠ Var v) ⇒ v ∉ vars t`,
+Theorem NOTIN_vars_walk:
+ wfs s ∧ (vwalk s v = walk s t) ∧ (t ≠ Var v) ⇒ v ∉ vars t
+Proof
 Cases_on `t` THEN SRW_TAC [][] THEN
 SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
 `v ∈ vars (vwalk s v)` by SRW_TAC [][] THEN
 IMP_RES_TAC vwalk_vR THEN
 Q.PAT_ASSUM `vwalk s v = X` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [wfs_no_cycles] THEN
-RES_TAC);
+RES_TAC
+QED
 
 (*
 val istep_if_tstep = Q.store_thm(
@@ -231,4 +234,3 @@ val tstep_def = Define`
     (sr = sl |+ (v,t)))`;
 *)
 
-val _ = export_theory ();

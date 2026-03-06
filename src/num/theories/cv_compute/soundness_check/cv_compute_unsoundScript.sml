@@ -1,6 +1,8 @@
-open HolKernel boolLib cvTheory numTheory arithmeticTheory
-
-val _ = new_theory "cv_compute_unsound";
+Theory cv_compute_unsound[bare]
+Ancestors
+  cv num arithmetic
+Libs
+  HolKernel Parse boolLib Q[qualified]
 
 val bad_cv_fst_def = Prim_rec.new_recursive_definition {
   name = "bad_cv_fst_def",
@@ -22,4 +24,14 @@ Proof
   strip_tac >> asm_rewrite_tac[bad_cv_fst_def]
 QED
 
-val _ = export_theory();
+(* Define g so that g x y distinguishes equal from unequal args *)
+val g_def = new_definition("g_def",
+  “g (x:cv) (y:cv) = cv_if (cv_eq x y) (cv$Num 1) (cv$Num 0)”);
+
+(* Prove the restricted equation: g2 x x = Num 1 *)
+(* Since cv_eq x x = Num 1 and cv_if (Num 1) (Num 1) (Num 0) = Num 1 *)
+Theorem g_xx:
+  g x x = cv$Num 1
+Proof
+  REWRITE_TAC[g_def, cv_eq_def, cv_if_def]
+QED

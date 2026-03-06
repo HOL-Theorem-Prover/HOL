@@ -1,0 +1,4 @@
+gh1371.log: doit.sh bugScript.sml
+	$(tee ./doit.sh $(protect $(HOLDIR)/bin/unquote), $@)
+
+EXTRA_CLEANS = gh1371.log

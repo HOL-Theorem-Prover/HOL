@@ -1,14 +1,10 @@
-(* Interactive mode
-app load
-["bossLib", "listSyntax", "combinSyntax", "rich_listTheory", "metisLib"];
-*)
-
-open HolKernel boolLib Parse bossLib pairTheory pairTools combinTheory
-     arithmeticTheory listTheory rich_listTheory optionTheory metisLib;
+Theory Encode
+Ancestors
+  pair combin arithmetic list rich_list option
+Libs
+  pairTools metisLib
 
 val arith_ss = old_arith_ss
-
-val _ = new_theory "Encode";
 
 val Suff = Q_TAC SUFF_TAC;
 val Know = Q_TAC KNOW_TAC;
@@ -21,23 +17,28 @@ val TOP_CASE_TAC = BasicProvers.TOP_CASE_TAC;
         biprefix is a bi-directional version of IS_PREFIX.
  ---------------------------------------------------------------------------*)
 
-val biprefix_def = Define `biprefix a b <=> IS_PREFIX a b \/ IS_PREFIX b a`;
+Definition biprefix_def:
+ biprefix a b <=> IS_PREFIX a b \/ IS_PREFIX b a
+End
 
-val biprefix_refl = store_thm
-  ("biprefix_refl",
-   ``!x. biprefix x x``,
-   RW_TAC std_ss [biprefix_def, IS_PREFIX_REFL]);
+Theorem biprefix_refl:
+     !x. biprefix x x
+Proof
+   RW_TAC std_ss [biprefix_def, IS_PREFIX_REFL]
+QED
 
-val biprefix_sym = store_thm
-  ("biprefix_sym",
-   ``!x y. biprefix x y ==> biprefix y x``,
-   PROVE_TAC [biprefix_def]);
+Theorem biprefix_sym:
+     !x y. biprefix x y ==> biprefix y x
+Proof
+   PROVE_TAC [biprefix_def]
+QED
 
-val biprefix_append = store_thm
-  ("biprefix_append",
-   ``!a b c d. biprefix (APPEND a b) (APPEND c d) ==> biprefix a c``,
+Theorem biprefix_append:
+     !a b c d. biprefix (APPEND a b) (APPEND c d) ==> biprefix a c
+Proof
    RW_TAC std_ss [biprefix_def] >>
-   PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]);
+   PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]
+QED
 
 Theorem biprefix_cons:
    !a b c d. biprefix (a :: b) (c :: d) <=> (a = c) /\ biprefix b d
@@ -46,10 +47,11 @@ Proof
    PROVE_TAC []
 QED
 
-val biprefix_appends = store_thm
-  ("biprefix_appends",
-   ``!a b c. biprefix (APPEND a b) (APPEND a c) = biprefix b c``,
-   RW_TAC std_ss [biprefix_def, IS_PREFIX_APPENDS]);
+Theorem biprefix_appends:
+     !a b c. biprefix (APPEND a b) (APPEND a c) = biprefix b c
+Proof
+   RW_TAC std_ss [biprefix_def, IS_PREFIX_APPENDS]
+QED
 
 (*---------------------------------------------------------------------------
         An always true predicate for total encodings.
@@ -103,140 +105,158 @@ val lift_tree_total = store_thm
         Well-formed predicates are non-empty.
  ---------------------------------------------------------------------------*)
 
-val wf_pred_def = Define `wf_pred p = ?x. p x`;
+Definition wf_pred_def:
+ wf_pred p = ?x. p x
+End
 
 (*---------------------------------------------------------------------------
         A well-formed encoder is prefix-free and injective.
  ---------------------------------------------------------------------------*)
 
-val wf_encoder_def = Define
-  `wf_encoder p (e : 'a -> bool list) =
-   !x y. p x /\ p y /\ IS_PREFIX (e x) (e y) ==> (x = y)`;
+Definition wf_encoder_def:
+   wf_encoder p (e : 'a -> bool list) =
+   !x y. p x /\ p y /\ IS_PREFIX (e x) (e y) ==> (x = y)
+End
 
-val wf_encoder_alt = store_thm
-  ("wf_encoder_alt",
-   ``wf_encoder p (e : 'a -> bool list) =
-     !x y. p x /\ p y /\ biprefix (e x) (e y) ==> (x = y)``,
-   PROVE_TAC [wf_encoder_def, biprefix_def]);
+Theorem wf_encoder_alt:
+     wf_encoder p (e : 'a -> bool list) =
+     !x y. p x /\ p y /\ biprefix (e x) (e y) ==> (x = y)
+Proof
+   PROVE_TAC [wf_encoder_def, biprefix_def]
+QED
 
-val wf_encoder_eq = store_thm
-  ("wf_encoder_eq",
-   ``!p e f. wf_encoder p e /\ (!x. p x ==> (e x = f x)) ==> wf_encoder p f``,
-   RW_TAC std_ss [wf_encoder_def]);
+Theorem wf_encoder_eq:
+     !p e f. wf_encoder p e /\ (!x. p x ==> (e x = f x)) ==> wf_encoder p f
+Proof
+   RW_TAC std_ss [wf_encoder_def]
+QED
 
-val wf_encoder_total = store_thm
-  ("wf_encoder_total",
-   ``!p e. wf_encoder (K T) e ==> wf_encoder p e``,
-   RW_TAC std_ss [wf_encoder_def, wf_encoder_def, K_THM]);
+Theorem wf_encoder_total:
+     !p e. wf_encoder (K T) e ==> wf_encoder p e
+Proof
+   RW_TAC std_ss [wf_encoder_def, wf_encoder_def, K_THM]
+QED
 
 (*---------------------------------------------------------------------------
       The unit type is cool because it consumes no space in the
       target list: the type has all the information!
  ---------------------------------------------------------------------------*)
 
-val encode_unit_def =
-  TotalDefn.Define `encode_unit (_ : one) : bool list = []`;
+Definition encode_unit_def:
+  encode_unit (_ : one) : bool list = []
+End
 
-val wf_encode_unit = store_thm
-  ("wf_encode_unit",
-   ``!p. wf_encoder p encode_unit``,
-   RW_TAC std_ss [wf_encoder_def, encode_unit_def, IS_PREFIX, oneTheory.one]);
+Theorem wf_encode_unit:
+     !p. wf_encoder p encode_unit
+Proof
+   RW_TAC std_ss [wf_encoder_def, encode_unit_def, IS_PREFIX, oneTheory.one]
+QED
 
 (*---------------------------------------------------------------------------
         Booleans
  ---------------------------------------------------------------------------*)
 
-val encode_bool_def = TotalDefn.Define
-  `encode_bool (x : bool) = [x]`;
+Definition encode_bool_def:
+  encode_bool (x : bool) = [x]
+End
 
-val wf_encode_bool = store_thm
-  ("wf_encode_bool",
-   ``!p. wf_encoder p encode_bool``,
-   RW_TAC std_ss [wf_encoder_def, encode_bool_def, IS_PREFIX]);
+Theorem wf_encode_bool:
+     !p. wf_encoder p encode_bool
+Proof
+   RW_TAC std_ss [wf_encoder_def, encode_bool_def, IS_PREFIX]
+QED
 
 (*---------------------------------------------------------------------------
         Pairs
  ---------------------------------------------------------------------------*)
 
-val encode_prod_def =
-  TotalDefn.Define
-  `encode_prod xb yb (x : 'a, y : 'b) : bool list = APPEND (xb x) (yb y)`;
+Definition encode_prod_def:
+  encode_prod xb yb (x : 'a, y : 'b) : bool list = APPEND (xb x) (yb y)
+End
 
-val lift_prod_def = Define `lift_prod p1 p2 x <=> p1 (FST x) /\ p2 (SND x)`;
+Definition lift_prod_def:
+  lift_prod p1 p2 x <=> p1 (FST x) /\ p2 (SND x)
+End
 
-val encode_prod_alt = store_thm
-  ("encode_prod_alt",
-   ``!xb yb p. encode_prod xb yb p = APPEND (xb (FST p)) (yb (SND p))``,
+Theorem encode_prod_alt:
+     !xb yb p. encode_prod xb yb p = APPEND (xb (FST p)) (yb (SND p))
+Proof
    GEN_TAC >> GEN_TAC >> Cases >>
-   RW_TAC std_ss [encode_prod_def]);
+   RW_TAC std_ss [encode_prod_def]
+QED
 
-val wf_encode_prod = store_thm
-  ("wf_encode_prod",
-   ``!p1 p2 e1 e2.
+Theorem wf_encode_prod:
+     !p1 p2 e1 e2.
        wf_encoder p1 e1 /\ wf_encoder p2 e2 ==>
-       wf_encoder (lift_prod p1 p2) (encode_prod e1 e2)``,
+       wf_encoder (lift_prod p1 p2) (encode_prod e1 e2)
+Proof
    RW_TAC std_ss [wf_encoder_def, encode_prod_alt, lift_prod_def] >>
    Cases_on `x` >>
    Cases_on `y` >>
    FULL_SIMP_TAC std_ss [] >>
    Suff `q = q'` >- PROVE_TAC [IS_PREFIX_APPENDS] >>
-   PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]);
+   PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]
+QED
 
 (*---------------------------------------------------------------------------
         Sums
  ---------------------------------------------------------------------------*)
 
-val encode_sum_def =
-  TotalDefn.Define
-  `(encode_sum xb yb (INL (x : 'a)) : bool list = T :: xb x) /\
-   (encode_sum xb yb (INR (y : 'b)) = F :: yb y)`;
+Definition encode_sum_def:
+  (encode_sum xb yb (INL (x : 'a)) : bool list = T :: xb x) /\
+  (encode_sum xb yb (INR (y : 'b)) = F :: yb y)
+End
 
-val lift_sum_def = Define
-  `lift_sum (p1 : 'a->bool) p2 x =
-   case x of INL x1 => p1 x1 | INR x2 => p2 x2`;
+Definition lift_sum_def:
+  lift_sum (p1 : 'a->bool) p2 x =
+   case x of INL x1 => p1 x1 | INR x2 => p2 x2
+End
 
-val wf_encode_sum = store_thm
-  ("wf_encode_sum",
-   ``!p1 p2 e1 e2.
+Theorem wf_encode_sum:
+     !p1 p2 e1 e2.
        wf_encoder p1 e1 /\ wf_encoder p2 e2 ==>
-       wf_encoder (lift_sum p1 p2) (encode_sum e1 e2)``,
+       wf_encoder (lift_sum p1 p2) (encode_sum e1 e2)
+Proof
    RW_TAC std_ss [wf_encoder_def, lift_sum_def] >>
    Cases_on `x` >>
    Cases_on `y` >>
-   FULL_SIMP_TAC std_ss [encode_sum_def, IS_PREFIX]);
+   FULL_SIMP_TAC std_ss [encode_sum_def, IS_PREFIX]
+QED
 
 (*---------------------------------------------------------------------------
         Options
  ---------------------------------------------------------------------------*)
 
-val encode_option_def =
-  TotalDefn.Define
-  `(encode_option xb NONE = [F]) /\
-   (encode_option xb (SOME x) = T :: xb x)`;
+Definition encode_option_def:
+  encode_option xb NONE = [F] /\
+  encode_option xb (SOME x) = T :: xb x
+End
 
-val lift_option_def = Define
-  `lift_option p x = case x of NONE => T | SOME y => p y`;
+Definition lift_option_def:
+  lift_option p x = case x of NONE => T | SOME y => p y
+End
 
-val wf_encode_option = store_thm
-  ("wf_encode_option",
-   ``!p e. wf_encoder p e ==> wf_encoder (lift_option p) (encode_option e)``,
+Theorem wf_encode_option:
+     !p e. wf_encoder p e ==> wf_encoder (lift_option p) (encode_option e)
+Proof
    RW_TAC std_ss [wf_encoder_def, lift_option_def] >>
    Cases_on `x` >>
    Cases_on `y` >>
-   FULL_SIMP_TAC std_ss [encode_option_def, IS_PREFIX]);
+   FULL_SIMP_TAC std_ss [encode_option_def, IS_PREFIX]
+QED
 
 (*---------------------------------------------------------------------------
         Lists
  ---------------------------------------------------------------------------*)
 
-val encode_list_def =
-  TotalDefn.Define
-  `(encode_list xb [] = [F]) /\
-   (encode_list xb (x :: xs) = T :: APPEND (xb x) (encode_list xb xs))`;
+Definition encode_list_def:
+  (encode_list xb [] = [F]) /\
+  (encode_list xb (x :: xs) = T :: APPEND (xb x) (encode_list xb xs))
+End
 
-val wf_encode_list = store_thm
-  ("wf_encode_list",
-   ``!p e. wf_encoder p e ==> wf_encoder (EVERY p) (encode_list e)``,
+Theorem wf_encode_list:
+     !p e. wf_encoder p e ==> wf_encoder (EVERY p) (encode_list e)
+Proof
    RW_TAC std_ss [wf_encoder_def] >>
    POP_ASSUM MP_TAC >>
    POP_ASSUM MP_TAC >>
@@ -253,7 +273,8 @@ val wf_encode_list = store_thm
    STRIP_TAC >>
    STRIP_TAC >>
    Suff `h = h'` >- PROVE_TAC [IS_PREFIX_APPENDS] >>
-   PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]);
+   PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]
+QED
 
 (* A congruence rule *)
 
@@ -272,12 +293,14 @@ QED
         Bounded lists
  ---------------------------------------------------------------------------*)
 
-val encode_blist_def =
-  Define
-  `(encode_blist 0 e l = []) /\
-   (encode_blist (SUC m) e l = APPEND (e (HD l)) (encode_blist m e (TL l)))`;
+Definition encode_blist_def:
+  (encode_blist 0 e l = []) /\
+  (encode_blist (SUC m) e l = APPEND (e (HD l)) (encode_blist m e (TL l)))
+End
 
-val lift_blist_def = Define `lift_blist m p x <=> EVERY p x /\ (LENGTH x = m)`;
+Definition lift_blist_def:
+  lift_blist m p x <=> EVERY p x /\ (LENGTH x = m)
+End
 
 Theorem lift_blist_suc:
    !n p h t. lift_blist (SUC n) p (h :: t) <=> p h /\ lift_blist n p t
@@ -285,10 +308,10 @@ Proof
    RW_TAC std_ss [lift_blist_def, EVERY_DEF, LENGTH, CONJ_ASSOC]
 QED
 
-val wf_encode_blist = store_thm
-  ("wf_encode_blist",
-   ``!m p e.
-       wf_encoder p e ==> wf_encoder (lift_blist m p) (encode_blist m e)``,
+Theorem wf_encode_blist:
+     !m p e.
+       wf_encoder p e ==> wf_encoder (lift_blist m p) (encode_blist m e)
+Proof
    RW_TAC std_ss [wf_encoder_alt, lift_blist_def]
    >> NTAC 4 (POP_ASSUM MP_TAC)
    >> REWRITE_TAC [AND_IMP_INTRO]
@@ -304,41 +327,27 @@ val wf_encode_blist = store_thm
    >> Q.PAT_X_ASSUM `!x. P x` MATCH_MP_TAC
    >> RW_TAC std_ss []
    >> MATCH_MP_TAC biprefix_append
-   >> PROVE_TAC [biprefix_sym]);
+   >> PROVE_TAC [biprefix_sym]
+QED
 
 (*---------------------------------------------------------------------------
         Nums (Norrish numeral encoding)
  ---------------------------------------------------------------------------*)
 
-val (encode_num_def, encode_num_ind) =
-  Defn.tprove
-  (Defn.Hol_defn "encode_num"
-   `encode_num (n:num) =
+Definition encode_num_def:
+  encode_num (n:num) =
     if n = 0 then [T; T]
     else if EVEN n then F :: encode_num ((n - 2) DIV 2)
-    else T :: F :: encode_num ((n - 1) DIV 2)`,
-   TotalDefn.WF_REL_TAC `$<` >>
-   REPEAT STRIP_TAC >>
-   (KNOW_TAC (Term `?j. n = SUC j`) >- PROVE_TAC [num_CASES]) >>
-   STRIP_TAC >>
-   IMP_RES_TAC EVEN_EXISTS >>
-   ASM_SIMP_TAC arith_ss
-   [SUC_SUB1, MULT_DIV, DIV_LESS_EQ,
-    DECIDE (Term `2n*m - 2n = (m-1n)*2n`),
-    DECIDE “x < SUC y <=> x <= y”]);
+    else T :: F :: encode_num ((n - 1) DIV 2)
+Termination
+  WF_REL_TAC ‘$<’ >> simp[DIV_LT_X]
+End
 
-val _ = save_thm ("encode_num_def", encode_num_def);
-val _ = save_thm ("encode_num_ind", encode_num_ind);
+val encode_num_def = SPEC_ALL encode_num_def
 
-  (*--------------------------------------------------------------------
-       Termination proof can also go:
-           WF_REL_TAC `$<` THEN intLib.COOPER_TAC
-       but then we'd need integers.
-   ----------------------------------------------------------------------*)
-
-val wf_encode_num = store_thm
-  ("wf_encode_num",
-   ``!p. wf_encoder p encode_num``,
+Theorem wf_encode_num:
+     !p. wf_encoder p encode_num
+Proof
    MATCH_MP_TAC wf_encoder_total >>
    SIMP_TAC std_ss [wf_encoder_def, K_THM] >>
    recInduct encode_num_ind >>
@@ -385,44 +394,49 @@ val wf_encode_num = store_thm
     POP_ASSUM MP_TAC >>
     POP_ASSUM_LIST (K ALL_TAC) >>
     ONCE_REWRITE_TAC [MULT_COMM] >>
-    RW_TAC arith_ss [MULT_DIV]]);
+    RW_TAC arith_ss [MULT_DIV]]
+QED
 
 (*---------------------------------------------------------------------------
         Bounded numbers (bit encoding)
  ---------------------------------------------------------------------------*)
 
-val encode_bnum_def =
-  Define
-  `(encode_bnum 0 (n : num) = []) /\
-   (encode_bnum (SUC m) n = ~(EVEN n) :: encode_bnum m (n DIV 2))`;
+Definition encode_bnum_def:
+  (encode_bnum 0 (n : num) = []) /\
+  (encode_bnum (SUC m) n = ~(EVEN n) :: encode_bnum m (n DIV 2))
+End
 
-val collision_free_def =
-  Define
-  `collision_free m p =
-   !x y. p x /\ p y /\ (x MOD (2 EXP m) = y MOD (2 EXP m)) ==> (x = y)`;
+Definition collision_free_def:
+  collision_free m p =
+   !x y. p x /\ p y /\ (x MOD (2 EXP m) = y MOD (2 EXP m)) ==> (x = y)
+End
 
-val wf_pred_bnum_def =
-  Define `wf_pred_bnum m p <=> wf_pred p /\ !x. p x ==> x < 2 ** m`;
+Definition wf_pred_bnum_def:
+  wf_pred_bnum m p <=> wf_pred p /\ !x. p x ==> x < 2 ** m
+End
 
-val wf_pred_bnum_total = store_thm
-  ("wf_pred_bnum_total",
-   ``!m. wf_pred_bnum m (\x. x < 2 ** m)``,
+Theorem wf_pred_bnum_total:
+     !m. wf_pred_bnum m (\x. x < 2 ** m)
+Proof
    RW_TAC std_ss [wf_pred_bnum_def, wf_pred_def]
    >> Q.EXISTS_TAC `0`
-   >> REWRITE_TAC [ZERO_LESS_EXP, TWO]);
+   >> REWRITE_TAC [ZERO_LESS_EXP, TWO]
+QED
 
-val wf_pred_bnum = store_thm
-  ("wf_pred_bnum",
-   ``!m p. wf_pred_bnum m p ==> collision_free m p``,
+Theorem wf_pred_bnum:
+     !m p. wf_pred_bnum m p ==> collision_free m p
+Proof
    RW_TAC std_ss [wf_pred_bnum_def, collision_free_def]
    >> POP_ASSUM MP_TAC
-   >> RW_TAC arith_ss [LESS_MOD]);
+   >> RW_TAC arith_ss [LESS_MOD]
+QED
 
-val encode_bnum_length = store_thm
-  ("encode_bnum_length",
-   ``!m n. LENGTH (encode_bnum m n) = m``,
+Theorem encode_bnum_length:
+     !m n. LENGTH (encode_bnum m n) = m
+Proof
    Induct
-   >> RW_TAC std_ss [LENGTH, encode_bnum_def]);
+   >> RW_TAC std_ss [LENGTH, encode_bnum_def]
+QED
 
 Theorem encode_bnum_inj:
   !m x y.
@@ -439,9 +453,9 @@ Proof
    >> RW_TAC std_ss [MOD_2]
 QED
 
-val wf_encode_bnum_collision_free = store_thm
-  ("wf_encode_bnum_collision_free",
-   ``!m p. wf_encoder p (encode_bnum m) = collision_free m p``,
+Theorem wf_encode_bnum_collision_free:
+     !m p. wf_encoder p (encode_bnum m) = collision_free m p
+Proof
    RW_TAC std_ss [collision_free_def, wf_encoder_def]
    >> HO_MATCH_MP_TAC
       (PROVE []
@@ -503,12 +517,14 @@ val wf_encode_bnum_collision_free = store_thm
    >> REWRITE_TAC [GSYM EXP]
    >> ONCE_REWRITE_TAC [MULT_COMM]
    >> REWRITE_TAC [EXP, TWO]
-   >> RW_TAC arith_ss [GSYM MOD_COMMON_FACTOR, ZERO_LESS_EXP]);
+   >> RW_TAC arith_ss [GSYM MOD_COMMON_FACTOR, ZERO_LESS_EXP]
+QED
 
-val wf_encode_bnum = store_thm
-  ("wf_encode_bnum",
-   ``!m p. wf_pred_bnum m p ==> wf_encoder p (encode_bnum m)``,
-   PROVE_TAC [wf_encode_bnum_collision_free, wf_pred_bnum]);
+Theorem wf_encode_bnum:
+     !m p. wf_pred_bnum m p ==> wf_encoder p (encode_bnum m)
+Proof
+   PROVE_TAC [wf_encode_bnum_collision_free, wf_pred_bnum]
+QED
 
 (*---------------------------------------------------------------------------
         Datatype of polymorphic n-ary trees.
@@ -516,45 +532,42 @@ val wf_encode_bnum = store_thm
         A challenging example for boolification.
  ---------------------------------------------------------------------------*)
 
-val () = Hol_datatype `tree = Node of 'a => tree list`;
+Datatype:
+  tree = Node 'a (tree list)
+End
 
-val tree_size_def  = fetch "-" "tree_size_def";
+Definition encode_tree_def:
+  encode_tree e (Node a ts) = (e a) ++ encode_list (encode_tree e) ts
+End
+
+Definition lift_tree_def:
+  lift_tree p (Node a ts) <=> p a /\ EVERY (lift_tree p) ts
+End
+
+Theorem encode_tree_def[allow_rebind] =
+        CONV_RULE (DEPTH_CONV ETA_CONV) encode_tree_def
+
+Theorem lift_tree_def[allow_rebind] =
+        CONV_RULE (DEPTH_CONV ETA_CONV) lift_tree_def;
+
+
 val tree_induction = fetch "-" "tree_induction";
 
-val tree_ind = store_thm
-  ("tree_ind",
-   ``!p. (!a ts. (!t. MEM t ts ==> p t) ==> p (Node a ts)) ==> (!t. p t)``,
+Theorem tree_ind:
+     !p. (!a ts. (!t. MEM t ts ==> p t) ==> p (Node a ts)) ==> (!t. p t)
+Proof
    GEN_TAC
    >> REPEAT DISCH_TAC
    >> Suff `(!t. p t) /\ (!l : 'a tree list. EVERY p l)` >- PROVE_TAC []
    >> HO_MATCH_MP_TAC tree_induction
    >> RW_TAC std_ss [EVERY_DEF]
    >> Q.PAT_X_ASSUM `!x. Q x` MATCH_MP_TAC
-   >> FULL_SIMP_TAC std_ss [EVERY_MEM]);
+   >> FULL_SIMP_TAC std_ss [EVERY_MEM]
+QED
 
-val (encode_tree_def, _) =
-  Defn.tprove
-  (Defn.Hol_defn "encode_tree"
-   `encode_tree e (Node a ts) = APPEND (e a) (encode_list (encode_tree e) ts)`,
-   TotalDefn.WF_REL_TAC `measure (tree_size (K 0) o SND)` >>
-   rw [] >> size_comb_tac >> simp []);
-
-val encode_tree_def =
-  save_thm ("encode_tree_def", CONV_RULE (DEPTH_CONV ETA_CONV) encode_tree_def);
-
-val (lift_tree_def, _) =
-  Defn.tprove
-  (Defn.Hol_defn "lift_tree"
-   `lift_tree p (Node a ts) <=> p a /\ EVERY (lift_tree p) ts`,
-   TotalDefn.WF_REL_TAC `measure (tree_size (K 0) o SND)` >>
-   rw_tac bool_ss [] >> size_comb_tac >> simp []);
-
-val lift_tree_def =
-  save_thm ("lift_tree_def", CONV_RULE (DEPTH_CONV ETA_CONV) lift_tree_def);
-
-val wf_encode_tree = store_thm
-  ("wf_encode_tree",
-   ``!p e. wf_encoder p e ==> wf_encoder (lift_tree p) (encode_tree e)``,
+Theorem wf_encode_tree:
+     !p e. wf_encoder p e ==> wf_encoder (lift_tree p) (encode_tree e)
+Proof
    RW_TAC std_ss [] >>
    SIMP_TAC std_ss [wf_encoder_alt] >>
    HO_MATCH_MP_TAC tree_ind >>
@@ -592,6 +605,6 @@ val wf_encode_tree = store_thm
    RW_TAC std_ss [] >>
    Q.PAT_X_ASSUM `!z. (!x. P x z) ==> Q z`
    (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO]) >>
-   PROVE_TAC [MEM, biprefix_appends]);
+   PROVE_TAC [MEM, biprefix_appends]
+QED
 
-val _ = export_theory ();

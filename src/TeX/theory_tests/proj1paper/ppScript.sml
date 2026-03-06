@@ -1,10 +1,7 @@
-open HolKernel Parse boolLib bossLib;
+Theory pp
+Ancestors
+  proj1A
 
-open proj1ATheory
-
-val _ = new_theory "pp";
-
-val _ = overload_on ("quux", ``foo``)
+Overload quux = ``foo``
 
 
-val _ = export_theory();

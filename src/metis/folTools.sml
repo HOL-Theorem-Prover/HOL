@@ -11,7 +11,8 @@ open HolKernel Parse boolLib combinTheory simpLib
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars normalFormsTheory.normalForms_grammars
+  val SOME normalForms_grammars = grammarDB {thyname="normalForms"}
+  val (Type,Term) = parse_from_grammars normalForms_grammars
 end
 open Parse
 

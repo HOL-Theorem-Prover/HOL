@@ -7,7 +7,8 @@ open stateLib spec_databaseLib m0_progTheory
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars m0_progTheory.m0_prog_grammars
+   val (Type, Term) =
+       parse_from_grammars $ valOf $ grammarDB {thyname="m0_prog"}
 end
 
 open Parse
@@ -17,7 +18,7 @@ val ERR = Feedback.mk_HOL_ERR "m0_progLib"
 (* ------------------------------------------------------------------------ *)
 
 val m0_proj_def = m0_progTheory.m0_proj_def
-val m0_comp_defs = m0_progTheory.component_defs
+val m0_comp_defs = stateLib.sep_components {thyname="m0_prog"}
 
 local
    val pc = Term.prim_mk_const {Thy = "m0", Name = "RName_PC"}

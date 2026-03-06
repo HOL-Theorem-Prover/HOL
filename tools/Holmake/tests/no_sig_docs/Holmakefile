@@ -1,0 +1,7 @@
+.PHONY: all
+
+DEPS = fooTheory.uo expected
+OUTPUT = $(HOLDIR)/tools/Holmake/tests/no_sig_docs/.hol/objs/fooTheory.sig
+
+all: $(DEPS)
+	diff $(OUTPUT) expected

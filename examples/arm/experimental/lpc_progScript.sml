@@ -1,12 +1,10 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory wordsTheory wordsLib arithmeticTheory;
-open set_sepTheory progTheory lpc_devicesTheory;
-open listTheory pairTheory combinTheory addressTheory;
-
-val _ = new_theory "lpc_prog";
-
-
+Theory lpc_prog
+Ancestors
+  pred_set words arithmetic set_sep prog lpc_devices list pair
+  combin address
+Libs
+  wordsLib
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -16,14 +14,15 @@ val RW1 = ONCE_REWRITE_RULE;
 (* The LPC set                                                                   *)
 (* ----------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `
-  lpc_el =  tReg of word4 => word32
-          | tStatus of arm_bit => bool
-          | tRom of word32 => word8 option
-          | tRam of word32 => word8 option
-          | tTime of num
-          | tUart0 of (word8 list # num # word8 list # num)
-          | tUndef of bool`;
+Datatype:
+  lpc_el =  tReg word4 word32
+          | tStatus arm_bit bool
+          | tRom word32 (word8 option)
+          | tRam word32 (word8 option)
+          | tTime num
+          | tUart0 (word8 list # num # word8 list # num)
+          | tUndef bool
+End
 
 val lpc_el_11 = DB.fetch "-" "lpc_el_11";
 val lpc_el_distinct = DB.fetch "-" "lpc_el_distinct";
@@ -38,23 +37,29 @@ val _ = Parse.type_abbrev("lpc_set",``:lpc_el set``);
 val ty = (type_of o snd o dest_comb) ``LPC_NEXT s1 s2``
 val _ = Parse.type_abbrev("lpc_state",ty);
 
-val LPC_READ_REG_def = Define `
-  LPC_READ_REG a ((s,p):lpc_state) = ARM_READ_REG a s`;
+Definition LPC_READ_REG_def:
+  LPC_READ_REG a ((s,p):lpc_state) = ARM_READ_REG a s
+End
 
-val LPC_READ_STATUS_def = Define `
-  LPC_READ_STATUS a ((s,p):lpc_state) = ARM_READ_STATUS a s`;
+Definition LPC_READ_STATUS_def:
+  LPC_READ_STATUS a ((s,p):lpc_state) = ARM_READ_STATUS a s
+End
 
-val LPC_READ_TIME_def = Define `
-  LPC_READ_TIME ((s,(time,rom,ram,p)):lpc_state) = time`;
+Definition LPC_READ_TIME_def:
+  LPC_READ_TIME ((s,(time,rom,ram,p)):lpc_state) = time
+End
 
-val LPC_READ_ROM_def = Define `
-  LPC_READ_ROM a ((s,(time,rom,ram,p)):lpc_state) = rom a`;
+Definition LPC_READ_ROM_def:
+  LPC_READ_ROM a ((s,(time,rom,ram,p)):lpc_state) = rom a
+End
 
-val LPC_READ_RAM_def = Define `
-  LPC_READ_RAM a ((s,(time,rom,ram,p)):lpc_state) = ram a`;
+Definition LPC_READ_RAM_def:
+  LPC_READ_RAM a ((s,(time,rom,ram,p)):lpc_state) = ram a
+End
 
-val LPC_READ_UART0_def = Define `
-  LPC_READ_UART0 ((s,(time,rom,ram,uart0,p)):lpc_state) = UART0_READ uart0`;
+Definition LPC_READ_UART0_def:
+  LPC_READ_UART0 ((s,(time,rom,ram,uart0,p)):lpc_state) = UART0_READ uart0
+End
 
 Definition ARM_OK_def:
   ARM_OK state <=>
@@ -67,15 +72,16 @@ Definition ARM_OK_def:
     (ARM_MODE state = 16w)
 End
 
-val LPC_READ_UNDEF_def = Define `
-  LPC_READ_UNDEF ((s,p):lpc_state) <=> ~ARM_OK s /\ ~PERIPHERALS_OK p`;
+Definition LPC_READ_UNDEF_def:
+  LPC_READ_UNDEF ((s,p):lpc_state) <=> ~ARM_OK s /\ ~PERIPHERALS_OK p
+End
 
 
 (* ----------------------------------------------------------------------
     Converting from lpc_state to lpc_set
    ---------------------------------------------------------------------- *)
 
-val lpc2set'_def = Define `
+Definition lpc2set'_def:
   lpc2set' (rs,st:arm_bit set,is,ms,tt:unit set,ua:unit set,ud:unit set) (s:lpc_state) =
     IMAGE (\a. tReg a (LPC_READ_REG a s)) rs UNION
     IMAGE (\a. tStatus a (LPC_READ_STATUS a s)) st UNION
@@ -83,10 +89,13 @@ val lpc2set'_def = Define `
     IMAGE (\a. tRam a (LPC_READ_RAM a s)) ms UNION
     IMAGE (\a. tTime (LPC_READ_TIME s)) tt UNION
     IMAGE (\a. tUart0 (LPC_READ_UART0 s)) ua UNION
-    IMAGE (\a. tUndef (LPC_READ_UNDEF s)) ud`;
+    IMAGE (\a. tUndef (LPC_READ_UNDEF s)) ud
+End
 
-val lpc2set_def   = Define `lpc2set s = lpc2set' (UNIV,UNIV,UNIV,UNIV,UNIV,UNIV,UNIV) s`;
-val lpc2set''_def = Define `lpc2set'' x s = lpc2set s DIFF lpc2set' x s`;
+Definition lpc2set_def:     lpc2set s = lpc2set' (UNIV,UNIV,UNIV,UNIV,UNIV,UNIV,UNIV) s
+End
+Definition lpc2set''_def:   lpc2set'' x s = lpc2set s DIFF lpc2set' x s
+End
 
 (* theorems *)
 
@@ -238,24 +247,33 @@ val EMPTY_lpc2set = prove(``
     Defining the LPC_MODEL
    ---------------------------------------------------------------------- *)
 
-val tR_def = Define `tR a x = SEP_EQ {tReg a x}`;
-val tM_def = Define `tM a x = SEP_EQ {tRam a x}`;
-val tS_def = Define `tS a x = SEP_EQ {tStatus a x}`;
-val tU_def = Define `tU x = SEP_EQ {tUndef x}`;
-val tT_def = Define `tT x = SEP_EQ {tTime x}`;
-val tUART0_def = Define `tUART0 x = SEP_EQ {tUart0 x}`;
+Definition tR_def:   tR a x = SEP_EQ {tReg a x}
+End
+Definition tM_def:   tM a x = SEP_EQ {tRam a x}
+End
+Definition tS_def:   tS a x = SEP_EQ {tStatus a x}
+End
+Definition tU_def:   tU x = SEP_EQ {tUndef x}
+End
+Definition tT_def:   tT x = SEP_EQ {tTime x}
+End
+Definition tUART0_def:   tUART0 x = SEP_EQ {tUart0 x}
+End
 
-val tPC_def = Define `tPC x = tR 15w x * tU F * cond (ALIGNED x)`;
+Definition tPC_def:   tPC x = tR 15w x * tU F * cond (ALIGNED x)
+End
 
-val LPC_ROM_def = Define `LPC_ROM (a,w:word32) =
+Definition LPC_ROM_def:   LPC_ROM (a,w:word32) =
   { tRom (a+3w) (SOME ((31 >< 24) w)) ;
     tRom (a+2w) (SOME ((23 >< 16) w)) ;
     tRom (a+1w) (SOME ((15 ><  8) w)) ;
-    tRom (a+0w) (SOME (( 7 ><  0) w)) }`;
+    tRom (a+0w) (SOME (( 7 ><  0) w)) }
+End
 
-val LPC_MODEL_def = Define `
+Definition LPC_MODEL_def:
   LPC_MODEL = (lpc2set, LPC_NEXT, LPC_ROM, (\x y. (x:lpc_state) = y),
-               {} : ^(ty_antiq (#1 (dom_rng (type_of “lpc2set”)))) set)`;
+               {} : ^(ty_antiq (#1 (dom_rng (type_of “lpc2set”)))) set)
+End
 
 
 (* theorems *)
@@ -313,14 +331,15 @@ Proof
   SIMP_TAC std_ss [EXTENSION,SUBSET_DEF,IN_INSERT,NOT_IN_EMPTY,IN_DIFF] \\ METIS_TAC []
 QED
 
-val CODE_POOL_lpc2set = store_thm("CODE_POOL_lpc2set",
-  ``CODE_POOL LPC_ROM {(p,c)} (lpc2set' (rs,st,is,ms,tt,ua,ud) s) <=>
+Theorem CODE_POOL_lpc2set:
+    CODE_POOL LPC_ROM {(p,c)} (lpc2set' (rs,st,is,ms,tt,ua,ud) s) <=>
       ({p+3w;p+2w;p+1w;p} = is) /\ (rs = {}) /\ (st = {}) /\ (ms = {}) /\
       (tt = {}) /\ (ua = {}) /\ (ud = {}) /\
       (LPC_READ_ROM (p + 0w) s = SOME (( 7 ><  0) c)) /\
       (LPC_READ_ROM (p + 1w) s = SOME ((15 ><  8) c)) /\
       (LPC_READ_ROM (p + 2w) s = SOME ((23 >< 16) c)) /\
-      (LPC_READ_ROM (p + 3w) s = SOME ((31 >< 24) c))``,
+      (LPC_READ_ROM (p + 3w) s = SOME ((31 >< 24) c))
+Proof
   SIMP_TAC bool_ss [CODE_POOL_def,IMAGE_INSERT,IMAGE_EMPTY,BIGUNION_INSERT,
     BIGUNION_EMPTY,UNION_EMPTY,LPC_ROM_def,CODE_POOL_lpc2set_LEMMA,
     GSYM DELETE_DEF, INSERT_SUBSET, EMPTY_SUBSET,IN_lpc2set]
@@ -328,7 +347,8 @@ val CODE_POOL_lpc2set = store_thm("CODE_POOL_lpc2set",
   \\ ASM_SIMP_TAC std_ss [DELETE_lpc2set,EMPTY_lpc2set,DIFF_INSERT,WORD_ADD_0]
   \\ ASM_SIMP_TAC std_ss [GSYM AND_IMP_INTRO,DELETE_lpc2set,EMPTY_lpc2set,DIFF_EMPTY]
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
-  \\ ASM_SIMP_TAC std_ss [DELETE_lpc2set,EMPTY_lpc2set]);
+  \\ ASM_SIMP_TAC std_ss [DELETE_lpc2set,EMPTY_lpc2set]
+QED
 
 val LPC_SPEC_CODE = (RW [GSYM LPC_MODEL_def] o SIMP_RULE std_ss [LPC_MODEL_def] o prove)
   (``SPEC LPC_MODEL (CODE_POOL (FST (SND (SND LPC_MODEL))) c * p) {}
@@ -381,6 +401,3 @@ Proof
   THEN1 (Q.PAT_ASSUM `!x.bb` (ASSUME_TAC o Q.SPEC `tUndef (LPC_READ_UNDEF s1)`)
          \\ FULL_SIMP_TAC std_ss [IN_lpc2set,oneTheory.one] \\ METIS_TAC [])
 QED
-
-
-val _ = export_theory();

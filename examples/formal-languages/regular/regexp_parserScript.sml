@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open regexpTheory pegTheory pegexecTheory monadsyntax
-
-val _ = new_theory "regexp_parser";
+Theory regexp_parser
+Ancestors
+  regexp peg pegexec
+Libs
+  monadsyntax
 
 val _ = temp_add_monadsyntax()
 
@@ -11,28 +11,27 @@ val _ = overload_on ("monad_unitbind", ``OPTION_IGNORE_BIND``)
 val _ = temp_overload_on ("return", ``SOME``)
 val _ = temp_overload_on ("fail", ``NONE``)
 
-val _ = computeLib.add_persistent_funs ["option.OPTION_BIND_def",
-                                        "option.OPTION_IGNORE_BIND_def",
-                                        "option.OPTION_GUARD_def",
-                                        "option.OPTION_MAP_DEF",
-                                        "option.OPTION_MAP2_DEF",
-                                        "option.OPTION_CHOICE_def"]
+val _ = computeLib.add_persistent_funs
+          ["option.OPTION_BIND_def",
+           "option.OPTION_IGNORE_BIND_def",
+           "option.OPTION_GUARD_def",
+           "option.OPTION_MAP_DEF",
+           "option.OPTION_MAP2_DEF",
+           "option.OPTION_CHOICE_def"]
 
 val _ = overload_on ("assert", ``option$OPTION_GUARD : bool -> unit option``)
 val _ = overload_on ("++", ``option$OPTION_CHOICE``)
 val _ = overload_on ("lift", ``option$OPTION_MAP``)
 
-
-val _ =
- Datatype
-   `reNT = Top
-         | Alt
-         | Concat
-         | Star
-         | Atom
-         | CharSet
-         | BslashSpecial`
-;
+Datatype:
+   reNT = Top
+        | Alt
+        | Concat
+        | Star
+        | Atom
+        | CharSet
+        | BslashSpecial
+End
 
 val _ = overload_on("mkNT", ``INL : reNT -> reNT inf``)
 
@@ -334,5 +333,3 @@ val r = EVAL ``parse_regexp "a|b*c|d"``
 val r = EVAL ``parse_regexp "a|[aoeu]"``
 val r = EVAL ``parse_regexp "a|[aoe]u"``
 *)
-
-val _ = export_theory();

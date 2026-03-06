@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-open foobarLib;
-
-val _ = new_theory "A";
+Theory A
+Libs
+  foobarLib
 
 Definition foo_def[foobar]:
   foo a = a + 1
@@ -13,4 +12,3 @@ Proof
   simp[foo_def]
 QED
 
-val _ = export_theory ()

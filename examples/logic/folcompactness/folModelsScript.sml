@@ -1,16 +1,13 @@
-open HolKernel Parse boolLib bossLib;
-
-open listTheory pred_setTheory
-open folLangTheory
-
-val _ = new_theory "folModels";
+Theory folModels
+Ancestors
+  list pred_set folLang
 
 val MAP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] MAP_CONG
 
-val _ = Datatype‘
+Datatype:
   model = <| Dom : α set ; Fun : num -> α list -> α ;
              Pred : num -> α list -> bool |>
-’;
+End
 
 Definition valuation_def:
   valuation M v ⇔ ∀n. v n ∈ M.Dom
@@ -25,8 +22,6 @@ QED
 Definition termval_def:
   (termval M v (V x) = v x) ∧
   (termval M v (Fn f l) = M.Fun f (MAP (termval M v) l))
-Termination
-  WF_REL_TAC ‘measure (term_size o SND o SND)’ >> simp[]
 End
 
 Theorem termval_def[simp,allow_rebind] =
@@ -303,8 +298,3 @@ Proof
   fs[valuation_def] >> fs[Abbr‘Mt’] >> metis_tac[]
 QED
 
-
-
-
-
-val _ = export_theory();

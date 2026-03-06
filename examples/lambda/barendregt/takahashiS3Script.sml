@@ -1,22 +1,20 @@
-open HolKernel Parse boolLib bossLib;
-
-open boolSimps metisLib basic_swapTheory relationTheory listTheory
-open pred_setTheory
-
-local open pred_setLib in end;
-
-open binderLib BasicProvers nomsetTheory termTheory chap2Theory appFOLDLTheory;
-open horeductionTheory chap3Theory
+Theory takahashiS3
+Ancestors
+  basic_swap relation list pred_set nomset term chap2 appFOLDL
+  horeduction chap3
+Libs
+  boolSimps metisLib binderLib BasicProvers
+  pred_setLib[qualified]
 
 (* ----------------------------------------------------------------------
     A mechanisation of §3 of
 
      Takahashi 1995, "Parallel Reductions in λ-Calculus"
+     Information and Computation, 1995.
+     doi:10.1006/inco.1995.1057.
 
     leading to ⊢ has_benf M ⇔ has_bnf M
    ---------------------------------------------------------------------- *)
-
-val _ = new_theory "takahashiS3";
 
 Inductive peta:
 [~refl[simp]:]
@@ -31,6 +29,9 @@ End
 
 val _ = set_mapped_fixity {term_name = "peta", tok = "=η=>",
                            fixity = Infix(NONASSOC, 450)}
+
+val _ = TeX_notation { hol = "=η=>",
+        TeX = ("\\ensuremath{\\Rightarrow_{\\eta}}", 1) };
 
 Theorem peta_VAR[simp]:
   peta (VAR s) M ⇔ M = VAR s
@@ -552,7 +553,7 @@ Theorem is_abs_eapp:
   is_abs (eapp M its) ⇔
   (∃p i t. its = p ++ [(i,t)] ∧ 0 < i) ∨ is_abs M ∧ its = []
 Proof
-  Cases_on ‘its’ using SNOC_CASES >> simp[] >>
+  Cases_on ‘its’ using SNOC_CASES >> simp[SNOC_APPEND] >>
   Cases_on ‘x’ >> simp[]
 QED
 
@@ -712,7 +713,7 @@ Proof
       gvs[LIST_REL_EL_EQN, MEM_EL] >> metis_tac[peta_FV]) >~
   [‘LAM u (LAMl vs _) = LAM w (M @@ VAR w)’]
   >- (gvs[LAM_eq_thm, app_eq_appstar_SNOC, FV_appstar, appstar_peta] >>
-      simp[DISJ_IMP_THM, FORALL_AND_THM]
+      simp[DISJ_IMP_THM, FORALL_AND_THM, SNOC_APPEND]
       >- metis_tac[] >>
       gvs[tpm_eqr, tpm_fresh, appstar_peta, FV_appstar] >> metis_tac[]) >~
   [‘u::vs = pvs ++ [w]’]
@@ -785,6 +786,4 @@ Proof
   simp[benf_def] >> metis_tac[RTC_CASES_RTC_TWICE, takahashi_3_7star]
 QED
 
-
-
-val _ = export_theory();
+val _ = html_theory "takahashiS3";

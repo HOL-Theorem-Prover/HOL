@@ -299,17 +299,17 @@ fun mk_guess_opt NONE v t i fvL = guess_general(i, fvL)
 (* Given a guess_term the function is applied to prove the term. *)
 fun make_set_guess_thm (guess_term(ty, i, fvL, tm)) proofConv =
     guess_thm (ty, i, fvL, proofConv tm)
-  | make_set_guess_thm guess _ =  guess
+  | make_set_guess_thm guess _ = guess
 
 fun guess_remove_thm v t (guess_thm(ty, i, fvL, thm)) =
     mk_guess ty v t i fvL
   | guess_remove_thm v t (guess_term(ty, i, fvL, tm)) =
     mk_guess ty v t i fvL
-  | guess_remove_thm _ _ guess =  guess;
+  | guess_remove_thm _ _ guess = guess;
 
 fun guess_thm2term (guess_thm(ty, i, fvL, thm)) =
     guess_term (ty, i, fvL, concl thm)
-  | guess_thm2term guess =  guess;
+  | guess_thm2term guess = guess;
 
 
 (* A dummy version that just uses mk_thm. *)
@@ -1930,12 +1930,12 @@ local
 
       val gc2 =  {rewrites     = #rewrites gc1,
                   general      = #general gc1,
-                  exists_point =  gfun GUESS_RULES_STRENGTHEN_EXISTS_POINT (#exists_point gc1),
-                  forall_point =  gfun GUESS_RULES_WEAKEN_FORALL_POINT (#forall_point gc1),
+                  exists_point = gfun GUESS_RULES_STRENGTHEN_EXISTS_POINT (#exists_point gc1),
+                  forall_point = gfun GUESS_RULES_WEAKEN_FORALL_POINT (#forall_point gc1),
                   forall       = [],
                   exists       = [],
-                  exists_gap =  gfun GUESS_RULES_WEAKEN_EXISTS_GAP (#exists_gap gc1),
-                  forall_gap =  gfun GUESS_RULES_STRENGTHEN_FORALL_GAP (#forall_gap gc1)}:guess_collection
+                  exists_gap = gfun GUESS_RULES_WEAKEN_EXISTS_GAP (#exists_gap gc1),
+                  forall_gap = gfun GUESS_RULES_STRENGTHEN_FORALL_GAP (#forall_gap gc1)}:guess_collection
    in SOME gc2 end handle HOL_ERR _ => NONE
                         | UNCHANGED => NONE
 in
@@ -2390,7 +2390,7 @@ fun inst_filter_qp fL =
    val t = ``x:num = 9``
 *)
 
-type quant_heuristic_cache =  (Term.term, (Term.term, guess_collection) Redblackmap.dict) Redblackmap.dict
+type quant_heuristic_cache = (Term.term, (Term.term, guess_collection) Redblackmap.dict) Redblackmap.dict
 fun mk_quant_heuristic_cache () = (Redblackmap.mkDict Term.compare):quant_heuristic_cache
 
 (*
@@ -3024,7 +3024,7 @@ fun QUANT_INSTANTIATE_REDUCER cache_ref_opt re min_occs expand_eq bqp qpL =
       fun get_db e = (raise e) handle FACTDB thms => thms
   in Traverse.REDUCER
     {name=SOME"QUANT_INSTANTIATE",
-     initial =  FACTDB [],
+     initial = FACTDB [],
      apply=(fn r => fn t =>
        let
          val thms = get_db (#context r);
@@ -3042,9 +3042,9 @@ fun QUANT_INST_ss qpL        = EXTENSIBLE_QUANT_INST_ss NONE false true  false b
 fun EXPAND_QUANT_INST_ss qpL = EXTENSIBLE_QUANT_INST_ss NONE false true  true  basic_qp qpL
 fun FAST_QUANT_INST_ss qpL   = EXTENSIBLE_QUANT_INST_ss NONE false false false basic_qp qpL
 
-fun QUANT_INSTANTIATE_TAC L =  CONV_TAC (QUANT_INSTANTIATE_CONV L);
+fun QUANT_INSTANTIATE_TAC L = CONV_TAC (QUANT_INSTANTIATE_CONV L);
 fun FAST_QUANT_INSTANTIATE_TAC L = CONV_TAC (FAST_QUANT_INSTANTIATE_CONV L);
-fun ASM_QUANT_INSTANTIATE_TAC L =  DISCH_ASM_CONV_TAC (QUANT_INSTANTIATE_CONV L);
+fun ASM_QUANT_INSTANTIATE_TAC L = DISCH_ASM_CONV_TAC (QUANT_INSTANTIATE_CONV L);
 fun FAST_ASM_QUANT_INSTANTIATE_TAC L = DISCH_ASM_CONV_TAC (FAST_QUANT_INSTANTIATE_CONV L);
 
 

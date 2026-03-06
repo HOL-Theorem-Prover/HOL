@@ -10,7 +10,8 @@ open blastLib riscvTheory riscv_stepTheory
 
 structure Parse = struct
   open Parse
-  val (Type, Term) = parse_from_grammars riscv_stepTheory.riscv_step_grammars
+  val (Type, Term) =
+      parse_from_grammars $ valOf $ grammarDB {thyname="riscv_step"}
 end
 open Parse
 
@@ -256,7 +257,7 @@ val fetch_inst =
 
 local
   val rwts = List.map (full_state_rule o fetch_inst o DB.fetch "riscv_step")
-               riscv_stepTheory.rwts
+               (valOf (utilsLib.get_rewrites{thyname="riscv_step"}))
   val fnd = utilsLib.find_rw (utilsLib.mk_rw_net utilsLib.lhsc rwts)
   val rule = Conv.DEPTH_CONV wordsLib.word_EQ_CONV
              THENC REWRITE_CONV [riscv_stepTheory.v2w_0_rwts]
@@ -276,8 +277,12 @@ in
         [] => err tm "no valid step theorem"
       | [x] => x
       | l => List.last (mlibUseful.sort_map neg_count Int.compare l))
-    handle HOL_ERR {message = "not found", origin_function = "find_rw", ...} =>
-      err tm "instruction instance not supported"
+    handle (e as HOL_ERR herr) =>
+      if message_of herr = "not found" andalso
+         top_function_of herr = "find_rw"
+      then
+         err tm "instruction instance not supported"
+      else raise e
 end
 
 (* -------------------------------------------------------------------------

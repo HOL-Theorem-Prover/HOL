@@ -5,22 +5,21 @@
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (*         : 2023-2024 Michael Norrish and Chun Tian                          *)
 (* ========================================================================== *)
+Theory basic_swap
+Ancestors
+  arithmetic string pred_set list rich_list pair numpair
+  string_num
+Libs
+  boolSimps numLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open boolSimps arithmeticTheory stringTheory pred_setTheory numLib hurdUtils
-     listTheory rich_listTheory pairTheory numpairTheory
-     string_numTheory listRangeTheory;
-
-val _ = new_theory "basic_swap";
 
 (* ----------------------------------------------------------------------
     swapping over strings
    ---------------------------------------------------------------------- *)
 
-val swapstr_def = Define`
+Definition swapstr_def:
   swapstr x y (s:string) = if x = s then y else if y = s then x else s
-`;
+End
 
 Theorem swapstr_id[simp] :
     swapstr x x s = s
@@ -78,57 +77,64 @@ QED
     swapping lists of pairs over strings (a foldr)
    ---------------------------------------------------------------------- *)
 
-val raw_lswapstr_def = Define`
+Definition raw_lswapstr_def:
   (raw_lswapstr [] s = s) /\
   (raw_lswapstr (h::t) s = swapstr (FST h) (SND h) (raw_lswapstr t s))
-`;
+End
 val _ = export_rewrites ["raw_lswapstr_def"]
 
-val raw_lswapstr_APPEND = store_thm(
-  "raw_lswapstr_APPEND",
-  ``raw_lswapstr (p1 ++ p2) s = raw_lswapstr p1 (raw_lswapstr p2 s)``,
-  Induct_on `p1` THEN SRW_TAC [][raw_lswapstr_def]);
+Theorem raw_lswapstr_APPEND:
+    raw_lswapstr (p1 ++ p2) s = raw_lswapstr p1 (raw_lswapstr p2 s)
+Proof
+  Induct_on `p1` THEN SRW_TAC [][raw_lswapstr_def]
+QED
 
-val raw_lswapstr_inverse = store_thm(
-  "raw_lswapstr_inverse",
-  ``!p s. (raw_lswapstr (REVERSE p) (raw_lswapstr p s) = s) /\
-          (raw_lswapstr p (raw_lswapstr (REVERSE p) s) = s)``,
-  Induct THEN SRW_TAC [][raw_lswapstr_def, raw_lswapstr_APPEND]);
+Theorem raw_lswapstr_inverse:
+    !p s. (raw_lswapstr (REVERSE p) (raw_lswapstr p s) = s) /\
+          (raw_lswapstr p (raw_lswapstr (REVERSE p) s) = s)
+Proof
+  Induct THEN SRW_TAC [][raw_lswapstr_def, raw_lswapstr_APPEND]
+QED
 val _ = export_rewrites ["raw_lswapstr_inverse"]
 
-val raw_lswapstr_11 = store_thm(
-  "raw_lswapstr_11",
-  ``(raw_lswapstr p s = raw_lswapstr p t) = (s = t)``,
-  METIS_TAC [raw_lswapstr_inverse]);
+Theorem raw_lswapstr_11:
+    (raw_lswapstr p s = raw_lswapstr p t) = (s = t)
+Proof
+  METIS_TAC [raw_lswapstr_inverse]
+QED
 val _ = export_rewrites ["raw_lswapstr_11"]
 
-val raw_lswapstr_eql = store_thm(
-  "raw_lswapstr_eql",
-  ``(raw_lswapstr p s = t) = (s = raw_lswapstr (REVERSE p) t)``,
-  METIS_TAC [raw_lswapstr_inverse]);
+Theorem raw_lswapstr_eql:
+    (raw_lswapstr p s = t) = (s = raw_lswapstr (REVERSE p) t)
+Proof
+  METIS_TAC [raw_lswapstr_inverse]
+QED
 
-val raw_lswapstr_eqr = store_thm(
-  "raw_lswapstr_eqr",
-  ``(s = raw_lswapstr p t) = (raw_lswapstr (REVERSE p) s =  t)``,
-  METIS_TAC [raw_lswapstr_inverse]);
+Theorem raw_lswapstr_eqr:
+    (s = raw_lswapstr p t) = (raw_lswapstr (REVERSE p) s =  t)
+Proof
+  METIS_TAC [raw_lswapstr_inverse]
+QED
 
-val raw_lswapstr_sing_to_back = store_thm(
-  "raw_lswapstr_sing_to_back",
-  ``!p u v s. swapstr (raw_lswapstr p u) (raw_lswapstr p v) (raw_lswapstr p s) =
-              raw_lswapstr p (swapstr u v s)``,
-  Induct THEN ASM_SIMP_TAC (srw_ss()) [FORALL_PROD]);
+Theorem raw_lswapstr_sing_to_back:
+    !p u v s. swapstr (raw_lswapstr p u) (raw_lswapstr p v) (raw_lswapstr p s) =
+              raw_lswapstr p (swapstr u v s)
+Proof
+  Induct THEN ASM_SIMP_TAC (srw_ss()) [FORALL_PROD]
+QED
 
 (* ----------------------------------------------------------------------
     NEW constant
    ---------------------------------------------------------------------- *)
 
-val new_exists = store_thm(
-  "new_exists",
-  ``!s : string set. FINITE s ==> ?x. ~(x IN s)``,
+Theorem new_exists:
+    !s : string set. FINITE s ==> ?x. ~(x IN s)
+Proof
   Q_TAC SUFF_TAC `INFINITE (UNIV : string set)`
         THEN1 METIS_TAC [pred_setTheory.IN_UNIV,
                          pred_setTheory.IN_INFINITE_NOT_FINITE] THEN
-  SRW_TAC [][INFINITE_STR_UNIV]);
+  SRW_TAC [][INFINITE_STR_UNIV]
+QED
 
 (* |- !s. FINITE s ==> NEW s NOTIN s *)
 val NEW_def =
@@ -136,11 +142,12 @@ val NEW_def =
       ("NEW_def", ["NEW"],
        SIMP_RULE (srw_ss()) [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] new_exists)
 
-val NEW_ELIM_RULE = store_thm(
-  "NEW_ELIM_RULE",
-  ``!P X. FINITE X /\ (!v:string. ~(v IN X) ==> P v) ==>
-          P (NEW X)``,
-  PROVE_TAC [NEW_def]);
+Theorem NEW_ELIM_RULE:
+    !P X. FINITE X /\ (!v:string. ~(v IN X) ==> P v) ==>
+          P (NEW X)
+Proof
+  PROVE_TAC [NEW_def]
+QED
 
 (* ----------------------------------------------------------------------
     Primitive definitions on string/name allocations
@@ -164,28 +171,25 @@ QED
 
 (* The primitive ‘alloc’ allocates a ranged list of variables in the row *)
 Definition alloc_def :
-    alloc r m n = MAP (n2s o npair r) [m ..< n]
+    alloc r z n = GENLIST (\i. n2s (npair r (z + i))) n
 End
 
-Theorem alloc_NIL[simp] :
-    alloc r n n = []
+Theorem alloc_0[simp] :
+    alloc r z 0 = []
 Proof
     rw [alloc_def]
 QED
 
 Theorem alloc_thm :
-    !r m n. ALL_DISTINCT (alloc r m n) /\ LENGTH (alloc r m n) = n - m
+    !r z n. ALL_DISTINCT (alloc r z n) /\ LENGTH (alloc r z n) = n
 Proof
-    rw [alloc_def]
- >> MATCH_MP_TAC ALL_DISTINCT_MAP_INJ >> rw []
+    rw [alloc_def, ALL_DISTINCT_GENLIST]
 QED
 
 Theorem alloc_prefix :
     !r m n n'. n <= n' ==> alloc r m n <<= alloc r m n'
 Proof
-    rw [alloc_def]
- >> MATCH_MP_TAC isPREFIX_MAP
- >> MATCH_MP_TAC isPREFIX_listRangeLHI >> art []
+    rw [alloc_def, isPREFIX_GENLIST]
 QED
 
 (* ----------------------------------------------------------------------
@@ -193,7 +197,7 @@ QED
    ---------------------------------------------------------------------- *)
 
 Definition RNEWS :
-    RNEWS r n s = let d = SUC (string_width s) in alloc r d (d + n)
+    RNEWS r n s = let z = SUC (string_width s) in alloc r z n
 End
 
 Theorem RNEWS_0[simp] :
@@ -204,16 +208,15 @@ QED
 
 Theorem RNEWS_def :
     !r n s.
-        FINITE s ==>
-        ALL_DISTINCT (RNEWS r n s) /\ DISJOINT (set (RNEWS r n s)) s /\
-        LENGTH (RNEWS r n s) = n
+       FINITE s ==>
+       ALL_DISTINCT (RNEWS r n s) /\ DISJOINT (set (RNEWS r n s)) s /\
+       LENGTH (RNEWS r n s) = n
 Proof
     rw [RNEWS, alloc_thm]
- >> rw [DISJOINT_ALT', alloc_def, MEM_MAP]
- >> rw [Once DISJ_COMM]
- >> STRONG_DISJ_TAC
- >> MP_TAC (Q.SPECL [‘n2s (r *, y)’, ‘s’] string_width_thm)
- >> rw []
+ >> rw [DISJOINT_ALT', alloc_def, MEM_MAP, MEM_GENLIST]
+ >> qabbrev_tac ‘x = n2s (r *, (i + SUC (string_width s)))’
+ >> MP_TAC (Q.SPECL [‘x’, ‘s’] string_width_thm)
+ >> simp [Abbr ‘x’]
 QED
 
 Theorem RNEWS_prefix :
@@ -222,15 +225,26 @@ Proof
     rw [RNEWS, alloc_prefix]
 QED
 
+Theorem TAKE_RNEWS :
+    !r m n s. FINITE s /\ m <= n ==> TAKE m (RNEWS r n s) = RNEWS r m s
+Proof
+    rw [RNEWS, alloc_def]
+ >> qabbrev_tac ‘z = string_width s’
+ >> simp [Once LIST_EQ_REWRITE]
+ >> Q.X_GEN_TAC ‘i’ >> DISCH_TAC
+ >> simp [EL_TAKE, EL_MAP]
+QED
+
 Theorem RNEWS_set :
     !r n s. set (RNEWS r n s) =
             {v | ?j. v = n2s (r *, j) /\
                      string_width s < j /\ j <= string_width s + n}
 Proof
     rw [RNEWS, alloc_def, Once EXTENSION, MEM_GENLIST, MEM_MAP]
+ >> qabbrev_tac ‘z = string_width s’
  >> EQ_TAC >> rw []
- >- (Q.EXISTS_TAC ‘y’ >> rw [])
- >> Q.EXISTS_TAC ‘j’ >> rw []
+ >- (Q.EXISTS_TAC ‘i + SUC z’ >> rw [])
+ >> Q.EXISTS_TAC ‘j - SUC z’ >> rw []
 QED
 
 Theorem RNEWS_11 :
@@ -288,8 +302,8 @@ QED
 Theorem alloc_SUBSET_ROW :
     !r m n. set (alloc r m n) SUBSET ROW r
 Proof
-    rw [alloc_def, ROW, SUBSET_DEF, MEM_MAP]
- >> Q.EXISTS_TAC ‘y’ >> rw []
+    rw [alloc_def, ROW, SUBSET_DEF, MEM_GENLIST]
+ >> Q.EXISTS_TAC ‘i + m’ >> art []
 QED
 
 Theorem ROW_DISJOINT :
@@ -417,5 +431,4 @@ Proof
  >> qexistsl_tac [‘r1’, ‘j’] >> rw []
 QED
 
-val _ = export_theory ();
 val _ = html_theory "basic_swap";

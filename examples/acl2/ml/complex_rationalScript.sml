@@ -2,17 +2,6 @@
 (* Define complex rationals                                                  *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Ignore everything up to "END BOILERPLATE"                                 *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* START BOILERPLATE NEEDED FOR COMPILATION                                  *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Load theories
-******************************************************************************)
 (* The commented out stuff below should be loaded in interactive sessions
 quietdec := true;
 map
@@ -22,25 +11,11 @@ open intLib gcdTheory fracLib ratLib ratTheory;
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation: open HOL4 systems modules
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories (including ratTheory from Jens Brandt)
-******************************************************************************)
-open gcdTheory fracLib ratLib ratTheory;
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* Start new theory "complex_rational"                                       *)
-(*****************************************************************************)
-
-val _ = new_theory "complex_rational";
+Theory complex_rational
+Ancestors
+  gcd rat
+Libs
+  fracLib ratLib
 
 (*****************************************************************************)
 (* A complex rational x+yi is a pair of rational numbers.                    *)
@@ -67,10 +42,10 @@ val com_1_def = Define `com_1 = com rat_1 rat_0`;
 (* Define complex addition                                                   *)
 (*****************************************************************************)
 
-val COMPLEX_ADD_def =
- Define
-  `COMPLEX_ADD (com a1 b1) (com a2 b2) =
-    com (a1+a2) (b1+b2)`;
+Definition COMPLEX_ADD_def:
+   COMPLEX_ADD (com a1 b1) (com a2 b2) =
+    com (a1+a2) (b1+b2)
+End
 
 (*****************************************************************************)
 (* Overload "+" onto complex addition                                        *)
@@ -82,10 +57,10 @@ val _ = overload_on("+", ``COMPLEX_ADD``);
 (* Define complex subtraction                                                *)
 (*****************************************************************************)
 
-val COMPLEX_SUB_def =
- Define
-  `COMPLEX_SUB (com a1 b1) (com a2 b2) =
-    com (a1-a2) (b1-b2)`;
+Definition COMPLEX_SUB_def:
+   COMPLEX_SUB (com a1 b1) (com a2 b2) =
+    com (a1-a2) (b1-b2)
+End
 
 (*****************************************************************************)
 (* Overload "-" onto complex subtraction                                     *)
@@ -97,10 +72,10 @@ val _ = overload_on("-", ``COMPLEX_SUB``);
 (* Complex multiplication                                                    *)
 (*****************************************************************************)
 
-val COMPLEX_MULT_def =
- Define
-  `COMPLEX_MULT (com a1 b1) (com a2 b2) =
-    com ((a1*a2)-(b1*b2)) ((b1*a2)+(a1*b2))`;
+Definition COMPLEX_MULT_def:
+   COMPLEX_MULT (com a1 b1) (com a2 b2) =
+    com ((a1*a2)-(b1*b2)) ((b1*a2)+(a1*b2))
+End
 
 (*****************************************************************************)
 (* Overload "*" onto complex multiplication                                  *)
@@ -112,33 +87,33 @@ val _ = overload_on("*", ``COMPLEX_MULT``);
 (* Complex reciprocal (1/x)                                                  *)
 (*****************************************************************************)
 
-val COMPLEX_RECIPROCAL_def =
- Define
-  `COMPLEX_RECIPROCAL (com a b) = com (a/(a*a + b*b)) ((~b)/(a*a + b*b))`;
+Definition COMPLEX_RECIPROCAL_def:
+   COMPLEX_RECIPROCAL (com a b) = com (a/(a*a + b*b)) ((~b)/(a*a + b*b))
+End
 
 (*****************************************************************************)
 (* Complex comparisions                                                      *)
 (*****************************************************************************)
 
-val COMPLEX_LT_def =
- Define
-  `COMPLEX_LT (com ra ia) (com rb ib) <=>
-    (ra < rb) \/ ((ra = rb) /\ (ia < ib))`;
+Definition COMPLEX_LT_def:
+   COMPLEX_LT (com ra ia) (com rb ib) =
+    (ra < rb) \/ ((ra = rb) /\ (ia < ib))
+End
 
-val COMPLEX_LE_def =
- Define
-  `COMPLEX_LE (com ra ia) (com rb ib) <=>
-    (ra < rb) \/ ((ra = rb) /\ (ia <= ib))`;
+Definition COMPLEX_LE_def:
+   COMPLEX_LE (com ra ia) (com rb ib) =
+    (ra < rb) \/ ((ra = rb) /\ (ia <= ib))
+End
 
-val COMPLEX_GT_def =
- Define
-  `COMPLEX_GT (com ra ia) (com rb ib) <=>
-    (ra > rb) \/ ((ra = rb) /\ (ia > ib))`;
+Definition COMPLEX_GT_def:
+   COMPLEX_GT (com ra ia) (com rb ib) =
+    (ra > rb) \/ ((ra = rb) /\ (ia > ib))
+End
 
-val COMPLEX_GE_def =
- Define
-  `COMPLEX_GE (com ra ia) (com rb ib) <=>
-    (ra > rb) \/ ((ra = rb) /\ (ia >= ib))`;
+Definition COMPLEX_GE_def:
+   COMPLEX_GE (com ra ia) (com rb ib) =
+    (ra > rb) \/ ((ra = rb) /\ (ia >= ib))
+End
 
 (*****************************************************************************)
 (* Overload "<", ">", "<=",">=" onto complex comparisons                     *)
@@ -153,7 +128,9 @@ val _ = overload_on(">=",``COMPLEX_GE``);
 (* Complex negation                                                          *)
 (*****************************************************************************)
 
-val COMPLEX_NEG_def = Define `COMPLEX_NEG a = com_0 - a`;
+Definition COMPLEX_NEG_def:
+   COMPLEX_NEG a = com_0 - a
+End
 
 (*****************************************************************************)
 (* Overload "~" onto complex negation                                        *)
@@ -165,7 +142,9 @@ val _ = overload_on("~",``COMPLEX_NEG``);
 (* Complex division                                                          *)
 (*****************************************************************************)
 
-val COMPLEX_DIV_def = Define `COMPLEX_DIV a b = a * (COMPLEX_RECIPROCAL b)`;
+Definition COMPLEX_DIV_def:
+   COMPLEX_DIV a b = a * (COMPLEX_RECIPROCAL b)
+End
 
 (*****************************************************************************)
 (* Overload "/" onto complex division                                        *)
@@ -182,8 +161,10 @@ val _ = overload_on("/",``COMPLEX_DIV``);
 (*  MOD     : num -> num -> num   compute remainder (curried infix)          *)
 (*                                                                           *)
 (*****************************************************************************)
+Definition DIVIDES_def:
+   DIVIDES m n = (Num(ABS n) MOD Num(ABS m) = 0)
+End
 
-val DIVIDES_def = Define `DIVIDES m n = (Num(ABS n) MOD Num(ABS m) = 0)`;
 
 (*****************************************************************************)
 (* Test if a complex rational is an integer                                  *)
@@ -195,9 +176,9 @@ val DIVIDES_def = Define `DIVIDES m n = (Num(ABS n) MOD Num(ABS m) = 0)`;
 (*                                                                           *)
 (*****************************************************************************)
 
-val IS_INT_def =
- Define
-  `IS_INT(com a b) <=> DIVIDES (rat_dnm a) (rat_nmr a) /\ (b = rat_0)`;
+Definition IS_INT_def:
+   IS_INT(com a b) = DIVIDES (rat_dnm a) (rat_nmr a) /\ (b = rat_0)
+End
 
 (*****************************************************************************)
 (* Need GCD to put a fraction in lowest terms for computing numerator and    *)
@@ -212,59 +193,57 @@ val IS_INT_def =
 (* the reduced pair: (x,y) |--> (x/(gcd x y), y/(gcd x y))                   *)
 (*****************************************************************************)
 
-val reduce_def =
- Define
-  `reduce(x,y) =
-    let n = &(gcd (Num(ABS x)) (Num(ABS y))) in (x/n, y/n)`;
+Definition reduce_def:
+   reduce(x,y) =
+    let n = &(gcd (Num(ABS x)) (Num(ABS y))) in (x/n, y/n)
+End
 
 (*****************************************************************************)
 (* Reduce a rational to lowest terms and return numerator as an integer      *)
 (*****************************************************************************)
 
-val reduced_nmr_def =
- Define
-  `reduced_nmr r = FST(reduce(rep_frac(rep_rat r)))`;
+Definition reduced_nmr_def:
+   reduced_nmr r = FST(reduce(rep_frac(rep_rat r)))
+End
 
 (*****************************************************************************)
 (* Reduce a rational to lowest terms and return denominator as an integer    *)
 (*****************************************************************************)
 
-val reduced_dnm_def =
- Define
-  `reduced_dnm r = SND(reduce(rep_frac(rep_rat r)))`;
+Definition reduced_dnm_def:
+   reduced_dnm r = SND(reduce(rep_frac(rep_rat r)))
+End
 
 (*****************************************************************************)
 (* Multiplication theorems for use in translation                            *)
 (*****************************************************************************)
 
-val COMPLEX_MULT_COMM =
- store_thm
-   ("COMPLEX_MULT_COMM",
-    ``a * b = b * a:complex_rational``,
+Theorem COMPLEX_MULT_COMM:
+      a * b = b * a:complex_rational
+Proof
     Cases_on `a` THEN Cases_on `b`
      THEN RW_TAC std_ss [COMPLEX_MULT_def]
-     THEN METIS_TAC [RAT_MUL_COMM,RAT_ADD_COMM]);
+     THEN METIS_TAC [RAT_MUL_COMM,RAT_ADD_COMM]
+QED
 
-val COMPLEX_MULT_ASSOC =
- store_thm
-  ("COMPLEX_MULT_ASSOC",
-   ``a * (b * c) = a * b * c:complex_rational``,
+Theorem COMPLEX_MULT_ASSOC:
+     a * (b * c) = a * b * c:complex_rational
+Proof
    Cases_on `a` THEN Cases_on `b` THEN Cases_on `c`
     THEN RW_TAC std_ss
           [COMPLEX_MULT_def,RAT_LDISTRIB,RAT_RDISTRIB,
            RAT_SUB_ADDAINV,GSYM RAT_AINV_LMUL,GSYM RAT_AINV_RMUL,
            RAT_ADD_ASSOC,RAT_MUL_ASSOC,RAT_AINV_ADD]
     THEN METIS_TAC
-          [RAT_MUL_COMM,RAT_MUL_ASSOC,RAT_ADD_COMM,RAT_ADD_ASSOC]);
+          [RAT_MUL_COMM,RAT_MUL_ASSOC,RAT_ADD_COMM,RAT_ADD_ASSOC]
+QED
 
-val COMPLEX_MULT_RID =
- store_thm
-  ("COMPLEX_MULT_RID",
-   ``a * com_1 = a``,
+Theorem COMPLEX_MULT_RID:
+     a * com_1 = a
+Proof
    Cases_on `a`
     THEN RW_TAC std_ss
           [com_1_def,COMPLEX_MULT_def,GSYM rat_0,rat_0_def,
            GSYM rat_1,rat_1_def,RAT_MUL_RID,RAT_MUL_RZERO,
-           RAT_ADD_RID,RAT_SUB_RID]);
-
-val _ = export_theory();
+           RAT_ADD_RID,RAT_SUB_RID]
+QED

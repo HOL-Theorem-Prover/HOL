@@ -2,90 +2,105 @@
 (* This takes the extensionality principle as the definition of equivalence.*)
 (* Composed and contributed by Michael Norrish.                             *)
 (* June 24, 2005.                                                           *)
+Theory ext_finite_set
+Ancestors
+  list
+Libs
+  BasicProvers quotientLib
 
-open HolKernel Parse boolLib bossLib BasicProvers listTheory quotientLib
 
-val _ = new_theory "ext_finite_set";
+Definition leq_def:  leq x y = !e:'a. MEM e x = MEM e y
+End
 
-fun Store_Thm(n,t,tac) = store_thm(n,t,tac) before
-                         export_rewrites [n]
+Theorem leq_refl[simp]:
+  !x :'a list. leq x x
+Proof
+  SRW_TAC [] [leq_def]
+QED
 
-val leq_def = Define`leq x y = !e:'a. MEM e x = MEM e y`
+Theorem leq_sym[simp]:
+  !x y :'a list. leq x y ==> leq y x
+Proof
+  SRW_TAC [] [leq_def]
+QED
 
-val leq_refl = Store_Thm(
-  "leq_refl",
-  ``!x :'a list. leq x x``,
-  SRW_TAC [] [leq_def]);
-
-val leq_sym = Store_Thm(
-  "leq_sym",
-  ``!x y :'a list. leq x y ==> leq y x``,
-  SRW_TAC [] [leq_def]);
-
-val leq_trans = Store_Thm(
-  "leq_trans",
-  ``!x y z :'a list. leq x y /\ leq y z ==> leq x z``,
-  SRW_TAC [] [leq_def]);
+Theorem leq_trans[simp]:
+  !x y z :'a list. leq x y /\ leq y z ==> leq x z
+Proof
+  SRW_TAC [] [leq_def]
+QED
 
 (* functions on representatives *)
 
 (* insertion is represented by :: *)
-val NOT_NIL_EQUIV_CONS = store_thm(
-  "NOT_NIL_EQUIV_CONS",
-  ``~(leq [] ((a:'a)::A))``,
-  SRW_TAC [boolSimps.DNF_ss] [leq_def]);
+Theorem NOT_NIL_EQUIV_CONS:
+    ~(leq [] ((a:'a)::A))
+Proof
+  SRW_TAC [boolSimps.DNF_ss] [leq_def]
+QED
 
-val NIL_RSP = store_thm(
-  "NIL_RSP",
-  ``leq ([]:'a list) []``,
-  SRW_TAC [] [leq_def]);
+Theorem NIL_RSP:
+    leq ([]:'a list) []
+Proof
+  SRW_TAC [] [leq_def]
+QED
 
-val CONS_RSP = store_thm(
-  "CONS_RSP",
-  ``!x:'a A B. leq A B ==> leq (x::A) (x::B)``,
-  SRW_TAC [] [leq_def]);
+Theorem CONS_RSP:
+    !x:'a A B. leq A B ==> leq (x::A) (x::B)
+Proof
+  SRW_TAC [] [leq_def]
+QED
 
 (* membership is represented by MEM *)
-val MEM_RSP = store_thm(
-  "MEM_RSP",
-  ``!X Y x:'a. leq X Y ==> (MEM x X = MEM x Y)``,
-  SRW_TAC [] [leq_def]);
+Theorem MEM_RSP:
+    !X Y x:'a. leq X Y ==> (MEM x X = MEM x Y)
+Proof
+  SRW_TAC [] [leq_def]
+QED
 
-val NO_MEM_NIL = Store_Thm(
-  "NO_MEM_NIL",
-  ``!A. (!a:'a. ~(MEM a A)) = (A = [])``,
-  Induct_on `A` THEN SRW_TAC [] [] THEN PROVE_TAC []);
+Theorem NO_MEM_NIL[simp]:
+  !A. (!a:'a. ~(MEM a A)) = (A = [])
+Proof
+  Induct_on `A` THEN SRW_TAC [] [] THEN PROVE_TAC []
+QED
 
-val NONE_MEM_NIL = store_thm(
-  "NONE_MEM_NIL",
-  ``!A. (!a:'a. ~(MEM a A)) = (leq A [])``,
-  SRW_TAC [] [leq_def]);
+Theorem NONE_MEM_NIL:
+    !A. (!a:'a. ~(MEM a A)) = (leq A [])
+Proof
+  SRW_TAC [] [leq_def]
+QED
 
-val MEM_CONS = store_thm(
-  "MEM_CONS",
-  ``!A (a:'a). MEM a A ==> leq (a :: A) A``,
-  SRW_TAC [] [leq_def] THEN PROVE_TAC []);
+Theorem MEM_CONS:
+    !A (a:'a). MEM a A ==> leq (a :: A) A
+Proof
+  SRW_TAC [] [leq_def] THEN PROVE_TAC []
+QED
 
-val CONS_LEFT_COMM = prove(
-  ``!A x y:'a. leq (x::y::A) (y::x::A)``,
-  SRW_TAC [] [leq_def] THEN PROVE_TAC []);
+Theorem CONS_LEFT_COMM[local]:
+    !A x y:'a. leq (x::y::A) (y::x::A)
+Proof
+  SRW_TAC [] [leq_def] THEN PROVE_TAC []
+QED
 
-val CONS_LEFT_IDEM = prove(
-  ``!A x:'a. leq (x::x::A) (x::A)``,
-  SRW_TAC [] [leq_def] THEN PROVE_TAC []);
+Theorem CONS_LEFT_IDEM[local]:
+    !A x:'a. leq (x::x::A) (x::A)
+Proof
+  SRW_TAC [] [leq_def] THEN PROVE_TAC []
+QED
 
-val finite_set1_strong_cases = store_thm(
-  "finite_set1_strong_cases",
-  ``!X. (X = []) \/ ?(a:'a) Y. ~MEM a Y /\ leq X (a::Y)``,
+Theorem finite_set1_strong_cases:
+    !X. (X = []) \/ ?(a:'a) Y. ~MEM a Y /\ leq X (a::Y)
+Proof
   Induct THEN FULL_SIMP_TAC (srw_ss()) [leq_def] THEN
-  METIS_TAC [MEM]);
+  METIS_TAC [MEM]
+QED
 
 (* Delete1 *)
-val Delete1_def = Define
-   `($Delete1 [] x = [])  /\
+Definition Delete1_def[simp]:
+    ($Delete1 [] x = [])  /\
     ($Delete1 ((a:'a) :: A) x = if a = x then $Delete1 A x
-                                     else a :: ($Delete1 A x))`;
-val _ = export_rewrites ["Delete1_def"]
+                                     else a :: ($Delete1 A x))
+End
 
 val _ = add_infix ("Delete1", 500, HOLgrammars.LEFT);
 
@@ -95,88 +110,97 @@ Proof
   Induct THEN SRW_TAC[][] THEN PROVE_TAC []
 QED
 
-val MEM_Delete1_IDENT = Store_Thm(
-  "MEM_Delete1_IDENT",
-  ``!A (a:'a). ~(MEM a (A Delete1 a))``,
-  Induct_on `A` THEN SRW_TAC [][]);
+Theorem MEM_Delete1_IDENT[simp]:
+  !A (a:'a). ~(MEM a (A Delete1 a))
+Proof
+  Induct_on `A` THEN SRW_TAC [][]
+QED
 
-val NOT_MEM_Delete1_IDENT = store_thm(
-  "NOT_MEM_Delete1_IDENT",
-  ``!A (b:'a). ~MEM b A ==> (A Delete1 b = A)``,
-  Induct_on `A` THEN SRW_TAC [][]);
+Theorem NOT_MEM_Delete1_IDENT:
+    !A (b:'a). ~MEM b A ==> (A Delete1 b = A)
+Proof
+  Induct_on `A` THEN SRW_TAC [][]
+QED
 
-val Delete1_RSP = store_thm(
-  "Delete1_RSP",
-  ``!A B (a:'a). leq A B ==> (leq (A Delete1 a) (B Delete1 a))``,
-  SRW_TAC [] [leq_def,MEM_Delete1]);
+Theorem Delete1_RSP:
+    !A B (a:'a). leq A B ==> (leq (A Delete1 a) (B Delete1 a))
+Proof
+  SRW_TAC [] [leq_def,MEM_Delete1]
+QED
 
-val CONS_Delete1 = store_thm(
-  "CONS_Delete1",
-  ``!A (a:'a). leq (a :: (A Delete1 a)) (if MEM a A then A else a::A)``,
-  SRW_TAC [] [leq_def, MEM_Delete1] THEN PROVE_TAC []);
+Theorem CONS_Delete1:
+    !A (a:'a). leq (a :: (A Delete1 a)) (if MEM a A then A else a::A)
+Proof
+  SRW_TAC [] [leq_def, MEM_Delete1] THEN PROVE_TAC []
+QED
 
-val MEM_CONS_Delete1 = store_thm
-   ("MEM_CONS_Delete1",
-    ``!A (a:'a). MEM a A ==> leq (a :: (A Delete1 a)) A``,
+Theorem MEM_CONS_Delete1:
+      !A (a:'a). MEM a A ==> leq (a :: (A Delete1 a)) A
+Proof
     PROVE_TAC [CONS_Delete1]
-   );
+QED
 
-val finite_set1_Delete1_cases1 = store_thm
-   ("finite_set1_Delete1_cases1",
-    ``!X. (X = []) \/ ?a:'a. leq X (a :: (X Delete1 a))``,
-    Cases THEN SRW_TAC [][leq_def, MEM_Delete1] THEN METIS_TAC []);
+Theorem finite_set1_Delete1_cases1:
+      !X. (X = []) \/ ?a:'a. leq X (a :: (X Delete1 a))
+Proof
+    Cases THEN SRW_TAC [][leq_def, MEM_Delete1] THEN METIS_TAC []
+QED
 
-val finite_set1_Delete1_cases = store_thm
-   ("finite_set1_Delete1_cases",
-    ``!X. (X = []) \/
-            ?a:'a. MEM a X /\ leq X (a :: (X Delete1 a))``,
+Theorem finite_set1_Delete1_cases:
+      !X. (X = []) \/
+            ?a:'a. MEM a X /\ leq X (a :: (X Delete1 a))
+Proof
     PROVE_TAC[finite_set1_Delete1_cases1,MEM,MEM_RSP]
-   );
+QED
 
 (* Card1 *)
 
-val Card1_def = Define
-   `(Card1 ([]) = 0)  /\
-    (Card1 ((a:'a) :: A) = if MEM a A then Card1 A else SUC (Card1 A))`;
-val _ = export_rewrites ["Card1_def"]
+Definition Card1_def[simp]:
+    (Card1 ([]) = 0)  /\
+    (Card1 ((a:'a) :: A) = if MEM a A then Card1 A else SUC (Card1 A))
+End
 
-val NOT_MEM_Card1 = store_thm
-   ("NOT_MEM_Card1",
-    ``!A:'a list a. ~(MEM a A) ==>
-             (Card1 (a :: A) = SUC (Card1 A))``,
+Theorem NOT_MEM_Card1:
+      !A:'a list a. ~(MEM a A) ==>
+             (Card1 (a :: A) = SUC (Card1 A))
+Proof
     RW_TAC std_ss [Card1_def]
-   );
+QED
 
-val Card1_SUC = store_thm (
-  "Card1_SUC",
-  ``!A n. (Card1 A = SUC n) ==>
-          ?(a:'a) B. ~(MEM a B) /\ leq A (a :: B)``,
+Theorem Card1_SUC:
+    !A n. (Card1 A = SUC n) ==>
+          ?(a:'a) B. ~(MEM a B) /\ leq A (a :: B)
+Proof
   Induct THEN SRW_TAC [][] THENL [
     PROVE_TAC [MEM_CONS, leq_trans, leq_sym],
     PROVE_TAC [leq_refl]
-  ]);
+  ]
+QED
 
-val MEM_Card1_NOT_0 = store_thm(
-  "MEM_Card1_NOT_0",
-  ``!A a. MEM (a:'a) A ==> ~(Card1 A = 0)``,
-  Induct_on `A` THEN SRW_TAC [][] THEN PROVE_TAC []);
+Theorem MEM_Card1_NOT_0:
+    !A a. MEM (a:'a) A ==> ~(Card1 A = 0)
+Proof
+  Induct_on `A` THEN SRW_TAC [][] THEN PROVE_TAC []
+QED
 
-val Card1_CONS_GT_0 = store_thm (
-  "Card1_CONS_GT_0",
-  ``!A (a:'a). 0 < Card1 (a :: A)``,
+Theorem Card1_CONS_GT_0:
+    !A (a:'a). 0 < Card1 (a :: A)
+Proof
   METIS_TAC [MEM, arithmeticTheory.NOT_ZERO_LT_ZERO,
-             MEM_Card1_NOT_0]);
+             MEM_Card1_NOT_0]
+QED
 
-val Card1_Delete1 = store_thm(
-  "Card1_Delete1",
-  ``!A (a:'a).
-      Card1 (A Delete1 a) = if MEM a A then Card1 A - 1 else Card1 A``,
+Theorem Card1_Delete1:
+    !A (a:'a).
+      Card1 (A Delete1 a) = if MEM a A then Card1 A - 1 else Card1 A
+Proof
   Induct_on `A` THEN SRW_TAC [][MEM_Delete1] THEN SRW_TAC [][] THEN
-  PROVE_TAC [MEM_Card1_NOT_0, DECIDE ``~(x = 0) ==> (SUC (x - 1) = x)``]);
+  PROVE_TAC [MEM_Card1_NOT_0, DECIDE ``~(x = 0) ==> (SUC (x - 1) = x)``]
+QED
 
-val Card1_RSP = store_thm (
-  "Card1_RSP",
-  ``!A B:'a list. leq A B ==> (Card1 A = Card1 B)``,
+Theorem Card1_RSP:
+    !A B:'a list. leq A B ==> (Card1 A = Card1 B)
+Proof
   SIMP_TAC (srw_ss()) [leq_def] THEN Induct THEN SRW_TAC [][] THENL [
     PROVE_TAC [],
     `MEM h B /\ ~(Card1 B = 0)` by PROVE_TAC [MEM_Card1_NOT_0] THEN
@@ -184,49 +208,55 @@ val Card1_RSP = store_thm (
           THEN1 SRW_TAC [numSimps.ARITH_ss][Card1_Delete1] THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][MEM_Delete1] THEN
     PROVE_TAC []
-  ]);
+  ]
+QED
 
-val Card1_0 = store_thm(
-  "Card1_0",
-  ``!A:'a list. (Card1 A = 0) = (A = [])``,
-  Induct_on `A` THEN SRW_TAC [][] THEN PROVE_TAC [NO_MEM_NIL]);
+Theorem Card1_0:
+    !A:'a list. (Card1 A = 0) = (A = [])
+Proof
+  Induct_on `A` THEN SRW_TAC [][] THEN PROVE_TAC [NO_MEM_NIL]
+QED
 
 (* list2set *)
-val list2set_thm = prove(
-  ``(LIST_TO_SET ([]:'a list) = {}) /\
-    (!h:'a t. LIST_TO_SET (h::t) = h INSERT LIST_TO_SET t)``,
-  SRW_TAC [][pred_setTheory.EXTENSION]);
+Theorem list2set_thm[local]:
+    (LIST_TO_SET ([]:'a list) = {}) /\
+    (!h:'a t. LIST_TO_SET (h::t) = h INSERT LIST_TO_SET t)
+Proof
+  SRW_TAC [][pred_setTheory.EXTENSION]
+QED
 
-val list2set_RSP = store_thm(
-  "list2set_RSP",
-  ``!A B:'a list. leq A B ==> (LIST_TO_SET A = LIST_TO_SET B)``,
-  SRW_TAC [][leq_def, pred_setTheory.EXTENSION]);
+Theorem list2set_RSP:
+    !A B:'a list. leq A B ==> (LIST_TO_SET A = LIST_TO_SET B)
+Proof
+  SRW_TAC [][leq_def, pred_setTheory.EXTENSION]
+QED
 
 (* fold *)
 
-val Fold1_def = Define`
+Definition Fold1_def:
   (Fold1 f (z:'b) [] = z) /\
   (Fold1 f z ((a:'a)::A) =
      if (!u v w. f u (f v w) = f v (f u w)) then
        if MEM a A then Fold1 f z A
        else f a (Fold1 f z A)
      else z)
-` ;
+End
 
-val MEM_lcommuting_Fold1 = store_thm(
-  "MEM_lcommuting_Fold1",
-  ``!B f (z:'b) (h:'a).
+Theorem MEM_lcommuting_Fold1:
+    !B f (z:'b) (h:'a).
      (!u v w. f u (f v w) = f v (f u w)) /\ MEM h B ==>
-     (Fold1 f z B = f h (Fold1 f z (B Delete1 h)))``,
+     (Fold1 f z B = f h (Fold1 f z (B Delete1 h)))
+Proof
   Induct_on `B` THEN SRW_TAC [][Fold1_def, MEM_Delete1] THENL [
     PROVE_TAC [],
     PROVE_TAC [NOT_MEM_Delete1_IDENT],
     PROVE_TAC []
-  ]);
+  ]
+QED
 
-val Fold1_RSP = store_thm(
-  "Fold1_RSP",
-  ``!A B:'a list f (z:'b). leq A B ==> (Fold1 f z A = Fold1 f z B)``,
+Theorem Fold1_RSP:
+    !A B:'a list f (z:'b). leq A B ==> (Fold1 f z A = Fold1 f z B)
+Proof
   REWRITE_TAC [leq_def] THEN Induct THEN SRW_TAC [][Fold1_def] THENL [
     PROVE_TAC [],
     `MEM h B` by PROVE_TAC [] THEN
@@ -236,18 +266,21 @@ val Fold1_RSP = store_thm(
     FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][MEM_Delete1] THEN
     PROVE_TAC [],
     Cases_on `B` THEN SRW_TAC [][Fold1_def]
-  ]);
+  ]
+QED
 
-val APPEND_RSP = store_thm(
-  "APPEND_RSP",
-  ``!A1 A2 B1 B2:'a list. leq A1 A2 /\ leq B1 B2 ==>
-                          leq (APPEND A1 B1) (APPEND A2 B2)``,
-  SRW_TAC [][leq_def]);
+Theorem APPEND_RSP:
+    !A1 A2 B1 B2:'a list. leq A1 A2 /\ leq B1 B2 ==>
+                          leq (APPEND A1 B1) (APPEND A2 B2)
+Proof
+  SRW_TAC [][leq_def]
+QED
 
-val Inter1_def = Define
-   `($Inter1 ([]) B = [])  /\
+Definition Inter1_def:
+    ($Inter1 ([]) B = [])  /\
     ($Inter1 ((a:'a) :: A) B = if MEM a B then a :: ($Inter1 A B)
-                                          else $Inter1 A B)`;
+                                          else $Inter1 A B)
+End
 
 val _ = add_infix ("Inter1", 600, HOLgrammars.LEFT);
 
@@ -259,16 +292,17 @@ Proof
     THEN PROVE_TAC []
 QED
 
-val Inter1_RSP = store_thm
-   ("Inter1_RSP",
-    ``!A1 A2 B1 B2:'a list.
+Theorem Inter1_RSP:
+      !A1 A2 B1 B2:'a list.
            leq A1 A2 /\ leq B1 B2 ==>
-           leq (A1 Inter1 B1) (A2 Inter1 B2)``,
-    SRW_TAC [][leq_def, MEM_Inter1]);
+           leq (A1 Inter1 B1) (A2 Inter1 B2)
+Proof
+    SRW_TAC [][leq_def, MEM_Inter1]
+QED
 
 (* do the quotient *)
-val leq_equiv = save_thm("leq_equiv",
-    refl_sym_trans_equiv leq_refl leq_sym leq_trans);
+Theorem leq_equiv =
+    refl_sym_trans_equiv leq_refl leq_sym leq_trans;
 
 val equivs = [leq_equiv];
 
@@ -370,35 +404,32 @@ val  [finite_set_cases, Insert_LEFT_COMM, Insert_LEFT_IDEM,
                  Fold1_def, list2set_thm, leq_def, list_INDUCT]
    };
 
-val _ = map save_thm
-    [("finite_set_cases",finite_set_cases),
-     ("Insert_LEFT_COMM",Insert_LEFT_COMM),
-     ("Insert_LEFT_IDEM",Insert_LEFT_IDEM),
-     ("In",In),
-     ("NONE_In_Empty",NONE_In_Empty),
-     ("In_Insert",In_Insert),
-     ("finite_set_strong_cases",finite_set_strong_cases),
-     ("Card",Card),
-     ("NOT_In_Card",NOT_In_Card),
-     ("Card_SUC",Card_SUC),
-     ("Card_Insert_GT_0",Card_Insert_GT_0),
-     ("In_Card_NOT_0",In_Card_NOT_0),
-     ("NOT_Empty_Insert",NOT_Empty_Insert),
-     ("In_Delete",In_Delete),
-     ("Card_Delete",Card_Delete),
-     ("Insert_Delete",Insert_Delete),
-     ("In_Insert_Delete",In_Insert_Delete),
-     ("finite_set_Delete_cases",finite_set_Delete_cases),
-     ("Union",Union),
-     ("In_Union",In_Union),
-     ("Inter",Inter),
-     ("In_Inter",In_Inter),
-     ("Fold",Fold),
-     ("fset2set",fset2set),
-     ("finite_set_EXTENSION",finite_set_EXTENSION),
-     ("finite_set_INDUCT",finite_set_INDUCT)
-    ];
 
-val _ = export_theory();
+Theorem finite_set_cases = finite_set_cases
+Theorem Insert_LEFT_COMM = Insert_LEFT_COMM
+Theorem Insert_LEFT_IDEM = Insert_LEFT_IDEM
+Theorem In = In
+Theorem NONE_In_Empty = NONE_In_Empty
+Theorem In_Insert = In_Insert
+Theorem finite_set_strong_cases = finite_set_strong_cases
+Theorem Card = Card
+Theorem NOT_In_Card = NOT_In_Card
+Theorem Card_SUC = Card_SUC
+Theorem Card_Insert_GT_0 = Card_Insert_GT_0
+Theorem In_Card_NOT_0 = In_Card_NOT_0
+Theorem NOT_Empty_Insert = NOT_Empty_Insert
+Theorem In_Delete = In_Delete
+Theorem Card_Delete = Card_Delete
+Theorem Insert_Delete = Insert_Delete
+Theorem In_Insert_Delete = In_Insert_Delete
+Theorem finite_set_Delete_cases = finite_set_Delete_cases
+Theorem Union = Union
+Theorem In_Union = In_Union
+Theorem Inter = Inter
+Theorem In_Inter = In_Inter
+Theorem Fold = Fold
+Theorem fset2set = fset2set
+Theorem finite_set_EXTENSION = finite_set_EXTENSION
+Theorem finite_set_INDUCT = finite_set_INDUCT
 
 val _ = html_theory "ext_finite_set";

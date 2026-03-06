@@ -3,32 +3,31 @@
 (*    Translations between explicit-state and symbolic (semi-)automata.       *)
 (*                                                                            *)
 (******************************************************************************)
+Theory omega_automaton_translations
+Ancestors
+  full_ltl arithmetic automaton_formula xprop_logic prop_logic
+  infinite_path symbolic_semi_automaton list pred_set pred_set
+  rich_list set_lemmata temporal_deep_mixed pair
+  symbolic_kripke_structure semi_automaton omega_automaton
+  kripke_structure container relation
+Libs
+  tuerk_tacticsLib numLib Sanity
 
-open HolKernel Parse boolLib bossLib;
-
-open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
-     infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
-     pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory pairTheory
-     symbolic_kripke_structureTheory
-     numLib semi_automatonTheory omega_automatonTheory kripke_structureTheory
-     containerTheory relationTheory;
-
-open Sanity;
 
 val _ = hide "K";
 val _ = hide "S";
 val _ = hide "I";
 
-val _ = new_theory "omega_automaton_translations";
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val _ = ParseExtras.temp_loose_equality()
 
-val DETERMINISED_SEMI_AUTOMATON_def = Define
-   `DETERMINISED_SEMI_AUTOMATON A =
+Definition DETERMINISED_SEMI_AUTOMATON_def:
+    DETERMINISED_SEMI_AUTOMATON A =
      (semi_automaton (POW A.S) A.I
                      (\(s, i). i SUBSET A.I /\ !x. x IN s <=> (x, i) IN A.S0)
                      (\(s1, i, s2, i'). s1 SUBSET A.S /\ i SUBSET A.I /\
-                        !x. x IN s2 = ?s1'. s1' IN s1 /\ (s1', i, x, i') IN A.R))`;
+                        !x. x IN s2 = ?s1'. s1' IN s1 /\ (s1', i, x, i') IN A.R))
+End
 
 Theorem DETERMINISED_SEMI_AUTOMATON___IS_DET_TOTAL :
     !A. IS_DET_TOTAL_SEMI_AUTOMATON (DETERMINISED_SEMI_AUTOMATON A)
@@ -57,17 +56,17 @@ Proof
     ]
 QED
 
-val SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE_def = Define
-   `SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE (A:('a, 'a) semi_automaton) =
+Definition SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE_def:
+    SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE (A:('a, 'a) semi_automaton) =
      (kripke_structure (A.S CROSS (POW A.I)) A.S0
                        (\((s1, i1),(s2, i2)). (s1, i1, s2, i2) IN A.R /\ i1 SUBSET A.I /\ i2 SUBSET A.I)
-                       (A.S UNION A.I) (\(s,i). s INSERT i))`;
+                       (A.S UNION A.I) (\(s,i). s INSERT i))
+End
 
-val SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE___IS_WELL_FORMED =
-  store_thm (
-    "SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE___IS_WELL_FORMED",
-    ``!A. IS_WELL_FORMED_SEMI_AUTOMATON A ==>
-          IS_WELL_FORMED_KRIPKE_STRUCTURE (SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE A)``,
+Theorem SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE___IS_WELL_FORMED:
+      !A. IS_WELL_FORMED_SEMI_AUTOMATON A ==>
+          IS_WELL_FORMED_KRIPKE_STRUCTURE (SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE A)
+Proof
 
     SIMP_TAC std_ss [IS_WELL_FORMED_KRIPKE_STRUCTURE_def,
                     SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE_def,
@@ -93,17 +92,17 @@ val SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE___IS_WELL_FORMED =
       Cases_on `s` THEN
       SIMP_TAC std_ss [IN_UNION, IN_INSERT] THEN
       PROVE_TAC[]
-    ]);
+    ]
+QED
 
-val SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE___LANGUAGE_EQ =
-  store_thm (
-    "SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE___LANGUAGE_EQ",
+Theorem SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE___LANGUAGE_EQ:
 
-    ``!A i p.
+      !A i p.
     IS_WELL_FORMED_SEMI_AUTOMATON A ==>
     (IS_RUN_THROUGH_SEMI_AUTOMATON A i p =
     IS_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE (SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE A)
-      (\n. (p n, i n INTER A.I)))``,
+      (\n. (p n, i n INTER A.I)))
+Proof
 
     SIMP_TAC std_ss [SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE_def,
                     kripke_structure_REWRITES,
@@ -118,22 +117,23 @@ val SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE___LANGUAGE_EQ =
                             (P1 (x1,x2,x3,x4) /\ P2 x2 x4)``, SIMP_TAC std_ss [IN_DEF])] THEN
     rpt STRIP_TAC THEN
     rpt BOOL_EQ_STRIP_TAC THEN
-    METIS_TAC[FST, SND]);
+    METIS_TAC[FST, SND]
+QED
 
-val SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON_def = Define
-   `SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON (A:'a symbolic_semi_automaton) I =
+Definition SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON_def:
+    SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON (A:'a symbolic_semi_automaton) I =
      (semi_automaton (POW A.S) I
                      (\(s, i). s SUBSET A.S /\ i SUBSET I /\
                                P_SEM (s UNION (i DIFF A.S)) A.S0)
                      (\(s1, i, s2, i'). s1 SUBSET A.S /\ s2 SUBSET A.S /\ i SUBSET I /\ i' SUBSET I /\
-                                        XP_SEM A.R ((s1 UNION (i DIFF A.S)), s2 UNION (i' DIFF A.S))))`;
+                                        XP_SEM A.R ((s1 UNION (i DIFF A.S)), s2 UNION (i' DIFF A.S))))
+End
 
-val SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___IS_WELL_FORMED =
-  store_thm (
-    "SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___IS_WELL_FORMED",
+Theorem SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___IS_WELL_FORMED:
 
-    ``!A I. (FINITE A.S /\ FINITE I) ==>
-          IS_WELL_FORMED_SEMI_AUTOMATON (SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON A I)``,
+      !A I. (FINITE A.S /\ FINITE I) ==>
+          IS_WELL_FORMED_SEMI_AUTOMATON (SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON A I)
+Proof
 
 
     SIMP_TAC std_ss [IS_WELL_FORMED_SEMI_AUTOMATON_def,
@@ -141,16 +141,16 @@ val SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___IS_WELL_FORMED =
                     semi_automaton_REWRITES,
                     FINITE_POW_IFF, SUBSET_DEF, IN_POW,
                     IN_CROSS, FORALL_PROD] THEN
-    SIMP_TAC std_ss [IN_DEF]);
+    SIMP_TAC std_ss [IN_DEF]
+QED
 
-val SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___LANGUAGE_EQ =
-  store_thm (
-    "SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___LANGUAGE_EQ",
+Theorem SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___LANGUAGE_EQ:
 
-    ``!A I i w. (!n. (i n INTER (SEMI_AUTOMATON_USED_INPUT_VARS A)) SUBSET I) ==>
+      !A I i w. (!n. (i n INTER (SEMI_AUTOMATON_USED_INPUT_VARS A)) SUBSET I) ==>
 
     (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w =
-    IS_RUN_THROUGH_SEMI_AUTOMATON (SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON A I) i w)``,
+    IS_RUN_THROUGH_SEMI_AUTOMATON (SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON A I) i w)
+Proof
 
     rpt STRIP_TAC THEN
     ASM_SIMP_TAC std_ss [ IS_TRANSITION_def,
@@ -179,23 +179,24 @@ val SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___LANGUAGE_EQ =
                         SEMI_AUTOMATON_USED_INPUT_VARS_def,
                         XP_USED_VARS_def] THEN
     rpt STRIP_TAC THEN rpt BOOL_EQ_STRIP_TAC THEN
-    METIS_TAC[]);
+    METIS_TAC[]
+QED
 
 (*=============================================================================
 = Connection to kripke_structures
 =============================================================================*)
 
-val SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE_def = Define
-   `SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE (A:'a symbolic_semi_automaton) =
-    symbolic_kripke_structure A.S0 A.R`;
+Definition SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE_def:
+    SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE (A:'a symbolic_semi_automaton) =
+    symbolic_kripke_structure A.S0 A.R
+End
 
-val SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE___RUN =
- store_thm
-  ("SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE___RUN",
-    ``!A i w.
+Theorem SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE___RUN:
+      !A i w.
         ((IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w) =
         ((PATH_SUBSET w A.S) /\
-        IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE (SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE A) (INPUT_RUN_PATH_UNION A i w)))``,
+        IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE (SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE A) (INPUT_RUN_PATH_UNION A i w)))
+Proof
 
       SIMP_TAC std_ss [PATHS_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE___REWRITES,
         IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def,
@@ -203,14 +204,14 @@ val SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE___RUN =
         symbolic_kripke_structure_REWRITES,
         IS_TRANSITION_def,
         INPUT_RUN_PATH_UNION_def] THEN
-      PROVE_TAC[]);
+      PROVE_TAC[]
+QED
 
-val SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE___INITIAL_PATH =
- store_thm
-  ("SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE___INITIAL_PATH",
-    ``!A i.
+Theorem SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE___INITIAL_PATH:
+      !A i.
         IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE (SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE A) i =
-        (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i (PATH_RESTRICT i A.S))``,
+        (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i (PATH_RESTRICT i A.S))
+Proof
 
       SUBGOAL_TAC `!a b. ((a INTER b) UNION (a DIFF b)) = a` THEN1 (
         SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_DIFF, IN_UNION] THEN
@@ -225,31 +226,32 @@ val SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE___INITIAL_PATH =
         INPUT_RUN_STATE_UNION_def,
         PATH_RESTRICT_def, PATH_MAP_def,
         PATH_SUBSET_def, INTER_SUBSET] THEN
-      PROVE_TAC[]);
+      PROVE_TAC[]
+QED
 
-val SYMBOLIC_KRIPKE_STRUCTURE___WITH___SEMI_AUTOMATON___PRODUCT_def =
- Define
-  `SYMBOLIC_KRIPKE_STRUCTURE___WITH___SEMI_AUTOMATON___PRODUCT K A =
-    SYMBOLIC_KRIPKE_STRUCTURE_PRODUCT K (SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE A)`;
+Definition SYMBOLIC_KRIPKE_STRUCTURE___WITH___SEMI_AUTOMATON___PRODUCT_def:
+   SYMBOLIC_KRIPKE_STRUCTURE___WITH___SEMI_AUTOMATON___PRODUCT K A =
+    SYMBOLIC_KRIPKE_STRUCTURE_PRODUCT K (SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE A)
+End
 
 
-val SYMBOLIC_KRIPKE_STRUCTURE___WITH___SEMI_AUTOMATON___PRODUCT =
- store_thm
-  ("SYMBOLIC_KRIPKE_STRUCTURE___WITH___SEMI_AUTOMATON___PRODUCT",
-  ``!K A. SYMBOLIC_KRIPKE_STRUCTURE___WITH___SEMI_AUTOMATON___PRODUCT K A =
-          symbolic_kripke_structure (P_AND(K.S0, A.S0)) (XP_AND(K.R, A.R))``,
+Theorem SYMBOLIC_KRIPKE_STRUCTURE___WITH___SEMI_AUTOMATON___PRODUCT:
+    !K A. SYMBOLIC_KRIPKE_STRUCTURE___WITH___SEMI_AUTOMATON___PRODUCT K A =
+          symbolic_kripke_structure (P_AND(K.S0, A.S0)) (XP_AND(K.R, A.R))
+Proof
 
     SIMP_TAC std_ss [SYMBOLIC_KRIPKE_STRUCTURE___WITH___SEMI_AUTOMATON___PRODUCT_def,
                      SYMBOLIC_KRIPKE_STRUCTURE_PRODUCT_def,
                      SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE_def,
-                     symbolic_kripke_structure_REWRITES]);
+                     symbolic_kripke_structure_REWRITES]
+QED
 
 (* Rabin-Scott subset construction from NDET A to DET A',
 
    Set of states of A is determinized by f into a state of A' (of the same type)
  *)
-val IS_RABIN_SCOTT_SUBSET_CONSTRUCTION_def = Define
-   `IS_RABIN_SCOTT_SUBSET_CONSTRUCTION (A  :'a symbolic_semi_automaton)
+Definition IS_RABIN_SCOTT_SUBSET_CONSTRUCTION_def:
+    IS_RABIN_SCOTT_SUBSET_CONSTRUCTION (A  :'a symbolic_semi_automaton)
                                        (A' :'a symbolic_semi_automaton)
                                        (IV :'a set)
                                        (f  :'a set -> 'a)
@@ -263,18 +265,20 @@ val IS_RABIN_SCOTT_SUBSET_CONSTRUCTION_def = Define
        !(S1 :'a set) (S2 :'a set) (i1 :'a set) (i2 :'a set).
          S1 SUBSET A'.S /\ S2 SUBSET A'.S ==>
         (IS_TRANSITION A' S1 i1 S2 i2 <=>
-         (S2 = {s2 | s2 IN A'.S /\ ?s1. s1 IN S1 /\ IS_TRANSITION A (g s1) i1 (g s2) i2})))`;
+         (S2 = {s2 | s2 IN A'.S /\ ?s1. s1 IN S1 /\ IS_TRANSITION A (g s1) i1 (g s2) i2})))
+End
 
 (* Rabin-Scott subset construction algorithm, by Sven Lamberti *)
-val RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON_def = Define
-   `RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON A f =
+Definition RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON_def:
+    RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON A f =
       symbolic_semi_automaton
         (IMAGE f (POW A.S))
         (P_FORALL (SET_TO_LIST A.S) (P_EQUIV(A.S0, VAR_RENAMING_HASHTABLE A.S f)))
         (XP_NEXT_FORALL (SET_TO_LIST A.S)
           (XP_EQUIV (XP_NEXT (VAR_RENAMING_HASHTABLE A.S f),
                      XP_CURRENT_EXISTS (SET_TO_LIST A.S)
-                        (XP_AND(A.R, XP_CURRENT (VAR_RENAMING_HASHTABLE A.S f))))))`;
+                        (XP_AND(A.R, XP_CURRENT (VAR_RENAMING_HASHTABLE A.S f))))))
+End
 
 (* Rabin-Scott subset construction: main theorem, by Sven Lamberti *)
 Theorem RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON_THM :
@@ -395,14 +399,13 @@ Proof
 ]
 QED
 
-val RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON___USED_INPUT_VARS =
-  store_thm (
-    "RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON___USED_INPUT_VARS",
-    ``!A f. (FINITE A.S /\
+Theorem RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON___USED_INPUT_VARS:
+      !A f. (FINITE A.S /\
              DISJOINT (IMAGE f (POW A.S)) (SEMI_AUTOMATON_USED_VARS A))    ==>
     (SEMI_AUTOMATON_USED_INPUT_VARS
       (RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON A f) =
-    SEMI_AUTOMATON_USED_INPUT_VARS A)``,
+    SEMI_AUTOMATON_USED_INPUT_VARS A)
+Proof
 
     rpt GEN_TAC THEN
     ASM_SIMP_TAC std_ss [RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON_def,
@@ -435,12 +438,12 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON___USED_INPUT_VARS =
       XP_USED_VARS_def] THEN
 
     EQ_TAC THEN rpt STRIP_TAC THEN
-    METIS_TAC[SUBSET_DEF, IN_UNION]);
+    METIS_TAC[SUBSET_DEF, IN_UNION]
+QED
 
-val RABIN_SCOTT_SUBSET_CONSTRUCTION___EXISTS =
- store_thm
-  ("RABIN_SCOTT_SUBSET_CONSTRUCTION___EXISTS",
-   ``!A IV. (INFINITE (UNIV:'a set) /\ FINITE A.S /\ FINITE (IV:'a set)) ==> (?f g A'. IS_RABIN_SCOTT_SUBSET_CONSTRUCTION A A' IV f g)``,
+Theorem RABIN_SCOTT_SUBSET_CONSTRUCTION___EXISTS:
+     !A IV. (INFINITE (UNIV:'a set) /\ FINITE A.S /\ FINITE (IV:'a set)) ==> (?f g A'. IS_RABIN_SCOTT_SUBSET_CONSTRUCTION A A' IV f g)
+Proof
 
    rpt STRIP_TAC THEN
 
@@ -470,13 +473,13 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION___EXISTS =
         FULL_SIMP_TAC std_ss [SEMI_AUTOMATON_USED_VARS_def, DISJOINT_UNION_BOTH, DISJOINT_SYM]
    ) THEN
 
-   PROVE_TAC[RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON_THM]);
+   PROVE_TAC[RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON_THM]
+QED
 
-val RABIN_SCOTT_SUBSET_CONSTRUCTION___IS_TOTAL_DET =
- store_thm
-  ("RABIN_SCOTT_SUBSET_CONSTRUCTION___IS_TOTAL_DET",
-   ``!A A' IV f g. IS_RABIN_SCOTT_SUBSET_CONSTRUCTION A A' IV f g ==>
-    IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A'``,
+Theorem RABIN_SCOTT_SUBSET_CONSTRUCTION___IS_TOTAL_DET:
+     !A A' IV f g. IS_RABIN_SCOTT_SUBSET_CONSTRUCTION A A' IV f g ==>
+    IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A'
+Proof
 
 SIMP_TAC std_ss [IS_RABIN_SCOTT_SUBSET_CONSTRUCTION_def,
     IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_THM] THEN
@@ -516,27 +519,27 @@ rpt STRIP_TAC THENL [
 
         METIS_TAC[TRANSITION_CURRENT_STATE_CLEANING, INTER_SUBSET]
     ]
-]);
+]
+QED
 
-val RABIN_SCOTT_SUBSET_CONSTRUCTION___UNIQUE_RUN =
- store_thm
-  ("RABIN_SCOTT_SUBSET_CONSTRUCTION___UNIQUE_RUN",
-   ``!A A' IV f g. (IS_RABIN_SCOTT_SUBSET_CONSTRUCTION A A' IV f g) ==>
-                   (!i. ?!w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A' i w)``,
+Theorem RABIN_SCOTT_SUBSET_CONSTRUCTION___UNIQUE_RUN:
+     !A A' IV f g. (IS_RABIN_SCOTT_SUBSET_CONSTRUCTION A A' IV f g) ==>
+                   (!i. ?!w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A' i w)
+Proof
 
    rpt STRIP_TAC THEN
    `IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A'` by PROVE_TAC[RABIN_SCOTT_SUBSET_CONSTRUCTION___IS_TOTAL_DET] THEN
-   PROVE_TAC[TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_UNIQUE_RUN]);
+   PROVE_TAC[TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_UNIQUE_RUN]
+QED
 
-val RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN =
- store_thm
-  ("RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN",
-   ``!A A' IV f g i w'. (IS_RABIN_SCOTT_SUBSET_CONSTRUCTION A A' IV f g) ==> (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A' i w' =
+Theorem RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN:
+     !A A' IV f g i w'. (IS_RABIN_SCOTT_SUBSET_CONSTRUCTION A A' IV f g) ==> (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A' i w' =
             ((w' 0 = {z |
             z IN A'.S /\ P_SEM (INPUT_RUN_STATE_UNION A (i 0) (g z)) A.S0}) /\
             (!n. w' (SUC n) = {s2 |
                s2 IN A'.S /\
-               ?s1. s1 IN (w' n) /\ IS_TRANSITION A (g s1) (i n) (g s2) (i (SUC n))})))``,
+               ?s1. s1 IN (w' n) /\ IS_TRANSITION A (g s1) (i n) (g s2) (i (SUC n))})))
+Proof
 
     REWRITE_TAC [IS_RABIN_SCOTT_SUBSET_CONSTRUCTION_def, IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def,
         PATH_SUBSET_def, INPUT_RUN_PATH_UNION_def] THEN
@@ -549,14 +552,14 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN =
             ASM_SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION]
         ) THEN
         METIS_TAC[]
-    ]);
+    ]
+QED
 
-val RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN_SUBSET =
- store_thm
-  ("RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN_SUBSET",
-   ``!A A' IV f g i w w'. ((IS_RABIN_SCOTT_SUBSET_CONSTRUCTION A A' IV f g) /\
+Theorem RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN_SUBSET:
+     !A A' IV f g i w w'. ((IS_RABIN_SCOTT_SUBSET_CONSTRUCTION A A' IV f g) /\
                            IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w /\ IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A' i w') ==>
-     (!n. (f (w n)) IN w' n)``,
+     (!n. (f (w n)) IN w' n)
+Proof
 
    rpt STRIP_TAC THEN
     `(w' 0 = {z | z IN A'.S /\
@@ -569,13 +572,13 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN_SUBSET =
             IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def, INPUT_RUN_PATH_UNION_def, GSPECIFICATION, IN_IMAGE,
             IS_RABIN_SCOTT_SUBSET_CONSTRUCTION_def, PATH_SUBSET_def] THEN
        METIS_TAC[]
-    ));
+    )
+QED
 
-val RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN_REACHABLE =
- store_thm
-  ("RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN_REACHABLE",
-   ``!A A' IV f g i w'. ((IS_RABIN_SCOTT_SUBSET_CONSTRUCTION A A' IV f g) /\  IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A' i w') ==>
-     (!n s. (f s IN w' n /\ s SUBSET A.S) = (?w. (PATH_SUBSET w A.S) /\ P_SEM (INPUT_RUN_PATH_UNION A i w 0) A.S0 /\ (w n = s) /\ !m. m < n ==> (IS_TRANSITION A (w m) (i m) (w (SUC m)) (i (SUC m)))))``,
+Theorem RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN_REACHABLE:
+     !A A' IV f g i w'. ((IS_RABIN_SCOTT_SUBSET_CONSTRUCTION A A' IV f g) /\  IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A' i w') ==>
+     (!n s. (f s IN w' n /\ s SUBSET A.S) = (?w. (PATH_SUBSET w A.S) /\ P_SEM (INPUT_RUN_PATH_UNION A i w 0) A.S0 /\ (w n = s) /\ !m. m < n ==> (IS_TRANSITION A (w m) (i m) (w (SUC m)) (i (SUC m)))))
+Proof
 
     rpt STRIP_TAC THEN EQ_TAC THEN rpt STRIP_TAC THENL [
         FULL_SIMP_TAC std_ss [IS_RABIN_SCOTT_SUBSET_CONSTRUCTION_def,
@@ -648,12 +651,12 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN_REACHABLE =
         ],
 
         PROVE_TAC[PATH_SUBSET_def]
-   ]);
+   ]
+QED
 
-val SYMBOLIC___TOTAL_UNIV_G___TO___DET_G___THM =
-  store_thm ("SYMBOLIC___TOTAL_UNIV_G___TO___DET_G___THM",
+Theorem SYMBOLIC___TOTAL_UNIV_G___TO___DET_G___THM:
 
-``!A A' IV f g p p'.
+  !A A' IV f g p p'.
 (IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A /\
 IS_RABIN_SCOTT_SUBSET_CONSTRUCTION A A' IV f g /\
 (!i s. s SUBSET A'.S ==>
@@ -663,7 +666,8 @@ IS_RABIN_SCOTT_SUBSET_CONSTRUCTION A A' IV f g /\
 ) ==>
 !i.
 (A_SEM i (A_UNIV (A, ACCEPT_COND_G p)) =
-A_SEM i (A_UNIV (A', ACCEPT_COND_G p')))``,
+A_SEM i (A_UNIV (A', ACCEPT_COND_G p')))
+Proof
 
 
 rpt STRIP_TAC THEN
@@ -761,7 +765,8 @@ EQ_TAC THEN rpt STRIP_TAC THEN rename1 `INPUT_RUN_PATH_UNION _ i w t` THENL [
   FULL_SIMP_TAC std_ss [IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def, PATH_SUBSET_def,
    IS_RABIN_SCOTT_SUBSET_CONSTRUCTION_def] THEN
   METIS_TAC[]
-]);
+]
+QED
 
 val SYMBOLIC___TOTAL_UNIV_G___TO___DET_G___CONCRETE_THM =
   store_simp_thm ("SYMBOLIC___TOTAL_UNIV_G___TO___DET_G___CONCRETE_THM",
@@ -938,8 +943,8 @@ EQ_TAC THEN rpt STRIP_TAC THENL [
   METIS_TAC[]
 ]);
 
-val BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON_def = Define
-   `BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON A S =
+Definition BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON_def:
+    BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON A S =
     semi_automaton (POW A.S CROSS POW A.S) A.I
       (\(s,i). i SUBSET A.I /\ (SND s = EMPTY) /\ !x. x IN (FST s) <=> (x, i) IN A.S0)
       (\((s11, s12), i, (s21, s22), i').
@@ -948,7 +953,8 @@ val BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON_def = Define
          (((s12 = {}) /\ (s22 = s21 INTER S)) \/
           (s12 <> {} /\
            !x. x IN s22 <=> x IN S /\ x IN A.S /\
-                            ?s1'. s1' IN s12 /\ (s1', i, x, i') IN A.R)))`;
+                            ?s1'. s1' IN s12 /\ (s1', i, x, i') IN A.R)))
+End
 
 Theorem BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON___IS_DET_TOTAL :
     !A S. IS_DET_TOTAL_SEMI_AUTOMATON (BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON A S)
@@ -997,11 +1003,10 @@ Proof
     ]
 QED
 
-val BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON___IS_WELL_FORMED =
-  store_thm (
-    "BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON___IS_WELL_FORMED",
-    ``!A S. IS_WELL_FORMED_SEMI_AUTOMATON A ==>
-            IS_WELL_FORMED_SEMI_AUTOMATON (BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON A S)``,
+Theorem BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON___IS_WELL_FORMED:
+      !A S. IS_WELL_FORMED_SEMI_AUTOMATON A ==>
+            IS_WELL_FORMED_SEMI_AUTOMATON (BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON A S)
+Proof
 
     SIMP_TAC std_ss [IS_WELL_FORMED_SEMI_AUTOMATON_def,
                      BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON_def,
@@ -1014,16 +1019,16 @@ val BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON___IS_WELL_FORMED =
       PROVE_TAC[],
       METIS_TAC[IN_INTER, IN_DEF],
       PROVE_TAC[]
-    ]);
+    ]
+QED
 
 
-val NDET_FG___TO___DET_FG___THM =
- store_thm
-  ("NDET_FG___TO___DET_FG___THM",
+Theorem NDET_FG___TO___DET_FG___THM:
 
-    ``!A S i. IS_WELL_FORMED_SEMI_AUTOMATON A ==>
+      !A S i. IS_WELL_FORMED_SEMI_AUTOMATON A ==>
             ((EXISTENTIAL_OMEGA_AUTOMATON_SEM (A, EXPLICIT_ACCEPT_FG (EXPLICIT_ACCEPT_STATE S)) i) =
-            (EXISTENTIAL_OMEGA_AUTOMATON_SEM (BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON A S, EXPLICIT_ACCEPT_FG (EXPLICIT_ACCEPT_STATE (\(s1, s2). (s1 SUBSET A.S) /\ (s2 SUBSET A.S) /\ ~(s2 = EMPTY)))) i))``,
+            (EXISTENTIAL_OMEGA_AUTOMATON_SEM (BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON A S, EXPLICIT_ACCEPT_FG (EXPLICIT_ACCEPT_STATE (\(s1, s2). (s1 SUBSET A.S) /\ (s2 SUBSET A.S) /\ ~(s2 = EMPTY)))) i))
+Proof
 
 
     rpt STRIP_TAC THEN EQ_TAC THEN rpt STRIP_TAC THENL [
@@ -1400,17 +1405,17 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
         SIMP_TAC arith_ss []
       ]
     ]
-  ]);
+  ]
+QED
 
-val A_SEM___NDET_F___TO___NDET_FG =
-  store_thm (
-    "A_SEM___NDET_F___TO___NDET_FG",
-    ``!A p x. (~(x IN (SEMI_AUTOMATON_USED_VARS A UNION P_USED_VARS p))) ==>
+Theorem A_SEM___NDET_F___TO___NDET_FG:
+      !A p x. (~(x IN (SEMI_AUTOMATON_USED_VARS A UNION P_USED_VARS p))) ==>
     (AUTOMATON_EQUIV (A_NDET (A, ACCEPT_COND_F p))
                     (A_NDET (symbolic_semi_automaton (x INSERT A.S)
                                                          (P_AND (P_EQUIV(P_PROP x, p), A.S0))
                                                          (XP_AND (XP_EQUIV(XP_NEXT_PROP x, XP_OR(XP_PROP x, XP_NEXT p)), A.R)),
-                                (ACCEPT_COND_FG (P_PROP x)))))``,
+                                (ACCEPT_COND_FG (P_PROP x)))))
+Proof
 
   SIMP_TAC std_ss [IN_UNION, SEMI_AUTOMATON_USED_VARS_def,
     SEMI_AUTOMATON_USED_INPUT_VARS_def, IN_DIFF, AUTOMATON_EQUIV_def,
@@ -1519,17 +1524,17 @@ val A_SEM___NDET_F___TO___NDET_FG =
         PROVE_TAC[]
       ]
     ]
-  ]);
+  ]
+QED
 
-val A_SEM___UNIV_G___TO___UNIV_GF =
-  store_thm (
-    "A_SEM___UNIV_G___TO___UNIV_GF",
-    ``!A p x. (~(x IN (SEMI_AUTOMATON_USED_VARS A UNION P_USED_VARS p))) ==>
+Theorem A_SEM___UNIV_G___TO___UNIV_GF:
+      !A p x. (~(x IN (SEMI_AUTOMATON_USED_VARS A UNION P_USED_VARS p))) ==>
     (AUTOMATON_EQUIV (A_UNIV (A, ACCEPT_COND_G p))
                     (A_UNIV (symbolic_semi_automaton (x INSERT A.S)
                                                          (P_AND (P_EQUIV(P_PROP x, P_NOT p), A.S0))
                                                          (XP_AND (XP_EQUIV(XP_NEXT_PROP x, XP_OR(XP_PROP x, XP_NEXT (P_NOT p))), A.R)),
-                                (ACCEPT_COND_GF (P_NOT (P_PROP x))))))``,
+                                (ACCEPT_COND_GF (P_NOT (P_PROP x))))))
+Proof
 
     SIMP_TAC std_ss [AUTOMATON_EQUIV_def] THEN
     rpt STRIP_TAC THEN
@@ -1552,15 +1557,17 @@ val A_SEM___UNIV_G___TO___UNIV_GF =
 
     SIMP_TAC std_ss [A_SEM_THM, IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def,
       P_SEM_THM, ACCEPT_COND_FG_def, ACCEPT_F_def, ACCEPT_COND_SEM_def,
-      ACCEPT_COND_SEM_TIME_def]);
+      ACCEPT_COND_SEM_TIME_def]
+QED
 
-val ACCEPT_COND_TO_LTL_def = Define
-  `(ACCEPT_COND_TO_LTL (ACCEPT_PROP b) = (LTL_PROP b)) /\
+Definition ACCEPT_COND_TO_LTL_def:
+   (ACCEPT_COND_TO_LTL (ACCEPT_PROP b) = (LTL_PROP b)) /\
    (ACCEPT_COND_TO_LTL ACCEPT_TRUE = LTL_TRUE) /\
    (ACCEPT_COND_TO_LTL (ACCEPT_NOT f) = (LTL_NOT (ACCEPT_COND_TO_LTL f))) /\
    (ACCEPT_COND_TO_LTL (ACCEPT_AND (f1, f2)) =
       (LTL_AND (ACCEPT_COND_TO_LTL f1, ACCEPT_COND_TO_LTL f2))) /\
-   (ACCEPT_COND_TO_LTL (ACCEPT_G f) = (LTL_ALWAYS (ACCEPT_COND_TO_LTL f)))`;
+   (ACCEPT_COND_TO_LTL (ACCEPT_G f) = (LTL_ALWAYS (ACCEPT_COND_TO_LTL f)))
+End
 
 Theorem ACCEPT_COND_TO_LTL_THM :
     (!ac:'a acceptance_condition v t.
@@ -1576,26 +1583,26 @@ Proof
     ]
 QED
 
-val LTL_USED_VARS___ACCEPT_COND_TO_LTL =
-  store_thm ("LTL_USED_VARS___ACCEPT_COND_TO_LTL",
-    ``!ac. LTL_USED_VARS (ACCEPT_COND_TO_LTL ac) =
-           ACCEPT_COND_USED_VARS ac``,
+Theorem LTL_USED_VARS___ACCEPT_COND_TO_LTL:
+      !ac. LTL_USED_VARS (ACCEPT_COND_TO_LTL ac) =
+           ACCEPT_COND_USED_VARS ac
+Proof
 
     INDUCT_THEN acceptance_condition_induct ASSUME_TAC THEN (
       ASM_SIMP_TAC std_ss  [ACCEPT_COND_TO_LTL_def,
         ACCEPT_COND_USED_VARS_def, LTL_USED_VARS_EVAL]
-    ));
+    )
+QED
 
-val A_NDET_FG___SYM__TO__CONRETE =
-  store_thm (
-    "A_NDET_FG___SYM__TO__CONRETE",
-    ``!A I p.
+Theorem A_NDET_FG___SYM__TO__CONRETE:
+      !A I p.
     (P_USED_VARS p SUBSET A.S /\
     SEMI_AUTOMATON_USED_INPUT_VARS A SUBSET I) ==>
 
     (!i. A_SEM i (A_NDET (A,ACCEPT_COND_FG p)) =
         EXISTENTIAL_OMEGA_AUTOMATON_SEM (SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON A I,
-                                        EXPLICIT_ACCEPT_FG (EXPLICIT_ACCEPT_STATE (\s. P_SEM s p))) i)``,
+                                        EXPLICIT_ACCEPT_FG (EXPLICIT_ACCEPT_STATE (\s. P_SEM s p))) i)
+Proof
 
     rpt STRIP_TAC THEN
     SUBGOAL_TAC `!n. (i n) INTER SEMI_AUTOMATON_USED_INPUT_VARS A SUBSET I` THEN1 (
@@ -1623,12 +1630,11 @@ val A_NDET_FG___SYM__TO__CONRETE =
     ) THEN
     SIMP_TAC std_ss [INPUT_RUN_PATH_UNION_def, INPUT_RUN_STATE_UNION_def, EXTENSION,
       IN_INTER, IN_UNION, IN_DIFF] THEN
-    rpt STRIP_TAC THEN rpt BOOL_EQ_STRIP_TAC);
+    rpt STRIP_TAC THEN rpt BOOL_EQ_STRIP_TAC
+QED
 
-val A_SEM___PRUNE_ACCEPTANCE_CONDITION =
-  store_thm (
-    "A_SEM___PRUNE_ACCEPTANCE_CONDITION",
-    ``!A f ac I A' ac'. ((I = ACCEPT_COND_USED_VARS ac DIFF A.S) /\
+Theorem A_SEM___PRUNE_ACCEPTANCE_CONDITION:
+      !A f ac I A' ac'. ((I = ACCEPT_COND_USED_VARS ac DIFF A.S) /\
                        (INJ f I UNIV) /\
                        (DISJOINT (IMAGE f I) (SEMI_AUTOMATON_USED_VARS A UNION I)) /\
                        (A' = symbolic_semi_automaton (A.S UNION (IMAGE f I)) A.S0
@@ -1637,7 +1643,8 @@ val A_SEM___PRUNE_ACCEPTANCE_CONDITION =
 
     ((ACCEPT_COND_USED_VARS ac' SUBSET A'.S) /\
     (!i. A_SEM i (A_UNIV (A, ACCEPT_COND ac)) =
-         A_SEM i (A_UNIV (A',ACCEPT_COND ac'))))``,
+         A_SEM i (A_UNIV (A',ACCEPT_COND ac'))))
+Proof
 
     rpt GEN_TAC THEN STRIP_TAC THEN
     LEFT_CONJ_TAC THENL [
@@ -1782,7 +1789,8 @@ val A_SEM___PRUNE_ACCEPTANCE_CONDITION =
           IN_UNIV, IN_IMAGE, IN_DIFF, EXTENSION, IN_ABS] THEN
         METIS_TAC[]
       ]
-    ]);
+    ]
+QED
 
 Theorem A_NDET_FG___SYM__TO__CONRETE___MIN_I =
   GEN ``A:'a symbolic_semi_automaton``
@@ -1790,8 +1798,8 @@ Theorem A_NDET_FG___SYM__TO__CONRETE___MIN_I =
                   (SPECL [``A:'a symbolic_semi_automaton``, ``SEMI_AUTOMATON_USED_INPUT_VARS A``]
                          A_NDET_FG___SYM__TO__CONRETE));
 
-val IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION_def = Define
-   `IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION (A  :'a symbolic_semi_automaton)
+Definition IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION_def:
+    IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION (A  :'a symbolic_semi_automaton)
                                         (A' :'a symbolic_semi_automaton)
                                         (IV :'a set)
                                         (f  :'a set -> 'a)
@@ -1820,7 +1828,8 @@ val IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION_def = Define
                       ?s1. s1 IN S1 /\
                           (COND (S1 INTER (IMAGE f' (POW A.S)) = EMPTY)
                                 (s1 IN (IMAGE f (POW A.S))) (s1 IN (IMAGE f' (POW A.S)))) /\
-                           IS_TRANSITION A (g s1) i1 (g s2) i2 /\ (g s2) IN S}))))`;
+                           IS_TRANSITION A (g s1) i1 (g s2) i2 /\ (g s2) IN S}))))
+End
 
 Theorem SYMBOLIC___NDET_FG___TO___DET_FG___THM :
     !A A' IV f f' g S p p'.
@@ -2220,11 +2229,10 @@ BINOP_TAC THENL [
 ]
 QED
 
-val SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_TOTAL =
-  store_thm (
-    "SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_TOTAL",
-    ``!A A' IV f f' g S.
-    IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION A A' IV f g f' S ==> IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A'``,
+Theorem SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_TOTAL:
+      !A A' IV f f' g S.
+    IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION A A' IV f g f' S ==> IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A'
+Proof
 
     SIMP_TAC std_ss [IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION_def, IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON_def] THEN
     rpt STRIP_TAC THENL [
@@ -2259,35 +2267,35 @@ val SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_TOTAL =
 
         METIS_TAC[INTER_SUBSET]
       ]
-    ]);
+    ]
+QED
 
-val SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_DET =
-  store_thm (
-    "SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_DET",
-    ``!A A' IV f f' g S.
+Theorem SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_DET:
+      !A A' IV f f' g S.
     IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION A A' IV f g f' S ==>
-    IS_DET_SYMBOLIC_SEMI_AUTOMATON A'``,
+    IS_DET_SYMBOLIC_SEMI_AUTOMATON A'
+Proof
 
     SIMP_TAC std_ss [IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION_def, IS_DET_SYMBOLIC_SEMI_AUTOMATON_def, EXISTS_AT_MOST_ONE_def] THEN
     rpt STRIP_TAC THENL [
       METIS_TAC[],
       METIS_TAC[TRANSITION_CURRENT_STATE_CLEANING, INTER_SUBSET]
-    ]);
+    ]
+QED
 
-val SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_DET_TOTAL =
-  store_thm (
-    "SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_DET_TOTAL",
-    ``!A A' IV f f' g S.
+Theorem SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_DET_TOTAL:
+      !A A' IV f f' g S.
     IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION A A' IV f g f' S ==>
-    IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A'``,
+    IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A'
+Proof
 
     PROVE_TAC [IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_def,
-      SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_DET, SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_TOTAL]);
+      SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_DET, SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_TOTAL]
+QED
 
-val SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_def=
+Definition SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_def:
 (* Idea by Sven Lamberti *)
- Define
-   `SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON A f f' pS =
+    SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON A f f' pS =
         symbolic_semi_automaton
             (IMAGE f (POW A.S) UNION IMAGE f' (POW A.S))
             (P_AND (P_FORALL (SET_TO_LIST A.S) (P_EQUIV(A.S0, VAR_RENAMING_HASHTABLE A.S f)),
@@ -2305,12 +2313,11 @@ val SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_def=
     (XP_NEXT_FORALL (SET_TO_LIST A.S) (XP_EQUIV(
                       XP_NEXT (VAR_RENAMING_HASHTABLE A.S f'),
                       XP_CURRENT_EXISTS (SET_TO_LIST A.S) (
-                          XP_AND(XP_AND(A.R, XP_NEXT pS), XP_CURRENT (VAR_RENAMING_HASHTABLE A.S f'))))))))))`;
+                          XP_AND(XP_AND(A.R, XP_NEXT pS), XP_CURRENT (VAR_RENAMING_HASHTABLE A.S f'))))))))))
+End
 
-val SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_THM =
- store_thm
-  ("SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_THM",
-    ``!A A' IV f g f' pS.
+Theorem SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_THM:
+      !A A' IV f g f' pS.
 
       ((A' = SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON A f f' pS) /\
         FINITE A.S /\
@@ -2324,7 +2331,8 @@ val SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_THM =
         (!z. z SUBSET A.S ==> (g (f z) = z)) /\
         (!z. z SUBSET A.S ==> (g (f' z) = z))) ==>
 
-    (IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION A A' IV f g f' (\s. s SUBSET A.S /\ P_SEM s pS))``,
+    (IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION A A' IV f g f' (\s. s SUBSET A.S /\ P_SEM s pS))
+Proof
 
 SIMP_TAC std_ss [IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION_def,
   SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_def, symbolic_semi_automaton_REWRITES] THEN
@@ -2620,18 +2628,18 @@ rpt STRIP_TAC THENL [
       ]
     ]
   ]
-]);
+]
+QED
 
-val SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON___USED_INPUT_VARS =
-  store_thm (
-    "SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON___USED_INPUT_VARS",
-    ``!A f f' p. (FINITE A.S /\ (P_USED_VARS p SUBSET
+Theorem SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON___USED_INPUT_VARS:
+      !A f f' p. (FINITE A.S /\ (P_USED_VARS p SUBSET
       SEMI_AUTOMATON_USED_VARS A) /\
       DISJOINT (IMAGE f (POW A.S)) (SEMI_AUTOMATON_USED_VARS A) /\
       DISJOINT (IMAGE f' (POW A.S)) (SEMI_AUTOMATON_USED_VARS A))    ==>
     (SEMI_AUTOMATON_USED_INPUT_VARS
       (SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON A f f' p) =
-    SEMI_AUTOMATON_USED_INPUT_VARS A)``,
+    SEMI_AUTOMATON_USED_INPUT_VARS A)
+Proof
 
     rpt GEN_TAC THEN
     ASM_SIMP_TAC std_ss [SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_def,
@@ -2664,7 +2672,8 @@ val SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON___USED_INPUT_VARS =
       XP_USED_VARS_def] THEN
 
     EQ_TAC THEN rpt STRIP_TAC THEN
-    METIS_TAC[SUBSET_DEF, IN_UNION]);
+    METIS_TAC[SUBSET_DEF, IN_UNION]
+QED
 
 val SYMBOLIC___NDET_FG___TO___DET_FG___CONCRETE_THM =
   store_simp_thm ("SYMBOLIC___NDET_FG___TO___DET_FG___CONCRETE_THM",
@@ -2768,8 +2777,8 @@ rpt STRIP_TAC THENL [
   ASM_SIMP_TAC std_ss []
 ]);
 
-val KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE_def =
-  Define `KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE (ks:('a, 'b) kripke_structure) f =
+Definition KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE_def:
+   KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE (ks:('a, 'b) kripke_structure) f =
           symbolic_kripke_structure
             (P_BIGOR (SET_TO_LIST ((IMAGE (\s. P_PROP_SET_MODEL (f s) (BIGUNION (IMAGE f ks.S))) ks.S0))))
 
@@ -2777,14 +2786,13 @@ val KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE_def =
               XP_CURRENT(P_BIGAND (SET_TO_LIST (IMAGE
                 (\s. P_IMPL(P_PROP_SET_MODEL (f s) (BIGUNION (IMAGE f ks.S)), P_PROP_SET_MODEL (ks.L s) (ks.P) )) ks.S))),
 
-              XP_BIGOR (SET_TO_LIST ((IMAGE (\(s1, s2). XP_AND(XP_CURRENT (P_PROP_SET_MODEL (f s1) (BIGUNION (IMAGE f ks.S))), XP_NEXT (P_PROP_SET_MODEL (f s2) (BIGUNION (IMAGE f ks.S))))) ks.R)))))`;
+              XP_BIGOR (SET_TO_LIST ((IMAGE (\(s1, s2). XP_AND(XP_CURRENT (P_PROP_SET_MODEL (f s1) (BIGUNION (IMAGE f ks.S))), XP_NEXT (P_PROP_SET_MODEL (f s2) (BIGUNION (IMAGE f ks.S))))) ks.R)))))
+End
 
 
-val KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE_THM =
-  store_thm (
-    "KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE_THM",
+Theorem KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE_THM:
 
-    ``!K S f.
+      !K S f.
 
     IS_WELL_FORMED_KRIPKE_STRUCTURE K /\
     (S = (BIGUNION (IMAGE f K.S))) /\
@@ -2795,7 +2803,8 @@ val KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE_THM =
     !p. IS_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE K p =
         ((!n. p n IN K.S) /\ IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE
         (KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE K f)
-        (\n. f (p n) UNION K.L (p n)))``,
+        (\n. f (p n) UNION K.L (p n)))
+Proof
 
 REWRITE_TAC [IS_WELL_FORMED_KRIPKE_STRUCTURE_def] THEN
 rpt STRIP_TAC THEN
@@ -2881,13 +2890,12 @@ EQ_TAC THENL [
 
     METIS_TAC[SUBSET_DEF]
   ]
-]);
+]
+QED
 
-val KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE___TRACE_OF_INITIAL_PATH =
-  store_thm (
-    "KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE___TRACE_OF_INITIAL_PATH",
+Theorem KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE___TRACE_OF_INITIAL_PATH:
 
-    ``!K S f.
+      !K S f.
 
     IS_WELL_FORMED_KRIPKE_STRUCTURE K /\
     (S = (BIGUNION (IMAGE f K.S))) /\
@@ -2899,7 +2907,8 @@ val KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE___TRACE_OF_INITIAL_PATH =
         (KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE K f) p ==>
 
         IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE K
-        (PATH_RESTRICT p K.P)``,
+        (PATH_RESTRICT p K.P)
+Proof
 
 rpt GEN_TAC THEN STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def] THEN
@@ -3035,15 +3044,15 @@ rpt STRIP_TAC THENL [
   PROVE_CONDITION_NO_ASSUM 0 THEN1 ASM_SIMP_TAC std_ss [] THEN
   ASM_REWRITE_TAC[GSYM SUBSET_INTER_ABSORPTION] THEN
   METIS_TAC[]
-]);
+]
+QED
 
-val UNIQUE_PATHS_THROUGH_SYMBOLIC_KRIPKE_STRUCTURES_ARE_ULTIMATIVELY_PERIODIC =
-  store_thm (
-    "UNIQUE_PATHS_THROUGH_SYMBOLIC_KRIPKE_STRUCTURES_ARE_ULTIMATIVELY_PERIODIC",
+Theorem UNIQUE_PATHS_THROUGH_SYMBOLIC_KRIPKE_STRUCTURES_ARE_ULTIMATIVELY_PERIODIC:
 
-    ``!i S M. ((FINITE S /\ IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M i) /\
+      !i S M. ((FINITE S /\ IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M i) /\
               (!i'. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M i' ==> (PATH_RESTRICT i' S = PATH_RESTRICT i S))) ==>
-              (IS_ULTIMATIVELY_PERIODIC_PATH (PATH_RESTRICT i S))``,
+              (IS_ULTIMATIVELY_PERIODIC_PATH (PATH_RESTRICT i S))
+Proof
 
 SIMP_TAC std_ss [PATHS_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE___REWRITES] THEN
 rpt STRIP_TAC THEN
@@ -3152,17 +3161,16 @@ ASM_REWRITE_TAC[PATH_RESTRICT___CUT_PATH_PERIODICALLY,
 Q_TAC EXISTS_TAC `m0` THEN
 Q_TAC EXISTS_TAC `(m1 - m0)` THEN
 ASM_SIMP_TAC arith_ss [CUT_PATH_PERIODICALLY___IS_ULTIMATIVELY_PERIODIC]
-);
+QED
 
-val ULTIMALTIVELY_PERIODIC_PATH_CORRESPONDING_TO_UNIQUE_PATHS_THROUGH_SYMBOLIC_KRIPKE_STRUCTURES =
-  store_thm (
-    "ULTIMALTIVELY_PERIODIC_PATH_CORRESPONDING_TO_UNIQUE_PATHS_THROUGH_SYMBOLIC_KRIPKE_STRUCTURES",
+Theorem ULTIMALTIVELY_PERIODIC_PATH_CORRESPONDING_TO_UNIQUE_PATHS_THROUGH_SYMBOLIC_KRIPKE_STRUCTURES:
 
-``!i S. (FINITE (S:'a set) /\ INFINITE (UNIV:'a set) /\
+  !i S. (FINITE (S:'a set) /\ INFINITE (UNIV:'a set) /\
     (IS_ULTIMATIVELY_PERIODIC_PATH i)) ==>
       (?M.
           (?i'. (IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M i')) /\
-          (!i'. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M i' ==> (PATH_RESTRICT i' S = PATH_RESTRICT i S)))``,
+          (!i'. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M i' ==> (PATH_RESTRICT i' S = PATH_RESTRICT i S)))
+Proof
 
 rpt STRIP_TAC THEN
 ASSUME_TAC (INST_TYPE [beta |-> alpha] DET_TOTAL_KRIPKE_STRUCTURES_THM) THEN
@@ -3227,19 +3235,19 @@ rpt STRIP_TAC THENL [
       GSYM RIGHT_FORALL_OR_THM, IN_SING, INJ_DEF]
   ) THEN
   METIS_TAC[]
-]);
+]
+QED
 
-val SYMBOLIC___UNIV_G___TO___DET_GF___EXISTS_THM =
-  store_thm (
-    "SYMBOLIC___UNIV_G___TO___DET_GF___EXISTS_THM",
+Theorem SYMBOLIC___UNIV_G___TO___DET_GF___EXISTS_THM:
 
-    ``!S A (p:'a prop_logic). (INFINITE (UNIV:'a set)  /\ FINITE S /\ FINITE A.S) ==>
+      !S A (p:'a prop_logic). (INFINITE (UNIV:'a set)  /\ FINITE S /\ FINITE A.S) ==>
 
 ?A' p'. ((IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A') /\
         (DISJOINT A'.S S) /\ FINITE A'.S /\
         (P_USED_VARS p' SUBSET A'.S) /\
         (!i. A_SEM i (A_UNIV (A,ACCEPT_COND_G p)) =
-             A_SEM i (A_UNIV (A',ACCEPT_COND_GF p'))))``,
+             A_SEM i (A_UNIV (A',ACCEPT_COND_GF p'))))
+Proof
 
 rpt STRIP_TAC THEN
 SUBGOAL_TAC `!A p i. (A_SEM i (A_UNIV (A,ACCEPT_COND_G p)) =
@@ -3324,18 +3332,18 @@ rpt STRIP_TAC THENL [
 
   ASM_SIMP_TAC std_ss [A_SEM_THM, ACCEPT_COND_FG_def, ACCEPT_COND_SEM_def,
     ACCEPT_COND_SEM_TIME_def, ACCEPT_F_def, P_SEM_def]
-]);
+]
+QED
 
-val TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_PRODUCT_THM =
- store_thm
-  ("TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_PRODUCT_THM",
+Theorem TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_PRODUCT_THM:
 
-``!A B i w ac . (IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A /\
+  !A B i w ac . (IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A /\
       (DISJOINT B.S (SEMI_AUTOMATON_USED_VARS A)) /\
       IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w) ==>
 
       (A_SEM i (A_UNIV (PRODUCT_SEMI_AUTOMATON A B, ac)) =
-       A_SEM (INPUT_RUN_PATH_UNION A i w) (A_UNIV (B, ac)))``,
+       A_SEM (INPUT_RUN_PATH_UNION A i w) (A_UNIV (B, ac)))
+Proof
 
 rpt STRIP_TAC THEN
 SIMP_TAC std_ss [A_SEM_THM] THEN
@@ -3476,6 +3484,6 @@ EQ_TAC THENL [
     PRODUCT_SEMI_AUTOMATON_REWRITES, PATH_UNION_def, EXTENSION,
     IN_UNION, IN_DIFF, PATH_RESTRICT_def, PATH_MAP_def, IN_INTER] THEN
   METIS_TAC[]
-]);
+]
+QED
 
-val _ = export_theory ();

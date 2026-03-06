@@ -66,6 +66,13 @@ in
       end
 end
 
+fun is_binder c M =
+    let val (c1,abs) = dest_comb M
+    in
+       same_const c c1 andalso is_abs abs
+    end
+    handle HOL_ERR _ => false
+
 local
    fun dest M =
       let val (Rator, Rand) = dest_comb M in (dest_thy_const Rator, Rand) end
@@ -176,7 +183,7 @@ fun list_mk_lbinop _ [] = raise ERR "list_mk_lbinop" "empty list"
 
 fun mk_binder c f (p as (Bvar, _)) =
    mk_comb (inst [alpha |-> type_of Bvar] c, mk_abs p)
-   handle HOL_ERR {message, ...} => raise ERR f message
+   handle HOL_ERR e => raise ERR f (message_of e)
 
 fun list_mk_fun (dtys, rty) = List.foldr op--> rty dtys
 
@@ -220,7 +227,7 @@ in
       in
          Term.list_mk_comb (Term.inst (Type.match_type tyl tyr) tm, xs)
       end
-      handle HOL_ERR {message, ...} => raise ERR "list_mk_icomb" message
+      handle HOL_ERR e => raise ERR "list_mk_icomb" (message_of e)
 
    fun syntax_fns
       {n: int, make: term -> 'a -> term, dest: term -> exn -> term -> 'b}
@@ -229,7 +236,7 @@ in
          val ERR = Feedback.mk_HOL_ERR (thy ^ "Syntax")
          val tm = Term.prim_mk_const {Name = name, Thy = thy}
          val () =
-            ignore (List.length (args tm) = n
+            ignore (List.length (args tm) >= n
                     orelse raise ERR "syntax_fns" "bad number of arguments")
          val d = dest tm (ERR ("dest_" ^ name) "")
       in
@@ -562,11 +569,19 @@ local
             (insts', (env, ctm, vtm)::homs)
           end
         else let
-            val (lv, rv) = dest_comb vtm
-            val (lc, rc) = dest_comb ctm
-            val sofar' = term_pmatch lconsts env lv lc sofar
+            (* Avoid doing the head check multiple times *)
+            fun term_pmatch' lconsts env vtm ctm sofar =
+              if is_comb vtm then
+                let
+                  val (lv, rv) = dest_comb vtm
+                  val (lc, rc) = dest_comb ctm
+                  val sofar' = term_pmatch' lconsts env lv lc sofar
+                in
+                  term_pmatch lconsts env rv rc sofar'
+                end
+              else term_pmatch lconsts env vtm ctm sofar
           in
-            term_pmatch lconsts env rv rc sofar'
+            term_pmatch' lconsts env vtm ctm sofar
           end
       end
 
@@ -761,4 +776,5 @@ val sort_vars =
   Portable.pull_prefix o map (fn n => equal n o #1 o dest_var)
 
 end
+
 end

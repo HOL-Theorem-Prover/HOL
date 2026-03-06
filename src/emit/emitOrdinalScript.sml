@@ -1,14 +1,14 @@
-open HolKernel Parse boolLib bossLib;
-
-open ordinalNotationTheory basis_emitTheory EmitML
-
-val _ = new_theory "emitOrdinal";
+Theory emitOrdinal
+Ancestors
+  ordinalNotation basis_emit
+Libs
+  EmitML
 
 (*---------------------------------------------------------------------------*)
 (* Generate an ML file for the executable functions of the theory.           *)
 (*---------------------------------------------------------------------------*)
 
-Triviality tail_End:
+Theorem tail_End[local]:
   tail (End n) = FAIL tail ^(mk_var("(End n)",bool)) (End n)
 Proof
   REWRITE_TAC [combinTheory.FAIL_THM]
@@ -30,7 +30,3 @@ val _ =
       DEFN ord_add_def,
       DEFN ord_sub_def,
       DEFN ord_mult_def]
-
-
-
-val _ = export_theory();

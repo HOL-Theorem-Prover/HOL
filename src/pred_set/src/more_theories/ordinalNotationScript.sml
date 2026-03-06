@@ -1,5 +1,8 @@
-open HolKernel Parse boolLib bossLib IndDefLib
-     numTheory prim_recTheory arithmeticTheory
+Theory ordinalNotation
+Ancestors
+  num prim_rec arithmetic
+Libs
+  IndDefLib
 
 val _ = numLib.temp_prefer_num();
 
@@ -23,16 +26,14 @@ val meter = Count.mk_meter();
 (* Start the theory                                                          *)
 (*---------------------------------------------------------------------------*)
 
-val _ = new_theory "ordinalNotation";
-
 (*---------------------------------------------------------------------------*)
 (* Raw syntax of ordinals                                                    *)
 (*---------------------------------------------------------------------------*)
 
 val _ = set_fixity "=" (Infix(NONASSOC, 100))
-val _ = Hol_datatype
-  `osyntax = End of num
-           | Plus of osyntax => num => osyntax`;
+Datatype:
+   osyntax = End num | Plus osyntax num osyntax
+End
 
 val osyntax_11       = TypeBase.one_one_of ``:osyntax``;
 val osyntax_distinct = TypeBase.distinct_of ``:osyntax``;
@@ -41,29 +42,29 @@ val osyntax_distinct = TypeBase.distinct_of ``:osyntax``;
 (* And operations over osyntax.                                              *)
 (*---------------------------------------------------------------------------*)
 
-val expt_def =
- Define
-    `(expt (End _) = End 0) /\
-     (expt (Plus e k t) = e)`;
+Definition expt_def:
+     (expt (End _) = End 0) /\
+     (expt (Plus e k t) = e)
+End
 
-val coeff_def =
- Define
-    `(coeff (End x) = x) /\
-     (coeff (Plus e k t) = k)`;
+Definition coeff_def:
+     (coeff (End x) = x) /\
+     (coeff (Plus e k t) = k)
+End
 
-val finp_def =
- Define
-  `(finp (End _) = T) /\
-   (finp (Plus _ _ _) = F)`;
+Definition finp_def:
+   (finp (End _) = T) /\
+   (finp (Plus _ _ _) = F)
+End
 
-val tail_def =
- Define
-   `tail (Plus e k t) = t`;
+Definition tail_def:
+    tail (Plus e k t) = t
+End
 
-val rank_def =
- Define
-   `(rank (End _) = 0) /\
-    (rank (Plus e k t) = 1 + rank e)`;
+Definition rank_def:
+    (rank (End _) = 0) /\
+    (rank (Plus e k t) = 1 + rank e)
+End
 
 val ord_ss = arith_ss ++ rewrites
    [expt_def, coeff_def, finp_def, tail_def, rank_def, GSYM IMP_DISJ_THM];
@@ -82,35 +83,36 @@ val (oless_rules, oless_ind, oless_cases) =
   (!e1 k1 t1 e2 k2 t2. (e1=e2) /\ (k1=k2) /\ oless t1 t2
                         ==> oless (Plus e1 k1 t1) (Plus e2 k2 t2))`;
 
-val oless_strong_ind =
-    save_thm ("oless_strong_ind",theorem "oless_strongind");
+Theorem oless_strong_ind = theorem "oless_strongind";
 
-val oless_End_End = Q.store_thm
-("oless_End_End",
- `!k1 k2. oless (End k1) (End k2) ==> k1 < k2`,
- RW_TAC ord_ss [Once oless_cases]);
+Theorem oless_End_End:
+  !k1 k2. oless (End k1) (End k2) ==> k1 < k2
+Proof
+ RW_TAC ord_ss [Once oless_cases]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Version of oless suitable for ML execution.                               *)
 (*---------------------------------------------------------------------------*)
 
-val oless_equations = Q.store_thm
-("oless_equations",
- `(oless (End m) (End n) <=> m < n) /\
+Theorem oless_equations:
+  (oless (End m) (End n) <=> m < n) /\
   (oless (End m) (Plus e k t) <=> T) /\
   (oless (Plus e k t) (End m) <=> F) /\
   (oless (Plus e1 k1 t1) (Plus e2 k2 t2) <=>
      if oless e1 e2 then T else
      if (e1 = e2) /\ k1 < k2 then T else
      if (e1 = e2) /\ (k1 = k2) /\ oless t1 t2 then T
-     else F)`,
+     else F)
+Proof
  SIMP_TAC arith_ss [EQ_IMP_THM] THEN REPEAT CONJ_TAC THENL
  [RW_TAC arith_ss [Once oless_cases],
   METIS_TAC [oless_rules],
   METIS_TAC [oless_rules],
   RW_TAC arith_ss [Once oless_cases] THEN METIS_TAC[],
   RW_TAC arith_ss [Once oless_cases] THEN METIS_TAC[],
-  METIS_TAC [oless_rules]]);
+  METIS_TAC [oless_rules]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Subset of osyntax things that are ordinals in Cantor Normal Form          *)
@@ -122,25 +124,26 @@ val (is_ord_rules, is_ord_ind, is_ord_cases) =
    (!e k t. is_ord e /\ ~(e = End 0) /\ 0 < k /\ is_ord t /\ oless (expt t) e
             ==> is_ord (Plus e k t))`;
 
-val is_ord_strong_ind =
-    save_thm("is_ord_strong_ind", theorem "is_ord_strongind")
+Theorem is_ord_strong_ind = theorem "is_ord_strongind"
 
-val decompose_plus = Q.store_thm
-("decompose_plus",
- `!e k t. is_ord (Plus e k t) ==>
-          is_ord e /\ ~(e = End 0) /\ 0 < k /\ is_ord t /\ oless (expt t) e`,
- METIS_TAC [is_ord_cases,osyntax_distinct,osyntax_11]);
+Theorem decompose_plus:
+  !e k t. is_ord (Plus e k t) ==>
+          is_ord e /\ ~(e = End 0) /\ 0 < k /\ is_ord t /\ oless (expt t) e
+Proof
+ METIS_TAC [is_ord_cases,osyntax_distinct,osyntax_11]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Functional version of is_ord                                              *)
 (*---------------------------------------------------------------------------*)
 
-val is_ord_equations = Q.store_thm
-("is_ord_equations",
- `(is_ord (End k) <=> T) /\
+Theorem is_ord_equations:
+  (is_ord (End k) <=> T) /\
   (is_ord (Plus e k t) <=>
-        is_ord e /\ ~(e = End 0) /\ 0 < k /\ is_ord t /\ oless (expt t) e)`,
-  METIS_TAC [is_ord_rules,decompose_plus]);
+        is_ord e /\ ~(e = End 0) /\ 0 < k /\ is_ord t /\ oless (expt t) e)
+Proof
+  METIS_TAC [is_ord_rules,decompose_plus]
+QED
 
 val is_ord_End = CONJUNCT1 is_ord_rules;
 
@@ -150,60 +153,71 @@ val ord_ss = ord_ss ++ rewrites [is_ord_End];
 (* Closure properties of ordinal operations.                                 *)
 (*---------------------------------------------------------------------------*)
 
-val is_ord_expt_closed = Q.store_thm
-("is_ord_expt_closed",
- `!x. is_ord x ==> is_ord (expt x)`,
- Induct THEN RW_TAC ord_ss [] THEN METIS_TAC [decompose_plus]);
+Theorem is_ord_expt_closed:
+  !x. is_ord x ==> is_ord (expt x)
+Proof
+ Induct THEN RW_TAC ord_ss [] THEN METIS_TAC [decompose_plus]
+QED
 
-val is_ord_tail_closed = Q.store_thm
-("is_ord_tail_closed",
-`!x. ~finp x /\ is_ord x ==> is_ord (tail x)`,
-Induct THEN RW_TAC ord_ss [] THEN METIS_TAC [decompose_plus]);
+Theorem is_ord_tail_closed:
+ !x. ~finp x /\ is_ord x ==> is_ord (tail x)
+Proof
+Induct THEN RW_TAC ord_ss [] THEN METIS_TAC [decompose_plus]
+QED
 
-val is_ord_downclosed = Q.store_thm
-("is_ord_downclosed",
- `is_ord (Plus w k t) ==> is_ord w /\ is_ord t`,
- METIS_TAC [is_ord_cases,osyntax_11,osyntax_distinct]);
+Theorem is_ord_downclosed:
+  is_ord (Plus w k t) ==> is_ord w /\ is_ord t
+Proof
+ METIS_TAC [is_ord_cases,osyntax_11,osyntax_distinct]
+QED
 
-val is_ord_coeff_pos = Q.store_thm
-("is_ord_coeff_pos",
- `!x. ~finp(x) /\ is_ord x ==> 0 < coeff x`,
-Induct THEN RW_TAC ord_ss [] THEN METIS_TAC [decompose_plus]);
+Theorem is_ord_coeff_pos:
+  !x. ~finp(x) /\ is_ord x ==> 0 < coeff x
+Proof
+Induct THEN RW_TAC ord_ss [] THEN METIS_TAC [decompose_plus]
+QED
 
-val rank_expt = Q.store_thm
-("rank_expt",
- `!x n. is_ord(x) /\ (rank x = SUC n) ==> (rank (expt x) = n)`,
- Cases THEN RW_TAC ord_ss []);
+Theorem rank_expt:
+  !x n. is_ord(x) /\ (rank x = SUC n) ==> (rank (expt x) = n)
+Proof
+ Cases THEN RW_TAC ord_ss []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* oless is antireflexive                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val oless_antirefl_lem = Q.prove
-(`!x y. oless x y ==> (x=y) /\ is_ord x ==> F`,
+Theorem oless_antirefl_lem[local]:
+  !x y. oless x y ==> (x=y) /\ is_ord x ==> F
+Proof
  HO_MATCH_MP_TAC oless_ind
-   THEN RW_TAC ord_ss [] THEN METIS_TAC[decompose_plus]);
+   THEN RW_TAC ord_ss [] THEN METIS_TAC[decompose_plus]
+QED
 
-val oless_antirefl = Q.store_thm
-("oless_antirefl",
- `!x. is_ord x ==> ~oless x x`,
- METIS_TAC[oless_antirefl_lem]);
+Theorem oless_antirefl:
+  !x. is_ord x ==> ~oless x x
+Proof
+ METIS_TAC[oless_antirefl_lem]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* oless is antisymmetric                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val oless_antisym_lem = Q.prove
-(`!x y. oless x y ==> is_ord x /\ is_ord y ==> ~oless y x`,
+Theorem oless_antisym_lem[local]:
+  !x y. oless x y ==> is_ord x /\ is_ord y ==> ~oless y x
+Proof
  HO_MATCH_MP_TAC oless_strong_ind THEN RW_TAC std_ss []
    THEN ONCE_REWRITE_TAC [oless_cases]
    THEN RW_TAC ord_ss []
-   THEN METIS_TAC [oless_antirefl,decompose_plus]);
+   THEN METIS_TAC [oless_antirefl,decompose_plus]
+QED
 
-val oless_antisym = Q.store_thm
-("oless_antisym",
- `!x y. is_ord x /\ is_ord y /\ oless x y ==> ~oless y x`,
- METIS_TAC [oless_antisym_lem]);
+Theorem oless_antisym:
+  !x y. is_ord x /\ is_ord y /\ oless x y ==> ~oless y x
+Proof
+ METIS_TAC [oless_antisym_lem]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* trichotomy and transitivity of oless ... not proved                       *)
@@ -220,79 +234,90 @@ val oless_transitivity =
 (* rank less implies oless                                                   *)
 (*---------------------------------------------------------------------------*)
 
-val rank_less_imp_oless = Q.store_thm
-("rank_less_imp_oless",
- `!x y. is_ord x /\ is_ord y /\ rank x < rank y ==> oless x y`,
+Theorem rank_less_imp_oless:
+  !x y. is_ord x /\ is_ord y /\ rank x < rank y ==> oless x y
+Proof
  measureInduct_on `rank x`
    THEN Cases_on `x` THEN Cases_on `y`
    THEN FULL_SIMP_TAC ord_ss [] THENL
    [METIS_TAC [oless_rules],
     RW_TAC ord_ss [] THEN
-    METIS_TAC [DECIDE``x < x + 1n``,decompose_plus,oless_rules]]);
+    METIS_TAC [DECIDE``x < x + 1n``,decompose_plus,oless_rules]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* oless implies rank leq.                                                   *)
 (*---------------------------------------------------------------------------*)
 
-val oless_imp_rank_leq = Q.store_thm
-("oless_imp_rank_leq",
- `!x y. is_ord x /\ is_ord y /\ oless x y ==> rank x <= rank y`,
+Theorem oless_imp_rank_leq:
+  !x y. is_ord x /\ is_ord y /\ oless x y ==> rank x <= rank y
+Proof
  RW_TAC ord_ss [] THEN SPOSE_NOT_THEN ASSUME_TAC THEN
  `rank y < rank x` by DECIDE_TAC THEN
- METIS_TAC [rank_less_imp_oless,oless_antisym]);
+ METIS_TAC [rank_less_imp_oless,oless_antisym]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Ordinals of rank 0 are essentially natural numbers                        *)
 (*---------------------------------------------------------------------------*)
 
-val rank_0_End = Q.store_thm
-("rank_0_End",
- `!x. (rank x = 0) = ?n. x = End n`,
- Cases THEN RW_TAC ord_ss [rank_def]);
+Theorem rank_0_End:
+  !x. (rank x = 0) = ?n. x = End n
+Proof
+ Cases THEN RW_TAC ord_ss [rank_def]
+QED
 
-val rank_finp = Q.store_thm
-("rank_finp",
- `!x. (rank x = 0) = finp x`,
- Cases THEN RW_TAC ord_ss [rank_def,finp_def]);
+Theorem rank_finp:
+  !x. (rank x = 0) = finp x
+Proof
+ Cases THEN RW_TAC ord_ss [rank_def,finp_def]
+QED
 
-val rank_positive_exists = Q.store_thm
-("rank_positive_exists",
- `!x. 0 < rank x <=> ?e c t. x = Plus e c t`,
- Cases THEN RW_TAC ord_ss [rank_def]);
+Theorem rank_positive_exists:
+  !x. 0 < rank x <=> ?e c t. x = Plus e c t
+Proof
+ Cases THEN RW_TAC ord_ss [rank_def]
+QED
 
-val rank_positive = Q.store_thm
-("rank_positive",
- `!x. 0 < rank x <=> (x = Plus (expt x) (coeff x) (tail x))`,
- Cases THEN RW_TAC ord_ss [rank_def,expt_def, coeff_def, tail_def]);
+Theorem rank_positive:
+  !x. 0 < rank x <=> (x = Plus (expt x) (coeff x) (tail x))
+Proof
+ Cases THEN RW_TAC ord_ss [rank_def,expt_def, coeff_def, tail_def]
+QED
 
-val rank_positive_expt = Q.store_thm
-("rank_positive_expt",
-`!x n. (rank x = SUC n) ==> (rank(expt x) = n)`,
- Cases THEN RW_TAC ord_ss [rank_def,expt_def]);
+Theorem rank_positive_expt:
+ !x n. (rank x = SUC n) ==> (rank(expt x) = n)
+Proof
+ Cases THEN RW_TAC ord_ss [rank_def,expt_def]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Proper subterms of an ordinal are oless than the ordinal                  *)
 (*---------------------------------------------------------------------------*)
 
-val oless_expt = Q.store_thm
-("oless_expt",
- `!e k t. is_ord (Plus e k t) ==> oless e (Plus e k t)`,
+Theorem oless_expt:
+  !e k t. is_ord (Plus e k t) ==> oless e (Plus e k t)
+Proof
  REPEAT STRIP_TAC THEN
  MATCH_MP_TAC rank_less_imp_oless THEN
  RW_TAC ord_ss [] THEN
- METIS_TAC [is_ord_downclosed]);
+ METIS_TAC [is_ord_downclosed]
+QED
 
-val oless_tail_lem = Q.prove
-(`!x. is_ord x ==> ~finp x ==> oless (tail x) x`,
+Theorem oless_tail_lem[local]:
+  !x. is_ord x ==> ~finp x ==> oless (tail x) x
+Proof
  HO_MATCH_MP_TAC is_ord_ind THEN
  RW_TAC ord_ss [tail_def,finp_def] THEN
  Cases_on `x'` THEN FULL_SIMP_TAC ord_ss [finp_def,tail_def,expt_def] THEN
- METIS_TAC [oless_rules]);;
+ METIS_TAC [oless_rules]
+QED
 
-val oless_tail = Q.store_thm
-("oless_tail",
- `!x. is_ord x /\ ~finp x ==> oless (tail x) x`,
- METIS_TAC [oless_tail_lem]);
+Theorem oless_tail:
+  !x. is_ord x /\ ~finp x ==> oless (tail x) x
+Proof
+ METIS_TAC [oless_tail_lem]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -300,14 +325,16 @@ val oless_tail = Q.store_thm
 (* one element of rank <= n or all are of rank = n+1.                        *)
 (*---------------------------------------------------------------------------*)
 
-val split_lem = Q.prove
-(`!P n. (?x. P x) /\ (!x. P x ==> rank x <= SUC n) ==>
-        (?x. P x /\ rank x <= n) \/ (!x. P x ==> (rank x = SUC n))`,
+Theorem split_lem[local]:
+  !P n. (?x. P x) /\ (!x. P x ==> rank x <= SUC n) ==>
+        (?x. P x /\ rank x <= n) \/ (!x. P x ==> (rank x = SUC n))
+Proof
  RW_TAC ord_ss [] THEN SPOSE_NOT_THEN ASSUME_TAC THEN RW_TAC arith_ss [] THEN
  STRIP_ASSUME_TAC
    (Q.SPECL [`rank x'`, `n`]
          (DECIDE ``!x y. x <= y \/ (x = SUC y) \/ (x > SUC y)``)) THENL
- [METIS_TAC [], RES_TAC THEN DECIDE_TAC]);
+ [METIS_TAC [], RES_TAC THEN DECIDE_TAC]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Every n.e. set of ordinals of rank <= n has an oless-minimal element      *)
@@ -315,8 +342,8 @@ val split_lem = Q.prove
 (* oless-minimal element.                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val stronger = Q.prove
-(`(!n. !P:osyntax->bool. !x.
+Theorem stronger[local]:
+  (!n. !P:osyntax->bool. !x.
      P x /\ (!x. P x ==> is_ord(x) /\ rank(x) <= n) ==>
      ?m. is_ord m /\ P m /\ rank m <= n /\
          !y. is_ord y /\ rank y <= n /\ oless y m ==> ~P y)
@@ -324,11 +351,13 @@ val stronger = Q.prove
    (!n. !P:osyntax->bool.
      (?x. is_ord x /\ P x /\ rank x <= n) ==>
       ?m. is_ord m /\ P m /\ rank m <= n /\
-       !y. is_ord y /\ rank y <= n /\ oless y m ==> ~P y)`,
+       !y. is_ord y /\ rank y <= n /\ oless y m ==> ~P y)
+Proof
  RW_TAC std_ss [] THEN
  Q.PAT_X_ASSUM `$!M`
     (MP_TAC o Q.SPEC `\a. P a /\ is_ord a /\ rank a <= n` o Q.ID_SPEC) THEN
- DISCH_THEN (MP_TAC o Q.ID_SPEC) THEN RW_TAC std_ss [] THEN METIS_TAC []);
+ DISCH_THEN (MP_TAC o Q.ID_SPEC) THEN RW_TAC std_ss [] THEN METIS_TAC []
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -338,12 +367,12 @@ val stronger = Q.prove
 
 val _ = Parse.hide "S";   (* used as a variable in the following proof *)
 
-val lemma = Q.store_thm
-("lemma",
- `!n. !P:osyntax->bool.
+Theorem lemma:
+  !n. !P:osyntax->bool.
      (?x. is_ord x /\ P x /\ rank x <= n) ==>
       ?m. is_ord m /\ P m /\ rank m <= n /\
-          !y. is_ord y /\ rank y <= n /\ oless y m ==> ~P y`,
+          !y. is_ord y /\ rank y <= n /\ oless y m ==> ~P y
+Proof
 
  MATCH_MP_TAC stronger THEN Induct THENL
 
@@ -666,7 +695,7 @@ THEN
 (* Done.                                                                     *)
 (*---------------------------------------------------------------------------*)
 
-);
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -683,33 +712,35 @@ val lemma' =
 (* So can rephrase lemma by getting rid of the rank restriction.             *)
 (*---------------------------------------------------------------------------*)
 
-val main_lemma = Q.store_thm
-("main_lemma",
- `!P. (?x. P x /\ is_ord x) ==>
-      ?x. P x /\ is_ord x /\ !y. is_ord y /\ oless y x ==> ~P y`,
+Theorem main_lemma:
+  !P. (?x. P x /\ is_ord x) ==>
+      ?x. P x /\ is_ord x /\ !y. is_ord y /\ oless y x ==> ~P y
+Proof
  REPEAT STRIP_TAC THEN
    `?m. is_ord m /\ P m /\ rank m <= rank x /\
         !y. is_ord y /\ rank y <= rank x /\ oless y m ==> ~P y` by METIS_TAC [lemma']
-  THEN METIS_TAC [oless_imp_rank_leq,LESS_EQ_TRANS]);
+  THEN METIS_TAC [oless_imp_rank_leq,LESS_EQ_TRANS]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* less-than on ordinals.                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val ord_less_def =
- Define
-   `ord_less x y <=> is_ord x /\ is_ord y /\ oless x y`;
+Definition ord_less_def:
+    ord_less x y <=> is_ord x /\ is_ord y /\ oless x y
+End
 
 
 (*---------------------------------------------------------------------------*)
 (* ord_less is well-founded.                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val WF_ord_less = Q.store_thm
-("WF_ord_less",
- `WF ord_less`,
+Theorem WF_ord_less:
+  WF ord_less
+Proof
  RW_TAC ord_ss [relationTheory.WF_DEF,ord_less_def] THEN
- METIS_TAC [main_lemma,ord_less_def]);
+ METIS_TAC [main_lemma,ord_less_def]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Hence induction and recursion on the ordinals up to e_0, ala ACL2.        *)
@@ -718,39 +749,38 @@ val WF_ord_less = Q.store_thm
 val WF_ord_measure =
  SPEC_ALL (MATCH_MP relationTheory.WF_inv_image WF_ord_less);
 
-val e0_induction = save_thm
-("e0_INDUCTION",
+Theorem e0_INDUCTION =
  GEN ``P:'a->bool``
   (GEN ``f:'a->osyntax``
     (SPEC_ALL
        (SIMP_RULE std_ss [relationTheory.inv_image_def]
-          (MATCH_MP relationTheory.WF_INDUCTION_THM WF_ord_measure)))));
+          (MATCH_MP relationTheory.WF_INDUCTION_THM WF_ord_measure))));
 
-val e0_RECURSION = Q.store_thm
-("e0_RECURSION",
- `!f. ?!g. !x. g x = M (RESTRICT g (\x y. ord_less (f x) (f y)) x) x`,
+Theorem e0_RECURSION:
+  !f. ?!g. !x. g x = M (RESTRICT g (\x y. ord_less (f x) (f y)) x) x
+Proof
  MATCH_ACCEPT_TAC
    (SIMP_RULE std_ss [relationTheory.inv_image_def]
-      (MATCH_MP relationTheory.WF_RECURSION_THM WF_ord_measure)));
+      (MATCH_MP relationTheory.WF_RECURSION_THM WF_ord_measure))
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Ordinal addition, subtraction, multiplication and exponentiation. Taken   *)
 (* from Manolios and Vroon, JAR.                                             *)
 (*---------------------------------------------------------------------------*)
 
-val ord_add_def =
- Define
-  `(ord_add (End m) (End n) = End (m+n)) /\
+Definition ord_add_def:
+   (ord_add (End m) (End n) = End (m+n)) /\
    (ord_add (End m) (Plus p k t) = Plus p k t) /\
    (ord_add (Plus e k t) (End m) = Plus e k (ord_add t (End m))) /\
    (ord_add (Plus e1 k1 t1) (Plus e2 k2 t2) =
      if oless e1 e2 then Plus e2 k2 t2 else
      if e1 = e2 then Plus e2 (k1+k2) t2 else
-     Plus e1 k1 (ord_add t1 (Plus e2 k2 t2)))`;
+     Plus e1 k1 (ord_add t1 (Plus e2 k2 t2)))
+End
 
-val ord_sub_def =
- Define
-  `(ord_sub (End m) (End n) = End (m-n)) /\
+Definition ord_sub_def:
+   (ord_sub (End m) (End n) = End (m-n)) /\
    (ord_sub (End m) (Plus p k t) = End 0) /\
    (ord_sub (Plus e k t) (End m) = Plus e k t) /\
    (ord_sub (Plus e1 k1 t1) (Plus e2 k2 t2) =
@@ -759,22 +789,23 @@ val ord_sub_def =
       then (if k1<k2 then End 0 else
             if k1>k2 then Plus e1 (k1-k2) t1
             else ord_sub t1 t2)
-     else Plus e1 k1 t1)`;
+     else Plus e1 k1 t1)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Weird renaming in last two clauses by Define.                             *)
 (*---------------------------------------------------------------------------*)
 
-val ord_mult_def =
- Define
-  `ord_mult x y =
+Definition ord_mult_def:
+   ord_mult x y =
     if (x = End 0) \/ (y = End 0) then End 0 else
     case (x,y)
     of (End m, End n) => End (m * n)
      | (End m, Plus e k t) => Plus (ord_add (End 0) e) k (ord_mult (End m) t)
      | (Plus e k t, End n) => Plus e (k*n) t
      | (Plus e1 k1 t1, Plus e2 k2 t2) => Plus (ord_add e1 e2) k2
-                                              (ord_mult (Plus e1 k1 t1) t2)`;
+                                              (ord_mult (Plus e1 k1 t1) t2)
+End
 
 val _ = Count.report (Count.read meter);
 
@@ -782,24 +813,24 @@ val _ = Count.report (Count.read meter);
     More efficient multiplication (again from Manolios & Vroon)
    ---------------------------------------------------------------------- *)
 
-val restn_def = Define`
+Definition restn_def:
   (restn a 0 = a) /\
   (restn a (SUC n) = restn (tail a) n)
-`;
+End
 
-val cf1_def = Define`
+Definition cf1_def[simp]:
   (cf1 (End _) b = 0) /\
   (cf1 (Plus e1 c1 k1) b = if ord_less (expt b) e1 then 1 + cf1 k1 b
                            else 0)
-`
-val _ = export_rewrites ["cf1_def"]
+End
 
-val cf2_def = Define`cf2 a b n = n + cf1 (restn a n) b`
+Definition cf2_def:  cf2 a b n = n + cf1 (restn a n) b
+End
 
-val padd_def = Define`
+Definition padd_def:
   (padd a b 0 = ord_add a b) /\
   (padd a b (SUC n) = Plus (expt a) (coeff a) (padd (tail a) b n))
-`
+End
 
 val pmult_def = tDefine "pmult" `
   pmult a b n =
@@ -813,5 +844,3 @@ val pmult_def = tDefine "pmult" `
           in
             Plus (padd (expt a) e2 m) c2 (pmult a k2 m)
 ` (WF_REL_TAC `measure (osyntax_size o FST o SND)`)
-
-val _ = export_theory();

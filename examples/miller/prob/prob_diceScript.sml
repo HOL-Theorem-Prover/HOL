@@ -1,20 +1,16 @@
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory pred_setTheory listTheory
-     state_transformerTheory combinTheory pairTheory
-     realTheory realLib extra_boolTheory res_quanTheory
-     hurdUtils extra_numTheory
-     extra_realTheory numTheory simpLib seqTheory;
-
-open sequenceTheory sequenceTools extra_pred_setTheory extra_pred_setTools subtypeTheory;
-open util_probTheory real_measureTheory real_probabilityTheory;
-open prob_algebraTheory probTheory;
+Theory prob_dice
+Ancestors
+  arithmetic pred_set list state_transformer combin pair real
+  extra_bool res_quan extra_num extra_real num seq sequence
+  extra_pred_set subtype real_measure real_probability
+  prob_algebra prob
+Libs
+  realLib hurdUtils simpLib sequenceTools extra_pred_setTools
 
 (* interactive mode
 quietdec := false;
 *)
 
-val _ = new_theory "prob_dice";
 val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
@@ -58,8 +54,8 @@ val ddg_ss = std_ss ++ simpLib.SSFRAG {
 (* The definition of Knuth's dice.                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val dice_def = Define
-  `dice : (num -> bool) -> num # (num -> bool) =
+Definition dice_def:
+   dice : (num -> bool) -> num # (num -> bool) =
    coin_flip
    (prob_repeat
     (coin_flip
@@ -78,13 +74,15 @@ val dice_def = Define
        (UNIT 5)))
      (coin_flip
       (UNIT (SOME 6))
-      (UNIT NONE))))`;
+      (UNIT NONE))))
+End
 
-val two_dice_def = Define
-  `two_dice = BIND dice (\a. BIND dice (\b. UNIT (a + b)))`;
+Definition two_dice_def:
+   two_dice = BIND dice (\a. BIND dice (\b. UNIT (a + b)))
+End
 
-val optimal_two_dice_def = Define
-  `optimal_two_dice : (num -> bool) -> num # (num -> bool) =
+Definition optimal_two_dice_def:
+   optimal_two_dice : (num -> bool) -> num # (num -> bool) =
    coin_flip
    (prob_repeat
     (coin_flip
@@ -160,7 +158,8 @@ val optimal_two_dice_def = Define
          (coin_flip
           (UNIT (SOME 12))
           (UNIT NONE))
-         (UNIT (SOME 12))))))))`;
+         (UNIT (SOME 12))))))))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)
@@ -170,61 +169,66 @@ val optimal_two_dice_def = Define
 (*      if 1 <= n /\ n <= 6 then 1 / 6 else 0                                *)
 (* ------------------------------------------------------------------------- *)
 
-val PROB_TERMINATES_DICE1 = store_thm
-  ("PROB_TERMINATES_DICE1",
-   ``?*s.
+Theorem PROB_TERMINATES_DICE1:
+     ?*s.
        IS_SOME
        (FST
         (coin_flip
          (coin_flip (UNIT NONE) (UNIT (SOME (1 : num))))
-         (MMAP SOME (coin_flip (UNIT 2) (UNIT 3))) s))``,
+         (MMAP SOME (coin_flip (UNIT 2) (UNIT 3))) s))
+Proof
    HO_MATCH_MP_TAC POSSIBLY_SOME_COIN_FLIP2
    >> RW_TAC std_ss [POSSIBLY_IS_SOME_MMAP, INDEP_FN_MMAP, INDEP_FN_COIN_FLIP,
-                     INDEP_FN_UNIT]);
+                     INDEP_FN_UNIT]
+QED
 
-val INDEP_FN_DICE1 = store_thm
-  ("INDEP_FN_DICE1",
-   ``prob_repeat
+Theorem INDEP_FN_DICE1:
+     prob_repeat
      (coin_flip
       (coin_flip (UNIT NONE) (UNIT (SOME (1 : num))))
-      (MMAP SOME (coin_flip (UNIT 2) (UNIT 3)))) IN indep_fn``,
+      (MMAP SOME (coin_flip (UNIT 2) (UNIT 3)))) IN indep_fn
+Proof
    MATCH_MP_TAC INDEP_FN_PROB_REPEAT
    >> RW_TAC std_ss [PROB_TERMINATES_DICE1, INDEP_FN_COIN_FLIP, INDEP_FN_MMAP,
-                     INDEP_FN_UNIT]);
+                     INDEP_FN_UNIT]
+QED
 
-val PROB_TERMINATES_DICE2 = store_thm
-  ("PROB_TERMINATES_DICE2",
-   ``?*s.
+Theorem PROB_TERMINATES_DICE2:
+     ?*s.
        IS_SOME
        (FST
         (coin_flip
          (MMAP SOME (coin_flip (UNIT (4 : num)) (UNIT 5)))
-         (coin_flip (UNIT (SOME 6)) (UNIT NONE)) s))``,
+         (coin_flip (UNIT (SOME 6)) (UNIT NONE)) s))
+Proof
    HO_MATCH_MP_TAC POSSIBLY_SOME_COIN_FLIP1
    >> RW_TAC std_ss [POSSIBLY_IS_SOME_MMAP, INDEP_FN_MMAP, INDEP_FN_COIN_FLIP,
-                     INDEP_FN_UNIT]);
+                     INDEP_FN_UNIT]
+QED
 
-val INDEP_FN_DICE2 = store_thm
-  ("INDEP_FN_DICE2",
-   ``prob_repeat
+Theorem INDEP_FN_DICE2:
+     prob_repeat
      (coin_flip
       (MMAP SOME (coin_flip (UNIT (4 : num)) (UNIT 5)))
-      (coin_flip (UNIT (SOME 6)) (UNIT NONE))) IN indep_fn``,
+      (coin_flip (UNIT (SOME 6)) (UNIT NONE))) IN indep_fn
+Proof
    MATCH_MP_TAC INDEP_FN_PROB_REPEAT
    >> RW_TAC std_ss [INDEP_FN_COIN_FLIP, INDEP_FN_MMAP, INDEP_FN_UNIT,
-                     PROB_TERMINATES_DICE2]);
+                     PROB_TERMINATES_DICE2]
+QED
 
-val INDEP_FN_DICE = store_thm
-  ("INDEP_FN_DICE",
-   ``dice IN indep_fn``,
+Theorem INDEP_FN_DICE:
+     dice IN indep_fn
+Proof
    RW_TAC std_ss [dice_def, INDEP_FN_COIN_FLIP, INDEP_FN_DICE1,
-                  INDEP_FN_DICE2]);
+                  INDEP_FN_DICE2]
+QED
 
-val PROB_BERN_DICE = store_thm
-  ("PROB_BERN_DICE",
-   ``!n.
+Theorem PROB_BERN_DICE:
+     !n.
        prob bern {s | FST (dice s) = n} =
-       if 1 <= n /\ n <= 6 then 1 / 6 else 0``,
+       if 1 <= n /\ n <= 6 then 1 / 6 else 0
+Proof
    STRIP_TAC
    >> MP_TAC (Q.ISPEC `\x : num. x = n` EVENT_TRANSITION)
    >> SIMP_TAC std_ss []
@@ -246,16 +250,17 @@ val PROB_BERN_DICE = store_thm
        >> Cases_on `n'` >- RW_TAC real_ss [PROB_BERN_EMPTY, PROB_BERN_UNIV])
    >> Cases_on `n` >- RW_TAC real_ss [PROB_BERN_EMPTY, PROB_BERN_UNIV]
    >> RW_TAC arith_ss []
-   >> RW_TAC real_ss [PROB_BERN_EMPTY, PROB_BERN_UNIV]);
+   >> RW_TAC real_ss [PROB_BERN_EMPTY, PROB_BERN_UNIV]
+QED
 
-val INDEP_FN_TWO_DICE = store_thm
-  ("INDEP_FN_TWO_DICE",
-   ``two_dice IN indep_fn``,
-   RW_TAC std_ss [INDEP_FN_BIND, two_dice_def, INDEP_FN_UNIT, INDEP_FN_DICE]);
+Theorem INDEP_FN_TWO_DICE:
+     two_dice IN indep_fn
+Proof
+   RW_TAC std_ss [INDEP_FN_BIND, two_dice_def, INDEP_FN_UNIT, INDEP_FN_DICE]
+QED
 
-val PROB_BERN_TWO_DICE = store_thm
-  ("PROB_BERN_TWO_DICE",
-   ``!n.
+Theorem PROB_BERN_TWO_DICE:
+     !n.
        prob bern {s | FST (two_dice s) = n} =
        if (n = 2) \/ (n = 12) then 1 / 36
        else if (n = 3) \/ (n = 11) then 2 / 36
@@ -263,7 +268,8 @@ val PROB_BERN_TWO_DICE = store_thm
        else if (n = 5) \/ (n = 9) then 4 / 36
        else if (n = 6) \/ (n = 8) then 5 / 36
        else if (n = 7) then 6 / 36
-       else 0``,
+       else 0
+Proof
    STRIP_TAC
    >> SIMP_TAC std_ss [two_dice_def]
    >> Know
@@ -370,11 +376,11 @@ val PROB_BERN_TWO_DICE = store_thm
        >> Cases_on `n'` >- RW_TAC arith_ss [REAL_INJ, REAL_MUL, sum, REAL_ADD]
        >> SIMP_TAC std_ss [prim_recTheory.INV_SUC_EQ, NOT_SUC])
    >> Suff `F` >- PROVE_TAC []
-   >> DECIDE_TAC);
+   >> DECIDE_TAC
+QED
 
-val PROB_TERMINATES_OPTIMAL_TWO_DICE1 = store_thm
-  ("PROB_TERMINATES_OPTIMAL_TWO_DICE1",
-   ``?*s.
+Theorem PROB_TERMINATES_OPTIMAL_TWO_DICE1:
+     ?*s.
        IS_SOME
        (FST
         (coin_flip
@@ -402,14 +408,15 @@ val PROB_TERMINATES_OPTIMAL_TWO_DICE1 = store_thm
                (UNIT 3)))
              (UNIT 5))
             (UNIT 5))
-           (UNIT 7))) s))``,
+           (UNIT 7))) s))
+Proof
    HO_MATCH_MP_TAC POSSIBLY_SOME_COIN_FLIP2
    >> SIMP_TAC std_ss [POSSIBLY_IS_SOME_MMAP]
-   >> PROVE_TAC [INDEP_FN_MMAP, INDEP_FN_COIN_FLIP, INDEP_FN_UNIT]);
+   >> PROVE_TAC [INDEP_FN_MMAP, INDEP_FN_COIN_FLIP, INDEP_FN_UNIT]
+QED
 
-val INDEP_FN_OPTIMAL_TWO_DICE1R = store_thm
-  ("INDEP_FN_OPTIMAL_TWO_DICE1R",
-   ``coin_flip
+Theorem INDEP_FN_OPTIMAL_TWO_DICE1R:
+     coin_flip
      (coin_flip
       (coin_flip
        (coin_flip
@@ -434,12 +441,13 @@ val INDEP_FN_OPTIMAL_TWO_DICE1R = store_thm
            (UNIT 3)))
          (UNIT 5))
         (UNIT 5))
-       (UNIT 7))) IN indep_fn``,
-   CONV_TAC DDG_INDEP_FN_CONV);
+       (UNIT 7))) IN indep_fn
+Proof
+   CONV_TAC DDG_INDEP_FN_CONV
+QED
 
-val INDEP_FN_OPTIMAL_TWO_DICE1 = store_thm
-  ("INDEP_FN_OPTIMAL_TWO_DICE1",
-   ``prob_repeat
+Theorem INDEP_FN_OPTIMAL_TWO_DICE1:
+     prob_repeat
      (coin_flip
       (coin_flip
        (coin_flip
@@ -465,13 +473,14 @@ val INDEP_FN_OPTIMAL_TWO_DICE1 = store_thm
             (UNIT 3)))
           (UNIT 5))
          (UNIT 5))
-        (UNIT 7)))) IN indep_fn``,
+        (UNIT 7)))) IN indep_fn
+Proof
    MATCH_MP_TAC INDEP_FN_PROB_REPEAT
-   >> SIMP_TAC ddg_ss [PROB_TERMINATES_OPTIMAL_TWO_DICE1]);
+   >> SIMP_TAC ddg_ss [PROB_TERMINATES_OPTIMAL_TWO_DICE1]
+QED
 
-val PROB_TERMINATES_OPTIMAL_TWO_DICE2 = store_thm
-  ("PROB_TERMINATES_OPTIMAL_TWO_DICE2",
-   ``?*s.
+Theorem PROB_TERMINATES_OPTIMAL_TWO_DICE2:
+     ?*s.
        IS_SOME
        (FST
         (coin_flip
@@ -520,18 +529,19 @@ val PROB_TERMINATES_OPTIMAL_TWO_DICE2 = store_thm
              (coin_flip
               (UNIT (SOME 12))
               (UNIT NONE))
-             (UNIT (SOME 12)))))) s))``,
+             (UNIT (SOME 12)))))) s))
+Proof
    HO_MATCH_MP_TAC POSSIBLY_SOME_COIN_FLIP1
    >> SIMP_TAC std_ss [POSSIBLY_IS_SOME_MMAP]
    >> REPEAT
       (CONJ_TAC ORELSE
        MATCH_MP_TAC INDEP_FN_COIN_FLIP ORELSE
        MATCH_MP_TAC INDEP_FN_MMAP)
-   >> MATCH_ACCEPT_TAC INDEP_FN_UNIT);
+   >> MATCH_ACCEPT_TAC INDEP_FN_UNIT
+QED
 
-val INDEP_FN_OPTIMAL_TWO_DICE2R = store_thm
-  ("INDEP_FN_OPTIMAL_TWO_DICE2R",
-   ``coin_flip
+Theorem INDEP_FN_OPTIMAL_TWO_DICE2R:
+     coin_flip
      (MMAP SOME
       (coin_flip
        (coin_flip
@@ -577,16 +587,17 @@ val INDEP_FN_OPTIMAL_TWO_DICE2R = store_thm
          (coin_flip
           (UNIT (SOME 12))
           (UNIT NONE))
-         (UNIT (SOME 12)))))) IN indep_fn``,
+         (UNIT (SOME 12)))))) IN indep_fn
+Proof
    REPEAT
    (CONJ_TAC ORELSE
     MATCH_MP_TAC INDEP_FN_COIN_FLIP ORELSE
     MATCH_MP_TAC INDEP_FN_MMAP)
-   >> MATCH_ACCEPT_TAC INDEP_FN_UNIT);
+   >> MATCH_ACCEPT_TAC INDEP_FN_UNIT
+QED
 
-val INDEP_FN_OPTIMAL_TWO_DICE2 = store_thm
-  ("INDEP_FN_OPTIMAL_TWO_DICE2",
-   ``prob_repeat
+Theorem INDEP_FN_OPTIMAL_TWO_DICE2:
+     prob_repeat
      (coin_flip
       (MMAP SOME
        (coin_flip
@@ -633,21 +644,23 @@ val INDEP_FN_OPTIMAL_TWO_DICE2 = store_thm
           (coin_flip
            (UNIT (SOME 12))
            (UNIT NONE))
-          (UNIT (SOME 12))))))) IN indep_fn``,
+          (UNIT (SOME 12))))))) IN indep_fn
+Proof
    MATCH_MP_TAC INDEP_FN_PROB_REPEAT
    >> SIMP_TAC std_ss [PROB_TERMINATES_OPTIMAL_TWO_DICE2,
-                       INDEP_FN_OPTIMAL_TWO_DICE2R]);
+                       INDEP_FN_OPTIMAL_TWO_DICE2R]
+QED
 
-val INDEP_FN_OPTIMAL_TWO_DICE = store_thm
-  ("INDEP_FN_OPTIMAL_TWO_DICE",
-   ``optimal_two_dice IN indep_fn``,
+Theorem INDEP_FN_OPTIMAL_TWO_DICE:
+     optimal_two_dice IN indep_fn
+Proof
    RW_TAC std_ss [optimal_two_dice_def, INDEP_FN_COIN_FLIP,
                   INDEP_FN_OPTIMAL_TWO_DICE1,
-                  INDEP_FN_OPTIMAL_TWO_DICE2]);
+                  INDEP_FN_OPTIMAL_TWO_DICE2]
+QED
 
-val PROB_BERN_OPTIMAL_TWO_DICE = store_thm
-  ("PROB_BERN_OPTIMAL_TWO_DICE",
-   ``!n.
+Theorem PROB_BERN_OPTIMAL_TWO_DICE:
+     !n.
        prob bern {s | FST (optimal_two_dice s) = n} =
        if (n = 2) \/ (n = 12) then 1 / 36
        else if (n = 3) \/ (n = 11) then 2 / 36
@@ -655,7 +668,8 @@ val PROB_BERN_OPTIMAL_TWO_DICE = store_thm
        else if (n = 5) \/ (n = 9) then 4 / 36
        else if (n = 6) \/ (n = 8) then 5 / 36
        else if (n = 7) then 6 / 36
-       else 0``,
+       else 0
+Proof
    STRIP_TAC
    >> MP_TAC (Q.ISPEC `\x : num. x = n` EVENT_TRANSITION)
    >> SIMP_TAC std_ss []
@@ -754,13 +768,14 @@ val PROB_BERN_OPTIMAL_TWO_DICE = store_thm
            >> RW_TAC arith_ss [])
        >> SIMP_TAC bool_ss [prim_recTheory.INV_SUC_EQ])
    >> SIMP_TAC std_ss [NOT_SUC, REAL_INJ, PROB_BERN_EMPTY, REAL_MUL_RZERO,
-                       REAL_ADD_LID]);
+                       REAL_ADD_LID]
+QED
 
-val OPTIMAL_TWO_DICE_CORRECT = store_thm
-  ("OPTIMAL_TWO_DICE_CORRECT",
-   ``!n.
+Theorem OPTIMAL_TWO_DICE_CORRECT:
+     !n.
        prob bern {s | FST (optimal_two_dice s) = n} =
-       prob bern {s | FST (two_dice s) = n}``,
-   SIMP_TAC std_ss [PROB_BERN_OPTIMAL_TWO_DICE, PROB_BERN_TWO_DICE]);
+       prob bern {s | FST (two_dice s) = n}
+Proof
+   SIMP_TAC std_ss [PROB_BERN_OPTIMAL_TWO_DICE, PROB_BERN_TWO_DICE]
+QED
 
-val _ = export_theory ();

@@ -1,6 +1,8 @@
-open preamble lprefix_lubTheory
-
-val _ = new_theory "while_lang";
+Theory while_lang
+Ancestors
+  string lprefix_lub
+Libs
+  preamble
 
 Type nat[pp] = “:num”;
 
@@ -77,5 +79,3 @@ Inductive diverges:
     ⇒
     diverges s p output
 End
-
-val _ = export_theory();

@@ -1,12 +1,10 @@
-open HolKernel Parse boolLib bossLib;
+Theory simp_attr2
+Ancestors
+  simp_attr1
 
-open simp_attr1Theory
+Theorem fact_SUC:
+    fact (SUC n) = SUC n * fact n
+Proof
+  SRW_TAC [][]
+QED
 
-val _ = new_theory "simp_attr2";
-
-val fact_SUC = store_thm(
-  "fact_SUC",
-  ``fact (SUC n) = SUC n * fact n``,
-  SRW_TAC [][])
-
-val _ = export_theory();

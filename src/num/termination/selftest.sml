@@ -4,7 +4,7 @@ val _ = Feedback.emit_MESG := false
 
 fun badpp x = HOLPP.add_string "<Can't print this>"
 
-fun EVAL t = computeLib.CBV_CONV computeLib.the_compset t
+fun EVAL t = computeLib.CBV_CONV (!computeLib.the_compset) t
 val _ = tprint "Testing mutually recursive function definition"
 
 val f_def = require (check_result (K true)) Define`
@@ -73,23 +73,25 @@ fun tdefoutput_pp(th,thopt) =
     "(" ^ thm_to_string th ^ ", " ^
     (case thopt of NONE => "NONE"
                  | SOME th' => "SOME " ^ thm_to_string th') ^ ")"
+
 fun quietDefn f x =
     Lib.with_flag (Globals.interactive, false) f x
-val _  = shouldfail { checkexn = is_struct_HOL_ERR "TotalDefn",
-                      printarg = K "tDefine: no schematic defs when \
-                                   \termination tac is supplied",
-                      printresult = tdefoutput_pp,
-                      testfn = (fn q => quietDefn (TotalDefn.tDefine "foo" q)
-                                           (WF_REL_TAC ‘$<’))}
-       ‘foo x = if x = 0 then y else foo(x - 1)*2’;
 
-val _  = shouldfail { checkexn = is_struct_HOL_ERR "TotalDefn",
-                      printarg = K "qDefine: no schematic defs when \
-                                   \termination tac is supplied",
-                      printresult = thm_to_string,
-                      testfn = (fn q => quietDefn (TotalDefn.qDefine "foo" q)
-                                           (SOME (WF_REL_TAC ‘$<’)))}
-       ‘foo x = if x = 0 then y else foo(x - 1)*2’;
+val _  =
+  shouldfail
+    { checkexn = is_struct_HOL_ERR "TotalDefn",
+      printarg = K "tDefine: no schematic defs when termination tac is supplied",
+      printresult = tdefoutput_pp,
+      testfn = (fn q => in_repl_mode (TotalDefn.tDefine "foo" q) (WF_REL_TAC ‘$<’))}
+   ‘foo x = if x = 0 then y else foo(x - 1)*2’;
+
+val _  =
+  shouldfail
+    { checkexn = is_struct_HOL_ERR "TotalDefn",
+      printarg = K "qDefine: no schematic defs when termination tac is supplied",
+      printresult = thm_to_string,
+      testfn = (fn q => in_repl_mode(TotalDefn.qDefine "foo" q) (SOME (WF_REL_TAC ‘$<’)))}
+   ‘foo x = if x = 0 then y else foo(x - 1)*2’;
 
 fun lhs_has_two_args th =
     th |> concl |> strip_forall |> #2 |> lhs |> strip_comb |> #2 |> length
@@ -184,3 +186,15 @@ val _ = require_msgk (check_result (K true)) pp_thm
                      ‘(urk n = urk2 (n + 1)) /\
                       (urk' n = n + 1) /\
                       (urk2 m = if m = 0 then 1 else urk (2 * m))’;
+
+val _ = tprint "DB doesn't pick up location-info"
+val _ = let
+  val loc = DB_dtype.mkloc("foo", 11, true)
+  val expected = {loc = loc, class = DB_dtype.Def, private = false}
+in
+  require_msg (check_result (equal expected o #2))
+              (DB_dtype.thminfo_toString o #2)
+              (fn () => (TotalDefn.located_qDefine loc "bar" `bar=1` NONE;
+                         valOf $ DB.lookup{Thy="-", Name = "bar"}))
+              ()
+end

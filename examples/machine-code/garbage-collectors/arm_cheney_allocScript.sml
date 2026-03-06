@@ -1,16 +1,13 @@
 
-open HolKernel boolLib bossLib Parse; val _ = new_theory "arm_cheney_alloc";
+Theory arm_cheney_alloc
+Ancestors
+  words arithmetic list pred_set pair combin finite_map address
+  tailrec cheney_gc cheney_alloc arm_cheney_gc prog prog_arm set_sep
+Libs
+  wordsLib mc_tailrecLib helperLib
+
 val _ = ParseExtras.temp_loose_equality()
 
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory;
-
-open addressTheory mc_tailrecLib tailrecTheory;
-open cheney_gcTheory cheney_allocTheory arm_cheney_gcTheory;
-
-
-infix \\ << >>
-val op \\ = op THEN;
 val _ = map Parse.hide ["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10","r11","r12","r13"];
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -209,15 +206,16 @@ val arm_alloc_lemma = prove(
   \\ IMP_RES_TAC arm_alloc_aux_lemma \\ ASM_SIMP_TAC std_ss []
   \\ REVERSE (REPEAT STRIP_TAC) \\ METIS_TAC []);
 
-val field_list_def = Define `
+Definition field_list_def:
   (field_list [] (a,r12,m) = T) /\
-  (field_list (x::xs) (a,r12,m) = (m r12 = ref_addr a x) /\ field_list xs (a,r12 + 4w,m))`;
+  (field_list (x::xs) (a,r12,m) = (m r12 = ref_addr a x) /\ field_list xs (a,r12 + 4w,m))
+End
 
 val roots_in_mem_IMP_addr_list = prove(
   ``!p a b xs. roots_in_mem p (a,b,xs) ==> field_list p (a,b,xs)``,
   Induct \\ ASM_SIMP_TAC std_ss [field_list_def,roots_in_mem_def]);
 
-val ch_mem_def = Define `
+Definition ch_mem_def:
   ch_mem (i,e,rs,l,u,m) (a,x,xs) =
     ?x1 x2 x3 x4 x5 x6:num.
       32 <= w2n a /\ w2n a + 2 * 12 * l + 20 < 2**32 /\
@@ -226,9 +224,10 @@ val ch_mem_def = Define `
       (rs = [x1;x2;x3;x4;x5;x6]) /\
       ref_cheney (m,l+l+1) (a,x,xs,xs) /\
       (xs (a-28w) = if u then 0w else 1w) /\
-      (xs (a-32w) = n2w (12 * l))`;
+      (xs (a-32w) = n2w (12 * l))
+End
 
-val ch_word_def = Define `
+Definition ch_word_def:
   ch_word (i,e,rs,l,u,m) (v1,v2,v3,v4,v5,v6,a,x,xs) =
     ?x1 x2 x3 x4 x5 x6:num.
       (rs = [x1;x2;x3;x4;x5;x6]) /\
@@ -237,7 +236,8 @@ val ch_word_def = Define `
       (v1 = ref_addr a x1) /\ (v2 = ref_addr a x2) /\ (v3 = ref_addr a x3) /\
       (v4 = ref_addr a x4) /\ (v5 = ref_addr a x5) /\ (v6 = ref_addr a x6) /\
       (xs a = ref_addr a i) /\ (xs (a+4w) = ref_addr a e) /\
-      (xs (a-28w) = if u then 0w else 1w) /\ (xs (a-32w) = n2w (12 * l))`;
+      (xs (a-28w) = if u then 0w else 1w) /\ (xs (a-32w) = n2w (12 * l))
+End
 
 val ch_mem_lemma1 = prove(
   ``!a. n < 2**32 /\ k < 2**32 /\ n <= w2n a /\
@@ -360,25 +360,29 @@ val ch_word_alloc = prove(
           (Cases_on `u'` \\ FULL_SIMP_TAC bool_ss [ok_state_def,LET_DEF] \\ DECIDE_TAC)
     \\ METIS_TAC []]);
 
-val ch_word_cheney_alloc = store_thm("ch_word_cheney_alloc",
-  ``!s t. ch_word s t ==> ch_word (cheney_alloc s 0w) (arm_alloc t) /\ arm_alloc_pre t``,
+Theorem ch_word_cheney_alloc:
+    !s t. ch_word s t ==> ch_word (cheney_alloc s 0w) (arm_alloc t) /\ arm_alloc_pre t
+Proof
   Cases \\ REPEAT (Cases_on `r` \\ REPEAT (Cases_on `r'`))
   \\ Cases \\ REPEAT (Cases_on `r'` \\ REPEAT (Cases_on `r''`))
   \\ `?a1 a2 a3 a4 a5 a6. cheney_alloc (q,q',q'',q''',q'''',r) 0w = (a1,a2,a3,a4,a5,a6)` by METIS_TAC [PAIR]
   \\ `?r3 r4 r5 r6 r7 r8 r9 df f. arm_alloc (q''''',q'''''',q''''''',q'''''''',q''''''''',q'''''''''',
           q''''''''''',q'''''''''''',r'') =
           (r3,r4,r5,r6,r7,r8,r9,df,f)` by METIS_TAC [PAIR]
-  \\ ASM_REWRITE_TAC [] \\ METIS_TAC [ch_word_alloc]);
+  \\ ASM_REWRITE_TAC [] \\ METIS_TAC [ch_word_alloc]
+QED
 
-val ch_rel_def = Define `
-  ch_rel s t = ?u. ch_inv s u /\ ch_word u t`;
+Definition ch_rel_def:
+  ch_rel s t = ?u. ch_inv s u /\ ch_word u t
+End
 
-val ch_arm_alloc = store_thm("ch_arm_alloc",
-  ``(arm_alloc (v1,v2,v3,v4,v5,v6,a,x,xs) = (w1,w2,w3,w4,w5,w6,a',x',xs')) ==>
+Theorem ch_arm_alloc:
+    (arm_alloc (v1,v2,v3,v4,v5,v6,a,x,xs) = (w1,w2,w3,w4,w5,w6,a',x',xs')) ==>
     CARD (reachables (t1::t2::ts) (ch_set h)) < l ==>
     ch_rel (t1::t2::ts,h,l) (v1,v2,v3,v4,v5,v6,a,x,xs) ==>
     ch_rel (fresh h::t2::ts,h |+ (fresh h,t1,t2,0w),l) (w1,w2,w3,w4,w5,w6,a',x,xs') /\
-    (a' = a) /\ (x' = x) /\ arm_alloc_pre (v1,v2,v3,v4,v5,v6,a,x,xs)``,
+    (a' = a) /\ (x' = x) /\ arm_alloc_pre (v1,v2,v3,v4,v5,v6,a,x,xs)
+Proof
   REWRITE_TAC [ch_rel_def] \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC
   \\ `?i e rs l u' m. u = (i,e,rs,l,u',m)` by METIS_TAC [PAIR]
   \\ `?i' e' rs' l'' u'' m'. cheney_alloc (i,e,rs,l,u',m) 0w = (i',e',rs',l'',u'',m')` by METIS_TAC [PAIR]
@@ -389,15 +393,15 @@ val ch_arm_alloc = store_thm("ch_arm_alloc",
   \\ Q.EXISTS_TAC `(i',e',rs',l'',u'',m')`
   \\ ASM_SIMP_TAC bool_ss [cheney_alloc_spec,FST]
   \\ MATCH_MP_TAC (GEN_ALL (RW [AND_IMP_INTRO] cheney_alloc_spec))
-  \\ FULL_SIMP_TAC bool_ss [] \\ METIS_TAC []);
+  \\ FULL_SIMP_TAC bool_ss [] \\ METIS_TAC []
+QED
 
-val aHEAP_def = Define `
+Definition aHEAP_def:
   aHEAP (a,l) (v1,v2,v3,v4,v5,v6,h) =
     SEP_EXISTS r3 r4 r5 r6 r7 r8 x xs.
       aR 3w r3 * aR 4w r4 * aR 5w r5 * aR 6w r6 * aR 7w r7 * aR 8w r8 * aR 9w a * aMEMORY x xs *
-      cond (ch_rel ([v1;v2;v3;v4;v5;v6],h,l) (r3,r4,r5,r6,r7,r8,a,x,xs))`;
-
-open progTheory set_sepTheory helperLib;
+      cond (ch_rel ([v1;v2;v3;v4;v5;v6],h,l) (r3,r4,r5,r6,r7,r8,a,x,xs))
+End
 
 val SPEC_ARM_ALLOC = save_thm("SPEC_ARM_ALLOC",let
   val th = arm_alloc_thm
@@ -446,6 +450,3 @@ val SPEC_ARM_ALLOC = save_thm("SPEC_ARM_ALLOC",let
     \\ FULL_SIMP_TAC (bool_ss++star_ss) [] \\ METIS_TAC [])
   val th = MP th lemma
   in th end);
-
-
-val _ = export_theory();

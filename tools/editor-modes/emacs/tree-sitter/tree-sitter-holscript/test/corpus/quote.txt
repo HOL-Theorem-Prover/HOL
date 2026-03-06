@@ -1,0 +1,89 @@
+======
+Basic
+======
+
+val _ = ‘a’
+
+---
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (backquote
+        (quoted)))))
+
+
+======
+ASCII
+======
+
+val _ = `a`
+
+---
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (backquote
+        (quoted)))))
+
+
+==========
+Antiquote
+==========
+
+val _ = ‘^x’
+
+---
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (backquote
+        (antiquoted
+          (sml_variable))))))
+
+
+========================
+Antiquote (Parentheses)
+========================
+
+val _ = ‘^(x)’
+
+---
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (backquote
+        (antiquoted
+          (vid_exp
+            (longvid
+              (vid))))))))
+
+
+======
+Mixed
+======
+
+val _ = ‘foo ^x ^(x) bar’
+
+---
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (backquote
+        (quoted)
+        (antiquoted
+          (sml_variable))
+        (antiquoted
+          (vid_exp
+            (longvid
+              (vid))))
+        (quoted)))))

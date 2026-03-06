@@ -1,7 +1,9 @@
-open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
-
+Theory term
+Ancestors
+  combin list arithmetic num prim_rec pair pred_set more_list
+  more_set variable
+Libs
+  Psyntax listLib dep_rewrite pairLib numLib Mutual tactics
 
 (* --------------------------------------------------------------------- *)
 (* Lifting the lambda calculus syntax to the abstract level.             *)
@@ -14,47 +16,18 @@ infixr -->;
 (* --------------------------------------------------------------------- *)
 
 
-val _ = new_theory "term";
-
-
-(* In interactive sessions, do:
-
-app load ["listTheory", "pred_setTheory", "pairTheory",
-          "arithmeticTheory", "numTheory", "prim_recTheory",
-          "dep_rewrite", "more_listTheory", "more_setTheory",
-          "variableTheory",
-          "pairLib", "numLib", "listLib",
-          "tautLib", "bossLib"];
-
-*)
-
-open Psyntax combinTheory;
-open listTheory listLib;
-open arithmeticTheory numTheory prim_recTheory;
-open pairTheory;
-open pred_setTheory;
-open dep_rewrite more_listTheory more_setTheory variableTheory;
-open pairLib;
-open numLib;
-open bossLib;
-open Mutual;
-
-
-open tactics;
-
-
-
 (* --------------------------------------------------------------------- *)
 (* Create datatypes for lambda expressions.                              *)
 (* --------------------------------------------------------------------- *)
 
 
-val _ = Hol_datatype
+Datatype:
 
-        ` term1 = Con1 of 'a
-                | Var1 of var
-                | App1 of term1 => term1
-                | Lam1 of var => term1 ` ;
+          term1 = Con1 'a
+                | Var1 var
+                | App1 term1 term1
+                | Lam1 var term1
+End
 
 
 val term1_distinct = theorem "term1_distinct";
@@ -65,10 +38,10 @@ val term1_case_cong = theorem "term1_case_cong";
 val term1_induct = theorem "term1_induction";
 val term1_Axiom = theorem "term1_Axiom";
 
-val term1_distinct2 = save_thm("term1_distinct2",
-                         CONJ term1_distinct (GSYM term1_distinct));
-val _ = save_thm("term1_one_one", term1_one_one);
-val _ = save_thm("term1_cases", term1_cases);
+Theorem term1_distinct2 =
+                         CONJ term1_distinct (GSYM term1_distinct);
+Theorem term1_one_one = term1_one_one;
+Theorem term1_cases = term1_cases;
 
 
 
@@ -88,23 +61,23 @@ val MAX =
      490);
 
 
-val LESS_EQ_MAX = store_thm
-   ("LESS_EQ_MAX",
-    “(!x y. x <= x MAX y) /\ (!x y. y <= x MAX y)”,
+Theorem LESS_EQ_MAX:
+     (!x y. x <= x MAX y) /\ (!x y. y <= x MAX y)
+Proof
     RW_TAC arith_ss [MAX]
-   );
+QED
 
-val MAX_SUC = store_thm
-   ("MAX_SUC",
-    “!x y. (SUC x MAX SUC y) = SUC(x MAX y)”,
+Theorem MAX_SUC:
+     !x y. (SUC x MAX SUC y) = SUC(x MAX y)
+Proof
     RW_TAC arith_ss [MAX]
-   );
+QED
 
-val MAX_LESS_EQ = store_thm
-   ("MAX_LESS_EQ",
-    “!x y z. ((x MAX y) <= z) = ((x <= z) /\ (y <= z))”,
+Theorem MAX_LESS_EQ:
+     !x y z. ((x MAX y) <= z) = ((x <= z) /\ (y <= z))
+Proof
     RW_TAC arith_ss [MAX]
-   );
+QED
 
 
 
@@ -116,9 +89,9 @@ Definition HEIGHT1_def:
 End
 
 
-val HEIGHT_LESS_EQ_ZERO1 = store_thm
-   ("HEIGHT_LESS_EQ_ZERO1",
-    “!t. (HEIGHT1 t <= 0) = ((?a:'a. t = Con1 a) \/ (?x. t = Var1 x))”,
+Theorem HEIGHT_LESS_EQ_ZERO1:
+     !t. (HEIGHT1 t <= 0) = ((?a:'a. t = Con1 a) \/ (?x. t = Var1 x))
+Proof
     Induct
     THEN REPEAT GEN_TAC
     THEN REWRITE_TAC[HEIGHT1_def]
@@ -126,30 +99,31 @@ val HEIGHT_LESS_EQ_ZERO1 = store_thm
     THEN REWRITE_TAC[term1_distinct2]
     THEN REWRITE_TAC[term1_one_one]
     THEN REWRITE_TAC[GSYM EXISTS_REFL]
-   );
+QED
 
 
 (* --------------------------------------------------------------------- *)
 (* Definition of free variables.                                         *)
 (* --------------------------------------------------------------------- *)
 
-val FV1_def = Define
-   `(FV1 (Con1 a)        = {})                                 /\
+Definition FV1_def:
+    (FV1 (Con1 a)        = {})                                 /\
     (FV1 (Var1 x)        = {x})                                /\
     (FV1 (App1 t u)      = FV1 t UNION FV1 u)                  /\
-    (FV1 (Lam1 x u)      = FV1 u DIFF {x})`;
+    (FV1 (Lam1 x u)      = FV1 u DIFF {x})
+End
 
 
-val FINITE_FV1 = store_thm
-   ("FINITE_FV1",
-    “!t:'a term1. FINITE (FV1 t)”,
+Theorem FINITE_FV1:
+     !t:'a term1. FINITE (FV1 t)
+Proof
     Induct
     THEN REWRITE_TAC[FV1_def]
     THEN ASM_REWRITE_TAC[FINITE_INSERT,FINITE_EMPTY,FINITE_UNION]
     THEN GEN_TAC
     THEN MATCH_MP_TAC FINITE_DIFF
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 
@@ -164,22 +138,22 @@ val subs = ty_antiq( ==`:(var # 'a term1) list`== );
 (* Application of a substitution to a single variable.                   *)
 (* --------------------------------------------------------------------- *)
 
-val SUB1_def =
-    Define
-    `(SUB1 (CONS p s) y = let (x, c:'a term1) = p in
+Definition SUB1_def:
+     (SUB1 (CONS p s) y = let (x, c:'a term1) = p in
                                 (if y = x then c else SUB1 s y)) /\
-     (SUB1 NIL y = Var1 y)`;
+     (SUB1 NIL y = Var1 y)
+End
 
-val SUB1 = store_thm
-   ("SUB1",
-    “(!y. SUB1 [] y = (Var1 y :'a term1)) /\
+Theorem SUB1:
+     (!y. SUB1 [] y = (Var1 y :'a term1)) /\
         (!y x (c :'a term1) s.
-          SUB1 ((x,c) :: s) y = (if y = x then c else SUB1 s y))”,
+          SUB1 ((x,c) :: s) y = (if y = x then c else SUB1 s y))
+Proof
     MP_TAC SUB1_def
     THEN ONCE_REWRITE_TAC[GSYM PAIR]
     THEN CONV_TAC (DEPTH_CONV let_CONV)
     THEN DISCH_THEN REWRITE_THM
-   );
+QED
 
 
 (* Variable-for-variable substitutions *)
@@ -212,9 +186,9 @@ Proof
 QED
 
 
-val SUB_vsubst_Var1 = store_thm
-   ("SUB_vsubst_Var1",
-    “!xs ys x. ?y. SUB1 (xs // ys) x = Var1 y :'a term1”,
+Theorem SUB_vsubst_Var1:
+     !xs ys x. ?y. SUB1 (xs // ys) x = Var1 y :'a term1
+Proof
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[vsubst1,SUB1]
     THENL
@@ -243,27 +217,27 @@ val SUB_vsubst_Var1 = store_thm
               ]
           ]
       ]
-   );
+QED
 
 
-val IN_FV_SUB_vsubst1 = store_thm
-   ("IN_FV_SUB_vsubst1",
-    “!xs ys x y.
+Theorem IN_FV_SUB_vsubst1:
+     !xs ys x y.
          (y IN FV1 (SUB1 (xs // ys) x :'a term1)) =
-         (SUB1 (xs // ys) x = Var1 y :'a term1)”,
+         (SUB1 (xs // ys) x = Var1 y :'a term1)
+Proof
     REPEAT GEN_TAC
     THEN STRIP_ASSUME_TAC (SPEC_ALL SUB_vsubst_Var1)
     THEN ASM_REWRITE_TAC[FV1_def,term1_one_one,IN]
     THEN MATCH_ACCEPT_TAC EQ_SYM_EQ
-   );
+QED
 
 
-val SUB_APPEND_vsubst1 = store_thm
-   ("SUB_APPEND_vsubst1",
-    “!xs ys xs' ys' x.
+Theorem SUB_APPEND_vsubst1:
+     !xs ys xs' ys' x.
          (LENGTH xs = LENGTH ys) ==>
          (SUB1 (APPEND xs xs' // APPEND ys ys') x :'a term1 =
-          (if (x IN SL xs) then SUB1 (xs // ys) x else SUB1 (xs' // ys') x))”,
+          (if (x IN SL xs) then SUB1 (xs // ys) x else SUB1 (xs' // ys') x))
+Proof
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[SL,IN]
     THENL
@@ -287,14 +261,14 @@ val SUB_APPEND_vsubst1 = store_thm
             THEN ASM_REWRITE_TAC[]
           ]
       ]
-   );
+QED
 
 
-val SUB_FREE_vsubst1 = store_thm
-   ("SUB_FREE_vsubst1",
-    “!xs ys x.
+Theorem SUB_FREE_vsubst1:
+     !xs ys x.
          ~(x IN SL xs) ==>
-         (SUB1 (xs // ys) x = Var1 x :'a term1)”,
+         (SUB1 (xs // ys) x = Var1 x :'a term1)
+Proof
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[SL,IN]
     THENL
@@ -310,14 +284,14 @@ val SUB_FREE_vsubst1 = store_thm
         THEN FIRST_ASSUM (REWRITE_THM o GSYM)
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
-val SUB_APPEND_FREE_vsubst1 = store_thm
-   ("SUB_APPEND_FREE_vsubst1",
-    “!xs ys xs' ys' x.
+Theorem SUB_APPEND_FREE_vsubst1:
+     !xs ys xs' ys' x.
          (LENGTH xs = LENGTH ys) /\ ~(x IN SL xs) ==>
          (SUB1 (APPEND xs xs' // APPEND ys ys') x =
-          SUB1 (xs' // ys') x :'a term1)”,
+          SUB1 (xs' // ys') x :'a term1)
+Proof
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[SL,IN]
     THENL
@@ -338,7 +312,7 @@ val SUB_APPEND_FREE_vsubst1 = store_thm
         THEN FIRST_ASSUM MATCH_MP_TAC
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
 
@@ -348,19 +322,19 @@ val SUB_APPEND_FREE_vsubst1 = store_thm
 (*   Only these variables are changed by a substitution                  *)
 (* --------------------------------------------------------------------- *)
 
-val BV_subst_def =
-    Define
-       `(BV_subst NIL = {}) /\
-        (BV_subst (CONS (x:(var # 'a)) xs) = (FST x INSERT BV_subst xs))`;
+Definition BV_subst_def:
+        (BV_subst NIL = {}) /\
+        (BV_subst (CONS (x:(var # 'a)) xs) = (FST x INSERT BV_subst xs))
+End
 
 
-val FINITE_BV_subst = store_thm
-   ("FINITE_BV_subst",
-    “!s:(var # 'a)list. FINITE (BV_subst s)”,
+Theorem FINITE_BV_subst:
+     !s:(var # 'a)list. FINITE (BV_subst s)
+Proof
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[BV_subst_def]
     THEN ASM_REWRITE_TAC[FINITE_EMPTY,FINITE_INSERT]
-   );
+QED
 
 (*
 val BV_subst_IDENT = store_thm
@@ -398,15 +372,15 @@ val BV_vsubst1 = store_thm
 (*   of the substitution; else the result is infinite                    *)
 (* --------------------------------------------------------------------- *)
 
-val FV_subst1 =
-    new_definition("FV_subst1",
-    “FV_subst1 (s:^subs) xs = UNION_SET (IMAGE (FV1 o SUB1 s) xs)”);
+Definition FV_subst1[nocompute]:
+    FV_subst1 (s:^subs) xs = UNION_SET (IMAGE (FV1 o SUB1 s) xs)
+End
 
 
 
-val FINITE_FV_subst1 = store_thm
-   ("FINITE_FV_subst1",
-    “!t s:^subs. FINITE t ==> FINITE (FV_subst1 s t)”,
+Theorem FINITE_FV_subst1:
+     !t s:^subs. FINITE t ==> FINITE (FV_subst1 s t)
+Proof
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[FV_subst1]
     THEN DEP_REWRITE_TAC[FINITE_UNION_SET]
@@ -416,14 +390,14 @@ val FINITE_FV_subst1 = store_thm
     THEN ASM_REWRITE_TAC[o_THM,FINITE_FV1]
     THEN MATCH_MP_TAC FINITE_DIFF
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
-val FV_subst_EQ1 = store_thm
-   ("FV_subst_EQ1",
-    “!s1:^subs s2 t.
+Theorem FV_subst_EQ1:
+     !s1:^subs s2 t.
           (!x. (x IN t) ==> (SUB1 s1 x = SUB1 s2 x)) ==>
-          (FV_subst1 s1 t = FV_subst1 s2 t)”,
+          (FV_subst1 s1 t = FV_subst1 s2 t)
+Proof
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[FV_subst1]
     THEN REWRITE_TAC[EXTENSION]
@@ -444,13 +418,13 @@ val FV_subst_EQ1 = store_thm
         THEN RES_TAC
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
-val FV_subst_IDENT1 = store_thm
-   ("FV_subst_IDENT1",
-    “!s:^subs t. (!x. (x IN t) ==> (SUB1 s x = Var1 x)) ==>
-                    (FV_subst1 s t = t)”,
+Theorem FV_subst_IDENT1:
+     !s:^subs t. (!x. (x IN t) ==> (SUB1 s x = Var1 x)) ==>
+                    (FV_subst1 s t = t)
+Proof
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[FV_subst1]
     THEN REWRITE_TAC[EXTENSION]
@@ -471,23 +445,23 @@ val FV_subst_IDENT1 = store_thm
         THEN RES_TAC
         THEN ASM_REWRITE_TAC[FV1_def]
       ]
-   );
+QED
 
 
-val FV_subst_NIL1 = store_thm
-   ("FV_subst_NIL1",
-    “!s. FV_subst1 ([]:^subs) s = s”,
+Theorem FV_subst_NIL1:
+     !s. FV_subst1 ([]:^subs) s = s
+Proof
     GEN_TAC
     THEN MATCH_MP_TAC FV_subst_IDENT1
     THEN REWRITE_TAC[SUB1]
-   );
+QED
 
 
-val FREE_SUB1 = store_thm
-   ("FREE_SUB1",
-    “!s:^subs t.
+Theorem FREE_SUB1:
+     !s:^subs t.
           DISJOINT t (BV_subst s) ==>
-          (!x. (x IN t) ==> (SUB1 s x = Var1 x))”,
+          (!x. (x IN t) ==> (SUB1 s x = Var1 x))
+Proof
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[BV_subst_def]
     THEN REWRITE_TAC[DISJOINT_EMPTY,DISJOINT_INSERT2]
@@ -501,23 +475,23 @@ val FREE_SUB1 = store_thm
         THEN FIRST_ASSUM REWRITE_THM
         THEN RES_TAC
       ]
-   );
+QED
 
-val FREE_FV_SUB1 = store_thm
-   ("FREE_FV_SUB1",
-    “!s:^subs t.
+Theorem FREE_FV_SUB1:
+     !s:^subs t.
           DISJOINT t (BV_subst s) ==>
-          (!x. (x IN t) ==> (FV1 (SUB1 s x) = {x}))”,
+          (!x. (x IN t) ==> (FV1 (SUB1 s x) = {x}))
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC FREE_SUB1
     THEN ASM_REWRITE_TAC[FV1_def]
-   );
+QED
 
-val FREE_IDENT_SUBST1 = store_thm
-   ("FREE_IDENT_SUBST1",
-    “!s:^subs t.
+Theorem FREE_IDENT_SUBST1:
+     !s:^subs t.
           DISJOINT t (BV_subst s) ==>
-          (FV_subst1 s t = t)”,
+          (FV_subst1 s t = t)
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC FREE_FV_SUB1
     THEN REWRITE_TAC[FV_subst1]
@@ -540,7 +514,7 @@ val FREE_IDENT_SUBST1 = store_thm
         THEN RES_TAC
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -599,10 +573,7 @@ handle e => Raise e;
 
 (* Now overload the substitution operator <[ to refer to any of the  *)
 (* object, dict, entry, or method substitution operators defined:    *)
-
-val _ = map (fn t => overload_on("<[", t))
-            [“$SUB1t :'a term1 -> ^subs -> 'a term1”]
-handle e => Raise e;
+Overload "<[" = “$SUB1t :'a term1 -> ^subs -> 'a term1”
 
 
 (* Now, printed interactively, we read
@@ -625,11 +596,11 @@ tautLib.TAUT_CONV “(a \/ b ==> c) = ((a ==> c) /\ (b ==> c))”
 handle e => Raise e;
 *)
 
-val subst_EQ1 = store_thm
-   ("subst_EQ1",
-    “!a s1 s2:^subs.
+Theorem subst_EQ1:
+     !a s1 s2:^subs.
           (!x. (x IN FV1 a) ==> (SUB1 s1 x = SUB1 s2 x)) ==>
-                   ((a <[ s1) = (a <[ s2))”,
+                   ((a <[ s1) = (a <[ s2))
+Proof
     Induct
     THEN REWRITE_TAC[FV1_def,IN_UNION,IN]
     THEN REWRITE_TAC[OR_IMP]
@@ -655,13 +626,13 @@ val subst_EQ1 = store_thm
         THEN FIRST_ASSUM MATCH_MP_TAC
         THEN ASM_REWRITE_TAC[IN_DIFF,IN]
       ]
-   );
+QED
 
-val subst_IDENT1 = store_thm
-   ("subst_IDENT1",
-    “!a s:^subs.
+Theorem subst_IDENT1:
+     !a s:^subs.
           (!x. (x IN FV1 a) ==> (SUB1 s x = Var1 x)) ==>
-              ((a <[ s) = a)”,
+              ((a <[ s) = a)
+Proof
     Induct
     THEN REWRITE_TAC[FV1_def,IN_UNION,IN]
     THEN REWRITE_TAC[OR_IMP]
@@ -689,31 +660,31 @@ val subst_IDENT1 = store_thm
         THEN FIRST_ASSUM MATCH_MP_TAC
         THEN ASM_REWRITE_TAC[IN_DIFF,IN]
       ]
-   );
+QED
 
-val subst_NIL1 = store_thm
-   ("subst_NIL1",
-    “!a. (a <[ []:^subs) = a”,
+Theorem subst_NIL1:
+     !a. (a <[ []:^subs) = a
+Proof
     GEN_TAC
     THENL (map MATCH_MP_TAC (CONJUNCTS subst_IDENT1))
     THEN REWRITE_TAC[SUB1]
-   );
+QED
 
-val subst_SAME_ONE1 = store_thm
-   ("subst_SAME_ONE1",
-    “!a x. (a <[ [x,Var1 x]:^subs) = a”,
+Theorem subst_SAME_ONE1:
+     !a x. (a <[ [x,Var1 x]:^subs) = a
+Proof
     REPEAT GEN_TAC
     THEN MATCH_MP_TAC subst_IDENT1
     THEN REWRITE_TAC[SUB1]
     THEN GEN_TAC
     THEN COND_CASES_TAC
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
-val subst_SAME_TWO1 = store_thm
-   ("subst_SAME_TWO1",
-    “!a x t u. (a <[ [x,t; x,u]:^subs) = (a <[ [x,t])”,
+Theorem subst_SAME_TWO1:
+     !a x t u. (a <[ [x,t; x,u]:^subs) = (a <[ [x,t])
+Proof
     REPEAT GEN_TAC
     THEN MATCH_MP_TAC subst_EQ1
     THEN REWRITE_TAC[SUB1]
@@ -721,13 +692,13 @@ val subst_SAME_TWO1 = store_thm
     THEN DISCH_TAC
     THEN COND_CASES_TAC
     THEN REWRITE_TAC[]
-   );
+QED
 
 
-val FV_vsubst1 = store_thm
-   ("FV_vsubst1",
-    “!t xs ys.
-           FV1 t DIFF SL xs SUBSET FV1 (t <[ (xs // ys):^subs) ”,
+Theorem FV_vsubst1:
+     !t xs ys.
+           FV1 t DIFF SL xs SUBSET FV1 (t <[ (xs // ys):^subs)
+Proof
     Induct
     THEN REPEAT GEN_TAC
     THEN REWRITE_TAC[SUB_term1_def]
@@ -768,10 +739,8 @@ val FV_vsubst1 = store_thm
         THEN EXISTS_TAC “x:var”
         THEN ASM_REWRITE_TAC[EXTENSION,FV1_def,IN]
       ]
-   );
+QED
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "-" "term.lst";
 

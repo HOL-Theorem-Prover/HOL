@@ -1,12 +1,9 @@
-open HolKernel boolLib bossLib Parse
-open armv86aTheory armv86a_terminationTheory armv86a_typesTheory
-open arm8Theory arm8Lib arm8_stepTheory arm8_stepLib
-open wordsTheory bitstringTheory finite_mapTheory listTheory
-     arithmeticTheory integerTheory
-open wordsLib optionLib combinLib
-
-val _ = new_theory "l3_equivalence";
-val _ = set_grammar_ancestry ["arm8_step", "arm8", "armv86a_termination"];
+Theory l3_equivalence
+Ancestors
+  arm8_step arm8 armv86a_termination armv86a armv86a_types words
+  bitstring finite_map list arithmetic integer
+Libs
+  arm8Lib arm8_stepLib wordsLib optionLib combinLib
 
 val _ = wordsLib.output_words_as_bin();
 val _ = wordsLib.guess_lengths();
@@ -149,6 +146,4 @@ Definition l3_models_asl_instr_def:
       | ARM8 opcode => l3_models_asl opcode
       | _ => F
 End
-
-val _ = export_theory();
 

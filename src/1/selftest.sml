@@ -3,6 +3,19 @@ open HolKernel Parse boolTheory boolLib
 open testutils
 val _ = set_trace "Unicode" 0
 
+val goal_compare = pair_compare(list_compare Term.compare, Term.compare)
+val goals_compare = list_compare goal_compare
+fun goals_eq gs1 gs2 = goals_compare (gs1, gs2) = EQUAL
+
+fun listp p xs = "[" ^ String.concatWith ", " (map p xs) ^ "]"
+fun pairp (p1, p2) (x,y) = "(" ^ p1 x ^ ", " ^ p2 y ^ ")"
+fun optp p NONE = "NONE"
+  | optp p (SOME x) = "SOME("^p x^")"
+
+val goal_toString =
+    pairp (listp term_to_string, term_to_string)
+val goals_toString = listp goal_toString
+
 val _ = tprint "Preterm free variables 1"
 val _ = require (check_result null) (Preterm.ptfvs o Parse.Preterm) ‘\x. x’
 
@@ -127,7 +140,7 @@ in
 end handle ExitOK => OK();
 
 fun cleanup() = let
-  fun rm s = FileSys.remove ("scratchTheory." ^ s)
+  fun rm s = HOLFileSys.remove ("scratchTheory." ^ s)
       handle _ => ()
 in
   app rm ["sml", "sig", "dat"]
@@ -289,7 +302,7 @@ fun checkparse () = let
   val tm = Lib.with_flag (Globals.notify_on_tyvar_guess, false)
                          Parse.Term
                          `!x. P x`
-  val randty =  type_of (rand tm)
+  val randty = type_of (rand tm)
 in
   if Type.compare(randty, alpha --> bool) <> EQUAL then die ""
   else OK()
@@ -1147,21 +1160,30 @@ val _ = let
   val asl = [“Q (a:ind) (b:'b):bool”,  “P (a:ind):bool”, “R T : bool”,
              “!x:ind. P x ==> !c:'b. Q x c ==> F”]
   val g = (asl, “p /\ q”)
-  val eres = Exn.capture (#1 o VALID (first_x_assum drule_all)) g
   val (asl', _) = front_last asl
   val expected = (asl', “F ==> p /\ q”)
 in
-  case eres of
-      Exn.Res res =>
-      if ListPair.allEq goal_equal ([expected], res) then OK()
-      else die ("Unexpected result:\n  " ^
-                PP.pp_to_string 70
-                                (fn r => PP.block PP.CONSISTENT 2 [pp_goals r])
-                                res
-               )
-    | Exn.Exn e => die ("Unexpected exception: " ^ General.exnMessage e)
+  require_pretty_msg
+    (check_result (fn r => ListPair.allEq goal_equal ([expected], r)))
+    pp_goals
+    (#1 o VALID (first_x_assum drule_all))
+    g
 end
 
+val _ = let
+  val _ = tprint "drule_all 3 (ith with negated concl.)"
+  val asl = [“Q(a:ind) (b:'b):bool”, “P (a:ind):bool”,
+             “!x:ind. P x ==> !c:'b. Q x c ==> !z:'b. ~R c z”]
+  val g = (asl, “p /\ q”)
+  val (asl', _) = front_last asl
+  val expected = (asl', “(!z:'b. ~R (b:'b) z) ==> p /\ q”)
+in
+  require_pretty_msg
+    (check_result (fn r => ListPair.allEq goal_equal ([expected], r)))
+    pp_goals
+    (#1 o VALID (first_x_assum drule_all))
+    g
+end
 
 val _ = let
   val _ = tprint "dxrule_all 1"
@@ -1315,3 +1337,123 @@ in
            SWAP_EXISTS_CONV,
            t, expected)
 end
+
+fun q s = "\"" ^ String.toString s ^ "\""
+fun kvs_toString (k,vs) =
+    "(" ^ q k ^ ", [" ^ String.concatWith ", " (map q vs) ^ "])"
+fun kvs_alist_toString al =
+    "[" ^ String.concatWith ", " (map kvs_toString al) ^ "]"
+fun attr_result_toString {thmname,attrs,reserved,unknown} =
+    "{ attrs = " ^ kvs_alist_toString attrs ^ ",\n" ^
+    "  reserved = " ^ kvs_alist_toString reserved ^ ",\n" ^
+    "  unknown = " ^ kvs_alist_toString unknown ^ ",\n" ^
+    "  thmname = " ^ q thmname ^ "}"
+
+val _ = let
+  val _ = tprint ("extract_attributes \"" ^
+                  "foo[local,simp=once twice,baz]\"")
+  val expected = {attrs = [] : (string * string list) list,
+                  reserved = [("local", [])],
+                  thmname = "foo",
+                  unknown = [("simp", ["once", "twice"]), ("baz", [])]}
+in
+  require_msg
+    (check_result (equal expected))
+    attr_result_toString
+    ThmAttribute.extract_attributes
+    "foo[local,simp=once twice,baz]"
+end
+
+val _ = let
+  val _ = tprint "attribute abbreviation \"foo[A1=v1  v3,*]\""
+  val expected = {attrs = [],
+                  reserved = [("local", [])],
+                  thmname = "foo",
+                  unknown = [("A1",["v1", "v3"]),
+                             ("A2",[]), ("A3", ["vv"])]}
+  val _ = ThmAttribute.define_abbreviation{
+        abbrev = "*",
+        expansion = [("A2", []), ("local", []), ("A3", ["vv"])]
+      }
+in
+  require_msg
+    (check_result (equal expected))
+    attr_result_toString
+    ThmAttribute.extract_attributes
+    "foo[A1=v1  v3,*]"
+end;
+
+val _ = let
+  val _ = tprint "ABS_TAC with name conflation"
+  val t = “(\a:bool. T = T) = (\b. (a:bool) = a)”
+  val expected = [([], “(T = T) = (a = a:bool)”)]
+in
+  require_msg
+    (check_result (goals_eq expected o fst))
+    (goals_toString o fst)
+    (VALID ABS_TAC)
+    ([], t)
+end;
+
+val _ = let
+  val _ = tprint "EQ_MP_TAC(1)"
+  val t = “p /\ q”
+  val th = ASSUME “r \/ s”
+  val expected = [([], “r \/ s <=> p /\ q”)]
+in
+  require_msg
+    (check_result (goals_eq expected o fst))
+    (goals_toString o fst)
+    (EQ_MP_TAC th)
+    ([], t)
+end;
+
+val _ = let
+  val _ = tprint "EQ_MP_TAC(2)"
+  val t = “p /\ q”
+  val expected = [([], “T /\ T <=> p /\ q”)]
+  val th = CONJ TRUTH TRUTH
+in
+  require_msg
+    (check_result (goals_eq expected o fst))
+    (goals_toString o fst)
+    (VALID (EQ_MP_TAC th))
+    ([], t)
+end;
+
+fun ip p {redex,residue} = p redex ^ " |-> " ^ p residue
+
+fun unify_test (t1,t2,b,st) =
+let
+  open optmonad
+  infix >>
+  fun tmp st = Feedback.trace ("types", if st then 1 else 0) term_to_string
+  val _ = tprint ("Unify" ^ (if b then "✓: " else "×: ") ^
+                  tmp st t1 ^ " and " ^ tmp st t2)
+  fun sub (tyi,tmi) t = Term.subst tmi (Term.inst tyi t)
+  fun check opt =
+      case opt of
+          NONE => not b
+        | SOME r =>
+          b andalso aconv (sub r t1) (sub r t2)
+  val print = optp (pairp(listp $ ip type_to_string, listp $ ip $ tmp true))
+in
+  require_msg (check_result check) print
+              FullUnify.Env.fromEmpty
+              (FullUnify.unify [] [] (t1,t2) >> FullUnify.collapse)
+end
+
+val _ = new_constant ("cle", “:'a -> 'b -> bool”)
+
+val _ = app unify_test [
+      (“x:bool”, “x:'a”, true, true),
+      (“x:bool->bool”, “y:bool”, false, true),
+      (“~ x”, “(f : 'a -> 'b) y”, true, true),
+      (“(f:'a -> 'a) x”, “$/\ T”, false, true),
+      (“(\x y. x /\ y <=> u /\ v) u a”,
+       “(f:bool->bool -> bool) x x”, true, false),
+      (“\x y. x /\ y /\ z”, “\a x. a /\ x”, false, false),
+      (“\x y. x /\ y”, “\y x. y /\ x”, true, false),
+      (“\x y. x /\ y”, “\y:'a x:'b. f y x”, true, false),
+      (“cle (t:'a) ($= t)”, “cle (s:'b) (t0:'c)”, true, false)
+    ]

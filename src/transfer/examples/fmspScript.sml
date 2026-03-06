@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open finite_mapTheory sptreeTheory transferTheory pred_setTheory
-
-open transferLib
-
-val _ = new_theory "fmsp";
+Theory fmsp
+Ancestors
+  finite_map sptree transfer pred_set
+Libs
+  transferLib
 
 Definition FMSP_def:
   FMSP AN BC fm sp <=>
@@ -274,4 +272,3 @@ Proof
        DOMSUB_FLOOKUP_THM] >> rw[]
 QED
 
-val _ = export_theory();

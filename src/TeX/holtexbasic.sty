@@ -6,7 +6,7 @@
 % -------------------------------------------------------
 
 \NeedsTeXFormat{LaTeX2e}
-\usepackage{amssymb, underscore, fancyvrb, amsmath}
+\usepackage{amssymb, underscore, fancyvrb, amsmath, stix}
 
 \fvset{commandchars=\\\{\},xleftmargin=1mm,framesep=1.2mm,fontsize=\small}
 
@@ -31,14 +31,14 @@
 \newcommand{\HOLKeyword}[1]{{\bfseries{\textsf{#1}}}}
 \newcommand{\HOLBoundVar}[1]{\ensuremath{\mathit{#1}}}
 \newcommand{\HOLFreeVar}[1]{\ensuremath{\mathit{#1}}}
-\newcommand{\HOLConst}[1]{\texttt{#1}}
+\newcommand{\HOLConst}[1]{\textsf{#1}}
 \newcommand{\HOLSymConst}[1]{#1}
-\newcommand{\HOLTyOp}[1]{\texttt{#1}}
-\newcommand{\HOLStringLit}[1]{\textrm{``#1''}}
-\newcommand{\HOLStringLitDG}[1]{\textrm{\guillemotleft#1\guillemotright}}
-\newcommand{\HOLStringLitSG}[1]{\textrm{\guilsinglleft#1\guilsinglright}}
+\newcommand{\HOLTyOp}[1]{\textsf{#1}}
+\newcommand{\HOLStringLit}[1]{\texttt{``#1''}}
+\newcommand{\HOLStringLitDG}[1]{\texttt{\guillemotleft#1\guillemotright}}
+\newcommand{\HOLStringLitSG}[1]{\texttt{\guilsinglleft#1\guilsinglright}}
 \newcommand{\HOLNumLit}[1]{\ensuremath{#1}}
-\newcommand{\HOLCharLit}[1]{\textrm{\#``#1''}}
+\newcommand{\HOLCharLit}[1]{\texttt{\#``#1''}}
 \newcommand{\HOLFieldName}[1]{\textsf{#1}}
 \newcommand{\HOLBeginSup}{\begin{math}{}\sp\bgroup\tt}
 \newcommand{\HOLBeginSub}{\begin{math}{}\sb\bgroup\tt}
@@ -51,6 +51,7 @@
 \newcommand{\HOLTokenTilde}{\texttt{\char'176}}
 \newcommand{\HOLTokenDoubleQuote}{\texttt{\char'42}}
 \newcommand{\HOLTokenDoublePlus}{\ensuremath{\mathbin{+\mkern-10mu+}}}
+\newcommand{\HOLTokenDoublePlusL}{\ensuremath{\mathbin{+\mkern-10mu+}_{l}}}
 \newcommand{\HOLTokenUnderscore}{\texttt{\_}}
 \newcommand{\HOLTokenIn}{\ensuremath{\in}}
 \newcommand{\HOLTokenNotIn}{\ensuremath{\notin}}
@@ -61,6 +62,8 @@
 \newcommand{\HOLTokenBigInter}{\ensuremath{\bigcap}}
 \newcommand{\HOLTokenRInter}{\ensuremath{\cap_r}}
 \newcommand{\HOLTokenLeftbrace}{\ensuremath{\left\{\right.}}
+\newcommand{\HOLTokenLeftELbracket}{\ensuremath{\lbrbrak}}
+\newcommand{\HOLTokenRightELbracket}{\ensuremath{\rbrbrak}}
 \newcommand{\HOLTokenRightbrace}{\ensuremath{\left.\right\}}}
 \newcommand{\HOLTokenTurnstile}{\ensuremath{\:\:\vdash}}
 \newcommand{\HOLTokenLambda}{\ensuremath{\lambda\,}}
@@ -104,6 +107,7 @@
 \newcommand{\HOLTokenLsl}{\ensuremath{\ll}} % {\texttt{<<}}
 \newcommand{\HOLTokenSupStar}{\ensuremath{{}^*}}
 \newcommand{\HOLTokenSupPlus}{\ensuremath{{}^+}}
+\newcommand{\HOLTokenSupMinus}{\ensuremath{{}^-}}
 \newcommand{\HOLTokenSupTwo}{\ensuremath{{}^2}}
 \newcommand{\HOLTokenSupThree}{\ensuremath{{}^3}}
 \newcommand{\HOLTokenSupFour}{\ensuremath{{}^4}}
@@ -133,3 +137,6 @@
 \newcommand{\HOLTokenIntegral}{\ensuremath{\int}}
 \newcommand{\HOLTokenIntegralPlus}{\ensuremath{\int^{+}}}
 \newcommand{\HOLTokenFUNION}{\ensuremath{\uplus}} % not ideal; the real symbol is available in unicode-math if you use xelatex...
+\newcommand{\HOLTokenLameq}{\ensuremath{\!=_\beta\!\!}}
+\newcommand{\HOLTokenLameta}{\ensuremath{\!=_{\beta\eta}\!\!}}
+\newcommand{\HOLTokenBottom}{\ensuremath{\bot}}

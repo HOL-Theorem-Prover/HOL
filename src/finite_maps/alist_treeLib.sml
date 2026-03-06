@@ -70,7 +70,7 @@ fun assume_prems thm = if not (is_imp (concl thm)) then thm
 fun do_inst_mp insts mp_thm arg_thm = let
     val (prem, _) = dest_imp (concl mp_thm)
     fun rerr e s = let
-        val m = s ^ ": " ^ #message e
+        val m = s ^ ": " ^ message_of e
       in print ("error in do_inst_mp: " ^ m ^ "\n");
         print_thm mp_thm; print "\n"; print_thm arg_thm; print "\n";
         raise (err "do_inst_mp" m) end

@@ -87,7 +87,4 @@ fun contains_fun_ty ty =
   else if not (can dest_type ty) then false
        else dest_type ty |> snd |> List.exists contains_fun_ty
 
-val _ = temp_overload_on("Num",cvSyntax.cv_num_tm);
-val _ = temp_overload_on("Pair",cvSyntax.cv_pair_tm);
-
 end

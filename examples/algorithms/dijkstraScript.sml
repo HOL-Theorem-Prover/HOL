@@ -1,11 +1,9 @@
 (*
   Dijkstra's algorithm for computing shortest paths
 *)
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory pred_setTheory listTheory;
-open finite_mapTheory optionTheory pairTheory;
-
-val _ = new_theory "dijkstra";
+Theory dijkstra
+Ancestors
+  arithmetic pred_set list finite_map option pair
 
 (* --- definition of algorithm --- *)
 
@@ -95,7 +93,7 @@ End
 
 (* --- verification --- *)
 
-Triviality FDOM_update:
+Theorem FDOM_update[local]:
   ∀xs root n q.
     FDOM (update xs root n k q) =
     FDOM q ∪ (set (MAP FST xs) DIFF FDOM k)
@@ -158,7 +156,7 @@ Proof
   \\ BasicProvers.EVERY_CASE_TAC \\ gvs [FLOOKUP_update_neq]
 QED
 
-Triviality pull_if:
+Theorem pull_if[local]:
   (f (if b then x else y) = if b then f x else f y) ∧
   ((if b then g1 else g2) z = if b then g1 z else g2 z)
 Proof
@@ -481,4 +479,3 @@ Proof
   \\ irule_at Any has_path_end
 QED
 
-val _ = export_theory();

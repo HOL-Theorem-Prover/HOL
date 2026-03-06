@@ -5,6 +5,14 @@
 structure Library =
 struct
 
+  structure Parse :> Parse =
+  struct
+    infixr $
+    fun f $ x = f x
+    open Parse
+    val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="words"}
+  end
+
   (***************************************************************************)
   (* tracing                                                                 *)
   (***************************************************************************)
@@ -125,7 +133,7 @@ struct
             SOME token => (buffer := NONE; token)
           | NONE => aux [] (get_char ())
       in
-        if !trace > 2 then
+        if !trace > 3 then
           Feedback.HOL_MESG ("HolSmtLib: next token is '" ^ token ^ "'")
         else ();
         token
@@ -205,6 +213,52 @@ struct
   (***************************************************************************)
   (* auxiliary functions                                                     *)
   (***************************************************************************)
+
+  (* Convert a term to a string, in such a way that terms with exponentially
+     large term sizes can still be printed very quickly.
+
+     This function is needed because Z3 can create terms which cause a
+     combinatorial explosion in both the running time and the output size if
+     they were to be printed out fully, and in fact the default HOL
+     pretty-printers do suffer from apparent hangs when printing such terms.
+
+     To prevent this from happening, this function temporarily sets
+     `max_print_depth` so that sub-terms deeper than some value get abbreviated
+     with the string "...", therefore preventing the full gigantic term tree
+     from being traversed. It also removes non-trivial overloads, since some of
+     them are also causing the pretty-printer to appear to hang when printing
+     terms. *)
+  fun term_to_string tm =
+  let
+    val grammar = Parse.term_grammar ()
+    val simpler_grammar = term_grammar.clear_overloads grammar
+  in
+    Lib.with_flag(Globals.max_print_depth, 15)
+      (Parse.term_to_string_by_grammar (Parse.type_grammar (), simpler_grammar))
+        tm
+  end
+
+  (* the same as above, but print a theorem instead *)
+  fun thm_to_string thm =
+  let
+    fun hyps_to_string hyps =
+      String.concatWith ", " (List.map term_to_string hyps)
+    val hyps_contents =
+      if !Globals.show_assums then
+        hyps_to_string (Thm.hyp thm)
+      else
+        "."
+  in
+    " [" ^ hyps_contents ^ "] |- " ^ term_to_string (Thm.concl thm)
+  end
+
+  fun check_oracle_tags name thm =
+    if Sanity.check_tags ((Theory.current_theory (), name), thm) then
+      raise Feedback.mk_HOL_ERR "HolSmtLib" "check_oracle_tags"
+        ("solver '" ^ name ^ "' produced unexpected oracle/axiom tags: " ^
+         thm_to_string thm)
+    else
+      ()
 
   (* `is_def_oriented` must return false when:
      1. `lhs` is not a variable in `var_set` but `rhs` is, or
@@ -357,7 +411,7 @@ struct
       pred_setTheory.EMPTY_DEF, pred_setTheory.UNIV_DEF,
       pred_setTheory.UNION_DEF, pred_setTheory.INTER_DEF]
   in
-    simpLib.SIMP_TAC (simpLib.mk_simpset [pred_setTheory.SET_SPEC_ss]) thms
+    simpLib.SIMP_TAC (simpLib.mk_simpset [pred_setSimps.SET_SPEC_ss]) thms
   end
 
   (* A tactic that unfolds LET. *)
@@ -366,25 +420,25 @@ struct
 
   (* A tactic that simplifies certain word expressions. *)
 
-  val TO_WORD_EXTRACT = Q.prove(
-        `(!w : 'a word.
+  val TO_WORD_EXTRACT = boolLib.TAC_PROOF(([],
+        “(!w : 'a word.
             dimindex(:'b) < dimindex(:'a) ==>
             (w2w w : 'b word = (dimindex(:'b) - 1 >< 0) w)) /\
          (!w : 'a word.
             dimindex(:'b) < dimindex(:'a) ==>
-            (sw2sw w : 'b word = (dimindex(:'b) - 1 >< 0) w))`,
+            (sw2sw w : 'b word = (dimindex(:'b) - 1 >< 0) w))”),
         BasicProvers.SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [])
 
   val WORD_BIT_EXTRACT = simpLib.SIMP_PROVE
         (simpLib.++(bossLib.std_ss, wordsLib.WORD_BIT_EQ_ss))
-        [wordsLib.WORD_DECIDE ``1w :word1 ' 0``]
-      ``!w:'a word i. i < dimindex (:'a) ==> (w ' i = ((i >< i) w = 1w:word1))``
+        [wordsLib.WORD_DECIDE “1w :word1 ' 0”]
+        “!w:'a word i. i < dimindex (:'a) ==> (w ' i = ((i >< i) w = 1w:word1))”
 
   val WORD_SHIFT_BV = simpLib.SIMP_PROVE bossLib.bool_ss
         [wordsTheory.word_shift_bv]
-      ``(!w:'a word n. n < dimword (:'a) ==> (w << n = w <<~ n2w n)) /\
+       “(!w:'a word n. n < dimword (:'a) ==> (w << n = w <<~ n2w n)) /\
         (!w:'a word n. n < dimword (:'a) ==> (w >> n = w >>~ n2w n)) /\
-        (!w:'a word n. n < dimword (:'a) ==> (w >>> n = w >>>~ n2w n))``
+        (!w:'a word n. n < dimword (:'a) ==> (w >>> n = w >>>~ n2w n))”
 
   val bit_field_insert_rwt = simpLib.SIMP_RULE
         (simpLib.++(bossLib.bool_ss, boolSimps.LET_ss)) [] wordsTheory.bit_field_insert;

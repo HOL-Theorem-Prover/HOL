@@ -1,7 +1,7 @@
 signature TypeNet =
 sig
 
-  (* signature names modelled on Binarymap's *)
+  (* signature names modelled on HOLdict's *)
   type 'a typenet
   type hol_type = Type.hol_type
 

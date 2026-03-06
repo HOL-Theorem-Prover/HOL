@@ -1,0 +1,2 @@
+INCLUDES = $(HOLDIR)/src/rational $(HOLDIR)/src/string \
+           $(HOLDIR)/src/integer

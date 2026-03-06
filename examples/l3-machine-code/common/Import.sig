@@ -132,6 +132,9 @@ sig
 
    val start : string -> unit
    val finish : int -> unit
+   val gen_inventory : {thyname:string} ->
+                       {Thy:string, C : string list, N : int list,
+                        T : string list}
    val ieee_underflow_before : bool ref
 
    val Construct : (string * ParseDatatype.constructor list) list -> unit

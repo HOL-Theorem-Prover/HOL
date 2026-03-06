@@ -1,41 +1,23 @@
-open HolKernel Parse boolLib bossLib;
-open chap1Theory;
-open pred_setTheory;
-open relationTheory;
-open arithmeticTheory;
-open set_relationTheory;
+Theory chap2_7
+Ancestors
+  chap1 pred_set relation arithmetic set_relation chap2_1 chap2_2
+  chap2_4 chap2_5 chap2_6 prop2_29 ultraproduct lemma2_73
+  equiv_on_partition prim_rec list finite_map combin ultrafilter
+  folLang folModels folCanon
 
-open chap2_1Theory;
-open chap2_2Theory;
-open chap2_4Theory;
-open chap2_5Theory;
-open chap2_6Theory;
-open prop2_29Theory;
-open ultraproductTheory;
-open lemma2_73Theory;
-open equiv_on_partitionTheory;
-open prim_recTheory;
-open listTheory;
-open finite_mapTheory;
-open combinTheory;
-open ultrafilterTheory;
-
-open folLangTheory;
-open folModelsTheory;
-open folCanonTheory;
-
-val _ = new_theory "chap2_7";
 val _ = temp_delsimps ["satis_def"]
 
-val sim_def = Define`
+Definition sim_def:
   sim Z M M' <=>
   !w w'. w IN M.frame.world /\ w' IN M'.frame.world /\ Z w w' ==>
   (!p. w IN M.valt p ==> w' IN M'.valt p) /\
-  (!v. v IN M.frame.world /\ M.frame.rel w v ==> ?v'. v' IN M'.frame.world /\ Z v v' /\ M'.frame.rel w' v')`;
+  (!v. v IN M.frame.world /\ M.frame.rel w v ==> ?v'. v' IN M'.frame.world /\ Z v v' /\ M'.frame.rel w' v')
+End
 
-val preserved_under_sim_def = Define`
+Definition preserved_under_sim_def:
   preserved_under_sim (μ:'a itself) (ν:'b itself) phi <=>
-  (!M M' Z w w'. w:'a IN M.frame.world /\ w':'b IN M'.frame.world /\ sim Z M M' /\ Z w w' ==> (satis M w phi ==> satis M' w' phi))`;
+  (!M M' Z w w'. w:'a IN M.frame.world /\ w':'b IN M'.frame.world /\ sim Z M M' /\ Z w w' ==> (satis M w phi ==> satis M' w' phi))
+End
 
 
 
@@ -48,22 +30,24 @@ val (PE_rules, PE_ind, PE_cases) = Hol_reln`
   (!f. PE f ==> PE (DIAM f))`;
 
 
-val thm_2_78_half1_lemma = store_thm(
-  "thm_2_78_half1_lemma",
-  ``!phi. PE phi ==> (!μ ν. preserved_under_sim μ ν phi)``,
+Theorem thm_2_78_half1_lemma:
+    !phi. PE phi ==> (!μ ν. preserved_under_sim μ ν phi)
+Proof
    Induct_on `PE phi` >> rw[preserved_under_sim_def] (* 6 *)
    >- fs[satis_def]
    >- fs[satis_def,TRUE_def]
    >- (fs[satis_def] >> metis_tac[sim_def])
    >- (fs[satis_AND] >> metis_tac[])
    >- (fs[satis_def] >> metis_tac[])
-   >- (fs[satis_def] >> imp_res_tac sim_def >> metis_tac[]));
+   >- (fs[satis_def] >> imp_res_tac sim_def >> metis_tac[])
+QED
 
-val thm_2_78_half1 = store_thm(
-  "thm_2_78_half1",
-  ``!phi phi0. (PE phi0 /\ equiv0 (:β) phi phi0 /\ equiv0 (:γ) phi phi0) ==> preserved_under_sim (:β) (:γ) phi``,
+Theorem thm_2_78_half1:
+    !phi phi0. (PE phi0 /\ equiv0 (:β) phi phi0 /\ equiv0 (:γ) phi phi0) ==> preserved_under_sim (:β) (:γ) phi
+Proof
   rw[] >> `preserved_under_sim (:β) (:γ) phi0` by metis_tac[thm_2_78_half1_lemma] >>
-  fs[preserved_under_sim_def] >> rw[] >> fs[equiv0_def] >> `satis M w phi0` by metis_tac[] >> metis_tac[]);
+  fs[preserved_under_sim_def] >> rw[] >> fs[equiv0_def] >> `satis M w phi0` by metis_tac[] >> metis_tac[]
+QED
 
 
 Theorem FINITE_SUBSET_IMAGE_lemma :
@@ -388,4 +372,3 @@ rw[EQ_IMP_THM] (* 2 *)
 QED
 
 
-val _ = export_theory();

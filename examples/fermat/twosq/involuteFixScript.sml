@@ -4,20 +4,13 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "involuteFix";
+Theory involuteFix
+Ancestors
+  arithmetic pred_set number gcdset combinatorics
+  helperTwosq  (* for doublet_finite, doublet_card *)
+  involute
 
 (* ------------------------------------------------------------------------- *)
-
-open arithmeticTheory pred_setTheory numberTheory gcdsetTheory
-     combinatoricsTheory;
-
-(* open dependent theories *)
-open helperTwosqTheory; (* for doublet_finite, doublet_card *)
-open involuteTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Involution Fix Documentation                                              *)
@@ -1205,8 +1198,4 @@ QED
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

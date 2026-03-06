@@ -1,12 +1,8 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "milawa_core";
+Theory milawa_core
+Ancestors
+  string finite_map pred_set list sum option arithmetic relation
+  lisp_sexp lisp_parse
 
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open optionTheory arithmeticTheory relationTheory;
-
-open lisp_sexpTheory lisp_parseTheory;
-
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
@@ -170,9 +166,10 @@ val next_token_PROGRESS = prove(
   \\ IMP_RES_TAC str2sym_LENGTH
   \\ FULL_SIMP_TAC std_ss [LENGTH] \\ DECIDE_TAC);
 
-val sexp_parse_stream_PROGRESS = store_thm("sexp_parse_stream_PROGRESS",
-  ``((F,str1) = is_eof str) /\ ((s,str2) = sexp_parse_stream str1) ==>
-    LENGTH str2 < LENGTH str``,
+Theorem sexp_parse_stream_PROGRESS:
+    ((F,str1) = is_eof str) /\ ((s,str2) = sexp_parse_stream str1) ==>
+    LENGTH str2 < LENGTH str
+Proof
   REPEAT STRIP_TAC \\ IMP_RES_TAC is_eof_F_IMP
   \\ FULL_SIMP_TAC std_ss [sexp_parse_stream_def]
   \\ Q.PAT_X_ASSUM `(s,str2) = bb` (MP_TAC o GSYM)
@@ -182,7 +179,8 @@ val sexp_parse_stream_PROGRESS = store_thm("sexp_parse_stream_PROGRESS",
   \\ IMP_RES_TAC next_token_PROGRESS
   \\ POP_ASSUM (MP_TAC o Q.SPEC `xs`)
   \\ FULL_SIMP_TAC std_ss [] \\ SRW_TAC [] []
-  \\ IMP_RES_TAC sexp_lex_parse_LESS_EQ \\ DECIDE_TAC);
+  \\ IMP_RES_TAC sexp_lex_parse_LESS_EQ \\ DECIDE_TAC
+QED
 
 val read_sexps_def = tDefine "read_sexps" `
   read_sexps str =
@@ -226,9 +224,10 @@ val sexp_lex_parse_SIMP2 = prove(
     (sexp_lex_parse (#"("::cs,s,L_READ,mem) = sexp_lex_parse (cs,L_STOP::s,L_READ,mem))``,
   EVAL_TAC);
 
-val DROP_WHILE_NOT_NL_def = Define `
+Definition DROP_WHILE_NOT_NL_def:
   (DROP_WHILE_NOT_NL [] = []) /\
-  (DROP_WHILE_NOT_NL (x::xs) = if x = #"\n" then #"\n"::xs else DROP_WHILE_NOT_NL xs)`
+  (DROP_WHILE_NOT_NL (x::xs) = if x = #"\n" then #"\n"::xs else DROP_WHILE_NOT_NL xs)
+End
 
 val DROP_WHILE_NOT_NL_INTRO = prove(
   ``!t s. SND (read_while (\x. x <> #"\n") t s) =
@@ -415,9 +414,10 @@ in
     in th end;
 end
 
-val is_eof_aux_def = Define `
+Definition is_eof_aux_def:
   (is_eof_aux "" = is_eof "") /\
-  (is_eof_aux (x::xs) = if x = #"\n" then is_eof xs else is_eof_aux xs)`
+  (is_eof_aux (x::xs) = if x = #"\n" then is_eof xs else is_eof_aux xs)
+End
 
 val is_eof_comment = prove(
   ``!xs. is_eof (#";"::xs) = is_eof_aux xs``,
@@ -469,8 +469,10 @@ val read_sexps_milawa_core_thm =
 val input_tm = milawa_core_append_thm |> concl |> rator |> rand
 val output_tm = read_sexps_milawa_core_thm |> concl |> rand
 
-val MILAWA_CORE_TEXT_def = Define `MILAWA_CORE_TEXT = ^(input_tm |> rator |> rand)`;
-val MILAWA_CORE_SEXP_def = Define `MILAWA_CORE_SEXP rest = ^output_tm`;
+Definition MILAWA_CORE_TEXT_def:   MILAWA_CORE_TEXT = ^(input_tm |> rator |> rand)
+End
+Definition MILAWA_CORE_SEXP_def:   MILAWA_CORE_SEXP rest = ^output_tm
+End
 
 val lemma = milawa_core_append_thm
   |> CONV_RULE ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
@@ -482,4 +484,3 @@ val MILAWA_CORE_TEXT_THM = save_thm("MILAWA_CORE_TEXT_THM",
   |> CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV) (REWR_CONV (GSYM lemma))));
 
 val _ = max_print_depth := 0;
-val _ = export_theory();

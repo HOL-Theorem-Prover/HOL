@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open finite_mapTheory sortingTheory
-
-val _ = new_theory "countchars";
+Theory countchars
+Ancestors
+  finite_map sorting
 
 val _ = ParseExtras.tight_equality()
 
@@ -46,7 +44,7 @@ Proof
   ‘LHS = countchars fm (EL i s :: TAKE i s)’ by simp[Abbr‘LHS’] >>
   pop_assum SUBST1_TAC >> irule countchars_PERM >>
   simp[PERM_CONS_EQ_APPEND] >> map_every qexists_tac [‘TAKE i s’, ‘[]’] >>
-  simp[GSYM rich_listTheory.SNOC_EL_TAKE]
+  simp[rich_listTheory.TAKE_SUC] (* TAKE1_DROP is implicitly used *)
 QED
 
 Theorem countchars_EQN: countchars fm s = countchars_aux fm s (LENGTH s)
@@ -68,4 +66,3 @@ Proof
   simp[pred_setTheory.EXTENSION] >> metis_tac[]
 QED
 
-val _ = export_theory();

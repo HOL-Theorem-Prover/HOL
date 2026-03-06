@@ -1,12 +1,13 @@
-open HolKernel Parse boolLib bossLib;
-open multiwordTheory helperLib;
-open wordsTheory wordsLib addressTheory arithmeticTheory listTheory pairSyntax;
-open addressTheory pairTheory set_sepTheory rich_listTheory integerTheory;
-local open mc_tailrecLib blastLib intLib in end
+Theory mc_multiword
+Ancestors
+  multiword words address arithmetic list address pair set_sep
+  rich_list integer
+Libs
+  helperLib wordsLib pairSyntax mc_tailrecLib[qualified]
+  blastLib[qualified] intLib[qualified]
 
-val _ = new_theory "mc_multiword";
 val _ = ParseExtras.temp_loose_equality()
-val _ = temp_delsimps ["NORMEQ_CONV"]
+val _ = temp_delsimps ["NORMEQ_CONV", "TAKE1_DROP"];
 
 val REV = Tactical.REVERSE;
 
@@ -20,25 +21,30 @@ val EVEN_BIT0 = bitTheory.BIT0_ODD |> REWRITE_RULE [ODD_EVEN,FUN_EQ_THM]
 
 (* TODO: move? *)
 
-val EVEN_BIT_SUC = Q.store_thm("EVEN_BIT_SUC",
-  `EVEN n ==> !i. (BIT i (SUC n) = if i = 0 then T else BIT i n)`,
+Theorem EVEN_BIT_SUC:
+   EVEN n ==> !i. (BIT i (SUC n) = if i = 0 then T else BIT i n)
+Proof
   completeInduct_on`n` \\ rw[]
   \\ Cases_on`i=0` \\ fs[]
   >- (
     CCONTR_TAC \\ fs[EVEN_BIT0,EVEN] )
   \\ Cases_on`i` \\ fs[]
   \\ fs[GSYM bitTheory.BIT_DIV2]
-  \\ fs[ADD1,ADD_DIV_RWT,EVEN_MOD2]);
+  \\ fs[ADD1,ADD_DIV_RWT,EVEN_MOD2]
+QED
 
-val EVEN_MOD = Q.store_thm("EVEN_MOD",
-  `0 < m /\ EVEN m ==> (EVEN (n MOD m) <=> EVEN n)`,
+Theorem EVEN_MOD:
+   0 < m /\ EVEN m ==> (EVEN (n MOD m) <=> EVEN n)
+Proof
   strip_tac
   \\ first_x_assum(CHANGED_TAC o strip_assume_tac o REWRITE_RULE[EVEN_EXISTS])
   \\ rw[EVEN_MOD2]
-  \\ rw[MOD_MULT_MOD]);
+  \\ rw[MOD_MULT_MOD]
+QED
 
-val word_msb_double_lsr_1 = Q.store_thm("word_msb_double_lsr_1",
-  `word_msb w <=> (w <> (word_lsr (word_add w w) 1))`,
+Theorem word_msb_double_lsr_1:
+   word_msb w <=> (w <> (word_lsr (word_add w w) 1))
+Proof
   rw[d_word_msb,DIV_LE_X]
   \\ qspecl_then[`w`,`1`](mp_tac o SYM)WORD_MUL_LSL \\ rw[]
   \\ reverse(rw[EQ_IMP_THM])
@@ -50,21 +56,26 @@ val word_msb_double_lsr_1 = Q.store_thm("word_msb_double_lsr_1",
   \\ fsrw_tac[wordsLib.WORD_BIT_EQ_ss][]
   \\ qexists_tac`dimindex(:'a)-1`
   \\ assume_tac DIMINDEX_GT_0
-  \\ simp[GSYM word_msb_def,d_word_msb,DIV_LE_X]);
+  \\ simp[GSYM word_msb_def,d_word_msb,DIV_LE_X]
+QED
 
-val xor_one_add_one = Q.store_thm("xor_one_add_one",
-  `~w ' 0 ==> (w ?? 1w = w + 1w)`,
+Theorem xor_one_add_one:
+   ~w ' 0 ==> (w ?? 1w = w + 1w)
+Proof
   srw_tac[wordsLib.WORD_BIT_EQ_ss][word_index]
   \\ Cases_on`i=0` \\ fs[WORD_ADD_BIT0,word_index]
   \\ Cases_on`w` \\ fs[word_add_n2w,word_index,EVEN_BIT0]
-  \\ simp[GSYM ADD1,EVEN_BIT_SUC]);
+  \\ simp[GSYM ADD1,EVEN_BIT_SUC]
+QED
 
-val add_one_xor_one = Q.store_thm("add_one_xor_one",
-  `~w ' 0 ==> (w + 1w ?? 1w = w)`,
+Theorem add_one_xor_one:
+   ~w ' 0 ==> (w + 1w ?? 1w = w)
+Proof
   srw_tac[wordsLib.WORD_BIT_EQ_ss][word_index]
   \\ Cases_on`i=0` \\ fs[WORD_ADD_BIT0,word_index]
   \\ Cases_on`w` \\ fs[word_add_n2w,word_index,EVEN_BIT0]
-  \\ simp[GSYM ADD1,EVEN_BIT_SUC]);
+  \\ simp[GSYM ADD1,EVEN_BIT_SUC]
+QED
 
 val one_neq_zero_word = SIMP_CONV(srw_ss())[]``1w = 0w``
 
@@ -116,8 +127,9 @@ val (mc_compare_def, _,
      word # α word # α word list # α word list + num # α word # α word
      list # α word list) # bool``;
 
-val mc_header_def = Define `
-  mc_header (s,xs:α word list) = n2w (LENGTH xs * 2) + if s then 1w else 0w:α word`;
+Definition mc_header_def:
+  mc_header (s,xs:α word list) = n2w (LENGTH xs * 2) + if s then 1w else 0w:α word
+End
 
 val (mc_icompare_def, _,
      mc_icompare_pre_def, _) =
@@ -146,10 +158,11 @@ val (mc_icompare_def, _,
      word # α word # α word list # α word list + num # α word # α word
      list # α word list) # bool``;
 
-val cmp2w_def = Define `
+Definition cmp2w_def:
   (cmp2w NONE = 0w:α word) /\
   (cmp2w (SOME T) = 1w) /\
-  (cmp2w (SOME F) = 2w)`;
+  (cmp2w (SOME F) = 2w)
+End
 
 val mc_cmp_thm = prove(
   ``!xs ys xs1 ys1 l.
@@ -208,8 +221,9 @@ val mc_compare_thm = prove(
   \\ disch_then (qspec_then `l-1` mp_tac) \\ fs []
   \\ strip_tac \\ fs []);
 
-val mc_header_AND_1 = store_thm("mc_header_AND_1",
-  ``mc_header (s,xs) && (0x1w:'a word) = b2w s``,
+Theorem mc_header_AND_1:
+    mc_header (s,xs) && (0x1w:'a word) = b2w s
+Proof
   rw[mc_header_def,GSYM word_mul_n2w,b2w_def,b2n_def]
   \\ Q.SPEC_TAC (`n2w (LENGTH xs) :α word`,`w`)
   \\ rw[fcpTheory.CART_EQ]
@@ -223,7 +237,8 @@ val mc_header_AND_1 = store_thm("mc_header_AND_1",
   \\ qmatch_goalsub_abbrev_tac`EVEN (n MOD m)`
   \\ `0 < m ∧ EVEN m`
   by ( simp[Abbr`m`,Abbr`n`,EVEN_EXP] )
-  \\ simp[EVEN_MOD,Abbr`n`]);
+  \\ simp[EVEN_MOD,Abbr`n`]
+QED
 
 val mc_header_sign = prove(
   ``(mc_header (s,xs) && 1w = (0w:'a word)) = ~s``,
@@ -292,10 +307,11 @@ val mc_icompare_thm = prove(
 
 (* addition *)
 
-val single_add_word_def = Define `
+Definition single_add_word_def:
   single_add_word w1 w2 c =
     let (z,c) = single_add w1 w2 (c <> 0w:'a word) in
-      (z:'a word, (b2w c) :'a word)`;
+      (z:'a word, (b2w c) :'a word)
+End
 
 val single_add_word_thm =
   single_add_word_def
@@ -407,9 +423,11 @@ val LUPDATE_SNOC = prove(
 
 val b2n_thm = prove(``!b. b2n b = b2n b``,Cases \\ EVAL_TAC)
 
-val b2w_eq = store_thm("b2w_eq[simp]",
-  ``((b2w b = 0w) <=> ~b) /\ ((b2w b = 1w) <=> b)``,
-  Cases_on `b` \\ EVAL_TAC \\ fs[]);
+Theorem b2w_eq[simp]:
+    ((b2w b = 0w) <=> ~b) /\ ((b2w b = 1w) <=> b)
+Proof
+  Cases_on `b` \\ EVAL_TAC \\ fs[]
+QED
 
 val mc_add_loop1_thm = prove(
   ``!(xs:'a word list) ys zs xs1 ys1 zs1 xs2 ys2 zs2 r8 r9 c l.
@@ -460,7 +478,7 @@ val mc_add_loop1_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_add_def,
        LET_DEF,single_add_def,b2n_thm]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
-  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def] \\ DECIDE_TAC);
+  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def, SNOC_APPEND] \\ DECIDE_TAC);
 
 val mc_add_loop2_thm = prove(
   ``!(xs:'a word list) zs xs1 zs1 xs2 zs2 r8 c l.
@@ -507,7 +525,7 @@ val mc_add_loop2_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_add_def,
        LET_DEF,single_add_def,b2n_thm]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
-  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def]
+  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def, SNOC_APPEND]
   \\ DECIDE_TAC)
 
 val mc_add_thm = prove(
@@ -581,10 +599,11 @@ val mc_add_thm = prove(
 
 (* subtraction *)
 
-val single_sub_word_def = Define `
+Definition single_sub_word_def:
   single_sub_word w1 w2 c =
     let (z,c) = single_sub w1 w2 (c <> 0w:'a word) in
-      (z:'a word, (b2w c) :'a word)`;
+      (z:'a word, (b2w c) :'a word)
+End
 
 val single_sub_word_thm =
   single_sub_word_def
@@ -781,7 +800,7 @@ val mc_sub_loop1_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_sub_def,
        LET_DEF,single_sub_def,b2n_thm,single_add_def]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
-  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def]
+  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def, SNOC_APPEND]
   \\ DECIDE_TAC);
 
 val mc_sub_loop2_thm = prove(
@@ -827,7 +846,7 @@ val mc_sub_loop2_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_sub_def,
        LET_DEF,single_add_def,b2n_thm,single_sub_def]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
-  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def] \\ DECIDE_TAC);
+  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def, SNOC_APPEND] \\ DECIDE_TAC);
 
 val mc_sub_thm = prove(
   ``!(xs:'a word list) ys zs zs2 l.
@@ -1474,10 +1493,11 @@ val mc_imul_thm = prove(
 
 (* simple div xs into zs and zs into zs *)
 
-val single_div_pre_def = Define `
+Definition single_div_pre_def:
   single_div_pre r2 r0 r9 <=>
     r9 <> (0x0w:'a word) /\
-    (w2n r2 * dimword(:'a) + w2n r0) DIV w2n r9 < dimword(:'a)`;
+    (w2n r2 * dimword(:'a) + w2n r0) DIV w2n r9 < dimword(:'a)
+End
 
 val (mc_single_div_def, _,
      mc_single_div_pre_def, _) =
@@ -2488,7 +2508,7 @@ val mc_div_loop_thm = prove(
     \\ FULL_SIMP_TAC std_ss [rich_listTheory.EL_APPEND2,DECIDE ``n <= n + m:num``,
          GSYM APPEND_ASSOC,rich_listTheory.EL_APPEND1]
     \\ `(x::zs = []) \/ ?t1 t2. x::zs = SNOC t1 t2` by METIS_TAC [SNOC_CASES]
-    \\ FULL_SIMP_TAC (srw_ss()) [ADD1]
+    \\ FULL_SIMP_TAC (srw_ss()) [ADD1, SNOC_APPEND]
     \\ `LENGTH ys = LENGTH t2` by
      (`LENGTH (x::zs) = LENGTH (t2 ++ [t1])` by METIS_TAC []
       \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH,ADD1])
@@ -3010,9 +3030,11 @@ val mc_div_pre_def = mc_div_pre_def
                    mc_div2_def,mc_div2_pre_def,
                    mc_div3_def,mc_div3_pre_def]
 
-val mw_fix_SNOC = store_thm("mw_fix_SNOC",
- ``mw_fix (SNOC 0w xs) = mw_fix xs``,
-  SIMP_TAC std_ss [Once mw_fix_def,FRONT_SNOC,LAST_SNOC] \\ SRW_TAC [] []);
+Theorem mw_fix_SNOC:
+   mw_fix (SNOC 0w xs) = mw_fix xs
+Proof
+  SIMP_TAC std_ss [Once mw_fix_def,FRONT_SNOC,LAST_SNOC] \\ SRW_TAC [] []
+QED
 
 val mw_fix_REPLICATE = prove(
   ``!n. mw_fix (xs ++ REPLICATE n 0w) = mw_fix xs``,
@@ -3023,10 +3045,11 @@ val MAP_K_0 = prove(
   ``!xs. MAP (\x. 0x0w) xs = REPLICATE (LENGTH xs) 0x0w``,
   Induct \\ SRW_TAC [] [REPLICATE]);
 
-val mc_div_max_def = Define `
+Definition mc_div_max_def:
   mc_div_max (xs:'a word list) (ys:'a word list) (zs:'a word list) =
     2 * LENGTH ys + 2 * LENGTH zs + 5 + dimindex (:α) +
-    LENGTH xs * (dimword (:α) + 2 * LENGTH ys + 4)`;
+    LENGTH xs * (dimword (:α) + 2 * LENGTH ys + 4)
+End
 
 val mc_div_thm = prove(
   ``(ys:'a word list) <> [] /\ mw_ok xs /\ mw_ok ys /\
@@ -3502,7 +3525,7 @@ val mc_div_sub_aux_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_sub_def,
        LET_DEF,single_sub_def,b2n_thm,single_add_def]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
-  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def]
+  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def, SNOC_APPEND]
   \\ `(dimword(:'a) <= b2n ~c + (w2n h' + w2n (~h))) =
       ~(w2n h' < b2n c + w2n h)` by METIS_TAC [sub_borrow_lemma]
   \\ fs [])
@@ -3622,9 +3645,10 @@ val b2w_EQ_0w = prove(
   ``!b. (b2w b = 0w:'a word) = ~b``,
   Cases \\ EVAL_TAC \\ rw[one_neq_zero_word]);
 
-val mwi_divmod_alt_def = Define `
+Definition mwi_divmod_alt_def:
   mwi_divmod_alt w s_xs t_ys =
-    if w = 0w then mwi_div s_xs t_ys else mwi_mod s_xs t_ys`;
+    if w = 0w then mwi_div s_xs t_ys else mwi_mod s_xs t_ys
+End
 
 val mc_idiv_thm = prove(
   ``LENGTH (xs:'a word list) + LENGTH ys <= LENGTH zs /\
@@ -3882,7 +3906,7 @@ val mc_int_to_dec_thm = prove(
 
 (* top-level entry point *)
 
-val int_op_rep_def = Define `
+Definition int_op_rep_def:
   (int_op_rep Add = 0w) /\
   (int_op_rep Sub = 1w) /\
   (int_op_rep Lt  = 2w) /\
@@ -3890,7 +3914,8 @@ val int_op_rep_def = Define `
   (int_op_rep Mul = 4w) /\
   (int_op_rep Div = 5w) /\
   (int_op_rep Mod = 6w) /\
-  (int_op_rep Dec = 7w:'a word)`;
+  (int_op_rep Dec = 7w:'a word)
+End
 
 val (mc_isub_flip_def, _,
      mc_isub_flip_pre_def, _) =
@@ -4073,8 +4098,8 @@ val mc_header_XOR_1 = prove(
   \\ FIRST (map match_mp_tac [xor_one_add_one,add_one_xor_one])
   \\ rw[word_lsl_def,fcpTheory.FCP_BETA] );
 
-val mc_iop_thm = store_thm("mc_iop_thm",
-  ``3 < dimindex(:'a) ==>
+Theorem mc_iop_thm:
+    3 < dimindex(:'a) ==>
     ((mc_header (s,xs) = 0x0w) <=> (xs = [])) /\ mw_ok xs /\
     ((mc_header (t,ys) = 0x0w) <=> (ys = [])) /\ mw_ok ys /\
     LENGTH (xs:'a word list) + LENGTH ys < LENGTH zs /\
@@ -4090,7 +4115,8 @@ val mc_iop_thm = store_thm("mc_iop_thm",
        (l2,mc_header (mwi_op iop (s,xs) (t,ys)),xs,ys,
         SND (mwi_op iop (s,xs) (t,ys)) ++ zs1)) /\
       (LENGTH (SND (mwi_op iop (s,xs) (t,ys)) ++ zs1) = LENGTH zs) /\
-      l <= l2 + mc_div_max xs ys zs + 2 * LENGTH zs + 2``,
+      l <= l2 + mc_div_max xs ys zs + 2 * LENGTH zs + 2
+Proof
   strip_tac \\
  `10 < dimword(:'a)`
   by (
@@ -4130,7 +4156,8 @@ val mc_iop_thm = store_thm("mc_iop_thm",
     IF_CASES_TAC \\ rfs[]
     \\ MP_TAC (mc_idiv_thm |> Q.INST [`r3`|->`1w`]) \\ fs[]
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mwi_op_def]
-    \\ fs[mwi_divmod_alt_def] ));
+    \\ fs[mwi_divmod_alt_def] )
+QED
 
 (* An example which uses recursion that is not tail-recursion:
    tail-recursive components are defined as usual; however,
@@ -4215,4 +4242,3 @@ val (mc_use_fac_def, _,
          (INR (l,r0),cond))
      :num # α word -> (num # α word + num # α word) # bool``
 
-val _ = export_theory();

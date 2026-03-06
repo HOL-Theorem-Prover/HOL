@@ -14,7 +14,7 @@ structure Parse =
 struct
   open Parse
   val (Type, Term) =
-     parse_from_grammars binary_ieeeTheory.binary_ieee_grammars
+     parse_from_grammars $ valOf $ grammarDB {thyname="binary_ieee"}
 end
 open Parse
 
@@ -243,7 +243,7 @@ val float_datatype_rwts =
 val FLOAT_DATATYPE_CONV =
    REWRITE_CONV (combinTheory.K_THM :: float_datatype_rwts)
 
-val REAL_REDUCE_CONV = computeLib.CBV_CONV (realSimps.real_compset())
+val REAL_REDUCE_CONV = computeLib.CBV_CONV (realSimps.real_compset)
 
 fun memo_conv is_tm cnv0 s =
    let
@@ -392,10 +392,12 @@ local
          val c = boolSyntax.mk_conj (f0, e1)
       in
          mlibUseful.INL (ties_to_even (boolSyntax.mk_imp (c, rx)))
-         handle HOL_ERR {origin_function = "EQT_ELIM", ...} =>
-           mlibUseful.INR
-              (conj_assoc_rule
-                 (ties_to_even (boolSyntax.mk_conj (c, boolSyntax.mk_neg rx))))
+         handle (e as HOL_ERR herr) =>
+           if top_function_of herr = "EQT_ELIM" then
+              mlibUseful.INR
+                (conj_assoc_rule
+                   (ties_to_even (boolSyntax.mk_conj (c, boolSyntax.mk_neg rx))))
+           else raise e
       end
    val lt_thm =
       Drule.MATCH_MP (REAL_ARITH ``(a <= b <=> F) ==> b < a: real``)
@@ -857,11 +859,11 @@ end
    ------------------------------------------------------------------------ *)
 
 local
-   val cmp = realSimps.real_compset ()
-   val () = computeLib.add_thms
-                ([pairTheory.pair_CASE_def,
-                  pairTheory.FST, pairTheory.SND] @
-                 #rewrs (TypeBase.simpls_of ``:float_value``)) cmp
+   val cmp = realSimps.real_compset
+             |> computeLib.add_thms
+                  ([pairTheory.pair_CASE_def,
+                    pairTheory.FST, pairTheory.SND] @
+                   #rewrs (TypeBase.simpls_of ``:float_value``))
    val float_compare_CONV =
       Conv.REWR_CONV binary_ieeeTheory.float_compare_def
       THENC Conv.LAND_CONV (Conv.BINOP_CONV float_value_CONV)
@@ -948,8 +950,8 @@ fun add_ieee_to_compset cmp =
    let
       open computeLib
    in
-      add_thms ieee_rewrites cmp
-    ; List.app (fn a => add_conv a cmp)
+      cmp |> add_thms ieee_rewrites
+          |> (fn cs => foldl (fn (a, c) => add_conv a c) cs
         [
          (float_Sign_fupd_tm, 2, infinity_intro_CONV),
          (binary_ieeeSyntax.ULP_tm, 1, ULP_CONV),
@@ -972,10 +974,10 @@ fun add_ieee_to_compset cmp =
          (binary_ieeeSyntax.float_less_equal_tm, 2, less_equal_CONV),
          (binary_ieeeSyntax.float_greater_than_tm, 2, greater_than_CONV),
          (binary_ieeeSyntax.float_greater_equal_tm, 2, greater_equal_CONV)
-        ]
+        ])
    end
 
-val () = add_ieee_to_compset computeLib.the_compset
+val () = computeLib.the_compset := add_ieee_to_compset (!computeLib.the_compset)
 
 (* ------------------------------------------------------------------------ *)
 

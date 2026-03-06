@@ -5,7 +5,8 @@ open HolKernel Parse boolLib liteLib Ho_Rewrite tautLib;
 
 (* Fix the grammar used by this file *)
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars combinTheory.combin_grammars;
+val SOME combin_grammars = grammarDB {thyname="combin"};
+val _ = Parse.temp_set_grammars combin_grammars;
 
 val RIGHT_AND_EXISTS_THM = GSYM RIGHT_EXISTS_AND_THM;
 val LEFT_AND_EXISTS_THM  = GSYM LEFT_EXISTS_AND_THM;

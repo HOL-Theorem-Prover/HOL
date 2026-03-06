@@ -1,44 +1,49 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory pred_setTheory pairTheory;
+Theory x86_icache
+Ancestors
+  words pred_set pair x86_coretypes x86_ast x86_seq_monad
 
-open x86_coretypesTheory x86_astTheory x86_seq_monadTheory;
-
-val _ = new_theory "x86_icache";
 val _ = ParseExtras.temp_loose_equality()
 
 
 (* instruction cache definitions *)
 
-val X86_ICACHE_def = Define `
+Definition X86_ICACHE_def:
   X86_ICACHE ((r,e,s,m,i):x86_state) ((r2,e2,s2,m2,i2):x86_state) =
     ?insert delete.
       (r = r2) /\ (e = e2) /\ (s = s2) /\ (m = m2) /\
       (i2 = \addr. if addr IN insert then m addr else
-                   if addr IN delete then NONE else i addr)`;
+                   if addr IN delete then NONE else i addr)
+End
 
-val X86_ACCURATE_def = Define `
-  X86_ACCURATE a ((r,e,s,m,i):x86_state) = (i a = NONE) \/ (i a = m a)`;
+Definition X86_ACCURATE_def:
+  X86_ACCURATE a ((r,e,s,m,i):x86_state) = (i a = NONE) \/ (i a = m a)
+End
 
-val icache_def = Define `
+Definition icache_def:
   icache (insert,delete) m i addr =
-    if addr IN insert then m addr else if addr IN delete then NONE else i addr`;
+    if addr IN insert then m addr else if addr IN delete then NONE else i addr
+End
 
-val X86_ICACHE_UPDATE_def = Define `
-  X86_ICACHE_UPDATE x ((r1,e1,s1,m1,i1):x86_state) = (r1,e1,s1,m1,icache x m1 i1)`;
+Definition X86_ICACHE_UPDATE_def:
+  X86_ICACHE_UPDATE x ((r1,e1,s1,m1,i1):x86_state) = (r1,e1,s1,m1,icache x m1 i1)
+End
 
 
 (* theorems *)
 
-val X86_ICACHE_REFL = store_thm("X86_ICACHE_REFL",
-  ``!s. X86_ICACHE s s``,
+Theorem X86_ICACHE_REFL:
+    !s. X86_ICACHE s s
+Proof
   STRIP_TAC THEN `?r e t m i. s = (r,e,t,m,i)` by METIS_TAC [PAIR]
   THEN ASM_SIMP_TAC std_ss [X86_ICACHE_def]
   THEN Q.EXISTS_TAC `{}` THEN Q.EXISTS_TAC `{}`
-  THEN ASM_SIMP_TAC std_ss [NOT_IN_EMPTY,FUN_EQ_THM]);
+  THEN ASM_SIMP_TAC std_ss [NOT_IN_EMPTY,FUN_EQ_THM]
+QED
 
-val X86_ICACHE_TRANS = store_thm("X86_ICACHE_TRANS",
-  ``!s t u. X86_ICACHE s t /\ X86_ICACHE t u ==> X86_ICACHE s u``,
+Theorem X86_ICACHE_TRANS:
+    !s t u. X86_ICACHE s t /\ X86_ICACHE t u ==> X86_ICACHE s u
+Proof
   REPEAT STRIP_TAC
   THEN `?r1 e1 t1 m1 i1. s = (r1,e1,t1,m1,i1)` by METIS_TAC [PAIR]
   THEN `?r2 e2 t2 m2 i2. t = (r2,e2,t2,m2,i2)` by METIS_TAC [PAIR]
@@ -47,17 +52,20 @@ val X86_ICACHE_TRANS = store_thm("X86_ICACHE_TRANS",
   THEN REPEAT (POP_ASSUM (K ALL_TAC))
   THEN Q.EXISTS_TAC `insert' UNION (insert DIFF delete')`
   THEN Q.EXISTS_TAC `delete UNION delete'`
-  THEN SIMP_TAC std_ss [IN_DIFF,IN_INSERT,IN_UNION] THEN METIS_TAC []);
+  THEN SIMP_TAC std_ss [IN_DIFF,IN_INSERT,IN_UNION] THEN METIS_TAC []
+QED
 
-val X86_ICACHE_THM = store_thm("X86_ICACHE_THM",
-  ``X86_ICACHE (r,e,s,m,i) (r2,e2,s2,m2,i2) =
+Theorem X86_ICACHE_THM:
+    X86_ICACHE (r,e,s,m,i) (r2,e2,s2,m2,i2) =
     ?update.
-      (r2,e2,s2,m2,i2) = (r,e,s,m,icache update m i)``,
+      (r2,e2,s2,m2,i2) = (r,e,s,m,icache update m i)
+Proof
   SIMP_TAC std_ss [EXISTS_PROD,X86_ICACHE_def,icache_def,FUN_EQ_THM]
-  THEN METIS_TAC []);
+  THEN METIS_TAC []
+QED
 
-val XREAD_CLAUSES = store_thm("XREAD_CLAUSES",
-  ``!s. (XREAD_REG r (XWRITE_REG r2 w s) = if r2 = r then w else XREAD_REG r s) /\
+Theorem XREAD_CLAUSES:
+    !s. (XREAD_REG r (XWRITE_REG r2 w s) = if r2 = r then w else XREAD_REG r s) /\
         (XREAD_REG r (XWRITE_EIP e s) = XREAD_REG r s) /\
         (XREAD_REG r (XWRITE_EFLAG f b s) = XREAD_REG r s) /\
         (XREAD_REG r (XCLEAR_ICACHE s) = XREAD_REG r s) /\
@@ -80,14 +88,15 @@ val XREAD_CLAUSES = store_thm("XREAD_CLAUSES",
         (XREAD_MEM2 a (XWRITE_EFLAG f b s) = XREAD_MEM2 a s) /\
         (XREAD_MEM2 a (XCLEAR_ICACHE s) = XREAD_MEM2 a s) /\
         (XREAD_MEM2 a (X86_ICACHE_UPDATE u s) = XREAD_MEM2 a s) /\
-        (XREAD_MEM2 a (XWRITE_MEM2 c x s) = if a = c then x else XREAD_MEM2 a s)``,
+        (XREAD_MEM2 a (XWRITE_MEM2 c x s) = if a = c then x else XREAD_MEM2 a s)
+Proof
   STRIP_TAC THEN `?r2 e2 s2 m2 i2. s = (r2,e2,s2,m2,i2)` by METIS_TAC [pairTheory.PAIR]
   THEN Cases_on `u`
   THEN ASM_SIMP_TAC std_ss [XREAD_REG_def,XREAD_EIP_def,
          XREAD_EFLAG_def, XWRITE_REG_def, XWRITE_MEM2_def, XREAD_MEM2_def,
          combinTheory.APPLY_UPDATE_THM, XWRITE_EIP_def,CAN_XREAD_MEM,
          XWRITE_EFLAG_def,XCLEAR_ICACHE_def,CAN_XWRITE_MEM,X86_ICACHE_UPDATE_def]
-  THEN Cases_on `c = a` THEN ASM_SIMP_TAC std_ss []);
+  THEN Cases_on `c = a` THEN ASM_SIMP_TAC std_ss []
+QED
 
 
-val _ = export_theory ();

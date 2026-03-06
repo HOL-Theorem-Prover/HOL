@@ -4,6 +4,7 @@ sig
 
   val TAC_PROOF      : goal * tactic -> thm
   val prove          : term * tactic -> thm
+  val prove_goal     : goal * tactic -> thm
   val store_thm      : string * term * tactic -> thm
   val CONV_TAC       : conv -> tactic
   val THEN           : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
@@ -21,8 +22,8 @@ sig
   *)
   val ORELSE         : tactic * tactic -> tactic
   val ORELSE_LT      : list_tactic * list_tactic -> list_tactic
-  val THEN1          : tactic * tactic -> tactic
-  val >-             : tactic * tactic -> tactic
+  val THEN1          : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
+  val >-             : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
   val THEN_LT        : ('a,'b) gentactic * list_tactic -> ('a,'b) gentactic
   val >>>            : ('a,'b) gentactic * list_tactic -> ('a,'b) gentactic
   (* could be used as
@@ -72,8 +73,10 @@ sig
   val MAP_EVERY      : ('a -> tactic) -> 'a list -> tactic
   val map_every      : ('a -> tactic) -> 'a list -> tactic
   val MAP_FIRST      : ('a -> tactic) -> 'a list -> tactic
+  val IF             : tactic -> tactic -> tactic -> tactic
   val FIRST_PROVE    : tactic list -> tactic
   val EVERY_ASSUM    : thm_tactic -> tactic
+  val every_assum    : thm_tactic -> tactic
   val FIRST_ASSUM    : thm_tactic -> tactic
   val first_assum    : thm_tactic -> tactic
   val FIRST_X_ASSUM  : thm_tactic -> tactic
@@ -109,7 +112,7 @@ sig
   val QTY_TAC        : hol_type -> (term -> tactic) -> term quotation -> tactic
 
   val default_prover : term * tactic -> thm
-  val set_prover     : (term * tactic -> thm) -> unit
+  val set_prover     : (goal * tactic -> thm) -> unit
   val restore_prover : unit -> unit
 
 end

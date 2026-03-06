@@ -4,16 +4,12 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "helperTwosq";
+Theory helperTwosq
+Ancestors
+  arithmetic pred_set divides gcd number While combinatorics
+  prime
 
 (* ------------------------------------------------------------------------- *)
-
-open arithmeticTheory pred_setTheory dividesTheory gcdTheory numberTheory
-     whileTheory combinatoricsTheory primeTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper Theorems Documentation                                             *)
@@ -1104,8 +1100,4 @@ QED
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

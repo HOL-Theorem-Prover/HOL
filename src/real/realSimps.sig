@@ -63,6 +63,6 @@ sig
   val RMULRELNORM_ss : simpLib.ssfrag
 
 
-  val real_compset : unit -> computeLib.compset
+  val real_compset : computeLib.compset
 
 end

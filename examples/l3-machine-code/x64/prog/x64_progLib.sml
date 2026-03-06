@@ -7,7 +7,8 @@ open stateLib x64_stepLib x64_progTheory
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars x64_progTheory.x64_prog_grammars
+   val (Type, Term) =
+       parse_from_grammars $ valOf $ grammarDB{thyname="x64_prog"}
 end
 
 open Parse
@@ -17,7 +18,7 @@ val ERR = Feedback.mk_HOL_ERR "x64_progLib"
 (* ------------------------------------------------------------------------ *)
 
 val x64_proj_def = x64_progTheory.x64_proj_def
-val x64_comp_defs = x64_progTheory.component_defs
+val x64_comp_defs = stateLib.sep_components {thyname="x64_prog"}
 
 fun syn n d m = HolKernel.syntax_fns {n = n, dest = d, make = m} "x64_prog"
 val x64_1 = syn 2 HolKernel.dest_monop HolKernel.mk_monop

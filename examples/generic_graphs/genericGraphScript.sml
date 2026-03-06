@@ -1,13 +1,12 @@
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory pairTheory bagTheory liftingTheory transferTheory
-     transferLib liftLib
+Theory genericGraph
+Ancestors
+  pred_set pair bag lifting transfer
+Libs
+  transferLib liftLib
 
 (* Material on finite simple graphs mechanised from
      "Combinatorics and Graph Theory" by Harris, Hirst, and Mossinghoff
  *)
-
-val _ = new_theory "genericGraph";
 
 Datatype: diredge = directed ((α+num) set) ((α+num) set) 'label
 End
@@ -1001,6 +1000,12 @@ Theorem nodes_addNode[simp]:
   ∀n l G. nodes (addNode n l G) = n INSERT nodes G
 Proof
   xfer_back_tac [] >> simp[addNode0_def]
+QED
+
+Theorem addNode_EQ_emptyG[simp]:
+  addNode n l G ≠ emptyG
+Proof
+  disch_then (mp_tac o Q.AP_TERM ‘nodes’) >> simp[]
 QED
 
 Theorem edgebag_addNode[simp]:
@@ -2244,7 +2249,8 @@ Proof
       simp[]) >>~-
   ([‘BAG_UNION _ _ = _ ’],
    csimp[edge0_def, Once FUN_EQ_THM, BAG_UNION, BAG_INSERT, BAG_OF_SET] >>
-   rw[])
+   rw[]) >>
+  simp[SF CONJ_ss]
 QED
 
 Theorem edges_addEdges_allokdirgraph:
@@ -2879,5 +2885,4 @@ Proof
   simp[Once FUN_EQ_THM, BAG_DIFF]
 QED
 
-val _ = export_theory();
 val _ = html_theory "genericGraph";

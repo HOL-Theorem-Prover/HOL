@@ -149,7 +149,7 @@ fun GEN_SAT conf = (* single entry point into HolSatLib *)
     handle initexp th => th
 
 (* default config invokes pre-installed MiniSat 1.14p *)
-fun SAT_PROVE tm =  GEN_SAT (set_term tm base_config)
+fun SAT_PROVE tm = GEN_SAT (set_term tm base_config)
 fun SAT_ORACLE tm =
     GEN_SAT ((set_term tm o set_flag_is_proved false) base_config)
 

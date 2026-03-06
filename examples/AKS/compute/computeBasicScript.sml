@@ -4,23 +4,17 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "computeBasic";
+Theory computeBasic
+Ancestors
+  pred_set list arithmetic logroot divides gcd gcdset number
+  combinatorics prime While
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory logrootTheory dividesTheory
-     gcdTheory gcdsetTheory numberTheory combinatoricsTheory primeTheory;
-
-(* val _ = load "whileTheory"; *)
-open whileTheory;
-
+(* val _ = load "WhileTheory"; *)
 val _ = temp_overload_on("SQ", ``\n. n * n``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
 val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
@@ -253,11 +247,11 @@ Question: Can (countdivs n) be expressed in a WHILE loop?
 *)
 
 (* Compute LOG2 by counting the number of divisions down to 1 *)
-val log_compute_def = Define `
+Definition log_compute_def:
    log_compute n = if n = 0 then LOG2 0
                    else if n = 1 then 0
                    else 1 + log_compute (HALF n)
-`;
+End
 
 (*
 > EVAL ``log_compute 4``; --> 2
@@ -283,13 +277,14 @@ val log_compute_def = Define `
           = 1 + LOG2 (HALF n)           by LOG_DIV, 1 < 2
           = 1 + log_compute (HALF n)    by induction hypothesis, 0 < HALF n
 *)
-val log_compute_eqn = store_thm(
-  "log_compute_eqn",
-  ``!n. log_compute n = LOG2 n``,
+Theorem log_compute_eqn:
+    !n. log_compute n = LOG2 n
+Proof
   completeInduct_on `n` >>
   rw_tac std_ss[Once log_compute_def] >-
   rw[LOG_1] >>
-  rw[LOG_DIV, X_LT_DIV]);
+  rw[LOG_DIV, X_LT_DIV]
+QED
 
 (* For the cost:
 f(n) --> cost_f(n)
@@ -310,19 +305,20 @@ End
 
 (* Theorem: ulog_step n m k = count_up n m k *)
 (* Proof: by ulog_step_def, count_up_def *)
-val ulog_step_eq_count_up = store_thm(
-  "ulog_step_eq_count_up",
-  ``!n m k. ulog_step n m k = count_up n m k``,
+Theorem ulog_step_eq_count_up:
+    !n m k. ulog_step n m k = count_up n m k
+Proof
   ntac 2 strip_tac >>
   completeInduct_on `n - m` >>
   simp[Once ulog_step_def] >>
   rpt strip_tac >>
-  metis_tac[count_up_def]);
+  metis_tac[count_up_def]
+QED
 
 (* Define upper LOG2 n by ulog_step *)
-val ulog_compute_def = Define`
+Definition ulog_compute_def:
     ulog_compute n = ulog_step n 1 0
-`;
+End
 
 (*
 > EVAL ``ulog_compute 4``; --> 2
@@ -337,10 +333,11 @@ val ulog_compute_def = Define`
 
 (* Theorem: ulog_compute n = ulog n *)
 (* Proof: by ulog_compute_def, ulog_def, ulog_step_eq_count_up *)
-val ulog_compute_eqn = store_thm(
-  "ulog_compute_eqn",
-  ``!n. ulog_compute n = ulog n``,
-  rw[ulog_compute_def, ulog_def, ulog_step_eq_count_up]);
+Theorem ulog_compute_eqn:
+    !n. ulog_compute n = ulog n
+Proof
+  rw[ulog_compute_def, ulog_def, ulog_step_eq_count_up]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Power Computation (Fast Exponential Computation)                          *)
@@ -375,13 +372,13 @@ else (* precompute *) r <- (m * m) ** (HALF n)
 *)
 
 (* Define exponentiation by repeated squaring. *)
-val exp_binary_def = Define`
+Definition exp_binary_def:
    exp_binary (m:num) n =
       if (n = 0) then 1  (* m ** 0 = 1 *)
       (* either n or (n - 1) is EVEN, precompute the repeated square *)
       else let r = exp_binary (m * m) (HALF n) in
       if EVEN n then r else m * r (* if EVEN, return reuslt, otherwise multiply by base for ODD *)
-`;
+End
 
 (*
 > EVAL ``exp_binary 3 2``; --> 9
@@ -394,31 +391,34 @@ val exp_binary_def = Define`
 
 (* Theorem: exp_binary m 0 = 1 *)
 (* Proof: by exp_binary_def *)
-val exp_binary_0 = store_thm(
-  "exp_binary_0",
-  ``!m. exp_binary m 0 = 1``,
-  rw[Once exp_binary_def]);
+Theorem exp_binary_0:
+    !m. exp_binary m 0 = 1
+Proof
+  rw[Once exp_binary_def]
+QED
 
 (* Theorem: exp_binary m 1 = m *)
 (* Proof: by exp_binary_def *)
-val exp_binary_1 = store_thm(
-  "exp_binary_1",
-  ``!m. exp_binary m 1 = m``,
+Theorem exp_binary_1:
+    !m. exp_binary m 1 = m
+Proof
   rw[Once exp_binary_def] >>
-  rw[Once exp_binary_def]);
+  rw[Once exp_binary_def]
+QED
 
 (* Theorem: EVEN n ==> (exp_binary m n = exp_binary (m * m) (HALF n)) *)
 (* Proof:
    If n = 0, true by      exp_binary_0, HALF 0 = 0.
    If n <> 0, true by     exp_binary_def
 *)
-val exp_binary_even = store_thm(
-  "exp_binary_even",
-  ``!m n. EVEN n ==> (exp_binary m n = exp_binary (m * m) (HALF n))``,
+Theorem exp_binary_even:
+    !m n. EVEN n ==> (exp_binary m n = exp_binary (m * m) (HALF n))
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[exp_binary_0] >>
-  rw[Once exp_binary_def]);
+  rw[Once exp_binary_def]
+QED
 
 (* Theorem: ODD n ==> (exp_binary m n = m * exp_binary (m * m) (HALF n)) *)
 (* Proof:
@@ -426,11 +426,12 @@ val exp_binary_even = store_thm(
     and ODD n = ~(EVEN n)   by ODD_EVEN
    Thus true                by exp_binary_def
 *)
-val exp_binary_odd = store_thm(
-  "exp_binary_odd",
-  ``!m n. ODD n ==> (exp_binary m n = m * exp_binary (m * m) (HALF n))``,
+Theorem exp_binary_odd:
+    !m n. ODD n ==> (exp_binary m n = m * exp_binary (m * m) (HALF n))
+Proof
   rw_tac std_ss[Once exp_binary_def] >>
-  metis_tac[ODD_EVEN]);
+  metis_tac[ODD_EVEN]
+QED
 
 (* Theorem: exp_binary m (SUC n) = m * exp_binary m n *)
 (* Proof:
@@ -452,9 +453,9 @@ val exp_binary_odd = store_thm(
       = exp_binary (m * m) (HALF (SUC n))        by ODD_SUC_HALF
       = exp_binary m (SUC n)                     by exp_binary_even
 *)
-val exp_binary_suc = store_thm(
-  "exp_binary_suc",
-  ``!m n. exp_binary m (SUC n) = m * exp_binary m n``,
+Theorem exp_binary_suc:
+    !m n. exp_binary m (SUC n) = m * exp_binary m n
+Proof
   completeInduct_on `n` >>
   rpt strip_tac >>
   Cases_on `EVEN n` >| [
@@ -472,7 +473,8 @@ val exp_binary_suc = store_thm(
     `_ = exp_binary (m * m) (HALF (SUC n))` by rw[ODD_SUC_HALF] >>
     `_ = exp_binary m (SUC n)` by rw[exp_binary_even] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: exp_binary m n = m ** n *)
 (* Proof:
@@ -487,13 +489,14 @@ val exp_binary_suc = store_thm(
      = m * m ** n             by induction hypothesis
      = m ** SUC n             by EXP
 *)
-val exp_binary_eqn = store_thm(
-  "exp_binary_eqn",
-  ``!m n. exp_binary m n = m ** n``,
+Theorem exp_binary_eqn:
+    !m n. exp_binary m n = m ** n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[exp_binary_0] >>
-  rw[exp_binary_suc, EXP]);
+  rw[exp_binary_suc, EXP]
+QED
 
 (* Theorem: exp_binary 0 n = if n = 0 then 1 else 0 *)
 (* Proof:
@@ -501,10 +504,11 @@ val exp_binary_eqn = store_thm(
    = 0 ** n                  by exp_binary_eqn
    = if n = 0 then 1 else 0  by ZERO_EXP
 *)
-val exp_binary_of_0 = store_thm(
-  "exp_binary_of_0",
-  ``!n. exp_binary 0 n = if n = 0 then 1 else 0``,
-  rw[exp_binary_eqn]);
+Theorem exp_binary_of_0:
+    !n. exp_binary 0 n = if n = 0 then 1 else 0
+Proof
+  rw[exp_binary_eqn]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Fast Exponentiation (Repeated Squares Method)                             *)
@@ -522,14 +526,14 @@ val exp_binary_of_0 = store_thm(
 *)
 
 (* Define fast exponentiation *)
-val exp_step_def = Define`
+Definition exp_step_def:
     exp_step m n r = (* r = m ** n *)
        if n = 0 then r else
        exp_step (SQ m) (HALF n) (if EVEN n then r else r * m)
-`;
-val exp_compute_def = Define`
+End
+Definition exp_compute_def:
     exp_compute m n = exp_step m n 1
-`;
+End
 
 (*
 EVAL ``exp_compute 2 10``; --> 1024
@@ -539,17 +543,19 @@ EVAL ``exp_compute 3 8 = 3 ** 8``; --> T
 
 (* Theorem: exp_step m 0 r = r *)
 (* Proof: by exp_step_def *)
-val exp_step_0 = store_thm(
-  "exp_step_0",
-  ``!m r. exp_step m 0 r = r``,
-  rw[Once exp_step_def]);
+Theorem exp_step_0:
+    !m r. exp_step m 0 r = r
+Proof
+  rw[Once exp_step_def]
+QED
 
 (* Theorem: exp_step m 1 r = r * m *)
 (* Proof: by exp_step_def *)
-val exp_step_1 = store_thm(
-  "exp_step_1",
-  ``!m r. exp_step m 1 r = r * m``,
-  rw[Once exp_step_def, Once exp_step_def]);
+Theorem exp_step_1:
+    !m r. exp_step m 1 r = r * m
+Proof
+  rw[Once exp_step_def, Once exp_step_def]
+QED
 
 (* Theorem: exp_step m 2 r = r * m * m *)
 (* Proof:
@@ -560,10 +566,11 @@ val exp_step_1 = store_thm(
    = r * (m * m)                    by EXP_2
    = r * m * m                      by MULT_ASSOC
 *)
-val exp_step_2 = store_thm(
-  "exp_step_2",
-  ``!m r. exp_step m 2 r = r * m * m``,
-  rw[Once exp_step_def, Once exp_step_def, Once exp_step_def]);
+Theorem exp_step_2:
+    !m r. exp_step m 2 r = r * m * m
+Proof
+  rw[Once exp_step_def, Once exp_step_def, Once exp_step_def]
+QED
 
 (* Theorem: EVEN n ==> !m r. exp_step m n r = exp_step (SQ m) (HALF n) r *)
 (* Proof:
@@ -571,13 +578,14 @@ val exp_step_2 = store_thm(
       Thus LHS = r = RHS     by exp_step_def
    If n <> 0, true           by exp_step_def
 *)
-val exp_step_even = store_thm(
-  "exp_step_even",
-  ``!n. EVEN n ==> !m r. exp_step m n r = exp_step (SQ m) (HALF n) r``,
+Theorem exp_step_even:
+    !n. EVEN n ==> !m r. exp_step m n r = exp_step (SQ m) (HALF n) r
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   metis_tac[exp_step_def, HALF_EQ_0] >>
-  rw[Once exp_step_def]);
+  rw[Once exp_step_def]
+QED
 
 (* Theorem: ODD n ==> !m r. exp_step m n r = exp_step (SQ m) (HALF n) (r * m) *)
 (* Proof:
@@ -585,12 +593,13 @@ val exp_step_even = store_thm(
                and n <> 0     by EVEN
    The result follows         by exp_step_def
 *)
-val exp_step_odd = store_thm(
-  "exp_step_odd",
-  ``!n. ODD n ==> !m r. exp_step m n r = exp_step (SQ m) (HALF n) (r * m)``,
+Theorem exp_step_odd:
+    !n. ODD n ==> !m r. exp_step m n r = exp_step (SQ m) (HALF n) (r * m)
+Proof
   rpt strip_tac >>
   `~EVEN n /\ n <> 0` by metis_tac[ODD_EVEN, EVEN] >>
-  rw[Once exp_step_def]);
+  rw[Once exp_step_def]
+QED
 
 (* Theorem: exp_step m n r = r * m ** n *)
 (* Proof:
@@ -615,9 +624,9 @@ val exp_step_odd = store_thm(
       = r * (m * (SQ m) ** (HALF n))         by MULT_ASSOC
       = r * m ** n                           by EXP_ODD
 *)
-val exp_step_eqn = store_thm(
-  "exp_step_eqn",
-  ``!m n r. exp_step m n r = r * m ** n``,
+Theorem exp_step_eqn:
+    !m n r. exp_step m n r = r * m ** n
+Proof
   completeInduct_on `n` >>
   rpt strip_tac >>
   Cases_on `n = 0` >-
@@ -625,28 +634,32 @@ val exp_step_eqn = store_thm(
   `HALF n < n` by rw[] >>
   Cases_on `EVEN n` >-
   rw[exp_step_even, GSYM EXP_EVEN] >>
-  metis_tac[ODD_EVEN, exp_step_odd, MULT_ASSOC, EXP_ODD]);
+  metis_tac[ODD_EVEN, exp_step_odd, MULT_ASSOC, EXP_ODD]
+QED
 
 (* Theorem: exp_compute m 0 = 1 *)
 (* Proof: by exp_compute_def, exp_step_0 *)
-val exp_compute_0 = store_thm(
-  "exp_compute_0",
-  ``!m. exp_compute m 0 = 1``,
-  rw[exp_compute_def, exp_step_0]);
+Theorem exp_compute_0:
+    !m. exp_compute m 0 = 1
+Proof
+  rw[exp_compute_def, exp_step_0]
+QED
 
 (* Theorem: exp_compute m 1 = m *)
 (* Proof: by exp_compute_def, exp_step_1 *)
-val exp_compute_1 = store_thm(
-  "exp_compute_1",
-  ``!m. exp_compute m 1 = m``,
-  rw[exp_compute_def, exp_step_1]);
+Theorem exp_compute_1:
+    !m. exp_compute m 1 = m
+Proof
+  rw[exp_compute_def, exp_step_1]
+QED
 
 (* Theorem: exp_compute m 2 = SQ m *)
 (* Proof: by exp_compute_def, exp_step_2 *)
-val exp_compute_2 = store_thm(
-  "exp_compute_2",
-  ``!m. exp_compute m 2 = SQ m``,
-  rw[exp_compute_def, exp_step_2]);
+Theorem exp_compute_2:
+    !m. exp_compute m 2 = SQ m
+Proof
+  rw[exp_compute_def, exp_step_2]
+QED
 
 (* Theorem: EVEN n ==> !m. exp_compute m n = exp_compute (SQ m) (HALF n) *)
 (* Proof:
@@ -655,10 +668,11 @@ val exp_compute_2 = store_thm(
    = exp_step (SQ m) (HALF n) 1   by exp_step_even, EVEN n
    = exp_compute (SQ m) (HALF n)  by exp_compute_def
 *)
-val exp_compute_even = store_thm(
-  "exp_compute_even",
-  ``!n. EVEN n ==> !m. exp_compute m n = exp_compute (SQ m) (HALF n)``,
-  rw[exp_compute_def, exp_step_even]);
+Theorem exp_compute_even:
+    !n. EVEN n ==> !m. exp_compute m n = exp_compute (SQ m) (HALF n)
+Proof
+  rw[exp_compute_def, exp_step_even]
+QED
 
 (* Theorem: exp_compute m n = m ** n *)
 (* Proof:
@@ -667,10 +681,11 @@ val exp_compute_even = store_thm(
    = 1 * m ** n         by exp_step_eqn
    = m ** n             by MULT_LEFT_1
 *)
-val exp_compute_eqn = store_thm(
-  "exp_compute_eqn",
-  ``!m n. exp_compute m n = m ** n``,
-  rw[exp_compute_def, exp_step_eqn]);
+Theorem exp_compute_eqn:
+    !m n. exp_compute m n = m ** n
+Proof
+  rw[exp_compute_def, exp_step_eqn]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Modular Exponentiation.                                                   *)
@@ -734,7 +749,7 @@ val exp_mod_binary_def = Define`
      else (a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m
 `;
 *)
-val exp_mod_binary_def = Define`
+Definition exp_mod_binary_def:
    exp_mod_binary a n m =
           if m = 0 then (a ** n) MOD 0   (* whatever that is! *)
      else if m = 1 then 0                (* all MOD 1 = 0 *)
@@ -743,7 +758,7 @@ val exp_mod_binary_def = Define`
      (* if ODD n then a ** n (mod m) = a * ((a * a MOD m) ** (HALF n)) MOD m *)
      else (let b = exp_mod_binary ((a * a) MOD m) (HALF n) m
             in if EVEN n then b else (a * b) MOD m)
-`;
+End
 (* Note the for-all order: n m a, which is good.
 val it =
    |- !n m a. exp_mod_binary a n m =
@@ -770,18 +785,20 @@ val it =
 
 (* Theorem: 0 < m ==> (exp_mod_binary a 0 m = if m = 1 then 0 else 1) *)
 (* Proof: by exp_mod_binary_def. *)
-val exp_mod_binary_0 = store_thm(
-  "exp_mod_binary_0",
-  ``!a m. 0 < m ==> (exp_mod_binary a 0 m = if m = 1 then 0 else 1)``,
-  rw[Once exp_mod_binary_def]);
+Theorem exp_mod_binary_0:
+    !a m. 0 < m ==> (exp_mod_binary a 0 m = if m = 1 then 0 else 1)
+Proof
+  rw[Once exp_mod_binary_def]
+QED
 
 (* Theorem: exp_mod_binary a 1 m = a MOD m *)
 (* Proof: by exp_mod_binary_def, exp_mod_binary_0. *)
-val exp_mod_binary_1 = store_thm(
-  "exp_mod_binary_1",
-  ``!a m. exp_mod_binary a 1 m = a MOD m``,
+Theorem exp_mod_binary_1:
+    !a m. exp_mod_binary a 1 m = a MOD m
+Proof
   rw[Once exp_mod_binary_def] >>
-  rw[exp_mod_binary_0]);
+  rw[exp_mod_binary_0]
+QED
 
 (* Theorem: 0 < m /\ EVEN n ==> !a. exp_mod_binary a n m = exp_mod_binary ((a * a) MOD m) (HALF n) m *)
 (* Proof:
@@ -797,14 +814,15 @@ val exp_mod_binary_1 = store_thm(
          = exp_mod_binary ((a * a) MOD 1) (HALF n) 1  by exp_mod_binary_def
       If m <> 1, true for EVEN n                      by exp_mod_binary_def
 *)
-val exp_mod_binary_even = store_thm(
-  "exp_mod_binary_even",
-  ``!m n. 0 < m /\ EVEN n ==> !a. exp_mod_binary a n m = exp_mod_binary ((a * a) MOD m) (HALF n) m``,
+Theorem exp_mod_binary_even:
+    !m n. 0 < m /\ EVEN n ==> !a. exp_mod_binary a n m = exp_mod_binary ((a * a) MOD m) (HALF n) m
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   simp[exp_mod_binary_0] >>
   rw[Once exp_mod_binary_def] >>
-  rw[Once exp_mod_binary_def]);
+  rw[Once exp_mod_binary_def]
+QED
 
 (* Theorem: 0 < m /\ ODD n ==> !a. exp_mod_binary a n m = (a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m *)
 (* Proof:
@@ -817,16 +835,17 @@ val exp_mod_binary_even = store_thm(
         so n <> 0                    by EVEN
       Thus true for ~(EVEN n)        by exp_mod_binary_def
 *)
-val exp_mod_binary_odd = store_thm(
-  "exp_mod_binary_odd",
-  ``!m n. 0 < m /\ ODD n ==> !a. exp_mod_binary a n m = (a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m``,
+Theorem exp_mod_binary_odd:
+    !m n. 0 < m /\ ODD n ==> !a. exp_mod_binary a n m = (a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m
+Proof
   rpt strip_tac >>
   Cases_on `m = 1` >-
   rw[Once exp_mod_binary_def] >>
   rpt strip_tac >>
   `~EVEN n` by rw[GSYM ODD_EVEN] >>
   `n <> 0` by metis_tac[EVEN] >>
-  rw[Once exp_mod_binary_def]);
+  rw[Once exp_mod_binary_def]
+QED
 
 (* Theorem: 0 < m ==> !a. exp_mod_binary a (SUC n) m = (a * exp_mod_binary a n m) MOD m *)
 (* Proof:
@@ -850,9 +869,9 @@ val exp_mod_binary_odd = store_thm(
       = exp_mod_binary ((a * a) MOD m) (HALF (SUC n)) m                       by ODD_SUC_HALF
       = exp_mod_binary a (SUC n) m                                            by exp_mod_binary_even, 0 < m
 *)
-val exp_mod_binary_suc = store_thm(
-  "exp_mod_binary_suc",
-  ``!m n. 0 < m ==> !a. exp_mod_binary a (SUC n) m = (a * exp_mod_binary a n m) MOD m``,
+Theorem exp_mod_binary_suc:
+    !m n. 0 < m ==> !a. exp_mod_binary a (SUC n) m = (a * exp_mod_binary a n m) MOD m
+Proof
   ntac 3 strip_tac >>
   completeInduct_on `n` >>
   rpt strip_tac >>
@@ -872,7 +891,8 @@ val exp_mod_binary_suc = store_thm(
     `_ = exp_mod_binary ((a * a) MOD m) (HALF (SUC n)) m` by rw[ODD_SUC_HALF] >>
     `_ = exp_mod_binary a (SUC n) m` by rw[exp_mod_binary_even] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: exp_mod_binary a n m = a ** n MOD m *)
 (* Proof:
@@ -896,9 +916,9 @@ val exp_mod_binary_suc = store_thm(
       = (a * a ** n) MOD m                   by MOD_MOD, MOD_TIMES2, 0 < m
       = (a ** SUC n) MOD m                   by EXP
 *)
-val exp_mod_binary_eqn = store_thm(
-  "exp_mod_binary_eqn",
-  ``!m n a. exp_mod_binary a n m = a ** n MOD m``,
+Theorem exp_mod_binary_eqn:
+    !m n a. exp_mod_binary a n m = a ** n MOD m
+Proof
   rpt strip_tac >>
   Cases_on `m = 0` >-
   rw[Once exp_mod_binary_def] >>
@@ -907,7 +927,8 @@ val exp_mod_binary_eqn = store_thm(
   `1 < m /\ 0 < m` by decide_tac >>
   Induct_on `n` >-
   simp[exp_mod_binary_0, ONE_MOD, EXP] >>
-  metis_tac[exp_mod_binary_suc, MOD_MOD, MOD_TIMES2, EXP]);
+  metis_tac[exp_mod_binary_suc, MOD_MOD, MOD_TIMES2, EXP]
+QED
 
 (* Theorem: exp_mod_binary 0 n m = (if n = 0 then 1 else 0) MOD m *)
 (* Proof:
@@ -915,10 +936,11 @@ val exp_mod_binary_eqn = store_thm(
    = (0 ** n) MOD m                          by exp_mod_binary_eqn
    = (if n = 0 then 1 else 0) MOD m          by ZERO_EXP
 *)
-val exp_mod_binary_0_n = store_thm(
-  "exp_mod_binary_0_n",
-  ``!m n. exp_mod_binary 0 n m = (if n = 0 then 1 else 0) MOD m``,
-  rw[exp_mod_binary_eqn, ZERO_EXP]);
+Theorem exp_mod_binary_0_n:
+    !m n. exp_mod_binary 0 n m = (if n = 0 then 1 else 0) MOD m
+Proof
+  rw[exp_mod_binary_eqn, ZERO_EXP]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Fast Modular Exponentiation                                               *)
@@ -936,15 +958,15 @@ val exp_mod_binary_0_n = store_thm(
 *)
 
 (* Define fast modulo exponentiation *)
-val exp_mod_step_def = Define`
+Definition exp_mod_step_def:
     exp_mod_step m n k r =
        if k = 0 then (r * m ** n) MOD k
        else if n = 0 then (r MOD k) else
        exp_mod_step ((SQ m) MOD k) (HALF n) k (if EVEN n then r else (r * m) MOD k)
-`;
-val exp_mod_compute_def = Define`
+End
+Definition exp_mod_compute_def:
     exp_mod_compute m n k = exp_mod_step m n k 1
-`;
+End
 
 (*
 EVAL ``exp_mod_compute 2 10 3``; --> 1024 MOD 3 = 1
@@ -954,17 +976,19 @@ EVAL ``exp_mod_compute 3 8 19 = (3 ** 8) MOD 19``; --> T
 
 (* Theorem: exp_mod_step m 0 k r = r MOD k *)
 (* Proof: by exp_mod_step_def *)
-val exp_mod_step_0 = store_thm(
-  "exp_mod_step_0",
-  ``!m r k. exp_mod_step m 0 k r = r MOD k``,
-  rw[Once exp_mod_step_def]);
+Theorem exp_mod_step_0:
+    !m r k. exp_mod_step m 0 k r = r MOD k
+Proof
+  rw[Once exp_mod_step_def]
+QED
 
 (* Theorem: exp_mod_step m 1 k r = (r * m) MOD k *)
 (* Proof: by exp_mod_step_def *)
-val exp_mod_step_1 = store_thm(
-  "exp_mod_step_1",
-  ``!m r k. exp_mod_step m 1 k r = (r * m) MOD k``,
-  rw[Once exp_mod_step_def, Once exp_mod_step_def]);
+Theorem exp_mod_step_1:
+    !m r k. exp_mod_step m 1 k r = (r * m) MOD k
+Proof
+  rw[Once exp_mod_step_def, Once exp_mod_step_def]
+QED
 
 (* Theorem: exp_mod_step m 2 k r = (r * m * m) MOD k *)
 (* Proof:
@@ -976,10 +1000,11 @@ val exp_mod_step_1 = store_thm(
    = (r * (m * m)) MOD k                        by EXP_2
    = (r * m * m) MOD k                          by MULT_ASSOC
 *)
-val exp_mod_step_2 = store_thm(
-  "exp_mod_step_2",
-  ``!m r k. exp_mod_step m 2 k r = (r * m * m) MOD k``,
-  rw[Once exp_mod_step_def, Once exp_mod_step_def, Once exp_mod_step_def]);
+Theorem exp_mod_step_2:
+    !m r k. exp_mod_step m 2 k r = (r * m * m) MOD k
+Proof
+  rw[Once exp_mod_step_def, Once exp_mod_step_def, Once exp_mod_step_def]
+QED
 
 (* Theorem: 0 < k ==> !n. EVEN n ==>
             !m r. exp_mod_step m n k r = exp_mod_step ((SQ m) MOD k) (HALF n) k r *)
@@ -988,14 +1013,15 @@ val exp_mod_step_2 = store_thm(
       Thus LHS = r MOD k = RHS   by exp_mod_step_def
    If n <> 0, true               by exp_mod_step_def
 *)
-val exp_mod_step_even = store_thm(
-  "exp_mod_step_even",
-  ``!k. 0 < k ==> !n. EVEN n ==>
-   !m r. exp_mod_step m n k r = exp_mod_step ((SQ m) MOD k) (HALF n) k r``,
+Theorem exp_mod_step_even:
+    !k. 0 < k ==> !n. EVEN n ==>
+   !m r. exp_mod_step m n k r = exp_mod_step ((SQ m) MOD k) (HALF n) k r
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   metis_tac[exp_mod_step_def, HALF_EQ_0, NOT_ZERO_LT_ZERO] >>
-  rw[Once exp_mod_step_def]);
+  rw[Once exp_mod_step_def]
+QED
 
 (* Theorem: 0 < k ==> !n. ODD n ==>
             !m r. exp_mod_step m n k r = exp_mod_step ((SQ m) MOD k) (HALF n) k ((r * m) MOD k) *)
@@ -1004,13 +1030,14 @@ val exp_mod_step_even = store_thm(
                and m <> 0     by EVEN
    The result follows         by exp_mod_step_def
 *)
-val exp_mod_step_odd = store_thm(
-  "exp_mod_step_odd",
-  ``!k. 0 < k ==> !n. ODD n ==>
-   !m r. exp_mod_step m n k r = exp_mod_step ((SQ m) MOD k) (HALF n) k ((r * m) MOD k)``,
+Theorem exp_mod_step_odd:
+    !k. 0 < k ==> !n. ODD n ==>
+   !m r. exp_mod_step m n k r = exp_mod_step ((SQ m) MOD k) (HALF n) k ((r * m) MOD k)
+Proof
   rpt strip_tac >>
   `~EVEN n /\ n <> 0` by metis_tac[ODD_EVEN, EVEN] >>
-  rw[Once exp_mod_step_def]);
+  rw[Once exp_mod_step_def]
+QED
 
 (* Theorem: exp_mod_step m n k r = (r * m ** n) MOD k *)
 (* Proof:
@@ -1039,9 +1066,9 @@ val exp_mod_step_odd = store_thm(
       = (r * (m * (SQ m) ** (HALF n))) MOD k         by MULT_ASSOC
       = (r * m ** n) MOD k                           by EXP_ODD
 *)
-val exp_mod_step_eqn = store_thm(
-  "exp_mod_step_eqn",
-  ``!m n k r. exp_mod_step m n k r = (r * m ** n) MOD k``,
+Theorem exp_mod_step_eqn:
+    !m n k r. exp_mod_step m n k r = (r * m ** n) MOD k
+Proof
   rpt strip_tac >>
   Cases_on `k = 0` >-
   rw[Once exp_mod_step_def] >>
@@ -1067,7 +1094,8 @@ val exp_mod_step_eqn = store_thm(
     `_ = (r * (m * (SQ m) ** (HALF n))) MOD k` by rw[] >>
     `_ = (r * m ** n) MOD k` by rw[EXP_ODD] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: exp_mod_compute m 0 k = 1 MOD k *)
 (* Proof:
@@ -1075,10 +1103,11 @@ val exp_mod_step_eqn = store_thm(
    = exp_mod_step m 0 k 1   by exp_mod_compute_def
    = 1 MOD k                by exp_mod_step_0
 *)
-val exp_mod_compute_0 = store_thm(
-  "exp_mod_compute_0",
-  ``!m k. exp_mod_compute m 0 k = 1 MOD k``,
-  rw[exp_mod_compute_def, exp_mod_step_0]);
+Theorem exp_mod_compute_0:
+    !m k. exp_mod_compute m 0 k = 1 MOD k
+Proof
+  rw[exp_mod_compute_def, exp_mod_step_0]
+QED
 
 (* Theorem: exp_mod_compute m 1 k = m MOD k *)
 (* Proof:
@@ -1087,10 +1116,11 @@ val exp_mod_compute_0 = store_thm(
    = (1 * m) MOD k          by exp_mod_step_1
    = m MOD k                by MULT_LEFT_1
 *)
-val exp_mod_compute_1 = store_thm(
-  "exp_mod_compute_1",
-  ``!m k. exp_mod_compute m 1 k = m MOD k``,
-  rw[exp_mod_compute_def, exp_mod_step_1]);
+Theorem exp_mod_compute_1:
+    !m k. exp_mod_compute m 1 k = m MOD k
+Proof
+  rw[exp_mod_compute_def, exp_mod_step_1]
+QED
 
 (* Theorem: exp_mod_compute m 2 k = (SQ m) MOD k *)
 (* Proof:
@@ -1099,10 +1129,11 @@ val exp_mod_compute_1 = store_thm(
    = (1 * n * n) MOD k      by exp_mod_step_2
    = (SQ m) MOD k           by EXP_2
 *)
-val exp_mod_compute_2 = store_thm(
-  "exp_mod_compute_2",
-  ``!m k. exp_mod_compute m 2 k = (SQ m) MOD k``,
-  rw[exp_mod_compute_def, exp_mod_step_2]);
+Theorem exp_mod_compute_2:
+    !m k. exp_mod_compute m 2 k = (SQ m) MOD k
+Proof
+  rw[exp_mod_compute_def, exp_mod_step_2]
+QED
 
 (* Theorem: 0 < k ==> !n. EVEN n ==>
             !m. exp_mod_compute m n k = exp_mod_compute ((SQ m) MOD k) (HALF n) k *)
@@ -1112,11 +1143,12 @@ val exp_mod_compute_2 = store_thm(
    = exp_mod_step ((SQ m) MOD k) (HALF n) k 1   by exp_mod_step_even, EVEN n
    = exp_mod_compute ((SQ m) MOD k) (HALF n) k  by exp_mod_compute_def
 *)
-val exp_mod_compute_even = store_thm(
-  "exp_mod_compute_even",
-  ``!k. 0 < k ==> !n. EVEN n ==>
-   !m. exp_mod_compute m n k = exp_mod_compute ((SQ m) MOD k) (HALF n) k``,
-  rw[exp_mod_compute_def, exp_mod_step_even]);
+Theorem exp_mod_compute_even:
+    !k. 0 < k ==> !n. EVEN n ==>
+   !m. exp_mod_compute m n k = exp_mod_compute ((SQ m) MOD k) (HALF n) k
+Proof
+  rw[exp_mod_compute_def, exp_mod_step_even]
+QED
 
 (* Theorem: 0 < k ==> !n. ODD n ==>
             !m. exp_mod_compute m n k = exp_mod_step ((SQ m) MOD k) (HALF n) k (m MOD k) *)
@@ -1126,11 +1158,12 @@ val exp_mod_compute_even = store_thm(
    = exp_mod_step ((SQ m) MOD k) (HALF n) k (1 * m MOD k)   by exp_mod_step_odd, ODD n
    = exp_mod_step ((SQ m) MOD k) (HALF n) k (m MOD k)       by MULT_LEFT_1
 *)
-val exp_mod_compute_odd = store_thm(
-  "exp_mod_compute_odd",
-  ``!k. 0 < k ==> !n. ODD n ==>
-   !m. exp_mod_compute m n k = exp_mod_step ((SQ m) MOD k) (HALF n) k (m MOD k)``,
-  rw[exp_mod_compute_def, exp_mod_step_odd]);
+Theorem exp_mod_compute_odd:
+    !k. 0 < k ==> !n. ODD n ==>
+   !m. exp_mod_compute m n k = exp_mod_step ((SQ m) MOD k) (HALF n) k (m MOD k)
+Proof
+  rw[exp_mod_compute_def, exp_mod_step_odd]
+QED
 
 (* Theorem: exp_mod_compute m n k = (m ** n) MOD k *)
 (* Proof:
@@ -1139,10 +1172,11 @@ val exp_mod_compute_odd = store_thm(
    = (1 * m ** n) MOD k       by exp_mod_step_eqn
    = (m ** n) MOD k           by MULT_LEFT_1
 *)
-val exp_mod_compute_eqn = store_thm(
-  "exp_mod_compute_eqn",
-  ``!m n k. exp_mod_compute m n k = (m ** n) MOD k``,
-  rw[exp_mod_compute_def, exp_mod_step_eqn]);
+Theorem exp_mod_compute_eqn:
+    !m n k. exp_mod_compute m n k = (m ** n) MOD k
+Proof
+  rw[exp_mod_compute_def, exp_mod_step_eqn]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* ROOT computation                                                          *)
@@ -1196,21 +1230,23 @@ End
                                            in if n < (SUC x) ** r then x else (SUC x))
                else ROOT 0 n *)
 (* Proof: by root_compute_def, exp_compute_eqn *)
-val root_compute_alt = store_thm(
-  "root_compute_alt",
-  ``!r n. root_compute r n = if 0 < r then
+Theorem root_compute_alt:
+    !r n. root_compute r n = if 0 < r then
                             if n = 0 then 0 else
                                (let x = 2 * root_compute r (n DIV (2 ** r))
                                  in if n < (SUC x) ** r then x else (SUC x))
-                            else ROOT 0 n``,
-  rw[Once root_compute_def, exp_compute_eqn]);
+                            else ROOT 0 n
+Proof
+  rw[Once root_compute_def, exp_compute_eqn]
+QED
 
 (* Theorem: root_compute r 0 = 0 *)
 (* Proof: by root_compute_def *)
-val root_compute_0 = store_thm(
-  "root_compute_0",
-  ``!r. 0 < r ==> (root_compute r 0 = 0)``,
-  rw[Once root_compute_def]);
+Theorem root_compute_0:
+    !r. 0 < r ==> (root_compute r 0 = 0)
+Proof
+  rw[Once root_compute_def]
+QED
 
 (* Theorem: root_compute 1 n = n *)
 (* Proof:
@@ -1242,9 +1278,9 @@ val root_compute_0 = store_thm(
       = SUC (2 * HALF n)           by above
       = n                          by ODD_HALF
 *)
-val root_compute_1 = store_thm(
-  "root_compute_1",
-  ``!n. root_compute 1 n = n``,
+Theorem root_compute_1:
+    !n. root_compute 1 n = n
+Proof
   completeInduct_on `n` >>
   rw[Once root_compute_alt] >| [
     spose_not_then strip_assume_tac >>
@@ -1255,7 +1291,8 @@ val root_compute_1 = store_thm(
     `EVEN n` by metis_tac[ODD_HALF, ADD1, EVEN_ODD] >>
     `n = 2 * HALF n` by rw[EVEN_HALF] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: root_compute r n = ROOT r n *)
 (* Proof:
@@ -1279,9 +1316,9 @@ val root_compute_1 = store_thm(
       = if n < SUC x ** r then x else SUC x    by root_compute_alt, induction hypothesis
       = ROOT r n                               by ROOT_COMPUTE
 *)
-val root_compute_eqn = store_thm(
-  "root_compute_eqn",
-  ``!r n. root_compute r n = ROOT r n``,
+Theorem root_compute_eqn:
+    !r n. root_compute r n = ROOT r n
+Proof
   rpt strip_tac >>
   Cases_on `r = 0` >-
   rw[Once root_compute_alt] >>
@@ -1297,7 +1334,8 @@ val root_compute_eqn = store_thm(
     decide_tac,
     `ROOT r n = SUC x` by rw[Once ROOT_COMPUTE, Abbr`x`] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Square Root Computation                                                   *)
@@ -1308,10 +1346,11 @@ val _ = overload_on("sqrt_compute", ``root_compute 2``);
 
 (* Theorem: sqrt_compute n = SQRT n *)
 (* Proof: by root_compute_eqn *)
-val sqrt_compute_eqn = store_thm(
-  "sqrt_compute_eqn",
-  ``!n. sqrt_compute n = SQRT n``,
-  rw[root_compute_eqn]);
+Theorem sqrt_compute_eqn:
+    !n. sqrt_compute n = SQRT n
+Proof
+  rw[root_compute_eqn]
+QED
 
 (*
 > EVAL ``sqrt_compute 1``; --> 1
@@ -1354,12 +1393,12 @@ perfect_power_bound_ulog;
 *)
 
 (* Define power-index computation, search downwards from k = LOG2 n *)
-val power_index_compute_def = Define`
+Definition power_index_compute_def:
     power_index_compute n k =
        if k <= 1 then 1
        else if exp_compute (root_compute k n) k = n then k
        else power_index_compute n (k - 1)
-`;
+End
 
 (*
 > EVAL ``power_index_compute 8 (log_compute 8)``; --> 3
@@ -1372,11 +1411,12 @@ val power_index_compute_def = Define`
 (* Theorem: power_index_compute n k =
             if k <= 1 then 1 else if (ROOT k n) ** k = n then k else power_index_compute n (k - 1) *)
 (* Proof: by power_index_compute_def, root_compute_eqn, exp_compute_eqn *)
-val power_index_compute_alt = store_thm(
-  "power_index_compute_alt",
-  ``!n k. power_index_compute n k =
-         if k <= 1 then 1 else if (ROOT k n) ** k = n then k else power_index_compute n (k - 1)``,
-  rw[Once power_index_compute_def, root_compute_eqn, exp_compute_eqn]);
+Theorem power_index_compute_alt:
+    !n k. power_index_compute n k =
+         if k <= 1 then 1 else if (ROOT k n) ** k = n then k else power_index_compute n (k - 1)
+Proof
+  rw[Once power_index_compute_def, root_compute_eqn, exp_compute_eqn]
+QED
 
 (* Theorem: power_index_compute n k = power_index n k *)
 (* Proof:
@@ -1394,19 +1434,20 @@ val power_index_compute_alt = store_thm(
        = power_index n (k - 1)         by induction hypothesis, k - 1 < k
        = power_index n k               by power_index_not_exact_root
 *)
-val power_index_compute_eqn = store_thm(
-  "power_index_compute_eqn",
-  ``!n k. power_index_compute n k = power_index n k``,
+Theorem power_index_compute_eqn:
+    !n k. power_index_compute n k = power_index n k
+Proof
   completeInduct_on `k` >>
   rw[Once power_index_compute_alt] >-
   metis_tac[power_index_0, power_index_1, DECIDE``k <= 1 <=> (k = 0) \/ (k = 1)``] >-
   rw[power_index_exact_root] >>
-  rw[power_index_not_exact_root]);
+  rw[power_index_not_exact_root]
+QED
 
 (* Define power-free check *)
-val power_free_check_def = Define`
+Definition power_free_check_def:
     power_free_check n <=> (1 < n) /\ (power_index_compute n (ulog_compute n) = 1)
-`;
+End
 
 (*
 > EVAL ``power_free_check 6``; --> T
@@ -1425,38 +1466,43 @@ val power_free_check_def = Define`
 
 (* Theorem: power_free_check 0 <=> F *)
 (* Proof: by power_free_check_def *)
-val power_free_check_0 = store_thm(
-  "power_free_check_0",
-  ``power_free_check 0 <=> F``,
-  rw[power_free_check_def]);
+Theorem power_free_check_0:
+    power_free_check 0 <=> F
+Proof
+  rw[power_free_check_def]
+QED
 
 (* Theorem: power_free_check 1 <=> F *)
 (* Proof: by power_free_check_def *)
-val power_free_check_1 = store_thm(
-  "power_free_check_1",
-  ``power_free_check 1 <=> F``,
-  rw[power_free_check_def]);
+Theorem power_free_check_1:
+    power_free_check 1 <=> F
+Proof
+  rw[power_free_check_def]
+QED
 
 (* Theorem: power_free_check n <=> (1 < n) /\ (power_index n (ulog n) = 1) *)
 (* Proof: by power_free_check_def, power_index_compute_eqn, ulog_compute_eqn *)
-val power_free_check_alt = store_thm(
-  "power_free_check_alt",
-  ``!n. power_free_check n <=> (1 < n) /\ (power_index n (ulog n) = 1)``,
-  rw[power_free_check_def, power_index_compute_eqn, ulog_compute_eqn]);
+Theorem power_free_check_alt:
+    !n. power_free_check n <=> (1 < n) /\ (power_index n (ulog n) = 1)
+Proof
+  rw[power_free_check_def, power_index_compute_eqn, ulog_compute_eqn]
+QED
 
 (* Theorem: power_free_check n <=> power_free n *)
 (* Proof: by power_free_check_alt, power_free_by_power_index_ulog *)
-val power_free_check_eqn = store_thm(
-  "power_free_check_eqn",
-  ``!n. power_free_check n <=> power_free n``,
-  rw[power_free_check_alt, power_free_by_power_index_ulog]);
+Theorem power_free_check_eqn:
+    !n. power_free_check n <=> power_free n
+Proof
+  rw[power_free_check_alt, power_free_by_power_index_ulog]
+QED
 
 (* Theorem: power_free n <=> power_free_check n *)
 (* Proof: by power_free_check_eqn *)
-val power_free_eval = store_thm(
-  "power_free_eval[compute]",
-  ``!n. power_free n <=> power_free_check n``,
-  rw[power_free_check_eqn]);
+Theorem power_free_eval[compute]:
+    !n. power_free n <=> power_free_check n
+Proof
+  rw[power_free_check_eqn]
+QED
 
 (*
 > EVAL ``power_free 0``; = F
@@ -1478,10 +1524,11 @@ val power_free_check_by_ulog = save_thm("power_free_check_by_ulog", power_free_c
 
 (* Theorem: power_free_check n <=> (1 < n) /\ (power_index n (LOG2 n) = 1) *)
 (* Proof: by power_free_check_eqn, power_free_by_power_index_LOG2 *)
-val power_free_check_by_LOG2 = store_thm(
-  "power_free_check_by_LOG2",
-  ``!n. power_free_check n <=> (1 < n) /\ (power_index n (LOG2 n) = 1)``,
-  rw[power_free_check_eqn, power_free_by_power_index_LOG2]);
+Theorem power_free_check_by_LOG2:
+    !n. power_free_check n <=> (1 < n) /\ (power_index n (LOG2 n) = 1)
+Proof
+  rw[power_free_check_eqn, power_free_by_power_index_LOG2]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* GCD computation                                                          *)
@@ -1584,9 +1631,9 @@ val BINARY_GCD = store_thm("BINARY_GCD",
 
    Since a divides b /\ b divides a, a = b    by DIVIDES_ANTISYM
 *)
-val ODD_IMP_GCD_CANCEL_EVEN = store_thm(
-  "ODD_IMP_GCD_CANCEL_EVEN",
-  ``!m n. ODD n ==> (gcd n (2 * m) = gcd n m)``,
+Theorem ODD_IMP_GCD_CANCEL_EVEN:
+    !m n. ODD n ==> (gcd n (2 * m) = gcd n m)
+Proof
   rpt strip_tac >>
   qabbrev_tac `a = gcd n (2 * m)` >>
   qabbrev_tac `b = gcd n m` >>
@@ -1600,7 +1647,8 @@ val ODD_IMP_GCD_CANCEL_EVEN = store_thm(
   `d <> 2` by metis_tac[DIVIDES_ODD, DIVIDES_MOD_0, ODD_MOD2, DECIDE``1 <> 0 /\ 0 < 2``] >>
   decide_tac) >>
   metis_tac[L_EUCLIDES]) >>
-  metis_tac[GCD_IS_GREATEST_COMMON_DIVISOR, DIVIDES_MULTIPLE, DIVIDES_ANTISYM]);
+  metis_tac[GCD_IS_GREATEST_COMMON_DIVISOR, DIVIDES_MULTIPLE, DIVIDES_ANTISYM]
+QED
 
 (* Proof in gcd theory:
 
@@ -1636,20 +1684,21 @@ val ODD_IMP_GCD_CANCEL_EVEN = prove(
          = gcd n hm                          by ODD_IMP_GCD_CANCEL_EVEN
          = gcd hm n                          by GCD_SYM
 *)
-val BINARY_GCD = store_thm(
-  "BINARY_GCD",
-  ``!m n. (EVEN m /\ EVEN n ==> (gcd m n = 2 * gcd (HALF m) (HALF n))) /\
-         (EVEN m /\ ODD n ==> (gcd m n = gcd (HALF m) n))``,
+Theorem BINARY_GCD:
+    !m n. (EVEN m /\ EVEN n ==> (gcd m n = 2 * gcd (HALF m) (HALF n))) /\
+         (EVEN m /\ ODD n ==> (gcd m n = gcd (HALF m) n))
+Proof
   rpt strip_tac >-
   metis_tac[EVEN_HALF, GCD_COMMON_FACTOR] >>
-  metis_tac[EVEN_HALF, ODD_IMP_GCD_CANCEL_EVEN, GCD_SYM]);
+  metis_tac[EVEN_HALF, ODD_IMP_GCD_CANCEL_EVEN, GCD_SYM]
+QED
 
 (* Note: For ODD m /\ ODD n,
    Let n < m, then apply GCD_SUB_L:  gcd m n = gcd (m - n) n,  with EVEN (m - n)
 *)
 
 (* Convert BINARY_GCD into an algorithm *)
-val gcd_compute_def = Define`
+Definition gcd_compute_def:
     gcd_compute n m =
        if n = 0 then m
      else if m = 0 then n
@@ -1660,7 +1709,7 @@ val gcd_compute_def = Define`
      else (* ODD n *) if EVEN m then gcd_compute n (HALF m)
                  else (* ODD m *)
                    if n < m then gcd_compute n (m - n) else gcd_compute (n - m) m
-`;
+End
 (* Techniques for recursive definition:
 (1) Keep the parameter order for recursive calls (no swapping of parameter).
 (2) Provide exit conditions for small enough parameters.
@@ -1683,18 +1732,20 @@ val gcd_compute_def = Define`
 
 (* Theorem: (gcd_compute 0 n = n) /\ (gcd_compute n 0 = n) *)
 (* Proof: by gcd_compute_def *)
-val gcd_compute_0 = store_thm(
-  "gcd_compute_0",
-  ``!n. (gcd_compute 0 n = n) /\ (gcd_compute n 0 = n)``,
+Theorem gcd_compute_0:
+    !n. (gcd_compute 0 n = n) /\ (gcd_compute n 0 = n)
+Proof
   rw[Once gcd_compute_def] >>
-  rw[Once gcd_compute_def]);
+  rw[Once gcd_compute_def]
+QED
 
 (* Theorem: gcd_compute n n = n *)
 (* Proof: by gcd_compute_def *)
-val gcd_compute_id = store_thm(
-  "gcd_compute_id",
-  ``!n. gcd_compute n n = n``,
-  rw[Once gcd_compute_def]);
+Theorem gcd_compute_id:
+    !n. gcd_compute n n = n
+Proof
+  rw[Once gcd_compute_def]
+QED
 
 (* Theorem: EVEN n /\ EVEN m ==> (gcd_compute n m = 2 * gcd_compute (HALF n) (HALF m)) *)
 (* Proof:
@@ -1717,9 +1768,9 @@ val gcd_compute_id = store_thm(
         If n <> 0 and m <> 0,
            The result is true                       by gcd_compute_def
 *)
-val gcd_compute_even_even = store_thm(
-  "gcd_compute_even_even",
-  ``!m n. EVEN n /\ EVEN m ==> (gcd_compute n m = 2 * gcd_compute (HALF n) (HALF m))``,
+Theorem gcd_compute_even_even:
+    !m n. EVEN n /\ EVEN m ==> (gcd_compute n m = 2 * gcd_compute (HALF n) (HALF m))
+Proof
   rpt strip_tac >>
   Cases_on `n = m` >-
   metis_tac[gcd_compute_id, EVEN_HALF] >>
@@ -1728,7 +1779,8 @@ val gcd_compute_even_even = store_thm(
   metis_tac[gcd_compute_0, EVEN_HALF] >>
   Cases_on `m = 0` >-
   metis_tac[gcd_compute_0, EVEN_HALF] >>
-  rw[Once gcd_compute_def]);
+  rw[Once gcd_compute_def]
+QED
 
 (* Theorem: EVEN n /\ ODD m ==> (gcd_compute n m = gcd_compute (HALF n) m) *)
 (* Proof:
@@ -1743,16 +1795,17 @@ val gcd_compute_even_even = store_thm(
         so n <> m                        by EVEN n, ~EVEN m
       Thus result is true                by gcd_compute_def
 *)
-val gcd_compute_even_odd = store_thm(
-  "gcd_compute_even_odd",
-  ``!m n. EVEN n /\ ODD m ==> (gcd_compute n m = gcd_compute (HALF n) m)``,
+Theorem gcd_compute_even_odd:
+    !m n. EVEN n /\ ODD m ==> (gcd_compute n m = gcd_compute (HALF n) m)
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[gcd_compute_0] >>
   `~EVEN m` by rw[GSYM ODD_EVEN] >>
   `n <> m` by metis_tac[] >>
   `m <> 0` by metis_tac[ODD] >>
-  rw[Once gcd_compute_def]);
+  rw[Once gcd_compute_def]
+QED
 
 (* Theorem: ODD n /\ EVEN m ==> (gcd_compute n m = gcd_compute n (HALF m)) *)
 (* Proof:
@@ -1767,16 +1820,17 @@ val gcd_compute_even_odd = store_thm(
         so n <> m                        by EVEN m, ~EVEN n
       Thus result is true                by gcd_compute_def
 *)
-val gcd_compute_odd_even = store_thm(
-  "gcd_compute_odd_even",
-  ``!m n. ODD n /\ EVEN m ==> (gcd_compute n m = gcd_compute n (HALF m))``,
+Theorem gcd_compute_odd_even:
+    !m n. ODD n /\ EVEN m ==> (gcd_compute n m = gcd_compute n (HALF m))
+Proof
   rpt strip_tac >>
   Cases_on `m = 0` >-
   rw[gcd_compute_0] >>
   `~EVEN n` by rw[GSYM ODD_EVEN] >>
   `n <> m` by metis_tac[] >>
   `n <> 0` by metis_tac[ODD] >>
-  rw[Once gcd_compute_def]);
+  rw[Once gcd_compute_def]
+QED
 
 (* Theorem: ODD n /\ ODD m ==> (gcd_compute n m =
             if n < m then gcd_compute n (m - n) else gcd_compute (n - m) m) *)
@@ -1792,16 +1846,17 @@ val gcd_compute_odd_even = store_thm(
       also n <> 0 /\ m <> 0      by ODD
       The result is true         by gcd_compute_def
 *)
-val gcd_compute_odd_odd = store_thm(
-  "gcd_compute_odd_odd",
-  ``!m n. ODD n /\ ODD m ==> (gcd_compute n m =
-         if n < m then gcd_compute n (m - n) else gcd_compute (n - m) m)``,
+Theorem gcd_compute_odd_odd:
+    !m n. ODD n /\ ODD m ==> (gcd_compute n m =
+         if n < m then gcd_compute n (m - n) else gcd_compute (n - m) m)
+Proof
   rpt strip_tac >>
   Cases_on `n = m` >-
   metis_tac[gcd_compute_id, gcd_compute_0, DECIDE``n - n = 0``] >>
   `~EVEN n /\ ~EVEN m` by rw[GSYM ODD_EVEN] >>
   `n <> 0 /\ m <> 0` by metis_tac[ODD] >>
-  rw[Once gcd_compute_def]);
+  rw[Once gcd_compute_def]
+QED
 
 (* Theorem: gcd_compute n m = gcd n m *)
 (* Proof:
@@ -1846,9 +1901,9 @@ val gcd_compute_odd_odd = store_thm(
           = gcd (n - m) m                by induction hypothesis
           = gcd n m                      by GCD_SUB_L, m <= n
 *)
-val gcd_compute_eqn = store_thm(
-  "gcd_compute_eqn",
-  ``!m n. gcd_compute n m = gcd n m``,
+Theorem gcd_compute_eqn:
+    !m n. gcd_compute n m = gcd n m
+Proof
   rpt strip_tac >>
   completeInduct_on `n + m` >>
   rpt strip_tac >>
@@ -1860,21 +1915,24 @@ val gcd_compute_eqn = store_thm(
     metis_tac[BINARY_GCD, EVEN_ODD, GCD_SYM],
     metis_tac[GCD_SUB_R, LESS_IMP_LESS_OR_EQ],
     metis_tac[GCD_SUB_L, NOT_LESS]
-  ]);
+  ]
+QED
 
 (* Theorem: (gcd_compute 1 n = 1) /\ (gcd_compute n 1 = 1) *)
 (* Proof: by gcd_compute_eqn, GCD_1 *)
-val gcd_compute_1 = store_thm(
-  "gcd_compute_1",
-  ``!n. (gcd_compute 1 n = 1) /\ (gcd_compute n 1 = 1)``,
-  rw_tac std_ss[gcd_compute_eqn, GCD_1]);
+Theorem gcd_compute_1:
+    !n. (gcd_compute 1 n = 1) /\ (gcd_compute n 1 = 1)
+Proof
+  rw_tac std_ss[gcd_compute_eqn, GCD_1]
+QED
 
 (* Theorem: gcd_compute n m = gcd_compute m n *)
 (* Proof: gcd_compute_eqn, GCD_SYM *)
-val gcd_compute_sym = store_thm(
-  "gcd_compute_sym",
-  ``!m n. gcd_compute n m = gcd_compute m n``,
-  rw[gcd_compute_eqn, GCD_SYM]);
+Theorem gcd_compute_sym:
+    !m n. gcd_compute n m = gcd_compute m n
+Proof
+  rw[gcd_compute_eqn, GCD_SYM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Phi Computation                                                           *)
@@ -1914,17 +1972,17 @@ val count_coprime_def = Define `
 *)
 
 (* Count the number of coprimes, linear stack version *)
-val count_coprime_def = Define `
+Definition count_coprime_def:
     count_coprime n j =
            if j = 0 then 0
       else if j = 1 then 1
       else count_coprime n (j - 1) + (if (gcd_compute j n = 1) then 1 else 0)
-`;
+End
 
 (* Compute phi function *)
-val phi_compute_def = Define`
+Definition phi_compute_def:
     phi_compute n = count_coprime n n
-`;
+End
 
 (*
 > EVAL ``phi_compute 0``; --> 0
@@ -1946,10 +2004,11 @@ val phi_compute_def = Define`
    = count_coprime 0 0    by phi_compute_def
    = 0                    by count_coprime_def
 *)
-val phi_compute_0 = store_thm(
-  "phi_compute_0",
-  ``phi_compute 0 = 0``,
-  rw[phi_compute_def, Once count_coprime_def]);
+Theorem phi_compute_0:
+    phi_compute 0 = 0
+Proof
+  rw[phi_compute_def, Once count_coprime_def]
+QED
 
 (* Theorem: phi_compute 1 = 1 *)
 (* Proof:
@@ -1957,33 +2016,37 @@ val phi_compute_0 = store_thm(
    = count_coprime 1 1    by phi_compute_def
    = 1                    by count_coprime_def
 *)
-val phi_compute_1 = store_thm(
-  "phi_compute_1",
-  ``phi_compute 1 = 1``,
-  rw[phi_compute_def, Once count_coprime_def]);
+Theorem phi_compute_1:
+    phi_compute 1 = 1
+Proof
+  rw[phi_compute_def, Once count_coprime_def]
+QED
 
 (* Theorem: count_coprime n 0 = 0 *)
 (* Proof: by count_coprime_def *)
-val count_coprime_0 = store_thm(
-  "count_coprime_0",
-  ``!n. count_coprime n 0 = 0``,
-  rw[Once count_coprime_def]);
+Theorem count_coprime_0:
+    !n. count_coprime n 0 = 0
+Proof
+  rw[Once count_coprime_def]
+QED
 
 (* Theorem: count_coprime n 1 = 1 *)
 (* Proof: by count_coprime_def *)
-val count_coprime_1 = store_thm(
-  "count_coprime_1",
-  ``!n. count_coprime n 1 = 1``,
-  rw[Once count_coprime_def]);
+Theorem count_coprime_1:
+    !n. count_coprime n 1 = 1
+Proof
+  rw[Once count_coprime_def]
+QED
 
 (* Theorem: count_coprime n j = if j = 0 then 0 else if j = 1 then 1 else
                                 count_coprime n (j - 1) + if coprime j n then 1 else 0 *)
 (* Proof: by count_coprime_def, gcd_compute_eqn *)
-val count_coprime_alt = store_thm(
-  "count_coprime_alt",
-  ``!n j. count_coprime n j = if j = 0 then 0 else if j = 1 then 1 else
-                             count_coprime n (j - 1) + if coprime j n then 1 else 0``,
-  rw[Once count_coprime_def, gcd_compute_eqn]);
+Theorem count_coprime_alt:
+    !n j. count_coprime n j = if j = 0 then 0 else if j = 1 then 1 else
+                             count_coprime n (j - 1) + if coprime j n then 1 else 0
+Proof
+  rw[Once count_coprime_def, gcd_compute_eqn]
+QED
 
 (* Theorem: count_coprime n (SUC k) = count_coprime n k + (if coprime (SUC k) n then 1 else 0) *)
 (* Proof:
@@ -1991,12 +2054,13 @@ val count_coprime_alt = store_thm(
    (1) coprime (SUC 0) n ==> 1 = count_coprime n 0 + 1, true   by count_coprime_0
    (2) gcd (SUC 0) n <> 1 ==> 1 = count_coprime n 0, true      by GCD_1
 *)
-val count_coprime_suc = store_thm(
-  "count_coprime_suc",
-  ``!n k. count_coprime n (SUC k) = count_coprime n k + (if coprime (SUC k) n then 1 else 0)``,
+Theorem count_coprime_suc:
+    !n k. count_coprime n (SUC k) = count_coprime n k + (if coprime (SUC k) n then 1 else 0)
+Proof
   rw[Once count_coprime_alt] >-
   rw[count_coprime_0] >>
-  fs[GCD_1]);
+  fs[GCD_1]
+QED
 
 (* Theorem: k <= n ==> (count_coprime n k = CARD ((coprimes n) INTER (natural k))) *)
 (* Proof:
@@ -2040,9 +2104,9 @@ val count_coprime_suc = store_thm(
           = count_coprime n (SUC k)                                by count_coprime_suc
 
 *)
-val count_coprime_eqn = store_thm(
-  "count_coprime_eqn",
-  ``!n k. k <= n ==> (count_coprime n k = CARD ((coprimes n) INTER (natural k)))``,
+Theorem count_coprime_eqn:
+    !n k. k <= n ==> (count_coprime n k = CARD ((coprimes n) INTER (natural k)))
+Proof
   rpt strip_tac >>
   Induct_on `k` >-
   rw[count_coprime_0] >>
@@ -2061,7 +2125,8 @@ val count_coprime_eqn = store_thm(
     `_ = CARD (((SUC k) INSERT (natural k)) INTER coprimes n)` by rw[natural_suc] >>
     `_ = CARD ((natural k) INTER (coprimes n))` by rw[INSERT_INTER] >>
     rw[INTER_COMM]
-  ]);
+  ]
+QED
 
 (* Theorem: phi_compute n = phi n *)
 (* Proof:
@@ -2073,15 +2138,12 @@ val count_coprime_eqn = store_thm(
    = CARD (coprimes n)                        by SUBSET_INTER_ABSORPTION
    = phi n                                    by phi_def
 *)
-val phi_compute_eqn = store_thm(
-  "phi_compute_eqn",
-  ``!n. phi_compute n = phi n``,
+Theorem phi_compute_eqn:
+    !n. phi_compute n = phi n
+Proof
   metis_tac[phi_compute_def, phi_def,
-            count_coprime_eqn, coprimes_subset, SUBSET_INTER_ABSORPTION, LESS_EQ_REFL]);
+            count_coprime_eqn, coprimes_subset, SUBSET_INTER_ABSORPTION, LESS_EQ_REFL]
+QED
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

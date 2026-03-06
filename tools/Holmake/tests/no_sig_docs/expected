@@ -1,0 +1,7 @@
+signature fooTheory =
+sig
+  type thm = Thm.thm
+  
+  (*  Definitions  *)
+    val bar : thm
+end

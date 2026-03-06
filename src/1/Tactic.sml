@@ -108,6 +108,11 @@ val ASSUME_TAC: thm_tactic =
 
 val assume_tac = ASSUME_TAC
 
+fun LAST_ASSUME_TAC th (g as (asl,w:term)) =
+  ([(asl @ [concl th], w)], (fn resths => PROVE_HYP th (hd resths)))
+
+val last_assume_tac = LAST_ASSUME_TAC
+
 (*---------------------------------------------------------------------------*
  * "Freeze" a theorem to prevent instantiation                               *
  *                                                                           *
@@ -196,6 +201,17 @@ val disj2_tac = DISJ2_TAC
 fun MP_TAC thb (asl, w) =
    ([(asl, mk_imp (concl thb, w))], sing (fn thimp => MP thimp thb))
 val mp_tac = MP_TAC
+
+(* ----------------------------------------------------------------------
+    EQ_MP_TAC : thm -> tactic
+
+    |- B           A
+           ==================
+                 B = A
+   ---------------------------------------------------------------------- *)
+
+fun EQ_MP_TAC thB (asl, w) =
+    ([(asl, mk_eq (concl thB, w))], sing (fn eqth => EQ_MP eqth thB))
 
 (*---------------------------------------------------------------------------*
  * Equality Introduction                                                     *
@@ -450,7 +466,7 @@ val CHECK_ASSUME_TAC: thm_tactic =
       FIRST [CONTR_TAC gth, ACCEPT_TAC gth, OPPOSITE_TAC gth,
              DISCARD_TAC gth, ASSUME_TAC gth]
 
-val STRIP_ASSUME_TAC = REPEAT_TCL STRIP_THM_THEN CHECK_ASSUME_TAC
+val STRIP_ASSUME_TAC = STRIP_ALL_THEN CHECK_ASSUME_TAC
 val strip_assume_tac = STRIP_ASSUME_TAC
 
 (*---------------------------------------------------------------------------*
@@ -471,10 +487,10 @@ val strip_assume_tac = STRIP_ASSUME_TAC
  *---------------------------------------------------------------------------*)
 
 val STRUCT_CASES_TAC =
-   REPEAT_TCL STRIP_THM_THEN (fn th => SUBST1_TAC th ORELSE ASSUME_TAC th)
+   STRIP_ALL_THEN (fn th => SUBST1_TAC th ORELSE ASSUME_TAC th)
 
 val FULL_STRUCT_CASES_TAC =
-   REPEAT_TCL STRIP_THM_THEN (fn th => SUBST_ALL_TAC th ORELSE ASSUME_TAC th)
+   STRIP_ALL_THEN (fn th => SUBST_ALL_TAC th ORELSE ASSUME_TAC th)
 
 (*---------------------------------------------------------------------------*
  * COND_CASES_TAC: tactic for doing a case split on the condition p          *
@@ -618,6 +634,18 @@ fun REFL_TAC (asl, g) =
       else raise ERR "REFL_TAC" "lhs and rhs not alpha-equivalent"
    end
 
+(* ----------------------------------------------------------------------
+    SYM_TAC : flips the direction of an equality goal
+
+        G ?- x = y
+      ==============
+        G ?- y = x
+   ---------------------------------------------------------------------- *)
+
+fun SYM_TAC g = CONV_TAC (REWR_CONV EQ_SYM_EQ) g
+                handle HOL_ERR _ => raise ERR "SYM_TAC" "Term not an equality"
+val sym_tac = SYM_TAC
+
 (*---------------------------------------------------------------------------*
  * UNDISCH_TAC - moves one of the assumptions as LHS of an implication       *
  * to the goal (fails if named assumption not in assumptions)                *
@@ -713,15 +741,17 @@ end
 
 val BINOP_TAC = MK_COMB_TAC THENL [AP_TERM_TAC, ALL_TAC]
 
-(*---------------------------------------------------------------------------*
- * ABS_TAC: inverts the ABS inference rule.                                  *
- *                                                                           *
- *   \x. f x = \x. g x                                                       *
- * =====================                                                     *
- *       f x = g x                                                           *
- *                                                                           *
- * Added: TT 2009.12.23                                                      *
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    ABS_TAC: inverts the ABS inference rule.
+
+       G ?-  (\x. M) = (\y. N)
+      ========================== (x and y may or may not appear in M, N)
+       G ?-  M[x:=v] = N[y:=v]
+
+    v chosen to be x, y, or some variant as necessary to avoid clashing
+    with existing free variables.
+
+   ---------------------------------------------------------------------- *)
 
 local
    fun ER s = ERR "ABS_TAC" s
@@ -731,12 +761,21 @@ in
          val (lhs, rhs) = with_exn dest_eq gl (ER "not an equation")
          val (x, g) = with_exn dest_abs lhs (ER "lhs not an abstraction")
          val (y, f) = with_exn dest_abs rhs (ER "rhs not an abstraction")
-         val f_thm = if aconv x y then REFL rhs else ALPHA_CONV x rhs
-         val (_, f') = dest_abs (rand (concl f_thm))
+         val avoids = FVL (gl::asl) empty_tmset
+         val var_to_use =
+             if HOLset.member(avoids, x) then
+               if HOLset.member(avoids, y) then
+                 variant (HOLset.listItems avoids) x
+               else y
+             else x
+         val (dty,rty) = dom_rng (type_of lhs)
+         val funeq_rwt = FUN_EQ_THM
+                           |> INST_TYPE [alpha |-> dty, beta |-> rty]
+                           |> SPECL [lhs, rhs]
       in
-         ([(asl, mk_eq (g, f'))],
-          CONV_RULE (RHS_CONV (K (GSYM f_thm))) o ABS x o Lib.trye hd)
-      end
+        CONV_TAC (K funeq_rwt) THEN X_GEN_TAC var_to_use THEN
+        CONV_TAC (BINOP_CONV BETA_CONV)
+      end (asl,gl)
 end
 
 (*---------------------------------------------------------------------------*
@@ -1221,29 +1260,46 @@ val impl_keep_tac =
   disch_then (provehyp_then (fn lth => fn rth => assume_tac lth >> mp_tac rth))
 
 
+(*
+Like EVERY_ASSUM but does not fail if a ttac fails
+fails if the ttac never succeeds
+*)
+local
+fun every_try [] = NO_TAC
+  | every_try (t::ts) =
+     (IF t (EVERY (map TRY ts)) (every_try ts))
+fun map_every_try tacf lst = every_try (map tacf lst)
+in
+val every_assum_try = ASSUM_LIST o map_every_try
+end
+
 open mp_then
 fun dGEN sel pos k = sel o mp_then pos k
 val drule                  = dGEN first_assum   (Pos hd) mp_tac
 val rev_drule              = dGEN last_assum    (Pos hd) mp_tac
 val dxrule                 = dGEN first_x_assum (Pos hd) mp_tac
 val rev_dxrule             = dGEN last_x_assum  (Pos hd) mp_tac
+val every_drule            = dGEN every_assum_try (Pos hd) mp_tac
 
 fun drule_then k           = dGEN first_assum   (Pos hd)    k
 fun dxrule_then k          = dGEN first_x_assum (Pos hd)    k
 fun rev_drule_then k       = dGEN last_assum    (Pos hd)    k
 fun rev_dxrule_then k      = dGEN last_x_assum  (Pos hd)    k
+fun every_drule_then k     = dGEN every_assum_try (Pos hd)  k
 
 fun drule_at p             = dGEN first_assum       p    mp_tac
 fun dxrule_at p            = dGEN first_x_assum     p    mp_tac
 fun rev_drule_at p         = dGEN last_assum        p    mp_tac
 fun rev_dxrule_at p        = dGEN last_x_assum      p    mp_tac
+fun every_drule_at p       = dGEN every_assum_try   p    mp_tac
 
 fun drule_at_then p k      = dGEN first_assum       p       k
 fun dxrule_at_then p k     = dGEN first_x_assum     p       k
 fun rev_drule_at_then p k  = dGEN last_assum        p       k
 fun rev_dxrule_at_then p k = dGEN last_x_assum      p       k
+fun every_drule_at_then p k = dGEN every_assum_try  p       k
 
-fun isfa_imp th = th |> concl |> strip_forall |> #2 |> is_imp
+fun isfa_imp th = th |> concl |> strip_forall |> #2 |> is_imp_only
 fun dall_prim k fa ith0 g =
   REPEAT_GTCL (fn ttcl => fn th => fa (mp_then (Pos hd) ttcl th))
               (k o assert (not o isfa_imp))

@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib
-
-open bossLib simpLib
-
-val _ = new_theory "cl";
+Theory cl
+Libs
+  simpLib
 
 val _ = (hide "S"; hide "K")
 
@@ -112,10 +110,11 @@ Proof
   metis_tac [predn_rules]
 QED
 
-val RTCredn_ap_congruence = store_thm(
-  "RTCredn_ap_congruence",
-  “!x y. x -->* y ==> !z. x # z -->* y # z /\ z # x -->* z # y”,
-  Induct_on ‘RTC’ >> metis_tac [RTC_rules, redn_rules]);
+Theorem RTCredn_ap_congruence:
+   !x y. x -->* y ==> !z. x # z -->* y # z /\ z # x -->* z # y
+Proof
+  Induct_on ‘RTC’ >> metis_tac [RTC_rules, redn_rules]
+QED
 
 Theorem predn_RTCredn:
   !x y. x -||-> y  ==>  x -->* y
@@ -203,4 +202,3 @@ Proof metis_tac [predn_diamond, confluent_diamond_RTC,
                  RTCpredn_EQ_RTCredn, diamond_RTC]
 QED
 
-val _ = export_theory();

@@ -6,26 +6,20 @@
 (* National University of Sciences and Technology (NUST)   *)
 (*                      Islamabad, Pakistan                *)
 (*---------------------------------------------------------*)
+Theory ASN_gateway
+Ancestors
+  lim arithmetic real prim_rec real_probability seq pred_set
+  res_quan sorting list transc rich_list pair combin option
+  extreal real_measure real_lebesgue real_sigma sat num RBD
+  FT_deep VDC
+Libs
+  res_quanTools extra_pred_setTools realLib dep_rewrite
 
-(*app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory",
-          "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory", "probabilityTheory", "numTheory",
-          "transcTheory", "rich_listTheory", "pairTheory", "extra_pred_setTools",
-          "combinTheory","limTheory","sortingTheory", "realLib", "optionTheory","satTheory",
-          "util_probTheory", "extrealTheory", "measureTheory", "lebesgueTheory","real_sigmaTheory","dep_rewrite","RBDTheory","FT_deepTheory","VDCTheory"];*)
-open HolKernel Parse boolLib bossLib limTheory arithmeticTheory realTheory
-    prim_recTheory real_probabilityTheory seqTheory pred_setTheory res_quanTheory
-    sortingTheory res_quanTools listTheory transcTheory extra_pred_setTools
-    rich_listTheory pairTheory combinTheory realLib  optionTheory
-    util_probTheory extrealTheory real_measureTheory real_lebesgueTheory
-    real_sigmaTheory satTheory numTheory dep_rewrite RBDTheory FT_deepTheory VDCTheory;
 
 fun K_TAC _ = ALL_TAC;
-open HolKernel boolLib bossLib Parse;
-val _ = new_theory "ASN_gateway";
-(*--------------------*)
+
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-(*---------------------------*)
 
 (* ------------------------------------------- *)
 (* Definition                                  *)
@@ -50,7 +44,6 @@ End
 (*  One Minus exponential                      *)
 (* --------------------------------------------*)
 Definition one_minus_exp_def :
-
     one_minus_exp t C =
     MAP (\c. 1 - exp(-(t * (c:real)))) C
 End
@@ -163,9 +156,6 @@ RW_TAC list_ss[ASN_gateway_FT_def,Internal_FT_def,A_FT_def,B1_FT_def,B2_FT_def,R
 >> SET_TAC[]
 QED
 
-
-
-
 (*======================================================*)
 Theorem B1_FT_lemma2 :
 ! a b c d e f g h i j k l:real. 1 - (a *b *c *d *e *f *g *h *i *j *k * l) = (1 - (a * b * e * f * g * j * k * l * c * d * h* i))
@@ -205,7 +195,6 @@ Theorem B1_FT_lemma3 :
              [ [E1; E21]; [E2; E21];
               [E6; E21]; [E7; E21]] t))))
 Proof
-
 RW_TAC list_ss[list_fail_event_list_def,fail_event_list_def,fail_event_def,list_prod_rel_def,one_minus_list_def,list_prob_def,list_prod_def]
 >> RW_TAC real_ss[REAL_MUL_ASSOC]
 >> RW_TAC std_ss[REAL_MUL_ASSOC]
@@ -382,11 +371,6 @@ RW_TAC list_ss[list_fail_event_list_def,fail_event_list_def,fail_event_def,list_
 >> RW_TAC real_ss[REAL_MUL_ASSOC]
 QED
 
-
-
-
-(*================================================*)
-
 Theorem Internal_FT_lemma2 :
 ! p t FD AP FF1 C_FD C_AP C_FF1.
 (0<= t) /\ prob_space p /\ (list_exp p (FLAT [[C_FD;C_FF1];[C_AP;C_FF1]]) (FLAT [[FD;FF1];[AP;FF1]])) ==>
@@ -403,10 +387,6 @@ RW_TAC list_ss[list_exp_def,exp_distribution_def,distribution_def,CDF_def,list_f
 >> REAL_ARITH_TAC
 QED
 
-
-(*================================================*)
-
-(*=========================================================================*)
 Theorem ASN_gateway_lemma1 :
 !p t FD AP FF1 D1 D4 D7 D10 E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12
       E13 E14 E15 E16 E17 E18 E19 E20 E21 C5 C6 C7 C8 notshw AL SL PD
@@ -438,12 +418,10 @@ list_prod
             [C7; C8]; [notshw]; [AL; time]; [SL; time]; [PD; time];
             [Others; time]] t))))
 Proof
-
 RW_TAC list_ss[list_fail_event_list_def,fail_event_list_def,fail_event_def,list_prod_rel_def,one_minus_list_def,list_prob_def,list_prod_def]
 >> RW_TAC real_ss[REAL_MUL_ASSOC]
 QED
 
-(*----------------------*)
 Theorem ASN_gateway_lemma2 :
 !p t ED EQ1 EN1 EN2 EN3 EN4 human C_ED C_EQ1 C_EN1 C_EN2 C_EN3 C_EN4 C_human.
 (0 <= t) /\  prob_space p /\ (list_exp p
@@ -465,7 +443,7 @@ RW_TAC list_ss[list_exp_def,exp_distribution_def,distribution_def,CDF_def,list_f
 >> RW_TAC std_ss[REAL_MUL_ASSOC]
 >> RW_TAC real_ss[]
 QED
-(*---------------------------*)
+
 Theorem ASN_gateway_lem5 :
 ! p t C5 C6 C7 C8 notshw AL time SL PD Others.
 (list_prod
@@ -488,7 +466,7 @@ Proof
 RW_TAC list_ss[list_fail_event_list_def,fail_event_list_def,fail_event_def,list_prod_rel_def,one_minus_list_def,list_prob_def,list_prod_def]
 >> RW_TAC real_ss[REAL_MUL_ASSOC]
 QED
-(*-----------------*)
+
 Theorem ASN_gateway_lem6 :
 ! p t C5 C6 C7 C8 C_C5 C_C6 C_C7 C_C8.
 (0<= t) /\ prob_space p /\ (list_exp p (FLAT [[C_C5;C_C8]; [C_C6;C_C8]; [C_C7;C_C8]]) (FLAT [[C5;C8]; [C6;C8]; [C7;C8]])) ==>
@@ -647,8 +625,3 @@ RW_TAC std_ss[ASN_FT_eq_parallel_series_RBD]
 >> RW_TAC real_ss[]
 QED
 
-
-
-(*=========================================================================*)
-
-val _ = export_theory();

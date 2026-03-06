@@ -25,7 +25,7 @@ datatype phase = Initial | Bare | Full
 val cline_record = process_cline ()
 val {cmdline,build_theory_graph,selftest_level,...} = cline_record
 val {debug,jobcount,relocbuild,extra={SRCDIRS,...},...} = cline_record
-val {multithread,keepgoing,...} = cline_record
+val {multithread,keepgoing,timelimit,...} = cline_record
 
 open Systeml;
 
@@ -74,6 +74,9 @@ in
               (case multithread of
                    NONE => []
                  | SOME i => ["--mt="^Int.toString i]) @
+              (case timelimit of
+                   NONE => []
+                 | SOME d => ["--time_limit="^Int.toString d]) @
               phase_extras())
     analysis selftest_level
 end
@@ -121,11 +124,18 @@ fun upload ((src, regulardir), target, symlink) =
     (thus requiring only a single place to look for things).
  ---------------------------------------------------------------------------*)
 
+val hol_state0 = fullPath [HOLDIR, "bin", "hol.state0"]
+val sigobj_proofmanLib = fullPath [HOLDIR, "sigobj", "proofManagerLib.uo"]
 fun buildDir symlink s =
-  if #1 s = fullPath [HOLDIR, "bin/hol.bare"] then phase := Bare
-  else if #1 s = fullPath [HOLDIR, "bin/hol"] then phase := Full
-  else
-    (build_dir Holmake selftest_level s; upload(s,SIGOBJ,symlink))
+  if #1 s = fullPath [HOLDIR, "bin/hol"] then phase := Full
+  else (
+    build_dir Holmake selftest_level s;
+    upload(s,SIGOBJ,symlink);
+    if !phase = Initial andalso OS.FileSys.access(hol_state0, []) andalso
+       OS.FileSys.access(sigobj_proofmanLib, [])
+    then phase := Bare
+    else ()
+  )
 
 fun build_src symlink = List.app (buildDir symlink) SRCDIRS
 

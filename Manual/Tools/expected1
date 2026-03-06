@@ -37,7 +37,7 @@ val it =
    
    1. Incomplete goalstack:
         Initial goal:
-        MEM p l \(\Rightarrow\) \(\exists\)i. i < LENGTH l \(\land\) p = EL i l
+        MEM p l \(\Rightarrow\) \(\exists\)i. i < LENGTH l \(\land\) p = l\(\lbtsbrak\)i\(\rbtsbrak\)
 > \`{}\`{}3 <> 4\`{}\`{};
 val it = \mbox{\textrm{\textquotedblleft}}3 \(\ne\) 4\mbox{\textrm{\textquotedblright}}: term
 > type_of \`{}\`{}[]\`{}\`{};
@@ -113,3 +113,10 @@ AND_CLAUSES
          (t \(\land\) F \({\Leftrightarrow}\) F) \(\land\) (t \(\land\) t \({\Leftrightarrow}\) t)
 
 val foo = \(\!\!\!{\turn}\!\!\!\!\) x < x + 1: thm
+
+> term_grammar();
+val it =
+   (0)    TM  ::= "OLEAST" <..binders..> "." TM
+                | "LEAST" <..binders..> "." TM | "some" <..binders..> "." TM
+                | "?!!" <..binders..> "." TM | "\(\exists\)!" <..binders..> "." TM [?!]
+[...Output elided...]

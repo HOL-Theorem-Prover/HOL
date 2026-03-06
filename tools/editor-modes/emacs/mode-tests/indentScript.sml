@@ -140,8 +140,8 @@ Proof
 QED
 
 (* escaped_alpha_qfier *)
-val t =  “P $some ∧ x < y ∧
-          Q”;
+val t = “P $some ∧ x < y ∧
+         Q”;
 
 (* escaped symbol qfier *)
 val t = “P $@ ∧
@@ -306,7 +306,7 @@ Datatype :
            rules : 'b inf |-> ('a,'b,'c,'e) pegsym |>
 End
 
-Triviality read_while_P_lem:
+Theorem read_while_P_lem[local]:
   ∀ls rest P x y.
     EVERY P rest ∧ read_while P ls rest = (x,y) ⇒ EVERY P x
 Proof

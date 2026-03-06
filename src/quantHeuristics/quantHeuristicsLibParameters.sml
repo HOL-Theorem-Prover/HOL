@@ -349,7 +349,7 @@ let
    val thm0 =
         let
            val xthm0 = DB.fetch thyname (typename^"_literal_nchotomy")
-           val xthm1 =  CONV_RULE (RENAME_VARS_CONV (map (fst o dest_var) (v :: vars))) xthm0
+           val xthm1 = CONV_RULE (RENAME_VARS_CONV (map (fst o dest_var) (v :: vars))) xthm0
         in xthm1
         end;
    val gc = QUANT_INSTANTIATE_HEURISTIC___one_case thm0 sys v t

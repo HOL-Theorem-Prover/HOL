@@ -5,12 +5,10 @@
    for inspiration
 
 *)
+Theory tableauK
+Ancestors
+  pair pred_set list sorting relation modalBasics tableauBasics
 
-open HolKernel Parse boolLib bossLib;
-open pairTheory pred_setTheory listTheory;
-open sortingTheory;
-open relationTheory modalBasicsTheory tableauBasicsTheory
-val _ = new_theory "tableauK";
 
 Definition sat_def:
   sat (tyit : α itself) Γ ⇔
@@ -245,7 +243,7 @@ Proof
   Induct_on ‘l’ >> simp[]
 QED
 
-Triviality FORALL_NUM:
+Theorem FORALL_NUM[local]:
   (∀n. P n) ⇔ P 0 ∧ ∀n. P (SUC n)
 Proof
   eq_tac >> simp[] >> rw[] >> Cases_on ‘n’ >> simp[]
@@ -612,4 +610,3 @@ Proof
   gs[]
 QED
 
-val _ = export_theory();

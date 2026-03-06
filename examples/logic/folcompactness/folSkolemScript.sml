@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open boolSimps pred_setTheory listTheory nlistTheory
-open folPrenexTheory folModelsTheory folLangTheory
-open mp_then
-
-val _ = new_theory "folSkolem";
+Theory folSkolem
+Ancestors
+  pred_set list nlist folPrenex folModels folLang
+Libs
+  boolSimps mp_then
 
 Theorem holds_exists_lemma:
   ∀p t x M v (preds : (num # num) set).
@@ -471,8 +469,6 @@ QED
 Definition bumpterm_def:
   bumpterm (V x) = V x ∧
   bumpterm (Fn k l) = Fn (0 ⊗ k) (MAP bumpterm l)
-Termination
-  WF_REL_TAC ‘measure term_size’ >> simp[]
 End
 
 Theorem bumpterm_def[simp,allow_rebind] =
@@ -542,8 +538,6 @@ QED
 Definition unbumpterm_def[simp]:
   unbumpterm (V x) = V x ∧
   unbumpterm (Fn k l) = Fn (nsnd k) (MAP unbumpterm l)
-Termination
-  WF_REL_TAC ‘measure term_size’ >> simp[]
 End
 
 Definition unbumpform_def[simp]:
@@ -909,4 +903,3 @@ Proof
 QED
 
 
-val _ = export_theory();

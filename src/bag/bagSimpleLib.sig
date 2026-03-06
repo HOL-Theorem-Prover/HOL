@@ -4,6 +4,7 @@ sig
 
   val BAG_RESORT_CONV : int list -> conv
   val BAG_IMAGE_CONV  : conv
+  val BAG_CARD_CONV : conv
   val GET_BAG_IN_THMS : term -> thm list
 
   val get_resort_position___pred       : (term -> bool) -> term -> int option

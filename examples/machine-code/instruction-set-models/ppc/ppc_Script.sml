@@ -1,9 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-
-open ppc_coretypesTheory ppc_astTheory ppc_opsemTheory ppc_seq_monadTheory ppc_decoderTheory ;
-
-val _ = new_theory "ppc_";
+Theory ppc_
+Ancestors
+  ppc_coretypes ppc_ast ppc_opsem ppc_seq_monad ppc_decoder
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -12,9 +10,10 @@ val _ = new_theory "ppc_";
 
 <* ---------------------------------------------------------------------------------- *)
 
-val iiid_dummy_def = Define `iiid_dummy = <| proc:=0; program_order_index:=0 |>`;
+Definition iiid_dummy_def:   iiid_dummy = <| proc:=0; program_order_index:=0 |>
+End
 
-val PPC_NEXT_def = Define `
+Definition PPC_NEXT_def:
   PPC_NEXT s =
     let pc = PREAD_R PPC_PC s in
     let w0 = PREAD_M (pc + 0w) s in
@@ -25,10 +24,11 @@ val PPC_NEXT_def = Define `
     let i = ppc_decode raw_instruction in
     let s' = ppc_exec_instr iiid_dummy (THE i) s in
       if ~(pc && 3w = 0w) \/ MEM NONE [w0;w1;w2;w3] \/ (i = NONE) \/ (s' = NONE) then NONE
-      else SOME (SND (THE s'))`;
+      else SOME (SND (THE s'))
+End
 
-val PPC_NEXT_THM = store_thm("PPC_NEXT_THM",
-  ``(ppc_decode xs = SOME i) ==>
+Theorem PPC_NEXT_THM:
+    (ppc_decode xs = SOME i) ==>
     !w0 w1 w2 w3.
       (w2bits w3 ++ w2bits w2 ++ w2bits w1 ++ w2bits w0 = xs) ==>
       (ppc_exec_instr iiid_dummy i s = SOME (tt,s')) ==>
@@ -37,8 +37,9 @@ val PPC_NEXT_THM = store_thm("PPC_NEXT_THM",
       (PREAD_M (PREAD_R PPC_PC s + 1w) s = SOME w1) ==>
       (PREAD_M (PREAD_R PPC_PC s + 2w) s = SOME w2) ==>
       (PREAD_M (PREAD_R PPC_PC s + 3w) s = SOME w3) ==>
-      (PPC_NEXT s = SOME s')``,
-  SIMP_TAC std_ss [PPC_NEXT_def,LET_DEF,listTheory.MEM]);
+      (PPC_NEXT s = SOME s')
+Proof
+  SIMP_TAC std_ss [PPC_NEXT_def,LET_DEF,listTheory.MEM]
+QED
 
 
-val _ = export_theory ();

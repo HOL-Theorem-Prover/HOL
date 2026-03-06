@@ -1,15 +1,14 @@
-open HolKernel Parse boolLib bossLib
+Theory tailrecAckermann
+Ancestors[qualified]
+  container
 
-local open containerTheory in end
+Datatype: work = DO num num | PENDING num
+End
 
-val _ = new_theory "tailrecAckermann"
-
-val _ = Hol_datatype `work = DO of num => num | PENDING of num`;
-
-val wsize_def = Define`
+Definition wsize_def:
   (wsize (DO n m) = (2 * n, m)) ∧
   (wsize (PENDING n) = (2 * n + 1, 0))
-`
+End
 
 val A'_defn = Hol_defn "A'" `
   A' results stk =
@@ -58,5 +57,3 @@ A(4,0) is also fine.  A(4,1) certainly isn't.
 
 (* I haven't given any thought to proving this formulation equivalent to
    the traditional definition *)
-
-val _ = export_theory()

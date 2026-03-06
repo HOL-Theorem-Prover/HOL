@@ -2,18 +2,16 @@
 app load ["bossLib"];
 quietdec := true;
 *)
+Theory power
+Ancestors
+  arithmetic
+Libs
+  Num_conv
 
-open HolKernel Parse boolLib
-     Num_conv arithmeticTheory bossLib;
 
 (*
 quietdec := false;
 *)
-
-infix THEN THENC THENL;
-infix 8 by;
-
-val _ = new_theory "power";
 
 val ARW = RW_TAC arith_ss;
 
@@ -62,4 +60,3 @@ val POWER_POWER = store_thm("POWER_POWER",
                         Induct_on `m` THEN ARW[POWER,MULT_CLAUSES,POWER_MULT]);
 
 
-val _ = export_theory();

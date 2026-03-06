@@ -50,10 +50,16 @@ type stdconvdata = { name: string,
 (*---------------------------------------------------------------------------*)
 
 (* boolean argument to c is whether or not the rewrite is bounded *)
-fun appconv (c,UNBOUNDED) solver stk tm = c false solver stk tm
-  | appconv (c,BOUNDED r) solver stk tm = if !r = 0 then failwith "exceeded rewrite bound"
-                                          else c true solver stk tm before
-                                            Portable.dec r
+fun appconv (c,UNBOUNDED) = c false (* do not eta expand! *)
+  | appconv (c,BOUNDED r) =
+    let
+      val c = c true (* do not inline! *)
+    in
+      (fn solver => fn stk => fn tm =>
+      if !r = 0 then failwith "exceeded rewrite bound"
+      else c solver stk tm before
+      Portable.dec r)
+    end
 
 fun split_name {Thy,Name} = (SOME Thy, Name)
 fun mk_rewr_convdata (nmopt,(thm,tag)) : tagged_convdata option = let
@@ -391,8 +397,9 @@ fun getlimit (SS ss) = #limit ss
      in
        refl x
      end
+     val congproc = CONGPROC mk_refl th (* do not inline *)
    in
-     CONGPROC mk_refl th
+     (fn rel => QCHANGED_CONV o congproc rel) (* do not eta expand *)
    end
  in
    TRAVRULES {relations = rels,
@@ -852,7 +859,7 @@ local
    val caa_tac =
        caa_tac0 false {elimvars = false, droptrues = false, strip = false,
                        oldestfirst = true}
-   val STRIP_ASSUME_TAC' = REPEAT_TCL STRIP_THM_THEN caa_tac
+   val STRIP_ASSUME_TAC' = STRIP_ALL_THEN caa_tac
    fun drop r =
       fn n =>
          POP_ASSUM_LIST
@@ -886,7 +893,7 @@ end
 fun stdcon (c : simptac_config) th =
     if #elimvars c andalso eliminable (concl th) then VSUBST_TAC th
     else
-      (if #strip c then REPEAT_TCL STRIP_THM_THEN else I)
+      (if #strip c then STRIP_ALL_THEN else I)
         (caa_tac0 (not (#oldestfirst c)) c)
         th
 

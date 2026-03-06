@@ -40,13 +40,12 @@ sig
    val WGROUND_CONV: conv
    val accessor_fns: hol_type -> term list
    val accessor_update_fns: hol_type -> (term * term) list
-   val add_base_datatypes: computeLib.compset -> unit
-   val add_datatypes: hol_type list -> computeLib.compset -> unit
-   val add_theory: (thm list * inventory) -> computeLib.compset -> unit
+   val add_base_datatypes: computeLib.compset -> computeLib.compset
+   val add_datatypes: hol_type list -> computeLib.compset -> computeLib.compset
+   val add_theory: (thm list * inventory) -> computeLib.compset -> computeLib.compset
    val add_to_rw_net:
       (thm -> term) -> thm * thm LVTermNet.lvtermnet -> thm LVTermNet.lvtermnet
    val add_to_the_compset: (thm list * inventory) -> unit
-   val adjoin_thms: unit -> unit
    val augment: term frag list * term list -> cover -> cover
    val avoid_name_clashes: term -> term -> term
    val cache: int -> ('a * 'a -> order) -> ('a -> 'b) -> 'a -> 'b
@@ -89,12 +88,12 @@ sig
    val qm_tac: thm list -> tactic
    val removeSpaces: string -> string
    val resetStepConv: unit -> unit
-   val reset_thms: unit -> unit
    val rev_endian: 'a list -> 'a list
    val rhsc: thm -> term
    val rng: hol_type -> hol_type
    val save_as: string -> thm -> thm
    val save_thms: string -> thm list -> thm list
+   val get_rewrites : {thyname:string} -> string list option
    val setStepConv: conv -> unit
    val specialized: string -> conv * term list -> thm list -> thm list
    val splitAtChar: (char -> bool) -> string -> string * string

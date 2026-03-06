@@ -3,6 +3,7 @@ sig
   type 'a history
 
   exception CANT_BACKUP_ANYMORE
+  exception CANT_REDO_ANYMORE
 
   val new_history  : {obj:'a, limit:int} -> 'a history
   val apply        : ('a -> 'a) -> 'a history -> 'a history
@@ -11,6 +12,7 @@ sig
   val remove_past  : 'a history -> 'a history
   val project      : ('a -> 'b) -> 'a history -> 'b
   val undo         : 'a history -> 'a history
+  val redo         : 'a history -> 'a history
   val restore      : 'a history -> 'a history
   val save         : 'a history -> 'a history
 

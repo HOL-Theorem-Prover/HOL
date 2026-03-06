@@ -1,14 +1,10 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_compiler";
+Theory lisp_compiler
+Ancestors
+  string finite_map pred_set list sum option arithmetic relation
+  pair lisp_bytecode lisp_sexp lisp_semantics lisp_alt_semantics
+
 val _ = ParseExtras.temp_loose_equality()
 
-open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
-open optionTheory arithmeticTheory relationTheory pairTheory;
-
-open lisp_bytecodeTheory;
-open lisp_sexpTheory lisp_semanticsTheory lisp_alt_semanticsTheory
-
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
@@ -19,74 +15,88 @@ val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 (* relation defines translation of programs into bytecode *)
 
-val _ = Hol_datatype`
+Datatype:
   stack_slot = ssTEMP
-             | ssVAR of string`;
+             | ssVAR string
+End
 
 val stack_slot_11 = fetch "-" "stack_slot_11"
 val stack_slot_distinct = fetch "-" "stack_slot_distinct"
 val stack_slot = simpLib.type_ssfrag ``:stack_slot``
 
-val _ = Hol_datatype `
+Datatype:
   bc_state = <| code : num -> bc_inst_type option ;
                 code_end : num;
                 compiled : (string # (num # num)) list ; (* this is an alist *)
                 instr_length : bc_inst_type -> num ;
                 consts : SExp list ;
                 io_out : string ;
-                ok : bool |>`;
+                ok : bool |>
+End
 
-val iLENGTH_def = Define `
+Definition iLENGTH_def:
   (iLENGTH il [] = 0) /\
-  (iLENGTH il (x::xs) = il (x:bc_inst_type) + iLENGTH il xs)`;
+  (iLENGTH il (x::xs) = il (x:bc_inst_type) + iLENGTH il xs)
+End
 
 val iLENGTH_APPEND = prove(
   ``!xs ys il. iLENGTH il (xs ++ ys) = iLENGTH il xs + iLENGTH il ys``,
   Induct \\ SRW_TAC [] [iLENGTH_def,ADD_ASSOC]);
 
-val var_lookup_def = Define `
+Definition var_lookup_def:
   (var_lookup n v [] = NONE) /\
-  (var_lookup n v (x::xs) = if x = ssVAR v then SOME n else var_lookup (n+1:num) v xs)`;
+  (var_lookup n v (x::xs) = if x = ssVAR v then SOME n else var_lookup (n+1:num) v xs)
+End
 
-val gen_pops_def = Define `
-  gen_pops n = if n = 0 then [] else [iPOPS n]`;
+Definition gen_pops_def:
+  gen_pops n = if n = 0 then [] else [iPOPS n]
+End
 
-val gen_popn_def = Define `
-  gen_popn n = if n = 0 then [] else gen_pops (n-1) ++ [iPOP]`;
+Definition gen_popn_def:
+  gen_popn n = if n = 0 then [] else gen_pops (n-1) ++ [iPOP]
+End
 
-val n_times_def = Define `
+Definition n_times_def:
   (n_times 0 x = []) /\
-  (n_times (SUC n) x = x::n_times n x)`;
+  (n_times (SUC n) x = x::n_times n x)
+End
 
-val BC_return_code_def = Define `
+Definition BC_return_code_def:
   (BC_return_code F a = []) /\
-  (BC_return_code T a = gen_pops (LENGTH a - 1) ++ [iRETURN])`;
+  (BC_return_code T a = gen_pops (LENGTH a - 1) ++ [iRETURN])
+End
 
-val BC_return_def = Define `
+Definition BC_return_def:
   BC_return ret (code,a:stack_slot list,q,bc) =
     (code ++ BC_return_code ret a,a,
-     q + iLENGTH bc.instr_length (code ++ BC_return_code ret a),bc)`;
+     q + iLENGTH bc.instr_length (code ++ BC_return_code ret a),bc)
+End
 
-val BC_call_aux_def = Define `
+Definition BC_call_aux_def:
   (BC_call_aux F (fc,n,SOME pos) = [iCALL pos]) /\
   (BC_call_aux T (fc,n,SOME pos) = [iJUMP pos]) /\
   (BC_call_aux F (fc,n,NONE) = [iCONST_NUM n; iCONST_SYM fc; iCALL_SYM]) /\
-  (BC_call_aux T (fc,n,NONE) = [iCONST_NUM n; iCONST_SYM fc; iJUMP_SYM])`;
+  (BC_call_aux T (fc,n,NONE) = [iCONST_NUM n; iCONST_SYM fc; iJUMP_SYM])
+End
 
-val BC_call_def = Define `
+Definition BC_call_def:
   (BC_call b (fc,n,NONE) = BC_call_aux b (fc,n,NONE)) /\
   (BC_call b (fc,n,SOME (pos,m)) = if m = n then BC_call_aux b (fc,n,SOME pos)
-                                            else BC_call_aux b (fc,n,NONE))`;
+                                            else BC_call_aux b (fc,n,NONE))
+End
 
-val BC_ADD_CONST_def = Define `
-  BC_ADD_CONST bc x = bc with consts := (bc.consts ++ [x])`;
+Definition BC_ADD_CONST_def:
+  BC_ADD_CONST bc x = bc with consts := (bc.consts ++ [x])
+End
 
-val BC_FAIL_def = Define `
-  BC_FAIL bc = bc with ok := F`;
+Definition BC_FAIL_def:
+  BC_FAIL bc = bc with ok := F
+End
 
-val FUN_LOOKUP_def = Define `
+Definition FUN_LOOKUP_def:
   (FUN_LOOKUP [] name = NONE) /\
-  (FUN_LOOKUP ((x,y)::xs) name = if x = name then SOME y else FUN_LOOKUP xs name)`;
+  (FUN_LOOKUP ((x,y)::xs) name = if x = name then SOME y else FUN_LOOKUP xs name)
+End
 
 val (BC_ev_rules,BC_ev_ind,BC_ev_cases) = Hol_reln `
   (* constant *)
@@ -269,17 +279,19 @@ val (BC_ev_rules,BC_ev_ind,BC_ev_cases) = Hol_reln `
 val PULL_EXISTS_IMP = METIS_PROVE [] ``((?x. P x) ==> Q) = (!x. P x ==> Q)``;
 val PULL_FORALL_IMP = METIS_PROVE [] ``(Q ==> !x. P x) = (!x. Q ==> P x)``;
 
-val BC_JUMPS_OK_def = Define `
+Definition BC_JUMPS_OK_def:
   BC_JUMPS_OK bc =
     (!a. bc.instr_length (iJUMP a) = bc.instr_length (iJUMP 0)) /\
-    (!a. bc.instr_length (iJNIL a) = bc.instr_length (iJNIL 0))`;
+    (!a. bc.instr_length (iJNIL a) = bc.instr_length (iJNIL 0))
+End
 
-val BC_CODE_OK_def = Define `
+Definition BC_CODE_OK_def:
   BC_CODE_OK bc =
     (!h. 0 < bc.instr_length h) /\
     (!a. bc.instr_length (iJUMP a) = bc.instr_length (iJUMP 0)) /\
     (!a. bc.instr_length (iJNIL a) = bc.instr_length (iJNIL 0)) /\
-    !i. bc.code_end <= i ==> (bc.code i = NONE)`;
+    !i. bc.code_end <= i ==> (bc.code i = NONE)
+End
 
 val NOT_isFun = prove(
   ``!fc. ~isFun fc = !f. ~(fc = Fun f)``,
@@ -340,40 +352,26 @@ local
     \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC [])
   \\ REPEAT (STRIP_TAC THEN1 DET_TAC))
 in
-  val BC_ev_DETERMINISTIC = store_thm("BC_ev_DETERMINISTIC",
-    ``!t a q bc y z.
+Theorem BC_ev_DETERMINISTIC:
+      !t a q bc y z.
         BC_CODE_OK bc ==>
-        BC_ev T (t,a,q,bc) y /\ BC_ev T (t,a,q,bc) z ==> (y = z)``,
+        BC_ev T (t,a,q,bc) y /\ BC_ev T (t,a,q,bc) z ==> (y = z)
+Proof
     FULL_SIMP_TAC std_ss [FORALL_PROD] \\ REPEAT STRIP_NOT_CONJ_TAC
     \\ `BC_JUMPS_OK bc` by FULL_SIMP_TAC std_ss [BC_JUMPS_OK_def,BC_CODE_OK_def]
     \\ IMP_RES_TAC (SIMP_RULE std_ss [FORALL_PROD] BC_ev_DET_lemma)
-    \\ METIS_TAC [])
+    \\ METIS_TAC []
+QED
 end;
 
 
-
-val SUM_def = Define `
+Definition SUM_def:
   (SUM [] = 0) /\
-  (SUM (x::xs) = x + SUM xs)`;
+  (SUM (x::xs) = x + SUM xs)
+End
 
-val MEM_term_size5 = prove(
-  ``!ts a. MEM a ts ==> term_size a < term5_size ts``,
-  Induct \\ SIMP_TAC std_ss [MEM,term_size_def] \\ REPEAT STRIP_TAC \\ RES_TAC
-  \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC);
-
-val MEM_term_size3 = prove(
-  ``!ts a b. MEM (a,b) ts ==> term_size a < term3_size ts /\
-                              term_size b < term3_size ts``,
-  Induct \\ SIMP_TAC std_ss [MEM,term_size_def] \\ REPEAT STRIP_TAC \\ RES_TAC
-  \\ Cases_on `h` \\ FULL_SIMP_TAC std_ss [term_size_def] \\ DECIDE_TAC);
-
-val MEM_term_size1 = prove(
-  ``!ts a b. MEM (a,b) ts ==> term_size b < term1_size ts``,
-  Induct \\ SIMP_TAC std_ss [MEM,term_size_def] \\ REPEAT STRIP_TAC \\ RES_TAC
-  \\ Cases_on `h` \\ FULL_SIMP_TAC std_ss [term_size_def] \\ DECIDE_TAC);
-
-val term_depth_def = tDefine "term_depth" `
-  (term_depth (Const _) = 1) /\
+Definition term_depth_def:
+(term_depth (Const _) = 1) /\
   (term_depth (Var _) = 1) /\
   (term_depth (App _ xs) = 1 + SUM (MAP term_depth xs)) /\
   (term_depth (If x y z) = 1 + term_depth x + term_depth y + term_depth z) /\
@@ -389,10 +387,8 @@ val term_depth_def = tDefine "term_depth" `
   (term_depth (Third x) = 30 + term_depth x) /\
   (term_depth (Fourth x) = 40 + term_depth x) /\
   (term_depth (Fifth x) = 50 + term_depth x) /\
-  (term_depth (Defun _ _ _) = 10)`
- (WF_REL_TAC `measure (term_size)` \\ REPEAT STRIP_TAC
-  \\ IMP_RES_TAC MEM_term_size5 \\ IMP_RES_TAC MEM_term_size1
-  \\ IMP_RES_TAC MEM_term_size3 \\ REPEAT DECIDE_TAC);
+  (term_depth (Defun _ _ _) = 10)
+End
 
 val ZERO_LT_term_depth = prove(
   ``!x. 0 < term_depth x``,
@@ -549,19 +545,23 @@ val BC_ev_TOTAL_LEMMA = prove(
          \\ FULL_SIMP_TAC std_ss [EXISTS_PROD] \\ Q.PAT_X_ASSUM `!tt.bbb` MATCH_MP_TAC
          \\ FULL_SIMP_TAC std_ss [term_depth_def,MAP,SUM_def,LENGTH,ADD1] \\ DECIDE_TAC));
 
-val BC_ev_TOTAL = store_thm("BC_ev_TOTAL",
-  ``!ret t a q bc. BC_JUMPS_OK bc ==> ?y. BC_ev ret (t,a,q,bc) y``,
-  FULL_SIMP_TAC std_ss [EXISTS_PROD] \\ METIS_TAC [BC_ev_TOTAL_LEMMA]);
+Theorem BC_ev_TOTAL:
+    !ret t a q bc. BC_JUMPS_OK bc ==> ?y. BC_ev ret (t,a,q,bc) y
+Proof
+  FULL_SIMP_TAC std_ss [EXISTS_PROD] \\ METIS_TAC [BC_ev_TOTAL_LEMMA]
+QED
 
-val WRITE_BYTECODE_def = Define `
+Definition WRITE_BYTECODE_def:
    (WRITE_BYTECODE bc p [] = bc) /\
    (WRITE_BYTECODE bc p ((c:bc_inst_type)::cs) =
-      (WRITE_BYTECODE (bc with code := ((p =+ SOME c) bc.code)) ((p:num) + bc.instr_length c) cs))`;
+      (WRITE_BYTECODE (bc with code := ((p =+ SOME c) bc.code)) ((p:num) + bc.instr_length c) cs))
+End
 
-val BC_ev_fun_def = Define `
+Definition BC_ev_fun_def:
   BC_ev_fun (params,body,bc) =
     @result. if BC_JUMPS_OK bc then BC_ev T (body,MAP ssVAR (REVERSE params),bc.code_end,bc) result
-                               else (result = ([],[],bc.code_end,bc))`;
+                               else (result = ([],[],bc.code_end,bc))
+End
 
 val BC_ev_fun_IMP = prove(
   ``(((BC_ev_fun (params,body,bc) = result)) /\ BC_JUMPS_OK bc ==>
@@ -575,45 +575,52 @@ val BC_ev_fun_thm = prove(
   SIMP_TAC std_ss [BC_ev_fun_def]
   \\ METIS_TAC [BC_ev_DETERMINISTIC,BC_ev_TOTAL,BC_JUMPS_OK_def,BC_CODE_OK_def]);
 
-val BC_PRINT_def = Define `
-  BC_PRINT bc x = bc with io_out := (bc.io_out ++ x)`;
+Definition BC_PRINT_def:
+  BC_PRINT bc x = bc with io_out := (bc.io_out ++ x)
+End
 
-val BC_STORE_COMPILED_def = Define `
-  BC_STORE_COMPILED bc fc x = bc with compiled := (fc,x)::bc.compiled`;
+Definition BC_STORE_COMPILED_def:
+  BC_STORE_COMPILED bc fc x = bc with compiled := (fc,x)::bc.compiled
+End
 
-val BC_ONLY_COMPILE_def = Define `
+Definition BC_ONLY_COMPILE_def:
   BC_ONLY_COMPILE (params,body,bc) =
     let (new_code,a2,q2,bc) = BC_ev_fun (params,body,bc) in
     let bc = WRITE_BYTECODE bc bc.code_end new_code in
     let bc = bc with code_end := bc.code_end + iLENGTH bc.instr_length new_code in
-      bc`;
+      bc
+End
 
-val BC_COMPILE_def = Define `
+Definition BC_COMPILE_def:
   BC_COMPILE (fname,params,body,bc) =
     let bc = BC_STORE_COMPILED bc fname (bc.code_end,LENGTH params) in
-      BC_ONLY_COMPILE (params,body,bc)`
+      BC_ONLY_COMPILE (params,body,bc)
+End
 
 val BC_COMPILE_thm = RW [BC_ONLY_COMPILE_def] BC_COMPILE_def;
 
 
 (* semantics *)
 
-val CONTAINS_BYTECODE_def = Define `
+Definition CONTAINS_BYTECODE_def:
   (CONTAINS_BYTECODE bc p [] = T) /\
   (CONTAINS_BYTECODE bc p (c::cs) =
      (bc.code p = SOME c) /\
-     CONTAINS_BYTECODE bc (p + bc.instr_length (c:bc_inst_type)) cs)`;
+     CONTAINS_BYTECODE bc (p + bc.instr_length (c:bc_inst_type)) cs)
+End
 
-val BC_STEP_def = Define `
-  BC_STEP bc p = p + bc.instr_length (THE (bc.code p))`;
+Definition BC_STEP_def:
+  BC_STEP bc p = p + bc.instr_length (THE (bc.code p))
+End
 
-val BC_SUBSTATE_def = Define `
+Definition BC_SUBSTATE_def:
   BC_SUBSTATE bc1 bc2 =
     (!i. BC_CODE_OK bc1 /\ ~(bc1.code i = NONE) ==> (bc2.code i = bc1.code i)) /\
     (!i. ~(FUN_LOOKUP bc1.compiled i = NONE) ==> (FUN_LOOKUP bc2.compiled i = FUN_LOOKUP bc1.compiled i)) /\
     (bc2.instr_length = bc1.instr_length) /\
     (BC_CODE_OK bc1 ==> BC_CODE_OK bc2) /\
-    ?qs. bc2.consts = bc1.consts ++ qs`;
+    ?qs. bc2.consts = bc1.consts ++ qs
+End
 
 val (iSTEP_rules,iSTEP_ind,iSTEP_cases) =
  Hol_reln
@@ -697,10 +704,12 @@ val BC_SUBSTATE_BC_ADD_CONST = prove(
   ``BC_SUBSTATE bc (BC_ADD_CONST bc s) /\ BC_SUBSTATE bc (BC_FAIL bc)``,
   SRW_TAC [] [BC_SUBSTATE_def,BC_ADD_CONST_def,BC_CODE_OK_def,BC_FAIL_def]);
 
-val BC_SUBSTATE_REFL = store_thm("BC_SUBSTATE_REFL",
-  ``!x. BC_SUBSTATE x x``,
+Theorem BC_SUBSTATE_REFL:
+    !x. BC_SUBSTATE x x
+Proof
   SIMP_TAC std_ss [BC_SUBSTATE_def] \\ REPEAT STRIP_TAC
-  \\ Q.EXISTS_TAC `[]` \\ SIMP_TAC std_ss [APPEND_NIL]);
+  \\ Q.EXISTS_TAC `[]` \\ SIMP_TAC std_ss [APPEND_NIL]
+QED
 
 val BC_SUBSTATE_TRANS = prove(
   ``!x y z. BC_SUBSTATE x y /\ BC_SUBSTATE y z ==> BC_SUBSTATE x z``,
@@ -793,17 +802,20 @@ val WRITE_BYTECODE_IGNORE2 = prove(
   \\ `0 < bc.instr_length h` by METIS_TAC []
   \\ `~(a = i)` by DECIDE_TAC \\ ASM_SIMP_TAC (srw_ss()) [combinTheory.APPLY_UPDATE_THM]);
 
-val WRITE_BYTECODE_code_end = store_thm("WRITE_BYTECODE_code_end",
-  ``!xs a bc. ((WRITE_BYTECODE bc a xs).code_end = bc.code_end) /\
+Theorem WRITE_BYTECODE_code_end:
+    !xs a bc. ((WRITE_BYTECODE bc a xs).code_end = bc.code_end) /\
               ((WRITE_BYTECODE bc a xs).instr_length = bc.instr_length) /\
               ((WRITE_BYTECODE bc a xs).consts = bc.consts) /\
               ((WRITE_BYTECODE bc a xs).compiled = bc.compiled) /\
               ((WRITE_BYTECODE bc a xs).io_out = bc.io_out) /\
-              ((WRITE_BYTECODE bc a xs).ok = bc.ok)``,
-  Induct \\ FULL_SIMP_TAC (srw_ss()) [WRITE_BYTECODE_def]);
+              ((WRITE_BYTECODE bc a xs).ok = bc.ok)
+Proof
+  Induct \\ FULL_SIMP_TAC (srw_ss()) [WRITE_BYTECODE_def]
+QED
 
-val BC_SUBSTATE_ONLY_COMPILE = store_thm("BC_SUBSTATE_ONLY_COMPILE",
-  ``!bc. BC_SUBSTATE bc (BC_ONLY_COMPILE (params,body,bc))``,
+Theorem BC_SUBSTATE_ONLY_COMPILE:
+    !bc. BC_SUBSTATE bc (BC_ONLY_COMPILE (params,body,bc))
+Proof
   SIMP_TAC std_ss [BC_ONLY_COMPILE_def,LET_DEF] \\ REPEAT STRIP_TAC
   \\ `?x y z bc8. BC_ev_fun (params,body,bc) = (x,y,z,bc8)` by METIS_TAC [PAIR]
   \\ REVERSE (Cases_on `BC_JUMPS_OK bc`) THEN1
@@ -824,7 +836,8 @@ val BC_SUBSTATE_ONLY_COMPILE = store_thm("BC_SUBSTATE_ONLY_COMPILE",
    (MATCH_MP_TAC WRITE_BYTECODE_IGNORE1 \\ CCONTR_TAC
     \\ FULL_SIMP_TAC std_ss [NOT_LESS] \\ RES_TAC \\ FULL_SIMP_TAC std_ss [])
   \\ IMP_RES_TAC WRITE_BYTECODE_IGNORE2 \\ ASM_SIMP_TAC std_ss []
-  \\ `a <= i` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss []);
+  \\ `a <= i` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss []
+QED
 
 val BC_COMPILE_SUBSTATE = prove(
   ``!bc1 bc2.
@@ -865,17 +878,19 @@ val iSTEP_BC_SUBSTATE = prove(
 
 (* prove that translation is semantics preserving *)
 
-val VARS_IN_STACK_def = Define `
+Definition VARS_IN_STACK_def:
   VARS_IN_STACK env stack alist_placement =
     !v. v IN FDOM env ==>
         ?n. (var_lookup 0 v alist_placement = SOME n) /\
             (env ' v = EL n stack) /\
-            n < LENGTH stack`;
+            n < LENGTH stack
+End
 
-val STACK_INV_def = Define `
+Definition STACK_INV_def:
   STACK_INV env stack alist_placement =
     VARS_IN_STACK env stack alist_placement /\
-    LENGTH alist_placement <= LENGTH stack`;
+    LENGTH alist_placement <= LENGTH stack
+End
 
 val var_lookup_aux_thm = prove(
   ``!a v n k.
@@ -1017,7 +1032,7 @@ val STACK_INV_VarBind = prove(
   SIMP_TAC std_ss [STACK_INV_def,STACK_INV_lemma,APPEND,VARS_IN_STACK_VarBind,
     isVal_def,LENGTH,LENGTH_APPEND,LENGTH_REVERSE,LENGTH_MAP]);
 
-val BC_FNS_ASSUM_def = Define `
+Definition BC_FNS_ASSUM_def:
   BC_FNS_ASSUM fns bc =
     !fc params exp.
        fc IN FDOM fns /\ (fns ' fc = (params,exp)) ==>
@@ -1026,17 +1041,20 @@ val BC_FNS_ASSUM_def = Define `
          (FUN_LOOKUP bc.compiled fc = SOME (p,LENGTH params)) /\
          BC_ev T (exp,MAP ssVAR (REVERSE params),p,bc4)
                  (pcode,a5,p + iLENGTH bc.instr_length pcode,bc5) /\
-         BC_SUBSTATE bc5 bc`;
+         BC_SUBSTATE bc5 bc
+End
 
-val BC_REFINES_def = Define `
+Definition BC_REFINES_def:
   BC_REFINES (fns,io) bc =
     BC_FNS_ASSUM fns bc /\ (bc.io_out = io) /\ BC_CODE_OK bc /\
     ({ j |j| ~(FUN_LOOKUP bc.compiled j = NONE)} = FDOM fns) /\
-    !j. bc.code_end <= j ==> (bc.code j = NONE)`;
+    !j. bc.code_end <= j ==> (bc.code j = NONE)
+End
 
-val iSTEP_ret_state_def = Define `
+Definition iSTEP_ret_state_def:
   iSTEP_ret_state a2 (result,stack,r,rs,bc) =
-    (result::DROP (LENGTH a2) stack,r,rs,bc)`;
+    (result::DROP (LENGTH a2) stack,r,rs,bc)
+End
 
 val gen_pops_thm = prove(
   ``CONTAINS_BYTECODE bc p (gen_pops (LENGTH xs)) ==>
@@ -1202,14 +1220,16 @@ val BC_ev_CONSTS = prove(
   \\ SRW_TAC [] [] \\ SIMP_TAC (srw_ss()) [BC_ADD_CONST_def])
   |> SIMP_RULE std_ss [PULL_FORALL_IMP];
 
-val BC_ev_fun_CONSTS = store_thm("BC_ev_fun_CONSTS",
-  ``(BC_ev_fun (params,body,bcA) = (new_code,a2,q2,bcB)) /\ BC_JUMPS_OK bcA ==>
+Theorem BC_ev_fun_CONSTS:
+    (BC_ev_fun (params,body,bcA) = (new_code,a2,q2,bcB)) /\ BC_JUMPS_OK bcA ==>
     (bcA.code = bcB.code) /\ (bcA.code_end = bcB.code_end) /\
     (bcA.instr_length = bcB.instr_length) /\ (bcA.io_out = bcB.io_out) /\
     (bcA.compiled = bcB.compiled) /\
-    (bcA.ok = bcB.ok)``,
+    (bcA.ok = bcB.ok)
+Proof
   STRIP_TAC \\ IMP_RES_TAC BC_ev_fun_IMP
-  \\ IMP_RES_TAC BC_ev_CONSTS \\ ASM_SIMP_TAC std_ss []);
+  \\ IMP_RES_TAC BC_ev_CONSTS \\ ASM_SIMP_TAC std_ss []
+QED
 
 val WRITE_BYTECODE_io_out = prove(
   ``!xs a bc. ((WRITE_BYTECODE bc a xs).io_out = bc.io_out) /\
@@ -1222,18 +1242,22 @@ val BC_ev_fun_io_out = prove(
   Cases_on `BC_JUMPS_OK bc` THEN1 (METIS_TAC [BC_ev_fun_CONSTS])
   \\ ASM_SIMP_TAC std_ss [BC_ev_fun_def]);
 
-val BC_ONLY_COMPILE_io_out = store_thm("BC_ONLY_COMPILE_io_out",
-  ``((BC_ONLY_COMPILE (params,body,bc)).io_out = bc.io_out) /\
-    ((BC_ONLY_COMPILE (params,body,bc)).ok = bc.ok)``,
+Theorem BC_ONLY_COMPILE_io_out:
+    ((BC_ONLY_COMPILE (params,body,bc)).io_out = bc.io_out) /\
+    ((BC_ONLY_COMPILE (params,body,bc)).ok = bc.ok)
+Proof
   SIMP_TAC std_ss [BC_ONLY_COMPILE_def,LET_DEF,BC_ev_fun_io_out]
   \\ `?z1 z2 z3 bc2. BC_ev_fun(params,body,bc) = (z1,z2,z3,bc2)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [] \\ IMP_RES_TAC BC_ev_fun_io_out
-  \\ FULL_SIMP_TAC (srw_ss()) [WRITE_BYTECODE_io_out]);
+  \\ FULL_SIMP_TAC (srw_ss()) [WRITE_BYTECODE_io_out]
+QED
 
-val BC_COMPILE_io_out = store_thm("BC_COMPILE_io_out",
-  ``((BC_COMPILE (fname,params,body,bc)).io_out = bc.io_out) /\
-    ((BC_COMPILE (fname,params,body,bc)).ok = bc.ok)``,
-  SIMP_TAC std_ss [BC_COMPILE_def,LET_DEF,BC_ONLY_COMPILE_io_out] \\ EVAL_TAC);
+Theorem BC_COMPILE_io_out:
+    ((BC_COMPILE (fname,params,body,bc)).io_out = bc.io_out) /\
+    ((BC_COMPILE (fname,params,body,bc)).ok = bc.ok)
+Proof
+  SIMP_TAC std_ss [BC_COMPILE_def,LET_DEF,BC_ONLY_COMPILE_io_out] \\ EVAL_TAC
+QED
 
 fun MOVE_TAC (gs,tm) = if is_forall tm then STRIP_TAC (gs,tm) else
                        if is_imp tm then STRIP_TAC (gs,tm) else NO_TAC (gs,tm)
@@ -1266,7 +1290,7 @@ val n_times_iCONST = prove(
 val MAP_EQ_GENLIST = prove(
   ``!xs. MAP (\x.b) xs = GENLIST (\x.b) (LENGTH xs)``,
   HO_MATCH_MP_TAC rich_listTheory.SNOC_INDUCT
-  \\ SRW_TAC [] [] \\ ASM_SIMP_TAC std_ss []
+  \\ SRW_TAC [] [SNOC_APPEND] \\ ASM_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [GENLIST,GSYM ADD1,SNOC_APPEND]);
 
 val MAP_CONST_REVERSE = prove(
@@ -1385,20 +1409,23 @@ val BC_SUBSTATE_TAC =
 val EXISTS_LEMMA = METIS_PROVE []
   ``(?y. (?x. P1 x /\ P2 x y) /\ Q y) = ?x. P1 x /\ ?y. P2 x y /\ Q y``
 
-val WRITE_BYTECODE_SKIP = store_thm("WRITE_BYTECODE_SKIP",
-  ``!new_code bc n i.
+Theorem WRITE_BYTECODE_SKIP:
+    !new_code bc n i.
       n + iLENGTH bc.instr_length new_code <= i /\ (!h. 0 < bc.instr_length h) ==>
-      ((WRITE_BYTECODE bc n new_code).code i = bc.code i)``,
+      ((WRITE_BYTECODE bc n new_code).code i = bc.code i)
+Proof
   Induct \\ SIMP_TAC std_ss [WRITE_BYTECODE_def,iLENGTH_def,ADD_ASSOC]
   \\ REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `!bc n.bbb`
        (MP_TAC o Q.SPEC `(bc with code := (n =+ SOME h) bc.code)`)
   \\ FULL_SIMP_TAC (srw_ss()) [] \\ REPEAT STRIP_TAC \\ RES_TAC
   \\ FULL_SIMP_TAC std_ss [combinTheory.APPLY_UPDATE_THM]
   \\ `0 < bc.instr_length h` by FULL_SIMP_TAC std_ss []
-  \\ `~(n = i)` by DECIDE_TAC \\ FULL_SIMP_TAC std_ss []);
+  \\ `~(n = i)` by DECIDE_TAC \\ FULL_SIMP_TAC std_ss []
+QED
 
-val BC_CODE_OK_BC_ONLY_COMPILE = store_thm("BC_CODE_OK_BC_ONLY_COMPILE",
-  ``BC_CODE_OK bc ==> BC_CODE_OK (BC_ONLY_COMPILE (params,body,bc))``,
+Theorem BC_CODE_OK_BC_ONLY_COMPILE:
+    BC_CODE_OK bc ==> BC_CODE_OK (BC_ONLY_COMPILE (params,body,bc))
+Proof
   SIMP_TAC std_ss [BC_ONLY_COMPILE_def,LET_DEF]
   \\ `?new_code a2 q2 bcB. BC_ev_fun (params,body,bc) = (new_code,a2,q2,bcB)` by METIS_TAC [PAIR]
   \\ ASM_SIMP_TAC std_ss [NOT_CONS_NIL]
@@ -1413,7 +1440,8 @@ val BC_CODE_OK_BC_ONLY_COMPILE = store_thm("BC_CODE_OK_BC_ONLY_COMPILE",
   \\ ASM_SIMP_TAC std_ss []
   \\ Q.PAT_X_ASSUM `bc.code = bcB.code` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
   \\ Q.PAT_X_ASSUM `!i. bcB.code_end <= i ==> (bc.code i = NONE)` MATCH_MP_TAC
-  \\ DECIDE_TAC);
+  \\ DECIDE_TAC
+QED
 
 val BC_CODE_OK_BC_COMPILE = prove(
   ``BC_CODE_OK bc ==> BC_CODE_OK (BC_COMPILE (fname,params,body,bc))``,
@@ -1447,21 +1475,24 @@ val BC_COMPILE_compiled_instr_length = prove(
        (POP_ASSUM MP_TAC \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
   \\ FULL_SIMP_TAC std_ss [BC_ONLY_COMPILE_compiled_instr_length] \\ EVAL_TAC);
 
-val WRITE_BYTECODE_SKIP_LESS = store_thm("WRITE_BYTECODE_SKIP_LESS",
-  ``!new_code bc n i.
-      i < n ==> ((WRITE_BYTECODE bc n new_code).code i = bc.code i)``,
+Theorem WRITE_BYTECODE_SKIP_LESS:
+    !new_code bc n i.
+      i < n ==> ((WRITE_BYTECODE bc n new_code).code i = bc.code i)
+Proof
   Induct \\ SIMP_TAC std_ss [WRITE_BYTECODE_def,iLENGTH_def,ADD_ASSOC]
   \\ REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `!bc n.bbb`
        (MP_TAC o Q.SPEC `(bc with code := (n =+ SOME h) bc.code)`)
   \\ `i < (n + bc.instr_length h)` by DECIDE_TAC
   \\ FULL_SIMP_TAC (srw_ss()) [] \\ REPEAT STRIP_TAC \\ RES_TAC
   \\ FULL_SIMP_TAC std_ss [combinTheory.APPLY_UPDATE_THM]
-  \\ `~(n = i)` by DECIDE_TAC \\ FULL_SIMP_TAC std_ss []);
+  \\ `~(n = i)` by DECIDE_TAC \\ FULL_SIMP_TAC std_ss []
+QED
 
-val CONTAINS_BYTECODE_WRITE_BYTECODE = store_thm("CONTAINS_BYTECODE_WRITE_BYTECODE",
-  ``!xs bc a.
+Theorem CONTAINS_BYTECODE_WRITE_BYTECODE:
+    !xs bc a.
       (!h. 0 < bc.instr_length h) ==>
-      CONTAINS_BYTECODE (WRITE_BYTECODE bc a xs) a xs``,
+      CONTAINS_BYTECODE (WRITE_BYTECODE bc a xs) a xs
+Proof
   Induct \\ ASM_SIMP_TAC std_ss [CONTAINS_BYTECODE_def,WRITE_BYTECODE_code_end,
     WRITE_BYTECODE_def] \\ REVERSE (REPEAT STRIP_TAC) \\ FULL_SIMP_TAC std_ss []
   \\ Q.PAT_X_ASSUM `!bc a. bbb`
@@ -1470,15 +1501,17 @@ val CONTAINS_BYTECODE_WRITE_BYTECODE = store_thm("CONTAINS_BYTECODE_WRITE_BYTECO
   \\ `0 < bc.instr_length h` by FULL_SIMP_TAC std_ss []
   \\ `a < a + bc.instr_length h` by DECIDE_TAC
   \\ IMP_RES_TAC WRITE_BYTECODE_SKIP_LESS \\ FULL_SIMP_TAC std_ss []
-  \\ FULL_SIMP_TAC (srw_ss()) [combinTheory.APPLY_UPDATE_THM]);
+  \\ FULL_SIMP_TAC (srw_ss()) [combinTheory.APPLY_UPDATE_THM]
+QED
 
 val CONTAINS_BYTECODE_code_end = prove(
   ``!xs a bc. CONTAINS_BYTECODE (bc with code_end := x) a xs = CONTAINS_BYTECODE bc a xs``,
   Induct \\ ASM_SIMP_TAC (srw_ss()) [CONTAINS_BYTECODE_def]);
 
-val BC_REFINES_ONLY_COMPILE = store_thm("BC_REFINES_ONLY_COMPILE",
-  ``BC_REFINES (fns,io) bc7 ==>
-    BC_REFINES (fns,io) (BC_ONLY_COMPILE (syms,body,bc7))``,
+Theorem BC_REFINES_ONLY_COMPILE:
+    BC_REFINES (fns,io) bc7 ==>
+    BC_REFINES (fns,io) (BC_ONLY_COMPILE (syms,body,bc7))
+Proof
   SIMP_TAC std_ss [BC_REFINES_def] \\ REVERSE (REPEAT STRIP_TAC)
   \\ FULL_SIMP_TAC std_ss [BC_ONLY_COMPILE_io_out,BC_CODE_OK_BC_ONLY_COMPILE]
   \\ IMP_RES_TAC BC_CODE_OK_BC_ONLY_COMPILE
@@ -1496,11 +1529,13 @@ val BC_REFINES_ONLY_COMPILE = store_thm("BC_REFINES_ONLY_COMPILE",
   \\ `BC_SUBSTATE bc7 (BC_ONLY_COMPILE (syms,body,bc7))` by
         ASM_SIMP_TAC std_ss [BC_SUBSTATE_ONLY_COMPILE]
   \\ POP_ASSUM MP_TAC
-  \\ FULL_SIMP_TAC std_ss [BC_ONLY_COMPILE_def,LET_DEF,WRITE_BYTECODE_code_end]);
+  \\ FULL_SIMP_TAC std_ss [BC_ONLY_COMPILE_def,LET_DEF,WRITE_BYTECODE_code_end]
+QED
 
-val BC_REFINES_COMPILE = store_thm("BC_REFINES_COMPILE",
-  ``fc NOTIN FDOM fns /\ BC_REFINES (fns,io) bc7 ==>
-    BC_REFINES (fns |+ (fc,syms,body),io) (BC_COMPILE (fc,syms,body,bc7))``,
+Theorem BC_REFINES_COMPILE:
+    fc NOTIN FDOM fns /\ BC_REFINES (fns,io) bc7 ==>
+    BC_REFINES (fns |+ (fc,syms,body),io) (BC_COMPILE (fc,syms,body,bc7))
+Proof
   SIMP_TAC std_ss [BC_REFINES_def] \\ REVERSE (REPEAT STRIP_TAC)
   \\ FULL_SIMP_TAC std_ss [BC_COMPILE_io_out,BC_CODE_OK_BC_COMPILE]
   \\ IMP_RES_TAC BC_CODE_OK_BC_COMPILE
@@ -1544,7 +1579,8 @@ val BC_REFINES_COMPILE = store_thm("BC_REFINES_COMPILE",
     \\ FULL_SIMP_TAC std_ss [BC_CODE_OK_def])
   \\ SIMP_TAC (srw_ss()) [BC_SUBSTATE_def,WRITE_BYTECODE_code_end]
   \\ Cases_on `BC_CODE_OK bcB` \\ FULL_SIMP_TAC std_ss []
-  \\ METIS_TAC [BC_CODE_OK_def,NOT_LESS,WRITE_BYTECODE_SKIP_LESS]);
+  \\ METIS_TAC [BC_CODE_OK_def,NOT_LESS,WRITE_BYTECODE_SKIP_LESS]
+QED
 
 val BC_CODE_OK_PRINT = prove(
   ``BC_CODE_OK (BC_PRINT bc str) = BC_CODE_OK bc``,
@@ -2817,7 +2853,7 @@ val _ = save_thm("BC_ev_thm",BC_ev_thm);
 
 (* translation: term2sexp *)
 
-val prim2sym_def = Define `
+Definition prim2sym_def:
   (prim2sym opCONS = "CONS") /\
   (prim2sym opEQUAL = "EQUAL") /\
   (prim2sym opLESS = "<") /\
@@ -2828,29 +2864,33 @@ val prim2sym_def = Define `
   (prim2sym opNATP = "NATP") /\
   (prim2sym opSYMBOLP = "SYMBOLP") /\
   (prim2sym opCAR = "CAR") /\
-  (prim2sym opCDR = "CDR")`;
+  (prim2sym opCDR = "CDR")
+End
 
-val macro_names_def = Define `
+Definition macro_names_def:
   macro_names =
     ["LET";"LET*";"COND";"AND";"FIRST";"SECOND";
-     "THIRD";"FOURTH";"FIFTH";"LIST";"DEFUN"]`;
+     "THIRD";"FOURTH";"FIFTH";"LIST";"DEFUN"]
+End
 
-val reserved_names_def = Define `
+Definition reserved_names_def:
   reserved_names =
     ["QUOTE";"IF";"OR";"DEFINE";"PRINT";"ERROR";"FUNCALL";
      "CAR";"CDR";"SYMBOLP";"NATP";"CONSP";"+";"-";
-     "SYMBOL-<";"<";"EQUAL";"CONS"] ++ macro_names`;
+     "SYMBOL-<";"<";"EQUAL";"CONS"] ++ macro_names
+End
 
-val func2sexp_def = Define `
+Definition func2sexp_def:
   (func2sexp (PrimitiveFun p) = [Sym (prim2sym p)]) /\
   (func2sexp (Define) = [Sym "DEFINE"]) /\
   (func2sexp (Print) = [Sym "PRINT"]) /\
   (func2sexp (Error) = [Sym "ERROR"]) /\
   (func2sexp (Funcall) = [Sym "FUNCALL"]) /\
   (func2sexp (Fun f) =
-     if MEM f reserved_names then [Val 0; Sym f] else [Sym f])`;
+     if MEM f reserved_names then [Val 0; Sym f] else [Sym f])
+End
 
-val term2sexp_def = tDefine "term2sexp" `
+Definition term2sexp_def:
   (term2sexp (Const s) = list2sexp [Sym "QUOTE"; s]) /\
   (term2sexp (Var v) = Sym v) /\
   (term2sexp (App fc vs) = list2sexp (func2sexp fc ++ MAP term2sexp vs)) /\
@@ -2867,14 +2907,15 @@ val term2sexp_def = tDefine "term2sexp" `
   (term2sexp (Third x) = list2sexp [Sym "THIRD"; term2sexp x]) /\
   (term2sexp (Fourth x) = list2sexp [Sym "FOURTH"; term2sexp x]) /\
   (term2sexp (Fifth x) = list2sexp [Sym "FIFTH"; term2sexp x]) /\
-  (term2sexp (Defun fname ps s) = list2sexp [Sym "DEFUN"; Sym fname; list2sexp (MAP Sym ps); s])`
- (WF_REL_TAC `measure (term_size)`);
+  (term2sexp (Defun fname ps s) = list2sexp [Sym "DEFUN"; Sym fname; list2sexp (MAP Sym ps); s])
+End
 
-val fun_name_ok_def = Define `
+Definition fun_name_ok_def:
   (fun_name_ok (Fun f) = ~MEM f reserved_names) /\
-  (fun_name_ok _ = T)`;
+  (fun_name_ok _ = T)
+End
 
-val no_bad_names_def = tDefine "no_bad_names" `
+Definition no_bad_names_def:
   (no_bad_names (Const s) = T) /\
   (no_bad_names (Var v) = ~(v = "T") /\ ~(v = "NIL")) /\
   (no_bad_names (App fc vs) = fun_name_ok fc /\ EVERY no_bad_names vs) /\
@@ -2891,8 +2932,8 @@ val no_bad_names_def = tDefine "no_bad_names" `
   (no_bad_names (Third x) = no_bad_names x) /\
   (no_bad_names (Fourth x) = no_bad_names x) /\
   (no_bad_names (Fifth x) = no_bad_names x) /\
-  (no_bad_names (Defun fname ps s) = T)`
- (WF_REL_TAC `measure (term_size)`);
+  (no_bad_names (Defun fname ps s) = T)
+End
 
 val sexp2list_list2sexp = prove(
   ``!x. sexp2list (list2sexp x) = x``,
@@ -2902,8 +2943,9 @@ val MAP_EQ_IMP = prove(
   ``!xs f. (!x. MEM x xs ==> (f x = x)) ==> (MAP f xs = xs)``,
   Induct \\ SIMP_TAC (srw_ss()) [] \\ REPEAT STRIP_TAC \\ METIS_TAC []);
 
-val sexp2term_term2sexp = store_thm("sexp2term_term2sexp",
-  ``!t. no_bad_names t ==> (sexp2term (term2sexp t) = t)``,
+Theorem sexp2term_term2sexp:
+    !t. no_bad_names t ==> (sexp2term (term2sexp t) = t)
+Proof
   HO_MATCH_MP_TAC (fetch "-" "term2sexp_ind") \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [no_bad_names_def]
   THEN1 (EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
@@ -2931,20 +2973,23 @@ val sexp2term_term2sexp = store_thm("sexp2term_term2sexp",
    (SIMP_TAC (srw_ss()) [term2sexp_def,Once sexp2term_def,LET_DEF]
     \\ ASM_SIMP_TAC (srw_ss()) [list2sexp_def,CAR_def,CDR_def,isVal_def,isSym_def,
         getSym_def,sym2prim_def,sexp2list_list2sexp,MAP_MAP_o,combinTheory.o_DEF]
-    \\ MATCH_MP_TAC MAP_EQ_IMP \\ FULL_SIMP_TAC std_ss [EVERY_MEM]));
+    \\ MATCH_MP_TAC MAP_EQ_IMP \\ FULL_SIMP_TAC std_ss [EVERY_MEM])
+QED
 
-val verified_string_def = Define `
+Definition verified_string_def:
   verified_string xs =
     if ~ALL_DISTINCT (MAP FST xs) then NONE else
     if ~EVERY (\(name,params,body). no_bad_names body) xs then NONE else
       SOME (FLAT (MAP ( \ (name,params,body). sexp2string
         (list2sexp [Sym "DEFUN"; Sym name;
-           list2sexp (MAP Sym params); term2sexp body]) ++ "\n") xs))`
+           list2sexp (MAP Sym params); term2sexp body]) ++ "\n") xs))
+End
 
 
 (* translation sexp2sexp *)
 
-val sfix_def = Define `sfix x = Sym (getSym x)`;
+Definition sfix_def:   sfix x = Sym (getSym x)
+End
 
 val IMP_isDot = prove(
   ``!x. ~(isVal x) /\ ~(isSym x) ==> isDot x``,
@@ -3024,8 +3069,9 @@ val MAP_sfix = prove(
   ``!xs. MAP sfix xs = MAP Sym (MAP getSym xs)``,
   Induct \\ FULL_SIMP_TAC std_ss [MAP,sfix_def]);
 
-val sexp2sexp_thm = store_thm("sexp2sexp_thm",
-  ``!x. sexp2sexp x = term2sexp (sexp2term x)``,
+Theorem sexp2sexp_thm:
+    !x. sexp2sexp x = term2sexp (sexp2term x)
+Proof
   REPEAT STRIP_TAC \\ completeInduct_on `LSIZE x` \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [PULL_FORALL_IMP]
   \\ ONCE_REWRITE_TAC [sexp2sexp_def]
@@ -3060,8 +3106,7 @@ val sexp2sexp_thm = store_thm("sexp2sexp_thm",
     \\ EVAL_TAC \\ DECIDE_TAC)
   \\ REVERSE (Cases_on `sym2prim (getSym a) = NONE`)
   \\ ASM_SIMP_TAC std_ss [] THEN1
-   (CCONTR_TAC \\ Q.PAT_X_ASSUM `sym2prim (getSym a) <> NONE` MP_TAC
-    \\ FULL_SIMP_TAC std_ss [sym2prim_def] \\ SRW_TAC [] [] \\ Cases_on `a`
+   (FULL_SIMP_TAC std_ss [sym2prim_def] \\ Cases_on `a`
     \\ FULL_SIMP_TAC (srw_ss()) [getSym_def,CAR_def,term2sexp_def,func2sexp_def,
          list2sexp_def,prim2sym_def,sfix_def])
   \\ Cases_on `MEM a [Sym "FIRST";Sym "SECOND";Sym "THIRD";Sym "FOURTH";Sym "FIFTH"]`
@@ -3146,7 +3191,8 @@ val sexp2sexp_thm = store_thm("sexp2sexp_thm",
   \\ Cases_on `a` THEN1 EVAL_TAC THEN1 EVAL_TAC
   \\ FULL_SIMP_TAC std_ss [getSym_def]
   \\ EVAL_TAC \\ FULL_SIMP_TAC (srw_ss()) []
-  \\ CCONTR_TAC \\ FULL_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [sym2prim_def]);
+  \\ CCONTR_TAC \\ FULL_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [sym2prim_def]
+QED
 
 (*
 
@@ -3186,5 +3232,3 @@ val iSTEP_DETERMINISTIC = store_thm("iSTEP_DETERMINISTIC",
   \\ IMP_RES_TAC list2sexp_MAP_Sym_11 \\ FULL_SIMP_TAC std_ss []);
 
 *)
-
-val _ = export_theory();

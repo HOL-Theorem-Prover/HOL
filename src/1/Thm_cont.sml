@@ -145,11 +145,12 @@ fun DISJ_CASES_THEN2 ttac1 ttac2 =
 (*               ttac1 (itlist ADD_ASSUM (Thm.hyp disth) (ASSUME disj1)) g *)
             and (gl2, prf2) = ttac2 (foo disth disj2) g
 (*              ttac2 (itlist ADD_ASSUM (Thm.hyp disth) (ASSUME disj2)) g *)
+            val len_gl1 = length gl1 (* Avoid capture of gl1 in closure *)
          in
             (gl1 @ gl2,
              fn thl =>
                let
-                  val (thl1, thl2) = split_after (length gl1) thl
+                  val (thl1, thl2) = split_after len_gl1 thl
                in
                   DISJ_CASES disth (prf1 thl1) (prf2 thl2)
                end)
@@ -239,6 +240,32 @@ fun X_CHOOSE_THEN y (ttac: thm_tactic) : thm_tactic =
       end
       handle HOL_ERR _ => raise ERR "X_CHOOSE_THEN" ""
 
+local
+fun dest_list [] tm vf = (tm,vf)
+  | dest_list (x::xs) tm vf =
+    let
+       val (Bvar,Body) = dest_exists (tm)
+       val Body = subst[Bvar |-> x] Body
+    in
+       dest_list xs Body (vf o (CHOOSE (x,ASSUME tm)))
+    end
+in
+fun X_CHOOSE_THENL ys (ttac: thm_tactic) : thm_tactic =
+    fn xth =>
+      let
+         val (tm,vf) = dest_list ys (Thm.concl xth) (PROVE_HYP xth)
+         val th = foo xth (tm)
+         (* itlist ADD_ASSUM (hyp xth) (ASSUME (subst[Bvar |-> y] Body)) *)
+      in fn (asl,w) =>
+            let
+               val (gl,prf) = ttac th (asl,w)
+            in
+               (gl, vf o prf)
+            end
+      end
+      handle HOL_ERR _ => raise ERR "X_CHOOSE_THENL" ""
+end
+
 (*---------------------------------------------------------------------------
  * Chooses a variant for the user.
  *---------------------------------------------------------------------------*)
@@ -260,6 +287,60 @@ val CHOOSE_THEN: thm_tactical =
       end
       handle HOL_ERR _ => raise ERR "CHOOSE_THEN" ""
 
+(* same as REPEAT_TCL CHOOSE_THEN but faster *)
+local
+   fun varyAcc v (V, l) = let val v' = gen_variant Parse.is_constname "" V v in (v'::V, v'::l) end
+   (* There are actual cases where strip_exists differ from this function *)
+   fun strip_exists1 tm =
+   let fun strip A tm =
+           case Lib.total dest_exists tm of
+               NONE => (List.rev A, tm)
+             | SOME (x,tm') => strip (x::A) tm'
+   in
+      strip [] tm
+   end
+in
+val CHOOSE_ALL_THEN: thm_tactical =
+   fn ttac => fn xth =>
+      let
+         val (hyp,conc) = dest_thm xth
+         val _ = if is_exists conc then () else raise ERR "CHOOSE_THEN" "not a exists"
+         val (vars,_) = strip_exists1 conc
+         val len = List.length vars
+         val arr = Array.array (len,false)
+         fun name_eq x y = (fst (dest_var x) = fst (dest_var y))
+         fun check_for_dupes i [] = ([],[])
+           | check_for_dupes i (x::xs) = (if op_mem name_eq x xs
+                                          then
+                                          let val _ = Array.update (arr,i,true)
+                                              val (dupl,notdup) = check_for_dupes (i + 1) xs
+                                          in
+                                            (x::dupl,notdup)
+                                          end
+                                          else
+                                          let val (dupl,notdup) = check_for_dupes (i + 1) xs
+                                          in (dupl,x::notdup)
+                                          end)
+         val (dups,vars) = check_for_dupes 0 vars
+         val vec = Array.vector arr
+
+      in
+         fn (g as (asl,w)) =>
+         let
+            val fvs = (free_varsl ((conc::hyp)@(w::asl)))
+            val vars = List.rev (snd (rev_itlist varyAcc vars (fvs,[])))
+            fun merge i dups vars = if i < Vector.length vec
+                                    then if Vector.sub (vec,i)
+                                         then (hd dups :: merge (i + 1) (tl dups) vars)
+                                         else (hd vars :: merge (i + 1) dups (tl vars))
+                                    else []
+            val vars = merge 0 dups vars
+         in
+            X_CHOOSE_THENL vars ttac xth g
+         end
+         handle HOL_ERR _ => raise ERR "CHOOSE_THEN" ""
+      end
+end
 (*----------  Cases tactics   -------------*)
 
 (*---------------------------------------------------------------------------
@@ -289,13 +370,16 @@ fun X_CASES_THEN varsl ttac =
  * Version that chooses the y's as variants of the x's.                      *
  *---------------------------------------------------------------------------*)
 
-fun CASES_THENL ttacl = DISJ_CASES_THENL (map (REPEAT_TCL CHOOSE_THEN) ttacl)
+fun CASES_THENL ttacl = DISJ_CASES_THENL (map (CHOOSE_ALL_THEN) ttacl)
 
 (*---------------------------------------------------------------------------*
  * Tactical to strip off ONE disjunction, conjunction, or existential.       *
  *---------------------------------------------------------------------------*)
 
 val STRIP_THM_THEN = FIRST_TCL [CONJUNCTS_THEN, DISJ_CASES_THEN, CHOOSE_THEN]
+
+(* Same as REPEAT_TCL STRIP_ALL_THEN but slightly faster *)
+val STRIP_ALL_THEN = REPEAT_TCL (FIRST_TCL [CONJUNCTS_THEN, DISJ_CASES_THEN, CHOOSE_ALL_THEN])
 
 
 (* ---------------------------------------------------------------------*)

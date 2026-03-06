@@ -7,17 +7,15 @@
 (*                 2018-2019 Fondazione Bruno Kessler, Italy (Chun Tian)      *)
 (*                 2023-2024 The Australian National University (Chun Tian)   *)
 (******************************************************************************)
+Theory CCS
+Ancestors
+  pred_set relation option list rich_list finite_map
+  generic_terms nomset
+  term[qualified]  (* for SUB's syntax only *)
+Libs
+  pred_setLib CCSLib binderLib nomdatatype
 
-open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory pred_setLib relationTheory optionTheory listTheory CCSLib
-     rich_listTheory finite_mapTheory;
-
-open generic_termsTheory binderLib nomsetTheory nomdatatype;
-
-local open termTheory; in end; (* for SUB's syntax only *)
-
-val _ = new_theory "CCS";
 
 val set_ss = std_ss ++ PRED_SET_ss;
 
@@ -123,24 +121,28 @@ val IS_LABEL_def = save_thm (
 val _ = export_rewrites ["LABEL_def", "IS_LABEL_def"];
 
 (* Define the complement of a label, COMPL: Label -> Label. *)
-val COMPL_LAB_def = Define `(COMPL_LAB (name (s :'a)) = (coname s)) /\
-                            (COMPL_LAB (coname s) = (name s))`;
+Definition COMPL_LAB_def:   (COMPL_LAB (name (s :'a)) = (coname s)) /\
+                            (COMPL_LAB (coname s) = (name s))
+End
 
 val _ = overload_on ("COMPL", ``COMPL_LAB``);
 val _ = export_rewrites ["COMPL_LAB_def"];
 
-val coname_COMPL = store_thm
-  ("coname_COMPL", ``!(s :'a). coname s = COMPL (name s)``,
-    REWRITE_TAC [COMPL_LAB_def]);
+Theorem coname_COMPL:   !(s :'a). coname s = COMPL (name s)
+Proof
+    REWRITE_TAC [COMPL_LAB_def]
+QED
 
-val COMPL_COMPL_LAB = store_thm (
-   "COMPL_COMPL_LAB", ``!(l :'a Label). COMPL_LAB (COMPL_LAB l) = l``,
-    Induct >> REWRITE_TAC [COMPL_LAB_def]);
+Theorem COMPL_COMPL_LAB:   !(l :'a Label). COMPL_LAB (COMPL_LAB l) = l
+Proof
+    Induct >> REWRITE_TAC [COMPL_LAB_def]
+QED
 
 (* Extend the complement to actions, COMPL_ACT: Action -> Action. *)
-val COMPL_ACT_def = Define `
+Definition COMPL_ACT_def:
    (COMPL_ACT (label (l: 'a Label)) = label (COMPL l)) /\
-   (COMPL_ACT tau = tau)`;
+   (COMPL_ACT tau = tau)
+End
 
 val _ = overload_on ("COMPL", ``COMPL_ACT``);
 val _ = export_rewrites ["COMPL_ACT_def"];
@@ -170,15 +172,18 @@ Proof
 QED
 
 (* Relabeling function is subtype of `:'a Label -> 'a Label *)
-val Is_Relabeling_def = Define `
-    Is_Relabeling (f: 'a Label -> 'a Label) = (!s. f (coname s) = COMPL (f (name s)))`;
+Definition Is_Relabeling_def:
+    Is_Relabeling (f: 'a Label -> 'a Label) = (!s. f (coname s) = COMPL (f (name s)))
+End
 
-val EXISTS_Relabeling = store_thm ("EXISTS_Relabeling",
-  ``?(f: 'a Label -> 'a Label). Is_Relabeling f``,
+Theorem EXISTS_Relabeling:
+    ?(f: 'a Label -> 'a Label). Is_Relabeling f
+Proof
     Q.EXISTS_TAC `\a. a`
  >> PURE_ONCE_REWRITE_TAC [Is_Relabeling_def]
  >> BETA_TAC
- >> REWRITE_TAC [COMPL_LAB_def]);
+ >> REWRITE_TAC [COMPL_LAB_def]
+QED
 
 (* |- ?rep. TYPE_DEFINITION Is_Relabeling rep *)
 val Relabeling_TY_DEF = new_type_definition ("Relabeling", EXISTS_Relabeling);
@@ -222,9 +227,10 @@ Proof
 QED
 
 (* Relabeling labels is extended to actions by renaming tau as tau. *)
-val relabel_def = Define `
+Definition relabel_def:
    (relabel (rf :'a Relabeling) tau = tau) /\
-   (relabel rf (label l) = label (REP_Relabeling rf l))`;
+   (relabel rf (label l) = label (REP_Relabeling rf l))
+End
 
 (* If the renaming of an action is a label, that action is a label. *)
 Theorem Relab_label :
@@ -249,12 +255,13 @@ QED
 (* Apply_Relab: ((Label # Label) list) -> Label -> Label
    (SND of any pair is a name, FST can be either name or coname)
  *)
-val Apply_Relab_def = Define `
+Definition Apply_Relab_def:
    (Apply_Relab ([]: ('a Label # 'a Label) list) l = l) /\
    (Apply_Relab ((newold: 'a Label # 'a Label) :: ls) l =
           if (SND newold = l)         then (FST newold)
      else if (COMPL (SND newold) = l) then (COMPL (FST newold))
-     else (Apply_Relab ls l))`;
+     else (Apply_Relab ls l))
+End
 
 Theorem Apply_Relab_COMPL_THM :
     !labl (s: 'a). Apply_Relab labl (coname s) =
@@ -289,8 +296,9 @@ QED
 (* Defining a relabelling function through substitution-like notation.
    RELAB: (Label # Label) list -> Relabeling
  *)
-val RELAB_def = Define `
-    RELAB (labl :('a Label # 'a Label) list) = ABS_Relabeling (Apply_Relab labl)`;
+Definition RELAB_def:
+    RELAB (labl :('a Label # 'a Label) list) = ABS_Relabeling (Apply_Relab labl)
+End
 
 (* !labl labl'.
      (RELAB labl = RELAB labl') <=> (Apply_Relab labl = Apply_Relab labl')
@@ -304,20 +312,19 @@ val APPLY_RELAB_THM = save_thm (
                   (Q.SPEC `labl` IS_RELABELING))));
 
 (******************************************************************************)
-(*                                                                            *)
 (*             Syntax of pure CCS (general formalization)                     *)
-(*                                                                            *)
 (******************************************************************************)
 
-(* The (equivalent) old way (no alpha conversion)
-Datatype: CCS = nil
-              | var string
+(* The nominal datatype with alpha conversion on recursion variables
+Nominal_datatype :
+          CCS = nil
+              | var name
               | prefix ('a Action) CCS
               | sum CCS CCS
               | par CCS CCS
               | restr ('a Label set) CCS
               | relab CCS ('a Relabeling)
-              | rec string CCS
+              | rec ''name CCS
 End
  *)
 
@@ -327,64 +334,73 @@ End
  *)
 val tyname = "CCS";
 
-(* ‘GVAR s vv’ corresponds to ‘var 'a’ *)
-val vp = “(\n u:unit. n = 0)”;                                  (* 0. var *)
+Datatype:
+  crep = cvar
+       | cpfx ('a Action) | csum | cpar
+       | crestr ('a Label set)
+       | crelab ('a Relabeling)
+       | crec
+End
 
-val rep_t = “:'a Action + unit + unit + 'a Label set + 'a Relabeling + unit”;
+val rep_t = “:'a crep”
 val d_tm = mk_var("d", rep_t);
 
-(* ‘GLAM v bv ts us’ corresponds to everything else.
-
-   NOTE: ‘nil’ is now defined by ‘rec "s" (var "s")’, no more primitive.
+(* NOTE: ‘nil’ is now defined by ‘rec "s" (var "s")’, no more primitive.
  *)
 val lp =
-  “(\n ^d_tm tns uns.
-     n = 0 /\ ISL d /\ tns = [] ∧ uns = [0]  \/                   (* 1. prefix *)
-     n = 0 /\ ISR d /\ ISL (OUTR d) /\ tns = [] /\ uns = [0;0] \/ (* 2. sum *)
-     n = 0 /\ ISR d /\ ISR (OUTR d) /\ ISL (OUTR (OUTR d)) /\
-              tns = [] /\ uns = [0;0] \/                          (* 3. par *)
-     n = 0 /\ ISR d /\ ISR (OUTR d) /\ ISR (OUTR (OUTR d)) /\
-              ISL (OUTR (OUTR (OUTR d))) /\
-              tns = [] /\ uns = [0] \/                          (* 4. restr *)
-     n = 0 /\ ISR d /\ ISR (OUTR d) /\ ISR (OUTR (OUTR d)) /\
-              ISR (OUTR (OUTR (OUTR d))) /\
-              ISL (OUTR (OUTR (OUTR (OUTR d)))) /\
-              tns = [] ∧ uns = [0] \/                           (* 5. relab *)
-     n = 0 /\ ISR d /\ ISR (OUTR d) /\ ISR (OUTR (OUTR d)) /\
-              ISR (OUTR (OUTR (OUTR d))) /\
-              ISR (OUTR (OUTR (OUTR (OUTR d)))) /\
-              tns = [0] /\ uns = [])”;                          (* 6. rec *)
+  “(\n lfvs ^d_tm tns uns.
+     n = 0 /\ lfvs = 1 /\ d = cvar /\ tns = [] /\ uns = [] \/     (* 0. var *)
+     (?a. n = 0 /\ lfvs = 0 ∧ d = cpfx a /\ tns = [] ∧
+          uns = [0]) \/                                           (* 1. prefix *)
+     n = 0 /\ lfvs = 0 ∧ d = csum /\ tns = [] /\ uns = [0;0] \/   (* 2. sum *)
+     n = 0 /\ lfvs = 0 ∧ d = cpar /\ tns = [] /\ uns = [0;0] \/   (* 3. par *)
+     (?ls. n = 0 /\ lfvs = 0 ∧ d = crestr ls /\ tns = [] /\
+           uns = [0]) \/                                          (* 4. restr *)
+     (?rl. n = 0 /\ lfvs = 0 ∧ d = crelab rl /\ tns = [] /\
+           uns = [0]) \/                                          (* 5. relab *)
+     n = 0 /\ lfvs = 0 ∧ d = crec /\ tns = [0] /\ uns = []        (* 6. rec *)
+    )”;
+
+Overload LP = “lp”
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
-    new_type_step1 tyname 0 {vp = vp, lp = lp};
+    new_type_step1 tyname 0 [] {lp = lp};
 
 (* ----------------------------------------------------------------------
     CCS operators
    ---------------------------------------------------------------------- *)
 
-val [gvar,glam] = genind_rules |> SPEC_ALL |> CONJUNCTS;
+val glam = genind_lam
+Overload ccslp[local] = “genind ^lp”
 
+fun toArb t = subst [“uu:string” |-> “ARB:string”] t
 (* var *)
 val var_t = mk_var("var", “:string -> ^newty”)
+val var_pattern = “GLAM uu [s] cvar [][]”
 val var_def = new_definition(
-   "var_def", “^var_t s = ^term_ABS_t (GVAR s ())”);
+   "var_def",
+   “^var_t s = ^term_ABS_t ^(toArb var_pattern)”);
 val var_termP = prove(
-  mk_comb(termP, var_def |> SPEC_ALL |> concl |> rhs |> rand),
+  mk_comb(termP, var_pattern),
   srw_tac [][genind_rules]);
 val var_t = defined_const var_def;
+val var_def' = prove(
+  “^term_ABS_t ^var_pattern = var s”,
+  srw_tac[][var_def, GLAM_NIL_EQ, term_ABS_pseudo11, var_termP])
 
 (* prefix *)
 val prefix_t = mk_var("prefix", “:'a Action -> ^newty -> ^newty”);
+val prefix_pattern = “GLAM uu [] (cpfx u) [] [^term_REP_t E]”
 val prefix_def = new_definition(
    "prefix_def",
-  “^prefix_t u E = ^term_ABS_t (GLAM ARB (INL u) [] [^term_REP_t E])”);
+  “^prefix_t u E = ^term_ABS_t ^(toArb prefix_pattern)”);
 val prefix_termP = prove(
-  “^termP (GLAM x (INL u) [] [^term_REP_t E])”,
-    match_mp_tac glam >> srw_tac [][genind_term_REP]);
+  mk_comb(termP, prefix_pattern),
+  match_mp_tac glam >> srw_tac [][genind_term_REP]);
 val prefix_t = defined_const prefix_def;
 val prefix_def' = prove(
-  “^term_ABS_t (GLAM v (INL u) [] [^term_REP_t E]) = ^prefix_t u E”,
+  “^term_ABS_t ^prefix_pattern = ^prefix_t u E”,
     srw_tac [][prefix_def, GLAM_NIL_EQ, term_ABS_pseudo11, prefix_termP]);
 
 val _ =
@@ -397,17 +413,16 @@ val _ = TeX_notation { hol = "..", TeX = ("\\ensuremath{\\ldotp}", 1) };
 
 (* sum *)
 val sum_t = mk_var("sum", “:^newty -> ^newty -> ^newty”);
+val sum_pattern = “GLAM uu [] csum [] [^term_REP_t E1; ^term_REP_t E2]”
 val sum_def = new_definition(
    "sum_def",
-  “^sum_t E1 E2 = ^term_ABS_t (GLAM ARB (INR (INL ())) []
-                                        [^term_REP_t E1; ^term_REP_t E2])”);
+  “^sum_t E1 E2 = ^term_ABS_t ^(toArb sum_pattern)”);
 val sum_termP = prove(
-  “^termP (GLAM x (INR (INL ())) [] [^term_REP_t E1; ^term_REP_t E2])”,
+  “^termP ^sum_pattern”,
     match_mp_tac glam >> srw_tac [][genind_term_REP]);
 val sum_t = defined_const sum_def;
 val sum_def' = prove(
-  “^term_ABS_t (GLAM v (INR (INL ())) []
-                       [^term_REP_t E1; ^term_REP_t E2]) = ^sum_t E1 E2”,
+  “^term_ABS_t ^sum_pattern = ^sum_t E1 E2”,
     srw_tac [][sum_def, GLAM_NIL_EQ, term_ABS_pseudo11, sum_termP]);
 
 val _ = overload_on ("+", ``sum``); (* priority: 500 *)
@@ -415,18 +430,16 @@ val _ = TeX_notation { hol = "+", TeX = ("\\ensuremath{+}", 1) };
 
 (* par *)
 val par_t = mk_var("par", “:^newty -> ^newty -> ^newty”);
+val par_pattern = “GLAM uu [] cpar [] [^term_REP_t E1; ^term_REP_t E2]”
 val par_def = new_definition(
    "par_def",
-  “^par_t E1 E2 = ^term_ABS_t (GLAM ARB (INR (INR (INL ()))) []
-                                        [^term_REP_t E1; ^term_REP_t E2])”);
+  “^par_t E1 E2 = ^term_ABS_t ^(toArb par_pattern)”);
 val par_termP = prove(
-  “^termP (GLAM x (INR (INR (INL ()))) []
-                  [^term_REP_t E1; ^term_REP_t E2])”,
+  “^termP ^par_pattern”,
     match_mp_tac glam >> srw_tac [][genind_term_REP]);
 val par_t = defined_const par_def;
 val par_def' = prove(
-  “^term_ABS_t (GLAM v (INR (INR (INL ()))) []
-                       [^term_REP_t E1; ^term_REP_t E2]) = ^par_t E1 E2”,
+  “^term_ABS_t ^par_pattern = ^par_t E1 E2”,
     srw_tac [][par_def, GLAM_NIL_EQ, term_ABS_pseudo11, par_termP]);
 
 val _ = set_mapped_fixity {fixity = Infixl 600,
@@ -437,17 +450,16 @@ val _ = TeX_notation { hol = "||", TeX = ("\\ensuremath{\\mid}", 1) };
 
 (* restr *)
 val restr_t = mk_var("restr", “:'a Label set -> ^newty -> ^newty”);
+val restr_pattern = “GLAM uu [] (crestr L) [] [^term_REP_t E]”
 val restr_def = new_definition(
    "restr_def",
-  “^restr_t L E = ^term_ABS_t (GLAM ARB (INR (INR (INR (INL L)))) []
-                                        [^term_REP_t E])”);
+  “^restr_t L E = ^term_ABS_t ^(toArb restr_pattern)”);
 val restr_termP = prove(
-  “^termP (GLAM x (INR (INR (INR (INL L)))) [] [^term_REP_t E])”,
+  mk_comb(termP, restr_pattern),
     match_mp_tac glam >> srw_tac [][genind_term_REP]);
 val restr_t = defined_const restr_def;
 val restr_def' = prove(
-  “^term_ABS_t (GLAM v (INR (INR (INR (INL L)))) [] [^term_REP_t E]) =
-   ^restr_t L E”,
+  “^term_ABS_t ^restr_pattern = ^restr_t L E”,
     srw_tac [][restr_def, GLAM_NIL_EQ, term_ABS_pseudo11, restr_termP]);
 
 (* compact representation for single-action restriction *)
@@ -460,30 +472,24 @@ val _ = add_rule {term_name = "nu", fixity = Closefix,
 
 (* relab *)
 val relab_t = mk_var("relab", “:^newty -> 'a Relabeling -> ^newty”);
+val relab_pattern = “GLAM uu [] (crelab rf) [] [^term_REP_t E]”
 val relab_def = new_definition(
    "relab_def",
-  “^relab_t E rf =
-   ^term_ABS_t (GLAM ARB (INR (INR (INR (INR (INL rf))))) []
-                         [^term_REP_t E])”);
+  “^relab_t E rf = ^term_ABS_t ^(toArb relab_pattern)”);
 val relab_termP = prove(
-  “^termP (GLAM x (INR (INR (INR (INR (INL rf))))) [] [^term_REP_t E])”,
+  mk_comb(termP, relab_pattern),
     match_mp_tac glam >> srw_tac [][genind_term_REP]);
 val relab_t = defined_const relab_def;
 val relab_def' = prove(
-  “^term_ABS_t (GLAM v (INR (INR (INR (INR (INL rf))))) []
-                       [^term_REP_t E]) =
-   ^relab_t E rf”,
+  “^term_ABS_t ^relab_pattern = ^relab_t E rf”,
     srw_tac [][relab_def, GLAM_NIL_EQ, term_ABS_pseudo11, relab_termP]);
 
 (* rec *)
 val rec_t = mk_var("rec", “:string -> ^newty -> ^newty”);
-val rec_def = new_definition(
-   "rec_def",
-  “^rec_t X E =
-   ^term_ABS_t (GLAM X (INR (INR (INR (INR (INR ())))))
-                       [^term_REP_t E] [])”);
+val rec_pattern = “GLAM X [] crec [^term_REP_t E] []”
+val rec_def = new_definition("rec_def", “^rec_t X E = ^term_ABS_t ^rec_pattern”);
 val rec_termP = prove(
-  “^termP (GLAM X (INR (INR (INR (INR (INR ()))))) [^term_REP_t E] [])”,
+  mk_comb(termP, rec_pattern),
     match_mp_tac glam >> srw_tac [][genind_term_REP]);
 val rec_t = defined_const rec_def;
 
@@ -492,7 +498,7 @@ val rec_t = defined_const rec_def;
    ---------------------------------------------------------------------- *)
 
 val cons_info =
-    [{con_termP = var_termP,    con_def = var_def},
+    [{con_termP = var_termP,    con_def = SYM var_def'},
      {con_termP = prefix_termP, con_def = SYM prefix_def'},
      {con_termP = sum_termP,    con_def = SYM sum_def'},
      {con_termP = par_termP,    con_def = SYM par_def'},
@@ -585,7 +591,7 @@ fun supp_clause {con_termP, con_def} = let
 in
   t |> REWRITE_CONV [supp_tpm, con_def, MATCH_MP repabs_pseudo_id con_termP,
                      GFV_thm]
-    |> REWRITE_RULE [supp_listpm, EMPTY_DELETE, UNION_EMPTY]
+    |> REWRITE_RULE [supp_listpm, EMPTY_DELETE, UNION_EMPTY, LIST_TO_SET]
     |> REWRITE_RULE [GSYM supp_tpm]
     |> GEN_ALL
 end
@@ -645,23 +651,24 @@ val LIST_REL_NIL = listTheory.LIST_REL_NIL;
 
 val term_ind =
     bvc_genind
-        |> INST_TYPE [alpha |-> rep_t, beta |-> “:unit”]
-        |> Q.INST [‘vp’ |-> ‘^vp’, ‘lp’ |-> ‘^lp’]
+        |> INST_TYPE [alpha |-> rep_t]
+        |> Q.INST [‘lp’ |-> ‘^lp’]
         |> SIMP_RULE std_ss [LIST_REL_CONS1, RIGHT_AND_OVER_OR,
                              LEFT_AND_OVER_OR, DISJ_IMP_THM, LIST_REL_NIL]
         |> Q.SPECL [‘\n t0 x. Q t0 x’, ‘fv’]
         |> UNDISCH |> Q.SPEC ‘0’ |> DISCH_ALL
         |> SIMP_RULE (std_ss ++ DNF_ss)
-                     [sumTheory.FORALL_SUM, supp_listpm,
+                     [sumTheory.FORALL_SUM, supp_listpm, LENGTH_NIL,
+                      LENGTH1,
                       IN_UNION, NOT_IN_EMPTY, oneTheory.FORALL_ONE,
                       genind_exists, LIST_REL_CONS1, LIST_REL_NIL]
         |> Q.INST [‘Q’ |-> ‘\t. P (^term_ABS_t t)’]
-        |> SIMP_RULE std_ss [GSYM var_def, prefix_def',
+        |> SIMP_RULE std_ss [var_def', prefix_def',
                              sum_def', par_def', restr_def', relab_def',
                              GSYM rec_def, absrep_id]
         |> SIMP_RULE (srw_ss()) [GSYM supp_tpm]
         |> elim_unnecessary_atoms {finite_fv = FINITE_FV}
-                                  [ASSUME “!x:'c. FINITE (fv x:string set)”]
+                                  [ASSUME “!x:'b. FINITE (fv x:string set)”]
         |> SPEC_ALL |> UNDISCH
         |> genit |> DISCH_ALL |> Q.GENL [‘P’, ‘fv’];
 
@@ -728,15 +735,12 @@ val termP_removal =
       termP = termP, repty = repty};
 
 val termP0 = prove(
-   “genind ^vp ^lp n t <=> ^termP t ∧ (n = 0)”,
+   “genind ^lp n t <=> ^termP t ∧ (n = 0)”,
     EQ_TAC >> simp_tac (srw_ss()) [] >> strip_tac
  >> qsuff_tac ‘n = 0’ >- (strip_tac >> srw_tac [][])
  >> pop_assum mp_tac
  >> Q.ISPEC_THEN ‘t’ STRUCT_CASES_TAC gterm_cases
- >> srw_tac [][genind_GVAR, genind_GLAM_eqn]);
-
-(* “tvf :string -> 'q -> 'r” *)
-val tvf = “λ(s:string) (u:unit) (p:ρ). tvf s p : 'r”; (* var *)
+ >> srw_tac [][genind_GLAM_eqn]);
 
 (* Type of constants occurring in tlf:
 
@@ -746,44 +750,45 @@ val tvf = “λ(s:string) (u:unit) (p:ρ). tvf s p : 'r”; (* var *)
    restr:  “trf :('q -> 'r) -> ('a Label -> bool) -> 'a CCS -> 'q -> 'r”
    relab:  “tlf :('q -> 'r) -> 'a CCS -> 'a Relabeling -> 'q -> 'r”
    rec:    “tcf :('q -> 'r) -> string -> 'a CCS -> 'q -> 'r”
+
+   NOTE: ds2 is the list of recursive parameters as functions ('q -> 'r).
+         ts2 is the list of actual arguments in the same position.
+         non-recursive parameters are taken from the corresponding position of u (rep_t).
+         The "if condition" identifies the constructor.
+         v is the only binding variable.
  *)
 val u_tm = mk_var("u", rep_t);
 val tlf =
-   “λ(v:string) ^u_tm (ds1:('q -> 'r) list) (ds2:('q -> 'r) list)
-                      (ts1:^repty' list) (ts2:^repty' list) (p :'q).
-       if ISL u then
-         tff (HD ds2) (OUTL u) (^term_ABS_t (HD ts2)) p :'r
-       else if ISL (OUTR u) then
-         tsf (HD ds2) (HD (TL ds2))
-             (^term_ABS_t (HD ts2)) (^term_ABS_t (HD (TL ts2))) p :'r
-       else if ISL (OUTR (OUTR u)) then
-         tpf (HD ds2) (HD (TL ds2))
-             (^term_ABS_t (HD ts2)) (^term_ABS_t (HD (TL ts2))) p :'r
-       else if ISL (OUTR (OUTR (OUTR u))) then
-         trf (HD ds2) (OUTL (OUTR (OUTR (OUTR u))))
-             (^term_ABS_t (HD ts2)) p :'r
-       else if ISL (OUTR (OUTR (OUTR (OUTR u)))) then
-         tlf (HD ds2) (^term_ABS_t (HD ts2))
-             (OUTL (OUTR (OUTR (OUTR (OUTR u))))) p :'r
-       else
-         tcf (HD ds1) v (^term_ABS_t (HD ts1)) p :'r”;
+   “λ(v:string) (fvs:string list) ^u_tm
+     (ds1:('q -> 'r) list) (ds2:('q -> 'r) list)
+     (ts1:^repty' list) (ts2:^repty' list) (p :'q).
+      case ^u_tm of
+      | cvar => tvf (HD fvs) p : 'r
+      | cpfx a => tff (HD ds2) a (^term_ABS_t (HD ts2)) p :'r
+      | csum => tsf (HD ds2) (HD (TL ds2))
+                    (^term_ABS_t (HD ts2)) (^term_ABS_t (HD (TL ts2))) p :'r
+      | cpar => tpf (HD ds2) (HD (TL ds2))
+                    (^term_ABS_t (HD ts2)) (^term_ABS_t (HD (TL ts2))) p :'r
+      | crestr ls => trf (HD ds2) ls (^term_ABS_t (HD ts2)) p :'r
+      | crelab rl => tlf (HD ds2) (^term_ABS_t (HD ts2)) rl p :'r
+      | crec => tcf (HD ds1) v (^term_ABS_t (HD ts1)) p :'r”;
 
 Theorem parameter_tm_recursion =
   parameter_gtm_recursion
-      |> INST_TYPE [alpha |-> rep_t, beta |-> “:unit”, gamma |-> “:'r”]
-      |> Q.INST [‘lf’ |-> ‘^tlf’, ‘vf’ |-> ‘^tvf’, ‘vp’ |-> ‘^vp’,
-                 ‘lp’ |-> ‘^lp’, ‘n’ |-> ‘0’]
+      |> INST_TYPE [alpha |-> rep_t, gamma |-> “:'r”]
+      |> Q.INST [‘lf’ |-> ‘^tlf’, ‘lp’ |-> ‘^lp’]
       |> SIMP_RULE (srw_ss()) [sumTheory.FORALL_SUM, FORALL_AND_THM,
                                GSYM RIGHT_FORALL_IMP_THM, IMP_CONJ_THM,
                                GSYM RIGHT_EXISTS_AND_THM,
                                GSYM LEFT_EXISTS_AND_THM,
                                GSYM LEFT_FORALL_IMP_THM,
-                               LIST_REL_CONS1, genind_GVAR,
+                               LIST_REL_CONS1,
                                genind_GLAM_eqn, sidecond_def,
                                NEWFCB_def, relsupp_def,
                                LENGTH_NIL_SYM, LENGTH1, LENGTH2]
       |> ONCE_REWRITE_RULE [termP0]
-      |> SIMP_RULE (srw_ss() ++ DNF_ss) [LENGTH1, LENGTH2, LENGTH_NIL]
+      |> SIMP_RULE (srw_ss() ++ DNF_ss) [LENGTH1, LENGTH2, LENGTH_NIL,
+                                        relsupp_def]
       |> CONV_RULE (DEPTH_CONV termP_removal)
       |> SIMP_RULE (srw_ss()) [GSYM supp_tpm, SYM term_REP_tpm]
       |> UNDISCH
@@ -871,7 +876,7 @@ Proof
     rw [var_def, var_termP, prefix_def, prefix_termP,
         sum_def, sum_termP, par_def, par_termP, restr_def, restr_termP,
         relab_def, relab_termP, rec_def, rec_termP,
-        term_ABS_pseudo11, gterm_distinct, GLAM_eq_thm]
+        term_ABS_pseudo11, GLAM_eq_thm]
 QED
 
 (* NOTE: ‘var X <> rec Y E’ does't hold in general. *)
@@ -1015,7 +1020,7 @@ val subst_exists =
                                  basic_swapTheory.swapstr_eq_left]
         |> SIMP_RULE (srw_ss()) [rewrite_pairing, pairTheory.FORALL_PROD]
         |> CONV_RULE (DEPTH_CONV (rename_vars [("p_1", "u"), ("p_2", "E")]))
-        |> prove_alpha_fcbhyp {ppm = ``pair_pmact string_pmact ^t_pmact_t``,
+        |> prove_alpha_fcbhyp {ppms = [``pair_pmact string_pmact ^t_pmact_t``],
                                rwts = [],
                                alphas = [tpm_ALPHA]};
 
@@ -1605,7 +1610,7 @@ val ssub_exists =
                                  fmpm_FDOM, notin_frange]
         |> SIMP_RULE (srw_ss()) [Once ordering]
         |> CONV_RULE (DEPTH_CONV (rename_vars [("p", "fm")]))
-        |> prove_alpha_fcbhyp {ppm = “fm_pmact string_pmact ^t_pmact_t”,
+        |> prove_alpha_fcbhyp {ppms = [“fm_pmact string_pmact ^t_pmact_t”],
                                rwts = [notin_frange, strterm_fmap_supp],
                                alphas = [tpm_ALPHA]};
 
@@ -2546,16 +2551,18 @@ Proof
 QED
 
 (* for CCS_TRANS_CONV *)
-val TRANS_SUM_EQ' = store_thm (
-   "TRANS_SUM_EQ'",
-  ``!E1 E2 u E. TRANS (sum E1 E2) u E <=> TRANS E1 u E \/ TRANS E2 u E``,
-    REWRITE_TAC [TRANS_SUM_EQ]);
+Theorem TRANS_SUM_EQ':
+    !E1 E2 u E. TRANS (sum E1 E2) u E <=> TRANS E1 u E \/ TRANS E2 u E
+Proof
+    REWRITE_TAC [TRANS_SUM_EQ]
+QED
 
 val TRANS_SUM = save_thm (
    "TRANS_SUM", EQ_IMP_LR TRANS_SUM_EQ);
 
-val TRANS_COMM_EQ = store_thm ("TRANS_COMM_EQ",
-  ``!E E' E'' u. TRANS (sum E E') u E'' <=> TRANS (sum E' E) u E''``,
+Theorem TRANS_COMM_EQ:
+    !E E' E'' u. TRANS (sum E E') u E'' <=> TRANS (sum E' E) u E''
+Proof
     rpt GEN_TAC
  >> EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -2567,10 +2574,12 @@ val TRANS_COMM_EQ = store_thm ("TRANS_COMM_EQ",
       DISCH_TAC \\
       IMP_RES_TAC TRANS_SUM >|
       [ MATCH_MP_TAC SUM2, MATCH_MP_TAC SUM1 ] \\
-      art [] ]);
+      art [] ]
+QED
 
-val TRANS_ASSOC_EQ = store_thm ("TRANS_ASSOC_EQ",
-  ``!E E' E'' E1 u. TRANS (sum (sum E E') E'') u E1 <=> TRANS (sum E (sum E' E'')) u E1``,
+Theorem TRANS_ASSOC_EQ:
+    !E E' E'' E1 u. TRANS (sum (sum E E') E'') u E1 <=> TRANS (sum E (sum E' E'')) u E1
+Proof
     rpt GEN_TAC
  >> EQ_TAC
  >| [ (* goal 1 (of 2) *)
@@ -2595,14 +2604,15 @@ val TRANS_ASSOC_EQ = store_thm ("TRANS_ASSOC_EQ",
         [ MATCH_MP_TAC SUM1 >> MATCH_MP_TAC SUM1,
           MATCH_MP_TAC SUM1 >> MATCH_MP_TAC SUM2,
           MATCH_MP_TAC SUM2,
-          MATCH_MP_TAC SUM2 ] >> art [] ] ]);
+          MATCH_MP_TAC SUM2 ] >> art [] ] ]
+QED
 
 val TRANS_ASSOC_RL = save_thm (
    "TRANS_ASSOC_RL", EQ_IMP_RL TRANS_ASSOC_EQ);
 
-val TRANS_SUM_NIL_EQ = store_thm (
-   "TRANS_SUM_NIL_EQ",
-  ``!E u E'. TRANS (sum E nil) u E' <=> TRANS E u E'``,
+Theorem TRANS_SUM_NIL_EQ:
+    !E u E'. TRANS (sum E nil) u E' <=> TRANS E u E'
+Proof
     rpt GEN_TAC
  >> EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -2611,19 +2621,22 @@ val TRANS_SUM_NIL_EQ = store_thm (
       IMP_RES_TAC NIL_NO_TRANS,
       (* goal 2 (of 2) *)
       DISCH_TAC \\
-      MATCH_MP_TAC SUM1 >> art [] ]);
+      MATCH_MP_TAC SUM1 >> art [] ]
+QED
 
 (* !E u E'. E + nil --u-> E' ==> E --u-> E' *)
 val TRANS_SUM_NIL = save_thm ("TRANS_SUM_NIL", EQ_IMP_LR TRANS_SUM_NIL_EQ);
 
-val TRANS_P_SUM_P_EQ = store_thm ("TRANS_P_SUM_P_EQ",
-  ``!E u E'. TRANS (sum E E) u E' = TRANS E u E'``,
+Theorem TRANS_P_SUM_P_EQ:
+    !E u E'. TRANS (sum E E) u E' = TRANS E u E'
+Proof
     rpt GEN_TAC
  >> EQ_TAC
  >| [ DISCH_TAC \\
       IMP_RES_TAC TRANS_SUM,
       DISCH_TAC \\
-      MATCH_MP_TAC SUM1 >> art [] ]);
+      MATCH_MP_TAC SUM1 >> art [] ]
+QED
 
 val TRANS_P_SUM_P = save_thm
   ("TRANS_P_SUM_P", EQ_IMP_LR TRANS_P_SUM_P_EQ);
@@ -2668,17 +2681,20 @@ QED
 
 val TRANS_PAR = save_thm ("TRANS_PAR", EQ_IMP_LR TRANS_PAR_EQ);
 
-val TRANS_PAR_P_NIL = store_thm ("TRANS_PAR_P_NIL",
-  ``!E u E'. TRANS (par E nil) u E' ==> (?E''. TRANS E u E'' /\ (E' = par E'' nil))``,
+Theorem TRANS_PAR_P_NIL:
+    !E u E'. TRANS (par E nil) u E' ==> (?E''. TRANS E u E'' /\ (E' = par E'' nil))
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC TRANS_PAR
  >| [ Q.EXISTS_TAC `E1` >> art [],
       IMP_RES_TAC NIL_NO_TRANS,
-      IMP_RES_TAC NIL_NO_TRANS ]);
+      IMP_RES_TAC NIL_NO_TRANS ]
+QED
 
-val TRANS_PAR_NO_SYNCR = store_thm ("TRANS_PAR_NO_SYNCR",
-  ``!(l :'a Label) l'. l <> COMPL l' ==>
-        !E E' E''. ~(TRANS (par (prefix (label l) E) (prefix (label l') E')) tau E'')``,
+Theorem TRANS_PAR_NO_SYNCR:
+    !(l :'a Label) l'. l <> COMPL l' ==>
+        !E E' E''. ~(TRANS (par (prefix (label l) E) (prefix (label l') E')) tau E'')
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC TRANS_PAR (* 3 sub-goals here *)
  >| [ IMP_RES_TAC TRANS_PREFIX >> IMP_RES_TAC Action_distinct,
@@ -2688,7 +2704,8 @@ val TRANS_PAR_NO_SYNCR = store_thm ("TRANS_PAR_NO_SYNCR",
         (REWRITE_RULE [SYM (ASSUME ``(l'' :'a Label) = l``),
                        SYM (ASSUME ``COMPL (l'' :'a Label) = l'``), COMPL_COMPL_LAB]
                       (ASSUME ``~(l = COMPL (l' :'a Label))``)) \\
-      RW_TAC bool_ss [] ]);
+      RW_TAC bool_ss [] ]
+QED
 
 val RESTR_cases_EQ = save_thm (
    "RESTR_cases_EQ",
@@ -2735,9 +2752,9 @@ QED
 val TRANS_RESTR = save_thm (
    "TRANS_RESTR", EQ_IMP_LR TRANS_RESTR_EQ);
 
-val TRANS_P_RESTR = store_thm (
-   "TRANS_P_RESTR",
-  ``!E u E' L. TRANS (restr L E) u (restr L E') ==> TRANS E u E'``,
+Theorem TRANS_P_RESTR:
+    !E u E' L. TRANS (restr L E) u (restr L E') ==> TRANS E u E'
+Proof
   let
       val thm = REWRITE_RULE [CCS_one_one]
                   (ASSUME ``restr (L :'a Label set) E' = restr L E''``)
@@ -2747,32 +2764,40 @@ val TRANS_P_RESTR = store_thm (
       [ FILTER_ASM_REWRITE_TAC (fn t => t !~ ``(u :'a Action) = tau``) [thm],
         FILTER_ASM_REWRITE_TAC (fn t => t !~ ``(u :'a Action) = label l``) [thm]
       ]
-  end);
+  end
+QED
 
-val RESTR_NIL_NO_TRANS = store_thm ("RESTR_NIL_NO_TRANS",
-  ``!(L :'a Label set) u E. ~(TRANS (restr L nil) u E)``,
+Theorem RESTR_NIL_NO_TRANS:
+    !(L :'a Label set) u E. ~(TRANS (restr L nil) u E)
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC TRANS_RESTR (* two sub-goals here, but same proofs *)
- >> IMP_RES_TAC NIL_NO_TRANS);
+ >> IMP_RES_TAC NIL_NO_TRANS
+QED
 
-val TRANS_IMP_NO_RESTR_NIL = store_thm ("TRANS_IMP_NO_RESTR_NIL",
-  ``!E u E'. TRANS E u E' ==> !L. ~(E = restr L nil)``,
+Theorem TRANS_IMP_NO_RESTR_NIL:
+    !E u E'. TRANS E u E' ==> !L. ~(E = restr L nil)
+Proof
     rpt STRIP_TAC
  >> ASSUME_TAC (REWRITE_RULE [ASSUME ``E = restr L nil``]
                              (ASSUME ``TRANS E u E'``))
- >> IMP_RES_TAC RESTR_NIL_NO_TRANS);
+ >> IMP_RES_TAC RESTR_NIL_NO_TRANS
+QED
 
-val TRANS_RESTR_NO_NIL = store_thm ("TRANS_RESTR_NO_NIL",
-  ``!E L u E'. TRANS (restr L E) u (restr L E') ==> ~(E = nil)``,
+Theorem TRANS_RESTR_NO_NIL:
+    !E L u E'. TRANS (restr L E) u (restr L E') ==> ~(E = nil)
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC TRANS_RESTR
  >> ASSUME_TAC (REWRITE_RULE [ASSUME ``E = nil``]
                              (ASSUME ``TRANS E u E''``))
- >> IMP_RES_TAC NIL_NO_TRANS);
+ >> IMP_RES_TAC NIL_NO_TRANS
+QED
 
-val RESTR_LABEL_NO_TRANS = store_thm ("RESTR_LABEL_NO_TRANS",
-  ``!(l :'a Label) L. (l IN L) \/ ((COMPL l) IN L) ==>
-                      (!E u E'. ~(TRANS (restr L (prefix (label l) E)) u E'))``,
+Theorem RESTR_LABEL_NO_TRANS:
+    !(l :'a Label) L. (l IN L) \/ ((COMPL l) IN L) ==>
+                      (!E u E'. ~(TRANS (restr L (prefix (label l) E)) u E'))
+Proof
     rpt STRIP_TAC (* 2 goals here *)
  >| [ (* goal 1 *)
       IMP_RES_TAC TRANS_RESTR >| (* 2 sub-goals here *)
@@ -2803,7 +2828,8 @@ val RESTR_LABEL_NO_TRANS = store_thm ("RESTR_LABEL_NO_TRANS",
                 [REWRITE_RULE [ASSUME ``(u :'a Action) = label l'``, Action_11]
                               (ASSUME ``(u :'a Action) = label l``)]
                 (ASSUME ``~((COMPL (l' :'a Label)) IN L)``))
-              (ASSUME ``(COMPL (l :'a Label)) IN L``)) ] ]);
+              (ASSUME ``(COMPL (l :'a Label)) IN L``)) ] ]
+QED
 
 (* |- !E rf u P.
          relab E rf --u-> P <=>
@@ -2843,11 +2869,13 @@ val TRANS_RELAB = save_thm ("TRANS_RELAB", EQ_IMP_LR TRANS_RELAB_EQ);
 val TRANS_RELAB_labl = save_thm ("TRANS_RELAB_labl",
     Q.GENL [`E`, `labl`] (Q.SPECL [`E`, `RELAB labl`] TRANS_RELAB));
 
-val RELAB_NIL_NO_TRANS = store_thm ("RELAB_NIL_NO_TRANS",
-  ``!(rf :'a Relabeling) u E. ~(TRANS (relab nil rf) u E)``,
+Theorem RELAB_NIL_NO_TRANS:
+    !(rf :'a Relabeling) u E. ~(TRANS (relab nil rf) u E)
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC TRANS_RELAB
- >> IMP_RES_TAC NIL_NO_TRANS);
+ >> IMP_RES_TAC NIL_NO_TRANS
+QED
 
 (* NOTE: This is the *ONLY* theorem for which the induction principle of
   ‘TRANS’ is needed. And this theorem (and the next TRANS_PROC) is only needed
@@ -2893,26 +2921,16 @@ val lemma = prove(
 Theorem tm_recursion_nosideset =
   tm_recursion |> Q.INST [‘A’ |-> ‘{}’] |> SIMP_RULE (srw_ss()) [lemma]
 
-val term_info_string =
-    "local\n\
-    \fun k |-> v = {redex = k, residue = v}\n\
-    \open binderLib\n\
-    \val term_info = \n\
-    \   {nullfv = “rec \"\" (var \"\") :'a CCS”,\n\
-    \    pm_rewrites = [],\n\
-    \    pm_constant = “(nomset$mk_pmact CCS$raw_tpm) :'a CCS pmact”,\n\
-    \    fv_rewrites = [],\n\
-    \    recursion_thm = SOME tm_recursion_nosideset,\n\
-    \    binders = [(“CCS$rec :string -> 'a CCS -> 'a CCS”, 0, tpm_ALPHA)]}\n\
-    \val _ = binderLib.type_db :=\n\
-    \          Binarymap.insert(!binderLib.type_db,\n\
-    \                           {Thy=\"CCS\", Name = \"CCS\"},\n\
-    \                           binderLib.NTI term_info)\n\
-    \in end;\n";
+val nti = binderLib.NTI {
+  nullfv = “rec "" (var "") :'a CCS”,
+  pm_rewrites = [],
+  pm_constant = “(nomset$mk_pmact CCS$raw_tpm) :'a CCS pmact”,
+  fv_rewrites = [],
+  recursion_thm = SOME tm_recursion_nosideset,
+  binders = [(“CCS$rec :string -> 'a CCS -> 'a CCS”, 0, tpm_ALPHA)]
+  }
+val _ = binderLib.export_nomtype(“:'a CCS”, nti)
 
-val _ = adjoin_after_completion (fn _ => PP.add_string term_info_string);
-
-val _ = export_theory ();
 val _ = html_theory "CCS";
 
 (* Bibliography:

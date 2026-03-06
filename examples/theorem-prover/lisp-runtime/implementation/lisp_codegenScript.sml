@@ -1,21 +1,16 @@
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_codegen";
+Theory lisp_codegen
+Ancestors
+  lisp_sexp lisp_cons lisp_inv lisp_symbols words arithmetic list
+  pred_set pair combin finite_map address set_sep bit fcp string
+  stop_and_copy prog_x64 prog lisp_parse
+Libs
+  wordsLib helperLib codegenLib decompilerLib prog_x64Lib
+
 val _ = ParseExtras.temp_loose_equality()
-open lisp_sexpTheory lisp_consTheory lisp_invTheory lisp_symbolsTheory;
-
 (* --- *)
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib;
-open set_sepTheory bitTheory fcpTheory stringTheory;
 
 val wstd_ss = std_ss ++ SIZES_ss ++ rewrites [DECIDE ``n<256 ==> (n:num)<18446744073709551616``,ORD_BOUND];
 
-open stop_and_copyTheory;
-open codegenLib decompilerLib prog_x64Lib prog_x64Theory progTheory;
-open lisp_parseTheory;
-
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 fun SUBGOAL q = REVERSE (sg q)
@@ -128,11 +123,13 @@ val (mc_const_load_spec,mc_const_load_def) = basic_decompile_strings x64_tools "
 val PULL_EXISTS_OVER_CONJ = METIS_PROVE []
   ``((?x. P x) /\ Q = ?x. P x /\ Q) /\ (Q /\ (?x. P x) = ?x. P x /\ Q)``
 
-val ref_heap_addr_alt = store_thm("ref_heap_addr_alt",
-  ``(ref_heap_addr (H_ADDR a) = n2w a << 1) /\
+Theorem ref_heap_addr_alt:
+    (ref_heap_addr (H_ADDR a) = n2w a << 1) /\
     (ref_heap_addr (H_DATA (INL w)) = w2w w << 2 + 0x1w) /\
-    (ref_heap_addr (H_DATA (INR v)) = w2w v << 3 + 0x3w)``,
-  SIMP_TAC std_ss [ref_heap_addr_def] \\ blastLib.BBLAST_TAC);
+    (ref_heap_addr (H_DATA (INR v)) = w2w v << 3 + 0x3w)
+Proof
+  SIMP_TAC std_ss [ref_heap_addr_def] \\ blastLib.BBLAST_TAC
+QED
 
 val mc_const_load_blast = prove(
   ``w2w ((0x1w:word32) + w2w w << 2) = (0x1w:word64) + w2w (w:word30) << 2``,
@@ -216,13 +213,15 @@ val (mc_const_store_spec,mc_const_store_def) = basic_decompile_strings x64_tools
        mov r0d,3
    `)
 
-val EL_UPDATE_NTH = store_thm("EL_UPDATE_NTH",
-  ``!xs n k x. EL n (UPDATE_NTH k x xs) =
-               if (k = n) /\ k < LENGTH xs then x else EL n xs``,
+Theorem EL_UPDATE_NTH:
+    !xs n k x. EL n (UPDATE_NTH k x xs) =
+               if (k = n) /\ k < LENGTH xs then x else EL n xs
+Proof
   Induct \\ Cases_on `k` \\ SIMP_TAC std_ss [LENGTH,UPDATE_NTH_def]
   THEN1 (Cases_on `n` \\ FULL_SIMP_TAC std_ss [EL,HD,TL] \\ FULL_SIMP_TAC std_ss [ADD1])
   \\ Cases_on `n'` \\ FULL_SIMP_TAC std_ss [EL,HD,TL]
-  \\ FULL_SIMP_TAC std_ss [ADD1]);
+  \\ FULL_SIMP_TAC std_ss [ADD1]
+QED
 
 val mc_const_store_blast = blastLib.BBLAST_PROVE
   ``(31 -- 0) (w:word64) = w2w ((w2w w):word32)``
@@ -595,8 +594,10 @@ val _ = save_thm("mc_read_snd_code_thm",mc_read_snd_code_thm);
 
 (* safe versions of car and cdr, i.e. total versions *)
 
-val SAFE_CAR_def = Define `SAFE_CAR x = CAR x`;
-val SAFE_CDR_def = Define `SAFE_CDR x = CDR x`;
+Definition SAFE_CAR_def:   SAFE_CAR x = CAR x
+End
+Definition SAFE_CDR_def:   SAFE_CDR x = CDR x
+End
 
 val (mc_safe_car_spec,mc_safe_car_def) = basic_decompile_strings x64_tools "mc_safe_car"
   (SOME (``(r0:word64,r6:word64,r8:word64,df:word64 set,f:word64->word32)``,
@@ -811,9 +812,10 @@ val bc_symbols_ok_APPEND = prove(
   Induct \\ SIMP_TAC std_ss [APPEND,bc_symbols_ok_def] \\ Cases_on `h`
   \\ ASM_SIMP_TAC std_ss [APPEND,bc_symbols_ok_def,CONJ_ASSOC]);
 
-val code_length_def = Define `
+Definition code_length_def:
   (code_length [] = 0) /\
-  (code_length (x::xs) = bc_length x + code_length xs)`;
+  (code_length (x::xs) = bc_length x + code_length xs)
+End
 
 val bs2bytes_APPEND = prove(
   ``!xs ys k sym.
@@ -1624,13 +1626,15 @@ fun straight_line_decompile func_name code in_out_vars = let
   val _ = print "done!\n"
   in (th,x) end;
 
-val one_write_list_def = Define `
+Definition one_write_list_def:
   (one_write_list a [] f = f) /\
-  (one_write_list (a:word64) (x::xs) f = one_write_list (a + 1w) xs ((a =+ x) f))`;
+  (one_write_list (a:word64) (x::xs) f = one_write_list (a + 1w) xs ((a =+ x) f))
+End
 
-val one_address_list_def = Define `
+Definition one_address_list_def:
   (one_address_list a [] = []) /\
-  (one_address_list (a:word64) (x::xs) = a::one_address_list (a+1w) xs)`;
+  (one_address_list (a:word64) (x::xs) = a::one_address_list (a+1w) xs)
+End
 
 val STAR5_LEMMA = prove(
   ``STAR x1 x2 * x3 * x4 * x5 = x1 * x3 * x2 * x4 * x5``,
@@ -1815,15 +1819,17 @@ val (mc_update_jnil_spec,mc_update_jnil_def) = basic_decompile_strings x64_tools
        mov r1d,1
    `)
 
-val REPLACE_CODE_def = Define `
-  REPLACE_CODE (BC_CODE (c1,c2)) p x = BC_CODE ((p =+ SOME x) c1,c2)`;
+Definition REPLACE_CODE_def:
+  REPLACE_CODE (BC_CODE (c1,c2)) p x = BC_CODE ((p =+ SOME x) c1,c2)
+End
 
 val SND_REPLACE_CODE = prove(
   ``!code p x. code_ptr (REPLACE_CODE code p x) = code_ptr code``,
   Cases \\ Cases_on `p` \\ FULL_SIMP_TAC std_ss [REPLACE_CODE_def,code_ptr_def]);
 
-val CODE_UPDATE_def = Define `
-  CODE_UPDATE x (BC_CODE (c,n)) = BC_CODE ((n =+ SOME x) c, n + bc_length x)`;
+Definition CODE_UPDATE_def:
+  CODE_UPDATE x (BC_CODE (c,n)) = BC_CODE ((n =+ SOME x) c, n + bc_length x)
+End
 
 val WRITE_CODE_SNOC = prove(
   ``!xs x c. WRITE_CODE c (xs ++ [x]) = CODE_UPDATE x (WRITE_CODE c xs)``,
@@ -2004,12 +2010,13 @@ val (mc_calc_addr_spec,mc_calc_addr_def) = basic_decompile_strings x64_tools "mc
 
 val _ = save_thm("mc_calc_addr_spec",mc_calc_addr_spec);
 
-val mc_calc_addr_thm = store_thm("mc_calc_addr_thm",
-  ``^LISP ==> isVal x2 ==>
+Theorem mc_calc_addr_thm:
+    ^LISP ==> isVal x2 ==>
     ?tw2i. mc_calc_addr_pre (tw2,sp,w2w w2,df,f) /\
            (mc_calc_addr (tw2,sp,w2w w2,df,f) = (tw2i,sp,w2w w2,df,f)) /\
            (tw2i = EL 4 cs + n2w (getVal x2)) /\
-           let tw2 = tw2i in ^LISP``,
+           let tw2 = tw2i in ^LISP
+Proof
   FULL_SIMP_TAC std_ss [LET_DEF,mc_calc_addr_def] \\ NTAC 2 STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [isVal_thm,getVal_def,INSERT_SUBSET,EMPTY_SUBSET]
   \\ IMP_RES_TAC lisp_inv_cs_read \\ FULL_SIMP_TAC std_ss []
@@ -2026,7 +2033,8 @@ val mc_calc_addr_thm = store_thm("mc_calc_addr_thm",
     \\ `a < 18446744073709551616` by DECIDE_TAC
     \\ ASM_SIMP_TAC std_ss [DIV_EQ_X] \\ DECIDE_TAC)
   \\ ASM_SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM]
-  \\ MATCH_MP_TAC (GEN_ALL lisp_inv_ignore_tw2) \\ METIS_TAC []);
+  \\ MATCH_MP_TAC (GEN_ALL lisp_inv_ignore_tw2) \\ METIS_TAC []
+QED
 
 
 (* return stack *)
@@ -2057,8 +2065,9 @@ val stack_tm =
   |> (fn tm => list_mk_forall (filter (fn v => fst (dest_var v) <> "stack")
                                  (free_vars tm), tm));
 
-val zSTACK_def = Define ` (* improve at some point... *)
-  zSTACK rbp xs = SEP_EXISTS stack. stack rbp xs * cond ^stack_tm`
+Definition zSTACK_def:    (* improve at some point... *)
+  zSTACK rbp xs = SEP_EXISTS stack. stack rbp xs * cond ^stack_tm
+End
 
 val zSTACK_PROPS = store_thm("zSTACK_PROPS",
   subst [hd (free_vars stack_tm)|->``zSTACK``] stack_tm,
@@ -2073,4 +2082,3 @@ val lisp_inv_stack = prove(
 val _ = save_thm("lisp_inv_stack",lisp_inv_stack);
 
 
-val _ = export_theory();

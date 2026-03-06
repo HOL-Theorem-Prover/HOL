@@ -8,19 +8,13 @@
 (* Jeff Joyce, University of Cambridge, 1 November 1988                  *)
 (*                                                                       *)
 (* Derive results of executing individual microinstructions.             *)
+Theory tamarackProof1
+Ancestors
+  arithmetic string pair prim_rec tamarack[qualified]
+Libs
+  proofManagerLib
 
 
-open HolKernel boolLib bossLib Parse
-open proofManagerLib
-
-val _ = new_theory "tamarackProof1";
-
-open arithmeticTheory stringTheory pairTheory prim_recTheory
-
-local
-  open tamarackTheory
-in
-end
 
 fun definition x y = SPEC_ALL (DB.fetch x y);
 
@@ -61,9 +55,9 @@ val MATCH_GOAL_TAC : thm_tactic = fn impthm => fn (asl,tm):goal =>
         ([(asl,fst (dest_imp (concl match)))],fn [th] => MP match th)
         end handle HOL_ERR _ => failwith "MATCH_GOAL_TAC";
 
-val PAIR_EQ_THM = store_thm (
-        "PAIR_EQ_THM",
-        ``!a:'a. !b:'b. !c:'a. !d:'b. ((a,b) = (c,d)) = ((a = c) /\ (b = d))``,
+Theorem PAIR_EQ_THM:
+          !a:'a. !b:'b. !c:'a. !d:'b. ((a,b) = (c,d)) = ((a = c) /\ (b = d))
+Proof
         REPEAT STRIP_TAC THEN
         EQ_TAC THENL
         [DISCH_THEN
@@ -74,7 +68,8 @@ val PAIR_EQ_THM = store_thm (
                   (AP_TERM ``FST:('a # 'b)->'a`` thm)
                   (AP_TERM ``SND:('a # 'b)->'b`` thm))]),
          DISCH_TAC THEN
-         ASM_REWRITE_TAC []]);
+         ASM_REWRITE_TAC []]
+QED
 
 fun not_eq_CONV tm =
         if not (is_eq tm) then failwith "not_eq_CONV" else
@@ -395,4 +390,3 @@ expandf tac4;
 val MPC_14_THM = save_thm ("MPC_14_THM",top_thm());
 val _ = drop();
 
-val _ = export_theory ();

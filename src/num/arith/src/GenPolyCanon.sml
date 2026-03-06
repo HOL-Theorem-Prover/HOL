@@ -179,7 +179,7 @@ in
                    REWR_CONV REAL_MUL_LID ORELSEC
                    TRY_CONV (REWR_CONV (GSYM REAL_NEG_MINUS1)),
         left_id = REAL_ADD_LID, right_id = REAL_ADD_RID,
-        reducer = computeLib.CBV_CONV (realSimps.real_compset())}
+        reducer = computeLib.CBV_CONV (realSimps.real_compset)}
 end
 
 

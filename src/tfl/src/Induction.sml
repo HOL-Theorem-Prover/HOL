@@ -149,30 +149,6 @@ fun undo_bring_to_front n l = let
    val (l0, l1) = Lib.split_after n l'
  in (l0 @ x::l1) end
 
-(*
-val org_in = {path=[z], rows=rows}
-
-val in_1 = hd news
-val in_2 = {path=rstp, rows=zip pat_rectangle' rights'}
-val in_3 = hd news
-
-mk in_2
-v
-val {path=u::rstp, rows as (p::_, _)::_} = in_3
-
-val {path=u::rstp, rows as (p::_, _)::_} =
-   {path=rstp, rows=zip pat_rectangle' rights'}
-val mk = mk_case ty_info FV thy
-mk in_1
-val in
-
-hm = mk_case ty_info FV thy {path=[z], rows=rows}
-
-val arg0 = {path=[z], rows=rows}
-val {path=rstp0, rows = rows0} = el 1 news
-*)
-
-
 fun mk_case_choose_column i rows =
 let
   val col_i = map (fn (l, _) => el (i+1) l) rows
@@ -265,9 +241,6 @@ fun mk_case ty_info FV thy =
          (* tyinfo rqt: `constructors' must line up exactly with constrs
             in disjuncts of `nchotomy'. *)
        | SOME{constructors,nchotomy} =>
-(*
-  val SOME{constructors,nchotomy} = ty_info (Thy,ty_name)
-*)
          let val thm'         = ISPEC u nchotomy
              val disjuncts    = strip_disj (concl thm')
              val subproblems  = divide(constructors, rows)
@@ -411,9 +384,14 @@ fun detuple newvar =
 (* theorem takes.                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val monitoring = ref 0;
+val monitoring = ref false;
 
-val _ = Feedback.register_trace("tfl_ind",monitoring,1);
+val _ = Feedback.register_btrace("Definition.induction derivation",monitoring);
+
+fun report_induction_measurements thunk =
+  if !monitoring then
+     (Lib.say "Derivation of induction theorem:\n"; Count.apply thunk ())
+  else thunk()
 
 (*---------------------------------------------------------------------------*
  * Input : f, R, SV, and  [(pat1,TCs1),..., (patn,TCsn)]                     *
@@ -514,14 +492,8 @@ fun match_clauses pats case_thm =
 (* the antecedent of Rinduct.                                                *)
 (*---------------------------------------------------------------------------*)
 
-(*
-val {fconst, R, SV, pat_TCs_list} =
-  {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs}
-val thy = facts
- *)
-
 fun mk_induction thy {fconst, R, SV, pat_TCs_list} =
-let fun f() =
+let fun thunk() =
 let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
     val (pats,TCsl) = unzip pat_TCs_list
     val case_thm = complete_cases thy pats
@@ -555,7 +527,7 @@ in
 end
 handle e => raise wrap_exn "Induction" "mk_induction" e
 in
-  if !monitoring > 0 then Count.apply f () else f()
+   report_induction_measurements thunk
 end;
 
 (*---------------------------------------------------------------------------*)

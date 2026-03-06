@@ -1,14 +1,13 @@
 (*===========================================================================*)
 (*  The RC5 in HOL                                *)
 (*===========================================================================*)
+Theory rc5
+Ancestors
+  arithmetic pair fcp words list sorting pred_set combin
+Libs
+  numLib fcpLib wordsLib listLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
 
-open arithmeticTheory numLib pairTheory fcpTheory fcpLib wordsTheory wordsLib
-     listTheory listLib sortingTheory pred_setTheory combinTheory hurdUtils;
-
-
-val _ = new_theory "rc5";
 val _ = guessing_word_lengths := true;
 val fcp_ss = std_ss ++ fcpLib.FCP_ss;
 Type    block[pp] = “:word32 # word32”
@@ -365,7 +364,6 @@ QED
    !n (w:word64) (k:word64) w1 w2 A B Lk Sk i j. Split64(w)=(w1,w2)/\ rc5keys n k = (A,B,Lk,Sk,i,j) ==>
    RoundDe64 n (RoundEn64 n w k) k= w
 Proof
-
      simp[rc5keys_def]
   >> Induct_on ‘n’
   >- (rw[RoundEn64_def,RoundDe64_def]\\
@@ -609,5 +607,4 @@ Proof
     EVAL_TAC
 QED
 
-val _ = export_theory();
 val _ = html_theory "rc5";

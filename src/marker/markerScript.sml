@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib
-
-val _ = new_theory "marker";
+Theory marker[bare]
+Libs
+  HolKernel Parse boolLib
 
 (* ----------------------------------------------------------------------
     stmarker
@@ -137,6 +137,33 @@ val label_def = new_definition(
   ``((lab:label) :- (argument:bool)) = argument``);
 
 (* ----------------------------------------------------------------------
+    The suspend-tactic label
+   ---------------------------------------------------------------------- *)
+
+val suspendlabel_def = new_definition(
+  "suspendlabel_def",
+  “suspendlabel (l:label) (arg:bool) = arg”);
+
+val suspendimp_def = new_definition(
+  "suspendimp_def",
+  “suspendimp = $==>”);
+
+val resconj_def = new_definition(
+  "resconj_def",
+  “resconj = $/\”);
+
+(* hopefully these won't appear to the user that often *)
+val _ = set_mapped_fixity {
+  term_name = "resconj", fixity = Infixr 400,
+  tok = UTF8.chr 0x214B ^ UnicodeChars.sub_r
+  };
+
+val _ = set_mapped_fixity {
+  term_name = "suspendimp", fixity = Infixr 200,
+  tok = UTF8.chr 0x21E8 ^ UnicodeChars.sub_r
+  };
+
+(* ----------------------------------------------------------------------
     The 'using' label
    ---------------------------------------------------------------------- *)
 
@@ -195,4 +222,3 @@ val _ = List.app permahide [“hide”, “AC”, “Req0”, “ReqD”]
 
 
 
-val _ = export_theory();

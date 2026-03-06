@@ -1,14 +1,13 @@
 (* ------------------------------------------------------------------------
    Definitions and theorems used by CHERI/MIPS step evaluator (cheri_stepLib)
    ------------------------------------------------------------------------ *)
+Theory cheri_step
+Ancestors
+  alignment update cheri
+Libs
+  utilsLib wordsLib blastLib
 
-open HolKernel boolLib bossLib
 
-open utilsLib
-open wordsLib blastLib alignmentTheory
-open updateTheory cheriTheory
-
-val _ = new_theory "cheri_step"
 val _ = ParseExtras.temp_loose_equality()
 val _ = List.app (fn f => f ())
    [numLib.temp_prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths]
@@ -17,9 +16,10 @@ val _ = List.app (fn f => f ())
 
 (* Next state theorems *)
 
-val NextStateCHERI_def = Define`
+Definition NextStateCHERI_def:
    NextStateCHERI s0 =
-   let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE`
+   let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE
+End
 
 val exceptionSignalled_id = Q.prove(
    `!s. ~exceptionSignalled s ==>
@@ -104,43 +104,48 @@ val NextStateCHERI_delay = utilsLib.ustore_thm("NextStateCHERI_delay",
 
 (* Lemmas and tools *)
 
-val not31 = Q.store_thm("not31",
-   `x0 /\ x1 /\ x2 /\ x3 /\ x4 = (v2w [x0; x1; x2; x3; x4] = (31w: word5))`,
+Theorem not31:
+    x0 /\ x1 /\ x2 /\ x3 /\ x4 = (v2w [x0; x1; x2; x3; x4] = (31w: word5))
+Proof
    blastLib.BBLAST_TAC
-   )
+QED
 
-val v2w_0_rwts = Q.store_thm("v2w_0_rwts",
-   `((v2w [F; F; F; F; F] = 0w: word5)) /\
+Theorem v2w_0_rwts:
+    ((v2w [F; F; F; F; F] = 0w: word5)) /\
     ((v2w [T; b3; b2; b1; b0] = 0w: word5) = F) /\
     ((v2w [b3; T; b2; b1; b0] = 0w: word5) = F) /\
     ((v2w [b3; b2; T; b1; b0] = 0w: word5) = F) /\
     ((v2w [b3; b2; b1; T; b0] = 0w: word5) = F) /\
-    ((v2w [b3; b2; b1; b0; T] = 0w: word5) = F)`,
+    ((v2w [b3; b2; b1; b0; T] = 0w: word5) = F)
+Proof
     blastLib.BBLAST_TAC
-    )
+QED
 
-val NotWordValue0 = Q.store_thm("NotWordValue0",
-   `!b x. ~NotWordValue 0w`,
+Theorem NotWordValue0:
+    !b x. ~NotWordValue 0w
+Proof
    lrw [NotWordValue_def]
-   )
+QED
 
-val NotWordValueCond = Q.store_thm("NotWordValueCond",
-   `!b x. NotWordValue (if b then 0w else x) = ~b /\ NotWordValue x`,
+Theorem NotWordValueCond:
+    !b x. NotWordValue (if b then 0w else x) = ~b /\ NotWordValue x
+Proof
    lrw [NotWordValue0]
-   )
+QED
 
 val () = show_assums := true
 
-val isAligned = Q.store_thm("isAligned",
-  `(!a. isAligned (a, 0w)) /\
+Theorem isAligned:
+   (!a. isAligned (a, 0w)) /\
    (!a. isAligned (a, 1w) = aligned 1 a) /\
    (!a. isAligned (a, 3w) = aligned 2 a) /\
-   (!a. isAligned (a, 7w) = aligned 3 a)`,
+   (!a. isAligned (a, 7w) = aligned 3 a)
+Proof
   simp [isAligned_def, alignmentTheory.aligned_extract]
   \\ blastLib.BBLAST_TAC
-  )
+QED
 
-Triviality aligned_pc:
+Theorem aligned_pc[local]:
   !pc : word64.  ((1 >< 0) pc = 0w : word2) = aligned 2 pc
 Proof
   simp [alignmentTheory.aligned_extract]
@@ -151,7 +156,7 @@ val word1_lem = utilsLib.mk_cond_exhaustive_thm 1
 val word2_lem = utilsLib.mk_cond_exhaustive_thm 2
 val word3_lem = utilsLib.mk_cond_exhaustive_thm 3
 
-Triviality write_data_lem0:
+Theorem write_data_lem0[local]:
   !d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
      (63 >< 0) d4 && (63 >< 0) (~mask) ||
      (63 >< 0) data && (63 >< 0) mask || (63 >< 0) d1 << 192 ||
@@ -160,7 +165,7 @@ Triviality write_data_lem0:
 Proof blastLib.BBLAST_TAC
 QED
 
-Triviality write_data_lem1:
+Theorem write_data_lem1[local]:
   !d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
      (63 >< 0) d3 << 64 && (63 >< 0) (~mask) << 64 ||
      (63 >< 0) data << 64 && (63 >< 0) mask << 64 ||
@@ -169,7 +174,7 @@ Triviality write_data_lem1:
 Proof blastLib.BBLAST_TAC
 QED
 
-Triviality write_data_lem2:
+Theorem write_data_lem2[local]:
   !d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
      (63 >< 0) d2 << 128 && (63 >< 0) (~mask) << 128 ||
      (63 >< 0) data << 128 && (63 >< 0) mask << 128 ||
@@ -178,7 +183,7 @@ Triviality write_data_lem2:
 Proof blastLib.BBLAST_TAC
 QED
 
-Triviality write_data_lem3:
+Theorem write_data_lem3[local]:
   !d1 : word64 d2 : word64 d3 : word64 d4 : word64 mask : word64 data : word64.
      (63 >< 0) d1 << 192 && (63 >< 0) (~mask) << 192 ||
      (63 >< 0) data << 192 && (63 >< 0) mask << 192 ||
@@ -187,10 +192,10 @@ Triviality write_data_lem3:
 Proof blastLib.BBLAST_TAC
 QED
 
-Triviality write_data_lem =
+Theorem write_data_lem[local] =
   LIST_CONJ [write_data_lem0, write_data_lem1, write_data_lem2, write_data_lem3]
 
-Triviality B_ZALL_lem:
+Theorem B_ZALL_lem[local]:
   (if b then s with <| c_gpr := x; c_state := y |> else s) =
     s with <| c_gpr := if b then x else s.c_gpr;
               c_state := if b then y else s.c_state |>
@@ -399,9 +404,7 @@ end
 
 (* ------------------------------------------------------------------------ *)
 
-val () = ( utilsLib.reset_thms ()
-         ; utilsLib.setStepConv utilsLib.WGROUND_CONV
-         )
+val () = utilsLib.setStepConv utilsLib.WGROUND_CONV
 
 fun get_def n =
   let
@@ -664,7 +667,7 @@ val SCD = sev "SCD"
 
 val () = utilsLib.setStepConv (utilsLib.WGROUND_CONV THENC extract_conv)
 
-val ReadWord_def = Define`
+Definition ReadWord_def:
   ReadWord m (addr : 40 word) =
   case m ((39 >< 5) addr : 35 word) of
      Raw w256 =>
@@ -679,7 +682,8 @@ val ReadWord_def = Define`
           else if v = 5w then (159 >< 128) w256
           else if v = 6w then (255 >< 224) w256
           else                (223 >< 192) w256 : word32)
-   | _ => NONE`
+   | _ => NONE
+End
 
 val ReadInst = Q.prove(
   `(ReadWord s.mem addr = SOME w) ==> (ReadInst addr s = w)`,
@@ -719,4 +723,3 @@ val Fetch_default = Theory.save_thm("Fetch_default",
 
 (* ------------------------------------------------------------------------ *)
 
-val () = (utilsLib.adjoin_thms (); export_theory ())

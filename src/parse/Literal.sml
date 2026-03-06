@@ -50,44 +50,61 @@ fun is_num2num_type ty =
      <numeral> ::= 0 | NUMERAL <bits>
      <bits>    ::= ZERO | BIT1 (<bits>) | BIT2 (<bits>)
  ---------------------------------------------------------------------------*)
+fun is_zero t = (if is_const t
+ then
+   (case dest_thy_const t
+     of {Name="0", Thy="num",...} => true| _ => false)
+  else false)
 
-fun dest_zero t =
- case total dest_thy_const t
-  of SOME {Name="0", Thy="num",...} => Arbnum.zero
-   | otherwise => raise ERR "dest_zero" "expected 0";
+fun is_ZERO t = (if is_const t
+ then
+   (case dest_thy_const t
+     of {Name="ZERO", Thy="arithmetic",...} => true| _ => false)
+  else false)
 
-fun dest_ZERO t =
- case total dest_thy_const t
-  of SOME {Name="ZERO", Thy="arithmetic",...} => Arbnum.zero
-   | otherwise => raise ERR "dest_zero" "expected ZERO";
+fun dest_zero t = (if is_zero t then Arbnum.zero else raise ERR "dest_zero" "expected 0")
+fun dest_ZERO t = (if is_ZERO t then Arbnum.zero else raise ERR "dest_zero" "expected ZERO")
 
-fun dest_b1 tm =
- case total ((dest_thy_const##I) o dest_comb) tm
-  of SOME ({Name="BIT1", Thy="arithmetic",...},t) => t
-   | otherwise => raise ERR "dest_b1" "expected BIT1";
+fun is_b1 t = (if is_const t
+  then
+   (case dest_thy_const t
+     of {Name="BIT1", Thy="arithmetic",...} => true | _ => false)
+  else false)
 
-fun dest_b2 tm =
- case total ((dest_thy_const##I) o dest_comb) tm
-  of SOME ({Name="BIT2", Thy="arithmetic",...},t) => t
-   | otherwise => raise ERR "dest_b2" "expected BIT2";
+fun is_b2 t = (if is_const t
+  then
+   (case dest_thy_const t
+     of {Name="BIT2", Thy="arithmetic",...} => true | _ => false)
+  else false)
+
 
 local open Arbnum
 in
-fun dest_bare_numeral t =
-  dest_ZERO t
-  handle HOL_ERR _ => two * dest_bare_numeral (dest_b1 t) + one
-  handle HOL_ERR _ => two * dest_bare_numeral (dest_b2 t) + two
+fun dest_bare_numeral tm =
+  if is_ZERO tm
+  then Arbnum.zero
+  else if is_comb tm
+  then
+    let val (rator,rand) = dest_comb tm
+    in
+      (if is_b1 rator
+       then two * (dest_bare_numeral rand) + one
+       else if is_b2 rator
+       then two * (dest_bare_numeral rand) + two
+       else
+       raise ERR "dest_bare_numeral" "not a numeral")
+    end
+  else raise ERR "dest_bare_numeral" "not a numeral"
 end
 
 fun dest_numeral tm =
- dest_zero tm
- handle HOL_ERR _ =>
-    (case total ((dest_thy_const##I) o dest_comb) tm
-      of SOME ({Name="NUMERAL", Thy="arithmetic",...},t)
+  dest_zero tm
+  handle HOL_ERR _ =>
+   (case total ((dest_thy_const##I) o dest_comb) tm of
+       SOME ({Name="NUMERAL", Thy="arithmetic",...},t)
          => with_exn dest_bare_numeral t
               (ERR "dest_numeral" "term is not a numeral")
-       | otherwise => raise ERR "dest_numeral" "term is not a numeral"
-    )
+     | _ => raise ERR "dest_numeral" "term is not a numeral")
 
 
 (*---------------------------------------------------------------------------
@@ -104,8 +121,6 @@ fun relaxed_dest_numeral tm =
  handle HOL_ERR _ => dest_bare_numeral tm
  handle HOL_ERR _ => raise ERR "relaxed_dest_numeral" "term is not a numeral";
 
-val is_zero = Lib.can dest_zero;
-val is_ZERO = Lib.can dest_ZERO;
 val is_bare_numeral = Lib.can dest_bare_numeral;
 val is_numeral = Lib.can dest_numeral;
 

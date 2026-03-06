@@ -6,7 +6,8 @@ open bitLib numposrepTheory
 
 structure Parse = struct
   open Parse
-  val (Type, Term) = parse_from_grammars numposrepTheory.numposrep_grammars
+  val (Type, Term) =
+      parse_from_grammars $ valOf $ grammarDB {thyname="numposrep"}
 end
 open Parse
 
@@ -47,7 +48,7 @@ in
    fun add_numposrep_compset cmp = computeLib.add_thms thms cmp
 end
 
-val () = add_numposrep_compset computeLib.the_compset
+val () = computeLib.the_compset := add_numposrep_compset (!computeLib.the_compset)
 
 (* ------------------------------------------------------------------------- *)
 

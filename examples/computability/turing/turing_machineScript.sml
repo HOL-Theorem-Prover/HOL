@@ -1,13 +1,7 @@
-open HolKernel Parse boolLib bossLib finite_mapTheory;
-open recursivefnsTheory;
-open prnlistTheory;
-open nlistTheory
-open primrecfnsTheory;
-open listTheory;
-open arithmeticTheory;
-open numpairTheory;
-open pred_setTheory;
-val _ = new_theory "turing_machine";
+Theory turing_machine
+Ancestors
+  finite_map recursivefns prnlist nlist primrecfns list
+  arithmetic numpair pred_set
 
 (*
 Li and Vitayi book
@@ -520,4 +514,3 @@ Proof
 rw[ENCODE_TM_TAPE_def]
 QED
 
-val _ = export_theory();

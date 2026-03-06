@@ -5,6 +5,8 @@ open Portable HolKernel term_grammar
      HOLtokens HOLgrammars GrammarSpecials
      PrecAnalysis
 
+infix >> >-
+
 val PP_ERR = mk_HOL_ERR "term_pp";
 
 fun PRINT s = print (s ^ "\n")
@@ -91,16 +93,11 @@ fun convert_case tm =
       end
 
 val prettyprint_cases = ref true;
-val prettyprint_cases_dt = ref false;
 val _ = register_btrace ("pp_cases", prettyprint_cases)
-val _ = register_btrace ("pp_cases_dt", prettyprint_cases_dt)
 
 val {get = read_qblock_smash, ...} =
     create_trace {name = "PP.qblock_smash_limit", max = 1000,
                   initial = 4}
-
-fun prettyprint_cases_name () =
-    if !prettyprint_cases_dt then "dtcase" else "case";
 
 
 
@@ -530,7 +527,7 @@ fun pp_term (G : grammar) TyG backend = let
     fun val_insert (tstamp,r) NONE = [(n,tstamp,r)]
       | val_insert (tstamp,r) (SOME l) = sortinsert (tstamp,r) l
     fun myinsert ((k, (tstamp, r)), acc) = let
-      val existing = Binarymap.peek(acc, k)
+      val existing = HOLdict.peek(acc, k)
       val newvalue =
         case existing of
           NONE => [(n,tstamp,r)]
@@ -539,15 +536,15 @@ fun pp_term (G : grammar) TyG backend = let
           if tstamp > t' then (n,tstamp,r)::old::rest
           else old::(n,tstamp,r)::rest
     in
-      Binarymap.insert(acc, k, newvalue)
+      HOLdict.insert(acc, k, newvalue)
     end
   in
     (List.foldl myinsert acc keys_n_rules)
   end
   val rule_table = List.foldl insert
-                              (Binarymap.mkDict String.compare)
+                              (HOLdict.mkDict String.compare)
                               (term_grammar.rules G)
-  fun lookup_term s = Binarymap.peek(rule_table, s)
+  fun lookup_term s = HOLdict.peek(rule_table, s)
   val comb_prec = #1 (hd (valOf (lookup_term fnapp_special)))
     handle Option =>
       raise PP_ERR "pp_term" "Grammar has no function application"
@@ -1970,7 +1967,7 @@ fun pp_term (G : grammar) TyG backend = let
                              )
                    in
                      p (block PP.CONSISTENT 0
-                            (add_string (prettyprint_cases_name ()) >>
+                            (add_string "case" >>
                              add_break(1,2) >>
                              pr_term split_on Top Top Top (decdepth depth) >>
                              add_break(1,0) >> add_string "of") >>

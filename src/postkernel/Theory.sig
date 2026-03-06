@@ -4,8 +4,6 @@ sig
   type hol_type  = Type.hol_type
   type term      = Term.term
   type thm       = Thm.thm
-  type thy_addon = {sig_ps    : (unit -> HOLPP.pretty) option,
-                    struct_ps : (unit -> HOLPP.pretty) option}
   type num = Arbnum.num
   datatype thm_src_location = datatype DB_dtype.thm_src_location
   type thminfo = DB_dtype.thminfo
@@ -41,7 +39,8 @@ sig
 (* Information on the current theory segment *)
 
   val current_theory     : unit -> string
-  val stamp              : string -> Time.time
+  val hash               : string -> string
+  val mod_time           : string -> Time.time
   val parents            : string -> string list
   val ancestry           : string -> string list
   val types              : string -> (string * int) list
@@ -53,18 +52,13 @@ sig
 
 (* Support for persistent theories *)
 
-  val adjoin_to_theory       : thy_addon -> unit
-  val adjoin_after_completion: (unit -> HOLPP.pretty) -> unit
-  val quote_adjoin_to_theory : string quotation -> string quotation -> unit
   val export_theory          : unit -> unit
 
 (* Make hooks available so that theory changes can be seen by
    "interested parties" *)
+  val delta_hook : TheoryDelta.t Listener.t
   val register_hook : string * (TheoryDelta.t -> unit) -> unit
-  val delete_hook : string -> unit
-  val get_hooks : unit -> (string * (TheoryDelta.t -> unit)) list
-  val disable_hook : string -> ('a -> 'b) -> 'a -> 'b
-  val enable_hook : string -> ('a -> 'b) -> 'a -> 'b
+    (* alias for Listener.add_listener delta_hook *)
 
 (* -- and persistent data added to theories *)
   structure LoadableThyData : sig
@@ -135,20 +129,28 @@ sig
 
   val format_name_message : {pfx:string,name:string} -> string
 
-(* For internal use *)
+(* For internal use
 
-  val pp_thm                 : (thm -> HOLPP.pretty) ref
-  val link_parents           : string*num*num -> (string*num*num) list -> unit
+    incorporate_types and incorporate_consts are versions of new_type and new_constant
+    used in loaded theory files from disk.
+
+    Similarly, link_parents is used when a theory is declared so that
+    its ancestors are identified.
+
+ *)
+
+  val link_parents           : string*string -> (string*string) list -> unit
   val incorporate_types      : string -> (string*int) list -> unit
+  val incorporate_consts     : string -> (string*hol_type) list -> unit
+  val pp_thm                 : (thm -> HOLPP.pretty) ref
 
+  type metadata = {path: string, timestamp: Time.time}
+  val record_metadata        : string -> metadata -> unit
 
-  val store_definition       : string * thm -> thm
-  val gen_store_definition   : string * thm * thm_src_location -> thm
-  val incorporate_consts : string -> hol_type Vector.vector ->
-                           (string*int) list -> unit
   (* Theory files (which are just SML source code) call this function as
      the last thing done when they load.  This will in turn cause a
      TheoryDelta event to be sent to all registered listeners *)
   val load_complete : string -> unit
 
+  val oracle_string_of : thm -> string option
 end

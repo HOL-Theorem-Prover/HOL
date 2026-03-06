@@ -18,7 +18,7 @@
 structure Norm_arith :> Norm_arith =
 struct
   open Arbint HolKernel boolLib Rsyntax
-       Arith_cons Term_coeffs RJBConv Theorems Thm_convs reduceLib;
+       Arith_cons Term_coeffs Theorems Thm_convs reduceLib;
 
 
   val op << = String.<
@@ -45,7 +45,7 @@ fun failwith function = raise (mk_HOL_ERR "Norm_arith" function "");
 fun COLLECT_NUM_CONSTS_CONV tm =
  (if ((is_plus tm) andalso (is_num_const (arg1 tm)))
   then if ((is_plus (arg2 tm)) andalso (is_num_const (arg1 (arg2 tm)))) then
-          (ADD_ASSOC_CONV THENC (RATOR_CONV (RAND_CONV ADD_CONV))) tm
+          (ADD_ASSOC_CONV THENC (LAND_CONV ADD_CONV)) tm
        else if (is_num_const (arg2 tm)) then ADD_CONV tm
        else failwith "fail"
   else failwith "fail"
@@ -64,18 +64,17 @@ fun COLLECT_NUM_CONSTS_CONV tm =
 fun NUM_RELN_NORM_CONV arith_conv leq_conv tm =
  (if (is_neg tm)
   then (let val tm' = rand tm
-        in  ((RAND_CONV (ARGS_CONV arith_conv)) THENC
+        in  ((RAND_CONV (BINOP_CONV arith_conv)) THENC
              (if (is_eq tm') then
                  (NOT_NUM_EQ_NORM_CONV THENC
-                  (ARGS_CONV
-                    ((RATOR_CONV
-                       (RAND_CONV
-                         (TRY_CONV COLLECT_NUM_CONSTS_CONV))) THENC
+                  (BINOP_CONV
+                    ((LAND_CONV
+                       (TRY_CONV COLLECT_NUM_CONSTS_CONV)) THENC
                      leq_conv)))
               else if (is_leq tm') then
                  (NOT_LEQ_NORM_CONV THENC
-                  (RATOR_CONV
-                    (RAND_CONV (TRY_CONV COLLECT_NUM_CONSTS_CONV))) THENC
+                  (LAND_CONV
+                    (TRY_CONV COLLECT_NUM_CONSTS_CONV)) THENC
                   leq_conv)
               else if (is_less tm') then
                  (NOT_LESS_NORM_CONV THENC leq_conv)
@@ -83,23 +82,22 @@ fun NUM_RELN_NORM_CONV arith_conv leq_conv tm =
                  (NOT_GREAT_NORM_CONV THENC leq_conv)
               else if (is_geq tm') then
                  (NOT_GEQ_NORM_CONV THENC
-                  (RATOR_CONV
-                    (RAND_CONV (TRY_CONV COLLECT_NUM_CONSTS_CONV))) THENC
+                  (LAND_CONV
+                    (TRY_CONV COLLECT_NUM_CONSTS_CONV)) THENC
                   leq_conv)
               else failwith "fail")) tm
         end)
-  else ((ARGS_CONV arith_conv) THENC
-        (if is_eq tm then (NUM_EQ_NORM_CONV THENC (ARGS_CONV leq_conv)) else
+  else ((BINOP_CONV arith_conv) THENC
+        (if is_eq tm then (NUM_EQ_NORM_CONV THENC (BINOP_CONV leq_conv)) else
          if is_leq tm then leq_conv else
          if is_less tm then
             (LESS_NORM_CONV THENC
-              (RATOR_CONV
-                (RAND_CONV (TRY_CONV COLLECT_NUM_CONSTS_CONV))) THENC leq_conv)
+              (LAND_CONV
+                (TRY_CONV COLLECT_NUM_CONSTS_CONV)) THENC leq_conv)
          else if (is_greater tm) then
             (GREAT_NORM_CONV THENC
-             (RATOR_CONV
-               (RAND_CONV (TRY_CONV COLLECT_NUM_CONSTS_CONV))) THENC
-             leq_conv)
+              (LAND_CONV
+                (TRY_CONV COLLECT_NUM_CONSTS_CONV)) THENC leq_conv)
          else if (is_geq tm) then (GEQ_NORM_CONV THENC leq_conv)
          else failwith "fail")) tm
  ) handle Interrupt => raise Interrupt
@@ -276,10 +274,10 @@ fun SUM_OF_PRODUCTS_MULT_CONV tm =
                          (is_num_const (arg1 tm2)) andalso
                          (is_var (arg2 tm2))) then
                    (MULT_ASSOC_CONV THENC
-                    (RATOR_CONV (RAND_CONV FAST_MULT_CONV))) tm
+                    (LAND_CONV FAST_MULT_CONV)) tm
                 else if (is_plus tm2) then
                    (LEFT_ADD_DISTRIB_CONV THENC
-                    (ARGS_CONV SUM_OF_PRODUCTS_MULT_CONV)) tm
+                    (BINOP_CONV SUM_OF_PRODUCTS_MULT_CONV)) tm
                 else failwith "fail")
             else failwith "fail"
         end)
@@ -303,7 +301,7 @@ fun SUM_OF_PRODUCTS_CONV tm =
   else if (is_suc tm) then
      ((RAND_CONV SUM_OF_PRODUCTS_CONV) THENC SUM_OF_PRODUCTS_SUC_CONV) tm
   else if (is_plus tm) then
-     ((ARGS_CONV SUM_OF_PRODUCTS_CONV) THENC
+     ((BINOP_CONV SUM_OF_PRODUCTS_CONV) THENC
       (fn tm' =>
           let val (tm1,tm2) = dest_plus tm'
           in  if (is_zero tm1) then (SPEC tm2 ZERO_PLUS)
@@ -313,7 +311,7 @@ fun SUM_OF_PRODUCTS_CONV tm =
               else ALL_CONV tm'
           end)) tm
   else if (is_mult tm) then
-     ((ARGS_CONV SUM_OF_PRODUCTS_CONV) THENC SUM_OF_PRODUCTS_MULT_CONV) tm
+     ((BINOP_CONV SUM_OF_PRODUCTS_CONV) THENC SUM_OF_PRODUCTS_MULT_CONV) tm
   else failwith "fail"
  ) handle (Feedback.HOL_ERR _) => failwith "SUM_OF_PRODUCTS_CONV";
 
@@ -330,7 +328,7 @@ val LINEAR_SUM_CONV =
         (TRY_CONV (SYM_ADD_ASSOC_CONV THENC (RAND_CONV FILTER_IN_CONV))) tm
      fun LINEAR_SUM_CONV' tm =
         (if (is_plus tm)
-         then ((ARGS_CONV LINEAR_SUM_CONV') THENC FILTER_IN_CONV) tm
+         then ((BINOP_CONV LINEAR_SUM_CONV') THENC FILTER_IN_CONV) tm
          else ALL_CONV tm
         ) handle (Feedback.HOL_ERR _) => failwith "LINEAR_SUM_CONV"
  in  LINEAR_SUM_CONV'
@@ -351,7 +349,7 @@ fun GATHER_CONV tm =
           | (true,false)  => GATHER_LEFT_CONV
           | (false,true)  => GATHER_RIGHT_CONV
           | (false,false) => GATHER_NEITHER_CONV
-  in  (conv THENC (RATOR_CONV (RAND_CONV (TRY_CONV ADD_CONV)))) tm
+  in  (conv THENC (LAND_CONV (TRY_CONV ADD_CONV))) tm
   end
  ) handle (Feedback.HOL_ERR _) => failwith "GATHER_CONV";
 
@@ -370,7 +368,7 @@ fun GATHER_CONV tm =
 
 fun IN_LINE_SUM_CONV conv tm =
  (ADD_ASSOC_CONV THENC
-  (RATOR_CONV (RAND_CONV conv)) THENC
+  (LAND_CONV conv) THENC
   (TRY_CONV SYM_ADD_ASSOC_CONV)) tm
  handle (Feedback.HOL_ERR _) => failwith "IN_LINE_SUM_CONV";
 
@@ -481,7 +479,7 @@ val NORM_ZERO_AND_ONE_CONV =
  let fun NORM_CONV tm =
         if (is_plus tm) then
            ((RAND_CONV NORM_CONV) THENC
-            (RATOR_CONV (RAND_CONV (TRY_CONV SYM_ONE_MULT_VAR_CONV))) THENC
+            (LAND_CONV (TRY_CONV SYM_ONE_MULT_VAR_CONV)) THENC
             (TRY_CONV ZERO_MULT_PLUS_CONV) THENC
             (TRY_CONV PLUS_ZERO_CONV)) tm
         else ((TRY_CONV ZERO_MULT_CONV) THENC

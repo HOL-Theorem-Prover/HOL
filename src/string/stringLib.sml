@@ -116,9 +116,8 @@ val string_rwts =
     ORD_CHR_COMPUTE, CHAR_EQ_THM]
 
 fun add_string_compset cmp =
-   ( computeLib.add_thms string_rwts cmp
-   ; computeLib.add_conv (stringSyntax.ord_tm, 1, ORD_CHR_CONV) cmp
-   )
+   cmp |> computeLib.add_thms string_rwts
+       |> computeLib.add_conv (stringSyntax.ord_tm, 1, ORD_CHR_CONV)
 
 (* ------------------------------------------------------------------------
      Define enum <-> string maps.
@@ -155,7 +154,7 @@ in
             List.map (fn c => boolSyntax.mk_eq (Term.mk_comb (f, c), e2s c)) l
             |> boolSyntax.list_mk_conj
       in
-         Feedback.trace ("Define.storage_message", 0)
+         Feedback.trace ("Definition.storage_message", 0)
             TotalDefn.Define [HOLPP.ANTIQUOTE cs]
       end
 end

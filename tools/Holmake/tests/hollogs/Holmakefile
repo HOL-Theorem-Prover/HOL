@@ -1,4 +1,5 @@
 INCLUDES = base
+LOGDIR = .hol/logs
 EXTRA_CLEANS = ls-base-output ls-child-output
 
 ifdef HOL_NUMJOBS
@@ -11,9 +12,9 @@ CMP = $(HOLDIR)/tools/cmp/cmp.exe
 all: $(DEFAULT_TARGETS) check
 
 check: $(dprot $(CMP)) ls-child-expected ls-base-expected childTheory.uo
-	/bin/ls -1 .hollogs 2>&1 > ls-child-output && \
+	/bin/ls -1 $(LOGDIR) 2>&1 > ls-child-output && \
           $(protect $(CMP)) ls-child-expected ls-child-output
-	/bin/ls -1 base/.hollogs 2>&1 > ls-base-output && \
+	/bin/ls -1 base/$(LOGDIR) 2>&1 > ls-base-output && \
           $(protect $(CMP)) ls-base-expected ls-base-output
 
 endif

@@ -4,23 +4,14 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "windmill";
+Theory windmill
+Ancestors
+  helperTwosq arithmetic pred_set number combinatorics divides
+  gcd pair logroot prime involute involuteFix
 
 (* ------------------------------------------------------------------------- *)
 
-(* open dependent theories *)
-open helperTwosqTheory;
-
-open arithmeticTheory pred_setTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory pairTheory logrootTheory primeTheory;
-
 (* val _ = load "involuteFixTheory"; *)
-open involuteTheory involuteFixTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Windmills and Involutions Documentation                                   *)
 (* ------------------------------------------------------------------------- *)
@@ -2374,8 +2365,4 @@ QED
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

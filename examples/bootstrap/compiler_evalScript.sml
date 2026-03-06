@@ -1,9 +1,9 @@
-
-open HolKernel Parse boolLib bossLib term_tactic cv_transLib;
-open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory;
-open wordsTheory wordsLib automationLib compiler_progTheory compiler_funs_cvTheory;
-
-val _ = new_theory "compiler_eval";
+Theory compiler_eval
+Ancestors
+  arithmetic list pair finite_map string
+  words compiler_prog compiler_funs_cv
+Libs
+  cv_transLib wordsLib automationLib
 
 val _ = max_print_depth := 10;
 
@@ -31,5 +31,3 @@ Theorem compiler_asm_str  = time cv_eval “compiler_asm_str”;
 
 val _ = write_hol_string_to_file "compiler_prog.txt" (compiler_str |> concl |> rand);
 val _ = write_hol_string_to_file "compiler_asm.s"    (compiler_asm_str |> concl |> rand);
-
-val _ = export_theory();

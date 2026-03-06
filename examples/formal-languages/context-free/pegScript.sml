@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib
-open boolSimps
-open grammarTheory finite_mapTheory
-open locationTheory
-open listTheory rich_listTheory
-
-val _ = new_theory "peg"
+Theory peg
+Ancestors
+  grammar finite_map location list rich_list
+Libs
+  boolSimps
 
 (* Based on
      Koprowski and Binzstok, "TRX: A Formally Verified Parser Interpreter".
@@ -422,7 +420,8 @@ Proof
   simp[Gexprs_def, subexprs_included]
 QED
 
-val wfG_def = Define`wfG G ⇔ ∀e. e ∈ Gexprs G ⇒ wfpeg G e`;
+Definition wfG_def:  wfG G ⇔ ∀e. e ∈ Gexprs G ⇒ wfpeg G e
+End
 
 Theorem IN_subexprs_TRANS:
   ∀a b c. a ∈ subexprs b ∧ b ∈ subexprs c ⇒ a ∈ subexprs c
@@ -523,26 +522,26 @@ QED
 Definition pegf_def:  pegf sym f = seq sym (empty ARB) (λl1 l2. f l1)
 End
 
-val ignoreL_def = Define`
+Definition ignoreL_def:
   ignoreL s1 s2 = seq s1 s2 (λa b. b)
-`;
+End
 val _ = set_mapped_fixity{fixity = Infixl 500, term_name = "ignoreL",
                           tok = "~>"}
 
-val ignoreR_def = Define`
+Definition ignoreR_def:
   ignoreR s1 s2 = seq s1 s2 (λa b. a)
-`;
+End
 val _ = set_mapped_fixity{fixity = Infixl 500, term_name = "ignoreR",
                           tok = "<~"}
 
-val choicel_def = Define`
+Definition choicel_def:
   (choicel [] = not (empty ARB) ARB) ∧
   (choicel (h::t) = choice h (choicel t) (λs. sum_CASE s I I))
-`;
+End
 
-val checkAhead_def = Define`
+Definition checkAhead_def:
   checkAhead P s = not (not (tok P ARB) ARB) ARB ~> s
-`;
+End
 
 Theorem peg_eval_seq_SOME:
   peg_eval G (i0, seq s1 s2 f) (Success i r eo) ⇔
@@ -632,15 +631,16 @@ Theorem peg_eval_rpt[allow_rebind]:
 Proof simp[Once peg_eval_cases, SimpLHS] >> metis_tac[]
 QED
 
-val peg_eval_list = Q.store_thm(
-  "peg_eval_list",
-  `peg_eval_list G (i0, e) (i, r, err) ⇔
+Theorem peg_eval_list:
+   peg_eval_list G (i0, e) (i, r, err) ⇔
      (∃fl fe. peg_eval G (i0, e) (Failure fl fe) ∧ i = i0 ∧ r = [] ∧
              err = (fl,fe)) ∨
      (∃i1 rh rt eo0.
         peg_eval G (i0, e) (Success i1 rh eo0) ∧
-        peg_eval_list G (i1, e) (i, rt, err) ∧ r = rh::rt)`,
-  simp[Once peg_eval_cases, SimpLHS] >> metis_tac[]);
+        peg_eval_list G (i1, e) (i, rt, err) ∧ r = rh::rt)
+Proof
+  simp[Once peg_eval_cases, SimpLHS] >> metis_tac[]
+QED
 
 Theorem pegfail_empty[simp]:
   pegfail G (empty r) = F
@@ -687,4 +687,3 @@ Proof
   simp[pegf_def]
 QED
 
-val _ = export_theory()

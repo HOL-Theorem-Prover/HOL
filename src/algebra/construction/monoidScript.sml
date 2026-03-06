@@ -17,22 +17,15 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
+Theory monoid
+Ancestors
+  pred_set arithmetic divides gcd logroot list rich_list bag
+  gcdset number combinatorics prime
+Libs
+  jcLib dep_rewrite
 
-(* declare new theory at start *)
-val _ = new_theory "monoid";
-
-(* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory logrootTheory
-     listTheory rich_listTheory bagTheory gcdsetTheory dep_rewrite;
-
-open numberTheory combinatoricsTheory primeTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Monoid Documentation                                                      *)
@@ -141,11 +134,12 @@ open numberTheory combinatoricsTheory primeTheory;
    . a binary operation (2-nary function) called multiplication
    . an identity element for the binary operation
 *)
-val _ = Hol_datatype`
+Datatype:
   monoid = <| carrier: 'a -> bool;
                    op: 'a -> 'a -> 'a;
                    id: 'a
-            |>`;
+            |>
+End
 (* If the field  inv: 'a -> 'a; is included,
    there will be an implicit monoid_inv accessor generated.
    Later, when monoid_inv_def defines another monoid_inv,
@@ -159,9 +153,9 @@ val _ = Hol_datatype`
    will give excessive overloading for Monoid and Group,
    so the generic symbol for both is taken as g. *)
 (* set overloading  *)
-val _ = overload_on ("*", ``g.op``);
-val _ = overload_on ("#e", ``g.id``);
-val _ = overload_on ("G", ``g.carrier``);
+Overload "*" = ``g.op``
+Overload "#e" = ``g.id``
+Overload G = ``g.carrier``
 
 (* Monoid Definition:
    A Monoid is a set with elements of type 'a monoid, such that
@@ -171,12 +165,12 @@ val _ = overload_on ("G", ``g.carrier``);
    . Property of identity: #e * x = x * #e = x
 *)
 (* Define Monoid by predicate *)
-val Monoid_def = Define`
+Definition Monoid_def:
   Monoid (g:'a monoid) <=>
     (!x y. x IN G /\ y IN G ==> x * y IN G) /\
     (!x y z. x IN G /\ y IN G /\ z IN G ==> ((x * y) * z = x * (y * z))) /\
     #e IN G /\ (!x. x IN G ==> (#e * x = x) /\ (x * #e = x))
-`;
+End
 (* export basic definition -- but too many and's. *)
 (* val _ = export_rewrites ["Monoid_def"]; *)
 
@@ -185,28 +179,24 @@ val Monoid_def = Define`
 (* ------------------------------------------------------------------------- *)
 
 (* Abelian Monoid = a Monoid that is commutative: x * y = y * x. *)
-val AbelianMonoid_def = Define`
+Definition AbelianMonoid_def:
   AbelianMonoid (g:'a monoid) <=>
     Monoid g /\ !x y. x IN G /\ y IN G ==> (x * y = y * x)
-`;
+End
 (* export simple definition -- but this one has commutativity, so don't. *)
 (* val _ = export_rewrites ["AbelianMonoid_def"]; *)
 
 (* Finite Monoid = a Monoid with a finite carrier set. *)
-val FiniteMonoid_def = Define`
+Definition FiniteMonoid_def[simp]:
   FiniteMonoid (g:'a monoid) <=>
     Monoid g /\ FINITE G
-`;
-(* export simple definition. *)
-val _ = export_rewrites ["FiniteMonoid_def"];
+End
 
 (* Finite Abelian Monoid = a Monoid that is both Finite and Abelian. *)
-val FiniteAbelianMonoid_def = Define`
+Definition FiniteAbelianMonoid_def[simp]:
   FiniteAbelianMonoid (g:'a monoid) <=>
     AbelianMonoid g /\ FINITE G
-`;
-(* export simple definition. *)
-val _ = export_rewrites ["FiniteAbelianMonoid_def"];
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Basic theorems from definition.                                           *)
@@ -214,11 +204,12 @@ val _ = export_rewrites ["FiniteAbelianMonoid_def"];
 
 (* Theorem: Finite Abelian Monoid = Finite Monoid /\ commutativity. *)
 (* Proof: by definitions. *)
-val FiniteAbelianMonoid_def_alt = store_thm(
-  "FiniteAbelianMonoid_def_alt",
-  ``!g:'a monoid. FiniteAbelianMonoid g <=>
-       FiniteMonoid g /\ !x y. x IN G /\ y IN G ==> (x * y = y * x)``,
-  rw[AbelianMonoid_def, EQ_IMP_THM]);
+Theorem FiniteAbelianMonoid_def_alt:
+    !g:'a monoid. FiniteAbelianMonoid g <=>
+       FiniteMonoid g /\ !x y. x IN G /\ y IN G ==> (x * y = y * x)
+Proof
+  rw[AbelianMonoid_def, EQ_IMP_THM]
+QED
 
 (* Monoid clauses from definition, in implicative form, no for-all, internal use only. *)
 val monoid_clauses = Monoid_def |> SPEC_ALL |> #1 o EQ_IMP_RULE;
@@ -232,56 +223,49 @@ val monoid_clauses = Monoid_def |> SPEC_ALL |> #1 o EQ_IMP_RULE;
 (* No need to export as definition is already exported. *)
 
 (* Theorem: [Closure] x * y in carrier. *)
-val monoid_op_element = save_thm("monoid_op_element",
-  monoid_clauses |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem monoid_op_element[simp] =
+  monoid_clauses |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_op_element = |- !g. Monoid g ==> !x y. x IN G /\ y IN G ==> x * y IN G : thm*)
 
 (* Theorem: [Associativity] (x * y) * z = x * (y * z) *)
-val monoid_assoc = save_thm("monoid_assoc",
-  monoid_clauses |> UNDISCH_ALL |> CONJUNCT2|> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem monoid_assoc =
+  monoid_clauses |> UNDISCH_ALL |> CONJUNCT2|> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_assoc = |- !g. Monoid g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> (x * y * z = x * (y * z)) : thm *)
 
 (* Theorem: [Identity exists] #e in carrier. *)
-val monoid_id_element = save_thm("monoid_id_element",
-  monoid_clauses |> UNDISCH_ALL |> CONJUNCT2|> CONJUNCT2 |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem monoid_id_element[simp] =
+  monoid_clauses |> UNDISCH_ALL |> CONJUNCT2|> CONJUNCT2 |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_id_element = |- !g. Monoid g ==> #e IN G : thm *)
 
 (* Theorem: [Identity property] #e * x = x  and x * #e = x *)
-val monoid_id = save_thm("monoid_id",
-  monoid_clauses |> UNDISCH_ALL |> CONJUNCT2|> CONJUNCT2 |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL);
+Theorem monoid_id =
+  monoid_clauses |> UNDISCH_ALL |> CONJUNCT2|> CONJUNCT2 |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_id = |- !g. Monoid g ==> !x. x IN G ==> (#e * x = x) /\ (x * #e = x) : thm *)
 
 (* Theorem: [Left identity] #e * x = x *)
 (* Proof: from monoid_id. *)
-val monoid_lid = save_thm("monoid_lid",
+Theorem monoid_lid[simp] =
   monoid_id |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1
-            |> DISCH ``x IN G`` |> GEN_ALL |> DISCH_ALL |> GEN_ALL);
+            |> DISCH ``x IN G`` |> GEN_ALL |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_lid = |- !g. Monoid g ==> !x. x IN G ==> (#e * x = x) : thm *)
 
 (* Theorem: [Right identity] x * #e = x *)
 (* Proof: from monoid_id. *)
-val monoid_rid = save_thm("monoid_rid",
+Theorem monoid_rid[simp] =
   monoid_id |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT2
-            |> DISCH ``x IN G`` |> GEN_ALL |> DISCH_ALL |> GEN_ALL);
+            |> DISCH ``x IN G`` |> GEN_ALL |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_rid = |- !g. Monoid g ==> !x. x IN G ==> (x * #e = x) : thm *)
-
-(* export simple statements (no complicated and's) *)
-val _ = export_rewrites ["monoid_op_element"];
-(* val _ = export_rewrites ["monoid_assoc"]; -- no associativity *)
-val _ = export_rewrites ["monoid_id_element"];
-val _ = export_rewrites ["monoid_lid"];
-val _ = export_rewrites ["monoid_rid"];
 
 (* Theorem: #e * #e = #e *)
 (* Proof:
    by monoid_lid and monoid_id_element.
 *)
-val monoid_id_id = store_thm(
-  "monoid_id_id",
-  ``!g:'a monoid. Monoid g ==> (#e * #e = #e)``,
-  rw[]);
+Theorem monoid_id_id[simp]:
+    !g:'a monoid. Monoid g ==> (#e * #e = #e)
+Proof
+  rw[]
+QED
 
-val _ = export_rewrites ["monoid_id_id"];
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems in basic Monoid Theory.                                          *)
@@ -289,10 +273,11 @@ val _ = export_rewrites ["monoid_id_id"];
 
 (* Theorem: [Monoid carrier nonempty] G <> {} *)
 (* Proof: by monoid_id_element. *)
-val monoid_carrier_nonempty = store_thm(
-  "monoid_carrier_nonempty",
-  ``!g:'a monoid. Monoid g ==> G <> {}``,
-  metis_tac[monoid_id_element, MEMBER_NOT_EMPTY]);
+Theorem monoid_carrier_nonempty:
+    !g:'a monoid. Monoid g ==> G <> {}
+Proof
+  metis_tac[monoid_id_element, MEMBER_NOT_EMPTY]
+QED
 
 (* Theorem: [Left Identity unique] !x. (e * x = x) ==> e = #e *)
 (* Proof:
@@ -301,10 +286,11 @@ val monoid_carrier_nonempty = store_thm(
    but  e * #e = e   by monoid_rid
    hence e = #e.
 *)
-val monoid_lid_unique = store_thm(
-  "monoid_lid_unique",
-  ``!g:'a monoid. Monoid g ==> !e. e IN G ==> ((!x. x IN G ==> (e * x = x)) ==> (e = #e))``,
-  metis_tac[monoid_id_element, monoid_rid]);
+Theorem monoid_lid_unique:
+    !g:'a monoid. Monoid g ==> !e. e IN G ==> ((!x. x IN G ==> (e * x = x)) ==> (e = #e))
+Proof
+  metis_tac[monoid_id_element, monoid_rid]
+QED
 
 (* Theorem: [Right Identity unique] !x. (x * e = x) ==> e = #e *)
 (* Proof:
@@ -313,10 +299,11 @@ val monoid_lid_unique = store_thm(
    but  #e * e = e   by monoid_lid
    hence e = #e.
 *)
-val monoid_rid_unique = store_thm(
-  "monoid_rid_unique",
-  ``!g:'a monoid. Monoid g ==> !e. e IN G ==> ((!x. x IN G ==> (x * e = x)) ==> (e = #e))``,
-  metis_tac[monoid_id_element, monoid_lid]);
+Theorem monoid_rid_unique:
+    !g:'a monoid. Monoid g ==> !e. e IN G ==> ((!x. x IN G ==> (x * e = x)) ==> (e = #e))
+Proof
+  metis_tac[monoid_id_element, monoid_lid]
+QED
 
 (* Theorem: [Identity unique] !x. (x * e = x)  and  (e * x = x) <=> e = #e *)
 (* Proof:
@@ -325,10 +312,11 @@ val monoid_rid_unique = store_thm(
    For #e, put x = e, e*#e = e  and #e*e = e
    Therefore e = #e.
 *)
-val monoid_id_unique = store_thm(
-  "monoid_id_unique",
-  ``!g:'a monoid. Monoid g ==> !e. e IN G ==> ((!x. x IN G ==> (x * e = x) /\ (e * x = x)) <=> (e = #e))``,
-  metis_tac[monoid_id_element, monoid_id]);
+Theorem monoid_id_unique:
+    !g:'a monoid. Monoid g ==> !e. e IN G ==> ((!x. x IN G ==> (x * e = x) /\ (e * x = x)) <=> (e = #e))
+Proof
+  metis_tac[monoid_id_element, monoid_id]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -346,7 +334,8 @@ val monoid_exp_def = Define`
   (monoid_exp m x (SUC n) = x * (monoid_exp m x n))
 `;
 *)
-val monoid_exp_def = Define `monoid_exp (g:'a monoid) (x:'a) n = FUNPOW (g.op x) n #e`;
+Definition monoid_exp_def:   monoid_exp (g:'a monoid) (x:'a) n = FUNPOW (g.op x) n #e
+End
 (* val _ = export_rewrites ["monoid_exp_def"]; *)
 (*
 - monoid_exp_def;
@@ -365,26 +354,26 @@ val _ = add_record_field ("exp", ``monoid_exp``);
 (* overloading  *)
 (* val _ = clear_overloads_on "**"; *)
 (* val _ = overload_on ("**", ``monoid_exp g``); -- not this *)
-val _ = overload_on ("**", ``g.exp``);
+Overload "**" = ``g.exp``
 
 (* Theorem: x ** 0 = #e *)
 (* Proof: by definition and FUNPOW_0. *)
-val monoid_exp_0 = store_thm(
-  "monoid_exp_0",
-  ``!g:'a monoid. !x:'a. x ** 0 = #e``,
-  rw[monoid_exp_def]);
+Theorem monoid_exp_0[simp]:
+    !g:'a monoid. !x:'a. x ** 0 = #e
+Proof
+  rw[monoid_exp_def]
+QED
 
-val _ = export_rewrites ["monoid_exp_0"];
 
 (* Theorem: x ** (SUC n) = x * (x ** n) *)
 (* Proof: by definition and FUNPOW_SUC. *)
-val monoid_exp_SUC = store_thm(
-  "monoid_exp_SUC",
-  ``!g:'a monoid. !x:'a. !n. x ** (SUC n) = x * (x ** n)``,
-  rw[monoid_exp_def, FUNPOW_SUC]);
-
 (* should this be exported? Only FUNPOW_0 is exported. *)
-val _ = export_rewrites ["monoid_exp_SUC"];
+Theorem monoid_exp_SUC[simp]:
+    !g:'a monoid. !x:'a. !n. x ** (SUC n) = x * (x ** n)
+Proof
+  rw[monoid_exp_def, FUNPOW_SUC]
+QED
+
 
 (* Theorem: (x ** n) in G *)
 (* Proof: by induction on n.
@@ -396,14 +385,14 @@ val _ = export_rewrites ["monoid_exp_SUC"];
    = x * (x ** n)    by monoid_exp_SUC
      in G            by monoid_op_element and induction hypothesis
 *)
-val monoid_exp_element = store_thm(
-  "monoid_exp_element",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G ==> !n. (x ** n) IN G``,
+Theorem monoid_exp_element[simp]:
+    !g:'a monoid. Monoid g ==> !x. x IN G ==> !n. (x ** n) IN G
+Proof
   rpt strip_tac>>
   Induct_on `n` >>
-  rw[]);
+  rw[]
+QED
 
-val _ = export_rewrites ["monoid_exp_element"];
 
 (* Theorem: x ** 1 = x *)
 (* Proof:
@@ -413,13 +402,13 @@ val _ = export_rewrites ["monoid_exp_element"];
    = x * #e         by monoid_exp_0
    = x              by monoid_rid
 *)
-val monoid_exp_1 = store_thm(
-  "monoid_exp_1",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G ==> (x ** 1 = x)``,
+Theorem monoid_exp_1[simp]:
+    !g:'a monoid. Monoid g ==> !x. x IN G ==> (x ** 1 = x)
+Proof
   rewrite_tac[ONE] >>
-  rw[]);
+  rw[]
+QED
 
-val _ = export_rewrites ["monoid_exp_1"];
 
 (* Theorem: (#e ** n) = #e  *)
 (* Proof: by induction on n.
@@ -431,14 +420,14 @@ val _ = export_rewrites ["monoid_exp_1"];
       = #e ** n         by monoid_lid, monoid_exp_element
       hence true by induction hypothesis.
 *)
-val monoid_id_exp = store_thm(
-  "monoid_id_exp",
-  ``!g:'a monoid. Monoid g ==> !n. #e ** n = #e``,
+Theorem monoid_id_exp[simp]:
+    !g:'a monoid. Monoid g ==> !n. #e ** n = #e
+Proof
   rpt strip_tac>>
   Induct_on `n` >>
-  rw[]);
+  rw[]
+QED
 
-val _ = export_rewrites ["monoid_id_exp"];
 
 (* Theorem: For Abelian Monoid g,  (x ** n) * y = y * (x ** n) *)
 (* Proof:
@@ -466,13 +455,14 @@ val _ = export_rewrites ["monoid_id_exp"];
    = y * (x * (x ** n))  by monoid_assoc
    = y * x ** (SUC n)    by monoid_exp_SUC
 *)
-val monoid_comm_exp = store_thm(
-  "monoid_comm_exp",
-  ``!g:'a monoid. Monoid g ==> !x y. x IN G /\ y IN G ==> (x * y = y * x) ==> !n. (x ** n) * y = y * (x ** n)``,
+Theorem monoid_comm_exp:
+    !g:'a monoid. Monoid g ==> !x y. x IN G /\ y IN G ==> (x * y = y * x) ==> !n. (x ** n) * y = y * (x ** n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
-  metis_tac[monoid_exp_SUC, monoid_assoc, monoid_exp_element]);
+  metis_tac[monoid_exp_SUC, monoid_assoc, monoid_exp_element]
+QED
 
 (* do not export commutativity check *)
 (* val _ = export_rewrites ["monoid_comm_exp"]; *)
@@ -481,20 +471,22 @@ val monoid_comm_exp = store_thm(
 (* Proof:
    Since x * x = x * x, this is true by monoid_comm_exp.
 *)
-val monoid_exp_comm = store_thm(
-  "monoid_exp_comm",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G ==> !n. (x ** n) * x = x * (x ** n)``,
-  rw[monoid_comm_exp]);
+Theorem monoid_exp_comm:
+    !g:'a monoid. Monoid g ==> !x. x IN G ==> !n. (x ** n) * x = x * (x ** n)
+Proof
+  rw[monoid_comm_exp]
+QED
 
 (* no export of commutativity *)
 (* val _ = export_rewrites ["monoid_exp_comm"]; *)
 
 (* Theorem: x ** (SUC n) = (x ** n) * x *)
 (* Proof: by monoid_exp_SUC and monoid_exp_comm. *)
-val monoid_exp_suc = store_thm(
-  "monoid_exp_suc",
-  ``!g:'a monoid. Monoid g ==> !x:'a. x IN G ==> !n. x ** (SUC n) = (x ** n) * x``,
-  rw[monoid_exp_comm]);
+Theorem monoid_exp_suc:
+    !g:'a monoid. Monoid g ==> !x:'a. x IN G ==> !n. x ** (SUC n) = (x ** n) * x
+Proof
+  rw[monoid_exp_comm]
+QED
 
 (* no export of commutativity *)
 (* val _ = export_rewrites ["monoid_exp_suc"]; *)
@@ -517,15 +509,16 @@ val monoid_exp_suc = store_thm(
    = x * ((x ** n) * (y * (y ** n)))  by monoid_assoc
    = (x * (x ** n)) * (y * (y ** n))  by monoid_assoc
 *)
-val monoid_comm_op_exp = store_thm(
-  "monoid_comm_op_exp",
-  ``!g:'a monoid. Monoid g ==> !x y. x IN G /\ y IN G /\ (x * y = y * x) ==> !n. (x * y) ** n = (x ** n) * (y ** n)``,
+Theorem monoid_comm_op_exp:
+    !g:'a monoid. Monoid g ==> !x y. x IN G /\ y IN G /\ (x * y = y * x) ==> !n. (x * y) ** n = (x ** n) * (y ** n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
   `(x * y) ** SUC n = x * ((y * (x ** n)) * (y ** n))` by rw[monoid_assoc] >>
   `_ = x * (((x ** n) * y) * (y ** n))` by metis_tac[monoid_comm_exp] >>
-  rw[monoid_assoc]);
+  rw[monoid_assoc]
+QED
 
 (* do not export commutativity check *)
 (* val _ = export_rewrites ["monoid_comm_op_exp"]; *)
@@ -551,10 +544,10 @@ val monoid_comm_op_exp = store_thm(
        = y ** SUC m  * x ** n     by monoid_exp_SUC
        = RHS
 *)
-val monoid_comm_exp_exp = store_thm(
-  "monoid_comm_exp_exp",
-  ``!g:'a monoid. Monoid g ==> !x y. x IN G /\ y IN G /\ (x * y = y * x) ==>
-   !n m. x ** n * y ** m = y ** m * x ** n``,
+Theorem monoid_comm_exp_exp:
+    !g:'a monoid. Monoid g ==> !x y. x IN G /\ y IN G /\ (x * y = y * x) ==>
+   !n m. x ** n * y ** m = y ** m * x ** n
+Proof
   rpt strip_tac >>
   Induct_on `m` >-
   rw[] >>
@@ -563,7 +556,8 @@ val monoid_comm_exp_exp = store_thm(
   `_ = (y * x ** n) * y ** m` by metis_tac[monoid_comm_exp] >>
   `_ = y * (x ** n * y ** m)` by rw[monoid_assoc] >>
   `_ = y * (y ** m * x ** n)` by metis_tac[] >>
-  rw[monoid_assoc]);
+  rw[monoid_assoc]
+QED
 
 (* Theorem: x ** (n + k) = (x ** n) * (x ** k) *)
 (* Proof:
@@ -581,16 +575,15 @@ val monoid_comm_exp_exp = store_thm(
    = (x * (x ** n)) * (x ** k)  by monoid_assoc
    = (x ** SUC n) * (x ** k)    by monoid_exp_def
 *)
-val monoid_exp_add = store_thm(
-  "monoid_exp_add",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G ==> !n k. x ** (n + k) = (x ** n) * (x ** k)``,
+Theorem monoid_exp_add[simp]:
+    !g:'a monoid. Monoid g ==> !x. x IN G ==> !n k. x ** (n + k) = (x ** n) * (x ** k)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
-  rw_tac std_ss[monoid_exp_SUC, monoid_assoc, monoid_exp_element, DECIDE ``SUC n + k = SUC (n+k)``]);
+  rw_tac std_ss[monoid_exp_SUC, monoid_assoc, monoid_exp_element, DECIDE ``SUC n + k = SUC (n+k)``]
+QED
 
-(* export simple result *)
-val _ = export_rewrites ["monoid_exp_add"];
 
 (* Theorem: x ** (n * k) = (x ** n) ** k  *)
 (* Proof:
@@ -610,18 +603,17 @@ val _ = export_rewrites ["monoid_exp_add"];
    = (x * (x ** n)) ** k          by monoid_exp_comm
    = (x ** SUC n) ** k            by monoid_exp_def
 *)
-val monoid_exp_mult = store_thm(
-  "monoid_exp_mult",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G ==> !n k. x ** (n * k) = (x ** n) ** k``,
+Theorem monoid_exp_mult[simp]:
+    !g:'a monoid. Monoid g ==> !x. x IN G ==> !n k. x ** (n * k) = (x ** n) ** k
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
   `SUC n * k = n * k + k` by metis_tac[MULT] >>
   `x ** (SUC n * k) = ((x ** n) * x) ** k` by rw_tac std_ss[monoid_comm_op_exp, monoid_exp_comm, monoid_exp_element, monoid_exp_add] >>
-  rw[monoid_exp_comm]);
+  rw[monoid_exp_comm]
+QED
 
-(* export simple result *)
-val _ = export_rewrites ["monoid_exp_mult"];
 
 (* Theorem: x IN G ==> (x ** m) ** n = (x ** n) ** m *)
 (* Proof:
@@ -630,10 +622,11 @@ val _ = export_rewrites ["monoid_exp_mult"];
    = x ** (n * m)    by MULT_COMM
    = (x ** n) ** m   by monoid_exp_mult
 *)
-val monoid_exp_mult_comm = store_thm(
-  "monoid_exp_mult_comm",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G ==> !m n. (x ** m) ** n = (x ** n) ** m``,
-  metis_tac[monoid_exp_mult, MULT_COMM]);
+Theorem monoid_exp_mult_comm:
+    !g:'a monoid. Monoid g ==> !x. x IN G ==> !m n. (x ** m) ** n = (x ** n) ** m
+Proof
+  metis_tac[monoid_exp_mult, MULT_COMM]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -649,15 +642,16 @@ val monoid_exp_mult_comm = store_thm(
    (2) injective since all x ** n are distinct
    But c < SUC c = CARD (count (SUC c)), and this contradicts the Pigeon-hole Principle.
 *)
-val finite_monoid_exp_not_distinct = store_thm(
-  "finite_monoid_exp_not_distinct",
-  ``!g:'a monoid. FiniteMonoid g ==> !x. x IN G ==> ?h k. (x ** h = x ** k) /\ (h <> k)``,
+Theorem finite_monoid_exp_not_distinct:
+    !g:'a monoid. FiniteMonoid g ==> !x. x IN G ==> ?h k. (x ** h = x ** k) /\ (h <> k)
+Proof
   rw[FiniteMonoid_def] >>
   spose_not_then strip_assume_tac >>
   qabbrev_tac `c = CARD G` >>
   `INJ (\n. x ** n) (count (SUC c)) G` by rw[INJ_DEF] >>
   `c < SUC c` by decide_tac >>
-  metis_tac[CARD_COUNT, PHP]);
+  metis_tac[CARD_COUNT, PHP]
+QED
 (*
 This theorem implies that, if x ** k are all distinct for a Monoid g,
 then its carrier G must be INFINITE.
@@ -674,7 +668,7 @@ from which the no-zero-divisor property of Integral Domain gives x ** (h-k) = #1
 (* ------------------------------------------------------------------------- *)
 
 (* Define ITSET for Monoid -- fold of g.op, especially for Abelian Monoid (by lifting) *)
-val _ = overload_on("GITSET", ``\(g:'a monoid) s b. ITSET g.op s b``);
+Overload GITSET = ``\(g:'a monoid) s b. ITSET g.op s b``
 
 (*
 > ITSET_def |> ISPEC ``s:'b -> bool`` |> ISPEC ``(g:'a monoid).op`` |> ISPEC ``b:'a``;
@@ -686,22 +680,21 @@ fun gINST th = th |> SPEC_ALL |> INST_TYPE [beta |-> alpha]
                   |> Q.INST [`f` |-> `g.op`] |> GEN_ALL;
 (* val gINST = fn: thm -> thm *)
 
-val GITSET_THM = save_thm("GITSET_THM", gINST ITSET_THM);
+Theorem GITSET_THM = gINST ITSET_THM;
 (* > val GITSET_THM =
   |- !s g b. FINITE s ==> (GITSET g s b = if s = {} then b else GITSET g (REST s) (CHOICE s * b)) : thm
 *)
 
 (* Theorem: GITSET {} b = b *)
-val GITSET_EMPTY = save_thm("GITSET_EMPTY", gINST ITSET_EMPTY);
+Theorem GITSET_EMPTY = gINST ITSET_EMPTY;
 (* > val GITSET_EMPTY = |- !g b. GITSET g {} b = b : thm *)
 
 (* Theorem: GITSET g (x INSERT s) b = GITSET g (REST (x INSERT s)) ((CHOICE (x INSERT s)) * b) *)
 (* Proof:
    By GITSET_THM, since x INSERT s is non-empty.
 *)
-val GITSET_INSERT = save_thm(
-  "GITSET_INSERT",
-  gINST (ITSET_INSERT |> SPEC_ALL |> UNDISCH) |> DISCH_ALL |> GEN_ALL);
+Theorem GITSET_INSERT =
+  gINST (ITSET_INSERT |> SPEC_ALL |> UNDISCH) |> DISCH_ALL |> GEN_ALL;
 (* > val GITSET_INSERT =
   |- !s. FINITE s ==> !x g b. (GITSET g (x INSERT s) b = GITSET g (REST (x INSERT s)) (CHOICE (x INSERT s) * b)) : thm
 *)
@@ -715,10 +708,11 @@ val GITSET_INSERT = save_thm(
      so (CHOICE s) INSERT s = s    by ABSORPTION
    and the result follows.
 *)
-val GITSET_PROPERTY = store_thm(
-  "GITSET_PROPERTY",
-  ``!g s. FINITE s /\ s <> {} ==> !b. GITSET g s b = GITSET g (REST s) ((CHOICE s) * b)``,
-  metis_tac[CHOICE_DEF, ABSORPTION, GITSET_INSERT]);
+Theorem GITSET_PROPERTY:
+    !g s. FINITE s /\ s <> {} ==> !b. GITSET g s b = GITSET g (REST s) ((CHOICE s) * b)
+Proof
+  metis_tac[CHOICE_DEF, ABSORPTION, GITSET_INSERT]
+QED
 
 (* Theorem: AbelianMonoid g ==> closure_comm_assoc_fun g.op G *)
 (* Proof:
@@ -726,11 +720,12 @@ val GITSET_PROPERTY = store_thm(
     and !x y z::(G). x * y * z = y * x * z     by monoid_assoc, above gives commutativity
    Thus closure_comm_assoc_fun g.op G          by closure_comm_assoc_fun_def
 *)
-val abelian_monoid_op_closure_comm_assoc_fun = store_thm(
-  "abelian_monoid_op_closure_comm_assoc_fun",
-  ``!g:'a monoid. AbelianMonoid g ==> closure_comm_assoc_fun g.op G``,
+Theorem abelian_monoid_op_closure_comm_assoc_fun:
+    !g:'a monoid. AbelianMonoid g ==> closure_comm_assoc_fun g.op G
+Proof
   rw[AbelianMonoid_def, closure_comm_assoc_fun_def] >>
-  metis_tac[monoid_assoc]);
+  metis_tac[monoid_assoc]
+QED
 
 (* Theorem: AbelianMonoid g /\ FINITE s /\ s SUBSET G ==>
             !b x::(G). GITSET g (x INSERT s) b = GITSET g (s DELETE x) (x * b) *)
@@ -738,11 +733,12 @@ val abelian_monoid_op_closure_comm_assoc_fun = store_thm(
    Note closure_comm_assoc_fun g.op G          by abelian_monoid_op_closure_comm_assoc_fun
    The result follows                          by SUBSET_COMMUTING_ITSET_INSERT
 *)
-val COMMUTING_GITSET_INSERT = store_thm(
-  "COMMUTING_GITSET_INSERT",
-  ``!(g:'a monoid) s. AbelianMonoid g /\ FINITE s /\ s SUBSET G ==>
-   !b x::(G). GITSET g (x INSERT s) b = GITSET g (s DELETE x) (x * b)``,
-  metis_tac[abelian_monoid_op_closure_comm_assoc_fun, SUBSET_COMMUTING_ITSET_INSERT]);
+Theorem COMMUTING_GITSET_INSERT:
+    !(g:'a monoid) s. AbelianMonoid g /\ FINITE s /\ s SUBSET G ==>
+   !b x::(G). GITSET g (x INSERT s) b = GITSET g (s DELETE x) (x * b)
+Proof
+  metis_tac[abelian_monoid_op_closure_comm_assoc_fun, SUBSET_COMMUTING_ITSET_INSERT]
+QED
 
 (* Theorem: AbelianMonoid g /\ FINITE s /\ s SUBSET G ==>
             !b x::(G). GITSET g s (x * b) = x * (GITSET g s b) *)
@@ -750,29 +746,32 @@ val COMMUTING_GITSET_INSERT = store_thm(
    Note closure_comm_assoc_fun g.op G          by abelian_monoid_op_closure_comm_assoc_fun
    The result follows                          by SUBSET_COMMUTING_ITSET_REDUCTION
 *)
-val COMMUTING_GITSET_REDUCTION = store_thm(
-  "COMMUTING_GITSET_REDUCTION",
-  ``!(g:'a monoid) s. AbelianMonoid g /\ FINITE s /\ s SUBSET G ==>
-   !b x::(G). GITSET g s (x * b) = x * (GITSET g s b)``,
-  metis_tac[abelian_monoid_op_closure_comm_assoc_fun, SUBSET_COMMUTING_ITSET_REDUCTION]);
+Theorem COMMUTING_GITSET_REDUCTION:
+    !(g:'a monoid) s. AbelianMonoid g /\ FINITE s /\ s SUBSET G ==>
+   !b x::(G). GITSET g s (x * b) = x * (GITSET g s b)
+Proof
+  metis_tac[abelian_monoid_op_closure_comm_assoc_fun, SUBSET_COMMUTING_ITSET_REDUCTION]
+QED
 
 (* Theorem: AbelianMonoid g ==> GITSET g (x INSERT s) b = x * (GITSET g (s DELETE x) b) *)
 (* Proof:
    Note closure_comm_assoc_fun g.op G          by abelian_monoid_op_closure_comm_assoc_fun
    The result follows                          by SUBSET_COMMUTING_ITSET_RECURSES
 *)
-val COMMUTING_GITSET_RECURSES = store_thm(
-  "COMMUTING_GITSET_RECURSES",
-  ``!(g:'a monoid) s. AbelianMonoid g /\ FINITE s /\ s SUBSET G ==>
-   !b x::(G). GITSET g (x INSERT s) b = x * (GITSET g (s DELETE x) b)``,
-  metis_tac[abelian_monoid_op_closure_comm_assoc_fun, SUBSET_COMMUTING_ITSET_RECURSES]);
+Theorem COMMUTING_GITSET_RECURSES:
+    !(g:'a monoid) s. AbelianMonoid g /\ FINITE s /\ s SUBSET G ==>
+   !b x::(G). GITSET g (x INSERT s) b = x * (GITSET g (s DELETE x) b)
+Proof
+  metis_tac[abelian_monoid_op_closure_comm_assoc_fun, SUBSET_COMMUTING_ITSET_RECURSES]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Abelian Monoid PROD_SET                                                   *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define GPROD_SET via GITSET *)
-val GPROD_SET_def = Define `GPROD_SET g s = GITSET g s #e`;
+Definition GPROD_SET_def:   GPROD_SET g s = GITSET g s #e
+End
 
 (* Theorem: property of GPROD_SET *)
 (* Proof:
@@ -782,14 +781,15 @@ val GPROD_SET_def = Define `GPROD_SET g s = GITSET g s #e`;
    (2) GITSET g (x INSERT s) #e = x * GITSET g (s DELETE x) #e
        True by COMMUTING_GITSET_RECURSES, and monoid_id_element.
 *)
-val GPROD_SET_THM = store_thm(
-  "GPROD_SET_THM",
-  ``!g s. (GPROD_SET g {} = #e) /\
+Theorem GPROD_SET_THM:
+    !g s. (GPROD_SET g {} = #e) /\
    (AbelianMonoid g /\ FINITE s /\ s SUBSET G ==>
-      (!x::(G). GPROD_SET g (x INSERT s) = x * GPROD_SET g (s DELETE x)))``,
+      (!x::(G). GPROD_SET g (x INSERT s) = x * GPROD_SET g (s DELETE x)))
+Proof
   rw[GPROD_SET_def, RES_FORALL_THM, GITSET_EMPTY] >>
   `Monoid g` by metis_tac[AbelianMonoid_def] >>
-  metis_tac[COMMUTING_GITSET_RECURSES, monoid_id_element]);
+  metis_tac[COMMUTING_GITSET_RECURSES, monoid_id_element]
+QED
 
 (* Theorem: GPROD_SET g {} = #e *)
 (* Proof:
@@ -798,10 +798,11 @@ val GPROD_SET_THM = store_thm(
    = #e              by GITSET_EMPTY
    or directly       by GPROD_SET_THM
 *)
-val GPROD_SET_EMPTY = store_thm(
-  "GPROD_SET_EMPTY",
-  ``!g s. GPROD_SET g {} = #e``,
-  rw[GPROD_SET_def, GITSET_EMPTY]);
+Theorem GPROD_SET_EMPTY:
+    !g s. GPROD_SET g {} = #e
+Proof
+  rw[GPROD_SET_def, GITSET_EMPTY]
+QED
 
 (* Theorem: Monoid g ==> !x. x IN G ==> (GPROD_SET g {x} = x) *)
 (* Proof:
@@ -810,10 +811,11 @@ val GPROD_SET_EMPTY = store_thm(
     = x * #e                    by ITSET_SING
     = x                         by monoid_rid
 *)
-val GPROD_SET_SING = store_thm(
-  "GPROD_SET_SING",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G ==> (GPROD_SET g {x} = x)``,
-  rw[GPROD_SET_def, ITSET_SING]);
+Theorem GPROD_SET_SING:
+    !g:'a monoid. Monoid g ==> !x. x IN G ==> (GPROD_SET g {x} = x)
+Proof
+  rw[GPROD_SET_def, ITSET_SING]
+QED
 
 (*
 > ITSET_SING |> SPEC_ALL |> INST_TYPE[beta |-> alpha] |> Q.INST[`f` |-> `g.op`] |> GEN_ALL;
@@ -836,9 +838,9 @@ val it = |- GPROD_SET g {x} = x * #e: thm
        = x * GPROD_SET g t              by DELETE_NON_ELEMENT, x NOTIN t
        Hence GPROD_SET g s IN G         by induction, and monoid_op_element.
 *)
-val GPROD_SET_PROPERTY = store_thm(
-  "GPROD_SET_PROPERTY",
-  ``!(g:'a monoid) s. AbelianMonoid g /\ FINITE s /\ s SUBSET G ==> GPROD_SET g s IN G``,
+Theorem GPROD_SET_PROPERTY:
+    !(g:'a monoid) s. AbelianMonoid g /\ FINITE s /\ s SUBSET G ==> GPROD_SET g s IN G
+Proof
   completeInduct_on `CARD s` >>
   pop_assum (assume_tac o SIMP_RULE bool_ss[GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]) >>
   rpt strip_tac >>
@@ -850,7 +852,8 @@ val GPROD_SET_PROPERTY = store_thm(
   `t SUBSET G /\ FINITE t` by metis_tac[REST_SUBSET, SUBSET_TRANS, SUBSET_FINITE] >>
   `x NOTIN t` by metis_tac[CHOICE_NOT_IN_REST] >>
   `CARD t < CARD s` by rw[] >>
-  metis_tac[GPROD_SET_THM, DELETE_NON_ELEMENT, monoid_op_element]);
+  metis_tac[GPROD_SET_THM, DELETE_NON_ELEMENT, monoid_op_element]
+QED
 
 (* ----------------------------------------------------------------------
     monoid extension
@@ -1005,42 +1008,43 @@ the Monoid Invertibles will be shown to be a Group.
 (* ------------------------------------------------------------------------- *)
 
 (* Define order = optional LEAST period for an element x in Group g *)
-val period_def = zDefine`
+Definition period_def[nocompute]:
   period (g:'a monoid) (x:'a) k <=> 0 < k /\ (x ** k = #e)
-`;
-val order_def = zDefine`
+End
+Definition order_def[nocompute]:
   order (g:'a monoid) (x:'a) = case OLEAST k. period g x k of
                                  NONE => 0
                                | SOME k => k
-`;
+End
 (* use zDefine here since these are not computationally effective. *)
 
 (* Expand order_def with period_def. *)
-val order_alt = save_thm(
-  "order_alt", REWRITE_RULE [period_def] order_def);
+Theorem order_alt = REWRITE_RULE [period_def] order_def;
 (* val order_alt =
    |- !g x. order g x =
             case OLEAST k. 0 < k /\ x ** k = #e of NONE => 0 | SOME k => k: thm *)
 
 (* overloading on Monoid Order *)
-val _ = overload_on ("ord", ``order g``);
+Overload ord = ``order g``
 
 (* Theorem: (x ** (ord x) = #e *)
 (* Proof: by definition, and x ** 0 = #e by monoid_exp_0. *)
-val order_property = store_thm(
-  "order_property",
-  ``!g:'a monoid. !x:'a. (x ** (ord x) = #e)``,
+Theorem order_property:
+    !g:'a monoid. !x:'a. (x ** (ord x) = #e)
+Proof
   ntac 2 strip_tac >>
   simp_tac std_ss[order_def, period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
-  rw[]);
+  DEEP_INTRO_TAC WhileTheory.OLEAST_INTRO >>
+  rw[]
+QED
 
 (* Theorem: 0 < (ord x) ==> period g x (ord x) *)
 (* Proof: by order_property, period_def. *)
-val order_period = store_thm(
-  "order_period",
-  ``!g:'a monoid x:'a. 0 < (ord x) ==> period g x (ord x)``,
-  rw[order_property, period_def]);
+Theorem order_period:
+    !g:'a monoid x:'a. 0 < (ord x) ==> period g x (ord x)
+Proof
+  rw[order_property, period_def]
+QED
 
 (* Theorem: !n. 0 < n /\ n < (ord x) ==> x ** n <> #e *)
 (* Proof: by definition of OLEAST. *)
@@ -1049,7 +1053,7 @@ Theorem order_minimal:
 Proof
   ntac 3 strip_tac >>
   simp_tac std_ss[order_def, period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC WhileTheory.OLEAST_INTRO >>
   rw_tac std_ss[] >>
   metis_tac[DECIDE “~(0 < 0)”]
 QED
@@ -1067,7 +1071,7 @@ Theorem order_eq_0:
 Proof
   ntac 2 strip_tac >>
   simp_tac std_ss[order_def, period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC WhileTheory.OLEAST_INTRO >>
   rw_tac std_ss[] >>
   metis_tac[DECIDE “~(0 < 0)”]
 QED
@@ -1087,20 +1091,21 @@ val std_ss = std_ss -* ["NOT_LT_ZERO_EQ_ZERO"]
       (2) 0 < n /\ 0 < n' /\ x ** n = #e /\ x ** n' = #e /\ ... ==> n' = n
           The assumptions implies ~(n' < n), and ~(n < n'), hence n' = n.
 *)
-val order_thm = store_thm(
-  "order_thm",
-  ``!g:'a monoid x:'a. !n. 0 < n ==>
-    ((ord x = n) <=> (x ** n = #e) /\ !m. 0 < m /\ m < n ==> x ** m <> #e)``,
+Theorem order_thm:
+    !g:'a monoid x:'a. !n. 0 < n ==>
+    ((ord x = n) <=> (x ** n = #e) /\ !m. 0 < m /\ m < n ==> x ** m <> #e)
+Proof
   rw[EQ_IMP_THM] >-
   rw[order_property] >-
   rw[order_minimal] >>
   simp_tac std_ss[order_def, period_def] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >>
+  DEEP_INTRO_TAC WhileTheory.OLEAST_INTRO >>
   rw_tac std_ss[] >-
   metis_tac[] >>
   `~(n' < n)` by metis_tac[] >>
   `~(n < n')` by metis_tac[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: Monoid g ==> (ord #e = 1) *)
 (* Proof:
@@ -1109,13 +1114,12 @@ val order_thm = store_thm(
    Obviously, 0 < 1 and there is no m such that 0 < m < 1
    hence true by order_thm
 *)
-val monoid_order_id = store_thm(
-  "monoid_order_id",
-  ``!g:'a monoid. Monoid g ==> (ord #e = 1)``,
-  rw[order_thm, DECIDE``!m . ~(0 < m /\ m < 1)``]);
+Theorem monoid_order_id[simp]:
+    !g:'a monoid. Monoid g ==> (ord #e = 1)
+Proof
+  rw[order_thm, DECIDE``!m . ~(0 < m /\ m < 1)``]
+QED
 
-(* export simple result *)
-val _ = export_rewrites ["monoid_order_id"];
 
 (* Theorem: Monoid g ==> !x. x IN G ==> ((ord x = 1) <=> (x = #e)) *)
 (* Proof:
@@ -1127,12 +1131,13 @@ val _ = export_rewrites ["monoid_order_id"];
       i.e. to show ord #e = 1.
       True by monoid_order_id.
 *)
-val monoid_order_eq_1 = store_thm(
-  "monoid_order_eq_1",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G ==> ((ord x = 1) <=> (x = #e))``,
+Theorem monoid_order_eq_1:
+    !g:'a monoid. Monoid g ==> !x. x IN G ==> ((ord x = 1) <=> (x = #e))
+Proof
   rw[EQ_IMP_THM] >>
   `#e = x ** (ord x)` by rw[order_property] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Monoid g ==> !x. x IN G ==> !m. (x ** m = #e) <=> (ord x) divides m *)
 (* Proof:
@@ -1154,9 +1159,9 @@ val monoid_order_eq_1 = store_thm(
      By divides_def, ?k. m = k * n
      x^m = x^(k * n) = (x^n)^k = #e^k = #e.
 *)
-val monoid_order_condition = store_thm(
-  "monoid_order_condition",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G ==> !m. (x ** m = #e) <=> (ord x) divides m``,
+Theorem monoid_order_condition:
+    !g:'a monoid. Monoid g ==> !x. x IN G ==> !m. (x ** m = #e) <=> (ord x) divides m
+Proof
   rpt strip_tac >>
   qabbrev_tac `n = ord x` >>
   rw[EQ_IMP_THM] >| [
@@ -1181,14 +1186,16 @@ val monoid_order_condition = store_thm(
     `x ** m = x ** (n * k)` by metis_tac[MULT_COMM] >>
     `_ = (x ** n) ** k` by rw[] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: Monoid g ==> !x n. x IN G ==> (x ** n = #e <=> ord x divides n) *)
 (* Proof: by monoid_order_condition *)
-val monoid_order_divides_exp = store_thm(
-  "monoid_order_divides_exp",
-  ``!g:'a monoid. Monoid g ==> !x n. x IN G ==> ((x ** n = #e) <=> ord x divides n)``,
-  rw[monoid_order_condition]);
+Theorem monoid_order_divides_exp:
+    !g:'a monoid. Monoid g ==> !x n. x IN G ==> ((x ** n = #e) <=> ord x divides n)
+Proof
+  rw[monoid_order_condition]
+QED
 
 (* Theorem: Monoid g ==> !x. x IN G ==> !k. (ord (x ** k) = 0) <=> 0 < k /\ (ord x = 0) *)
 (* Proof:
@@ -1213,9 +1220,9 @@ val monoid_order_divides_exp = store_thm(
        But (x ** n) ** k = x ** (n * k)   by monoid_exp_mult
        This contradicts the implication: (x ** k) ** n <> #e.
 *)
-val monoid_order_power_eq_0 = store_thm(
-  "monoid_order_power_eq_0",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G ==> !k. (ord (x ** k) = 0) <=> 0 < k /\ (ord x = 0)``,
+Theorem monoid_order_power_eq_0:
+    !g:'a monoid. Monoid g ==> !x. x IN G ==> !k. (ord (x ** k) = 0) <=> 0 < k /\ (ord x = 0)
+Proof
   rw[order_eq_0, EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
     `k = 0` by decide_tac >>
@@ -1224,7 +1231,8 @@ val monoid_order_power_eq_0 = store_thm(
     metis_tac[monoid_exp_mult, MULT_COMM, monoid_id_exp],
     `0 < k * n` by rw[LESS_MULT2] >>
     metis_tac[monoid_exp_mult]
-  ]);
+  ]
+QED
 
 (* Theorem: ord (x ** k) = ord x / gcd(ord x, k)
             Monoid g ==> !x. x IN G ==> !k. (ord (x ** k) * (gcd (ord x) k) = ord x) *)
@@ -1252,9 +1260,9 @@ val monoid_order_power_eq_0 = store_thm(
      i.e. (n/d) | m                by DIVIDES_CANCEL.
    By DIVIDES_ANTISYM, ord (x^k) = m = n/d.
 *)
-val monoid_order_power = store_thm(
-  "monoid_order_power",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G ==> !k. (ord (x ** k) * (gcd (ord x) k) = ord x)``,
+Theorem monoid_order_power:
+    !g:'a monoid. Monoid g ==> !x. x IN G ==> !k. (ord (x ** k) * (gcd (ord x) k) = ord x)
+Proof
   rpt strip_tac >>
   qabbrev_tac `n = ord x` >>
   qabbrev_tac `m = ord (x ** k)` >>
@@ -1291,7 +1299,8 @@ val monoid_order_power = store_thm(
       `p divides m` by metis_tac[DIVIDES_CANCEL] >>
       metis_tac[DIVIDES_ANTISYM]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: Monoid g ==>
    !x k. x IN G /\ 0 < k ==> (ord (x ** k) = (ord x) DIV (gcd k (ord x))) *)
@@ -1300,14 +1309,15 @@ val monoid_order_power = store_thm(
     and 0 < gcd k (ord x)                            by GCD_EQ_0, 0 < k
     ==> ord (x ** k) = (ord x) DIV (gcd k (ord x))   by MULT_EQ_DIV
 *)
-val monoid_order_power_eqn = store_thm(
-  "monoid_order_power_eqn",
-  ``!g:'a monoid. Monoid g ==>
-   !x k. x IN G /\ 0 < k ==> (ord (x ** k) = (ord x) DIV (gcd k (ord x)))``,
+Theorem monoid_order_power_eqn:
+    !g:'a monoid. Monoid g ==>
+   !x k. x IN G /\ 0 < k ==> (ord (x ** k) = (ord x) DIV (gcd k (ord x)))
+Proof
   rpt strip_tac >>
   `ord (x ** k) * gcd k (ord x) = ord x` by metis_tac[monoid_order_power, GCD_SYM] >>
   `0 < gcd k (ord x)` by metis_tac[GCD_EQ_0, NOT_ZERO] >>
-  fs[MULT_EQ_DIV]);
+  fs[MULT_EQ_DIV]
+QED
 
 (* Theorem: Monoid g ==> !x. x IN G ==> !n. coprime n (ord x) ==> (ord (x ** n) = ord x) *)
 (* Proof:
@@ -1316,10 +1326,11 @@ val monoid_order_power_eqn = store_thm(
    = ord (x ** n) * 1               by coprime_sym
    = ord (x ** n)                   by MULT_RIGHT_1
 *)
-val monoid_order_power_coprime = store_thm(
-  "monoid_order_power_coprime",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G ==> !n. coprime n (ord x) ==> (ord (x ** n) = ord x)``,
-  metis_tac[monoid_order_power, coprime_sym, MULT_RIGHT_1]);
+Theorem monoid_order_power_coprime:
+    !g:'a monoid. Monoid g ==> !x. x IN G ==> !n. coprime n (ord x) ==> (ord (x ** n) = ord x)
+Proof
+  metis_tac[monoid_order_power, coprime_sym, MULT_RIGHT_1]
+QED
 
 (* Theorem: Monoid g ==>
             !x n. x IN G /\ 0 < ord x /\ n divides ord x ==> (ord (x ** (ord x DIV n)) = n) *)
@@ -1336,10 +1347,10 @@ val monoid_order_power_coprime = store_thm(
        = n * k                           by MULT_COMM
    Hence ord (x ** k) = n                by MULT_RIGHT_CANCEL, k <> 0
 *)
-val monoid_order_cofactor = store_thm(
-  "monoid_order_cofactor",
-  ``!g: 'a monoid. Monoid g ==>
-     !x n. x IN G /\ 0 < ord x /\ n divides ord x ==> (ord (x ** (ord x DIV n)) = n)``,
+Theorem monoid_order_cofactor:
+    !g: 'a monoid. Monoid g ==>
+     !x n. x IN G /\ 0 < ord x /\ n divides ord x ==> (ord (x ** (ord x DIV n)) = n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = ord x` >>
   qabbrev_tac `k = m DIV n` >>
@@ -1348,7 +1359,8 @@ val monoid_order_cofactor = store_thm(
   `k divides m` by metis_tac[divides_def, MULT_COMM] >>
   `k <> 0` by metis_tac[MULT, NOT_ZERO_LT_ZERO] >>
   `gcd k m = k` by rw[GSYM divides_iff_gcd_fix] >>
-  metis_tac[monoid_order_power, GCD_SYM, MULT_COMM, MULT_RIGHT_CANCEL]);
+  metis_tac[monoid_order_power, GCD_SYM, MULT_COMM, MULT_RIGHT_CANCEL]
+QED
 
 (* Theorem: If x IN G with ord x = n > 0, and m divides n, then G contains an element of order m. *)
 (* Proof:
@@ -1359,10 +1371,10 @@ val monoid_order_cofactor = store_thm(
    if (x^k)^h = x^(k * h) = #e means x has order k * h < k * m = n,
    which is a contradiction with order_minimal.
 *)
-val monoid_order_divisor = store_thm(
-  "monoid_order_divisor",
-  ``!g:'a monoid. Monoid g ==>
-   !x m. x IN G /\ 0 < ord x /\ m divides (ord x) ==> ?y. y IN G /\ (ord y = m)``,
+Theorem monoid_order_divisor:
+    !g:'a monoid. Monoid g ==>
+   !x m. x IN G /\ 0 < ord x /\ m divides (ord x) ==> ?y. y IN G /\ (ord y = m)
+Proof
   rpt strip_tac >>
   `ord x <> 0` by decide_tac >>
   `m <> 0` by metis_tac[ZERO_DIVIDES] >>
@@ -1379,7 +1391,8 @@ val monoid_order_divisor = store_thm(
   `0 < k /\ 0 < k * h` by decide_tac >>
   `k * h < k * m` by metis_tac[LT_MULT_LCANCEL] >>
   `(x ** k) ** h = x ** (k * h)` by rw[] >>
-  metis_tac[order_minimal]);
+  metis_tac[order_minimal]
+QED
 
 (* Theorem: If x * y = y * x, and n = ord x, m = ord y,
             then there exists z IN G such that ord z = (lcm n m) / (gcd n m) *)
@@ -1416,10 +1429,10 @@ val monoid_order_divisor = store_thm(
    Hence there is some z in G such that ord z = p * q  by monoid_order_divisor.
    i.e.  ord z = lcm p q = lcm (n/d) (m/d) = (lcm n m) / d.
 *)
-val monoid_order_common = store_thm(
-  "monoid_order_common",
-  ``!g:'a monoid. Monoid g ==> !x y. x IN G /\ y IN G /\ (x * y = y * x) ==>
-     ?z. z IN G /\ ((ord z) * gcd (ord x) (ord y) = lcm (ord x) (ord y))``,
+Theorem monoid_order_common:
+    !g:'a monoid. Monoid g ==> !x y. x IN G /\ y IN G /\ (x * y = y * x) ==>
+     ?z. z IN G /\ ((ord z) * gcd (ord x) (ord y) = lcm (ord x) (ord y))
+Proof
   rpt strip_tac >>
   qabbrev_tac `n = ord x` >>
   qabbrev_tac `m = ord y` >>
@@ -1484,7 +1497,8 @@ val monoid_order_common = store_thm(
   `ord z * d = d * (p * q)` by rw_tac arith_ss[] >>
   `_ = lcm (d * p) (d * q)` by rw[LCM_COMMON_FACTOR] >>
   `_ = lcm n m` by metis_tac[MULT_COMM] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* This is a milestone. *)
 
@@ -1493,11 +1507,12 @@ val monoid_order_common = store_thm(
 (* Proof:
    By monoid_order_common and gcd n m = 1.
 *)
-val monoid_order_common_coprime = store_thm(
-  "monoid_order_common_coprime",
-  ``!g:'a monoid. Monoid g ==> !x y. x IN G /\ y IN G /\ (x * y = y * x) /\ coprime (ord x) (ord y) ==>
-     ?z. z IN G /\ (ord z = (ord x) * (ord y))``,
-  metis_tac[monoid_order_common, GCD_LCM, MULT_RIGHT_1, MULT_LEFT_1]);
+Theorem monoid_order_common_coprime:
+    !g:'a monoid. Monoid g ==> !x y. x IN G /\ y IN G /\ (x * y = y * x) /\ coprime (ord x) (ord y) ==>
+     ?z. z IN G /\ (ord z = (ord x) * (ord y))
+Proof
+  metis_tac[monoid_order_common, GCD_LCM, MULT_RIGHT_1, MULT_LEFT_1]
+QED
 (* This version can be proved directly using previous technique, then derive the general case:
    Let ord x = n, ord y = m.
    Let d = gcd(n,m)  p = n/d, q = m/d, gcd(p,q) = 1.
@@ -1520,33 +1535,36 @@ val monoid_order_common_coprime = store_thm(
     = #e * x ** (n MOD z)                       by monoid_id_exp
     = x ** (n MOD z)                            by monoid_lid
 *)
-val monoid_exp_mod_order = store_thm(
-  "monoid_exp_mod_order",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G /\ 0 < ord x ==> !n. x ** n = x ** (n MOD (ord x))``,
+Theorem monoid_exp_mod_order:
+    !g:'a monoid. Monoid g ==> !x. x IN G /\ 0 < ord x ==> !n. x ** n = x ** (n MOD (ord x))
+Proof
   rpt strip_tac >>
   qabbrev_tac `z = ord x` >>
   `x ** n = x ** ((n DIV z) * z + (n MOD z))` by metis_tac[DIVISION] >>
   `_ = x ** ((n DIV z) * z) * x ** (n MOD z)` by rw[monoid_exp_add] >>
   `_ = x ** (z * (n DIV z)) * x ** (n MOD z)` by metis_tac[MULT_COMM] >>
-  rw[monoid_exp_mult, order_property, Abbr`z`]);
+  rw[monoid_exp_mult, order_property, Abbr`z`]
+QED
 
 (* Theorem: AbelianMonoid g ==> !x y. x IN G /\ y IN G ==>
             ?z. z IN G /\ (ord z * gcd (ord x) (ord y) = lcm (ord x) (ord y)) *)
 (* Proof: by AbelianMonoid_def, monoid_order_common *)
-val abelian_monoid_order_common = store_thm(
-  "abelian_monoid_order_common",
-  ``!g:'a monoid. AbelianMonoid g ==> !x y. x IN G /\ y IN G ==>
-   ?z. z IN G /\ (ord z * gcd (ord x) (ord y) = lcm (ord x) (ord y))``,
-  rw[AbelianMonoid_def, monoid_order_common]);
+Theorem abelian_monoid_order_common:
+    !g:'a monoid. AbelianMonoid g ==> !x y. x IN G /\ y IN G ==>
+   ?z. z IN G /\ (ord z * gcd (ord x) (ord y) = lcm (ord x) (ord y))
+Proof
+  rw[AbelianMonoid_def, monoid_order_common]
+QED
 
 (* Theorem: AbelianMonoid g ==> !x y. x IN G /\ y IN G /\ coprime (ord x) (ord y) ==>
             ?z. z IN G /\ (ord z = ord x * ord y) *)
 (* Proof: by AbelianMonoid_def, monoid_order_common_coprime *)
-val abelian_monoid_order_common_coprime = store_thm(
-  "abelian_monoid_order_common_coprime",
-  ``!g:'a monoid. AbelianMonoid g ==> !x y. x IN G /\ y IN G /\ coprime (ord x) (ord y) ==>
-   ?z. z IN G /\ (ord z = ord x * ord y)``,
-  rw[AbelianMonoid_def, monoid_order_common_coprime]);
+Theorem abelian_monoid_order_common_coprime:
+    !g:'a monoid. AbelianMonoid g ==> !x y. x IN G /\ y IN G /\ coprime (ord x) (ord y) ==>
+   ?z. z IN G /\ (ord z = ord x * ord y)
+Proof
+  rw[AbelianMonoid_def, monoid_order_common_coprime]
+QED
 
 (* Theorem: AbelianMonoid g ==>
             !x y. x IN G /\ y IN G ==> ?z. z IN G /\ (ord z = lcm (ord x) (ord y)) *)
@@ -1567,10 +1585,10 @@ val abelian_monoid_order_common_coprime = store_thm(
        ==> ?z. z IN G /\ (ord z = p * q)          by monoid_order_common_coprime, coprime p q
         or     z IN G /\ (ord z = lcm m n)        by above
 *)
-val abelian_monoid_order_lcm = store_thm(
-  "abelian_monoid_order_lcm",
-  ``!g:'a monoid. AbelianMonoid g ==>
-   !x y. x IN G /\ y IN G ==> ?z. z IN G /\ (ord z = lcm (ord x) (ord y))``,
+Theorem abelian_monoid_order_lcm:
+    !g:'a monoid. AbelianMonoid g ==>
+   !x y. x IN G /\ y IN G ==> ?z. z IN G /\ (ord z = lcm (ord x) (ord y))
+Proof
   rw[AbelianMonoid_def] >>
   qabbrev_tac `m = ord x` >>
   qabbrev_tac `n = ord y` >>
@@ -1582,7 +1600,8 @@ val abelian_monoid_order_lcm = store_thm(
   `?u. u IN G /\ (ord u = p)` by metis_tac[monoid_order_divisor] >>
   `?v. v IN G /\ (ord v = q)` by metis_tac[monoid_order_divisor] >>
   `?z. z IN G /\ (ord z = p * q)` by rw[monoid_order_common_coprime] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* This is much better than:
 abelian_monoid_order_common
@@ -1595,30 +1614,33 @@ abelian_monoid_order_common
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of elements with a given order *)
-val orders_def = Define `
+Definition orders_def:
    orders (g:'a monoid) n = {x | x IN G /\ (ord x = n)}
-`;
+End
 
 (* Theorem: !x n. x IN orders g n <=> x IN G /\ (ord x = n) *)
 (* Proof: by orders_def *)
-val orders_element = store_thm(
-  "orders_element",
-  ``!g:'a monoid. !x n. x IN orders g n <=> x IN G /\ (ord x = n)``,
-  rw[orders_def]);
+Theorem orders_element:
+    !g:'a monoid. !x n. x IN orders g n <=> x IN G /\ (ord x = n)
+Proof
+  rw[orders_def]
+QED
 
 (* Theorem: !n. (orders g n) SUBSET G *)
 (* Proof: by orders_def, SUBSET_DEF *)
-val orders_subset = store_thm(
-  "orders_subset",
-  ``!g:'a monoid. !n. (orders g n) SUBSET G``,
-  rw[orders_def, SUBSET_DEF]);
+Theorem orders_subset:
+    !g:'a monoid. !n. (orders g n) SUBSET G
+Proof
+  rw[orders_def, SUBSET_DEF]
+QED
 
 (* Theorem: FINITE G ==> !n. FINITE (orders g n) *)
 (* Proof: by orders_subset, SUBSET_FINITE *)
-val orders_finite = store_thm(
-  "orders_finite",
-  ``!g:'a monoid. FINITE G ==> !n. FINITE (orders g n)``,
-  metis_tac[orders_subset, SUBSET_FINITE]);
+Theorem orders_finite:
+    !g:'a monoid. FINITE G ==> !n. FINITE (orders g n)
+Proof
+  metis_tac[orders_subset, SUBSET_FINITE]
+QED
 
 (* Theorem: Monoid g ==> (orders g 1 = {#e}) *)
 (* Proof:
@@ -1627,26 +1649,28 @@ val orders_finite = store_thm(
    = {x | x IN G /\ (x = #e)}       by monoid_order_eq_1
    = {#e}                           by monoid_id_elelment
 *)
-val orders_eq_1 = store_thm(
-  "orders_eq_1",
-  ``!g:'a monoid. Monoid g ==> (orders g 1 = {#e})``,
-  rw[orders_def, EXTENSION, EQ_IMP_THM, GSYM monoid_order_eq_1]);
+Theorem orders_eq_1:
+    !g:'a monoid. Monoid g ==> (orders g 1 = {#e})
+Proof
+  rw[orders_def, EXTENSION, EQ_IMP_THM, GSYM monoid_order_eq_1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Maximal Order                                                             *)
 (* ------------------------------------------------------------------------- *)
 
 (* Overload maximal_order of a group *)
-val _ = overload_on("maximal_order", ``\g:'a monoid. MAX_SET (IMAGE ord G)``);
+Overload maximal_order = ``\g:'a monoid. MAX_SET (IMAGE ord G)``
 
 (* Theorem: maximal_order g = MAX_SET {ord z | z | z IN G} *)
 (* Proof: by IN_IMAGE *)
-val maximal_order_alt = store_thm(
-  "maximal_order_alt",
-  ``!g:'a monoid. maximal_order g = MAX_SET {ord z | z | z IN G}``,
+Theorem maximal_order_alt:
+    !g:'a monoid. maximal_order g = MAX_SET {ord z | z | z IN G}
+Proof
   rpt strip_tac >>
   `IMAGE ord G = {ord z | z | z IN G}` by rw[EXTENSION] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: In an Abelian Monoid, every nonzero order divides the maximal order.
             FiniteAbelianMonoid g ==> !x. x IN G /\ 0 < ord x ==> (ord x) divides (maximal_order g) *)
@@ -1692,10 +1716,10 @@ val maximal_order_alt = store_thm(
    But d | n,  d <= n,
    Hence       n = d = gcd(m,n), apply divides_iff_gcd_fix: n divides m.
 *)
-val monoid_order_divides_maximal = store_thm(
-  "monoid_order_divides_maximal",
-  ``!g:'a monoid. FiniteAbelianMonoid g ==>
-   !x. x IN G /\ 0 < ord x ==> (ord x) divides (maximal_order g)``,
+Theorem monoid_order_divides_maximal:
+    !g:'a monoid. FiniteAbelianMonoid g ==>
+   !x. x IN G /\ 0 < ord x ==> (ord x) divides (maximal_order g)
+Proof
   rw[FiniteAbelianMonoid_def, AbelianMonoid_def] >>
   qabbrev_tac `s = IMAGE ord G` >>
   qabbrev_tac `m = MAX_SET s` >>
@@ -1782,7 +1806,8 @@ val monoid_order_divides_maximal = store_thm(
         metis_tac[GCD_SYM, DIVIDES_ONE, NOT_PRIME_1]
       ]
     ]
-  ]);
+  ]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -1834,18 +1859,19 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* The Invertibles are those with inverses. *)
-val monoid_invertibles_def = Define`
+Definition monoid_invertibles_def:
     monoid_invertibles (g:'a monoid) =
     { x | x IN G /\ (?y. y IN G /\ (x * y = #e) /\ (y * x = #e)) }
-`;
-val _ = overload_on ("G*", ``monoid_invertibles g``);
+End
+Overload "G*" = ``monoid_invertibles g``
 
 (* Theorem: x IN G* <=> x IN G /\ ?y. y IN G /\ (x * y = #e) /\ (y * x = #e) *)
 (* Proof: by monoid_invertibles_def. *)
-val monoid_invertibles_element = store_thm(
-  "monoid_invertibles_element",
-  ``!g:'a monoid x. x IN G* <=> x IN G /\ ?y. y IN G /\ (x * y = #e) /\ (y * x = #e)``,
-  rw[monoid_invertibles_def]);
+Theorem monoid_invertibles_element:
+    !g:'a monoid x. x IN G* <=> x IN G /\ ?y. y IN G /\ (x * y = #e) /\ (y * x = #e)
+Proof
+  rw[monoid_invertibles_def]
+QED
 
 (* Theorem: Monoid g /\ x IN G /\ 0 < ord x ==> x IN G*  *)
 (* Proof:
@@ -1858,22 +1884,23 @@ val monoid_invertibles_element = store_thm(
      and x ** n IN G                 by monoid_exp_element
     Hence taking y = x ** n will satisfy the requirements.
 *)
-val monoid_order_nonzero = store_thm(
-  "monoid_order_nonzero",
-  ``!g:'a monoid x. Monoid g /\ x IN G  /\ 0 < ord x ==> x IN G*``,
+Theorem monoid_order_nonzero:
+    !g:'a monoid x. Monoid g /\ x IN G  /\ 0 < ord x ==> x IN G*
+Proof
   rw[monoid_invertibles_def] >>
   `x ** (ord x) = #e` by rw[order_property] >>
   `ord x <> 0` by decide_tac >>
-  metis_tac[num_CASES, monoid_exp_SUC, monoid_exp_suc, monoid_exp_element]);
+  metis_tac[num_CASES, monoid_exp_SUC, monoid_exp_suc, monoid_exp_element]
+QED
 
 (* The Invertibles of a monoid, will be a Group. *)
-val Invertibles_def = Define`
+Definition Invertibles_def:
   Invertibles (g:'a monoid) : 'a monoid =
     <| carrier := G*;
             op := g.op;
             id := g.id
      |>
-`;
+End
 (*
 - type_of ``Invertibles g``;
 > val it = ``:'a moniod`` : hol_type
@@ -1881,20 +1908,22 @@ val Invertibles_def = Define`
 
 (* Theorem: properties of Invertibles *)
 (* Proof: by Invertibles_def. *)
-val Invertibles_property = store_thm(
-  "Invertibles_property",
-  ``!g:'a monoid. ((Invertibles g).carrier = G*) /\
+Theorem Invertibles_property:
+    !g:'a monoid. ((Invertibles g).carrier = G*) /\
                  ((Invertibles g).op = g.op) /\
                  ((Invertibles g).id = #e) /\
-                 ((Invertibles g).exp = g.exp)``,
-  rw[Invertibles_def, monoid_exp_def, FUN_EQ_THM]);
+                 ((Invertibles g).exp = g.exp)
+Proof
+  rw[Invertibles_def, monoid_exp_def, FUN_EQ_THM]
+QED
 
 (* Theorem: (Invertibles g).carrier = monoid_invertibles g *)
 (* Proof: by Invertibles_def. *)
-val Invertibles_carrier = store_thm(
-  "Invertibles_carrier",
-  ``!g:'a monoid. (Invertibles g).carrier = monoid_invertibles g``,
-  rw[Invertibles_def]);
+Theorem Invertibles_carrier:
+    !g:'a monoid. (Invertibles g).carrier = monoid_invertibles g
+Proof
+  rw[Invertibles_def]
+QED
 
 (* Theorem: (Invertibles g).carrier SUBSET G *)
 (* Proof:
@@ -1903,17 +1932,19 @@ val Invertibles_carrier = store_thm(
    = {x | x IN G /\ ... }       by monoid_invertibles_def
    SUBSET G                     by SUBSET_DEF
 *)
-val Invertibles_subset = store_thm(
-  "Invertibles_subset",
-  ``!g:'a monoid. (Invertibles g).carrier SUBSET G``,
-  rw[Invertibles_def, monoid_invertibles_def, SUBSET_DEF]);
+Theorem Invertibles_subset:
+    !g:'a monoid. (Invertibles g).carrier SUBSET G
+Proof
+  rw[Invertibles_def, monoid_invertibles_def, SUBSET_DEF]
+QED
 
 (* Theorem: order (Invertibles g) x = order g x *)
 (* Proof: order_def, period_def, Invertibles_property *)
-val Invertibles_order = store_thm(
-  "Invertibles_order",
-  ``!g:'a monoid. !x. order (Invertibles g) x = order g x``,
-  rw[order_def, period_def, Invertibles_property]);
+Theorem Invertibles_order:
+    !g:'a monoid. !x. order (Invertibles g) x = order g x
+Proof
+  rw[order_def, period_def, Invertibles_property]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Monoid Inverse as an operation                                            *)
@@ -1921,15 +1952,18 @@ val Invertibles_order = store_thm(
 
 (* Theorem: x IN G* means inverse of x exists. *)
 (* Proof: by definition of G*. *)
-val monoid_inv_from_invertibles = store_thm(
-  "monoid_inv_from_invertibles",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G* ==> ?y. y IN G /\ (x * y = #e) /\ (y * x = #e)``,
-  rw[monoid_invertibles_def]);
+Theorem monoid_inv_from_invertibles:
+    !g:'a monoid. Monoid g ==> !x. x IN G* ==> ?y. y IN G /\ (x * y = #e) /\ (y * x = #e)
+Proof
+  rw[monoid_invertibles_def]
+QED
 
 (* Convert this into the form: !g x. ?y. ..... for SKOLEM_THM *)
-val lemma = prove(
-  ``!(g:'a monoid) x. ?y. Monoid g /\ x IN G* ==> y IN G /\ (x * y = #e) /\ (y * x = #e)``,
-  metis_tac[monoid_inv_from_invertibles]);
+Theorem lemma[local]:
+    !(g:'a monoid) x. ?y. Monoid g /\ x IN G* ==> y IN G /\ (x * y = #e) /\ (y * x = #e)
+Proof
+  metis_tac[monoid_inv_from_invertibles]
+QED
 
 (* Convert this into the form: !g x. ?y. ..... for SKOLEM_THM
 
@@ -1970,8 +2004,8 @@ val _ = add_rule{fixity = Suffix 2100,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
                  pp_elements = [TOK (UnicodeChars.sup_minus ^ UnicodeChars.sup_1)]};
-val _ = overload_on("reciprocal", ``monoid_inv g``);
-val _ = overload_on ("|/", ``reciprocal``); (* for non-unicode input *)
+Overload reciprocal = ``monoid_inv g``
+Overload "|/" = ``reciprocal``(* for non-unicode input *)
 
 (* This means: reciprocal will have the display $^{-1}$, and here reciprocal is
    short-name for monoid_inv g *)
@@ -1982,34 +2016,36 @@ val _ = overload_on ("|/", ``reciprocal``); (* for non-unicode input *)
 
 (* Theorem: x IN G* <=> x IN G /\ |/ x IN G /\ (x * |/ x = #e) /\ ( |/ x * x = #e) *)
 (* Proof: by definition. *)
-val monoid_inv_def_alt = store_thm(
-  "monoid_inv_def_alt",
-  ``!g:'a monoid. Monoid g ==> (!x. x IN G* <=> x IN G /\ |/ x IN G /\ (x * |/ x = #e) /\ ( |/ x * x = #e))``,
+Theorem monoid_inv_def_alt:
+    !g:'a monoid. Monoid g ==> (!x. x IN G* <=> x IN G /\ |/ x IN G /\ (x * |/ x = #e) /\ ( |/ x * x = #e))
+Proof
   rw[monoid_invertibles_def, monoid_inv_def, EQ_IMP_THM] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* In preparation for: The invertibles of a monoid form a group. *)
 
 (* Theorem: x IN G* ==> x IN G *)
 (* Proof: by definition of G*. *)
-val monoid_inv_element = store_thm(
-  "monoid_inv_element",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G* ==> x IN G``,
-  rw[monoid_invertibles_def]);
+Theorem monoid_inv_element:
+    !g:'a monoid. Monoid g ==> !x. x IN G* ==> x IN G
+Proof
+  rw[monoid_invertibles_def]
+QED
 
 (* This export will cause rewrites of RHS = x IN G to become proving LHS = x IN G*, which is not useful. *)
 (* val _ = export_rewrites ["monoid_inv_element"]; *)
 
 (* Theorem: #e IN G* *)
 (* Proof: by monoid_id and definition. *)
-val monoid_id_invertible = store_thm(
-  "monoid_id_invertible",
-  ``!g:'a monoid. Monoid g ==> #e IN G*``,
+Theorem monoid_id_invertible[simp]:
+    !g:'a monoid. Monoid g ==> #e IN G*
+Proof
   rw[monoid_invertibles_def] >>
   qexists_tac `#e` >>
-  rw[]);
+  rw[]
+QED
 
-val _ = export_rewrites ["monoid_id_invertible"];
 
 (* This is a direct proof, next one is shorter. *)
 
@@ -2024,9 +2060,9 @@ val _ = export_rewrites ["monoid_id_invertible"];
     also ( |/ y * |/ x) * (x * y) = #e         by monoid_assoc, monoid_lid
     Thus x * y IN G*, with ( |/ y * |/ x) as its inverse.
 *)
-val monoid_inv_op_invertible = store_thm(
-  "monoid_inv_op_invertible",
-  ``!g:'a monoid. Monoid g ==> !x y. x IN G* /\ y IN G* ==> x * y IN G*``,
+Theorem monoid_inv_op_invertible:
+    !g:'a monoid. Monoid g ==> !x y. x IN G* /\ y IN G* ==> x * y IN G*
+Proof
   rpt strip_tac>>
   `x IN G /\ y IN G` by rw_tac std_ss[monoid_inv_element] >>
   `|/ x IN G /\ (x * |/ x = #e) /\ ( |/ x * x = #e)` by rw_tac std_ss[monoid_inv_def] >>
@@ -2035,7 +2071,8 @@ val monoid_inv_op_invertible = store_thm(
   `(x * y) * ( |/ y * |/ x) = x * ((y * |/ y) * |/ x)` by rw_tac std_ss[monoid_assoc, monoid_op_element] >>
   `( |/ y * |/ x) * (x * y) = |/ y * (( |/ x * x) * y)` by rw_tac std_ss[monoid_assoc, monoid_op_element] >>
   rw_tac std_ss[monoid_invertibles_def, GSPECIFICATION] >>
-  metis_tac[monoid_lid]);
+  metis_tac[monoid_lid]
+QED
 
 (* Better proof of the same theorem. *)
 
@@ -2054,26 +2091,27 @@ QED
 
 (* Theorem: x IN G* ==> |/ x IN G* *)
 (* Proof: by monoid_inv_def. *)
-val monoid_inv_invertible = store_thm(
-  "monoid_inv_invertible",
-  ``!g:'a monoid. Monoid g ==> !x. x IN G* ==> |/ x IN G*``,
+Theorem monoid_inv_invertible[simp]:
+    !g:'a monoid. Monoid g ==> !x. x IN G* ==> |/ x IN G*
+Proof
   rpt strip_tac >>
   rw[monoid_invertibles_def] >-
   rw[monoid_inv_def] >>
-  metis_tac[monoid_inv_def, monoid_inv_element]);
+  metis_tac[monoid_inv_def, monoid_inv_element]
+QED
 
-val _ = export_rewrites ["monoid_inv_invertible"];
 
 (* Theorem: The Invertibles of a monoid form a monoid. *)
 (* Proof: by checking definition. *)
-val monoid_invertibles_is_monoid = store_thm(
-  "monoid_invertibles_is_monoid",
-  ``!g. Monoid g ==> Monoid (Invertibles g)``,
+Theorem monoid_invertibles_is_monoid:
+    !g. Monoid g ==> Monoid (Invertibles g)
+Proof
   rpt strip_tac >>
   `!x. x IN G* ==> x IN G` by rw[monoid_inv_element] >>
   rw[Invertibles_def] >>
   rewrite_tac[Monoid_def] >>
-  rw[monoid_assoc]);
+  rw[monoid_assoc]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Monoid Maps Documentation                                                 *)
@@ -2213,12 +2251,12 @@ will need val _ = overload_on ("H", ``(h:'b monoid).carrier``);
 
 (* A function f from g to h is a homomorphism if monoid properties are preserved. *)
 (* For monoids, need to ensure that identity is preserved, too. See: monoid_weak_iso_id. *)
-val MonoidHomo_def = Define`
+Definition MonoidHomo_def:
   MonoidHomo (f:'a -> 'b) (g:'a monoid) (h:'b monoid) <=>
     (!x. x IN G ==> f x IN h.carrier) /\
     (!x y. x IN G /\ y IN G ==> (f (x * y) = h.op (f x) (f y))) /\
     (f #e = h.id)
-`;
+End
 (*
 If MonoidHomo_def uses the condition: !x y. f (x * y) = h.op (f x) (f y)
 this will mean a corresponding change in GroupHomo_def, but then
@@ -2227,18 +2265,21 @@ h <= g ==> x * y * H = (x * H) o (y * H) with no qualification on x, y!
 *)
 
 (* A function f from g to h is an isomorphism if f is a bijective homomorphism. *)
-val MonoidIso_def = Define`
+Definition MonoidIso_def:
   MonoidIso f g h <=> MonoidHomo f g h /\ BIJ f G h.carrier
-`;
+End
 
 (* A monoid homomorphism from g to g is an endomorphism. *)
-val MonoidEndo_def = Define `MonoidEndo f g <=> MonoidHomo f g g`;
+Definition MonoidEndo_def:   MonoidEndo f g <=> MonoidHomo f g g
+End
 
 (* A monoid isomorphism from g to g is an automorphism. *)
-val MonoidAuto_def = Define `MonoidAuto f g <=> MonoidIso f g g`;
+Definition MonoidAuto_def:   MonoidAuto f g <=> MonoidIso f g g
+End
 
 (* A submonoid h of g if identity is a homomorphism from h to g *)
-val submonoid_def = Define `submonoid h g <=> MonoidHomo I h g`;
+Definition submonoid_def:   submonoid h g <=> MonoidHomo I h g
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Monoid Homomorphisms                                                      *)
@@ -2246,44 +2287,49 @@ val submonoid_def = Define `submonoid h g <=> MonoidHomo I h g`;
 
 (* Theorem: MonoidHomo f g h ==> (f #e = h.id) *)
 (* Proof: by MonoidHomo_def. *)
-val monoid_homo_id = store_thm(
-  "monoid_homo_id",
-  ``!f g h. MonoidHomo f g h ==> (f #e = h.id)``,
-  rw[MonoidHomo_def]);
+Theorem monoid_homo_id:
+    !f g h. MonoidHomo f g h ==> (f #e = h.id)
+Proof
+  rw[MonoidHomo_def]
+QED
 
 (* Theorem: MonoidHomo f g h ==> !x. x IN G ==> f x IN h.carrier *)
 (* Proof: by MonoidHomo_def *)
-val monoid_homo_element = store_thm(
-  "monoid_homo_element",
-  ``!f g h. MonoidHomo f g h ==> !x. x IN G ==> f x IN h.carrier``,
-  rw_tac std_ss[MonoidHomo_def]);
+Theorem monoid_homo_element:
+    !f g h. MonoidHomo f g h ==> !x. x IN G ==> f x IN h.carrier
+Proof
+  rw_tac std_ss[MonoidHomo_def]
+QED
 
 (* Theorem: Monoid g /\ Monoid h /\ (!x. x IN G ==> (f1 x = f2 x)) ==> (MonoidHomo f1 g h = MonoidHomo f2 g h) *)
 (* Proof: by MonoidHomo_def, monoid_op_element, monoid_id_element *)
-val monoid_homo_cong = store_thm(
-  "monoid_homo_cong",
-  ``!g h f1 f2. Monoid g /\ Monoid h /\ (!x. x IN G ==> (f1 x = f2 x)) ==>
-               (MonoidHomo f1 g h = MonoidHomo f2 g h)``,
+Theorem monoid_homo_cong:
+    !g h f1 f2. Monoid g /\ Monoid h /\ (!x. x IN G ==> (f1 x = f2 x)) ==>
+               (MonoidHomo f1 g h = MonoidHomo f2 g h)
+Proof
   rw_tac std_ss[MonoidHomo_def, EQ_IMP_THM] >-
   metis_tac[monoid_op_element] >-
   metis_tac[monoid_id_element] >-
   metis_tac[monoid_op_element] >>
-  metis_tac[monoid_id_element]);
+  metis_tac[monoid_id_element]
+QED
 
 (* Theorem: MonoidHomo I g g *)
 (* Proof: by MonoidHomo_def. *)
-val monoid_homo_I_refl = store_thm(
-  "monoid_homo_I_refl",
-  ``!g:'a monoid. MonoidHomo I g g``,
-  rw[MonoidHomo_def]);
+Theorem monoid_homo_I_refl:
+    !g:'a monoid. MonoidHomo I g g
+Proof
+  rw[MonoidHomo_def]
+QED
 
 (* Theorem: MonoidHomo f1 g h /\ MonoidHomo f2 h k ==> MonoidHomo f2 o f1 g k *)
 (* Proof: true by MonoidHomo_def. *)
-val monoid_homo_trans = store_thm(
-  "monoid_homo_trans",
-  ``!(g:'a monoid) (h:'b monoid) (k:'c monoid).
-    !f1 f2. MonoidHomo f1 g h /\ MonoidHomo f2 h k ==> MonoidHomo (f2 o f1) g k``,
-  rw[MonoidHomo_def]);
+Theorem monoid_homo_trans:
+    !(g:'a monoid) (h:'b monoid) (k:'c monoid).
+    !f1 f2. MonoidHomo f1 g h /\ MonoidHomo f2 h k ==> MonoidHomo (f2 o f1) g k
+Proof
+  rw[MonoidHomo_def]
+QED
 
 (* Theorem: Monoid g /\ MonoidHomo f g h /\ BIJ f G h.carrier ==> MonoidHomo (LINV f G) h g *)
 (* Proof:
@@ -2311,10 +2357,10 @@ val monoid_homo_trans = store_thm(
        = LINV f G (f #e)               by MonoidHomo_def
        = #e                            by BIJ_LINV_THM
 *)
-val monoid_homo_sym = store_thm(
-  "monoid_homo_sym",
-  ``!(g:'a monoid) (h:'b monoid) f. Monoid g /\ MonoidHomo f g h /\ BIJ f G h.carrier ==>
-        MonoidHomo (LINV f G) h g``,
+Theorem monoid_homo_sym:
+    !(g:'a monoid) (h:'b monoid) f. Monoid g /\ MonoidHomo f g h /\ BIJ f G h.carrier ==>
+        MonoidHomo (LINV f G) h g
+Proof
   rpt strip_tac >>
   `BIJ (LINV f G) h.carrier G` by rw[BIJ_LINV_BIJ] >>
   fs[MonoidHomo_def] >>
@@ -2325,7 +2371,8 @@ val monoid_homo_sym = store_thm(
   `g.op x1 y1 IN G` by rw[] >>
   metis_tac[BIJ_LINV_THM]) >>
   `#e IN G` by rw[] >>
-  metis_tac[BIJ_LINV_THM]);
+  metis_tac[BIJ_LINV_THM]
+QED
 
 Theorem monoid_homo_sym_any:
   Monoid g /\ MonoidHomo f g h /\
@@ -2340,11 +2387,12 @@ QED
 
 (* Theorem: MonoidHomo f1 g h /\ MonoidHomo f2 h k ==> MonoidHomo (f2 o f1) g k *)
 (* Proof: by MonoidHomo_def *)
-val monoid_homo_compose = store_thm(
-  "monoid_homo_compose",
-  ``!(g:'a monoid) (h:'b monoid) (k:'c monoid).
-   !f1 f2. MonoidHomo f1 g h /\ MonoidHomo f2 h k ==> MonoidHomo (f2 o f1) g k``,
-  rw_tac std_ss[MonoidHomo_def]);
+Theorem monoid_homo_compose:
+    !(g:'a monoid) (h:'b monoid) (k:'c monoid).
+   !f1 f2. MonoidHomo f1 g h /\ MonoidHomo f2 h k ==> MonoidHomo (f2 o f1) g k
+Proof
+  rw_tac std_ss[MonoidHomo_def]
+QED
 (* This is the same as monoid_homo_trans *)
 
 (* Theorem: Monoid g /\ MonoidHomo f g h ==> !x. x IN G ==> !n. f (x ** n) = h.exp (f x) n *)
@@ -2363,14 +2411,15 @@ val monoid_homo_compose = store_thm(
        = h.op (f x) (h.exp (f x) n)   by induction hypothesis
        = h.exp (f x) (SUC n)          by monoid_exp_SUC
 *)
-val monoid_homo_exp = store_thm(
-  "monoid_homo_exp",
-  ``!(g:'a monoid) (h:'b monoid) f. Monoid g /\ MonoidHomo f g h ==>
-   !x. x IN G ==> !n. f (x ** n) = h.exp (f x) n``,
+Theorem monoid_homo_exp:
+    !(g:'a monoid) (h:'b monoid) f. Monoid g /\ MonoidHomo f g h ==>
+   !x. x IN G ==> !n. f (x ** n) = h.exp (f x) n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[monoid_exp_0, monoid_homo_id] >>
-  fs[monoid_exp_SUC, MonoidHomo_def]);
+  fs[monoid_exp_SUC, MonoidHomo_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Monoid Isomorphisms                                                       *)
@@ -2385,30 +2434,33 @@ val monoid_homo_exp = store_thm(
        true by INJ_DEF and SURJ_DEF, and
        x IN G /\ GroupHomo f g h ==> f x IN H  by MonoidHomo_def
 *)
-val monoid_iso_property = store_thm(
-  "monoid_iso_property",
-  ``!f g h. MonoidIso f g h <=> MonoidHomo f g h /\ (!y. y IN h.carrier ==> ?!x. x IN G /\ (f x = y))``,
+Theorem monoid_iso_property:
+    !f g h. MonoidIso f g h <=> MonoidHomo f g h /\ (!y. y IN h.carrier ==> ?!x. x IN G /\ (f x = y))
+Proof
   rw_tac std_ss[MonoidIso_def, EQ_IMP_THM] >-
   metis_tac[BIJ_THM] >>
   rw[BIJ_THM] >>
-  metis_tac[MonoidHomo_def]);
+  metis_tac[MonoidHomo_def]
+QED
 
 (* Note: all these proofs so far do not require the condition: f #e = h.id in MonoidHomo_def,
    but evetually it should, as this is included in definitions of all resources. *)
 
 (* Theorem: MonoidIso f g h ==> (f #e = h.id) *)
 (* Proof: by MonoidIso_def, monoid_homo_id. *)
-val monoid_iso_id = store_thm(
-  "monoid_iso_id",
-  ``!f g h. MonoidIso f g h ==> (f #e = h.id)``,
-  rw_tac std_ss[MonoidIso_def, monoid_homo_id]);
+Theorem monoid_iso_id:
+    !f g h. MonoidIso f g h ==> (f #e = h.id)
+Proof
+  rw_tac std_ss[MonoidIso_def, monoid_homo_id]
+QED
 
 (* Theorem: MonoidIso f g h ==> !x. x IN G ==> f x IN h.carrier *)
 (* Proof: by MonoidIso_def, monoid_homo_element *)
-val monoid_iso_element = store_thm(
-  "monoid_iso_element",
-  ``!f g h. MonoidIso f g h ==> !x. x IN G ==> f x IN h.carrier``,
-  metis_tac[MonoidIso_def, monoid_homo_element]);
+Theorem monoid_iso_element:
+    !f g h. MonoidIso f g h ==> !x. x IN G ==> f x IN h.carrier
+Proof
+  metis_tac[MonoidIso_def, monoid_homo_element]
+QED
 
 (* Theorem: Monoid g /\ MonoidIso f g h ==> Monoid h  *)
 (* Proof:
@@ -2457,9 +2509,9 @@ val monoid_iso_element = store_thm(
                          = f x'          by monoid_rid
                          = x
 *)
-val monoid_iso_monoid = store_thm(
-  "monoid_iso_monoid",
-  ``!(g:'a monoid) (h:'b monoid) f. Monoid g /\ MonoidIso f g h ==> Monoid h``,
+Theorem monoid_iso_monoid:
+    !(g:'a monoid) (h:'b monoid) f. Monoid g /\ MonoidIso f g h ==> Monoid h
+Proof
   rw[monoid_iso_property] >>
   `(!x. x IN G ==> f x IN h.carrier) /\
      (!x y. x IN G /\ y IN G ==> (f (x * y) = h.op (f x) (f y))) /\
@@ -2477,7 +2529,8 @@ val monoid_iso_monoid = store_thm(
   metis_tac[]) >-
   metis_tac[monoid_id_element, MonoidHomo_def] >-
   metis_tac[monoid_lid, monoid_id_element] >>
-  metis_tac[monoid_rid, monoid_id_element]);
+  metis_tac[monoid_rid, monoid_id_element]
+QED
 
 (* Theorem: MonoidIso I g g *)
 (* Proof:
@@ -2485,10 +2538,11 @@ val monoid_iso_monoid = store_thm(
    (1) MonoidHomo I g g, true by monoid_homo_I_refl
    (2) BIJ I R R, true by BIJ_I_SAME
 *)
-val monoid_iso_I_refl = store_thm(
-  "monoid_iso_I_refl",
-  ``!g:'a monoid. MonoidIso I g g``,
-  rw[MonoidIso_def, monoid_homo_I_refl, BIJ_I_SAME]);
+Theorem monoid_iso_I_refl:
+    !g:'a monoid. MonoidIso I g g
+Proof
+  rw[MonoidIso_def, monoid_homo_I_refl, BIJ_I_SAME]
+QED
 
 (* Theorem: MonoidIso f1 g h /\ MonoidIso f2 h k ==> MonoidIso (f2 o f1) g k *)
 (* Proof:
@@ -2498,13 +2552,14 @@ val monoid_iso_I_refl = store_thm(
    (2) BIJ f1 G h.carrier /\ BIJ f2 h.carrier k.carrier ==> BIJ (f2 o f1) G k.carrier
        True by BIJ_COMPOSE.
 *)
-val monoid_iso_trans = store_thm(
-  "monoid_iso_trans",
-  ``!(g:'a monoid) (h:'b monoid) (k:'c monoid).
-    !f1 f2. MonoidIso f1 g h /\ MonoidIso f2 h k ==> MonoidIso (f2 o f1) g k``,
+Theorem monoid_iso_trans:
+    !(g:'a monoid) (h:'b monoid) (k:'c monoid).
+    !f1 f2. MonoidIso f1 g h /\ MonoidIso f2 h k ==> MonoidIso (f2 o f1) g k
+Proof
   rw[MonoidIso_def] >-
   metis_tac[monoid_homo_trans] >>
-  metis_tac[BIJ_COMPOSE]);
+  metis_tac[BIJ_COMPOSE]
+QED
 
 (* Theorem: Monoid g /\ MonoidIso f g h ==> MonoidIso (LINV f G) h g *)
 (* Proof:
@@ -2514,10 +2569,11 @@ val monoid_iso_trans = store_thm(
    (2) BIJ f G h.carrier ==> BIJ (LINV f G) h.carrier G
        True by BIJ_LINV_BIJ
 *)
-val monoid_iso_sym = store_thm(
-  "monoid_iso_sym",
-  ``!(g:'a monoid) (h:'b monoid) f. Monoid g /\ MonoidIso f g h ==> MonoidIso (LINV f G) h g``,
-  rw[MonoidIso_def, monoid_homo_sym, BIJ_LINV_BIJ]);
+Theorem monoid_iso_sym:
+    !(g:'a monoid) (h:'b monoid) f. Monoid g /\ MonoidIso f g h ==> MonoidIso (LINV f G) h g
+Proof
+  rw[MonoidIso_def, monoid_homo_sym, BIJ_LINV_BIJ]
+QED
 
 (* Theorem: MonoidIso f1 g h /\ MonoidIso f2 h k ==> MonoidIso (f2 o f1) g k *)
 (* Proof:
@@ -2527,22 +2583,24 @@ val monoid_iso_sym = store_thm(
    (2) BIJ f1 G h.carrier /\ BIJ f2 h.carrier k.carrier ==> BIJ (f2 o f1) G k.carrier
        True by BIJ_COMPOSE
 *)
-val monoid_iso_compose = store_thm(
-  "monoid_iso_compose",
-  ``!(g:'a monoid) (h:'b monoid) (k:'c monoid).
-   !f1 f2. MonoidIso f1 g h /\ MonoidIso f2 h k ==> MonoidIso (f2 o f1) g k``,
+Theorem monoid_iso_compose:
+    !(g:'a monoid) (h:'b monoid) (k:'c monoid).
+   !f1 f2. MonoidIso f1 g h /\ MonoidIso f2 h k ==> MonoidIso (f2 o f1) g k
+Proof
   rw_tac std_ss[MonoidIso_def] >-
   metis_tac[monoid_homo_compose] >>
-  metis_tac[BIJ_COMPOSE]);
+  metis_tac[BIJ_COMPOSE]
+QED
 (* This is the same as monoid_iso_trans. *)
 
 (* Theorem: Monoid g /\ MonoidIso f g h ==> !x. x IN G ==> !n. f (x ** n) = h.exp (f x) n *)
 (* Proof: by MonoidIso_def, monoid_homo_exp *)
-val monoid_iso_exp = store_thm(
-  "monoid_iso_exp",
-  ``!(g:'a monoid) (h:'b monoid) f. Monoid g /\ MonoidIso f g h ==>
-   !x. x IN G ==> !n. f (x ** n) = h.exp (f x) n``,
-  rw[MonoidIso_def, monoid_homo_exp]);
+Theorem monoid_iso_exp:
+    !(g:'a monoid) (h:'b monoid) f. Monoid g /\ MonoidIso f g h ==>
+   !x. x IN G ==> !n. f (x ** n) = h.exp (f x) n
+Proof
+  rw[MonoidIso_def, monoid_homo_exp]
+QED
 
 (* Theorem: Monoid g /\ MonoidIso f g h ==> MonoidIso (LINV f G) h g *)
 (* Proof:
@@ -2565,24 +2623,26 @@ val monoid_iso_exp = store_thm(
    (4) BIJ f G h.carrier ==> BIJ (LINV f G) h.carrier G
        True by BIJ_LINV_BIJ
 *)
-val monoid_iso_linv_iso = store_thm(
-  "monoid_iso_linv_iso",
-  ``!(g:'a monoid) (h:'b monoid) f. Monoid g /\ MonoidIso f g h ==> MonoidIso (LINV f G) h g``,
+Theorem monoid_iso_linv_iso:
+    !(g:'a monoid) (h:'b monoid) f. Monoid g /\ MonoidIso f g h ==> MonoidIso (LINV f G) h g
+Proof
   rw_tac std_ss[MonoidIso_def, MonoidHomo_def] >-
   metis_tac[BIJ_LINV_ELEMENT] >-
  (qabbrev_tac `x' = LINV f G x` >>
   qabbrev_tac `y' = LINV f G y` >>
   metis_tac[BIJ_LINV_THM, BIJ_LINV_ELEMENT, monoid_op_element]) >-
   metis_tac[BIJ_LINV_THM, monoid_id_element] >>
-  rw_tac std_ss[BIJ_LINV_BIJ]);
+  rw_tac std_ss[BIJ_LINV_BIJ]
+QED
 (* This is the same as monoid_iso_sym, just a direct proof. *)
 
 (* Theorem: MonoidIso f g h ==> BIJ f G h.carrier *)
 (* Proof: by MonoidIso_def *)
-val monoid_iso_bij = store_thm(
-  "monoid_iso_bij",
-  ``!(g:'a monoid) (h:'b monoid) f. MonoidIso f g h ==> BIJ f G h.carrier``,
-  rw_tac std_ss[MonoidIso_def]);
+Theorem monoid_iso_bij:
+    !(g:'a monoid) (h:'b monoid) f. MonoidIso f g h ==> BIJ f G h.carrier
+Proof
+  rw_tac std_ss[MonoidIso_def]
+QED
 
 (* Theorem: Monoid g /\ Monoid h /\ MonoidIso f g h ==>
             !x. x IN G ==> ((f x = h.id) <=> (x = #e)) *)
@@ -2607,10 +2667,10 @@ val monoid_iso_bij = store_thm(
 
    Only-if part: f #e = h.id, true  by monoid_homo_id
 *)
-val monoid_iso_eq_id = store_thm(
-  "monoid_iso_eq_id",
-  ``!(g:'a monoid) (h:'b monoid) f. Monoid g /\ Monoid h /\ MonoidIso f g h ==>
-   !x. x IN G ==> ((f x = h.id) <=> (x = #e))``,
+Theorem monoid_iso_eq_id:
+    !(g:'a monoid) (h:'b monoid) f. Monoid g /\ Monoid h /\ MonoidIso f g h ==>
+   !x. x IN G ==> ((f x = h.id) <=> (x = #e))
+Proof
   rw[MonoidIso_def] >>
   rw[EQ_IMP_THM] >| [
     rw[GSYM monoid_id_unique] >| [
@@ -2626,7 +2686,8 @@ val monoid_iso_eq_id = store_thm(
       metis_tac[BIJ_DEF, INJ_DEF]
     ],
     rw[monoid_homo_id]
-  ]);
+  ]
+QED
 
 (* Theorem: Monoid g /\ Monoid h /\ MonoidIso f g h ==> !x. x IN G ==> (order h (f x) = ord x) *)
 (* Proof:
@@ -2657,10 +2718,10 @@ val monoid_iso_eq_id = store_thm(
 
       Thus by [1] and claim, order h y = n  by order_thm
 *)
-val monoid_iso_order = store_thm(
-  "monoid_iso_order",
-  ``!(g:'a monoid) (h:'b monoid) f. Monoid g /\ Monoid h /\ MonoidIso f g h ==>
-   !x. x IN G ==> (order h (f x) = ord x)``,
+Theorem monoid_iso_order:
+    !(g:'a monoid) (h:'b monoid) f. Monoid g /\ Monoid h /\ MonoidIso f g h ==>
+   !x. x IN G ==> (order h (f x) = ord x)
+Proof
   rpt strip_tac >>
   qabbrev_tac `n = ord x` >>
   qabbrev_tac `y = f x` >>
@@ -2681,14 +2742,16 @@ val monoid_iso_order = store_thm(
     `x ** m = #e` by metis_tac[monoid_iso_eq_id, monoid_exp_element] >>
     metis_tac[]) >>
     metis_tac[order_thm]
-  ]);
+  ]
+QED
 
 (* Theorem: MonoidIso f g h /\ FINITE G ==> (CARD G = CARD h.carrier) *)
 (* Proof: by MonoidIso_def, FINITE_BIJ_CARD. *)
-val monoid_iso_card_eq = store_thm(
-  "monoid_iso_card_eq",
-  ``!g:'a monoid h:'b monoid f. MonoidIso f g h /\ FINITE G ==> (CARD G = CARD h.carrier)``,
-  metis_tac[MonoidIso_def, FINITE_BIJ_CARD]);
+Theorem monoid_iso_card_eq:
+    !g:'a monoid h:'b monoid f. MonoidIso f g h /\ FINITE G ==> (CARD G = CARD h.carrier)
+Proof
+  metis_tac[MonoidIso_def, FINITE_BIJ_CARD]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Monoid Automorphisms                                                      *)
@@ -2696,31 +2759,35 @@ val monoid_iso_card_eq = store_thm(
 
 (* Theorem: MonoidAuto f g ==> (f #e = #e) *)
 (* Proof: by MonoidAuto_def, monoid_iso_id. *)
-val monoid_auto_id = store_thm(
-  "monoid_auto_id",
-  ``!f g. MonoidAuto f g ==> (f #e = #e)``,
-  rw_tac std_ss[MonoidAuto_def, monoid_iso_id]);
+Theorem monoid_auto_id:
+    !f g. MonoidAuto f g ==> (f #e = #e)
+Proof
+  rw_tac std_ss[MonoidAuto_def, monoid_iso_id]
+QED
 
 (* Theorem: MonoidAuto f g ==> !x. x IN G ==> f x IN G *)
 (* Proof: by MonoidAuto_def, monoid_iso_element *)
-val monoid_auto_element = store_thm(
-  "monoid_auto_element",
-  ``!f g. MonoidAuto f g ==> !x. x IN G ==> f x IN G``,
-  metis_tac[MonoidAuto_def, monoid_iso_element]);
+Theorem monoid_auto_element:
+    !f g. MonoidAuto f g ==> !x. x IN G ==> f x IN G
+Proof
+  metis_tac[MonoidAuto_def, monoid_iso_element]
+QED
 
 (* Theorem: MonoidAuto f1 g /\ MonoidAuto f2 g ==> MonoidAuto (f1 o f2) g *)
 (* Proof: by MonoidAuto_def, monoid_iso_compose *)
-val monoid_auto_compose = store_thm(
-  "monoid_auto_compose",
-  ``!(g:'a monoid). !f1 f2. MonoidAuto f1 g /\ MonoidAuto f2 g ==> MonoidAuto (f1 o f2) g``,
-  metis_tac[MonoidAuto_def, monoid_iso_compose]);
+Theorem monoid_auto_compose:
+    !(g:'a monoid). !f1 f2. MonoidAuto f1 g /\ MonoidAuto f2 g ==> MonoidAuto (f1 o f2) g
+Proof
+  metis_tac[MonoidAuto_def, monoid_iso_compose]
+QED
 
 (* Theorem: Monoid g /\ MonoidAuto f g ==> !x. x IN G ==> !n. f (x ** n) = (f x) ** n *)
 (* Proof: by MonoidAuto_def, monoid_iso_exp *)
-val monoid_auto_exp = store_thm(
-  "monoid_auto_exp",
-  ``!f g. Monoid g /\ MonoidAuto f g ==> !x. x IN G ==> !n. f (x ** n) = (f x) ** n``,
-  rw[MonoidAuto_def, monoid_iso_exp]);
+Theorem monoid_auto_exp:
+    !f g. Monoid g /\ MonoidAuto f g ==> !x. x IN G ==> !n. f (x ** n) = (f x) ** n
+Proof
+  rw[MonoidAuto_def, monoid_iso_exp]
+QED
 
 (* Theorem: MonoidAuto I g *)
 (* Proof:
@@ -2730,10 +2797,11 @@ val monoid_auto_exp = store_thm(
    <=> T /\ BIJ f G G                 by MonoidHomo_def, I_THM
    <=> T /\ T                         by BIJ_I_SAME
 *)
-val monoid_auto_I = store_thm(
-  "monoid_auto_I",
-  ``!(g:'a monoid). MonoidAuto I g``,
-  rw_tac std_ss[MonoidAuto_def, MonoidIso_def, MonoidHomo_def, BIJ_I_SAME]);
+Theorem monoid_auto_I:
+    !(g:'a monoid). MonoidAuto I g
+Proof
+  rw_tac std_ss[MonoidAuto_def, MonoidIso_def, MonoidHomo_def, BIJ_I_SAME]
+QED
 
 (* Theorem: Monoid g /\ MonoidAuto f g ==> MonoidAuto (LINV f G) g *)
 (* Proof:
@@ -2742,31 +2810,34 @@ val monoid_auto_I = store_thm(
    ==> MonoidIso (LINV f G) g         by monoid_iso_linv_iso
    ==> MonoidAuto (LINV f G) g        by MonoidAuto_def
 *)
-val monoid_auto_linv_auto = store_thm(
-  "monoid_auto_linv_auto",
-  ``!(g:'a monoid) f. Monoid g /\ MonoidAuto f g ==> MonoidAuto (LINV f G) g``,
-  rw_tac std_ss[MonoidAuto_def, monoid_iso_linv_iso]);
+Theorem monoid_auto_linv_auto:
+    !(g:'a monoid) f. Monoid g /\ MonoidAuto f g ==> MonoidAuto (LINV f G) g
+Proof
+  rw_tac std_ss[MonoidAuto_def, monoid_iso_linv_iso]
+QED
 
 (* Theorem: MonoidAuto f g ==> f PERMUTES G *)
 (* Proof: by MonoidAuto_def, MonoidIso_def *)
-val monoid_auto_bij = store_thm(
-  "monoid_auto_bij",
-  ``!g:'a monoid. !f. MonoidAuto f g ==> f PERMUTES G``,
-  rw_tac std_ss[MonoidAuto_def, MonoidIso_def]);
+Theorem monoid_auto_bij:
+    !g:'a monoid. !f. MonoidAuto f g ==> f PERMUTES G
+Proof
+  rw_tac std_ss[MonoidAuto_def, MonoidIso_def]
+QED
 
 (* Theorem: Monoid g /\ MonoidAuto f g ==> !x. x IN G ==> (ord (f x) = ord x) *)
 (* Proof: by MonoidAuto_def, monoid_iso_order. *)
-val monoid_auto_order = store_thm(
-  "monoid_auto_order",
-  ``!(g:'a monoid) f. Monoid g /\ MonoidAuto f g ==> !x. x IN G ==> (ord (f x) = ord x)``,
-  rw[MonoidAuto_def, monoid_iso_order]);
+Theorem monoid_auto_order:
+    !(g:'a monoid) f. Monoid g /\ MonoidAuto f g ==> !x. x IN G ==> (ord (f x) = ord x)
+Proof
+  rw[MonoidAuto_def, monoid_iso_order]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Submonoids.                                                               *)
 (* ------------------------------------------------------------------------- *)
 
 (* Use H to denote h.carrier *)
-val _ = overload_on ("H", ``(h:'a monoid).carrier``);
+Overload H = ``(h:'a monoid).carrier``
 
 (* Theorem: submonoid h g ==> H SUBSET G /\ (!x y. x IN H /\ y IN H ==> (h.op x y = x * y)) /\ (h.id = #e) *)
 (* Proof:
@@ -2782,18 +2853,20 @@ val _ = overload_on ("H", ``(h:'a monoid).carrier``);
        (!x y. x IN H /\ y IN H ==> (h.op x y = x * y)) /\
        (h.id = #e)                by SUBSET_DEF
 *)
-val submonoid_eqn = store_thm(
-  "submonoid_eqn",
-  ``!(g:'a monoid) (h:'a monoid). submonoid h g <=>
-     H SUBSET G /\ (!x y. x IN H /\ y IN H ==> (h.op x y = x * y)) /\ (h.id = #e)``,
-  rw_tac std_ss[submonoid_def, MonoidHomo_def, SUBSET_DEF]);
+Theorem submonoid_eqn:
+    !(g:'a monoid) (h:'a monoid). submonoid h g <=>
+     H SUBSET G /\ (!x y. x IN H /\ y IN H ==> (h.op x y = x * y)) /\ (h.id = #e)
+Proof
+  rw_tac std_ss[submonoid_def, MonoidHomo_def, SUBSET_DEF]
+QED
 
 (* Theorem: submonoid h g ==> H SUBSET G *)
 (* Proof: by submonoid_eqn *)
-val submonoid_subset = store_thm(
-  "submonoid_subset",
-  ``!(g:'a monoid) (h:'a monoid). submonoid h g ==> H SUBSET G``,
-  rw_tac std_ss[submonoid_eqn]);
+Theorem submonoid_subset:
+    !(g:'a monoid) (h:'a monoid). submonoid h g ==> H SUBSET G
+Proof
+  rw_tac std_ss[submonoid_eqn]
+QED
 
 (* Theorem: submonoid h g /\ MonoidHomo f g k ==> MonoidHomo f h k *)
 (* Proof:
@@ -2813,20 +2886,22 @@ val submonoid_subset = store_thm(
        = f #e                   by submonoid_eqn
        = k.id                   by MonoidHomo_def
 *)
-val submonoid_homo_homo = store_thm(
-  "submonoid_homo_homo",
-  ``!(g:'a monoid) (h:'a monoid) (k:'b monoid) f. submonoid h g /\ MonoidHomo f g k ==> MonoidHomo f h k``,
-  rw_tac std_ss[submonoid_def, MonoidHomo_def]);
+Theorem submonoid_homo_homo:
+    !(g:'a monoid) (h:'a monoid) (k:'b monoid) f. submonoid h g /\ MonoidHomo f g k ==> MonoidHomo f h k
+Proof
+  rw_tac std_ss[submonoid_def, MonoidHomo_def]
+QED
 
 (* Theorem: submonoid g g *)
 (* Proof:
    By submonoid_def, this is to show:
    MonoidHomo I g g, true by monoid_homo_I_refl.
 *)
-val submonoid_refl = store_thm(
-  "submonoid_refl",
-  ``!g:'a monoid. submonoid g g``,
-  rw[submonoid_def, monoid_homo_I_refl]);
+Theorem submonoid_refl:
+    !g:'a monoid. submonoid g g
+Proof
+  rw[submonoid_def, monoid_homo_I_refl]
+QED
 
 (* Theorem: submonoid g h /\ submonoid h k ==> submonoid g k *)
 (* Proof:
@@ -2835,10 +2910,11 @@ val submonoid_refl = store_thm(
    Since I o I = I       by combinTheory.I_o_ID
    This is true          by monoid_homo_trans
 *)
-val submonoid_trans = store_thm(
-  "submonoid_trans",
-  ``!(g h k):'a monoid. submonoid g h /\ submonoid h k ==> submonoid g k``,
-  prove_tac[submonoid_def, combinTheory.I_o_ID, monoid_homo_trans]);
+Theorem submonoid_trans:
+    !(g h k):'a monoid. submonoid g h /\ submonoid h k ==> submonoid g k
+Proof
+  prove_tac[submonoid_def, combinTheory.I_o_ID, monoid_homo_trans]
+QED
 
 (* Theorem: submonoid h g /\ submonoid g h ==> MonoidIso I h g *)
 (* Proof:
@@ -2848,12 +2924,13 @@ val submonoid_trans = store_thm(
    (1) x IN H ==> x IN G, true    by submonoid_subset, submonoid h g
    (2) x IN G ==> x IN H, true    by submonoid_subset, submonoid g h
 *)
-val submonoid_I_antisym = store_thm(
-  "submonoid_I_antisym",
-  ``!(g:'a monoid) h. submonoid h g /\ submonoid g h ==> MonoidIso I h g``,
+Theorem submonoid_I_antisym:
+    !(g:'a monoid) h. submonoid h g /\ submonoid g h ==> MonoidIso I h g
+Proof
   rw_tac std_ss[submonoid_def, MonoidIso_def] >>
   fs[MonoidHomo_def] >>
-  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]);
+  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]
+QED
 
 (* Theorem: submonoid h g /\ G SUBSET H ==> MonoidIso I h g *)
 (* Proof:
@@ -2863,14 +2940,15 @@ val submonoid_I_antisym = store_thm(
    (1) x IN H ==> x IN G, true    by submonoid_subset, submonoid h g
    (2) x IN G ==> x IN H, true    by G SUBSET H, given
 *)
-val submonoid_carrier_antisym = store_thm(
-  "submonoid_carrier_antisym",
-  ``!(g:'a monoid) h. submonoid h g /\ G SUBSET H ==> MonoidIso I h g``,
+Theorem submonoid_carrier_antisym:
+    !(g:'a monoid) h. submonoid h g /\ G SUBSET H ==> MonoidIso I h g
+Proof
   rpt (stripDup[submonoid_def]) >>
   rw_tac std_ss[MonoidIso_def] >>
   `H SUBSET G` by rw[submonoid_subset] >>
   fs[MonoidHomo_def, SUBSET_DEF] >>
-  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]);
+  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]
+QED
 
 (* Theorem: Monoid g /\ Monoid h /\ submonoid h g ==> !x. x IN H ==> (order h x = ord x) *)
 (* Proof:
@@ -2906,10 +2984,10 @@ val submonoid_carrier_antisym = store_thm(
           But x ** m <> #e        by order_thm
           This is a contradiction.
 *)
-val submonoid_order_eqn = store_thm(
-  "submonoid_order_eqn",
-  ``!(g:'a monoid) h. Monoid g /\ Monoid h /\ submonoid h g ==>
-   !x. x IN H ==> (order h x = ord x)``,
+Theorem submonoid_order_eqn:
+    !(g:'a monoid) h. Monoid g /\ Monoid h /\ submonoid h g ==>
+   !x. x IN H ==> (order h x = ord x)
+Proof
   rw[submonoid_def] >>
   `!x. I x = x` by rw[] >>
   Cases_on `ord x = 0` >| [
@@ -2925,16 +3003,17 @@ val submonoid_order_eqn = store_thm(
     spose_not_then strip_assume_tac >>
     `x ** m = #e` by metis_tac[monoid_homo_exp, monoid_homo_id] >>
     metis_tac[order_thm]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Homomorphic Image of Monoid.                                              *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define an operation on images *)
-val image_op_def = Define`
-   image_op (g:'a monoid) (f:'a -> 'b) x y =  f (CHOICE (preimage f G x) * CHOICE (preimage f G y))
-`;
+Definition image_op_def:
+   image_op (g:'a monoid) (f:'a -> 'b) x y = f (CHOICE (preimage f G x) * CHOICE (preimage f G y))
+End
 
 (* Theorem: INJ f G univ(:'b) ==> !x y. x IN G /\ y IN G ==> (image_op g f (f x) (f y) = f (x * y)) *)
 (* Proof:
@@ -2944,48 +3023,52 @@ val image_op_def = Define`
    = f (CHOICE (preimage f G (f x)) * CHOICE (preimage f G (f y))   by image_op_def
    = f (x * y)                             by above
 *)
-val image_op_inj = store_thm(
-  "image_op_inj",
-  ``!g:'a monoid f. INJ f G univ(:'b) ==>
-    !x y. x IN G /\ y IN G ==> (image_op g f (f x) (f y) = f (g.op x y))``,
-  rw[image_op_def, preimage_inj_choice]);
+Theorem image_op_inj:
+    !g:'a monoid f. INJ f G univ(:'b) ==>
+    !x y. x IN G /\ y IN G ==> (image_op g f (f x) (f y) = f (g.op x y))
+Proof
+  rw[image_op_def, preimage_inj_choice]
+QED
 
 (* Define the homomorphic image of a monoid. *)
-val homo_monoid_def = Define`
+Definition homo_monoid_def:
   homo_monoid (g:'a monoid) (f:'a -> 'b) =
     <| carrier := IMAGE f G;
             op := image_op g f;
             id := f #e
      |>
-`;
+End
 
 (* set overloading *)
-val _ = overload_on ("o", ``(homo_monoid (g:'a monoid) (f:'a -> 'b)).op``);
-val _ = overload_on ("#i", ``(homo_monoid (g:'a monoid) (f:'a -> 'b)).id``);
-val _ = overload_on ("fG", ``(homo_monoid (g:'a monoid) (f:'a -> 'b)).carrier``);
+Overload o = ``(homo_monoid (g:'a monoid) (f:'a -> 'b)).op``
+Overload "#i" = ``(homo_monoid (g:'a monoid) (f:'a -> 'b)).id``
+Overload fG = ``(homo_monoid (g:'a monoid) (f:'a -> 'b)).carrier``
 
 (* Theorem: Properties of homo_monoid. *)
 (* Proof: by homo_monoid_def and image_op_def. *)
-val homo_monoid_property = store_thm(
-  "homo_monoid_property",
-  ``!(g:'a monoid) (f:'a -> 'b). (fG = IMAGE f G) /\
+Theorem homo_monoid_property:
+    !(g:'a monoid) (f:'a -> 'b). (fG = IMAGE f G) /\
       (!x y. x IN fG /\ y IN fG  ==> (x o y = f (CHOICE (preimage f G x) * CHOICE (preimage f G y)))) /\
-      (#i = f #e)``,
-  rw[homo_monoid_def, image_op_def]);
+      (#i = f #e)
+Proof
+  rw[homo_monoid_def, image_op_def]
+QED
 
 (* Theorem: !x. x IN G ==> f x IN fG *)
 (* Proof: by homo_monoid_def, IN_IMAGE *)
-val homo_monoid_element = store_thm(
-  "homo_monoid_element",
-  ``!(g:'a monoid) (f:'a -> 'b). !x. x IN G ==> f x IN fG``,
-  rw[homo_monoid_def]);
+Theorem homo_monoid_element:
+    !(g:'a monoid) (f:'a -> 'b). !x. x IN G ==> f x IN fG
+Proof
+  rw[homo_monoid_def]
+QED
 
 (* Theorem: f #e = #i *)
 (* Proof: by homo_monoid_def *)
-val homo_monoid_id = store_thm(
-  "homo_monoid_id",
-  ``!(g:'a monoid) (f:'a -> 'b). f #e = #i``,
-  rw[homo_monoid_def]);
+Theorem homo_monoid_id:
+    !(g:'a monoid) (f:'a -> 'b). f #e = #i
+Proof
+  rw[homo_monoid_def]
+QED
 
 (* Theorem: INJ f G univ(:'b) ==>
             !x y. x IN G /\ y IN G  ==> (f (x * y) = (f x) o (f y)) *)
@@ -2996,11 +3079,12 @@ val homo_monoid_id = store_thm(
    = f (CHOICE (preimage f G (f x)) * CHOICE (preimage f G (f y))   by above
    = (f x) o (f y)                         by homo_monoid_property
 *)
-val homo_monoid_op_inj = store_thm(
-  "homo_monoid_op_inj",
-  ``!(g:'a monoid) (f:'a -> 'b). INJ f G univ(:'b) ==>
-   !x y. x IN G /\ y IN G  ==> (f (x * y) = (f x) o (f y))``,
-  rw[homo_monoid_property, preimage_inj_choice]);
+Theorem homo_monoid_op_inj:
+    !(g:'a monoid) (f:'a -> 'b). INJ f G univ(:'b) ==>
+   !x y. x IN G /\ y IN G  ==> (f (x * y) = (f x) o (f y))
+Proof
+  rw[homo_monoid_property, preimage_inj_choice]
+QED
 
 (* Theorem: MonoidIso I (homo_monoid g I) g *)
 (* Proof:
@@ -3018,9 +3102,9 @@ val homo_monoid_op_inj = store_thm(
        = G                    by above, IMAGE_I
        This is true           by BIJ_I_SAME
 *)
-val homo_monoid_I = store_thm(
-  "homo_monoid_I",
-  ``!g:'a monoid. MonoidIso I (homo_monoid g I) g``,
+Theorem homo_monoid_I:
+    !g:'a monoid. MonoidIso I (homo_monoid g I) g
+Proof
   rpt strip_tac >>
   `IMAGE I G = G` by rw[] >>
   `INJ I G univ(:'a)` by rw[INJ_I] >>
@@ -3029,7 +3113,8 @@ val homo_monoid_I = store_thm(
     rw_tac std_ss[MonoidHomo_def, homo_monoid_def] >>
     metis_tac[image_op_inj],
     rw[homo_monoid_property, BIJ_I_SAME]
-  ]);
+  ]
+QED
 
 (* Theorem: [Closure] Monoid g /\ MonoidHomo f g (homo_monoid g f) ==> x IN fG /\ y IN fG ==> x o y IN fG *)
 (* Proof:
@@ -3043,12 +3128,13 @@ val homo_monoid_I = store_thm(
    Note a * b IN G             by monoid_op_element
    so   f (a * b) IN fG        by homo_monoid_element
 *)
-val homo_monoid_closure = store_thm(
-  "homo_monoid_closure",
-  ``!(g:'a monoid) (f:'a -> 'b). Monoid g /\ MonoidHomo f g (homo_monoid g f) ==>
-     !x y. x IN fG /\ y IN fG ==> x o y IN fG``,
+Theorem homo_monoid_closure:
+    !(g:'a monoid) (f:'a -> 'b). Monoid g /\ MonoidHomo f g (homo_monoid g f) ==>
+     !x y. x IN fG /\ y IN fG ==> x o y IN fG
+Proof
   rw_tac std_ss[homo_monoid_property] >>
-  rw[preimage_choice_property]);
+  rw[preimage_choice_property]
+QED
 
 (* Theorem: [Associative] Monoid g /\ MonoidHomo f g (homo_monoid g f) ==>
             x IN fG /\ y IN fG /\ z IN fG ==> (x o y) o z = x o (y o z) *)
@@ -3071,10 +3157,10 @@ val homo_monoid_closure = store_thm(
    = (f a) o ((f b) o (f c))   by homo_monoid_property
    = x o (y o z)               by contracting x, y, z
 *)
-val homo_monoid_assoc = store_thm(
-  "homo_monoid_assoc",
-  ``!(g:'a monoid) (f:'a -> 'b). Monoid g /\ MonoidHomo f g (homo_monoid g f) ==>
-   !x y z. x IN fG /\ y IN fG /\ z IN fG ==> ((x o y) o z = x o (y o z))``,
+Theorem homo_monoid_assoc:
+    !(g:'a monoid) (f:'a -> 'b). Monoid g /\ MonoidHomo f g (homo_monoid g f) ==>
+   !x y z. x IN fG /\ y IN fG /\ z IN fG ==> ((x o y) o z = x o (y o z))
+Proof
   rw_tac std_ss[MonoidHomo_def] >>
   `(fG = IMAGE f G) /\ !x y. x IN fG /\ y IN fG ==> (x o y = f (CHOICE (preimage f G x) * CHOICE (preimage f G y)))` by rw[homo_monoid_property] >>
   qabbrev_tac `a = CHOICE (preimage f G x)` >>
@@ -3085,7 +3171,8 @@ val homo_monoid_assoc = store_thm(
   `c IN G /\ (f c = z)` by metis_tac[preimage_choice_property] >>
   `a * b IN G /\ b * c IN G ` by rw[] >>
   `a * b * c = a * (b * c)` by rw[monoid_assoc] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: [Identity] Monoid g /\ MonoidHomo f g (homo_monoid g f) ==> #i IN fG /\ #i o x = x /\ x o #i = x. *)
 (* Proof:
@@ -3098,13 +3185,14 @@ val homo_monoid_assoc = store_thm(
         = x
    similarly for x o #i = x             by monoid_rid
 *)
-val homo_monoid_id_property = store_thm(
-  "homo_monoid_id_property",
-  ``!(g:'a monoid) (f:'a -> 'b). Monoid g /\ MonoidHomo f g (homo_monoid g f) ==>
-      #i IN fG /\ (!x. x IN fG ==> (#i o x = x) /\ (x o #i = x))``,
+Theorem homo_monoid_id_property:
+    !(g:'a monoid) (f:'a -> 'b). Monoid g /\ MonoidHomo f g (homo_monoid g f) ==>
+      #i IN fG /\ (!x. x IN fG ==> (#i o x = x) /\ (x o #i = x))
+Proof
   rw[MonoidHomo_def, homo_monoid_property] >-
   metis_tac[monoid_lid, monoid_id_element, preimage_choice_property] >>
-  metis_tac[monoid_rid, monoid_id_element, preimage_choice_property]);
+  metis_tac[monoid_rid, monoid_id_element, preimage_choice_property]
+QED
 
 (* Theorem: [Commutative] AbelianMonoid g /\ MonoidHomo f g (homo_monoid g f) ==>
             x IN fG /\ y IN fG ==> (x o y = y o x) *)
@@ -3125,10 +3213,10 @@ val homo_monoid_id_property = store_thm(
    = (f b) o (f a)            by homo_monoid_property
    = y o x                    by contracting x, y
 *)
-val homo_monoid_comm = store_thm(
-  "homo_monoid_comm",
-  ``!(g:'a monoid) (f:'a -> 'b). AbelianMonoid g /\ MonoidHomo f g (homo_monoid g f) ==>
-   !x y. x IN fG /\ y IN fG ==> (x o y = y o x)``,
+Theorem homo_monoid_comm:
+    !(g:'a monoid) (f:'a -> 'b). AbelianMonoid g /\ MonoidHomo f g (homo_monoid g f) ==>
+   !x y. x IN fG /\ y IN fG ==> (x o y = y o x)
+Proof
   rw_tac std_ss[AbelianMonoid_def, MonoidHomo_def] >>
   `(fG = IMAGE f G) /\ !x y. x IN fG /\ y IN fG ==> (x o y = f (CHOICE (preimage f G x) * CHOICE (preimage f G y)))` by rw[homo_monoid_property] >>
   qabbrev_tac `a = CHOICE (preimage f G x)` >>
@@ -3136,7 +3224,8 @@ val homo_monoid_comm = store_thm(
   `a IN G /\ (f a = x)` by metis_tac[preimage_choice_property] >>
   `b IN G /\ (f b = y)` by metis_tac[preimage_choice_property] >>
   `a * b = b * a` by rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: Homomorphic image of a monoid is a monoid.
             Monoid g /\ MonoidHomo f g (homo_monoid g f) ==> Monoid (homo_monoid g f) *)
@@ -3148,9 +3237,9 @@ val homo_monoid_comm = store_thm(
    (4) x IN fG ==> #i o x = x, true by homo_monoid_id_property
    (5) x IN fG ==> x o #i = x, true by homo_monoid_id_property
 *)
-val homo_monoid_monoid = store_thm(
-  "homo_monoid_monoid",
-  ``!(g:'a monoid) f. Monoid g /\ MonoidHomo f g (homo_monoid g f) ==> Monoid (homo_monoid g f)``,
+Theorem homo_monoid_monoid:
+    !(g:'a monoid) f. Monoid g /\ MonoidHomo f g (homo_monoid g f) ==> Monoid (homo_monoid g f)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[Monoid_def] >| [
     rw[homo_monoid_closure],
@@ -3158,7 +3247,8 @@ val homo_monoid_monoid = store_thm(
     rw[homo_monoid_id_property],
     rw[homo_monoid_id_property],
     rw[homo_monoid_id_property]
-  ]);
+  ]
+QED
 
 (* Theorem: Homomorphic image of an Abelian monoid is an Abelian monoid.
             AbelianMonoid g /\ MonoidHomo f g (homo_monoid g f) ==> AbelianMonoid (homo_monoid g f) *)
@@ -3168,10 +3258,11 @@ val homo_monoid_monoid = store_thm(
    (1) Monoid (homo_monoid g f), true               by homo_monoid_monoid, Monoid g
    (2) x IN fG /\ y IN fG ==> x o y = y o x, true   by homo_monoid_comm, AbelianMonoid g
 *)
-val homo_monoid_abelian_monoid = store_thm(
-  "homo_monoid_abelian_monoid",
-  ``!(g:'a monoid) f. AbelianMonoid g /\ MonoidHomo f g (homo_monoid g f) ==> AbelianMonoid (homo_monoid g f)``,
-  metis_tac[homo_monoid_monoid, AbelianMonoid_def, homo_monoid_comm]);
+Theorem homo_monoid_abelian_monoid:
+    !(g:'a monoid) f. AbelianMonoid g /\ MonoidHomo f g (homo_monoid g f) ==> AbelianMonoid (homo_monoid g f)
+Proof
+  metis_tac[homo_monoid_monoid, AbelianMonoid_def, homo_monoid_comm]
+QED
 
 (* Theorem: Monoid g /\ INJ f G UNIV ==> MonoidHomo f g (homo_monoid g f) *)
 (* Proof:
@@ -3179,29 +3270,30 @@ val homo_monoid_abelian_monoid = store_thm(
    (1) x IN G ==> f x IN IMAGE f G, true                 by IN_IMAGE
    (2) x IN G /\ y IN G ==> f (x * y) = f x o f y, true  by homo_monoid_op_inj
 *)
-val homo_monoid_by_inj = store_thm(
-  "homo_monoid_by_inj",
-  ``!(g:'a monoid) (f:'a -> 'b). Monoid g /\ INJ f G UNIV ==> MonoidHomo f g (homo_monoid g f)``,
+Theorem homo_monoid_by_inj:
+    !(g:'a monoid) (f:'a -> 'b). Monoid g /\ INJ f G UNIV ==> MonoidHomo f g (homo_monoid g f)
+Proof
   rw_tac std_ss[MonoidHomo_def, homo_monoid_property] >-
   rw[] >>
-  rw[homo_monoid_op_inj]);
+  rw[homo_monoid_op_inj]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Weaker form of Homomorphic of Monoid and image of identity.               *)
 (* ------------------------------------------------------------------------- *)
 
 (* Let us take out the image of identity requirement *)
-val WeakHomo_def = Define`
+Definition WeakHomo_def:
   WeakHomo (f:'a -> 'b) (g:'a monoid) (h:'b monoid) <=>
     (!x. x IN G ==> f x IN h.carrier) /\
     (!x y. x IN G /\ y IN G ==> (f (x * y) = h.op (f x) (f y)))
     (* no requirement for: f #e = h.id *)
-`;
+End
 
 (* A function f from g to h is an isomorphism if f is a bijective homomorphism. *)
-val WeakIso_def = Define`
+Definition WeakIso_def:
   WeakIso f g h <=> WeakHomo f g h /\ BIJ f G h.carrier
-`;
+End
 
 (* Then the best we can prove about monoid identities is the following:
             Monoid g /\ Monoid h /\ WeakIso f g h ==> f #e = h.id
@@ -3224,9 +3316,9 @@ val WeakIso_def = Define`
        Similar to above,
        h.op (f #e) x = h.op (f #e) (f y) = f (#e * y) = f y = x  by monoid_lid.
 *)
-val monoid_weak_iso_id = store_thm(
-  "monoid_weak_iso_id",
-  ``!f g h. Monoid g /\ Monoid h /\ WeakIso f g h ==> (f #e = h.id)``,
+Theorem monoid_weak_iso_id:
+    !f g h. Monoid g /\ Monoid h /\ WeakIso f g h ==> (f #e = h.id)
+Proof
   rw_tac std_ss[WeakIso_def] >>
   `#e IN G /\ f #e IN h.carrier` by metis_tac[WeakHomo_def, monoid_id_element] >>
   `!x. x IN h.carrier ==> (h.op x (f #e) = x) /\ (h.op (f #e) x = x)` suffices_by rw_tac std_ss[monoid_id_unique] >>
@@ -3235,7 +3327,8 @@ val monoid_weak_iso_id = store_thm(
     metis_tac[WeakHomo_def, monoid_rid],
     `?y. y IN G /\ (f y = x)` by metis_tac[BIJ_THM] >>
     metis_tac[WeakHomo_def, monoid_lid]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Injective Image of Monoid.                                                *)
@@ -3449,23 +3542,23 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Use K to denote k.carrier *)
-val _ = temp_overload_on ("K", ``(k:'a monoid).carrier``);
+Overload K[local] = ``(k:'a monoid).carrier``
 
 (* Use o to denote h.op *)
-val _ = temp_overload_on ("o", ``(h:'a monoid).op``);
+Overload o[local] = ``(h:'a monoid).op``
 
 (* Use #i to denote h.id *)
-val _ = temp_overload_on ("#i", ``(h:'a monoid).id``);
+Overload "#i"[local] = ``(h:'a monoid).id``
 
 (* A Submonoid is a subset of a monoid that's a monoid itself, keeping op, id. *)
-val Submonoid_def = Define`
+Definition Submonoid_def:
   Submonoid (h:'a monoid) (g:'a monoid) <=>
     Monoid h /\ Monoid g /\
     H SUBSET G /\ ($o = $* ) /\ (#i = #e)
-`;
+End
 
 (* Overload Submonoid *)
-val _ = overload_on ("<<", ``Submonoid``);
+Overload "<<" = ``Submonoid``
 val _ = set_fixity "<<" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (* Note: The requirement $o = $* is stronger than the following:
@@ -3493,45 +3586,46 @@ val submonoid_property = |- !g h. h << g ==> Monoid h /\ Monoid g /\ ($o = $* ) 
 
 (* Theorem: properties of submonoid *)
 (* Proof: Assume h << g, then derive all consequences of definition. *)
-val submonoid_property = store_thm(
-  "submonoid_property",
-  ``!(g:'a monoid) h. h << g ==> Monoid h /\ Monoid g /\ H SUBSET G /\
-      (!x y. x IN H /\ y IN H ==> (x o y = x * y)) /\ (#i = #e)``,
-  rw_tac std_ss[Submonoid_def]);
+Theorem submonoid_property:
+    !(g:'a monoid) h. h << g ==> Monoid h /\ Monoid g /\ H SUBSET G /\
+      (!x y. x IN H /\ y IN H ==> (x o y = x * y)) /\ (#i = #e)
+Proof
+  rw_tac std_ss[Submonoid_def]
+QED
 
 (* Theorem: h << g ==> H SUBSET G *)
 (* Proof: by Submonoid_def *)
-val submonoid_carrier_subset = store_thm(
-  "submonoid_carrier_subset",
-  ``!(g:'a monoid) h. Submonoid h g ==> H SUBSET G``,
-  rw[Submonoid_def]);
+Theorem submonoid_carrier_subset:
+    !(g:'a monoid) h. Submonoid h g ==> H SUBSET G
+Proof
+  rw[Submonoid_def]
+QED
 
 (* Theorem: elements in submonoid are also in monoid. *)
 (* Proof: Since h << g ==> H SUBSET G by Submonoid_def. *)
-val submonoid_element = store_thm(
-  "submonoid_element",
-  ``!(g:'a monoid) h. h << g ==> !x. x IN H ==> x IN G``,
-  rw_tac std_ss[Submonoid_def, SUBSET_DEF]);
+Theorem submonoid_element[simp]:
+    !(g:'a monoid) h. h << g ==> !x. x IN H ==> x IN G
+Proof
+  rw_tac std_ss[Submonoid_def, SUBSET_DEF]
+QED
 
-(* export simple result *)
-val _ = export_rewrites ["submonoid_element"];
 
 (* Theorem: h << g ==> (h.op = $* ) *)
 (* Proof: by Subgroup_def *)
-val submonoid_op = store_thm(
-  "submonoid_op",
-  ``!(g:'a monoid) h. h << g ==> (h.op = g.op)``,
-  rw[Submonoid_def]);
+Theorem submonoid_op:
+    !(g:'a monoid) h. h << g ==> (h.op = g.op)
+Proof
+  rw[Submonoid_def]
+QED
 
 (* Theorem: h << g ==> #i = #e *)
 (* Proof: by Submonoid_def. *)
-val submonoid_id = store_thm(
-  "submonoid_id",
-  ``!(g:'a monoid) h. h << g ==> (#i = #e)``,
-  rw_tac std_ss[Submonoid_def]);
+Theorem submonoid_id[simp]:
+    !(g:'a monoid) h. h << g ==> (#i = #e)
+Proof
+  rw_tac std_ss[Submonoid_def]
+QED
 
-(* export simple results *)
-val _ = export_rewrites["submonoid_id"];
 
 (* Theorem: h << g ==> !x. x IN H ==> !n. h.exp x n = x ** n *)
 (* Proof: by induction on n.
@@ -3549,9 +3643,9 @@ val _ = export_rewrites["submonoid_id"];
          = x ** SUC n            by monoid_exp_SUC
          = RHS
 *)
-val submonoid_exp = store_thm(
-  "submonoid_exp",
-  ``!(g:'a monoid) h. h << g ==> !x. x IN H ==> !n. h.exp x n = x ** n``,
+Theorem submonoid_exp:
+    !(g:'a monoid) h. h << g ==> !x. x IN H ==> !n. h.exp x n = x ** n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
@@ -3559,7 +3653,8 @@ val submonoid_exp = store_thm(
   `_ = x * (h.exp x n)` by metis_tac[submonoid_property, monoid_exp_element] >>
   `_ = x * (x ** n)` by rw[] >>
   `_ = x ** (SUC n)` by rw_tac std_ss[monoid_exp_SUC] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: A submonoid h of g implies identity is a homomorphism from h to g.
         or  h << g ==> Monoid h /\ Monoid g /\ submonoid h g  *)
@@ -3573,10 +3668,11 @@ val submonoid_exp = store_thm(
    ==> MonoidHomo I h g                             by MonoidHomo_def, f = I.
    ==> submonoid h g                                by submonoid_def
 *)
-val submonoid_homomorphism = store_thm(
-  "submonoid_homomorphism",
-  ``!(g:'a monoid) h. h << g ==> Monoid h /\ Monoid g /\ submonoid h g``,
-  rw_tac std_ss[Submonoid_def, submonoid_def, MonoidHomo_def, SUBSET_DEF]);
+Theorem submonoid_homomorphism:
+    !(g:'a monoid) h. h << g ==> Monoid h /\ Monoid g /\ submonoid h g
+Proof
+  rw_tac std_ss[Submonoid_def, submonoid_def, MonoidHomo_def, SUBSET_DEF]
+QED
 
 (* original:
 g `!(g:'a monoid) h. h << g = Monoid h /\ Monoid g /\ submonoid h g`;
@@ -3592,10 +3688,11 @@ but submonoid_def uses homomorphism I, and so cannot show this for any x y.
    Note Monoid g /\ Monoid h /\ submonoid h g   by submonoid_homomorphism, h << g
    Thus !x. x IN H ==> (order h x = ord x)      by submonoid_order_eqn
 *)
-val submonoid_order = store_thm(
-  "submonoid_order",
-  ``!(g:'a monoid) h. h << g ==> !x. x IN H ==> (order h x = ord x)``,
-  metis_tac[submonoid_homomorphism, submonoid_order_eqn]);
+Theorem submonoid_order:
+    !(g:'a monoid) h. h << g ==> !x. x IN H ==> (order h x = ord x)
+Proof
+  metis_tac[submonoid_homomorphism, submonoid_order_eqn]
+QED
 
 (* Theorem: Monoid g ==> !h. Submonoid h g <=>
             H SUBSET G /\ (!x y. x IN H /\ y IN H ==> h.op x y IN H) /\ (h.id IN H) /\ (h.op = $* ) /\ (h.id = #e) *)
@@ -3610,20 +3707,21 @@ val submonoid_order = store_thm(
        (2) x IN H ==> #e * x = x, true          by monoid_lid, SUBSET_DEF
        (3) x IN H ==> x * #e = x, true          by monoid_rid, SUBSET_DEF
 *)
-val submonoid_alt = store_thm(
-  "submonoid_alt",
-  ``!g:'a monoid. Monoid g ==> !h. Submonoid h g <=>
+Theorem submonoid_alt:
+    !g:'a monoid. Monoid g ==> !h. Submonoid h g <=>
     H SUBSET G /\ (* subset *)
     (!x y. x IN H /\ y IN H ==> h.op x y IN H) /\ (* closure *)
     (h.id IN H) /\ (* has identity *)
-    (h.op = g.op ) /\ (h.id = #e)``,
+    (h.op = g.op ) /\ (h.id = #e)
+Proof
   rw_tac std_ss[Submonoid_def, EQ_IMP_THM] >-
   metis_tac[monoid_op_element] >-
   metis_tac[monoid_id_element] >>
   rw_tac std_ss[Monoid_def] >-
   fs[monoid_assoc, SUBSET_DEF] >-
   fs[monoid_lid, SUBSET_DEF] >>
-  fs[monoid_rid, SUBSET_DEF]);
+  fs[monoid_rid, SUBSET_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Submonoid Theorems                                                        *)
@@ -3631,10 +3729,11 @@ val submonoid_alt = store_thm(
 
 (* Theorem: Monoid g ==> g << g *)
 (* Proof: by Submonoid_def, SUBSET_REFL *)
-val submonoid_reflexive = store_thm(
-  "submonoid_reflexive",
-  ``!g:'a monoid. Monoid g ==> g << g``,
-  rw_tac std_ss[Submonoid_def, SUBSET_REFL]);
+Theorem submonoid_reflexive:
+    !g:'a monoid. Monoid g ==> g << g
+Proof
+  rw_tac std_ss[Submonoid_def, SUBSET_REFL]
+QED
 
 val monoid_component_equality = DB.fetch "-" "monoid_component_equality";
 
@@ -3645,41 +3744,44 @@ val monoid_component_equality = DB.fetch "-" "monoid_component_equality";
    Now, H SUBSET G /\ G SUBSET H ==> H = G       by SUBSET_ANTISYM
    Hence h = g                                   by monoid_component_equality
 *)
-val submonoid_antisymmetric = store_thm(
-  "submonoid_antisymmetric",
-  ``!g h:'a monoid. h << g /\ g << h ==> (h = g)``,
+Theorem submonoid_antisymmetric:
+    !g h:'a monoid. h << g /\ g << h ==> (h = g)
+Proof
   rw_tac std_ss[Submonoid_def] >>
-  full_simp_tac bool_ss[monoid_component_equality, SUBSET_ANTISYM]);
+  full_simp_tac bool_ss[monoid_component_equality, SUBSET_ANTISYM]
+QED
 
 (* Theorem: k << h /\ h << g ==> k << g *)
 (* Proof: by Submonoid_def and SUBSET_TRANS *)
-val submonoid_transitive = store_thm(
-  "submonoid_transitive",
-  ``!g h k:'a monoid. k << h /\ h << g ==> k << g``,
+Theorem submonoid_transitive:
+    !g h k:'a monoid. k << h /\ h << g ==> k << g
+Proof
   rw_tac std_ss[Submonoid_def] >>
-  metis_tac[SUBSET_TRANS]);
+  metis_tac[SUBSET_TRANS]
+QED
 
 (* Theorem: h << g ==> Monoid h *)
 (* Proof: by Submonoid_def. *)
-val submonoid_monoid = store_thm(
-  "submonoid_monoid",
-  ``!g h:'a monoid. h << g ==> Monoid h``,
-  rw[Submonoid_def]);
+Theorem submonoid_monoid:
+    !g h:'a monoid. h << g ==> Monoid h
+Proof
+  rw[Submonoid_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Submonoid Intersection                                                    *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define intersection of monoids *)
-val monoid_intersect_def = Define`
+Definition monoid_intersect_def:
    monoid_intersect (g:'a monoid) (h:'a monoid) =
       <| carrier := G INTER H;
               op := $*; (* g.op *)
               id := #e  (* g.id *)
        |>
-`;
+End
 
-val _ = overload_on ("mINTER", ``monoid_intersect``);
+Overload mINTER = ``monoid_intersect``
 val _ = set_fixity "mINTER" (Infix(NONASSOC, 450)); (* same as relation *)
 (*
 > monoid_intersect_def;
@@ -3689,11 +3791,12 @@ val it = |- !g h. g mINTER h = <|carrier := G INTER H; op := $*; id := #e|>: thm
 (* Theorem: ((g mINTER h).carrier = G INTER H) /\
             ((g mINTER h).op = $* ) /\ ((g mINTER h).id = #e) *)
 (* Proof: by monoid_intersect_def *)
-val monoid_intersect_property = store_thm(
-  "monoid_intersect_property",
-  ``!g h:'a monoid. ((g mINTER h).carrier = G INTER H) /\
-                   ((g mINTER h).op = $* ) /\ ((g mINTER h).id = #e)``,
-  rw[monoid_intersect_def]);
+Theorem monoid_intersect_property:
+    !g h:'a monoid. ((g mINTER h).carrier = G INTER H) /\
+                   ((g mINTER h).op = $* ) /\ ((g mINTER h).id = #e)
+Proof
+  rw[monoid_intersect_def]
+QED
 
 (* Theorem: !x. x IN (g mINTER h).carrier ==> x IN G /\ x IN H *)
 (* Proof:
@@ -3701,17 +3804,19 @@ val monoid_intersect_property = store_thm(
      ==> x IN G INTER H                     by monoid_intersect_def
      ==> x IN G and x IN H                  by IN_INTER
 *)
-val monoid_intersect_element = store_thm(
-  "monoid_intersect_element",
-  ``!g h:'a monoid. !x. x IN (g mINTER h).carrier ==> x IN G /\ x IN H``,
-  rw[monoid_intersect_def, IN_INTER]);
+Theorem monoid_intersect_element:
+    !g h:'a monoid. !x. x IN (g mINTER h).carrier ==> x IN G /\ x IN H
+Proof
+  rw[monoid_intersect_def, IN_INTER]
+QED
 
 (* Theorem: (g mINTER h).id = #e *)
 (* Proof: by monoid_intersect_def. *)
-val monoid_intersect_id = store_thm(
-  "monoid_intersect_id",
-  ``!g h:'a monoid. (g mINTER h).id = #e``,
-  rw[monoid_intersect_def]);
+Theorem monoid_intersect_id:
+    !g h:'a monoid. (g mINTER h).id = #e
+Proof
+  rw[monoid_intersect_def]
+QED
 
 (* Theorem: h << g /\ k << g ==>
     ((h mINTER k).carrier = H INTER K) /\
@@ -3726,13 +3831,14 @@ val monoid_intersect_id = store_thm(
      and (h mINTER k).id = #i                by monoid_intersect_def
                          = #e                by submonoid_property
 *)
-val submonoid_intersect_property = store_thm(
-  "submonoid_intersect_property",
-  ``!g h k:'a monoid. h << g /\ k << g ==>
+Theorem submonoid_intersect_property:
+    !g h k:'a monoid. h << g /\ k << g ==>
     ((h mINTER k).carrier = H INTER K) /\
     (!x y. x IN H INTER K /\ y IN H INTER K ==> ((h mINTER k).op x y = x * y)) /\
-    ((h mINTER k).id = #e)``,
-  rw[monoid_intersect_def, submonoid_property]);
+    ((h mINTER k).id = #e)
+Proof
+  rw[monoid_intersect_def, submonoid_property]
+QED
 
 (* Theorem: h << g /\ k << g ==> Monoid (h mINTER k) *)
 (* Proof:
@@ -3779,9 +3885,9 @@ val submonoid_intersect_property = store_thm(
        = x * #e                                 by submonoid_id
        = x                                      by monoid_id
 *)
-val submonoid_intersect_monoid = store_thm(
-  "submonoid_intersect_monoid",
-  ``!g h k:'a monoid. h << g /\ k << g ==> Monoid (h mINTER k)``,
+Theorem submonoid_intersect_monoid:
+    !g h k:'a monoid. h << g /\ k << g ==> Monoid (h mINTER k)
+Proof
   rpt strip_tac >>
   `Monoid h /\ Monoid k /\ Monoid g` by metis_tac[submonoid_property] >>
   rw_tac std_ss[Monoid_def, monoid_intersect_def] >| [
@@ -3798,7 +3904,8 @@ val submonoid_intersect_monoid = store_thm(
     metis_tac[IN_INTER, submonoid_id, monoid_id_element],
     metis_tac[submonoid_property, monoid_id, submonoid_element, IN_INTER, monoid_id_element],
     metis_tac[submonoid_property, monoid_id, submonoid_element, IN_INTER, monoid_id_element]
-  ]);
+  ]
+QED
 
 (* Theorem: h << g /\ k << g ==> (h mINTER k) << g *)
 (* Proof:
@@ -3816,9 +3923,9 @@ val submonoid_intersect_monoid = store_thm(
        (h mINTER k).id = #i                      by monoid_intersect_def
                        = #e                      by Submonoid_def
 *)
-val submonoid_intersect_submonoid = store_thm(
-  "submonoid_intersect_submonoid",
-  ``!g h k:'a monoid. h << g /\ k << g ==> (h mINTER k) << g``,
+Theorem submonoid_intersect_submonoid:
+    !g h k:'a monoid. h << g /\ k << g ==> (h mINTER k) << g
+Proof
   rpt strip_tac >>
   `Monoid h /\ Monoid k /\ Monoid g` by metis_tac[submonoid_property] >>
   rw[Submonoid_def] >| [
@@ -3830,22 +3937,23 @@ val submonoid_intersect_submonoid = store_thm(
     metis_tac[Submonoid_def],
     `(h mINTER k).id = #i` by rw[monoid_intersect_def] >>
     metis_tac[Submonoid_def]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Submonoid Big Intersection                                                *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define intersection of submonoids of a monoid *)
-val submonoid_big_intersect_def = Define`
+Definition submonoid_big_intersect_def:
    submonoid_big_intersect (g:'a monoid) =
       <| carrier := BIGINTER (IMAGE (\h. H) {h | h << g});
               op := $*; (* g.op *)
               id := #e  (* g.id *)
        |>
-`;
+End
 
-val _ = overload_on ("smbINTER", ``submonoid_big_intersect``);
+Overload smbINTER = ``submonoid_big_intersect``
 (*
 > submonoid_big_intersect_def;
 val it = |- !g. smbINTER g =
@@ -3856,12 +3964,13 @@ val it = |- !g. smbINTER g =
    (!x y. x IN (smbINTER g).carrier /\ y IN (smbINTER g).carrier ==> ((smbINTER g).op x y = x * y)) /\
    ((smbINTER g).id = #e) *)
 (* Proof: by submonoid_big_intersect_def. *)
-val submonoid_big_intersect_property = store_thm(
-  "submonoid_big_intersect_property",
-  ``!g:'a monoid. ((smbINTER g).carrier = BIGINTER (IMAGE (\h. H) {h | h << g})) /\
+Theorem submonoid_big_intersect_property:
+    !g:'a monoid. ((smbINTER g).carrier = BIGINTER (IMAGE (\h. H) {h | h << g})) /\
    (!x y. x IN (smbINTER g).carrier /\ y IN (smbINTER g).carrier ==> ((smbINTER g).op x y = x * y)) /\
-   ((smbINTER g).id = #e)``,
-  rw[submonoid_big_intersect_def]);
+   ((smbINTER g).id = #e)
+Proof
+  rw[submonoid_big_intersect_def]
+QED
 
 (* Theorem: x IN (smbINTER g).carrier <=> (!h. h << g ==> x IN H) *)
 (* Proof:
@@ -3872,11 +3981,12 @@ val submonoid_big_intersect_property = store_thm(
    <=> !P. ?h. (P = H) /\ h << g) ==> x IN P               by GSPECIFICATION
    <=> !h. h << g ==> x IN H
 *)
-val submonoid_big_intersect_element = store_thm(
-  "submonoid_big_intersect_element",
-  ``!g:'a monoid. !x. x IN (smbINTER g).carrier <=> (!h. h << g ==> x IN H)``,
+Theorem submonoid_big_intersect_element:
+    !g:'a monoid. !x. x IN (smbINTER g).carrier <=> (!h. h << g ==> x IN H)
+Proof
   rw[submonoid_big_intersect_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: x IN (smbINTER g).carrier /\ y IN (smbINTER g).carrier ==> (smbINTER g).op x y IN (smbINTER g).carrier *)
 (* Proof:
@@ -3887,15 +3997,16 @@ val submonoid_big_intersect_element = store_thm(
      Now, (smbINTER g).op x y = x * y                       by submonoid_big_intersect_property
      Hence (smbINTER g).op x y IN (smbINTER g).carrier      by submonoid_big_intersect_element
 *)
-val submonoid_big_intersect_op_element = store_thm(
-  "submonoid_big_intersect_op_element",
-  ``!g:'a monoid. !x y. x IN (smbINTER g).carrier /\ y IN (smbINTER g).carrier ==>
-                     (smbINTER g).op x y IN (smbINTER g).carrier``,
+Theorem submonoid_big_intersect_op_element:
+    !g:'a monoid. !x y. x IN (smbINTER g).carrier /\ y IN (smbINTER g).carrier ==>
+                     (smbINTER g).op x y IN (smbINTER g).carrier
+Proof
   rpt strip_tac >>
   `!h. h << g ==> x IN H /\ y IN H` by metis_tac[submonoid_big_intersect_element] >>
   `!h. h << g ==> x * y IN H` by metis_tac[Submonoid_def, monoid_op_element, submonoid_property] >>
   `(smbINTER g).op x y = x * y` by rw[submonoid_big_intersect_property] >>
-  metis_tac[submonoid_big_intersect_element]);
+  metis_tac[submonoid_big_intersect_element]
+QED
 
 (* Theorem: (smbINTER g).id IN (smbINTER g).carrier *)
 (* Proof:
@@ -3905,14 +4016,15 @@ val submonoid_big_intersect_op_element = store_thm(
    Hence !h. h << g ==> (smbINTER g).id IN H          by above
     or (smbINTER g).id IN (smbINTER g).carrier        by submonoid_big_intersect_element
 *)
-val submonoid_big_intersect_has_id = store_thm(
-  "submonoid_big_intersect_has_id",
-  ``!g:'a monoid. (smbINTER g).id IN (smbINTER g).carrier``,
+Theorem submonoid_big_intersect_has_id:
+    !g:'a monoid. (smbINTER g).id IN (smbINTER g).carrier
+Proof
   rpt strip_tac >>
   `!h. h << g ==> (#i = #e)` by rw[submonoid_id] >>
   `!h. h << g ==> #i IN H` by rw[Submonoid_def] >>
   `(smbINTER g).id = #e` by metis_tac[submonoid_big_intersect_property] >>
-  metis_tac[submonoid_big_intersect_element]);
+  metis_tac[submonoid_big_intersect_element]
+QED
 
 (* Theorem: Monoid g ==> (smbINTER g).carrier SUBSET G *)
 (* Proof:
@@ -3925,16 +4037,17 @@ val submonoid_big_intersect_has_id = store_thm(
      Now h << g ==> H SUBSET G     by submonoid_property
    Hence P SUBSET G                by BIGINTER_SUBSET
 *)
-val submonoid_big_intersect_subset = store_thm(
-  "submonoid_big_intersect_subset",
-  ``!g:'a monoid. Monoid g ==> (smbINTER g).carrier SUBSET G``,
+Theorem submonoid_big_intersect_subset:
+    !g:'a monoid. Monoid g ==> (smbINTER g).carrier SUBSET G
+Proof
   rw[submonoid_big_intersect_def] >>
   qabbrev_tac `P = IMAGE (\h. H) {h | h << g}` >>
   (`!x. x IN P <=> ?h. (H = x) /\ h << g` by (rw[Abbr`P`] >> metis_tac[])) >>
   `g << g` by rw[submonoid_reflexive] >>
   `P <> {}` by metis_tac[MEMBER_NOT_EMPTY] >>
   `!h:'a monoid. h << g ==> H SUBSET G` by rw[submonoid_property] >>
-  metis_tac[BIGINTER_SUBSET]);
+  metis_tac[BIGINTER_SUBSET]
+QED
 
 (* Theorem: Monoid g ==> Monoid (smbINTER g) *)
 (* Proof:
@@ -3965,9 +4078,9 @@ val submonoid_big_intersect_subset = store_thm(
        = x * #e                                        by submonoid_big_intersect_property
        = x                                             by monoid_id
 *)
-val submonoid_big_intersect_monoid = store_thm(
-  "submonoid_big_intersect_monoid",
-  ``!g:'a monoid. Monoid g ==> Monoid (smbINTER g)``,
+Theorem submonoid_big_intersect_monoid:
+    !g:'a monoid. Monoid g ==> Monoid (smbINTER g)
+Proof
   rpt strip_tac >>
   `(smbINTER g).carrier SUBSET G` by rw[submonoid_big_intersect_subset] >>
   rw_tac std_ss[Monoid_def] >| [
@@ -3988,7 +4101,8 @@ val submonoid_big_intersect_monoid = store_thm(
     `x * #e = x` suffices_by rw[submonoid_big_intersect_property] >>
     `x IN G` by metis_tac[SUBSET_DEF] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: Monoid g ==> (smbINTER g) << g *)
 (* Proof:
@@ -4002,15 +4116,16 @@ val submonoid_big_intersect_monoid = store_thm(
    (4) (smbINTER g).id = #e
        True by submonoid_big_intersect_def
 *)
-val submonoid_big_intersect_submonoid = store_thm(
-  "submonoid_big_intersect_submonoid",
-  ``!g:'a monoid. Monoid g ==> (smbINTER g) << g``,
+Theorem submonoid_big_intersect_submonoid:
+    !g:'a monoid. Monoid g ==> (smbINTER g) << g
+Proof
   rw_tac std_ss[Submonoid_def] >| [
     rw[submonoid_big_intersect_monoid],
     rw[submonoid_big_intersect_subset],
     rw[submonoid_big_intersect_def],
     rw[submonoid_big_intersect_def]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Monoid Instances Documentation                                            *)
@@ -4111,13 +4226,13 @@ val submonoid_big_intersect_submonoid = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* The trivial monoid: {#e} *)
-val trivial_monoid_def = Define`
+Definition trivial_monoid_def:
   trivial_monoid e :'a monoid =
    <| carrier := {e};
            id := e;
            op := (\x y. e)
     |>
-`;
+End
 
 (*
 - type_of ``trivial_monoid e``;
@@ -4130,23 +4245,24 @@ val it = |- (trivial_monoid 8).id = 8: thm
 
 (* Theorem: {e} is indeed a monoid *)
 (* Proof: check by definition. *)
-val trivial_monoid = store_thm(
-  "trivial_monoid",
-  ``!e. FiniteAbelianMonoid (trivial_monoid e)``,
-  rw_tac std_ss[FiniteAbelianMonoid_def, AbelianMonoid_def, Monoid_def, trivial_monoid_def, IN_SING, FINITE_SING]);
+Theorem trivial_monoid:
+    !e. FiniteAbelianMonoid (trivial_monoid e)
+Proof
+  rw_tac std_ss[FiniteAbelianMonoid_def, AbelianMonoid_def, Monoid_def, trivial_monoid_def, IN_SING, FINITE_SING]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The monoid of addition modulo n.                                          *)
 (* ------------------------------------------------------------------------- *)
 
 (* Additive Modulo Monoid *)
-val plus_mod_def = Define`
+Definition plus_mod_def:
   plus_mod n :num monoid =
    <| carrier := count n;
            id := 0;
            op := (\i j. (i + j) MOD n)
     |>
-`;
+End
 (* This monoid should be upgraded to add_mod, the additive group of ZN ring later. *)
 
 (*
@@ -4158,15 +4274,16 @@ val it = |- (plus_mod 7).op 5 6 = 4: thm
 
 (* Theorem: properties of (plus_mod n) *)
 (* Proof: by plus_mod_def. *)
-val plus_mod_property = store_thm(
-  "plus_mod_property",
-  ``!n. ((plus_mod n).carrier = count n) /\
+Theorem plus_mod_property:
+    !n. ((plus_mod n).carrier = count n) /\
        ((plus_mod n).op = (\i j. (i + j) MOD n)) /\
        ((plus_mod n).id = 0) /\
        (!x. x IN (plus_mod n).carrier ==> x < n) /\
        (FINITE (plus_mod n).carrier) /\
-       (CARD (plus_mod n).carrier = n)``,
-  rw[plus_mod_def]);
+       (CARD (plus_mod n).carrier = n)
+Proof
+  rw[plus_mod_def]
+QED
 
 (* Theorem: 0 < n ==> !x k. (plus_mod n).exp x k = (k * x) MOD n *)
 (* Proof:
@@ -4189,63 +4306,69 @@ val plus_mod_property = store_thm(
        = ((SUC k) * x) MOD n              by MULT
        = RHS
 *)
-val plus_mod_exp = store_thm(
-  "plus_mod_exp",
-  ``!n. 0 < n ==> !x k. (plus_mod n).exp x k = (k * x) MOD n``,
+Theorem plus_mod_exp:
+    !n. 0 < n ==> !x k. (plus_mod n).exp x k = (k * x) MOD n
+Proof
   rw_tac std_ss[plus_mod_def, monoid_exp_def] >>
   Induct_on `k` >-
   rw[] >>
   rw_tac std_ss[FUNPOW_SUC] >>
-  metis_tac[MULT, ADD_COMM, MOD_PLUS, MOD_MOD]);
+  metis_tac[MULT, ADD_COMM, MOD_PLUS, MOD_MOD]
+QED
 
 (* Theorem: Additive Modulo n is a monoid. *)
 (* Proof: check group definitions, use MOD_ADD_ASSOC.
 *)
-val plus_mod_monoid = store_thm(
-  "plus_mod_monoid",
-  ``!n. 0 < n ==> Monoid (plus_mod n)``,
-  rw_tac std_ss[plus_mod_def, Monoid_def, count_def, GSPECIFICATION, MOD_ADD_ASSOC]);
+Theorem plus_mod_monoid:
+    !n. 0 < n ==> Monoid (plus_mod n)
+Proof
+  rw_tac std_ss[plus_mod_def, Monoid_def, count_def, GSPECIFICATION, MOD_ADD_ASSOC]
+QED
 
 (* Theorem: Additive Modulo n is an Abelian monoid. *)
 (* Proof: by plus_mod_monoid and ADD_COMM. *)
-val plus_mod_abelian_monoid = store_thm(
-  "plus_mod_abelian_monoid",
-  ``!n. 0 < n ==> AbelianMonoid (plus_mod n)``,
-  rw[plus_mod_monoid, plus_mod_def, AbelianMonoid_def, ADD_COMM]);
+Theorem plus_mod_abelian_monoid:
+    !n. 0 < n ==> AbelianMonoid (plus_mod n)
+Proof
+  rw[plus_mod_monoid, plus_mod_def, AbelianMonoid_def, ADD_COMM]
+QED
 
 (* Theorem: Additive Modulo n carrier is FINITE. *)
 (* Proof: by FINITE_COUNT. *)
-val plus_mod_finite = store_thm(
-  "plus_mod_finite",
-  ``!n. FINITE (plus_mod n).carrier``,
-  rw[plus_mod_def]);
+Theorem plus_mod_finite:
+    !n. FINITE (plus_mod n).carrier
+Proof
+  rw[plus_mod_def]
+QED
 
 (* Theorem: Additive Modulo n is a FINITE monoid. *)
 (* Proof: by plus_mod_monoid and plus_mod_finite. *)
-val plus_mod_finite_monoid = store_thm(
-  "plus_mod_finite_monoid",
-  ``!n. 0 < n ==> FiniteMonoid (plus_mod n)``,
-  rw[FiniteMonoid_def, plus_mod_monoid, plus_mod_finite]);
+Theorem plus_mod_finite_monoid:
+    !n. 0 < n ==> FiniteMonoid (plus_mod n)
+Proof
+  rw[FiniteMonoid_def, plus_mod_monoid, plus_mod_finite]
+QED
 
 (* Theorem: Additive Modulo n is a FINITE Abelian monoid. *)
 (* Proof: by plus_mod_abelian_monoid and plus_mod_finite. *)
-val plus_mod_finite_abelian_monoid = store_thm(
-  "plus_mod_finite_abelian_monoid",
-  ``!n. 0 < n ==> FiniteAbelianMonoid (plus_mod n)``,
-  rw[FiniteAbelianMonoid_def, plus_mod_abelian_monoid, plus_mod_finite]);
+Theorem plus_mod_finite_abelian_monoid:
+    !n. 0 < n ==> FiniteAbelianMonoid (plus_mod n)
+Proof
+  rw[FiniteAbelianMonoid_def, plus_mod_abelian_monoid, plus_mod_finite]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The monoid of multiplication modulo n.                                    *)
 (* ------------------------------------------------------------------------- *)
 
 (* Multiplicative Modulo Monoid *)
-val times_mod_def = zDefine`
+Definition times_mod_def[nocompute]:
   times_mod n :num monoid =
    <| carrier := count n;
            id := if n = 1 then 0 else 1;
            op := (\i j. (i * j) MOD n)
     |>
-`;
+End
 (* This monoid is taken as the multiplicative monoid of ZN ring later. *)
 (* Use of zDefine to avoid incorporating into computeLib, by default. *)
 (* Evaluation is given later in times_mod_eval. *)
@@ -4259,24 +4382,26 @@ val it = |- (times_mod 7).op 5 6 = 2: thm
 
 (* Theorem: times_mod evaluation. *)
 (* Proof: by times_mod_def. *)
-val times_mod_eval = store_thm(
-  "times_mod_eval[compute]",
-  ``!n. ((times_mod n).carrier = count n) /\
+Theorem times_mod_eval[compute]:
+    !n. ((times_mod n).carrier = count n) /\
        (!x y. (times_mod n).op x y = (x * y) MOD n) /\
-       ((times_mod n).id = if n = 1 then 0 else 1)``,
-  rw_tac std_ss[times_mod_def]);
+       ((times_mod n).id = if n = 1 then 0 else 1)
+Proof
+  rw_tac std_ss[times_mod_def]
+QED
 
 (* Theorem: properties of (times_mod n) *)
 (* Proof: by times_mod_def. *)
-val times_mod_property = store_thm(
-  "times_mod_property",
-  ``!n. ((times_mod n).carrier = count n) /\
+Theorem times_mod_property:
+    !n. ((times_mod n).carrier = count n) /\
        ((times_mod n).op = (\i j. (i * j) MOD n)) /\
        ((times_mod n).id = if n = 1 then 0 else 1) /\
        (!x. x IN (times_mod n).carrier ==> x < n) /\
        (FINITE (times_mod n).carrier) /\
-       (CARD (times_mod n).carrier = n)``,
-  rw[times_mod_def]);
+       (CARD (times_mod n).carrier = n)
+Proof
+  rw[times_mod_def]
+QED
 
 (* Theorem: 0 < n ==> !x k. (times_mod n).exp x k = ((x MOD n) ** k) MOD n *)
 (* Proof:
@@ -4301,9 +4426,9 @@ val times_mod_property = store_thm(
            = ((x MOD n) * (x MOD n) ** k) MOD n            by MOD_TIMES2, MOD_MOD, 0 < n
            = ((x MOD n) ** SUC k) MOD n                    by EXP
 *)
-val times_mod_exp = store_thm(
-  "times_mod_exp",
-  ``!n. 0 < n ==> !x k. (times_mod n).exp x k = ((x MOD n) ** k) MOD n``,
+Theorem times_mod_exp:
+    !n. 0 < n ==> !x k. (times_mod n).exp x k = ((x MOD n) ** k) MOD n
+Proof
   rw_tac std_ss[times_mod_def, monoid_exp_def] >| [
     `(\j. 0) = K 0` by rw[FUN_EQ_THM] >>
     metis_tac[FUNPOW_K],
@@ -4312,7 +4437,8 @@ val times_mod_exp = store_thm(
     rw[EXP, ONE_MOD] >>
     `FUNPOW (\j. (x * j) MOD n) (SUC k) 1 = (x * FUNPOW (\j. (x * j) MOD n) k 1) MOD n` by rw_tac std_ss[FUNPOW_SUC] >>
     metis_tac[EXP, MOD_TIMES2, MOD_MOD]
-  ]);
+  ]
+QED
 
 (* Theorem: For n > 0, Multiplication Modulo n is a monoid. *)
 (* Proof: check monoid definitions, use MOD_MULT_ASSOC. *)
@@ -4327,31 +4453,35 @@ QED
 
 (* Theorem: For n > 0, Multiplication Modulo n is an Abelian monoid. *)
 (* Proof: by times_mod_monoid and MULT_COMM. *)
-val times_mod_abelian_monoid = store_thm(
-  "times_mod_abelian_monoid",
-  ``!n. 0 < n ==> AbelianMonoid (times_mod n)``,
-  rw[AbelianMonoid_def, times_mod_monoid, times_mod_def, MULT_COMM]);
+Theorem times_mod_abelian_monoid:
+    !n. 0 < n ==> AbelianMonoid (times_mod n)
+Proof
+  rw[AbelianMonoid_def, times_mod_monoid, times_mod_def, MULT_COMM]
+QED
 
 (* Theorem: Multiplication Modulo n carrier is FINITE. *)
 (* Proof: by FINITE_COUNT. *)
-val times_mod_finite = store_thm(
-  "times_mod_finite",
-  ``!n. FINITE (times_mod n).carrier``,
-  rw[times_mod_def]);
+Theorem times_mod_finite:
+    !n. FINITE (times_mod n).carrier
+Proof
+  rw[times_mod_def]
+QED
 
 (* Theorem: For n > 0, Multiplication Modulo n is a FINITE monoid. *)
 (* Proof: by times_mod_monoid and times_mod_finite. *)
-val times_mod_finite_monoid = store_thm(
-  "times_mod_finite_monoid",
-  ``!n. 0 < n ==> FiniteMonoid (times_mod n)``,
-  rw[times_mod_monoid, times_mod_finite, FiniteMonoid_def]);
+Theorem times_mod_finite_monoid:
+    !n. 0 < n ==> FiniteMonoid (times_mod n)
+Proof
+  rw[times_mod_monoid, times_mod_finite, FiniteMonoid_def]
+QED
 
 (* Theorem: For n > 0, Multiplication Modulo n is a FINITE Abelian monoid. *)
 (* Proof: by times_mod_abelian_monoid and times_mod_finite. *)
-val times_mod_finite_abelian_monoid = store_thm(
-  "times_mod_finite_abelian_monoid",
-  ``!n. 0 < n ==> FiniteAbelianMonoid (times_mod n)``,
-  rw[times_mod_abelian_monoid, times_mod_finite, FiniteAbelianMonoid_def, AbelianMonoid_def]);
+Theorem times_mod_finite_abelian_monoid:
+    !n. 0 < n ==> FiniteAbelianMonoid (times_mod n)
+Proof
+  rw[times_mod_abelian_monoid, times_mod_finite, FiniteAbelianMonoid_def, AbelianMonoid_def]
+QED
 
 (*
 
@@ -4369,13 +4499,13 @@ val times_mod_finite_abelian_monoid = store_thm(
 (* The Monoid of List concatenation.                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val lists_def = Define`
+Definition lists_def:
   lists :'a list monoid =
    <| carrier := UNIV;
            id := [];
            op := list$APPEND
     |>
-`;
+End
 
 (*
 > EVAL ``lists.op [1;2;3] [4;5]``;
@@ -4384,10 +4514,11 @@ val it = |- lists.op [1; 2; 3] [4; 5] = [1; 2; 3; 4; 5]: thm
 
 (* Theorem: Lists form a Monoid *)
 (* Proof: check definition. *)
-val lists_monoid = store_thm(
-  "lists_monoid",
-  ``Monoid lists``,
-  rw_tac std_ss[Monoid_def, lists_def, IN_UNIV, GSPECIFICATION, APPEND, APPEND_NIL, APPEND_ASSOC]);
+Theorem lists_monoid:
+    Monoid lists
+Proof
+  rw_tac std_ss[Monoid_def, lists_def, IN_UNIV, GSPECIFICATION, APPEND, APPEND_NIL, APPEND_ASSOC]
+QED
 
 (* after a long while ...
 
@@ -4402,11 +4533,11 @@ val lists_monoid = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* The Monoid of set intersection *)
-val set_inter_def = Define`
+Definition set_inter_def:
   set_inter = <| carrier := UNIV;
                       id := UNIV;
                       op := (INTER) |>
-`;
+End
 
 (*
 > EVAL ``set_inter.op {1;4;5;6} {5;6;8;9}``;
@@ -4415,28 +4546,28 @@ val it = |- set_inter.op {1; 4; 5; 6} {5; 6; 8; 9} = {5; 6}: thm
 
 (* Theorem: set_inter is a Monoid. *)
 (* Proof: check definitions. *)
-val set_inter_monoid = store_thm(
-  "set_inter_monoid",
-  ``Monoid set_inter``,
-  rw[Monoid_def, set_inter_def, INTER_ASSOC]);
+Theorem set_inter_monoid[simp]:
+    Monoid set_inter
+Proof
+  rw[Monoid_def, set_inter_def, INTER_ASSOC]
+QED
 
-val _ = export_rewrites ["set_inter_monoid"];
 
 (* Theorem: set_inter is an abelian Monoid. *)
 (* Proof: check definitions. *)
-val set_inter_abelian_monoid = store_thm(
-  "set_inter_abelian_monoid",
-  ``AbelianMonoid set_inter``,
-  rw[AbelianMonoid_def, set_inter_def, INTER_COMM]);
+Theorem set_inter_abelian_monoid[simp]:
+    AbelianMonoid set_inter
+Proof
+  rw[AbelianMonoid_def, set_inter_def, INTER_COMM]
+QED
 
-val _ = export_rewrites ["set_inter_abelian_monoid"];
 
 (* The Monoid of set union *)
-val set_union_def = Define`
+Definition set_union_def:
   set_union = <| carrier := UNIV;
                       id := EMPTY;
                       op := (UNION) |>
-`;
+End
 
 (*
 > EVAL ``set_union.op {1;4;5;6} {5;6;8;9}``;
@@ -4445,34 +4576,34 @@ val it = |- set_union.op {1; 4; 5; 6} {5; 6; 8; 9} = {1; 4; 5; 6; 8; 9}: thm
 
 (* Theorem: set_union is a Monoid. *)
 (* Proof: check definitions. *)
-val set_union_monoid = store_thm(
-  "set_union_monoid",
-  ``Monoid set_union``,
-  rw[Monoid_def, set_union_def, UNION_ASSOC]);
+Theorem set_union_monoid[simp]:
+    Monoid set_union
+Proof
+  rw[Monoid_def, set_union_def, UNION_ASSOC]
+QED
 
-val _ = export_rewrites ["set_union_monoid"];
 
 (* Theorem: set_union is an abelian Monoid. *)
 (* Proof: check definitions. *)
-val set_union_abelian_monoid = store_thm(
-  "set_union_abelian_monoid",
-  ``AbelianMonoid set_union``,
-  rw[AbelianMonoid_def, set_union_def, UNION_COMM]);
+Theorem set_union_abelian_monoid[simp]:
+    AbelianMonoid set_union
+Proof
+  rw[AbelianMonoid_def, set_union_def, UNION_COMM]
+QED
 
-val _ = export_rewrites ["set_union_abelian_monoid"];
 
 (* ------------------------------------------------------------------------- *)
 (* Addition of numbers form a Monoid                                         *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define the number addition monoid *)
-val addition_monoid_def = Define`
+Definition addition_monoid_def:
     addition_monoid =
        <| carrier := univ(:num);
           op := $+;
           id := 0;
         |>
-`;
+End
 
 (*
 > EVAL ``addition_monoid.op 5 6``;
@@ -4481,12 +4612,13 @@ val it = |- addition_monoid.op 5 6 = 11: thm
 
 (* Theorem: properties of addition_monoid *)
 (* Proof: by addition_monoid_def *)
-val addition_monoid_property = store_thm(
-  "addition_monoid_property",
-  ``(addition_monoid.carrier = univ(:num)) /\
+Theorem addition_monoid_property:
+    (addition_monoid.carrier = univ(:num)) /\
    (addition_monoid.op = $+ ) /\
-   (addition_monoid.id = 0)``,
-  rw[addition_monoid_def]);
+   (addition_monoid.id = 0)
+Proof
+  rw[addition_monoid_def]
+QED
 
 (* Theorem: AbelianMonoid (addition_monoid) *)
 (* Proof:
@@ -4496,31 +4628,33 @@ val addition_monoid_property = store_thm(
    (3) x + 0 = x /\ 0 + x = x, true     by ADD, ADD_0
    (4) x + y = y + x, true              by ADD_COMM
 *)
-val addition_monoid_abelian_monoid = store_thm(
-  "addition_monoid_abelian_monoid",
-  ``AbelianMonoid (addition_monoid)``,
+Theorem addition_monoid_abelian_monoid:
+    AbelianMonoid (addition_monoid)
+Proof
   rw_tac std_ss[AbelianMonoid_def, Monoid_def, addition_monoid_def, GSPECIFICATION, IN_UNIV] >>
-  simp[]);
+  simp[]
+QED
 
 (* Theorem: Monoid (addition_monoid) *)
 (* Proof: by addition_monoid_abelian_monoid, AbelianMonoid_def *)
-val addition_monoid_monoid = store_thm(
-  "addition_monoid_monoid",
-  ``Monoid (addition_monoid)``,
-  metis_tac[addition_monoid_abelian_monoid, AbelianMonoid_def]);
+Theorem addition_monoid_monoid:
+    Monoid (addition_monoid)
+Proof
+  metis_tac[addition_monoid_abelian_monoid, AbelianMonoid_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Multiplication of numbers form a Monoid                                   *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define the number multiplication monoid *)
-val multiplication_monoid_def = Define`
+Definition multiplication_monoid_def:
     multiplication_monoid =
        <| carrier := univ(:num);
           op := $*;
           id := 1;
         |>
-`;
+End
 
 (*
 > EVAL ``multiplication_monoid.op 5 6``;
@@ -4529,12 +4663,13 @@ val it = |- multiplication_monoid.op 5 6 = 30: thm
 
 (* Theorem: properties of multiplication_monoid *)
 (* Proof: by multiplication_monoid_def *)
-val multiplication_monoid_property = store_thm(
-  "multiplication_monoid_property",
-  ``(multiplication_monoid.carrier = univ(:num)) /\
+Theorem multiplication_monoid_property:
+    (multiplication_monoid.carrier = univ(:num)) /\
    (multiplication_monoid.op = $* ) /\
-   (multiplication_monoid.id = 1)``,
-  rw[multiplication_monoid_def]);
+   (multiplication_monoid.id = 1)
+Proof
+  rw[multiplication_monoid_def]
+QED
 
 (* Theorem: AbelianMonoid (multiplication_monoid) *)
 (* Proof:
@@ -4544,32 +4679,34 @@ val multiplication_monoid_property = store_thm(
    (3) x * 1 = x /\ 1 * x = x, true     by MULT, MULT_1
    (4) x * y = y * x, true              by MULT_COMM
 *)
-val multiplication_monoid_abelian_monoid = store_thm(
-  "multiplication_monoid_abelian_monoid",
-  ``AbelianMonoid (multiplication_monoid)``,
+Theorem multiplication_monoid_abelian_monoid:
+    AbelianMonoid (multiplication_monoid)
+Proof
   rw_tac std_ss[AbelianMonoid_def, Monoid_def, multiplication_monoid_def, GSPECIFICATION, IN_UNIV] >-
   simp[] >>
-  simp[]);
+  simp[]
+QED
 
 (* Theorem: Monoid (multiplication_monoid) *)
 (* Proof: by multiplication_monoid_abelian_monoid, AbelianMonoid_def *)
-val multiplication_monoid_monoid = store_thm(
-  "multiplication_monoid_monoid",
-  ``Monoid (multiplication_monoid)``,
-  metis_tac[multiplication_monoid_abelian_monoid, AbelianMonoid_def]);
+Theorem multiplication_monoid_monoid:
+    Monoid (multiplication_monoid)
+Proof
+  metis_tac[multiplication_monoid_abelian_monoid, AbelianMonoid_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Powers of a fixed base form a Monoid                                      *)
 (* ------------------------------------------------------------------------- *)
 
 (* Define the power monoid *)
-val power_monoid_def = Define`
+Definition power_monoid_def:
     power_monoid (b:num) =
        <| carrier := {b ** j | j IN univ(:num)};
           op := $*;
           id := 1;
         |>
-`;
+End
 
 (*
 > EVAL ``(power_monoid 2).op (2 ** 3) (2 ** 4)``;
@@ -4578,12 +4715,13 @@ val it = |- (power_monoid 2).op (2 ** 3) (2 ** 4) = 128: thm
 
 (* Theorem: properties of power monoid *)
 (* Proof: by power_monoid_def *)
-val power_monoid_property = store_thm(
-  "power_monoid_property",
-  ``!b. ((power_monoid b).carrier = {b ** j | j IN univ(:num)}) /\
+Theorem power_monoid_property:
+    !b. ((power_monoid b).carrier = {b ** j | j IN univ(:num)}) /\
        ((power_monoid b).op = $* ) /\
-       ((power_monoid b).id = 1)``,
-  rw[power_monoid_def]);
+       ((power_monoid b).id = 1)
+Proof
+  rw[power_monoid_def]
+QED
 
 
 (* Theorem: AbelianMonoid (power_monoid b) *)
@@ -4598,21 +4736,23 @@ val power_monoid_property = store_thm(
    (4) b ** j * b ** j' = b ** j' * b ** j
        True                            by EXP_ADD, ADD_COMM
 *)
-val power_monoid_abelian_monoid = store_thm(
-  "power_monoid_abelian_monoid",
-  ``!b. AbelianMonoid (power_monoid b)``,
+Theorem power_monoid_abelian_monoid:
+    !b. AbelianMonoid (power_monoid b)
+Proof
   rw_tac std_ss[AbelianMonoid_def, Monoid_def, power_monoid_def, GSPECIFICATION, IN_UNIV] >-
   metis_tac[EXP_ADD] >-
   rw[EXP_ADD] >-
   metis_tac[] >>
-  rw[EXP_ADD]);
+  rw[EXP_ADD]
+QED
 
 (* Theorem: Monoid (power_monoid b) *)
 (* Proof: by power_monoid_abelian_monoid, AbelianMonoid_def *)
-val power_monoid_monoid = store_thm(
-  "power_monoid_monoid",
-  ``!b. Monoid (power_monoid b)``,
-  metis_tac[power_monoid_abelian_monoid, AbelianMonoid_def]);
+Theorem power_monoid_monoid:
+    !b. Monoid (power_monoid b)
+Proof
+  metis_tac[power_monoid_abelian_monoid, AbelianMonoid_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Logarithm is an isomorphism from Power Monoid to Addition Monoid          *)
@@ -4628,12 +4768,13 @@ val power_monoid_monoid = store_thm(
        = LOG b (b ** j) + LOG b (b ** j')   by LOG_EXACT_EXP
    (2) LOG b 1 = 0, true                    by LOG_1
 *)
-val power_to_addition_homo = store_thm(
-  "power_to_addition_homo",
-  ``!b. 1 < b ==> MonoidHomo (LOG b) (power_monoid b) (addition_monoid)``,
+Theorem power_to_addition_homo:
+    !b. 1 < b ==> MonoidHomo (LOG b) (power_monoid b) (addition_monoid)
+Proof
   rw[MonoidHomo_def, power_monoid_def, addition_monoid_def] >-
   rw[LOG_EXACT_EXP, GSYM EXP_ADD] >>
-  rw[LOG_1]);
+  rw[LOG_1]
+QED
 
 (* Theorem: 1 < b ==> MonoidIso (LOG b) (power_monoid b) (addition_monoid) *)
 (* Proof:
@@ -4653,9 +4794,9 @@ val power_to_addition_homo = store_thm(
               ?y. (?j. y = b ** j) /\ (LOG b y = x)
            Let j = x, y = b ** x, then true       by LOG_EXACT_EXP
 *)
-val power_to_addition_iso = store_thm(
-  "power_to_addition_iso",
-  ``!b. 1 < b ==> MonoidIso (LOG b) (power_monoid b) (addition_monoid)``,
+Theorem power_to_addition_iso:
+    !b. 1 < b ==> MonoidIso (LOG b) (power_monoid b) (addition_monoid)
+Proof
   rw[MonoidIso_def] >-
   rw[power_to_addition_homo] >>
   rw_tac std_ss[BIJ_DEF, power_monoid_def, addition_monoid_def] >| [
@@ -4663,7 +4804,8 @@ val power_to_addition_iso = store_thm(
     rfs[LOG_EXACT_EXP],
     rw[SURJ_DEF] >>
     metis_tac[LOG_EXACT_EXP]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Theory about folding a monoid (or group) operation over a bag of elements *)
@@ -5169,8 +5311,3 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
-(*===========================================================================*)

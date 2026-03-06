@@ -1,20 +1,19 @@
-open HolKernel Parse boolLib bossLib
-open pure_dBTheory numpairTheory
+Theory enumerations
+Ancestors
+  pure_dB numpair
 
 val _ = set_trace "Unicode" 1
-val _ = new_theory "enumerations"
-
 (* ----------------------------------------------------------------------
     A computable bijection between the natural numbers and all dB terms
    ---------------------------------------------------------------------- *)
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
-val dBnum_def = Define`
+Definition dBnum_def:
   (dBnum (dV i) = 3 * i) ∧
   (dBnum (dAPP M N) = 3 * (dBnum M ⊗ dBnum N) + 1) ∧
   (dBnum (dABS M) = 3 * dBnum M + 2)
-`;
+End
 
 val mod3 = prove(
   ``((3 * n) MOD 3 = 0) ∧ (r < 3 ⇒ ((3 * n + r) MOD 3 = r))``,
@@ -53,25 +52,20 @@ Definition numdB_def:
               dAPP (numdB (nfst (n DIV 3))) (numdB (nsnd (n DIV 3)))
             else dABS (numdB (n DIV 3))
 Termination
-  WF_REL_TAC `$<` THEN REPEAT STRIP_TAC THENL [
-    MATCH_MP_TAC arithmeticTheory.DIV_LESS THEN SRW_TAC [][] THEN
-    Q_TAC SUFF_TAC `n ≠ 0` THEN1 DECIDE_TAC THEN STRIP_TAC THEN
-    FULL_SIMP_TAC (srw_ss())[],
-
-    Q_TAC SUFF_TAC `n DIV 3 < n`
-      THEN1 (ASSUME_TAC (Q.INST [`n` |-> `n DIV 3`] nfst_le) THEN
-             DECIDE_TAC) THEN
-    MATCH_MP_TAC arithmeticTheory.DIV_LESS THEN SRW_TAC [][] THEN
-    Q_TAC SUFF_TAC `n ≠ 0` THEN1 DECIDE_TAC THEN STRIP_TAC THEN
-    FULL_SIMP_TAC (srw_ss())[],
-
-    Q_TAC SUFF_TAC `n DIV 3 < n`
-      THEN1 (ASSUME_TAC (Q.INST [`n` |-> `n DIV 3`] nsnd_le) THEN
-             DECIDE_TAC) THEN
-    MATCH_MP_TAC arithmeticTheory.DIV_LESS THEN SRW_TAC [][] THEN
-    Q_TAC SUFF_TAC `n ≠ 0` THEN1 DECIDE_TAC THEN STRIP_TAC THEN
-    FULL_SIMP_TAC (srw_ss())[]
-  ]
+  WF_REL_TAC `$<` >> rw[]
+  >- (Cases_on ‘n’ >> gvs[])
+  >- (Q_TAC SUFF_TAC `n DIV 3 < n`
+      >- (ASSUME_TAC (Q.INST [`n` |-> `n DIV 3`] nfst_le) THEN
+             DECIDE_TAC) >>
+      irule arithmeticTheory.DIV_LESS >> rw[] >>
+      Q_TAC SUFF_TAC `n ≠ 0` >- DECIDE_TAC >>
+      STRIP_TAC >> gvs[])
+  >- (Q_TAC SUFF_TAC `n DIV 3 < n`
+      >- (ASSUME_TAC (Q.INST [`n` |-> `n DIV 3`] nsnd_le) THEN
+             DECIDE_TAC) >>
+      irule arithmeticTheory.DIV_LESS >> rw[] >>
+      Q_TAC SUFF_TAC `n ≠ 0` >- DECIDE_TAC >>
+      STRIP_TAC >> gvs[])
 End
 
 val numdBnum = Store_thm(
@@ -107,22 +101,14 @@ val numdB_11 = Store_thm(
   ``(numdB n = numdB m) ⇔ (n = m)``,
   METIS_TAC [dBnumdB]);
 
-val numdB_onto = store_thm(
-  "numdB_onto",
-  ``∀t. ∃n. numdB n = t``,
-  METIS_TAC [numdBnum]);
-val dBnum_onto = store_thm(
-  "dBnum_onto",
-  ``∀n. ∃t. dBnum t = n``,
-  METIS_TAC [dBnumdB]);
-
-val _ = export_theory();
-
-
-
-
-
-
-
-
+Theorem numdB_onto:
+    ∀t. ∃n. numdB n = t
+Proof
+  METIS_TAC [numdBnum]
+QED
+Theorem dBnum_onto:
+    ∀n. ∃t. dBnum t = n
+Proof
+  METIS_TAC [dBnumdB]
+QED
 

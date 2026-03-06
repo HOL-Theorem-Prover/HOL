@@ -1,12 +1,9 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory stringTheory stringLib listTheory stringSimps listLib simpLib;
-open decoderTheory bit_listTheory opmonTheory;
-
-open ppc_astTheory;
-
-val _ = new_theory "ppc_decoder";
-
+Theory ppc_decoder
+Ancestors
+  words string list decoder bit_list opmon ppc_ast
+Libs
+  stringLib stringSimps listLib simpLib
 
 (* ---------------------------------------------------------------------------------- *>
 
@@ -15,7 +12,7 @@ val _ = new_theory "ppc_decoder";
 
 <* ---------------------------------------------------------------------------------- *)
 
-val ppc_match_step_def = Define `
+Definition ppc_match_step_def:
   ppc_match_step name =
     if name = "0" then DF else
     if name = "1" then DT else
@@ -30,7 +27,8 @@ val ppc_match_step_def = Define `
     else if MEM name ["AA";"Rc";"OE";"y";"z"] then
       assign_drop name 1
     else
-      option_fail`;
+      option_fail
+End
 
 (* The following strings are copied from the PowerPC manual. *)
 
@@ -160,8 +158,9 @@ val ppc_syntax = ``
    ("0 1 1 0 1 1 S A UIMM",
      (\v. Pxoris (b2w v "A") (b2w v "S") (b2w v "UIMM")))]    ``;
 
-val ppc_decode_def = zDefine `
-  ppc_decode = match_list ppc_match_step (REVERSE o tokenise) (\k x. SOME (k (FST x))) ^ppc_syntax`;
+Definition ppc_decode_def[nocompute]:
+  ppc_decode = match_list ppc_match_step (REVERSE o tokenise) (\k x. SOME (k (FST x))) ^ppc_syntax
+End
 
 (* -- partially pre-evaluate ppc_decode -- *)
 
@@ -185,6 +184,4 @@ val ppc_decode_thm = let
 
 val _ = save_thm("ppc_decode_thm",ppc_decode_thm);
 val _ = computeLib.add_persistent_funs ["ppc_decode_thm"];
-
-val _ = export_theory ();
 

@@ -16,6 +16,7 @@ sig
   val preterm : grammar -> tygrammar -> term quotation -> preterm in_env
   val typed_preterm : grammar -> tygrammar -> hol_type -> term quotation ->
                       preterm in_env
+  val ctxt_absyn_to_preterm : grammar -> term list -> absyn -> preterm in_env
   val absyn_to_preterm : grammar -> absyn -> preterm in_env
   val absyn_to_preterm_in_env : grammar -> absyn -> Parse_support.preterm_in_env
   val absyn_to_term : pprinters -> grammar -> absyn -> term

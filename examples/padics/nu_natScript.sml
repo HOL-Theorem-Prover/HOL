@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "nu_nat";
-
-open arithmeticTheory dividesTheory gcdTheory;
+Theory nu_nat
+Ancestors
+  arithmetic divides gcd
 
 val _ = temp_set_fixity "divides" (Infix(NONASSOC, 450));
 
@@ -248,4 +246,3 @@ Proof
       >> simp[MIN_DEF])
 QED
 
-val _ = export_theory();

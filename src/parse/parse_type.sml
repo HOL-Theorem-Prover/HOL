@@ -122,18 +122,18 @@ fun parse_type_fns tyfns allow_unknown_suffixes G = let
       in
         if is_numeric s then generate_fcpbit((s,locn), args)
         else
-          case Binarymap.peek(privabbs, s) of
+          case HOLdict.peek(privabbs, s) of
             NONE => pType((s,locn), args)
           | SOME thy => let
             in
-              case Binarymap.peek(abbrevs, {Name = s, Thy = thy}) of
+              case HOLdict.peek(abbrevs, {Name = s, Thy = thy}) of
                   NONE => raise Fail
                             "parse_tyop.apply_tyop: probably shouldn't happen"
                 | SOME st => structure_to_value (s,locn) args st
             end
       end
     | QTypeIdent(thy,ty) =>
-        (case Binarymap.peek(abbrevs, {Name = ty, Thy = thy}) of
+        (case HOLdict.peek(abbrevs, {Name = ty, Thy = thy}) of
              NONE => qtyop{Thy=thy,Tyop=ty,Locn=locn,Args=args}
          |   SOME st => structure_to_value (ty,locn) args st)
     | _ => raise Fail "parse_type.apply_tyop: can't happen"

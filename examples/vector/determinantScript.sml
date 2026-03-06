@@ -6,19 +6,14 @@
 (*                                                                           *)
 (*   Ported to HOL4 by Chun Tian, on (July 1, 2023)                          *)
 (* ========================================================================= *)
+Theory determinant
+Ancestors
+  arithmetic combin pred_set pair bool fcp real cardinal permutes
+  iterate vector matrix real_sigma
+Libs
+  PairedLambda pred_setLib fcpLib tautLib numLib realLib
+  InductiveDefinition hurdUtils vectorLib Q
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory combinTheory pred_setTheory pairTheory boolTheory
-     PairedLambda pred_setLib fcpTheory fcpLib tautLib numLib realTheory
-     realLib InductiveDefinition hurdUtils cardinalTheory;
-
-open permutesTheory iterateTheory vectorTheory vectorLib matrixTheory
-     real_sigmaTheory
-
-open Q;
-
-val _ = new_theory "determinant";
 
 Overload PRODUCT[local]  = “real_sigma$product”
 Overload SUM[local]      = “real_sigma$Sum”
@@ -982,5 +977,4 @@ Proof
   ASM_SIMP_TAC bool_ss[REAL_MUL_LINV, MATRIX_CMUL_LID]
 QED
 
-val _ = export_theory ();
 val _ = html_theory "determinant";

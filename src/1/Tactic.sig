@@ -9,6 +9,8 @@ sig
   val CCONTR_TAC            : tactic
   val ASSUME_TAC            : thm_tactic
   val assume_tac            : thm_tactic
+  val LAST_ASSUME_TAC       : thm_tactic
+  val last_assume_tac       : thm_tactic
   val FREEZE_THEN           : thm_tactical
   val CONJ_TAC              : tactic
   val conj_tac              : tactic
@@ -22,6 +24,7 @@ sig
   val disj2_tac             : tactic
   val MP_TAC                : thm_tactic
   val mp_tac                : thm_tactic
+  val EQ_MP_TAC             : thm_tactic
   val EQ_TAC                : tactic
   val eq_tac                : tactic (* alias for EQ_TAC *)
   val iff_tac               : tactic (* alias for EQ_TAC *)
@@ -66,6 +69,8 @@ sig
   val FILTER_STRIP_TAC      : term -> tactic
   val ASM_CASES_TAC         : term -> tactic
   val REFL_TAC              : tactic
+  val SYM_TAC               : tactic
+  val sym_tac               : tactic
   val UNDISCH_TAC           : term -> tactic
   val AP_TERM_TAC           : tactic
   val AP_THM_TAC            : tactic
@@ -115,21 +120,25 @@ sig
   val dxrule               : thm_tactic
   val rev_drule            : thm_tactic
   val rev_dxrule           : thm_tactic
+  val every_drule          : thm_tactic
 
   val drule_at             : match_position -> thm_tactic
   val dxrule_at            : match_position -> thm_tactic
   val rev_drule_at         : match_position -> thm_tactic
   val rev_dxrule_at        : match_position -> thm_tactic
+  val every_drule_at       : match_position -> thm_tactic
 
   val drule_then           : thm_tactic -> thm_tactic
   val dxrule_then          : thm_tactic -> thm_tactic
   val rev_drule_then       : thm_tactic -> thm_tactic
   val rev_dxrule_then      : thm_tactic -> thm_tactic
+  val every_drule_then     : thm_tactic -> thm_tactic
 
   val drule_at_then        : match_position -> thm_tactic -> thm_tactic
   val dxrule_at_then       : match_position -> thm_tactic -> thm_tactic
   val rev_drule_at_then    : match_position -> thm_tactic -> thm_tactic
   val rev_dxrule_at_then   : match_position -> thm_tactic -> thm_tactic
+  val every_drule_at_then  : match_position -> thm_tactic -> thm_tactic
 
 
   val drule_all            : thm_tactic

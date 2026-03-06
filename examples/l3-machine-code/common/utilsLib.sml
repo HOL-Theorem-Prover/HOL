@@ -11,7 +11,7 @@ val WARN = Feedback.HOL_WARNING "utilsLib"
 structure Parse =
 struct
    open Parse
-   val (Type,Term) = parse_from_grammars wordsTheory.words_grammars
+   val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="words"}
 end
 open Parse
 
@@ -270,12 +270,11 @@ fun find_rw net tm =
 (* ---------------------------- *)
 
 local
-   val cmp = reduceLib.num_compset ()
-   val () = computeLib.add_thms
+   val cmp = computeLib.add_thms
               [pairTheory.UNCURRY, combinTheory.o_THM,
                state_transformerTheory.FOR_def,
                state_transformerTheory.BIND_DEF,
-               state_transformerTheory.UNIT_DEF] cmp
+               state_transformerTheory.UNIT_DEF] reduceLib.num_compset
    val FOR_CONV = computeLib.CBV_CONV cmp
    fun term_frag_of_int i = [QUOTE (Int.toString i)]: term frag list
 in
@@ -315,11 +314,27 @@ fun usave_as s = save_as s o STRIP_UNDISCH
 fun ustore_thm (s, t, tac) = usave_as s (Q.prove (t, tac))
 
 local
-  val names = ref ([] : string list)
-  fun add (n, th) = (names := n :: !names; Theory.save_thm (n, th))
+
+  val rwts_thmset_opns = AncestryData.fullmake {
+        adinfo = {tag = "l3Utils_rwt",
+                  initial_values = [("min", [])],
+                  apply_delta = cons},
+        uptodate_delta = K true,
+        sexps = {dec = ThyDataSexp.string_decode, enc = ThyDataSexp.String},
+        globinfo = {
+          apply_to_global = cons,
+          thy_finaliser = NONE,
+          initial_value = []
+        }
+      }
+  fun add (n, th) = (
+    Theory.save_thm (n, th) ;
+    #record_delta rwts_thmset_opns n;
+    #update_global_value rwts_thmset_opns (cons n);
+    th
+  )
   val add_list = List.map add
 in
-  fun reset_thms () = names := []
   fun save_thms name l =
     add_list
      (case l of
@@ -328,20 +343,7 @@ in
        | _ => ListPair.zip
                  (List.tabulate
                     (List.length l, fn i => name ^ "_" ^ Int.toString i), l))
-  fun adjoin_thms () =
-    Theory.adjoin_to_theory
-      { sig_ps = SOME (fn _ => PP.add_string ("val rwts : string list")),
-        struct_ps =
-          SOME (fn _ =>
-                   PP.block PP.INCONSISTENT 12 (
-                     [PP.add_string "val rwts = ["] @
-                     PP.pr_list (PP.add_string o Lib.quote)
-                                [PP.add_string ",", PP.add_break (1, 0)]
-                                (!names) @
-                     [PP.add_string "]", PP.add_newline]
-                   )
-               )
-      }
+  val get_rewrites = Option.map List.rev o #DB rwts_thmset_opns
 end
 
 
@@ -985,11 +987,13 @@ in
    fun add_base_datatypes cmp =
       let
          val cnv = computeLib.CBV_CONV cmp
+         val cmp = computeLib.add_thms basic_rewrites cmp
+         val cmp = computeLib.add_conv
+             (pred_setSyntax.in_tm, 2, in_conv cnv) cmp
+         val cmp = computeLib.add_conv
+             (pred_setSyntax.insert_tm, 2, pred_setLib.INSERT_CONV cnv) cmp
       in
-         computeLib.add_thms basic_rewrites cmp
-         ; List.app (fn x => computeLib.add_conv x cmp)
-             [(pred_setSyntax.in_tm, 2, in_conv cnv),
-              (pred_setSyntax.insert_tm, 2, pred_setLib.INSERT_CONV cnv)]
+         cmp
       end
 end
 
@@ -1032,10 +1036,11 @@ in
 end
 
 local
-   fun add_datatype cmp =
-     computeLib.add_datatype_info cmp o Option.valOf o TypeBase.fetch
+   fun add_datatype (ty, cmp) =
+     computeLib.add_datatype_info cmp (Option.valOf (TypeBase.fetch ty))
 in
-   fun add_datatypes l cmp = List.app (add_datatype cmp) l
+   fun add_datatypes l cmp =
+     List.foldl add_datatype cmp l
 end
 
 type inventory = {C: string list, N: int list, T: string list, Thy: string}
@@ -1077,16 +1082,20 @@ in
 end
 
 fun add_theory (x as (_, i)) cmp =
-   ( add_datatypes (theory_types i) cmp
-   ; computeLib.add_thms (theory_rewrites x) cmp)
+   let
+      val cmp = add_datatypes (theory_types i) cmp
+   in
+      computeLib.add_thms (theory_rewrites x) cmp
+   end
 
 fun add_to_the_compset x = computeLib.add_funs (theory_rewrites x)
 
 fun theory_compset x =
    let
-      val cmp = wordsLib.words_compset ()
+      val cmp = wordsLib.words_compset
+      val cmp = add_base_datatypes cmp
    in
-      add_base_datatypes cmp; add_theory x cmp; cmp
+      add_theory x cmp
    end
 
 (* ---------------------------- *)
@@ -1208,9 +1217,11 @@ local
                            val l = buildAst thy (dom t)
                         in
                            List.map (fn x => Term.mk_comb (t, x)
-                           handle HOL_ERR {origin_function = "mk_comb", ...} =>
-                             (Parse.print_term t; print "\n";
-                              Parse.print_term x; raise ERR "buildAst" "")) l
+                           handle (e as HOL_ERR herr) =>
+                             if top_function_of herr = "mk_comb" then
+                                (Parse.print_term t; print "\n";
+                                 Parse.print_term x; raise ERR "buildAst" "")
+                             else raise e) l
                         end) n
       in
          t0 @ t1 @ List.concat n
@@ -1289,9 +1300,8 @@ in
             let
                val (nh, h) = no_hyp l
                val c = INST_REWRITE_CONV h
-               val cmp = reduceLib.num_compset ()
-               val () = ( computeLib.add_thms (rwts @ nh) cmp
-                        ; add_word_eq cmp )
+               val cmp = computeLib.add_thms (rwts @ nh) (computeLib.copy reduceLib.num_compset)
+               val cmp = add_word_eq cmp
                fun cnv rwt =
                   Conv.REPEATC
                     (Conv.TRY_CONV (CHANGE_CBV_CONV cmp)

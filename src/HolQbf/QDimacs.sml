@@ -94,8 +94,8 @@ struct
       in
         Lib.apfst (Lib.cons bvar) (strip_bool_quantifier dest_fn body)
       end
-      handle (e as Feedback.HOL_ERR {origin_function, ...}) =>
-        if origin_function = "write_qdimacs_file" then
+      handle e as Feedback.HOL_ERR holerr =>
+        if Feedback.top_function_of holerr = "write_qdimacs_file" then
           (* re-raise *)
           raise e
         else

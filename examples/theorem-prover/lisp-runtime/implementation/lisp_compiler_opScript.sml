@@ -1,17 +1,15 @@
 
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_compiler_op";
+Theory lisp_compiler_op
+Ancestors
+  lisp_sexp lisp_inv lisp_ops lisp_bigops lisp_codegen lisp_init
+  lisp_symbols lisp_sexp lisp_inv lisp_parse lisp_semantics
+  lisp_alt_semantics lisp_compiler prog words arithmetic list
+  pred_set pair combin finite_map address sum set_sep bit fcp
+  string option relation lisp_compiler lisp_semantics
+Libs
+  compilerLib decompilerLib codegenLib wordsLib helperLib
+
 val _ = ParseExtras.temp_loose_equality()
-
-open compilerLib decompilerLib codegenLib;
-
-open lisp_sexpTheory lisp_invTheory lisp_opsTheory lisp_bigopsTheory;
-open lisp_codegenTheory lisp_initTheory lisp_symbolsTheory
-open lisp_sexpTheory lisp_invTheory lisp_parseTheory;
-open lisp_semanticsTheory lisp_alt_semanticsTheory lisp_compilerTheory progTheory;
-
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
-open combinTheory finite_mapTheory addressTheory helperLib sumTheory;
-open set_sepTheory bitTheory fcpTheory stringTheory optionTheory relationTheory;
 
 val _ = let
   val thms = DB.match [] ``SPEC X64_MODEL``
@@ -27,10 +25,6 @@ val _ = let
 
 *)
 
-open lisp_compilerTheory lisp_semanticsTheory;
-
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
@@ -127,9 +121,10 @@ val (_,mc_push_list_def,mc_push_list_pre_def) = compile "x64" ``
       let xs = x0 :: xs in
         mc_push_list (x0,x2,xs)``
 
-val push_list_fun_def = Define `
+Definition push_list_fun_def:
   (push_list_fun [] = []) /\
-  (push_list_fun (x::xs) = Sym "EQUAL" :: x :: push_list_fun xs)`;
+  (push_list_fun (x::xs) = Sym "EQUAL" :: x :: push_list_fun xs)
+End
 
 val push_list_fun_SNOC = prove(
   ``!xs x. push_list_fun (xs ++ [x]) = push_list_fun xs ++ [Sym "EQUAL"; x]``,
@@ -778,19 +773,21 @@ val list2btree_def = tDefine "list2tree" `
  (WF_REL_TAC `measure (LENGTH)` \\ FULL_SIMP_TAC std_ss [LENGTH]
   \\ METIS_TAC [DECIDE ``n < SUC n``,LENGTH_SPLIT_LIST,LESS_EQ_LESS_TRANS]);
 
-val btree_lookup_def = Define `
+Definition btree_lookup_def:
   btree_lookup n x =
     if n < 2 then CAR x else
       if EVEN n then btree_lookup (n DIV 2) (CAR (CDR x))
-                else btree_lookup (n DIV 2) (CDR (CDR x))`;
+                else btree_lookup (n DIV 2) (CDR (CDR x))
+End
 
-val btree_insert_def = Define `
+Definition btree_insert_def:
   btree_insert n y x =
     if n < 2 then Dot y (Sym "NIL") else
       if EVEN n then
         Dot (CAR x) (Dot (btree_insert (n DIV 2) y (CAR (CDR x))) (CDR (CDR x)))
       else
-        Dot (CAR x) (Dot (CAR (CDR x)) (btree_insert (n DIV 2) y (CDR (CDR x))))`;
+        Dot (CAR x) (Dot (CAR (CDR x)) (btree_insert (n DIV 2) y (CDR (CDR x))))
+End
 
 (*
   1
@@ -928,21 +925,23 @@ val btree_insert_thm = prove(
 
 (* tail-recursive version of insert *)
 
-val btree_insert_pushes_def = Define `
+Definition btree_insert_pushes_def:
   btree_insert_pushes n x =
     if n < 2 then [] else
       if EVEN n then
         btree_insert_pushes (n DIV 2) (CAR (CDR x)) ++ [Val 0;x]
       else
-        btree_insert_pushes (n DIV 2) (CDR (CDR x)) ++ [Val 1;x]`;
+        btree_insert_pushes (n DIV 2) (CDR (CDR x)) ++ [Val 1;x]
+End
 
-val btree_insert_pushes_tr_def = Define `
+Definition btree_insert_pushes_tr_def:
   btree_insert_pushes_tr n x xs =
     if n < 2 then xs else
       if EVEN n then
         btree_insert_pushes_tr (n DIV 2) (CAR (CDR x)) ([Val 0;x] ++ xs)
       else
-        btree_insert_pushes_tr (n DIV 2) (CDR (CDR x)) ([Val 1;x] ++ xs)`;
+        btree_insert_pushes_tr (n DIV 2) (CDR (CDR x)) ([Val 1;x] ++ xs)
+End
 
 val (_,mc_btree_insert_pushes_def,mc_btree_insert_pushes_pre_def) = compile "x64" ``
   mc_btree_insert_pushes (x0,x1,x2,xs) =
@@ -965,14 +964,15 @@ val (_,mc_btree_insert_pushes_def,mc_btree_insert_pushes_pre_def) = compile "x64
         let x1 = SAFE_CDR x1 in
           mc_btree_insert_pushes (x0,x1,x2,xs)``;
 
-val btree_insert_pops_def = Define `
+Definition btree_insert_pops_def:
   (btree_insert_pops y [] = y) /\
   (btree_insert_pops y [x] = y) /\
   (btree_insert_pops y (x::x2::xs) =
      if x = Val 0 then
        btree_insert_pops (Dot (CAR x2) (Dot y (CDR (CDR x2)))) xs
      else
-       btree_insert_pops (Dot (CAR x2) (Dot (CAR (CDR x2)) y)) xs)`
+       btree_insert_pops (Dot (CAR x2) (Dot (CAR (CDR x2)) y)) xs)
+End
 
 val (_,mc_btree_insert_pops_def,mc_btree_insert_pops_pre_def) = compile "x64" ``
   mc_btree_insert_pops (x0,x1,xs) =
@@ -1003,9 +1003,10 @@ val (_,mc_btree_insert_pops_def,mc_btree_insert_pops_pre_def) = compile "x64" ``
         let x1 = x0 in
           mc_btree_insert_pops (x0,x1,xs)``
 
-val btree_insert_tr_def = Define `
+Definition btree_insert_tr_def:
   btree_insert_tr n y x =
-    btree_insert_pops (Dot y (Sym "NIL")) (btree_insert_pushes_tr n x [])`;
+    btree_insert_pops (Dot y (Sym "NIL")) (btree_insert_pushes_tr n x [])
+End
 
 val btree_insert_pops_thm = prove(
   ``!n x y z xs.
@@ -1035,10 +1036,11 @@ val EVEN_LENGTH_INDUCT = prove(
   \\ Cases_on `t` \\ FULL_SIMP_TAC std_ss [EVEN,LENGTH]
   \\ FULL_SIMP_TAC std_ss [ADD1,GSYM ADD_ASSOC]);
 
-val EVERY_OTHER_VAL_def = Define `
+Definition EVERY_OTHER_VAL_def:
   (EVERY_OTHER_VAL [] = T) /\
   (EVERY_OTHER_VAL [x] = T) /\
-  (EVERY_OTHER_VAL (x::y::xs) = isVal x /\ EVERY_OTHER_VAL xs)`;
+  (EVERY_OTHER_VAL (x::y::xs) = isVal x /\ EVERY_OTHER_VAL xs)
+End
 
 val mc_btree_insert_pops_thm = prove(
   ``!ys. EVEN (LENGTH ys) ==> !x0 y xs.
@@ -1173,9 +1175,10 @@ val COMPILE_OR2 = ``Val 11``
      x5 -- bc_state
 *)
 
-val bool2sexp_def = Define `
+Definition bool2sexp_def:
   (bool2sexp T = Sym "T") /\
-  (bool2sexp F = Sym "NIL")`;
+  (bool2sexp F = Sym "NIL")
+End
 
 val code_ptr_REPLACE_CODE = prove(
   ``code_ptr (REPLACE_CODE code x y) = code_ptr code``,
@@ -1246,10 +1249,11 @@ val REPLACE_CODE_RW = prove(
   \\ `code_ptr (WRITE_CODE (BC_CODE (q',r')) x_code) = code_ptr (BC_CODE (q,r))` by METIS_TAC []
   \\ FULL_SIMP_TAC std_ss [code_ptr_def,code_ptr_WRITE_CODE]);
 
-val code_mem_WRITE_CODE_LESS = store_thm("code_mem_WRITE_CODE_LESS",
-  ``!xs code i.
+Theorem code_mem_WRITE_CODE_LESS:
+    !xs code i.
       i < code_ptr code ==>
-      (code_mem (WRITE_CODE code xs) i = code_mem code i)``,
+      (code_mem (WRITE_CODE code xs) i = code_mem code i)
+Proof
   Induct
   THEN1 (Cases_on `code` \\ Cases_on `p` \\ SIMP_TAC std_ss [WRITE_CODE_def])
   \\ ONCE_REWRITE_TAC [GSYM (EVAL ``[x] ++ ys``)]
@@ -1261,7 +1265,8 @@ val code_mem_WRITE_CODE_LESS = store_thm("code_mem_WRITE_CODE_LESS",
   \\ RES_TAC \\ ASM_SIMP_TAC std_ss []
   \\ Cases_on `code` \\ Cases_on `p`
   \\ FULL_SIMP_TAC std_ss [WRITE_CODE_def,code_mem_def,APPLY_UPDATE_THM,code_ptr_def]
-  \\ `~(i = r)` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss []);
+  \\ `~(i = r)` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss []
+QED
 
 val code_mem_WRITE_CODE = prove(
   ``!xs y ys code.
@@ -1292,15 +1297,18 @@ val code_mem_WRITE_CODE_IMP = prove(
       (code_mem (WRITE_CODE code (xs ++ y::ys)) l = SOME y)``,
   SIMP_TAC std_ss [code_mem_WRITE_CODE]);
 
-val a2sexp_aux_def = Define `
+Definition a2sexp_aux_def:
   (a2sexp_aux ssTEMP = Val 0) /\
-  (a2sexp_aux (ssVAR v) = Sym v)`;
+  (a2sexp_aux (ssVAR v) = Sym v)
+End
 
-val a2sexp_def = Define `
-  a2sexp a = list2sexp (MAP a2sexp_aux a)`;
+Definition a2sexp_def:
+  a2sexp a = list2sexp (MAP a2sexp_aux a)
+End
 
-val bc_inv_def = Define `
-  bc_inv bc = (bc.instr_length = bc_length) /\ BC_CODE_OK bc`;
+Definition bc_inv_def:
+  bc_inv bc = (bc.instr_length = bc_length) /\ BC_CODE_OK bc
+End
 
 val term2sexp_guard_lemma = prove(
   ``~isVal (term2sexp (App fc xs)) /\
@@ -1335,15 +1343,18 @@ val s2sexp_retract = prove(
   ``!a. Dot (Val 0) (a2sexp a) = a2sexp (ssTEMP::a)``,
   SIMP_TAC std_ss [a2sexp_def,a2sexp_aux_def,MAP,list2sexp_def]);
 
-val const_tree_def = Define `
-  const_tree bc = Dot (Val (LENGTH bc.consts)) (list2btree bc.consts)`;
+Definition const_tree_def:
+  const_tree bc = Dot (Val (LENGTH bc.consts)) (list2btree bc.consts)
+End
 
-val flat_alist_def = Define `
+Definition flat_alist_def:
   (flat_alist [] = []) /\
-  (flat_alist ((x,(y,z))::xs) = Sym x::(Dot (Val y) (Val z))::flat_alist xs)`;
+  (flat_alist ((x,(y,z))::xs) = Sym x::(Dot (Val y) (Val z))::flat_alist xs)
+End
 
-val bc_state_tree_def = Define `
-  bc_state_tree bc = Dot (Sym "NIL") (list2sexp (flat_alist bc.compiled))`;
+Definition bc_state_tree_def:
+  bc_state_tree bc = Dot (Sym "NIL") (list2sexp (flat_alist bc.compiled))
+End
 
 val bc_inv_ADD_CONST = prove(
   ``(bc_inv (BC_ADD_CONST bc s) = bc_inv bc) /\
@@ -1586,10 +1597,11 @@ val (_,mc_primitive_def,mc_primitivie_pre_def) = compile "x64" ``
 
 (* check function name *)
 
-val BC_is_reserved_name_def = Define `
+Definition BC_is_reserved_name_def:
   BC_is_reserved_name exp =
     if MEM exp (MAP Sym macro_names) then Val 0 else
-    if MEM exp (MAP Sym reserved_names) then exp else Sym "NIL"`;
+    if MEM exp (MAP Sym reserved_names) then exp else Sym "NIL"
+End
 
 val (_,mc_is_reserved_name_def,mc_is_reserved_name_pre_def) = compile "x64" ``
   mc_is_reserved_name (x0) =
@@ -1752,9 +1764,10 @@ val (_,mc_fun_lookup_def,mc_fun_lookup_pre_def) = compile "x64" ``
           let x1 = CDR x1 in
             mc_fun_lookup (x0,x1,x2)``
 
-val lookup_result_def = Define `
+Definition lookup_result_def:
   (lookup_result NONE = Sym "NIL") /\
-  (lookup_result (SOME (x,y)) = Dot (Val x) (Val y))`;
+  (lookup_result (SOME (x,y)) = Dot (Val x) (Val y))
+End
 
 val mc_fun_lookup_thm = prove(
   ``!xs y fc. ?y0 y1.
@@ -1883,9 +1896,10 @@ val (_,mc_map_car_def,mc_map_car_pre_def) = compile "x64" ``
     let (x0,x1,x2,x3,xs) = mc_map_car2 (x0,x1,x2,x3,xs) in
       (x0,x1,x2,x3,xs)``
 
-val map_car_flatten_def = Define `
+Definition map_car_flatten_def:
   (map_car_flatten [] = []) /\
-  (map_car_flatten (x::xs) = CAR x :: CAR (CDR x) :: map_car_flatten xs)`;
+  (map_car_flatten (x::xs) = CAR x :: CAR (CDR x) :: map_car_flatten xs)
+End
 
 val map_car_flatten_APPEND = prove(
   ``!xs ys. map_car_flatten (xs ++ ys) = map_car_flatten xs ++ map_car_flatten ys``,
@@ -1938,7 +1952,7 @@ val mc_map_car_thm = prove(
 
 
 (* BC_expand_macro is a readable version of mc_expand_macro *)
-val BC_expand_macro_def = Define `
+Definition BC_expand_macro_def:
   BC_expand_macro (temp:SExp,task,exp,a,ret,consts,xs) =
     let temp = exp in
     let exp = CAR exp in
@@ -2029,7 +2043,8 @@ val BC_expand_macro_def = Define `
          let arg3 = list2sexp [Sym "QUOTE"; CAR (CDR (CDR (CDR temp)))] in
          let exp = list2sexp [Sym "DEFINE"; arg1; arg2; arg3] in
            (Sym "NIL",task,exp,a,ret,consts,xs)) else
-      (Sym "NIL",task,temp,a,ret,consts,xs)`;
+      (Sym "NIL",task,temp,a,ret,consts,xs)
+End
 
 fun sexp_lets exp = let
   val expand = (cdr o concl o SIMP_CONV std_ss [list2sexp_def])
@@ -2489,7 +2504,7 @@ val mc_expand_macro_thm = prove(
        LET_DEF,HD,TL,NOT_CONS_NIL,mc_map_car_alternative_thm]);
 
 (* BC_aux_ev is a readable version of mc_aux_ev *)
-val BC_aux_ev_def = Define `
+Definition BC_aux_ev_def:
   BC_aux_ev (temp:SExp,task,exp,a,ret,consts:SExp,xs,xs1,code) =
       if isSym exp then
        (let (t1,loc,t2,t3) = mc_alist_lookup (task,Val 0,exp,a) in
@@ -2594,7 +2609,8 @@ val BC_aux_ev_def = Define `
                let ret = Sym "NIL" in
                let exp = CDR exp in
                let task = ^COMPILE_EVL in
-                 (Sym "NIL",task,exp,a,ret,consts,xs,xs1,code))`;
+                 (Sym "NIL",task,exp,a,ret,consts,xs,xs1,code))
+End
 
 (* val mc_aux_ev_def = Define *)
 val (thm,mc_aux_ev_def,mc_aux_ev_pre_def) = compile "x64" ``
@@ -2854,7 +2870,7 @@ val mc_aux_ev_thm = prove(
     SAFE_CAR_def,SAFE_CDR_def] \\ SRW_TAC [] []);
 
 
-val BC_aux_ap_def = Define `
+Definition BC_aux_ap_def:
   BC_aux_ap (temp:SExp,task:SExp,exp,a,ret,xs:SExp list,code) =
       if CAR exp = Sym "DEFINE" then
         let code = WRITE_CODE code [iCOMPILE] in
@@ -2907,7 +2923,8 @@ val BC_aux_ap_def = Define `
         let (temp,a) = mc_drop (CDR exp,a) in
         let a = Dot (Val 0) a in
         let (t1,t2,a,ret,code) = mc_return_code (task,task,a,ret,code) in
-          (Sym "NIL", task,exp,a,ret,xs,code)`;
+          (Sym "NIL", task,exp,a,ret,xs,code)
+End
 
 (* val mc_aux_ap_def = Define *)
 val (_,mc_aux_ap_def,mc_aux_ap_pre_def) = compile "x64" ``
@@ -3023,16 +3040,17 @@ val mc_aux_ap_thm = prove(
     EVAL ``LISP_ADD (Val 1) (Val 1)``,SAFE_CAR_def,SAFE_CDR_def]);
 
 
-val BC_aux_call_aux_def = Define `
+Definition BC_aux_call_aux_def:
   BC_aux_call_aux (temp,ll,a) =
     if temp = Sym "NIL" then (temp,ll,a) else
       let a = CDR temp in
         if a = ll then
           let temp = CAR temp in (temp,ll,a)
         else
-          let temp = Sym "NIL" in (temp,ll,a)`;
+          let temp = Sym "NIL" in (temp,ll,a)
+End
 
-val BC_aux_call_def = Define `
+Definition BC_aux_call_def:
   BC_aux_call (temp:SExp,task:SExp,exp:SExp,a:SExp,ret:SExp,consts:SExp,xs:SExp list,code) =
       let (t1,temp,t2) = mc_fun_lookup (task,CDR consts,CAR exp) in
       let (t1,ll) = mc_length (CDR exp,Val 0) in
@@ -3059,7 +3077,8 @@ val BC_aux_call_def = Define `
             else
               let a = Sym "NIL" in
               let code = WRITE_CODE code [iJUMP (getVal temp)] in
-                (Sym "NIL",task,exp,a,ret,consts,xs,code)`;
+                (Sym "NIL",task,exp,a,ret,consts,xs,code)
+End
 
 val (_,mc_aux_call_aux_def,mc_aux_call_aux_pre_def) = compile "x64" ``
   mc_aux_call_aux (x0:SExp,x1:SExp,x3:SExp) =
@@ -3143,7 +3162,7 @@ val mc_aux_call_thm = prove(
 
 
 (* this is an almost readable version of mc_aux_tail *)
-val BC_aux_tail_def = Define `
+Definition BC_aux_tail_def:
   BC_aux_tail (temp:SExp,task,exp,a,ret,consts,xs,code) =
     if task = ^COMPILE_LAM1 then (* ex list has been compiled *)
       let ret = HD xs in
@@ -3269,7 +3288,8 @@ val BC_aux_tail_def = Define `
       let temp = Sym "NIL" in
       let (temp,task,exp,a,ret,consts,xs) = mc_expand_macro (temp,task,exp,a,ret,consts,xs) in
       let task = ^COMPILE_EV in
-        (Sym "NIL",task,exp,a,ret,consts,xs,code)`;
+        (Sym "NIL",task,exp,a,ret,consts,xs,code)
+End
 
 (* val mc_aux_tail_def = Define *)
 val (_,mc_aux_tail_def,mc_aux_tail_pre_def) = compile "x64" ``
@@ -3470,7 +3490,7 @@ val mc_aux_tail_thm = prove(
     mc_aux_call_thm, LISP_ADD_def,AC ADD_COMM ADD_ASSOC,SAFE_CAR_def,SAFE_CDR_def]);
 
 
-val BC_aux1_def = Define `
+Definition BC_aux1_def:
   BC_aux1 (temp:SExp,task,exp,a,ret,consts,xs,xs1,code) =
     if task = ^COMPILE_EV then
       let (temp,task,exp,a,ret,consts,xs,xs1,code) = BC_aux_ev (temp,task,exp,a,ret,consts,xs,xs1,code) in
@@ -3489,7 +3509,8 @@ val BC_aux1_def = Define `
         (temp,task,exp,a,ret,consts,xs,xs1,code)
     else
       let (temp,task,exp,a,ret,consts,xs,code) = BC_aux_tail (temp,task,exp,a,ret,consts,xs,code) in
-        (temp,task,exp,a,ret,consts,xs,xs1,code)`;
+        (temp,task,exp,a,ret,consts,xs,xs1,code)
+End
 
 (* val mc_aux1_def = Define *)
 val (_,mc_aux1_def,mc_aux1_pre_def) = compile "x64" ``
@@ -4103,9 +4124,11 @@ val BC_EV_HILBERT_LEMMA = prove(
   ``bc_inv bc /\ BC_ev T (t,a,q,bc) y ==> ((@result. BC_ev T (t,a,q,bc) result) = y)``,
   METIS_TAC [BC_ev_DETERMINISTIC,bc_inv_def]);
 
-val INSERT_UNION_INSERT = store_thm("INSERT_UNION_INSERT",
-  ``x INSERT (y UNION (z INSERT t)) = x INSERT z INSERT (y UNION t)``,
-  SIMP_TAC std_ss [EXTENSION,IN_INSERT,IN_UNION] \\ METIS_TAC []);
+Theorem INSERT_UNION_INSERT:
+    x INSERT (y UNION (z INSERT t)) = x INSERT z INSERT (y UNION t)
+Proof
+  SIMP_TAC std_ss [EXTENSION,IN_INSERT,IN_UNION] \\ METIS_TAC []
+QED
 
 fun abbrev_code (th,def_name) = let
   fun mk_tuple [] = fail()
@@ -4265,8 +4288,9 @@ val mc_fun_exists_thm = prove(
        markerTheory.Abbrev_def] \\ REPEAT STRIP_TAC
   \\ Cases_on `q = fc` \\ FULL_SIMP_TAC std_ss [LISP_TEST_def]);
 
-val no_such_function_bool_def = Define `
-  no_such_function_bool = F`;
+Definition no_such_function_bool_def:
+  no_such_function_bool = F
+End
 
 val _ = let
   val thms = [SPEC_COMPOSE_RULE [X64_LISP_ERROR_11,X64_LISP_SET_OK_F]]
@@ -4285,7 +4309,7 @@ val (_,mc_check_exists_def,mc_check_exists_pre_def) = compile "x64" ``
 val FUN_LOOKUP_EQ_NONE = prove(
   ``!xs. (FUN_LOOKUP xs y = NONE) = ~(MEM y (MAP FST xs))``,
   Induct \\ FULL_SIMP_TAC std_ss [FUN_LOOKUP_def,MAP,MEM,FORALL_PROD]
-  \\ SRW_TAC [] []);
+  \\ SRW_TAC [] [EQ_IMP_THM]);
 
 val mc_check_exists_thm = prove(
   ``!xs y fc ok.
@@ -4364,11 +4388,13 @@ val bc_state_tree_WRITE_BYTECODE = prove(
   Induct \\ FULL_SIMP_TAC std_ss [WRITE_BYTECODE_def]
   \\ FULL_SIMP_TAC (srw_ss()) [bc_state_tree_def,const_tree_def]);
 
-val WRITE_BYTECODE_code_end = store_thm("WRITE_BYTECODE_code_end",
-  ``!xs a bc. ((WRITE_BYTECODE bc a xs).code_end = bc.code_end) /\
+Theorem WRITE_BYTECODE_code_end:
+    !xs a bc. ((WRITE_BYTECODE bc a xs).code_end = bc.code_end) /\
               ((WRITE_BYTECODE bc a xs).instr_length = bc.instr_length) /\
-              ((WRITE_BYTECODE bc a xs).consts = bc.consts)``,
-  Induct \\ FULL_SIMP_TAC (srw_ss()) [WRITE_BYTECODE_def]);
+              ((WRITE_BYTECODE bc a xs).consts = bc.consts)
+Proof
+  Induct \\ FULL_SIMP_TAC (srw_ss()) [WRITE_BYTECODE_def]
+QED
 
 val BC_CODE_OK_WRITE_BYTECODE_LEMMA = prove(
   ``!xs a bc x y.
@@ -4376,19 +4402,21 @@ val BC_CODE_OK_WRITE_BYTECODE_LEMMA = prove(
       (WRITE_BYTECODE (bc with <|code := x|>) a xs).code``,
   Induct \\ ASM_SIMP_TAC (srw_ss()) [WRITE_BYTECODE_def]);
 
-val WRITE_CODE_EQ_WRITE_BYTECODE = store_thm("WRITE_CODE_EQ_WRITE_BYTECODE",
-  ``!xs bc.
+Theorem WRITE_CODE_EQ_WRITE_BYTECODE:
+    !xs bc.
      (bc_length = bc.instr_length) ==>
      (WRITE_CODE (BC_CODE (bc.code,bc.code_end)) xs =
       BC_CODE ((WRITE_BYTECODE bc bc.code_end xs).code,
-               bc.code_end + iLENGTH bc_length xs))``,
+               bc.code_end + iLENGTH bc_length xs))
+Proof
   Induct \\ FULL_SIMP_TAC (srw_ss()) [WRITE_BYTECODE_def,WRITE_CODE_def,iLENGTH_def]
   \\ REPEAT STRIP_TAC
   \\ Q.PAT_X_ASSUM `!bc.bbb`
     (MP_TAC o Q.SPEC `(bc with code_end := bc.code_end + bc_length h)
                           with code := (bc.code_end =+ SOME h) bc.code`)
   \\ FULL_SIMP_TAC (srw_ss()) [ADD_ASSOC] \\ REPEAT STRIP_TAC
-  \\ FULL_SIMP_TAC std_ss [BC_CODE_OK_WRITE_BYTECODE_LEMMA]);
+  \\ FULL_SIMP_TAC std_ss [BC_CODE_OK_WRITE_BYTECODE_LEMMA]
+QED
 
 val bc_inv_WRITE_BYTECODE = prove(
   ``!xs bc.
@@ -4483,9 +4511,11 @@ val mc_only_compile_thm = prove(
   \\ MATCH_MP_TAC WRITE_BYTECODE_code \\ ASM_SIMP_TAC std_ss [])
   |> SIMP_RULE std_ss [LET_DEF];
 
-val bc_inv_BC_ONLY_COMPILE = store_thm("bc_inv_BC_ONLY_COMPILE",
-  ``bc_inv bc ==> bc_inv (BC_ONLY_COMPILE (MAP getSym (sexp2list params),sexp2term body,bc))``,
-  ASM_SIMP_TAC std_ss [mc_only_compile_thm]);
+Theorem bc_inv_BC_ONLY_COMPILE:
+    bc_inv bc ==> bc_inv (BC_ONLY_COMPILE (MAP getSym (sexp2list params),sexp2term body,bc))
+Proof
+  ASM_SIMP_TAC std_ss [mc_only_compile_thm]
+QED
 
 val mc_compile_inst_thm = prove(
   ``bc_inv bc /\ (FUN_LOOKUP bc.compiled (getSym fname) = NONE) ==>
@@ -4771,4 +4801,3 @@ val X64_BYTECODE_JUMP_SYM = save_thm("X64_BYTECODE_JUMP_SYM",
   |> (fn th => SPEC_COMPOSE_RULE [th,X64_LISP_JUMP_TO_CODE_NO_RET])
   |> SIMP_RULE std_ss [isVal_def,getVal_def,SEP_CLAUSES]);
 
-val _ = export_theory();

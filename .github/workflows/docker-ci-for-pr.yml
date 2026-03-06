@@ -26,7 +26,8 @@ jobs:
             SML=poly
             Z3_VERSION=4.13.0
             CVC_VERSION=5
-            BUILDOPTS=--stdknl -j2 -t
+            CSDP_VERSION=1
+            BUILDOPTS=--stdknl -j4 -t
 
   build-expk:
     runs-on: ubuntu-latest
@@ -47,7 +48,8 @@ jobs:
             SML=poly
             Z3_VERSION=4.13.0
             CVC_VERSION=5
-            BUILDOPTS=--expk -j2 -t
+            CSDP_VERSION=1
+            BUILDOPTS=--expk -j4 -t
 
   build-mosml:
     runs-on: ubuntu-latest
@@ -87,4 +89,5 @@ jobs:
             SML=poly
             Z3_VERSION=4.13.0
             CVC_VERSION=5
+            CSDP_VERSION=1
             BUILDOPTS=--otknl -j2 --seq=tools/sequences/upto-parallel

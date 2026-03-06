@@ -13,8 +13,7 @@ open helperLib;
 open mc_tailrecLib;
 structure Parse = struct
   open Parse
-  val (Type,Term) =
-      wordsTheory.words_grammars |> parse_from_grammars
+  val (Type,Term) = valOf (grammarDB {thyname="words"}) |> parse_from_grammars
 end
 open Parse
 

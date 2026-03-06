@@ -1,4 +1,8 @@
-open Theory Datatype Drule Thm Term Lib listTheory ratTheory;
+Theory testTypes
+Ancestors
+   list rat
+Libs
+  Datatype Drule Thm Term Lib
 
 val types = ref ([] : hol_type list);
 
@@ -9,8 +13,6 @@ in
 end;
 
 fun AddType t = (types := Parse.Type t :: (!types));
-
-val _ = new_theory "testTypes";
 
 (*****************************************************************************)
 (* Simple Types                                                              *)
@@ -322,4 +324,3 @@ val _ = DataType
 val _ = save_thm("LIST",LIST_CONJ (map (REFL o curry mk_var "a")
                                   (rev (!types))));
 
-val _ = export_theory();

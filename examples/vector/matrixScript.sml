@@ -7,17 +7,14 @@
 (*               (c) Copyright, Marco Maggesi 2014                           *)
 (*       (c) Copyright, Andrea Gabrielli, Marco Maggesi 2016-2017            *)
 (* ========================================================================= *)
+Theory matrix
+Ancestors
+  arithmetic combin pred_set pair fcp list rich_list topology
+  real iterate real_sigma permutes vector
+Libs
+  PairedLambda pred_setLib fcpLib tautLib numLib
+  InductiveDefinition realLib RealArith mesonLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory combinTheory pred_setTheory pairTheory PairedLambda
-     pred_setLib fcpTheory fcpLib tautLib numLib listTheory rich_listTheory
-     topologyTheory InductiveDefinition;
-
-open realTheory realLib iterateTheory real_sigmaTheory RealArith mesonLib;
-open hurdUtils permutesTheory vectorTheory;
-
-val _ = new_theory "matrix";
 
 val bool_ss' = bool_ss -* ["lift_disj_eq", "lift_imp_disj"];
 
@@ -926,16 +923,17 @@ Proof
     ASM_SIMP_TAC bool_ss[GSYM MATRIX_COMPOSE, MATRIX_I]]
 QED
 
-(* NOTE: the following theorem(s) cannot be parsed in the modern syntax *)
-val INVERTIBLE_LEFT_INVERSE = store_thm
-  ("INVERTIBLE_LEFT_INVERSE",
-   “!A:real['N]['N]. invertible(A) <=> ?B:real['N]['N]. B ** A = mat 1”,
- PROVE_TAC[invertible_def, MATRIX_LEFT_RIGHT_INVERSE]);
+Theorem INVERTIBLE_LEFT_INVERSE:
+    !A:real['N]['N]. invertible(A) <=> ?B:real['N]['N]. B ** A = mat 1
+Proof
+ PROVE_TAC[invertible_def, MATRIX_LEFT_RIGHT_INVERSE]
+QED
 
-val INVERTIBLE_RIGHT_INVERSE = store_thm
-  ("INVERTIBLE_RIGHT_INVERSE",
-   “!A:real['N]['N]. invertible(A) <=> ?B:real['N]['N]. A ** B = mat 1”,
- PROVE_TAC[invertible_def, MATRIX_LEFT_RIGHT_INVERSE]);
+Theorem INVERTIBLE_RIGHT_INVERSE:
+    !A:real['N]['N]. invertible(A) <=> ?B:real['N]['N]. A ** B = mat 1
+Proof
+ PROVE_TAC[invertible_def, MATRIX_LEFT_RIGHT_INVERSE]
+QED
 
 Theorem MATRIX_INVERTIBLE :
    !f:real['N]->real['N].
@@ -959,7 +957,6 @@ Proof
  METIS_TAC[MATRIX_LINV_UNIQ, MATRIX_INV_INV, INVERTIBLE_LEFT_INVERSE]
 QED
 
-val _ = export_theory ();
 val _ = html_theory "matrix";
 
 (* References:

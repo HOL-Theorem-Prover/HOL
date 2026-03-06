@@ -14,9 +14,10 @@ open HolKernel Parse Drule Conv Tactic Tactical Thm_cont
 
 infix THENR ORELSER ++ ||;
 
+
 local  (* Fix the grammar used by this file *)
   val ambient_grammars = Parse.current_grammars();
-  val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+  val _ = Parse.temp_set_grammars $ valOf $ grammarDB {thyname = "bool"}
 in
 
 val bool_ss = boolSimps.bool_ss;
@@ -361,8 +362,8 @@ fun RESQ_IMP_RES_THEN ttac resth =
     let val th = check_res resth
     in IMP_RES_THEN ttac th
     end
-    handle HOL_ERR{message = s,...} =>
-        raise ERR "RESQ_IMP_RES_THEN" s
+    handle HOL_ERR herr =>
+        raise ERR "RESQ_IMP_RES_THEN" (message_of herr)
 
 (* --------------------------------------------------------------------- *)
 (* RESQ_RES_THEN : Resolve all restricted universally quantified         *)
@@ -572,8 +573,8 @@ fun RESQ_DEF_EXISTS_RULE tm =
        else defthm
       end
     end
-     handle HOL_ERR {message = s,...} =>
-        raise ERR "RESQ_DEF_EXISTS_RULE" s;
+     handle HOL_ERR herr =>
+        raise ERR "RESQ_DEF_EXISTS_RULE" (message_of herr);
 
 (* --------------------------------------------------------------------- *)
 (* new_gen_resq_definition flag (name, (--`!x1::P1. ... !xn::Pn.         *)
@@ -596,14 +597,14 @@ in
                      sat_thm = def_thm}
 end;
 
-val new_resq_definition =  new_gen_resq_definition NONE;
+val new_resq_definition = new_gen_resq_definition NONE;
 
 fun new_infixl_resq_definition (name,tm,fix) =
     new_gen_resq_definition (SOME (Infixl fix)) (name,tm);
 fun new_infixr_resq_definition (name,tm,fix) =
     new_gen_resq_definition (SOME (Infixr fix)) (name,tm);
 
-val new_binder_resq_definition =  new_gen_resq_definition (SOME Binder);
+val new_binder_resq_definition = new_gen_resq_definition (SOME Binder);
 
 (* --------------------------------------------------------------------- *)
 (* Some restricted quantifier functions using term quotations            *)

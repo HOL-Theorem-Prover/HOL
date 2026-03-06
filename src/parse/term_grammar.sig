@@ -59,7 +59,7 @@ sig
     (string * term * userprinter) -> grammar ->
     grammar
   val remove_user_printer :
-    string -> grammar -> (grammar * (term * userprinter) option)
+    string * term -> grammar -> (grammar * (term * userprinter) option)
   val user_printers :
     grammar -> (term * string * userprinter)FCNet.t
 

@@ -1,44 +1,49 @@
-open HolKernel boolLib bossLib BasicProvers;
-open pred_setTheory arithmeticTheory listTheory rich_listTheory optionTheory
-     pairTheory relationTheory sortingTheory;
-open permLib;
-
-val _ = new_theory "mergesort";
+Theory mergesort
+Ancestors
+  pred_set arithmetic list rich_list option pair relation sorting
+Libs
+  BasicProvers permLib
 
 val _ = temp_tight_equality ();
 
 val every_case_tac = BasicProvers.EVERY_CASE_TAC;
 
-val last_reverse = Q.prove (
-`!l. l <> [] ==> LAST (REVERSE l) = HD l`,
+Theorem last_reverse[local]:
+ !l. l <> [] ==> LAST (REVERSE l) = HD l
+Proof
  Induct_on `l` >>
- srw_tac[][]);
+ srw_tac[][]
+QED
 
-val mem_sorted_append = Q.prove (
-`!R l1 l2 x y.
+Theorem mem_sorted_append[local]:
+ !R l1 l2 x y.
   transitive R /\
   SORTED R (l1 ++ l2) /\
   MEM x l1 /\
   MEM y l2
   ==>
-  R x y`,
+  R x y
+Proof
  Induct_on `l1` >>
  srw_tac[][] >>
  REV_FULL_SIMP_TAC (srw_ss()) [SORTED_EQ] >>
- metis_tac []);
+ metis_tac []
+QED
 
-val stable_def = Define `
+Definition stable_def:
 stable R l1 l2 =
-  !p. (!x y. p x /\ p y ==> R x y) ==> FILTER p l1 = FILTER p l2`;
+  !p. (!x y. p x /\ p y ==> R x y) ==> FILTER p l1 = FILTER p l2
+End
 
-val sort2_def = Define `
+Definition sort2_def:
 sort2 R x y =
   if R x y then
     [x;y]
   else
-    [y;x]`;
+    [y;x]
+End
 
-val sort3_def = Define `
+Definition sort3_def:
 sort3 R x y z =
   if R x y then
     if R y z then
@@ -53,7 +58,8 @@ sort3 R x y z =
     else
       [y;z;x]
   else
-    [z;y;x]`;
+    [z;y;x]
+End
 
 Definition merge_def:
   (merge R [] [] = []) /\
@@ -82,30 +88,26 @@ Definition mergesortN_def:
       merge R
             (mergesortN R (DIV2 n) l)
             (mergesortN R (n - len1) (DROP len1 l)))
-Termination
-  WF_REL_TAC `measure (λ(R,n,l). n)` >>
-  srw_tac[][DIV2_def, X_LT_DIV]
-  >- (match_mp_tac DIV_LESS >>
-      decide_tac) >>
-  decide_tac
 End
 
-val mergesort_def = Define `
-mergesort R l = mergesortN R (LENGTH l) l`;
+Definition mergesort_def:
+  mergesort R l = mergesortN R (LENGTH l) l
+End
 
 (* A mergesort using tail recursive merging. This is what OCaml's standard
  * library does, but instead of parameterizing with negate, it just copies the
  * code for merge_rev sort. *)
 
-val sort2_tail_def = Define `
-sort2_tail (neg:bool) R x y =
-  if R x y <> neg then
-    [x;y]
-  else
-    [y;x]`;
+Definition sort2_tail_def:
+ sort2_tail (neg:bool) R x y =
+   if R x y <> neg then
+     [x;y]
+   else
+     [y;x]
+End
 
-val sort3_tail_def = Define `
-sort3_tail (neg:bool) R x y z =
+Definition sort3_tail_def:
+ sort3_tail (neg:bool) R x y z =
   if R x y <> neg then
     if R y z <> neg then
       [x;y;z]
@@ -119,7 +121,8 @@ sort3_tail (neg:bool) R x y z =
     else
       [y;z;x]
   else
-    [z;y;x]`;
+    [z;y;x]
+End
 
 Definition merge_tail_def:
   (merge_tail (negate:bool) R [] [] acc = acc) /\
@@ -149,38 +152,40 @@ Definition mergesortN_tail_def:
       merge_tail neg R (mergesortN_tail neg R (DIV2 n) l)
                        (mergesortN_tail neg R (n - len1) (DROP len1 l))
                        [])
-Termination
-  WF_REL_TAC `measure (λ(neg,R,n,l). n)` >>
-  srw_tac[][DIV2_def] >>
-  srw_tac[][DIV2_def, X_LT_DIV]
-  >- (match_mp_tac DIV_LESS >> decide_tac) >>
-  decide_tac
 End
 
-val mergesort_tail_def = Define `
-mergesort_tail R l = mergesortN_tail F R (LENGTH l) l`;
+Definition mergesort_tail_def:
+  mergesort_tail R l = mergesortN_tail F R (LENGTH l) l
+End
 
 
 (* ------------------------- proofs ----------------------- *)
 
 (* mergesort permutes its input *)
 
-val sort2_perm = Q.store_thm ("sort2_perm",
-`!R x y. PERM [x;y] (sort2 R x y)`,
- srw_tac [PERM_ss] [sort2_def]);
+Theorem sort2_perm:
+ !R x y. PERM [x;y] (sort2 R x y)
+Proof
+ srw_tac [PERM_ss] [sort2_def]
+QED
 
-val sort3_perm = Q.store_thm ("sort3_perm",
-`!R x y z. PERM [x;y;z] (sort3 R x y z)`,
- srw_tac [PERM_ss] [sort3_def]);
+Theorem sort3_perm:
+ !R x y z. PERM [x;y;z] (sort3 R x y z)
+Proof
+ srw_tac [PERM_ss] [sort3_def]
+QED
 
-val merge_perm = Q.store_thm ("merge_perm",
-`!R l1 l2. PERM (l1++l2) (merge R l1 l2)`,
+Theorem merge_perm:
+ !R l1 l2. PERM (l1++l2) (merge R l1 l2)
+Proof
  ho_match_mp_tac merge_ind >>
  srw_tac[][merge_def] >>
- full_simp_tac (srw_ss()++PERM_ss) []);
+ full_simp_tac (srw_ss()++PERM_ss) []
+QED
 
-val mergesortN_perm = Q.store_thm ("mergesortN_perm",
-`!R n l. PERM (TAKE n l) (mergesortN R n l)`,
+Theorem mergesortN_perm:
+ !R n l. PERM (TAKE n l) (mergesortN R n l)
+Proof
  ho_match_mp_tac mergesortN_ind >>
  srw_tac[][] >>
  ONCE_REWRITE_TAC [mergesortN_def] >>
@@ -196,36 +201,44 @@ val mergesortN_perm = Q.store_thm ("mergesortN_perm",
  `len1 <= n`
              by (UNABBREV_ALL_TAC >>
                  fs [DIV2_def, DIV_LESS_EQ]) >>
- metis_tac [take_drop_partition, PERM_TRANS, PERM_CONG, merge_perm]);
+ metis_tac [take_drop_partition, PERM_TRANS, PERM_CONG, merge_perm]
+QED
 
-val mergesort_perm = Q.store_thm ("mergesort_perm",
-`!R l. PERM l (mergesort R l)`,
+Theorem mergesort_perm:
+ !R l. PERM l (mergesort R l)
+Proof
  srw_tac[][mergesort_def] >>
- metis_tac [TAKE_LENGTH_ID, mergesortN_perm]);
+ metis_tac [TAKE_LENGTH_ID, mergesortN_perm]
+QED
 
 (* mergesort's output is sorted *)
 
-val sort2_sorted = Q.store_thm ("sort2_sorted",
-`!R x y.
+Theorem sort2_sorted:
+ !R x y.
   total R
   ==>
-  SORTED R (sort2 R x y)`,
+  SORTED R (sort2 R x y)
+Proof
  srw_tac[][sort2_def, SORTED_DEF, total_def] >>
- metis_tac []);
+ metis_tac []
+QED
 
-val sort3_sorted = Q.store_thm ("sort3_sorted",
-`!R x y z.
+Theorem sort3_sorted:
+ !R x y z.
   total R
   ==>
-  SORTED R (sort3 R x y z)`,
+  SORTED R (sort3 R x y z)
+Proof
  srw_tac[][sort3_def, SORTED_DEF, total_def] >>
- metis_tac []);
+ metis_tac []
+QED
 
-val merge_sorted = Q.store_thm ("merge_sorted",
-`!R l1 l2.
+Theorem merge_sorted:
+ !R l1 l2.
   transitive R /\ total R /\ SORTED R l1 /\ SORTED R l2
   ==>
-  SORTED R (merge R l1 l2)`,
+  SORTED R (merge R l1 l2)
+Proof
  ho_match_mp_tac merge_ind >>
  srw_tac[][merge_def] >>
  REV_FULL_SIMP_TAC (srw_ss()) [SORTED_EQ] >>
@@ -238,13 +251,15 @@ val merge_sorted = Q.store_thm ("merge_sorted",
  >- (`PERM ((x::l1)++l2) (merge R (x::l1) l2)` by metis_tac [merge_perm] >>
      imp_res_tac MEM_PERM >>
      fs [] >>
-     metis_tac []));
+     metis_tac [])
+QED
 
-val mergesortN_sorted = Q.store_thm ("mergesortN_sorted",
-`!R n l.
+Theorem mergesortN_sorted:
+ !R n l.
   total R /\ transitive R
   ==>
-  SORTED R (mergesortN R n l)`,
+  SORTED R (mergesortN R n l)
+Proof
  ho_match_mp_tac mergesortN_ind >>
  srw_tac[][] >>
  ONCE_REWRITE_TAC [mergesortN_def] >>
@@ -261,52 +276,64 @@ val mergesortN_sorted = Q.store_thm ("mergesortN_sorted",
      srw_tac[][sort2_sorted] >>
      Cases_on `t'` >>
      srw_tac[][sort2_sorted, sort3_sorted])
- >- metis_tac [merge_sorted]);
+ >- metis_tac [merge_sorted]
+QED
 
-val mergesort_sorted = Q.store_thm ("mergesort_sorted",
-`!R l. transitive R /\ total R ==> SORTED R (mergesort R l)`,
- metis_tac [mergesort_def, mergesortN_sorted]);
+Theorem mergesort_sorted:
+ !R l. transitive R /\ total R ==> SORTED R (mergesort R l)
+Proof
+ metis_tac [mergesort_def, mergesortN_sorted]
+QED
 
 (* mergesort is stable *)
 
-val stable_cong = Q.store_thm ("stable_cong",
-`!R l1 l2 l3 l4.
+Theorem stable_cong:
+ !R l1 l2 l3 l4.
   stable R l1 l2 /\ stable R l3 l4
   ==>
-  stable R (l1++l3) (l2++l4)`,
- srw_tac[][stable_def, FILTER_APPEND]);
+  stable R (l1++l3) (l2++l4)
+Proof
+ srw_tac[][stable_def, FILTER_APPEND]
+QED
 
-val stable_trans = Q.store_thm ("stable_trans",
-`!R l1 l2 l3.
+Theorem stable_trans:
+ !R l1 l2 l3.
   stable R l1 l2 /\ stable R l2 l3
   ==>
-  stable R l1 l3`,
- srw_tac[][stable_def]);
+  stable R l1 l3
+Proof
+ srw_tac[][stable_def]
+QED
 
-val sort2_stable = Q.store_thm ("sort2_stable",
-`!R x y. stable R [x;y] (sort2 R x y)`,
+Theorem sort2_stable:
+ !R x y. stable R [x;y] (sort2 R x y)
+Proof
  srw_tac[][stable_def, sort2_def] >>
  every_case_tac >>
  srw_tac[][] >>
- metis_tac []);
+ metis_tac []
+QED
 
-val sort3_stable = Q.store_thm ("sort3_stable",
-`!R x y z.
+Theorem sort3_stable:
+ !R x y z.
   total R /\ transitive R
   ==>
-  stable R [x;y;z] (sort3 R x y z)`,
+  stable R [x;y;z] (sort3 R x y z)
+Proof
  srw_tac[][sort3_def, stable_def] >>
  every_case_tac >>
  srw_tac[][] >>
- metis_tac [total_def, transitive_def]);
+ metis_tac [total_def, transitive_def]
+QED
 
-val filter_merge = Q.store_thm ("filter_merge",
-`!P R l1 l2.
+Theorem filter_merge:
+ !P R l1 l2.
   transitive R /\
   (!x y. P x /\ P y ==> R x y) /\
   SORTED R l1
   ==>
-  FILTER P (merge R l1 l2) = FILTER P (l1 ++ l2)`,
+  FILTER P (merge R l1 l2) = FILTER P (l1 ++ l2)
+Proof
  gen_tac >>
  ho_match_mp_tac merge_ind >>
  srw_tac[][merge_def, SORTED_EQ] >>
@@ -319,15 +346,18 @@ val filter_merge = Q.store_thm ("filter_merge",
                CCONTR_TAC >>
                fs [EXISTS_MEM] >>
                metis_tac [transitive_def]) >>
-     srw_tac[][]));
+     srw_tac[][])
+QED
 
-val merge_stable = Q.store_thm ("merge_stable",
-`!R l1 l2.
+Theorem merge_stable:
+ !R l1 l2.
   transitive R /\
   SORTED R l1
   ==>
-  stable R (l1 ++ l2) (merge R l1 l2)`,
- srw_tac[][stable_def, filter_merge]);
+  stable R (l1 ++ l2) (merge R l1 l2)
+Proof
+ srw_tac[][stable_def, filter_merge]
+QED
 
 Theorem mergesortN_stable:
   !R n l.
@@ -363,28 +393,36 @@ Proof
                 mergesortN_sorted])
 QED
 
-val mergesort_stable = Q.store_thm ("mergesort_stable",
-`!R l. transitive R /\ total R ==> stable R l (mergesort R l)`,
- metis_tac [mergesortN_stable, mergesort_def, TAKE_LENGTH_ID]);
+Theorem mergesort_stable:
+ !R l. transitive R /\ total R ==> stable R l (mergesort R l)
+Proof
+ metis_tac [mergesortN_stable, mergesort_def, TAKE_LENGTH_ID]
+QED
 
 (* packaging things up *)
 
-val mergesort_STABLE_SORT = Q.store_thm ("mergesort_STABLE_SORT",
-`!R.  transitive R /\ total R ==> STABLE mergesort R`,
+Theorem mergesort_STABLE_SORT:
+ !R.  transitive R /\ total R ==> STABLE mergesort R
+Proof
  srw_tac[][STABLE_DEF, SORTS_DEF] >>
- metis_tac [mergesort_perm, mergesort_sorted, mergesort_stable, stable_def]);
+ metis_tac [mergesort_perm, mergesort_sorted, mergesort_stable, stable_def]
+QED
 
-val mergesort_mem = Q.store_thm ("mergesort_mem",
-`!R L x. MEM x (mergesort R L) <=> MEM x L`,
- metis_tac [mergesort_perm, MEM_PERM]);
+Theorem mergesort_mem:
+ !R L x. MEM x (mergesort R L) <=> MEM x L
+Proof
+ metis_tac [mergesort_perm, MEM_PERM]
+QED
 
 (* On to mergesort_tail *)
 
-val sort2_tail_correct = Q.store_thm ("sort2_tail_correct",
-`!neg R x y.
-  sort2_tail neg R x y = if neg then REVERSE (sort2 R x y) else sort2 R x y`,
+Theorem sort2_tail_correct:
+ !neg R x y.
+  sort2_tail neg R x y = if neg then REVERSE (sort2 R x y) else sort2 R x y
+Proof
  srw_tac[][sort2_def, sort2_tail_def] >>
- fs []);
+ fs []
+QED
 
 Theorem sort3_tail_correct:
   !neg R x y z.
@@ -393,51 +431,60 @@ Theorem sort3_tail_correct:
 Proof srw_tac[][sort3_def, sort3_tail_def] >> fs []
 QED
 
-val merge_tail_correct1 = Q.store_thm ("merge_tail_correct1",
-`!neg R l1 l2 acc.
+Theorem merge_tail_correct1:
+ !neg R l1 l2 acc.
   (neg = F)
   ==>
-  merge_tail neg R l1 l2 acc = REVERSE (merge R l1 l2) ++ acc`,
+  merge_tail neg R l1 l2 acc = REVERSE (merge R l1 l2) ++ acc
+Proof
  ho_match_mp_tac merge_tail_ind >>
- srw_tac[][merge_tail_def, merge_def, REV_REVERSE_LEM]);
+ srw_tac[][merge_tail_def, merge_def, REV_REVERSE_LEM]
+QED
 
-val merge_empty = Q.store_thm ("merge_empty",
-`!R l acc.
+Theorem merge_empty:
+ !R l acc.
   merge R l [] = l /\
-  merge R [] l = l`,
+  merge R [] l = l
+Proof
  Cases_on `l` >>
- srw_tac[][merge_def]);
+ srw_tac[][merge_def]
+QED
 
-val merge_last_lem1 = Q.prove (
-`!R l1 l2 x.
+Theorem merge_last_lem1[local]:
+ !R l1 l2 x.
   (!y. MEM y l2 ==> ~R x y)
   ==>
-  merge R (l1 ++ [x]) l2 = merge R l1 l2 ++ [x]`,
+  merge R (l1 ++ [x]) l2 = merge R l1 l2 ++ [x]
+Proof
  ho_match_mp_tac merge_ind >>
  srw_tac[][merge_def, merge_empty] >>
  Induct_on `v5` >>
  srw_tac[][merge_empty, merge_def] >>
- metis_tac []);
+ metis_tac []
+QED
 
-val merge_last_lem2 = Q.prove (
-`!R l1 l2 y.
+Theorem merge_last_lem2[local]:
+ !R l1 l2 y.
   (!x. MEM x l1 ==> R x y)
   ==>
-  merge R l1 (l2 ++ [y]) = merge R l1 l2 ++ [y]`,
+  merge R l1 (l2 ++ [y]) = merge R l1 l2 ++ [y]
+Proof
  ho_match_mp_tac merge_ind >>
  srw_tac[][merge_def, merge_empty] >>
  Induct_on `v9` >>
  srw_tac[][merge_empty, merge_def] >>
- metis_tac []);
+ metis_tac []
+QED
 
-val merge_tail_correct2 = Q.store_thm ("merge_tail_correct2",
-`!neg R l1 l2 acc.
+Theorem merge_tail_correct2:
+ !neg R l1 l2 acc.
   (neg = T) /\
   transitive R /\
   SORTED R (REVERSE l1) /\
   SORTED R (REVERSE l2)
   ==>
-  merge_tail neg R l1 l2 acc = (merge R (REVERSE l1) (REVERSE l2)) ++ acc`,
+  merge_tail neg R l1 l2 acc = (merge R (REVERSE l1) (REVERSE l2)) ++ acc
+Proof
  ho_match_mp_tac merge_tail_ind >>
  srw_tac[][merge_tail_def, merge_def, REV_REVERSE_LEM, merge_empty] >>
  fs [] >>
@@ -455,7 +502,8 @@ val merge_tail_correct2 = Q.store_thm ("merge_tail_correct2",
      srw_tac[][] >>
      srw_tac[][] >>
      `R x' x` by metis_tac [mem_sorted_append, MEM_REVERSE, MEM] >>
-     metis_tac [transitive_def]));
+     metis_tac [transitive_def])
+QED
 
 Theorem mergesortN_correct:
   !negate R n l.
@@ -477,13 +525,15 @@ Proof
  metis_tac [merge_tail_correct2, mergesortN_sorted, REVERSE_REVERSE,APPEND_NIL]
 QED
 
-val mergesort_tail_correct = Q.store_thm ("mergesort_tail_correct",
-`!R l.
+Theorem mergesort_tail_correct:
+ !R l.
   total R /\
   transitive R
   ==>
-  mergesort_tail R l = mergesort R l`,
- srw_tac[][mergesort_tail_def, mergesort_def, mergesortN_correct]);
+  mergesort_tail R l = mergesort R l
+Proof
+ srw_tac[][mergesort_tail_def, mergesort_def, mergesortN_correct]
+QED
 
 
  (*
@@ -577,4 +627,3 @@ time (fn x => (EVAL x; ())) ``QSORT $<= ^l'``;
 
 *)
 
-val _ = export_theory ();

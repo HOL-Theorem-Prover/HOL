@@ -3,6 +3,8 @@ struct
 
 open terminal_primitives ProcessMultiplexor Holmake_tools
 
+val LOGDIR = Systeml.LOGDIR
+
 fun nstr_subhandler f nm n s =
     f n s
     handle e =>
@@ -116,7 +118,7 @@ val polish = nstr_subhandler polish "polish"
 
 val cheat_string =      "Saved CHEAT _"
 val fastcheat_string =  "Saved FAST-CHEAT _"
-val oracle_string =     "Saved ORACLE thm _"
+val oracle_string =   "Saved ORACLE thm _"
 val used_cheat_string = "(used CHEAT)"
 
 fun delsml_sfx s =
@@ -373,7 +375,13 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
                     (tinfo (red, "FAIL<" ^ status_string ^ ">");
                      List.app (fn s => info (" " ^ dim s)) fulllines;
                      if lastpartial <> "" then info (" " ^ dim lastpartial)
-                     else ());
+                     else ();
+                     info (
+                       bold (
+                         " Full log: "^ fullPath [dir,LOGDIR,delsml_sfx tag]
+                       )
+                     )
+                    );
                   TextIO.closeOut strm;
                   monitor_map := #1 (Binarymap.remove(!monitor_map, jk));
                   display_map();

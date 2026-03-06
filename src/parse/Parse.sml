@@ -215,7 +215,14 @@ fun print_term_by_grammar Gs t =
   in
     stdprint (termprinter t) ;
     print "\n"
-end
+  end
+
+fun term_to_string_by_grammar Gs t =
+  let
+    val (_, termprinter) = rawterm_pp print_from_grammars Gs
+  in
+    ppstring termprinter t
+  end
 
 val min_grammars = (type_grammar.min_grammar, term_grammar.min_grammar)
 
@@ -458,13 +465,17 @@ fun smashErrm m =
   case m Pretype.Env.empty of
       errormonad.Error e => raise Preterm.mkExn e
     | errormonad.Some (_, result) => result
+
 val stdprinters = SOME(term_to_string,type_to_string)
+
+fun ctxt_absyn_to_preterm fvs a =
+  TermParse.ctxt_absyn_to_preterm (term_grammar()) fvs a
 
 fun parse_in_context FVs q =
   let
     open errormonad
     val m =
-        (q |> Absyn |> absyn_to_preterm) >-
+        (q |> Absyn |> ctxt_absyn_to_preterm FVs) >-
         TermParse.ctxt_preterm_to_term stdprinters NONE FVs
   in
     smashErrm m
@@ -584,7 +595,7 @@ val temp_add_infix_type = mk_temp_tyd add_infix_type0
 val add_infix_type = mk_perm_tyd add_infix_type0
 
 fun replace_exnfn fnm f x =
-  f x handle HOL_ERR e => raise HOL_ERR (set_origin_function fnm e)
+  f x handle HOL_ERR e => raise HOL_ERR (set_top_function fnm e)
 
 fun thytype_abbrev0 r = [TYABBREV r]
 val temp_thytype_abbrev = mk_temp_tyd thytype_abbrev0
@@ -1022,9 +1033,9 @@ in
   term_grammar_changed := true
 end
 
-fun temp_remove_user_printer name = let
+fun temp_remove_user_printer namepat = let
   val (newg, printfnopt) =
-      term_grammar.remove_user_printer name (term_grammar())
+      term_grammar.remove_user_printer namepat (term_grammar())
 in
   the_term_grammar := newg;
   term_grammar_changed := true;
@@ -1035,12 +1046,8 @@ end
 val add_user_printer =
   mk_perm (fn (s,t) => [ADD_UPRINTER {codename=s,pattern=t}])
 
-fun remove_user_printer name = let
-in
-  update_grms "remove_user_printer"
-              ("(ignore o temp_remove_user_printer)", mlquote name);
-  temp_remove_user_printer name
-end;
+val remove_user_printer =
+    mk_perm (fn (n,p) => [RM_UPRINTER {codename=n,pattern=p}])
 
 
 (* ----------------------------------------------------------------------
@@ -1054,7 +1061,7 @@ fun gparents {thyname} =
     | thys => thys
 
 val {merge = merge_grammars0, set_parents = set_grammar_ancestry0,
-     DB = grammarDB0, parents = gparents} =
+     DB = grammarDB0, parents = grammar_ancestry} =
     let
       open GrammarDeltas
       fun apply (TYD tyd) (tyG, tmG) = (type_grammar.apply_delta tyd tyG, tmG)
@@ -1087,7 +1094,6 @@ fun merge_grammars sl =
 
 fun grammarDB thyname = grammarDB0 thyname
 
-
 fun set_grammar_ancestry slist =
     let
       val _ = GrammarDeltas.clear_deltas()
@@ -1100,33 +1106,6 @@ fun set_grammar_ancestry slist =
       term_grammar_changed := true
     end
 
-local fun sig_addn s = String.concat
-       ["val ", s, "_grammars : type_grammar.grammar * term_grammar.grammar"]
-      open Portable
-in
-fun setup_grammars (oldname, thyname) = let
-in
-  if not (null (!grm_updates)) andalso thyname <> oldname then
-    HOL_WARNING "Parse" "setup_grammars"
-                ("\"new_theory\" is throwing away grammar changes for "^
-                 "theory "^oldname^":\n"^
-                 String.concat (map (fn (s1, s2, _) => s1 ^ " - " ^ s2 ^ "\n")
-                                    (!grm_updates)))
-  else ();
-  grm_updates := [];
-  adjoin_to_theory {
-    sig_ps = SOME (fn _ => PP.add_string (sig_addn thyname)),
-    struct_ps = NONE
-  };
-  adjoin_after_completion (
-    fn () =>
-       PP.add_string ("val " ^ thyname ^
-                      "_grammars = valOf (Parse.grammarDB {thyname = " ^
-                      quote thyname ^ "})\n")
-  )
-end
-end (* local *)
-
 val _ = let
   val rawpp_thm =
       pp_thm
@@ -1135,13 +1114,6 @@ val _ = let
 in
   Theory.pp_thm := rawpp_thm
 end
-
-val _ = Theory.register_hook
-            ("Parse.setup_grammars",
-             (fn TheoryDelta.NewTheory{oldseg,newseg} =>
-                 setup_grammars(oldseg, newseg)
-               | _ => ()))
-
 
 fun export_theorems_as_docfiles dirname thms = let
   val {arcs,isAbs,vol} = Path.fromString dirname

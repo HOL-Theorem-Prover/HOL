@@ -197,7 +197,7 @@ let
            val (ty, tm) = destruct_theory_thm (valOf content);
            val _ = DB.fetch ty tm
                    handle HOL_ERR e =>
-                       (report_error (#message e);Feedback.fail());
+                       (report_error (message_of e);Feedback.fail());
         in
            ()
         end else ();

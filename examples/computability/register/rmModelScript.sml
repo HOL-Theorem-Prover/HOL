@@ -1,18 +1,9 @@
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory;
-open combinTheory;
-open whileTheory;
-open indexedListsTheory;
-open numeralTheory;
-open primrecfnsTheory;
-open listTheory;
-open mp_then;
-open boolTheory;
-open numpairTheory;
-open pred_setTheory;
-
-val _ = new_theory "rmModel";
-
+Theory rmModel
+Ancestors
+  arithmetic combin While indexedLists numeral primrecfns list
+  bool numpair pred_set
+Libs
+  mp_then
 
 Type reg = “:num”;
 Type state = “:num”;
@@ -63,17 +54,17 @@ Datatype:
 End
 
 (* Initialise *)
-val init_machine_def = Define `
+Definition init_machine_def:
   init_machine m i =
     ((λn. if findi n m.In = LENGTH m.In then 0
             else EL (findi n m.In) i)
     ,
         SOME m.q0)
-`;
+End
 
 
 (* run machine :: machine -> (registers, state option) ->  (registers, state option) *)
-val run_machine_1_def = Define `
+Definition run_machine_1_def:
     (run_machine_1 m (rs, NONE) = (rs, NONE))
     ∧
   (run_machine_1 m (rs, SOME s) = if s ∉ m.Q then (rs, NONE)
@@ -81,7 +72,7 @@ val run_machine_1_def = Define `
     | Inc r so => ( rs (| r |-> rs r + 1 |), so )
     | Dec r so1 so2 => if rs r > 0 then ( rs (| r |-> rs r - 1 |) , so1)
                           else ( rs, so2))
-`;
+End
 
 Theorem run_machine_1_alt:
   (run_machine_1 m (rs, NONE) = (rs, NONE)) ∧
@@ -94,17 +85,17 @@ Proof
   rw[APPLY_UPDATE_THM, FUN_EQ_THM] >> rw[] >> rw[]
 QED
 
-val run_machine_def = Define `
+Definition run_machine_def:
   (run_machine m = WHILE (λ(rs, so). so ≠ NONE) (run_machine_1 m))
-`;
+End
 
-val rsf_def = Define `
+Definition rsf_def:
   rsf m i = FST (run_machine m (init_machine m i))
-`;
+End
 
-val RUN_def = Define `
+Definition RUN_def:
   RUN m i = FST (run_machine m (init_machine m i)) m.Out
-`;
+End
 
 Definition conv_def:
   (conv (SOME s) = s+1) ∧
@@ -131,13 +122,12 @@ End
       Has finite states initial state(q0) is in that machine's set of all states(Q),
       and a valid state only transits to a valid state or NONE.
 *)
-val wfrm_def = Define `
+Definition wfrm_def:
   wfrm m ⇔
     FINITE m.Q ∧
     m.q0 ∈ m.Q ∧
     (∀s. s ∈ m.Q ⇒ action_states (m.tf s) ⊆ m.Q)
-`;
+End
 
 val rm_component_equality = theorem "rm_component_equality"
 
-val _ = export_theory ()

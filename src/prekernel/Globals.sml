@@ -50,18 +50,6 @@ val show_axioms = ref true
 val show_scrub = ref true
 
 (*---------------------------------------------------------------------------*
- * Assignable function for printing errors.                                  *
- *---------------------------------------------------------------------------*)
-
-fun outHOL_ERR_default {message,origin_function,origin_structure} =
-   (TextIO.output (TextIO.stdOut,
-                   "\nException raised at " ^ origin_structure ^ "." ^
-                   origin_function ^ ":\n" ^ message ^ "\n")
-    ; TextIO.flushOut TextIO.stdOut)
-
-val output_HOL_ERR = ref outHOL_ERR_default
-
-(*---------------------------------------------------------------------------*
  * Prettyprinting flags                                                      *
  *---------------------------------------------------------------------------*)
 
@@ -158,7 +146,7 @@ val print_thy_loads = ref false
 (* ----------------------------------------------------------------------
     Flag telling us whether or not we're interactive.
     If this is set, this allows for certain pieces of code to be a bit more
-    verbose.  It's set by std.prelude, so theory scripts and the like that
+    verbose.  It's set by tools/std.prelude (or tools-poly/prelude.ML), so theory scripts and the like that
     Holmake runs won't cause the printing of messages.
    ---------------------------------------------------------------------- *)
 

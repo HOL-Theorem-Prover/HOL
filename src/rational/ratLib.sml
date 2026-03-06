@@ -4,8 +4,7 @@ struct
 open HolKernel boolLib Parse bossLib;
 
 open simpLib pairLib integerTheory intLib intExtensionTheory
-     schneiderUtils fracTheory fracLib fracUtils ratTheory ratUtils
-     integerRingLib ratSyntax;
+     schneiderUtils fracTheory fracLib fracUtils ratTheory ratUtils ratSyntax;
 
 val ERR = mk_HOL_ERR "ratLib";
 
@@ -164,7 +163,7 @@ in
       val subst_list =
           map (fn x => fst(x) |-> snd(x)) (ListPair.zip (arg_vars,arg_thms));
       (* subst_term: t1 = top_rator arg_vars[1] ... arg_vars[n] *)
-      val subst_term =  mk_eq (t1 , list_mk_comb (top_rator,arg_vars))
+      val subst_term = mk_eq (t1 , list_mk_comb (top_rator,arg_vars))
 
       val thm1 = SUBST subst_list subst_term thm;
       val (thm1_lhs, thm1_rhs) = dest_eq(concl thm1);
@@ -434,10 +433,8 @@ val RAT_ELIMINATE_MINV_TAC = CONV_TAC RAT_ELIMINATE_MINV_CONV;
  * rewrite rules to calculate rational expressions
  *--------------------------------------------------------------------------*)
 
-(* rewrites to calculate operations on integers
-   (TODO) remove dependencies: numRingTheory and integerRingTheory
- *)
-local open numeralTheory EVAL_numRingTheory integerRingTheory in
+(* rewrites to calculate operations on integers *)
+local open numeralTheory in
 
 val num_rewrites =
    [numeral_distrib, numeral_eq, numeral_suc, numeral_iisuc, numeral_add,

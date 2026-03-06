@@ -5,8 +5,11 @@ open HolKernel Parse boolLib simpLib Traverse BasicProvers
 open chap3Theory normal_orderTheory termSyntax
 
 structure Parse = struct
-val (Type,Term) = parse_from_grammars normal_orderTheory.normal_order_grammars
+  open Parse
+  val (Type,Term) =
+    parse_from_grammars $ valOf $ grammarDB{thyname="normal_order"}
 end
+open Parse
 
 fun ERR f msg = mk_HOL_ERR "reductionEval" f msg
 val betastar_t = ``(-b->*)``

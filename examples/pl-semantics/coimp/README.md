@@ -1,0 +1,17 @@
+# Coimp
+
+## Premise
+A functional big-step semantics for an extension of the `listImp` language that describes a constrained coroutine mechanism. In particular the coroutines are, __stackful__, __one-shot__ and __asymmetric__. In addition, the coroutines are __NOT__ first-class in that they can't be passed around the program like other values, nor can multiple identifiers be bound to the same instance of a coroutine, let alone obtain a copy.
+
+## Coroutine Creation
+The state used in the semantics consists of a collection of top level functions that cannot be modified at runtime. A coroutine is created locally at runtime from one of these functions by supplying it with arguments. Functions are allowed to contain `yield` statements that are interpreted as a `NOP` when exectued outside of a coroutine context. When in a corotuine context, a `yield` returns control to the caller of the most recent coroutine invocation on the call stack and updates the identifier to refer to the continuation of what was invoked. The intent of this was to be able to use the same function in both a "classical" setting where it runs to completion, or in a coroutine setting where it yields at chosen points for scheduling fairness. This idea is a little half-baked because at the moment, there is no way to ignore the yields of a function once in a coroutine context.
+
+## Observable Effects
+Similarly to functions, there is a collection of global variables that are a part of the state, but new globals can't be introduced at runtime. These allow for different observable effects depending on how two coroutines are interleaved. A program needs to explicitly set up global variables and functions that are intended to be used as coroutines that coordinate via these globals. At the moment, a coroutine itself can't yield a value in the same way that a normal function can return a value, though this is perhaps not a difficult extension. Additionally, if a coroutine completes via a return, the return value is ignored. For simplicity, the invocation of a coroutine can't appear in expression position.
+
+At runtime, an identifier can be checked to determine if it is a runnable coroutine i.e. to check whether the coroutine has completed or not. The semantics however do not distinguish between a coroutine that has completed and an identifier that was never bound to a coroutine.
+
+## Variables and Scope
+There is no explicit declaration syntax. On assignment, the local variables are checked for a match. If there is none, the global variables are then checked. If both fail, a new local variable is created. Shadowing can occur when a function parameter shares the name of a global variable. Coroutine identifiers are local but occupy their own namespace, i.e. a coroutine can have the same name as a variable or function with no relation. Variables can also have the same name as a function.
+
+The only scope that exists is global and function scope i.e. there is no block scope. A function call starts with only its arguments as local variables and no coroutines, though will inherit the coroutine context from its caller. A coroutine can be created in any statement position, including inside loops and is then alive for the duration of the enclosing function call, unless it runs to completion beforehand. Since they can be created inside loops, a coroutine identifier can be rebound to a new coroutine/instance. The old coroutine referenced by the identifier is then lost.

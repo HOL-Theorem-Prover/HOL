@@ -1,24 +1,13 @@
 
-open HolKernel boolLib bossLib Parse;
-open decompilerLib prog_x86Lib;
+Theory jit_codegen
+Ancestors
+  pred_set arithmetic pair list words address set_sep prog
+  prog_x86 prog_ppc prog_arm jit_input jit_ops
+Libs
+  decompilerLib prog_x86Lib wordsLib x86_encodeLib helperLib
+  compilerLib export_codeLib
 
 val decompile_x86 = decompile x86_tools
-
-open pred_setTheory arithmeticTheory pairTheory listTheory wordsTheory;
-open addressTheory set_sepTheory progTheory prog_x86Theory;
-open wordsLib x86_encodeLib helperLib;
-
-open jit_inputTheory jit_opsTheory;
-
-open compilerLib;
-open export_codeLib;
-
-infix \\
-val op \\ = op THEN;
-
-
-val _ = new_theory "jit_codegen";
-
 
 (* compiler setup code *)
 
@@ -191,66 +180,80 @@ val (x86_codegen_th,x86_codegen_def,x86_codegen_pre_def) = compile "x86" ``
     let (r4,df,f,dg,g) = x86_codegen_loop (r1,r2,r3,r4,df,f,dg,g) in
       (r4,df,f,dg,g)``;
 
-val SEP_BYTES_IN_MEM_def = Define `
+Definition SEP_BYTES_IN_MEM_def:
   (SEP_BYTES_IN_MEM a [] = emp) /\
-  (SEP_BYTES_IN_MEM a (x::xs) = one (a,x) * SEP_BYTES_IN_MEM (a+1w) xs)`;
+  (SEP_BYTES_IN_MEM a (x::xs) = one (a,x) * SEP_BYTES_IN_MEM (a+1w) xs)
+End
 
-val SEP_CODE_IN_MEM_LOOP_def = Define `
+Definition SEP_CODE_IN_MEM_LOOP_def:
   (SEP_CODE_IN_MEM_LOOP a [] (a1,ns1) = emp) /\
   (SEP_CODE_IN_MEM_LOOP a (n::ns) (a1,ns1) =
      let branch j = ADDR ns1 a1 j - a in
      let xs = X86_ENCODE branch n in
-       SEP_BYTES_IN_MEM a xs * SEP_CODE_IN_MEM_LOOP (a + n2w (LENGTH xs)) ns (a1,ns1))`;
+       SEP_BYTES_IN_MEM a xs * SEP_CODE_IN_MEM_LOOP (a + n2w (LENGTH xs)) ns (a1,ns1))
+End
 
-val SEP_CODE_IN_MEM_def = Define `
-  SEP_CODE_IN_MEM a ns = SEP_CODE_IN_MEM_LOOP a ns (a,ns)`;
+Definition SEP_CODE_IN_MEM_def:
+  SEP_CODE_IN_MEM a ns = SEP_CODE_IN_MEM_LOOP a ns (a,ns)
+End
 
-val CODE_LENGTH_def = Define `
+Definition CODE_LENGTH_def:
   (CODE_LENGTH [] = 0) /\
-  (CODE_LENGTH (n::ns) = LENGTH (X86_ENCODE (\x.0w) n) + CODE_LENGTH ns)`;
+  (CODE_LENGTH (n::ns) = LENGTH (X86_ENCODE (\x.0w) n) + CODE_LENGTH ns)
+End
 
-val one_list_def = Define `
+Definition one_list_def:
   (one_list a [] b = cond (b = a)) /\
-  (one_list a (x::xs) b = one (a,x) * one_list (a + 1w) xs b)`;
+  (one_list a (x::xs) b = one (a,x) * one_list (a + 1w) xs b)
+End
 
-val one_space_def = Define `
+Definition one_space_def:
   (one_space a 0 b = cond (b = a)) /\
-  (one_space a (SUC n) b = SEP_EXISTS y. one (a,y) * one_space (a + 1w) n b)`;
+  (one_space a (SUC n) b = SEP_EXISTS y. one (a,y) * one_space (a + 1w) n b)
+End
 
-val one_string_def = Define `
-  one_string a (s:string) b = one_list a (MAP (n2w o ORD) s) b`;
+Definition one_string_def:
+  one_string a (s:string) b = one_list a (MAP (n2w o ORD) s) b
+End
 
-val one_string_0_def = Define `
-  one_string_0 a (s:string) b = one_string a (s ++ [CHR 0]) b`;
+Definition one_string_0_def:
+  one_string_0 a (s:string) b = one_string a (s ++ [CHR 0]) b
+End
 
-val one_string_STRCAT = store_thm("one_string_STRCAT",
-  ``!s t a c.
+Theorem one_string_STRCAT:
+    !s t a c.
       one_string a (s ++ t) c =
       one_string a s (a + n2w (LENGTH s)) *
-      one_string (a + n2w (LENGTH s)) t c``,
+      one_string (a + n2w (LENGTH s)) t c
+Proof
   Induct
   \\ FULL_SIMP_TAC std_ss [one_string_def,WORD_ADD_0,SEP_CLAUSES,
        ADD,MAP,LENGTH,one_list_def,APPEND]
   \\ SIMP_TAC std_ss [ADD1,GSYM word_add_n2w]
-  \\ SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM,STAR_ASSOC]);
+  \\ SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM,STAR_ASSOC]
+QED
 
-val one_string_0_STRCAT = store_thm("one_string_0_STRCAT",
-  ``!s t a c.
+Theorem one_string_0_STRCAT:
+    !s t a c.
       one_string_0 a (s ++ t) c =
       one_string a s (a + n2w (LENGTH s)) *
-      one_string_0 (a + n2w (LENGTH s)) t c``,
+      one_string_0 (a + n2w (LENGTH s)) t c
+Proof
   SIMP_TAC std_ss [one_string_0_def,GSYM APPEND_ASSOC]
-  \\ REWRITE_TAC [one_string_STRCAT]);
+  \\ REWRITE_TAC [one_string_STRCAT]
+QED
 
-val one_space_ADD = store_thm("one_space_ADD",
-  ``!m n a c.
+Theorem one_space_ADD:
+    !m n a c.
       one_space a (m + n) c =
       one_space a m (a + n2w m) *
-      one_space (a + n2w m) n c``,
+      one_space (a + n2w m) n c
+Proof
   Induct
   \\ ASM_SIMP_TAC std_ss [one_space_def,WORD_ADD_0,SEP_CLAUSES,ADD]
   \\ SIMP_TAC std_ss [ADD1,GSYM word_add_n2w]
-  \\ SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM,STAR_ASSOC]);
+  \\ SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM,STAR_ASSOC]
+QED
 
 val LENGTH_X86_ENCODE = prove(
   ``!n b. LENGTH (X86_ENCODE b n) = LENGTH (X86_ENCODE (\x.0w) n)``,
@@ -571,13 +574,15 @@ val SEP_CODE_IN_MEM_LOOP_thm = prove(
        BYTES_IN_MEM_def,SEP_CLAUSES,X86_IMMEDIATE_def,APPEND]
   \\ SEP_READ_TAC);
 
-val SEP_CODE_IN_MEM_IMP = store_thm("SEP_CODE_IN_MEM_IMP",
-  ``!x a ns f df xs l p ns.
+Theorem SEP_CODE_IN_MEM_IMP:
+    !x a ns f df xs l p ns.
       (x * SEP_CODE_IN_MEM a ns) (fun2set (f,df)) ==>
-      CODE_IN_MEM (xs,l,p,ns) a df f``,
+      CODE_IN_MEM (xs,l,p,ns) a df f
+Proof
   SIMP_TAC std_ss [SEP_CODE_IN_MEM_def] \\ REPEAT STRIP_TAC
   \\ IMP_RES_TAC SEP_CODE_IN_MEM_LOOP_thm
-  \\ FULL_SIMP_TAC std_ss [CODE_IN_MEM_def,LET_DEF]);
+  \\ FULL_SIMP_TAC std_ss [CODE_IN_MEM_def,LET_DEF]
+QED
 
 fun subst_SPEC_PC th tm = let
   val p = find_term (can (match_term ``aPC p``)) (cdr (concl th)) handle e =>
@@ -618,6 +623,3 @@ val x86_codegen_better = save_thm("x86_codegen_better",let
   val th = DISCH_ALL (MP th (UNDISCH lemma))
   val th = RW [GSYM SPEC_MOVE_COND] th
   in th end);
-
-
-val _ = export_theory();

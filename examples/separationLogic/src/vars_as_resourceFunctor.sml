@@ -422,10 +422,9 @@ local
                xconv1 THENC xconv2 THENC xconv3
             end;
 
-         val cs = computeLib.bool_compset ();
-         val _ = computeLib.add_thms [
+         val cs = computeLib.add_thms [
                     listTheory.HD,
-                    listTheory.TL] cs
+                    listTheory.TL] computeLib.bool_compset
 
          val conv2 = DEPTH_CONV PairRules.PBETA_CONV
          val conv3 =  computeLib.CBV_CONV cs
@@ -488,9 +487,8 @@ val tref = ref T;
 val ttt = !tref
 *)
 
-val all_distinct_cs = computeLib.bool_compset ();
-val _ = computeLib.add_thms [listTheory.ALL_DISTINCT,
-                             listTheory.MEM] all_distinct_cs;
+val all_distinct_cs = computeLib.add_thms [listTheory.ALL_DISTINCT,
+                             listTheory.MEM] computeLib.bool_compset;
 val ALL_DISTINCT_EXPAND_CONV =
    computeLib.CBV_CONV all_distinct_cs
 
@@ -785,11 +783,13 @@ val combinatorRWL = [IS_VAR_RES_COMBINATOR___holfoot_separation_combinator,
                      GET_VAR_RES_COMBINATOR___holfoot_separation_combinator]
 *)
 
-val critical_section_cs = computeLib.bool_compset ();
-val _ = computeLib.add_thms [listTheory.MAP, pairTheory.FST,
+val critical_section_cs =
+  let val cs = computeLib.bool_compset
+      val cs = computeLib.add_thms [listTheory.MAP, pairTheory.FST,
                              listTheory.ALL_DISTINCT,
-                             listTheory.MEM] critical_section_cs;
-val _ = computeLib.add_conv (Term `($=):'a -> 'a -> bool`, 2, stringLib.string_EQ_CONV) critical_section_cs;
+                             listTheory.MEM] cs
+  in computeLib.add_conv (Term `($=):'a -> 'a -> bool`, 2, stringLib.string_EQ_CONV) cs
+  end;
 
 fun ASL_PROGRAM_ABSTRACTION___var_res_cond_critical_section pf abstL sys xenv penv p =
    let
@@ -820,7 +820,7 @@ fun ASL_PROGRAM_ABSTRACTION___var_res_cond_critical_section pf abstL sys xenv pe
 
       (*normalise var_res_prop_input*)
       val i_t = (rand o rand o rator o rand o rand o concl) thm1;
-      val wpL_t = (fst o dest_pair o rand o rator) i_t;
+      val wpL_t = (fst o pairSyntax.dest_pair o rand o rator) i_t
       val wpL_thm = REWRITE_CONV [LIST_TO_SET_THM] wpL_t;
 
       val i_thm = ((REWR_CONV var_res_prop_input_def) THENC
@@ -2637,7 +2637,7 @@ let
    (*update vars*)
    val (_, _, wr, _, context_sfb, split_sfb, imp_sfb, _) =
         dest_VAR_RES_FRAME_SPLIT ((fst o dest_imp) (concl thm2));
-   val (wpb,rpb) = dest_pair wr
+   val (wpb,rpb) = pairSyntax.dest_pair wr
    val (precond, rewrL) = GENERATE___var_res_exp_varlist_update___REWRITES wpb rpb vcL_t;
 
    fun save_conv t = (cond_rewrite___varlist_update rewrL t) handle UNCHANGED => REFL t
@@ -3078,7 +3078,7 @@ let
                            (SPEC b (split_thm_inst (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE___bool_prop else VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop)), true)
                      end;
 
-   val (wpb,rpb) = dest_pair wpbrpb;
+   val (wpb,rpb) = pairSyntax.dest_pair wpbrpb;
    val solve_thm1 = ISPECL [sr, f,wpb,rpb,wpb'] solve_thm0
    val solve_thm = CONV_RULE
       ((STRIP_QUANT_CONV o RATOR_CONV o RAND_CONV o
@@ -3173,7 +3173,7 @@ fun VAR_RES_FRAME_SPLIT_INFERENCE___enrich_split___CONV el ss context tt =
 let
    val (f, _, wr, _, context_sfb, split_sfb, imp_sfb, _) =
         dest_VAR_RES_FRAME_SPLIT tt
-   val (wpb,rpb) = dest_pair wr
+   val (wpb,rpb) = pairSyntax.dest_pair wr
    val sfb = bagSyntax.mk_union (context_sfb, split_sfb)
 
    val implies_list = flatten (

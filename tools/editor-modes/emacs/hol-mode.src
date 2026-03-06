@@ -102,7 +102,7 @@ evaluations.")
   "*Do automatic loading?")
 
 (defvar hol-bare-p nil
-  "*use hol.bare?")
+  "*use hol --bare?")
 
 ;;; For compatability between both Emacs and XEmacs, please use the following
 ;;; two functions to determine if the mark is active, or to set it active.
@@ -169,7 +169,7 @@ evaluations.")
 
 (defun hol-term-at-point ()
   (let ((s (thing-at-point 'hol-term t)))
-    (with-hol-locpragma hol-beg-pos s)))
+    (with-hol-interm-locpragma hol-beg-pos s)))
 
 (defun hol-buffer-ok (string)
   "Checks a string to see if it is the name of a good HOL buffer.
@@ -204,16 +204,50 @@ process in it."
       (concat (hol-locpragma-of-position pos) s)
       s))
 
+(defun with-hol-interm-locpragma (pos s)
+  (if hol-generate-locpragma-p
+      (concat (hol-interm-locpragma-of-position pos) s)
+    s))
+
+(defun hol-string-escape (s)
+  "Escape argument so that special chars are escaped with backslash characters.
+The special characters are backslashes, left and right parentheses, and space."
+  (let (acc)
+    (seq-doseq (c s)
+      (let ((s1 (cond
+                 ((= c ?\s) "\\ ")
+                 ((= c ?\() "\\(")
+                 ((= c ?\\) "\\\\")
+                 ((= c ?\)) "\\)")
+                 (t (string c)))))
+        (setq acc (cons s1 acc))))
+    (string-join (reverse acc))))
+
 (defun hol-locpragma-of-position (pos)
   "Convert Elisp position into HOL location pragma.  Not for interactive use."
-  (let ((initial-point (point)))
+  (let*
+      ((rcposn (hol-get-rowcol-posn pos))
+       (fname (buffer-file-name))
+       (filepart (if fname (format "#(FILE=%s)" (hol-string-escape fname)) "")))
+    ;; send position of the line before a newline so that text that
+    ;; needs to be in column 0 is still in column 0
+    (format "%s#(LINE=%d,%d)\n"
+            filepart
+            (- (car rcposn) 1)
+            (cdr rcposn))))
+
+(defun hol-interm-locpragma-of-position (pos)
+  (let ((rcposn (hol-get-rowcol-posn pos)))
+    (format "(*#loc %d %d*)" (car rcposn) (cdr rcposn))))
+
+(defun hol-get-rowcol-posn (pos)
+  (save-excursion
     (goto-char pos)
     (let* ((rowstart (point-at-bol))  ;; (line-beginning-position)
            (row      (+ (count-lines 1 pos)
-                      (if (= rowstart pos) 1 0)))
+                        (if (= rowstart pos) 1 0)))
            (col      (+ (current-column) 1)))
-      (goto-char initial-point)
-      (format " (*#loc %d %d *)\n" (- row 1) col))))
+      (cons row col))))
 
 (defun send-raw-string-to-hol (string echoit)
   "Sends a string in the raw to HOL.  Not for interactive use."
@@ -369,21 +403,130 @@ With a prefix ARG, uses `expandf' rather than `e'."
                 nil)))
         nil))))
 
+; string-processing functions written in conjunction with Copilot
+(defun hol-bracketed-csv->list (s)
+  "Convert a bracketed, comma-separated string S into a list of strings.
+Examples:
+  (bracketed-csv->list \"[foo,bar,baz=qux lux]\")
+  ;; => (\"foo\" \"bar\" \"baz=qux lux\")
+  (bracketed-csv->list \" [ foo , bar , baz=qux lux ] \")  ;; => (\"foo\" \"bar\" \"baz=qux lux\")
+If S is not bracketed, it's still split by commas:
+  (bracketed-csv->list \"foo, bar\")
+  ;; => (\"foo\" \"bar\")"
+  (let* ((s (string-trim s))
+         (len (length s))         ;; strip surrounding brackets if present
+         (inner (if (and (> len 1) (eq (aref s 0) ?\[) (eq (aref s (1- len)) ?\]))
+                    (substring s 1 (1- len))
+                  s)))
+    ;; split on commas, omit empty parts, and trim whitespace around parts
+    (split-string inner "," t "[ \t\n\r]+")))
+
+
+(defun hol-split-on-equals-to-cons (s)
+  "Turn s like \"foo = bar bar\" into a cons cell (LEFT . RIGHT-LIST).
+
+LEFT is the trimmed substring to the left of the first '='.
+RIGHT-LIST is a list of whitespace-delimited strings to the right.
+
+If no '=' is present, return (S), with S trimmed."
+  (let ((trimmed (string-trim s)))
+    (if (string-match "=" trimmed)
+        (let* ((left-raw (substring trimmed 0 (match-beginning 0)))
+               (right-raw (substring trimmed (1+ (match-beginning 0))))
+               (left (string-trim left-raw))
+               (right-list (split-string (string-trim right-raw)
+                                         "[ \t\n\r]+" t)))
+          (cons left right-list))
+      ;; No '=' found ⇒ full string is the left part, empty list on the right
+      (list trimmed))))
+
+
+
+(defun hol-alist-pop-value (key alist)
+  "Look up KEY in ALIST and return (VALUE . REST).
+
+VALUE is the value of the first pair whose car matches KEY using TEST
+(defaults to `equal`). REST is ALIST with that first matching pair removed.
+If no pair matches, return (nil . ALIST) with ALIST unchanged (same object)."
+  (let* ((front nil)
+         (tail alist)
+         (found nil)
+         (value nil))
+    ;; Walk until we find KEY; accumulate a reversed prefix in FRONT.
+    (while (and tail (not found))
+      (let ((pair (car tail)))
+        (if (equal key (car pair))
+            (setq value (cdr pair)
+                  found t
+                  ;; skip the matching cell
+                  tail (cdr tail))
+          (push pair front)
+          (setq tail (cdr tail)))))
+    (if found
+        ;; Rebuild REST as FRONT (reversed back) + remaining TAIL.
+        (cons value (nconc (nreverse front) tail))
+      ;; Not found: return original ALIST pointer intact.
+      (cons nil alist))))
+
+(defconst resume-decl-pfx "Resume[ \t]+\\([A-Za-z0-9_']+\\)[ \t]*")
+
 (defun hol-do-goal (arg)
-  "Send term around point to HOL process as goal.
+  "If point is on a line beginning with the `Resume' keyword, set the goal
+using the markerLib.set_suspended_goal function.
 If prefix ARG is true, or if in transient mark mode, region is active and
-the region contains no term-delimiters, then send region instead."
+the region contains no term-delimiters, then send region instead.
+Failing all that, send term around point to HOL process as goal."
   (interactive "P")
-  (let ((txt (condition-case nil
+  (let ((susp-resume-data
+         (save-mark-and-excursion
+           (beginning-of-line)
+           (if (looking-at
+                (concat resume-decl-pfx "\\(\\[[A-Za-z0-9\n ,_'=]+\\]\\)"))
+               (cons (match-string-no-properties 1) (match-string-no-properties 2))
+             (if (looking-at resume-decl-pfx)
+                 (error "Resumption line for thm '%s' needs following subgoal label in [..]"
+                        (match-string-no-properties 1))
+             nil))))
+        (txt (condition-case nil
                  (with-hol-locpragma (region-beginning)
-                    (buffer-substring (region-beginning) (region-end)))
-               (error nil)))
-        (attr-string (hol-get-proof-attribute-string)))
-    (if (or (and (is-region-active)
-                 (not (hol-string-contains-term-delimiters-p txt)))
-            arg)
-      (send-string-as-hol-goal txt)
-      (let ((attr-s
+                                     (buffer-substring (region-beginning) (region-end)))
+               (error nil))))
+    (cond
+     (susp-resume-data
+        (let*
+            ((thname (car susp-resume-data))
+             (attrs0 (hol-bracketed-csv->list (cdr susp-resume-data)))
+             ;; list of strings, including some that look like foo=bar baz
+             (attrs (mapcar 'hol-split-on-equals-to-cons attrs0))
+             ;; now a list of lists, singleton lists are bare words;
+             ;; longer lists have lhs of equation as first element and
+             ;; rhs as rest
+             (labelname (caar attrs))
+             (smlname-and-rest (hol-alist-pop-value "smlname" (cdr attrs)))
+             (proof-attrs (cdr smlname-and-rest))
+             (proof-attr-str0
+              (mapcar (lambda (l) (format "%s=%s" (car l) (string-join (cdr l) " ")))
+                      proof-attrs))
+             (proof-attr-str (if proof-attrs
+                                 (format "(BasicProvers.mk_tacmod \"[%s]\")"
+                                         (string-join proof-attr-str0 ","))
+                               "Manager.id_tacm"))
+             (to-send
+              (format
+               (concat
+                "markerLib.prim_set_suspended_goal %s {label_name = \"%s\","
+                "suspension_name=\"%s\"}")
+               proof-attr-str labelname thname)))
+          (send-string-to-hol to-send hol-echo-commands-p)))
+
+     ((or (and (is-region-active)
+               (not (hol-string-contains-term-delimiters-p txt)))
+          arg)
+      (send-string-as-hol-goal txt))
+
+     (t
+      (let* ((attr-string (hol-get-proof-attribute-string))
+             (attr-s
              (if attr-string
                  (concat "\""
                          (replace-regexp-in-string
@@ -391,7 +534,7 @@ the region contains no term-delimiters, then send region instead."
                           attr-string)
                          "\"")
                nil)))
-        (send-string-as-hol-goal (hol-term-at-point) attr-s)))))
+        (send-string-as-hol-goal (hol-term-at-point) attr-s))))))
 
 
 (defun send-string-as-hol-goaltree (s)
@@ -424,15 +567,22 @@ before and after the region is sent."
   (interactive "r\np")
   (let* ((buffer-string
             (with-hol-locpragma start (buffer-substring start end)))
+         (pnv (prefix-numeric-value arg))
          (send-string
-          (if (= arg 4)
-              (concat "(" buffer-string ") handle e => Raise e")
-            buffer-string))
-         (loud-opens (if (= arg 16) t loud-opens0))
+          (cond ((= pnv 4)
+                 (concat "(" buffer-string ") handle e => Raise e"))
+                ((= pnv 16)
+                 (concat buffer-string
+                         ";val _ = Globals.interactive := true;"))
+                (t buffer-string)))
+         (loud-opens (if (= pnv 16) t loud-opens0))
          (sender (if hol-emit-time-elapsed-p
                      'send-timed-string-to-hol
                    'send-string-to-hol)))
-    (if (= arg 16) (hol-toggle-quietdec))
+    (if (= pnv 16)
+        (progn
+          (hol-toggle-quietdec)
+          (send-string-to-hol "val _ = Globals.interactive := false;")))
     (unwind-protect
         (progn
           (funcall sender send-string hol-echo-commands-p loud-opens)
@@ -440,7 +590,9 @@ before and after the region is sent."
               (send-string-to-hol
                (concat "val _ = print \"\\n*** Emacs/HOL command completed "
                        "***\\n\\n\""))))
-      (if (= (prefix-numeric-value arg) 16) (hol-toggle-quietdec)))))
+      (if (= pnv 16) (hol-toggle-quietdec))
+      ;; necessary just in case exception was raised in send-string
+      (send-string-to-hol "val _ = Globals.interactive := true"))))
 
 
 
@@ -467,7 +619,7 @@ If prefix ARG is true, or if in transient mark mode, region is active and
 the region contains no term delimiters, then send region instead."
   (interactive "P")
   (let ((txt (condition-case nil
-                 (with-hol-locpragma (region-beginning)
+                 (with-hol-interm-locpragma (region-beginning)
                     (buffer-substring (region-beginning) (region-end)))
                (error nil))))
     (if (or (and (is-region-active)
@@ -480,7 +632,7 @@ the region contains no term delimiters, then send region instead."
   (send-raw-string-to-hol
    (concat "Defn.tgoal (Defn.Hol_defn \"HOLmode_defn\" `"
            str "`) handle e => Raise e")
-   nil))
+   t))
 
 (defun remove-sml-comments (end)
   (let (done (start (point)))
@@ -519,7 +671,8 @@ starts >%s%s<"
       (concat
        (mapconcat (lambda (s) (concat "^" s "\\>"))
                   '("Theorem" "Definition" "Inductive" "CoInductive"
-                    "Triviality" "Datatype" "Type" "Overload" "Quote")
+                    "Triviality" "Datatype" "Type" "Overload" "Quote"
+                    "Theory" "Ancestors" "Libs")
                   "\\|")
        "\\|;\\|"
        (regexp-opt
@@ -534,7 +687,7 @@ starts >%s%s<"
         (old-mark-active (is-region-active)))
     (unwind-protect
         (with-temp-buffer
-          (holscript-mode)
+          (let ((holscript-mode-hook nil)) (holscript-mode))
           (setq hol-buffer-name buf) ; version of this variable in tmpbuf
           (setq case-fold-search nil) ; buffer-local version
           (insert string)
@@ -543,13 +696,15 @@ starts >%s%s<"
           ;; identifiers of form id.id.  When spotted such identifiers need
           ;; to have the first component of the name loaded.
           (let ((regexp
-                 (concat "`\\|“\\|‘\\|"
+                 (concat "`\\|“\\|‘\\|#(FILE=\\|"
                          hol-quoted-theorem-proof-re-begin "\\|"
                          hol-quoted-definition-re-begin "\\|"
                          hol-quoted-datatype-re-begin "\\|"
                          hol-quoted-Quote-re-begin "\\|"
                          "\\(" sml-struct-id-regexp "\\)\\.\\w+" "\\|"
-                         "\\_<open\\_>")))
+                         "\\_<open\\_>" "\\|"
+                         "^Libs\\_>" "\\|"
+                         "^Ancestors\\_>")))
             (while (re-search-forward regexp (point-max) t)
               (let ((pp (syntax-ppss))
                     (ms (match-string-no-properties 0)))
@@ -569,6 +724,17 @@ starts >%s%s<"
                      ((string= ms "‘")
                       (if (not (re-search-forward "’" nil t))
                           (error "Unbalanced ‘ in region")))
+                     ((string= ms "#(FILE=")
+                      (let (foundp abortedp)
+                        (while (and (not foundp)(not abortedp))
+                          (if (re-search-forward ")\\|\\\\" nil t)
+                              (let ((ms2 (match-string-no-properties 0)))
+                                (cond
+                                 ((string= ms2 ")") (setq foundp t))
+                                 (t (forward-char 1))))
+                            (setq abortedp t)))
+                        (if abortedp
+                            (error "Unterminated `#(FILE=..' directive in region"))))
                      ((and (or (string-prefix-p "Theorem" ms)
                                (string-prefix-p "Triviality" ms))
                            (char-equal (char-before) ?:))
@@ -586,13 +752,18 @@ starts >%s%s<"
                            (char-equal (char-before) ?:))
                       (if (not (re-search-forward "^End" nil t))
                           (error "Unbalanced [Co]Inductive/Quote in region")))
-                     ((string= ms "open")
-                      ;; point now after an open, now search forward
+                     ((or (string= ms "open")
+                          (string= ms "Libs")
+                          (string= ms "Ancestors"))
+                      ;; point now after an open/Libs, now search forward
                       ;; to end of buffer or a semi-colon, or an infix
                       ;; declaration or a val or a fun or another open
                       ;; or whatever, (as per the regexp defined just
                       ;; before this function definition)
-                      (let ((open-start (match-beginning 0))
+                      (if (or (string= ms "Libs") (string= ms "Ancestors"))
+                          (if (looking-at hol-module-qualification-regexp)
+                              (goto-char (match-end 0))))
+                      (let ((ancp (string= ms "Ancestors"))
                             (start (point))
                             (end
                              (save-excursion
@@ -613,21 +784,10 @@ starts >%s%s<"
                                      (setq abortedp t)))
                                  (if foundp
                                      (- (point) (length (match-string 0)))
-                                   (point-max)))))
-                            (endm (make-marker)))
+                                   (point-max))))))
                         ; (message "Handling an open")
                         (if hol-auto-load-p
-                            (hol-load-modules-in-region start end))
-                        (if leave-loud-opens nil
-                            ;; now bracket the open decl with quietdec toggles
-                          (set-marker endm end)
-                          (goto-char end)
-                          (insert
-                           ";val _ = HOL_Interactive.toggle_quietdec();\n")
-                          (goto-char open-start)
-                          (insert
-                           "val _ = HOL_Interactive.toggle_quietdec();\n")
-                          (goto-char endm) (set-marker endm nil))))
+                            (hol-load-modules-in-region ancp start end))))
                      (t
                       ; (message "Saw \"%s\"; position = %d; loading: %s"
                       ;           ms (point) (match-string 6))
@@ -717,7 +877,8 @@ file to \"use\" first."
                        (setq hol-mode-to-delete nil)))
             ; below, use visit parameter = 1 to stop message in mini-buffer
             (write-region (point-min) (point-max) fname nil 1)
-            (send-raw-string-to-hol (format "use \"%s\"" fname) nil)
+            (send-raw-string-to-hol
+             (format "QUse.prim_use {quietOpen = true} \"%s\"" fname) nil)
             (setq hol-mode-to-delete fname))
     (send-raw-string-to-hol (buffer-string) echoit)))
 
@@ -726,6 +887,11 @@ file to \"use\" first."
   "Perform a HOL backup."
   (interactive)
   (send-raw-string-to-hol "proofManagerLib.b()" hol-echo-commands-p))
+
+(defun hol-redo ()
+  "Perform a HOL redo."
+  (interactive)
+  (send-raw-string-to-hol "proofManagerLib.rd()" hol-echo-commands-p))
 
 (defun hol-user-backup ()
   "Perform a HOL backup to a user-defined save-point."
@@ -825,15 +991,26 @@ containing the HOL window, but keep the current frame uppermost."
                   "\\n\"; " "Meta.load \"" mys "\");\n")))
     (comint-send-string buf commandstring)))
 
-(defun hol-load-modules-in-region (start end)
-  "Attempts to load all of the words in the region as modules."
-  (interactive "rP")
+(defvar hol-module-qualification-regexp
+          "[[:space:]]*\\[[A-Za-z0-9=, \t\n]*\\]")
+
+(defun hol-load-modules-in-region (ancp start end)
+  "Attempts to load all of the words in the region as modules; with prefix arg
+appends \"Theory\" to the names. Skips over (ignores) module attributes given
+in square brackets after the names."
+  (interactive "P\nr")
   (save-excursion
     (goto-char start)
-    (while (re-search-forward (concat "\\b" sml-struct-id-regexp "\\b") end t)
+    (while (re-search-forward
+            (concat "\\b" sml-struct-id-regexp "\\b") end t)
       (let ((ppss (syntax-ppss)))
         (if (and (not (nth 4 ppss)) (not (nth 3 ppss)))
-            (hol-load-string (match-string 0)))))))
+            (progn
+              (hol-load-string (concat (match-string 0)
+                                       (if ancp "Theory" "")))
+              (if (looking-at hol-module-qualification-regexp)
+                  (goto-char (match-end 0)))))))))
+
 
 (defun hol-load-file (arg)
   "Gets HOL session to \"load\" the file at point.
@@ -850,7 +1027,7 @@ region instead. With prefix ARG prompt for a file-name to load."
           ((and (is-region-active)
                 (string-match (concat "^\\(\\s-*" sml-struct-id-regexp
                                       "\\)+\\s-*$") txt))
-           (hol-load-modules-in-region (region-beginning) (region-end)))
+           (hol-load-modules-in-region nil (region-beginning) (region-end)))
           ((and wap (string-match "^\\w+$" wap)) (hol-load-string wap))
           (t (hol-load-string (read-string "Library to load: "))))))
 
@@ -892,23 +1069,28 @@ region instead. With prefix ARG prompt for a file-name to load."
 
 ;** hol map keys and function definitions
 (defun hol-executable-with-bare ()
-  (if hol-bare-p (concat hol-executable ".bare")
-                 hol-executable))
+  "Return the HOL executable path (hol-bare-p affects args, not executable)."
+  hol-executable)
+
+(defun hol-bare-args ()
+  "Return list of extra args for HOL when hol-bare-p is set."
+  (if hol-bare-p '("--bare") nil))
 
 (defun hol--looks-like-root-holdir (dir)
   (cl-every
    (lambda (s) (file-exists-p (concat (file-name-as-directory dir) s)))
-   '("COPYRIGHT" "tools" "tools-poly" "std.prelude" "bin")))
+   '("COPYRIGHT" "tools" "tools-poly" "bin" "sigobj")))
 
 (defun hol--find-alternate-executable (dir0 original-name0)
   (let ((dir (expand-file-name dir0))
-        (original-name (expand-file-name original-name0)))
+        (original-name (expand-file-name original-name0))
+        (lastmaker-path ".hol/make-deps/lastmaker"))
     ;; check for lastmaker file
     (if-let*
-        (((file-readable-p ".HOLMK/lastmaker"))
-         ((> 500 (file-attribute-size (file-attributes ".HOLMK/lastmaker"))))
+        (((file-readable-p lastmaker-path))
+         ((> 500 (file-attribute-size (file-attributes lastmaker-path))))
          (lines (with-temp-buffer
-                  (insert-file-contents-literally ".HOLMK/lastmaker")
+                  (insert-file-contents-literally lastmaker-path)
                   (split-string (buffer-string) "\n" t)))
          ((not (null lines)))
          (dir1 (file-name-directory (car lines)))
@@ -927,9 +1109,11 @@ region instead. With prefix ARG prompt for a file-name to load."
            ((file-exists-p (concat bindir "hol.state"))
             (list (concat bindir "hol") "(as we are in its HOL directory)"))
            ((file-exists-p (concat bindir "hol.state0"))
-            (list
-             (concat bindir "hol.bare")
-             "(as we are in its HOL directory and hol.state doesn't exist)"))))))))
+            (progn
+              (setq hol-bare-p t)
+              (list
+               (concat bindir "hol")
+               "(as we are in its HOL directory and hol.state doesn't exist, using --bare)")))))))))
 
 (defun hol--get-executable ()
   (let ((first-option (hol-executable-with-bare)))
@@ -961,8 +1145,8 @@ region instead. With prefix ARG prompt for a file-name to load."
                 (comint-send-eof)
                 (sleep-for 0 500)))
           (setq default-directory my-dir)
-          (make-comint-in-buffer "HOL" hol-buffer-name hol-executable))
-      (let* ((buf (make-comint "HOL" hol-executable)))
+          (apply #'make-comint-in-buffer "HOL" hol-buffer-name hol-executable nil (hol-bare-args)))
+      (let* ((buf (apply #'make-comint "HOL" hol-executable nil (hol-bare-args))))
         (setq hol-buffer-name (buffer-name buf))
         (set-buffer hol-buffer-name)))
 
@@ -1030,7 +1214,7 @@ region instead. With prefix ARG prompt for a file-name to load."
         (new-frame . hol)))
 
 (defun hol-with-region ()
-  "Starts a HOL session and pastes selected region into it. If there is no active region, pastes whole buffer."
+  "Starts a HOL session and pastes selected region into it. If there is no active region, pastes whole buffer up to latest whitespace line before point."
   (interactive)
   (let* ((style-str (completing-read
                      (concat "HOL buffer position ("
@@ -1046,18 +1230,32 @@ region instead. With prefix ARG prompt for a file-name to load."
          (style (intern style-str))
          (starter (cdr (assoc style hol-new-buffer-style-alist))))
     (setq hol-new-buffer-style style)
-    (save-mark-and-excursion (funcall starter))
-    (if (region-active-p)
-        (copy-region-as-hol-definition (region-beginning) (region-end) 16 t)
-      (let ((beg (point-min))
-            (end (progn
-                   (while (looking-at "[[:space:]]*\n") (forward-line 1))
-                   (search-backward "\n\n")
-                   (while (looking-at "[[:space:]]*\n") (forward-line 1))
-                   (point))))
+    (let ((begin-end
+           (if (region-active-p)
+               (cons (region-beginning) (region-end))
+             (cons (point-min)
+                   (progn
+                     (while (looking-at "[[:space:]]*\n") (forward-line 1))
+                     (search-backward "\n\n")
+                     (while (looking-at "[[:space:]]*\n") (forward-line 1))
+                     (point))))))
+      (save-mark-and-excursion
+        (goto-char (car begin-end))
+        (let ((bare nil)
+              (limit (cdr begin-end)))
+          (while (and (not bare)
+                      (re-search-forward "^Theory [A-Za-z0-9_']+ *\\[bare\\]" limit t))
+            (let ((pps (syntax-ppss)))
+              (if (or (nth 3 pps) (nth 4 pps)) nil (setq bare t))))
+          (if bare (let ((hol-bare-p t)) 
+                     (message "Using hol --bare")
+                     (sleep-for 2)
+                     (funcall starter))
+            (funcall starter))))
+      (if (region-active-p) nil
         (push-mark (point-min))
-        (activate-mark t)
-        (copy-region-as-hol-definition beg end 16 t)))))
+        (activate-mark t))
+      (copy-region-as-hol-definition (car begin-end) (cdr begin-end) 16 t))))
 
 (defun run-program (filename niceness)
   "Runs a PROGRAM in a comint window, with a given (optional) NICENESS."
@@ -1102,9 +1300,10 @@ argument N, sets the trace to that value in particular."
         (send-raw-string-to-hol
          (format "local open Int in
                   val _ = let val nm = \"%s\"
-                      fun findfn r = #name r = nm
+                      fun findfn (Feedback.TraceElt r) = #name r = nm
+                      fun level (Feedback.TraceElt r) = #trace_level r
                       val old =
-                            #trace_level (valOf (List.find findfn (traces())))
+                            level (valOf (List.find findfn (traces())))
                   in
                       print (\"** \"^nm^\" trace now \");
                       if 0 < old then (set_trace nm 0; print \"off\\n\")
@@ -1211,8 +1410,7 @@ argument N, sets the trace to that value in particular."
    (concat
     "val _ = print (\"*** 'Quiet declaration' now \" ^"
     "Bool.toString (HOL_Interactive.toggle_quietdec()) ^ \" ***\\n\")")
-   nil)
-  (hol-toggle-var "Globals.interactive"))
+   nil))
 
 (defun hol-toggle-quiet-quietdec ()
   "Toggles quiet declarations in the interactive system."
@@ -1265,24 +1463,28 @@ argument N, sets the trace to that value in particular."
 
 (defun hol-open-string (prefixp)
   "Opens HOL modules, prompting for the name of the module to load.
-With prefix ARG, toggles quietdec variable before and after opening,
-potentially saving a great deal of time as tediously large modules are
-printed out.  (That's assuming that quietdec is false to start with.)"
+With prefix ARG, makes output loud, letting the module contents
+appear as printed declarations in the REPL. The noisy-open flag is then
+(re)set to false.  Noisiness is overridden if HOL's quietdec flag is true."
   (interactive "P")
   (let* ((prompt0 "Name of module to (load and) open")
-         (prompt (concat prompt0 (if prefixp " (toggling quietness)") ": "))
+         (prompt (concat prompt0 (if prefixp " (printing decls)") ": "))
          (module-name (read-string prompt)))
     (hol-load-string module-name)
-    (if prefixp (hol-toggle-quietdec))
+    (if prefixp
+        (send-raw-string-to-hol "HOL_Interactive.noisy_open := true;"
+                                hol-echo-commands-p))
     (send-raw-string-to-hol (concat "open " module-name) hol-echo-commands-p)
-    (if prefixp (hol-toggle-quietdec))))
+    (if prefixp
+        (send-raw-string-to-hol "HOL_Interactive.noisy_open := false;"
+                                hol-echo-commands-p))))
 
 (defun hol-db-match (tm)
   "Does a DB.match [] on the given TERM (given as a string, without quotes) and formats the result nicely."
   (interactive "sTerm to match on: ")
   (send-raw-string-to-hol (format "Hol_pp.print_match [] (Term`%s`)" tm)
                           hol-echo-commands-p))
-                          
+
 (defun hol-db-polarity-match (p tm)
   "Does a DB.polarity_match [] on the given TERM (given as a string, without quotes) and formats the result nicely."
   (interactive "P\nsTerm to polarity match on: ")
@@ -2222,13 +2424,3 @@ the surrounding text (as done by ‘hol-do-goal’ and
 
 (define-key global-map [menu-bar hol-menu hol-process hol-with-region]
   '("Start HOL & run to cursor" . hol-with-region))
-
-;; Support for snippet expansion, if yasnippet is installed.
-(when (require 'yasnippet nil 'noerror)
-  (let ((HOLsnippets
-         (concat
-          (string-remove-suffix "/bin/hol" hol-executable)
-          "/tools/yasnippets" "")))
-    (setq yas-snippet-dirs (nconc yas-snippet-dirs (cons HOLsnippets '())))
-    (yas-reload-all)
-    (define-key hol-map (kbd "TAB") 'yas-expand)))

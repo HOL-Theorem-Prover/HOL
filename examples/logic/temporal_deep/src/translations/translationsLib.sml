@@ -10,6 +10,8 @@ open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory p
      rltl_to_ltlTheory rltlTheory computeLib congLib temporal_deep_simplificationsLib
      Trace symbolic_kripke_structureTheory psl_lemmataTheory ProjectionTheory psl_to_rltlTheory;
 
+open pairSyntax
+
 exception NoLTLTerm;
 
 val list_ss = list_ss -* ["LT1_EQ0"]

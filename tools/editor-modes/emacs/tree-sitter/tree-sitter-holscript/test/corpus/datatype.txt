@@ -1,0 +1,123 @@
+========================
+One 0-Arity Constructor
+========================
+
+Datatype:
+  nil = Nil
+End
+
+---
+
+(source_file
+  (hol_datatype
+    (hol_binding
+      (hol_identifier)
+      (hol_constructor
+        (hol_clause
+          (hol_identifier))))))
+
+
+=================
+Extended Numbers
+=================
+
+Datatype:
+  extnum = FinNum num | PosInf
+End
+
+---
+
+(source_file
+  (hol_datatype
+    (hol_binding
+      (hol_identifier)
+      (hol_constructor
+        (hol_clause
+          (hol_identifier)
+          (hol_atomic_type))
+        (hol_clause
+          (hol_identifier))))))
+
+
+=====================
+Simple Type Variable
+=====================
+
+Datatype:
+  foo = Foo 'a
+End
+
+---
+
+(source_file
+  (hol_datatype
+    (hol_binding
+      (hol_identifier)
+      (hol_constructor
+        (hol_clause
+          (hol_identifier)
+          (hol_atomic_type))))))
+
+
+=====================
+'g_a_p Type Variable
+=====================
+
+Datatype:
+  foo = Foo 'g_a_p
+End
+
+---
+
+(source_file
+  (hol_datatype
+    (hol_binding
+      (hol_identifier)
+      (hol_constructor
+        (hol_clause
+          (hol_identifier)
+          (hol_atomic_type))))))
+
+
+============
+String Type
+============
+
+Datatype:
+  foo = Foo string
+End
+
+---
+
+(source_file
+  (hol_datatype
+    (hol_binding
+      (hol_identifier)
+      (hol_constructor
+        (hol_clause
+          (hol_identifier)
+          (hol_atomic_type))))))
+
+
+===============
+"Complex" Type
+===============
+
+Datatype:
+  sexp = Atom string | Expr (sexp list)
+End
+
+---
+
+(source_file
+  (hol_datatype
+    (hol_binding
+      (hol_identifier)
+      (hol_constructor
+        (hol_clause
+          (hol_identifier)
+          (hol_atomic_type))
+        (hol_clause
+          (hol_identifier)
+          (hol_list_ty
+            (hol_atomic_type)))))))

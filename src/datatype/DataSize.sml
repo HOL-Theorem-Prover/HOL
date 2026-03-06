@@ -155,6 +155,11 @@ val thm_compare = inv_img_cmp concl Term.compare
 
 val useful_ths = List.take(CONJUNCTS arithmeticTheory.ADD_CLAUSES, 2)
 
+(*---------------------------------------------------------------------------*)
+(* Prove "size_eq" theorem which is used to eliminate intermediate clauses   *)
+(* in the size definition, which stem from recursion under type operators in *)
+(* the datatype definition.                                                  *)
+(*---------------------------------------------------------------------------*)
 
 fun size_def_to_comb (db : TypeBasePure.typeBase) opt_ind_rec size_def =
   let
@@ -202,28 +207,47 @@ fun size_def_to_comb (db : TypeBasePure.typeBase) opt_ind_rec size_def =
         val th1 = prove (eqs,
                 ho_match_mp_tac ind
                 \\ REWRITE_TAC (size_def' :: aux_size_eqs @ aux_size_rules @ useful_ths)
+                \\ rpt (CHANGED_TAC BETA_TAC)
                 \\ rpt strip_tac
-                \\ BETA_TAC
                 \\ ASSUM_LIST REWRITE_TAC)
         val th2 = prove (list_mk_conj aux_eqs, REWRITE_TAC [FUN_EQ_THM, th1])
       in SOME th2 end
   end
 
+fun revise_size_def keepers size_def size_eq =
+  let val def_const = fst o strip_comb o lhs o snd o strip_forall o concl
+      val is_keeper = C (op_mem same_const) keepers o def_const
+  in
+    REWRITE_RULE [size_eq] size_def
+       |> CONJUNCTS
+       |> filter is_keeper
+       |> LIST_CONJ
+  end
+
 val prove_size_eqs = ref true
 
-fun define_size {induction, recursion} db = case define_size_rec recursion db of
+fun define_size {induction, recursion} db =
+ case define_size_rec recursion db of
     NONE => NONE
-  | SOME r => if ! prove_size_eqs then let
-    val dtys = Prim_rec.doms_of_tyaxiom recursion
-    val comb_eqs = size_def_to_comb db (SOME (induction, recursion)) (#def r)
-      handle HOL_ERR err =>
-        let in
-        Feedback.HOL_MESG ("error in size_eqs, consider DataSize.prove_size_eqs := false; ");
-        raise (HOL_ERR err) end
-    val def_name = fst(dest_type(hd dtys))
-    val _ = case comb_eqs of NONE => TRUTH
-      | SOME thm => save_thm (def_name ^ "_size_eq", thm)
-  in SOME r end
-  else SOME r
+  | SOME (r as {def, const_tyopl}) =>
+    if !prove_size_eqs then
+      let val comb_eqs = size_def_to_comb db (SOME (induction, recursion)) def
+              handle e as HOL_ERR _ =>
+              let in
+                Feedback.HOL_MESG (String.concat
+                  ["Failure in size_eq proof attempt. ",
+                   "Consider DataSize.prove_size_eqs := false;"]);
+                raise e
+              end
+      in case comb_eqs
+          of NONE => SOME r
+           | SOME size_eq_thm =>
+             let val keepers = map fst const_tyopl
+             in SOME {def = revise_size_def keepers def size_eq_thm,
+                      const_tyopl = const_tyopl}
+             end
+      end
+    else
+      SOME r
 
 end

@@ -3,15 +3,12 @@
 (*                                                                           *)
 (*  Author: Chun Tian (binghe) <binghe.lisp@gmail.com> (2023)                *)
 (*===========================================================================*)
+Theory des_test
+Ancestors
+  arithmetic pair fcp words list combin des
+Libs
+  numLib fcpLib wordsLib listLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory numLib pairTheory fcpTheory fcpLib wordsTheory wordsLib
-     listTheory listLib combinTheory hurdUtils;
-
-open desTheory;
-
-val _ = new_theory "des_test";
 
 val fcp_ss = std_ss ++ fcpLib.FCP_ss;
 
@@ -269,7 +266,6 @@ Proof
     EVAL_TAC
 QED
 
-val _ = export_theory();
 val _ = html_theory "des_test";
 
 (* References:

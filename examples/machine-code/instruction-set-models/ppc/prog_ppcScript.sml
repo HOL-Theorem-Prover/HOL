@@ -1,16 +1,12 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory res_quanTheory wordsTheory wordsLib bitTheory arithmeticTheory;
-open listTheory pairTheory combinTheory addressTheory;
+Theory prog_ppc
+Ancestors
+  pred_set res_quan words bit arithmetic list pair combin address
+  set_sep prog ppc_ ppc_seq_monad
+Libs
+  wordsLib
 
-open set_sepTheory progTheory ppc_Theory ppc_seq_monadTheory;
-
-val _ = new_theory "prog_ppc";
 val _ = ParseExtras.temp_loose_equality()
-
-
-infix \\
-val op \\ = op THEN;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -20,10 +16,11 @@ val RW1 = ONCE_REWRITE_RULE;
 (* The PowerPC set                                                               *)
 (* ----------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `
-  ppc_el =  pReg of ppc_reg => word32
-          | pMem of word32 => word8 option
-          | pStatus of ppc_bit => bool option`;
+Datatype:
+  ppc_el =  pReg ppc_reg word32
+          | pMem word32 (word8 option)
+          | pStatus ppc_bit (bool option)
+End
 
 val ppc_el_11 = DB.fetch "-" "ppc_el_11";
 val ppc_el_distinct = DB.fetch "-" "ppc_el_distinct";
@@ -35,14 +32,17 @@ val _ = Parse.type_abbrev("ppc_set",``:ppc_el set``);
 (* Converting from PPC-state tuple to ppc_set                                    *)
 (* ----------------------------------------------------------------------------- *)
 
-val ppc2set'_def = Define `
+Definition ppc2set'_def:
   ppc2set' (rs,ms,st) s =
     IMAGE (\a. pReg a (PREAD_R a s)) rs UNION
     IMAGE (\a. pMem a (PREAD_M a s)) ms UNION
-    IMAGE (\a. pStatus a (PREAD_S a s)) st`;
+    IMAGE (\a. pStatus a (PREAD_S a s)) st
+End
 
-val ppc2set_def   = Define `ppc2set s = ppc2set' (UNIV,UNIV,UNIV) s`;
-val ppc2set''_def = Define `ppc2set'' x s = ppc2set s DIFF ppc2set' x s`;
+Definition ppc2set_def:     ppc2set s = ppc2set' (UNIV,UNIV,UNIV) s
+End
+Definition ppc2set''_def:   ppc2set'' x s = ppc2set s DIFF ppc2set' x s
+End
 
 (* theorems *)
 
@@ -136,33 +136,45 @@ val EMPTY_ppc2set = prove(``
 (* Defining the PPC_MODEL                                                        *)
 (* ----------------------------------------------------------------------------- *)
 
-val pR1_def = Define `pR1 a x = SEP_EQ {pReg a x}`;
-val pM1_def = Define `pM1 a x = SEP_EQ {pMem a x}`;
-val pS1_def = Define `pS1 a x = SEP_EQ {pStatus a x}`;
+Definition pR1_def:   pR1 a x = SEP_EQ {pReg a x}
+End
+Definition pM1_def:   pM1 a x = SEP_EQ {pMem a x}
+End
+Definition pS1_def:   pS1 a x = SEP_EQ {pStatus a x}
+End
 
-val pR_def   = Define `pR a x = pR1 (PPC_IR a) x`;
-val pPC_def  = Define `pPC x  = pR1 (PPC_PC) x * cond (ALIGNED x)`;
-val pLR_def  = Define `pLR x  = pR1 (PPC_LR) x`;
-val pCTR_def = Define `pCTR x = pR1 (PPC_CTR) x`;
+Definition pR_def:     pR a x = pR1 (PPC_IR a) x
+End
+Definition pPC_def:    pPC x  = pR1 (PPC_PC) x * cond (ALIGNED x)
+End
+Definition pLR_def:    pLR x  = pR1 (PPC_LR) x
+End
+Definition pCTR_def:   pCTR x = pR1 (PPC_CTR) x
+End
 
-val pS_def = Define `
+Definition pS_def:
   pS (x0,x1,x2,x3,c) =
     pS1 (PPC_CR0 0w) x0 * pS1 (PPC_CR0 1w) x1 *
-    pS1 (PPC_CR0 2w) x2 * pS1 (PPC_CR0 3w) x3 * pS1 PPC_CARRY c`;
+    pS1 (PPC_CR0 2w) x2 * pS1 (PPC_CR0 3w) x3 * pS1 PPC_CARRY c
+End
 
-val PPC_NEXT_REL_def = Define `PPC_NEXT_REL s s' = (PPC_NEXT s = SOME s')`;
+Definition PPC_NEXT_REL_def:   PPC_NEXT_REL s s' = (PPC_NEXT s = SOME s')
+End
 
-val PPC_INSTR_def    = Define `PPC_INSTR (a,w:word32) =
+Definition PPC_INSTR_def:      PPC_INSTR (a,w:word32) =
   { pMem a      (SOME ((31 >< 24) w)) ;
     pMem (a+1w) (SOME ((23 >< 16) w)) ;
     pMem (a+2w) (SOME ((15 ><  8) w)) ;
-    pMem (a+3w) (SOME (( 7 ><  0) w)) }`;
+    pMem (a+3w) (SOME (( 7 ><  0) w)) }
+End
 
-val PPC_MODEL_def = Define `
+Definition PPC_MODEL_def:
   PPC_MODEL = (ppc2set, PPC_NEXT_REL, PPC_INSTR, (\x y. (x = (y:ppc_state))),
-               (K F):ppc_state -> bool)`;
+               (K F):ppc_state -> bool)
+End
 
-val pLINK_REGISTER_def = Define `pLINK_REGISTER x  = pLR x * cond (ALIGNED x)`;
+Definition pLINK_REGISTER_def:   pLINK_REGISTER x  = pLR x * cond (ALIGNED x)
+End
 
 (* theorems *)
 
@@ -170,47 +182,52 @@ val lemma =
   METIS_PROVE [SPLIT_ppc2set]
   ``p (ppc2set' y s) ==> (?u v. SPLIT (ppc2set s) (u,v) /\ p u /\ (\v. v = ppc2set'' y s) v)``;
 
-val PPC_SPEC_SEMANTICS = store_thm("PPC_SPEC_SEMANTICS",
-  ``SPEC PPC_MODEL p {} q =
+Theorem PPC_SPEC_SEMANTICS:
+    SPEC PPC_MODEL p {} q =
     !y s seq. p (ppc2set' y s) /\ rel_sequence PPC_NEXT_REL seq s ==>
-              ?k. q (ppc2set' y (seq k)) /\ (ppc2set'' y s = ppc2set'' y (seq k))``,
+              ?k. q (ppc2set' y (seq k)) /\ (ppc2set'' y s = ppc2set'' y (seq k))
+Proof
   SIMP_TAC std_ss [GSYM RUN_EQ_SPEC,RUN_def,PPC_MODEL_def,STAR_def,SEP_REFINE_def]
   \\ REPEAT STRIP_TAC \\ REVERSE EQ_TAC \\ REPEAT STRIP_TAC
   THEN1 (FULL_SIMP_TAC bool_ss [SPLIT_ppc2set_EXISTS] \\ METIS_TAC [])
   \\ Q.PAT_X_ASSUM `!s r. b` (STRIP_ASSUME_TAC o UNDISCH o SPEC_ALL o
      (fn th => MATCH_MP th (UNDISCH lemma))  o Q.SPECL [`s`,`(\v. v = ppc2set'' y s)`])
   \\ FULL_SIMP_TAC bool_ss [SPLIT_ppc2set_EXISTS]
-  \\ IMP_RES_TAC ppc2set''_11 \\ Q.EXISTS_TAC `i` \\ METIS_TAC []);
+  \\ IMP_RES_TAC ppc2set''_11 \\ Q.EXISTS_TAC `i` \\ METIS_TAC []
+QED
 
 
 (* ----------------------------------------------------------------------------- *)
 (* Theorems for construction of |- SPEC PPC_MODEL ...                            *)
 (* ----------------------------------------------------------------------------- *)
 
-val STAR_ppc2set = store_thm("STAR_ppc2set",
-  ``((pR1 a x * p) (ppc2set' (rs,ms,st) (r,s,m)) =
+Theorem STAR_ppc2set:
+    ((pR1 a x * p) (ppc2set' (rs,ms,st) (r,s,m)) =
       (x = r a) /\ a IN rs /\ p (ppc2set' (rs DELETE a,ms,st) (r,s,m))) /\
     ((pM1 b y * p) (ppc2set' (rs,ms,st) (r,s,m)) =
       (y = m b) /\ b IN ms /\ p (ppc2set' (rs,ms DELETE b,st) (r,s,m))) /\
     ((pS1 c z * p) (ppc2set' (rs,ms,st) (r,s,m)) =
       (z = s c) /\ c IN st /\ p (ppc2set' (rs,ms,st DELETE c) (r,s,m))) /\
     ((cond g * p) (ppc2set' (rs,ms,st) (r,s,m)) =
-      g /\ p (ppc2set' (rs,ms,st) (r,s,m)))``,
+      g /\ p (ppc2set' (rs,ms,st) (r,s,m)))
+Proof
   SIMP_TAC std_ss [pR1_def,pS1_def,pM1_def,EQ_STAR,INSERT_SUBSET,cond_STAR,
     EMPTY_SUBSET,IN_ppc2set,PREAD_R_def,PREAD_S_def,PREAD_M_def,GSYM DELETE_DEF]
-  \\ METIS_TAC [DELETE_ppc2set]);
+  \\ METIS_TAC [DELETE_ppc2set]
+QED
 
 val CODE_POOL_ppc2set_LEMMA = prove(
   ``!x y z. (x = z INSERT y) = (z INSERT y) SUBSET x /\ (x DIFF (z INSERT y) = {})``,
   SIMP_TAC std_ss [EXTENSION,SUBSET_DEF,IN_INSERT,NOT_IN_EMPTY,IN_DIFF] \\ METIS_TAC []);
 
-val CODE_POOL_ppc2set = store_thm("CODE_POOL_ppc2set",
-  ``CODE_POOL PPC_INSTR {(p,w)} (ppc2set' (rs,ms,st) (r,s,m)) =
+Theorem CODE_POOL_ppc2set:
+    CODE_POOL PPC_INSTR {(p,w)} (ppc2set' (rs,ms,st) (r,s,m)) =
       ({p;p+1w;p+2w;p+3w} = ms) /\ (rs = {}) /\ (st = {}) /\
       (SOME ((31 >< 24) (w:word32)) = m p) /\
       (SOME ((23 >< 16) (w:word32)) = m (p+1w)) /\
       (SOME ((15 ><  8) (w:word32)) = m (p+2w)) /\
-      (SOME (( 7 ><  0) (w:word32)) = m (p+3w))``,
+      (SOME (( 7 ><  0) (w:word32)) = m (p+3w))
+Proof
   SIMP_TAC bool_ss [INSERT_SUBSET,GSYM DELETE_DEF, CODE_POOL_ppc2set_LEMMA,
     EMPTY_SUBSET, IN_DELETE, IMAGE_INSERT, CODE_POOL_def, IMAGE_EMPTY,PREAD_M_def,
     BIGUNION_INSERT, BIGUNION_EMPTY, UNION_EMPTY, PPC_INSTR_def,IN_ppc2set]
@@ -220,18 +237,21 @@ val CODE_POOL_ppc2set = store_thm("CODE_POOL_ppc2set",
   \\ Cases_on `SOME ((23 >< 16) (w:word32)) = m (p + 1w)` \\ ASM_REWRITE_TAC []
   \\ Cases_on `SOME ((31 >< 24) (w:word32)) = m (p     )` \\ ASM_REWRITE_TAC []
   \\ ASM_SIMP_TAC std_ss [DIFF_INSERT,DELETE_ppc2set,DIFF_EMPTY,EMPTY_ppc2set]
-  \\ METIS_TAC []);
+  \\ METIS_TAC []
+QED
 
-val UPDATE_ppc2set'' = store_thm("UPDATE_ppc2set''",
-  ``(!a x. a IN rs ==>
+Theorem UPDATE_ppc2set'':
+    (!a x. a IN rs ==>
       (ppc2set'' (rs,ms,st) ((a =+ x) r,s,m) = ppc2set'' (rs,ms,st) (r,s,m))) /\
     (!a x. a IN ms ==>
       (ppc2set'' (rs,ms,st) (r,s,(a =+ x) m) = ppc2set'' (rs,ms,st) (r,s,m))) /\
     (!a x. a IN st ==>
-      (ppc2set'' (rs,ms,st) (r,(a =+ x) s,m) = ppc2set'' (rs,ms,st) (r,s,m)))``,
+      (ppc2set'' (rs,ms,st) (r,(a =+ x) s,m) = ppc2set'' (rs,ms,st) (r,s,m)))
+Proof
   SIMP_TAC std_ss [ppc2set_def,ppc2set''_def,ppc2set'_def,EXTENSION,IN_UNION,
     IN_IMAGE,IN_DIFF,IN_UNIV,PREAD_R_def,PREAD_M_def,PREAD_S_def,APPLY_UPDATE_THM]
-  \\ METIS_TAC [ppc_el_distinct,ppc_el_11]);
+  \\ METIS_TAC [ppc_el_distinct,ppc_el_11]
+QED
 
 val PPC_SPEC_CODE = RW [GSYM PPC_MODEL_def]
   (SIMP_RULE std_ss [PPC_MODEL_def] (Q.ISPEC `PPC_MODEL` SPEC_CODE));
@@ -252,28 +272,33 @@ val IMP_PPC_SPEC = save_thm("IMP_PPC_SPEC",
    SPECL [``CODE_POOL PPC_INSTR {(p,c)} * p'``,
           ``CODE_POOL PPC_INSTR {(p,c)} * q'``]) IMP_PPC_SPEC_LEMMA);
 
-val pS_HIDE = store_thm("pS_HIDE",
-  ``~pS = ~pS1 (PPC_CR0 0w) * ~pS1 (PPC_CR0 1w) * ~pS1 (PPC_CR0 2w) *
-          ~pS1 (PPC_CR0 3w) * ~pS1 PPC_CARRY``,
+Theorem pS_HIDE:
+    ~pS = ~pS1 (PPC_CR0 0w) * ~pS1 (PPC_CR0 1w) * ~pS1 (PPC_CR0 2w) *
+          ~pS1 (PPC_CR0 3w) * ~pS1 PPC_CARRY
+Proof
   SIMP_TAC std_ss [SEP_HIDE_def,pS_def,SEP_CLAUSES,FUN_EQ_THM]
-  \\ SIMP_TAC std_ss [SEP_EXISTS] \\ METIS_TAC [pS_def,PAIR]);
+  \\ SIMP_TAC std_ss [SEP_EXISTS] \\ METIS_TAC [pS_def,PAIR]
+QED
 
 
 (* ----------------------------------------------------------------------------- *)
 (* Improved memory predicates                                                    *)
 (* ----------------------------------------------------------------------------- *)
 
-val pMEMORY_WORD_def = Define `
+Definition pMEMORY_WORD_def:
   pMEMORY_WORD (a:word32) (w:word32) =
     { pMem a      (SOME ((7 >< 0) (w >> 24))) ;
       pMem (a+1w) (SOME ((7 >< 0) (w >> 16))) ;
       pMem (a+2w) (SOME ((7 >< 0) (w >> 8))) ;
-      pMem (a+3w) (SOME ((7 >< 0) w)) }`;
+      pMem (a+3w) (SOME ((7 >< 0) w)) }
+End
 
-val pMEMORY_SET_def = Define `
-  pMEMORY_SET df f = BIGUNION { pMEMORY_WORD a (f a) | a | a IN df /\ ALIGNED a  }`;
+Definition pMEMORY_SET_def:
+  pMEMORY_SET df f = BIGUNION { pMEMORY_WORD a (f a) | a | a IN df /\ ALIGNED a  }
+End
 
-val pMEMORY_def = Define `pMEMORY df f = SEP_EQ (pMEMORY_SET df f)`;
+Definition pMEMORY_def:   pMEMORY df f = SEP_EQ (pMEMORY_SET df f)
+End
 
 val pMEMORY_SET_SING = prove(
   ``!a f. ALIGNED a ==> (pMEMORY_SET {a} f = pMEMORY_WORD a (f a))``,
@@ -337,14 +362,15 @@ val pMEMORY_INSERT = prove(
       \\ METIS_TAC []])
   \\ ASM_SIMP_TAC bool_ss [] \\ METIS_TAC []);
 
-val pMEMORY_INTRO = store_thm("pMEMORY_INTRO",
-  ``SPEC PPC_MODEL
+Theorem pMEMORY_INTRO:
+    SPEC PPC_MODEL
      (pM1 a (SOME ((7 >< 0) (v >> 24))) * pM1 (a + 1w) (SOME ((7 >< 0) (v >> 16))) *
       pM1 (a + 2w) (SOME ((7 >< 0) (v >> 8))) * pM1 (a + 3w) (SOME ((7 >< 0) v)) * P) c
      (pM1 a (SOME ((7 >< 0) (w >> 24))) * pM1 (a + 1w) (SOME ((7 >< 0) (w >> 16))) *
       pM1 (a + 2w) (SOME ((7 >< 0) (w >> 8))) * pM1 (a + 3w) (SOME ((7 >< 0) w)) * Q) ==>
     ALIGNED a /\ a IN df ==>
-    SPEC PPC_MODEL (pMEMORY df ((a =+ v) f) * P) c (pMEMORY df ((a =+ w) f) * Q)``,
+    SPEC PPC_MODEL (pMEMORY df ((a =+ v) f) * P) c (pMEMORY df ((a =+ w) f) * Q)
+Proof
   REPEAT STRIP_TAC
   \\ (IMP_RES_TAC o GEN_ALL o REWRITE_RULE [AND_IMP_INTRO] o
      SIMP_RULE std_ss [INSERT_DELETE,IN_DELETE] o
@@ -352,16 +378,19 @@ val pMEMORY_INTRO = store_thm("pMEMORY_INTRO",
   \\ ASM_REWRITE_TAC [] \\ ASM_SIMP_TAC bool_ss [pMEMORY_LEMMA]
   \\ ONCE_REWRITE_TAC [STAR_COMM] \\ REWRITE_TAC [STAR_ASSOC]
   \\ MATCH_MP_TAC SPEC_FRAME
-  \\ FULL_SIMP_TAC bool_ss [AC STAR_COMM STAR_ASSOC]);
+  \\ FULL_SIMP_TAC bool_ss [AC STAR_COMM STAR_ASSOC]
+QED
 
 (* ----------------------------------------------------------------------------- *)
 (* Improved memory predicates (byte addressed memory)                            *)
 (* ----------------------------------------------------------------------------- *)
 
-val pBYTE_MEMORY_SET_def = Define `
-  pBYTE_MEMORY_SET df f = { pMem a (SOME (f a)) | a | a IN df }`;
+Definition pBYTE_MEMORY_SET_def:
+  pBYTE_MEMORY_SET df f = { pMem a (SOME (f a)) | a | a IN df }
+End
 
-val pBYTE_MEMORY_def = Define `pBYTE_MEMORY df f = SEP_EQ (pBYTE_MEMORY_SET df f)`;
+Definition pBYTE_MEMORY_def:   pBYTE_MEMORY df f = SEP_EQ (pBYTE_MEMORY_SET df f)
+End
 
 val IN_pBYTE_MEMORY_SET = prove(
   ``a IN df ==>
@@ -376,10 +405,11 @@ val DELETE_pBYTE_MEMORY_SET = prove(
   SIMP_TAC std_ss [EXTENSION,IN_INSERT,pBYTE_MEMORY_SET_def,GSPECIFICATION]
   \\ REWRITE_TAC [IN_DELETE,APPLY_UPDATE_THM] \\ METIS_TAC []);
 
-val pBYTE_MEMORY_INSERT = store_thm("pBYTE_MEMORY_INSERT",
-  ``a IN df ==>
+Theorem pBYTE_MEMORY_INSERT:
+    a IN df ==>
     (pBYTE_MEMORY df ((a =+ w) g) =
-    pM1 a (SOME w) * pBYTE_MEMORY (df DELETE a) g)``,
+    pM1 a (SOME w) * pBYTE_MEMORY (df DELETE a) g)
+Proof
   SIMP_TAC std_ss [pBYTE_MEMORY_def,pM1_def,pMEMORY_def,FUN_EQ_THM,EQ_STAR]
   \\ SIMP_TAC std_ss [SEP_EQ_def] \\ REPEAT STRIP_TAC
   \\ IMP_RES_TAC (GEN_ALL IN_pBYTE_MEMORY_SET)
@@ -387,15 +417,15 @@ val pBYTE_MEMORY_INSERT = store_thm("pBYTE_MEMORY_INSERT",
   \\ REWRITE_TAC [DELETE_pBYTE_MEMORY_SET,APPLY_UPDATE_THM]
   \\ REWRITE_TAC [EXTENSION,IN_INSERT,IN_DELETE]
   \\ `~(pMem a (SOME w) IN pBYTE_MEMORY_SET (df DELETE a) g)` suffices_by METIS_TAC []
-  \\ SIMP_TAC std_ss [pBYTE_MEMORY_SET_def,GSPECIFICATION,IN_DELETE,ppc_el_11]);
+  \\ SIMP_TAC std_ss [pBYTE_MEMORY_SET_def,GSPECIFICATION,IN_DELETE,ppc_el_11]
+QED
 
-val pBYTE_MEMORY_INTRO = store_thm("pBYTE_MEMORY_INTRO",
-  ``SPEC m (pM1 a (SOME v) * P) c (pM1 a (SOME w) * Q) ==>
+Theorem pBYTE_MEMORY_INTRO:
+    SPEC m (pM1 a (SOME v) * P) c (pM1 a (SOME w) * Q) ==>
     a IN df ==>
-    SPEC m (pBYTE_MEMORY df ((a =+ v) f) * P) c (pBYTE_MEMORY df ((a =+ w) f) * Q)``,
+    SPEC m (pBYTE_MEMORY df ((a =+ v) f) * P) c (pBYTE_MEMORY df ((a =+ w) f) * Q)
+Proof
   ONCE_REWRITE_TAC [STAR_COMM]
   \\ SIMP_TAC std_ss [pBYTE_MEMORY_INSERT,STAR_ASSOC]
-  \\ METIS_TAC [SPEC_FRAME]);
-
-
-val _ = export_theory();
+  \\ METIS_TAC [SPEC_FRAME]
+QED

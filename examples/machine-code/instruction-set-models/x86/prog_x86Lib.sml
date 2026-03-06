@@ -7,11 +7,6 @@ open set_sepTheory x86_Theory x86_Lib helperLib;
 open x86_seq_monadTheory x86_coretypesTheory x86_astTheory x86_icacheTheory;
 open prog_x86Theory;
 
-infix \\
-val op \\ = op THEN;
-
-
-
 val x86_status = xS_HIDE;
 val x86_pc = ``xPC``;
 val x86_exec_flag = ref false;

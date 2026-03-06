@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-open relationTheory combinTheory pred_setTheory cardinalTheory
-
-val _ = new_theory "simpleSetCat";
+Theory simpleSetCat
+Ancestors
+  relation combin pred_set cardinal
 
 val _ = app (ignore o hide) ["S", "W"]
 
@@ -24,7 +23,7 @@ QED
 Definition Delta_def[simp]:
   Delta V a b <=>  a = b /\ a IN V
 End
-Overload "Δ" = “Delta”                                                 (* UOK *)
+Overload "Δ" = “Delta”
 
 Theorem Delta_INTER:
   Delta (s INTER t) = Delta s RINTER Delta t
@@ -468,7 +467,3 @@ Proof
   simp[eps_def, partition_def] >> strip_tac >>
   qexists_tac ‘a’ >> simp[EXTENSION] >> metis_tac[]
 QED
-
-
-
-val _ = export_theory();

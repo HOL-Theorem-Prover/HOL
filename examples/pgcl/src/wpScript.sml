@@ -13,11 +13,13 @@ app load
    "metisLib","posrealLib","expectationTheory","intLib"];
 quietdec := true;
 *)
+Theory wp
+Ancestors
+  combin list rich_list string integer real poset posreal
+  expectation syntax
+Libs
+  intLib realLib metisLib posrealLib
 
-open HolKernel Parse boolLib bossLib intLib realLib metisLib;
-open combinTheory listTheory rich_listTheory stringTheory integerTheory
-     realTheory posetTheory;
-open posrealTheory posrealLib expectationTheory syntaxTheory;
 
 (*
 quietdec := false;
@@ -26,8 +28,6 @@ quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "wp"                                            *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "wp";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -49,25 +49,26 @@ val lemma = I prove;
 (* Weakest precondition semantics.                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val wp_def = Define
-  `(wp Abort = \r. Zero) /\
+Definition wp_def:
+   (wp Abort = \r. Zero) /\
    (wp (Consume k) = \r. r) /\
    (wp (Assign v e) = \r s. r (assign v e s)) /\
    (wp (Seq a b) = \r. wp a (wp b r)) /\
    (wp (Nondet a b) = \r. Min (wp a r) (wp b r)) /\
    (wp (Prob p a b) = \r. Lin p (wp a r) (wp b r)) /\
-   (wp (While c b) = \r. expect_lfp (\e. Cond c (wp b e) r))`;
+   (wp (While c b) = \r. expect_lfp (\e. Cond c (wp b e) r))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Showing the need for SUB-linearity                                        *)
 (* (assuming there are at least two distinct values)                         *)
 (* ------------------------------------------------------------------------- *)
 
-val sublinear_necessary = store_thm
-  ("sublinear_necessary",
-   ``(?x y : 'a. ~(x = y)) ==>
+Theorem sublinear_necessary:
+     (?x y : 'a. ~(x = y)) ==>
      ?prog r1 r2 s : 'a state.
-       wp prog r1 s + wp prog r2 s < wp prog (\s'. r1 s' + r2 s') s``,
+       wp prog r1 s + wp prog r2 s < wp prog (\s'. r1 s' + r2 s') s
+Proof
    RW_TAC std_ss []
    ++ Q.EXISTS_TAC `Nondet (Assign "n" (\v. x)) Skip`
    ++ Q.EXISTS_TAC `\v. if v "n" = x then 1 else 0`
@@ -75,7 +76,8 @@ val sublinear_necessary = store_thm
    ++ Q.EXISTS_TAC `(\v. y)`
    ++ REWRITE_TAC [wp_def, assign_eta, Skip_def]
    ++ SIMP_TAC int_ss [Min_def]
-   ++ ASM_SIMP_TAC posreal_ss [preal_min_def]);
+   ++ ASM_SIMP_TAC posreal_ss [preal_min_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* All wp transformers are healthy                                           *)
@@ -888,9 +890,9 @@ val healthy_wp_while = lemma
 
 val () = print "wp While is healthy\n";
 
-val wp_healthy = store_thm
-  ("wp_healthy",
-   ``!prog. healthy (wp prog)``,
+Theorem wp_healthy:
+     !prog. healthy (wp prog)
+Proof
    Induct
    << [PROVE_TAC [healthy_wp_abort],
        PROVE_TAC [healthy_wp_consume],
@@ -898,82 +900,92 @@ val wp_healthy = store_thm
        PROVE_TAC [healthy_wp_seq],
        PROVE_TAC [healthy_wp_nondet],
        PROVE_TAC [healthy_wp_prob],
-       PROVE_TAC [healthy_wp_while]]);
+       PROVE_TAC [healthy_wp_while]]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* And so we can transfer the following nice properties to wp transformers   *)
 (* ------------------------------------------------------------------------- *)
 
-val wp_zero = store_thm
-  ("wp_zero",
-   ``!p. wp p Zero = Zero``,
-   PROVE_TAC [healthy_zero, wp_healthy]);
+Theorem wp_zero:
+     !p. wp p Zero = Zero
+Proof
+   PROVE_TAC [healthy_zero, wp_healthy]
+QED
 
-val wp_mono = store_thm
-  ("wp_mono",
-   ``!p r1 r2. Leq r1 r2 ==> Leq (wp p r1) (wp p r2)``,
-   PROVE_TAC [healthy_mono, wp_healthy]);
+Theorem wp_mono:
+     !p r1 r2. Leq r1 r2 ==> Leq (wp p r1) (wp p r2)
+Proof
+   PROVE_TAC [healthy_mono, wp_healthy]
+QED
 
-val wp_scale = store_thm
-  ("wp_scale",
-   ``!p r c s. wp p (\s'. c * r s') s = c * wp p r s``,
-   METIS_TAC [healthy_scale, wp_healthy]);
+Theorem wp_scale:
+     !p r c s. wp p (\s'. c * r s') s = c * wp p r s
+Proof
+   METIS_TAC [healthy_scale, wp_healthy]
+QED
 
-val wp_conj = store_thm
-  ("wp_conj",
-   ``!p r1 r2. Leq (Conj (wp p r1) (wp p r2)) (wp p (Conj r1 r2))``,
-   PROVE_TAC [healthy_conj, wp_healthy]);
+Theorem wp_conj:
+     !p r1 r2. Leq (Conj (wp p r1) (wp p r2)) (wp p (Conj r1 r2))
+Proof
+   PROVE_TAC [healthy_conj, wp_healthy]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Useful properties of programs                                             *)
 (* ------------------------------------------------------------------------- *)
 
-val seq_assoc = store_thm
-  ("seq_assoc",
-   ``!p q r. wp (Seq p (Seq q r)) = wp (Seq (Seq p q) r)``,
-   RW_TAC std_ss [wp_def]);
+Theorem seq_assoc:
+     !p q r. wp (Seq p (Seq q r)) = wp (Seq (Seq p q) r)
+Proof
+   RW_TAC std_ss [wp_def]
+QED
 
-val wp_skip = store_thm
-  ("wp_skip",
-   ``!r. wp Skip r = r``,
-   RW_TAC std_ss [wp_def, Skip_def]);
+Theorem wp_skip:
+     !r. wp Skip r = r
+Proof
+   RW_TAC std_ss [wp_def, Skip_def]
+QED
 
-val wp_if = store_thm
-  ("wp_if",
-   ``!c a b r. wp (If c a b) r = Cond c (wp a r) (wp b r)``,
+Theorem wp_if:
+     !c a b r. wp (If c a b) r = Cond c (wp a r) (wp b r)
+Proof
    RW_TAC std_ss [wp_def, If_def, cond_eta, lin_eta]
    ++ CONV_TAC FUN_EQ_CONV
    ++ RW_TAC posreal_ss [bound1_basic]
    ++ Q.UNABBREV_TAC `x`
-   ++ RW_TAC posreal_ss [mul_lone, mul_lzero]);
+   ++ RW_TAC posreal_ss [mul_lone, mul_lzero]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Anything refines Abort                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-val refines_abort = store_thm
-  ("refines_abort",
-   ``!p. refines (wp Abort) (wp p)``,
-   RW_TAC std_ss [wp_def, wp_healthy, refines_zero]);
+Theorem refines_abort:
+     !p. refines (wp Abort) (wp p)
+Proof
+   RW_TAC std_ss [wp_def, wp_healthy, refines_zero]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Probabilistic choice refines demonic choice                               *)
 (* ------------------------------------------------------------------------- *)
 
-val refines_nondet_prob = store_thm
-  ("refines_nondet_prob",
-   ``!f p q. refines (wp (Nondet p q)) (wp (Prob f p q))``,
+Theorem refines_nondet_prob:
+     !f p q. refines (wp (Nondet p q)) (wp (Prob f p q))
+Proof
    RW_TAC std_ss [refines_def, wp_def, Min_def, Leq_def, min_le_lin, Lin_def]
    ++ Q.UNABBREV_TAC `x`
-   ++ RW_TAC posreal_ss [min_le_lin, Lin_def]);
+   ++ RW_TAC posreal_ss [min_le_lin, Lin_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Probabilistic assignment always terminates.                               *)
 (* ------------------------------------------------------------------------- *)
 
-val prob_assign_terminates = store_thm
-  ("prob_assign_terminates",
-   ``!v l. ~(l = []) ==> (wp (ProbAssign v l) One = One)``,
+Theorem prob_assign_terminates:
+     !v l. ~(l = []) ==> (wp (ProbAssign v l) One = One)
+Proof
    GEN_TAC
    ++ Induct
    ++ RW_TAC std_ss [ProbAssign_def,MAP,LENGTH,Probs_def]
@@ -1001,29 +1013,31 @@ val prob_assign_terminates = store_thm
    ++ POP_ASSUM (K ALL_TAC)
    ++ RW_TAC posreal_reduce_ss []
    ++ POP_ASSUM MP_TAC
-   ++ RW_TAC arith_ss []);
+   ++ RW_TAC arith_ss []
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* wlp is the partial-correctness analogue of wp.                            *)
 (* ------------------------------------------------------------------------- *)
 
-val wlp_def = Define
-  `(wlp Abort = \r. Magic) /\
+Definition wlp_def:
+   (wlp Abort = \r. Magic) /\
    (wlp (Consume k) = \r. r) /\
    (wlp (Assign v e) = \r s. r (assign v e s)) /\
    (wlp (Seq a b) = \r. wlp a (wlp b r)) /\
    (wlp (Nondet a b) = \r. Min (wlp a r) (wlp b r)) /\
    (wlp (Prob p a b) = \r. Lin p (wlp a r) (wlp b r)) /\
-   (wlp (While c b) = \r. expect_gfp (\e. Cond c (wlp b e) r))`;
+   (wlp (While c b) = \r. expect_gfp (\e. Cond c (wlp b e) r))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* wlp is not healthy, but it does satisfy some nice properties.             *)
 (* [It's obvious that wlp can't be healthy, because wlp Abort Zero = Magic.] *)
 (* ------------------------------------------------------------------------- *)
 
-val wlp_mono = store_thm
-  ("wlp_mono",
-   ``!p r1 r2. Leq r1 r2 ==> Leq (wlp p r1) (wlp p r2)``,
+Theorem wlp_mono:
+     !p r1 r2. Leq r1 r2 ==> Leq (wlp p r1) (wlp p r2)
+Proof
    (Induct ++ RW_TAC std_ss [wlp_def, leq_refl])
    << [FULL_SIMP_TAC std_ss [Leq_def, assign_eta],
        METIS_TAC [min_leq2_imp],
@@ -1033,7 +1047,8 @@ val wlp_mono = store_thm
        MATCH_MP_TAC refines_gfp
        ++ RW_TAC std_ss [monotonic_def, refines_def, Leq_def, cond_eta]
        ++ RW_TAC posreal_ss []
-       ++ METIS_TAC [Leq_def]]);
+       ++ METIS_TAC [Leq_def]]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The whole point of using wlp is that it gives the following nice rule for *)
@@ -1041,11 +1056,11 @@ val wlp_mono = store_thm
 (* TERMINATES.                                                               *)
 (* ------------------------------------------------------------------------- *)
 
-val wlp_while = store_thm
-  ("wlp_while",
-   ``!cond body pre post.
+Theorem wlp_while:
+     !cond body pre post.
        Leq pre (Cond cond (wlp body pre) post) ==>
-       Leq pre (wlp (While cond body) post)``,
+       Leq pre (wlp (While cond body) post)
+Proof
    RW_TAC std_ss [wlp_def, cond_eta]
    ++ Know
       `!r.
@@ -1066,114 +1081,127 @@ val wlp_while = store_thm
    ++ SIMP_TAC std_ss []
    ++ Q.SPEC_TAC
       (`expect_gfp (\e s. (if cond s then wlp body e s else post s))`, `g`)
-   ++ RW_TAC std_ss [gfp_def, expect_def]);
+   ++ RW_TAC std_ss [gfp_def, expect_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* wlp of derived programs.                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-val wlp_skip = store_thm
-  ("wlp_skip",
-   ``!r. wlp Skip r = r``,
-   RW_TAC std_ss [Skip_def,wlp_def]);
+Theorem wlp_skip:
+     !r. wlp Skip r = r
+Proof
+   RW_TAC std_ss [Skip_def,wlp_def]
+QED
 
-val wlp_if = store_thm
-  ("wlp_if",
-   ``!c a b r. wlp (If c a b) r = Cond c (wlp a r) (wlp b r)``,
+Theorem wlp_if:
+     !c a b r. wlp (If c a b) r = Cond c (wlp a r) (wlp b r)
+Proof
    RW_TAC std_ss [wlp_def, If_def, cond_eta, lin_eta]
    ++ CONV_TAC FUN_EQ_CONV
    ++ RW_TAC posreal_ss [bound1_basic]
    ++ Q.UNABBREV_TAC `x`
-   ++ RW_TAC posreal_ss [mul_lone, mul_lzero]);
+   ++ RW_TAC posreal_ss [mul_lone, mul_lzero]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Automatic tool for calculating wlps.                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val wlp_assert_vc = store_thm
-  ("wlp_assert_vc",
-   ``!pre mid post.
+Theorem wlp_assert_vc:
+     !pre mid post.
         Leq mid (wlp a post) /\
         Leq pre mid ==>
-        Leq pre (wlp (Assert pre a) post)``,
+        Leq pre (wlp (Assert pre a) post)
+Proof
    RW_TAC std_ss [Assert_def]
-   ++ METIS_TAC [leq_trans]);
+   ++ METIS_TAC [leq_trans]
+QED
 
-val wlp_abort_vc = store_thm
-  ("wlp_abort_vc",
-   ``!post. Leq Magic (wlp Abort post)``,
-   RW_TAC posreal_ss [wlp_def, Leq_def, Magic_def]);
+Theorem wlp_abort_vc:
+     !post. Leq Magic (wlp Abort post)
+Proof
+   RW_TAC posreal_ss [wlp_def, Leq_def, Magic_def]
+QED
 
-val wlp_consume_vc = store_thm
-  ("wlp_consume_vc",
-   ``!post k. Leq post (wlp (Consume k) post)``,
-   RW_TAC std_ss [wlp_def, leq_refl]);
+Theorem wlp_consume_vc:
+     !post k. Leq post (wlp (Consume k) post)
+Proof
+   RW_TAC std_ss [wlp_def, leq_refl]
+QED
 
-val wlp_assign_vc = store_thm
-  ("wlp_assign_vc",
-   ``!post v e. Leq (post o assign v e) (wlp (Assign v e) post)``,
-   RW_TAC std_ss [wlp_def, Leq_def, assign_eta, o_THM, le_refl]);
+Theorem wlp_assign_vc:
+     !post v e. Leq (post o assign v e) (wlp (Assign v e) post)
+Proof
+   RW_TAC std_ss [wlp_def, Leq_def, assign_eta, o_THM, le_refl]
+QED
 
-val wlp_seq_vc = store_thm
-  ("wlp_seq_vc",
-   ``!pre mid post c1 c2.
+Theorem wlp_seq_vc:
+     !pre mid post c1 c2.
        Leq mid (wlp c2 post) /\ Leq pre (wlp c1 mid) ==>
-       Leq pre (wlp (Seq c1 c2) post)``,
+       Leq pre (wlp (Seq c1 c2) post)
+Proof
    RW_TAC std_ss [wlp_def]
    ++ MATCH_MP_TAC leq_trans
    ++ Q.EXISTS_TAC `wlp c1 mid`
    ++ RW_TAC std_ss []
-   ++ METIS_TAC [wlp_mono, Leq_def]);
+   ++ METIS_TAC [wlp_mono, Leq_def]
+QED
 
-val wlp_nondet_vc = store_thm
-  ("wlp_nondet_vc",
-   ``!pre1 pre2 post c1 c2.
+Theorem wlp_nondet_vc:
+     !pre1 pre2 post c1 c2.
        Leq pre1 (wlp c1 post) /\ Leq pre2 (wlp c2 post) ==>
-       Leq (Min pre1 pre2) (wlp (Nondet c1 c2) post)``,
+       Leq (Min pre1 pre2) (wlp (Nondet c1 c2) post)
+Proof
    RW_TAC std_ss [wlp_def, Leq_def]
    ++ MATCH_MP_TAC le_trans
    ++ Q.EXISTS_TAC `Min pre1 pre2 s`
    ++ RW_TAC std_ss []
    ++ RW_TAC std_ss [Min_def, le_refl]
-   ++ METIS_TAC [min_le2_imp]);
+   ++ METIS_TAC [min_le2_imp]
+QED
 
-val wlp_prob_vc = store_thm
-  ("wlp_prob_vc",
-   ``!pre1 pre2 post p c1 c2.
+Theorem wlp_prob_vc:
+     !pre1 pre2 post p c1 c2.
        Leq pre1 (wlp c1 post) /\ Leq pre2 (wlp c2 post) ==>
-       Leq (Lin p pre1 pre2) (wlp (Prob p c1 c2) post)``,
+       Leq (Lin p pre1 pre2) (wlp (Prob p c1 c2) post)
+Proof
    RW_TAC std_ss [wlp_def, Leq_def]
    ++ MATCH_MP_TAC le_trans
    ++ Q.EXISTS_TAC `Lin p pre1 pre2 s`
    ++ RW_TAC std_ss []
    ++ RW_TAC std_ss [Lin_def, le_refl]
-   ++ METIS_TAC [le_add2, le_lmul_imp]);
+   ++ METIS_TAC [le_add2, le_lmul_imp]
+QED
 
-val wlp_while_vc = store_thm
-  ("wlp_while_vc",
-   ``!pre post mid b c.
+Theorem wlp_while_vc:
+     !pre post mid b c.
        Leq mid (wlp c pre) /\ Leq pre (Cond b mid post) ==>
-       Leq pre (wlp (Assert pre (While b c)) post)``,
+       Leq pre (wlp (Assert pre (While b c)) post)
+Proof
    RW_TAC std_ss []
    ++ MATCH_MP_TAC wlp_assert_vc
    ++ Q.EXISTS_TAC `pre`
    ++ RW_TAC std_ss [leq_refl]
    ++ MATCH_MP_TAC wlp_while
    ++ FULL_SIMP_TAC std_ss [Leq_def, Cond_def]
-   ++ METIS_TAC [le_trans]);
+   ++ METIS_TAC [le_trans]
+QED
 
-val wlp_skip_vc = store_thm
-  ("wlp_skip_vc",
-   ``!post. Leq post (wlp Skip post)``,
-   RW_TAC std_ss [wlp_skip, leq_refl]);
+Theorem wlp_skip_vc:
+     !post. Leq post (wlp Skip post)
+Proof
+   RW_TAC std_ss [wlp_skip, leq_refl]
+QED
 
-val wlp_if_vc = store_thm
-  ("wlp_if_vc",
-   ``!pre1 pre2 post b c1 c2.
+Theorem wlp_if_vc:
+     !pre1 pre2 post b c1 c2.
        Leq pre1 (wlp c1 post) /\ Leq pre2 (wlp c2 post) ==>
-       Leq (Cond b pre1 pre2) (wlp (If b c1 c2) post)``,
+       Leq (Cond b pre1 pre2) (wlp (If b c1 c2) post)
+Proof
    RW_TAC std_ss [wlp_if, Leq_def, Cond_def]
-   ++ METIS_TAC [le_trans]);
+   ++ METIS_TAC [le_trans]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Counter-example:                                                          *)
@@ -1184,10 +1212,10 @@ val wlp_if_vc = store_thm
 (* but wlp loop One = (\s. if s n = x then 1 else infty)                     *)
 (* ------------------------------------------------------------------------- *)
 
-val wp_eq_wlp_plus_termination_counterexample = store_thm
-  ("wp_eq_wlp_plus_termination_counterexample",
-   ``(?x y : 'a. ~(x = y)) ==>
-     ~!prog : 'a command. (wp prog One = One) ==> (wp prog = wlp prog)``,
+Theorem wp_eq_wlp_plus_termination_counterexample:
+     (?x y : 'a. ~(x = y)) ==>
+     ~!prog : 'a command. (wp prog One = One) ==> (wp prog = wlp prog)
+Proof
    RW_TAC std_ss []
    ++ Q.EXISTS_TAC `While (\s. s n = x) (ProbAssign n [x; y])`
    ++ MATCH_MP_TAC (PROVE [] ``a /\ (a ==> b) ==> a /\ b``)
@@ -1254,6 +1282,6 @@ val wp_eq_wlp_plus_termination_counterexample = store_thm
             [FUN_EQ_THM,wlp_def,ProbAssign_def,Probs_def,MAP,LENGTH,Magic_def,
              Lin_def,assign_eta,Cond_def]
        ++ markerLib.UNABBREV_ALL_TAC
-       ++ RW_TAC posreal_reduce_ss []]);
+       ++ RW_TAC posreal_reduce_ss []]
+QED
 
-val _ = export_theory();

@@ -1,15 +1,14 @@
-open HolKernel Parse boolLib bossLib;
+Theory proj1A
 
-val _ = new_theory "proj1A";
+Definition foo_def:  foo x = x * 2 + 1
+End
 
-val foo_def = Define`foo x = x * 2 + 1`;
-
-val Athm = Q.store_thm(
-  "Athm",
-  `foo = BIT1`,
+Theorem Athm:
+   foo = BIT1
+Proof
   REWRITE_TAC [FUN_EQ_THM, arithmeticTheory.BIT1] >>
-  simp[foo_def]);
+  simp[foo_def]
+QED
 
 
 
-val _ = export_theory();

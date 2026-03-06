@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib Prim_rec
-     pairTheory sumTheory optionTheory numeralTheory;
-
-
-val _ = new_theory "basicSize";
+Theory basicSize[bare]
+Ancestors
+  pair sum option numeral
+Libs
+  HolKernel Parse boolLib pairLib Prim_rec
 
 val bool_size_def = new_definition
   ("bool_size_def", ``bool_size (b:bool) = 0``);
@@ -28,10 +28,12 @@ val sum_size_def =
 
 val full_sum_size_def = new_definition
   ("full_sum_size_def", ``full_sum_size f g sum = 1 + (sum_size f g sum)``);
-val full_sum_size_thm = Q.store_thm ("full_sum_size_thm",
-  `(full_sum_size f g (INL x) = 1 + (f x)) /\
-    (full_sum_size f g (INR y) = 1 + (g y))`,
-  REWRITE_TAC [full_sum_size_def, sum_size_def]);
+Theorem full_sum_size_thm:
+   (full_sum_size f g (INL x) = 1 + (f x)) /\
+    (full_sum_size f g (INR y) = 1 + (g y))
+Proof
+  REWRITE_TAC [full_sum_size_def, sum_size_def]
+QED
 
 val option_size_def =
  new_recursive_definition
@@ -40,4 +42,3 @@ val option_size_def =
     name="option_size_def",
     rec_axiom = optionTheory.option_Axiom};
 
-val _ = export_theory();

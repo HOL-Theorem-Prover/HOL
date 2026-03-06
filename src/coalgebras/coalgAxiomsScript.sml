@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open relationTheory pairTheory pred_setTheory combinTheory
-open cardinalTheory simpleSetCatTheory
+Theory coalgAxioms
+Ancestors
+  relation pair pred_set combin cardinal simpleSetCat
 
 (* Abstract development of existence of final co-algebras, using new_type,
    new_constant and axioms to emulate a locale. If this can be carried out
@@ -15,8 +14,6 @@ open cardinalTheory simpleSetCatTheory
    Blanchette et al (ITP, 2014):
       "Truly Modular (Co)datatypes for Isabelle/HOL"
  *)
-
-val _ = new_theory "coalgAxioms";
 
 val _ = app (ignore o hide) ["S", "W"]
 
@@ -37,11 +34,11 @@ val map_CONG = new_axiom (
 
 val _ = add_rule{block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  fixity = Suffix 2100, paren_style = OnlyIfNecessary,
-                 pp_elements = [TOK "ᴾ"], term_name = "UNCURRY"}       (* UOK *)
+                 pp_elements = [TOK "ᴾ"], term_name = "UNCURRY"}
 
 val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  fixity = Suffix 2100, paren_style = OnlyIfNecessary,
-                 pp_elements = [TOK "⟨",TM,TOK"⟩"], term_name = "restr"}(* UOK*)
+                 pp_elements = [TOK "⟨",TM,TOK"⟩"], term_name = "restr"}
 
 Definition relF_def:
   relF R x y <=> ?z. setF z SUBSET UNCURRY R /\ mapF FST z = x /\ mapF SND z = y
@@ -1055,4 +1052,3 @@ QED
 
 
 
-val _ = export_theory();

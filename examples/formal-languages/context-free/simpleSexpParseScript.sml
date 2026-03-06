@@ -1,32 +1,35 @@
-open HolKernel boolLib bossLib BasicProvers finite_mapSyntax
-open ASCIInumbersTheory simpleSexpTheory
-open pegTheory pegexecTheory;
-open simpleSexpPEGTheory
-
-open listTheory pairTheory stringTheory
-
-val _ = new_theory"simpleSexpParse"
+Theory simpleSexpParse
+Ancestors
+  ASCIInumbers simpleSexp peg pegexec simpleSexpPEG list pair
+  string
+Libs
+  BasicProvers finite_mapSyntax
 
 val _ = temp_delsimps ["NORMEQ_CONV"]
 
-val option_sequence_def = Define`
+Definition option_sequence_def:
   option_sequence [] = SOME [] ∧
   option_sequence (h::t) =
-    OPTION_MAP2 CONS h (option_sequence t)`;
+    OPTION_MAP2 CONS h (option_sequence t)
+End
 val _ = export_rewrites["option_sequence_def"];
 
-val option_sequence_SOME = Q.store_thm("option_sequence_SOME",
-  `∀l1 l2.
+Theorem option_sequence_SOME:
+   ∀l1 l2.
    (option_sequence l1 = SOME l2 ⇔
-    EVERY IS_SOME l1 ∧ l2 = MAP THE l1)`,
+    EVERY IS_SOME l1 ∧ l2 = MAP THE l1)
+Proof
   Induct \\ rw[EQ_IMP_THM] \\ rw[]
-  \\ fs[optionTheory.IS_SOME_EXISTS]);
+  \\ fs[optionTheory.IS_SOME_EXISTS]
+QED
 
-val isDigit_HEX = Q.store_thm("isDigit_HEX",
-  `∀n. n < 10 ⇒ isDigit (HEX n)`,
+Theorem isDigit_HEX:
+   ∀n. n < 10 ⇒ isDigit (HEX n)
+Proof
   simp[GSYM rich_listTheory.MEM_COUNT_LIST]
   \\ gen_tac \\ EVAL_TAC
-  \\ strip_tac \\ var_eq_tac \\ EVAL_TAC);
+  \\ strip_tac \\ var_eq_tac \\ EVAL_TAC
+QED
 
 Theorem EVERY_isDigit_n2s: ∀n. EVERY isDigit (n2s 10 HEX n)
 Proof
@@ -44,29 +47,38 @@ Proof
   rw[num_to_dec_string_def,EVERY_isDigit_n2s]
 QED
 
-val n2s_not_null = Q.store_thm("n2s_not_null",
-  `∀n. ¬NULL(n2s 10 HEX n)`,
+Theorem n2s_not_null:
+   ∀n. ¬NULL(n2s 10 HEX n)
+Proof
   rw[n2s_def,NULL_EQ]
   \\ strip_tac
   \\ qspecl_then[`10`,`n`]mp_tac numposrepTheory.LENGTH_n2l
-  \\ simp[]);
+  \\ simp[]
+QED
 
-val num_to_dec_string_not_null = Q.store_thm("num_to_dec_string_not_null",
-  `∀n. ¬NULL(toString n)`,
-  rw[num_to_dec_string_def,n2s_not_null]);
+Theorem num_to_dec_string_not_null:
+   ∀n. ¬NULL(toString n)
+Proof
+  rw[num_to_dec_string_def,n2s_not_null]
+QED
 
-val l2n_APPEND = Q.store_thm("l2n_APPEND",
-  `∀l1 l2. l2n b (l1 ++ l2) =
-           l2n b l1 + b ** (LENGTH l1) * l2n b l2`,
-  Induct \\ simp[numposrepTheory.l2n_def,arithmeticTheory.EXP]);
+Theorem l2n_APPEND:
+   ∀l1 l2. l2n b (l1 ++ l2) =
+           l2n b l1 + b ** (LENGTH l1) * l2n b l2
+Proof
+  Induct \\ simp[numposrepTheory.l2n_def,arithmeticTheory.EXP]
+QED
 
-val isDigit_ORD_MOD_10 = Q.store_thm("isDigit_ORD_MOD_10",
-  `isDigit x ⇒ (ORD x - 48) < 10`,
-  EVAL_TAC \\ DECIDE_TAC);
+Theorem isDigit_ORD_MOD_10:
+   isDigit x ⇒ (ORD x - 48) < 10
+Proof
+  EVAL_TAC \\ DECIDE_TAC
+QED
 
-val isDigit_UNHEX_alt = Q.store_thm("isDigit_UNHEX_alt",
-  `isDigit h ⇒
-   (combin$C $- 48 o ORD) h = UNHEX h`,
+Theorem isDigit_UNHEX_alt:
+   isDigit h ⇒
+   (combin$C $- 48 o ORD) h = UNHEX h
+Proof
   simp[isDigit_def] \\ rw[]
   \\ Cases_on`h` \\ fs[]
   \\ Cases_on`n = 57` \\ fs[UNHEX_def]
@@ -78,32 +90,37 @@ val isDigit_UNHEX_alt = Q.store_thm("isDigit_UNHEX_alt",
   \\ Cases_on`n = 51` \\ fs[UNHEX_def]
   \\ Cases_on`n = 50` \\ fs[UNHEX_def]
   \\ Cases_on`n = 49` \\ fs[UNHEX_def]
-  \\ Cases_on`n = 48` \\ fs[UNHEX_def]);
+  \\ Cases_on`n = 48` \\ fs[UNHEX_def]
+QED
 
-val s2n_UNHEX_alt = Q.store_thm("s2n_UNHEX_alt",
-  `∀ls. EVERY isDigit ls ⇒
-    s2n 10 (combin$C $- 48 o ORD) ls = s2n 10 UNHEX ls`,
+Theorem s2n_UNHEX_alt:
+   ∀ls. EVERY isDigit ls ⇒
+    s2n 10 (combin$C $- 48 o ORD) ls = s2n 10 UNHEX ls
+Proof
   simp[s2n_def]
   \\ Induct
   \\ simp[numposrepTheory.l2n_def,l2n_APPEND]
-  \\ rw[] \\ simp[GSYM isDigit_UNHEX_alt,isDigit_ORD_MOD_10]);
+  \\ rw[] \\ simp[GSYM isDigit_UNHEX_alt,isDigit_ORD_MOD_10]
+QED
 
-val num_to_dec_string_eq_cons = Q.store_thm("num_to_dec_string_eq_cons",
-  `num_to_dec_string n = h::t ⇒
-   n = UNHEX h * 10 ** LENGTH t + num_from_dec_string t`,
+Theorem num_to_dec_string_eq_cons:
+   num_to_dec_string n = h::t ⇒
+   n = UNHEX h * 10 ** LENGTH t + num_from_dec_string t
+Proof
   rw[num_to_dec_string_def,num_from_dec_string_def]
   \\ fs[n2s_def]
   \\ qspecl_then[`10`,`n`]mp_tac numposrepTheory.n2l_BOUND
   \\ rw[]
   \\ qspecl_then[`10`,`n`]mp_tac numposrepTheory.l2n_n2l \\ rw[]
   \\ Q.ISPEC_THEN`n2l 10 n`FULL_STRUCT_CASES_TAC SNOC_CASES
-  \\ fs[EVERY_SNOC] \\ rpt var_eq_tac
+  \\ fs[EVERY_SNOC, SNOC_APPEND] \\ rpt var_eq_tac
   \\ simp[UNHEX_HEX]
-  \\ simp[SNOC_APPEND,l2n_APPEND,numposrepTheory.l2n_def]
+  \\ simp[l2n_APPEND,numposrepTheory.l2n_def]
   \\ simp[s2n_def,MAP_MAP_o]
   \\ AP_TERM_TAC
   \\ fs[LIST_EQ_REWRITE,EL_MAP,EVERY_MEM,MEM_EL,PULL_EXISTS]
-  \\ rw[] \\ res_tac \\ simp[UNHEX_HEX]);
+  \\ rw[] \\ res_tac \\ simp[UNHEX_HEX]
+QED
 
 Theorem peg_eval_list_tok_nil:
   peg_eval_list G ([], tok P a) ([],[],Locs EOFpt EOFpt, G.tokEOF) ∧
@@ -410,13 +427,15 @@ Proof
   metis_tac[]
 QED
 
-val valid_symbol_no_spaces = Q.store_thm("valid_symbol_no_spaces",
-  `∀s. valid_symbol s ⇒ EVERY ($~ o isSpace) s`,
+Theorem valid_symbol_no_spaces:
+   ∀s. valid_symbol s ⇒ EVERY ($~ o isSpace) s
+Proof
   Cases_on`s` \\ rw[valid_symbol_def]
   >- ( fs[isGraph_def,isSpace_def] )
   \\ Induct_on`t`
   \\ rw[]
-  >- ( fs[isGraph_def,isSpace_def] ));
+  >- ( fs[isGraph_def,isSpace_def] )
+QED
 
 Theorem peg_eval_list_digits:
   ∀s.
@@ -494,10 +513,12 @@ Definition dest_quote_def[simp]:
   dest_quote _ = NONE
 End
 
-val dest_quote_sizelt = Q.store_thm("dest_quote_sizelt",
-  `∀sx a. dest_quote sx = SOME a ⇒ sexp_size a < sexp_size sx`,
+Theorem dest_quote_sizelt:
+   ∀sx a. dest_quote sx = SOME a ⇒ sexp_size a < sexp_size sx
+Proof
   ho_match_mp_tac(theorem"dest_quote_ind")
-  \\ rw[] \\ rw[sexp_size_def]);
+  \\ rw[] \\ rw[sexp_size_def]
+QED
 
 Definition print_nt_def:
   (print_nt sxnt_normstrchar (SX_SYM [c]) =
@@ -547,8 +568,9 @@ Termination
   \\ imp_res_tac strip_dot_MEM_sizelt
 End
 
-val print_nt_sexp0_no_leading_space = Q.store_thm("print_nt_sexp0_no_leading_space",
-  `print_nt sxnt_sexp0 s = SOME str ⇒ str ≠ [] ∧ ¬ isSpace (HD str)`,
+Theorem print_nt_sexp0_no_leading_space:
+   print_nt sxnt_sexp0 s = SOME str ⇒ str ≠ [] ∧ ¬ isSpace (HD str)
+Proof
   Cases_on`s` \\ rw[print_nt_def] \\ rw[]
   \\ TRY (
     rw[GSYM NULL_EQ,num_to_dec_string_not_null]
@@ -563,10 +585,12 @@ val print_nt_sexp0_no_leading_space = Q.store_thm("print_nt_sexp0_no_leading_spa
     \\ NO_TAC)
   \\ every_case_tac \\ fs[NULL_EQ]
   \\ TRY (EVAL_TAC \\ NO_TAC)
-  \\ fs[isGraph_def,isSpace_def]);
+  \\ fs[isGraph_def,isSpace_def]
+QED
 
-val print_nt_sexp0_no_leading_rparen = Q.store_thm("print_nt_sexp0_no_leading_rparen",
-  `print_nt sxnt_sexp0 s = SOME str ⇒ str ≠ [] ∧ HD str ≠ #")"`,
+Theorem print_nt_sexp0_no_leading_rparen:
+   print_nt sxnt_sexp0 s = SOME str ⇒ str ≠ [] ∧ HD str ≠ #")"
+Proof
   Cases_on`s` \\ rw[print_nt_def] \\ rw[]
   \\ TRY (
     rw[GSYM NULL_EQ,num_to_dec_string_not_null]
@@ -582,7 +606,8 @@ val print_nt_sexp0_no_leading_rparen = Q.store_thm("print_nt_sexp0_no_leading_rp
     \\ NO_TAC)
   \\ every_case_tac \\ fs[NULL_EQ]
   \\ TRY (EVAL_TAC \\ NO_TAC)
-  \\ fs[isGraph_def,isSpace_def]);
+  \\ fs[isGraph_def,isSpace_def]
+QED
 
 Theorem sexpnum_requires_digits:
   ¬isDigit c ⇒
@@ -1026,7 +1051,8 @@ Proof
     gvs[stoppers_def,IN_DEF]
     \\ pairarg_tac \\ fs[destSXNUM_def]
     \\ fs[UNCURRY,destSXCONS_def,destSXNUM_def,rich_listTheory.FOLDL_MAP]
-    \\ qmatch_assum_abbrev_tac`FOLDL f a t = _`
+    \\ gvs[destSXNUM_def]
+    \\ qmatch_goalsub_abbrev_tac`FOLDL f a t`
     \\ ‘∀ls a . FST (FOLDL f a ls) = FST a * 10 ** (LENGTH ls)’
           by (Induct \\ simp[Abbr`f`,arithmeticTheory.EXP]) >>
     ‘∀ls a. EVERY isDigit (MAP FST ls) ⇒
@@ -1044,6 +1070,7 @@ Proof
     \\ fs[s2n_UNHEX_alt]
     \\ imp_res_tac num_to_dec_string_eq_cons
     \\ simp[GSYM num_from_dec_string_def]
+    \\ fs[]
     \\ imp_res_tac isDigit_UNHEX_alt \\ fs[]) >~
   [‘print_nt sxnt_sexp’, ‘print_nt sxnt_sexp0’]
   >- (qx_gen_tac ‘sexp’ >> strip_tac >> simp[Once print_nt_def] >> gvs[] >>
@@ -1162,7 +1189,7 @@ Proof
 QED
 
 (*
-val cs = listLib.list_compset()
+val cs = listLib.list_compset
 val () = stringLib.add_string_compset cs;
 val () = pairLib.add_pair_compset cs;
 val () = combinLib.add_combin_compset cs;
@@ -1202,4 +1229,3 @@ val _ = clear_overloads_on"CONCAT";
 val _ = set_trace"Goalstack.print_goal_at_top"0;
 *)
 
-val _ = export_theory()

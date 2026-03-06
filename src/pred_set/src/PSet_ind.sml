@@ -45,7 +45,7 @@ local val check = assert (fn tm =>
             in (Bvar,ant,conseq) end
       fun sconv tm =
             let val (s,a,balt) = dest tm
-                val (e,h,c) =  dest balt
+                val (e,h,c) = dest balt
                 val th1 = RAND_CONV BETA_CONV a
                 and th2 = BETA_CONV c
             in FORALL_EQ s (MK_IMP2 th1 (FORALL_EQ e (MK_IMP1 h th2))) end

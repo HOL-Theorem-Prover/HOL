@@ -11,11 +11,7 @@ struct
 
 open HolKernel boolLib Parse bossLib;
 
-open
-        arithmeticTheory
-        pairTheory pairLib integerTheory intLib
-        EVAL_ringLib integerRingTheory integerRingLib
-        intExtensionTheory;
+open arithmeticTheory pairTheory pairLib integerTheory intLib intExtensionTheory;
 
 val ERR = mk_HOL_ERR "intExtensionLib"
 

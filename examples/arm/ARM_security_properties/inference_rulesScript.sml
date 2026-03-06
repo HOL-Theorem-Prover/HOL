@@ -1,20 +1,23 @@
-open HolKernel boolLib bossLib Parse;
-open MMU_SetupTheory MMUTheory arm_opsemTheory arm_seq_monadTheory arm_coretypesTheory arm_stepTheory;
-open tacticsLib;
+Theory inference_rules
+Ancestors
+  MMU_Setup MMU arm_opsem arm_seq_monad arm_coretypes arm_step
+Libs
+  tacticsLib
 
-val _ =  new_theory("inference_rules");
 val _ = ParseExtras.temp_loose_equality()
 
 
 val let_ss = simpLib.mk_simpset [boolSimps.LET_ss] ;
-val comb_def = Define `comb invr1 invr2 invr3 = (!s. invr3 s = (invr1 s \/ invr2 s))`;
-val assert_mode_def = Define `assert_mode k s = (ARM_MODE s = k)`;
+Definition comb_def:   comb invr1 invr2 invr3 = (!s. invr3 s = (invr1 s \/ invr2 s))
+End
+Definition assert_mode_def:   assert_mode k s = (ARM_MODE s = k)
+End
 
 
 (* =============     Untouched   ==========================*)
 (* smc mode is not involved yet, also RName_LRmon,RName_SPmon*)
 
-val untouched_def = Define `untouched id state1 state2 =
+Definition untouched_def:   untouched id state1 state2 =
 (state1.coprocessors  = state2.coprocessors)
 
 /\
@@ -125,7 +128,7 @@ let und_regs = {RName_0usr; RName_1usr; RName_2usr; RName_3usr; RName_4usr; RNam
           ==> (state1.registers (0, reg) = state2.registers (0, reg)))
 /\
 (!psr . ((psr <> CPSR)  /\ (psr <> SPSR_und)) ==> (state1.psrs (0, psr) = state2.psrs (0, psr)))))
-`;
+End
 
 (* only for arm_next
 val priv_mode_similar_def =
@@ -147,8 +150,8 @@ val priv_mode_similar_def =
         `;*)
 
 
-val get_spsr_by_mode_def =
-    Define `get_spsr_by_mode (mode:bool[5]) =
+Definition get_spsr_by_mode_def:
+     get_spsr_by_mode (mode:bool[5]) =
         case (mode) of
                17w => SPSR_fiq
              | 18w => SPSR_irq
@@ -156,10 +159,11 @@ val get_spsr_by_mode_def =
              | 22w => SPSR_mon
              | 23w => SPSR_abt
              | 27w => SPSR_und
-             |  _  => CPSR`;
+             |  _  => CPSR
+End
 
-val get_lr_by_mode_def =
-    Define `get_lr_by_mode (mode:bool[5]) =
+Definition get_lr_by_mode_def:
+     get_lr_by_mode (mode:bool[5]) =
         case (mode) of
                17w => RName_LRfiq
              | 18w => RName_LRirq
@@ -167,10 +171,11 @@ val get_lr_by_mode_def =
              | 22w => RName_LRmon
              | 23w => RName_LRabt
              | 27w => RName_LRund
-             |  _  => RName_LRusr `;
+             |  _  => RName_LRusr
+End
 
-val priv_mode_similar_def =
-    Define `priv_mode_similar (g:bool[32]) state1 state2 =
+Definition priv_mode_similar_def:
+     priv_mode_similar (g:bool[32]) state1 state2 =
     (ARM_MODE state2 <> 16w) ==>
     (let (lr_reg,spsr) = (get_lr_by_mode(ARM_MODE state2) ,
 get_spsr_by_mode(ARM_MODE state2))
@@ -179,40 +184,41 @@ get_spsr_by_mode(ARM_MODE state2))
                 /\
          (state1.psrs(0,spsr) = state2.psrs(0,spsr)))
 
-        `;
+End
 
 
-val untouched_trans = store_thm (
-    "untouched_trans",
-    ``!g st1 st2 st3 .
+Theorem untouched_trans:
+      !g st1 st2 st3 .
       (untouched g st1 st2 ) ==> (untouched g st2 st3 )
       ==>  ((ARM_MODE st3 = ARM_MODE st2) \/
             (ARM_MODE st1 = ARM_MODE st2)) ==>
-      (untouched g st1 st3 )``,
+      (untouched g st1 st3 )
+Proof
     RW_TAC (srw_ss()) [untouched_def]
     THEN FULL_SIMP_TAC (let_ss) []
     THEN RW_TAC (srw_ss()) []
-);
+QED
 
-val untouched_memory_eq_lem = store_thm(
-    "untouched_memory_eq_lem",
-    ``!s1 s2 g . (untouched g s1 s2 ) ==>
-                (!addr. (addr <+ (*UNSIGNED*) guest1_min_adr (*ADR*)) ==> (s1.memory addr = s2.memory addr))``,
+Theorem untouched_memory_eq_lem:
+      !s1 s2 g . (untouched g s1 s2 ) ==>
+                (!addr. (addr <+ (*UNSIGNED*) guest1_min_adr (*ADR*)) ==> (s1.memory addr = s2.memory addr))
+Proof
     REPEAT STRIP_TAC
        THEN Cases_on `(g<>guest1) /\ (g<>guest2)`
        THENL [ALL_TAC, IMP_RES_TAC address_trans (*ADR*)]
        THEN FULL_SIMP_TAC (let_ss) [untouched_def]
-       THEN FULL_SIMP_TAC (srw_ss()) [untouched_def]);
+       THEN FULL_SIMP_TAC (srw_ss()) [untouched_def]
+QED
 
 
-val untouched_permissions_lem = store_thm(
-    "untouched_permissions_lem",
-    ``!s1 s2 g priv .
+Theorem untouched_permissions_lem:
+      !s1 s2 g priv .
          (mmu_requirements s1 g) ==>
          (untouched g s1 s2 )
      ==> (!addr isw c1 c3.
           (permitted_byte addr isw c1 s1.coprocessors.state.cp15.C2 c3 priv s1.memory
-         = permitted_byte addr isw c1 s1.coprocessors.state.cp15.C2 c3 priv s2.memory))``,
+         = permitted_byte addr isw c1 s1.coprocessors.state.cp15.C2 c3 priv s2.memory))
+Proof
     REPEAT STRIP_TAC
        THEN IMP_RES_TAC untouched_memory_eq_lem
        THEN FULL_SIMP_TAC (srw_ss()) [permitted_byte_def]
@@ -233,101 +239,109 @@ val untouched_permissions_lem = store_thm(
      ((0xFFFFC000w && s2.coprocessors.state.cp15.C2) + 4w *(addr >>> (*UNSIGNED*) 20) + 3w <+ (*UNSIGNED*) guest1_min_adr (*ADR*)) )``)
                 THEN METIS_TAC [])
        THEN UNABBREV_ALL_TAC
-       THEN METIS_TAC []);
+       THEN METIS_TAC []
+QED
 
 
-val untouched_permissions_lem2 = store_thm(
-    "untouched_permissions_lem2",
-    ``!s1 s2 g priv .
+Theorem untouched_permissions_lem2:
+      !s1 s2 g priv .
          (mmu_requirements s1 g) ==>
          (untouched g s1 s2 )
      ==> (!addr isw.
           (permitted_byte addr isw s1.coprocessors.state.cp15.C1 s1.coprocessors.state.cp15.C2 s1.coprocessors.state.cp15.C3 priv s1.memory
-         = permitted_byte addr isw s2.coprocessors.state.cp15.C1 s2.coprocessors.state.cp15.C2 s2.coprocessors.state.cp15.C3 priv s2.memory))``,
+         = permitted_byte addr isw s2.coprocessors.state.cp15.C1 s2.coprocessors.state.cp15.C2 s2.coprocessors.state.cp15.C3 priv s2.memory))
+Proof
    REPEAT STRIP_TAC
        THEN IMP_RES_TAC (SPECL [``s1:arm_state``, ``s2:arm_state``, ``g:word32``] untouched_permissions_lem)
        THEN FULL_SIMP_TAC (srw_ss()) [untouched_def]
-       THEN METIS_TAC []);
+       THEN METIS_TAC []
+QED
 
 
-val untouched_mmu_setup_lem = store_thm(
-    "untouched_mmu_setup_lem",
-    ``!s1 s2 g .
+Theorem untouched_mmu_setup_lem:
+      !s1 s2 g .
           (mmu_requirements s1 g) ==>
           (untouched g s1 s2 )
         ==>
-          (mmu_requirements s2 g)``,
+          (mmu_requirements s2 g)
+Proof
     REPEAT STRIP_TAC
        THEN IMP_RES_TAC (SPECL [``s1:arm_state``, ``s2:arm_state``, ``g:word32``] untouched_permissions_lem)
        THEN UNDISCH_TAC ``mmu_requirements s1 g``
        THEN FULL_SIMP_TAC (srw_ss()) [untouched_def]
        THEN PURE_ONCE_REWRITE_TAC [mmu_requirements_def]
-       THEN METIS_TAC []);
+       THEN METIS_TAC []
+QED
 
 
-val trivially_untouched_mmu_setup_lem = store_thm(
-    "trivially_untouched_mmu_setup_lem",
-    ``!s t gst. (s.coprocessors = t.coprocessors) ==>
+Theorem trivially_untouched_mmu_setup_lem:
+      !s t gst. (s.coprocessors = t.coprocessors) ==>
                 (s.memory = t.memory)
        ==>
-      (mmu_requirements s gst = mmu_requirements t gst)``,
-    RW_TAC (srw_ss()) [mmu_requirements_def]);
+      (mmu_requirements s gst = mmu_requirements t gst)
+Proof
+    RW_TAC (srw_ss()) [mmu_requirements_def]
+QED
 
 
-val trivially_untouched_av_lem = store_thm(
-    "trivially_untouched_av_lem",
-    ``!s t gst. (mmu_requirements s gst)          ==>
+Theorem trivially_untouched_av_lem:
+      !s t gst. (mmu_requirements s gst)          ==>
                 (s.coprocessors = t.coprocessors) ==>
                 (s.memory = t.memory)             ==>
                 (s.accesses = t.accesses)
-       ==> (access_violation s = access_violation t)``,
+       ==> (access_violation s = access_violation t)
+Proof
     REPEAT STRIP_TAC
        THEN `mmu_requirements t gst` by IMP_RES_TAC trivially_untouched_mmu_setup_lem
        THEN IMP_RES_TAC access_violation_req
-       THEN RW_TAC (srw_ss()) [access_violation_pure_def]);
+       THEN RW_TAC (srw_ss()) [access_violation_pure_def]
+QED
 
 
-val trivially_untouched_mmu_setup_lem2 = store_thm(
-    "trivially_untouched_mmu_setup_lem2",
-    ``!s t gst. (s.coprocessors.state.cp15.C1 = t.coprocessors.state.cp15.C1)  ==>
+Theorem trivially_untouched_mmu_setup_lem2:
+      !s t gst. (s.coprocessors.state.cp15.C1 = t.coprocessors.state.cp15.C1)  ==>
                 (s.coprocessors.state.cp15.C2 = t.coprocessors.state.cp15.C2)  ==>
                 (s.coprocessors.state.cp15.C3 = t.coprocessors.state.cp15.C3)  ==>
                 (s.memory = t.memory)
        ==>
-      (mmu_requirements s gst = mmu_requirements t gst)``,
-    RW_TAC (srw_ss()) [mmu_requirements_def]);
+      (mmu_requirements s gst = mmu_requirements t gst)
+Proof
+    RW_TAC (srw_ss()) [mmu_requirements_def]
+QED
 
 
 
 
 
-val trivially_untouched_av_lem2 = store_thm(
-    "trivially_untouched_av_lem2",
-    ``!s t gst. (mmu_requirements s gst)                                       ==>
+Theorem trivially_untouched_av_lem2:
+      !s t gst. (mmu_requirements s gst)                                       ==>
                 (s.coprocessors.state.cp15.C1 = t.coprocessors.state.cp15.C1)  ==>
                 (s.coprocessors.state.cp15.C2 = t.coprocessors.state.cp15.C2)  ==>
                 (s.coprocessors.state.cp15.C3 = t.coprocessors.state.cp15.C3)  ==>
                 (s.memory = t.memory)                                          ==>
                 (s.accesses = t.accesses)
-       ==> (access_violation s = access_violation t)``,
+       ==> (access_violation s = access_violation t)
+Proof
     REPEAT STRIP_TAC
        THEN `mmu_requirements t gst` by IMP_RES_TAC trivially_untouched_mmu_setup_lem2
        THEN IMP_RES_TAC access_violation_req
-       THEN RW_TAC (srw_ss()) [access_violation_pure_def]);
+       THEN RW_TAC (srw_ss()) [access_violation_pure_def]
+QED
 
 
 
 (* =============   Similar    ==========================*)
 
-val equal_user_register_def = Define `equal_user_register s t  =
+Definition equal_user_register_def:   equal_user_register s t  =
 (! reg.  reg IN  {RName_0usr; RName_1usr; RName_2usr; RName_3usr; RName_4usr; RName_5usr;
                        RName_6usr; RName_7usr; RName_8usr; RName_9usr; RName_10usr; RName_11usr;
                        RName_12usr; RName_SPusr; RName_LRusr; RName_PC}
-             ==> (s.registers (0, reg) = t.registers (0, reg)))`;
+             ==> (s.registers (0, reg) = t.registers (0, reg)))
+End
 
 
 
-val similar_def = Define `similar  gst s1 s2 =
+Definition similar_def:   similar  gst s1 s2 =
 (! addr.
  (((addr <=+ (*UNSIGNED*)  guest1_max_adr) /\ (addr >=+ (*UNSIGNED*) guest1_min_adr) /\ (gst = guest1)) ==>
         ((s1.memory addr) = (s2.memory addr)))
@@ -348,26 +362,28 @@ val similar_def = Define `similar  gst s1 s2 =
                                     /\
 (s1.event_register = s2.event_register)
 
-`;
+End
 
 
-val similar_refl = store_thm(
-    "similar_refl",
-    ``!gst s  . similar  gst s s``,
-    RW_TAC (srw_ss()) [similar_def, equal_user_register_def]);
+Theorem similar_refl:
+      !gst s  . similar  gst s s
+Proof
+    RW_TAC (srw_ss()) [similar_def, equal_user_register_def]
+QED
 
 
 (*********************** preserve ****************************)
 
-val trans_fun_def = Define `trans_fun uf =
+Definition trans_fun_def:   trans_fun uf =
 !g st1 st2 st3 .
       (uf g st1 st2) ==>
       (uf g st2 st3)
-      ==>  (uf g st1 st3)`;
+      ==>  (uf g st1 st3)
+End
 
 
-val preserve_relation_mmu_def =
-Define `preserve_relation_mmu comp invr1 invr2 f y =
+Definition preserve_relation_mmu_def:
+ preserve_relation_mmu comp invr1 invr2 f y =
     !g s1 s2 .
     mmu_requirements s1 g    ==>
     mmu_requirements s2 g    ==>
@@ -384,11 +400,12 @@ Define `preserve_relation_mmu comp invr1 invr2 f y =
                   (invr2 s1') /\
                   (invr2 s2') /\
                   (similar  g s1' s2')))
-\/   (? e. (comp s1 = Error e) /\ (comp s2 = Error e)))`;
+\/   (? e. (comp s1 = Error e) /\ (comp s2 = Error e)))
+End
 
 
 
-val preserve_relation_mmu_abs_def = Define `preserve_relation_mmu_abs  comp invr1 invr2 f y =
+Definition preserve_relation_mmu_abs_def:   preserve_relation_mmu_abs  comp invr1 invr2 f y =
     !c g s1 s2 .
     mmu_requirements s1 g    ==>
     mmu_requirements s2 g    ==>
@@ -405,13 +422,15 @@ val preserve_relation_mmu_abs_def = Define `preserve_relation_mmu_abs  comp invr
                      (invr2 s1') /\
                      (invr2 s2') /\
                      (similar  g s1' s2')))
-\/   (? e. (comp c s1 = Error e) /\ (comp c s2 = Error e)))`;
+\/   (? e. (comp c s1 = Error e) /\ (comp c s2 = Error e)))
+End
 
-val comb_rel_lem = store_thm (
-    "comb_rel_lem",
-    ``!i1 i2 i3 s. (comb i1 i2 i3)
-       ==> ((i1 s) ==> (i3 s)) /\ ((i2 s) ==> (i3 s))``,
-    RW_TAC (srw_ss()) [comb_def]);
+Theorem comb_rel_lem:
+      !i1 i2 i3 s. (comb i1 i2 i3)
+       ==> ((i1 s) ==> (i3 s)) /\ ((i2 s) ==> (i3 s))
+Proof
+    RW_TAC (srw_ss()) [comb_def]
+QED
 
 val seqT_preserves_relation_up_proof =
   (RW_TAC (srw_ss()) [arm_seq_monadTheory.seqT_def,arm_seq_monadTheory.constT_def,preserve_relation_mmu_def,preserve_relation_mmu_abs_def,trans_fun_def])
@@ -478,39 +497,38 @@ THEN RES_TAC
 THEN FULL_SIMP_TAC (srw_ss()) []
 THEN FULL_SIMP_TAC (srw_ss()) []];
 
-val seqT_preserves_relation_up1_thm =
-    store_thm ("seqT_preserves_relation_up1_thm",
-    ``! f1 f2 k k' invr23  uf uy.
+Theorem seqT_preserves_relation_up1_thm:
+      ! f1 f2 k k' invr23  uf uy.
           (comb  (assert_mode k) (assert_mode k') invr23) ==>
           (trans_fun uf) ==>
           (preserve_relation_mmu  f1 (assert_mode k) (assert_mode k) uf uy)       ==>
           (preserve_relation_mmu_abs  f2 (assert_mode k) (assert_mode k') uf uy) ==>
           (preserve_relation_mmu  (f1 >>= (f2)) (assert_mode k) invr23 uf uy)
-``,
-   seqT_preserves_relation_up_proof);
+Proof
+   seqT_preserves_relation_up_proof
+QED
 
 
 
-val seqT_preserves_relation_up2_thm =
-    store_thm ("seqT_preserves_relation_up2_thm",
-    ``! f1 f2 k k'  uf uy.
+Theorem seqT_preserves_relation_up2_thm:
+      ! f1 f2 k k'  uf uy.
           (trans_fun uf) ==>
           (preserve_relation_mmu  f1 (assert_mode k) (assert_mode k') uf uy)       ==>
           (preserve_relation_mmu_abs  f2 (assert_mode k') (assert_mode k') uf uy) ==>
           (preserve_relation_mmu  (f1 >>= (f2)) (assert_mode k) (assert_mode k') uf uy)
-``,
-seqT_preserves_relation_up_proof  );
+Proof
+seqT_preserves_relation_up_proof
+QED
 
 
-val seqT_preserves_relation_uc_thm =
-    store_thm ("seqT_preserves_relation_uc_thm",
-    ``! f1 f2 k k' comb_inv  uf uy.
+Theorem seqT_preserves_relation_uc_thm:
+      ! f1 f2 k k' comb_inv  uf uy.
           (comb  (assert_mode k) (assert_mode k') comb_inv) ==>
           (trans_fun uf) ==>
           (preserve_relation_mmu  f1 (assert_mode k) (assert_mode k) uf uy)       ==>
           (preserve_relation_mmu_abs  f2 (assert_mode k) (comb_inv) uf uy) ==>
           (preserve_relation_mmu  (f1 >>= (f2)) (assert_mode k) comb_inv uf uy)
-``,
+Proof
     (RW_TAC (srw_ss()) [arm_seq_monadTheory.seqT_def,arm_seq_monadTheory.constT_def,preserve_relation_mmu_def,preserve_relation_mmu_abs_def,trans_fun_def])
     THEN (UNDISCH_ALL_TAC
        THEN REPEAT (CASE_TAC THEN FULL_SIMP_TAC (srw_ss()) []))
@@ -570,17 +588,17 @@ THEN FULL_SIMP_TAC (srw_ss()) [],
 RW_TAC (srw_ss()) []
 THEN RES_TAC
 THEN FULL_SIMP_TAC (srw_ss()) []
-THEN FULL_SIMP_TAC (srw_ss()) []]);
+THEN FULL_SIMP_TAC (srw_ss()) []]
+QED
 
 
-val seqT_preserves_relation_uu_thm =
-    store_thm ("seqT_preserves_relation_uu_thm",
-    ``! f1 f2 k  uf uy.
+Theorem seqT_preserves_relation_uu_thm:
+      ! f1 f2 k  uf uy.
           (trans_fun uf) ==>
           (preserve_relation_mmu  f1 (assert_mode k) (assert_mode k) uf uy)       ==>
           (preserve_relation_mmu_abs  f2 (assert_mode k) (assert_mode k) uf uy) ==>
           (preserve_relation_mmu  (f1 >>= (f2)) (assert_mode k) (assert_mode k) uf uy)
-``,
+Proof
                (RW_TAC (srw_ss()) [arm_seq_monadTheory.seqT_def,arm_seq_monadTheory.constT_def,preserve_relation_mmu_def,preserve_relation_mmu_abs_def,trans_fun_def])
                    THEN (UNDISCH_ALL_TAC
                              THEN REPEAT (CASE_TAC THEN FULL_SIMP_TAC (srw_ss()) []))
@@ -640,51 +658,61 @@ THEN FULL_SIMP_TAC (srw_ss()) [],
 RW_TAC (srw_ss()) []
 THEN RES_TAC
 THEN FULL_SIMP_TAC (srw_ss()) []
-THEN FULL_SIMP_TAC (srw_ss()) []]);
+THEN FULL_SIMP_TAC (srw_ss()) []]
+QED
 
 
-val reflexive_comp_def = Define `reflexive_comp  f invr =
-                       ! s g. (invr s) ==> f g s s`;
+Definition reflexive_comp_def:   reflexive_comp  f invr =
+                       ! s g. (invr s) ==> f g s s
+End
 
 
-val condT_preserves_relation_thm = store_thm("condT_preserves_relation_thm",
-``! b f invr1:(arm_state -> bool)  uf uy.
+Theorem condT_preserves_relation_thm:
+  ! b f invr1:(arm_state -> bool)  uf uy.
           (reflexive_comp  uf invr1) ==>
           (preserve_relation_mmu  f invr1 invr1 uf uy)  ==>
-          (preserve_relation_mmu  (condT b f ) invr1 invr1 uf uy)``,
+          (preserve_relation_mmu  (condT b f ) invr1 invr1 uf uy)
+Proof
 (RW_TAC (srw_ss()) [preserve_relation_mmu_def,condT_def,similar_def,constT_def,untouched_def,reflexive_comp_def] )
-THEN (RW_TAC (srw_ss()) [] ));
+THEN (RW_TAC (srw_ss()) [] )
+QED
 
-val first_abs_lemma = store_thm ("first_abs_lemma",
-``(!f g i1 i2  uf uy. (f=g) ==> ((preserve_relation_mmu  f i1 i2 uf uy) =
-                                (preserve_relation_mmu  g i1 i2 uf uy)))``,
- RW_TAC (srw_ss()) []);
-
-
-val second_abs_lemma = store_thm ("second_abs_lemma",
-``! f i1 i2 uf uy. (! y. preserve_relation_mmu  (f y) i1 i2 uf uy) =
-                       preserve_relation_mmu_abs  f i1 i2 uf uy``,
- RW_TAC (srw_ss()) [preserve_relation_mmu_def,preserve_relation_mmu_abs_def]);
+Theorem first_abs_lemma:
+  (!f g i1 i2  uf uy. (f=g) ==> ((preserve_relation_mmu  f i1 i2 uf uy) =
+                                (preserve_relation_mmu  g i1 i2 uf uy)))
+Proof
+ RW_TAC (srw_ss()) []
+QED
 
 
-val constT_preserves_relation_thm = store_thm(
-    "constT_preserves_relation_thm",
-    ``!invr:(arm_state->bool) x  uf uy.  (reflexive_comp  uf invr) ==>
-                              preserve_relation_mmu  (constT x) invr invr uf uy``,
+Theorem second_abs_lemma:
+  ! f i1 i2 uf uy. (! y. preserve_relation_mmu  (f y) i1 i2 uf uy) =
+                       preserve_relation_mmu_abs  f i1 i2 uf uy
+Proof
+ RW_TAC (srw_ss()) [preserve_relation_mmu_def,preserve_relation_mmu_abs_def]
+QED
+
+
+Theorem constT_preserves_relation_thm:
+      !invr:(arm_state->bool) x  uf uy.  (reflexive_comp  uf invr) ==>
+                              preserve_relation_mmu  (constT x) invr invr uf uy
+Proof
     RW_TAC (srw_ss()) [constT_def, preserve_relation_mmu_def, untouched_def, similar_def,reflexive_comp_def] THEN
-RW_TAC (srw_ss()) [] );
+RW_TAC (srw_ss()) []
+QED
 
 
-val parT_alternative_thm = store_thm(
-    "parT_alternative_thm",
-    ``!(f1:'a M) (f2:'b M) s. ((f1 ||| f2) s ) = (case f1 s of ValueState x t =>
-      if access_violation t then ValueState (ARB:'a#'b) t else (f2 >>= (\y. constT (x,y))) t | Error e => Error e)``,
-    RW_TAC (srw_ss()) [arm_seq_monadTheory.parT_def, arm_seq_monadTheory.constT_def, arm_seq_monadTheory.seqT_def]);
+Theorem parT_alternative_thm:
+      !(f1:'a M) (f2:'b M) s. ((f1 ||| f2) s ) = (case f1 s of ValueState x t =>
+      if access_violation t then ValueState (ARB:'a#'b) t else (f2 >>= (\y. constT (x,y))) t | Error e => Error e)
+Proof
+    RW_TAC (srw_ss()) [arm_seq_monadTheory.parT_def, arm_seq_monadTheory.constT_def, arm_seq_monadTheory.seqT_def]
+QED
 
-val parT_latter_part_hlem = store_thm (
-    "parT_latter_part_hlem",
-    ``!f2 i2 i3 (x:'a) uf uy. (preserve_relation_mmu  f2 i2 i3 uf uy) ==>
-                                      preserve_relation_mmu (f2 >>= (λy. constT (x,y))) i2 i3 uf uy``,
+Theorem parT_latter_part_hlem:
+      !f2 i2 i3 (x:'a) uf uy. (preserve_relation_mmu  f2 i2 i3 uf uy) ==>
+                                      preserve_relation_mmu (f2 >>= (λy. constT (x,y))) i2 i3 uf uy
+Proof
     REPEAT STRIP_TAC
         THEN ASSUME_TAC (SPEC ``i3:arm_state->bool`` constT_preserves_relation_thm)
         THEN UNDISCH_ALL_TAC
@@ -712,14 +740,16 @@ val parT_latter_part_hlem = store_thm (
                                               THEN UNDISCH_ALL_TAC
                                               THEN RW_TAC (srw_ss()) []
                                               THEN FULL_SIMP_TAC (srw_ss()) []))
-                                              THEN METIS_TAC []]);
+                                              THEN METIS_TAC []]
+QED
 
-val parT_preserves_relation_up_thm = store_thm("parT_preserves_relation_up_thm",
-    `` ! f1 f2 k k' invr23  uf uy.
+Theorem parT_preserves_relation_up_thm:
+       ! f1 f2 k k' invr23  uf uy.
           (trans_fun uf) ==> (comb  (assert_mode k) (assert_mode k') invr23)     ==>
           (preserve_relation_mmu  f1 (assert_mode k) (assert_mode k) uf uy)       ==>
           (preserve_relation_mmu  f2 (assert_mode k) (assert_mode k') uf uy) ==>
-               (preserve_relation_mmu  (parT f1 f2) (assert_mode k) invr23 uf uy) ``,
+               (preserve_relation_mmu  (parT f1 f2) (assert_mode k) invr23 uf uy)
+Proof
      REPEAT STRIP_TAC
         THEN IMP_RES_TAC parT_latter_part_hlem
         THEN WEAKEN_TAC is_forall
@@ -759,15 +789,17 @@ val parT_preserves_relation_up_thm = store_thm("parT_preserves_relation_up_thm",
                                            THEN UNDISCH_ALL_TAC
                                            THEN RW_TAC (srw_ss()) []
                                            THEN FULL_SIMP_TAC (srw_ss()) []))
-                             THEN METIS_TAC [comb_rel_lem]]);
+                             THEN METIS_TAC [comb_rel_lem]]
+QED
 
 
-val parT_preserves_relation_uu_thm = store_thm("parT_preserves_relation_uu_thm",
-    `` ! f1 f2 k  uf uy.
+Theorem parT_preserves_relation_uu_thm:
+       ! f1 f2 k  uf uy.
          (trans_fun uf) ==>
           (preserve_relation_mmu  f1 (assert_mode k) (assert_mode k) uf uy) ==>
           (preserve_relation_mmu  f2 (assert_mode k) (assert_mode k) uf uy)   ==>
-           (preserve_relation_mmu  (parT f1 f2) (assert_mode k) (assert_mode k) uf uy) ``,
+           (preserve_relation_mmu  (parT f1 f2) (assert_mode k) (assert_mode k) uf uy)
+Proof
      REPEAT STRIP_TAC
         THEN IMP_RES_TAC parT_latter_part_hlem
         THEN WEAKEN_TAC is_forall
@@ -807,70 +839,79 @@ val parT_preserves_relation_uu_thm = store_thm("parT_preserves_relation_uu_thm",
                                            THEN UNDISCH_ALL_TAC
                                            THEN RW_TAC (srw_ss()) []
                                            THEN FULL_SIMP_TAC (srw_ss()) []))
-                             THEN METIS_TAC [comb_rel_lem]]);
+                             THEN METIS_TAC [comb_rel_lem]]
+QED
 
-val comb_monot_thm = store_thm("comb_monot_thm",
-                               ``!a:(arm_state -> bool). comb a a a``,
-                               RW_TAC (srw_ss()) [comb_def]);
+Theorem comb_monot_thm:
+                                 !a:(arm_state -> bool). comb a a a
+Proof
+                               RW_TAC (srw_ss()) [comb_def]
+QED
 
 
 
-val preserve_relation_comb_thm1 =
-    store_thm ("preserve_relation_comb_thm1",
-               ``! a b c d f  uf uy.
+Theorem preserve_relation_comb_thm1:
+                 ! a b c d f  uf uy.
               preserve_relation_mmu  f d a uf uy
               ==>
               comb a b c ==>
-              preserve_relation_mmu  f d c uf uy``,
+              preserve_relation_mmu  f d c uf uy
+Proof
                RW_TAC (srw_ss()) [preserve_relation_mmu_def,comb_def]
                       THEN PAT_X_ASSUM ``∀g s1 s2. X``
                       (fn thm => ASSUME_TAC (SPECL [``g:bool[32]``,
                                                     ``s1:arm_state``, ``s2:arm_state``] thm))
     THEN RES_TAC
-         THEN RW_TAC (srw_ss()) []);
+         THEN RW_TAC (srw_ss()) []
+QED
 
-val preserve_relation_comb_v2_thm =
-    store_thm ("preserve_relation_comb_v2_thm",
-               ``! a b c d f  uf uy.
+Theorem preserve_relation_comb_v2_thm:
+                 ! a b c d f  uf uy.
               preserve_relation_mmu  f d a uf uy
               ==>
               comb a b c ==>
-              preserve_relation_mmu  f d c uf uy``,
+              preserve_relation_mmu  f d c uf uy
+Proof
                RW_TAC (srw_ss()) [preserve_relation_mmu_def,comb_def]
                       THEN PAT_X_ASSUM ``∀g s1 s2. X``
                       (fn thm => ASSUME_TAC (SPECL [``g:bool[32]``,
                                                     ``s1:arm_state``, ``s2:arm_state``] thm))
     THEN RES_TAC
-         THEN RW_TAC (srw_ss()) []);
+         THEN RW_TAC (srw_ss()) []
+QED
 
-val preserve_relation_comb_abs_thm =
-    store_thm ("preserve_relation_comb_abs_thm",
-               ``! a b c d f uf uy. preserve_relation_mmu_abs f d b uf uy
+Theorem preserve_relation_comb_abs_thm:
+                 ! a b c d f uf uy. preserve_relation_mmu_abs f d b uf uy
               ==>  comb a b c ==>
-              preserve_relation_mmu_abs f d c uf uy``,
+              preserve_relation_mmu_abs f d c uf uy
+Proof
                RW_TAC (srw_ss()) [preserve_relation_mmu_abs_def,comb_def]
                       THEN PAT_X_ASSUM ``∀ c g s1 s2. X``
                       (fn thm => ASSUME_TAC (SPECL [``c':'a``,``g:bool[32]``,
                                                     ``s1:arm_state``, ``s2:arm_state``] thm))
     THEN RES_TAC
-         THEN RW_TAC (srw_ss()) []);
+         THEN RW_TAC (srw_ss()) []
+QED
 
 
-val comb_mode_def = Define `comb_mode m n s = (assert_mode m s \/ assert_mode n s)`;
+Definition comb_mode_def:   comb_mode m n s = (assert_mode m s \/ assert_mode n s)
+End
 
-val comb_mode_thm =
-    store_thm ("comb_mode_thm",
-``! m n. comb (assert_mode m) (assert_mode n) (comb_mode m n)``,
-RW_TAC (srw_ss()) [ assert_mode_def,comb_mode_def,comb_def]);
+Theorem comb_mode_thm:
+  ! m n. comb (assert_mode m) (assert_mode n) (comb_mode m n)
+Proof
+RW_TAC (srw_ss()) [ assert_mode_def,comb_mode_def,comb_def]
+QED
 
 
 
 (*********    3-parts-lem   *********)
 
-val keep_mode_relation_def = Define `keep_mode_relation comp i1 i2 =
-  (!g s s' x. (mmu_requirements s g) ==> (i1 s) ==> (comp s = ValueState x s') ==> (i2 s'))`;
+Definition keep_mode_relation_def:   keep_mode_relation comp i1 i2 =
+  (!g s s' x. (mmu_requirements s g) ==> (i1 s) ==> (comp s = ValueState x s') ==> (i2 s'))
+End
 
-val keep_similar_relation_def = Define `keep_similar_relation comp invr1 y =
+Definition keep_similar_relation_def:   keep_similar_relation comp invr1 y =
     !g s1 s2.
     mmu_requirements s1 g    ==>
     mmu_requirements s2 g    ==>
@@ -880,24 +921,28 @@ val keep_similar_relation_def = Define `keep_similar_relation comp invr1 y =
     invr1 s2                 ==>
     ((?a s1' s2'.((comp s1 = ValueState a s1') /\  (comp s2 = ValueState a s2') /\
            (y  g s1' s2') /\        (similar g s1' s2')))
-\/   (? e. (comp s1 = Error e) /\ (comp s2 = Error e)))`;
+\/   (? e. (comp s1 = Error e) /\ (comp s2 = Error e)))
+End
 
-val keep_untouched_relation_def = Define `keep_untouched_relation comp invr1 f =
-    !g s s' a. (mmu_requirements s g) ==> (invr1 s) ==> (comp s = ValueState a s') ==> ((untouched g s s') /\  (f g s s'))`;
+Definition keep_untouched_relation_def:   keep_untouched_relation comp invr1 f =
+    !g s s' a. (mmu_requirements s g) ==> (invr1 s) ==> (comp s = ValueState a s') ==> ((untouched g s s') /\  (f g s s'))
+End
 
-val three_parts_thm = store_thm(
-    "three_parts_thm",
-    ``!comp i1 i2 f y. (keep_mode_relation comp i1 i2) ==> (keep_similar_relation comp i1 y) ==> (keep_untouched_relation comp i1 f) ==> (preserve_relation_mmu comp i1 i2 f y)``,
-    RW_TAC (srw_ss()) [preserve_relation_mmu_def, keep_mode_relation_def, keep_similar_relation_def, keep_untouched_relation_def] THEN METIS_TAC []);
+Theorem three_parts_thm:
+      !comp i1 i2 f y. (keep_mode_relation comp i1 i2) ==> (keep_similar_relation comp i1 y) ==> (keep_untouched_relation comp i1 f) ==> (preserve_relation_mmu comp i1 i2 f y)
+Proof
+    RW_TAC (srw_ss()) [preserve_relation_mmu_def, keep_mode_relation_def, keep_similar_relation_def, keep_untouched_relation_def] THEN METIS_TAC []
+QED
 
-val refl_rel_def = Define `refl_rel y = (!gg ss. y gg ss ss)`;
+Definition refl_rel_def:   refl_rel y = (!gg ss. y gg ss ss)
+End
 
 
 
-val downgrade_thm = store_thm (
-    "downgrade_thm",
-    ``!comp i1 i2 f y. (preserve_relation_mmu comp i1 i2 f y) ==> (refl_rel y)
-       ==> (keep_mode_relation comp i1 i2 /\ keep_similar_relation comp i1 y /\ keep_untouched_relation comp i1 f)``,
+Theorem downgrade_thm:
+      !comp i1 i2 f y. (preserve_relation_mmu comp i1 i2 f y) ==> (refl_rel y)
+       ==> (keep_mode_relation comp i1 i2 /\ keep_similar_relation comp i1 y /\ keep_untouched_relation comp i1 f)
+Proof
     RW_TAC (srw_ss()) [refl_rel_def, preserve_relation_mmu_def, keep_mode_relation_def, keep_similar_relation_def, keep_untouched_relation_def]
        THEN RES_TAC
        THEN FULL_SIMP_TAC (srw_ss()) []
@@ -906,7 +951,8 @@ val downgrade_thm = store_thm (
        THEN SPEC_ASSUM_TAC (``!gg ss. y gg ss``, [``g:word32``, ``s:arm_state``])
        THEN RES_TAC
        THEN FULL_SIMP_TAC (srw_ss()) []
-       THEN METIS_TAC []);
+       THEN METIS_TAC []
+QED
 
 
 
@@ -918,20 +964,22 @@ val downgrade_thm = store_thm (
 (******  handling forT loops   *******)
 
 
-val comb_gen_lem = store_thm(
-    "comb_gen_lem",
-    ``!comp i1 i2 i3 i23 f y. (comb i2 i3 i23 \/ comb i3 i2 i23) ==> (preserve_relation_mmu comp i1 i2 f y) ==> (preserve_relation_mmu comp i1 i23 f y)``,
+Theorem comb_gen_lem:
+      !comp i1 i2 i3 i23 f y. (comb i2 i3 i23 \/ comb i3 i2 i23) ==> (preserve_relation_mmu comp i1 i2 f y) ==> (preserve_relation_mmu comp i1 i23 f y)
+Proof
     RW_TAC (srw_ss()) [preserve_relation_mmu_def, comb_def]
-        THEN METIS_TAC[]);
+        THEN METIS_TAC[]
+QED
 
 
 
-val constT_unit_preserving_lem = store_thm(
-    "constT_unit_preserving_lem",
-    ``!invr:(arm_state->bool) uf uy.  (reflexive_comp  uf invr) ==>
-                              preserve_relation_mmu  (constT ()) invr invr uf uy``,
+Theorem constT_unit_preserving_lem:
+      !invr:(arm_state->bool) uf uy.  (reflexive_comp  uf invr) ==>
+                              preserve_relation_mmu  (constT ()) invr invr uf uy
+Proof
     RW_TAC (srw_ss()) [constT_def, preserve_relation_mmu_def, untouched_def, similar_def,reflexive_comp_def] THEN
-(RW_TAC (srw_ss()) [] ));
+(RW_TAC (srw_ss()) [] )
+QED
 
 
 
@@ -951,14 +999,14 @@ val SEQT_UNTOUCHED_TAC =
 
 
 
-val forT_untouching_thm = store_thm(
-    "forT_untouching_thm",
-    ``!f k uf uy.
+Theorem forT_untouching_thm:
+      !f k uf uy.
             (trans_fun uf)
         ==> (reflexive_comp uf (assert_mode k))
         ==> (!a. keep_untouched_relation (f a) (assert_mode k) uf)
         ==> (!a. keep_mode_relation (f a) (assert_mode k) (assert_mode k))
-        ==> (!l h. keep_untouched_relation (forT l h f) (assert_mode k) uf)``,
+        ==> (!l h. keep_untouched_relation (forT l h f) (assert_mode k) uf)
+Proof
     REPEAT STRIP_TAC
       THEN Induct_on `h - l`
       THENL [FULL_SIMP_TAC (srw_ss()) []
@@ -981,7 +1029,8 @@ val forT_untouching_thm = store_thm(
                 THEN FULL_SIMP_TAC (srw_ss()) [keep_mode_relation_def]
                 THEN REPEAT STRIP_TAC
                 THEN SEQT_UNTOUCHED_TAC
-                THEN METIS_TAC [assert_mode_def]]);
+                THEN METIS_TAC [assert_mode_def]]
+QED
 
 
 val SEQT_PRESERVE_TAC = fn F1 =>
@@ -1012,13 +1061,13 @@ val SEQT_PRESERVE_BEGIN_TAC = fn F1 =>
        THEN `mmu_requirements b g` by METIS_TAC [untouched_mmu_setup_lem]
        THEN `mmu_requirements b' g` by METIS_TAC [untouched_mmu_setup_lem]);
 
-val forT_similar_thm = store_thm(
-    "forT_similar_thm",
-    ``!f k uf uy.
+Theorem forT_similar_thm:
+      !f k uf uy.
             (!a. keep_untouched_relation (f a) (assert_mode k) uf)
         ==> (!a. keep_mode_relation (f a) (assert_mode k) (assert_mode k))
         ==> (!a. keep_similar_relation (f a) (assert_mode k) uy)
-        ==> (!l h. keep_similar_relation (forT l h f) (assert_mode k) uy)``,
+        ==> (!l h. keep_similar_relation (forT l h f) (assert_mode k) uy)
+Proof
     REPEAT STRIP_TAC
       THEN IMP_RES_TAC forT_untouching_thm
       THEN Induct_on `h - l`
@@ -1063,15 +1112,16 @@ val forT_similar_thm = store_thm(
                 THEN FULL_SIMP_TAC (srw_ss()) []
                 THEN REPEAT IF_CASES_TAC THEN RW_TAC (srw_ss()) []
                 THEN (`access_violation b'' = access_violation b'''` by METIS_TAC [similar_def])
-                THEN FULL_SIMP_TAC (srw_ss()) []]);
+                THEN FULL_SIMP_TAC (srw_ss()) []]
+QED
 
 
-val forT_mode_thm = store_thm(
-    "forT_mode_thm",
-    ``!f k uf.
+Theorem forT_mode_thm:
+      !f k uf.
             (!a. keep_untouched_relation (f a) (assert_mode k) uf)
         ==> (!a. keep_mode_relation (f a) (assert_mode k) (assert_mode k))
-        ==> (!l h. keep_mode_relation (forT l h f)  (assert_mode k) (assert_mode k))``,
+        ==> (!l h. keep_mode_relation (forT l h f)  (assert_mode k) (assert_mode k))
+Proof
     REPEAT STRIP_TAC
       THEN Induct_on `h - l`
       THENL [FULL_SIMP_TAC (srw_ss()) []
@@ -1107,47 +1157,51 @@ val forT_mode_thm = store_thm(
                 THEN FULL_SIMP_TAC (srw_ss()) [keep_untouched_relation_def]
                 THEN RES_TAC
                 THEN IMP_RES_TAC untouched_mmu_setup_lem
-                THEN RES_TAC]);
+                THEN RES_TAC]
+QED
 
 
 
-val forT_preserves_user_relation_thm = store_thm(
-    "forT_preserves_user_relation_thm",
-    ``!f k uf uy.
+Theorem forT_preserves_user_relation_thm:
+      !f k uf uy.
             (trans_fun uf)
         ==> (refl_rel uy)
         ==> (reflexive_comp uf (assert_mode k))
         ==> (!a. preserve_relation_mmu (f a) (assert_mode k) (assert_mode k) uf uy)
-        ==> (!l h. preserve_relation_mmu (forT l h f) (assert_mode k) (assert_mode k) uf uy)``,
-        METIS_TAC [forT_similar_thm, forT_mode_thm, forT_untouching_thm, three_parts_thm, downgrade_thm]);
+        ==> (!l h. preserve_relation_mmu (forT l h f) (assert_mode k) (assert_mode k) uf uy)
+Proof
+        METIS_TAC [forT_similar_thm, forT_mode_thm, forT_untouching_thm, three_parts_thm, downgrade_thm]
+QED
 
 
-val forT_preserving_thm = store_thm(
-    "forT_preserving_thm",
-    ``!f k uf uy.
+Theorem forT_preserving_thm:
+      !f k uf uy.
             (trans_fun uf)
         ==> (refl_rel uy)
         ==> (reflexive_comp uf (assert_mode k))
         ==> (preserve_relation_mmu_abs f (assert_mode k) (assert_mode k) uf uy)
-        ==> (!l h. preserve_relation_mmu (forT l h f) (assert_mode k) (assert_mode k) uf uy)``,
-   RW_TAC (srw_ss()) [] THEN METIS_TAC [forT_preserves_user_relation_thm, second_abs_lemma]);
+        ==> (!l h. preserve_relation_mmu (forT l h f) (assert_mode k) (assert_mode k) uf uy)
+Proof
+   RW_TAC (srw_ss()) [] THEN METIS_TAC [forT_preserves_user_relation_thm, second_abs_lemma]
+QED
 
 
 (*********    errorT   *********)
 
 
-val errorT_thm =
-    store_thm("errorT_thm",
-              ``! inv s uf1 uy1. preserve_relation_mmu (errorT s) inv inv uf1 uy1 ``,
+Theorem errorT_thm:
+                ! inv s uf1 uy1. preserve_relation_mmu (errorT s) inv inv uf1 uy1
+Proof
               (RW_TAC (srw_ss()) [preserve_relation_mmu_def,similar_def,
-                                  assert_mode_def,errorT_def,untouched_def]));
+                                  assert_mode_def,errorT_def,untouched_def])
+QED
 
-val errorT_comb_thm =
-    store_thm("errorT_comb_thm",
-              ``! inv1 inv2 s uf1 uy1. preserve_relation_mmu (errorT s) inv1 inv2 uf1 uy1 ``,
+Theorem errorT_comb_thm:
+                ! inv1 inv2 s uf1 uy1. preserve_relation_mmu (errorT s) inv1 inv2 uf1 uy1
+Proof
               (RW_TAC (srw_ss()) [preserve_relation_mmu_def,similar_def,
-                                  assert_mode_def,errorT_def,untouched_def]));
+                                  assert_mode_def,errorT_def,untouched_def])
+QED
 
 
 
-val _ = export_theory();
