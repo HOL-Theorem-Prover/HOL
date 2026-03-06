@@ -144,8 +144,8 @@ fun auto_tac (_, t) =
       handle Feedback.HOL_ERR _ =>
         realLib.REAL_ARITH t'
       handle Feedback.HOL_ERR _ =>
-        if Library.is_nonlinear t' then Library.nla_prove t'
-        else raise Feedback.mk_HOL_ERR "" "" ""
+        (if Library.is_nonlinear t' then Library.nla_prove t'
+         else raise Feedback.mk_HOL_ERR "" "" "")
       handle Feedback.HOL_ERR _ =>
         wordsLib.WORD_DECIDE t'
       handle Feedback.HOL_ERR _ =>
