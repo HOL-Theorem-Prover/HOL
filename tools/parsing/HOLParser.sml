@@ -685,22 +685,27 @@ fun parseSML file read parseError: scope -> result = let
         SOME c => ahead i = c andalso checkKW kw (i+1)
       | NONE => true
 
-    fun finishHOLString s p = case cur () of
-      #"\000" => parseError (p, !pos) "unclosed string literal"
-    | #"\"" => (next ();
-      if s = "\"" then () else parseError (!pos - 1, !pos) ("expected ["^s^"]"))
-    | #"\226" =>
-      if checkKW "\226\128\186" 1 then (nextn 3;
-        if s = "\226\128\186" then () else parseError (!pos - 3, !pos) ("expected ["^s^"]"))
-      else (next (); finishHOLString s p)
-    | #"\194" => if checkKW "\194\187" 1 then (nextn 2;
-        if s = "\194\187" then () else parseError (!pos - 2, !pos) ("expected ["^s^"]"))
-      else (next (); finishHOLString s p)
-    | #"\\" => (next ();
-      if Char.isSpace (cur ()) then
-        (next (); ws (); (case cur () of #"\\" => next () | _ => ()); finishHOLString s p)
-      else (next (); finishHOLString s p))
-    | _ => (next (); finishHOLString s p)
+    fun finishHOLString s p = let
+      fun go s p first_mismatch = case cur () of
+        #"\000" => (case first_mismatch of
+          NONE => parseError (p, !pos) "unclosed string literal"
+        | SOME p_close =>
+          parseError (p, p_close) "mismatched string quotes? (reached EOF unclosed)")
+      | #"\"" => (next (); if s = "\"" then () else go s p (SOME (!pos)))
+      | #"\226" =>
+        if checkKW "\226\128\186" 1 then (nextn 3;
+          if s = "\226\128\186" then () else go s p (SOME (!pos)))
+        else (next (); go s p first_mismatch)
+      | #"\194" => if checkKW "\194\187" 1 then (nextn 2;
+          if s = "\194\187" then () else go s p (SOME (!pos)))
+        else (next (); go s p first_mismatch)
+      | #"\\" => (next ();
+        if Char.isSpace (cur ()) then
+          (next (); ws ();
+           (case cur () of #"\\" => next () | _ => ()); go s p first_mismatch)
+        else (next (); go s p first_mismatch))
+      | _ => (next (); go s p first_mismatch)
+    in go s p NONE end
 
     fun qtoken cm =
       case cur () of
