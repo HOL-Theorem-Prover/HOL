@@ -54,7 +54,7 @@ all: hol4-real.art
 endif
 
 ifdef HOLSELFTESTLEVEL
-all: real-selftest.log # sos-selftest.log
+all: real-selftest.log sos-selftest.log
 
 real-selftest.log: selftest.exe
 	$(tee ./$<, $@)
