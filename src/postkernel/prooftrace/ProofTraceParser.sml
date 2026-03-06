@@ -16,6 +16,7 @@ type ('a,'A) gparser = 'a ptr -> 'A
 type 'a parser = ('a, 'a) gparser
 type root = unit
 type heap = obj DArray.darray
+val heapSize = DArray.size
 val castPtr = I
 
 fun parse filename = let

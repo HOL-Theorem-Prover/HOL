@@ -7,6 +7,8 @@ type 'a parser = ('a,'a) gparser
 type root
 val parse: string -> root ptr * heap
 
+val heapSize: heap -> int
+
 datatype 'a any = Int of int | Bytes of string | Obj of 'a list | Other
 val any: heap -> (unit, 'A) gparser -> ('b, 'A any) gparser
 
