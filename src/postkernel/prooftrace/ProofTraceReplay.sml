@@ -1,7 +1,9 @@
 open ProofTraceParser
 open Redblackmap
 
-fun mk_rules {string,term,thm,hol_type,list,pair,opt,compute_prep} =
+fun apply f g = f g
+
+fun mk_rules {string,term,thm,hol_type,list,pair,opt,four} =
    Array.fromList [
       ("ABS", [term, thm]),
       ("ALPHA", [term, term]),
@@ -45,11 +47,12 @@ fun mk_rules {string,term,thm,hol_type,list,pair,opt,compute_prep} =
       ("SYM", [thm]),
       ("Specialize", [term, thm]),
       ("TRANS", [thm, thm]),
-      ("compute", [compute_prep, term]),
+      ("compute", [pair (four (hol_type, list (pair (string, thm)),
+                               hol_type, list (pair (string, term))),
+                         list thm), term]),
       ("deductAntisym", [thm, thm]),
       ("deleted", [])
   ]
-
 (* 
   compute_prf of (compute_args * thm list) * term
   where compute_args = {
@@ -58,7 +61,8 @@ fun mk_rules {string,term,thm,hol_type,list,pair,opt,compute_prep} =
     cval_type  : hol_type,
     cval_terms : (string * term) list }
 *)
-fun do_all_thms heap f = {
+
+fun do_all_thms heap (f: unit parser) = {
   hol_type = K (),
   list = fn f => appList heap f o castPtr,
   opt = fn f => ignore o option heap f o castPtr,
@@ -66,9 +70,7 @@ fun do_all_thms heap f = {
   string = K (),
   term = K (),
   thm = f,
-  compute_prep = let
-    val a = tuple4 heap (I, appList heap (tuple2 heap (I, f)), I, I)
-  in ignore o tuple2 heap (tuple2 heap (a, appList heap f), I) o castPtr end
+  four = fn fghi => ignore o tuple4 heap fghi o castPtr
 }
 
 (*
@@ -126,7 +128,7 @@ fun mk_add_def thyname heap = let
                                   (castPtr (el 1 args_ptrs))
     in ty_defs := update(!ty_defs, tyop, add_thm_ptr)
     end
-    val _ = map2 (fn f => fn g => f g) args_rs args_ptrs
+    val _ = map2 apply args_rs args_ptrs
   in () end
 in (tm_defs, ty_defs, add_def) end
 
@@ -135,10 +137,24 @@ val trDB : (string, (string, thm) dict) dict ref
 
 val replay_prefix = "tr_"; (* can be empty if we start from min *)
 
-datatype hol_obj = Ty of hol_type | Tm of term | Th of thm | Unknown
+datatype hol_obj =
+   Ty of hol_type
+ | Tm of term
+ | Th of thm
+ | Str of string
+ | Pair of hol_obj * hol_obj
+ | List of hol_obj list
+ | Opt of hol_obj option
+ | Four of hol_obj * (hol_obj * (hol_obj * hol_obj))
+ | Unknown
 fun destTy (Ty ty) = ty | destTy _ = raise Fail "destTy"
 fun destTm (Tm tm) = tm | destTm _ = raise Fail "destTm"
 fun destTh (Th th) = th | destTh _ = raise Fail "destTh"
+fun destStr (Str x) = x | destStr _ = raise Fail "destStr"
+fun destPair (Pair x) = x | destPair _ = raise Fail "destPair"
+fun destList (List x) = x | destList _ = raise Fail "destList"
+fun destOpt (Opt x) = x | destOpt _ = raise Fail "destOpt"
+fun destFour (Four x) = x | destFour _ = raise Fail "destFour"
 
 (*
 val thyname = "bool";
@@ -159,53 +175,82 @@ fun replay thyname = let
     in (!tms, !tys) end
 
   val replay_thyname = replay_prefix ^ thyname; 
+  fun mk_thyname rawThy = if rawThy = "min" then rawThy
+                          else replay_thyname ^ rawThy
   val replayed_heap = Array.array(heapSize heap, Unknown);
 
   fun cache (mk_obj,dest_obj) mk_x x_ptr = let
     val key = ptr x_ptr
   in case Array.sub(replayed_heap, key) of Unknown =>
-       let val obj = mk_obj(mk_x())
+       let val obj = mk_obj(mk_x x_ptr)
        in (Array.update(replayed_heap, key, obj); dest_obj obj) end
      | obj => dest_obj obj
   end
 
-  fun check_def map Thy nm =
-    if Thy = thyname then case peek (map, nm)
+  val replay_str = cache (Str,destStr) (str heap)
+  fun replay_pair f = cache (Pair,destPair) (tuple2 heap f)
+  fun replay_list f = cache (List,destList) (list heap f)
+  fun replay_opt f = cache (Opt,destOpt) (option heap f)
+  fun replay_four f = cache (Four,destFour) (tuple4 heap f)
+
+  fun check_def map rawThy nm =
+    if rawThy = thyname then case peek (map, nm)
     of SOME thp => ignore (replay_thm thp)
      | _ => () else ()
 
   and replay_type ty_ptr =
-  cache (Ty,destTy) (fn () =>
+  cache (Ty,destTy) (fn ty_ptr =>
     case shType heap ty_ptr of
       Tyv s => mk_vartype s
     | Tyapp (idp, args_ptr) => let
-        val (Thy,Tyop) = ident heap idp
+        val (rawThy,Tyop) = ident heap idp
         val Args = list heap replay_type args_ptr
-        val () = check_def ty_defs Thy Tyop
-        in mk_thy_type {Thy=replay_prefix^Thy, Tyop=Tyop, Args=Args} end
+        val () = check_def ty_defs rawThy Tyop
+        in mk_thy_type {Thy=mk_thyname rawThy, Tyop=Tyop, Args=Args} end
   ) ty_ptr
 
   and replay_term tm_ptr =
-  cache (Tm,destTm) (fn () =>
+  cache (Tm,destTm) (fn tm_ptr =>
     case shTerm heap tm_ptr of
       Abs (t1,t2) => mk_abs (replay_term t1, replay_term t2)
     | Comb (t1,t2) => mk_comb (replay_term t1, replay_term t2)
     | Fv (s, ty) => mk_var (s, replay_type ty)
     | Const (idp, typ) => let
-        val (Thy,Name) = ident heap idp
-        val () = check_def tm_defs Thy Name
+        val (rawThy,Name) = ident heap idp
+        val () = check_def tm_defs rawThy Name
         val ty = replay_type typ 
-        in mk_thy_const {Thy=replay_prefix^Thy, Name=Name, Ty=ty} end
-    | _ => raise Fail "replay_term"
+        in mk_thy_const {Thy=mk_thyname rawThy, Name=Name, Ty=ty} end
+    | Clos _ => raise Fail "replay_term Clos"
+    | Bv _ => raise Fail "replay_term Bv"
   ) tm_ptr
 
   and replay_thm (thm_ptr: thm ptr) =
-  cache (Th,destTh) (fn () => raise Fail "replay_thm") thm_ptr
+  cache (Th,destTh) (fn thm_ptr => let
+    val (_, _, proof_ptr) = shThm heap thm_ptr
+    val (i, args_ptrs) = shVariant heap proof_ptr
+    val (name, args_rs) = Array.sub(rules(), i)
+    val args_objs = map2 apply args_rs args_ptrs
+  in
+    raise Fail ("replay_thm " ^ name)
+  end) thm_ptr
+
+  and rules() = mk_rules {
+    string = Str o replay_str o castPtr,
+    term = Tm o replay_term o castPtr,
+    thm = Th o replay_thm o castPtr,
+    hol_type = Ty o replay_type o castPtr,
+    list = fn f => List o replay_list f o castPtr,
+    pair = fn f => Pair o replay_pair f o castPtr,
+    opt = fn f => Opt o replay_opt f o castPtr,
+    four = fn f => Four o replay_four f o castPtr
+  }
 
   fun export p = let
     val (nm, (th, _)) = tuple3 heap (str heap, replay_thm, I) p
   in (nm, th) end
+
   val thyDB = fromList String.compare (list heap export all_thms)
+
   val () = trDB := update(!trDB, replay_thyname, fn NONE => thyDB
                                       | _ => raise Fail "dup thy")
 in () end
