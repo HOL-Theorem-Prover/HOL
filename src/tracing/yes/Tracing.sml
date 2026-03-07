@@ -20,9 +20,6 @@ fun export (file, x: 'a) = let
   val _ = Process.waitpid (Process.W_CHILD pid, [])
   in () end
 
-fun trace_theory name
-    ({theory,parents,types,constants,all_thms,mldeps,...}: struct_info_record) = let
-  val file = concat[".hol/objs/",name,".tr.gz"]
-  in export(file, (theory,parents,types,constants,all_thms,mldeps)) end
+fun trace_theory name args = export(concat[".hol/objs/",name,".tr.gz"], args)
 
 end
