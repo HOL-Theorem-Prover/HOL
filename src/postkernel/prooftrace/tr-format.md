@@ -10,46 +10,46 @@ This is a PolyML memory dump, but it can still be decoded to get to the proof ma
 
 The outer structure of the dump is a sequence of objects, followed by a root pointer:
 
-```
+```c
 file ::= object* tagptr
 ```
 
-A tagged pointer `tagptr` is a 64 bit value which can be either an integer or a pointer.
+A tagged pointer `tagptr` is a little-endian 64 bit value which can be either an integer or a pointer.
 If the low bit is `0`, then the remaining 63 bits are an index into the object list
 (1-based, with 0 denoting the null pointer), and if the low bit is `1` then the
 remaining bits denote a signed 63 bit integer.
-```
+```c
 tagptr ::= 0 ptr63 | 1 int63
 ```
 
 An object begins with a 64 bit header word, with the top 8 bits reserved for flags:
-```
+```c
 header ::= len56 flags8
 ```
 In all cases, an object will have exactly `len56` 64-bit words following it:
-```
+```c
 object ::= header data64[len56]
 ```
 The contents of those bytes depends on the object kind.
 
-The low 2 bits of the flags denote the object kind:
-```
-flags8 ::= 00xxxxxx  // Regular
-        |  01xxxxxx  // Bytes
-        |  10xxxxxx  // Code
-        |  11xxxxxx  // Closure
+The low 2 bits of the flags denote the object kind: (the low bit is drawn on the left here, i.e. little-endian)
+```c
+flags8 ::= 00xxxxxx  // 0: Regular
+        |  10xxxxxx  // 1: Bytes
+        |  01xxxxxx  // 2: Code
+        |  11xxxxxx  // 3: Closure
 ```
 * For the `Code` and `Closure` kinds, the exporter does not export the contents, and `len56` will be 0.
 
 * For `Bytes`, the data is a packed byte-array. The first word is the byte length of the array,
   and it is followed by that many bytes. It is then padded to a multiple of 8 bytes.
 
-  ```
+  ```c
   bytes_data ::= blen64 data8[blen64] pad
   ```
 
 * For `Regular`, the data is a sequence of tagged pointers:
-  ```
+  ```c
   regular_data ::= tagptr[len56]
   ```
 
@@ -57,7 +57,7 @@ flags8 ::= 00xxxxxx  // Regular
 
 We can summarize the file structure more abstractly like so:
 
-```
+```c
 tagptr ::= int63 | ptr63
 bytes ::= int8*
 regular ::= tagptr*
