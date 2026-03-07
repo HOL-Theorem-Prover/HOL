@@ -97,7 +97,7 @@ Now we will describe how SML datatypes are encoded as elements of `tagptr`.
   Note that the layout of lists above is consistent with a datatype declaration
   `datatype 'a list = nil | cons of 'a * 'a list` under this rule. We will call these datatypes "option-like" below, since `'a option` also uses this optimization.
 
-## File structure: SML data declartions
+## File structure: SML data declarations
 
 Now that we can encode arbitrary datatypes inside the file, it suffices to give the type of the root pointer. This is more or less a copy of the sources, but we have re-sorted the constructors according to the above sort criteria where applicable. A `clos` means the value in this position is a function type.
 ```sml
