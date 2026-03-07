@@ -93,6 +93,11 @@ end
 fun option _ _ 0w0 = NONE
   | option c p w = SOME (p (arg c 0 w))
 
+fun list c go w = let
+  fun build (0w1, acc) = rev acc
+    | build (w, acc) = case tuple2 c (I, I) w of (a, b) => (build (b, go a :: acc))
+  in build (w, []) end
+
 fun appList _ _ 0w1 = ()
   | appList c go w = case tuple2 c (I, I) w of (a, b) => (go a; appList c go b)
 

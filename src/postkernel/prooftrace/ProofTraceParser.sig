@@ -23,6 +23,7 @@ val tuple4: heap -> ('a,'A) gparser * ('b,'B) gparser * ('c,'C) gparser * ('d,'D
 val appList: heap -> ('a, 'b) gparser -> ('a list, unit) gparser
 val appSet: heap -> ('a, 'b) gparser -> ('a HOLset.set, unit) gparser
 val option: heap -> ('a, 'A) gparser -> ('a option, 'A option) gparser
+val list: heap -> ('a, 'A) gparser -> ('a list, 'A list) gparser
 
 val str: heap -> string parser
 val int: int parser
