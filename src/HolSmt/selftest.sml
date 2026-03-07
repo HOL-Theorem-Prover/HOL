@@ -158,34 +158,6 @@ val thm_AUTO =
   mk_test_fun true (expect_thm true) "AUTO"
     (Tactical.THEN (Library.SET_SIMP_TAC, auto_tac))
 
-(* Like thm_AUTO but with nonlinear arithmetic fallback.
-   Used only for NIA/NRA test entries to avoid expensive SOS cert search
-   polluting the general auto_tac chain. *)
-fun nla_auto_tac (_, t) =
-  let
-    val simpset = bossLib.++ (bossLib.srw_ss (), wordsLib.WORD_ss)
-    val simp_thms =
-    let
-      open arithmeticTheory integerTheory realTheory
-    in
-      [EXP, EXP_1, EXP_2, EDIV_DEF, EMOD_DEF, INT_ABS, INT_MAX, INT_MIN,
-       int_exp, int_quot, int_rem, EXP_2, POW_2, REAL_POW_LT,
-       boolTheory.LET_THM]
-    end
-    val t_eq_t' =
-      simpLib.SIMP_CONV simpset simp_thms t
-      handle Conv.UNCHANGED => Thm.REFL t
-    val t' = boolSyntax.rhs (Thm.concl t_eq_t')
-    val t'_thm = Library.nla_prove t'
-    val thm = Thm.EQ_MP (Thm.SYM t_eq_t') t'_thm
-  in
-    ([], fn _ => thm)
-  end
-
-val thm_NLA =
-  mk_test_fun true (expect_thm true) "NLA"
-    (Tactical.THEN (Library.SET_SIMP_TAC, nla_auto_tac))
-
 fun mk_CVC expect_fun =
   mk_test_fun (CVC.is_configured ()) expect_fun "cvc5" HolSmtLib.CVC_ORACLE_TAC
 
@@ -837,17 +809,17 @@ in
 
     (* NIA: product of nonneg *)
     (``(x:int) >= 0 /\ (y:int) >= 0 ==> x * y >= 0``,
-      [thm_NLA, thm_Z3, thm_Z3p_v4, thm_CVCp]),
+      [thm_Z3, thm_Z3p_v4, thm_CVCp]),
     (* NIA: square nonneg *)
-    (``(x:int) * x >= 0``, [thm_NLA, thm_Z3, thm_Z3p_v4, thm_CVCp]),
+    (``(x:int) * x >= 0``, [thm_Z3, thm_Z3p_v4, thm_CVCp]),
     (* NIA: bounded product *)
     (``(x:int) >= 5 /\ (y:int) >= 5 ==> x * y >= 25``,
-      [thm_NLA, thm_Z3, thm_Z3p_v4, thm_CVCp]),
+      [thm_Z3, thm_Z3p_v4, thm_CVCp]),
     (* NRA: product of nonneg *)
     (``(x:real) >= 0 /\ (y:real) >= 0 ==> x * y >= 0``,
-      [thm_NLA, thm_Z3, thm_Z3p_v4, thm_CVCp]),
+      [thm_Z3, thm_Z3p_v4, thm_CVCp]),
     (* NRA: square nonneg *)
-    (``(x:real) * x >= 0``, [thm_NLA, thm_Z3, thm_Z3p_v4, thm_CVCp]),
+    (``(x:real) * x >= 0``, [thm_Z3, thm_Z3p_v4, thm_CVCp]),
 
     (* arithmetic inequalities: <, <=, >, >= *)
 
