@@ -985,8 +985,10 @@ let
           MUL_RULE (CONJ (translate p1) (translate p2))
   in
     fn prf =>
-       CONV_RULE(FIRST_CONV[NUMERIC_GE_CONV, NUMERIC_GT_CONV, NUMERIC_EQ_CONV])
-                (translate prf)
+       let val th = translate prf
+       in CONV_RULE(FIRST_CONV[NUMERIC_GE_CONV, NUMERIC_GT_CONV, NUMERIC_EQ_CONV])
+                   th
+       end
   end
 
   val init_conv =
