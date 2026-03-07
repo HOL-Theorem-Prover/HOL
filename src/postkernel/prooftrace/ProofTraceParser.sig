@@ -9,7 +9,7 @@ val parse: string -> root ptr * heap
 
 val heapSize: heap -> int
 
-datatype 'a any = Int of int | Bytes of string | Obj of 'a list | Other
+datatype 'a any = Int of int | Bytes of Word8VectorSlice.slice | Obj of 'a list | Other
 val any: heap -> (unit, 'A) gparser -> ('b, 'A any) gparser
 
 val shVariant: heap -> 'a ptr -> int * unit ptr list

@@ -1,6 +1,5 @@
 signature ProofTraceConverter = sig
 
-include ProofTraceParser
-val convert: root ptr * heap -> string -> unit
+val convert: ProofTraceParser.root ProofTraceParser.ptr * ProofTraceParser.heap -> string -> unit
 
 end
