@@ -201,11 +201,11 @@ datatype thm_src_location (* option-like *)
 
 type thminfo = {loc: thm_src_location, class: class, private: bool}
 
-type trace_file = (
-  (* theory *)    string,
-  (* parents *)   (string * string) list,
-  (* types *)     (string * (* arity *) int) list,
-  (* constants *) (string * hol_type) list,
-  (* all_thms *)  (string * thm * thminfo) list,
-  (* mldeps *)    string list)
+type trace_file =
+  { types     : (string * int) list,
+    mldeps    : string list,
+    theory    : string,
+    parents   : (string * string) list,
+    all_thms  : (string * thm * thminfo) list,
+    constants : (string * hol_type) list }
 ```

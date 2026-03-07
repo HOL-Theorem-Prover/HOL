@@ -154,12 +154,12 @@ type proof = unit
 fun shThm c w = case get64 (obj c w) of f => (f 8, f 16, arg c 0 (f 24))
 
 fun shRoot c w = case get64 (obj c w) of f =>
-  { theory = str c (f 0),
-    parents = f 8,
-    types = f 16,
-    constants = f 24,
+  { types = f 0,
+    mldeps = f 8,
+    theory = str c (f 16),
+    parents = f 24,
     all_thms = f 32,
-    mldeps = f 40 }
+    constants = f 40 }
 
 fun shThmInfo c w = {private = arg c 2 w = 0w3}
 

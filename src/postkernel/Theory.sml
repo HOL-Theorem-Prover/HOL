@@ -967,7 +967,13 @@ fun export_theory_return_hash () = let
       in
         theory_out (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
         theory_out (TheoryPP.pp_struct hash structthry) ostrm2;
-        Tracing.trace_theory name structthry;
+        Tracing.trace_theory name {
+          theory    = thyname,
+          parents   = #parents structthry,
+          types     = #types structthry,
+          constants = #constants structthry,
+          all_thms  = all_thms,
+          mldeps    = #mldeps structthry };
         mesg "done.\n";
         if !report_times then
           (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^ " to build\n");
