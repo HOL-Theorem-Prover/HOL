@@ -1,3 +1,7 @@
+val _ = use "/home/mario/HOL4-stable/src/postkernel/prooftrace/ProofTraceParser.sig";
+val _ = use "/home/mario/HOL4-stable/src/postkernel/prooftrace/ProofTraceParser.sml";
+val _ = use "/home/mario/HOL4-stable/src/postkernel/prooftrace/ProofTraceConverter.sig";
+val _ = use "/home/mario/HOL4-stable/src/postkernel/prooftrace/ProofTraceConverter.sml";
 open ProofTraceParser
 open Redblackmap
 
@@ -53,7 +57,7 @@ fun mk_rules {string,term,thm,hol_type,list,pair,opt,four} =
       ("deductAntisym", [thm, thm]),
       ("deleted", [])
   ]
-(* 
+(*
   compute_prf of (compute_args * thm list) * term
   where compute_args = {
     num_type   : hol_type,
@@ -96,16 +100,16 @@ fun mk_add_def thyname heap = let
     val () = BoolArray.update(seen, ptr thm_ptr, true)
     val (_, _, proof_ptr) = shThm heap thm_ptr
     val (i, args_ptrs) = shVariant heap proof_ptr
-    val rs = mk_rules (do_all_thms heap (add_def o castPtr)) 
+    val rs = mk_rules (do_all_thms heap (add_def o castPtr))
     val (rule_name, args_rs) = Array.sub(rs, i)
     fun add_thm_ptr NONE = thm_ptr
-      | add_thm_ptr _ = raise Fail "add_def dup" 
-    fun check_thy defthy = 
+      | add_thm_ptr _ = raise Fail "add_def dup"
+    fun check_thy defthy =
       if defthy = thyname then () else raise Fail "add_def thy"
     fun add_const nm = tm_defs := update(!tm_defs, nm, add_thm_ptr)
     val () = if rule_name <> "Def_const_list" then () else let
       (* val () = print "Def_const_list\n" *)
-      val () = check_thy $ str heap (castPtr (el 1 args_ptrs)) 
+      val () = check_thy $ str heap (castPtr (el 1 args_ptrs))
       val names = list heap (#1 o tuple2 heap (str heap, I))
                             (castPtr (el 2 args_ptrs))
     in List.app add_const names end
@@ -132,14 +136,15 @@ fun mk_add_def thyname heap = let
   in () end
 in (tm_defs, ty_defs, add_def) end
 
-val trDB : (string, (string, thm) dict) dict ref 
+val trDB : (string, (string, thm) dict) dict ref
   = ref (mkDict String.compare)
 
 val replay_prefix = "tr_"; (* can be empty if we start from min *)
 
 datatype hol_obj =
    Ty of hol_type
- | Tm of term
+ | CTm of term
+ | OTm of int * int * term
  | Th of thm
  | Str of string
  | Pair of hol_obj * hol_obj
@@ -148,7 +153,7 @@ datatype hol_obj =
  | Four of hol_obj * (hol_obj * (hol_obj * hol_obj))
  | Unknown
 fun destTy (Ty ty) = ty | destTy _ = raise Fail "destTy"
-fun destTm (Tm tm) = tm | destTm _ = raise Fail "destTm"
+(* fun destTm (Tm tm) = tm | destTm _ = raise Fail "destTm" *)
 fun destTh (Th th) = th | destTh _ = raise Fail "destTh"
 fun destStr (Str x) = x | destStr _ = raise Fail "destStr"
 fun destPair (Pair x) = x | destPair _ = raise Fail "destPair"
@@ -162,7 +167,7 @@ val thyname = "bool";
 
 fun replay thyname = let
 
-  val filename =  thyname ^ "Theory.tr.gz";
+  val filename = thyname ^ "Theory.tr.gz";
   val (root_ptr, heap) = parse filename;
   val {all_thms, ...} = shRoot heap root_ptr;
   (*
@@ -174,7 +179,7 @@ fun replay thyname = let
         val () = appList heap (tuple3 heap (I, ad, I)) all_thms
     in (!tms, !tys) end
 
-  val replay_thyname = replay_prefix ^ thyname; 
+  val replay_thyname = replay_prefix ^ thyname;
   fun mk_thyname rawThy = if rawThy = "min" then rawThy
                           else replay_thyname ^ rawThy
   val replayed_heap = Array.array(heapSize heap, Unknown);
@@ -193,6 +198,8 @@ fun replay thyname = let
   fun replay_opt f = cache (Opt,destOpt) (option heap f)
   fun replay_four f = cache (Four,destFour) (tuple4 heap f)
 
+  val snum = ref 0
+
   fun check_def map rawThy nm =
     if rawThy = thyname then case peek (map, nm)
     of SOME thp => ignore (replay_thm thp)
@@ -209,20 +216,40 @@ fun replay thyname = let
         in mk_thy_type {Thy=mk_thyname rawThy, Tyop=Tyop, Args=Args} end
   ) ty_ptr
 
-  and replay_term tm_ptr =
-  cache (Tm,destTm) (fn tm_ptr =>
-    case shTerm heap tm_ptr of
-      Abs (t1,t2) => mk_abs (replay_term t1, replay_term t2)
-    | Comb (t1,t2) => mk_comb (replay_term t1, replay_term t2)
-    | Fv (s, ty) => mk_var (s, replay_type ty)
-    | Const (idp, typ) => let
+  and replay_term_core (p as (sid, s)) tm_ptr = let
+    val key = ptr tm_ptr
+    fun build () = let
+      val (depth, tm) = case shTerm heap tm_ptr of
+        Abs (t1,t2) => let
+        val (_, x) = replay_term_core p t1
+        val n = !snum; val _ = snum := n + 1
+        val (d, t2) = replay_term_core (n, Subst.cons (s, x)) t2
+        in (Int.max (0, d - 1), mk_abs (x, t2)) end
+      | Comb (t1,t2) => let
+        val (d1, t1) = replay_term_core p t1
+        val (d2, t2) = replay_term_core p t2
+        in (Int.max (d1, d2), mk_comb (t1, t2)) end
+      | Fv (s, ty) => (0, mk_var (s, replay_type ty))
+      | Const (idp, typ) => let
         val (rawThy,Name) = ident heap idp
         val () = check_def tm_defs rawThy Name
-        val ty = replay_type typ 
-        in mk_thy_const {Thy=mk_thyname rawThy, Name=Name, Ty=ty} end
-    | Clos _ => raise Fail "replay_term Clos"
-    | Bv _ => raise Fail "replay_term Bv"
-  ) tm_ptr
+        val ty = replay_type typ
+        in (0, mk_thy_const {Thy=mk_thyname rawThy, Name=Name, Ty=ty}) end
+      | Clos _ => raise Fail "replay_term Clos"
+      | Bv n => case Subst.exp_rel (s, n) of
+          (_, SOME t) => (n + 1, t)
+        | (_, NONE) => raise Fail "open term"
+      val value = if depth = 0 then CTm tm else OTm (depth, sid, tm)
+      in Array.update(replayed_heap, key, value); (depth, tm) end
+    in
+      case Array.sub(replayed_heap, key) of
+        Unknown => build ()
+      | CTm tm => (0, tm)
+      | OTm (d, sid', tm) => if sid = sid' then (d, tm) else build ()
+      | _ => raise Fail "destTm"
+    end
+
+  and replay_term tm_ptr = #2 (replay_term_core (0, Subst.id) tm_ptr)
 
   and replay_thm (thm_ptr: thm ptr) =
   cache (Th,destTh) (fn thm_ptr => let
@@ -236,7 +263,7 @@ fun replay thyname = let
 
   and rules() = mk_rules {
     string = Str o replay_str o castPtr,
-    term = Tm o replay_term o castPtr,
+    term = CTm o replay_term o castPtr,
     thm = Th o replay_thm o castPtr,
     hol_type = Ty o replay_type o castPtr,
     list = fn f => List o replay_list f o castPtr,
