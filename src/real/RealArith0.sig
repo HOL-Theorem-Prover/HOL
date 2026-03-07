@@ -43,7 +43,7 @@ sig
                              thm list * thm list * thm list -> 'a
 
  (* for REAL_LINEAR_PROVER, 0: nothing, 1: minimal, 2+: details *)
-  val verbose_level        : int ref (* default: 1 *)
+  val verbose_level        : int ref (* default: 0 *)
 
   val GEN_REAL_ARITH0:
     (rat -> term) * conv * conv * conv * conv * conv * conv * conv * conv * conv *
