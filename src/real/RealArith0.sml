@@ -298,7 +298,10 @@ open Int realSyntax Rewrite
 val NNF_CONV = normalForms.NNFD_CONV
 
 val chatting = ref (if !Globals.interactive then true else false)
-val verbose_level = ref 1
+(* Keep the linear/Positivstellensatz prover quiet by default in
+   interactive sessions. Users can still raise this ref when they want
+   detailed trace output for debugging. *)
+val verbose_level = ref 0
 
 fun print_verbose (message,default) =
   if !chatting andalso !verbose_level > 1 then print message
@@ -985,8 +988,18 @@ let
           MUL_RULE (CONJ (translate p1) (translate p2))
   in
     fn prf =>
-       CONV_RULE(FIRST_CONV[NUMERIC_GE_CONV, NUMERIC_GT_CONV, NUMERIC_EQ_CONV])
-                (translate prf)
+       let
+         val raw = translate prf
+       in
+         CONV_RULE
+           ((* The proof tree above normalizes products and sums locally.
+               Run one final whole-polynomial normalization pass before the
+               numeric contradiction conversion so the conclusion is reduced
+               to a ground comparison. *)
+            LAND_CONV POLY_CONV THENC
+            FIRST_CONV[NUMERIC_GE_CONV, NUMERIC_GT_CONV, NUMERIC_EQ_CONV])
+           raw
+       end
   end
 
   val init_conv =
@@ -1003,7 +1016,9 @@ let
     NNF_NORM_CONV THENC
     SKOLEM_CONV THENC
     PRENEX_CONV THENC
-    DNF_CONV (* was: WEAK_DNF_CONV in HOL-Light *)
+    DNF_CONV
+    (* HOL Light uses WEAK_DNF_CONV here; DNF_CONV gives the clause shape
+       expected by the prover pipeline below. *)
 
   fun overall dun ths =
     case ths of
