@@ -73,16 +73,8 @@ fun do_all_thms heap f = {
 
 (*
   val [(_,thm_ptr)] = listItems (!tm_defs)
-*)
-val tm_defs : (string, thm ptr) dict ref = ref (mkDict String.compare)
-val ty_defs : (string, thm ptr) dict ref = ref (mkDict String.compare)
-
-(*
-val debug_ptr: thm ptr ref = ref (castPtr root_ptr)
-val thm_ptr = !debug_ptr
-*)
-
-(*
+  val debug_ptr: thm ptr ref = ref (castPtr root_ptr)
+  val thm_ptr = !debug_ptr
   ("Def_const_list", [string, list (pair (string, hol_type)), thm]),
   ("Def_const", [pair (string, string), term]),
   ("Def_spec", [list term, thm]),
@@ -90,6 +82,8 @@ val thm_ptr = !debug_ptr
   val thm_ptr = el 1 thm_ptrs
 *)
 fun mk_add_def thyname heap = let
+  val tm_defs : (string, thm ptr) dict ref = ref (mkDict String.compare)
+  val ty_defs : (string, thm ptr) dict ref = ref (mkDict String.compare)
   val seen = BoolArray.array(heapSize heap, false)
   fun add_def (thm_ptr: thm ptr) =
     if BoolArray.sub(seen, ptr thm_ptr) then () else let
@@ -108,40 +102,43 @@ fun mk_add_def thyname heap = let
       if defthy = thyname then () else raise Fail "add_def thy"
     fun add_const nm = tm_defs := update(!tm_defs, nm, add_thm_ptr)
     val () = if rule_name <> "Def_const_list" then () else let
-      val () = print "Def_const_list\n"
+      (* val () = print "Def_const_list\n" *)
       val () = check_thy $ str heap (castPtr (el 1 args_ptrs)) 
       val names = list heap (#1 o tuple2 heap (str heap, I))
                             (castPtr (el 2 args_ptrs))
     in List.app add_const names end
     val () = if rule_name <> "Def_const" then () else let
-      val () = print "Def_const\n"
+      (* val () = print "Def_const\n" *)
       val ((),nm) = tuple2 heap (check_thy o str heap, str heap)
                                 (castPtr (el 1 args_ptrs))
     in add_const nm end
     fun get_const (Const (idp,_)) = ident heap idp
       | get_const _ = raise Fail "add_def spec"
     val () = if rule_name <> "Def_spec" then () else let
-      val () = print "Def_spec\n"
+      (* val () = print "Def_spec\n" *)
       val shtms = list heap (shTerm heap) (castPtr (el 1 args_ptrs))
       val (defthys, nms) = unzip (List.map get_const shtms)
       val () = List.app check_thy defthys
     in List.app add_const nms end
     val () = if rule_name <> "Def_tyop" then () else let
-      val () = print "Def_tyop\n"
+      (* val () = print "Def_tyop\n" *)
       val ((),tyop) = tuple2 heap (check_thy o str heap, str heap)
                                   (castPtr (el 1 args_ptrs))
     in ty_defs := update(!ty_defs, tyop, add_thm_ptr)
     end
     val _ = map2 (fn f => fn g => f g) args_rs args_ptrs
   in () end
-in add_def end
+in (tm_defs, ty_defs, add_def) end
 
 val trDB : (string, (string, thm) dict) dict ref 
   = ref (mkDict String.compare)
 
 val replay_prefix = "tr_"; (* can be empty if we start from min *)
 
-datatype hol_obj = Ty of hol_type | Tm of term | Thm of thm | Unknown
+datatype hol_obj = Ty of hol_type | Tm of term | Th of thm | Unknown
+fun destTy (Ty ty) = ty | destTy _ = raise Fail "destTy"
+fun destTm (Tm tm) = tm | destTm _ = raise Fail "destTm"
+fun destTh (Th th) = th | destTh _ = raise Fail "destTh"
 
 (*
 val thyname = "bool";
@@ -150,15 +147,65 @@ val thyname = "bool";
 fun replay thyname = let
 
   val filename =  thyname ^ "Theory.tr.gz";
-  val replay_thyname = replay_prefix ^ thyname; 
   val (root_ptr, heap) = parse filename;
   val {all_thms, ...} = shRoot heap root_ptr;
   (*
     val all_ptrs = list heap (tuple3 heap (I, I, I)) all_thms
     val thm_ptrs = List.map (fn (_,(p,_)) => p) all_ptrs
   *)
-  val () = let val ad = mk_add_def thyname heap in
-             appList heap (tuple3 heap (I, ad, I)) all_thms
-           end
+  val (tm_defs, ty_defs) =
+    let val (tms,tys,ad) = mk_add_def thyname heap
+        val () = appList heap (tuple3 heap (I, ad, I)) all_thms
+    in (!tms, !tys) end
+
+  val replay_thyname = replay_prefix ^ thyname; 
   val replayed_heap = Array.array(heapSize heap, Unknown);
+
+  fun cache (mk_obj,dest_obj) mk_x x_ptr = let
+    val key = ptr x_ptr
+  in case Array.sub(replayed_heap, key) of Unknown =>
+       let val obj = mk_obj(mk_x())
+       in (Array.update(replayed_heap, key, obj); dest_obj obj) end
+     | obj => dest_obj obj
+  end
+
+  fun check_def map Thy nm =
+    if Thy = thyname then case peek (map, nm)
+    of SOME thp => ignore (replay_thm thp)
+     | _ => () else ()
+
+  and replay_type ty_ptr =
+  cache (Ty,destTy) (fn () =>
+    case shType heap ty_ptr of
+      Tyv s => mk_vartype s
+    | Tyapp (idp, args_ptr) => let
+        val (Thy,Tyop) = ident heap idp
+        val Args = list heap replay_type args_ptr
+        val () = check_def ty_defs Thy Tyop
+        in mk_thy_type {Thy=replay_prefix^Thy, Tyop=Tyop, Args=Args} end
+  ) ty_ptr
+
+  and replay_term tm_ptr =
+  cache (Tm,destTm) (fn () =>
+    case shTerm heap tm_ptr of
+      Abs (t1,t2) => mk_abs (replay_term t1, replay_term t2)
+    | Comb (t1,t2) => mk_comb (replay_term t1, replay_term t2)
+    | Fv (s, ty) => mk_var (s, replay_type ty)
+    | Const (idp, typ) => let
+        val (Thy,Name) = ident heap idp
+        val () = check_def tm_defs Thy Name
+        val ty = replay_type typ 
+        in mk_thy_const {Thy=replay_prefix^Thy, Name=Name, Ty=ty} end
+    | _ => raise Fail "replay_term"
+  ) tm_ptr
+
+  and replay_thm (thm_ptr: thm ptr) =
+  cache (Th,destTh) (fn () => raise Fail "replay_thm") thm_ptr
+
+  fun export p = let
+    val (nm, (th, _)) = tuple3 heap (str heap, replay_thm, I) p
+  in (nm, th) end
+  val thyDB = fromList String.compare (list heap export all_thms)
+  val () = trDB := update(!trDB, replay_thyname, fn NONE => thyDB
+                                      | _ => raise Fail "dup thy")
 in () end
