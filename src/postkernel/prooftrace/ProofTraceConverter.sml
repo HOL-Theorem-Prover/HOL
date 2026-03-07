@@ -85,7 +85,7 @@ fun convert (root, objs) file = let
     fun subst w = list (tup2 w)
     fun visitCompute1 w = case ptr w of p =>
       case Array.sub (cache, p) of Compute1 n => n | _ => let
-      val (char_eqns, (cval_terms, (cval_type, num_type))) = tuple4 objs (I, I, I, I) w
+      val (num_type, (char_eqns, (cval_type, cval_terms))) = tuple4 objs (I, I, I, I) w
       val buf = ref []
       fun write' s = buf := s :: !buf
       val _ = list (tup2 (string, term)) write' cval_terms
