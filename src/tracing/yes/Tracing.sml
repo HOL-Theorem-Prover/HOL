@@ -1,6 +1,5 @@
 structure Tracing :> Tracing =
 struct
-
 open TheoryPP
 
 fun export (file, x: 'a) = let
