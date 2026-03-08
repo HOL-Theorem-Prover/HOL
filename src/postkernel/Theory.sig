@@ -52,7 +52,7 @@ sig
 
 (* Support for persistent theories *)
 
-  val next_thm_id            : unit -> int
+  val add_anonymous_thm      : thm -> int (* for ThyDataSexp only *)
   val export_theory          : unit -> unit
 
 (* Make hooks available so that theory changes can be seen by

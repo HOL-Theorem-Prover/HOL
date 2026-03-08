@@ -236,11 +236,12 @@ fun thmwrite tmw th0 =
     val thy = Theory.current_theory()
     val th = if deps_saved th0 then th0
              else Thm.save_dep thy th0
+    val id = add_anonymous_thm th
   in
     HOLsexp.pair4_encode (tagwrite, HOLsexp.list_encode (HOLsexp.String o tmw),
                           HOLsexp.String, HOLsexp.Integer)
                          (Thm.tag th, concl th :: hyp th,
-                          thy, next_thm_id())
+                          thy, id)
   end
 fun thmreader tmr =
     pair4_decode (tagreader, list_decode (string_decode >> tmr),
