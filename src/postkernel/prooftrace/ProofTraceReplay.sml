@@ -6,7 +6,8 @@ open Lib HolKernel Redblackmap ProofTraceParser
 fun apply f g = f g
 fun mk_eq(l,r) = list_mk_icomb equality [l,r]
 
-fun mk_rules {string,term,thm,hol_type,list,pair,opt,four,new_type} =
+fun mk_rules {string,term,thm,hol_type,list,pair,opt,four,
+              new_term,new_type} =
    Array.fromList [
       ("ABS", [term, thm]),
       ("ALPHA", [term, term]),
@@ -27,7 +28,7 @@ fun mk_rules {string,term,thm,hol_type,list,pair,opt,four,new_type} =
       ("DISJ_CASES", [thm, thm, thm]),
       ("Def_const_list", [string, list (pair (string, hol_type)), thm]),
       ("Def_const", [pair (string, string), term]),
-      ("Def_spec", [list term, thm]),
+      ("Def_spec", [list new_term, thm]),
       ("Def_tyop", [pair (string, string), list hol_type, thm, new_type]),
       ("EQ_IMP_RULE1", [thm]),
       ("EQ_IMP_RULE2", [thm]),
@@ -71,7 +72,7 @@ fun do_all_thms heap (f: unit parser) = {
   opt = fn f => ignore o option heap f o castPtr,
   pair = fn fg => ignore o tuple2 heap fg o castPtr,
   string = K (),
-  term = K (),
+  term = K (), new_term = K (),
   thm = f,
   four = fn fghi => ignore o tuple4 heap fghi o castPtr
 }
@@ -178,7 +179,7 @@ fun replay thyname = let
   val replayed_heap = Array.array(heapSize heap, Unknown);
 
   val next_axiom_name = let
-    val names = ref ["SELECT_AX", "INFINITY_AX", "ETA_AX"]
+    val names = ref ["BOOL_CASES_AX", "SELECT_AX", "ETA_AX", "INFINITY_AX"]
   in 
     fn () => case !names of x::xs => x before names := xs
              | _ => raise Fail "next_axiom_name"
@@ -193,6 +194,11 @@ fun replay thyname = let
   end
 
   val debug : thm list ref = ref []
+  val dbg_print = print
+
+  fun get_const_id tm_ptr =
+    case shTerm heap tm_ptr of Const (idp,_) => ident heap idp
+    | _ => raise Fail "get_const_id"
 
   val replay_str = cache (Str,destStr) (str heap)
   fun replay_pair f = cache (Pair,destPair) (tuple2 heap f)
@@ -229,6 +235,7 @@ fun replay thyname = let
       in mk_comb(f,x) end
     | Const (idp,typ) => let
         val (Thy,Name) = ident heap idp
+        val () = dbg_print ("check_def "^Name^",")
         val () = check_def tm_defs Thy Name
         val ty = replay_type typ
       in mk_thy_const {Thy=Thy, Name=Name, Ty=ty}
@@ -250,6 +257,7 @@ fun replay thyname = let
     val (hyp_ptr, concl_ptr, proof_ptr) = shThm heap thm_ptr
     val (i, args_ptrs) = shVariant heap proof_ptr
     val (name, args_rs) = Array.sub(rules(), i)
+    val () = dbg_print (name^",")
     val aos = map2 apply args_rs args_ptrs
   in
     if name = "ABS" then
@@ -300,8 +308,14 @@ fun replay thyname = let
       val rhs = destTm (el 2 aos)
       val th = ASSUME (mk_eq(mk_var(Name, type_of rhs), rhs))
       in #2 (gen_prim_specification Thy th) end
-    else if name = "Def_spec" then
-      raise Fail ("replay_thm: Def_spec not yet implemented")
+    else if name = "Def_spec" then let
+      val ids = List.map ((destStr ## destStr) o destPair)
+                         (destList (el 1 aos))
+      val () = if List.all (equal thyname) (List.map #1 ids) then ()
+               else raise Fail "Def_spec thy"
+      val cnames = List.map #2 ids
+      val th = destTh (el 2 aos)
+    in prim_specification thyname cnames th end
     else if name = "Def_tyop" then let
       val (Thy,Tyop) = (destStr ## destStr) (destPair (el 1 aos))
       val th = destTh (el 3 aos)
@@ -310,9 +324,9 @@ fun replay thyname = let
                else ()
     in prim_type_definition ({Thy=Thy, Tyop=Tyop},th) end
     else if name = "EQ_IMP_RULE1" then
-      raise Fail ("replay_thm: EQ_IMP_RULE1 not yet implemented")
+      #1 (EQ_IMP_RULE (destTh (el 1 aos)))
     else if name = "EQ_IMP_RULE2" then
-      raise Fail ("replay_thm: EQ_IMP_RULE2 not yet implemented")
+      #2 (EQ_IMP_RULE (destTh (el 1 aos)))
     else if name = "EQ_MP" then
       EQ_MP (destTh (el 1 aos)) (destTh (el 2 aos))
     else if name = "EXISTS" then
@@ -328,8 +342,11 @@ fun replay thyname = let
                        (destList (el 1 aos))
       val th = destTh (el 2 aos)
     in INST_TYPE s th end
-    else if name = "INST" then
-      raise Fail ("replay_thm: INST not yet implemented")
+    else if name = "INST" then let
+      val s = List.map (op |-> o (destTm ## destTm) o destPair)
+                       (destList (el 1 aos))
+      val th = destTh (el 2 aos)
+    in INST s th end
     else if name = "MK_COMB" then
       MK_COMB (destTh (el 1 aos), destTh (el 2 aos))
     else if name = "MP" then
@@ -358,6 +375,8 @@ fun replay thyname = let
       raise Fail ("replay_thm: Specialize not yet implemented")
     else if name = "TRANS" then
       TRANS (destTh (el 1 aos)) (destTh (el 2 aos))
+      handle e as (HOL_ERR _) => (debug := [
+        destTh (el 1 aos), destTh (el 2 aos) ]; raise e)
     else if name = "compute" then
       raise Fail ("replay_thm: compute not yet implemented")
     else if name = "deductAntisym" then
@@ -373,6 +392,7 @@ fun replay thyname = let
     thm = Th o replay_thm o castPtr,
     hol_type = Ty o replay_type o castPtr,
     new_type = K Unknown,
+    new_term = Pair o (Str ## Str) o get_const_id o castPtr,
     list = fn f => List o replay_list f o castPtr,
     pair = fn f => Pair o replay_pair f o castPtr,
     opt = fn f => Opt o replay_opt f o castPtr,
@@ -380,11 +400,46 @@ fun replay thyname = let
   }
 
   fun export p = let
-    val (nm, (th, _)) = tuple3 heap (str heap, replay_thm, I) p
+    val (nm, (thp, _)) = tuple3 heap (str heap, I, I) p
+    val () = dbg_print ("Replaying "^nm^"...")
+    val th = replay_thm thp
+    val () = dbg_print " done\n"
   in (nm, th) end
+
+  val () = new_theory thyname
 
   val thyDB = fromList String.compare (list heap export all_thms)
 
   val () = trDB := update(!trDB, thyname, fn NONE => thyDB
                                       | _ => raise Fail "dup thy")
 in () end
+
+(*
+val () = replay "bool"
+val rm = find(!trDB,"bool")
+
+fun print_ty ty =
+  if is_vartype ty then dest_vartype ty
+  else let
+    val (opn, args) = dest_type ty
+    val args = List.map print_ty args
+  in if List.null args then opn
+     else String.concat["(", String.concatWith "," args, ") ", opn]
+  end
+
+fun print_tm tm =
+  if is_var tm then let
+    val (x,ty) = dest_var tm
+  in String.concat[x,":",print_ty ty] end
+  else if is_const tm then let
+    val (x,ty) = dest_const tm
+  in x end
+  else if is_abs tm then let
+    val (x,b) = dest_abs tm
+  in String.concat["(\\", print_tm x, ". ", print_tm b, ")"] end
+  else let val (f,x) = dest_comb tm in
+    String.concat["(", print_tm f, " ", print_tm x, ")"]
+  end
+
+print_tm(concl(find(rm,"INFINITY_AX")))
+*)
