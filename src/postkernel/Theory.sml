@@ -910,7 +910,11 @@ local
   fun fromHOLFS x = case HFS_NameMunge.HOLtoFS x
                       of NONE => x
                        | SOME {fullfile,...} => fullfile
+  val thm_id_nonce = ref 0
 in
+fun next_thm_id() = let val r = !thm_id_nonce;
+                        val () = thm_id_nonce := r + 1
+                    in r end
 fun export_theory_return_hash () = let
   val _ = hooks_or_abort (TheoryDelta.ExportTheory (current_theory()))
   val {name=thyname,facts,thydata,mldeps,...} = scrubCT()
@@ -961,6 +965,7 @@ fun export_theory_return_hash () = let
           val time_since = Time.-(time_now, !new_theory_time)
           val tstr = Lib.time_to_string time_since
           val () = mesg ("Exporting theory "^Lib.quote thyname^" ... ");
+          val () = thm_id_nonce := 0
           val () = theory_out (TheoryPP.pp_thydata structthry) ostrm3;
           val datfile = fromHOLFS holdatfile
           val hash = SHA1.sha1_file {filename=datfile}

@@ -52,6 +52,7 @@ sig
 
 (* Support for persistent theories *)
 
+  val next_thm_id            : unit -> int
   val export_theory          : unit -> unit
 
 (* Make hooks available so that theory changes can be seen by

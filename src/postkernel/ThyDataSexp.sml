@@ -233,14 +233,20 @@ fun deps_saved th =
 
 fun thmwrite tmw th0 =
   let
+    val thy = Theory.current_theory()
     val th = if deps_saved th0 then th0
-             else Thm.save_dep (Theory.current_theory()) th0
+             else Thm.save_dep thy th0
   in
-    HOLsexp.pair_encode (tagwrite, HOLsexp.list_encode (HOLsexp.String o tmw))
-                        (Thm.tag th, concl th :: hyp th)
+    HOLsexp.pair4_encode (tagwrite, HOLsexp.list_encode (HOLsexp.String o tmw),
+                          HOLsexp.String, HOLsexp.Integer)
+                         (Thm.tag th, concl th :: hyp th,
+                          thy, next_thm_id())
   end
 fun thmreader tmr =
-    pair_decode (tagreader, list_decode (string_decode >> tmr)) >> Thm.disk_thm
+    pair4_decode (tagreader, list_decode (string_decode >> tmr),
+                  string_decode, int_decode) >>
+    (fn (tag, terms, thy, id) =>
+       Thm.disk_thm (thy, Thm.SavedAnon id) (tag, terms))
 
 fun tag s enc x = HOLsexp.tagged_encode s enc x
 fun write (wrt as {strings,terms}) s =

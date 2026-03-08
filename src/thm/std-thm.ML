@@ -1296,10 +1296,12 @@ end
     Creating a theorem from disk
    ---------------------------------------------------------------------- *)
 
+datatype thm_id = SavedName of string | SavedAnon of int
+
 local
   val mk_disk_thm  = make_thm Count.Disk
 in
-fun disk_thm ((d,ocl), termlist) = let
+fun disk_thm _ ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
 in

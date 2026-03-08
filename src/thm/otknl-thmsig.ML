@@ -5,6 +5,7 @@ sig
 
   datatype proof =
     Axiom_prf
+  | Disk_prf of string * thm_id
   | deleted_prf
   | ABS_prf of term * thm
   | ALPHA_prf of term * term
