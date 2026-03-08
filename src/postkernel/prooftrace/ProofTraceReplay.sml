@@ -1,7 +1,10 @@
-open ProofTraceParser
-open Redblackmap
+(*
+val _ = PolyML.use (OS.Path.concat(Globals.HOLDIR, "tools-poly/holinteractive.ML"));
+*)
+open Lib HolKernel Redblackmap ProofTraceParser
 
 fun apply f g = f g
+fun mk_eq(l,r) = list_mk_icomb equality [l,r]
 
 fun mk_rules {string,term,thm,hol_type,list,pair,opt,four} =
    Array.fromList [

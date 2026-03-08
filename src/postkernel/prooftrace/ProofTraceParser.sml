@@ -1,5 +1,7 @@
 structure ProofTraceParser :> ProofTraceParser = struct
 
+open HolKernel
+
 fun decompressGzip (filename: string): Word8Vector.vector = let
   val proc = Unix.execute ("/usr/bin/gzip", ["-dc", filename])
   val (instream, outstream) = Unix.streamsOf proc
