@@ -6,7 +6,7 @@ open Lib HolKernel Redblackmap ProofTraceParser
 fun apply f g = f g
 fun mk_eq(l,r) = list_mk_icomb equality [l,r]
 
-fun mk_rules {string,term,thm,hol_type,list,pair,opt,four} =
+fun mk_rules {string,term,thm,hol_type,list,pair,opt,four,new_type} =
    Array.fromList [
       ("ABS", [term, thm]),
       ("ALPHA", [term, term]),
@@ -28,7 +28,7 @@ fun mk_rules {string,term,thm,hol_type,list,pair,opt,four} =
       ("Def_const_list", [string, list (pair (string, hol_type)), thm]),
       ("Def_const", [pair (string, string), term]),
       ("Def_spec", [list term, thm]),
-      ("Def_tyop", [pair (string, string), list hol_type, thm, hol_type]),
+      ("Def_tyop", [pair (string, string), list hol_type, thm, new_type]),
       ("EQ_IMP_RULE1", [thm]),
       ("EQ_IMP_RULE2", [thm]),
       ("EQ_MP", [thm, thm]),
@@ -66,7 +66,7 @@ fun mk_rules {string,term,thm,hol_type,list,pair,opt,four} =
 *)
 
 fun do_all_thms heap (f: unit parser) = {
-  hol_type = K (),
+  hol_type = K (), new_type = K (),
   list = fn f => appList heap f o castPtr,
   opt = fn f => ignore o option heap f o castPtr,
   pair = fn fg => ignore o tuple2 heap fg o castPtr,
@@ -192,14 +192,16 @@ fun replay thyname = let
      | obj => dest_obj obj
   end
 
+  val debug : thm list ref = ref []
+
   val replay_str = cache (Str,destStr) (str heap)
   fun replay_pair f = cache (Pair,destPair) (tuple2 heap f)
   fun replay_list f = cache (List,destList) (list heap f)
   fun replay_opt f = cache (Opt,destOpt) (option heap f)
   fun replay_four f = cache (Four,destFour) (tuple4 heap f)
 
-  fun check_def map rawThy nm =
-    if rawThy = thyname then case peek (map, nm)
+  fun check_def map Thy nm =
+    if Thy = thyname then case peek (map, nm)
     of SOME thp => ignore (replay_thm thp)
      | _ => () else ()
 
@@ -229,7 +231,13 @@ fun replay thyname = let
         val (Thy,Name) = ident heap idp
         val () = check_def tm_defs Thy Name
         val ty = replay_type typ
-      in mk_thy_const {Thy=Thy, Name=Name, Ty=ty} end
+      in mk_thy_const {Thy=Thy, Name=Name, Ty=ty}
+         handle e as (HOL_ERR _) =>
+           if Thy = thyname then
+             (new_constant(Name,ty);
+              prim_mk_const {Thy=Thy, Name=Name})
+           else raise e
+      end
     | Fv (s,typ) => mk_var(s, replay_type typ)
     | Bv n => List.nth(env, n)
     | _ => raise Fail "replay_term_core Clos"
@@ -294,8 +302,13 @@ fun replay thyname = let
       in #2 (gen_prim_specification Thy th) end
     else if name = "Def_spec" then
       raise Fail ("replay_thm: Def_spec not yet implemented")
-    else if name = "Def_tyop" then
-      raise Fail ("replay_thm: Def_tyop not yet implemented")
+    else if name = "Def_tyop" then let
+      val (Thy,Tyop) = (destStr ## destStr) (destPair (el 1 aos))
+      val th = destTh (el 3 aos)
+      val () = if thyname = "bool"
+               then check_def tm_defs thyname "TYPE_DEFINITION"
+               else ()
+    in prim_type_definition ({Thy=Thy, Tyop=Tyop},th) end
     else if name = "EQ_IMP_RULE1" then
       raise Fail ("replay_thm: EQ_IMP_RULE1 not yet implemented")
     else if name = "EQ_IMP_RULE2" then
@@ -310,8 +323,11 @@ fun replay thyname = let
       raise Fail ("replay_thm: GEN_ABS not yet implemented")
     else if name = "GEN" then
       GEN (destTm (el 1 aos)) (destTh (el 2 aos))
-    else if name = "INST_TYPE" then
-      raise Fail ("replay_thm: INST_TYPE not yet implemented")
+    else if name = "INST_TYPE" then let
+      val s = List.map (op |-> o (destTy ## destTy) o destPair)
+                       (destList (el 1 aos))
+      val th = destTh (el 2 aos)
+    in INST_TYPE s th end
     else if name = "INST" then
       raise Fail ("replay_thm: INST not yet implemented")
     else if name = "MK_COMB" then
@@ -356,6 +372,7 @@ fun replay thyname = let
     term = Tm o replay_term o castPtr,
     thm = Th o replay_thm o castPtr,
     hol_type = Ty o replay_type o castPtr,
+    new_type = K Unknown,
     list = fn f => List o replay_list f o castPtr,
     pair = fn f => Pair o replay_pair f o castPtr,
     opt = fn f => Opt o replay_opt f o castPtr,
