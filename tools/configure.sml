@@ -380,6 +380,7 @@ val _ =
     FileSys.chDir "../../src/portableML/mosml";
     compile ["-I", "../../../tools/Holmake"] "SHA1_ML.sig";
     compile ["-I", "../../../tools/Holmake"] "SHA1_ML.sml";
+    compile [] "MLSYSPortable.sml";
     FileSys.chDir "..";
     compile ["-I", "mosml", "-I", "../../tools/Holmake"] "SHA1.sig";
     compile ["-I", "mosml", "-I", "../../tools/Holmake"] "SHA1.sml";
