@@ -345,8 +345,12 @@ fun replay thyname = let
       REFL (destCTm (el 1 aos))
     else if name = "SPEC" then
       SPEC (destCTm (el 1 aos)) (destTh (el 2 aos))
-    else if name = "SUBST" then
-      raise Fail ("replay_thm: SUBST not yet implemented")
+    else if name = "SUBST" then let
+      val s = List.map (op |-> o (destCTm ## destTh) o destPair)
+                       (destList (el 1 aos))
+      val t = destCTm (el 2 aos)
+      val th = destTh (el 3 aos)
+    in SUBST s t th end
     else if name = "SYM" then
       SYM (destTh (el 1 aos))
     else if name = "Specialize" then
