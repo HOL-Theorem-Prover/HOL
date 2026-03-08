@@ -140,8 +140,7 @@ val trDB : (string, (string, thm) dict) dict ref
 
 datatype hol_obj =
    Ty of hol_type
- | CTm of term
- | OTm of int * int * term
+ | Tm of term
  | Th of thm
  | Str of string
  | Pair of hol_obj * hol_obj
@@ -150,7 +149,7 @@ datatype hol_obj =
  | Four of hol_obj * (hol_obj * (hol_obj * hol_obj))
  | Unknown
 fun destTy (Ty ty) = ty | destTy _ = raise Fail "destTy"
-fun destCTm (CTm tm) = tm | destCTm _ = raise Fail "destCTm"
+fun destTm (Tm tm) = tm | destTm _ = raise Fail "destTm"
 fun destTh (Th th) = th | destTh _ = raise Fail "destTh"
 fun destStr (Str x) = x | destStr _ = raise Fail "destStr"
 fun destPair (Pair x) = x | destPair _ = raise Fail "destPair"
@@ -177,8 +176,6 @@ fun replay thyname = let
     in (!tms, !tys) end
 
   val replayed_heap = Array.array(heapSize heap, Unknown);
-
-  val next_subst_id = ref 0
 
   val next_axiom_name = let
     val names = ref ["SELECT_AX", "INFINITY_AX", "ETA_AX"]
@@ -217,40 +214,28 @@ fun replay thyname = let
         in mk_thy_type {Thy=Thy, Tyop=Tyop, Args=Args} end
   ) ty_ptr
 
-  and replay_term_core (p as (sid, s)) tm_ptr = let
-    val key = ptr tm_ptr
-    fun build () = let
-      val (depth, tm) = case shTerm heap tm_ptr of
-        Abs (t1,t2) => let
-        val (_, x) = replay_term_core p t1
-        val n = !next_subst_id; val _ = next_subst_id := n + 1
-        val (d, t2) = replay_term_core (n, Subst.cons (s, x)) t2
-        in (Int.max (0, d - 1), mk_abs (x, t2)) end
-      | Comb (t1,t2) => let
-        val (d1, t1) = replay_term_core p t1
-        val (d2, t2) = replay_term_core p t2
-        in (Int.max (d1, d2), mk_comb (t1, t2)) end
-      | Fv (s, ty) => (0, mk_var (s, replay_type ty))
-      | Const (idp, typ) => let
+  and replay_term_core env tm_ptr =
+    case shTerm heap tm_ptr of
+      Abs (t1,t2) => let
+        val x = replay_term_core env t1
+        val g = genvar(type_of x)
+        val b = replay_term_core (g::env) t2
+      in mk_abs(g,b) end
+    | Comb (t1,t2) => let
+        val f = replay_term_core env t1
+        val x = replay_term_core env t2
+      in mk_comb(f,x) end
+    | Const (idp,typ) => let
         val (Thy,Name) = ident heap idp
         val () = check_def tm_defs Thy Name
         val ty = replay_type typ
-        in (0, mk_thy_const {Thy=Thy, Name=Name, Ty=ty}) end
-      | Clos _ => raise Fail "replay_term Clos"
-      | Bv n => case Subst.exp_rel (s, n) of
-          (_, SOME t) => (n + 1, t)
-        | (_, NONE) => raise Fail "open term"
-      val value = if depth = 0 then CTm tm else OTm (depth, sid, tm)
-      in Array.update(replayed_heap, key, value); (depth, tm) end
-    in
-      case Array.sub(replayed_heap, key) of
-        Unknown => build ()
-      | CTm tm => (0, tm)
-      | OTm (d, sid', tm) => if sid = sid' then (d, tm) else build ()
-      | _ => raise Fail "destTm"
-    end
+      in mk_thy_const {Thy=Thy, Name=Name, Ty=ty} end
+    | Fv (s,typ) => mk_var(s, replay_type typ)
+    | Bv n => List.nth(env, n)
+    | _ => raise Fail "replay_term_core Clos"
 
-  and replay_term tm_ptr = #2 (replay_term_core (0, Subst.id) tm_ptr)
+  and replay_term tm_ptr =
+  cache (Tm,destTm) (replay_term_core []) tm_ptr
 
   and replay_thm (thm_ptr: thm ptr) =
   cache (Th,destTh) (fn thm_ptr => let
@@ -260,15 +245,15 @@ fun replay thyname = let
     val aos = map2 apply args_rs args_ptrs
   in
     if name = "ABS" then
-      ABS (destCTm (el 1 aos)) (destTh (el 2 aos))
+      ABS (destTm (el 1 aos)) (destTh (el 2 aos))
     else if name = "ALPHA" then
-      ALPHA (destCTm (el 1 aos)) (destCTm (el 2 aos))
+      ALPHA (destTm (el 1 aos)) (destTm (el 2 aos))
     else if name = "AP_TERM" then
-      AP_TERM (destCTm (el 1 aos)) (destTh (el 2 aos))
+      AP_TERM (destTm (el 1 aos)) (destTh (el 2 aos))
     else if name = "AP_THM" then
-      AP_THM (destTh (el 1 aos)) (destCTm (el 2 aos))
+      AP_THM (destTh (el 1 aos)) (destTm (el 2 aos))
     else if name = "ASSUME" then
-      ASSUME (destCTm (el 1 aos))
+      ASSUME (destTm (el 1 aos))
     else if name = "Axiom" then let
       val h = ref (HOLset.empty Term.compare)
       fun add t = h := HOLset.add(!h, t)
@@ -279,13 +264,13 @@ fun replay thyname = let
       val () = if HOLset.isEmpty h then () else raise Fail "Axiom hyps"
     in new_axiom(next_axiom_name(), c) end
     else if name = "BETA_CONV" then
-      BETA_CONV (destCTm (el 1 aos))
+      BETA_CONV (destTm (el 1 aos))
     else if name = "Beta" then
       raise Fail ("replay_thm: Beta not yet implemented")
     else if name = "CCONTR" then
-      CCONTR (destCTm (el 1 aos)) (destTh (el 2 aos))
+      CCONTR (destTm (el 1 aos)) (destTh (el 2 aos))
     else if name = "CHOOSE" then
-      CHOOSE (destCTm (el 1 aos), destTh (el 2 aos)) (destTh (el 3 aos))
+      CHOOSE (destTm (el 1 aos), destTh (el 2 aos)) (destTh (el 3 aos))
     else if name = "CONJUNCT1" then
       CONJUNCT1 (destTh (el 1 aos))
     else if name = "CONJUNCT2" then
@@ -293,18 +278,18 @@ fun replay thyname = let
     else if name = "CONJ" then
       CONJ (destTh (el 1 aos)) (destTh (el 2 aos))
     else if name = "DISCH" then
-      DISCH (destCTm (el 1 aos)) (destTh (el 2 aos))
+      DISCH (destTm (el 1 aos)) (destTh (el 2 aos))
     else if name = "DISJ1" then
-      DISJ1 (destTh (el 1 aos)) (destCTm (el 2 aos))
+      DISJ1 (destTh (el 1 aos)) (destTm (el 2 aos))
     else if name = "DISJ2" then
-      DISJ2 (destCTm (el 1 aos)) (destTh (el 2 aos))
+      DISJ2 (destTm (el 1 aos)) (destTh (el 2 aos))
     else if name = "DISJ_CASES" then
       DISJ_CASES (destTh (el 1 aos)) (destTh (el 2 aos)) (destTh (el 3 aos))
     else if name = "Def_const_list" then
       raise Fail ("replay_thm: Def_const_list not yet implemented")
     else if name = "Def_const" then let
       val (Thy,Name) = (destStr ## destStr) (destPair (el 1 aos))
-      val rhs = destCTm (el 2 aos)
+      val rhs = destTm (el 2 aos)
       val th = ASSUME (mk_eq(mk_var(Name, type_of rhs), rhs))
       in #2 (gen_prim_specification Thy th) end
     else if name = "Def_spec" then
@@ -318,13 +303,13 @@ fun replay thyname = let
     else if name = "EQ_MP" then
       EQ_MP (destTh (el 1 aos)) (destTh (el 2 aos))
     else if name = "EXISTS" then
-      EXISTS (destCTm (el 1 aos), destCTm (el 2 aos)) (destTh (el 3 aos))
+      EXISTS (destTm (el 1 aos), destTm (el 2 aos)) (destTh (el 3 aos))
     else if name = "GENL" then
       raise Fail ("replay_thm: GENL not yet implemented")
     else if name = "GEN_ABS" then
       raise Fail ("replay_thm: GEN_ABS not yet implemented")
     else if name = "GEN" then
-      GEN (destCTm (el 1 aos)) (destTh (el 2 aos))
+      GEN (destTm (el 1 aos)) (destTh (el 2 aos))
     else if name = "INST_TYPE" then
       raise Fail ("replay_thm: INST_TYPE not yet implemented")
     else if name = "INST" then
@@ -342,13 +327,13 @@ fun replay thyname = let
     else if name = "NOT_INTRO" then
       NOT_INTRO (destTh (el 1 aos))
     else if name = "REFL" then
-      REFL (destCTm (el 1 aos))
+      REFL (destTm (el 1 aos))
     else if name = "SPEC" then
-      SPEC (destCTm (el 1 aos)) (destTh (el 2 aos))
+      SPEC (destTm (el 1 aos)) (destTh (el 2 aos))
     else if name = "SUBST" then let
-      val s = List.map (op |-> o (destCTm ## destTh) o destPair)
+      val s = List.map (op |-> o (destTm ## destTh) o destPair)
                        (destList (el 1 aos))
-      val t = destCTm (el 2 aos)
+      val t = destTm (el 2 aos)
       val th = destTh (el 3 aos)
     in SUBST s t th end
     else if name = "SYM" then
@@ -368,7 +353,7 @@ fun replay thyname = let
 
   and rules() = mk_rules {
     string = Str o replay_str o castPtr,
-    term = CTm o replay_term o castPtr,
+    term = Tm o replay_term o castPtr,
     thm = Th o replay_thm o castPtr,
     hol_type = Ty o replay_type o castPtr,
     list = fn f => List o replay_list f o castPtr,
