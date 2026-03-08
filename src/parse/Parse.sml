@@ -441,14 +441,20 @@ val absyn_to_term =
 
 fun Term q = absyn_to_term (term_grammar()) (Absyn q)
 
-fun typedTerm qtm ty =
-   let fun trail s = [QUOTE (s^"):"), ANTIQUOTE(ty_antiq ty), QUOTE""]
-   in
-   Term (case (Lib.front_last qtm)
-        of ([],QUOTE s) => trail ("("^s)
-         | (QUOTE s::rst, QUOTE s') => (QUOTE ("("^s)::rst) @ trail s'
-         | _ => raise ERROR"typedTerm" "badly formed quotation")
-   end;
+fun typedTerm qtm ty = let
+  val tyclose = [ANTIQUOTE (ty_antiq ty), QUOTE ""]
+  fun open_ (QUOTE s) t = QUOTE ("(" ^ s) :: t
+    | open_ frag      t = QUOTE "(" :: frag :: t
+  fun close (QUOTE s)   = QUOTE (s ^ "):") :: tyclose
+    | close frag        = frag :: QUOTE "):" :: tyclose
+  val frags =
+      case Lib.front_last qtm of
+        ([], sole)        => open_ sole (QUOTE "):" :: tyclose)
+      | (hd :: rst, last) => open_ hd (rst @ close last)
+      | _                 => raise ERROR "Parse.typedTerm" "unreachable"
+in
+  Term frags
+end;
 
 fun parse_from_grammars (tyG, tmG) = let
   val ty_parser = parse_type.parse_type Pretype.typantiq_constructors false tyG

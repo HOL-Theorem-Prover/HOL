@@ -346,6 +346,14 @@ val _ =
     FileSys.chDir "../core";
     compile [] "Holmake_tools_dtype.sml";
     FileSys.chDir "../../parsing";
+    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLAst.sig";
+    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLAst.sml";
+    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLParser.sig";
+    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLParser.sml";
+    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLToSML.sig";
+    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLToSML.sml";
+    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLPrinter.sig";
+    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLPrinter.sml";
     compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HolParser.sig";
     compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HolParser.sml";
     FileSys.chDir "../Holmake";

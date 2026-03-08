@@ -19,7 +19,7 @@ test1:
           echo done > ../$@
 
 test2: test1
-	/bin/rm -f sibling/sibling-tgt && cd child && \
+	rm -f sibling/sibling-tgt && cd child && \
           $(HOLDIR)/bin/Holmake cleanAll && \
           $(HOLDIR)/bin/Holmake $(HMOPTS) --no_preexecs && \
           [ ! -r tgt ] && echo tgt absent && \

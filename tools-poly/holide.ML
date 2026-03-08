@@ -16,7 +16,7 @@ val initialize:
     error: error -> unit,
     runtimeExn: exn -> unit,
     mlParseTree: PolyML.parseTree -> unit,
-    holParseTree: HolParser.Simple.decl -> unit
+    holParseTree: HolParserOld.Simple.decl -> unit
   } -> unit
 
 val moveUp: subtree -> subtree
@@ -64,14 +64,14 @@ fun initialize {
     val j = i + #2 (Substring.base s)
     in f (fn s => push (FlatChunk (SOME j, Substring.full s))) (i, s) end
   val {feed, regular, finish, doDecl, ...} =
-    HolParser.ToSML.mkPushTranslatorCore {
+    HolParserOld.ToSML.mkPushTranslatorCore {
       filename = filename, parseError = parseError, quietOpen = true,
       read = fn _ => !sr before sr := ""
     } {
       regular = push o RegularChunk,
       aux = fn s => push (FlatChunk (NONE, Substring.full s)),
-      strstr = encode HolParser.ToSML.strstr,
-      strcode = encode HolParser.ToSML.strcode
+      strstr = encode HolParserOld.ToSML.strstr,
+      strcode = encode HolParserOld.ToSML.strcode
     }
   val atEnd = ref false
   val pos = ref 0
@@ -80,8 +80,8 @@ fun initialize {
       s :: rest => (queue := rest; s)
     | [] => if !atEnd then EOFChunk else (
       case feed () of
-        HolParser.Simple.TopDecl d => (holParseTree d; pos := doDecl true (!pos) d)
-      | HolParser.Simple.EOF p =>
+        HolParserOld.Simple.TopDecl d => (holParseTree d; pos := doDecl true (!pos) d)
+      | HolParserOld.Simple.EOF p =>
         (regular (!pos, p); finish (); pos := p; atEnd := true);
       queue := rev (!queue);
       readChunk ())

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 cd testd
 ulimit -t 2
