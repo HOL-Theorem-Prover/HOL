@@ -760,22 +760,34 @@ fun parseSML file read parseError: scope -> result = let
 
     fun expected () = "expected [" ^ String.concatWith ", " s ^ "]"
 
+    fun mismatch_msg mismatches =
+      case rev mismatches of
+        [] => ""
+      | (p, mm)::_ => " " ^ "(first mismatch [" ^ mm ^ "] at " ^ Int.toString p ^ ")"
+
     fun push i p acc = if i = p andalso not (null acc) then acc else
       QuoteLiteral (i, DString.extract (body, i, SOME (p - i))) :: acc
 
-    fun go i acc =
+    fun go i acc mismatches =
       case qtoken 0 of
-        (p, EOF) => (parseError (start, p) "unclosed quotation"; (rev (push i p acc), p))
+        (p, EOF) => (
+         parseError (start, p) ("unclosed quotation" ^ mismatch_msg mismatches);
+         (rev (push i p acc), p))
       | (p, StrongEndTk) => (
-        if mem (ident p) s then () else parseError (start, p) (expected ());
+        if mem (ident p) s then ()
+        else parseError (start, p) (expected () ^ mismatch_msg mismatches);
         (rev (push i p acc), p))
-      | (p, EndTk) => if mem (ident p) s then (rev (push i p acc), p) else go i acc
+      | (p, EndTk) => let
+        val closing = ident p in
+          if mem closing s then (rev (push i p acc), p)
+          else go i acc ((p, closing)::mismatches)
+        end
       | (p, AntiqIdent) => let
         val acc = push i p acc
         val exp = case identKind (p + 1) of
           (s, Regular) => Ident {op_ = NONE, id = (p+1, s)}
         | _ => (parseError (p+1, !pos) "expected identifier"; ExpBad {start = p+1, stop = !pos})
-        in go (!pos) (QuoteAntiq {caret_ = p, exp = exp} :: acc) end
+        in go (!pos) (QuoteAntiq {caret_ = p, exp = exp} :: acc) mismatches end
       | (p, AntiqParen) => let
         val acc = push i p acc
         val e = parseParen sc false (p+1)
@@ -785,7 +797,7 @@ fun parseSML file read parseError: scope -> result = let
         | Tuple {stop, ...} => stop
         | Sequence {stop, ...} => stop
         | _ => raise Unreachable
-        in go stop (QuoteAntiq {caret_ = p, exp = e} :: acc) end
+        in go stop (QuoteAntiq {caret_ = p, exp = e} :: acc) mismatches end
       | (p, OpenBrack) => let
         val acc = push i p acc
         val _ = ws ()
@@ -817,8 +829,8 @@ fun parseSML file read parseError: scope -> result = let
         val r = DefinitionLabel {
           left = p, label = label, attrs = attrs,
           colon = colon, right = right, stop = stop }
-        in go stop (r :: acc) end
-    in go qstart [] end
+        in go stop (r :: acc) mismatches end
+    in go qstart [] [] end
 
   and parseDec (inSig: bool) (sc: scope): (scope * dec) option = let
 
