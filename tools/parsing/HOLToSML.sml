@@ -14,7 +14,7 @@ fun mkHandleHolErr (p, e) = let
   val arm = {bar = NONE, pat = pat, arrow = NONE, exp = h}
   in Handle {exp = e, handle_ = p, elems = [arm], stop = expStop e} end
 
-fun mkKval {key, bind = NONE} = #2 key
+fun mkKval ({key, bind = NONE}: kvals) = #2 key
   | mkKval {key, bind = SOME {vals, ...}} =
     concat [#2 key, " = ", String.concatWith " " (map #2 vals)]
 
@@ -45,12 +45,12 @@ fun expandRecord f pat {left, elems = {args, delims, stop = stop1}, right, stop}
 fun mkLocPragma line col s =
   concat [" (*#loc ", Int.toString (line + 1), " ", Int.toString (col + 1), "*)", s]
 
-fun mkLocString (p, noloc, _) {file = "", ...} = mkIdent (p, noloc)
+fun mkLocString (p, noloc, _) ({file = "", ...}: fileline) = mkIdent (p, noloc)
   | mkLocString (p, _, loc) {file, line, ...} =
     App (mkIdent (p, loc), App (mkIdent (p, "DB_dtype.mkloc"),
       mkTuple (p, [mkString (p, file), mkInt (p, line+1), mkIdent (p, "true")])))
 
-fun mkLocString' (p, loc) {file = "", ...} = App (mkIdent (p, loc), mkIdent (p, "DB_dtype.Unknown"))
+fun mkLocString' (p, loc) ({file = "", ...}: fileline) = App (mkIdent (p, loc), mkIdent (p, "DB_dtype.Unknown"))
   | mkLocString' (p, loc) {file, line, ...} =
     App (mkIdent (p, loc), App (mkIdent (p, "DB_dtype.mkloc"),
       mkTuple (p, [mkString (p, file), mkInt (p, line+1), mkIdent (p, "true")])))
@@ -59,7 +59,7 @@ fun doProofKvals p [] tac = tac
   | doProofKvals p (kv::kvs) tac = let
   val e = mkIdent (p, "BasicProvers.with_simpset_updates")
   fun mktm1 {key = (p, key), bind} = let
-    val args = case bind of NONE => [] | SOME {vals, ...} => map mkString vals
+    val args = case bind of NONE => [] | SOME {vals, eq_=_} => map mkString vals
     val key = case key of
       "exclude_simps" => "simpLib.remove_simps"
     | "exclude_frags" => "simpLib.remove_ssfrags"
@@ -68,7 +68,7 @@ fun doProofKvals p [] tac = tac
   fun mktm (kv, e) = Infix {left = e, id = (p, "o"), right = mktm1 kv}
   in App (App (e, foldl mktm (mktm1 kv) kvs), tac) end
 
-fun doProofAttrs p (SOME {attrs = {args = kvs, ...}, ...}) tac = doProofKvals p kvs tac
+fun doProofAttrs p (SOME {attrs = {args = kvs, delims=_, stop=_}, left=_, right=_, stop=_}) tac = doProofKvals p kvs tac
   | doProofAttrs _ _ tac = tac
 
 fun wrapTac (p, tac) = let

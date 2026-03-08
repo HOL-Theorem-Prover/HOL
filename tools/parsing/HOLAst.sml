@@ -505,7 +505,7 @@ fun strexpSpan (StrIdent id) = idSpan id
   | strexpSpan (FunAppDec {funid = (p, _), stop, ...}) = (p, stop)
   | strexpSpan (StrLetInEnd {let_, stop, ...}) = (let_, stop)
 
-fun headerElemStop {id, attrs = NONE} = idStop id
+fun headerElemStop ({id, attrs = NONE}: header_elem) = idStop id
   | headerElemStop {attrs = SOME {stop, ...}, ...} = stop
 
 fun headerStop (HOLAncestors {ancestors_, elems, ...}) =

@@ -18,14 +18,12 @@ val _ = if qfixp then
   quotefix.run read write
 else let
   open HolParser.ToSML
-  val read = mkPushTranslator {
+  val {read = read', ...} = mkPullTranslator {
     read = read,
     filename = infilename,
     parseError = HOLParser.simpleParseError,
-    quietOpen = qopn
-  } (mkStrcode write)
-
-  fun loop () = if read () then () else loop ()
+    quietOpen = qopn }
+  fun loop () = case read' () of "" => () | s => (write s; loop ())
   in loop () end
 
 val _ = callback()

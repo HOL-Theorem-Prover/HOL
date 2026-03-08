@@ -56,7 +56,7 @@ end
 open HOLFileSys
 type reader = {read: unit -> char option, fileline: unit -> fileline, eof: unit -> bool}
 
-fun exhaust_parser {read, close, ...} =
+fun exhaust_parser {read, close, fileline=_} =
   let
     fun recurse acc =
       case read () of

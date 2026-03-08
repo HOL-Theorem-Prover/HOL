@@ -63,9 +63,9 @@ fun printTyBind ({tyvars, tycon, bind}:tybind) pr = (
   seq (K ident) tyvars pr; ident tycon pr;
   Option.app (fn {ty, ...} => (token "=" pr; printTy ty pr)) bind)
 
-fun printTypeDec kw {args, ...} = delimited (token kw) args printTyBind (token "and") (K ())
+fun printTypeDec kw ({args, ...}: tybind delimited) = delimited (token kw) args printTyBind (token "and") (K ())
 
-fun printDatBinds kw {args, ...} wt pr = let
+fun printDatBinds kw ({args, ...}: datbind delimited) wt pr = let
   fun f {op_, id, arg, ...} pr = (
     otoken op_ "op" pr; ident id pr;
     Option.app (fn {ty, ...} => (token "of" pr; printTy ty pr)) arg)
@@ -75,7 +75,7 @@ fun printDatBinds kw {args, ...} wt pr = let
       DatvalDatatype {id, ...} => (token "datatype" pr; ident id pr)
     | DatvalElems args => delimited (K ()) args f (token "|") (K ()) pr)
   val _ = delimited (token kw) args g (token "and") (K ()) pr
-  in Option.app (fn {tybind, ...} => printTypeDec "withtype" tybind pr) wt end
+  in Option.app (fn ({tybind, ...}: {withtype_: int, tybind: tybind delimited}) => printTypeDec "withtype" tybind pr) wt end
 
 fun print parseError = let
 
