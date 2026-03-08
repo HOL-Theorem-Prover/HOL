@@ -1,7 +1,3 @@
-val _ = use "/home/mario/HOL4-stable/src/postkernel/prooftrace/ProofTraceParser.sig";
-val _ = use "/home/mario/HOL4-stable/src/postkernel/prooftrace/ProofTraceParser.sml";
-val _ = use "/home/mario/HOL4-stable/src/postkernel/prooftrace/ProofTraceConverter.sig";
-val _ = use "/home/mario/HOL4-stable/src/postkernel/prooftrace/ProofTraceConverter.sml";
 open ProofTraceParser
 open Redblackmap
 
@@ -139,8 +135,6 @@ in (tm_defs, ty_defs, add_def) end
 val trDB : (string, (string, thm) dict) dict ref
   = ref (mkDict String.compare)
 
-val replay_prefix = "tr_"; (* can be empty if we start from min *)
-
 datatype hol_obj =
    Ty of hol_type
  | CTm of term
@@ -153,7 +147,7 @@ datatype hol_obj =
  | Four of hol_obj * (hol_obj * (hol_obj * hol_obj))
  | Unknown
 fun destTy (Ty ty) = ty | destTy _ = raise Fail "destTy"
-(* fun destTm (Tm tm) = tm | destTm _ = raise Fail "destTm" *)
+fun destCTm (CTm tm) = tm | destCTm _ = raise Fail "destCTm"
 fun destTh (Th th) = th | destTh _ = raise Fail "destTh"
 fun destStr (Str x) = x | destStr _ = raise Fail "destStr"
 fun destPair (Pair x) = x | destPair _ = raise Fail "destPair"
@@ -179,10 +173,16 @@ fun replay thyname = let
         val () = appList heap (tuple3 heap (I, ad, I)) all_thms
     in (!tms, !tys) end
 
-  val replay_thyname = replay_prefix ^ thyname;
-  fun mk_thyname rawThy = if rawThy = "min" then rawThy
-                          else replay_thyname ^ rawThy
   val replayed_heap = Array.array(heapSize heap, Unknown);
+
+  val next_subst_id = ref 0
+
+  val next_axiom_name = let
+    val names = ref ["SELECT_AX", "INFINITY_AX", "ETA_AX"]
+  in 
+    fn () => case !names of x::xs => x before names := xs
+             | _ => raise Fail "next_axiom_name"
+  end
 
   fun cache (mk_obj,dest_obj) mk_x x_ptr = let
     val key = ptr x_ptr
@@ -198,8 +198,6 @@ fun replay thyname = let
   fun replay_opt f = cache (Opt,destOpt) (option heap f)
   fun replay_four f = cache (Four,destFour) (tuple4 heap f)
 
-  val snum = ref 0
-
   fun check_def map rawThy nm =
     if rawThy = thyname then case peek (map, nm)
     of SOME thp => ignore (replay_thm thp)
@@ -210,10 +208,10 @@ fun replay thyname = let
     case shType heap ty_ptr of
       Tyv s => mk_vartype s
     | Tyapp (idp, args_ptr) => let
-        val (rawThy,Tyop) = ident heap idp
+        val (Thy,Tyop) = ident heap idp
         val Args = list heap replay_type args_ptr
-        val () = check_def ty_defs rawThy Tyop
-        in mk_thy_type {Thy=mk_thyname rawThy, Tyop=Tyop, Args=Args} end
+        val () = check_def ty_defs Thy Tyop
+        in mk_thy_type {Thy=Thy, Tyop=Tyop, Args=Args} end
   ) ty_ptr
 
   and replay_term_core (p as (sid, s)) tm_ptr = let
@@ -222,7 +220,7 @@ fun replay thyname = let
       val (depth, tm) = case shTerm heap tm_ptr of
         Abs (t1,t2) => let
         val (_, x) = replay_term_core p t1
-        val n = !snum; val _ = snum := n + 1
+        val n = !next_subst_id; val _ = next_subst_id := n + 1
         val (d, t2) = replay_term_core (n, Subst.cons (s, x)) t2
         in (Int.max (0, d - 1), mk_abs (x, t2)) end
       | Comb (t1,t2) => let
@@ -231,10 +229,10 @@ fun replay thyname = let
         in (Int.max (d1, d2), mk_comb (t1, t2)) end
       | Fv (s, ty) => (0, mk_var (s, replay_type ty))
       | Const (idp, typ) => let
-        val (rawThy,Name) = ident heap idp
-        val () = check_def tm_defs rawThy Name
+        val (Thy,Name) = ident heap idp
+        val () = check_def tm_defs Thy Name
         val ty = replay_type typ
-        in (0, mk_thy_const {Thy=mk_thyname rawThy, Name=Name, Ty=ty}) end
+        in (0, mk_thy_const {Thy=Thy, Name=Name, Ty=ty}) end
       | Clos _ => raise Fail "replay_term Clos"
       | Bv n => case Subst.exp_rel (s, n) of
           (_, SOME t) => (n + 1, t)
@@ -253,12 +251,112 @@ fun replay thyname = let
 
   and replay_thm (thm_ptr: thm ptr) =
   cache (Th,destTh) (fn thm_ptr => let
-    val (_, _, proof_ptr) = shThm heap thm_ptr
+    val (hyp_ptr, concl_ptr, proof_ptr) = shThm heap thm_ptr
     val (i, args_ptrs) = shVariant heap proof_ptr
     val (name, args_rs) = Array.sub(rules(), i)
-    val args_objs = map2 apply args_rs args_ptrs
+    val aos = map2 apply args_rs args_ptrs
   in
-    raise Fail ("replay_thm " ^ name)
+    if name = "ABS" then
+      ABS (destCTm (el 1 aos)) (destTh (el 2 aos))
+    else if name = "ALPHA" then
+      ALPHA (destCTm (el 1 aos)) (destCTm (el 2 aos))
+    else if name = "AP_TERM" then
+      AP_TERM (destCTm (el 1 aos)) (destTh (el 2 aos))
+    else if name = "AP_THM" then
+      AP_THM (destTh (el 1 aos)) (destCTm (el 2 aos))
+    else if name = "ASSUME" then
+      ASSUME (destCTm (el 1 aos))
+    else if name = "Axiom" then let
+      val h = ref (HOLset.empty Term.compare)
+      fun add t = h := HOLset.add(!h, t)
+      val () = appSet heap (add o replay_term) hyp_ptr
+      val h = !h 
+      val c = replay_term concl_ptr
+      (* TODO: search for previously exported theoerms *)
+      val () = if HOLset.isEmpty h then () else raise Fail "Axiom hyps"
+    in new_axiom(next_axiom_name(), c) end
+    else if name = "BETA_CONV" then
+      BETA_CONV (destCTm (el 1 aos))
+    else if name = "Beta" then
+      raise Fail ("replay_thm: Beta not yet implemented")
+    else if name = "CCONTR" then
+      CCONTR (destCTm (el 1 aos)) (destTh (el 2 aos))
+    else if name = "CHOOSE" then
+      CHOOSE (destCTm (el 1 aos), destTh (el 2 aos)) (destTh (el 3 aos))
+    else if name = "CONJUNCT1" then
+      CONJUNCT1 (destTh (el 1 aos))
+    else if name = "CONJUNCT2" then
+      CONJUNCT2 (destTh (el 1 aos))
+    else if name = "CONJ" then
+      CONJ (destTh (el 1 aos)) (destTh (el 2 aos))
+    else if name = "DISCH" then
+      DISCH (destCTm (el 1 aos)) (destTh (el 2 aos))
+    else if name = "DISJ1" then
+      DISJ1 (destTh (el 1 aos)) (destCTm (el 2 aos))
+    else if name = "DISJ2" then
+      DISJ2 (destCTm (el 1 aos)) (destTh (el 2 aos))
+    else if name = "DISJ_CASES" then
+      DISJ_CASES (destTh (el 1 aos)) (destTh (el 2 aos)) (destTh (el 3 aos))
+    else if name = "Def_const_list" then
+      raise Fail ("replay_thm: Def_const_list not yet implemented")
+    else if name = "Def_const" then let
+      val (Thy,Name) = (destStr ## destStr) (destPair (el 1 aos))
+      val rhs = destCTm (el 2 aos)
+      val th = ASSUME (mk_eq(mk_var(Name, type_of rhs), rhs))
+      in #2 (gen_prim_specification Thy th) end
+    else if name = "Def_spec" then
+      raise Fail ("replay_thm: Def_spec not yet implemented")
+    else if name = "Def_tyop" then
+      raise Fail ("replay_thm: Def_tyop not yet implemented")
+    else if name = "EQ_IMP_RULE1" then
+      raise Fail ("replay_thm: EQ_IMP_RULE1 not yet implemented")
+    else if name = "EQ_IMP_RULE2" then
+      raise Fail ("replay_thm: EQ_IMP_RULE2 not yet implemented")
+    else if name = "EQ_MP" then
+      EQ_MP (destTh (el 1 aos)) (destTh (el 2 aos))
+    else if name = "EXISTS" then
+      EXISTS (destCTm (el 1 aos), destCTm (el 2 aos)) (destTh (el 3 aos))
+    else if name = "GENL" then
+      raise Fail ("replay_thm: GENL not yet implemented")
+    else if name = "GEN_ABS" then
+      raise Fail ("replay_thm: GEN_ABS not yet implemented")
+    else if name = "GEN" then
+      GEN (destCTm (el 1 aos)) (destTh (el 2 aos))
+    else if name = "INST_TYPE" then
+      raise Fail ("replay_thm: INST_TYPE not yet implemented")
+    else if name = "INST" then
+      raise Fail ("replay_thm: INST not yet implemented")
+    else if name = "MK_COMB" then
+      MK_COMB (destTh (el 1 aos), destTh (el 2 aos))
+    else if name = "MP" then
+      MP (destTh (el 1 aos)) (destTh (el 2 aos))
+    else if name = "Mk_abs" then
+      raise Fail ("replay_thm: Mk_abs not yet implemented")
+    else if name = "Mk_comb" then
+      raise Fail ("replay_thm: Mk_comb not yet implemented")
+    else if name = "NOT_ELIM" then
+      NOT_ELIM (destTh (el 1 aos))
+    else if name = "NOT_INTRO" then
+      NOT_INTRO (destTh (el 1 aos))
+    else if name = "REFL" then
+      REFL (destCTm (el 1 aos))
+    else if name = "SPEC" then
+      SPEC (destCTm (el 1 aos)) (destTh (el 2 aos))
+    else if name = "SUBST" then
+      raise Fail ("replay_thm: SUBST not yet implemented")
+    else if name = "SYM" then
+      SYM (destTh (el 1 aos))
+    else if name = "Specialize" then
+      raise Fail ("replay_thm: Specialize not yet implemented")
+    else if name = "TRANS" then
+      TRANS (destTh (el 1 aos)) (destTh (el 2 aos))
+    else if name = "compute" then
+      raise Fail ("replay_thm: compute not yet implemented")
+    else if name = "deductAntisym" then
+      raise Fail ("replay_thm: deductAntisym not yet implemented")
+    else if name = "deleted" then
+      raise Fail ("replay_thm: deleted not yet implemented")
+    else raise Fail ("replay_thm " ^ name)
   end) thm_ptr
 
   and rules() = mk_rules {
@@ -278,6 +376,6 @@ fun replay thyname = let
 
   val thyDB = fromList String.compare (list heap export all_thms)
 
-  val () = trDB := update(!trDB, replay_thyname, fn NONE => thyDB
+  val () = trDB := update(!trDB, thyname, fn NONE => thyDB
                                       | _ => raise Fail "dup thy")
 in () end
