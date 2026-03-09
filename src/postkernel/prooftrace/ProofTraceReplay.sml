@@ -8,6 +8,25 @@ fun mk_eq(l,r) = list_mk_icomb equality [l,r]
 (* TODO: remove after merging HolKernel that has this *)
 datatype thm_id = SavedAnon of int | SavedName of string
 
+fun somePair (x,y) = x orelse y
+fun someFour (x,(y,(z,w))) = x orelse y orelse z orelse w
+
+fun warn_old orig s = (
+  print("WARNING: stripped "^orig^" to "^s^"\n");
+  s
+)
+
+fun strip_old Name =
+  if String.isSuffix "<-old" Name then
+    Substring.full Name
+    |> Substring.trimr (String.size "<-old")
+    |> Substring.triml (String.size "old")
+    |> Substring.dropl Char.isDigit
+    |> Substring.triml (String.size "->")
+    |> Substring.string
+    |> warn_old Name
+  else Name
+
 fun mk_rules {string,term,thm,hol_type,list,pair,opt,four,
               new_term,new_type,thm_id} =
    Array.fromList [
@@ -79,6 +98,86 @@ fun do_all_thms heap (f: unit parser) = {
   thm = f,
   four = fn fghi => ignore o tuple4 heap fghi o castPtr
 }
+
+fun mk_ood_thm heap = let
+  val ood_heap = Array.array(heapSize heap, NONE: bool option)
+
+  fun cache f p = if isPtr p then let
+    val key = ptr p
+  in case Array.sub(ood_heap, key) of SOME x => x
+   | NONE => let val x = f p
+                 val () = Array.update(ood_heap, key, SOME x)
+             in x end
+  end else false
+
+  val outofdate_id = cache (fn (p: ident ptr) =>
+    let val s = #2(ident heap p) in
+        String.isPrefix "old" s andalso
+        String.isSuffix "<-old" s
+    end)
+
+  fun someList P (p: 'a list ptr) =
+    (appList heap (fn x => P x andalso raise Match) p;
+     false) handle Match => true
+
+  fun outofdate_type heap = cache (fn (p: hol_type ptr) =>
+    case shType heap p of
+      Tyapp (idp, asp) =>
+        outofdate_id idp orelse
+        someList (outofdate_type heap) asp
+    | _ => false)
+
+  fun outofdate_term heap = cache (fn (p: term ptr) =>
+    case shTerm heap p of
+      Abs (p1,p2) => outofdate_term heap p1 orelse
+                     outofdate_term heap p2
+    | Comb (p1,p2) => outofdate_term heap p1 orelse
+                      outofdate_term heap p2
+    | Clos (p1,p2) => outofdate_subst heap p1 orelse
+                      outofdate_term heap p2
+    | Const (p1,p2) => outofdate_id p1 orelse
+                       outofdate_type heap p2
+    | Fv (_,p) => outofdate_type heap p
+    | _ => false)
+  and outofdate_subst heap = cache (fn (p: term Subst.subs ptr) =>
+    case shSubs heap p of
+      Cons (p1,p2) => outofdate_subst heap p1 orelse
+                      outofdate_term heap p2
+    | Id => false
+    | Lift (_,p) => outofdate_subst heap p
+    | Shift (_,p) => outofdate_subst heap p)
+
+  fun outofdate_hyps heap = cache (fn (p: term set ptr) =>
+    (appSet heap (fn t => outofdate_term heap t andalso
+                          raise Match) p;
+     false) handle Match => true)
+
+  fun outofdate_thm heap = cache (fn (p: thm ptr) =>
+    case shThm heap p of (h, c, p) =>
+      outofdate_hyps heap h orelse
+      outofdate_term heap c orelse
+      outofdate_proof heap p)
+  and outofdate_proof heap = cache (fn (p: proof ptr) => let
+    val (i, a) = shVariant heap p
+    val (_, r) = Array.sub(outofdate_rules heap, i)
+    val a = map2 apply r a
+  in List.exists I a end)
+  and outofdate_rules heap = mk_rules {
+    hol_type = outofdate_type heap o castPtr,
+    term = outofdate_term heap o castPtr,
+    new_term = outofdate_term heap o castPtr,
+    new_type = outofdate_type heap o castPtr,
+    opt = fn f => equal (SOME true) o (option heap f) o castPtr,
+    list = fn f => someList f o castPtr,
+    pair = fn fg => somePair o tuple2 heap fg o castPtr,
+    thm = outofdate_thm heap o castPtr,
+    thm_id = K false,
+    string = K false,
+    four = fn fghi => someFour o tuple4 heap fghi o castPtr
+  }
+in outofdate_thm heap end
+
+val OUTOFDATE = ASSUME(mk_var("OUTOFDATE", bool))
 
 (*
   val [(_,thm_ptr)] = listItems (!tm_defs)
@@ -185,6 +284,15 @@ fun replay thyname = let
     val all_ptrs = list heap (tuple3 heap (I, I, I)) all_thms
     val thm_ptrs = List.map (fn (_,(p,_)) => p) all_ptrs
   *)
+
+  (* this should not be necessary because of scrubCT before export
+  val () = case
+    List.find (fn (_,(x,_)) => x)
+    (list heap (tuple3 heap (I, outofdate_thm heap, I)) all_thms)
+  of SOME (nm,_) => raise Fail ((str heap nm)^" is outofdate")
+   | _ => ()
+  *)
+
   val (tm_defs, ty_defs) =
     let val (tms,tys,ad) = mk_add_def thyname heap
         val () = appList heap (tuple3 heap (I, ad, I)) all_thms
@@ -300,7 +408,7 @@ fun replay thyname = let
       val h = ref (HOLset.empty Term.compare)
       fun add t = h := HOLset.add(!h, t)
       val () = appSet heap (add o replay_term) hyp_ptr
-      val h = !h 
+      val h = !h
       val c = replay_term concl_ptr
       (* TODO: search for previously exported theoerms *)
       val () = if HOLset.isEmpty h then () else raise Fail "Axiom hyps"
@@ -402,6 +510,8 @@ fun replay thyname = let
       MK_COMB (destTh (el 1 aos), destTh (el 2 aos))
     else if name = "MP" then
       MP (destTh (el 1 aos)) (destTh (el 2 aos))
+      handle e as (HOL_ERR _) => (debug := [
+        destTh (el 1 aos), destTh (el 2 aos) ]; raise e)
     else if name = "Mk_abs" then
       raise Fail ("replay_thm: Mk_abs not yet implemented")
     else if name = "Mk_comb" then let
@@ -460,7 +570,12 @@ fun replay thyname = let
   in (nm, th) end
 
   val named = fromList String.compare (list heap export all_thms)
-  val anons = list heap replay_thm anon_thms
+  val ood_thm = mk_ood_thm heap
+  fun replay_if_uptodate tp =
+    if ood_thm tp then
+      (print "outofdate anon\n"; OUTOFDATE)
+    else replay_thm tp
+  val anons = list heap replay_if_uptodate anon_thms
 
   val () = trDB := update(!trDB, thyname,
              fn NONE => (named, anons)
