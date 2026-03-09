@@ -239,9 +239,10 @@ fun replay thyname = let
     case shTerm heap tm_ptr of
       Abs (t1,t2) => let
         val x = replay_term_core env t1
-        val g = genvar(type_of x)
+        val (s,ty) = dest_var x
+        val g = genvar ty
         val b = replay_term_core (g::env) t2
-      in mk_abs(g,b) end
+      in rename_bvar s (mk_abs(g,b)) end
     | Comb (t1,t2) => let
         val f = replay_term_core env t1
         val x = replay_term_core env t2
