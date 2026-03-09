@@ -59,7 +59,7 @@ fun main() = let
       read = read,
       filename = infilename,
       parseError = HOLParser.simpleParseError,
-      quietOpen = quietOpen }
+      quietOpen = quietOpen, canBindStr = true }
     fun loop () = case read () of "" => () | s => (write s; loop ())
     in loop () end
 in

@@ -5,7 +5,7 @@ val mkSemi: HOLAst.dec list -> HOLAst.dec list
 val expandDec:
   { fileline: int -> HOLAst.fileline,
     parseError: int * int -> string -> unit,
-    quietOpen: bool } ->
+    quietOpen: bool, canBindStr: bool } ->
   HOLAst.dec -> HOLAst.dec
 
 end

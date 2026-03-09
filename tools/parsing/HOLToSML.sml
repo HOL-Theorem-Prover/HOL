@@ -77,20 +77,11 @@ fun wrapTac (p, tac) = let
        elems = [{bar = NONE, pat = dummy, arrow = NONE, exp = App (tac, dummy)}],
        stop = expStop tac} end
 
-val canBindStr = true (* TODO: make false on mosml *)
-
 fun valPat pos pat e = let
   val s = {rec_ = NONE, pat = pat, eq = SOME {eq = pos, exp = e}}
   in DecVal {val_ = pos, tyvars = Empty, elems = {args = [s], delims = [], stop = expStop e}} end
 
 fun valWild pos = valPat pos (Wild pos)
-
-fun magicBind (p, name) acc =
-  if canBindStr then let
-    val code = mkString (p, concat ["val ", name, " = DB.fetch \"-\" \"", name,
-      "\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;"])
-    in valWild p (App (mkIdent (p, "CompilerSpecific.quietbind"), code)) :: acc end
-  else acc
 
 fun mapArms g f1 f2 elems = let
   fun list [] _ f = f []
@@ -152,7 +143,14 @@ fun withLocalAttrs _ false attrs = attrs
 exception HasOrPat
 fun mapDelim f {args, delims, stop} = {args = map f args, delims = delims, stop = stop}
 
-fun expandDec {parseError, quietOpen, fileline} = let
+fun expandDec {parseError, quietOpen, fileline, canBindStr} = let
+
+fun magicBind (p, name) acc =
+  if canBindStr then let
+    val code = mkString (p, concat ["val ", name, " = DB.fetch \"-\" \"", name,
+      "\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;"])
+    in valWild p (App (mkIdent (p, "CompilerSpecific.quietbind"), code)) :: acc end
+  else acc
 
 fun expandExp true (e as Wild _) = e
   | expandExp false (Wild p) = mkFail (p, "_")
