@@ -173,6 +173,8 @@ end
 (*
 val thyname = "bool";
 *)
+val debug : thm list ref = ref []
+val dbg_print = K ()
 
 fun replay thyname = let
 
@@ -198,9 +200,6 @@ fun replay thyname = let
        in (Array.update(replayed_heap, key, obj); dest_obj obj) end
      | obj => dest_obj obj
   end else mk_x x_ptr
-
-  val debug : thm list ref = ref []
-  val dbg_print = K ()
 
   fun get_const_id tm_ptr =
     case shTerm heap tm_ptr of Const (idp,_) => ident heap idp
@@ -264,7 +263,8 @@ fun replay thyname = let
       in mk_thy_const {Thy=Thy, Name=Name, Ty=ty}
          handle e as (HOL_ERR _) =>
            if Thy = thyname then
-             prim_new_const {Thy=Thy, Name=Name} ty
+             (print("WARNING: prim_new_const "^Thy^"$"^Name^"\n");
+              prim_new_const {Thy=Thy, Name=Name} ty)
            else raise e
       end
     | Fv (s,typ) => mk_var(s, replay_type typ)
@@ -331,6 +331,9 @@ fun replay thyname = let
       raise Fail ("replay_thm: Def_const_list not yet implemented")
     else if name = "Def_const" then let
       val (Thy,Name) = (destStr ## destStr) (destPair (el 1 aos))
+      val () = ((prim_mk_const{Thy=Thy,Name=Name};
+                 raise Fail ("Def_const redef "^Thy^"$"^Name))
+                handle HOL_ERR _ => ())
       val rhs = destTm (el 2 aos)
       val th = ASSUME (mk_eq(mk_var(Name, type_of rhs), rhs))
       in #2 (gen_prim_specification Thy th) end
@@ -340,10 +343,17 @@ fun replay thyname = let
       val () = if List.all (equal thyname) (List.map #1 ids) then ()
                else raise Fail "Def_spec thy"
       val cnames = List.map #2 ids
+      val () = List.app (fn Name =>
+                 (prim_mk_const{Thy=thyname,Name=Name};
+                  raise Fail ("Def_spec redef "^Name))
+                 handle HOL_ERR _ => ()) cnames
       val th = destTh (el 2 aos)
     in prim_specification thyname cnames th end
     else if name = "Def_tyop" then let
       val (Thy,Tyop) = (destStr ## destStr) (destPair (el 1 aos))
+      val () = if Option.isSome (op_arity {Thy=Thy,Tyop=Tyop})
+               then raise Fail ("Def_tyop redef "^Thy^"$"^Tyop)
+               else ()
       val th = destTh (el 3 aos)
       val () = if thyname = "bool"
                then check_def tm_defs thyname "TYPE_DEFINITION"
