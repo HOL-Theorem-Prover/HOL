@@ -5,9 +5,11 @@ open Lib HolKernel Redblackmap ProofTraceParser
 
 fun apply f g = f g
 fun mk_eq(l,r) = list_mk_icomb equality [l,r]
+(* TODO: remove after merging HolKernel that has this *)
+datatype thm_id = SavedAnon of int | SavedName of string
 
 fun mk_rules {string,term,thm,hol_type,list,pair,opt,four,
-              new_term,new_type} =
+              new_term,new_type,thm_id} =
    Array.fromList [
       ("ABS", [term, thm]),
       ("ALPHA", [term, term]),
@@ -30,6 +32,7 @@ fun mk_rules {string,term,thm,hol_type,list,pair,opt,four,
       ("Def_const", [pair (string, string), term]),
       ("Def_spec", [list new_term, thm]),
       ("Def_tyop", [pair (string, string), list hol_type, thm, new_type]),
+      ("Disk", [string, thm_id]),
       ("EQ_IMP_RULE1", [thm]),
       ("EQ_IMP_RULE2", [thm]),
       ("EQ_MP", [thm, thm]),
@@ -71,7 +74,7 @@ fun do_all_thms heap (f: unit parser) = {
   list = fn f => appList heap f o castPtr,
   opt = fn f => ignore o option heap f o castPtr,
   pair = fn fg => ignore o tuple2 heap fg o castPtr,
-  string = K (),
+  string = K (), thm_id = K (),
   term = K (), new_term = K (),
   thm = f,
   four = fn fghi => ignore o tuple4 heap fghi o castPtr
@@ -136,13 +139,14 @@ fun mk_add_def thyname heap = let
   in () end
 in (tm_defs, ty_defs, add_def) end
 
-val trDB : (string, (string, thm) dict) dict ref
+val trDB : (string, (string, thm) dict * thm list) dict ref
   = ref (mkDict String.compare)
 
 datatype hol_obj =
    Ty of hol_type
  | Tm of term
  | Th of thm
+ | Id of thm_id
  | Str of string
  | Pair of hol_obj * hol_obj
  | List of hol_obj list
@@ -152,6 +156,7 @@ datatype hol_obj =
 fun destTy (Ty ty) = ty | destTy _ = raise Fail "destTy"
 fun destTm (Tm tm) = tm | destTm _ = raise Fail "destTm"
 fun destTh (Th th) = th | destTh _ = raise Fail "destTh"
+fun destId (Id id) = id | destId _ = raise Fail "destId"
 fun destStr (Str x) = x | destStr _ = raise Fail "destStr"
 fun destPair (Pair x) = x | destPair _ = raise Fail "destPair"
 fun destList (List x) = x | destList _ = raise Fail "destList"
@@ -166,7 +171,7 @@ fun replay thyname = let
 
   val filename = thyname ^ "Theory.tr.gz";
   val (root_ptr, heap) = parse filename;
-  val {all_thms, ...} = shRoot heap root_ptr;
+  val {all_thms, anon_thms, ...} = shRoot heap root_ptr;
   (*
     val all_ptrs = list heap (tuple3 heap (I, I, I)) all_thms
     val thm_ptrs = List.map (fn (_,(p,_)) => p) all_ptrs
@@ -174,6 +179,7 @@ fun replay thyname = let
   val (tm_defs, ty_defs) =
     let val (tms,tys,ad) = mk_add_def thyname heap
         val () = appList heap (tuple3 heap (I, ad, I)) all_thms
+        val () = appList heap ad anon_thms
     in (!tms, !tys) end
 
   val replayed_heap = Array.array(heapSize heap, Unknown);
@@ -199,6 +205,12 @@ fun replay thyname = let
   fun get_const_id tm_ptr =
     case shTerm heap tm_ptr of Const (idp,_) => ident heap idp
     | _ => raise Fail "get_const_id"
+
+  fun get_thm_id (id_ptr: thm_id ptr) = let
+    val (i,ps) = shVariant heap id_ptr
+    val p = el 1 ps
+  in if i = 0 then SavedAnon (int (castPtr p))
+     else SavedName (str heap (castPtr p)) end
 
   val replay_str = cache (Str,destStr) (str heap)
   fun replay_pair f = cache (Pair,destPair) (tuple2 heap f)
@@ -241,8 +253,7 @@ fun replay thyname = let
       in mk_thy_const {Thy=Thy, Name=Name, Ty=ty}
          handle e as (HOL_ERR _) =>
            if Thy = thyname then
-             (new_constant(Name,ty);
-              prim_mk_const {Thy=Thy, Name=Name})
+             prim_new_const {Thy=Thy, Name=Name} ty
            else raise e
       end
     | Fv (s,typ) => mk_var(s, replay_type typ)
@@ -323,6 +334,17 @@ fun replay thyname = let
                then check_def tm_defs thyname "TYPE_DEFINITION"
                else ()
     in prim_type_definition ({Thy=Thy, Tyop=Tyop},th) end
+    else if name = "Disk" then
+      case destStr (el 1 aos) of thy => (
+      case peek(!trDB, thy) of
+        NONE => raise Fail ("Disk thy "^thy)
+      | SOME (named,anons) => (
+        case (destId (el 2 aos)) of
+          SavedAnon i => List.nth(anons, i)
+        | SavedName s => (
+            case peek(named, s) of
+              NONE => raise Fail ("Disk thy "^thy^"$"^s)
+            | SOME th => th)))
     else if name = "EQ_IMP_RULE1" then
       #1 (EQ_IMP_RULE (destTh (el 1 aos)))
     else if name = "EQ_IMP_RULE2" then
@@ -390,6 +412,7 @@ fun replay thyname = let
     string = Str o replay_str o castPtr,
     term = Tm o replay_term o castPtr,
     thm = Th o replay_thm o castPtr,
+    thm_id = Id o get_thm_id o castPtr,
     hol_type = Ty o replay_type o castPtr,
     new_type = K Unknown,
     new_term = Pair o (Str ## Str) o get_const_id o castPtr,
@@ -406,16 +429,17 @@ fun replay thyname = let
     val () = dbg_print " done\n"
   in (nm, th) end
 
-  val () = new_theory thyname
+  val named = fromList String.compare (list heap export all_thms)
+  val anons = list heap replay_thm anon_thms
 
-  val thyDB = fromList String.compare (list heap export all_thms)
-
-  val () = trDB := update(!trDB, thyname, fn NONE => thyDB
-                                      | _ => raise Fail "dup thy")
+  val () = trDB := update(!trDB, thyname,
+             fn NONE => (named, anons)
+              | _    => raise Fail "dup thy")
 in () end
 
 (*
 val () = replay "bool"
+val () = replay "marker"
 val rm = find(!trDB,"bool")
 
 fun print_ty ty =
