@@ -17,6 +17,7 @@ val _ = Feedback.register_trace("opentheory logging",verbosity,5)
 
 val proof_type = let open Thm fun
  f Axiom_prf = "Axiom"
+|f (Disk_prf _) = "Disk"
 |f deleted_prf = "deleted"
 |f (ABS_prf _) = "ABS"
 |f (ALPHA_prf _) = "ALPHA"
@@ -60,7 +61,7 @@ val proof_type = let open Thm fun
 |f (Mk_comb_prf _) = "Mk_comb"
 |f (Specialize_prf _) = "Specialize"
 |f (deductAntisym_prf _) = "deductAntisym"
-|f compute_prf = "compute"
+|f (compute_prf _) = "compute"
 in f end
 
 datatype log_state =
@@ -415,6 +416,11 @@ val (log_term, log_thm, log_clear,
       val _ = log_term (concl th)
       val _ = log_command "axiom"
       in () end
+    | Disk_prf _ => let
+      val _ = log_list log_term (hyp th)
+      val _ = log_term (concl th)
+      val _ = log_command "axiom"
+      in () end
     | deleted_prf => let
       val _ = log_list log_term (hyp th)
       val _ = log_term (concl th)
@@ -697,7 +703,7 @@ val (log_term, log_thm, log_clear,
                                   [alpha|->rty,beta|->aty]) Def_tyop_pth
       val _       = log_thm (proveHyp ra (proveHyp ar pth))
       in () end
-    | compute_prf => raise ERR "log_thm" "disabled in opentheory kernel";
+    | compute_prf _ => raise ERR "log_thm" "disabled in opentheory kernel";
     val _ = if !verbosity >= 4 then HOL_MESG("Finish proof for "^(Susp.force ths)) else ()
     (*
     val _ = log_comment(pt^")")

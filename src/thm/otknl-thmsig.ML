@@ -2,8 +2,10 @@ signature Thm =
 sig
 
   include FinalThm
+
   datatype proof =
     Axiom_prf
+  | Disk_prf of string * thm_id
   | deleted_prf
   | ABS_prf of term * thm
   | ALPHA_prf of term * term
@@ -47,7 +49,13 @@ sig
   | Mk_comb_prf of thm * thm * thm
   | Specialize_prf of term * thm
   | deductAntisym_prf of thm * thm
-  | compute_prf
+  | compute_prf of (compute_args * thm list) * term
+
+  withtype compute_args =
+    { cval_terms : (string * term) list,
+      cval_type  : hol_type,
+      num_type   : hol_type,
+      char_eqns  : (string * thm) list }
 
   val proof : thm -> proof
   val delete_proof : thm -> unit

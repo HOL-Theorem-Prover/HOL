@@ -72,5 +72,11 @@ type raw_theory = {
   thydata : HOLsexp.t
 }
 
+(* the location of the SML declaration and definition of the theorem value *)
+datatype thm_src_location =
+         Located of {scriptpath: string, linenum : int, exact : bool}
+       | Unknown
+
+type thminfo = {private: bool, loc:thm_src_location,class:class}
 
 end
