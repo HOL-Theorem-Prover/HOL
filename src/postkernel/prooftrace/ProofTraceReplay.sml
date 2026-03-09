@@ -381,8 +381,9 @@ fun replay thyname = let
       MP (destTh (el 1 aos)) (destTh (el 2 aos))
     else if name = "Mk_abs" then
       raise Fail ("replay_thm: Mk_abs not yet implemented")
-    else if name = "Mk_comb" then
-      raise Fail ("replay_thm: Mk_comb not yet implemented")
+    else if name = "Mk_comb" then let
+      val (_,_,mkc) = Mk_comb (destTh (el 1 aos))
+    in mkc (destTh (el 2 aos)) (destTh (el 3 aos)) end
     else if name = "NOT_ELIM" then
       NOT_ELIM (destTh (el 1 aos))
     else if name = "NOT_INTRO" then
@@ -454,6 +455,7 @@ val () = preplay "prim_rec"
 val () = preplay "quotient"
 val () = preplay "pair"
 val () = preplay "arithmetic"
+val () = preplay "numeral"
 val () = preplay "ind_type"
 val () = preplay "list"
 (*
