@@ -235,13 +235,22 @@ fun replay thyname = let
         in mk_thy_type {Thy=Thy, Tyop=Tyop, Args=Args} end
   ) ty_ptr
 
+  and replay_subst env (sb_ptr: term Subst.subs ptr) =
+    case shSubs heap sb_ptr of
+      Cons (sbp,tmp) =>
+        Subst.cons (replay_subst env sbp,
+                    replay_term_core env tmp)
+    | Id => Subst.id
+    | Lift (i,sbp) => Subst.lift(i, replay_subst env sbp)
+    | Shift (i,sbp) => Subst.shift(i, replay_subst env sbp)
+
   and replay_term_core env tm_ptr =
     case shTerm heap tm_ptr of
       Abs (t1,t2) => let
         val x = replay_term_core env t1
         val (s,ty) = dest_var x
         val g = genvar ty
-        val b = replay_term_core (g::env) t2
+        val b = replay_term_core (Subst.cons(env,g)) t2
       in rename_bvar s (mk_abs(g,b)) end
     | Comb (t1,t2) => let
         val f = replay_term_core env t1
@@ -259,12 +268,15 @@ fun replay thyname = let
            else raise e
       end
     | Fv (s,typ) => mk_var(s, replay_type typ)
-    | Bv n => (List.nth(env, n) handle Subscript =>
-                 raise Fail "replay_term_core Bv")
-    | _ => raise Fail "replay_term_core Clos"
+    | Bv n => (case Subst.exp_rel(env, n) of
+                 (0, SOME t) => t
+               | (n, SOME t) => raise Fail "replay_term_core reloc"
+               | _ => raise Fail "replay_term_core Bv")
+    | Clos (sbp,tmp) =>
+        replay_term_core (Subst.comp #2 (env,replay_subst env sbp)) tmp
 
   and replay_term tm_ptr =
-  cache (Tm,destTm) (replay_term_core []) tm_ptr
+  cache (Tm,destTm) (replay_term_core Subst.id) tm_ptr
 
   and replay_thm (thm_ptr: thm ptr) =
   cache (Th,destTh) (fn thm_ptr => let
