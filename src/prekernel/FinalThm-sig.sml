@@ -116,7 +116,8 @@ sig
 
   (* Fetching theorems from disk *)
 
-  val disk_thm : (depdisk * string list) * term list -> thm
+  datatype thm_id = SavedName of string | SavedAnon of int
+  val disk_thm : (string * thm_id) -> (depdisk * string list) * term list -> thm
 
   (* Saving proof dependencies *)
 
