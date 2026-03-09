@@ -5,27 +5,7 @@ open Lib HolKernel Redblackmap ProofTraceParser
 
 fun apply f g = f g
 fun mk_eq(l,r) = list_mk_icomb equality [l,r]
-(* TODO: remove after merging HolKernel that has this *)
 datatype thm_id = SavedAnon of int | SavedName of string
-
-fun somePair (x,y) = x orelse y
-fun someFour (x,(y,(z,w))) = x orelse y orelse z orelse w
-
-fun warn_old orig s = (
-  print("WARNING: stripped "^orig^" to "^s^"\n");
-  s
-)
-
-fun strip_old Name =
-  if String.isSuffix "<-old" Name then
-    Substring.full Name
-    |> Substring.trimr (String.size "<-old")
-    |> Substring.triml (String.size "old")
-    |> Substring.dropl Char.isDigit
-    |> Substring.triml (String.size "->")
-    |> Substring.string
-    |> warn_old Name
-  else Name
 
 fun mk_rules {string,term,thm,hol_type,list,pair,opt,four,
               new_term,new_type,thm_id} =
@@ -47,10 +27,10 @@ fun mk_rules {string,term,thm,hol_type,list,pair,opt,four,
       ("DISJ1", [thm, term]),
       ("DISJ2", [term, thm]),
       ("DISJ_CASES", [thm, thm, thm]),
-      ("Def_const_list", [string, list (pair (string, hol_type)), thm]),
-      ("Def_const", [pair (string, string), term]),
-      ("Def_spec", [list new_term, thm]),
-      ("Def_tyop", [pair (string, string), list hol_type, thm, new_type]),
+      ("Def_const_list", [thm, list new_term]),
+      ("Def_const", [term, new_term]),
+      ("Def_spec", [thm, list new_term]),
+      ("Def_tyop", [list hol_type, thm, new_type]),
       ("Disk", [string, thm_id]),
       ("EQ_IMP_RULE1", [thm]),
       ("EQ_IMP_RULE2", [thm]),
@@ -99,94 +79,18 @@ fun do_all_thms heap (f: unit parser) = {
   four = fn fghi => ignore o tuple4 heap fghi o castPtr
 }
 
-fun mk_ood_thm heap = let
-  val ood_heap = Array.array(heapSize heap, NONE: bool option)
+fun get_const_id heap tm_ptr =
+  case shTerm heap tm_ptr of Const (idp,_) => ident heap idp
+  | _ => raise Fail "get_const_id"
 
-  fun cache f p = if isPtr p then let
-    val key = ptr p
-  in case Array.sub(ood_heap, key) of SOME x => x
-   | NONE => let val x = f p
-                 val () = Array.update(ood_heap, key, SOME x)
-             in x end
-  end else false
-
-  val outofdate_id = cache (fn (p: ident ptr) =>
-    let val s = #2(ident heap p) in
-        String.isPrefix "old" s andalso
-        String.isSuffix "<-old" s
-    end)
-
-  fun someList P (p: 'a list ptr) =
-    (appList heap (fn x => P x andalso raise Match) p;
-     false) handle Match => true
-
-  fun outofdate_type heap = cache (fn (p: hol_type ptr) =>
-    case shType heap p of
-      Tyapp (idp, asp) =>
-        outofdate_id idp orelse
-        someList (outofdate_type heap) asp
-    | _ => false)
-
-  fun outofdate_term heap = cache (fn (p: term ptr) =>
-    case shTerm heap p of
-      Abs (p1,p2) => outofdate_term heap p1 orelse
-                     outofdate_term heap p2
-    | Comb (p1,p2) => outofdate_term heap p1 orelse
-                      outofdate_term heap p2
-    | Clos (p1,p2) => outofdate_subst heap p1 orelse
-                      outofdate_term heap p2
-    | Const (p1,p2) => outofdate_id p1 orelse
-                       outofdate_type heap p2
-    | Fv (_,p) => outofdate_type heap p
-    | _ => false)
-  and outofdate_subst heap = cache (fn (p: term Subst.subs ptr) =>
-    case shSubs heap p of
-      Cons (p1,p2) => outofdate_subst heap p1 orelse
-                      outofdate_term heap p2
-    | Id => false
-    | Lift (_,p) => outofdate_subst heap p
-    | Shift (_,p) => outofdate_subst heap p)
-
-  fun outofdate_hyps heap = cache (fn (p: term set ptr) =>
-    (appSet heap (fn t => outofdate_term heap t andalso
-                          raise Match) p;
-     false) handle Match => true)
-
-  fun outofdate_thm heap = cache (fn (p: thm ptr) =>
-    case shThm heap p of (h, c, p) =>
-      outofdate_hyps heap h orelse
-      outofdate_term heap c orelse
-      outofdate_proof heap p)
-  and outofdate_proof heap = cache (fn (p: proof ptr) => let
-    val (i, a) = shVariant heap p
-    val (_, r) = Array.sub(outofdate_rules heap, i)
-    val a = map2 apply r a
-  in List.exists I a end)
-  and outofdate_rules heap = mk_rules {
-    hol_type = outofdate_type heap o castPtr,
-    term = outofdate_term heap o castPtr,
-    new_term = outofdate_term heap o castPtr,
-    new_type = outofdate_type heap o castPtr,
-    opt = fn f => equal (SOME true) o (option heap f) o castPtr,
-    list = fn f => someList f o castPtr,
-    pair = fn fg => somePair o tuple2 heap fg o castPtr,
-    thm = outofdate_thm heap o castPtr,
-    thm_id = K false,
-    string = K false,
-    four = fn fghi => someFour o tuple4 heap fghi o castPtr
-  }
-in outofdate_thm heap end
-
-val OUTOFDATE = ASSUME(mk_var("OUTOFDATE", bool))
+fun get_type_id heap ty_ptr =
+  case shType heap ty_ptr of Tyapp (idp,_) => ident heap idp
+  | _ => raise Fail "get_type_id"
 
 (*
   val [(_,thm_ptr)] = listItems (!tm_defs)
   val debug_ptr: thm ptr ref = ref (castPtr root_ptr)
   val thm_ptr = !debug_ptr
-  ("Def_const_list", [string, list (pair (string, hol_type)), thm]),
-  ("Def_const", [pair (string, string), term]),
-  ("Def_spec", [list term, thm]),
-  ("Def_tyop", [pair (string, string), list hol_type, thm, hol_type]),
   val thm_ptr = el 1 thm_ptrs
 *)
 fun mk_add_def thyname heap = let
@@ -209,29 +113,21 @@ fun mk_add_def thyname heap = let
     fun check_thy defthy =
       if defthy = thyname then () else raise Fail "add_def thy"
     fun add_const nm = tm_defs := update(!tm_defs, nm, add_thm_ptr)
-    val () = if rule_name <> "Def_const_list" then () else let
-      (* val () = print "Def_const_list\n" *)
-      val () = check_thy $ str heap (castPtr (el 1 args_ptrs))
-      val names = list heap (#1 o tuple2 heap (str heap, I))
-                            (castPtr (el 2 args_ptrs))
-    in List.app add_const names end
+    val () = if rule_name <> "Def_const_list" andalso
+                rule_name <> "Def_spec" then () else let
+      (* val () = print "Def_const_list/spec\n" *)
+      val ids = list heap (get_const_id heap) (castPtr (el 2 args_ptrs))
+      fun go (thy,nm) = (check_thy thy; add_const nm)
+    in List.app go ids end
     val () = if rule_name <> "Def_const" then () else let
       (* val () = print "Def_const\n" *)
-      val ((),nm) = tuple2 heap (check_thy o str heap, str heap)
-                                (castPtr (el 1 args_ptrs))
+      val (thy,nm) = get_const_id heap (castPtr (el 2 args_ptrs))
+      val () = check_thy thy
     in add_const nm end
-    fun get_const (Const (idp,_)) = ident heap idp
-      | get_const _ = raise Fail "add_def spec"
-    val () = if rule_name <> "Def_spec" then () else let
-      (* val () = print "Def_spec\n" *)
-      val shtms = list heap (shTerm heap) (castPtr (el 1 args_ptrs))
-      val (defthys, nms) = unzip (List.map get_const shtms)
-      val () = List.app check_thy defthys
-    in List.app add_const nms end
     val () = if rule_name <> "Def_tyop" then () else let
       (* val () = print "Def_tyop\n" *)
-      val ((),tyop) = tuple2 heap (check_thy o str heap, str heap)
-                                  (castPtr (el 1 args_ptrs))
+      val (thy,tyop) = get_type_id heap (castPtr (el 3 args_ptrs))
+      val () = check_thy thy
     in ty_defs := update(!ty_defs, tyop, add_thm_ptr)
     end
     val _ = map2 apply args_rs args_ptrs
@@ -273,7 +169,7 @@ end
 val thyname = "bool";
 *)
 val debug : thm list ref = ref []
-val dbg_print = K ()
+val dbg_print : string -> unit = K ()
 
 fun replay thyname = let
 
@@ -308,10 +204,6 @@ fun replay thyname = let
        in (Array.update(replayed_heap, key, obj); dest_obj obj) end
      | obj => dest_obj obj
   end else mk_x x_ptr
-
-  fun get_const_id tm_ptr =
-    case shTerm heap tm_ptr of Const (idp,_) => ident heap idp
-    | _ => raise Fail "get_const_id"
 
   fun get_thm_id (id_ptr: thm_id ptr) = let
     val (i,ps) = shVariant heap id_ptr
@@ -438,16 +330,16 @@ fun replay thyname = let
     else if name = "Def_const_list" then
       raise Fail ("replay_thm: Def_const_list not yet implemented")
     else if name = "Def_const" then let
-      val (Thy,Name) = (destStr ## destStr) (destPair (el 1 aos))
+      val (Thy,Name) = (destStr ## destStr) (destPair (el 2 aos))
       val () = ((prim_mk_const{Thy=Thy,Name=Name};
                  raise Fail ("Def_const redef "^Thy^"$"^Name))
                 handle HOL_ERR _ => ())
-      val rhs = destTm (el 2 aos)
+      val rhs = destTm (el 1 aos)
       val th = ASSUME (mk_eq(mk_var(Name, type_of rhs), rhs))
       in #2 (gen_prim_specification Thy th) end
     else if name = "Def_spec" then let
       val ids = List.map ((destStr ## destStr) o destPair)
-                         (destList (el 1 aos))
+                         (destList (el 2 aos))
       val () = if List.all (equal thyname) (List.map #1 ids) then ()
                else raise Fail "Def_spec thy"
       val cnames = List.map #2 ids
@@ -455,14 +347,14 @@ fun replay thyname = let
                  (prim_mk_const{Thy=thyname,Name=Name};
                   raise Fail ("Def_spec redef "^Name))
                  handle HOL_ERR _ => ()) cnames
-      val th = destTh (el 2 aos)
+      val th = destTh (el 1 aos)
     in prim_specification thyname cnames th end
     else if name = "Def_tyop" then let
-      val (Thy,Tyop) = (destStr ## destStr) (destPair (el 1 aos))
+      val (Thy,Tyop) = (destStr ## destStr) (destPair (el 3 aos))
       val () = if Option.isSome (op_arity {Thy=Thy,Tyop=Tyop})
                then raise Fail ("Def_tyop redef "^Thy^"$"^Tyop)
                else ()
-      val th = destTh (el 3 aos)
+      val th = destTh (el 2 aos)
       val () = if thyname = "bool"
                then check_def tm_defs thyname "TYPE_DEFINITION"
                else ()
@@ -554,8 +446,8 @@ fun replay thyname = let
     thm = Th o replay_thm o castPtr,
     thm_id = ThmId o get_thm_id o castPtr,
     hol_type = Ty o replay_type o castPtr,
-    new_type = K Unknown,
-    new_term = Pair o (Str ## Str) o get_const_id o castPtr,
+    new_type = Pair o (Str ## Str) o (get_type_id heap) o castPtr,
+    new_term = Pair o (Str ## Str) o (get_const_id heap) o castPtr,
     list = fn f => List o replay_list f o castPtr,
     pair = fn f => Pair o replay_pair f o castPtr,
     opt = fn f => Opt o replay_opt f o castPtr,
@@ -570,12 +462,7 @@ fun replay thyname = let
   in (nm, th) end
 
   val named = fromList String.compare (list heap export all_thms)
-  val ood_thm = mk_ood_thm heap
-  fun replay_if_uptodate tp =
-    if ood_thm tp then
-      (print "outofdate anon\n"; OUTOFDATE)
-    else replay_thm tp
-  val anons = list heap replay_if_uptodate anon_thms
+  val anons = list heap replay_thm anon_thms
 
   val () = trDB := update(!trDB, thyname,
              fn NONE => (named, anons)
@@ -594,6 +481,8 @@ val () = preplay "quotient"
 val () = preplay "pair"
 val () = preplay "arithmetic"
 val () = preplay "numeral"
+val () = preplay "cv"
+val () = preplay "numpair"
 val () = preplay "ind_type"
 val () = preplay "list"
 (*
