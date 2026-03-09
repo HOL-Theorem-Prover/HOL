@@ -163,6 +163,13 @@ fun destList (List x) = x | destList _ = raise Fail "destList"
 fun destOpt (Opt x) = x | destOpt _ = raise Fail "destOpt"
 fun destFour (Four x) = x | destFour _ = raise Fail "destFour"
 
+val next_axiom_name = let
+  val names = ref ["BOOL_CASES_AX", "SELECT_AX", "ETA_AX", "INFINITY_AX"]
+in
+  fn () => case !names of x::xs => x before names := xs
+           | _ => raise Fail "next_axiom_name"
+end
+
 (*
 val thyname = "bool";
 *)
@@ -184,13 +191,6 @@ fun replay thyname = let
 
   val replayed_heap = Array.array(heapSize heap, Unknown);
 
-  val next_axiom_name = let
-    val names = ref ["BOOL_CASES_AX", "SELECT_AX", "ETA_AX", "INFINITY_AX"]
-  in 
-    fn () => case !names of x::xs => x before names := xs
-             | _ => raise Fail "next_axiom_name"
-  end
-
   fun cache (mk_obj,dest_obj) mk_x x_ptr =
   if isPtr x_ptr then let val key = ptr x_ptr
   in case Array.sub(replayed_heap, key) of Unknown =>
@@ -200,7 +200,7 @@ fun replay thyname = let
   end else mk_x x_ptr
 
   val debug : thm list ref = ref []
-  val dbg_print = print
+  val dbg_print = K ()
 
   fun get_const_id tm_ptr =
     case shTerm heap tm_ptr of Const (idp,_) => ident heap idp
@@ -229,6 +229,7 @@ fun replay thyname = let
       Tyv s => mk_vartype s
     | Tyapp (idp, args_ptr) => let
         val (Thy,Tyop) = ident heap idp
+        val () = dbg_print ("tyop("^Tyop^")")
         val Args = list heap replay_type args_ptr
         val () = check_def ty_defs Thy Tyop
         in mk_thy_type {Thy=Thy, Tyop=Tyop, Args=Args} end
@@ -257,7 +258,8 @@ fun replay thyname = let
            else raise e
       end
     | Fv (s,typ) => mk_var(s, replay_type typ)
-    | Bv n => List.nth(env, n)
+    | Bv n => (List.nth(env, n) handle Subscript =>
+                 raise Fail "replay_term_core Bv")
     | _ => raise Fail "replay_term_core Clos"
 
   and replay_term tm_ptr =
@@ -340,7 +342,9 @@ fun replay thyname = let
         NONE => raise Fail ("Disk thy "^thy)
       | SOME (named,anons) => (
         case (destId (el 2 aos)) of
-          SavedAnon i => List.nth(anons, i)
+          SavedAnon i => (
+            List.nth(anons, i) handle Subscript =>
+              raise Fail ("Disk thy "^thy^":"^(Int.toString i)))
         | SavedName s => (
             case peek(named, s) of
               NONE => raise Fail ("Disk thy "^thy^"$"^s)
@@ -354,9 +358,11 @@ fun replay thyname = let
     else if name = "EXISTS" then
       EXISTS (destTm (el 1 aos), destTm (el 2 aos)) (destTh (el 3 aos))
     else if name = "GENL" then
-      raise Fail ("replay_thm: GENL not yet implemented")
+      GENL (List.map destTm (destList (el 1 aos))) (destTh (el 2 aos))
     else if name = "GEN_ABS" then
-      raise Fail ("replay_thm: GEN_ABS not yet implemented")
+      GEN_ABS (Option.map destTm (destOpt (el 1 aos)))
+              (List.map destTm (destList (el 2 aos)))
+              (destTh (el 3 aos))
     else if name = "GEN" then
       GEN (destTm (el 1 aos)) (destTh (el 2 aos))
     else if name = "INST_TYPE" then let
@@ -394,7 +400,7 @@ fun replay thyname = let
     else if name = "SYM" then
       SYM (destTh (el 1 aos))
     else if name = "Specialize" then
-      raise Fail ("replay_thm: Specialize not yet implemented")
+      Specialize (destTm (el 1 aos)) (destTh (el 2 aos))
     else if name = "TRANS" then
       TRANS (destTh (el 1 aos)) (destTh (el 2 aos))
       handle e as (HOL_ERR _) => (debug := [
@@ -437,10 +443,22 @@ fun replay thyname = let
               | _    => raise Fail "dup thy")
 in () end
 
+fun preplay s = (print s; replay s; print " done\n")
+val () = preplay "bool"
+val () = preplay "marker"
+val () = preplay "num"
+val () = preplay "sat"
+val () = preplay "combin"
+val () = preplay "relation"
+val () = preplay "prim_rec"
+val () = preplay "quotient"
+val () = preplay "pair"
+val () = preplay "arithmetic"
+val () = preplay "ind_type"
+val () = preplay "list"
 (*
-val () = replay "bool"
-val () = replay "marker"
-val rm = find(!trDB,"bool")
+val (boolDB, boolAs) = find(!trDB,"bool")
+val (markerDB, markerAs) = find(!trDB,"marker")
 
 fun print_ty ty =
   if is_vartype ty then dest_vartype ty
@@ -465,5 +483,6 @@ fun print_tm tm =
     String.concat["(", print_tm f, " ", print_tm x, ")"]
   end
 
-print_tm(concl(find(rm,"INFINITY_AX")))
+print_tm(concl(find(boolDB,"INFINITY_AX")))
+print_tm(concl(find(markerDB,"Case_def")))
 *)
