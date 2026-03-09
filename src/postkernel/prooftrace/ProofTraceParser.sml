@@ -167,7 +167,8 @@ fun shRoot c w = case arg' c w of f =>
     theory = str c (f 16),
     parents = f 24,
     all_thms = f 32,
-    constants = f 40 }
+    anon_thms = f 40,
+    constants = f 48 }
 
 fun shThmInfo c w = {private = arg c 2 w = 0w3}
 

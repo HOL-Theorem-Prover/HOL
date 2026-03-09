@@ -68,6 +68,7 @@ val shRoot: heap -> root ptr ->
     types: (string * int) list ptr,
     constants: (string * hol_type) list ptr,
     all_thms: (string * thm * thminfo) list ptr,
+    anon_thms: thm list ptr,
     mldeps: string list ptr }
 
 val shThmInfo: heap -> (thminfo, {private: bool}) gparser

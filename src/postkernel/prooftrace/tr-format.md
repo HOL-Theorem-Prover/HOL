@@ -140,6 +140,10 @@ type tag = dep * string list * string ref list
 
 type thm = tag * term set * term * proof ref
 
+datatype thm_id
+  = SavedAnon of int
+  | SavedName of string
+
 datatype proof
   = ABS_prf of term * thm
   | ALPHA_prf of term * term
@@ -158,6 +162,7 @@ datatype proof
   | DISJ1_prf of thm * term
   | DISJ2_prf of term * thm
   | DISJ_CASES_prf of thm * thm * thm
+  | Disk_prf of string * thm_id
   | Def_const_list_prf of string * (string * hol_type) list * thm
   | Def_const_prf of {Thy: string, Name: string} * term
   | Def_spec_prf of term list * thm
@@ -207,5 +212,6 @@ type trace_file =
     theory    : string,
     parents   : (string * string) list,
     all_thms  : (string * thm * thminfo) list,
+    anon_thms : thm list,
     constants : (string * hol_type) list }
 ```
