@@ -127,6 +127,7 @@ fun convert (root, objs) file = let
       ("Def_const", [%(tup2 (string, string)), %term]),
       ("Def_spec", [%(list term), %thm]),
       ("Def_tyop", [%(tup2 (string, string)), %(list hol_type), %thm, %hol_type]),
+      ("Disk", []),
       ("EQ_IMP_RULE1", [%thm]),
       ("EQ_IMP_RULE2", [%thm]),
       ("EQ_MP", [%thm, %thm]),
