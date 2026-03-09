@@ -146,7 +146,7 @@ datatype hol_obj =
    Ty of hol_type
  | Tm of term
  | Th of thm
- | Id of thm_id
+ | ThmId of thm_id
  | Str of string
  | Pair of hol_obj * hol_obj
  | List of hol_obj list
@@ -156,7 +156,7 @@ datatype hol_obj =
 fun destTy (Ty ty) = ty | destTy _ = raise Fail "destTy"
 fun destTm (Tm tm) = tm | destTm _ = raise Fail "destTm"
 fun destTh (Th th) = th | destTh _ = raise Fail "destTh"
-fun destId (Id id) = id | destId _ = raise Fail "destId"
+fun destThmId (ThmId id) = id | destThmId _ = raise Fail "destThmId"
 fun destStr (Str x) = x | destStr _ = raise Fail "destStr"
 fun destPair (Pair x) = x | destPair _ = raise Fail "destPair"
 fun destList (List x) = x | destList _ = raise Fail "destList"
@@ -342,7 +342,7 @@ fun replay thyname = let
       case peek(!trDB, thy) of
         NONE => raise Fail ("Disk thy "^thy)
       | SOME (named,anons) => (
-        case (destId (el 2 aos)) of
+        case (destThmId (el 2 aos)) of
           SavedAnon i => (
             List.nth(anons, i) handle Subscript =>
               raise Fail ("Disk thy "^thy^":"^(Int.toString i)))
@@ -420,7 +420,7 @@ fun replay thyname = let
     string = Str o replay_str o castPtr,
     term = Tm o replay_term o castPtr,
     thm = Th o replay_thm o castPtr,
-    thm_id = Id o get_thm_id o castPtr,
+    thm_id = ThmId o get_thm_id o castPtr,
     hol_type = Ty o replay_type o castPtr,
     new_type = K Unknown,
     new_term = Pair o (Str ## Str) o get_const_id o castPtr,
