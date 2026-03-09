@@ -191,13 +191,13 @@ fun replay thyname = let
              | _ => raise Fail "next_axiom_name"
   end
 
-  fun cache (mk_obj,dest_obj) mk_x x_ptr = let
-    val key = ptr x_ptr
+  fun cache (mk_obj,dest_obj) mk_x x_ptr =
+  if isPtr x_ptr then let val key = ptr x_ptr
   in case Array.sub(replayed_heap, key) of Unknown =>
        let val obj = mk_obj(mk_x x_ptr)
        in (Array.update(replayed_heap, key, obj); dest_obj obj) end
      | obj => dest_obj obj
-  end
+  end else mk_x x_ptr
 
   val debug : thm list ref = ref []
   val dbg_print = print
