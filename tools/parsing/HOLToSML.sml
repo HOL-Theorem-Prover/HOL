@@ -150,7 +150,21 @@ fun magicBind (p, name) acc =
     val code = mkString (p, concat ["val ", name, " = DB.fetch \"-\" \"", name,
       "\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;"])
     in valWild p (App (mkIdent (p, "CompilerSpecific.quietbind"), code)) :: acc end
-  else acc
+  else let
+    val fetchExp = mkApp (mkIdent (p, "DB.fetch"))
+      [mkString (p, "-"), mkString (p, name)]
+    val handleExp = Handle {
+      exp = fetchExp, handle_ = p,
+      elems = [{bar = NONE,
+                pat = App (mkIdent (p, "Feedback.HOL_ERR"), Wild p),
+                arrow = SOME p,
+                exp = mkIdent (p, "boolTheory.TRUTH")}],
+      stop = p}
+    val bind = DecVal {val_ = p, tyvars = Empty,
+      elems = {args = [{rec_ = NONE, pat = mkIdent (p, name),
+                         eq = SOME {eq = p, exp = handleExp}}],
+               delims = [], stop = p}}
+    in bind :: acc end
 
 fun expandExp true (e as Wild _) = e
   | expandExp false (Wild p) = mkFail (p, "_")
