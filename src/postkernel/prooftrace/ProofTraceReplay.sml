@@ -197,6 +197,10 @@ fun replay thyname = let
 
   val replayed_heap = Array.array(heapSize heap, Unknown);
 
+  val cached_compute_args : hol_obj ref = ref Unknown
+  val cached_compute : (thm list -> term -> thm) ref
+    = ref (fn _ => raise Bind)
+
   fun cache (mk_obj,dest_obj) mk_x x_ptr =
   if isPtr x_ptr then let val key = ptr x_ptr
   in case Array.sub(replayed_heap, key) of Unknown =>
@@ -431,8 +435,26 @@ fun replay thyname = let
       TRANS (destTh (el 1 aos)) (destTh (el 2 aos))
       handle e as (HOL_ERR _) => (debug := [
         destTh (el 1 aos), destTh (el 2 aos) ]; raise e)
-    else if name = "compute" then
-      raise Fail ("replay_thm: compute not yet implemented")
+    else if name = "compute" then let
+      val (a4, ths_obj) = destPair (el 1 aos)
+      val ths = List.map destTh (destList ths_obj)
+      val tm = destTm (el 2 aos)
+      val () =  if Portable.pointer_eq(!cached_compute_args, a4)
+                then ()
+        else (cached_compute_args := a4;
+              cached_compute := Thm.compute
+              let val (n,(e,(y,t))) = destFour a4
+                  val num_type = destTy n
+                  val char_eqns =
+                    List.map ((destStr ## destTh) o destPair)
+                             (destList e)
+                  val cval_type = destTy y
+                  val cval_terms =
+                    List.map ((destStr ## destTm) o destPair)
+                             (destList t)
+              in {num_type = num_type, char_eqns = char_eqns,
+                  cval_type = cval_type, cval_terms = cval_terms} end)
+    in (!cached_compute) ths tm end
     else if name = "deductAntisym" then
       raise Fail ("replay_thm: deductAntisym not yet implemented")
     else if name = "deleted" then
