@@ -506,10 +506,16 @@ val () = preplay "numeral"
 val () = preplay "cv"
 val () = preplay "numpair"
 val () = preplay "ind_type"
+val () = preplay "one"
+val () = preplay "sum"
+val () = preplay "option"
+val () = preplay "While"
+val () = preplay "pred_set"
 val () = preplay "list"
 (*
 val (boolDB, boolAs) = find(!trDB,"bool")
 val (markerDB, markerAs) = find(!trDB,"marker")
+val (numDB, numAs) = find(!trDB,"num")
 
 fun print_ty ty =
   if is_vartype ty then dest_vartype ty
@@ -534,6 +540,9 @@ fun print_tm tm =
     String.concat["(", print_tm f, " ", print_tm x, ")"]
   end
 
+List.map (print_tm o concl) (!debug)
+
 print_tm(concl(find(boolDB,"INFINITY_AX")))
 print_tm(concl(find(markerDB,"Case_def")))
+print_tm(concl(find(numDB,"NOT_SUC")))
 *)
