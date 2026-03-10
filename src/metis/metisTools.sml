@@ -14,6 +14,8 @@ struct
 
 open HolKernel Parse boolLib folTools folMapping;
 
+exception OutOfDateTerm of string
+
 (* ------------------------------------------------------------------------- *)
 (* Chatting and error handling.                                              *)
 (* ------------------------------------------------------------------------- *)
@@ -205,6 +207,7 @@ fun contains s =
 fun const_scheme c =
   let val {Thy, Name, ...} = dest_thy_const c
   in prim_mk_const {Name = Name, Thy = Thy}
+     handle HOL_ERR _ => raise OutOfDateTerm Name
   end;
 
 fun trap f g x =
@@ -414,11 +417,15 @@ local
     end;
 in
   fun classify fms = order (First,empty) fms
-    handle HOL_ERR e => (
-        print "metisTools.classify: error in classifying:\n";
-        print (format_ERR e);
-        raise BUG "metisTools.classify" "shouldn't fail"
-    );
+    handle
+    HOL_ERR e => (
+      print "metisTools.classify: error in classifying:\n";
+      print (format_ERR e);
+      raise BUG "metisTools.classify" "shouldn't fail"
+    )
+  | OutOfDateTerm nm =>
+    raise ERR "classify"
+          ("Input thm includes out-of-date constant with name " ^ nm)
 end;
 
 fun METIS_TTAC (cs,ths) =
