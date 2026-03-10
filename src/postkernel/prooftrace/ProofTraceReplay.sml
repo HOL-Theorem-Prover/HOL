@@ -147,64 +147,9 @@ let
     case shType heap ty_ptr of Tyapp (idp,_) => ident heap idp
     | _ => raise Fail "get_type_id")
 
-  (*
-    val [(_,thm_ptr)] = listItems (!tm_defs)
-    val debug_ptr: thm ptr ref = ref (castPtr root_ptr)
-    val thm_ptr = !debug_ptr
-    val thm_ptr = el 1 thm_ptrs
-  *)
-  fun mk_add_def thyname = let
-    val tm_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
-    val ty_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
-    val seen = BoolArray.array(heapSize heap, false)
-    fun add_def (thm_ptr: thm ptr) =
-      if BoolArray.sub(seen, ptr thm_ptr) then () else let
-      (*
-      val () = print ("ptr thm_ptr: " ^ Int.toString(ptr thm_ptr) ^ "\n")
-      val () = debug_ptr := thm_ptr
-      *)
-      val () = BoolArray.update(seen, ptr thm_ptr, true)
-      val (_, _, proof_ptr) = shThm heap thm_ptr
-      val (i, args_ptrs) = shVariant heap proof_ptr
-      val rs = mk_rules (do_all_thms heap (add_def o castPtr))
-      val (rule_name, args_rs) = Array.sub(rs, i)
-      fun add_thm_ptr nm NONE = [thm_ptr]
-        | add_thm_ptr nm (SOME ls) = (
-            print("WARNING: multiple defs for "^nm^"\n");
-            thm_ptr::ls)
-      fun check_thy defthy =
-        if defthy = thyname then () else raise Fail "add_def thy"
-      fun add_const nm = tm_defs := update(!tm_defs, nm, add_thm_ptr nm)
-      val () = if rule_name <> "Def_const_list" andalso
-                  rule_name <> "Def_spec" then () else let
-        (* val () = print "Def_const_list/spec\n" *)
-        val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
-        fun go (thy,nm) = (check_thy thy; add_const nm)
-      in List.app go ids end
-      val () = if rule_name <> "Def_const" then () else let
-        (* val () = print "Def_const\n" *)
-        val (thy,nm) = get_const_id (castPtr (el 2 args_ptrs))
-        val () = check_thy thy
-      in add_const nm end
-      val () = if rule_name <> "Def_tyop" then () else let
-        (* val () = print "Def_tyop\n" *)
-        val (thy,tyop) = get_type_id (castPtr (el 3 args_ptrs))
-        val () = check_thy thy
-      in ty_defs := update(!ty_defs, tyop, add_thm_ptr tyop) end
-      val _ = map2 apply args_rs args_ptrs
-    in () end
-  in (tm_defs, ty_defs, add_def) end
-
-  val (tm_defs, ty_defs) =
-    let val (tms,tys,ad) = mk_add_def thyname
-        val () = appList heap (tuple3 heap (I, ad, I)) all_thms
-        val () = appList heap ad anon_thms
-    in (!tms, !tys) end
-
-  (* Reference counting pre-pass for theorems.
-     Count how many times each thm pointer is accessed via cache during replay.
-     Def thm pointers (from check_def) are excluded — they're called an
-     unpredictable number of times and are a small fixed set, so we pin them. *)
+  (* Combined pre-pass: collect defs and count thm references in one traversal *)
+  val tm_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
+  val ty_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
   val thm_refcounts = Array.array(heapSize heap, 0 : int)
   val pinned = BoolArray.array(heapSize heap, false)
   val () = let
@@ -221,24 +166,41 @@ let
         val (i, args_ptrs) = shVariant heap proof_ptr
         val rs = mk_rules (do_all_thms heap
                    (fn p => (incr p; walk (castPtr p))))
-        val (_, args_rs) = Array.sub(rs, i)
+        val (rule_name, args_rs) = Array.sub(rs, i)
+        (* Collect defs and pin their thm pointers *)
+        fun add_thm_ptr nm prev =
+              (BoolArray.update(pinned, ptr thm_ptr, true);
+               case prev of NONE => [thm_ptr]
+                 | SOME ls => (print("WARNING: multiple defs for "^nm^"\n");
+                               thm_ptr::ls))
+        fun check_thy defthy =
+          if defthy = thyname then () else raise Fail "add_def thy"
+        fun add_const nm = tm_defs := update(!tm_defs, nm, add_thm_ptr nm)
+        val () = if rule_name <> "Def_const_list" andalso
+                    rule_name <> "Def_spec" then () else let
+          val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
+          fun go (thy,nm) = (check_thy thy; add_const nm)
+        in List.app go ids end
+        val () = if rule_name <> "Def_const" then () else let
+          val (thy,nm) = get_const_id (castPtr (el 2 args_ptrs))
+          val () = check_thy thy
+        in add_const nm end
+        val () = if rule_name <> "Def_tyop" then () else let
+          val (thy,tyop) = get_type_id (castPtr (el 3 args_ptrs))
+          val () = check_thy thy
+        in ty_defs := update(!ty_defs, tyop, add_thm_ptr tyop) end
         val _ = map2 apply args_rs args_ptrs
       in () end
-    fun count_named p = let
+    fun pre_named p = let
       val (_, (thp, _)) = tuple3 heap (I, I, I) p
     in incr thp; walk thp end
-    fun count_anon p = (incr p; walk (castPtr p))
+    fun pre_anon p = (incr p; walk (castPtr p))
   in
-    appList heap count_named all_thms;
-    appList heap count_anon anon_thms
+    appList heap pre_named all_thms;
+    appList heap pre_anon anon_thms
   end
-  (* Pin def thm pointers so they're never evicted *)
-  val () = let
-    fun pin_ptrs ptrs = List.app (fn p => BoolArray.update(pinned, ptr p, true)) ptrs
-  in
-    app' pin_ptrs tm_defs;
-    app' pin_ptrs ty_defs
-  end
+  val tm_defs = !tm_defs
+  val ty_defs = !ty_defs
 
   val replayed_heap = Array.array(heapSize heap, Unknown);
 
