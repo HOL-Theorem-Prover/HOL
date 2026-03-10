@@ -454,10 +454,8 @@ fun MK_FORALL v th =
   let val theta = [{redex=Type.alpha, residue=Term.type_of v}]
   in AP_TERM (Term.inst theta boolSyntax.universal) (ABS v th)
   end;
-fun MK_EXISTS v th =
-  let val theta = [{redex=Type.alpha, residue=Term.type_of v}]
-  in AP_TERM (Term.inst theta boolSyntax.existential) (ABS v th)
-  end;
+
+val MK_EXISTS = Drule.MK_EXISTS
 
 fun SIMPLE_DISJ_CASES th1 th2 =
   case (hyp th1, hyp th2)

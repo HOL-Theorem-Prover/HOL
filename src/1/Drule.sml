@@ -120,38 +120,6 @@ fun SPEC_VAR th =
       (bv', SPEC bv' th)
    end
 
-(*---------------------------------------------------------------------------*
- *       A |-  (!x. t1 = t2)                                                 *
- *   ---------------------------                                             *
- *    A |- (?x.t1)  =  (?x.t2)                                               *
- *---------------------------------------------------------------------------*)
-
-fun MK_EXISTS bodyth =
-   let
-      val (x, sth) = SPEC_VAR bodyth
-      val (a, b) = dest_eq (concl sth)
-      val (abimp, baimp) = EQ_IMP_RULE sth
-      fun HALF (p, q) pqimp =
-         let
-            val xp = mk_exists (x, p)
-            and xq = mk_exists (x, q)
-         in
-            DISCH xp (CHOOSE (x, ASSUME xp)
-                             (EXISTS (xq, x) (MP pqimp (ASSUME p))))
-         end
-   in
-      IMP_ANTISYM_RULE (HALF (a, b) abimp) (HALF (b, a) baimp)
-   end
-   handle HOL_ERR _ => raise ERR "MK_EXISTS" ""
-
-(*---------------------------------------------------------------------------*
- *               A |-  t1 = t2                                               *
- *   ------------------------------------------- (xi not free in A)          *
- *    A |- (?x1 ... xn. t1)  =  (?x1 ... xn. t2)                             *
- *---------------------------------------------------------------------------*)
-
-fun LIST_MK_EXISTS l th = itlist (fn x => fn th => MK_EXISTS (GEN x th)) l th
-
 fun SIMPLE_EXISTS v th = EXISTS (mk_exists (v, concl th), v) th
 
 fun SIMPLE_CHOOSE v th =
@@ -415,13 +383,21 @@ fun FORALL_EQ x =
  *      A |- (?x.t1) = (?x.t2)                                               *
  *---------------------------------------------------------------------------*)
 
-fun EXISTS_EQ x =
+fun MK_EXISTS x =
    let
       val exists = AP_TERM (inst [alpha |-> type_of x] boolSyntax.existential)
    in
       fn th => exists (ABS x th)
    end
-   handle HOL_ERR _ => raise ERR "EXISTS_EQ" ""
+   handle HOL_ERR _ => raise ERR "MK_EXISTS" ""
+
+(*---------------------------------------------------------------------------*
+ *               A |-  t1 = t2                                               *
+ *   ------------------------------------------- (xi not free in A)          *
+ *    A |- (?x1 ... xn. t1)  =  (?x1 ... xn. t2)                             *
+ *---------------------------------------------------------------------------*)
+
+fun LIST_MK_EXISTS l th = itlist (fn x => fn th => MK_EXISTS x th) l th
 
 (*---------------------------------------------------------------------------*
  * @ abstraction                                                             *
