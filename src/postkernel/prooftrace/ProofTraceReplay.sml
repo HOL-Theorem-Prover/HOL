@@ -312,7 +312,7 @@ fun replay thyname = let
     else if name = "BETA_CONV" then
       BETA_CONV (destTm (el 1 aos))
     else if name = "Beta" then
-      raise Fail ("replay_thm: Beta not yet implemented")
+      Beta (destTh (el 1 aos))
     else if name = "CCONTR" then
       CCONTR (destTm (el 1 aos)) (destTh (el 2 aos))
     else if name = "CHOOSE" then
@@ -331,8 +331,17 @@ fun replay thyname = let
       DISJ2 (destTm (el 1 aos)) (destTh (el 2 aos))
     else if name = "DISJ_CASES" then
       DISJ_CASES (destTh (el 1 aos)) (destTh (el 2 aos)) (destTh (el 3 aos))
-    else if name = "Def_const_list" then
-      raise Fail ("replay_thm: Def_const_list not yet implemented")
+    else if name = "Def_const_list" then let
+      val ids = List.map ((destStr ## destStr) o destPair)
+                         (destList (el 2 aos))
+      val () = if List.all (equal thyname) (List.map #1 ids) then ()
+               else raise Fail "Def_const_list thy"
+      val () = List.app (fn (Thy,Name) =>
+                 (prim_mk_const{Thy=Thy,Name=Name};
+                  raise Fail ("Def_const_list redef "^Thy^"$"^Name))
+                 handle HOL_ERR _ => ()) ids
+      val th = destTh (el 1 aos)
+    in #2 (gen_prim_specification thyname th) end
     else if name = "Def_const" then let
       val (Thy,Name) = (destStr ## destStr) (destPair (el 2 aos))
       val () = ((prim_mk_const{Thy=Thy,Name=Name};
@@ -409,7 +418,8 @@ fun replay thyname = let
       handle e as (HOL_ERR _) => (debug := [
         destTh (el 1 aos), destTh (el 2 aos) ]; raise e)
     else if name = "Mk_abs" then
-      raise Fail ("replay_thm: Mk_abs not yet implemented")
+      let val (_,_,mka) = Mk_abs (destTh (el 1 aos))
+    in mka (destTh (el 3 aos)) end
     else if name = "Mk_comb" then let
       val (_,_,mkc) = Mk_comb (destTh (el 1 aos))
     in mkc (destTh (el 2 aos)) (destTh (el 3 aos)) end
@@ -510,7 +520,11 @@ val () = preplay "one"
 val () = preplay "sum"
 val () = preplay "option"
 val () = preplay "While"
+val () = preplay "reduce"
+val () = preplay "divides"
+val () = preplay "normalForms"
 val () = preplay "pred_set"
+val () = preplay "basicSize"
 val () = preplay "list"
 (*
 val (boolDB, boolAs) = find(!trDB,"bool")
