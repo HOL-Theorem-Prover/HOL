@@ -4,69 +4,38 @@ val _ = PolyML.use (OS.Path.concat(Globals.HOLDIR, "tools-poly/holinteractive.ML
 open Lib HolKernel Redblackmap ProofTraceParser
 
 val () = Feedback.emit_WARNING := false
-fun apply f g = f g
+
 fun mk_eq(l,r) = list_mk_icomb equality [l,r]
 datatype thm_id = SavedAnon of int | SavedName of string
 
-fun mk_rules {string,term,thm,hol_type,list,pair,opt,four,
-              new_term,new_type,thm_id} =
-   Array.fromList [
-      (* 0  *) ("ABS", [term, thm]),
-      (* 1  *) ("ALPHA", [term, term]),
-      (* 2  *) ("AP_TERM", [term, thm]),
-      (* 3  *) ("AP_THM", [thm, term]),
-      (* 4  *) ("ASSUME", [term]),
-      (* 5  *) ("Axiom", []),
-      (* 6  *) ("BETA_CONV", [term]),
-      (* 7  *) ("Beta", [thm]),
-      (* 8  *) ("CCONTR", [term, thm]),
-      (* 9  *) ("CHOOSE", [term, thm, thm]),
-      (* 10 *) ("CONJUNCT1", [thm]),
-      (* 11 *) ("CONJUNCT2", [thm]),
-      (* 12 *) ("CONJ", [thm, thm]),
-      (* 13 *) ("DISCH", [term, thm]),
-      (* 14 *) ("DISJ1", [thm, term]),
-      (* 15 *) ("DISJ2", [term, thm]),
-      (* 16 *) ("DISJ_CASES", [thm, thm, thm]),
-      (* 17 *) ("Def_const_list", [thm, list new_term]),
-      (* 18 *) ("Def_const", [term, new_term]),
-      (* 19 *) ("Def_spec", [thm, list new_term]),
-      (* 20 *) ("Def_tyop", [list hol_type, thm, new_type]),
-      (* 21 *) ("Disk", [string, thm_id]),
-      (* 22 *) ("EQ_IMP_RULE1", [thm]),
-      (* 23 *) ("EQ_IMP_RULE2", [thm]),
-      (* 24 *) ("EQ_MP", [thm, thm]),
-      (* 25 *) ("EXISTS", [term, term, thm]),
-      (* 26 *) ("GENL", [list term, thm]),
-      (* 27 *) ("GEN_ABS", [opt term, list term, thm]),
-      (* 28 *) ("GEN", [term, thm]),
-      (* 29 *) ("INST_TYPE", [list (pair (hol_type, hol_type)), thm]),
-      (* 30 *) ("INST", [list (pair (term, term)), thm]),
-      (* 31 *) ("MK_COMB", [thm, thm]),
-      (* 32 *) ("MP", [thm, thm]),
-      (* 33 *) ("Mk_abs", [thm, term, thm]),
-      (* 34 *) ("Mk_comb", [thm, thm, thm]),
-      (* 35 *) ("NOT_ELIM", [thm]),
-      (* 36 *) ("NOT_INTRO", [thm]),
-      (* 37 *) ("REFL", [term]),
-      (* 38 *) ("SPEC", [term, thm]),
-      (* 39 *) ("SUBST", [list (pair (term, thm)), term, thm]),
-      (* 40 *) ("SYM", [thm]),
-      (* 41 *) ("Specialize", [term, thm]),
-      (* 42 *) ("TRANS", [thm, thm]),
-      (* 43 *) ("compute", [pair (four (hol_type, list (pair (string, thm)),
-                               hol_type, list (pair (string, term))),
-                         list thm), term]),
-      (* 44 *) ("deductAntisym", [thm, thm]),
-      (* 45 *) ("deleted", [])
-  ]
 (*
-  compute_prf of (compute_args * thm list) * term
-  where compute_args = {
-    num_type   : hol_type,
-    char_eqns  : (string * thm) list,
-    cval_type  : hol_type,
-    cval_terms : (string * term) list }
+  Proof rule indices (source of truth for both walk_thm and replay_thm):
+   0  ABS (term, thm)            23 EQ_IMP_RULE2 (thm)
+   1  ALPHA (term, term)         24 EQ_MP (thm, thm)
+   2  AP_TERM (term, thm)        25 EXISTS (term, term, thm)
+   3  AP_THM (thm, term)         26 GENL (list term, thm)
+   4  ASSUME (term)              27 GEN_ABS (opt term, list term, thm)
+   5  Axiom ()                   28 GEN (term, thm)
+   6  BETA_CONV (term)           29 INST_TYPE (list(pair(ty,ty)), thm)
+   7  Beta (thm)                 30 INST (list(pair(tm,tm)), thm)
+   8  CCONTR (term, thm)         31 MK_COMB (thm, thm)
+   9  CHOOSE (term, thm, thm)    32 MP (thm, thm)
+  10  CONJUNCT1 (thm)            33 Mk_abs (thm, term, thm)
+  11  CONJUNCT2 (thm)            34 Mk_comb (thm, thm, thm)
+  12  CONJ (thm, thm)            35 NOT_ELIM (thm)
+  13  DISCH (term, thm)          36 NOT_INTRO (thm)
+  14  DISJ1 (thm, term)          37 REFL (term)
+  15  DISJ2 (term, thm)          38 SPEC (term, thm)
+  16  DISJ_CASES (thm,thm,thm)   39 SUBST (list(pair(tm,th)), term, thm)
+  17  Def_const_list (thm,       40 SYM (thm)
+        list new_term)           41 Specialize (term, thm)
+  18  Def_const (term, new_term) 42 TRANS (thm, thm)
+  19  Def_spec (thm,             43 compute (pair(four(ty,list(pair(str,th)),
+        list new_term)                 ty,list(pair(str,tm))),list th),term)
+  20  Def_tyop (list ty,         44 deductAntisym (thm, thm)
+        thm, new_type)           45 deleted ()
+  21  Disk (string, thm_id)
+  22  EQ_IMP_RULE1 (thm)
 *)
 
 val trDB : (string, (string, thm) dict * thm list) dict ref
@@ -195,19 +164,11 @@ let
         val () = BoolArray.update(seen, ptr thm_ptr, true)
         val (_, _, proof_ptr) = shThm heap thm_ptr
         val (i, args_ptrs) = shVariant heap proof_ptr
-        val rs = mk_rules {
-          string = K (), new_term = K (), new_type = K (), thm_id = K (),
-          hol_type = fn p => (incr p; walk_type (castPtr p)),
-          term = fn p => (incr p;
-            if first_seen (castPtr p) then walk_term_inner (castPtr p)
-            else ()),
-          thm = fn p => (incr p; walk_thm (castPtr p)),
-          list = fn f => appList heap f o castPtr,
-          opt = fn f => ignore o option heap f o castPtr,
-          pair = fn fg => ignore o tuple2 heap fg o castPtr,
-          four = fn fghi => ignore o tuple4 heap fghi o castPtr
-        }
-        val (rule_name, args_rs) = Array.sub(rs, i)
+        fun tm p = (incr p;
+          if first_seen (castPtr p) then walk_term_inner (castPtr p)
+          else ())
+        fun th p = (incr p; walk_thm (castPtr p))
+        fun ty p = (incr p; walk_type (castPtr p))
         (* Collect defs and pin their thm pointers *)
         fun add_thm_ptr nm prev =
               (BoolArray.update(pinned, ptr thm_ptr, true);
@@ -217,21 +178,93 @@ let
         fun check_thy defthy =
           if defthy = thyname then () else raise Fail "add_def thy"
         fun add_const nm = tm_defs := update(!tm_defs, nm, add_thm_ptr nm)
-        val () = if rule_name <> "Def_const_list" andalso
-                    rule_name <> "Def_spec" then () else let
-          val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
-          fun go (thy,nm) = (check_thy thy; add_const nm)
-        in List.app go ids end
-        val () = if rule_name <> "Def_const" then () else let
-          val (thy,nm) = get_const_id (castPtr (el 2 args_ptrs))
+        fun add_def_const p = let
+          val (thy,nm) = get_const_id (castPtr p)
           val () = check_thy thy
         in add_const nm end
-        val () = if rule_name <> "Def_tyop" then () else let
-          val (thy,tyop) = get_type_id (castPtr (el 3 args_ptrs))
-          val () = check_thy thy
-        in ty_defs := update(!ty_defs, tyop, add_thm_ptr tyop) end
-        val _ = map2 apply args_rs args_ptrs
-      in () end
+      in case i of
+        (* Simple rules: just term/thm/type args *)
+          0  => (* ABS *)        (tm(el 1 args_ptrs); th(el 2 args_ptrs))
+        | 1  => (* ALPHA *)      (tm(el 1 args_ptrs); tm(el 2 args_ptrs))
+        | 2  => (* AP_TERM *)    (tm(el 1 args_ptrs); th(el 2 args_ptrs))
+        | 3  => (* AP_THM *)     (th(el 1 args_ptrs); tm(el 2 args_ptrs))
+        | 4  => (* ASSUME *)     tm(el 1 args_ptrs)
+        | 5  => (* Axiom *)      ()
+        | 6  => (* BETA_CONV *)  tm(el 1 args_ptrs)
+        | 7  => (* Beta *)       th(el 1 args_ptrs)
+        | 8  => (* CCONTR *)     (tm(el 1 args_ptrs); th(el 2 args_ptrs))
+        | 9  => (* CHOOSE *)     (tm(el 1 args_ptrs); th(el 2 args_ptrs); th(el 3 args_ptrs))
+        | 10 => (* CONJUNCT1 *)  th(el 1 args_ptrs)
+        | 11 => (* CONJUNCT2 *)  th(el 1 args_ptrs)
+        | 12 => (* CONJ *)       (th(el 1 args_ptrs); th(el 2 args_ptrs))
+        | 13 => (* DISCH *)      (tm(el 1 args_ptrs); th(el 2 args_ptrs))
+        | 14 => (* DISJ1 *)      (th(el 1 args_ptrs); tm(el 2 args_ptrs))
+        | 15 => (* DISJ2 *)      (tm(el 1 args_ptrs); th(el 2 args_ptrs))
+        | 16 => (* DISJ_CASES *) (th(el 1 args_ptrs); th(el 2 args_ptrs); th(el 3 args_ptrs))
+        | 17 => (* Def_const_list *) let
+            val () = th(el 1 args_ptrs)
+            val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
+          in List.app (fn (thy,nm) => (check_thy thy; add_const nm)) ids end
+        | 18 => (* Def_const *) (tm(el 1 args_ptrs); add_def_const (el 2 args_ptrs))
+        | 19 => (* Def_spec *) let
+            val () = th(el 1 args_ptrs)
+            val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
+          in List.app (fn (thy,nm) => (check_thy thy; add_const nm)) ids end
+        | 20 => (* Def_tyop *) let
+            val () = appList heap ty (castPtr (el 1 args_ptrs))
+            val () = th(el 2 args_ptrs)
+            val (thy,tyop) = get_type_id (castPtr (el 3 args_ptrs))
+            val () = check_thy thy
+          in ty_defs := update(!ty_defs, tyop, add_thm_ptr tyop) end
+        | 21 => (* Disk *)       ()
+        | 22 => (* EQ_IMP_RULE1 *) th(el 1 args_ptrs)
+        | 23 => (* EQ_IMP_RULE2 *) th(el 1 args_ptrs)
+        | 24 => (* EQ_MP *)      (th(el 1 args_ptrs); th(el 2 args_ptrs))
+        | 25 => (* EXISTS *)     (tm(el 1 args_ptrs); tm(el 2 args_ptrs); th(el 3 args_ptrs))
+        | 26 => (* GENL *)       (appList heap tm (castPtr (el 1 args_ptrs)); th(el 2 args_ptrs))
+        | 27 => (* GEN_ABS *)    (ignore (option heap tm (castPtr (el 1 args_ptrs)));
+                                   appList heap tm (castPtr (el 2 args_ptrs));
+                                   th(el 3 args_ptrs))
+        | 28 => (* GEN *)        (tm(el 1 args_ptrs); th(el 2 args_ptrs))
+        | 29 => (* INST_TYPE *)  (appList heap (fn p =>
+                                    let val (a,b) = tuple2 heap (ty,ty) (castPtr p)
+                                    in () end) (castPtr (el 1 args_ptrs));
+                                   th(el 2 args_ptrs))
+        | 30 => (* INST *)       (appList heap (fn p =>
+                                    let val (a,b) = tuple2 heap (tm,tm) (castPtr p)
+                                    in () end) (castPtr (el 1 args_ptrs));
+                                   th(el 2 args_ptrs))
+        | 31 => (* MK_COMB *)    (th(el 1 args_ptrs); th(el 2 args_ptrs))
+        | 32 => (* MP *)         (th(el 1 args_ptrs); th(el 2 args_ptrs))
+        | 33 => (* Mk_abs *)     (th(el 1 args_ptrs); tm(el 2 args_ptrs); th(el 3 args_ptrs))
+        | 34 => (* Mk_comb *)    (th(el 1 args_ptrs); th(el 2 args_ptrs); th(el 3 args_ptrs))
+        | 35 => (* NOT_ELIM *)   th(el 1 args_ptrs)
+        | 36 => (* NOT_INTRO *)  th(el 1 args_ptrs)
+        | 37 => (* REFL *)       tm(el 1 args_ptrs)
+        | 38 => (* SPEC *)       (tm(el 1 args_ptrs); th(el 2 args_ptrs))
+        | 39 => (* SUBST *)      (appList heap (fn p =>
+                                    let val (a,b) = tuple2 heap (tm,th) (castPtr p)
+                                    in () end) (castPtr (el 1 args_ptrs));
+                                   tm(el 2 args_ptrs); th(el 3 args_ptrs))
+        | 40 => (* SYM *)        th(el 1 args_ptrs)
+        | 41 => (* Specialize *) (tm(el 1 args_ptrs); th(el 2 args_ptrs))
+        | 42 => (* TRANS *)      (th(el 1 args_ptrs); th(el 2 args_ptrs))
+        | 43 => (* compute *) let
+            val (args_p, extra_p) = tuple2 heap (I, I) (castPtr (el 1 args_ptrs))
+            val (nty_p, (ceq_p, (cvty_p, cvtm_p))) =
+              tuple4 heap (I, I, I, I) (castPtr args_p)
+            val () = ty nty_p
+            val () = appList heap (fn p =>
+              ignore (tuple2 heap (K(), th) (castPtr p))) (castPtr ceq_p)
+            val () = ty cvty_p
+            val () = appList heap (fn p =>
+              ignore (tuple2 heap (K(), tm) (castPtr p))) (castPtr cvtm_p)
+            val () = appList heap th (castPtr extra_p)
+          in tm(el 2 args_ptrs) end
+        | 44 => (* deductAntisym *) (th(el 1 args_ptrs); th(el 2 args_ptrs))
+        | 45 => (* deleted *)    ()
+        | n => raise Fail ("walk_thm: unknown rule " ^ Int.toString n)
+      end
     fun pre_named p = let
       val (_, (thp, _)) = tuple3 heap (I, I, I) p
     in incr thp; walk_thm thp end
