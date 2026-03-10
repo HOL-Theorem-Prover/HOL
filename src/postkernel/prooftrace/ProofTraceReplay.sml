@@ -501,11 +501,39 @@ let
   val named = fromList String.compare (list heap export all_thms)
   val anons = list heap replay_thm anon_thms
 
+(*
+  val (live_ty, live_tm, live_th) =
+    Array.foldl (fn (Ty _, (a,b,c)) => (a+1,b,c)
+                  | (Tm _, (a,b,c)) => (a,b+1,c)
+                  | (Th _, (a,b,c)) => (a,b,c+1)
+                  | (_, acc) => acc) (0,0,0) replayed_heap
+  val saturated = Word8Array.foldl (fn (0wxFF, n) => n+1 | (_, n) => n) 0 refcounts
+  val pinned_count = BoolArray.foldl (fn (true, n) => n+1 | (_, n) => n) 0 pinned
+  val () = print (concat [
+    "  heap: ", Int.toString (heapSize heap),
+    "  live: ", Int.toString live_ty, "ty/",
+               Int.toString live_tm, "tm/",
+               Int.toString live_th, "th",
+    "  pinned: ", Int.toString pinned_count,
+    "  sat: ", Int.toString saturated,
+    "  ids: ", Int.toString (PIntMap.size (!id_cache)),
+    "  named: ", Int.toString (numItems named),
+    "  anons: ", Int.toString (length anons), "\n"])
+*)
+
 in trDB := insert(!trDB, thyname, (named, anons)) end
+
+(*
+fun trDB_size () = foldl (fn (_,(n,a), acc) =>
+  acc + numItems n + length a) 0 (!trDB)
+*)
 
 fun replay_seq [] = ()
   | replay_seq (thy::thys) =
     (print thy; print ": ";
+(*
+     print ("trDB: " ^ Int.toString (trDB_size ()) ^ " thms  ");
+*)
      PolyML.fullGC();
      time replay thy;
      replay_seq thys)
