@@ -2005,7 +2005,13 @@ in
         val tm0 = rhs (concl th0)
     in EQ_MP (SYM th0)
          (core tm0
-          handle HOL_ERR _ => direct_sos tm0)
+          handle e1 as HOL_ERR _ =>
+            (direct_sos tm0
+             handle HOL_ERR _ =>
+               if isSome (find_csdp ()) then raise e1
+               else raise ERR "REAL_SOS"
+                 "failed (CSDP not found -- install CSDP or set \
+                 \HOL4_CSDP_EXECUTABLE for nonlinear goals with hypotheses)"))
     end
     handle e => raise wrap_exn "SOSLib" "REAL_SOS" e
 end;

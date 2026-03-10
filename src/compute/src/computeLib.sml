@@ -290,7 +290,7 @@ fun set_skip compset c opt =
  let val {Name,Thy,...} = dest_thy_const c
  in clauses.set_skip compset (Name,Thy) opt
  end
- handle HOL_ERR _ => raise ERR "set_skip" "";
+ handle e as HOL_ERR _ => raise wrap_exn "computeLib" "set_skip" e
 
 
 (*---------------------------------------------------------------------------

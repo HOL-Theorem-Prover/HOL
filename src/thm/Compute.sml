@@ -117,7 +117,9 @@ fun exec funs env ce =
                              (get_code f funs)
   | Let (x, y) => exec funs (exec funs env x::env) y
   | If (x, y, z) =>
-      exec funs env (if exec funs env x = cv_zero then z else y)
+      exec funs env (case exec funs env x of
+                       Num n => if n = Arbnum.zero then z else y
+                     | _     => z)
 and exec_list funs env xs acc =
   case xs of
     [] => List.rev acc
@@ -538,7 +540,7 @@ local
        ("cv_lt4",     CV_LT (CV_PAIR P_ Q_) (CV_PAIR R_ S_) === CV_NUM ZERO),
        ("cv_if1",     CV_IF (CV_NUM (SUC M_)) P_ Q_ === P_),
        ("cv_if2",     CV_IF (CV_NUM ZERO) P_ Q_ === Q_),
-       ("cv_if3",     CV_IF (CV_PAIR R_ S_) P_ Q_ === P_),
+       ("cv_if3",     CV_IF (CV_PAIR R_ S_) P_ Q_ === Q_),
        ("cv_fst1",    CV_FST (CV_PAIR P_ Q_) === P_),
        ("cv_fst2",    CV_FST (CV_NUM M_) === CV_NUM ZERO),
        ("cv_snd1",    CV_SND (CV_PAIR P_ Q_) === Q_),
