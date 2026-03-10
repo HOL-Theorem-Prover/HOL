@@ -243,12 +243,6 @@ let
   in if i = 0 then SavedAnon (int (castPtr p))
      else SavedName (str heap (castPtr p)) end
 
-  val replay_str = cache (Str,destStr) (str heap)
-  fun replay_pair f = cache (Pair,destPair) (tuple2 heap f)
-  fun replay_list f = cache (List,destList) (list heap f)
-  fun replay_opt f = cache (Opt,destOpt) (option heap f)
-  fun replay_four f = cache (Four,destFour) (tuple4 heap f)
-
   fun check_def map Thy nm =
     if Thy = thyname then case peek (map, nm)
     of SOME thps => List.app (ignore o replay_thm) thps
@@ -503,18 +497,17 @@ let
   end) thm_ptr
 
   and rules() = mk_rules {
-    string = Str o replay_str o castPtr,
+    string = Str o str heap o castPtr,
     term = Tm o replay_term o castPtr,
     thm = Th o replay_thm o castPtr,
     thm_id = ThmId o get_thm_id o castPtr,
     hol_type = Ty o replay_type o castPtr,
     new_type = Pair o (Str ## Str) o get_type_id o castPtr,
     new_term = Pair o (Str ## Str) o get_const_id o castPtr,
-    list = fn f => List o replay_list f o castPtr,
-    pair = fn f => Pair o replay_pair f o castPtr,
-    opt = fn f => Opt o replay_opt f o castPtr,
-    four = fn f => Four o replay_four f o castPtr
-  }
+    list = fn f => List o list heap f o castPtr,
+    pair = fn f => Pair o tuple2 heap f o castPtr,
+    opt = fn f => Opt o option heap f o castPtr,
+    four = fn f => Four o cache (Four,destFour) (tuple4 heap f) o castPtr }
 
   fun export p = let
     val (nm, (thp, _)) = tuple3 heap (str heap, I, I) p
