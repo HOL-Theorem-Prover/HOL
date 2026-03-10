@@ -94,8 +94,8 @@ fun get_type_id heap ty_ptr =
   val thm_ptr = el 1 thm_ptrs
 *)
 fun mk_add_def thyname heap = let
-  val tm_defs : (string, thm ptr) dict ref = ref (mkDict String.compare)
-  val ty_defs : (string, thm ptr) dict ref = ref (mkDict String.compare)
+  val tm_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
+  val ty_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
   val seen = BoolArray.array(heapSize heap, false)
   fun add_def (thm_ptr: thm ptr) =
     if BoolArray.sub(seen, ptr thm_ptr) then () else let
@@ -108,11 +108,13 @@ fun mk_add_def thyname heap = let
     val (i, args_ptrs) = shVariant heap proof_ptr
     val rs = mk_rules (do_all_thms heap (add_def o castPtr))
     val (rule_name, args_rs) = Array.sub(rs, i)
-    fun add_thm_ptr NONE = thm_ptr
-      | add_thm_ptr _ = raise Fail "add_def dup"
+    fun add_thm_ptr nm NONE = [thm_ptr]
+      | add_thm_ptr nm (SOME ls) = (
+          print("WARNING: multiple defs for "^nm^"\n");
+          thm_ptr::ls)
     fun check_thy defthy =
       if defthy = thyname then () else raise Fail "add_def thy"
-    fun add_const nm = tm_defs := update(!tm_defs, nm, add_thm_ptr)
+    fun add_const nm = tm_defs := update(!tm_defs, nm, add_thm_ptr nm)
     val () = if rule_name <> "Def_const_list" andalso
                 rule_name <> "Def_spec" then () else let
       (* val () = print "Def_const_list/spec\n" *)
@@ -128,8 +130,7 @@ fun mk_add_def thyname heap = let
       (* val () = print "Def_tyop\n" *)
       val (thy,tyop) = get_type_id heap (castPtr (el 3 args_ptrs))
       val () = check_thy thy
-    in ty_defs := update(!ty_defs, tyop, add_thm_ptr)
-    end
+    in ty_defs := update(!ty_defs, tyop, add_thm_ptr tyop) end
     val _ = map2 apply args_rs args_ptrs
   in () end
 in (tm_defs, ty_defs, add_def) end
@@ -223,7 +224,7 @@ fun replay thyname = let
 
   fun check_def map Thy nm =
     if Thy = thyname then case peek (map, nm)
-    of SOME thp => ignore (replay_thm thp)
+    of SOME thps => List.app (ignore o replay_thm) thps
      | _ => () else ()
 
   and replay_type ty_ptr =
