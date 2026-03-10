@@ -79,62 +79,6 @@ fun do_all_thms heap (f: unit parser) = {
   four = fn fghi => ignore o tuple4 heap fghi o castPtr
 }
 
-fun get_const_id heap tm_ptr =
-  case shTerm heap tm_ptr of Const (idp,_) => ident heap idp
-  | _ => raise Fail "get_const_id"
-
-fun get_type_id heap ty_ptr =
-  case shType heap ty_ptr of Tyapp (idp,_) => ident heap idp
-  | _ => raise Fail "get_type_id"
-
-(*
-  val [(_,thm_ptr)] = listItems (!tm_defs)
-  val debug_ptr: thm ptr ref = ref (castPtr root_ptr)
-  val thm_ptr = !debug_ptr
-  val thm_ptr = el 1 thm_ptrs
-*)
-fun mk_add_def thyname heap = let
-  val tm_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
-  val ty_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
-  val seen = BoolArray.array(heapSize heap, false)
-  fun add_def (thm_ptr: thm ptr) =
-    if BoolArray.sub(seen, ptr thm_ptr) then () else let
-    (*
-    val () = print ("ptr thm_ptr: " ^ Int.toString(ptr thm_ptr) ^ "\n")
-    val () = debug_ptr := thm_ptr
-    *)
-    val () = BoolArray.update(seen, ptr thm_ptr, true)
-    val (_, _, proof_ptr) = shThm heap thm_ptr
-    val (i, args_ptrs) = shVariant heap proof_ptr
-    val rs = mk_rules (do_all_thms heap (add_def o castPtr))
-    val (rule_name, args_rs) = Array.sub(rs, i)
-    fun add_thm_ptr nm NONE = [thm_ptr]
-      | add_thm_ptr nm (SOME ls) = (
-          print("WARNING: multiple defs for "^nm^"\n");
-          thm_ptr::ls)
-    fun check_thy defthy =
-      if defthy = thyname then () else raise Fail "add_def thy"
-    fun add_const nm = tm_defs := update(!tm_defs, nm, add_thm_ptr nm)
-    val () = if rule_name <> "Def_const_list" andalso
-                rule_name <> "Def_spec" then () else let
-      (* val () = print "Def_const_list/spec\n" *)
-      val ids = list heap (get_const_id heap) (castPtr (el 2 args_ptrs))
-      fun go (thy,nm) = (check_thy thy; add_const nm)
-    in List.app go ids end
-    val () = if rule_name <> "Def_const" then () else let
-      (* val () = print "Def_const\n" *)
-      val (thy,nm) = get_const_id heap (castPtr (el 2 args_ptrs))
-      val () = check_thy thy
-    in add_const nm end
-    val () = if rule_name <> "Def_tyop" then () else let
-      (* val () = print "Def_tyop\n" *)
-      val (thy,tyop) = get_type_id heap (castPtr (el 3 args_ptrs))
-      val () = check_thy thy
-    in ty_defs := update(!ty_defs, tyop, add_thm_ptr tyop) end
-    val _ = map2 apply args_rs args_ptrs
-  in () end
-in (tm_defs, ty_defs, add_def) end
-
 val trDB : (string, (string, thm) dict * thm list) dict ref
   = ref (mkDict String.compare)
 
@@ -169,14 +113,13 @@ end
 (*
 val thyname = "bool";
 *)
-val debug : thm list ref = ref []
-val dbg_print : string -> unit = K ()
+val dbg_print : string -> unit = (* print *) K ()
 
 exception NeedsAncestor of string
 
 fun replay thyname =
   if inDomain(!trDB, thyname)
-  then print(" skip")
+  then print("skip ")
   else
 let
   val filename = thyname ^ "Theory.tr.gz";
@@ -187,8 +130,73 @@ let
     val thm_ptrs = List.map (fn (_,(p,_)) => p) all_ptrs
   *)
 
+  val id_cache : (string * string) PIntMap.t ref = ref PIntMap.empty
+  fun cache_id f p =
+    let val key = ptr p
+        val idc = !id_cache
+    in PIntMap.find key idc
+       handle PIntMap.NotFound =>
+         let val x = f p
+         in (id_cache := PIntMap.add key x idc; x)
+         end
+    end
+  val get_const_id = cache_id (fn tm_ptr =>
+    case shTerm heap tm_ptr of Const (idp,_) => ident heap idp
+    | _ => raise Fail "get_const_id")
+  val get_type_id = cache_id (fn ty_ptr =>
+    case shType heap ty_ptr of Tyapp (idp,_) => ident heap idp
+    | _ => raise Fail "get_type_id")
+
+  (*
+    val [(_,thm_ptr)] = listItems (!tm_defs)
+    val debug_ptr: thm ptr ref = ref (castPtr root_ptr)
+    val thm_ptr = !debug_ptr
+    val thm_ptr = el 1 thm_ptrs
+  *)
+  fun mk_add_def thyname = let
+    val tm_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
+    val ty_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
+    val seen = BoolArray.array(heapSize heap, false)
+    fun add_def (thm_ptr: thm ptr) =
+      if BoolArray.sub(seen, ptr thm_ptr) then () else let
+      (*
+      val () = print ("ptr thm_ptr: " ^ Int.toString(ptr thm_ptr) ^ "\n")
+      val () = debug_ptr := thm_ptr
+      *)
+      val () = BoolArray.update(seen, ptr thm_ptr, true)
+      val (_, _, proof_ptr) = shThm heap thm_ptr
+      val (i, args_ptrs) = shVariant heap proof_ptr
+      val rs = mk_rules (do_all_thms heap (add_def o castPtr))
+      val (rule_name, args_rs) = Array.sub(rs, i)
+      fun add_thm_ptr nm NONE = [thm_ptr]
+        | add_thm_ptr nm (SOME ls) = (
+            print("WARNING: multiple defs for "^nm^"\n");
+            thm_ptr::ls)
+      fun check_thy defthy =
+        if defthy = thyname then () else raise Fail "add_def thy"
+      fun add_const nm = tm_defs := update(!tm_defs, nm, add_thm_ptr nm)
+      val () = if rule_name <> "Def_const_list" andalso
+                  rule_name <> "Def_spec" then () else let
+        (* val () = print "Def_const_list/spec\n" *)
+        val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
+        fun go (thy,nm) = (check_thy thy; add_const nm)
+      in List.app go ids end
+      val () = if rule_name <> "Def_const" then () else let
+        (* val () = print "Def_const\n" *)
+        val (thy,nm) = get_const_id (castPtr (el 2 args_ptrs))
+        val () = check_thy thy
+      in add_const nm end
+      val () = if rule_name <> "Def_tyop" then () else let
+        (* val () = print "Def_tyop\n" *)
+        val (thy,tyop) = get_type_id (castPtr (el 3 args_ptrs))
+        val () = check_thy thy
+      in ty_defs := update(!ty_defs, tyop, add_thm_ptr tyop) end
+      val _ = map2 apply args_rs args_ptrs
+    in () end
+  in (tm_defs, ty_defs, add_def) end
+
   val (tm_defs, ty_defs) =
-    let val (tms,tys,ad) = mk_add_def thyname heap
+    let val (tms,tys,ad) = mk_add_def thyname
         val () = appList heap (tuple3 heap (I, ad, I)) all_thms
         val () = appList heap ad anon_thms
     in (!tms, !tys) end
@@ -230,7 +238,6 @@ let
       Tyv s => mk_vartype s
     | Tyapp (idp, args_ptr) => let
         val (Thy,Tyop) = ident heap idp
-        val () = dbg_print ("tyop("^Tyop^")")
         val Args = list heap replay_type args_ptr
         val () = check_def ty_defs Thy Tyop
         in mk_thy_type {Thy=Thy, Tyop=Tyop, Args=Args} end
@@ -259,7 +266,6 @@ let
       in mk_comb(f,x) end
     | Const (idp,typ) => let
         val (Thy,Name) = ident heap idp
-        val () = dbg_print ("check_def "^Name^",")
         val () = check_def tm_defs Thy Name
         val ty = replay_type typ
       in mk_thy_const {Thy=Thy, Name=Name, Ty=ty}
@@ -421,8 +427,6 @@ let
       MK_COMB (destTh (el 1 aos), destTh (el 2 aos))
     else if name = "MP" then
       MP (destTh (el 1 aos)) (destTh (el 2 aos))
-      handle e as (HOL_ERR _) => (debug := [
-        destTh (el 1 aos), destTh (el 2 aos) ]; raise e)
     else if name = "Mk_abs" then
       let val (_,_,mka) = Mk_abs (destTh (el 1 aos))
     in mka (destTh (el 3 aos)) end
@@ -449,8 +453,6 @@ let
       Specialize (destTm (el 1 aos)) (destTh (el 2 aos))
     else if name = "TRANS" then
       TRANS (destTh (el 1 aos)) (destTh (el 2 aos))
-      handle e as (HOL_ERR _) => (debug := [
-        destTh (el 1 aos), destTh (el 2 aos) ]; raise e)
     else if name = "compute" then let
       val (a4, ths_obj) = destPair (el 1 aos)
       val ths = List.map destTh (destList ths_obj)
@@ -484,8 +486,8 @@ let
     thm = Th o replay_thm o castPtr,
     thm_id = ThmId o get_thm_id o castPtr,
     hol_type = Ty o replay_type o castPtr,
-    new_type = Pair o (Str ## Str) o (get_type_id heap) o castPtr,
-    new_term = Pair o (Str ## Str) o (get_const_id heap) o castPtr,
+    new_type = Pair o (Str ## Str) o get_type_id o castPtr,
+    new_term = Pair o (Str ## Str) o get_const_id o castPtr,
     list = fn f => List o replay_list f o castPtr,
     pair = fn f => Pair o replay_pair f o castPtr,
     opt = fn f => Opt o replay_opt f o castPtr,
@@ -506,7 +508,9 @@ in trDB := insert(!trDB, thyname, (named, anons)) end
 
 fun replay_seq [] = ()
   | replay_seq (thy::thys) =
-    (print thy; replay thy; print " done\n";
+    (print thy; print ": ";
+     PolyML.fullGC();
+     time replay thy;
      replay_seq thys)
 
 val seq = ["bool", "marker", "num", "sat", "combin",
@@ -518,8 +522,9 @@ val seq = ["bool", "marker", "num", "sat", "combin",
            "finite_map", "alist", "indexedLists", "logroot",
            "sptree", "permutes", "iterate", "fcp", "bit",
            "ternaryComparisons", "string", "numposrep",
-           "ASCIInumbers",
-           "words", "misc"]
+           "ASCIInumbers", "sum_num", "numeral_bit", "words",
+           "set_sep", "byte", "bitstring", "set_relation",
+           "llist", "poset", "fixedPoint", "path", "alignment"]
 
 val () = replay_seq seq
 
