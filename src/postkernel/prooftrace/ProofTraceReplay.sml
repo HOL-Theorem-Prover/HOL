@@ -501,7 +501,17 @@ val seq = ["bool", "marker", "num", "sat", "combin",
            "ASCIInumbers", "sum_num", "numeral_bit", "words",
            "set_sep", "byte", "bitstring", "set_relation",
            "llist", "poset", "fixedPoint", "path", "alignment",
-           "address", "bag", "misc"]
+           "address", "bag", "misc", "toto", "comparison",
+           "mergesort", "mllist", "mlstring", "normalizer", "gcd",
+           "integer", "int_arith", "cooper", "Omega", "integer_word",
+           "hrat", "hreal", "realax", "real_arith", "real", "intreal",
+           "blast", "multiword", "tailrec", "mc_multiword",
+           "namespace", "location", "ast", "asm", "ffi", "lprefix_lub",
+           "ml_monadBase", "semanticPrimitives",
+           "backend_common", "binary_ieee", "machine_ieee", "fpSem",
+           "backendProps", "reg_alloc", "wordConvs",
+           "stackLang", "wordLang", "word_bignum", "wordSem", "wordProps",
+           "word_bignumProof"]
 
 val () = replay_seq seq
 
