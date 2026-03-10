@@ -137,9 +137,9 @@ fun pp_type0 (G:grammar) (backend: PPBackEnd.t) = let
             val i = Char.ord (String.sub(s, 1)) - Char.ord #"a" + 0x3B1
           in
             if 0x3B1 <= i andalso i <= 0x3C9 andalso i <> 0x3BB then UTF8.chr i
-            else s
+            else String.toString s
           end
-        else s
+        else String.toString s
   in
     if depth = 0 then add_string "..."
     else
