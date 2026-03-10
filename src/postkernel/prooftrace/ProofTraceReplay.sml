@@ -148,18 +148,27 @@ let
     fun incr p = if isPtr p then let val k = ptr p in
       Array.update(refcounts, k, Array.sub(refcounts, k) + 1)
     end else ()
+    fun first_seen p =
+      if not (isPtr p) then false
+      else if BoolArray.sub(seen, ptr p) then false
+      else (BoolArray.update(seen, ptr p, true); true)
+    (* Walk type structure. Increment refcount on every encounter,
+       but only recurse into sub-types on first encounter (matching
+       replay_type's cache behavior). *)
     fun walk_type (ty_ptr: hol_type ptr) =
-      if not (isPtr ty_ptr) then () else
+      if not (first_seen ty_ptr) then () else
       case shType heap ty_ptr of
         Tyv _ => ()
       | Tyapp (_, args_ptr) =>
           appList heap (fn p => (incr p; walk_type (castPtr p))) args_ptr
     (* Walk term structure to count references to closed sub-terms and types.
        Mirrors what replay_term_core will do: closed sub-terms go through
-       cache (so count them), open sub-terms are traversed inline. *)
+       cache (so count them and recurse on first encounter), open sub-terms
+       are traversed inline. *)
     fun walk_term (tm_ptr: term ptr) =
       if is_closed tm_ptr
-      then incr tm_ptr (* closed: replay will go through cache *)
+      then (incr tm_ptr;
+            if first_seen tm_ptr then walk_term_inner tm_ptr else ())
       else walk_term_inner tm_ptr
     and walk_term_inner tm_ptr =
       if not (isPtr tm_ptr) then () else
@@ -186,7 +195,9 @@ let
         val rs = mk_rules {
           string = K (), new_term = K (), new_type = K (), thm_id = K (),
           hol_type = fn p => (incr p; walk_type (castPtr p)),
-          term = fn p => (incr p; walk_term_inner (castPtr p)),
+          term = fn p => (incr p;
+            if first_seen (castPtr p) then walk_term_inner (castPtr p)
+            else ()),
           thm = fn p => (incr p; walk_thm (castPtr p)),
           list = fn f => appList heap f o castPtr,
           opt = fn f => ignore o option heap f o castPtr,
