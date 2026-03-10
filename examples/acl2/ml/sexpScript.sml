@@ -25,6 +25,7 @@ Ancestors
 Libs
   stringLib sexp
 
+val _ = ParseExtras.temp_loose_equality();
 (*****************************************************************************)
 (* Define s-expressions.                                                     *)
 (*****************************************************************************)
@@ -821,6 +822,7 @@ Proof
     THEN Cases_on `h`
     THEN Cases_on `r`
     THEN RW_TAC list_ss [VALID_PKG_TRIPLES_def,VALID_PKG_TRIPLES_AUX_def]
+    THEN metis_tac[]
 QED
 
 val LOOKUP_IDEMPOTENT_LEMMA =
@@ -1230,6 +1232,9 @@ val intern_in_package_of_symbol_def =
 (*****************************************************************************)
 (* |= t, where t:sexp, means t is a theorem of ACL2                          *)
 (*****************************************************************************)
+
+val _ = Parse.remove_rules_for_term combinpp.toplevel_updname
+
 val _ = set_fixity "|=" (Prefix 11);        (* Give "|=" weak precedence *)
 
 val ACL2_TRUE_def =
@@ -1464,7 +1469,7 @@ QED
 (* 4. The resulting termination conditions should be trivial to prove.       *)
 (*****************************************************************************)
 
-Theorem ite_CONG1:
+Theorem ite_CONG1[defncong]:
      !p q x x' y y'.
       (p = q) /\ (~(q = nil) ==> (x = x')) /\ ((q = nil) ==> (y = y'))
       ==>
@@ -1473,7 +1478,7 @@ Proof
    RW_TAC std_ss [ite_def]
 QED
 
-Theorem ite_CONG2:
+Theorem ite_CONG2[defncong]:
      !p q x x' y y'.
       (p = q) /\ ((|= q) ==> (x = x')) /\ (~(|= q) ==> (y = y'))
       ==>
@@ -1482,9 +1487,7 @@ Proof
    RW_TAC std_ss [ite_def,ACL2_TRUE_def,equal_def,EVAL ``t=nil``]
 QED
 
-val _ = DefnBase.write_congs (ite_CONG1::ite_CONG2::DefnBase.read_congs());
-
-Theorem itel_CONG1:
+Theorem itel_CONG1[defncong]:
      !p q x x' l l' y y'.
       (p = q)
       /\
@@ -1497,7 +1500,7 @@ Proof
    RW_TAC std_ss [itel_def,ite_def]
 QED
 
-Theorem itel_CONG2:
+Theorem itel_CONG2[defncong]:
      !p q x x' l l' y y'.
       (p = q)
       /\
@@ -1510,17 +1513,13 @@ Proof
    RW_TAC std_ss [itel_def,ite_def,ACL2_TRUE_def,equal_def,EVAL ``t=nil``]
 QED
 
-val _ = DefnBase.write_congs (itel_CONG1::itel_CONG2::DefnBase.read_congs());
-
-Theorem andl_CONG:
+Theorem andl_CONG[defncong]:
      !p q x x'.
       (p = q) /\ (~(p = nil) ==> (x = x')) ==> (andl[p;x] = andl[q;x'])
 Proof
    Cases
     THEN RW_TAC std_ss [andl_def,ite_def]
 QED
-
-val _ = DefnBase.write_congs (andl_CONG::DefnBase.read_congs());
 
 Theorem sexp_size_car:
      !x. ~(consp x = nil) ==> (sexp_size (car x) < sexp_size x)
@@ -1570,17 +1569,6 @@ val _ =
    cdaaar_def,cddaar_def,cdadar_def,cdddar_def,cdaadr_def,cddadr_def,cdaddr_def,cddddr_def,
    sexp_size_car,sexp_size_cdr,
    List_def,andl_def];
-
-val _ = adjoin_to_theory
-         {sig_ps = NONE,
-          struct_ps =
-           SOME (fn ppstrm =>
-                  PP.add_string ppstrm
-                   ("val _ = DefnBase.write_congs" ^
-                    "(andl_CONG::\
-                     \ite_CONG1::ite_CONG2::\
-                     \itel_CONG1::itel_CONG2::\
-                     \DefnBase.read_congs());\n"))
-         };
-
+(*
 val _ = export_acl2_theory();
+*)
