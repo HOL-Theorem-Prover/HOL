@@ -137,17 +137,19 @@ let
         | Clos _ => 999
       in Array.update(closedness, key, result); result end
     end
+  (* is_closed used during pre-pass with int array; replaced by BoolArray after *)
   fun is_closed tm_ptr = isPtr tm_ptr andalso compute_closedness tm_ptr < 0
 
   (* Combined pre-pass: collect defs and count thm+term+type references *)
   val tm_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
   val ty_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
-  val refcounts = Array.array(heapSize heap, 0 : int)
+  val refcounts = Word8Array.array(heapSize heap, 0w0 : Word8.word)
   val pinned = BoolArray.array(heapSize heap, false)
   val () = let
     val seen = BoolArray.array(heapSize heap, false)
-    fun incr p = if isPtr p then let val k = ptr p in
-      Array.update(refcounts, k, Array.sub(refcounts, k) + 1)
+    fun incr p = if isPtr p then let val k = ptr p
+      val c = Word8Array.sub(refcounts, k)
+    in if c < 0wxFF then Word8Array.update(refcounts, k, c + 0w1) else ()
     end else ()
     fun first_seen p =
       if not (isPtr p) then false
@@ -241,6 +243,12 @@ let
   val tm_defs = !tm_defs
   val ty_defs = !ty_defs
 
+  (* Convert closedness int array to BoolArray and free the int array *)
+  val is_closed_bits = BoolArray.tabulate(heapSize heap,
+    fn i => Array.sub(closedness, i) = ~1)
+  fun is_closed tm_ptr = isPtr tm_ptr andalso
+    BoolArray.sub(is_closed_bits, ptr tm_ptr)
+
   val replayed_heap = Array.array(heapSize heap, Unknown);
 
   val cached_compute_ptr : unit ptr ref = ref (castPtr root_ptr)
@@ -252,11 +260,12 @@ let
     val key = ptr ptr_
     fun maybe_evict () =
       if BoolArray.sub(pinned, key) then () else let
-        val rc = Array.sub(refcounts, key) - 1
-        val () = Array.update(refcounts, key, rc)
-      in if rc <= 0
-         then Array.update(replayed_heap, key, Unknown)
-         else ()
+        val rc = Word8Array.sub(refcounts, key)
+      in if rc = 0wxFF then () (* saturated, never evict *)
+         else if rc <= 0w1
+         then (Word8Array.update(refcounts, key, 0w0);
+               Array.update(replayed_heap, key, Unknown))
+         else Word8Array.update(refcounts, key, rc - 0w1)
       end
   in case Array.sub(replayed_heap, key) of
        Unknown => let
