@@ -172,22 +172,19 @@ val thyname = "bool";
 val debug : thm list ref = ref []
 val dbg_print : string -> unit = K ()
 
-fun replay thyname = let
+exception NeedsAncestor of string
 
+fun replay thyname =
+  if inDomain(!trDB, thyname)
+  then print(" skip")
+  else
+let
   val filename = thyname ^ "Theory.tr.gz";
   val (root_ptr, heap) = parse filename;
   val {all_thms, anon_thms, ...} = shRoot heap root_ptr;
   (*
     val all_ptrs = list heap (tuple3 heap (I, I, I)) all_thms
     val thm_ptrs = List.map (fn (_,(p,_)) => p) all_ptrs
-  *)
-
-  (* this should not be necessary because of scrubCT before export
-  val () = case
-    List.find (fn (_,(x,_)) => x)
-    (list heap (tuple3 heap (I, outofdate_thm heap, I)) all_thms)
-  of SOME (nm,_) => raise Fail ((str heap nm)^" is outofdate")
-   | _ => ()
   *)
 
   val (tm_defs, ty_defs) =
@@ -337,17 +334,21 @@ fun replay thyname = let
                          (destList (el 2 aos))
       val () = if List.all (equal thyname) (List.map #1 ids) then ()
                else raise Fail "Def_const_list thy"
+(*
       val () = List.app (fn (Thy,Name) =>
                  (prim_mk_const{Thy=Thy,Name=Name};
                   raise Fail ("Def_const_list redef "^Thy^"$"^Name))
                  handle HOL_ERR _ => ()) ids
+*)
       val th = destTh (el 1 aos)
     in #2 (gen_prim_specification thyname th) end
     else if name = "Def_const" then let
       val (Thy,Name) = (destStr ## destStr) (destPair (el 2 aos))
+(*
       val () = ((prim_mk_const{Thy=Thy,Name=Name};
                  raise Fail ("Def_const redef "^Thy^"$"^Name))
                 handle HOL_ERR _ => ())
+*)
       val rhs = destTm (el 1 aos)
       val th = ASSUME (mk_eq(mk_var(Name, type_of rhs), rhs))
       in #2 (gen_prim_specification Thy th) end
@@ -357,17 +358,21 @@ fun replay thyname = let
       val () = if List.all (equal thyname) (List.map #1 ids) then ()
                else raise Fail "Def_spec thy"
       val cnames = List.map #2 ids
+(*
       val () = List.app (fn Name =>
                  (prim_mk_const{Thy=thyname,Name=Name};
                   raise Fail ("Def_spec redef "^Name))
                  handle HOL_ERR _ => ()) cnames
+*)
       val th = destTh (el 1 aos)
     in prim_specification thyname cnames th end
     else if name = "Def_tyop" then let
       val (Thy,Tyop) = (destStr ## destStr) (destPair (el 3 aos))
+(*
       val () = if Option.isSome (op_arity {Thy=Thy,Tyop=Tyop})
                then raise Fail ("Def_tyop redef "^Thy^"$"^Tyop)
                else ()
+*)
       val th = destTh (el 2 aos)
       val () = if thyname = "bool"
                then check_def tm_defs thyname "TYPE_DEFINITION"
@@ -376,7 +381,7 @@ fun replay thyname = let
     else if name = "Disk" then
       case destStr (el 1 aos) of thy => (
       case peek(!trDB, thy) of
-        NONE => raise Fail ("Disk thy "^thy)
+        NONE => raise NeedsAncestor thy
       | SOME (named,anons) => (
         case (destThmId (el 2 aos)) of
           SavedAnon i => (
@@ -497,40 +502,32 @@ fun replay thyname = let
   val named = fromList String.compare (list heap export all_thms)
   val anons = list heap replay_thm anon_thms
 
-  val () = trDB := update(!trDB, thyname,
-             fn NONE => (named, anons)
-              | _    => raise Fail "dup thy")
-in () end
+in trDB := insert(!trDB, thyname, (named, anons)) end
 
-fun preplay s = (print s; replay s; print " done\n")
-val () = preplay "bool"
-val () = preplay "marker"
-val () = preplay "num"
-val () = preplay "sat"
-val () = preplay "combin"
-val () = preplay "relation"
-val () = preplay "prim_rec"
-val () = preplay "quotient"
-val () = preplay "pair"
-val () = preplay "arithmetic"
-val () = preplay "numeral"
-val () = preplay "cv"
-val () = preplay "numpair"
-val () = preplay "ind_type"
-val () = preplay "one"
-val () = preplay "sum"
-val () = preplay "option"
-val () = preplay "While"
-val () = preplay "reduce"
-val () = preplay "divides"
-val () = preplay "normalForms"
-val () = preplay "pred_set"
-val () = preplay "basicSize"
-val () = preplay "list"
+fun replay_seq [] = ()
+  | replay_seq (thy::thys) =
+    (print thy; replay thy; print " done\n";
+     replay_seq thys)
+
+val seq = ["bool", "marker", "num", "sat", "combin",
+           "relation", "prim_rec", "quotient", "pair",
+           "arithmetic", "numeral", "cv", "numpair",
+           "ind_type", "one", "sum", "option", "While",
+           "reduce", "divides", "normalForms", "pred_set",
+           "basicSize", "list", "rich_list", "sorting",
+           "finite_map", "alist", "indexedLists", "logroot",
+           "sptree", "permutes", "iterate", "fcp", "bit",
+           "ternaryComparisons", "string", "numposrep",
+           "ASCIInumbers",
+           "words", "misc"]
+
+val () = replay_seq seq
+
 (*
 val (boolDB, boolAs) = find(!trDB,"bool")
 val (markerDB, markerAs) = find(!trDB,"marker")
 val (numDB, numAs) = find(!trDB,"num")
+val (listDB, listAs) = find(!trDB,"list")
 
 fun print_ty ty =
   if is_vartype ty then dest_vartype ty
@@ -555,8 +552,10 @@ fun print_tm tm =
     String.concat["(", print_tm f, " ", print_tm x, ")"]
   end
 
-List.map (print_tm o concl) (!debug)
-
+print_tm(concl(List.nth(listAs,3)))
+val LENGTH_MAP = find(listDB,"LENGTH_MAP")
+Tag.dest_tag $ Thm.tag LENGTH_MAP
+print_tm(concl LENGTH_MAP)
 print_tm(concl(find(boolDB,"INFINITY_AX")))
 print_tm(concl(find(markerDB,"Case_def")))
 print_tm(concl(find(numDB,"NOT_SUC")))
