@@ -3,6 +3,7 @@ val _ = PolyML.use (OS.Path.concat(Globals.HOLDIR, "tools-poly/holinteractive.ML
 *)
 open Lib HolKernel Redblackmap ProofTraceParser
 
+val () = Feedback.emit_WARNING := false
 fun apply f g = f g
 fun mk_eq(l,r) = list_mk_icomb equality [l,r]
 datatype thm_id = SavedAnon of int | SavedName of string
