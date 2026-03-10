@@ -517,12 +517,20 @@ val seq = ["bool", "marker", "num", "sat", "combin",
            "integer", "int_arith", "cooper", "Omega", "integer_word",
            "hrat", "hreal", "realax", "real_arith", "real", "intreal",
            "blast", "multiword", "tailrec", "mc_multiword",
-           "namespace", "location", "ast", "asm", "ffi", "lprefix_lub",
-           "ml_monadBase", "semanticPrimitives",
-           "backend_common", "binary_ieee", "machine_ieee", "fpSem",
-           "backendProps", "reg_alloc", "wordConvs",
-           "stackLang", "wordLang", "word_bignum", "wordSem", "wordProps",
-           "word_bignumProof"]
+           "binary_ieee", "machine_ieee", "namespace", "location",
+           "quantHeuristics", "ConseqConv", "patternMatches",
+           "balanced_map", "ast", "asm", "ffi", "lprefix_lub", "fpSem",
+           "semanticPrimitives", "ml_monadBase", "backend_common",
+           "backendProps", "reg_alloc", "linear_scan",
+           "stackLang", "wordLang", "wordConvs",
+           "word_bignum", "word_alloc", "word_remove", "word_unreach",
+           "word_inst", "word_copy", "word_cse", "word_simp",
+           "word_to_word", "wordSem", "wordProps",
+           "word_bignumProof", "word_simpProof",
+           "reg_allocProof", "linear_scanProof", "word_allocProof",
+           "wordConvsProof", "word_unreachProof", "word_cseProof",
+           "word_instProof", "word_copyProof", "word_removeProof",
+           "word_to_wordProof"]
 
 val () = replay_seq seq
 
