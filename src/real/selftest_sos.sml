@@ -278,10 +278,13 @@ fun prover_test prover_name prover (name, tm) =
 
 (* -- INT_SOS tests -- *)
 
-val _ = List.app (prover_test "INT_SOS" INT_SOS) [
-  ("!x:int. x*x >= 0",
-   Parse.Term `!x:int. x * x >= &0`)
-];
+val _ =
+    if csdp_available then
+      List.app (prover_test "INT_SOS" INT_SOS) [
+        ("!x:int. x*x >= 0",
+         Parse.Term `!x:int. x * x >= &0`)
+      ]
+    else ();
 
 (* INT_SOS with hypotheses (requires CSDP) *)
 val _ = if csdp_available then
