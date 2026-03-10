@@ -595,7 +595,7 @@ val seq = ["bool", "marker", "num", "sat", "combin",
            "ASCIInumbers", "sum_num", "numeral_bit", "words",
            "set_sep", "byte", "bitstring", "set_relation",
            "llist", "poset", "fixedPoint", "path", "alignment",
-           "address", "misc"]
+           "address", "bag", "misc"]
 
 val () = replay_seq seq
 
@@ -604,6 +604,7 @@ val (boolDB, boolAs) = find(!trDB,"bool")
 val (markerDB, markerAs) = find(!trDB,"marker")
 val (numDB, numAs) = find(!trDB,"num")
 val (listDB, listAs) = find(!trDB,"list")
+val (miscDB, miscAs) = find(!trDB,"misc")
 
 fun print_ty ty =
   if is_vartype ty then dest_vartype ty
@@ -628,6 +629,7 @@ fun print_tm tm =
     String.concat["(", print_tm f, " ", print_tm x, ")"]
   end
 
+print_tm(concl(List.nth(miscAs,0)))
 print_tm(concl(List.nth(listAs,3)))
 val LENGTH_MAP = find(listDB,"LENGTH_MAP")
 Tag.dest_tag $ Thm.tag LENGTH_MAP
