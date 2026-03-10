@@ -147,25 +147,77 @@ let
     case shType heap ty_ptr of Tyapp (idp,_) => ident heap idp
     | _ => raise Fail "get_type_id")
 
-  (* Combined pre-pass: collect defs and count thm references in one traversal *)
+  (* Closedness pre-pass: compute max free Bv index for each term pointer.
+     ~1 means closed (no free Bv's), n >= 0 means max free Bv index.
+     ~2 = unvisited. Clos is treated conservatively as open. *)
+  val closedness = Array.array(heapSize heap, ~2 : int)
+  fun compute_closedness tm_ptr =
+    if not (isPtr tm_ptr) then ~1
+    else let val key = ptr tm_ptr
+             val c = Array.sub(closedness, key)
+    in if c <> ~2 then c else let
+      val result = case shTerm heap tm_ptr of
+          Const _ => ~1
+        | Fv _    => ~1
+        | Bv n    => n
+        | Comb (t1, t2) =>
+            Int.max(compute_closedness t1, compute_closedness t2)
+        | Abs (_, t2) =>
+            compute_closedness t2 - 1
+        | Clos _ => 999
+      in Array.update(closedness, key, result); result end
+    end
+  fun is_closed tm_ptr = isPtr tm_ptr andalso compute_closedness tm_ptr < 0
+
+  (* Combined pre-pass: collect defs and count thm+term references *)
   val tm_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
   val ty_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
-  val thm_refcounts = Array.array(heapSize heap, 0 : int)
+  val refcounts = Array.array(heapSize heap, 0 : int)
   val pinned = BoolArray.array(heapSize heap, false)
   val () = let
     val seen = BoolArray.array(heapSize heap, false)
     fun incr p = if isPtr p then let val k = ptr p in
-      Array.update(thm_refcounts, k, Array.sub(thm_refcounts, k) + 1)
+      Array.update(refcounts, k, Array.sub(refcounts, k) + 1)
     end else ()
-    fun walk (thm_ptr: thm ptr) =
+    (* Walk term structure to count references to closed sub-terms.
+       Mirrors what replay_term_core will do: closed sub-terms go through
+       cache (so count them), open sub-terms are traversed inline. *)
+    fun walk_term (tm_ptr: term ptr) =
+      if is_closed tm_ptr
+      then incr tm_ptr (* closed: replay will go through cache *)
+      else walk_term_inner tm_ptr
+    and walk_term_inner tm_ptr =
+      if not (isPtr tm_ptr) then () else
+      case shTerm heap tm_ptr of
+        Abs (t1, t2) => (walk_term t1; walk_term t2)
+      | Comb (t1, t2) => (walk_term t1; walk_term t2)
+      | Const _ => ()
+      | Fv _ => ()
+      | Bv _ => ()
+      | Clos (sbp, tmp) => (walk_subs sbp; walk_term tmp)
+    and walk_subs sbp =
+      case shSubs heap sbp of
+        Cons (sbp', tmp) => (walk_subs sbp'; walk_term tmp)
+      | Id => ()
+      | Lift (_, sbp') => walk_subs sbp'
+      | Shift (_, sbp') => walk_subs sbp'
+    fun walk_thm (thm_ptr: thm ptr) =
       if not (isPtr thm_ptr) then ()
       else if BoolArray.sub(seen, ptr thm_ptr) then ()
       else let
         val () = BoolArray.update(seen, ptr thm_ptr, true)
         val (_, _, proof_ptr) = shThm heap thm_ptr
         val (i, args_ptrs) = shVariant heap proof_ptr
-        val rs = mk_rules (do_all_thms heap
-                   (fn p => (incr p; walk (castPtr p))))
+        val rs = mk_rules {
+          hol_type = K (), new_type = K (), thm_id = K (),
+          string = K (), new_term = K (),
+          term = fn p => (incr p; walk_term_inner (castPtr p)),
+          thm = fn p => (incr p; walk_thm (castPtr p)),
+          list = fn f => appList heap f o castPtr,
+          opt = fn f => ignore o option heap f o castPtr,
+          pair = fn fg => ignore o tuple2 heap fg o castPtr,
+          four = fn fghi => ignore o tuple4 heap fghi o castPtr
+        }
         val (rule_name, args_rs) = Array.sub(rs, i)
         (* Collect defs and pin their thm pointers *)
         fun add_thm_ptr nm prev =
@@ -193,8 +245,8 @@ let
       in () end
     fun pre_named p = let
       val (_, (thp, _)) = tuple3 heap (I, I, I) p
-    in incr thp; walk thp end
-    fun pre_anon p = (incr p; walk (castPtr p))
+    in incr thp; walk_thm thp end
+    fun pre_anon p = (incr p; walk_thm (castPtr p))
   in
     appList heap pre_named all_thms;
     appList heap pre_anon anon_thms
@@ -216,26 +268,25 @@ let
      | obj => dest_obj obj
   end else mk_x x_ptr
 
-  fun thm_cache mk_x thm_ptr =
-  if isPtr thm_ptr then let
-    val key = ptr thm_ptr
+  fun evicting_cache (mk_obj, dest_obj) mk_x ptr_ =
+  if isPtr ptr_ then let
+    val key = ptr ptr_
     fun maybe_evict () =
       if BoolArray.sub(pinned, key) then () else let
-        val rc = Array.sub(thm_refcounts, key) - 1
-        val () = Array.update(thm_refcounts, key, rc)
+        val rc = Array.sub(refcounts, key) - 1
+        val () = Array.update(refcounts, key, rc)
       in if rc <= 0
          then Array.update(replayed_heap, key, Unknown)
          else ()
       end
   in case Array.sub(replayed_heap, key) of
        Unknown => let
-         val th = mk_x thm_ptr
-         val () = Array.update(replayed_heap, key, Th th)
+         val x = mk_x ptr_
+         val () = Array.update(replayed_heap, key, mk_obj x)
          val () = maybe_evict ()
-       in th end
-     | Th th => (maybe_evict (); th)
-     | _ => raise Fail "thm_cache: type mismatch"
-  end else mk_x thm_ptr
+       in x end
+     | obj => (maybe_evict (); dest_obj obj)
+  end else mk_x ptr_
 
   fun get_thm_id (id_ptr: thm_id ptr) = let
     val (i,ps) = shVariant heap id_ptr
@@ -263,22 +314,26 @@ let
     case shSubs heap sb_ptr of
       Cons (sbp,tmp) =>
         Subst.cons (replay_subst env sbp,
-                    replay_term_core env tmp)
+                    replay_term_sub env tmp)
     | Id => Subst.id
     | Lift (i,sbp) => Subst.lift(i, replay_subst env sbp)
     | Shift (i,sbp) => Subst.shift(i, replay_subst env sbp)
 
+  and replay_term_sub env tm_ptr =
+    if is_closed tm_ptr then replay_term tm_ptr
+    else replay_term_core env tm_ptr
+
   and replay_term_core env tm_ptr =
     case shTerm heap tm_ptr of
       Abs (t1,t2) => let
-        val x = replay_term_core env t1
+        val x = replay_term_sub env t1
         val (s,ty) = dest_var x
         val g = genvar ty
-        val b = replay_term_core (Subst.cons(env,g)) t2
+        val b = replay_term_sub (Subst.cons(env,g)) t2
       in rename_bvar s (mk_abs(g,b)) end
     | Comb (t1,t2) => let
-        val f = replay_term_core env t1
-        val x = replay_term_core env t2
+        val f = replay_term_sub env t1
+        val x = replay_term_sub env t2
       in mk_comb(f,x) end
     | Const (idp,typ) => let
         val (Thy,Name) = ident heap idp
@@ -297,13 +352,13 @@ let
                | (n, SOME t) => raise Fail "replay_term_core reloc"
                | _ => raise Fail "replay_term_core Bv")
     | Clos (sbp,tmp) =>
-        replay_term_core (Subst.comp #2 (env,replay_subst env sbp)) tmp
+        replay_term_sub (Subst.comp #2 (env,replay_subst env sbp)) tmp
 
   and replay_term tm_ptr =
-  cache (Tm,destTm) (replay_term_core Subst.id) tm_ptr
+  evicting_cache (Tm,destTm) (replay_term_core Subst.id) tm_ptr
 
   and replay_thm (thm_ptr: thm ptr) =
-  thm_cache (fn thm_ptr => let
+  evicting_cache (Th,destTh) (fn thm_ptr => let
     val (hyp_ptr, concl_ptr, proof_ptr) = shThm heap thm_ptr
     val (i, args_ptrs) = shVariant heap proof_ptr
     val (name, args_rs) = Array.sub(rules(), i)
@@ -539,7 +594,8 @@ val seq = ["bool", "marker", "num", "sat", "combin",
            "ternaryComparisons", "string", "numposrep",
            "ASCIInumbers", "sum_num", "numeral_bit", "words",
            "set_sep", "byte", "bitstring", "set_relation",
-           "llist", "poset", "fixedPoint", "path", "alignment"]
+           "llist", "poset", "fixedPoint", "path", "alignment",
+           "address", "misc"]
 
 val () = replay_seq seq
 
