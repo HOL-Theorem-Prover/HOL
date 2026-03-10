@@ -201,6 +201,45 @@ let
         val () = appList heap ad anon_thms
     in (!tms, !tys) end
 
+  (* Reference counting pre-pass for theorems.
+     Count how many times each thm pointer is accessed via cache during replay.
+     Def thm pointers (from check_def) are excluded — they're called an
+     unpredictable number of times and are a small fixed set, so we pin them. *)
+  val thm_refcounts = Array.array(heapSize heap, 0 : int)
+  val pinned = BoolArray.array(heapSize heap, false)
+  val () = let
+    val seen = BoolArray.array(heapSize heap, false)
+    fun incr p = if isPtr p then let val k = ptr p in
+      Array.update(thm_refcounts, k, Array.sub(thm_refcounts, k) + 1)
+    end else ()
+    fun walk (thm_ptr: thm ptr) =
+      if not (isPtr thm_ptr) then ()
+      else if BoolArray.sub(seen, ptr thm_ptr) then ()
+      else let
+        val () = BoolArray.update(seen, ptr thm_ptr, true)
+        val (_, _, proof_ptr) = shThm heap thm_ptr
+        val (i, args_ptrs) = shVariant heap proof_ptr
+        val rs = mk_rules (do_all_thms heap
+                   (fn p => (incr p; walk (castPtr p))))
+        val (_, args_rs) = Array.sub(rs, i)
+        val _ = map2 apply args_rs args_ptrs
+      in () end
+    fun count_named p = let
+      val (_, (thp, _)) = tuple3 heap (I, I, I) p
+    in incr thp; walk thp end
+    fun count_anon p = (incr p; walk (castPtr p))
+  in
+    appList heap count_named all_thms;
+    appList heap count_anon anon_thms
+  end
+  (* Pin def thm pointers so they're never evicted *)
+  val () = let
+    fun pin_ptrs ptrs = List.app (fn p => BoolArray.update(pinned, ptr p, true)) ptrs
+  in
+    app' pin_ptrs tm_defs;
+    app' pin_ptrs ty_defs
+  end
+
   val replayed_heap = Array.array(heapSize heap, Unknown);
 
   val cached_compute_args : hol_obj ref = ref Unknown
@@ -214,6 +253,27 @@ let
        in (Array.update(replayed_heap, key, obj); dest_obj obj) end
      | obj => dest_obj obj
   end else mk_x x_ptr
+
+  fun thm_cache mk_x thm_ptr =
+  if isPtr thm_ptr then let
+    val key = ptr thm_ptr
+    fun maybe_evict () =
+      if BoolArray.sub(pinned, key) then () else let
+        val rc = Array.sub(thm_refcounts, key) - 1
+        val () = Array.update(thm_refcounts, key, rc)
+      in if rc <= 0
+         then Array.update(replayed_heap, key, Unknown)
+         else ()
+      end
+  in case Array.sub(replayed_heap, key) of
+       Unknown => let
+         val th = mk_x thm_ptr
+         val () = Array.update(replayed_heap, key, Th th)
+         val () = maybe_evict ()
+       in th end
+     | Th th => (maybe_evict (); th)
+     | _ => raise Fail "thm_cache: type mismatch"
+  end else mk_x thm_ptr
 
   fun get_thm_id (id_ptr: thm_id ptr) = let
     val (i,ps) = shVariant heap id_ptr
@@ -287,7 +347,7 @@ let
   cache (Tm,destTm) (replay_term_core Subst.id) tm_ptr
 
   and replay_thm (thm_ptr: thm ptr) =
-  cache (Th,destTh) (fn thm_ptr => let
+  thm_cache (fn thm_ptr => let
     val (hyp_ptr, concl_ptr, proof_ptr) = shThm heap thm_ptr
     val (i, args_ptrs) = shVariant heap proof_ptr
     val (name, args_rs) = Array.sub(rules(), i)
