@@ -27,13 +27,14 @@ Since every command is typed, the assigned ID does not need a namespace prefix
 — it is unambiguously in the namespace of the command's result type. DEL
 commands do require a namespace prefix.
 
-## Header
+## Header and Footer
 
-Every trace begins with a header declaring the peak number of simultaneously
-live objects per namespace:
+Every trace begins with a header and ends with a footer.
+
+### Header
 
 ```
-PFT <version> <ruleset> <n_types> <n_terms> <n_thms> <n_computes>
+PFT <version> <ruleset>
 ```
 
 - `version` is the format version number (currently `1`). Covers the
@@ -41,10 +42,25 @@ PFT <version> <ruleset> <n_types> <n_terms> <n_thms> <n_computes>
 - `ruleset` names the set of theorem commands that may appear in the trace
   (currently `hol4`). This allows future rulesets (e.g., a minimal ruleset)
   to be defined independently of format version changes.
-- The four counts are the peak number of simultaneously live objects in the
-  type, term, theorem, and compute context namespaces respectively.
 
-A replayer can use these to pre-allocate fixed-size arrays.
+### Footer
+
+The footer declares the peak number of simultaneously live objects per
+namespace:
+
+```
+<n_types> <n_terms> <n_thms> <n_computes>
+```
+
+The four counts are the peak number of simultaneously live objects in the
+type, term, theorem, and compute context namespaces respectively.
+
+In the text format, the footer is the last line of the file. In the binary
+format, the footer encoding is described below.
+
+A replayer can use these to pre-allocate fixed-size arrays. The footer is
+placed at the end so that a producer can emit commands in a single pass
+without needing to know the peak counts upfront.
 
 ## Command Syntax Conventions
 
@@ -285,7 +301,7 @@ VAR 7 \\_ 1
 ## Example
 
 ```
-PFT 1 hol4 3 4 2 0
+PFT 1 hol4
 
 # Types
 TYOP 0 bool$bool
@@ -306,6 +322,7 @@ DEL tm 0 1
 DEL tm 3
 
 SAVE bool$TRUTH 1
+3 4 2 0
 ```
 
 ## Binary Encoding
@@ -324,8 +341,19 @@ then a sequence of encoded commands.
 ### Header
 
 ```
-PFT\0 <version:varint> <ruleset:string> <n_ty:varint> <n_tm:varint> <n_th:varint> <n_ci:varint>
+PFT\0 <version:varint> <ruleset:string>
 ```
+
+### Footer
+
+```
+<n_ty:varint> <n_tm:varint> <n_th:varint> <n_ci:varint> <footer_len:uint16le>
+```
+
+The footer consists of four varint counts followed by a 2-byte little-endian
+unsigned integer giving the byte length of the footer excluding the 2-byte
+length field itself. A reader seeks to the last 2 bytes of the file to read
+the length, then seeks back that many bytes to read the four counts.
 
 ### Command encoding
 
@@ -633,4 +661,4 @@ Replay the internal trace in topological order. For each kernel operation:
    substitution representation to the public API (VAR, CONST, COMB, ABS)
    — the existing replay code already does this.
 
-The header is emitted first using the peak counts from Pass 1.
+The footer is emitted last with the peak counts accumulated during emission.
