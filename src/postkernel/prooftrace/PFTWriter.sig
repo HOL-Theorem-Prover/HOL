@@ -2,13 +2,13 @@ signature PFTWriter = sig
 
   type pft_out
 
-  (* Open a PFT output stream. binary=true for binary format, false for text. *)
-  val openOut : {file: string, binary: bool} -> pft_out
-  val closeOut : pft_out -> unit
+  (* Open a PFT output stream. Writes the header (version + ruleset)
+     immediately. *)
+  val openOut : {file: string, binary: bool,
+                 version: int, ruleset: string} -> pft_out
 
-  (* Header *)
-  val header : pft_out -> {version: int, ruleset: string,
-                           n_ty: int, n_tm: int, n_th: int, n_ci: int} -> unit
+  (* Close the stream. Writes the footer (peak namespace counts). *)
+  val closeOut : pft_out -> {n_ty: int, n_tm: int, n_th: int, n_ci: int} -> unit
 
   (* Type commands *)
   val tyvar : pft_out -> int -> string -> unit

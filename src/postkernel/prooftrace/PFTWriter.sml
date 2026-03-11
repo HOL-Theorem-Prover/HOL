@@ -6,13 +6,6 @@ datatype pft_out =
     TextOut of TextIO.outstream
   | BinOut of BinIO.outstream
 
-fun closeOut (TextOut s) = TextIO.closeOut s
-  | closeOut (BinOut s) = BinIO.closeOut s
-
-fun openOut {file, binary} =
-  if binary then BinOut (BinIO.openOut file)
-  else TextOut (TextIO.openOut file)
-
 (* Text output helpers *)
 
 fun tWrite (TextOut s) t = TextIO.output (s, t)
@@ -75,24 +68,42 @@ end
 
 fun bOpcode out opc = bByte out (Word8.fromInt opc)
 
-(* --- Header -------------------------------------------------------------- *)
+(* --- Header and footer ---------------------------------------------------- *)
 
-fun header (out as TextOut _) {version, ruleset, n_ty, n_tm, n_th, n_ci} =
-    (tWrite out "PFT "; tInt out version;
-     tSp out; tName out ruleset;
-     tSp out; tInt out n_ty;
-     tSp out; tInt out n_tm;
-     tSp out; tInt out n_th;
-     tSp out; tInt out n_ci;
-     tNl out)
-  | header (out as BinOut _) {version, ruleset, n_ty, n_tm, n_th, n_ci} =
-    (bBytes out (Byte.stringToBytes "PFT\000");
+fun openOut {file, binary, version, ruleset} =
+  if binary then let
+    val s = BinIO.openOut file
+    val out = BinOut s
+  in bBytes out (Byte.stringToBytes "PFT\000");
      bVarint out version;
      bString out ruleset;
-     bVarint out n_ty;
-     bVarint out n_tm;
-     bVarint out n_th;
-     bVarint out n_ci)
+     out
+  end
+  else let
+    val s = TextIO.openOut file
+    val out = TextOut s
+  in tWrite out "PFT "; tInt out version;
+     tSp out; tName out ruleset; tNl out;
+     out
+  end
+
+fun closeOut (out as TextOut s) {n_ty, n_tm, n_th, n_ci} =
+    (tInt out n_ty; tSp out; tInt out n_tm;
+     tSp out; tInt out n_th; tSp out; tInt out n_ci; tNl out;
+     TextIO.closeOut s)
+  | closeOut (out as BinOut s) {n_ty, n_tm, n_th, n_ci} = let
+    fun varint_size n = if n < 128 then 1 else 1 + varint_size (n div 128)
+    val footer_len = varint_size n_ty + varint_size n_tm
+                   + varint_size n_th + varint_size n_ci
+    val () = bVarint out n_ty
+    val () = bVarint out n_tm
+    val () = bVarint out n_th
+    val () = bVarint out n_ci
+    val lo = Word8.fromInt (footer_len mod 256)
+    val hi = Word8.fromInt (footer_len div 256)
+  in bByte out lo; bByte out hi;
+     BinIO.closeOut s
+  end
 
 (* --- Text command helpers ------------------------------------------------ *)
 
