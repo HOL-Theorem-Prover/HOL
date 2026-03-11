@@ -1,6 +1,12 @@
+structure ProofTraceReplay :> ProofTraceReplay = struct
+
 (*
+(* interactive use in hol --min *)
 val _ = PolyML.use (OS.Path.concat(Globals.HOLDIR, "tools-poly/holinteractive.ML"));
+qload "ProofTraceParser";
+qload "PIntMap";
 *)
+
 open Lib HolKernel Redblackmap ProofTraceParser
 
 val () = Feedback.emit_WARNING := false
@@ -46,23 +52,30 @@ fun destTy (Ty ty) = ty | destTy _ = raise Fail "destTy"
 fun destTm (Tm tm) = tm | destTm _ = raise Fail "destTm"
 fun destTh (Th th) = th | destTh _ = raise Fail "destTh"
 
-val next_axiom_name = let
+val (next_axiom_name, add_axiom_name) = let
   val names = ref ["BOOL_CASES_AX", "SELECT_AX", "ETA_AX", "INFINITY_AX"]
+  fun next () = case !names of x::xs => x before names := xs
+                | _ => raise Fail "next_axiom_name"
+  fun add name = names := (!names)@[name]
 in
-  fn () => case !names of x::xs => x before names := xs
-           | _ => raise Fail "next_axiom_name"
+  (next, add)
 end
+val skip_standard_axiom = next_axiom_name
 
 (*
 val thyname = "bool";
 *)
-val dbg_print : string -> unit = (* print *) K ()
+val print_statistics = ref false
+val debug = ref false
+val quiet = ref false
+fun dbg_print s = if !debug then print s else ()
+fun msg_print s = if !quiet then print s else ()
 
 exception NeedsAncestor of string
 
 fun replay thyname =
   if inDomain(!trDB, thyname)
-  then print("skip ")
+  then msg_print("skip ")
   else
 let
   val filename = thyname ^ "Theory.tr.gz";
@@ -173,7 +186,7 @@ let
         fun add_thm_ptr nm prev =
               (BoolArray.update(pinned, ptr thm_ptr, true);
                case prev of NONE => [thm_ptr]
-                 | SOME ls => (print("WARNING: multiple defs for "^nm^"\n");
+                 | SOME ls => (msg_print("WARNING: multiple defs for "^nm^"\n");
                                thm_ptr::ls))
         fun check_thy defthy =
           if defthy = thyname then () else raise Fail "add_def thy"
@@ -288,9 +301,9 @@ let
   val cached_compute : (thm list -> term -> thm) ref
     = ref (fn _ => raise Bind)
 
-  fun cache (mk_obj, dest_obj) mk_x ptr_ =
-  if isPtr ptr_ then let
-    val key = ptr ptr_
+  fun cache (mk_obj, dest_obj) mk_x p =
+  if isPtr p then let
+    val key = ptr p
     fun maybe_evict () =
       if BoolArray.sub(pinned, key) then () else let
         val rc = Word8Array.sub(refcounts, key)
@@ -302,12 +315,12 @@ let
       end
   in case Array.sub(replayed_heap, key) of
        Unknown => let
-         val x = mk_x ptr_
+         val x = mk_x p
          val () = Array.update(replayed_heap, key, mk_obj x)
          val () = maybe_evict ()
        in x end
      | obj => (maybe_evict (); dest_obj obj)
-  end else mk_x ptr_
+  end else mk_x p
 
   fun get_thm_id (id_ptr: thm_id ptr) = let
     val (i,ps) = shVariant heap id_ptr
@@ -363,7 +376,7 @@ let
       in mk_thy_const {Thy=Thy, Name=Name, Ty=ty}
          handle e as (HOL_ERR _) =>
            if Thy = thyname then
-             (print("WARNING: prim_new_const "^Thy^"$"^Name^"\n");
+             (msg_print("WARNING: prim_new_const "^Thy^"$"^Name^"\n");
               prim_new_const {Thy=Thy, Name=Name} ty)
            else raise e
       end
@@ -534,7 +547,7 @@ let
   val named = fromList String.compare (list heap export all_thms)
   val anons = list heap replay_thm anon_thms
 
-(*
+  val () = if !print_statistics then let
   val (live_ty, live_tm, live_th) =
     Array.foldl (fn (Ty _, (a,b,c)) => (a+1,b,c)
                   | (Tm _, (a,b,c)) => (a,b+1,c)
@@ -552,24 +565,26 @@ let
     "  ids: ", Int.toString (PIntMap.size (!id_cache)),
     "  named: ", Int.toString (numItems named),
     "  anons: ", Int.toString (length anons), "\n"])
-*)
+  in () end else ()
 
 in trDB := insert(!trDB, thyname, (named, anons)) end
 
-(*
 fun trDB_size () = foldl (fn (_,(n,a), acc) =>
   acc + numItems n + length a) 0 (!trDB)
-*)
 
-fun replay_seq [] = ()
-  | replay_seq (thy::thys) =
-    (print thy; print ": ";
-(*
-     print ("trDB: " ^ Int.toString (trDB_size ()) ^ " thms  ");
-*)
+fun replay_sequence [] = ()
+  | replay_sequence (thy::thys) =
+    (msg_print thy; print ": ";
+     if !print_statistics then
+       print ("trDB: " ^ Int.toString (trDB_size ()) ^ " thms  ")
+     else ();
      PolyML.fullGC();
-     time replay thy;
-     replay_seq thys)
+     (if !print_statistics then time else I) replay thy;
+     replay_sequence thys)
+
+fun replayed_thms s = find(!trDB, s)
+
+(*
 
 val seq = ["bool", "marker", "num", "sat", "combin",
            "relation", "prim_rec", "quotient", "pair",
@@ -605,12 +620,11 @@ val seq = ["bool", "marker", "num", "sat", "combin",
 
 val () = replay_seq seq
 
-(*
-val (boolDB, boolAs) = find(!trDB,"bool")
-val (markerDB, markerAs) = find(!trDB,"marker")
-val (numDB, numAs) = find(!trDB,"num")
-val (listDB, listAs) = find(!trDB,"list")
-val (miscDB, miscAs) = find(!trDB,"misc")
+val (boolDB, boolAs) = replayed_thms "bool"
+val (markerDB, markerAs) = replayed_thms "marker"
+val (numDB, numAs) = replayed_thms "num"
+val (listDB, listAs) = replayed_thms "list"
+val (miscDB, miscAs) = replayed_thms "misc"
 
 fun print_ty ty =
   if is_vartype ty then dest_vartype ty
@@ -644,3 +658,4 @@ print_tm(concl(find(boolDB,"INFINITY_AX")))
 print_tm(concl(find(markerDB,"Case_def")))
 print_tm(concl(find(numDB,"NOT_SUC")))
 *)
+end
