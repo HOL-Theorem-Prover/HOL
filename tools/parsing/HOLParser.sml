@@ -205,8 +205,8 @@ fun parseSML file read parseError: scope -> result = let
   fun parseInt err = case token () of
       (start, IntTk) => (start, SOME (ident start))
     | tk => (makeError tk NONE err; (#1 tk, NONE))
-  fun parseIdent err = case token () of
-      (start, IdentTk) => (start, SOME (ident start))
+  fun parseString err = case token () of
+      (start, StringTk) => (start, SOME (ident start))
     | tk => (makeError tk NONE err; (#1 tk, NONE))
 
   fun parseSymbol s err = let
@@ -471,7 +471,7 @@ fun parseSML file read parseError: scope -> result = let
               end)
           | "FILE" => (case parseKeyword "=" NONE of
               SOME eq_ => let
-              val file = parseIdent (SOME "expected an identifier")
+              val file = parseString (SOME "expected a string")
               val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
               val _ = case file of (_, SOME n) =>
                 DArray.push (evts, FileEvent (start, n))
