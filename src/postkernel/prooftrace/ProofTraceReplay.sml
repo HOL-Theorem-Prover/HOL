@@ -9,8 +9,6 @@ qload "PIntMap";
 
 open Lib HolKernel Redblackmap ProofTraceParser
 
-val () = Feedback.emit_WARNING := false
-
 fun mk_eq(l,r) = list_mk_icomb equality [l,r]
 datatype thm_id = SavedAnon of int | SavedName of string
 
@@ -69,7 +67,7 @@ val print_statistics = ref false
 val debug = ref false
 val quiet = ref false
 fun dbg_print s = if !debug then print s else ()
-fun msg_print s = if !quiet then print s else ()
+fun msg_print s = if !quiet then () else print s
 
 exception NeedsAncestor of string
 
