@@ -584,46 +584,6 @@ fun replayed_thms s = find(!trDB, s)
 
 (*
 
-val seq = ["bool", "marker", "num", "sat", "combin",
-           "relation", "prim_rec", "quotient", "pair",
-           "arithmetic", "numeral", "cv", "numpair",
-           "ind_type", "one", "sum", "option", "While",
-           "reduce", "divides", "normalForms", "pred_set",
-           "basicSize", "list", "rich_list", "sorting",
-           "finite_map", "alist", "indexedLists", "logroot",
-           "sptree", "permutes", "iterate", "fcp", "bit",
-           "ternaryComparisons", "string", "numposrep",
-           "ASCIInumbers", "sum_num", "numeral_bit", "words",
-           "set_sep", "byte", "bitstring", "set_relation",
-           "llist", "poset", "fixedPoint", "path", "alignment",
-           "address", "bag", "misc", "toto", "comparison",
-           "mergesort", "mllist", "mlstring", "normalizer", "gcd",
-           "integer", "int_arith", "cooper", "Omega", "integer_word",
-           "hrat", "hreal", "realax", "real_arith", "real", "intreal",
-           "blast", "multiword", "tailrec", "mc_multiword",
-           "binary_ieee", "machine_ieee", "namespace", "location",
-           "quantHeuristics", "ConseqConv", "patternMatches",
-           "balanced_map", "ast", "asm", "ffi", "lprefix_lub", "fpSem",
-           "semanticPrimitives", "ml_monadBase", "backend_common",
-           "backendProps", "reg_alloc", "linear_scan",
-           "stackLang", "wordLang", "wordConvs",
-           "word_bignum", "word_alloc", "word_remove", "word_unreach",
-           "word_inst", "word_copy", "word_cse", "word_simp",
-           "word_to_word", "wordSem", "wordProps",
-           "word_bignumProof", "word_simpProof",
-           "reg_allocProof", "linear_scanProof", "word_allocProof",
-           "wordConvsProof", "word_unreachProof", "word_cseProof",
-           "word_instProof", "word_copyProof", "word_removeProof",
-           "word_to_wordProof"]
-
-val () = replay_seq seq
-
-val (boolDB, boolAs) = replayed_thms "bool"
-val (markerDB, markerAs) = replayed_thms "marker"
-val (numDB, numAs) = replayed_thms "num"
-val (listDB, listAs) = replayed_thms "list"
-val (miscDB, miscAs) = replayed_thms "misc"
-
 fun print_ty ty =
   if is_vartype ty then dest_vartype ty
   else let
@@ -647,13 +607,5 @@ fun print_tm tm =
     String.concat["(", print_tm f, " ", print_tm x, ")"]
   end
 
-print_tm(concl(List.nth(miscAs,0)))
-print_tm(concl(List.nth(listAs,3)))
-val LENGTH_MAP = find(listDB,"LENGTH_MAP")
-Tag.dest_tag $ Thm.tag LENGTH_MAP
-print_tm(concl LENGTH_MAP)
-print_tm(concl(find(boolDB,"INFINITY_AX")))
-print_tm(concl(find(markerDB,"Case_def")))
-print_tm(concl(find(numDB,"NOT_SUC")))
 *)
 end
