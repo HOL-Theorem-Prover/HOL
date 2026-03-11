@@ -2,9 +2,8 @@
 
 ## Overview
 
-A proof trace is a linear stream of commands that, when replayed against a
-HOL4 kernel, reconstructs a set of target theorems. The format is
-self-contained: a trace plus a conforming kernel is sufficient to replay.
+A proof trace is a linear stream of commands for a HOL theorem proving kernel
+to construct a set of theorems.
 
 Commands are topologically ordered — every object is constructed before it is
 used.
@@ -21,7 +20,7 @@ There are four namespaces, each with independently numbered IDs:
 | Compute contexts | `ci`                   |
 
 IDs are reused: when an object is no longer needed, its ID may be assigned to
-a new object of the same namespace. Each command assigns an ID in the
+a new object in the same namespace. Each command assigns an ID in the
 appropriate namespace (determined by the command type).
 
 Since every command is typed, the assigned ID does not need a namespace prefix
@@ -51,7 +50,7 @@ A replayer can use these to pre-allocate fixed-size arrays.
 
 Each command occupies one line. In the rule specifications below:
 
-- `<id>` is the ID being assigned (a non-negative integer in decimal).
+- `<id>` is the ID being assigned (an unsigned decimal integer).
 - `<type-id>`, `<term-id>`, `<thm-id>`, `<compute-id>` are references to
   previously constructed objects (integers).
 - `<name>` is a string token (see Name Encoding).
@@ -92,7 +91,7 @@ ABS <id> <term-id> <term-id>
 
 ## Theorem Commands
 
-Each theorem command corresponds to a HOL4 kernel inference rule.
+Each theorem command corresponds to a HOL kernel inference rule.
 
 ### Basic rules
 
@@ -262,7 +261,7 @@ the empty string.
 A backslash in a name token is an escape character when followed by a space
 or another backslash:
 
-| Sequence | Meaning           |
+| Sequence | Meaning            |
 |----------|--------------------|
 | `\ `     | literal space      |
 | `\\`     | literal backslash  |
@@ -277,7 +276,10 @@ Examples:
 ```
 CONST 0 bool$T 0
 VAR 5 x\ y 0
+# A variable whose name is "":
 VAR 6 \_ 0
+# A variable whose name is "\_":
+VAR 7 \\_ 1
 ```
 
 ## Example
@@ -365,7 +367,7 @@ IDs and counts are encoded as varints. Names are encoded as strings.
 | 0x26   | Specialize    | id tm th                               |
 | 0x27   | GENL          | id th n_tms tm...                      |
 | 0x28   | ABSL          | id th n_tms tm...                      |
-| 0x29   | GEN_ABS       | id th tm_op n_tms tm...                |
+| 0x29   | GEN_ABS       | id th tm n_tms tm...                   |
 | 0x30   | ABS_THM       | id tm th                               |
 | 0x31   | AP_TERM       | id tm th                               |
 | 0x32   | AP_THM        | id th tm                               |
@@ -375,9 +377,9 @@ IDs and counts are encoded as varints. Names are encoded as strings.
 | 0x36   | Mk_comb       | id th1 th2 th3                         |
 | 0x37   | EQ_IMP_RULE1  | id th                                  |
 | 0x38   | EQ_IMP_RULE2  | id th                                  |
-| 0x39   | INST          | id th n_pairs tm tm...                 |
-| 0x3A   | INST_TYPE     | id th n_pairs ty ty...                 |
-| 0x3B   | SUBST         | id tm th n_pairs tm th...              |
+| 0x39   | INST          | id th n_pairs (tm tm)...               |
+| 0x3A   | INST_TYPE     | id th n_pairs (ty ty)...               |
+| 0x3B   | SUBST         | id tm th n_pairs (tm th)...            |
 | 0x3C   | deductAntisym | id th1 th2                             |
 | 0x40   | AXIOM         | id tm name                             |
 | 0x41   | DEF_SPEC      | id th n_names name...                  |
@@ -398,6 +400,129 @@ IDs and counts are encoded as varints. Names are encoded as strings.
 Note: In the binary format, variable-length lists (TYOP args, GENL terms,
 INST pairs, etc.) are preceded by a varint count, since there is no
 end-of-line delimiter.
+
+## Specification of the Theorem Commands
+
+We write `A` for hypothesis sets and `|-` for entailment. In the result
+column, `A` denotes the union of the hypothesis sets of the input theorems
+unless otherwise stated. `t : ty` means term `t` has type `ty`.
+
+### Equality and rewriting
+
+| Rule | Inputs | Result | Side Conditions |
+|------|--------|--------|-----------------|
+| REFL | `t` | `|- t = t` | |
+| ALPHA | `t1` `t2` | `|- t1 = t2` | `t1` and `t2` are alpha-equivalent |
+| BETA_CONV | `(\x. t) u` | `|- (\x. t) u = t[u/x]` | |
+| SYM | `A |- t1 = t2` | `A |- t2 = t1` | |
+| TRANS | `A |- t1 = t2`, `B |- t2 = t3` | `A ∪ B |- t1 = t3` | |
+| EQ_MP | `A |- p = q`, `B |- p` | `A ∪ B |- q` | |
+
+### Congruence
+
+| Rule | Inputs | Result | Side Conditions |
+|------|--------|--------|-----------------|
+| MK_COMB | `A |- f = g`, `B |- x = y` | `A ∪ B |- f x = g y` | types must be compatible |
+| ABS_THM | `x`, `A |- t1 = t2` | `A |- (\x. t1) = (\x. t2)` | `x` not free in `A` |
+| AP_TERM | `f`, `A |- x = y` | `A |- f x = f y` | `f` has compatible function type |
+| AP_THM | `A |- f = g`, `x` | `A |- f x = g x` | types must be compatible |
+| Beta | `A |- (\x. t1) = (\x. t2)` | `A |- t1[x'/x] = t2[x'/x]` | beta-reduces under the lambda |
+
+### Implication and modus ponens
+
+| Rule | Inputs | Result | Side Conditions |
+|------|--------|--------|-----------------|
+| ASSUME | `p` | `{p} |- p` | `p` has type `bool` |
+| MP | `A |- p ==> q`, `B |- p` | `A ∪ B |- q` | |
+| DISCH | `p`, `A |- q` | `A \ {p} |- p ==> q` | |
+| NOT_INTRO | `A |- p ==> F` | `A |- ~p` | |
+| NOT_ELIM | `A |- ~p` | `A |- p ==> F` | |
+| CCONTR | `p`, `A |- F` | `A \ {~p} |- p` | |
+| deductAntisym | `A |- p`, `B |- q` | `(A \ {q}) ∪ (B \ {p}) |- p = q` | |
+
+### Conjunction
+
+| Rule | Inputs | Result | Side Conditions |
+|------|--------|--------|-----------------|
+| CONJ | `A |- p`, `B |- q` | `A ∪ B |- p /\ q` | |
+| CONJUNCT1 | `A |- p /\ q` | `A |- p` | |
+| CONJUNCT2 | `A |- p /\ q` | `A |- q` | |
+
+### Disjunction
+
+| Rule | Inputs | Result | Side Conditions |
+|------|--------|--------|-----------------|
+| DISJ1 | `A |- p`, `q` | `A |- p \/ q` | |
+| DISJ2 | `q`, `A |- p` | `A |- q \/ p` | |
+| DISJ_CASES | `A |- p \/ q`, `B |- r`, `C |- r` | `(A ∪ B \ {p}) ∪ (C \ {q}) |- r` | second thm assumes `p`, third assumes `q` |
+
+### Quantifiers
+
+| Rule | Inputs | Result | Side Conditions |
+|------|--------|--------|-----------------|
+| GEN | `x`, `A |- p` | `A |- !x. p` | `x` not free in `A` |
+| SPEC | `t`, `A |- !x. p` | `A |- p[t/x]` | `t` has same type as `x` |
+| Specialize | `t`, `A |- !x. p` | `A |- p[t/x]` | `t` has the same type as `x` |
+| GENL | `A |- p`, `[x1,...,xn]` | `A |- !x1...xn. p` | each `xi` not free in `A` |
+| EXISTS | `(?x. p)`, `t`, `A |- p[t/x]` | `A |- ?x. p` | |
+| CHOOSE | `x`, `A |- ?x. p`, `B |- q` | `A ∪ B \ {p[x/x]} |- q` | `x` not free in `A`, `q`, or `?x. p` |
+
+Note: `Specialize` has the same logical semantics as `SPEC`, but indicates
+a request to delay the substitution in kernel implementations whose terms
+support doing that.
+
+### Abstraction lists
+
+| Rule | Inputs | Result | Side Conditions |
+|------|--------|--------|-----------------|
+| ABSL | `A |- t1 = t2`, `[x1,...,xn]` | `A |- (\x1...xn. t1) = (\x1...xn. t2)` | each `xi` not free in `A` |
+| GEN_ABS | `A |- t1 = t2`, `c`, `[x1,...,xn]` | `A |- (c \x1...xn. t1) = (c \x1...xn. t2)` | `c` is an abstraction operator; each `xi` not free in `A` |
+
+### Parallel congruence (Mk rules)
+
+| Rule | Inputs | Result | Notes |
+|------|--------|--------|-----------------|
+| Mk_comb | `A |- f = g` | returns three values; the third is applied to two further equality theorems to combine them | congruence rule for application |
+| Mk_abs | `A |- (\x. t1) = (\x. t2)` | returns three values; the third is applied to a body equality theorem | congruence rule for abstraction |
+
+Note: `Mk_comb` takes one theorem and returns a continuation that takes two
+more theorems. In the trace, all three theorems are provided:
+`Mk_comb <id> <th1> <th2> <th3>`. Similarly, `Mk_abs` takes one theorem and
+a continuation theorem: `Mk_abs <id> <th1> <th2>`.
+
+### Instantiation and substitution
+
+| Rule | Inputs | Result | Side Conditions |
+|------|--------|--------|-----------------|
+| INST | `A |- p`, `[(t1,x1),...,(tn,xn)]` | `A[ti/xi] |- p[ti/xi]` | each `ti` has same type as `xi` |
+| INST_TYPE | `A |- p`, `[(ty1,a1),...,(tyn,an)]` | `A[tyi/ai] |- p[tyi/ai]` | type variable substitution |
+| SUBST | `[(v1, A1 |- t1 = t1'),...,(vn, An |- tn = tn')]`, `template`, `B |- p` | `A1 ∪...∪ An ∪ B |- p'` | `p'` is `p` with each `vi` in template replaced by corresponding `ti'` |
+| EQ_IMP_RULE1 | `A |- p = q` | `A |- p ==> q` | |
+| EQ_IMP_RULE2 | `A |- p = q` | `A |- q ==> p` | |
+
+### Axioms and definitions
+
+| Rule | Inputs | Result | Side Conditions |
+|------|--------|--------|-----------------|
+| AXIOM | `t`, name? | `|- t` | Asserts `t` as a new axiom |
+| DEF_SPEC | `|- ?v1...vn. P`, `[c1,...,cn]` | `|- P[c1/v1,...,cn/vn]` | Creates new constants `c1,...,cn`; the input theorem must have no hypotheses and no free variables; each `ci` gets the type of the corresponding `vi` |
+| DEF_TYOP | `|- ?v. P v`, name | `|- ?rep. TYPE_DEFINITION P rep` | Creates a new type operator with the given name; `P : dom -> bool` must be a closed term; the input theorem must have no hypotheses; the new type has the type variables of `P` as parameters |
+
+### Computation
+
+| Rule | Inputs | Result | Side Conditions |
+|------|--------|--------|-----------------|
+| COMPUTE | ci, `[th1,...,thn]`, `t` | `|- t = v` | Each `thi` must be a rewrite equation `|- l = r` with no hypotheses; `v` is the normal form of `t` under the rewrite rules from the compute context `ci` and the additional equations `th1,...,thn` |
+
+The compute context (created by `COMPUTE_INIT`) packages:
+- `num_type`: the type of numerals
+- `char_eqns`: named rewrite equations for character operations
+- `cval_type`: the type of computed values
+- `cval_terms`: named terms for constructing computed values
+
+The context is created once and reused across multiple `COMPUTE` calls.
+The additional theorems `th1,...,thn` provide per-call rewrite equations (code
+equations) that augment the context's built-in rules.
 
 ## Production from HOL4 Proof Traces
 
