@@ -516,7 +516,11 @@ in
         (* Load prelude files for interactive mode, unless using the
            minimal (min-only) heap which has no boolTheory. *)
         (case base_state of
-            SOME s => if String.isSuffix "hol.state.min" s then ()
+            SOME s => if String.isSuffix "hol.state.min" s then
+                        (* Even in --min mode, we need HOL_Interactive for
+                           the parser's open-rewriting (issue #1865) *)
+                        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                                 "tools-poly/holinteractive.ML"))
                       else load_preludes()
           | NONE => ());
         List.app
