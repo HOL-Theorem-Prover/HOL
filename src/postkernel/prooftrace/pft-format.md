@@ -403,9 +403,7 @@ end-of-line delimiter.
 
 ## Specification of the Theorem Commands
 
-We write `A` for hypothesis sets and `⊢` for entailment. In the result
-column, `A` denotes the union of the hypothesis sets of the input theorems
-unless otherwise stated. `t : ty` means term `t` has type `ty`.
+We write `A` for hypothesis sets and `⊢` for entailment.
 
 ### Equality and rewriting
 
@@ -413,7 +411,7 @@ unless otherwise stated. `t : ty` means term `t` has type `ty`.
 |------|--------|--------|-----------------|
 | REFL | `t` | `⊢ t = t` | |
 | ALPHA | `t1` `t2` | `⊢ t1 = t2` | `t1` and `t2` are alpha-equivalent |
-| BETA_CONV | `(\x. t) u` | `⊢ (\x. t) u = t[u/x]` | |
+| BETA_CONV | `(λx. t) u` | `⊢ (λx. t) u = t[u/x]` | |
 | SYM | `A ⊢ t1 = t2` | `A ⊢ t2 = t1` | |
 | TRANS | `A ⊢ t1 = t2`, `B ⊢ t2 = t3` | `A ∪ B ⊢ t1 = t3` | |
 | EQ_MP | `A ⊢ p = q`, `B ⊢ p` | `A ∪ B ⊢ q` | |
@@ -423,10 +421,10 @@ unless otherwise stated. `t : ty` means term `t` has type `ty`.
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
 | MK_COMB | `A ⊢ f = g`, `B ⊢ x = y` | `A ∪ B ⊢ f x = g y` | types must be compatible |
-| ABS_THM | `x`, `A ⊢ t1 = t2` | `A ⊢ (\x. t1) = (\x. t2)` | `x` not free in `A` |
+| ABS_THM | `x`, `A ⊢ t1 = t2` | `A ⊢ (λx. t1) = (λx. t2)` | `x` not free in `A` |
 | AP_TERM | `f`, `A ⊢ x = y` | `A ⊢ f x = f y` | `f` has compatible function type |
 | AP_THM | `A ⊢ f = g`, `x` | `A ⊢ f x = g x` | types must be compatible |
-| Beta | `A ⊢ t1 = (\x. b) u` | `A ⊢ t1 = b[u/x]` | RHS must be a beta-redex |
+| Beta | `A ⊢ t1 = (λx. b) u` | `A ⊢ t1 = b[u/x]` | RHS must be a beta-redex |
 
 ### Implication and modus ponens
 
@@ -454,7 +452,7 @@ unless otherwise stated. `t : ty` means term `t` has type `ty`.
 |------|--------|--------|-----------------|
 | DISJ1 | `A ⊢ p`, `q` | `A ⊢ p ∨ q` | |
 | DISJ2 | `q`, `A ⊢ p` | `A ⊢ q ∨ p` | |
-| DISJ_CASES | `A ⊢ p ∨ q`, `B ⊢ r`, `C ⊢ r` | `(A ∪ B \ {p}) ∪ (C \ {q}) ⊢ r` | second thm assumes `p`, third assumes `q` |
+| DISJ_CASES | `A ⊢ p ∨ q`, `B ⊢ r`, `C ⊢ r` | `A ∪ (B \ {p}) ∪ (C \ {q}) ⊢ r` | |
 
 ### Quantifiers
 
@@ -465,7 +463,7 @@ unless otherwise stated. `t : ty` means term `t` has type `ty`.
 | Specialize | `t`, `A ⊢ ∀x. p` | `A ⊢ p[t/x]` | `t` has the same type as `x` |
 | GENL | `A ⊢ p`, `[x1,...,xn]` | `A ⊢ ∀x1...xn. p` | each `xi` not free in `A` |
 | EXISTS | `(∃x. p)`, `t`, `A ⊢ p[t/x]` | `A ⊢ ∃x. p` | |
-| CHOOSE | `x`, `A ⊢ ∃x. p`, `B ⊢ q` | `A ∪ B \ {p[x/x]} ⊢ q` | `x` not free in `A`, `q`, or `∃x. p` |
+| CHOOSE | `v`, `A ⊢ ∃x. P`, `B ⊢ q` | `A ∪ (B \ {P[v/x]}) ⊢ q` | `v` not free in `∃x. P`, `q`, or the remaining hypotheses |
 
 Note: `Specialize` has the same logical semantics as `SPEC`, but indicates
 a request to delay the substitution in kernel implementations whose terms
@@ -475,15 +473,15 @@ support doing that.
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| ABSL | `A ⊢ t1 = t2`, `[x1,...,xn]` | `A ⊢ (\x1...xn. t1) = (\x1...xn. t2)` | each `xi` not free in `A` |
-| GEN_ABS | `A ⊢ t1 = t2`, `c`, `[x1,...,xn]` | `A ⊢ (c \x1...xn. t1) = (c \x1...xn. t2)` | `c` is an abstraction operator; each `xi` not free in `A` |
+| ABSL | `A ⊢ t1 = t2`, `[x1,...,xn]` | `A ⊢ (λx1...xn. t1) = (λx1...xn. t2)` | each `xi` not free in `A` |
+| GEN_ABS | `A ⊢ t1 = t2`, `c`, `[x1,...,xn]` | `A ⊢ (c (λx1. c (λx2. ... c (λxn. t1)...))) = (c (λx1. c (λx2. ... c (λxn. t2)...)))` | types are compatible; each `xi` not free in `A` |
 
 ### Parallel congruence (Mk rules)
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
 | Mk_comb | `A ⊢ t = f x`, `B ⊢ f = f'`, `C ⊢ x = x'` | `A ∪ B ∪ C ⊢ t = f' x'` | RHS of first thm must be an application; LHS of second must be alpha-equivalent to the rator; LHS of third must be alpha-equivalent to the rand |
-| Mk_abs | `A ⊢ t = \v. b`, `B ⊢ b = b'` | `A ∪ B ⊢ t = \v. b'` | RHS of first thm must be an abstraction; LHS of second must be alpha-equivalent to the body; `v` not free in `B` |
+| Mk_abs | `A ⊢ t = λv. b`, `B ⊢ b = b'` | `A ∪ B ⊢ t = λv. b'` | RHS of first thm must be an abstraction; LHS of second must be alpha-equivalent to the body; `v` not free in `B` |
 
 In the kernel API, `Mk_comb` and `Mk_abs` return continuations. In the trace,
 all arguments are provided directly: `Mk_comb <id> <th1> <th2> <th3>` and
@@ -503,7 +501,7 @@ all arguments are provided directly: `Mk_comb <id> <th1> <th2> <th3>` and
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| AXIOM | `t`, name? | `⊢ t` | Asserts `t` as a new axiom |
+| AXIOM | `t`, optional name | `⊢ t` | `t` has type `bool` |
 | DEF_SPEC | `⊢ ∃v1...vn. P`, `[c1,...,cn]` | `⊢ P[c1/v1,...,cn/vn]` | Creates new constants `c1,...,cn`; the input theorem must have no hypotheses and no free variables; each `ci` gets the type of the corresponding `vi` |
 | DEF_TYOP | `⊢ ∃v. P v`, name | `⊢ ∃rep. TYPE_DEFINITION P rep` | Creates a new type operator with the given name; `P : dom → bool` must be a closed term; the input theorem must have no hypotheses; the new type has the type variables of `P` as parameters |
 
@@ -511,20 +509,98 @@ all arguments are provided directly: `Mk_comb <id> <th1> <th2> <th3>` and
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| COMPUTE | ci, `[th1,...,thn]`, `t` | `⊢ t = v` | Each `thi` must be an equation with no hypotheses |
+| COMPUTE | ci, `[th1,...,thn]`, `t` | `⊢ t = v` | See below |
 
-`v` is the normal form of `t` under the rewrite rules from the compute
-context `ci` and the additional equations `th1,...,thn`.
+#### COMPUTE_INIT
 
-The compute context (created by `COMPUTE_INIT`) packages:
-- `num_type`: the type of numerals
-- `char_eqns`: named rewrite equations for character operations
-- `cval_type`: the type of computed values
-- `cval_terms`: named terms for constructing computed values
+Creates a compute context from four components:
+
+- **`num_type`**: the type of natural numbers (`:num`)
+- **`cval_type`**: the type of computed values (`:cv`)
+- **`cval_terms`**: a list of named terms providing the operators used by the
+  evaluator. The following names must be present, each bound to a constant of
+  the appropriate type:
+
+  | Name | Description | Name | Description |
+  |------|-------------|------|-------------|
+  | `truth` | `T` | `false` | `F` |
+  | `cond` | conditional | `let` | let-binding |
+  | `zero` | `0 : num` | `alt_zero` | alternate zero |
+  | `suc` | successor | `numeral` | numeral wrapper |
+  | `bit1` | binary encoding | `bit2` | binary encoding |
+  | `add` | addition | `sub` | subtraction |
+  | `mul` | multiplication | `div` | division |
+  | `mod` | modulus | `lt` | less-than |
+  | `cv_pair` | cv pair constructor | `cv_num` | cv numeral constructor |
+  | `cv_fst` | cv first projection | `cv_snd` | cv second projection |
+  | `cv_ispair` | cv pair test | `cv_eq` | cv equality |
+  | `cv_add` | cv addition | `cv_sub` | cv subtraction |
+  | `cv_mul` | cv multiplication | `cv_div` | cv division |
+  | `cv_mod` | cv modulus | `cv_lt` | cv less-than |
+  | `cv_if` | cv conditional | | |
+
+- **`char_eqns`**: a list of named theorems, each with no hypotheses,
+  providing the defining equations for the operators above. They must be
+  provided in a fixed order and each must match a specific pattern involving
+  `num_type`, `cval_type`, and the `cval_terms` constants. The required
+  equations (in order) are:
+
+  | Name | Equation |
+  |------|----------|
+  | `alt_zero` | `ALT_ZERO = ZERO` |
+  | `cond_T` | `COND T a b = a` |
+  | `cond_F` | `COND F a b = b` |
+  | `numeral` | `NUMERAL n = n` |
+  | `bit1` | `BIT1 n = n + (n + SUC ZERO)` |
+  | `bit2` | `BIT2 n = n + (n + SUC (SUC ZERO))` |
+  | `add1` | `ZERO + n = n` |
+  | `add2` | `SUC m + n = SUC (m + n)` |
+  | `sub1` | `ZERO − m = ZERO` |
+  | `sub2` | `SUC m − n = if m < n then ZERO else SUC (m − n)` |
+  | `mul1` | `ZERO * n = ZERO` |
+  | `mul2` | `SUC m * n = m * n + n` |
+  | `div` | `m DIV n = if n = 0 then 0 else if m < n then 0 else SUC ((m − n) DIV n)` |
+  | `mod` | `m MOD n = if n = 0 then m else if m < n then m else (m − n) MOD n` |
+  | `lt1` | `m < ZERO = F` |
+  | `lt2` | `m < SUC n = if m = n then T else m < n` |
+  | `suc1` | `(SUC m = ZERO) = F` |
+  | `suc2` | `(SUC m = SUC n) = (m = n)` |
+  | `cval1` | `(cv_pair p q = cv_pair r s) = if p = r then q = s else F` |
+  | `cval2` | `(cv_pair p q = cv_num n) = F` |
+  | `cval3` | `(cv_num m = cv_num n) = (m = n)` |
+  | `cv_add1`–`cv_add4` | cv_add on all four constructor combinations |
+  | `cv_sub1`–`cv_sub4` | cv_sub on all four constructor combinations |
+  | `cv_mul1`–`cv_mul4` | cv_mul on all four constructor combinations |
+  | `cv_div1`–`cv_div4` | cv_div on all four constructor combinations |
+  | `cv_mod1`–`cv_mod4` | cv_mod on all four constructor combinations |
+  | `cv_lt1`–`cv_lt4` | cv_lt on all four constructor combinations |
+  | `cv_if1`–`cv_if3` | cv_if on cv_num/cv_pair conditions |
+  | `cv_fst1`–`cv_fst2` | cv_fst on cv_pair/cv_num |
+  | `cv_snd1`–`cv_snd2` | cv_snd on cv_pair/cv_num |
+  | `cv_ispair1`–`cv_ispair2` | cv_ispair on cv_pair/cv_num |
+  | `cv_eq` | `cv_eq p q = cv_num (if p = q then SUC ZERO else ZERO)` |
+  | `let` | `LET f x = f x` |
+
+  The "four constructor combinations" for binary cv operations are:
+  `(cv_num, cv_num)`, `(cv_num, cv_pair)`, `(cv_pair, cv_num)`,
+  `(cv_pair, cv_pair)`.
 
 The context is created once and reused across multiple `COMPUTE` calls.
-The additional theorems `th1,...,thn` provide per-call rewrite equations (code
-equations) that augment the context's built-in rules.
+
+#### COMPUTE
+
+Takes a compute context `ci`, a list of code equation theorems
+`[th1,...,thn]`, and a term `t`. Returns `⊢ t = v` (no hypotheses) where `v`
+is the normal form of `t` under evaluation.
+
+**Conditions on code equations**: Each `thi` must be a theorem with no
+hypotheses whose conclusion has the form `f x1 ... xk = r` where:
+- `f` is a constant
+- each `xi` is a variable of type `cval_type`
+- the `xi` are all distinct
+- the RHS `r` has type `cval_type`
+- all free variables in `r` are among `x1,...,xk`
+- all constants in `f` are among the LHS head constants of the code equations
 
 ## Production from HOL4 Proof Traces
 
