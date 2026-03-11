@@ -426,46 +426,46 @@ unless otherwise stated. `t : ty` means term `t` has type `ty`.
 | ABS_THM | `x`, `A ⊢ t1 = t2` | `A ⊢ (\x. t1) = (\x. t2)` | `x` not free in `A` |
 | AP_TERM | `f`, `A ⊢ x = y` | `A ⊢ f x = f y` | `f` has compatible function type |
 | AP_THM | `A ⊢ f = g`, `x` | `A ⊢ f x = g x` | types must be compatible |
-| Beta | `A ⊢ (\x. t1) = (\x. t2)` | `A ⊢ t1[x'/x] = t2[x'/x]` | beta-reduces under the lambda |
+| Beta | `A ⊢ t1 = (\x. b) u` | `A ⊢ t1 = b[u/x]` | RHS must be a beta-redex |
 
 ### Implication and modus ponens
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
 | ASSUME | `p` | `{p} ⊢ p` | `p` has type `bool` |
-| MP | `A ⊢ p ==> q`, `B ⊢ p` | `A ∪ B ⊢ q` | |
-| DISCH | `p`, `A ⊢ q` | `A \ {p} ⊢ p ==> q` | |
-| NOT_INTRO | `A ⊢ p ==> F` | `A ⊢ ~p` | |
-| NOT_ELIM | `A ⊢ ~p` | `A ⊢ p ==> F` | |
-| CCONTR | `p`, `A ⊢ F` | `A \ {~p} ⊢ p` | |
+| MP | `A ⊢ p ⇒ q`, `B ⊢ p` | `A ∪ B ⊢ q` | |
+| DISCH | `p`, `A ⊢ q` | `A \ {p} ⊢ p ⇒ q` | |
+| NOT_INTRO | `A ⊢ p ⇒ F` | `A ⊢ ¬p` | |
+| NOT_ELIM | `A ⊢ ¬p` | `A ⊢ p ⇒ F` | |
+| CCONTR | `p`, `A ⊢ F` | `A \ {¬p} ⊢ p` | |
 | deductAntisym | `A ⊢ p`, `B ⊢ q` | `(A \ {q}) ∪ (B \ {p}) ⊢ p = q` | |
 
 ### Conjunction
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| CONJ | `A ⊢ p`, `B ⊢ q` | `A ∪ B ⊢ p /\ q` | |
-| CONJUNCT1 | `A ⊢ p /\ q` | `A ⊢ p` | |
-| CONJUNCT2 | `A ⊢ p /\ q` | `A ⊢ q` | |
+| CONJ | `A ⊢ p`, `B ⊢ q` | `A ∪ B ⊢ p ∧ q` | |
+| CONJUNCT1 | `A ⊢ p ∧ q` | `A ⊢ p` | |
+| CONJUNCT2 | `A ⊢ p ∧ q` | `A ⊢ q` | |
 
 ### Disjunction
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| DISJ1 | `A ⊢ p`, `q` | `A ⊢ p \/ q` | |
-| DISJ2 | `q`, `A ⊢ p` | `A ⊢ q \/ p` | |
-| DISJ_CASES | `A ⊢ p \/ q`, `B ⊢ r`, `C ⊢ r` | `(A ∪ B \ {p}) ∪ (C \ {q}) ⊢ r` | second thm assumes `p`, third assumes `q` |
+| DISJ1 | `A ⊢ p`, `q` | `A ⊢ p ∨ q` | |
+| DISJ2 | `q`, `A ⊢ p` | `A ⊢ q ∨ p` | |
+| DISJ_CASES | `A ⊢ p ∨ q`, `B ⊢ r`, `C ⊢ r` | `(A ∪ B \ {p}) ∪ (C \ {q}) ⊢ r` | second thm assumes `p`, third assumes `q` |
 
 ### Quantifiers
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| GEN | `x`, `A ⊢ p` | `A ⊢ !x. p` | `x` not free in `A` |
-| SPEC | `t`, `A ⊢ !x. p` | `A ⊢ p[t/x]` | `t` has same type as `x` |
-| Specialize | `t`, `A ⊢ !x. p` | `A ⊢ p[t/x]` | `t` has the same type as `x` |
-| GENL | `A ⊢ p`, `[x1,...,xn]` | `A ⊢ !x1...xn. p` | each `xi` not free in `A` |
-| EXISTS | `(?x. p)`, `t`, `A ⊢ p[t/x]` | `A ⊢ ?x. p` | |
-| CHOOSE | `x`, `A ⊢ ?x. p`, `B ⊢ q` | `A ∪ B \ {p[x/x]} ⊢ q` | `x` not free in `A`, `q`, or `?x. p` |
+| GEN | `x`, `A ⊢ p` | `A ⊢ ∀x. p` | `x` not free in `A` |
+| SPEC | `t`, `A ⊢ ∀x. p` | `A ⊢ p[t/x]` | `t` has same type as `x` |
+| Specialize | `t`, `A ⊢ ∀x. p` | `A ⊢ p[t/x]` | `t` has the same type as `x` |
+| GENL | `A ⊢ p`, `[x1,...,xn]` | `A ⊢ ∀x1...xn. p` | each `xi` not free in `A` |
+| EXISTS | `(∃x. p)`, `t`, `A ⊢ p[t/x]` | `A ⊢ ∃x. p` | |
+| CHOOSE | `x`, `A ⊢ ∃x. p`, `B ⊢ q` | `A ∪ B \ {p[x/x]} ⊢ q` | `x` not free in `A`, `q`, or `∃x. p` |
 
 Note: `Specialize` has the same logical semantics as `SPEC`, but indicates
 a request to delay the substitution in kernel implementations whose terms
@@ -480,15 +480,14 @@ support doing that.
 
 ### Parallel congruence (Mk rules)
 
-| Rule | Inputs | Result | Notes |
+| Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| Mk_comb | `A ⊢ f = g` | returns three values; the third is applied to two further equality theorems to combine them | congruence rule for application |
-| Mk_abs | `A ⊢ (\x. t1) = (\x. t2)` | returns three values; the third is applied to a body equality theorem | congruence rule for abstraction |
+| Mk_comb | `A ⊢ t = f x`, `B ⊢ f = f'`, `C ⊢ x = x'` | `A ∪ B ∪ C ⊢ t = f' x'` | RHS of first thm must be an application; LHS of second must be alpha-equivalent to the rator; LHS of third must be alpha-equivalent to the rand |
+| Mk_abs | `A ⊢ t = \v. b`, `B ⊢ b = b'` | `A ∪ B ⊢ t = \v. b'` | RHS of first thm must be an abstraction; LHS of second must be alpha-equivalent to the body; `v` not free in `B` |
 
-Note: `Mk_comb` takes one theorem and returns a continuation that takes two
-more theorems. In the trace, all three theorems are provided:
-`Mk_comb <id> <th1> <th2> <th3>`. Similarly, `Mk_abs` takes one theorem and
-a continuation theorem: `Mk_abs <id> <th1> <th2>`.
+In the kernel API, `Mk_comb` and `Mk_abs` return continuations. In the trace,
+all arguments are provided directly: `Mk_comb <id> <th1> <th2> <th3>` and
+`Mk_abs <id> <th1> <th2>`.
 
 ### Instantiation and substitution
 
@@ -497,22 +496,25 @@ a continuation theorem: `Mk_abs <id> <th1> <th2>`.
 | INST | `A ⊢ p`, `[(t1,x1),...,(tn,xn)]` | `A[ti/xi] ⊢ p[ti/xi]` | each `ti` has same type as `xi` |
 | INST_TYPE | `A ⊢ p`, `[(ty1,a1),...,(tyn,an)]` | `A[tyi/ai] ⊢ p[tyi/ai]` | type variable substitution |
 | SUBST | `[(v1, A1 ⊢ t1 = t1'),...,(vn, An ⊢ tn = tn')]`, `template`, `B ⊢ p` | `A1 ∪...∪ An ∪ B ⊢ p'` | `p'` is `p` with each `vi` in template replaced by corresponding `ti'` |
-| EQ_IMP_RULE1 | `A ⊢ p = q` | `A ⊢ p ==> q` | |
-| EQ_IMP_RULE2 | `A ⊢ p = q` | `A ⊢ q ==> p` | |
+| EQ_IMP_RULE1 | `A ⊢ p = q` | `A ⊢ p ⇒ q` | |
+| EQ_IMP_RULE2 | `A ⊢ p = q` | `A ⊢ q ⇒ p` | |
 
 ### Axioms and definitions
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
 | AXIOM | `t`, name? | `⊢ t` | Asserts `t` as a new axiom |
-| DEF_SPEC | `⊢ ?v1...vn. P`, `[c1,...,cn]` | `⊢ P[c1/v1,...,cn/vn]` | Creates new constants `c1,...,cn`; the input theorem must have no hypotheses and no free variables; each `ci` gets the type of the corresponding `vi` |
-| DEF_TYOP | `⊢ ?v. P v`, name | `⊢ ?rep. TYPE_DEFINITION P rep` | Creates a new type operator with the given name; `P : dom -> bool` must be a closed term; the input theorem must have no hypotheses; the new type has the type variables of `P` as parameters |
+| DEF_SPEC | `⊢ ∃v1...vn. P`, `[c1,...,cn]` | `⊢ P[c1/v1,...,cn/vn]` | Creates new constants `c1,...,cn`; the input theorem must have no hypotheses and no free variables; each `ci` gets the type of the corresponding `vi` |
+| DEF_TYOP | `⊢ ∃v. P v`, name | `⊢ ∃rep. TYPE_DEFINITION P rep` | Creates a new type operator with the given name; `P : dom → bool` must be a closed term; the input theorem must have no hypotheses; the new type has the type variables of `P` as parameters |
 
 ### Computation
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| COMPUTE | ci, `[th1,...,thn]`, `t` | `⊢ t = v` | Each `thi` must be a rewrite equation `⊢ l = r` with no hypotheses; `v` is the normal form of `t` under the rewrite rules from the compute context `ci` and the additional equations `th1,...,thn` |
+| COMPUTE | ci, `[th1,...,thn]`, `t` | `⊢ t = v` | Each `thi` must be an equation with no hypotheses |
+
+`v` is the normal form of `t` under the rewrite rules from the compute
+context `ci` and the additional equations `th1,...,thn`.
 
 The compute context (created by `COMPUTE_INIT`) packages:
 - `num_type`: the type of numerals
