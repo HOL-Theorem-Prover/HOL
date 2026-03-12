@@ -14,7 +14,10 @@ fun export (file, x: 'a) = let
     val () = IO.dup2 {old = fd, new = FileSys.stdout}
     val () = app IO.close [pipeRead, pipeWrite, fd]
     in Process.exec ("/usr/bin/gzip", []) end
-  val _ = IO.writeVec (pipeWrite, Word8VectorSlice.full body)
+  fun writeAll slice = if Word8VectorSlice.length slice = 0 then () else let
+    val n = IO.writeVec (pipeWrite, slice)
+    in writeAll (Word8VectorSlice.subslice (slice, n, NONE)) end
+  val () = writeAll (Word8VectorSlice.full body)
   val () = app IO.close [pipeRead, pipeWrite]
   val _ = Process.waitpid (Process.W_CHILD pid, [])
   in () end
