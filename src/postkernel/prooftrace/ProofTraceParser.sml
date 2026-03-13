@@ -1,6 +1,6 @@
 structure ProofTraceParser :> ProofTraceParser = struct
 
-open HolKernel
+open Lib Type Term Thm RawTheory_dtype
 
 fun decompressGzip (filename: string): Word8Vector.vector = let
   val proc = Unix.execute ("/usr/bin/gzip", ["-dc", filename])
