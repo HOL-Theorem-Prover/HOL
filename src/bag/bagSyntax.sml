@@ -83,8 +83,8 @@ fun mk_bag (tms, ty) =
 
 fun dest_bag tm = let
   val (els, b) = strip_insert tm
-  val _ = is_const b andalso fst (Term.dest_const b) = "EMPTY_BAG" orelse
-    raise ERR "dest_bag" "Not a bag literal"
+  val _ = same_const b EMPTY_BAG_tm orelse
+          raise ERR "dest_bag" "Not a bag literal"
 in
   (els, base_type b)
 end

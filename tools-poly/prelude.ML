@@ -141,9 +141,7 @@ in
 end
 
 val _ = PolyML.use (OS.Path.concat(HOLDIR, "tools-poly/holinteractive.ML"));
-
-(* Connect HOL_Interactive.reset_open to REPL's compile-fail handler *)
-val _ = HOL_REPL.resetOpenHook := HOL_Interactive.reset_open;
+(* holinteractive.ML sets HOL_REPL.resetOpenHook *)
 
 (*---------------------------------------------------------------------------*
  * Set up the help paths.                                                    *

@@ -1,5 +1,10 @@
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
 ifdef POLY
-TARGET = $(dprot $(HOLDIR)/bin/hol.state0)
+ZEROSTATE = $(dprot $(HOLDIR)/bin/hol.state0)
+MINSTATE = $(dprot $(HOLDIR)/bin/hol.state.min)
+all: $(ZEROSTATE) $(MINSTATE)
 
 BOOLTHEORY = $(dprot $(SIGOBJ)/boolTheory.uo)
 BOOLLIB = $(dprot $(SIGOBJ)/boolLib.uo)
@@ -37,10 +42,13 @@ UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack \
          $(protect $(SIGOBJ)/Inttab) $(protect $(SIGOBJ)/HOLsexp) \
 	 $(protect $(SIGOBJ)/ThmSetData)
 
-EXTRA_CLEANS = $(TARGET)
+EXTRA_CLEANS = $(ZEROSTATE) $(MINSTATE)
 
-$(TARGET): $(DEPS)
+$(ZEROSTATE): $(DEPS)
 	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) --poly -o $@ $(UOARGS) && \
 	rm -f $(protect $(HOLDIR)/bin/hol.state)
 
+$(MINSTATE): $(dprot $(HOLDIR)/bin/hol)
+	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) --poly -o $@ \
+	$(protect $(SIGOBJ)/HolKernel)
 endif

@@ -140,4 +140,3 @@ Theorem cv_postprocess:
 Proof
   fs [cv_if_def]
 QED
-

@@ -34,6 +34,9 @@ New features
 Bugs fixed
 ----------
 
+-   Three kernel bugs (github issues [#1838](https://github.com/HOL-Theorem-Prover/HOL/issues/1838), [#1839](https://github.com/HOL-Theorem-Prover/HOL/issues/1839), and [#1840](https://github.com/HOL-Theorem-Prover/HOL/issues/1840)) in CV-compute were fixed.
+    Thanks to Ramana Kumar for finding these!
+
 New theories
 ------------
 
@@ -42,6 +45,8 @@ New tools
 
 New examples
 ------------
+
+-   The LaTeX munging technology has a tutorial document in the `examples/latex-generation` directory.
 
 Incompatibilities
 -----------------

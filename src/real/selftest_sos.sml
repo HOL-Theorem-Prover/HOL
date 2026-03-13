@@ -12,16 +12,12 @@ val _ = diemode := Remember errc
 (* -- SOS_CONV: decompose polynomial as sum of squares -- *)
 
 fun sos_conv_test (name, tm) =
-    let
-      val _ = tprint ("SOS_CONV " ^ name)
-      val th = SOS_CONV tm
-      val lhs_tm = lhand (concl th)
-      val rhs_tm = rand (concl th)
-    in
-      if lhs_tm ~~ tm then OK()
-      else die ("LHS mismatch: " ^ term_to_string lhs_tm)
-    end
-    handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+  let
+    fun check res = lhand (concl res) ~~ tm
+  in
+    tprint ("SOS_CONV " ^ name);
+    require_msg (check_result check) (term_to_string o concl) SOS_CONV tm
+  end;
 
 val _ = List.app sos_conv_test [
   ("x^2",
@@ -45,14 +41,12 @@ val _ = List.app sos_conv_test [
 (* -- PURE_SOS: prove &0 <= polynomial -- *)
 
 fun pure_sos_test (name, tm) =
-    let
-      val _ = tprint ("PURE_SOS " ^ name)
-      val th = PURE_SOS tm
-    in
-      if concl th ~~ tm then OK()
-      else die ("conclusion mismatch: " ^ thm_to_string th)
-    end
-    handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+  let
+    fun check res = concl res ~~ tm
+  in
+    tprint ("PURE_SOS " ^ name);
+    require_msg (check_result check) (term_to_string o concl) PURE_SOS tm
+  end;
 
 val _ = List.app pure_sos_test [
   ("0 <= x^2",
@@ -72,14 +66,13 @@ val _ = List.app pure_sos_test [
 (* -- PURE_SOS_TAC: close goals -- *)
 
 fun tac_test (name, goal_tm) =
-    let
-      val _ = tprint ("PURE_SOS_TAC " ^ name)
-      val th = prove(goal_tm, PURE_SOS_TAC)
-    in
-      if concl th ~~ goal_tm then OK()
-      else die ("conclusion mismatch")
-    end
-    handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+  let
+    fun check res = concl res ~~ goal_tm
+  in
+    tprint ("PURE_SOS_TAC " ^ name);
+    require_msg (check_result check) (term_to_string o concl)
+                (fn t => prove(t, PURE_SOS_TAC)) goal_tm
+  end;
 
 val _ = List.app tac_test [
   ("0 <= x^2",
@@ -149,24 +142,23 @@ else ();
 
 (* -- FAIL tests: should raise on non-SOS polynomials -- *)
 
-val _ = let
-  val _ = tprint "SOS_CONV fails on x (not a square)"
-in
-  (SOS_CONV ``x:real``; die "should have failed")
-  handle HOL_ERR _ => OK()
-end;
+val _ = shouldfail {
+      testfn = SOS_CONV,
+      printresult = thm_to_string,
+      printarg = fn t => "SOS_CONV fails on " ^ term_to_string t ^
+                         " (not a square)",
+      checkexn = fn HOL_ERR _ => true | _ => false
+    } ``x:real``;
 
 (* -- REAL_SOS tests: universally quantified goals -- *)
 
 fun real_sos_test (name, tm) =
-    let
-      val _ = tprint ("REAL_SOS " ^ name)
-      val th = REAL_SOS tm
-    in
-      if concl th ~~ tm then OK()
-      else die ("conclusion mismatch: " ^ thm_to_string th)
-    end
-    handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+  let
+    fun check res = concl res ~~ tm
+  in
+    tprint ("REAL_SOS " ^ name);
+    require_msg (check_result check) (term_to_string o concl) REAL_SOS tm
+  end;
 
 val _ = List.app real_sos_test [
   ("!x. 0 <= x^2",
@@ -190,14 +182,13 @@ else ();
 (* -- REAL_SOS_TAC tests -- *)
 
 fun sos_tac_test (name, goal_tm) =
-    let
-      val _ = tprint ("REAL_SOS_TAC " ^ name)
-      val th = prove(goal_tm, REAL_SOS_TAC)
-    in
-      if concl th ~~ goal_tm then OK()
-      else die ("conclusion mismatch")
-    end
-    handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+  let
+    fun check res = concl res ~~ goal_tm
+  in
+    tprint ("REAL_SOS_TAC " ^ name);
+    require_msg (check_result check) (term_to_string o concl)
+                (fn t => prove(t, REAL_SOS_TAC)) goal_tm
+  end;
 
 val _ = List.app sos_tac_test [
   ("!x. 0 <= x^2",
@@ -207,6 +198,140 @@ val _ = List.app sos_tac_test [
   ("!x y. x^2 + y^2 >= 2*x*y (AM-GM, tac)",
    ``!x y:real. x * x + y * y >= &2 * x * y``)
 ];
+
+(* -- REAL_SOS with hypotheses (Positivstellensatz, requires CSDP) -- *)
+
+val _ = if csdp_available then
+  List.app real_sos_test [
+    ("x>=5 /\\ y>=5 ==> x*y>=25",
+     ``!x y:real. x >= &5 /\ y >= &5 ==> x * y >= &25``),
+    ("x>=1 ==> x*x>=x",
+     ``!x:real. x >= &1 ==> x * x >= x``),
+    ("x>=0 /\\ y>=0 ==> x*x+y*y>=0 (hyps)",
+     ``!x y:real. x >= &0 /\ y >= &0 ==> x * x + y * y >= &0``)
+  ]
+else ();
+
+val _ = if csdp_available then
+  List.app real_sos_test [
+    ("x>=0 /\\ y>=0 /\\ x+y<=1 ==> x*y<=1/4 (CSDP)",
+     ``!x y:real. x >= &0 /\ y >= &0 /\ x + y <= &1
+                  ==> x * y <= &1 / &4``),
+    ("x+y=1 /\\ x>=0 /\\ y>=0 ==> x*y<=1/4 (subst, CSDP)",
+     ``!x y:real. x + y = &1 /\ x >= &0 /\ y >= &0
+                  ==> x * y <= &1 / &4``),
+    ("replay regression from HOL Light (CSDP)",
+     ``!c d h x y z:real.
+         &0 <= c /\ &0 <= z /\ z pow 2 = h pow 2 * d + c /\
+         &0 <= y /\ y pow 2 = d /\
+         &0 <= x /\
+         x pow 2 = d + &2 * h * d + h pow 2 * d + c /\
+         y + z < x ==> F``)
+  ]
+else ();
+
+(* -- REAL_SOS_TAC with hypotheses (requires CSDP) -- *)
+
+val _ = if csdp_available then
+  List.app sos_tac_test [
+    ("x>=5 /\\ y>=5 ==> x*y>=25 (tac)",
+     ``!x y:real. x >= &5 /\ y >= &5 ==> x * y >= &25``)
+  ]
+else ();
+
+(* -- REAL_SOS_ASM_TAC test (requires CSDP) -- *)
+
+val _ = if csdp_available then
+  let
+    val goal = ``!x:real. x >= &1 ==> x * x >= x``
+    fun check res = concl res ~~ goal
+  in
+    tprint "REAL_SOS_ASM_TAC with assumption";
+    require_msg (check_result check) (term_to_string o concl)
+                (fn t => prove(t, REAL_SOS_ASM_TAC)) goal
+  end
+else ();
+
+(* -- REAL_SOS_DIRECT_TAC (requires CSDP) -- *)
+
+val _ = if csdp_available then
+  let
+    val expected_concl = ``x * y >= &25:real``
+    val expected_hyps = HOLset.fromList Term.compare
+                          [``x >= &5:real``, ``y >= &5:real``]
+    fun check res = concl res ~~ expected_concl andalso
+                    HOLset.equal (hypset res, expected_hyps)
+  in
+    tprint "REAL_SOS_DIRECT_TAC x>=5, y>=5 |- x*y>=25";
+    require_msg (check_result check) thm_to_string
+      (fn () => prove(``x * y >= &25:real``,
+                  MAP_EVERY ASSUME_TAC
+                    [ASSUME ``x >= &5:real``, ASSUME ``y >= &5:real``] THEN
+                  REAL_SOS_DIRECT_TAC)) ()
+  end
+else ();
+
+(* ===================================================================== *)
+(* A3: INT_SOS, NUM_SOS_RULE, REAL_SOSFIELD                             *)
+(* ===================================================================== *)
+
+fun prover_test prover_name prover (name, tm) =
+  let
+    fun check res = aconv tm (concl res)
+  in
+    tprint (prover_name ^ " " ^ name);
+    require_msg (check_result check) (term_to_string o concl) prover tm
+  end;
+
+(* -- INT_SOS tests -- *)
+
+val _ =
+    if csdp_available then
+      List.app (prover_test "INT_SOS" INT_SOS) [
+        ("!x:int. x*x >= 0",
+         Parse.Term `!x:int. x * x >= &0`)
+      ]
+    else ();
+
+(* INT_SOS with hypotheses (requires CSDP) *)
+val _ = if csdp_available then
+  List.app (prover_test "INT_SOS" INT_SOS) [
+    ("x>=5 /\\ y>=5 ==> x*y>=25",
+     Parse.Term `!x y:int. x >= &5 /\ y >= &5 ==> x * y >= &25`),
+    ("x>=1 ==> x*x>=x",
+     Parse.Term `!x:int. x >= &1 ==> x * x >= x`)
+  ]
+else ();
+
+(* -- NUM_SOS_RULE tests -- *)
+
+val _ = List.app (prover_test "NUM_SOS_RULE" NUM_SOS_RULE) [
+  ("num: x*x >= x*x",
+   Parse.Term `!x:num. x * x >= x * x`)
+];
+
+(* NUM_SOS_RULE with hypotheses (requires CSDP) *)
+val _ = if csdp_available then
+  List.app (prover_test "NUM_SOS_RULE" NUM_SOS_RULE) [
+    ("num: x>=5 /\\ y>=5 ==> x*y>=25",
+     Parse.Term `!x y:num. x >= 5 /\ y >= 5 ==> x * y >= 25`)
+  ]
+else ();
+
+(* -- REAL_SOSFIELD tests -- *)
+
+val _ = List.app (prover_test "REAL_SOSFIELD" REAL_SOSFIELD) [
+  ("x*x >= 0 (no div)",
+   Parse.Term `!x:real. x * x >= &0`)
+];
+
+(* REAL_SOSFIELD with hypotheses (requires CSDP) *)
+val _ = if csdp_available then
+  List.app (prover_test "REAL_SOSFIELD" REAL_SOSFIELD) [
+    ("x>0 ==> x + x/x >= x",
+     Parse.Term `!x:real. x > &0 ==> x + x / x >= x`)
+  ]
+else ();
 
 val _ = print "\n"
 val _ = exit_count0 errc

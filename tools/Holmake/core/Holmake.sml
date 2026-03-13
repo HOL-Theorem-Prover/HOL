@@ -1364,8 +1364,34 @@ fun do_cachekey thyname =
           in
             map (fn dep =>
                     let val p = tgt_toString dep
+                        val fspath = toFSpath p
+                        (* If this is a .dat converted from a .uo/.ui that
+                           lives in sigobj (symlinked), the .dat won't exist
+                           in sigobj. Resolve the .uo symlink to find the
+                           real directory where the .dat lives. *)
+                        val path =
+                            if OS.FileSys.access(fspath, []) then fspath
+                            else
+                              case hm_target.filepart dep of
+                                  DAT s =>
+                                  (let
+                                    val uoname = fromFile (UO (Theory s))
+                                    val dir = OS.Path.dir p
+                                    val uo_path =
+                                        if dir = "" then uoname
+                                        else OS.Path.concat(dir, uoname)
+                                    val uo_fspath = toFSpath uo_path
+                                    val real_uo = OS.FileSys.realPath uo_fspath
+                                    val real_dir = OS.Path.dir real_uo
+                                    val dat_name = fromFile (DAT s)
+                                    val dat_fspath =
+                                        OS.Path.concat(real_dir, dat_name)
+                                  in
+                                    dat_fspath
+                                  end handle OS.SysErr _ => fspath)
+                                | _ => fspath
                     in { name = fromFile (hm_target.filepart dep),
-                         path = toFSpath p }
+                         path = path }
                     end)
                 (Binaryset.listItems depset)
           end
