@@ -910,7 +910,12 @@ local
   fun fromHOLFS x = case HFS_NameMunge.HOLtoFS x
                       of NONE => x
                        | SOME {fullfile,...} => fullfile
+  val anonymous_thms = ref (0,[])
 in
+fun add_anonymous_thm th = let
+  val (n,ls) = !anonymous_thms
+  val () = anonymous_thms := (n+1,th::ls)
+in n end
 fun export_theory_return_hash () = let
   val _ = hooks_or_abort (TheoryDelta.ExportTheory (current_theory()))
   val {name=thyname,facts,thydata,mldeps,...} = scrubCT()
@@ -961,12 +966,21 @@ fun export_theory_return_hash () = let
           val time_since = Time.-(time_now, !new_theory_time)
           val tstr = Lib.time_to_string time_since
           val () = mesg ("Exporting theory "^Lib.quote thyname^" ... ");
+          val () = anonymous_thms := (0,[])
           val () = theory_out (TheoryPP.pp_thydata structthry) ostrm3;
           val datfile = fromHOLFS holdatfile
           val hash = SHA1.sha1_file {filename=datfile}
       in
         theory_out (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
         theory_out (TheoryPP.pp_struct hash structthry) ostrm2;
+        Tracing.trace_theory name {
+          theory    = thyname,
+          parents   = #parents structthry,
+          types     = #types structthry,
+          constants = #constants structthry,
+          all_thms  = all_thms,
+          anon_thms = rev(#2(!anonymous_thms)),
+          mldeps    = #mldeps structthry };
         mesg "done.\n";
         if !report_times then
           (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^ " to build\n");

@@ -107,9 +107,12 @@ end;
  * The type of theorems and some basic operations on it.                     *
  *---------------------------------------------------------------------------*)
 
+datatype thm_id = SavedName of string | SavedAnon of int
+
 datatype thm = THM of Tag.tag * term HOLset.set * term * proof ref
 and proof =
   Axiom_prf
+| Disk_prf of string * thm_id
 | deleted_prf
 | ASSUME_prf of term
 | REFL_prf of term
@@ -1370,11 +1373,11 @@ end
 local
   val mk_disk_thm  = make_thm Count.Disk
 in
-fun disk_thm ((d,ocl), termlist) = let
+fun disk_thm prov ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
 in
-  mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c,Axiom_prf)
+  mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c,Disk_prf prov)
 end
 end; (* local *)
 
