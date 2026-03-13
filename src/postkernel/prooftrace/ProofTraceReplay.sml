@@ -7,9 +7,9 @@ qload "ProofTraceParser";
 qload "PIntMap";
 *)
 
-open Lib HolKernel Redblackmap ProofTraceParser
+open Feedback Lib Type Term Thm Redblackmap ProofTraceParser
 
-fun mk_eq(l,r) = list_mk_icomb equality [l,r]
+fun mk_eq(l,r) = list_mk_comb(inst[alpha |-> type_of l]equality, [l,r])
 datatype thm_id = SavedAnon of int | SavedName of string
 
 (*
@@ -211,7 +211,7 @@ let
         val h = !h
         val c = replay_term concl_ptr
         val () = if HOLset.isEmpty h then () else raise Fail "Axiom hyps"
-      in new_axiom(next_axiom_name(), c) end
+      in mk_axiom_thm(Nonce.mk(next_axiom_name()), c) end
     | 6  => (* BETA_CONV *)  BETA_CONV (tm 1)
     | 7  => (* Beta *)       Beta (th 1)
     | 8  => (* CCONTR *)     CCONTR (tm 1) (th 2)
@@ -377,7 +377,6 @@ fun replay_sequence [] = ()
      if !print_statistics then
        print ("trDB: " ^ Int.toString (trDB_size ()) ^ " thms  ")
      else ();
-     PolyML.fullGC();
      (if !print_statistics then time else I) replay thy;
      replay_sequence thys)
 
