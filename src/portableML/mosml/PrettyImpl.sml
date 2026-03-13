@@ -3,14 +3,15 @@ struct
 
   type context = unit
   datatype pretty =
-           PrettyBlock of int * bool * context list * pretty list
-           | PrettyBreak of int * int
+           PrettyBlock of FixedInt.int * bool * context list * pretty list
+           | PrettyBreak of FixedInt.int * FixedInt.int
            | PrettyLineBreak
            | PrettyString of string
-           | PrettyStringWithWidth of string * int
+           | PrettyStringWithWidth of string * FixedInt.int
 
   fun prettyPrint (stream, lineWidth) pretty =
     let
+      val fi = FixedInt.toInt
       fun printBlanks n =
         if n > 0 then (stream " "; printBlanks(n-1)) else ()
 
@@ -22,7 +23,8 @@ struct
                       entries
 
       |   getSize(PrettyBreak (blanks, _), spaceLeft) =
-            if blanks <= spaceLeft then SOME(spaceLeft-blanks) else NONE
+            let val b = fi blanks
+            in if b <= spaceLeft then SOME(spaceLeft-b) else NONE end
 
       |   getSize(PrettyString st, spaceLeft) =
             let
@@ -32,7 +34,8 @@ struct
             end
 
       |   getSize(PrettyStringWithWidth(_, w), spaceLeft) =
-            if w <= spaceLeft then SOME(spaceLeft-w) else NONE
+            let val w = fi w
+            in if w <= spaceLeft then SOME(spaceLeft-w) else NONE end
 
       |   getSize(PrettyLineBreak, _) = NONE
 
@@ -41,7 +44,7 @@ struct
       fun layOut(p as PrettyBlock (blockOffset, consistent, context, entries),
                  indent, spaceLeft) =
         let
-          val blockIndent = indent+blockOffset
+          val blockIndent = indent + fi blockOffset
         in
           case getSize(p, spaceLeft) of
               SOME s => (* Fits *)
@@ -60,6 +63,8 @@ struct
 
                  |   doPrint(PrettyBreak (blanks, breakIndent)::rest, _, left) =
                      let
+                       val blanks = fi blanks
+                       val breakIndent = fi breakIndent
                        val currentIndent = blockIndent+breakIndent
                        (* Compute the space of the next item(s) up to the end
                           or the next space.  Since we only break at spaces if
@@ -103,7 +108,7 @@ struct
                  |   doPrint(PrettyStringWithWidth(s, w) :: rest, _, left) =
                        (
                          stream s;
-                         doPrint(rest, 0, left-w)
+                         doPrint(rest, 0, left - fi w)
                        )
 
                  |   doPrint((b as PrettyBlock _) :: rest, breakIndent, left) =
@@ -122,14 +127,15 @@ struct
         end
 
       |   layOut (PrettyBreak (blanks, _), _, spaceLeft) =
-                ( printBlanks blanks; Int.max(spaceLeft-blanks, 0) )
+            let val b = fi blanks
+            in printBlanks b; Int.max(spaceLeft-b, 0) end
 
       |   layOut (PrettyString st, _, spaceLeft) =
             ( stream st;
               Int.max(spaceLeft - String.size st, 0) )
 
       |   layOut (PrettyStringWithWidth(st, w), _, spaceLeft) =
-            ( stream st; Int.max(spaceLeft-w, 0) )
+            ( stream st; Int.max(spaceLeft - fi w, 0) )
 
       |   layOut (PrettyLineBreak, _, spaceLeft) = spaceLeft
 

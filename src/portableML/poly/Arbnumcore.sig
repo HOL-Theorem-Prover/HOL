@@ -28,15 +28,15 @@ sig
   val fromOctString : string -> num
   val fromBinString : string -> num
 
-  val fromInt     : int -> num          (* raises Overflow if i < 0 *)
-  val fromLargeInt: LargeInt.int -> num (* raises Overflow if i < 0 *)
-  val toInt       : num -> int          (* raises Overflow if n > maxInt *)
+  val fromInt     : Int.int -> num          (* raises Overflow if i < 0 *)
+  val fromLargeInt: LargeInt.int -> num    (* raises Overflow if i < 0 *)
+  val toInt       : num -> Int.int         (* raises Overflow if n > maxInt *)
   val toLargeInt  : num -> LargeInt.int
 
   val floor       : real -> num   (* raises Overflow if r < 0 *)
   val toReal      : num -> real
 
-  val asList      : num -> int list
+  val asList      : num -> Int.int list
 
   val +           : num * num -> num
   val -           : num * num -> num

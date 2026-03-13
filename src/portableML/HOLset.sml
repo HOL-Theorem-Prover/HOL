@@ -3,7 +3,7 @@ struct
   exception NotFound = Redblackset.NotFound
   open Redblackset
 
-  fun pp_holset dpth ipp s =
+  fun pp_holset (dpth : FixedInt.int) ipp s =
       let
         open HOLPP
         fun ppi i = ipp (i,dpth - 1)

@@ -8,27 +8,41 @@
 structure Arbnumcore :> Arbnumcore =
 struct
 
-open IntInf
+type num = IntInf.int
 
-type num = int
+val zero : num = 0
+val one : num = 1
+val two : num = 2
 
-val zero = 0
-val one = 1
-val two = 2
+val op + = IntInf.+
+val op - = IntInf.-
+val op * = IntInf.*
+val op div = IntInf.div
+val op mod = IntInf.mod
+val op < = IntInf.<
+val op > = IntInf.>
+val op <= = IntInf.<=
+val op >= = IntInf.>=
+val compare = IntInf.compare
+val toString = IntInf.toString
+val fmt = IntInf.fmt
 
 fun times2 x = 2 * x
 fun div2 x = x div 2
 fun mod2 x = x mod 2
 fun pow (x, y) = IntInf.pow (x, IntInf.toInt y)
-val log2 = IntInf.fromInt o IntInf.log2
+fun log2 n =
+  if n <= 0 then raise Domain
+  else let fun go (x, acc) = if x <= 1 then acc else go (x div 2, acc + 1)
+       in go (n, 0) end
 
 fun plus1 x = x + 1
 fun plus2 x = x + 2
 fun less1 x = if x = 0 then raise Fail "Can't take one off zero" else x - 1
 fun less2 x = if x < 2 then raise Fail "Can't take one off zero" else x - 2
 
-fun max (x, y) = if x < y then y else x
-fun min (x, y) = if x < y then x else y
+fun max (x:num, y) = if x < y then y else x
+fun min (x:num, y) = if x < y then x else y
 
 fun toBinString x = fmt StringCvt.BIN x
 fun toOctString x = fmt StringCvt.OCT x
@@ -59,11 +73,11 @@ in
    val fromString = genFromString StringCvt.DEC
 end
 
-fun fromLargeInt n = if n < 0 then raise Overflow else n
+fun fromLargeInt (n:num) = if n < 0 then raise Overflow else n
 fun fromInt n = if Int.< (n, 0) then raise Overflow else IntInf.fromInt n
 
 val toInt = IntInf.toInt
-fun toLargeInt n = n
+fun toLargeInt (n:num) = n
 
 fun floor x =
    let
@@ -76,9 +90,9 @@ val toReal = Real.fromLargeInt
 
 fun asList x = [toInt x]
 
-fun (x - y) = if x < y then 0 else IntInf.- (x, y)
+fun (x:num) - (y:num) = if x < y then zero else IntInf.- (x, y)
 
-val divmod = divMod
+val divmod = IntInf.divMod
 
 local
    fun gcd' i j =
