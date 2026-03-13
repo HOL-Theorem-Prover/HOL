@@ -84,6 +84,8 @@ Incompatibilities
 
 -   For better compatibility with HOL Light (making code-porting easier), arithmetic theory’s `GREATER_EQ` theorem (stating *m ≥ n ⇔ n ≤ m*) is now also available in that theory under the name `GE`.
 
+-   The function `Parse.remove_user_printer` now returns `unit`.
+
 
 Deprecations
 ------------

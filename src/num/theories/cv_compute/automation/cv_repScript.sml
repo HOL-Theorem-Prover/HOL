@@ -73,9 +73,10 @@ Theorem cv_eval[compute]:
   c2n (Num n) = n /\
   c2n (Pair x y) = 0 /\
   c2b (Num n) = (n <> 0) /\
-  c2b (Pair x y) = T
+  c2b (Pair x y) = F
 Proof
   gvs [cvTheory.c2n_def,cvTheory.c2b_def]
+  \\ Cases_on ‘n’ \\ gvs []
 QED
 
 Theorem UNCURRY_pair_case:
@@ -139,4 +140,3 @@ Theorem cv_postprocess:
 Proof
   fs [cv_if_def]
 QED
-

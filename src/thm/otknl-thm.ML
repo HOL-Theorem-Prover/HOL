@@ -153,7 +153,13 @@ and proof =
 | Def_const_list_prf of string * (string * hol_type) list * thm
 | Def_spec_prf of term list * thm
 | deductAntisym_prf of thm * thm
-| compute_prf
+| compute_prf of (compute_args * thm list) * term
+
+withtype compute_args =
+  { cval_terms : (string * term) list,
+    cval_type  : hol_type,
+    num_type   : hol_type,
+    char_eqns  : (string * thm) list }
 
 fun proof (THM(_,_,_,p)) = !p
 fun delete_proof (THM(_,_,_,p)) = p := deleted_prf
@@ -1417,7 +1423,7 @@ local
     end;
   val merge_tags = foldr (uncurry Tag.merge)
 in
-  fun compute {cval_terms, cval_type, num_type, char_eqns} =
+  fun compute (args as {cval_terms, cval_type, num_type, char_eqns}) =
     let
       val tag0 = merge_tags empty_tag (List.map (tag o snd) char_eqns)
       val char_eqns = List.map (I ## dest_thm) char_eqns
@@ -1434,13 +1440,14 @@ in
           val tag1 = merge_tags tag0 (List.map tag code_eqs)
           val eqs = List.map dest_code_eqn code_eqs
           val tc1 = tc0 eqs
+          val args = (args, code_eqs)
         in
           fn tm =>
             let
               val tm' = tc1 tm
               val eqn = safe_mk_eq tm tm'
             in
-              make_thm Count.Compute (tag1, empty_hyp, eqn, compute_prf)
+              make_thm Count.Compute (tag1, empty_hyp, eqn, compute_prf (args, tm))
             end
         end
     end;

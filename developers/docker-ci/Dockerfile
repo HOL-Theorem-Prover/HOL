@@ -24,6 +24,7 @@ COPY --link . .
 ARG Z3_VERSION
 ARG CVC_VERSION
 ARG YICES_VERSION
+ARG CSDP_VERSION
 
 # this overrides the PATH environment from upstream images
 ENV PATH=/ML/HOL/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -52,6 +53,12 @@ fi
 ENV HOL4_YICES_EXECUTABLE=${YICES_VERSION:+/ML/yices-${YICES_VERSION}/bin/yices}
 RUN if [ "" != "${YICES_VERSION}" ]; then \
     echo "Using Yices solver: `${HOL4_YICES_EXECUTABLE} --version`"; \
+fi
+
+# if --build-arg CSDP_VERSION=1, install coinor-csdp (for SOSLib Positivstellensatz)
+RUN if [ "" != "${CSDP_VERSION}" ]; then \
+    apt-get update -qy && apt-get install -qy coinor-csdp && apt-get clean && \
+    echo "Using CSDP solver: `csdp 2>&1 | head -1`"; \
 fi
 
 # remove potential local poly-includes.ML for docker builds

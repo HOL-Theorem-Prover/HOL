@@ -22,17 +22,51 @@ sig
   val PURE_SOS_TAC : tactic
   val PURE_SOS     : term -> thm
 
-  (* --- Full nonlinear prover (pure SOS + CSDP when available) --- *)
+  (* --- Full nonlinear prover (Positivstellensatz + CSDP) --- *)
 
   (* SOS-based nonlinear real arithmetic prover.
-     Handles universally quantified nonnegativity:
-       &0 <= p, p >= &0, p >= q, p <= q, !x y. &0 <= f(x,y).
-     Uses CSDP for the SDP when available, falls back to pure SOS.
-     Does NOT yet handle hypotheses (future: GEN_REAL_ARITH integration). *)
-  val REAL_SOS     : term -> thm
-  val REAL_SOS_TAC : tactic
+     Uses GEN_REAL_ARITH to handle hypotheses via Positivstellensatz
+     certificate search. Tries linear prover first, then CSDP.
+     Handles universally quantified goals with implications. *)
+  val REAL_SOS         : term -> thm
+  val REAL_SOS_TAC     : tactic
+  val REAL_SOS_ASM_TAC : tactic
 
-  (* Debugging *)
-  val sos_debugging : bool ref
+  (* --- Direct SOS: bypass GEN_REAL_ARITH normalization --- *)
+  (* Use when REAL_SOS_ASM_TAC hangs on goals with many nonlinear hyps.
+     Expects: all assumptions and goal are :real polynomial inequalities.
+     No quantifiers, no abs/max/min. *)
+  val REAL_SOS_DIRECT_TAC : tactic
+
+  (* --- REAL_SOSFIELD: handles division and inv in real goals --- *)
+
+  (* Like REAL_SOS but also handles real_div and inv.
+     Adds t * inv(t) = 1 hypotheses, replaces inv(t) with fresh
+     variables, tries REAL_ARITH → REAL_RING → REAL_SOS chain. *)
+  val REAL_SOSFIELD         : term -> thm
+  val REAL_SOSFIELD_TAC     : tactic
+  val REAL_SOSFIELD_ASM_TAC : tactic
+
+  (* --- INT_SOS: integer SOS prover --- *)
+
+  (* SOS prover for integer goals. Normalizes negated comparisons
+     using discreteness (x < y ⟺ x + 1 ≤ y), converts integer
+     operations to reals via real_of_int, then calls REAL_SOS. *)
+  val INT_SOS         : term -> thm
+  val INT_SOS_TAC     : tactic
+  val INT_SOS_ASM_TAC : tactic
+
+  (* --- NUM_SOS_RULE: natural number SOS prover --- *)
+
+  (* SOS prover for natural number goals. Converts num operations
+     to int via int_of_num, then calls INT_SOS. Handles polynomial
+     goals with +, *, EXP, <=, <, >=, >, =. *)
+  val NUM_SOS_RULE         : term -> thm
+  val NUM_SOS_RULE_TAC     : tactic
+  val NUM_SOS_RULE_ASM_TAC : tactic
+
+  (* --- Knobs --- *)
+  val sos_debugging  : bool ref
+  val max_sos_degree : int ref    (* default 20 *)
 
 end
