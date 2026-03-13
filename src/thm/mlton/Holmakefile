@@ -1,0 +1,16 @@
+EXTRA_CLEANS = selftest mlton-selftest.log
+OPTIONS = NO_OVERLAY
+CLINE_OPTIONS = --no_prereqs
+
+.PHONY: all
+all: selftest
+
+selftest: selftest.mlb selftest.sml thm.mlb stubs.sml
+	mlton -output $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: mlton-selftest.log
+
+mlton-selftest.log: selftest
+	$(tee ./$<, $@)
+endif
