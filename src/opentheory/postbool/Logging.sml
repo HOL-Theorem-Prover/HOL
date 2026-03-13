@@ -62,6 +62,7 @@ val proof_type = let open Thm fun
 |f (Specialize_prf _) = "Specialize"
 |f (deductAntisym_prf _) = "deductAntisym"
 |f (compute_prf _) = "compute"
+|f (save_dep_prf _) = "save_dep"
 in f end
 
 datatype log_state =
@@ -424,6 +425,7 @@ val (log_term, log_thm, log_clear,
       val _ = log_term (concl th)
       val _ = log_command "axiom"
       in () end
+    | save_dep_prf th => log_thm th
     | ASSUME_prf tm => let
       val _ = log_term tm
       val _ = log_command "assume"

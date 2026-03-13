@@ -157,6 +157,7 @@ and proof =
 | Def_spec_prf of thm * term list
 | deductAntisym_prf of thm * thm
 | compute_prf of (compute_args * thm list) * term
+| save_dep_prf of thm
 
 withtype compute_args =
   { cval_terms : (string * term) list,
@@ -1397,7 +1398,7 @@ fun save_dep thy (th as (THM(t,h,c,p))) =
     val dep = DEP_SAVED(did,dl)
   in
     thm_order := (!thm_order) + 1;
-    THM(Tag.set_dep dep t,h,c,p)
+    THM(Tag.set_dep dep t,h,c,ref(save_dep_prf th))
   end
 
 (* Some OpenTheory kernel rules *)
