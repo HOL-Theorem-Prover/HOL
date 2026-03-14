@@ -191,6 +191,7 @@ datatype proof
   | compute_prf of (compute_args * thm list) * term
   | deductAntisym_prf of thm * thm
   | deleted_prf
+  | saved_prf of thm
 
 type compute_args =
   { num_type   : hol_type,

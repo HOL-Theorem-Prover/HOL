@@ -187,6 +187,7 @@ fun walk {heap, thyname, named_thms, anon_thms,
         in tm(el 2 args_ptrs) end
       | 44 => (* deductAntisym *) (th(el 1 args_ptrs); th(el 2 args_ptrs))
       | 45 => (* deleted *)    ()
+      | 46 => th(el 1 args_ptrs)
       | n => raise Fail ("walk_thm: unknown rule " ^ Int.toString n)
     end
 

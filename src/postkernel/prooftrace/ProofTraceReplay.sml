@@ -38,7 +38,7 @@ datatype thm_id = SavedAnon of int | SavedName of string
         list new_term)                 ty,list(pair(str,tm))),list th),term)
   20  Def_tyop (list ty,         44 deductAntisym (thm, thm)
         thm, new_type)           45 deleted ()
-  21  Disk (string, thm_id)
+  21  Disk (string, thm_id)      46 save_dep (thm)
   22  EQ_IMP_RULE1 (thm)
 *)
 
@@ -334,6 +334,7 @@ let
         raise Fail "replay_thm: deductAntisym not yet implemented"
     | 45 => (* deleted *)
         raise Fail "replay_thm: deleted not yet implemented"
+    | 46 => (* save_dep *) th 1
     | n => raise Fail ("replay_thm: unknown rule " ^ Int.toString n)
   end) thm_ptr
 
