@@ -4,7 +4,7 @@ signature ProofTraceWalk = sig
   val walk :
     { heap : ProofTraceParser.heap,
       thyname : string,
-      named_thms : ('string * Thm.thm * 'thminfo) list ptr,
+      named_thms : (string * Thm.thm * 'thminfo) list ptr,
       anon_thms : Thm.thm list ptr,
       incr : unit ptr -> unit,
       on_def_thm : Thm.thm ptr -> unit } ->

@@ -9,6 +9,8 @@ qload "PIntMap";
 
 open Feedback Lib Type Term Thm Redblackmap ProofTraceParser
 
+infix |->
+
 fun mk_eq(l,r) = list_mk_comb(inst[alpha |-> type_of l]equality, [l,r])
 datatype thm_id = SavedAnon of int | SavedName of string
 
@@ -368,6 +370,8 @@ let
   in () end else ()
 
 in trDB := insert(!trDB, thyname, (named, anons)) end
+handle e as (NeedsAncestor s) => (print("Ancestor missing: "^s^"\n"); raise e)
+     | e as (HOL_ERR m) => (print("HOL_ERR: "^(Feedback.message_of m)^"\n"); raise e)
 
 fun trDB_size () = foldl (fn (_,(n,a), acc) =>
   acc + numItems n + length a) 0 (!trDB)
