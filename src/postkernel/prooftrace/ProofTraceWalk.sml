@@ -25,9 +25,28 @@ fun walk {heap, thyname, named_thms, anon_thms,
 
   (* Closedness pre-pass: compute max free Bv index for each term pointer.
      ~1 means closed (no free Bv's), n >= 0 means max free Bv index.
-     ~2 = unvisited. Clos is treated conservatively as open. *)
+     ~2 = unvisited. *)
   val closedness = Array.array(heapSize heap, ~2 : int)
-  fun compute_closedness tm_ptr =
+  fun sub_closedness (sub_ptr, b) =
+    if b < 0 then ~1
+    else case shSubs heap sub_ptr of
+      Id => b
+    | Cons (sub', tm_ptr) => let
+        val tm_cl = compute_closedness tm_ptr
+      in if b = 0 then tm_cl
+         else Int.max(tm_cl, sub_closedness(sub', b - 1))
+      end
+    | Shift (k, sub') => let
+        val inner = sub_closedness(sub', b)
+      in if inner < 0 then ~1 else inner + k end
+    | Lift (k, sub') =>
+        if b < k then b
+        else let
+          val low = k - 1
+          val inner = sub_closedness(sub', b - k)
+          val high = if inner < 0 then ~1 else inner + k
+        in Int.max(low, high) end
+  and compute_closedness tm_ptr =
     if not (isPtr tm_ptr) then ~1
     else let val key = ptr tm_ptr
              val c = Array.sub(closedness, key)
@@ -40,7 +59,8 @@ fun walk {heap, thyname, named_thms, anon_thms,
             Int.max(compute_closedness t1, compute_closedness t2)
         | Abs (_, t2) =>
             compute_closedness t2 - 1
-        | Clos _ => 999
+        | Clos (sub_ptr, body_ptr) =>
+            sub_closedness(sub_ptr, compute_closedness body_ptr)
       in Array.update(closedness, key, result); result end
     end
   fun is_closed tm_ptr = isPtr tm_ptr andalso compute_closedness tm_ptr < 0
