@@ -85,7 +85,7 @@ if [ -d /tmp/localhol -a "${reusecommit}" -eq 1 ]
 then
     :
 else
-  /bin/rm -rf /tmp/localhol
+  rm -rf /tmp/localhol
   echo -n "Cloning into /tmp - "
   (git clone -q ./ /tmp/localhol && echo "done" || die "failed")
 fi
@@ -135,7 +135,7 @@ createdir () {
   then
       :
   else
-    if /bin/rm -rf $1 2> /dev/null
+    if rm -rf $1 2> /dev/null
     then
         mkdir $1
     else
@@ -147,9 +147,9 @@ createdir () {
 # initial setup
 createdir $texlogs
 archive=/tmp/hol-$releasename
-/bin/rm -rf $archive                     # final directory to be tarred
+rm -rf $archive                     # final directory to be tarred
 
-if /bin/ls -1 $localholdir | grep std.prelude > /dev/null 2>&1
+if ls -1 $localholdir | grep std.prelude > /dev/null 2>&1
 then
     :
 else
@@ -229,7 +229,7 @@ while read line
 do
   case "$line" in
       \#* ) : ;;
-      * ) (/bin/rm -r $line 2> /dev/null && echo "  Removed $line") ||
+      * ) (rm -r $line 2> /dev/null && echo "  Removed $line") ||
         warn "  *** Couldn't delete $line ***"
   esac
 done < $localholdir/developers/deleted-in-release.txt
@@ -240,18 +240,18 @@ echo
 
 if [ $ML = "mosml" ]
 then
-    /bin/rm tools/Holmake/*.{uo,ui} tools/hol-mode.el
-    /bin/rm tools/Holmake/{Parser,Lexer}.sml tools/Holmake/Parser.sig
-    /bin/rm tools/Holmake/Holmake_tokens.sml
+    rm tools/Holmake/*.{uo,ui} tools/hol-mode.el
+    rm tools/Holmake/{Parser,Lexer}.sml tools/Holmake/Parser.sig
+    rm tools/Holmake/Holmake_tokens.sml
     (cd tools/quote-filter ; ../../bin/Holmake cleanAll)
     (cd tools/mlyacc/mlyacclib ; ../../../bin/Holmake cleanAll)
     (cd tools/mlyacc/src ; ../../../bin/Holmake cleanAll)
-    (cd sigobj ; /bin/rm Systeml.{uo,ui})
+    (cd sigobj ; rm Systeml.{uo,ui})
     (cd tools/mllex ; ../../bin/Holmake cleanAll)
     (cd help/src-sml ; ../../bin/Holmake cleanAll)
     cd bin
     echo "Cleaning bin/"
-    /bin/ls -A1 | egrep -v '(hol.ML|noninterhol.ML|README)' | xargs /bin/rm
+    ls -A1 | egrep -v '(hol.ML|noninterhol.ML|README)' | xargs rm
 fi
 
 cd /tmp

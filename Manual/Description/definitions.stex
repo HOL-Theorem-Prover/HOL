@@ -327,7 +327,7 @@ declaration could be used to formalize a simple file system.
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype
+  Datatype:
      file = Text string | Dir directory
        ;
      directory = <| owner : string ;
@@ -1357,7 +1357,7 @@ First we define a datatype, named \ml{prop}, of boolean formulas:
 %
 \begin{hol}
 \begin{alltt}
->> Datatype‘prop = VAR 'a | NOT prop | AND prop prop
+>>  Datatype‘prop = VAR 'a | NOT prop | AND prop prop
                  | OR  prop prop’;
 \end{alltt}
 \end{hol}
@@ -1579,7 +1579,7 @@ branch. At the end of execution the tree has been linearized.
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
->>_ Datatype `btree = Leaf | Brh btree btree`;
+>>_  Datatype `btree = Leaf | Brh btree btree`;
 
 >> val Unbal_defn =
       Hol_defn "Unbal"
@@ -1839,7 +1839,7 @@ summing the results of a function in a arbitrarily
 %
 \begin{session}
 \begin{alltt}
-  >>_ Datatype `ltree = Node 'a (ltree list)`;
+  >>_  Datatype `ltree = Node 'a (ltree list)`;
 
   Defn.Hol_defn
     "ltree_sigma"

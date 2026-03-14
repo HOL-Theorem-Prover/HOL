@@ -17,7 +17,7 @@ fun lnumdie linenum extra exn =
 
 val outputPrompt = ref "> "
 
-val args = {quietOpen = true}
+val args = {quietOpen = true, canBindStr = true}
 val quote = HolParser.fromString args
 val default_linewidth = 77
 

@@ -33,6 +33,10 @@ fun useParsing f =
      use ("../tools/parsing/" ^ f ^ ".sml"))
 val _ = useParsing "AttributeSyntax";
 val _ = use "../tools/parsing/HolLex.sml";
+val _ = useParsing "HOLAst";
+val _ = useParsing "HOLParser";
+val _ = useParsing "HOLToSML";
+val _ = useParsing "HOLPrinter";
 val _ = useParsing "HolParser";
 val _ = useDeps "Holdep";
 fun useCore f =

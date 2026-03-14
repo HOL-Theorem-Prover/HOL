@@ -31,7 +31,7 @@ fun HOL_commit () = let
   val t = TextIO.openIn(filename)
   val commit = case TextIO.inputLine(t) of SOME s => s | NONE => fail()
   val _ = TextIO.closeIn(t)
-  val _ = exec ("/bin/rm -f " ^ filename)
+  val _ = exec ("rm -f " ^ filename)
   val remove_newline =
     String.translate (fn c => if c = #"\n" then "" else implode [c])
   in remove_newline commit end handle Interrupt => raise Interrupt

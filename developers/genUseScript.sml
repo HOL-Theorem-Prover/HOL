@@ -12,6 +12,10 @@ use "../tools-poly/poly/Binaryset.sig";
 use "../tools-poly/poly/Binaryset.sml";
 use "../tools-poly/poly/Binarymap.sig";
 use "../tools-poly/poly/Binarymap.sml";
+use "../src/portableML/DString.sig";
+use "../src/portableML/DString.sml";
+use "../src/portableML/DArray.sig";
+use "../src/portableML/DArray.sml";
 use "../tools/Holmake/Systeml.sig";
 use "../tools-poly/Holmake/Systeml.sml";
 use "../tools/Holmake/hfs/holpathdb.sig";
@@ -41,11 +45,17 @@ in
   (push, read, reset)
 end;
 
+val _ = use "../tools/parsing/HOLAst.sig";
+val _ = use "../tools/parsing/HOLAst.sml";
+val _ = use "../tools/parsing/HOLParser.sig";
+val _ = use "../tools/parsing/HOLParser.sml";
+val _ = use "../tools/parsing/HOLToSML.sig";
+val _ = use "../tools/parsing/HOLToSML.sml";
+val _ = use "../tools/parsing/HOLPrinter.sig";
+val _ = use "../tools/parsing/HOLPrinter.sml";
 val _ = use "../tools/parsing/HolLex.sml";
 val _ = use "../tools/parsing/HolParser.sig";
 val _ = use "../tools/parsing/HolParser.sml";
-val _ = use "../tools/Holmake/deps/Holdep_tokens.sig"
-val _ = use "../tools/Holmake/deps/Holdep_tokens.sml";
 
 
 infix ^^
