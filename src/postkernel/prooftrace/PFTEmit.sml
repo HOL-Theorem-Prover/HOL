@@ -94,14 +94,30 @@ fun emit_theory {trace, output, binary} = let
   fun is_const_done name = case peek(!const_done, name) of SOME _ => true | NONE => false
   fun is_type_done name = case peek(!type_done, name) of SOME _ => true | NONE => false
 
-  (* Decrement refcount; emit DEL and free ID when it reaches zero *)
+  (* Protection counter: prevents eviction of objects that have been
+     captured by an outer emit_thm but whose command hasn't been written
+     yet. Nested emit_thm chains can decrement refcounts to 0, but
+     eviction is blocked while protect_count > 0. *)
+  val protect_count = Array.array(heapSize heap, 0 : int)
+  fun protect (p : 'a ptr) =
+    if isPtr p then
+      Array.update(protect_count, ptr p,
+                   Array.sub(protect_count, ptr p) + 1)
+    else ()
+  fun unprotect (p : 'a ptr) =
+    if isPtr p then
+      Array.update(protect_count, ptr p,
+                   Array.sub(protect_count, ptr p) - 1)
+    else ()
+
   fun decr ns id_map free_id (p : 'a ptr) =
     if not (isPtr p) then () else let
       val k = ptr p
       val rc = Array.sub(refcounts, k) - 1
     in
       Array.update(refcounts, k, rc);
-      if rc <= 0 andalso not (BoolArray.sub(pinned, k)) then let
+      if rc <= 0 andalso not (BoolArray.sub(pinned, k))
+                 andalso Array.sub(protect_count, k) <= 0 then let
         val pft_id = Array.sub(id_map, k)
       in if pft_id >= 0 then
            (PFTWriter.del out ns pft_id;
@@ -132,17 +148,24 @@ fun emit_theory {trace, output, binary} = let
           | Tyapp (idp, args_ptr) => let
               val (Thy, Tyop) = ident heap idp
               val () = check_def ty_defs Thy Tyop
-              (* walk did incr on each arg, so decrement after emitting *)
+              (* Protect each arg after emitting to prevent subsequent
+                 arg emissions from evicting earlier args *)
               val arg_ids = list heap
                 (fn p => let val r = emit_type (castPtr p)
-                         in decr_ty (castPtr p); r end) args_ptr
+                         in protect (castPtr p : Type.hol_type ptr); r
+                         end) args_ptr
               val () = if Thy = thyname andalso not (is_type_done Tyop)
                        then (mark_type Tyop;
                              PFTWriter.new_type out (Thy ^ "$" ^ Tyop)
                                (length arg_ids))
                        else ()
               val name = Thy ^ "$" ^ Tyop
-            in PFTWriter.tyop out id name arg_ids; id end
+              val () = PFTWriter.tyop out id name arg_ids
+              val () = appList heap
+                (fn p => let val q : Type.hol_type ptr = castPtr p
+                         in unprotect q; decr_ty q end)
+                (castPtr args_ptr)
+            in id end
        end
     end
 
@@ -181,29 +204,27 @@ fun emit_theory {trace, output, binary} = let
     val cached = Array.sub(tm_map, k)
   in if cached >= 0 then cached
      else let val id = emit_term_core Subst.id tm_ptr
-          in Array.update(tm_map, k, id); id end
+          in (* Don't cache Clos: the returned PFT ID belongs to the
+                body, so caching would alias two tm_map entries to the
+                same PFT ID, causing double-free on eviction. *)
+             case shTerm heap tm_ptr of
+               Clos _ => id
+             | _ => (Array.update(tm_map, k, id); id)
+          end
   end
-
-  (* emit + decrement for sub-terms: corresponds to walk_term which
-     does incr for closed terms. Used for recursive calls within
-     emit_term_core (Comb, Abs) and emit_subs (Cons). *)
-  and emit_term_decr env (tm_ptr : Term.term ptr) : int = let
-    val id = emit_term_sub env tm_ptr
-  in if is_closed tm_ptr then decr_tm tm_ptr else (); id end
 
   and emit_term_core env (tm_ptr : Term.term ptr) : int =
     case shTerm heap tm_ptr of
       Fv (s, typ) => let
-        (* walk did incr on typ *)
         val ty_id = emit_type typ
         val id = #alloc tm_ids ()
         val () = PFTWriter.var out id s ty_id
+        (* decr type AFTER VAR command is written *)
         val () = decr_ty typ
       in id end
     | Const (idp, typ) => let
         val (Thy, Name) = ident heap idp
         val () = check_def tm_defs Thy Name
-        (* walk did incr on typ *)
         val ty_id = emit_type typ
         val () = if Thy = thyname andalso not (is_const_done Name)
                  then (mark_const Name;
@@ -211,6 +232,7 @@ fun emit_theory {trace, output, binary} = let
                  else ()
         val id = #alloc tm_ids ()
         val () = PFTWriter.const out id (Thy ^ "$" ^ Name) ty_id
+        (* decr type AFTER CONST command is written *)
         val () = decr_ty typ
       in id end
     | Bv n => (case Subst.exp_rel(env, n) of
@@ -218,42 +240,56 @@ fun emit_theory {trace, output, binary} = let
                | _ => raise Fail ("emit_term: unresolved Bv " ^
                                    Int.toString n))
     | Comb (t1, t2) => let
-        (* walk_term_inner Comb calls walk_term on t1,t2 *)
-        val id1 = emit_term_decr env t1
-        val id2 = emit_term_decr env t2
+        val id1 = emit_term_sub env t1
+        (* Protect t1 before emitting t2, which may trigger nested
+           chains that decrement t1 *)
+        val () = if is_closed t1 then protect t1 else ()
+        val id2 = emit_term_sub env t2
         val id = #alloc tm_ids ()
-      in PFTWriter.comb out id id1 id2; id end
+        val () = PFTWriter.comb out id id1 id2
+        val () = if is_closed t1 then (unprotect t1; decr_tm t1) else ()
+        val () = if is_closed t2 then decr_tm t2 else ()
+      in id end
     | Abs (t1, t2) => let
-        (* walk_term_inner Abs calls walk_term on t1,t2 *)
-        val bvar_id = emit_binder_decr env t1
-        val body_id = emit_term_decr (Subst.cons(env, bvar_id)) t2
+        val bvar_id = emit_binder env t1
+        (* Protect t1 before emitting body, which may trigger nested
+           chains that decrement t1 *)
+        val () = if is_closed t1 then protect t1 else ()
+        val body_id = emit_term_sub (Subst.cons(env, bvar_id)) t2
         val id = #alloc tm_ids ()
-      in PFTWriter.abs out id bvar_id body_id; id end
+        val () = PFTWriter.abs out id bvar_id body_id
+        val () = if is_closed t1 then (unprotect t1; decr_tm t1) else ()
+        val () = if is_closed t2 then decr_tm t2 else ()
+      in id end
     | Clos (sbp, tmp) => let
         val env' = Subst.comp (fn (_,s) => s) (env, emit_subs env sbp)
-        (* walk_term_inner Clos calls walk_term on tmp *)
-      in emit_term_decr env' tmp end
+        (* No decrements here: Clos is not cached (to avoid PFT ID
+           aliasing with body), so subs terms and body decrements would
+           over-fire on repeated evaluation. Their walk incrs become
+           minor leaks. *)
+      in emit_term_sub env' tmp end
 
   and emit_binder env (tm_ptr : Term.term ptr) : int =
     case shTerm heap tm_ptr of
       Fv (s, typ) => let
         val ty_id = emit_type typ
-        val () = decr_ty typ
         val id = #alloc tm_ids ()
-      in PFTWriter.var out id s ty_id; id end
+        val () = PFTWriter.var out id s ty_id
+        (* No decr_ty here: emit_binder is not cached (creates fresh
+           VARs for alpha-renaming), so N Abs nodes sharing a binder
+           would call decr_ty N times vs the walk's single incr.
+           The type decr is handled by emit_term_core Fv if the Fv is
+           also used as a free variable; otherwise it's a minor leak. *)
+      in id end
     | _ => emit_term_sub env tm_ptr
 
-  (* emit_binder + decrement (for Abs t1 which is walked via walk_term) *)
-  and emit_binder_decr env (tm_ptr : Term.term ptr) : int = let
-    val id = emit_binder env tm_ptr
-  in if is_closed tm_ptr then decr_tm tm_ptr else (); id end
-
+  (* emit_subs: emit substitution terms, returning PFT-level subs.
+     Does NOT decrement — Clos caller handles via decr_subs_terms. *)
   and emit_subs env (sbp : Term.term Subst.subs ptr) : int Subst.subs =
     case shSubs heap sbp of
       Id => Subst.id
     | Cons (sbp', tmp) =>
-        (* walk_subs Cons calls walk_term on tmp *)
-        Subst.cons(emit_subs env sbp', emit_term_decr env tmp)
+        Subst.cons(emit_subs env sbp', emit_term_sub env tmp)
     | Lift (n, sbp') => Subst.lift(n, emit_subs env sbp')
     | Shift (n, sbp') => Subst.shift(n, emit_subs env sbp')
 
@@ -275,13 +311,50 @@ fun emit_theory {trace, output, binary} = let
        else let
          val (hyp_ptr, concl_ptr, proof_ptr) = shThm heap thm_ptr
          val (i, args_ptrs) = shVariant heap proof_ptr
-         (* walk_thm's tm/th/ty helpers always incr; decrement here *)
-         fun tm n = let val p = el n args_ptrs val r = emit_term (castPtr p)
-                    in decr_tm (castPtr p); r end
-         fun th n = let val p = el n args_ptrs val r = emit_thm (castPtr p)
-                    in decr_th (castPtr p); r end
-         fun ty n = let val p = el n args_ptrs val r = emit_type (castPtr p)
-                    in decr_ty (castPtr p); r end
+         (* Pending decrements: collected during child emission,
+            flushed AFTER the parent PFT command is written.
+
+            Each captured child is protected (protect_count bumped) to
+            prevent nested emit_thm chains from evicting it. Unprotect
+            and decrement happen in flush, after the command is written. *)
+         val pend_ty : Type.hol_type ptr list ref = ref []
+         val pend_tm : Term.term ptr list ref = ref []
+         val pend_th : Thm.thm ptr list ref = ref []
+         fun flush () = (
+           List.app unprotect (!pend_ty);
+           List.app unprotect (!pend_tm);
+           List.app unprotect (!pend_th);
+           List.app decr_ty (!pend_ty);
+           List.app decr_tm (!pend_tm);
+           List.app decr_th (!pend_th))
+         fun tm n = let val p : Term.term ptr = castPtr (el n args_ptrs)
+                        val r = emit_term p
+                        val () = protect p
+                    in pend_tm := p :: !pend_tm; r end
+         fun th n = let val p : Thm.thm ptr = castPtr (el n args_ptrs)
+                        val r = emit_thm p
+                        val () = protect p
+                    in pend_th := p :: !pend_th; r end
+         fun ty n = let val p : Type.hol_type ptr = castPtr (el n args_ptrs)
+                        val r = emit_type p
+                        val () = protect p
+                    in pend_ty := p :: !pend_ty; r end
+         (* Helpers for inline list/option processing *)
+         fun emit_type_pend q = let
+           val p : Type.hol_type ptr = castPtr q
+           val r = emit_type p
+           val () = protect p
+         in pend_ty := p :: !pend_ty; r end
+         fun emit_term_pend q = let
+           val p : Term.term ptr = castPtr q
+           val r = emit_term p
+           val () = protect p
+         in pend_tm := p :: !pend_tm; r end
+         fun emit_thm_pend q = let
+           val p : Thm.thm ptr = castPtr q
+           val r = emit_thm p
+           val () = protect p
+         in pend_th := p :: !pend_th; r end
          val id = #alloc th_ids ()
          val () = Array.update(th_map, k, id)
          val () = case i of
@@ -310,7 +383,7 @@ fun emit_theory {trace, output, binary} = let
                val names = List.map (fn (Thy,nm) => Thy ^ "$" ^ nm) ids
                val () = List.app (fn (_,nm) => mark_const nm) ids
              in PFTWriter.HOL4.def_spec out id th1 names end
-           | 18 => (* Def_const *) emit_def_const id args_ptrs
+           | 18 => (* Def_const *) emit_def_const flush id args_ptrs
            | 19 => (* Def_spec *) let
                val th1 = th 1
                val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
@@ -318,10 +391,7 @@ fun emit_theory {trace, output, binary} = let
                val () = List.app (fn (_,nm) => mark_const nm) ids
              in PFTWriter.HOL4.def_spec out id th1 names end
            | 20 => (* Def_tyop *) let
-               (* walk does appList heap ty; decr each *)
-               val _ = list heap (fn p => let val r = emit_type (castPtr p)
-                         in decr_ty (castPtr p); r end)
-                         (castPtr (el 1 args_ptrs))
+               val _ = list heap emit_type_pend (castPtr (el 1 args_ptrs))
                val th2 = th 2
                val (Thy, Tyop) = get_type_id (castPtr (el 3 args_ptrs))
                val () = mark_type Tyop
@@ -336,48 +406,30 @@ fun emit_theory {trace, output, binary} = let
            | 24 => (* EQ_MP *)      PFTWriter.HOL4.eq_mp out id (th 1) (th 2)
            | 25 => (* EXISTS *)     PFTWriter.HOL4.exists out id (tm 1) (tm 2) (th 3)
            | 26 => (* GENL *) let
-               (* walk does appList heap tm; decr each *)
-               val tms = list heap (fn p => let val r = emit_term (castPtr p)
-                           in decr_tm (castPtr p); r end)
+               val tms = list heap emit_term_pend
                            (castPtr (el 1 args_ptrs))
                val th2 = th 2
              in PFTWriter.HOL4.genl out id th2 tms end
            | 27 => (* GEN_ABS *) let
-               (* walk does option heap tm; decr if present *)
-               val opt = option heap (fn p => let val r = emit_term (castPtr p)
-                           in decr_tm (castPtr p); r end)
+               val opt = option heap emit_term_pend
                            (castPtr (el 1 args_ptrs))
                val c_id = case opt of SOME c => c
                  | NONE => raise Fail "GEN_ABS: missing constant"
-               (* walk does appList heap tm; decr each *)
-               val tms = list heap (fn p => let val r = emit_term (castPtr p)
-                           in decr_tm (castPtr p); r end)
+               val tms = list heap emit_term_pend
                            (castPtr (el 2 args_ptrs))
                val th3 = th 3
              in PFTWriter.HOL4.gen_abs out id th3 c_id tms end
            | 28 => (* GEN *)        PFTWriter.HOL4.gen out id (tm 1) (th 2)
            | 29 => (* INST_TYPE *) let
-               (* walk does appList with tuple2(ty,ty); decr each *)
-               val pairs = list heap (fn p => let
-                 val (a,b) = tuple2 heap
-                   (fn q => let val r = emit_type (castPtr q)
-                            in decr_ty (castPtr q); r end,
-                    fn q => let val r = emit_type (castPtr q)
-                            in decr_ty (castPtr q); r end)
-                   (castPtr p)
-               in (a,b) end) (castPtr (el 1 args_ptrs))
+               val pairs = list heap (fn p =>
+                 tuple2 heap (emit_type_pend, emit_type_pend) (castPtr p))
+                 (castPtr (el 1 args_ptrs))
                val th2 = th 2
              in PFTWriter.HOL4.inst_type out id th2 pairs end
            | 30 => (* INST *) let
-               (* walk does appList with tuple2(tm,tm); decr each *)
-               val pairs = list heap (fn p => let
-                 val (a,b) = tuple2 heap
-                   (fn q => let val r = emit_term (castPtr q)
-                            in decr_tm (castPtr q); r end,
-                    fn q => let val r = emit_term (castPtr q)
-                            in decr_tm (castPtr q); r end)
-                   (castPtr p)
-               in (a,b) end) (castPtr (el 1 args_ptrs))
+               val pairs = list heap (fn p =>
+                 tuple2 heap (emit_term_pend, emit_term_pend) (castPtr p))
+                 (castPtr (el 1 args_ptrs))
                val th2 = th 2
              in PFTWriter.HOL4.inst out id th2 pairs end
            | 31 => (* MK_COMB *)    PFTWriter.HOL4.mk_comb out id (th 1) (th 2)
@@ -394,34 +446,30 @@ fun emit_theory {trace, output, binary} = let
            | 37 => (* REFL *)       PFTWriter.HOL4.refl out id (tm 1)
            | 38 => (* SPEC *)       PFTWriter.HOL4.spec out id (tm 1) (th 2)
            | 39 => (* SUBST *) let
-               (* walk does appList with tuple2(tm,th); decr each *)
-               val pairs = list heap (fn p => let
-                 val (a,b) = tuple2 heap
-                   (fn q => let val r = emit_term (castPtr q)
-                            in decr_tm (castPtr q); r end,
-                    fn q => let val r = emit_thm (castPtr q)
-                            in decr_th (castPtr q); r end)
-                   (castPtr p)
-               in (a,b) end) (castPtr (el 1 args_ptrs))
+               val pairs = list heap (fn p =>
+                 tuple2 heap (emit_term_pend, emit_thm_pend) (castPtr p))
+                 (castPtr (el 1 args_ptrs))
                val tm2 = tm 2
                val th3 = th 3
              in PFTWriter.HOL4.subst out id tm2 th3 pairs end
            | 40 => (* SYM *)        PFTWriter.HOL4.sym out id (th 1)
            | 41 => (* Specialize *) PFTWriter.HOL4.specialize out id (tm 1) (th 2)
            | 42 => (* TRANS *)      PFTWriter.HOL4.trans out id (th 1) (th 2)
-           | 43 => (* compute *)    emit_compute id args_ptrs
+           | 43 => (* compute *)    emit_compute flush id args_ptrs
            | 44 => (* deductAntisym *) PFTWriter.HOL4.deductAntisym out id (th 1) (th 2)
            | 45 => (* deleted *)    raise Fail "emit_thm: deleted"
            | n => raise Fail ("emit_thm: unknown rule " ^ Int.toString n)
+         (* Flush all pending decrements now that the command is written *)
+         val () = flush ()
        in id end
     end
 
-  (* Def_const: synthesize ASSUME(v = rhs) then DEF_SPEC *)
-  and emit_def_const thm_id args_ptrs = let
-    (* walk does tm(el 1); decr *)
+  (* Def_const: synthesize ASSUME(v = rhs) then DEF_SPEC.
+     flush_parent flushes the parent emit_thm's pending decrements;
+     called after DEF_SPEC is written (which is the parent command). *)
+  and emit_def_const flush_parent thm_id args_ptrs = let
     val rhs_p = el 1 args_ptrs
     val rhs_id = emit_term (castPtr rhs_p)
-    val () = decr_tm (castPtr rhs_p)
     val const_ptr : Term.term ptr = castPtr (el 2 args_ptrs)
     val (Thy, Name) = get_const_id const_ptr
     val ty_ptr = case shTerm heap const_ptr of
@@ -451,41 +499,46 @@ fun emit_theory {trace, output, binary} = let
     val () = mark_const Name
     val () = PFTWriter.HOL4.def_spec out thm_id assume_id
                [Thy ^ "$" ^ Name]
+    (* Now safe to flush parent's pending decrements (which includes
+       the walk's tm(el 1) incr for rhs_p) *)
+    val () = flush_parent ()
   in () end
 
-  (* compute: emit COMPUTE_INIT then COMPUTE *)
-  and emit_compute thm_id args_ptrs = let
+  (* compute: emit COMPUTE_INIT then COMPUTE.
+     flush_parent flushes the parent emit_thm's pending decrements. *)
+  and emit_compute flush_parent thm_id args_ptrs = let
     val (compute_args_ptr, ths_ptr) =
       tuple2 heap (I, I) (castPtr (el 1 args_ptrs))
-    (* walk does appList heap th on ths_ptr; decr each *)
-    val th_id_list = list heap (fn p => let
-      val r = emit_thm (castPtr p)
-    in decr_th (castPtr p); r end) ths_ptr
-    (* walk does tm(el 2); decr *)
+    val th_id_list = list heap (fn p => emit_thm (castPtr p)) ths_ptr
     val tm_p = el 2 args_ptrs
     val tm_id = emit_term (castPtr tm_p)
-    val () = decr_tm (castPtr tm_p)
     val (num_type_ptr, (eqns_ptr, (cval_type_ptr, cterms_ptr))) =
       tuple4 heap (I, I, I, I) (castPtr compute_args_ptr)
-    (* walk does ty on num_type and cval_type; decr *)
     val num_ty = emit_type (castPtr num_type_ptr)
-    val () = decr_ty (castPtr num_type_ptr)
     val cval_ty = emit_type (castPtr cval_type_ptr)
-    val () = decr_ty (castPtr cval_type_ptr)
-    (* walk does appList with tuple2(K(),th); decr th *)
     val char_eqns = list heap (fn p =>
       tuple2 heap (str heap,
-        fn q => let val r = emit_thm (castPtr q)
-                in decr_th (castPtr q); r end) (castPtr p)) eqns_ptr
-    (* walk does appList with tuple2(K(),tm); decr tm *)
+        fn q => emit_thm (castPtr q)) (castPtr p)) eqns_ptr
     val cval_terms = list heap (fn p =>
       tuple2 heap (str heap,
-        fn q => let val r = emit_term (castPtr q)
-                in decr_tm (castPtr q); r end) (castPtr p)) cterms_ptr
+        fn q => emit_term (castPtr q)) (castPtr p)) cterms_ptr
     val ci_id = #alloc ci_ids ()
     val () = PFTWriter.HOL4.compute_init out ci_id num_ty cval_ty
                char_eqns cval_terms
-  in PFTWriter.HOL4.compute out thm_id ci_id tm_id th_id_list end
+    val () = PFTWriter.HOL4.compute out thm_id ci_id tm_id th_id_list
+    (* Now safe to decrement everything *)
+    val () = flush_parent ()
+    val () = appList heap (fn p => decr_th (castPtr p)) (castPtr ths_ptr)
+    val () = decr_tm (castPtr tm_p)
+    val () = decr_ty (castPtr num_type_ptr)
+    val () = decr_ty (castPtr cval_type_ptr)
+    val () = appList heap (fn p =>
+      ignore (tuple2 heap (K(), fn q => decr_th (castPtr q)) (castPtr p)))
+      eqns_ptr
+    val () = appList heap (fn p =>
+      ignore (tuple2 heap (K(), fn q => decr_tm (castPtr q)) (castPtr p)))
+      cterms_ptr
+  in () end
 
   (* --- Process exports ------------------------------------------------- *)
 
