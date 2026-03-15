@@ -142,7 +142,7 @@ Depends on: `bool$!`, `bool$?`, `bool$/\`, `min$=`, `min$==>`.
 
 | Rules | Required constants |
 |-------|-------------------|
-| REFL, ALPHA, BETA_CONV, SYM, TRANS, EQ_MP, MK_COMB, ABS_THM, AP_TERM, AP_THM, Beta, Mk_comb, Mk_abs, ASSUME, MP, DISCH, deductAntisym, EQ_IMP_RULE1, EQ_IMP_RULE2, INST, INST_TYPE, SUBST, ABSL, GEN_ABS, AXIOM, DEF_SPEC | *(none)* |
+| REFL, ALPHA, BETA_CONV, SYM, TRANS, EQ_MP, MK_COMB, ABS_THM, AP_TERM, AP_THM, Beta, Mk_comb, Mk_abs, ASSUME, MP, DISCH, deductAntisym, EQ_IMP_RULE1, EQ_IMP_RULE2, INST, INST_TYPE, SUBST, ABSL, GEN_ABS, DEF_SPEC | *(none)* |
 | GEN, GENL | `bool$!` |
 | SPEC, Specialize | `bool$!` |
 | EXISTS | `bool$?` |
@@ -234,17 +234,12 @@ Depends on: `bool$!`, `bool$?`, `bool$/\`, `min$=`, `min$==>`.
 | EQ_IMP_RULE1 | id, th |
 | EQ_IMP_RULE2 | id, th |
 
-### Axioms and definitions
+### Definitions
 
 | Command | Arguments |
 |---------|-----------|
-| AXIOM | id, tm, name (optional) |
 | DEF_SPEC | id, th, names: string list |
 | DEF_TYOP | id, th, name |
-
-Axiom names are optional and purely informational. Each AXIOM command is a
-distinct axiom assertion — two commands with the same name and conclusion are
-two separate axioms.
 
 ### Computation
 
@@ -296,14 +291,10 @@ two separate axioms.
 | 0x3A   | INST_TYPE     | id th n_subst (redex residue)...       |
 | 0x3B   | SUBST         | id template th n_subst (redex residue)...|
 | 0x3C   | deductAntisym | id th1 th2                             |
-| 0x40   | AXIOM         | id tm name                             |
-| 0x41   | DEF_SPEC      | id th n_names name...                  |
-| 0x42   | DEF_TYOP      | id th name                             |
-| 0x43   | COMPUTE       | id ci tm n_ths th...                   |
-| 0x44   | COMPUTE_INIT  | id ty1 ty2 n_eqns (name th)... n_terms (name tm)... |
-
-Note: In the binary AXIOM encoding, the name is always present. An empty
-string indicates no name.
+| 0x40   | DEF_SPEC      | id th n_names name...                  |
+| 0x41   | DEF_TYOP      | id th name                             |
+| 0x42   | COMPUTE       | id ci tm n_ths th...                   |
+| 0x43   | COMPUTE_INIT  | id ty1 ty2 n_eqns (name th)... n_terms (name tm)... |
 
 ## JSON Lines Encoding
 
@@ -371,16 +362,12 @@ Substitution lists use `redex` and `residue` keys:
 For INST and INST_TYPE, `redex` and `residue` are term IDs and type IDs
 respectively. For SUBST, `redex` is a term ID and `residue` is a theorem ID.
 
-### Axioms and definitions
+### Definitions
 
 ```json
-{"cmd":"AXIOM","id":0,"tm":1,"name":"MY_AXIOM"}
-{"cmd":"AXIOM","id":0,"tm":1}
 {"cmd":"DEF_SPEC","id":0,"th":1,"names":["c1","c2"]}
 {"cmd":"DEF_TYOP","id":0,"th":1,"name":"mytype"}
 ```
-
-For AXIOM, the `name` key is omitted when no name is provided.
 
 ### Computation
 
@@ -524,7 +511,6 @@ all arguments are provided directly.
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| AXIOM | `t`, optional name | `⊢ t` | `t` has type `bool` |
 | DEF_SPEC | `⊢ ∃v1...vn. P`, `[c1,...,cn]` | `⊢ P[c1/v1,...,cn/vn]` | Creates new constants `c1,...,cn`; the input theorem must have no hypotheses and no free variables; each `ci` gets the type of the corresponding `vi` |
 | DEF_TYOP | `⊢ ∃v. P v`, name | `⊢ ∃rep. TYPE_DEFINITION P rep` | Creates a new type operator with the given name; `P : dom → bool` must be a closed term; the input theorem must have no hypotheses; the new type has the type variables of `P` as parameters. Requires `bool$TYPE_DEFINITION` |
 

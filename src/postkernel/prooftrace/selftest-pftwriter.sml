@@ -167,8 +167,8 @@ val () = let
   val () = PFTWriter.tyop out 0 "bool" []
   val () = PFTWriter.var out 0 "x" 0
   val () = PFTWriter.HOL4.refl out 0 0
-  val () = PFTWriter.HOL4.axiom out 1 0 (SOME "my_axiom")
-  val () = PFTWriter.HOL4.axiom out 2 0 NONE
+  val () = PFTWriter.axiom out 1 0 (SOME "my_axiom")
+  val () = PFTWriter.axiom out 2 0 NONE
   val () = PFTWriter.HOL4.def_spec out 3 0 ["foo", "bar"]
   val () = PFTWriter.HOL4.def_tyop out 4 0 "mytype"
   val () = PFTWriter.closeOut out {n_ty=1, n_tm=1, n_th=5, n_ci=0}
@@ -263,13 +263,13 @@ in
   cleanup f
 end
 
-val _ = tprint "Text (Candle): axioms, definitions, compute"
+val _ = tprint "Text (Candle): axiom, definitions, compute"
 val () = let
   val f = tmpfile "candle-defs.pft"
   val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="candle"}
   val () = PFTWriter.tyop out 0 "bool" []
   val () = PFTWriter.var out 0 "x" 0
-  val () = PFTWriter.Candle.new_axiom out 0 0
+  val () = PFTWriter.axiom out 0 0 NONE
   val () = PFTWriter.Candle.new_specification out 1 0
   val () = PFTWriter.Candle.new_type_definition out 2 0 "mid" "mid_ABS" "mid_REP"
   val () = PFTWriter.Candle.compute_init out 0 [0, 1, 2]
@@ -280,7 +280,7 @@ val () = let
     "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"candle\"}\n\
     \{\"cmd\":\"TYOP\",\"id\":0,\"name\":\"bool\",\"args\":[]}\n\
     \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"x\",\"ty\":0}\n\
-    \{\"cmd\":\"new_axiom\",\"id\":0,\"tm\":0}\n\
+    \{\"cmd\":\"AXIOM\",\"id\":0,\"tm\":0}\n\
     \{\"cmd\":\"new_specification\",\"id\":1,\"th\":0}\n\
     \{\"cmd\":\"new_type_definition\",\"id\":2,\"th\":0,\"tyname\":\"mid\",\"absname\":\"mid_ABS\",\"repname\":\"mid_REP\"}\n\
     \{\"cmd\":\"COMPUTE_INIT\",\"id\":0,\"ths\":[0,1,2]}\n\

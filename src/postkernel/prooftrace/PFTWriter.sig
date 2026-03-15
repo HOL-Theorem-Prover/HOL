@@ -20,6 +20,11 @@ signature PFTWriter = sig
   val comb  : pft_out -> int -> int -> int -> unit
   val abs   : pft_out -> int -> int -> int -> unit
 
+  (* Kernel commands *)
+  val new_const : pft_out -> string -> int -> unit
+  val new_type  : pft_out -> string -> int -> unit
+  val axiom     : pft_out -> int -> int -> string option -> unit
+
   (* Control commands *)
   val del       : pft_out -> string -> int -> unit
   val del_range : pft_out -> string -> int -> int -> unit
@@ -67,7 +72,6 @@ signature PFTWriter = sig
     val inst_type     : pft_out -> int -> int -> (int * int) list -> unit
     val subst         : pft_out -> int -> int -> int -> (int * int) list -> unit
     val deductAntisym : pft_out -> int -> int -> int -> unit
-    val axiom         : pft_out -> int -> int -> string option -> unit
     val def_spec      : pft_out -> int -> int -> string list -> unit
     val def_tyop      : pft_out -> int -> int -> string -> unit
     val compute       : pft_out -> int -> int -> int -> int list -> unit
@@ -90,7 +94,6 @@ signature PFTWriter = sig
     val sym                 : pft_out -> int -> int -> unit
     val prove_hyp           : pft_out -> int -> int -> int -> unit
     val alpha_thm           : pft_out -> int -> int -> int list -> int -> unit
-    val new_axiom           : pft_out -> int -> int -> unit
     val new_specification   : pft_out -> int -> int -> unit
     val new_type_definition : pft_out -> int -> int -> string -> string
                               -> string -> unit

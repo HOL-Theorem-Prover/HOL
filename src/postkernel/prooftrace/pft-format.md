@@ -81,6 +81,28 @@ all rulesets) and **theorem commands** (defined by the ruleset).
 | COMB    | id, rator: term-id, rand: term-id | Construct a function application |
 | ABS     | id, var: term-id, body: term-id | Construct a lambda abstraction |
 
+### Kernel Commands
+
+| Command | Arguments | Description |
+|---------|-----------|-------------|
+| NEW_CONST | name, ty: type-id | Declare a new constant |
+| NEW_TYPE | name, arity: int | Declare a new type operator |
+| AXIOM | id, tm, name (optional) | Assert an axiom (produces a theorem) |
+
+**NEW_CONST** declares a new constant with the given name and type. The
+constant can then be referenced by subsequent CONST commands. No ID is
+assigned. It is an error to declare two constants with the same name.
+
+**NEW_TYPE** declares a new type operator with the given name and arity. The
+type operator can then be referenced by subsequent TYOP commands. No ID is
+assigned. It is an error to declare two type operators with the same name.
+
+**AXIOM** asserts an axiom: the given term (which must have type `bool`)
+becomes the conclusion of a new theorem with no hypotheses. The theorem is
+assigned an ID. The optional name is purely informational. AXIOM is
+generative: each AXIOM command is a distinct axiom assertion, even if two
+commands have the same name and conclusion.
+
 ### Control Commands
 
 | Command | Arguments |
@@ -131,11 +153,16 @@ Names carry the following semantics depending on context:
   the same name and type produce the same constant.
 - **Variable names** (in VAR): Identify a variable. Two VAR commands with the
   same name and type produce the same variable.
+- **New constant names** (in NEW_CONST): Identify the constant being declared.
+  Must match the name used in subsequent CONST commands.
+- **New type names** (in NEW_TYPE): Identify the type operator being declared.
+  Must match the name used in subsequent TYOP commands.
+- **Axiom names** (in AXIOM): Optional, purely informational.
 - **Save/Load names** (in SAVE, LOAD): Identify theorems in the name→theorem
   table. These are chosen by the producer and have no kernel significance.
 
-Additional name semantics (e.g., for axiom or definition commands) are defined
-by the ruleset.
+Additional name semantics (e.g., for definition commands) are defined by the
+ruleset.
 
 A well-optimised producer SHOULD avoid creating duplicate IDs for the same
 logical entity (i.e., should hash-cons types, terms, and sub-terms). However,
@@ -187,6 +214,9 @@ IDs and counts are encoded as varints. Names are encoded as strings.
 | 0x04   | CONST         | id name type_id                        |
 | 0x05   | COMB          | id rator rand                          |
 | 0x06   | ABS           | id var body                            |
+| 0x07   | NEW_CONST     | name type_id                           |
+| 0x08   | NEW_TYPE      | name arity                             |
+| 0x09   | AXIOM         | id tm name                             |
 | 0x50   | SAVE          | name th                                |
 | 0x51   | LOAD          | id name                                |
 | 0xE0   | DEL ty        | id                                     |
@@ -242,6 +272,18 @@ For TYOP, `args` is an array of type IDs (empty array for nullary operators).
 {"cmd":"COMB","id":2,"rator":0,"rand":1}
 {"cmd":"ABS","id":3,"var":0,"body":1}
 ```
+
+### Kernel commands
+
+```json
+{"cmd":"NEW_CONST","name":"bool$ARB","ty":3}
+{"cmd":"NEW_TYPE","name":"bool$ind","arity":0}
+{"cmd":"AXIOM","id":0,"tm":1,"name":"MY_AXIOM"}
+{"cmd":"AXIOM","id":0,"tm":1}
+```
+
+For AXIOM, the `name` key is omitted when no name is provided. In the binary
+encoding, the name is always present; an empty string indicates no name.
 
 ### Control commands
 

@@ -182,6 +182,28 @@ fun abs (out as TextOut _) id tm1 tm2 =
   | abs out id tm1 tm2 =
     (bOpcode out 0x06; bVarint out id; bVarint out tm1; bVarint out tm2)
 
+(* --- Kernel commands ------------------------------------------------------ *)
+
+fun new_const (out as TextOut _) name ty_id =
+    (jBegin out "NEW_CONST"; jStr out "name" name;
+     jInt out "ty" ty_id; jEnd out)
+  | new_const out name ty_id =
+    (bOpcode out 0x07; bString out name; bVarint out ty_id)
+
+fun new_type (out as TextOut _) name arity =
+    (jBegin out "NEW_TYPE"; jStr out "name" name;
+     jInt out "arity" arity; jEnd out)
+  | new_type out name arity =
+    (bOpcode out 0x08; bString out name; bVarint out arity)
+
+fun axiom (out as TextOut _) id tm nameOpt =
+    (jBegin out "AXIOM"; jInt out "id" id; jInt out "tm" tm;
+     case nameOpt of SOME n => jStr out "name" n | NONE => ();
+     jEnd out)
+  | axiom out id tm nameOpt =
+    (bOpcode out 0x09; bVarint out id; bVarint out tm;
+     bString out (case nameOpt of SOME n => n | NONE => ""))
+
 (* --- Theorem commands: helpers for common patterns ----------------------- *)
 
 (* th_1: RULE id arg — one key *)
@@ -305,21 +327,13 @@ fun subst (out as TextOut _) id template th pairs =
      bVarint out (length pairs);
      List.app (fn (t,h) => (bVarint out t; bVarint out h)) pairs)
 
-(* --- Axioms and definitions ---------------------------------------------- *)
-
-fun axiom (out as TextOut _) id tm nameOpt =
-    (jBegin out "AXIOM"; jInt out "id" id; jInt out "tm" tm;
-     case nameOpt of SOME n => jStr out "name" n | NONE => ();
-     jEnd out)
-  | axiom out id tm nameOpt =
-    (bOpcode out 0x40; bVarint out id; bVarint out tm;
-     bString out (case nameOpt of SOME n => n | NONE => ""))
+(* --- Definitions --------------------------------------------------------- *)
 
 fun def_spec (out as TextOut _) id th names =
     (jBegin out "DEF_SPEC"; jInt out "id" id;
      jInt out "th" th; jStrList out "names" names; jEnd out)
   | def_spec out id th names =
-    (bOpcode out 0x41; bVarint out id; bVarint out th;
+    (bOpcode out 0x40; bVarint out id; bVarint out th;
      bVarint out (length names);
      List.app (bString out) names)
 
@@ -327,7 +341,7 @@ fun def_tyop (out as TextOut _) id th name =
     (jBegin out "DEF_TYOP"; jInt out "id" id;
      jInt out "th" th; jStr out "name" name; jEnd out)
   | def_tyop out id th name =
-    (bOpcode out 0x42; bVarint out id; bVarint out th; bString out name)
+    (bOpcode out 0x41; bVarint out id; bVarint out th; bString out name)
 
 (* --- Computation --------------------------------------------------------- *)
 
@@ -336,7 +350,7 @@ fun compute (out as TextOut _) id ci tm ths =
      jInt out "ci" ci; jInt out "tm" tm;
      jIntList out "ths" ths; jEnd out)
   | compute out id ci tm ths =
-    (bOpcode out 0x43; bVarint out id; bVarint out ci; bVarint out tm;
+    (bOpcode out 0x42; bVarint out id; bVarint out ci; bVarint out tm;
      bVarint out (length ths);
      List.app (bVarint out) ths)
 
@@ -347,7 +361,7 @@ fun compute_init (out as TextOut _) id ty1 ty2 char_eqns cval_terms =
      jNamedIntMap out "cval_terms" cval_terms;
      jEnd out)
   | compute_init out id ty1 ty2 char_eqns cval_terms =
-    (bOpcode out 0x44; bVarint out id; bVarint out ty1; bVarint out ty2;
+    (bOpcode out 0x43; bVarint out id; bVarint out ty1; bVarint out ty2;
      bVarint out (length char_eqns);
      List.app (fn (n,th) => (bString out n; bVarint out th)) char_eqns;
      bVarint out (length cval_terms);
@@ -372,11 +386,8 @@ val eq_mp               = th_2 "EQ_MP"               0x16 "eq" "th"
 val deduct_antisym_rule = th_2 "DEDUCT_ANTISYM_RULE" 0x17 "th1" "th2"
 val prove_hyp           = th_2 "PROVE_HYP"           0x21 "th1" "th2"
 
-(* new_axiom: id tm *)
-val new_axiom           = th_1 "new_axiom"           0x30 "tm"
-
 (* new_specification: id th *)
-val new_specification   = th_1 "new_specification"   0x31 "th"
+val new_specification   = th_1 "new_specification"   0x30 "th"
 
 (* INST id th subst *)
 fun inst (out as TextOut _) id th pairs =
@@ -413,7 +424,7 @@ fun new_type_definition (out as TextOut _) id th tyname absname repname =
      jInt out "th" th; jStr out "tyname" tyname;
      jStr out "absname" absname; jStr out "repname" repname; jEnd out)
   | new_type_definition out id th tyname absname repname =
-    (bOpcode out 0x32; bVarint out id; bVarint out th;
+    (bOpcode out 0x31; bVarint out id; bVarint out th;
      bString out tyname; bString out absname; bString out repname)
 
 (* COMPUTE id ci tm ths *)
