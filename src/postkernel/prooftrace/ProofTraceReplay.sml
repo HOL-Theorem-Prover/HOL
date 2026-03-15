@@ -80,7 +80,7 @@ fun replay thyname =
 let
   val filename = thyname ^ "Theory.tr.gz";
   val (root_ptr, heap) = parse filename;
-  val {all_thms, anon_thms, ...} = shRoot heap root_ptr;
+  val {all_thms, anon_thms, constants, types, ...} = shRoot heap root_ptr;
 
   (* Pre-pass: closedness, refcounts, def collection *)
   val refcounts = Word8Array.array(heapSize heap, 0w0 : Word8.word)
@@ -349,6 +349,29 @@ let
 
   val named = fromList String.compare (list heap export all_thms)
   val anons = list heap replay_thm anon_thms
+
+  fun ensure_const p = let
+    val (Name, ty) = tuple2 heap (str heap, replay_type) p
+    val () = check_def tm_defs thyname Name
+  in
+    prim_mk_const {Thy=thyname, Name=Name}
+    handle HOL_ERR _ =>
+      (msg_print("WARNING: prim_new_const "^thyname^"$"^Name^"\n");
+       prim_new_const {Thy=thyname, Name=Name} ty)
+  end
+
+  fun ensure_type p = let
+    val (Tyop, ar) = tuple2 heap (str heap, int) p
+    val () = check_def ty_defs thyname Tyop
+  in case op_arity {Thy=thyname, Tyop=Tyop}
+     of SOME n => if n = ar then () else
+                  raise Fail ("ensure_type arity "^Tyop)
+      | NONE => (msg_print("WARNING: prim_new_type "^thyname^"$"^Tyop^"\n");
+                 prim_new_type {Thy=thyname, Tyop=Tyop} ar)
+  end
+
+  val () = appList heap ensure_const constants
+  val () = appList heap ensure_type types
 
   val () = if !print_statistics then let
   val (live_ty, live_tm, live_th) =
