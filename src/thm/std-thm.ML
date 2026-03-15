@@ -48,61 +48,6 @@ fun rng ty    = snd (Type.dom_rng ty);
 val empty_tag = Tag.empty_tag
 
 
-(*---------------------------------------------------------------------------
-    The following are here because I didn't want to Thm to be dependent
-    on some derived syntax (now in boolSyntax).
- ---------------------------------------------------------------------------*)
-structure Susp = Portable.HOLSusp
-
-val F = Susp.delay (fn () => mk_thy_const{Name="F", Thy="bool", Ty=bool});
-
-val mk_neg = Susp.delay (fn () =>
-  let val notc = mk_thy_const{Name="~",Thy="bool",Ty=bool --> bool}
-  in fn M => mk_comb(notc,M)
-  end);
-
-val mk_forall = Susp.delay (fn () =>
- let val forallc = prim_mk_const{Name="!", Thy="bool"}
- in fn v => fn tm =>
-      mk_comb(inst[alpha |-> type_of v] forallc, mk_abs(v,tm))
- end);
-
-val mk_conj = Susp.delay (fn () =>
- let val conjc = prim_mk_const{Name="/\\", Thy="bool"}
- in fn (M,N) => list_mk_comb(conjc,[M,N])
- end);
-
-val mk_disj = Susp.delay (fn () =>
- let val disjc = prim_mk_const{Name="\\/", Thy="bool"}
- in fn (M,N) => list_mk_comb(disjc,[M,N])
- end);
-
-
-local val DEST_IMP_ERR = thm_err "dest_imp" ""
-in
-fun dest_imp M =
- let val (Rator,conseq) = with_exn dest_comb M DEST_IMP_ERR
- in if is_comb Rator
-    then let val (Rator,ant) = dest_comb Rator
-         in if Rator=Term.imp then (ant,conseq) else raise DEST_IMP_ERR
-         end
-    else case with_exn dest_thy_const Rator DEST_IMP_ERR
-          of {Name="~", Thy="bool",...} => (conseq,Susp.force F)
-           | otherwise => raise DEST_IMP_ERR
- end
-end;
-
-local val err = thm_err "dest_exists" ""
-in
-fun dest_exists tm =
- let val (Rator,Rand) = with_exn dest_comb tm err
- in case with_exn dest_thy_const Rator err
-     of {Name="?", Thy="bool",...} => with_exn dest_abs Rand err
-      | otherwise => raise err
- end
-end;
-
-
 (*---------------------------------------------------------------------------*
  * The type of theorems and some basic operations on it.                     *
  *---------------------------------------------------------------------------*)
@@ -118,6 +63,210 @@ fun concl(THM(_,_,c))   = c
 fun hypset  (THM(_,asl,_)) = asl
 fun hyplist (THM(_,asl,_)) = HOLset.listItems asl
 val hyp = hyplist   (* backwards compatibility *)
+
+(*---------------------------------------------------------------------------
+    Registered bool constants.
+
+    Each ref is set exactly once by the corresponding register_* function,
+    which checks that the definition theorem has the expected RHS (built
+    from primitives and previously-registered constants) before storing the
+    LHS constant.  Kernel rules read from these refs instead of doing
+    name-based lookups, closing the soundness hole where
+    prim_specification could redefine a bool constant.
+ ---------------------------------------------------------------------------*)
+
+val T_const     : term option ref = ref NONE
+val forall_const: term option ref = ref NONE
+val exists_const: term option ref = ref NONE
+val F_const     : term option ref = ref NONE
+val neg_const   : term option ref = ref NONE
+val conj_const  : term option ref = ref NONE
+val disj_const  : term option ref = ref NONE
+val tydef_const : term option ref = ref NONE
+
+fun force_const r name =
+  case !r of SOME c => c | NONE => ERR name "bool constant not yet registered"
+
+(* Registration helpers *)
+
+fun check_def_thm fname th =
+  (if null (hyp th) then ()
+   else ERR fname "definition theorem must have no hypotheses";
+   let val (lhs, rhs, _) = Term.dest_eq_ty (concl th)
+   in (lhs, rhs)
+   end
+   handle HOL_ERR _ => ERR fname "definition not an equation")
+
+fun register_once r fname th expected_rhs =
+  case !r of
+    SOME _ => ()
+  | NONE =>
+    let val (lhs, rhs) = check_def_thm fname th
+    in if aconv rhs expected_rhs
+       then r := SOME lhs
+       else ERR fname "definition RHS does not match expected term"
+    end
+
+(* T = (\x:bool. x) = (\x:bool. x) *)
+fun register_T th =
+  let val x = mk_var("x", bool)
+      val lam = mk_abs(x, x)
+      val expected = Term.prim_mk_eq (bool --> bool) lam lam
+  in register_once T_const "register_T" th expected
+  end
+
+(* ! = \P:'a->bool. P = \x. T *)
+fun register_forall th =
+  let val T = force_const T_const "register_forall"
+      val P = mk_var("P", alpha --> bool)
+      val x = mk_var("x", alpha)
+      val expected = mk_abs(P,
+                      Term.prim_mk_eq (alpha --> bool)
+                        P (mk_abs(x, T)))
+  in register_once forall_const "register_forall" th expected
+  end
+
+(* ? = \P:'a->bool. P ($@ P) *)
+fun register_exists th =
+  let val P = mk_var("P", alpha --> bool)
+      val selc = mk_thy_const{Name="@", Thy="min",
+                              Ty=(alpha --> bool) --> alpha}
+      val expected = mk_abs(P, mk_comb(P, mk_comb(selc, P)))
+  in register_once exists_const "register_exists" th expected
+  end
+
+(* F = !t. t *)
+fun register_F th =
+  let val forallc = force_const forall_const "register_F"
+      val t = mk_var("t", bool)
+      val expected = mk_comb(inst[alpha |-> bool] forallc, mk_abs(t, t))
+  in register_once F_const "register_F" th expected
+  end
+
+(* ~ = \t. t ==> F *)
+fun register_neg th =
+  let val Fc = force_const F_const "register_neg"
+      val t = mk_var("t", bool)
+      val expected = mk_abs(t, Term.prim_mk_imp t Fc)
+  in register_once neg_const "register_neg" th expected
+  end
+
+(* /\ = \t1 t2. !t. (t1 ==> t2 ==> t) ==> t *)
+fun register_conj th =
+  let val forallc = force_const forall_const "register_conj"
+      val t1 = mk_var("t1", bool)
+      val t2 = mk_var("t2", bool)
+      val t  = mk_var("t", bool)
+      val body = Term.prim_mk_imp
+                   (Term.prim_mk_imp t1 (Term.prim_mk_imp t2 t)) t
+      val expected = mk_abs(t1, mk_abs(t2,
+                      mk_comb(inst[alpha |-> bool] forallc,
+                              mk_abs(t, body))))
+  in register_once conj_const "register_conj" th expected
+  end
+
+(* \/ = \t1 t2. !t. (t1 ==> t) ==> (t2 ==> t) ==> t *)
+fun register_disj th =
+  let val forallc = force_const forall_const "register_disj"
+      val t1 = mk_var("t1", bool)
+      val t2 = mk_var("t2", bool)
+      val t  = mk_var("t", bool)
+      val body = Term.prim_mk_imp (Term.prim_mk_imp t1 t)
+                   (Term.prim_mk_imp (Term.prim_mk_imp t2 t) t)
+      val expected = mk_abs(t1, mk_abs(t2,
+                      mk_comb(inst[alpha |-> bool] forallc,
+                              mk_abs(t, body))))
+  in register_once disj_const "register_disj" th expected
+  end
+
+(* TYPE_DEFINITION =
+     \P:'a->bool. \rep:'b->'a.
+       (!x' x''. (rep x' = rep x'') ==> (x' = x'')) /\
+       (!x. P x = (?x'. x = rep x')) *)
+fun register_type_definition th =
+  let val forallc = force_const forall_const "register_type_definition"
+      val existsc = force_const exists_const "register_type_definition"
+      val conjc   = force_const conj_const   "register_type_definition"
+      val beta = Type.mk_vartype "'b"
+      val P   = mk_var("P", alpha --> bool)
+      val rep = mk_var("rep", beta --> alpha)
+      val x'  = mk_var("x'", beta)
+      val x'' = mk_var("x''", beta)
+      val x   = mk_var("x", alpha)
+      val inj = mk_comb(inst[alpha |-> beta] forallc,
+                  mk_abs(x', mk_comb(inst[alpha |-> beta] forallc,
+                    mk_abs(x'',
+                      Term.prim_mk_imp
+                        (Term.prim_mk_eq alpha
+                          (mk_comb(rep, x')) (mk_comb(rep, x'')))
+                        (Term.prim_mk_eq beta x' x'')))))
+      val surj = mk_comb(inst[alpha |-> alpha] forallc,
+                   mk_abs(x,
+                     Term.prim_mk_eq bool
+                       (mk_comb(P, x))
+                       (mk_comb(inst[alpha |-> beta] existsc,
+                         mk_abs(x',
+                           Term.prim_mk_eq alpha x (mk_comb(rep, x')))))))
+      val body = list_mk_comb(inst[alpha |-> bool] conjc, [inj, surj])
+      val expected = mk_abs(P, mk_abs(rep, body))
+  in register_once tydef_const "register_type_definition" th expected
+  end
+
+(*---------------------------------------------------------------------------
+    The following are here because I didn't want to Thm to be dependent
+    on some derived syntax (now in boolSyntax).
+    Now implemented via registered constant refs.
+ ---------------------------------------------------------------------------*)
+
+fun get_F () = force_const F_const "get_F"
+
+fun mk_neg_tm M =
+  let val negc = force_const neg_const "mk_neg"
+  in mk_comb(negc, M)
+  end
+
+fun mk_forall_tm v tm =
+  let val forallc = force_const forall_const "mk_forall"
+  in mk_comb(inst[alpha |-> type_of v] forallc, mk_abs(v, tm))
+  end
+
+fun mk_conj_tm (M, N) =
+  let val conjc = force_const conj_const "mk_conj"
+  in list_mk_comb(conjc, [M, N])
+  end
+
+fun mk_disj_tm (M, N) =
+  let val disjc = force_const disj_const "mk_disj"
+  in list_mk_comb(disjc, [M, N])
+  end
+
+
+local val DEST_IMP_ERR = thm_err "dest_imp" ""
+in
+fun dest_imp M =
+ let val (Rator,conseq) = with_exn dest_comb M DEST_IMP_ERR
+ in if is_comb Rator
+    then let val (Rator,ant) = dest_comb Rator
+         in if Rator=Term.imp then (ant,conseq) else raise DEST_IMP_ERR
+         end
+    else case !neg_const of
+           SOME nc => if same_const Rator nc then (conseq, get_F())
+                      else raise DEST_IMP_ERR
+         | NONE => raise DEST_IMP_ERR
+ end
+end;
+
+local val err = thm_err "dest_exists" ""
+in
+fun dest_exists tm =
+ let val (Rator,Rand) = with_exn dest_comb tm err
+ in case !exists_const of
+      SOME ec => if same_const Rator ec
+                 then with_exn dest_abs Rand err
+                 else raise err
+    | NONE => raise err
+ end
+end;
 
 fun dest_thm(t as THM(_,asl,w)) = (hyplist t,w) (* Compatible with old code. *)
 fun sdest_thm(THM(_,asl,w)) = (asl,w)
@@ -558,9 +707,9 @@ fun EQ_IMP_RULE th =
 
 fun SPEC t th =
  let val (Rator,Rand) = dest_comb(concl th)
-     val {Thy,Name,...} = dest_thy_const Rator
+     val fc = force_const forall_const "SPEC"
  in
-   Assert (Name="!" andalso Thy="bool")
+   Assert (same_const Rator fc)
           "SPEC" "Theorem not universally quantified";
    make_thm Count.Spec
        (tag th, hypset th, beta_conv(mk_comb(Rand, t)))
@@ -600,7 +749,7 @@ fun GEN x th =
   let val (asl,c) = sdest_thm th
   in if var_occursl x asl
      then ERR  "GEN" "variable occurs free in hypotheses"
-     else make_thm Count.Gen(tag th, asl, Susp.force mk_forall x c)
+     else make_thm Count.Gen(tag th, asl, mk_forall_tm x c)
           handle HOL_ERR _ => ERR "GEN" ""
   end;
 
@@ -612,7 +761,7 @@ in
   else
     make_thm
       Count.Gen(tag th, asl,
-                list_mk_binder (SOME (prim_mk_const {Thy="bool", Name="!"}))
+                list_mk_binder (SOME (force_const forall_const "GENL"))
                                (vs,c))
     handle HOL_ERR _ => ERR "GENL" ""
 end
@@ -654,8 +803,8 @@ local
 in
 fun EXISTS (w,t) th =
  let val (ex,Rand) = with_exn dest_comb w err
-     val {Name,Thy,...}  = with_exn dest_thy_const ex err
-     val _ = Assert ("?"=Name andalso Thy="bool") "EXISTS" mesg1
+     val ec = force_const exists_const "EXISTS"
+     val _ = Assert (same_const ex ec) "EXISTS" mesg1
      val _ = Assert (aconv (beta_conv(mk_comb(Rand,t))) (concl th))
                     "EXISTS" mesg2
    in make_thm Count.Exists (tag th, hypset th, w)
@@ -732,7 +881,7 @@ fun CONJ th1 th2 =
    make_thm Count.Conj
         (Tag.merge (tag th1) (tag th2),
          union_hyp (hypset th1) (hypset th2),
-         Susp.force mk_conj(concl th1, concl th2))
+         mk_conj_tm(concl th1, concl th2))
    handle HOL_ERR _ => ERR "CONJ" "";
 
 
@@ -754,9 +903,9 @@ fun CONJ th1 th2 =
 
 fun conj1 tm =
   let val (c,M) = dest_comb (rator tm)
-      val {Name,Thy,...} = dest_thy_const c
+      val cc = force_const conj_const "CONJUNCT1"
   in
-    if Name="/\\" andalso Thy="bool" then M else ERR "" ""
+    if same_const c cc then M else ERR "" ""
   end
 
 
@@ -782,9 +931,9 @@ fun CONJUNCT1 th =
 
 fun conj2 tm =
   let val (Rator,M) = dest_comb tm
-      val {Name,Thy,...} = dest_thy_const (rator Rator)
+      val cc = force_const conj_const "CONJUNCT2"
   in
-     if Name="/\\" andalso Thy="bool" then M else ERR "" ""
+     if same_const (rator Rator) cc then M else ERR "" ""
   end
 
 fun CONJUNCT2 th =
@@ -804,7 +953,7 @@ fun CONJUNCT2 th =
  *---------------------------------------------------------------------------*)
 
 fun DISJ1 th w = make_thm Count.Disj1
- (tag th, hypset th, Susp.force mk_disj (concl th, w))
+ (tag th, hypset th, mk_disj_tm (concl th, w))
  handle HOL_ERR _ => ERR "DISJ1" "";
 
 
@@ -820,7 +969,7 @@ fun DISJ1 th w = make_thm Count.Disj1
  *---------------------------------------------------------------------------*)
 
 fun DISJ2 w th = make_thm Count.Disj2
- (tag th, hypset th, Susp.force mk_disj(w,concl th))
+ (tag th, hypset th, mk_disj_tm(w,concl th))
  handle HOL_ERR _ => ERR "DISJ2" "";
 
 
@@ -844,9 +993,9 @@ fun DISJ2 w th = make_thm Count.Disj2
 fun dest_disj tm =
   let val (Rator,N) = dest_comb tm
       val (c,M)     = dest_comb Rator
-      val {Name,Thy,...}   = dest_thy_const c
+      val dc = force_const disj_const "dest_disj"
   in
-    if Name="\\/" andalso Thy="bool" then (M,N) else ERR "" ""
+    if same_const c dc then (M,N) else ERR "" ""
   end
 
 
@@ -879,8 +1028,8 @@ fun DISJ_CASES dth ath bth =
 
 fun NOT_INTRO th =
   let val (ant,c) = dest_imp(concl th)
-  in Assert (c = Susp.force F) "" "";
-     make_thm Count.NotIntro  (tag th, hypset th, Susp.force mk_neg ant)
+  in Assert (c = get_F ()) "" "";
+     make_thm Count.NotIntro  (tag th, hypset th, mk_neg_tm ant)
   end
   handle HOL_ERR _ => ERR "NOT_INTRO" "";
 
@@ -899,18 +1048,14 @@ fun NOT_INTRO th =
  *   handle _ => ERR{function = "NOT_ELIM",message = ""};
  *---------------------------------------------------------------------------*)
 
-local fun dest M =
-        let val (Rator,Rand)  = dest_comb M
-        in (dest_thy_const Rator, Rand)
-        end
-in
 fun NOT_ELIM th =
-  case with_exn dest (concl th) (thm_err "NOT_ELIM" "")
-   of ({Name="~", Thy="bool",...},Rand)
-       => make_thm Count.NotElim
-             (tag th, hypset th, Term.prim_mk_imp Rand (Susp.force F))
-    | otherwise => ERR "NOT_ELIM" ""
-end;
+  let val nc = force_const neg_const "NOT_ELIM"
+      val (Rator,Rand) = with_exn dest_comb (concl th) (thm_err "NOT_ELIM" "")
+  in if same_const Rator nc
+     then make_thm Count.NotElim
+             (tag th, hypset th, Term.prim_mk_imp Rand (get_F ()))
+     else ERR "NOT_ELIM" ""
+  end;
 
 
 (*---------------------------------------------------------------------------*
@@ -934,9 +1079,9 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun CCONTR w fth =
-  (Assert (concl fth = Susp.force F) "CCONTR" "";
+  (Assert (concl fth = get_F ()) "CCONTR" "";
    make_thm Count.Ccontr
-       (tag fth, disch(Susp.force mk_neg w, hypset fth), w)
+       (tag fth, disch(mk_neg_tm w, hypset fth), w)
      handle HOL_ERR _ => ERR "CCONTR" "");
 
 
@@ -1068,9 +1213,9 @@ fun Mk_abs thm =
 
 fun Specialize t th =
    let val (Rator,Rand) = dest_comb(concl th)
-       val {Name,Thy,...} = dest_thy_const Rator
+       val fc = force_const forall_const "Specialize"
    in
-     Assert (Thy="bool" andalso Name="!") "" "";
+     Assert (same_const Rator fc) "" "";
      make_thm Count.Spec
         (tag th, hypset th, Term.lazy_beta_conv(mk_comb(Rand,t)))
    end
@@ -1116,8 +1261,9 @@ val DEF_FORM_ERR   = DEF_ERR   "expected a term of the form \"v = M\""
 
 (* some simple term manipulation functions *)
 fun mk_exists (absrec as (Bvar,_)) =
-  mk_comb(mk_thy_const{Name="?",Thy="bool", Ty= (type_of Bvar-->bool)-->bool},
-          mk_abs absrec)
+  let val ec = force_const exists_const "mk_exists"
+  in mk_comb(inst[alpha |-> type_of Bvar] ec, mk_abs absrec)
+  end
 
 fun dest_eq M =
   let val (Rator,r) = dest_comb M
@@ -1194,8 +1340,8 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val newty     = Type.mk_thy_type{Tyop=Tyop,Thy=Thy,Args=tyvars}
   val repty     = newty --> dom
   val rep       = mk_primed_var("rep", repty)
-  val TYDEF     = mk_thy_const{Name="TYPE_DEFINITION", Thy="bool",
-                               Ty = Pty --> (repty-->bool)}
+  val TYDEF     = inst[alpha |-> dom, Type.mk_vartype "'b" |-> newty]
+                      (force_const tydef_const "prim_type_definition")
 in
   mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])))
 end
