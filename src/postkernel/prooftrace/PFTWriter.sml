@@ -355,6 +355,88 @@ fun compute_init (out as TextOut _) id ty1 ty2 char_eqns cval_terms =
 
 end (* structure HOL4 *)
 
+(* --- Candle ruleset ------------------------------------------------------ *)
+
+structure Candle = struct
+
+(* Core inference rules *)
+val refl                = th_1 "REFL"                0x10 "tm"
+val beta                = th_1 "BETA"                0x14 "tm"
+val assume              = th_1 "ASSUME"              0x15 "tm"
+val sym                 = th_1 "SYM"                 0x20 "th"
+
+val trans               = th_2 "TRANS"               0x11 "th1" "th2"
+val mk_comb             = th_2 "MK_COMB"             0x12 "th1" "th2"
+val abs                 = th_2 "ABS"                 0x13 "tm" "th"
+val eq_mp               = th_2 "EQ_MP"               0x16 "eq" "th"
+val deduct_antisym_rule = th_2 "DEDUCT_ANTISYM_RULE" 0x17 "th1" "th2"
+val prove_hyp           = th_2 "PROVE_HYP"           0x21 "th1" "th2"
+
+(* new_axiom: id tm *)
+val new_axiom           = th_1 "new_axiom"           0x30 "tm"
+
+(* new_specification: id th *)
+val new_specification   = th_1 "new_specification"   0x31 "th"
+
+(* INST id th subst *)
+fun inst (out as TextOut _) id th pairs =
+    (jBegin out "INST"; jInt out "id" id;
+     jInt out "th" th; jSubstList out "subst" pairs; jEnd out)
+  | inst out id th pairs =
+    (bOpcode out 0x18; bVarint out id; bVarint out th;
+     bVarint out (length pairs);
+     List.app (fn (a,b) => (bVarint out a; bVarint out b)) pairs)
+
+(* INST_TYPE id th subst *)
+fun inst_type (out as TextOut _) id th pairs =
+    (jBegin out "INST_TYPE"; jInt out "id" id;
+     jInt out "th" th; jSubstList out "subst" pairs; jEnd out)
+  | inst_type out id th pairs =
+    (bOpcode out 0x19; bVarint out id; bVarint out th;
+     bVarint out (length pairs);
+     List.app (fn (a,b) => (bVarint out a; bVarint out b)) pairs)
+
+(* ALPHA_THM id th tms tm *)
+fun alpha_thm (out as TextOut _) id th tms tm =
+    (jBegin out "ALPHA_THM"; jInt out "id" id;
+     jInt out "th" th; jIntList out "tms" tms;
+     jInt out "tm" tm; jEnd out)
+  | alpha_thm out id th tms tm =
+    (bOpcode out 0x22; bVarint out id; bVarint out th;
+     bVarint out (length tms);
+     List.app (bVarint out) tms;
+     bVarint out tm)
+
+(* new_type_definition id th tyname absname repname *)
+fun new_type_definition (out as TextOut _) id th tyname absname repname =
+    (jBegin out "new_type_definition"; jInt out "id" id;
+     jInt out "th" th; jStr out "tyname" tyname;
+     jStr out "absname" absname; jStr out "repname" repname; jEnd out)
+  | new_type_definition out id th tyname absname repname =
+    (bOpcode out 0x32; bVarint out id; bVarint out th;
+     bString out tyname; bString out absname; bString out repname)
+
+(* COMPUTE id ci tm ths *)
+fun compute (out as TextOut _) id ci tm ths =
+    (jBegin out "COMPUTE"; jInt out "id" id;
+     jInt out "ci" ci; jInt out "tm" tm;
+     jIntList out "ths" ths; jEnd out)
+  | compute out id ci tm ths =
+    (bOpcode out 0x41; bVarint out id; bVarint out ci; bVarint out tm;
+     bVarint out (length ths);
+     List.app (bVarint out) ths)
+
+(* COMPUTE_INIT id ths *)
+fun compute_init (out as TextOut _) id ths =
+    (jBegin out "COMPUTE_INIT"; jInt out "id" id;
+     jIntList out "ths" ths; jEnd out)
+  | compute_init out id ths =
+    (bOpcode out 0x40; bVarint out id;
+     bVarint out (length ths);
+     List.app (bVarint out) ths)
+
+end (* structure Candle *)
+
 (* --- Deletion ------------------------------------------------------------ *)
 
 val del_opcodes = [("ty",0xE0),("tm",0xE1),("th",0xE2),("ci",0xE3)]

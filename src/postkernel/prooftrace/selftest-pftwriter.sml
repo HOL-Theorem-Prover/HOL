@@ -189,7 +189,148 @@ in
   cleanup f
 end
 
-(* --- Binary format tests ------------------------------------------------- *)
+(* --- Candle text format tests --------------------------------------------- *)
+
+val _ = tprint "Text (Candle): core rules"
+val () = let
+  val f = tmpfile "candle-core.pft"
+  val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="candle"}
+  val () = PFTWriter.tyop out 0 "bool" []
+  val () = PFTWriter.tyop out 1 "fun" [0,0]
+  val () = PFTWriter.var out 0 "p" 0
+  val () = PFTWriter.var out 1 "q" 0
+  val () = PFTWriter.Candle.refl out 0 0
+  val () = PFTWriter.Candle.assume out 1 0
+  val () = PFTWriter.Candle.assume out 2 1
+  val () = PFTWriter.Candle.sym out 3 0
+  val () = PFTWriter.Candle.trans out 4 0 3
+  val () = PFTWriter.Candle.eq_mp out 5 0 1
+  val () = PFTWriter.Candle.deduct_antisym_rule out 6 1 2
+  val () = PFTWriter.Candle.mk_comb out 7 0 0
+  val () = PFTWriter.Candle.abs out 8 0 0
+  val () = PFTWriter.Candle.prove_hyp out 9 1 2
+  val () = PFTWriter.closeOut out {n_ty=2, n_tm=2, n_th=10, n_ci=0}
+  val got = readFile f
+  val expected =
+    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"candle\"}\n\
+    \{\"cmd\":\"TYOP\",\"id\":0,\"name\":\"bool\",\"args\":[]}\n\
+    \{\"cmd\":\"TYOP\",\"id\":1,\"name\":\"fun\",\"args\":[0,0]}\n\
+    \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"p\",\"ty\":0}\n\
+    \{\"cmd\":\"VAR\",\"id\":1,\"name\":\"q\",\"ty\":0}\n\
+    \{\"cmd\":\"REFL\",\"id\":0,\"tm\":0}\n\
+    \{\"cmd\":\"ASSUME\",\"id\":1,\"tm\":0}\n\
+    \{\"cmd\":\"ASSUME\",\"id\":2,\"tm\":1}\n\
+    \{\"cmd\":\"SYM\",\"id\":3,\"th\":0}\n\
+    \{\"cmd\":\"TRANS\",\"id\":4,\"th1\":0,\"th2\":3}\n\
+    \{\"cmd\":\"EQ_MP\",\"id\":5,\"eq\":0,\"th\":1}\n\
+    \{\"cmd\":\"DEDUCT_ANTISYM_RULE\",\"id\":6,\"th1\":1,\"th2\":2}\n\
+    \{\"cmd\":\"MK_COMB\",\"id\":7,\"th1\":0,\"th2\":0}\n\
+    \{\"cmd\":\"ABS\",\"id\":8,\"tm\":0,\"th\":0}\n\
+    \{\"cmd\":\"PROVE_HYP\",\"id\":9,\"th1\":1,\"th2\":2}\n\
+    \{\"cmd\":\"FOOTER\",\"n_ty\":2,\"n_tm\":2,\"n_th\":10,\"n_ci\":0}\n"
+in
+  if got = expected then OK()
+  else die ("got:\n" ^ got);
+  cleanup f
+end
+
+val _ = tprint "Text (Candle): beta, inst, inst_type, alpha_thm"
+val () = let
+  val f = tmpfile "candle-misc.pft"
+  val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="candle"}
+  val () = PFTWriter.tyvar out 0 "A"
+  val () = PFTWriter.tyop out 1 "bool" []
+  val () = PFTWriter.var out 0 "x" 0
+  val () = PFTWriter.Candle.beta out 0 0
+  val () = PFTWriter.Candle.inst out 1 0 [(0,0)]
+  val () = PFTWriter.Candle.inst_type out 2 0 [(0,1)]
+  val () = PFTWriter.Candle.alpha_thm out 3 0 [0,0] 0
+  val () = PFTWriter.closeOut out {n_ty=2, n_tm=1, n_th=4, n_ci=0}
+  val got = readFile f
+  val expected =
+    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"candle\"}\n\
+    \{\"cmd\":\"TYVAR\",\"id\":0,\"name\":\"A\"}\n\
+    \{\"cmd\":\"TYOP\",\"id\":1,\"name\":\"bool\",\"args\":[]}\n\
+    \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"x\",\"ty\":0}\n\
+    \{\"cmd\":\"BETA\",\"id\":0,\"tm\":0}\n\
+    \{\"cmd\":\"INST\",\"id\":1,\"th\":0,\"subst\":[{\"redex\":0,\"residue\":0}]}\n\
+    \{\"cmd\":\"INST_TYPE\",\"id\":2,\"th\":0,\"subst\":[{\"redex\":0,\"residue\":1}]}\n\
+    \{\"cmd\":\"ALPHA_THM\",\"id\":3,\"th\":0,\"tms\":[0,0],\"tm\":0}\n\
+    \{\"cmd\":\"FOOTER\",\"n_ty\":2,\"n_tm\":1,\"n_th\":4,\"n_ci\":0}\n"
+in
+  if got = expected then OK()
+  else die ("got:\n" ^ got);
+  cleanup f
+end
+
+val _ = tprint "Text (Candle): axioms, definitions, compute"
+val () = let
+  val f = tmpfile "candle-defs.pft"
+  val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="candle"}
+  val () = PFTWriter.tyop out 0 "bool" []
+  val () = PFTWriter.var out 0 "x" 0
+  val () = PFTWriter.Candle.new_axiom out 0 0
+  val () = PFTWriter.Candle.new_specification out 1 0
+  val () = PFTWriter.Candle.new_type_definition out 2 0 "mid" "mid_ABS" "mid_REP"
+  val () = PFTWriter.Candle.compute_init out 0 [0, 1, 2]
+  val () = PFTWriter.Candle.compute out 4 0 0 [0]
+  val () = PFTWriter.closeOut out {n_ty=1, n_tm=1, n_th=5, n_ci=1}
+  val got = readFile f
+  val expected =
+    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"candle\"}\n\
+    \{\"cmd\":\"TYOP\",\"id\":0,\"name\":\"bool\",\"args\":[]}\n\
+    \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"x\",\"ty\":0}\n\
+    \{\"cmd\":\"new_axiom\",\"id\":0,\"tm\":0}\n\
+    \{\"cmd\":\"new_specification\",\"id\":1,\"th\":0}\n\
+    \{\"cmd\":\"new_type_definition\",\"id\":2,\"th\":0,\"tyname\":\"mid\",\"absname\":\"mid_ABS\",\"repname\":\"mid_REP\"}\n\
+    \{\"cmd\":\"COMPUTE_INIT\",\"id\":0,\"ths\":[0,1,2]}\n\
+    \{\"cmd\":\"COMPUTE\",\"id\":4,\"ci\":0,\"tm\":0,\"ths\":[0]}\n\
+    \{\"cmd\":\"FOOTER\",\"n_ty\":1,\"n_tm\":1,\"n_th\":5,\"n_ci\":1}\n"
+in
+  if got = expected then OK()
+  else die ("got:\n" ^ got);
+  cleanup f
+end
+
+val _ = tprint "Binary (Candle): core rules"
+val () = let
+  val f = tmpfile "candle-core.bpft"
+  val out = PFTWriter.openOut {file=f, binary=true, version=1, ruleset="candle"}
+  val () = PFTWriter.tyop out 0 "bool" []
+  val () = PFTWriter.var out 0 "p" 0
+  val () = PFTWriter.Candle.refl out 0 0
+  val () = PFTWriter.Candle.assume out 1 0
+  val () = PFTWriter.Candle.sym out 2 0
+  val () = PFTWriter.Candle.trans out 3 0 2
+  val () = PFTWriter.closeOut out {n_ty=1, n_tm=1, n_th=4, n_ci=0}
+  val got = readBinFile f
+  val expected = String.implode (map Char.chr [
+    0x50, 0x46, 0x54, 0x00,       (* magic *)
+    0x01,                          (* version=1 *)
+    0x06, 0x63, 0x61, 0x6E, 0x64, 0x6C, 0x65, (* "candle" *)
+    (* TYOP 0 "bool" [] *)
+    0x02, 0x00, 0x04, 0x62, 0x6F, 0x6F, 0x6C, 0x00,
+    (* VAR 0 "p" 0 *)
+    0x03, 0x00, 0x01, 0x70, 0x00,
+    (* REFL 0 0 *)
+    0x10, 0x00, 0x00,
+    (* ASSUME 1 0 *)
+    0x15, 0x01, 0x00,
+    (* SYM 2 0 *)
+    0x20, 0x02, 0x00,
+    (* TRANS 3 0 2 *)
+    0x11, 0x03, 0x00, 0x02,
+    (* footer: 1 1 4 0, len=4 *)
+    0x01, 0x01, 0x04, 0x00,
+    0x04, 0x00
+  ])
+in
+  if got = expected then OK()
+  else die ("binary mismatch, got " ^ Int.toString (size got) ^ " bytes");
+  cleanup f
+end
+
+(* --- Binary format tests (HOL4) ----------------------------------------- *)
 
 val _ = tprint "Binary: header + footer with basic commands"
 val () = let

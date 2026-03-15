@@ -75,4 +75,27 @@ signature PFTWriter = sig
                         -> (string * int) list -> (string * int) list -> unit
   end
 
+  (* Candle ruleset theorem commands *)
+  structure Candle : sig
+    val refl                : pft_out -> int -> int -> unit
+    val trans               : pft_out -> int -> int -> int -> unit
+    val mk_comb             : pft_out -> int -> int -> int -> unit
+    val abs                 : pft_out -> int -> int -> int -> unit
+    val beta                : pft_out -> int -> int -> unit
+    val assume              : pft_out -> int -> int -> unit
+    val eq_mp               : pft_out -> int -> int -> int -> unit
+    val deduct_antisym_rule : pft_out -> int -> int -> int -> unit
+    val inst                : pft_out -> int -> int -> (int * int) list -> unit
+    val inst_type           : pft_out -> int -> int -> (int * int) list -> unit
+    val sym                 : pft_out -> int -> int -> unit
+    val prove_hyp           : pft_out -> int -> int -> int -> unit
+    val alpha_thm           : pft_out -> int -> int -> int list -> int -> unit
+    val new_axiom           : pft_out -> int -> int -> unit
+    val new_specification   : pft_out -> int -> int -> unit
+    val new_type_definition : pft_out -> int -> int -> string -> string
+                              -> string -> unit
+    val compute             : pft_out -> int -> int -> int -> int list -> unit
+    val compute_init        : pft_out -> int -> int list -> unit
+  end
+
 end
