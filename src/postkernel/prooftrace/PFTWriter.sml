@@ -204,6 +204,10 @@ fun th_3 cmd opc k1 k2 k3 out id a b c = case out of
   | BinOut _ => (bOpcode out opc; bVarint out id;
                  bVarint out a; bVarint out b; bVarint out c)
 
+(* --- HOL4 ruleset -------------------------------------------------------- *)
+
+structure HOL4 = struct
+
 (* --- Basic theorem rules ------------------------------------------------- *)
 
 val refl       = th_1 "REFL"       0x10 "tm"
@@ -348,6 +352,8 @@ fun compute_init (out as TextOut _) id ty1 ty2 char_eqns cval_terms =
      List.app (fn (n,th) => (bString out n; bVarint out th)) char_eqns;
      bVarint out (length cval_terms);
      List.app (fn (n,tm) => (bString out n; bVarint out tm)) cval_terms)
+
+end (* structure HOL4 *)
 
 (* --- Deletion ------------------------------------------------------------ *)
 

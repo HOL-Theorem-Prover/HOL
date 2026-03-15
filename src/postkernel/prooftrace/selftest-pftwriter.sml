@@ -24,7 +24,7 @@ val () = let
   val () = PFTWriter.tyvar out 0 "alpha"
   val () = PFTWriter.tyop out 1 "bool" []
   val () = PFTWriter.var out 0 "x" 0
-  val () = PFTWriter.refl out 0 0
+  val () = PFTWriter.HOL4.refl out 0 0
   val () = PFTWriter.closeOut out {n_ty=2, n_tm=1, n_th=1, n_ci=0}
   val got = readFile f
   val expected =
@@ -72,13 +72,13 @@ val () = let
   val () = PFTWriter.tyop out 0 "bool" []
   val () = PFTWriter.var out 0 "p" 0
   val () = PFTWriter.var out 1 "q" 0
-  val () = PFTWriter.assume out 0 0
-  val () = PFTWriter.assume out 1 1
-  val () = PFTWriter.conj out 2 0 1
-  val () = PFTWriter.conjunct1 out 3 2
-  val () = PFTWriter.conjunct2 out 4 2
-  val () = PFTWriter.disch out 5 0 1
-  val () = PFTWriter.mp out 6 5 0
+  val () = PFTWriter.HOL4.assume out 0 0
+  val () = PFTWriter.HOL4.assume out 1 1
+  val () = PFTWriter.HOL4.conj out 2 0 1
+  val () = PFTWriter.HOL4.conjunct1 out 3 2
+  val () = PFTWriter.HOL4.conjunct2 out 4 2
+  val () = PFTWriter.HOL4.disch out 5 0 1
+  val () = PFTWriter.HOL4.mp out 6 5 0
   val () = PFTWriter.closeOut out {n_ty=1, n_tm=2, n_th=7, n_ci=0}
   val got = readFile f
   val expected =
@@ -108,10 +108,10 @@ val () = let
   val () = PFTWriter.tyop out 1 "fun" [0,0]
   val () = PFTWriter.var out 0 "x" 0
   val () = PFTWriter.var out 1 "y" 0
-  val () = PFTWriter.refl out 0 0
-  val () = PFTWriter.genl out 1 0 [0, 1]
-  val () = PFTWriter.inst out 2 0 [(0,1),(1,0)]
-  val () = PFTWriter.inst_type out 3 0 [(0,1)]
+  val () = PFTWriter.HOL4.refl out 0 0
+  val () = PFTWriter.HOL4.genl out 1 0 [0, 1]
+  val () = PFTWriter.HOL4.inst out 2 0 [(0,1),(1,0)]
+  val () = PFTWriter.HOL4.inst_type out 3 0 [(0,1)]
   val () = PFTWriter.closeOut out {n_ty=2, n_tm=2, n_th=4, n_ci=0}
   val got = readFile f
   val expected =
@@ -131,13 +131,13 @@ in
   cleanup f
 end
 
-val _ = tprint "Text: del, save, load, comment"
+val _ = tprint "Text: del, save, load"
 val () = let
   val f = tmpfile "meta.pft"
   val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="hol4"}
   val () = PFTWriter.tyop out 0 "bool" []
   val () = PFTWriter.var out 0 "x" 0
-  val () = PFTWriter.refl out 0 0
+  val () = PFTWriter.HOL4.refl out 0 0
   val () = PFTWriter.save out "myThm" 0
   val () = PFTWriter.del out "th" 0
   val () = PFTWriter.del_range out "tm" 0 5
@@ -166,11 +166,11 @@ val () = let
   val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="hol4"}
   val () = PFTWriter.tyop out 0 "bool" []
   val () = PFTWriter.var out 0 "x" 0
-  val () = PFTWriter.refl out 0 0
-  val () = PFTWriter.axiom out 1 0 (SOME "my_axiom")
-  val () = PFTWriter.axiom out 2 0 NONE
-  val () = PFTWriter.def_spec out 3 0 ["foo", "bar"]
-  val () = PFTWriter.def_tyop out 4 0 "mytype"
+  val () = PFTWriter.HOL4.refl out 0 0
+  val () = PFTWriter.HOL4.axiom out 1 0 (SOME "my_axiom")
+  val () = PFTWriter.HOL4.axiom out 2 0 NONE
+  val () = PFTWriter.HOL4.def_spec out 3 0 ["foo", "bar"]
+  val () = PFTWriter.HOL4.def_tyop out 4 0 "mytype"
   val () = PFTWriter.closeOut out {n_ty=1, n_tm=1, n_th=5, n_ci=0}
   val got = readFile f
   val expected =
@@ -198,7 +198,7 @@ val () = let
   val () = PFTWriter.tyvar out 0 "alpha"
   val () = PFTWriter.tyop out 1 "bool" []
   val () = PFTWriter.var out 0 "x" 0
-  val () = PFTWriter.refl out 0 0
+  val () = PFTWriter.HOL4.refl out 0 0
   val () = PFTWriter.closeOut out {n_ty=2, n_tm=1, n_th=1, n_ci=0}
   val got = readBinFile f
   val expected = String.implode (map Char.chr [
