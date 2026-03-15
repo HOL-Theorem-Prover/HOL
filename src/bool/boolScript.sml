@@ -73,9 +73,11 @@ fun ax l (n,t) = Theory.gen_new_axiom(n,t,mkloc l)
 val T_DEF = def (#(FILE),#(LINE))
   ("T_DEF",
    “T = ((\x:bool. x) = \x:bool. x)”);
+val _ = Thm.register_T T_DEF;
 
 val FORALL_DEF = def (#(FILE), #(LINE))
     ("FORALL_DEF", “! = \P:'a->bool. P = \x. T”)
+val _ = Thm.register_forall FORALL_DEF;
 
 val _ = set_fixity "!" Binder
 val _ = unicode_version {u = UChar.forall, tmnm = "!"};
@@ -84,6 +86,7 @@ val _ = TeX_notation {hol = UChar.forall, TeX = ("\\HOLTokenForall{}",1)}
 
 val EXISTS_DEF = def (#(FILE), #(LINE))
                      ("EXISTS_DEF",     “? = \P:'a->bool. P ($@ P)”);
+val _ = Thm.register_exists EXISTS_DEF;
 
 val _ = set_fixity "?" Binder
 val _ = unicode_version {u = UChar.exists, tmnm = "?"}
@@ -92,6 +95,7 @@ val _ = TeX_notation {hol = UChar.exists, TeX = ("\\HOLTokenExists{}",1)}
 
 val AND_DEF = def (#(FILE), #(LINE))
             ("AND_DEF",        “/\ = \t1 t2. !t. (t1 ==> t2 ==> t) ==> t”);
+val _ = Thm.register_conj AND_DEF;
 
 val _ = set_fixity "/\\" (Infixr 400);
 val _ = unicode_version {u = UChar.conj, tmnm = "/\\"};
@@ -101,6 +105,7 @@ val _ = TeX_notation {hol = UChar.conj, TeX = ("\\HOLTokenConj{}",1)}
 
 val OR_DEF = def (#(FILE), #(LINE))
    ("OR_DEF",         “\/ = \t1 t2. !t. (t1 ==> t) ==> (t2 ==> t) ==> t”)
+val _ = Thm.register_disj OR_DEF;
 
 val _ = set_fixity "\\/" (Infixr 300)
 val _ = unicode_version {u = UChar.disj, tmnm = "\\/"}
@@ -110,9 +115,11 @@ val _ = TeX_notation {hol = UChar.disj, TeX = ("\\HOLTokenDisj{}",1)}
 
 val F_DEF = def (#(FILE), #(LINE))
    ("F_DEF",          “F = !t. t”);
+val _ = Thm.register_F F_DEF;
 
 val NOT_DEF = def (#(FILE), #(LINE))
    ("NOT_DEF",        “~ = \t. t ==> F”);
+val _ = Thm.register_neg NOT_DEF;
 
 (* now allows parsing of not equal *)
 Overload "<>" = “\x:'a y:'a. ~(x = y)”
@@ -156,6 +163,7 @@ val TYPE_DEFINITION = def (#(FILE), #(LINE))
                       “TYPE_DEFINITION = \P:'a->bool. \rep:'b->'a.
                               (!x' x''. (rep x' = rep x'') ==> (x' = x'')) /\
                               (!x. P x = (?x'. x = rep x'))”);
+val _ = Thm.register_type_definition TYPE_DEFINITION;
 
 
 (*---------------------------------------------------------------------------*
