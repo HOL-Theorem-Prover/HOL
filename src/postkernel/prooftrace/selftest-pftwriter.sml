@@ -15,7 +15,7 @@ fun readBinFile f = let
 in BinIO.closeIn s; Byte.bytesToString v end
 fun cleanup f = OS.FileSys.remove f handle OS.SysErr _ => ()
 
-(* --- Text format tests --------------------------------------------------- *)
+(* --- Text format tests (JSON Lines) -------------------------------------- *)
 
 val _ = tprint "Text: header + footer with basic commands"
 val () = let
@@ -28,43 +28,37 @@ val () = let
   val () = PFTWriter.closeOut out {n_ty=2, n_tm=1, n_th=1, n_ci=0}
   val got = readFile f
   val expected =
-    "PFT 1 hol4\n\
-    \TYVAR 0 alpha\n\
-    \TYOP 1 bool\n\
-    \VAR 0 x 0\n\
-    \REFL 0 0\n\
-    \2 1 1 0\n"
+    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"hol4\"}\n\
+    \{\"cmd\":\"TYVAR\",\"id\":0,\"name\":\"alpha\"}\n\
+    \{\"cmd\":\"TYOP\",\"id\":1,\"name\":\"bool\",\"args\":[]}\n\
+    \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"x\",\"ty\":0}\n\
+    \{\"cmd\":\"REFL\",\"id\":0,\"tm\":0}\n\
+    \{\"cmd\":\"FOOTER\",\"n_ty\":2,\"n_tm\":1,\"n_th\":1,\"n_ci\":0}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got);
   cleanup f
 end
 
-val _ = tprint "Text: name escaping"
+val _ = tprint "Text: JSON string escaping"
 val () = let
   val f = tmpfile "escape.pft"
   val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="hol4"}
-  (* SML string    -> actual chars -> PFT output *)
-  val () = PFTWriter.tyvar out 0 ""           (* empty -> \_ *)
-  val () = PFTWriter.tyvar out 1 "a b"        (* "a b" -> a\ b *)
-  val () = PFTWriter.tyvar out 2 "a\\b"       (* "a\b" -> a\b (no escape needed) *)
-  val () = PFTWriter.tyvar out 3 "a\\ "       (* "a\ " -> a\\\ (both escaped) *)
-  val () = PFTWriter.tyvar out 4 "a\\"        (* "a\" -> a\\ (trailing \ escaped) *)
-  val () = PFTWriter.tyvar out 5 "\\_"        (* "\_" -> \\_ (reserved token) *)
-  val () = PFTWriter.closeOut out {n_ty=6, n_tm=0, n_th=0, n_ci=0}
+  val () = PFTWriter.tyvar out 0 ""               (* empty string *)
+  val () = PFTWriter.tyvar out 1 "a b"            (* space is fine in JSON *)
+  val () = PFTWriter.tyvar out 2 "a\\b"           (* backslash escaped *)
+  val () = PFTWriter.tyvar out 3 "a\"b"           (* quote escaped *)
+  val () = PFTWriter.tyvar out 4 "bool$/\\"       (* /\ with trailing \ *)
+  val () = PFTWriter.closeOut out {n_ty=5, n_tm=0, n_th=0, n_ci=0}
   val got = readFile f
-  (* Build expected with String.concat to keep SML escaping clear.
-     Each line shows: PFT output chars | SML literal *)
-  val expected = String.concat [
-    "PFT 1 hol4\n",
-    "TYVAR 0 \\_\n",                  (* PFT: \_       *)
-    "TYVAR 1 a\\ b\n",               (* PFT: a\ b     *)
-    "TYVAR 2 a\\b\n",                (* PFT: a\b      *)
-    "TYVAR 3 a\\\\\\ \n",            (* PFT: a\\\sp   *)
-    "TYVAR 4 a\\\\\n",               (* PFT: a\\      *)
-    "TYVAR 5 \\\\_\n",               (* PFT: \\_      *)
-    "6 0 0 0\n"
-  ]
+  val expected =
+    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"hol4\"}\n\
+    \{\"cmd\":\"TYVAR\",\"id\":0,\"name\":\"\"}\n\
+    \{\"cmd\":\"TYVAR\",\"id\":1,\"name\":\"a b\"}\n\
+    \{\"cmd\":\"TYVAR\",\"id\":2,\"name\":\"a\\\\b\"}\n\
+    \{\"cmd\":\"TYVAR\",\"id\":3,\"name\":\"a\\\"b\"}\n\
+    \{\"cmd\":\"TYVAR\",\"id\":4,\"name\":\"bool$/\\\\\"}\n\
+    \{\"cmd\":\"FOOTER\",\"n_ty\":5,\"n_tm\":0,\"n_th\":0,\"n_ci\":0}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got ^ "expected:\n" ^ expected);
@@ -88,18 +82,18 @@ val () = let
   val () = PFTWriter.closeOut out {n_ty=1, n_tm=2, n_th=7, n_ci=0}
   val got = readFile f
   val expected =
-    "PFT 1 hol4\n\
-    \TYOP 0 bool\n\
-    \VAR 0 p 0\n\
-    \VAR 1 q 0\n\
-    \ASSUME 0 0\n\
-    \ASSUME 1 1\n\
-    \CONJ 2 0 1\n\
-    \CONJUNCT1 3 2\n\
-    \CONJUNCT2 4 2\n\
-    \DISCH 5 0 1\n\
-    \MP 6 5 0\n\
-    \1 2 7 0\n"
+    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"hol4\"}\n\
+    \{\"cmd\":\"TYOP\",\"id\":0,\"name\":\"bool\",\"args\":[]}\n\
+    \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"p\",\"ty\":0}\n\
+    \{\"cmd\":\"VAR\",\"id\":1,\"name\":\"q\",\"ty\":0}\n\
+    \{\"cmd\":\"ASSUME\",\"id\":0,\"tm\":0}\n\
+    \{\"cmd\":\"ASSUME\",\"id\":1,\"tm\":1}\n\
+    \{\"cmd\":\"CONJ\",\"id\":2,\"th1\":0,\"th2\":1}\n\
+    \{\"cmd\":\"CONJUNCT1\",\"id\":3,\"th\":2}\n\
+    \{\"cmd\":\"CONJUNCT2\",\"id\":4,\"th\":2}\n\
+    \{\"cmd\":\"DISCH\",\"id\":5,\"tm\":0,\"th\":1}\n\
+    \{\"cmd\":\"MP\",\"id\":6,\"imp\":5,\"ant\":0}\n\
+    \{\"cmd\":\"FOOTER\",\"n_ty\":1,\"n_tm\":2,\"n_th\":7,\"n_ci\":0}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got);
@@ -121,16 +115,16 @@ val () = let
   val () = PFTWriter.closeOut out {n_ty=2, n_tm=2, n_th=4, n_ci=0}
   val got = readFile f
   val expected =
-    "PFT 1 hol4\n\
-    \TYOP 0 bool\n\
-    \TYOP 1 fun 0 0\n\
-    \VAR 0 x 0\n\
-    \VAR 1 y 0\n\
-    \REFL 0 0\n\
-    \GENL 1 0 0 1\n\
-    \INST 2 0 0 1 1 0\n\
-    \INST_TYPE 3 0 0 1\n\
-    \2 2 4 0\n"
+    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"hol4\"}\n\
+    \{\"cmd\":\"TYOP\",\"id\":0,\"name\":\"bool\",\"args\":[]}\n\
+    \{\"cmd\":\"TYOP\",\"id\":1,\"name\":\"fun\",\"args\":[0,0]}\n\
+    \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"x\",\"ty\":0}\n\
+    \{\"cmd\":\"VAR\",\"id\":1,\"name\":\"y\",\"ty\":0}\n\
+    \{\"cmd\":\"REFL\",\"id\":0,\"tm\":0}\n\
+    \{\"cmd\":\"GENL\",\"id\":1,\"th\":0,\"tms\":[0,1]}\n\
+    \{\"cmd\":\"INST\",\"id\":2,\"th\":0,\"subst\":[{\"redex\":0,\"residue\":1},{\"redex\":1,\"residue\":0}]}\n\
+    \{\"cmd\":\"INST_TYPE\",\"id\":3,\"th\":0,\"subst\":[{\"redex\":0,\"residue\":1}]}\n\
+    \{\"cmd\":\"FOOTER\",\"n_ty\":2,\"n_tm\":2,\"n_th\":4,\"n_ci\":0}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got);
@@ -144,7 +138,6 @@ val () = let
   val () = PFTWriter.tyop out 0 "bool" []
   val () = PFTWriter.var out 0 "x" 0
   val () = PFTWriter.refl out 0 0
-  val () = PFTWriter.comment out "test comment"
   val () = PFTWriter.save out "myThm" 0
   val () = PFTWriter.del out "th" 0
   val () = PFTWriter.del_range out "tm" 0 5
@@ -152,16 +145,15 @@ val () = let
   val () = PFTWriter.closeOut out {n_ty=1, n_tm=1, n_th=2, n_ci=0}
   val got = readFile f
   val expected =
-    "PFT 1 hol4\n\
-    \TYOP 0 bool\n\
-    \VAR 0 x 0\n\
-    \REFL 0 0\n\
-    \# test comment\n\
-    \SAVE myThm 0\n\
-    \DEL th 0\n\
-    \DEL tm 0 5\n\
-    \LOAD 1 myThm\n\
-    \1 1 2 0\n"
+    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"hol4\"}\n\
+    \{\"cmd\":\"TYOP\",\"id\":0,\"name\":\"bool\",\"args\":[]}\n\
+    \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"x\",\"ty\":0}\n\
+    \{\"cmd\":\"REFL\",\"id\":0,\"tm\":0}\n\
+    \{\"cmd\":\"SAVE\",\"name\":\"myThm\",\"th\":0}\n\
+    \{\"cmd\":\"DEL\",\"ns\":\"th\",\"id\":0}\n\
+    \{\"cmd\":\"DEL\",\"ns\":\"tm\",\"id\":0,\"upto\":5}\n\
+    \{\"cmd\":\"LOAD\",\"id\":1,\"name\":\"myThm\"}\n\
+    \{\"cmd\":\"FOOTER\",\"n_ty\":1,\"n_tm\":1,\"n_th\":2,\"n_ci\":0}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got);
@@ -182,15 +174,15 @@ val () = let
   val () = PFTWriter.closeOut out {n_ty=1, n_tm=1, n_th=5, n_ci=0}
   val got = readFile f
   val expected =
-    "PFT 1 hol4\n\
-    \TYOP 0 bool\n\
-    \VAR 0 x 0\n\
-    \REFL 0 0\n\
-    \AXIOM 1 0 my_axiom\n\
-    \AXIOM 2 0\n\
-    \DEF_SPEC 3 0 foo bar\n\
-    \DEF_TYOP 4 0 mytype\n\
-    \1 1 5 0\n"
+    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"hol4\"}\n\
+    \{\"cmd\":\"TYOP\",\"id\":0,\"name\":\"bool\",\"args\":[]}\n\
+    \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"x\",\"ty\":0}\n\
+    \{\"cmd\":\"REFL\",\"id\":0,\"tm\":0}\n\
+    \{\"cmd\":\"AXIOM\",\"id\":1,\"tm\":0,\"name\":\"my_axiom\"}\n\
+    \{\"cmd\":\"AXIOM\",\"id\":2,\"tm\":0}\n\
+    \{\"cmd\":\"DEF_SPEC\",\"id\":3,\"th\":0,\"names\":[\"foo\",\"bar\"]}\n\
+    \{\"cmd\":\"DEF_TYOP\",\"id\":4,\"th\":0,\"name\":\"mytype\"}\n\
+    \{\"cmd\":\"FOOTER\",\"n_ty\":1,\"n_tm\":1,\"n_th\":5,\"n_ci\":0}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got);
@@ -226,23 +218,4 @@ in
   if got = expected then OK()
   else die ("binary mismatch, got " ^ Int.toString (size got) ^ " bytes");
   cleanup f
-end
-
-val _ = tprint "Binary: comments are ignored"
-val () = let
-  val f1 = tmpfile "nocomment.bpft"
-  val out1 = PFTWriter.openOut {file=f1, binary=true, version=1, ruleset="hol4"}
-  val () = PFTWriter.refl out1 0 0
-  val () = PFTWriter.closeOut out1 {n_ty=0, n_tm=0, n_th=1, n_ci=0}
-  val f2 = tmpfile "withcomment.bpft"
-  val out2 = PFTWriter.openOut {file=f2, binary=true, version=1, ruleset="hol4"}
-  val () = PFTWriter.comment out2 "this should be ignored"
-  val () = PFTWriter.refl out2 0 0
-  val () = PFTWriter.closeOut out2 {n_ty=0, n_tm=0, n_th=1, n_ci=0}
-  val b1 = readBinFile f1
-  val b2 = readBinFile f2
-in
-  if b1 = b2 then OK()
-  else die "binary output differs with comment";
-  cleanup f1; cleanup f2
 end

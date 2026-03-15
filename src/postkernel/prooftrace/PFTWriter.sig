@@ -81,7 +81,4 @@ signature PFTWriter = sig
   val save : pft_out -> string -> int -> unit
   val load : pft_out -> int -> string -> unit
 
-  (* Comment (text only; ignored in binary) *)
-  val comment : pft_out -> string -> unit
-
 end

@@ -6,44 +6,73 @@ datatype pft_out =
     TextOut of TextIO.outstream
   | BinOut of BinIO.outstream
 
-(* Text output helpers *)
+(* --- JSON text output helpers -------------------------------------------- *)
 
 fun tWrite (TextOut s) t = TextIO.output (s, t)
   | tWrite _ _ = raise Fail "tWrite on binary stream"
 
-fun tInt out n = tWrite out (Int.toString n)
+(* JSON string escaping: handle \, ", and control characters *)
+fun jsonEscape s = let
+  val n = String.size s
+  fun esc i acc = if i >= n then String.concat (List.rev acc)
+    else let val c = String.sub(s, i) in
+      if c = #"\"" then esc (i+1) ("\\\"" :: acc)
+      else if c = #"\\" then esc (i+1) ("\\\\" :: acc)
+      else if c = #"\n" then esc (i+1) ("\\n" :: acc)
+      else if c = #"\r" then esc (i+1) ("\\r" :: acc)
+      else if c = #"\t" then esc (i+1) ("\\t" :: acc)
+      else if Char.ord c < 32 then
+        esc (i+1) ("\\u00"
+                    ^ (if Char.ord c < 16 then "0" else "1")
+                    ^ str (String.sub("0123456789abcdef",
+                                      Char.ord c mod 16))
+                    :: acc)
+      else esc (i+1) (str c :: acc)
+    end
+in esc 0 [] end
 
-(* Name escaping for text format.  The decoder interprets:
-     "\ "  as a literal space
-     "\\"  as a literal backslash
-     "\x"  (any other x) as the two literal characters \ and x
-     "\_"  as the whole-token encoding of the empty string
-   We escape minimally: a backslash is only escaped when followed by space or
-   backslash or end of string (the only pairs the decoder treats specially).
-   Spaces are always escaped. The token "\_" is reserved for the empty string,
-   so the name "\_" is written as "\\_". *)
-fun escapeName "" = "\\_"
-  | escapeName "\\_" = "\\\\_"
-  | escapeName s = let
-      val n = String.size s
-      fun esc i acc = if i >= n then List.rev acc
-        else let val c = String.sub(s, i) in
-          if c = #" " orelse (
-             c = #"\\" andalso (
-               let val c2 = String.sub(s, i+1)
-               in c2 = #" " orelse c2 = #"\\"
-               end handle Subscript => true ))
-          then esc (i+1) (c :: #"\\" :: acc)
-          else esc (i+1) (c :: acc)
-        end
-    in String.implode (esc 0 []) end
+(* Begin a JSON object: {"cmd":"NAME" *)
+fun jBegin out cmd =
+  tWrite out ("{\"cmd\":\"" ^ cmd ^ "\"")
 
-fun tName out s = tWrite out (escapeName s)
+(* Emit ,"key":int *)
+fun jInt out key n =
+  tWrite out (",\"" ^ key ^ "\":" ^ Int.toString n)
 
-fun tSp out = tWrite out " "
-fun tNl out = tWrite out "\n"
+(* Emit ,"key":"value" *)
+fun jStr out key v =
+  tWrite out (",\"" ^ key ^ "\":\"" ^ jsonEscape v ^ "\"")
 
-(* Binary output helpers *)
+(* Emit ,"key":[i1,i2,...] *)
+fun jIntList out key ns =
+  tWrite out (",\"" ^ key ^ "\":["
+              ^ String.concatWith "," (List.map Int.toString ns) ^ "]")
+
+(* Emit ,"key":["s1","s2",...] *)
+fun jStrList out key ss =
+  tWrite out (",\"" ^ key ^ "\":["
+              ^ String.concatWith ","
+                  (List.map (fn s => "\"" ^ jsonEscape s ^ "\"") ss) ^ "]")
+
+(* Emit ,"key":[{"redex":r1,"residue":r2},...] *)
+fun jSubstList out key pairs =
+  let fun one (r, s) = "{\"redex\":" ^ Int.toString r
+                        ^ ",\"residue\":" ^ Int.toString s ^ "}"
+  in tWrite out (",\"" ^ key ^ "\":["
+                 ^ String.concatWith "," (List.map one pairs) ^ "]")
+  end
+
+(* Emit ,"key":{"n1":v1,"n2":v2,...} for named int maps *)
+fun jNamedIntMap out key entries =
+  let fun one (n, v) = "\"" ^ jsonEscape n ^ "\":" ^ Int.toString v
+  in tWrite out (",\"" ^ key ^ "\":{"
+                 ^ String.concatWith "," (List.map one entries) ^ "}")
+  end
+
+(* End a JSON object: }\n *)
+fun jEnd out = tWrite out "}\n"
+
+(* --- Binary output helpers ----------------------------------------------- *)
 
 fun bByte (BinOut s) b = BinIO.output1 (s, b)
   | bByte _ _ = raise Fail "bByte on text stream"
@@ -82,14 +111,20 @@ fun openOut {file, binary, version, ruleset} =
   else let
     val s = TextIO.openOut file
     val out = TextOut s
-  in tWrite out "PFT "; tInt out version;
-     tSp out; tName out ruleset; tNl out;
+  in jBegin out "PFT";
+     jInt out "version" version;
+     jStr out "ruleset" ruleset;
+     jEnd out;
      out
   end
 
 fun closeOut (out as TextOut s) {n_ty, n_tm, n_th, n_ci} =
-    (tInt out n_ty; tSp out; tInt out n_tm;
-     tSp out; tInt out n_th; tSp out; tInt out n_ci; tNl out;
+    (jBegin out "FOOTER";
+     jInt out "n_ty" n_ty;
+     jInt out "n_tm" n_tm;
+     jInt out "n_th" n_th;
+     jInt out "n_ci" n_ci;
+     jEnd out;
      TextIO.closeOut s)
   | closeOut (out as BinOut s) {n_ty, n_tm, n_th, n_ci} = let
     fun varint_size n = if n < 128 then 1 else 1 + varint_size (n div 128)
@@ -105,22 +140,17 @@ fun closeOut (out as TextOut s) {n_ty, n_tm, n_th, n_ci} =
      BinIO.closeOut s
   end
 
-(* --- Text command helpers ------------------------------------------------ *)
-
-(* Emit: COMMAND id args... \n *)
-fun tCmd out cmd id = (tWrite out cmd; tSp out; tInt out id)
-fun tArg out n = (tSp out; tInt out n)
-
 (* --- Type commands ------------------------------------------------------- *)
 
 fun tyvar (out as TextOut _) id name =
-    (tCmd out "TYVAR" id; tSp out; tName out name; tNl out)
+    (jBegin out "TYVAR"; jInt out "id" id;
+     jStr out "name" name; jEnd out)
   | tyvar out id name =
     (bOpcode out 0x01; bVarint out id; bString out name)
 
 fun tyop (out as TextOut _) id name args =
-    (tCmd out "TYOP" id; tSp out; tName out name;
-     List.app (tArg out) args; tNl out)
+    (jBegin out "TYOP"; jInt out "id" id;
+     jStr out "name" name; jIntList out "args" args; jEnd out)
   | tyop out id name args =
     (bOpcode out 0x02; bVarint out id; bString out name;
      bVarint out (length args);
@@ -129,133 +159,143 @@ fun tyop (out as TextOut _) id name args =
 (* --- Term commands ------------------------------------------------------- *)
 
 fun var (out as TextOut _) id name ty_id =
-    (tCmd out "VAR" id; tSp out; tName out name; tArg out ty_id; tNl out)
+    (jBegin out "VAR"; jInt out "id" id;
+     jStr out "name" name; jInt out "ty" ty_id; jEnd out)
   | var out id name ty_id =
     (bOpcode out 0x03; bVarint out id; bString out name; bVarint out ty_id)
 
 fun const (out as TextOut _) id name ty_id =
-    (tCmd out "CONST" id; tSp out; tName out name; tArg out ty_id; tNl out)
+    (jBegin out "CONST"; jInt out "id" id;
+     jStr out "name" name; jInt out "ty" ty_id; jEnd out)
   | const out id name ty_id =
     (bOpcode out 0x04; bVarint out id; bString out name; bVarint out ty_id)
 
 fun comb (out as TextOut _) id tm1 tm2 =
-    (tCmd out "COMB" id; tArg out tm1; tArg out tm2; tNl out)
+    (jBegin out "COMB"; jInt out "id" id;
+     jInt out "rator" tm1; jInt out "rand" tm2; jEnd out)
   | comb out id tm1 tm2 =
     (bOpcode out 0x05; bVarint out id; bVarint out tm1; bVarint out tm2)
 
 fun abs (out as TextOut _) id tm1 tm2 =
-    (tCmd out "ABS" id; tArg out tm1; tArg out tm2; tNl out)
+    (jBegin out "ABS"; jInt out "id" id;
+     jInt out "var" tm1; jInt out "body" tm2; jEnd out)
   | abs out id tm1 tm2 =
     (bOpcode out 0x06; bVarint out id; bVarint out tm1; bVarint out tm2)
 
 (* --- Theorem commands: helpers for common patterns ----------------------- *)
 
-(* th_1: RULE id arg *)
-fun th_1 cmd opc out id a = case out of
-    TextOut _ => (tCmd out cmd id; tArg out a; tNl out)
+(* th_1: RULE id arg — one key *)
+fun th_1 cmd opc k1 out id a = case out of
+    TextOut _ => (jBegin out cmd; jInt out "id" id;
+                  jInt out k1 a; jEnd out)
   | BinOut _ => (bOpcode out opc; bVarint out id; bVarint out a)
 
-(* th_2: RULE id arg1 arg2 *)
-fun th_2 cmd opc out id a b = case out of
-    TextOut _ => (tCmd out cmd id; tArg out a; tArg out b; tNl out)
-  | BinOut _ => (bOpcode out opc; bVarint out id; bVarint out a; bVarint out b)
+(* th_2: RULE id arg1 arg2 — two keys *)
+fun th_2 cmd opc k1 k2 out id a b = case out of
+    TextOut _ => (jBegin out cmd; jInt out "id" id;
+                  jInt out k1 a; jInt out k2 b; jEnd out)
+  | BinOut _ => (bOpcode out opc; bVarint out id;
+                 bVarint out a; bVarint out b)
 
-(* th_3: RULE id arg1 arg2 arg3 *)
-fun th_3 cmd opc out id a b c = case out of
-    TextOut _ => (tCmd out cmd id; tArg out a; tArg out b; tArg out c; tNl out)
+(* th_3: RULE id arg1 arg2 arg3 — three keys *)
+fun th_3 cmd opc k1 k2 k3 out id a b c = case out of
+    TextOut _ => (jBegin out cmd; jInt out "id" id;
+                  jInt out k1 a; jInt out k2 b; jInt out k3 c; jEnd out)
   | BinOut _ => (bOpcode out opc; bVarint out id;
                  bVarint out a; bVarint out b; bVarint out c)
 
 (* --- Basic theorem rules ------------------------------------------------- *)
 
-val refl       = th_1 "REFL"       0x10
-val assume     = th_1 "ASSUME"     0x12
-val beta_conv  = th_1 "BETA_CONV"  0x13
-val sym        = th_1 "SYM"        0x16
-val conjunct1  = th_1 "CONJUNCT1"  0x19
-val conjunct2  = th_1 "CONJUNCT2"  0x1A
-val not_elim   = th_1 "NOT_ELIM"   0x1F
-val not_intro  = th_1 "NOT_INTRO"  0x20
-val beta_thm   = th_1 "Beta"       0x34
-val eq_imp_rule1 = th_1 "EQ_IMP_RULE1" 0x37
-val eq_imp_rule2 = th_1 "EQ_IMP_RULE2" 0x38
+val refl       = th_1 "REFL"       0x10 "tm"
+val assume     = th_1 "ASSUME"     0x12 "tm"
+val beta_conv  = th_1 "BETA_CONV"  0x13 "tm"
+val sym        = th_1 "SYM"        0x16 "th"
+val conjunct1  = th_1 "CONJUNCT1"  0x19 "th"
+val conjunct2  = th_1 "CONJUNCT2"  0x1A "th"
+val not_elim   = th_1 "NOT_ELIM"   0x1F "th"
+val not_intro  = th_1 "NOT_INTRO"  0x20 "th"
+val beta_thm   = th_1 "Beta"       0x34 "th"
+val eq_imp_rule1 = th_1 "EQ_IMP_RULE1" 0x37 "th"
+val eq_imp_rule2 = th_1 "EQ_IMP_RULE2" 0x38 "th"
 
-val alpha      = th_2 "ALPHA"      0x11
-val eq_mp      = th_2 "EQ_MP"      0x14
-val mp         = th_2 "MP"         0x15
-val trans      = th_2 "TRANS"      0x17
-val conj       = th_2 "CONJ"       0x18
-val disch      = th_2 "DISCH"      0x1B
-val disj1      = th_2 "DISJ1"      0x1C
-val disj2      = th_2 "DISJ2"      0x1D
-val ccontr     = th_2 "CCONTR"     0x21
-val gen        = th_2 "GEN"        0x24
-val spec       = th_2 "SPEC"       0x25
-val specialize = th_2 "Specialize" 0x26
-val abs_thm    = th_2 "ABS_THM"    0x30
-val ap_term    = th_2 "AP_TERM"    0x31
-val ap_thm     = th_2 "AP_THM"     0x32
-val mk_comb    = th_2 "MK_COMB"    0x33
-val mk_abs_thm = th_2 "Mk_abs"    0x35
-val deductAntisym = th_2 "deductAntisym" 0x3C
+val alpha      = th_2 "ALPHA"      0x11 "tm1" "tm2"
+val eq_mp      = th_2 "EQ_MP"      0x14 "eq" "th"
+val mp         = th_2 "MP"         0x15 "imp" "ant"
+val trans      = th_2 "TRANS"      0x17 "th1" "th2"
+val conj       = th_2 "CONJ"       0x18 "th1" "th2"
+val disch      = th_2 "DISCH"      0x1B "tm" "th"
+val disj1      = th_2 "DISJ1"      0x1C "th" "tm"
+val disj2      = th_2 "DISJ2"      0x1D "tm" "th"
+val ccontr     = th_2 "CCONTR"     0x21 "tm" "th"
+val gen        = th_2 "GEN"        0x24 "tm" "th"
+val spec       = th_2 "SPEC"       0x25 "tm" "th"
+val specialize = th_2 "Specialize" 0x26 "tm" "th"
+val abs_thm    = th_2 "ABS_THM"    0x30 "tm" "th"
+val ap_term    = th_2 "AP_TERM"    0x31 "tm" "th"
+val ap_thm     = th_2 "AP_THM"     0x32 "th" "tm"
+val mk_comb    = th_2 "MK_COMB"    0x33 "th1" "th2"
+val mk_abs_thm = th_2 "Mk_abs"    0x35 "eq" "body"
+val deductAntisym = th_2 "deductAntisym" 0x3C "th1" "th2"
 
-val exists     = th_3 "EXISTS"     0x22
-val choose     = th_3 "CHOOSE"     0x23
-val mk_comb_thm = th_3 "Mk_comb"  0x36
+val exists     = th_3 "EXISTS"     0x22 "tm1" "tm2" "th"
+val choose     = th_3 "CHOOSE"     0x23 "var" "existence" "body"
+val mk_comb_thm = th_3 "Mk_comb"  0x36 "eq" "rator" "rand"
 
-val disj_cases = th_3 "DISJ_CASES" 0x1E
+val disj_cases = th_3 "DISJ_CASES" 0x1E "disj" "left" "right"
 
 (* --- Variable-length theorem rules --------------------------------------- *)
 
-(* GENL id th tm... *)
+(* GENL id th tms *)
 fun genl (out as TextOut _) id th tms =
-    (tCmd out "GENL" id; tArg out th;
-     List.app (tArg out) tms; tNl out)
+    (jBegin out "GENL"; jInt out "id" id;
+     jInt out "th" th; jIntList out "tms" tms; jEnd out)
   | genl out id th tms =
     (bOpcode out 0x27; bVarint out id; bVarint out th;
      bVarint out (length tms);
      List.app (bVarint out) tms)
 
-(* ABSL id th tm... *)
+(* ABSL id th tms *)
 fun absl (out as TextOut _) id th tms =
-    (tCmd out "ABSL" id; tArg out th;
-     List.app (tArg out) tms; tNl out)
+    (jBegin out "ABSL"; jInt out "id" id;
+     jInt out "th" th; jIntList out "tms" tms; jEnd out)
   | absl out id th tms =
     (bOpcode out 0x28; bVarint out id; bVarint out th;
      bVarint out (length tms);
      List.app (bVarint out) tms)
 
-(* GEN_ABS id th tm tm... *)
+(* GEN_ABS id th tm tms *)
 fun gen_abs (out as TextOut _) id th c tms =
-    (tCmd out "GEN_ABS" id; tArg out th; tArg out c;
-     List.app (tArg out) tms; tNl out)
+    (jBegin out "GEN_ABS"; jInt out "id" id;
+     jInt out "th" th; jInt out "tm" c;
+     jIntList out "tms" tms; jEnd out)
   | gen_abs out id th c tms =
     (bOpcode out 0x29; bVarint out id; bVarint out th; bVarint out c;
      bVarint out (length tms);
      List.app (bVarint out) tms)
 
-(* INST id th (tm tm)... *)
+(* INST id th subst *)
 fun inst (out as TextOut _) id th pairs =
-    (tCmd out "INST" id; tArg out th;
-     List.app (fn (a,b) => (tArg out a; tArg out b)) pairs; tNl out)
+    (jBegin out "INST"; jInt out "id" id;
+     jInt out "th" th; jSubstList out "subst" pairs; jEnd out)
   | inst out id th pairs =
     (bOpcode out 0x39; bVarint out id; bVarint out th;
      bVarint out (length pairs);
      List.app (fn (a,b) => (bVarint out a; bVarint out b)) pairs)
 
-(* INST_TYPE id th (ty ty)... *)
+(* INST_TYPE id th subst *)
 fun inst_type (out as TextOut _) id th pairs =
-    (tCmd out "INST_TYPE" id; tArg out th;
-     List.app (fn (a,b) => (tArg out a; tArg out b)) pairs; tNl out)
+    (jBegin out "INST_TYPE"; jInt out "id" id;
+     jInt out "th" th; jSubstList out "subst" pairs; jEnd out)
   | inst_type out id th pairs =
     (bOpcode out 0x3A; bVarint out id; bVarint out th;
      bVarint out (length pairs);
      List.app (fn (a,b) => (bVarint out a; bVarint out b)) pairs)
 
-(* SUBST id tm th (tm th)... *)
+(* SUBST id template th subst *)
 fun subst (out as TextOut _) id template th pairs =
-    (tCmd out "SUBST" id; tArg out template; tArg out th;
-     List.app (fn (t,h) => (tArg out t; tArg out h)) pairs; tNl out)
+    (jBegin out "SUBST"; jInt out "id" id;
+     jInt out "template" template; jInt out "th" th;
+     jSubstList out "subst" pairs; jEnd out)
   | subst out id template th pairs =
     (bOpcode out 0x3B; bVarint out id; bVarint out template; bVarint out th;
      bVarint out (length pairs);
@@ -264,44 +304,44 @@ fun subst (out as TextOut _) id template th pairs =
 (* --- Axioms and definitions ---------------------------------------------- *)
 
 fun axiom (out as TextOut _) id tm nameOpt =
-    (tCmd out "AXIOM" id; tArg out tm;
-     case nameOpt of SOME n => (tSp out; tName out n) | NONE => ();
-     tNl out)
+    (jBegin out "AXIOM"; jInt out "id" id; jInt out "tm" tm;
+     case nameOpt of SOME n => jStr out "name" n | NONE => ();
+     jEnd out)
   | axiom out id tm nameOpt =
     (bOpcode out 0x40; bVarint out id; bVarint out tm;
      bString out (case nameOpt of SOME n => n | NONE => ""))
 
 fun def_spec (out as TextOut _) id th names =
-    (tCmd out "DEF_SPEC" id; tArg out th;
-     List.app (fn n => (tSp out; tName out n)) names; tNl out)
+    (jBegin out "DEF_SPEC"; jInt out "id" id;
+     jInt out "th" th; jStrList out "names" names; jEnd out)
   | def_spec out id th names =
     (bOpcode out 0x41; bVarint out id; bVarint out th;
      bVarint out (length names);
      List.app (bString out) names)
 
 fun def_tyop (out as TextOut _) id th name =
-    (tCmd out "DEF_TYOP" id; tArg out th; tSp out; tName out name; tNl out)
+    (jBegin out "DEF_TYOP"; jInt out "id" id;
+     jInt out "th" th; jStr out "name" name; jEnd out)
   | def_tyop out id th name =
     (bOpcode out 0x42; bVarint out id; bVarint out th; bString out name)
 
 (* --- Computation --------------------------------------------------------- *)
 
 fun compute (out as TextOut _) id ci tm ths =
-    (tCmd out "COMPUTE" id; tArg out ci; tArg out tm;
-     List.app (tArg out) ths; tNl out)
+    (jBegin out "COMPUTE"; jInt out "id" id;
+     jInt out "ci" ci; jInt out "tm" tm;
+     jIntList out "ths" ths; jEnd out)
   | compute out id ci tm ths =
     (bOpcode out 0x43; bVarint out id; bVarint out ci; bVarint out tm;
      bVarint out (length ths);
      List.app (bVarint out) ths)
 
 fun compute_init (out as TextOut _) id ty1 ty2 char_eqns cval_terms =
-    (tCmd out "COMPUTE_INIT" id; tArg out ty1; tArg out ty2; tNl out;
-     tWrite out " ";
-     List.app (fn (n,th) => (tSp out; tName out n; tArg out th)) char_eqns;
-     tNl out;
-     tWrite out " ";
-     List.app (fn (n,tm) => (tSp out; tName out n; tArg out tm)) cval_terms;
-     tNl out)
+    (jBegin out "COMPUTE_INIT"; jInt out "id" id;
+     jInt out "num_ty" ty1; jInt out "cval_ty" ty2;
+     jNamedIntMap out "char_eqns" char_eqns;
+     jNamedIntMap out "cval_terms" cval_terms;
+     jEnd out)
   | compute_init out id ty1 ty2 char_eqns cval_terms =
     (bOpcode out 0x44; bVarint out id; bVarint out ty1; bVarint out ty2;
      bVarint out (length char_eqns);
@@ -320,33 +360,29 @@ fun lookup_opc table ns =
   | NONE => raise Fail ("PFTWriter.del: bad namespace " ^ ns)
 
 fun del (out as TextOut _) ns id =
-    (tWrite out "DEL "; tWrite out ns; tSp out; tInt out id; tNl out)
+    (jBegin out "DEL"; jStr out "ns" ns;
+     jInt out "id" id; jEnd out)
   | del out ns id =
     (bOpcode out (lookup_opc del_opcodes ns); bVarint out id)
 
 fun del_range (out as TextOut _) ns lo hi =
-    (tWrite out "DEL "; tWrite out ns; tSp out; tInt out lo;
-     tSp out; tInt out hi; tNl out)
+    (jBegin out "DEL"; jStr out "ns" ns;
+     jInt out "id" lo; jInt out "upto" hi; jEnd out)
   | del_range out ns lo hi =
     (bOpcode out (lookup_opc del_range_opcodes ns); bVarint out lo; bVarint out hi)
 
 (* --- Save / Load --------------------------------------------------------- *)
 
 fun save (out as TextOut _) name th_id =
-    (tWrite out "SAVE "; tName out name; tArg out th_id; tNl out)
+    (jBegin out "SAVE"; jStr out "name" name;
+     jInt out "th" th_id; jEnd out)
   | save out name th_id =
     (bOpcode out 0x50; bString out name; bVarint out th_id)
 
 fun load (out as TextOut _) id name =
-    (tWrite out "LOAD "; tInt out id; tSp out; tName out name; tNl out)
+    (jBegin out "LOAD"; jInt out "id" id;
+     jStr out "name" name; jEnd out)
   | load out id name =
     (bOpcode out 0x51; bVarint out id; bString out name)
-
-(* --- Comment ------------------------------------------------------------- *)
-
-fun comment (TextOut s) text = (TextIO.output (s, "# ");
-                                TextIO.output (s, text);
-                                TextIO.output (s, "\n"))
-  | comment (BinOut _) _ = ()
 
 end
