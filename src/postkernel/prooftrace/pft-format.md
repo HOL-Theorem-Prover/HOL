@@ -12,20 +12,28 @@ used.
 
 There are four namespaces, each with independently numbered IDs:
 
-| Namespace        | Keyword prefix for DEL |
-|------------------|------------------------|
-| Types            | `ty`                   |
-| Terms            | `tm`                   |
-| Theorems         | `th`                   |
-| Compute contexts | `ci`                   |
+| Namespace        | Identifier |
+|------------------|------------|
+| Types            | `ty`       |
+| Terms            | `tm`       |
+| Theorems         | `th`       |
+| Compute contexts | `ci`       |
 
 IDs are reused: when an object is no longer needed, its ID may be assigned to
 a new object in the same namespace. Each command assigns an ID in the
 appropriate namespace (determined by the command type).
 
-Since every command is typed, the assigned ID does not need a namespace prefix
-— it is unambiguously in the namespace of the command's result type. DEL
-commands do require a namespace prefix.
+Since every command is typed, the assigned ID does not need a namespace
+qualifier — it is unambiguously in the namespace of the command's result type.
+DEL commands do require a namespace qualifier.
+
+## Encodings
+
+The format has two encodings: **binary** (primary, for production use) and
+**JSON Lines** (for human inspection and interoperability). Both encode the
+same abstract command stream. Producers and consumers SHOULD use the binary
+encoding; the JSON Lines encoding is provided for debugging, testing, and
+integration with tools that consume JSON.
 
 ## Header and Footer
 
@@ -33,205 +41,169 @@ Every trace begins with a header and ends with a footer.
 
 ### Header
 
-```
-PFT <version> <ruleset>
-```
+The header specifies:
 
-- `version` is the format version number (currently `1`). Covers the
-  encoding and syntax of the format.
-- `ruleset` names the set of theorem commands that may appear in the trace
+- **version**: the format version number (currently `1`). Covers the encoding
+  and syntax of the format.
+- **ruleset**: the set of theorem commands that may appear in the trace
   (currently `hol4`). This allows future rulesets (e.g., a minimal ruleset)
   to be defined independently of format version changes.
 
 ### Footer
 
 The footer declares the peak number of simultaneously live objects per
-namespace:
-
-```
-<n_types> <n_terms> <n_thms> <n_computes>
-```
-
-The four counts are the peak number of simultaneously live objects in the
-type, term, theorem, and compute context namespaces respectively.
-
-In the text format, the footer is the last line of the file. In the binary
-format, the footer encoding is described below.
+namespace: four counts for types, terms, theorems, and compute contexts
+respectively.
 
 A replayer can use these to pre-allocate fixed-size arrays. The footer is
 placed at the end so that a producer can emit commands in a single pass
-without needing to know the peak counts upfront.
+without needing to know the peak counts upfront. A reader can seek to the
+end of the file to read the footer before processing commands from the start.
 
-## Command Syntax Conventions
+## Command Reference
 
-Each command occupies one line. In the rule specifications below:
+Each command is described below with its abstract arguments. The binary and
+JSON Lines encodings of each command are specified in their respective
+sections.
 
-- `<id>` is the ID being assigned (an unsigned decimal integer).
-- `<type-id>`, `<term-id>`, `<thm-id>`, `<compute-id>` are references to
-  previously constructed objects (integers).
-- `<name>` is a string token (see Name Encoding).
-- `...` after an element means zero or more repetitions to the end of the
-  line. The parser determines the count from the number of remaining tokens.
-- For commands with repeated pairs (e.g., `INST`), the elements alternate
-  and the total remaining token count must be a multiple of the stride.
-- Fixed arguments come before variable-length arguments so that parsing is
-  unambiguous.
+### Type Commands
 
-## Type Commands
+| Command | Arguments | Description |
+|---------|-----------|-------------|
+| TYVAR   | id, name  | Construct a type variable (`mk_vartype`) |
+| TYOP    | id, name, args: type-id list | Construct a type operator application (`mk_thy_type`) |
 
-```
-TYVAR <id> <name>
-TYOP <id> <name> <type-id>...
-```
+### Term Commands
 
-- `TYVAR` constructs a type variable. Corresponds to `mk_vartype`.
-- `TYOP` constructs a type operator application. The name identifies the type
-  operator (e.g., `bool$bool`, `min$fun`). Corresponds to `mk_thy_type`.
+| Command | Arguments | Description |
+|---------|-----------|-------------|
+| VAR     | id, name, ty: type-id | Construct a variable (`mk_var`) |
+| CONST   | id, name, ty: type-id | Construct a constant (`mk_thy_const`) |
+| COMB    | id, rator: term-id, rand: term-id | Construct a function application (`mk_comb`) |
+| ABS     | id, var: term-id, body: term-id | Construct a lambda abstraction (`mk_abs`) |
 
-## Term Commands
+### Theorem Commands
 
-```
-VAR <id> <name> <type-id>
-CONST <id> <name> <type-id>
-COMB <id> <term-id> <term-id>
-ABS <id> <term-id> <term-id>
-```
+#### Equality and rewriting
 
-- `VAR` constructs a variable with a name and type. Corresponds to `mk_var`.
-- `CONST` constructs a constant. The name identifies the constant (e.g.,
-  `bool$=`). Corresponds to `mk_thy_const`.
-- `COMB` constructs a function application. Corresponds to `mk_comb`.
-- `ABS` constructs a lambda abstraction. The first argument is the bound
-  variable (must be a variable), the second is the body. Corresponds to
-  `mk_abs`.
+| Command | Arguments |
+|---------|-----------|
+| REFL | id, tm |
+| ALPHA | id, tm1, tm2 |
+| BETA_CONV | id, tm |
+| SYM | id, th |
+| TRANS | id, th1, th2 |
+| EQ_MP | id, eq: thm-id, th: thm-id |
 
-## Theorem Commands
+#### Congruence
 
-Each theorem command corresponds to a HOL kernel inference rule.
+| Command | Arguments |
+|---------|-----------|
+| MK_COMB | id, th1, th2 |
+| ABS_THM | id, tm, th |
+| AP_TERM | id, tm, th |
+| AP_THM | id, th, tm |
+| Beta | id, th |
+| Mk_comb | id, eq: thm-id, rator: thm-id, rand: thm-id |
+| Mk_abs | id, eq: thm-id, body: thm-id |
 
-### Basic rules
+#### Implication and modus ponens
 
-```
-REFL <id> <term-id>
-ALPHA <id> <term-id> <term-id>
-ASSUME <id> <term-id>
-BETA_CONV <id> <term-id>
-EQ_MP <id> <thm-id> <thm-id>
-MP <id> <thm-id> <thm-id>
-SYM <id> <thm-id>
-TRANS <id> <thm-id> <thm-id>
-CONJ <id> <thm-id> <thm-id>
-CONJUNCT1 <id> <thm-id>
-CONJUNCT2 <id> <thm-id>
-DISCH <id> <term-id> <thm-id>
-DISJ1 <id> <thm-id> <term-id>
-DISJ2 <id> <term-id> <thm-id>
-DISJ_CASES <id> <thm-id> <thm-id> <thm-id>
-NOT_ELIM <id> <thm-id>
-NOT_INTRO <id> <thm-id>
-CCONTR <id> <term-id> <thm-id>
-EXISTS <id> <term-id> <term-id> <thm-id>
-CHOOSE <id> <term-id> <thm-id> <thm-id>
-GEN <id> <term-id> <thm-id>
-SPEC <id> <term-id> <thm-id>
-Specialize <id> <term-id> <thm-id>
-GENL <id> <thm-id> <term-id>...
-ABSL <id> <thm-id> <term-id>...
-GEN_ABS <id> <thm-id> <term-id> <term-id>...
-```
+| Command | Arguments |
+|---------|-----------|
+| ASSUME | id, tm |
+| MP | id, imp: thm-id, ant: thm-id |
+| DISCH | id, tm, th |
+| NOT_INTRO | id, th |
+| NOT_ELIM | id, th |
+| CCONTR | id, tm, th |
+| deductAntisym | id, th1, th2 |
 
-### Congruence and substitution rules
+#### Conjunction
 
-```
-ABS_THM <id> <term-id> <thm-id>
-AP_TERM <id> <term-id> <thm-id>
-AP_THM <id> <thm-id> <term-id>
-MK_COMB <id> <thm-id> <thm-id>
-Beta <id> <thm-id>
-Mk_abs <id> <thm-id> <thm-id>
-Mk_comb <id> <thm-id> <thm-id> <thm-id>
-EQ_IMP_RULE1 <id> <thm-id>
-EQ_IMP_RULE2 <id> <thm-id>
-INST <id> <thm-id> <term-id> <term-id>...
-INST_TYPE <id> <thm-id> <type-id> <type-id>...
-SUBST <id> <term-id> <thm-id> <term-id> <thm-id>...
-deductAntisym <id> <thm-id> <thm-id>
-```
+| Command | Arguments |
+|---------|-----------|
+| CONJ | id, th1, th2 |
+| CONJUNCT1 | id, th |
+| CONJUNCT2 | id, th |
 
-### Axioms and definitions
+#### Disjunction
 
-```
-AXIOM <id> <term-id> <name>?
-DEF_SPEC <id> <thm-id> <name>...
-DEF_TYOP <id> <thm-id> <name>
-```
+| Command | Arguments |
+|---------|-----------|
+| DISJ1 | id, th, tm |
+| DISJ2 | id, tm, th |
+| DISJ_CASES | id, disj: thm-id, left: thm-id, right: thm-id |
 
-- `AXIOM` asserts an axiom. Takes the axiom's conclusion term and an
-  optional informational name. `AXIOM` does not imply `SAVE`.
-- `DEF_SPEC` defines constants by specification. Takes an existential theorem
-  and the names of the constants being defined.
-- `DEF_TYOP` defines a type operator. Takes a type-existence theorem and the
-  name of the type operator being defined.
+#### Quantifiers
 
-### Computation
+| Command | Arguments |
+|---------|-----------|
+| GEN | id, tm, th |
+| SPEC | id, tm, th |
+| Specialize | id, tm, th |
+| GENL | id, th, tms: term-id list |
+| EXISTS | id, tm1, tm2, th |
+| CHOOSE | id, var: term-id, existence: thm-id, body: thm-id |
 
-```
-COMPUTE <id> <compute-id> <term-id> <thm-id>...
-```
+#### Abstraction lists
 
-## Compute Context Commands
+| Command | Arguments |
+|---------|-----------|
+| ABSL | id, th, tms: term-id list |
+| GEN_ABS | id, th, tm, tms: term-id list |
 
-```
-COMPUTE_INIT <id> <type-id> <type-id>
-  <name> <thm-id>...
-  <name> <term-id>...
-```
+#### Instantiation and substitution
 
-Constructs a compute context from a numeral type, cval type, character
-equation list (name/theorem pairs on the second line), and cval term list
-(name/term pairs on the third line). This is the only command that spans
-multiple lines; the continuation lines are indented with a space.
+| Command | Arguments |
+|---------|-----------|
+| INST | id, th, subst: {redex: term-id, residue: term-id} list |
+| INST_TYPE | id, th, subst: {redex: type-id, residue: type-id} list |
+| SUBST | id, template: term-id, th, subst: {redex: term-id, residue: thm-id} list |
+| EQ_IMP_RULE1 | id, th |
+| EQ_IMP_RULE2 | id, th |
 
-## Deletion Commands
+#### Axioms and definitions
 
-```
-DEL ty <id>
-DEL tm <id>
-DEL th <id>
-DEL ci <id>
-DEL ty <id> <id>
-DEL tm <id> <id>
-DEL th <id> <id>
-DEL ci <id> <id>
-```
+| Command | Arguments |
+|---------|-----------|
+| AXIOM | id, tm, name (optional) |
+| DEF_SPEC | id, th, names: string list |
+| DEF_TYOP | id, th, name |
 
-Informs the replayer that the given objects are no longer needed. The replayer
+#### Computation
+
+| Command | Arguments |
+|---------|-----------|
+| COMPUTE_INIT | id, num_ty: type-id, cval_ty: type-id, char_eqns: {name: thm-id}, cval_terms: {name: term-id} |
+| COMPUTE | id, ci: compute-id, tm, ths: thm-id list |
+
+### Control Commands
+
+| Command | Arguments |
+|---------|-----------|
+| DEL | ns, id, upto: id (optional) |
+| SAVE | name, th |
+| LOAD | id, name |
+
+**DEL** informs the replayer that the given object (or range of objects from
+`id` to `upto` inclusive, if `upto` is present) is no longer needed. The replayer
 MAY use this to free memory. A correct replayer MAY ignore all DEL commands.
-
-The two-argument form deletes all IDs from the first to the second inclusive.
-
 Since IDs are reused, a slot will eventually be overwritten regardless of
-whether DEL was issued. DEL allows the replayer to free the underlying object
+whether DEL was issued; DEL allows the replayer to free the underlying object
 earlier.
 
-## Save and Load Commands
+**SAVE** makes a theorem available by name. The replayer stores it in a
+name→theorem table. The theorem remains available for subsequent LOAD commands
+(including in concatenated traces).
 
-```
-SAVE <name> <thm-id>
-LOAD <id> <name>
-```
-
-- `SAVE` makes a theorem available by name. The replayer stores it in a
-  name→theorem table. The theorem remains available for subsequent `LOAD`
-  commands (including in concatenated traces).
-- `LOAD` retrieves a previously saved theorem by name and assigns it to a
-  theorem ID. The named theorem must have been saved by a prior `SAVE`
-  command.
+**LOAD** retrieves a previously saved theorem by name and assigns it to a
+theorem ID. The named theorem must have been saved by a prior SAVE command.
 
 These commands enable modularity: a trace can be split into separate files
-(e.g., one per theory), where each file `LOAD`s its dependencies and `SAVE`s
-its exports. Concatenating traces works as long as `LOAD`s come after the
-corresponding `SAVE`s.
+(e.g., one per theory), where each file LOADs its dependencies and SAVEs its
+exports. Concatenating traces works as long as LOADs come after the
+corresponding SAVEs.
 
 ## Name Semantics
 
@@ -241,95 +213,31 @@ The trace format does not interpret the structure of names.
 
 Names carry the following semantics depending on context:
 
-- **Type operator names** (in `TYOP`, `DEF_TYOP`): Identify a type operator.
-  Two `TYOP` commands with the same name and arguments produce the same type,
+- **Type operator names** (in TYOP, DEF_TYOP): Identify a type operator.
+  Two TYOP commands with the same name and arguments produce the same type,
   even if assigned different IDs.
-- **Type variable names** (in `TYVAR`): Identify a type variable. Two `TYVAR`
+- **Type variable names** (in TYVAR): Identify a type variable. Two TYVAR
   commands with the same name produce the same type variable.
-- **Constant names** (in `CONST`, `DEF_SPEC`): Identify a constant. Two
-  `CONST` commands with the same name and type produce the same constant.
-- **Variable names** (in `VAR`): Identify a variable. Two `VAR` commands with
-  the same name and type produce the same variable.
-- **Axiom names** (in `AXIOM`): Optional and purely informational. Each
-  `AXIOM` command is a distinct axiom assertion — two commands with the same
-  name and conclusion are two separate axioms.
-- **Save/Load names** (in `SAVE`, `LOAD`): Identify theorems in the
-  name→theorem table. These are chosen by the producer and have no kernel
-  significance.
+- **Constant names** (in CONST, DEF_SPEC): Identify a constant. Two CONST
+  commands with the same name and type produce the same constant.
+- **Variable names** (in VAR): Identify a variable. Two VAR commands with the
+  same name and type produce the same variable.
+- **Axiom names** (in AXIOM): Optional and purely informational. Each AXIOM
+  command is a distinct axiom assertion — two commands with the same name and
+  conclusion are two separate axioms.
+- **Save/Load names** (in SAVE, LOAD): Identify theorems in the name→theorem
+  table. These are chosen by the producer and have no kernel significance.
 
 A well-optimised producer SHOULD avoid creating duplicate IDs for the same
 logical entity (i.e., should hash-cons types, terms, and sub-terms). However,
 a valid trace MAY assign multiple IDs to equivalent objects — the replayer
 will produce correct results either way.
 
-## Name Encoding
-
-### Text format rules
-
-The text format uses spaces and newlines as delimiters. Each command occupies
-one line, except for `COMPUTE_INIT` which spans three lines (the continuation
-lines are indented with a space). Tokens on a line are separated by spaces.
-Empty lines and lines starting with `#` are ignored.
-
-Names may contain any characters except newlines. The token `\_` represents
-the empty string.
-
-A backslash in a name token is an escape character when followed by a space
-or another backslash:
-
-| Sequence | Meaning            |
-|----------|--------------------|
-| `\ `     | literal space      |
-| `\\`     | literal backslash  |
-
-A backslash followed by any other character is not an escape and both
-characters are literal. Escaping a backslash is only necessary when it
-would otherwise be misinterpreted (i.e., when followed by a space, or when
-the name is `\_` which would be read as the empty string).
-
-Examples:
-
-```
-CONST 0 bool$T 0
-VAR 5 x\ y 0
-# A variable whose name is "":
-VAR 6 \_ 0
-# A variable whose name is "\_":
-VAR 7 \\_ 1
-```
-
-## Example
-
-```
-PFT 1 hol4
-
-# Types
-TYOP 0 bool$bool
-TYOP 1 min$fun 0 0
-
-# Terms
-CONST 0 bool$= 1
-CONST 1 bool$T 0
-COMB 2 0 1
-COMB 3 2 1
-DEL tm 2
-
-# Theorems
-REFL 0 1
-AP_TERM 1 3 0
-DEL th 0
-DEL tm 0 1
-DEL tm 3
-
-SAVE bool$TRUTH 1
-3 4 2 0
-```
-
 ## Binary Encoding
 
-The binary format encodes the same abstract command stream as the text format.
-A binary trace starts with the magic bytes `PFT\0` followed by the header,
-then a sequence of encoded commands.
+The binary format is the primary encoding. A binary trace starts with the
+magic bytes `PFT\0` followed by the header, then a sequence of encoded
+commands, and ends with a footer.
 
 ### Primitive encodings
 
@@ -368,14 +276,14 @@ IDs and counts are encoded as varints. Names are encoded as strings.
 | 0x02   | TYOP          | id name n_args arg...                  |
 | 0x03   | VAR           | id name type_id                        |
 | 0x04   | CONST         | id name type_id                        |
-| 0x05   | COMB          | id tm1 tm2                             |
+| 0x05   | COMB          | id rator rand                          |
 | 0x06   | ABS           | id tm1 tm2                             |
 | 0x10   | REFL          | id tm                                  |
 | 0x11   | ALPHA         | id tm1 tm2                             |
 | 0x12   | ASSUME        | id tm                                  |
 | 0x13   | BETA_CONV     | id tm                                  |
-| 0x14   | EQ_MP         | id th1 th2                             |
-| 0x15   | MP            | id th1 th2                             |
+| 0x14   | EQ_MP         | id eq th                               |
+| 0x15   | MP            | id imp ant                             |
 | 0x16   | SYM           | id th                                  |
 | 0x17   | TRANS         | id th1 th2                             |
 | 0x18   | CONJ          | id th1 th2                             |
@@ -384,12 +292,12 @@ IDs and counts are encoded as varints. Names are encoded as strings.
 | 0x1B   | DISCH         | id tm th                               |
 | 0x1C   | DISJ1         | id th tm                               |
 | 0x1D   | DISJ2         | id tm th                               |
-| 0x1E   | DISJ_CASES    | id th1 th2 th3                         |
+| 0x1E   | DISJ_CASES    | id disj left right                     |
 | 0x1F   | NOT_ELIM      | id th                                  |
 | 0x20   | NOT_INTRO     | id th                                  |
 | 0x21   | CCONTR        | id tm th                               |
 | 0x22   | EXISTS        | id tm1 tm2 th                          |
-| 0x23   | CHOOSE        | id tm th1 th2                          |
+| 0x23   | CHOOSE        | id var existence body                  |
 | 0x24   | GEN           | id tm th                               |
 | 0x25   | SPEC          | id tm th                               |
 | 0x26   | Specialize    | id tm th                               |
@@ -401,13 +309,13 @@ IDs and counts are encoded as varints. Names are encoded as strings.
 | 0x32   | AP_THM        | id th tm                               |
 | 0x33   | MK_COMB       | id th1 th2                             |
 | 0x34   | Beta          | id th                                  |
-| 0x35   | Mk_abs        | id th1 th2                             |
-| 0x36   | Mk_comb       | id th1 th2 th3                         |
+| 0x35   | Mk_abs        | id eq body                             |
+| 0x36   | Mk_comb       | id eq rator rand                       |
 | 0x37   | EQ_IMP_RULE1  | id th                                  |
 | 0x38   | EQ_IMP_RULE2  | id th                                  |
-| 0x39   | INST          | id th n_pairs (tm tm)...               |
-| 0x3A   | INST_TYPE     | id th n_pairs (ty ty)...               |
-| 0x3B   | SUBST         | id tm th n_pairs (tm th)...            |
+| 0x39   | INST          | id th n_pairs (redex residue)...       |
+| 0x3A   | INST_TYPE     | id th n_pairs (redex residue)...       |
+| 0x3B   | SUBST         | id template th n_pairs (redex residue)... |
 | 0x3C   | deductAntisym | id th1 th2                             |
 | 0x40   | AXIOM         | id tm name                             |
 | 0x41   | DEF_SPEC      | id th n_names name...                  |
@@ -425,9 +333,175 @@ IDs and counts are encoded as varints. Names are encoded as strings.
 | 0xF2   | DEL th range  | id_lo id_hi                            |
 | 0xF3   | DEL ci range  | id_lo id_hi                            |
 
-Note: In the binary format, variable-length lists (TYOP args, GENL terms,
-INST pairs, etc.) are preceded by a varint count, since there is no
-end-of-line delimiter.
+Note: In the binary format, variable-length lists are preceded by a varint
+count, since there are no delimiters.
+
+Note: In the binary AXIOM encoding, the name is always present. An empty
+string indicates no name.
+
+## JSON Lines Encoding
+
+The JSON Lines encoding represents the same abstract command stream as the
+binary format. Each line of the file is a single JSON object. Empty lines
+are ignored.
+
+The file extension SHOULD be `.jsonl`.
+
+### Header and footer
+
+```json
+{"cmd":"PFT","version":1,"ruleset":"hol4"}
+```
+
+```json
+{"cmd":"FOOTER","n_ty":3,"n_tm":4,"n_th":2,"n_ci":0}
+```
+
+The footer is the last non-empty line. A reader can seek to the end of the
+file and scan backwards for the last newline to read the footer.
+
+### Type commands
+
+```json
+{"cmd":"TYVAR","id":0,"name":"'a"}
+{"cmd":"TYOP","id":1,"name":"min$fun","args":[0,0]}
+```
+
+For TYOP, `args` is an array of type IDs (empty array for nullary operators).
+
+### Term commands
+
+```json
+{"cmd":"VAR","id":0,"name":"x","ty":0}
+{"cmd":"CONST","id":1,"name":"bool$T","ty":0}
+{"cmd":"COMB","id":2,"rator":0,"rand":1}
+{"cmd":"ABS","id":3,"var":0,"body":1}
+```
+
+### Theorem commands
+
+Commands with generic arguments use short positional keys (`th`, `tm`,
+`th1`/`th2`, `tm1`/`tm2`). Commands where argument roles are non-obvious
+use descriptive keys.
+
+#### Simple commands
+
+```json
+{"cmd":"REFL","id":0,"tm":1}
+{"cmd":"ALPHA","id":0,"tm1":1,"tm2":2}
+{"cmd":"ASSUME","id":0,"tm":1}
+{"cmd":"BETA_CONV","id":0,"tm":1}
+{"cmd":"SYM","id":0,"th":1}
+{"cmd":"TRANS","id":0,"th1":1,"th2":2}
+{"cmd":"MK_COMB","id":0,"th1":1,"th2":2}
+{"cmd":"ABS_THM","id":0,"tm":1,"th":2}
+{"cmd":"AP_TERM","id":0,"tm":1,"th":2}
+{"cmd":"AP_THM","id":0,"th":1,"tm":2}
+{"cmd":"Beta","id":0,"th":1}
+{"cmd":"MP","id":0,"imp":1,"ant":2}
+{"cmd":"DISCH","id":0,"tm":1,"th":2}
+{"cmd":"NOT_INTRO","id":0,"th":1}
+{"cmd":"NOT_ELIM","id":0,"th":1}
+{"cmd":"CCONTR","id":0,"tm":1,"th":2}
+{"cmd":"deductAntisym","id":0,"th1":1,"th2":2}
+{"cmd":"CONJ","id":0,"th1":1,"th2":2}
+{"cmd":"CONJUNCT1","id":0,"th":1}
+{"cmd":"CONJUNCT2","id":0,"th":1}
+{"cmd":"DISJ1","id":0,"th":1,"tm":2}
+{"cmd":"DISJ2","id":0,"tm":1,"th":2}
+{"cmd":"GEN","id":0,"tm":1,"th":2}
+{"cmd":"SPEC","id":0,"tm":1,"th":2}
+{"cmd":"Specialize","id":0,"tm":1,"th":2}
+{"cmd":"EXISTS","id":0,"tm1":1,"tm2":2,"th":3}
+{"cmd":"EQ_IMP_RULE1","id":0,"th":1}
+{"cmd":"EQ_IMP_RULE2","id":0,"th":1}
+```
+
+#### Commands with descriptive keys
+
+```json
+{"cmd":"EQ_MP","id":0,"eq":1,"th":2}
+{"cmd":"DISJ_CASES","id":0,"disj":1,"left":2,"right":3}
+{"cmd":"CHOOSE","id":0,"var":1,"existence":2,"body":3}
+{"cmd":"Mk_comb","id":0,"eq":1,"rator":2,"rand":3}
+{"cmd":"Mk_abs","id":0,"eq":1,"body":2}
+```
+
+#### Commands with lists
+
+```json
+{"cmd":"GENL","id":0,"th":1,"tms":[2,3]}
+{"cmd":"ABSL","id":0,"th":1,"tms":[2,3]}
+{"cmd":"GEN_ABS","id":0,"th":1,"tm":2,"tms":[3,4]}
+```
+
+#### Substitution commands
+
+Substitution lists use `redex` and `residue` keys:
+
+```json
+{"cmd":"INST","id":0,"th":1,"subst":[{"redex":2,"residue":3}]}
+{"cmd":"INST_TYPE","id":0,"th":1,"subst":[{"redex":2,"residue":3}]}
+{"cmd":"SUBST","id":0,"template":1,"th":2,"subst":[{"redex":3,"residue":4}]}
+```
+
+For INST and INST_TYPE, `redex` and `residue` are term IDs and type IDs
+respectively. For SUBST, `redex` is a term ID and `residue` is a theorem ID.
+
+#### Axioms and definitions
+
+```json
+{"cmd":"AXIOM","id":0,"tm":1,"name":"MY_AXIOM"}
+{"cmd":"AXIOM","id":0,"tm":1}
+{"cmd":"DEF_SPEC","id":0,"th":1,"names":["c1","c2"]}
+{"cmd":"DEF_TYOP","id":0,"th":1,"name":"mytype"}
+```
+
+For AXIOM, the `name` key is omitted when no name is provided.
+
+#### Computation
+
+```json
+{"cmd":"COMPUTE_INIT","id":0,"num_ty":1,"cval_ty":2,
+ "char_eqns":{"alt_zero":10,"cond_T":11,"cond_F":12,...},
+ "cval_terms":{"truth":20,"false":21,...}}
+{"cmd":"COMPUTE","id":0,"ci":1,"tm":2,"ths":[3,4,5]}
+```
+
+`char_eqns` is an object mapping equation names to theorem IDs.
+`cval_terms` is an object mapping operator names to term IDs.
+
+### Control commands
+
+```json
+{"cmd":"DEL","ns":"tm","id":2}
+{"cmd":"DEL","ns":"tm","id":2,"upto":5}
+{"cmd":"SAVE","name":"bool$TRUTH","th":1}
+{"cmd":"LOAD","id":0,"name":"bool$TRUTH"}
+```
+
+For DEL, `ns` is one of `"ty"`, `"tm"`, `"th"`, `"ci"`. When `upto` is
+present, all IDs from `id` to `upto` inclusive are deleted.
+
+### Example
+
+```json
+{"cmd":"PFT","version":1,"ruleset":"hol4"}
+{"cmd":"TYOP","id":0,"name":"bool$bool","args":[]}
+{"cmd":"TYOP","id":1,"name":"min$fun","args":[0,0]}
+{"cmd":"CONST","id":0,"name":"bool$=","ty":1}
+{"cmd":"CONST","id":1,"name":"bool$T","ty":0}
+{"cmd":"COMB","id":2,"rator":0,"rand":1}
+{"cmd":"COMB","id":3,"rator":2,"rand":1}
+{"cmd":"DEL","ns":"tm","id":2}
+{"cmd":"REFL","id":0,"tm":1}
+{"cmd":"AP_TERM","id":1,"tm":3,"th":0}
+{"cmd":"DEL","ns":"th","id":0}
+{"cmd":"DEL","ns":"tm","id":0,"upto":1}
+{"cmd":"DEL","ns":"tm","id":3}
+{"cmd":"SAVE","name":"bool$TRUTH","th":1}
+{"cmd":"FOOTER","n_ty":3,"n_tm":4,"n_th":2,"n_ci":0}
+```
 
 ## Specification of the Theorem Commands
 
@@ -512,8 +586,7 @@ support doing that.
 | Mk_abs | `A ⊢ t = λv. b`, `B ⊢ b = b'` | `A ∪ B ⊢ t = λv. b'` | RHS of first thm must be an abstraction; LHS of second must be alpha-equivalent to the body; `v` not free in `B` |
 
 In the kernel API, `Mk_comb` and `Mk_abs` return continuations. In the trace,
-all arguments are provided directly: `Mk_comb <id> <th1> <th2> <th3>` and
-`Mk_abs <id> <th1> <th2>`.
+all arguments are provided directly.
 
 ### Instantiation and substitution
 
@@ -543,11 +616,11 @@ all arguments are provided directly: `Mk_comb <id> <th1> <th2> <th3>` and
 
 Creates a compute context from four components:
 
-- **`num_type`**: the type of natural numbers (`:num`)
-- **`cval_type`**: the type of computed values (`:cv`)
-- **`cval_terms`**: a list of named terms providing the operators used by the
-  evaluator. The following names must be present, each bound to a constant of
-  the appropriate type:
+- **`num_ty`**: the type of natural numbers (`:num`)
+- **`cval_ty`**: the type of computed values (`:cv`)
+- **`cval_terms`**: an object mapping operator names to term IDs. The
+  following names must be present, each bound to a constant of the
+  appropriate type:
 
   | Name | Description | Name | Description |
   |------|-------------|------|-------------|
@@ -567,11 +640,8 @@ Creates a compute context from four components:
   | `cv_mod` | cv modulus | `cv_lt` | cv less-than |
   | `cv_if` | cv conditional | | |
 
-- **`char_eqns`**: a list of named theorems, each with no hypotheses,
-  providing the defining equations for the operators above. They must be
-  provided in a fixed order and each must match a specific pattern involving
-  `num_type`, `cval_type`, and the `cval_terms` constants. The required
-  equations (in order) are:
+- **`char_eqns`**: an object mapping equation names to theorem IDs. Each
+  theorem must have no hypotheses. The required equations are:
 
   | Name | Equation |
   |------|----------|
@@ -613,7 +683,7 @@ Creates a compute context from four components:
   `(cv_num, cv_num)`, `(cv_num, cv_pair)`, `(cv_pair, cv_num)`,
   `(cv_pair, cv_pair)`.
 
-The context is created once and reused across multiple `COMPUTE` calls.
+The context is created once and reused across multiple COMPUTE calls.
 
 #### COMPUTE
 
@@ -645,7 +715,7 @@ Walk the internal proof DAG to determine:
 2. **Reference counts**: For each reachable node, count how many times it
    will be accessed during replay (for DEL placement).
 3. **Peak live sets**: Track the maximum number of simultaneously live objects
-   per namespace (for the header).
+   per namespace (for the footer).
 4. **ID assignment**: Assign IDs with reuse — maintain a free list per
    namespace, always assigning the lowest available ID. When a node's
    reference count reaches zero, return its ID to the free list.
