@@ -1,6 +1,6 @@
 structure ProofTraceParser :> ProofTraceParser = struct
 
-open HolKernel
+open Lib Type Term Thm RawTheory_dtype
 
 fun decompressGzip (filename: string): Word8Vector.vector = let
   val proc = Unix.execute ("/usr/bin/gzip", ["-dc", filename])
@@ -20,6 +20,7 @@ type root = unit
 type heap = Word8Vector.vector * int vector
 fun heapSize (_, ptrs) = Vector.length ptrs
 val castPtr = I
+fun isPtr w = Word64.andb(w, 0w1) = 0w0
 
 fun get64 vec start = let
   fun b i = Word64.fromInt (Word8.toInt (Word8Vector.sub (vec, start + i)))

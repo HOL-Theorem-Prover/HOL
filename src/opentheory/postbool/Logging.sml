@@ -62,6 +62,7 @@ val proof_type = let open Thm fun
 |f (Specialize_prf _) = "Specialize"
 |f (deductAntisym_prf _) = "deductAntisym"
 |f (compute_prf _) = "compute"
+|f (save_dep_prf _) = "save_dep"
 in f end
 
 datatype log_state =
@@ -352,9 +353,7 @@ val (log_term, log_thm, log_clear,
     fun specify c (th,defs) = let
       val th1 = SEL_RULE th
       val (l,r) = dest_comb(concl th1)
-      val {Thy,Name,...} = dest_thy_const c
-      val Name = if uptodate_const Thy Name then Name else strip_old Name
-      val th2 = mk_proof_thm (Def_const_prf({Thy=Thy,Name=Name},r)) ([],mk_eq(c,r))
+      val th2 = mk_proof_thm (Def_const_prf(r,c)) ([],mk_eq(c,r))
       val defs = th2 :: defs
       val th = CONV_RULE BETA_CONV (EQ_MP (AP_TERM l (SYM th2)) th1)
       in (th,defs) end
@@ -426,6 +425,7 @@ val (log_term, log_thm, log_clear,
       val _ = log_term (concl th)
       val _ = log_command "axiom"
       in () end
+    | save_dep_prf th => log_thm th
     | ASSUME_prf tm => let
       val _ = log_term tm
       val _ = log_command "assume"
@@ -438,7 +438,9 @@ val (log_term, log_thm, log_clear,
       val _ = log_term tm
       val _ = log_command "refl"
       in () end
-    | Def_const_prf (c,t) => let
+    | Def_const_prf (t,ctm) => let
+      val {Thy,Name,...} = dest_thy_const ctm
+      val c = {Thy=Thy,Name=Name}
       val _ = log_const_name c
       val _ = log_term t
       val _ = log_command "defineConst"
@@ -645,13 +647,14 @@ val (log_term, log_thm, log_clear,
       val _ = log_thm (DISJ_CASES (SPEC tm BOOL_CASES_AX) th2 th6)
       in () end
     | Beta_prf th => log_thm (RIGHT_BETA th)
-    | Def_spec_prf (cs,th) => let
+    | Def_spec_prf (th,cs) => let
       val (th,defs) = rev_itlist specify cs (th,[])
       val _ = app log_thm (rev defs)
       val _ = log_thm th
       in () end
-    | Def_const_list_prf (thyname,stys,th) => let
-      val nvars = map (fn (s,ty) => ({Thy=thyname,Name=s},mk_var(s,ty))) stys
+    | Def_const_list_prf (th,cs) => let
+      val nvars = map (fn c => let val {Thy,Name,Ty} = dest_thy_const c
+                               in ({Thy=Thy,Name=Name},mk_var(Name,Ty)) end) cs
       val _ = log_list (log_pair (log_const_name, log_var)) nvars
       val _ = log_thm th
       val _ = log_command "defineConstList"
@@ -663,7 +666,8 @@ val (log_term, log_thm, log_clear,
       val _ = log_num k
       val _ = log_command "ref"
       in () end
-    | Def_tyop_prf (name,tyvars,th,aty) => let
+    | Def_tyop_prf (tyvars,th,aty) => let
+      val (name,_) = dest_type aty
       val n = log_tyop_name name
       val (ns,n) = n
       val ns'    = ns@[n]
@@ -752,16 +756,16 @@ datatype OTDirective = DeleteConstant | DeleteType | SkipThm | DeleteProof
 
 fun log_some_thms axdefs th =
   (if (case Thm.proof th of
-         Thm.Def_const_prf (thyrec, _) =>
-           Lib.mem (DeleteConstant, #Name thyrec) axdefs
-       | Thm.Def_const_list_prf (_,stys,_) =>
-           List.exists (Lib.C Lib.mem axdefs o mkpair DeleteConstant o #1)
-                       stys
-       | Thm.Def_spec_prf (cs,_) =>
+         Thm.Def_const_prf (_, c) =>
+           Lib.mem (DeleteConstant, #1(Term.dest_const c)) axdefs
+       | Thm.Def_const_list_prf (_,cs) =>
            List.exists (Lib.C Lib.mem axdefs o mkpair DeleteConstant o #1 o
                         Term.dest_const) cs
-       | Thm.Def_tyop_prf (thyrec,_,_,_) =>
-           Lib.mem (DeleteType, #Tyop thyrec) axdefs
+       | Thm.Def_spec_prf (_,cs) =>
+           List.exists (Lib.C Lib.mem axdefs o mkpair DeleteConstant o #1 o
+                        Term.dest_const) cs
+       | Thm.Def_tyop_prf (_,_,t) =>
+           Lib.mem (DeleteType, #1(Type.dest_type t)) axdefs
        | _ => false)
    then Thm.delete_proof th
    else ();

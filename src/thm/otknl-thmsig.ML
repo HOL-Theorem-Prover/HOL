@@ -41,15 +41,16 @@ sig
   | SYM_prf of thm
   | TRANS_prf of thm * thm
   | Beta_prf of thm
-  | Def_tyop_prf of {Thy:string,Tyop:string} * hol_type list * thm * hol_type
-  | Def_const_prf of {Thy:string,Name:string} * term
-  | Def_const_list_prf of string * (string * hol_type) list * thm
-  | Def_spec_prf of term list * thm
+  | Def_tyop_prf of hol_type list * thm * hol_type
+  | Def_const_prf of term * term
+  | Def_const_list_prf of thm * term list
+  | Def_spec_prf of thm * term list
   | Mk_abs_prf of thm * term * thm
   | Mk_comb_prf of thm * thm * thm
   | Specialize_prf of term * thm
   | deductAntisym_prf of thm * thm
   | compute_prf of (compute_args * thm list) * term
+  | save_dep_prf of thm
 
   withtype compute_args =
     { cval_terms : (string * term) list,

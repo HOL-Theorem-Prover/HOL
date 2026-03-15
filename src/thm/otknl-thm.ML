@@ -151,12 +151,13 @@ and proof =
 | Mk_comb_prf of thm * thm * thm
 | Mk_abs_prf of thm * term * thm
 | Specialize_prf of term * thm
-| Def_tyop_prf of {Thy:string,Tyop:string} * hol_type list * thm * hol_type
-| Def_const_prf of {Thy:string,Name:string} * term
-| Def_const_list_prf of string * (string * hol_type) list * thm
-| Def_spec_prf of term list * thm
+| Def_tyop_prf of hol_type list * thm * hol_type
+| Def_const_prf of term * term
+| Def_const_list_prf of thm * term list
+| Def_spec_prf of thm * term list
 | deductAntisym_prf of thm * thm
 | compute_prf of (compute_args * thm list) * term
+| save_dep_prf of thm
 
 withtype compute_args =
   { cval_terms : (string * term) list,
@@ -1265,7 +1266,7 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val TYDEF     = mk_thy_const{Name="TYPE_DEFINITION", Thy="bool",
                                Ty = Pty --> (repty-->bool)}
 in
-  mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])), Def_tyop_prf(name,tyvars,thm,newty))
+  mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])), Def_tyop_prf(tyvars,thm,newty))
 end
 
 (* subsumed by gen_prim_specification
@@ -1289,7 +1290,7 @@ fun prim_constant_definition Thy M = let
   val checked = check_tyvars (type_vars_in_term rhs) Ty DEF_ERR
   val new_lhs = Term.prim_new_const {Name = Name, Thy = Thy} Ty
 in
-  mk_defn_thm(empty_tag, mk_eq(new_lhs, rhs),Def_const_prf({Name=Name,Thy=Thy},rhs))
+  mk_defn_thm(empty_tag, mk_eq(new_lhs, rhs),Def_const_prf(rhs, new_lhs))
 end
 *)
 
@@ -1315,7 +1316,7 @@ fun prim_specification thyname cnames th = let
   fun addc v s  = v |-> bind thyname s (snd(dest_var v))
   val sigma     = map2 addc V cnames
 in
-  mk_defn_thm (tag th, subst sigma body, Def_spec_prf(map #residue sigma,th))
+  mk_defn_thm (tag th, subst sigma body, Def_spec_prf(th,map #residue sigma))
 end
 
 fun gen_prim_specification thyname th = let
@@ -1351,13 +1352,14 @@ fun gen_prim_specification thyname th = let
         | SOME n => raise SPEC_ERR ("Constant name: \""^n^"\" invalid")
   val checked     = check_vars body (List.map mk_var stys) SPEC_ERR
   fun addc (s,ty) = (mk_var (s,ty)) |-> bind thyname s ty
-  val prf = Def_const_list_prf(thyname,stys,th)
+  val sigma = List.map addc stys
+  val prf = Def_const_list_prf(th,map #residue sigma)
   val prf =
-    case cnames of [c] => if HOLset.member(hyps,body) then
-      Def_const_prf({Thy=thyname,Name=c},Term.rand body)
+    case sigma of [{residue, ...}] => if HOLset.member(hyps,body) then
+      Def_const_prf(Term.rand body, residue)
     else prf | _ => prf
 in
-  (cnames, mk_defn_thm (tag th, subst (List.map addc stys) body, prf))
+  (cnames, mk_defn_thm (tag th, subst sigma body, prf))
 end
 
 
@@ -1396,7 +1398,7 @@ fun save_dep thy (th as (THM(t,h,c,p))) =
     val dep = DEP_SAVED(did,dl)
   in
     thm_order := (!thm_order) + 1;
-    THM(Tag.set_dep dep t,h,c,p)
+    THM(Tag.set_dep dep t,h,c,ref(save_dep_prf th))
   end
 
 (* Some OpenTheory kernel rules *)

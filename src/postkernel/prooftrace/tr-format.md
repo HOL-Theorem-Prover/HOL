@@ -162,11 +162,11 @@ datatype proof
   | DISJ1_prf of thm * term
   | DISJ2_prf of term * thm
   | DISJ_CASES_prf of thm * thm * thm
+  | Def_const_list_prf of thm * term list
+  | Def_const_prf of term * term
+  | Def_spec_prf of thm * term list
+  | Def_tyop_prf of hol_type list * thm * hol_type
   | Disk_prf of string * thm_id
-  | Def_const_list_prf of string * (string * hol_type) list * thm
-  | Def_const_prf of {Thy: string, Name: string} * term
-  | Def_spec_prf of term list * thm
-  | Def_tyop_prf of {Thy: string, Tyop: string} * hol_type list * thm * hol_type
   | EQ_IMP_RULE1_prf of thm
   | EQ_IMP_RULE2_prf of thm
   | EQ_MP_prf of thm * thm
@@ -191,6 +191,7 @@ datatype proof
   | compute_prf of (compute_args * thm list) * term
   | deductAntisym_prf of thm * thm
   | deleted_prf
+  | saved_prf of thm
 
 type compute_args =
   { num_type   : hol_type,

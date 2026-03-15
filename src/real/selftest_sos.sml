@@ -199,16 +199,18 @@ val _ = List.app sos_tac_test [
    ``!x y:real. x * x + y * y >= &2 * x * y``)
 ];
 
-(* -- REAL_SOS with hypotheses (Positivstellensatz) -- *)
+(* -- REAL_SOS with hypotheses (Positivstellensatz, requires CSDP) -- *)
 
-val _ = List.app real_sos_test [
-  ("x>=5 /\\ y>=5 ==> x*y>=25",
-   ``!x y:real. x >= &5 /\ y >= &5 ==> x * y >= &25``),
-  ("x>=1 ==> x*x>=x",
-   ``!x:real. x >= &1 ==> x * x >= x``),
-  ("x>=0 /\\ y>=0 ==> x*x+y*y>=0 (hyps)",
-   ``!x y:real. x >= &0 /\ y >= &0 ==> x * x + y * y >= &0``)
-];
+val _ = if csdp_available then
+  List.app real_sos_test [
+    ("x>=5 /\\ y>=5 ==> x*y>=25",
+     ``!x y:real. x >= &5 /\ y >= &5 ==> x * y >= &25``),
+    ("x>=1 ==> x*x>=x",
+     ``!x:real. x >= &1 ==> x * x >= x``),
+    ("x>=0 /\\ y>=0 ==> x*x+y*y>=0 (hyps)",
+     ``!x y:real. x >= &0 /\ y >= &0 ==> x * x + y * y >= &0``)
+  ]
+else ();
 
 val _ = if csdp_available then
   List.app real_sos_test [
@@ -221,23 +223,27 @@ val _ = if csdp_available then
   ]
 else ();
 
-(* -- REAL_SOS_TAC with hypotheses -- *)
+(* -- REAL_SOS_TAC with hypotheses (requires CSDP) -- *)
 
-val _ = List.app sos_tac_test [
-  ("x>=5 /\\ y>=5 ==> x*y>=25 (tac)",
-   ``!x y:real. x >= &5 /\ y >= &5 ==> x * y >= &25``)
-];
+val _ = if csdp_available then
+  List.app sos_tac_test [
+    ("x>=5 /\\ y>=5 ==> x*y>=25 (tac)",
+     ``!x y:real. x >= &5 /\ y >= &5 ==> x * y >= &25``)
+  ]
+else ();
 
-(* -- REAL_SOS_ASM_TAC test -- *)
+(* -- REAL_SOS_ASM_TAC test (requires CSDP) -- *)
 
-val _ = let
-  val goal = ``!x:real. x >= &1 ==> x * x >= x``
-  fun check res = concl res ~~ goal
-in
-  tprint "REAL_SOS_ASM_TAC with assumption";
-  require_msg (check_result check) (term_to_string o concl)
-              (fn t => prove(t, REAL_SOS_ASM_TAC)) goal
-end;
+val _ = if csdp_available then
+  let
+    val goal = ``!x:real. x >= &1 ==> x * x >= x``
+    fun check res = concl res ~~ goal
+  in
+    tprint "REAL_SOS_ASM_TAC with assumption";
+    require_msg (check_result check) (term_to_string o concl)
+                (fn t => prove(t, REAL_SOS_ASM_TAC)) goal
+  end
+else ();
 
 (* -- REAL_SOS_DIRECT_TAC (requires CSDP) -- *)
 
@@ -274,30 +280,48 @@ fun prover_test prover_name prover (name, tm) =
 
 val _ = List.app (prover_test "INT_SOS" INT_SOS) [
   ("!x:int. x*x >= 0",
-   Parse.Term `!x:int. x * x >= &0`),
-  ("x>=5 /\\ y>=5 ==> x*y>=25",
-   Parse.Term `!x y:int. x >= &5 /\ y >= &5 ==> x * y >= &25`),
-  ("x>=1 ==> x*x>=x",
-   Parse.Term `!x:int. x >= &1 ==> x * x >= x`)
+   Parse.Term `!x:int. x * x >= &0`)
 ];
+
+(* INT_SOS with hypotheses (requires CSDP) *)
+val _ = if csdp_available then
+  List.app (prover_test "INT_SOS" INT_SOS) [
+    ("x>=5 /\\ y>=5 ==> x*y>=25",
+     Parse.Term `!x y:int. x >= &5 /\ y >= &5 ==> x * y >= &25`),
+    ("x>=1 ==> x*x>=x",
+     Parse.Term `!x:int. x >= &1 ==> x * x >= x`)
+  ]
+else ();
 
 (* -- NUM_SOS_RULE tests -- *)
 
 val _ = List.app (prover_test "NUM_SOS_RULE" NUM_SOS_RULE) [
-  ("num: x>=5 /\\ y>=5 ==> x*y>=25",
-   Parse.Term `!x y:num. x >= 5 /\ y >= 5 ==> x * y >= 25`),
   ("num: x*x >= x*x",
    Parse.Term `!x:num. x * x >= x * x`)
 ];
 
+(* NUM_SOS_RULE with hypotheses (requires CSDP) *)
+val _ = if csdp_available then
+  List.app (prover_test "NUM_SOS_RULE" NUM_SOS_RULE) [
+    ("num: x>=5 /\\ y>=5 ==> x*y>=25",
+     Parse.Term `!x y:num. x >= 5 /\ y >= 5 ==> x * y >= 25`)
+  ]
+else ();
+
 (* -- REAL_SOSFIELD tests -- *)
 
 val _ = List.app (prover_test "REAL_SOSFIELD" REAL_SOSFIELD) [
-  ("x>0 ==> x + x/x >= x",
-   Parse.Term `!x:real. x > &0 ==> x + x / x >= x`),
   ("x*x >= 0 (no div)",
    Parse.Term `!x:real. x * x >= &0`)
 ];
+
+(* REAL_SOSFIELD with hypotheses (requires CSDP) *)
+val _ = if csdp_available then
+  List.app (prover_test "REAL_SOSFIELD" REAL_SOSFIELD) [
+    ("x>0 ==> x + x/x >= x",
+     Parse.Term `!x:real. x > &0 ==> x + x / x >= x`)
+  ]
+else ();
 
 val _ = print "\n"
 val _ = exit_count0 errc

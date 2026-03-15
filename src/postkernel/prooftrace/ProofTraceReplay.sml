@@ -1,214 +1,138 @@
+structure ProofTraceReplay :> ProofTraceReplay = struct
+
 (*
+(* interactive use in hol --min *)
 val _ = PolyML.use (OS.Path.concat(Globals.HOLDIR, "tools-poly/holinteractive.ML"));
-*)
-open Lib HolKernel Redblackmap ProofTraceParser
-
-fun apply f g = f g
-fun mk_eq(l,r) = list_mk_icomb equality [l,r]
-
-fun mk_rules {string,term,thm,hol_type,list,pair,opt,four,
-              new_term,new_type} =
-   Array.fromList [
-      ("ABS", [term, thm]),
-      ("ALPHA", [term, term]),
-      ("AP_TERM", [term, thm]),
-      ("AP_THM", [thm, term]),
-      ("ASSUME", [term]),
-      ("Axiom", []),
-      ("BETA_CONV", [term]),
-      ("Beta", [thm]),
-      ("CCONTR", [term, thm]),
-      ("CHOOSE", [term, thm, thm]),
-      ("CONJUNCT1", [thm]),
-      ("CONJUNCT2", [thm]),
-      ("CONJ", [thm, thm]),
-      ("DISCH", [term, thm]),
-      ("DISJ1", [thm, term]),
-      ("DISJ2", [term, thm]),
-      ("DISJ_CASES", [thm, thm, thm]),
-      ("Def_const_list", [string, list (pair (string, hol_type)), thm]),
-      ("Def_const", [pair (string, string), term]),
-      ("Def_spec", [list new_term, thm]),
-      ("Def_tyop", [pair (string, string), list hol_type, thm, new_type]),
-      ("EQ_IMP_RULE1", [thm]),
-      ("EQ_IMP_RULE2", [thm]),
-      ("EQ_MP", [thm, thm]),
-      ("EXISTS", [term, term, thm]),
-      ("GENL", [list term, thm]),
-      ("GEN_ABS", [opt term, list term, thm]),
-      ("GEN", [term, thm]),
-      ("INST_TYPE", [list (pair (hol_type, hol_type)), thm]),
-      ("INST", [list (pair (term, term)), thm]),
-      ("MK_COMB", [thm, thm]),
-      ("MP", [thm, thm]),
-      ("Mk_abs", [thm, term, thm]),
-      ("Mk_comb", [thm, thm, thm]),
-      ("NOT_ELIM", [thm]),
-      ("NOT_INTRO", [thm]),
-      ("REFL", [term]),
-      ("SPEC", [term, thm]),
-      ("SUBST", [list (pair (term, thm)), term, thm]),
-      ("SYM", [thm]),
-      ("Specialize", [term, thm]),
-      ("TRANS", [thm, thm]),
-      ("compute", [pair (four (hol_type, list (pair (string, thm)),
-                               hol_type, list (pair (string, term))),
-                         list thm), term]),
-      ("deductAntisym", [thm, thm]),
-      ("deleted", [])
-  ]
-(*
-  compute_prf of (compute_args * thm list) * term
-  where compute_args = {
-    num_type   : hol_type,
-    char_eqns  : (string * thm) list,
-    cval_type  : hol_type,
-    cval_terms : (string * term) list }
+qload "ProofTraceParser";
+qload "PIntMap";
 *)
 
-fun do_all_thms heap (f: unit parser) = {
-  hol_type = K (), new_type = K (),
-  list = fn f => appList heap f o castPtr,
-  opt = fn f => ignore o option heap f o castPtr,
-  pair = fn fg => ignore o tuple2 heap fg o castPtr,
-  string = K (),
-  term = K (), new_term = K (),
-  thm = f,
-  four = fn fghi => ignore o tuple4 heap fghi o castPtr
-}
+open Feedback Lib Type Term Thm Redblackmap ProofTraceParser
+
+infix |->
+
+fun mk_eq(l,r) = list_mk_comb(inst[alpha |-> type_of l]equality, [l,r])
+datatype thm_id = SavedAnon of int | SavedName of string
 
 (*
-  val [(_,thm_ptr)] = listItems (!tm_defs)
-  val debug_ptr: thm ptr ref = ref (castPtr root_ptr)
-  val thm_ptr = !debug_ptr
-  ("Def_const_list", [string, list (pair (string, hol_type)), thm]),
-  ("Def_const", [pair (string, string), term]),
-  ("Def_spec", [list term, thm]),
-  ("Def_tyop", [pair (string, string), list hol_type, thm, hol_type]),
-  val thm_ptr = el 1 thm_ptrs
+  Proof rule indices (source of truth for both walk_thm and replay_thm):
+   0  ABS (term, thm)            23 EQ_IMP_RULE2 (thm)
+   1  ALPHA (term, term)         24 EQ_MP (thm, thm)
+   2  AP_TERM (term, thm)        25 EXISTS (term, term, thm)
+   3  AP_THM (thm, term)         26 GENL (list term, thm)
+   4  ASSUME (term)              27 GEN_ABS (opt term, list term, thm)
+   5  Axiom ()                   28 GEN (term, thm)
+   6  BETA_CONV (term)           29 INST_TYPE (list(pair(ty,ty)), thm)
+   7  Beta (thm)                 30 INST (list(pair(tm,tm)), thm)
+   8  CCONTR (term, thm)         31 MK_COMB (thm, thm)
+   9  CHOOSE (term, thm, thm)    32 MP (thm, thm)
+  10  CONJUNCT1 (thm)            33 Mk_abs (thm, term, thm)
+  11  CONJUNCT2 (thm)            34 Mk_comb (thm, thm, thm)
+  12  CONJ (thm, thm)            35 NOT_ELIM (thm)
+  13  DISCH (term, thm)          36 NOT_INTRO (thm)
+  14  DISJ1 (thm, term)          37 REFL (term)
+  15  DISJ2 (term, thm)          38 SPEC (term, thm)
+  16  DISJ_CASES (thm,thm,thm)   39 SUBST (list(pair(tm,th)), term, thm)
+  17  Def_const_list (thm,       40 SYM (thm)
+        list new_term)           41 Specialize (term, thm)
+  18  Def_const (term, new_term) 42 TRANS (thm, thm)
+  19  Def_spec (thm,             43 compute (pair(four(ty,list(pair(str,th)),
+        list new_term)                 ty,list(pair(str,tm))),list th),term)
+  20  Def_tyop (list ty,         44 deductAntisym (thm, thm)
+        thm, new_type)           45 deleted ()
+  21  Disk (string, thm_id)      46 save_dep (thm)
+  22  EQ_IMP_RULE1 (thm)
 *)
-fun mk_add_def thyname heap = let
-  val tm_defs : (string, thm ptr) dict ref = ref (mkDict String.compare)
-  val ty_defs : (string, thm ptr) dict ref = ref (mkDict String.compare)
-  val seen = BoolArray.array(heapSize heap, false)
-  fun add_def (thm_ptr: thm ptr) =
-    if BoolArray.sub(seen, ptr thm_ptr) then () else let
-    (*
-    val () = print ("ptr thm_ptr: " ^ Int.toString(ptr thm_ptr) ^ "\n")
-    val () = debug_ptr := thm_ptr
-    *)
-    val () = BoolArray.update(seen, ptr thm_ptr, true)
-    val (_, _, proof_ptr) = shThm heap thm_ptr
-    val (i, args_ptrs) = shVariant heap proof_ptr
-    val rs = mk_rules (do_all_thms heap (add_def o castPtr))
-    val (rule_name, args_rs) = Array.sub(rs, i)
-    fun add_thm_ptr NONE = thm_ptr
-      | add_thm_ptr _ = raise Fail "add_def dup"
-    fun check_thy defthy =
-      if defthy = thyname then () else raise Fail "add_def thy"
-    fun add_const nm = tm_defs := update(!tm_defs, nm, add_thm_ptr)
-    val () = if rule_name <> "Def_const_list" then () else let
-      (* val () = print "Def_const_list\n" *)
-      val () = check_thy $ str heap (castPtr (el 1 args_ptrs))
-      val names = list heap (#1 o tuple2 heap (str heap, I))
-                            (castPtr (el 2 args_ptrs))
-    in List.app add_const names end
-    val () = if rule_name <> "Def_const" then () else let
-      (* val () = print "Def_const\n" *)
-      val ((),nm) = tuple2 heap (check_thy o str heap, str heap)
-                                (castPtr (el 1 args_ptrs))
-    in add_const nm end
-    fun get_const (Const (idp,_)) = ident heap idp
-      | get_const _ = raise Fail "add_def spec"
-    val () = if rule_name <> "Def_spec" then () else let
-      (* val () = print "Def_spec\n" *)
-      val shtms = list heap (shTerm heap) (castPtr (el 1 args_ptrs))
-      val (defthys, nms) = unzip (List.map get_const shtms)
-      val () = List.app check_thy defthys
-    in List.app add_const nms end
-    val () = if rule_name <> "Def_tyop" then () else let
-      (* val () = print "Def_tyop\n" *)
-      val ((),tyop) = tuple2 heap (check_thy o str heap, str heap)
-                                  (castPtr (el 1 args_ptrs))
-    in ty_defs := update(!ty_defs, tyop, add_thm_ptr)
-    end
-    val _ = map2 apply args_rs args_ptrs
-  in () end
-in (tm_defs, ty_defs, add_def) end
 
-val trDB : (string, (string, thm) dict) dict ref
+val trDB : (string, (string, thm) dict * thm list) dict ref
   = ref (mkDict String.compare)
 
-datatype hol_obj =
-   Ty of hol_type
- | Tm of term
- | Th of thm
- | Str of string
- | Pair of hol_obj * hol_obj
- | List of hol_obj list
- | Opt of hol_obj option
- | Four of hol_obj * (hol_obj * (hol_obj * hol_obj))
- | Unknown
+datatype hol_obj = Ty of hol_type | Tm of term | Th of thm | Unknown
 fun destTy (Ty ty) = ty | destTy _ = raise Fail "destTy"
 fun destTm (Tm tm) = tm | destTm _ = raise Fail "destTm"
 fun destTh (Th th) = th | destTh _ = raise Fail "destTh"
-fun destStr (Str x) = x | destStr _ = raise Fail "destStr"
-fun destPair (Pair x) = x | destPair _ = raise Fail "destPair"
-fun destList (List x) = x | destList _ = raise Fail "destList"
-fun destOpt (Opt x) = x | destOpt _ = raise Fail "destOpt"
-fun destFour (Four x) = x | destFour _ = raise Fail "destFour"
+
+val (next_axiom_name, add_axiom_name) = let
+  val names = ref ["BOOL_CASES_AX", "SELECT_AX", "ETA_AX", "INFINITY_AX"]
+  fun next () = case !names of x::xs => x before names := xs
+                | _ => raise Fail "next_axiom_name"
+  fun add name = names := (!names)@[name]
+in
+  (next, add)
+end
+val skip_standard_axiom = next_axiom_name
 
 (*
 val thyname = "bool";
 *)
+val print_statistics = ref false
+val debug = ref false
+val quiet = ref false
+fun dbg_print s = if !debug then print s else ()
+fun msg_print s = if !quiet then () else print s
 
-fun replay thyname = let
+exception NeedsAncestor of string
 
+fun replay thyname =
+  if inDomain(!trDB, thyname)
+  then msg_print("skip ")
+  else
+let
   val filename = thyname ^ "Theory.tr.gz";
   val (root_ptr, heap) = parse filename;
-  val {all_thms, ...} = shRoot heap root_ptr;
-  (*
-    val all_ptrs = list heap (tuple3 heap (I, I, I)) all_thms
-    val thm_ptrs = List.map (fn (_,(p,_)) => p) all_ptrs
-  *)
-  val (tm_defs, ty_defs) =
-    let val (tms,tys,ad) = mk_add_def thyname heap
-        val () = appList heap (tuple3 heap (I, ad, I)) all_thms
-    in (!tms, !tys) end
+  val {all_thms, anon_thms, constants, types, ...} = shRoot heap root_ptr;
+
+  (* Pre-pass: closedness, refcounts, def collection *)
+  val refcounts = Word8Array.array(heapSize heap, 0w0 : Word8.word)
+  val pinned = BoolArray.array(heapSize heap, false)
+  fun incr p = if isPtr p then let val k = ptr p
+    val c = Word8Array.sub(refcounts, k)
+  in if c < 0wxFF then Word8Array.update(refcounts, k, c + 0w1) else ()
+  end else ()
+  fun on_def_thm thm_ptr = BoolArray.update(pinned, ptr thm_ptr, true)
+
+  val {tm_defs, ty_defs, is_closed, get_const_id, get_type_id} =
+    ProofTraceWalk.walk
+      {heap = heap, thyname = thyname,
+       named_thms = all_thms, anon_thms = anon_thms,
+       incr = incr, on_def_thm = on_def_thm}
 
   val replayed_heap = Array.array(heapSize heap, Unknown);
 
-  val next_axiom_name = let
-    val names = ref ["BOOL_CASES_AX", "SELECT_AX", "ETA_AX", "INFINITY_AX"]
-  in 
-    fn () => case !names of x::xs => x before names := xs
-             | _ => raise Fail "next_axiom_name"
-  end
+  val cached_compute_ptr : unit ptr ref = ref (castPtr root_ptr)
+  val cached_compute : (thm list -> term -> thm) ref
+    = ref (fn _ => raise Bind)
 
-  fun cache (mk_obj,dest_obj) mk_x x_ptr = let
-    val key = ptr x_ptr
-  in case Array.sub(replayed_heap, key) of Unknown =>
-       let val obj = mk_obj(mk_x x_ptr)
-       in (Array.update(replayed_heap, key, obj); dest_obj obj) end
-     | obj => dest_obj obj
-  end
+  fun cache (mk_obj, dest_obj) mk_x p =
+  if isPtr p then let
+    val key = ptr p
+    fun maybe_evict () =
+      if BoolArray.sub(pinned, key) then () else let
+        val rc = Word8Array.sub(refcounts, key)
+      in if rc = 0wxFF then () (* saturated, never evict *)
+         else if rc <= 0w1
+         then (Word8Array.update(refcounts, key, 0w0);
+               Array.update(replayed_heap, key, Unknown))
+         else Word8Array.update(refcounts, key, rc - 0w1)
+      end
+  in case Array.sub(replayed_heap, key) of
+       Unknown => let
+         val x = mk_x p
+         val () = Array.update(replayed_heap, key, mk_obj x)
+         val () = maybe_evict ()
+       in x end
+     | obj => (maybe_evict (); dest_obj obj)
+  end else mk_x p
 
-  val debug : thm list ref = ref []
-  val dbg_print = print
-
-  fun get_const_id tm_ptr =
-    case shTerm heap tm_ptr of Const (idp,_) => ident heap idp
-    | _ => raise Fail "get_const_id"
-
-  val replay_str = cache (Str,destStr) (str heap)
-  fun replay_pair f = cache (Pair,destPair) (tuple2 heap f)
-  fun replay_list f = cache (List,destList) (list heap f)
-  fun replay_opt f = cache (Opt,destOpt) (option heap f)
-  fun replay_four f = cache (Four,destFour) (tuple4 heap f)
+  fun get_thm_id (id_ptr: thm_id ptr) = let
+    val (i,ps) = shVariant heap id_ptr
+    val p = el 1 ps
+  in if i = 0 then SavedAnon (int (castPtr p))
+     else SavedName (str heap (castPtr p)) end
 
   fun check_def map Thy nm =
     if Thy = thyname then case peek (map, nm)
-    of SOME thp => ignore (replay_thm thp)
+    of SOME thps => List.app (ignore o replay_thm) thps
      | _ => () else ()
 
   and replay_type ty_ptr =
@@ -222,182 +146,199 @@ fun replay thyname = let
         in mk_thy_type {Thy=Thy, Tyop=Tyop, Args=Args} end
   ) ty_ptr
 
+  and replay_subst env (sb_ptr: term Subst.subs ptr) =
+    case shSubs heap sb_ptr of
+      Cons (sbp,tmp) =>
+        Subst.cons (replay_subst env sbp,
+                    replay_term_sub env tmp)
+    | Id => Subst.id
+    | Lift (i,sbp) => Subst.lift(i, replay_subst env sbp)
+    | Shift (i,sbp) => Subst.shift(i, replay_subst env sbp)
+
+  and replay_term_sub env tm_ptr =
+    if is_closed tm_ptr then replay_term tm_ptr
+    else replay_term_core env tm_ptr
+
   and replay_term_core env tm_ptr =
     case shTerm heap tm_ptr of
       Abs (t1,t2) => let
-        val x = replay_term_core env t1
-        val g = genvar(type_of x)
-        val b = replay_term_core (g::env) t2
-      in mk_abs(g,b) end
+        val x = replay_term_sub env t1
+        val (s,ty) = dest_var x
+        val g = genvar ty
+        val b = replay_term_sub (Subst.cons(env,g)) t2
+      in rename_bvar s (mk_abs(g,b)) end
     | Comb (t1,t2) => let
-        val f = replay_term_core env t1
-        val x = replay_term_core env t2
+        val f = replay_term_sub env t1
+        val x = replay_term_sub env t2
       in mk_comb(f,x) end
     | Const (idp,typ) => let
         val (Thy,Name) = ident heap idp
-        val () = dbg_print ("check_def "^Name^",")
         val () = check_def tm_defs Thy Name
         val ty = replay_type typ
       in mk_thy_const {Thy=Thy, Name=Name, Ty=ty}
          handle e as (HOL_ERR _) =>
            if Thy = thyname then
-             (new_constant(Name,ty);
-              prim_mk_const {Thy=Thy, Name=Name})
+             (msg_print("WARNING: prim_new_const "^Thy^"$"^Name^"\n");
+              prim_new_const {Thy=Thy, Name=Name} ty)
            else raise e
       end
     | Fv (s,typ) => mk_var(s, replay_type typ)
-    | Bv n => List.nth(env, n)
-    | _ => raise Fail "replay_term_core Clos"
+    | Bv n => (case Subst.exp_rel(env, n) of
+                 (0, SOME t) => t
+               | (n, SOME t) => raise Fail "replay_term_core reloc"
+               | _ => raise Fail "replay_term_core Bv")
+    | Clos (sbp,tmp) =>
+        replay_term_sub (Subst.comp #2 (env,replay_subst env sbp)) tmp
 
   and replay_term tm_ptr =
-  cache (Tm,destTm) (replay_term_core []) tm_ptr
+  cache (Tm,destTm) (replay_term_core Subst.id) tm_ptr
 
   and replay_thm (thm_ptr: thm ptr) =
   cache (Th,destTh) (fn thm_ptr => let
     val (hyp_ptr, concl_ptr, proof_ptr) = shThm heap thm_ptr
     val (i, args_ptrs) = shVariant heap proof_ptr
-    val (name, args_rs) = Array.sub(rules(), i)
-    val () = dbg_print (name^",")
-    val aos = map2 apply args_rs args_ptrs
-  in
-    if name = "ABS" then
-      ABS (destTm (el 1 aos)) (destTh (el 2 aos))
-    else if name = "ALPHA" then
-      ALPHA (destTm (el 1 aos)) (destTm (el 2 aos))
-    else if name = "AP_TERM" then
-      AP_TERM (destTm (el 1 aos)) (destTh (el 2 aos))
-    else if name = "AP_THM" then
-      AP_THM (destTh (el 1 aos)) (destTm (el 2 aos))
-    else if name = "ASSUME" then
-      ASSUME (destTm (el 1 aos))
-    else if name = "Axiom" then let
-      val h = ref (HOLset.empty Term.compare)
-      fun add t = h := HOLset.add(!h, t)
-      val () = appSet heap (add o replay_term) hyp_ptr
-      val h = !h 
-      val c = replay_term concl_ptr
-      (* TODO: search for previously exported theoerms *)
-      val () = if HOLset.isEmpty h then () else raise Fail "Axiom hyps"
-    in new_axiom(next_axiom_name(), c) end
-    else if name = "BETA_CONV" then
-      BETA_CONV (destTm (el 1 aos))
-    else if name = "Beta" then
-      raise Fail ("replay_thm: Beta not yet implemented")
-    else if name = "CCONTR" then
-      CCONTR (destTm (el 1 aos)) (destTh (el 2 aos))
-    else if name = "CHOOSE" then
-      CHOOSE (destTm (el 1 aos), destTh (el 2 aos)) (destTh (el 3 aos))
-    else if name = "CONJUNCT1" then
-      CONJUNCT1 (destTh (el 1 aos))
-    else if name = "CONJUNCT2" then
-      CONJUNCT2 (destTh (el 1 aos))
-    else if name = "CONJ" then
-      CONJ (destTh (el 1 aos)) (destTh (el 2 aos))
-    else if name = "DISCH" then
-      DISCH (destTm (el 1 aos)) (destTh (el 2 aos))
-    else if name = "DISJ1" then
-      DISJ1 (destTh (el 1 aos)) (destTm (el 2 aos))
-    else if name = "DISJ2" then
-      DISJ2 (destTm (el 1 aos)) (destTh (el 2 aos))
-    else if name = "DISJ_CASES" then
-      DISJ_CASES (destTh (el 1 aos)) (destTh (el 2 aos)) (destTh (el 3 aos))
-    else if name = "Def_const_list" then
-      raise Fail ("replay_thm: Def_const_list not yet implemented")
-    else if name = "Def_const" then let
-      val (Thy,Name) = (destStr ## destStr) (destPair (el 1 aos))
-      val rhs = destTm (el 2 aos)
-      val th = ASSUME (mk_eq(mk_var(Name, type_of rhs), rhs))
-      in #2 (gen_prim_specification Thy th) end
-    else if name = "Def_spec" then let
-      val ids = List.map ((destStr ## destStr) o destPair)
-                         (destList (el 1 aos))
-      val () = if List.all (equal thyname) (List.map #1 ids) then ()
-               else raise Fail "Def_spec thy"
-      val cnames = List.map #2 ids
-      val th = destTh (el 2 aos)
-    in prim_specification thyname cnames th end
-    else if name = "Def_tyop" then let
-      val (Thy,Tyop) = (destStr ## destStr) (destPair (el 1 aos))
-      val th = destTh (el 3 aos)
-      val () = if thyname = "bool"
-               then check_def tm_defs thyname "TYPE_DEFINITION"
-               else ()
-    in prim_type_definition ({Thy=Thy, Tyop=Tyop},th) end
-    else if name = "EQ_IMP_RULE1" then
-      #1 (EQ_IMP_RULE (destTh (el 1 aos)))
-    else if name = "EQ_IMP_RULE2" then
-      #2 (EQ_IMP_RULE (destTh (el 1 aos)))
-    else if name = "EQ_MP" then
-      EQ_MP (destTh (el 1 aos)) (destTh (el 2 aos))
-    else if name = "EXISTS" then
-      EXISTS (destTm (el 1 aos), destTm (el 2 aos)) (destTh (el 3 aos))
-    else if name = "GENL" then
-      raise Fail ("replay_thm: GENL not yet implemented")
-    else if name = "GEN_ABS" then
-      raise Fail ("replay_thm: GEN_ABS not yet implemented")
-    else if name = "GEN" then
-      GEN (destTm (el 1 aos)) (destTh (el 2 aos))
-    else if name = "INST_TYPE" then let
-      val s = List.map (op |-> o (destTy ## destTy) o destPair)
-                       (destList (el 1 aos))
-      val th = destTh (el 2 aos)
-    in INST_TYPE s th end
-    else if name = "INST" then let
-      val s = List.map (op |-> o (destTm ## destTm) o destPair)
-                       (destList (el 1 aos))
-      val th = destTh (el 2 aos)
-    in INST s th end
-    else if name = "MK_COMB" then
-      MK_COMB (destTh (el 1 aos), destTh (el 2 aos))
-    else if name = "MP" then
-      MP (destTh (el 1 aos)) (destTh (el 2 aos))
-    else if name = "Mk_abs" then
-      raise Fail ("replay_thm: Mk_abs not yet implemented")
-    else if name = "Mk_comb" then
-      raise Fail ("replay_thm: Mk_comb not yet implemented")
-    else if name = "NOT_ELIM" then
-      NOT_ELIM (destTh (el 1 aos))
-    else if name = "NOT_INTRO" then
-      NOT_INTRO (destTh (el 1 aos))
-    else if name = "REFL" then
-      REFL (destTm (el 1 aos))
-    else if name = "SPEC" then
-      SPEC (destTm (el 1 aos)) (destTh (el 2 aos))
-    else if name = "SUBST" then let
-      val s = List.map (op |-> o (destTm ## destTh) o destPair)
-                       (destList (el 1 aos))
-      val t = destTm (el 2 aos)
-      val th = destTh (el 3 aos)
-    in SUBST s t th end
-    else if name = "SYM" then
-      SYM (destTh (el 1 aos))
-    else if name = "Specialize" then
-      raise Fail ("replay_thm: Specialize not yet implemented")
-    else if name = "TRANS" then
-      TRANS (destTh (el 1 aos)) (destTh (el 2 aos))
-      handle e as (HOL_ERR _) => (debug := [
-        destTh (el 1 aos), destTh (el 2 aos) ]; raise e)
-    else if name = "compute" then
-      raise Fail ("replay_thm: compute not yet implemented")
-    else if name = "deductAntisym" then
-      raise Fail ("replay_thm: deductAntisym not yet implemented")
-    else if name = "deleted" then
-      raise Fail ("replay_thm: deleted not yet implemented")
-    else raise Fail ("replay_thm " ^ name)
+    fun tm n = replay_term (castPtr (el n args_ptrs))
+    fun th n = replay_thm (castPtr (el n args_ptrs))
+    fun ty n = replay_type (castPtr (el n args_ptrs))
+  in case i of
+      0  => (* ABS *)        ABS (tm 1) (th 2)
+    | 1  => (* ALPHA *)      ALPHA (tm 1) (tm 2)
+    | 2  => (* AP_TERM *)    AP_TERM (tm 1) (th 2)
+    | 3  => (* AP_THM *)     AP_THM (th 1) (tm 2)
+    | 4  => (* ASSUME *)     ASSUME (tm 1)
+    | 5  => (* Axiom *) let
+        val h = ref (HOLset.empty Term.compare)
+        fun add t = h := HOLset.add(!h, t)
+        val () = appSet heap (add o replay_term) hyp_ptr
+        val h = !h
+        val c = replay_term concl_ptr
+        val () = if HOLset.isEmpty h then () else raise Fail "Axiom hyps"
+      in mk_axiom_thm(Nonce.mk(next_axiom_name()), c) end
+    | 6  => (* BETA_CONV *)  BETA_CONV (tm 1)
+    | 7  => (* Beta *)       Beta (th 1)
+    | 8  => (* CCONTR *)     CCONTR (tm 1) (th 2)
+    | 9  => (* CHOOSE *)     CHOOSE (tm 1, th 2) (th 3)
+    | 10 => (* CONJUNCT1 *)  CONJUNCT1 (th 1)
+    | 11 => (* CONJUNCT2 *)  CONJUNCT2 (th 1)
+    | 12 => (* CONJ *)       CONJ (th 1) (th 2)
+    | 13 => (* DISCH *)      DISCH (tm 1) (th 2)
+    | 14 => (* DISJ1 *)      DISJ1 (th 1) (tm 2)
+    | 15 => (* DISJ2 *)      DISJ2 (tm 1) (th 2)
+    | 16 => (* DISJ_CASES *) DISJ_CASES (th 1) (th 2) (th 3)
+    | 17 => (* Def_const_list *) let
+        val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
+        val () = if List.all (equal thyname) (List.map #1 ids) then ()
+                 else raise Fail "Def_const_list thy"
+      in #2 (gen_prim_specification thyname (th 1)) end
+    | 18 => (* Def_const *) let
+        val (Thy,Name) = get_const_id (castPtr (el 2 args_ptrs))
+        val rhs = tm 1
+        val thm = ASSUME (mk_eq(mk_var(Name, type_of rhs), rhs))
+      in #2 (gen_prim_specification Thy thm) end
+    | 19 => (* Def_spec *) let
+        val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
+        val () = if List.all (equal thyname) (List.map #1 ids) then ()
+                 else raise Fail "Def_spec thy"
+        val cnames = List.map #2 ids
+      in prim_specification thyname cnames (th 1) end
+    | 20 => (* Def_tyop *) let
+        val (Thy,Tyop) = get_type_id (castPtr (el 3 args_ptrs))
+        val thm = th 2
+        val () = if thyname = "bool"
+                 then check_def tm_defs thyname "TYPE_DEFINITION"
+                 else ()
+      in prim_type_definition ({Thy=Thy, Tyop=Tyop}, thm) end
+    | 21 => (* Disk *) let
+        val thy = str heap (castPtr (el 1 args_ptrs))
+        val id = get_thm_id (castPtr (el 2 args_ptrs))
+      in case peek(!trDB, thy) of
+          NONE => raise NeedsAncestor thy
+        | SOME (named,anons) => (case id of
+            SavedAnon i => (
+              List.nth(anons, i) handle Subscript =>
+                raise Fail ("Disk thy "^thy^":"^(Int.toString i)))
+          | SavedName s => (
+              case peek(named, s) of
+                NONE => raise Fail ("Disk thy "^thy^"$"^s)
+              | SOME th => th))
+      end
+    | 22 => (* EQ_IMP_RULE1 *) #1 (EQ_IMP_RULE (th 1))
+    | 23 => (* EQ_IMP_RULE2 *) #2 (EQ_IMP_RULE (th 1))
+    | 24 => (* EQ_MP *)      EQ_MP (th 1) (th 2)
+    | 25 => (* EXISTS *)     EXISTS (tm 1, tm 2) (th 3)
+    | 26 => (* GENL *)       GENL (list heap (replay_term o castPtr)
+                                   (castPtr (el 1 args_ptrs))) (th 2)
+    | 27 => (* GEN_ABS *) let
+        val opt_tm = option heap (replay_term o castPtr)
+                                 (castPtr (el 1 args_ptrs))
+        val tms = list heap (replay_term o castPtr)
+                            (castPtr (el 2 args_ptrs))
+      in GEN_ABS opt_tm tms (th 3) end
+    | 28 => (* GEN *)        GEN (tm 1) (th 2)
+    | 29 => (* INST_TYPE *) let
+        val s = list heap (fn p => let
+          val (a,b) = tuple2 heap
+            (replay_type o castPtr, replay_type o castPtr) (castPtr p)
+        in a |-> b end) (castPtr (el 1 args_ptrs))
+      in INST_TYPE s (th 2) end
+    | 30 => (* INST *) let
+        val s = list heap (fn p => let
+          val (a,b) = tuple2 heap
+            (replay_term o castPtr, replay_term o castPtr) (castPtr p)
+        in a |-> b end) (castPtr (el 1 args_ptrs))
+      in INST s (th 2) end
+    | 31 => (* MK_COMB *)    MK_COMB (th 1, th 2)
+    | 32 => (* MP *)         MP (th 1) (th 2)
+    | 33 => (* Mk_abs *) let
+        val (_,_,mka) = Mk_abs (th 1)
+      in mka (th 3) end
+    | 34 => (* Mk_comb *) let
+        val (_,_,mkc) = Mk_comb (th 1)
+      in mkc (th 2) (th 3) end
+    | 35 => (* NOT_ELIM *)   NOT_ELIM (th 1)
+    | 36 => (* NOT_INTRO *)  NOT_INTRO (th 1)
+    | 37 => (* REFL *)       REFL (tm 1)
+    | 38 => (* SPEC *)       SPEC (tm 1) (th 2)
+    | 39 => (* SUBST *) let
+        val s = list heap (fn p => let
+          val (a,b) = tuple2 heap
+            (replay_term o castPtr, replay_thm o castPtr) (castPtr p)
+        in a |-> b end) (castPtr (el 1 args_ptrs))
+      in SUBST s (tm 2) (th 3) end
+    | 40 => (* SYM *)        SYM (th 1)
+    | 41 => (* Specialize *) Specialize (tm 1) (th 2)
+    | 42 => (* TRANS *)      TRANS (th 1) (th 2)
+    | 43 => (* compute *) let
+        val (compute_args_ptr, ths_ptr) =
+          tuple2 heap (I, I) (castPtr (el 1 args_ptrs))
+        val ths = list heap (replay_thm o castPtr) ths_ptr
+        val t = tm 2
+        val () = if !cached_compute_ptr = compute_args_ptr then ()
+          else let
+            val (num_type_ptr, (eqns_ptr, (cval_type_ptr, cterms_ptr))) =
+              tuple4 heap (I, I, I, I) (castPtr compute_args_ptr)
+            val num_type = replay_type (castPtr num_type_ptr)
+            val char_eqns = list heap (fn p =>
+              tuple2 heap (str heap, replay_thm o castPtr) (castPtr p))
+              eqns_ptr
+            val cval_type = replay_type (castPtr cval_type_ptr)
+            val cval_terms = list heap (fn p =>
+              tuple2 heap (str heap, replay_term o castPtr) (castPtr p))
+              cterms_ptr
+          in
+            cached_compute_ptr := compute_args_ptr;
+            cached_compute := Thm.compute
+              {num_type = num_type, char_eqns = char_eqns,
+               cval_type = cval_type, cval_terms = cval_terms}
+          end
+      in (!cached_compute) ths t end
+    | 44 => (* deductAntisym *)
+        raise Fail "replay_thm: deductAntisym not yet implemented"
+    | 45 => (* deleted *)
+        raise Fail "replay_thm: deleted not yet implemented"
+    | 46 => (* save_dep *) th 1
+    | n => raise Fail ("replay_thm: unknown rule " ^ Int.toString n)
   end) thm_ptr
-
-  and rules() = mk_rules {
-    string = Str o replay_str o castPtr,
-    term = Tm o replay_term o castPtr,
-    thm = Th o replay_thm o castPtr,
-    hol_type = Ty o replay_type o castPtr,
-    new_type = K Unknown,
-    new_term = Pair o (Str ## Str) o get_const_id o castPtr,
-    list = fn f => List o replay_list f o castPtr,
-    pair = fn f => Pair o replay_pair f o castPtr,
-    opt = fn f => Opt o replay_opt f o castPtr,
-    four = fn f => Four o replay_four f o castPtr
-  }
 
   fun export p = let
     val (nm, (thp, _)) = tuple3 heap (str heap, I, I) p
@@ -406,17 +347,70 @@ fun replay thyname = let
     val () = dbg_print " done\n"
   in (nm, th) end
 
-  val () = new_theory thyname
+  val named = fromList String.compare (list heap export all_thms)
+  val anons = list heap replay_thm anon_thms
 
-  val thyDB = fromList String.compare (list heap export all_thms)
+  fun ensure_const p = let
+    val (Name, ty) = tuple2 heap (str heap, replay_type) p
+    val () = check_def tm_defs thyname Name
+  in
+    prim_mk_const {Thy=thyname, Name=Name}
+    handle HOL_ERR _ =>
+      (msg_print("WARNING: prim_new_const "^thyname^"$"^Name^"\n");
+       prim_new_const {Thy=thyname, Name=Name} ty)
+  end
 
-  val () = trDB := update(!trDB, thyname, fn NONE => thyDB
-                                      | _ => raise Fail "dup thy")
-in () end
+  fun ensure_type p = let
+    val (Tyop, ar) = tuple2 heap (str heap, int) p
+    val () = check_def ty_defs thyname Tyop
+  in case op_arity {Thy=thyname, Tyop=Tyop}
+     of SOME n => if n = ar then () else
+                  raise Fail ("ensure_type arity "^Tyop)
+      | NONE => (msg_print("WARNING: prim_new_type "^thyname^"$"^Tyop^"\n");
+                 prim_new_type {Thy=thyname, Tyop=Tyop} ar)
+  end
+
+  val () = appList heap ensure_const constants
+  val () = appList heap ensure_type types
+
+  val () = if !print_statistics then let
+  val (live_ty, live_tm, live_th) =
+    Array.foldl (fn (Ty _, (a,b,c)) => (a+1,b,c)
+                  | (Tm _, (a,b,c)) => (a,b+1,c)
+                  | (Th _, (a,b,c)) => (a,b,c+1)
+                  | (_, acc) => acc) (0,0,0) replayed_heap
+  val saturated = Word8Array.foldl (fn (0wxFF, n) => n+1 | (_, n) => n) 0 refcounts
+  val pinned_count = BoolArray.foldl (fn (true, n) => n+1 | (_, n) => n) 0 pinned
+  val () = print (concat [
+    "  heap: ", Int.toString (heapSize heap),
+    "  live: ", Int.toString live_ty, "ty/",
+               Int.toString live_tm, "tm/",
+               Int.toString live_th, "th",
+    "  pinned: ", Int.toString pinned_count,
+    "  sat: ", Int.toString saturated,
+    "  named: ", Int.toString (numItems named),
+    "  anons: ", Int.toString (length anons), "\n"])
+  in () end else ()
+
+in trDB := insert(!trDB, thyname, (named, anons)) end
+handle e as (NeedsAncestor s) => (print("Ancestor missing: "^s^"\n"); raise e)
+     | e as (HOL_ERR m) => (print("HOL_ERR: "^(Feedback.message_of m)^"\n"); raise e)
+
+fun trDB_size () = foldl (fn (_,(n,a), acc) =>
+  acc + numItems n + length a) 0 (!trDB)
+
+fun replay_sequence [] = ()
+  | replay_sequence (thy::thys) =
+    (msg_print thy; print ": ";
+     if !print_statistics then
+       print ("trDB: " ^ Int.toString (trDB_size ()) ^ " thms  ")
+     else ();
+     (if !print_statistics then time else I) replay thy;
+     replay_sequence thys)
+
+fun replayed_thms s = find(!trDB, s)
 
 (*
-val () = replay "bool"
-val rm = find(!trDB,"bool")
 
 fun print_ty ty =
   if is_vartype ty then dest_vartype ty
@@ -441,5 +435,5 @@ fun print_tm tm =
     String.concat["(", print_tm f, " ", print_tm x, ")"]
   end
 
-print_tm(concl(find(rm,"INFINITY_AX")))
 *)
+end

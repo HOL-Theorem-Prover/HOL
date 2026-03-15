@@ -1374,7 +1374,7 @@ fun do_cachekey thyname =
                             else
                               case hm_target.filepart dep of
                                   DAT s =>
-                                  let
+                                  (let
                                     val uoname = fromFile (UO (Theory s))
                                     val dir = OS.Path.dir p
                                     val uo_path =
@@ -1388,7 +1388,7 @@ fun do_cachekey thyname =
                                         OS.Path.concat(real_dir, dat_name)
                                   in
                                     dat_fspath
-                                  end handle OS.SysErr _ => fspath
+                                  end handle OS.SysErr _ => fspath)
                                 | _ => fspath
                     in { name = fromFile (hm_target.filepart dep),
                          path = path }

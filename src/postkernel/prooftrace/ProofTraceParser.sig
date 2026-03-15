@@ -34,6 +34,7 @@ val str: heap -> string parser
 val int: int parser
 val ptr: 'a ptr -> int
 val castPtr: 'a ptr -> 'b ptr
+val isPtr: 'a ptr -> bool
 
 type ident
 val ident: heap -> ident ptr -> string * string
