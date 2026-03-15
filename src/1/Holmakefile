@@ -13,7 +13,7 @@ selftest.exe: selftest.uo simpfrag.uo $(dprot $(SIGOBJ)/term_pp.uo) \
 ifdef HOLSELFTESTLEVEL
 
 selftest.log: selftest.exe
-	./selftest.exe > $@ 2>&1
+	$(tee ./selftest.exe,$@)
 
 all: selftest.log
 endif
