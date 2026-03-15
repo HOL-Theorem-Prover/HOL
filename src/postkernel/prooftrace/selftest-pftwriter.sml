@@ -33,7 +33,7 @@ val () = let
     \{\"cmd\":\"TYOP\",\"id\":1,\"name\":\"bool\",\"args\":[]}\n\
     \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"x\",\"ty\":0}\n\
     \{\"cmd\":\"REFL\",\"id\":0,\"tm\":0}\n\
-    \{\"cmd\":\"FOOTER\",\"n_ty\":2,\"n_tm\":1,\"n_th\":1,\"n_ci\":0}\n"
+    \{\"cmd\":\"LIMITS\",\"n_ty\":2,\"n_tm\":1,\"n_th\":1,\"n_ci\":0}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got);
@@ -58,7 +58,7 @@ val () = let
     \{\"cmd\":\"TYVAR\",\"id\":2,\"name\":\"a\\\\b\"}\n\
     \{\"cmd\":\"TYVAR\",\"id\":3,\"name\":\"a\\\"b\"}\n\
     \{\"cmd\":\"TYVAR\",\"id\":4,\"name\":\"bool$/\\\\\"}\n\
-    \{\"cmd\":\"FOOTER\",\"n_ty\":5,\"n_tm\":0,\"n_th\":0,\"n_ci\":0}\n"
+    \{\"cmd\":\"LIMITS\",\"n_ty\":5,\"n_tm\":0,\"n_th\":0,\"n_ci\":0}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got ^ "expected:\n" ^ expected);
@@ -93,7 +93,7 @@ val () = let
     \{\"cmd\":\"CONJUNCT2\",\"id\":4,\"th\":2}\n\
     \{\"cmd\":\"DISCH\",\"id\":5,\"tm\":0,\"th\":1}\n\
     \{\"cmd\":\"MP\",\"id\":6,\"imp\":5,\"ant\":0}\n\
-    \{\"cmd\":\"FOOTER\",\"n_ty\":1,\"n_tm\":2,\"n_th\":7,\"n_ci\":0}\n"
+    \{\"cmd\":\"LIMITS\",\"n_ty\":1,\"n_tm\":2,\"n_th\":7,\"n_ci\":0}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got);
@@ -124,7 +124,7 @@ val () = let
     \{\"cmd\":\"GENL\",\"id\":1,\"th\":0,\"tms\":[0,1]}\n\
     \{\"cmd\":\"INST\",\"id\":2,\"th\":0,\"subst\":[{\"redex\":0,\"residue\":1},{\"redex\":1,\"residue\":0}]}\n\
     \{\"cmd\":\"INST_TYPE\",\"id\":3,\"th\":0,\"subst\":[{\"redex\":0,\"residue\":1}]}\n\
-    \{\"cmd\":\"FOOTER\",\"n_ty\":2,\"n_tm\":2,\"n_th\":4,\"n_ci\":0}\n"
+    \{\"cmd\":\"LIMITS\",\"n_ty\":2,\"n_tm\":2,\"n_th\":4,\"n_ci\":0}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got);
@@ -153,7 +153,7 @@ val () = let
     \{\"cmd\":\"DEL\",\"ns\":\"th\",\"id\":0}\n\
     \{\"cmd\":\"DEL\",\"ns\":\"tm\",\"id\":0,\"upto\":5}\n\
     \{\"cmd\":\"LOAD\",\"id\":1,\"name\":\"myThm\"}\n\
-    \{\"cmd\":\"FOOTER\",\"n_ty\":1,\"n_tm\":1,\"n_th\":2,\"n_ci\":0}\n"
+    \{\"cmd\":\"LIMITS\",\"n_ty\":1,\"n_tm\":1,\"n_th\":2,\"n_ci\":0}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got);
@@ -182,7 +182,7 @@ val () = let
     \{\"cmd\":\"AXIOM\",\"id\":2,\"tm\":0}\n\
     \{\"cmd\":\"DEF_SPEC\",\"id\":3,\"th\":0,\"names\":[\"foo\",\"bar\"]}\n\
     \{\"cmd\":\"DEF_TYOP\",\"id\":4,\"th\":0,\"name\":\"mytype\"}\n\
-    \{\"cmd\":\"FOOTER\",\"n_ty\":1,\"n_tm\":1,\"n_th\":5,\"n_ci\":0}\n"
+    \{\"cmd\":\"LIMITS\",\"n_ty\":1,\"n_tm\":1,\"n_th\":5,\"n_ci\":0}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got);
@@ -227,7 +227,7 @@ val () = let
     \{\"cmd\":\"MK_COMB\",\"id\":7,\"th1\":0,\"th2\":0}\n\
     \{\"cmd\":\"ABS\",\"id\":8,\"tm\":0,\"th\":0}\n\
     \{\"cmd\":\"PROVE_HYP\",\"id\":9,\"th1\":1,\"th2\":2}\n\
-    \{\"cmd\":\"FOOTER\",\"n_ty\":2,\"n_tm\":2,\"n_th\":10,\"n_ci\":0}\n"
+    \{\"cmd\":\"LIMITS\",\"n_ty\":2,\"n_tm\":2,\"n_th\":10,\"n_ci\":0}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got);
@@ -256,7 +256,7 @@ val () = let
     \{\"cmd\":\"INST\",\"id\":1,\"th\":0,\"subst\":[{\"redex\":0,\"residue\":0}]}\n\
     \{\"cmd\":\"INST_TYPE\",\"id\":2,\"th\":0,\"subst\":[{\"redex\":0,\"residue\":1}]}\n\
     \{\"cmd\":\"ALPHA_THM\",\"id\":3,\"th\":0,\"tms\":[0,0],\"tm\":0}\n\
-    \{\"cmd\":\"FOOTER\",\"n_ty\":2,\"n_tm\":1,\"n_th\":4,\"n_ci\":0}\n"
+    \{\"cmd\":\"LIMITS\",\"n_ty\":2,\"n_tm\":1,\"n_th\":4,\"n_ci\":0}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got);
@@ -285,7 +285,7 @@ val () = let
     \{\"cmd\":\"new_type_definition\",\"id\":2,\"th\":0,\"tyname\":\"mid\",\"absname\":\"mid_ABS\",\"repname\":\"mid_REP\"}\n\
     \{\"cmd\":\"COMPUTE_INIT\",\"id\":0,\"ths\":[0,1,2]}\n\
     \{\"cmd\":\"COMPUTE\",\"id\":4,\"ci\":0,\"tm\":0,\"ths\":[0]}\n\
-    \{\"cmd\":\"FOOTER\",\"n_ty\":1,\"n_tm\":1,\"n_th\":5,\"n_ci\":1}\n"
+    \{\"cmd\":\"LIMITS\",\"n_ty\":1,\"n_tm\":1,\"n_th\":5,\"n_ci\":1}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got);

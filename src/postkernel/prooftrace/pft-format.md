@@ -219,7 +219,7 @@ The file extension SHOULD be `.jsonl`.
 ```
 
 ```json
-{"cmd":"FOOTER","n_ty":3,"n_tm":4,"n_th":2,"n_ci":0}
+{"cmd":"LIMITS","n_ty":3,"n_tm":4,"n_th":2,"n_ci":0}
 ```
 
 The footer is the last non-empty line. A reader can seek to the end of the

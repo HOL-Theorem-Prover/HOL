@@ -119,7 +119,7 @@ fun openOut {file, binary, version, ruleset} =
   end
 
 fun closeOut (out as TextOut s) {n_ty, n_tm, n_th, n_ci} =
-    (jBegin out "FOOTER";
+    (jBegin out "LIMITS";
      jInt out "n_ty" n_ty;
      jInt out "n_tm" n_tm;
      jInt out "n_th" n_th;

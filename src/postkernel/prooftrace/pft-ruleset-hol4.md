@@ -411,7 +411,7 @@ For AXIOM, the `name` key is omitted when no name is provided.
 {"cmd":"DEL","ns":"tm","id":0,"upto":1}
 {"cmd":"DEL","ns":"tm","id":3}
 {"cmd":"SAVE","name":"bool$TRUTH","th":1}
-{"cmd":"FOOTER","n_ty":3,"n_tm":4,"n_th":2,"n_ci":0}
+{"cmd":"LIMITS","n_ty":3,"n_tm":4,"n_th":2,"n_ci":0}
 ```
 
 ## Specification of the Theorem Commands
