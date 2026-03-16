@@ -220,22 +220,22 @@ fun register_type_definition th =
 
 fun get_F () = force_const F_const "get_F"
 
-fun mk_neg_tm M =
+fun mk_neg M =
   let val negc = force_const neg_const "mk_neg"
   in mk_comb(negc, M)
   end
 
-fun mk_forall_tm v tm =
+fun mk_forall v tm =
   let val forallc = force_const forall_const "mk_forall"
   in mk_comb(inst[alpha |-> type_of v] forallc, mk_abs(v, tm))
   end
 
-fun mk_conj_tm (M, N) =
+fun mk_conj (M, N) =
   let val conjc = force_const conj_const "mk_conj"
   in list_mk_comb(conjc, [M, N])
   end
 
-fun mk_disj_tm (M, N) =
+fun mk_disj (M, N) =
   let val disjc = force_const disj_const "mk_disj"
   in list_mk_comb(disjc, [M, N])
   end
@@ -748,7 +748,7 @@ fun GEN x th =
   let val (asl,c) = sdest_thm th
   in if var_occursl x asl
      then ERR  "GEN" "variable occurs free in hypotheses"
-     else make_thm Count.Gen(tag th, asl, mk_forall_tm x c)
+     else make_thm Count.Gen(tag th, asl, mk_forall x c)
           handle HOL_ERR _ => ERR "GEN" ""
   end;
 
@@ -880,7 +880,7 @@ fun CONJ th1 th2 =
    make_thm Count.Conj
         (Tag.merge (tag th1) (tag th2),
          union_hyp (hypset th1) (hypset th2),
-         mk_conj_tm(concl th1, concl th2))
+         mk_conj(concl th1, concl th2))
    handle HOL_ERR _ => ERR "CONJ" "";
 
 
@@ -952,7 +952,7 @@ fun CONJUNCT2 th =
  *---------------------------------------------------------------------------*)
 
 fun DISJ1 th w = make_thm Count.Disj1
- (tag th, hypset th, mk_disj_tm (concl th, w))
+ (tag th, hypset th, mk_disj (concl th, w))
  handle HOL_ERR _ => ERR "DISJ1" "";
 
 
@@ -968,7 +968,7 @@ fun DISJ1 th w = make_thm Count.Disj1
  *---------------------------------------------------------------------------*)
 
 fun DISJ2 w th = make_thm Count.Disj2
- (tag th, hypset th, mk_disj_tm(w,concl th))
+ (tag th, hypset th, mk_disj(w,concl th))
  handle HOL_ERR _ => ERR "DISJ2" "";
 
 
@@ -1028,7 +1028,7 @@ fun DISJ_CASES dth ath bth =
 fun NOT_INTRO th =
   let val (ant,c) = dest_imp(concl th)
   in Assert (c = get_F ()) "" "";
-     make_thm Count.NotIntro  (tag th, hypset th, mk_neg_tm ant)
+     make_thm Count.NotIntro  (tag th, hypset th, mk_neg ant)
   end
   handle HOL_ERR _ => ERR "NOT_INTRO" "";
 
@@ -1080,7 +1080,7 @@ fun NOT_ELIM th =
 fun CCONTR w fth =
   (Assert (concl fth = get_F ()) "CCONTR" "";
    make_thm Count.Ccontr
-       (tag fth, disch(mk_neg_tm w, hypset fth), w)
+       (tag fth, disch(mk_neg w, hypset fth), w)
      handle HOL_ERR _ => ERR "CCONTR" "");
 
 
