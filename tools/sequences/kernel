@@ -20,6 +20,7 @@ src/portableML/rawtheory
 src/prekernel
 **KERNEL**
 src/thm
+src/tracing
 (stdknl)src/tracing/no
 (expk)src/tracing/no
 [poly](trknl)src/tracing/yes
