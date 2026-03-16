@@ -249,6 +249,11 @@ fun emit_theory {trace, output, binary} = let
   fun is_type_done name =
     case peek(!type_done, name) of SOME _ => true | NONE => false
 
+  (* Axiom names: PFT thm ID -> optional name. Axiom IDs are registered
+     with NONE at emit time, resolved to SOME name by scanning named_thms
+     after exports. Read by axiom write closures at buffer flush time. *)
+  val axiom_names : (int, string option) dict ref = ref (mkDict Int.compare)
+
   (* --- Emit helpers ------------------------------------------------------ *)
 
   fun emit entry = DArray.push(cmd_buf, entry)
@@ -524,8 +529,11 @@ fun emit_theory {trace, output, binary} = let
          | 5  => (* Axiom *) let
              val c = emit_term concl_ptr
              val () = rtms := c :: !rtms
+             val () = axiom_names :=
+               insert(!axiom_names, id, NONE)
            in emit (mk_entry (fn out =>
-                PFTWriter.axiom out id c NONE)) end
+                PFTWriter.axiom out id c
+                  (find(!axiom_names, id)))) end
          | 6  => (* BETA_CONV *) let val a = tm 1
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.beta_conv out id a)) end
@@ -853,6 +861,20 @@ fun emit_theory {trace, output, binary} = let
            emit0 (fn out =>
              PFTWriter.new_type out (thyname ^ "$" ^ Tyop) arity))
   end) types
+
+  (* ======================================================================= *)
+  (* Axiom name fixup                                                        *)
+  (* ======================================================================= *)
+
+  (* Resolve axiom names: for each named thm whose PFT ID is in the
+     axiom_names map, set its name. *)
+  val () = appList heap (fn p => let
+    val (nm, (thp, _)) = tuple3 heap (str heap, I, I) p
+    val pft_id = th_memo_get (ptr thp)
+  in if pft_id >= 0 andalso inDomain(!axiom_names, pft_id) then
+       axiom_names := insert(!axiom_names, pft_id, SOME nm)
+     else ()
+  end) all_thms
 
   (* ======================================================================= *)
   (* DEL insertion and output                                                *)
