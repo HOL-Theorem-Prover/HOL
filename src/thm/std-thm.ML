@@ -260,11 +260,10 @@ local val err = thm_err "dest_exists" ""
 in
 fun dest_exists tm =
  let val (Rator,Rand) = with_exn dest_comb tm err
- in case !exists_const of
-      SOME ec => if same_const Rator ec
-                 then with_exn dest_abs Rand err
-                 else raise err
-    | NONE => raise err
+     val ec = force_const exists_const "dest_exists"
+ in if same_const Rator ec
+    then with_exn dest_abs Rand err
+    else raise err
  end
 end;
 
