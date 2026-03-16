@@ -21,7 +21,9 @@ There are four namespaces, each with independently numbered IDs:
 
 IDs are reused: when an object is no longer needed, its ID may be assigned to
 a new object in the same namespace. Each command assigns an ID in the
-appropriate namespace (determined by the command type).
+appropriate namespace (determined by the command type). A command may assign
+an ID that it also references as an argument; the replayer reads all arguments
+before writing the result.
 
 Since every command is typed, the assigned ID does not need a namespace
 qualifier — it is unambiguously in the namespace of the command's result type.
@@ -80,6 +82,11 @@ all rulesets) and **theorem commands** (defined by the ruleset).
 | CONST   | id, name, ty: type-id | Construct a constant |
 | COMB    | id, rator: term-id, rand: term-id | Construct a function application |
 | ABS     | id, var: term-id, body: term-id | Construct a lambda abstraction |
+
+**Term equality.** Two terms are equal if and only if they are
+alpha-equivalent. In particular, theorem commands that require two terms to
+be equal (e.g., TRANS matching the middle term) succeed whenever the terms
+are alpha-equivalent, regardless of binder names.
 
 ### Kernel Commands
 
