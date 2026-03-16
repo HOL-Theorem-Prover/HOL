@@ -704,7 +704,7 @@ fun emit_theory {trace, output, binary} = let
       | _ => raise Fail "Def_const: expected Const"
     val rhs_ty_id = emit_type ty_ptr
     (* Build equality type: ty -> (ty -> bool) *)
-    val bool_ty_id = emit_tyop "bool$bool" []
+    val bool_ty_id = emit_tyop "min$bool" []
     val fun_ty1_id = emit_tyop "min$fun" [rhs_ty_id, bool_ty_id]
     val eq_ty_id = emit_tyop "min$fun" [rhs_ty_id, fun_ty1_id]
     (* VAR for the new constant name *)
