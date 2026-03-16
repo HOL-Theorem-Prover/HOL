@@ -37,6 +37,8 @@ Bugs fixed
 -   Three kernel bugs (github issues [#1838](https://github.com/HOL-Theorem-Prover/HOL/issues/1838), [#1839](https://github.com/HOL-Theorem-Prover/HOL/issues/1839), and [#1840](https://github.com/HOL-Theorem-Prover/HOL/issues/1840)) in CV-compute were fixed.
     Thanks to Ramana Kumar for finding these!
 
+-   We also fixed another [kernel soundness bug](https://github.com/HOL-Theorem-Prover/HOL/issues/1870) found by Ramana Kumar in the technology used to push constants from `bool` back into the kernel.
+
 New theories
 ------------
 
