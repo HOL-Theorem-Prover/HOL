@@ -4141,7 +4141,7 @@ Proof
   rpt strip_tac >>
   `?k. ((k * x) MOD n = 1) /\ coprime n k` by rw_tac std_ss[GCD_ONE_PROPERTY] >>
   `0 < n` by decide_tac >>
-  `(k MOD n * x MOD n) MOD n = 1` by rw_tac std_ss[MOD_TIMES2] >>
+  `((k MOD n) * (x MOD n)) MOD n = 1` by rw_tac std_ss[MOD_TIMES2] >>
   `((k MOD n) * x) MOD n = 1` by metis_tac[LESS_MOD] >>
   `k MOD n < n` by rw_tac std_ss[MOD_LESS] >>
   `1 <> 0` by decide_tac >>
@@ -10155,12 +10155,12 @@ Proof
     rw[] >| [
       `z MOD (m * n) MOD m = z MOD m` by rw[MOD_MULT_MOD] >>
       `_ = (a * q * n) MOD m` by rw[Abbr`z`] >>
-      `_ = ((a MOD m) * (q * n) MOD m) MOD m` by rw[MOD_TIMES2] >>
+      `_ = ((a MOD m) * ((q * n) MOD m)) MOD m` by rw[MOD_TIMES2] >>
       `_ = a MOD m` by fs[] >>
       decide_tac,
       `z MOD (m * n) MOD n = z MOD n` by metis_tac[MOD_MULT_MOD, MULT_COMM] >>
       `_ = (b * p * m) MOD n` by rw[Abbr`z`] >>
-      `_ = ((b MOD n) * (p * m) MOD n) MOD n` by rw[MOD_TIMES2] >>
+      `_ = ((b MOD n) * ((p * m) MOD n)) MOD n` by rw[MOD_TIMES2] >>
       `_ = b MOD n` by fs[] >>
       decide_tac
     ],

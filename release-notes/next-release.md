@@ -86,6 +86,12 @@ Incompatibilities
 
 -   The function `Parse.remove_user_printer` now returns `unit`.
 
+-   The precedence of the `MOD`-infix’s syntax has been changed to bring it line with convention elsewhere: instead of being tighter then multiplication but looser than exponentiation, it now lives at the same precedence level as multiplication.
+    To restore it to its old level/behaviour, use the following declaration at the head of relevant `*Script.sml` files:
+
+           val _ = temp_set_fixity "MOD" (Infixl 650)
+
+    (If one over-arching change is desired, dropping the `temp_` prefix and putting the declaration in a root script-file will install the change for all of one’s theories.)
 
 Deprecations
 ------------

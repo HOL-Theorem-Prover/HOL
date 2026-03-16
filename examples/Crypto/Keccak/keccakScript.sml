@@ -819,7 +819,7 @@ Proof
   >- (
     `F` suffices_by simp[]
     \\ pop_assum mp_tac \\ simp[]
-    \\ qmatch_goalsub_abbrev_tac`w * q MOD 5 + r MOD w`
+    \\ qmatch_goalsub_abbrev_tac`w * (q MOD 5) + r MOD w`
     \\ `q MOD 5 < 5` by simp[]
     \\ pop_assum mp_tac
     \\ `r MOD w < w` by simp[]
@@ -844,7 +844,7 @@ Proof
   \\ `c = (x + z DIV w) MOD 5` by simp[Abbr`c`]
   \\ qpat_x_assum`Abbrev(c = _)`kall_tac
   \\ pop_assum SUBST_ALL_TAC
-  \\ qmatch_goalsub_abbrev_tac`w * c MOD 5`
+  \\ qmatch_goalsub_abbrev_tac`w * (c MOD 5)`
   \\ rw[]
   \\ `z DIV w = 0` by metis_tac[LESS_DIV_EQ_ZERO]
   \\ fs[Abbr`c`,LEFT_ADD_DISTRIB]

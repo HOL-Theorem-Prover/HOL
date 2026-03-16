@@ -2336,7 +2336,7 @@ val DIV_def = new_definition
 val MOD_def = new_definition
   ("MOD_def", “MOD m n = if n = 0 then m else OT_MOD m n”);
 
-val _ = set_fixity "MOD" (Infixl 650);
+val _ = set_fixity "MOD" (Infixl 600);
 val _ = set_fixity "DIV" (Infixl 600);
 
 Theorem DIVISION:
@@ -2974,7 +2974,7 @@ in
 end
 
 Theorem MOD_TIMES2:
-   !n j k. (j MOD n * k MOD n) MOD n = (j * k) MOD n
+   !n j k. ((j MOD n) * (k MOD n)) MOD n = (j * k) MOD n
 Proof
   REPEAT STRIP_TAC THEN
   Cases_on `n = 0`
@@ -5689,7 +5689,7 @@ QED
 *)
 Theorem MOD_MULT_ASSOC:
     !n x y z. 0 < n /\ x < n /\ y < n /\ z < n ==>
-              ((x * y) MOD n * z) MOD n = (x * (y * z) MOD n) MOD n
+              ((x * y) MOD n * z) MOD n = (x * ((y * z) MOD n)) MOD n
 Proof
   metis_tac[LESS_MOD, MOD_TIMES2, MULT_ASSOC]
 QED
