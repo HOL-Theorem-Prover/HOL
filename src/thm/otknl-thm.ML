@@ -255,14 +255,14 @@ fun register_type_definition th =
                         (Term.prim_mk_eq alpha
                           (mk_comb(rep, x')) (mk_comb(rep, x'')))
                         (Term.prim_mk_eq beta x' x'')))))
-      val surj = mk_comb(inst[alpha |-> alpha] forallc,
+      val surj = mk_comb(forallc,
                    mk_abs(x,
                      Term.prim_mk_eq bool
                        (mk_comb(P, x))
                        (mk_comb(inst[alpha |-> beta] existsc,
                          mk_abs(x',
                            Term.prim_mk_eq alpha x (mk_comb(rep, x')))))))
-      val body = list_mk_comb(inst[alpha |-> bool] conjc, [inj, surj])
+      val body = list_mk_comb(conjc, [inj, surj])
       val expected = mk_abs(P, mk_abs(rep, body))
   in register_once tydef_const "register_type_definition" th expected
   end
