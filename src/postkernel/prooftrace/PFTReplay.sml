@@ -289,8 +289,8 @@ fun replay (db: trDB) file = let
     def_spec = fn (id, th, names) =>
       set_th (id, prim_specification thyname names (get_th th)),
 
-    def_spec_gen = fn (id, th) =>
-      set_th (id, #2 (gen_prim_specification thyname (get_th th))),
+    def_spec_gen = fn (id, th, thy) =>
+      set_th (id, #2 (gen_prim_specification thy (get_th th))),
 
     compute_init = fn (id, ty1, ty2, eqns, terms) => let
       val num_type = get_ty ty1

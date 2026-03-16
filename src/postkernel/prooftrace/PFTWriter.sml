@@ -343,11 +343,11 @@ fun def_spec (out as TextOut _) id th names =
      bVarint out (length names);
      List.app (bString out) names)
 
-fun def_spec_gen (out as TextOut _) id th =
+fun def_spec_gen (out as TextOut _) id th thy =
     (jBegin out "DEF_SPEC_GEN"; jInt out "id" id;
-     jInt out "th" th; jEnd out)
-  | def_spec_gen out id th =
-    (bOpcode out 0x42; bVarint out id; bVarint out th)
+     jInt out "th" th; jStr out "thy" thy; jEnd out)
+  | def_spec_gen out id th thy =
+    (bOpcode out 0x42; bVarint out id; bVarint out th; bString out thy)
 
 (* --- Computation --------------------------------------------------------- *)
 

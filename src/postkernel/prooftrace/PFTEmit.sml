@@ -572,7 +572,7 @@ fun emit_theory {trace, output, binary} = let
              val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
              val () = List.app (fn (_,nm) => mark_const nm) ids
            in emit (mk_entry (fn out =>
-                PFTWriter.HOL4.def_spec_gen out id a)) end
+                PFTWriter.HOL4.def_spec_gen out id a thyname)) end
          | 18 => (* Def_const *) emit_def_const id args_ptrs
          | 19 => (* Def_spec *) let
              val a = th 1
@@ -724,7 +724,7 @@ fun emit_theory {trace, output, binary} = let
     (* DEF_SPEC_GEN *)
     val () = mark_const Name
     val () = emit_th_def thm_id {write = fn out =>
-      PFTWriter.HOL4.def_spec_gen out thm_id assume_id,
+      PFTWriter.HOL4.def_spec_gen out thm_id assume_id thyname,
       ref_ty = [], ref_tm = [], ref_th = [assume_id], ref_ci = []}
   in () end
 

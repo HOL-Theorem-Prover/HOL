@@ -258,7 +258,7 @@ type handler = {
   eq_imp_rule1: int * int -> unit, eq_imp_rule2: int * int -> unit,
   def_tyop: int * int * string -> unit,
   def_spec: int * int * string list -> unit,
-  def_spec_gen: int * int -> unit,
+  def_spec_gen: int * int * string -> unit,
   compute_init: int * int * int
                 * (string * int) list * (string * int) list -> unit,
   compute: int * int * int * int list -> unit
@@ -323,7 +323,7 @@ in case opc of
   | 0x41 => let val id = vi() val th = vi()
             in #def_spec h (id, th, #readStringList sr ()) end
   | 0x42 => let val id = vi() val th = vi()
-            in #def_spec_gen h (id, th) end
+            in #def_spec_gen h (id, th, vs()) end
   | 0x43 => let val id = vi() val ty1 = vi() val ty2 = vi()
                 val eqns = #readStringVarintPairs sr ()
                 val terms = #readStringVarintPairs sr ()
