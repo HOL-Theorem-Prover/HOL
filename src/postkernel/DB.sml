@@ -534,6 +534,25 @@ fun fetch s1 s2 = #1 (thm_class "fetch" s1 s2);
 fun fetch_knm{Thy,Name} = fetch Thy Name
 fun lookup {Thy,Name} = Lib.total (thm_class "lookup" Thy) Name
 
+(* Register bool constants in the kernel on theory load.
+   During the initial build, boolScript.sml calls Thm.register_* directly.
+   This hook ensures the constants are also registered when boolTheory is
+   loaded from disk in a child session. register_* is idempotent, so it is
+   safe for both paths to fire. *)
+val _ = Theory.register_hook (
+      "Thm.register_bool_constants",
+      fn TheoryDelta.TheoryLoaded "bool" =>
+         (Thm.register_T (fetch "bool" "T_DEF");
+          Thm.register_forall (fetch "bool" "FORALL_DEF");
+          Thm.register_exists (fetch "bool" "EXISTS_DEF");
+          Thm.register_F (fetch "bool" "F_DEF");
+          Thm.register_neg (fetch "bool" "NOT_DEF");
+          Thm.register_conj (fetch "bool" "AND_DEF");
+          Thm.register_disj (fetch "bool" "OR_DEF");
+          Thm.register_type_definition (fetch "bool" "TYPE_DEFINITION"))
+       | _ => ()
+    )
+
 fun thm_of ((_,n),dv) = (n,dv_thm dv);
 fun is x (_,dv) = (dv_class dv=x)
 
