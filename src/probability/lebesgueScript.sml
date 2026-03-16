@@ -10114,21 +10114,21 @@ QED
 (* Helper simps for later results *)
 
 Theorem m_space_density[simp]:
-    ∀m f. m_space (density m f) = m_space m
+    !m f. m_space (density m f) = m_space m
 Proof
     simp[density_def]
 QED
 
 Theorem measurable_sets_density[simp]:
-    ∀m f. measurable_sets (density m f) = measurable_sets m
+    !m f. measurable_sets (density m f) = measurable_sets m
 Proof
     simp[density_def]
 QED
 
-Theorem sig_alg_density[simp]:
-    ∀m f. measurable_space (density m f) = measurable_space m
+Theorem measurable_space_density[simp] :
+    measurable_space (density m f) = measurable_space m
 Proof
-    simp[density_def]
+    simp [density_def]
 QED
 
 (* References:
