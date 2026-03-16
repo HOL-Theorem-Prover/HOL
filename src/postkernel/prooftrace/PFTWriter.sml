@@ -329,28 +329,27 @@ fun subst (out as TextOut _) id template th pairs =
 
 (* --- Definitions --------------------------------------------------------- *)
 
-fun def_spec (out as TextOut _) id th =
-    (jBegin out "DEF_SPEC"; jInt out "id" id;
-     jInt out "th" th; jEnd out)
-  | def_spec out id th =
-    (bOpcode out 0x40; bVarint out id; bVarint out th)
-
 fun def_tyop (out as TextOut _) id th name =
     (jBegin out "DEF_TYOP"; jInt out "id" id;
      jInt out "th" th; jStr out "name" name; jEnd out)
   | def_tyop out id th name =
-    (bOpcode out 0x41; bVarint out id; bVarint out th; bString out name)
+    (bOpcode out 0x40; bVarint out id; bVarint out th; bString out name)
+
+fun def_spec (out as TextOut _) id th names =
+    (jBegin out "DEF_SPEC"; jInt out "id" id;
+     jInt out "th" th; jStrList out "names" names; jEnd out)
+  | def_spec out id th names =
+    (bOpcode out 0x41; bVarint out id; bVarint out th;
+     bVarint out (length names);
+     List.app (bString out) names)
+
+fun def_spec_gen (out as TextOut _) id th =
+    (jBegin out "DEF_SPEC_GEN"; jInt out "id" id;
+     jInt out "th" th; jEnd out)
+  | def_spec_gen out id th =
+    (bOpcode out 0x42; bVarint out id; bVarint out th)
 
 (* --- Computation --------------------------------------------------------- *)
-
-fun compute (out as TextOut _) id ci tm ths =
-    (jBegin out "COMPUTE"; jInt out "id" id;
-     jInt out "ci" ci; jInt out "tm" tm;
-     jIntList out "ths" ths; jEnd out)
-  | compute out id ci tm ths =
-    (bOpcode out 0x42; bVarint out id; bVarint out ci; bVarint out tm;
-     bVarint out (length ths);
-     List.app (bVarint out) ths)
 
 fun compute_init (out as TextOut _) id ty1 ty2 char_eqns cval_terms =
     (jBegin out "COMPUTE_INIT"; jInt out "id" id;
@@ -364,6 +363,15 @@ fun compute_init (out as TextOut _) id ty1 ty2 char_eqns cval_terms =
      List.app (fn (n,th) => (bString out n; bVarint out th)) char_eqns;
      bVarint out (length cval_terms);
      List.app (fn (n,tm) => (bString out n; bVarint out tm)) cval_terms)
+
+fun compute (out as TextOut _) id ci tm ths =
+    (jBegin out "COMPUTE"; jInt out "id" id;
+     jInt out "ci" ci; jInt out "tm" tm;
+     jIntList out "ths" ths; jEnd out)
+  | compute out id ci tm ths =
+    (bOpcode out 0x44; bVarint out id; bVarint out ci; bVarint out tm;
+     bVarint out (length ths);
+     List.app (bVarint out) ths)
 
 end (* structure HOL4 *)
 

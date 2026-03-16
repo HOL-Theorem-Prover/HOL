@@ -572,14 +572,15 @@ fun emit_theory {trace, output, binary} = let
              val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
              val () = List.app (fn (_,nm) => mark_const nm) ids
            in emit (mk_entry (fn out =>
-                PFTWriter.HOL4.def_spec out id a)) end
+                PFTWriter.HOL4.def_spec_gen out id a)) end
          | 18 => (* Def_const *) emit_def_const id args_ptrs
          | 19 => (* Def_spec *) let
              val a = th 1
              val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
-             val () = List.app (fn (_,nm) => mark_const nm) ids
+             val names = List.map (fn (_,nm) => nm) ids
+             val () = List.app mark_const names
            in emit (mk_entry (fn out =>
-                PFTWriter.HOL4.def_spec out id a)) end
+                PFTWriter.HOL4.def_spec out id a names)) end
          | 20 => (* Def_tyop *) let
              val _ = list heap emit_type_ref (castPtr (el 1 args_ptrs))
              val a = th 2
@@ -720,10 +721,10 @@ fun emit_theory {trace, output, binary} = let
     val () = emit_th_def assume_id {write = fn out =>
       PFTWriter.HOL4.assume out assume_id eq_tm_id,
       ref_ty = [], ref_tm = [eq_tm_id], ref_th = [], ref_ci = []}
-    (* DEF_SPEC *)
+    (* DEF_SPEC_GEN *)
     val () = mark_const Name
     val () = emit_th_def thm_id {write = fn out =>
-      PFTWriter.HOL4.def_spec out thm_id assume_id,
+      PFTWriter.HOL4.def_spec_gen out thm_id assume_id,
       ref_ty = [], ref_tm = [], ref_th = [assume_id], ref_ci = []}
   in () end
 

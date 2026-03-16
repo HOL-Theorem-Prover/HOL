@@ -94,8 +94,9 @@ signature PFTReader = sig
       subst         : int * int * int * (int * int) list -> unit,
       eq_imp_rule1  : int * int -> unit,
       eq_imp_rule2  : int * int -> unit,
-      def_spec      : int * int -> unit,
       def_tyop      : int * int * string -> unit,
+      def_spec      : int * int * string list -> unit,
+      def_spec_gen  : int * int -> unit,
       compute_init  : int * int * int
                       * (string * int) list * (string * int) list -> unit,
       compute       : int * int * int * int list -> unit

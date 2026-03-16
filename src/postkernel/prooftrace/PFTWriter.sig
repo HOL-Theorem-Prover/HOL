@@ -72,11 +72,12 @@ signature PFTWriter = sig
     val inst_type     : pft_out -> int -> int -> (int * int) list -> unit
     val subst         : pft_out -> int -> int -> int -> (int * int) list -> unit
     val deductAntisym : pft_out -> int -> int -> int -> unit
-    val def_spec      : pft_out -> int -> int -> unit
     val def_tyop      : pft_out -> int -> int -> string -> unit
-    val compute       : pft_out -> int -> int -> int -> int list -> unit
+    val def_spec      : pft_out -> int -> int -> string list -> unit
+    val def_spec_gen  : pft_out -> int -> int -> unit
     val compute_init  : pft_out -> int -> int -> int
                         -> (string * int) list -> (string * int) list -> unit
+    val compute       : pft_out -> int -> int -> int -> int list -> unit
   end
 
   (* Candle ruleset theorem commands *)
