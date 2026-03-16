@@ -304,10 +304,10 @@ fun dest_imp M =
     then let val (Rator,ant) = dest_comb Rator
          in if Rator=Term.imp then (ant,conseq) else raise DEST_IMP_ERR
          end
-    else case !neg_const of
-           SOME nc => if same_const Rator nc then (conseq, get_F())
-                      else raise DEST_IMP_ERR
-         | NONE => raise DEST_IMP_ERR
+    else let val nc = force_const neg_const "dest_imp"
+         in if same_const Rator nc then (conseq, get_F())
+            else raise DEST_IMP_ERR
+         end
  end
 end;
 
