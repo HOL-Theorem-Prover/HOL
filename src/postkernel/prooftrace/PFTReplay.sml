@@ -281,9 +281,8 @@ fun replay (db: trDB) file = let
     eq_imp_rule2 = fn (id, th) =>
       set_th (id, #2 (EQ_IMP_RULE (get_th th))),
 
-    def_spec = fn (id, th, names) => let
-      val cnames = List.map (#2 o split_qualified) names
-    in set_th (id, prim_specification thyname cnames (get_th th)) end,
+    def_spec = fn (id, th) =>
+      set_th (id, #2 (gen_prim_specification thyname (get_th th))),
 
     def_tyop = fn (id, th, name) => let
       val (Thy, Tyop) = split_qualified name

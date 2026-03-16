@@ -256,7 +256,7 @@ type handler = {
   inst_type: int * int * (int * int) list -> unit,
   subst: int * int * int * (int * int) list -> unit,
   eq_imp_rule1: int * int -> unit, eq_imp_rule2: int * int -> unit,
-  def_spec: int * int * string list -> unit,
+  def_spec: int * int -> unit,
   def_tyop: int * int * string -> unit,
   compute_init: int * int * int
                 * (string * int) list * (string * int) list -> unit,
@@ -318,7 +318,7 @@ in case opc of
   | 0x3C => let val id = vi() val a = vi()
             in #deductAntisym h (id, a, vi()) end
   | 0x40 => let val id = vi() val th = vi()
-            in #def_spec h (id, th, #readStringList sr ()) end
+            in #def_spec h (id, th) end
   | 0x41 => let val id = vi() val th = vi()
             in #def_tyop h (id, th, vs()) end
   | 0x42 => let val id = vi() val ci = vi() val tm = vi()

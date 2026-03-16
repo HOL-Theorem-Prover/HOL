@@ -238,7 +238,7 @@ Depends on: `bool$!`, `bool$?`, `bool$/\`, `min$=`, `min$==>`.
 
 | Command | Arguments |
 |---------|-----------|
-| DEF_SPEC | id, th, names: string list |
+| DEF_SPEC | id, th |
 | DEF_TYOP | id, th, name |
 
 ### Computation
@@ -291,7 +291,7 @@ Depends on: `bool$!`, `bool$?`, `bool$/\`, `min$=`, `min$==>`.
 | 0x3A   | INST_TYPE     | id th n_subst (redex residue)...       |
 | 0x3B   | SUBST         | id template th n_subst (redex residue)...|
 | 0x3C   | deductAntisym | id th1 th2                             |
-| 0x40   | DEF_SPEC      | id th n_names name...                  |
+| 0x40   | DEF_SPEC      | id th                                  |
 | 0x41   | DEF_TYOP      | id th name                             |
 | 0x42   | COMPUTE       | id ci tm n_ths th...                   |
 | 0x43   | COMPUTE_INIT  | id ty1 ty2 n_eqns (name th)... n_terms (name tm)... |
@@ -365,7 +365,7 @@ respectively. For SUBST, `redex` is a term ID and `residue` is a theorem ID.
 ### Definitions
 
 ```json
-{"cmd":"DEF_SPEC","id":0,"th":1,"names":["c1","c2"]}
+{"cmd":"DEF_SPEC","id":0,"th":1}
 {"cmd":"DEF_TYOP","id":0,"th":1,"name":"mytype"}
 ```
 
@@ -511,7 +511,7 @@ all arguments are provided directly.
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| DEF_SPEC | `⊢ ∃v1...vn. P`, `[c1,...,cn]` | `⊢ P[c1/v1,...,cn/vn]` | Creates new constants `c1,...,cn`; the input theorem must have no hypotheses and no free variables; each `ci` gets the type of the corresponding `vi` |
+| DEF_SPEC | `{v1 = t1, ..., vn = tn} ⊢ P`, `[c1,...,cn]` | `⊢ P[c1/v1,...,cn/vn]` | Creates new constants `c1,...,cn` where each `ci` has the same type as `vi`. Each hypothesis must be an equation `vi = ti` where `vi` is a variable. The `ti` must have no free variables other than those bound by other hypotheses. The names `[c1,...,cn]` in the command are informational; the constant names are determined by the hypothesis variables. Corresponds to HOL4's `gen_prim_specification`. |
 | DEF_TYOP | `⊢ ∃v. P v`, name | `⊢ ∃rep. TYPE_DEFINITION P rep` | Creates a new type operator with the given name; `P : dom → bool` must be a closed term; the input theorem must have no hypotheses; the new type has the type variables of `P` as parameters. Requires `bool$TYPE_DEFINITION` |
 
 ### Computation

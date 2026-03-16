@@ -329,13 +329,11 @@ fun subst (out as TextOut _) id template th pairs =
 
 (* --- Definitions --------------------------------------------------------- *)
 
-fun def_spec (out as TextOut _) id th names =
+fun def_spec (out as TextOut _) id th =
     (jBegin out "DEF_SPEC"; jInt out "id" id;
-     jInt out "th" th; jStrList out "names" names; jEnd out)
-  | def_spec out id th names =
-    (bOpcode out 0x40; bVarint out id; bVarint out th;
-     bVarint out (length names);
-     List.app (bString out) names)
+     jInt out "th" th; jEnd out)
+  | def_spec out id th =
+    (bOpcode out 0x40; bVarint out id; bVarint out th)
 
 fun def_tyop (out as TextOut _) id th name =
     (jBegin out "DEF_TYOP"; jInt out "id" id;
