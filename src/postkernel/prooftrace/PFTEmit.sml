@@ -41,30 +41,19 @@ type cmd_entry = {
   ref_ci: int list
 }
 
-(* Growable command buffer *)
-type cmd_buf = {
-  cmds: cmd_entry list ref,   (* reversed *)
-  count: int ref
+(* Dummy entry for DArray default *)
+val dummy_cmd : cmd_entry = {
+  write = fn _ => (), ref_ty = [], ref_tm = [], ref_th = [], ref_ci = []
 }
-
-fun mk_cmd_buf () : cmd_buf = {cmds = ref [], count = ref 0}
-
-fun buf_append (buf: cmd_buf) (entry: cmd_entry) = (
-  #cmds buf := entry :: !(#cmds buf);
-  #count buf := !(#count buf) + 1
-)
-
-fun buf_to_vector (buf: cmd_buf) : cmd_entry vector =
-  Vector.fromList (List.rev (!(#cmds buf)))
 
 (* ========================================================================= *)
 (* DEL insertion pass                                                        *)
 (* ========================================================================= *)
 
-fun write_with_dels out (cmds: cmd_entry vector)
+fun write_with_dels out (cmds: cmd_entry DArray.darray)
       {n_ty, n_tm, n_th, n_ci}
       {def_ty, def_tm, def_th, def_ci} = let
-  val num_cmds = Vector.length cmds
+  val num_cmds = DArray.size cmds
 
   (* last_use arrays: PFT ID -> last command index that references it.
      Initialized from def_idx so unreferenced IDs get DEL'd at their
@@ -82,7 +71,7 @@ fun write_with_dels out (cmds: cmd_entry vector)
   fun update arr id i =
     if Array.sub(arr, id) < i then Array.update(arr, id, i) else ()
   fun scan_refs i = if i >= num_cmds then () else let
-    val {ref_ty, ref_tm, ref_th, ref_ci, ...} = Vector.sub(cmds, i)
+    val {ref_ty, ref_tm, ref_th, ref_ci, ...} = DArray.sub(cmds, i)
   in
     List.app (fn id => update last_use_ty id i) ref_ty;
     List.app (fn id => update last_use_tm id i) ref_tm;
@@ -146,7 +135,7 @@ fun write_with_dels out (cmds: cmd_entry vector)
 
   (* Pass 3: write commands interleaved with DELs *)
   fun write_cmds i = if i >= num_cmds then () else (
-    #write (Vector.sub(cmds, i)) out;
+    #write (DArray.sub(cmds, i)) out;
     emit_dels_at i;
     write_cmds (i + 1)
   )
@@ -171,8 +160,8 @@ fun emit_theory {trace, output, binary} = let
 
   (* --- Emit pass state --------------------------------------------------- *)
 
-  val cmd_buf = mk_cmd_buf ()
-  val cmd_index = #count cmd_buf   (* alias: current command count = next index *)
+  val cmd_buf = DArray.new(65536, dummy_cmd)
+  fun cmd_index () = DArray.size cmd_buf
 
   (* ID counters (no free lists — DELs are inserted in a later pass) *)
   val next_ty = ref 0
@@ -194,10 +183,10 @@ fun emit_theory {trace, output, binary} = let
   fun alloc_ci () = let val id = !next_ci in next_ci := id + 1; id end
 
   (* Record definition index: called when the defining command is emitted *)
-  fun def_ty id = def_idx_ty := PIntMap.add id (!(cmd_index)) (!def_idx_ty)
-  fun def_tm id = def_idx_tm := PIntMap.add id (!(cmd_index)) (!def_idx_tm)
-  fun def_th id = def_idx_th := PIntMap.add id (!(cmd_index)) (!def_idx_th)
-  fun def_ci id = def_idx_ci := PIntMap.add id (!(cmd_index)) (!def_idx_ci)
+  fun def_ty id = def_idx_ty := PIntMap.add id (cmd_index()) (!def_idx_ty)
+  fun def_tm id = def_idx_tm := PIntMap.add id (cmd_index()) (!def_idx_tm)
+  fun def_th id = def_idx_th := PIntMap.add id (cmd_index()) (!def_idx_th)
+  fun def_ci id = def_idx_ci := PIntMap.add id (cmd_index()) (!def_idx_ci)
 
   fun def_idx_to_array m n =
     Array.tabulate(n, fn i => PIntMap.find i m handle PIntMap.NotFound => ~1)
@@ -262,7 +251,7 @@ fun emit_theory {trace, output, binary} = let
 
   (* --- Emit helpers ------------------------------------------------------ *)
 
-  fun emit entry = buf_append cmd_buf entry
+  fun emit entry = DArray.push(cmd_buf, entry)
 
   (* Emit a type-defining command and record its def index *)
   fun emit_ty_def id entry = (emit entry; def_ty id)
@@ -874,12 +863,10 @@ fun emit_theory {trace, output, binary} = let
   val n_th = !next_th
   val n_ci = !next_ci
 
-  val cmds = buf_to_vector cmd_buf
-
   val out = PFTWriter.openOut
     {file = output, binary = binary, version = 1, ruleset = "hol4"}
 
-  val () = write_with_dels out cmds
+  val () = write_with_dels out cmd_buf
     {n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci}
     {def_ty = def_idx_to_array (!def_idx_ty) n_ty,
      def_tm = def_idx_to_array (!def_idx_tm) n_tm,
