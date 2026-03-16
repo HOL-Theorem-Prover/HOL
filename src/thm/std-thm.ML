@@ -71,8 +71,8 @@ val hyp = hyplist   (* backwards compatibility *)
     which checks that the definition theorem has the expected RHS (built
     from primitives and previously-registered constants) before storing the
     LHS constant.  Kernel rules read from these refs instead of doing
-    name-based lookups, closing the soundness hole where
-    prim_specification could redefine a bool constant.
+    name-based lookups, so that even if a constant is later redefined,
+    the rules of inference still use the original, correct version.
  ---------------------------------------------------------------------------*)
 
 val T_const     : term option ref = ref NONE
