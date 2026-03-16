@@ -17,6 +17,7 @@ val _ = Feedback.register_trace("opentheory logging",verbosity,5)
 
 val proof_type = let open Thm fun
  f Axiom_prf = "Axiom"
+|f (Disk_prf _) = "Disk"
 |f deleted_prf = "deleted"
 |f (ABS_prf _) = "ABS"
 |f (ALPHA_prf _) = "ALPHA"
@@ -411,6 +412,11 @@ val (log_term, log_thm, log_clear,
     val _ = case proof th of
 
       Axiom_prf => let
+      val _ = log_list log_term (hyp th)
+      val _ = log_term (concl th)
+      val _ = log_command "axiom"
+      in () end
+    | Disk_prf _ => let
       val _ = log_list log_term (hyp th)
       val _ = log_term (concl th)
       val _ = log_command "axiom"

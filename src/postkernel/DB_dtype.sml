@@ -9,12 +9,6 @@ open RawTheory_dtype
 *)
 datatype location = Local of string | Stored of KernelSig.kernelname
 
-(* the second flavour is the location of the SML declaration and definition of the
-   theorem value *)
-datatype thm_src_location =
-         Located of {scriptpath: string, linenum : int, exact : bool}
-       | Unknown
-
 fun inexactify_locn (Located{scriptpath,linenum,exact}) =
       Located{scriptpath=scriptpath,linenum=linenum,exact=false}
   | inexactify_locn Unknown = Unknown
@@ -25,8 +19,6 @@ fun mkloc(s,i,b) =
       linenum = i,
       exact = b
     }
-
-type thminfo = {private: bool, loc:thm_src_location,class:class}
 
 fun updsrcloc f {private,loc,class} =
     {private = private,loc = f loc,class = class}
