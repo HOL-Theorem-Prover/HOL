@@ -1,6 +1,6 @@
 structure PFTReplay :> PFTReplay = struct
 
-open Type Term Thm
+open Feedback Lib Type Term Thm
 
 infix |->
 

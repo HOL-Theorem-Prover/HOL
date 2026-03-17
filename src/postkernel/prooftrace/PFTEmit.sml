@@ -14,8 +14,8 @@ in
   else raise Fail ("PFTEmit: expected <thy>Theory.tr.gz, got " ^ file)
 end
 
-fun disk_save_name thy (SavedAnon i) = thy ^ "#" ^ Int.toString i
-  | disk_save_name thy (SavedName s) = thy ^ "$" ^ s
+fun disk_save_name thy (Thm.SavedAnon i) = thy ^ "#" ^ Int.toString i
+  | disk_save_name thy (Thm.SavedName s) = thy ^ "$" ^ s
 
 (* ========================================================================= *)
 (* Command buffer                                                            *)

@@ -1,6 +1,8 @@
 signature ProofTraceParser = sig
 
 type thm          = Thm.thm
+type thm_id       = Thm.thm_id
+type compute_args = Thm.compute_args
 type term         = Term.term
 type hol_type     = Type.hol_type
 type thminfo      = RawTheory_dtype.thminfo
