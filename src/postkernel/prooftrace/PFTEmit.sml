@@ -577,6 +577,9 @@ fun emit_theory {trace, output, binary} = let
                 PFTWriter.HOL4.def_spec out id a names)) end
          | 20 => (* Def_tyop *) let
              val _ = list heap emit_type_ref (castPtr (el 1 args_ptrs))
+             val () = if thyname = "bool"
+                      then check_def tm_defs thyname "TYPE_DEFINITION"
+                      else ()
              val a = th 2
              val (Thy, Tyop) = get_type_id (castPtr (el 3 args_ptrs))
              val () = mark_type Tyop
