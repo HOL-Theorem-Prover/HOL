@@ -105,12 +105,12 @@ fun unlambda_conj thm =
 (*---------------------------------------------------------------------------*)
 (* Lambda-lifting means that entities destined for translation to defhol     *)
 (* format aren't single objects anymore, but bundles of auxiliary            *)
-(* definitions plus the lifted entity (when lifting is needed). There is     *)
-(* also an extra complication arising from lifting recursive definitions.    *)
+(* definitions plus the lifted entity (when lifting is needed).              *)
 (*                                                                           *)
-(* Elimination of lambda expressions from a definition happens after the     *)
-(* definition is made. The new lambda-eliminator definitions can introduce   *)
-(* what look to be mutual recursions. Consider                               *)
+(* There is also an extra complication that may arise when lifting a         *)
+(* recursive definitions. Elimination of lambda expressions from a           *)
+(* definition happens after the definition is made. The new auxiliary        *)
+(* definitions can introduce what seem to be mutual recursions. Consider     *)
 (*                                                                           *)
 (*   fact n = case n of 0 => 1 | _ => n * fact (n - 1)                       *)
 (*                                                                           *)
@@ -131,19 +131,18 @@ fun unlambda_conj thm =
 (* been created post-definition and shouldn't be taken as being part of the  *)
 (* recursion equations to be solved.                                         *)
 (*                                                                           *)
-(* On the ACL2(zfc) side, the attitude (I think) is that the HOL-side        *)
-(* definition event has introduced some constants and asserted some axioms,  *)
-(* and only those steps have to be replicated on the ACL2(zfc) side.         *)
+(* On the ACL2(zfc) side, the attitude is that the HOL-side definition event *)
+(* has introduced some constants and asserted some axioms, and only those    *)
+(* steps have to be replicated on the ACL2(zfc) side. But we have to take    *)
+(* into consideration that constants need to be "installed" before they are  *)
+(* mentioned in formulas. So we divide the auxiliary defs into those that    *)
+(* stand by themselves, and those that are in "pseudo-mutual-recursion" with *)
+(* the original constant(s) being defined. The latter get put into a defhol  *)
+(* form with the lifted original definition.                                 *)
 (*                                                                           *)
-(* But how exactly? This is currently to be discussed with Matt, but two     *)
-(* possibilities come to mind. (1) combine the auxiliary definition(s) and   *)
-(* the lifted original into one defhol form or (2) create one defhol per     *)
-(* definition (so one for "Lam_31" and one for "fact") and add extra         *)
-(* signature information on the first defhol, ie, if "Lam_31" is defined     *)
-(* first, its :fns field will hold both the "Lam_31" constant and the "fact" *)
-(* constant.                                                                 *)
-(*                                                                           *)
-(* For now I am going with possibility 1.                                    *)
+(* For the above example, this means that the auxiliary definitions are      *)
+(* split into (A) zero independent definitions and (B) one joint defhol      *)
+(* combining the definition for Lam_31 with that of the lifted original.     *)
 (*---------------------------------------------------------------------------*)
 
 datatype bundle
@@ -192,7 +191,6 @@ fun thm_bundle name thm =
         val opt = if null aux then NONE else SOME(aux,th')
     in THM (name, thm, opt) end
 
-(* TODO: think about whether the equiv theorem should be stored *)
 fun goal_bundle name tm =
     let val (aux,equiv) = unlambda_term tm
         val opt = if null aux then NONE else SOME(aux,rhs(concl equiv))
@@ -272,18 +270,20 @@ fun pp_bundle (THM(name,orig,NONE)) =
     let open HOLPP
     in block CONSISTENT 0
         ([add_string "#|", NL,
-          add_string "Original definition:", NL, NL,
+          add_string "Definition:", NL, NL,
           add_string"   ",
           block CONSISTENT 3 [pp_thm orig], NL, NL]
           @
           (if not $ null aux then
-              [add_string "Auxiliary definitions:", NL, NL,
+              [add_string "Auxiliary definitions:",
+               NL, NL,
                add_string"   ",
                block CONSISTENT 3 (pr_list pp_thm [NL] aux), NL,NL]
            else [])
           @
           (if not $ null aux' then
-              [add_string "Auxiliary definitions (pseudo recursive):", NL, NL,
+              [add_string "Auxiliary definitions (pseudo mutual recursion):",
+               NL, NL,
                add_string"   ",
                block CONSISTENT 3 (pr_list pp_thm [NL] aux'), NL,NL]
            else [])
@@ -312,13 +312,15 @@ fun pp_bundle (THM(name,orig,NONE)) =
            add_string"   ", block CONSISTENT 3 [pp_thm orig], NL,NL]
           @
           (if not $ null aux then
-              [add_string "Auxiliary definitions:", NL, NL,
+              [add_string "Auxiliary definitions:",
+               NL, NL,
                add_string"   ",
                block CONSISTENT 3 (pr_list pp_thm [NL] aux), NL,NL]
            else [])
           @
           (if not $ null aux' then
-              [add_string "Auxiliary definitions (pseudo recursive):", NL, NL,
+              [add_string "Auxiliary definitions (pseudo mutual recursion):",
+               NL, NL,
                add_string"   ",
                block CONSISTENT 3 (pr_list pp_thm [NL] aux'), NL,NL]
            else [])
