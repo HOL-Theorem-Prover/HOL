@@ -12,18 +12,16 @@ structure ToSML = struct
     read: int -> string,
     filename: string,
     parseError: int * int -> string -> unit,
-    quietOpen: bool,
-    canBindStr: bool
+    quietOpen: bool
   }
   type printer = {str: string -> unit, startSpan: int * int -> unit, stopSpan: unit -> unit}
 
-  fun mkPushTranslator ({read, filename, parseError, quietOpen, canBindStr}:args) pr = let
+  fun mkPushTranslator ({read, filename, parseError, quietOpen}:args) pr = let
     val {parseDec, body, events, ...} =
       HOLSourceParser.parseSML filename read parseError HOLSourceParser.initialScope
     val fileline = HOLSourceAST.mkFileline body events
     val expandDec = HOLSourceExpand.expandDec
-      {parseError = parseError, quietOpen = quietOpen, fileline = fileline,
-       canBindStr = canBindStr}
+      {parseError = parseError, quietOpen = quietOpen, fileline = fileline}
     val pr' = HOLSourcePrinter.mkPrinter pr
     fun push () =
       case parseDec () of
@@ -68,32 +66,32 @@ fun exhaust_parser {read, close, fileline=_} =
     recurse []
   end
 
-type args = {quietOpen: bool, canBindStr: bool}
+type args = {quietOpen: bool}
 
-fun file_to_parser ({quietOpen, canBindStr}:args) fname = let
+fun file_to_parser ({quietOpen}:args) fname = let
   val instrm = openIn fname
   (* val isscript = String.isSuffix "Script.sml" fname *)
   val {fileline, read} = ToSML.mkPullTranslator
     {read = fn _ => input instrm,
      filename = fname,
      parseError = HOLSourceParser.simpleParseError,
-     quietOpen = quietOpen, canBindStr = canBindStr}
+     quietOpen = quietOpen}
   in {read = read, fileline = fileline, close = fn () => closeIn instrm} end
 
-fun string_to_parser ({quietOpen, canBindStr}:args) s = let
+fun string_to_parser ({quietOpen}:args) s = let
   val sr = ref s
   fun str_read _ = (!sr before sr := "")
   val {fileline, read} = ToSML.mkPullTranslator
     {read = str_read, filename = "",
      parseError = HOLSourceParser.simpleParseError,
-     quietOpen = quietOpen, canBindStr = canBindStr}
+     quietOpen = quietOpen}
   in {read = read, fileline = fileline, close = I} end
 
-fun input_to_parser ({quietOpen, canBindStr}:args) fname inp = let
+fun input_to_parser ({quietOpen}:args) fname inp = let
   val {fileline, read} = ToSML.mkPullTranslator
     {read = inp, filename = fname,
      parseError = HOLSourceParser.simpleParseError,
-     quietOpen = quietOpen, canBindStr = canBindStr}
+     quietOpen = quietOpen}
   in {read = read, fileline = fileline, close = I} end
 
 fun stream_to_parser args fname strm =

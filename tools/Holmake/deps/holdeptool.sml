@@ -23,7 +23,7 @@ fun main() = let
                  handle LEX_ERROR s => diewith("Lexical error: " ^ s)
                       | e => diewith ("Exception: "^General.exnMessage e))
         | ["-h"] => usage ok
-        | [fname] => (reader_deps (fname, #read (HOLSource.fileToReader {quietOpen = false, canBindStr = false} fname))
+        | [fname] => (reader_deps (fname, #read (HOLSource.fileToReader {quietOpen = false} fname))
                       handle LEX_ERROR s => diewith("Lexical error: " ^ s)
                            | e => diewith ("Exception: "^General.exnMessage e))
         | _ => usage die

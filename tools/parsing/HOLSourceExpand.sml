@@ -143,10 +143,10 @@ fun withLocalAttrs _ false attrs = attrs
 exception HasOrPat
 fun mapDelim f {args, delims, stop} = {args = map f args, delims = delims, stop = stop}
 
-fun expandDec {parseError, quietOpen, fileline, canBindStr} = let
+fun expandDec {parseError, quietOpen, fileline} = let
 
 fun magicBind (p, name) acc =
-  if canBindStr then let
+  if Systeml.canBindStr then let
     val code = mkString (p, concat ["val ", name, " = DB.fetch \"-\" \"", name,
       "\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;"])
     in valWild p (App (mkIdent (p, "CompilerSpecific.quietbind"), code)) :: acc end

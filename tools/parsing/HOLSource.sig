@@ -9,8 +9,7 @@ structure ToSML: sig
     read: int -> string,
     filename: string,
     parseError: int * int -> string -> unit,
-    quietOpen: bool,
-    canBindStr: bool
+    quietOpen: bool
   }
 
   type printer = {str: string -> unit, startSpan: int * int -> unit, stopSpan: unit -> unit}
@@ -21,7 +20,7 @@ structure ToSML: sig
 end
 
 type reader = {read: unit -> char option, fileline: unit -> fileline, eof: unit -> bool}
-type args = {quietOpen: bool, canBindStr: bool}
+type args = {quietOpen: bool}
 
 val inputFile : args -> string -> string
 val fromString : args -> string -> string

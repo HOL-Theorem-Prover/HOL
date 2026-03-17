@@ -522,7 +522,7 @@ fun start {diag} = let
     | _ => DArray.push (buf, msg)
 
   fun getHoldep text = let
-    val {read, ...} = HOLSource.stringToReader {quietOpen = false, canBindStr = true} text
+    val {read, ...} = HOLSource.stringToReader {quietOpen = false} text
     in
       Binarymap.foldr (fn (a, _, r) => a :: r) [] (Holdep_tokens.reader_deps ("", read))
       handle _ => []

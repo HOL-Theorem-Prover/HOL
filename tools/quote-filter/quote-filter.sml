@@ -22,7 +22,7 @@ else let
     read = read,
     filename = infilename,
     parseError = HOLSourceParser.simpleParseError,
-    quietOpen = qopn, canBindStr = false }
+    quietOpen = qopn }
   fun loop () = case read' () of "" => () | s => (write s; loop ())
   in loop () end
 
