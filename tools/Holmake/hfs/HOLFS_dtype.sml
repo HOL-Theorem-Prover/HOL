@@ -19,6 +19,27 @@ datatype File =
        | DAT of string
        | Unhandled of string
 
+fun map_CodeType f ct =
+    case ct of
+        Theory s => Theory (f s)
+      | Script s => Script (f s)
+      | Other s => Other (f s)
+
+fun codeTypeToString (Theory s) = "Theory(" ^ String.toString s ^ ")"
+  | codeTypeToString (Script s) = "Script(" ^ String.toString s ^ ")"
+  | codeTypeToString (Other s) = "Other(" ^ String.toString s ^ ")"
+fun articleTypeToString (RawArticle s) = "RawArticle(" ^ String.toString s ^ ")"
+  | articleTypeToString (ProcessedArticle s) =
+    "ProcessedArticle(" ^ String.toString s ^ ")"
+
+fun fileToString (SML c) = "SML(" ^ codeTypeToString c ^ ")"
+  | fileToString (SIG c) = "SIG(" ^ codeTypeToString c ^ ")"
+  | fileToString (UO c) = "UO(" ^ codeTypeToString c ^ ")"
+  | fileToString (UI c) = "UI(" ^ codeTypeToString c ^ ")"
+  | fileToString (ART at) = "ART(" ^ articleTypeToString at ^ ")"
+  | fileToString (DAT s) = "DAT(" ^ String.toString s ^ ")"
+  | fileToString (Unhandled s) = "Unhandled(" ^ String.toString s ^ ")"
+
 fun createDirIfNecessary s =
     if OS.FileSys.isDir s handle OS.SysErr _ => false then ()
     else if OS.FileSys.access(s,[]) then
