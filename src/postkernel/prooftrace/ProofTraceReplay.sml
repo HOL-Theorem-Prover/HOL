@@ -40,6 +40,16 @@ val quiet = ref false
 fun dbg_print s = if !debug then print s else ()
 fun msg_print s = if !quiet then () else print s
 
+fun register_bool_def "bool" "T" = register_T
+  | register_bool_def "bool" "!" = register_forall
+  | register_bool_def "bool" "?" = register_exists
+  | register_bool_def "bool" "F" = register_F
+  | register_bool_def "bool" "~" = register_neg
+  | register_bool_def "bool" "/\\" = register_conj
+  | register_bool_def "bool" "\\/" = register_disj
+  | register_bool_def "bool" "TYPE_DEFINITION" = register_type_definition
+  | register_bool_def _ _ = K ()
+
 exception NeedsAncestor of string
 
 fun replay thyname =
@@ -50,6 +60,9 @@ let
   val filename = thyname ^ "Theory.tr.gz";
   val (root_ptr, heap) = parse filename;
   val {all_thms, anon_thms, constants, types, ...} = shRoot heap root_ptr;
+
+  val register_def = if thyname = "bool" then register_bool_def
+                     else K (K (K ()))
 
   (* Pre-pass: closedness, refcounts, def collection *)
   val refcounts = Word8Array.array(heapSize heap, 0w0 : Word8.word)
@@ -198,7 +211,9 @@ let
         val (Thy,Name) = get_const_id b
         val rhs = tm a
         val thm = ASSUME (mk_eq(mk_var(Name, type_of rhs), rhs))
-      in #2 (gen_prim_specification Thy thm) end
+        val (_, thm) = gen_prim_specification Thy thm
+        val () = register_def Thy Name thm
+      in thm end
     | Def_spec_prf (a, b) => let
         val ids = list heap get_const_id b
         val () = if List.all (equal thyname) (List.map #1 ids) then ()
