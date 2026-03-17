@@ -31,6 +31,7 @@ $(SML_LIB)/basis/libs/basis-extra/basis-extra.mlb
 ../../../tools/Holmake/hfs/HOLFileSys.sig
 ../../../tools/Holmake/hfs/HOLFileSys.sml
 ../../portableML/mlton/MLSYSPortable.sml
+../../portableML/mlton/Interrupt.sml
 ../../portableML/Portable.sig
 ../../portableML/Portable.sml
 
