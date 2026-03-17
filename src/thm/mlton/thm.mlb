@@ -6,6 +6,7 @@ $(SML_LIB)/basis/libs/basis-extra/basis-extra.mlb
 
 ../../portableML/Uref.sig
 ../../portableML/Uref.sml
+../../portableML/mlton/FixedInt.sml
 ../../portableML/mosml/PrettyImpl.sml
 ../../portableML/quotation_dtype.sml
 ../../portableML/HOLquotation.sig
@@ -22,7 +23,8 @@ $(SML_LIB)/basis/libs/basis-extra/basis-extra.mlb
 ../../portableML/Arbnum.sml
 ../../portableML/poly/Susp.sig
 ../../portableML/poly/Susp.sml
-../../portableML/mlton/Exn.sml
+../../portableML/mosml/Exn.sig
+../../portableML/mosml/Exn.sml
 ../../../tools/Holmake/hfs/HOLFS_dtype.sml
 ../../../tools/Holmake/hfs/HFS_NameMunge.sig
 ../../../tools/Holmake/poly/HFS_NameMunge.sml
