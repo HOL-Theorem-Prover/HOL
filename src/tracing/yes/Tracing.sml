@@ -13,8 +13,7 @@ fun export (file, x: 'a) = let
     val () = IO.dup2 {old = fd, new = FileSys.stdout}
     val () = app IO.close [pipeRead, pipeWrite, fd]
     in Process.exec ("/usr/bin/gzip", []) end
-  val fd_int = SysWord.toInt (FileSys.fdToWord pipeWrite)
-  val () = PolyML.exportSmallToFD (fd_int, x)
+  val () = PolyML.exportSmallToFD (pipeWrite, x)
   val () = app IO.close [pipeRead, pipeWrite]
   val _ = Process.waitpid (Process.W_CHILD pid, [])
   in () end
