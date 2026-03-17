@@ -2,9 +2,6 @@ val _ = use "poly/poly-init2.ML";
 structure BasicIO = SML90;
 exception Interrupt = SML90.Interrupt
 
-val _ = use "../tools/Holmake/Systeml.sig"
-val _ = use "Holmake/Systeml.sml";
-
 val _ = use "../tools/Holmake/hmcore.ML";
 val _ = use "../tools/util/GetOpt.sig";
 val _ = use "../tools/util/GetOpt.sml";
@@ -22,8 +19,6 @@ val _ = use "../src/portableML/json/JSONParser.sig";
 val _ = use "../src/portableML/json/JSONParser.sml";
 val _ = use "../src/portableML/json/JSONDecode.sig";
 val _ = use "../src/portableML/json/JSONDecode.sml";
-val _ = use "../src/portableML/DArray.sig";
-val _ = use "../src/portableML/DArray.sml";
 val _ = use "holide.ML";
 val _ = use "lsp-server.ML";
 

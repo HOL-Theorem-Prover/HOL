@@ -16,7 +16,6 @@ use "../util/SimpleBuffer.sml";
 use "../Holmake/hfs/HOLFS_dtype.sml";
 use "../Holmake/hfs/HFS_NameMunge.sig";
 use "../Holmake/poly/HFS_NameMunge.sml";
-use "../Holmake/hfs/HOLFS_dtype.sml";
 use "../Holmake/hfs/HOLFileSys.sig";
 use "../Holmake/hfs/HOLFileSys.sml";
 use "../../tools-poly/poly/Binarymap.sig";
