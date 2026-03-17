@@ -440,6 +440,7 @@ val (log_term, log_thm, log_clear,
       in () end
     | Def_const_prf (t,ctm) => let
       val {Thy,Name,...} = dest_thy_const ctm
+      val Name = if uptodate_const Thy Name then Name else strip_old Name
       val c = {Thy=Thy,Name=Name}
       val _ = log_const_name c
       val _ = log_term t
@@ -654,6 +655,8 @@ val (log_term, log_thm, log_clear,
       in () end
     | Def_const_list_prf (th,cs) => let
       val nvars = map (fn c => let val {Thy,Name,Ty} = dest_thy_const c
+                                   val Name = if uptodate_const Thy Name
+                                              then Name else strip_old Name
                                in ({Thy=Thy,Name=Name},mk_var(Name,Ty)) end) cs
       val _ = log_list (log_pair (log_const_name, log_var)) nvars
       val _ = log_thm th
@@ -668,6 +671,7 @@ val (log_term, log_thm, log_clear,
       in () end
     | Def_tyop_prf (tyvars,th,aty) => let
       val {Thy,Tyop,...} = Type.dest_thy_type aty
+      val Tyop = if Type.uptodate_type aty then Tyop else strip_old Tyop
       val name = {Thy=Thy,Tyop=Tyop}
       val n = log_tyop_name name
       val (ns,n) = n
