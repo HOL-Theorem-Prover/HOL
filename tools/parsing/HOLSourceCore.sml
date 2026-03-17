@@ -37,7 +37,7 @@ type result = {
 fun simpleParseError (start, stop) s =
     TextIO.output (
         TextIO.stdErr,
-        "parse error at " ^
+        "parse error at byte " ^
         Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n")
 
 fun parseSML file read parseError: scope -> result = let
