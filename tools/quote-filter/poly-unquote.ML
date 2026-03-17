@@ -23,8 +23,8 @@ use "../../tools-poly/poly/Binarymap.sig";
 use "../../tools-poly/poly/Binarymap.sml";
 use "../parsing/HOLSourceAST.sig";
 use "../parsing/HOLSourceAST.sml";
-use "../parsing/HOLSourceCore.sig";
-use "../parsing/HOLSourceCore.sml";
+use "../parsing/HOLSourceParser.sig";
+use "../parsing/HOLSourceParser.sml";
 use "../parsing/HOLSourceExpand.sig";
 use "../parsing/HOLSourceExpand.sml";
 use "../parsing/HOLSourcePrinter.sig";
@@ -58,7 +58,7 @@ fun main() = let
     val {read, ...} = mkPullTranslator {
       read = read,
       filename = infilename,
-      parseError = HOLSourceCore.simpleParseError,
+      parseError = HOLSourceParser.simpleParseError,
       quietOpen = quietOpen, canBindStr = true }
     fun loop () = case read () of "" => () | s => (write s; loop ())
     in loop () end

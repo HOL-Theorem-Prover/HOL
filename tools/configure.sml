@@ -353,8 +353,8 @@ val _ =
     FileSys.chDir "../../tools/parsing";
     compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core", "-I", "../../src/portableML"] "HOLSourceAST.sig";
     compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core", "-I", "../../src/portableML"] "HOLSourceAST.sml";
-    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core", "-I", "../../src/portableML"] "HOLSourceCore.sig";
-    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core", "-I", "../../src/portableML"] "HOLSourceCore.sml";
+    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core", "-I", "../../src/portableML"] "HOLSourceParser.sig";
+    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core", "-I", "../../src/portableML"] "HOLSourceParser.sml";
     compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLSourceExpand.sig";
     compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLSourceExpand.sml";
     compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLSourcePrinter.sig";

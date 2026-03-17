@@ -1,4 +1,4 @@
-signature HOLSourceCore = sig
+signature HOLSourceParser = sig
 
 type scope = (string, int * bool) Binarymap.dict
 

@@ -47,8 +47,8 @@ end;
 
 val _ = use "../tools/parsing/HOLSourceAST.sig";
 val _ = use "../tools/parsing/HOLSourceAST.sml";
-val _ = use "../tools/parsing/HOLSourceCore.sig";
-val _ = use "../tools/parsing/HOLSourceCore.sml";
+val _ = use "../tools/parsing/HOLSourceParser.sig";
+val _ = use "../tools/parsing/HOLSourceParser.sml";
 val _ = use "../tools/parsing/HOLSourceExpand.sig";
 val _ = use "../tools/parsing/HOLSourceExpand.sml";
 val _ = use "../tools/parsing/HOLSourcePrinter.sig";

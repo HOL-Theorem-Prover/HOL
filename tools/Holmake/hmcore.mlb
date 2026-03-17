@@ -25,8 +25,8 @@ deps/Holdep_tokens.sml
 ../parsing/HOLSourceExpand.sml
 ../parsing/HOLSourcePrinter.sig
 ../parsing/HOLSourcePrinter.sml
-../parsing/HOLSourceCore.sig
-../parsing/HOLSourceCore.sml
+../parsing/HOLSourceParser.sig
+../parsing/HOLSourceParser.sml
 ../parsing/HOLSource.sig
 ../parsing/HOLSource.sml
 deps/Holdep.sig

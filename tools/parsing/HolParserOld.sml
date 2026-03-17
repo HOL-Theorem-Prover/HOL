@@ -831,7 +831,7 @@ fun file_to_parser ({quietOpen}:args) fname = let
   val read = ToSML.mkPullTranslator
     {read = fn _ => input instrm,
      filename = fname,
-     parseError = HOLSourceCore.simpleParseError,
+     parseError = HOLSourceParser.simpleParseError,
      quietOpen = quietOpen}
   in (read, fn () => closeIn instrm) end
 
@@ -841,7 +841,7 @@ fun string_to_parser ({quietOpen}:args) s = let
   val read = ToSML.mkPullTranslator
     {read = str_read,
      filename = "",
-     parseError = HOLSourceCore.simpleParseError,
+     parseError = HOLSourceParser.simpleParseError,
      quietOpen = quietOpen}
   in (read, I) end
 
@@ -849,7 +849,7 @@ fun input_to_parser ({quietOpen}:args) fname inp = let
   val read = ToSML.mkPullTranslator
     {read = inp,
      filename = fname,
-     parseError = HOLSourceCore.simpleParseError,
+     parseError = HOLSourceParser.simpleParseError,
      quietOpen = quietOpen}
   in (read, I) end
 

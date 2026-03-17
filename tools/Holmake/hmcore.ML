@@ -40,7 +40,7 @@ in
   app (myuse parsingdir) ["HolLex.sml"];
   app (myuse coredir) ["Holmake_tools_dtype.sml"];
   app (myuse hmutildir) ["terminal_primitives.sig", "poly-terminal-prims.ML"];
-  app appparsing ["HOLSourceAST", "HOLSourceExpand", "HOLSourcePrinter", "HOLSourceCore", "HOLSource"] ;
+  app appparsing ["HOLSourceAST", "HOLSourceExpand", "HOLSourcePrinter", "HOLSourceParser", "HOLSource"] ;
   app appdeps ["Holdep"] ;
   app appcore ["Holmake_tools"];
   app apphmf ["internal_functions", "Holmake_types", "ReadHMF"];

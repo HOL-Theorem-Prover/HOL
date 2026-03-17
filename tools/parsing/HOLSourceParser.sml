@@ -1,4 +1,4 @@
-structure HOLSourceCore :> HOLSourceCore = struct
+structure HOLSourceParser :> HOLSourceParser = struct
 open HOLSourceAST
 
 fun mem x = List.exists (fn y => x = y)
