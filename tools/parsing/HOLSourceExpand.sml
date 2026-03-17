@@ -1,5 +1,5 @@
-structure HOLToSML :> HOLToSML = struct
-open HOLAst
+structure HOLSourceExpand :> HOLSourceExpand = struct
+open HOLSourceAST
 
 exception Unreachable
 

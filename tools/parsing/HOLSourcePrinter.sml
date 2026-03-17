@@ -1,5 +1,5 @@
-structure HOLPrinter :> HOLPrinter = struct
-open HOLAst
+structure HOLSourcePrinter :> HOLSourcePrinter = struct
+open HOLSourceAST
 
 fun K a _ = a
 fun C f x y = f y x

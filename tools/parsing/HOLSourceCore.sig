@@ -1,4 +1,4 @@
-signature HOLParser = sig
+signature HOLSourceCore = sig
 
 type scope = (string, int * bool) Binarymap.dict
 
@@ -6,9 +6,9 @@ val initialScope: scope
 
 type result = {
   getScope: unit -> scope,
-  parseDec: unit -> HOLAst.dec option,
+  parseDec: unit -> HOLSourceAST.dec option,
   body: DString.dstring,
-  events: HOLAst.events }
+  events: HOLSourceAST.events }
 
 val simpleParseError: int * int -> string -> unit
 

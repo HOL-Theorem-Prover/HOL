@@ -1,4 +1,4 @@
-signature HOLAst = sig
+signature HOLSourceAST = sig
 
 (* (start, content) *)
 type ident = int * string

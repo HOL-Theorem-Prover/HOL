@@ -21,16 +21,16 @@ use "../Holmake/hfs/HOLFileSys.sig";
 use "../Holmake/hfs/HOLFileSys.sml";
 use "../../tools-poly/poly/Binarymap.sig";
 use "../../tools-poly/poly/Binarymap.sml";
-use "../parsing/HOLAst.sig";
-use "../parsing/HOLAst.sml";
-use "../parsing/HOLParser.sig";
-use "../parsing/HOLParser.sml";
-use "../parsing/HOLToSML.sig";
-use "../parsing/HOLToSML.sml";
-use "../parsing/HOLPrinter.sig";
-use "../parsing/HOLPrinter.sml";
-use "../parsing/HolParser.sig";
-use "../parsing/HolParser.sml";
+use "../parsing/HOLSourceAST.sig";
+use "../parsing/HOLSourceAST.sml";
+use "../parsing/HOLSourceCore.sig";
+use "../parsing/HOLSourceCore.sml";
+use "../parsing/HOLSourceExpand.sig";
+use "../parsing/HOLSourceExpand.sml";
+use "../parsing/HOLSourcePrinter.sig";
+use "../parsing/HOLSourcePrinter.sml";
+use "../parsing/HOLSource.sig";
+use "../parsing/HOLSource.sml";
 use "quotefix.sig";
 use "quotefix.sml";
 use "qfilter_util.sig";
@@ -54,11 +54,11 @@ fun main() = let
   val _ = if quotefixp then
     quotefix.run read write
   else let
-    open HolParser.ToSML
+    open HOLSource.ToSML
     val {read, ...} = mkPullTranslator {
       read = read,
       filename = infilename,
-      parseError = HOLParser.simpleParseError,
+      parseError = HOLSourceCore.simpleParseError,
       quietOpen = quietOpen, canBindStr = true }
     fun loop () = case read () of "" => () | s => (write s; loop ())
     in loop () end

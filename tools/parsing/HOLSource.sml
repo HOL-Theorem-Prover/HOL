@@ -1,4 +1,4 @@
-structure HolParser :> HolParser =
+structure HOLSource :> HOLSource =
 struct
 
 fun K a _ = a
@@ -19,19 +19,19 @@ structure ToSML = struct
 
   fun mkPushTranslator ({read, filename, parseError, quietOpen, canBindStr}:args) pr = let
     val {parseDec, body, events, ...} =
-      HOLParser.parseSML filename read parseError HOLParser.initialScope
-    val fileline = HOLAst.mkFileline body events
-    val expandDec = HOLToSML.expandDec
+      HOLSourceCore.parseSML filename read parseError HOLSourceCore.initialScope
+    val fileline = HOLSourceAST.mkFileline body events
+    val expandDec = HOLSourceExpand.expandDec
       {parseError = parseError, quietOpen = quietOpen, fileline = fileline,
        canBindStr = canBindStr}
-    val pr' = HOLPrinter.mkPrinter pr
+    val pr' = HOLSourcePrinter.mkPrinter pr
     fun push () =
       case parseDec () of
         NONE => true
       | SOME dec => case expandDec dec of
-          HOLAst.DecExpansion {result = [], ...} => false
+          HOLSourceAST.DecExpansion {result = [], ...} => false
         | dec => (
-          HOLPrinter.printDecs parseError (rev (HOLToSML.mkSemi [dec])) pr';
+          HOLSourcePrinter.printDecs parseError (rev (HOLSourceExpand.mkSemi [dec])) pr';
           #str pr "\n"; false)
     in {fileline = fileline, push = push} end
 
@@ -76,7 +76,7 @@ fun file_to_parser ({quietOpen, canBindStr}:args) fname = let
   val {fileline, read} = ToSML.mkPullTranslator
     {read = fn _ => input instrm,
      filename = fname,
-     parseError = HOLParser.simpleParseError,
+     parseError = HOLSourceCore.simpleParseError,
      quietOpen = quietOpen, canBindStr = canBindStr}
   in {read = read, fileline = fileline, close = fn () => closeIn instrm} end
 
@@ -85,14 +85,14 @@ fun string_to_parser ({quietOpen, canBindStr}:args) s = let
   fun str_read _ = (!sr before sr := "")
   val {fileline, read} = ToSML.mkPullTranslator
     {read = str_read, filename = "",
-     parseError = HOLParser.simpleParseError,
+     parseError = HOLSourceCore.simpleParseError,
      quietOpen = quietOpen, canBindStr = canBindStr}
   in {read = read, fileline = fileline, close = I} end
 
 fun input_to_parser ({quietOpen, canBindStr}:args) fname inp = let
   val {fileline, read} = ToSML.mkPullTranslator
     {read = inp, filename = fname,
-     parseError = HOLParser.simpleParseError,
+     parseError = HOLSourceCore.simpleParseError,
      quietOpen = quietOpen, canBindStr = canBindStr}
   in {read = read, fileline = fileline, close = I} end
 

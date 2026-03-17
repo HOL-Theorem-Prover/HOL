@@ -45,17 +45,17 @@ in
   (push, read, reset)
 end;
 
-val _ = use "../tools/parsing/HOLAst.sig";
-val _ = use "../tools/parsing/HOLAst.sml";
-val _ = use "../tools/parsing/HOLParser.sig";
-val _ = use "../tools/parsing/HOLParser.sml";
-val _ = use "../tools/parsing/HOLToSML.sig";
-val _ = use "../tools/parsing/HOLToSML.sml";
-val _ = use "../tools/parsing/HOLPrinter.sig";
-val _ = use "../tools/parsing/HOLPrinter.sml";
+val _ = use "../tools/parsing/HOLSourceAST.sig";
+val _ = use "../tools/parsing/HOLSourceAST.sml";
+val _ = use "../tools/parsing/HOLSourceCore.sig";
+val _ = use "../tools/parsing/HOLSourceCore.sml";
+val _ = use "../tools/parsing/HOLSourceExpand.sig";
+val _ = use "../tools/parsing/HOLSourceExpand.sml";
+val _ = use "../tools/parsing/HOLSourcePrinter.sig";
+val _ = use "../tools/parsing/HOLSourcePrinter.sml";
 val _ = use "../tools/parsing/HolLex.sml";
-val _ = use "../tools/parsing/HolParser.sig";
-val _ = use "../tools/parsing/HolParser.sml";
+val _ = use "../tools/parsing/HOLSource.sig";
+val _ = use "../tools/parsing/HOLSource.sml";
 
 
 infix ^^

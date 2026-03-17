@@ -18,11 +18,11 @@ fun lnumdie linenum extra exn =
 val outputPrompt = ref "> "
 
 val args = {quietOpen = true, canBindStr = true}
-val quote = HolParser.fromString args
+val quote = HOLSource.fromString args
 val default_linewidth = 77
 
 fun quoteFile lnum fname =
-  HolParser.inputFile args fname handle e => lnumdie lnum "" e
+  HOLSource.inputFile args fname handle e => lnumdie lnum "" e
 
 datatype lbuf =
          LB of {
@@ -374,7 +374,7 @@ fun process_line debugp umap obuf origline lbuf = let
     end
   val assertcmd = "##assert "
   val assertcmdsz = size assertcmd
-  val stringCReader = #read o HolParser.stringToReader args
+  val stringCReader = #read o HOLSource.stringToReader args
   fun compile exnhandle input =
       (if debugp then
          TextIO.output(TextIO.stdErr, input)

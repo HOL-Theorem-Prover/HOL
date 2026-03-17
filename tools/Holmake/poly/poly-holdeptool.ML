@@ -20,16 +20,16 @@ use "../Systeml.sig";
 use "../../../tools-poly/Holmake/Systeml.sml";
 use "../../parsing/AttributeSyntax.sig";
 use "../../parsing/AttributeSyntax.sml";
-use "../../parsing/HOLAst.sig";
-use "../../parsing/HOLAst.sml";
-use "../../parsing/HOLParser.sig";
-use "../../parsing/HOLParser.sml";
-use "../../parsing/HOLToSML.sig";
-use "../../parsing/HOLToSML.sml";
-use "../../parsing/HOLPrinter.sig";
-use "../../parsing/HOLPrinter.sml";
-use "../../parsing/HolParser.sig";
-use "../../parsing/HolParser.sml";
+use "../../parsing/HOLSourceAST.sig";
+use "../../parsing/HOLSourceAST.sml";
+use "../../parsing/HOLSourceCore.sig";
+use "../../parsing/HOLSourceCore.sml";
+use "../../parsing/HOLSourceExpand.sig";
+use "../../parsing/HOLSourceExpand.sml";
+use "../../parsing/HOLSourcePrinter.sig";
+use "../../parsing/HOLSourcePrinter.sml";
+use "../../parsing/HOLSource.sig";
+use "../../parsing/HOLSource.sml";
 use "../deps/holdeptool.sml";
 
 val main = holdeptool.main

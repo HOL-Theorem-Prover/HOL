@@ -10,7 +10,7 @@ fun use_reader fname {read = infn, fileline, eof} =
   end
 
 fun prim_use cfg fname =
-    use_reader fname (HolParser.fileToReader cfg fname)
+    use_reader fname (HOLSource.fileToReader cfg fname)
 
 val use = prim_use {quietOpen = false, canBindStr = true}
 
@@ -19,7 +19,7 @@ fun useScript fname =
     let
       val istream = TextIO.openIn fname
       val reader =
-        HolParser.streamToReader {quietOpen = false, canBindStr = true} fname istream
+        HOLSource.streamToReader {quietOpen = false, canBindStr = true} fname istream
       val _ = use_reader fname reader
               handle e => (TextIO.closeIn istream; PolyML.Exception.reraise e)
     in

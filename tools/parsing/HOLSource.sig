@@ -1,4 +1,4 @@
-signature HolParser =
+signature HOLSource =
 sig
 
 type fileline = {file: string, line: int, col: int}

@@ -1,4 +1,4 @@
-structure HOLAst :> HOLAst = struct
+structure HOLSourceAST :> HOLSourceAST = struct
 
 (* Defines an AST for Standard ML and the HOL-specific extensions such as
    Definition, Theorem, Inductive, and so on.

@@ -62,7 +62,7 @@ struct
   fun all_attributes () = Map.keys (Sref.value funstore)
   fun is_attribute a = Map.defined (Sref.value funstore) a
 
-   (* "induction=name" is handled by tools/Holmake/HolParser, and so is basically
+   (* "induction=name" is handled by tools/Holmake/HOLSource, and so is basically
       invisible to all later code *)
   fun reserve_word s =
       if Lib.mem s (Sref.value reserved_words) then
