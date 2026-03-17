@@ -225,18 +225,24 @@ fun emit_theory {trace, output, binary} = let
   fun ty_lookup key = peek(!ty_ht, key)
   fun ty_insert key v = ty_ht := insert(!ty_ht, key, v)
 
-  (* Terms: VAR and CONST use Redblackmap; COMB and ABS use IntPairTable *)
+  (* Terms: VAR and CONST use Redblackmap; COMB uses IntPairTable *)
   fun str_int_cmp ((s1,i1): string * int, (s2,i2)) =
     case String.compare(s1, s2) of EQUAL => Int.compare(i1, i2) | x => x
   val var_ht : (string * int, int) dict ref = ref (mkDict str_int_cmp)
   val const_ht : (string * int, int) dict ref = ref (mkDict str_int_cmp)
   val comb_ht = IntPairTable.create 65536
-  val abs_ht = IntPairTable.create 4096
 
   fun var_lookup key = peek(!var_ht, key)
   fun var_insert key v = var_ht := insert(!var_ht, key, v)
   fun const_lookup key = peek(!const_ht, key)
   fun const_insert key v = const_ht := insert(!const_ht, key, v)
+
+  (* --- Unique binder names for Abs capture avoidance ---------------------- *)
+
+  val binder_ctr = ref 0
+  fun fresh_binder_name s = let
+    val n = !binder_ctr
+  in binder_ctr := n + 1; s ^ " " ^ Int.toString n end
 
   (* --- NEW_CONST / NEW_TYPE tracking ------------------------------------- *)
 
@@ -408,41 +414,29 @@ fun emit_theory {trace, output, binary} = let
            end
       end
     | Abs (t1, t2) => let
-        val bvar_id = emit_binder env t1
-        val body_id = emit_term_sub (Subst.cons(env, bvar_id)) t2
-      in case IntPairTable.lookup abs_ht (bvar_id, body_id) of
-           SOME id => id
-         | NONE => let
-             val id = alloc_tm ()
-           in emit_tm_def id {write = fn out => PFTWriter.abs out id bvar_id body_id,
-                    ref_ty = [], ref_tm = [bvar_id, body_id],
-                    ref_th = [], ref_ci = []};
-              IntPairTable.insert abs_ht (bvar_id, body_id) id;
-              id
-           end
+        val (s, typ) = resolve_binder_name t1
+        val ty_id = emit_type typ
+        val B = alloc_tm ()
+        val bname = fresh_binder_name s
+        val () = emit_tm_def B {write = fn out =>
+                   PFTWriter.var out B bname ty_id,
+                 ref_ty = [ty_id], ref_tm = [], ref_th = [], ref_ci = []}
+        val body_id = emit_term_sub (Subst.cons(env, B)) t2
+      in
+        emit_tm_def B {write = fn out => PFTWriter.abs out B B body_id,
+              ref_ty = [], ref_tm = [B, body_id],
+              ref_th = [], ref_ci = []};
+        B
       end
     | Clos (sbp, tmp) => let
         val env' = Subst.comp (fn (_,s) => s) (env, emit_subs env sbp)
       in emit_term_sub env' tmp end
 
-  (* Binders go through the VAR hash table — same (name, ty_id) reuses
-     the same PFT ID. No fresh VARs per binder. *)
-  and emit_binder env (tm_ptr : Term.term ptr) : int =
+  and resolve_binder_name (tm_ptr : Term.term ptr) : string * Type.hol_type ptr =
     case shTerm heap tm_ptr of
-      Fv (s, typ) => let
-        val ty_id = emit_type typ
-        val key = (s, ty_id)
-      in case var_lookup key of
-           SOME id => id
-         | NONE => let
-             val id = alloc_tm ()
-           in emit_tm_def id {write = fn out => PFTWriter.var out id s ty_id,
-                    ref_ty = [ty_id], ref_tm = [], ref_th = [], ref_ci = []};
-              var_insert key id;
-              id
-           end
-      end
-    | _ => emit_term_sub env tm_ptr
+      Fv (s, typ) => (s, typ)
+    | Clos (_, tmp) => resolve_binder_name (castPtr tmp)
+    | _ => raise Fail "resolve_binder_name: not a variable"
 
   and emit_subs env (sbp : Term.term Subst.subs ptr) : int Subst.subs =
     case shSubs heap sbp of
