@@ -23,15 +23,13 @@ fun isProperSuffix s1 s2 =
     else NONE
 
 fun toCodeType s = let
-  val possprefix = isProperSuffix "Theory" s
+  val {dir = d, file = f} = OS.Path.splitDirFile s
 in
-  if (isSome possprefix) then Theory (valOf possprefix)
-  else let
-    val possprefix = isProperSuffix "Script" s
-  in
-    if isSome possprefix then Script (valOf possprefix)
-    else Other s
-  end
+  case isProperSuffix "Theory" f of
+      SOME f0 => Theory (OS.Path.concat(d,f0))
+    | NONE => case isProperSuffix "Script" f of
+                  SOME f0 => Script (OS.Path.concat(d,f0))
+                | NONE => Other s
 end
 
 fun toArticleType s = let
