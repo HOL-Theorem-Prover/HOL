@@ -1,16 +1,19 @@
-EXTRA_CLEANS = selftest mlton-selftest.log
+EXTRA_CLEANS = selftest-stdknl selftest-expk mlton-selftest.log
 OPTIONS = NO_OVERLAY
 CLINE_OPTIONS = --no_prereqs
 
 .PHONY: all
-all: selftest
+all: selftest-stdknl
 
-selftest: selftest.mlb selftest.sml thm.mlb stubs.sml
-	mlton -output $@ $<
+selftest-stdknl: selftest-stdknl.mlb selftest.sml thm-stdknl.mlb
+	mlton -default-type intinf -output $@ $<
+
+selftest-expk: selftest-expk.mlb selftest.sml thm-expk.mlb
+	mlton -default-type intinf -output $@ $<
 
 ifdef HOLSELFTESTLEVEL
 all: mlton-selftest.log
 
-mlton-selftest.log: selftest
+mlton-selftest.log: selftest-stdknl
 	$(tee ./$<, $@)
 endif
