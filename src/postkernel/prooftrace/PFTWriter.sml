@@ -343,11 +343,13 @@ fun def_spec (out as TextOut _) id th names =
      bVarint out (length names);
      List.app (bString out) names)
 
-fun def_spec_gen (out as TextOut _) id th thy =
+fun def_spec_gen (out as TextOut _) id th names =
     (jBegin out "DEF_SPEC_GEN"; jInt out "id" id;
-     jInt out "th" th; jStr out "thy" thy; jEnd out)
-  | def_spec_gen out id th thy =
-    (bOpcode out 0x42; bVarint out id; bVarint out th; bString out thy)
+     jInt out "th" th; jStrList out "names" names; jEnd out)
+  | def_spec_gen out id th names =
+    (bOpcode out 0x42; bVarint out id; bVarint out th;
+     bVarint out (length names);
+     List.app (bString out) names)
 
 (* --- Computation --------------------------------------------------------- *)
 
@@ -392,8 +394,14 @@ val eq_mp               = th_2 "EQ_MP"               0x16 "eq" "th"
 val deduct_antisym_rule = th_2 "DEDUCT_ANTISYM_RULE" 0x17 "th1" "th2"
 val prove_hyp           = th_2 "PROVE_HYP"           0x21 "th1" "th2"
 
-(* new_specification: id th *)
-val new_specification   = th_1 "new_specification"   0x30 "th"
+(* new_specification: id th names *)
+fun new_specification (out as TextOut _) id th names =
+    (jBegin out "new_specification"; jInt out "id" id;
+     jInt out "th" th; jStrList out "names" names; jEnd out)
+  | new_specification out id th names =
+    (bOpcode out 0x30; bVarint out id; bVarint out th;
+     bVarint out (length names);
+     List.app (bString out) names)
 
 (* INST id th subst *)
 fun inst (out as TextOut _) id th pairs =

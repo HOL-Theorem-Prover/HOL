@@ -289,8 +289,21 @@ fun replay (db: trDB) file = let
     def_spec = fn (id, th, names) =>
       set_th (id, prim_specification thyname names (get_th th)),
 
-    def_spec_gen = fn (id, th, thy) =>
-      set_th (id, #2 (gen_prim_specification thy (get_th th))),
+    def_spec_gen = fn (id, th, names) => let
+      fun split_name n =
+        case String.fields (fn c => c = #"$") n of
+          [t, _] => t
+        | _ => raise Fail ("DEF_SPEC_GEN: bad name " ^ n)
+      val thy = case names of
+          [] => raise Fail "DEF_SPEC_GEN: empty names list"
+        | (n :: rest) => let
+            val t = split_name n
+            val () = List.app (fn n' =>
+              if split_name n' = t then ()
+              else raise Fail ("DEF_SPEC_GEN: inconsistent theory prefix: "
+                               ^ n ^ " vs " ^ n')) rest
+          in t end
+    in set_th (id, #2 (gen_prim_specification thy (get_th th))) end,
 
     compute_init = fn (id, ty1, ty2, eqns, terms) => let
       val num_type = get_ty ty1

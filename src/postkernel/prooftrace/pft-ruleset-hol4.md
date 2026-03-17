@@ -240,7 +240,7 @@ Depends on: `bool$!`, `bool$?`, `bool$/\`, `min$=`, `min$==>`.
 |---------|-----------|
 | DEF_TYOP | id, th, name |
 | DEF_SPEC | id, th, names: string list |
-| DEF_SPEC_GEN | id, th, thy: string |
+| DEF_SPEC_GEN | id, th, names: string list |
 
 ### Computation
 
@@ -294,7 +294,7 @@ Depends on: `bool$!`, `bool$?`, `bool$/\`, `min$=`, `min$==>`.
 | 0x3C   | deductAntisym | id th1 th2                             |
 | 0x40   | DEF_TYOP      | id th name                             |
 | 0x41   | DEF_SPEC      | id th n_names name...                  |
-| 0x42   | DEF_SPEC_GEN  | id th thy                               |
+| 0x42   | DEF_SPEC_GEN  | id th n_names name...                   |
 | 0x43   | COMPUTE_INIT  | id ty1 ty2 n_eqns (name th)... n_terms (name tm)... |
 | 0x44   | COMPUTE       | id ci tm n_ths th...                   |
 
@@ -367,8 +367,8 @@ respectively. For SUBST, `redex` is a term ID and `residue` is a theorem ID.
 ### Definitions
 
 ```json
-{"cmd":"DEF_SPEC","id":0,"th":1,"names":["c1","c2"]}
-{"cmd":"DEF_SPEC_GEN","id":0,"th":1,"thy":"mytheory"}
+{"cmd":"DEF_SPEC","id":0,"th":1,"names":["foo$c1","foo$c2"]}
+{"cmd":"DEF_SPEC_GEN","id":0,"th":1,"names":["mytheory$c1","mytheory$c2"]}
 {"cmd":"DEF_TYOP","id":0,"th":1,"name":"mytype"}
 ```
 
@@ -514,8 +514,8 @@ all arguments are provided directly.
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| DEF_SPEC | `⊢ ∃v1...vn. P`, `[c1,...,cn]` | `⊢ P[c1/v1,...,cn/vn]` | Creates new constants `c1,...,cn`; the input theorem must have no hypotheses and no free variables; each `ci` gets the type of the corresponding `vi`. Corresponds to HOL4's `prim_specification`. |
-| DEF_SPEC_GEN | `{v1 = t1, ..., vn = tn} ⊢ P`, thy | `⊢ P[c1/v1,...,cn/vn]` | Creates new constants `c1,...,cn` where each `ci` has name `thy$vi` and the same type as `vi`. Each hypothesis must be an equation `vi = ti` where `vi` is a variable. The `ti` must have no free variables other than those bound by other hypotheses. Corresponds to HOL4's `gen_prim_specification`. |
+| DEF_SPEC | `⊢ ∃v1...vn. P`, `[s1,...,sn]` | `⊢ P[c1/v1,...,cn/vn]` | The input theorem must have no hypotheses and no free variables; each `si` is the name of a fresh constant `ci` with the same type as `vi`. Corresponds to HOL4's `prim_specification`. |
+| DEF_SPEC_GEN | `{v1 = t1, ..., vn = tn} ⊢ P`, `[s1,...,sn]` | `⊢ P[c1/v1,...,cn/vn]` | Each hypothesis must be an equation `vi = ti` where `vi` is a variable. The `ti` must have no free variables other than those bound by other hypotheses. Each `si` must match `thy$vi` for some common theory prefix `thy`; each `ci` is a fresh constant named `si` with the same type as `vi`. Corresponds to HOL4's `gen_prim_specification`. |
 | DEF_TYOP | `⊢ ∃v. P v`, name | `⊢ ∃rep. TYPE_DEFINITION P rep` | Creates a new type operator with the given name; `P : dom → bool` must be a closed term; the input theorem must have no hypotheses; the new type has the type variables of `P` as parameters. Requires `bool$TYPE_DEFINITION` |
 
 ### Computation

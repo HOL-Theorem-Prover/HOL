@@ -74,7 +74,7 @@ signature PFTWriter = sig
     val deductAntisym : pft_out -> int -> int -> int -> unit
     val def_tyop      : pft_out -> int -> int -> string -> unit
     val def_spec      : pft_out -> int -> int -> string list -> unit
-    val def_spec_gen  : pft_out -> int -> int -> string -> unit
+    val def_spec_gen  : pft_out -> int -> int -> string list -> unit
     val compute_init  : pft_out -> int -> int -> int
                         -> (string * int) list -> (string * int) list -> unit
     val compute       : pft_out -> int -> int -> int -> int list -> unit
@@ -95,7 +95,7 @@ signature PFTWriter = sig
     val sym                 : pft_out -> int -> int -> unit
     val prove_hyp           : pft_out -> int -> int -> int -> unit
     val alpha_thm           : pft_out -> int -> int -> int list -> int -> unit
-    val new_specification   : pft_out -> int -> int -> unit
+    val new_specification   : pft_out -> int -> int -> string list -> unit
     val new_type_definition : pft_out -> int -> int -> string -> string
                               -> string -> unit
     val compute             : pft_out -> int -> int -> int -> int list -> unit

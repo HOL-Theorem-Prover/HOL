@@ -143,6 +143,13 @@ Theorem commands are defined by the ruleset. See the relevant ruleset
 specification for the full list of commands, their arguments, and their
 logical semantics.
 
+**Definition commands.** Some theorem commands introduce new constants or
+type operators as a side effect (e.g., constant definition, type definition).
+Such commands MUST include the names of all newly introduced constants and/or
+type operators among their arguments. This enables tools (e.g., trace mergers)
+to determine what a definition command defines without inspecting term
+structure.
+
 ## Name Semantics
 
 Names in the trace are opaque strings. For systems with namespaced identifiers

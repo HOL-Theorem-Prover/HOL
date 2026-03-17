@@ -68,7 +68,7 @@ directly in the kernel for efficiency.
 
 | Command | Arguments |
 |---------|-----------|
-| new_specification | id, th |
+| new_specification | id, th, names: string list |
 | new_type_definition | id, th, tyname: string, absname: string, repname: string |
 
 ### Computation
@@ -95,7 +95,7 @@ directly in the kernel for efficiency.
 | 0x20   | SYM                        | id th                                  |
 | 0x21   | PROVE_HYP                  | id th1 th2                             |
 | 0x22   | ALPHA_THM                  | id th n_tms tm... tm                   |
-| 0x30   | new_specification          | id th                                  |
+| 0x30   | new_specification          | id th n_names name...                  |
 | 0x31   | new_type_definition        | id th tyname absname repname           |
 | 0x40   | COMPUTE_INIT               | id n_ths th...                         |
 | 0x41   | COMPUTE                    | id ci tm n_ths th...                   |
@@ -134,7 +134,7 @@ term.
 ### Definitions
 
 ```json
-{"cmd":"new_specification","id":0,"th":1}
+{"cmd":"new_specification","id":0,"th":1,"names":["foo","bar"]}
 {"cmd":"new_type_definition","id":0,"th":1,"tyname":"mid","absname":"mid_ABS","repname":"mid_REP"}
 ```
 
@@ -185,7 +185,7 @@ beta-reduction.
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| new_specification | `[v1=t1,...,vn=tn] ⊢ p` | `⊢ p[c1/v1,...,cn/vn]` | each `ti` is closed; type vars in `ti` ⊆ type vars in type of `vi`; `p` is closed under the `vi`; each `ci` is a fresh constant |
+| new_specification | `[v1=t1,...,vn=tn] ⊢ p`, `[s1,...,sn]` | `⊢ p[c1/v1,...,cn/vn]` | each `ti` is closed; type vars in `ti` ⊆ type vars in type of `vi`; `p` is closed under the `vi`; each `si` must equal the name of `vi`; each `ci` is a fresh constant named `si` with the same type as `vi` |
 | new_type_definition | `⊢ P x`, tyname, absname, repname | `⊢ abs (rep a) = a` and `⊢ P r = (rep (abs r) = r)` | `P` is closed; hypotheses must be empty; creates a new type operator `tyname` and two new constants `absname` (rep-type → new-type) and `repname` (new-type → rep-type) |
 
 ### Computation
