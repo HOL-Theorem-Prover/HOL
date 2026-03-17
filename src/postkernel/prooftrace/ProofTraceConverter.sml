@@ -70,12 +70,9 @@ fun convert (root, objs) file = let
         in app write [" V ", mlquote v, " ", Int.toString ty, "\n"]; n end
     end
 
-  local
-    val visitThm = ref ((fn _ => raise Fail "missing"): thm ptr -> int)
-    fun %p write (w: unit ptr) = p write (castPtr w)
+  val visitThm = let
     fun hol_type write w = app write [" ", Int.toString (visitType w)]
     fun term write w = app write [" ", Int.toString (visitTerm w)]
-    fun thm write w = app write [" ", Int.toString (!visitThm w)]
     fun string write w = app write [" ", mlquote (str objs w)]
     fun tup2 (p, q) write = ignore o tuple2 objs (p write, q write)
     fun list p write w = (write " ["; appList objs (p write) w; write " ]")
@@ -83,9 +80,10 @@ fun convert (root, objs) file = let
         NONE => write "~"
       | SOME w => p write w
     fun subst w = list (tup2 w)
-    fun visitCompute1 w = case ptr w of p =>
+    fun thm write w = app write [" ", Int.toString (visitThm w)]
+    and visitCompute1 w = case ptr w of p =>
       case Array.sub (cache, p) of Compute1 n => n | _ => let
-      val (num_type, (char_eqns, (cval_type, cval_terms))) = tuple4 objs (I, I, I, I) w
+      val {num_type, char_eqns, cval_type, cval_terms} = shComputeArgs objs w
       val buf = ref []
       fun write' s = buf := s :: !buf
       val _ = list (tup2 (string, term)) write' cval_terms
@@ -95,7 +93,7 @@ fun convert (root, objs) file = let
       val n = !c1N before c1N := !c1N + 1
       val _ = Array.update (cache, p, Compute1 n)
       in app write ("M " :: Int.toString n :: rev (!buf)); write "\n"; n end
-    fun visitCompute2 w = case ptr w of p =>
+    and visitCompute2 w = case ptr w of p =>
       case Array.sub (cache, p) of Compute2 n => n | _ => let
       val buf = ref []
       fun write' s = buf := s :: !buf
@@ -104,72 +102,66 @@ fun convert (root, objs) file = let
       val _ = Array.update (cache, p, Compute2 n)
       val _ = app write ("M2 " :: Int.toString n :: " " :: Int.toString x :: rev (!buf))
       in write "\n"; n end
-    fun compute_prep write w = app write [" ", Int.toString (visitCompute2 w)]
-    val rules = Array.fromList [
-      ("ABS", [%term, %thm]),
-      ("ALPHA", [%term, %term]),
-      ("AP_TERM", [%term, %thm]),
-      ("AP_THM", [%thm, %term]),
-      ("ASSUME", [%term]),
-      ("Axiom", []),
-      ("BETA_CONV", [%term]),
-      ("Beta", [%thm]),
-      ("CCONTR", [%term, %thm]),
-      ("CHOOSE", [%term, %thm, %thm]),
-      ("CONJUNCT1", [%thm]),
-      ("CONJUNCT2", [%thm]),
-      ("CONJ", [%thm, %thm]),
-      ("DISCH", [%term, %thm]),
-      ("DISJ1", [%thm, %term]),
-      ("DISJ2", [%term, %thm]),
-      ("DISJ_CASES", [%thm, %thm, %thm]),
-      ("Def_const_list", [%thm, %(list term)]),
-      ("Def_const", [%term, %term]),
-      ("Def_spec", [%thm, %(list term)]),
-      ("Def_tyop", [%(list hol_type), %thm, %hol_type]),
-      ("Disk", []),
-      ("EQ_IMP_RULE1", [%thm]),
-      ("EQ_IMP_RULE2", [%thm]),
-      ("EQ_MP", [%thm, %thm]),
-      ("EXISTS", [%term, %term, %thm]),
-      ("GENL", [%(list term), %thm]),
-      ("GEN_ABS", [%(opt term), %(list term), %thm]),
-      ("GEN", [%term, %thm]),
-      ("INST_TYPE", [%(subst (hol_type, hol_type)), %thm]),
-      ("INST", [%(subst (term, term)), %thm]),
-      ("MK_COMB", [%thm, %thm]),
-      ("MP", [%thm, %thm]),
-      ("Mk_abs", [%thm, %term, %thm]),
-      ("Mk_comb", [%thm, %thm, %thm]),
-      ("NOT_ELIM", [%thm]),
-      ("NOT_INTRO", [%thm]),
-      ("REFL", [%term]),
-      ("SPEC", [%term, %thm]),
-      ("SUBST", [%(subst (term, thm)), %term, %thm]),
-      ("SYM", [%thm]),
-      ("Specialize", [%term, %thm]),
-      ("TRANS", [%thm, %thm]),
-      ("compute", [%compute_prep, %term]),
-      ("deductAntisym", [%thm, %thm]),
-      ("deleted", [])]
-  in
-    val _ = visitThm := (fn w => case ptr w of p =>
+    and compute_prep write w = app write [" ", Int.toString (visitCompute2 w)]
+    and visitThm w = case ptr w of p =>
       case Array.sub (cache, p) of Thm n => n | _ => let
       val (hyps, concl, proof) = shThm objs w
-      val (i, ps) = shVariant objs proof
       val _ = (appSet objs visitTerm hyps; visitTerm concl)
-      val (rule, args) = Array.sub (rules, i)
       val buf = ref []
-      fun write' s = buf := s :: !buf
-      fun go (p :: ps, g :: gs) = (g write' p; go (ps, gs))
-        | go _ = ()
-      val _ = go (ps, args)
+      fun %f = f (fn s => buf := s :: !buf)
+      val rule = case shProof objs proof of
+        ABS_prf (a, b) => (%term a; %thm b; "ABS")
+      | ALPHA_prf (a, b) => (%term a; %term b; "ALPHA")
+      | AP_TERM_prf (a, b) => (%term a; %thm b; "AP_TERM")
+      | AP_THM_prf (a, b) => (%thm a; %term b; "AP_THM")
+      | ASSUME_prf a => (%term a; "ASSUME")
+      | Axiom_prf => "Axiom"
+      | BETA_CONV_prf a => (%term a; "BETA_CONV")
+      | Beta_prf a => (%thm a; "Beta")
+      | CCONTR_prf (a, b) => (%term a; %thm b; "CCONTR")
+      | CHOOSE_prf (a, b, c) => (%term a; %thm b; %thm c; "CHOOSE")
+      | CONJUNCT1_prf a => (%thm a; "CONJUNCT1")
+      | CONJUNCT2_prf a => (%thm a; "CONJUNCT2")
+      | CONJ_prf (a, b) => (%thm a; %thm b; "CONJ")
+      | DISCH_prf (a, b) => (%term a; %thm b; "DISCH")
+      | DISJ1_prf (a, b) => (%thm a; %term b; "DISJ1")
+      | DISJ2_prf (a, b) => (%term a; %thm b; "DISJ2")
+      | DISJ_CASES_prf (a, b, c) => (%thm a; %thm b; %thm c; "DISJ_CASES")
+      | Def_const_list_prf (a, b) => (%thm a; %(list term) b; "Def_const_list")
+      | Def_const_prf (a, b) => (%term a; %term b; "Def_const")
+      | Def_spec_prf (a, b) => (%thm a; %(list term) b; "Def_spec")
+      | Def_tyop_prf (a, b, c) => (%(list hol_type) a; %thm b; %hol_type c; "Def_tyop")
+      | Disk_prf _ => "Disk"
+      | EQ_IMP_RULE1_prf a => (%thm a; "EQ_IMP_RULE1")
+      | EQ_IMP_RULE2_prf a => (%thm a; "EQ_IMP_RULE2")
+      | EQ_MP_prf (a, b) => (%thm a; %thm b; "EQ_MP")
+      | EXISTS_prf (a, b, c) => (%term a; %term b; %thm c; "EXISTS")
+      | GENL_prf (a, b) => (%(list term) a; %thm b; "GENL")
+      | GEN_ABS_prf (a, b, c) => (%(opt term) a; %(list term) b; %thm c; "GEN_ABS")
+      | GEN_prf (a, b) => (%term a; %thm b; "GEN")
+      | INST_TYPE_prf (a, b) => (%(subst (hol_type, hol_type)) a; %thm b; "INST_TYPE")
+      | INST_prf (a, b) => (%(subst (term, term)) a; %thm b; "INST")
+      | MK_COMB_prf (a, b) => (%thm a; %thm b; "MK_COMB")
+      | MP_prf (a, b) => (%thm a; %thm b; "MP")
+      | Mk_abs_prf (a, b, c) => (%thm a; %term b; %thm c; "Mk_abs")
+      | Mk_comb_prf (a, b, c) => (%thm a; %thm b; %thm c; "Mk_comb")
+      | NOT_ELIM_prf a => (%thm a; "NOT_ELIM")
+      | NOT_INTRO_prf a => (%thm a; "NOT_INTRO")
+      | REFL_prf a => (%term a; "REFL")
+      | SPEC_prf (a, b) => (%term a; %thm b; "SPEC")
+      | SUBST_prf (a, b, c) => (%(subst (term, thm)) a; %term b; %thm c; "SUBST")
+      | SYM_prf a => (%thm a; "SYM")
+      | Specialize_prf (a, b) => (%term a; %thm b; "Specialize")
+      | TRANS_prf (a, b) => (%thm a; %thm b; "TRANS")
+      | compute_prf (a, b) => (%compute_prep a; %term b; "compute")
+      | deductAntisym_prf (a, b) => (%thm a; %thm b; "deductAntisym")
+      | deleted_prf => "deleted"
+      | save_dep_prf a => (%thm a; "save_dep")
       val n = !thN before thN := !thN + 1
       val _ = Array.update (cache, p, Thm n)
       val _ = app write ("P " :: Int.toString n :: " " :: rule :: rev (!buf))
-      in write "\n"; n end)
-    val visitThm = fn x => !visitThm x
-  end
+      in write "\n"; n end
+    in visitThm end
 
   val _ = appList objs ((fn (name, arity) =>
     app write ["O ", mlquote theory, " ", mlquote name, " ", Int.toString arity, "\n"]

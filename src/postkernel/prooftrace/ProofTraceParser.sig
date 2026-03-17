@@ -37,7 +37,9 @@ val castPtr: 'a ptr -> 'b ptr
 val isPtr: 'a ptr -> bool
 
 type ident
-val ident: heap -> ident ptr -> string * string
+val ident: heap -> (ident, string * string) gparser
+
+val thmId: heap -> thm_id parser
 
 datatype sh_type =
   Tyapp of ident ptr * hol_type list ptr
@@ -62,6 +64,62 @@ val shSubs: heap -> 'a Subst.subs ptr -> 'a sh_subs
 
 type proof
 val shThm: heap -> thm ptr -> term HOLset.set ptr * term ptr * proof ptr
+
+datatype sh_proof =
+  ABS_prf of term ptr * thm ptr
+| ALPHA_prf of term ptr * term ptr
+| AP_TERM_prf of term ptr * thm ptr
+| AP_THM_prf of thm ptr * term ptr
+| ASSUME_prf of term ptr
+| Axiom_prf
+| BETA_CONV_prf of term ptr
+| Beta_prf of thm ptr
+| CCONTR_prf of term ptr * thm ptr
+| CHOOSE_prf of term ptr * thm ptr * thm ptr
+| CONJUNCT1_prf of thm ptr
+| CONJUNCT2_prf of thm ptr
+| CONJ_prf of thm ptr * thm ptr
+| DISCH_prf of term ptr * thm ptr
+| DISJ1_prf of thm ptr * term ptr
+| DISJ2_prf of term ptr * thm ptr
+| DISJ_CASES_prf of thm ptr * thm ptr * thm ptr
+| Def_const_list_prf of thm ptr * term list ptr
+| Def_const_prf of term ptr * term ptr
+| Def_spec_prf of thm ptr * term list ptr
+| Def_tyop_prf of hol_type list ptr * thm ptr * hol_type ptr
+| Disk_prf of string * thm_id ptr
+| EQ_IMP_RULE1_prf of thm ptr
+| EQ_IMP_RULE2_prf of thm ptr
+| EQ_MP_prf of thm ptr * thm ptr
+| EXISTS_prf of term ptr * term ptr * thm ptr
+| GENL_prf of term list ptr * thm ptr
+| GEN_ABS_prf of term option ptr * term list ptr * thm ptr
+| GEN_prf of term ptr * thm ptr
+| INST_TYPE_prf of (hol_type * hol_type) list ptr * thm ptr
+| INST_prf of (term * term) list ptr * thm ptr
+| MK_COMB_prf of thm ptr * thm ptr
+| MP_prf of thm ptr * thm ptr
+| Mk_abs_prf of thm ptr * term ptr * thm ptr
+| Mk_comb_prf of thm ptr * thm ptr * thm ptr
+| NOT_ELIM_prf of thm ptr
+| NOT_INTRO_prf of thm ptr
+| REFL_prf of term ptr
+| SPEC_prf of term ptr * thm ptr
+| SUBST_prf of (term * thm) list ptr * term ptr * thm ptr
+| SYM_prf of thm ptr
+| Specialize_prf of term ptr * thm ptr
+| TRANS_prf of thm ptr * thm ptr
+| compute_prf of (compute_args * thm list) ptr * term ptr
+| deductAntisym_prf of thm ptr * thm ptr
+| deleted_prf
+| save_dep_prf of thm ptr
+val shProof: heap -> proof ptr -> sh_proof
+
+val shComputeArgs: heap -> compute_args ptr ->
+  { cval_terms : (string * term) list ptr,
+    cval_type  : hol_type ptr,
+    num_type   : hol_type ptr,
+    char_eqns  : (string * thm) list ptr }
 
 val shRoot: heap -> root ptr ->
   { theory: string,

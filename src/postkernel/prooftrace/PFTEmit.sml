@@ -14,17 +14,8 @@ in
   else raise Fail ("PFTEmit: expected <thy>Theory.tr.gz, got " ^ file)
 end
 
-datatype thm_id = DiskAnon of int | DiskName of string
-
-fun get_thm_id heap (id_ptr : thm_id ptr) = let
-  val (i, ps) = shVariant heap id_ptr
-  val p = el 1 ps
-in if i = 0 then DiskAnon (int (castPtr p))
-   else DiskName (str heap (castPtr p))
-end
-
-fun disk_save_name thy (DiskAnon i) = thy ^ "#" ^ Int.toString i
-  | disk_save_name thy (DiskName s) = thy ^ "$" ^ s
+fun disk_save_name thy (SavedAnon i) = thy ^ "#" ^ Int.toString i
+  | disk_save_name thy (SavedName s) = thy ^ "$" ^ s
 
 (* ========================================================================= *)
 (* Command buffer                                                            *)
@@ -307,7 +298,7 @@ fun emit_theory {trace, output, binary} = let
     | Tyapp (idp, args_ptr) => let
         val (Thy, Tyop) = ident heap idp
         val () = check_def ty_defs Thy Tyop
-        val arg_ids = list heap (fn p => emit_type (castPtr p)) args_ptr
+        val arg_ids = list heap emit_type args_ptr
         val name = Thy ^ "$" ^ Tyop
         val key = TyOpK(name, arg_ids)
       in case ty_lookup key of
@@ -435,7 +426,7 @@ fun emit_theory {trace, output, binary} = let
   and resolve_binder_name (tm_ptr : Term.term ptr) : string * Type.hol_type ptr =
     case shTerm heap tm_ptr of
       Fv (s, typ) => (s, typ)
-    | Clos (_, tmp) => resolve_binder_name (castPtr tmp)
+    | Clos (_, tmp) => resolve_binder_name tmp
     | _ => raise Fail "resolve_binder_name: not a variable"
 
   and emit_subs env (sbp : Term.term Subst.subs ptr) : int Subst.subs =
@@ -466,61 +457,47 @@ fun emit_theory {trace, output, binary} = let
              val cached = th_memo_get k
     in if cached >= 0 then cached
        else let
-         val (hyp_ptr, concl_ptr, proof_ptr) = shThm heap thm_ptr
-         val (i, args_ptrs) = shVariant heap proof_ptr
+         val (_, concl_ptr, proof_ptr) = shThm heap thm_ptr
+         val proof = shProof heap proof_ptr
        in
-         (* saved_prf: transparent wrapper, just return inner thm's ID *)
-         if i = 46 then let
-           val inner_id = emit_thm (castPtr (el 1 args_ptrs))
-         in th_memo_set k inner_id; inner_id end
-         else let
+         (* save_dep_prf: transparent wrapper, just return inner thm's ID *)
+         case proof of
+           save_dep_prf a => let
+             val inner_id = emit_thm a
+           in th_memo_set k inner_id; inner_id end
+         | _ => let
          (* Accumulators for referenced IDs *)
          val rtys : int list ref = ref []
          val rtms : int list ref = ref []
          val rths : int list ref = ref []
          val rcis : int list ref = ref []
-         fun tm n = let val p : Term.term ptr = castPtr (el n args_ptrs)
-                        val r = emit_term p
+         fun tm p = let val r = emit_term p
                     in rtms := r :: !rtms; r end
-         fun th n = let val p : Thm.thm ptr = castPtr (el n args_ptrs)
-                        val r = emit_thm p
+         fun th p = let val r = emit_thm p
                     in rths := r :: !rths; r end
-         fun ty n = let val p : Type.hol_type ptr = castPtr (el n args_ptrs)
-                        val r = emit_type p
+         fun ty p = let val r = emit_type p
                     in rtys := r :: !rtys; r end
-         fun emit_type_ref q = let
-           val p : Type.hol_type ptr = castPtr q
-           val r = emit_type p
-         in rtys := r :: !rtys; r end
-         fun emit_term_ref q = let
-           val p : Term.term ptr = castPtr q
-           val r = emit_term p
-         in rtms := r :: !rtms; r end
-         fun emit_thm_ref q = let
-           val p : Thm.thm ptr = castPtr q
-           val r = emit_thm p
-         in rths := r :: !rths; r end
          val id = alloc_th ()
          val () = th_memo_set k id
          fun mk_entry wfn = (def_th id; {write = wfn,
            ref_ty = !rtys, ref_tm = !rtms, ref_th = !rths, ref_ci = !rcis})
-       in case i of
-           0  => (* ABS *) let val a = tm 1 val b = th 2
+       in case proof of
+           ABS_prf (a, b) => let val a = tm a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.abs_thm out id a b)) end
-         | 1  => (* ALPHA *) let val a = tm 1 val b = tm 2
+         | ALPHA_prf (a, b) => let val a = tm a val b = tm b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.alpha out id a b)) end
-         | 2  => (* AP_TERM *) let val a = tm 1 val b = th 2
+         | AP_TERM_prf (a, b) => let val a = tm a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.ap_term out id a b)) end
-         | 3  => (* AP_THM *) let val a = th 1 val b = tm 2
+         | AP_THM_prf (a, b) => let val a = th a val b = tm b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.ap_thm out id a b)) end
-         | 4  => (* ASSUME *) let val a = tm 1
+         | ASSUME_prf a => let val a = tm a
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.assume out id a)) end
-         | 5  => (* Axiom *) let
+         | Axiom_prf => let
              val c = emit_term concl_ptr
              val () = rtms := c :: !rtms
              val () = axiom_names :=
@@ -528,161 +505,154 @@ fun emit_theory {trace, output, binary} = let
            in emit (mk_entry (fn out =>
                 PFTWriter.axiom out id c
                   (find(!axiom_names, id)))) end
-         | 6  => (* BETA_CONV *) let val a = tm 1
+         | BETA_CONV_prf a => let val a = tm a
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.beta_conv out id a)) end
-         | 7  => (* Beta *) let val a = th 1
+         | Beta_prf a => let val a = th a
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.beta_thm out id a)) end
-         | 8  => (* CCONTR *) let val a = tm 1 val b = th 2
+         | CCONTR_prf (a, b) => let val a = tm a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.ccontr out id a b)) end
-         | 9  => (* CHOOSE *) let val a = tm 1 val b = th 2 val c = th 3
+         | CHOOSE_prf (a, b, c) => let val a = tm a val b = th b val c = th c
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.choose out id a b c)) end
-         | 10 => (* CONJUNCT1 *) let val a = th 1
+         | CONJUNCT1_prf a => let val a = th a
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.conjunct1 out id a)) end
-         | 11 => (* CONJUNCT2 *) let val a = th 1
+         | CONJUNCT2_prf a => let val a = th a
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.conjunct2 out id a)) end
-         | 12 => (* CONJ *) let val a = th 1 val b = th 2
+         | CONJ_prf (a, b) => let val a = th a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.conj out id a b)) end
-         | 13 => (* DISCH *) let val a = tm 1 val b = th 2
+         | DISCH_prf (a, b) => let val a = tm a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.disch out id a b)) end
-         | 14 => (* DISJ1 *) let val a = th 1 val b = tm 2
+         | DISJ1_prf (a, b) => let val a = th a val b = tm b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.disj1 out id a b)) end
-         | 15 => (* DISJ2 *) let val a = tm 1 val b = th 2
+         | DISJ2_prf (a, b) => let val a = tm a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.disj2 out id a b)) end
-         | 16 => (* DISJ_CASES *) let val a = th 1 val b = th 2 val c = th 3
+         | DISJ_CASES_prf (a, b, c) => let val a = th a val b = th b val c = th c
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.disj_cases out id a b c)) end
-         | 17 => (* Def_const_list *) let
-             val a = th 1
-             val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
+         | Def_const_list_prf (a, b) => let
+             val a = th a
+             val ids = list heap get_const_id b
              val () = List.app (fn (_,nm) => mark_const nm) ids
            in emit (mk_entry (fn out =>
                 PFTWriter.HOL4.def_spec_gen out id a thyname)) end
-         | 18 => (* Def_const *) emit_def_const id args_ptrs
-         | 19 => (* Def_spec *) let
-             val a = th 1
-             val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
+         | Def_const_prf (a, b) => emit_def_const id (a, b)
+         | Def_spec_prf (a, b) => let
+             val a = th a
+             val ids = list heap get_const_id b
              val names = List.map (fn (_,nm) => nm) ids
              val () = List.app mark_const names
            in emit (mk_entry (fn out =>
                 PFTWriter.HOL4.def_spec out id a names)) end
-         | 20 => (* Def_tyop *) let
-             val _ = list heap emit_type_ref (castPtr (el 1 args_ptrs))
+         | Def_tyop_prf (a, b, c) => let
+             val _ = list heap ty a
              val () = if thyname = "bool"
                       then check_def tm_defs thyname "TYPE_DEFINITION"
                       else ()
-             val a = th 2
-             val (Thy, Tyop) = get_type_id (castPtr (el 3 args_ptrs))
+             val b = th b
+             val (Thy, Tyop) = get_type_id c
              val () = mark_type Tyop
            in emit (mk_entry (fn out =>
-                PFTWriter.HOL4.def_tyop out id a (Thy ^ "$" ^ Tyop))) end
-         | 21 => (* Disk *) let
-             val dep_thy = str heap (castPtr (el 1 args_ptrs))
-             val dep_id = get_thm_id heap (castPtr (el 2 args_ptrs))
+                PFTWriter.HOL4.def_tyop out id b (Thy ^ "$" ^ Tyop))) end
+         | Disk_prf (dep_thy, b) => let
+             val dep_id = thmId heap b
              val save_name = disk_save_name dep_thy dep_id
            in emit (mk_entry (fn out =>
                 PFTWriter.load out id save_name)) end
-         | 22 => (* EQ_IMP_RULE1 *) let val a = th 1
+         | EQ_IMP_RULE1_prf a => let val a = th a
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.eq_imp_rule1 out id a)) end
-         | 23 => (* EQ_IMP_RULE2 *) let val a = th 1
+         | EQ_IMP_RULE2_prf a => let val a = th a
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.eq_imp_rule2 out id a)) end
-         | 24 => (* EQ_MP *) let val a = th 1 val b = th 2
+         | EQ_MP_prf (a, b) => let val a = th a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.eq_mp out id a b)) end
-         | 25 => (* EXISTS *) let val a = tm 1 val b = tm 2 val c = th 3
+         | EXISTS_prf (a, b, c) => let val a = tm a val b = tm b val c = th c
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.exists out id a b c)) end
-         | 26 => (* GENL *) let
-             val tms = list heap emit_term_ref (castPtr (el 1 args_ptrs))
-             val a = th 2
+         | GENL_prf (a, b) => let
+             val tms = list heap tm a
+             val b = th b
            in emit (mk_entry (fn out =>
-                PFTWriter.HOL4.genl out id a tms)) end
-         | 27 => (* GEN_ABS *) let
-             val opt = option heap emit_term_ref (castPtr (el 1 args_ptrs))
+                PFTWriter.HOL4.genl out id b tms)) end
+         | GEN_ABS_prf (a, b, c) => let
+             val opt = option heap tm a
              val c_id = case opt of SOME c => c
                | NONE => raise Fail "GEN_ABS: missing constant"
-             val tms = list heap emit_term_ref (castPtr (el 2 args_ptrs))
-             val a = th 3
+             val tms = list heap tm b
+             val c = th c
            in emit (mk_entry (fn out =>
-                PFTWriter.HOL4.gen_abs out id a c_id tms)) end
-         | 28 => (* GEN *) let val a = tm 1 val b = th 2
+                PFTWriter.HOL4.gen_abs out id c c_id tms)) end
+         | GEN_prf (a, b) => let val a = tm a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.gen out id a b)) end
-         | 29 => (* INST_TYPE *) let
-             val pairs = list heap (fn p =>
-               tuple2 heap (emit_type_ref, emit_type_ref) (castPtr p))
-               (castPtr (el 1 args_ptrs))
-             val a = th 2
+         | INST_TYPE_prf (a, b) => let
+             val pairs = list heap (tuple2 heap (ty, ty)) a
+             val b = th b
            in emit (mk_entry (fn out =>
-                PFTWriter.HOL4.inst_type out id a pairs)) end
-         | 30 => (* INST *) let
-             val pairs = list heap (fn p =>
-               tuple2 heap (emit_term_ref, emit_term_ref) (castPtr p))
-               (castPtr (el 1 args_ptrs))
-             val a = th 2
+                PFTWriter.HOL4.inst_type out id b pairs)) end
+         | INST_prf (a, b) => let
+             val pairs = list heap (tuple2 heap (tm, tm)) a
+             val b = th b
            in emit (mk_entry (fn out =>
-                PFTWriter.HOL4.inst out id a pairs)) end
-         | 31 => (* MK_COMB *) let val a = th 1 val b = th 2
+                PFTWriter.HOL4.inst out id b pairs)) end
+         | MK_COMB_prf (a, b) => let val a = th a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.mk_comb out id a b)) end
-         | 32 => (* MP *) let val a = th 1 val b = th 2
+         | MP_prf (a, b) => let val a = th a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.mp out id a b)) end
-         | 33 => (* Mk_abs *) let
-             val a = th 1
-             (* walk does tm(el 2); PFT Mk_abs doesn't use it, skip *)
-             val b = th 3
+         | Mk_abs_prf (a, _, c) => let
+             val a = th a
+             (* walk does tm b; PFT Mk_abs doesn't use it, skip *)
+             val c = th c
            in emit (mk_entry (fn out =>
-                PFTWriter.HOL4.mk_abs_thm out id a b)) end
-         | 34 => (* Mk_comb *) let val a = th 1 val b = th 2 val c = th 3
+                PFTWriter.HOL4.mk_abs_thm out id a c)) end
+         | Mk_comb_prf (a, b, c) => let val a = th a val b = th b val c = th c
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.mk_comb_thm out id a b c)) end
-         | 35 => (* NOT_ELIM *) let val a = th 1
+         | NOT_ELIM_prf a => let val a = th a
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.not_elim out id a)) end
-         | 36 => (* NOT_INTRO *) let val a = th 1
+         | NOT_INTRO_prf a => let val a = th a
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.not_intro out id a)) end
-         | 37 => (* REFL *) let val a = tm 1
+         | REFL_prf a => let val a = tm a
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.refl out id a)) end
-         | 38 => (* SPEC *) let val a = tm 1 val b = th 2
+         | SPEC_prf (a, b) => let val a = tm a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.spec out id a b)) end
-         | 39 => (* SUBST *) let
-             val pairs = list heap (fn p =>
-               tuple2 heap (emit_term_ref, emit_thm_ref) (castPtr p))
-               (castPtr (el 1 args_ptrs))
-             val a = tm 2
-             val b = th 3
+         | SUBST_prf (a, b, c) => let
+             val pairs = list heap (tuple2 heap (tm, th)) a
+             val b = tm b
+             val c = th c
            in emit (mk_entry (fn out =>
-                PFTWriter.HOL4.subst out id a b pairs)) end
-         | 40 => (* SYM *) let val a = th 1
+                PFTWriter.HOL4.subst out id b c pairs)) end
+         | SYM_prf a => let val a = th a
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.sym out id a)) end
-         | 41 => (* Specialize *) let val a = tm 1 val b = th 2
+         | Specialize_prf (a, b) => let val a = tm a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.specialize out id a b)) end
-         | 42 => (* TRANS *) let val a = th 1 val b = th 2
+         | TRANS_prf (a, b) => let val a = th a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.trans out id a b)) end
-         | 43 => (* compute *) emit_compute id args_ptrs
-         | 44 => (* deductAntisym *) let val a = th 1 val b = th 2
+         | compute_prf (a, b) => emit_compute id (tuple2 heap (I, I) a, b)
+         | deductAntisym_prf (a, b) => let val a = th a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.deductAntisym out id a b)) end
-         | 45 => (* deleted *) raise Fail "emit_thm: deleted"
-         | n => raise Fail ("emit_thm: unknown rule " ^ Int.toString n)
+         | deleted_prf => raise Fail "emit_thm: deleted"
+         | save_dep_prf _ => raise Fail "unreachable"
        ; id end end
     end
 
@@ -692,10 +662,8 @@ fun emit_theory {trace, output, binary} = let
 
   (* Synthesize ASSUME(v = rhs) then DEF_SPEC. All synthesized
      intermediate objects go through hash-cons tables. *)
-  and emit_def_const thm_id args_ptrs = let
-    val rhs_p = el 1 args_ptrs
-    val rhs_id = emit_term (castPtr rhs_p)
-    val const_ptr : Term.term ptr = castPtr (el 2 args_ptrs)
+  and emit_def_const thm_id (rhs_p, const_ptr) = let
+    val rhs_id = emit_term rhs_p
     val (Thy, Name) = get_const_id const_ptr
     val ty_ptr = case shTerm heap const_ptr of
         Const (_, tp) => tp
@@ -772,34 +740,26 @@ fun emit_theory {trace, output, binary} = let
   (* compute                                                                 *)
   (* ======================================================================= *)
 
-  and emit_compute thm_id args_ptrs = let
-    val (compute_args_ptr, ths_ptr) =
-      tuple2 heap (I, I) (castPtr (el 1 args_ptrs))
+  and emit_compute thm_id ((compute_args_ptr, ths_ptr), tm_p) = let
     val ci_id = emit_compute_init compute_args_ptr
-    val th_id_list = list heap (fn p => emit_thm (castPtr p)) ths_ptr
-    val tm_p = el 2 args_ptrs
-    val tm_id = emit_term (castPtr tm_p)
+    val th_id_list = list heap emit_thm ths_ptr
+    val tm_id = emit_term tm_p
   in emit_th_def thm_id {write = fn out =>
        PFTWriter.HOL4.compute out thm_id ci_id tm_id th_id_list,
      ref_ty = [], ref_tm = [tm_id], ref_th = th_id_list,
      ref_ci = [ci_id]}
   end
 
-  and emit_compute_init (args_ptr : unit ptr) : int = let
+  and emit_compute_init (args_ptr : compute_args ptr) : int = let
     val k = ptr args_ptr
     val cached = ci_memo_get k
   in if cached >= 0 then cached
      else let
-       val (num_type_ptr, (eqns_ptr, (cval_type_ptr, cterms_ptr))) =
-         tuple4 heap (I, I, I, I) (castPtr args_ptr)
-       val num_ty = emit_type (castPtr num_type_ptr)
-       val cval_ty = emit_type (castPtr cval_type_ptr)
-       val char_eqns = list heap (fn p =>
-         tuple2 heap (str heap,
-           fn q => emit_thm (castPtr q)) (castPtr p)) eqns_ptr
-       val cval_terms = list heap (fn p =>
-         tuple2 heap (str heap,
-           fn q => emit_term (castPtr q)) (castPtr p)) cterms_ptr
+       val {num_type, char_eqns, cval_type, cval_terms} = shComputeArgs heap args_ptr
+       val num_ty = emit_type num_type
+       val cval_ty = emit_type cval_type
+       val char_eqns = list heap (tuple2 heap (str heap, emit_thm)) char_eqns
+       val cval_terms = list heap (tuple2 heap (str heap, emit_term)) cval_terms
        val eqn_th_ids = List.map #2 char_eqns
        val cval_tm_ids = List.map #2 cval_terms
        val ci_id = alloc_ci ()
@@ -818,7 +778,7 @@ fun emit_theory {trace, output, binary} = let
 
   val () = appList heap (fn p => let
     val (nm, (thp, _)) = tuple3 heap (str heap, I, I) p
-    val thm_id = emit_thm (castPtr thp)
+    val thm_id = emit_thm thp
     val () = emit {write = fn out =>
       PFTWriter.save out (thyname ^ "$" ^ nm) thm_id,
       ref_ty = [], ref_tm = [], ref_th = [thm_id], ref_ci = []}
@@ -828,7 +788,7 @@ fun emit_theory {trace, output, binary} = let
   val () = appList heap (fn p => let
     val i = !anon_idx
     val () = anon_idx := i + 1
-    val thm_id = emit_thm (castPtr p)
+    val thm_id = emit_thm p
     val () = emit {write = fn out =>
       PFTWriter.save out (thyname ^ "#" ^ Int.toString i) thm_id,
       ref_ty = [], ref_tm = [], ref_th = [thm_id], ref_ci = []}
@@ -841,7 +801,7 @@ fun emit_theory {trace, output, binary} = let
     val () = check_def tm_defs thyname Name
   in if is_const_done Name then ()
      else let
-       val ty_id = emit_type (castPtr ty_ptr)
+       val ty_id = emit_type ty_ptr
        val () = mark_const Name
      in emit {write = fn out =>
                PFTWriter.new_const out (thyname ^ "$" ^ Name) ty_id,

@@ -79,21 +79,19 @@ fun walk {heap, thyname, named_thms, anon_thms,
     if not (first_seen ty_ptr) then () else
     case shType heap ty_ptr of
       Tyv _ => ()
-    | Tyapp (_, args_ptr) =>
-        appList heap (fn p => (incr p; walk_type (castPtr p))) (castPtr args_ptr)
+    | Tyapp (_, args_ptr) => appList heap ty args_ptr
+  and ty p = (incr (castPtr p); walk_type p)
 
   fun walk_term (tm_ptr: term ptr) =
-    if is_closed tm_ptr
-    then (incr (castPtr tm_ptr);
-          if first_seen tm_ptr then walk_term_inner tm_ptr else ())
-    else walk_term_inner tm_ptr
+    if is_closed tm_ptr then tm tm_ptr else walk_term_inner tm_ptr
+  and tm p = (incr (castPtr p); if first_seen p then walk_term_inner p else ())
   and walk_term_inner tm_ptr =
     if not (isPtr tm_ptr) then () else
     case shTerm heap tm_ptr of
       Abs (t1, t2) => (walk_term t1; walk_term t2)
     | Comb (t1, t2) => (walk_term t1; walk_term t2)
-    | Const (_, typ) => (incr (castPtr typ); walk_type typ)
-    | Fv (_, typ) => (incr (castPtr typ); walk_type typ)
+    | Const (_, typ) => ty typ
+    | Fv (_, typ) => ty typ
     | Bv _ => ()
     | Clos (sbp, tmp) => (walk_subs sbp; walk_term tmp)
   and walk_subs sbp =
@@ -109,12 +107,6 @@ fun walk {heap, thyname, named_thms, anon_thms,
     else let
       val () = BoolArray.update(seen, ptr thm_ptr, true)
       val (_, _, proof_ptr) = shThm heap thm_ptr
-      val (i, args_ptrs) = shVariant heap proof_ptr
-      fun tm (p: unit ptr) = (incr p;
-        if first_seen (castPtr p) then walk_term_inner (castPtr p)
-        else ())
-      fun th (p: unit ptr) = (incr p; walk_thm (castPtr p))
-      fun ty (p: unit ptr) = (incr p; walk_type (castPtr p))
       fun add_thm_ptr nm prev =
             (on_def_thm thm_ptr;
              case prev of NONE => [thm_ptr]
@@ -124,92 +116,78 @@ fun walk {heap, thyname, named_thms, anon_thms,
         if defthy = thyname then () else raise Fail "add_def thy"
       fun add_const nm = tm_defs := update(!tm_defs, nm, add_thm_ptr nm)
       fun add_def_const p = let
-        val (thy,nm) = get_const_id (castPtr p)
+        val (thy,nm) = get_const_id p
         val () = check_thy thy
       in add_const nm end
-    in case i of
-        0  => (* ABS *)        (tm(el 1 args_ptrs); th(el 2 args_ptrs))
-      | 1  => (* ALPHA *)      (tm(el 1 args_ptrs); tm(el 2 args_ptrs))
-      | 2  => (* AP_TERM *)    (tm(el 1 args_ptrs); th(el 2 args_ptrs))
-      | 3  => (* AP_THM *)     (th(el 1 args_ptrs); tm(el 2 args_ptrs))
-      | 4  => (* ASSUME *)     tm(el 1 args_ptrs)
-      | 5  => (* Axiom *)      ()
-      | 6  => (* BETA_CONV *)  tm(el 1 args_ptrs)
-      | 7  => (* Beta *)       th(el 1 args_ptrs)
-      | 8  => (* CCONTR *)     (tm(el 1 args_ptrs); th(el 2 args_ptrs))
-      | 9  => (* CHOOSE *)     (tm(el 1 args_ptrs); th(el 2 args_ptrs); th(el 3 args_ptrs))
-      | 10 => (* CONJUNCT1 *)  th(el 1 args_ptrs)
-      | 11 => (* CONJUNCT2 *)  th(el 1 args_ptrs)
-      | 12 => (* CONJ *)       (th(el 1 args_ptrs); th(el 2 args_ptrs))
-      | 13 => (* DISCH *)      (tm(el 1 args_ptrs); th(el 2 args_ptrs))
-      | 14 => (* DISJ1 *)      (th(el 1 args_ptrs); tm(el 2 args_ptrs))
-      | 15 => (* DISJ2 *)      (tm(el 1 args_ptrs); th(el 2 args_ptrs))
-      | 16 => (* DISJ_CASES *) (th(el 1 args_ptrs); th(el 2 args_ptrs); th(el 3 args_ptrs))
-      | 17 => (* Def_const_list *) let
-          val () = th(el 1 args_ptrs)
-          val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
+    in case shProof heap proof_ptr of
+        ABS_prf (a, b) => (tm a; th b)
+      | ALPHA_prf (a, b) => (tm a; tm b)
+      | AP_TERM_prf (a, b) => (tm a; th b)
+      | AP_THM_prf (a, b) => (th a; tm b)
+      | ASSUME_prf a => tm a
+      | Axiom_prf => ()
+      | BETA_CONV_prf a => tm a
+      | Beta_prf a => th a
+      | CCONTR_prf (a, b) => (tm a; th b)
+      | CHOOSE_prf (a, b, c) => (tm a; th b; th c)
+      | CONJUNCT1_prf a => th a
+      | CONJUNCT2_prf a => th a
+      | CONJ_prf (a, b) => (th a; th b)
+      | DISCH_prf (a, b) => (tm a; th b)
+      | DISJ1_prf (a, b) => (th a; tm b)
+      | DISJ2_prf (a, b) => (tm a; th b)
+      | DISJ_CASES_prf (a, b, c) => (th a; th b; th c)
+      | Def_const_list_prf (a, b) => let
+          val () = th a
+          val ids = list heap get_const_id b
         in List.app (fn (thy,nm) => (check_thy thy; add_const nm)) ids end
-      | 18 => (* Def_const *) (tm(el 1 args_ptrs); add_def_const (el 2 args_ptrs))
-      | 19 => (* Def_spec *) let
-          val () = th(el 1 args_ptrs)
-          val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
+      | Def_const_prf (a, b) => (tm a; add_def_const b)
+      | Def_spec_prf (a, b) => let
+          val () = th a
+          val ids = list heap get_const_id b
         in List.app (fn (thy,nm) => (check_thy thy; add_const nm)) ids end
-      | 20 => (* Def_tyop *) let
-          val () = appList heap ty (castPtr (el 1 args_ptrs))
-          val () = th(el 2 args_ptrs)
-          val (thy,tyop) = get_type_id (castPtr (el 3 args_ptrs))
+      | Def_tyop_prf (a, b, c) => let
+          val () = appList heap ty a
+          val () = th b
+          val (thy,tyop) = get_type_id c
           val () = check_thy thy
         in ty_defs := update(!ty_defs, tyop, add_thm_ptr tyop) end
-      | 21 => (* Disk *)       ()
-      | 22 => (* EQ_IMP_RULE1 *) th(el 1 args_ptrs)
-      | 23 => (* EQ_IMP_RULE2 *) th(el 1 args_ptrs)
-      | 24 => (* EQ_MP *)      (th(el 1 args_ptrs); th(el 2 args_ptrs))
-      | 25 => (* EXISTS *)     (tm(el 1 args_ptrs); tm(el 2 args_ptrs); th(el 3 args_ptrs))
-      | 26 => (* GENL *)       (appList heap tm (castPtr (el 1 args_ptrs)); th(el 2 args_ptrs))
-      | 27 => (* GEN_ABS *)    (ignore (option heap tm (castPtr (el 1 args_ptrs)));
-                                 appList heap tm (castPtr (el 2 args_ptrs));
-                                 th(el 3 args_ptrs))
-      | 28 => (* GEN *)        (tm(el 1 args_ptrs); th(el 2 args_ptrs))
-      | 29 => (* INST_TYPE *)  (appList heap (fn p =>
-                                  ignore (tuple2 heap (ty,ty) (castPtr p))
-                                  ) (castPtr (el 1 args_ptrs));
-                                 th(el 2 args_ptrs))
-      | 30 => (* INST *)       (appList heap (fn p =>
-                                  ignore (tuple2 heap (tm,tm) (castPtr p))
-                                  ) (castPtr (el 1 args_ptrs));
-                                 th(el 2 args_ptrs))
-      | 31 => (* MK_COMB *)    (th(el 1 args_ptrs); th(el 2 args_ptrs))
-      | 32 => (* MP *)         (th(el 1 args_ptrs); th(el 2 args_ptrs))
-      | 33 => (* Mk_abs *)     (th(el 1 args_ptrs); tm(el 2 args_ptrs); th(el 3 args_ptrs))
-      | 34 => (* Mk_comb *)    (th(el 1 args_ptrs); th(el 2 args_ptrs); th(el 3 args_ptrs))
-      | 35 => (* NOT_ELIM *)   th(el 1 args_ptrs)
-      | 36 => (* NOT_INTRO *)  th(el 1 args_ptrs)
-      | 37 => (* REFL *)       tm(el 1 args_ptrs)
-      | 38 => (* SPEC *)       (tm(el 1 args_ptrs); th(el 2 args_ptrs))
-      | 39 => (* SUBST *)      (appList heap (fn p =>
-                                  ignore (tuple2 heap (tm,th) (castPtr p))
-                                  ) (castPtr (el 1 args_ptrs));
-                                 tm(el 2 args_ptrs); th(el 3 args_ptrs))
-      | 40 => (* SYM *)        th(el 1 args_ptrs)
-      | 41 => (* Specialize *) (tm(el 1 args_ptrs); th(el 2 args_ptrs))
-      | 42 => (* TRANS *)      (th(el 1 args_ptrs); th(el 2 args_ptrs))
-      | 43 => (* compute *) let
-          val (args_p, extra_p) = tuple2 heap (I, I) (castPtr (el 1 args_ptrs))
-          val (nty_p, (ceq_p, (cvty_p, cvtm_p))) =
-            tuple4 heap (I, I, I, I) (castPtr args_p)
-          val () = ty nty_p
-          val () = appList heap (fn p =>
-            ignore (tuple2 heap (K(), th) (castPtr p))) (castPtr ceq_p)
-          val () = ty cvty_p
-          val () = appList heap (fn p =>
-            ignore (tuple2 heap (K(), tm) (castPtr p))) (castPtr cvtm_p)
-          val () = appList heap th (castPtr extra_p)
-        in tm(el 2 args_ptrs) end
-      | 44 => (* deductAntisym *) (th(el 1 args_ptrs); th(el 2 args_ptrs))
-      | 45 => (* deleted *)    ()
-      | 46 => th(el 1 args_ptrs)
-      | n => raise Fail ("walk_thm: unknown rule " ^ Int.toString n)
+      | Disk_prf _ => ()
+      | EQ_IMP_RULE1_prf a => th a
+      | EQ_IMP_RULE2_prf a => th a
+      | EQ_MP_prf (a, b) => (th a; th b)
+      | EXISTS_prf (a, b, c) => (tm a; tm b; th c)
+      | GENL_prf (a, b) => (appList heap tm a; th b)
+      | GEN_ABS_prf (a, b, c) => (option heap tm a; appList heap tm b; th c)
+      | GEN_prf (a, b) => (tm a; th b)
+      | INST_TYPE_prf (a, b) =>  (appList heap (tuple2 heap (ty,ty)) a; th b)
+      | INST_prf (a, b) => (appList heap (tuple2 heap (tm,tm)) a; th b)
+      | MK_COMB_prf (a, b) => (th a; th b)
+      | MP_prf (a, b) => (th a; th b)
+      | Mk_abs_prf (a, b, c) => (th a; tm b; th c)
+      | Mk_comb_prf (a, b, c) => (th a; th b; th c)
+      | NOT_ELIM_prf a => th a
+      | NOT_INTRO_prf a => th a
+      | REFL_prf a => tm a
+      | SPEC_prf (a, b) => (tm a; th b)
+      | SUBST_prf (a, b, c) => (appList heap (tuple2 heap (tm,th)) a; tm b; th c)
+      | SYM_prf a => th a
+      | Specialize_prf (a, b) => (tm a; th b)
+      | TRANS_prf (a, b) => (th a; th b)
+      | compute_prf (a, b) => let
+          val (args_p, extra_p) = tuple2 heap (I, I) a
+          val {cval_terms, cval_type, num_type, char_eqns} = shComputeArgs heap args_p
+          val () = ty num_type
+          val () = appList heap (tuple2 heap (K(), th)) char_eqns
+          val () = ty cval_type
+          val () = appList heap (tuple2 heap (K(), tm)) cval_terms
+          val () = appList heap th extra_p
+        in tm b end
+      | deductAntisym_prf (a, b) => (th a; th b)
+      | deleted_prf => ()
+      | save_dep_prf a => th a
     end
+  and th p = (incr (castPtr p); walk_thm p)
 
   fun pre_named p = let
     val (_, (thp, _)) = tuple3 heap (I, I, I) p

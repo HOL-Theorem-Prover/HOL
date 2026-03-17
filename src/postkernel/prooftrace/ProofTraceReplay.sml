@@ -12,37 +12,6 @@ open Feedback Lib Type Term Thm Redblackmap ProofTraceParser
 infix |->
 
 fun mk_eq(l,r) = list_mk_comb(inst[alpha |-> type_of l]equality, [l,r])
-datatype thm_id = SavedAnon of int | SavedName of string
-
-(*
-  Proof rule indices (source of truth for both walk_thm and replay_thm):
-   0  ABS (term, thm)            23 EQ_IMP_RULE2 (thm)
-   1  ALPHA (term, term)         24 EQ_MP (thm, thm)
-   2  AP_TERM (term, thm)        25 EXISTS (term, term, thm)
-   3  AP_THM (thm, term)         26 GENL (list term, thm)
-   4  ASSUME (term)              27 GEN_ABS (opt term, list term, thm)
-   5  Axiom ()                   28 GEN (term, thm)
-   6  BETA_CONV (term)           29 INST_TYPE (list(pair(ty,ty)), thm)
-   7  Beta (thm)                 30 INST (list(pair(tm,tm)), thm)
-   8  CCONTR (term, thm)         31 MK_COMB (thm, thm)
-   9  CHOOSE (term, thm, thm)    32 MP (thm, thm)
-  10  CONJUNCT1 (thm)            33 Mk_abs (thm, term, thm)
-  11  CONJUNCT2 (thm)            34 Mk_comb (thm, thm, thm)
-  12  CONJ (thm, thm)            35 NOT_ELIM (thm)
-  13  DISCH (term, thm)          36 NOT_INTRO (thm)
-  14  DISJ1 (thm, term)          37 REFL (term)
-  15  DISJ2 (term, thm)          38 SPEC (term, thm)
-  16  DISJ_CASES (thm,thm,thm)   39 SUBST (list(pair(tm,th)), term, thm)
-  17  Def_const_list (thm,       40 SYM (thm)
-        list new_term)           41 Specialize (term, thm)
-  18  Def_const (term, new_term) 42 TRANS (thm, thm)
-  19  Def_spec (thm,             43 compute (pair(four(ty,list(pair(str,th)),
-        list new_term)                 ty,list(pair(str,tm))),list th),term)
-  20  Def_tyop (list ty,         44 deductAntisym (thm, thm)
-        thm, new_type)           45 deleted ()
-  21  Disk (string, thm_id)      46 save_dep (thm)
-  22  EQ_IMP_RULE1 (thm)
-*)
 
 val trDB : (string, (string, thm) dict * thm list) dict ref
   = ref (mkDict String.compare)
@@ -99,7 +68,7 @@ let
 
   val replayed_heap = Array.array(heapSize heap, Unknown);
 
-  val cached_compute_ptr : unit ptr ref = ref (castPtr root_ptr)
+  val cached_compute_ptr : compute_args ptr ref = ref (castPtr root_ptr)
   val cached_compute : (thm list -> term -> thm) ref
     = ref (fn _ => raise Bind)
 
@@ -196,17 +165,16 @@ let
   and replay_thm (thm_ptr: thm ptr) =
   cache (Th,destTh) (fn thm_ptr => let
     val (hyp_ptr, concl_ptr, proof_ptr) = shThm heap thm_ptr
-    val (i, args_ptrs) = shVariant heap proof_ptr
-    fun tm n = replay_term (castPtr (el n args_ptrs))
-    fun th n = replay_thm (castPtr (el n args_ptrs))
-    fun ty n = replay_type (castPtr (el n args_ptrs))
-  in case i of
-      0  => (* ABS *)        ABS (tm 1) (th 2)
-    | 1  => (* ALPHA *)      ALPHA (tm 1) (tm 2)
-    | 2  => (* AP_TERM *)    AP_TERM (tm 1) (th 2)
-    | 3  => (* AP_THM *)     AP_THM (th 1) (tm 2)
-    | 4  => (* ASSUME *)     ASSUME (tm 1)
-    | 5  => (* Axiom *) let
+    val tm = replay_term
+    val th = replay_thm
+    val ty = replay_type
+  in case shProof heap proof_ptr of
+      ABS_prf (a, b) =>        ABS (tm a) (th b)
+    | ALPHA_prf (a, b) =>      ALPHA (tm a) (tm b)
+    | AP_TERM_prf (a, b) =>    AP_TERM (tm a) (th b)
+    | AP_THM_prf (a, b) =>     AP_THM (th a) (tm b)
+    | ASSUME_prf a =>          ASSUME (tm a)
+    | Axiom_prf => let
         val h = ref (HOLset.empty Term.compare)
         fun add t = h := HOLset.add(!h, t)
         val () = appSet heap (add o replay_term) hyp_ptr
@@ -214,43 +182,42 @@ let
         val c = replay_term concl_ptr
         val () = if HOLset.isEmpty h then () else raise Fail "Axiom hyps"
       in mk_axiom_thm(Nonce.mk(next_axiom_name()), c) end
-    | 6  => (* BETA_CONV *)  BETA_CONV (tm 1)
-    | 7  => (* Beta *)       Beta (th 1)
-    | 8  => (* CCONTR *)     CCONTR (tm 1) (th 2)
-    | 9  => (* CHOOSE *)     CHOOSE (tm 1, th 2) (th 3)
-    | 10 => (* CONJUNCT1 *)  CONJUNCT1 (th 1)
-    | 11 => (* CONJUNCT2 *)  CONJUNCT2 (th 1)
-    | 12 => (* CONJ *)       CONJ (th 1) (th 2)
-    | 13 => (* DISCH *)      DISCH (tm 1) (th 2)
-    | 14 => (* DISJ1 *)      DISJ1 (th 1) (tm 2)
-    | 15 => (* DISJ2 *)      DISJ2 (tm 1) (th 2)
-    | 16 => (* DISJ_CASES *) DISJ_CASES (th 1) (th 2) (th 3)
-    | 17 => (* Def_const_list *) let
-        val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
+    | BETA_CONV_prf a =>       BETA_CONV (tm a)
+    | Beta_prf a =>            Beta (th a)
+    | CCONTR_prf (a, b) =>     CCONTR (tm a) (th b)
+    | CHOOSE_prf (a, b, c) =>  CHOOSE (tm a, th b) (th c)
+    | CONJUNCT1_prf a =>       CONJUNCT1 (th a)
+    | CONJUNCT2_prf a =>       CONJUNCT2 (th a)
+    | CONJ_prf (a, b) =>       CONJ (th a) (th b)
+    | DISCH_prf (a, b) =>      DISCH (tm a) (th b)
+    | DISJ1_prf (a, b) =>      DISJ1 (th a) (tm b)
+    | DISJ2_prf (a, b) =>      DISJ2 (tm a) (th b)
+    | DISJ_CASES_prf (a, b, c) => DISJ_CASES (th a) (th b) (th c)
+    | Def_const_list_prf (a, b) => let
+        val ids = list heap get_const_id b
         val () = if List.all (equal thyname) (List.map #1 ids) then ()
                  else raise Fail "Def_const_list thy"
-      in #2 (gen_prim_specification thyname (th 1)) end
-    | 18 => (* Def_const *) let
-        val (Thy,Name) = get_const_id (castPtr (el 2 args_ptrs))
-        val rhs = tm 1
+      in #2 (gen_prim_specification thyname (th a)) end
+    | Def_const_prf (a, b) => let
+        val (Thy,Name) = get_const_id b
+        val rhs = tm a
         val thm = ASSUME (mk_eq(mk_var(Name, type_of rhs), rhs))
       in #2 (gen_prim_specification Thy thm) end
-    | 19 => (* Def_spec *) let
-        val ids = list heap get_const_id (castPtr (el 2 args_ptrs))
+    | Def_spec_prf (a, b) => let
+        val ids = list heap get_const_id b
         val () = if List.all (equal thyname) (List.map #1 ids) then ()
                  else raise Fail "Def_spec thy"
         val cnames = List.map #2 ids
-      in prim_specification thyname cnames (th 1) end
-    | 20 => (* Def_tyop *) let
-        val (Thy,Tyop) = get_type_id (castPtr (el 3 args_ptrs))
-        val thm = th 2
+      in prim_specification thyname cnames (th a) end
+    | Def_tyop_prf (_, b, c) => let
+        val (Thy,Tyop) = get_type_id c
+        val thm = th b
         val () = if thyname = "bool"
                  then check_def tm_defs thyname "TYPE_DEFINITION"
                  else ()
       in prim_type_definition ({Thy=Thy, Tyop=Tyop}, thm) end
-    | 21 => (* Disk *) let
-        val thy = str heap (castPtr (el 1 args_ptrs))
-        val id = get_thm_id (castPtr (el 2 args_ptrs))
+    | Disk_prf (thy, b) => let
+        val id = get_thm_id b
       in case peek(!trDB, thy) of
           NONE => raise NeedsAncestor thy
         | SOME (named,anons) => (case id of
@@ -262,69 +229,61 @@ let
                 NONE => raise Fail ("Disk thy "^thy^"$"^s)
               | SOME th => th))
       end
-    | 22 => (* EQ_IMP_RULE1 *) #1 (EQ_IMP_RULE (th 1))
-    | 23 => (* EQ_IMP_RULE2 *) #2 (EQ_IMP_RULE (th 1))
-    | 24 => (* EQ_MP *)      EQ_MP (th 1) (th 2)
-    | 25 => (* EXISTS *)     EXISTS (tm 1, tm 2) (th 3)
-    | 26 => (* GENL *)       GENL (list heap (replay_term o castPtr)
-                                   (castPtr (el 1 args_ptrs))) (th 2)
-    | 27 => (* GEN_ABS *) let
-        val opt_tm = option heap (replay_term o castPtr)
-                                 (castPtr (el 1 args_ptrs))
-        val tms = list heap (replay_term o castPtr)
-                            (castPtr (el 2 args_ptrs))
-      in GEN_ABS opt_tm tms (th 3) end
-    | 28 => (* GEN *)        GEN (tm 1) (th 2)
-    | 29 => (* INST_TYPE *) let
+    | EQ_IMP_RULE1_prf a => #1 (EQ_IMP_RULE (th a))
+    | EQ_IMP_RULE2_prf a => #2 (EQ_IMP_RULE (th a))
+    | EQ_MP_prf (a, b) =>      EQ_MP (th a) (th b)
+    | EXISTS_prf (a, b, c) =>  EXISTS (tm a, tm b) (th c)
+    | GENL_prf (a, b) =>       GENL (list heap (replay_term o castPtr) a) (th b)
+    | GEN_ABS_prf (a, b, c) => let
+        val opt_tm = option heap (replay_term o castPtr) a
+        val tms = list heap (replay_term o castPtr) b
+      in GEN_ABS opt_tm tms (th c) end
+    | GEN_prf (a, b) =>        GEN (tm a) (th b)
+    | INST_TYPE_prf (a, b) => let
         val s = list heap (fn p => let
           val (a,b) = tuple2 heap
             (replay_type o castPtr, replay_type o castPtr) (castPtr p)
-        in a |-> b end) (castPtr (el 1 args_ptrs))
-      in INST_TYPE s (th 2) end
-    | 30 => (* INST *) let
+        in a |-> b end) a
+      in INST_TYPE s (th b) end
+    | INST_prf (a, b) => let
         val s = list heap (fn p => let
           val (a,b) = tuple2 heap
             (replay_term o castPtr, replay_term o castPtr) (castPtr p)
-        in a |-> b end) (castPtr (el 1 args_ptrs))
-      in INST s (th 2) end
-    | 31 => (* MK_COMB *)    MK_COMB (th 1, th 2)
-    | 32 => (* MP *)         MP (th 1) (th 2)
-    | 33 => (* Mk_abs *) let
-        val (_,_,mka) = Mk_abs (th 1)
-      in mka (th 3) end
-    | 34 => (* Mk_comb *) let
-        val (_,_,mkc) = Mk_comb (th 1)
-      in mkc (th 2) (th 3) end
-    | 35 => (* NOT_ELIM *)   NOT_ELIM (th 1)
-    | 36 => (* NOT_INTRO *)  NOT_INTRO (th 1)
-    | 37 => (* REFL *)       REFL (tm 1)
-    | 38 => (* SPEC *)       SPEC (tm 1) (th 2)
-    | 39 => (* SUBST *) let
+        in a |-> b end) a
+      in INST s (th b) end
+    | MK_COMB_prf (a, b) =>    MK_COMB (th a, th b)
+    | MP_prf (a, b) =>         MP (th a) (th b)
+    | Mk_abs_prf (a, _, c) => let
+        val (_,_,mka) = Mk_abs (th a)
+      in mka (th c) end
+    | Mk_comb_prf (a, b, c) => let
+        val (_,_,mkc) = Mk_comb (th a)
+      in mkc (th b) (th c) end
+    | NOT_ELIM_prf a =>        NOT_ELIM (th a)
+    | NOT_INTRO_prf a =>       NOT_INTRO (th a)
+    | REFL_prf a =>            REFL (tm a)
+    | SPEC_prf (a, b) =>       SPEC (tm a) (th b)
+    | SUBST_prf (a, b, c) => let
         val s = list heap (fn p => let
           val (a,b) = tuple2 heap
             (replay_term o castPtr, replay_thm o castPtr) (castPtr p)
-        in a |-> b end) (castPtr (el 1 args_ptrs))
-      in SUBST s (tm 2) (th 3) end
-    | 40 => (* SYM *)        SYM (th 1)
-    | 41 => (* Specialize *) Specialize (tm 1) (th 2)
-    | 42 => (* TRANS *)      TRANS (th 1) (th 2)
-    | 43 => (* compute *) let
-        val (compute_args_ptr, ths_ptr) =
-          tuple2 heap (I, I) (castPtr (el 1 args_ptrs))
+        in a |-> b end) a
+      in SUBST s (tm b) (th c) end
+    | SYM_prf a =>        SYM (th a)
+    | Specialize_prf (a, b) => Specialize (tm a) (th b)
+    | TRANS_prf (a, b) =>      TRANS (th a) (th b)
+    | compute_prf (a, b) => let
+        val (compute_args_ptr, ths_ptr) = tuple2 heap (I, I) a
         val ths = list heap (replay_thm o castPtr) ths_ptr
-        val t = tm 2
-        val () = if !cached_compute_ptr = compute_args_ptr then ()
+        val t = tm b
+        val () = if castPtr (!cached_compute_ptr) = castPtr compute_args_ptr then ()
           else let
-            val (num_type_ptr, (eqns_ptr, (cval_type_ptr, cterms_ptr))) =
-              tuple4 heap (I, I, I, I) (castPtr compute_args_ptr)
-            val num_type = replay_type (castPtr num_type_ptr)
-            val char_eqns = list heap (fn p =>
-              tuple2 heap (str heap, replay_thm o castPtr) (castPtr p))
-              eqns_ptr
-            val cval_type = replay_type (castPtr cval_type_ptr)
-            val cval_terms = list heap (fn p =>
-              tuple2 heap (str heap, replay_term o castPtr) (castPtr p))
-              cterms_ptr
+            val {num_type, char_eqns, cval_type, cval_terms} =
+              shComputeArgs heap compute_args_ptr
+            val num_type = replay_type num_type
+            val char_eqns = list heap (tuple2 heap (str heap, replay_thm)) char_eqns
+            val cval_type = replay_type cval_type
+            val cval_terms = list heap (tuple2 heap (str heap, replay_term)) cval_terms
           in
             cached_compute_ptr := compute_args_ptr;
             cached_compute := Thm.compute
@@ -332,12 +291,9 @@ let
                cval_type = cval_type, cval_terms = cval_terms}
           end
       in (!cached_compute) ths t end
-    | 44 => (* deductAntisym *)
-        raise Fail "replay_thm: deductAntisym not yet implemented"
-    | 45 => (* deleted *)
-        raise Fail "replay_thm: deleted not yet implemented"
-    | 46 => (* save_dep *) th 1
-    | n => raise Fail ("replay_thm: unknown rule " ^ Int.toString n)
+    | deductAntisym_prf (a, b) => raise Fail "replay_thm: deductAntisym not yet implemented"
+    | deleted_prf =>              raise Fail "replay_thm: deleted not yet implemented"
+    | save_dep_prf a => th a
   end) thm_ptr
 
   fun export p = let
