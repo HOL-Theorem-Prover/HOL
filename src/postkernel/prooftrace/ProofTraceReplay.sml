@@ -93,11 +93,7 @@ let
      | obj => (maybe_evict (); dest_obj obj)
   end else mk_x p
 
-  fun get_thm_id (id_ptr: thm_id ptr) = let
-    val (i,ps) = shVariant heap id_ptr
-    val p = el 1 ps
-  in if i = 0 then SavedAnon (int (castPtr p))
-     else SavedName (str heap (castPtr p)) end
+  fun get_thm_id (id_ptr: thm_id ptr) = thmId heap id_ptr
 
   fun check_def map Thy nm =
     if Thy = thyname then case peek (map, nm)
@@ -233,22 +229,20 @@ let
     | EQ_IMP_RULE2_prf a => #2 (EQ_IMP_RULE (th a))
     | EQ_MP_prf (a, b) =>      EQ_MP (th a) (th b)
     | EXISTS_prf (a, b, c) =>  EXISTS (tm a, tm b) (th c)
-    | GENL_prf (a, b) =>       GENL (list heap (replay_term o castPtr) a) (th b)
+    | GENL_prf (a, b) =>       GENL (list heap replay_term a) (th b)
     | GEN_ABS_prf (a, b, c) => let
-        val opt_tm = option heap (replay_term o castPtr) a
-        val tms = list heap (replay_term o castPtr) b
+        val opt_tm = option heap replay_term a
+        val tms = list heap replay_term b
       in GEN_ABS opt_tm tms (th c) end
     | GEN_prf (a, b) =>        GEN (tm a) (th b)
     | INST_TYPE_prf (a, b) => let
         val s = list heap (fn p => let
-          val (a,b) = tuple2 heap
-            (replay_type o castPtr, replay_type o castPtr) (castPtr p)
+          val (a,b) = tuple2 heap (replay_type, replay_type) p
         in a |-> b end) a
       in INST_TYPE s (th b) end
     | INST_prf (a, b) => let
         val s = list heap (fn p => let
-          val (a,b) = tuple2 heap
-            (replay_term o castPtr, replay_term o castPtr) (castPtr p)
+          val (a,b) = tuple2 heap (replay_term, replay_term) p
         in a |-> b end) a
       in INST s (th b) end
     | MK_COMB_prf (a, b) =>    MK_COMB (th a, th b)
@@ -265,16 +259,14 @@ let
     | SPEC_prf (a, b) =>       SPEC (tm a) (th b)
     | SUBST_prf (a, b, c) => let
         val s = list heap (fn p => let
-          val (a,b) = tuple2 heap
-            (replay_term o castPtr, replay_thm o castPtr) (castPtr p)
+          val (a,b) = tuple2 heap (replay_term, replay_thm) p
         in a |-> b end) a
       in SUBST s (tm b) (th c) end
     | SYM_prf a =>        SYM (th a)
     | Specialize_prf (a, b) => Specialize (tm a) (th b)
     | TRANS_prf (a, b) =>      TRANS (th a) (th b)
     | compute_prf (a, b) => let
-        val (compute_args_ptr, ths_ptr) = tuple2 heap (I, I) a
-        val ths = list heap (replay_thm o castPtr) ths_ptr
+        val (compute_args_ptr, ths) = tuple2 heap (I, list heap replay_thm) a
         val t = tm b
         val () = if castPtr (!cached_compute_ptr) = castPtr compute_args_ptr then ()
           else let
