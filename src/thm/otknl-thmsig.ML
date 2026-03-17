@@ -50,6 +50,7 @@ sig
   | Specialize_prf of term * thm
   | deductAntisym_prf of thm * thm
   | compute_prf of (compute_args * thm list) * term
+  | save_dep_prf of thm
 
   withtype compute_args =
     { cval_terms : (string * term) list,
