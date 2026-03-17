@@ -112,7 +112,10 @@ withtype compute_args =
     char_eqns  : (string * thm) list }
 
 fun proof (THM(_,_,_,p)) = !p
-fun delete_proof (THM(_,_,_,p)) = p := deleted_prf
+fun delete_proof (THM(_,_,_,p)) =
+  (case !p of save_dep_prf (THM(_,_,_,inner)) => inner := deleted_prf
+            | _ => ();
+   p := deleted_prf)
 
 fun single_hyp tm = HOLset.singleton Term.compare tm
 val empty_hyp = Term.empty_tmset
