@@ -32,19 +32,36 @@ type result = {
   getScope: unit -> scope,
   parseDec: unit -> dec option,
   body: DString.dstring,
-  events: events }
+  events: events,
+  parseError: int * int -> string -> unit }
 
 fun simpleParseError (start, stop) s =
-    TextIO.output (
-        TextIO.stdErr,
-        "parse error at byte " ^
-        Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n")
+  print (
+    "parse error at byte " ^
+    Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n")
+
+fun filelineParseError (body, events) =
+  case mkFileline body events of fileline =>
+  fn (start, stop) => fn s => let
+    val {file, line, col} = fileline start
+    val stop = fileline stop
+    val s = [": parse error: ", s, "\n"]
+    val s = if
+      file = #file stop andalso
+      (line < #line stop orelse line = #line stop andalso col + 1 < #col stop)
+    then
+      if line = #line stop then ("-" :: Int.toString (#col stop + 1) :: s)
+      else ("-" :: Int.toString (#line stop + 1) :: ":" :: Int.toString (#col stop + 1) :: s)
+    else s
+    val s = file :: ":" :: Int.toString (line + 1) :: ":" :: Int.toString (col + 1) :: s
+    in print (String.concat s) end
 
 fun parseSML file read parseError: scope -> result = let
   val pos = ref 0
   val body = DString.new 1024
   val evts = DArray.new (1, LineEvent (0, 0))
   val events = {initFile = file, evts = evts}
+  val parseError = parseError (body, events)
   fun getch p = DString.sub (body, p) handle Subscript =>
     case read 1024 of "" => #"\000" | s => (DString.appendStr (body, s); getch p)
   fun ahead i = getch (!pos + i)
@@ -1118,8 +1135,8 @@ fun parseSML file read parseError: scope -> result = let
                    else (
                      parseError (start, !pos) "bad declaration";
                      SOME (sc, DecBad {start = start, stop = !pos})) end
-            | tk as (start, Symbol #")") => (unread tk; NONE)
-            | tk as (start, EOF) => (unread tk; NONE)
+            | tk as (_, Symbol #")") => (unread tk; NONE)
+            | tk as (_, EOF) => (unread tk; NONE)
             | (start, _) => (
                 parseError (start, !pos) "bad declaration";
                 SOME (sc, DecBad {start = start, stop = !pos})))
@@ -1227,7 +1244,7 @@ fun parseSML file read parseError: scope -> result = let
     val _ = parseDecRef := (fn () =>
       case parseDec false (!sc) of
         NONE => (case token () of
-            tk as (start, EOF) => (unread tk; finishTheory ())
+            tk as (_, EOF) => (unread tk; finishTheory ())
           | (start, _) => (
               parseError (start, !pos) "bad declaration";
               SOME (DecBad {start = start, stop = !pos})))
@@ -1240,7 +1257,8 @@ fun parseSML file read parseError: scope -> result = let
               (case attrs of NONE => [] | SOME v => #args (#attrs v)))
         | _ => ();
         SOME d))
-    in {parseDec = fn () => !parseDecRef (), getScope = fn () => !sc, body = body, events = events} end
+    in {parseDec = fn () => !parseDecRef (), getScope = fn () => !sc,
+        parseError = parseError, body = body, events = events} end
   in go end
 
 end;

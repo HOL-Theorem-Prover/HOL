@@ -21,7 +21,7 @@ else let
   val {read = read', ...} = mkPullTranslator {
     read = read,
     filename = infilename,
-    parseError = HOLSourceParser.simpleParseError,
+    parseError = HOLSourceParser.filelineParseError,
     quietOpen = qopn }
   fun loop () = case read' () of "" => () | s => (write s; loop ())
   in loop () end

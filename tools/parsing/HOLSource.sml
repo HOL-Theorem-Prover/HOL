@@ -1,7 +1,6 @@
 structure HOLSource :> HOLSource =
 struct
 
-fun K a _ = a
 fun I a = a
 
 type fileline = {file: string, line: int, col: int}
@@ -11,13 +10,13 @@ structure ToSML = struct
   type args = {
     read: int -> string,
     filename: string,
-    parseError: int * int -> string -> unit,
+    parseError: DString.dstring * HOLSourceAST.events -> int * int -> string -> unit,
     quietOpen: bool
   }
   type printer = {str: string -> unit, startSpan: int * int -> unit, stopSpan: unit -> unit}
 
   fun mkPushTranslator ({read, filename, parseError, quietOpen}:args) pr = let
-    val {parseDec, body, events, ...} =
+    val {parseDec, body, events, parseError, ...} =
       HOLSourceParser.parseSML filename read parseError HOLSourceParser.initialScope
     val fileline = HOLSourceAST.mkFileline body events
     val expandDec = HOLSourceExpand.expandDec
@@ -74,7 +73,7 @@ fun file_to_parser ({quietOpen}:args) fname = let
   val {fileline, read} = ToSML.mkPullTranslator
     {read = fn _ => input instrm,
      filename = fname,
-     parseError = HOLSourceParser.simpleParseError,
+     parseError = HOLSourceParser.filelineParseError,
      quietOpen = quietOpen}
   in {read = read, fileline = fileline, close = fn () => closeIn instrm} end
 
@@ -83,14 +82,14 @@ fun string_to_parser ({quietOpen}:args) s = let
   fun str_read _ = (!sr before sr := "")
   val {fileline, read} = ToSML.mkPullTranslator
     {read = str_read, filename = "",
-     parseError = HOLSourceParser.simpleParseError,
+     parseError = HOLSourceParser.filelineParseError,
      quietOpen = quietOpen}
   in {read = read, fileline = fileline, close = I} end
 
 fun input_to_parser ({quietOpen}:args) fname inp = let
   val {fileline, read} = ToSML.mkPullTranslator
     {read = inp, filename = fname,
-     parseError = HOLSourceParser.simpleParseError,
+     parseError = HOLSourceParser.filelineParseError,
      quietOpen = quietOpen}
   in {read = read, fileline = fileline, close = I} end
 
