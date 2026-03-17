@@ -900,7 +900,7 @@ Proof
       qexists_tac ‘qs1 = qs2’ >> qexists_tac ‘T’ >> simp[] >> conj_tac
       >- (first_x_assum irule >> rw[LENGTH_FRONT] >> fs[GSYM SNOC_APPEND]
           >- (‘EL (n+1) (SNOC q1 qs1) ∈
-               N.delta (EL n (SNOC q1 qs1)) (EL n (SNOC a w))’ by rw[] >>
+             Xn  N.delta (EL n (SNOC q1 qs1)) (EL n (SNOC a w))’ by rw[] >>
                rpt (forget_tac is_forall) >> pop_assum mp_tac >> simp [EL_SNOC])
           >- (‘EL (n+1) (SNOC q2 qs2) ∈
                N.delta (EL n (SNOC q2 qs2)) (EL n (SNOC a w))’ by rw[] >>
@@ -919,10 +919,79 @@ Proof
      )
 QED
 
+Definition nfa_to_dfa_def:
+  nfa_to_dfa N (enc:state set -> state) (dec:state -> state set) =
+    <|Sigma   := N.Sigma;
+      Q       := {enc s | s ⊆ N.Q};
+      delta   := λqset a. {enc (BIGUNION {N.delta q a | q ∈ dec qset})};
+      initial := {enc N.initial};
+      final   := {enc s | s ⊆ N.Q ∧ s ∩ N.final ≠ ∅}
+    |>
+End
+
+Theorem nfa_to_dfa_builtin_simps[local,simp]:
+  (nfa_to_dfa N encFn decFn).Sigma = N.Sigma ∧
+  (nfa_to_dfa N encFn decFn).initial = {encFn N.initial} ∧
+  (nfa_to_dfa N encFn decFn).final   = {encFn s | s ⊆ N.Q ∧ s ∩ N.final ≠ ∅} ∧
+  (∀q. q ∈ (nfa_to_dfa N encFn decFn).Q <=> ∃s. q = encFn s ∧ s ⊆ N.Q)
+Proof
+  rw[SF ETA_ss, nfa_to_dfa_def]
+QED
+
+Theorem is_dfa_nfa_to_dfa:
+  wf_nfa N ∧
+  (∀s. s ∈ POW N.Q ⇒ decFn (encFn s) = s)
+  ⇒ is_dfa (nfa_to_dfa N encFn decFn)
+Proof
+  fs[wf_nfa_def,is_dfa_def,nfa_to_dfa_def] >> rw[]
+  >- (rw [GSPEC_IMAGE, o_DEF] >> irule IMAGE_FINITE >>
+      last_x_assum (mp_tac o MATCH_MP FINITE_POW) >>
+      PURE_REWRITE_TAC[GSYM IN_POW,SPECIFICATION,ETA_THM] >> metis_tac[])
+  >- metis_tac []
+  >- (rw [SUBSET_DEF] >> metis_tac[])
+  >- (irule_at Any EQ_REFL >> rw[BIGUNION_SUBSET] >>
+      first_x_assum irule >> gvs[IN_POW,SUBSET_DEF])
+QED
+
+Theorem dfa_states_closed:
+  wf_nfa N ⇒
+  ∀w eqs.
+   EVERY (λa. a ∈ N.Sigma) w ∧
+   LENGTH eqs = LENGTH w + 1 ∧
+   HD eqs = enc N.initial ∧
+   (∀n. n<LENGTH w ⇒ EL (n+1) eqs ∈ (nfa_to_dfa N).delta (EL n eqs) (EL n w))
+   ==>
+   EVERY (λeq. eq ∈ (nfa_to_dfa N).Q) eqs
+Proof
+  disch_tac >>
+  ho_match_mp_tac SNOC_INDUCT >> simp[LENGTH_EQ_NUM_compute] >> rw[]
+  >- (fs[wf_nfa_def] >> metis_tac[])
+  >- (rename [‘SNOC a w’,‘HD (eqs ++ [eq]) = enc N.initial’] >>
+      ‘eqs ≠ []’ by (Cases_on ‘eqs’ >> gvs[]) >>
+      ‘EVERY (λeq. ∃s. eq = enc s ∧ s ⊆ N.Q) eqs’ by
+         (first_x_assum irule >> rw[] >> fs [EVERY_SNOC]
+          >- (fs [Once BOUNDED_FORALL_THM] >> first_x_assum drule >>
+              full_simp_tac std_ss [GSYM SNOC_APPEND] >> simp[EL_SNOC])
+          >- (rw[PULL_EXISTS] >>  qexistsl_tac [‘FRONT eqs’, ‘LAST eqs’] >>
+              rw [LENGTH_FRONT,APPEND_FRONT_LAST])) >>
+      drule_all EVERY_LAST >> rw[] >> fs [Once BOUNDED_FORALL_THM] >>
+      rpt (forget_tac is_forall) >> qpat_x_assum ‘_ ∈ _’ mp_tac >>
+      fs[EVERY_SNOC,EL_LENGTH_SNOC] >>
+      ‘LENGTH w + 1 = LENGTH eqs’ by decide_tac >> pop_subst_tac >>
+      simp_tac std_ss [GSYM SNOC_APPEND] >> simp [EL_LENGTH_SNOC,EL_SNOC] >>
+      ‘EL (LENGTH w) eqs = LAST eqs’ by
+         (‘LENGTH w = PRE (LENGTH eqs)’ by decide_tac >>
+          pop_assum SUBST1_TAC >> rw [Once EL_PRE_LENGTH]) >> pop_subst_tac >>
+      ‘FINITE s’ by metis_tac [wf_nfa_def,SUBSET_FINITE] >>
+      rw [nfa_to_dfa_def] >> irule_at Any EQ_REFL >>
+      rw[BIGUNION_SUBSET,SUBSET_DEF] >> metis_tac[wf_nfa_def,SUBSET_DEF])
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Subset construction                                                       *)
 (*---------------------------------------------------------------------------*)
 
+(*
 Definition nfa_to_dfa_def:
   nfa_to_dfa N =
     <|Q       := {enc s | s ⊆ N.Q};
@@ -941,6 +1010,7 @@ Proof
   rw[nfa_to_dfa_def]
 QED
 
+
 (*---------------------------------------------------------------------------*)
 (* Well-formedness of subset DFA                                             *)
 (*---------------------------------------------------------------------------*)
@@ -958,6 +1028,7 @@ Proof
       ‘FINITE s’ by metis_tac [SUBSET_FINITE] >>
       gvs[MEM_SET_TO_LIST] >> metis_tac [SUBSET_DEF])
 QED
+*)
 
 (*---------------------------------------------------------------------------*)
 (* This seems very close to nfa_states_closed above.                         *)
@@ -1163,6 +1234,7 @@ Proof
   >- metis_tac [is_dfa_nfa_to_dfa,nfa_to_dfa_correct]
   >- metis_tac[is_dfa_def]
 QED
+
 
 (*===========================================================================*)
 (* Machine constructions and closure properties                              *)
