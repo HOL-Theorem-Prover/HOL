@@ -172,7 +172,7 @@ Proof
 QED
 
 Theorem MOD_MULT2:
-     !n a b. 0 < n ==> ((a * b MOD n) MOD n = (a * b) MOD n)
+     !n a b. 0 < n ==> ((a * (b MOD n)) MOD n = (a * b) MOD n)
 Proof
    PROVE_TAC [MOD_MULT1, MULT_COMM]
 QED

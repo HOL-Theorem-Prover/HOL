@@ -683,7 +683,8 @@ end (* REAL_FIELD *)
 (* create tactic versions for REAL_FIELD *)
 val (REAL_FIELD_TAC,REAL_ASM_FIELD_TAC) = mk_real_arith_tac REAL_FIELD;
 
-(* set verbose level to 1 by default *)
-val _ = RealArith.verbose_level := 1;
+(* Keep arithmetic proof search quiet by default after loading. Users can
+   still raise RealArith.verbose_level explicitly when debugging. *)
+val _ = RealArith.verbose_level := 0;
 
 end (* struct *)

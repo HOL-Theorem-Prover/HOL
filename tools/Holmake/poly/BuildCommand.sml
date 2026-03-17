@@ -139,7 +139,7 @@ fun poly_compile warn diag quietp file I (deps : dep list) objs = let
                         concatWithf tgt_toString ", " deps ^ "]\n  objs = [" ^
                         String.concatWith ", " objs ^ "]")
   val modName = fromFileNoSuf file
-  val deps = let
+  val deps : hm_target.t list = let
     open Binaryset
     val dep_set0 = addList (empty_tgtset, deps)
     val {deps = extra_deps, ...} =
@@ -151,6 +151,9 @@ fun poly_compile warn diag quietp file I (deps : dep list) objs = let
     listItems dep_set
   end
   val depfiles = map (toFile o tgt_toString) deps
+  val _ = diag (fn _ =>
+    "Depfiles are " ^
+    String.concatWith ", " (map HOLFS_dtype.fileToString depfiles))
   val objfiles = map toFile objs
   fun mapthis (Unhandled _) = NONE
     | mapthis (DAT _) = NONE
@@ -163,8 +166,14 @@ fun poly_compile warn diag quietp file I (deps : dep list) objs = let
             else (fn s => FileSys.output(FileSys.stdOut, s ^ "\n"))
   val _ = say ("HOLMOSMLC -c " ^ fromFile file)
   val filename = tgt_toString (filestr_to_tgt (fromFile file))
-  val _ = diag (fn _ => "Writing target with dependencies: " ^
+  val _ = diag (fn _ => "Compiling " ^ HOLFS_dtype.fileToString file ^
+                        "; writing target with dependencies: " ^
                         String.concatWith ", " depMods)
+  fun uiOfCodeIsDep ct =
+      let val file_ct = UI (HOLFileSys.map_CodeType OS.Path.file ct)
+      in
+        List.exists (fn tgt => filepart tgt = file_ct) deps
+      end
 in
 case file of
   SIG _ =>
@@ -179,7 +188,7 @@ case file of
        finish_compilation warn depMods filename tgt
      end
      handle IO.Io _ => OS.Process.failure)
-| SML _ =>
+| SML ct =>
     (let
       val tgt = modName ^ ".uo"
       val outUo = FileSys.openOut tgt
@@ -188,14 +197,16 @@ case file of
        FileSys.output (outUo, "\n");
        FileSys.output (outUo, usePathVars filename ^ "\n");
        FileSys.closeOut outUo;
-       (if FileSys.access (modName ^ ".sig", []) then
-          ()
-        else
-          let val outUi = FileSys.openOut (modName ^ ".ui")
-          in
-            FileSys.closeOut outUi;
-            ignore (finish_compilation warn depMods filename (modName ^ ".ui"))
-          end);
+       if uiOfCodeIsDep ct then ()
+       else
+         let
+           val _ = diag (fn _ => "Creating empty " ^ modName ^
+                                 ".ui file as it is not a dependency")
+           val outUi = FileSys.openOut (modName ^ ".ui")
+         in
+           FileSys.closeOut outUi;
+           ignore (finish_compilation warn depMods filename (modName ^ ".ui"))
+         end;
        finish_compilation warn depMods filename tgt
      end
      handle IO.Io _ => OS.Process.failure)

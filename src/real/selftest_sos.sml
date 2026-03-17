@@ -219,7 +219,14 @@ val _ = if csdp_available then
                   ==> x * y <= &1 / &4``),
     ("x+y=1 /\\ x>=0 /\\ y>=0 ==> x*y<=1/4 (subst, CSDP)",
      ``!x y:real. x + y = &1 /\ x >= &0 /\ y >= &0
-                  ==> x * y <= &1 / &4``)
+                  ==> x * y <= &1 / &4``),
+    ("replay regression from HOL Light (CSDP)",
+     ``!c d h x y z:real.
+         &0 <= c /\ &0 <= z /\ z pow 2 = h pow 2 * d + c /\
+         &0 <= y /\ y pow 2 = d /\
+         &0 <= x /\
+         x pow 2 = d + &2 * h * d + h pow 2 * d + c /\
+         y + z < x ==> F``)
   ]
 else ();
 
@@ -278,10 +285,13 @@ fun prover_test prover_name prover (name, tm) =
 
 (* -- INT_SOS tests -- *)
 
-val _ = List.app (prover_test "INT_SOS" INT_SOS) [
-  ("!x:int. x*x >= 0",
-   Parse.Term `!x:int. x * x >= &0`)
-];
+val _ =
+    if csdp_available then
+      List.app (prover_test "INT_SOS" INT_SOS) [
+        ("!x:int. x*x >= 0",
+         Parse.Term `!x:int. x * x >= &0`)
+      ]
+    else ();
 
 (* INT_SOS with hypotheses (requires CSDP) *)
 val _ = if csdp_available then

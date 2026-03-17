@@ -264,7 +264,7 @@ Theorem mod_4_even:
   !n. EVEN n <=> n MOD 4 IN {0; 2}
 Proof
   rw[EVEN_EXISTS, EQ_IMP_THM] >| [
-    `(2 * m) MOD 4 = (2 * m MOD 4) MOD 4` by rw[MOD_TIMES] >>
+    `(2 * m) MOD 4 = (2 * (m MOD 4)) MOD 4` by rw[MOD_TIMES] >>
     `m MOD 4 < 4` by rw[] >>
     qabbrev_tac `x = m MOD 4` >>
     (`(x = 0) \/ (x = 1) \/ (x = 2) \/ (x = 3)` by decide_tac >> rfs[]),

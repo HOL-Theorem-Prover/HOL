@@ -1983,7 +1983,7 @@ local
   val word_div_le = Q.prove(
     `!a:'a word b.
        0 < b MOD dimword (:'a) ==>
-       w2n (a // n2w b) <= w2n a DIV b MOD dimword (:'a)`,
+       w2n (a // n2w b) <= w2n a DIV (b MOD dimword (:'a))`,
     Cases THEN STRIP_TAC
     THEN Cases_on `b MOD dimword (:'a) = 1`
     THENL
@@ -2000,7 +2000,7 @@ local
     THEN ASM_SIMP_TAC arith_ss
          [arithmeticTheory.EXP, GSYM arithmeticTheory.MOD_COMMON_FACTOR,
           bitTheory.ZERO_LT_TWOEXP, dimword_def, GSYM arithmeticTheory.ADD1]
-    THEN `ODD (SUC (2 * n MOD 2 ** m))`
+    THEN `ODD (SUC (2 * (n MOD 2 ** m)))`
       by (REWRITE_TAC [arithmeticTheory.ODD_EXISTS]
          THEN Q.EXISTS_TAC `n MOD 2 ** m` THEN REWRITE_TAC [])
     THEN RULE_ASSUM_TAC (SIMP_RULE std_ss
@@ -2014,7 +2014,7 @@ local
     THEN IMP_RES_TAC (CONJUNCT2 (SPEC_ALL arithmeticTheory.EVEN_ODD_EXISTS))
     THEN POP_ASSUM SUBST1_TAC
     THEN SRW_TAC [numSimps.ARITH_ss] [word_div_def, w2n_n2w]
-    THEN `n DIV SUC (2 * m) MOD dimword (:'a) <= n`
+    THEN `n DIV (SUC (2 * m) MOD dimword (:'a)) <= n`
       by SIMP_TAC std_ss [arithmeticTheory.DIV_LESS_EQ, word_div_le2_lem]
     THEN SRW_TAC [numSimps.ARITH_ss] [])
 
@@ -2126,7 +2126,7 @@ local
        0 < b /\ b < dimword (:'a) /\ w2n a <= n ==>
        w2n (a // n2w b) <= n DIV b`,
     REPEAT STRIP_TAC
-    THEN Q.SPECL_THEN [`w2n (a // n2w b)`, `w2n a DIV b MOD dimword (:'a)`]
+    THEN Q.SPECL_THEN [`w2n (a // n2w b)`, `w2n a DIV (b MOD dimword (:'a))`]
            MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
     THEN ASM_SIMP_TAC arith_ss [arithmeticTheory.DIV_LE_MONOTONE,
            word_div_order_lem])
@@ -2136,7 +2136,7 @@ local
        0 < b /\ b < dimword (:'a) /\ w2n a < n ==>
        w2n (a // n2w b) <= n DIV b`,
     REPEAT STRIP_TAC
-    THEN Q.SPECL_THEN [`w2n (a // n2w b)`, `w2n a DIV b MOD dimword (:'a)`]
+    THEN Q.SPECL_THEN [`w2n (a // n2w b)`, `w2n a DIV (b MOD dimword (:'a))`]
            MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
     THEN ASM_SIMP_TAC arith_ss [arithmeticTheory.DIV_LE_MONOTONE,
            word_div_order_lem])
