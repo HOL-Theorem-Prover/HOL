@@ -36,19 +36,20 @@ structure ToSML = struct
     val queue = ref []
     val atEnd = ref false
     val spans = ref []
+    val cur = ref 0
+    fun topspan () = case !spans of [] => 0 | (s, _) :: _ => s
     val {fileline, push} = mkPushTranslator args {
-      str = fn s => queue := s :: !queue,
+      str = fn s => queue := (topspan (), s) :: !queue,
       startSpan = fn s => spans := s :: !spans,
       stopSpan = fn () => spans := tl (!spans) }
-    fun topspan () = case !spans of [] => 0 | (s, _) :: _ => s
     fun loop () =
       case !queue of
-        s :: rest => (queue := rest; s)
+        (sp, s) :: rest => (queue := rest; cur := sp; s)
       | [] => if !atEnd then "" else (
         atEnd := push ();
         queue := rev (!queue);
         loop ())
-    in {fileline = fileline o topspan, read = loop} end
+    in {fileline = fn _ => fileline (!cur), read = loop} end
 
 end
 
@@ -103,8 +104,9 @@ fun mkReaderEOF {read, fileline, close} = let
   val i = ref 0
   val s = ref ""
   val eofp = ref false
-  fun pull () = (s := read(); i := 0;
-                 if !s = "" then (eofp := true; close()) else ())
+  val lookahead = ref (read ())
+  fun pull () = (s := !lookahead; i := 0;
+                 if !s = "" then (eofp := true; close()) else lookahead := read ())
   fun doit () =
     if !eofp then NONE
     else if !i < size (!s) then SOME (String.sub(!s,!i)) before i := !i + 1

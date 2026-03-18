@@ -4,9 +4,10 @@ struct
 fun use_reader fname {read = infn, fileline, eof} =
   let
     open PolyML
+    fun line () = #line (fileline ()) + 1
   in
     while not (eof()) do
-      compiler (infn, [Compiler.CPFileName fname, Compiler.CPLineNo (#line o fileline)]) ()
+      compiler (infn, [Compiler.CPFileName fname, Compiler.CPLineNo line]) ()
   end
 
 fun prim_use {quietOpen} fname =
