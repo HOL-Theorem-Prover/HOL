@@ -128,10 +128,8 @@ local fun tyV (Fv(_,Ty)) A         = Type.type_vars_acc Ty A
         | tyV (Bv _) A             = A
         | tyV (Const(_,GRND _)) A  = A
         | tyV (Const(_,POLY Ty)) A = Type.type_vars_acc Ty A
-        | tyV (Comb(Rator,Rand)) A = let val A' = tyV Rator A
-                                     in tyV Rand A' end
-        | tyV (Abs(Bvar,Body)) A   = let val A' = tyV Bvar A
-                                     in tyV Body A' end
+        | tyV (Comb(Rator,Rand)) A = tyV Rand (tyV Rator A)
+        | tyV (Abs(Bvar,Body)) A   = tyV Body (tyV Bvar A)
         | tyV (t as Clos _) A      = tyV (push_clos t) A
 in
 fun type_vars_in_term tm = tyV tm []

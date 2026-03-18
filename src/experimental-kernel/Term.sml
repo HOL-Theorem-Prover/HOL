@@ -435,10 +435,8 @@ end
 
 local fun tyV (Var(_, ty)) A = Type.type_vars_acc ty A
         | tyV (Const(_, ty)) A = Type.type_vars_acc ty A
-        | tyV (App(f,x)) A = let val A' = tyV f A
-                             in tyV x A' end
-        | tyV (Abs(x,b)) A = let val A' = tyV x A
-                             in tyV b A' end
+        | tyV (App(f,x)) A = tyV x (tyV f A)
+        | tyV (Abs(x,b)) A = tyV b (tyV x A)
 in
 fun type_vars_in_term tm = tyV tm []
 end;
