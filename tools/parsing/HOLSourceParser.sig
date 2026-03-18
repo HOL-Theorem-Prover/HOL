@@ -11,9 +11,9 @@ type result = {
   events: HOLSourceAST.events,
   parseError: int * int -> string -> unit }
 
-val simpleParseError: int * int -> string -> unit
-val filelineParseError: DString.dstring * HOLSourceAST.events ->
-  int * int -> string -> unit
+val simpleParseError: (string -> unit) -> int * int -> string -> unit
+val filelineParseError: (string -> unit) ->
+  DString.dstring * HOLSourceAST.events -> int * int -> string -> unit
 
 val parseSML: string -> (int -> string) ->
   (DString.dstring * HOLSourceAST.events -> int * int -> string -> unit) ->

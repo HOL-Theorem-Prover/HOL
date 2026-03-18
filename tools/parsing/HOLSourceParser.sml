@@ -35,12 +35,12 @@ type result = {
   events: events,
   parseError: int * int -> string -> unit }
 
-fun simpleParseError (start, stop) s =
+fun simpleParseError print (start, stop) s =
   print (
     "parse error at byte " ^
     Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n")
 
-fun filelineParseError (body, events) =
+fun filelineParseError print (body, events) =
   case mkFileline body events of fileline =>
   fn (start, stop) => fn s => let
     val {file, line, col} = fileline start

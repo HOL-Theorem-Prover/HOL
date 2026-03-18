@@ -65,31 +65,31 @@ fun exhaust_parser {read, close, fileline=_} =
     recurse []
   end
 
-type args = {quietOpen: bool}
+type args = {quietOpen: bool, print: string -> unit}
 
-fun file_to_parser ({quietOpen}:args) fname = let
+fun file_to_parser ({quietOpen, print}:args) fname = let
   val instrm = openIn fname
   (* val isscript = String.isSuffix "Script.sml" fname *)
   val {fileline, read} = ToSML.mkPullTranslator
     {read = fn _ => input instrm,
      filename = fname,
-     parseError = HOLSourceParser.filelineParseError,
+     parseError = HOLSourceParser.filelineParseError print,
      quietOpen = quietOpen}
   in {read = read, fileline = fileline, close = fn () => closeIn instrm} end
 
-fun string_to_parser ({quietOpen}:args) s = let
+fun string_to_parser ({quietOpen, print}:args) s = let
   val sr = ref s
   fun str_read _ = (!sr before sr := "")
   val {fileline, read} = ToSML.mkPullTranslator
     {read = str_read, filename = "",
-     parseError = HOLSourceParser.filelineParseError,
+     parseError = HOLSourceParser.filelineParseError print,
      quietOpen = quietOpen}
   in {read = read, fileline = fileline, close = I} end
 
-fun input_to_parser ({quietOpen}:args) fname inp = let
+fun input_to_parser ({quietOpen, print}:args) fname inp = let
   val {fileline, read} = ToSML.mkPullTranslator
     {read = inp, filename = fname,
-     parseError = HOLSourceParser.filelineParseError,
+     parseError = HOLSourceParser.filelineParseError print,
      quietOpen = quietOpen}
   in {read = read, fileline = fileline, close = I} end
 

@@ -124,7 +124,7 @@ fun encode_for_HOLMKfile {tgt, deps} =
 
 fun uqfname_holdep fname =
   let
-    val reader = HOLSource.fileToReader {quietOpen = false} fname
+    val reader = HOLSource.fileToReader {quietOpen = false, print = fn _ => ()} fname
   in
     Holdep_tokens.reader_deps (fname, #read reader)
   end

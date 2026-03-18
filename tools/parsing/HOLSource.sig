@@ -20,7 +20,7 @@ structure ToSML: sig
 end
 
 type reader = {read: unit -> char option, fileline: unit -> fileline, eof: unit -> bool}
-type args = {quietOpen: bool}
+type args = {quietOpen: bool, print: string -> unit}
 
 val inputFile : args -> string -> string
 val fromString : args -> string -> string
