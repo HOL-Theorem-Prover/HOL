@@ -359,8 +359,8 @@ val _ =
     compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLSourceExpand.sml";
     compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLSourcePrinter.sig";
     compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLSourcePrinter.sml";
-    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLSource.sig";
-    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core"] "HOLSource.sml";
+    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core", "-I", "../../src/portableML"] "HOLSource.sig";
+    compile ["-I", "../Holmake", "-I", "../Holmake/hfs", "-I", "../Holmake/core", "-I", "../../src/portableML"] "HOLSource.sml";
     FileSys.chDir "../Holmake";
     FileSys.chDir "deps";
     compile ["-I", "..", "-I", "../mosml", "-I", "../../parsing", "-I", "../hfs", "-I", "../core"] "Holdep.sig";
