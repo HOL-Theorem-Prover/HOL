@@ -135,15 +135,17 @@ sig
 
   (* Computing with first-order lisp-style expressions *)
 
-  val compute :
-    (* initialization: *)
+  type compute_args =
     { cval_terms : (string * term) list,
       cval_type  : hol_type,
       num_type   : hol_type,
       char_eqns  : (string * thm) list }
+
+  val compute :
+    (* initialization: *)
+    compute_args
     (* code equations: *)
     -> thm list
     -> term -> thm
 
 end;
-
