@@ -45,16 +45,17 @@ fun filelineParseError print (body, events) =
   fn (start, stop) => fn s => let
     val {file, line, col} = fileline start
     val stop = fileline stop
-    val s = [": parse error: ", s, "\n"]
-    val s = if
+    val msg = if
       file = #file stop andalso
       (line < #line stop orelse line = #line stop andalso col + 1 < #col stop)
     then
-      if line = #line stop then ("-" :: Int.toString (#col stop + 1) :: s)
-      else ("-" :: Int.toString (#line stop + 1) :: ":" :: Int.toString (#col stop + 1) :: s)
-    else s
-    val s = file :: ":" :: Int.toString (line + 1) :: ":" :: Int.toString (col + 1) :: s
-    in print (String.concat s) end
+      if line = #line stop then ["-", Int.toString (#col stop + 1)]
+      else ["-", Int.toString (#line stop + 1), ":", Int.toString (#col stop + 1)]
+    else []
+    val msg = String.concat (Int.toString (line + 1) :: ":" :: Int.toString (col + 1) :: msg)
+    val msg = if file = "" then ["parse error at ", msg, ": ", s, "\n"]
+    else [file, ":", msg, ": parse error: ", s, "\n"]
+    in print (String.concat msg) end
 
 fun parseSML file read parseError: scope -> result = let
   val pos = ref 0
