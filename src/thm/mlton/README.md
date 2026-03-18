@@ -1,8 +1,7 @@
 # Building HOL kernel modules with MLton
 
 MLton must be invoked with `-default-type intinf` so that the default
-`int` type is `IntInf.int`, matching the assumption made throughout
-the HOL codebase.
+`int` type is `IntInf.int`.
 
 For example:
 
