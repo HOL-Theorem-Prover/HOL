@@ -63,6 +63,12 @@ fun printTyBind ({tyvars, tycon, bind}:tybind) pr = (
   seq (K ident) tyvars pr; ident tycon pr;
   Option.app (fn {ty, ...} => (token "=" pr; printTy ty pr)) bind)
 
+fun kwType KWType = "type"
+  | kwType KWEqtype = "eqtype"
+  | kwType KWMosmlPrimType = "prim_type"
+  | kwType KWMosmlPrimEqtype = "prim_eqtype"
+  | kwType KWMosmlPrimRefType = "prim_EQtype"
+
 fun printTypeDec kw ({args, ...}: tybind delimited) = delimited (token kw) args printTyBind (token "and") (K ())
 
 fun printDatBinds kw ({args, ...}: datbind delimited) wt pr = let
@@ -215,13 +221,19 @@ and printDecCore (DecSemi _) pr = token ";" pr
       otoken rec_ "rec" pr; printExp (SOME false) pat pr;
       Option.app (fn {exp, ...} => (token "=" pr; printExp NONE exp pr)) eq)
     in token "val" pr; seq (K ident) tyvars pr; delimited (K ()) args f (token "and") (K ()) pr end
+  | printDecCore (DecMosmlPrimVal {tyvars, elems = {args, ...}, ...}) pr = let
+    fun f {op_, id, ty, eq} pr = (
+      otoken op_ "op" pr; ident id pr;
+      Option.app (fn {ty, ...} => (token ":" pr; printTy ty pr)) ty;
+      Option.app (fn {arity = (_, arity), str = (_, str), ...} => (
+        token "=" pr; token arity pr; token str pr)) eq)
+    in token "prim_val" pr; seq (K ident) tyvars pr; delimited (K ()) args f (token "and") (K ()) pr end
   | printDecCore (DecFun {tyvars, fvalbind = {args, ...}, ...}) pr = let
     fun f nobar {pat, exp, ...} pr =
       (printExpFunPat (SOME false, handlePrec) pat pr; token "=" pr; printExp nobar exp pr)
     fun g arms = delimitedBar (K ()) arms f (K ())
     in token "fun" pr; seq (K ident) tyvars pr; delimited (K ()) args g (token "and") (K ()) pr end
-  | printDecCore (DecType {tybind, ...}) pr = printTypeDec "type" tybind pr
-  | printDecCore (DecEqtype {tybind, ...}) pr = printTypeDec "eqtype" tybind pr
+  | printDecCore (DecType {kw = (kw, _), tybind, ...}) pr = printTypeDec (kwType kw) tybind pr
   | printDecCore (DecDatatype {datbind, withtype_, ...}) pr =
     printDatBinds "datatype" datbind withtype_ pr
   | printDecCore (DecAbstype {datbind, withtype_, dec, ...}) pr = (

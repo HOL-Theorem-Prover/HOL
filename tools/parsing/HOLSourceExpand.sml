@@ -3,7 +3,7 @@ open HOLSourceAST
 
 exception Unreachable
 
-fun pluck p [] = NONE
+fun pluck _ [] = NONE
   | pluck p (h::t) =
     if p h then SOME(h,t)
     else case pluck p t of NONE => NONE | SOME (e,t) => SOME(e,h::t)
@@ -55,7 +55,7 @@ fun mkLocString' (p, loc) ({file = "", ...}: fileline) = App (mkIdent (p, loc), 
     App (mkIdent (p, loc), App (mkIdent (p, "DB_dtype.mkloc"),
       mkTuple (p, [mkString (p, file), mkInt (p, line+1), mkIdent (p, "true")])))
 
-fun doProofKvals p [] tac = tac
+fun doProofKvals _ [] tac = tac
   | doProofKvals p (kv::kvs) tac = let
   val e = mkIdent (p, "BasicProvers.with_simpset_updates")
   fun mktm1 {key = (p, key), bind} = let
@@ -287,11 +287,23 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
       val eq = Option.map (fn {eq, exp} => {eq = eq, exp = expandExp false exp}) eq
       in {rec_ = rec_, pat = pat, eq = eq} end
     in DecVal {val_ = val_, tyvars = tyvars, elems = mapDelim f elems} end
+  | expandDec _ (dec as DecMosmlPrimVal {prim_val_, tyvars, elems}) = let
+    fun f {ty, eq, ...} = Option.isSome ty andalso Option.isSome eq
+    fun g {op_, id, ty, ...} = let
+      val pat = Ident {op_ = op_, id = id}
+      val pat = case ty of
+        SOME {colon, ty} => Typed {exp = pat, colon = colon, ty = ty}
+      | NONE => pat
+      in {rec_ = NONE, pat = pat, eq = NONE} end
+    val r = if List.all f (#args elems) then
+      DecMosmlPrimVal {prim_val_ = prim_val_, tyvars = tyvars, elems = elems}
+    else DecExpansion {orig = dec, result = [
+      DecVal {val_ = prim_val_, tyvars = tyvars, elems = mapDelim g elems}]}
+    in r end
   | expandDec _ (DecFun {fun_, tyvars, fvalbind}) = let
     val fvalbind = mapDelim (expandFunBranches fun_) fvalbind
     in DecFun {fun_ = fun_, tyvars = tyvars, fvalbind = fvalbind} end
   | expandDec _ (dec as DecType _) = dec
-  | expandDec _ (dec as DecEqtype _) = dec
   | expandDec _ (dec as DecDatatype _) = dec
   | expandDec _ (dec as DecAbstype _) = dec
   | expandDec _ (dec as DecException _) = dec

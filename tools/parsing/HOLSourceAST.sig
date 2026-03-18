@@ -43,6 +43,10 @@ datatype exbind =
   ExnNew of {op_: int option, id: ident, arg: {of_: int, ty: ty} option}
 | ExnReplicate of {op_: int option, id: ident, eq: int, tgt: ident}
 
+type mosml_primvalbind = {
+  op_: int option, id: ident, ty: {colon: int, ty: ty} option,
+  eq: {eq: int, arity: int * string, str: int * string} option}
+
 datatype constraint = Colon | ColonGt
 
 datatype defn_label_id =
@@ -64,6 +68,13 @@ type header_elem = {id: ident, attrs: kvals attrs}
 datatype header =
   HOLAncestors of {ancestors_: int, attrs: kvals attrs, elems: header_elem list}
 | HOLLibs of {libs_: int, attrs: kvals attrs, elems: header_elem list}
+
+datatype type_kw =
+  KWType (* type *)
+| KWEqtype (* eqtype *)
+| KWMosmlPrimType (* prim_type *)
+| KWMosmlPrimEqtype (* prim_eqtype *)
+| KWMosmlPrimRefType (* prim_EQtype *)
 
 datatype exp =
   Wild of int
@@ -149,10 +160,8 @@ and dec =
     fun_: int, tyvars: ident seq,
     fvalbind: {bar: int option, pat: exp, eq: int option, exp: exp} list delimited}
   (** fun tyvarseq [op]vid atpat ... atpat [: ty] = exp [| ...] *)
-| DecType of {type_: int, tybind: tybind delimited}
+| DecType of {kw: type_kw * int, tybind: tybind delimited}
   (** type tyvarseq tycon = ty [and tyvarseq tycon = ty ...] *)
-| DecEqtype of {eqtype_: int, tybind: tybind delimited}
-  (** eqtype tyvarseq tycon = ty [and tyvarseq tycon = ty ...] *)
 | DecDatatype of {
     datatype_: int, datbind: datbind delimited,
     withtype_: {withtype_: int, tybind: tybind delimited} option }
@@ -233,6 +242,9 @@ and dec =
   (** Resume to_suspend[rtp_q,smlname=qsubgoal]: ... QED *)
 | HOLFinalise of {finalise_: int, id: ident, attrs: kvals attrs, stop: int}
   (** Finalise to_suspend[simp] *)
+
+| DecMosmlPrimVal of {prim_val_: int, tyvars: ident seq, elems: mosml_primvalbind delimited}
+  (** prim_val tyvarseq id: ty = n str [and id: ty = n str ...] *)
 
 | DecBad of {start: int, stop: int}
 | DecExpansion of {orig: dec, result: dec list}

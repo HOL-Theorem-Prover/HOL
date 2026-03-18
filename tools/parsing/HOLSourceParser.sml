@@ -402,6 +402,9 @@ fun parseSML file read parseError: scope -> result = let
     tycon = parseIdentifier true,
     bind = Option.map (fn eq => {eq = eq, ty = parseTy ()}) (parseKeyword "=" NONE) }
 
+  fun parseTyBinds () = parseDelimited [] [] {elem = parseTyBind, delim = isKeyword "and"}
+  fun mkDecType kw start = DecType {kw = (kw, start), tybind = parseTyBinds ()}
+
   fun updateScope (sc:scope): dec -> scope = let
     fun updateInfix right prec elems (sc:scope): scope =
       case case prec of SOME (_, prec) => Int.fromString prec | NONE => SOME 0 of
@@ -886,9 +889,7 @@ fun parseSML file read parseError: scope -> result = let
             | NONE => DatvalElems (go [])
           in {tyvars = tyvars, tycon = tycon, eq = eq, rhs = rhs} end,
         delim = isKeyword "and" },
-      Option.map (fn withtype_ => {
-          withtype_ = withtype_,
-          tybind = parseDelimited [] [] {elem = parseTyBind, delim = isKeyword "and"}})
+      Option.map (fn withtype_ => {withtype_ = withtype_, tybind = parseTyBinds ()})
         (parseKeyword "withtype" NONE))
 
     fun parseInductive start co = let
@@ -944,12 +945,29 @@ fun parseSML file read parseError: scope -> result = let
             eq = Option.map (fn eq => {eq = eq, exp = parseExp sc false})
               (parseKeyword "=" NONE) },
           delim = isKeyword "and" } })
-      | ("type", _) => SOME (sc, DecType {
-        type_ = start,
-        tybind = parseDelimited [] [] {elem = parseTyBind, delim = isKeyword "and"} })
-      | ("eqtype", _) => SOME (sc, DecEqtype {
-        eqtype_ = start,
-        tybind = parseDelimited [] [] {elem = parseTyBind, delim = isKeyword "and"} })
+      | ("prim_val", _) => SOME (sc, DecMosmlPrimVal {
+        prim_val_ = start,
+        tyvars = parseTyVars (),
+        elems = parseDelimited [] [] {
+          elem = fn () => {
+            op_ = parseKeyword "op" NONE,
+            id = parseIdentifier true,
+            ty = Option.map (fn colon => {colon = colon, ty = parseTy ()})
+              (parseKeyword ":" (SOME "expected ':'")),
+            eq = case parseKeyword "=" (SOME "expected '='") of NONE => NONE | SOME eq => let
+              val arity = parseInt (SOME "expected integer literal")
+              val s = parseString (SOME "expected string literal")
+              val eq = case (arity, s) of
+                ((start, SOME s), (start', SOME s')) =>
+                SOME {eq = eq, arity = (start, s), str = (start', s')}
+              | _ => NONE
+              in eq end },
+          delim = isKeyword "and" } })
+      | ("type", _) => SOME (sc, mkDecType KWType start)
+      | ("eqtype", _) => SOME (sc, mkDecType KWEqtype start)
+      | ("prim_type", _) => SOME (sc, mkDecType KWMosmlPrimType start)
+      | ("prim_eqtype", _) => SOME (sc, mkDecType KWMosmlPrimEqtype start)
+      | ("prim_EQtype", _) => SOME (sc, mkDecType KWMosmlPrimRefType start)
       | ("infix", _) => let
         val prec = case parseInt NONE of (_, NONE) => NONE | (start, SOME n) => SOME (start, n)
         val elems = parseInfixElems []
