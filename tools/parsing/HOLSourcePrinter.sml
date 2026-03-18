@@ -6,9 +6,15 @@ fun C f x y = f y x
 
 type printer = {token: string -> unit, startSpan: int * int -> unit, stopSpan: unit -> unit}
 
-fun mkPrinter {str, startSpan, stopSpan} = {
-  token = fn s => (str s; str " "),
-  startSpan = startSpan, stopSpan = stopSpan }
+fun mkPrinter mkLine {str, startSpan, stopSpan} = let
+  val line = ref 0
+  fun startSpan' (p: int * int) = let
+    val l = mkLine (#1 p)
+    val () = if !line < l then (
+      str (Byte.bytesToString (Word8Vector.tabulate (l - !line, K 0w10)));
+      line := l) else ()
+    in startSpan p end
+  in { token = fn s => (str s; str " "), startSpan = startSpan', stopSpan = stopSpan } end
 
 fun token s (pr: printer) = #token pr s
 

@@ -21,7 +21,7 @@ structure ToSML = struct
     val fileline = HOLSourceAST.mkFileline body events
     val expandDec = HOLSourceExpand.expandDec
       {parseError = parseError, quietOpen = quietOpen, fileline = fileline}
-    val pr' = HOLSourcePrinter.mkPrinter pr
+    val pr' = HOLSourcePrinter.mkPrinter (#line o fileline) pr
     fun push () =
       case parseDec () of
         NONE => true
@@ -29,7 +29,7 @@ structure ToSML = struct
           HOLSourceAST.DecExpansion {result = [], ...} => false
         | dec => (
           HOLSourcePrinter.printDecs parseError (rev (HOLSourceExpand.mkSemi [dec])) pr';
-          #str pr "\n"; false)
+          false)
     in {fileline = fileline, push = push} end
 
   fun mkPullTranslator args = let
