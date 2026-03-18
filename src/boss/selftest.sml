@@ -299,9 +299,8 @@ fun testtac tac = #1 o VALID tac
 val _ = let
   val _ = tprint "tmCases_on (.doc file example)"
   val g = ([], “MAP (f:num -> num) l = []”)
-  val expected: (term list * term) list =
-      [([] : term list, “MAP (f:num -> num) [] = []”),
-       ([] : term list , “MAP (f:num -> num) (e::es) = []”)]
+  val expected = [([] : term list, “MAP (f:num -> num) [] = []”),
+                  ([] : term list , “MAP (f:num -> num) (e::es) = []”)]
 in
   require_msg (check_result (list_eq goal_eq expected))
               goalpp
@@ -312,9 +311,8 @@ end
 val _ = let
   val _ = tprint "tmCases_on (bound l)"
   val g = ([], “!l. MAP (f:num -> num) l = []”)
-  val expected: (term list * term) list =
-      [([] : term list, “MAP (f:num -> num) [] = []”),
-       ([] : term list , “MAP (f:num -> num) (e::es) = []”)]
+  val expected = [([] : term list, “MAP (f:num -> num) [] = []”),
+                  ([] : term list , “MAP (f:num -> num) (e::es) = []”)]
 in
   require_msg (check_result (list_eq goal_eq expected))
               goalpp
@@ -326,7 +324,7 @@ val _ = let
   val _ = tprint "resolve_then/IRULE hyp order preserved"
   val th1 = rich_listTheory.is_prefix_el
   val g = ([], “?m n. EL m (l1:'a list) = EL n l2 /\ m <= n /\ EVEN n”)
-  val expected: (term list * term) list =
+  val expected =
       [([] : term list,
         “?n. (l1:'a list) <<= l2 /\ n < LENGTH l1 /\ n < LENGTH l2 /\ n <= n /\
              EVEN n”)]
@@ -449,7 +447,7 @@ val _ = require_msg (check_result (aconv “y < 10” o #2 o hd o #1))
                     (simp[]) ([], “y IN {x | x < 10}”)
 
 val _ = tprint "CONG_TAC on a set comprehension with numeral"
-val expected: (term list * term) list = [([], “c * d = 10n”)]
+val expected = [([]: term list, “c * d = 10n”)]
 val _ = require_msg (check_result (goals_eq expected o #1))
                     (goals_toString o #1)
                     (CONG_TAC NONE)
@@ -457,9 +455,8 @@ val _ = require_msg (check_result (goals_eq expected o #1))
 
 val _ = hide "f"
 val _ = tprint "CONG_TAC with MAP congruence used"
-val expected: (term list * term) list =
-    [([“MEM (x:'a) l2”], “f (x:'a) + 1 = g x”),
-     ([], “l1 : 'a list = l2”)]
+val expected = [([“MEM (x:'a) l2”], “f (x:'a) + 1 = g x”),
+                ([], “l1 : 'a list = l2”)]
 val _ = require_msg
           (check_result (goals_eq expected o #1))
           (goals_toString o #1)
