@@ -7,8 +7,8 @@ Libs
 (* example defining a mutually recursive pair of types that one would
    specify as
 
-ty1 = C11 ty2 | C12 ('b -> (ty2 # ty1) option) ;
-ty2 = C21 ty1 | C22 ty1 ty2    (* non-empty list of ty1's *)
+mty = M1 pty | M2 ('b -> (pty # mty) option) ;
+pty = P1 mty | P2 mty pty    (* non-empty list of mty's *)
 
 *)
 
@@ -2798,35 +2798,121 @@ QED
 Theorem better_Ginitiality =
         Ginitiality
           |> SRULE [sumTheory.FORALL_SUM, FORALL_SUMALG, FORALL_PROD,
-                    GSYM D1_def, GSYM D2_def]
-
-Theorem t1_fold_exists =
-  better_initiality  |> SRULE[EXISTS_UNIQUE_THM] |> cj 1 |> SRULE[SKOLEM_THM]
-
-Theorem t2_fold_exists =
-  better_Ginitiality |> SRULE[EXISTS_UNIQUE_THM] |> cj 1 |> SRULE[SKOLEM_THM]
-    |> INST_TYPE [“:'a1” |-> “:'b1 nty2”]
-
-val t1_fold_def = new_specification("t1_fold_def", ["t1_fold"], t1_fold_exists)
-val t2_fold_def = new_specification("t2_fold_def", ["t2_fold"], t2_fold_exists)
+                    GSYM D1_def, GSYM D2_def, FORALL_UNCURRIED]
 
 Type NTY[pp] = “:('b1 nty2, 'b1) nty”
 
-val Better_initiality = INST_TYPE [“:'a1” |-> “:('b1 nty2)”] better_initiality
+val better_MAP = SRULE[sumTheory.FORALL_SUM, GSYM C1_def, GSYM C2_def] MAP_def
 
-(*
-Theorem merged_initiality:
-  ∀(t1 : 'c2 -> 'c1) (t2: ('b -> ('c2 # 'c1) option) -> 'c1)
-   (u1 : 'c1 -> 'c2) (u2: 'c1 -> 'c2 -> 'c2).
-   ∃(h1:'b NTY -> 'c1, h2 : 'b nty2 -> 'c2).
-     (∀c1. h1 (C1 c1) = t1 (h2 c1)) ∧
-     (∀c2. h1 (C2 c2) = t2 (OPTION_MAP (h2 ## h1) o c2)) ∧
-     (∀d1. h2 (D1 d1) = u1 (h1 d1)) ∧
-     (∀d21 d22. h2 (D2 d21 d22) = u2 (h1 d21) (h2 d22))
+Theorem exu[local]:
+  (∃!x. P x) ⇔ ∃x. P x ∧ ∀y. P y ⇒ x = y
 Proof
-  qx_genl_tac [‘f3A’, ‘f3F’, ‘f2L’, ‘f2R’] >>
-  qexists_tac ‘(t2_fold (f2L ’
-  qabbrev_tac ‘l_mf2 = λg. f2L (mf3_from mf2 g)’
-  qspecl_then [‘f2L’, ‘f2R’] mp_tac better_Ginitiality
-  qspecl_then [‘t1’, ‘t2’] mp_tac Better_initiality
-*)
+  metis_tac[]
+QED
+
+Theorem combined_initiality0:
+  ∀(f1:'d -> 'c) (f2:('b -> ('d # 'c) option) -> 'c)
+   (g1:'c -> 'd) (g2:'c -> 'd -> 'd).
+  ∃!(h,k).
+    (∀a. h (C1 a) = f1 (k a)) ∧
+    (∀b. h (C2 b) = f2 (OPTION_MAP (k ## h) o b)) ∧
+    (∀c. k (D1 c) = g1 (h c)) ∧
+    (∀d1 d2. k (D2 d1 d2) = g2 (h d1) (k d2))
+Proof
+  rpt gen_tac >>
+  simp[exu, ELIM_UNCURRY, EXISTS_PROD, FORALL_PROD] >>
+  qspecl_then [‘f1’, ‘f2’]
+              (qx_choose_then ‘eval’ (strip_assume_tac o CONJUNCT1) o
+               SRULE [exu])
+              better_initiality >>
+  qspecl_then [‘g1 o eval’, ‘g2 o eval’]
+              (qx_choose_then ‘k’ strip_assume_tac o
+               SRULE [exu])
+              better_Ginitiality >>
+  qexistsl [‘eval o MAP k’, ‘k’] >>
+  simp[better_MAP, Excl "o_ASSOC'", o_ASSOC, optMap_O, pairMap_O] >>
+  rpt gen_tac >> strip_tac >>
+  rename [‘h' (C1 _) = f1 (k' _)’] >>
+  ‘h' = eval o MAP k'’
+    by (qspecl_then [‘f1 o k'’, ‘λf. f2 (OPTION_MAP (k' ## I) o f)’]
+              strip_assume_tac
+              (cj 2 $ SRULE[EXISTS_UNIQUE_THM]
+                    $ INST_TYPE [“:'b1” |-> beta] better_initiality) >>
+        pop_assum irule >>
+        simp[better_MAP, Excl "o_ASSOC'", o_ASSOC, optMap_O, pairMap_O]) >>
+  gvs[] >>
+  ‘k = k'’ by simp[] >>
+  gvs[]
+QED
+
+(* hide nty1 entirely *)
+val mtyrec = newtypeTools.rich_new_type {
+  ABS = "mkM", REP = "repM",
+  exthm = prove(“∃x:'b NTY. (λy. T) x”, simp_tac bool_ss []),
+  tyname = "mty"}
+
+(* which requires tweaking nty2 *)
+val ptyrec = newtypeTools.rich_new_type {
+  ABS = "mkP", REP = "repP",
+  exthm = prove(“∃y: 'b nty2. (λz. T) y”, simp_tac bool_ss []),
+  tyname = "pty"}
+
+Definition M1_def:
+  M1 n = mkM (C1 (repP n))
+End
+
+Definition M2_def:
+  M2 (f:'b -> ('b pty # 'b mty) option) =
+  mkM (C2 (OPTION_MAP (repP ## repM) o f))
+End
+
+Definition P1_def:
+  P1 n = mkP (D1 (repM n))
+End
+
+Definition P2_def:
+  P2 m p = mkP (D2 (repM m) (repP p))
+End
+
+Theorem o_REPEQ:
+  (f o repM = f' ⇔ f = f' o mkM) ∧
+  (g o repP = g' ⇔ g = g' o mkP) ∧
+  repP o mkP = I ∧ repM o mkM = I
+Proof
+  simp[FUN_EQ_THM, EQ_IMP_THM, #absrep_id mtyrec, #absrep_id ptyrec] >>
+  metis_tac[#repabs_pseudo_id mtyrec, #repabs_pseudo_id ptyrec]
+QED
+
+Theorem combined_initiality:
+  ∀(f1:'d -> 'c) (f2:('b -> ('d # 'c) option) -> 'c)
+   (g1:'c -> 'd) (g2:'c -> 'd -> 'd).
+  ∃!(h,k).
+    (∀p. h (M1 p) = f1 (k p)) ∧
+    (∀b. h (M2 b) = f2 (OPTION_MAP (k ## h) o b)) ∧
+    (∀m. k (P1 m) = g1 (h m)) ∧
+    (∀m p. k (P2 m p) = g2 (h m) (k p))
+Proof
+  rpt gen_tac >>
+  qspecl_then [‘f1’, ‘f2’, ‘g1’, ‘g2’] strip_assume_tac
+              combined_initiality0 >>
+  gvs[exu, ELIM_UNCURRY, EXISTS_PROD, FORALL_PROD] >>
+  rename [‘h0 (C1 _) = f1 (k0 _)’] >>
+  qexistsl [‘h0 o repM’, ‘k0 o repP’] >>
+  simp[M1_def, M2_def, P1_def, P2_def,
+       SIMP_RULE bool_ss [] (#repabs_pseudo_id mtyrec),
+       SIMP_RULE bool_ss [] (#repabs_pseudo_id ptyrec),
+       Excl "o_ASSOC'", o_ASSOC, optMap_O, pairMap_O,
+       o_REPEQ
+      ] >>
+  rpt gen_tac >> strip_tac >>
+  first_x_assum irule >> simp[] >> rw[] >~
+  [‘mkM (C1 a) (* sg *)’]
+  >- (first_x_assum $ qspec_then ‘mkP a’ mp_tac >>
+      simp[#repabs_pseudo_id ptyrec]) >~
+  [‘mkM (C2 b) (* sg *)’]
+  >- (first_x_assum $ qspec_then ‘OPTION_MAP (mkP ## mkM) o b’ mp_tac >>
+      simp[Excl "o_ASSOC'", o_ASSOC, optMap_O, pairMap_O, o_REPEQ, optMap_ID])>~
+  [‘mkP (D1 c) (* sg *)’]
+  >- metis_tac[#repabs_pseudo_id mtyrec] >>
+  metis_tac[#repabs_pseudo_id mtyrec, #repabs_pseudo_id ptyrec]
+QED
