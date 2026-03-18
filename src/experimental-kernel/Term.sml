@@ -433,16 +433,15 @@ in
   occ
 end
 
-fun type_vars_in_term t = let
-  fun tyv t k =
-      case t of
-        Var(_, ty) => k (Type.type_vars ty)
-      | Const(_, ty) => k (Type.type_vars ty)
-      | App(f, x) => tyv f (fn fq => tyv x (fn xq => k (union fq xq)))
-      | Abs(x, b) => tyv x (fn xq => tyv b (fn bq => k (union xq bq)))
+local fun tyV (Var(_, ty)) A = Type.type_vars_acc ty A
+        | tyV (Const(_, ty)) A = Type.type_vars_acc ty A
+        | tyV (App(f,x)) A = let val A' = tyV f A
+                             in tyV x A' end
+        | tyV (Abs(x,b)) A = let val A' = tyV x A
+                             in tyV b A' end
 in
-  tyv t Lib.I
-end
+fun type_vars_in_term tm = tyV tm []
+end;
 
 (* two different substs; monomorphism restriction bites again; later code
    gives these different types *)
