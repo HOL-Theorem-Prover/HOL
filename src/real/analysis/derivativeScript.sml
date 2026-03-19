@@ -717,6 +717,22 @@ Proof
   MESON_TAC[HAS_DERIVATIVE_TRANSFORM_WITHIN, IN_UNIV]
 QED
 
+Theorem HAS_DERIVATIVE_WITHIN_CONG :
+   !f f' g x s.
+         x IN s /\ (!x'. x' IN s ==> (f x' = g x')) ==>
+       ((f has_derivative f') (at x within s) <=>
+        (g has_derivative f') (at x within s))
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC >> DISCH_TAC
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC HAS_DERIVATIVE_TRANSFORM_WITHIN \\
+      qexistsl_tac [‘f’, ‘1’] >> simp [DIST_REFL],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC HAS_DERIVATIVE_TRANSFORM_WITHIN \\
+      qexistsl_tac [‘g’, ‘1’] >> simp [DIST_REFL] ]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Differentiability.                                                        *)
 (* ------------------------------------------------------------------------- *)
@@ -2909,6 +2925,111 @@ Proof
   Q.SPEC_TAC(`x - y:real`,`z:real`) THEN
   MATCH_MP_TAC(REWRITE_RULE[RIGHT_FORALL_IMP_THM] LINEAR_NEG) THEN
   ASM_MESON_TAC[has_derivative]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Concave functions                                                         *)
+(* ------------------------------------------------------------------------- *)
+
+val _ = set_fixity "concave_on" (Infix(NONASSOC, 450));
+
+Definition concave_on_def :
+  f concave_on s <=> (\x. -f x) convex_on s
+End
+
+Theorem concave_on :
+  !f s. f concave_on s <=>
+        !x y u v:real. x IN s /\ y IN s /\ &0 <= u /\ &0 <= v /\ (u + v = &1)
+                  ==> u * f(x) + v * f(y) <= f(u * x + v * y)
+Proof
+  rw [concave_on_def, convex_on, REAL_MUL_RNEG, GSYM REAL_NEG_ADD, REAL_LE_NEG]
+QED
+
+Theorem CONCAVE_ON_SECANT_DERIVATIVE :
+    !f f' s.
+        convex s /\
+        (!x. x IN s ==> (f has_derivative (f'(x))) (at x within s))
+        ==> (f concave_on s <=>
+             !x y. x IN s /\ y IN s ==> f'(y)(y - x) <= f y - f x)
+Proof
+    RW_TAC std_ss [concave_on_def]
+ >> qabbrev_tac ‘g = \x. -f x’
+ >> qabbrev_tac ‘g' = \h x. -f' h x’
+ >> ‘!x y. f' y (y - x) = -g' y (y - x)’
+      by rw [REAL_NEG_NEG, Abbr ‘g'’] >> POP_ORW
+ >> ‘!x y. f y - f x = -(g y - g x)’
+      by rw [Abbr ‘g’, REAL_SUB_NEG2, REAL_NEG_SUB] >> POP_ORW
+ >> simp [REAL_LE_NEG]
+ >> MATCH_MP_TAC CONVEX_ON_SECANT_DERIVATIVE
+ >> rw [Abbr ‘g’, Abbr ‘g'’]
+ >> HO_MATCH_MP_TAC HAS_DERIVATIVE_NEG
+ >> simp [SF ETA_ss]
+QED
+
+Theorem CONCAVE_ON_DERIVATIVE_SECANT :
+    !f f' s.
+        convex s /\
+        (!x. x IN s ==> (f has_derivative f' x) (at x within s)) ==>
+        (f concave_on s <=>
+         !x y. x IN s /\ y IN s ==> f y - f x <= f' x (y - x))
+Proof
+    RW_TAC std_ss [concave_on_def]
+ >> qabbrev_tac ‘g = \x. -f x’
+ >> qabbrev_tac ‘g' = \h x. -f' h x’
+ >> ‘!x y. f' x (y - x) = -g' x (y - x)’
+      by rw [REAL_NEG_NEG, Abbr ‘g'’] >> POP_ORW
+ >> ‘!x y. f y - f x = -(g y - g x)’
+      by rw [Abbr ‘g’, REAL_SUB_NEG2, REAL_NEG_SUB] >> POP_ORW
+ >> simp [REAL_LE_NEG]
+ >> MATCH_MP_TAC CONVEX_ON_DERIVATIVE_SECANT
+ >> rw [Abbr ‘g’, Abbr ‘g'’]
+ >> HO_MATCH_MP_TAC HAS_DERIVATIVE_NEG
+ >> simp [SF ETA_ss]
+QED
+
+Theorem CONCAVE_ON_LEFT_SECANT :
+    !f s.
+        f concave_on s <=>
+        !a b x.
+          a IN s /\ b IN s /\ x IN segment (a,b) ==>
+          (f b - f a) / abs (b - a) <= (f x - f a) / abs (x - a)
+Proof
+    RW_TAC std_ss [concave_on_def]
+ >> qabbrev_tac ‘g = \x. -f x’
+ >> ‘!a b. f b - f a = -(g b - g a)’
+      by rw [Abbr ‘g’, REAL_SUB_NEG2, REAL_NEG_SUB] >> POP_ORW
+ >> REWRITE_TAC [REAL_DIV_LNEG, REAL_LE_NEG]
+ >> REWRITE_TAC [CONVEX_ON_LEFT_SECANT]
+QED
+
+Theorem CONCAVE_ON_RIGHT_SECANT :
+    !f s.
+        f concave_on s <=>
+        !a b x.
+          a IN s /\ b IN s /\ x IN segment (a,b) ==>
+          (f b - f x) / abs (b - x) <= (f b - f a) / abs (b - a)
+Proof
+    RW_TAC std_ss [concave_on_def]
+ >> qabbrev_tac ‘g = \x. -f x’
+ >> ‘!a b. f b - f a = -(g b - g a)’
+      by rw [Abbr ‘g’, REAL_SUB_NEG2, REAL_NEG_SUB] >> POP_ORW
+ >> REWRITE_TAC [REAL_DIV_LNEG, REAL_LE_NEG]
+ >> REWRITE_TAC [CONVEX_ON_RIGHT_SECANT]
+QED
+
+Theorem CONCAVE_ON_MID_SECANT :
+    !f s.
+        f concave_on s <=>
+        !a b x.
+          a IN s /\ b IN s /\ x IN segment (a,b) ==>
+          (f b - f x) / abs (b - x) <= (f x - f a) / abs (x - a)
+Proof
+    RW_TAC std_ss [concave_on_def]
+ >> qabbrev_tac ‘g = \x. -f x’
+ >> ‘!a b. f b - f a = -(g b - g a)’
+      by rw [Abbr ‘g’, REAL_SUB_NEG2, REAL_NEG_SUB] >> POP_ORW
+ >> REWRITE_TAC [REAL_DIV_LNEG, REAL_LE_NEG]
+ >> REWRITE_TAC [CONVEX_ON_MID_SECANT]
 QED
 
 (* END *)

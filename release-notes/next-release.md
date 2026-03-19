@@ -94,6 +94,7 @@ Incompatibilities
            val _ = temp_set_fixity "MOD" (Infixl 650)
 
     (If one over-arching change is desired, dropping the `temp_` prefix and putting the declaration in a root script-file will install the change for all of one’s theories.)
+-   The order of the list of type variables given by `Type.type_vars` and `Term.type_vars_in_term` have changed. User code should be written to not depend on this anyway.
 
 Deprecations
 ------------

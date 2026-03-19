@@ -2797,6 +2797,14 @@ Proof
   REWRITE_TAC[integrable_on] THEN METIS_TAC[HAS_INTEGRAL_EQ]
 QED
 
+Theorem INTEGRABLE_EQ_EQ:
+   !f:real->real g s.
+        (!x. x IN s ==> (f(x) = g(x))) ==>
+        (f integrable_on s <=> g integrable_on s)
+Proof
+  METIS_TAC[INTEGRABLE_EQ]
+QED
+
 Theorem HAS_INTEGRAL_EQ_EQ:
    !f:real->real g k s.
         (!x. x IN s ==> (f(x) = g(x)))
@@ -5891,48 +5899,131 @@ Theorem INTEGRAL_HAS_VECTOR_DERIVATIVE_POINTWISE:
 Proof
   REWRITE_TAC[IN_INTERVAL] THEN REPEAT STRIP_TAC THEN
   REWRITE_TAC[has_vector_derivative, HAS_DERIVATIVE_WITHIN_ALT] THEN
-  CONJ_TAC THENL
-   [SIMP_TAC std_ss [linear] THEN
-    CONJ_TAC THEN REAL_ARITH_TAC,
-    ALL_TAC] THEN
+  CONJ_TAC
+  >- (ONCE_REWRITE_TAC [REAL_MUL_COMM] \\
+      HO_MATCH_MP_TAC LINEAR_COMPOSE_CMUL \\
+      REWRITE_TAC [LINEAR_ID]) \\
   X_GEN_TAC ``e:real`` THEN DISCH_TAC THEN REWRITE_TAC[IN_INTERVAL] THEN
-  UNDISCH_TAC ``f continuous (at x within interval [(a,b)])`` THEN DISCH_TAC THEN
-  FIRST_ASSUM(MP_TAC o REWRITE_RULE [continuous_within]) THEN
+  Q.PAT_X_ASSUM ‘f continuous (at x within interval [a,b])’
+    (MP_TAC o REWRITE_RULE [continuous_within]) THEN
   DISCH_THEN(MP_TAC o SPEC ``e:real``) THEN
   ASM_REWRITE_TAC[IN_INTERVAL, dist] THEN
   STRIP_TAC THEN EXISTS_TAC ``d:real`` THEN
   ASM_REWRITE_TAC[] THEN X_GEN_TAC ``y:real`` THEN STRIP_TAC THEN
   SIMP_TAC std_ss [] THEN
+ (* stage work *)
   DISJ_CASES_TAC(REAL_ARITH ``x <= y \/ y <= x:real``) THENL
-   [ASM_SIMP_TAC std_ss [REAL_ARITH ``x <= y ==> (abs(y - x) = y - x:real)``],
+  [ (* goal 1 (of 2) *)
+    ASM_SIMP_TAC std_ss [REAL_ARITH ``x <= y ==> (abs(y - x) = y - x:real)``],
+    (* goal 2 (of 2) *)
     ONCE_REWRITE_TAC[REAL_ARITH
      ``fy - fx - (x - y) * c:real = -(fx - fy - (y - x) * c)``] THEN
-    ASM_SIMP_TAC std_ss [ABS_NEG, REAL_ARITH ``x <= y ==> (abs(x - y) = y - x:real)``]] THEN
-  ASM_SIMP_TAC std_ss [GSYM CONTENT_CLOSED_INTERVAL] THEN MATCH_MP_TAC HAS_INTEGRAL_BOUND THEN
+    ASM_SIMP_TAC std_ss [ABS_NEG,
+                         REAL_ARITH ``x <= y ==> (abs(x - y) = y - x:real)``]
+  ] THEN
+ (* shared tactics *)
+  ASM_SIMP_TAC std_ss [GSYM CONTENT_CLOSED_INTERVAL] THEN
+ (* applying a key theorem *)
+  MATCH_MP_TAC HAS_INTEGRAL_BOUND THEN
   EXISTS_TAC ``(\u. f(u) - f(x)):real->real`` THEN
-  (ASM_SIMP_TAC std_ss [REAL_LT_IMP_LE] THEN CONJ_TAC THENL
-   [ALL_TAC,
-    REPEAT STRIP_TAC THEN
-    MATCH_MP_TAC REAL_LT_IMP_LE THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-    REPEAT(POP_ASSUM MP_TAC) THEN
-    SIMP_TAC std_ss [IN_INTERVAL] THEN
-    REAL_ARITH_TAC] THEN
-   ONCE_REWRITE_TAC [METIS [] ``(\u:real. f u - (f:real->real) x) = (\u:real. f u - (\u. f x) u)``] THEN
-   MATCH_MP_TAC HAS_INTEGRAL_SUB THEN REWRITE_TAC[HAS_INTEGRAL_CONST]) THENL
-    [SUBGOAL_THEN
+  (ASM_SIMP_TAC std_ss [REAL_LT_IMP_LE] THEN
+   reverse CONJ_TAC
+   >- (Q.X_GEN_TAC ‘z’ THEN REPEAT STRIP_TAC THEN
+       MATCH_MP_TAC REAL_LT_IMP_LE THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+       REPEAT(POP_ASSUM MP_TAC) THEN
+       SIMP_TAC std_ss [IN_INTERVAL] THEN
+       REAL_ARITH_TAC) THEN
+   HO_MATCH_MP_TAC HAS_INTEGRAL_SUB THEN REWRITE_TAC[HAS_INTEGRAL_CONST]) THENL
+   [ (* goal 1 (of 2) *)
+     SUBGOAL_THEN
       ``(integral(interval[a,x]) f + integral(interval[x,y]) f =
          integral(interval[a,y]) f) /\
        ((f:real->real) has_integral integral(interval[x,y]) f)
         (interval[x,y])``
-      (fn th => METIS_TAC[th,
-          REAL_ARITH ``(a + b = c:real) ==> (c - a = b:real)``]),
+      (fn th => METIS_TAC[th, REAL_ARITH ``(a + b = c:real) ==> (c - a = b:real)``]),
+     (* goal 2 (of 2) *)
      SUBGOAL_THEN
       ``(integral(interval[a,y]) f + integral(interval[y,x]) f =
          integral(interval[a,x]) f) /\
        ((f:real->real) has_integral integral(interval[y,x]) f)
         (interval[y,x])``
-       (fn th => METIS_TAC[th,
-         REAL_ARITH ``(a + b = c:real) ==> (c - a = b:real)``])] THEN
+      (fn th => METIS_TAC[th,REAL_ARITH ``(a + b = c:real) ==> (c - a = b:real)``])
+   ] THEN
+ (* shared tactics, again *)
+   (CONJ_TAC THENL
+     [MATCH_MP_TAC INTEGRAL_COMBINE,
+      MATCH_MP_TAC INTEGRABLE_INTEGRAL] THEN
+    ASM_REWRITE_TAC[] THEN
+    MATCH_MP_TAC INTEGRABLE_SUBINTERVAL THEN
+    MAP_EVERY EXISTS_TAC [``a:real``, ``b:real``] THEN
+    ASM_SIMP_TAC std_ss [INTEGRABLE_CONTINUOUS, SUBSET_INTERVAL, REAL_LE_REFL] THEN
+    ASM_REAL_ARITH_TAC)
+QED
+
+Theorem INTEGRAL_HAS_VECTOR_DERIVATIVE_NEG_POINTWISE:
+   !f:real->real a b x.
+        f integrable_on interval[a,b] /\ x IN interval[a,b] /\
+        f continuous (at x within interval[a,b])
+        ==> ((\u. integral (interval [u,b]) f) has_vector_derivative -f x)
+            (at x within interval [a,b])
+Proof
+  REWRITE_TAC[IN_INTERVAL] THEN REPEAT STRIP_TAC THEN
+  REWRITE_TAC[has_vector_derivative, HAS_DERIVATIVE_WITHIN_ALT] THEN
+  CONJ_TAC
+  >- (ONCE_REWRITE_TAC [REAL_MUL_COMM] \\
+      HO_MATCH_MP_TAC LINEAR_COMPOSE_CMUL \\
+      REWRITE_TAC [LINEAR_ID]) \\
+  X_GEN_TAC ``e:real`` THEN DISCH_TAC THEN REWRITE_TAC[IN_INTERVAL] THEN
+  Q.PAT_X_ASSUM ‘f continuous (at x within interval [a,b])’
+    (MP_TAC o REWRITE_RULE [continuous_within]) THEN
+  DISCH_THEN(MP_TAC o SPEC ``e:real``) THEN
+  ASM_REWRITE_TAC[IN_INTERVAL, dist] THEN
+  STRIP_TAC THEN EXISTS_TAC ``d:real`` THEN
+  ASM_REWRITE_TAC[] THEN X_GEN_TAC ``y:real`` THEN STRIP_TAC THEN
+  SIMP_TAC std_ss [] THEN
+ (* stage work *)
+  DISJ_CASES_TAC(REAL_ARITH ``x <= y \/ y <= x:real``) THENL
+  [ (* goal 1 (of 2) *)
+    ASM_SIMP_TAC std_ss [REAL_ARITH ``x <= y ==> (abs(y - x) = y - x:real)``],
+    (* goal 2 (of 2) *)
+    ONCE_REWRITE_TAC[REAL_ARITH
+     ``fy - fx - (x - y) * c:real = -(fx - fy - (y - x) * c)``] THEN
+    ASM_SIMP_TAC std_ss [ABS_NEG,
+                         REAL_ARITH ``x <= y ==> (abs(x - y) = y - x:real)``]
+  ] THEN
+ (* shared tactics *)
+  ASM_SIMP_TAC std_ss [GSYM CONTENT_CLOSED_INTERVAL] THEN
+ (* applying a key theorem *)
+  MATCH_MP_TAC HAS_INTEGRAL_BOUND THEN
+  EXISTS_TAC ``(\u. f(x) - f(u)):real->real`` THEN
+  (ASM_SIMP_TAC std_ss [REAL_LT_IMP_LE] THEN
+   reverse CONJ_TAC
+   >- (Q.X_GEN_TAC ‘z’ >> rpt STRIP_TAC \\
+       MATCH_MP_TAC REAL_LT_IMP_LE \\
+       ONCE_REWRITE_TAC [ABS_SUB] \\
+       FIRST_X_ASSUM MATCH_MP_TAC \\
+       REPEAT(POP_ASSUM MP_TAC) \\
+       SIMP_TAC std_ss [IN_INTERVAL] \\
+       REAL_ARITH_TAC) \\
+   REWRITE_TAC [REAL_MUL_RNEG, REAL_SUB_RNEG,
+                REAL_ARITH “a - b + c = c - (b - a :real)”] \\
+   HO_MATCH_MP_TAC HAS_INTEGRAL_SUB THEN REWRITE_TAC[HAS_INTEGRAL_CONST]) THENL
+   [ (* goal 1 (of 2) *)
+     SUBGOAL_THEN
+      ``(integral(interval[x,y]) f + integral(interval[y,b]) f =
+         integral(interval[x,b]) f) /\
+       ((f:real->real) has_integral integral(interval[x,y]) f)
+        (interval[x,y])``
+      (fn th => METIS_TAC[th, REAL_ARITH ``(a + b = c:real) ==> (c - b = a:real)``]),
+     (* goal 2 (of 2) *)
+     SUBGOAL_THEN
+      ``(integral(interval[y,x]) f + integral(interval[x,b]) f =
+         integral(interval[y,b]) f) /\
+       ((f:real->real) has_integral integral(interval[y,x]) f)
+        (interval[y,x])``
+      (fn th => METIS_TAC[th,REAL_ARITH ``(a + b = c:real) ==> (c - b = a:real)``])
+   ] THEN
+ (* shared tactics, again *)
    (CONJ_TAC THENL
      [MATCH_MP_TAC INTEGRAL_COMBINE,
       MATCH_MP_TAC INTEGRABLE_INTEGRAL] THEN
@@ -5952,6 +6043,18 @@ Theorem INTEGRAL_HAS_VECTOR_DERIVATIVE:
 Proof
   REPEAT STRIP_TAC THEN
   MATCH_MP_TAC INTEGRAL_HAS_VECTOR_DERIVATIVE_POINTWISE THEN
+  ASM_MESON_TAC[INTEGRABLE_CONTINUOUS, CONTINUOUS_ON_EQ_CONTINUOUS_WITHIN]
+QED
+
+Theorem INTEGRAL_HAS_VECTOR_DERIVATIVE_NEG:
+   !f:real->real a b.
+     f continuous_on interval[a,b]
+     ==> !x. x IN interval[a,b]
+             ==> ((\u. integral (interval[u,b]) f) has_vector_derivative -f(x))
+                 (at x within interval[a,b])
+Proof
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC INTEGRAL_HAS_VECTOR_DERIVATIVE_NEG_POINTWISE THEN
   ASM_MESON_TAC[INTEGRABLE_CONTINUOUS, CONTINUOUS_ON_EQ_CONTINUOUS_WITHIN]
 QED
 
@@ -6760,6 +6863,35 @@ Theorem INTEGRABLE_RESTRICT_UNIV:
          f integrable_on s
 Proof
   REWRITE_TAC[integrable_on, HAS_INTEGRAL_RESTRICT_UNIV]
+QED
+
+(* NOTE: These are modern version of the above "RESTRICT_UNIV" theorems *)
+Theorem HAS_INTEGRAL_MUL_INDICATOR :
+    !f s l. ((\x. f x * indicator s x) has_integral l) UNIV <=>
+            (f has_integral l) s
+Proof
+    rpt GEN_TAC
+ >> ONCE_REWRITE_TAC [GSYM HAS_INTEGRAL_RESTRICT_UNIV]
+ >> simp []
+ >> MATCH_MP_TAC HAS_INTEGRAL_EQ_EQ >> rw [indicator]
+QED
+
+Theorem INTEGRAL_MUL_INDICATOR :
+    !f s. integral UNIV (\x. f x * indicator s x) = integral s f
+Proof
+    rpt GEN_TAC
+ >> ONCE_REWRITE_TAC [GSYM INTEGRAL_RESTRICT_UNIV]
+ >> simp []
+ >> MATCH_MP_TAC INTEGRAL_EQ >> rw [indicator]
+QED
+
+Theorem INTEGRABLE_MUL_INDICATOR :
+    !f s. (\x. f x * indicator s x) integrable_on UNIV <=> f integrable_on s
+Proof
+    rpt GEN_TAC
+ >> ONCE_REWRITE_TAC [GSYM INTEGRABLE_RESTRICT_UNIV]
+ >> simp []
+ >> MATCH_MP_TAC INTEGRABLE_EQ_EQ >> rw [indicator]
 QED
 
 Theorem HAS_INTEGRAL_RESTRICT_INTER:
@@ -10852,6 +10984,14 @@ Proof
   ASM_SIMP_TAC std_ss []
 QED
 
+Theorem ABSOLUTELY_INTEGRABLE_EQ_EQ:
+   !f:real->real g s.
+        (!x. x IN s ==> (f x = g x)) ==>
+        (f absolutely_integrable_on s <=> g absolutely_integrable_on s)
+Proof
+  METIS_TAC [ABSOLUTELY_INTEGRABLE_EQ]
+QED
+
 Theorem ABSOLUTELY_INTEGRABLE_BOUNDED_SETVARIATION:
    !f:real->real s.
         f absolutely_integrable_on s
@@ -11828,6 +11968,16 @@ Theorem ABSOLUTELY_INTEGRABLE_RESTRICT_UNIV:
 Proof
   SIMP_TAC std_ss [absolutely_integrable_on, INTEGRABLE_RESTRICT_UNIV,
               COND_RAND, ABS_0]
+QED
+
+Theorem ABSOLUTELY_INTEGRABLE_MUL_INDICATOR :
+    !f s. (\x. f x * indicator s x) absolutely_integrable_on UNIV <=>
+          f absolutely_integrable_on s
+Proof
+    rpt GEN_TAC
+ >> ONCE_REWRITE_TAC [GSYM ABSOLUTELY_INTEGRABLE_RESTRICT_UNIV]
+ >> simp []
+ >> MATCH_MP_TAC ABSOLUTELY_INTEGRABLE_EQ_EQ >> rw [indicator]
 QED
 
 Theorem ABSOLUTELY_INTEGRABLE_CONST:
