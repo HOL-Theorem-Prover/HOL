@@ -280,11 +280,22 @@ and qdecl =
 
 type struct_kind = {colon: int * constraint, sigexp: sigexp}
 
+type sigbind = {id: ident, bind: {eq: int, sigexp: sigexp} option}
+
 type valbind = {rec_: int option, pat: exp, eq: {eq: int, exp: exp} option}
 
 type arm = {bar: int option, pat: exp, arrow: int option, exp: exp}
 
 type fvalarm = {bar: int option, pat: exp, eq: int option, exp: exp}
+
+type structbind = {
+  id: ident, constraint: struct_kind option,
+  bind: {eq: int, strexp: strexp} option}
+
+type functorbind = {
+  id: ident, lparen: int option, funarg: funarg, rparen: int option,
+  constraint: struct_kind option,
+  bind: {eq: int, strexp: strexp} option}
 
 val mkIdent: ident -> exp
 
@@ -305,18 +316,26 @@ val idSpan: ident -> int * int
 val tyStart: ty -> int
 val tyStop: ty -> int
 val tySpan: ty -> int * int
+val tybindStop: tybind -> int
+val conbindStop: conbind -> int
+val datbindStop: datbind -> int
 val expStart: exp -> int
 val expStop: exp -> int
 val expSpan: exp -> int * int
 val exbindStop: exbind -> int
+val valbindStop: valbind -> int
+val mosmlPrimvalbindStop: mosml_primvalbind -> int
 val sigexpStart: sigexp -> int
 val sigexpStop: sigexp -> int
 val sigexpSpan: sigexp -> int * int
 val strexpSpan: strexp -> int * int
+val sigbindStop: sigbind -> int
+val structbindStop: structbind -> int
 val headerStop: header -> int
 val decStart: dec -> int
 val decStop: dec -> int
 val decSpan: dec -> int * int
+val functorbindStop: functorbind -> int
 
 val isOnlyComments: substring -> bool
 

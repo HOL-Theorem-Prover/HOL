@@ -192,9 +192,7 @@ and dec =
       id: ident, constraint: struct_kind option,
       bind: {eq: int, strexp: strexp} option} delimited}
   (** structure strid : sigexp = strexp [and strid : sigep = strexp ...] *)
-| DecSignature of {
-    signature_: int,
-    elems: {id: ident, bind: {eq: int, sigexp: sigexp} option} delimited}
+| DecSignature of {signature_: int, elems: sigbind delimited}
   (** signature sigid = sigexp [and ...] *)
 | DecInclude of {include_: int, sigexps: sigexp list}
   (** include sigid ... sigid *)
@@ -283,11 +281,22 @@ and qdecl =
 
 withtype struct_kind = {colon: int * constraint, sigexp: sigexp}
 
+and sigbind = {id: ident, bind: {eq: int, sigexp: sigexp} option}
+
 and valbind = {rec_: int option, pat: exp, eq: {eq: int, exp: exp} option}
 
 and arm = {bar: int option, pat: exp, arrow: int option, exp: exp}
 
 and fvalarm = {bar: int option, pat: exp, eq: int option, exp: exp}
+
+type structbind = {
+  id: ident, constraint: struct_kind option,
+  bind: {eq: int, strexp: strexp} option}
+
+type functorbind = {
+  id: ident, lparen: int option, funarg: funarg, rparen: int option,
+  constraint: struct_kind option,
+  bind: {eq: int, strexp: strexp} option}
 
 fun mkIdent s = Ident {op_ = NONE, id = s}
 
@@ -414,6 +423,17 @@ fun tyStop (TyVar id) = idStop id
 
 fun tySpan ty = (tyStart ty, tyStop ty)
 
+fun tybindStop ({bind = SOME {ty, ...}, ...}: tybind) = tyStop ty
+  | tybindStop {bind = NONE, tycon, ...} = idStop tycon
+
+fun conbindStop ({id, arg = NONE, ...}: conbind) = idStop id
+  | conbindStop {arg = SOME {ty, ...}, ...} = tyStop ty
+
+fun datbindStop ({eq = SOME eq, rhs = DatvalElems [], ...}: datbind) = eq + 1
+  | datbindStop {tycon, eq = NONE, rhs = DatvalElems [], ...} = idStop tycon
+  | datbindStop {rhs = DatvalElems args, ...} = conbindStop (List.last args)
+  | datbindStop {rhs = DatvalDatatype {id, ...}, ...} = idStop id
+
 fun expStart (Wild p) = p
   | expStart (IntegerConstant (p, _)) = p
   | expStart (WordConstant (p, _)) = p
@@ -499,6 +519,13 @@ fun exbindStop (ExnNew {arg = SOME {ty, ...}, ...}) = tyStop ty
   | exbindStop (ExnNew {arg = NONE, id, ...}) = idStop id
   | exbindStop (ExnReplicate {tgt, ...}) = idStop tgt
 
+fun valbindStop ({eq = SOME {exp, ...}, ...}: valbind) = expStop exp
+  | valbindStop {pat, eq = NONE, ...} = expStop pat
+
+fun mosmlPrimvalbindStop ({eq = SOME {str, ...}, ...}: mosml_primvalbind) = idStop str
+  | mosmlPrimvalbindStop {ty = SOME {ty, ...}, eq = NONE, ...} = tyStop ty
+  | mosmlPrimvalbindStop {id, ty = NONE, eq = NONE, ...} = idStop id
+
 fun sigexpStart (SigIdent (p, _)) = p
   | sigexpStart (Spec {sig_, ...}) = sig_
   | sigexpStart (WhereType {sigexp, ...}) = sigexpStart sigexp
@@ -516,6 +543,13 @@ fun strexpSpan (StrIdent id) = idSpan id
   | strexpSpan (FunAppExp {funid = (p, _), stop, ...}) = (p, stop)
   | strexpSpan (FunAppDec {funid = (p, _), stop, ...}) = (p, stop)
   | strexpSpan (StrLetInEnd {let_, stop, ...}) = (let_, stop)
+
+fun structbindStop ({bind = SOME {strexp, ...}, ...}: structbind) = #2 (strexpSpan strexp)
+  | structbindStop {constraint = SOME {sigexp, ...}, bind = NONE, ...} = sigexpStop sigexp
+  | structbindStop {id, constraint = NONE, bind = NONE} = idStop id
+
+fun sigbindStop ({bind = SOME {sigexp, ...}, ...}: sigbind) = sigexpStop sigexp
+  | sigbindStop {id, bind = NONE} = idStop id
 
 fun headerElemStop ({id, attrs = NONE}: header_elem) = idStop id
   | headerElemStop {attrs = SOME {stop, ...}, ...} = stop
@@ -582,6 +616,16 @@ fun decSpan (DecSemi p) = (p, p + 1)
 
 val decStart = #1 o decSpan
 val decStop = #2 o decSpan
+
+fun functorbindStop ({id, lparen, funarg, rparen, constraint, bind}: functorbind) =
+  case bind of SOME {strexp, ...} => #2 (strexpSpan strexp) | NONE =>
+  case constraint of SOME {sigexp, ...} => sigexpStop sigexp | NONE =>
+  case rparen of SOME tk => tk + 1 | NONE =>
+  case funarg of
+    ArgIdent {ty = SOME {sigexp, ...}, ...} => sigexpStop sigexp
+  | ArgIdent {strid, ty = NONE} => idStop strid
+  | ArgSpec (args as _::_) => decStop (List.last args)
+  | ArgSpec [] => case lparen of SOME tk => tk + 1 | NONE => idStop id
 
 fun isOnlyComments s = let
   val (base, start, len) = Substring.base s

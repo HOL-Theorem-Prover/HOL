@@ -278,14 +278,16 @@ fun parseSML file read parseError: scope -> result = let
           parseError (#1 tk, !pos) "expected close delimiter";
           unread tk; ({args = rev args, delims = rev delims, stop = #1 tk}, NONE, #1 tk))
 
-  fun parseDelimited args delims (f as {elem, delim}) =
+  fun parseDelimited args delims stop getStop (f as {elem, delim}) =
     case (elem (), token ()) of (e, tk) =>
       case delim tk of
-        SOME true => parseDelimited (e :: args) (SOME (#1 tk) :: delims) f
+        SOME true => parseDelimited (e :: args) (SOME (#1 tk) :: delims) (SOME (!pos)) getStop f
       | SOME false => (
         parseError (#1 tk, !pos) "unexpected delimiter";
-        parseDelimited (e :: args) (NONE :: delims) f)
-      | NONE => (unread tk; {args = rev (e :: args), delims = rev delims, stop = #1 tk})
+        parseDelimited (e :: args) (NONE :: delims) NONE getStop f)
+      | NONE => let
+        val stop = case stop of SOME stop => stop | _ => getStop e handle List.Empty => #1 tk
+        in unread tk; {args = rev (e :: args), delims = rev delims, stop = stop} end
 
   fun isKeyword kw = fn (s, IdentTk) => if ident s = kw then SOME true else NONE | _ => NONE
 
@@ -298,9 +300,9 @@ fun parseSML file read parseError: scope -> result = let
     in
       case tk of
         (start, IdentTk) =>
-          (case identKind start of
-              (id, Regular) => (start, id)
-            | (id, _) => if f id then (start, id) else fail ())
+        (case identKind start of
+          (id, Regular) => (start, id)
+        | (id, _) => if f id then (start, id) else fail ())
       | _ => fail ()
     end
   val parseIdentifier = parseIdentifier' (fn _ => false)
@@ -373,7 +375,7 @@ fun parseSML file read parseError: scope -> result = let
     fun rhs lhs = case token () of
       tk as (start, IdentTk) => (case identKind start of
         ("*", _) => if prec then (unread tk; lhs) else
-          rhs (TyTuple (parseDelimited [lhs] [SOME start]
+          rhs (TyTuple (parseDelimited [lhs] [SOME start] NONE tyStop
             {elem = fn () => parseTy true, delim = isKeyword "*"}))
       | ("->", _) => if prec then (unread tk; lhs) else
           rhs (TyArrow {from = lhs, arrow = start, to = parseTy false})
@@ -402,7 +404,8 @@ fun parseSML file read parseError: scope -> result = let
     tycon = parseIdentifier true,
     bind = Option.map (fn eq => {eq = eq, ty = parseTy ()}) (parseKeyword "=" NONE) }
 
-  fun parseTyBinds () = parseDelimited [] [] {elem = parseTyBind, delim = isKeyword "and"}
+  fun parseTyBinds () = parseDelimited [] [] NONE tybindStop
+    {elem = parseTyBind, delim = isKeyword "and"}
   fun mkDecType kw start = DecType {kw = (kw, start), tybind = parseTyBinds ()}
 
   fun updateScope (sc:scope): dec -> scope = let
@@ -641,7 +644,7 @@ fun parseSML file read parseError: scope -> result = let
       case parseExp1 true force of lhs =>
       case parseKeyword "|" NONE of
         NONE => lhs
-      | SOME bar => Or (parseDelimited [lhs] [SOME bar] {
+      | SOME bar => Or (parseDelimited [lhs] [SOME bar] NONE expStop {
         elem = fn () => parseExp1 true true,
         delim = isKeyword "|" })
 
@@ -869,7 +872,7 @@ fun parseSML file read parseError: scope -> result = let
       in parseFValBinds ({bar = bar, pat = pat, eq = eq, exp = parseExp sc false} :: acc) end
 
     fun parseDatBind () = (
-      parseDelimited [] [] {
+      parseDelimited [] [] NONE datbindStop {
         elem = fn () => let
           val tyvars = parseTyVars ()
           val tycon = parseIdentifier true
@@ -938,7 +941,7 @@ fun parseSML file read parseError: scope -> result = let
         ("val", _) => SOME (sc, DecVal {
         val_ = start,
         tyvars = parseTyVars (),
-        elems = parseDelimited [] [] {
+        elems = parseDelimited [] [] NONE valbindStop {
           elem = fn () => {
             rec_ = parseKeyword "rec" NONE,
             pat = parseExp sc true,
@@ -948,7 +951,7 @@ fun parseSML file read parseError: scope -> result = let
       | ("prim_val", _) => SOME (sc, DecMosmlPrimVal {
         prim_val_ = start,
         tyvars = parseTyVars (),
-        elems = parseDelimited [] [] {
+        elems = parseDelimited [] [] NONE mosmlPrimvalbindStop {
           elem = fn () => {
             op_ = parseKeyword "op" NONE,
             id = parseIdentifier true,
@@ -985,11 +988,11 @@ fun parseSML file read parseError: scope -> result = let
       | ("fun", _) => SOME (sc, DecFun {
         fun_ = start,
         tyvars = parseTyVars (),
-        fvalbind = parseDelimited [] []
+        fvalbind = parseDelimited [] [] NONE (expStop o #exp o List.last)
           {elem = fn () => parseFValBinds [], delim = isKeyword "and"} })
       | ("exception", _) => SOME (sc, DecException {
         exception_ = start,
-        elems = parseDelimited [] [] {
+        elems = parseDelimited [] [] NONE exbindStop {
           elem = fn () => let
             val op_ = parseKeyword "op" NONE
             val id = parseIdentifier true
@@ -1030,7 +1033,7 @@ fun parseSML file read parseError: scope -> result = let
         end
       | ("structure", _) => SOME (sc, DecStructure {
         structure_ = start,
-        elems = parseDelimited [] [] {
+        elems = parseDelimited [] [] NONE structbindStop {
           elem = fn () => {
             id = parseIdentifier true,
             constraint = parseStructKind sc,
@@ -1039,7 +1042,7 @@ fun parseSML file read parseError: scope -> result = let
           delim = isKeyword "and" } })
       | ("signature", _) => SOME (sc, DecSignature {
         signature_ = start,
-        elems = parseDelimited [] [] {
+        elems = parseDelimited [] [] NONE sigbindStop {
           elem = fn () => {
             id = parseIdentifier true,
             bind = Option.map (fn eq => {eq = eq, sigexp = parseSigExp sc})
@@ -1048,12 +1051,12 @@ fun parseSML file read parseError: scope -> result = let
       | ("sharing", _) => SOME (sc, Sharing {
         sharing_ = start,
         type_ = parseKeyword "type" NONE,
-        elems = parseDelimited [] [] {
+        elems = parseDelimited [] [] NONE idStop {
           elem = fn () => parseIdentifier true,
           delim = isKeyword "=" } })
       | ("functor", _) => SOME (sc, DecFunctor {
         functor_ = start,
-        elems = parseDelimited [] [] {
+        elems = parseDelimited [] [] NONE functorbindStop {
           elem = fn () => {
             id = parseIdentifier true,
             lparen = parseSymbol #"(" (SOME "expected '('"),
@@ -1184,7 +1187,7 @@ fun parseSML file read parseError: scope -> result = let
     fun rhs lhs =
       case parseKeyword "where" NONE of
         SOME where_ => let
-        val elems = parseDelimited [] [] {
+        val elems = parseDelimited [] [] NONE (tybindStop o #tybind) {
           elem = fn () => {
             type_ = parseKeyword "type" (SOME "expected 'type'"),
             tybind = parseTyBind () },
