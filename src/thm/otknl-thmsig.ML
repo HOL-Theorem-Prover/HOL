@@ -52,12 +52,6 @@ sig
   | compute_prf of (compute_args * thm list) * term
   | save_dep_prf of thm
 
-  withtype compute_args =
-    { cval_terms : (string * term) list,
-      cval_type  : hol_type,
-      num_type   : hol_type,
-      char_eqns  : (string * thm) list }
-
   val proof : thm -> proof
   val delete_proof : thm -> unit
   val mk_proof_thm : proof -> term list * term -> thm
