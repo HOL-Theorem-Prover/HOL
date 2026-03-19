@@ -1,7 +1,4 @@
-(*
-../../thm/mlton/thm.mlb
-*)
-../../../../HOL2/src/thm/mlton/thm.mlb
+../../thm/mlton/thm-stdknl.mlb
 
 ../../portableML/PIntMap.sig
 ../../portableML/PIntMap.sml
@@ -14,3 +11,13 @@ ProofTraceWalk.sig
 ProofTraceWalk.sml
 ProofTraceReplay.sig
 ProofTraceReplay.sml
+
+PFTWriter.sig
+PFTWriter.sml
+IntPairTable.sig
+IntPairTable.sml
+PFTEmit.sig
+PFTEmit.sml
+
+PFTReader.sig
+PFTReader.sml
