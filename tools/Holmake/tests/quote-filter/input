@@ -91,7 +91,7 @@ End
 
 val x = #(LINE) + 10;
 val #(LINE=11) y = #(LINE)
-val s = #(FILE) #(FILE=foo.sml)
+val s = #(FILE) #(FILE="foo.sml")
 val s' = #(FILE) (* #(FILE) *)
 
 Theorem thm[foo, simp , key = val1 val2]:

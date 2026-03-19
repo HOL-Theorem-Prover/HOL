@@ -495,11 +495,18 @@ fun parseSML file read parseError: scope -> result = let
               end)
           | "FILE" => (case parseKeyword "=" NONE of
               SOME eq_ => let
-              val file = parseString (SOME "expected a string")
-              val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
-              val _ = case file of (_, SOME n) =>
-                DArray.push (evts, FileEvent (start, n))
-              | _ => ()
+              val file = case token () of
+                (start, StringTk) => (start, SOME (true, ident start))
+              | (start, IdentTk) => (
+                parseError (start, !pos) "expected a string";
+                (start, SOME (false, ident start)))
+              | tk => (unread tk; parseError (#1 tk, !pos) "expected a string"; (#1 tk, NONE))
+              val (file, (right, stop)) = case file of
+                (start, NONE) => (NONE, (NONE, start))
+              | (start, SOME (s, file)) => (
+                DArray.push (evts, FileEvent (start,
+                  if s then decodeStr parseError file 1 (size file - 1) else file));
+                (SOME (start, file), parseStop (parseSymbol #")") 1 "expected ')'"))
               in HOLFilePragmaWith {
                 hash_ = start, left = startParen, file_ = kw,
                 eq_ = eq_, file = file, right = right, stop = stop }

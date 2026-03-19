@@ -145,7 +145,7 @@ datatype exp =
 | HOLFilePragma of {hash_: int, left: int, file_: int, right: int option, stop: int} (* #(FILE) *)
 | HOLFilePragmaWith of {
     hash_: int, left: int, file_: int, eq_: int,
-    file: int * string option, right: int option, stop: int} (* #(FILE=foo.sml) this is BS *)
+    file: (int * string) option, right: int option, stop: int} (* #(FILE="foo.sml") this is BS *)
 
 | ExpExpansion of {orig: exp, result: exp}
 | ExpEmpty of int
