@@ -131,14 +131,7 @@ datatype exp =
 | HOLQuote of {head: int * string, quote: qdecl list, end_tok: (int * string) option, stop: int}
 | HOLLinePragma of {
     hash_: int, left: int, line_: int, right: int option, stop: int} (* #(LINE) *)
-| HOLLinePragmaWith of {
-    hash_: int, left: int, line_: int, eq_: int,
-    line: int * string option, col: {comma_: int, col: int * string option} option,
-    right: int option, stop: int} (* #(LINE=3) this is BS *)
 | HOLFilePragma of {hash_: int, left: int, file_: int, right: int option, stop: int} (* #(FILE) *)
-| HOLFilePragmaWith of {
-    hash_: int, left: int, file_: int, eq_: int,
-    file: (int * string) option, right: int option, stop: int} (* #(FILE="foo.sml") this is BS *)
 
 | ExpExpansion of {orig: exp, result: exp}
 | ExpEmpty of int
@@ -205,6 +198,13 @@ and dec =
   (** functor id(funarg) [:> sigexp] = strexp [and ...] *)
 | DecExp of exp (** exp (only at top level) *)
 
+| HOLLinePragmaWith of {
+    hash_: int, left: int, line_: int, eq_: int,
+    line: int * string option, col: {comma_: int, col: int * string option} option,
+    right: int option, stop: int} (* #(LINE=3) this is BS *)
+| HOLFilePragmaWith of {
+    hash_: int, left: int, file_: int, eq_: int,
+    file: (int * string) option, right: int option, stop: int} (* #(FILE="foo.sml") this is BS *)
 | HOLTheory of {theory_: int, id: ident, attrs: kvals attrs, elems: header list}
   (** Theory foo[attrs] [elems ...] *)
 | HOLTheoryEnd of {theory_: int, stop: int, noSigDocs: bool}

@@ -232,10 +232,6 @@ fun expandExp true (e as Wild _) = e
     in ExpExpansion {orig = e, result = e'} end
   | expandExp _ (e as HOLFilePragma {hash_, ...}) =
     ExpExpansion {orig = e, result = mkString (hash_, #file (fileline hash_))}
-  | expandExp _ (e as HOLLinePragmaWith {hash_, ...}) =
-    ExpExpansion {orig = e, result = Unit {left = hash_, right = hash_}}
-  | expandExp _ (e as HOLFilePragmaWith {hash_, ...}) =
-    ExpExpansion {orig = e, result = Unit {left = hash_, right = hash_}}
   | expandExp _ (e as ExpEmpty p) = ExpExpansion {orig = e, result = Unit {left = p, right = p}}
   | expandExp _ (e as ExpBad {start = p, ...}) =
     ExpExpansion {orig = e, result = mkFail (p, "malformed")}
@@ -338,6 +334,8 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val dec' = valPat p (if top then mkIdent (p, "it") else Wild p) (expandExp false e)
     in DecExpansion {orig = dec, result = [dec']} end
 
+  | expandDec _ (dec as HOLLinePragmaWith _) = DecExpansion {orig = dec, result = []}
+  | expandDec _ (dec as HOLFilePragmaWith _) = DecExpansion {orig = dec, result = []}
   | expandDec _ (dec as HOLTheory {theory_, id, attrs, elems, ...}) = let
     val bare = ref false
     val _ = app (fn

@@ -186,9 +186,7 @@ and printExpCore (_:bool option * int) (Wild _) pr = token "_" pr
   | printExpCore _ (HOLFullQuote _)      _ = raise Fail "unexpanded HOL syntax"
   | printExpCore _ (HOLQuote _)          _ = raise Fail "unexpanded HOL syntax"
   | printExpCore _ (HOLLinePragma _)     _ = raise Fail "unexpanded HOL syntax"
-  | printExpCore _ (HOLLinePragmaWith _) _ = raise Fail "unexpanded HOL syntax"
   | printExpCore _ (HOLFilePragma _)     _ = raise Fail "unexpanded HOL syntax"
-  | printExpCore _ (HOLFilePragmaWith _) _ = raise Fail "unexpanded HOL syntax"
   | printExpCore _ (ExpEmpty _)          pr = token "(raise Fail \"empty\")" pr
   | printExpCore _ (ExpBad _)            pr = token "(raise Fail \"malformed expression\")" pr
   | printExpCore prec (ExpExpansion {orig, result}) pr =
@@ -284,19 +282,21 @@ and printDecCore (DecSemi _) pr = token ";" pr
       token ")" pr; printConstraint constraint pr;
       Option.app (fn {strexp, ...} => (token "=" pr; printStrExp strexp pr)) bind)
     in delimited (token "functor") args f (token "and") (K ()) pr end
-  | printDecCore (DecExp _)           _ = raise Fail "unexpanded top-level expression"
-  | printDecCore (HOLTheory _)        _ = raise Fail "unexpanded HOL syntax"
-  | printDecCore (HOLTheoryEnd _)     _ = raise Fail "unexpanded HOL syntax"
-  | printDecCore (HOLDefinition _)    _ = raise Fail "unexpanded HOL syntax"
-  | printDecCore (HOLDatatype _)      _ = raise Fail "unexpanded HOL syntax"
-  | printDecCore (HOLQuoteDecl _)     _ = raise Fail "unexpanded HOL syntax"
-  | printDecCore (HOLInductiveDecl _) _ = raise Fail "unexpanded HOL syntax"
-  | printDecCore (HOLType _)          _ = raise Fail "unexpanded HOL syntax"
-  | printDecCore (HOLSimpleThm _)     _ = raise Fail "unexpanded HOL syntax"
-  | printDecCore (HOLTheoremDecl _)   _ = raise Fail "unexpanded HOL syntax"
-  | printDecCore (HOLResume _)        _ = raise Fail "unexpanded HOL syntax"
-  | printDecCore (HOLFinalise _)      _ = raise Fail "unexpanded HOL syntax"
-  | printDecCore (DecBad _)           _ = raise Fail "unexpanded bad declaration"
+  | printDecCore (DecExp _)            _ = raise Fail "unexpanded top-level expression"
+  | printDecCore (HOLLinePragmaWith _) _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (HOLFilePragmaWith _) _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (HOLTheory _)         _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (HOLTheoryEnd _)      _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (HOLDefinition _)     _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (HOLDatatype _)       _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (HOLQuoteDecl _)      _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (HOLInductiveDecl _)  _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (HOLType _)           _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (HOLSimpleThm _)      _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (HOLTheoremDecl _)    _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (HOLResume _)         _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (HOLFinalise _)       _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (DecBad _)            _ = raise Fail "unexpanded bad declaration"
   | printDecCore (DecExpansion {orig, result}) pr = spanned (decSpan orig) (printDecs result) pr
 
   and printConstraint NONE _ = ()

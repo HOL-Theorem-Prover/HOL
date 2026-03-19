@@ -470,47 +470,22 @@ fun parseSML file read parseError: scope -> result = let
         val res = case token () of
           (kw, IdentTk) => (case ident kw of
             "LINE" => (case parseKeyword "=" NONE of
-              SOME eq_ => let
-              val line = parseInt (SOME "expected a number")
-              val col = Option.map
-                (fn comma_ => {comma_ = comma_, col = parseInt (SOME "expected a number")})
-                (parseSymbol #"," NONE)
-              val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
-              val line' = case line of (_, SOME n) => Int.fromString n | _ => NONE
-              val _ = case line' of SOME n => let
-                val col' = case col of SOME {col = (_, SOME n), ...} => Int.fromString n | _ => NONE
-                val e = case col' of
-                  SOME c => LineColEvent (start, n-1, c-1)
-                | NONE => LineEvent (start, n-1)
-                in DArray.push (evts, e) end
-              | _ => ()
-              in HOLLinePragmaWith {
-                hash_ = start, left = startParen, line_ = kw,
-                eq_ = eq_, line = line, col = col, right = right, stop = stop }
-              end
+              SOME eq_ => if force then (
+                unread (eq_, IdentTk);
+                parseError (eq_, eq_) "expected ')'";
+                ExpBad {start = start, stop = eq_}
+              ) else (pos := start; ExpEmpty start)
             | NONE => let
               val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
               in HOLLinePragma {
                 hash_ = start, left = startParen, line_ = kw, right = right, stop = stop}
               end)
           | "FILE" => (case parseKeyword "=" NONE of
-              SOME eq_ => let
-              val file = case token () of
-                (start, StringTk) => (start, SOME (true, ident start))
-              | (start, IdentTk) => (
-                parseError (start, !pos) "expected a string";
-                (start, SOME (false, ident start)))
-              | tk => (unread tk; parseError (#1 tk, !pos) "expected a string"; (#1 tk, NONE))
-              val (file, (right, stop)) = case file of
-                (start, NONE) => (NONE, (NONE, start))
-              | (start, SOME (s, file)) => (
-                DArray.push (evts, FileEvent (start,
-                  if s then decodeStr parseError file 1 (size file - 1) else file));
-                (SOME (start, file), parseStop (parseSymbol #")") 1 "expected ')'"))
-              in HOLFilePragmaWith {
-                hash_ = start, left = startParen, file_ = kw,
-                eq_ = eq_, file = file, right = right, stop = stop }
-              end
+              SOME eq_ => if force then (
+                unread (eq_, IdentTk);
+                parseError (eq_, eq_) "expected ')'";
+                ExpBad {start = start, stop = eq_}
+              ) else (pos := start; ExpEmpty start)
             | NONE => let
               val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
               in HOLFilePragma {
@@ -1078,6 +1053,51 @@ fun parseSML file read parseError: scope -> result = let
             bind = Option.map (fn eq => {eq = eq, strexp = parseStrExp sc})
               (parseKeyword "=" (SOME "expected '='")) },
           delim = isKeyword "and" } })
+      | ("#", _) => (case parseSymbol #"(" NONE of
+          SOME startParen => (case token () of
+            (kw, IdentTk) => (case ident kw of
+              "LINE" => (case parseKeyword "=" NONE of
+                NONE => (lookahead := []; pos := start; NONE)
+              | SOME eq_ => let
+                val line = parseInt (SOME "expected a number")
+                val col = Option.map
+                  (fn comma_ => {comma_ = comma_, col = parseInt (SOME "expected a number")})
+                  (parseSymbol #"," NONE)
+                val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
+                val line' = case line of (_, SOME n) => Int.fromString n | _ => NONE
+                val _ = case line' of SOME n => let
+                  val col' = case col of SOME {col = (_, SOME n), ...} => Int.fromString n | _ => NONE
+                  val e = case col' of
+                    SOME c => LineColEvent (start, n-1, c-1)
+                  | NONE => LineEvent (start, n-1)
+                  in DArray.push (evts, e) end
+                | _ => ()
+                in SOME (sc, HOLLinePragmaWith {
+                  hash_ = start, left = startParen, line_ = kw,
+                  eq_ = eq_, line = line, col = col, right = right, stop = stop })
+                end)
+            | "FILE" => (case parseKeyword "=" NONE of
+                NONE => (lookahead := []; pos := start; NONE)
+              | SOME eq_ => let
+                val file = case token () of
+                  (start, StringTk) => (start, SOME (true, ident start))
+                | (start, IdentTk) => (
+                  parseError (start, !pos) "expected a string";
+                  (start, SOME (false, ident start)))
+                | tk => (unread tk; parseError (#1 tk, !pos) "expected a string"; (#1 tk, NONE))
+                val (file, (right, stop)) = case file of
+                  (start, NONE) => (NONE, (NONE, start))
+                | (start, SOME (s, file)) => (
+                  DArray.push (evts, FileEvent (start,
+                    if s then decodeStr parseError file 1 (size file - 1) else file));
+                  (SOME (start, file), parseStop (parseSymbol #")") 1 "expected ')'"))
+                in SOME (sc, HOLFilePragmaWith {
+                  hash_ = start, left = startParen, file_ = kw,
+                  eq_ = eq_, file = file, right = right, stop = stop })
+                end)
+            | _ => (pos := start; NONE))
+          | _ => (pos := start; NONE))
+        | NONE => (pos := start; NONE))
       | ("Definition", HolKeyword) => SOME (sc, let
         val id = parseIdentifier true
         val attrs = parseAttrs parseKVals
@@ -1158,17 +1178,19 @@ fun parseSML file read parseError: scope -> result = let
       case dec of SOME dec => SOME dec | NONE => (
         case parseExp' sc false false of
           ExpEmpty _ => (case token () of
-              tk as (start, IdentTk) => let
-                val s = ident start
-                in if s = "in" orelse s = "end" then (unread tk; NONE)
-                   else (
-                     parseError (start, !pos) "bad declaration";
-                     SOME (sc, DecBad {start = start, stop = !pos})) end
-            | tk as (_, Symbol #")") => (unread tk; NONE)
-            | tk as (_, EOF) => (unread tk; NONE)
-            | (start, _) => (
+            tk as (start, IdentTk) => let
+            val s = ident start
+            in
+              if s = "in" orelse s = "end" then (unread tk; NONE)
+              else (
                 parseError (start, !pos) "bad declaration";
-                SOME (sc, DecBad {start = start, stop = !pos})))
+                SOME (sc, DecBad {start = start, stop = !pos}))
+            end
+          | tk as (_, Symbol #")") => (unread tk; NONE)
+          | tk as (_, EOF) => (unread tk; NONE)
+          | (start, _) => (
+            parseError (start, !pos) "bad declaration";
+            SOME (sc, DecBad {start = start, stop = !pos})))
         | e => SOME (sc, DecExp e))
     end
 

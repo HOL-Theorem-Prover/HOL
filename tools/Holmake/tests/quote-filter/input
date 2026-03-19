@@ -90,7 +90,7 @@ Quote bar_x:
 End
 
 val x = #(LINE) + 10;
-val #(LINE=11) y = #(LINE)
+#(LINE=11) val y = #(LINE)
 val s = #(FILE) #(FILE="foo.sml")
 val s' = #(FILE) (* #(FILE) *)
 
