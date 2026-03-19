@@ -11,13 +11,3 @@ ProofTraceWalk.sig
 ProofTraceWalk.sml
 ProofTraceReplay.sig
 ProofTraceReplay.sml
-
-PFTWriter.sig
-PFTWriter.sml
-IntPairTable.sig
-IntPairTable.sml
-PFTEmit.sig
-PFTEmit.sml
-
-PFTReader.sig
-PFTReader.sml
