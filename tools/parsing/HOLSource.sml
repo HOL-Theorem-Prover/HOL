@@ -24,7 +24,7 @@ structure ToSML = struct
     val pr' = HOLSourcePrinter.mkPrinter (#line o fileline) pr
     fun push () =
       case parseDec () of
-        NONE => true
+        NONE => (#str pr "\n"; true)
       | SOME dec => case expandDec dec of
           HOLSourceAST.DecExpansion {result = [], ...} => false
         | dec => (
