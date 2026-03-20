@@ -17,7 +17,7 @@ fun lnumdie linenum extra exn =
 
 val outputPrompt = ref "> "
 
-val args = {quietOpen = true, print = print}
+val args = {quietOpen = true, print = fn s => TextIO.output(TextIO.stdErr, s)}
 val quote = HOLSource.fromString args
 val default_linewidth = 77
 
@@ -119,7 +119,7 @@ fun remove_multi_goalproved s =
     fun recurse ss =
       let
         val ss' = Substring.slice(ss, 1, NONE)
-        val (l,r) = Substring.position "\n\nGoal proved." ss'
+        val (_,r) = Substring.position "\n\nGoal proved." ss'
       in
         if Substring.size r <> 0 then
           case recurse r of NONE => SOME r | x => x
@@ -219,8 +219,8 @@ fun addIndent ws = String.translate(fn #"\n" => "\n"^ws | c => str c)
 type 'a refstack = 'a list ref
 fun rsPushValue a (r as ref v) = r := a::v
 fun rsValue (ref v) = hd v
-fun rsPop (r as ref [_]) = ()
-  | rsPop (r as ref (x::xs)) = r := xs
+fun rsPop (ref [_]) = ()
+  | rsPop (r as ref (_::xs)) = r := xs
   | rsPop (ref []) = raise Fail "rsPop: can't happen"
 fun newRS v = ref [v]
 
@@ -311,7 +311,7 @@ fun strip_for_thm s =
     remove_colonthm s0
   end
 
-fun tailmap f [] = []
+fun tailmap _ [] = []
   | tailmap f (h::t) = h :: map f t
 
 fun poss_space_extract n s =
@@ -324,7 +324,7 @@ fun poss_space_extract n s =
 
 fun strcat s1 s2 = s1 ^ s2
 
-fun dropWhile0 P a [] = (List.rev a,[])
+fun dropWhile0 _ a [] = (List.rev a,[])
   | dropWhile0 P a (l as h::t) = if P h then dropWhile0 P (h::a) t
                                  else (List.rev a, l)
 fun dropWhile P l = dropWhile0 P [] l

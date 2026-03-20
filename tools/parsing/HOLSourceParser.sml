@@ -1095,9 +1095,9 @@ fun parseSML file read parseError: scope -> result = let
                   hash_ = start, left = startParen, file_ = kw,
                   eq_ = eq_, file = file, right = right, stop = stop })
                 end)
-            | _ => (pos := start; NONE))
-          | _ => (pos := start; NONE))
-        | NONE => (pos := start; NONE))
+            | _ => (lookahead := []; pos := start; NONE))
+          | _ => (lookahead := []; pos := start; NONE))
+        | NONE => (lookahead := []; pos := start; NONE))
       | ("Definition", HolKeyword) => SOME (sc, let
         val id = parseIdentifier true
         val attrs = parseAttrs parseKVals

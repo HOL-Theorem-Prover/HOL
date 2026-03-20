@@ -80,7 +80,7 @@ fun file_to_parser ({quietOpen, print}:args) fname = let
 
 fun string_to_parser ({quietOpen, print}:args) s = let
   val sr = ref s
-  fun str_read _ = (!sr before sr := "")
+  fun str_read _ = !sr before sr := ""
   val {fileline, read} = ToSML.mkPullTranslator
     {read = str_read, filename = "",
      parseError = HOLSourceParser.filelineParseError print,
