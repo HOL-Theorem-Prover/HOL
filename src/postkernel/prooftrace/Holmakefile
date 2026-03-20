@@ -1,0 +1,2 @@
+replay-test: replay-test.mlb replay-test.sml
+	mlton -default-type intinf $<
