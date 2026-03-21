@@ -1247,26 +1247,28 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val exists_P_tm = tm concl_b
 
         (* Get bound var of predicate *)
-        val (bv_ptr, body_ptr) = case shTerm heap pred_ptr of
-            Abs (v, body) => (v, body) | _ => raise Fail "CHOOSE: not abs"
+        val bv_ptr = case shTerm heap pred_ptr of
+            Abs (v, _) => v | _ => raise Fail "CHOOSE: not abs"
         val bv_tm = tm bv_ptr
         val v_ty_ptr = heap_var_type bv_ptr
         val v_ty = ty v_ty_ptr
 
-        (* cmb = pred(v), beta-reduce to Pv *)
+        (* cmb = pred(v), the beta-redex form of P(v).
+           beta_v: ⊢ cmb = Pv (where Pv is the beta-normal form).
+           Use PROVE_HYP to replace the Pv hypothesis in c_th with cmb,
+           avoiding the need to construct Pv as a PFT term (which would
+           require substitution into a de Bruijn body). *)
         val cmb = emit_comb pred_tm v_tm
         val beta_v = do_beta_reduce pred_tm bv_tm v_tm
         val assume_cmb = candle_th (fn out => fn iid =>
           PFTWriter.Candle.assume out iid cmb) [cmb] []
+        (* th3: {cmb} ⊢ Pv *)
         val th3 = candle_th (fn out => fn iid =>
           PFTWriter.Candle.eq_mp out iid beta_v assume_cmb) [] [beta_v, assume_cmb]
-
-        (* Construct Pv as a PFT term *)
-        val Pv_tm = tm body_ptr  (* body of pred with bv = v *)
-
-        val disch_Pv = do_DISCH Pv_tm q_tm c_th
-        val mp1 = do_MP disch_Pv Pv_tm q_tm th3
-        val disch_cmb = do_DISCH cmb q_tm mp1
+        (* PROVE_HYP c_th th3: B ∪ {cmb} ⊢ q  (replaces Pv hyp with cmb) *)
+        val c_with_cmb = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.prove_hyp out iid c_th th3) [] [c_th, th3]
+        val disch_cmb = do_DISCH cmb q_tm c_with_cmb
         val imp_cmb_q = emit_comb (emit_comb (imp_const()) cmb) q_tm
         val gen_v = do_GEN v_tm v_ty imp_cmb_q disch_cmb
 
@@ -1905,8 +1907,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
          | Def_spec_prf (a, b) => let
              val a = th a
              val ids = list heap get_const_id b
-             val names = List.map (fn (_,nm) => nm) ids
-             val () = List.app mark_const names
+             val names = List.map (fn (Thy,nm) => tr_name (Thy ^ "$" ^ nm)) ids
+             val () = List.app (fn (_,nm) => mark_const nm) ids
            in emit (mk_entry (fn out =>
                 PFTWriter.HOL4.def_spec out id a names)) end
          | Def_tyop_prf (a, b, c) => let
@@ -1943,12 +1945,14 @@ fun emit_theory {trace, output, binary, ruleset} = let
                 PFTWriter.HOL4.genl out id b tms)) end
          | GEN_ABS_prf (a, b, c) => let
              val opt = option heap tm a
-             val c_id = case opt of SOME c => c
-               | NONE => raise Fail "GEN_ABS: missing constant"
              val tms = list heap tm b
              val c = th c
-           in emit (mk_entry (fn out =>
-                PFTWriter.HOL4.gen_abs out id c c_id tms)) end
+           in case opt of
+                SOME c_id => emit (mk_entry (fn out =>
+                  PFTWriter.HOL4.gen_abs out id c c_id tms))
+              | NONE => emit (mk_entry (fn out =>
+                  PFTWriter.HOL4.absl out id c tms))
+           end
          | GEN_prf (a, b) => let val a = tm a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.gen out id a b)) end
