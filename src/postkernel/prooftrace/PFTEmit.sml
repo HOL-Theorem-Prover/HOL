@@ -249,6 +249,42 @@ fun emit_theory {trace, output, binary, ruleset} = let
   val comb_ht = IntPairTable.create 65536
   val abs_ht  = IntPairTable.create 4096
 
+  (* Reverse lookup: PFT term ID → subterm IDs.
+     Populated by emit_comb/emit_abs. Enables Clos-safe destructuring
+     of PFT terms by ID, without traversing the heap.
+     Two parallel arrays (rator/var and rand/body), grown as needed.
+     Entries for non-COMB/ABS terms are (~1, ~1). *)
+  val tm_part1 = ref (Array.array(65536, ~1))  (* rator or var *)
+  val tm_part2 = ref (Array.array(65536, ~1))  (* rand or body *)
+
+  fun tm_parts_ensure id = let
+    val a1 = !tm_part1
+    val len = Array.length a1
+  in if id < len then ()
+     else let
+       val newlen = Int.max(id + 1, len * 2)
+       val b1 = Array.array(newlen, ~1)
+       val b2 = Array.array(newlen, ~1)
+       val () = Array.copy{src = a1, dst = b1, di = 0}
+       val () = Array.copy{src = !tm_part2, dst = b2, di = 0}
+     in tm_part1 := b1; tm_part2 := b2 end
+  end
+
+  fun tm_parts_set id (x, y) =
+    (tm_parts_ensure id;
+     Array.update(!tm_part1, id, x);
+     Array.update(!tm_part2, id, y))
+
+  fun pft_dest_comb id =
+    let val f = Array.sub(!tm_part1, id)
+        val x = Array.sub(!tm_part2, id)
+    in if f >= 0 then (f, x)
+       else raise Fail ("pft_dest_comb: term " ^ Int.toString id ^
+                         " is not a COMB/ABS")
+    end
+
+  fun pft_dest_abs id = pft_dest_comb id  (* same layout: (var, body) *)
+
   fun var_lookup key = peek(!var_ht, key)
   fun var_insert key v = var_ht := insert(!var_ht, key, v)
   fun const_lookup key = peek(!const_ht, key)
@@ -460,6 +496,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         emit_tm_def B {write = fn out => PFTWriter.abs out B B body_id,
               ref_ty = [], ref_tm = [B, body_id],
               ref_th = [], ref_ci = []};
+        tm_parts_set B (B, body_id);
         B
       end
     | Clos (sbp, tmp) => let
@@ -755,10 +792,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
     | CONJUNCT1_prf a => let
         val a_th = th a
-        val concl = heap_concl a
-        val (and_l, r_ptr) = heap_dest_comb concl  (* (/\ l) r *)
-        val (_, l_ptr) = heap_dest_comb and_l       (* /\ , l *)
-        val l_tm = tm l_ptr val r_tm = tm r_ptr
+        val concl_id = tm (heap_concl a)
+        val (and_l_id, r_tm) = pft_dest_comb concl_id
+        val (_, l_tm) = pft_dest_comb and_l_id
         val pth = candle_th (fn out => fn iid =>
           PFTWriter.Candle.inst out iid (candle_load_pth "candle$CONJUNCT1")
             [(pvar_p(), l_tm), (pvar_q(), r_tm)]) [l_tm, r_tm] []
@@ -781,10 +817,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | MP_prf (a, b) => let
         (* a: A ⊢ p ==> q,  b: B ⊢ p.  Result: A ∪ B ⊢ q *)
         val a_th = th a val b_th = th b
-        val concl_a = heap_concl a
-        val (imp_p, q_ptr) = heap_dest_comb concl_a  (* (==> p) q *)
-        val (_, p_ptr) = heap_dest_comb imp_p         (* ==> , p *)
-        val p_tm = tm p_ptr val q_tm = tm q_ptr
+        val concl_a_id = tm (heap_concl a)
+        val (imp_p_id, q_tm) = pft_dest_comb concl_a_id
+        val (_, p_tm) = pft_dest_comb imp_p_id
         (* MP_rth: {p} ⊢ (p ==> q) = q *)
         val rth = candle_th (fn out => fn iid =>
           PFTWriter.Candle.inst out iid (candle_load_pth "candle$MP")
@@ -801,10 +836,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
     | EQ_IMP_RULE1_prf a => let
         val a_th = th a
-        val concl = heap_concl a
-        val (eq_l, q_ptr) = heap_dest_comb concl  (* (= p) q *)
-        val (_, p_ptr) = heap_dest_comb eq_l
-        val p_tm = tm p_ptr val q_tm = tm q_ptr
+        val concl_id = tm (heap_concl a)
+        val (eq_l_id, q_tm) = pft_dest_comb concl_id
+        val (_, p_tm) = pft_dest_comb eq_l_id
         val pth = candle_th (fn out => fn iid =>
           PFTWriter.Candle.inst out iid (candle_load_pth "candle$EQ_IMP_RULE1")
             [(pvar_p(), p_tm), (pvar_q(), q_tm)]) [p_tm, q_tm] []
@@ -813,10 +847,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
     | EQ_IMP_RULE2_prf a => let
         val a_th = th a
-        val concl = heap_concl a
-        val (eq_l, q_ptr) = heap_dest_comb concl
-        val (_, p_ptr) = heap_dest_comb eq_l
-        val p_tm = tm p_ptr val q_tm = tm q_ptr
+        val concl_id = tm (heap_concl a)
+        val (eq_l_id, q_tm) = pft_dest_comb concl_id
+        val (_, p_tm) = pft_dest_comb eq_l_id
         val pth = candle_th (fn out => fn iid =>
           PFTWriter.Candle.inst out iid (candle_load_pth "candle$EQ_IMP_RULE2")
             [(pvar_p(), p_tm), (pvar_q(), q_tm)]) [p_tm, q_tm] []
@@ -825,9 +858,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
     | NOT_ELIM_prf a => let
         val a_th = th a
-        val concl = heap_concl a  (* ~p = (~ p) *)
-        val (_, p_ptr) = heap_dest_comb concl
-        val p_tm = tm p_ptr
+        val concl_id = tm (heap_concl a)
+        val (_, p_tm) = pft_dest_comb concl_id
         val pth = candle_th (fn out => fn iid =>
           PFTWriter.Candle.inst out iid (candle_load_pth "candle$NOT_ELIM")
             [(pvar_p(), p_tm)]) [p_tm] []
@@ -837,10 +869,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | NOT_INTRO_prf a => let
         val a_th = th a
         (* conclusion is p ==> F, extract p *)
-        val concl = heap_concl a
-        val (imp_p, _) = heap_dest_comb concl  (* (==> p) F *)
-        val (_, p_ptr) = heap_dest_comb imp_p
-        val p_tm = tm p_ptr
+        val concl_id = tm (heap_concl a)
+        val (imp_p_id, _) = pft_dest_comb concl_id
+        val (_, p_tm) = pft_dest_comb imp_p_id
         val pth = candle_th (fn out => fn iid =>
           PFTWriter.Candle.inst out iid (candle_load_pth "candle$NOT_INTRO")
             [(pvar_p(), p_tm)]) [p_tm] []
@@ -1173,10 +1204,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
            DISJ_CASES_pth: {p ∨ q, p ==> r, q ==> r} ⊢ r.
            DISCH p from b, DISCH q from c, then PROVE_HYP. *)
         val a_th = th a val b_th = th b val c_th = th c
-        val concl_a = heap_concl a
-        val (or_p, q_ptr) = heap_dest_comb concl_a
-        val (_, p_ptr) = heap_dest_comb or_p
-        val p_tm = tm p_ptr val q_tm = tm q_ptr
+        val concl_a_id = tm (heap_concl a)
+        val (or_p_id, q_tm) = pft_dest_comb concl_a_id
+        val (_, p_tm) = pft_dest_comb or_p_id
         val r_tm = tm (heap_concl b)
         val pth = candle_th (fn out => fn iid =>
           PFTWriter.Candle.inst out iid (candle_load_pth "candle$DISJ_CASES")
@@ -1901,7 +1931,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | NONE => let val id = alloc_tm ()
       in emit_tm_def id {write = fn out => PFTWriter.abs out id var_id body_id,
                ref_ty = [], ref_tm = [var_id, body_id], ref_th = [], ref_ci = []};
-         IntPairTable.insert abs_ht (var_id, body_id) id; id
+         IntPairTable.insert abs_ht (var_id, body_id) id;
+         tm_parts_set id (var_id, body_id); id
       end
 
   and emit_comb rator_id rand_id =
@@ -1910,7 +1941,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | NONE => let val id = alloc_tm ()
       in emit_tm_def id {write = fn out => PFTWriter.comb out id rator_id rand_id,
                ref_ty = [], ref_tm = [rator_id, rand_id], ref_th = [], ref_ci = []};
-         IntPairTable.insert comb_ht (rator_id, rand_id) id; id
+         IntPairTable.insert comb_ht (rator_id, rand_id) id;
+         tm_parts_set id (rator_id, rand_id); id
       end
 
   (* ======================================================================= *)
