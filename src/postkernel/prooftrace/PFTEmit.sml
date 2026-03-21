@@ -1693,9 +1693,47 @@ fun emit_theory {trace, output, binary, ruleset} = let
       in loop rev_vars c_th; () end
 
     (* === Definition commands === *)
-    | Def_const_prf (a, b) => raise Fail "emit_thm_candle: Def_const not yet implemented"
-    | Def_const_list_prf (a, b) => raise Fail "emit_thm_candle: Def_const_list not yet implemented"
-    | Def_spec_prf (a, b) => raise Fail "emit_thm_candle: Def_spec not yet implemented"
+    | Def_const_prf (a, b) => let
+        (* a: rhs term, b: const ptr. Synthesize ASSUME(v = rhs) then
+           new_specification. Same as emit_def_const but with Candle command. *)
+        val rhs_id = emit_term a
+        val (Thy, Name) = get_const_id b
+        val ty_ptr = case shTerm heap b of
+            Const (_, tp) => tp
+          | _ => raise Fail "Def_const: expected Const"
+        val rhs_ty_id = emit_type ty_ptr
+        val bool_ty_c = emit_tyop "bool" []
+        val fun_ty1 = emit_tyop "fun" [rhs_ty_id, bool_ty_c]
+        val eq_ty = emit_tyop "fun" [rhs_ty_id, fun_ty1]
+        val cname = tr_name (thyname ^ "$" ^ Name)
+        val var_id = emit_var cname rhs_ty_id
+        val eq_id = emit_const "=" eq_ty
+        val eq_var = emit_comb eq_id var_id
+        val eq_tm = emit_comb eq_var rhs_id
+        val assume_id = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.assume out iid eq_tm) [eq_tm] []
+        val () = mark_const Name
+      in emit_final (fn out =>
+           PFTWriter.Candle.new_specification out result_id assume_id
+             [cname]) end
+
+    | Def_const_list_prf (a, b) => let
+        (* a: input theorem (with hypotheses v1=t1,...,vn=tn)
+           b: list of constant ptrs giving the names.
+           Map directly to new_specification. *)
+        val a_th = th a
+        val ids = list heap get_const_id b
+        val names = List.map (fn (Thy,nm) => tr_name (Thy ^ "$" ^ nm)) ids
+        val () = List.app (fn (_,nm) => mark_const nm) ids
+      in emit_final (fn out =>
+           PFTWriter.Candle.new_specification out result_id a_th names) end
+
+    | Def_spec_prf (a, b) =>
+        (* Input is ⊢ ∃v1...vn. P (existential form).
+           Candle's new_specification needs hypothesis form.
+           Conversion requires existential elimination via @.
+           Deferred — needs EXISTS_THM from HOL4 trace. *)
+        raise Fail "emit_thm_candle: Def_spec not yet implemented"
     | Def_tyop_prf (a, b, c) => raise Fail "emit_thm_candle: Def_tyop not yet implemented"
     | compute_prf (a, b) => raise Fail "emit_thm_candle: compute not yet implemented"
 
