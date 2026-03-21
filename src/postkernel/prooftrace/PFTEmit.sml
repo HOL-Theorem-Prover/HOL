@@ -2,6 +2,8 @@ structure PFTEmit :> PFTEmit = struct
 
 open Lib Redblackmap ProofTraceParser
 
+datatype ruleset = HOL4 | Candle
+
 (* ========================================================================= *)
 (* Utilities                                                                 *)
 (* ========================================================================= *)
@@ -16,6 +18,27 @@ end
 
 fun disk_save_name thy (Thm.SavedAnon i) = thy ^ "#" ^ Int.toString i
   | disk_save_name thy (Thm.SavedName s) = thy ^ "$" ^ s
+
+(* ========================================================================= *)
+(* Candle name translation                                                   *)
+(* ========================================================================= *)
+
+(* Map HOL4 qualified names to Candle names for core types/constants.
+   Applied when ruleset = Candle; identity for HOL4. *)
+local
+  val candle_name_map = [
+    ("min$bool", "bool"), ("min$fun", "fun"),
+    ("min$=", "="), ("min$==>", "==>"), ("min$@", "@"),
+    ("bool$T", "T"), ("bool$F", "F"),
+    ("bool$/\\", "/\\"), ("bool$\\/", "\\/"),
+    ("bool$~", "~"), ("bool$!", "!"), ("bool$?", "?")
+  ]
+in
+  fun candle_translate_name s =
+    case List.find (fn (k,_) => k = s) candle_name_map of
+      SOME (_, v) => v
+    | NONE => s
+end
 
 (* ========================================================================= *)
 (* Command buffer                                                            *)
@@ -136,8 +159,10 @@ in write_cmds 0 end
 (* emit_theory                                                               *)
 (* ========================================================================= *)
 
-fun emit_theory {trace, output, binary} = let
+fun emit_theory {trace, output, binary, ruleset} = let
   val thyname = thyname_of_path trace
+  val is_candle = case ruleset of Candle => true | HOL4 => false
+  val tr_name = if is_candle then candle_translate_name else (fn s => s)
   val (root_ptr, heap) = parse trace
   val {all_thms, anon_thms, constants, types, ...} = shRoot heap root_ptr
 
@@ -269,6 +294,23 @@ fun emit_theory {trace, output, binary} = let
     ref_ty = [], ref_tm = [], ref_th = [], ref_ci = []}
 
   (* ======================================================================= *)
+  (* Candle pro-forma theorem IDs (lazy-loaded on first use)                 *)
+  (* ======================================================================= *)
+
+  val candle_pths : (string, int) dict ref = ref (mkDict String.compare)
+
+  fun candle_load_pth name =
+    case peek(!candle_pths, name) of
+      SOME id => id
+    | NONE => let
+        val id = alloc_th ()
+      in emit_th_def id {write = fn out => PFTWriter.load out id name,
+           ref_ty = [], ref_tm = [], ref_th = [], ref_ci = []};
+         candle_pths := insert(!candle_pths, name, id);
+         id
+      end
+
+  (* ======================================================================= *)
   (* Type emission                                                           *)
   (* ======================================================================= *)
 
@@ -299,7 +341,7 @@ fun emit_theory {trace, output, binary} = let
         val (Thy, Tyop) = ident heap idp
         val () = check_def ty_defs Thy Tyop
         val arg_ids = list heap emit_type args_ptr
-        val name = Thy ^ "$" ^ Tyop
+        val name = tr_name (Thy ^ "$" ^ Tyop)
         val key = TyOpK(name, arg_ids)
       in case ty_lookup key of
            SOME id => (ty_memo_set k id; id)
@@ -368,7 +410,7 @@ fun emit_theory {trace, output, binary} = let
         val (Thy, Name) = ident heap idp
         val () = check_def tm_defs Thy Name
         val ty_id = emit_type typ
-        val qname = Thy ^ "$" ^ Name
+        val qname = tr_name (Thy ^ "$" ^ Name)
         val () = if Thy = thyname andalso not (is_const_done Name)
                  then (mark_const Name;
                        emit {write = fn out =>
@@ -448,6 +490,93 @@ fun emit_theory {trace, output, binary} = let
     else ()
 
   (* ======================================================================= *)
+  (* Candle theorem dispatch                                                 *)
+  (* Emits Candle-ruleset commands for each HOL4 proof constructor.          *)
+  (* For derived rules, uses pro-formas from the preamble via                *)
+  (* INST + PROVE_HYP.                                                      *)
+  (* ======================================================================= *)
+
+  and emit_thm_candle result_id concl_ptr proof
+        (tm : Term.term ptr -> int)
+        (th : Thm.thm ptr -> int)
+        (ty : Type.hol_type ptr -> int)
+        mk_entry emit = let
+    (* Emit an intermediate Candle theorem command.
+       wfn: pft_out -> int{id} -> unit. Allocates fresh ID, returns it. *)
+    fun candle_th wfn ref_tms ref_ths = let
+      val iid = alloc_th ()
+      val entry = {write = fn out => wfn out iid,
+        ref_ty = [], ref_tm = ref_tms, ref_th = ref_ths, ref_ci = []}
+    in emit_th_def iid entry; emit entry; iid end
+    (* Emit the final result using the pre-allocated result_id *)
+    fun emit_final wfn = emit (mk_entry wfn)
+  in
+    case proof of
+    (* === Direct mappings (1:1 to Candle core rules) === *)
+      REFL_prf a => let val a = tm a
+        in emit_final (fn out => PFTWriter.Candle.refl out result_id a) end
+    | TRANS_prf (a, b) => let val a = th a val b = th b
+        in emit_final (fn out =>
+             PFTWriter.Candle.trans out result_id a b) end
+    | MK_COMB_prf (a, b) => let val a = th a val b = th b
+        in emit_final (fn out =>
+             PFTWriter.Candle.mk_comb out result_id a b) end
+    | ABS_prf (a, b) => let val a = tm a val b = th b
+        in emit_final (fn out =>
+             PFTWriter.Candle.abs out result_id a b) end
+    | EQ_MP_prf (a, b) => let val a = th a val b = th b
+        in emit_final (fn out =>
+             PFTWriter.Candle.eq_mp out result_id a b) end
+    | ASSUME_prf a => let val a = tm a
+        in emit_final (fn out =>
+             PFTWriter.Candle.assume out result_id a) end
+    | SYM_prf a => let val a = th a
+        in emit_final (fn out =>
+             PFTWriter.Candle.sym out result_id a) end
+    | INST_prf (a, b) => let
+        val pairs = list heap (tuple2 heap (tm, tm)) a
+        val b = th b
+      in emit_final (fn out =>
+           PFTWriter.Candle.inst out result_id b pairs) end
+    | INST_TYPE_prf (a, b) => let
+        val pairs = list heap (tuple2 heap (ty, ty)) a
+        val b = th b
+      in emit_final (fn out =>
+           PFTWriter.Candle.inst_type out result_id b pairs) end
+    | deductAntisym_prf (a, b) => let val a = th a val b = th b
+        in emit_final (fn out =>
+             PFTWriter.Candle.deduct_antisym_rule out result_id a b) end
+    | Axiom_prf => let
+        val c = tm concl_ptr
+        val () = axiom_names := insert(!axiom_names, result_id, NONE)
+      in emit_final (fn out =>
+           PFTWriter.axiom out result_id c
+             (find(!axiom_names, result_id))) end
+    | Disk_prf (dep_thy, b) => let
+        val dep_id = thmId heap b
+        val save_name = disk_save_name dep_thy dep_id
+      in emit_final (fn out =>
+           PFTWriter.load out result_id save_name) end
+
+    (* === Simple compositions === *)
+    | AP_TERM_prf (a, b) => let
+        val a = tm a val b = th b
+        val refl_a = candle_th
+          (fn out => fn iid => PFTWriter.Candle.refl out iid a) [a] []
+      in emit_final (fn out =>
+           PFTWriter.Candle.mk_comb out result_id refl_a b) end
+    | AP_THM_prf (a, b) => let
+        val a = th a val b = tm b
+        val refl_b = candle_th
+          (fn out => fn iid => PFTWriter.Candle.refl out iid b) [b] []
+      in emit_final (fn out =>
+           PFTWriter.Candle.mk_comb out result_id a refl_b) end
+
+    (* === TODO: Pro-forma based rules === *)
+    | _ => raise Fail ("emit_thm_candle: unimplemented proof type")
+  end
+
+  (* ======================================================================= *)
   (* Theorem emission                                                        *)
   (* ======================================================================= *)
 
@@ -481,7 +610,11 @@ fun emit_theory {trace, output, binary} = let
          val () = th_memo_set k id
          fun mk_entry wfn = (def_th id; {write = wfn,
            ref_ty = !rtys, ref_tm = !rtms, ref_th = !rths, ref_ci = !rcis})
-       in case proof of
+       in if is_candle
+          then emit_thm_candle id concl_ptr proof tm th ty
+                               mk_entry emit
+          else
+          case proof of
            ABS_prf (a, b) => let val a = tm a val b = th b
              in emit (mk_entry (fn out =>
                   PFTWriter.HOL4.abs_thm out id a b)) end
@@ -541,7 +674,7 @@ fun emit_theory {trace, output, binary} = let
          | Def_const_list_prf (a, b) => let
              val a = th a
              val ids = list heap get_const_id b
-             val names = List.map (fn (Thy,nm) => Thy ^ "$" ^ nm) ids
+             val names = List.map (fn (Thy,nm) => tr_name (Thy ^ "$" ^ nm)) ids
              val () = List.app (fn (_,nm) => mark_const nm) ids
            in emit (mk_entry (fn out =>
                 PFTWriter.HOL4.def_spec_gen out id a names)) end
@@ -562,7 +695,7 @@ fun emit_theory {trace, output, binary} = let
              val (Thy, Tyop) = get_type_id c
              val () = mark_type Tyop
            in emit (mk_entry (fn out =>
-                PFTWriter.HOL4.def_tyop out id b (Thy ^ "$" ^ Tyop))) end
+                PFTWriter.HOL4.def_tyop out id b (tr_name (Thy ^ "$" ^ Tyop)))) end
          | Disk_prf (dep_thy, b) => let
              val dep_id = thmId heap b
              val save_name = disk_save_name dep_thy dep_id
@@ -691,7 +824,7 @@ fun emit_theory {trace, output, binary} = let
     val () = mark_const Name
     val () = emit_th_def thm_id {write = fn out =>
       PFTWriter.HOL4.def_spec_gen out thm_id assume_id
-        [thyname ^ "$" ^ Name],
+        [tr_name (thyname ^ "$" ^ Name)],
       ref_ty = [], ref_tm = [], ref_th = [assume_id], ref_ci = []}
   in () end
 
@@ -806,7 +939,7 @@ fun emit_theory {trace, output, binary} = let
        val ty_id = emit_type ty_ptr
        val () = mark_const Name
      in emit {write = fn out =>
-               PFTWriter.new_const out (thyname ^ "$" ^ Name) ty_id,
+               PFTWriter.new_const out (tr_name (thyname ^ "$" ^ Name)) ty_id,
              ref_ty = [ty_id], ref_tm = [], ref_th = [], ref_ci = []} end
   end) constants
 
@@ -816,7 +949,7 @@ fun emit_theory {trace, output, binary} = let
   in if is_type_done Tyop then ()
      else (mark_type Tyop;
            emit0 (fn out =>
-             PFTWriter.new_type out (thyname ^ "$" ^ Tyop) arity))
+             PFTWriter.new_type out (tr_name (thyname ^ "$" ^ Tyop)) arity))
   end) types
 
   (* ======================================================================= *)
@@ -842,8 +975,9 @@ fun emit_theory {trace, output, binary} = let
   val n_th = !next_th
   val n_ci = !next_ci
 
+  val ruleset_str = case ruleset of HOL4 => "hol4" | Candle => "candle"
   val out = PFTWriter.openOut
-    {file = output, binary = binary, version = 1, ruleset = "hol4"}
+    {file = output, binary = binary, version = 1, ruleset = ruleset_str}
 
   val () = write_with_dels out cmd_buf
     {n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci}
