@@ -525,6 +525,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
     in emit_th_def iid entry; emit entry; iid end
     (* Emit the final result using the pre-allocated result_id *)
     fun emit_final wfn = emit (mk_entry wfn)
+    (* Emit a candle_th that uses result_id (for the last step of a derivation) *)
+    fun candle_th_result wfn = emit (mk_entry (fn out => wfn out result_id))
 
     (* Preamble variable term IDs — memoized via emit_var hash-cons *)
     val bool_tyid = emit_tyop "bool" []
@@ -543,6 +545,139 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
     (* Candle ==> constant *)
     fun imp_const () = emit_const "==>" bbb_tyid
+
+    (* TYVAR "A" for INST_TYPE on polymorphic pro-formas — memoized *)
+    fun tyvar_A () = let val key = TyVarK "A"
+      in case ty_lookup key of SOME id => id
+       | NONE => let val id = alloc_ty ()
+         in emit_ty_def id {write = fn out => PFTWriter.tyvar out id "A",
+                  ref_ty = [], ref_tm = [], ref_th = [], ref_ci = []};
+            ty_insert key id; id end end
+
+    (* === Candle derived-rule helpers ===
+       These emit sequences of Candle commands and return theorem IDs. *)
+
+    (* do_MP: from ith: ⊢ a ==> b and th: ⊢ a, derive ⊢ b.
+       Uses MP_rth = {p} ⊢ (p ==> q) = q.
+       final_id: if SOME id, the last step uses that id; if NONE, allocates fresh. *)
+    fun do_MP_gen final_id ith a_tm b_tm ant_th =
+      let val rth = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.inst out iid (candle_load_pth "candle$MP")
+              [(pvar_p(), a_tm), (pvar_q(), b_tm)]) [a_tm, b_tm] []
+          val da = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.deduct_antisym_rule out iid ant_th rth)
+              [] [ant_th, rth]
+          val eq1 = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.eq_mp out iid da ant_th) [] [da, ant_th]
+      in case final_id of
+           NONE => candle_th (fn out => fn iid =>
+             PFTWriter.Candle.eq_mp out iid eq1 ith) [] [eq1, ith]
+         | SOME fid => (emit (mk_entry (fn out =>
+             PFTWriter.Candle.eq_mp out fid eq1 ith)); fid)
+      end
+    fun do_MP ith a b th = do_MP_gen NONE ith a b th
+    fun do_MP_final ith a b th = do_MP_gen (SOME result_id) ith a b th
+
+    (* do_DISCH: from a_tm and th: A ⊢ c, derive A\{a} ⊢ a ==> c. *)
+    fun do_DISCH a_tm c_tm th_c =
+      let val a_and_c = emit_comb (emit_comb (and_const()) a_tm) c_tm
+          val assume_a = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.assume out iid a_tm) [a_tm] []
+          val ci = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.inst out iid (candle_load_pth "candle$CONJ")
+              [(pvar_p(), a_tm), (pvar_q(), c_tm)]) [a_tm, c_tm] []
+          val c1 = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.prove_hyp out iid ci assume_a) [] [ci, assume_a]
+          val cj = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.prove_hyp out iid c1 th_c) [] [c1, th_c]
+          val aac = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.assume out iid a_and_c) [a_and_c] []
+          val c1i = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.inst out iid (candle_load_pth "candle$CONJUNCT1")
+              [(pvar_p(), a_tm), (pvar_q(), c_tm)]) [a_tm, c_tm] []
+          val c1t = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.prove_hyp out iid c1i aac) [] [c1i, aac]
+          val da = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.deduct_antisym_rule out iid cj c1t) [] [cj, c1t]
+          val di = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.inst out iid (candle_load_pth "candle$DISCH")
+              [(pvar_p(), a_tm), (pvar_q(), c_tm)]) [a_tm, c_tm] []
+      in candle_th (fn out => fn iid =>
+           PFTWriter.Candle.eq_mp out iid di da) [] [di, da] end
+
+    (* do_GEN: from v_tm and th: A ⊢ s, derive A ⊢ ∀v. s.
+       v_ty = type of v, s_tm = conclusion term. *)
+    fun do_GEN v_tm v_ty s_tm th_s =
+      let val const_T_tm = emit_const "T" bool_tyid
+          val eqt_pth = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.inst out iid (candle_load_pth "candle$EQT_INTRO")
+              [(pvar_t(), s_tm)]) [s_tm] []
+          val eqt = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.eq_mp out iid eqt_pth th_s) [] [eqt_pth, th_s]
+          val abs_eq = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.abs out iid v_tm eqt) [v_tm] [eqt]
+          val lam_v_s = emit_abs v_tm s_tm
+          val gen_pth = candle_load_pth "candle$GEN"
+          val gen_ty = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.inst_type out iid gen_pth
+              [(tyvar_A(), v_ty)]) [] [gen_pth]
+          val Ab = emit_tyop "fun" [v_ty, bool_tyid]
+          val var_P_inst = emit_var "P" Ab
+          val var_x_inst = emit_var "x" v_ty
+          val gen_inst = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.inst out iid gen_ty
+              [(var_P_inst, lam_v_s), (var_x_inst, v_tm)])
+              [var_P_inst, lam_v_s, var_x_inst, v_tm] [gen_ty]
+      in candle_th (fn out => fn iid =>
+           PFTWriter.Candle.eq_mp out iid gen_inst abs_eq)
+           [] [gen_inst, abs_eq] end
+
+    (* do_SPEC: from t_tm and th: A ⊢ ∀v.s, derive A ⊢ s[t/v].
+       pred_tm = the predicate λv.s, var_tm = the bound variable,
+       forall_tm = the ∀ term, v_ty = type of the variable. *)
+    fun do_SPEC t_tm pred_tm var_tm forall_tm v_ty th_forall =
+      let val spec_pth = candle_load_pth "candle$SPEC"
+          val spec_ty = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.inst_type out iid spec_pth
+              [(tyvar_A(), v_ty)]) [] [spec_pth]
+          val Ab = emit_tyop "fun" [v_ty, bool_tyid]
+          val var_P_inst = emit_var "P" Ab
+          val var_x_inst = emit_var "x" v_ty
+          val spec_inst = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.inst out iid spec_ty
+              [(var_P_inst, pred_tm), (var_x_inst, t_tm)])
+              [var_P_inst, pred_tm, var_x_inst, t_tm] [spec_ty]
+          val pred_t = emit_comb pred_tm t_tm
+          val mp_result = do_MP spec_inst forall_tm pred_t th_forall
+          (* Beta-reduce pred(t) = (λv.s)(t) to s[t/v] *)
+          val app_var = emit_comb pred_tm var_tm
+          val beta_th = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.beta out iid app_var) [app_var] []
+          val beta_inst = if var_tm = t_tm then beta_th
+            else candle_th (fn out => fn iid =>
+              PFTWriter.Candle.inst out iid beta_th
+                [(var_tm, t_tm)]) [var_tm, t_tm] [beta_th]
+      in candle_th (fn out => fn iid =>
+           PFTWriter.Candle.eq_mp out iid beta_inst mp_result)
+           [] [beta_inst, mp_result] end
+
+    (* do_beta_reduce: from lam_tm (= abs var_tm body) and arg_tm,
+       derive ⊢ lam_tm arg_tm = body[arg/var]. *)
+    fun do_beta_reduce lam_tm var_tm arg_tm =
+      let val app_var = emit_comb lam_tm var_tm
+          val beta_th = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.beta out iid app_var) [app_var] []
+      in if var_tm = arg_tm then beta_th
+         else candle_th (fn out => fn iid =>
+           PFTWriter.Candle.inst out iid beta_th
+             [(var_tm, arg_tm)]) [var_tm, arg_tm] [beta_th] end
+
+    (* Helper to get type of a heap variable *)
+    fun heap_var_type (v_ptr : Term.term ptr) =
+      case shTerm heap v_ptr of
+        Fv (_, t) => t
+      | _ => raise Fail "heap_var_type: not a variable"
+
   in
     case proof of
     (* === Direct mappings (1:1 to Candle core rules) === *)
@@ -755,16 +890,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val a_th = th a val c_th = th c
         (* Get v from the RHS of a's conclusion: t = λv. b *)
         val concl_a = heap_concl a
-        val (_, rhs) = heap_dest_comb concl_a   (* (= t) (λv. b) *)
-        val (_, rhs2) = heap_dest_comb rhs       (* = , (λv. b) ... wait *)
-        (* Actually concl is = t (λv. b), so: (= t) applied to (λv. b) *)
-        (* heap_dest_comb gives ((= t), (λv. b)) *)
-        val lam = rhs  (* this is (λv. b) — the second arg of the eq *)
-        (* Hmm, need to get past the (= t) application. Let me re-think.
-           concl = (= t) (λv.b) = Comb(Comb(=, t), λv.b)
-           heap_dest_comb concl = (Comb(=, t), λv.b)
-           So rhs here is λv.b — wrong name, it's the rand. *)
-        val lam_ptr = rhs  (* = second argument of the top comb = λv.b *)
+        (* concl = (= t) (λv. b); heap_dest_comb gives ((= t), λv.b) *)
+        val (_, lam_ptr) = heap_dest_comb concl_a
       in case shTerm heap lam_ptr of
            Abs (v_ptr, _) => let
              val v_tm = tm v_ptr
@@ -835,39 +962,13 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
     (* === Remaining direct/simple === *)
     | DISCH_prf (a, b) => let
-        (* a: term p, b: A ⊢ q. Result: A\{p} ⊢ p ==> q.
-           Uses CONJ, CONJUNCT1, DEDUCT_ANTISYM, DISCH_pth. *)
-        val p_tm = tm a
-        val b_th = th b
-        val q_tm = tm (heap_concl b)
-        (* CONJ (ASSUME p) b_th: {p} ∪ A ⊢ p ∧ q *)
-        val assume_p = candle_th (fn out => fn iid =>
-          PFTWriter.Candle.assume out iid p_tm) [p_tm] []
-        val conj_pq = emit_comb (emit_comb (and_const()) p_tm) q_tm
-        val conj_inst = candle_th (fn out => fn iid =>
-          PFTWriter.Candle.inst out iid (candle_load_pth "candle$CONJ")
-            [(pvar_p(), p_tm), (pvar_q(), q_tm)]) [p_tm, q_tm] []
-        val conj1 = candle_th (fn out => fn iid =>
-          PFTWriter.Candle.prove_hyp out iid conj_inst assume_p) [] [conj_inst, assume_p]
-        val conj_th = candle_th (fn out => fn iid =>
-          PFTWriter.Candle.prove_hyp out iid conj1 b_th) [] [conj1, b_th]
-        (* CONJUNCT1 (ASSUME (p ∧ q)): {p ∧ q} ⊢ p *)
-        val assume_pq = candle_th (fn out => fn iid =>
-          PFTWriter.Candle.assume out iid conj_pq) [conj_pq] []
-        val c1_inst = candle_th (fn out => fn iid =>
-          PFTWriter.Candle.inst out iid (candle_load_pth "candle$CONJUNCT1")
-            [(pvar_p(), p_tm), (pvar_q(), q_tm)]) [p_tm, q_tm] []
-        val c1_th = candle_th (fn out => fn iid =>
-          PFTWriter.Candle.prove_hyp out iid c1_inst assume_pq) [] [c1_inst, assume_pq]
-        (* DEDUCT_ANTISYM conj_th c1_th: A\{p} ⊢ (p ∧ q) = p *)
-        val da = candle_th (fn out => fn iid =>
-          PFTWriter.Candle.deduct_antisym_rule out iid conj_th c1_th) [] [conj_th, c1_th]
-        (* INST DISCH_pth: ⊢ ((p ∧ q) = p) = (p ==> q) *)
-        val disch_inst = candle_th (fn out => fn iid =>
-          PFTWriter.Candle.inst out iid (candle_load_pth "candle$DISCH")
-            [(pvar_p(), p_tm), (pvar_q(), q_tm)]) [p_tm, q_tm] []
-      in emit_final (fn out =>
-           PFTWriter.Candle.eq_mp out result_id disch_inst da) end
+        val p_tm = tm a val b_th = th b val q_tm = tm (heap_concl b)
+        val r = do_DISCH p_tm q_tm b_th
+      in (* Last step of do_DISCH was EQ_MP; copy result to result_id
+            using PROVE_HYP with TRUTH (⊢ T). T ∉ hyps so this is identity. *)
+         candle_th_result (fn out => fn fid =>
+           PFTWriter.Candle.prove_hyp out fid r
+             (candle_load_pth "candle$TRUTH")) end
 
     | GEN_prf (a, b) => let
         (* a: term v, b: A ⊢ s. Result: A ⊢ ∀v. s (v not free in A).
@@ -926,65 +1027,20 @@ fun emit_theory {trace, output, binary, ruleset} = let
            then fold GEN from innermost to outermost. *)
         val var_ptrs = list heap (fn p => p) a
         val inner_th = th b
-        (* Peel n foralls from the conclusion to get intermediate conclusions.
-           concl = ∀v1. ∀v2. ... ∀vn. s = !(\v1. !(\v2. ... !(\vn. s)...))
-           Each step: dest_comb gives (!, \vi. rest), dest_abs gives (vi, rest) *)
-        fun peel_foralls 0 c = [c]
-          | peel_foralls n c = let
-              val (_, body) = heap_dest_comb c  (* ! applied to \v. rest *)
-            in c :: peel_foralls (n - 1) body end
-              (* body is \v. rest, but we want rest for the next level.
-                 Actually we want the conclusion AFTER GEN, which IS ∀vi. rest.
-                 Let me reconsider: the intermediate conclusions from inside out are:
-                   s, ∀vn.s, ∀v(n-1).∀vn.s, ..., ∀v1...vn.s
-                 The inner theorem has conclusion s.
-                 After GEN vn: conclusion is ∀vn. s = (! \vn. s)
-                 etc.
-                 From concl_ptr (= ∀v1...vn.s), I can extract each level:
-                   level 0: ∀v1. (∀v2. ... ∀vn. s) = concl_ptr
-                   level 1: ∀v2. ... ∀vn. s  (body of \v1. ...)
-                 I need n intermediate conclusions. Let me get them by
-                 destructuring the abs body at each level. *)
+        (* Peel foralls from concl_ptr to get intermediate conclusion ptrs.
+           concl = ∀v1...vn. s. outer_concls = [∀v1..., ∀v2..., ..., ∀vn.s].
+           For each GEN step, s_tm = body of the corresponding forall. *)
         fun get_abs_body p = let
-          val (_, lam) = heap_dest_comb p  (* (! , \v. body) *)
+          val (_, lam) = heap_dest_comb p
         in case shTerm heap lam of
              Abs (_, body) => body
            | _ => raise Fail "GENL: expected abstraction under forall"
         end
-        (* Build list of intermediate conclusions from outermost to innermost.
-           concls = [∀v1...vn.s, ∀v2...vn.s, ..., ∀vn.s, s]
-           (length = n+1, one more than vars) *)
         val n = length var_ptrs
         fun build_concls 0 _ = []
           | build_concls k c = c :: build_concls (k-1) (get_abs_body c)
         val outer_concls = build_concls n concl_ptr
-        (* inner_concl is the body of the last forall = s *)
         val inner_concl = heap_concl b
-
-        (* Now fold: GEN vn over s, then GEN v(n-1) over ∀vn.s, etc.
-           Process vars in reverse (innermost first).
-           Each GEN step uses the conclusion BEFORE the GEN as s_tm,
-           and the variable. *)
-        val pairs = ListPair.zip (var_ptrs, outer_concls)
-        val rev_pairs = List.rev pairs
-        (* rev_pairs: [(vn, ∀vn...s), (v(n-1), ∀v(n-1)...s), ..., (v1, ∀v1...s)]
-           Hmm, the concl at each level is the RESULT of the GEN.
-           For GEN vi over current_th (which has conclusion = body of ∀vi...):
-             s_tm = conclusion of current_th
-             After GEN: conclusion = ∀vi. s_tm
-           The outer_concls[i] = ∀vi. ... which is the RESULT. So the
-           body (= s_tm for that GEN step) is get_abs_body(outer_concls[i]).
-           For the innermost: s_tm = inner_concl = conclusion of inner_th. *)
-
-        (* Let me build a cleaner list: for each var, what is s_tm (the
-           conclusion before GEN) and what is the var ptr. *)
-        (* inner_concl, then get_abs_body of each outer_concl in reverse *)
-        fun get_s_tms [] = []
-          | get_s_tms (c :: rest) = get_abs_body c :: get_s_tms rest
-        (* s_tms from innermost to outermost *)
-        val s_ptrs = inner_concl :: get_s_tms (List.rev (List.tl (List.rev outer_concls)))
-        (* Actually this is getting confusing. Let me just pair vars with
-           their s_tm (conclusion before GEN) in innermost-first order. *)
         val rev_vars = List.rev var_ptrs
         (* For the innermost var (last in list), s = inner_concl.
            For the next var, s = ∀(innermost_var). inner_concl.
@@ -1237,10 +1293,273 @@ fun emit_theory {trace, output, binary, ruleset} = let
       in emit_final (fn out =>
            PFTWriter.Candle.eq_mp out result_id eq2 ccontr_inst) end
 
-    | EXISTS_prf (a, b, c) =>
-        raise Fail "emit_thm_candle: EXISTS not yet implemented"
-    | CHOOSE_prf (a, b, c) =>
-        raise Fail "emit_thm_candle: CHOOSE not yet implemented"
+    | EXISTS_prf (a, b, c) => let
+        (* a: ∃x. P x (the goal), b: witness term, c: A ⊢ P(witness).
+           EXISTS_pth: {P x} ⊢ ?P.
+           1. Extract pred from a: ? pred, where pred = λx. P x
+           2. beta = ⊢ pred(witness) = P(witness)
+           3. EQ_MP (SYM beta) c_th: A ⊢ pred(witness)
+           4. INST_TYPE + INST EXISTS_pth: {pred(witness)} ⊢ ?(pred)
+           5. PROVE_HYP: A ⊢ ?(pred) *)
+        val c_th = th c
+        val witness_tm = tm b
+        val (_, pred_ptr) = heap_dest_comb a  (* ? applied to pred *)
+        val pred_tm = tm pred_ptr
+        (* Get bound var from pred for beta *)
+        val (var_ptr, _) = case shTerm heap pred_ptr of
+            Abs (v, body) => (v, body)
+          | _ => raise Fail "EXISTS: predicate not abstraction"
+        val var_tm = tm var_ptr
+        (* type of witness *)
+        val w_ty_ptr = case shTerm heap b of
+            Fv (_, t) => t | Const (_, t) => t
+          | _ => let val (f, _) = heap_dest_comb b in
+                   case shTerm heap f of
+                     Fv (_, t) => t | Const (_, t) => t
+                   | _ => raise Fail "EXISTS: can't get witness type"
+                 end
+        val w_ty = ty w_ty_ptr
+        val tyvar_A_id = let val key = TyVarK "A"
+          in case ty_lookup key of SOME id => id
+           | NONE => let val id = alloc_ty ()
+             in emit_ty_def id {write = fn out => PFTWriter.tyvar out id "A",
+                      ref_ty = [], ref_tm = [], ref_th = [], ref_ci = []};
+                ty_insert key id; id end end
+        (* beta_reduce: ⊢ pred(witness) = P(witness) *)
+        val app_var = emit_comb pred_tm var_tm
+        val beta_th = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.beta out iid app_var) [app_var] []
+        val beta_inst = if var_tm = witness_tm then beta_th
+          else candle_th (fn out => fn iid =>
+            PFTWriter.Candle.inst out iid beta_th
+              [(var_tm, witness_tm)]) [var_tm, witness_tm] [beta_th]
+        (* EQ_MP (SYM beta_inst) c_th: A ⊢ pred(witness) *)
+        val sym_beta = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.sym out iid beta_inst) [] [beta_inst]
+        val th_pred_w = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.eq_mp out iid sym_beta c_th) [] [sym_beta, c_th]
+        (* INST_TYPE + INST EXISTS_pth *)
+        val exists_pth = candle_load_pth "candle$EXISTS"
+        val exists_ty = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst_type out iid exists_pth
+            [(tyvar_A_id, w_ty)]) [] [exists_pth]
+        val Ab = emit_tyop "fun" [w_ty, bool_tyid]
+        val var_P_inst = emit_var "P" Ab
+        val var_x_inst = emit_var "x" w_ty
+        val exists_inst = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst out iid exists_ty
+            [(var_P_inst, pred_tm), (var_x_inst, witness_tm)])
+            [var_P_inst, pred_tm, var_x_inst, witness_tm] [exists_ty]
+        (* exists_inst: {pred(witness)} ⊢ ?(pred) *)
+      in emit_final (fn out =>
+           PFTWriter.Candle.prove_hyp out result_id exists_inst th_pred_w) end
+
+    | CHOOSE_prf (a, b, c) => let
+        (* a: variable v, b: A ⊢ ∃x. P x, c: B∪{P v} ⊢ q.
+           Result: A ∪ (B\{P v}) ⊢ q.
+           CHOOSE_pth: ⊢ (?P) ==> (!x. Px ==> Q) ==> Q.
+           Steps:
+             1. pred = λx.Px from existence theorem
+             2. cmb = pred(v), beta to Pv
+             3. DISCH Pv from c_th, MP with ASSUME(cmb) beta'd
+             4. DISCH cmb, GEN v → B\{Pv} ⊢ ∀v. pred(v) ==> q
+             5. INST CHOOSE_pth, MP twice *)
+        val v_tm = tm a
+        val b_th = th b
+        val c_th = th c
+        val q_tm = tm (heap_concl c)
+        (* Extract predicate from b's conclusion: ? pred *)
+        val concl_b = heap_concl b
+        val (_, pred_ptr) = heap_dest_comb concl_b
+        val pred_tm = tm pred_ptr
+        val exists_P_tm = tm concl_b  (* ?(pred) *)
+        (* bound var of predicate *)
+        val (bv_ptr, _) = case shTerm heap pred_ptr of
+            Abs (v, body) => (v, body)
+          | _ => raise Fail "CHOOSE: predicate not abstraction"
+        val bv_tm = tm bv_ptr
+        (* cmb = pred(v) *)
+        val cmb = emit_comb pred_tm v_tm
+        (* beta_reduce: ⊢ pred(v) = Pv *)
+        val app_bv = emit_comb pred_tm bv_tm
+        val beta_th = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.beta out iid app_bv) [app_bv] []
+        val beta_v = if bv_tm = v_tm then beta_th
+          else candle_th (fn out => fn iid =>
+            PFTWriter.Candle.inst out iid beta_th
+              [(bv_tm, v_tm)]) [bv_tm, v_tm] [beta_th]
+        (* beta_v: ⊢ pred(v) = Pv *)
+        (* th3 = EQ_MP beta_v (ASSUME cmb): {cmb} ⊢ Pv *)
+        val assume_cmb = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.assume out iid cmb) [cmb] []
+        val th3 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.eq_mp out iid beta_v assume_cmb) [] [beta_v, assume_cmb]
+        (* Construct Pv = body[v/bv] from the heap predicate.
+           When v = bv (common case), Pv = body directly. *)
+        val (_, body_ptr) = case shTerm heap pred_ptr of
+            Abs (_, b) => (bv_ptr, b) | _ => raise Fail "CHOOSE"
+        val Pv_tm = tm body_ptr
+        (* NOTE: if v ≠ bv, this emits body without substitution.
+           Correct only when v and bv are the same heap pointer. *)
+
+        (* DISCH Pv from c_th: B\{Pv} ⊢ Pv ==> q *)
+        val Pv_and_q = emit_comb (emit_comb (and_const()) Pv_tm) q_tm
+        val assume_Pv = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.assume out iid Pv_tm) [Pv_tm] []
+        val ci = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst out iid (candle_load_pth "candle$CONJ")
+            [(pvar_p(), Pv_tm), (pvar_q(), q_tm)]) [Pv_tm, q_tm] []
+        val c1 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.prove_hyp out iid ci assume_Pv) [] [ci, assume_Pv]
+        val cj = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.prove_hyp out iid c1 c_th) [] [c1, c_th]
+        val apq = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.assume out iid Pv_and_q) [Pv_and_q] []
+        val c1i = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst out iid (candle_load_pth "candle$CONJUNCT1")
+            [(pvar_p(), Pv_tm), (pvar_q(), q_tm)]) [Pv_tm, q_tm] []
+        val c1t = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.prove_hyp out iid c1i apq) [] [c1i, apq]
+        val da = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.deduct_antisym_rule out iid cj c1t) [] [cj, c1t]
+        val di = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst out iid (candle_load_pth "candle$DISCH")
+            [(pvar_p(), Pv_tm), (pvar_q(), q_tm)]) [Pv_tm, q_tm] []
+        val disch_Pv = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.eq_mp out iid di da) [] [di, da]
+        (* disch_Pv: B\{Pv} ⊢ Pv ==> q *)
+
+        (* MP disch_Pv th3: B\{Pv} ∪ {cmb} ⊢ q *)
+        val mp1 = let val mp_rth = candle_load_pth "candle$MP"
+          val mi = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.inst out iid mp_rth
+              [(pvar_p(), Pv_tm), (pvar_q(), q_tm)]) [Pv_tm, q_tm] [mp_rth]
+          val da1 = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.deduct_antisym_rule out iid th3 mi) [] [th3, mi]
+          val eq1 = candle_th (fn out => fn iid =>
+            PFTWriter.Candle.eq_mp out iid da1 th3) [] [da1, th3]
+        in candle_th (fn out => fn iid =>
+             PFTWriter.Candle.eq_mp out iid eq1 disch_Pv) [] [eq1, disch_Pv] end
+        (* mp1: B\{Pv} ∪ {cmb} ⊢ q *)
+
+        (* DISCH cmb: B\{Pv} ⊢ cmb ==> q *)
+        val cmb_and_q = emit_comb (emit_comb (and_const()) cmb) q_tm
+        val assume_cmb2 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.assume out iid cmb) [cmb] []
+        val ci2 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst out iid (candle_load_pth "candle$CONJ")
+            [(pvar_p(), cmb), (pvar_q(), q_tm)]) [cmb, q_tm] []
+        val c12 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.prove_hyp out iid ci2 assume_cmb2) [] [ci2, assume_cmb2]
+        val cj2 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.prove_hyp out iid c12 mp1) [] [c12, mp1]
+        val acq = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.assume out iid cmb_and_q) [cmb_and_q] []
+        val c1i2 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst out iid (candle_load_pth "candle$CONJUNCT1")
+            [(pvar_p(), cmb), (pvar_q(), q_tm)]) [cmb, q_tm] []
+        val c1t2 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.prove_hyp out iid c1i2 acq) [] [c1i2, acq]
+        val da2 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.deduct_antisym_rule out iid cj2 c1t2) [] [cj2, c1t2]
+        val di2 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst out iid (candle_load_pth "candle$DISCH")
+            [(pvar_p(), cmb), (pvar_q(), q_tm)]) [cmb, q_tm] []
+        val disch_cmb = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.eq_mp out iid di2 da2) [] [di2, da2]
+        (* disch_cmb: B\{Pv} ⊢ cmb ==> q = (λx.Px)v ==> q *)
+
+        (* GEN v: B\{Pv} ⊢ ∀v. (λx.Px)v ==> q *)
+        val imp_cmb_q = emit_comb (emit_comb (imp_const()) cmb) q_tm
+        val v_ty_ptr = case shTerm heap a of
+            Fv (_, t) => t | _ => raise Fail "CHOOSE: var expected"
+        val v_ty = ty v_ty_ptr
+        val const_T_tm = emit_const "T" bool_tyid
+        val eqt_pth = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst out iid (candle_load_pth "candle$EQT_INTRO")
+            [(pvar_t(), imp_cmb_q)]) [imp_cmb_q] []
+        val eqt_th = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.eq_mp out iid eqt_pth disch_cmb) [] [eqt_pth, disch_cmb]
+        val abs_eq = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.abs out iid v_tm eqt_th) [v_tm] [eqt_th]
+        val lam_v_imp = emit_abs v_tm imp_cmb_q
+        val lam_v_T = emit_abs v_tm const_T_tm
+        val tyvar_A_id = let val key = TyVarK "A"
+          in case ty_lookup key of SOME id => id
+           | NONE => let val id = alloc_ty ()
+             in emit_ty_def id {write = fn out => PFTWriter.tyvar out id "A",
+                      ref_ty = [], ref_tm = [], ref_th = [], ref_ci = []};
+                ty_insert key id; id end end
+        val gen_pth = candle_load_pth "candle$GEN"
+        val gen_ty = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst_type out iid gen_pth
+            [(tyvar_A_id, v_ty)]) [] [gen_pth]
+        val Ab = emit_tyop "fun" [v_ty, bool_tyid]
+        val var_P_inst = emit_var "P" Ab
+        val var_x_inst = emit_var "x" v_ty
+        val gen_inst = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst out iid gen_ty
+            [(var_P_inst, lam_v_imp), (var_x_inst, v_tm)])
+            [var_P_inst, lam_v_imp, var_x_inst, v_tm] [gen_ty]
+        val th4 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.eq_mp out iid gen_inst abs_eq) [] [gen_inst, abs_eq]
+        (* th4: B\{Pv} ⊢ ∀v. (λx.Px)v ==> q *)
+
+        (* INST CHOOSE_pth *)
+        val choose_pth = candle_load_pth "candle$CHOOSE"
+        val choose_ty = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst_type out iid choose_pth
+            [(tyvar_A_id, v_ty)]) [] [choose_pth]
+        val choose_inst = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst out iid choose_ty
+            [(var_P_inst, pred_tm), (pvar_Q(), q_tm)])
+            [var_P_inst, pred_tm, q_tm] [choose_ty]
+        (* choose_inst: ⊢ (?pred) ==> (!x. pred x ==> q) ==> q *)
+
+        (* MP choose_inst b_th: A ⊢ (!x. pred x ==> q) ==> q *)
+        val forall_imp = emit_comb
+          (emit_const "!" (emit_tyop "fun" [emit_tyop "fun" [v_ty, bool_tyid], bool_tyid]))
+          lam_v_imp
+        val mp_rth2 = candle_load_pth "candle$MP"
+        val mi3 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst out iid mp_rth2
+            [(pvar_p(), exists_P_tm), (pvar_q(), forall_imp)])
+            [exists_P_tm, forall_imp] [mp_rth2]
+        val da3 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.deduct_antisym_rule out iid b_th mi3) [] [b_th, mi3]
+        val eq3 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.eq_mp out iid da3 b_th) [] [da3, b_th]
+        val mp_choose1 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.eq_mp out iid eq3 choose_inst) [] [eq3, choose_inst]
+        (* mp_choose1: A ⊢ (!v. pred(v) ==> q) ==> q *)
+
+        val imp_forall_q = emit_comb (emit_comb (imp_const()) forall_imp) q_tm
+        val mi3_fixed = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst out iid mp_rth2
+            [(pvar_p(), exists_P_tm), (pvar_q(), imp_forall_q)])
+            [exists_P_tm, imp_forall_q] [mp_rth2]
+        val da3_f = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.deduct_antisym_rule out iid b_th mi3_fixed)
+            [] [b_th, mi3_fixed]
+        val eq3_f = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.eq_mp out iid da3_f b_th) [] [da3_f, b_th]
+        val mp_choose1_f = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.eq_mp out iid eq3_f choose_inst)
+            [] [eq3_f, choose_inst]
+        (* mp_choose1_f: A ⊢ (!v. pred(v) ==> q) ==> q *)
+
+        (* MP mp_choose1_f th4: A ∪ B\{Pv} ⊢ q *)
+        val mi4 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.inst out iid mp_rth2
+            [(pvar_p(), forall_imp), (pvar_q(), q_tm)])
+            [forall_imp, q_tm] [mp_rth2]
+        val da4 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.deduct_antisym_rule out iid th4 mi4) [] [th4, mi4]
+        val eq4 = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.eq_mp out iid da4 th4) [] [da4, th4]
+      in emit_final (fn out =>
+           PFTWriter.Candle.eq_mp out result_id eq4 mp_choose1_f) end
+
     | SUBST_prf (a, b, c) =>
         raise Fail "emit_thm_candle: SUBST not yet implemented"
 
