@@ -1196,12 +1196,11 @@ fun emit_theory {trace, output, binary, ruleset} = let
           PFTWriter.Candle.inst out iid (candle_load_pth "candle$DISJ_CASES")
             [(pvar_p, p_tm), (pvar_q, q_tm), (pvar_r, r_tm)])
             [p_tm, q_tm, r_tm] []
+        val da = candle_th (fn out => fn iid =>
+          PFTWriter.Candle.deduct_antisym_rule out iid a_th pth)
+            [] [a_th, pth]
         val th3 = candle_th (fn out => fn iid =>
-          PFTWriter.Candle.eq_mp out iid
-            (candle_th (fn out2 => fn iid2 =>
-              PFTWriter.Candle.deduct_antisym_rule out2 iid2 a_th pth)
-              [] [a_th, pth])
-            a_th) [] [a_th, pth]
+          PFTWriter.Candle.eq_mp out iid da a_th) [] [da, a_th]
         val disch_l = do_DISCH p_tm r_tm b_th
         val disch_r = do_DISCH q_tm r_tm c_th
         val th4 = candle_th (fn out => fn iid =>
@@ -1835,13 +1834,27 @@ fun emit_theory {trace, output, binary, ruleset} = let
        else let
          val (_, concl_ptr, proof_ptr) = shThm heap thm_ptr
          val proof = shProof heap proof_ptr
-       in
-         (* save_dep_prf: transparent wrapper, just return inner thm's ID *)
-         case proof of
-           save_dep_prf a => let
-             val inner_id = emit_thm a
-           in th_memo_set k inner_id; inner_id end
-         | _ => let
+         (* Identity short-circuits: when a rule is the identity on its
+            input theorem (save_dep_prf wrapper, or a rule applied with an
+            empty list argument), reuse the input theorem's ID. *)
+         val identity_th = case proof of
+             save_dep_prf th => SOME th
+           | GENL_prf (vars, th) =>
+               if not (isPtr vars) then SOME th else NONE
+           | GEN_ABS_prf (_, vars, th) =>
+               if not (isPtr vars) then SOME th else NONE
+           | INST_prf (subst, th) =>
+               if not (isPtr subst) then SOME th else NONE
+           | INST_TYPE_prf (subst, th) =>
+               if not (isPtr subst) then SOME th else NONE
+           | SUBST_prf (subst, _, th) =>
+               if not (isPtr subst) then SOME th else NONE
+           | _ => NONE
+       in case identity_th of
+            SOME th => let
+              val inner_id = emit_thm th
+            in th_memo_set k inner_id; inner_id end
+          | NONE => let
          (* Accumulators for referenced IDs *)
          val rtys : int list ref = ref []
          val rtms : int list ref = ref []
