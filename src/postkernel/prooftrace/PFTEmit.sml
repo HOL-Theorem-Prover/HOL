@@ -410,10 +410,18 @@ fun emit_theory {trace, output, binary, ruleset} = let
   (* INST + PROVE_HYP.                                                      *)
   (* ======================================================================= *)
 
-  and emit_thm_candle result_id concl_ptr proof = let
+  and emit_thm_candle result_id hyps_ptr concl_ptr proof = let
     val tm = emit_term
     val th = emit_thm
     val ty = emit_type
+
+    (* Emit all hypothesis terms and return their PFT term IDs.
+       Used by r_alpha_thm to specify the expected hypothesis set. *)
+    fun emit_hyps () = let
+      val acc = ref ([] : int list)
+    in appSet heap (fn p => acc := emit_term p :: !acc) hyps_ptr;
+       List.rev (!acc)
+    end
 
     (* --- Per-rule Candle wrappers ---------------------------------------- *)
     (* Each allocates a fresh theorem ID, writes the command, returns the ID.*)
@@ -745,17 +753,17 @@ fun emit_theory {trace, output, binary, ruleset} = let
       end
 
     | ALPHA_prf (t1, _) =>
-        r_alpha_thm (c_refl (tm t1)) [] (tm concl_ptr)
+        r_alpha_thm (c_refl (tm t1)) (emit_hyps ()) (tm concl_ptr)
 
     | DISCH_prf (a, b) => let
         val p_tm = tm a val b_th = th b val q_tm = tm (heap_concl b)
-      in r_alpha_thm (do_DISCH p_tm q_tm b_th) [] (tm concl_ptr) end
+      in r_alpha_thm (do_DISCH p_tm q_tm b_th) (emit_hyps ()) (tm concl_ptr) end
 
     | GEN_prf (a, b) => let
         val v_tm = tm a val b_th = th b
         val s_tm = tm (heap_concl b)
         val v_ty = ty (heap_var_type a)
-      in r_alpha_thm (do_GEN v_tm v_ty s_tm b_th) [] (tm concl_ptr) end
+      in r_alpha_thm (do_GEN v_tm v_ty s_tm b_th) (emit_hyps ()) (tm concl_ptr) end
 
     | GENL_prf (a, b) => let
         val var_ptrs = list heap (fn p => p) a
@@ -780,10 +788,10 @@ fun emit_theory {trace, output, binary, ruleset} = let
               val v_tm = tm v_ptr val s_tm = tm s_ptr
               val v_ty = ty (heap_var_type v_ptr)
             in fold_gens rest (do_GEN v_tm v_ty s_tm th_acc) end
-      in r_alpha_thm (fold_gens gen_pairs inner_th) [] (tm concl_ptr) end
+      in r_alpha_thm (fold_gens gen_pairs inner_th) (emit_hyps ()) (tm concl_ptr) end
 
     | SPEC_prf (a, b) =>
-        emit_thm_candle result_id concl_ptr (Specialize_prf (a, b))
+        emit_thm_candle result_id hyps_ptr concl_ptr (Specialize_prf (a, b))
 
     | Specialize_prf (a, b) => let
         val t_tm = tm a val b_th = th b
@@ -796,7 +804,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
           | _ => raise Fail "SPEC: predicate not an abstraction"
         val v_ty = ty (heap_var_type var_ptr)
         val _ = tm var_ptr
-      in r_alpha_thm (do_SPEC t_tm pred_tm (tm var_ptr) forall_P_tm v_ty b_th) [] (tm concl_ptr) end
+      in r_alpha_thm (do_SPEC t_tm pred_tm (tm var_ptr) forall_P_tm v_ty b_th) (emit_hyps ()) (tm concl_ptr) end
 
     | DISJ_CASES_prf (a, b, c) => let
         val a_th = th a val b_th = th b val c_th = th c
@@ -819,7 +827,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val ccontr_inst = c_inst (candle_load_pth "candle$CCONTR")
                             [(pvar_p, p_tm)]
         val neg_p_imp_F = emit_comb (emit_comb imp_const neg_p) const_F_tm
-      in r_alpha_thm (do_MP ccontr_inst neg_p_imp_F p_tm disch_th) [] (tm concl_ptr) end
+      in r_alpha_thm (do_MP ccontr_inst neg_p_imp_F p_tm disch_th) (emit_hyps ()) (tm concl_ptr) end
 
     | EXISTS_prf (a, b, c) => let
         val c_th = th c
@@ -832,7 +840,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val var_tm = tm var_ptr
         val v_ty = ty (heap_var_type var_ptr)
         val th_pred_w = c_eq_mp (c_sym (do_beta_reduce pred_tm var_tm witness_tm)) c_th
-      in r_alpha_thm (do_EXISTS pred_tm var_tm witness_tm v_ty th_pred_w) [] (tm concl_ptr) end
+      in r_alpha_thm (do_EXISTS pred_tm var_tm witness_tm v_ty th_pred_w) (emit_hyps ()) (tm concl_ptr) end
 
     | CHOOSE_prf (a, b, c) => let
         val v_tm = tm a val b_th = th b val c_th = th c
@@ -858,7 +866,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
           (emit_const "!" (emit_tyop "fun" [Ab_v, bool_tyid])) (emit_abs v_tm imp_cmb_q)
         val imp_forall_q = emit_comb (emit_comb imp_const forall_v_imp) q_tm
         val mp_choose1 = do_MP choose_inst exists_P_tm imp_forall_q b_th
-      in r_alpha_thm (do_MP mp_choose1 forall_v_imp q_tm gen_v) [] (tm concl_ptr) end
+      in r_alpha_thm (do_MP mp_choose1 forall_v_imp q_tm gen_v) (emit_hyps ()) (tm concl_ptr) end
 
     | SUBST_prf (a, b, c) => let
         val pairs = list heap (tuple2 heap (fn p => p, fn p => p)) a
@@ -911,7 +919,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         fun loop [] acc = acc
           | loop (v :: rest) acc = loop rest (fold_one (v, acc))
         val r = loop rev_vars c_th
-      in r_alpha_thm r [] (tm concl_ptr) end
+      in r_alpha_thm r (emit_hyps ()) (tm concl_ptr) end
 
     (* === Definition commands === *)
     | Def_const_prf (a, b) => let
@@ -967,7 +975,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
       in case const_ptrs of
            [] => ()
          | _ => let val r = peel_all const_ptrs (input_th, input_concl_ptr)
-                in r_alpha_thm r [] (tm concl_ptr) end
+                in r_alpha_thm r (emit_hyps ()) (tm concl_ptr) end
       end
 
     | Def_tyop_prf (a, b, c) => let
@@ -1125,7 +1133,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
         val exist_pred_rep = emit_abs var_rep_v
           (emit_comb (emit_comb tydef_c pred_id) var_rep_v)
-      in r_alpha_thm (do_EXISTS exist_pred_rep var_rep_v rep_c rep_fn_ty tydef_proved) [] (tm concl_ptr) end
+      in r_alpha_thm (do_EXISTS exist_pred_rep var_rep_v rep_c rep_fn_ty tydef_proved) (emit_hyps ()) (tm concl_ptr) end
 
     | compute_prf (a, b) => raise Fail "emit_thm_candle: compute not yet implemented"
 
@@ -1145,7 +1153,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
              val cached = th_memo_get k
     in if cached >= 0 then cached
        else let
-         val (_, concl_ptr, proof_ptr) = shThm heap thm_ptr
+         val (hyps_ptr, concl_ptr, proof_ptr) = shThm heap thm_ptr
          val proof = shProof heap proof_ptr
          val identity_th = case proof of
              save_dep_prf th => SOME th
@@ -1182,7 +1190,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
            in PFTWriter.load out id save_name end
          | _ =>
            if is_candle
-           then emit_thm_candle id concl_ptr proof
+           then emit_thm_candle id hyps_ptr concl_ptr proof
            else
            case proof of
             ABS_prf (a, b) => let val a = emit_term a val b = emit_thm b
