@@ -578,14 +578,18 @@ fun emit_theory {trace, output, binary, ruleset} = let
               [(var_P_inst, pred_tm), (var_x_inst, t_tm)])
           val pred_t = emit_comb pred_tm t_tm
           val mp_result = do_MP spec_inst forall_tm pred_t th_forall
-          (* Beta-reduce pred(t) = (λv.s)(t) to s[t/v] *)
-          val app_var = emit_comb pred_tm var_tm
+          (* Beta-reduce pred(t) = (λv.s)(t) to s[t/v].
+             We must use the actual PFT binder variable of pred_tm
+             (which has a fresh name from emit_term), not var_tm
+             (the heap variable emitted separately via var_ht). *)
+          val (actual_bv, _) = pft_dest_abs pred_tm
+          val app_var = emit_comb pred_tm actual_bv
           val beta_th = candle_th (fn out => fn iid =>
             PFTWriter.Candle.beta out iid app_var)
-          val beta_inst = if var_tm = t_tm then beta_th
+          val beta_inst = if actual_bv = t_tm then beta_th
             else candle_th (fn out => fn iid =>
               PFTWriter.Candle.inst out iid beta_th
-                [(var_tm, t_tm)])
+                [(actual_bv, t_tm)])
       in last_step final (fn out => fn iid =>
            PFTWriter.Candle.eq_mp out iid beta_inst mp_result) end
     fun do_SPEC t p v f vt th = do_SPEC_gen NONE t p v f vt th
@@ -1277,6 +1281,11 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
         val absname = tyname ^ "_abs"
         val repname = tyname ^ "_rep"
+        (* new_type_definition produces two theorems at consecutive IDs:
+           tydef_id   = ⊢ abs (rep a) = a
+           tydef_id+1 = ⊢ P r = (rep (abs r) = r)
+           We allocate both IDs here so the counter advances past the
+           implicitly-created second theorem. *)
         val tydef_id = alloc_th ()
         val tydef_id2 = alloc_th ()
         val () = PFTWriter.Candle.new_type_definition out tydef_id th_pw
