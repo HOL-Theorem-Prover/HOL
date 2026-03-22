@@ -1131,3 +1131,81 @@ Lifted definition:
          (exists
           (typ (:arrow* (:arrow* (:tree a) :bool) (:list (:tree a)) :bool)))
          (hap* (lam_54 (typ (:arrow* a (:tree a) :bool))) a) ts))))))
+
+#|
+Definition:
+
+   ⊢ CONJ = (λt1 t2. ∀t. (t1 ⇒ t2 ⇒ t) ⇒ t)
+
+Auxiliary definitions:
+
+   ⊢ ∀t1 t2 t. Lam_55 t1 t2 t ⇔ (t1 ⇒ t2 ⇒ t) ⇒ t
+   ⊢ ∀t1 t2. Lam_56 t1 t2 ⇔ $! (Lam_55 t1 t2)
+
+Lifted definition:
+
+   ⊢ CONJ = Lam_56
+|#
+
+(defhol
+   :fns ((lam_55 (:arrow* :bool :bool :bool :bool)))
+   :defs ((:forall ((t1 :bool) (t2 :bool) (t :bool))
+      (equal (hap* (lam_55 (typ (:arrow* :bool :bool :bool :bool))) t1 t2 t)
+       (hp-implies (hp-implies t1 (hp-implies t2 t)) t)))))
+
+(defhol
+   :fns ((lam_56 (:arrow* :bool :bool :bool)))
+   :defs ((:forall ((t1 :bool) (t2 :bool))
+      (equal (hap* (lam_56 (typ (:arrow* :bool :bool :bool))) t1 t2)
+       (hp-forall
+        (hap* (lam_55 (typ (:arrow* :bool :bool :bool :bool))) t1 t2))))))
+
+(defhol
+   :fns ((conj (:arrow* :bool :bool :bool)))
+   :defs ((equal (hap* (conj (typ (:arrow* :bool :bool :bool))))
+      (lam_56 (typ (:arrow* :bool :bool :bool))))))
+
+#|
+Definition:
+
+   ⊢ DISJ = (λt1 t2. ∀t. (t1 ⇒ t) ⇒ (t2 ⇒ t) ⇒ t)
+
+Auxiliary definitions:
+
+   ⊢ ∀t1 t2 t. Lam_57 t1 t2 t ⇔ (t1 ⇒ t) ⇒ (t2 ⇒ t) ⇒ t
+   ⊢ ∀t1 t2. Lam_58 t1 t2 ⇔ $! (Lam_57 t1 t2)
+
+Lifted definition:
+
+   ⊢ DISJ = Lam_58
+|#
+
+(defhol
+   :fns ((lam_57 (:arrow* :bool :bool :bool :bool)))
+   :defs ((:forall ((t1 :bool) (t2 :bool) (t :bool))
+      (equal (hap* (lam_57 (typ (:arrow* :bool :bool :bool :bool))) t1 t2 t)
+       (hp-implies (hp-implies t1 t) (hp-implies (hp-implies t2 t) t))))))
+
+(defhol
+   :fns ((lam_58 (:arrow* :bool :bool :bool)))
+   :defs ((:forall ((t1 :bool) (t2 :bool))
+      (equal (hap* (lam_58 (typ (:arrow* :bool :bool :bool))) t1 t2)
+       (hp-forall
+        (hap* (lam_57 (typ (:arrow* :bool :bool :bool :bool))) t1 t2))))))
+
+(defhol
+   :fns ((disj (:arrow* :bool :bool :bool)))
+   :defs ((equal (hap* (disj (typ (:arrow* :bool :bool :bool))))
+      (lam_58 (typ (:arrow* :bool :bool :bool))))))
+
+#|
+Goal: conj_neq_disj
+
+   CONJ ≠ DISJ
+|#
+
+(defhol
+   :name conj_neq_disj
+   :goal (hp-not
+     (hp= (conj (typ (:arrow* :bool :bool :bool)))
+      (disj (typ (:arrow* :bool :bool :bool))))))

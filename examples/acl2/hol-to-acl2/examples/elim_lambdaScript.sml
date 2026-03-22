@@ -84,11 +84,40 @@ val tree_ind          = thm_bundle "tree_induction" (fetch "-" "tree_induction")
 val tree_ty_bundle    = thm_bundle "tree_ty_thm" tree_ty_thm;
 val occurs_def_bundle = def_bundle occurs_def;
 
+(*---------------------------------------------------------------------------*)
+(* Conjunction and disjunction are hardwired into the translator, as part of *)
+(* the formula language that is assumed to be common between the two systems.*)
+(* A HOL formula like "A ∧ B" translates to "(hp-and A B)". But HOL allows   *)
+(* one to express things like "$∧ ≠ $∨" and that requires that the           *)
+(* definitions of the connectives be made available.                         *)
+(*                                                                           *)
+(* We rename the definitions to be conventional identifiers to avoid         *)
+(* lexical problems                                                          *)
+(*---------------------------------------------------------------------------*)
+
+Definition conj_def:
+  CONJ = $/\
+End
+
+Definition disj_def:
+  DISJ = $\/
+End
+
+val conj = def_bundle (AND_DEF |> SRULE [GSYM conj_def]);
+val disj = def_bundle (OR_DEF  |> SRULE [GSYM disj_def]);
+
+val conj_neq_disj = goal_bundle "conj_neq_disj" ``~(CONJ = DISJ)``;
+
+(*---------------------------------------------------------------------------*)
+(* Output defhol file                                                        *)
+(*---------------------------------------------------------------------------*)
+
 val bundles =
   [map_def, prim_rec,
    skolem, num_ind, list_ind, tc_def, tc_ind,
    pforall_thm, pair_cases, pair_case_eq,
    qsort_def, fact_case_def, len_case_def,
-   tree_ind, tree_ty_bundle, occurs_def_bundle];
+   tree_ind, tree_ty_bundle, occurs_def_bundle,
+   conj, disj, conj_neq_disj];
 
 val _ = print_bundles_to_file "elim_lambda.defhol" bundles;
