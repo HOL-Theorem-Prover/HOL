@@ -210,18 +210,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
          id
       end
 
-  (* Eagerly load all preamble pro-forma theorems used by Candle mode,
-     so that candle_load_pth inside write closures finds cached IDs. *)
-  val () = if is_candle then List.app (ignore o candle_load_pth) [
-    "candle$MP", "candle$CONJ",
-    "candle$CONJUNCT1", "candle$CONJUNCT2", "candle$DISCH",
-    "candle$EQT_INTRO", "candle$GEN", "candle$SPEC",
-    "candle$EXISTS", "candle$SELECT_AX", "candle$CHOOSE",
-    "candle$DISJ1", "candle$DISJ2", "candle$DISJ_CASES",
-    "candle$CCONTR", "candle$EQ_IMP_RULE1", "candle$EQ_IMP_RULE2",
-    "candle$NOT_ELIM", "candle$NOT_INTRO",
-    "bool$TYPE_DEFINITION_THM"
-  ] else ()
+  (* Pro-forma theorems are loaded lazily by candle_load_pth on first use. *)
 
   (* ======================================================================= *)
   (* Type emission                                                           *)
@@ -1068,7 +1057,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val th_fwd_u = do_MP th_fwd_disch phi_x exist_x_eq (c_assume phi_x)
         val th_bwd_u = do_MP (do_DISCH exist_x_eq phi_x th_bwd)
                          exist_x_eq phi_x (c_assume exist_x_eq)
-        val th_char_x = c_deduct th_fwd_u th_bwd_u
+        val th_char_x = c_deduct th_bwd_u th_fwd_u
         val phi_eq_exists = emit_comb (emit_comb (eq_bool_const) phi_x) exist_x_eq
         val th_conj2 = do_GEN var_x_rep rep_ty phi_eq_exists th_char_x
 
