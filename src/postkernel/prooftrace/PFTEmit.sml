@@ -754,9 +754,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | GEN_prf (a, b) => let
         val v_tm = tm a val b_th = th b
         val s_tm = tm (heap_concl b)
-        val v_ty = ty (case shTerm heap a of
-                          Fv (_, t) => t
-                        | _ => raise Fail "GEN: variable expected")
+        val v_ty = ty (heap_var_type a)
       in r_alpha_thm (do_GEN v_tm v_ty s_tm b_th) [] (tm concl_ptr) end
 
     | GENL_prf (a, b) => let
@@ -780,8 +778,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         fun fold_gens [] th_acc = th_acc
           | fold_gens ((v_ptr, s_ptr) :: rest) th_acc = let
               val v_tm = tm v_ptr val s_tm = tm s_ptr
-              val v_ty = ty (case shTerm heap v_ptr of
-                              Fv (_, t) => t | _ => raise Fail "GENL: var expected")
+              val v_ty = ty (heap_var_type v_ptr)
             in fold_gens rest (do_GEN v_tm v_ty s_tm th_acc) end
       in r_alpha_thm (fold_gens gen_pairs inner_th) [] (tm concl_ptr) end
 
@@ -797,8 +794,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val (var_ptr, _) = case shTerm heap pred_ptr of
             Abs (v, body) => (v, body)
           | _ => raise Fail "SPEC: predicate not an abstraction"
-        val v_ty = ty (case shTerm heap var_ptr of
-            Fv (_, t) => t | _ => raise Fail "SPEC: not a variable")
+        val v_ty = ty (heap_var_type var_ptr)
         val _ = tm var_ptr
       in r_alpha_thm (do_SPEC t_tm pred_tm (tm var_ptr) forall_P_tm v_ty b_th) [] (tm concl_ptr) end
 
@@ -948,31 +944,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val input_concl_ptr = heap_concl a
 
         fun peel_one th_id exists_tm exists_ptr const_ptr = let
-          val (_, pred_id) = pft_dest_comb exists_tm
-          val (_, pred_ptr) = heap_dest_comb exists_ptr
-          val (bv_ptr, _) = case shTerm heap pred_ptr of
-              Abs (v, body) => (v, body)
-            | _ => raise Fail "Def_spec: predicate not abstraction"
-          val v_ty = ty (case shTerm heap bv_ptr of
-              Fv (_, t) => t | _ => raise Fail "Def_spec: var expected")
-          val Ab = emit_tyop "fun" [v_ty, bool_tyid]
-          val witness = emit_comb (emit_const "@" (emit_tyop "fun" [Ab, v_ty])) pred_id
-          val pred_witness = emit_comb pred_id witness
-          val var_P_Ab = emit_var "P" Ab
-          val sel_inst = c_inst (c_inst_type (candle_load_pth "candle$SELECT_AX")
-                           [(tyvar_A, v_ty)])
-                           [(var_P_Ab, pred_id)]
-          val choose_inst = c_inst (c_inst_type (candle_load_pth "candle$CHOOSE")
-                              [(tyvar_A, v_ty)])
-                              [(var_P_Ab, pred_id), (pvar_Q, pred_witness)]
-          val var_x_v = emit_var "x" v_ty
-          val lam_x_imp = emit_abs var_x_v
-                            (emit_comb (emit_comb imp_const (emit_comb pred_id var_x_v)) pred_witness)
-          val forall_inner = emit_comb (emit_const "!" (emit_tyop "fun" [Ab, bool_tyid])) lam_x_imp
-          val imp_forall_pw = emit_comb (emit_comb imp_const forall_inner) pred_witness
-          val th_pred_witness = do_MP
-            (do_MP choose_inst exists_tm imp_forall_pw th_id)
-            forall_inner pred_witness sel_inst
+          val (th_pred_witness, pred_id, witness, v_ty, bv_ptr, pred_ptr) =
+            exist_to_witness th_id exists_tm exists_ptr
           val (Thy, Name) = get_const_id const_ptr
           val cname = tr_name (Thy ^ "$" ^ Name)
           val eq_c = emit_const "=" (emit_tyop "fun" [v_ty, emit_tyop "fun" [v_ty, bool_tyid]])
@@ -1099,51 +1072,54 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val conj2_body = emit_comb forall_rep (emit_abs var_x_rep phi_eq_exists)
         val conj_th = do_CONJ conj1_body conj2_body th_conj1 th_conj2
 
-        val tydef_thm = candle_load_pth "bool$TYPE_DEFINITION_THM"
-        val tyvar_a = mk_tyvar_cached "'a"
-        val tyvar_b = mk_tyvar_cached "'b"
-        val tydef_inst = c_inst_type tydef_thm
-                           [(tyvar_a, rep_ty), (tyvar_b, new_ty)]
+        (* --- Instantiate TYPE_DEFINITION_THM via two SPECs --------------- *)
+
+        val tydef_inst = c_inst_type (candle_load_pth "bool$TYPE_DEFINITION_THM")
+                           [(mk_tyvar_cached "'a", rep_ty),
+                            (mk_tyvar_cached "'b", new_ty)]
         val var_P_v = emit_var "P" Ab
         val var_rep_v = emit_var "rep" rep_fn_ty
         val tydef_ty = emit_tyop "fun" [Ab, emit_tyop "fun" [rep_fn_ty, bool_tyid]]
         val tydef_c = emit_const "TYPE_DEFINITION" tydef_ty
-        val rep_v_x' = emit_comb var_rep_v var_x'
-        val rep_v_x'' = emit_comb var_rep_v var_x''
-        val rr_v = emit_comb (emit_comb eq_rep rep_v_x') rep_v_x''
-        val inj_inner_v = emit_abs var_x''
-          (emit_comb (emit_comb (imp_const) rr_v)
-            (emit_comb (emit_comb eq_new var_x') var_x''))
-        val inj_body_v = emit_comb forall_new
-          (emit_abs var_x' (emit_comb forall_new inj_inner_v))
-        val P_v_x = emit_comb var_P_v var_x_rep
-        val exist_v = emit_comb (emit_const "?" (emit_tyop "fun" [Ab_new, bool_tyid]))
-          (emit_abs var_x' (emit_comb (emit_comb eq_rep var_x_rep) rep_v_x'))
-        val char_body_v = emit_comb forall_rep
-          (emit_abs var_x_rep (emit_comb (emit_comb (eq_bool_const) P_v_x) exist_v))
-        val tydef_body_v = emit_comb (emit_comb (and_const) inj_body_v) char_body_v
-        val tydef_eq_v = emit_comb (emit_comb (eq_bool_const)
-          (emit_comb (emit_comb tydef_c var_P_v) var_rep_v)) tydef_body_v
-        val inner_lam = emit_abs var_rep_v tydef_eq_v
         val forall_rep_fn = emit_const "!"
           (emit_tyop "fun" [emit_tyop "fun" [rep_fn_ty, bool_tyid], bool_tyid])
-        val inner_forall = emit_comb forall_rep_fn inner_lam
+
+        (* Build the TYPE_DEFINITION body with generic P, rep variables.
+           TYPE_DEFINITION P rep ≡
+             (∀x' x''. rep x' = rep x'' ⇒ x' = x'') ∧
+             (∀x. P x = ∃x'. x = rep x') *)
+        val rep_v_x' = emit_comb var_rep_v var_x'
+        val rep_v_x'' = emit_comb var_rep_v var_x''
+        val inj_body_v = emit_comb forall_new
+          (emit_abs var_x' (emit_comb forall_new (emit_abs var_x''
+            (emit_comb (emit_comb imp_const
+              (emit_comb (emit_comb eq_rep rep_v_x') rep_v_x''))
+              (emit_comb (emit_comb eq_new var_x') var_x'')))))
+        val exist_v = emit_comb (emit_const "?" (emit_tyop "fun" [Ab_new, bool_tyid]))
+          (emit_abs var_x' (emit_comb (emit_comb eq_rep var_x_rep) rep_v_x'))
+        fun mk_char_body P_x = emit_comb forall_rep
+          (emit_abs var_x_rep (emit_comb (emit_comb eq_bool_const P_x) exist_v))
+        val tydef_body_v = emit_comb (emit_comb and_const inj_body_v)
+                             (mk_char_body (emit_comb var_P_v var_x_rep))
+        val tydef_eq_v = emit_comb (emit_comb eq_bool_const
+          (emit_comb (emit_comb tydef_c var_P_v) var_rep_v)) tydef_body_v
+        val inner_forall = emit_comb forall_rep_fn (emit_abs var_rep_v tydef_eq_v)
         val outer_lam = emit_abs var_P_v inner_forall
         val forall_Ab = emit_const "!"
           (emit_tyop "fun" [emit_tyop "fun" [Ab, bool_tyid], bool_tyid])
         val outer_forall = emit_comb forall_Ab outer_lam
+
+        (* SPEC P := pred_id *)
         val spec1 = do_SPEC pred_id outer_lam var_P_v outer_forall Ab tydef_inst
-        val tydef_phi_rep = emit_comb (emit_comb tydef_c pred_id) var_rep_v
-        val phi_x_v = emit_comb pred_id var_x_rep
-        val exist_v2 = emit_comb (emit_const "?" (emit_tyop "fun" [Ab_new, bool_tyid]))
-          (emit_abs var_x' (emit_comb (emit_comb eq_rep var_x_rep) rep_v_x'))
-        val char_body_v2 = emit_comb forall_rep
-          (emit_abs var_x_rep (emit_comb (emit_comb (eq_bool_const) phi_x_v) exist_v2))
-        val body_v2 = emit_comb (emit_comb (and_const) inj_body_v) char_body_v2
-        val eq_v2 = emit_comb (emit_comb (eq_bool_const) tydef_phi_rep) body_v2
-        val inner_lam2 = emit_abs var_rep_v eq_v2
-        val inner_forall2 = emit_comb forall_rep_fn inner_lam2
-        val spec2 = do_SPEC rep_c inner_lam2 var_rep_v inner_forall2 rep_fn_ty spec1
+
+        (* SPEC rep := rep_c — need the post-P-specialization body *)
+        val tydef_phi_body = emit_comb (emit_comb and_const inj_body_v)
+                               (mk_char_body phi_x)
+        val tydef_phi_eq = emit_comb (emit_comb eq_bool_const
+          (emit_comb (emit_comb tydef_c pred_id) var_rep_v)) tydef_phi_body
+        val inner_forall2 = emit_comb forall_rep_fn (emit_abs var_rep_v tydef_phi_eq)
+        val spec2 = do_SPEC rep_c (emit_abs var_rep_v tydef_phi_eq)
+                      var_rep_v inner_forall2 rep_fn_ty spec1
 
         val tydef_proved = c_eq_mp (c_sym spec2) conj_th
 
