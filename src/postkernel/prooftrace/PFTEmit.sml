@@ -1,6 +1,6 @@
 structure PFTEmit :> PFTEmit = struct
 
-open Lib Redblackmap ProofTraceParser
+open Lib Redblackset Redblackmap ProofTraceParser
 
 datatype ruleset = HOL4 | Candle
 
@@ -162,7 +162,7 @@ in write_cmds 0 end
 fun emit_theory {trace, output, binary, ruleset} = let
   val thyname = thyname_of_path trace
   val is_candle = case ruleset of Candle => true | HOL4 => false
-  val tr_name = if is_candle then candle_translate_name else (fn s => s)
+  val tr_name = if is_candle then candle_translate_name else I
   val (root_ptr, heap) = parse trace
   val {all_thms, anon_thms, constants, types, ...} = shRoot heap root_ptr
 
@@ -172,7 +172,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
     ProofTraceWalk.walk
       {heap = heap, thyname = thyname,
        named_thms = all_thms, anon_thms = anon_thms,
-       incr = fn _ => (), on_def_thm = fn _ => ()}
+       incr = K (), on_def_thm = K ()}
 
   (* --- Emit pass state --------------------------------------------------- *)
 
@@ -299,14 +299,12 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
   (* --- NEW_CONST / NEW_TYPE tracking ------------------------------------- *)
 
-  val const_done : (string, unit) dict ref = ref (mkDict String.compare)
-  val type_done : (string, unit) dict ref = ref (mkDict String.compare)
-  fun mark_const name = const_done := insert(!const_done, name, ())
-  fun mark_type name = type_done := insert(!type_done, name, ())
-  fun is_const_done name =
-    case peek(!const_done, name) of SOME _ => true | NONE => false
-  fun is_type_done name =
-    case peek(!type_done, name) of SOME _ => true | NONE => false
+  val const_done : string set ref = ref (empty String.compare)
+  val type_done : string set ref = ref (empty String.compare)
+  fun mark_const name = const_done := add(!const_done, name)
+  fun mark_type name = type_done := add(!type_done, name)
+  fun is_const_done name = member(!const_done, name)
+  fun is_type_done name = member(!type_done, name)
 
   (* Axiom names: PFT thm ID -> optional name. Axiom IDs are registered
      with NONE at emit time, resolved to SOME name by scanning named_thms
@@ -318,13 +316,13 @@ fun emit_theory {trace, output, binary, ruleset} = let
   fun emit entry = DArray.push(cmd_buf, entry)
 
   (* Emit a type-defining command and record its def index *)
-  fun emit_ty_def id entry = (emit entry; def_ty id)
+  fun emit_ty_def id entry = (def_ty id; emit entry)
   (* Emit a term-defining command and record its def index *)
-  fun emit_tm_def id entry = (emit entry; def_tm id)
+  fun emit_tm_def id entry = (def_tm id; emit entry)
   (* Emit a theorem-defining command and record its def index *)
-  fun emit_th_def id entry = (emit entry; def_th id)
+  fun emit_th_def id entry = (def_th id; emit entry)
   (* Emit a ci-defining command and record its def index *)
-  fun emit_ci_def id entry = (emit entry; def_ci id)
+  fun emit_ci_def id entry = (def_ci id; emit entry)
 
   (* Emit a command with no refs and no defined ID (e.g., NEW_TYPE) *)
   fun emit0 wfn = emit {write = wfn,
@@ -757,16 +755,19 @@ fun emit_theory {trace, output, binary, ruleset} = let
            [] [beta_inst, mp_result] end
     fun do_SPEC t p v f vt th = do_SPEC_gen NONE t p v f vt th
 
-    (* do_beta_reduce: from lam_tm (= abs var_tm body) and arg_tm,
-       derive ⊢ lam_tm arg_tm = body[arg/var]. *)
-    fun do_beta_reduce lam_tm var_tm arg_tm =
-      let val app_var = emit_comb lam_tm var_tm
+    (* do_beta_reduce: from lam_tm (a PFT abs term) and arg_tm,
+       derive ⊢ lam_tm arg_tm = body[arg/binder].
+       Extracts the actual bound variable from lam_tm via pft_dest_abs
+       to ensure the BETA term is exactly (λv. t) v. *)
+    fun do_beta_reduce lam_tm _ arg_tm =
+      let val (actual_bv, _) = pft_dest_abs lam_tm
+          val app_var = emit_comb lam_tm actual_bv
           val beta_th = candle_th (fn out => fn iid =>
             PFTWriter.Candle.beta out iid app_var) [app_var] []
-      in if var_tm = arg_tm then beta_th
+      in if actual_bv = arg_tm then beta_th
          else candle_th (fn out => fn iid =>
            PFTWriter.Candle.inst out iid beta_th
-             [(var_tm, arg_tm)]) [var_tm, arg_tm] [beta_th] end
+             [(actual_bv, arg_tm)]) [actual_bv, arg_tm] [beta_th] end
 
     (* do_EXISTS: from th: A ⊢ P(witness), pred = λv.body, derive A ⊢ ∃v. body
        Needs: pred_tm, var_tm (bound var of pred), witness_tm, v_ty *)
@@ -1071,24 +1072,21 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val concl_a = heap_concl a
         val (_, rhs_ptr) = heap_dest_comb concl_a  (* rhs = (λx. body) arg *)
         val rhs_tm = tm rhs_ptr
-        (* Candle BETA only works on (λx. body) x where arg = bound var.
-           For the general case: construct (λx. body) x, BETA, INST x→arg.
-           But we don't easily have the lambda and arg separately from PFT IDs.
-           However, we CAN destructure from the heap. *)
         val (lam_ptr, arg_ptr) = heap_dest_comb rhs_ptr
       in case shTerm heap lam_ptr of
            Abs (var_ptr, _) => let
-             val var_tm = tm var_ptr
+             val _ = tm var_ptr  (* ensure emitted for ref tracking *)
              val lam_tm = tm lam_ptr
              val arg_tm = tm arg_ptr
-             (* (λx. body) x *)
-             val app_var = emit_comb lam_tm var_tm
+             (* Extract actual bound variable from emitted lambda *)
+             val (actual_bv, _) = pft_dest_abs lam_tm
+             val app_var = emit_comb lam_tm actual_bv
              val beta_th = candle_th (fn out => fn iid =>
                PFTWriter.Candle.beta out iid app_var) [app_var] []
-             val beta_inst = if var_tm = arg_tm then beta_th
+             val beta_inst = if actual_bv = arg_tm then beta_th
                else candle_th (fn out => fn iid =>
                  PFTWriter.Candle.inst out iid beta_th
-                   [(var_tm, arg_tm)]) [var_tm, arg_tm] [beta_th]
+                   [(actual_bv, arg_tm)]) [actual_bv, arg_tm] [beta_th]
            in emit_final (fn out =>
                 PFTWriter.Candle.trans out result_id a_th beta_inst) end
          | _ => raise Fail "Beta: RHS not an application of abstraction"
@@ -1099,18 +1097,21 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val (lam_ptr, arg_ptr) = heap_dest_comb a
       in case shTerm heap lam_ptr of
            Abs (var_ptr, _) => let
-             val var_tm = tm var_ptr
+             val _ = tm var_ptr  (* ensure emitted for ref tracking *)
              val lam_tm = tm lam_ptr
              val arg_tm = tm arg_ptr
-             val app_var = emit_comb lam_tm var_tm
-             val beta_th = candle_th (fn out => fn iid =>
-               PFTWriter.Candle.beta out iid app_var) [app_var] []
-           in if var_tm = arg_tm
+             (* Extract actual bound variable from emitted lambda *)
+             val (actual_bv, _) = pft_dest_abs lam_tm
+             val app_var = emit_comb lam_tm actual_bv
+           in if actual_bv = arg_tm
               then emit_final (fn out =>
                 PFTWriter.Candle.beta out result_id app_var)
-              else emit_final (fn out =>
+              else let
+                val beta_th = candle_th (fn out => fn iid =>
+                  PFTWriter.Candle.beta out iid app_var) [app_var] []
+              in emit_final (fn out =>
                 PFTWriter.Candle.inst out result_id beta_th
-                  [(var_tm, arg_tm)]) end
+                  [(actual_bv, arg_tm)]) end end
          | _ => raise Fail "BETA_CONV: not an application of abstraction"
       end
 
@@ -1603,12 +1604,14 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val repname = tyname ^ "_rep"
         val tydef_id = alloc_th ()
         val tydef_id2 = alloc_th ()
-        val () = emit_th_def tydef_id {write = fn out =>
+        (* new_type_definition produces two consecutive theorem IDs;
+           record both def indices at the same command position. *)
+        val () = def_th tydef_id
+        val () = def_th tydef_id2
+        val () = emit {write = fn out =>
           PFTWriter.Candle.new_type_definition out tydef_id th_pw
             tyname absname repname,
           ref_ty = [], ref_tm = [], ref_th = [th_pw], ref_ci = []}
-        val () = emit_th_def tydef_id2 {write = fn _ => (),
-          ref_ty = [], ref_tm = [], ref_th = [], ref_ci = []}
         (* tydef_id: |- abs(rep a) = a, tydef_id2: |- phi r = (rep(abs r) = r) *)
 
         (* Step 3: bridge derivation *)
@@ -1677,10 +1680,10 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
         (* Forward: {phi x} |- ?x'. x = rep x' *)
         val th_rep_abs_x = candle_th (fn out => fn iid =>
-          PFTWriter.Candle.eq_mp out iid sym_ra_x
+          PFTWriter.Candle.eq_mp out iid ra_x
             (candle_th (fn out2 => fn iid2 =>
               PFTWriter.Candle.assume out2 iid2 phi_x) [phi_x] []))
-            [] [sym_ra_x]
+            [] [ra_x]
         val sym_repabs = candle_th (fn out => fn iid =>
           PFTWriter.Candle.sym out iid th_rep_abs_x) [] [th_rep_abs_x]
         val beta_fwd = do_beta_reduce pred_exists var_x' abs_x
@@ -1708,7 +1711,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
           PFTWriter.Candle.trans out iid ap_rep_abs sym_xeq)
             [] [ap_rep_abs, sym_xeq]
         val th_phi_from_xeq = candle_th (fn out => fn iid =>
-          PFTWriter.Candle.eq_mp out iid ra_x th_repabsx) [] [ra_x, th_repabsx]
+          PFTWriter.Candle.eq_mp out iid sym_ra_x th_repabsx) [] [sym_ra_x, th_repabsx]
         (* CHOOSE to discharge ?x'. x = rep x' *)
         val x_eq_imp_phi = emit_comb (emit_comb (imp_const) x_eq_rep_x') phi_x
         val choose_pth = candle_load_pth "candle$CHOOSE"
