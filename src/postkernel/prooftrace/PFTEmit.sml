@@ -1087,29 +1087,38 @@ fun emit_theory {trace, output, binary, ruleset} = let
           | NONE => NONE
         val source_id = tm (heap_concl c)
         val template_id = tm template_ptr
-        fun rconv src_id tmpl_id =
+        fun rconv binder_map src_id tmpl_id =
           if src_id = tmpl_id then
             candle_th (fn out => fn iid =>
               PFTWriter.Candle.refl out iid src_id)
           else
+            case List.find (fn (tv, _) => tv = tmpl_id) binder_map of
+              SOME (_, sv) =>
+                if sv = src_id then
+                  candle_th (fn out => fn iid =>
+                    PFTWriter.Candle.refl out iid src_id)
+                else raise Fail ("rconv: binder variable mismatch: src "
+                                 ^ Int.toString src_id ^ " vs mapped "
+                                 ^ Int.toString sv)
+            | NONE =>
             case lookup_subst tmpl_id of
               SOME th_id => th_id
             | NONE =>
               let val (sf, sx) = pft_dest_comb src_id
                   val (tf, tx) = pft_dest_comb tmpl_id
-                  val f_eq = rconv sf tf
-                  val x_eq = rconv sx tx
+                  val f_eq = rconv binder_map sf tf
+                  val x_eq = rconv binder_map sx tx
               in candle_th (fn out => fn iid =>
                    PFTWriter.Candle.mk_comb out iid f_eq x_eq)
               end
               handle Fail _ =>
               let val (sv, sb) = pft_dest_abs src_id
                   val (tv, tb) = pft_dest_abs tmpl_id
-                  val body_eq = rconv sb tb
+                  val body_eq = rconv ((tv, sv) :: binder_map) sb tb
               in candle_th (fn out => fn iid =>
                    PFTWriter.Candle.abs out iid sv body_eq)
               end
-        val eq_th = rconv source_id template_id
+        val eq_th = rconv [] source_id template_id
       in emit_final (fn out =>
            PFTWriter.Candle.eq_mp out result_id eq_th c_th) end
 
