@@ -839,8 +839,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
           | _ => raise Fail "EXISTS: predicate not abstraction"
         val var_tm = tm var_ptr
         val v_ty = ty (heap_var_type var_ptr)
-        val th_pred_w = c_eq_mp (c_sym (do_beta_reduce pred_tm var_tm witness_tm)) c_th
-      in r_alpha_thm (do_EXISTS pred_tm var_tm witness_tm v_ty th_pred_w) (emit_hyps ()) (tm concl_ptr) end
+      in r_alpha_thm (do_EXISTS pred_tm var_tm witness_tm v_ty c_th) (emit_hyps ()) (tm concl_ptr) end
 
     | CHOOSE_prf (a, b, c) => let
         val v_tm = tm a val b_th = th b val c_th = th c
@@ -1043,8 +1042,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
         (* Forward: {phi x} |- ?x'. x = rep x' *)
         val sym_repabs = c_sym (c_eq_mp ra_x (c_assume phi_x))
-        val witness_fwd = c_eq_mp (c_sym (do_beta_reduce pred_exists var_x' abs_x)) sym_repabs
-        val th_fwd = do_EXISTS pred_exists var_x' abs_x new_ty witness_fwd
+        val th_fwd = do_EXISTS pred_exists var_x' abs_x new_ty sym_repabs
         val th_fwd_disch = do_DISCH phi_x exist_x_eq th_fwd
 
         (* Backward: {?x'. x = rep x'} |- phi x *)
