@@ -500,18 +500,19 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | Abs (t1, t2) => let
         val (s, typ) = resolve_binder_name t1
         val ty_id = emit_type typ
-        val B = alloc_tm ()
+        val V = alloc_tm ()
         val bname = fresh_binder_name s
-        val () = emit_tm_def B {write = fn out =>
-                   PFTWriter.var out B bname ty_id,
+        val () = emit_tm_def V {write = fn out =>
+                   PFTWriter.var out V bname ty_id,
                  ref_ty = [ty_id], ref_tm = [], ref_th = [], ref_ci = []}
-        val body_id = emit_term_sub (Subst.cons(env, B)) t2
+        val body_id = emit_term_sub (Subst.cons(env, V)) t2
+        val A = alloc_tm ()
       in
-        emit_tm_def B {write = fn out => PFTWriter.abs out B B body_id,
-              ref_ty = [], ref_tm = [B, body_id],
+        emit_tm_def A {write = fn out => PFTWriter.abs out A V body_id,
+              ref_ty = [], ref_tm = [V, body_id],
               ref_th = [], ref_ci = []};
-        tm_parts_set B (B, body_id);
-        B
+        tm_parts_set A (V, body_id);
+        A
       end
     | Clos (sbp, tmp) => let
         val env' = Subst.comp (fn (_,s) => s) (env, emit_subs env sbp)
