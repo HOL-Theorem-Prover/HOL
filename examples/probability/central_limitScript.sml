@@ -7,7 +7,7 @@ Ancestors
   pair combin option prim_rec arithmetic pred_set list rich_list real iterate
   seq transc real_sigma lim topology real_topology extreal sigma_algebra
   measure lebesgue_measure real_borel borel lebesgue martingale extreal_base
-  probability derivative distribution stochastic_process
+  probability derivative integration distribution stochastic_process
 Libs
   pred_setLib hurdUtils realLib Diff
 
@@ -1551,7 +1551,7 @@ Theorem has_integral_x_cubic_std_normal_density :
 Proof
   rpt STRIP_TAC
   >> ONCE_REWRITE_TAC [GSYM REAL_SUB_NEG2]
-  >> HO_MATCH_MP_TAC integrationTheory.FUNDAMENTAL_THEOREM_OF_CALCULUS
+  >> HO_MATCH_MP_TAC FUNDAMENTAL_THEOREM_OF_CALCULUS
   >> rw [IN_INTERVAL]
   >> MATCH_MP_TAC HAS_VECTOR_DERIVATIVE_AT_WITHIN
   >> REWRITE_TAC [has_vector_derivative_x_cubic_normal_density]
@@ -1744,9 +1744,9 @@ Proof
          ‘abs x = x’ by rw [GSYM ABS_REFL] >> POP_ORW \\
          simp []) >> DISCH_TAC \\
      MP_TAC (Q.SPECL [‘0’, ‘&n’] has_integral_x_cubic_std_normal_density) >> rw [] \\
-     MATCH_MP_TAC integrationTheory.HAS_INTEGRAL_EQ \\
+     MATCH_MP_TAC HAS_INTEGRAL_EQ \\
      qexists ‘λx. x³ * std_normal_density x’ >> METIS_TAC [])
- >> rw [integrationTheory.HAS_INTEGRAL_INTEGRABLE_INTEGRAL, FORALL_AND_THM]
+ >> rw [HAS_INTEGRAL_INTEGRABLE_INTEGRAL, FORALL_AND_THM]
  (* applying lebesgue_eq_gauge_integral_positive_alt *)
  >> Know ‘!n. pos_fn_integral lborel (Normal o h n) =
               Normal (integral univ(:real) (h n))’

@@ -109,6 +109,16 @@ sig
   val mk_axiom_thm  : (string Nonce.t * term) -> thm
   val add_tag       : tag * thm -> thm
 
+  (* registration of bool constants *)
+  val register_T               : thm -> unit
+  val register_forall          : thm -> unit
+  val register_exists          : thm -> unit
+  val register_F               : thm -> unit
+  val register_neg             : thm -> unit
+  val register_conj            : thm -> unit
+  val register_disj            : thm -> unit
+  val register_type_definition : thm -> unit
+
   (* definitional rules of inference *)
   val prim_type_definition : {Thy : string, Tyop : string} * thm -> thm
   val prim_specification : string -> string list -> thm -> thm
@@ -116,7 +126,8 @@ sig
 
   (* Fetching theorems from disk *)
 
-  val disk_thm : (depdisk * string list) * term list -> thm
+  datatype thm_id = SavedName of string | SavedAnon of int
+  val disk_thm : (string * thm_id) -> (depdisk * string list) * term list -> thm
 
   (* Saving proof dependencies *)
 

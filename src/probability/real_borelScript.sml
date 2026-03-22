@@ -1708,6 +1708,108 @@ Proof
  >> MATCH_MP_TAC borel_open >> fs []
 QED
 
+Definition real_fn_plus_def :
+    real_fn_plus f x = max (0 :real) (f x)
+End
+
+Definition real_fn_minus_def :
+    real_fn_minus f x = -min (0 :real) (f x)
+End
+
+Overload TC                = “real_fn_plus”
+Overload fn_plus[inferior] = “real_fn_plus”
+Overload fn_minus          = “real_fn_minus”
+
+Theorem real_fn_plus :
+    !f. real_fn_plus f = \x. max 0 (f x)
+Proof
+    rw [FUN_EQ_THM, real_fn_plus_def]
+QED
+
+Theorem real_fn_minus :
+    real_fn_minus f = \x. -min 0 (f x)
+Proof
+    rw [FUN_EQ_THM, real_fn_minus_def]
+QED
+
+Theorem real_fn_plus_pos :
+    !f x. 0 <= real_fn_plus f x
+Proof
+    rw [real_fn_plus_def, REAL_LE_MAX]
+QED
+
+Theorem real_fn_minus_pos :
+    !f x. 0 <= real_fn_minus f x
+Proof
+    rw [real_fn_minus_def, REAL_MIN_LE]
+QED
+
+(* cf. extrealTheory.FN_DECOMP *)
+Theorem fn_decompose :
+    !(f :'a -> real) x. f x = fn_plus f x - fn_minus f x
+Proof
+    RW_TAC real_ss [real_fn_plus_def, real_fn_minus_def]
+ >> Cases_on ‘0 <= f x’
+ >- simp [REAL_MAX_REDUCE, REAL_MIN_REDUCE]
+ >> fs [REAL_NOT_LE]
+ >> simp [REAL_MAX_REDUCE, REAL_MIN_REDUCE]
+QED
+
+Theorem fn_abs_decompose :
+    !(f :'a -> real) x. abs (f x) = fn_plus f x + fn_minus f x
+Proof
+    RW_TAC real_ss [real_fn_plus_def, real_fn_minus_def]
+ >> Cases_on ‘0 <= f x’
+ >- simp [ABS_REDUCE, REAL_MAX_REDUCE, REAL_MIN_REDUCE]
+ >> fs [REAL_NOT_LE]
+ >> simp [ABS_EQ_NEG, REAL_MAX_REDUCE, REAL_MIN_REDUCE]
+QED
+
+Theorem fn_abs :
+    !(f :'a -> real). abs o f = \x. fn_plus f x + fn_minus f x
+Proof
+    rw [FUN_EQ_THM, fn_abs_decompose]
+QED
+
+Theorem in_borel_measurable_fn_plus :
+    !a f. sigma_algebra a /\ f IN borel_measurable a ==>
+          real_fn_plus f IN borel_measurable a
+Proof
+    rw [real_fn_plus]
+ >> HO_MATCH_MP_TAC in_borel_measurable_max >> art []
+ >> MATCH_MP_TAC in_borel_measurable_const
+ >> Q.EXISTS_TAC ‘0’ >> rw []
+QED
+
+Theorem in_borel_measurable_fn_minus :
+    !a f. sigma_algebra a /\ f IN borel_measurable a ==>
+          real_fn_minus f IN borel_measurable a
+Proof
+    rw [real_fn_minus]
+ >> HO_MATCH_MP_TAC in_borel_measurable_ainv >> art []
+ >> HO_MATCH_MP_TAC in_borel_measurable_min >> art []
+ >> MATCH_MP_TAC in_borel_measurable_const
+ >> Q.EXISTS_TAC ‘0’ >> rw []
+QED
+
+Theorem in_borel_measurable_abs' :
+    !a f. sigma_algebra a /\ f IN borel_measurable a ==>
+          abs o f IN borel_measurable a
+Proof
+    rw [fn_abs]
+ >> MATCH_MP_TAC in_borel_measurable_add
+ >> qexistsl_tac [‘fn_plus f’, ‘fn_minus f’]
+ >> rw [in_borel_measurable_fn_plus, in_borel_measurable_fn_minus]
+QED
+
+Theorem in_borel_measurable_borel_abs :
+    abs IN borel_measurable borel
+Proof
+    MP_TAC (ISPECL [“borel”, “\x. (x :real)”] in_borel_measurable_abs')
+ >> simp [o_DEF, in_borel_measurable_I, sigma_algebra_borel]
+ >> SIMP_TAC (std_ss ++ ETA_ss) []
+QED
+
 (************************************************************)
 (*  right-open (left-closed) intervals [a, b) in R          *)
 (************************************************************)

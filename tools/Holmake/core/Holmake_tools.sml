@@ -30,6 +30,8 @@ fun memoise cmp f =
       lookup
     end
 
+fun mapFind P f [] = NONE
+  | mapFind P f (x::xs) = let val fx = f x in if P fx then SOME fx else mapFind P f xs end
 
 structure Exception = struct
   datatype 'a result = Res of 'a | Exn of exn
@@ -777,13 +779,14 @@ in
     val arg = valOf arg
     val argname = fromFile arg
     val depfile = mk_depfile_name DEPDIR argname
+    val allincs = preincludes @ includes
     val _ =
       if argname forces_update_of depfile then
         runholdep {ofs = output_functions, extras = extra_targets,
-                   includes = preincludes @ includes, arg = arg,
+                   includes = allincs, arg = arg,
                    destination = depfile}
       else ()
-    val phase1 =
+    val phase1 : hm_target.t list =
       (* circumstances can arise in which the dependency file won't be
          built, and won't exist; mainly because the file we're trying to
          compute dependencies for doesn't exist either.  In this case, we
@@ -792,16 +795,19 @@ in
         get_dependencies_from_file depfile
       else
         []
+    fun sigcheck x =
+        mapFind (fn tgt => tgtexists_readable tgt andalso
+                           List.all (fn tgt' => tgt' <> tgt) phase1)
+                (fn d => filestr_to_tgt (OS.Path.concat(d, fromFile (SIG x))))
+                ("."::allincs)
   in
     case f of
         UO (Theory s) => localFile (UI (Theory s)) :: localFile(DAT s) :: phase1
-      | UO x =>
-        if access(fromFile (SIG x), []) andalso
-           List.all (fn f => f <> localFile (SIG x)) phase1
-        then
-          localFile (UI x) :: phase1
-        else
-          phase1
+      | UO x => (case sigcheck x of
+                     SOME tgt => (case filepart tgt of
+                                      SIG base => setFile (UI base) tgt :: phase1
+                                    | _ => phase1)
+                   | _ => phase1)
       | _ => phase1
   end
   else

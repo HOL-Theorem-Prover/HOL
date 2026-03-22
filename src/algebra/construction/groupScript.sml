@@ -9893,7 +9893,8 @@ Proof
   `b IN (Estar n).carrier` by rw[] >>
   `(Estar n).op a b = (Estar n).id` by
   (`(Estar n).id = 1` by rw[Estar_property] >>
-  `(Estar n).op a b = (a * a ** ((totient n) - 1) MOD n) MOD n` by rw[Estar_property, Abbr`b`] >>
+  `(Estar n).op a b = (a * (a ** ((totient n) - 1) MOD n)) MOD n`
+     by rw[Estar_property, Abbr`b`] >>
   `_ = (a * a ** (totient n - 1)) MOD n` by metis_tac[LESS_MOD, MOD_TIMES2, ONE_LT_POS] >>
   `_ = (a ** SUC (totient n - 1)) MOD n` by rw[EXP] >>
   `0 < totient n` by rw[Euler_card_bounds] >>
@@ -15329,8 +15330,10 @@ Proof
   `0 < a MOD p` by decide_tac >>
   `a MOD p < p` by rw_tac std_ss[MOD_LESS] >>
   `p = SUC (p-1)` by decide_tac >>
-  `(a MOD p) ** p MOD p = ((a MOD p) * (a MOD p) ** (p-1)) MOD p` by metis_tac[EXP] >>
-  `_ = ((a MOD p) * (a MOD p) ** (p-1) MOD p) MOD p` by metis_tac[MOD_TIMES2, MOD_MOD] >>
+  `(a MOD p) ** p MOD p = ((a MOD p) * (a MOD p) ** (p-1)) MOD p`
+    by metis_tac[EXP] >>
+  `_ = ((a MOD p) * ((a MOD p) ** (p-1) MOD p)) MOD p`
+    by metis_tac[MOD_TIMES2, MOD_MOD] >>
   `_ = ((a MOD p) * 1) MOD p` by rw_tac std_ss[fermat_little] >>
   `_ = a MOD p` by rw_tac std_ss[MULT_RIGHT_1, MOD_MOD] >>
   rw_tac std_ss[]

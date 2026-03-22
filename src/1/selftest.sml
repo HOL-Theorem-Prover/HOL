@@ -1457,3 +1457,29 @@ val _ = app unify_test [
       (“\x y. x /\ y”, “\y:'a x:'b. f y x”, true, false),
       (“cle (t:'a) ($= t)”, “cle (s:'b) (t0:'c)”, true, false)
     ]
+
+(* Test for #1870: redefinition of bool constants via prim_specification.
+   This test must be last because prim_specification retires the old ?
+   constant, corrupting state for any subsequent code that uses ?. *)
+val _ = let
+  val _ = tprint "Testing for #1870 prim_specification soundness bug"
+  val old_F = prim_mk_const {Thy="bool", Name="F"}
+  val witness = mk_abs(mk_var("P", alpha --> bool),
+                       prim_mk_const{Thy="bool", Name="T"})
+  val q       = mk_var("q", type_of witness)
+  val step1   = EXISTS (mk_exists(q, mk_eq(q, witness)), witness)
+                       (REFL witness)
+  (* Redefining ? succeeds at the prim_specification level, but the
+     kernel no longer recognizes the new ? in its rules *)
+  val step2   = prim_specification "bool" ["?"] step1
+  val step2a  = INST_TYPE [alpha |-> bool] step2
+  val body    = mk_abs(mk_var("x", bool), old_F)
+  val step3   = TRANS (AP_THM step2a body)
+                      (BETA_CONV (rhs(concl(AP_THM step2a body))))
+  val step4   = EQ_MP (SYM step3) boolTheory.TRUTH
+  (* This should fail because the new ? is not the registered ? *)
+  val step5   = prim_specification "bool" ["c"] step4
+  val unsound = CCONTR (mk_var("p", bool)) step5
+in
+  if null (hyp unsound) then die "UNSOUND" else die "unexpected hyps"
+end handle HOL_ERR _ => OK();

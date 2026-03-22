@@ -341,12 +341,16 @@ Proof
   rpt strip_tac >>
   `0 < n` by decide_tac >>
   `0 MOD n = 0` by rw[] >>
-  rw_tac arith_ss[AbelianMonoid_def, Monoid_def, GF_def, mult_mod_def, including_def, GSPECIFICATION, EXTENSION, SING_UNION, UNION_DEF, IN_SING] >| [
-    `(z * (x * y) MOD n) MOD n = ((z MOD n) * (x * y) MOD n) MOD n` by metis_tac[MOD_TIMES2, MOD_MOD] >>
+  rw_tac arith_ss[AbelianMonoid_def, Monoid_def, GF_def, mult_mod_def,
+                  including_def, GSPECIFICATION, EXTENSION, SING_UNION,
+                  UNION_DEF, IN_SING] >|
+  [
+    `(z * ((x * y) MOD n)) MOD n = ((z MOD n) * ((x * y) MOD n)) MOD n`
+     by metis_tac[MOD_TIMES2, MOD_MOD] >>
     `_ = (z * (x * y)) MOD n` by rw_tac std_ss[MOD_TIMES2] >>
     `_ = ((x * y) * z) MOD n` by rw_tac std_ss[MULT_COMM] >>
     `_ = (x * (y * z)) MOD n` by rw_tac std_ss[MULT_ASSOC] >>
-    `_ = (x * (y * z) MOD n) MOD n` by metis_tac[MOD_TIMES2, LESS_MOD] >>
+    `_ = (x * ((y * z) MOD n)) MOD n` by metis_tac[MOD_TIMES2, LESS_MOD] >>
     rw_tac std_ss[],
     rw[],
     rw[],

@@ -2716,6 +2716,12 @@ Proof
     RW_TAC real_ss [DROP_INDICATOR]
 QED
 
+Theorem ABS_INDICATOR :
+    !s x. abs(indicator s x) = indicator s x
+Proof
+    rw [ABS_REFL, INDICATOR_POS]
+QED
+
 Theorem INDICATOR_EMPTY :
     indicator {} = (\x. 0)
 Proof

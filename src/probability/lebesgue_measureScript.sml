@@ -4671,41 +4671,6 @@ Proof
  >> rw [ext_mono_increasing_def, o_DEF, Abbr ‘ng’]
 QED
 
-Definition real_fn_plus_def :
-    real_fn_plus f x = max (0 :real) (f x)
-End
-
-Definition real_fn_minus_def :
-    real_fn_minus f x = -min (0 :real) (f x)
-End
-
-Overload TC                = “real_fn_plus”
-Overload fn_plus[inferior] = “real_fn_plus”
-Overload fn_minus          = “real_fn_minus”
-
-Theorem real_fn_plus_pos :
-    !f x. 0 <= real_fn_plus f x
-Proof
-    rw [real_fn_plus_def, REAL_LE_MAX]
-QED
-
-Theorem real_fn_minus_pos :
-    !f x. 0 <= real_fn_minus f x
-Proof
-    rw [real_fn_minus_def, REAL_MIN_LE]
-QED
-
-(* cf. extrealTheory.FN_DECOMP *)
-Theorem fn_decompose :
-    !(f :real -> real) x. f x = fn_plus f x - fn_minus f x
-Proof
-    RW_TAC real_ss [real_fn_plus_def, real_fn_minus_def]
- >> Cases_on ‘0 <= f x’
- >- simp [REAL_MAX_REDUCE, REAL_MIN_REDUCE]
- >> fs [REAL_NOT_LE]
- >> simp [REAL_MAX_REDUCE, REAL_MIN_REDUCE]
-QED
-
 Theorem fn_plus_normal :
     !f. fn_plus (Normal o f) = Normal o fn_plus f
 Proof

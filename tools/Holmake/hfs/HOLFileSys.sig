@@ -18,6 +18,7 @@ sig
   val primary_dependent : File -> File option
   val exists_readable : string -> bool
   val extract_theory : string list -> string option
+  val map_CodeType : (string -> string) -> CodeType -> CodeType
 
 
   val openIn : string -> TextIO.instream
