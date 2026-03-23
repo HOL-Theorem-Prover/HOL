@@ -19,7 +19,7 @@ sig
   val goal_bundle : string -> term -> bundle
   val spec_bundle : term list -> thm -> bundle
 
-  val builtin_const_map : (term * string) list
+  val builtin_const_map : (term * (string * int)) list
   val ty_sexp : hol_type -> t
   val tm_sexp : term -> t
   val thm_sexp : thm -> string * t
