@@ -992,6 +992,25 @@ fun emit {output, binary} = let
   val () = PFTWriter.axiom out SELECT_AX_th tm_forall_P_body (SOME "SELECT_AX")
   val () = save "candle$SELECT_AX" SELECT_AX_th
 
+  (* SELECT_AX with outer ∀P specialized out (P free):
+     ⊢ !x. P x ==> P (@ P)
+     Used by exist_to_witness which needs to INST P. *)
+  val select_ax_spec = let
+    (* SPEC_pth at type (A->bool): ⊢ (!P') ==> P' x'
+       where P' : (A->bool)->bool and x' : A->bool.
+       Need fresh variables at the post-INST_TYPE types. *)
+    val spec_Ab = INST_TYPE SPEC_pth [(ty_A, ty_Ab)]
+    val var_P' = mk_var "P" ty_Ab_b       (* P : (A->bool) -> bool *)
+    val var_x' = mk_var "x" ty_Ab         (* x : A->bool *)
+    val pth = INST spec_Ab [(var_P', lam_P_body), (var_x', var_P)]
+    (* pth: ⊢ (∀P. ∀x. P x ==> P(@P)) ==> (λP. ∀x. P x ==> P(@P)) P *)
+    val lam_P_body_app = mk_comb lam_P_body var_P
+    val mp_result = do_MP pth tm_forall_P_body lam_P_body_app SELECT_AX_th
+    (* mp_result: ⊢ (λP. ∀x. P x ==> P(@P)) P *)
+  in EQ_MP (beta_reduce lam_P_body var_P var_P) mp_result end
+  (* select_ax_spec: ⊢ !x. P x ==> P (@ P)  with P : A->bool free *)
+  val () = save "candle$SELECT_AX_SPEC" select_ax_spec
+
   (* ================================================================ *)
   (* ETA_AX: ⊢ !t:A->B. (\x. t x) = t                              *)
   (* ================================================================ *)

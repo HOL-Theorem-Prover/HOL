@@ -585,7 +585,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
       val witness = emit_comb select_c pred_id
       val pred_witness = emit_comb pred_id witness
       val var_P_Ab = emit_var "P" Ab
-      val sel_inst = c_inst (c_inst_type (candle_load_pth "candle$SELECT_AX")
+      val sel_inst = c_inst (c_inst_type (candle_load_pth "candle$SELECT_AX_SPEC")
                        [(tyvar_A, v_ty)])
                        [(var_P_Ab, pred_id)]
       val choose_inst = c_inst (c_inst_type (candle_load_pth "candle$CHOOSE")
