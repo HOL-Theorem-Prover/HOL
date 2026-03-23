@@ -900,7 +900,7 @@ Proof
       qexists_tac ‘qs1 = qs2’ >> qexists_tac ‘T’ >> simp[] >> conj_tac
       >- (first_x_assum irule >> rw[LENGTH_FRONT] >> fs[GSYM SNOC_APPEND]
           >- (‘EL (n+1) (SNOC q1 qs1) ∈
-             Xn  N.delta (EL n (SNOC q1 qs1)) (EL n (SNOC a w))’ by rw[] >>
+               N.delta (EL n (SNOC q1 qs1)) (EL n (SNOC a w))’ by rw[] >>
                rpt (forget_tac is_forall) >> pop_assum mp_tac >> simp [EL_SNOC])
           >- (‘EL (n+1) (SNOC q2 qs2) ∈
                N.delta (EL n (SNOC q2 qs2)) (EL n (SNOC a w))’ by rw[] >>
@@ -954,21 +954,23 @@ Proof
 QED
 
 Theorem dfa_states_closed:
-  wf_nfa N ⇒
+  wf_nfa N ∧
+  (∀s. s ⊆ N.Q ⇒ decFn (encFn s) = s)
+  ⇒
   ∀w eqs.
    EVERY (λa. a ∈ N.Sigma) w ∧
    LENGTH eqs = LENGTH w + 1 ∧
-   HD eqs = enc N.initial ∧
-   (∀n. n<LENGTH w ⇒ EL (n+1) eqs ∈ (nfa_to_dfa N).delta (EL n eqs) (EL n w))
+   HD eqs = encFn N.initial ∧
+   (∀n. n<LENGTH w ⇒ EL (n+1) eqs ∈ (nfa_to_dfa N encFn decFn).delta (EL n eqs) (EL n w))
    ==>
-   EVERY (λeq. eq ∈ (nfa_to_dfa N).Q) eqs
+   EVERY (λeq. eq ∈ (nfa_to_dfa N encFn decFn).Q) eqs
 Proof
-  disch_tac >>
+  strip_tac >>
   ho_match_mp_tac SNOC_INDUCT >> simp[LENGTH_EQ_NUM_compute] >> rw[]
   >- (fs[wf_nfa_def] >> metis_tac[])
-  >- (rename [‘SNOC a w’,‘HD (eqs ++ [eq]) = enc N.initial’] >>
+  >- (rename [‘SNOC a w’,‘HD (eqs ++ [eq]) = encFn N.initial’] >>
       ‘eqs ≠ []’ by (Cases_on ‘eqs’ >> gvs[]) >>
-      ‘EVERY (λeq. ∃s. eq = enc s ∧ s ⊆ N.Q) eqs’ by
+      ‘EVERY (λeq. ∃s. eq = encFn s ∧ s ⊆ N.Q) eqs’ by
          (first_x_assum irule >> rw[] >> fs [EVERY_SNOC]
           >- (fs [Once BOUNDED_FORALL_THM] >> first_x_assum drule >>
               full_simp_tac std_ss [GSYM SNOC_APPEND] >> simp[EL_SNOC])
@@ -984,7 +986,8 @@ Proof
           pop_assum SUBST1_TAC >> rw [Once EL_PRE_LENGTH]) >> pop_subst_tac >>
       ‘FINITE s’ by metis_tac [wf_nfa_def,SUBSET_FINITE] >>
       rw [nfa_to_dfa_def] >> irule_at Any EQ_REFL >>
-      rw[BIGUNION_SUBSET,SUBSET_DEF] >> metis_tac[wf_nfa_def,SUBSET_DEF])
+      rw[BIGUNION_SUBSET,SUBSET_DEF] >> metis_tac[wf_nfa_def,SUBSET_DEF]
+     )
 QED
 
 (*---------------------------------------------------------------------------*)
