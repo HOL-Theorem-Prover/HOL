@@ -180,14 +180,16 @@ Proof
 QED
 
 Definition cv_gcd_def:
-  cv_gcd a b = cv_if (cv_lt (Num 0) a) (cv_gcd (cv_mod b a) a) b
+  cv_gcd a b = cv_if a (cv_gcd (cv_mod b a) a) b
 Termination
-  WF_REL_TAC ‘measure $ λ(a,b). c2n a + c2n b + (c2n a - c2n b)’ >>
+  WF_REL_TAC `measure $ λ(a,b). c2n a + c2n b + (c2n a - c2n b)` >>
   rpt gen_tac >> strip_tac >>
   simp[] >> gvs[c2b_def] >>
-  map_every Cases_on [‘a’, ‘b’] >> gvs[cv_mod_def, AllCaseEqs()] >>
-  rename [‘m + n MOD m + _ < _’] >>
-  ‘n MOD m < m’ by simp[] >> simp[]
+  Cases_on `b` >> gvs[cv_mod_def] >>
+  `m MOD SUC k - SUC k = 0` by (
+    simp[] >> irule LESS_IMP_LESS_OR_EQ >> simp[]) >>
+  `m MOD SUC k < SUC k` by simp[] >>
+  simp[] >> DECIDE_TAC
 End
 
 Theorem cv_gcd_thm[cv_rep]:
@@ -196,7 +198,8 @@ Proof
   qsuff_tac `!c d a b. c = Num a /\ d = Num b ==> Num (gcd a b) = cv_gcd c d`
   >- rw[] >>
   ho_match_mp_tac cv_gcd_ind >> rw[] >>
-  rw[Once gcdTheory.GCD_EFFICIENTLY, Once cv_gcd_def] >> gvs[]
+  rw[Once gcdTheory.GCD_EFFICIENTLY, Once cv_gcd_def] >> gvs[] >>
+  gvs[c2b_def] >> Cases_on `a` >> gvs[]
 QED
 
 Definition cv_log2_def:

@@ -137,6 +137,7 @@ fun emit_hol_script _ _ = OS.Process.success
 fun emit_hol_unquote_script _ _ = OS.Process.success
 end (* local *)
 
+val canBindStr = true
 fun bindstr mlcode =
     "val _ = CompilerSpecific.quietbind \"" ^ String.toString mlcode ^ "\""
 

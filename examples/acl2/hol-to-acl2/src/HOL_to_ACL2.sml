@@ -105,12 +105,12 @@ fun unlambda_conj thm =
 (*---------------------------------------------------------------------------*)
 (* Lambda-lifting means that entities destined for translation to defhol     *)
 (* format aren't single objects anymore, but bundles of auxiliary            *)
-(* definitions plus the lifted entity (when lifting is needed). There is     *)
-(* also an extra complication arising from lifting recursive definitions.    *)
+(* definitions plus the lifted entity (when lifting is needed).              *)
 (*                                                                           *)
-(* Elimination of lambda expressions from a definition happens after the     *)
-(* definition is made. The new lambda-eliminator definitions can introduce   *)
-(* what look to be mutual recursions. Consider                               *)
+(* There is also an extra complication that may arise when lifting a         *)
+(* recursive definitions. Elimination of lambda expressions from a           *)
+(* definition happens after the definition is made. The new auxiliary        *)
+(* definitions can introduce what seem to be mutual recursions. Consider     *)
 (*                                                                           *)
 (*   fact n = case n of 0 => 1 | _ => n * fact (n - 1)                       *)
 (*                                                                           *)
@@ -131,19 +131,18 @@ fun unlambda_conj thm =
 (* been created post-definition and shouldn't be taken as being part of the  *)
 (* recursion equations to be solved.                                         *)
 (*                                                                           *)
-(* On the ACL2(zfc) side, the attitude (I think) is that the HOL-side        *)
-(* definition event has introduced some constants and asserted some axioms,  *)
-(* and only those steps have to be replicated on the ACL2(zfc) side.         *)
+(* On the ACL2(zfc) side, the attitude is that the HOL-side definition event *)
+(* has introduced some constants and asserted some axioms, and only those    *)
+(* steps have to be replicated on the ACL2(zfc) side. But we have to take    *)
+(* into consideration that constants need to be "installed" before they are  *)
+(* mentioned in formulas. So we divide the auxiliary defs into those that    *)
+(* stand by themselves, and those that are in "pseudo-mutual-recursion" with *)
+(* the original constant(s) being defined. The latter get put into a defhol  *)
+(* form with the lifted original definition.                                 *)
 (*                                                                           *)
-(* But how exactly? This is currently to be discussed with Matt, but two     *)
-(* possibilities come to mind. (1) combine the auxiliary definition(s) and   *)
-(* the lifted original into one defhol form or (2) create one defhol per     *)
-(* definition (so one for "Lam_31" and one for "fact") and add extra         *)
-(* signature information on the first defhol, ie, if "Lam_31" is defined     *)
-(* first, its :fns field will hold both the "Lam_31" constant and the "fact" *)
-(* constant.                                                                 *)
-(*                                                                           *)
-(* For now I am going with possibility 1.                                    *)
+(* For the above example, this means that the auxiliary definitions are      *)
+(* split into (A) zero independent definitions and (B) one joint defhol      *)
+(* combining the definition for Lam_31 with that of the lifted original.     *)
 (*---------------------------------------------------------------------------*)
 
 datatype bundle
@@ -192,7 +191,6 @@ fun thm_bundle name thm =
         val opt = if null aux then NONE else SOME(aux,th')
     in THM (name, thm, opt) end
 
-(* TODO: think about whether the equiv theorem should be stored *)
 fun goal_bundle name tm =
     let val (aux,equiv) = unlambda_term tm
         val opt = if null aux then NONE else SOME(aux,rhs(concl equiv))
@@ -272,18 +270,20 @@ fun pp_bundle (THM(name,orig,NONE)) =
     let open HOLPP
     in block CONSISTENT 0
         ([add_string "#|", NL,
-          add_string "Original definition:", NL, NL,
+          add_string "Definition:", NL, NL,
           add_string"   ",
           block CONSISTENT 3 [pp_thm orig], NL, NL]
           @
           (if not $ null aux then
-              [add_string "Auxiliary definitions:", NL, NL,
+              [add_string "Auxiliary definitions:",
+               NL, NL,
                add_string"   ",
                block CONSISTENT 3 (pr_list pp_thm [NL] aux), NL,NL]
            else [])
           @
           (if not $ null aux' then
-              [add_string "Auxiliary definitions (pseudo recursive):", NL, NL,
+              [add_string "Auxiliary definitions (pseudo mutual recursion):",
+               NL, NL,
                add_string"   ",
                block CONSISTENT 3 (pr_list pp_thm [NL] aux'), NL,NL]
            else [])
@@ -312,13 +312,15 @@ fun pp_bundle (THM(name,orig,NONE)) =
            add_string"   ", block CONSISTENT 3 [pp_thm orig], NL,NL]
           @
           (if not $ null aux then
-              [add_string "Auxiliary definitions:", NL, NL,
+              [add_string "Auxiliary definitions:",
+               NL, NL,
                add_string"   ",
                block CONSISTENT 3 (pr_list pp_thm [NL] aux), NL,NL]
            else [])
           @
           (if not $ null aux' then
-              [add_string "Auxiliary definitions (pseudo recursive):", NL, NL,
+              [add_string "Auxiliary definitions (pseudo mutual recursion):",
+               NL, NL,
                add_string"   ",
                block CONSISTENT 3 (pr_list pp_thm [NL] aux'), NL,NL]
            else [])
@@ -378,96 +380,108 @@ map ty_sexp [bool, alpha --> beta, bool --> alpha --> beta, ``:num list``];
 (*---------------------------------------------------------------------------*)
 
 fun bvar_sexp v =
- let val (s,ty) = dest_var v
- in List[Symbol s,ty_sexp ty]
- end
+    let val (s,ty) = dest_var v
+    in Cons(Symbol s,List [ty_sexp ty]) end
 
-(*---------------------------------------------------------------------------*)
-(* Current rule for mapping a name to a constant: look to see if the name is *)
-(* that of a built-in. If it is then no need to do a hap*. If it isn't then  *)
-(* do a (hap* (name (ty <ty>)) a1 ... an)                                    *)
-(*---------------------------------------------------------------------------*)
-
-val builtin_const_map =
-  [(“(=)”, "hp="),
-   (“(,)”, "hp-comma"),
-   (“NIL”, "hp-nil"),
-   (“CONS”, "hp-cons"),
-   (“NONE”, "hp-none"),
-   (“SOME”, "hp-some"),
-   (“T”, "hp-true"),
-   (“F”, "hp-false"),
-   (“(~):bool->bool”, "hp-not"),
-   (“(/\)”, "hp-and"),
-   (“(\/)”, "hp-or"),
-   (“(==>)”, "hp-implies"),
-   (“(!)”, "hp-forall"),
-   (“(?)”, "hp-exists"),
-   (“(+):num->num->num”, "hp+"),
-   (“$* :num->num->num”, "hp*"),
-   (“(<):num->num->bool”, "hp<")
-  ];
-
-fun lookup_const_name c = total (op_assoc same_const c) builtin_const_map;
+fun var_sexp t = Symbol $ fst $ dest_var t
 
 fun mk_typ ty = Cons(Symbol "typ", List [ty_sexp ty])
 
-(*---------------------------------------------------------------------------*)
-(* Nullary polymorphic constructors need special treatment to find the type  *)
-(* argument.                                                                 *)
-(*---------------------------------------------------------------------------*)
+fun typed_symbol (s,ty) = Cons(Symbol s,List [mk_typ ty])
 
-fun const_sexp c =
-  let val {Name,Ty,Thy} = dest_thy_const c
-      val generic_const = prim_mk_const{Name=Name,Thy=Thy}
-      val is_ground = null o type_vars_in_term
-  in case lookup_const_name c
-      of NONE => Cons(Symbol Name, List [mk_typ Ty])
-       | SOME acl2_name =>
-           let val tylist =
-               if is_ground generic_const then
-                  [] else
-               if same_const c listSyntax.nil_tm then
-                  [mk_typ (listSyntax.dest_list_type Ty)] else
-               if same_const c optionSyntax.none_tm then
-                  [mk_typ (optionSyntax.dest_option Ty)]
-               else [mk_typ Ty]
-           in
-              Cons(Symbol acl2_name, List tylist)
-           end
-  end
+fun numeral_sexp t =
+    let open numSyntax
+        val n = dest_numeral t
+        val ns = Arbnum.toString n
+    in Cons (Symbol "hp-num", List [Symbol ns]) end
+
+fun hap_star [] = raise ERR "hap_star" "empty list"
+  | hap_star [atom] = atom
+  | hap_star sexps = Cons(Symbol "hap*", List sexps)
 
 (*---------------------------------------------------------------------------*)
-(* NB: 0 is a constant but needs to be treated as a literal, so the          *)
-(* "is_numeral" check has to come before the "is_const" check.               *)
+(* Mapping a HOL term to a prebuilt definition in ACL2(zfc). We check that   *)
+(* the term is an application of a builtin constant and also check that it's *)
+(* applied to the expected number of arguments. If the checks succeed, then  *)
+(* there is no need to do a hap*. If they fail then do a                     *)
+(* (hap* (name (ty <ty>)) a1 ... an). Also, if the constant is a nullary     *)
+(* polymorphic constructor (NIL and NONE), then its type instance has to be  *)
+(* supplied. Note: this isn't general enough when a datatype has more than   *)
+(* one type variable. Example:                                               *)
+(*                                                                           *)
+(*   Datatype:                                                               *)
+(*    ty = Leaf | Cons ('a # 'b) ty                                          *)
+(*                                                                           *)
+(* defines "Leaf : ('a,'b) ty"                                               *)
+(*---------------------------------------------------------------------------*)
+
+val builtin_const_map =
+  [(“(=)”,  ("hp=",2)),
+   (“(,)”,  ("hp-comma",2)),
+   (“NIL”,  ("hp-nil",0)),
+   (“CONS”, ("hp-cons",2)),
+   (“NONE”, ("hp-none",0)),
+   (“SOME”, ("hp-some",1)),
+   (“T”,    ("hp-true",0)),
+   (“F”,    ("hp-false",0)),
+   (“(~):bool->bool”, ("hp-not",1)),
+   (“(/\)”, ("hp-and",2)),
+   (“(\/)”, ("hp-or",2)),
+   (“(==>)”,("hp-implies",2)),
+   (“(!)”,  ("hp-forall",1)),
+   (“(?)”,  ("hp-exists",1)),
+   (“(+):num->num->num”, ("hp+",2)),
+   (“$* :num->num->num”, ("hp*",2)),
+   (“(<):num->num->bool”,("hp<",2))
+  ];
+
+fun lookup_builtin c = total (op_assoc same_const c) builtin_const_map;
+
+(*---------------------------------------------------------------------------*)
+(* Nullary polymorphic constructors get special treatment for their type     *)
+(* argument. The ACL2(zfc) side is able to reconstruct the type of a nullary *)
+(* constructor instance like ``NIL: num list`` from just ``:num``. When      *)
+(* given (hp-nil (type :num)) from the translation ACL2 will do the          *)
+(* necessary to create value NIL living in set (:list :num).                 *)
+(*                                                                           *)
+(* This does not work for constants in general, where the full type is       *)
+(* needed.                                                                   *)
+(*---------------------------------------------------------------------------*)
+
+fun fully_applied_builtin c acl2_name arg_sexps =
+  let open listSyntax optionSyntax
+  in if same_const c nil_tm then
+        typed_symbol(acl2_name, dest_list_type (type_of c)) else
+     if same_const c none_tm then
+        typed_symbol (acl2_name,dest_option (type_of c))
+     else
+       Cons (Symbol acl2_name, List arg_sexps) end
+
+(*---------------------------------------------------------------------------*)
+(* A num literal can be a constant (0) or an application (all else). We      *)
+(* handle numerals specially before doing consts and applications.           *)
 (*---------------------------------------------------------------------------*)
 
 fun tm_sexp t =
-  if is_var t then
-     Symbol (fst(dest_var t)) else
-  if numSyntax.is_numeral t then
-     let open numSyntax
-         val n = dest_numeral t
-         val ns = Arbnum.toString n
-     in List [Symbol "hp-num", Symbol ns]
-     end else
-  if is_const t then
-     const_sexp t else
-  let val (f,args) = strip_comb t
-  in if is_abs f then String "<!!lambda abstraction!!>"
-     else
-     (* args are non-null at this point *)
-     if is_var f then
-        Cons(Symbol "hap*", List (map tm_sexp (f::args))) else
-     if is_const f then
-        let val {Name,Thy,Ty} = dest_thy_const f
-        in case lookup_const_name f
-            of NONE => Cons(Symbol "hap*", List (map tm_sexp (f::args)))
-             | SOME acl2_name => Cons(Symbol acl2_name, List (map tm_sexp args))
-        end
-     else
-     String "<!unexpected term structure!>"
-  end
+  if is_var t then var_sexp t else
+  if numSyntax.is_numeral t then numeral_sexp t else
+  case strip_comb t of
+  (f,args) =>
+   let val arg_sexps = map tm_sexp args
+   in if is_var f then
+         hap_star (var_sexp f::arg_sexps) else
+      if is_const f then
+         (case lookup_builtin f
+           of NONE => hap_star (typed_symbol (dest_const f)::arg_sexps)
+            | SOME (acl2_name,arity) =>
+              if length args < arity then  (* partial application *)
+                 hap_star (typed_symbol (dest_const f)::arg_sexps)
+              else
+                 fully_applied_builtin f acl2_name arg_sexps)
+      else
+        String "<!unexpected term structure!>" end
+
+
 
 (* TODO
 

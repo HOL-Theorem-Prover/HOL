@@ -27,6 +27,14 @@ Thm.sml: otknl-thm.ML
 Thm-sig.sml: otknl-thmsig.ML
 	$(CP) $< $@
 
+else ifeq ($(KERNELID),trknl)
+
+Thm.sml: otknl-thm.ML
+	$(CP) $< $@
+
+Thm-sig.sml: otknl-thmsig.ML
+	$(CP) $< $@
+
 else
 Thm.sml: std-thm.ML
 	$(CP) $< $@

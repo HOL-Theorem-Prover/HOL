@@ -6146,6 +6146,12 @@ Definition indicator_fn :
     indicator_fn s = Normal o indicator s
 End
 
+Theorem normal_indicator :
+    !s x. Normal (indicator s x) = indicator_fn s x
+Proof
+    rw [indicator_fn, o_DEF]
+QED
+
 (* The old definition now becomes an equivalent theorem *)
 Theorem indicator_fn_def :
     !s. indicator_fn s = \x. if x IN s then (1 :extreal) else (0 :extreal)
@@ -6169,6 +6175,12 @@ Theorem INDICATOR_FN_POS :
     !s x. 0 <= indicator_fn s x
 Proof
     rw [indicator_fn, extreal_of_num_def, extreal_le_eq, DROP_INDICATOR_POS_LE]
+QED
+
+Theorem ABS_INDICATOR_FN[simp] :
+    !s x. abs (indicator_fn s x) = indicator_fn s x
+Proof
+    rw [abs_refl, INDICATOR_FN_POS]
 QED
 
 Theorem INDICATOR_FN_LE_1 :
@@ -6499,6 +6511,13 @@ Proof
  >> MATCH_MP_TAC (Q.SPECL [‘f’, ‘indicator_fn s’] FN_MINUS_FMUL)
  >> GEN_TAC
  >> REWRITE_TAC [INDICATOR_FN_POS]
+QED
+
+Theorem normal_mul_indicator :
+    !c s x. Normal c * indicator_fn s x = Normal (c * indicator s x)
+Proof
+    rw [indicator_fn_def, indicator]
+ >> simp [extreal_of_num_def]
 QED
 
 (* ------------------------------------------------------------------------- *)

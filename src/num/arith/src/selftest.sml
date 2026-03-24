@@ -154,7 +154,10 @@ val _ = List.app convtest [
   ("BEQ_CONV(1)", Boolconv.BEQ_CONV, “(\x. x) (p:bool) = (\y. y) p”, “T”),
   ("COND_CONV(1)", Boolconv.COND_CONV, “if b then (\x:'a. x) else (\y. y)”,
    “\a:'a. a”),
-  ("sum_eq_norm", NumRelNorms.sum_eq_norm, “SUC (SUC (SUC n)) = 3”, “n = 0”)
+  ("sum_eq_norm", NumRelNorms.sum_eq_norm, “SUC (SUC (SUC n)) = 3”, “n = 0”),
+  ("ARITH_NORM_ss(1)", SIMP_CONV (ss ++ numSimps.ARITH_NORM_ss) [], “SUC m - 9”, “m - 8”),
+  ("ARITH_NORM_ss(2)", SIMP_CONV (ss ++ numSimps.ARITH_NORM_ss) [], “SUC m - 4”, “m - 3”),
+  ("ARITH_NORM_ss(3)", SIMP_CONV (ss ++ numSimps.ARITH_NORM_ss) [], “SUC m - 0”, “SUC m”)
 ];
 
 val _ = Feedback.emit_WARNING := false

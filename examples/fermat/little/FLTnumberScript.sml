@@ -287,10 +287,14 @@ Proof
   rw[residue_1, PROD_SET_EMPTY, FACT_0] >>
   `0 < n /\ n <= p /\ 0 < p` by decide_tac >>
   `(PROD_SET (IMAGE (row p a) (residue (SUC n)))) MOD p =
-      (((a * n) MOD p) * PROD_SET (IMAGE (row p a) (residue n))) MOD p` by rw[prod_set_image_row_reduction] >>
-  `_ = ((a * n) * PROD_SET (IMAGE (row p a) (residue n))) MOD p` by rw[MOD_TIMES2] >>
-  `_ = ((a * n) MOD p * (PROD_SET (IMAGE (row p a) (residue n))) MOD p) MOD p` by rw[MOD_TIMES2] >>
-  `_ = ((a * n) MOD p * ((a ** (n - 1) * FACT (n - 1))) MOD p) MOD p` by simp[] >>
+      (((a * n) MOD p) * PROD_SET (IMAGE (row p a) (residue n))) MOD p`
+    by rw[prod_set_image_row_reduction] >>
+  `_ = ((a * n) * PROD_SET (IMAGE (row p a) (residue n))) MOD p`
+    by rw[MOD_TIMES2] >>
+  `_ = ((a * n) MOD p * (PROD_SET (IMAGE (row p a) (residue n)) MOD p)) MOD p`
+    by rw[MOD_TIMES2] >>
+  `_ = ((a * n) MOD p * (((a ** (n - 1) * FACT (n - 1))) MOD p)) MOD p`
+    by simp[] >>
   `_ = ((a * n) * (a ** (n - 1) * FACT (n - 1))) MOD p` by rw[MOD_TIMES2] >>
   `_ = ((a * (a ** (n-1))) * (n * FACT (n-1))) MOD p` by simp[] >>
   `_ = (a ** (SUC (n-1)) * (n * FACT (n-1))) MOD p` by rw[EXP] >>

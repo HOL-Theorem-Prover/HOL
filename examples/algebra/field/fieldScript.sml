@@ -3121,8 +3121,8 @@ Proof
   `0 < u` by decide_tac >>
   `?v. 0 < v /\ v < p /\ ((v * u) MOD p = 1)` by rw[MOD_MULT_INV_EXISTS, Abbr`u`] >>
   qexists_tac `##v` >>
-  `#1 = ##((v MOD p * u MOD p) MOD p)` by rw[MOD_TIMES2] >>
-  `_ = ##(v MOD p * u MOD p)` by metis_tac[field_num_mod] >>
+  `#1 = ##((v MOD p * (u MOD p)) MOD p)` by rw[MOD_TIMES2] >>
+  `_ = ##((v MOD p) * (u MOD p))` by metis_tac[field_num_mod] >>
   `_ = ##(v MOD p) * ## (u MOD p)` by rw[field_num_mult] >>
   `_ = ##v * ##u` by metis_tac[field_num_mod] >>
   `#1 <> #0` by rw[] >>

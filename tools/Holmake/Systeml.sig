@@ -41,6 +41,7 @@ sig
 
   val isUnix : bool
   val pointer_eq : 'a * 'a -> bool
+  val canBindStr : bool
   val bindstr : string -> string
    (* emits code that tries to quietly emulate the action of the argument
       when fed to the compiler.  For MoscowML, this is the identity function

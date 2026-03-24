@@ -660,8 +660,10 @@ in
                          "LEQ_CANON_CONV")],
           rewrs = [(SOME {Thy = "arithmetic", Name = "GREATER_DEF"},
                     arithmeticTheory.GREATER_DEF),
-                   (SOME {Thy = "arithmeticTheory", Name = "GREATER_EQ"},
-                    arithmeticTheory.GREATER_EQ)] @
+                   (SOME {Thy = "arithmetic", Name = "GREATER_EQ"},
+                    arithmeticTheory.GREATER_EQ),
+                   (SOME {Thy = "arithmetic", Name = "SUC_MINUS_NUMERAL"},
+                    arithmeticTheory.SUC_MINUS_NUMERAL)] @
                   map (fn (s, th) => (SOME {Name = s, Thy = ""}, th)) [
                     ("LT_SUB", DECIDE “x < y - z <=> x + z < y”),
                     ("SUB_LE", DECIDE “x - y <= z <=> x <= y + z”),

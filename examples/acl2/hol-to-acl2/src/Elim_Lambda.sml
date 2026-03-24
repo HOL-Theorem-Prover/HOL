@@ -68,9 +68,9 @@ fun trav tm =
 
 fun find_defs t =
   let val () = def_list := []
-      val new = trav t
+      val t' = trav t
   in
-    (!def_list |> rev, new)
+    (!def_list |> rev, t')
   end
 
 (*---------------------------------------------------------------------------*)
@@ -78,11 +78,29 @@ fun find_defs t =
 (*---------------------------------------------------------------------------*)
 
 local
-  val equiv_prefix = "Equiv_"
+  val equiv_prefix = "Unlambda_Equiv_"
   val num_stream = Portable.make_counter{init=0,inc=1}
 in
   fun equiv_thm_name() = equiv_prefix^Int.toString(num_stream())
 end;
+
+(*---------------------------------------------------------------------------*)
+(* Move from |- !vs. M vs = \x1..xn. N to |- !vs x1..xn. M vs x1..xn = N     *)
+(*---------------------------------------------------------------------------*)
+
+val unlambda_rhs =
+  let fun unlambda th =
+          let val x = fst $ dest_abs $ rhs $ concl th
+          in RIGHT_BETA $ AP_THM th x end
+      fun multi_unlambda th =
+          case total unlambda th
+           of NONE => th
+            | SOME th' => multi_unlambda th'
+ in fn th =>
+    let val th1 = multi_unlambda $ SPEC_ALL th
+        val vlist = snd $ strip_comb $ lhs $ concl th1
+    in GENL vlist th1 end
+ end
 
 fun lift_lambdas tm =
   let val (vs,M) = strip_forall tm
@@ -90,26 +108,12 @@ fun lift_lambdas tm =
       of ([],_) => NONE
        | (defs,M') =>
        let val goal = mk_eq (tm, list_mk_forall(vs,M'))
-           val eq_thm = prove(goal,simp defs)
+           val eq_thm = prove(goal,simp_tac bool_ss defs)
            val _ = save_thm(equiv_thm_name(),eq_thm)
-           val defs' = map (SIMP_RULE bool_ss [FUN_EQ_THM]) defs
+           val defs' = map unlambda_rhs defs
        in SOME (eq_thm, defs') end
   end
   handle e as HOL_ERR _ =>
          raise wrap_exn "Elim_Lambda" "lift_lambdas" e;
-
-
-(* Following definition obviated by blunderbuss call to SIMP_RULE
-   above, but possibly useful in a more tailored solution later on.
-
-val unlambda_eq =
- let val fun_eq_imp = iffLR FUN_EQ_THM
- in fn th =>
-    let val x = fst $ dest_abs $ rhs $ concl th
-        val th1 = MATCH_MP fun_eq_imp th
-    in RIGHT_BETA $ SPEC x th1
-    end
- end
-*)
 
 end

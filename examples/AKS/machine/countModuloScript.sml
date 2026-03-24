@@ -552,13 +552,20 @@ val it = |- stepsOf (mexpM m b 1) = if m <= 1 then TWICE (size m) + 1
      if m <= 1 then 0 else stepsOf (mexpM m (SQ b MOD m) (HALF n))
 *)
 Theorem mexpM_steps_by_sqmod_div_loop:
-    !m. let body b n = if m <= 1 then 2 * size m + size n else
-             1 + 5 * size n + size b ** 2 + 2 * size m + size (SQ b) * size m +
-             if EVEN n then 0 else
-                size b * size (SQ b ** HALF n MOD m) + size (b * SQ b ** HALF n MOD m) * size m
-        in !b n. stepsOf (mexpM m b n) =
-                 if n = 0 then 1 + 2 * size m else body b n +
-                 if m <= 1 then 0 else stepsOf (mexpM m ((b * b) MOD m) (HALF n))
+  !m. let body b n =
+          if m <= 1 then 2 * size m + size n
+          else
+            1 + 5 * size n + size b ** 2 + 2 * size m + size (SQ b) * size m +
+            if EVEN n then 0
+            else
+              size b * size (SQ b ** HALF n MOD m) +
+              size (b * (SQ b ** HALF n MOD m)) * size m
+      in
+        !b n. stepsOf (mexpM m b n) =
+              if n = 0 then 1 + 2 * size m
+              else body b n +
+                   if m <= 1 then 0
+                   else stepsOf (mexpM m ((b * b) MOD m) (HALF n))
 Proof
   rw[Once mexpM_steps_thm] >>
   rw[]
@@ -597,12 +604,18 @@ suitable for: loop2_div_mono_count_cover_exit_le
       = 1 + 2sm + 5sn + 4 sm sb + sb ** 2 + sm ** 2
 *)
 Theorem mexpM_body_upper:
-    !m. let body b n = if m <= 1 then 2 * size m + size n else
-               1 + 5 * size n + size b ** 2 + 2 * size m + size (SQ b) * size m +
-               if EVEN n then 0 else
-                  size b * size (SQ b ** HALF n MOD m) + size (b * SQ b ** HALF n MOD m) * size m
-        in !b n. body b n <=
-                 1 + 2 * size m + 5 * size n + 4 * size m * size b + (size b) ** 2 + (size m) ** 2
+  !m. let body b n = if m <= 1 then 2 * size m + size n
+                     else
+                       1 + 5 * size n + size b ** 2 + 2 * size m +
+                       size (SQ b) * size m +
+                       if EVEN n then 0
+                       else
+                         size b * size (SQ b ** HALF n MOD m) +
+                         size (b * (SQ b ** HALF n MOD m)) * size m
+      in
+        !b n. body b n <=
+              1 + 2 * size m + 5 * size n + 4 * size m * size b +
+              (size b) ** 2 + (size m) ** 2
 Proof
   rw[] >>
   (Cases_on `m <= 1` >> rw[]) >| [
@@ -638,49 +651,67 @@ QED
     = 14 * (size n) * (size b) ** 2 * (size m) ** 2       by arithmetic
 *)
 Theorem mexpM_body_bound:
-    !m. let body b n = if m <= 1 then 2 * size m + size n else
-               1 + 5 * size n + size b ** 2 + 2 * size m + size (SQ b) * size m +
-               if EVEN n then 0 else
-                  size b * size (SQ b ** HALF n MOD m) + size (b * SQ b ** HALF n MOD m) * size m
-        in !b n. body b n <= 14 * (size n) * (size b) ** 2 * (size m) ** 2
+  !m. let body b n =
+          if m <= 1 then
+            2 * size m + size n
+          else
+            1 + 5 * size n + size b ** 2 + 2 * size m + size (SQ b) * size m +
+            if EVEN n then 0
+            else
+              size b * size (SQ b ** HALF n MOD m) +
+              size (b * (SQ b ** HALF n MOD m)) * size m
+      in
+        !b n. body b n <= 14 * (size n) * (size b) ** 2 * (size m) ** 2
 Proof
   rpt strip_tac >>
   assume_tac mexpM_body_upper >>
-  last_x_assum (qspec_then `m` strip_assume_tac) >>
-  qabbrev_tac `body = \b n. if m <= 1 then 2 * size m + size n else
-               1 + 5 * size n + size b ** 2 + 2 * size m + size (SQ b) * size m +
-               if EVEN n then 0 else
-                  size b * size (SQ b ** HALF n MOD m) + size (b * SQ b ** HALF n MOD m) * size m` >>
-  `!b n. body b n <= 14 * size n * size b ** 2 * size m ** 2` suffices_by fs[] >>
+  last_x_assum (qspec_then ‘m’ strip_assume_tac) >>
+  qabbrev_tac
+    ‘body = \b n.
+              if m <= 1 then 2 * size m + size n
+              else
+                1 + 5 * size n + size b ** 2 + 2 * size m +
+                size (SQ b) * size m +
+                if EVEN n then 0
+                else
+                  size b * size (SQ b ** HALF n MOD m) +
+                  size (b * (SQ b ** HALF n MOD m)) * size m’ >>
+  ‘!b n. body b n <= 14 * size n * size b ** 2 * size m ** 2’ suffices_by fs[] >>
   rpt strip_tac >>
-  `body b n <= 1 + 2 * size m + 5 * size n + 4 * size m * size b + size b ** 2 + size m ** 2` by metis_tac[] >>
-  qabbrev_tac `sm = size m` >>
-  qabbrev_tac `sb = size b` >>
-  qabbrev_tac `sn = size n` >>
-  qabbrev_tac `t = sn * sb ** 2 * sm ** 2` >>
-  `body b n <= 14 * t` suffices_by rw[Abbr`t`] >>
-  `0 < t` by rw[MULT_POS, Abbr`t`, Abbr`sm`, Abbr`sb`, Abbr`sn`] >>
-  `1 <= t` by decide_tac >>
-  `sm <= t` by
-  (`sm <= sm * (sn * sb ** 2 * sm)` by rw[MULT_POS, Abbr`sn`, Abbr`sb`, Abbr`sm`] >>
-  `sm * (sn * sb ** 2 * sm) = t` by rw[Abbr`t`] >>
+  ‘body b n <=
+    1 + 2 * size m + 5 * size n + 4 * size m * size b +
+    size b ** 2 + size m ** 2’ by metis_tac[] >>
+  qabbrev_tac ‘sm = size m’ >>
+  qabbrev_tac ‘sb = size b’ >>
+  qabbrev_tac ‘sn = size n’ >>
+  qabbrev_tac ‘t = sn * sb ** 2 * sm ** 2’ >>
+  ‘body b n <= 14 * t’ suffices_by rw[Abbr‘t’] >>
+  ‘0 < t’ by rw[MULT_POS, Abbr‘t’, Abbr‘sm’, Abbr‘sb’, Abbr‘sn’] >>
+  ‘1 <= t’ by decide_tac >>
+  ‘sm <= t’ by
+  (‘sm <= sm * (sn * sb ** 2 * sm)’
+     by rw[MULT_POS, Abbr‘sn’, Abbr‘sb’, Abbr‘sm’] >>
+  ‘sm * (sn * sb ** 2 * sm) = t’ by rw[Abbr‘t’] >>
   decide_tac) >>
-  `sn <= t` by
-    (`sn <= sn * (sb ** 2 * sm ** 2)` by rw[MULT_POS, Abbr`sb`, Abbr`sm`] >>
-  `sn * (sb ** 2 * sm ** 2) = t` by rw[Abbr`t`] >>
+  ‘sn <= t’ by
+    (‘sn <= sn * (sb ** 2 * sm ** 2)’ by rw[MULT_POS, Abbr‘sb’, Abbr‘sm’] >>
+  ‘sn * (sb ** 2 * sm ** 2) = t’ by rw[Abbr‘t’] >>
   decide_tac) >>
-  `sm * sb <= t` by
-      (`sm * sb <= sm * sb * (sn * sb * sm)` by rw[MULT_POS,Abbr`sn`, Abbr`sb`, Abbr`sm`] >>
-  `sm * sb * (sn * sb * sm) = t` by rw[Abbr`t`] >>
+  ‘sm * sb <= t’ by
+      (‘sm * sb <= sm * sb * (sn * sb * sm)’
+         by rw[MULT_POS,Abbr‘sn’, Abbr‘sb’, Abbr‘sm’] >>
+  ‘sm * sb * (sn * sb * sm) = t’ by rw[Abbr‘t’] >>
   decide_tac) >>
-  `sb ** 2 <= t` by
-        (`sb ** 2 <= sb ** 2 * (sn * sm ** 2)` by rw[MULT_POS,Abbr`sn`, Abbr`sm`] >>
-  `sb ** 2 * (sn * sm ** 2) = t` by rw[Abbr`t`] >>
+  ‘sb ** 2 <= t’ by
+        (‘sb ** 2 <= sb ** 2 * (sn * sm ** 2)’
+           by rw[MULT_POS,Abbr‘sn’, Abbr‘sm’] >>
+  ‘sb ** 2 * (sn * sm ** 2) = t’ by rw[Abbr‘t’] >>
   decide_tac) >>
-  `sm ** 2 <= t` by
-          (`sm ** 2 <= sm ** 2 * (sn * sb ** 2)` by rw[MULT_POS,Abbr`sn`, Abbr`sb`] >>
-  `sm ** 2 * (sn * sb ** 2) = t` by rw[Abbr`t`] >>
-  decide_tac) >>
+  ‘sm ** 2 <= t’ by
+          (‘sm ** 2 <= sm ** 2 * (sn * sb ** 2)’
+             by rw[MULT_POS,Abbr‘sn’, Abbr‘sb’] >>
+           ‘sm ** 2 * (sn * sb ** 2) = t’ by rw[Abbr‘t’] >>
+           decide_tac) >>
   decide_tac
 QED
 
@@ -708,7 +739,7 @@ The modified result is given in: loop2_div_mono_count_cover_exit_le
    Let body = (\b n. if m <= 1 then 2 * size m + size n else
                1 + 5 * size n + size b ** 2 + 2 * size m + size (SQ b) * size m +
                if EVEN n then 0 else
-                  size b * size (SQ b ** HALF n MOD m) + size (b * SQ b ** HALF n MOD m) * size m),
+                  size b * size (SQ b ** HALF n MOD m) + size (b * (SQ b ** HALF n MOD m)) * size m),
        cover = (\b n. 14 * (size n) * (size b) ** 2 * (size m) ** 2),
        exit = (\n. m <= 1),
        f = (\b. (b * b) MOD m),
@@ -759,55 +790,60 @@ The modified result is given in: loop2_div_mono_count_cover_exit_le
       = 1 + 2 * size m + 14 * (size n) ** 2 * (size m) ** 2 * (size (MAX b m)) ** 2
 *)
 Theorem mexpM_steps_upper:
-    !m b n. stepsOf (mexpM m b n) <=
-           1 + 2 * size m + 14 * (size n) ** 2 * (size m) ** 2 * (size (MAX b m)) ** 2
+  !m b n.
+    stepsOf (mexpM m b n) <=
+    1 + 2 * size m + 14 * (size n) ** 2 * (size m) ** 2 * (size (MAX b m)) ** 2
 Proof
   rpt strip_tac >>
   assume_tac mexpM_steps_by_sqmod_div_loop >>
-  last_x_assum (qspec_then `m` strip_assume_tac) >>
+  last_x_assum (qspec_then ‘m’ strip_assume_tac) >>
   assume_tac mexpM_body_bound >>
-  first_x_assum (qspec_then `m` strip_assume_tac) >>
-  qabbrev_tac `body = \b n. if m <= 1 then 2 * size m + size n
+  first_x_assum (qspec_then ‘m’ strip_assume_tac) >>
+  qabbrev_tac ‘body = \b n. if m <= 1 then 2 * size m + size n
                   else 1 + 5 * size n + size b ** 2 + 2 * size m +
-                    size (SQ b) * size m + if EVEN n then 0
-                    else size b * size (SQ b ** HALF n MOD m) +
-                         size (b * SQ b ** HALF n MOD m) * size m` >>
-  qabbrev_tac `cover = \b n. 14 * (size n) * (size b) ** 2 * (size m) ** 2` >>
-  qabbrev_tac `exit = \b:num n:num. m <= 1` >>
-  qabbrev_tac `c = 1 + 2 * size m` >>
-  qabbrev_tac `f = \b. (b * b) MOD m` >>
-  qabbrev_tac `g = \b. MAX b m` >>
-  qabbrev_tac `loop = \b n. stepsOf (mexpM m b n)` >>
-  qabbrev_tac `quit = \b:num. c` >>
-  `loop b n <= c + 14 * (size n) ** 2 * (size m) ** 2 * (size (MAX b m)) ** 2` suffices_by rw[Abbr`loop`] >>
-  `!b n. loop b n = if n = 0 then quit b else body b n + if exit b n then 0 else loop (f b) (HALF n)` by metis_tac[] >>
-  Cases_on `m = 0` >| [
-    `loop b n = 2 + size n` by metis_tac[mexpM_steps_base] >>
-    simp[Abbr`c`] >>
-    `0 < size n * (size (g b)) ** 2` by rw[MULT_POS] >>
-    `size n <= size n * (size n * (size (g b)) ** 2)` by rw[] >>
-    `size n * (size n * (size (g b)) ** 2) = size n ** 2 * (size (g b)) ** 2` by rw[] >>
+                       size (SQ b) * size m +
+                       if EVEN n then 0
+                       else size b * size (SQ b ** HALF n MOD m) +
+                            size (b * (SQ b ** HALF n MOD m)) * size m’ >>
+  qabbrev_tac ‘cover = \b n. 14 * (size n) * (size b) ** 2 * (size m) ** 2’ >>
+  qabbrev_tac ‘exit = \b:num n:num. m <= 1’ >>
+  qabbrev_tac ‘c = 1 + 2 * size m’ >>
+  qabbrev_tac ‘f = \b. (b * b) MOD m’ >>
+  qabbrev_tac ‘g = \b. MAX b m’ >>
+  qabbrev_tac ‘loop = \b n. stepsOf (mexpM m b n)’ >>
+  qabbrev_tac ‘quit = \b:num. c’ >>
+  ‘loop b n <= c + 14 * (size n) ** 2 * (size m) ** 2 * (size (MAX b m)) ** 2’
+  suffices_by rw[Abbr‘loop’] >>
+  ‘!b n. loop b n = if n = 0 then quit b
+                    else body b n + if exit b n then 0 else loop (f b) (HALF n)’
+    by metis_tac[] >>
+  Cases_on ‘m = 0’ >| [
+    ‘loop b n = 2 + size n’ by metis_tac[mexpM_steps_base] >>
+    simp[Abbr‘c’] >>
+    ‘0 < size n * (size (g b)) ** 2’ by rw[MULT_POS] >>
+    ‘size n <= size n * (size n * (size (g b)) ** 2)’ by rw[] >>
+    ‘size n * (size n * (size (g b)) ** 2) = size n ** 2 * (size (g b)) ** 2’ by rw[] >>
     decide_tac,
-    Cases_on `n = 0` >| [
-      `loop b n = c` by metis_tac[] >>
+    Cases_on ‘n = 0’ >| [
+      ‘loop b n = c’ by metis_tac[] >>
       decide_tac,
-      `!x y. body x y <= cover x y` by metis_tac[] >>
-      `MONO2 cover` by rw[size_monotone_le, LE_MONO_MULT2, Abbr`cover`] >>
-      `!x. f x <= g x` by
-  (rw[Abbr`f`, Abbr`g`] >>
-      `x ** 2 MOD m < m` by rw[MOD_LESS] >>
+      ‘!x y. body x y <= cover x y’ by metis_tac[] >>
+      ‘MONO2 cover’ by rw[size_monotone_le, LE_MONO_MULT2, Abbr‘cover’] >>
+      ‘!x. f x <= g x’ by
+  (rw[Abbr‘f’, Abbr‘g’] >>
+      ‘x ** 2 MOD m < m’ by rw[MOD_LESS] >>
       decide_tac) >>
-      `MONO g` by rw[Abbr`g`] >>
-      `RISING g` by rw[Abbr`g`] >>
-      `1 < 2` by decide_tac >>
+      ‘MONO g’ by rw[Abbr‘g’] >>
+      ‘RISING g’ by rw[Abbr‘g’] >>
+      ‘1 < 2’ by decide_tac >>
       imp_res_tac loop2_div_mono_count_cover_exit_le >>
-      first_x_assum (qspecl_then [`n`, `b`] strip_assume_tac) >>
-      `pop 2 n * cover (FUNPOW g (pop 2 n) b) n =
-       14 * size n ** 2 * size m ** 2 * size (MAX b m) ** 2` by
-    (`pop 2 n = size n` by rw[pop_2_size] >>
-      rw[Abbr`cover`, Abbr`g`] >>
-      `0 < size n` by rw[] >>
-      `FUNPOW (\b. MAX b m) (size n) b = MAX b m` by rw[FUNPOW_MAX] >>
+      first_x_assum (qspecl_then [‘n’, ‘b’] strip_assume_tac) >>
+      ‘pop 2 n * cover (FUNPOW g (pop 2 n) b) n =
+       14 * size n ** 2 * size m ** 2 * size (MAX b m) ** 2’ by
+    (‘pop 2 n = size n’ by rw[pop_2_size] >>
+      rw[Abbr‘cover’, Abbr‘g’] >>
+      ‘0 < size n’ by rw[] >>
+      ‘FUNPOW (\b. MAX b m) (size n) b = MAX b m’ by rw[FUNPOW_MAX] >>
       simp[]) >>
       metis_tac[]
     ]

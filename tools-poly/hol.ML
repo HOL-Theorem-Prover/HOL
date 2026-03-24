@@ -2,9 +2,6 @@ val _ = use "poly/poly-init2.ML";
 structure BasicIO = SML90;
 exception Interrupt = SML90.Interrupt
 
-val _ = use "../tools/Holmake/Systeml.sig"
-val _ = use "Holmake/Systeml.sml";
-
 val _ = use "../tools/Holmake/hmcore.ML";
 val _ = use "../tools/util/GetOpt.sig";
 val _ = use "../tools/util/GetOpt.sml";
@@ -22,8 +19,6 @@ val _ = use "../src/portableML/json/JSONParser.sig";
 val _ = use "../src/portableML/json/JSONParser.sml";
 val _ = use "../src/portableML/json/JSONDecode.sig";
 val _ = use "../src/portableML/json/JSONDecode.sml";
-val _ = use "../src/portableML/DArray.sig";
-val _ = use "../src/portableML/DArray.sml";
 val _ = use "holide.ML";
 val _ = use "lsp-server.ML";
 
@@ -153,6 +148,10 @@ local
    ReqArg ((fn s => fn (OR r) => OR (updateT r (U sel (SOME s)) $$)), argnm)
  val setBaseNone =
      NoArg (fn () => fn (OR r) => OR (updateT r (U #base_state NONE) $$))
+ val setBaseMin =
+     NoArg (fn () => fn (OR r) =>
+       OR (updateT r (U #base_state
+             (SOME (OS.Path.concat(Systeml.HOLDIR, "bin/hol.state.min")))) $$))
  val ConsForced =
    ReqArg ((fn s => fn (OR r) =>
                OR (updateT r (U #forced_objs (#forced_objs r @ [s])) $$)),
@@ -173,6 +172,8 @@ in
 val cline_opts = [
   {help = "use minimal (bare) heap without bossLib", long = ["bare"], short = "",
    desc = mkBoolT #bare},
+  {help = "use min-only heap (just the kernel, no boolTheory)",
+   long = ["min"], short = "", desc = setBaseMin},
   {help = "error if checked for file is absent", long = ["checkerr"],
    short = "e", desc = setStringOpt "message" #checkerr},
   {help = "check file exists afterwards (can repeat)", long = ["checkfor"],
@@ -507,9 +508,16 @@ in
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;
-        (* Load prelude files first for interactive mode, so user scripts
-           have access to Parse, bossLib, etc. *)
-        load_preludes();
+        (* Load prelude files for interactive mode, unless using the
+           minimal (min-only) heap which has no boolTheory. *)
+        (case base_state of
+            SOME s => if String.isSuffix "hol.state.min" s then
+                        (* Even in --min mode, we need HOL_Interactive for
+                           the parser's open-rewriting (issue #1865) *)
+                        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                                 "tools-poly/holinteractive.ML"))
+                      else load_preludes()
+          | NONE => ());
         List.app
           (maybe_check_load diag)
           ((case #multithread options of

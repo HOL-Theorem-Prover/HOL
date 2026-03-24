@@ -37,6 +37,8 @@ Bugs fixed
 -   Three kernel bugs (github issues [#1838](https://github.com/HOL-Theorem-Prover/HOL/issues/1838), [#1839](https://github.com/HOL-Theorem-Prover/HOL/issues/1839), and [#1840](https://github.com/HOL-Theorem-Prover/HOL/issues/1840)) in CV-compute were fixed.
     Thanks to Ramana Kumar for finding these!
 
+-   We also fixed another [kernel soundness bug](https://github.com/HOL-Theorem-Prover/HOL/issues/1870) found by Ramana Kumar in the technology used to push constants from `bool` back into the kernel.
+
 New theories
 ------------
 
@@ -84,6 +86,15 @@ Incompatibilities
 
 -   For better compatibility with HOL Light (making code-porting easier), arithmetic theory’s `GREATER_EQ` theorem (stating *m ≥ n ⇔ n ≤ m*) is now also available in that theory under the name `GE`.
 
+-   The function `Parse.remove_user_printer` now returns `unit`.
+
+-   The precedence of the `MOD`-infix’s syntax has been changed to bring it line with convention elsewhere: instead of being tighter then multiplication but looser than exponentiation, it now lives at the same precedence level as multiplication.
+    To restore it to its old level/behaviour, use the following declaration at the head of relevant `*Script.sml` files:
+
+           val _ = temp_set_fixity "MOD" (Infixl 650)
+
+    (If one over-arching change is desired, dropping the `temp_` prefix and putting the declaration in a root script-file will install the change for all of one’s theories.)
+-   The order of the list of type variables given by `Type.type_vars` and `Term.type_vars_in_term` have changed. User code should be written to not depend on this anyway.
 
 Deprecations
 ------------

@@ -266,23 +266,18 @@ fun term_of_varpow x 1 = x
   | term_of_varpow x k =
     mk_comb(mk_comb(pow_tm, x), numSyntax.mk_numeral(Arbnum.fromInt k));
 
-(* NOTE: must produce RIGHT-associated products (a * (b * c)), not
-   left-associated ((a * b) * c). The Normalizer's MONOMIAL_MUL_CONV
-   expects right-associated inputs: it calls dest_mul on the outermost
-   product and uses powvar on the left operand, which must be a single
-   variable/power, not a sub-product. *)
 fun term_of_monomial (m:monomial) =
     let val items = Redblackmap.listItems m in
       case items of
           [] => realSyntax.one_tm
         | _ =>
-          let val vps = map (fn (x,k) => term_of_varpow x k) items
-              fun right_assoc [t] = t
-                | right_assoc (t::ts) =
-                    mk_comb(mk_comb(mul_tm, t), right_assoc ts)
-                | right_assoc [] = raise Match
-          in right_assoc vps
-          end
+          (* Keep the HOL term shape aligned with HOL Light's itlist-based
+             constructor. Proof reconstruction below only applies local
+             polynomial conversions, and this canonical form keeps them
+             reducing cleanly. *)
+          List.foldr (fn ((x, k), acc) =>
+                         mk_comb(mk_comb(mul_tm, term_of_varpow x k), acc))
+                     realSyntax.one_tm items
     end;
 
 fun term_of_cmonomial (m, c:rat) =
@@ -291,11 +286,6 @@ fun term_of_cmonomial (m, c:rat) =
     else mk_comb(mk_comb(mul_tm, RealArith.term_of_rat c),
                  term_of_monomial m);
 
-(* NOTE: must produce RIGHT-associated sums (a + (b + c)), not
-   left-associated ((a + b) + c). The Normalizer's POLYNOMIAL_MUL_CONV
-   expects right-associated inputs: it calls dest_add on the outermost
-   sum and uses POLYNOMIAL_MONOMIAL_MUL_CONV on the left operand, which
-   must be a single monomial, not a sub-polynomial. *)
 fun term_of_poly (p:poly) =
     if poly_is0 p then zero_tm
     else
@@ -308,12 +298,12 @@ fun term_of_poly (p:poly) =
               | ord => ord
         val sorted = Listsort.sort cmp items
         val tms = map term_of_cmonomial sorted
-        fun right_assoc [t] = t
-          | right_assoc (t::ts) =
-              mk_comb(mk_comb(add_tm, t), right_assoc ts)
-          | right_assoc [] = raise Match
       in
-        right_assoc tms
+        (* Likewise preserve HOL Light's right-associated polynomial sum
+           tree. This keeps the reconstructed HOL proof in the same normal
+           form that the translator expects to collapse to a ground
+           contradiction. *)
+        end_itlist (fn t1 => fn t2 => mk_comb(mk_comb(add_tm, t1), t2)) tms
       end;
 
 (* ===================================================================== *)
@@ -334,6 +324,12 @@ type matrix = (int * int) * ((int * int), rat) IMap.dict;
 
 val imap_empty = IMap.mkDict int_compare;
 val mmap_empty = IMap.mkDict intpair_compare;
+
+(* HOL Light's list-set union is "itlist insert", which preserves the left
+   list's order. Variable order feeds directly into SOS basis construction
+   and SDP size, so use the same order on ordering-sensitive paths. *)
+fun hl_union eq xs ys =
+    List.foldr (fn (x, acc) => op_insert eq x acc) ys xs;
 
 fun vec_dim ((n, _):vector) = n;
 
@@ -392,42 +388,6 @@ fun mat_row k (((r,c), m):matrix) : vector =
 fun mat_is0 (((_, _), m):matrix) = IMap.numItems m = 0;
 
 (* ===================================================================== *)
-(* Newton polytope and convex hull                                       *)
-(* ===================================================================== *)
-
-(* Test if point pt is in the convex hull of pts using CSDP.
-   Rather than computational geometry, express as LP and call CSDP.
-   This is the HOL-Light approach — lazy but effective. *)
-
-(* For environments without CSDP, use a simple fallback:
-   just return all monomials up to half-degree *)
-
-fun all_monomials_upto vars ds =
-    case (vars, ds) of
-        ([], _) => [mono_1]
-      | (_, []) => [mono_1]
-      | (v::vs, d::dds) =>
-        List.concat
-          (List.tabulate(d+1, fn k =>
-             map (fn m => if k = 0 then m
-                          else Redblackmap.insert(m, v, k))
-                 (all_monomials_upto vs dds)));
-
-(* Newton polytope: monomials m s.t. 2*m is in the convex hull of
-   the monomials of pol. We approximate by taking monomials whose
-   total degree is at most half the total degree of pol, AND whose
-   per-variable degree is at most half the per-variable degree in pol. *)
-fun newton_polytope (pol:poly) =
-    let val vars = poly_variables pol
-        val half_total = (multidegree pol + 1) div 2
-        val ds = map (fn x => (degree x pol + 1) div 2) vars
-        val all = all_monomials_upto vars ds
-        (* Filter by total degree *)
-        val filtered = List.filter (fn m => mono_degree m <= half_total) all
-    in rev filtered
-    end;
-
-(* ===================================================================== *)
 (* Equation elimination (Gaussian elimination for parametric equations)   *)
 (* ===================================================================== *)
 
@@ -484,9 +444,18 @@ fun eliminate_all_equations (one:eqvar) (eqs: equation list)
               | [(v,_)] => if eqvar_compare(v, one) = EQUAL
                            then raise ERR "choose_variable" "only constant"
                            else v
-              | (v,_)::_ =>
-                if eqvar_compare(v, one) = EQUAL then #1(List.nth(items, 1))
-                else v
+              | _ =>
+                let
+                  (* HOL Light's finite-map choose walks the left branch first.
+                     Using the first map item is the closest analogue here.
+                     Pivot order affects elimination and can inflate the
+                     remaining free-variable set. *)
+                  val (v, _) = hd items
+                in
+                  if eqvar_compare(v, one) = EQUAL then
+                    #1(List.nth(items, 1))
+                  else v
+                end
           end
       val assig_empty = Redblackmap.mkDict eqvar_compare
       fun elim dun [] = dun
@@ -640,49 +609,54 @@ fun deration (d : (rat * vector) list) =
 (* CSDP interface                                                        *)
 (* ===================================================================== *)
 
-(* Decimalize a rational number for SDPA format output.
-   Port of HOL Light's exact-arithmetic decimalize: normalizes the rational
-   to 0.xxx * 10^e form, rounds to d significant digits, formats directly.
-   No IEEE 754 double intermediary — preserves full precision. *)
-local
-  val ten = Arbrat.fromInt 10
-  val one_tenth = rat_inv ten
-  fun normalize y =
-      if rat_lt(rat_abs y, one_tenth) then normalize (rat_mul(ten, y)) - 1
-      else if rat_ge(rat_abs y, rat1) then normalize (rat_mul(y, one_tenth)) + 1
-      else 0
-  fun pow10 n =
-      if n >= 0 then rat_pow ten n
-      else rat_inv (rat_pow ten (~n))
-in
-fun decimalize (d:int) (x:rat) : string =
-    if x = rat0 then "0.0"
-    else
-      let
-        val y = rat_abs x
-        val e = normalize y
-        (* z = y * 10^(-e) + 1, so z is in [1.1, 2.0) *)
-        val z = rat_add(rat_mul(pow10 (~e), y), rat1)
-        (* Round z * 10^d to nearest integer *)
-        val scaled = rat_mul(pow10 d, z)
-        val k = Arbrat.floor scaled  (* this is an Arbint *)
-        (* Adjust: round to nearest *)
-        val frac = rat_sub(scaled, Arbrat.fromAInt k)
-        val k' = if rat_ge(frac, rat_div(rat1, Arbrat.fromInt 2))
-                 then Arbint.+(k, Arbint.one) else k
-        val digits_raw = Arbint.toString k'
-        (* Strip trailing 'i' from Arbint.toString *)
-        val digits = if String.isSuffix "i" digits_raw
-                     then String.substring(digits_raw, 0,
-                            String.size digits_raw - 1)
-                     else digits_raw
-        (* Drop leading '1' (from the +1 above) *)
-        val mantissa = String.extract(digits, 1, NONE)
-        val sign = if rat_lt(x, rat0) then "-0." else "0."
-        val exp_str = if e = 0 then "" else "e" ^ Int.toString e
-      in sign ^ mantissa ^ exp_str
-      end
-end;
+(* Decimalize a rational number with d significant digits.
+   This follows HOL-Light's exact decimalization rather than routing
+   through machine floating-point. *)
+fun decimalize d (x:rat) : string =
+    let
+      val rat_tenth = rat_div(rat1, Arbrat.fromInt 10)
+      fun pow10 n =
+          if n >= 0 then rat_pow (Arbrat.fromInt 10) n
+          else rat_div(rat1, rat_pow (Arbrat.fromInt 10) (~n))
+      fun normalize y =
+          if rat_lt(rat_abs y, rat_tenth) then
+            normalize (rat_mul(Arbrat.fromInt 10, y)) - 1
+          else if rat_ge(rat_abs y, rat1) then
+            normalize (rat_div(y, Arbrat.fromInt 10)) + 1
+          else 0
+      fun round_rat y =
+          let
+            val half = rat_div(rat1, Arbrat.fromInt 2)
+          in
+            if y = rat0 then Arbint.zero
+            else
+              let
+                val sgn = if rat_lt(y, rat0) then ~1 else 1
+                val v = rat_abs y
+                val vint = Arbrat.floor v
+                val vfrac = rat_sub(v, Arbrat.fromAInt vint)
+                val absres =
+                  if rat_ge(vfrac, half) then Arbint.+(vint, Arbint.one)
+                  else vint
+              in
+                if sgn < 0 then Arbint.~ absres else absres
+              end
+          end
+    in
+      if x = rat0 then "0.0"
+      else
+        let
+          val y = rat_abs x
+          val e = normalize y
+          val z = rat_add(rat_mul(pow10 (~e), y), rat1)
+          val k = round_rat (rat_mul(pow10 d, z))
+          val ks = Arbnum.toString (Arbint.toNat k)
+          val frac = if String.size ks > 0 then String.extract(ks, 1, NONE) else ""
+          val sign = if rat_lt(x, rat0) then "-0." else "0."
+          val expo = if e = 0 then "" else "e" ^ Int.toString e
+        in sign ^ frac ^ expo
+        end
+    end;
 
 (* Write SDPA-sparse format for a single-block SDP problem.
    Format:
@@ -729,59 +703,68 @@ fun sdpa_of_problem (obj:vector) (mats : matrix list) =
     end;
 
 (* Parse CSDP output: a single line of space-separated decimals.
-   CSDP writes the dual solution y as a single line.
-   Port of HOL Light: parse decimal strings directly to exact rationals
-   without IEEE 754 double intermediary. *)
-local
-  val ten = Arbrat.fromInt 10
-  fun pow10_rat n =
-      if n >= 0 then rat_pow ten n
-      else rat_inv (rat_pow ten (~n))
-  (* Parse a decimal string like "-1.234e-5" directly to exact rational *)
-  fun parse_decimal_exact (s:string) : rat =
-    let
-      val (neg, rest) =
-          if String.isPrefix "-" s then (true, String.extract(s, 1, NONE))
-          else if String.isPrefix "+" s then (false, String.extract(s, 1, NONE))
-          else (false, s)
-      (* Split at 'e' or 'E' for exponent *)
-      val (mantissa_s, exp_s) =
-          case String.fields (fn c => c = #"e" orelse c = #"E") rest of
-              [m] => (m, "0")
-            | [m, e] => (m, e)
-            | _ => (rest, "0")
-      (* Parse mantissa: integer part and optional fractional part *)
-      val (int_s, frac_s) =
-          case String.fields (fn c => c = #".") mantissa_s of
-              [i] => (i, "")
-            | [i, f] => (i, f)
-            | _ => (mantissa_s, "")
-      (* Build exact rational: concat digits as integer / 10^fraclen *)
-      val fraclen = String.size frac_s
-      val combined_s = int_s ^ frac_s
-      val combined = Arbint.fromString combined_s
-                     handle _ => Arbint.zero
-      val denom = rat_pow ten fraclen
-      val base = rat_div(Arbrat.fromAInt combined, denom)
-      (* Apply exponent *)
-      val exp_val = case Int.fromString exp_s of
-                        SOME e => e | NONE => 0
-      val result = rat_mul(base, pow10_rat exp_val)
-    in if neg then rat_neg result else result
-    end
-in
+   CSDP writes the dual solution y as a single line. *)
 fun parse_csdp_output (s:string) : vector =
     let
       val lines = String.tokens (fn c => c = #"\n") s
-      val first_line = if null lines then "" else hd lines
+      val first_line = case List.find (fn line => line <> "") lines of
+                           SOME line => line
+                         | NONE => ""
       val tokens = String.tokens Char.isSpace first_line
       val tokens' = List.filter (fn t => t <> "") tokens
-      val vals = map (fn tok =>
-                   parse_decimal_exact tok
-                   handle _ => rat0) tokens'
+      fun pow10 n =
+          Arbnum.pow (Arbnum.fromInt 10, Arbnum.fromInt n)
+      fun parse_tok tok =
+          let
+            val (neg, body) =
+                if String.size tok = 0 then
+                  raise ERR "parse_csdp_output" "empty token"
+                else
+                  case String.sub(tok, 0) of
+                      #"-" => (true, String.extract(tok, 1, NONE))
+                    | #"+" => (false, String.extract(tok, 1, NONE))
+                    | _ => (false, tok)
+            val exp_parts = String.fields (fn c => c = #"e" orelse c = #"E") body
+            val (mantissa, exp10) =
+                case exp_parts of
+                    [m] => (m, 0)
+                  | [m, e] =>
+                    (case Int.fromString e of
+                         SOME k => (m, k)
+                       | NONE =>
+                         raise ERR "parse_csdp_output"
+                           ("bad exponent: " ^ tok))
+                  | _ =>
+                    raise ERR "parse_csdp_output"
+                      ("bad decimal token: " ^ tok)
+            val mant_parts = String.fields (fn c => c = #".") mantissa
+            val (whole0, frac) =
+                case mant_parts of
+                    [w] => (w, "")
+                  | [w, f] => (w, f)
+                  | _ =>
+                    raise ERR "parse_csdp_output"
+                      ("bad mantissa: " ^ tok)
+            val whole = if whole0 = "" then "0" else whole0
+            val digits = whole ^ frac
+            val _ =
+                if String.size digits = 0 orelse
+                   not (List.all Char.isDigit (String.explode digits))
+                then raise ERR "parse_csdp_output"
+                       ("bad digits: " ^ tok)
+                else ()
+            val base = Arbrat.fromAInt (Arbint.fromString digits)
+            val signed = if neg then rat_neg base else base
+            val shift = exp10 - String.size frac
+          in
+            if shift >= 0 then
+              rat_mul(signed, Arbrat.fromNat (pow10 shift))
+            else
+              rat_div(signed, Arbrat.fromNat (pow10 (~shift)))
+          end
+      val vals = map parse_tok tokens'
     in vec_of_list vals
-    end
-end;
+    end;
 
 (* Find CSDP binary.
    Checks HOL4_CSDP_EXECUTABLE env var first, then tries "csdp" in PATH. *)
@@ -807,32 +790,58 @@ fun find_csdp () =
            else NONE
         end;
 
+fun process_exit_code st =
+    let
+      open Posix.Process
+    in
+      (* Preserve CSDP's native exit codes. HOL Light uses them to
+         distinguish infeasible branches from usable approximate
+         solutions, and callers here need the same distinction. *)
+      case fromStatus st of
+          W_EXITED => 0
+        | W_EXITSTATUS w8 => Word8.toInt w8
+        | W_SIGNALED sg => 128 + SysWord.toInt (Posix.Signal.toWord sg)
+        | W_STOPPED sg => 128 + SysWord.toInt (Posix.Signal.toWord sg)
+    end;
+
 (* Round a vector to "nice" rationals *)
 (* Round x to nearest multiple of 1/n *)
 fun nice_rational n (x:rat) =
-    let val nx = rat_mul(n, x)
-        val f = Arbrat.floor nx
-        val c = Arbrat.ceil nx
-        val diff_f = rat_abs(rat_sub(nx, Arbrat.fromAInt f))
-        val diff_c = rat_abs(rat_sub(nx, Arbrat.fromAInt c))
-        val rounded = if rat_le(diff_f, diff_c) then f else c
+    let
+      val nx = rat_mul(n, x)
+      val half = rat_div(rat1, Arbrat.fromInt 2)
+      val rounded =
+        if nx = rat0 then Arbint.zero
+        else
+          let
+            val sgn = if rat_lt(nx, rat0) then ~1 else 1
+            val v = rat_abs nx
+            val vint = Arbrat.floor v
+            val vfrac = rat_sub(v, Arbrat.fromAInt vint)
+            val absres =
+              if rat_ge(vfrac, half) then Arbint.+(vint, Arbint.one)
+              else vint
+          in
+            if sgn < 0 then Arbint.~ absres else absres
+          end
     in rat_div(Arbrat.fromAInt rounded, n)
     end;
 
 fun nice_vector n ((dim, vm):vector) : vector =
     (dim, IMap.map (fn (_, x) => nice_rational n x) vm);
 
-(* Run CSDP on an SDP problem, return the dual vector.
+(* Run CSDP on an SDP problem, returning the raw exit code and dual vector.
    CSDP syntax: csdp <input.dat-s> <output.sol>
    Return code: 0=success, 1/2=infeasible, 3=reduced accuracy *)
-fun run_csdp (obj:vector) (mats:matrix list) : vector =
+fun run_csdp_raw (obj:vector) (mats:matrix list) : int * vector =
     case find_csdp () of
-        NONE => raise ERR "run_csdp" "CSDP not found"
+        NONE => raise ERR "run_csdp_raw" "CSDP not found"
       | SOME csdp_bin =>
     let
       val input_file = OS.FileSys.tmpName () ^ ".dat-s"
       val output_file = input_file ^ ".out"
-      val params_file = input_file ^ ".params"
+      val workdir = OS.Path.dir input_file
+      val params_file = OS.Path.concat(workdir, "param.csdp")
 
       (* Write SDPA-format input *)
       val sdpa = sdpa_of_problem obj mats
@@ -847,10 +856,11 @@ fun run_csdp (obj:vector) (mats:matrix list) : vector =
       val _ = with_out_file params_file (fn os => TextIO.output(os, params))
 
       (* Run CSDP *)
-      val cmd = csdp_bin ^ " " ^ input_file ^ " " ^ output_file ^
-                " > /dev/null 2>&1"
+      val cmd = "cd " ^ workdir ^ "; " ^
+                csdp_bin ^ " " ^ input_file ^ " " ^ output_file ^
+                (if !sos_debugging then "" else " > /dev/null 2>&1")
       val _ = if !sos_debugging then print ("CSDP: " ^ cmd ^ "\n") else ()
-      val _ = OS.Process.system cmd
+      val rv = process_exit_code (OS.Process.system cmd)
 
       (* Parse output — CSDP writes dual y vector on first line *)
       val op_str = with_in_file output_file TextIO.inputAll
@@ -865,13 +875,175 @@ fun run_csdp (obj:vector) (mats:matrix list) : vector =
               else ()
 
       (* Cleanup temp files *)
-      val _ = (OS.FileSys.remove input_file;
-               OS.FileSys.remove output_file;
-               OS.FileSys.remove params_file) handle OS.SysErr _ => ()
+      val _ = if !sos_debugging then ()
+              else ((OS.FileSys.remove input_file;
+                     OS.FileSys.remove output_file;
+                     OS.FileSys.remove params_file) handle OS.SysErr _ => ())
     in
-      if vec_dim res = 0 then
-        raise ERR "run_csdp" "CSDP produced no output (problem may be infeasible)"
+      (rv, res)
+    end;
+
+fun run_csdp (obj:vector) (mats:matrix list) : vector =
+    let
+      val (rv, res) = run_csdp_raw obj mats
+    in
+      if rv = 1 orelse rv = 2 then
+        raise ERR "run_csdp" "Problem is infeasible"
+      else if rv = 3 then
+        (print "csdp warning: Reduced accuracy\n"; res)
+      else if rv <> 0 then
+        raise ERR "run_csdp" ("solver exited with code " ^ Int.toString rv)
+      else if vec_dim res = 0 then
+        raise ERR "run_csdp" "CSDP produced no output"
       else res
+    end;
+
+(* ===================================================================== *)
+(* Newton polytope and convex hull                                       *)
+(* ===================================================================== *)
+
+fun vec_const c n : vector =
+    if c = rat0 then vec_0 n
+    else
+      (n, List.foldl
+            (fn (i, m) => IMap.insert(m, i, c))
+            imap_empty
+            (List.tabulate(n, fn i => i + 1)));
+
+fun mat_column j (((rows, _), m):matrix) : vector =
+    (rows, IMap.foldl
+             (fn ((i, j'), c, acc) =>
+                 if j = j' then IMap.insert(acc, i, c) else acc)
+             imap_empty m);
+
+fun diagonal ((n, vm):vector) : matrix =
+    ((n, n), IMap.foldl
+               (fn (i, c, acc) => IMap.insert(acc, (i, i), c))
+               mmap_empty vm);
+
+fun linear_program_basic (a:matrix) =
+    let
+      val (m, n) = mat_dims a
+      val mats = map (fn j => diagonal (mat_column j a))
+                     (List.tabulate(n, fn i => i + 1))
+      val obj = vec_const rat1 m
+      val (rv, _) = run_csdp_raw obj mats
+    in
+      if rv = 1 orelse rv = 2 then false
+      else if rv = 0 then true
+      else raise ERR "linear_program_basic"
+        ("unexpected solver exit code " ^ Int.toString rv)
+    end;
+
+fun linear_program (a:matrix) (b:vector) =
+    let
+      val (m, n) = mat_dims a
+    in
+      if vec_dim b <> m then
+        raise ERR "linear_program" "incompatible dimensions"
+      else
+        let
+          val mats = diagonal b ::
+                     map (fn j => diagonal (mat_column j a))
+                         (List.tabulate(n, fn i => i + 1))
+          val obj = vec_const rat1 m
+          val (rv, _) = run_csdp_raw obj mats
+        in
+          if rv = 1 orelse rv = 2 then false
+          else if rv = 0 then true
+          else raise ERR "linear_program"
+            ("unexpected solver exit code " ^ Int.toString rv)
+        end
+    end;
+
+fun funpow 0 f x = x
+  | funpow n f x = funpow (n - 1) f (f x);
+
+fun in_convex_hull pts pt =
+    if null pts then
+      (* The convex hull of the empty set is empty, and the corresponding
+         zero-constraint LP encoding is not accepted by CSDP. *)
+      false
+    else
+    let
+      val pts1 = (1 :: pt) :: map (fn xs => 1 :: xs) pts
+      val pts2 = map (fn p => map (fn x => ~x) p @ p) pts1
+      val n = length pts + 1
+      val v = 2 * (length pt + 1)
+      val m = v + n - 1
+      val base =
+        List.foldl
+          (fn (i, acc) => IMap.insert(acc, (v + i, i + 1), rat1))
+          mmap_empty
+          (List.tabulate(n, fn i => i + 1))
+      val entries =
+        #2 (List.foldl
+              (fn (col, (j, acc)) =>
+                  let
+                    val acc' =
+                      #2 (List.foldl
+                            (fn (x, (i, a)) =>
+                                (i + 1, IMap.insert(a, (i, j), Arbrat.fromInt x)))
+                            (1, acc) col)
+                  in
+                    (j + 1, acc')
+                  end)
+              (1, base) pts2)
+      val mat = ((m, n), entries)
+    in
+      linear_program_basic mat
+    end;
+
+fun minimal_convex_hull mons =
+    let
+      fun augment1 (m::ms) = if in_convex_hull ms m then ms else ms @ [m]
+        | augment1 [] = []
+      fun augment m ms = funpow 3 augment1 (m :: ms)
+      val mons' =
+        case mons of
+            [] => []
+          | m::ms =>
+            (* Keep the augmentation order stable; on tiny inputs this avoids
+               dropping the last remaining extreme point before cleanup runs. *)
+            List.foldr (fn (x, acc) => augment x acc) [m] ms
+    in
+      funpow (length mons') augment1 mons'
+    end;
+
+fun all_monomials_upto vars ds =
+    case (vars, ds) of
+        ([], _) => [mono_1]
+      | (_, []) => [mono_1]
+      | (v::vs, d::dds) =>
+        List.concat
+          (List.tabulate(d+1, fn k =>
+             map (fn m => if k = 0 then m
+                          else Redblackmap.insert(m, v, k))
+                 (all_monomials_upto vs dds)));
+
+fun newton_polytope (pol:poly) =
+    let
+      val vars = poly_variables pol
+      val mons =
+        map (fn (m, _) => map (fn x =>
+              case Redblackmap.peek(m, x) of SOME k => k | NONE => 0) vars)
+            (Redblackmap.listItems pol)
+      val ds = map (fn x => (degree x pol + 1) div 2) vars
+      val all = all_monomials_upto vars ds
+      (* The HOL Light SOS search filters the half-degree basis through the
+         exponent convex hull. Keeping that tighter Gram basis avoids
+         unnecessary SDP growth. *)
+      val mons' = minimal_convex_hull mons
+      val all' =
+        List.filter (fn m =>
+          let
+            val exps = map (fn x =>
+              2 * (case Redblackmap.peek(m, x) of SOME k => k | NONE => 0)) vars
+          in
+            in_convex_hull mons' exps
+          end) all
+    in
+      rev all'
     end;
 
 (* ===================================================================== *)
@@ -1221,19 +1393,24 @@ fun eq3_vars (eq:equation3) = map #1 (Redblackmap.listItems eq);
 fun eliminate_all_equations3 (one:eqvar3) (eqs: equation3 list)
     : eqvar3 list * (eqvar3, equation3) Redblackmap.dict =
     let
-      (* Choose pivot variable with largest absolute coefficient
-         (partial pivoting for numerical stability) *)
       fun choose_variable (eq:equation3) =
-          let val items = Redblackmap.listItems eq
-              val non_one = List.filter
-                (fn (v, _) => eqvar3_compare(v, one) <> EQUAL) items
-          in case non_one of
-                [] => raise ERR "choose_variable3" "only constant"
-              | _ => #1 (List.foldl
-                  (fn ((v, c), (best_v, best_c)) =>
-                     if rat_gt(rat_abs c, rat_abs best_c)
-                     then (v, c) else (best_v, best_c))
-                  (hd non_one) (tl non_one))
+          let val items = Redblackmap.listItems eq in
+            case items of
+                [] => raise ERR "choose_variable3" "empty equation"
+              | [(v,_)] => if eqvar3_compare(v, one) = EQUAL
+                           then raise ERR "choose_variable3" "only constant"
+                           else v
+              | _ =>
+                let
+                  (* Match the left-biased HOL Light choose as closely as the
+                     ordered HOL4 map allows. Pivot order strongly affects the
+                     size of the reduced SDP that reaches CSDP. *)
+                  val (v, _) = hd items
+                in
+                  if eqvar3_compare(v, one) = EQUAL then
+                    #1(List.nth(items, 1))
+                  else v
+                end
           end
       val assig_empty = Redblackmap.mkDict eqvar3_compare
       fun elim dun [] = dun
@@ -1346,86 +1523,56 @@ fun blocks (blocksizes:int list) (bm:bmatrix) : matrix list =
        indexed
     end;
 
-(* CSDP parameters (matching HOL Light's csdp_params) *)
-(* CSDP parameters.
-   usexzgap=0 needed for some ill-conditioned SDPs (CSDP 6.2.0).
-   Relaxed tolerances (1e-6) and min step sizes improve convergence. *)
-val csdp_params =
-    "axtol=1.0e-6\natytol=1.0e-6\nobjtol=1.0e-6\n" ^
-    "pinftol=1.0e8\ndinftol=1.0e8\nmaxiter=500\n" ^
-    "minstepfrac=0.5\nmaxstepfrac=0.99\n" ^
-    "minstepp=1.0e-12\nminstepd=1.0e-12\n" ^
-    "usexzgap=0\ntweakgap=0\naffine=0\nprintlevel=0\n";
-
-(* Run CSDP on a block-diagonal SDP problem.
-   Returns (return_code, result_vector).
-   Return codes: 0=optimal, 1=primal infeasible, 2=dual infeasible,
-                 3=reduced accuracy, other=error *)
-fun run_csdp_blocks nblocks blocksizes (obj:vector) (mats:bmatrix list)
+(* Run CSDP on a block-diagonal SDP problem, returning raw exit code. *)
+fun run_csdp_blocks_raw nblocks blocksizes (obj:vector) (mats:bmatrix list)
     : int * vector =
     case find_csdp () of
-        NONE => raise ERR "run_csdp_blocks" "CSDP not found"
+        NONE => raise ERR "run_csdp_blocks_raw" "CSDP not found"
       | SOME csdp_bin =>
     let
       val input_file = OS.FileSys.tmpName () ^ ".dat-s"
       val output_file = input_file ^ ".out"
-      (* Bug 6 fix: write param.csdp in the temp directory, run CSDP from there *)
-      val tmp_dir = OS.Path.dir input_file
-      val params_file = OS.Path.concat(tmp_dir, "param.csdp")
+      val workdir = OS.Path.dir input_file
+      val params_file = OS.Path.concat(workdir, "param.csdp")
       val sdpa = sdpa_of_blockproblem nblocks blocksizes obj mats
       val _ = with_out_file input_file (fn os => TextIO.output(os, sdpa))
-      val _ = with_out_file params_file (fn os => TextIO.output(os, csdp_params))
-      (* Run CSDP from the temp directory so it finds param.csdp *)
-      val cmd = "cd " ^ tmp_dir ^ " && " ^
+      val params = "axtol=1.0e-8\natytol=1.0e-8\nobjtol=1.0e-8\n" ^
+                   "pinftol=1.0e8\ndinftol=1.0e8\nmaxiter=100\n" ^
+                   "minstepfrac=0.9\nmaxstepfrac=0.97\n" ^
+                   "minstepp=1.0e-8\nminstepd=1.0e-8\n" ^
+                   "usexzgap=1\ntweakgap=0\naffine=0\nprintlevel=0\n"
+      val _ = with_out_file params_file (fn os => TextIO.output(os, params))
+      val cmd = "cd " ^ workdir ^ "; " ^
                 csdp_bin ^ " " ^ input_file ^ " " ^ output_file ^
                 (if !sos_debugging then "" else " > /dev/null 2>&1")
-      val _ = if !sos_debugging then
-                (print ("CSDP: " ^ cmd ^ "\n");
-                 (* Save first SDPA file for debugging *)
-                 with_out_file "/tmp/sos_debug.dat-s"
-                   (fn os => TextIO.output(os, sdpa)))
-              else ()
-      val status = OS.Process.system cmd
-      (* Extract return code: OS.Process.isSuccess checks for 0 *)
-      val rv = if OS.Process.isSuccess status then 0
-               else (* Parse exit code from status — Poly/ML specific *)
-                 3 (* assume reduced accuracy for non-zero non-failure *)
+      val _ = if !sos_debugging then print ("CSDP: " ^ cmd ^ "\n") else ()
+      val rv = process_exit_code (OS.Process.system cmd)
       val op_str = with_in_file output_file TextIO.inputAll
                    handle IO.Io _ => ""
       val res = parse_csdp_output op_str
-      val _ = if !sos_debugging then
-                (print ("CSDP: rv=" ^ Int.toString rv ^
-                        ", " ^ Int.toString (vec_dim res) ^ " dual values\n");
-                 (* Show first few raw tokens and parsed values *)
-                 let val lines = String.tokens (fn c => c = #"\n") op_str
-                     val first = if null lines then "" else hd lines
-                     val toks = String.tokens Char.isSpace first
-                     val n = Int.min(5, length toks)
-                 in print ("CSDP raw[0.." ^ Int.toString (n-1) ^ "]: " ^
-                           String.concatWith " " (List.take(toks, n)) ^ "\n");
-                    List.app (fn i =>
-                      print ("  y[" ^ Int.toString i ^ "] = " ^
-                             Arbrat.toString (vec_el res i) ^ "\n"))
-                    (List.tabulate(Int.min(5, vec_dim res), fn i => i+1))
-                 end)
-              else ()
-      val _ = (OS.FileSys.remove input_file;
-               OS.FileSys.remove output_file) handle OS.SysErr _ => ()
-    in (rv, res)
+      val _ = if !sos_debugging then ()
+              else ((OS.FileSys.remove input_file;
+                     OS.FileSys.remove output_file;
+                     OS.FileSys.remove params_file) handle OS.SysErr _ => ())
+    in
+      (rv, res)
     end;
 
-(* CSDP wrapper that checks return code, matching HOL Light's csdp function *)
-fun csdp_blocks nblocks blocksizes (obj:vector) (mats:bmatrix list) : vector =
-    let val (rv, res) = run_csdp_blocks nblocks blocksizes obj mats
-    in if rv = 1 orelse rv = 2 then
-         raise ERR "csdp" "Problem is infeasible"
-       else if rv = 3 then
-         (if !sos_debugging then print "CSDP warning: Reduced accuracy\n"
-          else ();
-          res)
-       else if rv <> 0 then
-         raise ERR "csdp" ("error " ^ Int.toString rv)
-       else res
+fun run_csdp_blocks nblocks blocksizes (obj:vector) (mats:bmatrix list)
+    : vector =
+    let
+      val (rv, res) = run_csdp_blocks_raw nblocks blocksizes obj mats
+    in
+      if rv = 1 orelse rv = 2 then
+        raise ERR "run_csdp_blocks" "Problem is infeasible"
+      else if rv = 3 then
+        (print "csdp warning: Reduced accuracy\n"; res)
+      else if rv <> 0 then
+        raise ERR "run_csdp_blocks"
+          ("solver exited with code " ^ Int.toString rv)
+      else if vec_dim res = 0 then
+        raise ERR "run_csdp_blocks" "CSDP produced no output"
+      else res
     end;
 
 (* Scale matrices before sending to CSDP (from HOL-Light's scale_then) *)
@@ -1433,15 +1580,18 @@ fun scale_then solver (obj:vector) (mats:bmatrix list) : vector =
     let
       fun common_denom (bm:bmatrix) acc =
           Redblackmap.foldl (fn (_, c, a) => lcm_num (rat_denom c) a) acc bm
+      fun common_denom_vec ((_, vm):vector) acc =
+          IMap.foldl (fn (_, c, a) => lcm_num (rat_denom c) a) acc vm
       fun max_elt (bm:bmatrix) acc =
           Redblackmap.foldl (fn (_, c, a) =>
               let val ac = rat_abs c in if rat_gt(ac, a) then ac else a end)
             acc bm
-      (* Bug 1 fix: use separate cd2 for objective, matching HOL Light *)
+      fun pow2_scale e =
+          if e >= 0 then rat_pow (Arbrat.fromInt 2) e
+          else rat_div(rat1, rat_pow (Arbrat.fromInt 2) (~e))
       val cd1 = List.foldl (fn (m, a) => common_denom m a)
                   (Arbnum.fromInt 1) mats
-      val cd2 = IMap.foldl (fn (_, c, a) => lcm_num (rat_denom c) a)
-                  (Arbnum.fromInt 1) (#2 obj)
+      val cd2 = common_denom_vec obj (Arbnum.fromInt 1)
       val mats' = map (Redblackmap.map (fn (_, x) =>
                          rat_mul(Arbrat.fromNat cd1, x))) mats
       val obj' = vec_cmul (Arbrat.fromNat cd2) obj
@@ -1450,7 +1600,6 @@ fun scale_then solver (obj:vector) (mats:bmatrix list) : vector =
       val max2 = IMap.foldl (fn (_, c, a) =>
                      let val ac = rat_abs c in
                        if rat_gt(ac, a) then ac else a end) rat0 (#2 obj')
-      (* Bug 4 fix: handle negative exponents like HOL Light's pow2 *)
       fun log2_scale mx =
           if mx = rat0 then rat1
           else let val f = Real.fromLargeInt
@@ -1459,8 +1608,7 @@ fun scale_then solver (obj:vector) (mats:bmatrix list) : vector =
                              (Arbint.toLargeInt
                                (Arbint.fromNat (rat_denom mx)))
                    val e = 20 - Real.floor(Math.ln(Real.abs f) / Math.ln 2.0)
-               in if e >= 0 then rat_pow (Arbrat.fromInt 2) e
-                  else rat_inv (rat_pow (Arbrat.fromInt 2) (~e))
+               in pow2_scale e
                end handle _ => rat1
       val scal1 = log2_scale max1
       val scal2 = log2_scale max2
@@ -1510,7 +1658,6 @@ fun epoly_of_poly (p:poly) : epoly =
 (* ===================================================================== *)
 
 val max_sos_degree = ref 20;
-val min_sos_degree = ref 0;
 
 (* Enumerate monomials of a given total degree d over given variables *)
 fun enumerate_monomials d (vars : term list) : monomial list =
@@ -1541,18 +1688,14 @@ fun enumerate_products d (pols : (poly * positivstellensatz) list)
                     (enumerate_products (d - e) ps)
         end;
 
-(* The main certificate search: Positivstellensatz via block-diagonal SDP.
-   vars_opt: optional variable ordering override for permutation search. *)
+(* The main certificate search: Positivstellensatz via block-diagonal SDP *)
 fun real_positivnullstellensatz_general linf d
     (eqs : poly list) (leqs : (poly * positivstellensatz) list) (pol : poly)
-    (vars_opt : term list option)
     : poly list * (positivstellensatz * (rat * poly) list) list =
   let
-    val vars = case vars_opt of
-        SOME vs => vs
-      | NONE => List.foldl
-          (fn (p, acc) => op_union aconv (poly_variables p) acc)
-          [] (pol :: eqs @ map #1 leqs)
+    val vars = List.foldl
+      (fn (p, acc) => hl_union aconv (poly_variables p) acc)
+      [] (pol :: eqs @ map #1 leqs)
     val monoid =
       if linf then
         (poly_const rat1, Rational_lt rat1) ::
@@ -1664,7 +1807,7 @@ fun real_positivnullstellensatz_general linf d
     (* Call CSDP *)
     val raw_vec =
       if null pvs then vec_0 0
-      else scale_then (csdp_blocks nblocks blocksizes) obj mats
+      else scale_then (run_csdp_blocks nblocks blocksizes) obj mats
 
     (* Rounding loop *)
     fun find_rounding dd =
@@ -1681,22 +1824,7 @@ fun real_positivnullstellensatz_general linf d
             (bmatrix_neg (hd mats))
             (List.tabulate(vec_dim vec, fn i => i+1))
         val allmats = blocks blocksizes blockmat
-        fun diag_block idx m =
-          diag m
-          handle e =>
-            (if !sos_debugging then
-               (print ("  block " ^ Int.toString (idx+1) ^
-                       " (size " ^ Int.toString (#1 (mat_dims m)) ^
-                       "): " ^ exnMessage e);
-                (* Show first diagonal entry for 1st rounding *)
-                print (" a11=" ^
-                       Arbrat.toString (mat_el m (1,1)) ^ "\n"))
-             else ();
-             raise e)
-        val ratdias =
-          #2 (List.foldl (fn (m, (i, acc)) =>
-            (i+1, acc @ [diag_block i m])) (0, []) allmats)
-      in (vec, ratdias)
+      in (vec, map diag allmats)
       end
 
     val rounding_vals =
@@ -1923,9 +2051,12 @@ fun term_of_sqterm (c, p) =
 
 fun term_of_sos (pr, sqs) =
     if null sqs then pr
-    else Product(pr,
-           List.foldl (fn (a, b) => Sum(b, a))
-             (term_of_sqterm (hd sqs)) (map term_of_sqterm (tl sqs)));
+    else
+      (* HOL Light builds these proof objects with end_itlist rather than a
+         left fold. The translator combines = / >= / > facts structurally,
+         so the same right-associated shape matters here too. *)
+      Product(pr, end_itlist (fn a => fn b => Sum(a, b))
+                             (map term_of_sqterm sqs));
 
 (* Iterative deepening with bounded depth *)
 fun deepen f n =
@@ -1982,45 +2113,21 @@ fun SOS_PROVER translator (eqs, les, lts) =
                   (poly_const rat1) ltp
       val leq = lep @ ltp
 
-      (* Collect all variables for permutation search *)
-      val all_polys = pol :: map #1 eq @ map #1 leq
-      val allvars = List.foldl
-        (fn (p, acc) => op_union aconv (poly_variables p) acc)
-        [] all_polys
-
-      (* Generate all permutations for small variable sets *)
-      fun perms [] = [[]]
-        | perms l = List.concat (map (fn x =>
-            map (fn p => x :: p)
-                (perms (List.filter (fn y => not (x ~~ y)) l))) l)
-
-      val var_orderings =
-        if length allvars > 5 then [allvars]
-        else perms allvars
-
-      val _ = if !sos_debugging then
-                (print ("SOS_PROVER: " ^ Int.toString (length allvars) ^
-                       " vars, " ^ Int.toString (length var_orderings) ^
-                       " orderings\n");
-                 app (fn v => print ("  var: " ^ term_to_string v ^
-                                     " is_var=" ^
-                                     Bool.toString (is_var v) ^ "\n"))
-                     allvars)
-              else ()
-
       fun tryall dd =
         let val e = multidegree pol
             val k = if e = 0 then 0 else dd div e
             val eq' = map #1 eq
-            fun try_vi (vars_order, i) =
+            fun try_i i =
               (dd, i, real_positivnullstellensatz_general false dd eq' leq
-                        (poly_neg (poly_pow pol i)) (SOME vars_order))
-            val combos = List.concat (map (fn vo =>
-              List.tabulate(k+1, fn i => (vo, i))) var_orderings)
-        in tryfind try_vi combos
+                        (poly_neg (poly_pow pol i)))
+        in
+          (* HOL Light uses tryfind here. Solve each candidate branch at
+             most once; rerunning the winning branch duplicates the same
+             CSDP work and repeats its warnings. *)
+          tryfind try_i (List.tabulate(k+1, fn i => i))
         end
 
-      val (dd, i, (cert_ideal, cert_cone)) = deepen tryall (!min_sos_degree)
+      val (dd, i, (cert_ideal, cert_cone)) = deepen tryall 0
 
       (* Build the proof certificate *)
       val proofs_ideal =
@@ -2030,26 +2137,22 @@ fun SOS_PROVER translator (eqs, les, lts) =
       val proof_ne =
         if null ltp then Rational_lt rat1
         else
-          let val p = List.foldl (fn ((_,c), acc) => Product(acc, c))
-                        (snd (hd ltp)) (tl ltp)
+          let
+            (* Keep the strict-hypothesis product tree right-associated to
+               match HOL Light's end_itlist/product construction. *)
+            val p = end_itlist (fn s => fn t => Product(s, t))
+                              (map snd ltp)
           in Lib.funpow i (fn q => Product(p, q)) (Rational_lt rat1)
           end
-      val proof = List.foldl (fn (a, b) => Sum(b, a))
-                    proof_ne (proofs_ideal @ proofs_cone)
+      val proof =
+        end_itlist (fn s => fn t => Sum(s, t))
+                   (proof_ne :: proofs_ideal @ proofs_cone)
 
       val _ = if !sos_debugging then
-                (print "SOS: translating certificate to HOL\n";
-                 print ("  dd=" ^ Int.toString dd ^ " i=" ^ Int.toString i ^ "\n");
-                 print ("  " ^ Int.toString (length proofs_ideal) ^
-                        " ideal, " ^ Int.toString (length proofs_cone) ^
-                        " cone\n"))
+                print "SOS: translating certificate to HOL\n"
               else ()
     in
-      (translator (eqs, les, lts) proof
-       handle e => (if !sos_debugging then
-                      print ("SOS: translator FAILED: " ^
-                             exnMessage e ^ "\n")
-                    else (); raise e))
+      translator (eqs, les, lts) proof
     end
   end
 
@@ -2078,10 +2181,10 @@ local
             then (RealArith.rat_of_term l, r)
             else if op2 ~~ realSyntax.plus_tm then
               (substitutable_monomial
-                 (op_union aconv (free_vars r) fvs) l
+                 (hl_union aconv (free_vars r) fvs) l
                handle HOL_ERR _ =>
                substitutable_monomial
-                 (op_union aconv (free_vars l) fvs) r)
+                 (hl_union aconv (free_vars l) fvs) r)
             else raise ERR "substitutable_monomial" ""
           end
         else raise ERR "substitutable_monomial" ""
@@ -2119,31 +2222,21 @@ in
   fun SOS_SUBST_PROVER translator =
     let
       fun substfirst (eqs, les, lts) =
-        (let val _ = if !sos_debugging then
-                       (print "SOS_SUBST: trying make_substitution...\n";
-                        List.app (fn eq => print ("  EQ: " ^
-                          term_to_string(concl eq) ^ "\n")) eqs)
-                     else ()
-             val eth = tryfind make_substitution eqs
-             val _ = if !sos_debugging then
-                       print ("SOS_SUBST: substituting " ^
-                              term_to_string (concl eth) ^ "\n")
-                     else ()
+        (let val eth = tryfind make_substitution eqs
+             (* This needs to be a substitution conversion, matching HOL
+                Light's SUBS_CONV step, rather than an unrestricted rewrite.
+                Otherwise the equality prepass perturbs the normalized SOS
+                search problem. *)
+             fun subst_cv t =
+               Drule.SUBST_CONV [lhand (concl eth) |-> eth] t t
              fun modify th =
-               CONV_RULE (LAND_CONV (PURE_REWRITE_CONV [eth]
+               CONV_RULE (LAND_CONV (subst_cv
                                      THENC REAL_POLY_CONV)) th
              val eqs' = List.filter (fn t => not (lhand (concl t) ~~ zero_real))
                           (map modify eqs)
          in substfirst (eqs', map modify les, map modify lts)
          end
-         handle HOL_ERR _ =>
-           (if !sos_debugging then
-              print ("SOS_SUBST: no more substitutions, " ^
-                     Int.toString (length eqs) ^ " eqs, " ^
-                     Int.toString (length les) ^ " les, " ^
-                     Int.toString (length lts) ^ " lts\n")
-            else ();
-            SOS_PROVER translator (eqs, les, lts)))
+         handle HOL_ERR _ => SOS_PROVER translator (eqs, les, lts))
     in substfirst
     end
 end (* local *);
@@ -2195,7 +2288,13 @@ in
         val tm0 = rhs (concl th0)
     in EQ_MP (SYM th0)
          (core tm0
-          handle HOL_ERR _ => direct_sos tm0)
+          handle e1 as HOL_ERR _ =>
+            (direct_sos tm0
+             handle HOL_ERR _ =>
+               if isSome (find_csdp ()) then raise e1
+               else raise ERR "REAL_SOS"
+                 "failed (CSDP not found -- install CSDP or set \
+                 \HOL4_CSDP_EXECUTABLE for nonlinear goals with hypotheses)"))
     end
     handle e => raise wrap_exn "SOSLib" "REAL_SOS" e
 end;
@@ -2318,10 +2417,36 @@ local
             ADD_RULE (CONJ (translate p1) (translate p2))
         | translate (Product(p1,p2)) =
             MUL_RULE (CONJ (translate p1) (translate p2))
+      val raw =
+        (translate prf
+         handle e =>
+           let
+             val _ =
+               if !sos_debugging then
+                 print ("SOS: raw translator failed on proof node: " ^
+                        General.exnMessage e ^ "\n")
+               else ()
+           in
+             raise e
+           end)
+      val _ =
+        if !sos_debugging then
+          print ("SOS: raw translated conclusion: " ^
+                 term_to_string (concl raw) ^ "\n")
+        else ()
     in
-      CONV_RULE(FIRST_CONV[REAL_RAT_GE_CONV, REAL_RAT_GT_CONV,
-                            REAL_RAT_EQ_CONV])
-               (translate prf)
+      (CONV_RULE(FIRST_CONV[REAL_RAT_GE_CONV, REAL_RAT_GT_CONV,
+                             REAL_RAT_EQ_CONV]) raw
+       handle e =>
+         let
+           val _ =
+             if !sos_debugging then
+               print ("SOS: final numeric reduction failed on: " ^
+                      term_to_string (concl raw) ^ "\n")
+             else ()
+         in
+           raise e
+         end)
     end
 in
   fun REAL_SOS_DIRECT_TAC (asl, gl) =

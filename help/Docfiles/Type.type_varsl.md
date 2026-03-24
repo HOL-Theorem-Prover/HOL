@@ -30,6 +30,7 @@ Code should not depend on how elements are arranged in the result of
 ### See also
 
 [`Type.type_vars`](#Type.type_vars),
+[`Type.type_vars_acc`](#Type.type_vars_acc),
 [`Type.type_var_in`](#Type.type_var_in),
 [`Type.exists_tyvar`](#Type.exists_tyvar),
 [`Type.polymorphic`](#Type.polymorphic),

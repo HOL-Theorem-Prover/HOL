@@ -68,6 +68,5 @@ sig
   (* --- Knobs --- *)
   val sos_debugging  : bool ref
   val max_sos_degree : int ref    (* default 20 *)
-  val min_sos_degree : int ref    (* default 0 *)
 
 end

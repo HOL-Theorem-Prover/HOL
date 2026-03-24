@@ -122,6 +122,9 @@ The experimental kernel can be selected by passing the `--expk` option to `build
 The *OpenTheory kernel* is based on the experimental kernel, but adds proof-logging to the primitive inference rules so that OpenTheory theory packages can be exported from HOL.
 This kernel can be selected by passing the `--otknl` option to `build`.
 
+The *tracing kernel* uses the same proof-logging to the primitive inference rules as OpenTheory, but exports inference rules without additional translation.
+This kernel can be selected by passing the `--trknl` option to `build`.
+
 ## Build Sequences
 
 When `build` runs, it choreographs its calls to `Holmake` by referring to a specified sequence of directories.
@@ -165,7 +168,7 @@ Under both Moscow&nbsp;ML and Poly/ML the following are created:
 
 `unquote`
 : This is the quotation filter embodied as a Unix filter, with a variety of options to specify behaviour. 
-  Note that this is not used by Poly/ML HOL, but can be useful there to see what the filter (as embodied by the `HolParser` module) is doing when it messes with user input.
+  Note that this is not used by Poly/ML HOL, but can be useful there to see what the filter (as embodied by the `HOLSource` module) is doing when it messes with user input.
 
 Under Poly/ML, the following additional files will appear:
 

@@ -164,6 +164,7 @@ fun emit_hol_script target {boss_qend, bare_qend} =
 end (* local *)
 
 fun quietbind s = ()
+val canBindStr = false
 fun bindstr s = s
 
 end; (* struct *)

@@ -104,4 +104,7 @@ struct
   )
 end;
 
+(* Connect reset_open to the REPL's compile-fail handler *)
+val _ = HOL_REPL.resetOpenHook := HOL_Interactive.reset_open;
+
 end (* local *)

@@ -180,7 +180,9 @@ fun mk_vartype "'a" = alpha  | mk_vartype "'b" = beta
   | mk_vartype "'e" = etyvar | mk_vartype "'f" = ftyvar
   | mk_vartype s = if Lexis.allowed_user_type_var s then Tyv s
                    else (if !varcomplain then
-                           WARN "mk_vartype" "non-standard syntax"
+                           WARN "mk_vartype"
+                                ("non-standard syntax: \""^ String.toString s ^
+                                 "\"")
                          else (); Tyv s)
 
 fun dest_vartype (Tyv s) = s
@@ -193,13 +195,12 @@ val is_type = not o is_vartype;
  * The variables in a type.                                                  *
  *---------------------------------------------------------------------------*)
 
-local fun tyvars (Tyapp(_,Args)) vlist = tyvarsl Args vlist
-        | tyvars v vlist = Lib.insert v vlist
-      and tyvarsl L vlist = rev_itlist tyvars L vlist
-in
-fun type_vars ty = rev(tyvars ty [])
-fun type_varsl L = rev(tyvarsl L [])
-end;
+fun type_vars_acc (Tyapp(_,Args)) vlist = type_varsl_acc Args vlist
+  | type_vars_acc v vlist = Lib.insert v vlist
+and type_varsl_acc L vlist = rev_itlist type_vars_acc L vlist
+
+fun type_vars ty = type_vars_acc ty []
+fun type_varsl L = type_varsl_acc L []
 
 
 (*---------------------------------------------------------------------------

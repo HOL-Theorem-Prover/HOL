@@ -17,17 +17,13 @@ fun write s = (TextIO.output (outstream, s); TextIO.flushOut outstream)
 val _ = if qfixp then
   quotefix.run read write
 else let
-  open HolParser.ToSML
-  val read = mkPushTranslator {
+  open HOLSource.ToSML
+  val {read = read', ...} = mkPullTranslator {
     read = read,
     filename = infilename,
-    parseError = fn (start, stop) => fn s =>
-      TextIO.output (TextIO.stdErr,
-        "parse error at " ^ Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n"),
-    quietOpen = qopn
-  } (mkStrcode write)
-
-  fun loop () = if read () then () else loop ()
+    parseError = HOLSourceParser.filelineParseError (fn s => TextIO.output (TextIO.stdErr, s)),
+    quietOpen = qopn }
+  fun loop () = case read' () of "" => () | s => (write s; loop ())
   in loop () end
 
 val _ = callback()
