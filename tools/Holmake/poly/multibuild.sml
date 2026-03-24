@@ -10,7 +10,7 @@ datatype buildresult =
                         job_kont : (string -> unit) -> OS.Process.status ->
                                    bool,
                         other_nodes : HM_DepGraph.node list }
-       | BR_CacheK of { base_url : string, cachekey : string, dest_dir : string,
+       | BR_CacheK of { base_url : string, cachekey : string,
 			other_nodes : HM_DepGraph.node list, fallback : buildresult }
        | BR_Failed
 
@@ -276,7 +276,7 @@ fun graphbuild optinfo g =
                                     update = update},
                                    (updall Running g, true))
                           end
-			| BR_CacheK{base_url, cachekey, dest_dir, other_nodes, fallback } =>
+			| BR_CacheK{base_url, cachekey, other_nodes, fallback } =>
                           let
                             val (thyc,ndi) = count_theories_needed other_nodes
                             val other_nodes =
@@ -288,7 +288,7 @@ fun graphbuild optinfo g =
                                          g
                                          other_nodes
 			    val t0 = Time.now()
-			    val ok = HolmakeCache.fetch base_url cachekey dest_dir
+			    val ok = HolmakeCache.fetch base_url cachekey
 			    val t = Time.-(Time.now(), t0)
                           in
                               if ok then

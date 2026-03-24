@@ -366,7 +366,6 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         fun create_br_cache url =
             BR_CacheK { base_url    = url,
                         cachekey    = HolmakeCache.compute_deps_cachekey deps,
-                        dest_dir    = HOLFileSys.getDir(),
                         other_nodes = other_nodes,
                         fallback    = br_cline }
       in
@@ -480,8 +479,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         BR_OK => true
       | BR_ClineK{cline = (_,cl), job_kont = k, ...} =>
         k warn (Systeml.systeml cl)
-      | BR_CacheK{base_url, cachekey, dest_dir, fallback, ...} =>
-	HolmakeCache.fetch base_url cachekey dest_dir orelse
+      | BR_CacheK{base_url, cachekey, fallback, ...} =>
+	HolmakeCache.fetch base_url cachekey orelse
 	interpret_bres fallback 
       | BR_Failed => false
 

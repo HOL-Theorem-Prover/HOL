@@ -88,7 +88,7 @@ val compute_deps_cachekey = generate_cachekey o compute_deps
 fun curl_get_to_file url dest =
     OS.Process.isSuccess (Systeml.systeml ["curl", "-s", "-f", "-o", dest, url])
 
-fun fetch base_url cachekey dest_dir =
+fun fetch base_url cachekey =
     let
         val key_url = base_url ^ "/key/" ^ cachekey
         val tmpfile = OS.FileSys.tmpName()
@@ -108,11 +108,11 @@ fun fetch base_url cachekey dest_dir =
                                 (fn v => { name = JSONUtil.asString (JSONUtil.lookupField v "name"),
                                            url  = JSONUtil.asString (JSONUtil.lookupField v "url") })
                                 (JSONUtil.lookupField json "files")
+		val to_dest_dir = HFS_NameMunge.toFSfn true (fn s => s)
             in
                 List.all
                     (fn {name, url} =>
-                        curl_get_to_file (base_url ^ url)
-                                         (OS.Path.concat (dest_dir, name)))
+                        curl_get_to_file (base_url ^ url) (to_dest_dir name))
                     files
             end
             handle _ => false
