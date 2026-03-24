@@ -1744,7 +1744,7 @@ second is to show the new term.
   "Converts a munged emacs_terminal string into a pretty one with text properties."
   (interactive "sinput: ")
   (let* ((tmpbuf (or temp-hol-output-buf
-                     (generate-new-buffer " *HOL output filter*)")))
+                     (generate-new-buffer " *HOL output filter*")))
          end)
     (setq temp-hol-output-buf tmpbuf)
     (with-current-buffer tmpbuf
