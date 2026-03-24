@@ -22,7 +22,7 @@ fun mkNameAttrs _ (p, name) NONE = mkString (p, name)
   | mkNameAttrs f (p, name) (SOME {attrs = {args, ...}, ...}: 'a attrs) =
     mkString (p, concat [name, "[", String.concatWith ", " (map f args), "]"])
 
-fun expandRecord f pat {left, elems = {args, delims, stop = stop1}, right, stop} = let
+fun expandRecord f pat {left, elems = {args, seps, stop = stop1}, right, stop} = let
   fun reord [] NONE acc = rev acc
     | reord [] (SOME p) acc = rev (DotDotDot p :: acc)
     | reord (DotDotDot p :: ls) _ acc = reord ls (SOME p) acc
@@ -39,7 +39,7 @@ fun expandRecord f pat {left, elems = {args, delims, stop = stop1}, right, stop}
         in LabExpansion {orig = lab, result = pat'} end
       in reord ls dot (lab :: acc) end
     | reord (LabExpansion _ :: _) _ _ = raise Fail "double row expansion"
-  val elems = {args = reord args NONE [], delims = delims, stop = stop1}
+  val elems = {args = reord args NONE [], seps = seps, stop = stop1}
   in {left = left, elems = elems, right = right, stop = stop} end
 
 fun mkLocPragma line col s =
@@ -68,7 +68,7 @@ fun doProofKvals _ [] tac = tac
   fun mktm (kv, e) = Infix {left = e, id = (p, "o"), right = mktm1 kv}
   in App (App (e, foldl mktm (mktm1 kv) kvs), tac) end
 
-fun doProofAttrs p (SOME {attrs = {args = kvs, delims=_, stop=_}, left=_, right=_, stop=_}) tac = doProofKvals p kvs tac
+fun doProofAttrs p (SOME {attrs = {args = kvs, seps=_, stop=_}, left=_, right=_, stop=_}) tac = doProofKvals p kvs tac
   | doProofAttrs _ _ tac = tac
 
 fun wrapTac (p, tac) = let
@@ -79,7 +79,7 @@ fun wrapTac (p, tac) = let
 
 fun valPat pos pat e = let
   val s = {rec_ = NONE, pat = pat, eq = SOME {eq = pos, exp = e}}
-  in DecVal {val_ = pos, tyvars = Empty, elems = {args = [s], delims = [], stop = expStop e}} end
+  in DecVal {val_ = pos, tyvars = Empty, elems = {args = [s], seps = [], stop = expStop e}} end
 
 fun valWild pos = valPat pos (Wild pos)
 
@@ -88,18 +88,18 @@ fun mapArms g f1 f2 elems = let
     | list (x :: xs) g f =
       g x (fn x => list xs g (fn xs => f (x :: xs)))
 
-  fun delims {args, delims, stop} g f =
-    list args g (fn args => f {args = args, delims = delims, stop = stop})
+  fun seps {args, seps, stop} g f =
+    list args g (fn args => f {args = args, seps = seps, stop = stop})
 
   fun onPat (List {left, elems, right, stop}) f =
-      delims elems onPat
+      seps elems onPat
         (fn elems => f (List {left = left, elems = elems, right = right, stop = stop}))
     | onPat (Tuple {left, elems, right, stop}) f =
-      delims elems onPat
+      seps elems onPat
         (fn elems => f (Tuple {left = left, elems = elems, right = right, stop = stop}))
     | onPat (Record r) f = let
       val {left, elems, right, stop} = expandRecord (fn x => x) true r
-      in delims elems onRow (fn elems =>
+      in seps elems onRow (fn elems =>
         f (Record {left = left, elems = elems, right = right, stop = stop}))
       end
     | onPat (Parens {left, exp, right, stop}) f =
@@ -133,15 +133,15 @@ fun withLocalAttrs _ false attrs = attrs
     val local_ = {key = (p, "local"), bind = NONE}
     in case attrs of
       NONE => SOME {
-      left = p, attrs = {args = [local_], delims = [], stop = p},
+      left = p, attrs = {args = [local_], seps = [], stop = p},
       right = NONE, stop = p}
-    | SOME {left, attrs = {args, delims, stop = stop1}, right, stop} => SOME {
-      left = left, attrs = {args = args @ [local_], delims = delims, stop = stop1},
+    | SOME {left, attrs = {args, seps, stop = stop1}, right, stop} => SOME {
+      left = left, attrs = {args = args @ [local_], seps = seps, stop = stop1},
       right = right, stop = stop}
     end
 
 exception HasOrPat
-fun mapDelim f {args, delims, stop} = {args = map f args, delims = delims, stop = stop}
+fun mapSep f {args, seps, stop} = {args = map f args, seps = seps, stop = stop}
 
 fun expandDec {parseError, quietOpen, fileline} = let
 
@@ -163,7 +163,7 @@ fun magicBind (p, name) acc =
     val bind = DecVal {val_ = p, tyvars = Empty,
       elems = {args = [{rec_ = NONE, pat = mkIdent (p, name),
                          eq = SOME {eq = p, exp = handleExp}}],
-               delims = [], stop = p}}
+               seps = [], stop = p}}
     in bind :: acc end
 
 fun expandExp true (e as Wild _) = e
@@ -178,9 +178,9 @@ fun expandExp true (e as Wild _) = e
   | expandExp _ (e as Unit _) = e
   | expandExp _ (e as Ident _) = e
   | expandExp pat (List {left, elems, right, stop}) =
-    List {left = left, elems = mapDelim (expandExp pat) elems, right = right, stop = stop}
+    List {left = left, elems = mapSep (expandExp pat) elems, right = right, stop = stop}
   | expandExp pat (Tuple {left, elems, right, stop}) =
-    Tuple {left = left, elems = mapDelim (expandExp pat) elems, right = right, stop = stop}
+    Tuple {left = left, elems = mapSep (expandExp pat) elems, right = right, stop = stop}
   | expandExp pat (Record r) = Record (expandRecord (expandExp pat) pat r)
   | expandExp pat (Parens {left, exp, right, stop}) =
     Parens {left = left, exp = expandExp pat exp, right = right, stop = stop}
@@ -192,10 +192,10 @@ fun expandExp true (e as Wild _) = e
   | expandExp _ (Or _) = raise HasOrPat
   | expandExp _ (e as Select _) = e
   | expandExp pat (Sequence {left, elems, right, stop}) =
-    Sequence {left = left, elems = mapDelim (expandExp pat) elems, right = right, stop = stop}
+    Sequence {left = left, elems = mapSep (expandExp pat) elems, right = right, stop = stop}
   | expandExp _ (LetInEnd {let_, dec, in_, exps, end_, stop}) =
     LetInEnd {let_ = let_, dec = map (expandDec false) dec, in_ = in_,
-      exps = mapDelim (expandExp false) exps, end_ = end_, stop = stop}
+      exps = mapSep (expandExp false) exps, end_ = end_, stop = stop}
   | expandExp pat (App (e1, e2)) = App (expandExp pat e1, expandExp pat e2)
   | expandExp _ (AndAlso {left, andalso_, right}) =
     AndAlso {left = expandExp false left, andalso_ = andalso_, right = expandExp false right}
@@ -270,7 +270,7 @@ and expandQuoteCore start toks = let
   in go toks [] end
 
 and expandQuote start stop toks = let
-  val elems = {args = expandQuoteCore start toks, delims = [], stop = stop}
+  val elems = {args = expandQuoteCore start toks, seps = [], stop = stop}
   in List {left = start, elems = elems, right = NONE, stop = stop} end
 
 and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
@@ -282,7 +282,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
         in ExpBad {start = start, stop = stop} end
       val eq = Option.map (fn {eq, exp} => {eq = eq, exp = expandExp false exp}) eq
       in {rec_ = rec_, pat = pat, eq = eq} end
-    in DecVal {val_ = val_, tyvars = tyvars, elems = mapDelim f elems} end
+    in DecVal {val_ = val_, tyvars = tyvars, elems = mapSep f elems} end
   | expandDec _ (dec as DecMosmlPrimVal {prim_val_, tyvars, elems}) = let
     fun f {ty, eq, ...} = Option.isSome ty andalso Option.isSome eq
     fun g {op_, id, ty, ...} = let
@@ -294,10 +294,10 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val r = if List.all f (#args elems) then
       DecMosmlPrimVal {prim_val_ = prim_val_, tyvars = tyvars, elems = elems}
     else DecExpansion {orig = dec, result = [
-      DecVal {val_ = prim_val_, tyvars = tyvars, elems = mapDelim g elems}]}
+      DecVal {val_ = prim_val_, tyvars = tyvars, elems = mapSep g elems}]}
     in r end
   | expandDec _ (DecFun {fun_, tyvars, fvalbind}) = let
-    val fvalbind = mapDelim (expandFunBranches fun_) fvalbind
+    val fvalbind = mapSep (expandFunBranches fun_) fvalbind
     in DecFun {fun_ = fun_, tyvars = tyvars, fvalbind = fvalbind} end
   | expandDec _ (dec as DecType _) = dec
   | expandDec _ (dec as DecDatatype _) = dec
@@ -314,11 +314,11 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     fun f {id, constraint, bind} = let
       val bind = Option.map (fn {eq, strexp} => {eq = eq, strexp = expandStrExp strexp}) bind
       in {id = id, constraint = constraint, bind = bind} end
-    in DecStructure {structure_ = structure_, elems = mapDelim f elems} end
+    in DecStructure {structure_ = structure_, elems = mapSep f elems} end
   | expandDec _ (DecSignature {signature_, elems}) = let
     fun f {eq, sigexp} = {eq = eq, sigexp = expandSigExp sigexp}
     fun g {id, bind} = {id = id, bind = Option.map f bind}
-    in DecSignature {signature_ = signature_, elems = mapDelim g elems} end
+    in DecSignature {signature_ = signature_, elems = mapSep g elems} end
   | expandDec _ (DecInclude {include_, sigexps}) =
     DecInclude {include_ = include_, sigexps = map expandSigExp sigexps}
   | expandDec _ (dec as Sharing _) = dec
@@ -328,7 +328,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
       val bind = Option.map (fn {eq, strexp} => {eq = eq, strexp = expandStrExp strexp}) bind
       in {id = id, lparen = lparen, funarg = funarg,
           rparen = rparen, constraint = constraint, bind = bind} end
-    in DecFunctor {functor_ = functor_, elems = mapDelim f elems} end
+    in DecFunctor {functor_ = functor_, elems = mapSep f elems} end
   | expandDec top (dec as DecExp e) = let
     val p = expStart e
     val dec' = valPat p (if top then mkIdent (p, "it") else Wild p) (expandExp false e)
@@ -385,7 +385,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
         val acc = foldl (fn (tgt, acc) => let
           val stop = idStop tgt
           val s = {id = tgt, constraint = NONE, bind = SOME {eq = stop, strexp = StrIdent id'}}
-          val elems = {args = [s], delims = [], stop = stop}
+          val elems = {args = [s], seps = [], stop = stop}
           val d = DecStructure {structure_ = #1 tgt, elems = elems}
           in (NONE, d :: finish acc) end) acc (rev (!aliases))
         in processList isThy header_attrs thys ls acc end

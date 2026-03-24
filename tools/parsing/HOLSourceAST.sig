@@ -5,20 +5,20 @@ type ident = int * string
 
 type fileline = {file: string, line: int, col: int}
 
-type 'exp delimited = {args: 'exp list, delims: int option list, stop: int}
+type 'exp separated = {args: 'exp list, seps: int option list, stop: int}
 
 datatype 'a seq =
   Empty
 | One of 'a
-| Many of {left: int, elems: 'a delimited, right: int option, stop: int}
+| Many of {left: int, elems: 'a separated, right: int option, stop: int}
 
 datatype ty =
   TyVar of ident
 | TyRecord of (** { lab : ty, ..., lab : ty } *)
     { left: int,
-      elems: {start: int, lab: ident option, colon: int option, ty: ty} delimited,
+      elems: {start: int, lab: ident option, colon: int option, ty: ty} separated,
       right: int option, stop: int }
-| TyTuple of ty delimited (** ty * ... * ty *)
+| TyTuple of ty separated (** ty * ... * ty *)
 | TyCon of {args: ty seq, id: ident} (** tyseq longtycon *)
 | TyArrow of {from: ty, arrow: int, to: ty} (** ty -> ty *)
 | TyParens of {left: int, ty: ty, right: int option, stop: int} (** ( ty ) *)
@@ -55,7 +55,7 @@ datatype defn_label_id =
 
 type 'a attrs = {
   left: int,
-  attrs: 'a delimited,
+  attrs: 'a separated,
   right: int option, stop: int} option
 type kvals = {key: ident, bind: {eq_: int, vals: ident list} option}
 
@@ -85,11 +85,11 @@ datatype exp =
 | RealConstant of int * string (* 1.5 *)
 | Unit of {left: int, right: int} (** () *)
 | Ident of {op_: int option, id: ident}  (** [op] longvid *)
-| List of {left: int, elems: exp delimited, right: int option, stop: int}
+| List of {left: int, elems: exp separated, right: int option, stop: int}
   (** [ exp, ..., exp ] *)
-| Tuple of {left: int, elems: exp delimited, right: int option, stop: int}
+| Tuple of {left: int, elems: exp separated, right: int option, stop: int}
   (** ( exp, ..., exp ) *)
-| Record of {left: int, elems: row delimited, right: int option, stop: int}
+| Record of {left: int, elems: row separated, right: int option, stop: int}
   (** { lab = exp, ..., lab = exp } *)
 | Parens of {left: int, exp: exp, right: int option, stop: int} (** ( exp ) *)
 | Infix of {left: exp, id: ident, right: exp} (** exp vid exp *)
@@ -97,12 +97,12 @@ datatype exp =
 | Layered of
   {op_: int option, id: ident, ty: {colon: int, ty: ty} option, as_: int, pat: exp}
   (** [op] vid [:ty] as pat *)
-| Or of exp delimited (** SuccessorML "or patterns": pat | pat | ... | pat *)
+| Or of exp separated (** SuccessorML "or patterns": pat | pat | ... | pat *)
 | Select of {hash: int, label: ident} (** # label *)
-| Sequence of {left: int, elems: exp delimited, right: int option, stop: int}
+| Sequence of {left: int, elems: exp separated, right: int option, stop: int}
   (** (exp; ...; exp) *) (* TODO: this is stupid *)
 | LetInEnd of
-  {let_: int, dec: dec list, in_: int option, exps: exp delimited, end_: int option, stop: int}
+  {let_: int, dec: dec list, in_: int option, exps: exp separated, end_: int option, stop: int}
   (** let dec in exp [; exp ...] end *)
 | App of exp * exp (** exp exp *)
 | AndAlso of {left: exp, andalso_: int, right: exp} (** exp andalso exp *)
@@ -147,24 +147,24 @@ and dec =
   DecSemi of int (** ; *)
 | DecVal of {
     val_: int, tyvars: ident seq,
-    elems: {rec_: int option, pat: exp, eq: {eq: int, exp: exp} option} delimited}
+    elems: {rec_: int option, pat: exp, eq: {eq: int, exp: exp} option} separated}
   (** val tyvarseq [rec] pat = exp [and [rec] pat = exp ...] *)
 | DecFun of {
     fun_: int, tyvars: ident seq,
-    fvalbind: {bar: int option, pat: exp, eq: int option, exp: exp} list delimited}
+    fvalbind: {bar: int option, pat: exp, eq: int option, exp: exp} list separated}
   (** fun tyvarseq [op]vid atpat ... atpat [: ty] = exp [| ...] *)
-| DecType of {kw: type_kw * int, tybind: tybind delimited}
+| DecType of {kw: type_kw * int, tybind: tybind separated}
   (** type tyvarseq tycon = ty [and tyvarseq tycon = ty ...] *)
 | DecDatatype of {
-    datatype_: int, datbind: datbind delimited,
-    withtype_: {withtype_: int, tybind: tybind delimited} option }
+    datatype_: int, datbind: datbind separated,
+    withtype_: {withtype_: int, tybind: tybind separated} option }
   (** datatype datbind [withtype typbind] *)
 | DecAbstype of {
-    abstype_: int, datbind: datbind delimited,
-    withtype_: {withtype_: int, tybind: tybind delimited} option,
+    abstype_: int, datbind: datbind separated,
+    withtype_: {withtype_: int, tybind: tybind separated} option,
     with_: int option, dec: dec list, end_: int option, stop: int}
   (** abstype datbind [withtype typbind] with dec end *)
-| DecException of {exception_: int, elems: exbind delimited}
+| DecException of {exception_: int, elems: exbind separated}
   (** exception exbind *)
 | DecLocal of {
     local_: int, dec1: dec list, in_: int option,
@@ -180,21 +180,21 @@ and dec =
 | DecStructure of {
     structure_: int, elems: {
       id: ident, constraint: {colon: int * constraint, sigexp: sigexp} option,
-      bind: {eq: int, strexp: strexp} option} delimited}
+      bind: {eq: int, strexp: strexp} option} separated}
   (** structure strid : sigexp = strexp [and strid : sigep = strexp ...] *)
 | DecSignature of {
     signature_: int,
-    elems: {id: ident, bind: {eq: int, sigexp: sigexp} option} delimited}
+    elems: {id: ident, bind: {eq: int, sigexp: sigexp} option} separated}
   (** signature sigid = sigexp [and ...] *)
 | DecInclude of {include_: int, sigexps: sigexp list}
   (** include sigid ... sigid *)
-| Sharing of {sharing_: int, type_: int option, elems: ident delimited}
+| Sharing of {sharing_: int, type_: int option, elems: ident separated}
   (** sharing [type] longstrid = ... = longstrid *)
 | DecFunctor of {
     functor_: int, elems: {
       id: ident, lparen: int option, funarg: funarg, rparen: int option,
       constraint: {colon: int * constraint, sigexp: sigexp} option,
-      bind: {eq: int, strexp: strexp} option} delimited}
+      bind: {eq: int, strexp: strexp} option} separated}
   (** functor id(funarg) [:> sigexp] = strexp [and ...] *)
 | DecExp of exp (** exp (only at top level) *)
 
@@ -243,7 +243,7 @@ and dec =
 | HOLFinalise of {finalise_: int, id: ident, attrs: kvals attrs, stop: int}
   (** Finalise to_suspend[simp] *)
 
-| DecMosmlPrimVal of {prim_val_: int, tyvars: ident seq, elems: mosml_primvalbind delimited}
+| DecMosmlPrimVal of {prim_val_: int, tyvars: ident seq, elems: mosml_primvalbind separated}
   (** prim_val tyvarseq id: ty = n str [and id: ty = n str ...] *)
 
 | DecBad of {start: int, stop: int}
@@ -259,7 +259,7 @@ and sigexp =
   (** sig spec end *)
 | WhereType of {
   sigexp: sigexp, where_: int,
-  elems: {type_: int option, tybind: tybind} delimited}
+  elems: {type_: int option, tybind: tybind} separated}
   (** sigexp where type tyvarseq tycon = ty [and type ...] *)
 
 and strexp =

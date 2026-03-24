@@ -28,14 +28,14 @@ fun ident (p, id) = spanned (p, p + size id) (token id)
 fun otoken NONE _ _ = ()
   | otoken (SOME _) s pr = token s pr
 
-fun delimited left args f delim right pr = (
+fun separated left args f sep right pr = (
   left pr;
   case args of
     [] => ()
-  | e :: args => (f e pr; app (fn e => (delim pr; f e pr)) args);
+  | e :: args => (f e pr; app (fn e => (sep pr; f e pr)) args);
   right pr)
 
-fun delimitedBar left args f right pr = let
+fun separatedBar left args f right pr = let
   fun go [] = ()
     | go [e] = f NONE e pr
     | go (e :: args) = (f (SOME true) e pr; token "|" pr; go args)
@@ -43,7 +43,7 @@ fun delimitedBar left args f right pr = let
 
 fun seq _ Empty _ = ()
   | seq f (One a) pr = f true a pr
-  | seq f (Many {elems, ...}) pr = delimited
+  | seq f (Many {elems, ...}) pr = separated
      (token "(") (#args elems) (f false) (token ",") (token ")") pr
 
 fun parenIf false f pr = f (false, pr)
@@ -54,9 +54,9 @@ fun printTyCore _ (TyVar id) pr = ident id pr
     fun f {start, lab, ty, ...} pr = let
       val lab = Option.getOpt (lab, (start, "_"))
       in ident lab pr; token ":" pr; printTy false ty pr end
-    in delimited (token "{") args f (token ",") (token "}") pr end
+    in separated (token "{") args f (token ",") (token "}") pr end
   | printTyCore prec (TyTuple {args, ...}) pr =
-    parenIf prec (delimited (K ()) args (printTy true) (token "*") (K ()) o #2) pr
+    parenIf prec (separated (K ()) args (printTy true) (token "*") (K ()) o #2) pr
   | printTyCore _ (TyCon {args, id}) pr = (seq printTy args pr; ident id pr)
   | printTyCore prec (TyArrow {from, to, ...}) pr =
     parenIf prec (fn (_,pr) => (printTy true from pr; token "->" pr; printTy false to pr)) pr
@@ -75,9 +75,10 @@ fun kwType KWType = "type"
   | kwType KWMosmlPrimEqtype = "prim_eqtype"
   | kwType KWMosmlPrimRefType = "prim_EQtype"
 
-fun printTypeDec kw ({args, ...}: tybind delimited) = delimited (token kw) args printTyBind (token "and") (K ())
+fun printTypeDec kw ({args, ...}: tybind separated) =
+  separated (token kw) args printTyBind (token "and") (K ())
 
-fun printDatBinds kw ({args, ...}: datbind delimited) wt pr = let
+fun printDatBinds kw ({args, ...}: datbind separated) wt pr = let
   fun f {op_, id, arg, ...} pr = (
     otoken op_ "op" pr; ident id pr;
     Option.app (fn {ty, ...} => (token "of" pr; printTy ty pr)) arg)
@@ -85,9 +86,10 @@ fun printDatBinds kw ({args, ...}: datbind delimited) wt pr = let
     seq (K ident) tyvars pr; ident tycon pr; token "=" pr;
     case rhs of
       DatvalDatatype {id, ...} => (token "datatype" pr; ident id pr)
-    | DatvalElems args => delimited (K ()) args f (token "|") (K ()) pr)
-  val _ = delimited (token kw) args g (token "and") (K ()) pr
-  in Option.app (fn ({tybind, ...}: {withtype_: int, tybind: tybind delimited}) => printTypeDec "withtype" tybind pr) wt end
+    | DatvalElems args => separated (K ()) args f (token "|") (K ()) pr)
+  val _ = separated (token kw) args g (token "and") (K ()) pr
+  fun h {tybind, ...} = printTypeDec "withtype" tybind pr
+  in Option.app h (wt: {withtype_: int, tybind: tybind separated} option) end
 
 fun print parseError = let
 
@@ -118,11 +120,11 @@ and printExpCore (_:bool option * int) (Wild _) pr = token "_" pr
   | printExpCore _ (Unit _) pr = token "()" pr
   | printExpCore _ (Ident {op_, id}) pr = (otoken op_ "op" pr; ident id pr)
   | printExpCore _ (List {elems = {args, ...}, ...}) pr =
-    delimited (token "[") args (printExp NONE) (token ",") (token "]") pr
+    separated (token "[") args (printExp NONE) (token ",") (token "]") pr
   | printExpCore _ (Tuple {elems = {args, ...}, ...}) pr =
-    delimited (token "(") args (printExp NONE) (token ",") (token ")") pr
+    separated (token "(") args (printExp NONE) (token ",") (token ")") pr
   | printExpCore _ (Record {elems = {args, ...}, ...}) pr =
-    delimited (token "{") args printRow (token ",") (token "}") pr
+    separated (token "{") args printRow (token ",") (token "}") pr
   | printExpCore prec (Parens {exp, left, stop, ...}) pr =
     parenIf (expSpan exp <> (left, stop)) (fn (paren, pr) =>
       printExp' (if paren then (NONE, handlePrec) else prec) exp pr) pr
@@ -140,11 +142,11 @@ and printExpCore (_:bool option * int) (Wild _) pr = token "_" pr
   | printExpCore _ (Or _) _ = raise Fail "unexpanded or pattern"
   | printExpCore _ (Select {label, ...}) pr = (token "#" pr; ident label pr)
   | printExpCore _ (Sequence {elems = {args, ...}, ...}) pr =
-    delimited (token "(") args (printExp NONE) (token ";") (token ")") pr
+    separated (token "(") args (printExp NONE) (token ";") (token ")") pr
   | printExpCore _ (LetInEnd {dec, exps = {args, ...}, ...}) pr = (
     token "let" pr; printDecs dec pr; token "in" pr;
     case args of [] => token "()" pr | _ =>
-      delimited (K ()) args (printExp NONE) (token ";") (K ()) pr;
+      separated (K ()) args (printExp NONE) (token ";") (K ()) pr;
     token "end" pr)
   | printExpCore (trail, prec) (App (f, e)) pr =
     parenIf (prec > appPrec) (fn (paren, pr) => (
@@ -192,7 +194,7 @@ and printExpCore (_:bool option * int) (Wild _) pr = token "_" pr
   | printExpCore prec (ExpExpansion {orig, result}) pr =
     spanned (expSpan orig) (printExpCore prec result) pr
 
-and printExpFunPat (prec:bool option*int) e = spanned (expSpan e) (printExpFunPatCore prec e)
+and printExpFunPat (prec: bool option * int) e = spanned (expSpan e) (printExpFunPatCore prec e)
 and printExpFunPatCore (trail, prec) (App (f, e)) pr =
     parenIf (prec > appPrec) (fn (paren, pr) => (
       printExpFunPat (SOME false, appPrec) f pr;
@@ -214,7 +216,7 @@ and printRow (DotDotDot _) pr = token "..." pr
 
 and printArms arms = let
   fun f trail {pat, exp, ...} pr = (printExp NONE pat pr; token "=>" pr; printExp trail exp pr)
-  in delimitedBar (K ()) arms f (K ()) end
+  in separatedBar (K ()) arms f (K ()) end
 
 and printDecs ds pr = app (fn d => printDec d pr) ds
 
@@ -224,19 +226,19 @@ and printDecCore (DecSemi _) pr = token ";" pr
     fun f {rec_, pat, eq} pr = (
       otoken rec_ "rec" pr; printExp (SOME false) pat pr;
       Option.app (fn {exp, ...} => (token "=" pr; printExp NONE exp pr)) eq)
-    in token "val" pr; seq (K ident) tyvars pr; delimited (K ()) args f (token "and") (K ()) pr end
+    in token "val" pr; seq (K ident) tyvars pr; separated (K ()) args f (token "and") (K ()) pr end
   | printDecCore (DecMosmlPrimVal {tyvars, elems = {args, ...}, ...}) pr = let
     fun f {op_, id, ty, eq} pr = (
       otoken op_ "op" pr; ident id pr;
       Option.app (fn {ty, ...} => (token ":" pr; printTy ty pr)) ty;
       Option.app (fn {arity = (_, arity), str = (_, str), ...} => (
         token "=" pr; token arity pr; token str pr)) eq)
-    in token "prim_val" pr; seq (K ident) tyvars pr; delimited (K ()) args f (token "and") (K ()) pr end
+    in token "prim_val" pr; seq (K ident) tyvars pr; separated (K ()) args f (token "and") (K ()) pr end
   | printDecCore (DecFun {tyvars, fvalbind = {args, ...}, ...}) pr = let
     fun f nobar {pat, exp, ...} pr =
       (printExpFunPat (SOME false, handlePrec) pat pr; token "=" pr; printExp nobar exp pr)
-    fun g arms = delimitedBar (K ()) arms f (K ())
-    in token "fun" pr; seq (K ident) tyvars pr; delimited (K ()) args g (token "and") (K ()) pr end
+    fun g arms = separatedBar (K ()) arms f (K ())
+    in token "fun" pr; seq (K ident) tyvars pr; separated (K ()) args g (token "and") (K ()) pr end
   | printDecCore (DecType {kw = (kw, _), tybind, ...}) pr = printTypeDec (kwType kw) tybind pr
   | printDecCore (DecDatatype {datbind, withtype_, ...}) pr =
     printDatBinds "datatype" datbind withtype_ pr
@@ -249,7 +251,7 @@ and printDecCore (DecSemi _) pr = token ";" pr
         Option.app (fn {ty, ...} => (token "of" pr; printTy ty pr)) arg)
       | f (ExnReplicate {op_, id, tgt, ...}) pr = (
         otoken op_ "op" pr; ident id pr; token "=" pr; ident tgt pr)
-    in token "exception" pr; delimited (K ()) args f (token "and") (K ()) pr end
+    in token "exception" pr; separated (K ()) args f (token "and") (K ()) pr end
   | printDecCore (DecLocal {dec1, dec2, ...}) pr = (
     token "local" pr; printDecs dec1 pr; token "in" pr; printDecs dec2 pr; token "end" pr)
   | printDecCore (DecOpen {elems, ...}) pr = (token "open" pr; app (C ident pr) elems)
@@ -262,15 +264,15 @@ and printDecCore (DecSemi _) pr = token ";" pr
     fun f {id, constraint, bind} pr = (
       ident id pr; printConstraint constraint pr;
       Option.app (fn {strexp, ...} => (token "=" pr; printStrExp strexp pr)) bind)
-    in delimited (token "structure") args f (token "and") (K ()) pr end
+    in separated (token "structure") args f (token "and") (K ()) pr end
   | printDecCore (DecSignature {elems = {args, ...}, ...}) pr = let
     fun f {id, bind} pr = (
       ident id pr;
       Option.app (fn {sigexp, ...} => (token "=" pr; printSigExp sigexp pr)) bind)
-    in delimited (token "signature") args f (token "and") (K ()) pr end
+    in separated (token "signature") args f (token "and") (K ()) pr end
   | printDecCore (DecInclude {sigexps, ...}) pr = (token "include" pr; app (C printSigExp pr) sigexps)
   | printDecCore (Sharing {type_, elems = {args, ...}, ...}) pr = (
-    token "sharing" pr; delimited (otoken type_ "type") args ident (token "=") (K ()) pr)
+    token "sharing" pr; separated (otoken type_ "type") args ident (token "=") (K ()) pr)
   | printDecCore (DecFunctor {elems = {args, ...}, ...}) pr = let
     fun f {id, funarg, constraint, bind, ...} pr = (
       ident id pr; token "(" pr;
@@ -281,7 +283,7 @@ and printDecCore (DecSemi _) pr = token ";" pr
       | ArgSpec dec => printDecs dec pr;
       token ")" pr; printConstraint constraint pr;
       Option.app (fn {strexp, ...} => (token "=" pr; printStrExp strexp pr)) bind)
-    in delimited (token "functor") args f (token "and") (K ()) pr end
+    in separated (token "functor") args f (token "and") (K ()) pr end
   | printDecCore (DecExp _)            _ = raise Fail "unexpanded top-level expression"
   | printDecCore (HOLLinePragmaWith _) _ = raise Fail "unexpanded HOL syntax"
   | printDecCore (HOLFilePragmaWith _) _ = raise Fail "unexpanded HOL syntax"
@@ -309,7 +311,7 @@ and printDecCore (DecSemi _) pr = token ";" pr
     | printSigExp (Spec {spec, ...}) pr = (token "sig" pr; printDecs spec pr; token "end" pr)
     | printSigExp (WhereType {sigexp, elems = {args, ...}, ...}) pr = let
       fun f {tybind, ...} pr = (token "type" pr; printTyBind tybind pr)
-      in printSigExp sigexp pr; delimited (token "where") args f (token "and") (K ()) pr end
+      in printSigExp sigexp pr; separated (token "where") args f (token "and") (K ()) pr end
 
   and printStrExp (StrIdent id) pr = ident id pr
     | printStrExp (StrStruct {strdec, ...}) pr = (
