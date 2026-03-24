@@ -14,6 +14,7 @@ val T = {Name = "TRUTH", Thy = "bool"} (* placeholder *)
    ---------------------------------------------------------------------- *)
 
 fun simp ths = simpLib.ASM_SIMP_TAC (srw_ss()) ths
+val metis_tac = METIS_TAC
 val op >~ = Q.>~
 
 (* ----------------------------------------------------------------------
@@ -100,19 +101,27 @@ Proof
       simp[combinTheory.APPLY_UPDATE_THM, FUN_EQ_THM] >> METIS_TAC[])
 QED
 
-Overload BIMG = “λf A. BIGUNION (IMAGE f A)”
+Overload BIMG = “(o) BIGUNION o IMAGE”
 
 Theorem BIMG_EQUAL:
-  BIMG $= A = A
+  BIMG $= = I
 Proof
+  ONCE_REWRITE_TAC[FUN_EQ_THM] >>
+  simp[Once EXTENSION, PULL_EXISTS, IN_equal]
+QED
+
+Theorem BIMG_EQUAL_L:
+  BIGUNION o IMAGE $= o f = f
+Proof
+  simp[Once FUN_EQ_THM] >>
   simp[Once EXTENSION, PULL_EXISTS, IN_equal]
 QED
 
 Theorem BIMG_K0:
-  BIMG (K ∅) A = ∅
+  BIMG (K ∅) = K ∅
 Proof
-  simp[Once EXTENSION] >> simp[Once EXTENSION] >>
-  simp[EQ_IMP_THM, PULL_EXISTS] >> METIS_TAC[MEMBER_NOT_EMPTY]
+  simp[Once FUN_EQ_THM] >> qx_gen_tac ‘A’ >> Cases_on ‘A = {}’ >>
+  simp[EXTENSION] >> METIS_TAC[MEMBER_NOT_EMPTY]
 QED
 
 Theorem BIMG_IMAGE:
@@ -120,6 +129,62 @@ Theorem BIMG_IMAGE:
 Proof
   simp[Once EXTENSION, PULL_EXISTS] >> METIS_TAC[]
 QED
+
+Theorem SKg_thm:
+  S (K v) g = v o g
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem UNION_EMPTY1:
+  (UNION) {} = I
+Proof
+  simp[Once FUN_EQ_THM]
+QED
+
+Theorem BIMG_IMAGEo:
+  BIMG (IMAGE f o g) = IMAGE f o BIMG g
+Proof
+  CONV_TAC (ONCE_REWRITE_CONV [FUN_EQ_THM]) >>
+  simp[Once EXTENSION, PULL_EXISTS, AC CONJ_ASSOC CONJ_COMM] >>
+  METIS_TAC[]
+QED
+
+Theorem IMAGE_IMAGE_lo:
+  (f o IMAGE g) o IMAGE h = f o IMAGE (g o h)
+Proof
+  simp[FUN_EQ_THM, GSYM IMAGE_o]
+QED
+
+Theorem IMAGE_IMAGE_o = REWRITE_RULE [GSYM combinTheory.o_ASSOC] IMAGE_IMAGE_lo
+
+Theorem IMAGE_IMAGE_ro:
+  IMAGE g o (IMAGE h o f) = IMAGE (g o h) o f
+Proof
+  simp[FUN_EQ_THM, PULL_EXISTS]
+QED
+
+Theorem BIGUNION_o_IMAGE_IMAGE:
+  BIGUNION o IMAGE (IMAGE f o g) = IMAGE f o BIGUNION o IMAGE g
+Proof
+  simp[Once FUN_EQ_THM]>> simp[Once EXTENSION, PULL_EXISTS] >>
+  metis_tac[]
+QED
+
+Theorem BIGUNION_o_IMAGE_IMAGEr:
+  BIGUNION o (IMAGE (IMAGE f o g) o h) = IMAGE f o BIGUNION o IMAGE g o h
+Proof
+  simp[Once FUN_EQ_THM]>> simp[Once EXTENSION, PULL_EXISTS] >>
+  metis_tac[]
+QED
+
+Theorem IMAGE_BIGUNIONo:
+  BIGUNION (IMAGE (IMAGE f o h) A) = IMAGE f (BIGUNION (IMAGE h A))
+Proof
+  simp[Once EXTENSION, PULL_EXISTS, AC CONJ_ASSOC CONJ_COMM] >>
+  metis_tac[]
+QED
+
 
 (* ----------------------------------------------------------------------
     record the sum type's Bounded Natural Functor nature
