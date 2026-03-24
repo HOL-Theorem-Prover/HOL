@@ -3,6 +3,7 @@ sig
 
 type t = {
   cachekey : string option,
+  cache_url : string option,
   debug : {ins:string list, outs:string list} option,
   do_logging : bool,
   fast : bool,

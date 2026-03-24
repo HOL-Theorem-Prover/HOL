@@ -10,6 +10,8 @@ datatype buildresult =
                         job_kont : (string -> unit) -> OS.Process.status ->
                                    bool,
                         other_nodes : HM_DepGraph.node list }
+       | BR_CacheK of { base_url : string, cachekey : string, dest_dir : string,
+			other_nodes : HM_DepGraph.node list, fallback : buildresult }
        | BR_Failed
 
 val RealFail = Failed{needed=true}
@@ -273,6 +275,27 @@ fun graphbuild optinfo g =
                                     command = cline_to_command cline,
                                     update = update},
                                    (updall Running g, true))
+                          end
+			| BR_CacheK{base_url, cachekey, dest_dir, other_nodes, fallback } =>
+                          let
+                            val (thyc,ndi) = count_theories_needed other_nodes
+                            val other_nodes =
+                                case hm_target.filepart (#target nI) of
+                                    ART _ => n::other_nodes
+                                  | _ => other_nodes
+                            fun updall s g =
+                              List.foldl (fn (n,g) => updnode(n,s) g)
+                                         g
+                                         other_nodes
+			    val t0 = Time.now()
+			    val ok = HolmakeCache.fetch base_url cachekey dest_dir
+			    val t = Time.-(Time.now(), t0)
+                          in
+                              if ok then
+				  (tgtcomplete(#dir nI, ndi, thyc, true, t);
+                                   (k true (updall Succeeded g)))
+			      else
+				  bresk fallback g
                           end
                     fun bc c f = pushdir dir (build_command g incinfo c) f
                     val _ = diag ("Handling builtin command " ^

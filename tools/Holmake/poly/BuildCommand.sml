@@ -294,7 +294,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           case build_command g ii (Compile depinfo) scriptsml_file of
               BR_OK => true
             | BR_Failed => false
-            | BR_ClineK _ => raise Fail "Compilation resulted in commandline"
+            | _ => raise Fail "Compilation resulted in commandline"
       val _ = b orelse raise CompileFailed
       val _ = info ("Linking "^scriptuo^" to produce theory-builder executable")
       val objectfiles0 =
@@ -311,7 +311,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     in
         ((script,[scriptuo,scriptui,script]), objectfiles)
     end
-    fun run_script g (extra:GraphExtra.t) (script, intermediates) objectfiles expecteds =
+    fun run_script use_cache deps g (extra:GraphExtra.t) (script, intermediates) objectfiles expecteds =
       let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
         val _ = app safedelete expecteds
@@ -360,9 +360,19 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                BuiltInCmd (BIC_BuildScript script_part, empty_incinfo))
               (* incinfos not consulted for comparison so empty value ok here *)
         end
+        val br_cline =
+            BR_ClineK { cline = (useScript, cline), job_kont = cont,
+                        other_nodes = other_nodes }
+        fun create_br_cache url =
+            BR_CacheK { base_url    = url,
+                        cachekey    = HolmakeCache.compute_deps_cachekey deps,
+                        dest_dir    = HOLFileSys.getDir(),
+                        other_nodes = other_nodes,
+                        fallback    = br_cline }
       in
-        BR_ClineK { cline = (useScript, cline), job_kont = cont,
-                    other_nodes = other_nodes }
+          case use_cache of
+              NONE => br_cline
+            | SOME url => create_br_cache url
       end
   in
     let
@@ -381,10 +391,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           end
         | BuildScript (s, deps, extra : GraphExtra.t) =>
           let
-            val (scriptetc,objectfiles) = setup_script s (deps,extra) []
+              val (scriptetc, objectfiles) = setup_script s (deps, extra) []
           in
-            run_script g extra scriptetc objectfiles
-                       [s^"Theory.sml", s^"Theory.sig", s^"Theory.dat"]
+              run_script (#cache_url (#core optv)) deps g extra scriptetc objectfiles
+                         [s^"Theory.sml", s^"Theory.sig", s^"Theory.dat"]
           end
         | BuildArticle (s0, deps : dep list, extra) =>
           let
@@ -405,7 +415,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             val ((script,inters),objectfiles) =
                 setup_script s (deps,extra) loggingextras
           in
-            run_script g extra (script,fakescript_str :: inters) objectfiles [s]
+            run_script NONE deps g extra (script,fakescript_str :: inters) objectfiles [s]
           end
         | ProcessArticle (s,extra) =>
           let
@@ -469,7 +479,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     case bres of
         BR_OK => true
       | BR_ClineK{cline = (_,cl), job_kont = k, ...} =>
-          k warn (Systeml.systeml cl)
+        k warn (Systeml.systeml cl)
+      | BR_CacheK{base_url, cachekey, dest_dir, fallback, ...} =>
+	HolmakeCache.fetch base_url cachekey dest_dir orelse
+	interpret_bres fallback 
       | BR_Failed => false
 
 
