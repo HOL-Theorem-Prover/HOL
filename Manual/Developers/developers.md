@@ -168,7 +168,7 @@ Under both Moscow&nbsp;ML and Poly/ML the following are created:
 
 `unquote`
 : This is the quotation filter embodied as a Unix filter, with a variety of options to specify behaviour. 
-  Note that this is not used by Poly/ML HOL, but can be useful there to see what the filter (as embodied by the `HolParser` module) is doing when it messes with user input.
+  Note that this is not used by Poly/ML HOL, but can be useful there to see what the filter (as embodied by the `HOLSource` module) is doing when it messes with user input.
 
 Under Poly/ML, the following additional files will appear:
 

@@ -160,7 +160,8 @@ fun topLevel {diag, zeroTerm} =
         in fn () =>
           let
             (* Create a new lexer for each command block. *)
-            val {read, ...} = HolParser.inputToReader {quietOpen = true} "" input;
+            val {read, ...} =
+              HOLSource.inputToReader {quietOpen = true, print = print} "" input;
             val endOfBlock = ref false;
             fun read' () = case read () of
                 NONE => (endOfBlock := true; NONE)
@@ -195,7 +196,8 @@ fun topLevel {diag, zeroTerm} =
           fun cgen() = !cgenref()
           fun bind_cgen () =
               let
-                val {read, ...} = HolParser.streamToReader {quietOpen = true} "" TextIO.stdIn
+                val {read, ...} =
+                  HOLSource.streamToReader {quietOpen = true, print = print} "" TextIO.stdIn
               in
                 cgenref := read
               end

@@ -30,17 +30,19 @@ val _ = let
   fun apphmutil s = (myuse hmutildir (s ^ ".sig"); myuse hmutildir (s ^ ".sml"))
   fun appparsing s = (myuse parsingdir (s ^ ".sig"); myuse parsingdir (s ^ ".sml"))
 in
-  app (myuse hfsdir) ["HOLFS_dtype.sml", "HFS_NameMunge.sig"];
-  myuse (hmakedir ++ "poly") "HFS_NameMunge.sml";
-  app apphfs ["HOLFileSys"] ;
+  if polyInitStatus < 2 then (
+    app (myuse hfsdir) ["HOLFS_dtype.sml", "HFS_NameMunge.sig"];
+    myuse (hmakedir ++ "poly") "HFS_NameMunge.sml";
+    app apphfs ["HOLFileSys"] ;
+    app appparsing ["AttributeSyntax"] ;
+    app (myuse parsingdir) ["HolLex.sml"];
+    app appparsing ["HOLSourceAST", "HOLSourceExpand", "HOLSourcePrinter", "HOLSourceParser", "HOLSource"]
+  ) else ();
   app apputil ["regexpMatch"] ;
   app apphmf ["parse_glob"] ;
   app appdeps ["Holdep_tokens"] ;
-  app appparsing ["AttributeSyntax"] ;
-  app (myuse parsingdir) ["HolLex.sml"];
   app (myuse coredir) ["Holmake_tools_dtype.sml"];
   app (myuse hmutildir) ["terminal_primitives.sig", "poly-terminal-prims.ML"];
-  app appparsing ["HolParser"] ;
   app appdeps ["Holdep"] ;
   app appcore ["Holmake_tools"];
   app apphmf ["internal_functions", "Holmake_types", "ReadHMF"];

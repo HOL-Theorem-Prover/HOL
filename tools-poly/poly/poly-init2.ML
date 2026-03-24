@@ -1,9 +1,6 @@
 (* this is an -*- sml -*- file *)
 val _ = use "poly/poly-init.ML";
 
-val _ = use "../tools/Holmake/Systeml.sig";
-val _ = use "Holmake/Systeml.sml"
-
 val _ = use "../tools/parsing/AttributeSyntax.sig";
 val _ = use "../tools/parsing/AttributeSyntax.sml";
 val _ = use "../tools/parsing/HolLex.sml";
@@ -12,11 +9,20 @@ val _ = use "../tools/util/SimpleBuffer.sml";
 val _ = use "../tools/Holmake/hfs/HOLFS_dtype.sml";
 val _ = use "../tools/Holmake/hfs/HFS_NameMunge.sig";
 val _ = use "../tools/Holmake/poly/HFS_NameMunge.sml";
-val _ = use "../tools/Holmake/hfs/HOLFS_dtype.sml";
 val _ = use "../tools/Holmake/hfs/HOLFileSys.sig";
 val _ = use "../tools/Holmake/hfs/HOLFileSys.sml";
-val _ = use "../tools/parsing/HolParser.sig";
-val _ = use "../tools/parsing/HolParser.sml";
+val _ = use "../tools/parsing/HOLSourceAST.sig";
+val _ = use "../tools/parsing/HOLSourceAST.sml";
+val _ = use "../tools/parsing/HOLSourceParser.sig";
+val _ = use "../tools/parsing/HOLSourceParser.sml";
+val _ = use "../tools/parsing/HOLSourceExpand.sig";
+val _ = use "../tools/parsing/HOLSourceExpand.sml";
+val _ = use "../tools/parsing/HOLSourcePrinter.sig";
+val _ = use "../tools/parsing/HOLSourcePrinter.sml";
+val _ = use "../tools/parsing/HOLSource.sig";
+val _ = use "../tools/parsing/HOLSource.sml";
+val _ = use "../tools/parsing/HolParserOld.sig";
+val _ = use "../tools/parsing/HolParserOld.sml";
 val _ = use "../src/portableML/UniversalType.sig";
 val _ = use "../src/portableML/UniversalType.sml";
 val _ = use "../src/portableML/poly/PrettyImpl.sml";
@@ -80,10 +86,11 @@ fun myuse f =
 val loadPath : string list ref = ref [OS.Path.concat(HOLDIR, "sigobj")];
 
 val loadedMods = ref (Binaryset.empty String.compare);
-val _ =
-    loadedMods := Binaryset.addList (!loadedMods,
-              ["Real", "Int", "List", "Binaryset", "Binarymap", "Listsort",
-               "Array", "Array2", "Vector", "LSPExtension"])
+val _ = loadedMods := Binaryset.addList (!loadedMods, [
+  "Real", "Int", "List", "Binaryset", "Binarymap", "Listsort",
+  "Array", "Array2", "Vector", "UniversalType", "DArray", "DString",
+  "HOLSourceAST", "HOLSourceParser", "HOLSourceExpand", "HOLSourcePrinter", "HOLSource",
+  "Systeml", "PrettyImpl", "LSPExtension", "SHA1"])
 
 fun findUo modPath [] = NONE
   | findUo modPath (search::rest) =
@@ -185,3 +192,5 @@ structure FileSys = HOLFileSys;
 exception Interrupt = SML90.Interrupt;
 exception Io = IO.Io;
 exception SysErr = OS.SysErr;
+
+val polyInitStatus = 2;

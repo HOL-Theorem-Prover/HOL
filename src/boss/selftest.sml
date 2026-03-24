@@ -447,7 +447,7 @@ val _ = require_msg (check_result (aconv “y < 10” o #2 o hd o #1))
                     (simp[]) ([], “y IN {x | x < 10}”)
 
 val _ = tprint "CONG_TAC on a set comprehension with numeral"
-val expected = [([], “c * d = 10n”)]
+val expected = [([]: term list, “c * d = 10n”)]
 val _ = require_msg (check_result (goals_eq expected o #1))
                     (goals_toString o #1)
                     (CONG_TAC NONE)
