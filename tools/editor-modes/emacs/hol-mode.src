@@ -1197,14 +1197,24 @@ region instead. With prefix ARG prompt for a file-name to load."
   (hol '(display-buffer-below-selected)))
 
 (defun hol-horizontal ()
-  "Runs a HOL session after splitting the window"
+  "Runs a HOL session after splitting the window horizontally.
+Reuses an existing visible HOL window if one is available (without resizing).
+If no visible HOL window exists, creates a new window to the right with 83 column width."
   (interactive)
-  (hol '(display-buffer-reuse-window
-         (lambda (b al)
-           (let ((split-height-threshold nil)
-                 (split-width-threshold 0))
-             (display-buffer-pop-up-window b al))))
-       '((window-width . 83) (reusable-frames . nil))))
+  (hol (list
+        (lambda (buffer alist)
+          "Reuse visible window if possible, else create new with horizontal split."
+          (let ((existing-window (get-buffer-window buffer 'visible)))
+            (if existing-window
+                ;; Reuse existing visible window without changing its size
+                existing-window
+              ;; No visible window found, create new one to the right (horizontal split)
+              (let ((split-height-threshold nil)
+                    (split-width-threshold 0))
+                (display-buffer-pop-up-window
+                 buffer
+                 (cons (list (cons 'window-width 83)) alist)))))))
+       nil))
 
 (defvar hol-new-buffer-style hol-new-buffer-style-default)
 
