@@ -5,6 +5,11 @@ type ident = int * string
 
 type fileline = {file: string, line: int, col: int}
 
+(* A list of 'exp separated by tokens, e.g "e1 , e2 , e3" stored as
+  {args = [e1, e2, e3], seps = [SOME ",", SOME ","], ...}.
+  |seps| is either |args| - 1 for a normal list, |args| for a list with trailing
+  separator (e.g. "[a, b,]", an SML extension), or 0 for fully synthetic lists.
+  A NONE is for a missing separator which was inserted during parse error repair. *)
 type 'exp separated = {args: 'exp list, seps: int option list, stop: int}
 
 datatype 'a seq =

@@ -5,7 +5,7 @@ structure HOLSourceAST :> HOLSourceAST = struct
 
    The AST is capable of representing ill-formed files. For example, Lists
    contain a record that holds `right: int option` and `stop: int`. If the
-   closing bracket is missing, `right` will be `None`, and `stop` will indicate
+   closing bracket is missing, `right` will be `NONE`, and `stop` will indicate
    where the parser guesses the list should have ended.
 
    The basic shape of the AST is based on Sam Westrick's excellent smlfmt, which
