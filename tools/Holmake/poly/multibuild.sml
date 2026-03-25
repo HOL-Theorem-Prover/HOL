@@ -287,15 +287,18 @@ fun graphbuild optinfo g =
                               List.foldl (fn (n,g) => updnode(n,s) g)
                                          g
                                          other_nodes
-			    val t0 = Time.now()
-			    val ok = HolmakeCache.fetch base_url cachekey
-			    val t = Time.-(Time.now(), t0)
+                            val t0 = Time.now()
+                            val ok = HolmakeCache.fetch base_url cachekey
+                            val elapsed = Time.-(Time.now(), t0)
                           in
-                              if ok then
-				  (tgtcomplete(#dir nI, ndi, thyc, true, t);
-                                   (k true (updall Succeeded g)))
-			      else
-				  bresk fallback g
+                            if ok then
+                              (info (dropthySuffix tag ^ " (cached)",
+                                     "(" ^ Time.toString elapsed ^ "s)" ^
+                                     green "     OK");
+                               tgtcomplete(#dir nI, ndi, thyc, true, elapsed);
+                               k true (updall Succeeded g))
+                            else
+                              bresk fallback g
                           end
                     fun bc c f = pushdir dir (build_command g incinfo c) f
                     val _ = diag ("Handling builtin command " ^
