@@ -17,14 +17,14 @@
 (*                                                                           *)
 (* Note: This theory is inspired by Isabelle/HOL                             *)
 (* ------------------------------------------------------------------------- *)
+
 Theory real_borel
 Ancestors
   arithmetic pred_set num list combin pair real seq real_sigma
-  transc metric topology cardinal real_topology iterate
+  transc nets metric topology cardinal real_topology iterate derivative
   real_of_rat sigma_algebra
 Libs
   metisLib pred_setLib numLib realLib jrhUtils hurdUtils
-
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "borel" (renamed to "real_borel")               *)
@@ -4256,6 +4256,64 @@ Proof
     Induct_on ‘n’ >> rw[pow] >- (metis_tac[in_borel_measurable_const]) >>
     irule in_borel_measurable_mul >> simp[] >> qexistsl [‘f’,‘λx. f x pow n’] >>
     simp[] >> last_x_assum $ irule_at Any >> simp[] >> qexists ‘f’ >> simp[]
+QED
+
+Theorem in_measurable_borel_borel_abs :
+    abs IN borel_measurable borel
+Proof
+    MATCH_MP_TAC in_borel_measurable_continuous_on
+ >> rw [continuous_on_def, CONTINUOUS_AT_ABS, WITHIN_UNIV]
+QED
+
+Theorem in_measurable_borel_borel_ainv :
+    numeric_negate IN borel_measurable borel
+Proof
+    Know ‘$real_neg = \x. -1 * x’
+ >- (rw [FUN_EQ_THM, Once REAL_NEG_MINUS1])
+ >> Rewr'
+ >> MATCH_MP_TAC in_borel_measurable_cmul
+ >> qexistsl_tac [‘\x. x’, ‘-1’]
+ >> rw [sigma_algebra_borel, in_borel_measurable_I, space_borel]
+QED
+
+Theorem in_measurable_borel_not_sing :
+    !f a. sigma_algebra a /\ f IN measurable a borel ==>
+          !c. ({x | f x <> c} INTER space a) IN subsets a
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘f’, ‘a’] in_borel_measurable_borel) >> rw []
+ >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘{x | x <> (c :real)}’)
+ >> fs [borel_measurable_sets_not_sing, PREIMAGE_def]
+QED
+
+Theorem in_measurable_borel_eq :
+    !a f g.
+      (!x. x IN space a ==> f x = g x) /\ g IN borel_measurable a ==>
+      f IN borel_measurable a
+Proof
+    rw [measurable_def, IN_FUNSET]
+ >> Know ‘PREIMAGE f s INTER space a = PREIMAGE g s INTER space a’
+ >- (rw [Once EXTENSION, PREIMAGE_def] \\
+     METIS_TAC [])
+ >> Rewr'
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
+
+Theorem in_measurable_borel_comp_borel :
+    !a f g h.
+      f IN borel_measurable borel /\ g IN borel_measurable a /\
+      (!x. x IN space a ==> h x = f (g x)) ==>
+      h IN borel_measurable a
+Proof
+    rw[] >> dxrule_all_then assume_tac MEASURABLE_COMP
+ >> irule in_measurable_borel_eq >> qexists_tac ‘f o g’ >> simp[]
+QED
+
+Theorem in_measurable_borel_borel_exp :
+    exp IN borel_measurable borel
+Proof
+    MATCH_MP_TAC in_borel_measurable_continuous_on
+ >> REWRITE_TAC [CONTINUOUS_ON_EXP]
 QED
 
 (* References:
