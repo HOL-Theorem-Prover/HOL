@@ -16,7 +16,7 @@ OBJS = real/realLib real/analysis/Diff n-bit/fcpLib \
        probability/lebesgue_measureTheory probability/probabilityTheory
 
 FULL_OBJPATHS = $(patsubst %,$(HOLDIR)/src/%.uo,$(OBJS)) \
-                $(HOLDIR)/sigobj/posetTheory.uo $(HOLDIR)/sigobj/ratLib.uo
+                $(HOLDIR)/sigobj/posetTheory.uo
 
 all: $(HOLHEAP)
 
