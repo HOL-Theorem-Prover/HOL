@@ -122,7 +122,9 @@ local
     handle Feedback.HOL_ERR _ =>
     RealField.REAL_ARITH t
     handle Feedback.HOL_ERR _ =>
-    raise ERR "arith_prove" ("failed: " ^ Hol_pp.term_to_string t)
+    (* nonlinear arithmetic fallback *)
+    if Library.is_nonlinear t then Library.nla_prove t
+    else raise ERR "arith_prove" ("failed: " ^ Hol_pp.term_to_string t)
 
   (* try to prove a tautology by METIS *)
   (* METIS with a time/inference limit to avoid non-termination *)
@@ -963,6 +965,10 @@ local
         handle Feedback.HOL_ERR _ =>
         (* 7. Evaluation *)
         Drule.EQT_ELIM (bossLib.EVAL target)
+        handle Feedback.HOL_ERR _ =>
+        (* 8. Nonlinear arithmetic (handles ARITH_MULT_SIGN etc.) *)
+        (if Library.is_nonlinear target then Library.nla_prove target
+         else raise ERR "" "")
         handle Feedback.HOL_ERR _ =>
         raise ERR "replay_hole" ("step '" ^ id ^ "' failed: " ^
           Library.term_to_string target)
