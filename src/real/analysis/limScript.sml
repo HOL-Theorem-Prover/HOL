@@ -2208,6 +2208,15 @@ Proof
  >> METIS_TAC [DIFF_CONT]
 QED
 
+Theorem higher_differentiable_imp_continuous' :
+    !n f x. higher_differentiable n f x /\ 1 <= n ==> f continuous (at x)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC higher_differentiable_imp_continuous
+ >> MATCH_MP_TAC higher_differentiable_mono
+ >> Q.EXISTS_TAC ‘n’ >> art []
+QED
+
 Theorem higher_differentiable_1_eq_differentiable:
     !f x. higher_differentiable 1 f x <=> derivative$differentiable f (at x)
 Proof
@@ -2330,6 +2339,30 @@ Proof
  >> simp []
 QED
 
+(* NOTE: cf. diffn_add (for additivity of diff1) *)
+Theorem diffn_ADD :
+    !m n f. (!x. higher_differentiable (m + n) f x) ==>
+            (diffn m (diffn n f) = diffn (m + n) f)
+Proof
+    Q.X_GEN_TAC ‘m’
+ >> Induct_on ‘n’ >- simp []
+ >> rpt STRIP_TAC
+ >> Know ‘diffn (SUC n) f = diffn n (diff1 f)’
+ >- (SYM_TAC >> MATCH_MP_TAC diffn_SUC \\
+     Q.X_GEN_TAC ‘x’ \\
+     MATCH_MP_TAC higher_differentiable_mono \\
+     qexists ‘m + SUC n’ >> simp [])
+ >> Rewr'
+ >> ‘m + SUC n = SUC (m + n)’ by simp [] >> POP_ORW
+ >> Know ‘diffn (SUC (m + n)) f = diffn (m + n) (diff1 f)’
+ >- (SYM_TAC >> MATCH_MP_TAC diffn_SUC \\
+     simp [ARITH_PROVE “SUC (m + n) = m + SUC n”])
+ >> Rewr'
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> MATCH_MP_TAC higher_differentiable_imp_n1
+ >> simp [ARITH_PROVE “SUC (m + n) = m + SUC n”]
+QED
+
 Theorem diffn_chain :
     !f g. (!t. higher_differentiable 1 f t) /\ (!t. higher_differentiable 1 g t) ==>
           (diffn 1 (λx. f (g x)) = λx. diffn 1 f (g x) * diffn 1 g x)
@@ -2403,6 +2436,14 @@ Proof
     rpt STRIP_TAC
  >> MP_TAC (Q.SPECL [‘f’] higher_differentiable_thm)
  >> rw []
+QED
+
+Theorem diff1_imp_diffl :
+    !f x y. higher_differentiable 1 f x /\ (diff1 f x = y) ==> (f diffl y) x
+Proof
+    rpt STRIP_TAC
+ >> ‘f = diffn 0 f’ by simp [] >> POP_ORW
+ >> MATCH_MP_TAC diffn_imp_diffl >> simp []
 QED
 
 Theorem diffn_mul :

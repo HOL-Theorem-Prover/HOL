@@ -3789,6 +3789,13 @@ Proof
  >> rw [sigma_finite_measure_space_def]
 QED
 
+(* |- !f. f IN borel_measurable borel ==>
+          (\x. Normal (f x)) IN Borel_measurable borel
+ *)
+Theorem IN_MEASURABLE_BOREL_BOREL_NORMAL =
+        IN_MEASURABLE_BOREL_IMP_BOREL' |> SRULE [o_DEF] |> ISPEC “borel”
+                                       |> REWRITE_RULE [sigma_algebra_borel]
+
 Theorem real_in_borel_measurable :
     real IN measurable Borel borel
 Proof
