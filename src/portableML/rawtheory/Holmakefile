@@ -6,8 +6,11 @@ theorystats.uo: theorystats.sml $(dprot $(SIGOBJ)/Graph.ui) $(dprot $(SIGOBJ)/SH
 	$(HOLMOSMLC) -c Graph.ui $<
 
 ifdef POLY
-all: theorytool
+all: theorytool dat-printer
 
 theorytool: mktool.ML theorytool.ML theorystats.uo
+	$(POLYC) -o $@ $<
+
+dat-printer: mkdatprinter.ML DatPrinterTool.ML RawTermPP.uo
 	$(POLYC) -o $@ $<
 endif
