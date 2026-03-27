@@ -63,8 +63,12 @@ fun parseSML file read parseError: scope -> result = let
   val evts = DArray.new (1, LineEvent (0, 0))
   val events = {initFile = file, evts = evts}
   val parseError = parseError (body, events)
+  val atEnd = ref false
   fun getch p = DString.sub (body, p) handle Subscript =>
-    case read 1024 of "" => #"\000" | s => (DString.appendStr (body, s); getch p)
+    if !atEnd then #"\000" else
+    case read 1024 of
+      "" => (atEnd := true; #"\000")
+    | s => (DString.appendStr (body, s); getch p)
   fun ahead i = getch (!pos + i)
   fun cur () = getch (!pos)
   fun next () = pos := !pos + 1
