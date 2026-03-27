@@ -29,6 +29,10 @@ Since every command is typed, the assigned ID does not need a namespace
 qualifier — it is unambiguously in the namespace of the command's result type.
 DEL commands do require a namespace qualifier.
 
+A compute context is a cached collection of types/terms/theorems used by
+the fast computation mechanism of kernels that support such a mechanism.
+See the specific ruleset specifications for details on what they contain.
+
 ## Encodings
 
 The format has two encodings: **binary** (primary, for production use) and
