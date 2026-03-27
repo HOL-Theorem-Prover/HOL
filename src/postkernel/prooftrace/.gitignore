@@ -2,3 +2,5 @@
 *.pft.jsonl
 emit-test
 replay-test
+merge-test
+replay-merged-test
