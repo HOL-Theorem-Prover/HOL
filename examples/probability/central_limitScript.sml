@@ -6350,7 +6350,6 @@ End
 Theorem central_limit_theorem :
     ∀p X N.
       prob_space p ∧ ext_normal_rv N p 0 1 ∧
-      integrable_std_normal_quartic ∧
       (∀i. real_random_variable (X i) p) ∧
       (∀n. indep_vars p X (λi. Borel) (count n)) ∧
       (∀i. expectation p (X i) = 0) ∧
@@ -6362,6 +6361,8 @@ Theorem central_limit_theorem :
       CLT p X N
 Proof
     RW_TAC std_ss [CLT_def]
+ >> MP_TAC (Q.SPECL [‘p’, ‘real o N’] integrable_std_normal_quartic)
+ >> DISCH_TAC >> fs []
  >> Q.ABBREV_TAC ‘s = λn. sqrt (second_moments p X n)’ >> fs []
  >> Q.ABBREV_TAC ‘b = λn. absolute_third_moments p X n’ >> fs []
  >> Q.ABBREV_TAC ‘R = λn x. ∑ (λi. X i x) (count (SUC n)) / s (SUC n)’
@@ -6836,7 +6837,6 @@ Proof
         irule EXTREAL_SUM_IMAGE_EQ' >> rw [])
  >> rw [] >> gs [Abbr ‘U’] >> gs []
  >> POP_ORW
-
  >> MP_TAC (Q.SPECL [‘∑ (λj. expectation p (λx. (abs (X j x))³) + B j) (count (SUC n))’,
                     ‘(1 + Normal c0) * b (SUC (n :num))’, ‘Normal m / (6 * Normal c³)’] le_lmul_imp)
  >> impl_tac
