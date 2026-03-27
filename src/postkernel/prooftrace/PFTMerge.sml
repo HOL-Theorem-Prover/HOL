@@ -63,7 +63,7 @@ val hol4_descs : (int * opcode_desc) list = [
   (0x32, {results=["th"], args=[Id "th", Id "tm"],           def=NONE}),
   (0x33, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
   (0x34, {results=["th"], args=[Id "th"],                    def=NONE}),
-  (0x35, {results=["th"], args=[Id "th", Id "tm"],           def=NONE}),
+  (0x35, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
   (0x36, {results=["th"], args=[Id "th", Id "th", Id "th"],  def=NONE}),
   (0x37, {results=["th"], args=[Id "th"],                    def=NONE}),
   (0x38, {results=["th"], args=[Id "th"],                    def=NONE}),
@@ -148,6 +148,13 @@ structure IdAlloc = struct
   fun release ({free, ...}: t) id = free := id :: (!free)
 
   fun peakCount ({peak, ...}: t) = !peak
+
+  (* Allocate n consecutive IDs, bypassing the free list *)
+  fun alloc_consecutive ({next, peak, ...}: t) n =
+    let val id = !next
+    in next := id + n;
+       if id + n > !peak then peak := id + n else ();
+       id end
 end
 
 (* ========================================================================= *)
@@ -447,9 +454,25 @@ fun pass2_emit (file_states: file_state vector)
                   | CmdSave _ => ()
                   | CmdDel => ()
                   | _ =>
-                      List.app (fn (ns, id) =>
-                        set_rename fi ns id (alloc_id ns))
-                        (#produced meta)
+                      let val produced = #produced meta
+                          val n_produced = length produced
+                      in if n_produced > 1 andalso
+                            List.all (fn (ns,_) => ns = #1 (hd produced))
+                                     produced
+                         then (* consecutive allocation required *)
+                           let val ns = #1 (hd produced)
+                               val base = IdAlloc.alloc_consecutive
+                                            (Vector.sub(allocators, ns))
+                                            n_produced
+                           in List.foldl (fn ((ns, id), i) =>
+                                (set_rename fi ns id (base + i); i + 1))
+                              0 produced; ()
+                           end
+                         else
+                           List.app (fn (ns, id) =>
+                             set_rename fi ns id (alloc_id ns))
+                             produced
+                      end
                end
              else ();
              go (ci + 1))
@@ -573,7 +596,8 @@ fun pass2_emit (file_states: file_state vector)
           let val vi = #readVarint sr val vs = #readString sr
               fun rTy x = ren NS_TY x fun rTm x = ren NS_TM x
               fun rTh x = ren NS_TH x fun rCi x = ren NS_CI x
-              val nid = rTh id
+              val nid = if opc = 0x43 then 0 (* dummy: unused by COMPUTE_INIT *)
+                        else rTh id
           in case opc of
               0x10 => PFTWriter.HOL4.refl out nid (rTm(vi()))
             | 0x11 => let val a = rTm(vi())
@@ -632,7 +656,7 @@ fun pass2_emit (file_states: file_state vector)
                       in PFTWriter.HOL4.mk_comb out nid a (rTh(vi())) end
             | 0x34 => PFTWriter.HOL4.beta_thm out nid (rTh(vi()))
             | 0x35 => let val a = rTh(vi())
-                      in PFTWriter.HOL4.mk_abs_thm out nid a (rTm(vi())) end
+                      in PFTWriter.HOL4.mk_abs_thm out nid a (rTh(vi())) end
             | 0x36 => let val a = rTh(vi()) val b = rTh(vi())
                       in PFTWriter.HOL4.mk_comb_thm out nid a b (rTh(vi())) end
             | 0x37 => PFTWriter.HOL4.eq_imp_rule1 out nid (rTh(vi()))
@@ -679,7 +703,8 @@ fun pass2_emit (file_states: file_state vector)
           let val vi = #readVarint sr val vs = #readString sr
               fun rTy x = ren NS_TY x fun rTm x = ren NS_TM x
               fun rTh x = ren NS_TH x fun rCi x = ren NS_CI x
-              val nid = rTh id
+              val nid = if opc = 0x40 then 0 (* dummy: unused by COMPUTE_INIT *)
+                        else rTh id
           in case opc of
               0x10 => PFTWriter.Candle.refl out nid (rTm(vi()))
             | 0x11 => let val a = rTh(vi())
