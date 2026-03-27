@@ -4316,17 +4316,6 @@ Proof
  >> REWRITE_TAC [CONTINUOUS_ON_EXP]
 QED
 
-Theorem in_measurable_borel_borel_aniv :
-  numeric_negate ∈ borel_measurable borel
-Proof
-  Know ‘$real_neg = \x. -1 * x’
-  >- (rw [FUN_EQ_THM, Once REAL_NEG_MINUS1])
-  >> Rewr'
-  >> MATCH_MP_TAC in_borel_measurable_cmul
-  >> qexistsl_tac [‘\x. x’, ‘-1’]
-  >> rw [sigma_algebra_borel, in_borel_measurable_I, space_borel]
-QED
-
 (* References:
 
   [1] Schilling, R.L.: Measures, Integrals and Martingales (Second Edition).

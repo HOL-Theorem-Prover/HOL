@@ -9478,7 +9478,7 @@ Proof
                  (* (λx. Normal (g (-x))) ∈ Borel_measurable borel *)
                  MP_TAC (Q.SPECL [‘borel’, ‘borel’, ‘λx. Normal (g x)’, ‘λx. -x’, ‘λx. Normal (g (-x))’]
                           (INST_TYPE [“:'a” |-> “:real”, “:'b” |-> “:real”] IN_MEASURABLE_BOREL_COMP)) \\
-                 impl_tac >- (simp [] >> METIS_TAC [in_measurable_borel_borel_aniv]) \\
+                 impl_tac >- (simp [] >> METIS_TAC [in_measurable_borel_borel_ainv]) \\
                  simp [])
  >> rw []
  >> Know ‘pos_fn_integral lborel (Normal o (\x. g (-x))) =
