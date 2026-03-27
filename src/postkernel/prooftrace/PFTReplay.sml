@@ -92,6 +92,21 @@ fun replay (db: trDB) file = let
                  else (del_ns (ns, i); loop (i + 1))
   in loop lo end
 
+  (* Extract common theory prefix from qualified names ["thy$c1","thy$c2",...] *)
+  fun thy_of_names names = let
+    fun split n = case String.fields (fn c => c = #"$") n of
+        [t, _] => t
+      | _ => raise Fail ("PFTReplay: bad qualified name " ^ n)
+  in case names of
+       [] => raise Fail "PFTReplay: empty names list"
+     | (n :: rest) => let val t = split n in
+         List.app (fn n' =>
+           if split n' = t then ()
+           else raise Fail ("PFTReplay: inconsistent theory prefix: "
+                            ^ n ^ " vs " ^ n')) rest;
+         t end
+  end
+
   (* ---- Format handler -------------------------------------------------- *)
 
   val format_handler : PFTReader.format_handler = {
@@ -287,23 +302,10 @@ fun replay (db: trDB) file = let
                                          get_th th)) end,
 
     def_spec = fn (id, th, names) =>
-      set_th (id, prim_specification thyname names (get_th th)),
+      set_th (id, prim_specification (thy_of_names names) names (get_th th)),
 
-    def_spec_gen = fn (id, th, names) => let
-      fun split_name n =
-        case String.fields (fn c => c = #"$") n of
-          [t, _] => t
-        | _ => raise Fail ("DEF_SPEC_GEN: bad name " ^ n)
-      val thy = case names of
-          [] => raise Fail "DEF_SPEC_GEN: empty names list"
-        | (n :: rest) => let
-            val t = split_name n
-            val () = List.app (fn n' =>
-              if split_name n' = t then ()
-              else raise Fail ("DEF_SPEC_GEN: inconsistent theory prefix: "
-                               ^ n ^ " vs " ^ n')) rest
-          in t end
-    in set_th (id, #2 (gen_prim_specification thy (get_th th))) end,
+    def_spec_gen = fn (id, th, names) =>
+      set_th (id, #2 (gen_prim_specification (thy_of_names names) (get_th th))),
 
     compute_init = fn (id, ty1, ty2, eqns, terms) => let
       val num_type = get_ty ty1
