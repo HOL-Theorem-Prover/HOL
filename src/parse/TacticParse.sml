@@ -4,10 +4,6 @@ struct
 open Lib
 open HOLSourceAST
 
-(* --- Helpers for working with HOLSourceAST.exp --- *)
-
-fun span e = (expStart e, expStop e)
-
 fun identName (Ident {id = (_, s), ...}) = SOME s
   | identName _ = NONE
 
@@ -26,24 +22,14 @@ fun tupleElems (Tuple {elems = {args, ...}, ...}) = SOME args
   | tupleElems _ = NONE
 
 (* Check if parens/brackets are closed *)
-fun isClosed (Parens {right = SOME _, ...}) = true
-  | isClosed (Parens _) = false
-  | isClosed (List {right = SOME _, ...}) = true
-  | isClosed (List _) = false
-  | isClosed (Tuple {right = SOME _, ...}) = true
-  | isClosed (Tuple _) = false
+fun isClosed (Parens {right, ...}) = Option.isSome right
+  | isClosed (List {right, ...}) = Option.isSome right
+  | isClosed (Tuple {right, ...}) = Option.isSome right
   | isClosed _ = true
 
 (* Strip one layer of closed parens *)
 fun stripParens (Parens {exp, right = SOME _, ...}) = SOME exp
   | stripParens _ = NONE
-
-val infixes =
-  map (fn x => (x, 0, false)) ["++", "&&", "|->", "THEN", "THEN1",
-    "THENL", "THEN_LT", "THENC", "ORELSE", "ORELSE_LT", "ORELSEC", "THEN_TCL",
-    "ORELSE_TCL", "?>", "|>", "|>>", "||>", "||->",
-    ">>", ">-", ">|", "\\\\", ">>>", ">>-", "??", ">~", ">>~", ">>~-"] @
-  [("by", 8, false), ("suffices_by", 8, false), ("$", 1, true)]
 
 fun getPrec (ExpEmpty _) = 10
   | getPrec (Parens _) = 10
@@ -51,8 +37,9 @@ fun getPrec (ExpEmpty _) = 10
   | getPrec (List _) = 10
   | getPrec (Ident _) = 10
   | getPrec (Infix {id = (_, s), ...}) =
-    #2 (Option.valOf (List.find (fn x => #1 x = s) infixes))
-    handle Option => 0
+    (case Binarymap.peek (HOLSourceParser.initialScope, s) of
+      NONE => 0
+    | SOME (prec, _) => prec)
   | getPrec (App _) = 9
   | getPrec _ = 0
 
@@ -125,7 +112,7 @@ fun topSpan (LSelectGoal p) = SOME p
 (* --- Tactic parsing from HOLSourceAST.exp --- *)
 
 val parseTacticBlock: exp -> (int * int) tac_expr = let
-  fun tr e = span e
+  val tr = expSpan
   fun trPrec e = (getPrec e, tr e)
   fun group tac a b = if topSpan b = SOME a then b else Group (tac, a, b)
   fun grouped b f e = group b (tr e) (f e)
@@ -134,35 +121,26 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
     else RepairGroup (tr e, "", e', ")")
 
   (* Match an infix expression with a specific operator *)
-  fun matchInfix s (Infix {left, id = (_, s'), right}) =
-    if s = s' then SOME (left, right) else NONE
-    | matchInfix _ _ = NONE
+  fun matchInfix (Infix {left, id = (_, s), right}) = SOME (left, s, right)
+    | matchInfix _ = NONE
 
-  (* Match App with a specific head identifier, returning args *)
-  fun matchApp1 s e = case flattenApp e of
-      [f, a] => (case identName f of SOME s' =>
-        if s = s' then SOME a else NONE | NONE => NONE)
-    | _ => NONE
-  fun matchApp2 s e = case flattenApp e of
-      [f, a, b] => (case identName f of SOME s' =>
-        if s = s' then SOME (a, b) else NONE | NONE => NONE)
+  (* Match App with a head identifier, returning args *)
+  fun matchApp e = case flattenApp e of
+      f :: args => Option.map (fn s => (s, args)) (identName f)
     | _ => NONE
 
   fun simplifys e acc = case stripParens e of
       SOME e' => simplifys e' acc
-    | NONE => case matchInfix ">>" e of
-      SOME (lhs, rhs) => simplifys lhs (simplifys rhs acc)
-    | NONE => case matchInfix "++" e of
-      SOME (lhs, rhs) => simplifys lhs (simplifys rhs acc)
-    | NONE => case matchInfix "\\\\" e of
-      SOME (lhs, rhs) => simplifys lhs (simplifys rhs acc)
-    | NONE => case matchInfix "THEN" e of
-      SOME (lhs, rhs) => simplifys lhs (simplifys rhs acc)
-    | NONE => (case matchApp1 "EVERY" e of
-      SOME le => (case listElems le of
+    | NONE => case matchInfix e of
+      SOME (lhs, ">>", rhs) => simplifys lhs (simplifys rhs acc)
+    | SOME (lhs, "++", rhs) => simplifys lhs (simplifys rhs acc)
+    | SOME (lhs, "\\\\", rhs) => simplifys lhs (simplifys rhs acc)
+    | SOME (lhs, "THEN", rhs) => simplifys lhs (simplifys rhs acc)
+    | _ => case matchApp e of
+      SOME ("EVERY", [le]) => (case listElems le of
         SOME args => foldr (uncurry simplifys) acc args
       | NONE => grouped true simplify e :: acc)
-    | NONE => grouped true simplify e :: acc)
+    | _ => grouped true simplify e :: acc
 
   and simplifyTacList e = case listElems e of
       SOME args => List (tr e, map (grouped true simplify) args)
@@ -170,215 +148,149 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
 
   and simplifyFirst e acc = case stripParens e of
       SOME e' => simplifyFirst e' acc
-    | NONE => case matchInfix "ORELSE" e of
-      SOME (lhs, rhs) => simplifyFirst lhs (simplifyFirst rhs acc)
-    | NONE => (case matchApp1 "FIRST" e of
-      SOME le => (case listElems le of
+    | NONE => case matchInfix e of
+      SOME (lhs, "ORELSE", rhs) => simplifyFirst lhs (simplifyFirst rhs acc)
+    | _ => case matchApp e of
+      SOME ("FIRST", [le]) => (case listElems le of
         SOME args => foldr (uncurry simplifyFirst) acc args
       | NONE => grouped true simplify e :: acc)
-    | NONE => grouped true simplify e :: acc)
+    | _ => grouped true simplify e :: acc
 
   and simplifyThenLT e acc = case e of
       Parens {exp = e', ...} => paren e (simplifyThenLT e' acc)
-    | _ => case matchInfix ">>>" e of
-      SOME (lhs, rhs) => simplifyThenLT lhs (simplifysLT rhs acc)
-    | NONE => case matchInfix "THEN_LT" e of
-      SOME (lhs, rhs) => simplifyThenLT lhs (simplifysLT rhs acc)
-    | NONE => ThenLT (simplify e, acc)
+    | _ => case matchInfix e of
+      SOME (lhs, ">>>", rhs) => simplifyThenLT lhs (simplifysLT rhs acc)
+    | SOME (lhs, "THEN_LT", rhs) => simplifyThenLT lhs (simplifysLT rhs acc)
+    | _ => ThenLT (simplify e, acc)
 
   and simplifyThenL lhs rhs =
     simplifyThenLT lhs [LNullOk $ LTacsToLT $ simplifyTacList rhs]
 
-  and simplify e =
+  and simplify e = case e of
     (* Try stripping parens first *)
-    (case e of
       Parens {exp = e', ...} => paren e (simplify e')
-    | _ =>
     (* Empty expression *)
-    case e of ExpEmpty _ => RepairEmpty (true, tr e, "ALL_TAC")
-    | _ =>
+    | ExpEmpty _ => RepairEmpty (true, tr e, "ALL_TAC")
     (* Infix operators *)
-    case matchInfix ">>" e of
-      SOME (lhs, rhs) => Then (simplifys lhs (simplifys rhs []))
-    | NONE => case matchInfix "++" e of
-      SOME (lhs, rhs) => Then (simplifys lhs (simplifys rhs []))
-    | NONE => case matchInfix "\\\\" e of
-      SOME (lhs, rhs) => Then (simplifys lhs (simplifys rhs []))
-    | NONE => case matchInfix "THEN" e of
-      SOME (lhs, rhs) => Then (simplifys lhs (simplifys rhs []))
-    | NONE => case matchInfix ">|" e of
-      SOME (lhs, rhs) => group true (tr e) (simplifyThenL lhs rhs)
-    | NONE => case matchInfix "THENL" e of
-      SOME (lhs, rhs) => group true (tr e) (simplifyThenL lhs rhs)
-    | NONE => case matchInfix ">-" e of
-      SOME (lhs, rhs) => simplifyThenLT lhs [LThen1 (grouped true simplify rhs)]
-    | NONE => case matchInfix "THEN1" e of
-      SOME (lhs, rhs) => simplifyThenLT lhs [LThen1 (grouped true simplify rhs)]
-    | NONE => case matchInfix ">>-" e of
-      SOME (lhs, rhs) => (case tupleElems lhs of
+    | _ => case matchInfix e of
+      SOME (lhs, ">>", rhs) => Then (simplifys lhs (simplifys rhs []))
+    | SOME (lhs, "++", rhs) => Then (simplifys lhs (simplifys rhs []))
+    | SOME (lhs, "\\\\", rhs) => Then (simplifys lhs (simplifys rhs []))
+    | SOME (lhs, "THEN", rhs) => Then (simplifys lhs (simplifys rhs []))
+    | SOME (lhs, ">|", rhs) => group true (tr e) (simplifyThenL lhs rhs)
+    | SOME (lhs, "THENL", rhs) => group true (tr e) (simplifyThenL lhs rhs)
+    | SOME (lhs, ">-", rhs) => simplifyThenLT lhs [LThen1 (grouped true simplify rhs)]
+    | SOME (lhs, "THEN1", rhs) => simplifyThenLT lhs [LThen1 (grouped true simplify rhs)]
+    | SOME (lhs, ">>-", rhs) => (case tupleElems lhs of
         SOME [lhs', _] => simplifyThenLT lhs' [LThen1 (grouped true simplify rhs)]
       | _ => Opaque (trPrec e))
-    | NONE => case matchInfix ">>>" e of
-      SOME (lhs, rhs) => simplifyThenLT lhs (simplifysLT rhs [])
-    | NONE => case matchInfix "THEN_LT" e of
-      SOME (lhs, rhs) => simplifyThenLT lhs (simplifysLT rhs [])
-    | NONE => case matchInfix "ORELSE" e of
-      SOME (lhs, rhs) => First (simplifyFirst lhs (simplifyFirst rhs []))
-    | NONE => case matchInfix ">~" e of
-      SOME (lhs, pat) => simplifyThenLT lhs [LSelectGoal (tr pat)]
-    | NONE => case matchInfix ">>~" e of
-      SOME (lhs, pat) => simplifyThenLT lhs [LSelectGoals (tr pat)]
-    | NONE => case matchInfix ">>~-" e of
-      SOME (lhs, rhs) => (case tupleElems rhs of
+    | SOME (lhs, ">>>", rhs) => simplifyThenLT lhs (simplifysLT rhs [])
+    | SOME (lhs, "THEN_LT", rhs) => simplifyThenLT lhs (simplifysLT rhs [])
+    | SOME (lhs, "ORELSE", rhs) => First (simplifyFirst lhs (simplifyFirst rhs []))
+    | SOME (lhs, ">~", pat) => simplifyThenLT lhs [LSelectGoal (tr pat)]
+    | SOME (lhs, ">>~", pat) => simplifyThenLT lhs [LSelectGoals (tr pat)]
+    | SOME (lhs, ">>~-", rhs) => (case tupleElems rhs of
         SOME [pat, rhs'] =>
           simplifyThenLT lhs [LSelectThen (
             group false (tr pat) (Rename (tr pat)),
             group true (tr rhs') $ Then (simplifys rhs' [First []]))]
       | _ => Opaque (trPrec e))
-    | NONE => case matchInfix "by" e of
-      SOME (lhs, rhs) =>
+    | SOME (lhs, "by", rhs) =>
         ThenLT (Subgoal (tr lhs), [LThen1 (grouped true simplify rhs)])
-    | NONE => case matchInfix "suffices_by" e of
-      SOME (lhs, rhs) => let
+    | SOME (lhs, "suffices_by", rhs) => let
         val p = tr lhs
         in ThenLT (
           group false p (ThenLT (Subgoal p, [LReverse])),
           [LThen1 (grouped true simplify rhs)]) end
-    | NONE =>
     (* Application forms *)
-    (case matchApp1 "subgoal" e of
-      SOME rhs => group true (tr e) (Subgoal (tr rhs))
-    | NONE => case matchApp1 "sg" e of
-      SOME rhs => group true (tr e) (Subgoal (tr rhs))
-    | NONE => case matchApp1 "REVERSE" e of
-      SOME rhs => group true (tr e) (simplifyThenLT rhs [LReverse])
-    | NONE => case matchApp1 "reverse" e of
-      SOME rhs => group true (tr e) (simplifyThenLT rhs [LReverse])
-    | NONE => case matchApp1 "TRY" e of
-      SOME rhs => group true (tr e) (Try (simplify rhs))
-    | NONE => case matchApp1 "REPEAT" e of
-      SOME rhs => group true (tr e) (Repeat (simplify rhs))
-    | NONE => case matchApp1 "rpt" e of
-      SOME rhs => group true (tr e) (Repeat (simplify rhs))
-    | NONE => case matchApp1 "EVERY" e of
-      SOME le => (case listElems le of
+    | _ => case matchApp e of
+      SOME ("subgoal", [rhs]) => group true (tr e) (Subgoal (tr rhs))
+    | SOME ("sg", [rhs]) => group true (tr e) (Subgoal (tr rhs))
+    | SOME ("REVERSE", [rhs]) => group true (tr e) (simplifyThenLT rhs [LReverse])
+    | SOME ("reverse", [rhs]) => group true (tr e) (simplifyThenLT rhs [LReverse])
+    | SOME ("TRY", [rhs]) => group true (tr e) (Try (simplify rhs))
+    | SOME ("REPEAT", [rhs]) => group true (tr e) (Repeat (simplify rhs))
+    | SOME ("rpt", [rhs]) => group true (tr e) (Repeat (simplify rhs))
+    | SOME ("EVERY", [le]) => (case listElems le of
         SOME args => Then (foldr (uncurry simplifys) [] args)
       | NONE => Opaque (trPrec e))
-    | NONE => case matchApp1 "FIRST" e of
-      SOME le => (case listElems le of
+    | SOME ("FIRST", [le]) => (case listElems le of
         SOME args => First (foldr (uncurry simplifyFirst) [] args)
       | NONE => Opaque (trPrec e))
-    | NONE => case matchApp2 "MAP_EVERY" e of
-      SOME (f, le) => (case listElems le of
+    | SOME ("MAP_EVERY", [f, le]) => (case listElems le of
         SOME args => MapEvery (tr f, map (fn e => OOpaque (trPrec e)) args)
       | NONE => Opaque (trPrec e))
-    | NONE => case matchApp2 "MAP_FIRST" e of
-      SOME (f, le) => (case listElems le of
+    | SOME ("MAP_FIRST", [f, le]) => (case listElems le of
         SOME args => MapFirst (tr f, map (fn e => OOpaque (trPrec e)) args)
       | NONE => Opaque (trPrec e))
-    | NONE => case matchApp1 "RENAME_TAC" e of
-      SOME pat => group true (tr e) (Rename (tr pat))
-    | NONE =>
-    (* Identifiers *)
-    (case identName e of
-      SOME "ALL_TAC" => group true (tr e) (Then [])
-    | SOME "all_tac" => group true (tr e) (Then [])
-    | _ => Opaque (trPrec e))))
+    | SOME ("RENAME_TAC", [pat]) => group true (tr e) (Rename (tr pat))
+    | SOME ("ALL_TAC", []) => group true (tr e) (Then [])
+    | SOME ("all_tac", []) => group true (tr e) (Then [])
+    | _ => Opaque (trPrec e)
 
   and simplifyLThen e acc = case stripParens e of
       SOME e' => simplifyLThen e' acc
-    | NONE => case matchInfix ">>" e of
-      SOME (lhs, rhs) => simplifyLThen lhs (grouped true simplify rhs :: acc)
-    | NONE => case matchInfix "++" e of
-      SOME (lhs, rhs) => simplifyLThen lhs (grouped true simplify rhs :: acc)
-    | NONE => case matchInfix "\\\\" e of
-      SOME (lhs, rhs) => simplifyLThen lhs (grouped true simplify rhs :: acc)
-    | NONE => case matchInfix "THEN" e of
-      SOME (lhs, rhs) => simplifyLThen lhs (grouped true simplify rhs :: acc)
-    | NONE => LThen (simplifyLT e, acc)
+    | _ => case matchInfix e of
+      SOME (lhs, ">>", rhs) => simplifyLThen lhs (grouped true simplify rhs :: acc)
+    | SOME (lhs, "++", rhs) => simplifyLThen lhs (grouped true simplify rhs :: acc)
+    | SOME (lhs, "\\\\", rhs) => simplifyLThen lhs (grouped true simplify rhs :: acc)
+    | SOME (lhs, "THEN", rhs) => simplifyLThen lhs (grouped true simplify rhs :: acc)
+    | _ => LThen (simplifyLT e, acc)
 
   and simplifyLFirst e acc = case stripParens e of
       SOME e' => simplifyLFirst e' acc
-    | NONE => case matchInfix "ORELSE_LT" e of
-      SOME (lhs, rhs) => simplifyLFirst lhs (simplifyLFirst rhs acc)
-    | NONE => (case matchApp1 "FIRST_LT" e of
-      SOME le => (case listElems le of
+    | _ => case matchInfix e of
+      SOME (lhs, "ORELSE_LT", rhs) => simplifyLFirst lhs (simplifyLFirst rhs acc)
+    | _ => case matchApp e of
+      SOME ("FIRST_LT", [le]) => (case listElems le of
         SOME args => foldr (uncurry simplifyLFirst) acc args
       | NONE => grouped true simplifyLT e :: acc)
-    | NONE => grouped true simplifyLT e :: acc)
+    | _ => grouped true simplifyLT e :: acc
 
-  and simplifysLT e acc =
-    (case e of ExpEmpty _ => RepairEmpty (true, tr e, "ALL_LT") :: acc
-    | _ =>
-    case e of
-      Parens {exp = e', right = SOME _, ...} => simplifysLT e' acc
-    | Parens {exp = e', right = NONE, ...} =>
-        paren e (simplifyLT e') :: acc
-    | _ =>
-    case matchInfix ">>" e of
-      SOME (lhs, rhs) => group true (tr e) (simplifyLThen lhs [simplify rhs]) :: acc
-    | NONE => case matchInfix "++" e of
-      SOME (lhs, rhs) => group true (tr e) (simplifyLThen lhs [simplify rhs]) :: acc
-    | NONE => case matchInfix "\\\\" e of
-      SOME (lhs, rhs) => group true (tr e) (simplifyLThen lhs [simplify rhs]) :: acc
-    | NONE => case matchInfix "THEN" e of
-      SOME (lhs, rhs) => group true (tr e) (simplifyLThen lhs [simplify rhs]) :: acc
-    | NONE => case matchInfix ">|" e of
-      SOME (lhs, rhs) =>
+  and simplifysLT e acc = case e of
+      ExpEmpty _ => RepairEmpty (true, tr e, "ALL_LT") :: acc
+    | Parens {exp = e', right = SOME _, ...} => simplifysLT e' acc
+    | Parens {exp = e', right = NONE, ...} => paren e (simplifyLT e') :: acc
+    | _ => case matchInfix e of
+      SOME (lhs, ">>", rhs) => group true (tr e) (simplifyLThen lhs [simplify rhs]) :: acc
+    | SOME (lhs, "++", rhs) => group true (tr e) (simplifyLThen lhs [simplify rhs]) :: acc
+    | SOME (lhs, "\\\\", rhs) => group true (tr e) (simplifyLThen lhs [simplify rhs]) :: acc
+    | SOME (lhs, "THEN", rhs) => group true (tr e) (simplifyLThen lhs [simplify rhs]) :: acc
+    | SOME (lhs, ">|", rhs) =>
         simplifysLT lhs (grouped false (LNullOk o LTacsToLT o simplifyTacList) rhs :: acc)
-    | NONE => case matchInfix "THENL" e of
-      SOME (lhs, rhs) =>
+    | SOME (lhs, "THENL", rhs) =>
         simplifysLT lhs (grouped false (LNullOk o LTacsToLT o simplifyTacList) rhs :: acc)
-    | NONE => case matchInfix ">>>" e of
-      SOME (lhs, rhs) => simplifysLT lhs (simplifysLT rhs acc)
-    | NONE => case matchInfix "THEN_LT" e of
-      SOME (lhs, rhs) => simplifysLT lhs (simplifysLT rhs acc)
-    | NONE => case matchInfix "ORELSE_LT" e of
-      SOME (lhs, rhs) =>
+    | SOME (lhs, ">>>", rhs) => simplifysLT lhs (simplifysLT rhs acc)
+    | SOME (lhs, "THEN_LT", rhs) => simplifysLT lhs (simplifysLT rhs acc)
+    | SOME (lhs, "ORELSE_LT", rhs) =>
         group true (tr e) (LFirst (simplifyLFirst lhs (simplifyLFirst rhs []))) :: acc
-    | NONE =>
-    (case matchApp1 "TACS_TO_LT" e of
-      SOME rhs =>
+    | _ => case matchApp e of
+      SOME ("TACS_TO_LT", [rhs]) =>
         group true (tr e) (LTacsToLT (simplifyTacList rhs)) :: acc
-    | NONE => case matchApp1 "NULL_OK_LT" e of
-      SOME rhs =>
+    | SOME ("NULL_OK_LT", [rhs]) =>
         group true (tr e) (LNullOk (simplifyLT rhs)) :: acc
-    | NONE => case matchApp1 "ALLGOALS" e of
-      SOME rhs => group true (tr e) (LAllGoals (simplify rhs)) :: acc
-    | NONE => case matchApp1 "TRYALL" e of
-      SOME rhs => group true (tr e) (LAllGoals $ Try (simplify rhs)) :: acc
-    | NONE => case matchApp2 "NTH_GOAL" e of
-      SOME (rhs, n) => group true (tr e) (LNthGoal (simplify rhs, tr n)) :: acc
-    | NONE => case matchApp1 "LASTGOAL" e of
-      SOME rhs => group true (tr e) (LLastGoal (simplify rhs)) :: acc
-    | NONE => case matchApp1 "HEADGOAL" e of
-      SOME rhs => group true (tr e) (LHeadGoal (simplify rhs)) :: acc
-    | NONE => case matchApp2 "SPLIT_LT" e of
-      SOME (n, tup) => (case tupleElems tup of
+    | SOME ("ALLGOALS", [rhs]) => group true (tr e) (LAllGoals (simplify rhs)) :: acc
+    | SOME ("TRYALL", [rhs]) => group true (tr e) (LAllGoals $ Try (simplify rhs)) :: acc
+    | SOME ("NTH_GOAL", [rhs, n]) => group true (tr e) (LNthGoal (simplify rhs, tr n)) :: acc
+    | SOME ("LASTGOAL", [rhs]) => group true (tr e) (LLastGoal (simplify rhs)) :: acc
+    | SOME ("HEADGOAL", [rhs]) => group true (tr e) (LHeadGoal (simplify rhs)) :: acc
+    | SOME ("SPLIT_LT", [n, tup]) => (case tupleElems tup of
         SOME [lhs, rhs] =>
           group true (tr e) (LSplit (tr n, grouped true simplifyLT lhs, grouped true simplifyLT rhs)) :: acc
       | _ => LOpaque (trPrec e) :: acc)
-    | NONE => case matchApp1 "TRY_LT" e of
-      SOME rhs => group true (tr e) (LTry (simplifyLT rhs)) :: acc
-    | NONE => case matchApp1 "REPEAT_LT" e of
-      SOME rhs => group true (tr e) (LRepeat (simplifyLT rhs)) :: acc
-    | NONE => case matchApp1 "FIRST_LT" e of
-      SOME rhs => group true (tr e) (LFirstLT (simplify rhs)) :: acc
-    | NONE => case matchApp1 "EVERY_LT" e of
-      SOME le => (case listElems le of
+    | SOME ("TRY_LT", [rhs]) => group true (tr e) (LTry (simplifyLT rhs)) :: acc
+    | SOME ("REPEAT_LT", [rhs]) => group true (tr e) (LRepeat (simplifyLT rhs)) :: acc
+    | SOME ("FIRST_LT", [rhs]) => group true (tr e) (LFirstLT (simplify rhs)) :: acc
+    | SOME ("EVERY_LT", [le]) => (case listElems le of
         SOME args => foldr (uncurry simplifysLT) acc args
       | NONE => LOpaque (trPrec e) :: acc)
-    | NONE => case matchApp2 "SELECT_LT_THEN" e of
-      SOME (lhs, rhs) =>
+    | SOME ("SELECT_LT_THEN", [lhs, rhs]) =>
         group true (tr e) (LSelectThen (grouped true simplify lhs, grouped true simplify rhs)) :: acc
-    | NONE => case matchApp1 "SELECT_LT" e of
-      SOME lhs =>
+    | SOME ("SELECT_LT", [lhs]) =>
         group true (tr e) (LSelectThen (grouped true simplify lhs, Then [])) :: acc
-    | NONE =>
-    (case identName e of
-      SOME "REVERSE_LT" => group true (tr e) LReverse :: acc
-    | SOME "ALL_LT" => group true (tr e) (LThenLT []) :: acc
-    | _ => LOpaque (trPrec e) :: acc)))
+    | SOME ("REVERSE_LT", []) => group true (tr e) LReverse :: acc
+    | SOME ("ALL_LT", []) => group true (tr e) (LThenLT []) :: acc
+    | _ => LOpaque (trPrec e) :: acc
 
   and simplifyLT e = LThenLT (simplifysLT e [])
 
