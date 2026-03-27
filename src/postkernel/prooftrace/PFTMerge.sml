@@ -479,6 +479,28 @@ fun pass2_emit (file_states: file_state vector)
       in go 0 end
     ) file_states
 
+    (* Collect definition SAVEs early (before refcount computation) *)
+    val def_saves =
+      if not (List.exists #2 target_saves) then []
+      else let val acc = ref [] : (string * int) list ref
+      in Vector.appi (fn (fi, fs) =>
+           let val vis = Vector.sub(included, fi)
+           in DArray.appi (fn (ci, meta) =>
+                if Array.sub(vis, ci) then
+                  case #kind meta of
+                    CmdDef _ =>
+                      List.app (fn (ns, id) =>
+                        if ns = NS_TH then
+                          let val nid = get_rename fi ns id
+                          in acc := ("def:" ^ Int.toString nid, nid) :: !acc
+                          end
+                        else ()) (#produced meta)
+                  | _ => ()
+                else ()) (#cmds fs)
+           end) file_states;
+         List.rev (!acc)
+      end
+
     (* Step 2: Compute refcounts for DEL insertion *)
     val refcounts = Vector.tabulate(NUM_NS, fn ns =>
       Array.array(IdAlloc.peakCount (Vector.sub(allocators, ns)), 0))
@@ -490,6 +512,7 @@ fun pass2_emit (file_states: file_state vector)
     fun count_consumed fi meta =
       case #kind meta of
         CmdDel => ()
+      | CmdSave _ => ()
       | CmdLoad name =>
           inc_ref NS_TH (get_rename (#file_idx (lookup_save name))
                                     NS_TH (#th_id (lookup_save name)))
@@ -509,6 +532,9 @@ fun pass2_emit (file_states: file_state vector)
       let val {file_idx, th_id, ...} = lookup_save name
       in inc_ref NS_TH (get_rename file_idx NS_TH th_id) end)
       target_saves
+
+    (* Refcounts for definition SAVEs *)
+    val () = List.app (fn (_, nid) => inc_ref NS_TH nid) def_saves
 
     (* Step 3: Emit *)
     val out = PFTWriter.openOut {file=output, binary=true,
@@ -779,28 +805,6 @@ fun pass2_emit (file_states: file_state vector)
        ignore (PFTReader.read {file=file, binary=true,
                                format_handler=fh, ruleset_handler=rh});
        fi + 1)) 0 inputs)
-
-    (* Collect definition SAVEs if requested *)
-    val def_saves =
-      if not (List.exists #2 target_saves) then []
-      else let val acc = ref [] : (string * int) list ref
-      in Vector.appi (fn (fi, fs) =>
-           let val vis = Vector.sub(included, fi)
-           in DArray.appi (fn (ci, meta) =>
-                if Array.sub(vis, ci) then
-                  case #kind meta of
-                    CmdDef _ =>
-                      List.app (fn (ns, id) =>
-                        if ns = NS_TH then
-                          let val nid = get_rename fi ns id
-                          in acc := ("def:" ^ Int.toString nid, nid) :: !acc
-                          end
-                        else ()) (#produced meta)
-                  | _ => ()
-                else ()) (#cmds fs)
-           end) file_states;
-         List.rev (!acc)
-      end
 
     (* Emit target SAVEs *)
     val () = List.app (fn (name, _) =>
