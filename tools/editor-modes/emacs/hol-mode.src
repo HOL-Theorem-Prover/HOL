@@ -319,27 +319,23 @@ With a prefix ARG, uses `expandf' rather than `e'."
   "Send selected region to HOL process as tactic."
   (interactive "r\nP")
   (let*
-      ((region-string0 (buffer-substring start end))
-       (region-string1 (tactic-cleanup-leading region-string0))
-       (region-string2 (tactic-cleanup-trailing region-string1))
-       (start-offset (- (length region-string0) (length region-string1)))
-       (region-string3 (with-hol-locpragma (+ start start-offset) region-string2))
-       (ste "\"show_typecheck_errors\"")
-       (region-string (concat "let val old = Feedback.current_trace "
-                              ste
-                              " val _ = Feedback.set_trace "
-                              ste
-                              " 0 in ("
-                              region-string3
-                              ") before "
-                              "Feedback.set_trace " ste " old end"))
+      ((tactic-string0 (buffer-substring start end))
+       (tactic-string1 (tactic-cleanup-leading tactic-string0))
+       (start-offset (- (length tactic-string0) (length tactic-string1)))
+       (tactic-string2 (tactic-cleanup-trailing tactic-string1))
+       (genvar "HOL__GOAL_foo")
+       (tactic-string
+        (format "(fn %s => (%s) %s)"
+                genvar tactic-string2 genvar))
        (e-string (concat "proofManagerLib." (if arg "expandf" "e")))
-       (tactic-string (format "%s (fn HOL__GOAL__foo => (%s) HOL__GOAL__foo)"
-                              e-string region-string))
+       (etactic-string
+        (format "Feedback.trace(\"show_typecheck_errors\", 0) %s (%s)"
+                e-string tactic-string2))
+       (region-string (with-hol-locpragma (+ start start-offset) etactic-string))
        (sender (if hol-emit-time-elapsed-p
                    'send-timed-string-to-hol
                  'send-string-to-hol)))
-    (funcall sender tactic-string hol-echo-commands-p)))
+    (funcall sender region-string hol-echo-commands-p)))
 
 ;;; For goaltrees
 (defun copy-region-as-goaltree-tactic (start end)
