@@ -15,10 +15,10 @@ val _ = intLib.deprecate_int();
 val _ = ratLib.deprecate_rat();
 
 (* ------------------------------------------------------------------------- *)
-(*  Liapunov inequality                                                      *)
+(*  Lyapunov inequality                                                      *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem liapounov_ineq_lemma:
+Theorem Lyapunov_ineq_lemma:
     !m u p. measure_space m ∧
             measure m (m_space m) < PosInf ∧
             1 < p ∧ p < PosInf ∧
@@ -95,7 +95,7 @@ Proof
  >> DISCH_TAC >> METIS_TAC []
 QED
 
-Theorem liapounov_ineq:
+Theorem Lyapunov_ineq:
     !m u r r'. measure_space m /\ u IN lp_space r m ∧  u IN lp_space r' m ∧
                measure m (m_space m) < PosInf ∧
                0 < r ∧
@@ -122,7 +122,7 @@ Proof
      ‘r / r = 1’ by METIS_TAC [div_refl_pos] >> METIS_TAC []) >> DISCH_TAC
  >> ‘0 < r' * inv(r)’ by METIS_TAC [lt_01, lt_trans]
  >> MP_TAC (Q.SPECL [‘m’, ‘λx. abs (u x) powr r’, ‘r'* inv(r)’]
-            liapounov_ineq_lemma) >> impl_tac >> simp[]
+            Lyapunov_ineq_lemma) >> impl_tac >> simp[]
  >- (CONJ_TAC
      >- (‘∃a. r' * inv(r) = Normal a’ by METIS_TAC [extreal_cases] >> rw[lt_infty]) \\
      gs [lp_space_alt_finite] >> CONJ_TAC
@@ -205,7 +205,7 @@ Proof
  >> DISCH_TAC >> FULL_SIMP_TAC std_ss[]
 QED
 
-Theorem liapounov_ineq_rv:
+Theorem Lyapunov_ineq_rv:
     !p u r r'. prob_space p /\ u IN lp_space r p ∧  u IN lp_space r' p ∧
                0 < r ∧
                r < r' ∧
@@ -214,7 +214,7 @@ Theorem liapounov_ineq_rv:
 Proof
     rpt STRIP_TAC
  >> FULL_SIMP_TAC std_ss [prob_space_def]
- >> MP_TAC (Q.SPECL [‘p’, ‘u’, ‘r’, ‘r'’] liapounov_ineq)
+ >> MP_TAC (Q.SPECL [‘p’, ‘u’, ‘r’, ‘r'’] Lyapunov_ineq)
  >> impl_tac >> simp []
  >> DISCH_TAC
  >> Know ‘0 < r⁻¹ − r'⁻¹’
@@ -1785,7 +1785,7 @@ Proof
  >- (fs [lp_space_def])
  >> STRIP_TAC
  >> rw [abs_pos, powr_1]
- >> MP_TAC (Q.SPECL [‘m’, ‘f’, ‘p’] liapounov_ineq_lemma)
+ >> MP_TAC (Q.SPECL [‘m’, ‘f’, ‘p’] Lyapunov_ineq_lemma)
  >> simp [lt_le]
  >> STRIP_TAC
  >> Know ‘seminorm p m f ≠ +∞’
@@ -5235,7 +5235,7 @@ Proof
 QED
 
 (*eq 18*)
-Theorem clt_liapounov_upper_bound[local] :
+Theorem clt_Lyapunov_upper_bound[local] :
   ∀p X Y. prob_space p ∧
           real_random_variable X p ∧
           expectation p (λx. (abs (X x))³) < +∞ ∧
@@ -5250,7 +5250,7 @@ Proof
   >> DISCH_TAC
   >> MP_TAC (Q.SPECL [‘p’, ‘X’] clt_integrable_lemma)
   >> simp [] >> STRIP_TAC
-  >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘2’, ‘3’] liapounov_ineq_rv)
+  >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘2’, ‘3’] Lyapunov_ineq_rv)
   >> impl_tac
   >- (fs [real_random_variable, p_space_def, events_def, prob_space_def] \\
       ‘2 < (3 :num)’ by EVAL_TAC >> POP_ASSUM (simp o wrap) \\
@@ -6774,7 +6774,7 @@ Proof
          fs [prob_space_def, o_DEF, pow_abs]) \\
      DISCH_TAC \\
 
-     MP_TAC (Q.SPECL [‘p’, ‘u’, ‘2’, ‘3’] liapounov_ineq_rv) >> rw [seminorm_def, expectation_def] \\
+     MP_TAC (Q.SPECL [‘p’, ‘u’, ‘2’, ‘3’] Lyapunov_ineq_rv) >> rw [seminorm_def, expectation_def] \\
      fs [integral_abs_pos_fn, prob_space_def, GSYM o_DEF, GSYM pow_abs] \\
      ‘∀x. abs (u x) = u x’ by rw [Abbr ‘u’, abs_abs] >> gs [] \\
      POP_ORW \\
