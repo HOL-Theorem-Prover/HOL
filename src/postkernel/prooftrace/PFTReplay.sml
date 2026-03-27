@@ -169,6 +169,20 @@ fun replay (db: trDB) file = let
     del_range = del_range_ns
   }
 
+  (* ---- Bool constant registration --------------------------------------- *)
+
+  fun register_bool_def name thm =
+    case name of
+      "T"               => register_T thm
+    | "!"               => register_forall thm
+    | "?"               => register_exists thm
+    | "F"               => register_F thm
+    | "~"               => register_neg thm
+    | "/\\"             => register_conj thm
+    | "\\/"             => register_disj thm
+    | "TYPE_DEFINITION" => register_type_definition thm
+    | _                 => ()
+
   (* ---- HOL4 ruleset handler -------------------------------------------- *)
 
   val hol4_handler : PFTReader.HOL4.handler = {
@@ -306,8 +320,14 @@ fun replay (db: trDB) file = let
       val cnames = List.map (#2 o split_qualified) names
     in set_th (id, prim_specification thy cnames (get_th th)) end,
 
-    def_spec_gen = fn (id, th, names) =>
-      set_th (id, #2 (gen_prim_specification (thy_of_names names) (get_th th))),
+    def_spec_gen = fn (id, th, names) => let
+      val thy = thy_of_names names
+      val thm = #2 (gen_prim_specification thy (get_th th))
+      val () = if thy = "bool" then
+                 List.app (fn n => register_bool_def (#2 (split_qualified n)) thm)
+                   names
+               else ()
+    in set_th (id, thm) end,
 
     compute_init = fn (id, ty1, ty2, eqns, terms) => let
       val num_type = get_ty ty1
