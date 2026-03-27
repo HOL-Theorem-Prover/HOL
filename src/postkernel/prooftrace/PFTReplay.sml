@@ -301,8 +301,10 @@ fun replay (db: trDB) file = let
     in set_th (id, prim_type_definition ({Thy=Thy, Tyop=Tyop},
                                          get_th th)) end,
 
-    def_spec = fn (id, th, names) =>
-      set_th (id, prim_specification (thy_of_names names) names (get_th th)),
+    def_spec = fn (id, th, names) => let
+      val thy = thy_of_names names
+      val cnames = List.map (#2 o split_qualified) names
+    in set_th (id, prim_specification thy cnames (get_th th)) end,
 
     def_spec_gen = fn (id, th, names) =>
       set_th (id, #2 (gen_prim_specification (thy_of_names names) (get_th th))),
