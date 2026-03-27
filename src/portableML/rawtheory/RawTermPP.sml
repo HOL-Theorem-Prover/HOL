@@ -178,20 +178,24 @@ fun decode_term (tables : sharing_tables) (encoded_str : string) =
       if n = 0 then
         parse (stk, rst)
       else
-        case stk of
-          (f :: args) =>
-            let
-              fun apply_n (0, acc, stk') = (acc, stk')
-                | apply_n (n, acc, x :: stk') =
-                    apply_n (n - 1, Comb (acc, x), stk')
-                | apply_n (_, _, []) =
-                    raise Fail ("doapps: not enough arguments for " ^ Int.toString n)
+        let
+          fun split_args (0, acc_args, remaining_stk) = (acc_args, remaining_stk)
+            | split_args (m, acc_args, x :: xs) =
+                split_args (m - 1, x :: acc_args, xs)
+            | split_args (_, _, []) =
+                raise Fail ("doapps: not enough arguments for @" ^ Int.toString n)
 
-              val (result, new_stk) = apply_n (n, f, List.drop (stk, 1))
-            in
-              parse (result :: new_stk, rst)
-            end
-        | _ => raise Fail ("doapps: empty stack")
+          val (args, rest_stk) = split_args (n, [], stk)
+        in
+          case rest_stk of
+            f :: new_stk =>
+              let
+                val result = List.foldl (fn (arg, acc) => Comb (acc, arg)) f args
+              in
+                parse (result :: new_stk, rst)
+              end
+          | [] => raise Fail ("doapps: missing function for application")
+        end
 
   in
     parse ([], Substring.full encoded_str)
@@ -234,10 +238,17 @@ end
    Pretty-printing
    ======================================================================== *)
 
-fun pp_type (TyVar name) = name
-  | pp_type (TyOp {name, args = []}) = name
+open smpp
+infix >>
+
+fun pp_type (TyVar name) = add_string name
+  | pp_type (TyOp {name, args = []}) = add_string name
   | pp_type (TyOp {name, args}) =
-      "(" ^ name ^ " " ^ (String.concatWith " " (map pp_type args)) ^ ")"
+      add_string "(" >>
+      block HOLPP.INCONSISTENT 1 (
+        add_string name >> add_break (1,0) >>
+        pr_list pp_type (add_break (1,0)) args
+      ) >> add_string ")"
 
 fun strip_comb t =
     let fun recurse acc t =
@@ -309,22 +320,29 @@ fun decode_numeral tm =
 (* Pretty-print with special handling for common patterns *)
 fun pp_term tm =
   let
-    fun atom_name (Var {name, ...}) = name
-      | atom_name (Const {name, thy, ...}) =
+    fun atom_name_str (Var {name, ...}) = name
+      | atom_name_str (Const {name, thy, ...}) =
           if thy = "bool" orelse thy = "min" then name else thy ^ "." ^ name
-      | atom_name _ = "??"
+      | atom_name_str _ = "??"
+
+    fun atom_name t = add_string (atom_name_str t)
 
     fun pp_internal tm =
       case decode_numeral tm of
-          SOME n => Arbnum.toString n
+          SOME n => add_string (Arbnum.toString n)
         | NONE =>
           (case strip_comb tm of
                (vca, []) =>
                (case strip_abs vca of
                     ([], vc) => atom_name vc
-                  | (bvs, body) => "(lambda (" ^
-                                   String.concatWith " " (map atom_name bvs) ^
-                                   ") " ^ pp_internal body ^ ")")
+                  | (bvs, body) =>
+                      add_string "(" >>
+                      block HOLPP.INCONSISTENT 1 (
+                        add_string "lambda (" >>
+                        pr_list atom_name (add_break (1,0)) bvs >>
+                        add_string ")" >> add_break (1,0) >>
+                        pp_internal body
+                      ) >> add_string ")")
              | (f, [x]) =>
                if is_abs x then
                  if is_const_named ("bool", "!") f orelse is_const_named ("bool", "?") f then
@@ -332,9 +350,13 @@ fun pp_term tm =
                      val thyn as (_, cn) = const_name f
                      val (bvs, body) = strip_quant thyn tm
                    in
-                     "(" ^ (if cn = "!" then "forall" else "exists") ^
-                     " (" ^ String.concatWith " " (map atom_name bvs) ^ ") " ^
-                     pp_internal body ^ ")"
+                     add_string "(" >>
+                     block HOLPP.INCONSISTENT 1 (
+                       add_string (if cn = "!" then "forall (" else "exists (") >>
+                       pr_list atom_name (add_break (1,0)) bvs >>
+                       add_string ")" >> add_break (1,0) >>
+                       pp_internal body
+                     ) >> add_string ")"
                    end
                  else
                    pr_comb2 f x
@@ -345,12 +367,28 @@ fun pp_term tm =
                    val thyn as (_, cn) = const_name f
                    val args = strip_binopr thyn tm
                  in
-                   "(" ^ (if cn = "/\\" then "and " else "or ") ^
-                   String.concatWith " " (map pp_internal args) ^ ")"
+                   add_string "(" >>
+                   block HOLPP.INCONSISTENT 1 (
+                     add_string (if cn = "/\\" then "and" else "or") >>
+                     add_break (1,0) >>
+                     pr_list pp_internal (add_break (1,0)) args
+                   ) >> add_string ")"
                  end
-               else "(" ^ String.concatWith " " (map pp_internal (f::[x1,x2])) ^ ")"
-             | (f, xs) => "(" ^ String.concatWith " " (map pp_internal (f::xs)) ^ ")")
-    and pr_comb2 f x = "(" ^ pp_internal f ^ " " ^ pp_internal x ^ ")"
+               else
+                 add_string "(" >>
+                 block HOLPP.INCONSISTENT 1 (
+                   pr_list pp_internal (add_break (1,0)) (f::[x1,x2])
+                 ) >> add_string ")"
+             | (f, xs) =>
+                 add_string "(" >>
+                 block HOLPP.INCONSISTENT 1 (
+                   pr_list pp_internal (add_break (1,0)) (f::xs)
+                 ) >> add_string ")")
+    and pr_comb2 f x =
+      add_string "(" >>
+      block HOLPP.INCONSISTENT 1 (
+        pp_internal f >> add_break (1,0) >> pp_internal x
+      ) >> add_string ")"
   in
     pp_internal tm
   end

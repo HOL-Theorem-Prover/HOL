@@ -19,11 +19,11 @@ signature RawTermPP = sig
   (* Decode a term from the write_raw format string, with access to sharing tables *)
   val decode_term : sharing_tables -> string -> term
 
-  (* Pretty-print a term as an s-expression *)
-  val pp_term : term -> string
+  (* Pretty-print a term as an smpp block *)
+  val pp_term : term -> (unit, unit) smpp.t
 
-  (* Pretty-print a type as an s-expression *)
-  val pp_type : hol_type -> string
+  (* Pretty-print a type as an smpp block *)
+  val pp_type : hol_type -> (unit, unit) smpp.t
 
 end
 

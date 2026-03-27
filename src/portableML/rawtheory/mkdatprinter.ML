@@ -52,6 +52,7 @@ use  "../HOLsexp.grm.sml";
 use  "../HOLsexp.lex.sml";
 useB "../HOLsexp_parser";
 useB "../HOLsexp";
+useB "../smpp";
 use  "RawTheory_dtype.sml";
 useB "RawTheoryReader";
 
