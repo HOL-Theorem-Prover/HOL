@@ -93,19 +93,14 @@ fun replay (db: trDB) file = let
   in loop lo end
 
   (* Extract common theory prefix from qualified names ["thy$c1","thy$c2",...] *)
-  fun thy_of_names names = let
-    fun split n = case String.fields (fn c => c = #"$") n of
-        [t, _] => t
-      | _ => raise Fail ("PFTReplay: bad qualified name " ^ n)
-  in case names of
-       [] => raise Fail "PFTReplay: empty names list"
-     | (n :: rest) => let val t = split n in
-         List.app (fn n' =>
-           if split n' = t then ()
-           else raise Fail ("PFTReplay: inconsistent theory prefix: "
-                            ^ n ^ " vs " ^ n')) rest;
-         t end
-  end
+  fun thy_of_names names = case names of
+      [] => raise Fail "PFTReplay: empty names list"
+    | (n :: rest) => let val (t, _) = split_qualified n in
+        List.app (fn n' =>
+          if #1 (split_qualified n') = t then ()
+          else raise Fail ("PFTReplay: inconsistent theory prefix: "
+                           ^ n ^ " vs " ^ n')) rest;
+        t end
 
   (* ---- Format handler -------------------------------------------------- *)
 
