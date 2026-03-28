@@ -637,9 +637,8 @@ fun pass2_emit (file_states: file_state vector)
             when_included (next_ci ()) (fn _ =>
               PFTWriter.new_const out name (ren NS_TY ty)),
           new_type = fn (name, arity) =>
-            let val ci = next_ci ()
-            in if is_included ci then PFTWriter.new_type out name arity
-               else () end,
+            when_included (next_ci ()) (fn _ =>
+              PFTWriter.new_type out name arity),
           axiom = fn (id, tm, nameOpt) =>
             when_included (next_ci ()) (fn _ =>
               PFTWriter.axiom out (ren NS_TH id) (ren NS_TM tm) nameOpt),
