@@ -48,6 +48,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
   val thyname = thyname_of_path trace
   val is_candle = case ruleset of Candle => true | HOL4 => false
   val tr_name = if is_candle then candle_translate_name else I
+  val fun_tyname = tr_name "min$fun"
   val (root_ptr, heap) = parse trace
   val {all_thms, anon_thms, constants, types, ...} = shRoot heap root_ptr
 
@@ -172,6 +173,45 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
   fun pft_dest_abs id = pft_dest_comb id  (* same layout: (var, body) *)
 
+  (* Reverse lookup: PFT term ID -> PFT type ID.
+     Populated for all emitted terms (Var, Const, Comb, Abs). *)
+  val tm_types = DArray.new(65536, ~1)
+
+  fun tm_types_ensure id = let
+    val sz = DArray.size tm_types
+    fun pad 0 = () | pad n = (DArray.push(tm_types, ~1); pad (n - 1))
+  in if id < sz then () else pad (id - sz + 1)
+  end
+
+  fun tm_types_set id ty_id =
+    (tm_types_ensure id; DArray.update(tm_types, id, ty_id))
+
+  fun pft_type_of id =
+    let val ty_id = DArray.sub(tm_types, id)
+    in if ty_id >= 0 then ty_id
+       else raise Fail ("pft_type_of: term " ^ Int.toString id ^
+                         " has no recorded type")
+    end
+
+  (* Reverse lookup: PFT type ID -> return type ID (for function types). *)
+  val ty_ret = DArray.new(4096, ~1)
+
+  fun ty_ret_ensure id = let
+    val sz = DArray.size ty_ret
+    fun pad 0 = () | pad n = (DArray.push(ty_ret, ~1); pad (n - 1))
+  in if id < sz then () else pad (id - sz + 1)
+  end
+
+  fun ty_ret_set id ret_id =
+    (ty_ret_ensure id; DArray.update(ty_ret, id, ret_id))
+
+  fun pft_ret_type id =
+    let val r = DArray.sub(ty_ret, id)
+    in if r >= 0 then r
+       else raise Fail ("pft_ret_type: type " ^ Int.toString id ^
+                         " is not a function type")
+    end
+
   fun var_lookup key = peek(!var_ht, key)
   fun var_insert key v = var_ht := insert(!var_ht, key, v)
   fun const_lookup key = peek(!const_ht, key)
@@ -254,6 +294,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
            in PFTWriter.tyop out id name arg_ids;
               ty_insert key id;
               ty_memo_set k id;
+              (case arg_ids of
+                 [_, r] => if name = fun_tyname then ty_ret_set id r else ()
+               | _ => ());
               id
            end
       end
@@ -297,6 +340,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
              val id = alloc_tm ()
            in PFTWriter.var out id s ty_id;
               var_insert key id;
+              tm_types_set id ty_id;
               id
            end
       end
@@ -316,6 +360,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
              val id = alloc_tm ()
            in PFTWriter.const out id qname ty_id;
               const_insert key id;
+              tm_types_set id ty_id;
               id
            end
       end
@@ -333,6 +378,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
            in PFTWriter.comb out id id1 id2;
               IntPairTable.insert comb_ht (id1, id2) id;
               tm_parts_set id (id1, id2);
+              tm_types_set id (pft_ret_type (pft_type_of id1));
               id
            end
       end
@@ -342,11 +388,13 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val V = alloc_tm ()
         val bname = fresh_binder_name s
         val () = PFTWriter.var out V bname ty_id
+        val () = tm_types_set V ty_id
         val body_id = emit_term_sub (Subst.cons(env, V)) t2
         val A = alloc_tm ()
       in
         PFTWriter.abs out A V body_id;
         tm_parts_set A (V, body_id);
+        tm_types_set A (emit_tyop fun_tyname [ty_id, pft_type_of body_id]);
         A
       end
     | Clos (sbp, tmp) => let
@@ -378,16 +426,10 @@ fun emit_theory {trace, output, binary, ruleset} = let
     else ()
 
   (* ======================================================================= *)
-  (* Candle: heap destructuring helpers                                      *)
+  (* Candle: heap helper                                                     *)
   (* ======================================================================= *)
 
-  (* Destructure a Comb from the heap *)
-  and heap_dest_comb (tm_ptr : Term.term ptr) =
-    case shTerm heap tm_ptr of
-      Comb (f, x) => (f, x)
-    | _ => raise Fail "heap_dest_comb: not a Comb"
-
-  (* Get the conclusion of a theorem from the heap *)
+  (* Get the conclusion pointer of a theorem from the heap *)
   and heap_concl (thm_ptr : Thm.thm ptr) =
     let val (_, concl, _) = shThm heap thm_ptr in concl end
 
@@ -565,20 +607,12 @@ fun emit_theory {trace, output, binary, ruleset} = let
          in PFTWriter.tyvar out id name;
             ty_insert key id; id end end
 
-    (* Helper to get type of a heap variable *)
-    fun heap_var_type (v_ptr : Term.term ptr) =
-      case shTerm heap v_ptr of
-        Fv (_, t) => t
-      | _ => raise Fail "heap_var_type: not a variable"
-
     (* exist_to_witness: from th: ⊢ ∃v. body, derive ⊢ (λv. body)(@(λv. body))
        using CHOOSE_pth + SELECT_AX. *)
-    fun exist_to_witness exists_th exists_concl_id exists_concl_ptr = let
+    fun exist_to_witness exists_th exists_concl_id = let
       val (_, pred_id) = pft_dest_comb exists_concl_id
-      val (_, pred_ptr) = heap_dest_comb exists_concl_ptr
-      val (bv_ptr, _) = case shTerm heap pred_ptr of
-          Abs (v, _) => (v, ()) | _ => raise Fail "exist_to_witness: not abs"
-      val v_ty = ty (heap_var_type bv_ptr)
+      val (bv_id, _) = pft_dest_abs pred_id
+      val v_ty = pft_type_of bv_id
       val Ab = emit_tyop "fun" [v_ty, bool_tyid]
       val select_c = emit_const "@" (emit_tyop "fun" [Ab, v_ty])
       val witness = emit_comb select_c pred_id
@@ -596,7 +630,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
       val imp_forall_pw = emit_comb (emit_comb (imp_const) forall_inner) pred_witness
       val mp1 = do_MP choose_inst exists_concl_id imp_forall_pw exists_th
       val result = do_MP mp1 forall_inner pred_witness sel_inst
-    in (result, pred_id, witness, v_ty, bv_ptr, pred_ptr) end
+    in (result, pred_id, witness, v_ty) end
 
   in
     case proof of
@@ -640,11 +674,11 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
     | CONJUNCT2_prf a => let
         val a_th = th a
-        val concl = heap_concl a
-        val (and_l, r_ptr) = heap_dest_comb concl
-        val (_, l_ptr) = heap_dest_comb and_l
+        val concl_id = tm (heap_concl a)
+        val (and_l_id, r_tm) = pft_dest_comb concl_id
+        val (_, l_tm) = pft_dest_comb and_l_id
       in r_prove_hyp (c_inst (candle_load_pth "candle$CONJUNCT2")
-                        [(pvar_p, tm l_ptr), (pvar_q, tm r_ptr)]) a_th end
+                        [(pvar_p, l_tm), (pvar_q, r_tm)]) a_th end
 
     (* === Pro-forma based: implication === *)
     | MP_prf (a, b) => let
@@ -704,41 +738,29 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
     | Mk_abs_prf (a, _, c) => let
         val a_th = th a val c_th = th c
-        val (_, lam_ptr) = heap_dest_comb (heap_concl a)
-      in case shTerm heap lam_ptr of
-           Abs (v_ptr, _) => r_trans a_th (c_abs (tm v_ptr) c_th)
-         | _ => raise Fail "Mk_abs: RHS not an abstraction"
-      end
+        val concl_id = tm (heap_concl a)
+        val (_, rhs_id) = pft_dest_comb concl_id
+        val (v_id, _) = pft_dest_abs rhs_id
+      in r_trans a_th (c_abs v_id c_th) end
 
     | Beta_prf a => let
         val a_th = th a
-        val (_, rhs_ptr) = heap_dest_comb (heap_concl a)
-        val _ = tm rhs_ptr
-        val (lam_ptr, arg_ptr) = heap_dest_comb rhs_ptr
-      in case shTerm heap lam_ptr of
-           Abs (var_ptr, _) => let
-             val _ = tm var_ptr
-             val lam_tm = tm lam_ptr val arg_tm = tm arg_ptr
-             val (actual_bv, _) = pft_dest_abs lam_tm
-             val beta_th = c_beta (emit_comb lam_tm actual_bv)
-             val beta_inst = if actual_bv = arg_tm then beta_th
-               else c_inst beta_th [(actual_bv, arg_tm)]
-           in r_trans a_th beta_inst end
-         | _ => raise Fail "Beta: RHS not an application of abstraction"
-      end
+        val concl_id = tm (heap_concl a)
+        val (_, rhs_id) = pft_dest_comb concl_id
+        val (lam_tm, arg_tm) = pft_dest_comb rhs_id
+        val (actual_bv, _) = pft_dest_abs lam_tm
+        val beta_th = c_beta (emit_comb lam_tm actual_bv)
+        val beta_inst = if actual_bv = arg_tm then beta_th
+          else c_inst beta_th [(actual_bv, arg_tm)]
+      in r_trans a_th beta_inst end
 
     | BETA_CONV_prf a => let
-        val (lam_ptr, arg_ptr) = heap_dest_comb a
-      in case shTerm heap lam_ptr of
-           Abs (var_ptr, _) => let
-             val _ = tm var_ptr
-             val lam_tm = tm lam_ptr val arg_tm = tm arg_ptr
-             val (actual_bv, _) = pft_dest_abs lam_tm
-             val app_var = emit_comb lam_tm actual_bv
-           in if actual_bv = arg_tm then r_beta app_var
-              else r_inst (c_beta app_var) [(actual_bv, arg_tm)] end
-         | _ => raise Fail "BETA_CONV: not an application of abstraction"
-      end
+        val app_id = tm a
+        val (lam_tm, arg_tm) = pft_dest_comb app_id
+        val (actual_bv, _) = pft_dest_abs lam_tm
+        val app_var = emit_comb lam_tm actual_bv
+      in if actual_bv = arg_tm then r_beta app_var
+         else r_inst (c_beta app_var) [(actual_bv, arg_tm)] end
 
     | ALPHA_prf (t1, _) =>
         r_alpha_thm (c_refl (tm t1)) (emit_hyps ()) (tm concl_ptr)
@@ -750,49 +772,42 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | GEN_prf (a, b) => let
         val v_tm = tm a val b_th = th b
         val s_tm = tm (heap_concl b)
-        val v_ty = ty (heap_var_type a)
+        val v_ty = pft_type_of v_tm
       in r_alpha_thm (do_GEN v_tm v_ty s_tm b_th) (emit_hyps ()) (tm concl_ptr) end
 
     | GENL_prf (a, b) => let
-        val var_ptrs = list heap (fn p => p) a
+        val var_ids = list heap tm a
         val inner_th = th b
-        fun get_abs_body p = let
-          val (_, lam) = heap_dest_comb p
-        in case shTerm heap lam of
-             Abs (_, body) => body
-           | _ => raise Fail "GENL: expected abstraction under forall"
-        end
-        val n = length var_ptrs
+        fun get_abs_body id = let
+          val (_, lam_id) = pft_dest_comb id
+          val (_, body_id) = pft_dest_abs lam_id
+        in body_id end
+        val n = length var_ids
+        val concl_id = tm concl_ptr
         fun build_concls 0 _ = []
           | build_concls k c = c :: build_concls (k-1) (get_abs_body c)
-        val outer_concls = build_concls n concl_ptr
-        val inner_concl = heap_concl b
-        val rev_vars = List.rev var_ptrs
-        val rev_s_ptrs = inner_concl :: List.rev outer_concls
-        val gen_pairs = ListPair.zip (rev_vars, List.take (rev_s_ptrs, n))
+        val outer_concls = build_concls n concl_id
+        val inner_concl_id = tm (heap_concl b)
+        val rev_vars = List.rev var_ids
+        val rev_s_ids = inner_concl_id :: List.rev outer_concls
+        val gen_pairs = ListPair.zip (rev_vars, List.take (rev_s_ids, n))
 
         fun fold_gens [] th_acc = th_acc
-          | fold_gens ((v_ptr, s_ptr) :: rest) th_acc = let
-              val v_tm = tm v_ptr val s_tm = tm s_ptr
-              val v_ty = ty (heap_var_type v_ptr)
+          | fold_gens ((v_tm, s_tm) :: rest) th_acc = let
+              val v_ty = pft_type_of v_tm
             in fold_gens rest (do_GEN v_tm v_ty s_tm th_acc) end
-      in r_alpha_thm (fold_gens gen_pairs inner_th) (emit_hyps ()) (tm concl_ptr) end
+      in r_alpha_thm (fold_gens gen_pairs inner_th) (emit_hyps ()) concl_id end
 
     | SPEC_prf (a, b) =>
         emit_thm_candle result_id hyps_ptr concl_ptr (Specialize_prf (a, b))
 
     | Specialize_prf (a, b) => let
         val t_tm = tm a val b_th = th b
-        val concl_b = heap_concl b
-        val (_, pred_ptr) = heap_dest_comb concl_b
-        val pred_tm = tm pred_ptr
-        val forall_P_tm = tm concl_b
-        val (var_ptr, _) = case shTerm heap pred_ptr of
-            Abs (v, body) => (v, body)
-          | _ => raise Fail "SPEC: predicate not an abstraction"
-        val v_ty = ty (heap_var_type var_ptr)
-        val _ = tm var_ptr
-      in r_alpha_thm (do_SPEC t_tm pred_tm (tm var_ptr) forall_P_tm v_ty b_th) (emit_hyps ()) (tm concl_ptr) end
+        val forall_P_tm = tm (heap_concl b)
+        val (_, pred_tm) = pft_dest_comb forall_P_tm
+        val (var_tm, _) = pft_dest_abs pred_tm
+        val v_ty = pft_type_of var_tm
+      in r_alpha_thm (do_SPEC t_tm pred_tm var_tm forall_P_tm v_ty b_th) (emit_hyps ()) (tm concl_ptr) end
 
     | DISJ_CASES_prf (a, b, c) => let
         val a_th = th a val b_th = th b val c_th = th c
@@ -820,26 +835,19 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | EXISTS_prf (a, b, c) => let
         val c_th = th c
         val witness_tm = tm b
-        val (_, pred_ptr) = heap_dest_comb a
-        val pred_tm = tm pred_ptr
-        val (var_ptr, _) = case shTerm heap pred_ptr of
-            Abs (v, body) => (v, body)
-          | _ => raise Fail "EXISTS: predicate not abstraction"
-        val var_tm = tm var_ptr
-        val v_ty = ty (heap_var_type var_ptr)
+        val exists_id = tm a
+        val (_, pred_tm) = pft_dest_comb exists_id
+        val (var_tm, _) = pft_dest_abs pred_tm
+        val v_ty = pft_type_of var_tm
       in r_alpha_thm (do_EXISTS pred_tm var_tm witness_tm v_ty c_th) (emit_hyps ()) (tm concl_ptr) end
 
     | CHOOSE_prf (a, b, c) => let
         val v_tm = tm a val b_th = th b val c_th = th c
         val q_tm = tm (heap_concl c)
-        val concl_b = heap_concl b
-        val (_, pred_ptr) = heap_dest_comb concl_b
-        val pred_tm = tm pred_ptr
-        val exists_P_tm = tm concl_b
-        val bv_ptr = case shTerm heap pred_ptr of
-            Abs (v, _) => v | _ => raise Fail "CHOOSE: not abs"
-        val bv_tm = tm bv_ptr
-        val v_ty = ty (heap_var_type bv_ptr)
+        val exists_P_tm = tm (heap_concl b)
+        val (_, pred_tm) = pft_dest_comb exists_P_tm
+        val (bv_tm, _) = pft_dest_abs pred_tm
+        val v_ty = pft_type_of bv_tm
         val cmb = emit_comb pred_tm v_tm
         val c_with_cmb = c_prove_hyp c_th
                             (c_eq_mp (do_beta_reduce pred_tm bv_tm v_tm) (c_assume cmb))
@@ -912,10 +920,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | Def_const_prf (a, b) => let
         val rhs_id = emit_term a
         val (Thy, Name) = get_const_id b
-        val ty_ptr = case shTerm heap b of
-            Const (_, tp) => tp
-          | _ => raise Fail "Def_const: expected Const"
-        val rhs_ty_id = emit_type ty_ptr
+        val rhs_ty_id = pft_type_of rhs_id
         val bool_ty_c = emit_tyop "bool" []
         val eq_ty = emit_tyop "fun" [rhs_ty_id, emit_tyop "fun" [rhs_ty_id, bool_ty_c]]
         val cname = tr_name (thyname ^ "$" ^ Name)
@@ -936,11 +941,11 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val const_ptrs = list heap (fn p => p) b
         val input_th = th a
         val input_concl_id = tm (heap_concl a)
-        val input_concl_ptr = heap_concl a
 
-        fun peel_one th_id exists_tm exists_ptr const_ptr = let
-          val (th_pred_witness, pred_id, witness, v_ty, bv_ptr, pred_ptr) =
-            exist_to_witness th_id exists_tm exists_ptr
+        fun peel_one th_id exists_id const_ptr = let
+          val (th_pred_witness, pred_id, witness, v_ty) =
+            exist_to_witness th_id exists_id
+          val (bv_id, body_id) = pft_dest_abs pred_id
           val (Thy, Name) = get_const_id const_ptr
           val cname = tr_name (Thy ^ "$" ^ Name)
           val eq_c = emit_const "=" (emit_tyop "fun" [v_ty, emit_tyop "fun" [v_ty, bool_tyid]])
@@ -949,19 +954,16 @@ fun emit_theory {trace, output, binary, ruleset} = let
           val th_pred_c = c_eq_mp (c_mk_comb (c_refl pred_id)
                             (c_sym (c_new_spec (c_assume c_eq_w) [cname])))
                             th_pred_witness
-          val result = c_eq_mp (do_beta_reduce pred_id (tm bv_ptr) (emit_const cname v_ty)) th_pred_c
-          val (_, body_ptr) = case shTerm heap pred_ptr of
-              Abs (_, b) => (bv_ptr, b)
-            | _ => raise Fail "Def_spec: pred not abs"
-        in (result, body_ptr) end
+          val result = c_eq_mp (do_beta_reduce pred_id bv_id (emit_const cname v_ty)) th_pred_c
+        in (result, body_id) end
 
         fun peel_all [] (th_acc, _) = th_acc
-          | peel_all (c :: rest) (th_acc, ep) = let
-              val (new_th, new_ep) = peel_one th_acc (tm ep) ep c
-            in peel_all rest (new_th, new_ep) end
+          | peel_all (c :: rest) (th_acc, eid) = let
+              val (new_th, new_eid) = peel_one th_acc eid c
+            in peel_all rest (new_th, new_eid) end
       in case const_ptrs of
            [] => ()
-         | _ => let val r = peel_all const_ptrs (input_th, input_concl_ptr)
+         | _ => let val r = peel_all const_ptrs (input_th, input_concl_id)
                 in r_alpha_thm r (emit_hyps ()) (tm concl_ptr) end
       end
 
@@ -973,8 +975,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val (Thy, Tyop) = get_type_id c
         val () = mark_type Tyop
         val tyname = tr_name (Thy ^ "$" ^ Tyop)
-        val (th_pw, pred_id, _, rep_ty, _, _) =
-          exist_to_witness b_th (tm (heap_concl b)) (heap_concl b)
+        val (th_pw, pred_id, _, rep_ty) =
+          exist_to_witness b_th (tm (heap_concl b))
         val Ab = emit_tyop "fun" [rep_ty, bool_tyid]
 
         val absname = tyname ^ "_abs"
@@ -1315,10 +1317,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
   and emit_def_const thm_id (rhs_p, const_ptr) = let
     val rhs_id = emit_term rhs_p
     val (Thy, Name) = get_const_id const_ptr
-    val ty_ptr = case shTerm heap const_ptr of
-        Const (_, tp) => tp
-      | _ => raise Fail "Def_const: expected Const"
-    val rhs_ty_id = emit_type ty_ptr
+    val rhs_ty_id = pft_type_of rhs_id
     val bool_ty_id = emit_tyop "min$bool" []
     val fun_ty1_id = emit_tyop "min$fun" [rhs_ty_id, bool_ty_id]
     val eq_ty_id = emit_tyop "min$fun" [rhs_ty_id, fun_ty1_id]
@@ -1340,7 +1339,11 @@ fun emit_theory {trace, output, binary, ruleset} = let
          SOME id => id
        | NONE => let val id = alloc_ty ()
          in PFTWriter.tyop out id name args;
-            ty_insert key id; id
+            ty_insert key id;
+            (case args of
+               [_, r] => if name = fun_tyname then ty_ret_set id r else ()
+             | _ => ());
+            id
          end
     end
 
@@ -1350,7 +1353,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
          SOME id => id
        | NONE => let val id = alloc_tm ()
          in PFTWriter.var out id name ty_id;
-            var_insert key id; id
+            var_insert key id;
+            tm_types_set id ty_id; id
          end
     end
 
@@ -1360,7 +1364,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
          SOME id => id
        | NONE => let val id = alloc_tm ()
          in PFTWriter.const out id name ty_id;
-            const_insert key id; id
+            const_insert key id;
+            tm_types_set id ty_id; id
          end
     end
 
@@ -1370,7 +1375,10 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | NONE => let val id = alloc_tm ()
       in PFTWriter.abs out id var_id body_id;
          IntPairTable.insert abs_ht (var_id, body_id) id;
-         tm_parts_set id (var_id, body_id); id
+         tm_parts_set id (var_id, body_id);
+         tm_types_set id (emit_tyop fun_tyname
+           [pft_type_of var_id, pft_type_of body_id]);
+         id
       end
 
   and emit_comb rator_id rand_id =
@@ -1379,7 +1387,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | NONE => let val id = alloc_tm ()
       in PFTWriter.comb out id rator_id rand_id;
          IntPairTable.insert comb_ht (rator_id, rand_id) id;
-         tm_parts_set id (rator_id, rand_id); id
+         tm_parts_set id (rator_id, rand_id);
+         tm_types_set id (pft_ret_type (pft_type_of rator_id));
+         id
       end
 
   (* ======================================================================= *)
