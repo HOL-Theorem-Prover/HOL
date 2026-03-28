@@ -350,7 +350,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         A
       end
     | Clos (sbp, tmp) => let
-        val env' = Subst.comp (fn (_,s) => s) (env, emit_subs env sbp)
+        val env' = Subst.comp #2 (env, emit_subs env sbp)
       in emit_term_sub env' tmp end
 
   and resolve_binder_name (tm_ptr : Term.term ptr) : string * Type.hol_type ptr =
