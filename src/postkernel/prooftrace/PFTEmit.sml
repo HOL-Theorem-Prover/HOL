@@ -66,12 +66,18 @@ fun emit_theory {trace, output, binary, ruleset} = let
      without deferred writes. *)
   val axiom_name_map : string PIntMap.t = let
     val m = ref PIntMap.empty
+    fun chase thp =
+      let val (_, _, proof_ptr) = shThm heap thp
+      in case shProof heap proof_ptr of
+           save_dep_prf inner => chase inner
+         | Axiom_prf => SOME thp
+         | _ => NONE
+      end
   in appList heap (fn p => let
        val (nm, (thp, _)) = tuple3 heap (str heap, I, I) p
-       val (_, _, proof_ptr) = shThm heap thp
-     in case shProof heap proof_ptr of
-          Axiom_prf => m := PIntMap.add (ptr thp) nm (!m)
-        | _ => ()
+     in case chase thp of
+          SOME ax => m := PIntMap.add (ptr ax) nm (!m)
+        | NONE => ()
      end) all_thms;
      !m
   end
