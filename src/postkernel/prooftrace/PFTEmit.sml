@@ -54,11 +54,21 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
   (* --- Walk pass --------------------------------------------------------- *)
 
+  (* Collect free variable names matching the binder name pattern so that
+     fresh_binder_name can avoid collisions with user-chosen names. *)
+  val fv_binder_names : string set ref = ref (empty String.compare)
+  val binder_infix = " pft%"
+  fun is_binder_name s = String.isSubstring binder_infix s
+  fun on_fv s = if is_binder_name s
+                then fv_binder_names := add(!fv_binder_names, s)
+                else ()
+
   val {tm_defs, ty_defs, is_closed, get_const_id, get_type_id} =
     ProofTraceWalk.walk
       {heap = heap, thyname = thyname,
        named_thms = all_thms, anon_thms = anon_thms,
-       incr = K (), on_def_thm = K ()}
+       incr = K (), on_def_thm = K (),
+       on_fv = on_fv}
 
   (* --- Axiom name pre-scan ----------------------------------------------- *)
 
@@ -221,8 +231,14 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
   val binder_ctr = ref 0
   fun fresh_binder_name s = let
-    val n = !binder_ctr
-  in binder_ctr := n + 1; s ^ " " ^ Int.toString n end
+    fun try () = let
+      val n = !binder_ctr
+      val () = binder_ctr := n + 1
+      val candidate = s ^ binder_infix ^ Int.toString n
+    in if member(!fv_binder_names, candidate) then try ()
+       else candidate
+    end
+  in try () end
 
   (* --- NEW_CONST / NEW_TYPE tracking ------------------------------------- *)
 

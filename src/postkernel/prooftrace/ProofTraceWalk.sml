@@ -3,7 +3,7 @@ structure ProofTraceWalk :> ProofTraceWalk = struct
 open Lib Redblackmap ProofTraceParser
 
 fun walk {heap, thyname, named_thms, anon_thms,
-          incr, on_def_thm} = let
+          incr, on_def_thm, on_fv} = let
 
   (* ID cache for constant/type operator identifiers *)
   val id_cache : (string * string) PIntMap.t ref = ref PIntMap.empty
@@ -91,7 +91,7 @@ fun walk {heap, thyname, named_thms, anon_thms,
       Abs (t1, t2) => (walk_term t1; walk_term t2)
     | Comb (t1, t2) => (walk_term t1; walk_term t2)
     | Const (_, typ) => ty typ
-    | Fv (_, typ) => ty typ
+    | Fv (s, typ) => (on_fv s; ty typ)
     | Bv _ => ()
     | Clos (sbp, tmp) => (walk_subs sbp; walk_term tmp)
   and walk_subs sbp =
