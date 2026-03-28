@@ -146,32 +146,25 @@ fun emit_theory {trace, output, binary, ruleset} = let
   (* Reverse lookup: PFT term ID -> subterm IDs.
      Populated by emit_comb/emit_abs. Enables Clos-safe destructuring
      of PFT terms by ID, without traversing the heap.
-     Two parallel arrays (rator/var and rand/body), grown as needed.
      Entries for non-COMB/ABS terms are (~1, ~1). *)
-  val tm_part1 = ref (Array.array(65536, ~1))  (* rator or var *)
-  val tm_part2 = ref (Array.array(65536, ~1))  (* rand or body *)
+  val tm_part1 = DArray.new(65536, ~1)  (* rator or var *)
+  val tm_part2 = DArray.new(65536, ~1)  (* rand or body *)
 
   fun tm_parts_ensure id = let
-    val a1 = !tm_part1
-    val len = Array.length a1
-  in if id < len then ()
-     else let
-       val newlen = Int.max(id + 1, len * 2)
-       val b1 = Array.array(newlen, ~1)
-       val b2 = Array.array(newlen, ~1)
-       val () = Array.copy{src = a1, dst = b1, di = 0}
-       val () = Array.copy{src = !tm_part2, dst = b2, di = 0}
-     in tm_part1 := b1; tm_part2 := b2 end
+    val sz = DArray.size tm_part1
+    fun pad 0 = () | pad n = (DArray.push(tm_part1, ~1);
+                               DArray.push(tm_part2, ~1); pad (n - 1))
+  in if id < sz then () else pad (id - sz + 1)
   end
 
   fun tm_parts_set id (x, y) =
     (tm_parts_ensure id;
-     Array.update(!tm_part1, id, x);
-     Array.update(!tm_part2, id, y))
+     DArray.update(tm_part1, id, x);
+     DArray.update(tm_part2, id, y))
 
   fun pft_dest_comb id =
-    let val f = Array.sub(!tm_part1, id)
-        val x = Array.sub(!tm_part2, id)
+    let val f = DArray.sub(tm_part1, id)
+        val x = DArray.sub(tm_part2, id)
     in if f >= 0 then (f, x)
        else raise Fail ("pft_dest_comb: term " ^ Int.toString id ^
                          " is not a COMB/ABS")
