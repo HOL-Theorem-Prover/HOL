@@ -16,11 +16,12 @@ datatype target = ThyThm of string * string * bool
 datatype arg_desc =
     Id of string                (* varint ID in given namespace *)
   | Val                         (* varint, pass through *)
-  | Str                         (* length-prefixed string, pass through *)
   | IdList of string            (* count-prefixed ID list *)
   | IdPairs of string * string  (* count-prefixed ID pairs *)
   | StrIdPairs of string        (* count-prefixed (string, id) pairs *)
-  | StrList                     (* count-prefixed string list *)
+  | NewTypeName                 (* string that introduces a type *)
+  | NewConstName                (* string that introduces a constant *)
+  | NewConstNames               (* string list that introduces constants *)
 
 datatype def_kind = DefTypes | DefConsts
 
@@ -72,11 +73,11 @@ val hol4_descs : (int * opcode_desc) list = [
   (0x3B, {results=["th"], args=[Id "tm", Id "th", IdPairs("tm","th")],
                                                              def=NONE}),
   (0x3C, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
-  (0x40, {results=["th"], args=[Id "th", Str],
+  (0x40, {results=["th"], args=[Id "th", NewTypeName],
                                               def=SOME(DefTypes, 1)}),
-  (0x41, {results=["th"], args=[Id "th", StrList],
+  (0x41, {results=["th"], args=[Id "th", NewConstNames],
                                               def=SOME(DefConsts, 1)}),
-  (0x42, {results=["th"], args=[Id "th", StrList],
+  (0x42, {results=["th"], args=[Id "th", NewConstNames],
                                               def=SOME(DefConsts, 1)}),
   (0x43, {results=["ci"], args=[Id "ty", Id "ty",
                                 StrIdPairs "th", StrIdPairs "tm"],
@@ -100,9 +101,9 @@ val candle_descs : (int * opcode_desc) list = [
   (0x21, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
   (0x22, {results=["th"], args=[Id "th", IdList "tm", Id "tm"],
                                                              def=NONE}),
-  (0x30, {results=["th"], args=[Id "th", StrList],
+  (0x30, {results=["th"], args=[Id "th", NewConstNames],
                                               def=SOME(DefConsts, 1)}),
-  (0x31, {results=["th","th"], args=[Id "th", Str, Str, Str],
+  (0x31, {results=["th","th"], args=[Id "th", NewTypeName, NewConstName, NewConstName],
                                               def=SOME(DefTypes, 1)}),
   (0x40, {results=["ci"], args=[IdList "th"],                def=NONE}),
   (0x41, {results=["th"], args=[Id "ci", Id "tm", IdList "th"],
@@ -175,31 +176,40 @@ type cmd_meta = {
   produced : (int * int) list, (* (ns_idx, id) *)
   consumed : (int * int) list, (* (ns_idx, id) *)
   kind : cmd_kind,
-  opcode : int
+  opcode : int,
+  ref_name : string option     (* name referenced by CONST/TYOP *)
 }
 
 val empty_meta : cmd_meta =
-  {produced=[], consumed=[], kind=CmdNormal, opcode=0}
+  {produced=[], consumed=[], kind=CmdNormal, opcode=0, ref_name=NONE}
 
 (* Consume arguments from stream according to descriptors, collecting
-   the (ns_idx, id) pairs of all referenced IDs. *)
+   the (ns_idx, id) pairs of all referenced IDs and any introduced
+   type/constant names from definition commands. *)
 fun collect_consumed (sr: PFTReader.stream_reader) (descs: arg_desc list)
-    : (int * int) list =
+    : (int * int) list * {new_types: string list, new_consts: string list} =
   let
     val vi = #readVarint sr
     val vs = #readString sr
     val acc = ref ([] : (int * int) list)
+    val new_types = ref ([] : string list)
+    val new_consts = ref ([] : string list)
     fun add ns id = acc := (ns_idx ns, id) :: (!acc)
     fun one (Id ns)          = add ns (vi ())
       | one Val              = ignore (vi ())
-      | one Str              = ignore (vs ())
       | one (IdList ns)      = List.app (add ns) (#readVarintList sr ())
       | one (IdPairs(n1,n2)) = List.app (fn (a,b) => (add n1 a; add n2 b))
                                  (#readVarintPairs sr ())
       | one (StrIdPairs ns)  = List.app (fn (_,id) => add ns id)
                                  (#readStringVarintPairs sr ())
-      | one StrList          = ignore (#readStringList sr ())
-  in List.app one descs; List.rev (!acc) end
+      | one NewTypeName      = new_types := vs () :: !new_types
+      | one NewConstName     = new_consts := vs () :: !new_consts
+      | one NewConstNames    = new_consts := !new_consts @ #readStringList sr ()
+  in List.app one descs;
+     (List.rev (!acc),
+      {new_types = List.rev (!new_types),
+       new_consts = List.rev (!new_consts)})
+  end
 
 (* Per-file state *)
 type file_state = {
@@ -238,56 +248,76 @@ type save_entry = {file_idx: int, cmd_idx: int, th_id: int}
 fun pass1_read_file (descs_ref: (int * opcode_desc) list ref)
                     (file_idx: int) (file: string)
                     (save_table: (string, save_entry) Redblackmap.dict ref)
+                    (const_introducer: (string, int * int) Redblackmap.dict ref)
+                    (type_introducer: (string, int * int) Redblackmap.dict ref)
     : file_state =
   let
     val fs = new_file_state file_idx
-    fun cmd p c k o' = ignore (add_cmd fs {produced=p, consumed=c,
-                                           kind=k, opcode=o'})
+    fun cmd p c k o' rn = ignore (add_cmd fs {produced=p, consumed=c,
+                                              kind=k, opcode=o',
+                                              ref_name=rn})
+    fun add_const_introducer name ci =
+      const_introducer :=
+        Redblackmap.insert(!const_introducer, name, (file_idx, ci))
+    fun add_type_introducer name ci =
+      type_introducer :=
+        Redblackmap.insert(!type_introducer, name, (file_idx, ci))
     val fh : PFTReader.format_handler = {
       tyvar = fn (id, _) =>
-        cmd [(NS_TY,id)] [] CmdNormal 0x01,
-      tyop = fn (id, _, args) =>
-        cmd [(NS_TY,id)] (map (fn a => (NS_TY,a)) args) CmdNormal 0x02,
+        cmd [(NS_TY,id)] [] CmdNormal 0x01 NONE,
+      tyop = fn (id, name, args) =>
+        cmd [(NS_TY,id)] (map (fn a => (NS_TY,a)) args) CmdNormal 0x02
+            (SOME name),
       var = fn (id, _, ty) =>
-        cmd [(NS_TM,id)] [(NS_TY,ty)] CmdNormal 0x03,
-      const = fn (id, _, ty) =>
-        cmd [(NS_TM,id)] [(NS_TY,ty)] CmdNormal 0x04,
+        cmd [(NS_TM,id)] [(NS_TY,ty)] CmdNormal 0x03 NONE,
+      const = fn (id, name, ty) =>
+        cmd [(NS_TM,id)] [(NS_TY,ty)] CmdNormal 0x04 (SOME name),
       comb = fn (id, a, b) =>
-        cmd [(NS_TM,id)] [(NS_TM,a),(NS_TM,b)] CmdNormal 0x05,
+        cmd [(NS_TM,id)] [(NS_TM,a),(NS_TM,b)] CmdNormal 0x05 NONE,
       abs = fn (id, a, b) =>
-        cmd [(NS_TM,id)] [(NS_TM,a),(NS_TM,b)] CmdNormal 0x06,
-      new_const = fn (_, ty) =>
-        cmd [] [(NS_TY,ty)] CmdNewConst 0x07,
-      new_type = fn _ =>
-        cmd [] [] CmdNewType 0x08,
+        cmd [(NS_TM,id)] [(NS_TM,a),(NS_TM,b)] CmdNormal 0x06 NONE,
+      new_const = fn (name, ty) => let
+        val ci = add_cmd fs {produced=[], consumed=[(NS_TY,ty)],
+                             kind=CmdNewConst, opcode=0x07, ref_name=NONE}
+        in add_const_introducer name ci end,
+      new_type = fn (name, _) => let
+        val ci = add_cmd fs {produced=[], consumed=[],
+                             kind=CmdNewType, opcode=0x08, ref_name=NONE}
+        in add_type_introducer name ci end,
       axiom = fn (id, tm, _) =>
-        cmd [(NS_TH,id)] [(NS_TM,tm)] CmdAxiom 0x09,
+        cmd [(NS_TH,id)] [(NS_TM,tm)] CmdAxiom 0x09 NONE,
       save = fn (name, th) =>
         let val ci = add_cmd fs {produced=[], consumed=[(NS_TH,th)],
-                                 kind=CmdSave name, opcode=0x50}
+                                 kind=CmdSave name, opcode=0x50,
+                                 ref_name=NONE}
         in save_table :=
              Redblackmap.insert(!save_table, name,
                {file_idx=file_idx, cmd_idx=ci, th_id=th})
         end,
       load = fn (id, name) =>
-        cmd [(NS_TH,id)] [] (CmdLoad name) 0x51,
+        cmd [(NS_TH,id)] [] (CmdLoad name) 0x51 NONE,
       del = fn _ =>
-        cmd [] [] CmdDel 0xE0,
+        cmd [] [] CmdDel 0xE0 NONE,
       del_range = fn _ =>
-        cmd [] [] CmdDel 0xF0
+        cmd [] [] CmdDel 0xF0 NONE
     }
     val rh : PFTReader.ruleset_handler = fn opc => fn sr =>
       let
         val desc = lookup_desc (!descs_ref) opc
         val id = #readVarint sr ()
-        val consumed = collect_consumed sr (#args desc)
+        val (consumed, {new_types, new_consts}) =
+          collect_consumed sr (#args desc)
         val produced =
           #1 (foldl (fn (ns,(acc,n)) =>
                 ((ns_idx ns, id+n)::acc, n+1))
               ([],0) (#results desc))
         val kind = case #def desc of
                      SOME (dk, _) => CmdDef dk | NONE => CmdNormal
-      in cmd (rev produced) consumed kind opc end
+        val ci = add_cmd fs {produced=rev produced, consumed=consumed,
+                             kind=kind, opcode=opc, ref_name=NONE}
+        val () = List.app (fn n => add_type_introducer n ci) new_types
+        val () = List.app (fn n => add_const_introducer n ci) new_consts
+      in () end
     val _ = PFTReader.read {file=file, binary=true,
                             format_handler=fh, ruleset_handler=rh}
   in fs end
@@ -323,6 +353,8 @@ fun resolve_targets (targets: target list)
 fun compute_reachable
       (file_states: file_state vector)
       (save_table: (string, save_entry) Redblackmap.dict)
+      (const_introducer: (string, int * int) Redblackmap.dict)
+      (type_introducer: (string, int * int) Redblackmap.dict)
       (target_saves: (string * bool) list)
     : (int * int) list =
   let
@@ -356,9 +388,11 @@ fun compute_reachable
             val fs = Vector.sub(file_states, fi)
             val meta = DArray.sub(#cmds fs, ci)
         in
+          (* Follow ID-level dependencies *)
           List.app (fn (ns, id) =>
             enqueue (fi, find_producer fs (ns, id)))
             (#consumed meta);
+          (* Follow cross-file LOAD dependencies *)
           (case #kind meta of
              CmdLoad name =>
                (case Redblackmap.peek(save_table, name) of
@@ -369,6 +403,17 @@ fun compute_reachable
                      enqueue (sfi, find_producer sfs (NS_TH, sth))
                   end)
            | _ => ());
+          (* Follow name-level dependencies: CONST/TYOP → introducer *)
+          (case #ref_name meta of
+             SOME name =>
+               let val table = if #opcode meta = 0x04
+                               then const_introducer
+                               else type_introducer
+               in case Redblackmap.peek(table, name) of
+                    SOME (ifi, ici) => enqueue (ifi, ici)
+                  | NONE => () (* primitive — no introducer *)
+               end
+           | NONE => ());
           process ()
         end
     val () = process ()
@@ -386,6 +431,8 @@ fun compute_reachable
 
 fun pass2_emit (file_states: file_state vector)
                (save_table: (string, save_entry) Redblackmap.dict)
+               (const_introducer: (string, int * int) Redblackmap.dict)
+               (type_introducer: (string, int * int) Redblackmap.dict)
                (inputs: string list)
                (target_saves: (string * bool) list)
                (output: string)
@@ -393,7 +440,8 @@ fun pass2_emit (file_states: file_state vector)
                (descs: (int * opcode_desc) list) =
   let
     val n_files = Vector.length file_states
-    val incl_list = compute_reachable file_states save_table target_saves
+    val incl_list = compute_reachable file_states save_table
+                      const_introducer type_introducer target_saves
 
     (* Included set as bool arrays for O(1) lookup *)
     val included = Vector.tabulate(n_files, fn fi =>
@@ -790,7 +838,7 @@ fun pass2_emit (file_states: file_state vector)
                end
              else
                let val _ = #readVarint sr ()
-               in ignore (collect_consumed sr (#args (lookup_desc descs opc)))
+               in ignore (#1 (collect_consumed sr (#args (lookup_desc descs opc))))
                end
           end
 
@@ -857,17 +905,22 @@ fun merge {inputs, targets, output, binary} =
     val descs_ref = ref (if the_ruleset = "candle" then candle_descs
                          else hol4_descs)
     val save_table = ref (Redblackmap.mkDict String.compare)
+    val const_introducer = ref (Redblackmap.mkDict String.compare)
+    val type_introducer = ref (Redblackmap.mkDict String.compare)
 
     (* Pass 1: read all files, build dependency graph *)
     val file_states = Vector.fromList
       (List.tabulate(length inputs, fn fi =>
-         pass1_read_file descs_ref fi (List.nth(inputs, fi)) save_table))
+         pass1_read_file descs_ref fi (List.nth(inputs, fi)) save_table
+           const_introducer type_introducer))
 
     (* Pass 1.5: resolve targets *)
     val target_saves = resolve_targets targets (!save_table)
 
     (* Pass 2: re-read and emit *)
-    val () = pass2_emit file_states (!save_table) inputs target_saves
+    val () = pass2_emit file_states (!save_table)
+               (!const_introducer) (!type_introducer)
+               inputs target_saves
                output the_version the_ruleset (!descs_ref)
   in () end
 
