@@ -23,91 +23,77 @@ datatype arg_desc =
   | NewConstName                (* string that introduces a constant *)
   | NewConstNames               (* string list that introduces constants *)
 
-datatype def_kind = DefTypes | DefConsts
-
 type opcode_desc = {
   results : string list,        (* namespaces of produced IDs *)
-  args : arg_desc list,         (* argument layout after the id *)
-  def : (def_kind * int) option (* SOME (kind, arg_index) for defs *)
+  args : arg_desc list          (* argument layout after the id *)
 }
 
 val hol4_descs : (int * opcode_desc) list = [
-  (0x10, {results=["th"], args=[Id "tm"],                    def=NONE}),
-  (0x11, {results=["th"], args=[Id "tm", Id "tm"],           def=NONE}),
-  (0x12, {results=["th"], args=[Id "tm"],                    def=NONE}),
-  (0x13, {results=["th"], args=[Id "tm"],                    def=NONE}),
-  (0x14, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
-  (0x15, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
-  (0x16, {results=["th"], args=[Id "th"],                    def=NONE}),
-  (0x17, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
-  (0x18, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
-  (0x19, {results=["th"], args=[Id "th"],                    def=NONE}),
-  (0x1A, {results=["th"], args=[Id "th"],                    def=NONE}),
-  (0x1B, {results=["th"], args=[Id "tm", Id "th"],           def=NONE}),
-  (0x1C, {results=["th"], args=[Id "th", Id "tm"],           def=NONE}),
-  (0x1D, {results=["th"], args=[Id "tm", Id "th"],           def=NONE}),
-  (0x1E, {results=["th"], args=[Id "th", Id "th", Id "th"],  def=NONE}),
-  (0x1F, {results=["th"], args=[Id "th"],                    def=NONE}),
-  (0x20, {results=["th"], args=[Id "th"],                    def=NONE}),
-  (0x21, {results=["th"], args=[Id "tm", Id "th"],           def=NONE}),
-  (0x22, {results=["th"], args=[Id "tm", Id "tm", Id "th"],  def=NONE}),
-  (0x23, {results=["th"], args=[Id "tm", Id "th", Id "th"],  def=NONE}),
-  (0x24, {results=["th"], args=[Id "tm", Id "th"],           def=NONE}),
-  (0x25, {results=["th"], args=[Id "tm", Id "th"],           def=NONE}),
-  (0x26, {results=["th"], args=[Id "tm", Id "th"],           def=NONE}),
-  (0x27, {results=["th"], args=[Id "th", IdList "tm"],       def=NONE}),
-  (0x28, {results=["th"], args=[Id "th", IdList "tm"],       def=NONE}),
-  (0x29, {results=["th"], args=[Id "th", Id "tm", IdList "tm"],
-                                                             def=NONE}),
-  (0x30, {results=["th"], args=[Id "tm", Id "th"],           def=NONE}),
-  (0x31, {results=["th"], args=[Id "tm", Id "th"],           def=NONE}),
-  (0x32, {results=["th"], args=[Id "th", Id "tm"],           def=NONE}),
-  (0x33, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
-  (0x34, {results=["th"], args=[Id "th"],                    def=NONE}),
-  (0x35, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
-  (0x36, {results=["th"], args=[Id "th", Id "th", Id "th"],  def=NONE}),
-  (0x37, {results=["th"], args=[Id "th"],                    def=NONE}),
-  (0x38, {results=["th"], args=[Id "th"],                    def=NONE}),
-  (0x39, {results=["th"], args=[Id "th", IdPairs("tm","tm")],def=NONE}),
-  (0x3A, {results=["th"], args=[Id "th", IdPairs("ty","ty")],def=NONE}),
-  (0x3B, {results=["th"], args=[Id "tm", Id "th", IdPairs("tm","th")],
-                                                             def=NONE}),
-  (0x3C, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
-  (0x40, {results=["th"], args=[Id "th", NewTypeName],
-                                              def=SOME(DefTypes, 1)}),
-  (0x41, {results=["th"], args=[Id "th", NewConstNames],
-                                              def=SOME(DefConsts, 1)}),
-  (0x42, {results=["th"], args=[Id "th", NewConstNames],
-                                              def=SOME(DefConsts, 1)}),
+  (0x10, {results=["th"], args=[Id "tm"]}),
+  (0x11, {results=["th"], args=[Id "tm", Id "tm"]}),
+  (0x12, {results=["th"], args=[Id "tm"]}),
+  (0x13, {results=["th"], args=[Id "tm"]}),
+  (0x14, {results=["th"], args=[Id "th", Id "th"]}),
+  (0x15, {results=["th"], args=[Id "th", Id "th"]}),
+  (0x16, {results=["th"], args=[Id "th"]}),
+  (0x17, {results=["th"], args=[Id "th", Id "th"]}),
+  (0x18, {results=["th"], args=[Id "th", Id "th"]}),
+  (0x19, {results=["th"], args=[Id "th"]}),
+  (0x1A, {results=["th"], args=[Id "th"]}),
+  (0x1B, {results=["th"], args=[Id "tm", Id "th"]}),
+  (0x1C, {results=["th"], args=[Id "th", Id "tm"]}),
+  (0x1D, {results=["th"], args=[Id "tm", Id "th"]}),
+  (0x1E, {results=["th"], args=[Id "th", Id "th", Id "th"]}),
+  (0x1F, {results=["th"], args=[Id "th"]}),
+  (0x20, {results=["th"], args=[Id "th"]}),
+  (0x21, {results=["th"], args=[Id "tm", Id "th"]}),
+  (0x22, {results=["th"], args=[Id "tm", Id "tm", Id "th"]}),
+  (0x23, {results=["th"], args=[Id "tm", Id "th", Id "th"]}),
+  (0x24, {results=["th"], args=[Id "tm", Id "th"]}),
+  (0x25, {results=["th"], args=[Id "tm", Id "th"]}),
+  (0x26, {results=["th"], args=[Id "tm", Id "th"]}),
+  (0x27, {results=["th"], args=[Id "th", IdList "tm"]}),
+  (0x28, {results=["th"], args=[Id "th", IdList "tm"]}),
+  (0x29, {results=["th"], args=[Id "th", Id "tm", IdList "tm"]}),
+  (0x30, {results=["th"], args=[Id "tm", Id "th"]}),
+  (0x31, {results=["th"], args=[Id "tm", Id "th"]}),
+  (0x32, {results=["th"], args=[Id "th", Id "tm"]}),
+  (0x33, {results=["th"], args=[Id "th", Id "th"]}),
+  (0x34, {results=["th"], args=[Id "th"]}),
+  (0x35, {results=["th"], args=[Id "th", Id "th"]}),
+  (0x36, {results=["th"], args=[Id "th", Id "th", Id "th"]}),
+  (0x37, {results=["th"], args=[Id "th"]}),
+  (0x38, {results=["th"], args=[Id "th"]}),
+  (0x39, {results=["th"], args=[Id "th", IdPairs("tm","tm")]}),
+  (0x3A, {results=["th"], args=[Id "th", IdPairs("ty","ty")]}),
+  (0x3B, {results=["th"], args=[Id "tm", Id "th", IdPairs("tm","th")]}),
+  (0x3C, {results=["th"], args=[Id "th", Id "th"]}),
+  (0x40, {results=["th"], args=[Id "th", NewTypeName]}),
+  (0x41, {results=["th"], args=[Id "th", NewConstNames]}),
+  (0x42, {results=["th"], args=[Id "th", NewConstNames]}),
   (0x43, {results=["ci"], args=[Id "ty", Id "ty",
-                                StrIdPairs "th", StrIdPairs "tm"],
-                                                             def=NONE}),
-  (0x44, {results=["th"], args=[Id "ci", Id "tm", IdList "th"],
-                                                             def=NONE})
+                                StrIdPairs "th", StrIdPairs "tm"]}),
+  (0x44, {results=["th"], args=[Id "ci", Id "tm", IdList "th"]})
 ]
 
 val candle_descs : (int * opcode_desc) list = [
-  (0x10, {results=["th"], args=[Id "tm"],                    def=NONE}),
-  (0x11, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
-  (0x12, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
-  (0x13, {results=["th"], args=[Id "tm", Id "th"],           def=NONE}),
-  (0x14, {results=["th"], args=[Id "tm"],                    def=NONE}),
-  (0x15, {results=["th"], args=[Id "tm"],                    def=NONE}),
-  (0x16, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
-  (0x17, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
-  (0x18, {results=["th"], args=[Id "th", IdPairs("tm","tm")],def=NONE}),
-  (0x19, {results=["th"], args=[Id "th", IdPairs("ty","ty")],def=NONE}),
-  (0x20, {results=["th"], args=[Id "th"],                    def=NONE}),
-  (0x21, {results=["th"], args=[Id "th", Id "th"],           def=NONE}),
-  (0x22, {results=["th"], args=[Id "th", IdList "tm", Id "tm"],
-                                                             def=NONE}),
-  (0x30, {results=["th"], args=[Id "th", NewConstNames],
-                                              def=SOME(DefConsts, 1)}),
-  (0x31, {results=["th","th"], args=[Id "th", NewTypeName, NewConstName, NewConstName],
-                                              def=SOME(DefTypes, 1)}),
-  (0x40, {results=["ci"], args=[IdList "th"],                def=NONE}),
-  (0x41, {results=["th"], args=[Id "ci", Id "tm", IdList "th"],
-                                                             def=NONE})
+  (0x10, {results=["th"], args=[Id "tm"]}),
+  (0x11, {results=["th"], args=[Id "th", Id "th"]}),
+  (0x12, {results=["th"], args=[Id "th", Id "th"]}),
+  (0x13, {results=["th"], args=[Id "tm", Id "th"]}),
+  (0x14, {results=["th"], args=[Id "tm"]}),
+  (0x15, {results=["th"], args=[Id "tm"]}),
+  (0x16, {results=["th"], args=[Id "th", Id "th"]}),
+  (0x17, {results=["th"], args=[Id "th", Id "th"]}),
+  (0x18, {results=["th"], args=[Id "th", IdPairs("tm","tm")]}),
+  (0x19, {results=["th"], args=[Id "th", IdPairs("ty","ty")]}),
+  (0x20, {results=["th"], args=[Id "th"]}),
+  (0x21, {results=["th"], args=[Id "th", Id "th"]}),
+  (0x22, {results=["th"], args=[Id "th", IdList "tm", Id "tm"]}),
+  (0x30, {results=["th"], args=[Id "th", NewConstNames]}),
+  (0x31, {results=["th","th"], args=[Id "th", NewTypeName, NewConstName, NewConstName]}),
+  (0x40, {results=["ci"], args=[IdList "th"]}),
+  (0x41, {results=["th"], args=[Id "ci", Id "tm", IdList "th"]})
 ]
 
 fun lookup_desc descs opc =
@@ -167,7 +153,7 @@ datatype cmd_kind =
   | CmdSave of string
   | CmdLoad of string
   | CmdDel
-  | CmdDef of def_kind
+  | CmdDef
   | CmdNewConst
   | CmdNewType
   | CmdAxiom
@@ -311,8 +297,11 @@ fun pass1_read_file (descs_ref: (int * opcode_desc) list ref)
           #1 (foldl (fn (ns,(acc,n)) =>
                 ((ns_idx ns, id+n)::acc, n+1))
               ([],0) (#results desc))
-        val kind = case #def desc of
-                     SOME (dk, _) => CmdDef dk | NONE => CmdNormal
+        val is_def = List.exists (fn NewTypeName => true
+                                    | NewConstName => true
+                                    | NewConstNames => true
+                                    | _ => false) (#args desc)
+        val kind = if is_def then CmdDef else CmdNormal
         val ci = add_cmd fs {produced=rev produced, consumed=consumed,
                              kind=kind, opcode=opc, ref_name=NONE}
         val () = List.app (fn n => add_type_introducer n ci) new_types
@@ -536,7 +525,7 @@ fun pass2_emit (file_states: file_state vector)
            in DArray.appi (fn (ci, meta) =>
                 if Array.sub(vis, ci) then
                   case #kind meta of
-                    CmdDef _ =>
+                    CmdDef =>
                       List.app (fn (ns, id) =>
                         if ns = NS_TH then
                           let val nid = get_rename fi ns id
