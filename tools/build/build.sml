@@ -26,7 +26,7 @@ val _ = startup_check()
 
 val cline_record = process_cline ()
 val {cmdline,build_theory_graph,selftest_level,keepgoing,...} = cline_record
-val {extra={SRCDIRS},jobcount,relocbuild,debug,...} = cline_record
+val {extra={SRCDIRS},jobcount,relocbuild,debug,thmsrc,...} = cline_record
 
 
 open Systeml;
@@ -40,7 +40,10 @@ in
                                     NONE => []
                                   | SOME j => ["-j"^Int.toString j]) @
                                (if debug then ["--dbg"] else []) @
-                               (if keepgoing then ["-k"] else []))
+                               (if keepgoing then ["-k"] else []) @
+                               (case thmsrc of
+                                    NONE => []
+                                  | SOME s => ["--thmsrc="^s]))
                      (fn _ => "")
                      selftest_level
 end

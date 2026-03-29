@@ -27,6 +27,7 @@ src/tracing
 [mosml](trknl)src/tracing/no
 (otknl)src/tracing/no
 src/postkernel
+src/postkernel/prooftrace
 # these three directories are required to even run hol --bare
 src/parse
 !tools/Holmake/tests/badincludes

@@ -235,6 +235,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                    (case OS.Process.getEnv Systeml.build_after_reloc_envvar of
                         SOME "1" => true
                       | _ => false)
+  val thmsrc = #thmsrc (#core optv)
   val interactive_flag = #interactive (#core optv)
   val quiet_flag = #quiet (#core optv)
   val cmdl_HOLSTATE = #holstate optv
@@ -326,6 +327,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             (case #multithread optv of
                  NONE => []
                | SOME i => ["--mt=" ^ Int.toString i]) @
+            (case thmsrc of
+                 NONE => []
+               | SOME s => ["--thmsrc=" ^ s]) @
             (case #holheap extra of NONE => "--poly"
                                   | SOME d => "--holstate="^tgt_toString d) ::
             extra_poly_cline() @
