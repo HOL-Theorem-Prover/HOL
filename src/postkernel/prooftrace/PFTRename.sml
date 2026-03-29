@@ -116,7 +116,9 @@ fun has_name (terms: term_info array)
              (stripped_name: string)
              (id: int) : bool =
   case Array.sub(terms, id) of
-    TVar name => name = stripped_name orelse BoolArray.sub(renamed, id)
+    TVar name => name = stripped_name orelse
+                 (BoolArray.sub(renamed, id) andalso
+                  strip_binder_name name = stripped_name)
   | TConst => false
   | TComb (f, x) =>
       has_name terms renamed stripped_name f orelse
