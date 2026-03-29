@@ -24,7 +24,7 @@ fun temp_encoded_update sdata thyname {data,ty} =
     }
 
 
-fun load_thydata (r as {thyname,path,hash}) =
+fun load_thydata_from_dat (r as {thyname,path,hash}) =
     let
       open HOLsexp
       val rawthy as {parents,tables,exports,name=stored_name,...} =
@@ -68,5 +68,13 @@ fun load_thydata (r as {thyname,path,hash}) =
   end handle Interrupt => raise Interrupt
            | e => raise TheoryReader ("Exception raised: " ^
                                       General.exnMessage e)
+
+(* Hook for alternative theorem sources. Default is to read from .dat files. *)
+val load_thydata_fn :
+    ({thyname:string,path:string,hash:string} ->
+     (Thm.thm * DB_dtype.thminfo) Symtab.table) ref
+    = ref load_thydata_from_dat
+
+fun load_thydata args = (!load_thydata_fn) args
 
 end;  (* TheoryReader *)
