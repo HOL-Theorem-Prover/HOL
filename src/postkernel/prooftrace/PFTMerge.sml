@@ -865,21 +865,6 @@ fun pass2_emit (file_states: file_state vector)
 (* Main entry point                                                          *)
 (* ========================================================================= *)
 
-fun read_header file =
-  let val inp = BinIO.openIn file
-      val _ = BinIO.inputN(inp, 4)  (* "PFT\0" *)
-      fun readVarint () =
-        let fun lp acc s =
-              let val b = Word8.toInt (valOf (BinIO.input1 inp))
-              in if b < 128 then acc + b * s
-                 else lp (acc + (b - 128) * s) (s * 128) end
-        in lp 0 1 end
-      fun readString () =
-        Byte.bytesToString (BinIO.inputN(inp, readVarint ()))
-      val v = readVarint ()
-      val r = readString ()
-  in BinIO.closeIn inp; (v, r) end
-
 fun merge {inputs, targets, output, binary} =
   let
     val () = if not binary
@@ -889,7 +874,8 @@ fun merge {inputs, targets, output, binary} =
              then raise Fail "PFTMerge: no input files"
              else ()
 
-    val (the_version, the_ruleset) = read_header (hd inputs)
+    val {version = the_version, ruleset = the_ruleset} =
+      PFTReader.read_header {file = hd inputs, binary = true}
     val descs_ref = ref (if the_ruleset = "candle" then candle_descs
                          else hol4_descs)
     val save_table = ref (Redblackmap.mkDict String.compare)

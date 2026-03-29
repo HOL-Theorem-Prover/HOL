@@ -151,6 +151,19 @@ fun read_limits {file, binary} =
   in {n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci} end
   else read_limits_jsonl file
 
+fun read_header {file, binary} =
+  if not binary
+  then raise Fail "PFTReader: read_header not supported for JSONL"
+  else let
+    val r = open_bin_reader file
+    val _ = #readBytes r 4   (* magic "PFT\0" *)
+    val vi = mk_readVarint r
+    val vs = mk_readString r
+    val version = vi ()
+    val ruleset = vs ()
+    val () = #close r ()
+  in {version = version, ruleset = ruleset} end
+
 (* ========================================================================= *)
 (* Binary command reader                                                     *)
 (* ========================================================================= *)
