@@ -448,6 +448,7 @@ fun main() = let
                                  General.exnMessage e ^
                                  "\n(is src/postkernel/prooftrace built?)")
               )
+            | SOME "dat" => ()  (* explicit dat is same as default *)
             | SOME s => die ("Unknown --thmsrc value: " ^ s)
             | NONE => ()   (* dat is the default, no action needed *)
   (* Helper to load preludes for REPL mode.
