@@ -1,11 +1,5 @@
 $(SML_LIB)/basis/basis.mlb
-../../tools-poly/poly/polytools-basic.mlb
-$(SML_LIB)/basis/mlton.mlb
-Systeml.sig
-hfs/holpathdb.sig
-hfs/holpathdb.sml
-mlton/PolyML.sml
-../../tools-poly/Holmake/Systeml.sml
+holsysteml.mlb
 hfs/HOLFS_dtype.sml
 hfs/HFS_NameMunge.sig
 poly/HFS_NameMunge.sml
