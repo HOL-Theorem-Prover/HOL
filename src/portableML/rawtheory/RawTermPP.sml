@@ -318,11 +318,12 @@ fun decode_numeral tm =
 
 
 (* Pretty-print with special handling for common patterns *)
-fun pp_term tm =
+fun pp_term unquals tm =
   let
     fun atom_name_str (Var {name, ...}) = name
       | atom_name_str (Const {name, thy, ...}) =
-          if thy = "bool" orelse thy = "min" then name else thy ^ "." ^ name
+          if List.exists (fn t => t = thy) unquals
+          then name else thy ^ "." ^ name
       | atom_name_str _ = "??"
 
     fun atom_name t = add_string (atom_name_str t)
