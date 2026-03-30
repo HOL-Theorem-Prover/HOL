@@ -503,17 +503,35 @@ fun install_const(s,ty,thy) = add_termCT {name=s, htype=ty, theory=thy}
     added; this is handled by the functions scrub and scrubCT below.
    ---------------------------------------------------------------------- *)
 
+(* Registry of axioms from replayed theories. When theories are loaded via
+   proof trace replay (--thmsrc=tr), axiom theorems retain their nonces in
+   tags (unlike disk_thm which strips them). This registry allows
+   uptodate_axioms to find those axioms even though they're not in theCT(). *)
+val replayed_axioms : (string Nonce.t * term) list ref = ref []
+
+fun register_replayed_axiom th =
+    case Tag.axioms_of (Thm.tag th) of
+        [nonce] =>
+          if not (HOLset.isEmpty (Thm.hypset th))
+          then raise ERR "register_replayed_axiom" "theorem has hypotheses"
+          else if Lib.mem nonce (map #1 (!replayed_axioms))
+          then raise ERR "register_replayed_axiom" "nonce already registered"
+          else replayed_axioms := (nonce, Thm.concl th) :: !replayed_axioms
+      | [] => raise ERR "register_replayed_axiom" "no axiom nonce in tag"
+      | _ => raise ERR "register_replayed_axiom" "multiple axiom nonces in tag"
+
 fun uptodate_axioms [] = true
   | uptodate_axioms rlist =
     let
       fun get_axtag th = hd (Tag.axioms_of (tag th))
       val axs = map (fn (_,(th,_)) => (get_axtag th,concl th))
                     (thy_axioms(theCT()))
+      val all_axs = axs @ !replayed_axioms
     in
       (* tempting to call uptodate_thm here, but this would put us into a loop
          because axioms have themselves as tags, also unnecessary because
          axioms never have hypotheses (check type of new_axiom) *)
-      Lib.all (uptodate_term o Lib.C Lib.assoc axs) rlist
+      Lib.all (uptodate_term o Lib.C Lib.assoc all_axs) rlist
     end handle HOL_ERR _ => false
 
 fun uptodate_thm thm =

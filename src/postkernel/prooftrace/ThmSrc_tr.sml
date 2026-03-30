@@ -57,6 +57,15 @@ fun load_thydata {thyname, path, hash} =
                 end)
             raw_thms
 
+      (* Register replayed axioms so that uptodate_axioms can find them.
+         Axiom nonces survive in replayed theorem tags (unlike disk_thm
+         which strips them), so they need to be in the registry for
+         theorems derived from them to pass uptodate checks. *)
+      val _ = List.app (fn (_, th, {class,...}: thminfo) =>
+                  if class = Axm
+                  then Theory.register_replayed_axiom th
+                  else ()) named_thms
+
       val thmdict =
           List.foldl (fn ((n,th,i), D) => Symtab.update (n, (th,i)) D)
                      Symtab.empty
