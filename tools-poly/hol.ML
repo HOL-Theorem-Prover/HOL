@@ -439,8 +439,11 @@ fun main() = let
   val _ = diag ("holpathdb extensions: "^
                 String.concatWith ", " (map print_ext exts))
   val _ = List.app holpathdb.extend_db exts
-  (* Initialize theorem source if --thmsrc was specified *)
-  val _ = case #thmsrc options of
+  (* Initialize theorem source if --thmsrc was specified (via flag or env var) *)
+  val thmsrc = case #thmsrc options of
+                   SOME s => SOME s
+                 | NONE => OS.Process.getEnv "HOL_THMSRC"
+  val _ = case thmsrc of
               SOME "tr" => (
                 diag "Loading ThmSrc_tr for proof trace replay";
                 Meta.load "ThmSrc_tr"
