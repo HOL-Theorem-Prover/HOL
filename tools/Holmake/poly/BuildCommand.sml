@@ -327,9 +327,6 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             (case #multithread optv of
                  NONE => []
                | SOME i => ["--mt=" ^ Int.toString i]) @
-            (case thmsrc of
-                 NONE => []
-               | SOME s => ["--thmsrc=" ^ s]) @
             (case #holheap extra of NONE => "--poly"
                                   | SOME d => "--holstate="^tgt_toString d) ::
             extra_poly_cline() @
@@ -478,9 +475,12 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
 
 
   fun system s =
-    Systeml.system_ps
-      (if relocbuild then Systeml.build_after_reloc_envvar ^ "=1 " ^ s
-       else s)
+    let val pfx = (if relocbuild then Systeml.build_after_reloc_envvar ^ "=1 "
+                   else "") ^
+                  (case thmsrc of SOME v => "HOL_THMSRC=" ^ v ^ " "
+                                | NONE => "")
+    in Systeml.system_ps (pfx ^ s)
+    end
 
   val build_graph =
       if jobs = 1 then
@@ -498,6 +498,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         (fn g =>
             multibuild.graphbuild { build_command = build_command,
                                     relocbuild = relocbuild,
+                                    thmsrc = thmsrc,
                                     mosml_build_command = mosml_build_command,
                                     warn = warn, tgtfatal = tgtfatal,
                                     keep_going = keep_going,

@@ -59,7 +59,7 @@ fun graphbuild optinfo g =
           mosml_build_command : GraphExtra.t mosml_build_command,
           warn, tgtfatal, diag,
           keep_going, quiet, hmenv, jobs, info, time_limit, maxheap,
-          relocbuild } = optinfo
+          relocbuild, thmsrc } = optinfo
     val _ = diag "Starting graphbuild"
     val dirmap = graph_dirinfo g
     fun dropthySuffix s =
@@ -133,6 +133,7 @@ fun graphbuild optinfo g =
 
     val env =
         (if relocbuild then [Systeml.build_after_reloc_envvar^"=1"] else []) @
+        (case thmsrc of SOME s => ["HOL_THMSRC="^s] | NONE => []) @
         Posix.ProcEnv.environ()
     fun cline_to_command (s, args) = {executable = s, nm_args = args, env = env}
     fun shell_command s =
