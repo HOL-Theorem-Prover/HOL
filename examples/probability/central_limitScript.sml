@@ -6361,8 +6361,6 @@ Theorem central_limit_theorem :
       CLT p X N
 Proof
     RW_TAC std_ss [CLT_def]
- >> MP_TAC (Q.SPECL [‘p’, ‘real o N’] integrable_std_normal_quartic)
- >> DISCH_TAC >> fs []
  >> Q.ABBREV_TAC ‘s = λn. sqrt (second_moments p X n)’ >> fs []
  >> Q.ABBREV_TAC ‘b = λn. absolute_third_moments p X n’ >> fs []
  >> Q.ABBREV_TAC ‘R = λn x. ∑ (λi. X i x) (count (SUC n)) / s (SUC n)’
@@ -6881,7 +6879,7 @@ QED
 (* NOTE: “!i. variance p (X i) < PosInf” can be derived from "finite third moments",
    i.e. “!n. integrable p (\x. (abs (X n x)) pow 3)”.
 
-   This version of CLT was originally from [7].
+   This version of CLT was originally published in [7].
  *)
 Theorem CLT_Lyapunov :
   !p X N. prob_space p /\ ext_normal_rv N p 0 1 /\
