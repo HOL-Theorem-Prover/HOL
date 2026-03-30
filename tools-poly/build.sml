@@ -25,7 +25,7 @@ datatype phase = Initial | Bare | Full
 val cline_record = process_cline ()
 val {cmdline,build_theory_graph,selftest_level,...} = cline_record
 val {debug,jobcount,relocbuild,extra={SRCDIRS,...},...} = cline_record
-val {multithread,keepgoing,timelimit,...} = cline_record
+val {multithread,keepgoing,timelimit,thmsrc,...} = cline_record
 
 open Systeml;
 
@@ -77,6 +77,9 @@ in
               (case timelimit of
                    NONE => []
                  | SOME d => ["--time_limit="^Int.toString d]) @
+              (case thmsrc of
+                   NONE => []
+                 | SOME s => ["--thmsrc="^s]) @
               phase_extras())
     analysis selftest_level
 end
