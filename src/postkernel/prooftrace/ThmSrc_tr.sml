@@ -22,11 +22,15 @@ fun load_thydata {thyname, path, hash} =
          (prim_new_type, prim_new_const, prim_type_definition,
          gen_prim_specification, etc.) as side effects of replaying
          the definition proofs.
-         We chDir to the .dat file's directory so that
-         ProofTraceReplay can find <thyname>Theory.tr.gz there. *)
-      val datdir = OS.Path.dir path
+         We chDir to the directory containing the .dat file so that
+         ProofTraceReplay can find <thyname>Theory.tr.gz there.
+         The path may be a HOL-level path (e.g., src/bool/boolTheory.dat)
+         that maps to .hol/objs/ via HFS_NameMunge. *)
+      val fspath = case HFS_NameMunge.HOLtoFS path of
+                       SOME {dir, ...} => dir
+                     | NONE => OS.Path.dir path
       val olddir = OS.FileSys.getDir ()
-      val _ = if datdir <> "" then OS.FileSys.chDir datdir else ()
+      val _ = if fspath <> "" then OS.FileSys.chDir fspath else ()
       val _ = ProofTraceReplay.replay thyname
               handle e => (OS.FileSys.chDir olddir; raise e)
       val _ = OS.FileSys.chDir olddir
