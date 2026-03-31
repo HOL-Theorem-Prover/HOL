@@ -36,6 +36,7 @@ useB "../Portable";
 use  "../Table.sml";
 useB "../AList";
 use  "../Graph.sml";
+useB "../../../tools/util/GetOpt";
 
 (* mlyacc cruft *)
 fun MLYuse s = use ("../../../tools/mlyacc/mlyacclib/MLY_" ^ s ^ ".sml");
