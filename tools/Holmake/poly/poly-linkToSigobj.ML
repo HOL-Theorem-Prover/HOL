@@ -1,5 +1,5 @@
 use "../Systeml.sig";
-use "../../../tools-poly/Holmake/Systeml.sml";
+use "../Systeml.sml";
 use "../hfs/HOLFS_dtype.sml";
 use "../hfs/HFS_NameMunge.sig";
 use "HFS_NameMunge.sml";

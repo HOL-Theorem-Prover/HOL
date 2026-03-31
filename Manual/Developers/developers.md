@@ -49,6 +49,11 @@ This is important because the compilation and creation of executables differs so
 Once this determination is made, actual configuration work is done in either `tools-poly/configure.sml` or `tools/configure.sml`
 (See [Sources](#sources) below for more on how these sources are organised.)
 
+One of the core outputs of configuration is the `Systeml` structure.
+This has a fixed signature, given in `tools/Holmake/Systeml.sig`, but has a `structure` that is filled with installation- and ML implementation-specific details.
+The generated file is `tools/Holmake/Systeml.sml`, which is generated from either `tools/Holmake/unix-systeml.sml` (for Moscow ML) or `tools-poly/Holmake/unix-systeml.sml` (for Poly/ML).
+There is an additional `tools/Holmake/winNT-systeml.sml` meant for Moscow ML on Windows, but this code hasn’t been tested and is probably bit-rotted.
+
 ## Building (and Rebuilding) `Holmake`
 
 Because `Holmake` is not assumed to exist when `Holmake` is built, the configuration script is responsible for assembling the constituent sources.
@@ -221,7 +226,7 @@ Unless otherwise noted, they are built by the configuration process.
 `Holmake`
 :   The user-facing tool for building HOL developments.
     Use of this tool is described in the Description manual.
-    The `tools/Holmake` directory contains almost all of the sources, but the Poly/ML-specific implementation of the `Systeml` module (on top of which everything else in the system is built) is in `tools-poly/Holmake`.
+    The `tools/Holmake` directory contains almost all of the sources, but the Poly/ML-specific template for the `Systeml` module (on top of which everything else in the system is built) is in `tools-poly/Holmake`.
     The Poly/ML specific code implementing concurrent `Holmake` is in `tools/Holmake/poly`.
     The executable is in `bin/`.
 

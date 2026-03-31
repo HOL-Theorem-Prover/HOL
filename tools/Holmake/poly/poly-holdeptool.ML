@@ -17,7 +17,7 @@ use "../hfs/HOLFileSys.sml";
 use "../deps/Holdep_tokens.sig";
 use "../deps/Holdep_tokens.sml";
 use "../Systeml.sig";
-use "../../../tools-poly/Holmake/Systeml.sml";
+use "../Systeml.sml";
 use "../../parsing/AttributeSyntax.sig";
 use "../../parsing/AttributeSyntax.sml";
 use "../../parsing/HOLSourceAST.sig";
