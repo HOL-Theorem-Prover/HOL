@@ -299,7 +299,7 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
             val tb = tailbuffer.new {
                   numlines = 50,
                   patterns = [cheat_string, oracle_string, used_cheat_string,
-                              fastcheat_string]
+                              fastcheat_string, cachehit_string]
                 }
           in
             monitor_map :=
@@ -370,7 +370,7 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
                     else if seen fastcheat_string then
                       tinfo (boldyellow, "F-CHEAT")
                     else if seen cachehit_string then
-                      tinfo (green, "OK (cache hit)")
+                      tinfo (green, "CACHED")
                     else
                       tinfo ((if seen oracle_string then boldyellow else green),
                              "OK")
