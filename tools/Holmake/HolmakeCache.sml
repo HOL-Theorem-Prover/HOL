@@ -86,7 +86,13 @@ fun generate_cachekey deps =
 val compute_deps_cachekey = generate_cachekey o compute_deps
 
 fun curl_get_to_file url dest =
-    OS.Process.isSuccess (Systeml.systeml ["curl", "-s", "-f", "-o", dest, url])
+    (* curl
+       -s <silent mode; don't show progress meter etc.>
+       -f <return nonzero status code for http errors (e.g. 404s from a cache miss)>
+       -m <timeout in seconds>
+       -o <destination file loc>
+       <url to download from> *)
+    OS.Process.isSuccess (Systeml.systeml ["curl", "-s", "-f", "-m", "5", "-o", dest, url])
 
 fun fetch base_url cachekey talk =
     let
