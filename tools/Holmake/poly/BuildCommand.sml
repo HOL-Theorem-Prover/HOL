@@ -480,7 +480,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       | BR_ClineK{cline = (_,cl), job_kont = k, ...} =>
         k warn (Systeml.systeml cl)
       | BR_CacheK{base_url, cachekey, fallback, ...} =>
-	HolmakeCache.fetch base_url cachekey orelse
+	HolmakeCache.fetch base_url cachekey info orelse
 	interpret_bres fallback 
       | BR_Failed => false
 

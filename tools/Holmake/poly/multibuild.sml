@@ -276,7 +276,7 @@ fun graphbuild optinfo g =
                                     update = update},
                                    (updall Running g, true))
                           end
-			| BR_CacheK{base_url, cachekey, other_nodes, fallback } =>
+			| BR_CacheK{base_url, cachekey, other_nodes, fallback} =>
                           let
                             val (thyc,ndi) = count_theories_needed other_nodes
                             val other_nodes =
