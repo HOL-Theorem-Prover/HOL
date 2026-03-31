@@ -120,16 +120,42 @@ Definition st_sorted_def:
                                 ∀c' t1' t2'. t2 = Branch c' t1' t2' ⇒ c < c')
 End
 
-Theorem st_get_Nothing:
+Theorem st_sorted_st_make[simp]:
+  ∀xs y. st_sorted (st_make xs y)
+Proof
+  Induct \\ rw[st_make_def, st_sorted_def]
+QED
+
+Theorem st_get_st_make:
+  ∀xs y n. st_get (st_make xs y) n = if n = xs then SOME y else NONE
+Proof
+  Induct \\ rw[st_get_def, st_make_def, st_get_nil_def,
+               stringTheory.char_lt_def, stringTheory.char_gt_def] >>
+  qmatch_goalsub_rename_tac`st_get _ ls` >>
+  Cases_on`ls` >> gvs[st_get_def, st_get_nil_def] >> rw[] >>
+  gvs[stringTheory.char_lt_def, stringTheory.char_gt_def] >>
+  qpat_x_assum`_ <> _`mp_tac \\ rw[] >>
+  irule $ iffLR stringTheory.ORD_11 >> simp[]
+QED
+
+Theorem st_get_Nothing[simp]:
   ∀xs. st_get Nothing xs = NONE
 Proof
   Cases \\ fs [st_get_def, st_get_nil_def]
 QED
 
-Theorem st_del_Nothing:
+Theorem st_del_Nothing[simp]:
   ∀xs. st_del Nothing xs = Nothing
 Proof
   Cases \\ fs [st_del_def, st_del_nil_def, st_del_cons_def]
+QED
+
+Theorem st_sorted_st_set_nil[simp]:
+  ∀t y. st_sorted t ⇒ st_sorted (st_set_nil t y)
+Proof
+  Induct \\ rw [st_set_nil_def, st_sorted_def] >>
+  qmatch_asmsub_rename_tac`st_set_nil tt _ = _` >>
+  Cases_on`tt` \\ gvs[st_set_nil_def]
 QED
 
 Theorem st_sorted_st_sets:
