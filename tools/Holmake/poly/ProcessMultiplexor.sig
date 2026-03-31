@@ -4,6 +4,7 @@ sig
   type command = {executable: string, nm_args : string list, env : string list}
   type 'a job = {tag : string, command : command,
                  update : 'a * bool * Time.time -> 'a,
+                 try_cache : (string -> unit) -> bool,
                  dir : string}
   type jobkey = Posix.ProcEnv.pid * {tag : string, dir : string}
   val jobkey_compare : jobkey * jobkey -> order

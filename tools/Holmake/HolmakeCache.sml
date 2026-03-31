@@ -110,7 +110,10 @@ fun fetch base_url cachekey talk =
                                 (fn v => { name = JSONUtil.asString (JSONUtil.lookupField v "name"),
                                            url  = JSONUtil.asString (JSONUtil.lookupField v "url") })
                                 (JSONUtil.lookupField json "files")
-		val to_dest_dir = HOLFileSys.writefn (fn s => s)
+		fun to_dest_dir s =
+		    case HFS_NameMunge.HOLtoFS s of
+		        NONE => s
+		      | SOME {fullfile, ...} => fullfile
 		val ok = List.all
 			     (fn {name, url} =>
 				 curl_get_to_file (base_url ^ url) (to_dest_dir name))

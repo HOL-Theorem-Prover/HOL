@@ -120,6 +120,7 @@ val cheat_string =      "Saved CHEAT _"
 val fastcheat_string =  "Saved FAST-CHEAT _"
 val oracle_string =   "Saved ORACLE thm _"
 val used_cheat_string = "(used CHEAT)"
+val cachehit_string = "cache hit!"
 
 fun delsml_sfx s =
   if String.isSuffix ".sml" s orelse String.isSuffix ".sig" s then
@@ -368,6 +369,8 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
                       tinfo (boldyellow, "CHEATED")
                     else if seen fastcheat_string then
                       tinfo (boldyellow, "F-CHEAT")
+                    else if seen cachehit_string then
+                      tinfo (green, "OK (cache hit)")
                     else
                       tinfo ((if seen oracle_string then boldyellow else green),
                              "OK")

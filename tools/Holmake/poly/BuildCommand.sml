@@ -360,18 +360,11 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                BuiltInCmd (BIC_BuildScript script_part, empty_incinfo))
               (* incinfos not consulted for comparison so empty value ok here *)
         end
-        val br_cline =
-            BR_ClineK { cline = (useScript, cline), job_kont = cont,
-                        other_nodes = other_nodes }
-        fun create_br_cache url =
-            BR_CacheK { base_url    = url,
-                        cachekey    = HolmakeCache.compute_deps_cachekey deps,
-                        other_nodes = other_nodes,
-                        fallback    = br_cline }
       in
-          case use_cache of
-              NONE => br_cline
-            | SOME url => create_br_cache url
+          BR_ClineK { cline = (useScript, cline), job_kont = cont,
+                      other_nodes = other_nodes,
+		      cache_url = use_cache,
+		      cachekey = HolmakeCache.compute_deps_cachekey deps}
       end
   in
     let
@@ -428,7 +421,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                   "opentheory info --article -o " ^ art ^ " " ^ raw_art])
           in
             BR_ClineK {cline = cline, job_kont = (fn _ => OS.Process.isSuccess),
-                       other_nodes = []}
+                       other_nodes = [], cache_url = NONE, cachekey = ""}
           end
     end handle CompileFailed => BR_Failed
              | FileNotFound  => BR_Failed
@@ -477,11 +470,11 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   fun interpret_bres bres =
     case bres of
         BR_OK => true
-      | BR_ClineK{cline = (_,cl), job_kont = k, ...} =>
-        k warn (Systeml.systeml cl)
-      | BR_CacheK{base_url, cachekey, fallback, ...} =>
-	HolmakeCache.fetch base_url cachekey info orelse
-	interpret_bres fallback 
+      | BR_ClineK{cline = (_,cl), job_kont = k, cache_url, cachekey, ...} =>
+        (case cache_url of
+             SOME url => HolmakeCache.fetch url cachekey info orelse
+                         k warn (Systeml.systeml cl)
+           | NONE => k warn (Systeml.systeml cl))
       | BR_Failed => false
 
 
