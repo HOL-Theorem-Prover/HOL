@@ -417,18 +417,164 @@ Proof
   \\ DEP_REWRITE_TAC [st_get_st_sets] \\ fs []
 QED
 
-Theorem st_del_st_set:
-  st_del (st_set t n x) m = if m = n then st_del t m else st_set (st_del t m) n x
+Theorem st_sorted_st_del_nil[simp]:
+  ∀t. st_sorted t ⇒ st_sorted (st_del_nil t)
 Proof
-  cheat
+  Induct \\ rw [st_del_nil_def, st_sorted_def] >>
+  Cases_on`t'` \\ gvs[]
+QED
+
+Theorem st_sorted_mk_Branch:
+  st_sorted (mk_Branch c t1 t2) ⇔
+    st_sorted t1 ∧ st_sorted t2 ∧
+    (t1 ≠ Nothing ⇒ ∀c' t1' t2'. t2 = Branch c' t1' t2' ⇒ c < c')
+Proof
+  rw [mk_Branch_def, st_sorted_def] \\ rw [] \\ eq_tac \\ rw []
+QED
+
+Theorem st_del_cons_not_Branch_Nothing:
+  ∀t x xs c rest. st_sorted t ⇒
+    st_del_cons t x xs ≠ Branch c Nothing rest
+Proof
+  Induct \\ rw [st_del_cons_def, st_sorted_def]
+  \\ gvs [mk_Branch_def, AllCaseEqs()]
+  \\ gvs[stringTheory.char_gt_def, stringTheory.char_lt_def]
+  \\ `ORD c = ORD x` by gvs[]
+  \\ gvs[stringTheory.ORD_11]
+  \\ CCONTR_TAC \\ gvs[]
+  \\ gvs[Once(oneline st_del_nil_def),AllCaseEqs(),st_sorted_def]
+QED
+
+Theorem st_sorted_st_del_cons[simp]:
+  ∀t x xs. st_sorted t ⇒ st_sorted (st_del_cons t x xs)
+Proof
+  Induct \\ rw [st_del_cons_def, st_sorted_def]
+  \\ gvs [st_sorted_def, st_sorted_mk_Branch]
+  \\ TRY (CASE_TAC \\ gvs [])
+  \\ pop_assum mp_tac
+  \\ simp[Once(oneline st_del_cons_def)]
+  \\ BasicProvers.TOP_CASE_TAC \\ gvs[]
+  \\ gvs[stringTheory.char_lt_def, stringTheory.char_gt_def]
+  \\ rw[] \\ gvs[]
+  \\ gvs[mk_Branch_def, AllCaseEqs(), st_sorted_def]
+  \\ Cases_on`s` \\ gvs[stringTheory.char_lt_def]
+QED
+
+Theorem st_sorted_st_del[simp]:
+  ∀t k. st_sorted t ⇒ st_sorted (st_del t k)
+Proof
+  rpt strip_tac \\ Cases_on `k`
+  \\ fs [st_del_def]
+QED
+
+Theorem st_get_nil_st_del_nil[simp]:
+  ∀t. st_get_nil (st_del_nil t) = NONE
+Proof
+  Induct \\ rw [st_del_nil_def, st_get_nil_def]
+QED
+
+Theorem st_get_cons_st_del_nil[simp]:
+  ∀t x xs. st_get_cons (st_del_nil t) x xs = st_get_cons t x xs
+Proof
+  Induct \\ rw [st_del_nil_def, st_get_def]
+QED
+
+Theorem st_get_nil_mk_Branch[simp]:
+  ∀c t1 t2. st_get_nil (mk_Branch c t1 t2) = st_get_nil t2
+Proof
+  rw [mk_Branch_def, st_get_nil_def]
+QED
+
+Theorem st_get_cons_mk_Branch:
+  ∀c t1 t2 x xs.
+    st_get_cons (mk_Branch c t1 t2) x xs =
+    if t1 = Nothing then st_get_cons t2 x xs
+    else st_get_cons (Branch c t1 t2) x xs
+Proof
+  rw [mk_Branch_def]
+QED
+
+Theorem st_get_nil_st_del_cons[simp]:
+  ∀t x xs. st_get_nil (st_del_cons t x xs) = st_get_nil t
+Proof
+  Induct \\ rw [st_del_cons_def, st_get_nil_def]
+  \\ gvs [st_get_nil_def, mk_Branch_def]
+QED
+
+Theorem st_get_cons_st_del_cons:
+  ∀t x xs h rest.
+    st_sorted t ⇒
+    st_get_cons (st_del_cons t x xs) h rest =
+      if h = x ∧ rest = xs then NONE
+      else st_get_cons t h rest
+Proof
+  Induct
+  \\ simp[st_del_cons_def, st_get_def]
+  \\ rpt gen_tac \\ strip_tac
+  \\ gvs [stringTheory.char_lt_def, stringTheory.char_gt_def, st_sorted_def]
+  \\ rw [st_get_cons_mk_Branch, st_get_def]
+  \\ gvs [stringTheory.char_lt_def, stringTheory.char_gt_def]
+  \\ CASE_TAC \\ rw[]
+  \\ gvs [st_get_def, st_get_nil_st_del_nil,
+          st_get_cons_st_del_nil, st_get_nil_def]
+  \\ TRY (
+    simp[Once(oneline st_get_def)]
+    \\ CASE_TAC
+    \\ simp[stringTheory.char_lt_def, stringTheory.char_gt_def]
+    \\ gvs[] \\ NO_TAC) >>
+  gvs[NOT_LESS, NOT_GREATER] >>
+  imp_res_tac LE_ANTISYM >>
+  imp_res_tac stringTheory.ORD_11 >>
+  rpt BasicProvers.VAR_EQ_TAC >> gvs[]
+  >- (
+    Cases_on`t` \\ gvs[st_get_def] >>
+    drule st_get_cons_sorted_lt >>
+    simp[stringTheory.char_lt_def] >>
+    Cases_on`rest` \\ rw[st_get_def] )
+  >- ( Cases_on`rest` \\ rw[st_get_def] )
+  \\ cheat
+QED
+
+Theorem st_get_st_del:
+  ∀t k n. st_sorted t ⇒
+    st_get (st_del t k) n = if n = k then NONE else st_get t n
+Proof
+  rpt strip_tac
+  \\ Cases_on `k` \\ Cases_on `n`
+  \\ fs [st_del_def, st_get_def,
+         st_get_nil_st_del_nil, st_get_cons_st_del_nil,
+         st_get_nil_st_del_cons, st_get_cons_st_del_cons]
+  \\ rw [] \\ gvs []
+QED
+
+Theorem st_sorted_st_set[simp]:
+  st_sorted t ⇒
+  st_sorted (st_set t m x)
+Proof
+  Cases_on`m` \\ rw[]
+QED
+
+Theorem st_del_st_set:
+  st_sorted t ⇒
+  st_del (st_set t n x) m = if m = n then st_del t m
+    else st_set (st_del t m) n x
+Proof
+  rw []
+  \\ irule st_sorted_st_get_eq \\ rw []
+  \\ DEP_REWRITE_TAC [st_get_st_del, st_get_st_set]
+  \\ rw [] \\ gvs []
 QED
 
 Theorem st_del_st_sets:
+  st_sorted t ⇒
   st_del (st_sets t xs) n = st_sets (st_del t n) (FILTER (λ(k,v). k ≠ n) xs)
 Proof
-  Induct_on ‘xs’
-  \\ fs [st_sets_def,FORALL_PROD,st_del_st_set]
-  \\ rpt gen_tac \\ IF_CASES_TAC \\ simp []
+  strip_tac
+  \\ Induct_on `xs`
+  \\ fs [st_sets_def, FORALL_PROD]
+  \\ rw []
+  \\ DEP_REWRITE_TAC [st_del_st_set]
+  \\ rw []
   \\ simp [st_sets_def]
 QED
 
