@@ -115,7 +115,7 @@ End
 Definition st_sorted_def:
   st_sorted Nothing = T ∧
   st_sorted (Just x) = T ∧
-  st_sorted (Branch c t1 t2) = (st_sorted t1 ∧
+  st_sorted (Branch c t1 t2) = (t1 ≠ Nothing ∧ st_sorted t1 ∧
                                 st_sorted t2 ∧
                                 ∀c' t1' t2'. t2 = Branch c' t1' t2' ⇒ c < c')
 End
@@ -124,6 +124,12 @@ Theorem st_sorted_base[simp]:
   st_sorted Nothing ∧ st_sorted (Just x)
 Proof
   rw[st_sorted_def]
+QED
+
+Theorem st_make_not_nothing[simp]:
+  st_make xs y ≠ Nothing
+Proof
+  Cases_on`xs` \\ rw[]
 QED
 
 Theorem st_sorted_st_make[simp]:
@@ -162,6 +168,18 @@ Proof
   Induct \\ rw [st_set_nil_def, st_sorted_def] >>
   qmatch_asmsub_rename_tac`st_set_nil tt _ = _` >>
   Cases_on`tt` \\ gvs[st_set_nil_def]
+QED
+
+Theorem st_set_nil_not_nothing[simp]:
+  st_set_nil t y ≠ Nothing
+Proof
+  Cases_on`t` \\ rw[]
+QED
+
+Theorem st_set_cons_not_nothing[simp]:
+  st_set_cons t x xs y ≠ Nothing
+Proof
+  Cases_on`t` \\ rw[st_set_cons_def]
 QED
 
 Theorem st_sorted_st_set_cons[simp]:
@@ -307,10 +325,20 @@ Proof
   \\ rw [] \\ fs []
 QED
 
-Theorem st_sets_eq:
-  ALOOKUP xs = ALOOKUP ys ⇒ st_sets t xs = st_sets t ys
+Theorem st_sorted_st_get_eq:
+  ∀t1 t2. st_sorted t1 ∧ st_sorted t2 ∧
+  (∀n. st_get t1 n = st_get t2 n) ⇒ t1 = t2
 Proof
-  cheat
+cheat
+QED
+
+Theorem st_sets_eq:
+  st_sorted t ⇒ ALOOKUP xs = ALOOKUP ys ⇒ st_sets t xs = st_sets t ys
+Proof
+  rw []
+  \\ irule st_sorted_st_get_eq
+  \\ rw []
+  \\ DEP_REWRITE_TAC [st_get_st_sets] \\ fs []
 QED
 
 Theorem st_del_st_set:
