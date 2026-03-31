@@ -6361,8 +6361,6 @@ Theorem central_limit_theorem :
       CLT p X N
 Proof
     RW_TAC std_ss [CLT_def]
- >> MP_TAC (Q.SPECL [‘p’, ‘real o N’] integrable_std_normal_quartic)
- >> DISCH_TAC >> fs []
  >> Q.ABBREV_TAC ‘s = λn. sqrt (second_moments p X n)’ >> fs []
  >> Q.ABBREV_TAC ‘b = λn. absolute_third_moments p X n’ >> fs []
  >> Q.ABBREV_TAC ‘R = λn x. ∑ (λi. X i x) (count (SUC n)) / s (SUC n)’
@@ -6878,6 +6876,37 @@ Proof
  >> rw []
 QED
 
+(* NOTE: “!i. variance p (X i) < PosInf” can be derived from "finite third moments",
+   i.e. “!n. integrable p (\x. (abs (X n x)) pow 3)”.
+
+   This version of CLT was originally published in [7].
+ *)
+Theorem CLT_Lyapunov :
+  !p X N. prob_space p /\ ext_normal_rv N p 0 1 /\
+         (!n. real_random_variable (X n) p) /\
+         (!n. indep_vars p X (\i. Borel) (count n)) /\
+         (!n. integrable p (\x. (abs (X n x)) pow 3)) /\
+         (!n. expectation p (X n) = 0) /\
+         (!n. variance p (X n) <> 0) /\
+         ((\n. absolute_third_moments p X (SUC n) /
+               sqrt (second_moments p X (SUC n)) pow 3) --> 0) sequentially
+         ==> CLT p X N
+Proof
+    rpt STRIP_TAC
+ >> Know ‘!i. integrable p (\x. (X i x) pow 2)’
+ >- (Q.X_GEN_TAC ‘i’ \\
+     irule integrable_absolute_moments_mono >> art [] \\
+     Q.EXISTS_TAC ‘3’ >> simp [])
+ >> DISCH_TAC
+ >> ‘!i. finite_second_moments p (X i)’
+      by METIS_TAC [finite_second_moments_eq_integrable_square]
+ >> ‘!i. variance p (X i) < PosInf’
+      by PROVE_TAC [finite_second_moments_eq_finite_variance]
+ >> MATCH_MP_TAC central_limit_theorem >> art []
+ >> rw [GSYM lt_infty, expectation_def]
+ >> METIS_TAC [integrable_finite_integral, prob_space_def]
+QED
+
 val _ = html_theory "central_limit";
 
 (* References:
@@ -6889,5 +6918,7 @@ val _ = html_theory "central_limit";
   [5] Rosenthal, J.S.: A First Look at Rigorous Probability Theory (Second Edition).
       World Scientific Publishing Company (2006).
   [6] Noll, W.: The chain rule for higher derivatives. (1995).
-
+  [7] Lyapunov, A.M.: On a theorem in probability theory. (1900).
+      Originally published in Izvestiya Akademii Nauk, series V, 1900, vol. XIII,
+      no. 4, 359–386.
  *)
