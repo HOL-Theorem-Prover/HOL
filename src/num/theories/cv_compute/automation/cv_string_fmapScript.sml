@@ -25,7 +25,7 @@ val _ = (cv_memLib.use_long_names := false);
 val from_to_str_trie = cv_typeLib.from_to_thm_for “:'a str_trie”;
 val _ = (cv_memLib.use_long_names := true);
 
-Definition st_get_nil_def:
+Definition st_get_nil_def[simp]:
   st_get_nil (Branch _ _ rest) = st_get_nil rest ∧
   st_get_nil (Just x) = SOME x ∧
   st_get_nil Nothing = NONE
@@ -42,12 +42,12 @@ Definition st_get_def:
       st_get subtrie xs
 End
 
-Definition st_make_def:
+Definition st_make_def[simp]:
   st_make [] y = Just y ∧
   st_make (x::xs) y = Branch x (st_make xs y) Nothing
 End
 
-Definition st_set_nil_def:
+Definition st_set_nil_def[simp]:
   st_set_nil (Branch c t rest) y = Branch c t (st_set_nil rest y) ∧
   st_set_nil _ y = Just y
 End
@@ -66,17 +66,17 @@ Definition st_set_cons_def:
                 | (x::xs) => st_set_cons subtrie x xs y) rest
 End
 
-Definition st_set_def:
+Definition st_set_def[simp]:
   st_set t [] y = st_set_nil t y ∧
   st_set t (x::xs) y = st_set_cons t x xs y
 End
 
-Definition st_sets_def:
+Definition st_sets_def[simp]:
   st_sets t [] = t ∧
   st_sets t ((s,a)::rest) = st_set (st_sets t rest) s a
 End
 
-Definition st_del_nil_def:
+Definition st_del_nil_def[simp]:
   st_del_nil (Branch x y rest) = Branch x y (st_del_nil rest) ∧
   st_del_nil _ = Nothing
 End
@@ -99,7 +99,7 @@ Definition st_del_cons_def:
                    | (x::xs) => st_del_cons subtrie x xs) rest
 End
 
-Definition st_del_def:
+Definition st_del_def[simp]:
   st_del t [] = st_del_nil t ∧
   st_del t (x::xs) = st_del_cons t x xs
 End
@@ -386,7 +386,7 @@ Theorem cv_rep_string_FUPDATE[cv_rep]:
   from_string_fmap f (m |+ (k,v)) = cv_st_set (from_string_fmap f m) (from_list from_char k) (f v)
 Proof
   gvs [from_string_fmap_def,GSYM $ fetch "-" "cv_st_set_thm"] \\ AP_TERM_TAC
-  \\ simp [GSYM st_sets_def]
+  \\ simp_tac std_ss [GSYM st_sets_def]
   \\ irule st_sets_eq \\ fs [finite_mapTheory.FLOOKUP_SIMP, FUN_EQ_THM]
 QED
 
