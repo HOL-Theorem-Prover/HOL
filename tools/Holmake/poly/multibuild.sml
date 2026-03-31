@@ -10,7 +10,7 @@ datatype buildresult =
                         job_kont : (string -> unit) -> OS.Process.status ->
                                    bool,
                         other_nodes : HM_DepGraph.node list,
-			cache_url : string option, cachekey : string}
+                        cache_url : string option, cachekey : string}
        | BR_Failed
 
 val RealFail = Failed{needed=true}
@@ -26,7 +26,7 @@ fun lmap_insert k v m =
 
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
-val loggingdir = ".hol/logs"	     
+val loggingdir = ".hol/logs"
 fun K x y = x
 
 fun graph_dirinfo g =
@@ -266,10 +266,10 @@ fun graphbuild optinfo g =
                                  (updall RealFail g, keep_going))
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l
-			    fun try_cache talk =
-				case cache_url of
-				    NONE => false
-				  | SOME url => HolmakeCache.fetch url cachekey talk
+                            funy try_cache talk =
+                              case cache_url of
+                                  NONE => false
+                                | SOME url => HolmakeCache.fetch url cachekey talk
                           in
                             diag ("New graph job for "^target_s^
                                   " with c/line: " ^ cline_str cline);
@@ -278,7 +278,7 @@ fun graphbuild optinfo g =
                                         (map node_toString other_nodes));
                             NewJob({tag = tag, dir = dir,
                                     command = cline_to_command cline,
-				    try_cache = try_cache,
+                                    try_cache = try_cache,
                                     update = update},
                                    (updall Running g, true))
                           end

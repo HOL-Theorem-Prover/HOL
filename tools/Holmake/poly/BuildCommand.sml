@@ -294,7 +294,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           case build_command g ii (Compile depinfo) scriptsml_file of
               BR_OK => true
             | BR_Failed => false
-            | _ => raise Fail "Compilation resulted in commandline"
+            | BR_ClineK _ => raise Fail "Compilation resulted in commandline"
       val _ = b orelse raise CompileFailed
       val _ = info ("Linking "^scriptuo^" to produce theory-builder executable")
       val objectfiles0 =
@@ -363,8 +363,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       in
           BR_ClineK { cline = (useScript, cline), job_kont = cont,
                       other_nodes = other_nodes,
-		      cache_url = use_cache,
-		      cachekey = HolmakeCache.compute_deps_cachekey deps}
+                      cache_url = use_cache,
+                      cachekey = HolmakeCache.compute_deps_cachekey deps}
       end
   in
     let
@@ -383,10 +383,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           end
         | BuildScript (s, deps, extra : GraphExtra.t) =>
           let
-              val (scriptetc, objectfiles) = setup_script s (deps, extra) []
+            val (scriptetc,objectfiles) = setup_script s (deps,extra) []
           in
-              run_script (#cache_url (#core optv)) deps g extra scriptetc objectfiles
-                         [s^"Theory.sml", s^"Theory.sig", s^"Theory.dat"]
+            run_script (#cache_url (#core optv)) deps g extra scriptetc objectfiles
+                       [s^"Theory.sml", s^"Theory.sig", s^"Theory.dat"]
           end
         | BuildArticle (s0, deps : dep list, extra) =>
           let
