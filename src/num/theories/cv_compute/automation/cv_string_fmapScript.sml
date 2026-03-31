@@ -325,11 +325,87 @@ Proof
   \\ rw [] \\ fs []
 QED
 
+Theorem st_sorted_not_Nothing_get:
+  ∀t. st_sorted t ∧ t ≠ Nothing ⇒ ∃k v. st_get t k = SOME v
+Proof
+  Induct \\ rw [st_sorted_def]
+  >- (qexists_tac `[]` \\ simp [st_get_def, st_get_nil_def])
+  >- (rename [`st_get (Branch c t1 t2)`]
+      \\ first_x_assum (drule_all_then strip_assume_tac)
+      \\ qexists_tac `c::k` \\ simp [st_get_def]
+      \\ gvs [stringTheory.char_lt_def, stringTheory.char_gt_def])
+QED
+
 Theorem st_sorted_st_get_eq:
   ∀t1 t2. st_sorted t1 ∧ st_sorted t2 ∧
   (∀n. st_get t1 n = st_get t2 n) ⇒ t1 = t2
 Proof
-cheat
+  Induct
+  >- (Cases \\ rw [st_sorted_def]
+      >- (qexists_tac`[]` \\ rw[st_get_def]) >>
+      CCONTR_TAC \\ gvs[] >>
+      drule_all st_sorted_not_Nothing_get >>
+      simp[] >> rpt strip_tac >>
+      first_x_assum(qspec_then`c::k`mp_tac) >>
+      simp[st_get_def, stringTheory.char_gt_def, stringTheory.char_lt_def])
+  >- (Cases_on`t2` \\ rw [st_sorted_def]
+      >- (qexists_tac`[]` \\ rw[st_get_def])
+      >- (first_x_assum (qspec_then `[]` mp_tac)
+          \\ rw [st_get_def, st_get_nil_def]) >>
+      CCONTR_TAC \\ gvs[] >>
+      drule_all st_sorted_not_Nothing_get \\ rw[] >>
+      first_x_assum (qspec_then `c::k` mp_tac)
+      \\ simp [st_get_def, st_get_nil_def]
+      \\ gvs [stringTheory.char_lt_def, stringTheory.char_gt_def]) >>
+  Cases_on`t2` >> simp[st_sorted_def]
+  >- (
+    CCONTR_TAC \\ gvs[] >>
+    drule_all st_sorted_not_Nothing_get >> rw[] >>
+    first_x_assum (qspec_then `c::k` mp_tac)
+    \\ simp [st_get_def, st_get_nil_def]
+    \\ gvs [stringTheory.char_lt_def, stringTheory.char_gt_def])
+  >- (
+    CCONTR_TAC \\ gvs[] >>
+    drule_all st_sorted_not_Nothing_get >> rw[] >>
+    first_x_assum (qspec_then `c::k` mp_tac)
+    \\ simp [st_get_def, st_get_nil_def]
+    \\ gvs [stringTheory.char_lt_def, stringTheory.char_gt_def]) >>
+  gen_tac >> strip_tac >>
+  Cases_on`char_lt c c'`
+  >- (
+    qspec_then`s`mp_tac st_sorted_not_Nothing_get >>
+    impl_tac >- rw[] >> strip_tac >>
+    first_assum(qspec_then`c::k`mp_tac) >>
+    simp_tac(srw_ss())[st_get_def] >>
+    gvs[stringTheory.char_lt_def, stringTheory.char_gt_def] ) >>
+  Cases_on`char_lt c' c`
+  >- (
+    qspec_then`t1`mp_tac st_sorted_not_Nothing_get >>
+    impl_tac >- rw[] >> strip_tac >>
+    first_assum(qspec_then`c'::k`mp_tac) >>
+    simp_tac(srw_ss())[st_get_def] >>
+    gvs[stringTheory.char_lt_def, stringTheory.char_gt_def] ) >>
+  `ORD c = ORD c'` by gvs[stringTheory.char_lt_def] >>
+  gvs[stringTheory.ORD_11] >>
+  conj_tac
+  >- (
+    first_x_assum irule \\ simp[] >>
+    gen_tac >>
+    first_x_assum(qspec_then`c::n`mp_tac) >>
+    simp[st_get_def, stringTheory.char_gt_def] ) >>
+  first_x_assum irule \\ simp[] >> gen_tac >>
+  first_x_assum(qspec_then`n`mp_tac) >>
+  Cases_on`n` \\ simp[st_get_def] >>
+  Cases_on`char_lt c h` >> gvs[]
+  >- gvs[stringTheory.char_lt_def, stringTheory.char_gt_def] >>
+  strip_tac >>
+  gvs[stringTheory.char_lt_def, stringTheory.char_gt_def] >>
+  qmatch_goalsub_abbrev_tac `sg1 = sg2` >>
+  `sg1 = NONE ∧ sg2 = NONE` suffices_by rw[] >>
+  unabbrev_all_tac >>
+  conj_tac >> irule st_get_cons_sorted_lt >> gvs[] >>
+  rpt strip_tac >> first_x_assum drule >>
+  gvs[stringTheory.char_lt_def, stringTheory.char_gt_def]
 QED
 
 Theorem st_sets_eq:
