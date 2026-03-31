@@ -1313,7 +1313,7 @@ fun work() =
               postmortem finish_logging outputfns (build_graph depgraph)
               handle e => die ("Exception: "^General.exnMessage e)
           end
-    end
+      end
 
 fun do_cachekey thyname =
     let
