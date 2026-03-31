@@ -5,4 +5,4 @@ Systeml.sig
 hfs/holpathdb.sig
 hfs/holpathdb.sml
 mlton/PolyML.sml
-../../tools-poly/Holmake/Systeml.sml
+../../tools/Holmake/Systeml.sml

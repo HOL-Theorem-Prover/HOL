@@ -26,3 +26,5 @@ dat-printer: mkdatprinter.ML DatPrinterTool.ML RawTermPP.uo
 	$(POLYC) -o $@ $<
 
 endif
+
+EXTRA_CLEANS = dat-printer theorytool
