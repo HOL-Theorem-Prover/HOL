@@ -266,7 +266,7 @@ fun graphbuild optinfo g =
                                  (updall RealFail g, keep_going))
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l
-                            funy try_cache talk =
+                            fun try_cache talk =
                               case cache_url of
                                   NONE => false
                                 | SOME url => HolmakeCache.fetch url cachekey talk
