@@ -37,8 +37,8 @@ Definition st_get_def:
   st_get_cons Nothing x xs = NONE ∧
   st_get_cons (Just _) x xs = NONE ∧
   st_get_cons (Branch c subtrie rest) x xs =
-    if c < x then NONE else
-    if c > x then st_get_cons rest x xs else
+    if c > x then NONE else
+    if c < x then st_get_cons rest x xs else
       st_get subtrie xs
 End
 
@@ -56,9 +56,9 @@ Definition st_set_cons_def:
   st_set_cons Nothing x xs y = Branch x (st_make xs y) Nothing ∧
   st_set_cons (Just z) x xs y = Branch x (st_make xs y) (Just z) ∧
   st_set_cons (Branch c subtrie rest) x xs y =
-    if c < x then
+    if c > x then
       Branch x (st_make xs y) (Branch c subtrie rest)
-    else if c > x then
+    else if c < x then
       Branch c subtrie (st_set_cons rest x xs y)
     else
       Branch c (case xs of
@@ -89,9 +89,9 @@ Definition st_del_cons_def:
   st_del_cons Nothing x xs = Nothing ∧
   st_del_cons (Just z) x xs = Just z ∧
   st_del_cons (Branch c subtrie rest) x xs =
-    if c < x then
+    if c > x then
       Branch c subtrie rest
-    else if c > x then
+    else if c < x then
       Branch c subtrie (st_del_cons rest x xs)
     else
       mk_Branch c (case xs of
