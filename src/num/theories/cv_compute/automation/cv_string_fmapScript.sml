@@ -158,16 +158,76 @@ Proof
   Cases_on`tt` \\ gvs[st_set_nil_def]
 QED
 
-Theorem st_sorted_st_sets:
+Theorem st_sorted_st_set_cons[simp]:
+  ∀t x xs y. st_sorted t ⇒ st_sorted (st_set_cons t x xs y)
+Proof
+  Induct \\ rw[st_set_cons_def, st_sorted_def]
+  >> gvs[stringTheory.char_lt_def, stringTheory.char_gt_def]
+  >- (
+    qmatch_asmsub_rename_tac`st_set_cons tt _ _ _ = _` >>
+    Cases_on`tt` \\ gvs[st_set_cons_def] >>
+    gvs[stringTheory.char_lt_def, stringTheory.char_gt_def] >>
+    qmatch_asmsub_rename_tac`ORD c2 > _` >>
+    qmatch_goalsub_rename_tac`_ < ORD c1` >>
+    Cases_on`c1 = c2` >> gvs[] >>
+    gvs[CaseEq"bool"]) >>
+  CASE_TAC \\ gvs[]
+QED
+
+Theorem st_sorted_st_sets[simp]:
   st_sorted t ⇒ st_sorted (st_sets t xs)
 Proof
-  cheat
+  Induct_on`xs` \\ simp[st_sets_def] >>
+  Cases >> simp[st_sets_def] >> rw[] >>
+  qmatch_goalsub_rename_tac`st_set _ s _` >>
+  Cases_on`s` >> gvs[st_set_def]
+QED
+
+(* When st_sorted t and t = Branch c t1 t2, looking up (h::rest) where
+   h < c should give NONE, because all branches in the chain have chars ≥ c *)
+Theorem st_get_cons_sorted_lt:
+  ∀t h rest. st_sorted t ⇒
+    (∀c' t1' t2'. t = Branch c' t1' t2' ⇒ h < c') ⇒
+    st_get_cons t h rest = NONE
+Proof
+  Induct \\ rw [st_get_def, st_sorted_def]
+  \\ gvs [stringTheory.char_lt_def, stringTheory.char_gt_def]
+  \\ first_x_assum irule \\ rw [st_sorted_def]
+  \\ res_tac \\ fs []
+QED
+
+Theorem ALOOKUP_MAP_CONS_CONS[local]:
+  ALOOKUP (MAP (λ(k,v). (c::k,v)) ls) (d::rest) =
+  if c = d then ALOOKUP ls rest else NONE
+Proof
+  Induct_on`ls` \\ rw[] \\ pairarg_tac \\ gvs[]
 QED
 
 Theorem ALOOKUP_st_flat:
   st_sorted t ⇒ ALOOKUP (st_flat t) n = st_get t n
 Proof
-  cheat
+  qid_spec_tac `n` \\ Induct_on `t`
+  \\ rw [st_flat_def, st_sorted_def]
+  >- rw[st_get_def, st_get_nil_def]
+  >- (Cases_on `n` \\ fs [st_get_def, st_get_nil_def])
+  \\ Cases_on `n`
+  >- (
+    simp [ALOOKUP_APPEND, st_get_def, st_get_nil_def] >>
+    CASE_TAC >> imp_res_tac ALOOKUP_MEM >>
+    gvs[MEM_MAP, EXISTS_PROD] ) >>
+  simp [ALOOKUP_APPEND, st_get_def, ALOOKUP_MAP_CONS_CONS] >>
+  rw []
+  \\ gvs [stringTheory.char_lt_def, stringTheory.char_gt_def]
+  >- (
+    CASE_TAC >>
+    irule st_get_cons_sorted_lt >>
+    rw[stringTheory.char_lt_def] )
+  >- (
+    irule st_get_cons_sorted_lt >>
+    rw[stringTheory.char_lt_def] >>
+    CCONTR_TAC >> gvs[NOT_LESS] ) >>
+  `ORD c <> ORD h` by simp[stringTheory.ORD_11] >>
+  gvs[]
 QED
 
 Theorem st_get_st_sets:
