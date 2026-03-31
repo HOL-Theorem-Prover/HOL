@@ -1,5 +1,5 @@
 use "../../../tools/Holmake/Systeml.sig";
-use "../../../tools-poly/Holmake/Systeml.sml";
+use "../../../tools/Holmake/Systeml.sml";
 
 val origdir = OS.FileSys.getDir();
 OS.FileSys.chDir "../../../tools-poly";
