@@ -120,6 +120,12 @@ Definition st_sorted_def:
                                 ∀c' t1' t2'. t2 = Branch c' t1' t2' ⇒ c < c')
 End
 
+Theorem st_sorted_base[simp]:
+  st_sorted Nothing ∧ st_sorted (Just x)
+Proof
+  rw[st_sorted_def]
+QED
+
 Theorem st_sorted_st_make[simp]:
   ∀xs y. st_sorted (st_make xs y)
 Proof
@@ -230,10 +236,75 @@ Proof
   gvs[]
 QED
 
+Theorem st_get_nil_st_set_nil[simp]:
+  ∀t y. st_get_nil (st_set_nil t y) = SOME y
+Proof
+  Induct \\ rw [st_set_nil_def, st_get_nil_def]
+QED
+
+Theorem st_get_cons_st_set_nil[simp]:
+  ∀t y x xs. st_get_cons (st_set_nil t y) x xs = st_get_cons t x xs
+Proof
+  Induct \\ rw [st_set_nil_def, st_get_def]
+QED
+
+Theorem st_get_nil_st_set_cons[simp]:
+  ∀t x xs y. st_get_nil (st_set_cons t x xs y) = st_get_nil t
+Proof
+  Induct \\ rw [st_set_cons_def, st_get_nil_def]
+  \\ gvs [st_get_nil_def]
+QED
+
+Theorem st_get_nil_st_make:
+  ∀xs y. st_get_nil (st_make xs y) = if xs = [] then SOME y else NONE
+Proof
+  Cases \\ rw [st_make_def, st_get_nil_def]
+QED
+
+Theorem st_get_cons_st_set_cons:
+  ∀t x xs y h rest.
+    st_sorted t ⇒
+    st_get_cons (st_set_cons t x xs y) h rest =
+      if h = x ∧ rest = xs then SOME y
+      else st_get_cons t h rest
+Proof
+  Induct \\ rw[st_set_cons_def, st_get_def]
+  \\ gvs [stringTheory.char_lt_def, stringTheory.char_gt_def, st_sorted_def]
+  \\ gvs[st_get_st_make]
+  \\ TRY (
+    rw[] >> first_x_assum irule
+    \\ irule $ iffLR stringTheory.ORD_11
+    \\ gvs[] ) >>
+  CASE_TAC \\ gvs[st_get_def] >>
+  `ORD c = ORD x ∧ ORD c = ORD h` by gvs[] >>
+  gvs[stringTheory.ORD_11]
+  >- (Cases_on`rest` \\ gvs[st_get_def]) >>
+  Cases_on`rest=[]` \\ gvs[st_get_def] >>
+  Cases_on`rest` >- gvs[] >>
+  simp[st_get_def] >> IF_CASES_TAC >> simp[] >> gvs[]
+QED
+
+Theorem st_get_st_set:
+  ∀t k v n. st_sorted t ⇒
+    st_get (st_set t k v) n = if n = k then SOME v else st_get t n
+Proof
+  rpt strip_tac
+  \\ Cases_on `k` \\ Cases_on `n`
+  \\ fs [st_set_def, st_get_def,
+         st_get_nil_st_set_nil, st_get_cons_st_set_nil,
+         st_get_nil_st_set_cons, st_get_cons_st_set_cons]
+  \\ rw [] \\ gvs []
+QED
+
 Theorem st_get_st_sets:
+  st_sorted t ⇒
   st_get (st_sets t xs) n = case ALOOKUP xs n of NONE => st_get t n | res => res
 Proof
-  cheat
+  strip_tac
+  \\ Induct_on `xs` \\ fs [st_sets_def, FORALL_PROD]
+  \\ rw []
+  \\ DEP_REWRITE_TAC [st_get_st_set]
+  \\ rw [] \\ fs []
 QED
 
 Theorem st_sets_eq:
