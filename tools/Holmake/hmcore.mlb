@@ -49,7 +49,8 @@ hmf/ReadHMF.sml
 ../../src/portableML/json/JSONParser.sml
 ../../src/portableML/json/JSONUtil.sig
 ../../src/portableML/json/JSONUtil.sml
-HolmakeCache.sml
+HolmakeCacheKey.sml
+poly/HolmakeCacheFetch.sml
 ../util/GetOpt.sig
 ../util/GetOpt.sml
 ../util/FunctionalRecordUpdate.sml

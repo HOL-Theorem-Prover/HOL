@@ -269,7 +269,7 @@ fun graphbuild optinfo g =
                             fun try_cache talk =
                               case cache_url of
                                   NONE => false
-                                | SOME url => HolmakeCache.fetch url cachekey talk
+                                | SOME url => HolmakeCacheFetch.fetch url cachekey talk
                           in
                             diag ("New graph job for "^target_s^
                                   " with c/line: " ^ cline_str cline);

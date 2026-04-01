@@ -54,5 +54,6 @@ in
   app appjson ["JSONErrors"];
   myuse jsondir "JSONSource.sml";
   app appjson ["JSONParser", "JSONUtil"];
-  myuse hmakedir "HolmakeCache.sml"
+  myuse hmakedir "HolmakeCacheKey.sml";
+  myuse hmakedir "poly/HolmakeCacheFetch.sml"
 end;

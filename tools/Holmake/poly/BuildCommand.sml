@@ -364,7 +364,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           BR_ClineK { cline = (useScript, cline), job_kont = cont,
                       other_nodes = other_nodes,
                       cache_url = use_cache,
-                      cachekey = HolmakeCache.compute_deps_cachekey deps}
+                      cachekey = HolmakeCacheKey.compute_deps_cachekey deps}
       end
   in
     let
@@ -472,7 +472,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         BR_OK => true
       | BR_ClineK{cline = (_,cl), job_kont = k, cache_url, cachekey, ...} =>
         (case cache_url of
-             SOME url => HolmakeCache.fetch url cachekey info orelse
+             SOME url => HolmakeCacheFetch.fetch url cachekey info orelse
                          k warn (Systeml.systeml cl)
            | NONE => k warn (Systeml.systeml cl))
       | BR_Failed => false

@@ -1337,7 +1337,7 @@ fun do_cachekey thyname =
          For .uo/.ui of Theory files, substitute the corresponding
          .dat file (the actual theory content). Other .uo/.ui files
          and the holheap state are excluded. *)
-      val deps = HolmakeCache.compute_deps (map #2 (#dependencies nodeinfo))
+      val deps = HolmakeCacheKey.compute_deps (map #2 (#dependencies nodeinfo))
       val _ = List.app
                 (fn {name, path} =>
                     if OS.FileSys.access(path, [OS.FileSys.A_READ]) then ()
@@ -1348,7 +1348,7 @@ fun do_cachekey thyname =
          machine-independent ordering. Filename is the primary key; hash
          breaks ties if two dependencies from different directories happen
          to share a filename. *)
-      val cachekey = HolmakeCache.generate_cachekey deps
+      val cachekey = HolmakeCacheKey.generate_cachekey deps
     in
       print (cachekey ^ "\n");
       OS.Process.success
