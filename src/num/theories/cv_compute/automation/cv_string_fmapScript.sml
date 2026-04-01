@@ -532,7 +532,25 @@ Proof
     simp[stringTheory.char_lt_def] >>
     Cases_on`rest` \\ rw[st_get_def] )
   >- ( Cases_on`rest` \\ rw[st_get_def] )
-  \\ cheat
+  >- (
+    qmatch_goalsub_abbrev_tac`sg1 = sg2` \\
+    `sg1 = NONE ∧ sg2 = NONE` suffices_by rw[] \\
+    unabbrev_all_tac \\
+    conj_tac >- ( irule st_get_cons_sorted_lt \\ rw[stringTheory.char_lt_def] )
+    >> Cases_on`rest` \\ gvs[st_get_def]
+    >- (
+      irule EQ_TRANS
+      \\ `st_get_nil Nothing = NONE` by simp[]
+      \\ goal_assum $ drule_at Any
+      \\ qpat_assum`_ = Nothing`(SUBST1_TAC o SYM)
+      \\ simp[] )
+    \\ qmatch_asmsub_rename_tac`st_del_cons t h1 t2`
+    \\ last_x_assum(qspecl_then[`h1`,`t2`]mp_tac)
+    \\ simp[]
+    \\ qmatch_goalsub_rename_tac`st_get_cons t h t3`
+    \\ disch_then(qspecl_then[`h`,`t3`]mp_tac)
+    \\ rw[st_get_def] ) >>
+  Cases_on`rest` \\ gvs[st_get_def] >> rw[]
 QED
 
 Theorem st_get_st_del:
