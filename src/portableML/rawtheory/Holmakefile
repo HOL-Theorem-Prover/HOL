@@ -13,7 +13,7 @@ theorytool: mktool.ML theorytool.ML theorystats.uo
 
 endif
 
-ifneq ($(which mlton),"")
+ifneq ($(which mlton),)
 all: dat-printer
 
 dat-printer: dat-printer.mlb RawTermPP.sml RawTheoryReader.sig RawTheoryReader.sml mlton-datprinter.ML DatPrinterTool.ML
