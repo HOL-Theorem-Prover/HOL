@@ -1,5 +1,5 @@
 use "../../../tools/Holmake/Systeml.sig";
-use "../../../tools-poly/Holmake/Systeml.sml";
+use "../../../tools/Holmake/Systeml.sml";
 
 val origdir = OS.FileSys.getDir();
 OS.FileSys.chDir "../../../tools-poly";
@@ -36,6 +36,7 @@ useB "../Portable";
 use  "../Table.sml";
 useB "../AList";
 use  "../Graph.sml";
+useB "../../../tools/util/GetOpt";
 
 (* mlyacc cruft *)
 fun MLYuse s = use ("../../../tools/mlyacc/mlyacclib/MLY_" ^ s ^ ".sml");

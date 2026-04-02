@@ -14,7 +14,7 @@ fun useC f = (use ("../" ^ f ^ ".sig"); use ("../" ^ f ^ ".sml"))
 fun useS f = use ("../" ^ f ^ ".sml")
 
 val _ = use "../Systeml.sig"
-val _ = use "../../../tools-poly/Holmake/Systeml.sml";
+val _ = use "../Systeml.sml";
 
 val _ = use "../hmcore.ML";
 

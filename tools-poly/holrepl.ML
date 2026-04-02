@@ -3,7 +3,7 @@ sig
   val sigint_handler : unit -> unit
   val topLevel : {diag: string -> unit, zeroTerm : bool} -> unit
   val resetOpenHook : (unit -> unit) ref
-end;
+end
 
 
 structure HOL_REPL :> HOL_REPL =
@@ -32,7 +32,7 @@ fun topLevel {diag, zeroTerm} =
 
     (* Don't use the end_of_stream because it may have been set by typing
        EOT to the command we were running. *)
-    val endOfFile    = ref false;
+    val endOfFile    = ref false
 
     fun reportTiming compileTime runTime =
       (* Print the times if required. *)
@@ -108,13 +108,13 @@ fun topLevel {diag, zeroTerm} =
         {compileTime = #usr endCompile + #sys endCompile,
          runTime = #usr endRun + #sys endRun,
          result = finalResult}
-      end; (* readEvalPrint1 *)
+      end (* readEvalPrint1 *)
 
     val readEvalPrint : unit -> unit =
       if zeroTerm then
         let
           (* Initial prompt / end of splash message *)
-          val () = printOut "\000";
+          val () = printOut "\000"
 
           (* The input state is one of:
              * `Current ""`: initial state, we have no pending input chunk
@@ -125,7 +125,7 @@ fun topLevel {diag, zeroTerm} =
           datatype state =
             Current of string
           | Next of string
-          val state = ref (Current "");
+          val state = ref (Current "")
 
           (* Parse a pending input chunk, splitting on the first zero byte *)
           fun process chunk =
@@ -161,23 +161,23 @@ fun topLevel {diag, zeroTerm} =
           let
             (* Create a new lexer for each command block. *)
             val {read, ...} =
-              HOLSource.inputToReader {quietOpen = true, print = print} "" input;
-            val endOfBlock = ref false;
+              HOLSource.inputToReader {quietOpen = true, print = printOut} "" input
+            val endOfBlock = ref false
             fun read' () = case read () of
                 NONE => (endOfBlock := true; NONE)
-              | ch => ch;
+              | ch => ch
 
             fun readEvalPrint compileAcc runAcc =
               let
                 val {compileTime, runTime, result} =
-                  readEvalPrint1 read' (!resetOpenHook);
-                val () = reportResult result;
+                  readEvalPrint1 read' (!resetOpenHook)
+                val () = reportResult result
               in
                 if !endOfBlock then
                   reportTiming compileTime runTime
                 else
                   readEvalPrint (compileAcc + compileTime) (runAcc + runTime)
-              end;
+              end
           in
             (readEvalPrint Time.zeroTime Time.zeroTime; finishCommand ())
             handle exn => (finishCommand (); PolyML.Exception.reraise exn)
@@ -185,58 +185,64 @@ fun topLevel {diag, zeroTerm} =
         end
       else (* not zeroTerm *)
         let
-          val realDataRead = ref false;
-          val lastWasEol   = ref true;
+          fun hasInput () = TextIO.canInput(TextIO.stdIn, 1) = SOME 1
+          fun mk_cgen () = let
+            val _ = printOut (!prompt1)
 
-          (* It seems like the only way to *really* reset a lexer, in particular, to
-            force it back into its INITIAL state, is to create a fresh one. So,
-            this is what bind_cgen() does, and this is what is called in the
-            compile-fail exception handler below. *)
-          val cgenref = ref (fn () => SOME #"\000")
-          fun cgen() = !cgenref()
-          fun bind_cgen () =
-              let
-                val {read, ...} =
-                  HOLSource.streamToReader {quietOpen = true, print = print} "" TextIO.stdIn
-              in
-                cgenref := read
-              end
+            (* true after output, or if we have just read a newline *)
+            val lastWasEol = ref false
+            (* true if the current input chunk has received a non-whitespace char *)
+            val realDataRead = ref false
+            (* true if we have started generating SML code
+              (i.e. we have completed at least one top level declaration) *)
+            val hasOutput = ref false
 
-          val () = bind_cgen();
+            (* A wrapper around `input stdIn` which writes the prompt *)
+            fun input _ = (
+              (* If we have done any output, reset the prompt *)
+              if !hasOutput then (
+                hasOutput := false;
+                if hasInput () then () else (
+                  lastWasEol := true;
+                  realDataRead := false)
+              ) else ();
+              (* If we are at a new line, print > to start and # for continuation lines *)
+              if !lastWasEol then (
+                lastWasEol := false;
+                printOut (if !realDataRead then !prompt2 else !prompt1)
+              ) else ();
+              (* Actually read the input and bail if we are at EOF *)
+              case TextIO.input TextIO.stdIn of "" => "" | s => (
+                (* Set lastWasEol if the last character was "\n" and more text is not pending *)
+                if hasInput () then () else
+                  if String.sub(s, size s - 1) = #"\n" then lastWasEol := true else ();
+                (* Set realDataRead if there are non-whitespace chars *)
+                if !realDataRead then () else let
+                  fun loop i =
+                    if i < size s then
+                      case String.sub(s, i) of
+                        #" " => loop (i+1)
+                      | #"\n" => loop (i+1)
+                      | _ => realDataRead := true
+                    else ()
+                  in loop 0 end;
+                s))
 
-          (* Each character typed is fed into the compiler but leading
-            blank lines result in the prompt remaining as firstPrompt until
-            significant characters are typed. *)
-          fun readin () =
-            let
-              val () =
-                if !lastWasEol (* Start of line *) then
-                  if !realDataRead then
-                    printOut (!prompt2)
-                  else printOut (!prompt1)
-                else ();
-            in
-              case cgen() of
-                NONE => (endOfFile := true; NONE)
-              | SOME #"\n" => (lastWasEol := true; SOME #"\n")
-              | SOME ch => (
-                  lastWasEol := false;
-                  if ch <> #" " then realDataRead := true else ();
-                  SOME ch
-                )
-            end; (* readin *)
+            val {read, ...} =
+              HOLSource.inputToReader {quietOpen = true, print = printOut} "" input
+            in fn () => (hasOutput := true; read ()) end
+
+          val cgen = ref (mk_cgen ())
+
+          fun readin () = case !cgen () of NONE => (endOfFile := true; NONE) | ch => ch
 
           (* Remove all buffered but unread input. *)
           fun flushInput () =
-            case TextIO.canInput(TextIO.stdIn, 1) of
-                SOME 1 => (TextIO.inputN(TextIO.stdIn, 1); flushInput())
-            |   _ => (* No input waiting or we're at EOF. *) ();
+            if hasInput () then
+              (TextIO.input TextIO.stdIn; flushInput ())
+            else (* No input waiting or we're at EOF. *) ()
 
-          fun resetAfterCompileFail () = (
-            flushInput();
-            lastWasEol := true;
-            bind_cgen()
-          );
+          fun resetAfterCompileFail () = (flushInput (); cgen := mk_cgen ())
 
         in fn () =>
           let
@@ -252,17 +258,16 @@ fun topLevel {diag, zeroTerm} =
             fun shrink_stack (newsize : int) : unit =
               RunCall.run_call1 RuntimeCalls.POLY_SYS_shrink_stack newsize
             val () = shrink_stack 8000 *)
-            val _ = realDataRead := false
             val {compileTime, runTime, result} =
               readEvalPrint1 readin resetAfterCompileFail
             val () = reportTiming compileTime runTime
           in reportResult result end
-        end; (* readEvalPrint *)
+        end (* readEvalPrint *)
 
     fun handledLoop () : unit =
       (
         (* Process a single top-level command. *)
-        readEvalPrint()
+        readEvalPrint ()
         (* Allow ^C to terminate the debugger and raise Interrupt in
           the called program. *)
         handle Thread.Thread.Interrupt => ()
@@ -289,6 +294,6 @@ fun sigint_handler() =
      |  SIG_DFL =>
         (signal(2, SIG_HANDLE (fn _ => Thread.Thread.broadcastInterrupt())); ())
      |  oldHandle => (signal(2, oldHandle); ())
-  end;
+  end
 
 end (* struct *)

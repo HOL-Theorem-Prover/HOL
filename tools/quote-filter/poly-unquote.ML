@@ -7,7 +7,7 @@ use "../../src/portableML/DString.sml";
 use "../../src/portableML/DArray.sig";
 use "../../src/portableML/DArray.sml";
 use "../Holmake/Systeml.sig";
-use "../../tools-poly/Holmake/Systeml.sml";
+use "../Holmake/Systeml.sml";
 use "../parsing/AttributeSyntax.sig";
 use "../parsing/AttributeSyntax.sml";
 use "../parsing/HolLex.sml";

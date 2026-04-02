@@ -10,7 +10,7 @@ structure BasicIO = SML90;
 exception Interrupt = SML90.Interrupt
 
 val _ = use "../../tools/Holmake/Systeml.sig"
-val _ = use "../../tools-poly/Holmake/Systeml.sml";
+val _ = use "../../tools/Holmake/Systeml.sml";
 use "../../tools/Holmake/hmcore.ML";
 use "../../tools/util/FunctionalRecordUpdate.sml";
 use "../../tools/util/GetOpt.sig";

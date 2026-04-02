@@ -6,11 +6,25 @@ theorystats.uo: theorystats.sml $(dprot $(SIGOBJ)/Graph.ui) $(dprot $(SIGOBJ)/SH
 	$(HOLMOSMLC) -c Graph.ui $<
 
 ifdef POLY
-all: theorytool dat-printer
+all: theorytool
 
 theorytool: mktool.ML theorytool.ML theorystats.uo
 	$(POLYC) -o $@ $<
 
+endif
+
+ifneq ($(which mlton),)
+all: dat-printer
+
+dat-printer: dat-printer.mlb RawTermPP.sml RawTheoryReader.sig RawTheoryReader.sml mlton-datprinter.ML DatPrinterTool.ML
+	mlton -default-type intinf $<
+
+else ifdef POLY
+all: dat-printer
+
 dat-printer: mkdatprinter.ML DatPrinterTool.ML RawTermPP.uo
 	$(POLYC) -o $@ $<
+
 endif
+
+EXTRA_CLEANS = dat-printer theorytool

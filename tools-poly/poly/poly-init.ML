@@ -31,6 +31,6 @@ val _ = use "../tools/Holmake/hfs/holpathdb.sig";
 val _ = use "../tools/Holmake/hfs/holpathdb.sml";
 val _ = use "../tools-poly/Holmake/CompilerSpecific.ML";
 val _ = use "../tools/Holmake/Systeml.sig";
-val _ = use "../tools-poly/Holmake/Systeml.sml";
+val _ = use "../tools/Holmake/Systeml.sml";
 
 val polyInitStatus = 1;

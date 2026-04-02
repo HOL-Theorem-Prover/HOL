@@ -2562,7 +2562,7 @@ Proof
 QED
 
 Theorem HAS_INTEGRAL_ADD:
-   !f:real->real g s k.
+   !f:real->real g s k l.
         (f has_integral k) s /\ (g has_integral l) s
         ==> ((\x. f(x) + g(x)) has_integral (k + l)) s
 Proof

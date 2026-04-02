@@ -132,7 +132,7 @@ local val DBref = ref empty_dbmap
           db |> updnamemap (functional_bindl_names thy blist)
              |> updrevmap (functional_bindl_revmap thy blist)
 
-      fun purge_stale_bindings() =
+      fun purge_stale_bindings thyname =
           let
             open Map
             fun foldthis (n, datas : data list, m) =
@@ -150,12 +150,12 @@ local val DBref = ref empty_dbmap
                        ttab
                        empty
                 end
-            val ct = current_theory()
           in
-            DBref := ((!DBref)
-                       |> updnamemap
-                            (updexisting ct (foldl foldthis empty_sdata_map))
-                       |> updrevmap purge_stale)
+            DBref :=
+            ((!DBref)
+               |> updnamemap
+                    (updexisting thyname (foldl foldthis empty_sdata_map))
+               |> updrevmap purge_stale)
           end
 
       fun delete_binding bnm =
@@ -191,6 +191,7 @@ local val DBref = ref empty_dbmap
                 else DBref := functional_bindl (!DBref)
                                                (current_theory())
                                                [(s,thm,new)]
+              | ExportTheory s => purge_stale_bindings s
               | _ => ()
           end
       val _ = Theory.register_hook("DB", hook)
