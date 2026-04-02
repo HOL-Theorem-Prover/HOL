@@ -21,19 +21,14 @@ fun load_thydata {thyname, path, hash} =
          This defines all types and constants via kernel primitives
          (prim_new_type, prim_new_const, prim_type_definition,
          gen_prim_specification, etc.) as side effects of replaying
-         the definition proofs.
-         We chDir to the directory containing the .dat file so that
-         ProofTraceReplay can find <thyname>Theory.tr.gz there.
-         The path may be a HOL-level path (e.g., src/bool/boolTheory.dat)
-         that maps to .hol/objs/ via HFS_NameMunge. *)
+         the definition proofs. *)
       val fspath = case HFS_NameMunge.HOLtoFS path of
                        SOME {dir, ...} => dir
                      | NONE => OS.Path.dir path
-      val olddir = OS.FileSys.getDir ()
-      val _ = if fspath <> "" then OS.FileSys.chDir fspath else ()
-      val _ = ProofTraceReplay.replay thyname
-              handle e => (OS.FileSys.chDir olddir; raise e)
-      val _ = OS.FileSys.chDir olddir
+      val trfile = OS.Path.concat
+                     (if fspath <> "" then fspath else ".",
+                      thyname ^ "Theory.tr.gz")
+      val _ = ProofTraceReplay.replay trfile
       val (named_dict, anon_list) = ProofTraceReplay.replayed_thms thyname
 
       (* Extract theorem name/info from the raw .dat exports.
