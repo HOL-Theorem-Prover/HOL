@@ -52,13 +52,26 @@ fun register_bool_def "bool" "T" = register_T
 
 exception NeedsAncestor of string
 
-fun replay thyname =
+fun thyname_from_path path =
+  let
+    val {file, ...} = OS.Path.splitDirFile path
+  in
+    if String.isSuffix "Theory.tr.gz" file then
+      String.extract(file, 0,
+        SOME(String.size file - String.size "Theory.tr.gz"))
+    else if String.isSuffix "Theory.tr" file then
+      String.extract(file, 0,
+        SOME(String.size file - String.size "Theory.tr"))
+    else raise Fail ("ProofTraceReplay.replay: unexpected filename: " ^ file)
+  end
+
+fun replay path =
+  let val thyname = thyname_from_path path in
   if inDomain(!trDB, thyname)
   then msg_print("skip ")
   else
 let
-  val filename = thyname ^ "Theory.tr.gz";
-  val (root_ptr, heap) = parse filename;
+  val (root_ptr, heap) = parse path;
   val {all_thms, anon_thms, constants, types, ...} = shRoot heap root_ptr;
 
   val register_def = if thyname = "bool" then register_bool_def
@@ -358,6 +371,7 @@ let
 in trDB := insert(!trDB, thyname, (named, anons)) end
 handle e as (NeedsAncestor s) => (print("Ancestor missing: "^s^"\n"); raise e)
      | e as (HOL_ERR m) => (print("HOL_ERR: "^(Feedback.message_of m)^"\n"); raise e)
+end (* let val thyname *)
 
 fun trDB_size () = foldl (fn (_,(n,a), acc) =>
   acc + numItems n + length a) 0 (!trDB)
@@ -368,7 +382,7 @@ fun replay_sequence [] = ()
      if !print_statistics then
        print ("trDB: " ^ Int.toString (trDB_size ()) ^ " thms  ")
      else ();
-     (if !print_statistics then time else I) replay thy;
+     (if !print_statistics then time else I) replay (thy ^ "Theory.tr.gz");
      replay_sequence thys)
 
 fun replayed_thms s = find(!trDB, s)
