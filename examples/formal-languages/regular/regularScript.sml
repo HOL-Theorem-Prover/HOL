@@ -635,6 +635,14 @@ Proof
   metis_tac [ADD1, wf_nfa_def,SUBSET_DEF]
 QED
 
+Theorem is_exec_last_state:
+  wf_nfa N ∧ is_exec N qs w ⇒ LAST qs ∈ N.Q
+Proof
+  rw [] >> drule is_exec_nonempty >>
+  drule_all is_exec_states >> rw [] >>
+  drule_all EVERY_LAST >> simp[]
+QED
+
 Theorem is_exec_TL:
   wf_nfa N ∧ is_exec N qs w ∧ w ≠ ε ⇒ is_exec N (TL qs) (TL w)
 Proof
@@ -860,16 +868,86 @@ Proof
      )
 QED
 
+(* A dfa can consume any string in Sigma* starting from any state *)
+Theorem dfa_has_exec:
+  is_dfa N ∧ q ∈ N.Q ⇒
+  ∀w. EVERY (λa. a ∈ N.Sigma) w ⇒
+      ∃qs. is_exec N qs w ∧ HD qs = q
+Proof
+ strip_tac >>
+ ho_match_mp_tac SNOC_INDUCT >> rw[EVERY_SNOC]
+  >- (qexists_tac ‘[q]’ >> rw [is_exec_def])
+  >- (first_x_assum drule >> rw[] >>
+      rename1 ‘a ∈ N.Sigma’ >>
+      subgoal ‘∃q. q ∈ N.delta (LAST qs) a’ >-
+        (gvs [is_dfa_def] >>
+         drule_all is_exec_last_state >>
+         metis_tac [IN_INSERT]) >>
+      qexists_tac ‘qs ++ [q]’ >> simp [SNOC_APPEND] >>
+      imp_res_tac is_exec_nonempty >> simp [HD_APPEND] >>
+      metis_tac [dfa_is_nfa,is_exec_extend_right])
+QED
+
 Theorem dfa_total:
   is_dfa N ∧ EVERY (λa. a ∈ N.Sigma) w
   ⇒ ∃qs. is_exec N qs w ∧
          N.initial = {HD qs}
 Proof
-  rw[] >> drule_all dfa_execution >> rw[] >>
-  qexists_tac ‘qs’ >> rw[is_exec_def]
-  >- gvs [is_dfa_def, wf_nfa_def]
-  >- metis_tac [IN_INSERT]
+  rw[] >>
+  ‘∃q. N.initial = {q}’ by metis_tac[is_dfa_def] >>
+  imp_res_tac dfa_is_nfa >> gvs [wf_nfa_def] >>
+  metis_tac [dfa_has_exec]
 QED
+
+(*
+Theorem dfa_execution_deterministic:
+  is_dfa N ⇒
+  ∀w qs1 qs2.
+      is_exec N qs1 w ∧
+      is_exec N qs2 w ∧ HD qs1 = HD qs2
+      ⇒ qs1 = qs2
+Proof
+  disch_tac >> ho_match_mp_tac SNOC_INDUCT >> rw[]
+  >- gvs [is_dfa_def,is_exec_def,LENGTH_EQ_NUM_compute]
+  >- (drule is_exec_nonempty >> rev_drule is_exec_nonempty >> rw[] >>
+      drule APPEND_FRONT_LAST >> disch_then (SUBST_ALL_TAC o SYM) >>
+      rev_drule APPEND_FRONT_LAST >> disch_then (SUBST_ALL_TAC o SYM) >>
+      gvs [SNOC_APPEND] >> imp_res_tac dfa_is_nfa >>
+      drule_all is_exec_drop_right >>
+      rev_drule_all is_exec_drop_right >> rw[]
+      >- (first_x_assum irule >> simp[] >>
+          ‘FRONT qs1 ≠ [] ∧ FRONT qs2 ≠ []’ by
+            metis_tac[is_exec_nonempty] >> gvs[])
+      >-
+FOO
+  >- (rename1 ‘SNOC a w’ >> fs [EVERY_SNOC] >>
+      ‘LENGTH Q1 = LENGTH w + 2 ∧ LENGTH Q2 = LENGTH w + 2’ by decide_tac >>
+      ‘∃qs1 q1. Q1 = SNOC q1 qs1 ∧ qs1 ≠ []’ by metis_tac[snoc2] >>
+      ‘∃qs2 q2. Q2 = SNOC q2 qs2 ∧ qs2 ≠ []’ by metis_tac[snoc2] >> fs[] >>
+      ONCE_REWRITE_TAC [CONJ_SYM] \\
+      irule (METIS_PROVE [] “(b' ⇒ a=a') ∧ (a' ⇒ b=b') ∧ a' ∧ b' ⇒ a ∧ b”) >>
+      qexists_tac ‘qs1 = qs2’ >> qexists_tac ‘T’ >> simp[] >> conj_tac
+      >- (first_x_assum irule >> rw[LENGTH_FRONT] >> fs[GSYM SNOC_APPEND]
+          >- (‘EL (n+1) (SNOC q1 qs1) ∈
+               N.delta (EL n (SNOC q1 qs1)) (EL n (SNOC a w))’ by rw[] >>
+               rpt (forget_tac is_forall) >> pop_assum mp_tac >> simp [EL_SNOC])
+          >- (‘EL (n+1) (SNOC q2 qs2) ∈
+               N.delta (EL n (SNOC q2 qs2)) (EL n (SNOC a w))’ by rw[] >>
+               rpt(forget_tac is_forall) >> pop_assum mp_tac >> simp[EL_SNOC]))
+      >- (fs [SNOC_APPEND] \\
+          rw[] >> forget_tac is_neg >> forget_tac is_eq >>
+          fs [GSYM SNOC_APPEND] >> ‘LENGTH w < SUC (LENGTH w)’ by decide_tac >>
+          first_x_assum drule >> fs [Once BOUNDED_FORALL_THM] >>
+          ‘LENGTH w + 1 = LENGTH qs1’ by decide_tac >>
+          gvs[EL_LENGTH_SNOC,EL_SNOC] >>
+          ‘EL (LENGTH w) qs1 ∈ N.Q’ by
+            (irule nfa_execution_last_state >> rw[] >> fs [is_dfa_def]) >>
+          fs [is_dfa_def] >>
+          ‘∃qf. N.delta (EL (LENGTH w) qs1) a = {qf}’ by metis_tac[] >>
+          gvs[])
+     )
+QED
+*)
 
 Theorem dfa_execution_deterministic:
   is_dfa N ⇒
@@ -914,6 +992,7 @@ Proof
           gvs[])
      )
 QED
+
 
 (*---------------------------------------------------------------------------*)
 (* Abstract encode/decode functions map back and forth between subsets and   *)
