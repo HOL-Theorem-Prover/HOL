@@ -1,5 +1,5 @@
 val _ = use "../tools/Holmake/Systeml.sig";
-val _ = use "Holmake/Systeml.sml";
+val _ = use "../tools/Holmake/Systeml.sml";
 val _ = use "poly/Binarymap.sig";
 val _ = use "poly/Binarymap.sml";
 val _ = use "poly/Binaryset.sig";
