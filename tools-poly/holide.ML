@@ -154,7 +154,9 @@ fun prettyToString pp = let
 
 fun trProps [] = []
   | trProps (PolyML.PTprint p :: ls) = PPrint (prettyToString (p 5)) :: trProps ls
-  | trProps (PolyML.PTdeclaredAt p :: ls) = PDeclaredAt p :: trProps ls
+  | trProps (PolyML.PTdeclaredAt {file, startLine, endLine, startPosition, endPosition} :: ls) =
+    PDeclaredAt {file = file, startLine = FixedInt.toInt startLine, endLine = FixedInt.toInt endLine,
+                 startPosition = FixedInt.toInt startPosition, endPosition = FixedInt.toInt endPosition} :: trProps ls
   | trProps (PolyML.PTtype t :: ls) = PType t :: trProps ls
   | trProps (PolyML.PTparent _ :: ls) = trProps ls
   | trProps (PolyML.PTfirstChild _ :: ls) = trProps ls
@@ -196,6 +198,8 @@ fun moveTopSemi (PTInner pt) = PTInner pt
 
 local open HOLSourceAST in
 
+fun fiSpan (a, b) = (FixedInt.fromInt a, FixedInt.fromInt b)
+
 fun overspan sp (b as Built (sp', props, _)) =
   if sp = sp' then b else Built (sp, props, [b])
 
@@ -221,9 +225,9 @@ fun skipDecs [] pt = pt
   | skipDecs (DecSemi _ :: ds) pt = skipDecs ds (moveTopSemi pt)
   | skipDecs (_ :: ds) pt = skipDecs ds (moveTopRight pt)
 
-fun annotateId id pt = addProps [PIdContent (#2 id)] (withProps (idSpan id) pt [])
+fun annotateId id pt = addProps [PIdContent (#2 id)] (withProps (fiSpan (idSpan id)) pt [])
 
-fun annotateTy ty pt = withProps (tySpan ty) pt (case ty of
+fun annotateTy ty pt = withProps (fiSpan (tySpan ty)) pt (case ty of
     TyVar _ => []
   | TyRecord {elems = {args, ...}, ...} =>
     rev (#1 (onList (fn ({lab,ty,...},pt,acc) => let
@@ -275,18 +279,18 @@ fun annotateDatatype {args, ...} withtype_ pt = let
     end
 
 fun annotateExp _ (ExpExpansion {orig, result}) pt =
-    overspan (expSpan orig) (annotateExp (SOME orig) result pt)
+    overspan (fiSpan (expSpan orig)) (annotateExp (SOME orig) result pt)
   | annotateExp (SOME (IfThenElse {else_ = NONE, ...})) (e as IfThenElse {exp1, exp2, ...}) pt =
-    withProps (expSpan e) pt (case moveDown pt of pt =>
+    withProps (fiSpan (expSpan e)) pt (case moveDown pt of pt =>
       [annotateExp NONE exp1 pt, annotateExp NONE exp2 (moveRight pt)])
   | annotateExp (SOME (HOLFullQuote _)) (App (_, e)) pt =
-    addProps [PQuote] (withProps (expSpan e) pt (
+    addProps [PQuote] (withProps (fiSpan (expSpan e)) pt (
       rev (annotateQuote e (moveRight (moveDown pt)) [])))
   | annotateExp (SOME (HOLQuote _)) e pt =
-    addProps [PQuote] (withProps (expSpan e) pt (rev (annotateQuote e pt [])))
+    addProps [PQuote] (withProps (fiSpan (expSpan e)) pt (rev (annotateQuote e pt [])))
   | annotateExp _ (Ident {op_ = NONE, id}) pt = annotateId id pt
   | annotateExp _ e pt =
-    withProps (expSpan e) pt (case e of
+    withProps (fiSpan (expSpan e)) pt (case e of
       Wild _ => []
     | IntegerConstant _ => []
     | WordConstant _ => []
@@ -313,9 +317,9 @@ fun annotateExp _ (ExpExpansion {orig, result}) pt =
     | Layered {op_, id, ty, pat, ...} => let
       val pt = moveDown pt
       fun var pt = let
-        val sp = idSpan id
+        val sp = fiSpan (idSpan id)
         val e = addProps [PIdContent (#2 id)] (withSpan sp pt)
-        in case op_ of NONE => e | SOME p => withProps (p, #2 sp) pt [e] end
+        in case op_ of NONE => e | SOME p => withProps (FixedInt.fromInt p, #2 sp) pt [e] end
       val e = case ty of
         NONE => var pt
       | SOME {ty, ...} => let
@@ -420,7 +424,7 @@ and annotateFunPat (App (f, x)) pt = let
     in (moveRight pt, mkList [f, x]) end
   | annotateFunPat (e as Parens {exp, ...}) pt = let
     val (pt, e') = annotateFunPat exp pt
-    in (pt, overspan (expSpan e) e') end
+    in (pt, overspan (fiSpan (expSpan e)) e') end
   | annotateFunPat (Infix {left, id, right}) pt = let
     val f = annotateId id pt
     val pt = moveRight pt
@@ -478,11 +482,11 @@ and annotateDec (DecExpansion {orig = DecExp _,
       | annotList (HOLAncestors {elems, ...} :: ls) acc = annotList ls (annot true elems acc)
       | annotList (HOLLibs {elems, ...} :: ls) acc = annotList ls (annot false elems acc)
     val acc = annotList elems {opens = rev opens, strs = rev strs, acc = acc}
-    in (withProps (decSpan orig) NONE (rev acc), pt) end
+    in (withProps (fiSpan (decSpan orig)) NONE (rev acc), pt) end
   | annotateDec (DecExpansion {orig, result}) pt = let
     val (acc, pt) = annotateDecs result pt []
-    in (withProps (decSpan orig) NONE (rev acc), pt) end
-  | annotateDec (d as DecSemi _) pt = (withProps (decSpan d) (topHead pt) [], moveTopSemi pt)
+    in (withProps (fiSpan (decSpan orig)) NONE (rev acc), pt) end
+  | annotateDec (d as DecSemi _) pt = (withProps (fiSpan (decSpan d)) (topHead pt) [], moveTopSemi pt)
   | annotateDec d pt = let
     val children = case d of
       DecSemi _ => raise Fail "unreachable"
@@ -579,7 +583,7 @@ and annotateDec (DecExpansion {orig = DecExp _,
     | DecMosmlPrimVal _    => []
     | DecBad _             => []
     | DecExpansion _       => raise Fail "unreachable"
-    in (withProps (decSpan d) (topHead pt) (rev children), moveTopRight pt) end
+    in (withProps (fiSpan (decSpan d)) (topHead pt) (rev children), moveTopRight pt) end
 
 and annotateConstraint NONE pt acc = (acc, pt)
   | annotateConstraint (SOME {sigexp, ...}) pt acc =
@@ -587,7 +591,7 @@ and annotateConstraint NONE pt acc = (acc, pt)
 
 and annotateSigexp (SigIdent id) pt = annotateId id pt
   | annotateSigexp sigexp pt =
-    withProps (sigexpSpan sigexp) pt (case sigexp of
+    withProps (fiSpan (sigexpSpan sigexp)) pt (case sigexp of
       SigIdent _ => raise Fail "unreachable"
     | Spec {spec, ...} => rev (#1 (annotateDecs spec (PTInner (moveDown pt)) []))
     | WhereType {sigexp, elems = {args, ...}, ...} =>
@@ -597,7 +601,7 @@ and annotateSigexp (SigIdent id) pt = annotateId id pt
 
 and annotateStrexp (StrIdent id) pt = annotateId id pt
   | annotateStrexp strexp pt =
-    withProps (strexpSpan strexp) pt (case strexp of
+    withProps (fiSpan (strexpSpan strexp)) pt (case strexp of
       StrIdent _ => raise Fail "unreachable"
     | StrStruct {strdec, ...} => rev (#1 (annotateDecs strdec (PTInner (moveDown pt)) []))
     | StrConstraint {strexp, kind = {sigexp, ...}, ...} =>
