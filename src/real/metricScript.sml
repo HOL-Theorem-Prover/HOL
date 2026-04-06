@@ -1954,6 +1954,13 @@ End
 Theorem Lipschitz_continuous_map_def =
         Lipschitz_continuous_map |> REWRITE_RULE [Lipschitz_condition_def]
 
+Theorem Lipschitz_continuous_map_const :
+    !E1 E2 c. Lipschitz_continuous_map (E1,E2) (\x. c)
+Proof
+    rw [Lipschitz_continuous_map_def, MDIST_REFL]
+ >> Q.EXISTS_TAC ‘1’ >> simp [MDIST_POS_LE]
+QED
+
 Theorem Lipschitz_continuous_map_imp_continuous_map :
     !E1 E2 f. Lipschitz_continuous_map (E1,E2) f ==>
               continuous_map (mtop E1,mtop E2) f

@@ -5278,6 +5278,42 @@ Proof
  >> REWRITE_TAC [extreal_not_infty]
 QED
 
+Theorem lambda_univ :
+    lambda UNIV = PosInf
+Proof
+    qabbrev_tac ‘f = \n. interval (-&n,&n)’
+ >> Know ‘UNIV = BIGUNION (IMAGE f UNIV)’
+ >- (rw [Once EXTENSION, IN_BIGUNION_IMAGE] \\
+     MP_TAC (Q.SPEC ‘abs x’ SIMP_REAL_ARCH_SUC) >> rw [ABS_BOUNDS_LT] \\
+     Q.EXISTS_TAC ‘SUC n’ >> simp [Abbr ‘f’, IN_INTERVAL])
+ >> Rewr'
+ >> qmatch_abbrev_tac ‘lambda s = PosInf’
+ >> Know ‘measure lborel s = sup (IMAGE (measure lborel o f) UNIV)’
+ >- (SYM_TAC >> MATCH_MP_TAC MONOTONE_CONVERGENCE \\
+     simp [measure_space_lborel, sets_lborel] \\
+     CONJ_TAC
+     >- rw [IN_FUNSET, Abbr ‘f’, OPEN_interval, borel_measurable_sets] \\
+     rw [Abbr ‘f’, SUBSET_DEF, IN_INTERVAL] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       Q_TAC (TRANS_TAC REAL_LT_TRANS) ‘-&n’ >> simp [],
+       (* goal 2 (of 2) *)
+       Q_TAC (TRANS_TAC REAL_LT_TRANS) ‘&n’ >> simp [] ])
+ >> Rewr'
+ >> Know ‘lambda o f = \n. Normal 2 * &n’
+ >- rw [o_DEF, FUN_EQ_THM, Abbr ‘f’, lambda_open_interval,
+        extreal_of_num_def, extreal_mul_eq, REAL_SUB_RNEG]
+ >> Rewr'
+ >> qabbrev_tac ‘g :num -> extreal = \n. &n’
+ >> simp []
+ >> Know ‘sup (IMAGE (\n. Normal 2 * g n) UNIV) =
+          Normal 2 * sup (IMAGE g UNIV)’
+ >- (MATCH_MP_TAC sup_cmul >> simp [])
+ >> Rewr'
+ >> ‘IMAGE g UNIV = \x. ?n. x = &n’ by rw [Once EXTENSION]
+ >> POP_ORW
+ >> simp [sup_num, mul_infty]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Extreal-based Borel measure space                                        *)
 (* ------------------------------------------------------------------------- *)

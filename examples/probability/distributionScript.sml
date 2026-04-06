@@ -12127,12 +12127,41 @@ Proof
     rw [ABS_REFL, EXP_POS_LE]
 QED
 
+Theorem abs_x_std_normmal_density_upper_bound_lemma[local] :
+    !y. 0 <= y ==> abs y * std_normal_density y <= std_normal_density 1
+Proof
+    rpt STRIP_TAC
+ >> ‘abs y = y’ by simp [ABS_REFL] >> POP_ORW
+ >> ‘std_normal_density 1 = 1 * std_normal_density 1’ by simp []
+ >> POP_ORW
+ >> ‘y <= 1 \/ 1 <= y’ by METIS_TAC [REAL_LE_TOTAL, REAL_LT_IMP_LE]
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC x_std_normal_density_increasing >> simp [],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC x_std_normal_density_decreasing >> simp [] ]
+QED
+
+Theorem abs_x_std_normmal_density_upper_bound :
+    !y. abs y * std_normal_density y <= std_normal_density 1
+Proof
+    Q.X_GEN_TAC ‘y’
+ >> Cases_on ‘0 <= y’
+ >- (MATCH_MP_TAC abs_x_std_normmal_density_upper_bound_lemma >> art [])
+ >> fs [REAL_NOT_LE]
+ >> ‘0 <= -y’ by REAL_ASM_ARITH_TAC
+ >> ONCE_REWRITE_TAC [GSYM ABS_NEG]
+ >> ‘std_normal_density y = std_normal_density (-y)’
+      by REWRITE_TAC [std_normal_density_neg]
+ >> POP_ORW
+ >> MATCH_MP_TAC abs_x_std_normmal_density_upper_bound_lemma >> art []
+QED
+
 (* NOTE: This theorem shows that the bound antecedent cannot be satisfied
    when gauge_higher_differentiable_lemma is applied in C3 proof.
  *)
 Theorem gauge_higher_differentiable_lemma_inapplicable :
   !s. s <> 0 ==>
-     ?n f. 1 <= n /\ n <= 3 /\ bounded (IMAGE f UNIV) /\
+     ?n f. 1 <= n /\ n <= 3 /\ f IN BL mr1 /\
           ~?w. integrable lborel w /\ (!x. 0 <= w x /\ w x <> PosInf) /\
                !t x. Normal
                       (abs (diffn n
@@ -12141,8 +12170,8 @@ Theorem gauge_higher_differentiable_lemma_inapplicable :
 Proof
     rpt STRIP_TAC
  >> qexistsl_tac [‘1’, ‘\x. 1’] >> simp []
- >> CONJ_TAC
- >- (rw [bounded_def] \\
+ >> CONJ_TAC (* BL *)
+ >- (rw [BL_alt, bounded_def, Lipschitz_continuous_map_const] \\
      Q.EXISTS_TAC ‘1’ >> simp [])
  >> CCONTR_TAC >> fs []
  >> Know ‘!x t. diff1
@@ -12203,9 +12232,35 @@ Proof
      >- (Q.EXISTS_TAC ‘a * std_normal_density 1’ \\
          simp [REAL_LT_MUL, std_normal_density_pos, Abbr ‘P’] \\
          Q.EXISTS_TAC ‘1’ >> simp []) \\
-     cheat)
+     Q.EXISTS_TAC ‘a * std_normal_density 1’ \\
+     Q.X_GEN_TAC ‘x’ >> simp [Abbr ‘P’] \\
+     DISCH_THEN (Q.X_CHOOSE_THEN ‘y’ (REWRITE_TAC o wrap)) \\
+     REWRITE_TAC [GSYM REAL_MUL_ASSOC] \\
+     MATCH_MP_TAC REAL_LE_LMUL_IMP >> simp [REAL_LT_IMP_LE] \\
+     REWRITE_TAC [abs_x_std_normmal_density_upper_bound])
  >> DISCH_TAC
- >> cheat
+ >> ‘integral lborel w <> PosInf’
+      by METIS_TAC [integrable_finite_integral, measure_space_lborel]
+ >> qabbrev_tac ‘f = \(x :real). Normal z’
+ >> Know ‘integral lborel f = Normal z * measure lborel (m_space lborel)’
+ >- (qunabbrev_tac ‘f’ \\
+     MATCH_MP_TAC integral_const >> simp [measure_space_lborel])
+ >> ‘0 < Normal z’ by simp [extreal_of_num_def, extreal_lt_eq]
+ >> simp [space_lborel, lambda_univ, mul_infty]
+ >> REWRITE_TAC [lt_infty]
+ >> Q_TAC (TRANS_TAC let_trans) ‘integral lborel w’
+ >> simp [GSYM lt_infty]
+ >> Know ‘integral lborel f = pos_fn_integral lborel f’
+ >- (MATCH_MP_TAC integral_pos_fn \\
+     simp [measure_space_lborel, space_lborel, Abbr ‘f’, extreal_of_num_def] \\
+     MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
+ >> Rewr'
+ >> Know ‘integral lborel w = pos_fn_integral lborel w’
+ >- (MATCH_MP_TAC integral_pos_fn \\
+     simp [measure_space_lborel, space_lborel])
+ >> Rewr'
+ >> MATCH_MP_TAC pos_fn_integral_mono
+ >> rw [Abbr ‘f’, space_lborel, REAL_LT_IMP_LE]
 QED
 
 (* ------------------------------------------------------------------------- *)
