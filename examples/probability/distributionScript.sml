@@ -9158,6 +9158,12 @@ Proof
  >> simp [Abbr ‘c’, REAL_INV_1OVER]
 QED
 
+Theorem diffn_std_normal_density' :
+    !n x. diffn n std_normal_density x = -1 pow n * He n x * std_normal_density x
+Proof
+    rw [std_normal_density_def, diffn_std_normal_density]
+QED
+
 Theorem Hermite_polynomial_higher_differentiable :
     !m n x. higher_differentiable m (He n) x
 Proof
