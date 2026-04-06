@@ -7525,12 +7525,15 @@ Proof
  >> Rewr
 QED
 
+(* NOTE: added “0 < n ==> _” into the bound antecedents to eliminate trivial
+   counterexamples (see also gauge_higher_differentiable_lemma_inapplicable).
+ *)
 Theorem gauge_higher_differentiable_lemma :
     !u. (!t. integrable lborel (Normal o u t)) /\
         (!n t x. higher_differentiable n (\t. u t x) t) /\
-        (!n. ?w. integrable lborel w /\
-                (!x. 0 <= w x /\ w x <> PosInf) /\
-                 !t x. Normal (abs (diffn n (\t. u t x) t)) <= w x)
+        (!n. 0 < n ==> ?w. integrable lborel w /\
+                          (!x. 0 <= w x /\ w x <> PosInf) /\
+                           !t x. Normal (abs (diffn n (\t. u t x) t)) <= w x)
      ==> !n t. higher_differentiable n (\t. integral univ(:real) (u t)) t /\
                integrable lborel (\x. Normal (diffn n (\t. u t x) t)) /\
                diffn n (\t. integral univ(:real) (u t)) t =
@@ -7570,7 +7573,7 @@ Proof
         ‘diffn n (\t. u t x) = (\t. f t x)’ by rw [Abbr ‘f’, FUN_EQ_THM] \\
          simp []) \\
      POP_ASSUM (REWRITE_TAC o wrap o GSYM) \\
-     Q.PAT_X_ASSUM ‘!n. ?w. P’ (MP_TAC o Q.SPEC ‘SUC n’) >> rw [])
+     Q.PAT_X_ASSUM ‘!n. 0 < n ==> ?w. P’ (MP_TAC o Q.SPEC ‘SUC n’) >> rw [])
  >> simp []
  >> DISCH_THEN (STRIP_ASSUME_TAC o SRULE [FORALL_AND_THM])
  >> qabbrev_tac ‘g = \t. integral univ(:real) (u t)’
