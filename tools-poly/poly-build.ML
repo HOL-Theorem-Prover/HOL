@@ -17,7 +17,7 @@ fun useHMUtil f =
     (use ("../tools/Holmake/util/" ^ f ^ ".sig");
      use ("../tools/Holmake/util/" ^ f ^ ".sml"))
 
-val _ = use "Holmake/Systeml.sml";
+val _ = use "../tools/Holmake/Systeml.sml";
 val _ = useUtil "GetOpt";
 fun useHfs f =
     (use ("../tools/Holmake/hfs/" ^ f ^ ".sig");
