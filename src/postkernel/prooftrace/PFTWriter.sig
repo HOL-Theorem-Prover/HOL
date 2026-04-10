@@ -85,7 +85,7 @@ signature PFTWriter = sig
     val refl                : pft_out -> int -> int -> unit
     val trans               : pft_out -> int -> int -> int -> unit
     val mk_comb             : pft_out -> int -> int -> int -> unit
-    val abs                 : pft_out -> int -> int -> int -> unit
+    val abs_thm             : pft_out -> int -> int -> int -> unit
     val beta                : pft_out -> int -> int -> unit
     val assume              : pft_out -> int -> int -> unit
     val eq_mp               : pft_out -> int -> int -> int -> unit

@@ -45,7 +45,7 @@ any defined constants.
 | REFL | id, tm |
 | TRANS | id, th1, th2 |
 | MK_COMB | id, th1, th2 |
-| ABS | id, tm, th |
+| ABS_THM | id, tm, th |
 | BETA | id, tm |
 | ASSUME | id, tm |
 | EQ_MP | id, eq: thm-id, th: thm-id |
@@ -85,7 +85,7 @@ directly in the kernel for efficiency.
 | 0x10   | REFL                       | id tm                                  |
 | 0x11   | TRANS                      | id th1 th2                             |
 | 0x12   | MK_COMB                    | id th1 th2                             |
-| 0x13   | ABS                        | id tm th                               |
+| 0x13   | ABS_THM                    | id tm th                               |
 | 0x14   | BETA                       | id tm                                  |
 | 0x15   | ASSUME                     | id tm                                  |
 | 0x16   | EQ_MP                      | id eq th                               |
@@ -114,7 +114,7 @@ term.
 {"cmd":"REFL","id":0,"tm":1}
 {"cmd":"TRANS","id":0,"th1":1,"th2":2}
 {"cmd":"MK_COMB","id":0,"th1":1,"th2":2}
-{"cmd":"ABS","id":0,"tm":1,"th":2}
+{"cmd":"ABS_THM","id":0,"tm":1,"th":2}
 {"cmd":"BETA","id":0,"tm":1}
 {"cmd":"ASSUME","id":0,"tm":1}
 {"cmd":"EQ_MP","id":0,"eq":1,"th":2}
@@ -161,7 +161,7 @@ union) and `⊢` for entailment.
 | REFL | `t` | `⊢ t = t` | |
 | TRANS | `H1 ⊢ l = m1`, `H2 ⊢ m2 = r` | `H1 ∪ H2 ⊢ l = r` | `m1` and `m2` are alpha-equivalent |
 | MK_COMB | `H1 ⊢ f = g`, `H2 ⊢ x = y` | `H1 ∪ H2 ⊢ f x = g y` | `f x` must be well-typed |
-| ABS | `v`, `H ⊢ l = r` | `H ⊢ (λv. l) = (λv. r)` | `v` is a variable; `v` not free in `H` |
+| ABS_THM | `v`, `H ⊢ l = r` | `H ⊢ (λv. l) = (λv. r)` | `v` is a variable; `v` not free in `H` |
 | BETA | `(λx. t) x` | `⊢ (λx. t) x = t` | argument must be exactly the bound variable |
 | ASSUME | `p` | `{p} ⊢ p` | `p` has type `bool` |
 | EQ_MP | `H1 ⊢ p = q`, `H2 ⊢ p'` | `H1 ∪ H2 ⊢ q` | `p` and `p'` are alpha-equivalent |

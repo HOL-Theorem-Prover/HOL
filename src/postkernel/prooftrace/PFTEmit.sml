@@ -475,7 +475,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
     fun c_refl a           = let val id = alloc_th () in PFTWriter.Candle.refl out id a; id end
     fun c_trans a b        = let val id = alloc_th () in PFTWriter.Candle.trans out id a b; id end
     fun c_mk_comb a b      = let val id = alloc_th () in PFTWriter.Candle.mk_comb out id a b; id end
-    fun c_abs v th         = let val id = alloc_th () in PFTWriter.Candle.abs out id v th; id end
+    fun c_abs v th         = let val id = alloc_th () in PFTWriter.Candle.abs_thm out id v th; id end
     fun c_beta a           = let val id = alloc_th () in PFTWriter.Candle.beta out id a; id end
     fun c_assume a         = let val id = alloc_th () in PFTWriter.Candle.assume out id a; id end
     fun c_eq_mp a b        = let val id = alloc_th () in PFTWriter.Candle.eq_mp out id a b; id end
@@ -490,7 +490,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
     fun r_refl a           = PFTWriter.Candle.refl out result_id a
     fun r_trans a b        = PFTWriter.Candle.trans out result_id a b
     fun r_mk_comb a b      = PFTWriter.Candle.mk_comb out result_id a b
-    fun r_abs v th         = PFTWriter.Candle.abs out result_id v th
+    fun r_abs v th         = PFTWriter.Candle.abs_thm out result_id v th
     fun r_beta a           = PFTWriter.Candle.beta out result_id a
     fun r_assume a         = PFTWriter.Candle.assume out result_id a
     fun r_eq_mp a b        = PFTWriter.Candle.eq_mp out result_id a b

@@ -207,7 +207,7 @@ val () = let
   val () = PFTWriter.Candle.eq_mp out 5 0 1
   val () = PFTWriter.Candle.deduct_antisym_rule out 6 1 2
   val () = PFTWriter.Candle.mk_comb out 7 0 0
-  val () = PFTWriter.Candle.abs out 8 0 0
+  val () = PFTWriter.Candle.abs_thm out 8 0 0
   val () = PFTWriter.Candle.prove_hyp out 9 1 2
   val () = PFTWriter.closeOut out {n_ty=2, n_tm=2, n_th=10, n_ci=0}
   val got = readFile f
@@ -225,7 +225,7 @@ val () = let
     \{\"cmd\":\"EQ_MP\",\"id\":5,\"eq\":0,\"th\":1}\n\
     \{\"cmd\":\"DEDUCT_ANTISYM_RULE\",\"id\":6,\"th1\":1,\"th2\":2}\n\
     \{\"cmd\":\"MK_COMB\",\"id\":7,\"th1\":0,\"th2\":0}\n\
-    \{\"cmd\":\"ABS\",\"id\":8,\"tm\":0,\"th\":0}\n\
+    \{\"cmd\":\"ABS_THM\",\"id\":8,\"tm\":0,\"th\":0}\n\
     \{\"cmd\":\"PROVE_HYP\",\"id\":9,\"th1\":1,\"th2\":2}\n\
     \{\"cmd\":\"LIMITS\",\"n_ty\":2,\"n_tm\":2,\"n_th\":10,\"n_ci\":0}\n"
 in

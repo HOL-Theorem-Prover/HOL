@@ -679,7 +679,7 @@ fun pass2_emit (file_states: file_state vector)
             | 0x12 => let val a = rTh(vi())
                       in PFTWriter.Candle.mk_comb out nid a (rTh(vi())) end
             | 0x13 => let val a = rTm(vi())
-                      in PFTWriter.Candle.abs out nid a (rTh(vi())) end
+                      in PFTWriter.Candle.abs_thm out nid a (rTh(vi())) end
             | 0x14 => PFTWriter.Candle.beta out nid (rTm(vi()))
             | 0x15 => PFTWriter.Candle.assume out nid (rTm(vi()))
             | 0x16 => let val a = rTh(vi())

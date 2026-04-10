@@ -389,7 +389,7 @@ val sym                 = th_1 "SYM"                 0x20 "th"
 
 val trans               = th_2 "TRANS"               0x11 "th1" "th2"
 val mk_comb             = th_2 "MK_COMB"             0x12 "th1" "th2"
-val abs                 = th_2 "ABS"                 0x13 "tm" "th"
+val abs_thm             = th_2 "ABS_THM"             0x13 "tm" "th"
 val eq_mp               = th_2 "EQ_MP"               0x16 "eq" "th"
 val deduct_antisym_rule = th_2 "DEDUCT_ANTISYM_RULE" 0x17 "th1" "th2"
 val prove_hyp           = th_2 "PROVE_HYP"           0x21 "th1" "th2"
