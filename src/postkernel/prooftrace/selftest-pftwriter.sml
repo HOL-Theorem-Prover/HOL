@@ -270,7 +270,7 @@ val () = let
   val () = PFTWriter.tyop out 0 "bool" []
   val () = PFTWriter.var out 0 "x" 0
   val () = PFTWriter.axiom out 0 0 NONE
-  val () = PFTWriter.Candle.new_specification out 1 0
+  val () = PFTWriter.Candle.new_specification out 1 0 ["foo"]
   val () = PFTWriter.Candle.new_type_definition out 2 0 "mid" "mid_ABS" "mid_REP"
   val () = PFTWriter.Candle.compute_init out 0 [0, 1, 2]
   val () = PFTWriter.Candle.compute out 4 0 0 [0]
@@ -281,7 +281,7 @@ val () = let
     \{\"cmd\":\"TYOP\",\"id\":0,\"name\":\"bool\",\"args\":[]}\n\
     \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"x\",\"ty\":0}\n\
     \{\"cmd\":\"AXIOM\",\"id\":0,\"tm\":0}\n\
-    \{\"cmd\":\"new_specification\",\"id\":1,\"th\":0}\n\
+    \{\"cmd\":\"new_specification\",\"id\":1,\"th\":0,\"names\":[\"foo\"]}\n\
     \{\"cmd\":\"new_type_definition\",\"id\":2,\"th\":0,\"tyname\":\"mid\",\"absname\":\"mid_ABS\",\"repname\":\"mid_REP\"}\n\
     \{\"cmd\":\"COMPUTE_INIT\",\"id\":0,\"ths\":[0,1,2]}\n\
     \{\"cmd\":\"COMPUTE\",\"id\":4,\"ci\":0,\"tm\":0,\"ths\":[0]}\n\
