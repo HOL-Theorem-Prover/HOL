@@ -504,8 +504,8 @@ all arguments are provided directly.
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| INST | `A ⊢ p`, `[(t1,x1),...,(tn,xn)]` | `A[ti/xi] ⊢ p[ti/xi]` | each `ti` has same type as `xi` |
-| INST_TYPE | `A ⊢ p`, `[(ty1,a1),...,(tyn,an)]` | `A[tyi/ai] ⊢ p[tyi/ai]` | type variable substitution |
+| INST | `A ⊢ p`, `[(x1,t1),...,(xn,tn)]` | `A[ti/xi] ⊢ p[ti/xi]` | each `ti` has same type as `xi` |
+| INST_TYPE | `A ⊢ p`, `[(a1,ty1),...,(an,tyn)]` | `A[tyi/ai] ⊢ p[tyi/ai]` | type variable substitution |
 | SUBST | `[(v1, A1 ⊢ t1 = t1'),...,(vn, An ⊢ tn = tn')]`, `template`, `B ⊢ p` | `A1 ∪...∪ An ∪ B ⊢ p'` | `p'` is `p` with each `vi` in template replaced by corresponding `ti'` |
 | EQ_IMP_RULE1 | `A ⊢ p = q` | `A ⊢ p ⇒ q` | |
 | EQ_IMP_RULE2 | `A ⊢ p = q` | `A ⊢ q ⇒ p` | |

@@ -166,8 +166,8 @@ union) and `⊢` for entailment.
 | ASSUME | `p` | `{p} ⊢ p` | `p` has type `bool` |
 | EQ_MP | `H1 ⊢ p = q`, `H2 ⊢ p'` | `H1 ∪ H2 ⊢ q` | `p` and `p'` are alpha-equivalent |
 | DEDUCT_ANTISYM_RULE | `H1 ⊢ p`, `H2 ⊢ q` | `(H1 \ {q}) ∪ (H2 \ {p}) ⊢ p = q` | |
-| INST | `H ⊢ p`, `[(t1,x1),...,(tn,xn)]` | `H[ti/xi] ⊢ p[ti/xi]` | each `xi` is a variable; each `ti` has same type as `xi` |
-| INST_TYPE | `H ⊢ p`, `[(ty1,a1),...,(tyn,an)]` | `H[tyi/ai] ⊢ p[tyi/ai]` | type variable substitution |
+| INST | `H ⊢ p`, `[(x1,t1),...,(xn,tn)]` | `H[ti/xi] ⊢ p[ti/xi]` | each `xi` is a variable; each `ti` has same type as `xi` |
+| INST_TYPE | `H ⊢ p`, `[(a1,ty1),...,(an,tyn)]` | `H[tyi/ai] ⊢ p[tyi/ai]` | type variable substitution |
 
 Note: BETA only applies to terms of the form `(λx. t) x` where the argument
 is exactly the bound variable. This is more restrictive than a general
