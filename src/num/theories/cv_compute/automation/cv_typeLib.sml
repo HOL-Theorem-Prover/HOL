@@ -625,7 +625,8 @@ fun define_from_to_aux ignore_tyvars ty =
     \\ once_rewrite_tac [to_def]
     \\ rewrite_tac [cv_has_shape_def,cv_fst_def,cv_snd_def]
     \\ EVERY (map assume_tac lemmas)
-    \\ gs [from_to_def])
+    \\ simp_tac std_ss [CV_EQ]
+    \\ full_simp_tac std_ss [from_to_def])
   val from_to_thms =
     from_to_thm |> REWRITE_RULE [GSYM from_to_def]
                 |> UNDISCH_ALL |> CONJUNCTS
