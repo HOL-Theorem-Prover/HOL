@@ -592,7 +592,10 @@ fun define_from_to_aux ignore_tyvars ty =
     in Defn.tprove(to_defn,
                    WF_REL_TAC [ANTIQUOTE full_measure_tm]
                    \\ rewrite_tac [cv_has_shape_expand]
-                   \\ rpt strip_tac \\ gvs [cv_size_def])
+                   \\ rpt strip_tac
+                   \\ rpt BasicProvers.VAR_EQ_TAC
+                   \\ simp_tac std_ss [cv_size_def, cv_snd_def, cv_fst_def]
+                   \\ decide_tac)
     end
   val (to_def, to_ind) = Feedback.trace ("Theory.allow_rebinds", 1) make_def ()
   (* from from_to theorems *)
