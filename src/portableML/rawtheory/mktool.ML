@@ -36,6 +36,11 @@ useB "../Portable";
 use  "../Table.sml";
 useB "../AList";
 use  "../Graph.sml";
+useB "../../../tools-poly/poly/Binarymap";
+useB "../../../tools-poly/poly/Binaryset";
+useB "../Redblackmap";
+useB "../Redblackset";
+useB "../../../tools/util/GetOpt";
 
 (* mlyacc cruft *)
 fun MLYuse s = use ("../../../tools/mlyacc/mlyacclib/MLY_" ^ s ^ ".sml");

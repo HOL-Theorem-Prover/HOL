@@ -223,6 +223,10 @@ Unless otherwise noted, they are built by the configuration process.
     Built on demand *via* a Holmakefile.
     The executable is in `tools/cmp`.
 
+`dat-printer`
+:   A utility designed to pretty-print the theorem statements from theory files, using a simple-minded s-expression based format.
+    The source files are located in `src/portableML/rawtheory/`.
+
 `Holmake`
 :   The user-facing tool for building HOL developments.
     Use of this tool is described in the Description manual.
@@ -237,6 +241,11 @@ Unless otherwise noted, they are built by the configuration process.
 `mlyacc.exe`
 :   The tool from SML/NJ.
     The executable is in `tools/mlyacc/src/`.
+
+`theorytool`
+:   A dependency and definition analysis tool. 
+    Running it allows you to dynamically dump `.dat` keys, or output a full hierarchical ancestry graph of the theories using `dot` format *via* the `--thygraph` option.
+    The source files are located in `src/portableML/rawtheory/`.
 
 `unquote`
 :   The quotation filter that runs over sources before they are seen by SML implementations.

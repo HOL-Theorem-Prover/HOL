@@ -5,24 +5,22 @@ all: $(DEFAULT_TARGETS)
 theorystats.uo: theorystats.sml $(dprot $(SIGOBJ)/Graph.ui) $(dprot $(SIGOBJ)/SHA1.uo)
 	$(HOLMOSMLC) -c Graph.ui $<
 
-ifdef POLY
-all: theorytool
-
-theorytool: mktool.ML theorytool.ML theorystats.uo
-	$(POLYC) -o $@ $<
-
-endif
-
 ifneq ($(which mlton),)
-all: dat-printer
+all: dat-printer theorytool
 
 dat-printer: dat-printer.mlb RawTermPP.sml RawTheoryReader.sig RawTheoryReader.sml mlton-datprinter.ML DatPrinterTool.ML
 	mlton -default-type intinf $<
 
+theorytool: theorytool.mlb theorystats.sml theorytool.ML mlton-theorytool.ML
+	mlton -default-type intinf $<
+
 else ifdef POLY
-all: dat-printer
+all: dat-printer theorytool
 
 dat-printer: mkdatprinter.ML DatPrinterTool.ML RawTermPP.uo
+	$(POLYC) -o $@ $<
+
+theorytool: mktool.ML theorytool.ML theorystats.uo
 	$(POLYC) -o $@ $<
 
 endif

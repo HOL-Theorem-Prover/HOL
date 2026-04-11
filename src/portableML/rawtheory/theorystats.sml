@@ -5,6 +5,8 @@ open Portable
 open RawTheory_dtype
 open RawTheoryReader
 
+val emit_scan_progress = ref (fn (s:string) => ())
+
 infix |>
 fun x |> f = f x
 
@@ -52,6 +54,7 @@ fun getHash p = SHA1.sha1_file {filename=p}
 
 fun readThy p (g,links) =
     let
+      val _ = !emit_scan_progress p
       open RawTheoryReader
       val dat as {parents, name, exports, ...} =
           RawTheoryReader.load_raw_thydata{path = p}
