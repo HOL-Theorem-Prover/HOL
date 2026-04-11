@@ -1,20 +1,37 @@
-datatype action = ShowKeys | ShowThyGraph
-datatype conf_record = CR of { action : action, help : bool, quiet : bool }
-val init_conf = CR { action = ShowKeys, help = false, quiet = false }
+datatype action = ShowKeys
+                | ShowThyGraph
+                | ShowUnused
+
+datatype conf_record = CR of {
+  action : action,
+  help : bool,
+  quiet : bool
+}
+
+val init_conf =
+  CR {action = ShowKeys, help = false, quiet = false}
+
 fun set_action a (CR {help, quiet, ...}) =
-    CR {action = a, help = help, quiet = quiet}
+  CR {action = a, help = help, quiet = quiet}
+
 fun set_help () (CR {action, quiet, ...}) =
-    CR {action = action, help = true, quiet = quiet}
+  CR {action = action, help = true, quiet = quiet}
+
 fun set_quiet () (CR {action, help, ...}) =
-    CR {action = action, help = help, quiet = true}
+  CR {action = action, help = help, quiet = true}
 
 val cline_options = [
   {short = "t", long = ["thygraph"],
    desc = GetOpt.NoArg (fn () => set_action ShowThyGraph),
    help = "Generate dep. graph for given theories (or all if list empty)"},
-  {short = "q", long = ["quiet"], desc = GetOpt.NoArg set_quiet,
+  {short = "u", long = ["unused"],
+   desc = GetOpt.NoArg (fn () => set_action ShowUnused),
+   help = "Scan and report unused theorems"},
+  {short = "q", long = ["quiet"],
+   desc = GetOpt.NoArg set_quiet,
    help = "Suppress file scanning output"},
-  {short = "h", long = ["help"], desc = GetOpt.NoArg set_help,
+  {short = "h", long = ["help"],
+   desc = GetOpt.NoArg set_help,
    help = "Show this message"}
 ]
 
@@ -127,10 +144,37 @@ fun main() =
       case action of
         ShowKeys => (
           print "Keys:\n";
-          List.app (println o HOLPP.pp_to_string 70 RawTheorykey.pp)
-                   (TheoryGraph.keys g)
+          List.app (println o
+           HOLPP.pp_to_string 70 RawTheorykey.pp)
+                    (TheoryGraph.keys g)
         )
       | ShowThyGraph => do_thygraph files (g, links)
+      | ShowUnused =>
+          let
+            val theories =
+              List.map (fn key =>
+                let
+                  val thy_name = #thy (#1 key)
+                  val nd =
+                    TheoryGraph.get_node g key
+                in
+                  (thy_name, nd)
+                end
+              ) (TheoryGraph.keys g)
+            val unused =
+              find_unused theories
+          in
+            if null unused then
+              println "No unused theorems found."
+            else (
+              println "Unused theorems:";
+              List.app (fn (thm_ref, name) =>
+                println
+                  (string_of_thm_ref thm_ref ^
+                   ": " ^ name)
+              ) unused
+            )
+          end
     end
   end handle e =>
              theorystats.die ("Uncaught exception: " ^ General.exnMessage e)

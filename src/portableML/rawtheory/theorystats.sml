@@ -125,6 +125,75 @@ fun find_theory_action dir A =
       else A
     end
 
+(* ======================================================================== *)
+(* Unused theorem scanning *)
+(* ======================================================================== *)
+
+type thm_ref = {thy : string, idx : int}
+
+fun string_of_thm_ref {thy, idx} =
+  thy ^ "[" ^ Int.toString idx ^ "]"
+
+(* Extract all theorem names and build index *)
+fun build_usage_sets theories =
+  let
+    (* Collect all theorem names *)
+    val all_thms =
+      ref ([] : (thm_ref * string) list)
+
+    (* Set of theorems that are depended upon *)
+    val used_thms = ref ([] : thm_ref list)
+
+    fun process_theory (thy_name, nd : raw_nodedata) =
+      let
+        val {exports, ...} = nd
+        val {thms, ...} = exports
+        fun process_idx_thm (i, thm) =
+          let
+            val ref_key = {thy = thy_name, idx = i}
+            val name = #name thm
+          in
+            all_thms := (ref_key, name) :: !all_thms
+          end
+        val thm_indices =
+          List.tabulate (List.length thms, fn i => i)
+      in
+        ListPair.app process_idx_thm
+          (thm_indices, thms);
+
+        List.app (fn thm =>
+          let val {deps, ...} = #deps thm
+          in
+            List.app (fn (dep_thy, indices) =>
+              List.app (fn idx =>
+                used_thms :=
+                  {thy = dep_thy, idx = idx} :: !used_thms
+              ) indices
+            ) deps
+          end
+        ) thms
+      end
+  in
+    List.app process_theory theories;
+    (!all_thms, !used_thms)
+  end
+
+(* Find unused theorems *)
+fun find_unused theories =
+  let
+    val (all_thms, used_thms) =
+      build_usage_sets theories
+    fun is_used ref_key =
+      List.exists (fn u =>
+        #thy u = #thy ref_key andalso
+        #idx u = #idx ref_key
+      ) used_thms
+  in
+    List.filter (fn (ref_key, _) =>
+      not (is_used ref_key)
+    ) all_thms
+  end
+
 
 end (* struct *)
 
