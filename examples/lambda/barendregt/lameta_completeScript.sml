@@ -1,19 +1,18 @@
 (* ========================================================================== *)
-(* FILE    : lameta_completeScript.sml (chap10_4Script.sml)                   *)
+(* FILE    : lameta_completeScript.sml                                        *)
 (* TITLE   : Completeness of (Untyped) Lambda-Calculus [1, Chapter 10.4]      *)
 (*                                                                            *)
 (* AUTHORS : 2024 - 2025 The Australian National University (Chun Tian)       *)
 (* ========================================================================== *)
+
 Theory lameta_complete
 Ancestors
-  combin arithmetic pred_set list rich_list llist ltree relation
-  topology iterate option nomset basic_swap term appFOLDL chap2
-  chap3 horeduction solvable takahashiS3 head_reduction
-  standardisation boehm chap4
+  combin option arithmetic pred_set list rich_list llist ltree relation iterate
+  topology nomset basic_swap term appFOLDL chap2 chap3 chap4 horeduction
+  solvable takahashiS3 head_reduction standardisation boehm
 Libs
-  hurdUtils tautLib numLib listLib NEWLib reductionEval
-  head_reductionLib monadsyntax
-
+  hurdUtils tautLib numLib listLib NEWLib reductionEval head_reductionLib
+  monadsyntax
 
 (* enable basic monad support *)
 val _ = enable_monadsyntax ();
@@ -43,6 +42,8 @@ val PRINT_TAC = goalStack.note_tac
 (* Disable some conflicting overloads from labelledTermsTheory *)
 Overload FV  = “supp term_pmact”
 Overload VAR = “term$VAR”
+
+val _ = temp_clear_overloads_on "fEL"; (* use old EL syntax *)
 
 (*---------------------------------------------------------------------------*
  *  head equivalence
@@ -209,11 +210,8 @@ Proof
  >> qabbrev_tac ‘Y = BIGUNION (IMAGE FV (set Ms))’
  >> ‘FINITE Y’ by (rw [Abbr ‘Y’] >> rw [])
  >> qabbrev_tac ‘pi' = Boehm_construction X Ms p’
- >> CONJ_ASM1_TAC
- >- rw [Abbr ‘pi'’, Boehm_construction_transform]
- (* original steps *)
- >> Q.PAT_X_ASSUM ‘EVERY _ Ms’ MP_TAC
- >> DISCH_THEN (STRIP_ASSUME_TAC o (REWRITE_RULE [EVERY_EL]))
+ >> CONJ_ASM1_TAC >- rw [Abbr ‘pi'’, Boehm_construction_transform]
+ >> Q.PAT_X_ASSUM ‘EVERY _ Ms’ (STRIP_ASSUME_TAC o (REWRITE_RULE [EVERY_EL]))
  >> qabbrev_tac ‘k = LENGTH Ms’
  >> qabbrev_tac ‘M = \i. EL i Ms’ >> fs []
  >> Know ‘!i. i < k ==> FV (M i) SUBSET X UNION RANK r’
@@ -224,14 +222,9 @@ Proof
      rw [Abbr ‘M’, EL_MEM])
  >> DISCH_TAC
  (* now derive some non-trivial assumptions *)
- >> ‘!i. i < k ==> (!q. q <<= p ==> subterm X (M i) q r <> NONE) /\
-                    !q. q <<= FRONT p ==> solvable (subterm' X (M i) q r)’
-       by METIS_TAC [subterm_solvable_lemma]
- (* convert previous assumption into easier forms for MATCH_MP_TAC *)
  >> ‘(!i q. i < k /\ q <<= p ==> subterm X (M i) q r <> NONE) /\
      (!i q. i < k /\ q <<= FRONT p ==> solvable (subterm' X (M i) q r))’
-       by PROVE_TAC []
- >> Q.PAT_X_ASSUM ‘!i. i < k ==> P /\ Q’ K_TAC
+       by METIS_TAC [subterm_solvable_lemma]
  (* In the original antecedents of this theorem, some M may be unsolvable,
     and that's the easy case.
   *)
@@ -240,10 +233,8 @@ Proof
      Q.PAT_X_ASSUM ‘!i q. i < k /\ q <<= FRONT p ==> solvable _’
        (MP_TAC o Q.SPECL [‘i’, ‘[]’]) >> simp [])
  >> DISCH_TAC
- >> Know ‘!i. i < k ==> p IN ltree_paths (BT' X (M i) r)’
- >- (rpt STRIP_TAC \\
-     irule (iffRL BT_ltree_paths_thm) >> rw [])
- >> DISCH_TAC
+ >> ‘!i. i < k ==> p IN ltree_paths (BT' X (M i) r)’
+      by METIS_TAC [BT_ltree_paths_thm]
  (* define M0 *)
  >> qabbrev_tac ‘M0 = \i. principal_hnf (M i)’
  >> Know ‘!i. i < k ==> hnf (M0 i)’
@@ -634,7 +625,7 @@ Proof
  >> ‘!i. LENGTH (l i) = m i + (n_max - n i) + SUC d_max + k’
        by rw [Abbr ‘l’, Abbr ‘m’, Abbr ‘args2’, Abbr ‘d_max’, MAP_DROP]
  >> ‘!i. d_max + k < LENGTH (l i)’ by rw []
- >> DISCH_TAC
+ >> DISCH_TAC (* !i. i < k ==> apply p3 _ = P (f i) @* l i *)
  (* applying TAKE_DROP_SUC to break l into 3 pieces
 
     NOTE: New the segmentation of ‘l’ also depends on ‘i’.
@@ -693,8 +684,8 @@ Proof
  >> DISCH_TAC
  >> Know ‘!i. i < k ==> ?b. EL (j i) xs = b /\ B i = VAR b’
  >- (rw [Abbr ‘B’, Abbr ‘l’] \\
-     Suff ‘EL (d_max' i) (args' i ++ args2 i ++ MAP VAR xs) = EL (j i) (MAP VAR xs)’
-     >- rw [EL_MAP] \\
+     Suff ‘EL (d_max' i) (args' i ++ args2 i ++ MAP VAR xs) =
+           EL (j i) (MAP VAR xs)’ >- rw [EL_MAP] \\
      SIMP_TAC bool_ss [Abbr ‘j’] \\
      MATCH_MP_TAC EL_APPEND2 \\
     ‘f i < k’ by rw [] \\
