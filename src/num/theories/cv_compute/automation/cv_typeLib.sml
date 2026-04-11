@@ -327,9 +327,16 @@ fun cv_rep_case_for from_def = let
     \\ rewrite_tac [inj,dist]
     \\ rewrite_tac [cv_rep_alt]
     \\ rpt strip_tac
-    \\ full_simp_tac bool_ss cs
+    \\ rewrite_tac cs
+    \\ rpt (BasicProvers.VAR_EQ_TAC ORELSE
+            first_x_assum (C (mp_then Any strip_assume_tac) TRUTH) ORELSE
+            first_x_assum(mp_then Any strip_assume_tac (iffLR UNWIND_FORALL_THM1)))
     \\ rewrite_tac ds
-    \\ simp [cv_lt_def])
+    \\ simp_tac (std_ss)
+         [cv_lt_def, cv_if, c2b_thm,
+          cv_ispair_def, cv_fst_def, cv_snd_def]
+    \\ rpt(first_x_assum irule)
+    \\ rewrite_tac[])
   val res = SPEC_ALL lemma
             |> CONV_RULE ((RAND_CONV o RATOR_CONV)
                           (ONCE_REWRITE_CONV [oneTheory.one] THENC
