@@ -182,10 +182,13 @@ fun set_openthy s =
 fun set_thmsrc s =
   resfn (fn (wn, t) =>
             if s = "dat" orelse s = "tr" then
-              (if isSome (#thmsrc t) then
-                 wn "Multiple --thmsrc specs; ignoring earlier spec"
-               else ();
-               updateT t (U #thmsrc (SOME s)) $$)
+              (if s = "tr" andalso not Systeml.haveWord64 then
+                 (wn "--thmsrc tr requires Word64 support; ignoring"; t)
+               else
+                 (if isSome (#thmsrc t) then
+                    wn "Multiple --thmsrc specs; ignoring earlier spec"
+                  else ();
+                  updateT t (U #thmsrc (SOME s)) $$))
             else
               (wn ("Bad --thmsrc value: " ^ s ^ "; expected dat or tr"); t))
 fun addDbg sopt =
