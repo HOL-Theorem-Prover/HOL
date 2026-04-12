@@ -98,19 +98,15 @@ fun find_theory_files_action dir A =
       let
         val thys =
           Portable.listDir objsdirname
-          |> List.filter
-               (String.isSuffix "Theory.dat")
+          |> List.filter (String.isSuffix "Theory.dat")
         fun collect (thyfile, acc) =
           let
             val thydat = dir ++ thyfile
-            val {base, ...} =
-              OS.Path.splitBaseExt thyfile
+            val {base, ...} = OS.Path.splitBaseExt thyfile
             val thy_name =
-              String.substring
-                (base, 0, size base - 6)
+              String.substring (base, 0, size base - 6)
           in
-            Symtab.cons_list
-              (thy_name, thydat) acc
+            Symtab.cons_list (thy_name, thydat) acc
           end
       in
         List.foldl collect A thys
@@ -170,8 +166,7 @@ fun load_with_ancestors
     target_thys thy_file_map (g, links) =
   let
     val to_read = ref target_thys
-    val read_set =
-      ref (Redblackset.empty String.compare)
+    val read_set = ref (Redblackset.empty String.compare)
     val result_g = ref g
     val result_links = ref links
 
@@ -180,33 +175,27 @@ fun load_with_ancestors
       then ()
       else
         let
-          val _ =
-            read_set :=
-              Redblackset.add(!read_set, thy)
+          val _ = read_set := Redblackset.add(!read_set, thy)
           val paths =
             case Symtab.lookup thy_file_map thy
             of SOME ps => ps
              | NONE => []
           fun try_paths [] = ()
             | try_paths (p::ps) =
-                case readThy p
-                       (!result_g, !result_links)
+                case readThy p (!result_g, !result_links)
                 of
                   SOME (new_g, new_links) =>
                     let
                       val (key, parents) =
                         (case new_links of
                           [] => raise Fail "empty links"
-                        | (k, ps) :: _ =>
-                            (k, ps))
+                        | (k, ps) :: _ => (k, ps))
                     in
                       result_g := new_g;
                       result_links := new_links;
-                      List.app
-                        (fn p =>
-                          to_read :=
-                            (#thy p) :: !to_read
-                        ) parents
+                      List.app (fn p =>
+                        to_read := (#thy p) :: !to_read
+                      ) parents
                     end
                 | NONE => try_paths ps
         in
@@ -217,9 +206,7 @@ fun load_with_ancestors
       case !to_read of
         [] => ()
       | thy :: rest =>
-          (to_read := rest;
-           process_thy thy;
-           loop ())
+          (to_read := rest; process_thy thy; loop ())
   in
     loop ();
     (!result_g, !result_links)
@@ -228,11 +215,7 @@ fun load_with_ancestors
 (* Extract all theorem names and build index *)
 fun build_usage_sets theories =
   let
-    (* Collect all theorem names *)
-    val all_thms =
-      ref ([] : (thm_ref * string) list)
-
-    (* Set of theorems that are depended upon *)
+    val all_thms = ref ([] : (thm_ref * string) list)
     val used_thms = ref ([] : thm_ref list)
 
     fun process_theory (thy_name, nd : raw_nodedata) =
@@ -249,9 +232,7 @@ fun build_usage_sets theories =
         val thm_indices =
           List.tabulate (List.length thms, fn i => i)
       in
-        ListPair.app process_idx_thm
-          (thm_indices, thms);
-
+        ListPair.app process_idx_thm (thm_indices, thms);
         List.app (fn thm =>
           let val {deps, ...} = #deps thm
           in
@@ -272,12 +253,10 @@ fun build_usage_sets theories =
 (* Find unused theorems *)
 fun find_unused theories =
   let
-    val (all_thms, used_thms) =
-      build_usage_sets theories
+    val (all_thms, used_thms) = build_usage_sets theories
     fun is_used ref_key =
       List.exists (fn u =>
-        #thy u = #thy ref_key andalso
-        #idx u = #idx ref_key
+        #thy u = #thy ref_key andalso #idx u = #idx ref_key
       ) used_thms
   in
     List.filter (fn (ref_key, _) =>

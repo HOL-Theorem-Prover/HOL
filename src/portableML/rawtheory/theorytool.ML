@@ -126,7 +126,8 @@ fun main() =
 
       val _ = theorystats.emit_scan_progress := (
         if quiet then (fn _ => ())
-        else if is_tty then (fn s => warn ("\r" ^ mkmsg s ^ "\r"))
+        else if is_tty then
+          (fn s => warn ("\r" ^ mkmsg s ^ "\r"))
         else (fn s => warnln (mkmsg s ^ "\n"))
       )
       open theorystats
@@ -137,12 +138,10 @@ fun main() =
                        [OS.FileSys.getDir()]
       
       val (g, links) =
-        if action = ShowUnused andalso
-           not (null files)
+        if action = ShowUnused andalso not (null files)
         then
-          load_with_ancestors files
-            thy_file_map
-            (TheoryGraph.empty, [])
+          load_with_ancestors files thy_file_map
+                              (TheoryGraph.empty, [])
         else
           recurse_toDirs find_theory_action
                          (TheoryGraph.empty, [])
@@ -150,18 +149,17 @@ fun main() =
       
       val _ = if not quiet andalso is_tty then
                 (TextIO.output(
-                    TextIO.stdOut,
-                    StringCvt.padRight #" " 80
-                      "\r" ^ "\r");
+                  TextIO.stdOut,
+                  StringCvt.padRight #" " 80 "\r" ^ "\r");
                  TextIO.flushOut TextIO.stdOut)
               else ()
     in
       case action of
         ShowKeys => (
           print "Keys:\n";
-          List.app (println o
-           HOLPP.pp_to_string 70 RawTheorykey.pp)
-                    (TheoryGraph.keys g)
+          List.app (println o HOLPP.pp_to_string 70
+                    RawTheorykey.pp)
+                   (TheoryGraph.keys g)
         )
       | ShowThyGraph => do_thygraph files (g, links)
       | ShowUnused =>
@@ -170,23 +168,20 @@ fun main() =
               List.map (fn key =>
                 let
                   val thy_name = #thy (#1 key)
-                  val nd =
-                    TheoryGraph.get_node g key
+                  val nd = TheoryGraph.get_node g key
                 in
                   (thy_name, nd)
                 end
               ) (TheoryGraph.keys g)
-            val unused =
-              find_unused theories
+            val unused = find_unused theories
           in
             if null unused then
               println "No unused theorems found."
             else (
               println "Unused theorems:";
               List.app (fn (thm_ref, name) =>
-                println
-                  (string_of_thm_ref thm_ref ^
-                   ": " ^ name)
+                println (string_of_thm_ref thm_ref ^
+                         ": " ^ name)
               ) unused
             )
           end
