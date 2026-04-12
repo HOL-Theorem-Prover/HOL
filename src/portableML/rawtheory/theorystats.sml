@@ -87,6 +87,37 @@ fun recurse_toDirs action A worklist =
           recurse_toDirs action A' (ds' @ ds)
         end
 
+fun find_theory_files_action dir A =
+  let
+    open OS.FileSys
+    val objsdirname = dir ++ ".hol/objs"
+  in
+    if access (objsdirname, [A_READ, A_EXEC])
+       andalso isDir objsdirname
+    then
+      let
+        val thys =
+          Portable.listDir objsdirname
+          |> List.filter
+               (String.isSuffix "Theory.dat")
+        fun collect (thyfile, acc) =
+          let
+            val thydat = dir ++ thyfile
+            val {base, ...} =
+              OS.Path.splitBaseExt thyfile
+            val thy_name =
+              String.substring
+                (base, 0, size base - 6)
+          in
+            Symtab.cons_list
+              (thy_name, thydat) acc
+          end
+      in
+        List.foldl collect A thys
+      end
+    else A
+  end
+
 fun find_theory_action dir A =
     let
       open OS.FileSys
@@ -133,6 +164,66 @@ type thm_ref = {thy : string, idx : int}
 
 fun string_of_thm_ref {thy, idx} =
   thy ^ "[" ^ Int.toString idx ^ "]"
+
+(* Load theories and their ancestors *)
+fun load_with_ancestors
+    target_thys thy_file_map (g, links) =
+  let
+    val to_read = ref target_thys
+    val read_set =
+      ref (Redblackset.empty String.compare)
+    val result_g = ref g
+    val result_links = ref links
+
+    fun process_thy thy =
+      if Redblackset.member(!read_set, thy)
+      then ()
+      else
+        let
+          val _ =
+            read_set :=
+              Redblackset.add(!read_set, thy)
+          val paths =
+            case Symtab.lookup thy_file_map thy
+            of SOME ps => ps
+             | NONE => []
+          fun try_paths [] = ()
+            | try_paths (p::ps) =
+                case readThy p
+                       (!result_g, !result_links)
+                of
+                  SOME (new_g, new_links) =>
+                    let
+                      val (key, parents) =
+                        (case new_links of
+                          [] => raise Fail "empty links"
+                        | (k, ps) :: _ =>
+                            (k, ps))
+                    in
+                      result_g := new_g;
+                      result_links := new_links;
+                      List.app
+                        (fn p =>
+                          to_read :=
+                            (#thy p) :: !to_read
+                        ) parents
+                    end
+                | NONE => try_paths ps
+        in
+          try_paths paths
+        end
+
+    fun loop () =
+      case !to_read of
+        [] => ()
+      | thy :: rest =>
+          (to_read := rest;
+           process_thy thy;
+           loop ())
+  in
+    loop ();
+    (!result_g, !result_links)
+  end
 
 (* Extract all theorem names and build index *)
 fun build_usage_sets theories =

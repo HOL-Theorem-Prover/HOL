@@ -130,14 +130,29 @@ fun main() =
         else (fn s => warnln (mkmsg s ^ "\n"))
       )
       open theorystats
+      
+      val thy_file_map =
+        recurse_toDirs find_theory_files_action
+                       (Symtab.empty)
+                       [OS.FileSys.getDir()]
+      
       val (g, links) =
+        if action = ShowUnused andalso
+           not (null files)
+        then
+          load_with_ancestors files
+            thy_file_map
+            (TheoryGraph.empty, [])
+        else
           recurse_toDirs find_theory_action
                          (TheoryGraph.empty, [])
                          [OS.FileSys.getDir()]
+      
       val _ = if not quiet andalso is_tty then
                 (TextIO.output(
                     TextIO.stdOut,
-                    StringCvt.padRight #" " 80 "\r" ^ "\r");
+                    StringCvt.padRight #" " 80
+                      "\r" ^ "\r");
                  TextIO.flushOut TextIO.stdOut)
               else ()
     in
