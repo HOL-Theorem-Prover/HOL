@@ -2,7 +2,10 @@ CLINE_OPTIONS = --no_overlay
 
 all: $(DEFAULT_TARGETS)
 
-theorystats.uo: theorystats.sml $(dprot $(SIGOBJ)/Graph.ui) $(dprot $(SIGOBJ)/SHA1.uo)
+theorystats.ui: theorystats.sig $(dprot $(SIGOBJ)/Graph.ui) $(dprot $(SIGOBJ)/Table.ui)
+	$(HOLMOSMLC) -c Table.ui Graph.ui $<
+
+theorystats.uo: theorystats.sml theorystats.ui $(dprot $(SIGOBJ)/Graph.ui) $(dprot $(SIGOBJ)/SHA1.uo)
 	$(HOLMOSMLC) -c Graph.ui $<
 
 ifneq ($(which mlton),)
