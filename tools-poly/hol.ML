@@ -445,11 +445,15 @@ fun main() = let
                  | NONE => OS.Process.getEnv "HOL_THMSRC"
   val _ = case thmsrc of
               SOME "tr" => (
-                diag "Loading ThmSrc_tr for proof trace replay";
-                Meta.load "ThmSrc_tr"
-                handle e => die ("Failed to load ThmSrc_tr: " ^
-                                 General.exnMessage e ^
-                                 "\n(is src/postkernel/prooftrace built?)")
+                if not Systeml.haveWord64 then
+                  die "--thmsrc tr requires Word64 support"
+                else (
+                  diag "Loading ThmSrc_tr for proof trace replay";
+                  Meta.load "ThmSrc_tr"
+                  handle e => die ("Failed to load ThmSrc_tr: " ^
+                                   General.exnMessage e ^
+                                   "\n(is src/postkernel/prooftrace built?)")
+                )
               )
             | SOME "dat" => ()  (* explicit dat is same as default *)
             | SOME s => die ("Unknown --thmsrc value: " ^ s)
