@@ -653,6 +653,30 @@ Proof
   gvs [from_char_def]
 QED
 
+Theorem cv_rep_char_lt[cv_rep]:
+  b2c (n < m) = cv_lt (from_char n) (from_char m)
+Proof
+  fs [cv_rep_def] \\ rw [from_char_def,stringTheory.char_lt_def]
+QED
+
+Theorem cv_rep_char_le[cv_rep]:
+  b2c (n <= m) = cv_sub (Num 1) (cv_lt (from_char m) (from_char n))
+Proof
+  fs [cv_rep_def] \\ rw [from_char_def,stringTheory.char_le_def]
+QED
+
+Theorem cv_rep_char_gt[cv_rep]:
+  b2c (n > m) = cv_lt (from_char m) (from_char n)
+Proof
+  fs [cv_rep_def] \\ rw [from_char_def,stringTheory.char_gt_def]
+QED
+
+Theorem cv_rep_char_ge[cv_rep]:
+  b2c (n >= m) = cv_sub (Num 1) (cv_lt (from_char n) (from_char m))
+Proof
+  fs [cv_rep_def] \\ rw [from_char_def,stringTheory.char_ge_def]
+QED
+
 (*----------------------------------------------------------*
    if, let, arb, =
  *----------------------------------------------------------*)
@@ -1408,4 +1432,3 @@ Proof
   ‘~w = w ?? UINT_MAXw’ by fs [WORD_XOR_CLAUSES]
   \\ asm_rewrite_tac [cv_rep_word_xor, cv_rep_word_uint_max]
 QED
-
