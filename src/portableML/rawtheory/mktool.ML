@@ -34,7 +34,10 @@ use  "../poly/Synchronized.sml";
 use  "../poly/MLSYSPortable.sml";
 useB "../Portable";
 use  "../Table.sml";
+use  "../Symtab.sml";
+use  "../Inttab.sml";
 useB "../AList";
+
 use  "../Graph.sml";
 useB "../../../tools-poly/poly/Binarymap";
 useB "../../../tools-poly/poly/Binaryset";
@@ -63,5 +66,5 @@ useB "RawTheoryReader";
 useB "../poly/SHA1_ML";
 useB "../SHA1";
 
-use "theorystats.sml";
-use "theorytool.ML";
+useB "theorystats";
+use  "theorytool.ML";

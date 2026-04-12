@@ -1,4 +1,4 @@
-structure theorystats =
+structure theorystats :> theorystats =
 struct
 
 open Portable
@@ -24,9 +24,10 @@ fun warn s = (
 
 fun println s = print (s ^ "\n")
 
+type thykey = RawTheory_dtype.raw_name * string
 structure RawTheorykey =
 struct
-  type key = raw_name * string (* name with hash + path *)
+  type key = thykey
   val ord = pair_compare (raw_name_compare, String.compare)
   fun pp (rn, p) =
       HOLPP.add_string(
@@ -35,6 +36,12 @@ struct
 end
 
 structure TheoryGraph = Graph(RawTheorykey)
+
+type thygraph_data = {exports : string RawTheory_dtype.raw_exports,
+                      parents : raw_name list} TheoryGraph.T *
+                     (thykey * raw_name list) list
+
+type theory_locn_map = string list Symtab.table
 
 type raw_nodedata = {
   exports : string raw_exports,
@@ -73,7 +80,9 @@ fun readThy p (g,links) =
                          General.exnMessage e)
 
 
-(* depth-first, preorder *)
+(* ----------------------------------------------------------------------
+    Depth-first, preorder
+   ---------------------------------------------------------------------- *)
 fun recurse_toDirs action A worklist =
     case worklist of
         [] => A
@@ -93,8 +102,7 @@ fun find_theory_files_action dir A =
     val objsdirname = dir ++ ".hol/objs"
   in
     if access (objsdirname, [A_READ, A_EXEC])
-       andalso isDir objsdirname
-    then
+       andalso isDir objsdirname then
       let
         val thys =
           Portable.listDir objsdirname
@@ -152,116 +160,139 @@ fun find_theory_action dir A =
       else A
     end
 
-(* ======================================================================== *)
-(* Unused theorem scanning *)
-(* ======================================================================== *)
+(* ----------------------------------------------------------------------
+    Unused theorem scanning
+   ---------------------------------------------------------------------- *)
 
 type thm_ref = {thy : string, idx : int}
 
 fun string_of_thm_ref {thy, idx} =
   thy ^ "[" ^ Int.toString idx ^ "]"
 
-(* Load theories and their ancestors *)
-fun load_with_ancestors
-    target_thys thy_file_map (g, links) =
-  let
-    val to_read = ref target_thys
-    val read_set = ref (Redblackset.empty String.compare)
-    val result_g = ref g
-    val result_links = ref links
+structure ThmRefKey =
+struct
+  type key = thm_ref
+  val ord = fn ({thy=t1, idx=i1}, {thy=t2, idx=i2}) =>
+    case String.compare(t1, t2) of
+      EQUAL => Int.compare(i1, i2)
+    | other => other
+  fun pp {thy, idx} =
+    HOLPP.add_string (thy ^ "[" ^ Int.toString idx ^ "]")
+end
 
-    fun process_thy thy =
-      if Redblackset.member(!read_set, thy)
-      then ()
+structure ThmGraph = Graph(ThmRefKey)
+
+(* ----------------------------------------------------------------------
+    Load theories and their ancestors
+   ---------------------------------------------------------------------- *)
+
+fun load_with_ancestors target_thys thy_file_map (g, links) =
+  let
+    fun process_thy thy (read_set, (G, links)) =
+      if Redblackset.member(read_set, thy) then ((read_set, (G, links)), [])
       else
         let
-          val _ = read_set := Redblackset.add(!read_set, thy)
-          val paths =
-            case Symtab.lookup thy_file_map thy
-            of SOME ps => ps
-             | NONE => []
-          fun try_paths [] = ()
-            | try_paths (p::ps) =
-                case readThy p (!result_g, !result_links)
-                of
-                  SOME (new_g, new_links) =>
-                    let
-                      val (key, parents) =
-                        (case new_links of
-                          [] => raise Fail "empty links"
-                        | (k, ps) :: _ => (k, ps))
-                    in
-                      result_g := new_g;
-                      result_links := new_links;
-                      List.app (fn p =>
-                        to_read := (#thy p) :: !to_read
-                      ) parents
-                    end
-                | NONE => try_paths ps
+          val read_set' = Redblackset.add(read_set, thy)
         in
-          try_paths paths
+          case Symtab.lookup thy_file_map thy of
+              SOME [p] =>
+              (case readThy p (G, links) of
+                   SOME (G',l') => ((read_set', (G',l')), map #thy (#2 (hd l')))
+                 | NONE => ((read_set', (G, links)), []))
+            | SOME ps =>
+              die
+                ("Cannot cope with multiple instances of theory " ^
+                 thy ^ " which appears to be present at\n" ^
+                 String.concat (map (fn p => " " ^ p ^ "\n") ps))
+            | NONE => (warn ("Cannot find location of theory " ^ thy ^
+                             "; ignoring it");
+                       ((read_set', (G, links)), []))
         end
 
-    fun loop () =
-      case !to_read of
-        [] => ()
-      | thy :: rest =>
-          (to_read := rest; process_thy thy; loop ())
+    fun loop glr worklist =
+        case worklist of
+            [] => glr
+          | [] :: rest => loop glr rest
+          | (thy :: rest1) :: rest2 =>
+            case process_thy thy glr of
+                (gl', parents) => loop gl' (parents :: rest1 :: rest2)
   in
-    loop ();
-    (!result_g, !result_links)
+    #2 (loop (Redblackset.empty String.compare, (g, links)) [target_thys])
   end
 
-(* Extract all theorem names and build index *)
-fun build_usage_sets theories =
+(* ----------------------------------------------------------------------
+    Find unused theorems
+   ---------------------------------------------------------------------- *)
+
+fun find_unused theories =
   let
-    val all_thms = ref ([] : (thm_ref * string) list)
-    val used_thms = ref ([] : thm_ref list)
+    val all_thm_refs = ref ([] : (thm_ref * string) list)
+
+    fun scan_max_indices ((thy_name, {exports,...} : raw_nodedata), tab) =
+      let
+        val {thms, ...} = exports
+        fun foldthis ({deps, name, ...}:string raw_thm, (mx, nametab)) =
+          let
+            val {me = (_, i), ...} = deps
+          in
+            (Int.max(i,mx), Inttab.update (i, name) nametab)
+          end
+      in
+        Symtab.update (thy_name, List.foldl foldthis (0, Inttab.empty) thms) tab
+      end
+    val name_maxidx_tab = List.foldl scan_max_indices Symtab.empty theories
+    val _ = Symtab.fold (fn (thy, (mx, _)) => fn () =>
+                            print ("Theory " ^ thy ^ " has max idx " ^
+                                   Int.toString mx ^ "\n"))
+                        name_maxidx_tab ()
+
+
+    val used_array_tab =
+        Symtab.fold (fn (thy,(mx, _)) =>
+                        Symtab.update (thy, Array.array(mx+1, false)))
+                    name_maxidx_tab
+                    Symtab.empty
 
     fun process_theory (thy_name, nd : raw_nodedata) =
       let
         val {exports, ...} = nd
         val {thms, ...} = exports
-        fun process_idx_thm (i, thm) =
+        fun process_idx_thm {deps, ...} =
           let
-            val ref_key = {thy = thy_name, idx = i}
-            val name = #name thm
+            val {deps=dep_list, ...} = deps
+            fun appthis (dep_thy, indices) =
+              case Symtab.lookup used_array_tab dep_thy of
+                  SOME arr =>
+                  (* Subscript exception is possible because of theorems
+                     that are stored in TypeBase and not exported with names *)
+                  List.app (fn idx => Array.update(arr, idx, true)
+                                      handle Subscript => ())
+                           indices
+                | NONE => ()
           in
-            all_thms := (ref_key, name) :: !all_thms
+            List.app appthis dep_list
           end
-        val thm_indices =
-          List.tabulate (List.length thms, fn i => i)
       in
-        ListPair.app process_idx_thm (thm_indices, thms);
-        List.app (fn thm =>
-          let val {deps, ...} = #deps thm
-          in
-            List.app (fn (dep_thy, indices) =>
-              List.app (fn idx =>
-                used_thms :=
-                  {thy = dep_thy, idx = idx} :: !used_thms
-              ) indices
-            ) deps
-          end
-        ) thms
+        List.app process_idx_thm thms
       end
+    fun buildresult (thy, arr) tab =
+        let
+          val (_, nametab) = valOf (Symtab.lookup name_maxidx_tab thy)
+          fun foldthis (i, usedp, tab) =
+              if not usedp then
+                case Inttab.lookup nametab i of
+                    NONE => tab
+                  | SOME s => Symtab.map_default
+                                (thy,Redblackset.empty String.compare)
+                                (fn set => Redblackset.add(set,s))
+                                tab
+              else tab
+        in
+          Array.foldli foldthis tab arr
+        end
   in
     List.app process_theory theories;
-    (!all_thms, !used_thms)
-  end
-
-(* Find unused theorems *)
-fun find_unused theories =
-  let
-    val (all_thms, used_thms) = build_usage_sets theories
-    fun is_used ref_key =
-      List.exists (fn u =>
-        #thy u = #thy ref_key andalso #idx u = #idx ref_key
-      ) used_thms
-  in
-    List.filter (fn (ref_key, _) =>
-      not (is_used ref_key)
-    ) all_thms
+    Symtab.fold buildresult used_array_tab Symtab.empty
   end
 
 

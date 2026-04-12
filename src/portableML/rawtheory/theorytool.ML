@@ -131,22 +131,21 @@ fun main() =
         else (fn s => warnln (mkmsg s ^ "\n"))
       )
       open theorystats
-      
+
       val thy_file_map =
         recurse_toDirs find_theory_files_action
-                       (Symtab.empty)
+                       Symtab.empty
                        [OS.FileSys.getDir()]
-      
+
       val (g, links) =
-        if action = ShowUnused andalso not (null files)
-        then
+        if not (null files) then
           load_with_ancestors files thy_file_map
                               (TheoryGraph.empty, [])
         else
           recurse_toDirs find_theory_action
                          (TheoryGraph.empty, [])
                          [OS.FileSys.getDir()]
-      
+
       val _ = if not quiet andalso is_tty then
                 (TextIO.output(
                   TextIO.stdOut,
@@ -154,8 +153,7 @@ fun main() =
                  TextIO.flushOut TextIO.stdOut)
               else ()
     in
-      case action of
-        ShowKeys => (
+      case action of ShowKeys => (
           print "Keys:\n";
           List.app (println o HOLPP.pp_to_string 70
                     RawTheorykey.pp)
@@ -163,28 +161,25 @@ fun main() =
         )
       | ShowThyGraph => do_thygraph files (g, links)
       | ShowUnused =>
-          let
-            val theories =
+        let
+          val theories =
               List.map (fn key =>
-                let
-                  val thy_name = #thy (#1 key)
-                  val nd = TheoryGraph.get_node g key
-                in
-                  (thy_name, nd)
-                end
-              ) (TheoryGraph.keys g)
-            val unused = find_unused theories
-          in
-            if null unused then
-              println "No unused theorems found."
-            else (
-              println "Unused theorems:";
-              List.app (fn (thm_ref, name) =>
-                println (string_of_thm_ref thm_ref ^
-                         ": " ^ name)
-              ) unused
-            )
-          end
+                           let
+                             val thy_name = #thy (#1 key)
+                             val nd = TheoryGraph.get_node g key
+                           in
+                             (thy_name, nd)
+                           end
+                       ) (TheoryGraph.keys g)
+          val _ = print ("Keys : " ^ String.concatWith ", " (map #1 theories) ^
+                         "\n")
+          fun foldthis (thyname, unused_names) () =
+              print ("Unused in " ^ thyname ^ ":\n" ^
+                     String.concat (map (fn s => "  " ^ s ^ "\n")
+                                        (Redblackset.listItems unused_names)))
+        in
+          Symtab.fold foldthis (find_unused theories) ()
+        end
     end
   end handle e =>
              theorystats.die ("Uncaught exception: " ^ General.exnMessage e)

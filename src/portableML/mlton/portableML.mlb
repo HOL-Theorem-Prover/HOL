@@ -50,6 +50,7 @@ Interrupt.sml
 Unsynchronized.sml
 ../Table.sml
 ../Symtab.sml
+../Inttab.sml
 ../mosml/concurrent/Sref.sig
 ../mosml/concurrent/Sref.sml
 ../seq.sig
