@@ -284,8 +284,9 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
       in {rec_ = rec_, pat = pat, eq = eq} end
     in DecVal {val_ = val_, tyvars = tyvars, elems = mapSep f elems} end
   | expandDec _ (dec as DecMosmlPrimVal {prim_val_, tyvars, elems}) = let
-    fun f {ty, eq, ...} = Option.isSome ty andalso Option.isSome eq
-    fun g {op_, id, ty, ...} = let
+    fun f ({ty, eq, ...}: mosml_primvalbind) =
+      Option.isSome ty andalso Option.isSome eq
+    fun g ({op_, id, ty, ...}: mosml_primvalbind) = let
       val pat = Ident {op_ = op_, id = id}
       val pat = case ty of
         SOME {colon, ty} => Typed {exp = pat, colon = colon, ty = ty}
@@ -474,7 +475,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val e = App (App (mkIdent (inductive_, entryPoint), mkString (id, stem)), quote)
     val acc = magicBind (mkStem "_strongind") [valPat inductive_ pat e]
     fun mkExtra _ [] acc = acc
-      | mkExtra i (SOME {label = SOME (HOLLabel {tilde_, id}), attrs, ...} :: conjs) acc = let
+      | mkExtra i (SOME ({label = SOME (HOLLabel {tilde_, id}), attrs, ...}: defn_label) :: conjs) acc = let
         val name = case tilde_ of NONE => id | SOME p => (p, stem ^ "_" ^ #2 id)
         val proof = mkHandleHolErr (inductive_,
           App (App (mkIdent (inductive_, "Drule.cj"), mkInt (inductive_, i)),

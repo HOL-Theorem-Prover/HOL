@@ -275,8 +275,7 @@ and strexp =
 and qdecl =
   QuoteLiteral of int * string
 | QuoteAntiq of {caret_: int, exp: exp}
-| DefinitionLabel of {left: int, label: defn_label_id option, attrs: ident attrs,
-    colon: int option, right: int option, stop: int}
+| DefinitionLabel of defn_label
   (** [id[x,y,z]:] *)
 
 withtype struct_kind = {colon: int * constraint, sigexp: sigexp}
@@ -288,6 +287,9 @@ and valbind = {rec_: int option, pat: exp, eq: {eq: int, exp: exp} option}
 and arm = {bar: int option, pat: exp, arrow: int option, exp: exp}
 
 and fvalarm = {bar: int option, pat: exp, eq: int option, exp: exp}
+
+and defn_label = {left: int, label: defn_label_id option, attrs: ident attrs,
+    colon: int option, right: int option, stop: int}
 
 type structbind = {
   id: ident, constraint: struct_kind option,

@@ -258,7 +258,7 @@ fun parseSML file read parseError: scope -> result = let
     | NONE => (case token () of tk => (unread tk; #1 tk))
     in (r, stop) end
 
-  fun parseSeparatedClose args seps (f as {elem, close, ...}) =
+  fun parseSeparatedClose args seps (f as {elem, close, sep=_}) =
     case token () of tk =>
       case close tk of
         SOME true => ({args = rev args, seps = rev seps, stop = #1 tk}, SOME (#1 tk), !pos)

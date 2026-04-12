@@ -293,6 +293,9 @@ type arm = {bar: int option, pat: exp, arrow: int option, exp: exp}
 
 type fvalarm = {bar: int option, pat: exp, eq: int option, exp: exp}
 
+type defn_label = {left: int, label: defn_label_id option, attrs: ident attrs,
+    colon: int option, right: int option, stop: int}
+
 type structbind = {
   id: ident, constraint: struct_kind option,
   bind: {eq: int, strexp: strexp} option}

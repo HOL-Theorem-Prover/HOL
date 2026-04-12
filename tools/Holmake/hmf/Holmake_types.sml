@@ -324,7 +324,7 @@ end
 
 fun is_pseudo_target s = s = ".PHONY"
 
-val empty_ruledb = Binarymap.mkDict String.compare
+val empty_ruledb : ruledb = Binarymap.mkDict String.compare
 type depdb = (string,string list) Binarymap.dict
 
 fun app_insert (ddb, s, slist) =

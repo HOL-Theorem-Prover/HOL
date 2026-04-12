@@ -379,7 +379,7 @@ local
    appropriate to use "real" OS.FileSys *)
 structure FileSys = OS.FileSys
 in
-fun dir_files ofns dnm A =
+fun dir_files (ofns: output_functions) dnm A =
     let
       val ds = FileSys.openDir dnm
       fun recurse A =
@@ -607,7 +607,7 @@ type dirset = hmdir.t Binaryset.set
 val empty_dirset = Binaryset.empty hmdir.compare
 type incset_pair = {pres : dirset, incs : dirset}
 type incdirmap = (hmdir.t,incset_pair) Binarymap.dict
-val empty_incdirmap = Binarymap.mkDict hmdir.compare
+val empty_incdirmap : incdirmap = Binarymap.mkDict hmdir.compare
 
 type holmake_dirinfo = {
   visited : hmdir.t Binaryset.set,
@@ -638,7 +638,7 @@ fun HMF_text (t:t) = #3 t
 fun setFile f (d,_,sopt) = (d,f,sopt)
 fun setHMF_text s (d,f,_) = (d,f,SOME s)
 fun toString (d,f,_) = OS.Path.concat (hmdir.toAbsPath d, fromFile f)
-val compare = inv_img_cmp (fn (d,f,_) => (d,f))
+val compare : t * t -> order = inv_img_cmp (fn (d,f,_) => (d,f))
                           (pair_compare (hmdir.compare, file_compare))
 val empty_tgtset : t Binaryset.set = Binaryset.empty compare
 fun tgtset_diff dl1 dl2 =
