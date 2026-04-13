@@ -61,6 +61,32 @@ fun graphbuild optinfo g =
           keep_going, quiet, hmenv, jobs, info, time_limit, maxheap,
           relocbuild } = optinfo
     val _ = diag "Starting graphbuild"
+    (* Per-directory locking: track locks and refcounts for active dirs *)
+    val dir_locks : (hmdir.t, {lock: HM_DirLock.lockhandle, refcount: int ref})
+                    Map.dict ref =
+        ref (Map.mkDict hmdir.compare)
+    fun acquire_dir_lock dir =
+        case Map.peek(!dir_locks, dir) of
+            SOME {refcount, ...} => refcount := !refcount + 1
+          | NONE =>
+            let val lh = HM_DirLock.acquire
+                           {dir = hmdir.toAbsPath dir, warn = warn}
+            in
+              dir_locks := Map.insert(!dir_locks, dir,
+                                      {lock = lh, refcount = ref 1})
+            end
+    fun release_dir_lock dir =
+        case Map.peek(!dir_locks, dir) of
+            NONE => ()
+          | SOME {lock, refcount} =>
+            (refcount := !refcount - 1;
+             if !refcount <= 0 then
+               (HM_DirLock.release lock;
+                dir_locks := #1 (Map.remove(!dir_locks, dir)))
+             else ())
+    fun release_all_locks () =
+        (Map.app (fn (_, {lock,...}) => HM_DirLock.release lock) (!dir_locks);
+         dir_locks := Map.mkDict hmdir.compare)
     val dirmap = graph_dirinfo g
     fun dropthySuffix s =
         if List.exists
@@ -158,8 +184,8 @@ fun graphbuild optinfo g =
 
     fun genjob (g,ok) =
       case (ok,find_runnable g) of
-          (false, _) => GiveUpAndDie (g, false)
-       |  (true, NONE) => NoMoreJobs (g, ok)
+          (false, _) => (release_all_locks(); GiveUpAndDie (g, false))
+       |  (true, NONE) => (release_all_locks(); NoMoreJobs (g, ok))
        |  (true, SOME (n,nI : GraphExtra.t nodeInfo)) =>
           let
             val _ = diag ("Found runnable node "^node_toString n)
@@ -173,19 +199,22 @@ fun graphbuild optinfo g =
             fun k b g =
                 (if needed then tgtcomplete (#dir nI, 1, 0, b, Time.zeroTime)
                  else ();
+                 release_dir_lock (#dir nI);
                  if b orelse keep_going then
                    genjob (updnode(n, if b then Succeeded else RealFail) g,
                            true)
-                 else GiveUpAndDie (g, ok))
+                 else (release_all_locks(); GiveUpAndDie (g, ok)))
             val deps = map #2 (#dependencies nI)
             val _ = is_pending (#status nI) orelse
                     raise Fail "runnable not pending"
             val target_s = tgt_toString (#target nI)
             val tag = if OS.Path.dir target_s = dir then OS.Path.file target_s
                       else target_s
+            val _ = acquire_dir_lock (#dir nI)
             fun stdprocess() =
               case #command nI of
-                  NoCmd => genjob (updnode (n,Succeeded) g, true)
+                  NoCmd => (release_dir_lock (#dir nI);
+                            genjob (updnode (n,Succeeded) g, true))
                 | cmd as SomeCmd c =>
                   let
                     val hypargs as {noecho,ignore_error,command=c} =
@@ -204,6 +233,7 @@ fun graphbuild optinfo g =
                      of
                         SOME r =>
                           k (error (OS.Process.isSuccess r) = Succeeded) g
+                          (* lock released via k *)
                       | NONE =>
                         let
                           val others = find_nodes_by_command g (#dir nI, cmd)
@@ -224,6 +254,7 @@ fun graphbuild optinfo g =
                                 val _ =
                                     tgtcomplete(#dir nI, neededi, thycount,
                                                 ok, t)
+                                val _ = release_dir_lock (#dir nI)
                               in
                                 (g',ok')
                               end
@@ -255,12 +286,13 @@ fun graphbuild optinfo g =
                                          g
                                          other_nodes
                             fun update ((g,ok), b, t) =
-                              if job_kont (fn s => ()) (b2res b) then
+                              (release_dir_lock (#dir nI);
+                               if job_kont (fn s => ()) (b2res b) then
                                 (tgtcomplete(#dir nI, ndi, thyc, true, t);
                                  (updall Succeeded g, true))
                               else
                                 (tgtcomplete(#dir nI, ndi, thyc, false, t);
-                                 (updall RealFail g, keep_going))
+                                 (updall RealFail g, keep_going)))
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l
                           in
@@ -312,6 +344,7 @@ fun graphbuild optinfo g =
                        (#dependencies nI)
                  of
                     NONE => (diag ("Can skip work on "^target_s);
+                             release_dir_lock (#dir nI);
                              genjob (updnode (n, Succeeded) g, true))
                   | SOME (_,d) =>
                     (diag ("Dependency " ^ tgt_toString d ^
@@ -326,6 +359,7 @@ fun graphbuild optinfo g =
                       provider = { initial = (g,true), genjob = genjob }}
   in
     do_work(worklist, monitor)
+    before release_all_locks()
   end
 
 end

@@ -45,9 +45,26 @@ fun 'a graphbuildj1 static_info =
         open HM_DepGraph
         val _ = diagK "Entering HMGBJ1.build_graph"
         val bc = build_command g
+        val cur_lock : (hmdir.t * HM_DirLock.lockhandle) option ref = ref NONE
+        fun ensure_lock dir =
+            case !cur_lock of
+                SOME (d, lh) =>
+                  if hmdir.compare(d, dir) = EQUAL then ()
+                  else (HM_DirLock.release lh;
+                        cur_lock := SOME (dir,
+                          HM_DirLock.acquire
+                            {dir = hmdir.toAbsPath dir, warn = warn}))
+              | NONE =>
+                  cur_lock := SOME (dir,
+                    HM_DirLock.acquire
+                      {dir = hmdir.toAbsPath dir, warn = warn})
+        fun release_lock () =
+            case !cur_lock of
+                SOME (_, lh) => (HM_DirLock.release lh; cur_lock := NONE)
+              | NONE => ()
         fun recurse retval g =
           case find_runnable g of
-              NONE => (retval, g)
+              NONE => (release_lock(); (retval, g))
             | SOME (n, nI : 'a nodeInfo) =>
               let
                 val target_d = #target nI
@@ -57,6 +74,7 @@ fun 'a graphbuildj1 static_info =
                 fun eBuildArticle (s,deps) = BuildArticle(s,deps,extra)
                 fun eProcessArticle s = ProcessArticle(s,extra)
                 val _ = hmdir.chdir (#dir nI)
+                val _ = ensure_lock (#dir nI)
                 val deps = map #2 (#dependencies nI)
                 fun k upd res =
                   let
