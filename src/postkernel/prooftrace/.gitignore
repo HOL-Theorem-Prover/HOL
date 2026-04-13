@@ -5,3 +5,4 @@ replay-test
 merge-test
 replay-merged-test
 pipeline-test
+make-preamble
