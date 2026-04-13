@@ -709,14 +709,6 @@ fun emit {output, binary} = let
   (* SPEC x from ASSUME (!x. P x ==> Q): {!x. P x ==> Q} ⊢ P x ==> Q *)
   val tm_forall_x_Px_imp_Q = mk_comb const_forall (mk_abs var_x (mk_comb (mk_comb const_imp tm_Px) var_Q))
 
-  (* {!x. P x ==> q} ⊢ P x ==> q  [via SPEC at type A] *)
-  val th_spec_inner = do_MP
-    (INST_TYPE (INST SPEC_pth [(var_P, lam_x_Px_imp_q), (var_x, var_x)])
-               [(ty_A, ty_A)])  (* already at type A, no-op INST_TYPE *)
-    tm_forall_x_Px_imp_q tm_Px_imp_q
-    (ASSUME tm_forall_x_Px_imp_q)
-
-
   (* Step 1: ASSUME (P x): {P x} ⊢ P x *)
   val th_assume_Px = ASSUME tm_Px
 
