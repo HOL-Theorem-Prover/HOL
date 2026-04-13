@@ -9,7 +9,9 @@ signature PFTCandlePreamble = sig
      Variable names used in pro-formas (PFTEmit must construct matching
      variables for INST):
        p, q : bool     (for /\, ==>, \/, conjunction/implication rules)
-       t    : bool     (for EQT_INTRO)
+       r    : bool     (for DISJ_CASES)
+       t    : bool     (for EQT_INTRO, EXCLUDED_MIDDLE)
+       Q    : bool     (for CHOOSE)
        P    : A->bool  (for !, ?, quantifier rules)
        x    : A        (for !, ?, quantifier rules)
 

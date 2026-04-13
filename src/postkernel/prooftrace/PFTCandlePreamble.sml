@@ -635,15 +635,15 @@ fun emit {output, binary} = let
   (* ================================================================ *)
   (* Helper: do_GEN — inline GEN using GEN_pth                       *)
   (*   from th: A ⊢ s, v not free in A, derive A ⊢ ∀v. s            *)
-  (*   body_tm = mk_abs(v, s_tm), lam_v_T = mk_abs(v, T)            *)
+  (*   body_tm = mk_abs(v, s_tm)                                     *)
   (* ================================================================ *)
 
-  fun do_GEN v th s_tm body_tm lam_v_T =
+  fun do_GEN v th s_tm body_tm =
     let val th1 = eqtIntro th s_tm                   (* A ⊢ s = T *)
         val th2 = ABS_thm v th1                      (* A ⊢ (\v. s) = (\v. T) *)
         val pth = INST (INST_TYPE GEN_pth [(ty_A, ty_bool)])
-                       [(var_P_bool, body_tm), (var_x_bool, v)]
-                                                     (* ⊢ (body = \v. T) = !body *)
+                       [(var_P_bool, body_tm)]
+                                                     (* ⊢ (body = \x. T) = !body *)
     in EQ_MP pth th2 end
 
   (* ================================================================ *)
@@ -687,7 +687,6 @@ fun emit {output, binary} = let
   val exists_body = mk_comb const_forall_bool lam_q_inner
 
   val exists_rhs = mk_abs var_P exists_body         (* \P. !q. ... *)
-  val ty_Ab_A = mk_fun ty_Ab ty_A                   (* (A->bool) -> A *)
 
   val var_exists_v = mk_var "?" ty_Ab_b
   val def_exists_tm = mk_eq eq_Ab_b var_exists_v exists_rhs
@@ -751,9 +750,8 @@ fun emit {output, binary} = let
 
   (* Step 6: GEN q *)
   val lam_q_forall_imp_q = mk_abs var_q tm_inner_imp  (* same as lam_q_inner *)
-  val lam_q_T_bool = mk_abs var_q const_T
   val th_gen_q = do_GEN var_q th_disch_forall tm_inner_imp
-                        lam_q_forall_imp_q lam_q_T_bool
+                        lam_q_forall_imp_q
   (* {P x} ⊢ !q. (!x. P x ==> q) ==> q *)
 
   (* Step 7: EQ_MP *)
@@ -851,8 +849,7 @@ fun emit {output, binary} = let
 
   (* GEN r *)
   val lam_r_pr_qr_r = lam_r_body  (* already have it *)
-  val lam_r_T = mk_abs var_r const_T
-  val th_gen_r = do_GEN var_r th_disch_pr tm_pr_qr_r lam_r_pr_qr_r lam_r_T
+  val th_gen_r = do_GEN var_r th_disch_pr tm_pr_qr_r lam_r_pr_qr_r
   (* {p} ⊢ !r. (p ==> r) ==> (q ==> r) ==> r *)
 
   (* EQ_MP (SYM or_unfold) *)
@@ -878,7 +875,7 @@ fun emit {output, binary} = let
   val th_disch_pr2 = do_DISCH tm_p_imp_r th_disch_qr2 tm_qr_imp_r tm_conj_pr_rest2
   (* {q} ⊢ (p ==> r) ==> (q ==> r) ==> r *)
 
-  val th_gen_r2 = do_GEN var_r th_disch_pr2 tm_pr_qr_r lam_r_pr_qr_r lam_r_T
+  val th_gen_r2 = do_GEN var_r th_disch_pr2 tm_pr_qr_r lam_r_pr_qr_r
   (* {q} ⊢ !r. ... *)
 
   val DISJ2_pth = EQ_MP (SYM or_unfold) th_gen_r2
@@ -972,6 +969,7 @@ fun emit {output, binary} = let
   (* ================================================================ *)
 
   (* NEW_CONST for @ : (A -> bool) -> A *)
+  val ty_Ab_A = mk_fun ty_Ab ty_A                   (* (A->bool) -> A *)
   val () = PFTWriter.new_const out "@" ty_Ab_A
 
   val const_select = mk_const "@" ty_Ab_A
@@ -1281,9 +1279,8 @@ fun emit {output, binary} = let
 
   (* GEN t: ⊢ ∀t. t ∨ ¬t *)
   val lam_t_tor = mk_abs var_t tm_t_or_neg_t
-  val lam_t_T2 = mk_abs var_t const_T
   val EXCLUDED_MIDDLE = do_GEN var_t th_excl_mid_t tm_t_or_neg_t
-                              lam_t_tor lam_t_T2
+                              lam_t_tor
   val () = save "candle$EXCLUDED_MIDDLE" EXCLUDED_MIDDLE
 
   (* ================================================================ *)
