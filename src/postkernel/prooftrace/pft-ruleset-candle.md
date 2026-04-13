@@ -138,10 +138,6 @@ term.
 {"cmd":"new_type_definition","id":0,"th":1,"tyname":"mid","absname":"mid_ABS","repname":"mid_REP"}
 ```
 
-`new_type_definition` produces **two** theorems. The `id` field is
-the first theorem's ID; the second theorem is assigned `id + 1`. The
-replayer must reserve both IDs.
-
 ### Computation
 
 ```json
@@ -187,6 +183,10 @@ beta-reduction.
 |------|--------|--------|-----------------|
 | new_specification | `[v1=t1,...,vn=tn] ⊢ p`, `[s1,...,sn]` | `⊢ p[c1/v1,...,cn/vn]` | each `ti` is closed; type vars in `ti` ⊆ type vars in type of `vi`; `p` is closed under the `vi`; each `si` must equal the name of `vi`; each `ci` is a fresh constant named `si` with the same type as `vi` |
 | new_type_definition | `⊢ P x`, tyname, absname, repname | `⊢ abs (rep a) = a` and `⊢ P r = (rep (abs r) = r)` | `P` is closed; hypotheses must be empty; creates a new type operator `tyname` and two new constants `absname` (rep-type → new-type) and `repname` (new-type → rep-type) |
+
+Note: `new_type_definition` produces **two** theorems. The `id` field is
+the first theorem's ID; the second theorem is assigned `id + 1`. The
+replayer must reserve both IDs.
 
 ### Computation
 
