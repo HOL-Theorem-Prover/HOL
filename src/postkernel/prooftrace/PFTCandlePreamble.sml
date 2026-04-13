@@ -1030,18 +1030,18 @@ fun emit {output, binary} = let
   (* DISJ1: from th: A ⊢ l, produce A ⊢ l ∨ q *)
   fun do_DISJ1 th l q =
     let val pth = INST DISJ1_pth [(var_p, l), (var_q, q)]
-    in EQ_MP (DEDUCT_ANTISYM th pth) th end
+    in PROVE_HYP th pth end
 
   (* DISJ2: from th: A ⊢ r, produce A ⊢ l ∨ r *)
   fun do_DISJ2 l th r =
     let val pth = INST DISJ2_pth [(var_p, l), (var_q, r)]
-    in EQ_MP (DEDUCT_ANTISYM th pth) th end
+    in PROVE_HYP th pth end
 
   (* DISJ_CASES: from th0: A ⊢ l∨r, th1: B∪{l} ⊢ c, th2: C∪{r} ⊢ c,
      produce A ∪ (B\{l}) ∪ (C\{r}) ⊢ c *)
   fun do_DISJ_CASES th0 l r th1 th2 c =
     let val pth = INST DISJ_CASES_pth [(var_p, l), (var_q, r), (var_r, c)]
-        val th3 = EQ_MP (DEDUCT_ANTISYM th0 pth) th0
+        val th3 = PROVE_HYP th0 pth
         val l_and_c = mk_comb (mk_comb const_and l) c
         val r_and_c = mk_comb (mk_comb const_and r) c
         val th_disch_l = do_DISCH l th1 c l_and_c
