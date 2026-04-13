@@ -719,9 +719,8 @@ fun emit {output, binary} = let
   val th_assume_forall = ASSUME tm_forall_x_Px_imp_q
 
   (* Step 3: SPEC x from step 2: {!x. P x ==> q} ⊢ P x ==> q *)
-  (* Use SPEC_pth at type A, with P := \x. P x ==> q, x := x *)
-  val spec_inst = INST (INST_TYPE SPEC_pth [(ty_A, ty_A)])
-                       [(var_P, lam_x_Px_imp_q), (var_x, var_x)]
+  (* Use SPEC_pth at type A, with P := \x. P x ==> q *)
+  val spec_inst = INST SPEC_pth [(var_P, lam_x_Px_imp_q)]
   (* ⊢ (!(\x. P x ==> q)) ==> (\x. P x ==> q) x *)
   (* Need to beta-reduce (\x. P x ==> q) x *)
   val tm_lam_app = mk_comb lam_x_Px_imp_q var_x
