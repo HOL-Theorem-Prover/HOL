@@ -972,8 +972,6 @@ fun emit {output, binary} = let
   val lam_x_Px_imp_Ps = mk_abs var_x tm_Px_imp_Pselect
   val tm_forall_x_inner = mk_comb const_forall lam_x_Px_imp_Ps
   val lam_P_body = mk_abs var_P tm_forall_x_inner
-  (* For ! at type (A->bool): type = ((A->bool)->bool)->bool *)
-  val ty_Ab_b_b2 = mk_fun ty_Ab_b ty_bool  (* ((A->bool)->bool) -> bool *)
   val const_forall_Ab = mk_const "!" ty_Ab_b_b
   val tm_forall_P_body = mk_comb const_forall_Ab lam_P_body
 
