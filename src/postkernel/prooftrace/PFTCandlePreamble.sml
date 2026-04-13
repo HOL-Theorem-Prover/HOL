@@ -217,6 +217,11 @@ fun emit {output, binary} = let
   val var_P = mk_var "P" ty_Ab
   val var_x = mk_var "x" ty_A
 
+  (* Variables at post-INST_TYPE types, for use when A is instantiated
+     to bool in SPEC_pth / GEN_pth / etc. *)
+  val var_P_bool = mk_var "P" ty_bb          (* P : bool -> bool *)
+  val var_x_bool = mk_var "x" ty_bool        (* x : bool *)
+
   (* ================================================================ *)
   (* 1. Define T                                                      *)
   (*    T = ((\p:bool. p) = (\p:bool. p))                             *)
@@ -637,7 +642,7 @@ fun emit {output, binary} = let
     let val th1 = eqtIntro th s_tm                   (* A ⊢ s = T *)
         val th2 = ABS_thm v th1                      (* A ⊢ (\v. s) = (\v. T) *)
         val pth = INST (INST_TYPE GEN_pth [(ty_A, ty_bool)])
-                       [(var_P, body_tm), (var_x, v)]
+                       [(var_P_bool, body_tm), (var_x_bool, v)]
                                                      (* ⊢ (body = \v. T) = !body *)
     in EQ_MP pth th2 end
 
@@ -654,7 +659,7 @@ fun emit {output, binary} = let
   (* For preamble use at type bool (A = bool): *)
   fun do_SPEC_bool abs_tm t th =
     let val pth = INST_TYPE SPEC_pth [(ty_A, ty_bool)]
-        val pth2 = INST pth [(var_P, abs_tm), (var_x, t)]
+        val pth2 = INST pth [(var_P_bool, abs_tm), (var_x_bool, t)]
         (* ⊢ (! abs_tm) ==> abs_tm t *)
     in do_MP pth2 (mk_comb const_forall_bool abs_tm)
                   (mk_comb abs_tm t) th
@@ -1147,7 +1152,10 @@ fun emit {output, binary} = let
   (* SPEC chain: derive ⊢ pred_T a and ⊢ pred_F b from SELECT_AX *)
   val spec_pth_bb = INST_TYPE SPEC_pth [(ty_A, ty_bb)]
   (* ⊢ (!P:(bb->bool)) ==> P (x:bb) — with P at type bb->bool, x at bb *)
-  val spec_outer_T = INST spec_pth_bb [(var_P, lam_P_outer), (var_x, pred_T)]
+  (* After INST_TYPE, P has type (bb)->bool = bb_b and x has type bb *)
+  val var_P_bb_b = mk_var "P" ty_bb_b        (* P : (bool->bool) -> bool *)
+  val var_x_bb   = mk_var "x" ty_bb          (* x : bool -> bool *)
+  val spec_outer_T = INST spec_pth_bb [(var_P_bb_b, lam_P_outer), (var_x_bb, pred_T)]
   (* ⊢ (! lam_P_outer) ==> lam_P_outer pred_T *)
 
   (* MP with sel_ax_bool *)
@@ -1170,7 +1178,7 @@ fun emit {output, binary} = let
   val tm_pred_Ts_imp_pred_Ta = mk_comb (mk_comb const_imp (mk_comb pred_T var_s))
                                         tm_pred_T_a2
   val lam_s_pred_T = mk_abs var_s tm_pred_Ts_imp_pred_Ta
-  val spec_inner_T = INST spec_pth_bool [(var_P, lam_s_pred_T), (var_x, const_T)]
+  val spec_inner_T = INST spec_pth_bool [(var_P_bool, lam_s_pred_T), (var_x_bool, const_T)]
   (* ⊢ (! lam_s_pred_T) ==> lam_s_pred_T T *)
   val tm_forall_lam_s = mk_comb const_forall_bool lam_s_pred_T
   val tm_lam_s_T = mk_comb lam_s_pred_T const_T
@@ -1190,7 +1198,7 @@ fun emit {output, binary} = let
   val th_a_eq_T_or_t = EQ_MP beta_pred_T_a th_pred_T_a
 
   (* Same for pred_F: ⊢ (b=F) ∨ t *)
-  val spec_outer_F = INST spec_pth_bb [(var_P, lam_P_outer), (var_x, pred_F)]
+  val spec_outer_F = INST spec_pth_bb [(var_P_bb_b, lam_P_outer), (var_x_bb, pred_F)]
   val tm_lam_P_outer_pred_F = mk_comb lam_P_outer pred_F
   val th_spec1_F_pre = do_MP spec_outer_F tm_sel_ax_concl tm_lam_P_outer_pred_F
                             sel_ax_bool
@@ -1201,7 +1209,7 @@ fun emit {output, binary} = let
   val tm_pred_Fs_imp_pred_Fb = mk_comb (mk_comb const_imp (mk_comb pred_F var_s))
                                         tm_pred_F_b
   val lam_s_pred_F = mk_abs var_s tm_pred_Fs_imp_pred_Fb
-  val spec_inner_F = INST spec_pth_bool [(var_P, lam_s_pred_F), (var_x, const_F)]
+  val spec_inner_F = INST spec_pth_bool [(var_P_bool, lam_s_pred_F), (var_x_bool, const_F)]
   val tm_forall_lam_s_F = mk_comb const_forall_bool lam_s_pred_F
   val tm_lam_s_F = mk_comb lam_s_pred_F const_F
   val th_spec2_F_pre = do_MP spec_inner_F tm_forall_lam_s_F tm_lam_s_F th_forall_s_F
