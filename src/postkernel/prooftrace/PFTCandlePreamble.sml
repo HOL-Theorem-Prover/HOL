@@ -636,7 +636,8 @@ fun emit {output, binary} = let
   fun do_GEN v th s_tm body_tm lam_v_T =
     let val th1 = eqtIntro th s_tm                   (* A ⊢ s = T *)
         val th2 = ABS_thm v th1                      (* A ⊢ (\v. s) = (\v. T) *)
-        val pth = INST GEN_pth [(var_P, body_tm), (var_x, v)]
+        val pth = INST (INST_TYPE GEN_pth [(ty_A, ty_bool)])
+                       [(var_P, body_tm), (var_x, v)]
                                                      (* ⊢ (body = \v. T) = !body *)
     in EQ_MP pth th2 end
 
@@ -647,12 +648,15 @@ fun emit {output, binary} = let
   (*   Needs INST_TYPE to match the type.                             *)
   (* ================================================================ *)
 
+  (* ! at type (bool->bool)->bool, needed by do_SPEC_bool and others *)
+  val const_forall_bool = mk_const "!" (mk_fun ty_bb ty_bool)
+
   (* For preamble use at type bool (A = bool): *)
   fun do_SPEC_bool abs_tm t th =
     let val pth = INST_TYPE SPEC_pth [(ty_A, ty_bool)]
         val pth2 = INST pth [(var_P, abs_tm), (var_x, t)]
         (* ⊢ (! abs_tm) ==> abs_tm t *)
-    in do_MP pth2 (mk_comb const_forall abs_tm)
+    in do_MP pth2 (mk_comb const_forall_bool abs_tm)
                   (mk_comb abs_tm t) th
     end
 
@@ -664,8 +668,6 @@ fun emit {output, binary} = let
   val var_Q = mk_var "Q" ty_bool
 
   (* Build the body: !q. (!x. P x ==> q) ==> q *)
-  (* At type bool for the inner quantifier on q *)
-  val const_forall_bool = mk_const "!" (mk_fun ty_bb ty_bool)
   (* P x ==> q *)
   val tm_Px_imp_q = mk_comb (mk_comb const_imp tm_Px) var_q
   (* \x. P x ==> q *)
@@ -705,9 +707,6 @@ fun emit {output, binary} = let
   (* th1 = exists_unfold: ⊢ ?P = !q. (!x. P x ==> q) ==> q *)
   (* We need: {P x} ⊢ !q. (!x. P x ==> q) ==> q *)
   (* Then EQ_MP (SYM exists_unfold) gives {P x} ⊢ ?P *)
-
-  (* SPEC x from ASSUME (!x. P x ==> Q): {!x. P x ==> Q} ⊢ P x ==> Q *)
-  val tm_forall_x_Px_imp_Q = mk_comb const_forall (mk_abs var_x (mk_comb (mk_comb const_imp tm_Px) var_Q))
 
   (* Step 1: ASSUME (P x): {P x} ⊢ P x *)
   val th_assume_Px = ASSUME tm_Px
@@ -973,8 +972,6 @@ fun emit {output, binary} = let
   val lam_x_Px_imp_Ps = mk_abs var_x tm_Px_imp_Pselect
   val tm_forall_x_inner = mk_comb const_forall lam_x_Px_imp_Ps
   val lam_P_body = mk_abs var_P tm_forall_x_inner
-  val eq_Ab_b_forall = mk_const "!" (mk_fun (mk_fun ty_Ab ty_bool) ty_bool)
-
   (* For ! at type (A->bool): type = ((A->bool)->bool)->bool *)
   val ty_Ab_b_b2 = mk_fun ty_Ab_b ty_bool  (* ((A->bool)->bool) -> bool *)
   val const_forall_Ab = mk_const "!" ty_Ab_b_b
@@ -1090,19 +1087,11 @@ fun emit {output, binary} = let
   val b_eq_F_or_t = mk_comb (mk_comb const_or b_eq_F) var_t
 
   (* t ∨ ¬t *)
-  val tm_t_or_neg_t = mk_comb (mk_comb const_or var_t) tm_neg_p
   val tm_neg_t = mk_comb const_neg var_t
   val tm_t_or_neg_t = mk_comb (mk_comb const_or var_t) tm_neg_t
 
   (* Step 1: ⊢ (a=T) ∨ t from SELECT_AX *)
   (* SELECT_AX at bool: ⊢ ∀P:(bool->bool). ∀x:bool. P x ==> P(@P) *)
-  val select_ax_bool = INST_TYPE SELECT_AX_th [(ty_A, ty_bool)]
-
-  (* SPEC pred_T: ⊢ ∀x:bool. pred_T x ==> pred_T(@pred_T) *)
-  val th_sel_1 = do_SPEC_bool
-    (mk_abs var_P (mk_comb (mk_comb const_imp (mk_comb var_P var_x))
-                            (mk_comb var_P tm_select_P)))
-  (* INST_TYPE SELECT_AX [(A, bool)] *)
   val sel_ax_bool = INST_TYPE SELECT_AX_th [(ty_A, ty_bool)]
 
   (* Variables and constants at type bool->bool for SPEC'ing SELECT_AX *)
