@@ -101,6 +101,10 @@ directly in the kernel for efficiency.
 
 Note: In `new_type_definition`, the three names are encoded as strings.
 
+Note: The `(redex residue)` ordering for pairs in substitutions (only
+observable in the binary format), differs from what is found in HOL Light.
+A replayer should take care to swap them when reading if necessary.
+
 ## JSON Lines Encoding
 
 ### Core inference rules
