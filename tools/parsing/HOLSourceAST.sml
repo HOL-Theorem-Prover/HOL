@@ -658,6 +658,7 @@ fun eventPos (FileEvent (p, _)) = p
   | eventPos (LineColEvent (p, _, _)) = p
 
 fun updateCursorSimple ({body, evts, file, pos, line, col, idx}: cursor, p) = let
+  val p = Int.min (p, DString.size body)
   fun countLines i line last =
     if i = p then (line, p - last) else
     if DString.sub (body, i) = #"\n" then countLines (i+1) (line+1) (i+1) else
