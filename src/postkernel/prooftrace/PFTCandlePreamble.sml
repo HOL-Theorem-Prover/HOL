@@ -780,7 +780,9 @@ fun emit {output, binary} = let
   val tm_inner_imp_Q = mk_comb (mk_comb const_imp
     (mk_comb const_forall (mk_abs var_x (mk_comb (mk_comb const_imp tm_Px) var_Q))))
     var_Q
-  val th_spec_Q = do_SPEC_bool lam_q_inner var_Q th_exists_unfolded
+  val th_spec_Q_pre = do_SPEC_bool lam_q_inner var_Q th_exists_unfolded
+  (* {?P} ⊢ (\q. (!x. P x ==> q) ==> q) Q — un-beta-reduced *)
+  val th_spec_Q = EQ_MP (beta_reduce lam_q_inner var_q var_Q) th_spec_Q_pre
   (* {?P} ⊢ (!x. P x ==> Q) ==> Q *)
 
   (* DISCH (?P) *)
@@ -892,7 +894,9 @@ fun emit {output, binary} = let
   val th_or_unfolded = EQ_MP or_unfold (ASSUME tm_p_or_q)
 
   (* SPEC r *)
-  val th_spec_r = do_SPEC_bool lam_r_body var_r th_or_unfolded
+  val th_spec_r_pre = do_SPEC_bool lam_r_body var_r th_or_unfolded
+  (* {p \/ q} ⊢ (\r. (p ==> r) ==> (q ==> r) ==> r) r — un-beta-reduced *)
+  val th_spec_r = EQ_MP (beta_reduce lam_r_body var_r var_r) th_spec_r_pre
   (* {p \/ q} ⊢ (p ==> r) ==> (q ==> r) ==> r *)
 
   (* MP with (p ==> r) *)
@@ -926,7 +930,9 @@ fun emit {output, binary} = let
   (* F = !p. p, so {F} ⊢ !p. p, then SPEC p gives {F} ⊢ p *)
   val th_F_unfolded = EQ_MP F_DEF (ASSUME const_F)
   (* {F} ⊢ !p. p  (i.e., !(\p.p)) *)
-  val CONTR_pth = do_SPEC_bool lam_p_p var_p th_F_unfolded
+  val CONTR_pth_pre = do_SPEC_bool lam_p_p var_p th_F_unfolded
+  (* {F} ⊢ (\p. p) p — un-beta-reduced *)
+  val CONTR_pth = EQ_MP (beta_reduce lam_p_p var_p var_p) CONTR_pth_pre
   (* {F} ⊢ p *)
   val () = save "candle$CONTR" CONTR_pth
 
