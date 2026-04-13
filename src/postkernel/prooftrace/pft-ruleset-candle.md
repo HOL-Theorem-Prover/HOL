@@ -174,7 +174,7 @@ beta-reduction.
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
 | SYM | `H ⊢ l = r` | `H ⊢ r = l` | |
-| PROVE_HYP | `H1 ⊢ p`, `H2 ⊢ q` | `H2 ∪ (H1 \ {q}) ⊢ p` | |
+| PROVE_HYP | `H1 ⊢ p`, `H2 ⊢ q` | `H1 ∪ (H2 \ {p}) ⊢ q` | |
 | ALPHA_THM | `H ⊢ c`, `H'`, `c'` | `H' ⊢ c'` | `c'` alpha-equivalent to `c`; every hypothesis in `H` is alpha-equivalent to some element of `H'`; all elements of `H'` have type `bool` |
 
 ### Axioms and definitions

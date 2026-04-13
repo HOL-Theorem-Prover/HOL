@@ -540,27 +540,27 @@ fun emit_theory {trace, output, binary, ruleset} = let
     fun do_CONJ a_tm b_tm th1 th2 =
       let val ci = c_inst (candle_load_pth "candle$CONJ")
                      [(pvar_p, a_tm), (pvar_q, b_tm)]
-      in c_prove_hyp (c_prove_hyp ci th1) th2 end
+      in c_prove_hyp th2 (c_prove_hyp th1 ci) end
 
     (* do_CONJUNCT1: from th: A ⊢ a ∧ b, derive A ⊢ a *)
     fun do_CONJUNCT1 a_tm b_tm th =
-      c_prove_hyp (c_inst (candle_load_pth "candle$CONJUNCT1")
-                     [(pvar_p, a_tm), (pvar_q, b_tm)]) th
+      c_prove_hyp th (c_inst (candle_load_pth "candle$CONJUNCT1")
+                     [(pvar_p, a_tm), (pvar_q, b_tm)])
 
     (* do_CONJUNCT2: from th: A ⊢ a ∧ b, derive A ⊢ b *)
     fun do_CONJUNCT2 a_tm b_tm th =
-      c_prove_hyp (c_inst (candle_load_pth "candle$CONJUNCT2")
-                     [(pvar_p, a_tm), (pvar_q, b_tm)]) th
+      c_prove_hyp th (c_inst (candle_load_pth "candle$CONJUNCT2")
+                     [(pvar_p, a_tm), (pvar_q, b_tm)])
 
     (* do_DISCH: from a_tm and th: A ⊢ c, derive A\{a} ⊢ a ==> c. *)
     fun do_DISCH a_tm c_tm th_c =
       let val a_and_c = emit_comb (emit_comb and_const a_tm) c_tm
           val ci = c_inst (candle_load_pth "candle$CONJ")
                      [(pvar_p, a_tm), (pvar_q, c_tm)]
-          val cj = c_prove_hyp (c_prove_hyp ci (c_assume a_tm)) th_c
+          val cj = c_prove_hyp th_c (c_prove_hyp (c_assume a_tm) ci)
           val c1i = c_inst (candle_load_pth "candle$CONJUNCT1")
                       [(pvar_p, a_tm), (pvar_q, c_tm)]
-          val da = c_deduct cj (c_prove_hyp c1i (c_assume a_and_c))
+          val da = c_deduct cj (c_prove_hyp (c_assume a_and_c) c1i)
           val di = c_inst (candle_load_pth "candle$DISCH")
                      [(pvar_p, a_tm), (pvar_q, c_tm)]
       in c_eq_mp di da end
@@ -611,7 +611,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
                               [(emit_var "P" Ab_v, pred_tm),
                                (emit_var "x" v_ty, witness_tm)]
           val witness_hyp = c_eq_mp (c_sym (do_beta_reduce pred_tm var_tm witness_tm)) th
-      in c_prove_hyp exists_inst witness_hyp end
+      in c_prove_hyp witness_hyp exists_inst end
 
     (* do_AP_TERM: from f and th: ⊢ x = y, derive ⊢ f x = f y *)
     fun do_AP_TERM f th = c_mk_comb (c_refl f) th
@@ -678,23 +678,23 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val a_tm = tm (heap_concl a) val b_tm = tm (heap_concl b)
         val ci = c_inst (candle_load_pth "candle$CONJ")
                    [(pvar_p, a_tm), (pvar_q, b_tm)]
-      in r_prove_hyp (c_prove_hyp ci a_th) b_th end
+      in r_prove_hyp b_th (c_prove_hyp a_th ci) end
 
     | CONJUNCT1_prf a => let
         val a_th = th a
         val concl_id = tm (heap_concl a)
         val (and_l_id, r_tm) = pft_dest_comb concl_id
         val (_, l_tm) = pft_dest_comb and_l_id
-      in r_prove_hyp (c_inst (candle_load_pth "candle$CONJUNCT1")
-                        [(pvar_p, l_tm), (pvar_q, r_tm)]) a_th end
+      in r_prove_hyp a_th (c_inst (candle_load_pth "candle$CONJUNCT1")
+                        [(pvar_p, l_tm), (pvar_q, r_tm)]) end
 
     | CONJUNCT2_prf a => let
         val a_th = th a
         val concl_id = tm (heap_concl a)
         val (and_l_id, r_tm) = pft_dest_comb concl_id
         val (_, l_tm) = pft_dest_comb and_l_id
-      in r_prove_hyp (c_inst (candle_load_pth "candle$CONJUNCT2")
-                        [(pvar_p, l_tm), (pvar_q, r_tm)]) a_th end
+      in r_prove_hyp a_th (c_inst (candle_load_pth "candle$CONJUNCT2")
+                        [(pvar_p, l_tm), (pvar_q, r_tm)]) end
 
     (* === Pro-forma based: implication === *)
     | MP_prf (a, b) => let
@@ -711,30 +711,30 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val concl_id = tm (heap_concl a)
         val (eq_l_id, q_tm) = pft_dest_comb concl_id
         val (_, p_tm) = pft_dest_comb eq_l_id
-      in r_prove_hyp (c_inst (candle_load_pth "candle$EQ_IMP_RULE1")
-                        [(pvar_p, p_tm), (pvar_q, q_tm)]) a_th end
+      in r_prove_hyp a_th (c_inst (candle_load_pth "candle$EQ_IMP_RULE1")
+                        [(pvar_p, p_tm), (pvar_q, q_tm)]) end
 
     | EQ_IMP_RULE2_prf a => let
         val a_th = th a
         val concl_id = tm (heap_concl a)
         val (eq_l_id, q_tm) = pft_dest_comb concl_id
         val (_, p_tm) = pft_dest_comb eq_l_id
-      in r_prove_hyp (c_inst (candle_load_pth "candle$EQ_IMP_RULE2")
-                        [(pvar_p, p_tm), (pvar_q, q_tm)]) a_th end
+      in r_prove_hyp a_th (c_inst (candle_load_pth "candle$EQ_IMP_RULE2")
+                        [(pvar_p, p_tm), (pvar_q, q_tm)]) end
 
     | NOT_ELIM_prf a => let
         val a_th = th a
         val (_, p_tm) = pft_dest_comb (tm (heap_concl a))
-      in r_prove_hyp (c_inst (candle_load_pth "candle$NOT_ELIM")
-                        [(pvar_p, p_tm)]) a_th end
+      in r_prove_hyp a_th (c_inst (candle_load_pth "candle$NOT_ELIM")
+                        [(pvar_p, p_tm)]) end
 
     | NOT_INTRO_prf a => let
         val a_th = th a
         val concl_id = tm (heap_concl a)
         val (imp_p_id, _) = pft_dest_comb concl_id
         val (_, p_tm) = pft_dest_comb imp_p_id
-      in r_prove_hyp (c_inst (candle_load_pth "candle$NOT_INTRO")
-                        [(pvar_p, p_tm)]) a_th end
+      in r_prove_hyp a_th (c_inst (candle_load_pth "candle$NOT_INTRO")
+                        [(pvar_p, p_tm)]) end
 
     | DISJ1_prf (a, b) => let
         val a_th = th a val q_tm = tm b
@@ -834,8 +834,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val pth = c_inst (candle_load_pth "candle$DISJ_CASES")
                     [(pvar_p, p_tm), (pvar_q, q_tm), (pvar_r, r_tm)]
         val th3 = c_eq_mp (c_deduct a_th pth) a_th
-        val th4 = c_prove_hyp th3 (do_DISCH p_tm r_tm b_th)
-      in r_prove_hyp th4 (do_DISCH q_tm r_tm c_th) end
+        val th4 = c_prove_hyp (do_DISCH p_tm r_tm b_th) th3
+      in r_prove_hyp (do_DISCH q_tm r_tm c_th) th4 end
 
     | CCONTR_prf (a, b) => let
         val p_tm = tm a val b_th = th b
@@ -865,8 +865,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val (bv_tm, _) = pft_dest_abs pred_tm
         val v_ty = pft_type_of bv_tm
         val cmb = emit_comb pred_tm v_tm
-        val c_with_cmb = c_prove_hyp c_th
-                            (c_eq_mp (do_beta_reduce pred_tm bv_tm v_tm) (c_assume cmb))
+        val c_with_cmb = c_prove_hyp
+                            (c_eq_mp (do_beta_reduce pred_tm bv_tm v_tm) (c_assume cmb)) c_th
         val imp_cmb_q = emit_comb (emit_comb imp_const cmb) q_tm
         val gen_v = do_GEN v_tm v_ty imp_cmb_q (do_DISCH cmb q_tm c_with_cmb)
         val Ab_v = emit_tyop "fun" [v_ty, bool_tyid]

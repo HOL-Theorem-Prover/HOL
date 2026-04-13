@@ -471,7 +471,7 @@ fun emit {output, binary} = let
      gives {p==>q, p} ⊢ p/\q, then PROVE_HYP with CONJUNCT2_pth *)
   val th_imp_unfolded = EQ_MP imp_unfold (ASSUME tm_imp_pq)
   val th_conj_from_imp = EQ_MP (SYM th_imp_unfolded) (ASSUME var_p)
-  val imp_qth = PROVE_HYP CONJUNCT2_pth th_conj_from_imp
+  val imp_qth = PROVE_HYP th_conj_from_imp CONJUNCT2_pth
 
   (* Combine: {p} ⊢ (p ==> q) = q *)
   val MP_rth = DEDUCT_ANTISYM imp_pth imp_qth
@@ -509,9 +509,9 @@ fun emit {output, binary} = let
   fun do_CONJ th1 a th2 b =
     let val pth = INST CONJ_pth [(var_p, a), (var_q, b)]
         (* {a, b} ⊢ a /\ b *)
-        val pth2 = PROVE_HYP pth th1    (* discharge a *)
+        val pth2 = PROVE_HYP th1 pth    (* discharge a *)
         (* A ∪ ({a,b} \ {a}) ⊢ a /\ b = A ∪ {b} ⊢ a /\ b *)
-    in PROVE_HYP pth2 th2 end           (* discharge b *)
+    in PROVE_HYP th2 pth2 end           (* discharge b *)
     (* A ∪ B ⊢ a /\ b *)
 
   (* CONJUNCT1 helper: given th: A ⊢ a /\ b and terms a, b,
@@ -519,13 +519,13 @@ fun emit {output, binary} = let
   fun do_CONJUNCT1 th a b =
     let val pth = INST CONJUNCT1_pth [(var_p, a), (var_q, b)]
         (* {a /\ b} ⊢ a *)
-    in PROVE_HYP pth th end
+    in PROVE_HYP th pth end
     (* A ⊢ a  (discharged a /\ b) *)
 
   (* CONJUNCT2 helper *)
   fun do_CONJUNCT2 th a b =
     let val pth = INST CONJUNCT2_pth [(var_p, a), (var_q, b)]
-    in PROVE_HYP pth th end
+    in PROVE_HYP th pth end
 
   (* DISCH helper: given tm a and th: A ⊢ c,
      produce A \ {a} ⊢ a ==> c *)
@@ -1059,18 +1059,18 @@ fun emit {output, binary} = let
         val r_and_c = mk_comb (mk_comb const_and r) c
         val th_disch_l = do_DISCH l th1 c l_and_c
         val th_disch_r = do_DISCH r th2 c r_and_c
-        val th4 = PROVE_HYP th3 th_disch_l
-    in PROVE_HYP th4 th_disch_r end
+        val th4 = PROVE_HYP th_disch_l th3
+    in PROVE_HYP th_disch_r th4 end
 
   (* NOT_INTRO: from th: A ⊢ a ==> F, produce A ⊢ ¬a *)
   fun do_NOT_INTRO th a =
     let val pth = INST NOT_INTRO_pth [(var_p, a)]
-    in PROVE_HYP pth th end
+    in PROVE_HYP th pth end
 
   (* CONTR: from th: A ⊢ F, produce A ⊢ c *)
   fun do_CONTR th c =
     let val pth = INST CONTR_pth [(var_p, c)]
-    in PROVE_HYP pth th end
+    in PROVE_HYP th pth end
 
   (* ================================================================ *)
   (* 10. EXCLUDED_MIDDLE: ⊢ ∀t. t ∨ ¬t                              *)
