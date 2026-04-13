@@ -421,17 +421,6 @@ fun inst_type (out as TextOut _) id th pairs =
      bVarint out (length pairs);
      List.app (fn (a,b) => (bVarint out a; bVarint out b)) pairs)
 
-(* ALPHA_THM id th tms tm *)
-fun alpha_thm (out as TextOut _) id th tms tm =
-    (jBegin out "ALPHA_THM"; jInt out "id" id;
-     jInt out "th" th; jIntList out "tms" tms;
-     jInt out "tm" tm; jEnd out)
-  | alpha_thm out id th tms tm =
-    (bOpcode out 0x22; bVarint out id; bVarint out th;
-     bVarint out (length tms);
-     List.app (bVarint out) tms;
-     bVarint out tm)
-
 (* new_type_definition id th tyname absname repname *)
 fun new_type_definition (out as TextOut _) id th tyname absname repname =
     (jBegin out "new_type_definition"; jInt out "id" id;

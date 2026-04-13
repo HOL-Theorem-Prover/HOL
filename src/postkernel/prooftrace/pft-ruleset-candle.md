@@ -62,7 +62,6 @@ directly in the kernel for efficiency.
 |---------|-----------|
 | SYM | id, th |
 | PROVE_HYP | id, th1, th2 |
-| ALPHA_THM | id, th, tms: term-id list, tm |
 
 ### Definitions
 
@@ -94,7 +93,6 @@ directly in the kernel for efficiency.
 | 0x19   | INST_TYPE                  | id th n_pairs (redex residue)...       |
 | 0x20   | SYM                        | id th                                  |
 | 0x21   | PROVE_HYP                  | id th1 th2                             |
-| 0x22   | ALPHA_THM                  | id th n_tms tm... tm                   |
 | 0x30   | new_specification          | id th n_names name...                  |
 | 0x31   | new_type_definition        | id th tyname absname repname           |
 | 0x40   | COMPUTE_INIT               | id n_ths th...                         |
@@ -102,9 +100,6 @@ directly in the kernel for efficiency.
 
 
 Note: In `new_type_definition`, the three names are encoded as strings.
-
-Note: In `ALPHA_THM`, the last `tm` after the list is the new conclusion
-term.
 
 ## JSON Lines Encoding
 
@@ -128,7 +123,6 @@ term.
 ```json
 {"cmd":"SYM","id":0,"th":1}
 {"cmd":"PROVE_HYP","id":0,"th1":1,"th2":2}
-{"cmd":"ALPHA_THM","id":0,"th":1,"tms":[2,3],"tm":4}
 ```
 
 ### Definitions
@@ -175,7 +169,6 @@ beta-reduction.
 |------|--------|--------|-----------------|
 | SYM | `H ⊢ l = r` | `H ⊢ r = l` | |
 | PROVE_HYP | `H1 ⊢ p`, `H2 ⊢ q` | `H1 ∪ (H2 \ {p}) ⊢ q` | |
-| ALPHA_THM | `H ⊢ c`, `H'`, `c'` | `H' ⊢ c'` | `c'` alpha-equivalent to `c`; every hypothesis in `H` is alpha-equivalent to some element of `H'`; all elements of `H'` have type `bool` |
 
 ### Axioms and definitions
 

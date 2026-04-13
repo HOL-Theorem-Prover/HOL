@@ -76,7 +76,6 @@ val candle_descs : (int * opcode_desc) list = [
   (0x19, {results=["th"], args=[Id "th", IdPairs("ty","ty")]}),
   (0x20, {results=["th"], args=[Id "th"]}),
   (0x21, {results=["th"], args=[Id "th", Id "th"]}),
-  (0x22, {results=["th"], args=[Id "th", IdList "tm", Id "tm"]}),
   (0x30, {results=["th"], args=[Id "th", NewConstNames]}),
   (0x31, {results=["th","th"], args=[Id "th", NewTypeName, NewConstName, NewConstName]}),
   (0x40, {results=["ci"], args=[IdList "th"]}),

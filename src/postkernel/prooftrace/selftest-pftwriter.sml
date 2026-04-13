@@ -234,7 +234,7 @@ in
   cleanup f
 end
 
-val _ = tprint "Text (Candle): beta, inst, inst_type, alpha_thm"
+val _ = tprint "Text (Candle): beta, inst, inst_type"
 val () = let
   val f = tmpfile "candle-misc.pft"
   val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="candle"}
@@ -244,8 +244,7 @@ val () = let
   val () = PFTWriter.Candle.beta out 0 0
   val () = PFTWriter.Candle.inst out 1 0 [(0,0)]
   val () = PFTWriter.Candle.inst_type out 2 0 [(0,1)]
-  val () = PFTWriter.Candle.alpha_thm out 3 0 [0,0] 0
-  val () = PFTWriter.closeOut out {n_ty=2, n_tm=1, n_th=4, n_ci=0}
+  val () = PFTWriter.closeOut out {n_ty=2, n_tm=1, n_th=3, n_ci=0}
   val got = readFile f
   val expected =
     "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"candle\"}\n\
@@ -255,8 +254,7 @@ val () = let
     \{\"cmd\":\"BETA\",\"id\":0,\"tm\":0}\n\
     \{\"cmd\":\"INST\",\"id\":1,\"th\":0,\"subst\":[{\"redex\":0,\"residue\":0}]}\n\
     \{\"cmd\":\"INST_TYPE\",\"id\":2,\"th\":0,\"subst\":[{\"redex\":0,\"residue\":1}]}\n\
-    \{\"cmd\":\"ALPHA_THM\",\"id\":3,\"th\":0,\"tms\":[0,0],\"tm\":0}\n\
-    \{\"cmd\":\"LIMITS\",\"n_ty\":2,\"n_tm\":1,\"n_th\":4,\"n_ci\":0}\n"
+    \{\"cmd\":\"LIMITS\",\"n_ty\":2,\"n_tm\":1,\"n_th\":3,\"n_ci\":0}\n"
 in
   if got = expected then OK()
   else die ("got:\n" ^ got);

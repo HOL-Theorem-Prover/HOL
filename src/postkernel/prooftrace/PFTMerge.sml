@@ -698,10 +698,6 @@ fun pass2_emit (file_states: file_state vector)
             | 0x20 => PFTWriter.Candle.sym out nid (rTh(vi()))
             | 0x21 => let val a = rTh(vi())
                       in PFTWriter.Candle.prove_hyp out nid a (rTh(vi())) end
-            | 0x22 => let val th = rTh(vi())
-                          val tms = map rTm (#readVarintList sr ())
-                      in PFTWriter.Candle.alpha_thm out nid th tms
-                           (rTm(vi())) end
             | 0x30 => let val th = rTh(vi())
                       in PFTWriter.Candle.new_specification out nid th
                            (#readStringList sr ()) end

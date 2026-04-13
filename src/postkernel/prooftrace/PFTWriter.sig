@@ -94,7 +94,6 @@ signature PFTWriter = sig
     val inst_type           : pft_out -> int -> int -> (int * int) list -> unit
     val sym                 : pft_out -> int -> int -> unit
     val prove_hyp           : pft_out -> int -> int -> int -> unit
-    val alpha_thm           : pft_out -> int -> int -> int list -> int -> unit
     val new_specification   : pft_out -> int -> int -> string list -> unit
     val new_type_definition : pft_out -> int -> int -> string -> string
                               -> string -> unit
