@@ -144,8 +144,9 @@ val _ = require_msg (check_result (equal "\\alpha{} \\HOLTokenMap{} \\beta{}"))
                     (pp_to_string 70 pp_type_as_tex) (alpha --> beta)
 
 val _ = tprint "Testing printing of fn update syntax"
-val expected = "\\HOLFreeVar{f}\\llparenthesis\\HOLFreeVar{k} \\HOLTokenMapto{}\
-               \ \\HOLFreeVar{v}\\rrparenthesis"
+val expected =
+  "\\HOLFreeVar{f}\\HOLTokenLLens{}\\HOLFreeVar{k} \\HOLTokenMapto{}\
+  \ \\HOLFreeVar{v}\\HOLTokenRLens{}"
 val _ = require_msg (check_result (equal expected)) String.toString
                     (pp_to_string 70 pp_term_as_tex)
                     “f (| k |-> v |)”
