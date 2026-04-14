@@ -40,6 +40,32 @@ in
     | NONE => s
 end
 
+(* When processing boolTheory in Candle mode, certain constants and axioms
+   are already provided by the preamble.  Their definitions/axioms must be
+   skipped and replaced by LOADs from the preamble.
+
+   candle_preamble_def: maps the unqualified constant name (as it appears
+     in the bool theory heap, e.g. "T") to the preamble SAVE name for
+     the definition theorem that has the HOL4-compatible conclusion.
+
+   candle_preamble_axiom: maps the axiom name string (from the trace) to
+     the preamble SAVE name for the corresponding theorem. *)
+val candle_preamble_def : (string * string) list = [
+  ("T",   "candle$T_DEF"),
+  ("/\\", "candle$AND_DEF_HOL4"),
+  ("!",   "candle$FORALL_DEF"),
+  ("?",   "candle$EXISTS_DEF_HOL4"),
+  ("\\/", "candle$OR_DEF"),
+  ("F",   "candle$F_DEF"),
+  ("~",   "candle$NOT_DEF")
+]
+
+val candle_preamble_axiom : (string * string) list = [
+  ("SELECT_AX", "candle$SELECT_AX"),
+  ("ETA_AX",    "candle$ETA_AX"),
+  ("BOOL_CASES_AX", "candle$BOOL_CASES_AX")
+]
+
 (* ========================================================================= *)
 (* emit_theory                                                               *)
 (* ========================================================================= *)
@@ -925,17 +951,31 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
     (* === Definition commands === *)
     | Def_const_prf (a, b) => let
-        val rhs_id = emit_term a
         val (Thy, Name) = get_const_id b
-        val rhs_ty_id = pft_type_of rhs_id
-        val bool_ty_c = emit_tyop "bool" []
-        val eq_ty = emit_tyop "fun" [rhs_ty_id, emit_tyop "fun" [rhs_ty_id, bool_ty_c]]
-        val cname = tr_name (thyname ^ "$" ^ Name)
-        val eq_tm = emit_comb (emit_comb (emit_const "=" eq_ty)
-                      (emit_var cname rhs_ty_id)) rhs_id
-        val () = mark_const Name
-      in PFTWriter.Candle.new_specification out result_id
-           (c_assume eq_tm) [cname]; result_id end
+        (* In boolTheory, constants already defined by the preamble are
+           not re-defined; instead we LOAD the preamble's definition
+           theorem (which has an alpha-equivalent or HOL4-compatible
+           conclusion). *)
+        val preamble_name =
+          if thyname = "bool" then
+            List.find (fn (k,_) => k = Name) candle_preamble_def
+          else NONE
+      in case preamble_name of
+           SOME (_, load_name) => let
+             val () = mark_const Name
+           in candle_load_pth load_name end
+         | NONE => let
+             val rhs_id = emit_term a
+             val rhs_ty_id = pft_type_of rhs_id
+             val bool_ty_c = emit_tyop "bool" []
+             val eq_ty = emit_tyop "fun" [rhs_ty_id, emit_tyop "fun" [rhs_ty_id, bool_ty_c]]
+             val cname = tr_name (thyname ^ "$" ^ Name)
+             val eq_tm = emit_comb (emit_comb (emit_const "=" eq_ty)
+                           (emit_var cname rhs_ty_id)) rhs_id
+             val () = mark_const Name
+           in PFTWriter.Candle.new_specification out result_id
+                (c_assume eq_tm) [cname]; result_id end
+      end
 
     | Def_const_list_prf (a, b) => let
         val a_th = th a
@@ -1173,10 +1213,23 @@ fun emit_theory {trace, output, binary, ruleset} = let
          val () = th_memo_set k id
        in case proof of
            Axiom_prf => let
-             val c = emit_term concl_ptr
              val name = (SOME (PIntMap.find k axiom_name_map))
                         handle PIntMap.NotFound => NONE
-           in PFTWriter.axiom out id c name; id end
+             (* In boolTheory, some axioms are already in the preamble *)
+             val preamble_name =
+               if thyname = "bool" then
+                 case name of
+                   SOME n => List.find (fn (k,_) => k = n)
+                               candle_preamble_axiom
+                 | NONE => NONE
+               else NONE
+           in case preamble_name of
+                SOME (_, load_name) =>
+                  (PFTWriter.load out id load_name; id)
+              | NONE => let
+                  val c = emit_term concl_ptr
+                in PFTWriter.axiom out id c name; id end
+           end
          | Disk_prf (dep_thy, b) => let
              val dep_id = thmId heap b
              val save_name = disk_save_name dep_thy dep_id

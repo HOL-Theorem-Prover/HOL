@@ -1322,6 +1322,214 @@ fun emit {output, binary} = let
   val () = save "candle$CCONTR" CCONTR_pth
 
   (* ================================================================ *)
+  (* 12. BOOL_CASES_AX: ⊢ ∀t. (t = T) ∨ (t = F)                     *)
+  (* From EXCLUDED_MIDDLE (⊢ ∀t. t ∨ ¬t).                            *)
+  (* Case t:  eqtIntro gives t = T, DISJ1.                           *)
+  (* Case ¬t: deductAntisym of {¬t,t}⊢F and {F}⊢t gives t = F.      *)
+  (* ================================================================ *)
+
+  val t_eq_T = mk_eq eq_bool var_t const_T
+  val t_eq_F = mk_eq eq_bool var_t const_F
+  val t_eq_T_or_t_eq_F = mk_comb (mk_comb const_or t_eq_T) t_eq_F
+
+  (* Case t: {t} ⊢ (t=T) ∨ (t=F) *)
+  val bc_case_t =
+    do_DISJ1 (eqtIntro (ASSUME var_t) var_t) t_eq_T t_eq_F
+
+  (* Case ¬t: {¬t} ⊢ (t=T) ∨ (t=F) *)
+  val bc_not_elim = PROVE_HYP (ASSUME tm_neg_t)
+                      (INST NOT_ELIM_pth [(var_p, var_t)])
+  (* {¬t} ⊢ t ==> F *)
+  val bc_t_gives_F = do_MP bc_not_elim var_t const_F (ASSUME var_t)
+  (* {¬t, t} ⊢ F *)
+  val bc_t_eq_F = DEDUCT_ANTISYM bc_t_gives_F (do_CONTR (ASSUME const_F) var_t)
+  (* {¬t} ⊢ t = F *)
+  val bc_case_neg_t =
+    do_DISJ2 t_eq_T bc_t_eq_F t_eq_F
+
+  val bc_body = do_DISJ_CASES th_excl_mid_t var_t tm_neg_t
+                  bc_case_t bc_case_neg_t t_eq_T_or_t_eq_F
+  (* ⊢ (t=T) ∨ (t=F) *)
+
+  val lam_t_bc = mk_abs var_t t_eq_T_or_t_eq_F
+  val BOOL_CASES_AX = do_GEN var_t bc_body t_eq_T_or_t_eq_F lam_t_bc
+  val () = save "candle$BOOL_CASES_AX" BOOL_CASES_AX
+
+  (* ================================================================ *)
+  (* 13. EXISTS_DEF_HOL4: ⊢ ? = λP. P (@ P)                         *)
+  (* Forward:  {P(@P)} ⊢ !q. (!x. P x ==> q) ==> q                 *)
+  (*   SPEC x:=@P from ASSUME(!x.Px==>q), MP with P(@P), DISCH, GEN *)
+  (* Backward: {!q.(!x.Px==>q)==>q} ⊢ P(@P)                         *)
+  (*   SPEC q:=P(@P), MP with select_ax_spec                         *)
+  (* ================================================================ *)
+
+  (* Forward: {P(@P)} ⊢ !q. (!x. P x ==> q) ==> q *)
+  local
+    val th_assume_Psel = ASSUME tm_P_select
+    (* SPEC x:=@P from (!x. P x ==> q) — at type A, use SPEC_pth directly *)
+    val spec_at_sel = INST SPEC_pth
+          [(var_P, lam_x_Px_imp_q), (var_x, tm_select_P)]
+    (* ⊢ (!(λx. P x ==> q)) ==> (λx. P x ==> q)(@P) *)
+    val tm_lam_at_sel = mk_comb lam_x_Px_imp_q tm_select_P
+    val th_lam_at_sel = do_MP spec_at_sel tm_forall_x_Px_imp_q
+                              tm_lam_at_sel (ASSUME tm_forall_x_Px_imp_q)
+    (* {!x. P x ==> q} ⊢ (λx. P x ==> q)(@P) *)
+    val tm_Psel_imp_q = mk_comb (mk_comb const_imp tm_P_select) var_q
+    val beta_at_sel = beta_reduce lam_x_Px_imp_q var_x tm_select_P
+    (* ⊢ (λx. P x ==> q)(@P) = (P(@P) ==> q) *)
+    val th_Psel_imp_q = EQ_MP beta_at_sel th_lam_at_sel
+    (* {!x. P x ==> q} ⊢ P(@P) ==> q *)
+    val th_q = do_MP th_Psel_imp_q tm_P_select var_q th_assume_Psel
+    (* {P(@P), !x. P x ==> q} ⊢ q *)
+    val tm_conj_forall_q2 = mk_comb (mk_comb const_and tm_forall_x_Px_imp_q) var_q
+    val th_disch = do_DISCH tm_forall_x_Px_imp_q th_q var_q tm_conj_forall_q2
+    (* {P(@P)} ⊢ (!x. P x ==> q) ==> q *)
+  in
+    val ex_fwd = do_GEN var_q th_disch tm_inner_imp lam_q_inner
+    (* {P(@P)} ⊢ !q. (!x. P x ==> q) ==> q *)
+  end
+
+  (* Backward: {!q.(!x.Px==>q)==>q} ⊢ P(@P) *)
+  local
+    val th_assume_ebody = ASSUME exists_body
+    (* SPEC q := P(@P) from the outer !q (bool-typed) *)
+    val tm_inner_imp_Psel = mk_comb (mk_comb const_imp
+          (mk_comb const_forall (mk_abs var_x
+            (mk_comb (mk_comb const_imp tm_Px) tm_P_select))))
+          tm_P_select
+    val th_spec_pre = do_SPEC_bool lam_q_inner tm_P_select th_assume_ebody
+    (* {exists_body} ⊢ (λq. (!x.Px==>q)==>q) P(@P) *)
+    val beta_q_Psel = beta_reduce lam_q_inner var_q tm_P_select
+    val th_spec = EQ_MP beta_q_Psel th_spec_pre
+    (* {exists_body} ⊢ (!x. P x ==> P(@P)) ==> P(@P) *)
+    val lam_x_Px_imp_Psel = mk_abs var_x
+          (mk_comb (mk_comb const_imp tm_Px) tm_P_select)
+    val tm_forall_x_Px_imp_Psel = mk_comb const_forall lam_x_Px_imp_Psel
+  in
+    val ex_bwd = do_MP th_spec tm_forall_x_Px_imp_Psel
+                       tm_P_select select_ax_spec
+    (* {exists_body} ⊢ P(@P) *)
+  end
+
+  (* Combine *)
+  val ex_equiv = SYM (DEDUCT_ANTISYM ex_fwd ex_bwd)
+  (* ⊢ exists_body = P(@P) *)
+  val ex_abs = ABS_thm var_P ex_equiv
+  (* ⊢ (λP. exists_body) = (λP. P(@P)) *)
+  val EXISTS_DEF_HOL4 = TRANS EXISTS_DEF ex_abs
+  (* ⊢ ? = λP. P(@P) *)
+  val () = save "candle$EXISTS_DEF_HOL4" EXISTS_DEF_HOL4
+
+  (* ================================================================ *)
+  (* 14. AND_DEF_HOL4: ⊢ /\ = λp q. ∀t. (p ⇒ q ⇒ t) ⇒ t          *)
+  (* Forward:  {(λf.f p q)=(λf.f T T)} ⊢ ∀t.(p==>q==>t)==>t         *)
+  (*   Extract p=T, q=T via selectors, then GEN/DISCH/MP.            *)
+  (* Backward: {∀t.(p==>q==>t)==>t} ⊢ (λf.f p q)=(λf.f T T)         *)
+  (*   SPEC t:=p gives p, SPEC t:=q gives q, then ABS f.             *)
+  (* ================================================================ *)
+
+  val tm_q_imp_t = mk_comb (mk_comb const_imp var_q) var_t
+  val tm_pqt = mk_comb (mk_comb const_imp var_p) tm_q_imp_t
+  (* p ==> q ==> t *)
+  val tm_pqt_imp_t = mk_comb (mk_comb const_imp tm_pqt) var_t
+  (* (p ==> q ==> t) ==> t *)
+  val lam_t_pqt_imp_t = mk_abs var_t tm_pqt_imp_t
+  val tm_forall_pqt = mk_comb const_forall_bool lam_t_pqt_imp_t
+  (* !t. (p ==> q ==> t) ==> t *)
+
+  (* Forward: {and_body} ⊢ ∀t. (p ==> q ==> t) ==> t *)
+  local
+    val th0 = ASSUME and_body
+    (* {and_body} ⊢ (λf.f p q) = (λf.f T T) *)
+
+    (* Extract p = T and q = T via selectors (reuse preamble results) *)
+    val and_p_eq_T = TRANS (TRANS (SYM lhs_sel1_pq) (AP_THM th0 sel1))
+                           rhs_sel1_TT
+    (* {and_body} ⊢ p = T *)
+    val and_q_eq_T = TRANS (TRANS (SYM lhs_sel2_pq) (AP_THM th0 sel2))
+                           rhs_sel2_TT
+    (* {and_body} ⊢ q = T *)
+
+    (* Get p and q from p=T and q=T *)
+    val th_p = EQ_MP (SYM and_p_eq_T) TRUTH    (* {and_body} ⊢ p *)
+    val th_q = EQ_MP (SYM and_q_eq_T) TRUTH    (* {and_body} ⊢ q *)
+
+    (* Assume (p==>q==>t), MP twice to get t *)
+    val th_assume_pqt = ASSUME tm_pqt
+    val th1 = do_MP th_assume_pqt var_p tm_q_imp_t th_p
+    (* {and_body, p==>q==>t} ⊢ q ==> t *)
+    val th2 = do_MP th1 var_q var_t th_q
+    (* {and_body, p==>q==>t} ⊢ t *)
+    val tm_conj_pqt_t = mk_comb (mk_comb const_and tm_pqt) var_t
+    val th3 = do_DISCH tm_pqt th2 var_t tm_conj_pqt_t
+    (* {and_body} ⊢ (p==>q==>t) ==> t *)
+  in
+    val and_fwd = do_GEN var_t th3 tm_pqt_imp_t lam_t_pqt_imp_t
+    (* {and_body} ⊢ ∀t. (p==>q==>t)==>t *)
+  end
+
+  (* Backward: {∀t.(p==>q==>t)==>t} ⊢ and_body *)
+  local
+    val th_assume_forall = ASSUME tm_forall_pqt
+
+    (* Prove ⊢ p ==> q ==> p (no hypotheses) *)
+    val tm_q_imp_p = mk_comb (mk_comb const_imp var_q) var_p
+    val tm_conj_qp2 = mk_comb (mk_comb const_and var_q) var_p
+    val th_q_imp_p = do_DISCH var_q (ASSUME var_p) var_p tm_conj_qp2
+    (* {p} ⊢ q ==> p *)
+    val tm_pqp = mk_comb (mk_comb const_imp var_p) tm_q_imp_p
+    val tm_conj_p_qp = mk_comb (mk_comb const_and var_p) tm_q_imp_p
+    val th_pqp = do_DISCH var_p th_q_imp_p tm_q_imp_p tm_conj_p_qp
+    (* ⊢ p ==> q ==> p *)
+
+    (* SPEC t:=p, MP with th_pqp: {hyp} ⊢ p *)
+    val th_spec_p_pre = do_SPEC_bool lam_t_pqt_imp_t var_p th_assume_forall
+    val beta_t_p = beta_reduce lam_t_pqt_imp_t var_t var_p
+    val th_spec_p = EQ_MP beta_t_p th_spec_p_pre
+    (* {hyp} ⊢ (p==>q==>p)==>p *)
+    val th_get_p = do_MP th_spec_p tm_pqp var_p th_pqp
+    (* {hyp} ⊢ p *)
+    val th_p_eq_T_bwd = eqtIntro th_get_p var_p
+    (* {hyp} ⊢ p = T *)
+
+    (* Prove ⊢ p ==> q ==> q (no hypotheses) *)
+    val tm_q_imp_q = mk_comb (mk_comb const_imp var_q) var_q
+    val tm_conj_qq = mk_comb (mk_comb const_and var_q) var_q
+    val th_q_imp_q = do_DISCH var_q (ASSUME var_q) var_q tm_conj_qq
+    (* ⊢ q ==> q *)
+    val tm_pqq = mk_comb (mk_comb const_imp var_p) tm_q_imp_q
+    val tm_conj_p_qq = mk_comb (mk_comb const_and var_p) tm_q_imp_q
+    val th_pqq = do_DISCH var_p th_q_imp_q tm_q_imp_q tm_conj_p_qq
+    (* ⊢ p ==> q ==> q *)
+
+    (* SPEC t:=q, MP with th_pqq: {hyp} ⊢ q *)
+    val th_spec_q_pre = do_SPEC_bool lam_t_pqt_imp_t var_q th_assume_forall
+    val beta_t_q = beta_reduce lam_t_pqt_imp_t var_t var_q
+    val th_spec_q = EQ_MP beta_t_q th_spec_q_pre
+    (* {hyp} ⊢ (p==>q==>q)==>q *)
+    val th_get_q = do_MP th_spec_q tm_pqq var_q th_pqq
+    (* {hyp} ⊢ q *)
+    val th_q_eq_T_bwd = eqtIntro th_get_q var_q
+    (* {hyp} ⊢ q = T *)
+
+    (* Build (λf. f p q) = (λf. f T T) from p=T, q=T *)
+    val th_fpq_fTT = MK_COMB (AP_TERM var_f th_p_eq_T_bwd) th_q_eq_T_bwd
+    (* {hyp} ⊢ f p q = f T T *)
+  in
+    val and_bwd = ABS_thm var_f th_fpq_fTT
+    (* {hyp} ⊢ (λf. f p q) = (λf. f T T) *)
+  end
+
+  (* Combine *)
+  val and_equiv = DEDUCT_ANTISYM and_fwd and_bwd
+  (* ⊢ and_body = ∀t.(p==>q==>t)==>t *)
+  val and_equiv_abs = ABS_thm var_p (ABS_thm var_q and_equiv)
+  (* ⊢ (λp q. and_body) = (λp q. ∀t.(p==>q==>t)==>t) *)
+  val AND_DEF_HOL4 = TRANS AND_DEF and_equiv_abs
+  (* ⊢ /\ = λp q. ∀t. (p ==> q ==> t) ==> t *)
+  val () = save "candle$AND_DEF_HOL4" AND_DEF_HOL4
+
+  (* ================================================================ *)
   (* Footer                                                           *)
   (* ================================================================ *)
 
