@@ -20,15 +20,23 @@ fun build dir = run_in dir []
 (* -----------------------------------------------------------------------
    Test 1: Lock file is created during build
    ----------------------------------------------------------------------- *)
-val _ = tprint "Lock file created during build"
+val _ = tprint "Per-target lock files created during build"
 val _ = clean (testdir ++ "shared")
 val _ = clean (testdir ++ "dirA")
 val result = build (testdir ++ "dirA")
-val lockfile = testdir ++ "shared" ++ ".hol" ++ "holmake.lock"
-val _ = if OS.Process.isSuccess result andalso
-           OS.FileSys.access(lockfile, [])
+val lockdir = testdir ++ "shared" ++ ".hol" ++ "locks"
+val has_lockdir = OS.FileSys.access(lockdir, [])
+                  handle OS.SysErr _ => false
+(* Check that per-target lock files exist for the shared theory *)
+val has_script_lock =
+    OS.FileSys.access(lockdir ++ "sharedScript.lock", [])
+    handle OS.SysErr _ => false
+val _ = if OS.Process.isSuccess result andalso has_lockdir andalso
+           has_script_lock
         then OK()
-        else die "FAILED"
+        else die ("FAILED: result=" ^ Bool.toString (OS.Process.isSuccess result) ^
+                  " lockdir=" ^ Bool.toString has_lockdir ^
+                  " script_lock=" ^ Bool.toString has_script_lock)
 
 (* -----------------------------------------------------------------------
    Test 2: Two concurrent Holmake processes both succeed when building

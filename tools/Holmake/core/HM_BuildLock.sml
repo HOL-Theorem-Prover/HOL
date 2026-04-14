@@ -1,8 +1,10 @@
-structure HM_DirLock :> HM_DirLock =
+structure HM_BuildLock :> HM_BuildLock =
 struct
 
 datatype lockhandle = RealLock of Posix.IO.file_desc
                     | DummyLock
+
+val nolock = DummyLock
 
 fun is_real (RealLock _) = true
   | is_real DummyLock = false
@@ -10,21 +12,30 @@ fun is_real (RealLock _) = true
 fun release (RealLock fd) = (Posix.IO.close fd handle OS.SysErr _ => ())
   | release DummyLock = ()
 
-fun ensure_hol_dir dir =
-    let val holdir = OS.Path.concat(dir, ".hol")
-    in
-      if OS.FileSys.access(holdir, []) then ()
-      else OS.FileSys.mkDir holdir
-           handle OS.SysErr _ => () (* may race with another process *)
-    end
+infix ++
+fun p1 ++ p2 = OS.Path.concat(p1, p2)
 
-fun acquire {dir, warn} =
+fun ensure_dir d =
+    if OS.FileSys.access(d, []) then ()
+    else OS.FileSys.mkDir d
+         handle OS.SysErr _ => () (* may race with another process *)
+
+fun sanitize_key key =
+    String.translate
+      (fn c => if Char.isAlphaNum c orelse c = #"_" orelse c = #"."
+                  orelse c = #"-"
+               then str c
+               else "_")
+      key
+
+fun acquire {dir, key, warn} =
     if not Systeml.isUnix then DummyLock
     else
       let
-        val _ = ensure_hol_dir dir
-        val lockpath = OS.Path.concat(OS.Path.concat(dir, ".hol"),
-                                      "holmake.lock")
+        val _ = ensure_dir (dir ++ ".hol")
+        val lockdir = dir ++ ".hol" ++ "locks"
+        val _ = ensure_dir lockdir
+        val lockpath = lockdir ++ (sanitize_key key ^ ".lock")
         open Posix.FileSys
         val fd = createf (lockpath, O_WRONLY, O.flags [O.trunc],
                           S.flags [S.irusr, S.iwusr])
@@ -47,8 +58,8 @@ fun acquire {dir, warn} =
         RealLock fd
       end
       handle OS.SysErr (msg, _) =>
-             (warn ("Failed to acquire directory lock in " ^ dir ^
-                    ": " ^ msg ^ " (proceeding without lock)");
+             (warn ("Failed to acquire build lock for " ^ key ^ " in " ^
+                    dir ^ ": " ^ msg ^ " (proceeding without lock)");
               DummyLock)
 
 end
