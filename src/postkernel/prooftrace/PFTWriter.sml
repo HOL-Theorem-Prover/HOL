@@ -128,8 +128,9 @@ fun closeOut (out as TextOut s) {n_ty, n_tm, n_th, n_ci} =
      TextIO.closeOut s)
   | closeOut (out as BinOut s) {n_ty, n_tm, n_th, n_ci} = let
     fun varint_size n = if n < 128 then 1 else 1 + varint_size (n div 128)
-    val footer_len = varint_size n_ty + varint_size n_tm
-                   + varint_size n_th + varint_size n_ci
+    val footer_len = 1 + varint_size n_ty + varint_size n_tm
+                       + varint_size n_th + varint_size n_ci
+    val () = bOpcode out 0xFF
     val () = bVarint out n_ty
     val () = bVarint out n_tm
     val () = bVarint out n_th

@@ -100,6 +100,9 @@ fun read_footer_raw file = let
   val () = #close r ()
   val r = open_bin_reader file
   val () = skip_to r (file_size - footer_len - 2)
+  val opc = #readByte r ()
+  val () = if opc = 0xFF then ()
+           else raise Fail "PFTReader: bad footer opcode"
   val vi = mk_readVarint r
   val n_ty = vi () val n_tm = vi () val n_th = vi () val n_ci = vi ()
   val () = #close r ()

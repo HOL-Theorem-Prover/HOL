@@ -209,13 +209,15 @@ PFT\0 <version:varint> <ruleset:string>
 ### Footer
 
 ```
-<n_ty:varint> <n_tm:varint> <n_th:varint> <n_ci:varint> <footer_len:uint16le>
+<0xFF> <n_ty:varint> <n_tm:varint> <n_th:varint> <n_ci:varint> <footer_len:uint16le>
 ```
 
-The footer consists of four varint counts followed by a 2-byte little-endian
-unsigned integer giving the byte length of the footer excluding the 2-byte
-length field itself. A reader seeks to the last 2 bytes of the file to read
-the length, then seeks back that many bytes to read the four counts.
+The footer begins with a single-byte opcode `0xFF` (LIMITS), followed by
+four varint counts, followed by a 2-byte little-endian unsigned integer
+giving the byte length of the footer excluding the 2-byte length field
+itself (i.e., the opcode byte plus the four varints). A reader seeks to
+the last 2 bytes of the file to read the length, then seeks back that
+many bytes to read the opcode and the four counts.
 
 ### Command encoding
 
@@ -245,6 +247,7 @@ IDs and counts are encoded as varints. Names are encoded as strings.
 | 0xF1   | DEL tm range  | id_lo id_upto                          |
 | 0xF2   | DEL th range  | id_lo id_upto                          |
 | 0xF3   | DEL ci range  | id_lo id_upto                          |
+| 0xFF   | LIMITS        | n_ty n_tm n_th n_ci                    |
 
 Opcodes in the range 0x10–0x4F are reserved for theorem commands defined by
 the ruleset.
