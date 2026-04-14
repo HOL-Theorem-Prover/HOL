@@ -390,6 +390,10 @@ val _ =
     compile ["-I", "..", "-I", "../core", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "HM_DepGraph.sig";
     compile ["-I", "..", "-I", "../core", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "HM_DepGraph.sml";
     FileSys.chDir "../core";
+    compile ["-I", ".."] "HM_BuildLock.sig";
+    FileSys.chDir "../mosml";
+    compile ["-I", "..", "-I", "../core"] "HM_BuildLock.sml";
+    FileSys.chDir "../core";
     compile ["-I", "..", "-I", "../deps", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "HM_GraphBuildJ1.sig";
     compile ["-I", "..", "-I", "../deps", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "HM_GraphBuildJ1.sml";
     FileSys.chDir "..";
