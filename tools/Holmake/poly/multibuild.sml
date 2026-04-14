@@ -61,32 +61,49 @@ fun graphbuild optinfo g =
           keep_going, quiet, hmenv, jobs, info, time_limit, maxheap,
           relocbuild, thmsrc } = optinfo
     val _ = diag "Starting graphbuild"
-    (* Per-directory locking: track locks and refcounts for active dirs *)
-    val dir_locks : (hmdir.t, {lock: HM_DirLock.lockhandle, refcount: int ref})
-                    Map.dict ref =
-        ref (Map.mkDict hmdir.compare)
-    fun acquire_dir_lock dir =
-        case Map.peek(!dir_locks, dir) of
-            SOME {refcount, ...} => refcount := !refcount + 1
-          | NONE =>
-            let val lh = HM_DirLock.acquire
-                           {dir = hmdir.toAbsPath dir, warn = warn}
+    (* Per-target locking: track locks for active build targets *)
+    type lockkey = hmdir.t * string
+    fun lockkey_compare ((d1,s1),(d2,s2)) =
+        case hmdir.compare(d1,d2) of
+            EQUAL => String.compare(s1,s2)
+          | x => x
+    val target_locks : (lockkey, HM_BuildLock.lockhandle) Map.dict ref =
+        ref (Map.mkDict lockkey_compare)
+    fun lock_key_for (nI : GraphExtra.t nodeInfo) =
+        case #command nI of
+            BuiltInCmd (BIC_BuildScript thyname, _) =>
+              SOME (OS.Path.file thyname ^ "Script")
+          | BuiltInCmd (BIC_Compile, _) =>
+              SOME (fromFile (hm_target.filepart (#target nI)))
+          | SomeCmd c => SOME ("cmd-" ^ c)
+          | NoCmd => NONE
+    fun acquire_target_lock nI =
+        case lock_key_for nI of
+            NONE => HM_BuildLock.nolock
+          | SOME key =>
+            let val dir = #dir nI
+                val lk = (dir, key)
+                val lh = HM_BuildLock.acquire
+                           {dir = hmdir.toAbsPath dir, key = key, warn = warn}
             in
-              dir_locks := Map.insert(!dir_locks, dir,
-                                      {lock = lh, refcount = ref 1})
+              target_locks := Map.insert(!target_locks, lk, lh);
+              lh
             end
-    fun release_dir_lock dir =
-        case Map.peek(!dir_locks, dir) of
+    fun release_target_lock nI =
+        case lock_key_for nI of
             NONE => ()
-          | SOME {lock, refcount} =>
-            (refcount := !refcount - 1;
-             if !refcount <= 0 then
-               (HM_DirLock.release lock;
-                dir_locks := #1 (Map.remove(!dir_locks, dir)))
-             else ())
+          | SOME key =>
+            let val lk = (#dir nI, key)
+            in
+              case Map.peek(!target_locks, lk) of
+                  NONE => ()
+                | SOME lh =>
+                  (HM_BuildLock.release lh;
+                   target_locks := #1 (Map.remove(!target_locks, lk)))
+            end
     fun release_all_locks () =
-        (Map.app (fn (_, {lock,...}) => HM_DirLock.release lock) (!dir_locks);
-         dir_locks := Map.mkDict hmdir.compare)
+        (Map.app (fn (_, lh) => HM_BuildLock.release lh) (!target_locks);
+         target_locks := Map.mkDict lockkey_compare)
     val dirmap = graph_dirinfo g
     fun dropthySuffix s =
         if List.exists
@@ -200,7 +217,7 @@ fun graphbuild optinfo g =
             fun k b g =
                 (if needed then tgtcomplete (#dir nI, 1, 0, b, Time.zeroTime)
                  else ();
-                 release_dir_lock (#dir nI);
+                 release_target_lock nI;
                  if b orelse keep_going then
                    genjob (updnode(n, if b then Succeeded else RealFail) g,
                            true)
@@ -211,10 +228,10 @@ fun graphbuild optinfo g =
             val target_s = tgt_toString (#target nI)
             val tag = if OS.Path.dir target_s = dir then OS.Path.file target_s
                       else target_s
-            val _ = acquire_dir_lock (#dir nI)
+            val _ = acquire_target_lock nI
             fun stdprocess() =
               case #command nI of
-                  NoCmd => (release_dir_lock (#dir nI);
+                  NoCmd => (release_target_lock nI;
                             genjob (updnode (n,Succeeded) g, true))
                 | cmd as SomeCmd c =>
                   let
@@ -255,7 +272,7 @@ fun graphbuild optinfo g =
                                 val _ =
                                     tgtcomplete(#dir nI, neededi, thycount,
                                                 ok, t)
-                                val _ = release_dir_lock (#dir nI)
+                                val _ = release_target_lock nI
                               in
                                 (g',ok')
                               end
@@ -287,7 +304,7 @@ fun graphbuild optinfo g =
                                          g
                                          other_nodes
                             fun update ((g,ok), b, t) =
-                              (release_dir_lock (#dir nI);
+                              (release_target_lock nI;
                                if job_kont (fn s => ()) (b2res b) then
                                 (tgtcomplete(#dir nI, ndi, thyc, true, t);
                                  (updall Succeeded g, true))
@@ -345,7 +362,7 @@ fun graphbuild optinfo g =
                        (#dependencies nI)
                  of
                     NONE => (diag ("Can skip work on "^target_s);
-                             release_dir_lock (#dir nI);
+                             release_target_lock nI;
                              genjob (updnode (n, Succeeded) g, true))
                   | SOME (_,d) =>
                     (diag ("Dependency " ^ tgt_toString d ^
