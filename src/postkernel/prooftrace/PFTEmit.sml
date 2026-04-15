@@ -608,17 +608,13 @@ fun emit_theory {trace, output, binary, ruleset} = let
       in c_eq_mp gen_inst abs_eq end
 
     (* do_SPEC: from t_tm and th: A ⊢ ∀v.s, derive A ⊢ s[t/v]. *)
-    fun do_SPEC t_tm pred_tm var_tm forall_tm v_ty th_forall =
+    fun do_SPEC t_tm pred_tm forall_tm v_ty th_forall =
       let val Ab = emit_tyop "fun" [v_ty, bool_tyid]
           val spec_inst = c_inst (c_inst_type (candle_load_pth "candle$SPEC")
                             [(tyvar_A, v_ty)])
                             [(emit_var "P" Ab, pred_tm),
                              (emit_var "x" v_ty, t_tm)]
           val mp_result = do_MP spec_inst forall_tm (emit_comb pred_tm t_tm) th_forall
-          (* Beta-reduce pred(t) = (λv.s)(t) to s[t/v].
-             We must use the actual PFT binder variable of pred_tm
-             (which has a fresh name from emit_term), not var_tm
-             (the heap variable emitted separately via var_ht). *)
           val (actual_bv, _) = pft_dest_abs pred_tm
           val beta_th = c_beta (emit_comb pred_tm actual_bv)
           val beta_inst = if actual_bv = t_tm then beta_th
@@ -860,9 +856,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val t_tm = tm a val b_th = th b
         val forall_P_tm = tm (heap_concl b)
         val (_, pred_tm) = pft_dest_comb forall_P_tm
-        val (var_tm, _) = pft_dest_abs pred_tm
-        val v_ty = pft_type_of var_tm
-      in do_SPEC t_tm pred_tm var_tm forall_P_tm v_ty b_th end
+        val v_ty = pft_type_of t_tm
+      in do_SPEC t_tm pred_tm forall_P_tm v_ty b_th end
 
     | DISJ_CASES_prf (a, b, c) => let
         val a_th = th a val b_th = th b val c_th = th c
@@ -1238,7 +1233,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val outer_forall = emit_comb forall_Ab outer_lam
 
         (* SPEC P := pred_id *)
-        val spec1 = do_SPEC pred_id outer_lam var_P_v outer_forall Ab tydef_inst
+        val spec1 = do_SPEC pred_id outer_lam outer_forall Ab tydef_inst
 
         (* SPEC rep := rep_c — need the post-P-specialization body *)
         val tydef_phi_body = emit_comb (emit_comb and_const inj_body_v)
@@ -1247,7 +1242,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
           (emit_comb (emit_comb tydef_c pred_id) var_rep_v)) tydef_phi_body
         val inner_forall2 = emit_comb forall_rep_fn (emit_abs var_rep_v tydef_phi_eq)
         val spec2 = do_SPEC rep_c (emit_abs var_rep_v tydef_phi_eq)
-                      var_rep_v inner_forall2 rep_fn_ty spec1
+                      inner_forall2 rep_fn_ty spec1
 
         val tydef_proved = c_eq_mp (c_sym spec2) conj_th
 
