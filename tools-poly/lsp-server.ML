@@ -439,19 +439,28 @@ fun start {diag} = let
     done: bool,
     pos: int,
     mlParseTrees: PolyML.parseTree list,
+    holParseTrees: HOLSourceAST.dec list,
     diags: report DArray.darray,
     plugins: plugin_data}
   fun emptyParseData n: parse_data = {
-    done = false, pos = 0, mlParseTrees = [], diags = DArray.new (n, Completed),
+    done = false, pos = 0, mlParseTrees = [], holParseTrees = [],
+    diags = DArray.new (n, Completed),
     plugins = emptyPluginData }
-  fun addParseTree t {done, pos, mlParseTrees, diags, plugins} =
-    {done = done, pos = pos, mlParseTrees = t :: mlParseTrees, diags = diags, plugins = plugins}
-  fun setParsePos pos {done, pos = _, mlParseTrees, diags, plugins} =
-    {done = done, pos = pos, mlParseTrees = mlParseTrees, diags = diags, plugins = plugins}
-  fun setParseDone pos {done = _, pos = _, mlParseTrees, diags, plugins} =
-    {done = true, pos = pos, mlParseTrees = mlParseTrees, diags = diags, plugins = plugins}
-  fun setPlugins plugins {done, pos, mlParseTrees, diags, plugins = _} =
-    {done = done, pos = pos, mlParseTrees = mlParseTrees, diags = diags, plugins = plugins}
+  fun addParseTree t {done, pos, mlParseTrees, holParseTrees, diags, plugins} =
+    {done = done, pos = pos, mlParseTrees = t :: mlParseTrees,
+     holParseTrees = holParseTrees, diags = diags, plugins = plugins}
+  fun addHolParseTree t {done, pos, mlParseTrees, holParseTrees, diags, plugins} =
+    {done = done, pos = pos, mlParseTrees = mlParseTrees,
+     holParseTrees = t :: holParseTrees, diags = diags, plugins = plugins}
+  fun setParsePos pos {done, pos = _, mlParseTrees, holParseTrees, diags, plugins} =
+    {done = done, pos = pos, mlParseTrees = mlParseTrees,
+     holParseTrees = holParseTrees, diags = diags, plugins = plugins}
+  fun setParseDone pos {done = _, pos = _, mlParseTrees, holParseTrees, diags, plugins} =
+    {done = true, pos = pos, mlParseTrees = mlParseTrees,
+     holParseTrees = holParseTrees, diags = diags, plugins = plugins}
+  fun setPlugins plugins {done, pos, mlParseTrees, holParseTrees, diags, plugins = _} =
+    {done = done, pos = pos, mlParseTrees = mlParseTrees,
+     holParseTrees = holParseTrees, diags = diags, plugins = plugins}
 
   type text_data = {text: string, version: int, lines: lines}
   type compile_data = {parse: parse_data ref, text: text_data, thread: Thread.thread}
@@ -528,7 +537,7 @@ fun start {diag} = let
       handle _ => []
     end
 
-  fun compileForReport uri code lastPos mlParseTree report = let
+  fun compileForReport uri code lastPos mlParseTree holParseTree report = let
     val _ = HOL_IDE.initialize {
       text = code,
       filename = uri,
@@ -540,7 +549,7 @@ fun start {diag} = let
         hard = hard, pos = locToRange location, msg = encPretty textWidth message}),
       runtimeExn = fn e => report (exnToReport (!lastPos) e),
       mlParseTree = mlParseTree,
-      holParseTree = fn _ => () }
+      holParseTree = holParseTree }
     in lastPos := size code end
 
   fun startCompile uri ({compile, lastTrees}:file_data) =
@@ -626,8 +635,9 @@ fun start {diag} = let
         | process Interrupted = raise Bind
         | process (msg as Error _) = DArray.push (#diags (!trees), msg)
       fun processTree t = trees := addParseTree t (!trees)
+      fun processHolTree t = trees := addHolParseTree t (!trees)
       in
-        compileForReport uri (#text text) lastPos processTree process;
+        compileForReport uri (#text text) lastPos processTree processHolTree process;
         afterCompile (!lastPos, size (#text text)) (!ls);
         send (mkNotif "$/compileCompleted" (fn print => (
           print "{\"uri\":"; encString uri print; print "}")));
@@ -651,8 +661,73 @@ fun start {diag} = let
     | NONE => NONE
     in case state of NONE => getIfValid (!lastTrees) | state => state end
 
+  fun holDecKind (HOLSourceAST.HOLDefinition _) = SOME "Definition"
+    | holDecKind (HOLSourceAST.HOLTheoremDecl _) = SOME "Theorem"
+    | holDecKind (HOLSourceAST.HOLSimpleThm _) = SOME "Theorem"
+    | holDecKind (HOLSourceAST.HOLDatatype _) = SOME "Datatype"
+    | holDecKind (HOLSourceAST.HOLTheory _) = SOME "Theory"
+    | holDecKind (HOLSourceAST.HOLQuoteDecl _) = SOME "Quote"
+    | holDecKind (HOLSourceAST.HOLInductiveDecl {co = false, ...}) = SOME "Inductive"
+    | holDecKind (HOLSourceAST.HOLInductiveDecl {co = true, ...}) = SOME "CoInductive"
+    | holDecKind (HOLSourceAST.HOLType {overload = false, ...}) = SOME "Type"
+    | holDecKind (HOLSourceAST.HOLType {overload = true, ...}) = SOME "Overload"
+    | holDecKind (HOLSourceAST.HOLResume _) = SOME "Resume"
+    | holDecKind (HOLSourceAST.HOLFinalise _) = SOME "Finalise"
+    | holDecKind _ = NONE
+
+  fun holDecName (HOLSourceAST.HOLDefinition {id, ...}) = SOME (#2 id)
+    | holDecName (HOLSourceAST.HOLTheoremDecl {id, ...}) = SOME (#2 id)
+    | holDecName (HOLSourceAST.HOLSimpleThm {id, ...}) = SOME (#2 id)
+    | holDecName (HOLSourceAST.HOLTheory {id, ...}) = SOME (#2 id)
+    | holDecName (HOLSourceAST.HOLQuoteDecl {id, ...}) = SOME (#2 id)
+    | holDecName (HOLSourceAST.HOLInductiveDecl {id, ...}) = SOME (#2 id)
+    | holDecName (HOLSourceAST.HOLType {id = HOLSourceAST.UnquotedId (_, s), ...}) = SOME s
+    | holDecName (HOLSourceAST.HOLType {id = HOLSourceAST.QuotedId (_, s), ...}) = SOME s
+    | holDecName (HOLSourceAST.HOLResume {id, ...}) = SOME (#2 id)
+    | holDecName (HOLSourceAST.HOLFinalise {id, ...}) = SOME (#2 id)
+    | holDecName _ = NONE
+
+  fun holDecAttrsStr (NONE: HOLSourceAST.kvals HOLSourceAST.attrs) = ""
+    | holDecAttrsStr (SOME {attrs = {args, ...}, ...}) = let
+      fun attrStr ({key = (_, k), bind = NONE}: HOLSourceAST.kvals) = k
+        | attrStr {key = (_, k), bind = SOME {vals, ...}} =
+          k ^ "=" ^ String.concatWith "," (map #2 vals)
+      in "[" ^ String.concatWith "," (map attrStr args) ^ "]" end
+
+  fun holDecGetAttrs (HOLSourceAST.HOLDefinition {attrs, ...}) = attrs
+    | holDecGetAttrs (HOLSourceAST.HOLTheoremDecl {attrs, ...}) = attrs
+    | holDecGetAttrs (HOLSourceAST.HOLSimpleThm {attrs, ...}) = attrs
+    | holDecGetAttrs (HOLSourceAST.HOLTheory {attrs, ...}) = attrs
+    | holDecGetAttrs (HOLSourceAST.HOLResume {attrs, ...}) = attrs
+    | holDecGetAttrs (HOLSourceAST.HOLFinalise {attrs, ...}) = attrs
+    | holDecGetAttrs _ = NONE
+
+  fun findHolDecAt holParseTrees offset = let
+    fun contains dec = let
+      val (s, e) = HOLSourceAST.decSpan dec
+      in s <= offset andalso offset < e end
+    fun search [] = NONE
+      | search (d :: ds) =
+        if contains d then SOME d
+        else search ds
+    in search (rev holParseTrees) end
+
+  fun holHover holParseTrees text offset = let
+    val dec = case findHolDecAt holParseTrees offset of
+      NONE => raise Empty | SOME d => d
+    val kind = case holDecKind dec of NONE => raise Empty | SOME k => k
+    val name = Option.getOpt (holDecName dec, "")
+    val attrs = holDecAttrsStr (holDecGetAttrs dec)
+    val (s, e) = HOLSourceAST.decSpan dec
+    val markdown = kind ^ (if name = "" then "" else " " ^ name) ^ attrs
+    val range = SOME (
+      getLineCol (#lines text) s,
+      getLineCol (#lines text) e)
+    in {markdown = markdown, range = range} end
+    handle Empty => raise Empty
+
   fun hover uri v (startTarget, endTarget) = let
-    val ({plugins, mlParseTrees, ...}, text, endOffset) =
+    val ({plugins, mlParseTrees, holParseTrees, ...}, text, endOffset) =
       case getState v endTarget of NONE => raise Empty | SOME s => s
     val startOffset = fromLineCol (#lines text) startTarget
     fun ppToString pp = let
@@ -750,6 +825,11 @@ fun start {diag} = let
       val offset' = {startOffset = FixedInt.fromInt startOffset, endOffset = FixedInt.fromInt endOffset}
       in fromTree (HOL_IDE.navigateTo' mlParseTrees offset') end
     val out = case out of [] => f () | _ => out
+    val out = case out of
+      [] => (case SOME (holHover holParseTrees text endOffset) handle Empty => NONE of
+        NONE => []
+      | SOME h => [h])
+    | _ => out
     val _ = case out of [] => raise Empty | _ => ()
     fun merge ({range = NONE, ...}, a) = a
       | merge ({range = a, ...}, NONE) = a
@@ -763,7 +843,7 @@ fun start {diag} = let
     fun fromFileLine {origin, file, line} = let
       val range = ((line, 0), (line+1, 0))
       in {origin = origin, uri = SOME file, range = range, selRange = range} end
-    val ({plugins, mlParseTrees, ...}, text, offset) =
+    val ({plugins, mlParseTrees, holParseTrees, ...}, text, offset) =
       case getState v target of NONE => raise Empty | SOME s => s
     val ctx = {uri = uri, lines = #lines text, plugins = plugins, fromFileLine = fromFileLine}
     val out = !LSPExtension.gotoDefinition (ctx, offset)
@@ -842,7 +922,7 @@ fun start {diag} = let
       | encReport Completed print = print "{\"kind\":\"compileCompleted\"}"
       | encReport Interrupted print = print "{\"kind\":\"interrupted\"}"
 
-    val compile = compileForReport uri code (ref 0) (fn _ => ())
+    val compile = compileForReport uri code (ref 0) (fn _ => ()) (fn _ => ())
     in
       case incr of
         IncrNone => let
