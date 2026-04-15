@@ -1,1 +1,5 @@
 INCLUDES = ../shared
+
+ifdef POLY
+CLINE_OPTIONS = --holstate=$(HOLDIR)/bin/hol.state0
+endif
