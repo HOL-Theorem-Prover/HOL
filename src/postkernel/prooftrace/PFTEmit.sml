@@ -627,7 +627,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
     (* do_beta_reduce: from lam_tm (a PFT abs term) and arg_tm,
        derive ⊢ lam_tm arg_tm = body[arg/binder]. *)
-    fun do_beta_reduce lam_tm _ arg_tm =
+    fun do_beta_reduce lam_tm arg_tm =
       let val (actual_bv, _) = pft_dest_abs lam_tm
           val beta_th = c_beta (emit_comb lam_tm actual_bv)
       in if actual_bv = arg_tm then beta_th
@@ -640,7 +640,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
                               [(tyvar_A, v_ty)])
                               [(emit_var "P" Ab_v, pred_tm),
                                (emit_var "x" v_ty, witness_tm)]
-          val witness_hyp = c_eq_mp (c_sym (do_beta_reduce pred_tm var_tm witness_tm)) th
+          val witness_hyp = c_eq_mp (c_sym (do_beta_reduce pred_tm witness_tm)) th
       in c_prove_hyp witness_hyp exists_inst end
 
     (* do_AP_TERM: from f and th: ⊢ x = y, derive ⊢ f x = f y *)
@@ -896,7 +896,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val v_ty = pft_type_of bv_tm
         val cmb = emit_comb pred_tm v_tm
         val c_with_cmb = c_prove_hyp
-                            (c_eq_mp (do_beta_reduce pred_tm bv_tm v_tm) (c_assume cmb)) c_th
+                            (c_eq_mp (do_beta_reduce pred_tm v_tm) (c_assume cmb)) c_th
         val imp_cmb_q = emit_comb (emit_comb imp_const cmb) q_tm
         val gen_v = do_GEN v_tm v_ty imp_cmb_q (do_DISCH cmb q_tm c_with_cmb)
         val Ab_v = emit_tyop "fun" [v_ty, bool_tyid]
@@ -1042,7 +1042,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
           val lam_body = emit_comb (emit_var "P" Ab)
                 (emit_comb select_c (emit_var "P" Ab))
           val lam_P_select = emit_abs (emit_var "P" Ab) lam_body
-          val beta1 = do_beta_reduce lam_P_select (emit_var "P" Ab) pred_id
+          val beta1 = do_beta_reduce lam_P_select pred_id
           (* beta1: ⊢ (λP. P(@P)) pred = pred(@pred) *)
           val strip_eq = c_trans ap_th beta1
           (* strip_eq: ⊢ ?pred = pred(witness) *)
@@ -1057,7 +1057,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
           (* Beta-reduce: ⊢ pred(var_i) = body[var_i/bv]
              EQ_MP: {..., ci=wi} ⊢ body[var_i/bv] *)
-          val th3 = c_eq_mp (do_beta_reduce pred_id bv_id var_i) th2
+          val th3 = c_eq_mp (do_beta_reduce pred_id var_i) th2
 
           (* Update exists_tm for next iteration *)
           val next_exists_tm = pft_subst_tm bv_id var_i body_id
