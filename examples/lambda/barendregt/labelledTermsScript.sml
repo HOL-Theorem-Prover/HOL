@@ -4,17 +4,18 @@ Ancestors
 Libs
   BasicProvers boolSimps binderLib nomdatatype
 
-val tyname = "lterm"
+(* calling nominal_datatype *)
+val _ = (repcode := "lrep");
+val _ = (rprefix := "l");
 
+val {tynames, rep_t, lp} =
+    nominal_datatype
+      ‘lterm = VAR 'free
+             | APP lterm lterm
+             | LAM 'bound lterm
+             | LAMi num 'bound lterm lterm’;
 
-Datatype: lrep = lvar | lapp | llam | llmi num
-End
-
-val lp = “λn lfvs (d:lrep) tns uns.
-            n = 0 ∧ lfvs = 1 ∧ d = lvar ∧ tns = [] ∧ uns = [] ∨
-            n = 0 ∧ lfvs = 0 ∧ d = lapp ∧ tns = [] ∧ uns = [0;0] ∨
-            n = 0 ∧ lfvs = 0 ∧ d = llam ∧ tns = [0] ∧ uns = [] ∨
-            ∃m. n = 0 ∧ lfvs = 0 ∧ d = llmi m ∧ tns = [0] ∧ uns = [0]”;
+val tyname = hd tynames; (* "lterm" *)
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, newty, term_REP_t, term_ABS_t,...} =
@@ -30,7 +31,7 @@ fun defined_const th = th |> concl |> strip_forall |> #2 |> lhs |> repeat rator
 val LAM_t = mk_var("LAM", “:string -> ^newty -> ^newty”)
 val LAM_def = new_definition(
   "LAM_def",
-  “^LAM_t v t = ^term_ABS_t (GLAM v [] llam [^term_REP_t t] [])”);
+  “^LAM_t v t = ^term_ABS_t (GLAM v [] lLAM [^term_REP_t t] [])”);
 val LAM_termP = prove(
   mk_comb(termP, LAM_def |> SPEC_ALL |> concl |> rhs |> rand),
   match_mp_tac glam >> srw_tac [][genind_term_REP])
@@ -41,14 +42,14 @@ val LAMi_t = mk_var("LAMi", “:num -> string -> ^newty -> ^newty -> ^newty”)
 val LAMi_def = new_definition(
   "LAMi_def",
   “^LAMi_t n v t1 t2 =
-      ^term_ABS_t (GLAM v [] (llmi n) [^term_REP_t t1] [^term_REP_t t2])”);
+      ^term_ABS_t (GLAM v [] (lLAMi n) [^term_REP_t t1] [^term_REP_t t2])”);
 val LAMi_termP = prove(
   mk_comb(termP, LAMi_def |> SPEC_ALL |> concl |> rhs |> rand),
   match_mp_tac glam >> srw_tac [][genind_term_REP]);
 val LAMi_t = defined_const LAMi_def
 
 val APP_t = mk_var("APP", “:^newty -> ^newty -> ^newty”)
-val APP_pattern = “GLAM v [] lapp [] [^term_REP_t t1; ^term_REP_t t2]”
+val APP_pattern = “GLAM v [] lAPP [] [^term_REP_t t1; ^term_REP_t t2]”
 val APP_def = new_definition(
   "APP_def",
   “^APP_t t1 t2 =
@@ -62,9 +63,8 @@ val APP_def' = prove(
   “^term_ABS_t ^APP_pattern = ^APP_t t1 t2”,
   srw_tac [][APP_def, GLAM_NIL_EQ, term_ABS_pseudo11, APP_termP]);
 
-
 val VAR_t = mk_var("VAR", “:string -> ^newty”)
-val VAR_pattern = “GLAM u [v] lvar [][]”
+val VAR_pattern = “GLAM u [v] lVAR [][]”
 val VAR_def = new_definition(
   "VAR_def",
   “^VAR_t v = ^term_ABS_t ^(subst [“u:string” |-> “ARB:string”] VAR_pattern)”);
@@ -211,12 +211,12 @@ val tlf =
                (ds1:(ρ -> α) list) (ds2:(ρ -> α) list)
                (ts1:^repty' list) (ts2:^repty' list) (p:ρ).
      case u of
-     | lvar => vr' (HD fvs) p
-     | lapp => ap (HD ds2) (HD (TL ds2))
+     | lVAR => vr' (HD fvs) p
+     | lAPP => ap (HD ds2) (HD (TL ds2))
                   (^term_ABS_t (HD ts2))
                   (^term_ABS_t (HD (TL ts2))) p: α
-     | llam => lm (HD ds1) v (^term_ABS_t (HD ts1)) p: α
-     | llmi m => li (HD ds1) (HD ds2) m v
+     | lLAM => lm (HD ds1) v (^term_ABS_t (HD ts1)) p: α
+     | lLAMi m => li (HD ds1) (HD ds2) m v
                     (^term_ABS_t (HD ts1))
                     (^term_ABS_t (HD ts2)) p”
 
@@ -464,4 +464,3 @@ val nti = NTI {
              (“labelledTerms$LAMi”, 1, ltpm_ALPHAi)]
 }
 val _ = binderLib.export_nomtype (“:lterm”, nti)
-
