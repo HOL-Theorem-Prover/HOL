@@ -6,3 +6,4 @@ merge-test
 replay-merged-test
 pipeline-test
 make-preamble
+emit-candle
