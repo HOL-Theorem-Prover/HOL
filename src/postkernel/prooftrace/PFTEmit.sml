@@ -1122,7 +1122,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val var_P_v = emit_var "P" Ab
         val var_rep_v = emit_var "rep" rep_fn_ty
         val tydef_ty = emit_tyop "fun" [Ab, emit_tyop "fun" [rep_fn_ty, bool_tyid]]
-        val tydef_c = emit_const "TYPE_DEFINITION" tydef_ty
+        val tydef_c = emit_const "bool$TYPE_DEFINITION" tydef_ty
         val forall_rep_fn = emit_const "!"
           (emit_tyop "fun" [emit_tyop "fun" [rep_fn_ty, bool_tyid], bool_tyid])
 
