@@ -1002,28 +1002,76 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val input_th = th a
         val input_concl_id = tm (heap_concl a)
 
-        fun peel_one th_id exists_id const_ptr = let
-          val (th_pred_witness, pred_id, witness, v_ty) =
-            exist_to_witness th_id exists_id
+        (* Iterate over constants, stripping one existential per
+           constant and replacing each witness with a fresh variable
+           whose name matches the constant being defined.  After the
+           loop we have {c1=w1,...,cn=wn} ⊢ P c1 ... cn which is
+           exactly the input that new_specification expects. *)
+        fun strip_one (const_ptr, (th_acc, exists_tm, names)) = let
+          val (_, pred_id) = pft_dest_comb exists_tm
           val (bv_id, body_id) = pft_dest_abs pred_id
+          val v_ty = pft_type_of bv_id
+          val Ab = emit_tyop "fun" [v_ty, bool_tyid]
+          val select_c = emit_const "@" (emit_tyop "fun" [Ab, v_ty])
+          val witness = emit_comb select_c pred_id
           val (Thy, Name) = get_const_id const_ptr
           val cname = tr_name (Thy ^ "$" ^ Name)
-          val eq_c = emit_const "=" (emit_tyop "fun" [v_ty, emit_tyop "fun" [v_ty, bool_tyid]])
-          val c_eq_w = emit_comb (emit_comb eq_c (emit_var cname v_ty)) witness
+          val var_i = emit_var cname v_ty
           val () = mark_const Name
-          val th_pred_c = c_eq_mp (c_mk_comb (c_refl pred_id)
-                            (c_sym (c_new_spec (c_assume c_eq_w) [cname])))
-                            th_pred_witness
-          val result = c_eq_mp (do_beta_reduce pred_id bv_id (emit_const cname v_ty)) th_pred_c
-        in (result, body_id) end
 
-        fun peel_all [] (th_acc, _) = th_acc
-          | peel_all (c :: rest) (th_acc, eid) = let
-              val (new_th, new_eid) = peel_one th_acc eid c
-            in peel_all rest (new_th, new_eid) end
+          (* Build equality var_i = witness and assume it *)
+          val eq_ty = emit_tyop "fun" [v_ty, emit_tyop "fun" [v_ty, bool_tyid]]
+          val eq_tm = emit_comb (emit_comb (emit_const "=" eq_ty) var_i) witness
+          val sym_eq = c_sym (c_assume eq_tm)
+          (* sym_eq: {var_i = witness} ⊢ witness = var_i *)
+
+          (* Strip one existential using EXISTS_DEF_HOL4:
+               ⊢ ? = λP. P(@P)  (at type A)
+             INST_TYPE A := v_ty, then AP_THM with pred_id:
+               ⊢ ?pred = (λP. P(@P)) pred
+             beta-reduce and TRANS:
+               ⊢ ?pred = pred(@pred)  i.e. ?pred = pred(witness)
+             EQ_MP with th_acc:
+               ... ⊢ pred(witness) *)
+          val exists_def = c_inst_type
+                (candle_load_pth "candle$EXISTS_DEF_HOL4")
+                [(tyvar_A, v_ty)]
+          (* exists_def: ⊢ ?(v_ty) = λP:(v_ty→bool). P(@P) *)
+          val ap_th = c_mk_comb exists_def (c_refl pred_id)
+          (* ap_th: ⊢ ?pred = (λP. P(@P)) pred *)
+          val lam_body = emit_comb (emit_var "P" Ab)
+                (emit_comb select_c (emit_var "P" Ab))
+          val lam_P_select = emit_abs (emit_var "P" Ab) lam_body
+          val beta1 = do_beta_reduce lam_P_select (emit_var "P" Ab) pred_id
+          (* beta1: ⊢ (λP. P(@P)) pred = pred(@pred) *)
+          val strip_eq = c_trans ap_th beta1
+          (* strip_eq: ⊢ ?pred = pred(witness) *)
+          val th1 = c_eq_mp strip_eq th_acc
+          (* th1: ... ⊢ pred(witness) *)
+
+          (* Replace witness with variable:
+               AP_TERM pred (witness = var_i): {ci=wi} ⊢ pred(wi) = pred(ci)
+               EQ_MP: {ci=wi,...} ⊢ pred(ci) *)
+          val th2 = c_eq_mp (do_AP_TERM pred_id sym_eq) th1
+          (* th2: {..., ci=wi} ⊢ pred(var_i) *)
+
+          (* Beta-reduce: ⊢ pred(var_i) = body[var_i/bv]
+             EQ_MP: {..., ci=wi} ⊢ body[var_i/bv] *)
+          val th3 = c_eq_mp (do_beta_reduce pred_id bv_id var_i) th2
+
+          (* Update exists_tm for next iteration *)
+          val next_exists_tm = pft_subst_tm bv_id var_i body_id
+        in (th3, next_exists_tm, cname :: names) end
+
       in case const_ptrs of
            [] => input_th
-         | _ => peel_all const_ptrs (input_th, input_concl_id)
+         | _ => let
+             val (final_th, _, rev_names) =
+               List.foldl strip_one (input_th, input_concl_id, []) const_ptrs
+             val names = List.rev rev_names
+           in PFTWriter.Candle.new_specification out result_id final_th names;
+              result_id
+           end
       end
 
     | Def_tyop_prf (a, b, c) => let
@@ -1481,6 +1529,23 @@ fun emit_theory {trace, output, binary, ruleset} = let
          tm_types_set id (pft_ret_type (pft_type_of rator_id));
          id
       end
+
+  (* Substitute old_id -> new_id in a PFT term, rebuilding via emit_comb/
+     emit_abs.  Distinguishes COMB from ABS by checking comb_ht: all COMBs
+     (heap and synthesised) are registered there; ABSs never are. *)
+  and pft_subst_tm old_id new_id tm_id =
+    if tm_id = old_id then new_id
+    else let val f = DArray.sub(tm_part1, tm_id)
+    in if f < 0 then tm_id (* VAR or CONST — no children *)
+       else let val x = DArray.sub(tm_part2, tm_id)
+                val f' = pft_subst_tm old_id new_id f
+                val x' = pft_subst_tm old_id new_id x
+            in if f' = f andalso x' = x then tm_id
+               else case IntPairTable.lookup comb_ht (f, x) of
+                      SOME _ => emit_comb f' x'
+                    | NONE   => emit_abs f' x'
+            end
+    end
 
   (* ======================================================================= *)
   (* compute (HOL4)                                                          *)
