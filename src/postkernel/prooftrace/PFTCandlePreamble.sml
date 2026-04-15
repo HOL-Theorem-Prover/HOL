@@ -1412,7 +1412,7 @@ fun emit {output, binary} = let
   end
 
   (* Combine *)
-  val ex_equiv = SYM (DEDUCT_ANTISYM ex_fwd ex_bwd)
+  val ex_equiv = DEDUCT_ANTISYM ex_bwd ex_fwd
   (* ⊢ exists_body = P(@P) *)
   val ex_abs = ABS_thm var_P ex_equiv
   (* ⊢ (λP. exists_body) = (λP. P(@P)) *)
@@ -1521,7 +1521,7 @@ fun emit {output, binary} = let
   end
 
   (* Combine *)
-  val and_equiv = DEDUCT_ANTISYM and_fwd and_bwd
+  val and_equiv = DEDUCT_ANTISYM and_bwd and_fwd
   (* ⊢ and_body = ∀t.(p==>q==>t)==>t *)
   val and_equiv_abs = ABS_thm var_p (ABS_thm var_q and_equiv)
   (* ⊢ (λp q. and_body) = (λp q. ∀t.(p==>q==>t)==>t) *)
