@@ -50,11 +50,18 @@ fun createDirIfNecessary s =
       in
         if dir = "" then (* happens if s is a relative path *)
           if file = "" then ()
-          else OS.FileSys.mkDir file
+          else (OS.FileSys.mkDir file
+                handle OS.SysErr _ =>
+                       if OS.FileSys.isDir file then ()
+                       else raise Fail ("createDirIfNecessary: " ^ file))
         else
           let val _ = createDirIfNecessary dir
           in
-            if file <> "" then OS.FileSys.mkDir s
+            if file <> "" then
+              (OS.FileSys.mkDir s
+               handle OS.SysErr _ =>
+                      if OS.FileSys.isDir s then ()
+                      else raise Fail ("createDirIfNecessary: " ^ s))
             else ()
           end
       end
