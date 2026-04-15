@@ -438,29 +438,21 @@ fun start {diag} = let
   type parse_data = {
     done: bool,
     pos: int,
-    mlParseTrees: PolyML.parseTree list,
-    holParseTrees: HOLSourceAST.dec list,
+    builtTrees: HOL_IDE.built list,
     diags: report DArray.darray,
     plugins: plugin_data}
   fun emptyParseData n: parse_data = {
-    done = false, pos = 0, mlParseTrees = [], holParseTrees = [],
+    done = false, pos = 0, builtTrees = [],
     diags = DArray.new (n, Completed),
     plugins = emptyPluginData }
-  fun addParseTree t {done, pos, mlParseTrees, holParseTrees, diags, plugins} =
-    {done = done, pos = pos, mlParseTrees = t :: mlParseTrees,
-     holParseTrees = holParseTrees, diags = diags, plugins = plugins}
-  fun addHolParseTree t {done, pos, mlParseTrees, holParseTrees, diags, plugins} =
-    {done = done, pos = pos, mlParseTrees = mlParseTrees,
-     holParseTrees = t :: holParseTrees, diags = diags, plugins = plugins}
-  fun setParsePos pos {done, pos = _, mlParseTrees, holParseTrees, diags, plugins} =
-    {done = done, pos = pos, mlParseTrees = mlParseTrees,
-     holParseTrees = holParseTrees, diags = diags, plugins = plugins}
-  fun setParseDone pos {done = _, pos = _, mlParseTrees, holParseTrees, diags, plugins} =
-    {done = true, pos = pos, mlParseTrees = mlParseTrees,
-     holParseTrees = holParseTrees, diags = diags, plugins = plugins}
-  fun setPlugins plugins {done, pos, mlParseTrees, holParseTrees, diags, plugins = _} =
-    {done = done, pos = pos, mlParseTrees = mlParseTrees,
-     holParseTrees = holParseTrees, diags = diags, plugins = plugins}
+  fun addBuiltTree t {done, pos, builtTrees, diags, plugins} =
+    {done = done, pos = pos, builtTrees = t :: builtTrees, diags = diags, plugins = plugins}
+  fun setParsePos pos {done, pos = _, builtTrees, diags, plugins} =
+    {done = done, pos = pos, builtTrees = builtTrees, diags = diags, plugins = plugins}
+  fun setParseDone pos {done = _, pos = _, builtTrees, diags, plugins} =
+    {done = true, pos = pos, builtTrees = builtTrees, diags = diags, plugins = plugins}
+  fun setPlugins plugins {done, pos, builtTrees, diags, plugins = _} =
+    {done = done, pos = pos, builtTrees = builtTrees, diags = diags, plugins = plugins}
 
   type text_data = {text: string, version: int, lines: lines}
   type compile_data = {parse: parse_data ref, text: text_data, thread: Thread.thread}
@@ -537,7 +529,7 @@ fun start {diag} = let
       handle _ => []
     end
 
-  fun compileForReport uri code lastPos mlParseTree holParseTree report = let
+  fun compileForReport uri code lastPos builtTree report = let
     val _ = HOL_IDE.initialize {
       text = code,
       filename = uri,
@@ -548,8 +540,7 @@ fun start {diag} = let
       error = fn {hard, location, message, ...} => report (Error {
         hard = hard, pos = locToRange location, msg = encPretty textWidth message}),
       runtimeExn = fn e => report (exnToReport (!lastPos) e),
-      mlParseTree = mlParseTree,
-      holParseTree = holParseTree }
+      builtTree = builtTree }
     in lastPos := size code end
 
   fun startCompile uri ({compile, lastTrees}:file_data) =
@@ -634,10 +625,9 @@ fun start {diag} = let
         | process Completed = raise Bind
         | process Interrupted = raise Bind
         | process (msg as Error _) = DArray.push (#diags (!trees), msg)
-      fun processTree t = trees := addParseTree t (!trees)
-      fun processHolTree t = trees := addHolParseTree t (!trees)
+      fun processBuiltTree t = trees := addBuiltTree t (!trees)
       in
-        compileForReport uri (#text text) lastPos processTree processHolTree process;
+        compileForReport uri (#text text) lastPos processBuiltTree process;
         afterCompile (!lastPos, size (#text text)) (!ls);
         send (mkNotif "$/compileCompleted" (fn print => (
           print "{\"uri\":"; encString uri print; print "}")));
@@ -661,73 +651,63 @@ fun start {diag} = let
     | NONE => NONE
     in case state of NONE => getIfValid (!lastTrees) | state => state end
 
-  fun holDecKind (HOLSourceAST.HOLDefinition _) = SOME "Definition"
-    | holDecKind (HOLSourceAST.HOLTheoremDecl _) = SOME "Theorem"
-    | holDecKind (HOLSourceAST.HOLSimpleThm _) = SOME "Theorem"
-    | holDecKind (HOLSourceAST.HOLDatatype _) = SOME "Datatype"
-    | holDecKind (HOLSourceAST.HOLTheory _) = SOME "Theory"
-    | holDecKind (HOLSourceAST.HOLQuoteDecl _) = SOME "Quote"
-    | holDecKind (HOLSourceAST.HOLInductiveDecl {co = false, ...}) = SOME "Inductive"
-    | holDecKind (HOLSourceAST.HOLInductiveDecl {co = true, ...}) = SOME "CoInductive"
-    | holDecKind (HOLSourceAST.HOLType {overload = false, ...}) = SOME "Type"
-    | holDecKind (HOLSourceAST.HOLType {overload = true, ...}) = SOME "Overload"
-    | holDecKind (HOLSourceAST.HOLResume _) = SOME "Resume"
-    | holDecKind (HOLSourceAST.HOLFinalise _) = SOME "Finalise"
-    | holDecKind _ = NONE
+  (* Navigate built trees: find the innermost node containing offset,
+     returning path from root to innermost as (span, props, children) list *)
+  fun navigateBuiltPath builtTrees offset = let
+    fun findIn [] = NONE
+      | findIn (HOL_IDE.Built ((s, e), props, children) :: rest) =
+        if s <= FixedInt.fromInt offset andalso FixedInt.fromInt offset < e then
+          case findIn children of
+            NONE => SOME [((s, e), props, children)]
+          | SOME path => SOME (((s, e), props, children) :: path)
+        else findIn rest
+    in findIn (rev builtTrees) end
 
-  fun holDecName (HOLSourceAST.HOLDefinition {id, ...}) = SOME (#2 id)
-    | holDecName (HOLSourceAST.HOLTheoremDecl {id, ...}) = SOME (#2 id)
-    | holDecName (HOLSourceAST.HOLSimpleThm {id, ...}) = SOME (#2 id)
-    | holDecName (HOLSourceAST.HOLTheory {id, ...}) = SOME (#2 id)
-    | holDecName (HOLSourceAST.HOLQuoteDecl {id, ...}) = SOME (#2 id)
-    | holDecName (HOLSourceAST.HOLInductiveDecl {id, ...}) = SOME (#2 id)
-    | holDecName (HOLSourceAST.HOLType {id = HOLSourceAST.UnquotedId (_, s), ...}) = SOME s
-    | holDecName (HOLSourceAST.HOLType {id = HOLSourceAST.QuotedId (_, s), ...}) = SOME s
-    | holDecName (HOLSourceAST.HOLResume {id, ...}) = SOME (#2 id)
-    | holDecName (HOLSourceAST.HOLFinalise {id, ...}) = SOME (#2 id)
-    | holDecName _ = NONE
+  fun navigateBuilt builtTrees offset =
+    case navigateBuiltPath builtTrees offset of
+      NONE => NONE
+    | SOME path => SOME (List.last path)
 
-  fun holDecAttrsStr (NONE: HOLSourceAST.kvals HOLSourceAST.attrs) = ""
-    | holDecAttrsStr (SOME {attrs = {args, ...}, ...}) = let
-      fun attrStr ({key = (_, k), bind = NONE}: HOLSourceAST.kvals) = k
-        | attrStr {key = (_, k), bind = SOME {vals, ...}} =
-          k ^ "=" ^ String.concatWith "," (map #2 vals)
-      in "[" ^ String.concatWith "," (map attrStr args) ^ "]" end
+  (* Extract props from a built node *)
+  fun builtGetType [] = NONE
+    | builtGetType (HOL_IDE.PType ty :: _) = SOME ty
+    | builtGetType (_ :: ps) = builtGetType ps
 
-  fun holDecGetAttrs (HOLSourceAST.HOLDefinition {attrs, ...}) = attrs
-    | holDecGetAttrs (HOLSourceAST.HOLTheoremDecl {attrs, ...}) = attrs
-    | holDecGetAttrs (HOLSourceAST.HOLSimpleThm {attrs, ...}) = attrs
-    | holDecGetAttrs (HOLSourceAST.HOLTheory {attrs, ...}) = attrs
-    | holDecGetAttrs (HOLSourceAST.HOLResume {attrs, ...}) = attrs
-    | holDecGetAttrs (HOLSourceAST.HOLFinalise {attrs, ...}) = attrs
-    | holDecGetAttrs _ = NONE
+  fun builtGetIdContent [] = NONE
+    | builtGetIdContent (HOL_IDE.PIdContent s :: _) = SOME s
+    | builtGetIdContent (_ :: ps) = builtGetIdContent ps
 
-  fun findHolDecAt holParseTrees offset = let
-    fun contains dec = let
-      val (s, e) = HOLSourceAST.decSpan dec
-      in s <= offset andalso offset < e end
-    fun search [] = NONE
-      | search (d :: ds) =
-        if contains d then SOME d
-        else search ds
-    in search (rev holParseTrees) end
+  fun builtGetRefOrDefId [] = NONE
+    | builtGetRefOrDefId (HOL_IDE.PRefId i :: _) = SOME i
+    | builtGetRefOrDefId (HOL_IDE.PDefId i :: _) = SOME i
+    | builtGetRefOrDefId (_ :: ps) = builtGetRefOrDefId ps
 
-  fun holHover holParseTrees text offset = let
-    val dec = case findHolDecAt holParseTrees offset of
-      NONE => raise Empty | SOME d => d
-    val kind = case holDecKind dec of NONE => raise Empty | SOME k => k
-    val name = Option.getOpt (holDecName dec, "")
-    val attrs = holDecAttrsStr (holDecGetAttrs dec)
-    val (s, e) = HOLSourceAST.decSpan dec
-    val markdown = kind ^ (if name = "" then "" else " " ^ name) ^ attrs
-    val range = SOME (
-      getLineCol (#lines text) s,
-      getLineCol (#lines text) e)
-    in {markdown = markdown, range = range} end
-    handle Empty => raise Empty
+  fun builtGetStructureAt [] = NONE
+    | builtGetStructureAt (HOL_IDE.PStructureAt f :: _) = SOME f
+    | builtGetStructureAt (_ :: ps) = builtGetStructureAt ps
+
+  fun builtGetDeclaredAt [] = NONE
+    | builtGetDeclaredAt (HOL_IDE.PDeclaredAt loc :: _) = SOME loc
+    | builtGetDeclaredAt (_ :: ps) = builtGetDeclaredAt ps
+
+  fun builtGetReferences [] = NONE
+    | builtGetReferences (HOL_IDE.PReferences exp :: _) = SOME exp
+    | builtGetReferences (_ :: ps) = builtGetReferences ps
+
+  fun builtGetPrint [] = NONE
+    | builtGetPrint (HOL_IDE.PPrint s :: _) = SOME s
+    | builtGetPrint (_ :: ps) = builtGetPrint ps
+
+  fun builtGetThy [] = NONE
+    | builtGetThy (HOL_IDE.PThy s :: _) = SOME s
+    | builtGetThy (_ :: ps) = builtGetThy ps
+
+  fun builtIsQuote [] = false
+    | builtIsQuote (HOL_IDE.PQuote :: _) = true
+    | builtIsQuote (_ :: ps) = builtIsQuote ps
 
   fun hover uri v (startTarget, endTarget) = let
-    val ({plugins, mlParseTrees, holParseTrees, ...}, text, endOffset) =
+    val ({plugins, builtTrees, ...}, text, endOffset) =
       case getState v endTarget of NONE => raise Empty | SOME s => s
     val startOffset = fromLineCol (#lines text) startTarget
     fun ppToString pp = let
@@ -736,100 +716,88 @@ fun start {diag} = let
       in concat (DArray.toList mds) end
     val ctx = {uri = uri, lines = #lines text, plugins = plugins, ppToString = ppToString}
     val out = !LSPExtension.hover (ctx, (startOffset, endOffset))
-    fun locToRange {startPosition, endPosition, ...} = (
-      getLineCol (#lines text) (FixedInt.toInt startPosition),
-      getLineCol (#lines text) (FixedInt.toInt endPosition))
-    fun typeHover (loc, pp) = {range = SOME (locToRange loc), markdown = ppToString pp}
-    fun process loc props = let
-      fun fromProps [] out = out
-        | fromProps (PolyML.PTtype ty :: props) (isId, _) = fromProps props (isId, SOME ty)
-        | fromProps (PolyML.PTrefId i :: props) (_, ty) = fromProps props (SOME i, ty)
-        | fromProps (PolyML.PTdefId i :: props) (_, ty) = fromProps props (SOME i, ty)
-        | fromProps (_ :: props) out = fromProps props out
-      val (isId, ty) = fromProps props (NONE, NONE)
-      val (id, value, help) = case isId of
-        NONE => (NONE, NONE, [])
-      | SOME i => let
-        val {startPosition, endPosition, ...} = loc
-        val startPos = FixedInt.toInt startPosition
-        val endPos = FixedInt.toInt endPosition
-        val id = String.substring (#text text, startPos, endPos - startPos)
-        val help =
-          if lastIndexOf #"." id < 0 then let
-            fun validate str = let
-              fun look [] = false
-                | look (PolyML.PTstructureAt {file, ...} :: props) = let
-                  val basename = String.extract (file, lastIndexOf #"/" file + 1, NONE)
-                  val stem = String.extract (basename, 0, SOME (lastIndexOf #"." basename))
-                  in str = stem orelse look props end
-                | look (_ :: props) = look props
-              in look props end
-            in !LSPExtension.helpLookup (id, validate) end
-          else let
-            val components = splitOn #"." id
-            val fst = List.hd components
-            in !LSPExtension.helpLookup (List.last components, fn s => s = fst) end
-          handle _ => []
-        val range = SOME (getLineCol (#lines text) startPos, getLineCol (#lines text) endPos)
-        val help = map (fn d => {range = range, markdown = d}) help
-        val isGlobalId = i = 0 orelse let
-          fun look [] = NONE
-            | look (PolyML.PTdeclaredAt loc :: _) = SOME loc
-            | look (_ :: props) = look props
-          fun lookRefs [] = false
-            | lookRefs (PolyML.PTreferences (exp, _) :: _) = exp
-            | lookRefs (_ :: props) = lookRefs props
-          in
-            case look props of
-              NONE => false
-            | SOME {startPosition, endPosition, ...} =>
-              case HOL_IDE.navigateTo' mlParseTrees
-                  {startOffset = startPosition, endOffset = endPosition} of
+    fun spanToRange (s, e) = (
+      getLineCol (#lines text) (FixedInt.toInt s),
+      getLineCol (#lines text) (FixedInt.toInt e))
+    fun processPath [] = []
+      | processPath (((sp, props, _)) :: parents) = let
+        val range = SOME (spanToRange sp)
+        (* Check for theory name *)
+        val thyHov = case builtGetThy props of
+          NONE => []
+        | SOME name => [{range = range, markdown = "Theory " ^ name}]
+        (* Check for type / identifier info *)
+        val ty = builtGetType props
+        val idContent = builtGetIdContent props
+        val refOrDef = builtGetRefOrDefId props
+        val (id, value, help) = case (idContent, refOrDef) of
+          (SOME id, _) => let
+          val help =
+            if lastIndexOf #"." id < 0 then let
+              fun validate str = case builtGetStructureAt props of
                 NONE => false
-              | SOME (_, props) => lookRefs props
-          end
-        val value = if isGlobalId then #lookupVal PolyML.globalNameSpace id else NONE
-        in (SOME id, value, help) end
-      open PolyML
-      val ty = Option.map (fn ty =>
-        NameSpace.Values.printType (ty, printDepth, SOME globalNameSpace)) ty
-      val value = case value of
-          NONE => NONE
-        | SOME value =>
-          case NameSpace.Values.print (value, printDepth) of
-            PrettyString "" => NONE
-          | otherwise => SOME otherwise
-      val out = case (id, ty, value) of
-          (_, NONE, NONE) => []
-        | (NONE, SOME ty, NONE) => [typeHover (loc, ty)]
-        | (SOME id, SOME ty, NONE) =>
-          [typeHover (loc, PrettyBlock(0, true, [],
-            [PrettyString ("val " ^ id ^ ":"), PrettyBreak(1, 2), ty]))]
-        | (id, ty, SOME value) =>
-          [typeHover (loc, PrettyBlock(2, true, [], [
-            PrettyBlock(0, false, [],
-              (case ty of
-                 NONE => [PrettyString ("val " ^ Option.getOpt (id, "_"))]
-                | SOME ty => [
-                  PrettyString ("val " ^ Option.getOpt (id, "_") ^ ":"),
-                  PrettyBreak(1, 2), ty])
-              @ [PrettyBreak(1, 2), PrettyString "="]),
-             PrettyBreak(1, 0), value]))]
-      in help @ out end
-    fun fromTree NONE = []
-      | fromTree (pt as (SOME (loc, props))) =
-        case process loc props of
-          [] => fromTree (HOL_IDE.moveUp pt)
-        | out => out
-    fun f () = let
-      val offset' = {startOffset = FixedInt.fromInt startOffset, endOffset = FixedInt.fromInt endOffset}
-      in fromTree (HOL_IDE.navigateTo' mlParseTrees offset') end
+              | SOME file => let
+                val basename = String.extract (file, lastIndexOf #"/" file + 1, NONE)
+                val stem = String.extract (basename, 0, SOME (lastIndexOf #"." basename))
+                in str = stem end
+              in !LSPExtension.helpLookup (id, validate) end
+            else let
+              val components = splitOn #"." id
+              val fst = List.hd components
+              in !LSPExtension.helpLookup (List.last components, fn s => s = fst) end
+            handle _ => []
+          val help = map (fn d => {range = range, markdown = d}) help
+          val isGlobalId = case refOrDef of
+            NONE => false
+          | SOME i => i = 0 orelse let
+            val declAt = builtGetDeclaredAt props
+            in case declAt of
+              NONE => false
+            | SOME {startPosition, endPosition, ...} => let
+              val declOffset = startPosition
+              in case navigateBuilt builtTrees declOffset of
+                NONE => false
+              | SOME (_, declProps, _) =>
+                case builtGetReferences declProps of
+                  NONE => false
+                | SOME exp => exp
+              end
+            end
+          val value = if isGlobalId then #lookupVal PolyML.globalNameSpace id else NONE
+          in (SOME id, value, help) end
+        | _ => (NONE, NONE, [])
+        open PolyML
+        val ty = Option.map (fn ty =>
+          NameSpace.Values.printType (ty, printDepth, SOME globalNameSpace)) ty
+        val value = case value of
+            NONE => NONE
+          | SOME value =>
+            case NameSpace.Values.print (value, printDepth) of
+              PrettyString "" => NONE
+            | otherwise => SOME otherwise
+        fun typeHover pp = {range = range, markdown = ppToString pp}
+        val idHov = case (id, ty, value) of
+            (_, NONE, NONE) => []
+          | (NONE, SOME ty, NONE) => [typeHover ty]
+          | (SOME id, SOME ty, NONE) =>
+            [typeHover (PrettyBlock(0, true, [],
+              [PrettyString ("val " ^ id ^ ":"), PrettyBreak(1, 2), ty]))]
+          | (id, ty, SOME value) =>
+            [typeHover (PrettyBlock(2, true, [], [
+              PrettyBlock(0, false, [],
+                (case ty of
+                   NONE => [PrettyString ("val " ^ Option.getOpt (id, "_"))]
+                  | SOME ty => [
+                    PrettyString ("val " ^ Option.getOpt (id, "_") ^ ":"),
+                    PrettyBreak(1, 2), ty])
+                @ [PrettyBreak(1, 2), PrettyString "="]),
+               PrettyBreak(1, 0), value]))]
+        val out = help @ thyHov @ idHov
+        in case out of [] => processPath parents | _ => out end
+    fun f () = case navigateBuiltPath builtTrees endOffset of
+      NONE => []
+    | SOME path => processPath (rev path)
     val out = case out of [] => f () | _ => out
-    val out = case out of
-      [] => (case SOME (holHover holParseTrees text endOffset) handle Empty => NONE of
-        NONE => []
-      | SOME h => [h])
-    | _ => out
     val _ = case out of [] => raise Empty | _ => ()
     fun merge ({range = NONE, ...}, a) = a
       | merge ({range = a, ...}, NONE) = a
@@ -843,39 +811,31 @@ fun start {diag} = let
     fun fromFileLine {origin, file, line} = let
       val range = ((line, 0), (line+1, 0))
       in {origin = origin, uri = SOME file, range = range, selRange = range} end
-    val ({plugins, mlParseTrees, holParseTrees, ...}, text, offset) =
+    val ({plugins, builtTrees, ...}, text, offset) =
       case getState v target of NONE => raise Empty | SOME s => s
     val ctx = {uri = uri, lines = #lines text, plugins = plugins, fromFileLine = fromFileLine}
     val out = !LSPExtension.gotoDefinition (ctx, offset)
     fun f () = let
-      fun fromProps [] r = r
-        | fromProps (PolyML.PTdeclaredAt loc :: _) (file, ty, _) = (file, ty, SOME loc)
-        | fromProps (PolyML.PTstructureAt {file,...} :: props) (_, ty, df) =
-          fromProps props (SOME file, ty, df)
-        | fromProps (PolyML.PTtype ty :: props) (file, _, df) = fromProps props (file, SOME ty, df)
-        | fromProps (_ :: props) r = fromProps props r
-      val offset' = {startOffset = FixedInt.fromInt offset, endOffset = FixedInt.fromInt offset}
-      val ({startPosition, endPosition, ...}, props) =
-        case HOL_IDE.navigateTo' mlParseTrees offset' of NONE => raise Empty | SOME pt => pt
-      val start = FixedInt.toInt startPosition
-      val stop = FixedInt.toInt endPosition
+      val ((s, e), props, _) = case navigateBuilt builtTrees offset of
+        NONE => raise Empty | SOME n => n
+      val start = FixedInt.toInt s
+      val stop = FixedInt.toInt e
       val origin = SOME (getLineCol (#lines text) start, getLineCol (#lines text) stop)
-      val (file, ty, loc) = case fromProps props (NONE, NONE, NONE) of
-        (_, _, NONE) => raise Empty
-      | (file, ty, SOME loc) => (file, ty, loc)
-      fun fromPolyLoc {file, startLine, startPosition, endPosition, ...} =
+      val loc = case builtGetDeclaredAt props of NONE => raise Empty | SOME loc => loc
+      val file = builtGetStructureAt props
+      val ty = builtGetType props
+      val idContent = builtGetIdContent props
+      fun fromDeclaredAt {file, startLine, startPosition, endPosition, ...} =
         if file = "" then let
-          val start = FixedInt.toInt startPosition
-          val stop = FixedInt.toInt endPosition
-          val range = (getLineCol (#lines text) start, getLineCol (#lines text) stop)
+          val range = (getLineCol (#lines text) startPosition, getLineCol (#lines text) endPosition)
           in {origin = origin, uri = NONE, range = range, selRange = range} end
-        else fromFileLine {origin = origin, file = file, line = FixedInt.toInt startLine - 1}
+        else fromFileLine {origin = origin, file = file, line = startLine - 1}
       val newLoc = case (file, ty) of
         (SOME file, SOME _) =>
         !LSPExtension.fixupTheoremLink {uri = file, text = #text text, start = start, stop = stop}
       | _ => NONE
       val newLoc = case newLoc of
-        NONE => fromPolyLoc loc
+        NONE => fromDeclaredAt loc
       | SOME {file, line} => fromFileLine {origin = origin, file = file, line = line}
       in [newLoc] end
     in case out of [] => f () | _ => out end
@@ -922,7 +882,7 @@ fun start {diag} = let
       | encReport Completed print = print "{\"kind\":\"compileCompleted\"}"
       | encReport Interrupted print = print "{\"kind\":\"interrupted\"}"
 
-    val compile = compileForReport uri code (ref 0) (fn _ => ()) (fn _ => ())
+    val compile = compileForReport uri code (ref 0) (fn _ => ())
     in
       case incr of
         IncrNone => let
