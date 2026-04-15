@@ -29,6 +29,10 @@ datatype props =
 | PIdContent of string
 | PDeclaredAt of {file: string, startLine: int, endLine: int, startPosition: int, endPosition: int}
 | PType of PolyML.NameSpace.Values.typeExpression
+| PRefId of FixedInt.int
+| PDefId of FixedInt.int
+| PStructureAt of string
+| PReferences of bool
 | POther of PolyML.ptProperties
 
 datatype built = Built of (FixedInt.int * FixedInt.int) * props list * built list
@@ -42,8 +46,7 @@ val initialize:
     progress: int -> unit,
     error: error -> unit,
     runtimeExn: exn -> unit,
-    mlParseTree: PolyML.parseTree -> unit,
-    holParseTree: HOLSourceAST.dec -> unit
+    builtTree: built -> unit
   } -> unit
 
 val moveUp: subtree -> subtree
@@ -99,6 +102,10 @@ datatype props =
 | PIdContent of string
 | PDeclaredAt of {file: string, startLine: int, endLine: int, startPosition: int, endPosition: int}
 | PType of PolyML.NameSpace.Values.typeExpression
+| PRefId of FixedInt.int
+| PDefId of FixedInt.int
+| PStructureAt of string
+| PReferences of bool
 | POther of PolyML.ptProperties
 
 datatype built = Built of (FixedInt.int * FixedInt.int) * props list * built list
@@ -158,6 +165,10 @@ fun trProps [] = []
     PDeclaredAt {file = file, startLine = FixedInt.toInt startLine, endLine = FixedInt.toInt endLine,
                  startPosition = FixedInt.toInt startPosition, endPosition = FixedInt.toInt endPosition} :: trProps ls
   | trProps (PolyML.PTtype t :: ls) = PType t :: trProps ls
+  | trProps (PolyML.PTrefId i :: ls) = PRefId i :: trProps ls
+  | trProps (PolyML.PTdefId i :: ls) = PDefId i :: trProps ls
+  | trProps (PolyML.PTstructureAt {file,...} :: ls) = PStructureAt file :: trProps ls
+  | trProps (PolyML.PTreferences (exp, _) :: ls) = PReferences exp :: trProps ls
   | trProps (PolyML.PTparent _ :: ls) = trProps ls
   | trProps (PolyML.PTfirstChild _ :: ls) = trProps ls
   | trProps (PolyML.PTpreviousSibling _ :: ls) = trProps ls
@@ -619,7 +630,7 @@ end
 
 fun initialize {
   text, filename, parseError, compilerOut, toplevelOut, progress, error,
-  runtimeExn, mlParseTree, holParseTree
+  runtimeExn, builtTree
 } = let
   datatype chunk
     = Chunk of string
@@ -648,7 +659,6 @@ fun initialize {
     case parseDec () of
       NONE => true
     | SOME dec => (
-      holParseTree dec;
       case expandDec dec of
         HOLSourceAST.DecExpansion {result = [], ...} => fetchDec ()
       | dec => (
@@ -684,7 +694,7 @@ fun initialize {
       else (curToken := toState (); read2 ())
   val serial = ref 1
   fun ptFn NONE = ()
-    | ptFn (SOME pt) = (mlParseTree pt; ptRef := moveDown (SOME pt) :: !ptRef)
+    | ptFn (SOME pt) = ptRef := moveDown (SOME pt) :: !ptRef
   fun codeFn NONE () = ()
     | codeFn (SOME code) () = let
       val {fixes, values, structures, signatures, functors, types} = code ()
@@ -714,11 +724,19 @@ fun initialize {
     case !curToken of
       (_, "") => ()
     | _ => ((PolyML.compiler (read2, parameters) () handle e => runtimeExn e); finish ()))
+  fun emitBuilt () = let
+    val decs = !decsRef
+    val pts = rev (!ptRef)
+    val (acc, _) = annotateDecs decs (PTTop pts) []
+    in app builtTree (rev acc) end
+    handle _ => () (* annotation can fail if trees are out of sync *)
   fun loop () = (
     DArray.clear queue;
     if fetchDec () then () else (
-      idx := 0; spans := []; ptRef := []; curToken := toState ();
+      idx := 0; spans := []; curToken := toState ();
       finish ();
+      emitBuilt ();
+      ptRef := [];
       loop ()))
   in loop () end;
 
