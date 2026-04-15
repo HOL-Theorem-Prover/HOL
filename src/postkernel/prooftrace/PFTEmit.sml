@@ -991,11 +991,23 @@ fun emit_theory {trace, output, binary, ruleset} = let
       end
 
     | Def_const_list_prf (a, b) => let
-        val a_th = th a
         val ids = list heap get_const_id b
-        val names = List.map (fn (Thy,nm) => tr_name (Thy ^ "$" ^ nm)) ids
-        val () = List.app (fn (_,nm) => mark_const nm) ids
-      in PFTWriter.Candle.new_specification out result_id a_th names; result_id end
+        val preamble_name =
+          if thyname = "bool" then
+            case ids of [(_, nm)] =>
+              List.find (fn (k,_) => k = nm) candle_preamble_def
+            | _ => NONE
+          else NONE
+      in case preamble_name of
+           SOME (_, load_name) =>
+             (mark_const (#2 (hd ids)); candle_load_pth load_name)
+         | NONE => let
+             val a_th = th a
+             val names = List.map (fn (Thy,nm) => tr_name (Thy ^ "$" ^ nm)) ids
+             val () = List.app (fn (_,nm) => mark_const nm) ids
+           in PFTWriter.Candle.new_specification out result_id a_th names;
+              result_id end
+      end
 
     | Def_spec_prf (a, b) => let
         val const_ptrs = list heap (fn p => p) b
