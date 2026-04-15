@@ -119,6 +119,19 @@ fun emit_theory {trace, output, binary, ruleset} = let
      !m
   end
 
+  (* Build a map from export name to theorem heap pointer.  Only needed
+     for boolTheory in Candle mode, where Def_tyop_prf must reference
+     TYPE_DEFINITION_THM from within the same theory without LOAD/SAVE. *)
+  val named_thm_map : (string, Thm.thm ptr) Redblackmap.dict =
+    if is_candle andalso thyname = "bool" then let
+      val m = ref (Redblackmap.mkDict String.compare)
+    in appList heap (fn p => let
+         val (nm, (thp, _)) = tuple3 heap (str heap, I, I) p
+       in m := Redblackmap.insert(!m, nm, thp) end) all_thms;
+       !m
+    end
+    else Redblackmap.mkDict String.compare
+
   (* --- Open output ------------------------------------------------------- *)
 
   val ruleset_str = case ruleset of HOL4 => "hol4" | Candle => "candle"
@@ -1116,7 +1129,11 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
         (* --- Instantiate TYPE_DEFINITION_THM via two SPECs --------------- *)
 
-        val tydef_inst = c_inst_type (candle_load_pth "bool$TYPE_DEFINITION_THM")
+        val tydef_th =
+          if thyname = "bool"
+          then emit_thm (Redblackmap.find(named_thm_map, "TYPE_DEFINITION_THM"))
+          else candle_load_pth "bool$TYPE_DEFINITION_THM"
+        val tydef_inst = c_inst_type tydef_th
                            [(mk_tyvar_cached "'a", rep_ty),
                             (mk_tyvar_cached "'b", new_ty)]
         val var_P_v = emit_var "P" Ab
