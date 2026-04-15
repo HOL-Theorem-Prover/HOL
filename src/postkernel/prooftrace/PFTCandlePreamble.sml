@@ -1342,7 +1342,7 @@ fun emit {output, binary} = let
   (* {¬t} ⊢ t ==> F *)
   val bc_t_gives_F = do_MP bc_not_elim var_t const_F (ASSUME var_t)
   (* {¬t, t} ⊢ F *)
-  val bc_t_eq_F = DEDUCT_ANTISYM bc_t_gives_F (do_CONTR (ASSUME const_F) var_t)
+  val bc_t_eq_F = DEDUCT_ANTISYM (do_CONTR (ASSUME const_F) var_t) bc_t_gives_F
   (* {¬t} ⊢ t = F *)
   val bc_case_neg_t =
     do_DISJ2 t_eq_T bc_t_eq_F t_eq_F
@@ -1412,7 +1412,7 @@ fun emit {output, binary} = let
   end
 
   (* Combine *)
-  val ex_equiv = DEDUCT_ANTISYM ex_bwd ex_fwd
+  val ex_equiv = DEDUCT_ANTISYM ex_fwd ex_bwd
   (* ⊢ exists_body = P(@P) *)
   val ex_abs = ABS_thm var_P ex_equiv
   (* ⊢ (λP. exists_body) = (λP. P(@P)) *)
