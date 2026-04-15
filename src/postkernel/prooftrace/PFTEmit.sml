@@ -730,8 +730,17 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | MP_prf (a, b) => let
         val a_th = th a val b_th = th b
         val concl_a_id = tm (heap_concl a)
-        val (imp_p_id, q_tm) = pft_dest_comb concl_a_id
-        val (_, p_tm) = pft_dest_comb imp_p_id
+        val (imp_p_id, rhs_tm) = pft_dest_comb concl_a_id
+        (* HOL4's MP treats ~p as p ==> F via dest_imp/dest_neg.
+           When the conclusion is ~p rather than p ==> q, unfold
+           the negation using NOT_ELIM before the normal MP step. *)
+        val (a_th, p_tm, q_tm) =
+          case total pft_dest_comb imp_p_id of
+            SOME (_, p) => (a_th, p, rhs_tm)
+          | NONE => let
+              val ne = c_inst (candle_load_pth "candle$NOT_ELIM")
+                         [(pvar_p, rhs_tm)]
+            in (c_prove_hyp a_th ne, rhs_tm, emit_const "F" bool_tyid) end
         val rth = c_inst (candle_load_pth "candle$MP")
                     [(pvar_p, p_tm), (pvar_q, q_tm)]
       in r_eq_mp (c_eq_mp (c_deduct b_th rth) b_th) a_th end
