@@ -626,7 +626,7 @@ val lp = “λn lfvs (d:lrep) tns uns.
   n is the index of (multiple) nominal types being defined
   lfvs is the number of 'free names in the constructor
   d is the repcode of the constructor
-  tns is the list of indexes of bounded arguments (at most one is allowed)
+  tns is the list of indexes of bounded arguments
   uns is the list of indexes of unbounded (free) arguments.
 *)
 
@@ -655,9 +655,17 @@ fun pretypeToName pty =
       | dTyop {Tyop = s, Thy, Args} => s
       | dAQ pty => type_to_string pty;
 
-(* NOTE: Currently the “tns” list is either empty or singleton list containing
-   the index of a normal type being defined. We check the presence of 'bound
-   and get the index of the followed nominal type.
+(* filter_this_next 2 [1,2,3,2,5] [] = [3,5] *)
+fun filter_this_next e l acc =
+    if l = [] then rev acc
+    else
+        if hd l = e then
+            filter_this_next e (tl (tl l)) (hd (tl l)::acc)
+        else
+            filter_this_next e (tl l) acc;
+
+(* NOTE: We assume there's always one bound nominal parameter after each 'bound
+   name. In the existing examples, at most one 'bound is present.
 
    val ptys = [dVartype "'free", dVartype "'bound",
                dTyop {Args = [], Thy = NONE, Tyop = "pi"}]
@@ -665,15 +673,10 @@ fun pretypeToName pty =
  *)
 fun build_tns ptys tynames = let
     val dv = dVartype (!bound_tyname);
-    val bound_names = List.filter (fn e => e = dv) ptys
+    val bound_args = filter_this_next dv ptys [];
+    val indexes = map (fn e => index_of (pretypeToName e) tynames) bound_args
 in
-    if bound_names = [] then
-        “tns = [] :num list”
-    else
-        let val i_tm = index_of (pretypeToName (find_next dv ptys)) tynames
-        in
-            mk_eq (“tns :num list”, mk_list ([i_tm], numSyntax.num))
-        end
+    mk_eq (“tns :num list”, mk_list (indexes, numSyntax.num)
 end;
 
 fun pretypeIsNominal pty =
@@ -682,20 +685,20 @@ fun pretypeIsNominal pty =
       | dTyop {Tyop, Thy = thy, Args} => (thy = NONE)
       | dAQ pty => false;
 
-(* filter_out2 2 [1,2,3,4,5] [] = [1,4,5] *)
-fun filter_out2 e l acc =
+(* filter_out_this_next 2 [1,2,3,4,5] [] = [1,4,5] *)
+fun filter_out_this_next e l acc =
     if l = [] then rev acc
     else
         if hd l = e then
-            filter_out2 e (tl (tl l)) acc
+            filter_out_this_next e (tl (tl l)) acc
         else
-            filter_out2 e (tl l) (hd l::acc);
+            filter_out_this_next e (tl l) (hd l::acc);
 
 (* The “uns” list contains indexes of all nominal types, excluding the one
    after 'bound (which is put into the “tns” list).
  *)
 fun build_uns ptys tynames = let
-    val l1 = filter_out2 (dVartype (!bound_tyname)) ptys [];
+    val l1 = filter_out_this_next (dVartype (!bound_tyname)) ptys [];
     val l2 = List.filter pretypeIsNominal l1;
     val uns = List.map (fn e => index_of (pretypeToName e) tynames) l2
 in
@@ -772,6 +775,7 @@ end;
 
 (* Step 1: parse datatype quotation
    Step 2: define repcode (intermediate datatype)
+   Step 3: generate lp term
  *)
 fun nominal_datatype q = let
   val asts = parse_datatype q;
