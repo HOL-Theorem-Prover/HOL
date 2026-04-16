@@ -12,7 +12,7 @@ signature PFTCandlePreamble = sig
        F_DEF:       |- F = !p. p
        NOT_DEF:     |- ~ = \p. p ==> F
 
-     HOL4-variant definitions (derived from the above plus SELECT_AX):
+     HOL4-variant definitions:
        EXISTS_DEF_HOL4: |- ? = \P. P(@ P)
        AND_DEF_HOL4:    |- /\ = \p q. !t. (p ==> q ==> t) ==> t
 
@@ -47,15 +47,6 @@ signature PFTCandlePreamble = sig
        EXCLUDED_MIDDLE:|- !t. t \/ ~t
        CCONTR:         |- (~p ==> F) ==> p
        BOOL_CASES_AX:  |- !t. (t = T) \/ (t = F)
-
-     Variable names used in pro-formas (PFTEmit must construct matching
-     variables for INST):
-       p, q : bool         (for /\, ==>, \/, conjunction/implication rules)
-       r    : bool         (for DISJ_CASES)
-       t    : bool         (for EQT_INTRO, EXCLUDED_MIDDLE, BOOL_CASES_AX)
-       Q    : bool         (for CHOOSE)
-       P    : A->bool      (for !, ?, quantifier rules)
-       x    : A            (for !, ?, quantifier rules)
 
      All theorems and definition equations are SAVEd under "candle$<name>".
   *)
