@@ -649,8 +649,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
          in PFTWriter.tyvar out id name;
             ty_insert key id; id end end
 
-    (* exist_to_witness: from th: ⊢ ∃v. body, derive ⊢ (λv. body)(@(λv. body))
-       using CHOOSE_pth + SELECT_AX. *)
+    (* exist_to_witness: from th: ⊢ ∃v. body, derive ⊢ body[@(λv. body)/v]
+       using CHOOSE_pth + SELECT_AX + beta reduction. *)
     fun exist_to_witness exists_th exists_concl_id = let
       val (_, pred_id) = pft_dest_comb exists_concl_id
       val (bv_id, _) = pft_dest_abs pred_id
@@ -671,7 +671,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
         (emit_abs var_x_v (emit_comb (emit_comb (imp_const) (emit_comb pred_id var_x_v)) pred_witness))
       val imp_forall_pw = emit_comb (emit_comb (imp_const) forall_inner) pred_witness
       val mp1 = do_MP choose_inst exists_concl_id imp_forall_pw exists_th
-      val result = do_MP mp1 forall_inner pred_witness sel_inst
+      val raw_result = do_MP mp1 forall_inner pred_witness sel_inst
+      val result = c_eq_mp (do_beta_reduce pred_id witness) raw_result
     in (result, pred_id, witness, v_ty) end
 
   in
