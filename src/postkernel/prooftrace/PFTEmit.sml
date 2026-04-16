@@ -607,7 +607,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
                             (emit_var "x" v_ty, v_tm)]
       in c_eq_mp gen_inst abs_eq end
 
-    (* do_SPEC: from t_tm and th: A ⊢ ∀v.s, derive A ⊢ s[t/v]. *)
+    (* do_SPEC: from t_tm, pred_tm: λv. s, th: A ⊢ ∀v. s, derive A ⊢ s[t/v] *)
     fun do_SPEC t_tm pred_tm forall_tm v_ty th_forall =
       let val Ab = emit_tyop "fun" [v_ty, bool_tyid]
           val spec_inst = c_inst (c_inst_type (candle_load_pth "candle$SPEC")
@@ -629,7 +629,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
       in if actual_bv = arg_tm then beta_th
          else c_inst beta_th [(actual_bv, arg_tm)] end
 
-    (* do_EXISTS: from th: A ⊢ P(witness), pred = λv.body, derive A ⊢ ∃v. body *)
+    (* do_EXISTS: from th: A ⊢ body[witness/v], pred = λv. body, derive A ⊢ ∃v. body *)
     fun do_EXISTS pred_tm var_tm witness_tm v_ty th =
       let val Ab_v = emit_tyop "fun" [v_ty, bool_tyid]
           val exists_inst = c_inst (c_inst_type (candle_load_pth "candle$EXISTS")
@@ -649,8 +649,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
          in PFTWriter.tyvar out id name;
             ty_insert key id; id end end
 
-    (* exist_to_witness: from th: ⊢ ∃v. body, derive ⊢ body[@(λv. body)/v]
-       using CHOOSE_pth + SELECT_AX + beta reduction. *)
+    (* exist_to_witness: from th: ⊢ ∃v. body, derive ⊢ (λv. body) (@v. body)
+       using CHOOSE_pth + SELECT_AX. *)
     fun exist_to_witness exists_th exists_concl_id = let
       val (_, pred_id) = pft_dest_comb exists_concl_id
       val (bv_id, _) = pft_dest_abs pred_id
@@ -671,9 +671,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
         (emit_abs var_x_v (emit_comb (emit_comb (imp_const) (emit_comb pred_id var_x_v)) pred_witness))
       val imp_forall_pw = emit_comb (emit_comb (imp_const) forall_inner) pred_witness
       val mp1 = do_MP choose_inst exists_concl_id imp_forall_pw exists_th
-      val raw_result = do_MP mp1 forall_inner pred_witness sel_inst
-      val result = c_eq_mp (do_beta_reduce pred_id witness) raw_result
-    in (result, pred_id, witness, v_ty) end
+      val result = do_MP mp1 forall_inner pred_witness sel_inst
+    in (result, pred_id, Ab, v_ty) end
 
   in
     case proof of
@@ -1099,9 +1098,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val (Thy, Tyop) = get_type_id c
         val () = mark_type Tyop
         val tyname = tr_name (Thy ^ "$" ^ Tyop)
-        val (th_pw, pred_id, _, rep_ty) =
+        val (th_pw, pred_id, Ab, rep_ty) =
           exist_to_witness b_th (tm (heap_concl b))
-        val Ab = emit_tyop "fun" [rep_ty, bool_tyid]
 
         val absname = tyname ^ "_abs"
         val repname = tyname ^ "_rep"
@@ -1115,7 +1113,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val () = PFTWriter.Candle.new_type_definition out tydef_id th_pw
             tyname absname repname
 
-        val tyvars_ptrs = list heap (fn p => p) a
+        val tyvars_ptrs = list heap I a
         val new_ty = emit_tyop tyname (List.map ty tyvars_ptrs)
         val abs_ty = emit_tyop "fun" [rep_ty, new_ty]
         val rep_fn_ty = emit_tyop "fun" [new_ty, rep_ty]
@@ -1124,6 +1122,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val Ab_new = emit_tyop "fun" [new_ty, bool_tyid]
         val eq_new = emit_const "=" (emit_tyop "fun" [new_ty, emit_tyop "fun" [new_ty, bool_tyid]])
         val eq_rep = emit_const "=" (emit_tyop "fun" [rep_ty, emit_tyop "fun" [rep_ty, bool_tyid]])
+        val Abb_new = emit_tyop "fun" [Ab_new, bool_tyid]
 
         val var_a = emit_var "a" new_ty
         val var_r_rep = emit_var "r" rep_ty
@@ -1135,64 +1134,71 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val abs_x = emit_comb abs_c var_x_rep
         val phi_x = emit_comb pred_id var_x_rep
 
-        val ar_x' = c_inst tydef_id [(var_a, var_x')]
-        val ar_x'' = c_inst tydef_id [(var_a, var_x'')]
-        val rr = emit_comb (emit_comb eq_rep rep_x') rep_x''
-        val th_inj = c_trans (c_trans (c_sym ar_x') (do_AP_TERM abs_c (c_assume rr))) ar_x''
-        val x'_eq_x'' = emit_comb (emit_comb eq_new var_x') var_x''
-        val inj_body = emit_comb (emit_comb (imp_const) rr) x'_eq_x''
-        val forall_new = emit_const "!" (emit_tyop "fun" [Ab_new, bool_tyid])
+        val ar_x' = c_inst tydef_id [(var_a, var_x')] (* ⊢ abs (rep x') = x' *)
+        val ar_x'' = c_inst tydef_id [(var_a, var_x'')] (* ⊢ abs (rep x'') = x'' *)
+        val rr = emit_comb (emit_comb eq_rep rep_x') rep_x'' (* rep x' = rep x'' *)
+        val arr = do_AP_TERM abs_c (c_assume rr) (* rep x' = rep x'' ⊢ abs (rep x') = abs (rep x'') *)
+        val th_inj = c_trans (c_trans (c_sym ar_x') arr) ar_x'' (* rep x' = rep x'' ⊢ x' = x'' *)
+        val x'_eq_x'' = emit_comb (emit_comb eq_new var_x') var_x'' (* x' = x'' *)
+        val inj_body = emit_comb (emit_comb (imp_const) rr) x'_eq_x'' (* rep x' = rep x'' ⇒ x' = x'' *)
+        val forall_new = emit_const "!" Abb_new
         val th_conj1 = do_GEN var_x' new_ty
           (emit_comb forall_new (emit_abs var_x'' inj_body))
           (do_GEN var_x'' new_ty inj_body (do_DISCH rr x'_eq_x'' th_inj))
+          (* ⊢ (∀x' x''. rep x' = rep x'' ⇒ x' = x'') *)
 
-        val ra_x = c_inst tydef_id2 [(var_r_rep, var_x_rep)]
-        val sym_ra_x = c_sym ra_x
-        val x_eq_rep_x' = emit_comb (emit_comb eq_rep var_x_rep) rep_x'
-        val pred_exists = emit_abs var_x' x_eq_rep_x'
-        val exist_x_eq = emit_comb
-          (emit_const "?" (emit_tyop "fun" [Ab_new, bool_tyid]))
-          pred_exists
+        val ra_x = c_inst tydef_id2 [(var_r_rep, var_x_rep)] (* ⊢ P x = (rep (abs x) = x) *)
+        val sym_ra_x = c_sym ra_x (* ⊢ (rep (abs x) = x) = P x *)
+        val x_eq_rep_x' = emit_comb (emit_comb eq_rep var_x_rep) rep_x' (* x = rep x' *)
+        val pred_exists = emit_abs var_x' x_eq_rep_x' (* λx'. x = rep x' *)
+        val exist_x_eq = emit_comb (emit_const "?" Abb_new) pred_exists (* ∃x'. x = rep x' *)
 
         (* Forward: {phi x} |- ?x'. x = rep x' *)
-        val sym_repabs = c_sym (c_eq_mp ra_x (c_assume phi_x))
+        val sym_repabs = c_sym (c_eq_mp ra_x (c_assume phi_x)) (* P x ⊢ x = rep (abs x) *)
         val th_fwd = do_EXISTS pred_exists var_x' abs_x new_ty sym_repabs
+        (* P x ⊢ ∃x'. x = rep x' *)
 
         (* Backward: {?x'. x = rep x'} |- phi x *)
-        (* pred_x' = (λx'. x = rep x') x' — un-beta-reduced form needed for CHOOSE *)
-        val pred_x' = emit_comb pred_exists var_x'
-        val assume_xeq = c_assume x_eq_rep_x'
-        val abs_x_eq_x' = c_trans (do_AP_TERM abs_c assume_xeq) ar_x'
-        val th_repabsx = c_trans (do_AP_TERM rep_c abs_x_eq_x') (c_sym assume_xeq)
-        val th_phi_from_xeq = c_eq_mp sym_ra_x th_repabsx
-        (* th_phi_from_xeq: {x = rep x'} ⊢ phi_x — convert hyp to un-beta-reduced *)
+        val pred_x' = emit_comb pred_exists var_x' (* (λx'. x = rep x') x' *)
+        val assume_xeq = c_assume x_eq_rep_x' (* x = rep x' ⊢ x = rep x' *)
+        val abs_x_eq_x' = c_trans (do_AP_TERM abs_c assume_xeq) ar_x' (* x = rep x' ⊢ abs x = x' *)
+        val th_repabsx = c_trans (do_AP_TERM rep_c abs_x_eq_x') (c_sym assume_xeq) (* x = rep x' ⊢ rep (abs x) = x *)
+        val th_phi_from_xeq = c_eq_mp sym_ra_x th_repabsx (* x = rep x' ⊢ P x *)
+        val beta_pred_x' = do_beta_reduce pred_exists var_x' (* ⊢ (λx'. x = rep x') x' = x = rep x' *)
         val th_phi_from_pred_x' = c_prove_hyp
-            (c_eq_mp (do_beta_reduce pred_exists var_x') (c_assume pred_x'))
-            th_phi_from_xeq
-        val pred_x'_imp_phi = emit_comb (emit_comb imp_const pred_x') phi_x
+            (c_eq_mp beta_pred_x' (c_assume pred_x'))
+            th_phi_from_xeq (* (λx'. x = rep x') x' ⊢ P x *)
+        val pred_x'_imp_phi = emit_comb (emit_comb imp_const pred_x') phi_x (* (λx'. x = rep x') x' ⇒ P x *)
         val var_P_Ab_new = emit_var "P" Ab_new
         val choose_inst_bwd = c_inst (c_inst_type (candle_load_pth "candle$CHOOSE")
                                 [(tyvar_A, new_ty)])
                                 [(var_P_Ab_new, pred_exists), (pvar_Q, phi_x)]
-        val forall_new_imp = emit_comb (emit_const "!" (emit_tyop "fun" [Ab_new, bool_tyid]))
-            (emit_abs var_x' pred_x'_imp_phi)
-        val th_bwd = do_MP
-          (do_MP choose_inst_bwd exist_x_eq
-            (emit_comb (emit_comb imp_const forall_new_imp) phi_x)
-            (c_assume exist_x_eq))
-          forall_new_imp phi_x
-          (do_GEN var_x' new_ty pred_x'_imp_phi
-            (do_DISCH pred_x' phi_x th_phi_from_pred_x'))
+                              (* ⊢ (∃x'. x = rep x') ⇒ (∀x''. (λx'. x = rep x') x'' ⇒ P x) ⇒ P x *)
+        val forall_new_imp = emit_comb forall_new
+            (emit_abs var_x' pred_x'_imp_phi) (* ∀x'. (λx'. x = rep x') x' ⇒ P x *)
+        val th_bwd1 = do_MP choose_inst_bwd exist_x_eq
+                        (emit_comb (emit_comb imp_const forall_new_imp) phi_x)
+                        (c_assume exist_x_eq)
+                      (* ∃x'. x = rep x' ⊢ (∀x'. (λx'. x = rep x') x' ⇒ P x) ⇒ P x *)
+        val th_bwd2 = do_DISCH pred_x' phi_x th_phi_from_pred_x' (* ⊢ (λx'. x = rep x') x' ⇒ P x *)
+        val th_bwd3 = do_GEN var_x' new_ty pred_x'_imp_phi th_bwd2 (* ⊢ ∀x'. (λx'. x = rep x') x' ⇒ P x *)
+        val th_bwd = do_MP th_bwd1 forall_new_imp phi_x th_bwd3
+                     (* ∃x'. x = rep x' ⊢ P x *)
 
-        val th_char_x = c_deduct th_bwd th_fwd
-        val phi_eq_exists = emit_comb (emit_comb (eq_bool_const) phi_x) exist_x_eq
+        val th_char_x = c_deduct th_bwd th_fwd (* ⊢ P x = ∃x'. x = rep x' *)
+        val phi_eq_exists = emit_comb (emit_comb (eq_bool_const) phi_x) exist_x_eq (* P x = ∃x'. x = rep x' *)
         val th_conj2 = do_GEN var_x_rep rep_ty phi_eq_exists th_char_x
+                       (* ⊢ ∀x. P x = ∃x'. x = rep x' *)
 
         val forall_rep = emit_const "!" (emit_tyop "fun" [Ab, bool_tyid])
         val conj1_body = emit_comb forall_new
           (emit_abs var_x' (emit_comb forall_new (emit_abs var_x'' inj_body)))
+          (* ∀x' x''. rep x' = rep x'' ⇒ x' = x'' *)
         val conj2_body = emit_comb forall_rep (emit_abs var_x_rep phi_eq_exists)
+          (* ∀x. P x = ∃x'. x = rep x' *)
         val conj_th = do_CONJ conj1_body conj2_body th_conj1 th_conj2
+          (* ⊢ (∀x' x''. rep x' = rep x'' ⇒ x' = x'') ∧
+               (∀x. P x = ∃x'. x = rep x' *)
 
         (* --- Instantiate TYPE_DEFINITION_THM via two SPECs --------------- *)
 
@@ -1203,54 +1209,73 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val tydef_inst = c_inst_type tydef_th
                            [(mk_tyvar_cached "'a", rep_ty),
                             (mk_tyvar_cached "'b", new_ty)]
+          (* ∀P rep. TYPE_DEFINITION P rep ⇔
+                     (∀x' x''. rep x' = rep x'' ⇒ x' = x'') ∧
+                     (∀x. P x ⇔ ∃x'. x = rep x') *)
         val var_P_v = emit_var "P" Ab
         val var_rep_v = emit_var "rep" rep_fn_ty
-        val tydef_ty = emit_tyop "fun" [Ab, emit_tyop "fun" [rep_fn_ty, bool_tyid]]
+        val rep_fn_ty_bool = emit_tyop "fun" [rep_fn_ty, bool_tyid]
+        val tydef_ty = emit_tyop "fun" [Ab, rep_fn_ty_bool]
         val tydef_c = emit_const "bool$TYPE_DEFINITION" tydef_ty
         val forall_rep_fn = emit_const "!"
-          (emit_tyop "fun" [emit_tyop "fun" [rep_fn_ty, bool_tyid], bool_tyid])
+          (emit_tyop "fun" [rep_fn_ty_bool, bool_tyid])
 
         (* Build the TYPE_DEFINITION body with generic P, rep variables.
            TYPE_DEFINITION P rep ≡
              (∀x' x''. rep x' = rep x'' ⇒ x' = x'') ∧
              (∀x. P x = ∃x'. x = rep x') *)
-        val rep_v_x' = emit_comb var_rep_v var_x'
-        val rep_v_x'' = emit_comb var_rep_v var_x''
+        val rep_v_x' = emit_comb var_rep_v var_x' (* rep x' *)
+        val rep_v_x'' = emit_comb var_rep_v var_x'' (* rep x'' *)
         val inj_body_v = emit_comb forall_new
           (emit_abs var_x' (emit_comb forall_new (emit_abs var_x''
             (emit_comb (emit_comb imp_const
               (emit_comb (emit_comb eq_rep rep_v_x') rep_v_x''))
               (emit_comb (emit_comb eq_new var_x') var_x'')))))
+           (* ∀x' x''. rep x' = rep x'' ⇒ x' = x'' *)
         val exist_v = emit_comb (emit_const "?" (emit_tyop "fun" [Ab_new, bool_tyid]))
           (emit_abs var_x' (emit_comb (emit_comb eq_rep var_x_rep) rep_v_x'))
+           (* ∃x'. x = rep x' *)
         fun mk_char_body P_x = emit_comb forall_rep
           (emit_abs var_x_rep (emit_comb (emit_comb eq_bool_const P_x) exist_v))
-        val tydef_body_v = emit_comb (emit_comb and_const inj_body_v)
+           (* ∀x. ^P_x = ∃x'. x = rep x' *)
+        val and_inj_body_v = emit_comb and_const inj_body_v
+        val tydef_body_v = emit_comb and_inj_body_v
                              (mk_char_body (emit_comb var_P_v var_x_rep))
+           (* (∀x' x''. rep x' = rep x'' ⇒ x' = x'') ∧
+              (∀x. P x = ∃x'. x = rep x') *)
         val tydef_eq_v = emit_comb (emit_comb eq_bool_const
           (emit_comb (emit_comb tydef_c var_P_v) var_rep_v)) tydef_body_v
+           (* TYPE_DEFINITION P rep = ... *)
         val inner_forall = emit_comb forall_rep_fn (emit_abs var_rep_v tydef_eq_v)
+           (* ∀rep. TYPE_DEFINITION P rep = ... *)
         val outer_lam = emit_abs var_P_v inner_forall
+           (* λP. ∀rep. TYPE_DEFINITION P rep = ... *)
         val forall_Ab = emit_const "!"
           (emit_tyop "fun" [emit_tyop "fun" [Ab, bool_tyid], bool_tyid])
         val outer_forall = emit_comb forall_Ab outer_lam
+           (* ∀P rep. TYPE_DEFINITION P rep = ... *)
 
         (* SPEC P := pred_id *)
         val spec1 = do_SPEC pred_id outer_lam outer_forall Ab tydef_inst
+         (* ⊢ ∀rep. TYPE_DEFINITION P rep = ... *)
 
         (* SPEC rep := rep_c — need the post-P-specialization body *)
-        val tydef_phi_body = emit_comb (emit_comb and_const inj_body_v)
-                               (mk_char_body phi_x)
-        val tydef_phi_eq = emit_comb (emit_comb eq_bool_const
-          (emit_comb (emit_comb tydef_c pred_id) var_rep_v)) tydef_phi_body
-        val inner_forall2 = emit_comb forall_rep_fn (emit_abs var_rep_v tydef_phi_eq)
-        val spec2 = do_SPEC rep_c (emit_abs var_rep_v tydef_phi_eq)
+        val tydef_phi_body = emit_comb and_inj_body_v (mk_char_body phi_x)
+        val tydef_phi_var_rep = emit_comb (emit_comb tydef_c pred_id) var_rep_v
+        val tydef_phi_eq = emit_comb
+                             (emit_comb eq_bool_const tydef_phi_var_rep)
+                                 tydef_phi_body
+        val lam_rep_tydef_phi_eq = emit_abs var_rep_v tydef_phi_eq
+        val inner_forall2 = emit_comb forall_rep_fn lam_rep_tydef_phi_eq
+                            (* ∀rep. TYPE_DEFINITION P rep = ... *)
+        val spec2 = do_SPEC rep_c lam_rep_tydef_phi_eq
                       inner_forall2 rep_fn_ty spec1
+         (* ⊢ TYPE_DEFINITION P rep = ... *)
 
         val tydef_proved = c_eq_mp (c_sym spec2) conj_th
+         (* ⊢ TYPE_DEFINITION P rep *)
 
-        val exist_pred_rep = emit_abs var_rep_v
-          (emit_comb (emit_comb tydef_c pred_id) var_rep_v)
+        val exist_pred_rep = emit_abs var_rep_v tydef_phi_var_rep
       in do_EXISTS exist_pred_rep var_rep_v rep_c rep_fn_ty tydef_proved end
 
     | compute_prf (a, b) => raise Fail "emit_thm_candle: compute not yet implemented"
