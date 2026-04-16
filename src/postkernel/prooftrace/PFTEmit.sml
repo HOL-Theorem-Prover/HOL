@@ -1157,32 +1157,34 @@ fun emit_theory {trace, output, binary, ruleset} = let
         (* Forward: {phi x} |- ?x'. x = rep x' *)
         val sym_repabs = c_sym (c_eq_mp ra_x (c_assume phi_x))
         val th_fwd = do_EXISTS pred_exists var_x' abs_x new_ty sym_repabs
-        val th_fwd_disch = do_DISCH phi_x exist_x_eq th_fwd
 
         (* Backward: {?x'. x = rep x'} |- phi x *)
+        (* pred_x' = (λx'. x = rep x') x' — un-beta-reduced form needed for CHOOSE *)
+        val pred_x' = emit_comb pred_exists var_x'
         val assume_xeq = c_assume x_eq_rep_x'
         val abs_x_eq_x' = c_trans (do_AP_TERM abs_c assume_xeq) ar_x'
         val th_repabsx = c_trans (do_AP_TERM rep_c abs_x_eq_x') (c_sym assume_xeq)
         val th_phi_from_xeq = c_eq_mp sym_ra_x th_repabsx
-        val x_eq_imp_phi = emit_comb (emit_comb imp_const x_eq_rep_x') phi_x
+        (* th_phi_from_xeq: {x = rep x'} ⊢ phi_x — convert hyp to un-beta-reduced *)
+        val th_phi_from_pred_x' = c_prove_hyp
+            (c_eq_mp (do_beta_reduce pred_exists var_x') (c_assume pred_x'))
+            th_phi_from_xeq
+        val pred_x'_imp_phi = emit_comb (emit_comb imp_const pred_x') phi_x
         val var_P_Ab_new = emit_var "P" Ab_new
         val choose_inst_bwd = c_inst (c_inst_type (candle_load_pth "candle$CHOOSE")
                                 [(tyvar_A, new_ty)])
                                 [(var_P_Ab_new, pred_exists), (pvar_Q, phi_x)]
         val forall_new_imp = emit_comb (emit_const "!" (emit_tyop "fun" [Ab_new, bool_tyid]))
-            (emit_abs var_x' x_eq_imp_phi)
+            (emit_abs var_x' pred_x'_imp_phi)
         val th_bwd = do_MP
           (do_MP choose_inst_bwd exist_x_eq
             (emit_comb (emit_comb imp_const forall_new_imp) phi_x)
             (c_assume exist_x_eq))
           forall_new_imp phi_x
-          (do_GEN var_x' new_ty x_eq_imp_phi
-            (do_DISCH x_eq_rep_x' phi_x th_phi_from_xeq))
+          (do_GEN var_x' new_ty pred_x'_imp_phi
+            (do_DISCH pred_x' phi_x th_phi_from_pred_x'))
 
-        val th_fwd_u = do_MP th_fwd_disch phi_x exist_x_eq (c_assume phi_x)
-        val th_bwd_u = do_MP (do_DISCH exist_x_eq phi_x th_bwd)
-                         exist_x_eq phi_x (c_assume exist_x_eq)
-        val th_char_x = c_deduct th_bwd_u th_fwd_u
+        val th_char_x = c_deduct th_bwd th_fwd
         val phi_eq_exists = emit_comb (emit_comb (eq_bool_const) phi_x) exist_x_eq
         val th_conj2 = do_GEN var_x_rep rep_ty phi_eq_exists th_char_x
 
