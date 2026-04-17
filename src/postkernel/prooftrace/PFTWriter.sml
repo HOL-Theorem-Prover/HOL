@@ -488,4 +488,15 @@ fun load (out as TextOut _) id name =
   | load out id name =
     (bOpcode out 0x51; bVarint out id; bString out name)
 
+(* --- Expect -------------------------------------------------------------- *)
+
+fun expect (out as TextOut _) th hyps concl =
+    (jBegin out "EXPECT"; jInt out "th" th;
+     jIntList out "hyps" hyps; jInt out "concl" concl; jEnd out)
+  | expect out th hyps concl =
+    (bOpcode out 0xEF; bVarint out th;
+     bVarint out (List.length hyps);
+     List.app (bVarint out) hyps;
+     bVarint out concl)
+
 end

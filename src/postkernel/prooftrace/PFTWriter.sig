@@ -31,6 +31,11 @@ signature PFTWriter = sig
   val save      : pft_out -> string -> int -> unit
   val load      : pft_out -> int -> string -> unit
 
+  (* Debug command: record the expected hypset (as term ids,
+     set semantics under alpha) and conclusion term id for
+     the theorem just produced at id [th]. *)
+  val expect    : pft_out -> int -> int list -> int -> unit
+
   (* HOL4 ruleset theorem commands *)
   structure HOL4 : sig
     val refl          : pft_out -> int -> int -> unit

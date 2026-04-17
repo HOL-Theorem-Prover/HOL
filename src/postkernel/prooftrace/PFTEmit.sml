@@ -1345,7 +1345,13 @@ fun emit_theory {trace, output, binary, ruleset} = let
            in PFTWriter.load out id save_name; id end
          | _ => let
              val actual_id = emit_thm_candle id concl_ptr proof
-           in th_memo_set k actual_id; actual_id end
+             val () = th_memo_set k actual_id
+             val concl_id = emit_term concl_ptr
+             val hyp_ids = ref []
+             val () = appSet heap
+               (fn p => hyp_ids := emit_term p :: !hyp_ids) hyps_ptr
+             val () = PFTWriter.expect out actual_id (!hyp_ids) concl_id
+           in actual_id end
        end
        else let
          val id = alloc_th ()
