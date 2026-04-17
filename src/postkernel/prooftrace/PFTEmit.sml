@@ -776,14 +776,14 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val p_tm = tm (heap_concl a)
         val pth = c_inst (candle_load_pth "candle$DISJ1")
                     [(pvar_p, p_tm), (pvar_q, q_tm)]
-      in r_eq_mp (c_deduct a_th pth) a_th end
+      in r_prove_hyp a_th pth end
 
     | DISJ2_prf (a, b) => let
         val p_tm = tm a val b_th = th b
         val q_tm = tm (heap_concl b)
         val pth = c_inst (candle_load_pth "candle$DISJ2")
                     [(pvar_p, p_tm), (pvar_q, q_tm)]
-      in r_eq_mp (c_deduct b_th pth) b_th end
+      in r_prove_hyp b_th pth end
 
     | Mk_comb_prf (a, b, c) => r_trans (th a) (c_mk_comb (th b) (th c))
 
