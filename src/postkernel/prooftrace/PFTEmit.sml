@@ -609,8 +609,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
           val Ab = emit_tyop "fun" [v_ty, bool_tyid]
           val gen_inst = c_inst (c_inst_type (candle_load_pth "candle$GEN")
                            [(tyvar_A, v_ty)])
-                           [(emit_var "P" Ab, emit_abs v_tm s_tm),
-                            (emit_var "x" v_ty, v_tm)]
+                           [(emit_var "P" Ab, emit_abs v_tm s_tm)]
       in c_eq_mp gen_inst abs_eq end
 
     (* do_SPEC: from t_tm, pred_tm: λv. s, th: A ⊢ ∀v. s, derive A ⊢ s[t/v] *)
