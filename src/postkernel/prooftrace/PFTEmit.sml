@@ -549,12 +549,18 @@ fun emit_theory {trace, output, binary, ruleset} = let
     (* Candle ==> constant *)
     val imp_const = emit_const "==>" bbb_tyid
 
-    (* TYVAR "A" for INST_TYPE on polymorphic pro-formas *)
-    val tyvar_A = let val key = TyVarK "A"
+    (* Candle F constant *)
+    val const_F_tm = emit_const "F" bool_tyid
+
+    (* mk_tyvar_cached: get or create a type variable by name *)
+    fun mk_tyvar_cached name = let val key = TyVarK name
       in case ty_lookup key of SOME id => id
        | NONE => let val id = alloc_ty ()
-         in PFTWriter.tyvar out id "A";
+         in PFTWriter.tyvar out id name;
             ty_insert key id; id end end
+
+    (* TYVAR "A" for INST_TYPE on polymorphic pro-formas *)
+    val tyvar_A = mk_tyvar_cached "A"
 
     (* === Candle derived-rule helpers ===
        These emit sequences of Candle commands and return theorem IDs. *)
@@ -641,13 +647,6 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
     (* do_AP_TERM: from f and th: ⊢ x = y, derive ⊢ f x = f y *)
     fun do_AP_TERM f th = c_mk_comb (c_refl f) th
-
-    (* mk_tyvar_cached: get or create a type variable by name *)
-    fun mk_tyvar_cached name = let val key = TyVarK name
-      in case ty_lookup key of SOME id => id
-       | NONE => let val id = alloc_ty ()
-         in PFTWriter.tyvar out id name;
-            ty_insert key id; id end end
 
     (* exist_to_witness: from th: ⊢ ∃v. body, derive ⊢ (λv. body) (@v. body)
        using CHOOSE_pth + SELECT_AX. *)
@@ -736,7 +735,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
           | NONE => let
               val ne = c_inst (candle_load_pth "candle$NOT_ELIM")
                          [(pvar_p, rhs_tm)]
-            in (c_prove_hyp a_th ne, rhs_tm, emit_const "F" bool_tyid) end
+            in (c_prove_hyp a_th ne, rhs_tm, const_F_tm) end
         val rth = c_inst (candle_load_pth "candle$MP")
                     [(pvar_p, p_tm), (pvar_q, q_tm)]
       in r_eq_mp (c_prove_hyp b_th rth) a_th end
@@ -875,7 +874,6 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val p_tm = tm a val b_th = th b
         val neg_tm = emit_const "~" (emit_tyop "fun" [bool_tyid, bool_tyid])
         val neg_p = emit_comb neg_tm p_tm
-        val const_F_tm = emit_const "F" bool_tyid
         val disch_th = do_DISCH neg_p const_F_tm b_th
         val ccontr_inst = c_inst (candle_load_pth "candle$CCONTR")
                             [(pvar_p, p_tm)]
