@@ -559,8 +559,11 @@ fun emit_theory {trace, output, binary, ruleset} = let
          in PFTWriter.tyvar out id name;
             ty_insert key id; id end end
 
-    (* TYVAR "A" for INST_TYPE on polymorphic pro-formas *)
-    val tyvar_A = mk_tyvar_cached "A"
+    (* Type variable 'a: the polymorphic parameter of the preamble
+       pro-formas (GEN, SPEC, EXISTS, CHOOSE, SELECT_AX_SPEC,
+       EXISTS_DEF_HOL4, TYPE_DEFINITION_THM). Matches HOL4's native
+       type-variable naming. *)
+    val tyvar_A = mk_tyvar_cached "'a"
 
     (* === Candle derived-rule helpers ===
        These emit sequences of Candle commands and return theorem IDs. *)

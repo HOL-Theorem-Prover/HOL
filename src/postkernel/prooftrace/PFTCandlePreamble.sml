@@ -173,7 +173,7 @@ fun emit {output, binary} = let
   val ty_bbb   = mk_fun ty_bool ty_bb             (* bool -> bool -> bool *)
   val ty_bbb_b = mk_fun ty_bbb ty_bool            (* (bbb) -> bool *)
 
-  val ty_A     = mk_tyvar "A"
+  val ty_A     = mk_tyvar "'a"
   val ty_Ab    = mk_fun ty_A ty_bool               (* A -> bool *)
   val ty_Ab_b  = mk_fun ty_Ab ty_bool              (* (A->bool) -> bool *)
 
@@ -1010,7 +1010,7 @@ fun emit {output, binary} = let
   (* ETA_AX: ⊢ !t:A->B. (\x. t x) = t                              *)
   (* ================================================================ *)
 
-  val ty_B = mk_tyvar "B"
+  val ty_B = mk_tyvar "'b"
   val ty_AB = mk_fun ty_A ty_B                        (* A -> B *)
   val var_eta_t = mk_var "t" ty_AB                     (* t : A -> B *)
 
