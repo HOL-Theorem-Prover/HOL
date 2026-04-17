@@ -564,6 +564,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
        EXISTS_DEF_HOL4, TYPE_DEFINITION_THM). Matches HOL4's native
        type-variable naming. *)
     val tyvar_A = mk_tyvar_cached "'a"
+    val tyvar_B = mk_tyvar_cached "'b"
 
     (* === Candle derived-rule helpers ===
        These emit sequences of Candle commands and return theorem IDs. *)
@@ -654,7 +655,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
        using CHOOSE_pth + SELECT_AX. *)
     fun exist_to_witness exists_th exists_concl_id = let
       val (_, pred_id) = pft_dest_comb exists_concl_id
-      val (bv_id, _) = pft_dest_abs pred_id
+      val (bv_id, pred_body_id) = pft_dest_abs pred_id
       val v_ty = pft_type_of bv_id
       val Ab = emit_tyop "fun" [v_ty, bool_tyid]
       val select_c = emit_const "@" (emit_tyop "fun" [Ab, v_ty])
@@ -673,7 +674,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
       val imp_forall_pw = emit_comb (emit_comb (imp_const) forall_inner) pred_witness
       val mp1 = do_MP choose_inst exists_concl_id imp_forall_pw exists_th
       val result = do_MP mp1 forall_inner pred_witness sel_inst
-    in (result, pred_id, Ab, v_ty) end
+    in (result, pred_id, pred_body_id, Ab, v_ty) end
 
   in
     case proof of
@@ -1098,7 +1099,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val (Thy, Tyop) = get_type_id c
         val () = mark_type Tyop
         val tyname = tr_name (Thy ^ "$" ^ Tyop)
-        val (th_pw, pred_id, Ab, rep_ty) =
+        val (th_pw, pred_id, pred_body_id, Ab, rep_ty) =
           exist_to_witness b_th (tm (heap_concl b))
 
         val absname = tyname ^ "_abs"
@@ -1207,8 +1208,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
           then emit_thm (Redblackmap.find(named_thm_map, "TYPE_DEFINITION_THM"))
           else candle_load_pth "bool$TYPE_DEFINITION_THM"
         val tydef_inst = c_inst_type tydef_th
-                           [(mk_tyvar_cached "'a", rep_ty),
-                            (mk_tyvar_cached "'b", new_ty)]
+                           [(tyvar_A, rep_ty),
+                            (tyvar_B, new_ty)]
           (* ∀P rep. TYPE_DEFINITION P rep ⇔
                      (∀x' x''. rep x' = rep x'' ⇒ x' = x'') ∧
                      (∀x. P x ⇔ ∃x'. x = rep x') *)
@@ -1275,8 +1276,44 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val tydef_proved = c_eq_mp (c_sym spec2) conj_th
          (* ⊢ TYPE_DEFINITION P rep *)
 
-        val exist_pred_rep = emit_abs var_rep_v tydef_phi_var_rep
-      in do_EXISTS exist_pred_rep var_rep_v rep_c rep_fn_ty tydef_proved end
+        (* HOL4's prim_type_definition destructures the input witness's
+           body as P v = dest_comb Body and then produces
+             ⊢ ∃rep. TYPE_DEFINITION P rep
+           with the un-eta-expanded P.  `pred_id` here is the λ from the
+           witness's ∃, and `pred_body_id` is `P v`; so `pred_uneta` is
+           the un-eta-expanded predicate HOL4 would use. *)
+        val (pred_uneta, _) = pft_dest_comb pred_body_id
+
+        (* Build ⊢ (λx. P x) = P via ETA_AX at (rep_ty, bool). *)
+        val eta_inst = c_inst_type (candle_load_pth "candle$ETA_AX")
+                         [(tyvar_A, rep_ty),
+                          (tyvar_B, bool_tyid)]
+        val eq_Ab = emit_const "="
+          (emit_tyop "fun" [Ab, emit_tyop "fun" [Ab, bool_tyid]])
+        val var_t = emit_var "t" Ab
+        val abs_x_t_x = emit_abs var_x_rep (emit_comb var_t var_x_rep)
+        val eta_eq_body = emit_comb (emit_comb eq_Ab abs_x_t_x) var_t
+        val abs_eta_eq = emit_abs var_t eta_eq_body
+        val P_uneta_eq = do_SPEC pred_uneta abs_eta_eq
+                           (emit_comb forall_Ab abs_eta_eq) Ab eta_inst
+         (* ⊢ (λx. P x) = P *)
+
+        (* Rewrite tydef_proved : ⊢ TYPE_DEFINITION (λx. P x) rep
+           into                   ⊢ TYPE_DEFINITION P rep, so that the
+           following do_EXISTS builds ?-at-rep_fn_ty with the correct
+           un-eta-expanded P. *)
+        val tydef_P_eq = do_AP_TERM tydef_c P_uneta_eq
+         (* ⊢ TYPE_DEFINITION (λx. P x) = TYPE_DEFINITION P *)
+        val tydef_P_rep_eq = c_mk_comb tydef_P_eq (c_refl var_rep_v)
+         (* ⊢ TYPE_DEFINITION (λx. P x) rep = TYPE_DEFINITION P rep *)
+        val tydef_uneta = c_eq_mp tydef_P_rep_eq tydef_proved
+         (* ⊢ TYPE_DEFINITION P rep *)
+
+        val tydef_P_var_rep =
+          emit_comb (emit_comb tydef_c pred_uneta) var_rep_v
+        val exist_pred_rep_uneta = emit_abs var_rep_v tydef_P_var_rep
+         (* λrep. TYPE_DEFINITION P rep *)
+      in do_EXISTS exist_pred_rep_uneta var_rep_v rep_c rep_fn_ty tydef_uneta end
 
     | compute_prf (a, b) => raise Fail "emit_thm_candle: compute not yet implemented"
 
