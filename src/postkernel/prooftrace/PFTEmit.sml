@@ -739,7 +739,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
             in (c_prove_hyp a_th ne, rhs_tm, emit_const "F" bool_tyid) end
         val rth = c_inst (candle_load_pth "candle$MP")
                     [(pvar_p, p_tm), (pvar_q, q_tm)]
-      in r_eq_mp (c_eq_mp (c_deduct b_th rth) b_th) a_th end
+      in r_eq_mp (c_prove_hyp b_th rth) a_th end
 
     | EQ_IMP_RULE1_prf a => let
         val a_th = th a
