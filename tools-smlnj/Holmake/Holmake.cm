@@ -72,5 +72,10 @@ Group is
   ../../tools/Holmake/poly/MB_Monitor.sml
   ../../tools/Holmake/util/tailbuffer.sig
   ../../tools/Holmake/util/tailbuffer.sml
-
+  ../../src/portableML/SHA1.sig
+  ../../src/portableML/SHA1.sml
+  ../../src/portableML/mosml/SHA1_ML.sig
+  ../../src/portableML/mosml/SHA1_ML.sml
   ../../tools/Holmake/core/Holmake.sml
+
+  smlnj-Holmake.sml

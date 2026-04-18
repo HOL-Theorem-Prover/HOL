@@ -75,7 +75,8 @@ end
 (** Command line parsing *)
 
 (*** parse command line *)
-fun apply_updates fs v = List.foldl (fn (f,v) => #update f (warn,v)) v fs
+fun apply_updates fs v =
+  List.foldl (fn (f: 'a HM_Core_Cline.cline_result,v) => #update f (warn,v)) v fs
 
 fun getcline args =
   let
@@ -1268,7 +1269,7 @@ fun work() =
                   if dir <> "" then SOME (filestr_to_tgt n)
                   else
                     let
-                      fun foldthis (_, ni) A =
+                      fun foldthis (_, ni : 'a HM_DepGraph.nodeInfo) A =
                           let val tgt = #target ni
                           in
                             if fromFile (filepart tgt) = n then tgt :: A else A
