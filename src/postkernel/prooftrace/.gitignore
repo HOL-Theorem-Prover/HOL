@@ -7,3 +7,5 @@ replay-merged-test
 pipeline-test
 make-preamble
 emit-candle
+pft-transcode
+selftest-pftraw

@@ -1,4 +1,6 @@
 replay.mlb
+PFTOpcodes.sig
+PFTOpcodes.sml
 PFTReader.sig
 PFTReader.sml
 PFTReplay.sig

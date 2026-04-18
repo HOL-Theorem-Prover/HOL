@@ -21,6 +21,20 @@ type stream_reader = {
 
 type ruleset_handler = int -> stream_reader -> unit
 
+fun read_raw_args (desc: PFTOpcodes.opcode_desc) (sr: stream_reader) =
+  let
+    open PFTOpcodes
+    fun one (spec: arg_spec) =
+      case #shape spec of
+        AId _          => VId (#readVarint sr ())
+      | AVal           => VVal (#readVarint sr ())
+      | AIdList _      => VIdList (#readVarintList sr ())
+      | AIdPairs _     => VIdPairs (#readVarintPairs sr ())
+      | AStrIdPairs _  => VStrIdPairs (#readStringVarintPairs sr ())
+      | AName          => VName (#readString sr ())
+      | ANameList      => VNameList (#readStringList sr ())
+  in List.map one (#args desc) end
+
 (* ========================================================================= *)
 (* Binary I/O primitives with position tracking                              *)
 (* ========================================================================= *)

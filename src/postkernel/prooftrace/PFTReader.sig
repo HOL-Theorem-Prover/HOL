@@ -35,6 +35,13 @@ signature PFTReader = sig
 
   type ruleset_handler = int -> stream_reader -> unit
 
+  (* Decode the arguments of a ruleset command whose opcode has
+     already been consumed and whose result-id varint has already
+     been consumed. Returns one arg_val per entry of desc.args in
+     the same order. *)
+  val read_raw_args : PFTOpcodes.opcode_desc -> stream_reader
+                      -> PFTOpcodes.arg_val list
+
   (* Read a PFT file, calling handler functions for each command.
      Format-level commands are dispatched via format_handler.
      Ruleset-specific opcodes (0x10-0x4F) are dispatched via

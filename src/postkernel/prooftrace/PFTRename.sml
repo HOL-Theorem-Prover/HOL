@@ -82,14 +82,15 @@ fun pass1 (file: string) = let
   val ruleset_handler : PFTReader.ruleset_handler = fn opc => fn sr => let
     val desc = PFTOpcodes.lookup_desc descs opc
     val _ = #readVarint sr ()  (* result id *)
-    fun skip (PFTOpcodes.Id _)          = ignore (#readVarint sr ())
-      | skip PFTOpcodes.Val             = ignore (#readVarint sr ())
-      | skip (PFTOpcodes.IdList _)      = ignore (#readVarintList sr ())
-      | skip (PFTOpcodes.IdPairs _)     = ignore (#readVarintPairs sr ())
-      | skip (PFTOpcodes.StrIdPairs _)  = ignore (#readStringVarintPairs sr ())
-      | skip PFTOpcodes.NewTypeName     = ignore (#readString sr ())
-      | skip PFTOpcodes.NewConstName    = ignore (#readString sr ())
-      | skip PFTOpcodes.NewConstNames   = ignore (#readStringList sr ())
+    fun skip (spec: PFTOpcodes.arg_spec) =
+      case #shape spec of
+        PFTOpcodes.AId _         => ignore (#readVarint sr ())
+      | PFTOpcodes.AVal          => ignore (#readVarint sr ())
+      | PFTOpcodes.AIdList _     => ignore (#readVarintList sr ())
+      | PFTOpcodes.AIdPairs _    => ignore (#readVarintPairs sr ())
+      | PFTOpcodes.AStrIdPairs _ => ignore (#readStringVarintPairs sr ())
+      | PFTOpcodes.AName         => ignore (#readString sr ())
+      | PFTOpcodes.ANameList     => ignore (#readStringList sr ())
   in List.app skip (#args desc) end
 
   val _ = PFTReader.read {file = file, binary = true,
@@ -233,14 +234,15 @@ fun copy_ruleset_cmd (cs: copy_state)
                      (opc: int) = let
   val desc = PFTOpcodes.lookup_desc descs opc
   val _ = copy_varint cs  (* result id *)
-  fun copy_arg (PFTOpcodes.Id _)          = ignore (copy_varint cs)
-    | copy_arg PFTOpcodes.Val             = ignore (copy_varint cs)
-    | copy_arg (PFTOpcodes.IdList _)      = copy_varint_list cs
-    | copy_arg (PFTOpcodes.IdPairs _)     = copy_varint_pairs cs
-    | copy_arg (PFTOpcodes.StrIdPairs _)  = copy_string_varint_pairs cs
-    | copy_arg PFTOpcodes.NewTypeName     = copy_string cs
-    | copy_arg PFTOpcodes.NewConstName    = copy_string cs
-    | copy_arg PFTOpcodes.NewConstNames   = copy_string_list cs
+  fun copy_arg (spec: PFTOpcodes.arg_spec) =
+    case #shape spec of
+      PFTOpcodes.AId _         => ignore (copy_varint cs)
+    | PFTOpcodes.AVal          => ignore (copy_varint cs)
+    | PFTOpcodes.AIdList _     => copy_varint_list cs
+    | PFTOpcodes.AIdPairs _    => copy_varint_pairs cs
+    | PFTOpcodes.AStrIdPairs _ => copy_string_varint_pairs cs
+    | PFTOpcodes.AName         => copy_string cs
+    | PFTOpcodes.ANameList     => copy_string_list cs
 in List.app copy_arg (#args desc) end
 
 fun pass3 {input, output, renamed, descs} = let

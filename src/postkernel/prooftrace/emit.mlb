@@ -1,5 +1,8 @@
 replay.mlb
 
+PFTOpcodes.sig
+PFTOpcodes.sml
+
 PFTWriter.sig
 PFTWriter.sml
 IntPairTable.sig

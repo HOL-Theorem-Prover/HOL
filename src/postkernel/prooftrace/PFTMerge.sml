@@ -77,7 +77,7 @@ val empty_meta : cmd_meta =
 (* Consume arguments from stream according to descriptors, collecting
    the (ns_idx, id) pairs of all referenced IDs and any introduced
    type/constant names from definition commands. *)
-fun collect_consumed (sr: PFTReader.stream_reader) (descs: arg_desc list)
+fun collect_consumed (sr: PFTReader.stream_reader) (specs: arg_spec list)
     : (int * int) list * {new_types: string list, new_consts: string list} =
   let
     val vi = #readVarint sr
@@ -86,17 +86,24 @@ fun collect_consumed (sr: PFTReader.stream_reader) (descs: arg_desc list)
     val new_types = ref ([] : string list)
     val new_consts = ref ([] : string list)
     fun add ns id = acc := (ns_idx ns, id) :: (!acc)
-    fun one (Id ns)          = add ns (vi ())
-      | one Val              = ignore (vi ())
-      | one (IdList ns)      = List.app (add ns) (#readVarintList sr ())
-      | one (IdPairs(n1,n2)) = List.app (fn (a,b) => (add n1 a; add n2 b))
-                                 (#readVarintPairs sr ())
-      | one (StrIdPairs ns)  = List.app (fn (_,id) => add ns id)
-                                 (#readStringVarintPairs sr ())
-      | one NewTypeName      = new_types := vs () :: !new_types
-      | one NewConstName     = new_consts := vs () :: !new_consts
-      | one NewConstNames    = new_consts := !new_consts @ #readStringList sr ()
-  in List.app one descs;
+    fun one ({shape, role, ...}: arg_spec) =
+      (case shape of
+         AId ns          => add ns (vi ())
+       | AVal            => ignore (vi ())
+       | AIdList ns      => List.app (add ns) (#readVarintList sr ())
+       | AIdPairs (n1,n2) => List.app (fn (a,b) => (add n1 a; add n2 b))
+                               (#readVarintPairs sr ())
+       | AStrIdPairs ns  => List.app (fn (_,id) => add ns id)
+                               (#readStringVarintPairs sr ())
+       | AName           => (case role of
+                               RNewType  => new_types := vs () :: !new_types
+                             | RNewConst => new_consts := vs () :: !new_consts
+                             | _         => ignore (vs ()))
+       | ANameList       => (case role of
+                               RNewConsts => new_consts :=
+                                 !new_consts @ #readStringList sr ()
+                             | _          => ignore (#readStringList sr ())))
+  in List.app one specs;
      (List.rev (!acc),
       {new_types = List.rev (!new_types),
        new_consts = List.rev (!new_consts)})
@@ -202,10 +209,12 @@ fun pass1_read_file (descs_ref: (int * opcode_desc) list ref)
           #1 (foldl (fn (ns,(acc,n)) =>
                 ((ns_idx ns, id+n)::acc, n+1))
               ([],0) (#results desc))
-        val is_def = List.exists (fn NewTypeName => true
-                                    | NewConstName => true
-                                    | NewConstNames => true
-                                    | _ => false) (#args desc)
+        val is_def = List.exists
+          (fn (s: arg_spec) => case #role s of
+                                 RNewType   => true
+                               | RNewConst  => true
+                               | RNewConsts => true
+                               | RNormal    => false) (#args desc)
         val kind = if is_def then CmdDef else CmdNormal
         val ci = add_cmd fs {produced=rev produced, consumed=consumed,
                              kind=kind, opcode=opc, ref_name=NONE}

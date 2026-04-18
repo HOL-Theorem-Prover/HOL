@@ -488,6 +488,65 @@ fun load (out as TextOut _) id name =
   | load out id name =
     (bOpcode out 0x51; bVarint out id; bString out name)
 
+(* --- Generic ruleset-command write --------------------------------------- *)
+
+fun write_raw out {opcode, desc: PFTOpcodes.opcode_desc, result, args} =
+  let
+    open PFTOpcodes
+    fun shape_vs_val (AId _,          VId _)         = true
+      | shape_vs_val (AVal,           VVal _)        = true
+      | shape_vs_val (AIdList _,      VIdList _)     = true
+      | shape_vs_val (AIdPairs _,     VIdPairs _)    = true
+      | shape_vs_val (AStrIdPairs _,  VStrIdPairs _) = true
+      | shape_vs_val (AName,          VName _)       = true
+      | shape_vs_val (ANameList,      VNameList _)   = true
+      | shape_vs_val _                               = false
+    val () =
+      if length (#args desc) <> length args then
+        raise Fail ("PFTWriter.write_raw: arity mismatch for " ^ #tag desc)
+      else ()
+    val () =
+      ListPair.appEq (fn (s, v) =>
+        if shape_vs_val (#shape s, v) then ()
+        else raise Fail ("PFTWriter.write_raw: shape mismatch for " ^
+                         #tag desc ^ "." ^ #label s))
+        (#args desc, args)
+  in case out of
+       TextOut _ => let
+         val () = jBegin out (#tag desc)
+         val () = jInt out "id" result
+         fun emit (spec: arg_spec, v) =
+           case (#shape spec, v) of
+             (AId _,          VId n)         => jInt out (#label spec) n
+           | (AVal,           VVal n)        => jInt out (#label spec) n
+           | (AIdList _,      VIdList ns)    => jIntList out (#label spec) ns
+           | (AIdPairs _,     VIdPairs ps)   => jSubstList out (#label spec) ps
+           | (AStrIdPairs _,  VStrIdPairs es)=> jNamedIntMap out (#label spec) es
+           | (AName,          VName s)       => jStr out (#label spec) s
+           | (ANameList,      VNameList ss)  => jStrList out (#label spec) ss
+           | _ => raise Fail "PFTWriter.write_raw: unreachable"
+       in ListPair.appEq emit (#args desc, args); jEnd out end
+     | BinOut _ => let
+         val () = bOpcode out opcode
+         val () = bVarint out result
+         fun emit (_: arg_spec, v) =
+           case v of
+             VId n         => bVarint out n
+           | VVal n        => bVarint out n
+           | VIdList ns    => (bVarint out (length ns);
+                               List.app (bVarint out) ns)
+           | VIdPairs ps   => (bVarint out (length ps);
+                               List.app (fn (a,b) => (bVarint out a;
+                                                      bVarint out b)) ps)
+           | VStrIdPairs es => (bVarint out (length es);
+                                List.app (fn (n,v) => (bString out n;
+                                                       bVarint out v)) es)
+           | VName s       => bString out s
+           | VNameList ss  => (bVarint out (length ss);
+                               List.app (bString out) ss)
+       in ListPair.appEq emit (#args desc, args) end
+  end
+
 (* --- Expect -------------------------------------------------------------- *)
 
 fun expect (out as TextOut _) th hyps concl =

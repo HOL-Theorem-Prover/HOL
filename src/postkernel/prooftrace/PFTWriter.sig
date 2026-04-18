@@ -31,6 +31,17 @@ signature PFTWriter = sig
   val save      : pft_out -> string -> int -> unit
   val load      : pft_out -> int -> string -> unit
 
+  (* Generic ruleset-command write, driven by the opcode descriptor.
+     The args list length and per-element shape must match desc.args;
+     result is the primary result ID (Candle new_type_definition's
+     second result ID is implicitly result + 1).
+
+     Shared across rulesets. *)
+  val write_raw : pft_out
+                  -> {opcode: int, desc: PFTOpcodes.opcode_desc,
+                      result: int, args: PFTOpcodes.arg_val list}
+                  -> unit
+
   (* Debug command: record the expected hypset (as term ids,
      set semantics under alpha) and conclusion term id for
      the theorem just produced at id [th]. *)
