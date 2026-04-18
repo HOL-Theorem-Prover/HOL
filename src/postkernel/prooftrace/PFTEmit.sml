@@ -4,6 +4,8 @@ open Lib Redblackset Redblackmap ProofTraceParser
 
 datatype ruleset = HOL4 | Candle
 
+val emit_expect : bool ref = ref false
+
 (* ========================================================================= *)
 (* Utilities                                                                 *)
 (* ========================================================================= *)
@@ -1410,11 +1412,14 @@ fun emit_theory {trace, output, binary, ruleset} = let
          | _ => let
              val actual_id = emit_thm_candle id concl_ptr proof
              val () = th_memo_set k actual_id
-             val concl_id = emit_term concl_ptr
-             val hyp_ids = ref []
-             val () = appSet heap
-               (fn p => hyp_ids := emit_term p :: !hyp_ids) hyps_ptr
-             val () = PFTWriter.expect out actual_id (!hyp_ids) concl_id
+             val () =
+               if !emit_expect then let
+                 val concl_id = emit_term concl_ptr
+                 val hyp_ids = ref []
+                 val () = appSet heap
+                   (fn p => hyp_ids := emit_term p :: !hyp_ids) hyps_ptr
+               in PFTWriter.expect out actual_id (!hyp_ids) concl_id end
+               else ()
            in actual_id end
        end
        else let
