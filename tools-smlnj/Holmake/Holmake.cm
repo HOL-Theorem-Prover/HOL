@@ -55,6 +55,9 @@ Group is
   ../../tools/Holmake/poly/HM_Cline.sml
   ../../tools/Holmake/poly/HM_BaseEnv.sig
   ../../tools/Holmake/poly/HM_BaseEnv.sml
+  (* A significant amount of time may be spent compiling
+     FunctionalRecordUpdate.sml, see:
+     https://github.com/smlnj/legacy/issues/376 *)
   ../../tools/util/FunctionalRecordUpdate.sml
   ../../tools-poly/poly/Mosml.sml
   ../../tools/Holmake/BuildCommand.sig
