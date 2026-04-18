@@ -284,7 +284,7 @@ struct
   fun wjstrm ERR (wj:'a working_job) = #err wj
     | wjstrm OUT wj = #out wj
 
-  fun killjob mfn (jk:jobkey) wl =
+  fun killjob mfn (jk:jobkey) (wl: 'a worklist) =
     let
       open Posix.Process
       val cjs = #current_jobs wl
@@ -319,7 +319,7 @@ struct
       | Kill jk :: rest =>
           wl |> killjob mfn jk |> execute_cmds mfn rest
 
-  fun elapsed wj = Time.-(Time.now(), #starttime wj)
+  fun elapsed (wj: 'a working_job) = Time.-(Time.now(), #starttime wj)
 
   fun do_work (wl0 : 'a worklist, monitorfn) =
     let
@@ -356,7 +356,7 @@ struct
       fun eof wj chan (cmds, wl) =
         (monitor (EOF (wjkey wj, chan, elapsed wj)) cmds,
          addjob (markeof chan wj) wl)
-      fun is_neweof wj chan =
+      fun is_neweof (wj: 'a working_job) chan =
         case chan of
             ERR => not (#erreof wj)
           | OUT => not (#outeof wj)

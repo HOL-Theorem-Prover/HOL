@@ -279,7 +279,7 @@ fun toString g =
       open hm_target
       val (successes, others) =
           List.partition (fn (_,nI) => #status nI = Succeeded) (listNodes g)
-      fun prSuccess (n,{dir,target,...}) =
+      fun prSuccess (n,{dir,target,...}: 'a nodeInfo) =
           Int.toString n ^ ":" ^
           tgt_toString target ^
           (if hmdir.compare(dir,dirpart target) <> EQUAL then
@@ -311,7 +311,8 @@ fun postmortem logfinished (outs : Holmake_tools.output_functions) (status,g) =
     fun pending_or_failed ps fs ns =
         case ns of
             [] => (ps,fs)
-          | (x as (n,nI))::rest => if #status nI = Failed{needed=true} then
+          | (x as (n,nI: 'a nodeInfo))::rest =>
+                                   if #status nI = Failed{needed=true} then
                                      pending_or_failed ps (x::fs) rest
                                    else if #status nI = Pending{needed=true}then
                                      pending_or_failed (x::ps) fs rest
@@ -322,9 +323,9 @@ fun postmortem logfinished (outs : Holmake_tools.output_functions) (status,g) =
       | (ps, fs) =>
         let
           fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString nI
-          fun nocmd (_, nI) = #command nI = NoCmd
+          fun nocmd (_, nI: 'a nodeInfo) = #command nI = NoCmd
           val fs' = List.filter nocmd fs
-          fun nI_target (_, nI) = #target nI
+          fun nI_target (_, nI: 'a nodeInfo) = #target nI
         in
           diagK ("Failed nodes: \n" ^ concatWithf str "\n" fs);
           diagK ("True pending: \n" ^ concatWithf str "\n" ps);

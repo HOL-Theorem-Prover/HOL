@@ -437,7 +437,8 @@ fun extend_paths A cfg worklist =
 
 
 val empty_strset = Binaryset.empty String.compare
-val empty_strmap = Binarymap.mkDict String.compare
+val empty_strmap: (string,string list) Binarymap.dict =
+  Binarymap.mkDict String.compare
 fun extend_path_with_includes (cfg as {lpref,verbosity=v}) =
     let
       val wlist = [OS.FileSys.getDir()]

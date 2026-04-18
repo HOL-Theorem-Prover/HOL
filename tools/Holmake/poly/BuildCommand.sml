@@ -246,7 +246,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
 
   fun extra_poly_cline() = envlist "POLY_CLINE_OPTIONS"
 
-  fun poly_link quietp extra result files =
+  fun poly_link quietp (extra: GraphExtra.t) result files =
   let
     open hm_target
     val _ = if not quietp then

@@ -29,7 +29,7 @@ val loggingdir = ".hol/logs"
 
 fun graph_dirinfo g =
     let
-      fun foldthis (_, nI) A =
+      fun foldthis (_, nI: 'a nodeInfo) A =
           case #status nI of
               Pending {needed=true} => fupdkey A (fn n => n + 1) (#dir nI) 1
             | _ => A
@@ -44,7 +44,7 @@ fun is_multidir gdi =
 
 fun build_predmap g =
     let
-      fun foldthis (n, nI) A =
+      fun foldthis (n, nI: 'a nodeInfo) A =
           List.foldl (fn ((sn,_), A) => lmap_insert sn n A) A (#dependencies nI)
     in
       HM_DepGraph.fold foldthis g (Binarymap.mkDict node_compare)
@@ -139,7 +139,7 @@ fun graphbuild optinfo g =
       {executable = "/bin/sh", nm_args = ["/bin/sh", "-c", s], env = env}
 
     val tgtcomplete = tgtcompletion_cb dirmap
-    fun really_needed nI = #status nI = Pending{needed=true}
+    fun really_needed (nI: 'a nodeInfo) = #status nI = Pending{needed=true}
     fun b2n true = 1 | b2n false = 0
     fun count_theories_needed0 (A as (thys,nd)) ns =
         case ns of

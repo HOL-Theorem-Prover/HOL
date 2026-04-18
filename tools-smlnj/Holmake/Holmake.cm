@@ -39,6 +39,8 @@ Group is
   ../../tools/parsing/HOLSourcePrinter.sml
   ../../tools/Holmake/hmf/Holmake_types.sig
   ../../tools/Holmake/hmf/Holmake_types.sml
+  ../../tools/Holmake/hmf/ReadHMF.sig
+  ../../tools/Holmake/hmf/ReadHMF.sml
   ../../tools/Holmake/hmf/internal_functions.sig
   ../../tools/Holmake/hmf/internal_functions.sml
   ../../tools/Holmake/hmf/parse_glob.sig
@@ -49,6 +51,26 @@ Group is
   ../../tools-poly/poly/Listsort.sml
   ../../tools/Holmake/core/HM_Core_Cline.sig
   ../../tools/Holmake/core/HM_Core_Cline.sml
+  ../../tools/Holmake/poly/HM_Cline.sig
+  ../../tools/Holmake/poly/HM_Cline.sml
+  ../../tools/Holmake/poly/HM_BaseEnv.sig
+  ../../tools/Holmake/poly/HM_BaseEnv.sml
   ../../tools/util/FunctionalRecordUpdate.sml
+  ../../tools-poly/poly/Mosml.sml
+  ../../tools/Holmake/BuildCommand.sig
+  ../../tools/Holmake/poly/BuildCommand.sml
+  ../../tools/Holmake/core/HM_GraphBuildJ1.sig
+  ../../tools/Holmake/core/HM_GraphBuildJ1.sml
+  ../../tools/Holmake/deps/HM_DepGraph.sig
+  ../../tools/Holmake/deps/HM_DepGraph.sml
+  ../../tools/Holmake/poly/GraphExtra.sig
+  ../../tools/Holmake/poly/GraphExtra.sml
+  ../../tools/Holmake/poly/multibuild.sml
+  ../../tools/Holmake/poly/ProcessMultiplexor.sig
+  ../../tools/Holmake/poly/ProcessMultiplexor.sml
+  ../../tools/Holmake/poly/MB_Monitor.sig
+  ../../tools/Holmake/poly/MB_Monitor.sml
+  ../../tools/Holmake/util/tailbuffer.sig
+  ../../tools/Holmake/util/tailbuffer.sml
 
   ../../tools/Holmake/core/Holmake.sml

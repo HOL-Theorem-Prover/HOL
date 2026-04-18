@@ -46,7 +46,7 @@ fun compact_time sz0 withsecs ld rd t =
           if i > 2 then ld ^ CharVector.tabulate(sz-1, fn _ => #"9") ^ "d" ^ rd
           else let
             val (u, f) = List.nth(time_units, i)
-            val n' = LargeInt.div(n,f)
+            val n' = LargeInt.div(n, IntInf.fromInt f)
             val n'_s = LargeInt.toString n'
           in
             if size n'_s + 1 > sz then helper (i + 1) n'
@@ -213,7 +213,7 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
               ) (!monitor_map);
               print CLR_EOL
             ) else
-              let fun foldthis ((_, {tag,dir}), {status,...}, worstopt) =
+              let fun foldthis ((_, {tag,dir}), {status,...}: procinfo, worstopt) =
                       case status of
                           Stalling t => (case worstopt of
                                              NONE => SOME (tag,t,status)
