@@ -1304,7 +1304,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
            un-eta-expanded P. *)
         val tydef_P_eq = do_AP_TERM tydef_c P_uneta_eq
          (* ⊢ TYPE_DEFINITION (λx. P x) = TYPE_DEFINITION P *)
-        val tydef_P_rep_eq = c_mk_comb tydef_P_eq (c_refl var_rep_v)
+        val tydef_P_rep_eq = c_mk_comb tydef_P_eq (c_refl rep_c)
          (* ⊢ TYPE_DEFINITION (λx. P x) rep = TYPE_DEFINITION P rep *)
         val tydef_uneta = c_eq_mp tydef_P_rep_eq tydef_proved
          (* ⊢ TYPE_DEFINITION P rep *)
