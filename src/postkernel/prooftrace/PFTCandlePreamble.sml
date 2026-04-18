@@ -25,16 +25,15 @@ fun emit {output, binary} = let
 
   (* Memoized type/term construction using hash tables.
      The preamble is small so a simple assoc list suffices. *)
-  val tyop_memo : (int list * int) list ref = ref []
+  val tyop_memo : (string * int list * int) list ref = ref []
 
   fun mk_tyop name args =
-    (* All tyops in preamble are min$fun, so key on args only *)
-    case List.find (fn (a,_) => a = args) (!tyop_memo) of
-      SOME (_, id) => id
+    case List.find (fn (n,a,_) => n = name andalso a = args) (!tyop_memo) of
+      SOME (_, _, id) => id
     | NONE =>
         let val id = alloc_ty()
         in PFTWriter.tyop out id name args;
-           tyop_memo := (args, id) :: !tyop_memo;
+           tyop_memo := (name, args, id) :: !tyop_memo;
            id
         end
   fun mk_fun a b = mk_tyop "fun" [a, b]
@@ -1528,6 +1527,85 @@ fun emit {output, binary} = let
   val AND_DEF_HOL4 = TRANS AND_DEF and_equiv_abs
   (* ⊢ /\ = λp q. ∀t. (p ==> q ==> t) ==> t *)
   val () = save "candle$AND_DEF_HOL4" AND_DEF_HOL4
+
+  (* ================================================================ *)
+  (* 15. ind, ONE_ONE, ONTO, INFINITY_AX                             *)
+  (*                                                                 *)
+  (* HOL4 treats `min$ind` as a primitive kernel type; Candle does    *)
+  (* not.  We declare `ind` here (NEW_TYPE) and define ONE_ONE and   *)
+  (* ONTO matching HOL4's boolTheory definitions, then assert         *)
+  (* INFINITY_AX in the exact form HOL4 emits it.  This makes        *)
+  (* PFTEmit's job trivial: LOAD the preamble's saved theorems        *)
+  (* instead of re-emitting a new_type / new_specification /          *)
+  (* axiom sequence each time.                                        *)
+  (* ================================================================ *)
+
+  val () = PFTWriter.new_type out "ind" 0
+  val ty_ind = mk_tyop "ind" []
+
+  (* ONE_ONE_DEF:
+       ⊢ ONE_ONE = \f:'a->'b. !x1 x2. f x1 = f x2 ==> x1 = x2 *)
+  val var_one_one = mk_var "ONE_ONE" ty_AB_b
+  val var_f_AB    = mk_var "f" ty_AB
+  val var_x1_A    = mk_var "x1" ty_A
+  val var_x2_A    = mk_var "x2" ty_A
+  val eq_A        = mk_const "=" (mk_fun ty_A (mk_fun ty_A ty_bool))
+  val eq_B        = mk_const "=" (mk_fun ty_B (mk_fun ty_B ty_bool))
+  val eq_AB_b_ty  = mk_fun ty_AB_b (mk_fun ty_AB_b ty_bool)
+  val eq_AB_b     = mk_const "=" eq_AB_b_ty
+
+  val tm_fx1 = mk_comb var_f_AB var_x1_A
+  val tm_fx2 = mk_comb var_f_AB var_x2_A
+  val tm_fx1_eq_fx2 = mk_eq eq_B tm_fx1 tm_fx2
+  val tm_x1_eq_x2   = mk_eq eq_A var_x1_A var_x2_A
+  val tm_oo_imp     = mk_comb (mk_comb const_imp tm_fx1_eq_fx2) tm_x1_eq_x2
+  val lam_x2_oo     = mk_abs var_x2_A tm_oo_imp
+  val tm_forall_x2_oo = mk_comb const_forall lam_x2_oo
+  val lam_x1_oo     = mk_abs var_x1_A tm_forall_x2_oo
+  val tm_forall_x1x2_oo = mk_comb const_forall lam_x1_oo
+  val lam_f_one_one = mk_abs var_f_AB tm_forall_x1x2_oo
+  val def_one_one_tm = mk_eq eq_AB_b var_one_one lam_f_one_one
+  val ONE_ONE_DEF = NEW_SPEC (ASSUME def_one_one_tm) ["ONE_ONE"]
+  val () = save "candle$ONE_ONE_DEF" ONE_ONE_DEF
+
+  (* ONTO_DEF:
+       ⊢ ONTO = \f:'a->'b. !y. ?x. y = f x *)
+  val var_onto = mk_var "ONTO" ty_AB_b
+  val var_y_B  = mk_var "y" ty_B
+  val var_x_A  = mk_var "x" ty_A
+  val ty_Bb    = mk_fun ty_B ty_bool
+  val const_forall_B = mk_const "!" (mk_fun ty_Bb ty_bool)
+  val const_exists_A = mk_const "?" ty_Ab_b
+
+  val tm_fx = mk_comb var_f_AB var_x_A
+  val tm_y_eq_fx = mk_eq eq_B var_y_B tm_fx
+  val lam_x_y_eq_fx = mk_abs var_x_A tm_y_eq_fx
+  val tm_exists_x = mk_comb const_exists_A lam_x_y_eq_fx
+  val lam_y_onto = mk_abs var_y_B tm_exists_x
+  val tm_forall_y = mk_comb const_forall_B lam_y_onto
+  val lam_f_onto = mk_abs var_f_AB tm_forall_y
+  val def_onto_tm = mk_eq eq_AB_b var_onto lam_f_onto
+  val ONTO_DEF = NEW_SPEC (ASSUME def_onto_tm) ["ONTO"]
+  val () = save "candle$ONTO_DEF" ONTO_DEF
+
+  (* INFINITY_AX: ⊢ ?f:ind->ind. ONE_ONE f /\ ~ONTO f *)
+  val ty_ind_ind = mk_fun ty_ind ty_ind
+  val ty_indind_b = mk_fun ty_ind_ind ty_bool      (* (ind->ind) -> bool *)
+  val ty_indind_b_b = mk_fun ty_indind_b ty_bool   (* ((ind->ind)->bool) -> bool *)
+  val var_f_ind = mk_var "f" ty_ind_ind
+  val const_one_one_ind = mk_const "ONE_ONE" ty_indind_b
+  val const_onto_ind    = mk_const "ONTO"    ty_indind_b
+  val const_exists_indind = mk_const "?" ty_indind_b_b
+  val tm_OO_f   = mk_comb const_one_one_ind var_f_ind
+  val tm_ONTO_f = mk_comb const_onto_ind    var_f_ind
+  val tm_neg_ONTO_f = mk_comb const_neg tm_ONTO_f
+  val tm_inf_body   = mk_comb (mk_comb const_and tm_OO_f) tm_neg_ONTO_f
+  val lam_f_inf     = mk_abs var_f_ind tm_inf_body
+  val tm_infinity_ax = mk_comb const_exists_indind lam_f_inf
+
+  val INFINITY_AX_th = alloc_th()
+  val () = PFTWriter.axiom out INFINITY_AX_th tm_infinity_ax (SOME "INFINITY_AX")
+  val () = save "candle$INFINITY_AX" INFINITY_AX_th
 
   (* ================================================================ *)
   (* Footer                                                           *)

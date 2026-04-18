@@ -24,10 +24,10 @@ There is one primitive constant:
 
 | Constant | Name | Type |
 |----------|------|------|
-| Equality | `=` | `A → A → bool` |
+| Equality | `=` | `'a → 'a → bool` |
 
-Here `A` is the concrete type variable name (i.e., the string one would pass
-to TYVAR). Candle uses unprimed type variable names.
+Here `'a` is the concrete type variable name (i.e., the string one would
+pass to TYVAR).
 
 Constant names in Candle are bare (no theory prefix): `=`, `@`, `T`, `!`,
 etc.
@@ -35,6 +35,37 @@ etc.
 No constant definitions are required before any inference rules can be used.
 The kernel rules are purely structural and do not depend on the existence of
 any defined constants.
+
+### Preamble-provided type, constants, and axioms
+
+In addition to the primitive kernel vocabulary above, the Candle preamble
+(see `PFTCandlePreamble.sml`) declares a type `ind` (arity 0) via
+`NEW_TYPE`, defines a standard collection of constants (`T`, `F`, `/\`,
+`\/`, `~`, `!`, `?`, `ONE_ONE`, `ONTO`) via `new_specification`, and
+asserts the usual axioms (`SELECT_AX`, `ETA_AX`, `BOOL_CASES_AX`,
+`INFINITY_AX`) via `AXIOM`.  Each is `SAVE`d under a `candle$`-prefixed
+name so that subsequent traces can `LOAD` them instead of re-emitting.
+
+| Name                  | SAVEd as                  |
+|-----------------------|---------------------------|
+| type `ind`            | — (declared by NEW_TYPE) |
+| `T`                   | `candle$T_DEF`            |
+| `/\`                  | `candle$AND_DEF_HOL4`     |
+| `!`                   | `candle$FORALL_DEF`       |
+| `?`                   | `candle$EXISTS_DEF_HOL4`  |
+| `\/`                  | `candle$OR_DEF`           |
+| `F`                   | `candle$F_DEF`            |
+| `~`                   | `candle$NOT_DEF`          |
+| `ONE_ONE`             | `candle$ONE_ONE_DEF`      |
+| `ONTO`                | `candle$ONTO_DEF`         |
+| `SELECT_AX`           | `candle$SELECT_AX`        |
+| `ETA_AX`              | `candle$ETA_AX`           |
+| `BOOL_CASES_AX`       | `candle$BOOL_CASES_AX`    |
+| `INFINITY_AX`         | `candle$INFINITY_AX`      |
+
+The preamble also SAVEs a number of derived pro-forma theorems used by
+translation from the `hol4` ruleset (see `PFTEmit.sml`).  See the preamble
+source for the full list.
 
 ## Command Reference
 

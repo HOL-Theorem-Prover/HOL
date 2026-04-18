@@ -27,11 +27,12 @@ fun disk_save_name thy (Thm.SavedAnon i) = thy ^ "#" ^ Int.toString i
    Applied when ruleset = Candle; identity for HOL4. *)
 local
   val candle_name_map = [
-    ("min$bool", "bool"), ("min$fun", "fun"),
+    ("min$bool", "bool"), ("min$fun", "fun"), ("min$ind", "ind"),
     ("min$=", "="), ("min$==>", "==>"), ("min$@", "@"),
     ("bool$T", "T"), ("bool$F", "F"),
     ("bool$/\\", "/\\"), ("bool$\\/", "\\/"),
-    ("bool$~", "~"), ("bool$!", "!"), ("bool$?", "?")
+    ("bool$~", "~"), ("bool$!", "!"), ("bool$?", "?"),
+    ("bool$ONE_ONE", "ONE_ONE"), ("bool$ONTO", "ONTO")
   ]
 in
   fun candle_translate_name s =
@@ -51,19 +52,22 @@ end
    candle_preamble_axiom: maps the axiom name string (from the trace) to
      the preamble SAVE name for the corresponding theorem. *)
 val candle_preamble_def : (string * string) list = [
-  ("T",   "candle$T_DEF"),
-  ("/\\", "candle$AND_DEF_HOL4"),
-  ("!",   "candle$FORALL_DEF"),
-  ("?",   "candle$EXISTS_DEF_HOL4"),
-  ("\\/", "candle$OR_DEF"),
-  ("F",   "candle$F_DEF"),
-  ("~",   "candle$NOT_DEF")
+  ("T",       "candle$T_DEF"),
+  ("/\\",     "candle$AND_DEF_HOL4"),
+  ("!",       "candle$FORALL_DEF"),
+  ("?",       "candle$EXISTS_DEF_HOL4"),
+  ("\\/",     "candle$OR_DEF"),
+  ("F",       "candle$F_DEF"),
+  ("~",       "candle$NOT_DEF"),
+  ("ONE_ONE", "candle$ONE_ONE_DEF"),
+  ("ONTO",    "candle$ONTO_DEF")
 ]
 
 val candle_preamble_axiom : (string * string) list = [
-  ("SELECT_AX", "candle$SELECT_AX"),
-  ("ETA_AX",    "candle$ETA_AX"),
-  ("BOOL_CASES_AX", "candle$BOOL_CASES_AX")
+  ("SELECT_AX",     "candle$SELECT_AX"),
+  ("ETA_AX",        "candle$ETA_AX"),
+  ("BOOL_CASES_AX", "candle$BOOL_CASES_AX"),
+  ("INFINITY_AX",   "candle$INFINITY_AX")
 ]
 
 (* ========================================================================= *)

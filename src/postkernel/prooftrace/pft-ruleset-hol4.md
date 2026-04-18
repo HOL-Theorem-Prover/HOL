@@ -17,8 +17,12 @@ The primitive type operators are:
 |---------------|------|-------|
 | Booleans | `min$bool` | 0 |
 | Functions | `min$fun` | 2 |
+| Individuals | `min$ind` | 0 |
 
-We write these as simply `bool` and `_ → _` henceforth.
+We write the first two as simply `bool` and `_ → _` henceforth; `min$ind`
+is the type of individuals assumed to be infinite (the `INFINITY_AX` axiom
+asserted in `boolTheory` is stated over it).  No `NEW_TYPE` command is
+emitted for any of the three — they are built into the kernel.
 
 The primitive constants are:
 
