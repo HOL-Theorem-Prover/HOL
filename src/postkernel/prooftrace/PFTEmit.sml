@@ -938,30 +938,40 @@ fun emit_theory {trace, output, binary, ruleset} = let
           | NONE => NONE
         val source_id = tm (heap_concl c)
         val template_id = tm template_ptr
+        (* Do NOT short-circuit on src_id = tmpl_id at compound
+           templates: HOL4's SUBST allows the redex to be any free
+           variable of the template (including one that also appears
+           unchanged in the source, e.g. SUBST [(v, ⊢ v = a)] (P v) (⊢ P v)
+           produces ⊢ P a).  Structural equality does not imply that no
+           substitution applies inside, so we must always descend through
+           the template to pick up redex lookups.  Only leaf VAR/CONSTs
+           that are neither bound nor a redex may emit c_refl. *)
         fun rconv binder_map src_id tmpl_id =
-          if src_id = tmpl_id then c_refl src_id
-          else
-            case List.find (fn (tv, _) => tv = tmpl_id) binder_map of
-              SOME (_, sv) =>
-                if sv = src_id then c_refl src_id
-                else raise Fail ("rconv: binder variable mismatch: src "
-                                 ^ Int.toString src_id ^ " vs mapped "
-                                 ^ Int.toString sv)
-            | NONE =>
-            case lookup_subst tmpl_id of
-              SOME th_id => th_id
-            | NONE =>
-              if pft_is_comb tmpl_id then
-                let val (sf, sx) = pft_dest_comb src_id
-                    val (tf, tx) = pft_dest_comb tmpl_id
-                in c_mk_comb (rconv binder_map sf tf)
-                             (rconv binder_map sx tx)
-                end
-              else
-                let val (sv, sb) = pft_dest_abs src_id
-                    val (tv, tb) = pft_dest_abs tmpl_id
-                in c_abs sv (rconv ((tv, sv) :: binder_map) sb tb)
-                end
+          case List.find (fn (tv, _) => tv = tmpl_id) binder_map of
+            SOME (_, sv) =>
+              if sv = src_id then c_refl src_id
+              else raise Fail ("rconv: binder variable mismatch: src "
+                               ^ Int.toString src_id ^ " vs mapped "
+                               ^ Int.toString sv)
+          | NONE =>
+          case lookup_subst tmpl_id of
+            SOME th_id => th_id
+          | NONE =>
+            if pft_is_comb tmpl_id then
+              let val (sf, sx) = pft_dest_comb src_id
+                  val (tf, tx) = pft_dest_comb tmpl_id
+              in c_mk_comb (rconv binder_map sf tf)
+                           (rconv binder_map sx tx)
+              end
+            else if DArray.sub(tm_part1, tmpl_id) >= 0 then
+              let val (sv, sb) = pft_dest_abs src_id
+                  val (tv, tb) = pft_dest_abs tmpl_id
+              in c_abs sv (rconv ((tv, sv) :: binder_map) sb tb)
+              end
+            else if src_id = tmpl_id then c_refl src_id
+            else raise Fail ("rconv: leaf mismatch: src "
+                             ^ Int.toString src_id
+                             ^ " vs tmpl " ^ Int.toString tmpl_id)
       in r_eq_mp (rconv [] source_id template_id) c_th end
 
     | GEN_ABS_prf (a, b, c) => let
