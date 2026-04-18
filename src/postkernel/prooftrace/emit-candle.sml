@@ -354,6 +354,10 @@ val seq =
 val seq = List.take(seq, 2);
 fun mk_inp s = s ^ "Theory.tr.gz";
 fun mk_out s = s ^ ".candle.pft.bin";
-val () = List.app (fn s => PFTEmit.emit_theory{trace=mk_inp s, output=mk_out s, binary=true, ruleset=PFTEmit.Candle}) seq;
+val () = print"Emitting binary files"
+val () = List.app (fn s => (print"."; PFTEmit.emit_theory{trace=mk_inp s, output=mk_out s, binary=true, ruleset=PFTEmit.Candle})) seq;
+val () = print"done\n";
 fun mk_out s = s ^ ".candle.pft.jsonl";
-val () = List.app (fn s => PFTEmit.emit_theory{trace=mk_inp s, output=mk_out s, binary=false, ruleset=PFTEmit.Candle}) seq;
+val () = print"Emitting jsonl files"
+val () = List.app (fn s => (print"."; PFTEmit.emit_theory{trace=mk_inp s, output=mk_out s, binary=false, ruleset=PFTEmit.Candle})) seq;
+val () = print"done\n";
