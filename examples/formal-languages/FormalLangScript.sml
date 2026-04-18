@@ -852,6 +852,12 @@ Definition LEFT_QUOTIENTS_OF_def:
   LEFT_QUOTIENTS_OF (a::w) L = L :: LEFT_QUOTIENTS_OF w (LEFT_QUOTIENT [a] L)
 End
 
+Theorem LEFT_QUOTIENTS_OF_nonempty:
+  LEFT_QUOTIENTS_OF w L ≠ []
+Proof
+  Cases_on ‘w’ >> simp [LEFT_QUOTIENTS_OF_def]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Left quotient by a language                                               *)
 (*---------------------------------------------------------------------------*)
@@ -1073,7 +1079,6 @@ QED
 (* applying the quotient, so the result is a partition of L, and the         *)
 (* arguments are about the finiteness of the partition.                      *)
 (*---------------------------------------------------------------------------*)
-
 
 Theorem FINITE_STATE_UNION:
   FINITE_STATE(L1,A) ∧ FINITE_STATE (L2,A) ⇒ FINITE_STATE(L1 ∪ L2, A)
