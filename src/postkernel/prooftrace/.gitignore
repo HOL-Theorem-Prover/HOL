@@ -9,3 +9,4 @@ make-preamble
 emit-candle
 pft-transcode
 selftest-pftraw
+emit-candle-merged
