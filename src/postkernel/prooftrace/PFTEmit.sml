@@ -222,6 +222,17 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
   fun pft_dest_abs id = pft_dest_comb id  (* same layout: (var, body) *)
 
+  (* Discriminates COMB from ABS: COMBs are registered in comb_ht by
+     emit_comb; ABSs never are.  Only needed by callers that genuinely
+     need to tell the two apart (e.g. SUBST_prf's rconv); all other
+     call sites know the kind from the surrounding proof-rule invariant
+     and can use pft_dest_comb / pft_dest_abs directly. *)
+  fun pft_is_comb id =
+    let val f = DArray.sub(tm_part1, id)
+        val x = DArray.sub(tm_part2, id)
+    in f >= 0 andalso isSome (IntPairTable.lookup comb_ht (f, x))
+    end
+
   (* Reverse lookup: PFT term ID -> PFT type ID.
      Populated for all emitted terms (Var, Const, Comb, Abs). *)
   val tm_types = DArray.new(65536, ~1)
@@ -940,15 +951,17 @@ fun emit_theory {trace, output, binary, ruleset} = let
             case lookup_subst tmpl_id of
               SOME th_id => th_id
             | NONE =>
-              let val (sf, sx) = pft_dest_comb src_id
-                  val (tf, tx) = pft_dest_comb tmpl_id
-              in c_mk_comb (rconv binder_map sf tf) (rconv binder_map sx tx)
-              end
-              handle Fail _ =>
-              let val (sv, sb) = pft_dest_abs src_id
-                  val (tv, tb) = pft_dest_abs tmpl_id
-              in c_abs sv (rconv ((tv, sv) :: binder_map) sb tb)
-              end
+              if pft_is_comb tmpl_id then
+                let val (sf, sx) = pft_dest_comb src_id
+                    val (tf, tx) = pft_dest_comb tmpl_id
+                in c_mk_comb (rconv binder_map sf tf)
+                             (rconv binder_map sx tx)
+                end
+              else
+                let val (sv, sb) = pft_dest_abs src_id
+                    val (tv, tb) = pft_dest_abs tmpl_id
+                in c_abs sv (rconv ((tv, sv) :: binder_map) sb tb)
+                end
       in r_eq_mp (rconv [] source_id template_id) c_th end
 
     | GEN_ABS_prf (a, b, c) => let
