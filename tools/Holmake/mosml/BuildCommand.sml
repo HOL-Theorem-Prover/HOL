@@ -158,6 +158,12 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                            (fn _ => "Created executable "^script')
               val thysmlfile = s^"Theory.sml"
               val thysigfile = s^"Theory.sig"
+              val datFS =
+                  case HFS_NameMunge.HOLtoFS (s ^ "Theory.dat") of
+                      SOME {fullfile, ...} => fullfile
+                    | NONE => s ^ "Theory.dat"
+              val stamp_path = HM_Cachekey.stamp_path_for_datfile datFS
+              val _ = HM_Cachekey.remove_stamp stamp_path
               fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
               val _ = app safedelete [thysmlfile, thysigfile]
               val res2 = Systeml.systeml [script']
@@ -165,7 +171,11 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
               val () = if not (isSuccess res2) then
                          failed_script_cache :=
                            Binaryset.add(!failed_script_cache, s)
-                       else ()
+                       else
+                         (case HM_Cachekey.compute_for_deps deps of
+                              HM_Cachekey.Key k =>
+                                HM_Cachekey.write_stamp stamp_path k
+                            | HM_Cachekey.Missing _ => ())
             in
               isSuccess res2 andalso
               (exists_readable thysmlfile orelse

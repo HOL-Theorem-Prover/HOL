@@ -310,6 +310,7 @@ val no_lastmakercheck = #no_lastmaker_check coption_value
 val show_usage = #help coption_value
 val show_json = #json coption_value
 val cline_cachekey = #cachekey coption_value
+val cline_rebuild_strategy = #rebuild coption_value
 val quit_on_failure = #quit_on_failure coption_value
 val toplevel_no_prereqs = #no_prereqs coption_value
 val toplevel_no_overlay = #no_overlay coption_value
@@ -905,15 +906,49 @@ in
                                          is_pending stat orelse is_failed stat
                                        end)
                           depnodes
-          val needs_building =
-              not (null unbuilt_deps) orelse
-              set_exists (fn d => d depforces_update_of tgt)
-                         (set_add pdep secondaries)
           val bic = case toFile target_s of
                         SML (Theory s) => BIC_BuildScript s
                       | SIG (Theory s) => BIC_BuildScript s
                       | DAT s => BIC_BuildScript s
                       | _ => BIC_Compile
+          (* For theory targets, when --rebuild=cachekey is in force,
+             consult the cachekey stamp next to the .dat instead of
+             mtime.  Short-circuit to Succeeded when the target exists
+             on disk and the stamp records the current input hash. *)
+          fun theory_stamp_path thy =
+              let
+                val datHOL_s = fps (fp dir (thy ^ "Theory.dat"))
+                val datFS =
+                    case HFS_NameMunge.HOLtoFS datHOL_s of
+                        SOME {fullfile, ...} => fullfile
+                      | NONE => datHOL_s
+              in
+                HM_Cachekey.stamp_path_for_datfile datFS
+              end
+          fun stamp_matches thy =
+              case HM_Cachekey.read_stamp (theory_stamp_path thy) of
+                  NONE => false
+                | SOME recorded =>
+                  (case HM_Cachekey.compute_for_deps (map #2 depnodes) of
+                       HM_Cachekey.Key k => k = recorded
+                     | HM_Cachekey.Missing _ => false)
+          val cachekey_uptodate =
+              cline_rebuild_strategy = HM_Cachekey_dtype.Cachekey andalso
+              (case bic of
+                   BIC_BuildScript thy =>
+                     exists_readable fullpath_s andalso
+                     null unbuilt_deps andalso
+                     stamp_matches thy
+                 | _ => false)
+          val needs_building =
+              not cachekey_uptodate andalso
+              (not (null unbuilt_deps) orelse
+               set_exists (fn d => d depforces_update_of tgt)
+                          (set_add pdep secondaries))
+          val _ = if cachekey_uptodate then
+                    diag (fn _ => target_s ^
+                                  ": cachekey matches stamp, up-to-date")
+                  else ()
         in
             add_node {target = tgt, seqnum = 0, phony = false,
                       status = if needs_building then Pending{needed=false}

@@ -312,7 +312,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     in
         ((script,[scriptuo,scriptui,script]), objectfiles)
     end
-    fun run_script g (extra:GraphExtra.t) (script, intermediates) objectfiles expecteds =
+    fun run_script g (extra:GraphExtra.t) (script, intermediates) objectfiles
+                   expecteds on_success =
       let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
         val _ = app safedelete expecteds
@@ -345,6 +346,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             val _ = if isSuccess res orelse debug = NONE then
                       app safedelete (script :: intermediates)
                     else ()
+            val _ = if isSuccess res then on_success () else ()
           in
             isSuccess res
           end
@@ -383,9 +385,24 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         | BuildScript (s, deps, extra : GraphExtra.t) =>
           let
             val (scriptetc,objectfiles) = setup_script s (deps,extra) []
+            (* When the script run succeeds, record the cachekey of its
+               inputs to <thy>Theory.cachekey so that a subsequent
+               Holmake invocation under --rebuild=cachekey can decide
+               the target is up-to-date without re-running the script. *)
+            val datFS =
+                case HFS_NameMunge.HOLtoFS (s ^ "Theory.dat") of
+                    SOME {fullfile, ...} => fullfile
+                  | NONE => s ^ "Theory.dat"
+            val stamp_path = HM_Cachekey.stamp_path_for_datfile datFS
+            val _ = HM_Cachekey.remove_stamp stamp_path
+            fun write_stamp () =
+                case HM_Cachekey.compute_for_deps deps of
+                    HM_Cachekey.Key k => HM_Cachekey.write_stamp stamp_path k
+                  | HM_Cachekey.Missing _ => ()
           in
             run_script g extra scriptetc objectfiles
                        [s^"Theory.sml", s^"Theory.sig", s^"Theory.dat"]
+                       write_stamp
           end
         | BuildArticle (s0, deps : dep list, extra) =>
           let
@@ -406,7 +423,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             val ((script,inters),objectfiles) =
                 setup_script s (deps,extra) loggingextras
           in
-            run_script g extra (script,fakescript_str :: inters) objectfiles [s]
+            run_script g extra (script,fakescript_str :: inters) objectfiles
+                       [s] (fn () => ())
           end
         | ProcessArticle (s,extra) =>
           let

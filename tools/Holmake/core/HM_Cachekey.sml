@@ -69,21 +69,17 @@ fun resolve_dat_path dep holpath =
           | _ => fspath
     end
 
-fun compute_for_node depgraph node =
+fun compute_for_deps raw_deps =
     let
-      val nodeinfo =
-          case HM_DepGraph.peeknode depgraph node of
-              SOME ni => ni
-            | NONE => raise Fail "HM_Cachekey.compute_for_node: node not found"
       val deps =
           let val depset =
                   List.foldl
-                    (fn ((_, dep), acc) =>
+                    (fn (dep, acc) =>
                         case dep_to_hashable dep of
                             SOME d => Binaryset.add (acc, d)
                           | NONE => acc)
                     hm_target.empty_tgtset
-                    (#dependencies nodeinfo)
+                    raw_deps
           in
             map (fn dep =>
                     let val p = tgt_toString dep
@@ -123,6 +119,11 @@ fun compute_for_node depgraph node =
             Key key
           end
     end
+
+fun compute_for_node depgraph node =
+    case HM_DepGraph.peeknode depgraph node of
+        NONE => raise Fail "HM_Cachekey.compute_for_node: node not found"
+      | SOME nodeinfo => compute_for_deps (map #2 (#dependencies nodeinfo))
 
 (* --------------------------------------------------------------------
    Stamp files.  For a theory-target foo, the stamp sits next to the

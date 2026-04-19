@@ -15,6 +15,13 @@ sig
   val compute_for_node :
       'a HM_DepGraph.t -> HM_DepGraph.node -> compute_result
 
+  (* Lower-level variant: compute the cachekey for a theory target
+     given its direct dependency list directly (without needing a
+     node already recorded in a depgraph).  Used from the rebuild-
+     decision path, where the node is about to be created, and from
+     BuildCommand after a successful script run. *)
+  val compute_for_deps : Holmake_tools.dep list -> compute_result
+
   (* Filesystem helpers for cachekey stamp files.  Each theory-target
      .dat file has a sibling .cachekey file recording the cachekey of
      the inputs that produced it, written after a successful build.
