@@ -597,7 +597,7 @@ structure ToSML = struct
           val {thmname,name_attrs,...} = parseTheoremPfx text
         in
           aux "val "; aux (ss thmname); aux " = ";
-          aux "boolLib.finalise_suspended_thm";
+          aux "markerLib.finalise_suspended_thm";
           aux (if !filename = "" then "(DB_dtype.Unknown)"
                else mk_mkloc_string(!filename, #1(!line)));
           aux (mlquote (ss name_attrs))

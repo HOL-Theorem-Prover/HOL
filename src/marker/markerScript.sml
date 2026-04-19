@@ -144,6 +144,22 @@ val suspendlabel_def = new_definition(
   "suspendlabel_def",
   “suspendlabel (l:label) (arg:bool) = arg”);
 
+(* ----------------------------------------------------------------------
+    The resumption-proof marker
+
+    resumelabel wraps a theorem that resolves one suspendlabel
+    hypothesis of a suspended parent theorem.  The first argument
+    ``s`` encodes the theory-qualified name of the parent theorem
+    (e.g. ``thy$thm``) and the second argument ``l`` is the label
+    name of the hypothesis being discharged.  The argument ``arg``
+    is the suspendlabel hypothesis itself, proved from the user's
+    tactic.
+   ---------------------------------------------------------------------- *)
+
+val resumelabel_def = new_definition(
+  "resumelabel_def",
+  “resumelabel (s:label) (l:label) (arg:bool) = arg”);
+
 val suspendimp_def = new_definition(
   "suspendimp_def",
   “suspendimp = $==>”);

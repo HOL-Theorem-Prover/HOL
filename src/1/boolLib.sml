@@ -158,30 +158,8 @@ fun get_suspended_names th =
       HOLset.foldl foldthis [] (Thm.hypset th)
     end
 
-local
-  open HolKernel
-  val suspensionDBref = Sref.new (Symtab.empty)
-  fun check_DBempty thydelta =
-      let open TheoryDelta
-      in
-        case thydelta of
-            ExportTheory _ =>
-            let val keys = Symtab.keys (Sref.value suspensionDBref)
-            in
-              case keys of
-                  [] => ()
-                | _ =>
-                  raise mk_HOL_ERR "boolLib" "check_DBempty"
-                        ("Incomplete theorems (" ^
-                         String.concatWith ", " keys ^ ") remain")
-            end
-          | _ => ()
-      end
-  val _ = Theory.register_hook (
-        "Unfinished Suspension Check",
-        check_DBempty
-      )
-in
+(* printable_keys: collapse duplicate label names with a count annotation.
+   Used when reporting which suspended subgoals remain in a theorem. *)
 fun printable_keys nms =
     let val ctab =
             List.foldl
@@ -197,24 +175,6 @@ fun printable_keys nms =
         ctab
         []
     end
-
-fun update_suspensionDB firstp (n,th) =
-    (if firstp then
-       case Symtab.lookup (Sref.value suspensionDBref) n of
-           NONE => ()
-         | SOME _ => Feedback.HOL_MESG (
-                      "Replacing stashed suspension theorem with name " ^
-                      n
-                    )
-     else ();
-     Sref.update suspensionDBref (Symtab.update(n,th)))
-
-(* don't eta-reduce *)
-fun find_suspension k = Symtab.lookup (Sref.value suspensionDBref) k
-
-fun remove_suspension k = Sref.update suspensionDBref (Symtab.delete k)
-
-end (* local *)
 
 local
 open Feedback Theory
@@ -263,43 +223,36 @@ in
         case printable_keys susp_names of
             [nstr] =>
             HOL_MESG (
-              "Stashing suspended theorem " ^ n ^
+              "Saving suspended theorem " ^ n ^
               " with pending subgoal: " ^ nstr ^ "."
             )
           | strs =>
             HOL_MESG (
-              "Stashing suspended theorem " ^ n ^
+              "Saving suspended theorem " ^ n ^
               " with pending subgoals: " ^
               String.concatWith ", " strs ^ "."
             );
         if localp orelse not (null attrs) then
           HOL_WARNING "boolLib" "save_thm_attrs"
-                      "Ignoring attributes on suspended theorem"
+                      ("Ignoring attributes on suspended theorem " ^ n ^
+                       "; apply them at Finalise time instead")
         else ();
-        update_suspensionDB true (n,th);
-        th
+        (* Save the suspended theorem as an ordinary exported theorem so
+           that it persists in the theory file and can be resumed /
+           finalised in the current script or in downstream theories.
+           Rebinding is allowed so that re-running the Theorem block in
+           an interactive session is not disruptive. *)
+        trace("Theory.allow_rebinds", 1)
+          (fn () =>
+              Theory.gen_save_thm
+                {name = n, private = privp, thm = th, loc = loc}) ()
       end
 end
 end (* local *)
 
-fun finalise_suspended_thm loc nm0 =
-    let val attrblock = ThmAttribute.extract_attributes nm0
-        val name = #thmname attrblock
-    in
-      case find_suspension name of
-          NONE => raise ERR "finalise_suspended_thm"
-                        ("No such suspended theorem: " ^ name)
-        | SOME th =>
-          case get_suspended_names th of
-              [] => (
-                remove_suspension name;
-                save_thm_attrs loc (attrblock, th)
-              )
-            | snms =>
-              raise ERR "finalise_suspended_thm"
-                    ("Theorem retains unproved subgoals: " ^
-                     String.concatWith ", " snms)
-    end
+(* finalise_suspended_thm lives in markerLib (it needs resumelabel and the
+   ancestor-scanning DB predicates).  The parser-level Finalise expansion
+   calls markerLib.finalise_suspended_thm directly. *)
 
 local
   open Feedback

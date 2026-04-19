@@ -116,6 +116,7 @@ sig
   val set_suspended_goal :
       {suspension_name:string, label_name:string} -> proofManagerLib.proofs
       (* provides id_tacm for the tactic modifier value *)
+  val finalise_suspended_thm : DB.thm_src_location -> string -> thm
 
   val add_suspension_label : string -> thm -> thm
   val resumption_to_goal : (int * term) list -> (term list * term)

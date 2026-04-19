@@ -238,10 +238,7 @@ val _ = require_msg
                                 disch_then  ACCEPT_TAC))
           resconj_closure_th
 
+(* Under the new cross-file suspend/resume design, a suspended theorem is
+   a perfectly valid export (as a theorem with suspendlabel hypotheses);
+   export_theory no longer fails on unfinalised suspensions. *)
 val incomplete_th = Feedback.quiet_messages save_thm("incomplete_th", pq_th1)
-val _ = shouldfail {
-      checkexn = is_struct_HOL_ERR "Theory",
-      printarg = K "export_theory fails on incomplete suspension",
-      printresult = K "()",
-      testfn = export_theory} ()
-val _ = boolLib.remove_suspension "incomplete_th"
