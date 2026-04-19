@@ -1428,7 +1428,7 @@ in
         val thynames =
             case targets of
                 _::_ => targets
-              | [] => tgts_to_thynames (get_targets_recursively local_incinfo)
+              | [] => tgts_to_thynames (generate_all_plausible_targets warn NONE)
         val result =
             List.foldl
                 (fn (thyname, acc) =>
