@@ -1027,12 +1027,27 @@ fun dest_resumption c =
     subgoal theorem for the SML binding.
    ---------------------------------------------------------------------- *)
 
+(* Mangle an arbitrary string into a valid SML identifier suffix.
+   Alphanumerics and underscores pass through; other characters become
+   ``_<hex>_``.  The caller supplies a prefix that is already a valid
+   SML identifier, so we don't need to worry about leading-digit or
+   keyword issues. *)
+fun mangle_for_sml s =
+    let
+      fun enc c =
+          if Char.isAlphaNum c orelse c = #"_" then String.str c
+          else "_" ^ Int.fmt StringCvt.HEX (Char.ord c) ^ "_"
+    in
+      String.translate enc s
+    end
+
 fun resumption_save_names (susp_name, label_nm, n) =
-    if n = 1 then [susp_name ^ "_" ^ label_nm ^ "_resumption"]
-    else List.tabulate (
-           n,
-           fn i => susp_name ^ "_" ^ label_nm ^ "_resumption_" ^
-                   Int.toString (i + 1))
+    let val lab = mangle_for_sml label_nm
+        val stem = susp_name ^ "_" ^ lab ^ "_resumption"
+    in
+      if n = 1 then [stem]
+      else List.tabulate (n, fn i => stem ^ "_" ^ Int.toString (i + 1))
+    end
 
 fun build_resumption_thms qname label_nm (ncts, sub_th) =
     let
