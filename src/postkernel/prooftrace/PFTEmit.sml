@@ -1025,7 +1025,22 @@ fun emit_theory {trace, output, binary, ruleset} = let
       end
 
     | Def_const_list_prf (a, b) => let
-        val ids = list heap get_const_id b
+        (* The two rulesets require incompatible naming conventions:
+             - pft-ruleset-hol4.md, DEF_SPEC_GEN: each `s_i` MUST match
+               `thy$v_i` for some common theory prefix `thy`.  So the
+               trace's hypothesis LHS is the bare-named variable `v_i`
+               while the command's argument name is `thy$v_i`.
+             - pft-ruleset-candle.md, new_specification: each `s_i`
+               MUST equal the name of `v_i`.  Hypothesis LHS name and
+               command argument name must coincide verbatim.
+           Passing the HOL4-shaped theorem and name list directly to
+           Candle would therefore violate Candle's side condition.  We
+           bridge the two conventions by INST-ing each bare-named
+           hypothesis variable to a fresh prefix-named one before the
+           hand-off, matching the name convention used by the sibling
+           branches Def_const_prf and Def_spec_prf. *)
+        val const_ptrs = list heap (fn p => p) b
+        val ids = List.map get_const_id const_ptrs
         val preamble_name =
           if thyname = "bool" then
             case ids of [(_, nm)] =>
@@ -1037,9 +1052,35 @@ fun emit_theory {trace, output, binary, ruleset} = let
              (mark_const (#2 (hd ids)); candle_load_pth load_name)
          | NONE => let
              val a_th = th a
-             val names = List.map (fn (Thy,nm) => tr_name (Thy ^ "$" ^ nm)) ids
-             val () = List.app (fn (_,nm) => mark_const nm) ids
-           in PFTWriter.Candle.new_specification out result_id a_th names;
+
+             (* For each constant pointer, build the bare-named and
+                prefix-named variables at the constant's type.  By
+                emit_var hash-consing, v_old is the very same term ID
+                that appears inside a_th's hypothesis LHS and as a
+                free variable in the body, so a single INST rewrites
+                both at once. *)
+             fun mk_rename cp = let
+                   val (Thy, Name) = get_const_id cp
+                   val ty_ptr =
+                     case shTerm heap cp of
+                       Const (_, typ) => typ
+                     | _ => raise Fail "Def_const_list_prf: not a const"
+                   val cname = tr_name (Thy ^ "$" ^ Name)
+                   val v_ty  = emit_type ty_ptr
+                   val v_old = emit_var Name  v_ty
+                   val v_new = emit_var cname v_ty
+                   val ()    = mark_const Name
+                 in (cname, v_old, v_new) end
+             val triples = List.map mk_rename const_ptrs
+             val cnames  = List.map #1 triples
+             val subs    = List.map (fn (_, old, new) => (old, new)) triples
+
+             (* Candle INST is a parallel free-variable substitution;
+                since the v_new's are all prefix-named (disjoint from
+                the bare v_old's and from each other), the parallel
+                and sequential forms coincide. *)
+             val a_th'   = if null subs then a_th else c_inst a_th subs
+           in PFTWriter.Candle.new_specification out result_id a_th' cnames;
               result_id end
       end
 
