@@ -77,6 +77,7 @@ in
 end
 
 val thms = [highByte] @ (map UNDISCH_ALL o List.concat o map CONJUNCTS) [
+  write_binop_rwts, write_monop_rwts, read_cond_rwts,
   Zbit_test_rwts, (*Znop_rwts,*) Zcmc_rwts, Zclc_rwts, Zstc_rwts, Zbinop_rwts,
   Zcall_imm_rwts, Zcall_rm_rwts, Zjcc_rwts, Zjmp_rwts, Zlea_rwts,
   Zleave_rwts, Zloop_rwts, Zmonop_rwts, Zmov_rwts, Zmovzx_rwts, Zmovsx_rwts,

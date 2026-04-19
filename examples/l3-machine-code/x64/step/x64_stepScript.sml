@@ -1157,6 +1157,15 @@ val write'XMM_rwt = EV ([write'XMM_def, write'mem128_rwt] @ mem_addr_rwt) [] xmm
 
 (* ------------------------------------------------------------------------ *)
 
+local
+  val state_with_pre = (st |-> ``^st with RIP := ^st.RIP + n2w len``)
+in
+  fun ADD_PRECOND_RULE thm =
+    thm |> Thm.INST [state_with_pre]
+        |> ALL_HYP_CONV_RULE DATATYPE_CONV
+        |> Conv.CONV_RULE DATATYPE_CONV
+end
+
 val write_arith_eflags_except_CF_OF_rwt =
    EV ([write_arith_eflags_except_CF_OF_def, FlagUnspecified_rwt,
         write_PF_rwt] @ write_SF_rwt @ write_ZF_rwt) [] (mapl (`size`, sizes))
@@ -1210,6 +1219,7 @@ val write_binop_rwt =
       (utilsLib.augment (`bop`, binops) ea_op)
       ``write_binop (size1, bop, x, y, ea)``
    |> List.map (utilsLib.ALL_HYP_CONV_RULE DATATYPE_CONV)
+   |> map ADD_PRECOND_RULE
 Theorem write_binop_rwts = LIST_CONJ (map DISCH_ALL write_binop_rwt)
 
 val write_monop_rwt =
@@ -1222,6 +1232,7 @@ val write_monop_rwt =
       (utilsLib.augment (`mop`, monops) ea_op)
       ``write_monop (size1, mop, x, ea)``
    |> List.map (utilsLib.ALL_HYP_CONV_RULE DATATYPE_CONV)
+   |> map ADD_PRECOND_RULE
 Theorem write_monop_rwts = LIST_CONJ (map DISCH_ALL write_monop_rwt)
 
 (* ------------------------------------------------------------------------ *)
@@ -1241,7 +1252,7 @@ val read_cond_rwt =
         ``^st.EFLAGS (Z_OF) = SOME oflag``]]
       (mapl (`c`, conds))
       ``read_cond c``
-Theorem read_cond_rwts = LIST_CONJ (map DISCH_ALL read_cond_rwt)
+Theorem read_cond_rwts = LIST_CONJ (map (DISCH_ALL o ADD_PRECOND_RULE) read_cond_rwt)
 
 val SignExtension_rwt =
    EV [SignExtension_def] []
@@ -1252,14 +1263,12 @@ val SignExtension_rwt =
        [`s1` |-> ``Z16``, `s2` |-> ``Z64``],
        [`s1` |-> ``Z32``, `s2` |-> ``Z64``]]
       ``SignExtension (w, s1, s2)``
-Theorem SignExtension_rwts = LIST_CONJ SignExtension_rwt
 
 val SignExtension64_rwt =
    EV (SignExtension64_def :: SignExtension_rwt) []
       [[`sz` |-> ``Z8 (b)``], [`sz` |-> ``Z16``],
        [`sz` |-> ``Z32``], [`sz` |-> ``Z64``]]
       ``SignExtension64 (w, sz)``
-Theorem SignExtension64_rwts = LIST_CONJ SignExtension64_rwt
 
 (* ------------------------------------------------------------------------ *)
 
@@ -1342,15 +1351,6 @@ val flags_override_rule =
            (SIMP_CONV (srw_ss()) []))))
 
 val cond_update_rule = List.map (Conv.CONV_RULE COND_UPDATE_CONV)
-
-local
-  val state_with_pre = (st |-> ``^st with RIP := ^st.RIP + n2w len``)
-in
-  fun ADD_PRECOND_RULE thm =
-    thm |> Thm.INST [state_with_pre]
-        |> ALL_HYP_CONV_RULE DATATYPE_CONV
-        |> Conv.CONV_RULE DATATYPE_CONV
-end
 
 (*
 val is_some_hyp_rule =
