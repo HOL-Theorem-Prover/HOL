@@ -1099,12 +1099,25 @@ fun save_resumption_thms {parent_nm, label_nm} thms =
       ListPair.app (ignore o save1) (names, thms)
     end
 
+(* Detect a theorem produced by ``Holmake --fast``: fastbuild stamps
+   every such theorem with the oracle tag "fast_proof".  Under --fast
+   the original Theorem...QED block's tactic is replaced by a
+   wholesale oracle, so the suspendlabel hypotheses manufactured by
+   the suspend tactical are never inserted.  Resume therefore has
+   nothing to latch onto; we treat it as a no-op, returning an
+   innocuous oracle theorem so the SML binding is well-typed. *)
+fun is_fast_proof th =
+    Lib.mem "fast_proof" (#1 (Tag.dest_tag (Thm.tag th)))
+
 fun resume {suspension_name, label_name} tac =
     case find_in_theories suspension_name of
         NONE => raise ERR "resume"
                       ("No suspended theorem named " ^ suspension_name ^
                        " in the current theory or its ancestors")
       | SOME (parent_thy, th) =>
+        if is_fast_proof th then
+          mk_oracle_thm "fast_proof" ([], boolSyntax.T)
+        else
         let
           val ncts = extract_suspended_goal th label_name
           val goal = resumption_to_goal ncts
