@@ -120,7 +120,7 @@ val cheat_string =      "Saved CHEAT _"
 val fastcheat_string =  "Saved FAST-CHEAT _"
 val oracle_string =   "Saved ORACLE thm _"
 val used_cheat_string = "(used CHEAT)"
-val cachehit_string = "cache hit!"
+val cachehit_string = "Cache hit!"
 
 fun delsml_sfx s =
   if String.isSuffix ".sml" s orelse String.isSuffix ".sig" s then

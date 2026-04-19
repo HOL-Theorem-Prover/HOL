@@ -17,6 +17,7 @@ fun copy src dest =
 
 fun upload base_url cachekey dir thyname talk =
     let
+        val _ = OS.FileSys.mkDir base_url handle OS.SysErr _ => ()
         val theory_exts = [".sig", ".sml", ".dat"]
         fun is_theory_file f =
             List.exists (fn ext => f = thyname ^ ext) theory_exts
@@ -44,6 +45,9 @@ fun upload base_url cachekey dir thyname talk =
             in
                 if ok then SOME (name, hash) else NONE
             end
+        val _ = if null files then
+                    raise Fail (thyname ^ " has no built theory files to cache")
+                else ()
         val results = List.mapPartial process files
         val ok = length results = length files
         val _ = OS.FileSys.mkDir (OS.Path.concat(base_url, "key")) handle OS.SysErr _ => ()
@@ -58,7 +62,7 @@ fun upload base_url cachekey dir thyname talk =
         if ok then (talk ("Cached " ^ thyname); true)
         else (talk ("Cache failed for " ^ thyname); false)
     end
-    handle _ => (talk "Write failed."; false)
+    handle e => (talk ("Write failed: " ^ exnMessage e); false)
 
 fun fetch base_url cachekey talk =
     let
