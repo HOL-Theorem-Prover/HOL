@@ -3,14 +3,14 @@ struct
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate26 z
+  fun makeUpdateT z = makeUpdate27 z
 in
 fun updateT z = let
   fun from cachekey debug do_logging fast help hmakefile holdir includes
            interactive jobs json keep_going no_action no_hmakefile
            no_lastmaker_check no_overlay
            no_preexecs no_prereqs opentheory quiet
-           quit_on_failure rebuild_deps recursive_build recursive_clean
+           quit_on_failure rebuild rebuild_deps recursive_build recursive_clean
            thmsrc verbose =
     {
       cachekey = cachekey,
@@ -23,10 +23,12 @@ fun updateT z = let
       no_preexecs = no_preexecs, no_prereqs = no_prereqs,
       opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
+      rebuild = rebuild,
       rebuild_deps = rebuild_deps, recursive_build = recursive_build,
       recursive_clean = recursive_clean, thmsrc = thmsrc, verbose = verbose
     }
   fun from' verbose thmsrc recursive_clean recursive_build rebuild_deps
+            rebuild
             quit_on_failure
             quiet opentheory no_prereqs no_preexecs
             no_overlay no_lastmaker_check no_hmakefile no_action keep_going
@@ -44,6 +46,7 @@ fun updateT z = let
       no_preexecs = no_preexecs, no_prereqs = no_prereqs,
       opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
+      rebuild = rebuild,
       rebuild_deps = rebuild_deps, recursive_build = recursive_build,
       recursive_clean = recursive_clean, thmsrc = thmsrc, verbose = verbose
     }
@@ -51,13 +54,13 @@ fun updateT z = let
             includes, interactive, jobs, json, keep_going, no_action,
             no_hmakefile, no_lastmaker_check,
             no_overlay, no_preexecs, no_prereqs, opentheory,
-            quiet, quit_on_failure, rebuild_deps, recursive_build,
+            quiet, quit_on_failure, rebuild, rebuild_deps, recursive_build,
             recursive_clean, thmsrc, verbose} =
     f cachekey debug do_logging fast help hmakefile holdir includes
       interactive jobs json keep_going no_action no_hmakefile
       no_lastmaker_check no_overlay no_preexecs
       no_prereqs opentheory quiet
-      quit_on_failure rebuild_deps recursive_build recursive_clean
+      quit_on_failure rebuild rebuild_deps recursive_build recursive_clean
       thmsrc verbose
 in
   makeUpdateT (from, from', to)
@@ -91,6 +94,7 @@ type t = {
   opentheory : string option,
   quiet : bool,
   quit_on_failure : bool,
+  rebuild : HM_Cachekey_dtype.rebuild_strategy,
   rebuild_deps : bool,
   recursive_build : bool,
   recursive_clean : bool,
@@ -121,6 +125,7 @@ val default_core_options : t =
   opentheory = NONE,
   quiet = false,
   quit_on_failure = true,
+  rebuild = HM_Cachekey_dtype.Cachekey,
   rebuild_deps = false,
   recursive_build = false,
   recursive_clean = false,
@@ -173,6 +178,12 @@ fun set_cachekey s =
                wn "Multiple cachekey specs; ignoring earlier spec"
              else ();
              updateT t (U #cachekey (SOME s)) $$))
+fun set_rebuild s =
+  resfn (fn (wn, t) =>
+            case HM_Cachekey_dtype.rebuild_strategy_fromString s of
+                SOME strat => updateT t (U #rebuild strat) $$
+              | NONE => (wn ("Bad --rebuild value: " ^ s ^
+                             "; expected mtime or cachekey"); t))
 fun set_openthy s =
   resfn (fn (wn, t) =>
             (if isSome (#opentheory t) then
@@ -267,6 +278,10 @@ val core_option_descriptions = [
     desc = mkBoolT #quit_on_failure },
   { help = "rebuild cached dependency files", short = "",
     long = ["rebuild_deps"], desc = mkBoolT #rebuild_deps },
+  { help = "rebuild-decision strategy for theory targets \
+           \(mtime or cachekey [default])",
+    short = "", long = ["rebuild"],
+    desc = ReqArg (set_rebuild, "strategy") },
   { help = "both --recursive-{build,clean}", short = "r", long = [],
     desc = NoArg (
       fn () => resfn (

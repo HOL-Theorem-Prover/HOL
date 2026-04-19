@@ -41,7 +41,7 @@ in
   app apputil ["regexpMatch"] ;
   app apphmf ["parse_glob"] ;
   app appdeps ["Holdep_tokens"] ;
-  app (myuse coredir) ["Holmake_tools_dtype.sml"];
+  app (myuse coredir) ["Holmake_tools_dtype.sml", "HM_Cachekey_dtype.sml"];
   app (myuse hmutildir) ["terminal_primitives.sig", "poly-terminal-prims.ML"];
   app appdeps ["Holdep"] ;
   app appcore ["Holmake_tools"];

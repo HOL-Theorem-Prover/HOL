@@ -22,6 +22,7 @@ type t = {
   opentheory : string option,
   quiet : bool,
   quit_on_failure : bool,
+  rebuild : HM_Cachekey_dtype.rebuild_strategy,
   rebuild_deps : bool,
   recursive_build : bool,
   recursive_clean : bool,

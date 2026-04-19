@@ -32,6 +32,7 @@ hmf/parse_glob.sml
 util/tailbuffer.sig
 util/tailbuffer.sml
 core/Holmake_tools_dtype.sml
+core/HM_Cachekey_dtype.sml
 util/terminal_primitives.sig
 util/poly-terminal-prims.ML
 core/Holmake_tools.sig
