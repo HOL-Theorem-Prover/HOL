@@ -50,7 +50,7 @@ val baseScript_v2 =
     \Theorem base_thm2 = TRUTH\n"
 
 val childScript =
-    "Theory child\n\
+    "Theory child[bare]\n\
     \Ancestors base\n\
     \Theorem child_thm = base_thm\n"
 
