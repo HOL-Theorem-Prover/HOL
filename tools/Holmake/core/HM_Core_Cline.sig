@@ -1,8 +1,11 @@
 signature HM_Core_Cline =
 sig
 
+datatype cache_op = Write | Fetch
+    
 type t = {
   cachekey : string option,
+  cache_url : (cache_op * string) option,
   debug : {ins:string list, outs:string list} option,
   do_logging : bool,
   fast : bool,

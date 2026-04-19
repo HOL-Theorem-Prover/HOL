@@ -312,7 +312,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     in
         ((script,[scriptuo,scriptui,script]), objectfiles)
     end
-    fun run_script g (extra:GraphExtra.t) (script, intermediates) objectfiles
+    fun run_script use_cache deps g (extra:GraphExtra.t) (script, intermediates) objectfiles
                    expecteds on_success =
       let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
@@ -364,8 +364,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
               (* incinfos not consulted for comparison so empty value ok here *)
         end
       in
-        BR_ClineK { cline = (useScript, cline), job_kont = cont,
-                    other_nodes = other_nodes }
+          BR_ClineK { cline = (useScript, cline), job_kont = cont,
+                      other_nodes = other_nodes,
+                      cache_url = use_cache,
+                      cachekey = HolmakeCacheKey.compute_deps_cachekey deps}
       end
   in
     let
@@ -400,7 +402,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                     HM_Cachekey.Key k => HM_Cachekey.write_stamp stamp_path k
                   | HM_Cachekey.Missing _ => ()
           in
-            run_script g extra scriptetc objectfiles
+            run_script (#cache_url (#core optv)) deps g extra scriptetc objectfiles
                        [s^"Theory.sml", s^"Theory.sig", s^"Theory.dat"]
                        write_stamp
           end
@@ -423,7 +425,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             val ((script,inters),objectfiles) =
                 setup_script s (deps,extra) loggingextras
           in
-            run_script g extra (script,fakescript_str :: inters) objectfiles
+            run_script NONE deps g extra (script,fakescript_str :: inters) objectfiles
                        [s] (fn () => ())
           end
         | ProcessArticle (s,extra) =>
@@ -438,7 +440,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                   "opentheory info --article -o " ^ art ^ " " ^ raw_art])
           in
             BR_ClineK {cline = cline, job_kont = (fn _ => OS.Process.isSuccess),
-                       other_nodes = []}
+                       other_nodes = [], cache_url = NONE, cachekey = ""}
           end
     end handle CompileFailed => BR_Failed
              | FileNotFound  => BR_Failed
@@ -487,8 +489,13 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   fun interpret_bres bres =
     case bres of
         BR_OK => true
-      | BR_ClineK{cline = (_,cl), job_kont = k, ...} =>
-          k warn (Systeml.systeml cl)
+      | BR_ClineK{cline = (_,cl), job_kont = k, cache_url, cachekey, ...} =>
+        (case cache_url of
+             SOME (HM_Core_Cline.Fetch, url) =>
+                 HolmakeCacheFetch.fetch url cachekey info orelse
+                 k warn (Systeml.systeml cl)
+           | SOME (HM_Core_Cline.Write, _) => k warn (Systeml.systeml cl)
+           | NONE => k warn (Systeml.systeml cl))
       | BR_Failed => false
 
 

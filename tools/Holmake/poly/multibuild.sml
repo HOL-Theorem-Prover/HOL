@@ -9,7 +9,8 @@ datatype buildresult =
        | BR_ClineK of { cline : string * string list,
                         job_kont : (string -> unit) -> OS.Process.status ->
                                    bool,
-                        other_nodes : HM_DepGraph.node list }
+                        other_nodes : HM_DepGraph.node list,
+                        cache_url : (HM_Core_Cline.cache_op * string) option, cachekey : string}
        | BR_Failed
 
 val RealFail = Failed{needed=true}
@@ -26,6 +27,7 @@ fun lmap_insert k v m =
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
 val loggingdir = ".hol/logs"
+fun K x y = x
 
 fun graph_dirinfo g =
     let
@@ -278,7 +280,8 @@ fun graphbuild optinfo g =
                               end
                         in
                           NewJob ({tag = tag, command = shell_command c,
-                                   update = update, dir = dir},
+                                   update = update, try_cache = K false,
+                                   dir = dir},
                                   (updall(g, Running), true))
                         end
                   end
@@ -290,7 +293,7 @@ fun graphbuild optinfo g =
                       case bres of
                           BR_OK => k true g
                         | BR_Failed => k false g
-                        | BR_ClineK{cline, job_kont, other_nodes} =>
+                        | BR_ClineK{cline, job_kont, other_nodes, cache_url, cachekey} =>
                           let
                             val (thyc,ndi) = count_theories_needed other_nodes
                             fun b2res b = if b then OS.Process.success
@@ -313,6 +316,12 @@ fun graphbuild optinfo g =
                                  (updall RealFail g, keep_going)))
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l
+                            fun try_cache talk =
+                              case cache_url of
+                                  NONE => false
+                                | SOME (HM_Core_Cline.Fetch, url) =>
+                                  HolmakeCacheFetch.fetch url cachekey talk
+                                | SOME (HM_Core_Cline.Write, _) => false
                           in
                             diag ("New graph job for "^target_s^
                                   " with c/line: " ^ cline_str cline);
@@ -321,6 +330,7 @@ fun graphbuild optinfo g =
                                         (map node_toString other_nodes));
                             NewJob({tag = tag, dir = dir,
                                     command = cline_to_command cline,
+                                    try_cache = try_cache,
                                     update = update},
                                    (updall Running g, true))
                           end

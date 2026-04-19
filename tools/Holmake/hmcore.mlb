@@ -47,6 +47,16 @@ hmf/ReadHMF.sml
 ../../src/portableML/poly/w64-SHA1.ML
 ../../src/portableML/SHA1.sig
 ../../src/portableML/SHA1.sml
+../../src/portableML/json/JSON.sml
+../../src/portableML/json/JSONErrors.sig
+../../src/portableML/json/JSONErrors.sml
+../../src/portableML/json/JSONSource.sml
+../../src/portableML/json/JSONParser.sig
+../../src/portableML/json/JSONParser.sml
+../../src/portableML/json/JSONUtil.sig
+../../src/portableML/json/JSONUtil.sml
+HolmakeCacheKey.sml
+poly/HolmakeCacheFetch.sml
 ../util/GetOpt.sig
 ../util/GetOpt.sml
 ../util/FunctionalRecordUpdate.sml
