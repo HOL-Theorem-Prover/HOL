@@ -976,65 +976,21 @@ fun export_theory_return_hash () = let
  in
    case filter filtP (map #1 all_thms) of
      [] =>
-     (let val holsigfile = concat["./",name,".sig"]
-          val holsmlfile = concat["./",name,".sml"]
-          val holdatfile = concat["./",name,".dat"]
-          (* Write each generated file to a sibling tempfile first; only
-             replace the destination if its contents would actually change.
-             This preserves the destination's mtime on no-op rebuilds (e.g.
-             a comment-only edit of fooScript.sml), so Holmake's timestamp
-             based dep-check won't cascade a rebuild to descendants.
-
-             We work in real-filesystem paths here (not HOL paths), because
-             the ".new" suffix on tempfiles is not recognised by
-             HFS_NameMunge.HOLtoFS and would otherwise land beside the
-             cwd instead of in the munged output directory (.hol/objs/
-             under Poly/ML). *)
-          fun realOf holp =
-              case HFS_NameMunge.HOLtoFS holp of
-                  SOME {fullfile, dir} =>
-                    (HOLFS_dtype.createDirIfNecessary dir; fullfile)
-                | NONE => holp
-          val datfile = realOf holdatfile
-          val sigfile = realOf holsigfile
-          val smlfile = realOf holsmlfile
-          val dattmp = datfile ^ ".new"
-          val sigtmp = sigfile ^ ".new"
-          val smltmp = smlfile ^ ".new"
-          val ostrm1 = TextIO.openOut sigtmp
-          val ostrm2 = TextIO.openOut smltmp
-          val ostrm3 = TextIO.openOut dattmp
+     (let val holdatfile = concat["./",name,".dat"]
+          val ostrm1 = Portable.open_out(concat["./",name,".sig"])
+          val ostrm2 = Portable.open_out(concat["./",name,".sml"])
+          val ostrm3 = Portable.open_out(holdatfile)
           val time_now = total_cpu (Timer.checkCPUTimer Globals.hol_clock)
           val time_since = Time.-(time_now, !new_theory_time)
           val tstr = Lib.time_to_string time_since
           val () = mesg ("Exporting theory "^Lib.quote thyname^" ... ");
           val () = anonymous_thms := (0,[])
           val () = theory_out (TheoryPP.pp_thydata structthry) ostrm3;
-          val hash = SHA1.sha1_file {filename=dattmp}
-          (* Replace dst with src iff they differ in content.  Otherwise
-             discard src, leaving dst (and its mtime) alone.  When dst
-             does not yet exist we always install src.  Caller may pass
-             the src file's sha1 if already known. *)
-          fun install_if_changed {src, dst, src_hash} =
-              let fun ren () = OS.FileSys.rename {old = src, new = dst}
-                  fun rm () = OS.FileSys.remove src handle _ => ()
-                  fun hashOf NONE = SHA1.sha1_file {filename = src}
-                    | hashOf (SOME h) = h
-              in
-                if OS.FileSys.access (dst, [OS.FileSys.A_READ]) then
-                  let val dst_hash = SHA1.sha1_file {filename = dst}
-                  in
-                    if hashOf src_hash = dst_hash then rm () else ren ()
-                  end
-                else ren ()
-              end
+          val datfile = fromHOLFS holdatfile
+          val hash = SHA1.sha1_file {filename=datfile}
       in
         theory_out (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
         theory_out (TheoryPP.pp_struct hash structthry) ostrm2;
-        install_if_changed {src = dattmp, dst = datfile,
-                            src_hash = SOME hash};
-        install_if_changed {src = sigtmp, dst = sigfile, src_hash = NONE};
-        install_if_changed {src = smltmp, dst = smlfile, src_hash = NONE};
         Tracing.trace_theory name {
           theory    = thyname,
           parents   = #parents structthry,
