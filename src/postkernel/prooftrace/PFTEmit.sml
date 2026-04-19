@@ -1044,80 +1044,145 @@ fun emit_theory {trace, output, binary, ruleset} = let
       end
 
     | Def_spec_prf (a, b) => let
+        (* Candle's new_specification requires each hypothesis ti in
+           [v_1=t_1,...,v_n=t_n] ⊢ p to be CLOSED (pft-ruleset-candle.md
+           §212).  From input ⊢ ∃v_1...∃v_n. body we:
+             1. build closed Hilbert-select witnesses
+                  W_i = @(λv_i. body_i [W_1/v_1,...,W_{i-1}/v_{i-1}])
+                (note: W_j substituted, not the constant-named variables);
+             2. peel the existentials using W_i as witness at each step
+                to get  ⊢ body [W_1/v_1,...,W_n/v_n]  (no hypotheses);
+             3. congruence-rewrite over body's AST to turn each v_i
+                position from W_i into a fresh variable c_var_i (named
+                after the constant), using ASSUME(c_var_i=W_i)+SYM.
+           The final theorem {c_var_i=W_i} ⊢ body[c_var/v] with closed W_i
+           is exactly what new_specification accepts. *)
+
         val const_ptrs = list heap (fn p => p) b
         val input_th = th a
         val input_concl_id = tm (heap_concl a)
+        val n = List.length const_ptrs
+        val () = if n = 0
+                 then raise Fail "Def_spec_prf: empty constants list"
+                 else ()
 
-        (* Iterate over constants, stripping one existential per
-           constant and replacing each witness with a fresh variable
-           whose name matches the constant being defined.  After the
-           loop we have {c1=w1,...,cn=wn} ⊢ P c1 ... cn which is
-           exactly the input that new_specification expects. *)
-        fun strip_one (const_ptr, (th_acc, exists_tm, names)) = let
-          val (_, pred_id) = pft_dest_comb exists_tm
-          val (bv_id, body_id) = pft_dest_abs pred_id
-          val v_ty = pft_type_of bv_id
-          val Ab = emit_tyop "fun" [v_ty, bool_tyid]
-          val select_c = emit_const "@" (emit_tyop "fun" [Ab, v_ty])
-          val witness = emit_comb select_c pred_id
-          val (Thy, Name) = get_const_id const_ptr
-          val cname = tr_name (Thy ^ "$" ^ Name)
-          val var_i = emit_var cname v_ty
-          val () = mark_const Name
+        (* Destructure ∃v_1...∃v_n. body into [v_1,...,v_n] and body.
+           Also collect each intermediate body_i = ∃v_{i+1}...∃v_n. body. *)
+        fun strip_exists 0 body acc_v acc_body =
+              (rev acc_v, rev acc_body, body)
+          | strip_exists k tm_id acc_v acc_body =
+              let val (_, pred) = pft_dest_comb tm_id
+                  val (v, body) = pft_dest_abs pred
+              in strip_exists (k-1) body (v::acc_v) (body::acc_body) end
+        val (vs, bodies, body_raw) =
+              strip_exists n input_concl_id [] []
 
-          (* Build equality var_i = witness and assume it *)
-          val eq_ty = emit_tyop "fun" [v_ty, emit_tyop "fun" [v_ty, bool_tyid]]
-          val eq_tm = emit_comb (emit_comb (emit_const "=" eq_ty) var_i) witness
-          val sym_eq = c_sym (c_assume eq_tm)
-          (* sym_eq: {var_i = witness} ⊢ witness = var_i *)
+        (* Per-constant data: constant-name variable c_var_i at v_i's type,
+           plus the cname string for the final new_specification call.
+           Also registers each constant via mark_const. *)
+        fun mk_const_var (cp, v_id) = let
+              val (Thy, Name) = get_const_id cp
+              val cname = tr_name (Thy ^ "$" ^ Name)
+              val v_ty = pft_type_of v_id
+              val () = mark_const Name
+            in (cname, emit_var cname v_ty, v_ty) end
+        val cvt = List.map mk_const_var (ListPair.zipEq (const_ptrs, vs))
+        val cnames = List.map #1 cvt
 
-          (* Strip one existential using EXISTS_DEF_HOL4:
-               ⊢ ? = λP. P(@P)  (at type A)
-             INST_TYPE A := v_ty, then AP_THM with pred_id:
-               ⊢ ?pred = (λP. P(@P)) pred
-             beta-reduce and TRANS:
-               ⊢ ?pred = pred(@pred)  i.e. ?pred = pred(witness)
-             EQ_MP with th_acc:
-               ... ⊢ pred(witness) *)
-          val exists_def = c_inst_type
-                (candle_load_pth "candle$EXISTS_DEF_HOL4")
-                [(tyvar_A, v_ty)]
-          (* exists_def: ⊢ ?(v_ty) = λP:(v_ty→bool). P(@P) *)
-          val ap_th = c_mk_comb exists_def (c_refl pred_id)
-          (* ap_th: ⊢ ?pred = (λP. P(@P)) pred *)
-          val lam_body = emit_comb (emit_var "P" Ab)
-                (emit_comb select_c (emit_var "P" Ab))
-          val lam_P_select = emit_abs (emit_var "P" Ab) lam_body
-          val beta1 = do_beta_reduce lam_P_select pred_id
-          (* beta1: ⊢ (λP. P(@P)) pred = pred(@pred) *)
-          val strip_eq = c_trans ap_th beta1
-          (* strip_eq: ⊢ ?pred = pred(witness) *)
-          val th1 = c_eq_mp strip_eq th_acc
-          (* th1: ... ⊢ pred(witness) *)
+        (* Phase 1a: build each W_i by substituting earlier W_j's into body_i. *)
+        fun mk_witness (v_id, v_ty, body_i, prev_vw) = let
+              val body_c =
+                List.foldl (fn ((vj, wj), t) => pft_subst_tm vj wj t)
+                           body_i prev_vw
+              val pred_c = emit_abs v_id body_c
+              val Ab = emit_tyop "fun" [v_ty, bool_tyid]
+              val w_i = emit_comb
+                          (emit_const "@" (emit_tyop "fun" [Ab, v_ty]))
+                          pred_c
+            in (pred_c, w_i) end
+        fun build_ws acc [] [] [] = rev acc
+          | build_ws acc ((_, _, v_ty)::cvt') (v_id::vs') (body_i::bodies') = let
+              val prev_vw = List.map (fn (v, _, _, w) => (v, w)) (rev acc)
+              val (pred_c, w_i) = mk_witness (v_id, v_ty, body_i, prev_vw)
+            in build_ws ((v_id, v_ty, pred_c, w_i) :: acc)
+                        cvt' vs' bodies' end
+          | build_ws _ _ _ _ = raise Fail "Def_spec_prf: length mismatch"
+        val wdata = build_ws [] cvt vs bodies
+        (* wdata : [(v_id, v_ty, pred_closed, W_i), ...] *)
 
-          (* Replace witness with variable:
-               AP_TERM pred (witness = var_i): {ci=wi} ⊢ pred(wi) = pred(ci)
-               EQ_MP: {ci=wi,...} ⊢ pred(ci) *)
-          val th2 = c_eq_mp (do_AP_TERM pred_id sym_eq) th1
-          (* th2: {..., ci=wi} ⊢ pred(var_i) *)
+        (* Phase 1b: peel each ∃ using W_i, producing ⊢ body_raw[W/v]. *)
+        fun peel ((_, v_ty, pred_c, w_i), th_acc) = let
+              val Ab = emit_tyop "fun" [v_ty, bool_tyid]
+              val var_P = emit_var "P" Ab
+              val select_c = emit_const "@" (emit_tyop "fun" [Ab, v_ty])
+              val lam_PP = emit_abs var_P
+                             (emit_comb var_P (emit_comb select_c var_P))
+              val exists_def = c_inst_type
+                     (candle_load_pth "candle$EXISTS_DEF_HOL4")
+                     [(tyvar_A, v_ty)]
+              (* ⊢ ?pred_c = (λP. P(@P)) pred_c *)
+              val ap_th = c_mk_comb exists_def (c_refl pred_c)
+              (* ⊢ (λP. P(@P)) pred_c = pred_c (@ pred_c) = pred_c W_i *)
+              val beta_th = do_beta_reduce lam_PP pred_c
+              val strip = c_trans ap_th beta_th
+              (* ⊢ pred_c W_i *)
+              val th1 = c_eq_mp strip th_acc
+              (* ⊢ body_closed_i [W_i / v_id] *)
+            in c_eq_mp (do_beta_reduce pred_c w_i) th1 end
+        val th_closed = List.foldl peel input_th wdata
 
-          (* Beta-reduce: ⊢ pred(var_i) = body[var_i/bv]
-             EQ_MP: {..., ci=wi} ⊢ body[var_i/bv] *)
-          val th3 = c_eq_mp (do_beta_reduce pred_id var_i) th2
+        (* Phase 2: for each i, eq_i : {c_var_i = W_i} ⊢ W_i = c_var_i. *)
+        val v_eqs =
+          List.map
+            (fn ((v_id, v_ty, _, w_i), (_, c_var, _)) => let
+                  val eq_ty = emit_tyop "fun"
+                                [v_ty, emit_tyop "fun" [v_ty, bool_tyid]]
+                  val eq_tm = emit_comb
+                                (emit_comb (emit_const "=" eq_ty) c_var) w_i
+                in (v_id, c_sym (c_assume eq_tm)) end)
+            (ListPair.zipEq (wdata, cvt))
 
-          (* Update exists_tm for next iteration *)
-          val next_exists_tm = pft_subst_tm bv_id var_i body_id
-        in (th3, next_exists_tm, cname :: names) end
+        (* Phase 3: congruence walk over body_raw.
+           cong t : ⊢ t[W/v] = t[c/v], with hypotheses drawn from
+           {c_var_i = W_i}.  At each v_i leaf we emit eq_i; elsewhere
+           we recurse structurally.  No memoization: bodies are small
+           in practice; if profiling shows it matters, memoize on tm_id. *)
+        fun cong tm_id =
+          case List.find (fn (v, _) => v = tm_id) v_eqs of
+            SOME (_, eq_i) => eq_i
+          | NONE => let
+              val f = DArray.sub(tm_part1, tm_id)
+            in if f < 0 then c_refl tm_id  (* VAR or CONST, not a v_i *)
+               else let val x = DArray.sub(tm_part2, tm_id)
+               in if isSome (IntPairTable.lookup comb_ht (f, x))
+                  then c_mk_comb (cong f) (cong x)
+                  else c_abs f (cong x)   (* ABS f x *)
+               end
+            end
 
-      in case const_ptrs of
-           [] => input_th
-         | _ => let
-             val (final_th, _, rev_names) =
-               List.foldl strip_one (input_th, input_concl_id, []) const_ptrs
-             val names = List.rev rev_names
-           in PFTWriter.Candle.new_specification out result_id final_th names;
-              result_id
-           end
+        (* Sanity: every v_i must occur free in body_raw, else the
+           corresponding hypothesis would be missing from final_th and
+           new_specification would reject (or accept a malformed input). *)
+        fun occurs_free v_id tm_id =
+            tm_id = v_id orelse
+            (let val f = DArray.sub(tm_part1, tm_id)
+             in f >= 0 andalso
+                  let val x = DArray.sub(tm_part2, tm_id)
+                  in if isSome (IntPairTable.lookup comb_ht (f, x))
+                     then occurs_free v_id f orelse occurs_free v_id x
+                     else f <> v_id andalso occurs_free v_id x
+                  end
+             end)
+        val () = List.app
+          (fn (v_id, _) =>
+             if occurs_free v_id body_raw then ()
+             else raise Fail ("Def_spec_prf: some v_i does not appear "
+                    ^ "free in body; cannot form required hypothesis"))
+          v_eqs
+
+        val final_th = c_eq_mp (cong body_raw) th_closed
+      in PFTWriter.Candle.new_specification out result_id final_th cnames;
+         result_id
       end
 
     | Def_tyop_prf (a, b, c) => let
