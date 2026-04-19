@@ -806,12 +806,14 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
     | Mk_comb_prf (a, b, c) => r_trans (th a) (c_mk_comb (th b) (th c))
 
-    | Mk_abs_prf (a, _, c) => let
+    | Mk_abs_prf (a, b, c) => let
+        (* ABS over the heap's Bvar as a free Fv (emitted via `tm b`), not
+           over the fresh binder that emit_term allocated inside a_th's
+           lambda: Bvar's free occurrences in c_th use the former, so only
+           that choice makes TRANS's mid-terms alpha-equivalent. *)
         val a_th = th a val c_th = th c
-        val concl_id = tm (heap_concl a)
-        val (_, rhs_id) = pft_dest_comb concl_id
-        val (v_id, _) = pft_dest_abs rhs_id
-      in r_trans a_th (c_abs v_id c_th) end
+        val bv_id = tm b
+      in r_trans a_th (c_abs bv_id c_th) end
 
     | Beta_prf a => let
         val a_th = th a
