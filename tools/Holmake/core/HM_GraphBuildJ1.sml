@@ -45,6 +45,20 @@ fun 'a graphbuildj1 static_info =
         open HM_DepGraph
         val _ = diagK "Entering HMGBJ1.build_graph"
         val bc = build_command g
+        fun lock_key_for (nI : 'a nodeInfo) =
+            case #command nI of
+                BuiltInCmd (BIC_BuildScript thyname, _) =>
+                  SOME (OS.Path.file thyname ^ "Script")
+              | BuiltInCmd (BIC_Compile, _) =>
+                  SOME (fromFile (hm_target.filepart (#target nI)))
+              | SomeCmd c => SOME ("cmd-" ^ c)
+              | NoCmd => NONE
+        fun acquire_for nI =
+            case lock_key_for nI of
+                NONE => HM_BuildLock.nolock
+              | SOME key =>
+                  HM_BuildLock.acquire
+                    {dir = hmdir.toAbsPath (#dir nI), key = key, warn = warn}
         fun recurse retval g =
           case find_runnable g of
               NONE => (retval, g)
@@ -57,9 +71,11 @@ fun 'a graphbuildj1 static_info =
                 fun eBuildArticle (s,deps) = BuildArticle(s,deps,extra)
                 fun eProcessArticle s = ProcessArticle(s,extra)
                 val _ = hmdir.chdir (#dir nI)
+                val lh = acquire_for nI
                 val deps = map #2 (#dependencies nI)
                 fun k upd res =
                   let
+                    val _ = HM_BuildLock.release lh
                     val g = upd (b2status res) g
                   in
                     if res then recurse retval g
