@@ -988,17 +988,10 @@ fun apply_susp_delta d (tab : susp_table) : susp_table =
       | RemoveSuspended n =>
           (Symtab.delete n tab handle _ => tab)
 
-val susp_ed : susp_delta ed =
-    let
-      val add_ed = pair_ed (string_ed, thm_ed)
-      val rm_ed = string_ed
-      fun toSum (AddSuspended p) = inl p
-        | toSum (RemoveSuspended s) = inr s
-      fun fromSum (inl p) = AddSuspended p
-        | fromSum (inr s) = RemoveSuspended s
-    in
-      bij_ed (fromSum, toSum) (tagged_sum ("add", add_ed) ("rm", rm_ed))
-    end
+val (susp_enc, susp_dec) = bij_ed (
+      (fn AddSuspended p => inl p | RemoveSuspended s => inr s),
+      (fn inl p => AddSuspended p | inr s => RemoveSuspended s)
+    ) (tagged_sum ("add", pair_ed (string_ed, thm_ed)) ("rm", string_ed))
 
 val {record_delta = record_suspension_delta,
      get_global_value = get_susp_global,
@@ -1010,7 +1003,7 @@ val {record_delta = record_suspension_delta,
                 initial_values = [("min", empty_susp_table)],
                 apply_delta = apply_susp_delta},
       uptodate_delta = K true,
-      sexps = {dec = #2 susp_ed, enc = #1 susp_ed},
+      sexps = {dec = susp_dec, enc = susp_enc},
       globinfo = {apply_to_global = apply_susp_delta,
                   thy_finaliser = NONE,
                   initial_value = empty_susp_table}
@@ -1063,17 +1056,11 @@ val reskey_ed : res_key ed =
       raw
     end
 
-val res_ed : res_delta ed =
-    let
-      val add_ed = pair_ed (reskey_ed, thm_ed)
-      val rm_ed = pair_ed (string_ed, string_ed)
-      fun toSum (AddResumption p) = inl p
-        | toSum (RemoveResumptions p) = inr p
-      fun fromSum (inl p) = AddResumption p
-        | fromSum (inr p) = RemoveResumptions p
-    in
-      bij_ed (fromSum, toSum) (tagged_sum ("add", add_ed) ("rm", rm_ed))
-    end
+val (res_enc, res_dec) = bij_ed (
+      (fn AddResumption p => inl p | RemoveResumptions p => inr p),
+      (fn inl p => AddResumption p | inr p => RemoveResumptions p)
+    ) (tagged_sum ("add", pair_ed (reskey_ed, thm_ed))
+                  ("rm", pair_ed (string_ed, string_ed)))
 
 val {record_delta = record_resumption_delta,
      get_global_value = get_res_global,
@@ -1085,7 +1072,7 @@ val {record_delta = record_resumption_delta,
                 initial_values = [("min", empty_res_dict)],
                 apply_delta = apply_res_delta},
       uptodate_delta = K true,
-      sexps = {dec = #2 res_ed, enc = #1 res_ed},
+      sexps = {dec = res_dec, enc = res_enc},
       globinfo = {apply_to_global = apply_res_delta,
                   thy_finaliser = NONE,
                   initial_value = empty_res_dict}
