@@ -978,7 +978,7 @@ datatype susp_delta =
     AddSuspended of string * thm
   | RemoveSuspended of string
 
-type susp_table = (string, thm) Symtab.table
+type susp_table = thm Symtab.table
 
 val empty_susp_table : susp_table = Symtab.empty
 
