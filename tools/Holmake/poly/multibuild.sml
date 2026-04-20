@@ -59,9 +59,11 @@ fun graphbuild optinfo g =
   let
     val { build_command,
           mosml_build_command : GraphExtra.t mosml_build_command,
-          warn, tgtfatal, diag,
-          keep_going, quiet, hmenv, jobs, info, time_limit, maxheap,
-          relocbuild, thmsrc } = optinfo
+          diag,
+          keep_going, quiet, hmenv, jobs, time_limit, maxheap,
+          relocbuild, thmsrc,
+          outs : Holmake_tools.output_functions } = optinfo
+    val {warn, info, tgtfatal, ...} = outs
     val _ = diag "Starting graphbuild"
     (* Per-target locking: track locks for active build targets *)
     type lockkey = hmdir.t * string
@@ -320,7 +322,7 @@ fun graphbuild optinfo g =
                               case cache_url of
                                   NONE => false
                                 | SOME (HM_Core_Cline.Fetch, url) =>
-                                  HolmakeCacheFetch.fetch url cachekey info warn
+                                  HolmakeCacheFetch.fetch url cachekey outs
                                 | SOME (HM_Core_Cline.Write, _) => false
                           in
                             diag ("New graph job for "^target_s^

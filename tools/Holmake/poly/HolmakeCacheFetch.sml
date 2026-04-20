@@ -15,8 +15,9 @@ fun copy src dest =
     in  loop (); true end
     handle _ => false
 
-fun upload base_url cachekey dir thyname info warn =
+fun upload base_url cachekey dir thyname (ofns : Holmake_tools.output_functions) =
     let
+        val {info, warn, ...} = ofns
         val _ = OS.FileSys.mkDir base_url handle OS.SysErr _ => ()
         val theory_exts = [".sig", ".sml", ".dat"]
         fun is_theory_file f =
@@ -61,11 +62,11 @@ fun upload base_url cachekey dir thyname info warn =
     in
         if ok then (info ("Cached " ^ thyname); true)
         else (warn ("Cache failed for " ^ thyname); false)
-    end
-    handle e => (warn ("Write failed: " ^ exnMessage e); false)
+    end handle e => (#warn ofns ("Write failed: " ^ exnMessage e); false)
 
-fun fetch base_url cachekey info warn =
+fun fetch base_url cachekey (ofns : Holmake_tools.output_functions) =
     let
+        val {info, warn, ...} = ofns
         val fetch_to_file = copy
         val key_url = base_url ^ "/key/" ^ cachekey
         val file = OS.FileSys.tmpName()

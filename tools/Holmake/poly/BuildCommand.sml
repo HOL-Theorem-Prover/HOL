@@ -492,7 +492,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       | BR_ClineK{cline = (_,cl), job_kont = k, cache_url, cachekey, ...} =>
         (case cache_url of
              SOME (HM_Core_Cline.Fetch, url) =>
-                 HolmakeCacheFetch.fetch url cachekey info warn orelse
+                 HolmakeCacheFetch.fetch url cachekey outs orelse
                  k warn (Systeml.systeml cl)
            | SOME (HM_Core_Cline.Write, _) => k warn (Systeml.systeml cl)
            | NONE => k warn (Systeml.systeml cl))
@@ -525,15 +525,14 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     relocbuild = relocbuild,
                                     thmsrc = thmsrc,
                                     mosml_build_command = mosml_build_command,
-                                    warn = warn, tgtfatal = tgtfatal,
                                     keep_going = keep_going,
                                     diag =
                                       (fn s => diag "multibuild" (fn _ => s)),
-                                    info = #info outs,
                                     time_limit = time_limit,
                                     maxheap = maxheap,
                                     quiet = quiet_flag, hmenv = hmenv,
-                                    jobs = jobs } g |> interpret_graph)
+                                    jobs = jobs,
+                                    outs = outs } g |> interpret_graph)
 in
   {extra_impl_deps = [],
    build_graph = build_graph}
