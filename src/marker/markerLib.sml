@@ -993,8 +993,9 @@ val (susp_enc, susp_dec) = bij_ed (
       (fn inl p => AddSuspended p | inr s => RemoveSuspended s)
     ) (tagged_sum ("add", pair_ed (string_ed, thm_ed)) ("rm", string_ed))
 
-val {record_delta = record_suspension_delta,
+val {record_delta = record_suspension_delta_raw,
      get_global_value = get_susp_global,
+     update_global_value = update_susp_global,
      DB = susp_DB,
      merge = susp_merge, ...} :
     (susp_delta, susp_table) AncestryData.fullresult =
@@ -1008,6 +1009,11 @@ val {record_delta = record_suspension_delta,
                   thy_finaliser = NONE,
                   initial_value = empty_susp_table}
     }
+
+(* Wrapper that both persists the delta and updates the in-memory global *)
+fun record_suspension_delta d =
+    (record_suspension_delta_raw d;
+     update_susp_global (apply_susp_delta d))
 
 (* --- suspension.resumptions store --- *)
 
@@ -1062,8 +1068,9 @@ val (res_enc, res_dec) = bij_ed (
     ) (tagged_sum ("add", pair_ed (reskey_ed, thm_ed))
                   ("rm", pair_ed (string_ed, string_ed)))
 
-val {record_delta = record_resumption_delta,
+val {record_delta = record_resumption_delta_raw,
      get_global_value = get_res_global,
+     update_global_value = update_res_global,
      DB = res_DB,
      merge = res_merge, ...} :
     (res_delta, res_dict) AncestryData.fullresult =
@@ -1077,6 +1084,11 @@ val {record_delta = record_resumption_delta,
                   thy_finaliser = NONE,
                   initial_value = empty_res_dict}
     }
+
+(* Wrapper that both persists the delta and updates the in-memory global *)
+fun record_resumption_delta d =
+    (record_resumption_delta_raw d;
+     update_res_global (apply_res_delta d))
 
 end (* local opening ThyDataSexp *)
 
