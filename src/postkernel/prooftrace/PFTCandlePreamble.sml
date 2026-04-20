@@ -42,16 +42,23 @@ fun emit {output, binary} = let
   (* Term constructors                                                *)
   (* ================================================================ *)
 
-  (* Memoized term construction using (tag, int, int) keys.
-     tag: 0=var, 1=const, 2=comb, 3=abs
-     For var/const: key is hash of name + type id
-     For comb/abs: key is (a, b) *)
+  (* Memoized term construction.
+     For var/const: key is (name, type_id)
+     For comb: key is (rator_id, rand_id) *)
   val comb_memo : (int * int * int) list ref = ref []
                    (* (rator, rand, result_id) *)
-  val abs_memo  : (int * int * int) list ref = ref []
 
   val var_memo   : (string * int * int) list ref = ref []
   val const_memo : (string * int * int) list ref = ref []
+
+  (* Binder naming to satisfy PFTRename assumptions *)
+  val binder_infix = " pft%"
+  val binder_ctr = ref 0
+  fun fresh_binder_name base =
+    let val n = !binder_ctr
+    in binder_ctr := n + 1;
+       base ^ binder_infix ^ Int.toString n
+    end
 
   fun mk_var name ty =
     case List.find (fn (n,t,_) => n = name andalso t = ty) (!var_memo) of
@@ -80,15 +87,19 @@ fun emit {output, binary} = let
            comb_memo := (f, x, id) :: !comb_memo;
            id
         end
-  fun mk_abs v b =
-    case List.find (fn (a,c,_) => a = v andalso c = b) (!abs_memo) of
-      SOME (_, _, id) => id
-    | NONE =>
-        let val id = alloc_tm()
-        in PFTWriter.abs out id v b;
-           abs_memo := (v, b, id) :: !abs_memo;
-           id
-        end
+
+  (* mk_abs: create a lambda abstraction with a fresh pft%-named binder.
+     body_fn receives the binder term id and returns the body term id.
+     Returns {lam, bv} where lam is the lambda term and bv is the binder var. *)
+  fun mk_abs name ty (body_fn : int -> int) : {lam: int, bv: int} =
+    let val bname = fresh_binder_name name
+        val binder = alloc_tm()
+        val () = PFTWriter.var out binder bname ty
+        val body = body_fn binder
+        val id = alloc_tm()
+    in PFTWriter.abs out id binder body;
+       {lam = id, bv = binder}
+    end
 
   fun mk_eq eq_c l r = mk_comb (mk_comb eq_c l) r
 
@@ -226,7 +237,7 @@ fun emit {output, binary} = let
   (*    T = ((\p:bool. p) = (\p:bool. p))                             *)
   (* ================================================================ *)
 
-  val lam_p_p = mk_abs var_p var_p                (* \p. p *)
+  val {lam=lam_p_p, bv=bv_p_p} = mk_abs "p" ty_bool (fn p => p)  (* \p. p *)
   val rhs_T = mk_eq eq_bb lam_p_p lam_p_p        (* (\p.p) = (\p.p) *)
 
   val var_T_v = mk_var "T" ty_bool
@@ -276,19 +287,19 @@ fun emit {output, binary} = let
   (* types and eq constants already defined above *)
 
   (* Body: (\f. f p q) = (\f. f T T) *)
-  val fp = mk_comb var_f var_p                   (* f p *)
-  val fpq = mk_comb fp var_q                     (* f p q *)
-  val lam_fpq = mk_abs var_f fpq                 (* \f. f p q *)
+  val {lam=lam_fpq, bv=bv_f_fpq} = mk_abs "f" ty_bbb (fn f =>
+    let val fp = mk_comb f var_p
+    in mk_comb fp var_q end)                     (* \f. f p q *)
 
-  val fT = mk_comb var_f const_T                 (* f T *)
-  val fTT = mk_comb fT const_T                   (* f T T *)
-  val lam_fTT = mk_abs var_f fTT                 (* \f. f T T *)
+  val {lam=lam_fTT, bv=bv_f_fTT} = mk_abs "f" ty_bbb (fn f =>
+    let val fT = mk_comb f const_T
+    in mk_comb fT const_T end)                   (* \f. f T T *)
 
   val and_body = mk_eq eq_bbb_b lam_fpq lam_fTT
   (* (\f. f p q) = (\f. f T T) *)
 
-  val and_inner = mk_abs var_q and_body          (* \q. body *)
-  val and_rhs = mk_abs var_p and_inner            (* \p. \q. body *)
+  val {lam=and_inner, bv=bv_q_and} = mk_abs "q" ty_bool (fn _ => and_body)  (* \q. body *)
+  val {lam=and_rhs, bv=bv_p_and} = mk_abs "p" ty_bool (fn _ => and_inner)   (* \p. \q. body *)
 
   val var_and_v = mk_var "/\\" ty_bbb
   val def_and_tm = mk_eq eq_bbb var_and_v and_rhs
@@ -298,7 +309,7 @@ fun emit {output, binary} = let
   val const_and = mk_const "/\\" ty_bbb
 
   (* and_unfold: ⊢ p /\ q = (\f. f p q) = (\f. f T T) *)
-  val and_unfold = unfold2 AND_DEF and_rhs and_inner var_p var_q
+  val and_unfold = unfold2 AND_DEF and_rhs and_inner bv_p_and bv_q_and
 
   (* Commonly used terms — constructed once *)
   val and_p = mk_comb const_and var_p              (* (/\) p *)
@@ -310,11 +321,23 @@ fun emit {output, binary} = let
   (*   sel2 = \p. \q. q  (second projection)                         *)
   (* ================================================================ *)
 
-  val sel1_inner = mk_abs var_q var_p             (* \q. p *)
-  val sel1 = mk_abs var_p sel1_inner              (* \p. \q. p *)
+  (* For sel1 = \p. \q. p, we need to build it inside-out and track binders *)
+  val (sel1, bv_p_sel1, sel1_inner, bv_q_sel1i) = let
+    val {lam=outer, bv=bv_p} = mk_abs "p" ty_bool (fn p =>
+      let val {lam=inner, bv=_} = mk_abs "q" ty_bool (fn _ => p)
+      in inner end)
+    (* We also need sel1_inner = \q. p with var_p free, for use with INST *)
+    val {lam=inner_free, bv=bv_qi} = mk_abs "q" ty_bool (fn _ => var_p)
+  in (outer, bv_p, inner_free, bv_qi) end
 
-  val sel2_inner = mk_abs var_q var_q             (* \q. q *)
-  val sel2 = mk_abs var_p sel2_inner              (* \p. \q. q *)
+  (* For sel2 = \p. \q. q *)
+  val (sel2, bv_p_sel2, sel2_inner, bv_q_sel2i) = let
+    val {lam=outer, bv=bv_p} = mk_abs "p" ty_bool (fn _ =>
+      let val {lam=inner, bv=_} = mk_abs "q" ty_bool (fn q => q)
+      in inner end)
+    (* sel2_inner = \q. q for use with INST *)
+    val {lam=inner_id, bv=bv_qi} = mk_abs "q" ty_bool (fn q => q)
+  in (outer, bv_p, inner_id, bv_qi) end
 
   (* ================================================================ *)
   (* sel_app_eq: derive ⊢ (\f. f a b) sel = result                   *)
@@ -325,34 +348,34 @@ fun emit {output, binary} = let
   (* ================================================================ *)
 
   (* ⊢ (\f. f p q) f = f p q  [restricted BETA, f is bound var] *)
-  val beta_fpq = BETA (mk_comb lam_fpq var_f)
+  val beta_fpq = BETA (mk_comb lam_fpq bv_f_fpq)
   (* ⊢ (\f. f T T) f = f T T *)
-  val beta_fTT = BETA (mk_comb lam_fTT var_f)
+  val beta_fTT = BETA (mk_comb lam_fTT bv_f_fTT)
 
   (* --- sel1 (first projection) applied to (p, q) --- *)
   (* ⊢ sel1 p = \q. p  [restricted BETA] *)
-  val beta_sel1_p = BETA (mk_comb sel1 var_p)
+  val beta_sel1_p = BETA (mk_comb sel1 bv_p_sel1)
   (* ⊢ (\q. p) q = p  [restricted BETA] *)
-  val beta_sel1_inner = BETA (mk_comb sel1_inner var_q)
+  val beta_sel1_inner = BETA (mk_comb sel1_inner bv_q_sel1i)
   (* ⊢ sel1 p q = (\q. p) q  [AP_THM] *)
   (* ⊢ sel1 p q = p          [TRANS] *)
   val sel1_pq_eq_p =
-    TRANS (AP_THM beta_sel1_p var_q) beta_sel1_inner
+    TRANS (AP_THM beta_sel1_p bv_q_sel1i) beta_sel1_inner
 
   (* ⊢ (\f. f p q) sel1 = sel1 p q  [INST f->sel1] *)
   (* ⊢ (\f. f p q) sel1 = p         [TRANS] *)
   val lhs_sel1_pq =
-    TRANS (INST beta_fpq [(var_f, sel1)]) sel1_pq_eq_p
+    TRANS (INST beta_fpq [(bv_f_fpq, sel1)]) sel1_pq_eq_p
 
   (* --- sel1 applied to (T, T) --- *)
   (* ⊢ sel1 T = \q. T  [INST p->T in beta_sel1_p] *)
-  val beta_sel1_T = INST beta_sel1_p [(var_p, const_T)]
+  val beta_sel1_T = INST beta_sel1_p [(bv_p_sel1, const_T)]
   (* Need term \q. T *)
-  val lam_q_T = mk_abs var_q const_T
+  val {lam=lam_q_T, bv=bv_q_T} = mk_abs "q" ty_bool (fn _ => const_T)
   (* ⊢ (\q. T) q = T  [restricted BETA] *)
-  val beta_lam_q_T = BETA (mk_comb lam_q_T var_q)
+  val beta_lam_q_T = BETA (mk_comb lam_q_T bv_q_T)
   (* ⊢ (\q. T) T = T  [INST q->T] *)
-  val beta_lam_q_T_T = INST beta_lam_q_T [(var_q, const_T)]
+  val beta_lam_q_T_T = INST beta_lam_q_T [(bv_q_T, const_T)]
   (* ⊢ sel1 T T = (\q. T) T  [AP_THM] *)
   (* ⊢ sel1 T T = T           [TRANS] *)
   val sel1_TT_eq_T =
@@ -361,27 +384,27 @@ fun emit {output, binary} = let
   (* ⊢ (\f. f T T) sel1 = sel1 T T  [INST f->sel1] *)
   (* ⊢ (\f. f T T) sel1 = T         [TRANS] *)
   val rhs_sel1_TT =
-    TRANS (INST beta_fTT [(var_f, sel1)]) sel1_TT_eq_T
+    TRANS (INST beta_fTT [(bv_f_fTT, sel1)]) sel1_TT_eq_T
 
   (* --- sel2 (second projection) applied to (p, q) --- *)
-  val beta_sel2_p = BETA (mk_comb sel2 var_p)   (* ⊢ sel2 p = \q. q *)
-  val beta_sel2_inner = BETA (mk_comb sel2_inner var_q)  (* ⊢ (\q. q) q = q *)
+  val beta_sel2_p = BETA (mk_comb sel2 bv_p_sel2)   (* ⊢ sel2 p = \q. q *)
+  val beta_sel2_inner = BETA (mk_comb sel2_inner bv_q_sel2i)  (* ⊢ (\q. q) q = q *)
   val sel2_pq_eq_q =
-    TRANS (AP_THM beta_sel2_p var_q) beta_sel2_inner
+    TRANS (AP_THM beta_sel2_p bv_q_sel2i) beta_sel2_inner
 
   val lhs_sel2_pq =
-    TRANS (INST beta_fpq [(var_f, sel2)]) sel2_pq_eq_q
+    TRANS (INST beta_fpq [(bv_f_fpq, sel2)]) sel2_pq_eq_q
 
   (* --- sel2 applied to (T, T) --- *)
-  val beta_sel2_T = INST beta_sel2_p [(var_p, const_T)]
+  val beta_sel2_T = INST beta_sel2_p [(bv_p_sel2, const_T)]
   (* ⊢ (\q. q) q = q  [same as beta_sel2_inner] *)
   (* ⊢ (\q. q) T = T  [INST q->T] *)
-  val beta_sel2_inner_T = INST beta_sel2_inner [(var_q, const_T)]
+  val beta_sel2_inner_T = INST beta_sel2_inner [(bv_q_sel2i, const_T)]
   val sel2_TT_eq_T =
     TRANS (AP_THM beta_sel2_T const_T) beta_sel2_inner_T
 
   val rhs_sel2_TT =
-    TRANS (INST beta_fTT [(var_f, sel2)]) sel2_TT_eq_T
+    TRANS (INST beta_fTT [(bv_f_fTT, sel2)]) sel2_TT_eq_T
 
   (* ================================================================ *)
   (* CONJUNCT1_pth: {p /\ q} ⊢ p                                    *)
@@ -439,8 +462,8 @@ fun emit {output, binary} = let
 
   (* RHS: \p q. (p /\ q) = p *)
   val imp_body = mk_eq eq_bool tm_pq var_p        (* (p /\ q) = p *)
-  val imp_inner = mk_abs var_q imp_body            (* \q. (p /\ q) = p *)
-  val imp_rhs = mk_abs var_p imp_inner             (* \p. \q. (p /\ q) = p *)
+  val {lam=imp_inner, bv=bv_q_imp} = mk_abs "q" ty_bool (fn _ => imp_body)  (* \q. (p /\ q) = p *)
+  val {lam=imp_rhs, bv=bv_p_imp} = mk_abs "p" ty_bool (fn _ => imp_inner)   (* \p. \q. (p /\ q) = p *)
 
   val var_imp_v = mk_var "==>" ty_bbb
   val def_imp_tm = mk_eq eq_bbb var_imp_v imp_rhs
@@ -450,7 +473,7 @@ fun emit {output, binary} = let
   val const_imp = mk_const "==>" ty_bbb
 
   (* imp_unfold: ⊢ (p ==> q) = ((p /\ q) = p) *)
-  val imp_unfold = unfold2 IMP_DEF imp_rhs imp_inner var_p var_q
+  val imp_unfold = unfold2 IMP_DEF imp_rhs imp_inner bv_p_imp bv_q_imp
   val tm_imp_pq = mk_comb (mk_comb const_imp var_p) var_q  (* p ==> q *)
 
   (* ================================================================ *)
@@ -566,10 +589,10 @@ fun emit {output, binary} = let
   (*    ! = \P:A->bool. P = \x. T                                    *)
   (* ================================================================ *)
 
-  val lam_x_T = mk_abs var_x const_T              (* \x. T *)
+  val {lam=lam_x_T, bv=bv_x_T} = mk_abs "x" ty_A (fn _ => const_T)  (* \x. T *)
   val forall_body = mk_eq eq_Ab var_P lam_x_T
   (* P = \x. T *)
-  val forall_rhs = mk_abs var_P forall_body        (* \P. P = \x. T *)
+  val {lam=forall_rhs, bv=bv_P_forall} = mk_abs "P" ty_Ab (fn _ => forall_body)  (* \P. P = \x. T *)
 
   val var_forall_v = mk_var "!" ty_Ab_b
   val def_forall_tm = mk_eq eq_Ab_b var_forall_v forall_rhs
@@ -581,7 +604,7 @@ fun emit {output, binary} = let
   (* forall_unfold: ⊢ !P = (P = \x. T) *)
   val forall_unfold_th =
     let val th1 = AP_THM FORALL_DEF var_P
-        val th2 = beta_reduce forall_rhs var_P var_P
+        val th2 = beta_reduce forall_rhs bv_P_forall bv_P_forall
     in TRANS th1 th2 end
   (* ⊢ !P = (P = \x. T) *)
 
@@ -596,7 +619,7 @@ fun emit {output, binary} = let
   val tm_Px = mk_comb var_P var_x                  (* P x *)
   val th_spec2 = AP_THM th_spec1 var_x
   (* {!P} ⊢ P x = (\x. T) x *)
-  val th_spec3 = TRANS th_spec2 (beta_reduce lam_x_T var_x var_x)
+  val th_spec3 = TRANS th_spec2 (beta_reduce lam_x_T bv_x_T bv_x_T)
   (* {!P} ⊢ P x = T *)
   val th_spec4 = eqtElim th_spec3
   (* {!P} ⊢ P x *)
@@ -675,17 +698,18 @@ fun emit {output, binary} = let
   (* P x ==> q *)
   val tm_Px_imp_q = mk_comb (mk_comb const_imp tm_Px) var_q
   (* \x. P x ==> q *)
-  val lam_x_Px_imp_q = mk_abs var_x tm_Px_imp_q
+  val {lam=lam_x_Px_imp_q, bv=bv_x_Pxq} = mk_abs "x" ty_A (fn x =>
+    mk_comb (mk_comb const_imp (mk_comb var_P x)) var_q)
   (* !x. P x ==> q  — need ! at type A *)
   val tm_forall_x_Px_imp_q = mk_comb const_forall lam_x_Px_imp_q
   (* (!x. P x ==> q) ==> q *)
   val tm_inner_imp = mk_comb (mk_comb const_imp tm_forall_x_Px_imp_q) var_q
   (* \q. (!x. P x ==> q) ==> q *)
-  val lam_q_inner = mk_abs var_q tm_inner_imp
+  val {lam=lam_q_inner, bv=bv_q_inner} = mk_abs "q" ty_bool (fn _ => tm_inner_imp)
   (* !q. (!x. P x ==> q) ==> q *)
   val exists_body = mk_comb const_forall_bool lam_q_inner
 
-  val exists_rhs = mk_abs var_P exists_body         (* \P. !q. ... *)
+  val {lam=exists_rhs, bv=bv_P_exists} = mk_abs "P" ty_Ab (fn _ => exists_body)  (* \P. !q. ... *)
 
   val var_exists_v = mk_var "?" ty_Ab_b
   val def_exists_tm = mk_eq eq_Ab_b var_exists_v exists_rhs
@@ -697,7 +721,7 @@ fun emit {output, binary} = let
   (* exists_unfold: ⊢ ?P = !q. (!x. P x ==> q) ==> q *)
   val exists_unfold_th =
     let val th1 = AP_THM EXISTS_DEF var_P
-        val th2 = beta_reduce exists_rhs var_P var_P
+        val th2 = beta_reduce exists_rhs bv_P_exists bv_P_exists
     in TRANS th1 th2 end
 
   val tm_exists_P = mk_comb const_exists var_P       (* ?P *)
@@ -722,8 +746,8 @@ fun emit {output, binary} = let
   val spec_inst = INST SPEC_pth [(var_P, lam_x_Px_imp_q)]
   (* ⊢ (!(\x. P x ==> q)) ==> (\x. P x ==> q) x *)
   (* Need to beta-reduce (\x. P x ==> q) x *)
-  val tm_lam_app = mk_comb lam_x_Px_imp_q var_x
-  val th_beta_lam = beta_reduce lam_x_Px_imp_q var_x var_x
+  val tm_lam_app = mk_comb lam_x_Px_imp_q bv_x_Pxq
+  val th_beta_lam = beta_reduce lam_x_Px_imp_q bv_x_Pxq bv_x_Pxq
   (* ⊢ (\x. P x ==> q) x = (P x ==> q) *)
 
   (* The SPEC conclusion has (\x. P x ==> q) x on the RHS. After MP
@@ -747,9 +771,8 @@ fun emit {output, binary} = let
   (* {P x} ⊢ (!x. P x ==> q) ==> q *)
 
   (* Step 6: GEN q *)
-  val lam_q_forall_imp_q = mk_abs var_q tm_inner_imp  (* same as lam_q_inner *)
-  val th_gen_q = do_GEN var_q th_disch_forall tm_inner_imp
-                        lam_q_forall_imp_q
+  val th_gen_q = do_GEN bv_q_inner th_disch_forall tm_inner_imp
+                        lam_q_inner
   (* {P x} ⊢ !q. (!x. P x ==> q) ==> q *)
 
   (* Step 7: EQ_MP *)
@@ -773,18 +796,17 @@ fun emit {output, binary} = let
 
   (* SPEC Q from the above (at type bool) *)
   (* We need do_SPEC_bool with abs = lam_q_inner, t = var_Q *)
-  val tm_inner_imp_Q = mk_comb (mk_comb const_imp
-    (mk_comb const_forall (mk_abs var_x (mk_comb (mk_comb const_imp tm_Px) var_Q))))
-    var_Q
+  val {lam=lam_x_Px_imp_Q, bv=bv_x_PxQ} = mk_abs "x" ty_A (fn x =>
+    mk_comb (mk_comb const_imp (mk_comb var_P x)) var_Q)
+  val tm_forall_x_Px_imp_Q = mk_comb const_forall lam_x_Px_imp_Q
+  val tm_inner_imp_Q = mk_comb (mk_comb const_imp tm_forall_x_Px_imp_Q) var_Q
   val th_spec_Q_pre = do_SPEC_bool lam_q_inner var_Q th_exists_unfolded
   (* {?P} ⊢ (\q. (!x. P x ==> q) ==> q) Q — un-beta-reduced *)
-  val th_spec_Q = EQ_MP (beta_reduce lam_q_inner var_q var_Q) th_spec_Q_pre
+  val th_spec_Q = EQ_MP (beta_reduce lam_q_inner bv_q_inner var_Q) th_spec_Q_pre
   (* {?P} ⊢ (!x. P x ==> Q) ==> Q *)
 
   (* DISCH (?P) *)
   val tm_Px_imp_Q = mk_comb (mk_comb const_imp tm_Px) var_Q
-  val lam_x_Px_imp_Q = mk_abs var_x tm_Px_imp_Q
-  val tm_forall_x_Px_imp_Q = mk_comb const_forall lam_x_Px_imp_Q
   val tm_conj_ep_inner = mk_comb (mk_comb const_and tm_exists_P) tm_inner_imp_Q
   val CHOOSE_pth = do_DISCH tm_exists_P th_spec_Q tm_inner_imp_Q tm_conj_ep_inner
   (* ⊢ (?P) ==> (!x. P x ==> Q) ==> Q *)
@@ -806,12 +828,12 @@ fun emit {output, binary} = let
   (* (p ==> r) ==> (q ==> r) ==> r *)
   val tm_pr_qr_r = mk_comb (mk_comb const_imp tm_p_imp_r) tm_qr_imp_r
   (* \r. (p ==> r) ==> (q ==> r) ==> r *)
-  val lam_r_body = mk_abs var_r tm_pr_qr_r
+  val {lam=lam_r_body, bv=bv_r_or} = mk_abs "r" ty_bool (fn _ => tm_pr_qr_r)
   (* !r. ... *)
   val or_body = mk_comb const_forall_bool lam_r_body
 
-  val or_inner = mk_abs var_q or_body                (* \q. !r. ... *)
-  val or_rhs = mk_abs var_p or_inner                 (* \p. \q. !r. ... *)
+  val {lam=or_inner, bv=bv_q_or} = mk_abs "q" ty_bool (fn _ => or_body)  (* \q. !r. ... *)
+  val {lam=or_rhs, bv=bv_p_or} = mk_abs "p" ty_bool (fn _ => or_inner)   (* \p. \q. !r. ... *)
 
   val var_or_v = mk_var "\\/" ty_bbb
   val def_or_tm = mk_eq eq_bbb var_or_v or_rhs
@@ -821,7 +843,7 @@ fun emit {output, binary} = let
   val const_or = mk_const "\\/" ty_bbb
 
   (* or_unfold: ⊢ p \/ q = !r. (p ==> r) ==> (q ==> r) ==> r *)
-  val or_unfold = unfold2 OR_DEF or_rhs or_inner var_p var_q
+  val or_unfold = unfold2 OR_DEF or_rhs or_inner bv_p_or bv_q_or
   val or_p = mk_comb const_or var_p
   val tm_p_or_q = mk_comb or_p var_q                 (* p \/ q *)
 
@@ -846,8 +868,7 @@ fun emit {output, binary} = let
   (* {p} ⊢ (p ==> r) ==> (q ==> r) ==> r *)
 
   (* GEN r *)
-  val lam_r_pr_qr_r = lam_r_body  (* already have it *)
-  val th_gen_r = do_GEN var_r th_disch_pr tm_pr_qr_r lam_r_pr_qr_r
+  val th_gen_r = do_GEN bv_r_or th_disch_pr tm_pr_qr_r lam_r_body
   (* {p} ⊢ !r. (p ==> r) ==> (q ==> r) ==> r *)
 
   (* EQ_MP (SYM or_unfold) *)
@@ -873,7 +894,7 @@ fun emit {output, binary} = let
   val th_disch_pr2 = do_DISCH tm_p_imp_r th_disch_qr2 tm_qr_imp_r tm_conj_pr_rest2
   (* {q} ⊢ (p ==> r) ==> (q ==> r) ==> r *)
 
-  val th_gen_r2 = do_GEN var_r th_disch_pr2 tm_pr_qr_r lam_r_pr_qr_r
+  val th_gen_r2 = do_GEN bv_r_or th_disch_pr2 tm_pr_qr_r lam_r_body
   (* {q} ⊢ !r. ... *)
 
   val DISJ2_pth = EQ_MP (SYM or_unfold) th_gen_r2
@@ -891,7 +912,7 @@ fun emit {output, binary} = let
   (* SPEC r *)
   val th_spec_r_pre = do_SPEC_bool lam_r_body var_r th_or_unfolded
   (* {p \/ q} ⊢ (\r. (p ==> r) ==> (q ==> r) ==> r) r — un-beta-reduced *)
-  val th_spec_r = EQ_MP (beta_reduce lam_r_body var_r var_r) th_spec_r_pre
+  val th_spec_r = EQ_MP (beta_reduce lam_r_body bv_r_or bv_r_or) th_spec_r_pre
   (* {p \/ q} ⊢ (p ==> r) ==> (q ==> r) ==> r *)
 
   (* MP with (p ==> r) *)
@@ -927,7 +948,7 @@ fun emit {output, binary} = let
   (* {F} ⊢ !p. p  (i.e., !(\p.p)) *)
   val CONTR_pth_pre = do_SPEC_bool lam_p_p var_p th_F_unfolded
   (* {F} ⊢ (\p. p) p — un-beta-reduced *)
-  val CONTR_pth = EQ_MP (beta_reduce lam_p_p var_p var_p) CONTR_pth_pre
+  val CONTR_pth = EQ_MP (beta_reduce lam_p_p bv_p_p bv_p_p) CONTR_pth_pre
   (* {F} ⊢ p *)
   val () = save "candle$CONTR" CONTR_pth
 
@@ -937,7 +958,8 @@ fun emit {output, binary} = let
   (* ================================================================ *)
 
   val tm_p_imp_F = mk_comb (mk_comb const_imp var_p) const_F  (* p ==> F *)
-  val neg_rhs = mk_abs var_p tm_p_imp_F               (* \p. p ==> F *)
+  val {lam=neg_rhs, bv=bv_p_neg} = mk_abs "p" ty_bool (fn p =>
+    mk_comb (mk_comb const_imp p) const_F)            (* \p. p ==> F *)
 
   val var_neg_v = mk_var "~" ty_bb
   val def_neg_tm = mk_eq eq_bb var_neg_v neg_rhs
@@ -949,7 +971,7 @@ fun emit {output, binary} = let
   (* neg_unfold: ⊢ ~p = (p ==> F) *)
   val neg_unfold =
     let val th1 = AP_THM NEG_DEF var_p
-        val th2 = beta_reduce neg_rhs var_p var_p
+        val th2 = beta_reduce neg_rhs bv_p_neg bv_p_neg
     in TRANS th1 th2 end
 
   val tm_neg_p = mk_comb const_neg var_p               (* ~p *)
@@ -976,9 +998,10 @@ fun emit {output, binary} = let
   val tm_select_P = mk_comb const_select var_P        (* @ P *)
   val tm_P_select = mk_comb var_P tm_select_P          (* P (@ P) *)
   val tm_Px_imp_Pselect = mk_comb (mk_comb const_imp tm_Px) tm_P_select
-  val lam_x_Px_imp_Ps = mk_abs var_x tm_Px_imp_Pselect
+  val {lam=lam_x_Px_imp_Ps, bv=bv_x_Pxips} = mk_abs "x" ty_A (fn x =>
+    mk_comb (mk_comb const_imp (mk_comb var_P x)) tm_P_select)
   val tm_forall_x_inner = mk_comb const_forall lam_x_Px_imp_Ps
-  val lam_P_body = mk_abs var_P tm_forall_x_inner
+  val {lam=lam_P_body, bv=bv_P_selax} = mk_abs "P" ty_Ab (fn _ => tm_forall_x_inner)
   val const_forall_Ab = mk_const "!" ty_Ab_b_b
   val tm_forall_P_body = mk_comb const_forall_Ab lam_P_body
 
@@ -1001,7 +1024,7 @@ fun emit {output, binary} = let
     val lam_P_body_app = mk_comb lam_P_body var_P
     val mp_result = do_MP pth tm_forall_P_body lam_P_body_app SELECT_AX_th
     (* mp_result: ⊢ (λP. ∀x. P x ==> P(@P)) P *)
-  in EQ_MP (beta_reduce lam_P_body var_P var_P) mp_result end
+  in EQ_MP (beta_reduce lam_P_body bv_P_selax bv_P_selax) mp_result end
   (* select_ax_spec: ⊢ !x. P x ==> P (@ P)  with P : A->bool free *)
   val () = save "candle$SELECT_AX_SPEC" select_ax_spec
 
@@ -1013,11 +1036,13 @@ fun emit {output, binary} = let
   val ty_AB = mk_fun ty_A ty_B                        (* A -> B *)
   val var_eta_t = mk_var "t" ty_AB                     (* t : A -> B *)
 
-  val tm_tx = mk_comb var_eta_t var_x                  (* t x *)
-  val lam_x_tx = mk_abs var_x tm_tx                    (* \x. t x *)
+  val {lam=lam_x_tx, bv=bv_x_eta} = mk_abs "x" ty_A (fn x =>
+    mk_comb var_eta_t x)                              (* \x. t x *)
   val eq_AB = mk_const "=" (mk_fun ty_AB (mk_fun ty_AB ty_bool))
   val eta_body = mk_eq eq_AB lam_x_tx var_eta_t        (* (\x. t x) = t *)
-  val lam_t_eta = mk_abs var_eta_t eta_body             (* \t. (\x. t x) = t *)
+  val {lam=lam_t_eta, bv=bv_t_eta} = mk_abs "t" ty_AB (fn t =>
+    let val {lam=inner, bv=_} = mk_abs "x" ty_A (fn x => mk_comb t x)
+    in mk_eq eq_AB inner t end)                       (* \t. (\x. t x) = t *)
 
   (* ! at type A->B *)
   val ty_AB_b = mk_fun ty_AB ty_bool
@@ -1079,8 +1104,10 @@ fun emit {output, binary} = let
   val s_eq_F = mk_eq eq_bool var_s const_F
   val s_eq_T_or_t = mk_comb (mk_comb const_or s_eq_T) var_t
   val s_eq_F_or_t = mk_comb (mk_comb const_or s_eq_F) var_t
-  val pred_T = mk_abs var_s s_eq_T_or_t     (* λs. (s=T) ∨ t *)
-  val pred_F = mk_abs var_s s_eq_F_or_t     (* λs. (s=F) ∨ t *)
+  val {lam=pred_T, bv=bv_s_predT} = mk_abs "s" ty_bool (fn s =>
+    mk_comb (mk_comb const_or (mk_eq eq_bool s const_T)) var_t)  (* λs. (s=T) ∨ t *)
+  val {lam=pred_F, bv=bv_s_predF} = mk_abs "s" ty_bool (fn s =>
+    mk_comb (mk_comb const_or (mk_eq eq_bool s const_F)) var_t)  (* λs. (s=F) ∨ t *)
 
   val tm_a = mk_comb const_select_bool pred_T   (* @(λs.(s=T)∨t) *)
   val tm_b = mk_comb const_select_bool pred_F   (* @(λs.(s=F)∨t) *)
@@ -1111,11 +1138,12 @@ fun emit {output, binary} = let
   val tm_select_P_bb = mk_comb const_select_bool var_P_bb  (* @ P *)
   val tm_P_bb_select = mk_comb var_P_bb tm_select_P_bb     (* P (@ P) *)
   val tm_Ps_imp_Psel = mk_comb (mk_comb const_imp tm_P_bb_x) tm_P_bb_select
-  val lam_s_inner = mk_abs var_s tm_Ps_imp_Psel
+  val {lam=lam_s_inner, bv=bv_s_inner} = mk_abs "s" ty_bool (fn s =>
+    mk_comb (mk_comb const_imp (mk_comb var_P_bb s)) tm_P_bb_select)
   (* λs. P s ==> P (@ P) *)
   val tm_forall_s_inner = mk_comb const_forall_bool lam_s_inner
   (* ∀s. P s ==> P (@ P) *)
-  val lam_P_outer = mk_abs var_P_bb tm_forall_s_inner
+  val {lam=lam_P_outer, bv=bv_P_outer} = mk_abs "P" ty_bb (fn _ => tm_forall_s_inner)
   (* λP. ∀s. P s ==> P (@ P) *)
 
   (* Unfold outer ∀ by SPEC at type bb *)
@@ -1130,10 +1158,10 @@ fun emit {output, binary} = let
 
   (* Beta-reduce pred_T and pred_F at specific arguments *)
   val pred_T_at_T = mk_comb pred_T const_T
-  val beta_pred_T_T = beta_reduce pred_T var_s const_T
+  val beta_pred_T_T = beta_reduce pred_T bv_s_predT const_T
   (* ⊢ pred_T T = (T=T) ∨ t *)
   val pred_T_at_a = mk_comb pred_T tm_a
-  val beta_pred_T_a = beta_reduce pred_T var_s tm_a
+  val beta_pred_T_a = beta_reduce pred_T bv_s_predT tm_a
   (* ⊢ pred_T a = (a=T) ∨ t *)
 
   (* Prove ⊢ pred_T T  via DISJ1 (REFL T) *)
@@ -1143,13 +1171,13 @@ fun emit {output, binary} = let
 
   (* Prove ⊢ pred_F F  via DISJ1 (REFL F) *)
   val pred_F_at_F = mk_comb pred_F const_F
-  val beta_pred_F_F = beta_reduce pred_F var_s const_F
+  val beta_pred_F_F = beta_reduce pred_F bv_s_predF const_F
   val F_eq_F = mk_eq eq_bool const_F const_F
   val th_F_eq_F_or_t = do_DISJ1 (REFL const_F) F_eq_F var_t
   val th_pred_F_at_F = EQ_MP (SYM beta_pred_F_F) th_F_eq_F_or_t
 
   (* Beta-reduce pred_F at b *)
-  val beta_pred_F_b = beta_reduce pred_F var_s tm_b
+  val beta_pred_F_b = beta_reduce pred_F bv_s_predF tm_b
 
   (* SPEC chain: derive ⊢ pred_T a and ⊢ pred_F b from SELECT_AX *)
   val spec_pth_bb = INST_TYPE SPEC_pth [(ty_A, ty_bb)]
@@ -1168,7 +1196,7 @@ fun emit {output, binary} = let
   (* ⊢ lam_P_outer pred_T *)
 
   (* Beta-reduce: lam_P_outer pred_T = ∀s. pred_T s ==> pred_T(@pred_T) *)
-  val beta_outer_T = beta_reduce lam_P_outer var_P_bb pred_T
+  val beta_outer_T = beta_reduce lam_P_outer bv_P_outer pred_T
   val th_forall_s_T = EQ_MP beta_outer_T th_spec1_pre
   (* ⊢ ∀s. pred_T s ==> pred_T (@ pred_T) *)
   (* i.e., ⊢ ∀s. pred_T s ==> pred_T a *)
@@ -1179,7 +1207,8 @@ fun emit {output, binary} = let
   val tm_pred_T_a2 = mk_comb pred_T tm_a  (* same as pred_T_at_a, memoized *)
   val tm_pred_Ts_imp_pred_Ta = mk_comb (mk_comb const_imp (mk_comb pred_T var_s))
                                         tm_pred_T_a2
-  val lam_s_pred_T = mk_abs var_s tm_pred_Ts_imp_pred_Ta
+  val {lam=lam_s_pred_T, bv=bv_s_pred_T} = mk_abs "s" ty_bool (fn s =>
+    mk_comb (mk_comb const_imp (mk_comb pred_T s)) tm_pred_T_a2)
   val spec_inner_T = INST spec_pth_bool [(var_P_bool, lam_s_pred_T), (var_x_bool, const_T)]
   (* ⊢ (! lam_s_pred_T) ==> lam_s_pred_T T *)
   val tm_forall_lam_s = mk_comb const_forall_bool lam_s_pred_T
@@ -1188,7 +1217,7 @@ fun emit {output, binary} = let
   (* ⊢ lam_s_pred_T T *)
 
   (* Beta-reduce: lam_s_pred_T T = pred_T T ==> pred_T a *)
-  val beta_inner_T = beta_reduce lam_s_pred_T var_s const_T
+  val beta_inner_T = beta_reduce lam_s_pred_T bv_s_pred_T const_T
   val th_imp_pred_T = EQ_MP beta_inner_T th_spec2_pre
   (* ⊢ pred_T T ==> pred_T a *)
 
@@ -1204,18 +1233,19 @@ fun emit {output, binary} = let
   val tm_lam_P_outer_pred_F = mk_comb lam_P_outer pred_F
   val th_spec1_F_pre = do_MP spec_outer_F tm_sel_ax_concl tm_lam_P_outer_pred_F
                             sel_ax_bool
-  val beta_outer_F = beta_reduce lam_P_outer var_P_bb pred_F
+  val beta_outer_F = beta_reduce lam_P_outer bv_P_outer pred_F
   val th_forall_s_F = EQ_MP beta_outer_F th_spec1_F_pre
 
   val tm_pred_F_b = mk_comb pred_F tm_b
   val tm_pred_Fs_imp_pred_Fb = mk_comb (mk_comb const_imp (mk_comb pred_F var_s))
                                         tm_pred_F_b
-  val lam_s_pred_F = mk_abs var_s tm_pred_Fs_imp_pred_Fb
+  val {lam=lam_s_pred_F, bv=bv_s_pred_F} = mk_abs "s" ty_bool (fn s =>
+    mk_comb (mk_comb const_imp (mk_comb pred_F s)) tm_pred_F_b)
   val spec_inner_F = INST spec_pth_bool [(var_P_bool, lam_s_pred_F), (var_x_bool, const_F)]
   val tm_forall_lam_s_F = mk_comb const_forall_bool lam_s_pred_F
   val tm_lam_s_F = mk_comb lam_s_pred_F const_F
   val th_spec2_F_pre = do_MP spec_inner_F tm_forall_lam_s_F tm_lam_s_F th_forall_s_F
-  val beta_inner_F = beta_reduce lam_s_pred_F var_s const_F
+  val beta_inner_F = beta_reduce lam_s_pred_F bv_s_pred_F const_F
   val th_imp_pred_F = EQ_MP beta_inner_F th_spec2_F_pre
   val th_pred_F_b = do_MP th_imp_pred_F pred_F_at_F tm_pred_F_b th_pred_F_at_F
   val th_b_eq_F_or_t = EQ_MP beta_pred_F_b th_pred_F_b
@@ -1276,8 +1306,9 @@ fun emit {output, binary} = let
   (* ⊢ t ∨ ¬t *)
 
   (* GEN t: ⊢ ∀t. t ∨ ¬t *)
-  val lam_t_tor = mk_abs var_t tm_t_or_neg_t
-  val EXCLUDED_MIDDLE = do_GEN var_t th_excl_mid_t tm_t_or_neg_t
+  val {lam=lam_t_tor, bv=bv_t_tor} = mk_abs "t" ty_bool (fn t =>
+    mk_comb (mk_comb const_or t) (mk_comb const_neg t))
+  val EXCLUDED_MIDDLE = do_GEN bv_t_tor th_excl_mid_t tm_t_or_neg_t
                               lam_t_tor
   val () = save "candle$EXCLUDED_MIDDLE" EXCLUDED_MIDDLE
 
@@ -1292,7 +1323,7 @@ fun emit {output, binary} = let
   val excl_mid_p = do_SPEC_bool lam_t_tor var_p EXCLUDED_MIDDLE
   (* ⊢ (λt. t ∨ ¬t) p — need beta *)
   val tm_lam_t_tor_p = mk_comb lam_t_tor var_p
-  val beta_excl = beta_reduce lam_t_tor var_t var_p
+  val beta_excl = beta_reduce lam_t_tor bv_t_tor var_p
   (* ⊢ (λt.t∨¬t) p = p∨¬p *)
   val tm_p_or_neg_p = mk_comb (mk_comb const_or var_p) tm_neg_p
   val th_p_or_neg_p = EQ_MP beta_excl excl_mid_p
@@ -1350,8 +1381,10 @@ fun emit {output, binary} = let
                   bc_case_t bc_case_neg_t t_eq_T_or_t_eq_F
   (* ⊢ (t=T) ∨ (t=F) *)
 
-  val lam_t_bc = mk_abs var_t t_eq_T_or_t_eq_F
-  val BOOL_CASES_AX = do_GEN var_t bc_body t_eq_T_or_t_eq_F lam_t_bc
+  val {lam=lam_t_bc, bv=bv_t_bc} = mk_abs "t" ty_bool (fn t =>
+    mk_comb (mk_comb const_or (mk_eq eq_bool t const_T))
+            (mk_eq eq_bool t const_F))
+  val BOOL_CASES_AX = do_GEN bv_t_bc bc_body t_eq_T_or_t_eq_F lam_t_bc
   val () = save "candle$BOOL_CASES_AX" BOOL_CASES_AX
 
   (* ================================================================ *)
@@ -1374,7 +1407,7 @@ fun emit {output, binary} = let
                               tm_lam_at_sel (ASSUME tm_forall_x_Px_imp_q)
     (* {!x. P x ==> q} ⊢ (λx. P x ==> q)(@P) *)
     val tm_Psel_imp_q = mk_comb (mk_comb const_imp tm_P_select) var_q
-    val beta_at_sel = beta_reduce lam_x_Px_imp_q var_x tm_select_P
+    val beta_at_sel = beta_reduce lam_x_Px_imp_q bv_x_Pxq tm_select_P
     (* ⊢ (λx. P x ==> q)(@P) = (P(@P) ==> q) *)
     val th_Psel_imp_q = EQ_MP beta_at_sel th_lam_at_sel
     (* {!x. P x ==> q} ⊢ P(@P) ==> q *)
@@ -1384,7 +1417,7 @@ fun emit {output, binary} = let
     val th_disch = do_DISCH tm_forall_x_Px_imp_q th_q var_q tm_conj_forall_q2
     (* {P(@P)} ⊢ (!x. P x ==> q) ==> q *)
   in
-    val ex_fwd = do_GEN var_q th_disch tm_inner_imp lam_q_inner
+    val ex_fwd = do_GEN bv_q_inner th_disch tm_inner_imp lam_q_inner
     (* {P(@P)} ⊢ !q. (!x. P x ==> q) ==> q *)
   end
 
@@ -1392,18 +1425,16 @@ fun emit {output, binary} = let
   local
     val th_assume_ebody = ASSUME exists_body
     (* SPEC q := P(@P) from the outer !q (bool-typed) *)
-    val tm_inner_imp_Psel = mk_comb (mk_comb const_imp
-          (mk_comb const_forall (mk_abs var_x
-            (mk_comb (mk_comb const_imp tm_Px) tm_P_select))))
+    val {lam=lam_x_Px_imp_Psel, bv=_} = mk_abs "x" ty_A (fn x =>
+          mk_comb (mk_comb const_imp (mk_comb var_P x)) tm_P_select)
+    val tm_forall_x_Px_imp_Psel = mk_comb const_forall lam_x_Px_imp_Psel
+    val tm_inner_imp_Psel = mk_comb (mk_comb const_imp tm_forall_x_Px_imp_Psel)
           tm_P_select
     val th_spec_pre = do_SPEC_bool lam_q_inner tm_P_select th_assume_ebody
     (* {exists_body} ⊢ (λq. (!x.Px==>q)==>q) P(@P) *)
-    val beta_q_Psel = beta_reduce lam_q_inner var_q tm_P_select
+    val beta_q_Psel = beta_reduce lam_q_inner bv_q_inner tm_P_select
     val th_spec = EQ_MP beta_q_Psel th_spec_pre
     (* {exists_body} ⊢ (!x. P x ==> P(@P)) ==> P(@P) *)
-    val lam_x_Px_imp_Psel = mk_abs var_x
-          (mk_comb (mk_comb const_imp tm_Px) tm_P_select)
-    val tm_forall_x_Px_imp_Psel = mk_comb const_forall lam_x_Px_imp_Psel
   in
     val ex_bwd = do_MP th_spec tm_forall_x_Px_imp_Psel
                        tm_P_select select_ax_spec
@@ -1432,7 +1463,7 @@ fun emit {output, binary} = let
   (* p ==> q ==> t *)
   val tm_pqt_imp_t = mk_comb (mk_comb const_imp tm_pqt) var_t
   (* (p ==> q ==> t) ==> t *)
-  val lam_t_pqt_imp_t = mk_abs var_t tm_pqt_imp_t
+  val {lam=lam_t_pqt_imp_t, bv=bv_t_pqt} = mk_abs "t" ty_bool (fn _ => tm_pqt_imp_t)
   val tm_forall_pqt = mk_comb const_forall_bool lam_t_pqt_imp_t
   (* !t. (p ==> q ==> t) ==> t *)
 
@@ -1463,7 +1494,7 @@ fun emit {output, binary} = let
     val th3 = do_DISCH tm_pqt th2 var_t tm_conj_pqt_t
     (* {and_body} ⊢ (p==>q==>t) ==> t *)
   in
-    val and_fwd = do_GEN var_t th3 tm_pqt_imp_t lam_t_pqt_imp_t
+    val and_fwd = do_GEN bv_t_pqt th3 tm_pqt_imp_t lam_t_pqt_imp_t
     (* {and_body} ⊢ ∀t. (p==>q==>t)==>t *)
   end
 
@@ -1483,7 +1514,7 @@ fun emit {output, binary} = let
 
     (* SPEC t:=p, MP with th_pqp: {hyp} ⊢ p *)
     val th_spec_p_pre = do_SPEC_bool lam_t_pqt_imp_t var_p th_assume_forall
-    val beta_t_p = beta_reduce lam_t_pqt_imp_t var_t var_p
+    val beta_t_p = beta_reduce lam_t_pqt_imp_t bv_t_pqt var_p
     val th_spec_p = EQ_MP beta_t_p th_spec_p_pre
     (* {hyp} ⊢ (p==>q==>p)==>p *)
     val th_get_p = do_MP th_spec_p tm_pqp var_p th_pqp
@@ -1503,7 +1534,7 @@ fun emit {output, binary} = let
 
     (* SPEC t:=q, MP with th_pqq: {hyp} ⊢ q *)
     val th_spec_q_pre = do_SPEC_bool lam_t_pqt_imp_t var_q th_assume_forall
-    val beta_t_q = beta_reduce lam_t_pqt_imp_t var_t var_q
+    val beta_t_q = beta_reduce lam_t_pqt_imp_t bv_t_pqt var_q
     val th_spec_q = EQ_MP beta_t_q th_spec_q_pre
     (* {hyp} ⊢ (p==>q==>q)==>q *)
     val th_get_q = do_MP th_spec_q tm_pqq var_q th_pqq
@@ -1554,16 +1585,16 @@ fun emit {output, binary} = let
   val eq_AB_b_ty  = mk_fun ty_AB_b (mk_fun ty_AB_b ty_bool)
   val eq_AB_b     = mk_const "=" eq_AB_b_ty
 
-  val tm_fx1 = mk_comb var_f_AB var_x1_A
-  val tm_fx2 = mk_comb var_f_AB var_x2_A
-  val tm_fx1_eq_fx2 = mk_eq eq_B tm_fx1 tm_fx2
-  val tm_x1_eq_x2   = mk_eq eq_A var_x1_A var_x2_A
-  val tm_oo_imp     = mk_comb (mk_comb const_imp tm_fx1_eq_fx2) tm_x1_eq_x2
-  val lam_x2_oo     = mk_abs var_x2_A tm_oo_imp
-  val tm_forall_x2_oo = mk_comb const_forall lam_x2_oo
-  val lam_x1_oo     = mk_abs var_x1_A tm_forall_x2_oo
-  val tm_forall_x1x2_oo = mk_comb const_forall lam_x1_oo
-  val lam_f_one_one = mk_abs var_f_AB tm_forall_x1x2_oo
+  val {lam=lam_f_one_one, bv=_} = mk_abs "f" ty_AB (fn f =>
+    let val {lam=lam_x1, bv=_} = mk_abs "x1" ty_A (fn x1 =>
+          let val {lam=lam_x2, bv=_} = mk_abs "x2" ty_A (fn x2 =>
+                let val tm_fx1 = mk_comb f x1
+                    val tm_fx2 = mk_comb f x2
+                    val tm_fx1_eq_fx2 = mk_eq eq_B tm_fx1 tm_fx2
+                    val tm_x1_eq_x2 = mk_eq eq_A x1 x2
+                in mk_comb (mk_comb const_imp tm_fx1_eq_fx2) tm_x1_eq_x2 end)
+          in mk_comb const_forall lam_x2 end)
+    in mk_comb const_forall lam_x1 end)
   val def_one_one_tm = mk_eq eq_AB_b var_one_one lam_f_one_one
   val ONE_ONE_DEF = NEW_SPEC (ASSUME def_one_one_tm) ["ONE_ONE"]
   val () = save "candle$ONE_ONE_DEF" ONE_ONE_DEF
@@ -1577,13 +1608,12 @@ fun emit {output, binary} = let
   val const_forall_B = mk_const "!" (mk_fun ty_Bb ty_bool)
   val const_exists_A = mk_const "?" ty_Ab_b
 
-  val tm_fx = mk_comb var_f_AB var_x_A
-  val tm_y_eq_fx = mk_eq eq_B var_y_B tm_fx
-  val lam_x_y_eq_fx = mk_abs var_x_A tm_y_eq_fx
-  val tm_exists_x = mk_comb const_exists_A lam_x_y_eq_fx
-  val lam_y_onto = mk_abs var_y_B tm_exists_x
-  val tm_forall_y = mk_comb const_forall_B lam_y_onto
-  val lam_f_onto = mk_abs var_f_AB tm_forall_y
+  val {lam=lam_f_onto, bv=_} = mk_abs "f" ty_AB (fn f =>
+    let val {lam=lam_y, bv=_} = mk_abs "y" ty_B (fn y =>
+          let val {lam=lam_x, bv=_} = mk_abs "x" ty_A (fn x =>
+                mk_eq eq_B y (mk_comb f x))
+          in mk_comb const_exists_A lam_x end)
+    in mk_comb const_forall_B lam_y end)
   val def_onto_tm = mk_eq eq_AB_b var_onto lam_f_onto
   val ONTO_DEF = NEW_SPEC (ASSUME def_onto_tm) ["ONTO"]
   val () = save "candle$ONTO_DEF" ONTO_DEF
@@ -1600,7 +1630,11 @@ fun emit {output, binary} = let
   val tm_ONTO_f = mk_comb const_onto_ind    var_f_ind
   val tm_neg_ONTO_f = mk_comb const_neg tm_ONTO_f
   val tm_inf_body   = mk_comb (mk_comb const_and tm_OO_f) tm_neg_ONTO_f
-  val lam_f_inf     = mk_abs var_f_ind tm_inf_body
+  val {lam=lam_f_inf, bv=_} = mk_abs "f" ty_ind_ind (fn f =>
+    let val tm_OO_f = mk_comb const_one_one_ind f
+        val tm_ONTO_f = mk_comb const_onto_ind f
+        val tm_neg_ONTO_f = mk_comb const_neg tm_ONTO_f
+    in mk_comb (mk_comb const_and tm_OO_f) tm_neg_ONTO_f end)
   val tm_infinity_ax = mk_comb const_exists_indind lam_f_inf
 
   val INFINITY_AX_th = alloc_th()
