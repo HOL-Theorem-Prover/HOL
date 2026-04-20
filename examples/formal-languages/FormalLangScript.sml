@@ -1071,6 +1071,19 @@ Proof
           metis_tac [LEFT_QUOTIENT_PREFIXES]))
 QED
 
+(*
+Theorem FINITE_STATE_FINITE_SET_SIMPLE:
+  FINITE L ⇒ FINITE_STATE (L,ALPHABET_OF L)
+Proof
+   strip_tac >> irule FINITE_STATE_FINITE_SET >> simp[] >>
+   rw [ALPHABET_OF_def]
+QED
+
+Theorem FINITE_STATE_EXTEND_ALPHABET:
+  FINITE_STATE(L,A) ∧ FINITE B ⇒ FINITE_STATE(L,A ∪ B)
+QED
+*)
+
 (*---------------------------------------------------------------------------*)
 (* Closure properties for FINITE_STATE. NB: the quotienting of a language L  *)
 (* by A* here is not the same as the usual quotienting of one language by    *)
