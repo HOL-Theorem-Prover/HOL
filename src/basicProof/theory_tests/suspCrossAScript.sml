@@ -17,12 +17,14 @@ Proof
   >- suspend "q"
 QED
 
-(* Confirm that the suspended theorem has been saved as an exported
-   theorem in this theory's segment, with both suspendlabel hypotheses
-   intact. *)
+(* Confirm that the suspended theorem has been recorded in the
+   suspension.theorems AncestryData store, with both suspendlabel
+   hypotheses intact. *)
 val _ =
   let
-    val th = DB.fetch "-" "cross_thm"
+    val th = case lookup_suspension "cross_thm" of
+                 SOME th => th
+               | NONE => raise Fail "cross_thm not in suspension store"
     val susp_names = boolLib.get_suspended_names th
   in
     if List.all (fn n => List.exists (fn m => m = n) ["p","q"]) susp_names

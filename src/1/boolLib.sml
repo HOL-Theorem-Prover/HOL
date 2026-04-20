@@ -158,6 +158,14 @@ fun get_suspended_names th =
       HOLset.foldl foldthis [] (Thm.hypset th)
     end
 
+(* Shim for markerLib to install a recorder that routes suspended
+   theorems into the suspension.theorems AncestryData store.  This
+   module (boolLib) sits below markerLib in the dependency graph, so
+   we cannot call into it directly; markerLib populates the ref when
+   it loads.  Same pattern as term_pp.casesplit_munger. *)
+val suspended_theorem_recorder : (string * thm -> unit) ref =
+    ref (fn _ => ())
+
 (* printable_keys: collapse duplicate label names with a count annotation.
    Used when reporting which suspended subgoals remain in a theorem. *)
 fun printable_keys nms =
@@ -223,12 +231,12 @@ in
         case printable_keys susp_names of
             [nstr] =>
             HOL_MESG (
-              "Saving suspended theorem " ^ n ^
+              "Stashing suspended theorem " ^ n ^
               " with pending subgoal: " ^ nstr ^ "."
             )
           | strs =>
             HOL_MESG (
-              "Saving suspended theorem " ^ n ^
+              "Stashing suspended theorem " ^ n ^
               " with pending subgoals: " ^
               String.concatWith ", " strs ^ "."
             );
@@ -237,22 +245,19 @@ in
                       ("Ignoring attributes on suspended theorem " ^ n ^
                        "; apply them at Finalise time instead")
         else ();
-        (* Save the suspended theorem as an ordinary exported theorem so
-           that it persists in the theory file and can be resumed /
-           finalised in the current script or in downstream theories.
-           Rebinding is allowed so that re-running the Theorem block in
-           an interactive session is not disruptive. *)
-        trace("Theory.allow_rebinds", 1)
-          (fn () =>
-              Theory.gen_save_thm
-                {name = n, private = privp, thm = th, loc = loc}) ()
+        (* Route the suspended theorem into markerLib's AncestryData
+           store for suspensions rather than saving it to the normal
+           theorem DB.  Finalise will save the clean form under this
+           name when all subgoals have been resumed. *)
+        !suspended_theorem_recorder (n, th);
+        th
       end
 end
 end (* local *)
 
-(* finalise_suspended_thm lives in markerLib (it needs resumelabel and the
-   ancestor-scanning DB predicates).  The parser-level Finalise expansion
-   calls markerLib.finalise_suspended_thm directly. *)
+(* finalise_suspended_thm lives in markerLib (it uses AncestryData and
+   needs to see the suspension dictionaries).  The parser-level Finalise
+   expansion calls markerLib.finalise_suspended_thm directly. *)
 
 local
   open Feedback

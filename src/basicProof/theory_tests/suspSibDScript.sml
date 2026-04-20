@@ -13,15 +13,13 @@ Libs HolKernel Parse boolLib markerLib
 
 Finalise sib_thm
 
-(* The suspended form still lives unmodified in suspSibA. *)
+(* After Finalise, the suspension store entry has been removed
+   (RemoveSuspended delta), so lookup_suspension returns NONE. *)
 val _ =
-  let val th = DB.fetch "suspSibA" "sib_thm"
-      val susp_names = boolLib.get_suspended_names th
-  in
-    if length susp_names = 2 then ()
-    else raise Fail ("Ancestor suspended theorem unexpectedly modified: [" ^
-                     String.concatWith "," susp_names ^ "]")
-  end
+  case lookup_suspension "sib_thm" of
+      NONE => ()
+    | SOME _ => raise Fail
+        "sib_thm still in suspension store after Finalise"
 
 val _ =
   let val th = DB.fetch "-" "sib_thm"

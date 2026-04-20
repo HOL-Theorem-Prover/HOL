@@ -19,15 +19,13 @@ QED
 
 Finalise cross_thm
 
-(* The suspended form still lives in the ancestor theory, untouched. *)
+(* After Finalise, the suspension store entry has been removed
+   (RemoveSuspended delta), so lookup_suspension returns NONE. *)
 val _ =
-  let val th = DB.fetch "suspCrossA" "cross_thm"
-      val susp_names = boolLib.get_suspended_names th
-  in
-    if length susp_names = 2 then ()
-    else raise Fail ("Ancestor suspended theorem unexpectedly modified: [" ^
-                     String.concatWith "," susp_names ^ "]")
-  end
+  case lookup_suspension "cross_thm" of
+      NONE => ()
+    | SOME _ => raise Fail
+        "cross_thm still in suspension store after Finalise"
 
 (* In this theory the finalised, clean form should be visible. *)
 val _ =
