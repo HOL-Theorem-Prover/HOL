@@ -23,7 +23,7 @@ QED
 val _ =
   let
     val th = case lookup_suspension "cross_thm" of
-                 SOME th => th
+                 SOME (_, th) => th
                | NONE => raise Fail "cross_thm not in suspension store"
     val susp_names = boolLib.get_suspended_names th
   in

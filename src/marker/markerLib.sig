@@ -121,7 +121,7 @@ sig
   (* Look up a suspended parent theorem or a resumption proof in the
      suspension AncestryData stores (current theory merged with
      ancestors).  Exposed mainly for selftests. *)
-  val lookup_suspension : string -> thm option
+  val lookup_suspension : string -> (string * thm) option
   val lookup_resumption :
       {parent_thy:string, parent_name:string, label:string} -> thm list
 

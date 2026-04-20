@@ -974,24 +974,34 @@ in
 
 (* --- suspension.theorems store --- *)
 
+(* Key: (thy, name).  Theory qualification allows distinct theorems
+   with the same name in different theories. *)
+type susp_key = string * string
+
+fun susp_key_compare ((t1,n1), (t2,n2)) =
+    case String.compare (t1, t2) of
+        EQUAL => String.compare (n1, n2)
+      | r => r
+
 datatype susp_delta =
-    AddSuspended of string * thm
-  | RemoveSuspended of string
+    AddSuspended of susp_key * thm
+  | RemoveSuspended of susp_key
 
-type susp_table = thm Symtab.table
+type susp_table = (susp_key, thm) Binarymap.dict
 
-val empty_susp_table : susp_table = Symtab.empty
+val empty_susp_table : susp_table = Binarymap.mkDict susp_key_compare
 
 fun apply_susp_delta d (tab : susp_table) : susp_table =
     case d of
-        AddSuspended (n, th) => Symtab.update (n, th) tab
-      | RemoveSuspended n =>
-          (Symtab.delete n tab handle _ => tab)
+        AddSuspended (k, th) => Binarymap.insert (tab, k, th)
+      | RemoveSuspended k =>
+          (fst (Binarymap.remove (tab, k)) handle Binarymap.NotFound => tab)
 
 val (susp_enc, susp_dec) = bij_ed (
-      (fn AddSuspended p => inl p | RemoveSuspended s => inr s),
-      (fn inl p => AddSuspended p | inr s => RemoveSuspended s)
-    ) (tagged_sum ("add", pair_ed (string_ed, thm_ed)) ("rm", string_ed))
+      (fn AddSuspended p => inl p | RemoveSuspended k => inr k),
+      (fn inl p => AddSuspended p | inr k => RemoveSuspended k)
+    ) (tagged_sum ("add", pair_ed (pair_ed (string_ed, string_ed), thm_ed))
+                  ("rm", pair_ed (string_ed, string_ed)))
 
 val {record_delta = record_suspension_delta_raw,
      get_global_value = get_susp_global,
@@ -1093,7 +1103,37 @@ fun record_resumption_delta d =
 end (* local opening ThyDataSexp *)
 
 (* Public lookup helpers. *)
-fun lookup_suspension nm = Symtab.lookup (get_susp_global ()) nm
+
+(* lookup_suspension: look up by (thy, name) key or unqualified name.
+   For unqualified lookup, scans the dictionary keys for any match.
+   Returns (thy, thm) on success so caller knows which theory. *)
+fun lookup_suspension_qualified (thy, nm) =
+    case Binarymap.peek (get_susp_global (), (thy, nm)) of
+        NONE => NONE
+      | SOME th => SOME (thy, th)
+
+fun lookup_suspension_unqualified nm =
+    let
+      val tab = get_susp_global ()
+      val matches = Binarymap.foldl
+            (fn ((t, n), th, acc) => if n = nm then (t, th) :: acc else acc)
+            [] tab
+    in
+      case matches of
+          [] => NONE
+        | [(thy, th)] => SOME (thy, th)
+        | _ =>
+            (* Multiple matches - ambiguous. For now, just pick the first.
+               A future enhancement could raise an error and require
+               qualified syntax. *)
+            SOME (hd matches)
+    end
+
+(* Main entry point: supports both "foo" and "thyname$foo" forms *)
+fun lookup_suspension nm =
+    case String.fields (fn c => c = #"$") nm of
+        [thy, n] => lookup_suspension_qualified (thy, n)
+      | _ => lookup_suspension_unqualified nm
 
 fun lookup_resumption {parent_thy, parent_name, label} =
     case Binarymap.peek (get_res_global (),
@@ -1105,7 +1145,8 @@ fun lookup_resumption {parent_thy, parent_name, label} =
    suspended theorem into our AncestryData store instead of the normal
    theorem DB. *)
 val _ = boolLib.suspended_theorem_recorder :=
-    (fn (n, th) => record_suspension_delta (AddSuspended (n, th)))
+    (fn (n, th) => record_suspension_delta
+                     (AddSuspended ((Theory.current_theory(), n), th)))
 
 (* ----------------------------------------------------------------------
     Finding the parent theorem for a Resume / Finalise.
@@ -1125,9 +1166,10 @@ datatype parent_source =
     FromStore  (* normal suspended theorem *)
   | FromDB     (* fallback: likely --fast, possibly already-finalised *)
 
-fun find_parent nm : (parent_source * thm) option =
+(* Returns (source, parent_thy, thm) *)
+fun find_parent nm : (parent_source * string * thm) option =
     case lookup_suspension nm of
-        SOME th => SOME (FromStore, th)
+        SOME (thy, th) => SOME (FromStore, thy, th)
       | NONE =>
           let
             val cur = Theory.current_theory ()
@@ -1135,12 +1177,12 @@ fun find_parent nm : (parent_source * thm) option =
             fun search [] = NONE
               | search (t::rest) =
                 (case Lib.total (DB.fetch t) nm of
-                     SOME th => SOME th
+                     SOME th => SOME (t, th)
                    | NONE => search rest)
           in
             case search thys of
                 NONE => NONE
-              | SOME th => SOME (FromDB, th)
+              | SOME (t, th) => SOME (FromDB, t, th)
           end
 
 (* ----------------------------------------------------------------------
@@ -1152,84 +1194,10 @@ fun find_parent nm : (parent_source * thm) option =
     each matching suspendlabel hypothesis.
    ---------------------------------------------------------------------- *)
 
-fun fast_shortcut () =
-    Thm.mk_oracle_thm "fast_proof" ([], boolSyntax.T)
-
-fun resume {suspension_name, label_name} tac =
-    case find_parent suspension_name of
-        NONE => raise ERR "resume"
-                  ("No suspended theorem named " ^ suspension_name ^
-                   " in the current theory or its ancestors")
-      | SOME (src, th) =>
-        (case Lib.total (extract_suspended_goal th) label_name of
-            NONE =>
-            (* No suspendlabel hypothesis for this label.  This is the
-               --fast case (or the user is trying to resume a label of
-               an already-finalised theorem, or making a typo);
-               shortcut. *)
-            fast_shortcut ()
-          | SOME ncts =>
-            let
-              val goal = resumption_to_goal ncts
-              val sub_th = prove_goal (goal, tac)
-              (* Which theory holds the parent? For FromStore we need
-                 to find the theory whose DB contains a suspension
-                 entry for this name; for FromDB we already have it. *)
-              val parent_thy =
-                  case src of
-                      FromStore => find_parent_thy_in_store suspension_name
-                    | FromDB => find_parent_thy_in_db suspension_name
-              (* Build |- suspendlabel "lab" G_i for each hyp i and
-                 record each as its own resumption delta. *)
-              val susp_thms =
-                  build_suspendlabel_thms
-                    label_name (ncts, sub_th)
-              val _ =
-                  List.app
-                    (fn rth =>
-                        record_resumption_delta
-                          (AddResumption
-                             ((parent_thy, suspension_name, label_name),
-                              rth)))
-                    susp_thms
-            in
-              sub_th
-            end)
-
-(* --- helpers used by resume above --- *)
-
-and find_parent_thy_in_store nm =
-    (* Walk ancestry looking at each theory's suspension.theorems DB *)
-    let
-      val cur = Theory.current_theory ()
-      val thys = cur :: Theory.ancestry cur
-      fun search [] = raise ERR "resume"
-                           ("Internal: lost track of suspension " ^ nm)
-        | search (t::rest) =
-          (case susp_DB {thyname = t} of
-               NONE => search rest
-             | SOME tab =>
-                 case Symtab.lookup tab nm of
-                     NONE => search rest
-                   | SOME _ => t)
-    in search thys end
-
-and find_parent_thy_in_db nm =
-    let
-      val cur = Theory.current_theory ()
-      val thys = cur :: Theory.ancestry cur
-      fun search [] = raise ERR "resume"
-                           ("Internal: lost track of DB theorem " ^ nm)
-        | search (t::rest) =
-          (case Lib.total (DB.fetch t) nm of
-               NONE => search rest
-             | SOME _ => t)
-    in search thys end
-
 (* Build |- suspendlabel "lab" G_i theorems for each matching
    hypothesis, reusing the closure-reconstruction logic of
    prove_suspended0. *)
-and build_suspendlabel_thms label_nm (ncts, sub_th) =
+fun build_suspendlabel_thms label_nm (ncts, sub_th) =
     let
       fun mk_susp_thm (nc, s_t) th =
         let
@@ -1254,12 +1222,49 @@ and build_suspendlabel_thms label_nm (ncts, sub_th) =
             end
     end
 
+fun fast_shortcut () =
+    Thm.mk_oracle_thm "fast_proof" ([], boolSyntax.T)
+
+fun resume {suspension_name, label_name} tac =
+    case find_parent suspension_name of
+        NONE => raise ERR "resume"
+                  ("No suspended theorem named " ^ suspension_name ^
+                   " in the current theory or its ancestors")
+      | SOME (_, parent_thy, th) =>
+        (case Lib.total (extract_suspended_goal th) label_name of
+            NONE =>
+            (* No suspendlabel hypothesis for this label.  This is the
+               --fast case (or the user is trying to resume a label of
+               an already-finalised theorem, or making a typo);
+               shortcut. *)
+            fast_shortcut ()
+          | SOME ncts =>
+            let
+              val goal = resumption_to_goal ncts
+              val sub_th = prove_goal (goal, tac)
+              (* Build |- suspendlabel "lab" G_i for each hyp i and
+                 record each as its own resumption delta. *)
+              val susp_thms =
+                  build_suspendlabel_thms
+                    label_name (ncts, sub_th)
+              val _ =
+                  List.app
+                    (fn rth =>
+                        record_resumption_delta
+                          (AddResumption
+                             ((parent_thy, suspension_name, label_name),
+                              rth)))
+                    susp_thms
+            in
+              sub_th
+            end)
+
 fun prim_set_suspended_goal tacmod {suspension_name, label_name} =
     case find_parent suspension_name of
         NONE => raise ERR "set_suspended_goal"
                   ("No suspended theorem named " ^ suspension_name ^
                    " in the current theory or its ancestors")
-      | SOME (_, th) =>
+      | SOME (_, _, th) =>
           proofManagerLib.new_goalstack (
             resumption_to_goal (extract_suspended_goal th label_name)
           )
@@ -1326,12 +1331,8 @@ fun finalise_suspended_thm loc nm0 =
       case find_parent name of
           NONE => raise ERR "finalise_suspended_thm"
                     ("No such suspended theorem: " ^ name)
-        | SOME (src, parent_th) =>
+        | SOME (src, parent_thy, parent_th) =>
           let
-            val parent_thy =
-                case src of
-                    FromStore => find_parent_thy_in_store name
-                  | FromDB => find_parent_thy_in_db name
             val clean_th = assemble_finalised parent_thy name parent_th
             val remaining = boolLib.get_suspended_names clean_th
             val _ = null remaining orelse
@@ -1352,7 +1353,7 @@ fun finalise_suspended_thm loc nm0 =
             (* Drop this name from the suspension store so it's no
                longer considered pending.  (For FromDB there was no
                entry to drop anyway; the delta is harmless.) *)
-            val _ = record_suspension_delta (RemoveSuspended name)
+            val _ = record_suspension_delta (RemoveSuspended (parent_thy, name))
             (* Also clean up the resumption proofs for this theorem. *)
             val _ = record_resumption_delta (RemoveResumptions (parent_thy, name))
           in
