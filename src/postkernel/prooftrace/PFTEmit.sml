@@ -983,20 +983,28 @@ fun emit_theory {trace, output, binary, ruleset} = let
       in r_eq_mp (rconv [] source_id template_id) c_th end
 
     | GEN_ABS_prf (a, b, c) => let
-        val opt_c = option heap tm a
         val vars = list heap tm b
         val c_th = th c
-        fun fold_one (v_tm, th_acc) =
-          let val abs_th = c_abs v_tm th_acc
-          in case opt_c of
-               NONE => abs_th
-             | SOME c_tm => c_mk_comb (c_refl c_tm) abs_th
-          end
-        val rev_vars = List.rev vars
-        fun loop [] acc = acc
-          | loop (v :: rest) acc = loop rest (fold_one (v, acc))
-        val r = loop rev_vars c_th
-      in r end
+        (* HOL4's GEN_ABS retypes the binder per variable (Thm.list_mk_binder
+           / Logging.GEN_ABS_prf), so we must too — otherwise mixed-type
+           variable lists yield ill-typed MK_COMB terms. *)
+        val step = case option heap (fn p => p) a of
+            NONE => (fn (v_tm, th_acc) => c_abs v_tm th_acc)
+          | SOME c_ptr => let
+              val c_refl0 = c_refl (emit_term c_ptr)
+              fun dom ty_ptr = case shType heap ty_ptr of
+                  Tyapp (_, args) => hd (list heap (fn p => p) args)
+                | _ => raise Fail "GEN_ABS_prf: c's type is not a function"
+              val sigma = case shTerm heap c_ptr of
+                  Const (_, ty) => emit_type (dom (dom ty))
+                | _ => raise Fail "GEN_ABS_prf: c is not a constant"
+              fun refl_at v_ty =
+                if v_ty = sigma then c_refl0
+                else c_inst_type c_refl0 [(sigma, v_ty)]
+            in fn (v_tm, th_acc) =>
+                 c_mk_comb (refl_at (pft_type_of v_tm)) (c_abs v_tm th_acc)
+            end
+      in List.foldr step c_th vars end
 
     (* === Definition commands === *)
     | Def_const_prf (a, b) => let
