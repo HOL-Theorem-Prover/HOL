@@ -17,7 +17,7 @@ struct
 
 open HolKernel Parse boolLib liteLib
 
-open boolSimps simpLib arithmeticTheory Num_conv numSyntax mesonLib metisLib
+open arithmeticTheory Num_conv numSyntax mesonLib metisLib simpLib
      tautLib Arithconv Canon_Port normalForms reduceLib normalizerTheory
 
 structure Parse = struct

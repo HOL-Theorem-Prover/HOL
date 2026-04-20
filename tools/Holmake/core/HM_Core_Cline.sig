@@ -26,6 +26,7 @@ type t = {
   recursive_build : bool,
   recursive_clean : bool,
   hmakefile : string option,
+  thmsrc : string option,
   verbose : bool
 }
 

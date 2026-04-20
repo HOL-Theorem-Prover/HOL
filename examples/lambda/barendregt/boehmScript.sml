@@ -4,6 +4,7 @@
 (*                                                                            *)
 (* AUTHORS : 2023-2024 The Australian National University (Chun Tian)         *)
 (* ========================================================================== *)
+
 Theory boehm
 Ancestors
   option arithmetic pred_set list rich_list llist relation ltree
@@ -13,7 +14,6 @@ Ancestors
 Libs
   hurdUtils tautLib listLib numLib BasicProvers NEWLib
   reductionEval head_reductionLib monadsyntax
-
 
 (* enable basic monad support *)
 val _ = enable_monadsyntax ();
@@ -37,6 +37,8 @@ val _ = set_trace "Goalstack.print_goal_at_top" 0;
 (* Disable some conflicting overloads from labelledTermsTheory *)
 Overload FV  = “supp term_pmact”
 Overload VAR = “term$VAR”
+
+val _ = temp_clear_overloads_on "fEL";
 
 (*---------------------------------------------------------------------------*
  *  Boehm Trees (and subterms) - name after Corrado Böhm [2]                 *
@@ -180,8 +182,7 @@ QED
  *)
 Theorem solvable_appstar :
     !X M r M0 n n' vs.
-           FINITE X /\ FV M SUBSET X UNION RANK r /\
-           solvable M /\
+           FINITE X /\ FV M SUBSET X UNION RANK r /\ solvable M /\
            M0 = principal_hnf M /\
             n = LAMl_size M0 /\
            vs = RNEWS r n' X /\ n <= n'
@@ -245,8 +246,8 @@ Proof
  >> qexistsl_tac [‘X’, ‘M’, ‘r’, ‘n’, ‘n’] >> simp []
 QED
 
-(* Essentially, ‘hnf_children_size (principal_hnf M)’ is irrelevant with
-   the excluding list. This lemma shows the equivalence in defining ‘m’.
+(* NOTE: Essentially, ‘hnf_children_size (principal_hnf M)’ is irrelevant with
+   the excluding set ‘X’. This lemma shows the equivalence with ‘m = LENGTH Ms’.
  *)
 Theorem hnf_children_size_alt :
     !X M r M0 n vs M1 Ms.
@@ -411,63 +412,6 @@ Proof
  >> qexistsl_tac [‘X’, ‘N’, ‘SUC r’] >> rw [BT_def]
 QED
 
-Theorem subterm_rank_lemma :
-    !p X M N r r'. FINITE X /\ FV M SUBSET X UNION RANK r /\
-                   subterm X M p r = SOME (N,r')
-               ==> r' = r + LENGTH p /\ FV N SUBSET X UNION RANK r'
-Proof
-    Induct_on ‘p’ >- NTAC 2 (rw [])
- >> rpt GEN_TAC
- >> reverse (Cases_on ‘solvable M’) >- rw [subterm_def]
- >> UNBETA_TAC [subterm_of_solvables] “subterm X M (h::p) r”
- >> STRIP_TAC
- >> qabbrev_tac ‘M' = EL h Ms’
- >> Q.PAT_X_ASSUM ‘!X M N r r'. P’
-      (MP_TAC o (Q.SPECL [‘X’, ‘M'’, ‘N’, ‘SUC r’, ‘r'’]))
- >> simp []
- >> Suff ‘FV M' SUBSET X UNION RANK (SUC r)’
- >- rw []
- >> qunabbrev_tac ‘vs’
- >> Q_TAC (RNEWS_TAC (“vs :string list”, “r :num”, “n :num”)) ‘X’
- >> ‘DISJOINT (set vs) (FV M0)’ by METIS_TAC [subterm_disjoint_lemma']
- >> Q_TAC (HNF_TAC (“M0 :term”, “vs :string list”,
-                    “y :string”, “args :term list”)) ‘M1’
- >> ‘TAKE n vs = vs’ by rw []
- >> POP_ASSUM (rfs o wrap)
- >> ‘Ms = args’ by rw [Abbr ‘Ms’]
- >> POP_ASSUM (rfs o wrap o SYM)
- >> Know ‘!i. i < LENGTH Ms ==> FV (EL i Ms) SUBSET FV M1’
- >- (MATCH_MP_TAC hnf_children_FV_SUBSET \\
-     simp [hnf_appstar])
- >> DISCH_TAC
- >> qunabbrev_tac ‘M'’
- >> qabbrev_tac ‘Y  = RANK r’
- >> qabbrev_tac ‘Y' = RANK (SUC r)’
- (* transitivity no.1 *)
- >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV M1’
- >> CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC >> rw [])
- (* transitivity no.2 *)
- >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV M0 UNION set vs’
- >> CONJ_TAC >- simp [FV_LAMl]
- (* transitivity no.3 *)
- >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV M UNION set vs’
- >> CONJ_TAC
- >- (Suff ‘FV M0 SUBSET FV M’ >- SET_TAC [] \\
-     qunabbrev_tac ‘M0’ \\
-     MATCH_MP_TAC principal_hnf_FV_SUBSET' >> art [])
- >> rw [SUBSET_DEF, IN_UNION]
- >- (Know ‘x IN X UNION Y’ >- METIS_TAC [SUBSET_DEF] \\
-     rw [IN_UNION] >- (DISJ1_TAC >> art []) \\
-     DISJ2_TAC \\
-     Suff ‘Y SUBSET Y'’ >- METIS_TAC [SUBSET_DEF] \\
-     qunabbrevl_tac [‘Y’, ‘Y'’] \\
-     MATCH_MP_TAC RANK_MONO >> rw [])
- >> DISJ2_TAC
- >> Suff ‘set vs SUBSET Y'’ >- METIS_TAC [SUBSET_DEF]
- >> qunabbrevl_tac [‘vs’, ‘Y'’]
- >> MATCH_MP_TAC RNEWS_SUBSET_RANK >> rw []
-QED
-
 Theorem subterm_induction_lemma :
     !X M r M0 n n' m vs M1 Ms h.
            FINITE X /\ FV M SUBSET X UNION RANK r /\
@@ -558,6 +502,33 @@ Proof
  >> qexistsl_tac [‘M’, ‘M0’, ‘n’, ‘n’, ‘m’, ‘vs’, ‘M1’] >> simp []
 QED
 
+Theorem subterm_rank_lemma :
+    !p X M N r r'. FINITE X /\ FV M SUBSET X UNION RANK r /\
+                   subterm X M p r = SOME (N,r')
+               ==> r' = r + LENGTH p /\ FV N SUBSET X UNION RANK r'
+Proof
+    Induct_on ‘p’ >- NTAC 2 (rw [])
+ >> rpt GEN_TAC
+ >> reverse (Cases_on ‘solvable M’) >- rw [subterm_def]
+ >> UNBETA_TAC [subterm_of_solvables] “subterm X M (h::p) r”
+ >> STRIP_TAC
+ >> qabbrev_tac ‘M' = EL h Ms’
+ >> Q.PAT_X_ASSUM ‘!X M N r r'. P’
+      (MP_TAC o (Q.SPECL [‘X’, ‘M'’, ‘N’, ‘SUC r’, ‘r'’]))
+ >> simp []
+ >> Suff ‘FV M' SUBSET X UNION RANK (SUC r)’ >- rw []
+ >> qunabbrev_tac ‘M'’
+ >> MATCH_MP_TAC subterm_induction_lemma'
+ >> qexistsl_tac [‘M’, ‘M0’, ‘n’, ‘m’, ‘vs’, ‘M1’] >> simp []
+ >> qunabbrev_tac ‘m’
+ >> SYM_TAC
+ >> MATCH_MP_TAC hnf_children_size_alt
+ >> qexistsl_tac [‘X’, ‘M’, ‘r’, ‘n’, ‘vs’, ‘M1’] >> simp []
+QED
+
+(* NOTE: This theorem provides a better estimates for “FV (EL h Ms)”, than the
+   above subterm_induction_lemma.
+ *)
 Theorem FV_subterm_lemma :
     !X M r M0 n m vs M1 Ms h.
            FINITE X /\ FV M SUBSET X UNION RANK r /\
@@ -6122,8 +6093,7 @@ Theorem BT_expand_lemma1 :
        BT_expand X (BT' X M r) p r = B /\ N = BT_to_term B ==>
        compat_closure eta N M /\ BT' X N r = B
 Proof
-    rpt GEN_TAC
- >> STRIP_TAC
+    rpt GEN_TAC >> STRIP_TAC
  >> simp []
  >> Suff ‘!R M r. (?p B. FV M SUBSET X UNION RANK r /\ bnf M /\
                          p IN ltree_paths (BT' X M r) /\
@@ -6782,10 +6752,10 @@ Proof
  (* Case 1 (m' < m):
 
        ((vs,y),m) at p'
-        / |  \
+       /  |  \
       /   |   \
-    /   p |    \
-   0     m'   (m-1)
+     /  p |    \
+    0     m'   (m-1)
 
    If m' < m, then p IN BT_paths B' = s0 UNION IMAGE f (count i).
    But p NOTIN s0, thus p IN IMAGE f (count i). This is impossible because
@@ -6806,10 +6776,10 @@ Proof
  (* Case 2:
 
        ((vs,y),m) at p'
-        / |  \  \__
+       /  |  \  \__
       /   |   \    \_ p
-    /     |    \     \
-   0     m-1   (m)     m'
+     /    |    \     \
+    0    m-1   (m)    m'
 
    If m < m' (LAST p), since p IN paths, we have
 
@@ -6875,8 +6845,7 @@ Definition Boehm_construction_def :
         vs0   = NEWS (n_max + SUC d_max + k) (X UNION X');
         vs    = TAKE n_max vs0;
         xs    = DROP n_max vs0;
-        M  i  = EL i Ms;
-        M0 i  = principal_hnf (M i);
+        M0 i  = principal_hnf (EL i Ms);
         M1 i  = principal_hnf (M0 i @* MAP VAR vs);
         y  i  = hnf_headvar (M1 i);
         P  i  = permutator (d_max + i);

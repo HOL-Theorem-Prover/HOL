@@ -224,7 +224,7 @@ end;
 val _ = let
   (* copy system-specific implementation of Systeml into place *)
   val srcfile = fullPath [holmakedir, OSkind ^"-systeml.sml"]
-  val destfile = fullPath [holmakedir, "Systeml.sml"]
+  val destfile = fullPath [holdir, "tools", "Holmake", "Systeml.sml"]
   val sigfile = fullPath [holdir, "tools", "Holmake", "Systeml.sig"]
 in
   print "\nLoading system specific functions\n";
@@ -310,7 +310,7 @@ in
     TextIO.output (oo, fullPath [holdir, "sigobj", "Systeml.sml"] ^ "\n");
     TextIO.closeOut oo
   end;
-  to_sigobj (fullPath [holmakedir, "Systeml.sml"]);
+  to_sigobj (fullPath [holdir, "tools", "Holmake", "Systeml.sml"]);
   print "sml)\n"
 end;
 

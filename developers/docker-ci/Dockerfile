@@ -66,6 +66,11 @@ RUN rm -f tools-poly/poly-includes.ML
 
 # Building HOL itself (PolyML is now installed in non-system directories)
 RUN if [ "poly" = "$SML" ]; then \
+    # Ensure that building the pre-Holmake tools work without mlton
+    echo 'val MLTON = NONE;' > tools-poly/poly-includes.ML && \
+    /ML/polyml/bin/${SML} < tools/smart-configure.sml && \
+    rm tools-poly/poly-includes.ML && \
+    # Building using standard detection by smart-configure
     /ML/polyml/bin/${SML} < tools/smart-configure.sml; \
 else \
     ${SML} < tools/smart-configure.sml; \

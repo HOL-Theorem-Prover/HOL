@@ -483,7 +483,8 @@ val condprinter_test = tpp_expected
              |> unicode_off
              |> raw_backend
 val test = condprinter_test
-val condprinter_tests =
+(* Explicit type annotation to avoid free variable in testf's type *)
+val condprinter_tests: {input: string, output: string, testf: string -> string} list =
     [
       {input = "if oless e1 e2 /\\ oless x y /\\ foobabbbbbbb\n\
                \then p /\\ q /\\ r /\\ ppppp xxxx yyyyy\n\

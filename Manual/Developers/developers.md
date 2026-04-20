@@ -49,6 +49,11 @@ This is important because the compilation and creation of executables differs so
 Once this determination is made, actual configuration work is done in either `tools-poly/configure.sml` or `tools/configure.sml`
 (See [Sources](#sources) below for more on how these sources are organised.)
 
+One of the core outputs of configuration is the `Systeml` structure.
+This has a fixed signature, given in `tools/Holmake/Systeml.sig`, but has a `structure` that is filled with installation- and ML implementation-specific details.
+The generated file is `tools/Holmake/Systeml.sml`, which is generated from either `tools/Holmake/unix-systeml.sml` (for Moscow ML) or `tools-poly/Holmake/unix-systeml.sml` (for Poly/ML).
+There is an additional `tools/Holmake/winNT-systeml.sml` meant for Moscow ML on Windows, but this code hasn’t been tested and is probably bit-rotted.
+
 ## Building (and Rebuilding) `Holmake`
 
 Because `Holmake` is not assumed to exist when `Holmake` is built, the configuration script is responsible for assembling the constituent sources.
@@ -168,7 +173,7 @@ Under both Moscow&nbsp;ML and Poly/ML the following are created:
 
 `unquote`
 : This is the quotation filter embodied as a Unix filter, with a variety of options to specify behaviour. 
-  Note that this is not used by Poly/ML HOL, but can be useful there to see what the filter (as embodied by the `HolParser` module) is doing when it messes with user input.
+  Note that this is not used by Poly/ML HOL, but can be useful there to see what the filter (as embodied by the `HOLSource` module) is doing when it messes with user input.
 
 Under Poly/ML, the following additional files will appear:
 
@@ -218,10 +223,14 @@ Unless otherwise noted, they are built by the configuration process.
     Built on demand *via* a Holmakefile.
     The executable is in `tools/cmp`.
 
+`dat-printer`
+:   A utility designed to pretty-print the theorem statements from theory files, using a simple-minded s-expression based format.
+    The source files are located in `src/portableML/rawtheory/`.
+
 `Holmake`
 :   The user-facing tool for building HOL developments.
     Use of this tool is described in the Description manual.
-    The `tools/Holmake` directory contains almost all of the sources, but the Poly/ML-specific implementation of the `Systeml` module (on top of which everything else in the system is built) is in `tools-poly/Holmake`.
+    The `tools/Holmake` directory contains almost all of the sources, but the Poly/ML-specific template for the `Systeml` module (on top of which everything else in the system is built) is in `tools-poly/Holmake`.
     The Poly/ML specific code implementing concurrent `Holmake` is in `tools/Holmake/poly`.
     The executable is in `bin/`.
 
@@ -232,6 +241,11 @@ Unless otherwise noted, they are built by the configuration process.
 `mlyacc.exe`
 :   The tool from SML/NJ.
     The executable is in `tools/mlyacc/src/`.
+
+`theorytool`
+:   A dependency and definition analysis tool. 
+    Running it allows you to dynamically dump `.dat` keys, or output a full hierarchical ancestry graph of the theories using `dot` format *via* the `--thygraph` option.
+    The source files are located in `src/portableML/rawtheory/`.
 
 `unquote`
 :   The quotation filter that runs over sources before they are seen by SML implementations.

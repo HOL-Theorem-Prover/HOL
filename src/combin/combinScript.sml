@@ -58,10 +58,10 @@ val _ = combinpp.new_form {
 val s = term_to_string “UPDATE k v f”
 val _ = print ("Printing of term gives: \"" ^ s ^ "\"\n")
 
-val _ = TeX_notation {TeX = ("\\llparenthesis", 1), hol = UnicodeChars.lensel}
-val _ = TeX_notation {TeX = ("\\llparenthesis", 1), hol = "(|"}
-val _ = TeX_notation {TeX = ("\\rrparenthesis", 1), hol = UnicodeChars.lenser}
-val _ = TeX_notation {TeX = ("\\rrparenthesis", 1), hol = "|)"}
+fun texparen (s, h) =
+  TeX_notation {TeX = ("\\HOLToken" ^ s ^ "Lens{}", 1), hol = h}
+val _ = List.app texparen [("L",UnicodeChars.lensel), ("L", "(|"),
+                           ("R",UnicodeChars.lenser), ("R", "|)")]
 val _ = TeX_notation {TeX = ("\\HOLTokenMapto{}", 1), hol = "↦"}
 val _ = TeX_notation {TeX = ("\\HOLTokenMapto{}", 1), hol = "|->"}
 

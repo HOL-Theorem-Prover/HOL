@@ -387,6 +387,7 @@ in
           keepgoing = #keepgoing option_record,
           multithread = #multithread option_record,
           relocbuild = #relocbuild option_record,
+          thmsrc = #thmsrc option_record,
           timelimit = #timelimit option_record}
 end handle DoClean s => (Clean s before safedelete Holmake_tools.kernelid_fname)
 
@@ -928,7 +929,7 @@ fun process_cline () =
       end
     | Normal {extra = {seqname,kernelspec}, cmdline, multithread,
               build_theory_graph, jobcount, relocbuild, debug, keepgoing,
-              selftest_level, timelimit} =>
+              selftest_level, thmsrc, timelimit} =>
       let
         val SRCDIRS = read_buildsequence {kernelname = kernelspec} seqname
       in
@@ -945,6 +946,7 @@ fun process_cline () =
            multithread = multithread,
            relocbuild = relocbuild,
            selftest_level = selftest_level,
+           thmsrc = thmsrc,
            timelimit = timelimit
           }
       end

@@ -228,10 +228,10 @@ The special characters are backslashes, left and right parentheses, and space."
   (let*
       ((rcposn (hol-get-rowcol-posn pos))
        (fname (buffer-file-name))
-       (filepart (if fname (format "#(FILE=%s)" (hol-string-escape fname)) "")))
+       (filepart (if fname (format "#(FILE=\"%s\");" (hol-string-escape fname)) "")))
     ;; send position of the line before a newline so that text that
     ;; needs to be in column 0 is still in column 0
-    (format "%s#(LINE=%d,%d)\n"
+    (format "%s#(LINE=%d,%d);\n"
             filepart
             (- (car rcposn) 1)
             (cdr rcposn))))
@@ -319,27 +319,23 @@ With a prefix ARG, uses `expandf' rather than `e'."
   "Send selected region to HOL process as tactic."
   (interactive "r\nP")
   (let*
-      ((region-string0 (buffer-substring start end))
-       (region-string1 (tactic-cleanup-leading region-string0))
-       (region-string2 (tactic-cleanup-trailing region-string1))
-       (start-offset (- (length region-string0) (length region-string1)))
-       (region-string3 (with-hol-locpragma (+ start start-offset) region-string2))
-       (ste "\"show_typecheck_errors\"")
-       (region-string (concat "let val old = Feedback.current_trace "
-                              ste
-                              " val _ = Feedback.set_trace "
-                              ste
-                              " 0 in ("
-                              region-string3
-                              ") before "
-                              "Feedback.set_trace " ste " old end"))
+      ((tactic-string0 (buffer-substring start end))
+       (tactic-string1 (tactic-cleanup-leading tactic-string0))
+       (start-offset (- (length tactic-string0) (length tactic-string1)))
+       (tactic-string2 (tactic-cleanup-trailing tactic-string1))
+       (genvar "HOL__GOAL_foo")
+       (tactic-string
+        (format "(fn %s => (%s) %s)"
+                genvar tactic-string2 genvar))
        (e-string (concat "proofManagerLib." (if arg "expandf" "e")))
-       (tactic-string (format "%s (fn HOL__GOAL__foo => (%s) HOL__GOAL__foo)"
-                              e-string region-string))
+       (etactic-string
+        (format "Feedback.trace(\"show_typecheck_errors\", 0) %s (%s)"
+                e-string tactic-string2))
+       (region-string (with-hol-locpragma (+ start start-offset) etactic-string))
        (sender (if hol-emit-time-elapsed-p
                    'send-timed-string-to-hol
                  'send-string-to-hol)))
-    (funcall sender tactic-string hol-echo-commands-p)))
+    (funcall sender region-string hol-echo-commands-p)))
 
 ;;; For goaltrees
 (defun copy-region-as-goaltree-tactic (start end)
@@ -1197,14 +1193,24 @@ region instead. With prefix ARG prompt for a file-name to load."
   (hol '(display-buffer-below-selected)))
 
 (defun hol-horizontal ()
-  "Runs a HOL session after splitting the window"
+  "Runs a HOL session after splitting the window horizontally.
+Reuses an existing visible HOL window if one is available (without resizing).
+If no visible HOL window exists, creates a new window to the right with 83 column width."
   (interactive)
-  (hol '(display-buffer-reuse-window
-         (lambda (b al)
-           (let ((split-height-threshold nil)
-                 (split-width-threshold 0))
-             (display-buffer-pop-up-window b al))))
-       '((window-width . 83) (reusable-frames . nil))))
+  (hol (list
+        (lambda (buffer alist)
+          "Reuse visible window if possible, else create new with horizontal split."
+          (let ((existing-window (get-buffer-window buffer 'visible)))
+            (if existing-window
+                ;; Reuse existing visible window without changing its size
+                existing-window
+              ;; No visible window found, create new one to the right (horizontal split)
+              (let ((split-height-threshold nil)
+                    (split-width-threshold 0))
+                (display-buffer-pop-up-window
+                 buffer
+                 (cons (list (cons 'window-width 83)) alist)))))))
+       nil))
 
 (defvar hol-new-buffer-style hol-new-buffer-style-default)
 
@@ -1247,7 +1253,7 @@ region instead. With prefix ARG prompt for a file-name to load."
                       (re-search-forward "^Theory [A-Za-z0-9_']+ *\\[bare\\]" limit t))
             (let ((pps (syntax-ppss)))
               (if (or (nth 3 pps) (nth 4 pps)) nil (setq bare t))))
-          (if bare (let ((hol-bare-p t)) 
+          (if bare (let ((hol-bare-p t))
                      (message "Using hol --bare")
                      (sleep-for 2)
                      (funcall starter))
@@ -1744,7 +1750,7 @@ second is to show the new term.
   "Converts a munged emacs_terminal string into a pretty one with text properties."
   (interactive "sinput: ")
   (let* ((tmpbuf (or temp-hol-output-buf
-                     (generate-new-buffer " *HOL output filter*)")))
+                     (generate-new-buffer " *HOL output filter*")))
          end)
     (setq temp-hol-output-buf tmpbuf)
     (with-current-buffer tmpbuf

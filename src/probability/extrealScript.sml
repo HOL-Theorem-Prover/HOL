@@ -5762,6 +5762,14 @@ Proof
  >> PROVE_TAC [let_antisym]
 QED
 
+Theorem FN_MINUS_REDUCE' :
+    !f x. f x <= 0 ==> (fn_minus f x = -f x)
+Proof
+    RW_TAC std_ss [fn_minus_def]
+ >> REWRITE_TAC [Once EQ_SYM_EQ, neg_eq0]
+ >> METIS_TAC [le_lt]
+QED
+
 (* don't put it into simp sets, ‘o’ may be eliminated *)
 Theorem FN_PLUS_ABS_SELF :
     !f. fn_plus (abs o f) = abs o f

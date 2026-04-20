@@ -1,21 +1,6 @@
 signature TacticParse =
 sig
 
-type 'a delim = int * int * 'a
-datatype expr
-  = EmptyE
-  | ParenE of expr delim * bool
-  | TupleE of expr delim list * bool
-  | ListE of expr delim list * bool
-  | IdentE of string
-  | OpaqueE
-  | InfixE of expr delim * string delim * expr delim
-  | AppE of expr delim list
-
-val getPrec: expr -> int
-
-val parseSMLSimple: string -> int * int * expr
-
 datatype 'a tac_expr
   = Then of 'a tac_expr list
   | ThenLT of 'a tac_expr * 'a tac_expr list
@@ -57,7 +42,7 @@ datatype 'a tac_expr
 val isTac: 'a tac_expr -> bool
 val topSpan: 'a tac_expr -> 'a option
 
-val parseTacticBlock: string -> (int * int) tac_expr
+val parseTacticBlock: HOLSourceAST.exp -> (int * int) tac_expr
 
 val mapTacExpr:
   { start: bool -> 'a -> 'b, stop: bool -> 'b -> 'c,

@@ -170,6 +170,7 @@ in
 end
 end (* local *)
 
+val canBindStr = false
 fun bindstr s = s
 
 end; (* struct *)

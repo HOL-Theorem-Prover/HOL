@@ -1,4 +1,4 @@
-signature HolParser =
+signature HolParserOld =
 sig
 
 structure Simple: sig

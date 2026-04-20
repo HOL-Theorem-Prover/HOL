@@ -2,9 +2,6 @@ val _ = use "poly/poly-init2.ML";
 structure BasicIO = SML90;
 exception Interrupt = SML90.Interrupt
 
-val _ = use "../tools/Holmake/Systeml.sig"
-val _ = use "Holmake/Systeml.sml";
-
 val _ = use "../tools/Holmake/hmcore.ML";
 val _ = use "../tools/util/GetOpt.sig";
 val _ = use "../tools/util/GetOpt.sml";
@@ -22,39 +19,37 @@ val _ = use "../src/portableML/json/JSONParser.sig";
 val _ = use "../src/portableML/json/JSONParser.sml";
 val _ = use "../src/portableML/json/JSONDecode.sig";
 val _ = use "../src/portableML/json/JSONDecode.sml";
-val _ = use "../src/portableML/DArray.sig";
-val _ = use "../src/portableML/DArray.sml";
 val _ = use "holide.ML";
 val _ = use "lsp-server.ML";
 
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate15 z
+  fun makeUpdateT z = makeUpdate16 z
 in
 fun updateT z = let
   fun from all_forced bare base_state checkerr checkfors debug defaultout exe
-           extra_data forced_objs help multithread output quietp z_repl =
+           extra_data forced_objs help multithread output quietp thmsrc z_repl =
     {all_forced = all_forced, bare = bare, base_state = base_state,
      checkerr = checkerr, checkfors = checkfors, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
-     output = output, quietp = quietp, z_repl = z_repl}
-  fun from' z_repl quietp output multithread help forced_objs extra_data exe
+     output = output, quietp = quietp, thmsrc = thmsrc, z_repl = z_repl}
+  fun from' z_repl thmsrc quietp output multithread help forced_objs extra_data exe
             defaultout debug checkfors checkerr base_state bare all_forced =
     {all_forced = all_forced, bare = bare, base_state = base_state,
      checkfors = checkfors, checkerr = checkerr, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
-     output = output, quietp = quietp, z_repl = z_repl}
+     output = output, quietp = quietp, thmsrc = thmsrc, z_repl = z_repl}
   fun to f {all_forced, bare, base_state, checkerr, checkfors, debug, defaultout,
             exe, extra_data,
-            forced_objs, help, multithread, output, quietp, z_repl} =
+            forced_objs, help, multithread, output, quietp, thmsrc, z_repl} =
     f all_forced bare base_state checkerr checkfors debug defaultout exe extra_data
       forced_objs help multithread
-      output quietp z_repl
+      output quietp thmsrc z_repl
 in
   makeUpdateT (from, from', to)
 end z
@@ -130,6 +125,7 @@ datatype option_record = OR of {
   multithread : int option,
   output : string option,
   quietp : bool,
+  thmsrc : string option,
   z_repl : bool
 }
 
@@ -209,6 +205,8 @@ val cline_opts = [
    desc = setBaseNone},
   {help = "reduce verbosity", long = ["quiet"], short = "q",
    desc = mkBoolT #quietp},
+  {help = "theorem source (dat or tr)", long = ["thmsrc"], short = "",
+   desc = setStringOpt "src" #thmsrc},
   {help = "use zero-terminated REPL style", long = ["zero"], short = "z",
    desc = mkBoolT #z_repl}
 ]
@@ -226,6 +224,7 @@ val initial_cline = OR {all_forced = false,
                         multithread = NONE,
                         output = NONE,
                         quietp = false,
+                        thmsrc = NONE,
                         z_repl = false}
 end
 
@@ -440,6 +439,25 @@ fun main() = let
   val _ = diag ("holpathdb extensions: "^
                 String.concatWith ", " (map print_ext exts))
   val _ = List.app holpathdb.extend_db exts
+  (* Initialize theorem source if --thmsrc was specified (via flag or env var) *)
+  val thmsrc = case #thmsrc options of
+                   SOME s => SOME s
+                 | NONE => OS.Process.getEnv "HOL_THMSRC"
+  val _ = case thmsrc of
+              SOME "tr" => (
+                if not Systeml.haveWord64 then
+                  die "--thmsrc tr requires Word64 support"
+                else (
+                  diag "Loading ThmSrc_tr for proof trace replay";
+                  Meta.load "ThmSrc_tr"
+                  handle e => die ("Failed to load ThmSrc_tr: " ^
+                                   General.exnMessage e ^
+                                   "\n(is src/postkernel/prooftrace built?)")
+                )
+              )
+            | SOME "dat" => ()  (* explicit dat is same as default *)
+            | SOME s => die ("Unknown --thmsrc value: " ^ s)
+            | NONE => ()   (* dat is the default, no action needed *)
   (* Helper to load preludes for REPL mode.
      Load Arbint and Arbrat first - they provide pp_int/pp_rat for the
      pretty-printers registered in prelude.ML. *)

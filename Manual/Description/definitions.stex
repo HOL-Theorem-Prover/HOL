@@ -21,7 +21,7 @@ Or
   Definition defname[\textit{attrs}]:
     \textit{fn-spec}
   Termination
-    \textit{tactic}  
+    \textit{tactic}
   End
 \end{alltt}
 \index{Define@\ml{Define}}
@@ -327,7 +327,7 @@ declaration could be used to formalize a simple file system.
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype
+  Datatype:
      file = Text string | Dir directory
        ;
      directory = <| owner : string ;
@@ -1357,8 +1357,10 @@ First we define a datatype, named \ml{prop}, of boolean formulas:
 %
 \begin{hol}
 \begin{alltt}
->> Datatype‘prop = VAR 'a | NOT prop | AND prop prop
-                 | OR  prop prop’;
+>> Datatype:
+     prop = VAR 'a | NOT prop | AND prop prop
+          | OR  prop prop
+   End
 \end{alltt}
 \end{hol}
 %
@@ -1579,7 +1581,8 @@ branch. At the end of execution the tree has been linearized.
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
->>_ Datatype `btree = Leaf | Brh btree btree`;
+>>_ Datatype: btree = Leaf | Brh btree btree
+    End
 
 >> val Unbal_defn =
       Hol_defn "Unbal"
@@ -1839,7 +1842,8 @@ summing the results of a function in a arbitrarily
 %
 \begin{session}
 \begin{alltt}
-  >>_ Datatype `ltree = Node 'a (ltree list)`;
+  >>_ Datatype: ltree = Node 'a (ltree list)
+      End
 
   Defn.Hol_defn
     "ltree_sigma"
@@ -2094,7 +2098,7 @@ the given operators.
 \index{export_mono (ML function)@\ml{export\_mono} (\ML{} function)}
 \index{theorem attributes!mono@\ml{mono}}
 Monotonicity results that the user derives may be stored in the global
-\ml{the\_monoset} variable by using the \ml{export\_mono} function, or the `mono` theorem attribute. 
+\ml{the\_monoset} variable by using the \ml{export\_mono} function, or the `mono` theorem attribute.
 This function takes a string naming a theorem in the current theory
 segment, and adds that theorem to the monotonicity theorems
 immediately, and in such a way that this situation will also obtain when

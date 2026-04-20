@@ -181,6 +181,12 @@ fun Hol_mono_coreln name monoset tm = let
                     ("Bad name for definition: "^ Lib.mlquote name^
                      " (use xHol_coreln to specify a better)")
   val (rules, coind, cases) = new_coinductive_definition monoset name tm
+  val _ = null (hyp rules) orelse
+          raise ERR "Hol_coreln"
+                ("Defining theorem has hypotheses; probably due to a \
+                 \monotonicity failure; one is: " ^
+                 term_to_string (hd $ hyp rules))
+
   val strong_ind = derive_strong_coinduction (rules, coind)
 in
   save_theorems name (rules, coind, strong_ind, cases);

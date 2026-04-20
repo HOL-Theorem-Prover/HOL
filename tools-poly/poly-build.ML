@@ -17,7 +17,7 @@ fun useHMUtil f =
     (use ("../tools/Holmake/util/" ^ f ^ ".sig");
      use ("../tools/Holmake/util/" ^ f ^ ".sml"))
 
-val _ = use "Holmake/Systeml.sml";
+val _ = use "../tools/Holmake/Systeml.sml";
 val _ = useUtil "GetOpt";
 fun useHfs f =
     (use ("../tools/Holmake/hfs/" ^ f ^ ".sig");
@@ -33,7 +33,11 @@ fun useParsing f =
      use ("../tools/parsing/" ^ f ^ ".sml"))
 val _ = useParsing "AttributeSyntax";
 val _ = use "../tools/parsing/HolLex.sml";
-val _ = useParsing "HolParser";
+val _ = useParsing "HOLSourceAST";
+val _ = useParsing "HOLSourceParser";
+val _ = useParsing "HOLSourceExpand";
+val _ = useParsing "HOLSourcePrinter";
+val _ = useParsing "HOLSource";
 val _ = useDeps "Holdep";
 fun useCore f =
     (use ("../tools/Holmake/core/" ^ f ^ ".sig");

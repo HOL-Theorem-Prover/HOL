@@ -2201,8 +2201,9 @@ Proof
  >> METIS_TAC [pos_fn_integral_pos_simple_fn, pos_simple_fn_integral_indicator]
 QED
 
+(* NOTE: removed “measure m (m_space m) < PosInf” *)
 Theorem pos_fn_integral_const :
-    !m c. measure_space m /\ measure m (m_space m) < PosInf /\ 0 <= c ==>
+    !m c. measure_space m /\ 0 <= c ==>
          (pos_fn_integral m (\x. Normal c) = Normal c * measure m (m_space m))
 Proof
     rpt STRIP_TAC
@@ -6109,15 +6110,42 @@ Proof
                    fn_plus_def, fn_minus_def]
 QED
 
-Theorem integral_const:
-    !m c. measure_space m /\ measure m (m_space m) < PosInf ==>
-         (integral m (\x. Normal c) = Normal c * measure m (m_space m))
+(* NOTE: removed “measure m (m_space m) < PosInf” *)
+Theorem integral_const :
+    !m c. measure_space m ==>
+          integral m (\x. Normal c) = Normal c * measure m (m_space m)
 Proof
     rpt STRIP_TAC
- >> ONCE_REWRITE_TAC [MATCH_MP integral_mspace (ASSUME ``measure_space m``)]
- >> BETA_TAC
- >> MATCH_MP_TAC integral_cmul_indicator >> art []
- >> PROVE_TAC [MEASURE_SPACE_MSPACE_MEASURABLE]
+ >> ‘c = 0 \/ 0 < c \/ c < 0’ by PROVE_TAC [REAL_LT_TOTAL]
+ >| [ (* goal 1 (of 3) *)
+      simp [normal_0, integral_zero],
+      (* goal 2 (of 3) *)
+      REWRITE_TAC [integral_def] \\
+     ‘0 <= c’ by simp [REAL_LT_IMP_LE] \\
+      Know ‘(\x. Normal c)^+ = \x. Normal c’
+      >- (PURE_REWRITE_TAC [FUN_EQ_THM] \\
+          Q.X_GEN_TAC ‘x’ \\
+          MATCH_MP_TAC FN_PLUS_REDUCE \\
+          simp [extreal_of_num_def, extreal_le_eq]) >> Rewr' \\
+      Know ‘(\x. Normal c)^- = \x. 0’
+      >- (rw [FUN_EQ_THM] \\
+          MATCH_MP_TAC FN_MINUS_REDUCE \\
+          simp [extreal_of_num_def, extreal_le_eq]) >> Rewr' \\
+      simp [pos_fn_integral_const, pos_fn_integral_zero],
+      (* goal 3 (of 3) *)
+      REWRITE_TAC [integral_def] \\
+     ‘c <= 0’ by simp [REAL_LT_IMP_LE] \\
+      Know ‘(\x. Normal c)^+ = \x. 0’
+      >- (rw [FUN_EQ_THM] \\
+          MATCH_MP_TAC FN_PLUS_REDUCE' \\
+          simp [extreal_of_num_def, extreal_le_eq]) >> Rewr' \\
+      Know ‘(\x. Normal c)^- = \x. Normal (-c)’
+      >- (rw [FUN_EQ_THM, GSYM extreal_ainv_def] \\
+         ‘-Normal c = -((\x. Normal c) x)’ by simp [] >> POP_ORW \\
+          MATCH_MP_TAC FN_MINUS_REDUCE' \\
+          simp [extreal_of_num_def, extreal_le_eq]) >> Rewr' \\
+      simp [pos_fn_integral_const, pos_fn_integral_zero] \\
+      simp [GSYM extreal_ainv_def, mul_lneg, neg_neg] ]
 QED
 
 Theorem integral_cmul_infty:

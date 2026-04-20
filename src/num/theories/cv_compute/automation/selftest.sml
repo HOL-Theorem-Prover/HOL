@@ -1,5 +1,6 @@
 
 open HolKernel Parse boolLib bossLib cvTheory cv_repTheory cv_primTheory;
+open cv_string_fmapTheory;
 open cv_typeTheory cv_typeLib cv_repLib cv_transLib;
 open arithmeticTheory integerTheory wordsTheory sptreeTheory wordsLib;
 
@@ -349,3 +350,16 @@ val mem_test_def = Define `mem_test n = MEM n ["test1"; "test2"]`
 val _ = cv_trans mem_test_def;
 val _ = cv_eval ``mem_test "hi"``
 *)
+
+val str_fmap_test_def = Define ‘
+  str_fmap_test [] n = FEMPTY ∧
+  str_fmap_test ((x:string)::xs) (n:num) = str_fmap_test xs (n+1) |+ (x,n)
+’
+
+val () = cv_trans str_fmap_test_def;
+
+val thy = fetch "-" "cv_str_fmap_test_thm"
+            |> concl |> dest_eq |> fst |> strip_comb |> fst
+            |> dest_thy_const |> #Thy;
+
+val _ = (thy = "cv_string_fmap") orelse fail();

@@ -5,6 +5,7 @@
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (*         : 2023-2024 Michael Norrish and Chun Tian                          *)
 (* ========================================================================== *)
+
 Theory term
 Ancestors
   arithmetic pred_set list finite_map relation pair rich_list
@@ -12,16 +13,13 @@ Ancestors
 Libs
   boolSimps hurdUtils binderLib nomdatatype
 
-
 val _ = set_fixity "=" (Infix(NONASSOC, 450))
 
-val tyname = "term"
+(* calling nominal_datatype *)
+val {tynames, rep_t, lp} =
+    nominal_datatype ‘term = VAR 'free | APP term term | LAM 'bound term’;
 
-(* d ≈ var + app + lam *)
-val lp = “(λn lfvs (d:unit + unit + unit) tns uns.
-             lfvs = 1 ∧ n = 0 ∧ ISL d ∧ tns = [] ∧ uns = [] ∨
-             lfvs = 0 ∧ n = 0 ∧ ISR d ∧ ISL (OUTR d) ∧ tns = [] ∧ uns = [0;0] ∨
-             lfvs = 0 ∧ n = 0 ∧ ISR d ∧ ISR (OUTR d) ∧ tns = [0] ∧ uns = [])”
+val tyname = hd tynames; (* "term" *)
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
@@ -32,7 +30,7 @@ val glam = genind_lam
 val LAM_t = mk_var("LAM", ``:string -> ^newty -> ^newty``)
 val LAM_def = new_definition(
   "LAM_def",
-  ``^LAM_t v t = ^term_ABS_t (GLAM v [] (INR $ INR ()) [^term_REP_t t] [])``);
+  ``^LAM_t v t = ^term_ABS_t (GLAM v [] rLAM [^term_REP_t t] [])``);
 
 val LAM_termP = prove(
   mk_comb(termP, LAM_def |> SPEC_ALL |> concl |> rhs |> rand),
@@ -43,15 +41,15 @@ val APP_t = mk_var("APP", ``:^newty -> ^newty -> ^newty``)
 val APP_def = new_definition(
   "APP_def",
   ``^APP_t t1 t2 =
-       ^term_ABS_t (GLAM ARB [] (INR $ INL ()) []
+       ^term_ABS_t (GLAM ARB [] rAPP []
                          [^term_REP_t t1; ^term_REP_t t2])``);
 val APP_termP = prove(
-  ``^termP (GLAM x [] (INR $ INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``,
+  ``^termP (GLAM x [] rAPP [] [^term_REP_t t1; ^term_REP_t t2])``,
   match_mp_tac glam >> srw_tac [][genind_term_REP])
 val APP_t = defined_const APP_def
 
 Theorem APP_def':
-  ^term_ABS_t (GLAM v [] (INR $ INL ()) [] [^term_REP_t t1; ^term_REP_t t2]) =
+  ^term_ABS_t (GLAM v [] rAPP [] [^term_REP_t t1; ^term_REP_t t2]) =
   ^APP_t t1 t2
 Proof srw_tac [][APP_def, GLAM_NIL_EQ, term_ABS_pseudo11, APP_termP]
 QED
@@ -59,15 +57,15 @@ QED
 val VAR_t = mk_var("VAR", ``:string -> ^newty``)
 val VAR_def = new_definition(
   "VAR_def",
-  ``^VAR_t s = ^term_ABS_t (GLAM ARB [s] (INL ()) [] [])``);
+  ``^VAR_t s = ^term_ABS_t (GLAM ARB [s] rVAR [] [])``);
 Theorem VAR_termP[local]:
-  ^termP (GLAM u [v] (INL ()) [][])
+  ^termP (GLAM u [v] rVAR [][])
 Proof irule glam >> srw_tac[][genind_term_REP]
 QED
 val VAR_t = defined_const VAR_def
 
 Theorem VAR_def':
-  ^term_ABS_t (GLAM u [v] (INL ()) [] []) = ^VAR_t v
+  ^term_ABS_t (GLAM u [v] rVAR [] []) = ^VAR_t v
 Proof
   srw_tac[][VAR_def, GLAM_NIL_EQ, term_ABS_pseudo11, VAR_termP]
 QED
@@ -161,7 +159,7 @@ val LIST_REL_NIL = listTheory.LIST_REL_NIL
 
 val term_ind =
     bvc_genind
-        |> INST_TYPE [alpha |-> ``:unit+unit+unit``]
+        |> INST_TYPE [alpha |-> rep_t]
         |> Q.INST [`lp` |-> `^lp`]
         |> SIMP_RULE std_ss [LIST_REL_CONS1, RIGHT_AND_OVER_OR,
                              LEFT_AND_OVER_OR, DISJ_IMP_THM, LIST_REL_NIL]
@@ -215,17 +213,17 @@ val LAM_eq_thm = save_thm(
 val (_, repty) = dom_rng (type_of term_REP_t)
 val repty' = ty_antiq repty
 
+val u_tm = mk_var("u", rep_t);
+
 val tlf =
-   “λ(v:string) (fvs : string list) (u:unit + unit + unit)
+   “λ(v:string) (fvs : string list) ^u_tm
      (ds1:(ρ -> α) list) (ds2:(ρ -> α) list)
      (ts1:^repty' list) (ts2:^repty' list) (p :ρ).
-      if ISL u then
-        tvf (HD fvs) p
-      else if ISL (OUTR u) then
-        taf (HD ds2) (HD (TL ds2)) (^term_ABS_t (HD ts2))
-            (^term_ABS_t (HD (TL ts2))) p :α
-      else
-        tlf (HD ds1) v (^term_ABS_t (HD ts1)) p :α”
+     case u of
+       rVAR => tvf (HD fvs) p
+     | rAPP => taf (HD ds2) (HD (TL ds2)) (^term_ABS_t (HD ts2))
+                   (^term_ABS_t (HD (TL ts2))) p :α
+     | rLAM => tlf (HD ds1) v (^term_ABS_t (HD ts1)) p :α”
 
 val termP_elim = prove(
   ``(∀g. ^termP g ⇒ P g) ⇔ (∀t. P (^term_REP_t t))``,
@@ -249,7 +247,7 @@ val termP0 = prove(
 
 Theorem parameter_tm_recursion =
   parameter_gtm_recursion
-      |> INST_TYPE [alpha |-> ``:unit + unit + unit``,
+      |> INST_TYPE [alpha |-> rep_t,
                     gamma |-> alpha]
       |> Q.INST [`lf` |-> `^tlf`, `lp` |-> `^lp`]
       |> SIMP_RULE (srw_ss()) [sumTheory.FORALL_SUM, FORALL_AND_THM,
@@ -259,12 +257,12 @@ Theorem parameter_tm_recursion =
                                GSYM LEFT_FORALL_IMP_THM,
                                LIST_REL_CONS1, LENGTH_EQ_NUM_compute,
                                genind_GLAM_eqn, sidecond_def,
-                               NEWFCB_def, relsupp_def,
+                               NEWFCB_def,
                                LENGTH_NIL_SYM, LENGTH1, LENGTH2]
       |> ONCE_REWRITE_RULE [termP0]
       |> SIMP_RULE (srw_ss() ++ DNF_ss) [LENGTH1, LENGTH2, LENGTH_NIL]
       |> CONV_RULE (DEPTH_CONV termP_removal)
-      |> SIMP_RULE (srw_ss()) [GSYM supp_tpm, SYM term_REP_tpm]
+      |> SIMP_RULE (srw_ss()) [GSYM supp_tpm, SYM term_REP_tpm, relsupp_def]
       |> UNDISCH
       |> rpt_hyp_dest_conj
       |> lift_exfunction {repabs_pseudo_id = repabs_pseudo_id,

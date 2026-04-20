@@ -1,0 +1,57 @@
+#|
+Theorem: SKOLEM_THM
+
+   ⊢ ∀P. (∀x. ∃y. P x y) ⇔ ∃f. ∀x. P x (f x)
+
+Auxiliary definitions:
+
+   ⊢ ∀P x y. Lam_0 P x y ⇔ P x y
+   ⊢ ∀P x. Lam_1 P x ⇔ $? (Lam_0 P x)
+   ⊢ ∀P f x. Lam_2 P f x ⇔ P x (f x)
+   ⊢ ∀P f. Lam_3 P f ⇔ $! (Lam_2 P f)
+
+Lifted theorem:
+
+   ⊢ ∀P. $! (Lam_1 P) ⇔ $? (Lam_3 P)
+|#
+
+(defhol
+   :fns ((lam_0 (:arrow* (:arrow* a b :bool) a b :bool)))
+   :defs ((:forall ((p (:arrow* a b :bool)) (x a) (y b))
+      (equal
+       (hap* (lam_0 (typ (:arrow* (:arrow* a b :bool) a b :bool))) p x y)
+       (hap* p x y)))))
+
+(defhol
+   :fns ((lam_1 (:arrow* (:arrow* a b :bool) a :bool)))
+   :defs ((:forall ((p (:arrow* a b :bool)) (x a))
+      (equal (hap* (lam_1 (typ (:arrow* (:arrow* a b :bool) a :bool))) p x)
+       (hp-exists
+        (hap* (lam_0 (typ (:arrow* (:arrow* a b :bool) a b :bool))) p x))))))
+
+(defhol
+   :fns ((lam_2 (:arrow* (:arrow* a b :bool) (:arrow* a b) a :bool)))
+   :defs ((:forall ((p (:arrow* a b :bool)) (f (:arrow* a b)) (x a))
+      (equal
+       (hap* (lam_2 (typ (:arrow* (:arrow* a b :bool) (:arrow* a b) a :bool)))
+        p f x) (hap* p x (hap* f x))))))
+
+(defhol
+   :fns ((lam_3 (:arrow* (:arrow* a b :bool) (:arrow* a b) :bool)))
+   :defs ((:forall ((p (:arrow* a b :bool)) (f (:arrow* a b)))
+      (equal
+       (hap* (lam_3 (typ (:arrow* (:arrow* a b :bool) (:arrow* a b) :bool))) p
+        f)
+       (hp-forall
+        (hap*
+         (lam_2 (typ (:arrow* (:arrow* a b :bool) (:arrow* a b) a :bool))) p
+         f))))))
+
+(defhol
+   :name skolem_thm
+   :thm (:forall ((p (:arrow* a b :bool)))
+     (hp=
+      (hp-forall (hap* (lam_1 (typ (:arrow* (:arrow* a b :bool) a :bool))) p))
+      (hp-exists
+       (hap* (lam_3 (typ (:arrow* (:arrow* a b :bool) (:arrow* a b) :bool)))
+        p)))))

@@ -10,8 +10,8 @@
 structure Normalizer :> Normalizer =
 struct
 
-open HolKernel Parse boolLib boolSimps liteLib
-open arithmeticTheory numSyntax Num_conv tautLib Arithconv simpLib
+open HolKernel Parse boolLib liteLib
+open arithmeticTheory numSyntax Num_conv tautLib Arithconv
      normalForms
 open normalizerTheory
 

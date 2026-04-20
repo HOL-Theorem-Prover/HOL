@@ -1476,6 +1476,12 @@ fun save_dep thy (th as (THM(t,h,c))) =
     Computing with first-order lisp-style values
    ---------------------------------------------------------------------- *)
 
+type compute_args =
+  { cval_terms : (string * term) list,
+    cval_type  : hol_type,
+    num_type   : hol_type,
+    char_eqns  : (string * thm) list }
+
 local
   infix ##;
   fun dest_code_eqn th =

@@ -5,6 +5,8 @@ $(SML_LIB)/basis/basis.mlb
 ../core/HM_Core_Cline.sml
 ../deps/HM_DepGraph.sig
 ../deps/HM_DepGraph.sml
+../core/HM_BuildLock.sig
+../core/HM_BuildLock.sml
 ../core/HM_GraphBuildJ1.sig
 ../core/HM_GraphBuildJ1.sml
 ../poly/HM_Cline.sig

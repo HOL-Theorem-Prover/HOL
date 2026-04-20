@@ -117,6 +117,7 @@ sig
   val uptodate_type      : hol_type -> bool
   val uptodate_term      : term -> bool
   val uptodate_thm       : thm -> bool
+  val register_replayed_axiom : thm -> unit
   val scrub              : unit -> unit
 
   val try_theory_extension : ('a -> 'b) -> 'a -> 'b
