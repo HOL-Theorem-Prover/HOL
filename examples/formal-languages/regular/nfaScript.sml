@@ -4,7 +4,7 @@
 (* taken is set-oriented, rather than computational.                         *)
 (*===========================================================================*)
 
-Theory regular
+Theory nfa
 Ancestors
   combin relation pred_set pair
   prim_rec arithmetic list rich_list
