@@ -243,9 +243,9 @@ fun addDbg sopt =
 
 val core_option_descriptions = [
   { help = "build and pull pre-built theories from local cache when possible",
-    long = ["use-cache"], short = "", desc = ReqArg (set_cache_url, "url") },
-  { help = "build and write built theory files to local cache",
-    long = ["write-cache"], short = "", desc = ReqArg (set_download_cache_url, "url") },
+    long = ["use-cache"], short = "", desc = ReqArg (set_cache_url, "dir") },
+  { help = "write built theory files to local cache for a target theory",
+    long = ["write-cache"], short = "", desc = ReqArg (set_download_cache_url, "dir") },
   { help = "print cache key for a theory target", long = ["cachekey"],
     short = "", desc = ReqArg (set_cachekey, "theory") },
   { help = "turn on diagnostic messages", long = ["dbg"], short = "d",

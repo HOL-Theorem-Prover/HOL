@@ -53,14 +53,14 @@ struct
     fun updateWJ z = let
       fun from dir tag command update starttime lastevent out err
                outeof erreof pid =
-          {tag = tag, command = command, update = update,
-           starttime = starttime, lastevent = lastevent, out = out, err = err,
-           outeof = outeof, erreof = erreof, pid = pid, dir = dir}
-      fun from' pid erreof outeof err out lastevent starttime update
-                command tag dir =
-          {tag = tag, command = command, update = update,
-           starttime = starttime, lastevent = lastevent, out = out, err = err,
-           outeof = outeof, erreof = erreof, pid = pid, dir = dir}
+          {tag = tag, command = command, update = update, starttime = starttime,
+           lastevent = lastevent, out = out, err = err, outeof = outeof,
+           erreof = erreof, pid = pid, dir = dir}
+      fun from' pid erreof outeof err out lastevent starttime update command
+                tag dir =
+          {tag = tag, command = command, update = update, starttime = starttime,
+           lastevent = lastevent, out = out, err = err, outeof = outeof,
+           erreof = erreof, pid = pid, dir = dir}
       fun to f {tag, command, update, starttime, lastevent, out,
                 err, outeof, erreof, pid, dir} =
         f dir tag command update starttime lastevent out err
