@@ -492,7 +492,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       | BR_ClineK{cline = (_,cl), job_kont = k, cache_url, cachekey, ...} =>
         (case cache_url of
              SOME (HM_Core_Cline.Fetch, url) =>
-                 HolmakeCacheFetch.fetch url cachekey info orelse
+                 HolmakeCacheFetch.fetch url cachekey info warn orelse
                  k warn (Systeml.systeml cl)
            | SOME (HM_Core_Cline.Write, _) => k warn (Systeml.systeml cl)
            | NONE => k warn (Systeml.systeml cl))

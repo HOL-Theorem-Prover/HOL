@@ -15,7 +15,7 @@ fun copy src dest =
     in  loop (); true end
     handle _ => false
 
-fun upload base_url cachekey dir thyname talk =
+fun upload base_url cachekey dir thyname info warn =
     let
         val _ = OS.FileSys.mkDir base_url handle OS.SysErr _ => ()
         val theory_exts = [".sig", ".sml", ".dat"]
@@ -59,23 +59,23 @@ fun upload base_url cachekey dir thyname talk =
         val _ = TextIO.output(out, json)
         val _ = TextIO.closeOut out
     in
-        if ok then (talk ("Cached " ^ thyname); true)
-        else (talk ("Cache failed for " ^ thyname); false)
+        if ok then (info ("Cached " ^ thyname); true)
+        else (warn ("Cache failed for " ^ thyname); false)
     end
-    handle e => (talk ("Write failed: " ^ exnMessage e); false)
+    handle e => (warn ("Write failed: " ^ exnMessage e); false)
 
-fun fetch base_url cachekey talk =
+fun fetch base_url cachekey info warn =
     let
         val fetch_to_file = copy
         val key_url = base_url ^ "/key/" ^ cachekey
         val file = OS.FileSys.tmpName()
         fun cleanup() = (OS.FileSys.remove file handle OS.SysErr _ => ())
-        val _ = talk "Checking cache for prebuilt theory..."
+        val _ = info "Checking cache for prebuilt theory..."
         val hit = fetch_to_file key_url file
     in
         if not hit then let
             val _ = cleanup()
-            val _ = talk "Cache miss; theory will be built locally."
+            val _ = info "Cache miss; theory will be built locally."
         in
             false
         end
@@ -97,13 +97,13 @@ fun fetch base_url cachekey talk =
                                  fetch_to_file (base_url ^ url) (to_dest_dir name))
                              files
                 val _ = if ok
-                        then talk "Cache hit! local theory building can be skipped."
-                        else talk "Only managed a partial cache hit; theory will be built locally."
+                        then info "Cache hit! local theory building can be skipped."
+                        else warn "Only managed a partial cache hit; theory will be built locally."
             in
                 ok
             end
             handle _ => let
-                val _ = talk "Something went wrong; theory will be built locally."
+                val _ = warn "Something went wrong; theory will be built locally."
             in
                 false
             end

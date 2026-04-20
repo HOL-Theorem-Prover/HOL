@@ -316,11 +316,11 @@ fun graphbuild optinfo g =
                                  (updall RealFail g, keep_going)))
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l
-                            fun try_cache talk =
+                            fun try_cache () =
                               case cache_url of
                                   NONE => false
                                 | SOME (HM_Core_Cline.Fetch, url) =>
-                                  HolmakeCacheFetch.fetch url cachekey talk
+                                  HolmakeCacheFetch.fetch url cachekey info warn
                                 | SOME (HM_Core_Cline.Write, _) => false
                           in
                             diag ("New graph job for "^target_s^

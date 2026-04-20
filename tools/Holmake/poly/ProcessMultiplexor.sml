@@ -14,7 +14,7 @@ struct
 
   type command = {executable: string, nm_args : string list, env : string list}
   type 'a job = {tag : string, command : command, dir : string,
-                 try_cache : (string -> unit) -> bool,
+                 try_cache : unit -> bool,
                  update : 'a * bool * Time.time -> 'a}
   datatype 'a genjob_result =
            NoMoreJobs of 'a | NewJob of ('a job * 'a) | GiveUpAndDie of 'a
@@ -187,7 +187,7 @@ struct
                                 ininfd, inoutfd]
             val _ = OS.FileSys.chDir dir
           in
-            if try_cache (fn s => print (s ^ "\n")) then
+            if try_cache () then
               OS.Process.exit OS.Process.success
             else
               exece(executable,nm_args,env)

@@ -1371,7 +1371,7 @@ fun do_write_cache depgraph base_url thyname =
       val cachekey = HolmakeCacheKey.generate_cachekey deps
       val dir = hmdir.toAbsPath (#dir nodeinfo)
     in
-      if HolmakeCacheFetch.upload base_url cachekey dir thyname (fn s => print (s ^ "\n")) then
+      if HolmakeCacheFetch.upload base_url cachekey dir thyname info warn then
         OS.Process.success
       else
         OS.Process.failure
