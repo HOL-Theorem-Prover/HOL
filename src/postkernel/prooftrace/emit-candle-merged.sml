@@ -1,20 +1,28 @@
 (* Self-contained Candle pipeline demo.
 
-   Given HOL4 proof-trace dumps boolTheory.tr.gz and markerTheory.tr.gz
+   Given HOL4 proof-trace dumps *Theory.tr.gz
    in the current directory, produces a single merged Candle-ruleset
-   proof trace in both encodings:
+   proof trace, for a targets, in both encodings:
      merged.candle.pft.bin
      merged.candle.pft.jsonl
 
    Pipeline:
      1. Emit candle-preamble.pft.bin          (PFTCandlePreamble.emit)
-     2. Emit {bool,marker}.candle.pft.bin     (PFTEmit.emit_theory)
+     2. Emit {...}.candle.pft.bin             (PFTEmit.emit_theory)
      3. Merge into merged.candle.raw.pft.bin  (PFTMerge.merge)
      4. Rename binders                        (PFTRename.rename)
      5. Transcode bin -> jsonl                (PFTTranscode.transcode)
 *)
 
-val theories = ["bool", "marker"]
+val theories = ["bool", "marker", "num", "sat", "combin", "relation",
+                "prim_rec", "quotient", "pair", "arithmetic", "numeral"]
+
+val targets =
+    (* everything
+    List.map (fn s => PFTMerge.ThyAll (s, false)) theories
+    *)
+    [PFTMerge.ThyThm ("arithmetic", "X_LE_DIV", true),
+     PFTMerge.ThyThm ("num", "INDUCTION", true)]
 
 val preamble_bin = "candle-preamble.pft.bin"
 fun theory_in  s = s ^ "Theory.tr.gz"
@@ -46,7 +54,7 @@ val merged_raw = "merged.candle.raw.pft.bin"
 val () = log "Merging..."
 val () = PFTMerge.merge {
   inputs  = preamble_bin :: List.map theory_pft theories,
-  targets = List.map (fn s => PFTMerge.ThyAll (s, false)) theories,
+  targets = targets,
   output  = merged_raw,
   binary  = true
 }
