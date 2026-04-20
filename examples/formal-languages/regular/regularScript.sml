@@ -1537,7 +1537,8 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
-(* Transformation that removes symbols from the alphabet of an NFA           *)
+(* Transformation that extends the alphabet of an NFA without changing its   *)
+(* behaviour.                                                                *)
 (*---------------------------------------------------------------------------*)
 
 Definition nfa_Sigma_extend_def:
