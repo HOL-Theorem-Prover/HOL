@@ -21,6 +21,7 @@ val _ = use "../../util/FunctionalRecordUpdate.sml";
 val _ = useC "core/HM_Core_Cline";
 val _ = useC "deps/HM_DepGraph";
 val _ = useC "core/HM_BuildLock";
+val _ = useC "core/HM_Cachekey";
 val _ = useC "core/HM_GraphBuildJ1";
 val _ = useC "poly/HM_Cline";
 val _ = useC "poly/GraphExtra";

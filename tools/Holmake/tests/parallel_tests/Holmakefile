@@ -12,6 +12,7 @@ DIRNAMES = \
   phony_tgt \
   quote-filter \
   cachekey \
+  rebuild_cachekey \
   theorytarget \
   commandmacros \
   doublecrnl \

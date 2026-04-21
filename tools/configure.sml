@@ -390,6 +390,7 @@ val _ =
     compile ["-I", "../Holmake"] "GetOpt.sml";
     compile ["-I", "../Holmake"] "FunctionalRecordUpdate.sml";
     FileSys.chDir "../Holmake/core";
+    compile ["-I", ".."] "HM_Cachekey_dtype.sml";
     compile ["-I", "..", "-I", "../../util", "-I", "../hmf"] "HM_Core_Cline.sig";
     compile ["-I", "..", "-I", "../../util", "-I", "../hmf"] "HM_Core_Cline.sml";
     FileSys.chDir "../deps";
@@ -404,6 +405,8 @@ val _ =
     compile ["-I", "..", "-I", "../core", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "HM_DepGraph.sig";
     compile ["-I", "..", "-I", "../core", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "HM_DepGraph.sml";
     FileSys.chDir "../core";
+    compile ["-I", "..", "-I", "../deps", "-I", "../hfs", "-I", "../../parsing", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "HM_Cachekey.sig";
+    compile ["-I", "..", "-I", "../deps", "-I", "../hfs", "-I", "../../parsing", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "HM_Cachekey.sml";
     compile ["-I", ".."] "HM_BuildLock.sig";
     FileSys.chDir "../mosml";
     compile ["-I", "..", "-I", "../core"] "HM_BuildLock.sml";

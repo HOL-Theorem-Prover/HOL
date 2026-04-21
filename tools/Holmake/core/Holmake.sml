@@ -310,6 +310,7 @@ val no_lastmakercheck = #no_lastmaker_check coption_value
 val show_usage = #help coption_value
 val show_json = #json coption_value
 val cline_cachekey = #cachekey coption_value
+val cline_rebuild_strategy = #rebuild coption_value
 val quit_on_failure = #quit_on_failure coption_value
 val toplevel_no_prereqs = #no_prereqs coption_value
 val toplevel_no_overlay = #no_overlay coption_value
@@ -905,15 +906,49 @@ in
                                          is_pending stat orelse is_failed stat
                                        end)
                           depnodes
-          val needs_building =
-              not (null unbuilt_deps) orelse
-              set_exists (fn d => d depforces_update_of tgt)
-                         (set_add pdep secondaries)
           val bic = case toFile target_s of
                         SML (Theory s) => BIC_BuildScript s
                       | SIG (Theory s) => BIC_BuildScript s
                       | DAT s => BIC_BuildScript s
                       | _ => BIC_Compile
+          (* For theory targets, when --rebuild=cachekey is in force,
+             consult the cachekey stamp next to the .dat instead of
+             mtime.  Short-circuit to Succeeded when the target exists
+             on disk and the stamp records the current input hash. *)
+          fun theory_stamp_path thy =
+              let
+                val datHOL_s = fps (fp dir (thy ^ "Theory.dat"))
+                val datFS =
+                    case HFS_NameMunge.HOLtoFS datHOL_s of
+                        SOME {fullfile, ...} => fullfile
+                      | NONE => datHOL_s
+              in
+                HM_Cachekey.stamp_path_for_datfile datFS
+              end
+          fun stamp_matches thy =
+              case HM_Cachekey.read_stamp (theory_stamp_path thy) of
+                  NONE => false
+                | SOME recorded =>
+                  (case HM_Cachekey.compute_for_deps (map #2 depnodes) of
+                       HM_Cachekey.Key k => k = recorded
+                     | HM_Cachekey.Missing _ => false)
+          val cachekey_uptodate =
+              cline_rebuild_strategy = HM_Cachekey_dtype.Cachekey andalso
+              (case bic of
+                   BIC_BuildScript thy =>
+                     exists_readable fullpath_s andalso
+                     null unbuilt_deps andalso
+                     stamp_matches thy
+                 | _ => false)
+          val needs_building =
+              not cachekey_uptodate andalso
+              (not (null unbuilt_deps) orelse
+               set_exists (fn d => d depforces_update_of tgt)
+                          (set_add pdep secondaries))
+          val _ = if cachekey_uptodate then
+                    diag (fn _ => target_s ^
+                                  ": cachekey matches stamp, up-to-date")
+                  else ()
         in
             add_node {target = tgt, seqnum = 0, phony = false,
                       status = if needs_building then Pending{needed=false}
@@ -1333,97 +1368,15 @@ fun do_cachekey thyname =
           case #command nodeinfo of
               HM_DepGraph.BuiltInCmd (HM_DepGraph.BIC_BuildScript _, _) => ()
             | _ => die ("--cachekey: " ^ thyname ^ " is not a theory target")
-      (* Select files whose contents are relevant to the theory.
-         For .uo/.ui of Theory files, substitute the corresponding
-         .dat file (the actual theory content). Other .uo/.ui files
-         and the holheap state are excluded. *)
-      fun dep_to_hashable dep =
-          case hm_target.filepart dep of
-              DAT _ => SOME dep
-            | SML _ => SOME dep
-            | SIG _ => SOME dep
-            | ART _ => SOME dep
-            | UO (Theory s) =>
-                SOME (hm_target.setFile (DAT s) dep)
-            | UI (Theory s) =>
-                SOME (hm_target.setFile (DAT s) dep)
-            | _ => NONE
-      val deps =
-          let val depset =
-                  List.foldl
-                    (fn ((_, dep), acc) =>
-                        case dep_to_hashable dep of
-                            SOME d => Binaryset.add(acc, d)
-                          | NONE => acc)
-                    hm_target.empty_tgtset
-                    (#dependencies nodeinfo)
-          fun toFSpath s =
-              case HFS_NameMunge.HOLtoFS s of
-                  NONE => s
-                | SOME {fullfile, ...} => fullfile
-          in
-            map (fn dep =>
-                    let val p = tgt_toString dep
-                        val fspath = toFSpath p
-                        (* If this is a .dat converted from a .uo/.ui that
-                           lives in sigobj (symlinked), the .dat won't exist
-                           in sigobj. Resolve the .uo symlink to find the
-                           real directory where the .dat lives. *)
-                        val path =
-                            if OS.FileSys.access(fspath, []) then fspath
-                            else
-                              case hm_target.filepart dep of
-                                  DAT s =>
-                                  (let
-                                    val uoname = fromFile (UO (Theory s))
-                                    val dir = OS.Path.dir p
-                                    val uo_path =
-                                        if dir = "" then uoname
-                                        else OS.Path.concat(dir, uoname)
-                                    val uo_fspath = toFSpath uo_path
-                                    val real_uo = OS.FileSys.realPath uo_fspath
-                                    val real_dir = OS.Path.dir real_uo
-                                    val dat_name = fromFile (DAT s)
-                                    val dat_fspath =
-                                        OS.Path.concat(real_dir, dat_name)
-                                  in
-                                    dat_fspath
-                                  end handle OS.SysErr _ => fspath)
-                                | _ => fspath
-                    in { name = fromFile (hm_target.filepart dep),
-                         path = path }
-                    end)
-                (Binaryset.listItems depset)
-          end
-      val _ = List.app
-                (fn {name, path} =>
-                    if OS.FileSys.access(path, [OS.FileSys.A_READ]) then ()
-                    else die ("--cachekey: dependency " ^ name ^
-                              " (" ^ path ^ ") does not exist"))
-                deps
-      (* Compute hashes, then sort by (filename, hash) for a canonical
-         machine-independent ordering. Filename is the primary key; hash
-         breaks ties if two dependencies from different directories happen
-         to share a filename. *)
-      val hashed_deps =
-          map (fn {name, path} =>
-                  (name, SHA1.sha1_file {filename = path}))
-              deps
-      val sorted_hashes =
-          Listsort.sort (pair_compare (String.compare, String.compare))
-                        hashed_deps
-      val dep_hashes = map #2 sorted_hashes
-      val tmpfile = OS.FileSys.tmpName ()
-      val _ = let val out = TextIO.openOut tmpfile
-              in
-                List.app (fn h => TextIO.output(out, h)) dep_hashes;
-                TextIO.closeOut out
-              end
-      val cachekey = SHA1.sha1_file {filename = tmpfile}
-      val _ = OS.FileSys.remove tmpfile handle OS.SysErr _ => ()
     in
-      print (cachekey ^ "\n");
-      OS.Process.success
+      case HM_Cachekey.compute_for_node depgraph node of
+          HM_Cachekey.Key k => (print (k ^ "\n"); OS.Process.success)
+        | HM_Cachekey.Missing ms =>
+          let val first = hd ms
+          in
+            die ("--cachekey: dependency " ^ #name first ^
+                 " (" ^ #path first ^ ") does not exist")
+          end
     end
 
 in
