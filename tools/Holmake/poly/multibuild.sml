@@ -10,7 +10,8 @@ datatype buildresult =
                         job_kont : (string -> unit) -> OS.Process.status ->
                                    bool,
                         other_nodes : HM_DepGraph.node list,
-                        cache_url : (HM_Core_Cline.cache_op * string) option, cachekey : string}
+                        cache_url : (HM_Core_Cline.cache_op * string) option,
+			cachekey : HM_Cachekey.compute_result }
        | BR_Failed
 
 val RealFail = Failed{needed=true}
@@ -322,7 +323,7 @@ fun graphbuild optinfo g =
                               case cache_url of
                                   NONE => false
                                 | SOME (HM_Core_Cline.Fetch, url) =>
-                                  HolmakeCacheFetch.fetch url cachekey outs
+                                  HM_CacheFetch.fetch url cachekey outs
                                 | SOME (HM_Core_Cline.Write, _) => false
                           in
                             diag ("New graph job for "^target_s^

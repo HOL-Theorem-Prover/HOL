@@ -1367,14 +1367,12 @@ fun do_write_cache depgraph base_url thyname =
           case #command nodeinfo of
               HM_DepGraph.BuiltInCmd (HM_DepGraph.BIC_BuildScript _, _) => ()
             | _ => die ("--write-cache: " ^ thyname ^ " is not a theory target")
-      val deps = HolmakeCacheKey.compute_deps (map #2 (#dependencies nodeinfo))
-      val cachekey = HolmakeCacheKey.generate_cachekey deps
+      val cachekey = HM_Cachekey.compute_for_node depgraph node
       val dir = hmdir.toAbsPath (#dir nodeinfo)
     in
-      if HolmakeCacheFetch.upload base_url cachekey dir thyname outputfns then
-        OS.Process.success
-      else
-        OS.Process.failure
+      if HM_CacheFetch.upload base_url cachekey dir thyname outputfns
+      then OS.Process.success
+      else OS.Process.failure
     end
 
 fun do_cachekey thyname =

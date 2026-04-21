@@ -1,7 +1,5 @@
-structure HolmakeCacheFetch =
+structure HM_CacheFetch =
 struct
-
-open HolmakeCacheKey
 
 fun copy src dest =
     let val instr  = BinIO.openIn src
@@ -16,6 +14,9 @@ fun copy src dest =
     handle _ => false
 
 fun upload base_url cachekey dir thyname (ofns : Holmake_tools.output_functions) =
+    case cachekey of
+        HM_Cachekey.Missing _ => false
+      | HM_Cachekey.Key key =>
     let
         val {info, warn, ...} = ofns
         val _ = OS.FileSys.mkDir base_url handle OS.SysErr _ => ()
@@ -52,7 +53,7 @@ fun upload base_url cachekey dir thyname (ofns : Holmake_tools.output_functions)
         val results = List.mapPartial process files
         val ok = length results = length files
         val _ = OS.FileSys.mkDir (OS.Path.concat(base_url, "key")) handle OS.SysErr _ => ()
-        val manifest_path = OS.Path.concat(OS.Path.concat(base_url, "key"), cachekey)
+        val manifest_path = OS.Path.concat(OS.Path.concat(base_url, "key"), key)
         fun entry_to_json (name, hash) =
             "{\"name\": \"" ^ name ^ "\", \"url\": \"/data/" ^ hash ^ "\"}"
         val json = "{\"files\": [" ^ String.concatWith ", " (map entry_to_json results) ^ "]}"
@@ -65,10 +66,13 @@ fun upload base_url cachekey dir thyname (ofns : Holmake_tools.output_functions)
     end handle e => (#warn ofns ("Write failed: " ^ exnMessage e); false)
 
 fun fetch base_url cachekey (ofns : Holmake_tools.output_functions) =
+    case cachekey of
+        HM_Cachekey.Missing _ => false
+      | HM_Cachekey.Key key =>
     let
         val {info, warn, ...} = ofns
         val fetch_to_file = copy
-        val key_url = base_url ^ "/key/" ^ cachekey
+        val key_url = base_url ^ "/key/" ^ key
         val file = OS.FileSys.tmpName()
         fun cleanup() = (OS.FileSys.remove file handle OS.SysErr _ => ())
         val _ = info "Checking cache for prebuilt theory..."

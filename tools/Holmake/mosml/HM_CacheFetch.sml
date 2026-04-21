@@ -1,4 +1,4 @@
-structure HolmakeCacheFetch =
+structure HM_CacheFetch =
 struct
 
 fun upload _ _ _ _ (ofns : Holmake_tools.output_functions) = let

@@ -30,6 +30,7 @@ local
   fun f25 z = next f24 z
   fun f26 z = next f25 z
   fun f27 z = next f26 z
+  fun f28 z = next f27 z
 
   fun  c0 from =  from
   fun  c1 from =  c0 (from  f1)
@@ -59,6 +60,7 @@ local
   fun c25 from = c24 (from f25)
   fun c26 from = c25 (from f26)
   fun c27 from = c26 (from f27)
+  fun c28 from = c27 (from f28)
 in
 
 structure Fold =
@@ -106,6 +108,7 @@ fun makeUpdate24 z = makeUpdate c24 z
 fun makeUpdate25 z = makeUpdate c25 z
 fun makeUpdate26 z = makeUpdate c26 z
 fun makeUpdate27 z = makeUpdate c27 z
+fun makeUpdate28 z = makeUpdate c28 z
 
 fun $$ (a,f) = f a
 fun U s v z =

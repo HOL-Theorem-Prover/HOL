@@ -367,7 +367,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           BR_ClineK { cline = (useScript, cline), job_kont = cont,
                       other_nodes = other_nodes,
                       cache_url = use_cache,
-                      cachekey = HolmakeCacheKey.compute_deps_cachekey deps}
+                      cachekey = HM_Cachekey.compute_for_deps deps }
       end
   in
     let
@@ -440,7 +440,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                   "opentheory info --article -o " ^ art ^ " " ^ raw_art])
           in
             BR_ClineK {cline = cline, job_kont = (fn _ => OS.Process.isSuccess),
-                       other_nodes = [], cache_url = NONE, cachekey = ""}
+                       other_nodes = [], cache_url = NONE,
+                       cachekey = HM_Cachekey.Missing []}
           end
     end handle CompileFailed => BR_Failed
              | FileNotFound  => BR_Failed
@@ -492,7 +493,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       | BR_ClineK{cline = (_,cl), job_kont = k, cache_url, cachekey, ...} =>
         (case cache_url of
              SOME (HM_Core_Cline.Fetch, url) =>
-                 HolmakeCacheFetch.fetch url cachekey outs orelse
+                 HM_CacheFetch.fetch url cachekey outs orelse
                  k warn (Systeml.systeml cl)
            | SOME (HM_Core_Cline.Write, _) => k warn (Systeml.systeml cl)
            | NONE => k warn (Systeml.systeml cl))

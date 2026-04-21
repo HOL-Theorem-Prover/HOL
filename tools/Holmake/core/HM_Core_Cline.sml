@@ -5,7 +5,7 @@ datatype cache_op = Write | Fetch
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate27 z
+  fun makeUpdateT z = makeUpdate28 z
 in
 fun updateT z = let
   fun from cache_url cachekey debug do_logging fast help hmakefile holdir includes
@@ -15,6 +15,7 @@ fun updateT z = let
            quit_on_failure rebuild rebuild_deps recursive_build recursive_clean
            thmsrc verbose =
     {
+      cache_url = cache_url,
       cachekey = cachekey,
       debug = debug, do_logging = do_logging,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
