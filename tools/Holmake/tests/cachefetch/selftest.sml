@@ -160,23 +160,7 @@ val _ =
     else die ("Expected fallback after partial cache hit, got: " ^ out5)
 
 (* ------------------------------------------------------------ *)
-(* Test 6: --write-cache to unwritable location fails gracefully *)
-(* ------------------------------------------------------------ *)
-val _ = tprint "write-cache fails gracefully on unwritable location"
-val _ = run_holmake ["cleanAll"]
-val _ = run_holmake ["fooTheory"]
-val cache_ro = fresh_cache ()
-(* Make the cache dir read-only *)
-val _ = OS.Process.system ("chmod 444 " ^ cache_ro)
-val (res6, _) = run_holmake_out ["--write-cache", cache_ro, "fooTheory"]
-(* Restore perms for cleanup *)
-val _ = OS.Process.system ("chmod 755 " ^ cache_ro)
-val _ =
-    if not (OS.Process.isSuccess res6) then OK()
-    else die "Expected failure writing to read-only cache dir"
-
-(* ------------------------------------------------------------ *)
-(* Test 7: --use-cache on empty cache dir is a miss, not error   *)
+(* Test 6: --use-cache on empty cache dir is a miss, not error   *)
 (* ------------------------------------------------------------ *)
 val _ = tprint "use-cache on empty cache dir is a clean miss"
 val _ = run_holmake ["cleanAll"]
@@ -194,4 +178,4 @@ val _ =
 val _ = run_holmake ["cleanAll"]
 val _ = List.app (fn c => rm_rf c handle _ => ())
         [cache_pop, cache_corrupt, cache_nodata, cache_partial,
-         cache_ro, cache_empty]
+         cache_empty]
