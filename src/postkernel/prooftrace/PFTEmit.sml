@@ -58,10 +58,10 @@ local
     ("arithmetic$ZERO", "_0"),       (* ZERO is an alias for 0 *)
     ("arithmetic$ALT_ZERO", "_0"),   (* ALT_ZERO is also an alias *)
     ("arithmetic$BIT1", "BIT1"),
-    ("arithmetic$BIT2", "BIT2"),
+    ("arithmetic$BIT2", "BIT2"),  (* kept for theorem loading; translated in compute *)
 
     (* cv theory - compute value type and operations *)
-    ("cv$cv", "cv"),
+    ("cv$cv", "Cexp"),
     ("cv$Num", "Cexp_num"),
     ("cv$Pair", "Cexp_pair"),
     ("cv$cv_add", "Cexp_add"),
@@ -217,6 +217,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
   (* Compute preamble: emitted once on first compute_prf encounter *)
   val compute_preamble_emitted = ref false
+
+  (* Candle compute context: initialized once after preamble, reused for all COMPUTE calls *)
+  val candle_compute_init_id : int ref = ref ~1
 
   (* --- Structural hash-cons tables -------------------------------------- *)
 
@@ -1515,9 +1518,98 @@ fun emit_theory {trace, output, binary, ruleset} = let
                            load_theorem = candle_load_pth
                          };
                          compute_preamble_emitted := true)
+
+          (* Ensure COMPUTE_INIT is emitted (once after preamble) *)
+          val ci_id =
+            if !candle_compute_init_id >= 0 then !candle_compute_init_id
+            else let
+              val cid = emit_candle_compute_init ()
+            in candle_compute_init_id := cid; cid end
+
+          (* Parse compute_prf arguments *)
+          val (compute_args_ptr, ths_ptr) = tuple2 heap (I, I) a
+
+          (* Emit and translate code equations.
+             Each code equation is ⊢ lhs = rhs where rhs may contain
+             HOL4-form numerals that need translation to Candle form. *)
+          val code_eqn_ths = list heap (fn th_ptr => let
+            val th_id = emit_thm th_ptr
+            (* Get the conclusion of this theorem to find its RHS *)
+            val (_, concl_p, _) = shThm heap th_ptr
+            val rhs_ptr = case shTerm heap concl_p of
+                Comb (eq_lhs_ptr, rhs_ptr) => rhs_ptr
+              | _ => raise Fail "compute_prf: code equation not an equation"
+            val rhs_id = emit_term rhs_ptr
+            val (candle_rhs_id, rhs_xlate_th) =
+              translate_term_numerals_hol4_to_candle rhs_ptr rhs_id
+          in
+            if rhs_xlate_th < 0 then th_id
+            else
+              (* TRANS th_id rhs_xlate_th: lhs = rhs_candle *)
+              let val id = alloc_th ()
+              in PFTWriter.Candle.trans out id th_id rhs_xlate_th; id end
+          end) ths_ptr
+
+          (* The input term from the trace *)
+          val input_tm_ptr = b
+
+          (* Get the expected result from the conclusion.
+             concl_ptr points to "input_tm = expected_result" *)
+          val (expected_result_ptr, _) = case shTerm heap concl_ptr of
+              Comb (eq_lhs_ptr, rhs_ptr) =>
+                (case shTerm heap eq_lhs_ptr of
+                   Comb (_, lhs_ptr) => (rhs_ptr, lhs_ptr)
+                 | _ => raise Fail "compute_prf: malformed conclusion")
+            | _ => raise Fail "compute_prf: conclusion not an equation"
+
+          (* Emit the input term (which may contain HOL4-form numerals) *)
+          val input_tm_id = emit_term input_tm_ptr
+
+          (* Translate input term's numerals from HOL4 to Candle form.
+             Returns (candle_tm_id, translation_th_id) where
+             translation_th_id proves: input_tm = candle_tm *)
+          val (candle_input_tm, input_xlate_th) =
+            translate_term_numerals_hol4_to_candle input_tm_ptr input_tm_id
+
+          (* Call COMPUTE: ci_id, candle_input_tm, code_eqn_ths
+             Returns theorem: candle_input_tm = candle_result *)
+          val compute_th_id = alloc_th ()
+          val () = PFTWriter.Candle.compute out compute_th_id ci_id
+                     candle_input_tm code_eqn_ths
+          (* compute_th_id: candle_input_tm = candle_result *)
+
+          (* Chain input translation with compute result:
+             input_xlate_th: input_tm = candle_input_tm
+             compute_th: candle_input_tm = candle_result
+             TRANS gives: input_tm = candle_result *)
+          val step1_th =
+            if input_xlate_th < 0 then compute_th_id
+            else let val id = alloc_th ()
+              in PFTWriter.Candle.trans out id input_xlate_th compute_th_id; id end
+          (* step1_th: input_tm = candle_result *)
+
+          (* Now translate the result back from Candle to HOL4 form.
+             The expected result is in expected_result_ptr (HOL4 form).
+             We need to prove: candle_result = expected_result *)
+          val expected_result_id = emit_term expected_result_ptr
+          val (candle_result_id, result_xlate_th) =
+            translate_term_numerals_hol4_to_candle expected_result_ptr expected_result_id
+          (* result_xlate_th: expected_result = candle_result (HOL4 = Candle)
+             We need: candle_result = expected_result, so use SYM *)
+
+          val final_th =
+            if result_xlate_th < 0 then
+              (* No translation needed in result *)
+              step1_th
+            else let
+              (* SYM result_xlate_th: candle_result = expected_result *)
+              val sym_th = let val id = alloc_th ()
+                in PFTWriter.Candle.sym out id result_xlate_th; id end
+              (* TRANS step1_th sym_th: input_tm = expected_result *)
+              val id = alloc_th ()
+            in PFTWriter.Candle.trans out id step1_th sym_th; id end
         in
-          (* TODO: emit COMPUTE_INIT and COMPUTE *)
-          raise Fail "emit_thm_candle: COMPUTE not yet implemented"
+          final_th
         end
 
     | save_dep_prf _ => raise Fail "unreachable"
@@ -1525,6 +1617,345 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | Axiom_prf => raise Fail "unreachable: handled in emit_thm"
     | Disk_prf _ => raise Fail "unreachable: handled in emit_thm"
   end
+
+  (* ======================================================================= *)
+  (* Candle COMPUTE helpers                                                  *)
+  (* ======================================================================= *)
+
+  (* Emit COMPUTE_INIT with the 62 characteristic equations from preamble *)
+  and emit_candle_compute_init () : int = let
+    (* Load all 62 characteristic equations from preamble *)
+    val eq_ids = List.tabulate (62, fn i =>
+      candle_load_pth ("candle$COMPUTE_EQ_" ^ Int.toString (i + 1)))
+    val ci_id = alloc_ci ()
+    val () = PFTWriter.Candle.compute_init out ci_id eq_ids
+  in ci_id end
+
+  (* Check if a term is a numeral (NUMERAL applied to bits) *)
+  and is_numeral_term tm_ptr =
+    case shTerm heap tm_ptr of
+      Comb (rator_ptr, _) =>
+        (case shTerm heap rator_ptr of
+           Const (id_ptr, _) =>
+             let val (thy, name) = ident heap id_ptr
+             in thy = "arithmetic" andalso name = "NUMERAL" end
+         | _ => false)
+    | _ => false
+
+  (* Extract numeric value from HOL4 numeral bits (inside NUMERAL wrapper)
+     Returns NONE if not a valid numeral bit pattern *)
+  and numeral_value_of_bits tm_ptr : int option =
+    case shTerm heap tm_ptr of
+      Const (id_ptr, _) =>
+        let val (thy, name) = ident heap id_ptr
+        in if (thy = "num" andalso name = "0") orelse
+              (thy = "arithmetic" andalso (name = "ZERO" orelse name = "ALT_ZERO"))
+           then SOME 0
+           else NONE
+        end
+    | Comb (rator_ptr, arg_ptr) =>
+        (case shTerm heap rator_ptr of
+           Const (id_ptr, _) =>
+             let val (thy, name) = ident heap id_ptr
+             in if thy = "arithmetic" then
+                  case numeral_value_of_bits arg_ptr of
+                    SOME n =>
+                      if name = "BIT1" then SOME (2 * n + 1)
+                      else if name = "BIT2" then SOME (2 * n + 2)
+                      else NONE
+                  | NONE => NONE
+                else NONE
+             end
+         | _ => NONE)
+    | _ => NONE
+
+  (* Check if a number needs translation (contains BIT2 in HOL4 form) *)
+  and needs_numeral_translation 0 = false
+    | needs_numeral_translation n =
+        if n mod 2 = 1 then needs_numeral_translation ((n - 1) div 2)
+        else true  (* even > 0 means BIT2 *)
+
+  (* Translate a single numeral from HOL4 to Candle form.
+     Given: tm_ptr pointing to NUMERAL (BIT... _0), tm_id its emitted term ID
+     Returns: (candle_tm_id, xlate_th_id) where xlate_th proves tm = candle_tm
+     If no translation needed, returns (tm_id, ~1) *)
+  and translate_numeral_hol4_to_candle tm_ptr tm_id : int * int =
+    case shTerm heap tm_ptr of
+      Comb (numeral_ptr, bits_ptr) =>
+        (case numeral_value_of_bits bits_ptr of
+           SOME n =>
+             if not (needs_numeral_translation n) then (tm_id, ~1)
+             else if n < 256 then
+               (* Use cached translation theorem *)
+               let
+                 val xlate_th = candle_load_pth ("candle$NUM_XLATE_" ^ Int.toString n)
+                 (* xlate_th: hol4_bits = candle_bits (without NUMERAL wrapper)
+                    We need: NUMERAL hol4_bits = NUMERAL candle_bits
+                    Use AP_TERM NUMERAL xlate_th *)
+                 val numeral_const_id = emit_term numeral_ptr
+                 val wrapped_th = let val id = alloc_th ()
+                   in PFTWriter.Candle.mk_comb out id
+                        (let val r = alloc_th () in PFTWriter.Candle.refl out r numeral_const_id; r end)
+                        xlate_th;
+                      id
+                   end
+                 (* Build the Candle numeral term *)
+                 val candle_bits_id = emit_candle_numeral_bits n
+                 val candle_tm_id = emit_comb numeral_const_id candle_bits_id
+               in (candle_tm_id, wrapped_th) end
+             else
+               (* Large numeral: construct translation on-the-fly using
+                  BIT2_eq_BIT0_SUC, SUC_0, SUC_BIT0, SUC_BIT1 *)
+               let
+                 val numeral_const_id = emit_term numeral_ptr
+                 (* Translate the bits portion, get (candle_bits_id, bits_xlate_th)
+                    where bits_xlate_th: hol4_bits = candle_bits *)
+                 val (candle_bits_id, bits_xlate_th) =
+                   translate_hol4_bits_to_candle bits_ptr
+                 (* Wrap with NUMERAL: MK_COMB (REFL NUMERAL) bits_xlate_th *)
+                 val wrapped_th = let val id = alloc_th ()
+                   in PFTWriter.Candle.mk_comb out id
+                        (let val r = alloc_th () in PFTWriter.Candle.refl out r numeral_const_id; r end)
+                        bits_xlate_th;
+                      id
+                   end
+                 val candle_tm_id = emit_comb numeral_const_id candle_bits_id
+               in (candle_tm_id, wrapped_th) end
+         | NONE => (tm_id, ~1))  (* Not a valid numeral, no translation *)
+    | _ => (tm_id, ~1)
+
+  (* Translate HOL4 bits (BIT1/BIT2/_0) to Candle bits (BIT0/BIT1/_0).
+     Returns (candle_bits_id, xlate_th) where xlate_th: hol4_bits = candle_bits *)
+  and translate_hol4_bits_to_candle bits_ptr : int * int =
+    case shTerm heap bits_ptr of
+      Const (id_ptr, _) =>
+        let val (thy, name) = ident heap id_ptr
+        in if (thy = "num" andalso name = "0") orelse
+              (thy = "arithmetic" andalso (name = "ZERO" orelse name = "ALT_ZERO"))
+           then
+             (* _0 -> _0, REFL *)
+             let val bits_id = emit_term bits_ptr
+                 val refl_th = let val id = alloc_th ()
+                   in PFTWriter.Candle.refl out id bits_id; id end
+             in (bits_id, refl_th) end
+           else raise Fail "translate_hol4_bits: unexpected const"
+        end
+    | Comb (rator_ptr, arg_ptr) =>
+        (case shTerm heap rator_ptr of
+           Const (id_ptr, _) =>
+             let val (thy, name) = ident heap id_ptr
+             in if thy <> "arithmetic" then
+                  raise Fail "translate_hol4_bits: unexpected rator"
+                else if name = "BIT1" then
+                  (* BIT1 n -> BIT1 (translate n)
+                     If translate n gives (n', th) where th: n = n'
+                     then MK_COMB (REFL BIT1) th gives BIT1 n = BIT1 n' *)
+                  let
+                    val (inner_candle, inner_th) = translate_hol4_bits_to_candle arg_ptr
+                    val ty_num = emit_tyop "num" []
+                    val ty_nn = emit_tyop "fun" [ty_num, ty_num]
+                    val bit1_id = emit_const "BIT1" ty_nn
+                    val bit1_refl = let val id = alloc_th ()
+                      in PFTWriter.Candle.refl out id bit1_id; id end
+                    val result_th = let val id = alloc_th ()
+                      in PFTWriter.Candle.mk_comb out id bit1_refl inner_th; id end
+                    val result_tm = emit_comb bit1_id inner_candle
+                  in (result_tm, result_th) end
+                else if name = "BIT2" then
+                  (* BIT2 n -> BIT0 (SUC (translate n))
+                     1. translate n to get (n', th1) where th1: n = n'
+                     2. derive SUC n' to get (suc_n', th2) where th2: SUC n' = suc_n'
+                     3. BIT2_eq_BIT0_SUC[n/n]: BIT2 n = BIT0 (SUC n)
+                     4. Chain: BIT2 n = BIT0 (SUC n) = BIT0 (SUC n') = BIT0 suc_n' *)
+                  let
+                    val (inner_candle, inner_th) = translate_hol4_bits_to_candle arg_ptr
+                    (* inner_th: n = n' (where n is HOL4 form, n' is Candle form) *)
+
+                    (* Derive SUC n' = simplified form *)
+                    val (suc_result, suc_th) = derive_suc_candle_bits inner_candle
+                    (* suc_th: SUC n' = suc_result *)
+
+                    (* Load BIT2_eq_BIT0_SUC and instantiate with original n *)
+                    val bit2_eq = candle_load_pth "candle$BIT2_eq_BIT0_SUC"
+                    val arg_id = emit_term arg_ptr
+                    val ty_num = emit_tyop "num" []
+                    val var_n = emit_var "n" ty_num
+                    val bit2_inst = let val id = alloc_th ()
+                      in PFTWriter.Candle.inst out id bit2_eq [(var_n, arg_id)]; id end
+                    (* bit2_inst: BIT2 n = BIT0 (SUC n) *)
+
+                    (* Now chain: BIT2 n = BIT0 (SUC n) = BIT0 (SUC n') = BIT0 suc_result *)
+                    (* Step 1: Use inner_th (n = n') to get SUC n = SUC n' *)
+                    val ty_nn = emit_tyop "fun" [ty_num, ty_num]
+                    val suc_id = emit_const "SUC" ty_nn
+                    val suc_refl = let val id = alloc_th ()
+                      in PFTWriter.Candle.refl out id suc_id; id end
+                    val suc_eq = let val id = alloc_th ()
+                      in PFTWriter.Candle.mk_comb out id suc_refl inner_th; id end
+                    (* suc_eq: SUC n = SUC n' *)
+
+                    (* Step 2: Wrap with BIT0: BIT0 (SUC n) = BIT0 (SUC n') *)
+                    val bit0_id = emit_const "BIT0" ty_nn
+                    val bit0_refl = let val id = alloc_th ()
+                      in PFTWriter.Candle.refl out id bit0_id; id end
+                    val bit0_suc_eq = let val id = alloc_th ()
+                      in PFTWriter.Candle.mk_comb out id bit0_refl suc_eq; id end
+                    (* bit0_suc_eq: BIT0 (SUC n) = BIT0 (SUC n') *)
+
+                    (* Step 3: Use suc_th to get BIT0 (SUC n') = BIT0 suc_result *)
+                    val bit0_suc_simp = let val id = alloc_th ()
+                      in PFTWriter.Candle.mk_comb out id bit0_refl suc_th; id end
+                    (* bit0_suc_simp: BIT0 (SUC n') = BIT0 suc_result *)
+
+                    (* Chain: bit2_inst TRANS bit0_suc_eq TRANS bit0_suc_simp *)
+                    val step1 = let val id = alloc_th ()
+                      in PFTWriter.Candle.trans out id bit2_inst bit0_suc_eq; id end
+                    val result_th = let val id = alloc_th ()
+                      in PFTWriter.Candle.trans out id step1 bit0_suc_simp; id end
+
+                    val result_tm = emit_comb bit0_id suc_result
+                  in (result_tm, result_th) end
+                else raise Fail "translate_hol4_bits: unexpected BIT constructor"
+             end
+         | _ => raise Fail "translate_hol4_bits: rator not a const")
+    | _ => raise Fail "translate_hol4_bits: unexpected term structure"
+
+  (* Derive SUC of a Candle-form numeral bits, returning simplified result.
+     Input: term ID for a Candle numeral bits (BIT0/BIT1/_0)
+     Returns: (result_id, th) where th: SUC input = result *)
+  and derive_suc_candle_bits bits_id : int * int =
+    let
+      val ty_num = emit_tyop "num" []
+      val ty_nn = emit_tyop "fun" [ty_num, ty_num]
+      val suc_id = emit_const "SUC" ty_nn
+      val suc_bits = emit_comb suc_id bits_id
+
+      (* Examine the structure of bits_id to determine which rule to apply.
+         We need to look at what term bits_id represents. *)
+      val (f_id, x_id) = (DArray.sub(tm_part1, bits_id), DArray.sub(tm_part2, bits_id))
+    in
+      if f_id < 0 then
+        (* bits_id is a constant (_0) - use SUC_0: SUC _0 = BIT1 _0 *)
+        let
+          val suc_0_th = candle_load_pth "candle$SUC_0"
+          val bit1_id = emit_const "BIT1" ty_nn
+          val zero_id = emit_const "_0" ty_num
+          val result = emit_comb bit1_id zero_id
+        in (result, suc_0_th) end
+      else
+        (* bits_id is a Comb - check if it's BIT0 or BIT1 *)
+        (* We identify BIT0 vs BIT1 by looking up the constant name.
+           This is tricky since we only have term IDs. We need to check
+           what constant f_id represents. *)
+        (* For now, use the numeric value approach: examine the term structure *)
+        (* Actually, we can check if f_id matches the BIT0 or BIT1 constant *)
+        let
+          val bit0_id = emit_const "BIT0" ty_nn
+          val bit1_id = emit_const "BIT1" ty_nn
+        in
+          if f_id = bit0_id then
+            (* SUC (BIT0 n) = BIT1 n, use SUC_BIT0 instantiated with n=x_id *)
+            let
+              val suc_bit0_th = candle_load_pth "candle$SUC_BIT0"
+              val var_n = emit_var "n" ty_num
+              val inst_th = let val id = alloc_th ()
+                in PFTWriter.Candle.inst out id suc_bit0_th [(var_n, x_id)]; id end
+              val result = emit_comb bit1_id x_id
+            in (result, inst_th) end
+          else if f_id = bit1_id then
+            (* SUC (BIT1 n) = BIT0 (SUC n), use SUC_BIT1 then recurse *)
+            let
+              val suc_bit1_th = candle_load_pth "candle$SUC_BIT1"
+              val var_n = emit_var "n" ty_num
+              val inst_th = let val id = alloc_th ()
+                in PFTWriter.Candle.inst out id suc_bit1_th [(var_n, x_id)]; id end
+              (* inst_th: SUC (BIT1 n) = BIT0 (SUC n) where n = x_id *)
+
+              (* Recurse to simplify SUC x_id *)
+              val (suc_inner, suc_inner_th) = derive_suc_candle_bits x_id
+              (* suc_inner_th: SUC x_id = suc_inner *)
+
+              (* Wrap with BIT0: BIT0 (SUC x_id) = BIT0 suc_inner *)
+              val bit0_refl = let val id = alloc_th ()
+                in PFTWriter.Candle.refl out id bit0_id; id end
+              val wrapped_th = let val id = alloc_th ()
+                in PFTWriter.Candle.mk_comb out id bit0_refl suc_inner_th; id end
+              (* wrapped_th: BIT0 (SUC x_id) = BIT0 suc_inner *)
+
+              (* Chain: inst_th TRANS wrapped_th *)
+              val result_th = let val id = alloc_th ()
+                in PFTWriter.Candle.trans out id inst_th wrapped_th; id end
+              val result = emit_comb bit0_id suc_inner
+            in (result, result_th) end
+          else
+            raise Fail "derive_suc_candle_bits: unexpected BIT constructor"
+        end
+    end
+
+  (* Build a Candle-form numeral bits term (using BIT0/BIT1/_0) for value n *)
+  and emit_candle_numeral_bits 0 =
+        (* _0 constant *)
+        let val ty_num = emit_tyop "num" []
+        in emit_const "_0" ty_num end
+    | emit_candle_numeral_bits n =
+        let val ty_num = emit_tyop "num" []
+            val ty_nn = emit_tyop "fun" [ty_num, ty_num]
+            val r = n mod 2
+            val q = n div 2
+            val inner = emit_candle_numeral_bits q
+        in if r = 1 then
+             emit_comb (emit_const "BIT1" ty_nn) inner
+           else
+             emit_comb (emit_const "BIT0" ty_nn) inner
+        end
+
+  (* Translate all numerals in a term from HOL4 to Candle form.
+     Returns (candle_tm_id, xlate_th_id) where xlate_th proves: original = candle_tm
+     If no translation needed, returns (original_tm_id, ~1) *)
+  and translate_term_numerals_hol4_to_candle tm_ptr tm_id : int * int =
+    if is_numeral_term tm_ptr then
+      translate_numeral_hol4_to_candle tm_ptr tm_id
+    else
+      case shTerm heap tm_ptr of
+        Comb (rator_ptr, rand_ptr) =>
+          let
+            val rator_id = emit_term rator_ptr
+            val rand_id = emit_term rand_ptr
+            val (rator_c, rator_th) = translate_term_numerals_hol4_to_candle rator_ptr rator_id
+            val (rand_c, rand_th) = translate_term_numerals_hol4_to_candle rand_ptr rand_id
+          in
+            if rator_th < 0 andalso rand_th < 0 then
+              (* No translation in either part *)
+              (tm_id, ~1)
+            else
+              (* At least one part was translated, use MK_COMB *)
+              let
+                val rator_eq = if rator_th < 0 then
+                    let val id = alloc_th () in PFTWriter.Candle.refl out id rator_id; id end
+                  else rator_th
+                val rand_eq = if rand_th < 0 then
+                    let val id = alloc_th () in PFTWriter.Candle.refl out id rand_id; id end
+                  else rand_th
+                val comb_th = let val id = alloc_th ()
+                  in PFTWriter.Candle.mk_comb out id rator_eq rand_eq; id end
+                val result_tm = emit_comb rator_c rand_c
+              in (result_tm, comb_th) end
+          end
+      | Abs (var_ptr, body_ptr) =>
+          let
+            val var_id = emit_term var_ptr
+            val body_id = emit_term body_ptr
+            val (body_c, body_th) = translate_term_numerals_hol4_to_candle body_ptr body_id
+          in
+            if body_th < 0 then (tm_id, ~1)
+            else
+              let
+                val abs_th = let val id = alloc_th ()
+                  in PFTWriter.Candle.abs_thm out id var_id body_th; id end
+                val result_tm = emit_abs var_id body_c
+              in (result_tm, abs_th) end
+          end
+      | _ => (tm_id, ~1)  (* Var or Const, no translation *)
 
   (* ======================================================================= *)
   (* Theorem emission                                                        *)

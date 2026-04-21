@@ -63,6 +63,25 @@ signature PFTCandleComputePreamble = sig
           Most are LOADed from arithmetic/cv theories; some use the
           above transformations.
 
+       5. Numeral translation equations and cache:
+          HOL4 uses BIT1/BIT2 encoding, Candle uses BIT0/BIT1.
+
+          Key equations for on-the-fly translation of large numerals:
+            - candle$BIT2_eq_BIT0_SUC: BIT2 n = BIT0 (SUC n)
+            - candle$SUC_0: SUC _0 = BIT1 _0
+            - candle$SUC_BIT0: SUC (BIT0 n) = BIT1 n
+            - candle$SUC_BIT1: SUC (BIT1 n) = BIT0 (SUC n)
+
+          Cached forward translations (HOL4 -> Candle) for 0-255:
+            - candle$NUM_XLATE_2: BIT2 _0 = BIT0 (BIT1 _0)
+            - candle$NUM_XLATE_4: BIT2 (BIT1 _0) = BIT0 (BIT0 (BIT1 _0))
+            - etc. (only for values containing BIT2 in HOL4 form)
+
+          Cached reverse translations (Candle -> HOL4) for 0-255:
+            - candle$NUM_XLATE_REV_2: BIT0 (BIT1 _0) = BIT2 _0
+            - candle$NUM_XLATE_REV_4: BIT0 (BIT0 (BIT1 _0)) = BIT2 (BIT1 _0)
+            - etc. (same values as forward translations)
+
      == Emitted theorem names ==
 
      All theorems are SAVEd with candle$ prefix:
@@ -70,6 +89,8 @@ signature PFTCandleComputePreamble = sig
        - candle$BIT1_CANDLE (Candle form)
        - candle$LESS_0, candle$LESS_SUC_0, candle$LESS_SUC_SUC
        - candle$COMPUTE_EQ_1 through candle$COMPUTE_EQ_62
+       - candle$BIT2_eq_BIT0_SUC, candle$SUC_0, candle$SUC_BIT0, candle$SUC_BIT1
+       - candle$NUM_XLATE_n for n in 2..255 that need translation
   *)
 
   val emit : { out : PFTWriter.pft_out,

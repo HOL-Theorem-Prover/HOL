@@ -143,7 +143,7 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
 
   val ty_bool = mk_tyop "bool" []
   val ty_num  = mk_tyop "num" []
-  val ty_cv   = mk_tyop "cv" []
+  val ty_cv   = mk_tyop "Cexp" []
   val ty_A    = mk_tyvar "'a"
 
   val ty_nn   = mk_fun ty_num ty_num           (* num -> num *)
@@ -849,6 +849,339 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val var_x_for_let = mk_var "x" ty_cv
   val eq62 = INST LET_cv [(var_x_for_let, var_p1)]
   val () = save "candle$COMPUTE_EQ_62" eq62
+
+  (* ================================================================ *)
+  (* Numeral translation: HOL4 (BIT1/BIT2) <-> Candle (BIT0/BIT1)     *)
+  (*                                                                  *)
+  (* HOL4:   BIT1 n = 2n + 1,  BIT2 n = 2n + 2                       *)
+  (* Candle: BIT0 n = 2n,      BIT1 n = 2n + 1                       *)
+  (*                                                                  *)
+  (* Key equations to derive:                                         *)
+  (*   BIT2 n = BIT0 (SUC n)     [core BIT2 elimination]             *)
+  (*   SUC _0 = BIT1 _0          [SUC of zero]                       *)
+  (*   SUC (BIT0 n) = BIT1 n     [SUC of even]                       *)
+  (*   SUC (BIT1 n) = BIT0 (SUC n) [SUC of odd]                      *)
+  (* ================================================================ *)
+
+  (* Definitions we have:
+       BIT0 n = n + n                    (defined in this preamble)
+       BIT1 n = SUC (n + n)              (derived in this preamble) 
+       BIT2 n = n + (n + SUC (SUC 0))    (from HOL4 arithmetic)
+
+     Key arithmetic facts needed:
+       ADD_CLAUSES: 0 + n = n, SUC m + n = SUC (m + n), etc.
+       SUC properties
+  *)
+
+  (* --- Derive: SUC _0 = BIT1 _0 --- *)
+  (* BIT1 _0 = SUC (_0 + _0) = SUC _0, so by symmetry SUC _0 = BIT1 _0 *)
+  val tm_BIT1_0 = mk_comb const_BIT1 const_zero
+  val tm_SUC_0_local = mk_SUC const_zero
+  (* BIT1_candle: ⊢ BIT1 n = SUC (n + n), instantiate n := _0 *)
+  val BIT1_at_0 = INST BIT1_candle [(var_n, const_zero)]
+  (* ⊢ BIT1 _0 = SUC (_0 + _0) *)
+  (* Need: _0 + _0 = _0, i.e., 0 + 0 = 0 *)
+  val ADD_0_0 = INST eq8 [(var_n, const_zero)]  (* 0 + 0 = 0 from eq8: 0 + n = n *)
+  val SUC_0_plus_0 = AP_TERM const_SUC ADD_0_0  (* SUC (0 + 0) = SUC 0 *)
+  val BIT1_0_eq = TRANS BIT1_at_0 SUC_0_plus_0  (* BIT1 _0 = SUC _0 *)
+  val SUC_0_eq_BIT1_0 = SYM BIT1_0_eq           (* SUC _0 = BIT1 _0 *)
+  val () = save "candle$SUC_0" SUC_0_eq_BIT1_0
+
+  (* --- Derive: SUC (BIT0 n) = BIT1 n --- *)
+  (* BIT0 n = n + n, so SUC (BIT0 n) = SUC (n + n) = BIT1 n *)
+  (* bit0_unfold: ⊢ BIT0 n = n + n *)
+  val tm_BIT0_n = mk_comb const_BIT0 var_n
+  val tm_SUC_BIT0_n = mk_SUC tm_BIT0_n
+  val tm_n_plus_n = mk_plus var_n var_n
+  val SUC_BIT0_step1 = AP_TERM const_SUC bit0_unfold  (* SUC (BIT0 n) = SUC (n + n) *)
+  (* BIT1_candle: ⊢ BIT1 n = SUC (n + n) *)
+  val SUC_BIT0_eq_BIT1 = TRANS SUC_BIT0_step1 (SYM BIT1_candle)  (* SUC (BIT0 n) = BIT1 n *)
+  val () = save "candle$SUC_BIT0" SUC_BIT0_eq_BIT1
+
+  (* --- Derive: SUC (BIT1 n) = BIT0 (SUC n) --- *)
+  (* BIT1 n = SUC (n + n), so SUC (BIT1 n) = SUC (SUC (n + n))
+     BIT0 (SUC n) = SUC n + SUC n
+     Need: SUC (SUC (n + n)) = SUC n + SUC n
+     From ADD: SUC m + n = SUC (m + n)
+     So: SUC n + SUC n = SUC (n + SUC n) = SUC (SUC (n + n))  [using n + SUC m = SUC (n + m)] *)
+  val tm_BIT1_n = mk_comb const_BIT1 var_n
+  val tm_SUC_BIT1_n = mk_SUC tm_BIT1_n
+  val tm_SUC_n = mk_SUC var_n
+  val tm_BIT0_SUC_n = mk_comb const_BIT0 tm_SUC_n
+  (* SUC (BIT1 n) = SUC (SUC (n + n)) *)
+  val SUC_BIT1_step1 = AP_TERM const_SUC BIT1_candle  (* SUC (BIT1 n) = SUC (SUC (n + n)) *)
+  (* BIT0 (SUC n) = SUC n + SUC n *)
+  val bit0_SUC_n = INST bit0_unfold [(var_n, tm_SUC_n)]  (* BIT0 (SUC n) = SUC n + SUC n *)
+  (* Need: SUC n + SUC n = SUC (SUC (n + n)) *)
+  (* eq9: SUC m + n = SUC (m + n), inst m := n, n := SUC n *)
+  val step_a = INST eq9 [(var_m, var_n), (var_n, tm_SUC_n)]  (* SUC n + SUC n = SUC (n + SUC n) *)
+  (* ADD_SUC: m + SUC n = SUC (m + n), inst m := n, n := n *)
+  val ADD_SUC_nn = INST ADD_SUC [(var_m, var_n), (var_n, var_n)]  (* n + SUC n = SUC (n + n) *)
+  val step_b = AP_TERM const_SUC ADD_SUC_nn  (* SUC (n + SUC n) = SUC (SUC (n + n)) *)
+  val SUC_n_plus_SUC_n = TRANS step_a step_b  (* SUC n + SUC n = SUC (SUC (n + n)) *)
+  val BIT0_SUC_n_eq = TRANS bit0_SUC_n SUC_n_plus_SUC_n  (* BIT0 (SUC n) = SUC (SUC (n + n)) *)
+  val SUC_BIT1_eq_BIT0_SUC = TRANS SUC_BIT1_step1 (SYM BIT0_SUC_n_eq)  (* SUC (BIT1 n) = BIT0 (SUC n) *)
+  val () = save "candle$SUC_BIT1" SUC_BIT1_eq_BIT0_SUC
+
+  (* --- Derive: BIT2 n = BIT0 (SUC n) --- *)
+  (* BIT2 n = n + (n + SUC (SUC 0)) = 2n + 2
+     BIT0 (SUC n) = SUC n + SUC n = 2(n + 1) = 2n + 2
+     So BIT2 n = BIT0 (SUC n) *)
+  val hol4_BIT2 = load_theorem "arithmetic$BIT2"
+  (* BIT2: ⊢ BIT2 n = n + (n + SUC (SUC 0)) *)
+  (* We already derived BIT0 (SUC n) = SUC (SUC (n + n)) above.
+     Need to show: n + (n + SUC (SUC 0)) = SUC (SUC (n + n)) *)
+  (* This requires several steps of arithmetic manipulation.
+     For now, derive via a different route using the equations we have. *)
+
+  (* Alternative: derive BIT2 n = SUC (BIT1 n) first, then use SUC_BIT1 *)
+  (* BIT2 n = n + (n + SUC (SUC 0)) = n + (n + 2)
+     BIT1 n = SUC (n + n) = 2n + 1
+     SUC (BIT1 n) = 2n + 2 = BIT2 n *)
+  (* From BIT1_candle: BIT1 n = SUC (n + n)
+     SUC (BIT1 n) = SUC (SUC (n + n))
+     Need: BIT2 n = SUC (SUC (n + n)) *)
+
+  (* BIT2 n = n + (n + SUC (SUC 0))
+     Let's compute n + SUC (SUC 0):
+       n + SUC (SUC 0) = SUC (n + SUC 0)   [ADD_SUC]
+                       = SUC (SUC (n + 0)) [ADD_SUC]
+                       = SUC (SUC n)       [ADD_0]
+     So BIT2 n = n + SUC (SUC n)
+               = SUC (n + SUC n)           [ADD_SUC with args swapped... need ADD_SUC form]
+     Hmm, eq9 is SUC m + n = SUC (m + n), not m + SUC n = SUC (m + n)
+     We have ADD_SUC: m + SUC n = SUC (m + n) *)
+
+  val tm_BIT2_n = mk_comb const_BIT2 var_n
+  val tm_two = mk_SUC (mk_SUC const_zero)  (* SUC (SUC 0) = 2 *)
+  val tm_n_plus_two = mk_plus var_n tm_two
+  val tm_n_plus_n_plus_two = mk_plus var_n tm_n_plus_two
+
+  (* Step 1: n + SUC (SUC 0) = SUC (n + SUC 0) *)
+  val step1_a = INST ADD_SUC [(var_m, var_n), (var_n, mk_SUC const_zero)]
+  (* n + SUC (SUC 0) = SUC (n + SUC 0) *)
+
+  (* Step 2: n + SUC 0 = SUC (n + 0) *)
+  val step2_a = INST ADD_SUC [(var_m, var_n), (var_n, const_zero)]
+  (* n + SUC 0 = SUC (n + 0) *)
+
+  (* Step 3: n + 0 = n *)
+  val ADD_0_n = INST ADD_0 [(var_m, var_n)]  (* n + 0 = n *)
+
+  (* Combine: n + SUC 0 = SUC (n + 0) = SUC n *)
+  val n_plus_SUC_0 = TRANS step2_a (AP_TERM const_SUC ADD_0_n)
+  (* n + SUC 0 = SUC n *)
+
+  (* Combine: n + SUC (SUC 0) = SUC (n + SUC 0) = SUC (SUC n) *)
+  val n_plus_two_eq = TRANS step1_a (AP_TERM const_SUC n_plus_SUC_0)
+  (* n + SUC (SUC 0) = SUC (SUC n) *)
+
+  (* Step 4: n + (n + SUC (SUC 0)) = n + SUC (SUC n) *)
+  val BIT2_rhs_step = AP_TERM (mk_comb const_plus var_n) n_plus_two_eq
+  (* n + (n + SUC (SUC 0)) = n + SUC (SUC n) *)
+
+  (* Step 5: n + SUC (SUC n) = SUC (n + SUC n) *)
+  val step5 = INST ADD_SUC [(var_m, var_n), (var_n, tm_SUC_n)]
+  (* n + SUC (SUC n) = SUC (n + SUC n) *)
+
+  (* Step 6: n + SUC n = SUC (n + n) *)
+  (* Already have ADD_SUC_nn from above *)
+
+  (* Combine: n + SUC (SUC n) = SUC (n + SUC n) = SUC (SUC (n + n)) *)
+  val step6 = TRANS step5 (AP_TERM const_SUC ADD_SUC_nn)
+  (* n + SUC (SUC n) = SUC (SUC (n + n)) *)
+
+  (* Combine all: n + (n + SUC (SUC 0)) = SUC (SUC (n + n)) *)
+  val BIT2_rhs_final = TRANS BIT2_rhs_step step6
+
+  (* BIT2 n = n + (n + SUC (SUC 0)) = SUC (SUC (n + n)) *)
+  val BIT2_eq_SUC_SUC = TRANS hol4_BIT2 BIT2_rhs_final
+
+  (* BIT0 (SUC n) = SUC (SUC (n + n))  [from BIT0_SUC_n_eq above] *)
+  (* So BIT2 n = BIT0 (SUC n) *)
+  val BIT2_eq_BIT0_SUC = TRANS BIT2_eq_SUC_SUC (SYM BIT0_SUC_n_eq)
+  val () = save "candle$BIT2_eq_BIT0_SUC" BIT2_eq_BIT0_SUC
+
+  (* --- Generate cached numeral translations for 0-255 --- *)
+  (* Only cache translations for numerals containing BIT2 in HOL4 form.
+     Numbers that are 2^k - 1 (0,1,3,7,15,31,63,127,255) use only BIT1
+     and need no translation (just REFL). *)
+
+  (* Helper: does this number need translation? (contains BIT2 in HOL4 form) *)
+  fun needs_translation 0 = false
+    | needs_translation n =
+        let val r = n mod 2
+        in if r = 1 then needs_translation ((n - 1) div 2)  (* BIT1 case *)
+           else true  (* BIT2 case: r = 0 means n = 2k+2, so n-2 = 2k *)
+        end
+
+  (* Build HOL4 numeral term (using BIT1/BIT2/_0) for value v > 0 *)
+  fun mk_hol4_numeral_bits 0 = const_zero  (* _0 *)
+    | mk_hol4_numeral_bits n =
+        let val r = n mod 2
+            val q = if r = 1 then (n - 1) div 2 else (n - 2) div 2
+        in if r = 1
+           then mk_comb const_BIT1 (mk_hol4_numeral_bits q)
+           else mk_comb const_BIT2 (mk_hol4_numeral_bits q)
+        end
+
+  (* Build Candle numeral term (using BIT0/BIT1/_0) for value v > 0 *)
+  fun mk_candle_numeral_bits 0 = const_zero  (* _0 *)
+    | mk_candle_numeral_bits n =
+        let val r = n mod 2
+            val q = n div 2
+        in if r = 1
+           then mk_comb const_BIT1 (mk_candle_numeral_bits q)
+           else mk_comb const_BIT0 (mk_candle_numeral_bits q)
+        end
+
+  (* Derive: SUC (candle_bits) = candle_bits'
+     Given a Candle numeral term, compute SUC of it and return theorem.
+     Uses SUC_0, SUC_BIT0, SUC_BIT1 equations. *)
+  fun derive_SUC_candle candle_tm =
+    (* Determine structure of candle_tm *)
+    if candle_tm = const_zero then
+      (* SUC _0 = BIT1 _0 *)
+      SUC_0_eq_BIT1_0
+    else
+      (* candle_tm is BIT0 arg or BIT1 arg *)
+      (* We need to inspect the term structure, but we only have term IDs.
+         Instead, we track the numeric value and reconstruct. *)
+      raise Fail "derive_SUC_candle: not implemented for non-zero"
+
+  (* Derive translation theorem: HOL4_bits = Candle_bits
+     Uses BIT2_eq_BIT0_SUC and SUC equations to eliminate BIT2 and SUC.
+
+     Strategy: recursively translate, building proof as we go.
+     - _0 -> REFL _0
+     - BIT1 inner -> if inner needs translation, use MK_COMB on BIT1 + translate(inner)
+                     else REFL
+     - BIT2 inner -> BIT2 inner = BIT0 (SUC inner)  [BIT2_eq_BIT0_SUC]
+                     then simplify SUC inner using SUC equations
+                     then recursively handle the result
+  *)
+
+  (* Since we can't inspect term structure (only have IDs), we work with
+     numeric values and build both terms and proofs together. *)
+
+  (* translate_bits n returns (hol4_tm, candle_tm, th) where th: hol4_tm = candle_tm
+     For n that needs no translation, returns REFL. *)
+  fun translate_bits 0 = (const_zero, const_zero, REFL const_zero)
+    | translate_bits n =
+        let val r = n mod 2
+        in if r = 1 then
+             (* HOL4: BIT1 ((n-1)/2), Candle: BIT1 (n/2) but (n-1)/2 = n/2 for odd n *)
+             let val q = (n - 1) div 2
+                 val (inner_h, inner_c, inner_th) = translate_bits q
+                 val hol4_tm = mk_comb const_BIT1 inner_h
+                 val candle_tm = mk_comb const_BIT1 inner_c
+             in if inner_h = inner_c then
+                  (hol4_tm, candle_tm, REFL hol4_tm)
+                else
+                  (* BIT1 inner_h = BIT1 inner_c by MK_COMB *)
+                  (hol4_tm, candle_tm, AP_TERM const_BIT1 inner_th)
+             end
+           else
+             (* HOL4: BIT2 ((n-2)/2), Candle: BIT0 (n/2) *)
+             let val q_hol4 = (n - 2) div 2   (* argument to BIT2 *)
+                 val q_candle = n div 2       (* argument to BIT0 *)
+                 (* Note: q_candle = q_hol4 + 1 *)
+
+                 val inner_h = mk_hol4_numeral_bits q_hol4
+                 val candle_tm = mk_candle_numeral_bits n
+                 val hol4_tm = mk_comb const_BIT2 inner_h
+
+                 (* BIT2 inner_h = BIT0 (SUC inner_h) by BIT2_eq_BIT0_SUC *)
+                 val step1 = INST BIT2_eq_BIT0_SUC [(var_n, inner_h)]
+                 (* step1: BIT2 inner_h = BIT0 (SUC inner_h) *)
+
+                 (* Now we need: SUC inner_h = candle_bits(q_hol4 + 1) = candle_bits(q_candle) *)
+                 (* And then: BIT0 (candle_bits(q_candle)) = candle_tm *)
+
+                 (* Get translation for inner: inner_h = inner_c *)
+                 val (_, inner_c, inner_th) = translate_bits q_hol4
+
+                 (* SUC inner_h = SUC inner_c (if inner_h ≠ inner_c) *)
+                 val SUC_inner_h = mk_SUC inner_h
+                 val SUC_inner_c = mk_SUC inner_c
+                 val suc_eq = if inner_h = inner_c then REFL SUC_inner_h
+                              else AP_TERM const_SUC inner_th
+                 (* suc_eq: SUC inner_h = SUC inner_c *)
+
+                 (* Now simplify SUC inner_c to get candle form *)
+                 (* SUC of candle numeral: use derive_SUC_result *)
+                 val (suc_result, suc_simp_th) = derive_SUC_result q_hol4
+                 (* suc_simp_th: SUC inner_c = suc_result (a candle numeral) *)
+
+                 (* Chain: SUC inner_h = SUC inner_c = suc_result *)
+                 val suc_full = TRANS suc_eq suc_simp_th
+                 (* suc_full: SUC inner_h = suc_result *)
+
+                 (* BIT0 (SUC inner_h) = BIT0 suc_result *)
+                 val bit0_eq = AP_TERM const_BIT0 suc_full
+
+                 (* Chain: BIT2 inner_h = BIT0 (SUC inner_h) = BIT0 suc_result *)
+                 val full_th = TRANS step1 bit0_eq
+
+             in (hol4_tm, mk_comb const_BIT0 suc_result, full_th) end
+        end
+
+  (* derive_SUC_result n: given numeric value n, compute SUC of its Candle representation
+     Returns (result_tm, th) where th: SUC (candle_bits n) = result_tm *)
+  and derive_SUC_result n =
+    let val candle_n = mk_candle_numeral_bits n
+        val suc_candle_n = mk_SUC candle_n
+    in if n = 0 then
+         (* SUC _0 = BIT1 _0 *)
+         (mk_comb const_BIT1 const_zero, SUC_0_eq_BIT1_0)
+       else
+         let val r = n mod 2
+             val q = n div 2
+         in if r = 0 then
+              (* candle_n = BIT0 (candle_bits q) *)
+              (* SUC (BIT0 x) = BIT1 x *)
+              let val inner = mk_candle_numeral_bits q
+                  val th = INST SUC_BIT0_eq_BIT1 [(var_n, inner)]
+                  (* th: SUC (BIT0 inner) = BIT1 inner *)
+              in (mk_comb const_BIT1 inner, th) end
+            else
+              (* candle_n = BIT1 (candle_bits q) *)
+              (* SUC (BIT1 x) = BIT0 (SUC x) *)
+              let val inner = mk_candle_numeral_bits q
+                  val th1 = INST SUC_BIT1_eq_BIT0_SUC [(var_n, inner)]
+                  (* th1: SUC (BIT1 inner) = BIT0 (SUC inner) *)
+
+                  (* Recursively simplify SUC inner *)
+                  val (suc_inner_result, suc_inner_th) = derive_SUC_result q
+                  (* suc_inner_th: SUC inner = suc_inner_result *)
+
+                  (* BIT0 (SUC inner) = BIT0 suc_inner_result *)
+                  val th2 = AP_TERM const_BIT0 suc_inner_th
+
+                  val result = mk_comb const_BIT0 suc_inner_result
+              in (result, TRANS th1 th2) end
+         end
+    end
+
+  (* Cache forward translations (HOL4 -> Candle) for 2-255 that need them *)
+  val () = let
+    fun cache_one n =
+      if needs_translation n then
+        let val (_, _, th) = translate_bits n
+        in save ("candle$NUM_XLATE_" ^ Int.toString n) th end
+      else ()
+  in List.app cache_one (List.tabulate (256, fn i => i)) end
+
+  (* For reverse translation (Candle -> HOL4), we just use SYM of forward.
+     The same numbers need translation in both directions. *)
+  val () = let
+    fun cache_reverse n =
+      if needs_translation n then
+        let val (_, _, th) = translate_bits n
+            val th_rev = SYM th
+        in save ("candle$NUM_XLATE_REV_" ^ Int.toString n) th_rev end
+      else ()
+  in List.app cache_reverse (List.tabulate (256, fn i => i)) end
 
 in () end
 
