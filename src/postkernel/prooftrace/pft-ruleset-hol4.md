@@ -636,12 +636,20 @@ Takes a compute context `ci`, a list of code equation theorems
 `[th1,...,thn]`, and a term `t`. Returns `⊢ t = v` (no hypotheses) where `v`
 is the normal form of `t` under evaluation.
 
+**Compute expressions**: A compute expression is a term `e` satisfying:
+- the type of `e` is `cval_ty`
+- all constants in `e` are among the LHS head constants of the code equations
+  or the `cval_terms` constants
+- all applications of `cv_num` are of the form `cv_num (NUMERAL n)` where
+  `n` only contains `ALT_ZERO`, `BIT1`, and `BIT2` (and no variables)
+
 **Conditions on code equations**: Each `thi` must be a theorem with no
 hypotheses whose conclusion has the form `f x1 ... xk = r` where:
 - `f` is a constant
 - each `xi` is a variable of type `cval_ty`
 - the `xi` are all distinct
-- the RHS `r` has type `cval_ty`
+- the RHS `r` is a compute expression
 - all free variables in `r` are among `x1,...,xk`
-- all constants in `r` are among the LHS head constants of the code equations
-  or the `cval_terms` constants
+
+**Conditions on the term**: The term `t` must be a
+compute expression with no free variables.

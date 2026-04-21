@@ -295,9 +295,11 @@ The required equations (in order):
 | 61 | `⊢ (Cexp_pair p1 q1 = Cexp_num n) = F` |
 | 62 | `⊢ LET f p1 = f p1` |
 
-Note: Candle uses both `COND` (conditional on `bool`) and `IF` (conditional
-on the `Cexp` type). The `<` (less-than) equations use three structural
-cases on natural numbers rather than a two-case pattern with `COND`.
+Note: Equations 1-2 use `COND` at a polymorphic type; equations 3-4 and 58
+use `IF` at `bool` type. In practice `IF` and `COND` may be the same
+constant instantiated differently. The `<` (less-than) equations (17-19)
+use three structural cases on natural numbers rather than a two-case
+pattern with `COND`.
 
 #### COMPUTE
 
@@ -305,11 +307,22 @@ Takes a compute context `ci`, a list of code equation theorems
 `[th1,...,thn]`, and a term `t`. Returns `⊢ t = v` (no hypotheses) where `v`
 is the normal form of `t` under evaluation.
 
+**Compute expressions**: A compute expression is a term `e` satisfying:
+- the type of `e` is `Cexp`
+- all constants in `e` are among the LHS head constants of the code equations
+  or the characteristic equation constants (`Cexp_num`, `Cexp_pair`,
+  `Cexp_add`, `Cexp_sub`, `Cexp_mul`, `Cexp_div`, `Cexp_mod`, `Cexp_less`,
+  `Cexp_if`, `Cexp_fst`, `Cexp_snd`, `Cexp_ispair`, `Cexp_eq`, `LET`)
+- all applications of `Cexp_num` are of the form `Cexp_num (NUMERAL n)` where
+  `n` only contains `_0`, `BIT0`, and `BIT1` (and no variables)
+
 **Conditions on code equations**: Each `thi` must be a theorem with no
 hypotheses whose conclusion has the form `f x1 ... xk = r` where:
 - `f` is a constant
 - each `xi` is a variable of type `Cexp`
 - the `xi` are all distinct
-- the RHS `r` has type `Cexp`
+- the RHS `r` is a compute expression
 - all free variables in `r` are among `x1,...,xk`
-- all constants in `r` appear as LHS head constants of some code equation
+
+**Conditions on the term**: The term `t` must be a compute expression with
+no free variables.
