@@ -29,12 +29,52 @@ fun disk_save_name thy (Thm.SavedAnon i) = thy ^ "#" ^ Int.toString i
    Applied when ruleset = Candle; identity for HOL4. *)
 local
   val candle_name_map = [
+    (* min theory - primitive types and constants *)
     ("min$bool", "bool"), ("min$fun", "fun"), ("min$ind", "ind"),
     ("min$=", "="), ("min$==>", "==>"), ("min$@", "@"),
+
+    (* bool theory - logical connectives *)
     ("bool$T", "T"), ("bool$F", "F"),
     ("bool$/\\", "/\\"), ("bool$\\/", "\\/"),
     ("bool$~", "~"), ("bool$!", "!"), ("bool$?", "?"),
-    ("bool$ONE_ONE", "ONE_ONE"), ("bool$ONTO", "ONTO")
+    ("bool$COND", "COND"), ("bool$LET", "LET"),
+    ("bool$ONE_ONE", "ONE_ONE"), ("bool$ONTO", "ONTO"),
+
+    (* num theory - natural number type and zero *)
+    ("num$num", "num"),
+    ("num$0", "_0"),
+    ("num$SUC", "SUC"),
+
+    (* prim_rec theory *)
+    ("prim_rec$<", "<"),
+
+    (* arithmetic theory - operations and numeral encoding *)
+    ("arithmetic$+", "+"),
+    ("arithmetic$-", "-"),
+    ("arithmetic$*", "*"),
+    ("arithmetic$DIV", "DIV"),
+    ("arithmetic$MOD", "MOD"),
+    ("arithmetic$NUMERAL", "NUMERAL"),
+    ("arithmetic$ZERO", "_0"),       (* ZERO is an alias for 0 *)
+    ("arithmetic$ALT_ZERO", "_0"),   (* ALT_ZERO is also an alias *)
+    ("arithmetic$BIT1", "BIT1"),
+    ("arithmetic$BIT2", "BIT2"),
+
+    (* cv theory - compute value type and operations *)
+    ("cv$cv", "cv"),
+    ("cv$Num", "Cexp_num"),
+    ("cv$Pair", "Cexp_pair"),
+    ("cv$cv_add", "Cexp_add"),
+    ("cv$cv_sub", "Cexp_sub"),
+    ("cv$cv_mul", "Cexp_mul"),
+    ("cv$cv_div", "Cexp_div"),
+    ("cv$cv_mod", "Cexp_mod"),
+    ("cv$cv_lt", "Cexp_less"),
+    ("cv$cv_if", "Cexp_if"),
+    ("cv$cv_fst", "Cexp_fst"),
+    ("cv$cv_snd", "Cexp_snd"),
+    ("cv$cv_ispair", "Cexp_ispair"),
+    ("cv$cv_eq", "Cexp_eq")
   ]
 in
   fun candle_translate_name s =
@@ -174,6 +214,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
   fun ci_memo_get k = PIntMap.find k (!ci_memo)
                       handle PIntMap.NotFound => ~1
   fun ci_memo_set k v = ci_memo := PIntMap.add k v (!ci_memo)
+
+  (* Compute preamble: emitted once on first compute_prf encounter *)
+  val compute_preamble_emitted = ref false
 
   (* --- Structural hash-cons tables -------------------------------------- *)
 
@@ -1460,7 +1503,22 @@ fun emit_theory {trace, output, binary, ruleset} = let
          (* λrep. TYPE_DEFINITION P rep *)
       in do_EXISTS exist_pred_rep_uneta bv_rep_v rep_c rep_fn_ty tydef_uneta end
 
-    | compute_prf (a, b) => raise Fail "emit_thm_candle: compute not yet implemented"
+    | compute_prf (a, b) =>
+        let
+          (* Ensure compute preamble is emitted (once per trace) *)
+          val () = if !compute_preamble_emitted then ()
+                   else (PFTCandleComputePreamble.emit {
+                           out = out,
+                           alloc_ty = alloc_ty,
+                           alloc_tm = alloc_tm,
+                           alloc_th = alloc_th,
+                           load_theorem = candle_load_pth
+                         };
+                         compute_preamble_emitted := true)
+        in
+          (* TODO: emit COMPUTE_INIT and COMPUTE *)
+          raise Fail "emit_thm_candle: COMPUTE not yet implemented"
+        end
 
     | save_dep_prf _ => raise Fail "unreachable"
     | deleted_prf => raise Fail "emit_thm_candle: deleted"

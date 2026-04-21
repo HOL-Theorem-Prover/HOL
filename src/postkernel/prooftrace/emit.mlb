@@ -7,6 +7,8 @@ PFTWriter.sig
 PFTWriter.sml
 IntPairTable.sig
 IntPairTable.sml
+PFTCandleComputePreamble.sig
+PFTCandleComputePreamble.sml
 PFTEmit.sig
 PFTEmit.sml
 
