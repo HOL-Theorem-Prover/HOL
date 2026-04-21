@@ -32,7 +32,8 @@ DIRNAMES = \
   time-logging
 
 ifdef POLY
-DIRNAMES += cheatspotting \
+DIRNAMES += cachefetch \
+            cheatspotting \
             depchain_heap/ \
             depchain_heap/dir2 \
             dirlock \
