@@ -31,6 +31,11 @@ New features
     Finally, the corresponding application/selection terms can be written with the brackets around the key values: `fm⟨k⟩` for `fm ’ k`, and `l❲i❳` for `EL i l`.
     The old syntax continues to work in both cases, but the new forms are preferred when terms are printed.
 
+-   The emacs-mode has moved its “remove Unicode” functionality to the key-binding `M-h u -`, and has added an “add Unicode” function under `M-h u +` which is roughly the inverse.
+    (These functions affect either the entirety of the source buffer, or the selected region.)
+
+    The old `M-h C-u` binding which toggles Unicode pretty-printing in the output `*HOL*` buffer has now moved to `M-h u p`.
+
 Bugs fixed
 ----------
 
