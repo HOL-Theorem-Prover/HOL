@@ -309,12 +309,14 @@ is the normal form of `t` under evaluation.
 
 **Compute expressions**: A compute expression is a term `e` satisfying:
 - the type of `e` is `Cexp`
+- `e` contains no abstractions except as an argument to `LET`
 - all constants in `e` are among the LHS head constants of the code equations
   or the characteristic equation constants (`Cexp_num`, `Cexp_pair`,
   `Cexp_add`, `Cexp_sub`, `Cexp_mul`, `Cexp_div`, `Cexp_mod`, `Cexp_less`,
   `Cexp_if`, `Cexp_fst`, `Cexp_snd`, `Cexp_ispair`, `Cexp_eq`, `LET`)
-- all applications of `Cexp_num` are of the form `Cexp_num (NUMERAL n)` where
-  `n` only contains `_0`, `BIT0`, and `BIT1` (and no variables)
+- all applications of `Cexp_num` are of the form `Cexp_num (NUMERAL n)` or
+  `Cexp_num n` where `n` contains no variables and all constants in `n` are
+  among `_0`, `BIT0`, and `BIT1`
 
 **Conditions on code equations**: Each `thi` must be a theorem with no
 hypotheses whose conclusion has the form `f x1 ... xk = r` where:

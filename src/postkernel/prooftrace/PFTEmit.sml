@@ -56,7 +56,6 @@ local
     ("arithmetic$MOD", "MOD"),
     ("arithmetic$NUMERAL", "NUMERAL"),
     ("arithmetic$ZERO", "_0"),       (* ZERO is an alias for 0 *)
-    ("arithmetic$ALT_ZERO", "_0"),   (* ALT_ZERO is also an alias *)
     ("arithmetic$BIT1", "BIT1"),
     ("arithmetic$BIT2", "BIT2"),  (* kept for theorem loading; translated in compute *)
 
@@ -1068,7 +1067,10 @@ fun emit_theory {trace, output, binary, ruleset} = let
            SOME (_, load_name) => let
              val () = mark_const cname
            in candle_load_pth load_name end
-         | NONE => let
+         | NONE =>
+           if (thyname, Name) = ("arithmetic", "ZERO") then
+             r_refl (emit_const "_0" (emit_tyop "num" []))
+           else let
              val rhs_id = emit_term a
              val rhs_ty_id = pft_type_of rhs_id
              val bool_ty_c = emit_tyop "bool" []
@@ -1648,8 +1650,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
     case shTerm heap tm_ptr of
       Const (id_ptr, _) =>
         let val (thy, name) = ident heap id_ptr
-        in if (thy = "num" andalso name = "0") orelse
-              (thy = "arithmetic" andalso (name = "ZERO" orelse name = "ALT_ZERO"))
+        in if thy = "arithmetic" andalso (name = "ZERO")
            then SOME 0
            else NONE
         end
@@ -1730,8 +1731,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
     case shTerm heap bits_ptr of
       Const (id_ptr, _) =>
         let val (thy, name) = ident heap id_ptr
-        in if (thy = "num" andalso name = "0") orelse
-              (thy = "arithmetic" andalso (name = "ZERO" orelse name = "ALT_ZERO"))
+        in if thy = "arithmetic" andalso (name = "ZERO")
            then
              (* _0 -> _0, REFL *)
              let val bits_id = emit_term bits_ptr

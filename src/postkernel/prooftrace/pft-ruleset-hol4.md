@@ -558,10 +558,10 @@ Creates a compute context from four components:
 
 - **`char_eqns`**: an object mapping equation names to theorem IDs. Each
   theorem must have no hypotheses. The equations use the `cval_terms`
-  constants and operate at `num_ty` and `cval_ty` types. We write `ZERO`,
+  constants and operate at `num_ty` and `cval_ty` types. We write `0`,
   `SUC`, `+`, `−`, `*`, `DIV`, `MOD`, `<` for the `zero`, `suc`, `add`,
   `sub`, `mul`, `div`, `mod`, `lt` constants; `T`, `F`, `COND` for
-  `truth`, `false`, `cond`; `NUMERAL`, `ALT_ZERO`, `BIT1`, `BIT2` for
+  `truth`, `false`, `cond`; `NUMERAL`, `ZERO`, `BIT1`, `BIT2` for
   `numeral`, `alt_zero`, `bit1`, `bit2`; `LET` for `let`; and `cv_num`,
   `cv_pair`, etc. for the cv constants. Variables `m`, `n` have type
   `num_ty`; variables `p`, `q`, `r`, `s` have type `cval_ty`; variables
@@ -571,23 +571,23 @@ Creates a compute context from four components:
 
   | Name | Equation |
   |------|----------|
-  | `alt_zero` | `⊢ ALT_ZERO = ZERO` |
+  | `alt_zero` | `⊢ ZERO = 0` |
   | `cond_T` | `⊢ COND T a b = a` |
   | `cond_F` | `⊢ COND F a b = b` |
   | `numeral` | `⊢ NUMERAL n = n` |
-  | `bit1` | `⊢ BIT1 n = n + (n + SUC ZERO)` |
-  | `bit2` | `⊢ BIT2 n = n + (n + SUC (SUC ZERO))` |
-  | `add1` | `⊢ ZERO + n = n` |
+  | `bit1` | `⊢ BIT1 n = n + (n + SUC 0)` |
+  | `bit2` | `⊢ BIT2 n = n + (n + SUC (SUC 0))` |
+  | `add1` | `⊢ 0 + n = n` |
   | `add2` | `⊢ SUC m + n = SUC (m + n)` |
-  | `sub1` | `⊢ ZERO − m = ZERO` |
-  | `sub2` | `⊢ SUC m − n = COND (m < n) ZERO (SUC (m − n))` |
-  | `mul1` | `⊢ ZERO * n = ZERO` |
+  | `sub1` | `⊢ 0 − m = 0` |
+  | `sub2` | `⊢ SUC m − n = COND (m < n) 0 (SUC (m − n))` |
+  | `mul1` | `⊢ 0 * n = 0` |
   | `mul2` | `⊢ SUC m * n = m * n + n` |
-  | `div` | `⊢ m DIV n = COND (n = ZERO) ZERO (COND (m < n) ZERO (SUC ((m − n) DIV n)))` |
-  | `mod` | `⊢ m MOD n = COND (n = ZERO) m (COND (m < n) m ((m − n) MOD n))` |
-  | `lt1` | `⊢ (m < ZERO) = F` |
+  | `div` | `⊢ m DIV n = COND (n = 0) 0 (COND (m < n) 0 (SUC ((m − n) DIV n)))` |
+  | `mod` | `⊢ m MOD n = COND (n = 0) m (COND (m < n) m ((m − n) MOD n))` |
+  | `lt1` | `⊢ (m < 0) = F` |
   | `lt2` | `⊢ (m < SUC n) = COND (m = n) T (m < n)` |
-  | `suc1` | `⊢ (SUC m = ZERO) = F` |
+  | `suc1` | `⊢ (SUC m = 0) = F` |
   | `suc2` | `⊢ (SUC m = SUC n) = (m = n)` |
   | `cval1` | `⊢ (cv_pair p q = cv_pair r s) = COND (p = r) (q = s) F` |
   | `cval2` | `⊢ (cv_pair p q = cv_num n) = F` |
@@ -595,37 +595,37 @@ Creates a compute context from four components:
   | `cv_add1` | `⊢ cv_add (cv_num m) (cv_num n) = cv_num (m + n)` |
   | `cv_add2` | `⊢ cv_add (cv_num m) (cv_pair p q) = cv_num m` |
   | `cv_add3` | `⊢ cv_add (cv_pair p q) (cv_num n) = cv_num n` |
-  | `cv_add4` | `⊢ cv_add (cv_pair p q) (cv_pair r s) = cv_num ZERO` |
+  | `cv_add4` | `⊢ cv_add (cv_pair p q) (cv_pair r s) = cv_num 0` |
   | `cv_sub1` | `⊢ cv_sub (cv_num m) (cv_num n) = cv_num (m − n)` |
   | `cv_sub2` | `⊢ cv_sub (cv_num m) (cv_pair p q) = cv_num m` |
-  | `cv_sub3` | `⊢ cv_sub (cv_pair p q) (cv_num n) = cv_num ZERO` |
-  | `cv_sub4` | `⊢ cv_sub (cv_pair p q) (cv_pair r s) = cv_num ZERO` |
+  | `cv_sub3` | `⊢ cv_sub (cv_pair p q) (cv_num n) = cv_num 0` |
+  | `cv_sub4` | `⊢ cv_sub (cv_pair p q) (cv_pair r s) = cv_num 0` |
   | `cv_mul1` | `⊢ cv_mul (cv_num m) (cv_num n) = cv_num (m * n)` |
-  | `cv_mul2` | `⊢ cv_mul (cv_num m) (cv_pair p q) = cv_num ZERO` |
-  | `cv_mul3` | `⊢ cv_mul (cv_pair p q) (cv_num n) = cv_num ZERO` |
-  | `cv_mul4` | `⊢ cv_mul (cv_pair p q) (cv_pair r s) = cv_num ZERO` |
+  | `cv_mul2` | `⊢ cv_mul (cv_num m) (cv_pair p q) = cv_num 0` |
+  | `cv_mul3` | `⊢ cv_mul (cv_pair p q) (cv_num n) = cv_num 0` |
+  | `cv_mul4` | `⊢ cv_mul (cv_pair p q) (cv_pair r s) = cv_num 0` |
   | `cv_div1` | `⊢ cv_div (cv_num m) (cv_num n) = cv_num (m DIV n)` |
-  | `cv_div2` | `⊢ cv_div (cv_num m) (cv_pair p q) = cv_num ZERO` |
-  | `cv_div3` | `⊢ cv_div (cv_pair p q) (cv_num n) = cv_num ZERO` |
-  | `cv_div4` | `⊢ cv_div (cv_pair p q) (cv_pair r s) = cv_num ZERO` |
+  | `cv_div2` | `⊢ cv_div (cv_num m) (cv_pair p q) = cv_num 0` |
+  | `cv_div3` | `⊢ cv_div (cv_pair p q) (cv_num n) = cv_num 0` |
+  | `cv_div4` | `⊢ cv_div (cv_pair p q) (cv_pair r s) = cv_num 0` |
   | `cv_mod1` | `⊢ cv_mod (cv_num m) (cv_num n) = cv_num (m MOD n)` |
   | `cv_mod2` | `⊢ cv_mod (cv_num m) (cv_pair p q) = cv_num m` |
-  | `cv_mod3` | `⊢ cv_mod (cv_pair p q) (cv_num n) = cv_num ZERO` |
-  | `cv_mod4` | `⊢ cv_mod (cv_pair p q) (cv_pair r s) = cv_num ZERO` |
-  | `cv_lt1` | `⊢ cv_lt (cv_num m) (cv_num n) = cv_num (COND (m < n) (SUC ZERO) ZERO)` |
-  | `cv_lt2` | `⊢ cv_lt (cv_num m) (cv_pair p q) = cv_num ZERO` |
-  | `cv_lt3` | `⊢ cv_lt (cv_pair p q) (cv_num n) = cv_num ZERO` |
-  | `cv_lt4` | `⊢ cv_lt (cv_pair p q) (cv_pair r s) = cv_num ZERO` |
+  | `cv_mod3` | `⊢ cv_mod (cv_pair p q) (cv_num n) = cv_num 0` |
+  | `cv_mod4` | `⊢ cv_mod (cv_pair p q) (cv_pair r s) = cv_num 0` |
+  | `cv_lt1` | `⊢ cv_lt (cv_num m) (cv_num n) = cv_num (COND (m < n) (SUC 0) 0)` |
+  | `cv_lt2` | `⊢ cv_lt (cv_num m) (cv_pair p q) = cv_num 0` |
+  | `cv_lt3` | `⊢ cv_lt (cv_pair p q) (cv_num n) = cv_num 0` |
+  | `cv_lt4` | `⊢ cv_lt (cv_pair p q) (cv_pair r s) = cv_num 0` |
   | `cv_if1` | `⊢ cv_if (cv_num (SUC m)) p q = p` |
-  | `cv_if2` | `⊢ cv_if (cv_num ZERO) p q = q` |
+  | `cv_if2` | `⊢ cv_if (cv_num 0) p q = q` |
   | `cv_if3` | `⊢ cv_if (cv_pair r s) p q = q` |
   | `cv_fst1` | `⊢ cv_fst (cv_pair p q) = p` |
-  | `cv_fst2` | `⊢ cv_fst (cv_num m) = cv_num ZERO` |
+  | `cv_fst2` | `⊢ cv_fst (cv_num m) = cv_num 0` |
   | `cv_snd1` | `⊢ cv_snd (cv_pair p q) = q` |
-  | `cv_snd2` | `⊢ cv_snd (cv_num m) = cv_num ZERO` |
-  | `cv_ispair1` | `⊢ cv_ispair (cv_pair p q) = cv_num (SUC ZERO)` |
-  | `cv_ispair2` | `⊢ cv_ispair (cv_num m) = cv_num ZERO` |
-  | `cv_eq` | `⊢ cv_eq p q = cv_num (COND (p = q) (SUC ZERO) ZERO)` |
+  | `cv_snd2` | `⊢ cv_snd (cv_num m) = cv_num 0` |
+  | `cv_ispair1` | `⊢ cv_ispair (cv_pair p q) = cv_num (SUC 0)` |
+  | `cv_ispair2` | `⊢ cv_ispair (cv_num m) = cv_num 0` |
+  | `cv_eq` | `⊢ cv_eq p q = cv_num (COND (p = q) (SUC 0) 0)` |
   | `let` | `⊢ LET f x = f x` |
 
 The context is created once and reused across multiple COMPUTE calls.
@@ -638,10 +638,12 @@ is the normal form of `t` under evaluation.
 
 **Compute expressions**: A compute expression is a term `e` satisfying:
 - the type of `e` is `cval_ty`
+- `e` contains no abstractions except as the first argument to `LET`
 - all constants in `e` are among the LHS head constants of the code equations
   or the `cval_terms` constants
-- all applications of `cv_num` are of the form `cv_num (NUMERAL n)` where
-  `n` only contains `ALT_ZERO`, `BIT1`, and `BIT2` (and no variables)
+- all applications of `cv_num` are of the form `cv_num (NUMERAL n)` or `cv_num n`
+  where `n` contains no variables and all constants in `n` are among `0`, `ZERO`,
+  `BIT1`, and `BIT2`
 
 **Conditions on code equations**: Each `thi` must be a theorem with no
 hypotheses whose conclusion has the form `f x1 ... xk = r` where:
