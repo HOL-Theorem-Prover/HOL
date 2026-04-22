@@ -37,8 +37,6 @@ fun dest_temp_binding s =
   else raise ERR "dest_temp_binding" "String not a temp-binding"
 
 
-val pp_sig_hook = ref (fn () => ());
-
 val concat = String.concat;
 val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
 val psort =
@@ -152,7 +150,6 @@ fun pp_sig pp_thm info_record = let
                       |            _                 => NONE)
   fun pr_docs() =
       if !include_docs then
-        (!pp_sig_hook();
          [block CONSISTENT 3 (
              [add_string "(*", NL] @
              pr_parents parents' @
@@ -160,7 +157,7 @@ fun pp_sig pp_thm info_record = let
              pr_thms "Definition" (filter_visible definitions') @
              pr_thms "Theorem" (filter_visible theorems')
            ), NL,
-          add_string "*)", NL])
+          add_string "*)", NL]
       else []
   fun pthms (heading, ths) =
     vblock(heading,

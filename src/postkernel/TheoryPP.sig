@@ -25,8 +25,6 @@ sig
 
  val pp_type : string -> string -> hol_type -> PP.pretty
 
- val pp_sig_hook : (unit -> unit) ref
-
  val pp_sig : thm PP.pprinter ->
               {name        : string,
                parents     : string list,
