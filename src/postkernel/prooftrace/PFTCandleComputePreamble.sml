@@ -557,7 +557,7 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val sym1 = SYM assum1                     (* {0 = SUC n} ⊢ SUC n = 0 *)
   val assum2 = ASSUME tm_SUC_n_eq_0        (* {SUC n = 0} ⊢ SUC n = 0 *)
   val sym2 = SYM assum2                     (* {SUC n = 0} ⊢ 0 = SUC n *)
-  val eq_sym = DEDUCT_ANTISYM sym1 sym2    (* ⊢ (0 = SUC n) = (SUC n = 0) *)
+  val eq_sym = DEDUCT_ANTISYM sym2 sym1    (* ⊢ (0 = SUC n) = (SUC n = 0) *)
 
   val eq21 = TRANS eq_sym eq22_inst_n      (* ⊢ (0 = SUC n) = F *)
   val () = save "candle$COMPUTE_EQ_21" eq21
