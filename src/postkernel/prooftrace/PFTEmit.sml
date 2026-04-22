@@ -1069,7 +1069,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
            in candle_load_pth load_name end
          | NONE =>
            if (thyname, Name) = ("arithmetic", "ZERO") then
-             r_refl (emit_const "_0" (emit_tyop "num" []))
+           let val () = mark_const cname
+           in r_refl (emit_const "_0" (emit_tyop "num" [])) end
            else let
              val rhs_id = emit_term a
              val rhs_ty_id = pft_type_of rhs_id
