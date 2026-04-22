@@ -5,13 +5,13 @@
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (*         : 2023-2025 Michael Norrish and Chun Tian                          *)
 (* ========================================================================== *)
+
 Theory chap3
 Ancestors
   basic_swap relation list pred_set nomset term chap2 appFOLDL
   horeduction
 Libs
   boolSimps metisLib hurdUtils pred_setLib BasicProvers binderLib
-
 
 (* definition from p30 *)
 Definition beta_def:  beta M N = ?x body arg. (M = LAM x body @@ arg) /\
@@ -1356,21 +1356,35 @@ QED
       §3: Postponement Theorem
    ---------------------------------------------------------------------- *)
 
-Overload "-η->" = “compat_closure eta”
-Overload "-η->*" = “reduction eta”
-Overload "-βη->" = “compat_closure (beta RUNION eta)”
-Overload "-βη->*" = “reduction (beta RUNION eta)”
+val _ = set_fixity "-e->" (Infix(NONASSOC, 450))
+val _ = overload_on("-e->", ``compat_closure eta``)
+val _ = set_fixity "-e->*" (Infix(NONASSOC, 450))
+val _ = overload_on ("-e->*", ``RTC (-e->)``)
 
-val _ = set_fixity "-βη->" (Infix(NONASSOC, 450))
-val _ = set_fixity "-βη->*" (Infix(NONASSOC, 450))
-val _ = set_fixity "-η->" (Infix(NONASSOC, 450))
-val _ = set_fixity "-η->*" (Infix(NONASSOC, 450))
+val ueta_arrow = "-" ^ UnicodeChars.eta ^ "->"
+val _ = Unicode.unicode_version {u = ueta_arrow, tmnm = "-e->"}
+val _ = Unicode.unicode_version {u = ueta_arrow^"*", tmnm = "-e->*"}
 
-val _ = TeX_notation { hol = "-η->",
+val _ = TeX_notation { hol = "-e->",
         TeX = ("\\ensuremath{\\rightarrow_{\\eta}}", 1) };
 
-val _ = TeX_notation { hol = "-η->*",
+val _ = TeX_notation { hol = "-e->*",
         TeX = ("\\ensuremath{\\twoheadrightarrow_{\\eta}}", 1) };
+
+val _ = set_fixity "-be->" (Infix(NONASSOC, 450))
+val _ = overload_on("-be->", ``compat_closure (beta RUNION eta)``)
+val _ = set_fixity "-be->*" (Infix(NONASSOC, 450))
+val _ = overload_on ("-be->*", ``RTC (-be->)``)
+
+val ubeta_eta_arrow = "-" ^ UnicodeChars.beta ^ UnicodeChars.eta ^ "->"
+val _ = Unicode.unicode_version {u = ubeta_eta_arrow, tmnm = "-be->"}
+val _ = Unicode.unicode_version {u = ubeta_eta_arrow^"*", tmnm = "-be->*"}
+
+val _ = TeX_notation { hol = "-be->",
+        TeX = ("\\ensuremath{\\rightarrow_{\\beta\\eta}}", 1) };
+
+val _ = TeX_notation { hol = "-be->*",
+        TeX = ("\\ensuremath{\\twoheadrightarrow_{\\beta\\eta}}", 1) };
 
 Theorem eta_FV_EQN:
   eta M N ⇒ FV N = FV M
@@ -1465,7 +1479,11 @@ Proof
   metis_tac[eta_beta_reorder0]
 QED
 
-
+Theorem benf_reduction_to_self:
+    !M N. benf M ==> (M -be->* N <=> (N = M))
+Proof
+    METIS_TAC [corollary3_2_1, beta_eta_normal_form_benf, RTC_RULES]
+QED
 
 Theorem strong_grandbeta_gen_ind =
         grandbeta_bvc_gen_ind
@@ -1720,6 +1738,11 @@ QED
 (* |- !x y z. x -b->* y /\ y -b->* z ==> x -b->* z *)
 Theorem betastar_TRANS =
         RTC_TRANSITIVE |> Q.ISPEC ‘compat_closure beta’
+                       |> REWRITE_RULE [transitive_def]
+
+(* |- !x y z. x -e->* y /\ y -e->* z ==> x -e->* z *)
+Theorem etastar_TRANS =
+        RTC_TRANSITIVE |> Q.ISPEC ‘compat_closure eta’
                        |> REWRITE_RULE [transitive_def]
 
 Theorem lameq_imp_lameta :

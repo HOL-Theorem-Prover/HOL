@@ -326,6 +326,16 @@ val _ = set_fixity "===" (Infix(NONASSOC, 450))
 val _ = overload_on("===", “lameta”);
 val _ = TeX_notation { hol = "===", TeX = ("\\HOLTokenLameta", 1) };
 
+Overload "=/==" = “\M (N :term). ~(M === N)”
+val _ = set_fixity "=/==" (Infix(NONASSOC, 450))
+val _ = TeX_notation { hol = "=/==", TeX = ("\\HOLTokenNotLameta", 1) };
+
+Theorem lameta_LAMl_cong :
+    !vs M N. M === N ==> LAMl vs M === LAMl vs N
+Proof
+    Induct_on ‘vs’ >> rw [lameta_ABS]
+QED
+
 Theorem lameta_subst :
     !M N P x. lameta M N ==> lameta ([P/x] M) ([P/x] N)
 Proof
@@ -1097,6 +1107,12 @@ val (enf_thm, _) = define_recursive_term_function
                                 v IN FV (rator t)))`
 val _ = export_rewrites ["enf_thm"]
 
+Theorem I_eta_normal[simp] :
+    enf I
+Proof
+    simp [enf_thm, I_def]
+QED
+
 Theorem subst_eq_var:
     [v/u] t = VAR s <=> t = VAR u ∧ v = VAR s ∨ t = VAR s ∧ u ≠ s
 Proof
@@ -1123,6 +1139,13 @@ End
 Definition has_benf_def: has_benf t = ?t'. lameta t t' /\ benf t'
 End
 
+Theorem bnf_has_bnf :
+    !M. bnf M ==> has_bnf M
+Proof
+    rw [has_bnf_def]
+ >> Q.EXISTS_TAC ‘M’ >> simp []
+QED
+
 Theorem lameq_ssub_cong :
   !M N. M == N ==> ∀fm. fm ' M == fm ' N
 Proof
@@ -1135,6 +1158,12 @@ Theorem lameq_appstar_cong :
     !M N Ns. M == N ==> M @* Ns == N @* Ns
 Proof
   Induct_on ‘Ns’ using SNOC_INDUCT >> rw [appstar_SNOC, lameq_APPL]
+QED
+
+Theorem lameta_appstar_cong :
+    !M N Ns. M === N ==> M @* Ns === N @* Ns
+Proof
+  Induct_on ‘Ns’ using SNOC_INDUCT >> rw [appstar_SNOC, lameta_APPL]
 QED
 
 (* Lemma 2.1.23 [1, p.30] *)

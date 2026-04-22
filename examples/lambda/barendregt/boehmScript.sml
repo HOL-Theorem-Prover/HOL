@@ -1460,8 +1460,7 @@ Proof
  >> POP_ASSUM (rfs o wrap)
  >> Cases_on ‘h < m’ >> simp []
  >> ‘Ms = args’ by rw [Abbr ‘Ms’]
- >> POP_ASSUM (fs o wrap)
- >> T_TAC
+ >> POP_ASSUM (fs o wrap) >> T_TAC
  >> DISCH_TAC
  (* applying IH *)
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
@@ -1470,46 +1469,24 @@ Proof
  >> qexistsl_tac [‘M’, ‘M0’, ‘n’, ‘m’, ‘vs’, ‘M1’] >> simp []
 QED
 
-Theorem lameq_subterm_cong_none :
-    !p X M N r. FINITE X /\
-                FV M SUBSET X UNION RANK r /\
-                FV N SUBSET X UNION RANK r /\ M == N ==>
-               (subterm X M p r = NONE <=> subterm X N p r = NONE)
+(* NOTE: Improved statements combining with (old) lameq_subterm_cong_none *)
+Theorem lameq_subterm_cong_lemma[local] :
+    !X. FINITE X ==>
+        !p M N r. FV M SUBSET X UNION RANK r /\
+                  FV N SUBSET X UNION RANK r /\ M == N
+             ==> (subterm X M p r = NONE <=> subterm X N p r = NONE) /\
+                  subterm X M p r <> NONE ==>
+                  subterm' X M p r == subterm' X N p r
 Proof
-    rpt STRIP_TAC
- >> Suff ‘subterm X M p r <> NONE <=> subterm X N p r <> NONE’ >- rw []
- >> Know ‘subterm X M p r <> NONE <=> p IN ltree_paths (BT' X M r)’
- >- (MATCH_MP_TAC (GSYM BT_ltree_paths_thm) >> art [])
- >> Rewr'
- >> Know ‘subterm X N p r <> NONE <=> p IN ltree_paths (BT' X N r)’
- >- (MATCH_MP_TAC (GSYM BT_ltree_paths_thm) >> art [])
- >> Rewr'
- >> PROVE_TAC [lameq_BT_cong]
-QED
-
-Theorem lameq_subterm_cong :
-    !p X M N r. FINITE X /\
-                FV M SUBSET X UNION RANK r /\
-                FV N SUBSET X UNION RANK r /\
-                M == N /\
-                subterm X M p r <> NONE /\
-                subterm X N p r <> NONE
-            ==> subterm' X M p r == subterm' X N p r
-Proof
-    Q.X_GEN_TAC ‘p’
- >> Cases_on ‘p = []’ >- rw []
- >> POP_ASSUM MP_TAC
- >> Q.ID_SPEC_TAC ‘p’
- >> Induct_on ‘p’ >- rw []
- >> RW_TAC std_ss []
+    NTAC 2 STRIP_TAC
+ >> Induct_on ‘p’ >- simp []
+ >> rpt GEN_TAC >> STRIP_TAC
  >> reverse (Cases_on ‘solvable M’)
- >- (‘unsolvable N’ by METIS_TAC [lameq_solvable_cong] \\
-     Cases_on ‘p’ >> fs [subterm_def])
- >> ‘solvable N’ by METIS_TAC [lameq_solvable_cong]
- >> Q.PAT_X_ASSUM ‘subterm X N (h::p) r <> NONE’ MP_TAC
- >> Q.PAT_X_ASSUM ‘subterm X M (h::p) r <> NONE’ MP_TAC
- >> RW_TAC std_ss [subterm_of_solvables]
- >> gs []
+ >- (‘unsolvable N’ by PROVE_TAC [lameq_solvable_cong] \\
+     simp [subterm_def])
+ >> ‘solvable N’ by PROVE_TAC [lameq_solvable_cong]
+ >> Q_TAC (UNBETA_TAC [subterm_def]) ‘subterm X M (h::p) r’
+ >> Q_TAC (UNBETA_TAC [subterm_def]) ‘subterm X N (h::p) r’
  >> Know ‘n = n' /\ vs = vs'’
  >- (reverse CONJ_ASM1_TAC >- rw [Abbr ‘vs’, Abbr ‘vs'’] \\
      qunabbrevl_tac [‘n’, ‘n'’, ‘M0’, ‘M0'’] \\
@@ -1520,9 +1497,10 @@ Proof
  (* applying lameq_principal_hnf_thm' *)
  >> MP_TAC (Q.SPECL [‘r’, ‘X’, ‘M’, ‘N’, ‘M0’, ‘M0'’, ‘n’, ‘vs’, ‘M1’, ‘M1'’]
                      lameq_principal_hnf_thm') >> simp []
- >> RW_TAC std_ss [Abbr ‘m’, Abbr ‘m'’]
+ >> simp [Abbr ‘m’, Abbr ‘m'’]
+ >> STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘n = LAMl_size M0'’ (ASSUME_TAC o SYM)
  (* preparing for hnf_children_FV_SUBSET *)
- >> qabbrev_tac ‘n = LAMl_size M0'’
  >> qunabbrev_tac ‘vs’
  >> Q_TAC (RNEWS_TAC (“vs :string list”, “r :num”, “n :num”)) ‘X’
  >> ‘DISJOINT (set vs) (FV M0) /\ DISJOINT (set vs) (FV M0')’
@@ -1532,6 +1510,8 @@ Proof
                     “y :string”, “args :term list”)) ‘M1’
  >> Q_TAC (HNF_TAC (“M0':term”, “vs :string list”,
                     “y' :string”, “args':term list”)) ‘M1'’
+ >> Q.PAT_X_ASSUM ‘DISJOINT (set vs) (FV M0)’  K_TAC
+ >> Q.PAT_X_ASSUM ‘DISJOINT (set vs) (FV M0')’ K_TAC
  >> ‘TAKE n vs = vs’ by rw []
  >> POP_ASSUM (rfs o wrap)
  (* refine P1 and Q1 again for clear assumptions using them *)
@@ -1541,9 +1521,8 @@ Proof
  >> ‘args = Ms’ by rw [Abbr ‘Ms’]
  >> POP_ASSUM (fs o wrap o SYM)
  >> Q.PAT_X_ASSUM ‘args' = Ms'’ (fs o wrap o SYM)
- >> qabbrev_tac ‘m = LENGTH args'’
- >> T_TAC
- >> Cases_on ‘p = []’ >> fs []
+ >> qabbrev_tac ‘m = LENGTH args'’ >> T_TAC
+ >> Cases_on ‘h < m’ >> simp []
  (* final stage *)
  >> FIRST_X_ASSUM MATCH_MP_TAC >> simp []
  >> CONJ_TAC (* 2 subgoals *)
@@ -1553,6 +1532,17 @@ Proof
       (* goal 2 (of 2) *)
       MATCH_MP_TAC subterm_induction_lemma' \\
       qexistsl_tac [‘N’, ‘M0'’, ‘n’, ‘m’, ‘vs’, ‘M1'’] >> simp [] ]
+QED
+
+Theorem lameq_subterm_cong :
+    !X M N p r. FINITE X /\
+                FV M SUBSET X UNION RANK r /\
+                FV N SUBSET X UNION RANK r /\ M == N
+           ==> (subterm X M p r = NONE <=> subterm X N p r = NONE) /\
+                subterm X M p r <> NONE ==>
+                subterm' X M p r == subterm' X N p r
+Proof
+   PROVE_TAC [lameq_subterm_cong_lemma]
 QED
 
 (*****************************************************************************)
@@ -6074,6 +6064,18 @@ Proof
  >> MATCH_MP_TAC BT_ltree_el_cases >> art []
 QED
 
+Theorem ltree_finite_BT_expand' :
+    !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\ has_bnf M /\
+              p IN ltree_paths (BT' X M r) ==>
+              ltree_finite (BT_expand X (BT' X M r) p r)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC ltree_finite_BT_expand_lemma
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC ltree_finite_BT_has_bnf >> art [])
+ >> MATCH_MP_TAC BT_ltree_el_cases' >> art []
+QED
+
 (* NOTE: This lemma is not suitable for induction, because (in general),
    if “compat_closure eta N M” and M is bnf, N may have beta-redexes due
    to eta-expansion. Thus, in general we can only say “has_bnf N” instead
@@ -6094,7 +6096,7 @@ Theorem BT_expand_lemma1 :
        compat_closure eta N M /\ BT' X N r = B
 Proof
     rpt GEN_TAC >> STRIP_TAC
- >> simp []
+ >> ASM_REWRITE_TAC []
  >> Suff ‘!R M r. (?p B. FV M SUBSET X UNION RANK r /\ bnf M /\
                          p IN ltree_paths (BT' X M r) /\
                          B = BT_expand X (BT' X M r) p r /\ R = to_rose B) ==>
@@ -6115,12 +6117,12 @@ Proof
  >> KILL_TAC >> DISCH_TAC
  (* applying induction on rose tree *)
  >> HO_MATCH_MP_TAC rose_tree_induction
- >> rpt GEN_TAC >> STRIP_TAC
- >> rpt GEN_TAC >> STRIP_TAC
+ >> NTAC 2 (rpt GEN_TAC >> STRIP_TAC)
  >> Q.PAT_X_ASSUM ‘Rose a ts = _’ (MP_TAC o SYM)
  >> POP_ORW
  >> DISCH_THEN (MP_TAC o AP_TERM “from_rose :BT_node rose_tree -> boehm_tree”)
  >> simp [to_rose_def, ltree_finite_BT_expand]
+ (* stage work *)
  >> simp [from_rose_def]
  >> DISCH_TAC
  >> Q_TAC (UNBETA_TAC [rose_to_term_def, Once rose_reduce_def])
