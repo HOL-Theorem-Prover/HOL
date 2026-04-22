@@ -14,13 +14,23 @@ struct
 
   type kernelid = (kernelname * bool) ref (* bool is uptodate flag *)
 
-  fun name_of_id r = case !r of (n,utd) => n
-  fun uptodate_id r = case !r of (n,utd) => utd
+  (* Monotone counter bumped on every retire_id.  Lets downstream listeners
+     (ThmSetData, AncestryData, GrammarDeltas) skip their O(n) "scan all
+     stored deltas for staleness" work when no constant/type has been
+     retired since the last scan.  A constant's uptodate flag only flips
+     via retire_id, so the counter is a sound summary of "has any stored
+     delta potentially become stale?". *)
+  val retire_counter = ref 0
+  fun retire_epoch () = !retire_counter
+
+  fun name_of_id r = case !r of (n,_) => n
+  fun uptodate_id r = case !r of (_,utd) => utd
   fun new_id n = ref (n, true)
-  fun retire_id r = case !r of ({Thy,Name}, _) =>
-      r := ({Thy = Thy, Name = Globals.old Name}, false)
-  fun name_of r = case !r of  ({Name,Thy},_) => Name
-  fun seg_of r = case !r of ({Thy,Name},_) => Thy
+  fun retire_id r = case !r of ({Thy,Name}, _) => (
+    r := ({Thy = Thy, Name = Globals.old Name}, false);
+    retire_counter := !retire_counter + 1)
+  fun name_of r = case !r of  ({Thy=_,Name},_) => Name
+  fun seg_of r = case !r of ({Thy,Name=_},_) => Thy
   fun id_toString id = name_toString (name_of_id id)
   fun id_compare(i1, i2) =
     case (!i1, !i2) of ((n1,_), (n2,_)) =>
@@ -40,7 +50,6 @@ struct
   datatype 'a symtab_error = Success of 'a
                            | Failure of exn
   fun isSuccess (Success _) = true | isSuccess _ = false
-  fun destSuccess (Success a) = a | destSuccess (Failure e) = raise e
 
   fun new_table() = Sref.new (Symtab.empty, Symtab.empty, 0)
   fun peek(tab : 'a symboltable, knm as {Thy,Name}) =
@@ -93,7 +102,7 @@ struct
   fun retire_name (r, n) =
       case remove(r, n) of
         Failure e => raise e
-      | Success (kid, v) => retire_id kid
+      | Success (kid, _) => retire_id kid
 
   fun insert(tab : 'a symboltable, n as {Thy,Name}, v) = let
     val id = new_id n
@@ -134,7 +143,7 @@ struct
 
   fun listName tab nm =
       let
-        val (kmap, tmap, _) = Sref.value tab
+        val (_, tmap, _) = Sref.value tab
         val thys = case Symtab.lookup tmap nm of NONE => [] | SOME xs => xs
         val knms = map (fn thy => {Thy = thy, Name = nm}) thys
       in
@@ -142,8 +151,8 @@ struct
       end
 
   fun del_segment (r : 'a symboltable, thyname) = let
-    fun appthis (knm as {Name,Thy},(id,v)) =
-        if Thy = thyname then retire_name(r,knm)
+    fun appthis (knm, _) =
+        if #Thy knm = thyname then retire_name(r,knm)
         else ()
   in
     app appthis r

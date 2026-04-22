@@ -36,7 +36,7 @@ type ('d,'v) info =
       apply_delta : 'd -> 'v -> 'v, tag : string,
       parents : {thyname : string} -> string list}
 
-fun fpluck f [] = NONE
+fun fpluck _ [] = NONE
   | fpluck f (h::t) = case f h of
                           NONE => Option.map (fn (v,r) => (v,h::r)) (fpluck f t)
                         | SOME v => SOME ((h,v),t)
@@ -147,8 +147,8 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
           Symtab.lookup (Sref.value value_table) thyname
 
       (* calculates merged values in the "onload" hook *)
-      val apply_delta_hook = ref (fn ps => NONE)
-      fun side_effects thy = List.app delta_side_effects
+      val apply_delta_hook = ref (fn _ => NONE)
+      fun side_effects _ = List.app delta_side_effects
       val parent_extras =
           {tag = tag, apply_delta_hook = apply_delta_hook,
            delta_side_effects = side_effects,
@@ -158,7 +158,7 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
       val {export = parent_export,
            segment_data = parent_segment_data, ...} =
           ThyDataSexp.new {
-            thydataty = tag, merge = fn {old,new} => new,
+            thydataty = tag, merge = #new,
             load = parent_onload parent_extras, other_tds = fn (s,_) => SOME s
           }
       fun parents thyname =
@@ -191,7 +191,21 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
        parents = parents, set_parents = set_ancestry}
     end
 
-fun gen_other_tds {tag,dec,enc,P} (t, thyevent) =
+fun gen_other_tds {tag,dec,enc,P} = let
+  val last_scan_epoch = ref ~1
+  (* Memoize only retire-sensitive events.  The scan's predicate P
+     (via ThmSetData.export_with_ancestry) composes retire checks with
+     DB.lookup, so it can change on *any* event that mutates the binding
+     table — NewBinding, UpdBinding, DelBinding.
+     When retire_epoch is unchanged and the event is one that only fires
+     after a retire (NewConstant / NewTypeOp / DelConstant / DelTypeOp),
+     we know no entry's P result can have changed since the last scan. *)
+  fun memoable (TheoryDelta.NewConstant _) = true
+    | memoable (TheoryDelta.NewTypeOp _) = true
+    | memoable (TheoryDelta.DelConstant _) = true
+    | memoable (TheoryDelta.DelTypeOp _) = true
+    | memoable _ = false
+  fun scan t =
     case t of
         ThyDataSexp.List raw_ds =>
         let
@@ -209,6 +223,11 @@ fun gen_other_tds {tag,dec,enc,P} (t, thyevent) =
                             ("Bad encoding (1) for tag: "^tag)
         end
       | _ => raise ERR "gen_other_tds" ("Bad encoding (2) for tag: "^tag)
+  in fn (t, thyevent) =>
+    case KernelSig.retire_epoch () of cur =>
+    if memoable thyevent andalso !last_scan_epoch = cur then NONE
+    else scan t before last_scan_epoch := cur
+  end
 
 type ('delta,'value) fullresult =
      { merge : string list -> 'value option,
@@ -220,10 +239,9 @@ type ('delta,'value) fullresult =
        get_global_value : unit -> 'value,
        update_global_value : ('value -> 'value) -> unit }
 
-fun fullmake (arg as {adinfo:('delta,'value)adata_info,...}) =
+fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta} =
     let
       open ThyDataSexp
-      val {adinfo, sexps, globinfo, uptodate_delta} = arg
       val {dec,enc} = sexps
       val {apply_to_global,initial_value,thy_finaliser} = globinfo
       val {initial_values, tag, apply_delta, ...} = adinfo
@@ -259,7 +277,7 @@ fun fullmake (arg as {adinfo:('delta,'value)adata_info,...}) =
             )
 
       (* store parentage *)
-      val apply_delta_hook = ref (fn ps => NONE)
+      val apply_delta_hook = ref (fn _ => NONE)
       fun delta_side_effects thyname ds =
           case thy_finaliser of
               NONE => List.app (update_global_value o apply_to_global) ds
@@ -269,10 +287,9 @@ fun fullmake (arg as {adinfo:('delta,'value)adata_info,...}) =
            delta_side_effects = delta_side_effects,
            apply_delta = apply_delta, get_deltas = get_deltas,
            value_table = value_table}
-      val {export = export_raw_parents, segment_data = get_raw_parents,
-           set = set_raw_parents} =
+      val {export = export_raw_parents, segment_data = get_raw_parents, ...} =
           ThyDataSexp.new {thydataty = tag ^ ".parents",
-                           merge = (fn {old,new} => new),
+                           merge = #new,
                            load = parent_onload parent_extras,
                            other_tds = (fn (t,_) => SOME t)}
       fun get_parents {thyname} =

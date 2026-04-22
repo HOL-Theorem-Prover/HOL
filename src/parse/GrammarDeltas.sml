@@ -351,20 +351,30 @@ fun nopp s _ = HOLPP.add_string ("<" ^ s ^ ">")
 fun check_gdelta (TMD tmd) = check_delta tmd
   | check_gdelta (TYD tyd) = check_tydelta tyd
 
-fun other_tds (t, thyevent) =
-    case list_decode gdelta_decode t of
-        NONE => raise Fail ("GrammarDelta: encoding failure: t = \n  " ^
-                            HOLPP.pp_to_string 70
-                             (pp_sexp (nopp"ty") (nopp"tm") (nopp"thm"))
-                             t)
-      | SOME gds =>
-        let
-          val (goodgds, badgds) = Lib.partition check_gdelta gds
-        in
-          if null badgds then NONE
-          else
-            SOME (mk_list gdelta_encode goodgds)
-        end
+(* check_gdelta inspects only retire-state (uptodate_term / prim_mk_const /
+   uptodate_type).  If retire_epoch is unchanged since the last successful
+   scan, every stored grammar delta remains as valid as it was then. *)
+local
+  val last_scan_epoch = ref ~1
+  fun scan t =
+      case list_decode gdelta_decode t of
+          NONE => raise Fail ("GrammarDelta: encoding failure: t = \n  " ^
+                              HOLPP.pp_to_string 70
+                               (pp_sexp (nopp"ty") (nopp"tm") (nopp"thm"))
+                               t)
+        | SOME gds =>
+          let
+            val (goodgds, badgds) = Lib.partition check_gdelta gds
+          in
+            if null badgds then NONE
+            else SOME (mk_list gdelta_encode goodgds)
+          end
+in
+  fun other_tds (t, _) =
+    case KernelSig.retire_epoch () of cur =>
+    if !last_scan_epoch = cur then NONE
+    else scan t before last_scan_epoch := cur
+end
 
 val {export, segment_data, set} = ThyDataSexp.new {
       thydataty = "grammardelta",

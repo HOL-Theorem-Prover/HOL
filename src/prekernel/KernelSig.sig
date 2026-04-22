@@ -14,6 +14,7 @@ sig
   val new_id : kernelname -> kernelid
   val uptodate_id : kernelid -> bool
   val retire_id : kernelid -> unit
+  val retire_epoch : unit -> int
   val name_of : kernelid -> string
   val seg_of : kernelid -> string
 
