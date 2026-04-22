@@ -639,8 +639,8 @@ is the normal form of `t` under evaluation.
 **Compute expressions**: A compute expression is a term `e` satisfying:
 - the type of `e` is `cval_ty`
 - `e` contains no abstractions except as the first argument to `LET`
-- all constants in `e` are among the LHS head constants of the code equations
-  or the `cval_terms` constants
+- all constants in `e` are among the LHS head constants of the code equations,
+  the `cval_terms` constants whose names begin with `cv_`, or `let`
 - all applications of `cv_num` are of the form `cv_num (NUMERAL n)` or `cv_num n`
   where `n` contains no variables and all constants in `n` are among `0`, `ZERO`,
   `BIT1`, and `BIT2`
