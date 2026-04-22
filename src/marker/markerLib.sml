@@ -1027,10 +1027,13 @@ fun record_suspension_delta d =
    name. *)
 type res_key = string * string * string
 
+fun triple_compare (c1, c2, c3) ((a1,a2,a3), (b1,b2,b3)) =
+    case Portable.pair_compare (c1, c2) ((a1,a2), (b1,b2)) of
+      EQUAL => c3 (a3, b3)
+    | r => r
+
 val res_key_compare =
-    Portable.pair_compare (String.compare,
-                           Portable.pair_compare (String.compare,
-                                                  String.compare))
+    triple_compare (String.compare, String.compare, String.compare)
 
 datatype res_delta =
     AddResumption of res_key * thm
