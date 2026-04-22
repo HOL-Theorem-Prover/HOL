@@ -962,15 +962,13 @@ fun prim_resume (th,label,tac) =
       suspension.resumptions
         (parent_thy, parent_name, label)  ->  list of proved
           |- suspendlabel "lab" G  theorems, one per matching
-          hypothesis of the parent (ordered to match the hyp order).
+          hypothesis of the parent.
 
     Finalise consults both stores (merged across the current theory
     and its ancestors) to assemble the clean theorem.
    ---------------------------------------------------------------------- *)
 
-local
-  open ThyDataSexp
-in
+open ThyDataSexp
 
 (* --- suspension.theorems store --- *)
 
@@ -978,10 +976,7 @@ in
    with the same name in different theories. *)
 type susp_key = string * string
 
-fun susp_key_compare ((t1,n1), (t2,n2)) =
-    case String.compare (t1, t2) of
-        EQUAL => String.compare (n1, n2)
-      | r => r
+val susp_key_compare = Portable.pair_compare (String.compare, String.compare)
 
 datatype susp_delta =
     AddSuspended of susp_key * thm
@@ -1032,12 +1027,10 @@ fun record_suspension_delta d =
    name. *)
 type res_key = string * string * string
 
-fun res_key_compare ((t1,n1,l1), (t2,n2,l2)) =
-    case String.compare (t1, t2) of
-        EQUAL => (case String.compare (n1, n2) of
-                      EQUAL => String.compare (l1, l2)
-                    | r => r)
-      | r => r
+val res_key_compare =
+    Portable.pair_compare (String.compare,
+                           Portable.pair_compare (String.compare,
+                                                  String.compare))
 
 datatype res_delta =
     AddResumption of res_key * thm
@@ -1065,12 +1058,7 @@ fun apply_res_delta d (dict : res_dict) : res_dict =
             empty_res_dict
             dict
 
-val reskey_ed : res_key ed =
-    let
-      val raw = pair3_ed (string_ed, string_ed, string_ed)
-    in
-      raw
-    end
+val reskey_ed : res_key ed = pair3_ed (string_ed, string_ed, string_ed)
 
 val (res_enc, res_dec) = bij_ed (
       (fn AddResumption p => inl p | RemoveResumptions p => inr p),
@@ -1100,8 +1088,6 @@ fun record_resumption_delta d =
     (record_resumption_delta_raw d;
      update_res_global (apply_res_delta d))
 
-end (* local opening ThyDataSexp *)
-
 (* Public lookup helpers. *)
 
 (* lookup_suspension: look up by (thy, name) key or unqualified name.
@@ -1129,9 +1115,9 @@ fun lookup_suspension_unqualified nm =
             SOME (hd matches)
     end
 
-(* Main entry point: supports both "foo" and "thyname$foo" forms *)
+(* Main entry point: supports both "foo" and "thyname.foo" forms *)
 fun lookup_suspension nm =
-    case String.fields (fn c => c = #"$") nm of
+    case String.fields (fn c => c = #".") nm of
         [thy, n] => lookup_suspension_qualified (thy, n)
       | _ => lookup_suspension_unqualified nm
 
@@ -1153,13 +1139,13 @@ val _ = boolLib.suspended_theorem_recorder :=
 
     Strategy:
      1. Look up in the suspension.theorems store (current theory merged
-        with ancestry) \u2014 this is the normal case.
+        with ancestry) -- this is the normal case.
      2. Fall back to DB.fetch: when Holmake --fast is in effect, the
         tactic body of Theorem...suspend...QED is not run, so the
         theorem is saved to DB normally (without any suspendlabel
         hypothesis) and does not appear in the suspension store.
         Resume and Finalise both detect this by finding a parent in
-        DB whose hyp set has no relevant suspendlabel \u2014 see callers.
+        DB whose hyp set has no relevant suspendlabel -- see callers.
    ---------------------------------------------------------------------- *)
 
 datatype parent_source =
