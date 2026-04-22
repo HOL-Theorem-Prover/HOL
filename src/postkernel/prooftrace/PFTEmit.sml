@@ -467,8 +467,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val () = check_def tm_defs Thy Name
         val ty_id = emit_type typ
         val qname = tr_name (Thy ^ "$" ^ Name)
-        val () = if Thy = thyname andalso not (is_const_done Name)
-                 then (mark_const Name;
+        val () = if Thy = thyname andalso not (is_const_done qname)
+                 then (mark_const qname;
                        PFTWriter.new_const out qname ty_id)
                  else ()
         val key = (qname, ty_id)
@@ -1055,6 +1055,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
     (* === Definition commands === *)
     | Def_const_prf (a, b) => let
         val (Thy, Name) = get_const_id b
+        val cname = tr_name (thyname ^ "$" ^ Name)
         (* In boolTheory, constants already defined by the preamble are
            not re-defined; instead we LOAD the preamble's definition
            theorem (which has an alpha-equivalent or HOL4-compatible
@@ -1065,17 +1066,16 @@ fun emit_theory {trace, output, binary, ruleset} = let
           else NONE
       in case preamble_name of
            SOME (_, load_name) => let
-             val () = mark_const Name
+             val () = mark_const cname
            in candle_load_pth load_name end
          | NONE => let
              val rhs_id = emit_term a
              val rhs_ty_id = pft_type_of rhs_id
              val bool_ty_c = emit_tyop "bool" []
              val eq_ty = emit_tyop "fun" [rhs_ty_id, emit_tyop "fun" [rhs_ty_id, bool_ty_c]]
-             val cname = tr_name (thyname ^ "$" ^ Name)
              val eq_tm = emit_comb (emit_comb (emit_const "=" eq_ty)
                            (emit_var cname rhs_ty_id)) rhs_id
-             val () = mark_const Name
+             val () = mark_const cname
            in PFTWriter.Candle.new_specification out result_id
                 (c_assume eq_tm) [cname]; result_id end
       end
@@ -1105,7 +1105,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
           else NONE
       in case preamble_name of
            SOME (_, load_name) =>
-             (mark_const (#2 (hd ids)); candle_load_pth load_name)
+             (mark_const (tr_name (thyname ^ "$" ^ #2 (hd ids))); candle_load_pth load_name)
          | NONE => let
              val a_th = th a
 
@@ -1125,7 +1125,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
                    val v_ty  = emit_type ty_ptr
                    val v_old = emit_var Name  v_ty
                    val v_new = emit_var cname v_ty
-                   val ()    = mark_const Name
+                   val ()    = mark_const cname
                  in (cname, v_old, v_new) end
              val triples = List.map mk_rename const_ptrs
              val cnames  = List.map #1 triples
@@ -1181,7 +1181,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
               val (Thy, Name) = get_const_id cp
               val cname = tr_name (Thy ^ "$" ^ Name)
               val v_ty = pft_type_of v_id
-              val () = mark_const Name
+              val () = mark_const cname
             in (cname, emit_var cname v_ty, v_ty) end
         val cvt = List.map mk_const_var (ListPair.zipEq (const_ptrs, vs))
         val cnames = List.map #1 cvt
@@ -2081,14 +2081,14 @@ fun emit_theory {trace, output, binary, ruleset} = let
               val a = emit_thm a
               val ids = list heap get_const_id b
               val names = List.map (fn (Thy,nm) => tr_name (Thy ^ "$" ^ nm)) ids
-              val () = List.app (fn (_,nm) => mark_const nm) ids
+              val () = List.app (fn (Thy,nm) => mark_const (tr_name (Thy ^ "$" ^ nm))) ids
             in PFTWriter.HOL4.def_spec_gen out id a names end
           | Def_const_prf (a, b) => emit_def_const id (a, b)
           | Def_spec_prf (a, b) => let
               val a = emit_thm a
               val ids = list heap get_const_id b
               val names = List.map (fn (Thy,nm) => tr_name (Thy ^ "$" ^ nm)) ids
-              val () = List.app (fn (_,nm) => mark_const nm) ids
+              val () = List.app (fn (Thy,nm) => mark_const (tr_name (Thy ^ "$" ^ nm))) ids
             in PFTWriter.HOL4.def_spec out id a names end
           | Def_tyop_prf (a, b, c) => let
               val _ = list heap emit_type a
@@ -2189,7 +2189,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
     val eq_tm_id = emit_comb eq_var_id rhs_id
     val assume_id = alloc_th ()
     val () = PFTWriter.HOL4.assume out assume_id eq_tm_id
-    val () = mark_const Name
+    val () = mark_const (tr_name (thyname ^ "$" ^ Name))
     val () = PFTWriter.HOL4.def_spec_gen out thm_id assume_id
         [tr_name (thyname ^ "$" ^ Name)]
   in () end
@@ -2328,10 +2328,10 @@ fun emit_theory {trace, output, binary, ruleset} = let
   val () = appList heap (fn p => let
     val (Name, ty_ptr) = tuple2 heap (str heap, I) p
     val () = check_def tm_defs thyname Name
-  in if is_const_done Name then ()
+  in if is_const_done (tr_name (thyname ^ "$" ^ Name)) then ()
      else let
        val ty_id = emit_type ty_ptr
-       val () = mark_const Name
+       val () = mark_const (tr_name (thyname ^ "$" ^ Name))
      in PFTWriter.new_const out (tr_name (thyname ^ "$" ^ Name)) ty_id end
   end) constants
 
