@@ -116,6 +116,14 @@ sig
   val set_suspended_goal :
       {suspension_name:string, label_name:string} -> proofManagerLib.proofs
       (* provides id_tacm for the tactic modifier value *)
+  val finalise_suspended_thm : DB.thm_src_location -> string -> thm
+
+  (* Look up a suspended parent theorem or a resumption proof in the
+     suspension AncestryData stores (current theory merged with
+     ancestors).  Exposed mainly for selftests. *)
+  val lookup_suspension : string -> (string * thm) option
+  val lookup_resumption :
+      {parent_thy:string, parent_name:string, label:string} -> thm list
 
   val add_suspension_label : string -> thm -> thm
   val resumption_to_goal : (int * term) list -> (term list * term)
