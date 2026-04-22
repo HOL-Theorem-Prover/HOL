@@ -173,7 +173,20 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
     | hook (DelBinding s) = neqbinding s
     | hook (NewBinding(s,_)) = neqbinding s
     | hook _ = fn _ => true
-  fun check_thydelta (arg as (sexp,td)) = revise_data (hook td) arg
+  (* For events that use uptodate_thmdelta (retire-state check on each
+     stored theorem), skip the scan when retire_epoch is unchanged since
+     our last scan.  Name-based events (NewBinding/DelBinding via
+     neqbinding) must still scan since they're unrelated to retires. *)
+  val last_scan_epoch = ref ~1
+  fun retire_memoable (DelConstant _) = true
+    | retire_memoable (DelTypeOp _) = true
+    | retire_memoable (NewConstant _) = true
+    | retire_memoable (NewTypeOp _) = true
+    | retire_memoable _ = false
+  fun check_thydelta (arg as (_, td)) =
+    case KernelSig.retire_epoch () of cur =>
+    if retire_memoable td andalso !last_scan_epoch = cur then NONE
+    else revise_data (hook td) arg before last_scan_epoch := cur
 
 
   val {export = export_deltasexp, segment_data, ...} =
