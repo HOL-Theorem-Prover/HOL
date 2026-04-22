@@ -1,18 +1,21 @@
 structure HM_Core_Cline :> HM_Core_Cline =
 struct
 
+datatype cache_op = Write | Fetch
+
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate27 z
+  fun makeUpdateT z = makeUpdate28 z
 in
 fun updateT z = let
-  fun from cachekey debug do_logging fast help hmakefile holdir includes
+  fun from cache_url cachekey debug do_logging fast help hmakefile holdir includes
            interactive jobs json keep_going no_action no_hmakefile
            no_lastmaker_check no_overlay
            no_preexecs no_prereqs opentheory quiet
            quit_on_failure rebuild rebuild_deps recursive_build recursive_clean
            thmsrc verbose =
     {
+      cache_url = cache_url,
       cachekey = cachekey,
       debug = debug, do_logging = do_logging,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
@@ -34,8 +37,9 @@ fun updateT z = let
             no_overlay no_lastmaker_check no_hmakefile no_action keep_going
             json jobs interactive
             includes holdir
-            hmakefile help fast do_logging debug cachekey =
+            hmakefile help fast do_logging debug cachekey cache_url =
     {
+      cache_url = cache_url,
       cachekey = cachekey,
       debug = debug, do_logging = do_logging,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
@@ -50,13 +54,13 @@ fun updateT z = let
       rebuild_deps = rebuild_deps, recursive_build = recursive_build,
       recursive_clean = recursive_clean, thmsrc = thmsrc, verbose = verbose
     }
-  fun to f {cachekey, debug, do_logging, fast, help, hmakefile, holdir,
+  fun to f {cache_url, cachekey, debug, do_logging, fast, help, hmakefile, holdir,
             includes, interactive, jobs, json, keep_going, no_action,
             no_hmakefile, no_lastmaker_check,
             no_overlay, no_preexecs, no_prereqs, opentheory,
             quiet, quit_on_failure, rebuild, rebuild_deps, recursive_build,
             recursive_clean, thmsrc, verbose} =
-    f cachekey debug do_logging fast help hmakefile holdir includes
+    f cache_url cachekey debug do_logging fast help hmakefile holdir includes
       interactive jobs json keep_going no_action no_hmakefile
       no_lastmaker_check no_overlay no_preexecs
       no_prereqs opentheory quiet
@@ -73,6 +77,7 @@ fun fupd_jobs f t = updateT t (U #jobs (f (#jobs t))) $$
 fun fupd_includes f t = updateT t (U #includes (f (#includes t))) $$
 
 type t = {
+  cache_url : (cache_op * string) option,
   cachekey : string option,
   debug : {ins : string list, outs : string list} option,
   do_logging : bool,
@@ -104,6 +109,7 @@ type t = {
 
 val default_core_options : t =
 {
+  cache_url = NONE,
   cachekey = NONE,
   debug = NONE,
   do_logging = false,
@@ -184,6 +190,18 @@ fun set_rebuild s =
                 SOME strat => updateT t (U #rebuild strat) $$
               | NONE => (wn ("Bad --rebuild value: " ^ s ^
                              "; expected mtime or cachekey"); t))
+fun set_cache_url s =
+  resfn (fn (wn, t) =>
+            (if isSome (#cache_url t) then
+               wn "Multiple cache_url specs; ignoring earlier spec"
+             else ();
+             updateT t (U #cache_url (SOME (Fetch, s))) $$))
+fun set_download_cache_url s =
+  resfn (fn (wn, t) =>
+            (if isSome (#cache_url t) then
+               wn "Multiple cache_url specs; ignoring earlier spec"
+             else ();
+             updateT t (U #cache_url (SOME (Write, s))) $$))
 fun set_openthy s =
   resfn (fn (wn, t) =>
             (if isSome (#opentheory t) then
@@ -225,6 +243,10 @@ fun addDbg sopt =
               end)
 
 val core_option_descriptions = [
+  { help = "build and pull pre-built theories from local cache when possible",
+    long = ["use-cache"], short = "", desc = ReqArg (set_cache_url, "dir") },
+  { help = "write built theory files to local cache for a target theory",
+    long = ["write-cache"], short = "", desc = ReqArg (set_download_cache_url, "dir") },
   { help = "print cache key for a theory target", long = ["cachekey"],
     short = "", desc = ReqArg (set_cachekey, "theory") },
   { help = "turn on diagnostic messages", long = ["dbg"], short = "d",

@@ -385,6 +385,10 @@ val _ =
     compile ["-I", "mosml", "-I", "../../tools/Holmake"] "SHA1.sig";
     compile ["-I", "mosml", "-I", "../../tools/Holmake"] "SHA1.sml";
     FileSys.chDir "../../tools/Holmake";
+    FileSys.chDir "mosml";
+    compile ["-I", "..", "-I", "../core", "-I", "../hfs", "-I", "../hmf", "-I", "../../parsing",
+             "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "HM_CacheFetch.sml";
+    FileSys.chDir "..";
     FileSys.chDir "../util";
     compile ["-I", "../Holmake"] "GetOpt.sig";
     compile ["-I", "../Holmake"] "GetOpt.sml";
