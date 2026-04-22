@@ -115,6 +115,10 @@ val candle_preamble_axiom : (string * string) list = [
 (* emit_theory                                                               *)
 (* ========================================================================= *)
 
+(* Compute preamble: emitted once on first compute_prf encounter *)
+(* at module level so it persists across emit_theory calls *)
+val compute_preamble_emitted = ref false
+
 fun emit_theory {trace, output, binary, ruleset} = let
   val thyname = thyname_of_path trace
   val is_candle = case ruleset of Candle => true | HOL4 => false
@@ -213,9 +217,6 @@ fun emit_theory {trace, output, binary, ruleset} = let
   fun ci_memo_get k = PIntMap.find k (!ci_memo)
                       handle PIntMap.NotFound => ~1
   fun ci_memo_set k v = ci_memo := PIntMap.add k v (!ci_memo)
-
-  (* Compute preamble: emitted once on first compute_prf encounter *)
-  val compute_preamble_emitted = ref false
 
   (* Candle compute context: initialized once after preamble, reused for all COMPUTE calls *)
   val candle_compute_init_id : int ref = ref ~1
