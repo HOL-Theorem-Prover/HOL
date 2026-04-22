@@ -507,6 +507,7 @@ fun pass2_emit (file_states: file_state vector)
     fun dec_consumed meta =
       case #kind meta of
         CmdDel => ()
+      | CmdSave _ => ()
       | CmdLoad name =>
           let val {file_idx=sfi, th_id=sth, ...} = lookup_save name
           in dec_ref NS_TH (get_rename sfi NS_TH sth) end
