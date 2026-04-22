@@ -22,13 +22,20 @@ sig
    thydata     : string list * Term.term list *
                  (string,shared_writemaps -> HOLsexp.t)Binarymap.dict
  }
+ type sig_info_record = {
+   name        : string,
+   parents     : string list,
+   all_thms    : (string * thm * thminfo) list
+ }
 
  val pp_type : string -> string -> hol_type -> PP.pretty
 
- val pp_sig : thm PP.pprinter ->
-              {name        : string,
+ val pp_sig : {name        : string,
                parents     : string list,
                all_thms    : (string * thm * thminfo) list} PP.pprinter
+
+ val pp_doc : thm PP.pprinter -> sig_info_record PP.pprinter
+
 
  val pp_struct : string -> struct_info_record PP.pprinter
 

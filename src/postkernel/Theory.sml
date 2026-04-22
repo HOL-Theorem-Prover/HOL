@@ -980,6 +980,7 @@ fun export_theory_return_hash () = let
           val ostrm1 = Portable.open_out(concat["./",name,".sig"])
           val ostrm2 = Portable.open_out(concat["./",name,".sml"])
           val ostrm3 = Portable.open_out(holdatfile)
+          val sigdoc_strm = Portable.open_out (concat["./",name,".txt"])
           val time_now = total_cpu (Timer.checkCPUTimer Globals.hol_clock)
           val time_since = Time.-(time_now, !new_theory_time)
           val tstr = Lib.time_to_string time_since
@@ -989,8 +990,11 @@ fun export_theory_return_hash () = let
           val datfile = fromHOLFS holdatfile
           val hash = SHA1.sha1_file {filename=datfile}
       in
-        theory_out (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
+        theory_out (TheoryPP.pp_sig sigthry) ostrm1;
         theory_out (TheoryPP.pp_struct hash structthry) ostrm2;
+        if Feedback.get_tracefn "TheoryPP.include_docs" () = 1 then
+          theory_out (TheoryPP.pp_doc (!pp_thm) sigthry) sigdoc_strm
+        else ();
         Tracing.trace_theory name {
           theory    = thyname,
           parents   = #parents structthry,
