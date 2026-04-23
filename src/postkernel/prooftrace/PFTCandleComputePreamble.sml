@@ -370,26 +370,51 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val ADD_SUC = load_theorem "arithmetic$ADD_SUC"
   val ADD_0 = load_theorem "arithmetic$ADD_0"
 
-  val tm_SUC_0 = mk_SUC tm_zero       (* SUC (NUMERAL _0) = 1 *)
-  val tm_SUC_bare0 = mk_SUC const_zero  (* SUC _0 = bare 1, for ADD_0 SPEC *)
+  val tm_SUC_0 = mk_SUC const_zero   (* SUC _0 *)
 
-  (* hol4_BIT1: ⊢ !n. BIT1 n = n + (n + SUC _0)  — strip the ∀n *)
+  (* SPEC BIT1 with n: ⊢ BIT1 n = n + (n + SUC _0) *)
   val bit1_pred = mk_abs var_n
     (mk_eq_tm eq_num (mk_comb const_BIT1 var_n)
-                    (mk_plus var_n (mk_plus var_n tm_SUC_bare0)))
+                    (mk_plus var_n (mk_plus var_n tm_SUC_0)))
   val BIT1_free = do_SPEC bit1_pred var_n var_n ty_num hol4_BIT1
 
-  (* ADD_0: ⊢ !m. m + _0 = m — strip ∀m by specializing with n *)
+  (* SPEC ADD_0 with n: ⊢ n + _0 = n *)
   val add0_pred = mk_abs var_m (mk_eq_tm eq_num (mk_plus var_m const_zero) var_m)
   val ADD_0_free = do_SPEC add0_pred var_n var_m ty_num ADD_0
 
-  val ADD_SUC_inst = INST ADD_SUC [(var_m, var_n), (var_n, const_zero)]
-  val SUC_n_plus_0_eq = AP_TERM const_SUC ADD_0_free
-  val n_plus_SUC_0_eq_SUC_n = TRANS ADD_SUC_inst SUC_n_plus_0_eq
-  val ADD_SUC_nn = INST ADD_SUC [(var_m, var_n), (var_n, var_n)]
-  val step1 = AP_TERM (mk_comb const_plus var_n) n_plus_SUC_0_eq_SUC_n
-  val rhs_eq = TRANS step1 ADD_SUC_nn
-  val BIT1_candle = TRANS BIT1_free rhs_eq
+  (* SPEC ADD_SUC twice (m then n) to get both free: ⊢ SUC (m + n) = m + SUC n *)
+  val add_suc_pred = mk_abs var_m
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
+      (mk_abs var_n
+        (mk_eq_tm eq_num (mk_SUC (mk_plus var_m var_n))
+                        (mk_plus var_m (mk_SUC var_n)))))
+  val add_suc_free_m = do_SPEC add_suc_pred var_m var_m ty_num ADD_SUC
+  val add_suc_inner = mk_abs var_n
+    (mk_eq_tm eq_num (mk_SUC (mk_plus var_m var_n))
+                    (mk_plus var_m (mk_SUC var_n)))
+  val ADD_SUC_free = do_SPEC add_suc_inner var_n var_n ty_num add_suc_free_m
+  (* ADD_SUC_free: ⊢ SUC (m + n) = m + SUC n  —  m, n both free *)
+
+  (* Derive: ⊢ n + SUC _0 = SUC n *)
+  val step4 = INST ADD_SUC_free [(var_m, var_n), (var_n, const_zero)]
+  (* ⊢ SUC (n + _0) = n + SUC _0 *)
+  val step5 = SYM step4
+  (* ⊢ n + SUC _0 = SUC (n + _0) *)
+  val step3 = AP_TERM const_SUC ADD_0_free
+  (* ⊢ SUC (n + _0) = SUC n *)
+  val n_plus_SUC_0_eq_SUC_n = TRANS step5 step3
+  (* ⊢ n + SUC _0 = SUC n *)
+
+  (* Derive: ⊢ BIT1 n = SUC (n + n) *)
+  val step7 = AP_TERM (mk_comb const_plus var_n) n_plus_SUC_0_eq_SUC_n
+  (* ⊢ n + (n + SUC _0) = n + SUC n *)
+  val step8 = INST ADD_SUC_free [(var_m, var_n), (var_n, var_n)]
+  (* ⊢ SUC (n + n) = n + SUC n *)
+  val step9 = SYM step8
+  (* ⊢ n + SUC n = SUC (n + n) *)
+  val step10 = TRANS step7 step9
+  (* ⊢ n + (n + SUC _0) = SUC (n + n) *)
+  val BIT1_candle = TRANS BIT1_free step10
   val () = save "candle$BIT1" BIT1_candle
 
   (* ================================================================ *)
