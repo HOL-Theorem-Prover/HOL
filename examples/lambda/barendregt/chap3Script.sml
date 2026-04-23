@@ -1356,10 +1356,10 @@ QED
       §3: Postponement Theorem
    ---------------------------------------------------------------------- *)
 
-val _ = set_fixity "-e->" (Infix(NONASSOC, 450))
-val _ = overload_on("-e->", ``compat_closure eta``)
+val _ = set_fixity "-e->"  (Infix(NONASSOC, 450))
 val _ = set_fixity "-e->*" (Infix(NONASSOC, 450))
-val _ = overload_on ("-e->*", ``RTC (-e->)``)
+Overload "-e->" = “compat_closure eta”
+Overload "-e->*" = “RTC (-e->)”
 
 val ueta_arrow = "-" ^ UnicodeChars.eta ^ "->"
 val _ = Unicode.unicode_version {u = ueta_arrow, tmnm = "-e->"}
@@ -1371,10 +1371,10 @@ val _ = TeX_notation { hol = "-e->",
 val _ = TeX_notation { hol = "-e->*",
         TeX = ("\\ensuremath{\\twoheadrightarrow_{\\eta}}", 1) };
 
-val _ = set_fixity "-be->" (Infix(NONASSOC, 450))
-val _ = overload_on("-be->", ``compat_closure (beta RUNION eta)``)
+val _ = set_fixity "-be->"  (Infix(NONASSOC, 450))
 val _ = set_fixity "-be->*" (Infix(NONASSOC, 450))
-val _ = overload_on ("-be->*", ``RTC (-be->)``)
+Overload "-be->"  = “compat_closure (beta RUNION eta)”
+Overload "-be->*" = “RTC (-be->)”
 
 val ubeta_eta_arrow = "-" ^ UnicodeChars.beta ^ UnicodeChars.eta ^ "->"
 val _ = Unicode.unicode_version {u = ubeta_eta_arrow, tmnm = "-be->"}
@@ -1385,6 +1385,13 @@ val _ = TeX_notation { hol = "-be->",
 
 val _ = TeX_notation { hol = "-be->*",
         TeX = ("\\ensuremath{\\twoheadrightarrow_{\\beta\\eta}}", 1) };
+
+Theorem bestar_lameta :
+    !M N. M -be->* N ==> M === N
+Proof
+    rw [GSYM beta_eta_lameta]
+ >> PROVE_TAC [conversion_rules]
+QED
 
 Theorem eta_FV_EQN:
   eta M N ⇒ FV N = FV M
@@ -1480,7 +1487,7 @@ Proof
 QED
 
 Theorem benf_reduction_to_self:
-    !M N. benf M ==> (M -be->* N <=> (N = M))
+    !M N. benf M ==> (M -be->* N <=> N = M)
 Proof
     METIS_TAC [corollary3_2_1, beta_eta_normal_form_benf, RTC_RULES]
 QED
@@ -1672,6 +1679,13 @@ Proof
   irule (cj 2 RTC_RULES) >> gs[CC_RUNION_DISTRIB, RUNION] >> metis_tac[]
 QED
 
+(* |- M -b->* N ==> M -be->* N *)
+Theorem betastar_bestar =
+        reduction_RUNION1 |> Q.GENL [‘R1’, ‘R2’] |> Q.SPECL [‘beta’, ‘eta’]
+
+(* |- M -e->* N ==> M -be->* N *)
+Theorem etastar_bestar =
+        reduction_RUNION2 |> Q.GENL [‘R1’, ‘R2’] |> Q.SPECL [‘beta’, ‘eta’]
 
 (* ----------------------------------------------------------------------
     Congruence and rewrite rules for -b-> and -b->*
