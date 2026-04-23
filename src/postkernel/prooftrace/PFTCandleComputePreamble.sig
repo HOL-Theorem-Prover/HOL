@@ -2,95 +2,170 @@ signature PFTCandleComputePreamble = sig
 
   (* Emit the Candle compute preamble into an open PFT stream.
 
-     This module emits additional definitions and theorems required for
-     Candle's COMPUTE_INIT rule, building on theorems already available
-     from replayed HOL4 theories.
-
      == Prerequisites ==
 
-     Must be called AFTER the following theories have been fully processed
-     and their exports SAVEd:
-       - bool (provides: COND, LET, T, F)
-       - num (provides: num type, 0, SUC)
-       - arithmetic (provides: +, -, *, DIV, MOD, <, BIT1, BIT2, NUMERAL,
-                     and equations ADD, SUB, MULT, DIV_RECURSIVE,
-                     MOD_RECURSIVE, etc.)
-       - cv (provides: cv type, Num, Pair, cv_add, cv_sub, cv_mul, cv_div,
-             cv_mod, cv_lt, cv_if, cv_fst, cv_snd, cv_ispair, cv_eq,
-             and equations cv_add_def, cv_sub_def, CV_EQ, LT_RECURSIVE, etc.)
+     Must be called AFTER the Candle preamble has been emitted and the
+     following theories have been fully processed and their exports SAVEd:
+       - bool, num, arithmetic, prim_rec, cv
 
-     This is typically called on first encounter of a compute_prf during
-     Candle-mode emission. Since compute_prf can only appear in theories
-     that depend on cv_compute (which depends on cv, which depends on
-     arithmetic), these prerequisites are always satisfied.
+     == Required loaded theorems ==
 
-     == Why the interface takes functions as arguments ==
+     Notation follows Candle naming (see pft-ruleset-candle.md).
+     All theorems below are assumed to have empty hypothesis lists and
+     free (un-quantified) variables as shown.
 
-     The preamble is emitted *inline* during PFTEmit's processing of a
-     theory trace, not as a separate file. It must integrate with
-     PFTEmit's existing state:
+     -- Candle preamble pro-formas (see PFTCandlePreamble.sml) ----------
 
-       - alloc_ty, alloc_tm, alloc_th, alloc_ci: ID allocators owned by
-         PFTEmit. IDs must be globally unique and monotonically increasing
-         across the entire trace. The preamble cannot have its own
-         allocators.
+       candle$CONJUNCT1  :  {p ∧ q} ⊢ p              p:bool, q:bool
+       candle$CONJUNCT2  :  {p ∧ q} ⊢ q              p:bool, q:bool
+       candle$EQT_INTRO  :  ⊢ t = (t = T)             t:bool
 
-       - out: The PFTWriter output stream, already open and mid-trace.
-         The preamble emits directly into this stream.
+     -- Arithmetic -----------------------------------------------------
 
-       - load_theorem: A function to LOAD a previously SAVEd theorem by
-         name, returning its theorem ID in the current trace. This
-         abstracts over PFTEmit's handling of LOAD (which may involve
-         ID allocation and caching).
+       arithmetic$BIT1       ⊢ BIT1 n = n + (n + SUC _0)
+                            n : num
 
-     == What gets emitted ==
+       arithmetic$BIT2       ⊢ BIT2 n = n + (n + SUC (SUC _0))
+                            n : num
 
-       1. Definition of BIT0 (not present in HOL4, needed by Candle):
-            BIT0 = λn. n + n
+       arithmetic$ADD_SUC    ⊢ m + SUC n = SUC (m + n)
+                            m : num, n : num
 
-       2. Proof of BIT1 in Candle's expected form:
-            ⊢ BIT1 n = SUC (n + n)
-          Derived from HOL4's BIT1 definition: BIT1 n = n + (n + SUC 0)
+       arithmetic$ADD_0      ⊢ m + NUMERAL _0 = m
+                            m : num
 
-       3. Three LESS equations in Candle's structural form:
-            ⊢ m < 0 = F
-            ⊢ 0 < SUC n = T
-            ⊢ SUC m < SUC n = (m < n)
-          Derived from HOL4's theorems.
+       arithmetic$ADD        ⊢ (NUMERAL _0 + n = n) ∧ (SUC m + n = SUC (m + n))
+                            m : num, n : num
 
-       4. The 62 characteristic equations for COMPUTE_INIT:
-            candle$COMPUTE_EQ_1 through candle$COMPUTE_EQ_62
-          Most are LOADed from arithmetic/cv theories; some use the
-          above transformations.
+       arithmetic$ADD_COMM   ⊢ m + n = n + m
+                            m : num, n : num
 
-       5. Numeral translation equations and cache:
-          HOL4 uses BIT1/BIT2 encoding, Candle uses BIT0/BIT1.
+       arithmetic$SUB_0      ⊢ (NUMERAL _0 - m = NUMERAL _0) ∧ (m - NUMERAL _0 = m)
+                            m : num
 
-          Key equations for on-the-fly translation of large numerals:
-            - candle$BIT2_eq_BIT0_SUC: BIT2 n = BIT0 (SUC n)
-            - candle$SUC_0: SUC _0 = BIT1 _0
-            - candle$SUC_BIT0: SUC (BIT0 n) = BIT1 n
-            - candle$SUC_BIT1: SUC (BIT1 n) = BIT0 (SUC n)
+       arithmetic$SUB_MONO_EQ  ⊢ SUC n - SUC m = n - m
+                            m : num, n : num
 
-          Cached forward translations (HOL4 -> Candle) for 0-255:
-            - candle$NUM_XLATE_2: BIT2 _0 = BIT0 (BIT1 _0)
-            - candle$NUM_XLATE_4: BIT2 (BIT1 _0) = BIT0 (BIT0 (BIT1 _0))
-            - etc. (only for values containing BIT2 in HOL4 form)
+       arithmetic$MULT       ⊢ (NUMERAL _0 * n = NUMERAL _0) ∧ (SUC m * n = m * n + n)
+                            m : num, n : num
 
-          Cached reverse translations (Candle -> HOL4) for 0-255:
-            - candle$NUM_XLATE_REV_2: BIT0 (BIT1 _0) = BIT2 _0
-            - candle$NUM_XLATE_REV_4: BIT0 (BIT0 (BIT1 _0)) = BIT2 (BIT1 _0)
-            - etc. (same values as forward translations)
+       arithmetic$NUMERAL_DEF  ⊢ NUMERAL n = n
+                            n : num
 
-     == Emitted theorem names ==
+     -- prim_rec -------------------------------------------------------
 
-     All theorems are SAVEd with candle$ prefix:
-       - candle$BIT0_DEF
-       - candle$BIT1_CANDLE (Candle form)
-       - candle$LESS_0, candle$LESS_SUC_0, candle$LESS_SUC_SUC
-       - candle$COMPUTE_EQ_1 through candle$COMPUTE_EQ_62
-       - candle$BIT2_eq_BIT0_SUC, candle$SUC_0, candle$SUC_BIT0, candle$SUC_BIT1
-       - candle$NUM_XLATE_n for n in 2..255 that need translation
+       prim_rec$LESS_0       ⊢ NUMERAL _0 < SUC n
+                            n : num
+
+       prim_rec$LESS_MONO_EQ  ⊢ SUC m < SUC n = (m < n)
+                            m : num, n : num
+
+     -- cv -------------------------------------------------------------
+
+       cv$LT_RECURSIVE       ⊢ (m < NUMERAL _0 = F) ∧ (m < SUC n = IF (m = n) T (m < n))
+                            m : num, n : num
+
+       cv$SUC_EQ             ⊢ (SUC m = NUMERAL _0 = F) ∧ (SUC m = SUC n = (m = n))
+                            m : num, n : num
+
+       cv$DIV_RECURSIVE      ⊢ m DIV n = COND (n = NUMERAL _0) (NUMERAL _0)
+                                (COND (m < n) (NUMERAL _0) (SUC ((m - n) DIV n)))
+                            m : num, n : num
+
+       cv$MOD_RECURSIVE      ⊢ m MOD n = COND (n = NUMERAL _0) m
+                                (COND (m < n) m ((m - n) MOD n))
+                            m : num, n : num
+
+       cv$cv_add_def         ⊢ (Cexp_add (Cexp_num m) (Cexp_num n) = Cexp_num (m + n)) ∧
+                               (Cexp_add (Cexp_num m) (Cexp_pair p q) = Cexp_num m) ∧
+                               (Cexp_add (Cexp_pair p q) (Cexp_num n) = Cexp_num n) ∧
+                               (Cexp_add (Cexp_pair p q) (Cexp_pair r s) = Cexp_num (NUMERAL _0))
+                            m : num, n : num, p : Cexp, q : Cexp, r : Cexp, s : Cexp
+
+       cv$cv_sub_def         ⊢ (Cexp_sub (Cexp_num m) (Cexp_num n) = Cexp_num (m - n)) ∧
+                               (Cexp_sub (Cexp_num m) (Cexp_pair p q) = Cexp_num m) ∧
+                               (Cexp_sub (Cexp_pair p q) (Cexp_num n) = Cexp_num (NUMERAL _0)) ∧
+                               (Cexp_sub (Cexp_pair p q) (Cexp_pair r s) = Cexp_num (NUMERAL _0))
+                            m : num, n : num, p : Cexp, q : Cexp, r : Cexp, s : Cexp
+
+       cv$cv_mul_def         ⊢ (Cexp_mul (Cexp_num m) (Cexp_num n) = Cexp_num (m * n)) ∧
+                               (Cexp_mul (Cexp_num m) (Cexp_pair p q) = Cexp_num (NUMERAL _0)) ∧
+                               (Cexp_mul (Cexp_pair p q) (Cexp_num n) = Cexp_num (NUMERAL _0)) ∧
+                               (Cexp_mul (Cexp_pair p q) (Cexp_pair r s) = Cexp_num (NUMERAL _0))
+                            m : num, n : num, p : Cexp, q : Cexp, r : Cexp, s : Cexp
+
+       cv$cv_div_def         ⊢ (Cexp_div (Cexp_num m) (Cexp_num n) = Cexp_num (m DIV n)) ∧
+                               (Cexp_div (Cexp_num m) (Cexp_pair p q) = Cexp_num (NUMERAL _0)) ∧
+                               (Cexp_div (Cexp_pair p q) (Cexp_num n) = Cexp_num (NUMERAL _0)) ∧
+                               (Cexp_div (Cexp_pair p q) (Cexp_pair r s) = Cexp_num (NUMERAL _0))
+                            m : num, n : num, p : Cexp, q : Cexp, r : Cexp, s : Cexp
+
+       cv$cv_mod_def         ⊢ (Cexp_mod (Cexp_num m) (Cexp_num n) = Cexp_num (m MOD n)) ∧
+                               (Cexp_mod (Cexp_num m) (Cexp_pair p q) = Cexp_num m) ∧
+                               (Cexp_mod (Cexp_pair p q) (Cexp_num n) = Cexp_num (NUMERAL _0)) ∧
+                               (Cexp_mod (Cexp_pair p q) (Cexp_pair r s) = Cexp_num (NUMERAL _0))
+                            m : num, n : num, p : Cexp, q : Cexp, r : Cexp, s : Cexp
+
+       cv$cv_lt_def          ⊢ (Cexp_less (Cexp_num m) (Cexp_num n) =
+                                Cexp_num (COND (m < n) (SUC (NUMERAL _0)) (NUMERAL _0))) ∧
+                               (Cexp_less (Cexp_num m) (Cexp_pair p q) = Cexp_num (NUMERAL _0)) ∧
+                               (Cexp_less (Cexp_pair p q) (Cexp_num n) = Cexp_num (NUMERAL _0)) ∧
+                               (Cexp_less (Cexp_pair p q) (Cexp_pair r s) = Cexp_num (NUMERAL _0))
+                            m : num, n : num, p : Cexp, q : Cexp, r : Cexp, s : Cexp
+
+       cv$cv_if_def          ⊢ (Cexp_if (Cexp_num (SUC m)) p q = p) ∧
+                               (Cexp_if (Cexp_num (NUMERAL _0)) p q = q) ∧
+                               (Cexp_if (Cexp_pair r s) p q = q)
+                            m : num, p : Cexp, q : Cexp, r : Cexp, s : Cexp
+
+       cv$cv_fst_def         ⊢ (Cexp_fst (Cexp_pair p q) = p) ∧
+                               (Cexp_fst (Cexp_num m) = Cexp_num (NUMERAL _0))
+                            m : num, p : Cexp, q : Cexp
+
+       cv$cv_snd_def         ⊢ (Cexp_snd (Cexp_pair p q) = q) ∧
+                               (Cexp_snd (Cexp_num m) = Cexp_num (NUMERAL _0))
+                            m : num, p : Cexp, q : Cexp
+
+       cv$cv_ispair_def      ⊢ (Cexp_ispair (Cexp_pair p q) = Cexp_num (SUC (NUMERAL _0))) ∧
+                               (Cexp_ispair (Cexp_num m) = Cexp_num (NUMERAL _0))
+                            m : num, p : Cexp, q : Cexp
+
+       cv$cv_eq_def          ⊢ Cexp_eq p q = Cexp_num (COND (p = q) (SUC (NUMERAL _0)) (NUMERAL _0))
+                            p : Cexp, q : Cexp
+
+       cv$CV_EQ              ⊢ (Cexp_pair p q = Cexp_pair r s = IF (p = r) (q = s) F) ∧
+                               (Cexp_pair p q = Cexp_num n = F) ∧
+                               (Cexp_num m = Cexp_num n = (m = n))
+                            m : num, n : num, p : Cexp, q : Cexp, r : Cexp, s : Cexp
+
+     -- bool -----------------------------------------------------------
+
+       bool$COND_CLAUSES     ⊢ (COND T t1 t2 = t1) ∧ (COND F t1 t2 = t2)
+                            t1 : 'a, t2 : 'a
+
+       bool$LET_THM          ⊢ LET f x = f x
+                            f : 'a -> 'b, x : 'a
+
+     == Emitted theorems ==
+
+     All SAVEd with candle$ prefix:
+
+       candle$BIT0_DEF         ⊢ BIT0 = λn. n + n
+       candle$BIT0             ⊢ BIT0 n = n + n
+       candle$BIT1             ⊢ BIT1 n = SUC (n + n)
+       candle$LESS_1            ⊢ m < NUMERAL _0 = F
+       candle$LESS_2            ⊢ NUMERAL _0 < SUC n = T
+       candle$LESS_3            ⊢ SUC m < SUC n = (m < n)
+       candle$COMPUTE_EQ_1..62  the 62 characteristic equations
+                                (see pft-ruleset-candle.md)
+       candle$BIT2_eq_BIT0_SUC  ⊢ BIT2 n = BIT0 (SUC n)
+       candle$SUC_0             ⊢ SUC _0 = BIT1 _0
+       candle$SUC_BIT0          ⊢ SUC (BIT0 n) = BIT1 n
+       candle$SUC_BIT1          ⊢ SUC (BIT1 n) = BIT0 (SUC n)
+       candle$NUM_XLATE_n       ⊢ <HOL4 bits for n> = <Candle bits for n>
+                                for n in 2..255 whose HOL4 form contains BIT2
+       candle$NUM_XLATE_REV_n   ⊢ <Candle bits for n> = <HOL4 bits for n>
+                                same n values as above
   *)
 
   val emit : { out : PFTWriter.pft_out,
