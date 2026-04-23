@@ -10,7 +10,7 @@ Theory head_reduction
 Ancestors
   relation pred_set list finite_map arithmetic llist path option
   rich_list pair term appFOLDL chap2 chap3 nomset horeduction
-  term_posns finite_developments basic_swap
+  term_posns finite_developments basic_swap takahashiS3
 Libs
   BasicProvers boolSimps hurdUtils binderLib NEWLib listLib
 
@@ -2703,6 +2703,73 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> simp [EL_MEM]
 QED
 
+Theorem hnf_ccbeta_appstar[local] :
+    !y Ms N. VAR y @* Ms -b-> N /\ Ms <> [] ==>
+             ?Ns. N = VAR y @* Ns /\ LENGTH Ns = LENGTH Ms /\
+                  !i. i < LENGTH Ms ==> EL i Ms -b->* EL i Ns
+Proof
+    Q.X_GEN_TAC ‘y’
+ >> SNOC_INDUCT_TAC >> rw []
+ >> fs [ccbeta_rwt] (* 2 subgoals *)
+ >- (Cases_on ‘Ms = []’ >> fs [ccbeta_rwt] \\
+     Q.PAT_X_ASSUM ‘!N. P’ (MP_TAC o (Q.SPEC ‘M'’)) \\
+     RW_TAC std_ss [] \\
+     Q.EXISTS_TAC ‘SNOC x Ns’ >> rw [] \\
+    ‘i = LENGTH Ms \/ i < LENGTH Ms’ by rw []
+     >- (rw [EL_LENGTH_SNOC] \\
+         Q.PAT_X_ASSUM ‘LENGTH Ns = LENGTH Ms’ (REWRITE_TAC o wrap o SYM) \\
+         rw [EL_LENGTH_SNOC]) \\
+     rw [EL_SNOC])
+ (* stage work *)
+ >> Cases_on ‘Ms = []’ >> fs []
+ >- (Q.EXISTS_TAC ‘[N']’ >> rw [])
+ >> Q.EXISTS_TAC ‘SNOC N' Ms’
+ >> rw [appstar_SNOC]
+ >> ‘i = LENGTH Ms \/ i < LENGTH Ms’ by rw []
+ >- (rw [EL_LENGTH_SNOC])
+ >> rw [EL_SNOC]
+QED
+
+Theorem hnf_ccbeta_cases[local] :
+    !Ms. LAMl vs (VAR y @* Ms) -b-> N ==>
+         ?Ns. N = LAMl vs (VAR y @* Ns) /\
+              LENGTH Ns = LENGTH Ms /\
+              !i. i < LENGTH Ms ==> EL i Ms -b->* EL i Ns
+Proof
+    rw [ccbeta_LAMl_rwt]
+ >> Suff ‘?Ns. M' = VAR y @* Ns /\ LENGTH Ns = LENGTH Ms /\
+              !i. i < LENGTH Ms ==> EL i Ms -b->* EL i Ns’
+ >- (STRIP_TAC >> Q.EXISTS_TAC ‘Ns’ >> rw [])
+ >> MATCH_MP_TAC hnf_ccbeta_appstar
+ >> Cases_on ‘Ms = []’ >> fs [ccbeta_rwt]
+QED
+
+(* Lemma 8.3.16 [1, p.176] *)
+Theorem hnf_betastar_cases :
+    !vs y Ms N. LAMl vs (VAR y @* Ms) -b->* N ==>
+                ?Ns. N = LAMl vs (VAR y @* Ns) /\
+                     LENGTH Ns = LENGTH Ms /\
+                     !i. i < LENGTH Ms ==> EL i Ms -b->* EL i Ns
+Proof
+    NTAC 2 GEN_TAC
+ >> Suff ‘!M N. M -b->* N ==>
+               !Ms. M = LAMl vs (VAR y @* Ms) ==>
+                   ?Ns. N = LAMl vs (VAR y @* Ns) /\
+                        LENGTH Ns = LENGTH Ms /\
+                        !i. i < LENGTH Ms ==> EL i Ms -b->* EL i Ns’
+ >- METIS_TAC []
+ >> HO_MATCH_MP_TAC RTC_INDUCT >> rw []
+ >> Know ‘?Ns. M' = LAMl vs (VAR y @* Ns) /\
+               LENGTH Ns = LENGTH Ms /\
+               !i. i < LENGTH Ms ==> EL i Ms -b->* EL i Ns’
+ >- (irule hnf_ccbeta_cases >> art [])
+ >> STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘!Ms. M' = LAMl vs (VAR y @* Ms) ==> P’ (MP_TAC o Q.SPEC ‘Ns’)
+ >> RW_TAC std_ss [] (* this asserts Ns' *)
+ >> Q.EXISTS_TAC ‘Ns'’ >> rw []
+ >> Q_TAC (TRANS_TAC betastar_TRANS) ‘EL i Ns’ >> simp []
+QED
+
 (* |- (VAR s -e-> t <=> F) /\
       (t @@ u -e-> v <=>
        (?t'. v = t' @@ u /\ t -e-> t') \/ ?u'. v = t @@ u' /\ u -e-> u') /\
@@ -2860,6 +2927,26 @@ Proof
  >> simp [EL_LENGTH_SNOC]
  >> Q.PAT_X_ASSUM ‘LENGTH Ns = LENGTH Ms'’ (REWRITE_TAC o wrap o SYM)
  >> simp [EL_LENGTH_SNOC]
+QED
+
+Theorem hnf_bestar_cases :
+    !vs y Ms N. LAMl vs (VAR y @* Ms) -be->* N ==>
+                ?n Ns. N = LAMl (BUTLASTN n vs) (VAR y @* BUTLASTN n Ns) /\
+                       n <= LENGTH vs /\ n <= LENGTH Ns /\
+                       LENGTH Ns = LENGTH Ms /\
+                       LASTN n Ns = MAP VAR (LASTN n vs) /\
+                       !i. i < LENGTH Ms ==> EL i Ms -be->* EL i Ns
+Proof
+    rpt STRIP_TAC
+ >> POP_ASSUM (STRIP_ASSUME_TAC o MATCH_MP takahashi_3_5)
+ >> Q.PAT_X_ASSUM ‘_ -b->* P’ (STRIP_ASSUME_TAC o MATCH_MP hnf_betastar_cases)
+ >> Q.PAT_X_ASSUM ‘P = _’ (fs o wrap)
+ >> Q.PAT_X_ASSUM ‘_ -e->* N’ (STRIP_ASSUME_TAC o MATCH_MP hnf_etastar_cases)
+ >> qexistsl_tac [‘n’, ‘Ns'’] >> rw []
+ >> Q_TAC (TRANS_TAC reduction_TRANS) ‘EL i Ns’
+ >> CONJ_TAC
+ >| [ MATCH_MP_TAC betastar_bestar >> simp [],
+      MATCH_MP_TAC etastar_bestar >> simp [] ]
 QED
 
 val _ = html_theory "head_reduction";

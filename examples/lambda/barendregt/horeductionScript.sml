@@ -233,6 +233,8 @@ Proof
   ]
 QED
 
+Theorem reduction_TRANS = cj 4 reduction_rules
+
 Theorem conversion_compatible:
     !R. compatible (conversion R)
 Proof
