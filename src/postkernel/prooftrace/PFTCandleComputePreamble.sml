@@ -296,6 +296,45 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
     let val pth = INST EQT_INTRO_pth [(var_t, tm_P)]
     in EQ_MP pth th end
 
+  val SPEC_pth = load_theorem "candle$SPEC"
+  (* SPEC_pth: ⊢ !(P:'a→bool) ⇒ P x *)
+
+  val MP_pth = load_theorem "candle$MP"
+  (* MP_pth: {p:bool} ⊢ (p ⇒ q) = q *)
+
+  (* do_MP: from ith: ⊢ a ⇒ b and ant_th: ⊢ a, derive ⊢ b.
+     Uses candle$MP: {p} ⊢ (p ⇒ q) = q.
+     1. INST MP_pth [(p,a),(q,b)] gives {a} ⊢ (a ⇒ b) = b
+     2. DEDUCT_ANTISYM ant_th rth gives ⊢ a = ((a ⇒ b) = b)
+     3. EQ_MP with ant_th gives ⊢ (a ⇒ b) = b
+     4. EQ_MP with ith gives ⊢ b *)
+  fun do_MP ith a_tm b_tm ant_th =
+    let val rth = INST MP_pth [(var_p, a_tm), (var_q, b_tm)]
+        val da = DEDUCT_ANTISYM ant_th rth
+        val eq_imp = EQ_MP da ant_th
+    in EQ_MP eq_imp ith end
+
+  (* do_SPEC: strip one ∀-quantifier from a theorem.
+     Given th: ⊢ !(λv. body) where v has type v_ty,
+     pred = (λv. body), and t: a term of type v_ty,
+     derive ⊢ body[t/v].
+     Uses candle$SPEC: ⊢ !(P:'a→bool) ⇒ P x.
+     1. INST_TYPE + INST SPEC_pth to get ⊢ !(pred) ⇒ pred t
+     2. do_MP with th gives ⊢ (λv. body) t
+     3. beta_reduce + EQ_MP gives ⊢ body[t/v] *)
+  fun do_SPEC pred t v v_ty th =
+    let val Ab = mk_fun v_ty ty_bool
+        val var_P = mk_var "P" Ab
+        val var_x = mk_var "x" v_ty
+        val spec_inst = INST (INST_TYPE SPEC_pth [(ty_A, v_ty)])
+                            [(var_P, pred), (var_x, t)]
+        val const_forall = mk_const "!" (mk_fun Ab ty_bool)
+        val forall_tm = mk_comb const_forall pred
+        val pred_t = mk_comb pred t
+        val mp_result = do_MP spec_inst forall_tm pred_t th
+        val beta_th = beta_reduce pred v t
+    in EQ_MP beta_th mp_result end
+
   (* ================================================================ *)
   (* 1. Define BIT0                                                   *)
   (*    BIT0 = λn. n + n                                              *)

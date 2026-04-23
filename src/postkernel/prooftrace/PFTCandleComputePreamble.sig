@@ -19,6 +19,8 @@ signature PFTCandleComputePreamble = sig
        candle$CONJUNCT1  :  {p ∧ q} ⊢ p              p:bool, q:bool
        candle$CONJUNCT2  :  {p ∧ q} ⊢ q              p:bool, q:bool
        candle$EQT_INTRO  :  ⊢ t = (t = T)             t:bool
+       candle$SPEC        :  ⊢ !(P:'a→bool) ⇒ P x      P:'a→bool, x:'a
+       candle$MP          :  {p} ⊢ (p ⇒ q) = q        p:bool, q:bool
 
      -- Arithmetic -----------------------------------------------------
 
