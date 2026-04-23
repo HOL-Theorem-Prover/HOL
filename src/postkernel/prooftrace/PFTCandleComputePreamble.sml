@@ -882,30 +882,28 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
 
   (* --- Equations 51-52: cv_fst --- *)
   (* cv_fst_def: ⊢ (∀p q. Cexp_fst (Cexp_pair p q) = p) ∧ (∀m. Cexp_fst (Cexp_num m) = Cexp_num _0)
-     Split conjunction, then SPEC each conjunct *)
+     ∀p q. is represented as !(λp. !(λq. body)), NOT !(λp. λq. body).
+     Split conjunction, then SPEC each conjunct. *)
   val cv_fst_def = load_theorem "cv$cv_fst_def"
   val fst_left_body = mk_eq_tm eq_cv (mk_comb const_cv_fst tm_Pair_p_q) var_p_cv
   val fst_right_body = mk_eq_tm eq_cv (mk_comb const_cv_fst tm_Num_m) tm_Num_0
-  val fst_conj1 = do_CONJUNCT1 cv_fst_def
-    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_cv (mk_fun ty_cv ty_bool)) ty_bool))
-      (mk_abs var_p_cv (mk_abs var_q_cv fst_left_body)))
-    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
-      (mk_abs var_m fst_right_body))
-  val fst_conj2 = do_CONJUNCT2 cv_fst_def
-    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_cv (mk_fun ty_cv ty_bool)) ty_bool))
-      (mk_abs var_p_cv (mk_abs var_q_cv fst_left_body)))
-    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
-      (mk_abs var_m fst_right_body))
-  (* Conj1: ∀p q. Cexp_fst (Cexp_pair p q) = p — double SPEC *)
-  val fst_pred = mk_abs var_p_cv (mk_abs var_q_cv fst_left_body)
-  val fst_left_free_m = do_SPEC fst_pred var_p_cv var_p_cv ty_cv fst_conj1
-  val fst_inner = mk_abs var_q_cv fst_left_body
-  val fst_left_free = do_SPEC fst_inner var_q_cv var_q_cv ty_cv fst_left_free_m
-  (* fst_left_free: ⊢ Cexp_fst (Cexp_pair p q) = p, p and q free *)
-  val eq51 = fst_left_free
-  val () = save "candle$COMPUTE_EQ_51" eq51
-  (* Conj2: ∀m. Cexp_fst (Cexp_num m) = Cexp_num _0 — SPEC *)
+  (* ∀ constants at the correct types for nested quantification *)
+  val forall_cv = mk_const "!" (mk_fun (mk_fun ty_cv ty_bool) ty_bool)
+  val forall_num = mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool)
+  (* First conjunct: ∀p q. ... = !(λp. !(λq. body)) *)
+  val fst_left_inner_pred = mk_abs var_q_cv fst_left_body
+  val fst_left_inner_forall = mk_comb forall_cv fst_left_inner_pred
+  val fst_left_outer_pred = mk_abs var_p_cv fst_left_inner_forall
+  val fst_left_tm = mk_comb forall_cv fst_left_outer_pred
+  (* Second conjunct: ∀m. ... = !(λm. body) *)
   val fst_right_pred = mk_abs var_m fst_right_body
+  val fst_right_tm = mk_comb forall_num fst_right_pred
+  val fst_conj1 = do_CONJUNCT1 cv_fst_def fst_left_tm fst_right_tm
+  val fst_conj2 = do_CONJUNCT2 cv_fst_def fst_left_tm fst_right_tm
+  (* Double-SPEC the first conjunct to free p and q *)
+  val eq51 = do_DOUBLE_SPEC fst_conj1 var_p_cv ty_cv var_q_cv ty_cv fst_left_body
+  val () = save "candle$COMPUTE_EQ_51" eq51
+  (* Single-SPEC the second conjunct to free m *)
   val eq52 = do_SPEC fst_right_pred var_m var_m ty_num fst_conj2
   val () = save "candle$COMPUTE_EQ_52" eq52
 
@@ -915,23 +913,20 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val cv_snd_def = load_theorem "cv$cv_snd_def"
   val snd_left_body = mk_eq_tm eq_cv (mk_comb const_cv_snd tm_Pair_p_q) var_q_cv
   val snd_right_body = mk_eq_tm eq_cv (mk_comb const_cv_snd tm_Num_m) tm_Num_0
-  val snd_conj1 = do_CONJUNCT1 cv_snd_def
-    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_cv (mk_fun ty_cv ty_bool)) ty_bool))
-      (mk_abs var_p_cv (mk_abs var_q_cv snd_left_body)))
-    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
-      (mk_abs var_m snd_right_body))
-  val snd_conj2 = do_CONJUNCT2 cv_snd_def
-    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_cv (mk_fun ty_cv ty_bool)) ty_bool))
-      (mk_abs var_p_cv (mk_abs var_q_cv snd_left_body)))
-    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
-      (mk_abs var_m snd_right_body))
-  val snd_pred = mk_abs var_p_cv (mk_abs var_q_cv snd_left_body)
-  val snd_left_free_m = do_SPEC snd_pred var_p_cv var_p_cv ty_cv snd_conj1
-  val snd_inner = mk_abs var_q_cv snd_left_body
-  val snd_left_free = do_SPEC snd_inner var_q_cv var_q_cv ty_cv snd_left_free_m
-  val eq53 = snd_left_free
-  val () = save "candle$COMPUTE_EQ_53" eq53
+  (* First conjunct: ∀p q. ... = !(λp. !(λq. body)) *)
+  val snd_left_inner_pred = mk_abs var_q_cv snd_left_body
+  val snd_left_inner_forall = mk_comb forall_cv snd_left_inner_pred
+  val snd_left_outer_pred = mk_abs var_p_cv snd_left_inner_forall
+  val snd_left_tm = mk_comb forall_cv snd_left_outer_pred
+  (* Second conjunct: ∀m. ... = !(λm. body) *)
   val snd_right_pred = mk_abs var_m snd_right_body
+  val snd_right_tm = mk_comb forall_num snd_right_pred
+  val snd_conj1 = do_CONJUNCT1 cv_snd_def snd_left_tm snd_right_tm
+  val snd_conj2 = do_CONJUNCT2 cv_snd_def snd_left_tm snd_right_tm
+  (* Double-SPEC the first conjunct to free p and q *)
+  val eq53 = do_DOUBLE_SPEC snd_conj1 var_p_cv ty_cv var_q_cv ty_cv snd_left_body
+  val () = save "candle$COMPUTE_EQ_53" eq53
+  (* Single-SPEC the second conjunct to free m *)
   val eq54 = do_SPEC snd_right_pred var_m var_m ty_num snd_conj2
   val () = save "candle$COMPUTE_EQ_54" eq54
 
@@ -942,23 +937,20 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val cv_ispair_def = load_theorem "cv$cv_ispair_def"
   val ispair_left_body = mk_eq_tm eq_cv (mk_comb const_cv_ispair tm_Pair_p_q) tm_Num_SUC_0
   val ispair_right_body = mk_eq_tm eq_cv (mk_comb const_cv_ispair tm_Num_m) tm_Num_0
-  val ispair_conj1 = do_CONJUNCT1 cv_ispair_def
-    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_cv (mk_fun ty_cv ty_bool)) ty_bool))
-      (mk_abs var_p_cv (mk_abs var_q_cv ispair_left_body)))
-    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
-      (mk_abs var_m ispair_right_body))
-  val ispair_conj2 = do_CONJUNCT2 cv_ispair_def
-    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_cv (mk_fun ty_cv ty_bool)) ty_bool))
-      (mk_abs var_p_cv (mk_abs var_q_cv ispair_left_body)))
-    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
-      (mk_abs var_m ispair_right_body))
-  val ispair_pred = mk_abs var_p_cv (mk_abs var_q_cv ispair_left_body)
-  val ispair_left_free_m = do_SPEC ispair_pred var_p_cv var_p_cv ty_cv ispair_conj1
-  val ispair_inner = mk_abs var_q_cv ispair_left_body
-  val ispair_left_free = do_SPEC ispair_inner var_q_cv var_q_cv ty_cv ispair_left_free_m
-  val eq55 = ispair_left_free
-  val () = save "candle$COMPUTE_EQ_55" eq55
+  (* First conjunct: ∀p q. ... = !(λp. !(λq. body)) *)
+  val ispair_left_inner_pred = mk_abs var_q_cv ispair_left_body
+  val ispair_left_inner_forall = mk_comb forall_cv ispair_left_inner_pred
+  val ispair_left_outer_pred = mk_abs var_p_cv ispair_left_inner_forall
+  val ispair_left_tm = mk_comb forall_cv ispair_left_outer_pred
+  (* Second conjunct: ∀m. ... = !(λm. body) *)
   val ispair_right_pred = mk_abs var_m ispair_right_body
+  val ispair_right_tm = mk_comb forall_num ispair_right_pred
+  val ispair_conj1 = do_CONJUNCT1 cv_ispair_def ispair_left_tm ispair_right_tm
+  val ispair_conj2 = do_CONJUNCT2 cv_ispair_def ispair_left_tm ispair_right_tm
+  (* Double-SPEC the first conjunct to free p and q *)
+  val eq55 = do_DOUBLE_SPEC ispair_conj1 var_p_cv ty_cv var_q_cv ty_cv ispair_left_body
+  val () = save "candle$COMPUTE_EQ_55" eq55
+  (* Single-SPEC the second conjunct to free m *)
   val eq56 = do_SPEC ispair_right_pred var_m var_m ty_num ispair_conj2
   val () = save "candle$COMPUTE_EQ_56" eq56
 
@@ -1009,7 +1001,7 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val sym_pn = SYM assum_pn                   (* {Pair p q = Num m} ⊢ Num m = Pair p q *)
   (* Need to instantiate eq61 with n := m *)
   val eq61_m = INST eq61 [(var_n, var_m)]
-  val eq_sym_cv = DEDUCT_ANTISYM sym_np sym_pn  (* ⊢ (Num m = Pair p q) = (Pair p q = Num m) *)
+  val eq_sym_cv = DEDUCT_ANTISYM sym_pn sym_np  (* ⊢ (Num m = Pair p q) = (Pair p q = Num m) *)
   val eq60 = TRANS eq_sym_cv eq61_m            (* ⊢ (Num m = Pair p q) = F *)
 
   val () = save "candle$COMPUTE_EQ_58" eq58
