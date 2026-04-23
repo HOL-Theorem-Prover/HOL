@@ -24,7 +24,7 @@ signature PFTCandleComputePreamble = sig
 
      -- Arithmetic -----------------------------------------------------
 
-       arithmetic$BIT1       ⊢ BIT1 n = n + (n + SUC _0)
+       arithmetic$BIT1       ⊢ !n. BIT1 n = n + (n + SUC _0)
                             n : num
 
        arithmetic$BIT2       ⊢ BIT2 n = n + (n + SUC (SUC _0))
@@ -33,7 +33,7 @@ signature PFTCandleComputePreamble = sig
        arithmetic$ADD_SUC    ⊢ m + SUC n = SUC (m + n)
                             m : num, n : num
 
-       arithmetic$ADD_0      ⊢ m + NUMERAL _0 = m
+       arithmetic$ADD_0      ⊢ !m. m + _0 = m
                             m : num
 
        arithmetic$ADD        ⊢ (NUMERAL _0 + n = n) ∧ (SUC m + n = SUC (m + n))

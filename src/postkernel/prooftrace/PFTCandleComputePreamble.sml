@@ -371,14 +371,25 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val ADD_0 = load_theorem "arithmetic$ADD_0"
 
   val tm_SUC_0 = mk_SUC tm_zero       (* SUC (NUMERAL _0) = 1 *)
-  val ADD_SUC_inst = INST ADD_SUC [(var_m, var_n), (var_n, tm_zero)]
-  val ADD_0_inst = INST ADD_0 [(var_m, var_n)]
-  val SUC_n_plus_0_eq = AP_TERM const_SUC ADD_0_inst
+  val tm_SUC_bare0 = mk_SUC const_zero  (* SUC _0 = bare 1, for ADD_0 SPEC *)
+
+  (* hol4_BIT1: ⊢ !n. BIT1 n = n + (n + SUC _0)  — strip the ∀n *)
+  val bit1_pred = mk_abs var_n
+    (mk_eq_tm eq_num (mk_comb const_BIT1 var_n)
+                    (mk_plus var_n (mk_plus var_n tm_SUC_bare0)))
+  val BIT1_free = do_SPEC bit1_pred var_n var_n ty_num hol4_BIT1
+
+  (* ADD_0: ⊢ !m. m + _0 = m — strip ∀m by specializing with n *)
+  val add0_pred = mk_abs var_m (mk_eq_tm eq_num (mk_plus var_m const_zero) var_m)
+  val ADD_0_free = do_SPEC add0_pred var_n var_m ty_num ADD_0
+
+  val ADD_SUC_inst = INST ADD_SUC [(var_m, var_n), (var_n, const_zero)]
+  val SUC_n_plus_0_eq = AP_TERM const_SUC ADD_0_free
   val n_plus_SUC_0_eq_SUC_n = TRANS ADD_SUC_inst SUC_n_plus_0_eq
   val ADD_SUC_nn = INST ADD_SUC [(var_m, var_n), (var_n, var_n)]
   val step1 = AP_TERM (mk_comb const_plus var_n) n_plus_SUC_0_eq_SUC_n
   val rhs_eq = TRANS step1 ADD_SUC_nn
-  val BIT1_candle = TRANS hol4_BIT1 rhs_eq
+  val BIT1_candle = TRANS BIT1_free rhs_eq
   val () = save "candle$BIT1" BIT1_candle
 
   (* ================================================================ *)
@@ -1004,8 +1015,8 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val step2_a = INST ADD_SUC [(var_m, var_n), (var_n, const_zero)]
   (* n + SUC 0 = SUC (n + 0) *)
 
-  (* Step 3: n + 0 = n *)
-  val ADD_0_n = INST ADD_0 [(var_m, var_n)]  (* n + 0 = n *)
+  (* Step 3: n + _0 = n, from ADD_0: ⊢ !m. m + _0 = m *)
+  val ADD_0_n = do_SPEC add0_pred var_n var_m ty_num ADD_0
 
   (* Combine: n + SUC 0 = SUC (n + 0) = SUC n *)
   val n_plus_SUC_0 = TRANS step2_a (AP_TERM const_SUC ADD_0_n)
