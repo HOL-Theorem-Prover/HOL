@@ -266,6 +266,7 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val tm_SUC_n = mk_SUC var_n
   val tm_SUC_m = mk_SUC var_m
   val tm_zero = mk_NUMERAL const_zero   (* NUMERAL _0 *)
+  val tm_m_plus_n = mk_plus var_m var_n
 
   (* ================================================================ *)
   (* CONJUNCT helpers from the main preamble                          *)
@@ -335,6 +336,20 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
         val beta_th = beta_reduce pred v t
     in EQ_MP beta_th mp_result end
 
+  (* do_DOUBLE_SPEC: strip two ∀-quantifiers from a theorem.
+     Given th: ⊢ ∀v1. ∀v2. body where v1:v1_ty and v2:v2_ty
+     (the original ∀-bound variable names), and inner_body = body
+     with v1, v2 both free, result: ⊢ body with v1 and v2 both free.
+     After do_DOUBLE_SPEC, use INST to substitute v1,v2 to desired terms. *)
+  fun do_DOUBLE_SPEC th v1 v1_ty v2 v2_ty inner_body =
+    let val inner_pred = mk_abs v2 inner_body
+        val Ab2 = mk_fun v2_ty ty_bool
+        val forall2_const = mk_const "!" Ab2
+        val inner_forall = mk_comb forall2_const inner_pred
+        val outer_pred = mk_abs v1 inner_forall
+        val step1 = do_SPEC outer_pred v1 v1 v1_ty th
+    in do_SPEC inner_pred v2 v2 v2_ty step1 end
+
   (* ================================================================ *)
   (* 1. Define BIT0                                                   *)
   (*    BIT0 = λn. n + n                                              *)
@@ -383,16 +398,9 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val ADD_0_free = do_SPEC add0_pred var_n var_m ty_num ADD_0
 
   (* SPEC ADD_SUC twice (m then n) to get both free: ⊢ SUC (m + n) = m + SUC n *)
-  val add_suc_pred = mk_abs var_m
-    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
-      (mk_abs var_n
-        (mk_eq_tm eq_num (mk_SUC (mk_plus var_m var_n))
-                        (mk_plus var_m (mk_SUC var_n)))))
-  val add_suc_free_m = do_SPEC add_suc_pred var_m var_m ty_num ADD_SUC
-  val add_suc_inner = mk_abs var_n
-    (mk_eq_tm eq_num (mk_SUC (mk_plus var_m var_n))
-                    (mk_plus var_m (mk_SUC var_n)))
-  val ADD_SUC_free = do_SPEC add_suc_inner var_n var_n ty_num add_suc_free_m
+  val add_suc_body = mk_eq_tm eq_num (mk_SUC (mk_plus var_m var_n))
+                                  (mk_plus var_m (mk_SUC var_n))
+  val ADD_SUC_free = do_DOUBLE_SPEC ADD_SUC var_m ty_num var_n ty_num add_suc_body
   (* ADD_SUC_free: ⊢ SUC (m + n) = m + SUC n  —  m, n both free *)
 
   (* Derive: ⊢ n + SUC _0 = SUC n *)
@@ -410,6 +418,7 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   (* ⊢ n + (n + SUC _0) = n + SUC n *)
   val step8 = INST ADD_SUC_free [(var_m, var_n), (var_n, var_n)]
   (* ⊢ SUC (n + n) = n + SUC n *)
+  val ADD_SUC_nn = step8
   val step9 = SYM step8
   (* ⊢ n + SUC n = SUC (n + n) *)
   val step10 = TRANS step7 step9
@@ -422,7 +431,7 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   (* ================================================================ *)
 
   val LT_RECURSIVE = load_theorem "cv$LT_RECURSIVE"
-  val tm_m_lt_0 = mk_LESS var_m tm_zero
+  val tm_m_lt_0 = mk_LESS var_m const_zero
   val tm_m_lt_0_eq_F = mk_eq_tm eq_bool tm_m_lt_0 const_F
   val tm_m_lt_SUC_n = mk_LESS var_m tm_SUC_n
   val tm_m_eq_n = mk_eq_tm eq_num var_m var_n
@@ -436,11 +445,17 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val LESS_0 = load_theorem "prim_rec$LESS_0"
   val LESS_MONO_EQ = load_theorem "prim_rec$LESS_MONO_EQ"
 
-  val tm_0_lt_SUC_n = mk_LESS tm_zero tm_SUC_n
-  val LESS_eq2 = do_EQT_INTRO LESS_0 tm_0_lt_SUC_n
+  (* LESS_0: ⊢ ∀n. _0 < SUC n — SPEC with n *)
+  val less0_pred = mk_abs var_n (mk_LESS const_zero tm_SUC_n)
+  val LESS_0_free = do_SPEC less0_pred var_n var_n ty_num LESS_0
+  val LESS_eq2 = do_EQT_INTRO LESS_0_free (mk_LESS const_zero tm_SUC_n)
   val () = save "candle$LESS_2" LESS_eq2
 
-  val LESS_eq3 = LESS_MONO_EQ
+  (* LESS_MONO_EQ: ⊢ ∀m n. SUC m < SUC n = m < n — double SPEC *)
+  val less_mono_body = mk_eq_tm eq_bool (mk_LESS tm_SUC_m tm_SUC_n) (mk_LESS var_m var_n)
+  val LESS_MONO_EQ_free = do_DOUBLE_SPEC LESS_MONO_EQ var_m ty_num var_n ty_num less_mono_body
+  (* LESS_MONO_EQ_free: ⊢ SUC m < SUC n = m < n, m and n both free *)
+  val LESS_eq3 = LESS_MONO_EQ_free
   val () = save "candle$LESS_3" LESS_eq3
 
   (* ================================================================ *)
@@ -451,17 +466,22 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   (* COND_CLAUSES: ⊢ ∀t1 t2. (COND T t1 t2 = t1) ∧ (COND F t1 t2 = t2) *)
   val COND_CLAUSES = load_theorem "bool$COND_CLAUSES"
 
-  (* COND_CLAUSES uses variables named t1 and t2 *)
+  (* Instantiate at num type, double-SPEC, then INST to (m, n) *)
+  val COND_CLAUSES_num = INST_TYPE COND_CLAUSES [(ty_A, ty_num)]
   val var_t1_num = mk_var "t1" ty_num
   val var_t2_num = mk_var "t2" ty_num
-  val var_t1_bool = mk_var "t1" ty_bool
-  val var_t2_bool = mk_var "t2" ty_bool
+  val cond_body_num =
+    mk_comb (mk_comb (mk_const "/\\" ty_bbb)
+      (mk_eq_tm eq_num
+        (mk_comb (mk_comb (mk_comb const_COND_num const_T) var_t1_num) var_t2_num)
+        var_t1_num))
+      (mk_eq_tm eq_num
+        (mk_comb (mk_comb (mk_comb const_COND_num const_F) var_t1_num) var_t2_num)
+        var_t2_num)
+  val COND_CLAUSES_num_free =
+    do_DOUBLE_SPEC COND_CLAUSES_num var_t1_num ty_num var_t2_num ty_num cond_body_num
+  val COND_CLAUSES_num_inst = INST COND_CLAUSES_num_free [(var_t1_num, var_m), (var_t2_num, var_n)]
 
-  (* Instantiate at num type for equations 1-2 *)
-  val COND_CLAUSES_num = INST_TYPE COND_CLAUSES [(ty_A, ty_num)]
-  val COND_CLAUSES_num_inst = INST COND_CLAUSES_num [(var_t1_num, var_m), (var_t2_num, var_n)]
-
-  (* Build term for conjunct extraction *)
   val tm_COND_T_m_n = mk_comb (mk_comb (mk_comb const_COND_num const_T) var_m) var_n
   val tm_COND_F_m_n = mk_comb (mk_comb (mk_comb const_COND_num const_F) var_m) var_n
   val tm_eq1 = mk_eq_tm eq_num tm_COND_T_m_n var_m
@@ -472,9 +492,21 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val () = save "candle$COMPUTE_EQ_1" eq1
   val () = save "candle$COMPUTE_EQ_2" eq2
 
-  (* Instantiate at bool type for equations 3-4 (IF = COND on bool) *)
+  (* Same at bool type, double-SPEC, then INST to (x, y) *)
   val COND_CLAUSES_bool = INST_TYPE COND_CLAUSES [(ty_A, ty_bool)]
-  val COND_CLAUSES_bool_inst = INST COND_CLAUSES_bool [(var_t1_bool, var_x), (var_t2_bool, var_y)]
+  val var_t1_bool = mk_var "t1" ty_bool
+  val var_t2_bool = mk_var "t2" ty_bool
+  val cond_body_bool =
+    mk_comb (mk_comb (mk_const "/\\" ty_bbb)
+      (mk_eq_tm eq_bool
+        (mk_comb (mk_comb (mk_comb const_COND_bool const_T) var_t1_bool) var_t2_bool)
+        var_t1_bool))
+      (mk_eq_tm eq_bool
+        (mk_comb (mk_comb (mk_comb const_COND_bool const_F) var_t1_bool) var_t2_bool)
+        var_t2_bool)
+  val COND_CLAUSES_bool_free =
+    do_DOUBLE_SPEC COND_CLAUSES_bool var_t1_bool ty_bool var_t2_bool ty_bool cond_body_bool
+  val COND_CLAUSES_bool_inst = INST COND_CLAUSES_bool_free [(var_t1_bool, var_x), (var_t2_bool, var_y)]
 
   val tm_IF_T_x_y = mk_comb (mk_comb (mk_comb const_COND_bool const_T) var_x) var_y
   val tm_IF_F_x_y = mk_comb (mk_comb (mk_comb const_COND_bool const_F) var_x) var_y
@@ -487,7 +519,10 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val () = save "candle$COMPUTE_EQ_4" eq4
 
   (* --- Equation 5: NUMERAL n = n --- *)
-  val eq5 = load_theorem "arithmetic$NUMERAL_DEF"
+  (* NUMERAL_DEF: ⊢ ∀x. NUMERAL x = x — SPEC with n *)
+  val NUMERAL_DEF = load_theorem "arithmetic$NUMERAL_DEF"
+  val numeral_def_pred = mk_abs var_n (mk_eq_tm eq_num (mk_comb const_NUMERAL var_n) var_n)
+  val eq5 = do_SPEC numeral_def_pred var_n var_n ty_num NUMERAL_DEF
   val () = save "candle$COMPUTE_EQ_5" eq5
 
   (* --- Equation 6: BIT0 n = n + n --- *)
@@ -497,75 +532,109 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val () = save "candle$COMPUTE_EQ_7" BIT1_candle
 
   (* --- Equations 8-9: ADD --- *)
-  (* ADD: ⊢ (0 + n = n) ∧ (SUC m + n = SUC (m + n)) *)
+  (* ADD: ⊢ (∀n. _0 + n = n) ∧ (∀m n. SUC m + n = SUC (m + n)) *)
   val ADD = load_theorem "arithmetic$ADD"
 
-  (* Note: HOL4's ADD uses NUMERAL _0, not bare _0 *)
-  val tm_0_plus_n = mk_plus tm_zero var_n
-  val tm_eq8 = mk_eq_tm eq_num tm_0_plus_n var_n
-  val tm_SUC_m_plus_n = mk_plus tm_SUC_m var_n
-  val tm_m_plus_n = mk_plus var_m var_n
-  val tm_SUC_m_plus_n_rhs = mk_SUC tm_m_plus_n
-  val tm_eq9 = mk_eq_tm eq_num tm_SUC_m_plus_n tm_SUC_m_plus_n_rhs
-
-  val eq8 = do_CONJUNCT1 ADD tm_eq8 tm_eq9
-  val eq9 = do_CONJUNCT2 ADD tm_eq8 tm_eq9
+  (* First conjunct: ∀n. _0 + n = n — SPEC with n *)
+  val add_left_body = mk_eq_tm eq_num (mk_plus const_zero var_n) var_n
+  val add_left_pred = mk_abs var_n add_left_body
+  val add_left_forall = do_CONJUNCT1 ADD
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool)) add_left_pred)
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
+      (mk_abs var_m
+        (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
+          (mk_abs var_n
+            (mk_eq_tm eq_num (mk_plus tm_SUC_m var_n) (mk_SUC (mk_plus var_m var_n)))))))
+  val eq8 = do_SPEC add_left_pred var_n var_n ty_num add_left_forall
   val () = save "candle$COMPUTE_EQ_8" eq8
+
+  (* Second conjunct: ∀m n. SUC m + n = SUC (m + n) — double SPEC *)
+  val add_right_body = mk_eq_tm eq_num (mk_plus tm_SUC_m var_n) (mk_SUC (mk_plus var_m var_n))
+  val add_right_forall = do_CONJUNCT2 ADD
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool)) add_left_pred)
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
+      (mk_abs var_m
+        (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
+          (mk_abs var_n add_right_body))))
+  val ADD_free = do_DOUBLE_SPEC add_right_forall var_m ty_num var_n ty_num add_right_body
+  val eq9 = ADD_free
   val () = save "candle$COMPUTE_EQ_9" eq9
 
   (* --- Equations 10-12: SUB --- *)
-  (* Candle needs:
-       10: 0 - n = 0
-       11: m - 0 = m
-       12: SUC m - SUC n = m - n
-     SUB_0: ⊢ (0 - m = 0) ∧ (m - 0 = m) *)
+  (* SUB_0: ⊢ ∀m. _0 - m = _0 ∧ m - _0 = m — SPEC with m, then CONJUNCT1/2 *)
   val SUB_0 = load_theorem "arithmetic$SUB_0"
+  val sub0_body = mk_comb (mk_comb (mk_const "/\\" ty_bbb)
+    (mk_eq_tm eq_num (mk_minus const_zero var_m) const_zero))
+    (mk_eq_tm eq_num (mk_minus var_m const_zero) var_m)
+  val sub0_pred = mk_abs var_m sub0_body
+  val SUB_0_free = do_SPEC sub0_pred var_m var_m ty_num SUB_0
 
-  val tm_0_minus_m = mk_minus tm_zero var_m
-  val tm_eq10a = mk_eq_tm eq_num tm_0_minus_m tm_zero
-  val tm_m_minus_0 = mk_minus var_m tm_zero
-  val tm_eq11a = mk_eq_tm eq_num tm_m_minus_0 var_m
+  val tm_0_minus_m = mk_minus const_zero var_m
+  val tm_eq10 = mk_eq_tm eq_num tm_0_minus_m const_zero
+  val tm_m_minus_0 = mk_minus var_m const_zero
+  val tm_eq11 = mk_eq_tm eq_num tm_m_minus_0 var_m
 
-  val eq10_m = do_CONJUNCT1 SUB_0 tm_eq10a tm_eq11a
-  val eq10 = INST eq10_m [(var_m, var_n)]  (* rename m to n *)
+  val eq10_m = do_CONJUNCT1 SUB_0_free tm_eq10 tm_eq11
+  val eq10 = INST eq10_m [(var_m, var_n)]
   val () = save "candle$COMPUTE_EQ_10" eq10
 
-  val eq11 = do_CONJUNCT2 SUB_0 tm_eq10a tm_eq11a
+  val eq11 = do_CONJUNCT2 SUB_0_free tm_eq10 tm_eq11
   val () = save "candle$COMPUTE_EQ_11" eq11
 
+  (* SUB_MONO_EQ: ⊢ ∀n m. SUC n - SUC m = n - m
+     Quantifier order is n then m. Double-SPEC n→var_m, m→var_n to get ⊢ SUC m - SUC n = m - n *)
   val SUB_MONO_EQ = load_theorem "arithmetic$SUB_MONO_EQ"
-  (* SUB_MONO_EQ: ⊢ SUC n - SUC m = n - m, need to swap n/m *)
-  val eq12 = INST SUB_MONO_EQ [(var_n, var_m), (var_m, var_n)]
+  val var_n_sub = mk_var "n" ty_num
+  val var_m_sub = mk_var "m" ty_num
+  val sub_mono_body = mk_eq_tm eq_num (mk_minus (mk_SUC var_n_sub) (mk_SUC var_m_sub))
+                                  (mk_minus var_n_sub var_m_sub)
+  val SUB_MONO_EQ_free = do_DOUBLE_SPEC SUB_MONO_EQ var_n_sub ty_num var_m_sub ty_num sub_mono_body
+  (* SUB_MONO_EQ_free: ⊢ SUC n - SUC m = n - m, n and m both free *)
+  val eq12 = INST SUB_MONO_EQ_free [(var_n_sub, var_m), (var_m_sub, var_n)]
+  (* eq12: ⊢ SUC m - SUC n = m - n *)
   val () = save "candle$COMPUTE_EQ_12" eq12
 
   (* --- Equations 13-14: MUL --- *)
-  (* MULT: ⊢ (0 * n = 0) ∧ (SUC m * n = (m * n) + n)
-     Candle needs: (SUC m) * n = n + (m * n)  [operands swapped]
-     We extract from MULT, then use ADD_COMM to swap. *)
+  (* MULT: ⊢ (∀n. _0 * n = _0) ∧ (∀m n. SUC m * n = m * n + n)
+     Candle needs: (SUC m) * n = n + (m * n)  [operands swapped via ADD_COMM] *)
   val MULT = load_theorem "arithmetic$MULT"
   val ADD_COMM = load_theorem "arithmetic$ADD_COMM"
 
-  val tm_0_times_n = mk_times tm_zero var_n
-  val tm_eq13 = mk_eq_tm eq_num tm_0_times_n tm_zero
-  val tm_SUC_m_times_n = mk_times tm_SUC_m var_n
+  (* First conjunct: ∀n. _0 * n = _0 — SPEC with n *)
+  val mul_left_body = mk_eq_tm eq_num (mk_times const_zero var_n) const_zero
+  val mul_left_pred = mk_abs var_n mul_left_body
+  val mul_left_forall = do_CONJUNCT1 MULT
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool)) mul_left_pred)
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
+      (mk_abs var_m
+        (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
+          (mk_abs var_n
+            (mk_eq_tm eq_num (mk_times tm_SUC_m var_n) (mk_plus (mk_times var_m var_n) var_n))))))
+  val eq13 = do_SPEC mul_left_pred var_n var_n ty_num mul_left_forall
+  val () = save "candle$COMPUTE_EQ_13" eq13
+
+  (* Second conjunct: ∀m n. SUC m * n = m * n + n — double SPEC *)
+  val mul_right_body = mk_eq_tm eq_num (mk_times tm_SUC_m var_n) (mk_plus (mk_times var_m var_n) var_n)
+  val mul_right_forall = do_CONJUNCT2 MULT
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool)) mul_left_pred)
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
+      (mk_abs var_m
+        (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
+          (mk_abs var_n mul_right_body))))
+  val MULT_free = do_DOUBLE_SPEC mul_right_forall var_m ty_num var_n ty_num mul_right_body
+  (* MULT_free: ⊢ SUC m * n = m * n + n, m and n both free *)
+
+  (* ADD_COMM: ⊢ ∀m n. m + n = n + m — double SPEC, then INST *)
+  val add_comm_body = mk_eq_tm eq_num (mk_plus var_m var_n) (mk_plus var_n var_m)
+  val ADD_COMM_free = do_DOUBLE_SPEC ADD_COMM var_m ty_num var_n ty_num add_comm_body
+  (* ADD_COMM_free: ⊢ m + n = n + m, m and n both free *)
   val tm_m_times_n = mk_times var_m var_n
-  val tm_m_times_n_plus_n = mk_plus tm_m_times_n var_n
-  val tm_eq14_hol4 = mk_eq_tm eq_num tm_SUC_m_times_n tm_m_times_n_plus_n
-
-  val eq13 = do_CONJUNCT1 MULT tm_eq13 tm_eq14_hol4
-
-  (* Extract HOL4 form: SUC m * n = (m * n) + n *)
-  val eq14_hol4 = do_CONJUNCT2 MULT tm_eq13 tm_eq14_hol4
-
-  (* ADD_COMM: ⊢ m + n = n + m. Instantiate with m := (m * n), n := n *)
-  val var_m_add = mk_var "m" ty_num  (* ADD_COMM uses m and n *)
-  val var_n_add = mk_var "n" ty_num
-  val ADD_COMM_inst = INST ADD_COMM [(var_m_add, tm_m_times_n), (var_n_add, var_n)]
+  val ADD_COMM_inst = INST ADD_COMM_free [(var_m, tm_m_times_n), (var_n, var_n)]
   (* ⊢ (m * n) + n = n + (m * n) *)
 
   (* TRANS: SUC m * n = (m * n) + n = n + (m * n) *)
+  val eq14_hol4 = MULT_free
   val eq14 = TRANS eq14_hol4 ADD_COMM_inst
-  val () = save "candle$COMPUTE_EQ_13" eq13
   val () = save "candle$COMPUTE_EQ_14" eq14
 
   (* --- Equations 15-16: DIV, MOD --- *)
@@ -587,16 +656,16 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
        23: (SUC m = SUC n) = (m = n)
      From cv$SUC_EQ we get 22 and 23. Need to derive 20 and 21. *)
 
-  (* Equation 20: (0 = 0) = T *)
-  val tm_0_eq_0 = mk_eq_tm eq_num tm_zero tm_zero
-  val REFL_0 = REFL tm_zero
+  (* Equation 20: (_0 = _0) = T *)
+  val tm_0_eq_0 = mk_eq_tm eq_num const_zero const_zero
+  val REFL_0 = REFL const_zero
   val eq20 = do_EQT_INTRO REFL_0 tm_0_eq_0
   val () = save "candle$COMPUTE_EQ_20" eq20
 
-  (* SUC_EQ: ⊢ (SUC m = 0 = F) ∧ (SUC m = SUC n = (m = n)) *)
+  (* SUC_EQ: ⊢ (SUC m = _0 = F) ∧ (SUC m = SUC n = (m = n)) *)
   val SUC_EQ = load_theorem "cv$SUC_EQ"
 
-  val tm_SUC_m_eq_0 = mk_eq_tm eq_num tm_SUC_m tm_zero
+  val tm_SUC_m_eq_0 = mk_eq_tm eq_num tm_SUC_m const_zero
   val tm_eq22 = mk_eq_tm eq_bool tm_SUC_m_eq_0 const_F
   val tm_SUC_m_eq_SUC_n = mk_eq_tm eq_num tm_SUC_m tm_SUC_n
   val tm_m_eq_n = mk_eq_tm eq_num var_m var_n
@@ -607,34 +676,20 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val () = save "candle$COMPUTE_EQ_22" eq22
   val () = save "candle$COMPUTE_EQ_23" eq23
 
-  (* Equation 21: (0 = SUC n) = F *)
-  (* From eq22 (SUC m = 0 = F), we need (0 = SUC n) = F.
-     Use the fact that (a = b) = (b = a). Specifically:
-       1. eq22 with m := n gives: (SUC n = 0) = F
-       2. We need a theorem that (0 = SUC n) = (SUC n = 0)
-       3. Then TRANS gives (0 = SUC n) = F
-     The symmetry of equality: (a = b) = (b = a) follows from
-     DEDUCT_ANTISYM_RULE on ASSUME (a = b) with SYM.
-     For now, use a simpler approach: derive from NOT_SUC *)
+  (* Equation 21: (_0 = SUC n) = F *)
+  (* From eq22 (SUC m = _0 = F), INST m := n gives (SUC n = _0) = F.
+     Derive symmetry: (_0 = SUC n) = (SUC n = _0), then TRANS. *)
+  val eq22_inst_n = INST eq22 [(var_m, var_n)]  (* ⊢ (SUC n = _0) = F *)
 
-  (* NOT_SUC: ⊢ ¬(SUC n = 0), i.e., (SUC n = 0) ==> F *)
-  (* To get (0 = SUC n) = F, we use:
-     1. REFL gives ⊢ 0 = 0
-     2. If 0 = SUC n, then SUC n = 0 by SYM, contradiction with NOT_SUC
-     3. So (0 = SUC n) = F *)
-  (* Actually, just derive eq21 from eq22 using equality symmetry *)
-  val eq22_inst_n = INST eq22 [(var_m, var_n)]  (* ⊢ (SUC n = 0) = F *)
+  val tm_0_eq_SUC_n = mk_eq_tm eq_num const_zero tm_SUC_n
+  val tm_SUC_n_eq_0 = mk_eq_tm eq_num tm_SUC_n const_zero
+  val assum1 = ASSUME tm_0_eq_SUC_n        (* {_0 = SUC n} ⊢ _0 = SUC n *)
+  val sym1 = SYM assum1                     (* {_0 = SUC n} ⊢ SUC n = _0 *)
+  val assum2 = ASSUME tm_SUC_n_eq_0        (* {SUC n = _0} ⊢ SUC n = _0 *)
+  val sym2 = SYM assum2                     (* {SUC n = _0} ⊢ _0 = SUC n *)
+  val eq_sym = DEDUCT_ANTISYM sym2 sym1    (* ⊢ (_0 = SUC n) = (SUC n = _0) *)
 
-  (* Build: ⊢ (0 = SUC n) = (SUC n = 0) using DEDUCT_ANTISYM *)
-  val tm_0_eq_SUC_n = mk_eq_tm eq_num tm_zero tm_SUC_n
-  val tm_SUC_n_eq_0 = mk_eq_tm eq_num tm_SUC_n tm_zero
-  val assum1 = ASSUME tm_0_eq_SUC_n        (* {0 = SUC n} ⊢ 0 = SUC n *)
-  val sym1 = SYM assum1                     (* {0 = SUC n} ⊢ SUC n = 0 *)
-  val assum2 = ASSUME tm_SUC_n_eq_0        (* {SUC n = 0} ⊢ SUC n = 0 *)
-  val sym2 = SYM assum2                     (* {SUC n = 0} ⊢ 0 = SUC n *)
-  val eq_sym = DEDUCT_ANTISYM sym2 sym1    (* ⊢ (0 = SUC n) = (SUC n = 0) *)
-
-  val eq21 = TRANS eq_sym eq22_inst_n      (* ⊢ (0 = SUC n) = F *)
+  val eq21 = TRANS eq_sym eq22_inst_n      (* ⊢ (_0 = SUC n) = F *)
   val () = save "candle$COMPUTE_EQ_21" eq21
 
   (* --- Equations 24-62: cv operations --- *)
@@ -675,12 +730,12 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   (* Common cv terms *)
   val tm_Num_m = mk_Num var_m
   val tm_Num_n = mk_Num var_n
-  val tm_Num_0 = mk_Num tm_zero
+  val tm_Num_0 = mk_Num const_zero
   val tm_Pair_p_q = mk_Pair var_p_cv var_q_cv
   val tm_Pair_r_s = mk_Pair var_r_cv var_s_cv
   val tm_Pair_p1_q1 = mk_Pair var_p1 var_q1
   val tm_Pair_p2_q2 = mk_Pair var_p2 var_q2
-  val tm_Num_SUC_0 = mk_Num tm_SUC_0   (* Num (SUC (NUMERAL _0)) = Num 1 *)
+  val tm_Num_SUC_0 = mk_Num tm_SUC_0     (* Num (SUC _0) = Num 1 *)
 
   (* --- Equations 24-27: cv_add --- *)
   val cv_add_def = load_theorem "cv$cv_add_def"
@@ -783,7 +838,7 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   (* --- Equations 44-47: cv_lt --- *)
   val cv_lt_def = load_theorem "cv$cv_lt_def"
   (* cv_lt (Num m) (Num n) = Num (if m < n then SUC 0 else 0) ∧ ... *)
-  val tm_lt_cond = mk_COND_num (mk_LESS var_m var_n) tm_SUC_0 tm_zero
+  val tm_lt_cond = mk_COND_num (mk_LESS var_m var_n) tm_SUC_0 const_zero
 
   val tm_eq44 = mk_eq_tm eq_cv (mk_comb (mk_comb const_cv_lt tm_Num_m) tm_Num_n)
                                (mk_Num tm_lt_cond)
@@ -826,42 +881,92 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val () = save "candle$COMPUTE_EQ_50" eq50
 
   (* --- Equations 51-52: cv_fst --- *)
+  (* cv_fst_def: ⊢ (∀p q. Cexp_fst (Cexp_pair p q) = p) ∧ (∀m. Cexp_fst (Cexp_num m) = Cexp_num _0)
+     Split conjunction, then SPEC each conjunct *)
   val cv_fst_def = load_theorem "cv$cv_fst_def"
-  (* cv_fst (Pair p q) = p ∧ cv_fst (Num m) = Num 0 *)
-
-  val tm_eq51 = mk_eq_tm eq_cv (mk_comb const_cv_fst tm_Pair_p_q) var_p_cv
-  val tm_eq52 = mk_eq_tm eq_cv (mk_comb const_cv_fst tm_Num_m) tm_Num_0
-
-  val [eq51, eq52] = extract2 cv_fst_def [tm_eq51, tm_eq52]
+  val fst_left_body = mk_eq_tm eq_cv (mk_comb const_cv_fst tm_Pair_p_q) var_p_cv
+  val fst_right_body = mk_eq_tm eq_cv (mk_comb const_cv_fst tm_Num_m) tm_Num_0
+  val fst_conj1 = do_CONJUNCT1 cv_fst_def
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_cv (mk_fun ty_cv ty_bool)) ty_bool))
+      (mk_abs var_p_cv (mk_abs var_q_cv fst_left_body)))
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
+      (mk_abs var_m fst_right_body))
+  val fst_conj2 = do_CONJUNCT2 cv_fst_def
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_cv (mk_fun ty_cv ty_bool)) ty_bool))
+      (mk_abs var_p_cv (mk_abs var_q_cv fst_left_body)))
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
+      (mk_abs var_m fst_right_body))
+  (* Conj1: ∀p q. Cexp_fst (Cexp_pair p q) = p — double SPEC *)
+  val fst_pred = mk_abs var_p_cv (mk_abs var_q_cv fst_left_body)
+  val fst_left_free_m = do_SPEC fst_pred var_p_cv var_p_cv ty_cv fst_conj1
+  val fst_inner = mk_abs var_q_cv fst_left_body
+  val fst_left_free = do_SPEC fst_inner var_q_cv var_q_cv ty_cv fst_left_free_m
+  (* fst_left_free: ⊢ Cexp_fst (Cexp_pair p q) = p, p and q free *)
+  val eq51 = fst_left_free
   val () = save "candle$COMPUTE_EQ_51" eq51
+  (* Conj2: ∀m. Cexp_fst (Cexp_num m) = Cexp_num _0 — SPEC *)
+  val fst_right_pred = mk_abs var_m fst_right_body
+  val eq52 = do_SPEC fst_right_pred var_m var_m ty_num fst_conj2
   val () = save "candle$COMPUTE_EQ_52" eq52
 
   (* --- Equations 53-54: cv_snd --- *)
+  (* cv_snd_def: ⊢ (∀p q. Cexp_snd (Cexp_pair p q) = q) ∧ (∀m. Cexp_snd (Cexp_num m) = Cexp_num _0)
+     Same structure as cv_fst *)
   val cv_snd_def = load_theorem "cv$cv_snd_def"
-
-  val tm_eq53 = mk_eq_tm eq_cv (mk_comb const_cv_snd tm_Pair_p_q) var_q_cv
-  val tm_eq54 = mk_eq_tm eq_cv (mk_comb const_cv_snd tm_Num_m) tm_Num_0
-
-  val [eq53, eq54] = extract2 cv_snd_def [tm_eq53, tm_eq54]
+  val snd_left_body = mk_eq_tm eq_cv (mk_comb const_cv_snd tm_Pair_p_q) var_q_cv
+  val snd_right_body = mk_eq_tm eq_cv (mk_comb const_cv_snd tm_Num_m) tm_Num_0
+  val snd_conj1 = do_CONJUNCT1 cv_snd_def
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_cv (mk_fun ty_cv ty_bool)) ty_bool))
+      (mk_abs var_p_cv (mk_abs var_q_cv snd_left_body)))
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
+      (mk_abs var_m snd_right_body))
+  val snd_conj2 = do_CONJUNCT2 cv_snd_def
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_cv (mk_fun ty_cv ty_bool)) ty_bool))
+      (mk_abs var_p_cv (mk_abs var_q_cv snd_left_body)))
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
+      (mk_abs var_m snd_right_body))
+  val snd_pred = mk_abs var_p_cv (mk_abs var_q_cv snd_left_body)
+  val snd_left_free_m = do_SPEC snd_pred var_p_cv var_p_cv ty_cv snd_conj1
+  val snd_inner = mk_abs var_q_cv snd_left_body
+  val snd_left_free = do_SPEC snd_inner var_q_cv var_q_cv ty_cv snd_left_free_m
+  val eq53 = snd_left_free
   val () = save "candle$COMPUTE_EQ_53" eq53
+  val snd_right_pred = mk_abs var_m snd_right_body
+  val eq54 = do_SPEC snd_right_pred var_m var_m ty_num snd_conj2
   val () = save "candle$COMPUTE_EQ_54" eq54
 
   (* --- Equations 55-56: cv_ispair --- *)
+  (* cv_ispair_def: ⊢ (∀p q. Cexp_ispair (Cexp_pair p q) = Cexp_num (SUC _0)) ∧
+     (∀m. Cexp_ispair (Cexp_num m) = Cexp_num _0)
+     Same structure as cv_fst *)
   val cv_ispair_def = load_theorem "cv$cv_ispair_def"
-  (* cv_ispair (Pair p q) = Num (SUC 0) ∧ cv_ispair (Num m) = Num 0 *)
-
-  val tm_eq55 = mk_eq_tm eq_cv (mk_comb const_cv_ispair tm_Pair_p_q) tm_Num_SUC_0
-  val tm_eq56 = mk_eq_tm eq_cv (mk_comb const_cv_ispair tm_Num_m) tm_Num_0
-
-  val [eq55, eq56] = extract2 cv_ispair_def [tm_eq55, tm_eq56]
+  val ispair_left_body = mk_eq_tm eq_cv (mk_comb const_cv_ispair tm_Pair_p_q) tm_Num_SUC_0
+  val ispair_right_body = mk_eq_tm eq_cv (mk_comb const_cv_ispair tm_Num_m) tm_Num_0
+  val ispair_conj1 = do_CONJUNCT1 cv_ispair_def
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_cv (mk_fun ty_cv ty_bool)) ty_bool))
+      (mk_abs var_p_cv (mk_abs var_q_cv ispair_left_body)))
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
+      (mk_abs var_m ispair_right_body))
+  val ispair_conj2 = do_CONJUNCT2 cv_ispair_def
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_cv (mk_fun ty_cv ty_bool)) ty_bool))
+      (mk_abs var_p_cv (mk_abs var_q_cv ispair_left_body)))
+    (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
+      (mk_abs var_m ispair_right_body))
+  val ispair_pred = mk_abs var_p_cv (mk_abs var_q_cv ispair_left_body)
+  val ispair_left_free_m = do_SPEC ispair_pred var_p_cv var_p_cv ty_cv ispair_conj1
+  val ispair_inner = mk_abs var_q_cv ispair_left_body
+  val ispair_left_free = do_SPEC ispair_inner var_q_cv var_q_cv ty_cv ispair_left_free_m
+  val eq55 = ispair_left_free
   val () = save "candle$COMPUTE_EQ_55" eq55
+  val ispair_right_pred = mk_abs var_m ispair_right_body
+  val eq56 = do_SPEC ispair_right_pred var_m var_m ty_num ispair_conj2
   val () = save "candle$COMPUTE_EQ_56" eq56
 
   (* --- Equation 57: cv_eq --- *)
   val cv_eq_def = load_theorem "cv$cv_eq_def"
   (* cv_eq p q = Num (if p = q then SUC 0 else 0) *)
   val tm_p_eq_q = mk_eq_tm eq_cv var_p_cv var_q_cv
-  val tm_eq_cond = mk_COND_num tm_p_eq_q tm_SUC_0 tm_zero
+  val tm_eq_cond = mk_COND_num tm_p_eq_q tm_SUC_0 const_zero
 
   val tm_eq57 = mk_eq_tm eq_cv (mk_comb (mk_comb const_cv_eq var_p_cv) var_q_cv)
                                (mk_Num tm_eq_cond)
@@ -913,16 +1018,18 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val () = save "candle$COMPUTE_EQ_61" eq61
 
   (* --- Equation 62: LET --- *)
+  (* LET_THM: ⊢ ∀f x. LET f x = f x, where f:'a->'b, x:'a
+     Candle needs: LET f p1 = f p1, where f:cv->cv, p1:cv *)
   val LET_THM = load_theorem "bool$LET_THM"
-  (* LET_THM: ⊢ ∀f x. LET f x = f x, where f:'a->'b, x:'a *)
-  (* Candle needs: LET f p1 = f p1, where f:cv->cv, p1:cv *)
-  val ty_alpha = mk_tyvar "'a"
-  val ty_beta = mk_tyvar "'b"
-  val LET_cv = INST_TYPE LET_THM [(ty_alpha, ty_cv), (ty_beta, ty_cv)]
-  (* Now f : cv -> cv, x : cv. The variables in LET_THM are named f and x. *)
-  val var_f_for_let = mk_var "f" ty_cv_cv
-  val var_x_for_let = mk_var "x" ty_cv
-  val eq62 = INST LET_cv [(var_x_for_let, var_p1)]
+  val LET_cv = INST_TYPE LET_THM [(ty_A, ty_cv)]
+  (* Now f : cv -> cv, x : cv. Double-SPEC, then INST x := p1 *)
+  val var_f_let = mk_var "f" ty_cv_cv
+  val var_x_let = mk_var "x" ty_cv
+  val let_body = mk_eq_tm eq_cv (mk_comb (mk_comb const_LET_cv var_f_let) var_x_let)
+                              (mk_comb var_f_let var_x_let)
+  val LET_cv_free = do_DOUBLE_SPEC LET_cv var_f_let ty_cv_cv var_x_let ty_cv let_body
+  (* LET_cv_free: ⊢ LET f x = f x, f and x free at cv type *)
+  val eq62 = INST LET_cv_free [(var_x_let, var_p1)]
   val () = save "candle$COMPUTE_EQ_62" eq62
 
   (* ================================================================ *)
@@ -988,89 +1095,51 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   (* BIT0 (SUC n) = SUC n + SUC n *)
   val bit0_SUC_n = INST bit0_unfold [(var_n, tm_SUC_n)]  (* BIT0 (SUC n) = SUC n + SUC n *)
   (* Need: SUC n + SUC n = SUC (SUC (n + n)) *)
-  (* eq9: SUC m + n = SUC (m + n), inst m := n, n := SUC n *)
-  val step_a = INST eq9 [(var_m, var_n), (var_n, tm_SUC_n)]  (* SUC n + SUC n = SUC (n + SUC n) *)
-  (* ADD_SUC: m + SUC n = SUC (m + n), inst m := n, n := n *)
-  val ADD_SUC_nn = INST ADD_SUC [(var_m, var_n), (var_n, var_n)]  (* n + SUC n = SUC (n + n) *)
-  val step_b = AP_TERM const_SUC ADD_SUC_nn  (* SUC (n + SUC n) = SUC (SUC (n + n)) *)
+  (* ADD_free (eq9): SUC m + n = SUC (m + n), inst m := n, n := SUC n *)
+  val step_a = INST ADD_free [(var_m, var_n), (var_n, tm_SUC_n)]  (* SUC n + SUC n = SUC (n + SUC n) *)
+  (* ADD_SUC_free: SUC (m + n) = m + SUC n, inst m := n, n := n *)
+  val ADD_SUC_nn_local = INST ADD_SUC_free [(var_m, var_n), (var_n, var_n)]  (* SUC (n + n) = n + SUC n *)
+  val step_b = AP_TERM const_SUC (SYM ADD_SUC_nn_local)  (* SUC (n + SUC n) = SUC (SUC (n + n)) *)
   val SUC_n_plus_SUC_n = TRANS step_a step_b  (* SUC n + SUC n = SUC (SUC (n + n)) *)
   val BIT0_SUC_n_eq = TRANS bit0_SUC_n SUC_n_plus_SUC_n  (* BIT0 (SUC n) = SUC (SUC (n + n)) *)
   val SUC_BIT1_eq_BIT0_SUC = TRANS SUC_BIT1_step1 (SYM BIT0_SUC_n_eq)  (* SUC (BIT1 n) = BIT0 (SUC n) *)
   val () = save "candle$SUC_BIT1" SUC_BIT1_eq_BIT0_SUC
 
   (* --- Derive: BIT2 n = BIT0 (SUC n) --- *)
-  (* BIT2 n = n + (n + SUC (SUC 0)) = 2n + 2
-     BIT0 (SUC n) = SUC n + SUC n = 2(n + 1) = 2n + 2
-     So BIT2 n = BIT0 (SUC n) *)
+  (* BIT2: ⊢ ∀n. BIT2 n = n + (n + SUC (SUC _0))
+     BIT0 (SUC n) = SUC n + SUC n = SUC (SUC (n + n)) (from SUC_BIT1 derivation)
+     Need: n + (n + SUC (SUC _0)) = SUC (SUC (n + n)) *)
   val hol4_BIT2 = load_theorem "arithmetic$BIT2"
-  (* BIT2: ⊢ BIT2 n = n + (n + SUC (SUC 0)) *)
-  (* We already derived BIT0 (SUC n) = SUC (SUC (n + n)) above.
-     Need to show: n + (n + SUC (SUC 0)) = SUC (SUC (n + n)) *)
-  (* This requires several steps of arithmetic manipulation.
-     For now, derive via a different route using the equations we have. *)
+  val bit2_pred = mk_abs var_n
+    (mk_eq_tm eq_num (mk_comb const_BIT2 var_n)
+                    (mk_plus var_n (mk_plus var_n (mk_SUC tm_SUC_0))))
+  val BIT2_free = do_SPEC bit2_pred var_n var_n ty_num hol4_BIT2
+  (* BIT2_free: ⊢ BIT2 n = n + (n + SUC (SUC _0)) *)
 
-  (* Alternative: derive BIT2 n = SUC (BIT1 n) first, then use SUC_BIT1 *)
-  (* BIT2 n = n + (n + SUC (SUC 0)) = n + (n + 2)
-     BIT1 n = SUC (n + n) = 2n + 1
-     SUC (BIT1 n) = 2n + 2 = BIT2 n *)
-  (* From BIT1_candle: BIT1 n = SUC (n + n)
-     SUC (BIT1 n) = SUC (SUC (n + n))
-     Need: BIT2 n = SUC (SUC (n + n)) *)
+  (* Derive: n + SUC (SUC _0) = SUC (SUC n)
+     Reuse: n_plus_SUC_0_eq_SUC_n gives n + SUC _0 = SUC n
+     ADD_SUC_free: SUC (m + n) = m + SUC n *)
+  val step1_a = SYM (INST ADD_SUC_free [(var_m, var_n), (var_n, tm_SUC_0)])
+  (* n + SUC (SUC _0) = SUC (n + SUC _0) *)
+  val n_plus_two_eq = TRANS step1_a (AP_TERM const_SUC n_plus_SUC_0_eq_SUC_n)
+  (* n + SUC (SUC _0) = SUC (SUC n) *)
 
-  (* BIT2 n = n + (n + SUC (SUC 0))
-     Let's compute n + SUC (SUC 0):
-       n + SUC (SUC 0) = SUC (n + SUC 0)   [ADD_SUC]
-                       = SUC (SUC (n + 0)) [ADD_SUC]
-                       = SUC (SUC n)       [ADD_0]
-     So BIT2 n = n + SUC (SUC n)
-               = SUC (n + SUC n)           [ADD_SUC with args swapped... need ADD_SUC form]
-     Hmm, eq9 is SUC m + n = SUC (m + n), not m + SUC n = SUC (m + n)
-     We have ADD_SUC: m + SUC n = SUC (m + n) *)
-
-  val tm_BIT2_n = mk_comb const_BIT2 var_n
-  val tm_two = mk_SUC (mk_SUC const_zero)  (* SUC (SUC 0) = 2 *)
-  val tm_n_plus_two = mk_plus var_n tm_two
-  val tm_n_plus_n_plus_two = mk_plus var_n tm_n_plus_two
-
-  (* Step 1: n + SUC (SUC 0) = SUC (n + SUC 0) *)
-  val step1_a = INST ADD_SUC [(var_m, var_n), (var_n, mk_SUC const_zero)]
-  (* n + SUC (SUC 0) = SUC (n + SUC 0) *)
-
-  (* Step 2: n + SUC 0 = SUC (n + 0) *)
-  val step2_a = INST ADD_SUC [(var_m, var_n), (var_n, const_zero)]
-  (* n + SUC 0 = SUC (n + 0) *)
-
-  (* Step 3: n + _0 = n, from ADD_0: ⊢ !m. m + _0 = m *)
-  val ADD_0_n = do_SPEC add0_pred var_n var_m ty_num ADD_0
-
-  (* Combine: n + SUC 0 = SUC (n + 0) = SUC n *)
-  val n_plus_SUC_0 = TRANS step2_a (AP_TERM const_SUC ADD_0_n)
-  (* n + SUC 0 = SUC n *)
-
-  (* Combine: n + SUC (SUC 0) = SUC (n + SUC 0) = SUC (SUC n) *)
-  val n_plus_two_eq = TRANS step1_a (AP_TERM const_SUC n_plus_SUC_0)
-  (* n + SUC (SUC 0) = SUC (SUC n) *)
-
-  (* Step 4: n + (n + SUC (SUC 0)) = n + SUC (SUC n) *)
+  (* Step 3: n + (n + SUC (SUC _0)) = n + SUC (SUC n) *)
   val BIT2_rhs_step = AP_TERM (mk_comb const_plus var_n) n_plus_two_eq
-  (* n + (n + SUC (SUC 0)) = n + SUC (SUC n) *)
 
-  (* Step 5: n + SUC (SUC n) = SUC (n + SUC n) *)
-  val step5 = INST ADD_SUC [(var_m, var_n), (var_n, tm_SUC_n)]
+  (* Step 4: n + SUC (SUC n) = SUC (n + SUC n) *)
+  val step4 = SYM (INST ADD_SUC_free [(var_m, var_n), (var_n, tm_SUC_n)])
   (* n + SUC (SUC n) = SUC (n + SUC n) *)
 
-  (* Step 6: n + SUC n = SUC (n + n) *)
-  (* Already have ADD_SUC_nn from above *)
+  (* Step 5: SUC (n + SUC n) = SUC (SUC (n + n))
+     Reuse ADD_SUC_nn from BIT1 section: SUC (n + n) = n + SUC n *)
+  val step5 = AP_TERM const_SUC (SYM ADD_SUC_nn)
+  (* SUC (n + SUC n) = SUC (SUC (n + n)) *)
 
-  (* Combine: n + SUC (SUC n) = SUC (n + SUC n) = SUC (SUC (n + n)) *)
-  val step6 = TRANS step5 (AP_TERM const_SUC ADD_SUC_nn)
-  (* n + SUC (SUC n) = SUC (SUC (n + n)) *)
+  (* Combine all: n + (n + SUC (SUC _0)) = SUC (SUC (n + n)) *)
+  val BIT2_rhs_final = TRANS (TRANS BIT2_rhs_step step4) step5
 
-  (* Combine all: n + (n + SUC (SUC 0)) = SUC (SUC (n + n)) *)
-  val BIT2_rhs_final = TRANS BIT2_rhs_step step6
-
-  (* BIT2 n = n + (n + SUC (SUC 0)) = SUC (SUC (n + n)) *)
-  val BIT2_eq_SUC_SUC = TRANS hol4_BIT2 BIT2_rhs_final
+  val BIT2_eq_SUC_SUC = TRANS BIT2_free BIT2_rhs_final
 
   (* BIT0 (SUC n) = SUC (SUC (n + n))  [from BIT0_SUC_n_eq above] *)
   (* So BIT2 n = BIT0 (SUC n) *)
