@@ -62,6 +62,15 @@ val at: PolyML.parseTree list -> int list -> subtree
 val build: PolyML.parseTree -> built
 val buildList: PolyML.parseTree option -> built list
 
+type built_subtree = (built * built list) option
+type built_trees = built list
+
+val builtMoveUp: built_subtree -> built_subtree
+val builtNavigateTo: built_subtree -> {startOffset: FixedInt.int, endOffset: FixedInt.int} -> built_subtree
+val builtNavigateTo': built_trees -> {startOffset: FixedInt.int, endOffset: FixedInt.int} -> built_subtree
+
+val builtGetThy: props list -> string option
+
 end =
 struct
 open HOL_IDE
@@ -770,5 +779,48 @@ fun navigateTo' [] _ = NONE
     if startOffset < startPosition
     then navigateTo' trees target
     else navigateTo (SOME tree) target
+
+type built_subtree = (built * built list) option
+type built_trees = built list
+
+fun builtMoveUp NONE = NONE
+  | builtMoveUp (SOME (_, [])) = NONE
+  | builtMoveUp (SOME (_, parent :: rest)) = SOME (parent, rest)
+
+fun builtNavigateTo NONE _ = NONE
+  | builtNavigateTo (tree as SOME (Built (sp as (startPosition, endPosition), props, children), parents))
+               (target as {startOffset, endOffset}) =
+    if startOffset >= startPosition andalso endOffset <= endPosition
+    then (* It's this node or a child. *)
+      case children of
+        [] => tree (* No children. *)
+      | first :: rest => let
+        (* See which child it is. *)
+        fun findChild [] = NONE
+          | findChild (c :: cs) = let
+            val Built ((s, e), _, _) = c
+            in
+              if startOffset >= s andalso endOffset <= e
+              then SOME c
+              else findChild cs
+            end
+        in
+          case findChild (first :: rest) of
+            NONE => tree (* In this *)
+          | SOME child => builtNavigateTo (SOME (child, Built (sp, props, children) :: parents)) target
+        end
+    else (* Must go out. *)
+      builtNavigateTo (builtMoveUp tree) target
+
+fun builtNavigateTo' [] _ = NONE
+  | builtNavigateTo' ((tree as Built ((startPosition, _), _, _)) :: trees)
+                (target as {startOffset, ...}) =
+    if startOffset < startPosition
+    then builtNavigateTo' trees target
+    else builtNavigateTo (SOME (tree, [])) target
+
+fun builtGetThy [] = NONE
+  | builtGetThy (PThy s :: _) = SOME s
+  | builtGetThy (_ :: ps) = builtGetThy ps
 
 end;
