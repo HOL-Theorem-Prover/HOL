@@ -651,61 +651,6 @@ fun start {diag} = let
     | NONE => NONE
     in case state of NONE => getIfValid (!lastTrees) | state => state end
 
-  (* Navigate built trees: find the innermost node containing offset,
-     returning path from root to innermost as (span, props, children) list *)
-  fun navigateBuiltPath builtTrees offset = let
-    fun findIn [] = NONE
-      | findIn (HOL_IDE.Built ((s, e), props, children) :: rest) =
-        if s <= FixedInt.fromInt offset andalso FixedInt.fromInt offset < e then
-          case findIn children of
-            NONE => SOME [((s, e), props, children)]
-          | SOME path => SOME (((s, e), props, children) :: path)
-        else findIn rest
-    in findIn (rev builtTrees) end
-
-  fun navigateBuilt builtTrees offset =
-    case navigateBuiltPath builtTrees offset of
-      NONE => NONE
-    | SOME path => SOME (List.last path)
-
-  (* Extract props from a built node *)
-  fun builtGetType [] = NONE
-    | builtGetType (HOL_IDE.PType ty :: _) = SOME ty
-    | builtGetType (_ :: ps) = builtGetType ps
-
-  fun builtGetIdContent [] = NONE
-    | builtGetIdContent (HOL_IDE.PIdContent s :: _) = SOME s
-    | builtGetIdContent (_ :: ps) = builtGetIdContent ps
-
-  fun builtGetRefOrDefId [] = NONE
-    | builtGetRefOrDefId (HOL_IDE.PRefId i :: _) = SOME i
-    | builtGetRefOrDefId (HOL_IDE.PDefId i :: _) = SOME i
-    | builtGetRefOrDefId (_ :: ps) = builtGetRefOrDefId ps
-
-  fun builtGetStructureAt [] = NONE
-    | builtGetStructureAt (HOL_IDE.PStructureAt f :: _) = SOME f
-    | builtGetStructureAt (_ :: ps) = builtGetStructureAt ps
-
-  fun builtGetDeclaredAt [] = NONE
-    | builtGetDeclaredAt (HOL_IDE.PDeclaredAt loc :: _) = SOME loc
-    | builtGetDeclaredAt (_ :: ps) = builtGetDeclaredAt ps
-
-  fun builtGetReferences [] = NONE
-    | builtGetReferences (HOL_IDE.PReferences exp :: _) = SOME exp
-    | builtGetReferences (_ :: ps) = builtGetReferences ps
-
-  fun builtGetPrint [] = NONE
-    | builtGetPrint (HOL_IDE.PPrint s :: _) = SOME s
-    | builtGetPrint (_ :: ps) = builtGetPrint ps
-
-  fun builtGetThy [] = NONE
-    | builtGetThy (HOL_IDE.PThy s :: _) = SOME s
-    | builtGetThy (_ :: ps) = builtGetThy ps
-
-  fun builtIsQuote [] = false
-    | builtIsQuote (HOL_IDE.PQuote :: _) = true
-    | builtIsQuote (_ :: ps) = builtIsQuote ps
-
   fun hover uri v (startTarget, endTarget) = let
     val ({plugins, builtTrees, ...}, text, endOffset) =
       case getState v endTarget of NONE => raise Empty | SOME s => s
@@ -716,87 +661,97 @@ fun start {diag} = let
       in concat (DArray.toList mds) end
     val ctx = {uri = uri, lines = #lines text, plugins = plugins, ppToString = ppToString}
     val out = !LSPExtension.hover (ctx, (startOffset, endOffset))
-    fun spanToRange (s, e) = (
-      getLineCol (#lines text) (FixedInt.toInt s),
-      getLineCol (#lines text) (FixedInt.toInt e))
-    fun processPath [] = []
-      | processPath (((sp, props, _)) :: parents) = let
-        val range = SOME (spanToRange sp)
-        (* Check for theory name *)
-        val thyHov = case builtGetThy props of
-          NONE => []
-        | SOME name => [{range = range, markdown = "Theory " ^ name}]
-        (* Check for type / identifier info *)
-        val ty = builtGetType props
-        val idContent = builtGetIdContent props
-        val refOrDef = builtGetRefOrDefId props
-        val (id, value, help) = case (idContent, refOrDef) of
-          (SOME id, _) => let
-          val help =
-            if lastIndexOf #"." id < 0 then let
-              fun validate str = case builtGetStructureAt props of
-                NONE => false
-              | SOME file => let
-                val basename = String.extract (file, lastIndexOf #"/" file + 1, NONE)
-                val stem = String.extract (basename, 0, SOME (lastIndexOf #"." basename))
-                in str = stem end
-              in !LSPExtension.helpLookup (id, validate) end
-            else let
-              val components = splitOn #"." id
-              val fst = List.hd components
-              in !LSPExtension.helpLookup (List.last components, fn s => s = fst) end
-            handle _ => []
-          val help = map (fn d => {range = range, markdown = d}) help
-          val isGlobalId = case refOrDef of
-            NONE => false
-          | SOME i => i = 0 orelse let
-            val declAt = builtGetDeclaredAt props
-            in case declAt of
+    fun locToRange {startPosition, endPosition, ...} = (
+      getLineCol (#lines text) (FixedInt.toInt startPosition),
+      getLineCol (#lines text) (FixedInt.toInt endPosition))
+    fun typeHover (loc, pp) = {range = SOME (locToRange loc), markdown = ppToString pp}
+    fun process loc props = let
+      fun fromProps [] out = out
+        | fromProps (HOL_IDE.PType ty :: props) (isId, _) = fromProps props (isId, SOME ty)
+        | fromProps (HOL_IDE.PRefId i :: props) (_, ty) = fromProps props (SOME i, ty)
+        | fromProps (HOL_IDE.PDefId i :: props) (_, ty) = fromProps props (SOME i, ty)
+        | fromProps (_ :: props) out = fromProps props out
+      val (isId, ty) = fromProps props (NONE, NONE)
+      val thyHov = case HOL_IDE.builtGetThy props of
+        NONE => []
+      | SOME name => [{range = SOME (locToRange loc), markdown = "Theory " ^ name}]
+      val (id, value, help) = case isId of
+        NONE => (NONE, NONE, [])
+      | SOME i => let
+        val {startPosition, endPosition, ...} = loc
+        val startPos = FixedInt.toInt startPosition
+        val endPos = FixedInt.toInt endPosition
+        val id = String.substring (#text text, startPos, endPos - startPos)
+        val help =
+          if lastIndexOf #"." id < 0 then let
+            fun validate str = let
+              fun look [] = false
+                | look (HOL_IDE.PStructureAt file :: props) = let
+                  val basename = String.extract (file, lastIndexOf #"/" file + 1, NONE)
+                  val stem = String.extract (basename, 0, SOME (lastIndexOf #"." basename))
+                  in str = stem orelse look props end
+                | look (_ :: props) = look props
+              in look props end
+            in !LSPExtension.helpLookup (id, validate) end
+          else let
+            val components = splitOn #"." id
+            val fst = List.hd components
+            in !LSPExtension.helpLookup (List.last components, fn s => s = fst) end
+          handle _ => []
+        val range = SOME (getLineCol (#lines text) startPos, getLineCol (#lines text) endPos)
+        val help = map (fn d => {range = range, markdown = d}) help
+        val isGlobalId = i = 0 orelse let
+          fun look [] = NONE
+            | look (HOL_IDE.PDeclaredAt loc :: _) = SOME loc
+            | look (_ :: props) = look props
+          fun lookRefs [] = false
+            | lookRefs (HOL_IDE.PReferences exp :: _) = exp
+            | lookRefs (_ :: props) = lookRefs props
+          in
+            case look props of
               NONE => false
-            | SOME {startPosition, endPosition, ...} => let
-              val declOffset = startPosition
-              in case navigateBuilt builtTrees declOffset of
+            | SOME {startPosition, endPosition, ...} =>
+              case HOL_IDE.builtNavigateTo' builtTrees
+                  {startOffset = FixedInt.fromInt startPosition, endOffset = FixedInt.fromInt endPosition} of
                 NONE => false
-              | SOME (_, declProps, _) =>
-                case builtGetReferences declProps of
-                  NONE => false
-                | SOME exp => exp
-              end
-            end
-          val value = if isGlobalId then #lookupVal PolyML.globalNameSpace id else NONE
-          in (SOME id, value, help) end
-        | _ => (NONE, NONE, [])
-        open PolyML
-        val ty = Option.map (fn ty =>
-          NameSpace.Values.printType (ty, printDepth, SOME globalNameSpace)) ty
-        val value = case value of
-            NONE => NONE
-          | SOME value =>
-            case NameSpace.Values.print (value, printDepth) of
-              PrettyString "" => NONE
-            | otherwise => SOME otherwise
-        fun typeHover pp = {range = range, markdown = ppToString pp}
-        val idHov = case (id, ty, value) of
-            (_, NONE, NONE) => []
-          | (NONE, SOME ty, NONE) => [typeHover ty]
-          | (SOME id, SOME ty, NONE) =>
-            [typeHover (PrettyBlock(0, true, [],
-              [PrettyString ("val " ^ id ^ ":"), PrettyBreak(1, 2), ty]))]
-          | (id, ty, SOME value) =>
-            [typeHover (PrettyBlock(2, true, [], [
-              PrettyBlock(0, false, [],
-                (case ty of
-                   NONE => [PrettyString ("val " ^ Option.getOpt (id, "_"))]
-                  | SOME ty => [
-                    PrettyString ("val " ^ Option.getOpt (id, "_") ^ ":"),
-                    PrettyBreak(1, 2), ty])
-                @ [PrettyBreak(1, 2), PrettyString "="]),
-               PrettyBreak(1, 0), value]))]
-        val out = help @ thyHov @ idHov
-        in case out of [] => processPath parents | _ => out end
-    fun f () = case navigateBuiltPath builtTrees endOffset of
-      NONE => []
-    | SOME path => processPath (rev path)
+              | SOME (HOL_IDE.Built (_, declProps, _), _) => lookRefs declProps
+          end
+        val value = if isGlobalId then #lookupVal PolyML.globalNameSpace id else NONE
+        in (SOME id, value, help) end
+      open PolyML
+      val ty = Option.map (fn ty =>
+        NameSpace.Values.printType (ty, printDepth, SOME globalNameSpace)) ty
+      val value = case value of
+          NONE => NONE
+        | SOME value =>
+          case NameSpace.Values.print (value, printDepth) of
+            PrettyString "" => NONE
+          | otherwise => SOME otherwise
+      val out = case (id, ty, value) of
+          (_, NONE, NONE) => []
+        | (NONE, SOME ty, NONE) => [typeHover (loc, ty)]
+        | (SOME id, SOME ty, NONE) =>
+          [typeHover (loc, PrettyBlock(0, true, [],
+            [PrettyString ("val " ^ id ^ ":"), PrettyBreak(1, 2), ty]))]
+        | (id, ty, SOME value) =>
+          [typeHover (loc, PrettyBlock(2, true, [], [
+            PrettyBlock(0, false, [],
+              (case ty of
+                 NONE => [PrettyString ("val " ^ Option.getOpt (id, "_"))]
+                | SOME ty => [
+                  PrettyString ("val " ^ Option.getOpt (id, "_") ^ ":"),
+                  PrettyBreak(1, 2), ty])
+              @ [PrettyBreak(1, 2), PrettyString "="]),
+             PrettyBreak(1, 0), value]))]
+      in thyHov @ help @ out end
+    fun fromTree NONE = []
+      | fromTree (pt as (SOME (HOL_IDE.Built ((s, e), props, _), _))) =
+        case process {startPosition = s, endPosition = e} props of
+          [] => fromTree (HOL_IDE.builtMoveUp pt)
+        | out => out
+    fun f () = let
+      val offset' = {startOffset = FixedInt.fromInt startOffset, endOffset = FixedInt.fromInt endOffset}
+      in fromTree (HOL_IDE.builtNavigateTo' builtTrees offset') end
     val out = case out of [] => f () | _ => out
     val _ = case out of [] => raise Empty | _ => ()
     fun merge ({range = NONE, ...}, a) = a
@@ -816,16 +771,22 @@ fun start {diag} = let
     val ctx = {uri = uri, lines = #lines text, plugins = plugins, fromFileLine = fromFileLine}
     val out = !LSPExtension.gotoDefinition (ctx, offset)
     fun f () = let
-      val ((s, e), props, _) = case navigateBuilt builtTrees offset of
-        NONE => raise Empty | SOME n => n
-      val start = FixedInt.toInt s
-      val stop = FixedInt.toInt e
+      fun fromProps [] r = r
+        | fromProps (HOL_IDE.PDeclaredAt loc :: _) (file, ty, _) = (file, ty, SOME loc)
+        | fromProps (HOL_IDE.PStructureAt file :: props) (_, ty, df) =
+          fromProps props (SOME file, ty, df)
+        | fromProps (HOL_IDE.PType ty :: props) (file, _, df) = fromProps props (file, SOME ty, df)
+        | fromProps (_ :: props) r = fromProps props r
+      val offset' = {startOffset = FixedInt.fromInt offset, endOffset = FixedInt.fromInt offset}
+      val (HOL_IDE.Built ((startPosition, endPosition), props, _), _) =
+        case HOL_IDE.builtNavigateTo' builtTrees offset' of NONE => raise Empty | SOME pt => pt
+      val start = FixedInt.toInt startPosition
+      val stop = FixedInt.toInt endPosition
       val origin = SOME (getLineCol (#lines text) start, getLineCol (#lines text) stop)
-      val loc = case builtGetDeclaredAt props of NONE => raise Empty | SOME loc => loc
-      val file = builtGetStructureAt props
-      val ty = builtGetType props
-      val idContent = builtGetIdContent props
-      fun fromDeclaredAt {file, startLine, startPosition, endPosition, ...} =
+      val (file, ty, loc) = case fromProps props (NONE, NONE, NONE) of
+        (_, _, NONE) => raise Empty
+      | (file, ty, SOME loc) => (file, ty, loc)
+      fun fromPolyLoc {file, startLine, startPosition, endPosition, ...} =
         if file = "" then let
           val range = (getLineCol (#lines text) startPosition, getLineCol (#lines text) endPosition)
           in {origin = origin, uri = NONE, range = range, selRange = range} end
@@ -835,7 +796,7 @@ fun start {diag} = let
         !LSPExtension.fixupTheoremLink {uri = file, text = #text text, start = start, stop = stop}
       | _ => NONE
       val newLoc = case newLoc of
-        NONE => fromDeclaredAt loc
+        NONE => fromPolyLoc loc
       | SOME {file, line} => fromFileLine {origin = origin, file = file, line = line}
       in [newLoc] end
     in case out of [] => f () | _ => out end
