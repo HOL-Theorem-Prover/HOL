@@ -8,6 +8,7 @@ DIRNAMES = \
   depchain1/dir3 \
   depchain2/dir1 \
   holdep \
+  longcmdlock \
   nullary_tgt \
   phony_tgt \
   quote-filter \
