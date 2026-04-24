@@ -1229,9 +1229,9 @@ fun resume {suspension_name, label_name} tac =
           (case Lib.total (extract_suspended_goal (th::sths)) label_name of
                NONE =>
                (* No suspendlabel hypothesis for this label.  This is the
-		  --fast case (or the user is trying to resume a label of
-		  an already-finalised theorem, or making a typo);
-		  shortcut. *)
+                  --fast case (or the user is trying to resume a label of
+                  an already-finalised theorem, or making a typo);
+                  shortcut. *)
                fast_shortcut ()
              | SOME ncts =>
                let
