@@ -80,7 +80,7 @@ fun graphbuild optinfo g =
               SOME (OS.Path.file thyname ^ "Script")
           | BuiltInCmd (BIC_Compile, _) =>
               SOME (fromFile (hm_target.filepart (#target nI)))
-          | SomeCmd c => SOME ("cmd-" ^ c)
+          | SomeCmd c => SOME (fromFile (hm_target.filepart (#target nI)))
           | NoCmd => NONE
     fun acquire_target_lock nI =
         case lock_key_for nI of

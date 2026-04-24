@@ -51,7 +51,7 @@ fun 'a graphbuildj1 static_info =
                   SOME (OS.Path.file thyname ^ "Script")
               | BuiltInCmd (BIC_Compile, _) =>
                   SOME (fromFile (hm_target.filepart (#target nI)))
-              | SomeCmd c => SOME ("cmd-" ^ c)
+              | SomeCmd c => SOME (fromFile (hm_target.filepart (#target nI)))
               | NoCmd => NONE
         fun acquire_for nI =
             case lock_key_for nI of
