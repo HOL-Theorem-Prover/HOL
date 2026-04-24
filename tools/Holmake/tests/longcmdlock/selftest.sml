@@ -85,10 +85,10 @@ val target_exists = OS.FileSys.access(tmpdir ++ "output", [])
    to DummyLock, leaving no .lock file on disk. *)
 val lockdir = tmpdir ++ ".hol" ++ "locks"
 val has_lock =
-    if Systeml.isUnix then
+    if Systeml.isUnix andalso Systeml.ML_SYSNAME <> "mosml" then
       OS.FileSys.access(lockdir ++ "output.lock", [])
       handle OS.SysErr _ => false
-    else true (* no real locks on Windows; skip this check *)
+    else true (* no real locks on Windows or Moscow ML; skip this check *)
 
 val _ = if OS.Process.isSuccess result andalso target_exists andalso has_lock
         then OK()
