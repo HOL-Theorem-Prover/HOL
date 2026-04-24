@@ -1264,23 +1264,23 @@ Proof
   >- (drule is_exec_hd_state >> rev_drule is_exec_hd_state >> rw[] >>
       qexists_tac ‘HD qs1’ >> qexists_tac ‘HD qs2’ >> rw[] >>
       dep_rewrite.DEP_REWRITE_TAC [HD_MAP2] >> simp[] >>
-      metis_tac [is_exec_nonempty])
-  >- (drule is_exec_delta >> rev_drule is_exec_delta >> rw[] >>
-      res_tac >>
-      qexists_tac ‘EL (n+1) qs1’ >> qexists_tac ‘EL (n+1) qs2’ >>
-      rw[] >-
-        (dep_rewrite.DEP_REWRITE_TAC [EL_MAP2] >> simp[] >>
-         drule is_exec_length >> rev_drule is_exec_length >>
-         decide_tac) >>
+      metis_tac [is_exec_nonempty]) >>
+  drule is_exec_delta >> rev_drule is_exec_delta >>
+  rw[] >> res_tac >>
+  qexists_tac ‘EL (n+1) qs1’ >> qexists_tac ‘EL (n+1) qs2’ >>
+  conj_tac >-
      (dep_rewrite.DEP_REWRITE_TAC [EL_MAP2] >> simp[] >>
-      dep_rewrite.DEP_REWRITE_TAC [codec_pair] >> simp[] >>
-      ‘is_nfa N1 ∧ is_nfa N2’ by metis_tac [dfa_is_nfa] >>
-      simp[] >> reverse conj_tac
-      >- (drule is_exec_length >> rev_drule is_exec_length >> decide_tac) >>
-      drule_all is_exec_states >> rev_drule_all is_exec_states >>
-      rw [EVERY_EL]
-      >- (first_x_assum irule >> rev_drule is_exec_length >> decide_tac)
-      >- (first_x_assum irule >> drule is_exec_length >> decide_tac)))
+      drule is_exec_length >> rev_drule is_exec_length >>
+      decide_tac) >>
+  dep_rewrite.DEP_REWRITE_TAC [EL_MAP2] >> simp[] >>
+  dep_rewrite.DEP_REWRITE_TAC [codec_pair] >> simp[] >>
+  ‘is_nfa N1 ∧ is_nfa N2’ by metis_tac [dfa_is_nfa] >>
+  simp[] >> reverse conj_tac
+  >- (drule is_exec_length >> rev_drule is_exec_length >> decide_tac) >>
+  drule_all is_exec_states >> rev_drule_all is_exec_states >>
+  rw [EVERY_EL]
+  >- (first_x_assum irule >> rev_drule is_exec_length >> decide_tac)
+  >- (first_x_assum irule >> drule is_exec_length >> decide_tac)
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -1308,14 +1308,14 @@ Proof
          (irule dfa_exec_deterministic >> reverse conj_tac >- metis_tac[] >>
           irule is_dfa_initial_unique >> goal_assum drule >> simp[] >>
           qpat_stage_tac ‘HD qs ∈ _’ >> rw[dfa_compl_def]) >>
-      gvs[dfa_compl_def])
-  >- (imp_res_tac is_dfa_initial >>
-      ‘q_0 ∈ N.Q’ by metis_tac[is_nfa_def,SUBSET_DEF,IN_INSERT] >>
-      drule_all dfa_has_exec >>
-      rw[is_accepting_exec_def,dfa_compl_exec] >>
-      goal_assum drule >> simp [dfa_compl_def] >>
-      gvs [is_accepting_exec_def] >>
-      metis_tac [is_exec_last_state])
+      gvs[dfa_compl_def]) >>
+  imp_res_tac is_dfa_initial >>
+  ‘q_0 ∈ N.Q’ by metis_tac[is_nfa_def,SUBSET_DEF,IN_INSERT] >>
+  drule_all dfa_has_exec >>
+  rw[is_accepting_exec_def,dfa_compl_exec] >>
+  goal_assum drule >> simp [dfa_compl_def] >>
+  gvs [is_accepting_exec_def] >>
+  metis_tac [is_exec_last_state]
 QED
 
 Theorem dfa_inter_correct :
