@@ -1470,15 +1470,22 @@ Proof
 QED
 
 (* NOTE: Improved statements combining with (old) lameq_subterm_cong_none *)
-Theorem lameq_subterm_cong_lemma[local] :
-    !X. FINITE X ==>
+Theorem lameq_subterm_cong :
+    !X M N p r. FINITE X /\
+                FV M SUBSET X UNION RANK r /\
+                FV N SUBSET X UNION RANK r /\ M == N
+           ==> (subterm X M p r = NONE <=> subterm X N p r = NONE) /\
+               (subterm X M p r <> NONE ==>
+                subterm' X M p r == subterm' X N p r)
+Proof
+  Suff
+   ‘!X. FINITE X ==>
         !p M N r. FV M SUBSET X UNION RANK r /\
                   FV N SUBSET X UNION RANK r /\ M == N
              ==> (subterm X M p r = NONE <=> subterm X N p r = NONE) /\
-                  subterm X M p r <> NONE ==>
-                  subterm' X M p r == subterm' X N p r
-Proof
-    NTAC 2 STRIP_TAC
+                 (subterm X M p r <> NONE ==>
+                  subterm' X M p r == subterm' X N p r)’ >- METIS_TAC []
+ >> NTAC 2 STRIP_TAC
  >> Induct_on ‘p’ >- simp []
  >> rpt GEN_TAC >> STRIP_TAC
  >> reverse (Cases_on ‘solvable M’)
@@ -1532,17 +1539,6 @@ Proof
       (* goal 2 (of 2) *)
       MATCH_MP_TAC subterm_induction_lemma' \\
       qexistsl_tac [‘N’, ‘M0'’, ‘n’, ‘m’, ‘vs’, ‘M1'’] >> simp [] ]
-QED
-
-Theorem lameq_subterm_cong :
-    !X M N p r. FINITE X /\
-                FV M SUBSET X UNION RANK r /\
-                FV N SUBSET X UNION RANK r /\ M == N
-           ==> (subterm X M p r = NONE <=> subterm X N p r = NONE) /\
-                subterm X M p r <> NONE ==>
-                subterm' X M p r == subterm' X N p r
-Proof
-   PROVE_TAC [lameq_subterm_cong_lemma]
 QED
 
 (*****************************************************************************)
