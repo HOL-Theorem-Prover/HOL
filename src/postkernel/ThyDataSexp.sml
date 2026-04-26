@@ -5,6 +5,9 @@ open Feedback Term Thm Theory
 
 val ERR = mk_HOL_ERR "ThyDataSexp"
 
+val anon_thm_lookup : (string * int -> Thm.thm option) ref
+    = ref (fn _ => NONE)
+
 val theory_debug_trace = get_tracefn "Theory.debug"
 
 fun DPRINT f =
@@ -247,7 +250,9 @@ fun thmreader tmr =
     pair4_decode (tagreader, list_decode (string_decode >> tmr),
                   string_decode, int_decode) >>
     (fn (tag, terms, thy, id) =>
-       Thm.disk_thm (thy, Thm.SavedAnon id) (tag, terms))
+       case !anon_thm_lookup (thy, id) of
+           SOME th => th
+         | NONE => Thm.disk_thm (thy, Thm.SavedAnon id) (tag, terms))
 
 fun tag s enc x = HOLsexp.tagged_encode s enc x
 fun write (wrt as {strings,terms}) s =

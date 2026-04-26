@@ -4,23 +4,20 @@ Ancestors
 Libs
   boolSimps hurdUtils binderLib nomdatatype
 
-val tyname = "cterm"
+(* calling nominal_datatype *)
+val _ = (repcode := "ctrep");
+val _ = (rprefix := "ct");
 
-Datatype: ctrep = ctv | ctap | ctlm | ctc 'a
-End
+val {tynames, rep_t, lp} =
+    nominal_datatype
+      ‘cterm = VAR 'free | APP cterm cterm | LAM 'bound cterm | CONST 'a’;
+
+val tyname = hd tynames; (* "cterm" *)
 
 Definition is_ctc_def[simp]:
-  is_ctc (ctc _) = T ∧
+  is_ctc (ctCONST _) = T ∧
   is_ctc _ = F
 End
-
-(* GLAM corresponds to APP, LAM and CONST *)
-val lp =
-  “(λn lfvs (d:'a ctrep) tns uns.
-      n = 0 ∧ lfvs = 1 ∧ d = ctv ∧ tns = [] ∧ uns = [] ∨
-      n = 0 ∧ lfvs = 0 ∧ d = ctap ∧ tns = [] ∧ uns = [0;0] ∨
-      n = 0 ∧ lfvs = 0 ∧ d = ctlm ∧ tns = [0] ∧ uns = [] ∨
-      n = 0 ∧ lfvs = 0 ∧ is_ctc d ∧ tns = [] ∧ uns = [])”
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
@@ -31,7 +28,7 @@ val glam = genind_lam
 val LAM_t = mk_var("LAM", ``:string -> ^newty -> ^newty``)
 val LAM_def = new_definition(
   "LAM_def",
-  ``^LAM_t v t = ^term_ABS_t (GLAM v [] ctlm [^term_REP_t t] [])``)
+  ``^LAM_t v t = ^term_ABS_t (GLAM v [] ctLAM [^term_REP_t t] [])``)
 val LAM_termP = prove(
   mk_comb(termP, LAM_def |> SPEC_ALL |> concl |> rhs |> rand),
   match_mp_tac glam >> srw_tac [][genind_term_REP]);
@@ -41,29 +38,29 @@ val APP_t = mk_var("APP", ``:^newty -> ^newty -> ^newty``)
 val APP_def = new_definition(
   "APP_def",
   ``^APP_t t1 t2 =
-       ^term_ABS_t (GLAM ARB [] ctap [] [^term_REP_t t1; ^term_REP_t t2])``);
+       ^term_ABS_t (GLAM ARB [] ctAPP [] [^term_REP_t t1; ^term_REP_t t2])``);
 val APP_termP = prove(
-  ``^termP (GLAM x [] ctap [] [^term_REP_t t1; ^term_REP_t t2])``,
+  ``^termP (GLAM x [] ctAPP [] [^term_REP_t t1; ^term_REP_t t2])``,
   match_mp_tac glam >> srw_tac [][genind_term_REP])
 val APP_t = defined_const APP_def
 
 val APP_def' = prove(
-  ``^term_ABS_t (GLAM v [] ctap [] [^term_REP_t t1; ^term_REP_t t2]) =
+  ``^term_ABS_t (GLAM v [] ctAPP [] [^term_REP_t t1; ^term_REP_t t2]) =
     ^APP_t t1 t2``,
   srw_tac [][APP_def, GLAM_NIL_EQ, term_ABS_pseudo11, APP_termP]);
 
 val VAR_t = mk_var("VAR", ``:string -> ^newty``)
 val VAR_def = new_definition(
   "VAR_def",
-  ``^VAR_t s = ^term_ABS_t (GLAM ARB [s] ctv [][])``);
+  ``^VAR_t s = ^term_ABS_t (GLAM ARB [s] ctVAR [][])``);
 Theorem VAR_termP[local]:
-  ^termP (GLAM u [v] ctv [][])
+  ^termP (GLAM u [v] ctVAR [][])
 Proof
   srw_tac [][genind_rules]
 QED
 val VAR_t = defined_const VAR_def
 Theorem VAR_def':
-  ^term_ABS_t (GLAM u [v] ctv [][]) = VAR v
+  ^term_ABS_t (GLAM u [v] ctVAR [][]) = VAR v
 Proof
   srw_tac[][VAR_def, GLAM_NIL_EQ, term_ABS_pseudo11, VAR_termP]
 QED
@@ -71,14 +68,14 @@ QED
 val CONST_t = mk_var("CONST", “:'a -> ^newty”)
 val CONST_def = new_definition(
   "CONST_def",
-  “^CONST_t a = ^term_ABS_t (GLAM ARB [] (ctc a) [][])”);
+  “^CONST_t a = ^term_ABS_t (GLAM ARB [] (ctCONST a) [][])”);
 val CONST_termP = prove(
-  “^termP (GLAM v [] (ctc a) [][])”,
+  “^termP (GLAM v [] (ctCONST a) [][])”,
   srw_tac[][genind_rules]);
 val CONST_t = defined_const CONST_def
 
 val CONST_def' = prove(
-  “^term_ABS_t (GLAM v [] (ctc a) [] []) = ^CONST_t a”,
+  “^term_ABS_t (GLAM v [] (ctCONST a) [] []) = ^CONST_t a”,
   srw_tac[][CONST_def, GLAM_NIL_EQ, term_ABS_pseudo11, CONST_termP]);
 
 val cons_info =
@@ -160,14 +157,14 @@ val LIST_REL_CONS1 = listTheory.LIST_REL_CONS1
 val LIST_REL_NIL = listTheory.LIST_REL_NIL
 
 Theorem is_ctc_exists[local]:
-  is_ctc bv ⇔ ∃a. bv = ctc a
+  is_ctc bv ⇔ ∃a. bv = ctCONST a
 Proof
   Cases_on ‘bv’ >> simp[]
 QED
 
 Theorem cterm_bvc_induction =
     bvc_genind
-        |> INST_TYPE [alpha |-> ``:'a ctrep``]
+        |> INST_TYPE [alpha |-> rep_t]
         |> Q.INST [`lp` |-> `^lp`]
         |> SIMP_RULE std_ss [LIST_REL_CONS1, RIGHT_AND_OVER_OR,
                              LEFT_AND_OVER_OR, DISJ_IMP_THM, LIST_REL_NIL]
@@ -210,11 +207,11 @@ val tlf =
      (ds1:(ρ -> 'r) list) (ds2:(ρ -> 'r)  list)
      (ts1:^repty' list) (ts2:^repty' list) (p:ρ).
      case u of
-     | ctv => (tvf (HD fvs) p : 'r)
-     | ctap => taf (HD ds2) (HD (TL ds2)) (cterm_ABS (HD ts2))
+     | ctVAR => (tvf (HD fvs) p : 'r)
+     | ctAPP => taf (HD ds2) (HD (TL ds2)) (cterm_ABS (HD ts2))
                    (cterm_ABS (HD (TL ts2))) p
-     | ctlm => tlf (HD ds1) v (cterm_ABS (HD ts1)) p
-     | ctc a => tcf a p``
+     | ctLAM => tlf (HD ds1) v (cterm_ABS (HD ts1)) p
+     | ctCONST a => tcf a p``
 
 val termP_elim = prove(
   ``(∀g. ^termP g ⇒ P g) ⇔ (∀t. P (^term_REP_t t))``,
@@ -238,7 +235,7 @@ val termP0 = prove(
 
 Theorem parameter_tm_recursion =
   parameter_gtm_recursion
-      |> INST_TYPE [alpha |-> ``:'a ctrep``, gamma |-> “:'r”]
+      |> INST_TYPE [alpha |-> rep_t, gamma |-> “:'r”]
       |> Q.INST [`lf` |-> `^tlf`, `lp` |-> `^lp`, `n` |-> `0`]
       |> SIMP_RULE (srw_ss()) [sumTheory.FORALL_SUM, FORALL_AND_THM,
                                GSYM RIGHT_FORALL_IMP_THM, IMP_CONJ_THM,
@@ -1039,4 +1036,3 @@ val term_info =
        binders = [(``cterm$LAM``, 0, ctpm_ALPHA)]}
 
 val _ = binderLib.export_nomtype (“:α cterm”, term_info)
-

@@ -7,6 +7,7 @@
 (*                 2018-2019 Fondazione Bruno Kessler, Italy (Chun Tian)      *)
 (*                 2023-2024 The Australian National University (Chun Tian)   *)
 (******************************************************************************)
+
 Theory CCS
 Ancestors
   pred_set relation option list rich_list finite_map
@@ -14,8 +15,6 @@ Ancestors
   term[qualified]  (* for SUB's syntax only *)
 Libs
   pred_setLib CCSLib binderLib nomdatatype
-
-
 
 val set_ss = std_ss ++ PRED_SET_ss;
 
@@ -303,63 +302,40 @@ End
 (* !labl labl'.
      (RELAB labl = RELAB labl') <=> (Apply_Relab labl = Apply_Relab labl')
  *)
-val APPLY_RELAB_THM = save_thm (
-   "APPLY_RELAB_THM",
+Theorem APPLY_RELAB_THM =
     Q.GENL [`labl`, `labl'`]
       (REWRITE_RULE [GSYM RELAB_def]
         (MATCH_MP (MATCH_MP ABS_Relabeling_one_one
                             (Q.SPEC `labl` IS_RELABELING))
-                  (Q.SPEC `labl` IS_RELABELING))));
+                  (Q.SPEC `labl` IS_RELABELING)))
 
 (******************************************************************************)
 (*             Syntax of pure CCS (general formalization)                     *)
 (******************************************************************************)
 
-(* The nominal datatype with alpha conversion on recursion variables
-Nominal_datatype :
-          CCS = nil
-              | var name
+(* The nominal datatype with alpha conversion on recursion variables *)
+
+val _ = (repcode := "crep");
+val _ = (rprefix := "c");
+
+val {tynames, rep_t, lp} =
+    nominal_datatype
+         ‘CCS = var 'free
               | prefix ('a Action) CCS
               | sum CCS CCS
               | par CCS CCS
               | restr ('a Label set) CCS
               | relab CCS ('a Relabeling)
-              | rec ''name CCS
-End
- *)
+              | rec 'bound CCS’;
 
 (* The new way based on "examples/lambda/basics/generic_termsTheory
 
    NOTE: it defines “:'a CCS” where 'a is 'b of the old “:('a,'b) CCS”.
  *)
-val tyname = "CCS";
+val tyname = hd tynames; (* "CCS" *)
 
-Datatype:
-  crep = cvar
-       | cpfx ('a Action) | csum | cpar
-       | crestr ('a Label set)
-       | crelab ('a Relabeling)
-       | crec
-End
-
-val rep_t = “:'a crep”
+(* val rep_t = “:'a crep” *)
 val d_tm = mk_var("d", rep_t);
-
-(* NOTE: ‘nil’ is now defined by ‘rec "s" (var "s")’, no more primitive.
- *)
-val lp =
-  “(\n lfvs ^d_tm tns uns.
-     n = 0 /\ lfvs = 1 /\ d = cvar /\ tns = [] /\ uns = [] \/     (* 0. var *)
-     (?a. n = 0 /\ lfvs = 0 ∧ d = cpfx a /\ tns = [] ∧
-          uns = [0]) \/                                           (* 1. prefix *)
-     n = 0 /\ lfvs = 0 ∧ d = csum /\ tns = [] /\ uns = [0;0] \/   (* 2. sum *)
-     n = 0 /\ lfvs = 0 ∧ d = cpar /\ tns = [] /\ uns = [0;0] \/   (* 3. par *)
-     (?ls. n = 0 /\ lfvs = 0 ∧ d = crestr ls /\ tns = [] /\
-           uns = [0]) \/                                          (* 4. restr *)
-     (?rl. n = 0 /\ lfvs = 0 ∧ d = crelab rl /\ tns = [] /\
-           uns = [0]) \/                                          (* 5. relab *)
-     n = 0 /\ lfvs = 0 ∧ d = crec /\ tns = [0] /\ uns = []        (* 6. rec *)
-    )”;
 
 Overload LP = “lp”
 
@@ -391,7 +367,7 @@ val var_def' = prove(
 
 (* prefix *)
 val prefix_t = mk_var("prefix", “:'a Action -> ^newty -> ^newty”);
-val prefix_pattern = “GLAM uu [] (cpfx u) [] [^term_REP_t E]”
+val prefix_pattern = “GLAM uu [] (cprefix u) [] [^term_REP_t E]”
 val prefix_def = new_definition(
    "prefix_def",
   “^prefix_t u E = ^term_ABS_t ^(toArb prefix_pattern)”);
@@ -764,7 +740,7 @@ val tlf =
      (ts1:^repty' list) (ts2:^repty' list) (p :'q).
       case ^u_tm of
       | cvar => tvf (HD fvs) p : 'r
-      | cpfx a => tff (HD ds2) a (^term_ABS_t (HD ts2)) p :'r
+      | cprefix a => tff (HD ds2) a (^term_ABS_t (HD ts2)) p :'r
       | csum => tsf (HD ds2) (HD (TL ds2))
                     (^term_ABS_t (HD ts2)) (^term_ABS_t (HD (TL ts2))) p :'r
       | cpar => tpf (HD ds2) (HD (TL ds2))

@@ -1978,6 +1978,7 @@ the surrounding text (as done by ‘hol-do-goal’ and
 (define-key global-map "\M-h" 'hol-map)
 (define-key global-map (kbd "C-M-h") 'hol-movement-map)
 (define-prefix-command 'holpp-map)
+(define-prefix-command 'hol-unicode-map)
 
 
 (define-key hol-map "\C-c" 'hol-interrupt)
@@ -2025,9 +2026,9 @@ the surrounding text (as done by ‘hol-do-goal’ and
 (define-key hol-map "T"    'hol-start-termination-proof)
 (define-key hol-map "i"    'hol-type-info)
 (define-key hol-map "s"    'interactive-send-string-to-hol)
-(define-key hol-map "u"    'hol-use-file)
+(define-key hol-map "u"    'hol-unicode-map)
+(define-key hol-map "C-u"  'hol-use-file)
 (define-key hol-map "C"    'hol-db-check-current)
-(define-key hol-map "a"    'hol-remove-unicode)
 (define-key hol-map "*"    'hol-template-comment-star)
 (define-key hol-map "-"    'hol-template-comment-minus)
 (define-key hol-map "="    'hol-template-comment-equal)
@@ -2060,7 +2061,9 @@ the surrounding text (as done by ‘hol-do-goal’ and
 
 (define-key hol-movement-map "u" 'hol-movement-backward-up-list)
 
-
+(define-key hol-unicode-map "+" 'hol-add-unicode)
+(define-key hol-unicode-map "-" 'hol-remove-unicode)
+(define-key hol-unicode-map "p" 'hol-toggle-unicode)
 
 
 
@@ -2087,6 +2090,10 @@ the surrounding text (as done by ‘hol-do-goal’ and
 (define-key global-map [menu-bar hol-menu hol-misc remove-unicode]
    '("Replace common HOL unicode symbols" .
      hol-remove-unicode))
+
+(define-key global-map [menu-bar hol-menu hol-misc add-unicode]
+   '("Add common HOL unicode symbols" .
+     hol-add-unicode))
 
 (define-key global-map [menu-bar hol-menu hol-misc check-names]
    '("Check names in store_thm, ..." . hol-check-statement-eq-string))

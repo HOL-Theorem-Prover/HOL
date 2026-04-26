@@ -235,6 +235,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                    (case OS.Process.getEnv Systeml.build_after_reloc_envvar of
                         SOME "1" => true
                       | _ => false)
+  val thmsrc = #thmsrc (#core optv)
   val interactive_flag = #interactive (#core optv)
   val quiet_flag = #quiet (#core optv)
   val cmdl_HOLSTATE = #holstate optv
@@ -315,7 +316,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     in
         ((script,[scriptuo,scriptui,script]), objectfiles)
     end
-    fun run_script g (extra:GraphExtra.t) (script, intermediates) objectfiles expecteds =
+    fun run_script use_cache deps g (extra:GraphExtra.t) (script, intermediates) objectfiles
+                   expecteds on_success =
       let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
         val _ = app safedelete expecteds
@@ -352,6 +354,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             val _ = if isSuccess res orelse debug = NONE then
                       app safedelete (script :: intermediates)
                     else ()
+            val _ = if isSuccess res then on_success () else ()
           in
             isSuccess res
           end
@@ -369,8 +372,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
               (* incinfos not consulted for comparison so empty value ok here *)
         end
       in
-        BR_ClineK { cline = (useScript, cline), job_kont = cont,
-                    other_nodes = other_nodes }
+          BR_ClineK { cline = (useScript, cline), job_kont = cont,
+                      other_nodes = other_nodes,
+                      cache_url = use_cache,
+                      cachekey = HM_Cachekey.compute_for_deps deps }
       end
   in
     let
@@ -390,9 +395,24 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         | BuildScript (s, deps, extra : GraphExtra.t) =>
           let
             val (scriptetc,objectfiles) = setup_script s (deps,extra) []
+            (* When the script run succeeds, record the cachekey of its
+               inputs to <thy>Theory.cachekey so that a subsequent
+               Holmake invocation under --rebuild=cachekey can decide
+               the target is up-to-date without re-running the script. *)
+            val datFS =
+                case HFS_NameMunge.HOLtoFS (s ^ "Theory.dat") of
+                    SOME {fullfile, ...} => fullfile
+                  | NONE => s ^ "Theory.dat"
+            val stamp_path = HM_Cachekey.stamp_path_for_datfile datFS
+            val _ = HM_Cachekey.remove_stamp stamp_path
+            fun write_stamp () =
+                case HM_Cachekey.compute_for_deps deps of
+                    HM_Cachekey.Key k => HM_Cachekey.write_stamp stamp_path k
+                  | HM_Cachekey.Missing _ => ()
           in
-            run_script g extra scriptetc objectfiles
+            run_script (#cache_url (#core optv)) deps g extra scriptetc objectfiles
                        [s^"Theory.sml", s^"Theory.sig", s^"Theory.dat"]
+                       write_stamp
           end
         | BuildArticle (s0, deps : dep list, extra) =>
           let
@@ -413,7 +433,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             val ((script,inters),objectfiles) =
                 setup_script s (deps,extra) loggingextras
           in
-            run_script g extra (script,fakescript_str :: inters) objectfiles [s]
+            run_script NONE deps g extra (script,fakescript_str :: inters) objectfiles
+                       [s] (fn () => ())
           end
         | ProcessArticle (s,extra) =>
           let
@@ -427,7 +448,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                   "opentheory info --article -o " ^ art ^ " " ^ raw_art])
           in
             BR_ClineK {cline = cline, job_kont = (fn _ => OS.Process.isSuccess),
-                       other_nodes = []}
+                       other_nodes = [], cache_url = NONE,
+                       cachekey = HM_Cachekey.Missing []}
           end
     end handle CompileFailed => BR_Failed
              | FileNotFound  => BR_Failed
@@ -476,15 +498,23 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   fun interpret_bres bres =
     case bres of
         BR_OK => true
-      | BR_ClineK{cline = (_,cl), job_kont = k, ...} =>
-          k warn (Systeml.systeml cl)
+      | BR_ClineK{cline = (_,cl), job_kont = k, cache_url, cachekey, ...} =>
+        (case cache_url of
+             SOME (HM_Core_Cline.Fetch, url) =>
+                 HM_CacheFetch.fetch url cachekey outs orelse
+                 k warn (Systeml.systeml cl)
+           | SOME (HM_Core_Cline.Write, _) => k warn (Systeml.systeml cl)
+           | NONE => k warn (Systeml.systeml cl))
       | BR_Failed => false
 
 
   fun system s =
-    Systeml.system_ps
-      (if relocbuild then Systeml.build_after_reloc_envvar ^ "=1 " ^ s
-       else s)
+    let val pfx = (if relocbuild then Systeml.build_after_reloc_envvar ^ "=1 "
+                   else "") ^
+                  (case thmsrc of SOME v => "HOL_THMSRC=" ^ v ^ " "
+                                | NONE => "")
+    in Systeml.system_ps (pfx ^ s)
+    end
 
   val build_graph =
       if jobs = 1 then
@@ -502,16 +532,16 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         (fn g =>
             multibuild.graphbuild { build_command = build_command,
                                     relocbuild = relocbuild,
+                                    thmsrc = thmsrc,
                                     mosml_build_command = mosml_build_command,
-                                    warn = warn, tgtfatal = tgtfatal,
                                     keep_going = keep_going,
                                     diag =
                                       (fn s => diag "multibuild" (fn _ => s)),
-                                    info = #info outs,
                                     time_limit = time_limit,
                                     maxheap = maxheap,
                                     quiet = quiet_flag, hmenv = hmenv,
-                                    jobs = jobs } g |> interpret_graph)
+                                    jobs = jobs,
+                                    outs = outs } g |> interpret_graph)
 in
   {extra_impl_deps = [],
    build_graph = build_graph}

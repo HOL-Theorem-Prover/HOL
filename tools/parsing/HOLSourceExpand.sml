@@ -574,7 +574,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     in DecExpansion {orig = dec, result = [valPat resume_ subname e]} end
   | expandDec _ (dec as HOLFinalise {finalise_, id, attrs, ...}) = let
     val fileline = fileline (#1 id)
-    val e = mkLocString' (finalise_, "boolLib.finalise_suspended_thm") fileline
+    val e = mkLocString' (finalise_, "markerLib.finalise_suspended_thm") fileline
     val e = App (e, mkNameAttrs mkKval id attrs)
     in DecExpansion {orig = dec, result = [valPat finalise_ (mkIdent id) e]} end
 

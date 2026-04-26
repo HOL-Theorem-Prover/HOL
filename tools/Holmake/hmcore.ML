@@ -20,7 +20,9 @@ val _ = let
   val utildir = Systeml.HOLDIR ++ "tools" ++ "util"
   val portableMLdir = Systeml.HOLDIR ++ "src" ++ "portableML"
   val portableMLpolydir = portableMLdir ++ "poly"
+  val jsondir = portableMLdir ++ "json"
   fun appportable s = (myuse portableMLdir (s ^ ".sig"); myuse portableMLdir (s ^ ".sml"))
+  fun appjson s = (myuse jsondir (s ^ ".sig"); myuse jsondir (s ^ ".sml"))
   fun appthis s = (myuse hmakedir (s ^ ".sig"); myuse hmakedir (s ^ ".sml"))
   fun appcore s = (myuse coredir (s ^ ".sig"); myuse coredir (s ^ ".sml"))
   fun appdeps s = (myuse depsdir (s ^ ".sig"); myuse depsdir (s ^ ".sml"))
@@ -41,7 +43,7 @@ in
   app apputil ["regexpMatch"] ;
   app apphmf ["parse_glob"] ;
   app appdeps ["Holdep_tokens"] ;
-  app (myuse coredir) ["Holmake_tools_dtype.sml"];
+  app (myuse coredir) ["Holmake_tools_dtype.sml", "HM_Cachekey_dtype.sml"];
   app (myuse hmutildir) ["terminal_primitives.sig", "poly-terminal-prims.ML"];
   app appdeps ["Holdep"] ;
   app appcore ["Holmake_tools"];
@@ -49,5 +51,9 @@ in
   myuse portableMLpolydir "SHA1_ML.sig";
   myuse portableMLpolydir
     (if Systeml.haveWord64 then "w64-SHA1.ML" else "SHA1-byexec.ML");
-  app appportable ["SHA1"]
+  app appportable ["SHA1"];
+  myuse jsondir "JSON.sml";
+  app appjson ["JSONErrors"];
+  myuse jsondir "JSONSource.sml";
+  app appjson ["JSONParser", "JSONUtil"]
 end;

@@ -1,18 +1,21 @@
 structure HM_Core_Cline :> HM_Core_Cline =
 struct
 
+datatype cache_op = Write | Fetch
+
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate25 z
+  fun makeUpdateT z = makeUpdate28 z
 in
 fun updateT z = let
-  fun from cachekey debug do_logging fast help hmakefile holdir includes
+  fun from cache_url cachekey debug do_logging fast help hmakefile holdir includes
            interactive jobs json keep_going no_action no_hmakefile
            no_lastmaker_check no_overlay
            no_preexecs no_prereqs opentheory quiet
-           quit_on_failure rebuild_deps recursive_build recursive_clean
-           verbose =
+           quit_on_failure rebuild rebuild_deps recursive_build recursive_clean
+           thmsrc verbose =
     {
+      cache_url = cache_url,
       cachekey = cachekey,
       debug = debug, do_logging = do_logging,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
@@ -23,16 +26,20 @@ fun updateT z = let
       no_preexecs = no_preexecs, no_prereqs = no_prereqs,
       opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
+      rebuild = rebuild,
       rebuild_deps = rebuild_deps, recursive_build = recursive_build,
-      recursive_clean = recursive_clean, verbose = verbose
+      recursive_clean = recursive_clean, thmsrc = thmsrc, verbose = verbose
     }
-  fun from' verbose recursive_clean recursive_build rebuild_deps quit_on_failure
+  fun from' verbose thmsrc recursive_clean recursive_build rebuild_deps
+            rebuild
+            quit_on_failure
             quiet opentheory no_prereqs no_preexecs
             no_overlay no_lastmaker_check no_hmakefile no_action keep_going
             json jobs interactive
             includes holdir
-            hmakefile help fast do_logging debug cachekey =
+            hmakefile help fast do_logging debug cachekey cache_url =
     {
+      cache_url = cache_url,
       cachekey = cachekey,
       debug = debug, do_logging = do_logging,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
@@ -43,20 +50,22 @@ fun updateT z = let
       no_preexecs = no_preexecs, no_prereqs = no_prereqs,
       opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
+      rebuild = rebuild,
       rebuild_deps = rebuild_deps, recursive_build = recursive_build,
-      recursive_clean = recursive_clean, verbose = verbose
+      recursive_clean = recursive_clean, thmsrc = thmsrc, verbose = verbose
     }
-  fun to f {cachekey, debug, do_logging, fast, help, hmakefile, holdir,
+  fun to f {cache_url, cachekey, debug, do_logging, fast, help, hmakefile, holdir,
             includes, interactive, jobs, json, keep_going, no_action,
             no_hmakefile, no_lastmaker_check,
             no_overlay, no_preexecs, no_prereqs, opentheory,
-            quiet, quit_on_failure, rebuild_deps, recursive_build,
-            recursive_clean, verbose} =
-    f cachekey debug do_logging fast help hmakefile holdir includes
+            quiet, quit_on_failure, rebuild, rebuild_deps, recursive_build,
+            recursive_clean, thmsrc, verbose} =
+    f cache_url cachekey debug do_logging fast help hmakefile holdir includes
       interactive jobs json keep_going no_action no_hmakefile
       no_lastmaker_check no_overlay no_preexecs
       no_prereqs opentheory quiet
-      quit_on_failure rebuild_deps recursive_build recursive_clean verbose
+      quit_on_failure rebuild rebuild_deps recursive_build recursive_clean
+      thmsrc verbose
 in
   makeUpdateT (from, from', to)
 end z
@@ -68,6 +77,7 @@ fun fupd_jobs f t = updateT t (U #jobs (f (#jobs t))) $$
 fun fupd_includes f t = updateT t (U #includes (f (#includes t))) $$
 
 type t = {
+  cache_url : (cache_op * string) option,
   cachekey : string option,
   debug : {ins : string list, outs : string list} option,
   do_logging : bool,
@@ -89,14 +99,17 @@ type t = {
   opentheory : string option,
   quiet : bool,
   quit_on_failure : bool,
+  rebuild : HM_Cachekey_dtype.rebuild_strategy,
   rebuild_deps : bool,
   recursive_build : bool,
   recursive_clean : bool,
+  thmsrc : string option,
   verbose : bool
 }
 
 val default_core_options : t =
 {
+  cache_url = NONE,
   cachekey = NONE,
   debug = NONE,
   do_logging = false,
@@ -118,9 +131,11 @@ val default_core_options : t =
   opentheory = NONE,
   quiet = false,
   quit_on_failure = true,
+  rebuild = HM_Cachekey_dtype.Cachekey,
   rebuild_deps = false,
   recursive_build = false,
   recursive_clean = false,
+  thmsrc = NONE,
   verbose = false
 }
 
@@ -169,12 +184,42 @@ fun set_cachekey s =
                wn "Multiple cachekey specs; ignoring earlier spec"
              else ();
              updateT t (U #cachekey (SOME s)) $$))
+fun set_rebuild s =
+  resfn (fn (wn, t) =>
+            case HM_Cachekey_dtype.rebuild_strategy_fromString s of
+                SOME strat => updateT t (U #rebuild strat) $$
+              | NONE => (wn ("Bad --rebuild value: " ^ s ^
+                             "; expected mtime or cachekey"); t))
+fun set_cache_url s =
+  resfn (fn (wn, t) =>
+            (if isSome (#cache_url t) then
+               wn "Multiple cache_url specs; ignoring earlier spec"
+             else ();
+             updateT t (U #cache_url (SOME (Fetch, s))) $$))
+fun set_download_cache_url s =
+  resfn (fn (wn, t) =>
+            (if isSome (#cache_url t) then
+               wn "Multiple cache_url specs; ignoring earlier spec"
+             else ();
+             updateT t (U #cache_url (SOME (Write, s))) $$))
 fun set_openthy s =
   resfn (fn (wn, t) =>
             (if isSome (#opentheory t) then
                wn "Multiple opentheory specs; ignoring earlier spec"
              else ();
              updateT t (U #opentheory (SOME s)) $$))
+fun set_thmsrc s =
+  resfn (fn (wn, t) =>
+            if s = "dat" orelse s = "tr" then
+              (if s = "tr" andalso not Systeml.haveWord64 then
+                 (wn "--thmsrc tr requires Word64 support; ignoring"; t)
+               else
+                 (if isSome (#thmsrc t) then
+                    wn "Multiple --thmsrc specs; ignoring earlier spec"
+                  else ();
+                  updateT t (U #thmsrc (SOME s)) $$))
+            else
+              (wn ("Bad --thmsrc value: " ^ s ^ "; expected dat or tr"); t))
 fun addDbg sopt =
     resfn (fn (wn, t) =>
               let
@@ -198,6 +243,10 @@ fun addDbg sopt =
               end)
 
 val core_option_descriptions = [
+  { help = "build and pull pre-built theories from local cache when possible",
+    long = ["use-cache"], short = "", desc = ReqArg (set_cache_url, "dir") },
+  { help = "write built theory files to local cache for a target theory",
+    long = ["write-cache"], short = "", desc = ReqArg (set_download_cache_url, "dir") },
   { help = "print cache key for a theory target", long = ["cachekey"],
     short = "", desc = ReqArg (set_cachekey, "theory") },
   { help = "turn on diagnostic messages", long = ["dbg"], short = "d",
@@ -251,6 +300,10 @@ val core_option_descriptions = [
     desc = mkBoolT #quit_on_failure },
   { help = "rebuild cached dependency files", short = "",
     long = ["rebuild_deps"], desc = mkBoolT #rebuild_deps },
+  { help = "rebuild-decision strategy for theory targets \
+           \(mtime or cachekey [default])",
+    short = "", long = ["rebuild"],
+    desc = ReqArg (set_rebuild, "strategy") },
   { help = "both --recursive-{build,clean}", short = "r", long = [],
     desc = NoArg (
       fn () => resfn (
@@ -263,6 +316,8 @@ val core_option_descriptions = [
     long = ["recursive-build"], desc = mkBoolT #recursive_build},
   { help = "clean recursively", short = "",
     long = ["recursive-clean"], desc = mkBoolT #recursive_clean},
+  { help = "theorem source (dat or tr)", long = ["thmsrc"], short = "",
+    desc = ReqArg (set_thmsrc, "dat|tr") },
   { help = "verbose output", short = "v", long = ["verbose"],
     desc = NoArg
              (fn () =>

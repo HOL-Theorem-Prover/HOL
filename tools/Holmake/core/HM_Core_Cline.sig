@@ -1,8 +1,11 @@
 signature HM_Core_Cline =
 sig
 
+datatype cache_op = Write | Fetch
+    
 type t = {
   cachekey : string option,
+  cache_url : (cache_op * string) option,
   debug : {ins:string list, outs:string list} option,
   do_logging : bool,
   fast : bool,
@@ -22,10 +25,12 @@ type t = {
   opentheory : string option,
   quiet : bool,
   quit_on_failure : bool,
+  rebuild : HM_Cachekey_dtype.rebuild_strategy,
   rebuild_deps : bool,
   recursive_build : bool,
   recursive_clean : bool,
   hmakefile : string option,
+  thmsrc : string option,
   verbose : bool
 }
 

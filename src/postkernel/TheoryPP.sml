@@ -13,6 +13,11 @@ type hol_type = Type.hol_type
 type shared_writemaps = {strings : string -> int, terms : Term.term -> string}
 type shared_readmaps = {strings : int -> string, terms : string -> Term.term}
 type thminfo = DB_dtype.thminfo
+type sig_info_record = {
+  name        : string,
+  parents     : string list,
+  all_thms    : (string * thm * thminfo) list
+}
 type struct_info_record = {
    theory      : string,
    parents     : (string*string) list,
@@ -36,8 +41,6 @@ fun dest_temp_binding s =
     String.extract(s, size temp_binding_pfx, NONE)
   else raise ERR "dest_temp_binding" "String not a temp-binding"
 
-
-val pp_sig_hook = ref (fn () => ());
 
 val concat = String.concat;
 val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
@@ -103,8 +106,7 @@ fun classify As Ds Ts [] = (As,Ds,Ts)
         | Thm => classify As Ds (r::Ts) rest
     end
 
-
-fun pp_sig pp_thm info_record = let
+fun pp_doc pp_thm info_record = let
   open PP
   val {name,parents,all_thms} = info_record
   val parents'     = sort parents
@@ -150,18 +152,34 @@ fun pp_sig pp_thm info_record = let
   val filter_visible =
       List.mapPartial (fn (s, th, {private=false,...}:thminfo) => SOME (s,th)
                       |            _                 => NONE)
-  fun pr_docs() =
-      if !include_docs then
-        (!pp_sig_hook();
-         [block CONSISTENT 3 (
-             [add_string "(*", NL] @
-             pr_parents parents' @
-             pr_thms "Axiom" (filter_visible axioms') @
-             pr_thms "Definition" (filter_visible definitions') @
-             pr_thms "Theorem" (filter_visible theorems')
-           ), NL,
-          add_string "*)", NL])
-      else []
+in
+  block CONSISTENT 3 (
+    pr_parents parents' @
+    pr_thms "Axiom" (filter_visible axioms') @
+    pr_thms "Definition" (filter_visible definitions') @
+    pr_thms "Theorem" (filter_visible theorems')
+  )
+end
+
+fun pp_sig info_record = let
+  open PP
+  val {name,parents,all_thms} = info_record
+  val parents'     = sort parents
+  val rm_temp      = List.filter (fn (s, _, _) => not (is_temp_binding s))
+  val all_thms'    = rm_temp all_thms
+  val (axioms,definitions,theorems) = classify [] [] [] all_thms'
+  val axioms'      = psort axioms
+  val definitions' = psort definitions
+  val theorems'    = psort theorems
+  fun vblock(header, ob_pr, obs) =
+    block CONSISTENT 2 [
+      add_string ("(*  "^header^ "  *)"), NL,
+      block CONSISTENT 0 (pr_list ob_pr [NL] obs)
+    ]
+
+  val filter_visible =
+      List.mapPartial (fn (s, th, {private=false,...}:thminfo) => SOME (s,th)
+                      |            _                 => NONE)
   fun pthms (heading, ths) =
     vblock(heading,
            (fn (s,th,{private,...}:thminfo) =>
@@ -171,9 +189,9 @@ fun pp_sig pp_thm info_record = let
                         [add_string("val "^ s ^ " : thm")])),
            ths)
 in
-  block CONSISTENT 0 (
-    [add_string ("signature "^ThrySig name^" ="), NL,
-     block CONSISTENT 2 [
+  block CONSISTENT 0 [
+    add_string ("signature "^ThrySig name^" ="), NL,
+    block CONSISTENT 2 [
        add_string "sig", NL,
        block CONSISTENT 0 (
          [add_string"type thm = Thm.thm"] @
@@ -184,11 +202,9 @@ in
          (if null theorems' then []
           else [NL, NL, pthms ("Theorems", theorems')])
        )
-     ], NL
-    ] @
-    pr_docs() @
-    [add_string"end", NL]
-  )
+    ], NL,
+    add_string"end", NL
+  ]
 end;
 
 (*---------------------------------------------------------------------------

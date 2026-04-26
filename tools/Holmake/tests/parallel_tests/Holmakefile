@@ -8,10 +8,12 @@ DIRNAMES = \
   depchain1/dir3 \
   depchain2/dir1 \
   holdep \
+  longcmdlock \
   nullary_tgt \
   phony_tgt \
   quote-filter \
   cachekey \
+  rebuild_cachekey \
   theorytarget \
   commandmacros \
   doublecrnl \
@@ -31,9 +33,11 @@ DIRNAMES = \
   time-logging
 
 ifdef POLY
-DIRNAMES += cheatspotting \
+DIRNAMES += cachefetch \
+            cheatspotting \
             depchain_heap/ \
             depchain_heap/dir2 \
+            dirlock \
             heap-size \
             ignore_errors/j4 \
             hollogs

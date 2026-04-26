@@ -1,2 +1,9 @@
+ifdef HAVE_WORD64
+all: $(DEFAULT_TARGETS)
+else
+all:
+endif
+.PHONY: all
+
 replay-test: replay-test.mlb replay-test.sml
 	mlton -default-type intinf $<

@@ -19,6 +19,12 @@ datatype ('a,'b) sum = inl of 'a | inr of 'b
 datatype ('a,'b,'c) sum3 = in13 of 'a | in23 of 'b | in33 of 'c
 datatype ('a,'b,'c,'d) sum4 = in14 of 'a | in24 of 'b | in34 of 'c | in44 of 'd
 
+(* Hook for alternative theorem sources during thydata loading.
+   When set, thmreader calls this function with (thy, anon_id)
+   to look up a replayed theorem instead of creating a disk_thm.
+   Returns NONE to fall back to disk_thm. *)
+val anon_thm_lookup : (string * int -> Thm.thm option) ref
+
 val uptodate : t -> bool
 val compare : t * t -> order
 

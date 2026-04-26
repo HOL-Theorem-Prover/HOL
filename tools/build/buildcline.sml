@@ -9,13 +9,13 @@ type 'a cline_result = {
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate11 z
+  fun makeUpdateT z = makeUpdate12 z
 in
 fun updateT z = let
   fun from build_theory_graph debug help jobcount keepgoing kernelspec
            multithread
            relocbuild selftest
-           seqname timelimit =
+           seqname thmsrc timelimit =
     {build_theory_graph = build_theory_graph,
      debug = debug,
      help = help,
@@ -26,8 +26,9 @@ fun updateT z = let
      relocbuild = relocbuild,
      selftest = selftest,
      seqname = seqname,
+     thmsrc = thmsrc,
      timelimit = timelimit}
-  fun from' timelimit seqname selftest relocbuild multithread kernelspec
+  fun from' timelimit thmsrc seqname selftest relocbuild multithread kernelspec
             keepgoing
             jobcount help
             debug
@@ -42,15 +43,16 @@ fun updateT z = let
      relocbuild = relocbuild,
      selftest = selftest,
      seqname = seqname,
+     thmsrc = thmsrc,
      timelimit = timelimit}
   fun to f {build_theory_graph, debug, help, jobcount, keepgoing, kernelspec,
             multithread,
             relocbuild,
-            selftest, seqname, timelimit} =
+            selftest, seqname, thmsrc, timelimit} =
     f build_theory_graph debug help jobcount keepgoing kernelspec multithread
       relocbuild
       selftest
-      seqname
+      seqname thmsrc
       timelimit
 in
   makeUpdateT (from, from', to)
@@ -122,6 +124,16 @@ fun setKname k =
                                    \ignoring earlier spec(s)";
                   updateT t (U #kernelspec (SOME k)) $$) })
 
+fun setThmSrc s =
+  { update = fn {warn=wn,die,arg=t} =>
+       if s = "dat" orelse s = "tr" then
+         (case #thmsrc t of
+              NONE => ()
+            | SOME _ => wn "Multiple --thmsrc specs; ignoring earlier spec(s)";
+          updateT t (U #thmsrc (SOME s)) $$)
+       else (die ("Bad --thmsrc value: " ^ s ^
+                  "; expected dat or tr"); t) }
+
 val cline_opt_descrs = [
   {help = "build with experimental kernel", long = ["expk"], short = "",
    desc = setKname "--expk"},
@@ -148,6 +160,8 @@ val cline_opt_descrs = [
    desc = mkBoolOpt #build_theory_graph false},
   {help = "build with logging kernel", long = ["otknl"], short = "",
    desc = setKname "--otknl"},
+  {help = "theorem source (dat or tr)", long = ["thmsrc"], short = "",
+   desc = ReqArg (setThmSrc, "dat|tr")},
   {help = "build with tracing kernel", long = ["trknl"], short = "",
    desc = setKname "--trknl"},
   {help = "do relocation build (e.g., after a cleanForReloc)",

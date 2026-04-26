@@ -385,11 +385,16 @@ val _ =
     compile ["-I", "mosml", "-I", "../../tools/Holmake"] "SHA1.sig";
     compile ["-I", "mosml", "-I", "../../tools/Holmake"] "SHA1.sml";
     FileSys.chDir "../../tools/Holmake";
+    FileSys.chDir "mosml";
+    compile ["-I", "..", "-I", "../core", "-I", "../hfs", "-I", "../hmf", "-I", "../../parsing",
+             "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "HM_CacheFetch.sml";
+    FileSys.chDir "..";
     FileSys.chDir "../util";
     compile ["-I", "../Holmake"] "GetOpt.sig";
     compile ["-I", "../Holmake"] "GetOpt.sml";
     compile ["-I", "../Holmake"] "FunctionalRecordUpdate.sml";
     FileSys.chDir "../Holmake/core";
+    compile ["-I", ".."] "HM_Cachekey_dtype.sml";
     compile ["-I", "..", "-I", "../../util", "-I", "../hmf"] "HM_Core_Cline.sig";
     compile ["-I", "..", "-I", "../../util", "-I", "../hmf"] "HM_Core_Cline.sml";
     FileSys.chDir "../deps";
@@ -403,6 +408,12 @@ val _ =
     FileSys.chDir "deps";
     compile ["-I", "..", "-I", "../core", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "HM_DepGraph.sig";
     compile ["-I", "..", "-I", "../core", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "HM_DepGraph.sml";
+    FileSys.chDir "../core";
+    compile ["-I", "..", "-I", "../deps", "-I", "../hfs", "-I", "../../parsing", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "HM_Cachekey.sig";
+    compile ["-I", "..", "-I", "../deps", "-I", "../hfs", "-I", "../../parsing", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "HM_Cachekey.sml";
+    compile ["-I", ".."] "HM_BuildLock.sig";
+    FileSys.chDir "../mosml";
+    compile ["-I", "..", "-I", "../core"] "HM_BuildLock.sml";
     FileSys.chDir "../core";
     compile ["-I", "..", "-I", "../deps", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "HM_GraphBuildJ1.sig";
     compile ["-I", "..", "-I", "../deps", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "HM_GraphBuildJ1.sml";
