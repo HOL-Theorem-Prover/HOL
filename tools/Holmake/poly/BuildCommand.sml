@@ -305,6 +305,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       val objectfiles0 =
           if allfast then ["fastbuild.uo", scriptuo]
           else if quit_on_failure andalso not dumpheap andalso not g_flag then [scriptuo]
+          else if dumpheap orelse g_flag then
+            ["holmakebuild.uo", SIGOBJ ++ "holmakebuild_prover.uo", scriptuo]
           else ["holmakebuild.uo", scriptuo]
       val objectfiles0 = extras @ objectfiles0
       val objectfiles =
