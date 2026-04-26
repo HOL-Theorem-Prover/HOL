@@ -90,7 +90,13 @@ val _ = loadedMods := Binaryset.addList (!loadedMods, [
   "Real", "Int", "List", "Binaryset", "Binarymap", "Listsort",
   "Array", "Array2", "Vector", "UniversalType", "DArray", "DString",
   "HOLSourceAST", "HOLSourceParser", "HOLSourceExpand", "HOLSourcePrinter", "HOLSource",
-  "Systeml", "PrettyImpl", "LSPExtension", "SHA1"])
+  "Systeml", "PrettyImpl", "LSPExtension", "SHA1"]);
+(* Globals is loaded via 'use' in the lines below, not via Meta.load.
+   Must add it to loadedMods so that Meta.load skips it when encountered
+   as a dependency (otherwise Meta.load re-runs Globals.sml, creating fresh
+   refs that shadow the ones set by hol.ML after loadState). *)
+val _ = loadedMods := Binaryset.add (!loadedMods, "Globals");
+val _ = loadedMods := Binaryset.add (!loadedMods, "CoreReplVARS")
 
 fun findUo modPath [] = NONE
   | findUo modPath (search::rest) =
@@ -188,6 +194,13 @@ end;
 structure Path = OS.Path;
 structure Process = OS.Process;
 structure FileSys = HOLFileSys;
+
+(* Load Globals early so hol.ML can reference holmake_* refs at compile-time.
+   Re-defined later when prekernel object files are loaded during bin/build.
+   CoreReplVARS is a dependency of Globals.sml. *)
+val _ = use "../src/portableML/poly/CoreReplVARS.sml";
+val _ = use "../src/prekernel/Globals.sig";
+val _ = use "../src/prekernel/Globals.sml";
 
 exception Interrupt = SML90.Interrupt;
 exception Io = IO.Io;

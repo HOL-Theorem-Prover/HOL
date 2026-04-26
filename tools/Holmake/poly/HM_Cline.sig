@@ -10,11 +10,14 @@ type t = {
   poly_not_hol : bool,
   relocbuild : bool,
   time_limit : Time.time option,
+  dumpheap : bool,
+  g : bool,
   core : HM_Core_Cline.t
 }
 
 val option_descriptions : t HM_Core_Cline.cline_result GetOpt.opt_descr list
 val fupd_core : (HM_Core_Cline.t -> HM_Core_Cline.t) -> (t -> t)
 val default_options : t
+val tactic_timeout_ref : real ref
 
 end

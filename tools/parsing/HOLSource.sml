@@ -18,6 +18,8 @@ structure ToSML = struct
   fun mkPushTranslator ({read, filename, parseError, quietOpen}:args) pr = let
     val {parseDec, body, events, parseError, ...} =
       HOLSourceParser.parseSML filename read parseError HOLSourceParser.initialScope
+    val _ = HOLSourceExpand.holmake_source_text_fn :=
+      SOME (fn (s, e) => DString.extract (body, s, SOME (e - s)))
     val fileline = HOLSourceAST.mkFileline body events
     val expandDec = HOLSourceExpand.expandDec
       {parseError = parseError, quietOpen = quietOpen, fileline = fileline}

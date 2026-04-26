@@ -672,4 +672,67 @@ fun sliceTacticBlock start stop sliceClose sp e = let
   val (ll, l) = slice sp (linearize isAtom e) ([], [])
   in rev (rev l :: ll) end
 
+(* --- Fragment flattening for goalfrag step execution --- *)
+
+(* Flatten nested fragments from linearize into a flat step sequence.
+   FBracket(FOpenThen1, [inner], FClose, expr) -> FOpenThen1, inner..., FClose
+   FMBracket(FOpenNullOk, mid, FClose, [arm1,arm2], expr)
+     -> FOpenNullOk, arm1, FMid, arm2, FClose
+   FGroup(span, [inner]) -> inner (unwrapped)
+   Returns fragments in FORWARD execution order. *)
+fun flatten_frags frags =
+  let
+    fun go [] acc = rev acc
+      | go (FFOpen opn :: rest) acc = go rest (FFOpen opn :: acc)
+      | go (FFMid mid :: rest) acc = go rest (FFMid mid :: acc)
+      | go (FFClose cls :: rest) acc = go rest (FFClose cls :: acc)
+      | go (FAtom a :: rest) acc = go rest (FAtom a :: acc)
+      | go (FGroup (_, inner) :: rest) acc =
+          go rest (rev (flatten_frags inner) @ acc)
+      | go (FBracket (opn, inner, cls, _) :: rest) acc =
+          let val flat = FFOpen opn :: flatten_frags inner @ [FFClose cls]
+          in go rest (rev flat @ acc) end
+      | go (FMBracket (opn, mid, cls, [], _) :: rest) acc =
+          go rest (FFClose cls :: FFOpen opn :: acc)
+      | go (FMBracket (opn, mid, cls, arms, _) :: rest) acc =
+          let
+            fun interleave [] _ = []
+              | interleave [a] _ = flatten_frags a
+              | interleave (a::as') mid =
+                  flatten_frags a @ [FFMid mid] @ interleave as' mid
+            val flat = FFOpen opn :: interleave arms mid @ [FFClose cls]
+          in go rest (rev flat @ acc) end
+  in
+    go frags []
+  end
+
+
+(* Re-expand ThenLT atoms that linearize left atomic inside >> chains.
+   linearize's `asTac` skips bracketing when `one=true` (inside Then list),
+   collapsing >-/by into a single FAtom(ThenLT _). We detect these and
+   re-linearize the ThenLT AST directly at the top level so it gets proper
+   open/close decomposition. *)
+fun reexpand_thenlt_frags frags =
+  let
+    fun isThenLTatom (FAtom (ThenLT _)) = true
+      | isThenLTatom (FAtom (Group (_, _, ThenLT _))) = true
+      | isThenLTatom _ = false
+    fun getThenLT (FAtom (ThenLT (base, arms))) =
+          ThenLT (base, arms)
+      | getThenLT (FAtom (Group (_, _, ThenLT (base, arms)))) =
+          ThenLT (base, arms)
+      | getThenLT _ = raise Match
+    fun isAtom e = Option.isSome (topSpan e)
+    fun reexpand f =
+          let
+            val expr = getThenLT f
+            val subFrags = linearize isAtom expr
+          in flatten_frags subFrags end
+    fun go [] acc = rev acc
+      | go (f :: rest) acc =
+          if isThenLTatom f
+          then go rest (rev (reexpand f) @ acc)
+          else go rest (f :: acc)
+  in go frags [] end
+
 end

@@ -8,32 +8,36 @@ type t = {
   poly : string option,
   polymllibdir : string option,
   poly_not_hol : bool,
-  time_limit : Time.time option,
   relocbuild : bool,
+  time_limit : Time.time option,
+  dumpheap : bool,
+  g : bool,
   core : HM_Core_Cline.t
 }
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate9 z
+  fun makeUpdateT z = makeUpdate11 z
 in
 fun updateT z = let
   fun from core holstate maxheap multithread poly polymllibdir poly_not_hol
-           relocbuild time_limit =
+           relocbuild time_limit dumpheap g =
     {core = core, holstate = holstate, maxheap = maxheap,
      multithread = multithread, poly = poly,
      polymllibdir = polymllibdir, poly_not_hol = poly_not_hol,
-     relocbuild = relocbuild, time_limit = time_limit}
-  fun from' time_limit relocbuild poly_not_hol polymllibdir poly multithread
-            maxheap holstate core =
+     relocbuild = relocbuild, time_limit = time_limit,
+     dumpheap = dumpheap, g = g}
+  fun from' g dumpheap time_limit relocbuild poly_not_hol polymllibdir poly
+            multithread maxheap holstate core =
     {core = core, holstate = holstate, maxheap = maxheap,
      multithread = multithread, poly = poly,
      polymllibdir = polymllibdir, poly_not_hol = poly_not_hol,
-     relocbuild = relocbuild, time_limit = time_limit}
+     relocbuild = relocbuild, time_limit = time_limit,
+     dumpheap = dumpheap, g = g}
   fun to f {core, holstate, maxheap, multithread, poly, polymllibdir,
-            poly_not_hol, relocbuild, time_limit} =
+            poly_not_hol, relocbuild, time_limit, dumpheap, g} =
     f core holstate maxheap multithread poly polymllibdir poly_not_hol
-      relocbuild time_limit
+      relocbuild time_limit dumpheap g
 in
   makeUpdateT (from, from', to)
 end z
@@ -51,7 +55,9 @@ val default_options = {
   polymllibdir = NONE,
   poly_not_hol = false,
   relocbuild = false,
-  time_limit = NONE
+  time_limit = NONE,
+  dumpheap = false,
+  g = false
 }
 
 fun fupdcore f x =
@@ -95,6 +101,19 @@ fun set_time_limit s =
               | SOME i => updateT t
                                   (U #time_limit (SOME (Time.fromSeconds i)))
                                   $$)
+
+(* tactic_timeout is stored in a separate ref (see BuildCommand.sml)
+   because adding it to the HM_Cline type breaks the FRU12 type system
+   when compiled inside the Holmake structure boundary. *)
+val tactic_timeout_ref : real ref = ref 0.0
+
+fun set_tactic_timeout s = let
+  val _ = case Real.fromString s of
+      NONE => ()  (* silently ignore bad values *)
+    | SOME r => if r > 0.0 then tactic_timeout_ref := r else ()
+in
+  resfn (fn (_, t : t) => t)  (* no-op update to satisfy cline_result type *)
+end
 
 fun mt_optint sopt =
   let
@@ -149,14 +168,25 @@ val poly_option_descriptions = [
    short = "",
    desc = ReqArg (set_polymllibdir, "directory")},
   {help = "set time limit (in seconds)", long = ["time_limit"], short = "t",
-   desc = ReqArg (set_time_limit, "delay")}
+   desc = ReqArg (set_time_limit, "delay")},
+  {help = "save heap checkpoints for incremental builds",
+   long = ["dumpheap"], short = "",
+   desc = NoArg (fn () =>
+                    resfn (fn (_,t) => updateT t (U #dumpheap true) $$))},
+  {help = "run proofs through goalfrag, show goal state on failure",
+   long = [], short = "g",
+   desc = NoArg (fn () =>
+                    resfn (fn (_,t) => updateT t (U #g true) $$))},
+  {help = "per-tactic timeout in seconds (0=none, default 5.0 with -g)",
+   long = ["tactic-timeout"], short = "",
+   desc = ReqArg (set_tactic_timeout, "seconds")}
 ]
 
 fun mapd (d : core_t cline_result arg_descr) : t cline_result arg_descr =
   case d of
       NoArg f => NoArg(fupdcore f)
-    | ReqArg (f, s) => ReqArg (fupdcore f, s)
-    | OptArg (f, s) => OptArg (fupdcore f, s)
+    | ReqArg (f, s) => ReqArg(fupdcore f, s)
+    | OptArg (f, s) => OptArg(fupdcore f, s)
 
 val option_descriptions =
     HM_Core_Cline.sort_descriptions

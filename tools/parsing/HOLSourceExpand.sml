@@ -1,6 +1,12 @@
 structure HOLSourceExpand :> HOLSourceExpand = struct
 open HOLSourceAST
 
+(* Holmake tactic text storage: set source text accessor before parsing,
+   read tactic text after expansion. Used by fragment-stepped prover. *)
+val holmake_source_text_fn = ref NONE : (int * int -> string) option ref
+val holmake_tactic_text = ref [] : (string * string * bool) list ref
+val holmake_active = ref false : bool ref
+
 exception Unreachable
 
 fun pluck _ [] = NONE
@@ -524,8 +530,25 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val fileline = fileline (#1 id)
     val nameAttrs = mkNameAttrs mkKval id (withLocalAttrs theorem_ triv attrs)
     val quote = expandQuote theorem_ stop quote
-    val tac = wrapTac (theorem_, expandExp false tac)
+    val tac_exp = expandExp false tac
+    val has_proof_attrs = Option.isSome proof_
+    val source_text =
+      if !holmake_active then
+        let val (s, e) = expSpan tac in
+          if s < e then
+            (case !holmake_source_text_fn of
+               SOME fn' => SOME (fn' (s, e))
+             | NONE => NONE)
+          else NONE
+        end
+      else NONE
+    val tac = wrapTac (theorem_, tac_exp)
     val tac = case proof_ of SOME {proof_, attrs} => doProofAttrs proof_ attrs tac | _ => tac
+    val _ = if !holmake_active then
+              holmake_tactic_text :=
+                (#2 id, Option.getOpt (source_text, ""), has_proof_attrs) ::
+                !holmake_tactic_text
+            else ()
     val e = mkLocString (theorem_, "Q.store_thm", "Q.store_thm_at") fileline
     val e = App (e, mkTuple (theorem_, [nameAttrs, quote, tac]))
     in DecExpansion {orig = dec, result = [valPat theorem_ (mkIdent id) e]} end

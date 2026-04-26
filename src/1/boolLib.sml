@@ -309,6 +309,7 @@ in
 fun store_thm_at loc (n0,t,tac) =
   let val attrblock = ThmAttribute.extract_attributes n0
       val name = #thmname attrblock
+      val _ = Globals.holmake_current_thm := name
       val th = Tactical.prove(t,tac)
                handle HOL_ERR herr =>
                let val err_mesg = tac_failure name (message_of herr)

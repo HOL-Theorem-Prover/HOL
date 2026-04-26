@@ -161,4 +161,11 @@ val hol_clock = Timer.startCPUTimer ()
 val emitMLDir = ref (Path.concat(HOLDIR,"src/emit/ML/"))
 val emitCAMLDir = ref (Path.concat(HOLDIR,"src/emit/Caml/"))
 
+(* Holmake build flags — set by hol.ML before loading holmakebuild.uo *)
+val holmake_dumpheap_flag = ref false
+val holmake_g_flag = ref false
+val holmake_allow_cheat = ref false
+val holmake_current_thm = ref ""
+val holmake_tactic_timeout = ref 0.0  (* 0 = no timeout; positive = seconds *)
+
 end (* Globals *)

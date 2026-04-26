@@ -25,31 +25,37 @@ val _ = use "lsp-server.ML";
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate15 z
+  fun makeUpdateT z = makeUpdate19 z
 in
 fun updateT z = let
   fun from all_forced bare base_state checkerr checkfors debug defaultout exe
-           extra_data forced_objs help multithread output quietp z_repl =
+           extra_data forced_objs help multithread output quietp z_repl
+           dumpheap g allow_cheat tactic_timeout =
     {all_forced = all_forced, bare = bare, base_state = base_state,
      checkerr = checkerr, checkfors = checkfors, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
-     output = output, quietp = quietp, z_repl = z_repl}
-  fun from' z_repl quietp output multithread help forced_objs extra_data exe
+     output = output, quietp = quietp, z_repl = z_repl,
+     dumpheap = dumpheap, g = g, allow_cheat = allow_cheat,
+     tactic_timeout = tactic_timeout}
+  fun from' tactic_timeout allow_cheat g dumpheap z_repl quietp output multithread help forced_objs extra_data exe
             defaultout debug checkfors checkerr base_state bare all_forced =
     {all_forced = all_forced, bare = bare, base_state = base_state,
      checkfors = checkfors, checkerr = checkerr, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
-     output = output, quietp = quietp, z_repl = z_repl}
+     output = output, quietp = quietp, z_repl = z_repl,
+     dumpheap = dumpheap, g = g, allow_cheat = allow_cheat,
+     tactic_timeout = tactic_timeout}
   fun to f {all_forced, bare, base_state, checkerr, checkfors, debug, defaultout,
             exe, extra_data,
-            forced_objs, help, multithread, output, quietp, z_repl} =
+            forced_objs, help, multithread, output, quietp, z_repl,
+            dumpheap, g, allow_cheat, tactic_timeout} =
     f all_forced bare base_state checkerr checkfors debug defaultout exe extra_data
       forced_objs help multithread
-      output quietp z_repl
+      output quietp z_repl dumpheap g allow_cheat tactic_timeout
 in
   makeUpdateT (from, from', to)
 end z
@@ -125,7 +131,11 @@ datatype option_record = OR of {
   multithread : int option,
   output : string option,
   quietp : bool,
-  z_repl : bool
+  z_repl : bool,
+  dumpheap : bool,
+  g : bool,
+  allow_cheat : bool,
+  tactic_timeout : real
 }
 
 local
@@ -205,7 +215,20 @@ val cline_opts = [
   {help = "reduce verbosity", long = ["quiet"], short = "q",
    desc = mkBoolT #quietp},
   {help = "use zero-terminated REPL style", long = ["zero"], short = "z",
-   desc = mkBoolT #z_repl}
+   desc = mkBoolT #z_repl},
+  {help = "save heap checkpoints for incremental builds",
+   long = ["dumpheap"], short = "",
+   desc = mkBoolT #dumpheap},
+  {help = "run proofs through goalfrag, show goal state on failure",
+   long = [], short = "g",
+   desc = mkBoolT #g},
+  {help = "allow cheat on proof failure (quit_on_failure=false)",
+   long = ["allow-cheat"], short = "",
+   desc = mkBoolT #allow_cheat},
+  {help = "per-tactic timeout in seconds (0=none, default 5.0 with -g)",
+   long = ["tactic-timeout"], short = "",
+   desc = ReqArg ((fn s => fn (OR r) => OR (updateT r (U #tactic_timeout (Option.valOf (Real.fromString s))) $$)),
+                  "seconds")}
 ]
 val initial_cline = OR {all_forced = false,
                         bare = false,
@@ -221,7 +244,11 @@ val initial_cline = OR {all_forced = false,
                         multithread = NONE,
                         output = NONE,
                         quietp = false,
-                        z_repl = false}
+                        z_repl = false,
+                        dumpheap = false,
+                        g = false,
+                        allow_cheat = false,
+                        tactic_timeout = 0.0}
 end
 
 fun member _ [] = false
@@ -370,7 +397,13 @@ fun main() = let
   val _ = List.app check_unknown_opt objs0
   val OR options = List.foldl (fn (f, opts) => f opts) initial_cline cline_upds
   val {quietp = qp, output, base_state, all_forced, forced_objs,
-       bare, z_repl, help, debug, extra_data, defaultout, exe, ...} = options
+       bare, z_repl, help, debug, extra_data, defaultout, exe,
+       dumpheap = dumpheap_flag, g = g_flag, allow_cheat,
+       tactic_timeout, ...} = options
+  (* Set Globals flag refs before loading object files *)
+  (* Note: Globals flags are set AFTER loading base heap (below)
+     because PolyML.SaveState.loadState restores all ref values,
+     wiping out any prior assignments. *)
   (* Determine base_state:
      - --bare: use hol.state0
      - --poly/--poly_not_hol: use no state (NONE)
@@ -423,6 +456,17 @@ fun main() = let
                      PolyML.SaveState.loadState f
                      handle e => die ("Couldn't load HOL base-state "^f^": "^
                                       General.exnMessage e))
+  (* Set Globals flag refs AFTER loading base state
+     (loadState clobbers ref values with saved-heap values) *)
+  val _ = Globals.holmake_dumpheap_flag := dumpheap_flag
+  val _ = Globals.holmake_g_flag := g_flag
+  val _ = Globals.holmake_allow_cheat := allow_cheat
+  val _ = HOLSourceExpand.holmake_active := (dumpheap_flag orelse g_flag)
+  val tactic_timeout =
+    if g_flag andalso tactic_timeout > 0.0 then tactic_timeout
+    else if g_flag then 5.0
+    else 0.0
+  val _ = Globals.holmake_tactic_timeout := tactic_timeout
   val _ = buildheap_extra_data := extra_data
   val _ = diag ("Buildheap extra now = " ^
                 (case !buildheap_extra_data of

@@ -99,4 +99,12 @@ val printFragsAsE: string -> tac_frag list list -> string
 val sliceTacticBlock:
   int -> int -> bool -> int * int -> (int * int) tac_expr -> tac_frag list list
 
+(* Fragment decomposition for step-based execution.
+   flatten_frags: flatten nested fragment tree (FGroup, FBracket, FMBracket)
+   into a flat list of FAtom/FFOpen/FFMid/FFClose.
+   reexpand_thenlt_frags: re-linearize ThenLT atoms that linearize leaves
+   opaque inside >> chains (asTac skips bracketing when one=true). *)
+val flatten_frags: tac_frag list -> tac_frag list
+val reexpand_thenlt_frags: tac_frag list -> tac_frag list
+
 end

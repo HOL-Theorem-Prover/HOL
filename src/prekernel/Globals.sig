@@ -38,4 +38,11 @@ sig
   val hol_clock               : Timer.cpu_timer
   val emitMLDir               : string ref
   val emitCAMLDir             : string ref
+
+  (* Holmake build flags — set by hol.ML before loading holmakebuild.uo *)
+  val holmake_dumpheap_flag   : bool ref
+  val holmake_g_flag          : bool ref
+  val holmake_allow_cheat     : bool ref  (* quit_on_failure = !allow_cheat *)
+  val holmake_current_thm    : string ref
+  val holmake_tactic_timeout  : real ref  (* seconds, 0 = no timeout *)
 end

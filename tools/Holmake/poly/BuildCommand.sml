@@ -241,6 +241,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val jobs = #jobs (#core optv)
   val time_limit = #time_limit optv
   val maxheap = #maxheap optv
+  val dumpheap = #dumpheap optv
+  val g_flag = #g optv
+  val tactic_timeout = !HM_Cline.tactic_timeout_ref
+  val allow_cheat = not quit_on_failure
   val chatty = if jobs = 1 then #chatty outs else (fn _ => ())
   val info = if jobs = 1 then #info outs else (fn _ => ())
 
@@ -299,7 +303,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       val _ = info ("Linking "^scriptuo^" to produce theory-builder executable")
       val objectfiles0 =
           if allfast then ["fastbuild.uo", scriptuo]
-          else if quit_on_failure then [scriptuo]
+          else if quit_on_failure andalso not dumpheap andalso not g_flag then [scriptuo]
           else ["holmakebuild.uo", scriptuo]
       val objectfiles0 = extras @ objectfiles0
       val objectfiles =
@@ -328,6 +332,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                | SOME i => ["--mt=" ^ Int.toString i]) @
             (case #holheap extra of NONE => "--poly"
                                   | SOME d => "--holstate="^tgt_toString d) ::
+            (if dumpheap then ["--dumpheap"] else []) @
+            (if g_flag then ["-g"] else []) @
+            (if tactic_timeout > 0.0 then ["--tactic-timeout=" ^ Real.fmt (StringCvt.FIX (SOME 1)) tactic_timeout] else []) @
+            (if allow_cheat then ["--allow-cheat"] else []) @
             extra_poly_cline() @
             ((if isSome debug then ["--dbg"] else []) @ objectfiles) @
             ["-e",
