@@ -15,55 +15,11 @@ val allow_cheat = Globals.holmake_allow_cheat
 val tactic_timeout_secs = Globals.holmake_tactic_timeout
 val current_thm_name = Globals.holmake_current_thm
 
-(* Tactic timeout: wraps a computation with a time limit.
-   Uses Thread.fork + Mutex + ConditionVar (same approach as
-   src/AI/sml_inspection/smlTimeout.sml, but without aiLib dependency).
-   Thread.kill used as last resort if Thread.interrupt fails.
-   After timeout, proofManagerLib.drop_all() must be called
-   to recover from possible corruption of the_proofs ref. *)
-exception TacticTimeout of real
-
-datatype 'a timeout_result = Res of 'a | Exn of exn
-
-fun capture_result f x = Res (f x) handle Interrupt => raise Interrupt | e => Exn e
-fun release_result (Res y) = y | release_result (Exn x) = raise x
-
-fun tactic_timeout (t: real) (f: 'a -> 'b) (x: 'a) : 'b =
-  if t <= 0.0 then f x
-  else let
-    val m = Mutex.mutex ()
-    val c = ConditionVar.conditionVar ()
-    val result_ref = ref NONE
-    val curattrib = Thread.getAttributes ()
-    val async_attrib = [Thread.InterruptState Thread.InterruptAsynchOnce,
-                        Thread.EnableBroadcastInterrupt true]
-    val sync_attrib = [Thread.InterruptState Thread.InterruptSynch,
-                       Thread.EnableBroadcastInterrupt true]
-    fun interruptkill worker =
-      (Thread.interrupt worker handle Thread _ => ();
-       let fun loop n =
-             if not (Thread.isActive worker) then ()
-             else if n > 0 then loop (n - 1)
-             else (HOL_MESG "Warning: thread killed"; Thread.kill worker)
-       in loop 100000000 end)
-    fun worker_fun () =
-      (result_ref := SOME (capture_result f x);
-       Thread.setAttributes sync_attrib;
-       Mutex.lock m; ConditionVar.signal c; Mutex.unlock m)
-    val _ = Thread.setAttributes sync_attrib
-    val _ = Mutex.lock m
-    val worker = Thread.fork (worker_fun, async_attrib)
-    val deadline = Time.now () + Time.fromReal t
-    val finished = ConditionVar.waitUntil (c, m, deadline)
-    val _ = Mutex.unlock m
-    val _ = Thread.setAttributes curattrib
-    val _ = if finished then () else interruptkill worker
-  in
-    case !result_ref of
-      NONE => raise TacticTimeout t
-    | SOME (Exn Interrupt) => raise TacticTimeout t
-    | SOME result => release_result result
-  end
+(* Tactic timeout and heap save operations.
+   PolyRuntime provides thread-based timeout on Poly/ML and no-op stubs on mosml.
+   See src/portableML/{poly,mosml}/concurrent/PolyRuntime.sml *)
+exception TacticTimeout = PolyRuntime.TacticTimeout
+val tactic_timeout = PolyRuntime.tactic_timeout
 
 (* Wrapper exception to prevent double-catching by nested HOL_ERR handlers.
    Carries the goalstate for diagnostics and the original exception. *)
@@ -102,9 +58,8 @@ fun save_context_checkpoint name =
   if !dumpheap then let
     val path = context_checkpoint_path name
     val _ = delete_checkpoint path
-    val depth = length (PolyML.SaveState.showHierarchy ())
   in
-    PolyML.SaveState.saveChild (path, depth);
+    PolyRuntime.save_heap path;
     HOL_MESG ("Saved context checkpoint: " ^ name)
   end
   else ()
@@ -116,9 +71,8 @@ fun save_end_of_proof_checkpoint name =
   if !dumpheap andalso !g_flag then let
     val path = end_of_proof_checkpoint_path name
     val _ = delete_checkpoint path
-    val depth = length (PolyML.SaveState.showHierarchy ())
   in
-    PolyML.SaveState.saveChild (path, depth);
+    PolyRuntime.save_heap path;
     HOL_MESG ("Saved proof checkpoint: " ^ name)
   end
   else ()
@@ -157,15 +111,7 @@ end
 (* Execute an SML string in the current namespace.
    Used for fragment-stepped proof execution where each fragment
    becomes an SML command like "proofManagerLib.ef(goalFrag.expand(tac))". *)
-fun eval_sml_string s = let
-  val chars = ref (String.explode (s ^ ";\n"))
-  fun reader () = case !chars of
-    [] => NONE
-  | c :: rest => (chars := rest; SOME c)
-in
-  while not (null (!chars)) do
-    PolyML.compiler (reader, [PolyML.Compiler.CPFileName "<fragment>"]) ()
-end
+val eval_sml_string = PolyRuntime.eval_sml_string
 
 (* Execute a single fragment step via proofManagerLib.ef.
    Returns true on success, false on failure. *)
