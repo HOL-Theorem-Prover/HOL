@@ -25,3 +25,6 @@ The clean* variations can be given in whatever mix of letter-cases
 desired (i.e., "cleanall" and "Cleanall" work as well as "cleanAll").
 
 Options:
+
+  --nodoc
+    skip generated documentation/help-file construction after the main build

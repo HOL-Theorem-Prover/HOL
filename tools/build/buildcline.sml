@@ -9,12 +9,12 @@ type 'a cline_result = {
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate12 z
+  fun makeUpdateT z = makeUpdate13 z
 in
 fun updateT z = let
   fun from build_theory_graph debug help jobcount keepgoing kernelspec
            multithread
-           relocbuild selftest
+           no_doc relocbuild selftest
            seqname thmsrc timelimit =
     {build_theory_graph = build_theory_graph,
      debug = debug,
@@ -23,12 +23,13 @@ fun updateT z = let
      keepgoing = keepgoing,
      kernelspec = kernelspec,
      multithread = multithread,
+     no_doc = no_doc,
      relocbuild = relocbuild,
      selftest = selftest,
      seqname = seqname,
      thmsrc = thmsrc,
      timelimit = timelimit}
-  fun from' timelimit thmsrc seqname selftest relocbuild multithread kernelspec
+  fun from' timelimit thmsrc seqname selftest relocbuild no_doc multithread kernelspec
             keepgoing
             jobcount help
             debug
@@ -40,6 +41,7 @@ fun updateT z = let
      keepgoing = keepgoing,
      kernelspec = kernelspec,
      multithread = multithread,
+     no_doc = no_doc,
      relocbuild = relocbuild,
      selftest = selftest,
      seqname = seqname,
@@ -47,10 +49,10 @@ fun updateT z = let
      timelimit = timelimit}
   fun to f {build_theory_graph, debug, help, jobcount, keepgoing, kernelspec,
             multithread,
-            relocbuild,
+            no_doc, relocbuild,
             selftest, seqname, thmsrc, timelimit} =
     f build_theory_graph debug help jobcount keepgoing kernelspec multithread
-      relocbuild
+      no_doc relocbuild
       selftest
       seqname thmsrc
       timelimit
@@ -158,6 +160,8 @@ val cline_opt_descrs = [
    desc = optInt "thread count" 0 #multithread},
   {help = "don't build a thy dep. graph", long = ["nograph"], short = "",
    desc = mkBoolOpt #build_theory_graph false},
+  {help = "don't build generated documentation/help files", long = ["nodoc"], short = "",
+   desc = mkBool #no_doc true},
   {help = "build with logging kernel", long = ["otknl"], short = "",
    desc = setKname "--otknl"},
   {help = "theorem source (dat or tr)", long = ["thmsrc"], short = "",
