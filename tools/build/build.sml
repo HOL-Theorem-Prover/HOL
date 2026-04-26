@@ -25,7 +25,7 @@ val _ = startup_check()
    ---------------------------------------------------------------------- *)
 
 val cline_record = process_cline ()
-val {cmdline,build_theory_graph,selftest_level,keepgoing,...} = cline_record
+val {cmdline,build_theory_graph,selftest_level,keepgoing,no_doc,...} = cline_record
 val {extra={SRCDIRS},jobcount,relocbuild,debug,thmsrc,...} = cline_record
 
 
@@ -127,7 +127,8 @@ in
     handle Interrupt => (finish_logging false; die "Interrupted");
   finish_logging true;
   make_buildstamp();
-  build_help build_theory_graph;
+  if no_doc then print "\nSkipping documentation/help generation (--nodoc).\n"
+  else build_help build_theory_graph;
   print "\nHol built successfully.\n"
 end
 
