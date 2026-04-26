@@ -1,9 +1,15 @@
-ifdef HAVE_WORD64
-all: $(DEFAULT_TARGETS)
-else
-all:
-endif
 .PHONY: all
 
 replay-test: replay-test.mlb replay-test.sml
 	mlton -default-type intinf $<
+
+pft-replay-test: pft-replay-test.mlb pft-replay-test.sml
+	mlton -default-type intinf $<
+
+ifdef HAVE_WORD64
+all: pft-replay-test replay-test
+else
+all: pft-replay-test
+endif
+
+EXTRA_CLEANS = replay-test pft-replay-test
