@@ -882,13 +882,14 @@ in
                     dir = dir, extra = extra,
                     command = NoCmd, dependencies = []} g0
         )
-        else if FileSys.access (hmdir.toAbsPath dir,
-                                 [FileSys.A_READ, FileSys.A_EXEC]) then (
+        else if isSome (incinfo_for_dir dir) andalso
+                FileSys.access (hmdir.toAbsPath dir,
+                                [FileSys.A_READ, FileSys.A_EXEC]) then (
           diag (fn _ => "Target "^pretty_tgt^
                         " external to directory; building in place");
           pushdir (hmdir.toAbsPath dir)
-                  (build_depgraph incinfo_for_dir cdset (incinfo_for_dir dir)
-                                  tgt)
+                  (build_depgraph incinfo_for_dir cdset
+                                  (valOf (incinfo_for_dir dir)) tgt)
                   g0
         )
         else (
@@ -1102,13 +1103,15 @@ fun get_targets dir =
     end
 
 fun include_info_from_map incdirmap dir =
-    let
-      val {pres, incs} = idm_lookup incdirmap dir
-      fun paths ds =
-          Binaryset.foldr (fn (d, acc) => hmdir.toAbsPath d :: acc) [] ds
-    in
-      {includes = paths incs, preincludes = paths pres}
-    end
+    case Binarymap.peek(incdirmap, dir) of
+        NONE => NONE
+      | SOME {pres, incs} =>
+        let
+          fun paths ds =
+              Binaryset.foldr (fn (d, acc) => hmdir.toAbsPath d :: acc) [] ds
+        in
+          SOME {includes = paths incs, preincludes = paths pres}
+        end
 
 fun extend_graph_in_dir incdirmap incinfo warn dir graph =
     let
