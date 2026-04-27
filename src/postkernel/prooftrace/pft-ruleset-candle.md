@@ -226,7 +226,7 @@ hypotheses.
 
 The characteristic equations use BIT0/BIT1 numeral encoding, with `_0` as
 the zero constant and `NUMERAL` as the numeral wrapper. The compute value
-type is named `Cexp`, with constructors `Cexp_num` and `Cexp_pair`.
+type is named `cval`, with constructors `Cexp_num` and `Cexp_pair`.
 
 The required equations (in order):
 
@@ -234,8 +234,8 @@ The required equations (in order):
 |---|----------|
 | 1 | `⊢ COND T m n = m` |
 | 2 | `⊢ COND F m n = n` |
-| 3 | `⊢ IF T x y = x` |
-| 4 | `⊢ IF F x y = y` |
+| 3 | `⊢ COND T x y = x` |
+| 4 | `⊢ COND F x y = y` |
 | 5 | `⊢ NUMERAL n = n` |
 | 6 | `⊢ BIT0 n = n + n` |
 | 7 | `⊢ BIT1 n = SUC (n + n)` |
@@ -289,17 +289,11 @@ The required equations (in order):
 | 55 | `⊢ Cexp_ispair (Cexp_pair p1 q1) = Cexp_num (SUC (NUMERAL _0))` |
 | 56 | `⊢ Cexp_ispair (Cexp_num m) = Cexp_num (NUMERAL _0)` |
 | 57 | `⊢ Cexp_eq p1 q1 = Cexp_num (COND (p1 = q1) (SUC (NUMERAL _0)) (NUMERAL _0))` |
-| 58 | `⊢ (Cexp_pair p1 q1 = Cexp_pair p2 q2) = IF (p1 = p2) (q1 = q2) F` |
+| 58 | `⊢ (Cexp_pair p1 q1 = Cexp_pair p2 q2) = COND (p1 = p2) (q1 = q2) F` |
 | 59 | `⊢ (Cexp_num m = Cexp_num n) = (m = n)` |
 | 60 | `⊢ (Cexp_num m = Cexp_pair p1 q1) = F` |
 | 61 | `⊢ (Cexp_pair p1 q1 = Cexp_num n) = F` |
 | 62 | `⊢ LET f p1 = f p1` |
-
-Note: Equations 1-2 use `COND` at a polymorphic type; equations 3-4 and 58
-use `IF` at `bool` type. In practice `IF` and `COND` may be the same
-constant instantiated differently. The `<` (less-than) equations (17-19)
-use three structural cases on natural numbers rather than a two-case
-pattern with `COND`.
 
 #### COMPUTE
 
@@ -308,7 +302,7 @@ Takes a compute context `ci`, a list of code equation theorems
 is the normal form of `t` under evaluation.
 
 **Compute expressions**: A compute expression is a term `e` satisfying:
-- the type of `e` is `Cexp`
+- the type of `e` is `cval`
 - `e` contains no abstractions except as an argument to `LET`
 - all constants in `e` are among the LHS head constants of the code equations
   or the characteristic equation constants (`Cexp_num`, `Cexp_pair`,
@@ -321,7 +315,7 @@ is the normal form of `t` under evaluation.
 **Conditions on code equations**: Each `thi` must be a theorem with no
 hypotheses whose conclusion has the form `f x1 ... xk = r` where:
 - `f` is a constant
-- each `xi` is a variable of type `Cexp`
+- each `xi` is a variable of type `cval`
 - the `xi` are all distinct
 - the RHS `r` is a compute expression
 - all free variables in `r` are among `x1,...,xk`

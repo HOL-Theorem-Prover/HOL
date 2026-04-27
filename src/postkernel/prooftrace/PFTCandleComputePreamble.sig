@@ -155,11 +155,14 @@ signature PFTCandleComputePreamble = sig
        candle$BIT0_DEF         ⊢ BIT0 = λn. n + n
        candle$BIT0             ⊢ BIT0 n = n + n
        candle$BIT1             ⊢ BIT1 n = SUC (n + n)
-       candle$LESS_1            ⊢ m < _0 = F
-       candle$LESS_2            ⊢ _0 < SUC n = T
+       candle$LESS_1            ⊢ m < (NUMERAL _0) = F
+       candle$LESS_2            ⊢ (NUMERAL _0) < SUC n = T
        candle$LESS_3            ⊢ SUC m < SUC n = m < n
        candle$COMPUTE_EQ_1..62  the 62 characteristic equations
-                                (see pft-ruleset-candle.md)
+                                (see pft-ruleset-candle.md;
+                                 note: all occurrences of zero in the
+                                 characteristic equations use (NUMERAL _0)
+                                 rather than bare _0)
        candle$BIT2_eq_BIT0_SUC  ⊢ BIT2 n = BIT0 (SUC n)
        candle$SUC_0             ⊢ SUC _0 = BIT1 _0
        candle$SUC_BIT0          ⊢ SUC (BIT0 n) = BIT1 n

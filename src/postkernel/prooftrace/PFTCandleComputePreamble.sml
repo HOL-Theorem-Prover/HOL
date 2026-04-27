@@ -431,6 +431,10 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   (* ================================================================ *)
 
   val LT_RECURSIVE = load_theorem "cv$LT_RECURSIVE"
+  val NUMERAL_DEF_for_less = load_theorem "arithmetic$NUMERAL_DEF"
+  val numeral_def_pred_for_less = mk_abs var_n (mk_eq_tm eq_num (mk_comb const_NUMERAL var_n) var_n)
+  val NUMERAL_DEF_free_for_less = do_SPEC numeral_def_pred_for_less var_n var_n ty_num NUMERAL_DEF_for_less
+  val eq5_at_0_for_less = INST NUMERAL_DEF_free_for_less [(var_n, const_zero)]
   val tm_m_lt_0 = mk_LESS var_m const_zero
   val tm_m_lt_0_eq_F = mk_eq_tm eq_bool tm_m_lt_0 const_F
   val tm_m_lt_SUC_n = mk_LESS var_m tm_SUC_n
@@ -439,7 +443,10 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val tm_cond_lt = mk_COND_bool tm_m_eq_n const_T tm_m_lt_n
   val tm_m_lt_SUC_n_eq = mk_eq_tm eq_bool tm_m_lt_SUC_n tm_cond_lt
 
-  val LESS_eq1 = do_CONJUNCT1 LT_RECURSIVE tm_m_lt_0_eq_F tm_m_lt_SUC_n_eq
+  val LESS_eq1_raw = do_CONJUNCT1 LT_RECURSIVE tm_m_lt_0_eq_F tm_m_lt_SUC_n_eq
+  (* Lift to NUMERAL-zero form: m < (NUMERAL _0) = F *)
+  val LESS_eq1_lhs = MK_COMB (MK_COMB (REFL const_LESS) (REFL var_m)) eq5_at_0_for_less
+  val LESS_eq1 = TRANS LESS_eq1_lhs LESS_eq1_raw
   val () = save "candle$LESS_1" LESS_eq1
 
   val LESS_0 = load_theorem "prim_rec$LESS_0"
@@ -448,7 +455,10 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   (* LESS_0: ⊢ ∀n. _0 < SUC n — SPEC with n *)
   val less0_pred = mk_abs var_n (mk_LESS const_zero tm_SUC_n)
   val LESS_0_free = do_SPEC less0_pred var_n var_n ty_num LESS_0
-  val LESS_eq2 = do_EQT_INTRO LESS_0_free (mk_LESS const_zero tm_SUC_n)
+  val LESS_eq2_raw = do_EQT_INTRO LESS_0_free (mk_LESS const_zero tm_SUC_n)
+  (* Lift to NUMERAL-zero form: (NUMERAL _0) < SUC n = T *)
+  val LESS_eq2_lhs = MK_COMB (MK_COMB (REFL const_LESS) eq5_at_0_for_less) (REFL tm_SUC_n)
+  val LESS_eq2 = TRANS LESS_eq2_lhs LESS_eq2_raw
   val () = save "candle$LESS_2" LESS_eq2
 
   (* LESS_MONO_EQ: ⊢ ∀m n. SUC m < SUC n = m < n — double SPEC *)
@@ -531,6 +541,22 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   (* --- Equation 7: BIT1 n = SUC (n + n) --- *)
   val () = save "candle$COMPUTE_EQ_7" BIT1_candle
 
+  (* ================================================================ *)
+  (* NUMERAL-0 bridge theorems                                        *)
+  (* Used to lift bare _0 to (NUMERAL _0) in characteristic equations  *)
+  (* ================================================================ *)
+
+  val eq5_at_0 = INST eq5 [(var_n, const_zero)]
+  (* ⊢ NUMERAL _0 = _0 *)
+  val eq5_at_0_sym = SYM eq5_at_0
+  (* ⊢ _0 = NUMERAL _0 *)
+  val Num_0_eq = AP_TERM const_Num eq5_at_0
+  (* ⊢ Cexp_num (NUMERAL _0) = Cexp_num _0 *)
+  val Num_0_eq_sym = SYM Num_0_eq
+  (* ⊢ Cexp_num _0 = Cexp_num (NUMERAL _0) *)
+  val Num_SUC_0_eq = AP_TERM const_Num (AP_TERM const_SUC eq5_at_0_sym)
+  (* ⊢ Cexp_num (SUC _0) = Cexp_num (SUC (NUMERAL _0)) *)
+
   (* --- Equations 8-9: ADD --- *)
   (* ADD: ⊢ (∀n. _0 + n = n) ∧ (∀m n. SUC m + n = SUC (m + n)) *)
   val ADD = load_theorem "arithmetic$ADD"
@@ -545,7 +571,11 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
         (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
           (mk_abs var_n
             (mk_eq_tm eq_num (mk_plus tm_SUC_m var_n) (mk_SUC (mk_plus var_m var_n)))))))
-  val eq8 = do_SPEC add_left_pred var_n var_n ty_num add_left_forall
+  val eq8_raw = do_SPEC add_left_pred var_n var_n ty_num add_left_forall
+  (* eq8_raw: ⊢ _0 + n = n — kept for SUC/BIT derivations that use _0 basis *)
+  (* eq8: ⊢ (NUMERAL _0) + n = n — the characteristic equation form *)
+  val eq8_lhs = MK_COMB (MK_COMB (REFL const_plus) eq5_at_0) (REFL var_n)
+  val eq8 = TRANS eq8_lhs eq8_raw
   val () = save "candle$COMPUTE_EQ_8" eq8
 
   (* Second conjunct: ∀m n. SUC m + n = SUC (m + n) — double SPEC *)
@@ -575,10 +605,21 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val tm_eq11 = mk_eq_tm eq_num tm_m_minus_0 var_m
 
   val eq10_m = do_CONJUNCT1 SUB_0_free tm_eq10 tm_eq11
-  val eq10 = INST eq10_m [(var_m, var_n)]
+  val eq10_raw = INST eq10_m [(var_m, var_n)]
+  (* eq10_raw: ⊢ _0 - n = _0, need (NUMERAL _0) - n = (NUMERAL _0) *)
+  val eq10_lhs = MK_COMB (MK_COMB (REFL const_minus) eq5_at_0) (REFL var_n)
+  (* ⊢ (NUMERAL _0) - n = _0 - n *)
+  val eq10_mid = TRANS eq10_lhs eq10_raw
+  (* ⊢ (NUMERAL _0) - n = _0 *)
+  val eq10 = TRANS eq10_mid eq5_at_0_sym
+  (* ⊢ (NUMERAL _0) - n = (NUMERAL _0) *)
   val () = save "candle$COMPUTE_EQ_10" eq10
 
-  val eq11 = do_CONJUNCT2 SUB_0_free tm_eq10 tm_eq11
+  val eq11_raw = do_CONJUNCT2 SUB_0_free tm_eq10 tm_eq11
+  (* eq11_raw: ⊢ m - _0 = m, need m - (NUMERAL _0) = m *)
+  val eq11_lhs = MK_COMB (MK_COMB (REFL const_minus) (REFL var_m)) eq5_at_0
+  (* ⊢ m - (NUMERAL _0) = m - _0 *)
+  val eq11 = TRANS eq11_lhs eq11_raw
   val () = save "candle$COMPUTE_EQ_11" eq11
 
   (* SUB_MONO_EQ: ⊢ ∀n m. SUC n - SUC m = n - m
@@ -610,7 +651,14 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
         (mk_comb (mk_const "!" (mk_fun (mk_fun ty_num ty_bool) ty_bool))
           (mk_abs var_n
             (mk_eq_tm eq_num (mk_times tm_SUC_m var_n) (mk_plus (mk_times var_m var_n) var_n))))))
-  val eq13 = do_SPEC mul_left_pred var_n var_n ty_num mul_left_forall
+  val eq13_raw = do_SPEC mul_left_pred var_n var_n ty_num mul_left_forall
+  (* eq13_raw: ⊢ _0 * n = _0, need (NUMERAL _0) * n = (NUMERAL _0) *)
+  val eq13_lhs = MK_COMB (MK_COMB (REFL const_times) eq5_at_0) (REFL var_n)
+  (* ⊢ (NUMERAL _0) * n = _0 * n *)
+  val eq13_mid = TRANS eq13_lhs eq13_raw
+  (* ⊢ (NUMERAL _0) * n = _0 *)
+  val eq13 = TRANS eq13_mid eq5_at_0_sym
+  (* ⊢ (NUMERAL _0) * n = (NUMERAL _0) *)
   val () = save "candle$COMPUTE_EQ_13" eq13
 
   (* Second conjunct: ∀m n. SUC m * n = m * n + n — double SPEC *)
@@ -638,14 +686,63 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val () = save "candle$COMPUTE_EQ_14" eq14
 
   (* --- Equations 15-16: DIV, MOD --- *)
-  val eq15 = load_theorem "cv$DIV_RECURSIVE"
-  val eq16 = load_theorem "cv$MOD_RECURSIVE"
+  (* DIV_RECURSIVE: ⊢ m DIV n = COND (n = _0) _0
+       (COND (m < n) _0 (SUC ((m - n) DIV n)))
+     Candle needs: m DIV n = COND (n = (NUMERAL _0)) (NUMERAL _0)
+       (COND (m < n) (NUMERAL _0) (SUC ((m - n) DIV n)))
+     Three _0s to lift:
+       n = _0  ->  n = (NUMERAL _0)      (2nd arg of =)
+       first _0 -> (NUMERAL _0)           (2nd arg of outer COND)
+       second _0 -> (NUMERAL _0)          (2nd arg of inner COND) *)
+  val eq15_raw = load_theorem "cv$DIV_RECURSIVE"
+  (* Lift: n = _0  ->  n = (NUMERAL _0) *)
+  val lift_n_eq_0 = MK_COMB (MK_COMB (REFL eq_num) (REFL var_n)) eq5_at_0
+  (* ⊢ (n = (NUMERAL _0)) = (n = _0) *)
+  (* Lift COND condition: (n = _0) -> (n = (NUMERAL _0)) *)
+  val cond15_1 = MK_COMB (REFL const_COND_num) lift_n_eq_0
+  (* Lift first result: _0 -> (NUMERAL _0) *)
+  val cond15_2 = MK_COMB cond15_1 eq5_at_0_sym
+  (* ⊢ COND (n = (NUMERAL _0)) (NUMERAL _0) = COND (n = _0) _0 *)
+  (* Inner COND: COND (m < n) _0 (...) -> COND (m < n) (NUMERAL _0) (...) *)
+  val cond15_inner = mk_comb (mk_comb const_COND_num (mk_LESS var_m var_n)) const_zero
+  val rest15 = mk_SUC (mk_DIV (mk_minus var_m var_n) var_n)
+  val lift_inner = MK_COMB (MK_COMB (REFL cond15_inner) eq5_at_0_sym) (REFL rest15)
+  (* ⊢ COND (m < n) (NUMERAL _0) rest = COND (m < n) _0 rest *)
+  (* Combine: outer COND with lifted 3rg argument *)
+  val lift15 = MK_COMB cond15_2 lift_inner
+  (* ⊢ new_outer_COND new_inner_COND = old_outer_COND old_inner_COND *)
+  val eq15 = TRANS eq15_raw lift15
   val () = save "candle$COMPUTE_EQ_15" eq15
+
+  (* MOD_RECURSIVE: ⊢ m MOD n = COND (n = _0) m
+       (COND (m < n) m ((m - n) MOD n))
+     Candle needs: m MOD n = COND (n = (NUMERAL _0)) m
+       (COND (m < n) m ((m - n) MOD n))
+     Only one _0 to lift: n = _0 -> n = (NUMERAL _0), and the second COND arg *)
+  val eq16_raw = load_theorem "cv$MOD_RECURSIVE"
+  (* Reuse lift_n_eq_0: ⊢ (n = (NUMERAL _0)) = (n = _0) *)
+  (* COND (n = (NUMERAL _0)) m inner = COND (n = _0) m inner *)
+  val cond16_inner = mk_comb (mk_comb const_COND_num (mk_LESS var_m var_n)) var_m
+  val rest16 = mk_MOD (mk_minus var_m var_n) var_n
+  val lift16 = MK_COMB
+    (MK_COMB (MK_COMB (REFL const_COND_num) lift_n_eq_0) (REFL var_m))
+    (MK_COMB (MK_COMB (REFL cond16_inner) (REFL var_m)) (REFL rest16))
+  val eq16 = TRANS eq16_raw lift16
   val () = save "candle$COMPUTE_EQ_16" eq16
 
   (* --- Equations 17-19: LESS --- *)
-  val () = save "candle$COMPUTE_EQ_17" LESS_eq1
-  val () = save "candle$COMPUTE_EQ_18" LESS_eq2
+  (* LESS_eq1: ⊢ m < _0 = F, need m < (NUMERAL _0) = F *)
+  val eq17_lhs = MK_COMB (MK_COMB (REFL const_LESS) (REFL var_m)) eq5_at_0
+  (* ⊢ m < (NUMERAL _0) = m < _0 *)
+  val eq17 = TRANS eq17_lhs LESS_eq1
+  val () = save "candle$COMPUTE_EQ_17" eq17
+
+  (* LESS_eq2: ⊢ _0 < SUC n = T, need (NUMERAL _0) < SUC n = T *)
+  val eq18_lhs = MK_COMB (MK_COMB (REFL const_LESS) eq5_at_0) (REFL tm_SUC_n)
+  (* ⊢ (NUMERAL _0) < SUC n = _0 < SUC n *)
+  val eq18 = TRANS eq18_lhs LESS_eq2
+  val () = save "candle$COMPUTE_EQ_18" eq18
+
   val () = save "candle$COMPUTE_EQ_19" LESS_eq3
 
   (* --- Equations 20-23: num equality --- *)
@@ -656,10 +753,10 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
        23: (SUC m = SUC n) = (m = n)
      From cv$SUC_EQ we get 22 and 23. Need to derive 20 and 21. *)
 
-  (* Equation 20: (_0 = _0) = T *)
-  val tm_0_eq_0 = mk_eq_tm eq_num const_zero const_zero
-  val REFL_0 = REFL const_zero
-  val eq20 = do_EQT_INTRO REFL_0 tm_0_eq_0
+  (* Equation 20: ((NUMERAL _0) = (NUMERAL _0)) = T *)
+  val tm_z0_eq_z0 = mk_eq_tm eq_num tm_zero tm_zero
+  val REFL_z0 = REFL tm_zero
+  val eq20 = do_EQT_INTRO REFL_z0 tm_z0_eq_z0
   val () = save "candle$COMPUTE_EQ_20" eq20
 
   (* SUC_EQ: ⊢ (SUC m = _0 = F) ∧ (SUC m = SUC n = (m = n)) *)
@@ -671,25 +768,33 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val tm_m_eq_n = mk_eq_tm eq_num var_m var_n
   val tm_eq23 = mk_eq_tm eq_bool tm_SUC_m_eq_SUC_n tm_m_eq_n
 
-  val eq22 = do_CONJUNCT1 SUC_EQ tm_eq22 tm_eq23
-  val eq23 = do_CONJUNCT2 SUC_EQ tm_eq22 tm_eq23
+  val eq22_raw = do_CONJUNCT1 SUC_EQ tm_eq22 tm_eq23
+  (* eq22_raw: ⊢ (SUC m = _0) = F, need (SUC m = (NUMERAL _0)) = F *)
+  val eq22_lhs = MK_COMB (MK_COMB (REFL eq_num) (REFL tm_SUC_m)) eq5_at_0
+  (* ⊢ (SUC m = (NUMERAL _0)) = (SUC m = _0) *)
+  val eq22 = TRANS eq22_lhs eq22_raw
   val () = save "candle$COMPUTE_EQ_22" eq22
+
+  val eq23 = do_CONJUNCT2 SUC_EQ tm_eq22 tm_eq23
   val () = save "candle$COMPUTE_EQ_23" eq23
 
-  (* Equation 21: (_0 = SUC n) = F *)
-  (* From eq22 (SUC m = _0 = F), INST m := n gives (SUC n = _0) = F.
-     Derive symmetry: (_0 = SUC n) = (SUC n = _0), then TRANS. *)
-  val eq22_inst_n = INST eq22 [(var_m, var_n)]  (* ⊢ (SUC n = _0) = F *)
+  (* Equation 21: ((NUMERAL _0) = SUC n) = F *)
+  (* From eq22 (SUC m = (NUMERAL _0) = F), INST m := n gives (SUC n = (NUMERAL _0)) = F.
+     Derive symmetry: ((NUMERAL _0) = SUC n) = (SUC n = (NUMERAL _0)), then TRANS. *)
+  val eq22_inst_n = INST eq22 [(var_m, var_n)]
+  (* ⊢ (SUC n = (NUMERAL _0)) = F *)
 
-  val tm_0_eq_SUC_n = mk_eq_tm eq_num const_zero tm_SUC_n
-  val tm_SUC_n_eq_0 = mk_eq_tm eq_num tm_SUC_n const_zero
-  val assum1 = ASSUME tm_0_eq_SUC_n        (* {_0 = SUC n} ⊢ _0 = SUC n *)
-  val sym1 = SYM assum1                     (* {_0 = SUC n} ⊢ SUC n = _0 *)
-  val assum2 = ASSUME tm_SUC_n_eq_0        (* {SUC n = _0} ⊢ SUC n = _0 *)
-  val sym2 = SYM assum2                     (* {SUC n = _0} ⊢ _0 = SUC n *)
-  val eq_sym = DEDUCT_ANTISYM sym2 sym1    (* ⊢ (_0 = SUC n) = (SUC n = _0) *)
+  val tm_z0_eq_SUC_n = mk_eq_tm eq_num tm_zero tm_SUC_n
+  val tm_SUC_n_eq_z0 = mk_eq_tm eq_num tm_SUC_n tm_zero
+  val assum1 = ASSUME tm_z0_eq_SUC_n        (* {(NUMERAL _0) = SUC n} ⊢ (NUMERAL _0) = SUC n *)
+  val sym1 = SYM assum1                     (* {(NUMERAL _0) = SUC n} ⊢ SUC n = (NUMERAL _0) *)
+  val assum2 = ASSUME tm_SUC_n_eq_z0        (* {SUC n = (NUMERAL _0)} ⊢ SUC n = (NUMERAL _0) *)
+  val sym2 = SYM assum2                     (* {SUC n = (NUMERAL _0)} ⊢ (NUMERAL _0) = SUC n *)
+  val eq_sym = DEDUCT_ANTISYM sym2 sym1
+  (* ⊢ ((NUMERAL _0) = SUC n) = (SUC n = (NUMERAL _0)) *)
 
-  val eq21 = TRANS eq_sym eq22_inst_n      (* ⊢ (_0 = SUC n) = F *)
+  val eq21 = TRANS eq_sym eq22_inst_n
+  (* ⊢ ((NUMERAL _0) = SUC n) = F *)
   val () = save "candle$COMPUTE_EQ_21" eq21
 
   (* --- Equations 24-62: cv operations --- *)
@@ -753,7 +858,10 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val tm_eq27 = mk_eq_tm eq_cv (mk_comb (mk_comb const_cv_add tm_Pair_p_q) tm_Pair_r_s)
                                tm_Num_0
 
-  val [eq24, eq25, eq26, eq27] = extract4 cv_add_def [tm_eq24, tm_eq25, tm_eq26, tm_eq27]
+  val [eq24, eq25, eq26, eq27_raw] = extract4 cv_add_def [tm_eq24, tm_eq25, tm_eq26, tm_eq27]
+  (* eq27_raw: ⊢ Cexp_add (Pair p q) (Pair r s) = Cexp_num _0
+     need Cexp_num (NUMERAL _0) on RHS *)
+  val eq27 = TRANS eq27_raw Num_0_eq_sym
   val () = save "candle$COMPUTE_EQ_24" eq24
   val () = save "candle$COMPUTE_EQ_25" eq25
   val () = save "candle$COMPUTE_EQ_26" eq26
@@ -772,7 +880,9 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val tm_eq31 = mk_eq_tm eq_cv (mk_comb (mk_comb const_cv_sub tm_Pair_p_q) tm_Pair_r_s)
                                tm_Num_0
 
-  val [eq28, eq29, eq30, eq31] = extract4 cv_sub_def [tm_eq28, tm_eq29, tm_eq30, tm_eq31]
+  val [eq28, eq29, eq30_raw, eq31_raw] = extract4 cv_sub_def [tm_eq28, tm_eq29, tm_eq30, tm_eq31]
+  val eq30 = TRANS eq30_raw Num_0_eq_sym
+  val eq31 = TRANS eq31_raw Num_0_eq_sym
   val () = save "candle$COMPUTE_EQ_28" eq28
   val () = save "candle$COMPUTE_EQ_29" eq29
   val () = save "candle$COMPUTE_EQ_30" eq30
@@ -791,7 +901,10 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val tm_eq35 = mk_eq_tm eq_cv (mk_comb (mk_comb const_cv_mul tm_Pair_p_q) tm_Pair_r_s)
                                tm_Num_0
 
-  val [eq32, eq33, eq34, eq35] = extract4 cv_mul_def [tm_eq32, tm_eq33, tm_eq34, tm_eq35]
+  val [eq32, eq33_raw, eq34_raw, eq35_raw] = extract4 cv_mul_def [tm_eq32, tm_eq33, tm_eq34, tm_eq35]
+  val eq33 = TRANS eq33_raw Num_0_eq_sym
+  val eq34 = TRANS eq34_raw Num_0_eq_sym
+  val eq35 = TRANS eq35_raw Num_0_eq_sym
   val () = save "candle$COMPUTE_EQ_32" eq32
   val () = save "candle$COMPUTE_EQ_33" eq33
   val () = save "candle$COMPUTE_EQ_34" eq34
@@ -810,7 +923,10 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val tm_eq39 = mk_eq_tm eq_cv (mk_comb (mk_comb const_cv_div tm_Pair_p_q) tm_Pair_r_s)
                                tm_Num_0
 
-  val [eq36, eq37, eq38, eq39] = extract4 cv_div_def [tm_eq36, tm_eq37, tm_eq38, tm_eq39]
+  val [eq36, eq37_raw, eq38_raw, eq39_raw] = extract4 cv_div_def [tm_eq36, tm_eq37, tm_eq38, tm_eq39]
+  val eq37 = TRANS eq37_raw Num_0_eq_sym
+  val eq38 = TRANS eq38_raw Num_0_eq_sym
+  val eq39 = TRANS eq39_raw Num_0_eq_sym
   val () = save "candle$COMPUTE_EQ_36" eq36
   val () = save "candle$COMPUTE_EQ_37" eq37
   val () = save "candle$COMPUTE_EQ_38" eq38
@@ -829,7 +945,9 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val tm_eq43 = mk_eq_tm eq_cv (mk_comb (mk_comb const_cv_mod tm_Pair_p_q) tm_Pair_r_s)
                                tm_Num_0
 
-  val [eq40, eq41, eq42, eq43] = extract4 cv_mod_def [tm_eq40, tm_eq41, tm_eq42, tm_eq43]
+  val [eq40, eq41, eq42_raw, eq43_raw] = extract4 cv_mod_def [tm_eq40, tm_eq41, tm_eq42, tm_eq43]
+  val eq42 = TRANS eq42_raw Num_0_eq_sym
+  val eq43 = TRANS eq43_raw Num_0_eq_sym
   val () = save "candle$COMPUTE_EQ_40" eq40
   val () = save "candle$COMPUTE_EQ_41" eq41
   val () = save "candle$COMPUTE_EQ_42" eq42
@@ -849,7 +967,22 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val tm_eq47 = mk_eq_tm eq_cv (mk_comb (mk_comb const_cv_lt tm_Pair_p_q) tm_Pair_r_s)
                                tm_Num_0
 
-  val [eq44, eq45, eq46, eq47] = extract4 cv_lt_def [tm_eq44, tm_eq45, tm_eq46, tm_eq47]
+  val [eq44_raw, eq45_raw, eq46_raw, eq47_raw] = extract4 cv_lt_def [tm_eq44, tm_eq45, tm_eq46, tm_eq47]
+  (* eq44: RHS has Cexp_num (COND (m < n) (SUC _0) _0), need Cexp_num with NUMERAL _0 *)
+  (* Lift the COND inside Cexp_num:
+     COND (m<n) (SUC _0) _0 -> COND (m<n) (SUC (NUMERAL _0)) (NUMERAL _0) *)
+  val cond44_ap1 = mk_comb const_COND_num (mk_LESS var_m var_n)
+  val lift44_step1 = MK_COMB (REFL cond44_ap1) (AP_TERM const_SUC eq5_at_0_sym)
+  (* ⊢ COND (m<n) (SUC (NUMERAL _0)) = COND (m<n) (SUC _0) *)
+  val lift44_step2 = MK_COMB lift44_step1 eq5_at_0_sym
+  (* ⊢ COND (m<n) (SUC (NUMERAL _0)) (NUMERAL _0) = COND (m<n) (SUC _0) _0 *)
+  val lift44_cexp = AP_TERM const_Num lift44_step2
+  (* ⊢ Cexp_num (new) = Cexp_num (old) *)
+  val eq44 = TRANS eq44_raw lift44_cexp
+  (* eqs 45-47: RHS is Cexp_num _0, lift to Cexp_num (NUMERAL _0) *)
+  val eq45 = TRANS eq45_raw Num_0_eq_sym
+  val eq46 = TRANS eq46_raw Num_0_eq_sym
+  val eq47 = TRANS eq47_raw Num_0_eq_sym
   val () = save "candle$COMPUTE_EQ_44" eq44
   val () = save "candle$COMPUTE_EQ_45" eq45
   val () = save "candle$COMPUTE_EQ_46" eq46
@@ -872,10 +1005,18 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
                                    var_q_cv
 
   (* Extract in HOL4 order, then assign to Candle equation numbers *)
-  val [th_if_SUC, th_if_0, th_if_Pair] = extract3 cv_if_def [tm_if_SUC, tm_if_0, tm_if_Pair]
+  val [th_if_SUC, th_if_0_raw, th_if_Pair] = extract3 cv_if_def [tm_if_SUC, tm_if_0, tm_if_Pair]
   val eq48 = th_if_SUC   (* Candle eq 48: cv_if (Num (SUC m)) ... *)
   val eq49 = th_if_Pair  (* Candle eq 49: cv_if (Pair ...) ... *)
-  val eq50 = th_if_0     (* Candle eq 50: cv_if (Num 0) ... *)
+  (* eq50: LHS has Cexp_num _0, need Cexp_num (NUMERAL _0).
+     Lift: Cexp_if (Cexp_num (NUMERAL _0)) p q = Cexp_if (Cexp_num _0) p q *)
+  val lift50_step1 = MK_COMB (REFL const_cv_if) Num_0_eq
+  (* ⊢ Cexp_if (Cexp_num (NUMERAL _0)) = Cexp_if (Cexp_num _0) *)
+  val lift50_step2 = MK_COMB lift50_step1 (REFL var_p_cv)
+  (* ⊢ Cexp_if (Cexp_num (NUMERAL _0)) p = Cexp_if (Cexp_num _0) p *)
+  val lift50_step3 = MK_COMB lift50_step2 (REFL var_q_cv)
+  (* ⊢ Cexp_if (Cexp_num (NUMERAL _0)) p q = Cexp_if (Cexp_num _0) p q *)
+  val eq50 = TRANS lift50_step3 th_if_0_raw
   val () = save "candle$COMPUTE_EQ_48" eq48
   val () = save "candle$COMPUTE_EQ_49" eq49
   val () = save "candle$COMPUTE_EQ_50" eq50
@@ -903,8 +1044,9 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   (* Double-SPEC the first conjunct to free p and q *)
   val eq51 = do_DOUBLE_SPEC fst_conj1 var_p_cv ty_cv var_q_cv ty_cv fst_left_body
   val () = save "candle$COMPUTE_EQ_51" eq51
-  (* Single-SPEC the second conjunct to free m *)
-  val eq52 = do_SPEC fst_right_pred var_m var_m ty_num fst_conj2
+  (* Single-SPEC the second conjunct to free m; RHS has Cexp_num _0 *)
+  val eq52_raw = do_SPEC fst_right_pred var_m var_m ty_num fst_conj2
+  val eq52 = TRANS eq52_raw Num_0_eq_sym
   val () = save "candle$COMPUTE_EQ_52" eq52
 
   (* --- Equations 53-54: cv_snd --- *)
@@ -926,8 +1068,9 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   (* Double-SPEC the first conjunct to free p and q *)
   val eq53 = do_DOUBLE_SPEC snd_conj1 var_p_cv ty_cv var_q_cv ty_cv snd_left_body
   val () = save "candle$COMPUTE_EQ_53" eq53
-  (* Single-SPEC the second conjunct to free m *)
-  val eq54 = do_SPEC snd_right_pred var_m var_m ty_num snd_conj2
+  (* Single-SPEC the second conjunct to free m; RHS has Cexp_num _0 *)
+  val eq54_raw = do_SPEC snd_right_pred var_m var_m ty_num snd_conj2
+  val eq54 = TRANS eq54_raw Num_0_eq_sym
   val () = save "candle$COMPUTE_EQ_54" eq54
 
   (* --- Equations 55-56: cv_ispair --- *)
@@ -947,11 +1090,13 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val ispair_right_tm = mk_comb forall_num ispair_right_pred
   val ispair_conj1 = do_CONJUNCT1 cv_ispair_def ispair_left_tm ispair_right_tm
   val ispair_conj2 = do_CONJUNCT2 cv_ispair_def ispair_left_tm ispair_right_tm
-  (* Double-SPEC the first conjunct to free p and q *)
-  val eq55 = do_DOUBLE_SPEC ispair_conj1 var_p_cv ty_cv var_q_cv ty_cv ispair_left_body
+  (* Double-SPEC the first conjunct to free p and q; RHS has Cexp_num (SUC _0) *)
+  val eq55_raw = do_DOUBLE_SPEC ispair_conj1 var_p_cv ty_cv var_q_cv ty_cv ispair_left_body
+  val eq55 = TRANS eq55_raw Num_SUC_0_eq
+  (* Single-SPEC the second conjunct to free m; RHS has Cexp_num _0 *)
+  val eq56_raw = do_SPEC ispair_right_pred var_m var_m ty_num ispair_conj2
+  val eq56 = TRANS eq56_raw Num_0_eq_sym
   val () = save "candle$COMPUTE_EQ_55" eq55
-  (* Single-SPEC the second conjunct to free m *)
-  val eq56 = do_SPEC ispair_right_pred var_m var_m ty_num ispair_conj2
   val () = save "candle$COMPUTE_EQ_56" eq56
 
   (* --- Equation 57: cv_eq --- *)
@@ -963,7 +1108,17 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   val tm_eq57 = mk_eq_tm eq_cv (mk_comb (mk_comb const_cv_eq var_p_cv) var_q_cv)
                                (mk_Num tm_eq_cond)
   (* cv_eq_def is a single equation, not a conjunction *)
-  val eq57 = cv_eq_def
+  (* RHS: Cexp_num (COND (p=q) (SUC _0) _0)
+     Need: Cexp_num (COND (p=q) (SUC (NUMERAL _0)) (NUMERAL _0))
+     Same COND-lifting pattern as eq44. *)
+  val eq57_raw = cv_eq_def
+  val cond57_ap1 = mk_comb const_COND_num (mk_eq_tm eq_cv var_p_cv var_q_cv)
+  val lift57_step1 = MK_COMB (REFL cond57_ap1) (AP_TERM const_SUC eq5_at_0_sym)
+  (* ⊢ COND (p=q) (SUC (NUMERAL _0)) = COND (p=q) (SUC _0) *)
+  val lift57_step2 = MK_COMB lift57_step1 eq5_at_0_sym
+  (* ⊢ COND (p=q) (SUC (NUMERAL _0)) (NUMERAL _0) = COND (p=q) (SUC _0) _0 *)
+  val lift57_cexp = AP_TERM const_Num lift57_step2
+  val eq57 = TRANS eq57_raw lift57_cexp
   val () = save "candle$COMPUTE_EQ_57" eq57
 
   (* --- Equations 58-61: CV_EQ (cv equality) --- *)
@@ -994,15 +1149,15 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   (* Equation 60: (Num m = Pair p q) = F - derive from eq61 by symmetry *)
   val tm_Num_eq_Pair = mk_eq_tm eq_cv tm_Num_m tm_Pair_p_q
   val tm_eq60 = mk_eq_tm eq_bool tm_Num_eq_Pair const_F
-  (* Use same symmetry trick as eq21 *)
+  (* Use same symmetry trick as eq21, with m used consistently on both sides *)
+  val tm_Pair_eq_Num_m = mk_eq_tm eq_cv tm_Pair_p_q tm_Num_m
   val assum_np = ASSUME tm_Num_eq_Pair       (* {Num m = Pair p q} ⊢ Num m = Pair p q *)
   val sym_np = SYM assum_np                   (* {Num m = Pair p q} ⊢ Pair p q = Num m *)
-  val assum_pn = ASSUME tm_Pair_eq_Num       (* {Pair p q = Num m} ⊢ Pair p q = Num m *)
-  val sym_pn = SYM assum_pn                   (* {Pair p q = Num m} ⊢ Num m = Pair p q *)
-  (* Need to instantiate eq61 with n := m *)
-  val eq61_m = INST eq61 [(var_n, var_m)]
-  val eq_sym_cv = DEDUCT_ANTISYM sym_pn sym_np  (* ⊢ (Num m = Pair p q) = (Pair p q = Num m) *)
-  val eq60 = TRANS eq_sym_cv eq61_m            (* ⊢ (Num m = Pair p q) = F *)
+  val assum_pn_m = ASSUME tm_Pair_eq_Num_m   (* {Pair p q = Num m} ⊢ Pair p q = Num m *)
+  val sym_pn_m = SYM assum_pn_m              (* {Pair p q = Num m} ⊢ Num m = Pair p q *)
+  val eq61_m = INST eq61 [(var_n, var_m)]    (* ⊢ (Pair p q = Num m) = F *)
+  val eq_sym_cv = DEDUCT_ANTISYM sym_pn_m sym_np  (* ⊢ (Num m = Pair p q) = (Pair p q = Num m) *)
+  val eq60 = TRANS eq_sym_cv eq61_m               (* ⊢ (Num m = Pair p q) = F *)
 
   val () = save "candle$COMPUTE_EQ_58" eq58
   val () = save "candle$COMPUTE_EQ_59" eq59
@@ -1054,9 +1209,9 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
   (* BIT1_candle: ⊢ BIT1 n = SUC (n + n), instantiate n := _0 *)
   val BIT1_at_0 = INST BIT1_candle [(var_n, const_zero)]
   (* ⊢ BIT1 _0 = SUC (_0 + _0) *)
-  (* Need: _0 + _0 = _0, i.e., 0 + 0 = 0 *)
-  val ADD_0_0 = INST eq8 [(var_n, const_zero)]  (* 0 + 0 = 0 from eq8: 0 + n = n *)
-  val SUC_0_plus_0 = AP_TERM const_SUC ADD_0_0  (* SUC (0 + 0) = SUC 0 *)
+  (* Need: _0 + _0 = _0 — from eq8_raw: _0 + n = n *)
+  val ADD_0_0 = INST eq8_raw [(var_n, const_zero)]
+  val SUC_0_plus_0 = AP_TERM const_SUC ADD_0_0  (* SUC (_0 + _0) = SUC _0 *)
   val BIT1_0_eq = TRANS BIT1_at_0 SUC_0_plus_0  (* BIT1 _0 = SUC _0 *)
   val SUC_0_eq_BIT1_0 = SYM BIT1_0_eq           (* SUC _0 = BIT1 _0 *)
   val () = save "candle$SUC_0" SUC_0_eq_BIT1_0
