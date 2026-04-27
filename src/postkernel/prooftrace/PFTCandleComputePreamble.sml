@@ -1171,20 +1171,6 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
            else mk_comb const_BIT0 (mk_candle_numeral_bits q)
         end
 
-  (* Derive: SUC (candle_bits) = candle_bits'
-     Given a Candle numeral term, compute SUC of it and return theorem.
-     Uses SUC_0, SUC_BIT0, SUC_BIT1 equations. *)
-  fun derive_SUC_candle candle_tm =
-    (* Determine structure of candle_tm *)
-    if candle_tm = const_zero then
-      (* SUC _0 = BIT1 _0 *)
-      SUC_0_eq_BIT1_0
-    else
-      (* candle_tm is BIT0 arg or BIT1 arg *)
-      (* We need to inspect the term structure, but we only have term IDs.
-         Instead, we track the numeric value and reconstruct. *)
-      raise Fail "derive_SUC_candle: not implemented for non-zero"
-
   (* Derive translation theorem: HOL4_bits = Candle_bits
      Uses BIT2_eq_BIT0_SUC and SUC equations to eliminate BIT2 and SUC.
 
