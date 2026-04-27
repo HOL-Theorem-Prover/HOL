@@ -153,7 +153,7 @@ val _ = tprint "extract_suspended_goal (1)"
 val _ = require_msg
           (check_result (goal_eq ([q, p], p)))
           goal_print
-          (fn th => resumption_to_goal (extract_suspended_goal th "p"))
+          (fn th => resumption_to_goal (extract_suspended_goal [th] "p"))
           pq_th1
 
 val _ = tprint "extract_suspended_goal (2)"
@@ -167,13 +167,13 @@ val _ = require_msg
             )
           )
           goal_print
-          (fn th => resumption_to_goal (extract_suspended_goal th "pq"))
+          (fn th => resumption_to_goal (extract_suspended_goal [th] "pq"))
           pq_th2
 
 val _ = shouldfail {checkexn = is_struct_HOL_ERR "markerLib",
                     printarg = K "extract_suspended_goal fails (1)",
                     printresult = goal_print,
-                    testfn = (fn th => resumption_to_goal (extract_suspended_goal th "pq"))}
+                    testfn = (fn th => resumption_to_goal (extract_suspended_goal [th] "pq"))}
                    pq_th1
 
 val _ = show_assums := true

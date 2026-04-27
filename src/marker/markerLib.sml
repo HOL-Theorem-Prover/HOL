@@ -909,16 +909,18 @@ fun prove_suspended nm ncts th tgt =
 
 (* extract_suspended_goal: returns a list of (nclosure, term) pairs,
    one per hypothesis with the given label. *)
-fun extract_suspended_goal th label =
-    let fun myhyp t =
-            case total dest_slab t of
-                SOME (nm,nc,t0) => if nm = label then SOME (nc,t0) else NONE
-              | NONE => NONE
+fun extract_suspended_goal thms label =
+    let
+      fun myhyp t =
+          case total dest_slab t of
+              SOME (nm,nc,t0) => if nm = label then SOME (nc,t0) else NONE
+            | NONE => NONE
+      val to_ncts = List.mapPartial myhyp o hyp
     in
-      case List.mapPartial myhyp (hyp th) of
-          [] => raise ERR "extract_suspended_goal"
+      case List.find (not o null) (List.map to_ncts thms) of
+          NONE => raise ERR "extract_suspended_goal"
                         ("No such label in theorem: " ^ label)
-        | ncts => ncts
+        | SOME ncts => ncts
     end
 
 (* resumption_to_goal: given the (nclosure, term) list from
@@ -939,7 +941,7 @@ fun resumption_to_goal ncts =
 
 
 fun prim_resume (th,label,tac) =
-    let val ncts = extract_suspended_goal th label
+    let val ncts = extract_suspended_goal [th] label
         val goal = resumption_to_goal ncts
         val sub_th = prove_goal(goal, tac)
     in
@@ -1220,45 +1222,66 @@ fun resume {suspension_name, label_name} tac =
                   ("No suspended theorem named " ^ suspension_name ^
                    " in the current theory or its ancestors")
       | SOME (_, parent_thy, th) =>
-        (case Lib.total (extract_suspended_goal th) label_name of
-            NONE =>
-            (* No suspendlabel hypothesis for this label.  This is the
-               --fast case (or the user is trying to resume a label of
-               an already-finalised theorem, or making a typo);
-               shortcut. *)
-            fast_shortcut ()
-          | SOME ncts =>
-            let
-              val goal = resumption_to_goal ncts
-              val sub_th = prove_goal (goal, tac)
-              (* Build |- suspendlabel "lab" G_i for each hyp i and
-                 record each as its own resumption delta. *)
-              val susp_thms =
-                  build_suspendlabel_thms
-                    label_name (ncts, sub_th)
-              val _ =
-                  List.app
-                    (fn rth =>
-                        record_resumption_delta
-                          (AddResumption
-                             ((parent_thy, suspension_name, label_name),
-                              rth)))
-                    susp_thms
-            in
-              sub_th
-            end)
+        let val sths = lookup_resumption {parent_thy = parent_thy,
+                                          parent_name = suspension_name,
+                                          label = label_name}
+        in
+          (case Lib.total (extract_suspended_goal (th::sths)) label_name of
+               NONE =>
+               (* No suspendlabel hypothesis for this label.  This is the
+                  --fast case (or the user is trying to resume a label of
+                  an already-finalised theorem, or making a typo);
+                  shortcut. *)
+               fast_shortcut ()
+             | SOME ncts =>
+               let
+                 val goal = resumption_to_goal ncts
+                 val sub_th = prove_goal (goal, tac)
+                 (* Build |- suspendlabel "lab" G_i for each hyp i and
+                    record each as its own resumption delta. *)
+                 val susp_thms =
+                     build_suspendlabel_thms
+                         label_name (ncts, sub_th)
+                 fun record_suspend_resumptions rth =
+                     List.app (fn h =>
+                                  case total dest_slab h of
+                                      SOME (nm, _, _) =>
+                                      record_resumption_delta
+                                          (AddResumption
+                                               ((parent_thy, suspension_name, nm),
+                                                rth))
+                                    | NONE => ())
+                              (hyp rth)
+                 val _ =
+                     List.app
+                         (fn rth => (
+                              record_resumption_delta
+                                  (AddResumption
+                                       ((parent_thy, suspension_name, label_name),
+                                        rth));
+                              record_suspend_resumptions rth))
+                         susp_thms
+               in
+                   sub_th
+               end)
+        end
 
 fun prim_set_suspended_goal tacmod {suspension_name, label_name} =
     case find_parent suspension_name of
         NONE => raise ERR "set_suspended_goal"
                   ("No suspended theorem named " ^ suspension_name ^
                    " in the current theory or its ancestors")
-      | SOME (_, _, th) =>
+      | SOME (_, parent_thy, th) =>
+        let val sths = lookup_resumption {parent_thy = parent_thy,
+                                          parent_name = suspension_name,
+                                          label = label_name}
+        in
           proofManagerLib.new_goalstack (
-            resumption_to_goal (extract_suspended_goal th label_name)
+              resumption_to_goal (extract_suspended_goal (th::sths) label_name)
           )
           tacmod
           I
+        end
 
 val set_suspended_goal = prim_set_suspended_goal Manager.id_tacm
 
@@ -1305,11 +1328,18 @@ fun assemble_finalised parent_thy parent_nm parent_th =
                         ("No resumption proof found for label " ^ label ^
                          " of " ^ parent_thy ^ "$" ^ parent_nm)
               end
-      val founds = map find_res_for susp_hyps
-      val finalised = List.foldl (fn (rth, acc) => PROVE_HYP rth acc)
-                                 parent_th founds
+      fun aux current_th current_susp_hyps = let
+          val founds = map find_res_for current_susp_hyps
+          val finalised = List.foldl (fn (rth, acc) => PROVE_HYP rth acc)
+                                     current_th founds
+          val remaining_susp_hyps = List.filter (Option.isSome o total dest_slab)
+                                                (hyp finalised)
+      in
+          if null remaining_susp_hyps then finalised else
+          aux finalised remaining_susp_hyps
+      end
     in
-      finalised
+      aux parent_th susp_hyps
     end
 
 fun finalise_suspended_thm loc nm0 =
