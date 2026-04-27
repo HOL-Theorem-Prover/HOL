@@ -232,9 +232,9 @@ The required equations (in order):
 
 | # | Equation |
 |---|----------|
-| 1 | `⊢ COND T m n = m` |
+| 1 | `⊢ COND T m n = m` (`m: num`, `n: num`)|
 | 2 | `⊢ COND F m n = n` |
-| 3 | `⊢ COND T x y = x` |
+| 3 | `⊢ COND T x y = x` (`x: bool`, `y: bool`)|
 | 4 | `⊢ COND F x y = y` |
 | 5 | `⊢ NUMERAL n = n` |
 | 6 | `⊢ BIT0 n = n + n` |
