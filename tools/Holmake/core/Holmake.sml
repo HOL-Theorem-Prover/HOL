@@ -407,6 +407,7 @@ type incmap = (hmdir.t, {incs:dirset,pres:dirset}) Binarymap.dict
 type dirinfo = {incdirmap : incmap, visited : hmdir.t Binaryset.set,
                 ancestors : hmdir.t list (* most recent hd of list *)}
 type 'a hmfold =
+     incmap ->
      {includes : string list, preincludes : string list} ->
      (string -> unit) ->
      hmdir.t ->
@@ -532,7 +533,8 @@ let
             val _ = if not (isSome dsopt) then
                       info_inline (verb ^ " " ^ bold (hmdir.pretty_dir dir))
                     else ()
-            val data' = hm {includes=f incs,preincludes=f pres} warn dir data
+            val data' = hm incdirmap {includes=f incs,preincludes=f pres}
+                           warn dir data
           in
             {incdirmap = incdirmap, visited = visited, data = data'}
           end
@@ -832,7 +834,7 @@ fun cdset_toString ((_,stk):cdset) =
 
 (* is run in a directory at a time *)
 type g = GraphExtra.t HM_DepGraph.t
-fun build_depgraph cdset incinfo (tgt:dep) g0:(g * node) =
+fun build_depgraph incinfo_for_dir cdset incinfo (tgt:dep) g0:(g * node) =
 let
   val dir = hm_target.dirpart tgt and target = hm_target.filepart tgt
   val {preincludes,includes} = incinfo
@@ -846,7 +848,8 @@ let
   fun addF tgt n = (n,tgt)
   fun nstatus g n = peeknode g n |> valOf |> #status
   fun build (tgt':dep) g =
-    build_depgraph (cdset_add cdset (dir, target_s)) incinfo tgt' g
+    build_depgraph incinfo_for_dir (cdset_add cdset (dir, target_s))
+                   incinfo tgt' g
 
   val fullpath = fp dir target_s
   val fullpath_s = fps fullpath
@@ -871,14 +874,31 @@ in
       if not (hmdir.eqdir dir actual_dir) andalso
          no_full_extra_rule (SOME tgt)
          (* path outside of current directory *)
-      then (
-        diag (fn _ => "Target "^pretty_tgt^" external to directory");
-        add_node {target = tgt, seqnum = 0, phony = false,
-                  status = if exists_readable fullpath_s then Succeeded
-                           else Failed{needed=false},
-                  dir = dir, extra = extra,
-                  command = NoCmd, dependencies = []} g0
-      )
+      then
+        if exists_readable fullpath_s then (
+          diag (fn _ => "Target "^pretty_tgt^" external to directory");
+          add_node {target = tgt, seqnum = 0, phony = false,
+                    status = Succeeded,
+                    dir = dir, extra = extra,
+                    command = NoCmd, dependencies = []} g0
+        )
+        else if FileSys.access (hmdir.toAbsPath dir,
+                                 [FileSys.A_READ, FileSys.A_EXEC]) then (
+          diag (fn _ => "Target "^pretty_tgt^
+                        " external to directory; building in place");
+          pushdir (hmdir.toAbsPath dir)
+                  (build_depgraph incinfo_for_dir cdset (incinfo_for_dir dir)
+                                  tgt)
+                  g0
+        )
+        else (
+          diag (fn _ => "Target "^pretty_tgt^
+                        " external to missing directory");
+          add_node {target = tgt, seqnum = 0, phony = false,
+                    status = Failed{needed=false},
+                    dir = dir, extra = extra,
+                    command = NoCmd, dependencies = []} g0
+        )
       else if isSome pdep andalso no_full_extra_rule (SOME tgt) then
         let
           val pdep = hm_target.mk(dir, valOf pdep)
@@ -1081,15 +1101,25 @@ fun get_targets dir =
                       rules
     end
 
-fun extend_graph_in_dir incinfo warn dir graph =
+fun include_info_from_map incdirmap dir =
+    let
+      val {pres, incs} = idm_lookup incdirmap dir
+      fun paths ds =
+          Binaryset.foldr (fn (d, acc) => hmdir.toAbsPath d :: acc) [] ds
+    in
+      {includes = paths incs, preincludes = paths pres}
+    end
+
+fun extend_graph_in_dir incdirmap incinfo warn dir graph =
     let
       open HM_DepGraph
+      val incinfo_for_dir = include_info_from_map incdirmap
       val _ = diag "builddepgraph" (fn _ =>
                        "Extending graph in directory " ^ hmdir.pretty_dir dir)
       val dir_targets = get_targets dir
     in
       Binaryset.foldl
-        (fn (t,g) => #1 (build_depgraph empty_cdset incinfo t g))
+        (fn (t,g) => #1 (build_depgraph incinfo_for_dir empty_cdset incinfo t g))
         graph
         dir_targets
     end
@@ -1247,7 +1277,7 @@ fun work() =
           else (
             recursively getnewincs (SOME cline_incs) {
               outputfns = outputfns, verb = "Cleaning",
-              hm = (fn _ => fn _ => fn _ => fn _ =>
+              hm = (fn _ => fn _ => fn _ => fn _ => fn _ =>
                        List.app (ignore o do_clean_target) cleanTargets),
               dirinfo = {incdirmap=idmap0, ancestors = [original_dir],
                          visited = Binaryset.empty hmdir.compare},
