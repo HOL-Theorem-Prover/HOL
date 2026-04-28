@@ -632,7 +632,8 @@ fun isOnlyComments s = let
   fun go cm p =
     case cur p of
       #"\000" => true
-    | #"(" => cur (p+1) = #"*" andalso go (cm + 1) (p+2)
+    | #"(" => if cur (p+1) = #"*" then go (cm + 1) (p+2)
+              else cm > 0 andalso go cm (p+1)
     | #"*" => cm > 0 andalso if cur (p+1) = #")" then go (cm - 1) (p+2) else go cm (p+1)
     | c => (cm > 0 orelse Char.isSpace c) andalso go cm (p+1)
   in go 0 start end
