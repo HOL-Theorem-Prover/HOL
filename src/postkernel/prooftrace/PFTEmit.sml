@@ -1441,7 +1441,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val rep_x'_bwd = emit_comb rep_c bv_x'_bwd
         val x_eq_rep_x'_bwd = emit_comb (emit_comb eq_rep x_free) rep_x'_bwd
         val assume_xeq = c_assume x_eq_rep_x'_bwd (* x = rep x' ⊢ x = rep x' *)
-        val abs_x_eq_x' = c_trans (do_AP_TERM abs_c assume_xeq) ar_x'_fwd (* x = rep x' ⊢ abs x = x' *)
+        val ar_x'_bwd = c_inst tydef_id [(var_a, bv_x'_bwd)] (* ⊢ abs (rep x') = x' for bv_x'_bwd *)
+        val abs_x_eq_x' = c_trans (do_AP_TERM abs_c assume_xeq) ar_x'_bwd (* x = rep x' ⊢ abs x = x' *)
         val th_repabsx = c_trans (do_AP_TERM rep_c abs_x_eq_x') (c_sym assume_xeq) (* x = rep x' ⊢ rep (abs x) = x *)
         val th_phi_from_xeq = c_eq_mp sym_ra_x th_repabsx (* x = rep x' ⊢ P x *)
         (* pred_x' = (λx'_ex. x = rep x') x'_bwd — alpha-variant beta-redex *)
@@ -1475,7 +1476,13 @@ fun emit_theory {trace, output, binary, ruleset} = let
         (* th_conj2: generalize over x.  bv_x_c2 is binder of do_GEN's ABS. *)
         val bv_x_c2 = emit_binder "x" rep_ty
         val phi_x_c2 = emit_comb pred_id bv_x_c2
-        val phi_eq_exists_c2 = emit_comb (emit_comb (eq_bool_const) phi_x_c2) exist_x_eq
+        (* Build exist_x_eq_c2 with bv_x_c2 in place of x_free, using a fresh binder *)
+        val bv_x'_c2 = emit_binder "x'" new_ty
+        val rep_x'_c2 = emit_comb rep_c bv_x'_c2
+        val x_eq_rep_x'_c2 = emit_comb (emit_comb eq_rep bv_x_c2) rep_x'_c2
+        val pred_exists_c2 = emit_abs bv_x'_c2 x_eq_rep_x'_c2
+        val exist_x_eq_c2 = emit_comb (emit_const "?" Abb_new) pred_exists_c2
+        val phi_eq_exists_c2 = emit_comb (emit_comb (eq_bool_const) phi_x_c2) exist_x_eq_c2
         val th_char_x_c2 = (* alpha-variant of th_char_x with bv_x_c2 for x_free *)
           c_inst th_char_x [(x_free, bv_x_c2)]
         val th_conj2 = do_GEN bv_x_c2 rep_ty phi_eq_exists_c2 th_char_x_c2
@@ -1496,7 +1503,13 @@ fun emit_theory {trace, output, binary, ruleset} = let
         (* conj2_body: fresh binder. *)
         val bv_x_c2b = emit_binder "x" rep_ty
         val phi_x_c2b = emit_comb pred_id bv_x_c2b
-        val phi_eq_exists_c2b = emit_comb (emit_comb (eq_bool_const) phi_x_c2b) exist_x_eq
+        (* Build exist_x_eq_c2b with bv_x_c2b in place of x_free, using a fresh binder *)
+        val bv_x'_c2b = emit_binder "x'" new_ty
+        val rep_x'_c2b = emit_comb rep_c bv_x'_c2b
+        val x_eq_rep_x'_c2b = emit_comb (emit_comb eq_rep bv_x_c2b) rep_x'_c2b
+        val pred_exists_c2b = emit_abs bv_x'_c2b x_eq_rep_x'_c2b
+        val exist_x_eq_c2b = emit_comb (emit_const "?" Abb_new) pred_exists_c2b
+        val phi_eq_exists_c2b = emit_comb (emit_comb (eq_bool_const) phi_x_c2b) exist_x_eq_c2b
         val conj2_body = emit_comb forall_rep (emit_abs bv_x_c2b phi_eq_exists_c2b)
           (* ∀x. P x = ∃x'. x = rep x' *)
         val conj_th = do_CONJ conj1_body conj2_body th_conj1 th_conj2
@@ -1530,7 +1543,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val eq_Ab = emit_const "="
           (emit_tyop "fun" [Ab, emit_tyop "fun" [Ab, bool_tyid]])
         val bv_t_eta = emit_binder "t" Ab
-        val bv_x_eta = emit_binder "x" Ab
+        val bv_x_eta = emit_binder "x" rep_ty
         val abs_x_t_x = emit_abs bv_x_eta (emit_comb bv_t_eta bv_x_eta)
         val eta_eq_body = emit_comb (emit_comb eq_Ab abs_x_t_x) bv_t_eta
         val abs_eta_eq = emit_abs bv_t_eta eta_eq_body
