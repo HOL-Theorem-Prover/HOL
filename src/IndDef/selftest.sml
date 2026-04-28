@@ -240,5 +240,12 @@ val _ = shouldfail {
       printresult = with_flag (show_assums, true) thm_to_string o #1}
       ‘ ∀n. ((¬test (n : num)) ⇒ test n) ’;
 
+val _ = tprint "Github 1931: comment containing opening parenthesis before first label"
+Inductive cmt_paren_rel:
+(* ( *)
+[~refl:]
+  (!x. cmt_paren_rel R x x)
+End
+val _ = OK()
 
 val _ = exit_count0 failcount
