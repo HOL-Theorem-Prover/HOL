@@ -119,6 +119,11 @@ val candle_preamble_axiom : (string * string) list = [
 (* at module level so it persists across emit_theory calls *)
 val compute_preamble_emitted = ref false
 
+(* TYPE_DEFINITION_THM_FREE: lazily derived during boolTheory, SAVEd
+   as candle$TYPE_DEFINITION_THM_FREE so later theories can LOAD it.
+   Tracks whether the SAVE has been emitted in the current PFT file. *)
+val tydef_thm_free_saved : bool ref = ref false
+
 fun emit_theory {trace, output, binary, ruleset} = let
   val thyname = thyname_of_path trace
   val is_candle = case ruleset of Candle => true | HOL4 => false
@@ -693,6 +698,20 @@ fun emit_theory {trace, output, binary, ruleset} = let
             else c_inst beta_th [(actual_bv, t_tm)]
       in c_eq_mp beta_inst mp_result end
 
+    (* do_DOUBLE_SPEC: strip two ∀-quantifiers from a theorem.
+       Given th: ⊢ ∀v1. ∀v2. body where v1:v1_ty and v2:v2_ty
+       (with v1_tm, v2_tm free-variable terms of those types),
+       and inner_body = body with v1, v2 both free,
+       derive ⊢ body with v1 and v2 both free. *)
+    fun do_DOUBLE_SPEC th v1_tm v1_ty v2_tm v2_ty inner_body = let
+        val inner_pred = emit_abs v2_tm inner_body
+        val Ab2 = emit_tyop "fun" [v2_ty, bool_tyid]
+        val forall2_const = emit_const "!" (emit_tyop "fun" [Ab2, bool_tyid])
+        val inner_forall = emit_comb forall2_const inner_pred
+        val outer_pred = emit_abs v1_tm inner_forall
+        val step1 = do_SPEC v1_tm outer_pred (emit_comb forall2_const outer_pred) v1_ty th
+    in do_SPEC v2_tm inner_pred (emit_comb forall2_const inner_pred) v2_ty step1 end
+
     (* do_beta_reduce: from lam_tm (a PFT abs term) and arg_tm,
        derive ⊢ lam_tm arg_tm = body[arg/binder]. *)
     fun do_beta_reduce lam_tm arg_tm =
@@ -738,6 +757,51 @@ fun emit_theory {trace, output, binary, ruleset} = let
       val mp1 = do_MP choose_inst exists_concl_id imp_forall_pw exists_th
       val result = do_MP mp1 forall_inner pred_witness sel_inst
     in (result, pred_id, pred_body_id, Ab, v_ty) end
+
+    (* Ensure candle$TYPE_DEFINITION_THM_FREE is available.
+       Derived once from bool$TYPE_DEFINITION_THM by stripping both outer ∀s,
+       then SAVEd as candle$TYPE_DEFINITION_THM_FREE.
+       During boolTheory the derivation happens here and the id is used directly;
+       later theories LOAD it via candle_load_pth.
+       Returns the theorem id. *)
+    fun ensure_tydef_thm_free () =
+      if !tydef_thm_free_saved
+      then candle_load_pth "candle$TYPE_DEFINITION_THM_FREE"
+      else let
+        val tydef_th =
+          if thyname = "bool"
+          then emit_thm (Redblackmap.find(named_thm_map, "TYPE_DEFINITION_THM"))
+          else candle_load_pth "bool$TYPE_DEFINITION_THM"
+        (* Get the conclusion PFT term ID.
+           For boolTheory, the terms are freshly emitted, so pft_dest_comb/abs
+           are available. For other theories, this would fail — but other
+           theories should always hit the !tydef_thm_free_saved branch above
+           (the SAVE was done during boolTheory's prior emit_theory call,
+           and the module-level flag persists). *)
+        val tydef_concl_id =
+          if thyname = "bool"
+          then tm (heap_concl (Redblackmap.find(named_thm_map,
+                                                "TYPE_DEFINITION_THM")))
+          else raise Fail "ensure_tydef_thm_free: not bool, not saved"
+        (* Destructure ∀P. ∀rep. body:
+           ! (λP. !(λrep. body)) *)
+        val (_, outer_pred) = pft_dest_comb tydef_concl_id
+        val (P_bv, inner_forall_id) = pft_dest_abs outer_pred
+        val P_ty = pft_type_of P_bv
+        val (_, inner_pred) = pft_dest_comb inner_forall_id
+        val (rep_bv, body_eq_id) = pft_dest_abs inner_pred
+        val rep_ty_gen = pft_type_of rep_bv
+        (* Build free-variable terms matching the binder names/types *)
+        val P_free = emit_var "P" (emit_tyop "fun" [mk_tyvar_cached "'a", bool_tyid])
+        val rep_free = emit_var "rep" (emit_tyop "fun" [mk_tyvar_cached "'b",
+                                                        mk_tyvar_cached "'a"])
+        (* Strip both ∀s via do_DOUBLE_SPEC *)
+        val tydef_free = do_DOUBLE_SPEC tydef_th
+                           P_free P_ty rep_free rep_ty_gen body_eq_id
+        (* SAVE for later LOAD by other theories *)
+        val () = PFTWriter.save out "candle$TYPE_DEFINITION_THM_FREE" tydef_free
+        val () = tydef_thm_free_saved := true
+      in tydef_free end
 
   in
     case proof of
@@ -1322,45 +1386,67 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
         val var_a = emit_var "a" new_ty
         val var_r_rep = emit_var "r" rep_ty
-        val bv_x_rep = emit_binder "x" rep_ty
-        val bv_x' = emit_binder "x'" new_ty
-        val bv_x'' = emit_binder "x''" new_ty
-        val rep_x' = emit_comb rep_c bv_x'
-        val rep_x'' = emit_comb rep_c bv_x''
-        val abs_x = emit_comb abs_c bv_x_rep
-        val phi_x = emit_comb pred_id bv_x_rep
 
-        val ar_x' = c_inst tydef_id [(var_a, bv_x')] (* ⊢ abs (rep x') = x' *)
-        val ar_x'' = c_inst tydef_id [(var_a, bv_x'')] (* ⊢ abs (rep x'') = x'' *)
-        val rr = emit_comb (emit_comb eq_rep rep_x') rep_x'' (* rep x' = rep x'' *)
+        (* Per-scope binder variables: each distinct ABS and each do_GEN
+           gets a unique emit_binder so that PFTRename promise 2 holds:
+           each binder VAR ID is the first argument of exactly one ABS and
+           is referenced only within that ABS's body.
+           Free occurrences of 'x', 'x\'', 'x\'\'' use emit_var so that
+           they are distinct from all binder IDs (no 'pft%' suffix). *)
+        val x_free = emit_var "x" rep_ty
+        val phi_x = emit_comb pred_id x_free
+        val abs_x = emit_comb abs_c x_free
+
+        (* --- Injectivity proof (th_conj1) --- *)
+        val bv_x'_inj = emit_binder "x'" new_ty
+        val bv_x''_inj = emit_binder "x''" new_ty
+        val rep_x'_inj = emit_comb rep_c bv_x'_inj
+        val rep_x''_inj = emit_comb rep_c bv_x''_inj
+        val ar_x'_inj = c_inst tydef_id [(var_a, bv_x'_inj)] (* ⊢ abs (rep x') = x' *)
+        val ar_x''_inj = c_inst tydef_id [(var_a, bv_x''_inj)] (* ⊢ abs (rep x'') = x'' *)
+        val rr = emit_comb (emit_comb eq_rep rep_x'_inj) rep_x''_inj (* rep x' = rep x'' *)
         val arr = do_AP_TERM abs_c (c_assume rr) (* rep x' = rep x'' ⊢ abs (rep x') = abs (rep x'') *)
-        val th_inj = c_trans (c_trans (c_sym ar_x') arr) ar_x'' (* rep x' = rep x'' ⊢ x' = x'' *)
-        val x'_eq_x'' = emit_comb (emit_comb eq_new bv_x') bv_x'' (* x' = x'' *)
+        val th_inj = c_trans (c_trans (c_sym ar_x'_inj) arr) ar_x''_inj (* rep x' = rep x'' ⊢ x' = x'' *)
+        val x'_eq_x'' = emit_comb (emit_comb eq_new bv_x'_inj) bv_x''_inj (* x' = x'' *)
         val inj_body = emit_comb (emit_comb (imp_const) rr) x'_eq_x'' (* rep x' = rep x'' ⇒ x' = x'' *)
         val forall_new = emit_const "!" Abb_new
-        val th_conj1 = do_GEN bv_x' new_ty
-          (emit_comb forall_new (emit_abs bv_x'' inj_body))
-          (do_GEN bv_x'' new_ty inj_body (do_DISCH rr x'_eq_x'' th_inj))
+        val th_conj1 = do_GEN bv_x'_inj new_ty
+          (emit_comb forall_new (emit_abs bv_x''_inj inj_body))
+          (do_GEN bv_x''_inj new_ty inj_body (do_DISCH rr x'_eq_x'' th_inj))
           (* ⊢ (∀x' x''. rep x' = rep x'' ⇒ x' = x'') *)
 
-        val ra_x = c_inst tydef_id2 [(var_r_rep, bv_x_rep)] (* ⊢ P x = (rep (abs x) = x) *)
+        (* --- Characterization proof (forward + backward) --- *)
+        val ra_x = c_inst tydef_id2 [(var_r_rep, x_free)] (* ⊢ P x = (rep (abs x) = x) *)
         val sym_ra_x = c_sym ra_x (* ⊢ (rep (abs x) = x) = P x *)
-        val x_eq_rep_x' = emit_comb (emit_comb eq_rep bv_x_rep) rep_x' (* x = rep x' *)
-        val pred_exists = emit_abs bv_x' x_eq_rep_x' (* λx'. x = rep x' *)
+
+        (* pred_exists: λx'_ex. x = rep x'_ex
+           x'_ex is the binder of exactly one ABS (pred_exists).
+           ar_x'_ex gives abs(rep x'_ex) = x'_ex, used in forward/backward. *)
+        val bv_x'_ex = emit_binder "x'" new_ty
+        val rep_x'_ex = emit_comb rep_c bv_x'_ex
+        val x_eq_rep_x' = emit_comb (emit_comb eq_rep x_free) rep_x'_ex (* x = rep x' *)
+        val pred_exists = emit_abs bv_x'_ex x_eq_rep_x' (* λx'. x = rep x' *)
         val exist_x_eq = emit_comb (emit_const "?" Abb_new) pred_exists (* ∃x'. x = rep x' *)
+        val ar_x'_fwd = c_inst tydef_id [(var_a, bv_x'_ex)] (* ⊢ abs (rep x') = x' *)
 
         (* Forward: {phi x} |- ?x'. x = rep x' *)
         val sym_repabs = c_sym (c_eq_mp ra_x (c_assume phi_x)) (* P x ⊢ x = rep (abs x) *)
-        val th_fwd = do_EXISTS pred_exists bv_x' abs_x new_ty sym_repabs
+        val th_fwd = do_EXISTS pred_exists bv_x'_ex abs_x new_ty sym_repabs
         (* P x ⊢ ∃x'. x = rep x' *)
 
         (* Backward: {?x'. x = rep x'} |- phi x *)
-        val pred_x' = emit_comb pred_exists bv_x' (* (λx'. x = rep x') x' *)
-        val assume_xeq = c_assume x_eq_rep_x' (* x = rep x' ⊢ x = rep x' *)
-        val abs_x_eq_x' = c_trans (do_AP_TERM abs_c assume_xeq) ar_x' (* x = rep x' ⊢ abs x = x' *)
+        (* bv_x'_bwd is the argument to pred_exists in the beta-redex
+           (λx'_ex. ...) bv_x'_bwd, and the binder of ∀x'_bwd. ... *)
+        val bv_x'_bwd = emit_binder "x'" new_ty
+        val rep_x'_bwd = emit_comb rep_c bv_x'_bwd
+        val x_eq_rep_x'_bwd = emit_comb (emit_comb eq_rep x_free) rep_x'_bwd
+        val assume_xeq = c_assume x_eq_rep_x'_bwd (* x = rep x' ⊢ x = rep x' *)
+        val abs_x_eq_x' = c_trans (do_AP_TERM abs_c assume_xeq) ar_x'_fwd (* x = rep x' ⊢ abs x = x' *)
         val th_repabsx = c_trans (do_AP_TERM rep_c abs_x_eq_x') (c_sym assume_xeq) (* x = rep x' ⊢ rep (abs x) = x *)
         val th_phi_from_xeq = c_eq_mp sym_ra_x th_repabsx (* x = rep x' ⊢ P x *)
-        val beta_pred_x' = do_beta_reduce pred_exists bv_x' (* ⊢ (λx'. x = rep x') x' = x = rep x' *)
+        (* pred_x' = (λx'_ex. x = rep x') x'_bwd — alpha-variant beta-redex *)
+        val pred_x' = emit_comb pred_exists bv_x'_bwd (* (λx'. x = rep x') x' *)
+        val beta_pred_x' = do_beta_reduce pred_exists bv_x'_bwd (* ⊢ (λx'. x = rep x') x' = x = rep x' *)
         val th_phi_from_pred_x' = c_prove_hyp
             (c_eq_mp beta_pred_x' (c_assume pred_x'))
             th_phi_from_xeq (* (λx'. x = rep x') x' ⊢ P x *)
@@ -1370,106 +1456,64 @@ fun emit_theory {trace, output, binary, ruleset} = let
                                 [(tyvar_A, new_ty)])
                                 [(var_P_Ab_new, pred_exists), (pvar_Q, phi_x)]
                               (* ⊢ (∃x'. x = rep x') ⇒ (∀x''. (λx'. x = rep x') x'' ⇒ P x) ⇒ P x *)
+        (* forall_new_imp: ∀x'_bwd. (λx'_ex. ...) x'_bwd ⇒ P x
+           bv_x'_bwd is binder of exactly this one ABS. *)
         val forall_new_imp = emit_comb forall_new
-            (emit_abs bv_x' pred_x'_imp_phi) (* ∀x'. (λx'. x = rep x') x' ⇒ P x *)
+            (emit_abs bv_x'_bwd pred_x'_imp_phi) (* ∀x'. (λx'. x = rep x') x' ⇒ P x *)
         val th_bwd1 = do_MP choose_inst_bwd exist_x_eq
                         (emit_comb (emit_comb imp_const forall_new_imp) phi_x)
                         (c_assume exist_x_eq)
                       (* ∃x'. x = rep x' ⊢ (∀x'. (λx'. x = rep x') x' ⇒ P x) ⇒ P x *)
         val th_bwd2 = do_DISCH pred_x' phi_x th_phi_from_pred_x' (* ⊢ (λx'. x = rep x') x' ⇒ P x *)
-        val th_bwd3 = do_GEN bv_x' new_ty pred_x'_imp_phi th_bwd2 (* ⊢ ∀x'. (λx'. x = rep x') x' ⇒ P x *)
+        val th_bwd3 = do_GEN bv_x'_bwd new_ty pred_x'_imp_phi th_bwd2 (* ⊢ ∀x'. (λx'. x = rep x') x' ⇒ P x *)
         val th_bwd = do_MP th_bwd1 forall_new_imp phi_x th_bwd3
                      (* ∃x'. x = rep x' ⊢ P x *)
 
         val th_char_x = c_deduct th_bwd th_fwd (* ⊢ P x = ∃x'. x = rep x' *)
         val phi_eq_exists = emit_comb (emit_comb (eq_bool_const) phi_x) exist_x_eq (* P x = ∃x'. x = rep x' *)
-        val th_conj2 = do_GEN bv_x_rep rep_ty phi_eq_exists th_char_x
+
+        (* th_conj2: generalize over x.  bv_x_c2 is binder of do_GEN's ABS. *)
+        val bv_x_c2 = emit_binder "x" rep_ty
+        val phi_x_c2 = emit_comb pred_id bv_x_c2
+        val phi_eq_exists_c2 = emit_comb (emit_comb (eq_bool_const) phi_x_c2) exist_x_eq
+        val th_char_x_c2 = (* alpha-variant of th_char_x with bv_x_c2 for x_free *)
+          c_inst th_char_x [(x_free, bv_x_c2)]
+        val th_conj2 = do_GEN bv_x_c2 rep_ty phi_eq_exists_c2 th_char_x_c2
                        (* ⊢ ∀x. P x = ∃x'. x = rep x' *)
 
         val forall_rep = emit_const "!" (emit_tyop "fun" [Ab, bool_tyid])
+        (* conj1_body: fresh binders for its two nested ABSes. *)
+        val bv_x'_c1 = emit_binder "x'" new_ty
+        val bv_x''_c1 = emit_binder "x''" new_ty
+        val rep_x'_c1 = emit_comb rep_c bv_x'_c1
+        val rep_x''_c1 = emit_comb rep_c bv_x''_c1
+        val rr_c1 = emit_comb (emit_comb eq_rep rep_x'_c1) rep_x''_c1
+        val x'_eq_x''_c1 = emit_comb (emit_comb eq_new bv_x'_c1) bv_x''_c1
+        val inj_body_c1 = emit_comb (emit_comb (imp_const) rr_c1) x'_eq_x''_c1
         val conj1_body = emit_comb forall_new
-          (emit_abs bv_x' (emit_comb forall_new (emit_abs bv_x'' inj_body)))
+          (emit_abs bv_x'_c1 (emit_comb forall_new (emit_abs bv_x''_c1 inj_body_c1)))
           (* ∀x' x''. rep x' = rep x'' ⇒ x' = x'' *)
-        val conj2_body = emit_comb forall_rep (emit_abs bv_x_rep phi_eq_exists)
+        (* conj2_body: fresh binder. *)
+        val bv_x_c2b = emit_binder "x" rep_ty
+        val phi_x_c2b = emit_comb pred_id bv_x_c2b
+        val phi_eq_exists_c2b = emit_comb (emit_comb (eq_bool_const) phi_x_c2b) exist_x_eq
+        val conj2_body = emit_comb forall_rep (emit_abs bv_x_c2b phi_eq_exists_c2b)
           (* ∀x. P x = ∃x'. x = rep x' *)
         val conj_th = do_CONJ conj1_body conj2_body th_conj1 th_conj2
           (* ⊢ (∀x' x''. rep x' = rep x'' ⇒ x' = x'') ∧
                (∀x. P x = ∃x'. x = rep x' *)
 
-        (* --- Instantiate TYPE_DEFINITION_THM via two SPECs --------------- *)
+        (* --- Instantiate TYPE_DEFINITION_THM_FREE via INST_TYPE + INST --- *)
 
-        val tydef_th =
-          if thyname = "bool"
-          then emit_thm (Redblackmap.find(named_thm_map, "TYPE_DEFINITION_THM"))
-          else candle_load_pth "bool$TYPE_DEFINITION_THM"
-        val tydef_inst = c_inst_type tydef_th
+        val tydef_free = ensure_tydef_thm_free ()
+        val tydef_inst = c_inst_type tydef_free
                            [(tyvar_A, rep_ty),
                             (tyvar_B, new_ty)]
-          (* ∀P rep. TYPE_DEFINITION P rep ⇔
-                     (∀x' x''. rep x' = rep x'' ⇒ x' = x'') ∧
-                     (∀x. P x ⇔ ∃x'. x = rep x') *)
-        val bv_P_v = emit_binder "P" Ab
-        val bv_rep_v = emit_binder "rep" rep_fn_ty
-        val rep_fn_ty_bool = emit_tyop "fun" [rep_fn_ty, bool_tyid]
-        val tydef_ty = emit_tyop "fun" [Ab, rep_fn_ty_bool]
-        val tydef_c = emit_const "bool$TYPE_DEFINITION" tydef_ty
-        val forall_rep_fn = emit_const "!"
-          (emit_tyop "fun" [rep_fn_ty_bool, bool_tyid])
-
-        (* Build the TYPE_DEFINITION body with generic P, rep variables.
-           TYPE_DEFINITION P rep ≡
-             (∀x' x''. rep x' = rep x'' ⇒ x' = x'') ∧
-             (∀x. P x = ∃x'. x = rep x') *)
-        val rep_v_x' = emit_comb bv_rep_v bv_x' (* rep x' *)
-        val rep_v_x'' = emit_comb bv_rep_v bv_x'' (* rep x'' *)
-        val inj_body_v = emit_comb forall_new
-          (emit_abs bv_x' (emit_comb forall_new (emit_abs bv_x''
-            (emit_comb (emit_comb imp_const
-              (emit_comb (emit_comb eq_rep rep_v_x') rep_v_x''))
-              (emit_comb (emit_comb eq_new bv_x') bv_x'')))))
-           (* ∀x' x''. rep x' = rep x'' ⇒ x' = x'' *)
-        val exist_v = emit_comb (emit_const "?" (emit_tyop "fun" [Ab_new, bool_tyid]))
-          (emit_abs bv_x' (emit_comb (emit_comb eq_rep bv_x_rep) rep_v_x'))
-           (* ∃x'. x = rep x' *)
-        fun mk_char_body P_x = emit_comb forall_rep
-          (emit_abs bv_x_rep (emit_comb (emit_comb eq_bool_const P_x) exist_v))
-           (* ∀x. ^P_x = ∃x'. x = rep x' *)
-        val and_inj_body_v = emit_comb and_const inj_body_v
-        val tydef_body_v = emit_comb and_inj_body_v
-                             (mk_char_body (emit_comb bv_P_v bv_x_rep))
-           (* (∀x' x''. rep x' = rep x'' ⇒ x' = x'') ∧
-              (∀x. P x = ∃x'. x = rep x') *)
-        val tydef_eq_v = emit_comb (emit_comb eq_bool_const
-          (emit_comb (emit_comb tydef_c bv_P_v) bv_rep_v)) tydef_body_v
-           (* TYPE_DEFINITION P rep = ... *)
-        val inner_forall = emit_comb forall_rep_fn (emit_abs bv_rep_v tydef_eq_v)
-           (* ∀rep. TYPE_DEFINITION P rep = ... *)
-        val outer_lam = emit_abs bv_P_v inner_forall
-           (* λP. ∀rep. TYPE_DEFINITION P rep = ... *)
-        val forall_Ab = emit_const "!"
-          (emit_tyop "fun" [emit_tyop "fun" [Ab, bool_tyid], bool_tyid])
-        val outer_forall = emit_comb forall_Ab outer_lam
-           (* ∀P rep. TYPE_DEFINITION P rep = ... *)
-
-        (* SPEC P := pred_id *)
-        val spec1 = do_SPEC pred_id outer_lam outer_forall Ab tydef_inst
-         (* ⊢ ∀rep. TYPE_DEFINITION P rep = ... *)
-
-        (* SPEC rep := rep_c — need the post-P-specialization body *)
-        val tydef_phi_body = emit_comb and_inj_body_v (mk_char_body phi_x)
-        val tydef_phi_bv_rep = emit_comb (emit_comb tydef_c pred_id) bv_rep_v
-        val tydef_phi_eq = emit_comb
-                             (emit_comb eq_bool_const tydef_phi_bv_rep)
-                                 tydef_phi_body
-        val lam_rep_tydef_phi_eq = emit_abs bv_rep_v tydef_phi_eq
-        val inner_forall2 = emit_comb forall_rep_fn lam_rep_tydef_phi_eq
-                            (* ∀rep. TYPE_DEFINITION P rep = ... *)
-        val spec2 = do_SPEC rep_c lam_rep_tydef_phi_eq
-                      inner_forall2 rep_fn_ty spec1
-         (* ⊢ TYPE_DEFINITION P rep = ... *)
-
-        val tydef_proved = c_eq_mp (c_sym spec2) conj_th
-         (* ⊢ TYPE_DEFINITION P rep *)
+        val tydef_inst2 = c_inst tydef_inst
+                           [(emit_var "P" Ab, pred_id),
+                            (emit_var "rep" rep_fn_ty, rep_c)]
+        val tydef_proved = c_eq_mp (c_sym tydef_inst2) conj_th
+         (* ⊢ TYPE_DEFINITION pred_id rep_c *)
 
         (* HOL4's prim_type_definition destructures the input witness's
            body as P v = dest_comb Body and then produces
@@ -1485,13 +1529,20 @@ fun emit_theory {trace, output, binary, ruleset} = let
                           (tyvar_B, bool_tyid)]
         val eq_Ab = emit_const "="
           (emit_tyop "fun" [Ab, emit_tyop "fun" [Ab, bool_tyid]])
-        val bv_t = emit_binder "t" Ab
-        val abs_x_t_x = emit_abs bv_x_rep (emit_comb bv_t bv_x_rep)
-        val eta_eq_body = emit_comb (emit_comb eq_Ab abs_x_t_x) bv_t
-        val abs_eta_eq = emit_abs bv_t eta_eq_body
+        val bv_t_eta = emit_binder "t" Ab
+        val bv_x_eta = emit_binder "x" Ab
+        val abs_x_t_x = emit_abs bv_x_eta (emit_comb bv_t_eta bv_x_eta)
+        val eta_eq_body = emit_comb (emit_comb eq_Ab abs_x_t_x) bv_t_eta
+        val abs_eta_eq = emit_abs bv_t_eta eta_eq_body
+        val forall_Ab = emit_const "!"
+          (emit_tyop "fun" [emit_tyop "fun" [Ab, bool_tyid], bool_tyid])
         val P_uneta_eq = do_SPEC pred_uneta abs_eta_eq
                            (emit_comb forall_Ab abs_eta_eq) Ab eta_inst
          (* ⊢ (λx. P x) = P *)
+
+        val rep_fn_ty_bool = emit_tyop "fun" [rep_fn_ty, bool_tyid]
+        val tydef_ty = emit_tyop "fun" [Ab, rep_fn_ty_bool]
+        val tydef_c = emit_const "bool$TYPE_DEFINITION" tydef_ty
 
         (* Rewrite tydef_proved : ⊢ TYPE_DEFINITION (λx. P x) rep
            into                   ⊢ TYPE_DEFINITION P rep, so that the
@@ -1504,6 +1555,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val tydef_uneta = c_eq_mp tydef_P_rep_eq tydef_proved
          (* ⊢ TYPE_DEFINITION P rep *)
 
+        val bv_rep_v = emit_binder "rep" rep_fn_ty
         val tydef_P_bv_rep =
           emit_comb (emit_comb tydef_c pred_uneta) bv_rep_v
         val exist_pred_rep_uneta = emit_abs bv_rep_v tydef_P_bv_rep
