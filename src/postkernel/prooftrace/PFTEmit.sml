@@ -1652,7 +1652,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
     case shTerm heap tm_ptr of
       Const (id_ptr, _) =>
         let val (thy, name) = ident heap id_ptr
-        in if thy = "arithmetic" andalso (name = "ZERO")
+        in if (thy = "arithmetic" andalso name = "ZERO") orelse
+              (thy = "num" andalso name = "0")
            then SOME 0
            else NONE
         end
@@ -1733,7 +1734,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
     case shTerm heap bits_ptr of
       Const (id_ptr, _) =>
         let val (thy, name) = ident heap id_ptr
-        in if thy = "arithmetic" andalso (name = "ZERO")
+        in if (thy = "arithmetic" andalso name = "ZERO") orelse
+              (thy = "num" andalso name = "0")
            then
              (* _0 -> _0, REFL *)
              let val bits_id = emit_term bits_ptr
@@ -1911,38 +1913,102 @@ fun emit_theory {trace, output, binary, ruleset} = let
              emit_comb (emit_const "BIT0" ty_nn) inner
         end
 
+  (* Check if a heap term pointer is cv$Num (emitted as Cexp_num) *)
+  and is_cv_num tm_ptr =
+    case shTerm heap tm_ptr of
+      Const (id_ptr, _) =>
+        let val (thy, name) = ident heap id_ptr
+        in thy = "cv" andalso name = "Num" end
+    | _ => false
+
+  (* Check if a heap term pointer is bare numeral bits (BIT1/BIT2/ZERO)
+     without a NUMERAL wrapper.  These need BIT2→BIT0/BIT1 translation. *)
+  and is_bare_bits_term tm_ptr =
+    case shTerm heap tm_ptr of
+      Const (id_ptr, _) =>
+        let val (thy, name) = ident heap id_ptr
+        in (thy = "arithmetic" andalso name = "ZERO") orelse
+           (thy = "num" andalso name = "0")
+        end
+    | Comb (rator_ptr, _) =>
+        (case shTerm heap rator_ptr of
+           Const (id_ptr, _) =>
+             let val (thy, name) = ident heap id_ptr
+             in thy = "arithmetic" andalso
+                  (name = "BIT1" orelse name = "BIT2")
+             end
+         | _ => false)
+    | _ => false
+
   (* Translate all numerals in a term from HOL4 to Candle form.
      Returns (candle_tm_id, xlate_th_id) where xlate_th proves: original = candle_tm
      If no translation needed, returns (original_tm_id, ~1) *)
   and translate_term_numerals_hol4_to_candle tm_ptr tm_id : int * int =
     if is_numeral_term tm_ptr then
       translate_numeral_hol4_to_candle tm_ptr tm_id
+    else if is_bare_bits_term tm_ptr then
+      translate_hol4_bits_to_candle tm_ptr
     else
       case shTerm heap tm_ptr of
         Comb (rator_ptr, rand_ptr) =>
-          let
-            val rator_id = emit_term rator_ptr
-            val rand_id = emit_term rand_ptr
-            val (rator_c, rator_th) = translate_term_numerals_hol4_to_candle rator_ptr rator_id
-            val (rand_c, rand_th) = translate_term_numerals_hol4_to_candle rand_ptr rand_id
-          in
-            if rator_th < 0 andalso rand_th < 0 then
-              (* No translation in either part *)
-              (tm_id, ~1)
-            else
-              (* At least one part was translated, use MK_COMB *)
-              let
-                val rator_eq = if rator_th < 0 then
-                    let val id = alloc_th () in PFTWriter.Candle.refl out id rator_id; id end
-                  else rator_th
-                val rand_eq = if rand_th < 0 then
-                    let val id = alloc_th () in PFTWriter.Candle.refl out id rand_id; id end
-                  else rand_th
-                val comb_th = let val id = alloc_th ()
-                  in PFTWriter.Candle.mk_comb out id rator_eq rand_eq; id end
-                val result_tm = emit_comb rator_c rand_c
-              in (result_tm, comb_th) end
-          end
+          if is_cv_num rator_ptr then
+            let
+              val rator_id = emit_term rator_ptr
+              val rand_id = emit_term rand_ptr
+              val (rand_c, rand_th) = translate_term_numerals_hol4_to_candle rand_ptr rand_id
+            in
+              if is_numeral_term rand_ptr then
+                (* Cexp_num (NUMERAL bits) : no wrap needed, just chain any
+                   BIT2 translation from rand *)
+                if rand_th < 0 then (tm_id, ~1)
+                else let val rator_eq = let val id = alloc_th ()
+                       in PFTWriter.Candle.refl out id rator_id; id end
+                     val comb_th = let val id = alloc_th ()
+                       in PFTWriter.Candle.mk_comb out id rator_eq rand_th; id end
+                 in (emit_comb rator_id rand_c, comb_th) end
+              else
+                (* Cexp_num X where X is not NUMERAL(...) : translate X,
+                   then wrap with NUMERAL.
+                   Proof: AP_TERM Cexp_num (TRANS rand_th (SYM (INST eq5))) *)
+                let
+                  val eq5 = candle_load_pth "candle$COMPUTE_EQ_5"
+                  val ty_num = emit_tyop "num" []
+                  val var_n = emit_var "n" ty_num
+                  val eq5_inst = let val id = alloc_th ()
+                    in PFTWriter.Candle.inst out id eq5 [(var_n, rand_c)]; id end
+                  val eq5_sym = let val id = alloc_th ()
+                    in PFTWriter.Candle.sym out id eq5_inst; id end
+                  val inner_th = if rand_th < 0 then eq5_sym
+                                 else let val id = alloc_th ()
+                                   in PFTWriter.Candle.trans out id rand_th eq5_sym; id end
+                  val rator_refl = let val id = alloc_th ()
+                    in PFTWriter.Candle.refl out id rator_id; id end
+                  val xlate_th = let val id = alloc_th ()
+                    in PFTWriter.Candle.mk_comb out id rator_refl inner_th; id end
+                  val numeral_id = emit_const "NUMERAL" (emit_tyop "fun" [ty_num, ty_num])
+                in (emit_comb rator_id (emit_comb numeral_id rand_c), xlate_th) end
+            end
+          else
+            let
+              val rator_id = emit_term rator_ptr
+              val rand_id = emit_term rand_ptr
+              val (rator_c, rator_th) = translate_term_numerals_hol4_to_candle rator_ptr rator_id
+              val (rand_c, rand_th) = translate_term_numerals_hol4_to_candle rand_ptr rand_id
+            in
+              if rator_th < 0 andalso rand_th < 0 then
+                (tm_id, ~1)
+              else
+                let
+                  val rator_eq = if rator_th < 0 then
+                      let val id = alloc_th () in PFTWriter.Candle.refl out id rator_id; id end
+                    else rator_th
+                  val rand_eq = if rand_th < 0 then
+                      let val id = alloc_th () in PFTWriter.Candle.refl out id rand_id; id end
+                    else rand_th
+                  val comb_th = let val id = alloc_th ()
+                    in PFTWriter.Candle.mk_comb out id rator_eq rand_eq; id end
+                in (emit_comb rator_c rand_c, comb_th) end
+            end
       | Abs (var_ptr, body_ptr) =>
           let
             val var_id = emit_term var_ptr
