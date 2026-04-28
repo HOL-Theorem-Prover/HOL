@@ -143,7 +143,7 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
 
   val ty_bool = mk_tyop "bool" []
   val ty_num  = mk_tyop "num" []
-  val ty_cv   = mk_tyop "Cexp" []
+  val ty_cv   = mk_tyop "cval" []
   val ty_A    = mk_tyvar "'a"
   val ty_B    = mk_tyvar "'b"
 

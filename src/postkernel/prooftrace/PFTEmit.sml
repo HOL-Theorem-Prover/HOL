@@ -60,7 +60,7 @@ local
     ("arithmetic$BIT2", "BIT2"),  (* kept for theorem loading; translated in compute *)
 
     (* cv theory - compute value type and operations *)
-    ("cv$cv", "Cexp"),
+    ("cv$cv", "cval"),
     ("cv$Num", "Cexp_num"),
     ("cv$Pair", "Cexp_pair"),
     ("cv$cv_add", "Cexp_add"),
