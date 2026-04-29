@@ -1146,8 +1146,11 @@ fun emit_theory {trace, output, binary, ruleset} = let
     in (result, pred_id, pred_body_id, Ab, v_ty) end
 
     (* Ensure candle$TYPE_DEFINITION_THM_FREE is available.
-       Derived once from bool$TYPE_DEFINITION_THM by stripping both outer ∀s,
-       then SAVEd as candle$TYPE_DEFINITION_THM_FREE.
+       Derived once from bool$TYPE_DEFINITION_THM by stripping both outer ∀s
+       via do_DOUBLE_SPEC, then renaming the resulting “pft%”-named free
+       variables (from the original binders) to clean names ("P", "rep")
+       via INST, so that downstream INST in Def_tyop_prf can target them
+       by name.  SAVEd as candle$TYPE_DEFINITION_THM_FREE.
        During boolTheory the derivation happens here and the id is used directly;
        later theories LOAD it via candle_load_pth.
        Returns the theorem id. *)
@@ -1178,13 +1181,22 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val (_, inner_pred) = pft_dest_comb inner_forall_id
         val (rep_bv, body_eq_id) = pft_dest_abs inner_pred
         val rep_ty_gen = pft_type_of rep_bv
-        (* Build free-variable terms matching the binder names/types *)
+        (* Build clean-named free-variable terms that downstream INST can
+           target by name.  P_bv/rep_bv have "pft%"-suffixed names that
+           won't match the emit_var "P" / emit_var "rep" redexes used
+           later in Def_tyop_prf. *)
         val P_free = emit_var "P" (emit_tyop "fun" [mk_tyvar_cached "'a", bool_tyid])
         val rep_free = emit_var "rep" (emit_tyop "fun" [mk_tyvar_cached "'b",
                                                         mk_tyvar_cached "'a"])
-        (* Strip both ∀s via do_DOUBLE_SPEC *)
-        val tydef_free = do_DOUBLE_SPEC tydef_th
-                           P_free P_ty rep_free rep_ty_gen body_eq_id
+        (* Strip both ∀s via do_DOUBLE_SPEC, passing the actual binder
+           variable IDs (P_bv, rep_bv) from pft_dest_abs so that
+           pft_subst_tm correctly finds them in body_eq_id.  The result
+           has P_bv/rep_bv free, which have "pft%" names; we then INST
+           them to the clean-named P_free/rep_free. *)
+        val tydef_free_raw = do_DOUBLE_SPEC tydef_th
+                               P_bv P_ty rep_bv rep_ty_gen body_eq_id
+        val tydef_free = c_inst tydef_free_raw
+                           [(P_bv, P_free), (rep_bv, rep_free)]
         (* SAVE for later LOAD by other theories *)
         val () = PFTWriter.save out "candle$TYPE_DEFINITION_THM_FREE" tydef_free
         val () = tydef_thm_free_saved := true
