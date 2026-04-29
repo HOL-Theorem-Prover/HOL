@@ -673,15 +673,21 @@ fun emit_theory {trace, output, binary, ruleset} = let
                      [(pvar_p, a_tm), (pvar_q, c_tm)]
       in c_eq_mp di da end
 
-    (* do_GEN: from v_tm and th: A ⊢ s, derive A ⊢ ∀v. s. *)
+    (* do_GEN: from v_tm and th: A ⊢ s, derive A ⊢ ∀v. s.
+       We create a fresh binder bv and substitute v_tm -> bv everywhere
+       to avoid using a free variable as a binder (which would violate
+       PFTRename's uniqueness assumption). *)
     fun do_GEN v_tm v_ty s_tm th_s =
-      let val eqt_pth = c_inst (candle_load_pth "candle$EQT_INTRO")
-                           [(pvar_t, s_tm)]
-          val abs_eq = c_abs v_tm (c_eq_mp eqt_pth th_s)
+      let val bv = emit_binder "v" v_ty
+          val s_tm_bv = pft_subst_tm v_tm bv s_tm
+          val th_s_bv = c_inst th_s [(v_tm, bv)]
+          val eqt_pth = c_inst (candle_load_pth "candle$EQT_INTRO")
+                           [(pvar_t, s_tm_bv)]
+          val abs_eq = c_abs bv (c_eq_mp eqt_pth th_s_bv)
           val Ab = emit_tyop "fun" [v_ty, bool_tyid]
           val gen_inst = c_inst (c_inst_type (candle_load_pth "candle$GEN")
                            [(tyvar_A, v_ty)])
-                           [(emit_var "P" Ab, emit_abs v_tm s_tm)]
+                           [(emit_var "P" Ab, emit_abs bv s_tm_bv)]
       in c_eq_mp gen_inst abs_eq end
 
     (* do_SPEC: from t_tm, pred_tm: λv. s, th: A ⊢ ∀v. s, derive A ⊢ s[t/v] *)
@@ -702,17 +708,36 @@ fun emit_theory {trace, output, binary, ruleset} = let
        Given th: ⊢ ∀v1. ∀v2. body where v1:v1_ty and v2:v2_ty
        (with v1_tm, v2_tm free-variable terms of those types),
        and inner_body = body with v1, v2 both free,
-       derive ⊢ body with v1 and v2 both free. *)
+       derive ⊢ body with v1 and v2 both free.
+       We use fresh binders to satisfy PFTRename's uniqueness assumption.
+       The binders are used in the lambda terms; do_SPEC will INST them
+       to the actual free variables v1_tm, v2_tm. *)
     fun do_DOUBLE_SPEC th v1_tm v1_ty v2_tm v2_ty inner_body = let
-        val inner_pred = emit_abs v2_tm inner_body
+        val bv1 = emit_binder "v" v1_ty
+        val bv2 = emit_binder "v" v2_ty
+        (* Substitute free vars with binders in inner_body *)
+        val inner_body_bv = pft_subst_tm v1_tm bv1 (pft_subst_tm v2_tm bv2 inner_body)
+        val inner_pred = emit_abs bv2 inner_body_bv
         val Ab2 = emit_tyop "fun" [v2_ty, bool_tyid]
         val forall2_const = emit_const "!" (emit_tyop "fun" [Ab2, bool_tyid])
         val inner_forall = emit_comb forall2_const inner_pred
-        val outer_pred = emit_abs v1_tm inner_forall
+        val outer_pred = emit_abs bv1 inner_forall
         val Ab1 = emit_tyop "fun" [v1_ty, bool_tyid]
         val forall1_const = emit_const "!" (emit_tyop "fun" [Ab1, bool_tyid])
+        (* First SPEC: ∀bv1. ∀bv2. body_bv  ==>  ∀bv2. body_bv[v1/bv1]
+           = ∀bv2. body[v1/v1, bv2/v2] = ∀bv2. body[bv2/v2] *)
         val step1 = do_SPEC v1_tm outer_pred (emit_comb forall1_const outer_pred) v1_ty th
-    in do_SPEC v2_tm inner_pred (emit_comb forall2_const inner_pred) v2_ty step1 end
+        (* After step1, we have ∀bv2. body[bv2/v2][v1/bv1]
+           Since body[bv2/v2] doesn't contain bv1 (only bv2 and other stuff),
+           [v1/bv1] has no effect. So we get ∀bv2. body[bv2/v2].
+           But we need inner_pred for the second SPEC to work.
+           inner_pred = λbv2. body[bv1/v1, bv2/v2]
+           After step1's INST, inner_pred becomes λbv2. body[v1/v1, bv2/v2] = λbv2. body[bv2/v2]
+           which matches what step1 proves. *)
+        (* Second SPEC uses inner_pred_after = λbv2. body[bv2/v2] (with v1 already specialized) *)
+        val inner_body_v1_bv2 = pft_subst_tm v2_tm bv2 inner_body
+        val inner_pred_after = emit_abs bv2 inner_body_v1_bv2
+    in do_SPEC v2_tm inner_pred_after (emit_comb forall2_const inner_pred_after) v2_ty step1 end
 
     (* do_beta_reduce: from lam_tm (a PFT abs term) and arg_tm,
        derive ⊢ lam_tm arg_tm = body[arg/binder]. *)
@@ -1030,17 +1055,32 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val (_, pred_tm) = pft_dest_comb exists_P_tm
         val (bv_tm, _) = pft_dest_abs pred_tm
         val v_ty = pft_type_of bv_tm
+        (* Create fresh binder for the forall term to satisfy PFTRename.
+           We use the same binder for both term construction and proof
+           so that do_MP sees matching term IDs. *)
+        val bv = emit_binder "v" v_ty
         val cmb = emit_comb pred_tm v_tm
+        val cmb_bv = emit_comb pred_tm bv
         val c_with_cmb = c_prove_hyp
                             (c_eq_mp (do_beta_reduce pred_tm v_tm) (c_assume cmb)) c_th
         val imp_cmb_q = emit_comb (emit_comb imp_const cmb) q_tm
-        val gen_v = do_GEN v_tm v_ty imp_cmb_q (do_DISCH cmb q_tm c_with_cmb)
+        val imp_cmb_q_bv = emit_comb (emit_comb imp_const cmb_bv) q_tm
+        (* Inline do_GEN logic but use bv instead of creating another fresh binder *)
+        val th_disch = do_DISCH cmb q_tm c_with_cmb
+        val th_disch_bv = c_inst th_disch [(v_tm, bv)]
+        val eqt_pth = c_inst (candle_load_pth "candle$EQT_INTRO")
+                         [(pvar_t, imp_cmb_q_bv)]
+        val abs_eq = c_abs bv (c_eq_mp eqt_pth th_disch_bv)
         val Ab_v = emit_tyop "fun" [v_ty, bool_tyid]
+        val gen_inst = c_inst (c_inst_type (candle_load_pth "candle$GEN")
+                         [(tyvar_A, v_ty)])
+                         [(emit_var "P" Ab_v, emit_abs bv imp_cmb_q_bv)]
+        val gen_v = c_eq_mp gen_inst abs_eq
         val choose_inst = c_inst (c_inst_type (candle_load_pth "candle$CHOOSE")
                             [(tyvar_A, v_ty)])
                             [(emit_var "P" Ab_v, pred_tm), (pvar_Q, q_tm)]
         val forall_v_imp = emit_comb
-          (emit_const "!" (emit_tyop "fun" [Ab_v, bool_tyid])) (emit_abs v_tm imp_cmb_q)
+          (emit_const "!" (emit_tyop "fun" [Ab_v, bool_tyid])) (emit_abs bv imp_cmb_q_bv)
         val imp_forall_q = emit_comb (emit_comb imp_const forall_v_imp) q_tm
         val mp_choose1 = do_MP choose_inst exists_P_tm imp_forall_q b_th
       in do_MP mp_choose1 forall_v_imp q_tm gen_v end
@@ -2078,7 +2118,10 @@ fun emit_theory {trace, output, binary, ruleset} = let
             end
       | Abs (var_ptr, body_ptr) =>
           let
-            val var_id = emit_term var_ptr
+            (* Use the binder from the already-emitted ABS (tm_id), not emit_term var_ptr,
+               because emit_term var_ptr would create a free variable with the original name
+               rather than the pft%-suffixed binder that was created when the ABS was emitted. *)
+            val (var_id, _) = pft_dest_abs tm_id
             val body_id = emit_term body_ptr
             val (body_c, body_th) = translate_term_numerals_hol4_to_candle body_ptr body_id
           in
