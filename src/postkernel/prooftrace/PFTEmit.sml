@@ -709,7 +709,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val forall2_const = emit_const "!" (emit_tyop "fun" [Ab2, bool_tyid])
         val inner_forall = emit_comb forall2_const inner_pred
         val outer_pred = emit_abs v1_tm inner_forall
-        val step1 = do_SPEC v1_tm outer_pred (emit_comb forall2_const outer_pred) v1_ty th
+        val Ab1 = emit_tyop "fun" [v1_ty, bool_tyid]
+        val forall1_const = emit_const "!" (emit_tyop "fun" [Ab1, bool_tyid])
+        val step1 = do_SPEC v1_tm outer_pred (emit_comb forall1_const outer_pred) v1_ty th
     in do_SPEC v2_tm inner_pred (emit_comb forall2_const inner_pred) v2_ty step1 end
 
     (* do_beta_reduce: from lam_tm (a PFT abs term) and arg_tm,
