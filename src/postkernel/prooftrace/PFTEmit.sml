@@ -634,155 +634,515 @@ fun emit_theory {trace, output, binary, ruleset} = let
     val tyvar_A = mk_tyvar_cached "'a"
     val tyvar_B = mk_tyvar_cached "'b"
 
-    (* === Candle derived-rule helpers ===
-       These emit sequences of Candle commands and return theorem IDs. *)
+    (* ===================================================================== *)
+    (* Candle derived-rule helpers                                           *)
+    (* These emit sequences of Candle commands and return theorem IDs.       *)
+    (* ===================================================================== *)
 
-    (* do_MP: from ith: ⊢ a ==> b and th: ⊢ a, derive ⊢ b.
-       Uses MP_rth = {p} ⊢ (p ==> q) = q. *)
+    (* do_MP
+       -------
+       Signature: ith: A ⊢ a ==> b
+                  ant_th: B ⊢ a
+                  a_tm, b_tm: term IDs for a and b
+                  Result: A ∪ B ⊢ b
+
+       Pro-forma: candle$MP = {p} ⊢ (p ==> q) = q
+
+       Derivation:
+         rth = INST candle$MP [p↦a, q↦b]
+             : {a} ⊢ (a ==> b) = b
+         c_deduct ant_th rth
+             : DEDUCT_ANTISYM (B ⊢ a) ({a} ⊢ (a==>b)=b)
+             : (B \ {(a==>b)=b}) ∪ ({a} \ {a}) ⊢ a = ((a==>b)=b)
+             : B ⊢ a = ((a ==> b) = b)
+         c_eq_mp (c_deduct ant_th rth) ant_th
+             : EQ_MP (B ⊢ a = ((a==>b)=b)) (B ⊢ a)
+             : B ⊢ (a ==> b) = b
+         c_eq_mp (...) ith
+             : EQ_MP (B ⊢ (a==>b)=b) (A ⊢ a==>b)
+             : A ∪ B ⊢ b
+    *)
     fun do_MP ith a_tm b_tm ant_th =
       let val rth = c_inst (candle_load_pth "candle$MP")
                       [(pvar_p, a_tm), (pvar_q, b_tm)]
-      in c_eq_mp (c_eq_mp (c_deduct ant_th rth) ant_th) ith end
+                    (* rth: {a} ⊢ (a ==> b) = b *)
+          val da = c_deduct ant_th rth
+                   (* da: B ⊢ a = ((a ==> b) = b) *)
+          val eq1 = c_eq_mp da ant_th
+                    (* eq1: B ⊢ (a ==> b) = b *)
+      in c_eq_mp eq1 ith end
+         (* result: A ∪ B ⊢ b *)
 
-    (* do_CONJ: from th1: A ⊢ a and th2: B ⊢ b, derive A ∪ B ⊢ a ∧ b *)
+    (* do_CONJ
+       --------
+       Signature: th1: A ⊢ a
+                  th2: B ⊢ b
+                  a_tm, b_tm: term IDs for a and b
+                  Result: A ∪ B ⊢ a ∧ b
+
+       Pro-forma: candle$CONJ = {p, q} ⊢ p ∧ q
+
+       Derivation:
+         ci = INST candle$CONJ [p↦a, q↦b]
+            : {a, b} ⊢ a ∧ b
+         c_prove_hyp th1 ci
+            : PROVE_HYP (A ⊢ a) ({a, b} ⊢ a ∧ b)
+            : A ∪ ({a, b} \ {a}) ⊢ a ∧ b
+            : A ∪ {b} ⊢ a ∧ b
+         c_prove_hyp th2 (...)
+            : PROVE_HYP (B ⊢ b) (A ∪ {b} ⊢ a ∧ b)
+            : B ∪ ((A ∪ {b}) \ {b}) ⊢ a ∧ b
+            : A ∪ B ⊢ a ∧ b
+    *)
     fun do_CONJ a_tm b_tm th1 th2 =
       let val ci = c_inst (candle_load_pth "candle$CONJ")
                      [(pvar_p, a_tm), (pvar_q, b_tm)]
-      in c_prove_hyp th2 (c_prove_hyp th1 ci) end
+                   (* ci: {a, b} ⊢ a ∧ b *)
+          val step1 = c_prove_hyp th1 ci
+                      (* step1: A ∪ {b} ⊢ a ∧ b *)
+      in c_prove_hyp th2 step1 end
+         (* result: A ∪ B ⊢ a ∧ b *)
 
-    (* do_CONJUNCT1: from th: A ⊢ a ∧ b, derive A ⊢ a *)
+    (* do_CONJUNCT1
+       -------------
+       Signature: th: A ⊢ a ∧ b
+                  a_tm, b_tm: term IDs for a and b
+                  Result: A ⊢ a
+
+       Pro-forma: candle$CONJUNCT1 = {p ∧ q} ⊢ p
+
+       Derivation:
+         c1i = INST candle$CONJUNCT1 [p↦a, q↦b]
+             : {a ∧ b} ⊢ a
+         c_prove_hyp th c1i
+             : PROVE_HYP (A ⊢ a ∧ b) ({a ∧ b} ⊢ a)
+             : A ∪ ({a ∧ b} \ {a ∧ b}) ⊢ a
+             : A ⊢ a
+    *)
     fun do_CONJUNCT1 a_tm b_tm th =
-      c_prove_hyp th (c_inst (candle_load_pth "candle$CONJUNCT1")
-                     [(pvar_p, a_tm), (pvar_q, b_tm)])
+      let val c1i = c_inst (candle_load_pth "candle$CONJUNCT1")
+                      [(pvar_p, a_tm), (pvar_q, b_tm)]
+                    (* c1i: {a ∧ b} ⊢ a *)
+      in c_prove_hyp th c1i end
+         (* result: A ⊢ a *)
 
-    (* do_CONJUNCT2: from th: A ⊢ a ∧ b, derive A ⊢ b *)
+    (* do_CONJUNCT2
+       -------------
+       Signature: th: A ⊢ a ∧ b
+                  a_tm, b_tm: term IDs for a and b
+                  Result: A ⊢ b
+
+       Pro-forma: candle$CONJUNCT2 = {p ∧ q} ⊢ q
+
+       Derivation:
+         c2i = INST candle$CONJUNCT2 [p↦a, q↦b]
+             : {a ∧ b} ⊢ b
+         c_prove_hyp th c2i
+             : A ⊢ b
+    *)
     fun do_CONJUNCT2 a_tm b_tm th =
-      c_prove_hyp th (c_inst (candle_load_pth "candle$CONJUNCT2")
-                     [(pvar_p, a_tm), (pvar_q, b_tm)])
+      let val c2i = c_inst (candle_load_pth "candle$CONJUNCT2")
+                      [(pvar_p, a_tm), (pvar_q, b_tm)]
+                    (* c2i: {a ∧ b} ⊢ b *)
+      in c_prove_hyp th c2i end
+         (* result: A ⊢ b *)
 
-    (* do_DISCH: from a_tm and th: A ⊢ c, derive A\{a} ⊢ a ==> c. *)
+    (* do_DISCH
+       ---------
+       Signature: th_c: A ⊢ c
+                  a_tm, c_tm: term IDs for a and c
+                  Result: A \ {a} ⊢ a ==> c
+
+       Pro-formas used:
+         candle$CONJ = {p, q} ⊢ p ∧ q
+         candle$CONJUNCT1 = {p ∧ q} ⊢ p
+         candle$DISCH = ⊢ ((p ∧ q) = p) = (p ==> q)
+
+       Derivation:
+         ci = INST candle$CONJ [p↦a, q↦c]
+            : {a, c} ⊢ a ∧ c
+
+         c_assume a_tm
+            : {a} ⊢ a
+
+         c_prove_hyp (c_assume a_tm) ci
+            : PROVE_HYP ({a} ⊢ a) ({a, c} ⊢ a ∧ c)
+            : {a} ∪ ({a, c} \ {a}) ⊢ a ∧ c
+            : {a, c} ⊢ a ∧ c
+
+         cj = c_prove_hyp th_c (c_prove_hyp (c_assume a_tm) ci)
+            : PROVE_HYP (A ⊢ c) ({a, c} ⊢ a ∧ c)
+            : A ∪ ({a, c} \ {c}) ⊢ a ∧ c
+            : A ∪ {a} ⊢ a ∧ c
+
+         c1i = INST candle$CONJUNCT1 [p↦a, q↦c]
+             : {a ∧ c} ⊢ a
+
+         c_assume a_and_c
+             : {a ∧ c} ⊢ a ∧ c
+
+         c_prove_hyp (c_assume a_and_c) c1i
+             : PROVE_HYP ({a ∧ c} ⊢ a ∧ c) ({a ∧ c} ⊢ a)
+             : {a ∧ c} ∪ ({a ∧ c} \ {a ∧ c}) ⊢ a
+             : {a ∧ c} ⊢ a
+
+         da = c_deduct cj (c_prove_hyp (c_assume a_and_c) c1i)
+            : DEDUCT_ANTISYM (A ∪ {a} ⊢ a ∧ c) ({a ∧ c} ⊢ a)
+            : ((A ∪ {a}) \ {a}) ∪ ({a ∧ c} \ {a ∧ c}) ⊢ (a ∧ c) = a
+            : (A ∪ {a}) \ {a} ⊢ (a ∧ c) = a
+
+         Note: (A ∪ {a}) \ {a} = A \ {a}  (if a ∈ A then A, else A)
+               More precisely: = A if a ∉ A, = A \ {a} if a ∈ A
+               In either case this equals A \ {a}.
+
+         di = INST candle$DISCH [p↦a, q↦c]
+            : ⊢ ((a ∧ c) = a) = (a ==> c)
+
+         c_eq_mp di da
+            : EQ_MP (⊢ ((a∧c)=a) = (a==>c)) (A\{a} ⊢ (a∧c)=a)
+            : A \ {a} ⊢ a ==> c
+    *)
     fun do_DISCH a_tm c_tm th_c =
       let val a_and_c = emit_comb (emit_comb and_const a_tm) c_tm
           val ci = c_inst (candle_load_pth "candle$CONJ")
                      [(pvar_p, a_tm), (pvar_q, c_tm)]
+                   (* ci: {a, c} ⊢ a ∧ c *)
           val cj = c_prove_hyp th_c (c_prove_hyp (c_assume a_tm) ci)
+                   (* cj: A ∪ {a} ⊢ a ∧ c *)
           val c1i = c_inst (candle_load_pth "candle$CONJUNCT1")
                       [(pvar_p, a_tm), (pvar_q, c_tm)]
+                    (* c1i: {a ∧ c} ⊢ a *)
           val da = c_deduct cj (c_prove_hyp (c_assume a_and_c) c1i)
+                   (* da: (A ∪ {a}) \ {a} ⊢ (a ∧ c) = a
+                        = A \ {a} ⊢ (a ∧ c) = a *)
           val di = c_inst (candle_load_pth "candle$DISCH")
                      [(pvar_p, a_tm), (pvar_q, c_tm)]
+                   (* di: ⊢ ((a ∧ c) = a) = (a ==> c) *)
       in c_eq_mp di da end
+         (* result: A \ {a} ⊢ a ==> c *)
 
-    (* do_GEN: from v_tm and th: A ⊢ s, derive A ⊢ ∀v. s.
-       We create a fresh binder bv and substitute v_tm -> bv everywhere
+    (* do_GEN
+       -------
+       Signature: th_s: A ⊢ s
+                  v_tm: term ID of free variable v in s
+                  v_ty: type ID of v
+                  s_tm: term ID for s
+                  Result: A ⊢ ∀v. s
+                  Side condition: v not free in A
+
+       Pro-formas used:
+         candle$EQT_INTRO = ⊢ t = (t = T)
+         candle$GEN = ⊢ (P = λx. T) = !P
+
+       Note: We create a fresh binder bv and substitute v_tm -> bv
        to avoid using a free variable as a binder (which would violate
-       PFTRename's uniqueness assumption). *)
+       PFTRename's uniqueness assumption that each binder VAR ID appears
+       as the first argument of exactly one ABS command).
+
+       Derivation:
+         bv = fresh binder variable with unique name "v pft%N"
+         s_tm_bv = s[bv/v]  (substitute v with bv in the term)
+         th_s_bv = INST th_s [v↦bv]
+                 : A[bv/v] ⊢ s[bv/v]
+                 : A ⊢ s[bv/v]  (since v not free in A)
+
+         eqt_pth = INST candle$EQT_INTRO [t↦s[bv/v]]
+                 : ⊢ s[bv/v] = (s[bv/v] = T)
+
+         c_eq_mp eqt_pth th_s_bv
+                 : EQ_MP (⊢ s[bv/v] = (s[bv/v] = T)) (A ⊢ s[bv/v])
+                 : A ⊢ s[bv/v] = T
+
+         abs_eq = c_abs bv (A ⊢ s[bv/v] = T)
+                : A ⊢ (λbv. s[bv/v]) = (λbv. T)
+                  (bv not free in A by side condition)
+
+         gen_inst = INST (INST_TYPE candle$GEN ['a↦v_ty]) [P↦(λbv. s[bv/v])]
+                  : ⊢ ((λbv. s[bv/v]) = (λx. T)) = !(λbv. s[bv/v])
+
+         c_eq_mp gen_inst abs_eq
+                  : A ⊢ !(λbv. s[bv/v])
+                  : A ⊢ ∀bv. s[bv/v]
+
+         This is alpha-equivalent to A ⊢ ∀v. s
+    *)
     fun do_GEN v_tm v_ty s_tm th_s =
       let val bv = emit_binder "v" v_ty
+                   (* bv: fresh binder with unique name *)
           val s_tm_bv = pft_subst_tm v_tm bv s_tm
+                        (* s_tm_bv: s[bv/v] *)
           val th_s_bv = c_inst th_s [(v_tm, bv)]
+                        (* th_s_bv: A ⊢ s[bv/v] *)
           val eqt_pth = c_inst (candle_load_pth "candle$EQT_INTRO")
                            [(pvar_t, s_tm_bv)]
+                        (* eqt_pth: ⊢ s[bv/v] = (s[bv/v] = T) *)
           val abs_eq = c_abs bv (c_eq_mp eqt_pth th_s_bv)
+                       (* abs_eq: A ⊢ (λbv. s[bv/v]) = (λbv. T) *)
           val Ab = emit_tyop "fun" [v_ty, bool_tyid]
           val gen_inst = c_inst (c_inst_type (candle_load_pth "candle$GEN")
                            [(tyvar_A, v_ty)])
                            [(emit_var "P" Ab, emit_abs bv s_tm_bv)]
+                         (* gen_inst: ⊢ ((λbv. s[bv/v]) = (λx. T)) = !(λbv. s[bv/v]) *)
       in c_eq_mp gen_inst abs_eq end
+         (* result: A ⊢ ∀bv. s[bv/v]  ≡α  A ⊢ ∀v. s *)
 
-    (* do_SPEC: from t_tm, pred_tm: λv. s, th: A ⊢ ∀v. s, derive A ⊢ s[t/v] *)
+    (* do_SPEC
+       --------
+       Signature: th_forall: A ⊢ ∀v. s  (i.e., A ⊢ !pred_tm where pred_tm = λv. s)
+                  t_tm: term ID to substitute for v
+                  pred_tm: term ID for λv. s
+                  forall_tm: term ID for !pred_tm
+                  v_ty: type of the bound variable
+                  Result: A ⊢ s[t/v]
+
+       Pro-forma used:
+         candle$SPEC = ⊢ (!P) ==> P x
+
+       Derivation:
+         spec_inst = INST (INST_TYPE candle$SPEC ['a↦v_ty]) [P↦pred_tm, x↦t_tm]
+                   : ⊢ (!pred_tm) ==> pred_tm t_tm
+                   : ⊢ (∀v. s) ==> (λv. s) t
+
+         mp_result = do_MP spec_inst forall_tm (pred_tm t_tm) th_forall
+                   : A ⊢ (λv. s) t
+
+         actual_bv = binder variable of pred_tm (from pft_dest_abs)
+         beta_th = c_beta (emit_comb pred_tm actual_bv)
+                 : ⊢ (λv. s) v = s
+                 (Candle BETA requires the argument to be exactly the binder)
+
+         beta_inst = if actual_bv = t_tm then beta_th
+                     else INST beta_th [actual_bv↦t_tm]
+                   : ⊢ (λv. s) t = s[t/v]
+
+         c_eq_mp beta_inst mp_result
+                   : A ⊢ s[t/v]
+    *)
     fun do_SPEC t_tm pred_tm forall_tm v_ty th_forall =
       let val Ab = emit_tyop "fun" [v_ty, bool_tyid]
           val spec_inst = c_inst (c_inst_type (candle_load_pth "candle$SPEC")
                             [(tyvar_A, v_ty)])
                             [(emit_var "P" Ab, pred_tm),
                              (emit_var "x" v_ty, t_tm)]
+                          (* spec_inst: ⊢ (!pred_tm) ==> pred_tm t_tm *)
           val mp_result = do_MP spec_inst forall_tm (emit_comb pred_tm t_tm) th_forall
+                          (* mp_result: A ⊢ pred_tm t_tm = (λv. s) t *)
           val (actual_bv, _) = pft_dest_abs pred_tm
           val beta_th = c_beta (emit_comb pred_tm actual_bv)
+                        (* beta_th: ⊢ (λv. s) v = s *)
           val beta_inst = if actual_bv = t_tm then beta_th
             else c_inst beta_th [(actual_bv, t_tm)]
+                        (* beta_inst: ⊢ (λv. s) t = s[t/v] *)
       in c_eq_mp beta_inst mp_result end
+         (* result: A ⊢ s[t/v] *)
 
-    (* do_DOUBLE_SPEC: strip two ∀-quantifiers from a theorem.
-       Given th: ⊢ ∀v1. ∀v2. body where v1:v1_ty and v2:v2_ty
-       (with v1_tm, v2_tm free-variable terms of those types),
-       and inner_body = body with v1, v2 both free,
-       derive ⊢ body with v1 and v2 both free.
-       We use fresh binders to satisfy PFTRename's uniqueness assumption.
-       The binders are used in the lambda terms; do_SPEC will INST them
-       to the actual free variables v1_tm, v2_tm. *)
+    (* do_DOUBLE_SPEC
+       ----------------
+       Signature: th: ⊢ ∀v1. ∀v2. body
+                  v1_tm, v2_tm: term IDs for free variables to substitute
+                  v1_ty, v2_ty: types of v1 and v2
+                  inner_body: term ID for body with v1, v2 free
+                  Result: ⊢ body  (with v1_tm, v2_tm free)
+
+       Note: The input theorem has binders that we don't know the IDs of,
+       so we construct fresh predicates using fresh binders bv1, bv2.
+       do_SPEC will apply INST to convert from bv1/bv2 to v1_tm/v2_tm.
+
+       Derivation:
+         We build:
+           outer_pred = λbv1. !(λbv2. body[bv1/v1, bv2/v2])
+           inner_pred = λbv2. body[bv1/v1, bv2/v2]
+
+         step1 = do_SPEC v1_tm outer_pred (!outer_pred) v1_ty th
+               : ⊢ !(λbv2. body[bv1/v1, bv2/v2])[v1/bv1]
+               : ⊢ !(λbv2. body[v1/v1, bv2/v2])
+               : ⊢ ∀bv2. body[bv2/v2]  (since body[v1/v1] = body when v1 is the same var)
+
+         inner_pred_after = λbv2. body[bv2/v2]  (with v1 already at v1_tm)
+
+         result = do_SPEC v2_tm inner_pred_after (!inner_pred_after) v2_ty step1
+                : ⊢ body[bv2/v2][v2/bv2]
+                : ⊢ body
+    *)
     fun do_DOUBLE_SPEC th v1_tm v1_ty v2_tm v2_ty inner_body = let
         val bv1 = emit_binder "v" v1_ty
         val bv2 = emit_binder "v" v2_ty
         (* Substitute free vars with binders in inner_body *)
         val inner_body_bv = pft_subst_tm v1_tm bv1 (pft_subst_tm v2_tm bv2 inner_body)
+                            (* inner_body_bv: body[bv1/v1, bv2/v2] *)
         val inner_pred = emit_abs bv2 inner_body_bv
+                         (* inner_pred: λbv2. body[bv1/v1, bv2/v2] *)
         val Ab2 = emit_tyop "fun" [v2_ty, bool_tyid]
         val forall2_const = emit_const "!" (emit_tyop "fun" [Ab2, bool_tyid])
         val inner_forall = emit_comb forall2_const inner_pred
+                           (* inner_forall: ∀bv2. body[bv1/v1, bv2/v2] *)
         val outer_pred = emit_abs bv1 inner_forall
+                         (* outer_pred: λbv1. ∀bv2. body[bv1/v1, bv2/v2] *)
         val Ab1 = emit_tyop "fun" [v1_ty, bool_tyid]
         val forall1_const = emit_const "!" (emit_tyop "fun" [Ab1, bool_tyid])
-        (* First SPEC: ∀bv1. ∀bv2. body_bv  ==>  ∀bv2. body_bv[v1/bv1]
-           = ∀bv2. body[v1/v1, bv2/v2] = ∀bv2. body[bv2/v2] *)
         val step1 = do_SPEC v1_tm outer_pred (emit_comb forall1_const outer_pred) v1_ty th
-        (* After step1, we have ∀bv2. body[bv2/v2][v1/bv1]
-           Since body[bv2/v2] doesn't contain bv1 (only bv2 and other stuff),
-           [v1/bv1] has no effect. So we get ∀bv2. body[bv2/v2].
-           But we need inner_pred for the second SPEC to work.
-           inner_pred = λbv2. body[bv1/v1, bv2/v2]
-           After step1's INST, inner_pred becomes λbv2. body[v1/v1, bv2/v2] = λbv2. body[bv2/v2]
-           which matches what step1 proves. *)
-        (* Second SPEC uses inner_pred_after = λbv2. body[bv2/v2] (with v1 already specialized) *)
+                    (* step1: ⊢ ∀bv2. body[bv2/v2]
+                       (do_SPEC internally does INST [bv1↦v1_tm]) *)
+        (* For second SPEC, we need pred with v1 already specialized *)
         val inner_body_v1_bv2 = pft_subst_tm v2_tm bv2 inner_body
+                                (* inner_body_v1_bv2: body[bv2/v2] (v1 stays as v1_tm) *)
         val inner_pred_after = emit_abs bv2 inner_body_v1_bv2
+                               (* inner_pred_after: λbv2. body[bv2/v2] *)
     in do_SPEC v2_tm inner_pred_after (emit_comb forall2_const inner_pred_after) v2_ty step1 end
+       (* result: ⊢ body *)
 
-    (* do_beta_reduce: from lam_tm (a PFT abs term) and arg_tm,
-       derive ⊢ lam_tm arg_tm = body[arg/binder]. *)
+    (* do_beta_reduce
+       ---------------
+       Signature: lam_tm: term ID for (λv. body)
+                  arg_tm: term ID for argument t
+                  Result: ⊢ (λv. body) t = body[t/v]
+
+       Note: Candle's BETA rule only works on (λv. body) v where the
+       argument is exactly the bound variable. We use INST to generalize.
+
+       Derivation:
+         actual_bv = bound variable of lam_tm
+         beta_th = BETA ((λv. body) v)
+                 : ⊢ (λv. body) v = body
+
+         if actual_bv = arg_tm:
+           return beta_th
+         else:
+           INST beta_th [actual_bv ↦ arg_tm]
+           : ⊢ (λv. body) t = body[t/v]
+    *)
     fun do_beta_reduce lam_tm arg_tm =
       let val (actual_bv, _) = pft_dest_abs lam_tm
           val beta_th = c_beta (emit_comb lam_tm actual_bv)
+                        (* beta_th: ⊢ (λv. body) v = body *)
       in if actual_bv = arg_tm then beta_th
          else c_inst beta_th [(actual_bv, arg_tm)] end
+         (* result: ⊢ (λv. body) t = body[t/v] *)
 
-    (* do_EXISTS: from th: A ⊢ body[witness/v], pred = λv. body, derive A ⊢ ∃v. body *)
+    (* do_EXISTS
+       ----------
+       Signature: th: A ⊢ body[witness/v]
+                  pred_tm: term ID for λv. body
+                  var_tm: term ID for v (binder of pred_tm)
+                  witness_tm: term ID for witness
+                  v_ty: type of v
+                  Result: A ⊢ ∃v. body
+
+       Pro-forma: candle$EXISTS = {P x} ⊢ ?P
+
+       Derivation:
+         exists_inst = INST (INST_TYPE candle$EXISTS ['a↦v_ty])
+                            [P↦pred_tm, x↦witness_tm]
+                     : {pred_tm witness_tm} ⊢ ?pred_tm
+                     : {(λv. body) witness} ⊢ ∃v. body
+
+         do_beta_reduce pred_tm witness_tm
+                     : ⊢ (λv. body) witness = body[witness/v]
+
+         c_sym (...)
+                     : ⊢ body[witness/v] = (λv. body) witness
+
+         witness_hyp = c_eq_mp (c_sym (do_beta_reduce ...)) th
+                     : EQ_MP (⊢ body[w/v] = (λv.body) w) (A ⊢ body[w/v])
+                     : A ⊢ (λv. body) witness
+
+         c_prove_hyp witness_hyp exists_inst
+                     : PROVE_HYP (A ⊢ (λv.body) w) ({(λv.body) w} ⊢ ∃v. body)
+                     : A ∪ ({(λv.body) w} \ {(λv.body) w}) ⊢ ∃v. body
+                     : A ⊢ ∃v. body
+    *)
     fun do_EXISTS pred_tm var_tm witness_tm v_ty th =
       let val Ab_v = emit_tyop "fun" [v_ty, bool_tyid]
           val exists_inst = c_inst (c_inst_type (candle_load_pth "candle$EXISTS")
                               [(tyvar_A, v_ty)])
                               [(emit_var "P" Ab_v, pred_tm),
                                (emit_var "x" v_ty, witness_tm)]
+                            (* exists_inst: {(λv.body) witness} ⊢ ∃v. body *)
           val witness_hyp = c_eq_mp (c_sym (do_beta_reduce pred_tm witness_tm)) th
+                            (* witness_hyp: A ⊢ (λv. body) witness *)
       in c_prove_hyp witness_hyp exists_inst end
+         (* result: A ⊢ ∃v. body *)
 
-    (* do_AP_TERM: from f and th: ⊢ x = y, derive ⊢ f x = f y *)
+    (* do_AP_TERM
+       -----------
+       Signature: th: A ⊢ x = y
+                  f: term ID for function f
+                  Result: A ⊢ f x = f y
+
+       Derivation:
+         c_refl f : ⊢ f = f
+         c_mk_comb (⊢ f = f) (A ⊢ x = y) : A ⊢ f x = f y
+    *)
     fun do_AP_TERM f th = c_mk_comb (c_refl f) th
 
-    (* exist_to_witness: from th: ⊢ ∃v. body, derive ⊢ (λv. body) (@v. body)
-       using CHOOSE_pth + SELECT_AX. *)
+    (* exist_to_witness
+       ------------------
+       Signature: exists_th: ⊢ ∃v. body  (no hypotheses)
+                  exists_concl_id: term ID for ∃v. body = ?(λv. body)
+                  Result: (th, pred_id, pred_body_id, Ab, v_ty) where
+                          th: ⊢ (λv. body) (@ (λv. body))
+                          pred_id: term ID for λv. body
+                          pred_body_id: term ID for body
+                          Ab: type ID for v_ty -> bool
+                          v_ty: type ID for v
+
+       Pro-formas used:
+         candle$SELECT_AX_SPEC = ⊢ !x. P x ==> P (@ P)  (P : 'a->bool free)
+         candle$CHOOSE = ⊢ (?P) ==> (!x. P x ==> Q) ==> Q
+
+       Let P = λv. body, w = @ P (the witness)
+
+       Derivation:
+         sel_inst = INST (INST_TYPE candle$SELECT_AX_SPEC ['a↦v_ty]) [P↦pred_id]
+                  : ⊢ !x. (λv.body) x ==> (λv.body) (@ (λv.body))
+                  : ⊢ ∀x. P x ==> P w
+
+         choose_inst = INST (INST_TYPE candle$CHOOSE ['a↦v_ty])
+                            [P↦pred_id, Q↦(P w)]
+                     : ⊢ (?P) ==> (!x. P x ==> P w) ==> P w
+
+         forall_inner = !x. P x ==> P w  (term)
+         imp_forall_pw = (!x. P x ==> P w) ==> P w  (term)
+
+         mp1 = do_MP choose_inst (?P) imp_forall_pw exists_th
+             : ⊢ (!x. P x ==> P w) ==> P w
+
+         result = do_MP mp1 forall_inner (P w) sel_inst
+                : ⊢ P w
+                : ⊢ (λv. body) (@ (λv. body))
+    *)
     fun exist_to_witness exists_th exists_concl_id = let
       val (_, pred_id) = pft_dest_comb exists_concl_id
+                         (* pred_id: λv. body *)
       val (bv_id, pred_body_id) = pft_dest_abs pred_id
+                                  (* bv_id: binder v, pred_body_id: body *)
       val v_ty = pft_type_of bv_id
       val Ab = emit_tyop "fun" [v_ty, bool_tyid]
+                (* Ab: v_ty -> bool *)
       val select_c = emit_const "@" (emit_tyop "fun" [Ab, v_ty])
       val witness = emit_comb select_c pred_id
+                    (* witness: @ (λv. body) *)
       val pred_witness = emit_comb pred_id witness
+                         (* pred_witness: (λv. body) (@ (λv. body)) = P w *)
       val var_P_Ab = emit_var "P" Ab
       val sel_inst = c_inst (c_inst_type (candle_load_pth "candle$SELECT_AX_SPEC")
                        [(tyvar_A, v_ty)])
                        [(var_P_Ab, pred_id)]
+                     (* sel_inst: ⊢ !x. P x ==> P w *)
       val choose_inst = c_inst (c_inst_type (candle_load_pth "candle$CHOOSE")
                           [(tyvar_A, v_ty)])
                           [(var_P_Ab, pred_id), (pvar_Q, pred_witness)]
+                        (* choose_inst: ⊢ (?P) ==> (!x. P x ==> P w) ==> P w *)
       val bv_x_v = emit_binder "x" v_ty
       val forall_inner = emit_comb (emit_const "!" (emit_tyop "fun" [Ab, bool_tyid]))
         (emit_abs bv_x_v (emit_comb (emit_comb (imp_const) (emit_comb pred_id bv_x_v)) pred_witness))
+                         (* forall_inner: !x. P x ==> P w *)
       val imp_forall_pw = emit_comb (emit_comb (imp_const) forall_inner) pred_witness
+                          (* imp_forall_pw: (!x. P x ==> P w) ==> P w *)
       val mp1 = do_MP choose_inst exists_concl_id imp_forall_pw exists_th
+                (* mp1: ⊢ (!x. P x ==> P w) ==> P w *)
       val result = do_MP mp1 forall_inner pred_witness sel_inst
+                   (* result: ⊢ P w = (λv. body) (@ (λv. body)) *)
     in (result, pred_id, pred_body_id, Ab, v_ty) end
 
     (* Ensure candle$TYPE_DEFINITION_THM_FREE is available.
@@ -832,29 +1192,77 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
   in
     case proof of
-    (* === Direct mappings (1:1 to Candle core rules) === *)
+    (* ================================================================= *)
+    (* Direct mappings (1:1 to Candle core rules)                        *)
+    (* These proof rules map directly to Candle primitive inference rules*)
+    (* ================================================================= *)
+
+    (* REFL_prf: t → ⊢ t = t *)
       REFL_prf a => r_refl (tm a)
+
+    (* TRANS_prf: A ⊢ l = m, B ⊢ m = r → A ∪ B ⊢ l = r *)
     | TRANS_prf (a, b) => r_trans (th a) (th b)
+
+    (* MK_COMB_prf: A ⊢ f = g, B ⊢ x = y → A ∪ B ⊢ f x = g y *)
     | MK_COMB_prf (a, b) => r_mk_comb (th a) (th b)
+
+    (* ABS_prf: v, A ⊢ l = r → A ⊢ (λv. l) = (λv. r) (v not free in A) *)
     | ABS_prf (a, b) => r_abs (tm a) (th b)
+
+    (* EQ_MP_prf: A ⊢ p = q, B ⊢ p → A ∪ B ⊢ q *)
     | EQ_MP_prf (a, b) => r_eq_mp (th a) (th b)
+
+    (* ASSUME_prf: p → {p} ⊢ p *)
     | ASSUME_prf a => r_assume (tm a)
+
+    (* SYM_prf: A ⊢ l = r → A ⊢ r = l *)
     | SYM_prf a => r_sym (th a)
+
+    (* INST_prf: [(v1,t1),...], A ⊢ p → A[t/v] ⊢ p[t/v] *)
     | INST_prf (a, b) => let
         val pairs = list heap (tuple2 heap (tm, tm)) a
       in r_inst (th b) pairs end
+
+    (* INST_TYPE_prf: [(α1,ty1),...], A ⊢ p → A[ty/α] ⊢ p[ty/α] *)
     | INST_TYPE_prf (a, b) => let
         val pairs = list heap (tuple2 heap (ty, ty)) a
       in r_inst_type (th b) pairs end
+
+    (* deductAntisym_prf: A ⊢ p, B ⊢ q → (A \ {q}) ∪ (B \ {p}) ⊢ p = q *)
     | deductAntisym_prf (a, b) => r_deduct (th a) (th b)
 
     (* Axiom_prf and Disk_prf are handled in emit_thm before dispatch *)
 
-    (* === Simple compositions === *)
+    (* ================================================================= *)
+    (* Simple compositions                                               *)
+    (* ================================================================= *)
+
+    (* AP_TERM_prf: f, A ⊢ x = y → A ⊢ f x = f y
+       Derivation: MK_COMB (REFL f) (A ⊢ x = y) *)
     | AP_TERM_prf (a, b) => r_mk_comb (c_refl (tm a)) (th b)
+
+    (* AP_THM_prf: A ⊢ f = g, x → A ⊢ f x = g x
+       Derivation: MK_COMB (A ⊢ f = g) (REFL x) *)
     | AP_THM_prf (a, b) => r_mk_comb (th a) (c_refl (tm b))
 
-    (* === Pro-forma based: conjunction === *)
+    (* ================================================================= *)
+    (* Pro-forma based: conjunction                                      *)
+    (* ================================================================= *)
+
+    (* CONJ_prf
+       ---------
+       HOL4 rule: A ⊢ p, B ⊢ q  →  A ∪ B ⊢ p ∧ q
+
+       Pro-forma: candle$CONJ = {p, q} ⊢ p ∧ q
+
+       Derivation:
+         ci = INST candle$CONJ [p↦a, q↦b]
+            : {a, b} ⊢ a ∧ b
+         c_prove_hyp a_th ci
+            : A ∪ {b} ⊢ a ∧ b
+         r_prove_hyp b_th (...)
+            : A ∪ B ⊢ a ∧ b  ✓
+    *)
     | CONJ_prf (a, b) => let
         val a_th = th a val b_th = th b
         val a_tm = tm (heap_concl a) val b_tm = tm (heap_concl b)
@@ -862,6 +1270,18 @@ fun emit_theory {trace, output, binary, ruleset} = let
                    [(pvar_p, a_tm), (pvar_q, b_tm)]
       in r_prove_hyp b_th (c_prove_hyp a_th ci) end
 
+    (* CONJUNCT1_prf
+       --------------
+       HOL4 rule: A ⊢ p ∧ q  →  A ⊢ p
+
+       Pro-forma: candle$CONJUNCT1 = {p ∧ q} ⊢ p
+
+       Derivation:
+         pth = INST candle$CONJUNCT1 [p↦l, q↦r]
+             : {l ∧ r} ⊢ l
+         r_prove_hyp a_th pth
+             : A ⊢ l  ✓
+    *)
     | CONJUNCT1_prf a => let
         val a_th = th a
         val concl_id = tm (heap_concl a)
@@ -870,6 +1290,18 @@ fun emit_theory {trace, output, binary, ruleset} = let
       in r_prove_hyp a_th (c_inst (candle_load_pth "candle$CONJUNCT1")
                         [(pvar_p, l_tm), (pvar_q, r_tm)]) end
 
+    (* CONJUNCT2_prf
+       --------------
+       HOL4 rule: A ⊢ p ∧ q  →  A ⊢ q
+
+       Pro-forma: candle$CONJUNCT2 = {p ∧ q} ⊢ q
+
+       Derivation:
+         pth = INST candle$CONJUNCT2 [p↦l, q↦r]
+             : {l ∧ r} ⊢ r
+         r_prove_hyp a_th pth
+             : A ⊢ r  ✓
+    *)
     | CONJUNCT2_prf a => let
         val a_th = th a
         val concl_id = tm (heap_concl a)
@@ -878,9 +1310,42 @@ fun emit_theory {trace, output, binary, ruleset} = let
       in r_prove_hyp a_th (c_inst (candle_load_pth "candle$CONJUNCT2")
                         [(pvar_p, l_tm), (pvar_q, r_tm)]) end
 
-    (* === Pro-forma based: implication === *)
+    (* MP_prf
+       -------
+       HOL4 rule: A ⊢ p ==> q, B ⊢ p  →  A ∪ B ⊢ q
+       Also handles: A ⊢ ~p, B ⊢ p  →  A ∪ B ⊢ F  (via dest_neg treating ~p as p ==> F)
+
+       Pro-formas:
+         candle$MP = {p} ⊢ (p ==> q) = q
+         candle$NOT_ELIM = {~p} ⊢ p ==> F
+
+       Derivation (normal case: a_th: A ⊢ p ==> q, b_th: B ⊢ p):
+         rth = INST candle$MP [p↦p, q↦q]
+             : {p} ⊢ (p ==> q) = q
+
+         c_prove_hyp b_th rth
+             : PROVE_HYP (B ⊢ p) ({p} ⊢ (p ==> q) = q)
+             : B ∪ ({p} \ {p}) ⊢ (p ==> q) = q
+             : B ⊢ (p ==> q) = q
+
+         r_eq_mp (c_prove_hyp b_th rth) a_th
+             : EQ_MP (B ⊢ (p ==> q) = q) (A ⊢ p ==> q)
+             : A ∪ B ⊢ q  ✓
+
+       Derivation (negation case: a_th: A ⊢ ~p, b_th: B ⊢ p):
+         ne = INST candle$NOT_ELIM [p↦p]
+            : {~p} ⊢ p ==> F
+
+         a_th' = c_prove_hyp a_th ne
+               : PROVE_HYP (A ⊢ ~p) ({~p} ⊢ p ==> F)
+               : A ⊢ p ==> F
+
+         Then proceed as normal case with q = F.
+    *)
     | MP_prf (a, b) => let
         val a_th = th a val b_th = th b
+                   (* a_th: A ⊢ p ==> q (or A ⊢ ~p)
+                      b_th: B ⊢ p *)
         val concl_a_id = tm (heap_concl a)
         val (imp_p_id, rhs_tm) = pft_dest_comb concl_a_id
         (* HOL4's MP treats ~p as p ==> F via dest_imp/dest_neg.
@@ -889,14 +1354,33 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val (a_th, p_tm, q_tm) =
           case total pft_dest_comb imp_p_id of
             SOME (_, p) => (a_th, p, rhs_tm)
+                           (* Normal case: concl is (==>) p q, so p_tm = p, q_tm = q *)
           | NONE => let
+              (* Negation case: concl is ~ rhs_tm, so p = rhs_tm, q = F *)
               val ne = c_inst (candle_load_pth "candle$NOT_ELIM")
                          [(pvar_p, rhs_tm)]
+                       (* ne: {~rhs_tm} ⊢ rhs_tm ==> F *)
             in (c_prove_hyp a_th ne, rhs_tm, const_F_tm) end
+                           (* a_th': A ⊢ rhs_tm ==> F *)
         val rth = c_inst (candle_load_pth "candle$MP")
                     [(pvar_p, p_tm), (pvar_q, q_tm)]
+                  (* rth: {p} ⊢ (p ==> q) = q *)
       in r_eq_mp (c_prove_hyp b_th rth) a_th end
+         (* result: A ∪ B ⊢ q *)
 
+    (* EQ_IMP_RULE1_prf
+       ------------------
+       HOL4 rule: A ⊢ p = q  →  A ⊢ p ==> q
+
+       Pro-forma: candle$EQ_IMP_RULE1 = {p = q} ⊢ p ==> q
+
+       Derivation:
+         pth = INST candle$EQ_IMP_RULE1 [p↦p, q↦q]
+             : {p = q} ⊢ p ==> q
+         r_prove_hyp a_th pth
+             : PROVE_HYP (A ⊢ p = q) ({p = q} ⊢ p ==> q)
+             : A ⊢ p ==> q  ✓
+    *)
     | EQ_IMP_RULE1_prf a => let
         val a_th = th a
         val concl_id = tm (heap_concl a)
@@ -905,6 +1389,18 @@ fun emit_theory {trace, output, binary, ruleset} = let
       in r_prove_hyp a_th (c_inst (candle_load_pth "candle$EQ_IMP_RULE1")
                         [(pvar_p, p_tm), (pvar_q, q_tm)]) end
 
+    (* EQ_IMP_RULE2_prf
+       ------------------
+       HOL4 rule: A ⊢ p = q  →  A ⊢ q ==> p
+
+       Pro-forma: candle$EQ_IMP_RULE2 = {p = q} ⊢ q ==> p
+
+       Derivation:
+         pth = INST candle$EQ_IMP_RULE2 [p↦p, q↦q]
+             : {p = q} ⊢ q ==> p
+         r_prove_hyp a_th pth
+             : A ⊢ q ==> p  ✓
+    *)
     | EQ_IMP_RULE2_prf a => let
         val a_th = th a
         val concl_id = tm (heap_concl a)
@@ -913,12 +1409,36 @@ fun emit_theory {trace, output, binary, ruleset} = let
       in r_prove_hyp a_th (c_inst (candle_load_pth "candle$EQ_IMP_RULE2")
                         [(pvar_p, p_tm), (pvar_q, q_tm)]) end
 
+    (* NOT_ELIM_prf
+       -------------
+       HOL4 rule: A ⊢ ~p  →  A ⊢ p ==> F
+
+       Pro-forma: candle$NOT_ELIM = {~p} ⊢ p ==> F
+
+       Derivation:
+         pth = INST candle$NOT_ELIM [p↦p]
+             : {~p} ⊢ p ==> F
+         r_prove_hyp a_th pth
+             : A ⊢ p ==> F  ✓
+    *)
     | NOT_ELIM_prf a => let
         val a_th = th a
         val (_, p_tm) = pft_dest_comb (tm (heap_concl a))
       in r_prove_hyp a_th (c_inst (candle_load_pth "candle$NOT_ELIM")
                         [(pvar_p, p_tm)]) end
 
+    (* NOT_INTRO_prf
+       --------------
+       HOL4 rule: A ⊢ p ==> F  →  A ⊢ ~p
+
+       Pro-forma: candle$NOT_INTRO = {p ==> F} ⊢ ~p
+
+       Derivation:
+         pth = INST candle$NOT_INTRO [p↦p]
+             : {p ==> F} ⊢ ~p
+         r_prove_hyp a_th pth
+             : A ⊢ ~p  ✓
+    *)
     | NOT_INTRO_prf a => let
         val a_th = th a
         val concl_id = tm (heap_concl a)
@@ -927,6 +1447,18 @@ fun emit_theory {trace, output, binary, ruleset} = let
       in r_prove_hyp a_th (c_inst (candle_load_pth "candle$NOT_INTRO")
                         [(pvar_p, p_tm)]) end
 
+    (* DISJ1_prf
+       ----------
+       HOL4 rule: A ⊢ p, q  →  A ⊢ p ∨ q
+
+       Pro-forma: candle$DISJ1 = {p} ⊢ p ∨ q
+
+       Derivation:
+         pth = INST candle$DISJ1 [p↦p, q↦q]
+             : {p} ⊢ p ∨ q
+         r_prove_hyp a_th pth
+             : A ⊢ p ∨ q  ✓
+    *)
     | DISJ1_prf (a, b) => let
         val a_th = th a val q_tm = tm b
         val p_tm = tm (heap_concl a)
@@ -934,6 +1466,18 @@ fun emit_theory {trace, output, binary, ruleset} = let
                     [(pvar_p, p_tm), (pvar_q, q_tm)]
       in r_prove_hyp a_th pth end
 
+    (* DISJ2_prf
+       ----------
+       HOL4 rule: p, A ⊢ q  →  A ⊢ p ∨ q
+
+       Pro-forma: candle$DISJ2 = {q} ⊢ p ∨ q
+
+       Derivation:
+         pth = INST candle$DISJ2 [p↦p, q↦q]
+             : {q} ⊢ p ∨ q
+         r_prove_hyp b_th pth
+             : A ⊢ p ∨ q  ✓
+    *)
     | DISJ2_prf (a, b) => let
         val p_tm = tm a val b_th = th b
         val q_tm = tm (heap_concl b)
@@ -941,8 +1485,35 @@ fun emit_theory {trace, output, binary, ruleset} = let
                     [(pvar_p, p_tm), (pvar_q, q_tm)]
       in r_prove_hyp b_th pth end
 
+    (* Mk_comb_prf
+       ------------
+       HOL4 rule: A ⊢ t = (f x), B ⊢ f = g, C ⊢ x = y  →  A ∪ B ∪ C ⊢ t = (g y)
+
+       Derivation:
+         th a: A ⊢ t = (f x)
+         th b: B ⊢ f = g
+         th c: C ⊢ x = y
+         c_mk_comb (th b) (th c): B ∪ C ⊢ f x = g y
+         r_trans (th a) (...): A ∪ B ∪ C ⊢ t = g y  ✓
+    *)
     | Mk_comb_prf (a, b, c) => r_trans (th a) (c_mk_comb (th b) (th c))
 
+    (* Mk_abs_prf
+       -----------
+       HOL4 rule: A ⊢ t = (λv. l), B ⊢ l = r  →  A ∪ B ⊢ t = (λv. r)
+       Side condition: v not free in A or B
+
+       Note: For PFTRename compliance, we must use a fresh binder for the new ABS.
+
+       Derivation:
+         a_th: A ⊢ t = (λv. l)
+         c_th: B ⊢ l = r
+         v_tm: variable from heap
+         bv: fresh binder
+         c_th' = INST c_th [(v_tm, bv)]: B ⊢ l[bv/v] = r[bv/v]
+         c_abs bv c_th': B ⊢ (λbv. l[bv/v]) = (λbv. r[bv/v])
+         r_trans a_th (...): A ∪ B ⊢ t = (λbv. r[bv/v])  ✓
+    *)
     | Mk_abs_prf (a, b, c) => let
         (* ABS requires a unique binder variable to satisfy PFTRename.
            We create a fresh binder and INST c_th to replace the free
@@ -954,6 +1525,25 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val c_th' = c_inst c_th [(v_tm, bv)]
       in r_trans a_th (c_abs bv c_th') end
 
+    (* Beta_prf
+       ---------
+       HOL4 rule: A ⊢ t = ((λv. body) x)  →  A ⊢ t = body[x/v]
+
+       Derivation:
+         a_th: A ⊢ t = (λv. body) x
+
+         actual_bv = binder of the lambda
+         beta_th = BETA ((λv. body) actual_bv)
+                 : ⊢ (λv. body) actual_bv = body
+
+         if actual_bv = arg_tm:
+           beta_inst = beta_th: ⊢ (λv. body) x = body[x/v]
+         else:
+           beta_inst = INST beta_th [(actual_bv, arg_tm)]
+                     : ⊢ (λv. body) x = body[x/v]
+
+         r_trans a_th beta_inst: A ⊢ t = body[x/v]  ✓
+    *)
     | Beta_prf a => let
         val a_th = th a
         val concl_id = tm (heap_concl a)
@@ -965,6 +1555,19 @@ fun emit_theory {trace, output, binary, ruleset} = let
           else c_inst beta_th [(actual_bv, arg_tm)]
       in r_trans a_th beta_inst end
 
+    (* BETA_CONV_prf
+       --------------
+       HOL4 rule: (λv. body) x  →  ⊢ (λv. body) x = body[x/v]
+
+       Derivation:
+         actual_bv = binder of the lambda
+         BETA ((λv. body) actual_bv): ⊢ (λv. body) actual_bv = body
+
+         if actual_bv = arg_tm:
+           return the BETA result directly
+         else:
+           INST [(actual_bv, arg_tm)]: ⊢ (λv. body) x = body[x/v]  ✓
+    *)
     | BETA_CONV_prf a => let
         val app_id = tm a
         val (lam_tm, arg_tm) = pft_dest_comb app_id
@@ -973,19 +1576,47 @@ fun emit_theory {trace, output, binary, ruleset} = let
       in if actual_bv = arg_tm then r_beta app_var
          else r_inst (c_beta app_var) [(actual_bv, arg_tm)] end
 
+    (* ALPHA_prf
+       ----------
+       HOL4 rule: t1, t2  →  ⊢ t1 = t2  (where t1 and t2 are alpha-equivalent)
+
+       In Candle, alpha-equivalent terms are equal, so REFL suffices.
+    *)
     | ALPHA_prf (t1, _) =>
         c_refl (tm t1)
 
+    (* DISCH_prf
+       ----------
+       HOL4 rule: p, A ⊢ q  →  A \ {p} ⊢ p ==> q
+
+       Just calls do_DISCH helper function.
+    *)
     | DISCH_prf (a, b) => let
         val p_tm = tm a val b_th = th b val q_tm = tm (heap_concl b)
       in do_DISCH p_tm q_tm b_th end
 
+    (* GEN_prf
+       --------
+       HOL4 rule: A ⊢ s  →  A ⊢ ∀v. s
+       Side condition: v not free in A
+
+       Just calls do_GEN helper function.
+    *)
     | GEN_prf (a, b) => let
         val v_tm = tm a val b_th = th b
         val s_tm = tm (heap_concl b)
         val v_ty = pft_type_of v_tm
       in do_GEN v_tm v_ty s_tm b_th end
 
+    (* GENL_prf
+       ---------
+       HOL4 rule: A ⊢ s  →  A ⊢ ∀v1...∀vn. s
+       Side condition: v1,...,vn not free in A
+
+       Derivation: Fold do_GEN from innermost to outermost.
+       For each variable vi, we construct the appropriate conclusion term
+       (the forall at that level) and call do_GEN.
+    *)
     | GENL_prf (a, b) => let
         val var_ids = list heap tm a
         val inner_th = th b
@@ -1009,9 +1640,21 @@ fun emit_theory {trace, output, binary, ruleset} = let
             in fold_gens rest (do_GEN v_tm v_ty s_tm th_acc) end
       in fold_gens gen_pairs inner_th end
 
+    (* SPEC_prf
+       ---------
+       HOL4 rule: A ⊢ ∀v. s  →  A ⊢ s[t/v]
+
+       Same as Specialize_prf.
+    *)
     | SPEC_prf (a, b) =>
         emit_thm_candle result_id concl_ptr (Specialize_prf (a, b))
 
+    (* Specialize_prf
+       ---------------
+       HOL4 rule: A ⊢ ∀v. s  →  A ⊢ s[t/v]
+
+       Just calls do_SPEC helper function.
+    *)
     | Specialize_prf (a, b) => let
         val t_tm = tm a val b_th = th b
         val forall_P_tm = tm (heap_concl b)
@@ -1019,18 +1662,84 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val v_ty = pft_type_of t_tm
       in do_SPEC t_tm pred_tm forall_P_tm v_ty b_th end
 
+    (* DISJ_CASES_prf
+       ----------------
+       HOL4 rule: A ⊢ p ∨ q, B ⊢ r, C ⊢ r
+                  → A ∪ (B \ {p}) ∪ (C \ {q}) ⊢ r
+       where B has hypothesis p and C has hypothesis q.
+
+       Pro-forma: candle$DISJ_CASES = {p ∨ q, p ==> r, q ==> r} ⊢ r
+
+       Derivation:
+         a_th: A ⊢ p ∨ q
+         b_th: B ⊢ r  (with p ∈ B)
+         c_th: C ⊢ r  (with q ∈ C)
+
+         pth = INST candle$DISJ_CASES [p↦p, q↦q, r↦r]
+             : {p ∨ q, p ==> r, q ==> r} ⊢ r
+
+         c_deduct a_th pth
+             : DEDUCT_ANTISYM (A ⊢ p∨q) ({p∨q, p==>r, q==>r} ⊢ r)
+             : (A \ {r}) ∪ ({p∨q, p==>r, q==>r} \ {p∨q}) ⊢ (p∨q) = r
+             : A ∪ {p==>r, q==>r} ⊢ (p∨q) = r
+               (since r ∉ A typically, and p∨q is the conclusion being discharged)
+
+         th3 = c_eq_mp (c_deduct a_th pth) a_th
+             : EQ_MP (A ∪ {p==>r, q==>r} ⊢ (p∨q) = r) (A ⊢ p∨q)
+             : A ∪ {p==>r, q==>r} ⊢ r
+
+         do_DISCH p_tm r_tm b_th
+             : B \ {p} ⊢ p ==> r
+
+         th4 = c_prove_hyp (do_DISCH p_tm r_tm b_th) th3
+             : PROVE_HYP (B\{p} ⊢ p==>r) (A ∪ {p==>r, q==>r} ⊢ r)
+             : (B\{p}) ∪ ((A ∪ {p==>r, q==>r}) \ {p==>r}) ⊢ r
+             : (B\{p}) ∪ A ∪ {q==>r} ⊢ r
+
+         do_DISCH q_tm r_tm c_th
+             : C \ {q} ⊢ q ==> r
+
+         r_prove_hyp (do_DISCH q_tm r_tm c_th) th4
+             : PROVE_HYP (C\{q} ⊢ q==>r) ((B\{p}) ∪ A ∪ {q==>r} ⊢ r)
+             : (C\{q}) ∪ (((B\{p}) ∪ A ∪ {q==>r}) \ {q==>r}) ⊢ r
+             : (C\{q}) ∪ (B\{p}) ∪ A ⊢ r
+             : A ∪ (B\{p}) ∪ (C\{q}) ⊢ r  ✓
+    *)
     | DISJ_CASES_prf (a, b, c) => let
         val a_th = th a val b_th = th b val c_th = th c
+                   (* a_th: A ⊢ p ∨ q
+                      b_th: B ⊢ r  (with p ∈ B)
+                      c_th: C ⊢ r  (with q ∈ C) *)
         val concl_a_id = tm (heap_concl a)
         val (or_p_id, q_tm) = pft_dest_comb concl_a_id
         val (_, p_tm) = pft_dest_comb or_p_id
         val r_tm = tm (heap_concl b)
         val pth = c_inst (candle_load_pth "candle$DISJ_CASES")
                     [(pvar_p, p_tm), (pvar_q, q_tm), (pvar_r, r_tm)]
+                  (* pth: {p ∨ q, p ==> r, q ==> r} ⊢ r *)
         val th3 = c_eq_mp (c_deduct a_th pth) a_th
+                  (* th3: A ∪ {p==>r, q==>r} ⊢ r *)
         val th4 = c_prove_hyp (do_DISCH p_tm r_tm b_th) th3
+                  (* th4: A ∪ (B\{p}) ∪ {q==>r} ⊢ r *)
       in r_prove_hyp (do_DISCH q_tm r_tm c_th) th4 end
+         (* result: A ∪ (B\{p}) ∪ (C\{q}) ⊢ r *)
 
+    (* CCONTR_prf
+       -----------
+       HOL4 rule: p, A ⊢ F  →  A \ {~p} ⊢ p
+       (Classical contradiction: if assuming ~p leads to F, then p holds)
+
+       Pro-forma: candle$CCONTR = ⊢ (~p ==> F) ==> p
+
+       Derivation:
+         b_th: A ⊢ F  (where ~p ∈ A)
+         disch_th = do_DISCH (~p) F b_th
+                  : A \ {~p} ⊢ ~p ==> F
+         ccontr_inst = INST candle$CCONTR [p↦p]
+                     : ⊢ (~p ==> F) ==> p
+         do_MP ccontr_inst (~p ==> F) p disch_th
+                     : A \ {~p} ⊢ p  ✓
+    *)
     | CCONTR_prf (a, b) => let
         val p_tm = tm a val b_th = th b
         val neg_tm = emit_const "~" (emit_tyop "fun" [bool_tyid, bool_tyid])
@@ -1041,6 +1750,12 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val neg_p_imp_F = emit_comb (emit_comb imp_const neg_p) const_F_tm
       in do_MP ccontr_inst neg_p_imp_F p_tm disch_th end
 
+    (* EXISTS_prf
+       -----------
+       HOL4 rule: ∃v. body, witness, A ⊢ body[witness/v]  →  A ⊢ ∃v. body
+
+       Just calls do_EXISTS helper function.
+    *)
     | EXISTS_prf (a, b, c) => let
         val c_th = th c
         val witness_tm = tm b
@@ -1050,43 +1765,151 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val v_ty = pft_type_of var_tm
       in do_EXISTS pred_tm var_tm witness_tm v_ty c_th end
 
+    (* CHOOSE_prf
+       -----------
+       HOL4 rule: v, A ⊢ ∃x. P, B ⊢ q
+                  → A ∪ (B \ {P[v/x]}) ⊢ q
+       Side condition: v not free in ∃x. P, q, or the remaining hypotheses of B
+
+       Here:
+         v_tm = the chosen variable v
+         b_th: A ⊢ ∃x. P  (i.e., A ⊢ ?pred_tm where pred_tm = λx. P)
+         c_th: B ⊢ q  (where P[v/x] ∈ B)
+
+       The hypothesis to discharge from B is P[v/x].
+
+       Pro-forma: candle$CHOOSE = ⊢ (?P) ==> (!x. P x ==> Q) ==> Q
+
+       Strategy:
+         1. From c_th: B ⊢ q with P[v/x] ∈ B, we need to derive
+            something of the form B \ {P[v/x]} ⊢ (P v) ==> q
+         2. Then GEN over v to get !v. P v ==> q
+         3. Then use CHOOSE pro-forma with b_th to get q
+
+       Let cmb = (λx. P) v (an application, NOT the same as P[v/x]).
+
+       Derivation:
+         c_assume cmb
+             : {cmb} ⊢ cmb
+             : {(λx. P) v} ⊢ (λx. P) v
+
+         do_beta_reduce pred_tm v_tm
+             : ⊢ (λx. P) v = P[v/x]
+
+         c_eq_mp (do_beta_reduce pred_tm v_tm) (c_assume cmb)
+             : EQ_MP (⊢ cmb = P[v/x]) ({cmb} ⊢ cmb)
+             : {cmb} ⊢ P[v/x]
+             : {(λx. P) v} ⊢ P[v/x]
+
+         c_with_cmb = c_prove_hyp (...) c_th
+             : PROVE_HYP ({cmb} ⊢ P[v/x]) (B ⊢ q)
+             : {cmb} ∪ (B \ {P[v/x]}) ⊢ q
+             : {(λx. P) v} ∪ (B \ {P[v/x]}) ⊢ q
+
+         th_disch = do_DISCH cmb q_tm c_with_cmb
+             : ({cmb} ∪ (B \ {P[v/x]})) \ {cmb} ⊢ cmb ==> q
+             : B \ {P[v/x]} ⊢ (λx. P) v ==> q
+
+         th_disch_bv = c_inst th_disch [(v_tm, bv)]
+             : (B \ {P[v/x]})[bv/v] ⊢ ((λx. P) v ==> q)[bv/v]
+             : B \ {P[v/x]} ⊢ (λx. P) bv ==> q
+             (since v not free in B \ {P[v/x]} or q by side condition)
+
+         eqt_pth = INST candle$EQT_INTRO [t ↦ ((λx.P) bv ==> q)]
+             : ⊢ ((λx.P) bv ==> q) = (((λx.P) bv ==> q) = T)
+
+         c_eq_mp eqt_pth th_disch_bv
+             : B \ {P[v/x]} ⊢ ((λx.P) bv ==> q) = T
+
+         abs_eq = c_abs bv (...)
+             : B \ {P[v/x]} ⊢ (λbv. (λx.P) bv ==> q) = (λbv. T)
+             (bv not free in B \ {P[v/x]} by side condition + fresh binder)
+
+         gen_inst = INST (INST_TYPE candle$GEN ['a↦v_ty]) [P ↦ (λbv. cmb_bv ==> q)]
+             : ⊢ ((λbv. cmb_bv ==> q) = (λx. T)) = !(λbv. cmb_bv ==> q)
+
+         gen_v = c_eq_mp gen_inst abs_eq
+             : B \ {P[v/x]} ⊢ !bv. (λx.P) bv ==> q
+
+         choose_inst = INST (INST_TYPE candle$CHOOSE ['a↦v_ty])
+                            [P ↦ pred_tm, Q ↦ q]
+             : ⊢ (?pred_tm) ==> (!bv. pred_tm bv ==> q) ==> q
+             : ⊢ (∃x. P) ==> (!bv. (λx.P) bv ==> q) ==> q
+
+         mp_choose1 = do_MP choose_inst exists_P_tm imp_forall_q b_th
+             : A ⊢ (!bv. (λx.P) bv ==> q) ==> q
+
+         do_MP mp_choose1 forall_v_imp q_tm gen_v
+             : A ∪ (B \ {P[v/x]}) ⊢ q  ✓
+    *)
     | CHOOSE_prf (a, b, c) => let
         val v_tm = tm a val b_th = th b val c_th = th c
+                   (* v_tm: the chosen variable
+                      b_th: A ⊢ ∃x. P
+                      c_th: B ⊢ q  (with P[v/x] ∈ B) *)
         val q_tm = tm (heap_concl c)
         val exists_P_tm = tm (heap_concl b)
+                          (* exists_P_tm: ?pred_tm = ∃x. P *)
         val (_, pred_tm) = pft_dest_comb exists_P_tm
+                           (* pred_tm: λx. P *)
         val (bv_tm, _) = pft_dest_abs pred_tm
         val v_ty = pft_type_of bv_tm
-        (* Create fresh binder for the forall term to satisfy PFTRename.
-           We use the same binder for both term construction and proof
-           so that do_MP sees matching term IDs. *)
+        (* Create fresh binder for the forall term to satisfy PFTRename. *)
         val bv = emit_binder "v" v_ty
         val cmb = emit_comb pred_tm v_tm
+                  (* cmb: (λx. P) v *)
         val cmb_bv = emit_comb pred_tm bv
+                     (* cmb_bv: (λx. P) bv *)
         val c_with_cmb = c_prove_hyp
                             (c_eq_mp (do_beta_reduce pred_tm v_tm) (c_assume cmb)) c_th
+                         (* c_with_cmb: {cmb} ∪ (B \ {P[v/x]}) ⊢ q *)
         val imp_cmb_q = emit_comb (emit_comb imp_const cmb) q_tm
         val imp_cmb_q_bv = emit_comb (emit_comb imp_const cmb_bv) q_tm
-        (* Inline do_GEN logic but use bv instead of creating another fresh binder *)
         val th_disch = do_DISCH cmb q_tm c_with_cmb
+                       (* th_disch: B \ {P[v/x]} ⊢ cmb ==> q *)
         val th_disch_bv = c_inst th_disch [(v_tm, bv)]
+                          (* th_disch_bv: B \ {P[v/x]} ⊢ cmb_bv ==> q *)
         val eqt_pth = c_inst (candle_load_pth "candle$EQT_INTRO")
                          [(pvar_t, imp_cmb_q_bv)]
         val abs_eq = c_abs bv (c_eq_mp eqt_pth th_disch_bv)
+                     (* abs_eq: B \ {P[v/x]} ⊢ (λbv. cmb_bv ==> q) = (λbv. T) *)
         val Ab_v = emit_tyop "fun" [v_ty, bool_tyid]
         val gen_inst = c_inst (c_inst_type (candle_load_pth "candle$GEN")
                          [(tyvar_A, v_ty)])
                          [(emit_var "P" Ab_v, emit_abs bv imp_cmb_q_bv)]
         val gen_v = c_eq_mp gen_inst abs_eq
+                    (* gen_v: B \ {P[v/x]} ⊢ !bv. cmb_bv ==> q *)
         val choose_inst = c_inst (c_inst_type (candle_load_pth "candle$CHOOSE")
                             [(tyvar_A, v_ty)])
                             [(emit_var "P" Ab_v, pred_tm), (pvar_Q, q_tm)]
+                          (* choose_inst: ⊢ (?pred_tm) ==> (!bv. pred_tm bv ==> q) ==> q *)
         val forall_v_imp = emit_comb
           (emit_const "!" (emit_tyop "fun" [Ab_v, bool_tyid])) (emit_abs bv imp_cmb_q_bv)
         val imp_forall_q = emit_comb (emit_comb imp_const forall_v_imp) q_tm
         val mp_choose1 = do_MP choose_inst exists_P_tm imp_forall_q b_th
+                         (* mp_choose1: A ⊢ forall_v_imp ==> q *)
       in do_MP mp_choose1 forall_v_imp q_tm gen_v end
+         (* result: A ∪ (B \ {P[v/x]}) ⊢ q *)
 
+    (* SUBST_prf
+       ----------
+       HOL4 rule: [(v1, ⊢ l1 = r1), ...], template, A ⊢ P[l1/v1, ...]
+                  →  A ⊢ P[r1/v1, ...]
+
+       The template P contains free variables v1, v2, ... as placeholders.
+       The source theorem c_th proves A ⊢ P with l1, l2, ... in place of v1, v2, ...
+       Each subst pair provides vi and a theorem ⊢ li = ri.
+
+       Derivation:
+         rconv walks the template and source in parallel:
+         - At a placeholder vi: return the corresponding theorem ⊢ li = ri
+         - At a COMB: recursively walk both children, combine with MK_COMB
+         - At an ABS: recursively walk the body with updated binder map, wrap with ABS_THM
+         - At other leaves: REFL
+
+         The result is ⊢ source = result where result has ri in place of li.
+         Then EQ_MP gives A ⊢ result.
+    *)
     | SUBST_prf (a, b, c) => let
         val pairs = list heap (tuple2 heap (fn p => p, fn p => p)) a
         val template_ptr = b
@@ -1136,6 +1959,26 @@ fun emit_theory {trace, output, binary, ruleset} = let
                              ^ " vs tmpl " ^ Int.toString tmpl_id)
       in r_eq_mp (rconv [] source_id template_id) c_th end
 
+    (* GEN_ABS_prf
+       -------------
+       HOL4 rule: (a) NONE, [v1,...,vn], A ⊢ l = r
+                      →  A ⊢ (λv1...λvn. l) = (λv1...λvn. r)
+                  (b) SOME c, [v1,...,vn], A ⊢ l = r
+                      →  A ⊢ (c (λv1. c (λv2. ... c (λvn. l)...))) = (same for r)
+                      where c is a binder constant like ! or ?
+
+       Side condition: v1,...,vn not free in A
+
+       Note: Fresh binders must be used for PFTRename compliance.
+
+       Derivation:
+         For each variable vi, working from innermost to outermost:
+         - Create fresh binder bv
+         - INST th_acc [(vi, bv)] to replace free vi with bv
+         - If NONE: c_abs bv (th_acc')  (gives ⊢ (λbv. l) = (λbv. r))
+         - If SOME c: c_mk_comb (REFL c) (c_abs bv th_acc')
+                      (gives ⊢ c (λbv. l) = c (λbv. r))
+    *)
     | GEN_ABS_prf (a, b, c) => let
         val vars = list heap tm b
         val c_th = th c
@@ -1312,7 +2155,14 @@ fun emit_theory {trace, output, binary, ruleset} = let
               val body_c =
                 List.foldl (fn ((vj, wj), t) => pft_subst_tm vj wj t)
                            body_i prev_vw
-              val pred_c = emit_abs v_id body_c
+              (* Use a fresh binder for the synthesized witness predicate,
+                 then alpha-rename body_c accordingly. This preserves the
+                 binder-uniqueness invariant expected by downstream tools
+                 (e.g., PFTRename), instead of reusing v_id as binder for
+                 multiple ABS nodes. *)
+              val bv = emit_binder "v" v_ty
+              val body_c_bv = pft_rename_free v_id bv body_c
+              val pred_c = emit_abs bv body_c_bv
               val Ab = emit_tyop "fun" [v_ty, bool_tyid]
               val w_i = emit_comb
                           (emit_const "@" (emit_tyop "fun" [Ab, v_ty]))
@@ -2127,21 +2977,60 @@ fun emit_theory {trace, output, binary, ruleset} = let
                     in PFTWriter.Candle.mk_comb out id rator_eq rand_eq; id end
                 in (emit_comb rator_c rand_c, comb_th) end
             end
+      (* translate_term_numerals_hol4_to_candle: Abs case
+         -------------------------------------------------
+         Input: tm_ptr points to Abs (var_ptr, body_ptr) in heap
+                tm_id is already-emitted term ID for this Abs
+         
+         We need to translate numerals in the body. If the body changes,
+         we produce:
+           abs_th: (λv. body) = (λv. body')  (where body' has Candle numerals)
+           result_tm: the term ID for (λv. body')
+
+         The theorem uses ABS_THM: if ⊢ body = body', then ⊢ (λv.body) = (λv.body')
+         provided v not free in the hypotheses (which is satisfied since both are ⊢).
+
+         CRITICAL: We must use a FRESH binder for the new ABS term to satisfy
+         PFTRename assumption #2 (each binder VAR ID is first arg of exactly one ABS).
+         The original var_id is already the binder of tm_id's ABS.
+
+         Strategy:
+           1. Get original binder var_id from tm_id
+           2. Recursively translate body
+           3. If body changed (body_th ≠ ~1):
+              a. Create fresh binder new_bv
+              b. INST body_th [var_id ↦ new_bv] to get ⊢ body[new_bv/v] = body'[new_bv/v]
+              c. ABS_THM new_bv on that to get ⊢ (λnew_bv. body[new_bv/v]) = (λnew_bv. body'[new_bv/v])
+              d. Build result term using new_bv as binder
+              e. Chain with alpha-equivalence (REFL) on both sides if needed
+              
+         Actually simpler: ABS_THM var_id body_th gives ⊢ (λvar_id. body) = (λvar_id. body').
+         The result term (λvar_id. body') is alpha-equivalent to what we want, but we
+         need a term ID for it. We can't reuse var_id as binder for a NEW abs term.
+         
+         Solution: Create fresh binder, substitute in both body and body', use that
+         for the new ABS. The result is alpha-equivalent to the original. *)
       | Abs (var_ptr, body_ptr) =>
           let
-            (* Use the binder from the already-emitted ABS (tm_id), not emit_term var_ptr,
-               because emit_term var_ptr would create a free variable with the original name
-               rather than the pft%-suffixed binder that was created when the ABS was emitted. *)
-            val (var_id, _) = pft_dest_abs tm_id
+            val (var_id, body_id_orig) = pft_dest_abs tm_id
             val body_id = emit_term body_ptr
             val (body_c, body_th) = translate_term_numerals_hol4_to_candle body_ptr body_id
           in
             if body_th < 0 then (tm_id, ~1)
             else
               let
+                (* Create fresh binder for the new ABS term *)
+                val var_ty = pft_type_of var_id
+                val new_bv = emit_binder "v" var_ty
+                (* Substitute the fresh binder for the original binder in body_th *)
+                val body_th_subst = let val id = alloc_th ()
+                  in PFTWriter.Candle.inst out id body_th [(var_id, new_bv)]; id end
+                (* body_th_subst: ⊢ body[new_bv/var_id] = body'[new_bv/var_id] *)
                 val abs_th = let val id = alloc_th ()
-                  in PFTWriter.Candle.abs_thm out id var_id body_th; id end
-                val result_tm = emit_abs var_id body_c
+                  in PFTWriter.Candle.abs_thm out id new_bv body_th_subst; id end
+                (* abs_th: ⊢ (λnew_bv. body[new_bv/v]) = (λnew_bv. body'[new_bv/v]) *)
+                val body_c_subst = pft_subst_tm var_id new_bv body_c
+                val result_tm = emit_abs new_bv body_c_subst
               in (result_tm, abs_th) end
           end
       | _ => (tm_id, ~1)  (* Var or Const, no translation *)
@@ -2467,6 +3356,34 @@ fun emit_theory {trace, output, binary, ruleset} = let
                       SOME _ => emit_comb f' x'
                     | NONE   => emit_abs f' x'
             end
+    end
+
+  (* Rename free occurrences of old_id to new_id in tm_id.
+     Unlike pft_subst_tm, this is binder-aware and does not rewrite
+     occurrences of old_id that are bound by an enclosing ABS old_id.
+     This is used for alpha-renaming synthesized binders while preserving
+     PFTRename's binder-uniqueness invariant. *)
+  and pft_rename_free old_id new_id tm_id =
+    let
+      fun go shadowed t =
+        if t = old_id then (if shadowed then t else new_id)
+        else let val f = DArray.sub(tm_part1, t)
+        in if f < 0 then t (* VAR or CONST *)
+           else let
+             val x = DArray.sub(tm_part2, t)
+           in
+             if isSome (IntPairTable.lookup comb_ht (f, x)) then
+               let val f' = go shadowed f
+                   val x' = go shadowed x
+               in if f' = f andalso x' = x then t else emit_comb f' x' end
+             else
+               (* ABS f x: entering body shadows old_id iff binder = old_id *)
+               let val x' = go (shadowed orelse f = old_id) x
+               in if x' = x then t else emit_abs f x' end
+           end
+        end
+    in
+      go false tm_id
     end
 
   (* ======================================================================= *)
