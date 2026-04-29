@@ -519,7 +519,7 @@ all arguments are provided directly.
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
 | DEF_SPEC | `⊢ ∃v1...vn. P`, `[s1,...,sn]` | `⊢ P[c1/v1,...,cn/vn]` | The input theorem must have no hypotheses and no free variables; each `si` is the name of a fresh constant `ci` with the same type as `vi`. Corresponds to HOL4's `prim_specification`. |
-| DEF_SPEC_GEN | `{v1 = t1, ..., vn = tn} ⊢ P`, `[s1,...,sn]` | `⊢ P[c1/v1,...,cn/vn]` | Each hypothesis must be an equation `vi = ti` where `vi` is a variable. The `ti` must have no free variables other than those bound by other hypotheses. Each `si` must match `thy$vi` for some common theory prefix `thy`; each `ci` is a fresh constant named `si` with the same type as `vi`. Corresponds to HOL4's `gen_prim_specification`. |
+| DEF_SPEC_GEN | `{v1 = t1, ..., vn = tn} ⊢ P`, `[s1,...,sn]` | `⊢ P[c1/v1,...,cn/vn]` | Each hypothesis must be an equation `vi = ti` where `vi` is a variable. Each `ti` must be **term-closed** (no free term variables). Type variables occurring in `ti` must be a subset of the type variables occurring in the type of `vi`. Each `si` must match `thy$vi` for some common theory prefix `thy`; each `ci` is a fresh constant named `si` with the same type as `vi`. Corresponds to HOL4's `gen_prim_specification`. |
 | DEF_TYOP | `⊢ ∃v. P v`, name | `⊢ ∃rep. TYPE_DEFINITION P rep` | Creates a new type operator with the given name; `P : dom → bool` must be a closed term; the input theorem must have no hypotheses; the new type has the type variables of `P` as parameters. Requires `bool$TYPE_DEFINITION` |
 
 ### Computation
