@@ -944,13 +944,15 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | Mk_comb_prf (a, b, c) => r_trans (th a) (c_mk_comb (th b) (th c))
 
     | Mk_abs_prf (a, b, c) => let
-        (* ABS over the heap's Bvar as a free Fv (emitted via `tm b`), not
-           over the fresh binder that emit_term allocated inside a_th's
-           lambda: Bvar's free occurrences in c_th use the former, so only
-           that choice makes TRANS's mid-terms alpha-equivalent. *)
+        (* ABS requires a unique binder variable to satisfy PFTRename.
+           We create a fresh binder and INST c_th to replace the free
+           variable with the fresh binder. *)
         val a_th = th a val c_th = th c
-        val bv_id = tm b
-      in r_trans a_th (c_abs bv_id c_th) end
+        val v_tm = tm b  (* free variable from heap *)
+        val v_ty = pft_type_of v_tm
+        val bv = emit_binder "v" v_ty
+        val c_th' = c_inst c_th [(v_tm, bv)]
+      in r_trans a_th (c_abs bv c_th') end
 
     | Beta_prf a => let
         val a_th = th a
@@ -1139,9 +1141,15 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val c_th = th c
         (* HOL4's GEN_ABS retypes the binder per variable (Thm.list_mk_binder
            / Logging.GEN_ABS_prf), so we must too — otherwise mixed-type
-           variable lists yield ill-typed MK_COMB terms. *)
+           variable lists yield ill-typed MK_COMB terms.
+           We create fresh binders and INST to satisfy PFTRename's
+           uniqueness assumption. *)
         val step = case option heap (fn p => p) a of
-            NONE => (fn (v_tm, th_acc) => c_abs v_tm th_acc)
+            NONE => (fn (v_tm, th_acc) => let
+              val v_ty = pft_type_of v_tm
+              val bv = emit_binder "v" v_ty
+              val th_acc' = c_inst th_acc [(v_tm, bv)]
+            in c_abs bv th_acc' end)
           | SOME c_ptr => let
               val c_refl0 = c_refl (emit_term c_ptr)
               fun dom ty_ptr = case shType heap ty_ptr of
@@ -1153,8 +1161,11 @@ fun emit_theory {trace, output, binary, ruleset} = let
               fun refl_at v_ty =
                 if v_ty = sigma then c_refl0
                 else c_inst_type c_refl0 [(sigma, v_ty)]
-            in fn (v_tm, th_acc) =>
-                 c_mk_comb (refl_at (pft_type_of v_tm)) (c_abs v_tm th_acc)
+            in fn (v_tm, th_acc) => let
+                 val v_ty = pft_type_of v_tm
+                 val bv = emit_binder "v" v_ty
+                 val th_acc' = c_inst th_acc [(v_tm, bv)]
+               in c_mk_comb (refl_at v_ty) (c_abs bv th_acc') end
             end
       in List.foldr step c_th vars end
 
