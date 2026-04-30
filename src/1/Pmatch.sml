@@ -484,8 +484,9 @@ end
      Repeated variable occurrences in a pattern are not allowed.
  ---------------------------------------------------------------------------*)
 
-fun inc d k = case Binarymap.peek(d,k) of NONE => Binarymap.insert(d,k,1)
-                                        | SOME n => Binarymap.insert(d,k,n+1);
+fun inc d k = case Termtab.lookup d k of
+                  NONE => Termtab.update (k,1) d
+                | SOME n => Termtab.update (k,n+1) d;
 
 fun FV_multiset tm =
   let
@@ -500,15 +501,15 @@ fun FV_multiset tm =
              | COMB(Rator,Rand) => recurse d (TM Rator :: TM Rand :: rest)
              | LAMB(Bvar,Body) =>
                let
-                 val c0 = case Binarymap.peek(d,Bvar) of
+                 val c0 = case Termtab.lookup d Bvar of
                               NONE => 0
                             | SOME i => i
                in
                  recurse d (TM Body :: RESET(Bvar,c0) :: rest)
                end)
-        | RESET (v,c) :: rest => recurse (Binarymap.insert(d,v,c)) rest
+        | RESET (v,c) :: rest => recurse (Termtab.update (v,c) d) rest
   in
-    recurse (Binarymap.mkDict Term.compare) [TM tm]
+    recurse Termtab.empty [TM tm]
   end
 
 fun no_repeat_vars pat =
@@ -516,7 +517,8 @@ fun no_repeat_vars pat =
     fun check d =
       let
         val repeats =
-            Binarymap.foldl (fn (k,v,acc) => if v > 1 then k::acc else acc) [] d
+            Termtab.fold (fn (k,v) => fn acc =>
+                             if v > 1 then k::acc else acc) d []
       in
         if null repeats then true
         else

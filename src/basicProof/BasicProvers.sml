@@ -470,8 +470,9 @@ fun Induct_on qtm g =
           SOME {Thy,Name,...} =>
           let
             fun indths() =
-                Binarymap.find (rule_induction_map(), {Thy=Thy,Name=Name})
-                handle NotFound => []
+                Option.getOpt (KNametab.lookup (rule_induction_map())
+                                               {Thy=Thy,Name=Name},
+                               [])
             fun numSchematics th =
                 let
                   val (_,base) = th |> concl |> strip_forall |> #2 |> dest_imp

@@ -52,12 +52,13 @@ fun TAUT_CHECK_CONV tm =
     let val (vars,tm') = strip_forall tm
         val g = list_mk_exists(vars,mk_neg tm')
         val cxm = List.foldl (fn (v, cxm) =>
-          if is_neg v then Redblackmap.insert (cxm, dest_neg v, F)
-          else Redblackmap.insert (cxm, v, T))
-            (Redblackmap.mkDict Term.compare)
+          if is_neg v then Termtab.update (dest_neg v, F) cxm
+          else Termtab.update (v, T) cxm)
+            Termtab.empty
             (strip_conj (fst (dest_imp (concl th))))
-        val cex = List.map (fn v => Redblackmap.find (cxm, v)
-          handle NotFound => T) vars
+        val cex = List.map (fn v => case Termtab.lookup cxm v of
+                                        SOME t => t
+                                      | NONE => T) vars
         val th1 = prove(g, MAP_EVERY EXISTS_TAC cex THEN REWRITE_TAC [])
         val th2 = CONV_RULE (REPEATC (LAST_EXISTS_CONV EXISTS_NOT_CONV)) th1
     in EQF_INTRO th2 end

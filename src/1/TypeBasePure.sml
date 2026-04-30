@@ -632,6 +632,13 @@ fun next_ty ty = mk_vartype(Lexis.tyvar_vary (dest_vartype ty))
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
+local
+  structure Typetab = Table(struct
+    type key = Type.hol_type
+    val ord = Type.compare
+    fun pp _ = HOLPP.add_string "<type>"
+  end)
+in
 fun normalise_ty ty = let
   fun recurse (acc as (dict,usethis)) tylist =
       case tylist of
@@ -639,8 +646,8 @@ fun normalise_ty ty = let
       | ty :: rest => let
         in
           if is_vartype ty then
-            case Binarymap.peek(dict,ty) of
-                NONE => recurse (Binarymap.insert(dict,ty,usethis),
+            case Typetab.lookup dict ty of
+                NONE => recurse (Typetab.update (ty,usethis) dict,
                                  next_ty usethis)
                                 rest
               | SOME _ => recurse acc rest
@@ -650,13 +657,14 @@ fun normalise_ty ty = let
               recurse acc (Args @ rest)
             end
         end
-  val (inst0, _) = recurse (Binarymap.mkDict Type.compare, Type.alpha) [ty]
-  val inst = Binarymap.foldl (fn (tyk,tyv,acc) => (tyk |-> tyv)::acc)
-                             []
-                             inst0
+  val (inst0, _) = recurse (Typetab.empty, Type.alpha) [ty]
+  val inst = Typetab.fold (fn (tyk,tyv) => fn acc => (tyk |-> tyv)::acc)
+                          inst0
+                          []
 in
   Type.type_subst inst ty
 end
+end (* local *)
 
 fun prim_get (db:typeBase) (thy,tyop) =
     case Type.op_arity {Thy = thy, Tyop = tyop} of

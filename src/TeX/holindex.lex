@@ -25,8 +25,8 @@ fun lexError msg text pos line =
 (* The table of keywords *)
 
 val keyword_table =
-List.foldl (fn ((str, tok), t) => Binarymap.insert (t, str, tok))
-(Binarymap.mkDict String.compare)
+List.foldl (fn ((str, tok), t) => Symtab.update (str, tok) t)
+Symtab.empty
 [
   ("TERM",         TERM),
   ("@TERM",        TERM),
@@ -64,8 +64,9 @@ fun toUpperString s =
    String.translate (fn c => Char.toString(Char.toUpper c)) s
 
 fun mkKeyword text pos line =
-  (Binarymap.find (keyword_table, toUpperString text)) (mkMtTok text pos line)
-  handle Binarymap.NotFound => IDENT (mkTok I text pos line);
+  case Symtab.lookup keyword_table (toUpperString text) of
+      SOME tok => tok (mkMtTok text pos line)
+    | NONE => IDENT (mkTok I text pos line);
 
 
 %%

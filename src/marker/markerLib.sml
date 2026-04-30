@@ -980,19 +980,24 @@ type susp_key = string * string
 
 val susp_key_compare = Portable.pair_compare (String.compare, String.compare)
 
+structure SuspTab = Table(struct
+  type key = susp_key
+  val ord = susp_key_compare
+  fun pp (s1,s2) = HOLPP.add_string (s1 ^ "$" ^ s2)
+end)
+
 datatype susp_delta =
     AddSuspended of susp_key * thm
   | RemoveSuspended of susp_key
 
-type susp_table = (susp_key, thm) Binarymap.dict
+type susp_table = thm SuspTab.table
 
-val empty_susp_table : susp_table = Binarymap.mkDict susp_key_compare
+val empty_susp_table : susp_table = SuspTab.empty
 
 fun apply_susp_delta d (tab : susp_table) : susp_table =
     case d of
-        AddSuspended (k, th) => Binarymap.insert (tab, k, th)
-      | RemoveSuspended k =>
-          (fst (Binarymap.remove (tab, k)) handle Binarymap.NotFound => tab)
+        AddSuspended (k, th) => SuspTab.update (k, th) tab
+      | RemoveSuspended k => SuspTab.delete_safe k tab
 
 val (susp_enc, susp_dec) = bij_ed (
       (fn AddSuspended p => inl p | RemoveSuspended k => inr k),
@@ -1037,31 +1042,37 @@ fun triple_compare (c1, c2, c3) ((a1,a2,a3), (b1,b2,b3)) =
 val res_key_compare =
     triple_compare (String.compare, String.compare, String.compare)
 
+structure ResTab = Table(struct
+  type key = res_key
+  val ord = res_key_compare
+  fun pp (s1,s2,s3) = HOLPP.add_string (s1 ^ "$" ^ s2 ^ "$" ^ s3)
+end)
+
 datatype res_delta =
     AddResumption of res_key * thm
   | RemoveResumptions of string * string  (* parent_thy, parent_name *)
 
-type res_dict = (res_key, thm list) Binarymap.dict
+type res_dict = thm list ResTab.table
 
-val empty_res_dict : res_dict = Binarymap.mkDict res_key_compare
+val empty_res_dict : res_dict = ResTab.empty
 
 fun apply_res_delta d (dict : res_dict) : res_dict =
     case d of
         AddResumption (k, th) =>
           let val existing =
-                  case Binarymap.peek (dict, k) of
+                  case ResTab.lookup dict k of
                       NONE => []
                     | SOME ths => ths
           in
-            Binarymap.insert (dict, k, th :: existing)
+            ResTab.update (k, th :: existing) dict
           end
       | RemoveResumptions (thy, nm) =>
-          Binarymap.foldl
-            (fn (k as (t,n,_), v, acc) =>
+          ResTab.fold
+            (fn (k as (t,n,_), v) => fn acc =>
                 if t = thy andalso n = nm then acc
-                else Binarymap.insert (acc, k, v))
-            empty_res_dict
+                else ResTab.update (k, v) acc)
             dict
+            empty_res_dict
 
 val reskey_ed : res_key ed = pair3_ed (string_ed, string_ed, string_ed)
 
@@ -1099,16 +1110,17 @@ fun record_resumption_delta d =
    For unqualified lookup, scans the dictionary keys for any match.
    Returns (thy, thm) on success so caller knows which theory. *)
 fun lookup_suspension_qualified (thy, nm) =
-    case Binarymap.peek (get_susp_global (), (thy, nm)) of
+    case SuspTab.lookup (get_susp_global ()) (thy, nm) of
         NONE => NONE
       | SOME th => SOME (thy, th)
 
 fun lookup_suspension_unqualified nm =
     let
       val tab = get_susp_global ()
-      val matches = Binarymap.foldl
-            (fn ((t, n), th, acc) => if n = nm then (t, th) :: acc else acc)
-            [] tab
+      val matches = SuspTab.fold
+            (fn ((t, n), th) => fn acc =>
+                if n = nm then (t, th) :: acc else acc)
+            tab []
     in
       case matches of
           [] => NONE
@@ -1127,8 +1139,8 @@ fun lookup_suspension nm =
       | _ => lookup_suspension_unqualified nm
 
 fun lookup_resumption {parent_thy, parent_name, label} =
-    case Binarymap.peek (get_res_global (),
-                        (parent_thy, parent_name, label)) of
+    case ResTab.lookup (get_res_global ())
+                       (parent_thy, parent_name, label) of
         NONE => []
       | SOME ths => ths
 
@@ -1309,7 +1321,7 @@ fun assemble_finalised parent_thy parent_nm parent_th =
               let
                 val key = (parent_thy, parent_nm, label)
                 val candidates =
-                    case Binarymap.peek (get_res_global (), key) of
+                    case ResTab.lookup (get_res_global ()) key of
                         NONE => []
                       | SOME ths => ths
                 (* Pick the candidate whose conclusion aconv-matches

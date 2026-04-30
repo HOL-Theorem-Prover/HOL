@@ -26,7 +26,7 @@ type struct_info_record = {
    all_thms    : (string * thm * thminfo) list,
    mldeps      : string list,
    thydata     : string list * Term.term list *
-                 (string,shared_writemaps -> HOLsexp.t)Binarymap.dict
+                 (shared_writemaps -> HOLsexp.t) Symtab.table
  }
 
 open Feedback Lib Portable Dep;
@@ -408,10 +408,10 @@ fun pp_thydata (info_record : struct_info_record) = let
   val enc_cpl = HOLsexp.pair_encode(HOLsexp.String, fn x => x)
 
   fun list_loadable shared_writers thydata_map =
-    Binarymap.foldl
-      (fn (k, data, rest) => (k, data shared_writers) :: rest)
-      []
+    Symtab.fold
+      (fn (k, data) => fn rest => (k, data shared_writers) :: rest)
       thydata_map
+      []
   fun enc_loadable shared_writers thydata_map =
       let open HOLsexp in
         tagged_encode "loadable-thydata" (list_encode enc_cpl)

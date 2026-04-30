@@ -243,11 +243,10 @@ type trace_record = {
 
 datatype TI = TR of trace_record | ALIAS of string
 
-val trace_map =
-    ref (Binarymap.mkDict String.compare : (string,TI)Binarymap.dict)
+val trace_map : TI Symtab.table ref = ref Symtab.empty
 
 fun find_record n =
-  case Binarymap.peek (!trace_map, n) of
+  case Symtab.lookup (!trace_map) n of
       NONE => NONE
     | SOME (TR tr) => SOME tr
     | SOME (ALIAS a) => find_record a
@@ -281,13 +280,13 @@ fun register_trace0 fnm (nm, r, max) =
      let
        val trfns as TRFP recd = ref2trfp r
      in
-       case Binarymap.peek (!trace_map, nm) of
+       case Symtab.lookup (!trace_map) nm of
            NONE => ()
          | SOME _ =>
            WARN fnm ("Replacing a trace with name " ^ quote nm);
-       trace_map := Binarymap.insert
-                      (!trace_map, nm, TR {value = trfns, default = !r,
-                                           aliases = [], maximum = max});
+       trace_map := Symtab.update
+                      (nm, TR {value = trfns, default = !r,
+                               aliases = [], maximum = max}) (!trace_map);
        recd
      end
 val register_trace = ignore o register_trace0 "register_trace"
@@ -312,10 +311,10 @@ fun register_alias_trace {original, alias} =
               else alias::aliases
           val recd = {aliases = aliases', maximum = maximum, default = default,
                      value = value}
-          val record_alias = Binarymap.insert(!trace_map, original, TR recd)
-          val mk_alias = Binarymap.insert(record_alias, alias, ALIAS original)
+          val record_alias = Symtab.update (original, TR recd) (!trace_map)
+          val mk_alias = Symtab.update (alias, ALIAS original) record_alias
         in
-          case Binarymap.peek (record_alias, alias) of
+          case Symtab.lookup record_alias alias of
               NONE => ()
             | SOME (ALIAS a) =>
                 if a = original then ()
@@ -336,15 +335,15 @@ fun register_ftrace (nm, (get, set), max) =
       if default < 0 orelse max < 0
          then raise ERR "register_ftrace"
                         "Can't have trace values less than zero."
-      else (case Binarymap.peek (!trace_map, nm) of
+      else (case Symtab.lookup (!trace_map) nm of
                NONE => ()
              | SOME _ => WARN "register_ftrace"
                               ("Replacing a trace with name " ^ quote nm)
             ; trace_map :=
-                  Binarymap.insert
-                     (!trace_map, nm, TR {value = TRFP {get = get, set = set},
-                                          default = default, aliases = [],
-                                          maximum = max}))
+                  Symtab.update
+                     (nm, TR {value = TRFP {get = get, set = set},
+                              default = default, aliases = [],
+                              maximum = max}) (!trace_map))
    end
 
 fun register_btrace0 fnm (nm, bref) =
@@ -352,16 +351,16 @@ fun register_btrace0 fnm (nm, bref) =
       fun get() = !bref
       fun set b = bref := b
     in
-      case Binarymap.peek (!trace_map, nm) of
+      case Symtab.lookup (!trace_map) nm of
           NONE => ()
         | SOME _ => WARN fnm ("Replacing a trace with name "^ quote nm);
       trace_map :=
-      Binarymap.insert
-        (!trace_map, nm,
+      Symtab.update
+        (nm,
          TR {value = TRFP {get = (fn () => if !bref then 1 else 0),
                            set = (fn i => bref := (i > 0))},
              default = if !bref then 1 else 0, aliases = [],
-             maximum = 1});
+             maximum = 1}) (!trace_map);
       {set = set, get = get}
     end
 val register_btrace = ignore o register_btrace0 "register_btrace0"
@@ -397,7 +396,7 @@ fun pp_trace_elt (TraceElt{name,aliases,trace_level,default,max}) =
 
 fun traces () =
    let
-      fun foldthis (n, ti, acc) =
+      fun foldthis (n, ti) acc =
         case ti of
             ALIAS _ => acc
           | TR {value, default = d, maximum, aliases} =>
@@ -407,7 +406,7 @@ fun traces () =
              max = maximum} :: acc
    in
      List.map TraceElt
-        (Binarymap.foldr foldthis [] (!trace_map))
+        (Symtab.fold_rev foldthis (!trace_map) [])
    end
 
 fun set_trace nm newvalue =
@@ -426,7 +425,7 @@ fun reset_traces () =
     fun reset (TR{value,default,...}) = trfp_set value default
       | reset (ALIAS _) = ()
   in
-    Binarymap.app (reset o #2) (!trace_map)
+    List.app (reset o #2) (Symtab.dest (!trace_map))
   end
 
 fun current_trace nm =

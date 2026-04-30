@@ -743,10 +743,8 @@ val _ = Parse.temp_set_grammars ambient_grammars;
 (*            (Ported from HOL-Light by Chun Tian, June 1, 2022)             *)
 (* ------------------------------------------------------------------------- *)
 
-local open Redblackmap in
-
-type func = (term,thm)dict;
-val undefined :func = mkDict Term.compare;
+type func = thm Termtab.table;
+val undefined :func = Termtab.empty;
 
 val CONJ_ACI_RULE = let
   fun mk_fun th (f :func) :func =
@@ -755,14 +753,14 @@ val CONJ_ACI_RULE = let
             let val (th1,th2) = CONJ_PAIR th in
                 mk_fun th1 (mk_fun th2 f)
             end
-        else insert (f,tm,th)
+        else Termtab.update (tm, th) f
     end
   and use_fun (f :func) tm :thm =
     if is_conj tm then
         let val (l,r) = dest_conj tm in
             CONJ (use_fun f l) (use_fun f r)
         end
-    else find (f,tm)
+    else valOf (Termtab.lookup f tm)
 in
   fn tm => let val (p,p') = dest_eq tm in
                if p ~~ p' then REFL p else
@@ -802,14 +800,14 @@ val DISJ_ACI_RULE = let
             let val (th1,th2) = NOT_DISJ_PAIR th in
                 mk_fun th1 (mk_fun th2 f)
             end
-        else insert (f,tm,th)
+        else Termtab.update (tm, th) f
     end
   and use_fun (f :func) tm :thm =
     if is_disj tm then
         let val (l,r) = dest_disj tm in
             NOT_DISJ (use_fun f l) (use_fun f r)
         end
-    else find (f,tm)
+    else valOf (Termtab.lookup f tm)
 in
   fn tm => let val (p,p') = dest_eq tm in
                if p ~~ p' then REFL p else
@@ -821,8 +819,6 @@ in
                end
            end
 end; (* DISJ_ACI_RULE *)
-
-end; (* local *)
 
 (* ------------------------------------------------------------------------- *)
 (* Order canonically, right-associate and remove duplicates.                 *)

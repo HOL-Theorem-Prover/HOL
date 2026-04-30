@@ -590,19 +590,23 @@ end
 val SYM_WORD_NEG_1 = SYM WORD_NEG_1
 
 local
-  val d = ref (Redblackmap.mkDict Arbnum.compare:
-               (Arbnum.num, thm) Redblackmap.dict)
+  structure Numtab = Table(struct
+    type key = Arbnum.num
+    val ord = Arbnum.compare
+    val pp = HOLPP.add_string o Arbnum.toString
+  end)
+  val d : thm Numtab.table ref = ref Numtab.empty
   val mk_th = Conv.RIGHT_CONV_RULE (Conv.REWR_CONV SYM_WORD_NEG_1) o GSYM o
               (Conv.REWR_CONV word_T_def THENC Conv.RAND_CONV SIZES_CONV) o
               wordsSyntax.mk_word_T o fcpSyntax.mk_numeric_type
   fun PRIM_UINT_MAX_CONV n =
-    case Redblackmap.peek (!d, n) of
+    case Numtab.lookup (!d) n of
        SOME th => Conv.REWR_CONV th
      | NONE =>
         let
           val th = mk_th n
         in
-          d := Redblackmap.insert (!d, n, th)
+          d := Numtab.update (n, th) (!d)
         ; Conv.REWR_CONV th
         end
   val err = ERR "UINT_MAX_CONV" ""

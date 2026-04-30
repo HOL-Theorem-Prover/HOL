@@ -235,16 +235,16 @@ fun check_vars (g as (asl,w)) =
           let
             val (nm,ty_s) = (I ## ty2s) (dest_var v)
           in
-            case Binarymap.peek(acc, nm) of
-                NONE => Binarymap.insert(acc, nm, [ty_s])
-              | SOME vs => Binarymap.insert(acc, nm, ty_s::vs)
+            case Symtab.lookup acc nm of
+                NONE => Symtab.update (nm, [ty_s]) acc
+              | SOME vs => Symtab.update (nm, ty_s::vs) acc
           end
-      val m = HOLset.foldl foldthis (Binarymap.mkDict String.compare) fvs
-      fun foldthis (nm,vtys,msg) =
+      val m = HOLset.foldl foldthis Symtab.empty fvs
+      fun foldthis (nm,vtys) msg =
           if length vtys > 1 then
             ("  " ^ nm ^ " : " ^ String.concatWith ", " vtys) :: msg
           else msg
-      val msg = Binarymap.foldl foldthis [] m
+      val msg = Symtab.fold foldthis m []
     in
       if null msg then nothing
       else (

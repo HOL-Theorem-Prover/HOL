@@ -42,7 +42,7 @@ fun dest_hd env t =
     case dest_term t of
       VAR (s, ty) => let
       in
-        case Binarymap.peek(env, t) of
+        case Termtab.lookup env t of
           NONE => (((s, ""), 0), ty)
         | SOME n => ((("", ""), ~n), Type.alpha)
       end
@@ -68,8 +68,8 @@ in
           in
             case Type.compare(type_of bv1, type_of bv2) of
               EQUAL => let
-                val env1' = Binarymap.insert(env1, bv1, n)
-                val env2' = Binarymap.insert(env2, bv2, n)
+                val env1' = Termtab.update (bv1, n) env1
+                val env2' = Termtab.update (bv2, n) env2
               in
                 ac_term_ord0 (n + 1) (env1', env2') (bdy1, bdy2)
               end
@@ -87,7 +87,7 @@ in
     end
   | x => x
 end
-val empty_dict = Binarymap.mkDict Term.compare
+val empty_dict = Termtab.empty
 val ac_term_ord = ac_term_ord0 0 (empty_dict, empty_dict)
 
 (* bad old implementation, has a loop between

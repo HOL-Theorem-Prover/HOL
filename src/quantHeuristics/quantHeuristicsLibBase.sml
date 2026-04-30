@@ -2390,8 +2390,8 @@ fun inst_filter_qp fL =
    val t = ``x:num = 9``
 *)
 
-type quant_heuristic_cache = (Term.term, (Term.term, guess_collection) Redblackmap.dict) Redblackmap.dict
-fun mk_quant_heuristic_cache () = (Redblackmap.mkDict Term.compare):quant_heuristic_cache
+type quant_heuristic_cache = guess_collection Termtab.table Termtab.table
+fun mk_quant_heuristic_cache () : quant_heuristic_cache = Termtab.empty
 
 (*
 val cache = mk_quant_heuristic_cache ()
@@ -2403,12 +2403,9 @@ val gc = SOME empty_guess_collection
 
 fun quant_heuristic_cache___insert (cache:quant_heuristic_cache) (v:term) (t:term) (gc:guess_collection) =
 let
-   val t_cache_opt = Redblackmap.peek (cache,t)
-   val t_cache = if isSome t_cache_opt then valOf t_cache_opt else
-                 (Redblackmap.mkDict Term.compare);
-
-   val t_cache' = Redblackmap.insert (t_cache, v, gc)
-   val cache' = Redblackmap.insert (cache, t, t_cache')
+   val t_cache = Option.getOpt (Termtab.lookup cache t, Termtab.empty)
+   val t_cache' = Termtab.update (v, gc) t_cache
+   val cache' = Termtab.update (t, t_cache') cache
 in
    cache':quant_heuristic_cache
 end;
@@ -2416,12 +2413,9 @@ end;
 
 
 fun quant_heuristic_cache___peek (cache:quant_heuristic_cache) (v:term) (t:term) =
-let
-   val t_cache = Redblackmap.find (cache,t)
-   val gc = Redblackmap.find (t_cache,v);
-in
-   SOME gc
-end handle Redblackmap.NotFound => NONE;
+   case Termtab.lookup cache t of
+       NONE => NONE
+     | SOME t_cache => Termtab.lookup t_cache v;
 
 
 

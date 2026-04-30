@@ -142,7 +142,7 @@ datatype action =
    Database of actions for a single constant. There is a linked list through the
    argument of `NeedArg` and `Tail` of `Try`. The linked-to `db` is for the same
    constant with arity greater by 1. The `db` that appears as a value in the
-   `Redblackmap.dict` in the `compset` is the `db` for arity 0 for that
+   table in the `compset` is the `db` for arity 0 for that
    constant.
 
    TO-DO: Which type instance of the constant is `Hcst`?
@@ -202,17 +202,22 @@ fun partition_skip (SOME n) Args =
    Adding rules for EXISTING constants in a sealed compset raises an exception.
    Use `copy` to create an unsealed copy if you need to extend existing constants.
 *)
-datatype compset
-   = Compset of { sealed: bool,
-                  dict: (string * string, (db * int option) ref) Redblackmap.dict };
-
 fun lex_string_comp ((s1, s2), (s3, s4)) =
   case String.compare (s1, s3) of
     EQUAL => String.compare (s2, s4)
   | x => x
 
-val empty_rws = Compset { sealed = true,
-                          dict = Redblackmap.mkDict lex_string_comp };
+structure SSPairTab = Table(struct
+  type key = string * string
+  val ord = lex_string_comp
+  fun pp (s1,s2) = HOLPP.add_string (s1 ^ "$" ^ s2)
+end)
+
+datatype compset
+   = Compset of { sealed: bool,
+                  dict: (db * int option) ref SSPairTab.table };
+
+val empty_rws = Compset { sealed = true, dict = SSPairTab.empty };
 
 (* Seal a compset, preventing mutation of existing constant entries. *)
 fun seal (Compset {dict, ...}) = Compset {sealed = true, dict = dict}
@@ -221,7 +226,7 @@ fun seal (Compset {dict, ...}) = Compset {sealed = true, dict = dict}
    Use this when you need to extend rules for existing constants. *)
 fun copy (Compset {dict, ...}) =
   Compset { sealed = false,
-            dict = Redblackmap.transform (fn r => ref (!r)) dict }
+            dict = SSPairTab.map (fn _ => fn r => ref (!r)) dict }
 
 (*
    Look up the per-constant database of `cst` in the given compset. If it does
@@ -230,10 +235,11 @@ fun copy (Compset {dict, ...}) =
    and the ref to the per-constant database.
 *)
 fun assoc_clause (Compset {sealed, dict}) cst =
-  case Redblackmap.peek (dict, cst)
+  case SSPairTab.lookup dict cst
    of SOME rl => (Compset {sealed=sealed, dict=dict}, rl)
     | NONE => let val mt = ref (EndDb, NONE)
-              in (Compset {sealed=false, dict=Redblackmap.insert (dict,cst,mt)}, mt)
+              in (Compset {sealed=false,
+                           dict=SSPairTab.update (cst,mt) dict}, mt)
               end;
 
 (* Check if modifying this constant would violate sealing.
@@ -241,7 +247,7 @@ fun assoc_clause (Compset {sealed, dict}) cst =
    Empty entries (created by from_term for RHS constants) don't count. *)
 fun is_sealed_existing (Compset {sealed, dict}) cst =
   sealed andalso
-  (case Redblackmap.peek (dict, cst) of
+  (case SSPairTab.lookup dict cst of
      SOME r => (case !r of (EndDb, _) => false | _ => true)
    | NONE => false)
 
@@ -284,7 +290,7 @@ fun set_skip compset p sk =
 
 fun scrub_const (Compset {sealed, dict}) c =
   let val {Thy,Name,Ty} = dest_thy_const c
-  in Compset {sealed=false, dict = #1 (Redblackmap.remove (dict,(Name,Thy)))}
+  in Compset {sealed=false, dict = SSPairTab.delete_safe (Name,Thy) dict}
   end;
 
 (*
@@ -475,7 +481,7 @@ fun scrub_thms lthm compset =
 (*---------------------------------------------------------------------------*)
 
 fun rws_of (Compset {dict, ...}) =
- let val thinglist = Redblackmap.listItems dict
+ let val thinglist = SSPairTab.dest dict
      fun db_of_entry (ss, r) = let val (db,opt) = !r in db end
      val dblist = List.map db_of_entry thinglist
      fun get_actions db =
@@ -504,7 +510,7 @@ datatype transform
 (* to make all the dependencies explicit.                                    *)
 (*---------------------------------------------------------------------------*)
 fun deplist (Compset {dict, ...}) =
- let val thinglist = Redblackmap.listItems dict
+ let val thinglist = SSPairTab.dest dict
      fun db_of_entry (ss, r) = let val (db,opt) = !r in (ss,db) end
      val dblist = List.map db_of_entry thinglist
      fun get_actions db =

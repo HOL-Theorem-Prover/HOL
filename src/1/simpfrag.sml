@@ -16,12 +16,12 @@ fun add_rwts {convs, rewrs} newrwts = {convs = convs, rewrs = rewrs @ newrwts};
 
 fun add_convs cds {convs, rewrs} = {convs = convs@cds, rewrs = rewrs}
 
-val sconv_db = ref (Binarymap.mkDict String.compare : (string,thm -> convdata) Binarymap.dict)
+val sconv_db : (thm -> convdata) Symtab.table ref = ref Symtab.empty
 
 fun register_simpfrag_conv {name,code} =
-  sconv_db := Binarymap.insert(!sconv_db, name, code)
+  sconv_db := Symtab.update (name, code) (!sconv_db)
 
-fun lookup_simpfrag_conv k = Binarymap.peek(!sconv_db, k)
+fun lookup_simpfrag_conv k = Symtab.lookup (!sconv_db) k
 
 val simpfrag_conv_tag = "ssfrag_CONV"
 

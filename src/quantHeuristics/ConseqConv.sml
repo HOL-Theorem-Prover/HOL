@@ -1063,9 +1063,9 @@ let
        if (same_const t T) orelse (same_const t F) then
           SOME (0, NONE)
        else if dir = CONSEQ_CONV_STRENGTHEN_direction then
-            Redblackmap.peek (cache_str, t)
+            Termtab.lookup cache_str t
        else
-            Redblackmap.peek (cache_weak, t);
+            Termtab.lookup cache_weak t;
    val cached_result' = if isSome cached_result then
        let
           val (n, thm_opt) = valOf cached_result;
@@ -1098,9 +1098,9 @@ in
       val (cache_str, cache_weak) = !cache_ref;
       val _ = cache_ref := (
             if dir = CONSEQ_CONV_STRENGTHEN_direction then
-               (Redblackmap.insert (cache_str, t, result'), cache_weak)
+               (Termtab.update (t, result') cache_str, cache_weak)
             else
-               (cache_str, Redblackmap.insert (cache_weak, t, result')))
+               (cache_str, Termtab.update (t, result') cache_weak))
    in
       ()
    end
@@ -1198,7 +1198,7 @@ fun DEPTH_CONSEQ_CONV_num step_conv cache_opt
   end handle UNCHANGED => (n, NONE);
 
 type depth_conseq_conv_cache =
-    ((term, (int * thm option)) Redblackmap.dict * (term, (int * thm option)) Redblackmap.dict) ref
+    ((int * thm option) Termtab.table * (int * thm option) Termtab.table) ref
 type depth_conseq_conv_cache_opt =
    ((unit -> depth_conseq_conv_cache) * ((term * (int * thm option)) -> bool)) option
 
@@ -1208,14 +1208,13 @@ fun dest_cache NONE = ([], [])
  let
     val (str, weak) = !(cf ())
  in
-    (Redblackmap.listItems str,
-     Redblackmap.listItems weak)
+    (Termtab.dest str,
+     Termtab.dest weak)
  end;
 *)
 
 
-fun mk_DEPTH_CONSEQ_CONV_CACHE_dict () =
-   (Redblackmap.mkDict (Term.compare), Redblackmap.mkDict (Term.compare))
+fun mk_DEPTH_CONSEQ_CONV_CACHE_dict () = (Termtab.empty, Termtab.empty)
 
 fun mk_DEPTH_CONSEQ_CONV_CACHE () =
    (ref (mk_DEPTH_CONSEQ_CONV_CACHE_dict ())):depth_conseq_conv_cache
