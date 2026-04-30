@@ -11,31 +11,29 @@ in
 
 
 (*
-** Mapping from HOL variable names to DIMACS  variable numbers
-** is stored in a global assignable (i.e. reference) variable sat_var_map.
-** The type of sat_var_map is (int * (term * int) set) ref and
-** the integer first component is the next available number
-** (i.e. it is one plus the number of elements in the set)
-** in th second component (t,n), if n<0 then the literal represented is ~t
-   (the stored t is never negated)
-*)
-
-(*
-** Initialise sat_var_map to integer 1 paired with the empty set
-** (in DIMACS  variable numbering starts from 1 because 0
-** is the clause separator)
+** DIMACS-variable bookkeeping.  The mapping from HOL variables to
+** DIMACS variable numbers is threaded through the conversion
+** functions as a pair (svm, sva):
+**
+**   svm = (int, (term, term * int) Redblackmap.dict)
+**     - first component is the next available DIMACS number;
+**     - second component maps each HOL variable t to (t, n), with
+**       n the assigned positive number.  Sign of literals is
+**       carried separately at the call site (see literalToInt),
+**       not in this map.
+**   sva : term Array.array
+**     Reverse map from DIMACS number to HOL term, used by
+**     lookup_sat_num.
+**
+** A fresh (svm, sva) pair is built per translation: DIMACS variable
+** numbers must form an initial segment of {1, 2, 3, ...} (some
+** solvers reject gaps), so reuse across translations is unsafe.
+** Numbering starts at 1 because 0 is the DIMACS clause separator.
 *)
 
 structure SVM = Redblackmap
 
 val var_to_string = fst o dest_var
-
-(*
-** Reinitialise sat_var_map.
-** Needs to be done for each translation of a term to DIMACS
-** as numbers must be an initial segment of 1,2,3,...
-** (otherwise grasp, zchaff etc may crash)
-*)
 
 val ttt0 = ref T
 val ttt1 = ref T

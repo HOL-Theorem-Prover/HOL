@@ -2,7 +2,7 @@
     contains configuration info for HolSatLib that is independent of the
     SAT solver
 
-    SAT solver specific config is in SatSolver.sml
+    SAT solver specific config is in SatSolvers.sml
 
     the main reason for having this as an opaque type is to give
     HolSatLib a stable signature
