@@ -1350,30 +1350,6 @@ fun work() =
           end
       end
 
-fun do_write_cache depgraph base_url thyname =
-    let
-      val dat_tgt = filestr_to_tgt (thyname ^ ".dat")
-      val node =
-          case HM_DepGraph.target_node depgraph dat_tgt of
-              SOME n => n
-            | NONE =>
-              die ("--write-cache: don't know how to build " ^
-                   tgt_toString dat_tgt)
-      val nodeinfo =
-          case HM_DepGraph.peeknode depgraph node of
-              SOME ni => ni
-            | NONE => die "--write-cache: internal error (node not found)"
-      val _ =
-          case #command nodeinfo of
-              HM_DepGraph.BuiltInCmd (HM_DepGraph.BIC_BuildScript _, _) => ()
-            | _ => die ("--write-cache: " ^ thyname ^ " is not a theory target")
-      val cachekey = HM_Cachekey.compute_for_node depgraph node
-      val dir = hmdir.toAbsPath (#dir nodeinfo)
-    in
-      if HM_CacheFetch.upload base_url cachekey dir thyname outputfns
-      then OS.Process.success
-      else OS.Process.failure
-    end
 
 fun do_cachekey thyname =
     let
@@ -1412,34 +1388,7 @@ in
                        \Extra options:",
               options = HM_Cline.option_descriptions
           })
-  else case (#cache_url coption_value, targets) of
-      (SOME (HM_Core_Cline.Write, url), _) => let
-        open Process
-        val (depgraph, local_incinfo) = toplevel_build_graph()
-        fun tgts_to_thynames tgts =
-            List.mapPartial
-                (fn tgt =>
-                    case hm_target.filepart tgt of
-                        UO (Theory s) => SOME (s ^ "Theory")
-                      | _ => NONE)
-                tgts
-        val thynames =
-            case targets of
-                _::_ => targets
-              | [] => tgts_to_thynames (generate_all_plausible_targets warn NONE)
-        val result =
-            List.foldl
-                (fn (thyname, acc) =>
-                    if Process.isSuccess acc then
-                        do_write_cache depgraph url thyname
-                        handle Fail s => die ("Fail exception: "^s^"\n")
-                    else acc)
-                Process.success
-                thynames
-      in
-        exit result
-      end
-    | _ => case cline_cachekey of
+  else case cline_cachekey of
       SOME thyname => let
         open Process
         val result = do_cachekey thyname

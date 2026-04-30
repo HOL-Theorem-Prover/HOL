@@ -10,8 +10,8 @@ datatype buildresult =
                         job_kont : (string -> unit) -> OS.Process.status ->
                                    bool,
                         other_nodes : HM_DepGraph.node list,
-                        cache_url : (HM_Core_Cline.cache_op * string) option,
-			cachekey : HM_Cachekey.compute_result }
+                        cache_dir : string option,
+                        cachekey : HM_Cachekey.compute_result }
        | BR_Failed
 
 val RealFail = Failed{needed=true}
@@ -296,7 +296,7 @@ fun graphbuild optinfo g =
                       case bres of
                           BR_OK => k true g
                         | BR_Failed => k false g
-                        | BR_ClineK{cline, job_kont, other_nodes, cache_url, cachekey} =>
+                        | BR_ClineK{cline, job_kont, other_nodes, cache_dir, cachekey} =>
                           let
                             val (thyc,ndi) = count_theories_needed other_nodes
                             fun b2res b = if b then OS.Process.success
@@ -320,11 +320,10 @@ fun graphbuild optinfo g =
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l
                             fun try_cache () =
-                              case cache_url of
+                              case cache_dir of
                                   NONE => false
-                                | SOME (HM_Core_Cline.Fetch, url) =>
+                                | SOME url =>
                                   HM_CacheFetch.fetch url cachekey outs
-                                | SOME (HM_Core_Cline.Write, _) => false
                           in
                             diag ("New graph job for "^target_s^
                                   " with c/line: " ^ cline_str cline);

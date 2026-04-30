@@ -13,13 +13,21 @@ fun copy src dest =
     in  loop (); true end
     handle _ => false
 
+fun recMkDir dir =
+    if OS.FileSys.access(dir, []) then ()
+    else (recMkDir (OS.Path.dir dir); OS.FileSys.mkDir dir)
+
+fun already_cached base key =
+    OS.FileSys.access(OS.Path.concat(OS.Path.concat(base, "key"), key), [])
+
 fun upload base_url cachekey dir thyname (ofns : Holmake_tools.output_functions) =
     case cachekey of
         HM_Cachekey.Missing _ => false
       | HM_Cachekey.Key key =>
+    if already_cached base_url key then true else
     let
         val {info, warn, ...} = ofns
-        val _ = OS.FileSys.mkDir base_url handle OS.SysErr _ => ()
+        val _ = recMkDir base_url handle OS.SysErr _ => ()
         val theory_exts = [".sig", ".sml", ".dat"]
         fun is_theory_file f =
             List.exists (fn ext => f = thyname ^ ext) theory_exts
@@ -40,7 +48,7 @@ fun upload base_url cachekey dir thyname (ofns : Holmake_tools.output_functions)
              then scan_dir obj_dir
              else [])
         val data_dir = OS.Path.concat(base_url, "data")
-        val _ = OS.FileSys.mkDir data_dir handle OS.SysErr _ => ()
+        val _ = recMkDir data_dir handle OS.SysErr _ => ()
         fun process {name, path} =
             let val hash = SHA1.sha1_file {filename = path}
                 val ok = copy path (OS.Path.concat(data_dir, hash))
@@ -52,7 +60,7 @@ fun upload base_url cachekey dir thyname (ofns : Holmake_tools.output_functions)
                 else ()
         val results = List.mapPartial process files
         val ok = length results = length files
-        val _ = OS.FileSys.mkDir (OS.Path.concat(base_url, "key")) handle OS.SysErr _ => ()
+        val _ = recMkDir (OS.Path.concat(base_url, "key")) handle OS.SysErr _ => ()
         val manifest_path = OS.Path.concat(OS.Path.concat(base_url, "key"), key)
         fun entry_to_json (name, hash) =
             "{\"name\": \"" ^ name ^ "\", \"url\": \"/data/" ^ hash ^ "\"}"
