@@ -249,10 +249,6 @@ fun thy_timestamp thy = #timestamp (Binarymap.find(!metadata, thy))
 
 (*---------------------------------------------------------------------------*
  *                 CREATE THE INITIAL THEORY SEGMENT.                        *
- *                                                                           *
- * The timestamp for a segment is its creation date. "con_wrt_disk" is       *
- * set to false because when a segment is created no corresponding file      *
- * gets created (the file is only created on export).                        *
  *---------------------------------------------------------------------------*)
 
 fun empty_segment_value name =
