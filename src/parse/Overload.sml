@@ -21,10 +21,14 @@ type overloaded_op_info = {base_type : Type.hol_type, actual_ops : term list,
 (* the overload info is thus a pair:
    * first component is for the "parsing direction"; it's a map from
      identifier name to an overloaded_op_info record.
-   * second component is for the "printing direction"; it takes constant
-     specifications {Name,Thy} records, and returns the preferred
-     identifier. If no entry exists, the constant should be printed in
-     thy$constant name form.
+   * second component is for the "printing direction"; it's an
+     LVTermNet (PrintMap, see below) whose stored values are
+     printmap_data = (term, string, int) triples (a term pattern, the
+     name to print it as, and a timestamp).  Lookup is keyed by the
+     term shape rather than by a {Name,Thy} record, so a single
+     constant may match multiple patterns; the pretty-printer breaks
+     ties by preferring the most recent timestamp.  If nothing
+     matches, the constant is printed in thy$constname form.
 *)
 
 

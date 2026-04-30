@@ -1,19 +1,47 @@
 (*---------------------------------------------------------------------------
                 Parsing datatype specifications
 
-   The grammar we're parsing is:
+   This file implements two distinct datatype grammars, dispatched
+   from a single parse_form entry point.  The two grammars share the
+   record / form / top-level structure but differ in how a
+   constructor's arguments are written.  The choice is made by the
+   caller, by passing either parse_phrase or parse_hphrase to
+   parse_form; the two phrase styles are not mixed within a single
+   datatype definition.
 
-       G ::=              id "=" <form>
-       form ::=           <phrase> ( "|" <phrase> ) *  |  <record_defn>
-       phrase ::=         id  | id "of" <under_constr>
-       under_constr ::=   <ptype> ( "=>" <ptype> ) * | <record_defn>
-       record_defn ::=    "<|"  <idtype_pairs> "|>"
-       idtype_pairs ::=   id ":" <type> | id : <type> ";" <idtype_pairs>
-       ptype ::=          <type> | "(" <type> ")"
+   --- Grammar A: the Hol_datatype style ---
+   Used by parse_phrase.  Constructor arguments are introduced by
+   "of" and separated by "=>".
 
-  It had better be the case that => is not a type infix.  This is true of
-  the standard HOL distribution.  In the event that => is an infix, this
-  code will still work as long as the input puts the types in parentheses.
+       G            ::= id "=" <form>
+       form         ::= "|"? <phrase> ( "|" <phrase> )*  |  <record_defn>
+       phrase       ::= id  |  id "of" <under_constr>
+       under_constr ::= <ptype> ( "=>" <ptype> )*  |  <record_defn>
+       ptype        ::= <type>  |  "(" <type> ")"
+       record_defn  ::= "<|" <idtype_pairs> ";"? "|>"
+       idtype_pairs ::= id ":" <type> ( ";" id ":" <type> )*
+
+   It had better be the case that "=>" is not a type infix.  This is
+   true of the standard HOL distribution.  In the event that "=>" is
+   an infix, this code will still work as long as the input puts the
+   types in parentheses.
+
+   --- Grammar B: the Datatype block style ---
+   Used by parse_hphrase.  Constructor arguments are juxtaposed
+   Haskell-style, with each argument either a single atomic type or
+   a parenthesised compound type.  There is no "of" keyword and no
+   "=>" between successive arguments.
+
+       G            ::= id "=" <form>
+       form         ::= "|"? <phrase> ( "|" <phrase> )*  |  <record_defn>
+       phrase       ::= id <harg>*
+       harg         ::= <atomic_type>  |  "(" <type> ")"
+       record_defn  ::= "<|" <idtype_pairs> ";"? "|>"
+       idtype_pairs ::= id ":" <type> ( ";" id ":" <type> )*
+
+   --- Top level ---
+   Multiple datatype definitions are ";"-separated, with the trailing
+   ";" optional.
  ---------------------------------------------------------------------------*)
 
 structure ParseDatatype :> ParseDatatype =
