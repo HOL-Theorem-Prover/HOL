@@ -136,7 +136,7 @@ fun pass2 {terms, abs_list, n_tm, ...}
   val () = List.app (fn {binder_id, body_id, stripped} =>
     if has_name terms renamed stripped body_id then ()
     else BoolArray.update(renamed, binder_id, true))
-    abs_list
+    (List.rev abs_list)
 in renamed end
 
 (* ========================================================================= *)
