@@ -365,3 +365,129 @@ val updateCursor: cursor * int -> cursor
 val mkFileline: DString.dstring -> events -> int -> fileline
 
 end;
+
+(* ----------------------------------------------------------------------
+    Overview
+   ----------------------------------------------------------------------
+
+    HOLSourceAST defines the abstract syntax for Standard ML extended
+    with the HOL declaration forms (Theorem, Definition, Datatype,
+    Inductive, Theory, Resume, etc.) plus the position-tracking
+    machinery used to map character offsets back to file/line/col
+    coordinates.  The shape of the AST is adapted from Sam Westrick's
+    smlfmt (MIT-licensed); the HOL extensions and span discipline are
+    layered on top.
+
+    Span discipline.  Every node records integer character offsets
+    into the source.  A token offset is just an int; a sub-expression's
+    extent is recovered through the *Start / *Stop / *Span helpers.
+    Token positions that may be absent (because the source was missing
+    them, e.g. a closing bracket the user forgot) are int option, and
+    each containing record carries a `stop` field telling the parser
+    where to resume.  This means the AST faithfully represents
+    ill-formed input rather than failing on it -- the closed-bracket
+    bit (right = SOME _) and the BadTy / ExpBad / DecBad constructors
+    let downstream tools choose between strict and lenient processing.
+
+    The aggregate types:
+
+      - 'exp separated = {args, seps, stop}
+        A comma/semicolon-separated list.  |seps| is normally
+        |args| - 1; |args| if a trailing separator was permitted (SML
+        extension, e.g. "[a, b,]"); 0 for synthetic lists.  A
+        separator entry of NONE marks an inserted separator from
+        parse-error repair.
+      - 'a seq = Empty | One of 'a | Many
+        Used wherever the surface allows zero, one, or
+        parenthesised-many items (e.g. tyvarseq, datatype tycons).
+
+    The core datatypes (mutually recursive):
+
+      - ty : SML types (TyVar, TyRecord, TyTuple, TyCon, TyArrow,
+        TyParens, BadTy).
+      - tybind, conbind, datbind, exbind, mosml_primvalbind : the
+        binding shapes used inside dec.
+      - exp : SML expressions/patterns (literals, Ident, List, Tuple,
+        Record, Parens, Infix, Typed, Layered, Or, Select, Sequence,
+        LetInEnd, App, AndAlso, OrElse, Handle, Raise, IfThenElse,
+        While, Case, Fn) plus the HOL quotation forms (HOLFullQuote,
+        HOLQuote) and #(LINE)/#(FILE) pragmas, and the synthetic
+        ExpExpansion / ExpEmpty / ExpBad markers.
+      - row : record-row entries (DotDotDot, LabEq, LabAs,
+        LabExpansion).
+      - dec : top-level declarations.  Standard SML
+        (DecVal/Fun/Type/Datatype/Abstype/Exception/Local/Open/Infix
+        /Infixr/Nonfix/Structure/Signature/Include/Sharing/Functor
+        /Exp), plus the HOL-extension declarations:
+
+          HOLTheory / HOLTheoryEnd            - Theory foo[attrs] ...
+          HOLDefinition                       - Definition ... End
+          HOLDatatype                         - Datatype: ... End
+          HOLQuoteDecl                        - Quote id [= e]: ... End
+          HOLInductiveDecl                    - [Co]Inductive id: ...
+          HOLType                             - Type / Overload
+          HOLSimpleThm                        - Theorem id[attrs] = exp
+          HOLTheoremDecl                      - Theorem ... QED
+          HOLResume / HOLFinalise             - suspended-proof support
+          HOLLinePragmaWith / HOLFilePragmaWith
+                                              - #(LINE=...) / #(FILE=)
+
+        plus DecMosmlPrimVal for Moscow ML compatibility, DecBad for
+        unparseable input, and DecExpansion as an "original ~> result"
+        wrapper produced by HOLSourceExpand.
+      - funarg, sigexp, strexp, qdecl : the structure / signature /
+        functor sublanguage and the contents of a HOL quotation block
+        (literal text, ^antiquotations, and DefinitionLabel headers
+        like `[name[attrs]:]`).
+
+    HOL-specific surface:
+
+      - kvals, 'a attrs, header_elem, header : the bracketed
+        attribute system shared between Theory headers and the
+        per-declaration attributes carried on Theorem / Definition /
+        Type / Resume / Finalise.  HOLAncestors and HOLLibs are the
+        two header forms.
+      - defn_label_id : labels inside DefinitionLabel
+        (HOLConjLabel for `[~name]`, HOLLabel for `[id]`).
+      - maybe_quoted : an identifier that may have been written either
+        bare (UnquotedId) or in double quotes (QuotedId).
+      - constraint : `:` vs `:>` for opaque vs transparent ascription.
+      - type_kw : selects between `type`, `eqtype`, and the Moscow ML
+        `prim_type` / `prim_eqtype` / `prim_EQtype` forms.
+
+    Construction helpers:
+
+      - mkIdent / mkString / mkInt / mkList / mkTuple / mkApp /
+        mkLabEq / mkRecord build synthetic nodes using a single
+        position parameter; the parser uses these when emitting
+        expansion results.
+      - decodeStr / encodeStr move between SML string literals and
+        their raw character contents, handling \NNN / \uXXXX /
+        line-continuation escapes.
+
+    Span accessors.  For each AST sort there is a *Stop (and where
+    useful *Start, *Span) function: idStop / idSpan, tyStart / tyStop
+    / tySpan, tybindStop, conbindStop, datbindStop, expStart /
+    expStop / expSpan, exbindStop, valbindStop, mosmlPrimvalbindStop,
+    sigexpStart / sigexpStop / sigexpSpan, strexpSpan, sigbindStop,
+    structbindStop, headerStop, decStart / decStop / decSpan,
+    functorbindStop.  These walk only as far as needed to find the
+    extent.
+
+    Source position tracking.  The lexer emits a stream of events
+    (FileEvent, LineEvent, LineColEvent) capturing changes in the
+    file/line/col cursor as the input is consumed.  Each event carries
+    the character offset at which it takes effect; eventPos extracts
+    it.  Events are stored in an `events` record alongside the initial
+    filename, in a DArray for binary search.  A `cursor` is a stateful
+    pointer that walks the event sequence; newCursor / updateCursor
+    advance it.  mkFileline body evts memoises a cursor and returns a
+    function (int -> fileline) that callers can use to translate an
+    arbitrary offset back to {file, line, col} -- amortised cheap when
+    queries arrive in roughly increasing offset order.
+
+    isOnlyComments tests whether a substring of the source consists
+    entirely of whitespace and (possibly nested) (* ... *) comments;
+    used by the printer and expander to decide where lossless
+    line-pragma insertions are safe.
+   ---------------------------------------------------------------------- *)
