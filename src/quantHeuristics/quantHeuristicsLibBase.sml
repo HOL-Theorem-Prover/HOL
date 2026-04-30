@@ -1957,35 +1957,6 @@ end
 (* Heuristic that uses the precondition for direct matching                   *)
 (******************************************************************************)
 
-(*
-val v = ``x:'a``
-
-val t = ``(P (x:'a)):bool``
-val thm = ASSUME t
-
-val t = ``(P (x:'a)):bool``
-val thm = ASSUME (mk_neg t)
-
-val t = ``(P (x:'a)):bool``
-val thm = ASSUME t
-val t = mk_neg t
-
-val thms = [thm];
-QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION thms () (v:term) t
-
-   val v' = genvar (type_of v);
-   val t' = subst [v |-> v'] t;
-
-
-val thms = [thm]
-
-val v = ``n:num``
-val t = ``n < SUC m``
-val thm = hd thms
-val SOME (thms, v, t) = !xxx
-
-*)
-
 local
    fun get_implication_gc sys v t neg dneg i P thm = let
       val _ = if neg then () else fail();

@@ -42,12 +42,6 @@ fun parseSat (s1,s2) ss =
  end
  handle _ => failwith("parseSat");
 
-(*
-** Test for success of the result of Process.system
-** N.B. isSuccess expected to primitive in next release of
-** Moscow ML, and Process.status will lose eqtype status
-*)
-
 fun isSuccess s = Process.isSuccess s
 
 (*
