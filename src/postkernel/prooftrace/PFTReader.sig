@@ -18,7 +18,9 @@ signature PFTReader = sig
     save      : string * int -> unit,
     load      : int * string -> unit,
     del       : string * int -> unit,
-    del_range : string * int * int -> unit
+    del_range : string * int * int -> unit,
+    (* Debug commands *)
+    expect    : int * int list * int -> unit
   }
 
   (* Ruleset-specific command dispatcher: called with (opcode, reader).

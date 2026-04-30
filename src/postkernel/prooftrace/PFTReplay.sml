@@ -161,7 +161,8 @@ fun replay (db: trDB) file = let
 
     del = del_ns,
 
-    del_range = del_range_ns
+    del_range = del_range_ns,
+    expect = fn _ => ()
   }
 
   (* ---- Bool constant registration --------------------------------------- *)

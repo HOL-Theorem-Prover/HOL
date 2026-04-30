@@ -197,7 +197,8 @@ fun pass1_read_file (descs_ref: (int * opcode_desc) list ref)
       del = fn _ =>
         cmd [] [] CmdDel 0xE0 NONE,
       del_range = fn _ =>
-        cmd [] [] CmdDel 0xF0 NONE
+        cmd [] [] CmdDel 0xF0 NONE,
+      expect = fn _ => ()
     }
     val rh : PFTReader.ruleset_handler = fn opc => fn sr =>
       let
@@ -565,7 +566,8 @@ fun pass2_emit (file_states: file_state vector)
                                                            !current_fi)), ci))
                else () end,
           del = fn _ => ignore (next_ci ()),
-          del_range = fn _ => ignore (next_ci ())
+          del_range = fn _ => ignore (next_ci ()),
+          expect = fn _ => ()
         }
 
         (* Emit a HOL4 ruleset command with renumbered IDs *)

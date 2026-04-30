@@ -75,7 +75,8 @@ fun pass1 (file: string) = let
     save      = fn _ => (),
     load      = fn _ => (),
     del       = fn _ => (),
-    del_range = fn _ => ()
+    del_range = fn _ => (),
+    expect    = fn _ => ()
   }
 
   (* Dummy ruleset handler: consume all arguments *)

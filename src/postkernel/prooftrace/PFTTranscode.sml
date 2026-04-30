@@ -22,7 +22,8 @@ fun transcode {input, input_binary, output, output_binary} =
       save      = fn (n, th)        => PFTWriter.save out n th,
       load      = fn (id, n)        => PFTWriter.load out id n,
       del       = fn (ns, id)       => PFTWriter.del out ns id,
-      del_range = fn (ns, lo, hi)   => PFTWriter.del_range out ns lo hi
+      del_range = fn (ns, lo, hi)   => PFTWriter.del_range out ns lo hi,
+      expect    = fn (th, hyps, concl) => PFTWriter.expect out th hyps concl
     }
 
     val rh : PFTReader.ruleset_handler = fn opc => fn sr =>

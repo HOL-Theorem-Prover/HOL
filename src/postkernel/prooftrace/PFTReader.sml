@@ -7,7 +7,8 @@ type format_handler = {
   new_const: string * int -> unit, new_type: string * int -> unit,
   axiom: int * int * string option -> unit,
   save: string * int -> unit, load: int * string -> unit,
-  del: string * int -> unit, del_range: string * int * int -> unit
+  del: string * int -> unit, del_range: string * int * int -> unit,
+  expect: int * int list * int -> unit
 }
 
 type stream_reader = {
@@ -240,6 +241,13 @@ fun read_binary file (fh: format_handler) (rh: ruleset_handler) = let
     | 0xF1 => let val a = vi() val b = vi() in #del_range fh ("tm",a,b) end
     | 0xF2 => let val a = vi() val b = vi() in #del_range fh ("th",a,b) end
     | 0xF3 => let val a = vi() val b = vi() in #del_range fh ("ci",a,b) end
+    (* Debug commands *)
+    | 0xEF => let val th = vi()
+                  val n = vi()
+                  fun lp 0 acc = rev acc | lp k acc = lp (k-1) (vi() :: acc)
+                  val hyps = lp n []
+                  val concl = vi()
+              in #expect fh (th, hyps, concl) end
     | _ => raise Fail ("PFTReader: unknown opcode 0x" ^
                         Int.fmt StringCvt.HEX opc)
 
