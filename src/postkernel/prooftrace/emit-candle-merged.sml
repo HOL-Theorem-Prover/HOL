@@ -20,16 +20,24 @@
 *)
 
 val theories = ["bool", "marker", "num", "sat", "combin", "relation",
-                "prim_rec", "quotient", "pair", "arithmetic", "numeral"]
+                "prim_rec", "quotient", "pair", "arithmetic", "numeral",
+                "cv", "numpair", "ind_type", "one", "sum", "option", "While",
+                "reduce", "divides", "normalForms", "pred_set"(*, "basicSize",
+                "list", "rich_list", "sorting", "finite_map", "alist",
+                "indexedLists", "logroot", "sptree", "permutes", "iterate",
+                "fcp", "bit", "ternaryComparisons", "string", "numposrep",
+                "ASCIInumbers", "sum_num", "numeral_bit", "words" *)]
 
 val targets =
     (* everything
     List.map (fn s => PFTMerge.ThyAll (s, false)) theories
     *)
     [PFTMerge.ThyThm ("arithmetic", "X_LE_DIV", true),
-     PFTMerge.ThyThm ("num", "INDUCTION", true)]
+     PFTMerge.ThyThm ("cv", "DIV_RECURSIVE", true),
+     PFTMerge.ThyThm ("divides", "ZERO_DIVIDES", true),
+     PFTMerge.ThyAll ("pred_set", true)]
 
-val preamble_bin = "candle-preamble.pft.bin"
+val preamble_bin = "preamble.candle.pft.bin"
 fun theory_in  s = s ^ "Theory.tr.gz"
 fun theory_raw s = s ^ ".candle.raw.pft.bin"
 fun theory_pft s = s ^ ".candle.pft.bin"
@@ -44,6 +52,9 @@ val () = PFTCandlePreamble.emit
    EXPECT records are debug-only and downstream tools (merge/rename/
    replay/transcode) don't handle opcode 0xEF, so turn them off. *)
 val () = PFTEmit.emit_expect := false
+(*
+val () = PFTEmit.emit_expect := true
+*)
 val () = log "Emitting per-theory Candle PFTs..."
 val () = List.app (fn s =>
   (log ("  " ^ s);
@@ -55,12 +66,25 @@ val () = List.app (fn s =>
    }))
   theories
 
+(*
+val () = log "Transcoding per-theory PFTs to JSONL..."
+val () = List.app (fn s =>
+  (log ("  " ^ s);
+   PFTTranscode.transcode {
+     input = theory_raw s, input_binary = true,
+     output = s ^ ".candle.raw.pft.jsonl", output_binary = false
+   }))
+  theories
+
+val _ = OS.Process.exit OS.Process.success
+*)
+
 (* 3. Rename binders in each theory PFT *)
 val () = log "Renaming binders..."
 val () = List.app (fn s =>
   (log ("  " ^ s);
-   PFTRename.rename {input = theory_raw s, output = theory_pft s};
-   OS.FileSys.remove (theory_raw s)))
+   PFTRename.rename {input = theory_raw s, output = theory_pft s}(*;
+   OS.FileSys.remove (theory_raw s)*)))
   theories
 
 (* 4. Merge *)
