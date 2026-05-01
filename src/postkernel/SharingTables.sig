@@ -1,7 +1,6 @@
 signature SharingTables =
 sig
 
-  structure Map : Binarymap
   exception SharingTables of string
 
   type id = {Thy : string, Other : string}
@@ -9,16 +8,18 @@ sig
   type thminfo = DB_dtype.thminfo
   datatype raw_term = datatype RawTheory_dtype.raw_term
 
+  structure Idtab : TABLE where type Key.key = id
+
   type stringtable =
-       {size : int, map : (string,int) Map.dict, list : string list}
+       {size : int, map : int Symtab.table, list : string list}
   type idtable = {idsize : int,
-                  idmap : (id, int) Map.dict,
+                  idmap : int Idtab.table,
                   idlist : (int * int) list}
   type typetable = {tysize : int,
-                    tymap : (Type.hol_type, int)Map.dict,
+                    tymap : int Typetab.table,
                     tylist : raw_type list}
   type termtable = {termsize : int,
-                    termmap : (Term.term, int)Map.dict,
+                    termmap : int Termtab.table,
                     termlist : raw_term list}
 
   val empty_strtable : stringtable

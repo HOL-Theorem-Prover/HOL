@@ -3,3 +3,6 @@ all: $(DEFAULT_TARGETS)
 
 Termtab.uo Termtab.ui: Termtab.sml $(dprot $(SIGOBJ)/Table.ui)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
+Typetab.uo Typetab.ui: Typetab.sml $(dprot $(SIGOBJ)/Table.ui)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
