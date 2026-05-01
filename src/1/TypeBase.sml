@@ -197,11 +197,11 @@ fun tyi_from_name s =
         let
           val tyg = Parse.type_grammar()
         in
-          case Redblackmap.peek(privileged_abbrevs tyg, nm) of
+          case Symtab.lookup (privileged_abbrevs tyg) nm of
               NONE => raise ERR "tyi_from_name"
                             ("Ty-grammar doesn't know name: "^nm)
             | SOME thy =>
-              (case Redblackmap.peek(parse_map tyg, {Thy = thy, Name = nm}) of
+              (case KNametab.lookup (parse_map tyg) {Thy = thy, Name = nm} of
                    NONE => raise ERR "tyi_from_name"
                                  ("Ty-grammar has bad abbrev-map for name: "^nm)
                  | SOME (TYOP {Thy,Tyop,...}) => tyi_from_kid Thy Tyop

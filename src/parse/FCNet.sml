@@ -278,28 +278,27 @@ fun lookup tm net =
           (follow tm net)  [];
 
 (* term match *)
-structure Map = Redblackmap
 fun bvar_free (bvmap, tm) = let
   (* return true if none of the free variables occur as keys in bvmap *)
   fun recurse bs t =
       case dest_term t of
         v as VAR _ => HOLset.member(bs, t) orelse
-                      not (isSome (Map.peek(bvmap, t)))
+                      not (isSome (Termtab.lookup bvmap t))
       | CONST _ => true
       | COMB(f,x) => recurse bs f andalso recurse bs x
       | LAMB(v, body) => recurse (HOLset.add(bs, v)) body
 in
-  Map.numItems bvmap = 0 orelse recurse empty_varset tm
+  Termtab.size bvmap = 0 orelse recurse empty_varset tm
 end
 
 type tminfo = {ids : term HOLset.set, n : int,
-               patbvars : (term,int)Map.dict,
-               obbvars :  (term,int)Map.dict,
+               patbvars : int Termtab.table,
+               obbvars :  int Termtab.table,
                theta : (term,term) Lib.subst}
 
 datatype tmpair = TMP of term * term
-                | BVrestore of {patbvars : (term,int)Map.dict,
-                                obbvars : (term,int)Map.dict,
+                | BVrestore of {patbvars : int Termtab.table,
+                                obbvars : int Termtab.table,
                                 n : int}
 fun add_id v {ids, patbvars, obbvars, theta, n} =
     {ids = HOLset.add(ids, v), patbvars = patbvars, obbvars = obbvars, n = n,
@@ -325,7 +324,7 @@ fun RM patobs (theta0 as (tminfo, tyS)) =
         case (dest_term t1, dest_term t2) of
           (VAR(_, ty), _) => let
           in
-            case Map.peek(#patbvars tminfo, t1) of
+            case Termtab.lookup (#patbvars tminfo) t1 of
               NONE => (* var on left not bound *) let
               in
                 if bvar_free (#obbvars tminfo, t2) then
@@ -340,7 +339,7 @@ fun RM patobs (theta0 as (tminfo, tyS)) =
                   MERR "Attempt to capture bound variable"
               end
             | SOME i => if is_var t2 andalso
-                           Map.peek(#obbvars tminfo, t2) = SOME i
+                           Termtab.lookup (#obbvars tminfo) t2 = SOME i
                         then
                           RM rest theta0
                         else false
@@ -368,8 +367,8 @@ fun RM patobs (theta0 as (tminfo, tyS)) =
                 BVrestore {patbvars = patbvars, obbvars = obbvars, n = n} ::
                 rest)
                ({ids = #ids tminfo, n = n + 1, theta = theta,
-                 patbvars = Map.insert(patbvars, x1, n),
-                 obbvars = Map.insert(obbvars, x2, n)}, tyS')
+                 patbvars = Termtab.update (x1, n) patbvars,
+                 obbvars = Termtab.update (x2, n) obbvars}, tyS')
           end
         | _ => false
       end
@@ -380,7 +379,7 @@ fun RM patobs (theta0 as (tminfo, tyS)) =
                   obbvars = obbvars, n = n}, tyS)
       end
 
-val empty_subst = Map.mkDict Term.compare
+val empty_subst : int Termtab.table = Termtab.empty
 fun can_match_term pat t =
   RM [TMP (pat,t)] ({ids = empty_tmset, n = 0, theta = [],
                      patbvars = empty_subst, obbvars = empty_subst},

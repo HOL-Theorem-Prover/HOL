@@ -22,6 +22,6 @@ fun typrinttest s =
 val _ = typrinttest ":bool -> bool"
 val _ = typrinttest ":bool -> bool -> bool"
 val _ = tprint "type_grammar abbrevs map is empty"
-val _ = if Redblackmap.numItems (type_grammar.parse_map tyg) = 4 then OK()
+val _ = if KNametab.size (type_grammar.parse_map tyg) = 4 then OK()
         else die "FAILED!"
 

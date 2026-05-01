@@ -114,6 +114,12 @@ fun fupd_lambda f {type_intro,lambda,endbinding,restr_binders,res_quanop} =
 
 type prmP0 = Absyn.absyn -> Parse_supportENV.preterm_in_env
 
+structure SI_Tab = Table(struct
+  type key = string * int
+  val ord = pair_compare(String.compare, Int.compare)
+  fun pp (s,i) = HOLPP.add_string (s ^ "/" ^ Int.toString i)
+end)
+
 datatype grammar = GCONS of
   {rules : (int option * grammar_rule) list,
    specials : special_info,
@@ -122,7 +128,7 @@ datatype grammar = GCONS of
    overload_info : overload_info,
    user_printers : (type_grammar.grammar * grammar, grammar) printer_info,
    absyn_postprocessors : (string * postprocessor) list,
-   preterm_processors : (string*int,ptmprocessor) Redblackmap.dict,
+   preterm_processors : ptmprocessor SI_Tab.table,
    next_timestamp : int
    }
 and postprocessor = AbPP of grammar -> Absyn.absyn -> Absyn.absyn
@@ -153,7 +159,7 @@ fun absyn_postprocessors g = map (apsnd destAbPP) (absyn_postprocessors0 g)
 fun gnext_timestamp (GCONS g) = #next_timestamp g
 
 fun preterm_processor (GCONS g) k =
-  Option.map destPtmP (Redblackmap.peek(#preterm_processors g, k))
+  Option.map destPtmP (SI_Tab.lookup (#preterm_processors g) k)
 
 
 (* fupdates *)
@@ -289,15 +295,16 @@ fun new_preterm_processor k f (GCONS g) = let
   val old = #preterm_processors g
 in
   GCONS (update_G g
-                  (U #preterm_processors (Redblackmap.insert(old,k,PtmP f))) $$)
+                  (U #preterm_processors (SI_Tab.update (k, PtmP f) old)) $$)
 end
 
 fun remove_preterm_processor k (G as GCONS g) = let
   val old = #preterm_processors g
 in
-  case Lib.total Redblackmap.remove (old,k) of
-      SOME(new, v) => (GCONS (update_G g (U #preterm_processors new) $$),
-                       SOME (destPtmP v))
+  case SI_Tab.lookup old k of
+      SOME v => (GCONS (update_G g
+                          (U #preterm_processors (SI_Tab.delete k old)) $$),
+                 SOME (destPtmP v))
     | NONE => (G, NONE)
 end
 
@@ -491,8 +498,7 @@ val stdhol : grammar =
    overload_info = Overload.null_oinfo,
    user_printers = (FCNet.empty, HOLset.empty String.compare),
    absyn_postprocessors = [],
-   preterm_processors =
-     Redblackmap.mkDict (pair_compare(String.compare, Int.compare)),
+   preterm_processors = SI_Tab.empty,
    next_timestamp = 1
    }
 
@@ -1028,10 +1034,10 @@ structure userSyntaxFns = struct
   type 'a t = 'a getter * 'a setter
   fun mk_table () =
     let
-      val tab = ref (Redblackmap.mkDict String.compare)
+      val tab = ref Symtab.empty
     in
-      ((fn s => Redblackmap.find(!tab, s)),
-       (fn {name,code} => tab := Redblackmap.insert(!tab, name, code)))
+      ((fn s => valOf (Symtab.lookup (!tab) s)),
+       (fn {name,code} => tab := Symtab.update (name, code) (!tab)))
     end
   val (get_userPP, register_userPP) = mk_table() : userprinter t
   val (get_absynPostProcessor, register_absynPostProcessor) =
@@ -1068,7 +1074,7 @@ fun add_delta ud G =
       else
         let
           val code = userSyntaxFns.get_userPP s
-                     handle Redblackmap.NotFound =>
+                     handle Option =>
                             raise ERROR "add_delta"
                                   ("No code named "^s^
                                    " registered for add user-printer")
@@ -1078,7 +1084,7 @@ fun add_delta ud G =
     | ADD_ABSYN_POSTP {codename} =>
       let
         val code = userSyntaxFns.get_absynPostProcessor codename
-          handle Redblackmap.NotFound =>
+          handle Option =>
                  raise ERROR "add_delta"
                        ("No code named "^codename^
                         " registered for add absyn-postprocessor")
@@ -1122,15 +1128,15 @@ end
 
 fun merge_bmaps typestring keyprinter m1 m2 = let
   (* m1 takes precedence - arbitrarily *)
-  fun foldfn (k,v,newmap) =
-    (if isSome (Redblackmap.peek(newmap, k)) then
+  fun foldfn (k,v) newmap =
+    (if isSome (SI_Tab.lookup newmap k) then
        Feedback.HOL_WARNING "term_grammar" "merge_grammars"
        ("Merging "^typestring^" has produced a clash on key "^keyprinter k)
      else
        ();
-     Redblackmap.insert(newmap,k,v))
+     SI_Tab.update (k, v) newmap)
 in
-  Redblackmap.foldl foldfn m2 m1
+  SI_Tab.fold foldfn m2 m1
 end
 
 fun merge_user_printers (n1,ks1) (n2,_) = let
@@ -1152,7 +1158,7 @@ in
 end
 
 fun bmap_merge m1 m2 =
-  Redblackmap.foldl (fn (k,v,acc) => Redblackmap.insert(acc,k,v)) m1 m2
+  SI_Tab.fold (fn (k,v) => fn acc => SI_Tab.update (k, v) acc) m1 m2
 
 fun merge_grammars (G1 as GCONS g1, G2 as GCONS g2) :grammar = let
   val g0_rules =

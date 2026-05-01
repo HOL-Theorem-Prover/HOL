@@ -575,15 +575,17 @@ val thePmatchCompileDB = ref empty
 fun lookup_typeBase_constructorFamily ty = let
   val b_ty = base_ty ty
 in
-  SOME (b_ty, TypeNet.find (!typeConstrFamsDB, b_ty)) handle
-     NotFound => let
-       val cf = constructorFamily_of_typebase b_ty
-       val net = !typeConstrFamsDB
-       val net'= TypeNet.insert (net, b_ty, cf)
-       val _ = typeConstrFamsDB := net'
-     in
-       SOME (b_ty, cf)
-     end
+  case TypeNet.peek (!typeConstrFamsDB, b_ty) of
+      SOME cf => SOME (b_ty, cf)
+    | NONE =>
+      let
+        val cf = constructorFamily_of_typebase b_ty
+        val net = !typeConstrFamsDB
+        val net'= TypeNet.insert (net, b_ty, cf)
+        val _ = typeConstrFamsDB := net'
+      in
+        SOME (b_ty, cf)
+      end
 end handle HOL_ERR _ => NONE
 
 
@@ -792,7 +794,7 @@ fun pmatch_compile_db_add_constrFam (db : pmatch_compile_db) cf = {
     val cl = (#constructors cf)
     val ty = normalise_ty (#cl_type cl)
     val net = #pcdb_constrFams db
-    val cfs = TypeNet.find (net, ty) handle NotFound => []
+    val cfs = case TypeNet.peek (net, ty) of SOME l => l | NONE => []
     val net' = TypeNet.insert (net, ty, cf::cfs)
   in
     net'

@@ -748,17 +748,17 @@ fun TRIV_LET_CONV tm =
 (* This calculation has to use multisets.                                    *)
 (*---------------------------------------------------------------------------*)
 
-val empty_mset = Redblackmap.mkDict Term.compare : (term,int) Redblackmap.dict
-fun mset_insert t mset = Redblackmap.insertWith (op+) (mset,t,1)
+val empty_mset : int Termtab.table = Termtab.empty
+fun mset_insert t mset =
+    Termtab.update (t, Option.getOpt (Termtab.lookup mset t, 0) + 1) mset
 fun mset_of list = itlist mset_insert list empty_mset
 fun mset_diff l2 l1 =  (* important to maintain the order of elements in l2 *)
-  let open Redblackmap
-      val mset1 = mset_of l1
+  let val mset1 = mset_of l1
       val mset2 = mset_of l2
       fun winnow [] acc = rev acc
         | winnow (h::t) acc =
-          let val i = find (mset1,h) handle NotFound => 0
-              val j = find (mset2,h)  (* at least 1 *)
+          let val i = Option.getOpt (Termtab.lookup mset1 h, 0)
+              val j = valOf (Termtab.lookup mset2 h)  (* at least 1 *)
           in winnow t (if i < j then h::acc else acc) end
   in
     winnow l2 []

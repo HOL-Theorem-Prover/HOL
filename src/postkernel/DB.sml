@@ -48,24 +48,23 @@ val toLower = CharVector.map Char.toLower
      is loaded.
  ---------------------------------------------------------------------------*)
 
-structure Map = Redblackmap
 (* the keys are lower-cased, but the data also stores the keys, and there
    the key information is kept in its original case *)
 
 fun updexisting key f m =
-    case Map.peek(m,key) of
+    case Symtab.lookup m key of
         NONE => m
-      | SOME v => Map.insert(m,key,f v)
+      | SOME v => Symtab.update (key, f v) m
 
 (* the submap is a map from lowercased item-name to those items with the
    same name.  There is a list of them because item-names are really
    case-sensitive *)
-type submap = (string, data list) Map.dict
-val empty_sdata_map = Map.mkDict String.compare
+type submap = data list Symtab.table
+val empty_sdata_map : submap = Symtab.empty
 (* the dbmap contains:
     - a map from theory-name to a submap (as above)
 *)
-datatype dbmap = DB of { namemap : (string, submap) Map.dict,
+datatype dbmap = DB of { namemap : submap Symtab.table,
                          revmap : location list Termtab.table,
                          localmap : (thm * thminfo) Symtab.table
                        }
@@ -82,30 +81,30 @@ fun updlocalmap f (DB{namemap,revmap,localmap}) =
 
 fun add_to_submap m (newdata as ((s1, s2), x)) =
     let val s2key = toLower s2
-        val oldvalue = case Map.peek(m, s2key) of
+        val oldvalue = case Symtab.lookup m s2key of
                            NONE => []
                          | SOME items => items
     in
-      Map.insert(m, s2key,
-                 newdata :: List.filter (not o dataNameEq s2) oldvalue)
+      Symtab.update
+        (s2key, newdata :: List.filter (not o dataNameEq s2) oldvalue) m
     end
 
 fun insert_localmap_into_namemap thyname ltab nmap =
     let
-      val sm0 = case Map.peek(nmap, thyname) of
+      val sm0 = case Symtab.lookup nmap thyname of
                     NONE => empty_sdata_map
                   | SOME sm0 => sm0
       fun foldthis (thname, th_thi) sm0 =
           add_to_submap sm0 ((thyname,thname), th_thi)
       val sm = Symtab.fold foldthis ltab sm0
     in
-      Map.insert(nmap, thyname, sm)
+      Symtab.update (thyname, sm) nmap
     end
 
 fun allnamemap cthy d =
     insert_localmap_into_namemap cthy (localmap d) (namemap d)
 
-val empty_dbmap = DB {namemap = Map.mkDict String.compare,
+val empty_dbmap = DB {namemap = Symtab.empty,
                       localmap = Symtab.empty, revmap = Termtab.empty}
 
 local val DBref = ref empty_dbmap
@@ -113,14 +112,14 @@ local val DBref = ref empty_dbmap
       fun functional_bindl_names thy blist namemap =
           (* used when a theory is loaded from disk *)
           let val submap =
-                  case Map.peek(namemap, thy) of
+                  case Symtab.lookup namemap thy of
                     NONE => empty_sdata_map
                   | SOME m => m
               fun foldthis ((n,th,info), m) =
                   add_to_submap m ((thy,n), (th,info))
               val submap' = List.foldl foldthis submap blist
           in
-            Map.insert(namemap, thy, submap')
+            Symtab.update (thy, submap') namemap
           end
       fun functional_bindl_revmap thy blist revmap =
           List.foldl
@@ -134,40 +133,37 @@ local val DBref = ref empty_dbmap
 
       fun purge_stale_bindings thyname =
           let
-            open Map
-            fun foldthis (n, datas : data list, m) =
+            fun foldthis (n, datas : data list) m =
                 let
                   val data' = List.filter(fn (_, (th, _)) => uptodate_thm th)
                                          datas
                 in
-                  insert(m,n,data')
+                  Symtab.update (n, data') m
                 end
             fun purge_stale ttab =
-                let open Termtab
-                in
-                  fold (fn (t,d) => fn A =>
-                           if uptodate_term t then update (t,d) A else A)
-                       ttab
-                       empty
-                end
+                Termtab.fold
+                  (fn (t,d) => fn A =>
+                      if uptodate_term t then Termtab.update (t,d) A else A)
+                  ttab Termtab.empty
           in
             DBref :=
             ((!DBref)
                |> updnamemap
-                    (updexisting thyname (foldl foldthis empty_sdata_map))
+                    (updexisting thyname
+                       (fn sm => Symtab.fold foldthis sm empty_sdata_map))
                |> updrevmap purge_stale)
           end
 
       fun delete_binding bnm =
           let
-            open Map
             val ct = current_theory()
             fun smdelbinding bnm sm =
-                case peek (sm, toLower bnm) of
+                case Symtab.lookup sm (toLower bnm) of
                     NONE => sm
                   | SOME datas =>
-                    insert(sm,toLower bnm,
-                           List.filter(not o dataNameEq bnm) datas)
+                    Symtab.update
+                      (toLower bnm,
+                       List.filter(not o dataNameEq bnm) datas) sm
           in
             DBref := updnamemap (updexisting ct (smdelbinding bnm)) (!DBref)
           end
@@ -235,9 +231,9 @@ fun thy s =
     let
       val DB{namemap,...} = CT()
     in
-      case Map.peek(namemap, norm_thyname s) of
+      case Symtab.lookup namemap (norm_thyname s) of
           NONE => []
-        | SOME m => Map.foldl (fn (lcnm, datas, A) => datas @ A) [] m
+        | SOME m => Symtab.fold (fn (_, datas) => fn A => datas @ A) m []
     end
 
 fun findpred pat =
@@ -252,15 +248,15 @@ fun find0 incprivatep s =
     let
       val DB{namemap,...} = CT()
       val check = findpred s (* pre-compiles regexp *)
-      fun subfold (k, vs, acc) =
+      fun subfold (k, vs) acc =
           if check k then
             (if incprivatep then vs
              else List.filter (fn (_, (_, {private=p,...})) => not p) vs) @
             acc
           else acc
-      fun fold (thy, m, acc) = Map.foldr subfold acc m
+      fun fold (_, m) acc = Symtab.fold_rev subfold m acc
     in
-      Map.foldr fold [] namemap
+      Symtab.fold_rev fold namemap []
     end
 
 fun find s = List.map drop_private (find0 false s)
@@ -273,19 +269,19 @@ val find_all = find0 true
 fun matchp0 incprivate P thylist =
     let fun data_P (_, (th, {private,...})) =
             (incprivate orelse not private) andalso P th
-        fun subfold (k, v, acc) = List.filter data_P v @ acc
+        fun subfold (k, v) acc = List.filter data_P v @ acc
         val curr = current_theory()
     in
       case thylist of
-        [] => let fun fold (k, m, acc) = Map.foldr subfold acc m
+        [] => let fun fold (_, m) acc = Symtab.fold_rev subfold m acc
               in
-                Map.foldr fold [] (allnamemap curr (CT()))
+                Symtab.fold_rev fold (allnamemap curr (CT())) []
               end
       | _ => let val db = allnamemap curr (CT())
                  fun fold (thyn, acc) =
-                     case Map.peek(db, norm_thyname thyn) of
+                     case Symtab.lookup db (norm_thyname thyn) of
                        NONE => acc
-                     | SOME m => Map.foldr subfold acc m
+                     | SOME m => Symtab.fold_rev subfold m acc
              in
                List.foldr fold [] thylist
              end
@@ -475,15 +471,15 @@ in List.filter (check o dataName)
 end
 
 fun listDB () =
-    let fun subfold (k,v,acc) = v @ acc
-        fun fold (_, m, acc) = Map.foldr subfold acc m
+    let fun subfold (_,v) acc = v @ acc
+        fun fold (_, m) acc = Symtab.fold_rev subfold m acc
     in
-      Map.foldr fold [] (namemap (CT()))
+      Symtab.fold_rev fold (namemap (CT())) []
     end
 
 fun listPublicDB() =
     let
-      fun subfold (_,dvs,acc) =
+      fun subfold (_,dvs) acc =
           let
             val dvs' =
                 List.mapPartial (fn d => if data_isprivate d then NONE
@@ -492,9 +488,9 @@ fun listPublicDB() =
           in
             dvs' :: acc
           end
-      fun fold (_, m, acc) = Map.foldr subfold acc m
+      fun fold (_, m) acc = Symtab.fold_rev subfold m acc
     in
-      List.concat (Map.foldr fold [] (namemap (CT())))
+      List.concat (Symtab.fold_rev fold (namemap (CT())) [])
     end
 
 fun selectDB sels =
@@ -519,10 +515,12 @@ fun thm_class origf thy name = let
   val db = namemap (CT())
   val thy = norm_thyname thy
   val nosuchthm = ("theorem "^thy^"$"^name^" not found")
-  val thymap = Map.find(db, thy)
-               handle Map.NotFound => raise ERR origf ("no such theory: "^thy)
-  val result = Map.find(thymap, toLower name)
-               handle Map.NotFound => raise ERR origf nosuchthm
+  val thymap = case Symtab.lookup db thy of
+                   SOME m => m
+                 | NONE => raise ERR origf ("no such theory: "^thy)
+  val result = case Symtab.lookup thymap (toLower name) of
+                   SOME r => r
+                 | NONE => raise ERR origf nosuchthm
 in
   case filter (equal (norm_thyname thy,name) o fst) result of
     [(_,p)] => p

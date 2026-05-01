@@ -3,6 +3,8 @@ struct
 
 open HolKernel
 
+exception NotFound
+
 datatype label = TV
                | TOP of {Thy : string, Tyop : string} * int
   (* The integer records arity of operator - this is necessary when
@@ -36,8 +38,14 @@ fun labcmp p =
          pair_compare(reccmp, Int.compare) (opdata1, opdata2)
     | (TOP _, TV) => GREATER
 
-datatype 'a N = LF of (hol_type,'a) Redblackmap.dict
-              | ND of (label,'a N) Redblackmap.dict
+structure LabelTab = Table(struct
+  type key = label
+  val ord = labcmp
+  fun pp _ = HOLPP.add_string "<typenet-label>"
+end)
+
+datatype 'a N = LF of 'a Typetab.table
+              | ND of 'a N LabelTab.table
               | EMPTY
 (* redundant EMPTY constructor is used to get around value polymorphism problem
    when creating a single value for empty below *)
@@ -46,7 +54,7 @@ type 'a typenet = 'a N * int
 
 val empty = (EMPTY, 0)
 
-fun mkempty () = ND (Redblackmap.mkDict labcmp)
+fun mkempty () = ND LabelTab.empty
 
 fun ndest_type ty =
     if is_vartype ty then (TV, [])
@@ -59,19 +67,19 @@ fun ndest_type ty =
 fun insert ((net,sz), ty, item) = let
   fun newnode labs =
       case labs of
-        [] => LF (Redblackmap.mkDict Type.compare)
+        [] => LF Typetab.empty
       | _ => mkempty()
   fun trav (net, tys) =
       case (net, tys) of
-        (LF d, []) => LF (Redblackmap.insert(d,ty,item))
+        (LF d, []) => LF (Typetab.update (ty, item) d)
       | (ND d, ty::tys0) => let
           val (lab, rest) = ndest_type ty
           val tys = rest @ tys0
           val n' =
-              case Redblackmap.peek(d,lab) of
+              case LabelTab.lookup d lab of
                 NONE => trav(newnode tys, tys)
               | SOME n => trav(n, tys)
-          val d' = Redblackmap.insert(d, lab, n')
+          val d' = LabelTab.update (lab, n') d
         in
           ND d'
         end
@@ -82,15 +90,10 @@ in
 end
 
 fun listItems (net, sz) = let
-  fun cons'(k,v,acc) = (k,v)::acc
   fun trav (net, acc) =
       case net of
-        LF d => Redblackmap.foldl cons' acc d
-      | ND d => let
-          fun foldthis (k,v,acc) = trav(v,acc)
-        in
-          Redblackmap.foldl foldthis acc d
-        end
+        LF d => Typetab.fold_rev (fn kv => fn acc => kv :: acc) d acc
+      | ND d => LabelTab.fold (fn (_,v) => fn acc => trav(v,acc)) d acc
       | EMPTY => []
 in
   trav(net, [])
@@ -101,11 +104,11 @@ fun numItems (net, sz) = sz
 fun peek ((net,sz), ty) = let
   fun trav (net, tys) =
       case (net, tys) of
-        (LF d, []) => Redblackmap.peek(d, ty)
+        (LF d, []) => Typetab.lookup d ty
       | (ND d, ty::tys) => let
           val (lab, rest) = ndest_type ty
         in
-          case Redblackmap.peek(d, lab) of
+          case LabelTab.lookup d lab of
             NONE => NONE
           | SOME n => trav(n, rest @ tys)
         end
@@ -116,15 +119,15 @@ in
 end
 
 fun find (n, ty) =
-    valOf (peek (n, ty)) handle Option => raise Redblackmap.NotFound
+    valOf (peek (n, ty)) handle Option => raise NotFound
 
 fun match ((net,sz), ty) = let
   fun trav acc (net, tyl) =
       case (net, tyl) of
         (EMPTY, _) => []
-      | (LF d, []) => Redblackmap.listItems d @ acc
+      | (LF d, []) => Typetab.dest d @ acc
       | (ND d, ty::tys) => let
-          val varresult = case Redblackmap.peek(d, TV) of
+          val varresult = case LabelTab.lookup d TV of
                             NONE => acc
                           | SOME n => trav acc (n, tys)
           val (lab, rest) = ndest_type ty
@@ -133,7 +136,7 @@ fun match ((net,sz), ty) = let
             TV => varresult
           | TOP _ => let
             in
-              case Redblackmap.peek (d, lab) of
+              case LabelTab.lookup d lab of
                 NONE => varresult
               | SOME n => trav varresult (n, rest @ tys)
             end
@@ -146,28 +149,30 @@ end
 fun delete ((net,sz), ty) = let
   fun trav (p as (net, tyl)) =
       case p of
-        (EMPTY, _) => raise Redblackmap.NotFound
-      | (LF d, []) => let
-          val (d',removed) = Redblackmap.remove(d, ty)
-        in
-          if Redblackmap.numItems d' = 0 then (NONE, removed)
-          else (SOME (LF d'), removed)
-        end
+        (EMPTY, _) => raise NotFound
+      | (LF d, []) =>
+        (case Typetab.lookup d ty of
+             NONE => raise NotFound
+           | SOME removed =>
+             let val d' = Typetab.delete ty d
+             in if Typetab.size d' = 0 then (NONE, removed)
+                else (SOME (LF d'), removed)
+             end)
       | (ND d, ty::tys) => let
           val (lab, rest) = ndest_type ty
         in
-          case Redblackmap.peek(d, lab) of
-            NONE => raise Redblackmap.NotFound
+          case LabelTab.lookup d lab of
+            NONE => raise NotFound
           | SOME n => let
             in
               case trav (n, rest @ tys) of
                 (NONE, removed) => let
-                  val (d',_) = Redblackmap.remove(d, lab)
+                  val d' = LabelTab.delete lab d
                 in
-                  if Redblackmap.numItems d' = 0 then (NONE, removed)
+                  if LabelTab.size d' = 0 then (NONE, removed)
                   else (SOME (ND d'), removed)
                 end
-              | (SOME n', removed) => (SOME (ND (Redblackmap.insert(d,lab,n'))),
+              | (SOME n', removed) => (SOME (ND (LabelTab.update (lab, n') d)),
                                        removed)
             end
         end
@@ -181,8 +186,8 @@ end
 fun app f (net, sz) = let
   fun trav n =
       case n of
-        LF d => Redblackmap.app f d
-      | ND d => Redblackmap.app (fn (lab, n) => trav n) d
+        LF d => List.app f (Typetab.dest d)
+      | ND d => List.app (fn (_, n) => trav n) (LabelTab.dest d)
       | EMPTY => ()
 in
   trav net
@@ -191,8 +196,8 @@ end
 fun fold f acc (net, sz) = let
   fun trav acc n =
       case n of
-        LF d => Redblackmap.foldl f acc d
-      | ND d => Redblackmap.foldl (fn (lab,n',acc) => trav acc n') acc d
+        LF d => Typetab.fold (fn (k,v) => fn a => f (k,v,a)) d acc
+      | ND d => LabelTab.fold (fn (_,n') => fn acc => trav acc n') d acc
       | EMPTY => acc
 in
   trav acc net
@@ -201,8 +206,8 @@ end
 fun map f (net, sz) = let
   fun trav n =
       case n of
-        LF d => LF (Redblackmap.map f d)
-      | ND d => ND (Redblackmap.transform trav d)
+        LF d => LF (Typetab.map (fn k => fn v => f (k, v)) d)
+      | ND d => ND (LabelTab.map (fn _ => fn n => trav n) d)
       | EMPTY => EMPTY
 in
   (trav net, sz)

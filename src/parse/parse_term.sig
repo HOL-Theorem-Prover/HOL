@@ -19,8 +19,9 @@ sig
       (term qbuf * term PStack, unit, string locn.located) errormonad.t
 
   datatype mx_order = datatype parse_term_dtype.mx_order
+  structure STBSTab : TABLE
+    where type Key.key = (stack_terminal * bool) * stack_terminal
   val mk_prec_matrix :
-      term_grammar.grammar ->
-      ((stack_terminal * bool) * stack_terminal, mx_order) Redblackmap.dict Uref.t
+      term_grammar.grammar -> mx_order STBSTab.table Uref.t
 
 end

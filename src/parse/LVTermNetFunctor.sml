@@ -17,6 +17,7 @@ sig
   type key = Term.term list * Term.term
   type value
   structure Set : LVSET where type value = value
+  exception NotFound
 
   val empty : lvtermnet
   val insert : (lvtermnet * key * value) -> lvtermnet
@@ -24,7 +25,7 @@ sig
   val peek : lvtermnet * key -> Set.t
   val match : lvtermnet * term -> (key * value) list
 
-  val delete : lvtermnet * key -> lvtermnet * Set.t
+  val delete : lvtermnet * key -> lvtermnet * Set.t  (* raises NotFound *)
   val numItems : lvtermnet -> int
   val listItems : lvtermnet -> (key * value) list
   val app : (key * Set.t -> unit) -> lvtermnet -> unit
@@ -36,6 +37,8 @@ functor LVTermNetFunctor(S : LVSET) : LV_TERM_NET =
 struct
 
 open HolKernel
+
+exception NotFound
 
 datatype label = V of int
                | C of {Name : string, Thy : string} * int
@@ -63,12 +66,24 @@ fun labcmp (p as (l1, l2)) =
     | (_, Lam _) => GREATER
     | (LV p1, LV p2) => pair_compare (String.compare, Int.compare) (p1, p2)
 
-datatype N = LF of (key,S.t) Redblackmap.dict
-           | ND of (label,N) Redblackmap.dict
+structure KeyTab = Table(struct
+  type key = term list * term
+  val ord = tlt_compare
+  fun pp _ = HOLPP.add_string "<lvtm-key>"
+end)
+
+structure LabelTab = Table(struct
+  type key = label
+  val ord = labcmp
+  fun pp _ = HOLPP.add_string "<lvtm-label>"
+end)
+
+datatype N = LF of S.t KeyTab.table
+           | ND of N LabelTab.table
 
 type lvtermnet = N * int
 
-val empty_node = ND (Redblackmap.mkDict labcmp)
+val empty_node = ND LabelTab.empty
 val empty = (empty_node, 0)
 
 fun ndest_term (fvs, tm) = let
@@ -85,14 +100,14 @@ in
 end
 
 fun cons_insert (bmap, k, i) =
-    case Redblackmap.peek(bmap,k) of
-      NONE => Redblackmap.insert(bmap,k,S.insert(S.empty,i))
-    | SOME items => Redblackmap.insert(bmap,k,S.insert(items, i))
+    case KeyTab.lookup bmap k of
+      NONE => KeyTab.update (k, S.insert(S.empty,i)) bmap
+    | SOME items => KeyTab.update (k, S.insert(items, i)) bmap
 
 fun insert ((net,sz), k, item) = let
   fun newnode labs =
       case labs of
-        [] => LF (Redblackmap.mkDict tlt_compare)
+        [] => LF KeyTab.empty
       | _ => empty_node
   fun trav (net, tms) =
       case (net, tms) of
@@ -101,11 +116,11 @@ fun insert ((net,sz), k, item) = let
           val (lab, rest) = ndest_term k
           val ks = rest @ ks0
           val n' =
-              case Redblackmap.peek(d,lab) of
+              case LabelTab.lookup d lab of
                 NONE => trav(newnode ks, ks)
               | SOME n => trav(n, ks)
         in
-          ND (Redblackmap.insert(d, lab, n'))
+          ND (LabelTab.update (lab, n') d)
         end
       | _ => raise Fail "LVTermNet.insert: catastrophic invariant failure"
 in
@@ -113,15 +128,11 @@ in
 end
 
 fun listItems (net, sz) = let
-  fun cons'(k,vs,acc) = S.fold (fn (v,acc) => (k,v)::acc) acc vs
+  fun cons' (k,vs) acc = S.fold (fn (v,acc) => (k,v)::acc) acc vs
   fun trav (net, acc) =
       case net of
-        LF d => Redblackmap.foldl cons' acc d
-      | ND d => let
-          fun foldthis (k,v,acc) = trav(v,acc)
-        in
-          Redblackmap.foldl foldthis acc d
-        end
+        LF d => KeyTab.fold cons' d acc
+      | ND d => LabelTab.fold (fn (_,v) => fn acc => trav(v,acc)) d acc
 in
   trav(net, [])
 end
@@ -131,11 +142,13 @@ fun numItems (net, sz) = sz
 fun peek ((net,sz), k) = let
   fun trav (net, tms) =
       case (net, tms) of
-        (LF d, []) => (valOf (Redblackmap.peek(d, k)) handle Option => S.empty)
+        (LF d, []) => (case KeyTab.lookup d k of
+                           NONE => S.empty
+                         | SOME items => items)
       | (ND d, k::ks) => let
           val (lab, rest) = ndest_term k
         in
-          case Redblackmap.peek(d, lab) of
+          case LabelTab.lookup d lab of
             NONE => S.empty
           | SOME n => trav(n, rest @ ks)
         end
@@ -158,9 +171,9 @@ end
 
 fun conslistItems (d, acc) = let
   fun listfold k (v,acc) = (k,v)::acc
-  fun mapfold (k,vs,acc) = S.fold (listfold k) acc vs
+  fun mapfold (k,vs) acc = S.fold (listfold k) acc vs
 in
-  Redblackmap.foldl mapfold acc d
+  KeyTab.fold mapfold d acc
 end
 
 fun match ((net,sz), tm) = let
@@ -168,7 +181,7 @@ fun match ((net,sz), tm) = let
       case (net, ks) of
         (LF d, []) => conslistItems (d, acc)
       | (ND d, k::ks0) => let
-          val varresult = case Redblackmap.peek(d, V 0) of
+          val varresult = case LabelTab.lookup d (V 0) of
                             NONE => acc
                           | SOME n => trav acc (n, ks0)
           val (lab, rest) = lookup_label k
@@ -177,7 +190,7 @@ fun match ((net,sz), tm) = let
             fun recurse acc n =
               if n = 0 then acc
               else
-                case Redblackmap.peek (d, V n) of
+                case LabelTab.lookup d (V n) of
                     NONE => recurse acc (n - 1)
                   | SOME m => recurse
                                 (trav acc (m, List.drop(rest, restn - n) @ ks0))
@@ -186,7 +199,7 @@ fun match ((net,sz), tm) = let
             recurse varresult (length (#2 (strip_comb k)))
           end
         in
-          case Redblackmap.peek (d, lab) of
+          case LabelTab.lookup d lab of
             NONE => varhead_results
           | SOME n => trav varhead_results (n, rest @ ks0)
         end
@@ -198,27 +211,29 @@ end
 fun delete ((net,sz), k) = let
   fun trav (p as (net, ks)) =
       case p of
-        (LF d, []) => let
-          val (d',removed) = Redblackmap.remove(d, k)
-        in
-          if Redblackmap.numItems d' = 0 then (NONE, removed)
-          else (SOME (LF d'), removed)
-        end
+        (LF d, []) =>
+        (case KeyTab.lookup d k of
+             NONE => raise NotFound
+           | SOME removed =>
+             let val d' = KeyTab.delete k d
+             in if KeyTab.size d' = 0 then (NONE, removed)
+                else (SOME (LF d'), removed)
+             end)
       | (ND d, k::ks) => let
           val (lab, rest) = ndest_term k
         in
-          case Redblackmap.peek(d, lab) of
-            NONE => raise Redblackmap.NotFound
+          case LabelTab.lookup d lab of
+            NONE => raise NotFound
           | SOME n => let
             in
               case trav (n, rest @ ks) of
                 (NONE, removed) => let
-                  val (d',_) = Redblackmap.remove(d, lab)
+                  val d' = LabelTab.delete lab d
                 in
-                  if Redblackmap.numItems d' = 0 then (NONE, removed)
+                  if LabelTab.size d' = 0 then (NONE, removed)
                   else (SOME (ND d'), removed)
                 end
-              | (SOME n', removed) => (SOME (ND (Redblackmap.insert(d,lab,n'))),
+              | (SOME n', removed) => (SOME (ND (LabelTab.update (lab, n') d)),
                                        removed)
             end
         end
@@ -232,24 +247,24 @@ end
 fun app f (net, sz) = let
   fun trav n =
       case n of
-        LF d => Redblackmap.app f d
-      | ND d => Redblackmap.app (fn (lab, n) => trav n) d
+        LF d => List.app f (KeyTab.dest d)
+      | ND d => List.app (fn (_, n) => trav n) (LabelTab.dest d)
 in
   trav net
 end
 
 fun consfoldl f acc d = let
   fun setfold k (d, acc) = f (k, d, acc)
-  fun mapfold (k,vs,acc) = S.fold (setfold k) acc vs
+  fun mapfold (k,vs) acc = S.fold (setfold k) acc vs
 in
-  Redblackmap.foldl mapfold acc d
+  KeyTab.fold mapfold d acc
 end
 
 fun fold f acc (net, sz) = let
   fun trav acc n =
       case n of
         LF d => consfoldl f acc d
-      | ND d => Redblackmap.foldl (fn (lab,n',acc) => trav acc n') acc d
+      | ND d => LabelTab.fold (fn (_,n') => fn acc => trav acc n') d acc
 in
   trav acc net
 end

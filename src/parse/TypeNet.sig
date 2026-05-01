@@ -4,14 +4,15 @@ sig
   (* signature names modelled on Redblackmap's *)
   type 'a typenet
   type hol_type = Type.hol_type
+  exception NotFound
 
   val empty : 'a typenet
   val insert : ('a typenet * hol_type * 'a) -> 'a typenet
-  val find : 'a typenet * hol_type -> 'a
+  val find : 'a typenet * hol_type -> 'a   (* raises NotFound *)
   val peek : 'a typenet * hol_type -> 'a option
   val match : 'a typenet * hol_type -> (hol_type * 'a) list
 
-  val delete : 'a typenet * hol_type -> 'a typenet * 'a
+  val delete : 'a typenet * hol_type -> 'a typenet * 'a   (* raises NotFound *)
   val numItems : 'a typenet -> int
   val listItems : 'a typenet -> (hol_type * 'a) list
   val app : (hol_type * 'a -> unit) -> 'a typenet -> unit
