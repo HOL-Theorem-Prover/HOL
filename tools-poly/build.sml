@@ -25,7 +25,11 @@ datatype phase = Initial | Bare | Full
 val cline_record = process_cline ()
 val {cmdline,build_theory_graph,selftest_level,...} = cline_record
 val {debug,jobcount,relocbuild,extra={SRCDIRS,...},...} = cline_record
-val {multithread,keepgoing,timelimit,thmsrc,...} = cline_record
+val {multithread,keepgoing,timelimit,thmsrc,cache_dir,...} = cline_record
+
+val _ = case cache_dir of
+            SOME d => print ("Using cache directory: " ^ d ^ "\n")
+          | NONE => ()
 
 open Systeml;
 
