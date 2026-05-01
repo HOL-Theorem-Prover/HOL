@@ -145,6 +145,102 @@ fun emit_theory {trace, output, binary, ruleset} = let
        incr = K (), on_def_thm = K (),
        on_fv = on_fv}
 
+  (* --- Free variable analysis for binder naming -------------------------- *)
+
+  (* To avoid variable capture when using plain binder names, we need to know
+     if the body of a lambda contains a free variable with the same (name, type)
+     as the binder.  This analysis is memoized on heap term pointers.
+
+     free_info computes:
+     - fvs: set of (name, type_ptr) pairs for Fv nodes that are free
+     - open_bvs: set of de Bruijn indices that escape (not yet bound/substituted)
+
+     For top-level heap terms, open_bvs should be empty. It's only needed
+     for intermediate computation through Clos nodes. *)
+
+  type name_ty = string * Type.hol_type ptr
+  fun name_ty_cmp ((s1, t1): name_ty, (s2, t2): name_ty) =
+    case String.compare(s1, s2) of
+      EQUAL => Int.compare(ptr t1, ptr t2)
+    | x => x
+
+  type free_info = { fvs: name_ty set, open_bvs: int set }
+  val empty_fi : free_info =
+    { fvs = Redblackset.empty name_ty_cmp,
+      open_bvs = Redblackset.empty Int.compare }
+
+  fun merge_fi ({fvs = fvs1, open_bvs = ob1}: free_info,
+                {fvs = fvs2, open_bvs = ob2}: free_info) : free_info =
+    { fvs = Redblackset.union(fvs1, fvs2),
+      open_bvs = Redblackset.union(ob1, ob2) }
+
+  (* Memoization table for free_info, keyed by heap term pointer *)
+  val fi_memo : free_info option array = Array.array(heapSize heap, NONE)
+
+  (* Trace a de Bruijn index through a heap substitution.
+     Returns (k, SOME t) if index maps to term t shifted by k,
+     or (k, NONE) if index maps to de Bruijn index k. *)
+  fun exp_rel_heap (subst_ptr: Term.term Subst.subs ptr, n: int)
+      : int * Term.term ptr option =
+    case shSubs heap subst_ptr of
+      Id => (n, NONE)
+    | Cons (s', t) =>
+        if n = 0 then (0, SOME t)
+        else exp_rel_heap(s', n - 1)
+    | Shift (k, s') =>
+        let val (m, r) = exp_rel_heap(s', n)
+        in (m + k, r) end
+    | Lift (k, s') =>
+        if n < k then (n, NONE)
+        else let val (m, r) = exp_rel_heap(s', n - k)
+             in (m + k, r) end
+
+  (* Compute free variable info for a heap term *)
+  fun free_info_of (tm_ptr: Term.term ptr) : free_info =
+    if not (isPtr tm_ptr) then empty_fi
+    else let val k = ptr tm_ptr
+    in case Array.sub(fi_memo, k) of
+         SOME fi => fi
+       | NONE => let val fi = free_info_compute tm_ptr
+                 in Array.update(fi_memo, k, SOME fi); fi end
+    end
+
+  and free_info_compute (tm_ptr: Term.term ptr) : free_info =
+    case shTerm heap tm_ptr of
+      Fv (s, typ) =>
+        { fvs = Redblackset.singleton name_ty_cmp (s, typ),
+          open_bvs = Redblackset.empty Int.compare }
+    | Bv n =>
+        { fvs = Redblackset.empty name_ty_cmp,
+          open_bvs = Redblackset.singleton Int.compare n }
+    | Const _ => empty_fi
+    | Comb (t1, t2) => merge_fi(free_info_of t1, free_info_of t2)
+    | Abs (v, body) =>
+        let val {fvs, open_bvs} = free_info_of body
+            (* decrement open indices > 0, drop index 0 (now bound) *)
+            val open_bvs' = Redblackset.foldl (fn (n, acc) =>
+                              if n = 0 then acc
+                              else Redblackset.add(acc, n - 1))
+                            (Redblackset.empty Int.compare) open_bvs
+        in {fvs = fvs, open_bvs = open_bvs'} end
+    | Clos (subst, t) =>
+        let val {fvs, open_bvs} = free_info_of t
+            (* Trace each open index through the substitution *)
+            val (fvs', open_bvs') =
+              Redblackset.foldl (fn (n, (fvs_acc, ob_acc)) =>
+                case exp_rel_heap(subst, n) of
+                  (k, NONE) => (fvs_acc, Redblackset.add(ob_acc, k))
+                | (k, SOME t') =>
+                    let val {fvs = fvs_t, open_bvs = ob_t} = free_info_of t'
+                        (* shift open indices from t' by k *)
+                        val ob_t_shifted = Redblackset.foldl
+                                             (fn (m, acc) => Redblackset.add(acc, m + k))
+                                             (Redblackset.empty Int.compare) ob_t
+                    in (Redblackset.union(fvs_acc, fvs_t),
+                        Redblackset.union(ob_acc, ob_t_shifted)) end)
+              (fvs, Redblackset.empty Int.compare) open_bvs
+        in {fvs = fvs', open_bvs = open_bvs'} end
+
   (* --- Axiom name pre-scan ----------------------------------------------- *)
 
   (* Build a map from heap pointer to axiom name by scanning named exports.
@@ -324,6 +420,70 @@ fun emit_theory {trace, output, binary, ruleset} = let
                          " is not a function type")
     end
 
+  (* Reverse lookup: PFT VAR term ID -> name.
+     Populated by emit_var and emit_binder. *)
+  val var_names : string DArray.darray = DArray.new(4096, "")
+
+  fun var_names_ensure id = let
+    val sz = DArray.size var_names
+    fun pad 0 = () | pad n = (DArray.push(var_names, ""); pad (n - 1))
+  in if id < sz then () else pad (id - sz + 1)
+  end
+
+  fun var_names_set id name =
+    (var_names_ensure id; DArray.update(var_names, id, name))
+
+  fun var_name_of id =
+    if id < DArray.size var_names then DArray.sub(var_names, id)
+    else ""
+
+  (* Memoized free variable computation for PFT terms.
+     Returns set of (name, type_id) pairs free in the term. *)
+  type name_ty_pft = string * int
+  fun name_ty_pft_cmp ((s1, t1): name_ty_pft, (s2, t2): name_ty_pft) =
+    case String.compare(s1, s2) of
+      EQUAL => Int.compare(t1, t2)
+    | x => x
+  type fv_set = name_ty_pft Redblackset.set
+  val empty_fv_set : fv_set = Redblackset.empty name_ty_pft_cmp
+
+  val pft_fv_memo : fv_set option DArray.darray = DArray.new(65536, NONE)
+
+  fun pft_fv_memo_ensure id = let
+    val sz = DArray.size pft_fv_memo
+    fun pad 0 = () | pad n = (DArray.push(pft_fv_memo, NONE); pad (n - 1))
+  in if id < sz then () else pad (id - sz + 1)
+  end
+
+  fun pft_free_vars (id: int) : fv_set =
+    (pft_fv_memo_ensure id;
+     case DArray.sub(pft_fv_memo, id) of
+       SOME fvs => fvs
+     | NONE => let val fvs = pft_free_vars_compute id
+               in DArray.update(pft_fv_memo, id, SOME fvs); fvs end)
+
+  and pft_free_vars_compute (id: int) : fv_set =
+    let val p1 = if id < DArray.size tm_part1 then DArray.sub(tm_part1, id) else ~1
+        val p2 = if id < DArray.size tm_part2 then DArray.sub(tm_part2, id) else ~1
+    in if p1 < 0 then
+         (* VAR or CONST: check if it's a VAR by looking up var_names *)
+         let val name = var_name_of id
+         in if name = "" then empty_fv_set  (* CONST *)
+            else Redblackset.singleton name_ty_pft_cmp (name, pft_type_of id)
+         end
+       else if isSome (IntPairTable.lookup comb_ht (p1, p2)) then
+         (* COMB *)
+         Redblackset.union(pft_free_vars p1, pft_free_vars p2)
+       else
+         (* ABS: p1 is binder VAR, p2 is body *)
+         let val binder_name = var_name_of p1
+             val binder_ty = pft_type_of p1
+             val body_fvs = pft_free_vars p2
+         in Redblackset.delete(body_fvs, (binder_name, binder_ty))
+            handle Redblackset.NotFound => body_fvs
+         end
+    end
+
   fun var_lookup key = peek(!var_ht, key)
   fun var_insert key v = var_ht := insert(!var_ht, key, v)
   fun const_lookup key = peek(!const_ht, key)
@@ -447,6 +607,29 @@ fun emit_theory {trace, output, binary, ruleset} = let
      end
   end
 
+  (* Check if using binder name s with type ty_id would capture a free variable
+     in the heap term tm_ptr, given the current substitution environment env.
+     
+     A capture occurs if:
+     1. The heap term contains Fv(s, typ) where emit_type(typ) = ty_id, OR
+     2. The heap term has an escaping de Bruijn index n > 0 that resolves
+        (via env) to a PFT term containing (s, ty_id) free. *)
+  and would_capture (s: string, ty_id: int) (env: int Subst.subs) (tm_ptr: Term.term ptr) : bool =
+    let val {fvs, open_bvs} = free_info_of tm_ptr
+        (* Check heap fvs: any Fv with same name and type? *)
+        val heap_conflict = isSome (Redblackset.find
+          (fn (s', typ') => s = s' andalso emit_type typ' = ty_id) fvs)
+        (* Check env: for escaping indices n > 0, does env map them to
+           PFT terms containing (s, ty_id) free? 
+           Note: n=0 will refer to our new binder, so we only check n > 0 *)
+        fun env_conflict n =
+          if n = 0 then false
+          else case Subst.exp_rel(env, n - 1) of
+                 (_, SOME tm_id) => Redblackset.member(pft_free_vars tm_id, (s, ty_id))
+               | (_, NONE) => false  (* still unresolved, no conflict from env *)
+        val env_has_conflict = isSome (Redblackset.find env_conflict open_bvs)
+    in heap_conflict orelse env_has_conflict end
+
   and emit_term_core env (tm_ptr : Term.term ptr) : int =
     case shTerm heap tm_ptr of
       Fv (s, typ) => let
@@ -459,6 +642,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
            in PFTWriter.var out id s ty_id;
               var_insert key id;
               tm_types_set id ty_id;
+              var_names_set id s;
               id
            end
       end
@@ -504,9 +688,14 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val (s, typ) = resolve_binder_name t1
         val ty_id = emit_type typ
         val V = alloc_tm ()
-        val bname = fresh_binder_name s
+        (* Use plain name if it won't capture a free variable in the body;
+           otherwise use a unique " pft%" name to avoid capture. *)
+        val bname = if would_capture (s, ty_id) env t2
+                    then fresh_binder_name s
+                    else s
         val () = PFTWriter.var out V bname ty_id
         val () = tm_types_set V ty_id
+        val () = var_names_set V bname
         val body_id = emit_term_sub (Subst.cons(env, V)) t2
         val A = alloc_tm ()
       in
@@ -2290,7 +2479,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
        | NONE => let val id = alloc_tm ()
          in PFTWriter.var out id name ty_id;
             var_insert key id;
-            tm_types_set id ty_id; id
+            tm_types_set id ty_id;
+            var_names_set id name;
+            id
          end
     end
 
@@ -2300,7 +2491,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
     let val id = alloc_tm ()
         val bname = fresh_binder_name name
     in PFTWriter.var out id bname ty_id;
-       tm_types_set id ty_id; id
+       tm_types_set id ty_id;
+       var_names_set id bname;
+       id
     end
 
   and emit_const name ty_id =
