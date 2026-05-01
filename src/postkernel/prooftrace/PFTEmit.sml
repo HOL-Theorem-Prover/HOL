@@ -375,9 +375,14 @@ fun emit_theory {trace, output, binary, ruleset} = let
      need to tell the two apart (e.g. SUBST_prf's rconv); all other
      call sites know the kind from the surrounding proof-rule invariant
      and can use pft_dest_comb / pft_dest_abs directly. *)
+  fun tm_part1_of id =
+    if id < DArray.size tm_part1 then DArray.sub(tm_part1, id) else ~1
+  fun tm_part2_of id =
+    if id < DArray.size tm_part2 then DArray.sub(tm_part2, id) else ~1
+
   fun pft_is_comb id =
-    let val f = DArray.sub(tm_part1, id)
-        val x = DArray.sub(tm_part2, id)
+    let val f = tm_part1_of id
+        val x = tm_part2_of id
     in f >= 0 andalso isSome (IntPairTable.lookup comb_ht (f, x))
     end
 
@@ -1212,16 +1217,32 @@ fun emit_theory {trace, output, binary, ruleset} = let
               in c_mk_comb (rconv binder_map sf tf)
                            (rconv binder_map sx tx)
               end
-            else if DArray.sub(tm_part1, tmpl_id) >= 0 then
+            else if tm_part1_of tmpl_id >= 0 then
               let val (sv, sb) = pft_dest_abs src_id
                   val (tv, tb) = pft_dest_abs tmpl_id
-              in c_abs sv (rconv ((tv, sv) :: binder_map) sb tb)
+                  (* ABS_THM requires the abstracted variable not to be
+                     free in the hypotheses of the recursive theorem.
+                     SUBST's recursive congruence theorem inherits the
+                     substitution hypotheses, so the original binder may
+                     be unsafe.  Alpha-rename both sides to a fresh
+                     synthetic binder before applying ABS_THM. *)
+                  val bv = emit_binder "v" (pft_type_of sv)
+                  val sb' = pft_rename_free sv bv sb
+                  val tb' = pft_rename_free tv bv tb
+              in c_abs bv (rconv binder_map sb' tb')
               end
             else if src_id = tmpl_id then c_refl src_id
             else raise Fail ("rconv: leaf mismatch: src "
                              ^ Int.toString src_id
                              ^ " vs tmpl " ^ Int.toString tmpl_id)
-      in r_eq_mp (rconv [] source_id template_id) c_th end
+        val conv_th = rconv [] source_id template_id
+        (* rconv may alpha-rename binders internally to satisfy ABS_THM.
+           Its RHS is the substituted result with freshened bound names.
+           Bridge back to this SUBST proof node's actual conclusion, whose
+           bound names are the names expected by downstream proof steps. *)
+        val result_id = tm concl_ptr
+        val conv_to_result = c_trans conv_th (c_refl result_id)
+      in r_eq_mp conv_to_result c_th end
 
     | GEN_ABS_prf (a, b, c) => let
         val vars = list heap tm b
@@ -1447,9 +1468,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
           case List.find (fn (v, _) => v = tm_id) v_eqs of
             SOME (_, eq_i) => eq_i
           | NONE => let
-              val f = DArray.sub(tm_part1, tm_id)
+              val f = tm_part1_of tm_id
             in if f < 0 then c_refl tm_id  (* VAR or CONST, not a v_i *)
-               else let val x = DArray.sub(tm_part2, tm_id)
+               else let val x = tm_part2_of tm_id
                in if isSome (IntPairTable.lookup comb_ht (f, x))
                   then c_mk_comb (cong f) (cong x)
                   else c_abs f (cong x)   (* ABS f x *)
@@ -1461,9 +1482,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
            new_specification would reject (or accept a malformed input). *)
         fun occurs_free v_id tm_id =
             tm_id = v_id orelse
-            (let val f = DArray.sub(tm_part1, tm_id)
+            (let val f = tm_part1_of tm_id
              in f >= 0 andalso
-                  let val x = DArray.sub(tm_part2, tm_id)
+                  let val x = tm_part2_of tm_id
                   in if isSome (IntPairTable.lookup comb_ht (f, x))
                      then occurs_free v_id f orelse occurs_free v_id x
                      else f <> v_id andalso occurs_free v_id x
@@ -2031,7 +2052,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
       (* Examine the structure of bits_id to determine which rule to apply.
          We need to look at what term bits_id represents. *)
-      val (f_id, x_id) = (DArray.sub(tm_part1, bits_id), DArray.sub(tm_part2, bits_id))
+      val (f_id, x_id) = (tm_part1_of bits_id, tm_part2_of bits_id)
     in
       if f_id < 0 then
         (* bits_id is a constant (_0) - use SUC_0: SUC _0 = BIT1 _0 *)
@@ -2535,9 +2556,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
      (heap and synthesised) are registered there; ABSs never are. *)
   and pft_subst_tm old_id new_id tm_id =
     if tm_id = old_id then new_id
-    else let val f = DArray.sub(tm_part1, tm_id)
+    else let val f = tm_part1_of tm_id
     in if f < 0 then tm_id (* VAR or CONST — no children *)
-       else let val x = DArray.sub(tm_part2, tm_id)
+       else let val x = tm_part2_of tm_id
                 val f' = pft_subst_tm old_id new_id f
                 val x' = pft_subst_tm old_id new_id x
             in if f' = f andalso x' = x then tm_id
@@ -2552,9 +2573,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
   and pft_rename_free old_id new_id tm_id = let
     fun go shadowed t =
       if t = old_id then (if shadowed then t else new_id)
-      else let val f = DArray.sub(tm_part1, t)
+      else let val f = tm_part1_of t
       in if f < 0 then t (* VAR or CONST *)
-         else let val x = DArray.sub(tm_part2, t)
+         else let val x = tm_part2_of t
          in if isSome (IntPairTable.lookup comb_ht (f, x)) then
               (* COMB: recurse into both children *)
               let val f' = go shadowed f
