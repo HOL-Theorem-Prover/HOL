@@ -1,3 +1,5 @@
+ifneq ($(which mlton),)
+
 .PHONY: all
 
 replay-test: replay-test.mlb replay-test.sml
@@ -10,6 +12,8 @@ ifdef HAVE_WORD64
 all: pft-replay-test replay-test
 else
 all: pft-replay-test
+endif
+
 endif
 
 EXTRA_CLEANS = replay-test pft-replay-test
