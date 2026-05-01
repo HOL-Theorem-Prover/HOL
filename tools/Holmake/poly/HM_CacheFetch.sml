@@ -55,9 +55,6 @@ fun upload base_url cachekey dir thyname (ofns : Holmake_tools.output_functions)
             in
                 if ok then SOME (name, hash) else NONE
             end
-        val _ = if null files then
-                    raise Fail (thyname ^ " has no built theory files to cache")
-                else ()
         val results = List.mapPartial process files
         val ok = length results = length files
         val _ = recMkDir (OS.Path.concat(base_url, "key")) handle OS.SysErr _ => ()
@@ -69,9 +66,9 @@ fun upload base_url cachekey dir thyname (ofns : Holmake_tools.output_functions)
         val _ = TextIO.output(out, json)
         val _ = TextIO.closeOut out
     in
-        if ok then (info ("Cached " ^ thyname); true)
+        if ok then true
         else (warn ("Cache failed for " ^ thyname); false)
-    end handle e => (#warn ofns ("Write failed: " ^ exnMessage e); false)
+    end handle _ => false
 
 fun fetch base_url cachekey (ofns : Holmake_tools.output_functions) =
     case cachekey of

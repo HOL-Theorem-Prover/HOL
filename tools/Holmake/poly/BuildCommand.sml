@@ -403,11 +403,12 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                 case ck of
                     HM_Cachekey.Key k => HM_Cachekey.write_stamp stamp_path k
                   | HM_Cachekey.Missing _ => ()
+            val cache_upload_dir = hmdir.toAbsPath (hmdir.curdir())
             fun write_cache () =
                 case cache_dir of
                     SOME url =>
                       ignore (HM_CacheFetch.upload url ck
-                                (hmdir.toAbsPath (hmdir.curdir()))
+                                cache_upload_dir
                                 (OS.Path.file s ^ "Theory") outs)
                   | NONE => ()
           in
