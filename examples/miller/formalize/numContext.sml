@@ -242,29 +242,6 @@ in
       THENC trace_CONV 2 "mod_mult_rewr result"))
 end;
 
-(* old---hopefully obsolete
-local
-  val GSYM_MOD_MULT1 = GSYM MOD_MULT1
-  val GSYM_MOD_MULT2 = GSYM MOD_MULT2
-in
-  val mod_mult_rewr = pattern_rewr
-    (``(a * b) MOD n``,
-     fn simplifier => fn prover =>
-     CHANGED_CONV
-     (trace_CONV 2 "mod_mult_rewr input"
-      THENC RAND_CONV simplifier
-      THENC ho_COND_REWR_CONV GSYM_MOD_MULT1 prover
-      THENC ho_COND_REWR_CONV GSYM_MOD_MULT2 prover
-      THENC trace_CONV 4 "mod_mult_rewr after preparation"
-      THENC
-      (RATOR_CONV o RAND_CONV)
-      ((RATOR_CONV o RAND_CONV) simplifier THENC RAND_CONV simplifier)
-      THENC TRYC (ho_COND_REWR_CONV MOD_MULT1 prover)
-      THENC TRYC (ho_COND_REWR_CONV MOD_MULT2 prover)
-      THENC trace_CONV 2 "mod_mult_rewr result"))
-end;
-*)
-
 (* The module *)
 
 val num_pc = precontext_add
