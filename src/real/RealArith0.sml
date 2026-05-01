@@ -420,7 +420,7 @@ end
    the form “a * x + b * y + c”, represented by a finite map from terms to
    rationals such as [x |=> a, y |=> b, 1 |=> c].
  *)
-local open HOLdict Arbrat in
+local open Redblackmap Arbrat in
 type linear_type = (term,rat)dict
 
 val is_undefined :linear_type -> bool = isEmpty

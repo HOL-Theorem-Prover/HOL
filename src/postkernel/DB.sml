@@ -48,7 +48,7 @@ val toLower = CharVector.map Char.toLower
      is loaded.
  ---------------------------------------------------------------------------*)
 
-structure Map = HOLdict
+structure Map = Redblackmap
 (* the keys are lower-cased, but the data also stores the keys, and there
    the key information is kept in its original case *)
 

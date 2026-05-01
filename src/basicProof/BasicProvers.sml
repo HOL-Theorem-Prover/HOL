@@ -748,11 +748,11 @@ fun TRIV_LET_CONV tm =
 (* This calculation has to use multisets.                                    *)
 (*---------------------------------------------------------------------------*)
 
-val empty_mset = HOLdict.mkDict Term.compare : (term,int) HOLdict.dict
-fun mset_insert t mset = HOLdict.insertWith (op+) (mset,t,1)
+val empty_mset = Redblackmap.mkDict Term.compare : (term,int) Redblackmap.dict
+fun mset_insert t mset = Redblackmap.insertWith (op+) (mset,t,1)
 fun mset_of list = itlist mset_insert list empty_mset
 fun mset_diff l2 l1 =  (* important to maintain the order of elements in l2 *)
-  let open HOLdict
+  let open Redblackmap
       val mset1 = mset_of l1
       val mset2 = mset_of l2
       fun winnow [] acc = rev acc

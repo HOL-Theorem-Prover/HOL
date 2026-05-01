@@ -122,7 +122,7 @@ datatype grammar = GCONS of
    overload_info : overload_info,
    user_printers : (type_grammar.grammar * grammar, grammar) printer_info,
    absyn_postprocessors : (string * postprocessor) list,
-   preterm_processors : (string*int,ptmprocessor) HOLdict.dict,
+   preterm_processors : (string*int,ptmprocessor) Redblackmap.dict,
    next_timestamp : int
    }
 and postprocessor = AbPP of grammar -> Absyn.absyn -> Absyn.absyn
@@ -153,7 +153,7 @@ fun absyn_postprocessors g = map (apsnd destAbPP) (absyn_postprocessors0 g)
 fun gnext_timestamp (GCONS g) = #next_timestamp g
 
 fun preterm_processor (GCONS g) k =
-  Option.map destPtmP (HOLdict.peek(#preterm_processors g, k))
+  Option.map destPtmP (Redblackmap.peek(#preterm_processors g, k))
 
 
 (* fupdates *)
@@ -289,13 +289,13 @@ fun new_preterm_processor k f (GCONS g) = let
   val old = #preterm_processors g
 in
   GCONS (update_G g
-                  (U #preterm_processors (HOLdict.insert(old,k,PtmP f))) $$)
+                  (U #preterm_processors (Redblackmap.insert(old,k,PtmP f))) $$)
 end
 
 fun remove_preterm_processor k (G as GCONS g) = let
   val old = #preterm_processors g
 in
-  case Lib.total HOLdict.remove (old,k) of
+  case Lib.total Redblackmap.remove (old,k) of
       SOME(new, v) => (GCONS (update_G g (U #preterm_processors new) $$),
                        SOME (destPtmP v))
     | NONE => (G, NONE)
@@ -492,7 +492,7 @@ val stdhol : grammar =
    user_printers = (FCNet.empty, HOLset.empty String.compare),
    absyn_postprocessors = [],
    preterm_processors =
-     HOLdict.mkDict (pair_compare(String.compare, Int.compare)),
+     Redblackmap.mkDict (pair_compare(String.compare, Int.compare)),
    next_timestamp = 1
    }
 
@@ -1028,10 +1028,10 @@ structure userSyntaxFns = struct
   type 'a t = 'a getter * 'a setter
   fun mk_table () =
     let
-      val tab = ref (HOLdict.mkDict String.compare)
+      val tab = ref (Redblackmap.mkDict String.compare)
     in
-      ((fn s => HOLdict.find(!tab, s)),
-       (fn {name,code} => tab := HOLdict.insert(!tab, name, code)))
+      ((fn s => Redblackmap.find(!tab, s)),
+       (fn {name,code} => tab := Redblackmap.insert(!tab, name, code)))
     end
   val (get_userPP, register_userPP) = mk_table() : userprinter t
   val (get_absynPostProcessor, register_absynPostProcessor) =
@@ -1068,7 +1068,7 @@ fun add_delta ud G =
       else
         let
           val code = userSyntaxFns.get_userPP s
-                     handle HOLdict.NotFound =>
+                     handle Redblackmap.NotFound =>
                             raise ERROR "add_delta"
                                   ("No code named "^s^
                                    " registered for add user-printer")
@@ -1078,7 +1078,7 @@ fun add_delta ud G =
     | ADD_ABSYN_POSTP {codename} =>
       let
         val code = userSyntaxFns.get_absynPostProcessor codename
-          handle HOLdict.NotFound =>
+          handle Redblackmap.NotFound =>
                  raise ERROR "add_delta"
                        ("No code named "^codename^
                         " registered for add absyn-postprocessor")
@@ -1123,14 +1123,14 @@ end
 fun merge_bmaps typestring keyprinter m1 m2 = let
   (* m1 takes precedence - arbitrarily *)
   fun foldfn (k,v,newmap) =
-    (if isSome (HOLdict.peek(newmap, k)) then
+    (if isSome (Redblackmap.peek(newmap, k)) then
        Feedback.HOL_WARNING "term_grammar" "merge_grammars"
        ("Merging "^typestring^" has produced a clash on key "^keyprinter k)
      else
        ();
-     HOLdict.insert(newmap,k,v))
+     Redblackmap.insert(newmap,k,v))
 in
-  HOLdict.foldl foldfn m2 m1
+  Redblackmap.foldl foldfn m2 m1
 end
 
 fun merge_user_printers (n1,ks1) (n2,_) = let
@@ -1152,7 +1152,7 @@ in
 end
 
 fun bmap_merge m1 m2 =
-  HOLdict.foldl (fn (k,v,acc) => HOLdict.insert(acc,k,v)) m1 m2
+  Redblackmap.foldl (fn (k,v,acc) => Redblackmap.insert(acc,k,v)) m1 m2
 
 fun merge_grammars (G1 as GCONS g1, G2 as GCONS g2) :grammar = let
   val g0_rules =
