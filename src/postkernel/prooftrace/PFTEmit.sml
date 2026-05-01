@@ -896,25 +896,31 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | GENL_prf (a, b) => let
         val var_ids = list heap tm a
         val inner_th = th b
-        fun get_abs_body id = let
-          val (_, lam_id) = pft_dest_comb id
-          val (_, body_id) = pft_dest_abs lam_id
-        in body_id end
-        val n = length var_ids
-        val concl_id = tm concl_ptr
-        fun build_concls 0 _ = []
-          | build_concls k c = c :: build_concls (k-1) (get_abs_body c)
-        val outer_concls = build_concls n concl_id
         val inner_concl_id = tm (heap_concl b)
-        val rev_vars = List.rev var_ids
-        val rev_s_ids = inner_concl_id :: List.rev outer_concls
-        val gen_pairs = ListPair.zip (rev_vars, List.take (rev_s_ids, n))
+        val rev_vars = List.rev var_ids  (* innermost first *)
 
-        fun fold_gens [] th_acc = th_acc
-          | fold_gens ((v_tm, s_tm) :: rest) th_acc = let
+        (* Build s_tm for each level by constructing foralls from inside out.
+           For variables [C, B, A] and inner body s:
+             - First do_GEN uses s with variable C
+             - Then we build ∀C'. s[C'/C] with fresh binder C'
+             - Then do_GEN uses that forall with variable B
+             - etc.
+           We use fresh binders (emit_binder) to satisfy PFTRename's
+           requirements, and pft_rename_free to substitute the heap
+           variable with the fresh binder in the term. *)
+        fun fold_gens [] _ th_acc = th_acc
+          | fold_gens (v_tm :: rest) s_tm th_acc = let
               val v_ty = pft_type_of v_tm
-            in fold_gens rest (do_GEN v_tm v_ty s_tm th_acc) end
-      in fold_gens gen_pairs inner_th end
+              val new_th = do_GEN v_tm v_ty s_tm th_acc
+              (* Build next s_tm: ∀bv. s_tm[bv/v_tm] with fresh binder *)
+              val bv = emit_binder "v" v_ty
+              val s_tm_bv = pft_rename_free v_tm bv s_tm
+              val Ab = emit_tyop "fun" [v_ty, bool_tyid]
+              val next_s_tm = emit_comb
+                (emit_const "!" (emit_tyop "fun" [Ab, bool_tyid]))
+                (emit_abs bv s_tm_bv)
+            in fold_gens rest next_s_tm new_th end
+      in fold_gens rev_vars inner_concl_id inner_th end
 
     | SPEC_prf (a, b) =>
         emit_thm_candle result_id concl_ptr (Specialize_prf (a, b))
@@ -2347,6 +2353,27 @@ fun emit_theory {trace, output, binary, ruleset} = let
                     | NONE   => emit_abs f' x'
             end
     end
+
+  (* Like pft_subst_tm but only substitutes free occurrences of old_id.
+     Tracks shadowing when entering ABS nodes. *)
+  and pft_rename_free old_id new_id tm_id = let
+    fun go shadowed t =
+      if t = old_id then (if shadowed then t else new_id)
+      else let val f = DArray.sub(tm_part1, t)
+      in if f < 0 then t (* VAR or CONST *)
+         else let val x = DArray.sub(tm_part2, t)
+         in if isSome (IntPairTable.lookup comb_ht (f, x)) then
+              (* COMB: recurse into both children *)
+              let val f' = go shadowed f
+                  val x' = go shadowed x
+              in if f' = f andalso x' = x then t else emit_comb f' x' end
+            else
+              (* ABS: binder is f, body is x; shadow if binder = old_id *)
+              let val x' = go (shadowed orelse f = old_id) x
+              in if x' = x then t else emit_abs f x' end
+         end
+      end
+  in go false tm_id end
 
   (* ======================================================================= *)
   (* compute (HOL4)                                                          *)
