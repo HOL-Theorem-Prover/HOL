@@ -13,33 +13,52 @@
      5. Transcode bin -> jsonl                (PFTTranscode.transcode)
 *)
 
-val theories = ["bool", "marker", "num", "sat", "combin", "relation",
-                "prim_rec", "quotient", "pair", "arithmetic", "numeral",
-                "cv", "numpair", "ind_type", "one", "sum", "option", "While",
-                "reduce", "divides", "normalForms", "pred_set", "basicSize",
-                "list", "rich_list", "sorting", "finite_map", "alist",
-                "indexedLists", "logroot", "sptree", "permutes", "iterate",
-                "fcp", "bit", "ternaryComparisons", "string", "numposrep",
-                "ASCIInumbers", "sum_num", "numeral_bit", "words", "set_sep",
-                "byte", "bitstring", "set_relation", "llist", "poset"]
+val theories = [
+  "bool", "marker", "num", "sat", "combin", "relation",
+  "prim_rec", "quotient", "pair", "arithmetic", "numeral",
+  "cv", "numpair", "ind_type", "one", "sum", "option", "While",
+  "reduce", "divides", "normalForms", "pred_set", "basicSize",
+  "list", "rich_list", "sorting", "finite_map", "alist",
+  "indexedLists", "logroot", "sptree", "permutes", "iterate",
+  "fcp", "bit", "ternaryComparisons", "string", "numposrep",
+  "ASCIInumbers", "sum_num", "numeral_bit", "words", "set_sep",
+  "byte", "bitstring", "set_relation", "llist", "poset",
+  "set_sep", "byte", "bitstring", "fixedPoint", "path", "alignment",
+  "address", "bag", "toto", "comparison",
+  "mergesort", "normalizer", "gcd",
+  "integer", "int_arith", "cooper", "Omega", "integer_word",
+  "hrat", "hreal", "realax", "real_arith", "real", "intreal",
+  "intExtension", "intReduce", "frac", "primeFactor", "rat",
+  "blast", "multiword", "tailrec", "mc_multiword",
+  "binary_ieee", "machine_ieee", "binary_ieeeProps",
+  "location",
+  "quantHeuristics", "ConseqConv", "patternMatches",
+  "balanced_map", "res_quan", "int_bitwise",
+  "container", "state_transformer", "errorMonad", "errorLogMonad",
+  "alist_tree", "transfer", "spt_closure",
+  "update",
+  "lprefix_lub", "grammar", "NTproperties", "peg", "pegexec",
+  "charset", "vec_map", "oset",
+  "FormalLang", "regexp", "regexp_map", "regexp_compiler",
+  "simpleSexp", "simpleSexpPEG", "simpleSexpParse",
+  (* CakeML theories *)
+  "ag32", "misc"
+]
 
 val targets =
     (* everything
     List.map (fn s => PFTMerge.ThyAll (s, false)) theories
     *)
-    [PFTMerge.ThyThm ("arithmetic", "X_LE_DIV", false),
-     PFTMerge.ThyThm ("cv", "DIV_RECURSIVE", true),
-     PFTMerge.ThyThm ("divides", "ZERO_DIVIDES", true),
-     PFTMerge.ThyThm ("alist", "ALOOKUP_FAILS", false),
-     PFTMerge.ThyAll ("pred_set", false),
-     PFTMerge.ThyThm ("byte", "num_of_bytes_REPLICATE_0w", true),
-     PFTMerge.ThyThm ("byte", "num_of_bytes_DIV_EXP_MOD", true)
+    [
+     PFTMerge.ThyThm ("misc", "ALL_DISTINCT_MAP_FST_toSortedAList", false)
     ]
 
 val preamble_bin = "preamble.candle.pft.bin"
 fun theory_in  s = s ^ "Theory.tr.gz"
 fun theory_pft s = s ^ ".candle.pft.bin"
 fun log s = print (s ^ "\n")
+
+fun emit_pfts () = let
 
 (* 1. Preamble — uses plain variable names, no rename needed *)
 val () = log "Emitting candle preamble..."
@@ -50,7 +69,9 @@ val () = PFTCandlePreamble.emit
    EXPECT records are debug-only and downstream tools (merge/rename/
    replay/transcode) don't handle opcode 0xEF, so turn them off. *)
 val () = PFTEmit.emit_expect := false
+(*
 val () = PFTEmit.emit_expect := true
+*)
 val () = log "Emitting per-theory Candle PFTs..."
 val () = List.app (fn s =>
   (log ("  " ^ s);
@@ -72,6 +93,10 @@ val () = List.app (fn s =>
    }))
   theories
 *)
+
+in () end
+
+(* val () = emit_pfts () *)
 
 (* 4. Merge *)
 val merged_bin = "merged.candle.pft.bin"
