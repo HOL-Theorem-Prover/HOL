@@ -113,33 +113,47 @@ fun collect_consumed (sr: PFTReader.stream_reader) (specs: arg_spec list)
 type file_state = {
   file_idx : int,
   cmds : cmd_meta DArray.darray,
-  producers : (int * int, int) Redblackmap.dict ref
+  producers : int DArray.darray vector
 }
 
-fun pair_compare ((a1:int,b1:int), (a2,b2)) =
-  case Int.compare(a1,a2) of EQUAL => Int.compare(b1,b2) | ord => ord
+fun ensure_darray_size da n =
+  let fun loop () =
+        if DArray.size da >= n then ()
+        else (DArray.push(da, ~1); loop ())
+  in loop () end
+
+fun set_producer producers ns id ci =
+  let val da = Vector.sub(producers, ns)
+  in ensure_darray_size da (id + 1);
+     DArray.update(da, id, ci)
+  end
+
+fun get_producer producers ns id =
+  let val da = Vector.sub(producers, ns)
+  in if id < DArray.size da then DArray.sub(da, id) else ~1 end
 
 fun new_file_state fi : file_state = {
   file_idx = fi,
   cmds = DArray.new(1024, empty_meta),
-  producers = ref (Redblackmap.mkDict pair_compare)
+  producers = Vector.tabulate(NUM_NS, fn _ => DArray.new(1024, ~1))
 }
 
 fun add_cmd (fs: file_state) (meta: cmd_meta) =
   let val ci = DArray.size (#cmds fs)
   in DArray.push(#cmds fs, meta);
      List.app (fn (ns, id) =>
-       #producers fs :=
-         Redblackmap.insert(!(#producers fs), (ns, id), ci))
+       set_producer (#producers fs) ns id ci)
        (#produced meta);
      ci
   end
 
 fun find_producer (fs: file_state) (ns, id) =
-  Redblackmap.find(!(#producers fs), (ns, id))
-  handle Redblackmap.NotFound =>
-    raise Fail ("PFTMerge: no producer for " ^ ns_name ns ^ "#" ^
-                Int.toString id ^ " in file " ^ Int.toString (#file_idx fs))
+  let val ci = get_producer (#producers fs) ns id
+  in if ci >= 0 then ci
+     else raise Fail ("PFTMerge: no producer for " ^ ns_name ns ^ "#" ^
+                      Int.toString id ^ " in file " ^
+                      Int.toString (#file_idx fs))
+  end
 
 type save_entry = {file_idx: int, cmd_idx: int, th_id: int}
 
