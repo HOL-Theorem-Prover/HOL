@@ -274,7 +274,7 @@ fun compute_reachable
       (const_introducer: (string, int * int) Redblackmap.dict)
       (type_introducer: (string, int * int) Redblackmap.dict)
       (target_saves: (string * bool) list)
-    : (int * int) list =
+    : bool array vector =
   let
     val n_files = Vector.length file_states
     val visited = Vector.tabulate(n_files, fn fi =>
@@ -336,12 +336,7 @@ fun compute_reachable
         end
     val () = process ()
 
-    val result = ref [] : (int * int) list ref
-    val () = Vector.appi (fn (fi, vis) =>
-      Array.appi (fn (ci, v) =>
-        if v then result := (fi, ci) :: !result else ()) vis)
-      visited
-  in List.rev (!result) end
+  in visited end
 
 (* ========================================================================= *)
 (* Pass 2: Re-read and emit with renumbered IDs                              *)
@@ -358,14 +353,9 @@ fun pass2_emit (file_states: file_state vector)
                (descs: (int * opcode_desc) list) =
   let
     val n_files = Vector.length file_states
-    val incl_list = compute_reachable file_states save_table
-                      const_introducer type_introducer target_saves
-
     (* Included set as bool arrays for O(1) lookup *)
-    val included = Vector.tabulate(n_files, fn fi =>
-      Array.array(DArray.size (#cmds (Vector.sub(file_states, fi))), false))
-    val () = List.app (fn (fi, ci) =>
-      Array.update(Vector.sub(included, fi), ci, true)) incl_list
+    val included = compute_reachable file_states save_table
+                     const_introducer type_introducer target_saves
 
     (* Per-namespace ID allocators *)
     val allocators = Vector.tabulate(NUM_NS, fn _ => IdAlloc.new ())
@@ -383,20 +373,21 @@ fun pass2_emit (file_states: file_state vector)
                 then Array.update(maxes, ns, id + 1) else ())
                 (#produced meta)) (#cmds fs)
         in Vector.tabulate(NUM_NS, fn ns =>
-             Array.array(Array.sub(maxes, ns), NONE : int option))
+             Array.array(Array.sub(maxes, ns), ~1))
         end)
 
     fun set_rename fi ns old_id new_id =
       Array.update(Vector.sub(Vector.sub(rename_tables, fi), ns),
-                   old_id, SOME new_id)
+                   old_id, new_id)
 
     fun get_rename fi ns old_id =
-      case Array.sub(Vector.sub(Vector.sub(rename_tables, fi), ns),
-                     old_id) of
-        SOME nid => nid
-      | NONE => raise Fail ("PFTMerge: unmapped " ^ ns_name ns ^ "#" ^
-                             Int.toString old_id ^ " in file " ^
-                             Int.toString fi)
+      let val nid = Array.sub(Vector.sub(Vector.sub(rename_tables, fi), ns),
+                              old_id)
+      in if nid >= 0 then nid
+         else raise Fail ("PFTMerge: unmapped " ^ ns_name ns ^ "#" ^
+                          Int.toString old_id ^ " in file " ^
+                          Int.toString fi)
+      end
 
     fun lookup_save name =
       case Redblackmap.peek(save_table, name) of
