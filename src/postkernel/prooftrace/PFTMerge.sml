@@ -169,10 +169,12 @@ fun pass1_read_file (descs_ref: (int * opcode_desc) list ref)
                                               kind=k, opcode=o',
                                               ref_name=rn})
     fun add_const_introducer name ci =
-      const_introducer :=
+      if isSome (Redblackmap.peek(!const_introducer, name)) then ()
+      else const_introducer :=
         Redblackmap.insert(!const_introducer, name, (file_idx, ci))
     fun add_type_introducer name ci =
-      type_introducer :=
+      if isSome (Redblackmap.peek(!type_introducer, name)) then ()
+      else type_introducer :=
         Redblackmap.insert(!type_introducer, name, (file_idx, ci))
     val fh : PFTReader.format_handler = {
       tyvar = fn (id, _) =>
@@ -202,7 +204,8 @@ fun pass1_read_file (descs_ref: (int * opcode_desc) list ref)
         let val ci = add_cmd fs {produced=[], consumed=[(NS_TH,th)],
                                  kind=CmdSave name, opcode=0x50,
                                  ref_name=NONE}
-        in save_table :=
+        in if isSome (Redblackmap.peek(!save_table, name)) then ()
+           else save_table :=
              Redblackmap.insert(!save_table, name,
                {file_idx=file_idx, cmd_idx=ci, th_id=th})
         end,
@@ -241,6 +244,59 @@ fun pass1_read_file (descs_ref: (int * opcode_desc) list ref)
   in fs end
 
 (* ========================================================================= *)
+(* Pass 1a: Lightweight global index scan                                    *)
+(* ========================================================================= *)
+
+(* Scan a file only for global names that may be referenced cross-file:
+   SAVE names and constant/type introducers.  This avoids building full
+   command metadata for files that are never reached from the targets. *)
+fun scan_index_file (descs_ref: (int * opcode_desc) list ref)
+                    (file_idx: int) (file: string)
+                    (save_table: (string, save_entry) Redblackmap.dict ref)
+                    (const_introducer: (string, int * int) Redblackmap.dict ref)
+                    (type_introducer: (string, int * int) Redblackmap.dict ref) =
+  let
+    val ci_ref = ref 0
+    fun next_ci () = let val ci = !ci_ref in ci_ref := ci + 1; ci end
+    fun add_const name ci =
+      const_introducer := Redblackmap.insert(!const_introducer, name, (file_idx, ci))
+    fun add_type name ci =
+      type_introducer := Redblackmap.insert(!type_introducer, name, (file_idx, ci))
+    val fh : PFTReader.format_handler = {
+      tyvar = fn _ => ignore (next_ci ()),
+      tyop = fn _ => ignore (next_ci ()),
+      var = fn _ => ignore (next_ci ()),
+      const = fn _ => ignore (next_ci ()),
+      comb = fn _ => ignore (next_ci ()),
+      abs = fn _ => ignore (next_ci ()),
+      new_const = fn (name, _) => let val ci = next_ci () in add_const name ci end,
+      new_type = fn (name, _) => let val ci = next_ci () in add_type name ci end,
+      axiom = fn _ => ignore (next_ci ()),
+      save = fn (name, th) =>
+        let val ci = next_ci ()
+        in save_table :=
+             Redblackmap.insert(!save_table, name,
+               {file_idx=file_idx, cmd_idx=ci, th_id=th})
+        end,
+      load = fn _ => ignore (next_ci ()),
+      del = fn _ => ignore (next_ci ()),
+      del_range = fn _ => ignore (next_ci ()),
+      expect = fn _ => ()
+    }
+    val rh : PFTReader.ruleset_handler = fn opc => fn sr =>
+      let
+        val ci = next_ci ()
+        val _ = #readVarint sr ()
+        val desc = lookup_desc (!descs_ref) opc
+        val (_, {new_types, new_consts}) = collect_consumed sr (#args desc)
+        val () = List.app (fn n => add_type n ci) new_types
+        val () = List.app (fn n => add_const n ci) new_consts
+      in () end
+  in ignore (PFTReader.read {file=file, binary=true,
+                             format_handler=fh, ruleset_handler=rh})
+  end
+
+(* ========================================================================= *)
 (* Pass 1.5: Target resolution and reachability                              *)
 (* ========================================================================= *)
 
@@ -269,20 +325,25 @@ fun resolve_targets (targets: target list)
 
 (* DFS backward from targets to find all reachable commands. *)
 fun compute_reachable
-      (file_states: file_state vector)
+      (n_files: int)
+      (ensure_file_state: int -> file_state)
       (save_table: (string, save_entry) Redblackmap.dict)
       (const_introducer: (string, int * int) Redblackmap.dict)
       (type_introducer: (string, int * int) Redblackmap.dict)
       (target_saves: (string * bool) list)
-    : bool array vector =
+    : bool array option ref vector =
   let
-    val n_files = Vector.length file_states
-    val visited = Vector.tabulate(n_files, fn fi =>
-      Array.array(DArray.size (#cmds (Vector.sub(file_states, fi))), false))
+    val visited = Vector.tabulate(n_files, fn _ => ref NONE : bool array option ref)
+    fun ensure_visited fi =
+      case !(Vector.sub(visited, fi)) of
+        SOME a => a
+      | NONE => let val fs = ensure_file_state fi
+                    val a = Array.array(DArray.size (#cmds fs), false)
+                in Vector.sub(visited, fi) := SOME a; a end
     val worklist = ref [] : (int * int) list ref
 
     fun enqueue (fi, ci) =
-      let val vis = Vector.sub(visited, fi)
+      let val vis = ensure_visited fi
       in if Array.sub(vis, ci) then ()
          else (Array.update(vis, ci, true);
                worklist := (fi, ci) :: !worklist)
@@ -294,7 +355,7 @@ fun compute_reachable
       | SOME {file_idx, cmd_idx, th_id} =>
         (enqueue (file_idx, cmd_idx);
          enqueue (file_idx,
-                  find_producer (Vector.sub(file_states, file_idx))
+                  find_producer (ensure_file_state file_idx)
                                 (NS_TH, th_id)))
     val () = List.app seed target_saves
 
@@ -303,7 +364,7 @@ fun compute_reachable
         [] => ()
       | (fi, ci) :: rest =>
         let val () = worklist := rest
-            val fs = Vector.sub(file_states, fi)
+            val fs = ensure_file_state fi
             val meta = DArray.sub(#cmds fs, ci)
         in
           (* Follow ID-level dependencies *)
@@ -316,7 +377,7 @@ fun compute_reachable
                (case Redblackmap.peek(save_table, name) of
                   NONE => raise Fail ("PFTMerge: unknown LOAD: " ^ name)
                 | SOME {file_idx=sfi, cmd_idx=sci, th_id=sth} =>
-                  let val sfs = Vector.sub(file_states, sfi)
+                  let val sfs = ensure_file_state sfi
                   in enqueue (sfi, sci);
                      enqueue (sfi, find_producer sfs (NS_TH, sth))
                   end)
@@ -342,7 +403,8 @@ fun compute_reachable
 (* Pass 2: Re-read and emit with renumbered IDs                              *)
 (* ========================================================================= *)
 
-fun pass2_emit (file_states: file_state vector)
+fun pass2_emit (file_states: file_state option ref vector)
+               (ensure_file_state: int -> file_state)
                (save_table: (string, save_entry) Redblackmap.dict)
                (const_introducer: (string, int * int) Redblackmap.dict)
                (type_introducer: (string, int * int) Redblackmap.dict)
@@ -353,8 +415,9 @@ fun pass2_emit (file_states: file_state vector)
                (descs: (int * opcode_desc) list) =
   let
     val n_files = Vector.length file_states
-    (* Included set as bool arrays for O(1) lookup *)
-    val included = compute_reachable file_states save_table
+    (* Included set as bool arrays for O(1) lookup; files not reached from
+       the targets remain NONE and are skipped in later passes. *)
+    val included = compute_reachable n_files ensure_file_state save_table
                      const_introducer type_introducer target_saves
 
     (* Per-namespace ID allocators *)
@@ -365,16 +428,18 @@ fun pass2_emit (file_states: file_state vector)
     (* Renaming tables: per-file, per-namespace, old_id -> new_id *)
     val rename_tables =
       Vector.tabulate(n_files, fn fi =>
-        let val fs = Vector.sub(file_states, fi)
-            val maxes = Array.array(NUM_NS, 0)
-            val () = DArray.appi (fn (_, meta) =>
-              List.app (fn (ns, id) =>
-                if id >= Array.sub(maxes, ns)
-                then Array.update(maxes, ns, id + 1) else ())
-                (#produced meta)) (#cmds fs)
-        in Vector.tabulate(NUM_NS, fn ns =>
-             Array.array(Array.sub(maxes, ns), ~1))
-        end)
+        case !(Vector.sub(file_states, fi)) of
+          NONE => Vector.tabulate(NUM_NS, fn _ => Array.array(0, ~1))
+        | SOME fs =>
+          let val maxes = Array.array(NUM_NS, 0)
+              val () = DArray.appi (fn (_, meta) =>
+                List.app (fn (ns, id) =>
+                  if id >= Array.sub(maxes, ns)
+                  then Array.update(maxes, ns, id + 1) else ())
+                  (#produced meta)) (#cmds fs)
+          in Vector.tabulate(NUM_NS, fn ns =>
+               Array.array(Array.sub(maxes, ns), ~1))
+          end)
 
     fun set_rename fi ns old_id new_id =
       Array.update(Vector.sub(Vector.sub(rename_tables, fi), ns),
@@ -395,9 +460,10 @@ fun pass2_emit (file_states: file_state vector)
       | NONE => raise Fail ("PFTMerge: unknown SAVE: " ^ name)
 
     (* Step 1: Allocate new IDs for all included commands *)
-    val () = Vector.appi (fn (fi, fs) =>
-      let val vis = Vector.sub(included, fi)
-          val n = DArray.size (#cmds fs)
+    val () = Vector.appi (fn (fi, fs_ref) =>
+      case (!(Vector.sub(included, fi)), !fs_ref) of
+        (SOME vis, SOME fs) =>
+      let val n = DArray.size (#cmds fs)
           fun go ci = if ci >= n then () else
             (if Array.sub(vis, ci) then
                let val meta = DArray.sub(#cmds fs, ci)
@@ -434,27 +500,29 @@ fun pass2_emit (file_states: file_state vector)
              else ();
              go (ci + 1))
       in go 0 end
+      | _ => ()
     ) file_states
 
     (* Collect definition SAVEs early (before refcount computation) *)
     val def_saves =
       if not (List.exists #2 target_saves) then []
       else let val acc = ref [] : (string * int) list ref
-      in Vector.appi (fn (fi, fs) =>
-           let val vis = Vector.sub(included, fi)
-           in DArray.appi (fn (ci, meta) =>
-                if Array.sub(vis, ci) then
-                  case #kind meta of
-                    CmdDef =>
-                      List.app (fn (ns, id) =>
-                        if ns = NS_TH then
-                          let val nid = get_rename fi ns id
-                          in acc := ("def:" ^ Int.toString nid, nid) :: !acc
-                          end
-                        else ()) (#produced meta)
-                  | _ => ()
-                else ()) (#cmds fs)
-           end) file_states;
+      in Vector.appi (fn (fi, fs_ref) =>
+           case (!(Vector.sub(included, fi)), !fs_ref) of
+             (SOME vis, SOME fs) =>
+               DArray.appi (fn (ci, meta) =>
+                 if Array.sub(vis, ci) then
+                   case #kind meta of
+                     CmdDef =>
+                       List.app (fn (ns, id) =>
+                         if ns = NS_TH then
+                           let val nid = get_rename fi ns id
+                           in acc := ("def:" ^ Int.toString nid, nid) :: !acc
+                           end
+                         else ()) (#produced meta)
+                   | _ => ()
+                 else ()) (#cmds fs)
+           | _ => ()) file_states;
          List.rev (!acc)
       end
 
@@ -477,12 +545,13 @@ fun pass2_emit (file_states: file_state vector)
           List.app (fn (ns, id) =>
             inc_ref ns (get_rename fi ns id)) (#consumed meta)
 
-    val () = Vector.appi (fn (fi, fs) =>
-      let val vis = Vector.sub(included, fi)
-      in DArray.appi (fn (ci, meta) =>
-           if Array.sub(vis, ci) then count_consumed fi meta else ())
-           (#cmds fs)
-      end) file_states
+    val () = Vector.appi (fn (fi, fs_ref) =>
+      case (!(Vector.sub(included, fi)), !fs_ref) of
+        (SOME vis, SOME fs) =>
+          DArray.appi (fn (ci, meta) =>
+            if Array.sub(vis, ci) then count_consumed fi meta else ())
+            (#cmds fs)
+      | _ => ()) file_states
 
     (* Refcounts for target SAVEs *)
     val () = List.app (fn (name, _) =>
@@ -507,7 +576,10 @@ fun pass2_emit (file_states: file_state vector)
 
     val current_fi = ref 0
 
-    fun is_included ci = Array.sub(Vector.sub(included, !current_fi), ci)
+    fun is_included ci =
+      case !(Vector.sub(included, !current_fi)) of
+        SOME vis => Array.sub(vis, ci)
+      | NONE => false
     fun ren ns id = get_rename (!current_fi) ns id
 
     fun dec_consumed meta =
@@ -527,10 +599,14 @@ fun pass2_emit (file_states: file_state vector)
         val ci_ref = ref 0
         fun next_ci () = let val c = !ci_ref in ci_ref := c + 1; c end
 
+        fun current_fs () =
+          case !(Vector.sub(file_states, !current_fi)) of
+            SOME fs => fs
+          | NONE => raise Fail "PFTMerge: pass2 on unloaded file"
+
         fun when_included ci f =
           if is_included ci then
-            let val meta = DArray.sub(#cmds (Vector.sub(file_states,
-                                                        !current_fi)), ci)
+            let val meta = DArray.sub(#cmds (current_fs ()), ci)
             in f meta; dec_consumed meta end
           else ()
 
@@ -567,8 +643,7 @@ fun pass2_emit (file_states: file_state vector)
           load = fn _ =>
             let val ci = next_ci ()
             in if is_included ci then
-                 dec_consumed (DArray.sub(#cmds (Vector.sub(file_states,
-                                                           !current_fi)), ci))
+                 dec_consumed (DArray.sub(#cmds (current_fs ()), ci))
                else () end,
           del = fn _ => ignore (next_ci ()),
           del_range = fn _ => ignore (next_ci ()),
@@ -737,8 +812,7 @@ fun pass2_emit (file_states: file_state vector)
           let val ci = next_ci ()
           in if is_included ci then
                let val id = #readVarint sr ()
-                   val meta = DArray.sub(#cmds (Vector.sub(file_states,
-                                                           !current_fi)), ci)
+                   val meta = DArray.sub(#cmds (current_fs ()), ci)
                in (if is_hol4 then emit_hol4 else emit_candle) opc id sr;
                   dec_consumed meta
                end
@@ -755,9 +829,12 @@ fun pass2_emit (file_states: file_state vector)
 
     (* Process each input file *)
     val () = ignore (List.foldl (fn (file, fi) =>
-      (current_fi := fi; reset_ci ();
-       ignore (PFTReader.read {file=file, binary=true,
-                               format_handler=fh, ruleset_handler=rh});
+      (case !(Vector.sub(file_states, fi)) of
+         NONE => ()
+       | SOME _ =>
+           (current_fi := fi; reset_ci ();
+            ignore (PFTReader.read {file=file, binary=true,
+                                    format_handler=fh, ruleset_handler=rh}));
        fi + 1)) 0 inputs)
 
     (* Emit target SAVEs *)
@@ -800,17 +877,28 @@ fun merge {inputs, targets, output, binary} =
     val const_introducer = ref (Redblackmap.mkDict String.compare)
     val type_introducer = ref (Redblackmap.mkDict String.compare)
 
-    (* Pass 1: read all files, build dependency graph *)
-    val file_states = Vector.fromList
-      (List.tabulate(length inputs, fn fi =>
-         pass1_read_file descs_ref fi (List.nth(inputs, fi)) save_table
-           const_introducer type_introducer))
+    (* Pass 1a: lightweight scan for global SAVE/definition names. *)
+    val () = ignore (List.foldl (fn (file, fi) =>
+      (scan_index_file descs_ref fi file save_table
+         const_introducer type_introducer;
+       fi + 1)) 0 inputs)
+
+    (* Full per-file metadata is loaded lazily during reachability. *)
+    val file_states : file_state option ref vector =
+      Vector.tabulate(length inputs, fn _ => ref NONE)
+
+    fun ensure_file_state fi =
+      case !(Vector.sub(file_states, fi)) of
+        SOME fs => fs
+      | NONE => let val fs = pass1_read_file descs_ref fi (List.nth(inputs, fi))
+                              save_table const_introducer type_introducer
+                in Vector.sub(file_states, fi) := SOME fs; fs end
 
     (* Pass 1.5: resolve targets *)
     val target_saves = resolve_targets targets (!save_table)
 
     (* Pass 2: re-read and emit *)
-    val () = pass2_emit file_states (!save_table)
+    val () = pass2_emit file_states ensure_file_state (!save_table)
                (!const_introducer) (!type_introducer)
                inputs target_saves
                output the_version the_ruleset (!descs_ref)
