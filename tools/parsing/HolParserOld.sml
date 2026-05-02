@@ -74,7 +74,7 @@ fun destNameAttrs ss =
 fun stringOfKey k =
     case k of
         "exclude_simps" => "simpLib.remove_simps"
-      | "exclude_frags" => "simpLib.remove_ssfrags"
+      | "exclude_frags" => "simpLib.exclude_ssfrags"
       | _ => k
 
 fun destAttrs attrs =
@@ -366,7 +366,7 @@ structure ToSML = struct
       let
         val {aux,readAt,line,ss,countlines,...} = ddargs:doDecl_args
         fun ofKey "exclude_simps" = "simpLib.remove_simps"
-          | ofKey "exclude_frags" = "simpLib.remove_ssfrags"
+          | ofKey "exclude_frags" = "simpLib.exclude_ssfrags"
           | ofKey k = k
         fun mktm1 (k,vals) =
             ofKey (ss k) ^ " [" ^

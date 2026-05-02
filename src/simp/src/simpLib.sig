@@ -131,6 +131,14 @@ sig
   val ssfrags_of      : simpset -> ssfrag list
   val mk_simpset      : ssfrag list -> simpset
   val remove_ssfrags  : string list -> simpset -> simpset
+
+  (* Like remove_ssfrags, but additionally records the names so that any
+     subsequent ++ of a named fragment with one of those names is silently
+     a no-op.  force_add is the override for that prohibition.
+     Never raises Conv.UNCHANGED. *)
+  val exclude_ssfrags : string list -> simpset -> simpset
+  val force_add       : simpset -> ssfrag -> simpset
+
   val ssfrag_names_of : simpset -> string list
   val ++              : simpset * ssfrag -> simpset  (* infix *)
   val -*              : simpset * string list -> simpset (* infix *)

@@ -62,7 +62,7 @@ fun doProofKvals _ [] tac = tac
     val args = case bind of NONE => [] | SOME {vals, eq_=_} => map mkString vals
     val key = case key of
       "exclude_simps" => "simpLib.remove_simps"
-    | "exclude_frags" => "simpLib.remove_ssfrags"
+    | "exclude_frags" => "simpLib.exclude_ssfrags"
     | _ => key
     in App (mkIdent (p, key), mkList (p, args)) end
   fun mktm (kv, e) = Infix {left = e, id = (p, "o"), right = mktm1 kv}

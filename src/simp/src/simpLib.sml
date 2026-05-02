@@ -254,16 +254,24 @@ datatype simpset =
             initial_net : net,
             dprocs      : reducer list,
             travrules   : travrules,
-            limit       : int option}
+            limit       : int option,
+            (* Names of fragments that are forbidden from being added by ++.
+               Set by `exclude_ssfrags`; cleared per-name by `force_add`. *)
+            excluded    : string Binaryset.set}
 
-fun ssupd_net f (SS{mk_rewrs,history,initial_net,dprocs,travrules,limit}) =
+val empty_excluded : string Binaryset.set = Binaryset.empty String.compare
+
+fun ssupd_net f (SS{mk_rewrs,history,initial_net,dprocs,travrules,limit,
+                    excluded}) =
     SS{mk_rewrs = mk_rewrs, history = history, initial_net = f initial_net,
-       dprocs = dprocs, travrules = travrules, limit = limit}
+       dprocs = dprocs, travrules = travrules, limit = limit,
+       excluded = excluded}
 
  val empty_ss = SS {mk_rewrs=fn x => [x],
                     history = [], limit = NONE,
                     initial_net=empty,
-                    dprocs=[],travrules=EQ_tr};
+                    dprocs=[],travrules=EQ_tr,
+                    excluded = empty_excluded};
 
  fun ssfrags_of (SS x) =
      List.mapPartial (fn ADDFRAG sf => SOME sf | _ => NONE) (#history x)
@@ -308,7 +316,8 @@ fun dphas_name_from nms (REDUCER {name = SOME n,...}) = Lib.mem n nms
   | dphas_name_from _ _ = false
 fun filter_dprocs_by_names nms = List.filter (not o dphas_name_from nms)
 
-fun (ss as SS{mk_rewrs,history,initial_net,dprocs,travrules,limit}) -* nms =
+fun (ss as SS{mk_rewrs,history,initial_net,dprocs,travrules,limit,
+              excluded}) -* nms =
     if null nms then ss
     else
       SS{initial_net = filter_net_by_names nms initial_net,
@@ -316,7 +325,8 @@ fun (ss as SS{mk_rewrs,history,initial_net,dprocs,travrules,limit}) -* nms =
          mk_rewrs = mk_rewrs,
          dprocs = filter_dprocs_by_names nms dprocs,
          travrules = travrules,
-         limit = limit}
+         limit = limit,
+         excluded = excluded}
 fun remove_simps nms ss = ss -* nms
 
 
@@ -379,9 +389,11 @@ fun remove_simps nms ss = ss -* nms
           |> List.mapPartial ssfrag_name
           |> Lib.mk_set
 
- fun fupdlimit f (SS{mk_rewrs,history,travrules,initial_net,dprocs,limit}) =
+ fun fupdlimit f (SS{mk_rewrs,history,travrules,initial_net,dprocs,limit,
+                     excluded}) =
      SS{mk_rewrs = mk_rewrs, history = history, travrules = travrules,
-        initial_net = initial_net, dprocs = dprocs, limit = f limit}
+        initial_net = initial_net, dprocs = dprocs, limit = f limit,
+        excluded = excluded}
 
  fun limit n = fupdlimit (fn _ => SOME n)
 
@@ -408,11 +420,13 @@ fun getlimit (SS ss) = #limit ss
  end
 
  fun add_weakener (wd as (rels,congs,dp)) simpset = let
-   val SS {mk_rewrs,history,travrules,initial_net,dprocs,limit} = simpset
+   val SS {mk_rewrs,history,travrules,initial_net,dprocs,limit,excluded} =
+       simpset
  in
    SS {mk_rewrs = mk_rewrs, history = ADDWEAKENER wd :: history,
        travrules = merge_travrules [travrules, wk_mk_travrules(rels,congs)],
-       initial_net = initial_net, dprocs = dprocs @ [dp], limit = limit}
+       initial_net = initial_net, dprocs = dprocs @ [dp], limit = limit,
+       excluded = excluded}
  end
 
 (* ----------------------------------------------------------------------
@@ -614,9 +628,15 @@ fun getlimit (SS ss) = #limit ss
      end
 
 
- fun op++(SS sset, f as SSFRAG_CON ssf) = let
-   val {mk_rewrs=mk_rewrs',history,travrules,initial_net,dprocs=dprocs',limit}=
-       sset
+ fun is_excluded (SS{excluded,...}) f =
+     case frag_name f of
+         SOME n => Binaryset.member(excluded, n)
+       | NONE => false
+
+ fun op++(ss as SS sset, f as SSFRAG_CON ssf) = if is_excluded ss f then ss else
+   let
+   val {mk_rewrs=mk_rewrs',history,travrules,initial_net,dprocs=dprocs',limit,
+        excluded}= sset
    val {convs,rewrs,filter,ac,dprocs,congs,relsimps,...} = ssf
    val mk_rewrs = case filter of
                     SOME f => f oo mk_rewrs'
@@ -645,6 +665,7 @@ fun getlimit (SS ss) = #limit ss
        initial_net = net,
        limit       = limit,
        dprocs      = new_dprocs,
+       excluded    = excluded,
        travrules   = merge_travrules
                          (travrules::mk_travrules relations congs::reltravs)
    }
@@ -663,7 +684,12 @@ fun build_from_history h0 =
       List.foldl foldthis empty_ss (List.rev h0)
     end
 
-fun remove_ssfrags names (ss as SS{history,limit,...}) =
+fun setexcluded e (SS{mk_rewrs,history,initial_net,dprocs,travrules,limit,
+                       excluded=_}) =
+    SS{mk_rewrs=mk_rewrs, history=history, initial_net=initial_net,
+       dprocs=dprocs, travrules=travrules, limit=limit, excluded=e}
+
+fun remove_ssfrags names (ss as SS{history,limit,excluded,...}) =
     let
       val s = Set.addList (Binaryset.empty String.compare, names)
       val nil_included = Set.member(s, "")
@@ -676,6 +702,48 @@ fun remove_ssfrags names (ss as SS{history,limit,...}) =
               raise Conv.UNCHANGED
     in
       build_from_history history' |> fupdlimit (fn _ => limit)
+                                  |> setexcluded excluded
+    end
+
+(* Like `remove_ssfrags`, but additionally records the names so that any
+   subsequent `++` of a fragment with one of those names is silently
+   skipped.  `force_add` is the override that bypasses (and clears) this
+   prohibition for a given fragment.  Never raises Conv.UNCHANGED.
+
+   Desired invariant on every simpset:
+       no ADDFRAG in `history` has a name in `excluded`.
+   The other simpset operations (`++`, `-*`, `add_weakener`, `force_add`,
+   `remove_ssfrags`) all preserve this invariant, so in principle we
+   could filter `history` against `names` alone here.  We defensively
+   filter against `excluded ∪ names` instead so that this function stays
+   correct in isolation even if some future operation accidentally
+   introduces an ADDFRAG of an already-excluded name. *)
+fun exclude_ssfrags names (ss as SS{history,limit,excluded,...}) =
+    let
+      val excluded' = Binaryset.addList (excluded, names)
+      val nil_included = Binaryset.member(excluded', "")
+      fun isexcl (SSFRAG_CON{name = SOME n,...}) =
+            Binaryset.member(excluded',n)
+        | isexcl (SSFRAG_CON{name = NONE,...}) = nil_included
+      fun filterthis (hi as ADDFRAG f) = not(isexcl f)
+        | filterthis hi = true
+      val history' = List.filter filterthis history
+    in
+      build_from_history history' |> fupdlimit (fn _ => limit)
+                                  |> setexcluded excluded'
+    end
+
+(* Force-include a fragment, even if its name is in the simpset's
+   excluded set — and remove that name from the excluded set so that
+   subsequent `++` of the same fragment also succeeds. *)
+fun force_add (ss as SS sset) f =
+    let val excluded' =
+            case frag_name f of
+                SOME n => (Binaryset.delete(#excluded sset, n)
+                           handle NotFound => #excluded sset)
+              | NONE => #excluded sset
+    in
+      setexcluded excluded' ss ++ f
     end
 
 (*---------------------------------------------------------------------------*)
@@ -774,14 +842,17 @@ fun process_tags ss thl =
       then (ss,thl)
       else
         let val base = remove_ssfrags exclfrags ss handle Conv.UNCHANGED => ss
+            val cong_ac =
+                SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
+                           ac=map unAC ACs, congs=map (normCong o unCong) Congs,
+                           convs=[],rewrs=[],filter=NONE,dprocs=[]}
+            (* Cong/AC is named but never user-excludable; SF-derived frags
+               go through force_add so they override any active exclusion. *)
+            val withCongAc = base ++ cong_ac
+            val withFrags = List.foldl (fn (f,ss) => force_add ss f)
+                                       withCongAc frags
         in
-          (List.foldl (flip op++) base (
-            SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
-                       ac=map unAC ACs, congs=map (normCong o unCong) Congs,
-                       convs=[],rewrs=[],filter=NONE,dprocs=[]} ::
-            frags
-           ) -* excludes,
-           rst)
+          (withFrags -* excludes, rst)
         end
     end
 

@@ -1255,7 +1255,8 @@ fun with_simpset_updates f g x = (
   (* tell clients that their derived values are stale because we're about
      to update the base *)
   notify();
-  AncestryData.with_temp_value adresult (f (srw_ss()), true, []) g x
+  let val ss' = f (srw_ss()) handle Conv.UNCHANGED => srw_ss()
+  in AncestryData.with_temp_value adresult (ss', true, []) g x end
   (* clients may believe they're up-to-date but we've just flipped the
      base value back, so we need to notify again *)
   before notify()
@@ -1384,7 +1385,7 @@ fun mk_tacmod s =
       fun key_to_f k =
           case k of
               "exclude_simps" => simpLib.remove_simps
-            | "exclude_frags" => simpLib.remove_ssfrags
+            | "exclude_frags" => simpLib.exclude_ssfrags
             | _ => (fn vs => fn ss => ss)
       val f =
           gen_mktm { values = (fn vs => vs),
