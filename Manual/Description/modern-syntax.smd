@@ -205,6 +205,8 @@ The following describes the attributes listed above:
 
 :   Used with `Proof` or `Resume`.
     The list of fragment names following is removed from the global simpset for the duration of the given proof, affecting all simplifier tactics that refer to the global simpset.
+    The exclusion is *sticky*: while it is in effect, attempts to add back a fragment with one of the named names via the `++` operator (including those performed implicitly by derived simpsets such as the one used by `simp[]`) are silent no-ops.
+    To opt back in for a specific simplification call, use the `SF` marker in its theorem-list argument (e.g. `simp[SF ARITH_ss]` inside a `Proof[exclude_frags = ARITH]` body re-enables `ARITH_ss` for that one call).
 
 `exclude_simps`=...
 
