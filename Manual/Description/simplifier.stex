@@ -544,6 +544,15 @@ pick up the default ``filter'' function for converting theorems to
 rewrite rules.  (This filtering process is described below in
 Section~\ref{sec:generating-rewrite-rules}.)
 
+A \simpset{} also carries a (usually empty) set of \emph{excluded}
+fragment names, set up by \ml{simpLib.exclude\_ssfrags} (which is
+what \ml{Proof[exclude\_frags = \ldots]} ultimately calls).  When the
+incoming fragment of \ml{ss\ ++\ frag} has a name in that set, the
+addition is a silent no-op and \ml{ss} is returned unchanged.  Use
+\ml{simpLib.force\_add}, or the \ml{SF} marker in a thm-list argument
+to a simplification tactic, to override that prohibition for a
+particular fragment.
+
 For major theories (or groups thereof), a collection of relevant
 \simpset{} fragments is usually found in the module \ml{<thy>Simps},
 with \ml{<thy>} the name of the theory.  For example, \simpset{}
@@ -687,6 +696,15 @@ Thus, one can use high-level tactics with the arithmetic decision procedure remo
 ##assert aconv (#2 (top_goal())) ``x < 10 ==> x < 13``
 \end{alltt}
 \end{session}
+The exclusion that \ml{ExclSF} effects is local to the \ml{simp} call
+in which it appears.  For an exclusion that persists across all the
+simplification tactics in a proof body, use the
+\ml{Proof[exclude\_frags\ =\ \ldots]} attribute (the
+\ml{simpLib.exclude\_ssfrags} function it relies on records the names
+in the \simpset{}'s excluded set, so subsequent uses of \ml{++} also
+respect it; see Section~\ref{sec:simpset-fragments}).  Inside such a
+proof body, the \ml{SF} marker can opt back in for an individual
+\ml{simp} call.
 \index{simplification!removing rewrites|)}
 
 \subsection{Rewriting with the simplifier}
@@ -1414,6 +1432,11 @@ For example, one can rewrite with conjunctions as assumptions using the \ml{CONJ
 ##assert aconv (#2 (top_goal())) ``x = 10``
 \end{alltt}
 \end{session}
+\ml{SF} also serves as the in-call escape hatch for fragments excluded
+by an enclosing \ml{Proof[exclude\_frags\ =\ \ldots]} attribute (see
+Section~\ref{sec:simpset-fragments}): writing \ml{simp[SF~X\_ss]}
+inside a body where the fragment named \ml{"X"} has been excluded
+re-enables it for that one \ml{simp} call.
 
 \paragraph{Simplifying at particular sub-terms}
 \index{simplification!at particular sub-terms}
