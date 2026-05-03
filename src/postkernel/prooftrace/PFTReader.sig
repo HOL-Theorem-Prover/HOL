@@ -52,7 +52,7 @@ signature PFTReader = sig
   val read : {file: string, binary: bool,
               format_handler: format_handler,
               ruleset_handler: ruleset_handler}
-             -> {version: int, ruleset: string,
+             -> {version: string, ruleset: string,
                  n_ty: int, n_tm: int, n_th: int, n_ci: int}
 
   (* Read just the limits (peak namespace counts) from a PFT file
@@ -64,7 +64,7 @@ signature PFTReader = sig
   (* Read just the header (version and ruleset) from a PFT file
      without processing commands. *)
   val read_header : {file: string, binary: bool}
-                    -> {version: int, ruleset: string}
+                    -> {version: string, ruleset: string}
 
   (* Construct a ruleset_handler for the HOL4 ruleset *)
   structure HOL4 : sig

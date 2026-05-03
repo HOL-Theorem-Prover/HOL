@@ -251,9 +251,9 @@ fun pass3 {input, output, renamed, descs} = let
   val out = BinIO.openOut output
   val cs : copy_state = {inp = inp, out = out, pos = ref 0}
 
-  (* Copy header: magic "PFT\0" + version varint + ruleset string *)
+  (* Copy header: magic "PFT\0" + version string + ruleset string *)
   val () = copy_bytes cs 4  (* magic *)
-  val _ = copy_varint cs    (* version *)
+  val () = copy_string cs   (* version *)
   val () = copy_string cs   (* ruleset *)
 
   (* Determine where commands end (before footer).

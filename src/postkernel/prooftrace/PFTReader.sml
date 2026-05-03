@@ -177,7 +177,7 @@ fun read_header {file, binary} =
     val _ = #readBytes r 4   (* magic "PFT\0" *)
     val vi = mk_readVarint r
     val vs = mk_readString r
-    val version = vi ()
+    val version = vs ()
     val ruleset = vs ()
     val () = #close r ()
   in {version = version, ruleset = ruleset} end
@@ -197,7 +197,7 @@ fun read_binary file (fh: format_handler) (rh: ruleset_handler) = let
 
   (* Skip header, but capture version and ruleset *)
   val _ = #readBytes r 4   (* magic "PFT\0" *)
-  val version = vi ()
+  val version = vs ()
   val ruleset = vs ()
 
   fun dispatch opc =

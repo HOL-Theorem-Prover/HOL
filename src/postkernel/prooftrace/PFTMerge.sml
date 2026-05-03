@@ -411,7 +411,7 @@ fun pass2_emit (file_states: file_state option ref vector)
                (inputs: string list)
                (target_saves: (string * bool) list)
                (output: string)
-               (version: int) (ruleset: string)
+               (version: string) (ruleset: string)
                (descs: (int * opcode_desc) list) =
   let
     val n_files = Vector.length file_states

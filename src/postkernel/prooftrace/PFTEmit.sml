@@ -281,7 +281,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
   val ruleset_str = case ruleset of HOL4 => "hol4" | Candle => "candle"
   val out = PFTWriter.openOut
-    {file = output, binary = binary, version = 1, ruleset = ruleset_str}
+    {file = output, binary = binary, version = "0.1.0", ruleset = ruleset_str}
 
   (* --- Emit pass state --------------------------------------------------- *)
 

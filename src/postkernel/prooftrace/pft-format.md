@@ -49,8 +49,8 @@ Every trace begins with a header and ends with a footer.
 
 The header specifies:
 
-- **version**: the format version number (currently `1`). Covers the encoding
-  and syntax of the format.
+- **version**: the format version string (currently `0.1.0`). Versions follow
+  semantic versioning semantics and cover the encoding and syntax of the format.
 - **ruleset**: the name of the ruleset that defines the theorem commands
   available in the trace. The ruleset is specified separately (e.g.,
   [pft-ruleset-hol4.md](pft-ruleset-hol4.md) for the `hol4` ruleset).
@@ -203,7 +203,7 @@ commands, and ends with a footer.
 ### Header
 
 ```
-PFT\0 <version:varint> <ruleset:string>
+PFT\0 <version:string> <ruleset:string>
 ```
 
 ### Footer
@@ -266,7 +266,7 @@ The file extension SHOULD be `.jsonl`.
 ### Header and footer
 
 ```json
-{"cmd":"PFT","version":1,"ruleset":"hol4"}
+{"cmd":"PFT","version":"0.1.0","ruleset":"hol4"}
 ```
 
 ```json

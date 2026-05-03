@@ -5,7 +5,7 @@ signature PFTWriter = sig
   (* Open a PFT output stream. Writes the header (version + ruleset)
      immediately. *)
   val openOut : {file: string, binary: bool,
-                 version: int, ruleset: string} -> pft_out
+                 version: string, ruleset: string} -> pft_out
 
   (* Close the stream. Writes the footer (peak namespace counts). *)
   val closeOut : pft_out -> {n_ty: int, n_tm: int, n_th: int, n_ci: int} -> unit

@@ -391,7 +391,7 @@ respectively. For SUBST, `redex` is a term ID and `residue` is a theorem ID.
 ## Example
 
 ```json
-{"cmd":"PFT","version":1,"ruleset":"hol4"}
+{"cmd":"PFT","version":"0.1.0","ruleset":"hol4"}
 {"cmd":"TYOP","id":0,"name":"bool$bool","args":[]}
 {"cmd":"TYOP","id":1,"name":"min$fun","args":[0,0]}
 {"cmd":"CONST","id":0,"name":"bool$=","ty":1}

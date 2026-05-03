@@ -20,7 +20,7 @@ fun cleanup f = OS.FileSys.remove f handle OS.SysErr _ => ()
 val _ = tprint "Text: header + footer with basic commands"
 val () = let
   val f = tmpfile "basic.pft"
-  val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="hol4"}
+  val out = PFTWriter.openOut {file=f, binary=false, version="0.1.0", ruleset="hol4"}
   val () = PFTWriter.tyvar out 0 "alpha"
   val () = PFTWriter.tyop out 1 "bool" []
   val () = PFTWriter.var out 0 "x" 0
@@ -28,7 +28,7 @@ val () = let
   val () = PFTWriter.closeOut out {n_ty=2, n_tm=1, n_th=1, n_ci=0}
   val got = readFile f
   val expected =
-    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"hol4\"}\n\
+    "{\"cmd\":\"PFT\",\"version\":\"0.1.0\",\"ruleset\":\"hol4\"}\n\
     \{\"cmd\":\"TYVAR\",\"id\":0,\"name\":\"alpha\"}\n\
     \{\"cmd\":\"TYOP\",\"id\":1,\"name\":\"bool\",\"args\":[]}\n\
     \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"x\",\"ty\":0}\n\
@@ -43,7 +43,7 @@ end
 val _ = tprint "Text: JSON string escaping"
 val () = let
   val f = tmpfile "escape.pft"
-  val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="hol4"}
+  val out = PFTWriter.openOut {file=f, binary=false, version="0.1.0", ruleset="hol4"}
   val () = PFTWriter.tyvar out 0 ""               (* empty string *)
   val () = PFTWriter.tyvar out 1 "a b"            (* space is fine in JSON *)
   val () = PFTWriter.tyvar out 2 "a\\b"           (* backslash escaped *)
@@ -52,7 +52,7 @@ val () = let
   val () = PFTWriter.closeOut out {n_ty=5, n_tm=0, n_th=0, n_ci=0}
   val got = readFile f
   val expected =
-    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"hol4\"}\n\
+    "{\"cmd\":\"PFT\",\"version\":\"0.1.0\",\"ruleset\":\"hol4\"}\n\
     \{\"cmd\":\"TYVAR\",\"id\":0,\"name\":\"\"}\n\
     \{\"cmd\":\"TYVAR\",\"id\":1,\"name\":\"a b\"}\n\
     \{\"cmd\":\"TYVAR\",\"id\":2,\"name\":\"a\\\\b\"}\n\
@@ -68,7 +68,7 @@ end
 val _ = tprint "Text: theorem commands"
 val () = let
   val f = tmpfile "thm.pft"
-  val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="hol4"}
+  val out = PFTWriter.openOut {file=f, binary=false, version="0.1.0", ruleset="hol4"}
   val () = PFTWriter.tyop out 0 "bool" []
   val () = PFTWriter.var out 0 "p" 0
   val () = PFTWriter.var out 1 "q" 0
@@ -82,7 +82,7 @@ val () = let
   val () = PFTWriter.closeOut out {n_ty=1, n_tm=2, n_th=7, n_ci=0}
   val got = readFile f
   val expected =
-    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"hol4\"}\n\
+    "{\"cmd\":\"PFT\",\"version\":\"0.1.0\",\"ruleset\":\"hol4\"}\n\
     \{\"cmd\":\"TYOP\",\"id\":0,\"name\":\"bool\",\"args\":[]}\n\
     \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"p\",\"ty\":0}\n\
     \{\"cmd\":\"VAR\",\"id\":1,\"name\":\"q\",\"ty\":0}\n\
@@ -103,7 +103,7 @@ end
 val _ = tprint "Text: variable-length commands"
 val () = let
   val f = tmpfile "varlen.pft"
-  val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="hol4"}
+  val out = PFTWriter.openOut {file=f, binary=false, version="0.1.0", ruleset="hol4"}
   val () = PFTWriter.tyop out 0 "bool" []
   val () = PFTWriter.tyop out 1 "fun" [0,0]
   val () = PFTWriter.var out 0 "x" 0
@@ -115,7 +115,7 @@ val () = let
   val () = PFTWriter.closeOut out {n_ty=2, n_tm=2, n_th=4, n_ci=0}
   val got = readFile f
   val expected =
-    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"hol4\"}\n\
+    "{\"cmd\":\"PFT\",\"version\":\"0.1.0\",\"ruleset\":\"hol4\"}\n\
     \{\"cmd\":\"TYOP\",\"id\":0,\"name\":\"bool\",\"args\":[]}\n\
     \{\"cmd\":\"TYOP\",\"id\":1,\"name\":\"fun\",\"args\":[0,0]}\n\
     \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"x\",\"ty\":0}\n\
@@ -134,7 +134,7 @@ end
 val _ = tprint "Text: del, save, load"
 val () = let
   val f = tmpfile "meta.pft"
-  val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="hol4"}
+  val out = PFTWriter.openOut {file=f, binary=false, version="0.1.0", ruleset="hol4"}
   val () = PFTWriter.tyop out 0 "bool" []
   val () = PFTWriter.var out 0 "x" 0
   val () = PFTWriter.HOL4.refl out 0 0
@@ -145,7 +145,7 @@ val () = let
   val () = PFTWriter.closeOut out {n_ty=1, n_tm=1, n_th=2, n_ci=0}
   val got = readFile f
   val expected =
-    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"hol4\"}\n\
+    "{\"cmd\":\"PFT\",\"version\":\"0.1.0\",\"ruleset\":\"hol4\"}\n\
     \{\"cmd\":\"TYOP\",\"id\":0,\"name\":\"bool\",\"args\":[]}\n\
     \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"x\",\"ty\":0}\n\
     \{\"cmd\":\"REFL\",\"id\":0,\"tm\":0}\n\
@@ -163,7 +163,7 @@ end
 val _ = tprint "Text: axiom and def commands"
 val () = let
   val f = tmpfile "defs.pft"
-  val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="hol4"}
+  val out = PFTWriter.openOut {file=f, binary=false, version="0.1.0", ruleset="hol4"}
   val () = PFTWriter.tyop out 0 "bool" []
   val () = PFTWriter.var out 0 "x" 0
   val () = PFTWriter.HOL4.refl out 0 0
@@ -174,7 +174,7 @@ val () = let
   val () = PFTWriter.closeOut out {n_ty=1, n_tm=1, n_th=5, n_ci=0}
   val got = readFile f
   val expected =
-    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"hol4\"}\n\
+    "{\"cmd\":\"PFT\",\"version\":\"0.1.0\",\"ruleset\":\"hol4\"}\n\
     \{\"cmd\":\"TYOP\",\"id\":0,\"name\":\"bool\",\"args\":[]}\n\
     \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"x\",\"ty\":0}\n\
     \{\"cmd\":\"REFL\",\"id\":0,\"tm\":0}\n\
@@ -194,7 +194,7 @@ end
 val _ = tprint "Text (Candle): core rules"
 val () = let
   val f = tmpfile "candle-core.pft"
-  val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="candle"}
+  val out = PFTWriter.openOut {file=f, binary=false, version="0.1.0", ruleset="candle"}
   val () = PFTWriter.tyop out 0 "bool" []
   val () = PFTWriter.tyop out 1 "fun" [0,0]
   val () = PFTWriter.var out 0 "p" 0
@@ -212,7 +212,7 @@ val () = let
   val () = PFTWriter.closeOut out {n_ty=2, n_tm=2, n_th=10, n_ci=0}
   val got = readFile f
   val expected =
-    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"candle\"}\n\
+    "{\"cmd\":\"PFT\",\"version\":\"0.1.0\",\"ruleset\":\"candle\"}\n\
     \{\"cmd\":\"TYOP\",\"id\":0,\"name\":\"bool\",\"args\":[]}\n\
     \{\"cmd\":\"TYOP\",\"id\":1,\"name\":\"fun\",\"args\":[0,0]}\n\
     \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"p\",\"ty\":0}\n\
@@ -237,7 +237,7 @@ end
 val _ = tprint "Text (Candle): beta, inst, inst_type"
 val () = let
   val f = tmpfile "candle-misc.pft"
-  val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="candle"}
+  val out = PFTWriter.openOut {file=f, binary=false, version="0.1.0", ruleset="candle"}
   val () = PFTWriter.tyvar out 0 "A"
   val () = PFTWriter.tyop out 1 "bool" []
   val () = PFTWriter.var out 0 "x" 0
@@ -247,7 +247,7 @@ val () = let
   val () = PFTWriter.closeOut out {n_ty=2, n_tm=1, n_th=3, n_ci=0}
   val got = readFile f
   val expected =
-    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"candle\"}\n\
+    "{\"cmd\":\"PFT\",\"version\":\"0.1.0\",\"ruleset\":\"candle\"}\n\
     \{\"cmd\":\"TYVAR\",\"id\":0,\"name\":\"A\"}\n\
     \{\"cmd\":\"TYOP\",\"id\":1,\"name\":\"bool\",\"args\":[]}\n\
     \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"x\",\"ty\":0}\n\
@@ -264,7 +264,7 @@ end
 val _ = tprint "Text (Candle): axiom, definitions, compute"
 val () = let
   val f = tmpfile "candle-defs.pft"
-  val out = PFTWriter.openOut {file=f, binary=false, version=1, ruleset="candle"}
+  val out = PFTWriter.openOut {file=f, binary=false, version="0.1.0", ruleset="candle"}
   val () = PFTWriter.tyop out 0 "bool" []
   val () = PFTWriter.var out 0 "x" 0
   val () = PFTWriter.axiom out 0 0 NONE
@@ -275,7 +275,7 @@ val () = let
   val () = PFTWriter.closeOut out {n_ty=1, n_tm=1, n_th=5, n_ci=1}
   val got = readFile f
   val expected =
-    "{\"cmd\":\"PFT\",\"version\":1,\"ruleset\":\"candle\"}\n\
+    "{\"cmd\":\"PFT\",\"version\":\"0.1.0\",\"ruleset\":\"candle\"}\n\
     \{\"cmd\":\"TYOP\",\"id\":0,\"name\":\"bool\",\"args\":[]}\n\
     \{\"cmd\":\"VAR\",\"id\":0,\"name\":\"x\",\"ty\":0}\n\
     \{\"cmd\":\"AXIOM\",\"id\":0,\"tm\":0}\n\
@@ -293,7 +293,7 @@ end
 val _ = tprint "Binary (Candle): core rules"
 val () = let
   val f = tmpfile "candle-core.bpft"
-  val out = PFTWriter.openOut {file=f, binary=true, version=1, ruleset="candle"}
+  val out = PFTWriter.openOut {file=f, binary=true, version="0.1.0", ruleset="candle"}
   val () = PFTWriter.tyop out 0 "bool" []
   val () = PFTWriter.var out 0 "p" 0
   val () = PFTWriter.Candle.refl out 0 0
@@ -304,7 +304,7 @@ val () = let
   val got = readBinFile f
   val expected = String.implode (map Char.chr [
     0x50, 0x46, 0x54, 0x00,       (* magic *)
-    0x01,                          (* version=1 *)
+    0x05, 0x30, 0x2E, 0x31, 0x2E, 0x30, (* version "0.1.0" *)
     0x06, 0x63, 0x61, 0x6E, 0x64, 0x6C, 0x65, (* "candle" *)
     (* TYOP 0 "bool" [] *)
     0x02, 0x00, 0x04, 0x62, 0x6F, 0x6F, 0x6C, 0x00,
@@ -333,7 +333,7 @@ end
 val _ = tprint "Binary: header + footer with basic commands"
 val () = let
   val f = tmpfile "basic.bpft"
-  val out = PFTWriter.openOut {file=f, binary=true, version=1, ruleset="hol4"}
+  val out = PFTWriter.openOut {file=f, binary=true, version="0.1.0", ruleset="hol4"}
   val () = PFTWriter.tyvar out 0 "alpha"
   val () = PFTWriter.tyop out 1 "bool" []
   val () = PFTWriter.var out 0 "x" 0
@@ -342,7 +342,7 @@ val () = let
   val got = readBinFile f
   val expected = String.implode (map Char.chr [
     0x50, 0x46, 0x54, 0x00,    (* magic *)
-    0x01,                       (* version=1 *)
+    0x05, 0x30, 0x2E, 0x31, 0x2E, 0x30, (* version "0.1.0" *)
     0x04, 0x68, 0x6F, 0x6C, 0x34, (* "hol4" *)
     (* commands *)
     0x01, 0x00, 0x05, 0x61, 0x6C, 0x70, 0x68, 0x61, (* TYVAR 0 "alpha" *)

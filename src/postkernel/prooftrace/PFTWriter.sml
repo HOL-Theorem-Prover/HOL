@@ -104,7 +104,7 @@ fun openOut {file, binary, version, ruleset} =
     val s = BinIO.openOut file
     val out = BinOut s
   in bBytes out (Byte.stringToBytes "PFT\000");
-     bVarint out version;
+     bString out version;
      bString out ruleset;
      out
   end
@@ -112,7 +112,7 @@ fun openOut {file, binary, version, ruleset} =
     val s = TextIO.openOut file
     val out = TextOut s
   in jBegin out "PFT";
-     jInt out "version" version;
+     jStr out "version" version;
      jStr out "ruleset" ruleset;
      jEnd out;
      out

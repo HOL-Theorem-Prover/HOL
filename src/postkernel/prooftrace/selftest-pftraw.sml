@@ -145,7 +145,7 @@ fun run_one (ruleset: string) binary
     val args = sample_args desc
     fun emit_one f emit =
       let val out = PFTWriter.openOut
-            {file=f, binary=binary, version=1, ruleset=ruleset}
+            {file=f, binary=binary, version="0.1.0", ruleset=ruleset}
           val () = emit out
           val () = PFTWriter.closeOut out
             {n_ty=0, n_tm=0, n_th=0, n_ci=0}
