@@ -680,22 +680,17 @@ fun emit_theory {trace, output, binary, ruleset} = let
     | Abs (t1, t2) => let
         val (s, typ) = resolve_binder_name t1
         val ty_id = emit_type typ
-        val V = alloc_tm ()
-        (* Use plain name if it won't capture a free variable in the body;
-           otherwise use a unique " pft%" name to avoid capture. *)
-        val bname = if would_capture (s, ty_id) env t2
-                    then fresh_binder_name s
-                    else s
-        val () = PFTWriter.var out V bname ty_id
-        val () = tm_types_set V ty_id
-        val () = var_names_set V bname
+        (* Use the canonical plain HOL variable when capture-safe.  PFT IDs
+           are only handles; logical variable identity is (name,type), so this
+           improves sharing substantially.  If the plain name would capture a
+           free variable from the heap body or current environment, fall back
+           to a fresh synthetic binder name. *)
+        val V = if would_capture (s, ty_id) env t2
+                then emit_binder s ty_id
+                else emit_var s ty_id
         val body_id = emit_term_sub (Subst.cons(env, V)) t2
-        val A = alloc_tm ()
       in
-        PFTWriter.abs out A V body_id;
-        tm_parts_set A (V, body_id);
-        tm_types_set A (emit_tyop fun_tyname [ty_id, pft_type_of body_id]);
-        A
+        emit_abs V body_id
       end
     | Clos (sbp, tmp) => let
         val env' = Subst.comp #2 (env, emit_subs env sbp)
