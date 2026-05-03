@@ -180,4 +180,11 @@ signature PFTCandleComputePreamble = sig
                load_theorem : string -> int
              } -> unit
 
+  (* Emit a standalone Candle compute preamble PFT.  The file LOADs all
+     prerequisites by name, derives and SAVEs the compute helper theorems,
+     then emits the single stateful COMPUTE_INIT.  It must be placed in
+     replay/merge order after its prerequisite theories, but it can be
+     generated independently. *)
+  val emit_file : {output: string, binary: bool} -> unit
+
 end

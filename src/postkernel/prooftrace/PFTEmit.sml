@@ -115,10 +115,6 @@ val candle_preamble_axiom : (string * string) list = [
 (* emit_theory                                                               *)
 (* ========================================================================= *)
 
-(* Compute preamble: emitted once on first compute_prf encounter *)
-(* at module level so it persists across emit_theory calls *)
-val compute_preamble_emitted = ref false
-
 fun emit_theory {trace, output, binary, ruleset} = let
   val thyname = thyname_of_path trace
   val is_candle = case ruleset of Candle => true | HOL4 => false
@@ -308,9 +304,6 @@ fun emit_theory {trace, output, binary, ruleset} = let
   fun th_memo_get k = PIntMap.find k (!th_memo)
                       handle PIntMap.NotFound => ~1
   fun th_memo_set k v = th_memo := PIntMap.add k v (!th_memo)
-
-  (* Candle compute context: initialized once after preamble, reused for all COMPUTE calls *)
-  val candle_compute_initialized : bool ref = ref false
 
   (* --- Structural hash-cons tables -------------------------------------- *)
 
@@ -1717,22 +1710,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
 
     | compute_prf (a, b) =>
         let
-          (* Ensure compute preamble is emitted (once per trace) *)
-          val () = if !compute_preamble_emitted then ()
-                   else (PFTCandleComputePreamble.emit {
-                           out = out,
-                           alloc_ty = alloc_ty,
-                           alloc_tm = alloc_tm,
-                           alloc_th = alloc_th,
-                           load_theorem = candle_load_pth
-                         };
-                         compute_preamble_emitted := true)
-
-          (* Ensure COMPUTE_INIT is emitted (once after preamble) *)
-          val () =
-            if !candle_compute_initialized then ()
-            else (emit_candle_compute_init ();
-                  candle_compute_initialized := true)
+          (* Compute preamble theorems and COMPUTE_INIT are emitted by the
+             standalone Candle compute preamble PFT.  Per-theory Candle PFTs
+             only LOAD those helper theorems and emit COMPUTE commands. *)
 
           (* Parse compute_prf arguments *)
           val (compute_args_ptr, ths_ptr) = tuple2 heap (I, I) a
@@ -1829,13 +1809,6 @@ fun emit_theory {trace, output, binary, ruleset} = let
   (* ======================================================================= *)
   (* Candle COMPUTE helpers                                                  *)
   (* ======================================================================= *)
-
-  (* Emit COMPUTE_INIT with the 62 characteristic equations from preamble *)
-  and emit_candle_compute_init () : unit = let
-    (* Load all 62 characteristic equations from preamble *)
-    val eq_ids = List.tabulate (62, fn i =>
-      candle_load_pth ("candle$COMPUTE_EQ_" ^ Int.toString (i + 1)))
-  in PFTWriter.Candle.compute_init out eq_ids end
 
   (* Check if a term is a numeral (NUMERAL applied to bits) *)
   and is_numeral_term tm_ptr =

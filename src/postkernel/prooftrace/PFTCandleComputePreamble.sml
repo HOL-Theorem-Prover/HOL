@@ -1526,4 +1526,36 @@ fun emit {out, alloc_ty, alloc_tm, alloc_th, load_theorem} = let
 
 in () end
 
+fun emit_file {output, binary} = let
+  val out = PFTWriter.openOut
+    {file = output, binary = binary, version = "0.1.0", ruleset = "candle"}
+
+  val next_ty = ref 0
+  val next_tm = ref 0
+  val next_th = ref 0
+
+  fun alloc_ty () = let val id = !next_ty in next_ty := id + 1; id end
+  fun alloc_tm () = let val id = !next_tm in next_tm := id + 1; id end
+  fun alloc_th () = let val id = !next_th in next_th := id + 1; id end
+
+  fun load_theorem name = let val id = alloc_th ()
+  in PFTWriter.load out id name; id end
+
+  val () = emit {out = out,
+                 alloc_ty = alloc_ty,
+                 alloc_tm = alloc_tm,
+                 alloc_th = alloc_th,
+                 load_theorem = load_theorem}
+
+  (* COMPUTE_INIT is stateful and produces no object.  Re-load the equations
+     by name rather than threading their IDs out of [emit]; same-file
+     SAVE/LOAD is valid and can be optimized by merge. *)
+  val eq_ids = List.tabulate (62, fn i =>
+    load_theorem ("candle$COMPUTE_EQ_" ^ Int.toString (i + 1)))
+  val () = PFTWriter.Candle.compute_init out eq_ids
+
+  val () = PFTWriter.closeOut out
+    {n_ty = !next_ty, n_tm = !next_tm, n_th = !next_th}
+in () end
+
 end (* struct *)

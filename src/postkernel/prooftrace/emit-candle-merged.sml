@@ -13,10 +13,13 @@
      5. Transcode bin -> jsonl                (PFTTranscode.transcode)
 *)
 
-val theories = [
+val till_cv_theories = [
   "bool", "marker", "num", "sat", "combin", "relation",
   "prim_rec", "quotient", "pair", "arithmetic", "numeral",
-  "cv", "numpair", "ind_type", "one", "sum", "option", "While",
+  "cv" ]
+
+val after_cv_theories = [
+  "numpair", "ind_type", "one", "sum", "option", "While",
   "reduce", "divides", "normalForms", "pred_set", "basicSize",
   "list", "rich_list", "sorting", "finite_map", "alist",
   "indexedLists", "logroot", "sptree", "permutes", "iterate",
@@ -106,9 +109,17 @@ val theories = [
 *)
 ]
 
-val preamble_bin = "preamble.candle.pft.bin"
-fun theory_in  s = s ^ "Theory.tr.gz"
 fun theory_pft s = s ^ ".candle.pft.bin"
+
+val preamble_bin = theory_pft "preamble"
+val compute_preamble_bin = theory_pft "compute_preamble"
+
+val theories = ["preamble"]
+  @ till_cv_theories
+  @ ["compute_preamble"]
+  @ after_cv_theories
+
+fun theory_in  s = s ^ "Theory.tr.gz"
 fun log s = print (s ^ "\n")
 
 fun emit_pfts () = let
@@ -126,7 +137,9 @@ val () = PFTEmit.emit_expect := false
 val () = PFTEmit.emit_expect := true
 *)
 val () = log "Emitting per-theory Candle PFTs..."
-val () = List.app (fn s =>
+
+val emit_theories =
+List.app (fn s =>
   (log ("  " ^ s);
    PFTEmit.emit_theory {
      trace   = theory_in s,
@@ -134,7 +147,11 @@ val () = List.app (fn s =>
      binary  = true,
      ruleset = PFTEmit.Candle
    }))
-  theories
+
+val () = emit_theories till_cv_theories
+val () = PFTCandleComputePreamble.emit_file
+  {output=compute_preamble_bin, binary=true}
+val () = emit_theories after_cv_theories
 
 (*
 val () = log "Transcoding per-theory PFTs to JSONL..."
@@ -164,7 +181,7 @@ fun emit_merged () = let
 (* 4. Merge *)
 val () = log "Merging..."
 val () = PFTMerge.merge {
-  inputs  = preamble_bin :: List.map theory_pft theories,
+  inputs  = List.map theory_pft theories,
   targets = targets,
   output  = merged_bin,
   binary  = true
