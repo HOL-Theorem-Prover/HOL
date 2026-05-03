@@ -45,13 +45,13 @@ val after_cv_theories = [
   "FormalLang", "regexp", "regexp_map", "regexp_compiler",
   "simpleSexp", "simpleSexpPEG", "simpleSexpParse",
   (* CakeML theories *)
-  "ag32", "misc" (*,
+  "ag32", "misc",
  "Marshalling", "backendProps", "backend_common",
   "db_vars", "gc_shared", "copying_gc", "gen_gc", "gen_gc_partial",
   "mllist", "mlmap", "mloption", "mlset", "mlstring", "cfFFIType",
   "ffi", "mlint", "jsonLang", "mlrat", "mlsexp", "displayLang", "mlvector",
   "export", "export_ag32", "export_arm7", "export_arm8", "export_mips",
-  "export_riscv", "export_x64", "mlprettyprinter", "namespace", "ast",
+  "export_riscv", "export_x64", "mlprettyprinter", "namespace"(* , "ast",
   "asm", "asmSem", "asmProps", "arm", "arm_step", "arm7_target", "arm8",
   "arm8_step", "arm8_target", "ag32_target", "crepLang", "crep_arith",
   "crep_inline", "flatLang", "flat_elim", "fpSem", "closLang", "bvi",
@@ -109,99 +109,192 @@ val after_cv_theories = [
 *)
 ]
 
-fun theory_pft s = s ^ ".candle.pft.bin"
-
-val preamble_bin = theory_pft "preamble"
-val compute_preamble_bin = theory_pft "compute_preamble"
-
-val theories = ["preamble"]
-  @ till_cv_theories
-  @ ["compute_preamble"]
-  @ after_cv_theories
-
-fun theory_in  s = s ^ "Theory.tr.gz"
-fun log s = print (s ^ "\n")
-
-fun emit_pfts () = let
-
-(* 1. Preamble *)
-val () = log "Emitting candle preamble..."
-val () = PFTCandlePreamble.emit
-  {output = preamble_bin, binary = true}
-
-(* 2. Per-theory PFTs.
-   EXPECT records are debug-only and downstream tools (merge/replay/transcode)
-   don't handle opcode 0xEF, so turn them off. *)
-val () = PFTEmit.emit_expect := false
-(*
-val () = PFTEmit.emit_expect := true
-*)
-val () = log "Emitting per-theory Candle PFTs..."
-
-val emit_theories =
-List.app (fn s =>
-  (log ("  " ^ s);
-   PFTEmit.emit_theory {
-     trace   = theory_in s,
-     output  = theory_pft s,
-     binary  = true,
-     ruleset = PFTEmit.Candle
-   }))
-
-val () = emit_theories till_cv_theories
-val () = PFTCandleComputePreamble.emit_file
-  {output=compute_preamble_bin, binary=true}
-val () = emit_theories after_cv_theories
-
-(*
-val () = log "Transcoding per-theory PFTs to JSONL..."
-val () = List.app (fn s =>
-  (log ("  " ^ s);
-   PFTTranscode.transcode {
-     input = theory_pft s, input_binary = true,
-     output = s ^ ".candle.pft.jsonl", output_binary = false
-   }))
-  theories
-*)
-
-in () end
-
 val targets =
     (* everything
-    List.map (fn s => PFTMerge.ThyAll (s, false)) theories
+    List.map (fn s => PFTMerge.ThyAll (s, false))
+      (till_cv_theories @ after_cv_theories)
     *)
     [
-     PFTMerge.ThyThm ("misc", "ALL_DISTINCT_MAP_FST_toSortedAList", false)
+     PFTMerge.ThyThm ("misc", "ALL_DISTINCT_MAP_FST_toSortedAList", false),
+     PFTMerge.ThyThm ("namespace", "nsAll_def", false)
     ]
 
+fun theory_pft s = s ^ ".candle.pft.bin"
+fun theory_in  s = s ^ "Theory.tr.gz"
+fun log s = (print (s ^ "\n"); TextIO.flushOut TextIO.stdOut)
+
 val merged_bin = "merged.candle.pft.bin"
-
-fun emit_merged () = let
-
-(* 4. Merge *)
-val () = log "Merging..."
-val () = PFTMerge.merge {
-  inputs  = List.map theory_pft theories,
-  targets = targets,
-  output  = merged_bin,
-  binary  = true
-}
-val () = log ("Done.\n"
-  ^ "  " ^ merged_bin)
-in () end
-
-fun emit_merged_jsonl () = let
-
-(* 5. Transcode to JSON Lines *)
 val merged_jsonl = "merged.candle.pft.jsonl"
-val () = log "Transcoding to JSON Lines..."
-val () = PFTTranscode.transcode {
-  input = merged_bin, input_binary = true,
-  output = merged_jsonl, output_binary = false
-}
-val () = log ("Done.\n"
-  ^ "  " ^ merged_jsonl)
-in () end
 
-val () = emit_pfts()
-val () = emit_merged()
+datatype job =
+    Preamble
+  | ComputePreamble
+  | Theory of string
+
+fun job_name Preamble = "preamble"
+  | job_name ComputePreamble = "compute_preamble"
+  | job_name (Theory s) = s
+
+fun job_output j = theory_pft (job_name j)
+
+val jobs =
+  [Preamble]
+  @ map Theory till_cv_theories
+  @ [ComputePreamble]
+  @ map Theory after_cv_theories
+
+fun find_job name =
+  case List.find (fn j => job_name j = name) jobs of
+    SOME j => j
+  | NONE => raise Fail ("unknown emit job: " ^ name)
+
+fun run_job Preamble =
+    PFTCandlePreamble.emit {output = job_output Preamble, binary = true}
+  | run_job ComputePreamble =
+    PFTCandleComputePreamble.emit_file
+      {output = job_output ComputePreamble, binary = true}
+  | run_job (Theory s) =
+    PFTEmit.emit_theory {
+      trace   = theory_in s,
+      output  = theory_pft s,
+      binary  = true,
+      ruleset = PFTEmit.Candle
+    }
+
+fun status_success st =
+  case st of
+    Posix.Process.W_EXITED => true
+  | Posix.Process.W_EXITSTATUS w => Word8.toInt w = 0
+  | _ => false
+
+fun spawn_emit_one exe j =
+  let val name = job_name j
+  in case Posix.Process.fork () of
+       NONE =>
+         ((Posix.Process.execp (exe, [exe, "emit-one", name]))
+          handle e =>
+            (TextIO.output(TextIO.stdErr,
+               "exec failed for " ^ name ^ ": " ^ exnMessage e ^ "\n");
+             TextIO.flushOut TextIO.stdErr;
+             OS.Process.exit OS.Process.failure))
+     | SOME pid => (pid, name)
+  end
+
+fun remove_pid pid running =
+  let
+    fun go acc [] = ("<unknown>", List.rev acc)
+      | go acc ((p,n)::rest) =
+          if p = pid then (n, List.revAppend(acc, rest))
+          else go ((p,n)::acc) rest
+  in go [] running end
+
+fun run_emit_all max_jobs =
+  let
+    val exe = CommandLine.name ()
+    val todo = List.filter (fn j => not (OS.FileSys.access(job_output j, []))) jobs
+    val () = PFTEmit.emit_expect := false
+    val parallelism = Int.max(1, max_jobs)
+    val total = length todo
+    val completed = ref 0
+
+    fun truncate max s =
+      if String.size s <= max then s
+      else if max <= 3 then String.substring(s, 0, max)
+      else String.substring(s, 0, max - 3) ^ "..."
+
+    fun running_names running =
+      truncate 80 (String.concatWith "," (List.map #2 running))
+
+    fun status pending running =
+      (TextIO.output(TextIO.stdOut,
+         "\rEmitting: " ^ Int.toString (!completed) ^ "/" ^
+         Int.toString total ^ " done, " ^
+         Int.toString (length running) ^ " running, " ^
+         Int.toString (length pending) ^ " pending [" ^
+         running_names running ^ "]");
+       TextIO.flushOut TextIO.stdOut)
+
+    fun finish_status () =
+      (TextIO.output(TextIO.stdOut, "\n");
+       TextIO.flushOut TextIO.stdOut)
+
+    fun wait_one running =
+      let
+        val (pid, st) = Posix.Process.waitpid (Posix.Process.W_ANY_CHILD, [])
+        val (name, running') = remove_pid pid running
+      in completed := !completed + 1;
+         if status_success st then
+           (running', false)
+         else
+           (finish_status ();
+            log ("FAILED " ^ name);
+            (running', true))
+      end
+
+    fun loop pending running failed =
+      (status pending running;
+       if failed andalso null running then
+         OS.Process.exit OS.Process.failure
+       else if null pending andalso null running then
+         finish_status ()
+       else if (not failed) andalso length running < parallelism andalso
+               not (null pending) then
+         let val j = hd pending
+             val running' = spawn_emit_one exe j :: running
+         in loop (tl pending) running' failed end
+       else
+         let val (running', failed_here) = wait_one running
+         in loop pending running' (failed orelse failed_here) end)
+  in loop todo [] false end
+
+fun run_merge () =
+  (log "Merging...";
+   PFTMerge.merge {
+     inputs  = map job_output jobs,
+     targets = targets,
+     output  = merged_bin,
+     binary  = true
+   };
+   log ("Wrote " ^ merged_bin))
+
+fun run_transcode () =
+  (log "Transcoding to JSON Lines...";
+   PFTTranscode.transcode {
+     input = merged_bin, input_binary = true,
+     output = merged_jsonl, output_binary = false
+   };
+   log ("Wrote " ^ merged_jsonl))
+
+fun usage () =
+  let val exe = CommandLine.name ()
+  in TextIO.output(TextIO.stdErr,
+       "Usage:\n" ^
+       "  " ^ exe ^ " emit-one <job-name>\n" ^
+       "  " ^ exe ^ " emit-all [-j N]\n" ^
+       "  " ^ exe ^ " merge\n" ^
+       "  " ^ exe ^ " transcode\n" ^
+       "  " ^ exe ^ " all [-j N]\n");
+     OS.Process.exit OS.Process.failure
+  end
+
+fun parse_j args =
+  let
+    fun loop [] = 8
+      | loop ["-j"] = usage ()
+      | loop ("-j" :: n :: rest) =
+          (case Int.fromString n of
+             SOME k => if k > 0 andalso null rest then k else usage ()
+           | NONE => usage ())
+      | loop _ = usage ()
+  in loop args end
+
+val () =
+  case CommandLine.arguments () of
+    ["emit-one", name] => run_job (find_job name)
+  | "emit-all" :: args => run_emit_all (parse_j args)
+  | ["merge"] => run_merge ()
+  | ["transcode"] => run_transcode ()
+  | "all" :: args =>
+      let val j = parse_j args
+      in run_emit_all j; run_merge (); run_transcode () end
+  | _ => usage ()
