@@ -36,6 +36,38 @@ must be separated from its structure name by two full-stops:
 
    <structure-name>..<encoded-name>.doc
 
+Aliasing
+--------
+
+When the same identifier is exported from several structures (e.g.,
+bossLib.Cases_on re-exports BasicProvers.Cases_on), one ".md" entry is
+designated the canonical home for the prose. It carries a YAML
+frontmatter listing every alias:
+
+   ---
+   aliases:
+     - BasicProvers.Cases_on
+   ---
+
+The alias entries themselves are tiny stubs whose frontmatter points
+back at the canonical and is marked auto-generated:
+
+   ---
+   canonical: bossLib.Cases_on
+   generated: true
+   ---
+
+Stub bodies and the canonical's "Also exported as" line (delimited by
+HTML markers <!-- BEGIN aliases-block --> .. <!-- END aliases-block -->)
+are maintained by AliasGen.exe.  Build it with
+
+   polyc -o AliasGen.exe poly-AliasGen.ML
+
+Then:
+
+   AliasGen.exe --check ../Docfiles    # CI: verify all aliases consistent
+   AliasGen.exe --regen ../Docfiles    # rewrite stubs from canonicals
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 File mosml/src/doc/helpsigs/README
 
