@@ -17,6 +17,12 @@ val presimp_conv =
             [NOT_CLAUSES, AND_CLAUSES, OR_CLAUSES, IMP_CLAUSES, EQ_CLAUSES,
              COND_EXPAND, COND_CLAUSES])
 
+(* Raised by to_cnf when boolean simplification of one of the top-level
+   conjuncts of the input term reduces to F: the input is unsatisfiable
+   without help from the SAT solver. The carried theorem is |- ~tm where
+   tm is the term passed to to_cnf. *)
+exception to_cnf_unsat of thm
+
 (* ------------------------------------------------------------------------- *)
 (* Split up a theorem according to conjuncts, in a general sense.            *)
 (* ------------------------------------------------------------------------- *)
@@ -236,7 +242,11 @@ fun to_cnf is_cnf tm =
                     itlist (fn (ic,th) =>
                             fn (m,tops,defs,lfn) =>
                                let val t = concl th
-                               in if is_T t orelse is_F t then (m,tops,defs,lfn)
+                               in if is_T t then (m,tops,defs,lfn)
+                                  else if is_F t then
+                                    (* th : tm |- F, so |- ~tm *)
+                                    raise to_cnf_unsat
+                                            (NOT_INTRO (DISCH tm th))
                                   else
                                   let val (n,v,defs',lfn') =
                                           if ic then
