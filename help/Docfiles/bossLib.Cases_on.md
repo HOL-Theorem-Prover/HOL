@@ -1,3 +1,7 @@
+---
+aliases:
+  - BasicProvers.Cases_on
+---
 ## `Cases_on`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.Cases_on : term quotation -> tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`BasicProvers.Cases_on`](#BasicProvers.Cases_on).*
+
+<!-- END aliases-block -->
 
 Performs case analysis on the type of a given term.
 

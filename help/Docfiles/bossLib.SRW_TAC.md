@@ -1,3 +1,7 @@
+---
+aliases:
+  - BasicProvers.SRW_TAC
+---
 ## `SRW_TAC`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.SRW_TAC : ssfrag list -> thm list -> tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`BasicProvers.SRW_TAC`](#BasicProvers.SRW_TAC).*
+
+<!-- END aliases-block -->
 
 A version of `RW_TAC` with an implicit `simpset`.
 

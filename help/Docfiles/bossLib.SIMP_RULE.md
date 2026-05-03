@@ -1,3 +1,7 @@
+---
+aliases:
+  - simpLib.SIMP_RULE
+---
 ## `SIMP_RULE`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.SIMP_RULE : simpset -> thm list -> thm -> thm
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`simpLib.SIMP_RULE`](#simpLib.SIMP_RULE).*
+
+<!-- END aliases-block -->
 
 Simplifies the conclusion of a theorem according to the given simpset
 and theorem rewrites.
