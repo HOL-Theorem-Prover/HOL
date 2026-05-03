@@ -142,6 +142,27 @@ Past the initial prefix of this process, most directories in the build sequence 
 This arrangement allows parallel processing of lots of directories at once.
 The sequence file `upto-parallel` gives the sequence of build targets up this point, so is a reasonable argument to `--seq` for tests of the core system.
 
+## Poly/ML Build Phases
+
+When building under Poly/ML, `build` proceeds through three phases, distinguished by which Poly/ML heap the per-directory `Holmake` invocations use.
+The transitions are driven by the `phase_extras` function in `tools-poly/build.sml`.
+
+1.  **Initial.**
+    No HOL-specific heap exists yet, so `Holmake` is invoked with `--poly_not_hol`.
+    This phase covers the kernel through `src/proofman`, the directory in which the bare heap, `bin/hol.state0`, is built (along with its accompanying `proofManagerLib.uo`).
+
+2.  **Bare.**
+    Once both `bin/hol.state0` and `sigobj/proofManagerLib.uo` exist, subsequent `Holmake` invocations are passed `--holstate <HOLDIR>/bin/hol.state0` so that they load against the bare heap.
+    This phase covers everything from after `src/proofman` up to and including `src/boss`, in which the full `bin/hol.state` heap (which embodies `bossLib`) is built.
+
+3.  **Full.**
+    After `src/boss` (signalled by the build reaching the `bin/hol` entry in the sequence), `Holmake` is invoked with no `--holstate` argument and so falls back to the default `bin/hol.state` heap.
+    This phase covers all post-`bossLib` directories, including `src/parallel_builds/` and the `examples/` tree.
+
+When editing in a directory that the build visits in the Initial or Bare phase (e.g., `src/marker`, `src/q`, `src/combin`, `src/simp/src`, `src/IndDef`, `src/list/src`, …), a plain `Holmake` invocation in that directory will either fail — when `bin/hol.state` hasn't been built yet, as on a fresh tree — or, worse, succeed by compiling against `bin/hol.state`, processing the file under edit in a context that already contains material built on top of it.
+To do a local re-compile before re-running the full build, pass `--holstate $HOLDIR/bin/hol.state0` to `Holmake`.
+Otherwise, just rerun `bin/build`; on incremental changes this is fast and rebuilds downstream theories as well.
+
 ## Rebuilding
 
 It is often possible to repeat `build` to get the system to rebuild itself in the face of changed source files.
