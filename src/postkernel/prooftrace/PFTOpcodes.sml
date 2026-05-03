@@ -135,12 +135,12 @@ val hol4_descs : (int * opcode_desc) list = [
           args=[id "th" "th", c_names "names"]}),
   (0x42, {tag="DEF_SPEC_GEN",  results=["th"],
           args=[id "th" "th", c_names "names"]}),
-  (0x43, {tag="COMPUTE_INIT",  results=["ci"],
+  (0x43, {tag="COMPUTE_INIT",  results=[],
           args=[id "num_ty" "ty", id "cval_ty" "ty",
                 strids "char_eqns" "th",
                 strids "cval_terms" "tm"]}),
   (0x44, {tag="COMPUTE",       results=["th"],
-          args=[id "ci" "ci", id "tm" "tm", ids "ths" "th"]})
+          args=[id "tm" "tm", ids "ths" "th"]})
 ]
 
 val candle_descs : (int * opcode_desc) list = [
@@ -175,10 +175,10 @@ val candle_descs : (int * opcode_desc) list = [
                 ty_name "tyname",
                 c_name "absname",
                 c_name "repname"]}),
-  (0x40, {tag="COMPUTE_INIT",        results=["ci"],
+  (0x40, {tag="COMPUTE_INIT",        results=[],
           args=[ids "ths" "th"]}),
   (0x41, {tag="COMPUTE",             results=["th"],
-          args=[id "ci" "ci", id "tm" "tm", ids "ths" "th"]})
+          args=[id "tm" "tm", ids "ths" "th"]})
 ]
 
 fun lookup_desc descs opc =

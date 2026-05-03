@@ -79,9 +79,9 @@ fun hol4_typed (opc: int) out r (args: arg_val list) =
   | (0x40, [a,b])     => HOL4.def_tyop out r (u_id a) (u_nm b)
   | (0x41, [a,b])     => HOL4.def_spec out r (u_id a) (u_nms b)
   | (0x42, [a,b])     => HOL4.def_spec_gen out r (u_id a) (u_nms b)
-  | (0x43, [a,b,c,d]) => HOL4.compute_init out r (u_id a) (u_id b)
+  | (0x43, [a,b,c,d]) => HOL4.compute_init out (u_id a) (u_id b)
                            (u_sps c) (u_sps d)
-  | (0x44, [a,b,c])   => HOL4.compute out r (u_id a) (u_id b) (u_ids c)
+  | (0x44, [a,b])     => HOL4.compute out r (u_id a) (u_ids b)
   | _ => raise Fail ("hol4_typed: bad arity for opcode 0x" ^
                      Int.fmt StringCvt.HEX opc)
   end
@@ -103,8 +103,8 @@ fun candle_typed (opc: int) out r (args: arg_val list) =
   | (0x30, [a,b])         => Candle.new_specification out r (u_id a) (u_nms b)
   | (0x31, [a,b,c,d])     => Candle.new_type_definition out r (u_id a)
                                (u_nm b) (u_nm c) (u_nm d)
-  | (0x40, [a])           => Candle.compute_init out r (u_ids a)
-  | (0x41, [a,b,c])       => Candle.compute out r (u_id a) (u_id b) (u_ids c)
+  | (0x40, [a])           => Candle.compute_init out (u_ids a)
+  | (0x41, [a,b])         => Candle.compute out r (u_id a) (u_ids b)
   | _ => raise Fail ("candle_typed: bad arity for opcode 0x" ^
                      Int.fmt StringCvt.HEX opc)
   end
@@ -148,7 +148,7 @@ fun run_one (ruleset: string) binary
             {file=f, binary=binary, version="0.1.0", ruleset=ruleset}
           val () = emit out
           val () = PFTWriter.closeOut out
-            {n_ty=0, n_tm=0, n_th=0, n_ci=0}
+            {n_ty=0, n_tm=0, n_th=0}
       in () end
     val () = emit_one f_typed
                (fn out => typed_emit opc out result args)

@@ -10,14 +10,13 @@ used.
 
 ## Object Namespaces
 
-There are four namespaces, each with independently numbered IDs:
+There are three namespaces, each with independently numbered IDs:
 
-| Namespace        | Identifier |
-|------------------|------------|
-| Types            | `ty`       |
-| Terms            | `tm`       |
-| Theorems         | `th`       |
-| Compute contexts | `ci`       |
+| Namespace | Identifier |
+|-----------|------------|
+| Types     | `ty`       |
+| Terms     | `tm`       |
+| Theorems  | `th`       |
 
 IDs are reused: when an object is no longer needed, its ID may be assigned to
 a new object in the same namespace. Each command assigns an ID in the
@@ -29,9 +28,10 @@ Since every command is typed, the assigned ID does not need a namespace
 qualifier — it is unambiguously in the namespace of the command's result type.
 DEL commands do require a namespace qualifier.
 
-A compute context is a cached collection of types/terms/theorems used by
-the fast computation mechanism of kernels that support such a mechanism.
-See the specific ruleset specifications for details on what they contain.
+Some rulesets include stateful computation commands. In those rulesets,
+`COMPUTE_INIT` initializes the ambient compute state and produces no object;
+`COMPUTE` uses that ambient state. See the specific ruleset specifications
+for details.
 
 ## Encodings
 
@@ -58,8 +58,7 @@ The header specifies:
 ### Footer
 
 The footer declares the peak number of simultaneously live objects per
-namespace: four counts for types, terms, theorems, and compute contexts
-respectively.
+namespace: three counts for types, terms, and theorems respectively.
 
 A replayer can use these to pre-allocate fixed-size arrays. The footer is
 placed at the end so that a producer can emit commands in a single pass
@@ -209,20 +208,23 @@ PFT\0 <version:string> <ruleset:string>
 ### Footer
 
 ```
-<0xFF> <n_ty:varint> <n_tm:varint> <n_th:varint> <n_ci:varint> <footer_len:uint16le>
+<0xFF> <n_ty:varint> <n_tm:varint> <n_th:varint> <footer_len:uint16le>
 ```
 
 The footer begins with a single-byte opcode `0xFF` (LIMITS), followed by
-four varint counts, followed by a 2-byte little-endian unsigned integer
+three varint counts, followed by a 2-byte little-endian unsigned integer
 giving the byte length of the footer excluding the 2-byte length field
-itself (i.e., the opcode byte plus the four varints). A reader seeks to
+itself (i.e., the opcode byte plus the three varints). A reader seeks to
 the last 2 bytes of the file to read the length, then seeks back that
-many bytes to read the opcode and the four counts.
+many bytes to read the opcode and the three counts.
 
 ### Command encoding
 
 Each command is encoded as a single-byte opcode, followed by its arguments.
-IDs and counts are encoded as varints. Names are encoded as strings.
+IDs and counts are encoded as varints. Names are encoded as strings. Ruleset
+commands that produce one or more theorem results encode the primary result ID
+immediately after the opcode; ruleset commands with no results encode no result
+ID.
 
 ### Format-level opcodes
 
@@ -242,12 +244,10 @@ IDs and counts are encoded as varints. Names are encoded as strings.
 | 0xE0   | DEL ty        | id                                     |
 | 0xE1   | DEL tm        | id                                     |
 | 0xE2   | DEL th        | id                                     |
-| 0xE3   | DEL ci        | id                                     |
 | 0xF0   | DEL ty range  | id_lo id_upto                          |
 | 0xF1   | DEL tm range  | id_lo id_upto                          |
 | 0xF2   | DEL th range  | id_lo id_upto                          |
-| 0xF3   | DEL ci range  | id_lo id_upto                          |
-| 0xFF   | LIMITS        | n_ty n_tm n_th n_ci                    |
+| 0xFF   | LIMITS        | n_ty n_tm n_th                         |
 
 Opcodes in the range 0x10–0x4F are reserved for theorem commands defined by
 the ruleset.
@@ -270,7 +270,7 @@ The file extension SHOULD be `.jsonl`.
 ```
 
 ```json
-{"cmd":"LIMITS","n_ty":3,"n_tm":4,"n_th":2,"n_ci":0}
+{"cmd":"LIMITS","n_ty":3,"n_tm":4,"n_th":2}
 ```
 
 The footer is the last non-empty line. A reader can seek to the end of the
@@ -315,7 +315,7 @@ encoding, the name is always present; an empty string indicates no name.
 {"cmd":"LOAD","id":0,"name":"bool$TRUTH"}
 ```
 
-For DEL, `ns` is one of `"ty"`, `"tm"`, `"th"`, `"ci"`. When `upto` is
+For DEL, `ns` is one of `"ty"`, `"tm"`, `"th"`. When `upto` is
 present, all IDs from `id` to `upto` inclusive are deleted.
 
 ### Theorem commands

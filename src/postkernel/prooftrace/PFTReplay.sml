@@ -18,6 +18,10 @@ fun size (db: trDB) = Redblackmap.numItems db
 
 fun listItems (db: trDB) = Redblackmap.listItems db
 
+(* Ambient compute state persists across replay calls, so a file may omit
+   COMPUTE_INIT after an earlier file initialized it. *)
+val ambient_compute_state : (thm list -> term -> thm) option ref = ref NONE
+
 (* ========================================================================= *)
 (* Filename parsing                                                          *)
 (* ========================================================================= *)
@@ -59,14 +63,12 @@ in find 0 end
 fun replay (db: trDB) file = let
   val db_ref = ref db
   val (thyname, binary) = parse_filename file
-  val {n_ty, n_tm, n_th, n_ci} =
+  val {n_ty, n_tm, n_th} =
     PFTReader.read_limits {file = file, binary = binary}
 
   val tys : hol_type option array = Array.array(n_ty, NONE)
   val tms : term option array     = Array.array(n_tm, NONE)
   val ths : thm option array      = Array.array(n_th, NONE)
-  val cis : (thm list -> term -> thm) option array =
-    Array.array(n_ci, NONE)
 
   fun get msg arr i = case Array.sub(arr, i) of
       SOME x => x
@@ -74,17 +76,18 @@ fun replay (db: trDB) file = let
   val get_ty = get "ty" tys
   val get_tm = get "tm" tms
   val get_th = get "th" ths
-  val get_ci = get "ci" cis
+  fun get_compute () = case !ambient_compute_state of
+      SOME f => f
+    | NONE => raise Fail "PFTReplay: COMPUTE before COMPUTE_INIT"
 
   fun set_ty (i, v) = Array.update(tys, i, SOME v)
   fun set_tm (i, v) = Array.update(tms, i, SOME v)
   fun set_th (i, v) = Array.update(ths, i, SOME v)
-  fun set_ci (i, v) = Array.update(cis, i, SOME v)
+  fun set_compute v = ambient_compute_state := SOME v
 
   fun del_ns ("ty", i) = Array.update(tys, i, NONE)
     | del_ns ("tm", i) = Array.update(tms, i, NONE)
     | del_ns ("th", i) = Array.update(ths, i, NONE)
-    | del_ns ("ci", i) = Array.update(cis, i, NONE)
     | del_ns (ns, _) = raise Fail ("PFTReplay: unknown ns " ^ ns)
 
   fun del_range_ns (ns, lo, hi) = let
@@ -325,17 +328,17 @@ fun replay (db: trDB) file = let
                else ()
     in set_th (id, thm) end,
 
-    compute_init = fn (id, ty1, ty2, eqns, terms) => let
+    compute_init = fn (ty1, ty2, eqns, terms) => let
       val num_type = get_ty ty1
       val cval_type = get_ty ty2
       val char_eqns = List.map (fn (s, t) => (s, get_th t)) eqns
       val cval_terms = List.map (fn (s, t) => (s, get_tm t)) terms
-    in set_ci (id, compute {num_type = num_type, char_eqns = char_eqns,
-                            cval_type = cval_type,
-                            cval_terms = cval_terms}) end,
+    in set_compute (compute {num_type = num_type, char_eqns = char_eqns,
+                             cval_type = cval_type,
+                             cval_terms = cval_terms}) end,
 
-    compute = fn (id, ci, tm, ths) => let
-      val f = get_ci ci
+    compute = fn (id, tm, ths) => let
+      val f = get_compute ()
       val t = get_tm tm
       val thms = List.map get_th ths
     in set_th (id, f thms t) end

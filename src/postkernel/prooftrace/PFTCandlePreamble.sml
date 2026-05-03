@@ -1612,7 +1612,7 @@ fun emit {output, binary} = let
   (* ================================================================ *)
 
   val () = PFTWriter.closeOut out
-    {n_ty = !next_ty, n_tm = !next_tm, n_th = !next_th, n_ci = 0}
+    {n_ty = !next_ty, n_tm = !next_tm, n_th = !next_th}
 in () end
 
 end

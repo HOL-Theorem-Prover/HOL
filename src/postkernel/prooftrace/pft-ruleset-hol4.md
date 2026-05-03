@@ -250,8 +250,8 @@ Depends on: `bool$!`, `bool$?`, `bool$/\`, `min$=`, `min$==>`.
 
 | Command | Arguments |
 |---------|-----------|
-| COMPUTE_INIT | id, num_ty: type-id, cval_ty: type-id, char_eqns: {name: thm-id}, cval_terms: {name: term-id} |
-| COMPUTE | id, ci: compute-id, tm, ths: thm-id list |
+| COMPUTE_INIT | num_ty: type-id, cval_ty: type-id, char_eqns: {name: thm-id}, cval_terms: {name: term-id} |
+| COMPUTE | id, tm, ths: thm-id list |
 
 ## Binary Opcodes
 
@@ -299,8 +299,8 @@ Depends on: `bool$!`, `bool$?`, `bool$/\`, `min$=`, `min$==>`.
 | 0x40   | DEF_TYOP      | id th name                             |
 | 0x41   | DEF_SPEC      | id th n_names name...                  |
 | 0x42   | DEF_SPEC_GEN  | id th n_names name...                   |
-| 0x43   | COMPUTE_INIT  | id ty1 ty2 n_eqns (name th)... n_terms (name tm)... |
-| 0x44   | COMPUTE       | id ci tm n_ths th...                   |
+| 0x43   | COMPUTE_INIT  | ty1 ty2 n_eqns (name th)... n_terms (name tm)... |
+| 0x44   | COMPUTE       | id tm n_ths th...                      |
 
 ## JSON Lines Encoding
 
@@ -379,10 +379,10 @@ respectively. For SUBST, `redex` is a term ID and `residue` is a theorem ID.
 ### Computation
 
 ```json
-{"cmd":"COMPUTE_INIT","id":0,"num_ty":1,"cval_ty":2,
+{"cmd":"COMPUTE_INIT","num_ty":1,"cval_ty":2,
  "char_eqns":{"alt_zero":10,"cond_T":11,"cond_F":12},
  "cval_terms":{"truth":20,"false":21}}
-{"cmd":"COMPUTE","id":0,"ci":1,"tm":2,"ths":[3,4,5]}
+{"cmd":"COMPUTE","id":0,"tm":2,"ths":[3,4,5]}
 ```
 
 `char_eqns` is an object mapping equation names to theorem IDs.
@@ -405,7 +405,7 @@ respectively. For SUBST, `redex` is a term ID and `residue` is a theorem ID.
 {"cmd":"DEL","ns":"tm","id":0,"upto":1}
 {"cmd":"DEL","ns":"tm","id":3}
 {"cmd":"SAVE","name":"bool$TRUTH","th":1}
-{"cmd":"LIMITS","n_ty":3,"n_tm":4,"n_th":2,"n_ci":0}
+{"cmd":"LIMITS","n_ty":3,"n_tm":4,"n_th":2}
 ```
 
 ## Specification of the Theorem Commands
@@ -526,11 +526,15 @@ all arguments are provided directly.
 
 | Rule | Inputs | Result | Side Conditions |
 |------|--------|--------|-----------------|
-| COMPUTE | ci, `[th1,...,thn]`, `t` | `⊢ t = v` | See below |
+| COMPUTE | `[th1,...,thn]`, `t` | `⊢ t = v` | See below |
 
 #### COMPUTE_INIT
 
-Creates a compute context from four components:
+Initializes the ambient compute context from four components. It produces no
+object. A trace may contain at most one `COMPUTE_INIT`; if present, it must
+occur before any `COMPUTE`. If a trace contains `COMPUTE` but no
+`COMPUTE_INIT`, the replayer must already have an initialized ambient compute
+context.
 
 - **`num_ty`**: the type of natural numbers (`:num`)
 - **`cval_ty`**: the type of computed values (`:cv`)
@@ -628,11 +632,11 @@ Creates a compute context from four components:
   | `cv_eq` | `⊢ cv_eq p q = cv_num (COND (p = q) (SUC 0) 0)` |
   | `let` | `⊢ LET f x = f x` |
 
-The context is created once and reused across multiple COMPUTE calls.
+The ambient compute context is initialized once and reused across subsequent COMPUTE calls.
 
 #### COMPUTE
 
-Takes a compute context `ci`, a list of code equation theorems
+Takes a list of code equation theorems
 `[th1,...,thn]`, and a term `t`. Returns `⊢ t = v` (no hypotheses) where `v`
 is the normal form of `t` under evaluation.
 

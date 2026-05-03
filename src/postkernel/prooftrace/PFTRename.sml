@@ -82,7 +82,7 @@ fun pass1 (file: string) = let
   (* Dummy ruleset handler: consume all arguments *)
   val ruleset_handler : PFTReader.ruleset_handler = fn opc => fn sr => let
     val desc = PFTOpcodes.lookup_desc descs opc
-    val _ = #readVarint sr ()  (* result id *)
+    val _ = if null (#results desc) then 0 else #readVarint sr ()  (* result id *)
     fun skip (spec: PFTOpcodes.arg_spec) =
       case #shape spec of
         PFTOpcodes.AId _         => ignore (#readVarint sr ())
@@ -234,7 +234,7 @@ fun copy_ruleset_cmd (cs: copy_state)
                      (descs: (int * PFTOpcodes.opcode_desc) list)
                      (opc: int) = let
   val desc = PFTOpcodes.lookup_desc descs opc
-  val _ = copy_varint cs  (* result id *)
+  val _ = if null (#results desc) then 0 else copy_varint cs  (* result id *)
   fun copy_arg (spec: PFTOpcodes.arg_spec) =
     case #shape spec of
       PFTOpcodes.AId _         => ignore (copy_varint cs)

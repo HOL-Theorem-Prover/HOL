@@ -42,16 +42,69 @@ val theories = [
   "FormalLang", "regexp", "regexp_map", "regexp_compiler",
   "simpleSexp", "simpleSexpPEG", "simpleSexpParse",
   (* CakeML theories *)
-  "ag32", "misc"
+  "ag32", "misc" (*,
+ "Marshalling", "backendProps", "backend_common",
+  "db_vars", "gc_shared", "copying_gc", "gen_gc", "gen_gc_partial",
+  "mllist", "mlmap", "mloption", "mlset", "mlstring", "cfFFIType",
+  "ffi", "mlint", "jsonLang", "mlrat", "mlsexp", "displayLang", "mlvector",
+  "export", "export_ag32", "export_arm7", "export_arm8", "export_mips",
+  "export_riscv", "export_x64", "mlprettyprinter", "namespace", "ast",
+  "asm", "asmSem", "asmProps", "arm", "arm_step", "arm7_target", "arm8",
+  "arm8_step", "arm8_target", "ag32_target", "crepLang", "crep_arith",
+  "crep_inline", "flatLang", "flat_elim", "fpSem", "closLang", "bvi",
+  "bvi_let", "bvi_tailrec", "bvl", "bvl_const", "bvl_handle", "bvl_inline",
+  "bvl_jump", "clos_annotate", "clos_call", "clos_fvs", "clos_interp",
+  "clos_letop", "clos_mti", "clos_number", "clos_op", "clos_ticks", "clos_known",
+  "clos_to_bvl", "dataLang", "bvl_to_bvi", "data_live", "data_simp", "data_space",
+  "bvi_to_data", "flat_to_clos", "fromSexp", "labLang", "lab_filter", "lab_to_target",
+  "loopLang", "loop_call", "loop_live", "crep_to_loop", "loop_remove", "mips",
+  "mips_step", "mips_target", "namespaceProps", "panLang", "panLexer", "panPEG",
+  "panPtreeConversion", "panStatic", "pan_common", "pan_globals", "pan_simp",
+  "pan_to_crep", "parmove", "pattern_common", "riscv", "riscv_step", "riscv_target",
+  "semanticPrimitives", "evaluate", "ml_monadBase", "pattern_semantics", "pattern_comp",
+  "flat_pattern", "reg_alloc", "linear_scan", "reg_allocProof", "linear_scanProof",
+  "semanticPrimitivesProps", "closSem", "bvlSem", "bviSem", "bvlProps", "bviProps",
+  "bvi_letProof", "bvi_tailrecProof", "bvl_constProof", "bvl_handleProof", "bvl_inlineProof",
+  "bvl_jumpProof", "bvl_to_bviProof", "closProps", "clos_annotateProof", "clos_callProof",
+  "clos_constantProof", "clos_fvsProof", "clos_interpProof", "clos_knownProps",
+  "clos_letopProof", "clos_mtiProof", "clos_numberProof", "clos_opProof", "clos_ticksProof",
+  "clos_knownProof", "clos_to_bvlProof", "evaluateProps", "evaluate_dec",
+  "flatSem", "flatProps", "flat_elimProof", "flat_patternProof", "flat_to_closProof",
+  "source_let", "source_to_flat", "source_to_source", "stackLang", "stack_names",
+  "stack_remove", "tokens", "gram", "gramProps", "cmlNTProps", "lexer_fun",
+  "lexer_impl", "tokenUtils", "cmlPEG", "cmlPtreeConversion", "cmlParse", "pegSound",
+  "pegComplete", "typeSystem", "infer_t", "primTypes", "semantics", "parserProof",
+  "source_evalProof", "source_letProof", "source_to_flatProof", "source_to_sourceProof",
+  "typeSoundInvariants", "typeSysProps", "primSemEnv", "ml_prog", "ml_translator",
+  "cfHeapsBase", "cfHeaps", "clFFI", "fsFFI", "fsFFIProps", "cfStore",
+  "cfNormalise", "cfApp", "cf", "cfLetAuto", "ml_pmatch", "cfMain", "cfTactics",
+  "ml_monad_translatorBase", "ml_monad_translator", "cfMonad", "runtimeFFI", "ml_optimise",
+  "std_prelude", "xcf", "cfDiv", "RuntimeProg", "OptionProg", "ListProg", "RuntimeProof",
+  "VectorProg", "StringProg", "mlbasicsProg", "IntProg", "PrettyPrinterProg",
+  "RatProg", "CharProg", "Word64Prog", "Word8Prog", "Word8ArrayProg", "ArrayProg",
+  "MapProg", "SetProg", "HashtableProg", "CommandLineProg", "DoubleProg", "Word8ArrayProof",
+  "CommandLineProof", "MarshallingProg", "TextIOProg", "TextIOProof", "SexpProg",
+  "basisProg", "commonUnif", "term", "subst", "walk", "walkstar", "unifDef", "unifProps", "collapse",
+  "fmsp", "cps", "rmfmap", "tcallUnif", "unify", "infer", "inferProps", "envRel",
+  "infer_eComplete", "infer_eSound", "type_dCanon", "type_eDeterm", "inferComplete",
+  "inferSound", "weakening", "typeSound", "semanticsProps", "wordLang", "loop_to_word",
+  "pan_to_word", "presLang", "wordConvs", "wordSem", "stackSem", "stackProps",
+  "stack_namesProof", "stack_removeProof", "targetSem",
+  "labSem", "labProps", "lab_filterProof", "targetProps", "lab_to_targetProof", "wordProps",
+  "word_alloc", "word_allocProof", "word_bignum", "word_bignumProof", "word_copy", "word_copyProof",
+  "word_cse", "word_depth", "word_depthProof", "word_elim", "word_elimProof", "word_inst",
+  "word_instProof", "word_remove", "word_removeProof", "word_simp", "word_cseProof", "word_simpProof",
+  "word_to_stack", "word_to_stackProof", "word_unreach", "word_to_word", "data_to_word",
+  "dataSem", "dataProps", "data_liveProof", "data_simpProof", "data_spaceProof", "bvi_to_dataProof",
+  "gc_combined", "stack_alloc", "stack_rawcall", "stack_rawcallProof", "stack_to_lab", "backend",
+  "ag32_config", "arm7_config", "arm8_config", "backend_passes", "mips_config", "pan_to_target",
+  "pan_passes", "riscv_config", "wordConvsProof", "word_gcFunctions", "data_to_word_memoryProof",
+  "data_to_word_gcProof", "data_to_word_bignumProof", "data_to_word_assignProof", "stack_allocProof",
+  "stack_to_labProof", "word_unreachProof",
+  "word_to_wordProof", "data_to_wordProof", "backendProof", "x64", "x64_step",
+  "x64_target", "x64_config", "compiler", "compilerProof"
+*)
 ]
-
-val targets =
-    (* everything
-    List.map (fn s => PFTMerge.ThyAll (s, false)) theories
-    *)
-    [
-     PFTMerge.ThyThm ("misc", "ALL_DISTINCT_MAP_FST_toSortedAList", false)
-    ]
 
 val preamble_bin = "preamble.candle.pft.bin"
 fun theory_in  s = s ^ "Theory.tr.gz"
@@ -96,10 +149,19 @@ val () = List.app (fn s =>
 
 in () end
 
-(* val () = emit_pfts () *)
+val targets =
+    (* everything
+    List.map (fn s => PFTMerge.ThyAll (s, false)) theories
+    *)
+    [
+     PFTMerge.ThyThm ("misc", "ALL_DISTINCT_MAP_FST_toSortedAList", false)
+    ]
+
+val merged_bin = "merged.candle.pft.bin"
+
+fun emit_merged () = let
 
 (* 4. Merge *)
-val merged_bin = "merged.candle.pft.bin"
 val () = log "Merging..."
 val () = PFTMerge.merge {
   inputs  = preamble_bin :: List.map theory_pft theories,
@@ -107,6 +169,11 @@ val () = PFTMerge.merge {
   output  = merged_bin,
   binary  = true
 }
+val () = log ("Done.\n"
+  ^ "  " ^ merged_bin)
+in () end
+
+fun emit_merged_jsonl () = let
 
 (* 5. Transcode to JSON Lines *)
 val merged_jsonl = "merged.candle.pft.jsonl"
@@ -115,7 +182,9 @@ val () = PFTTranscode.transcode {
   input = merged_bin, input_binary = true,
   output = merged_jsonl, output_binary = false
 }
-
 val () = log ("Done.\n"
-  ^ "  " ^ merged_bin ^ "\n"
   ^ "  " ^ merged_jsonl)
+in () end
+
+val () = emit_pfts()
+val () = emit_merged()

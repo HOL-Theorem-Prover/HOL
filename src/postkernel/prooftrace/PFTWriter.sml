@@ -118,23 +118,21 @@ fun openOut {file, binary, version, ruleset} =
      out
   end
 
-fun closeOut (out as TextOut s) {n_ty, n_tm, n_th, n_ci} =
+fun closeOut (out as TextOut s) {n_ty, n_tm, n_th} =
     (jBegin out "LIMITS";
      jInt out "n_ty" n_ty;
      jInt out "n_tm" n_tm;
      jInt out "n_th" n_th;
-     jInt out "n_ci" n_ci;
      jEnd out;
      TextIO.closeOut s)
-  | closeOut (out as BinOut s) {n_ty, n_tm, n_th, n_ci} = let
+  | closeOut (out as BinOut s) {n_ty, n_tm, n_th} = let
     fun varint_size n = if n < 128 then 1 else 1 + varint_size (n div 128)
     val footer_len = 1 + varint_size n_ty + varint_size n_tm
-                       + varint_size n_th + varint_size n_ci
+                       + varint_size n_th
     val () = bOpcode out 0xFF
     val () = bVarint out n_ty
     val () = bVarint out n_tm
     val () = bVarint out n_th
-    val () = bVarint out n_ci
     val lo = Word8.fromInt (footer_len mod 256)
     val hi = Word8.fromInt (footer_len div 256)
   in bByte out lo; bByte out hi;
@@ -354,25 +352,25 @@ fun def_spec_gen (out as TextOut _) id th names =
 
 (* --- Computation --------------------------------------------------------- *)
 
-fun compute_init (out as TextOut _) id ty1 ty2 char_eqns cval_terms =
-    (jBegin out "COMPUTE_INIT"; jInt out "id" id;
+fun compute_init (out as TextOut _) ty1 ty2 char_eqns cval_terms =
+    (jBegin out "COMPUTE_INIT";
      jInt out "num_ty" ty1; jInt out "cval_ty" ty2;
      jNamedIntMap out "char_eqns" char_eqns;
      jNamedIntMap out "cval_terms" cval_terms;
      jEnd out)
-  | compute_init out id ty1 ty2 char_eqns cval_terms =
-    (bOpcode out 0x43; bVarint out id; bVarint out ty1; bVarint out ty2;
+  | compute_init out ty1 ty2 char_eqns cval_terms =
+    (bOpcode out 0x43; bVarint out ty1; bVarint out ty2;
      bVarint out (length char_eqns);
      List.app (fn (n,th) => (bString out n; bVarint out th)) char_eqns;
      bVarint out (length cval_terms);
      List.app (fn (n,tm) => (bString out n; bVarint out tm)) cval_terms)
 
-fun compute (out as TextOut _) id ci tm ths =
+fun compute (out as TextOut _) id tm ths =
     (jBegin out "COMPUTE"; jInt out "id" id;
-     jInt out "ci" ci; jInt out "tm" tm;
+     jInt out "tm" tm;
      jIntList out "ths" ths; jEnd out)
-  | compute out id ci tm ths =
-    (bOpcode out 0x44; bVarint out id; bVarint out ci; bVarint out tm;
+  | compute out id tm ths =
+    (bOpcode out 0x44; bVarint out id; bVarint out tm;
      bVarint out (length ths);
      List.app (bVarint out) ths)
 
@@ -431,22 +429,22 @@ fun new_type_definition (out as TextOut _) id th tyname absname repname =
     (bOpcode out 0x31; bVarint out id; bVarint out th;
      bString out tyname; bString out absname; bString out repname)
 
-(* COMPUTE id ci tm ths *)
-fun compute (out as TextOut _) id ci tm ths =
+(* COMPUTE id tm ths *)
+fun compute (out as TextOut _) id tm ths =
     (jBegin out "COMPUTE"; jInt out "id" id;
-     jInt out "ci" ci; jInt out "tm" tm;
+     jInt out "tm" tm;
      jIntList out "ths" ths; jEnd out)
-  | compute out id ci tm ths =
-    (bOpcode out 0x41; bVarint out id; bVarint out ci; bVarint out tm;
+  | compute out id tm ths =
+    (bOpcode out 0x41; bVarint out id; bVarint out tm;
      bVarint out (length ths);
      List.app (bVarint out) ths)
 
-(* COMPUTE_INIT id ths *)
-fun compute_init (out as TextOut _) id ths =
-    (jBegin out "COMPUTE_INIT"; jInt out "id" id;
+(* COMPUTE_INIT ths *)
+fun compute_init (out as TextOut _) ths =
+    (jBegin out "COMPUTE_INIT";
      jIntList out "ths" ths; jEnd out)
-  | compute_init out id ths =
-    (bOpcode out 0x40; bVarint out id;
+  | compute_init out ths =
+    (bOpcode out 0x40;
      bVarint out (length ths);
      List.app (bVarint out) ths)
 
@@ -454,8 +452,8 @@ end (* structure Candle *)
 
 (* --- Deletion ------------------------------------------------------------ *)
 
-val del_opcodes = [("ty",0xE0),("tm",0xE1),("th",0xE2),("ci",0xE3)]
-val del_range_opcodes = [("ty",0xF0),("tm",0xF1),("th",0xF2),("ci",0xF3)]
+val del_opcodes = [("ty",0xE0),("tm",0xE1),("th",0xE2)]
+val del_range_opcodes = [("ty",0xF0),("tm",0xF1),("th",0xF2)]
 
 fun lookup_opc table ns =
   case List.find (fn (k,_) => k = ns) table of
@@ -514,7 +512,7 @@ fun write_raw out {opcode, desc: PFTOpcodes.opcode_desc, result, args} =
   in case out of
        TextOut _ => let
          val () = jBegin out (#tag desc)
-         val () = jInt out "id" result
+         val () = if null (#results desc) then () else jInt out "id" result
          fun emit (spec: arg_spec, v) =
            case (#shape spec, v) of
              (AId _,          VId n)         => jInt out (#label spec) n
@@ -528,7 +526,7 @@ fun write_raw out {opcode, desc: PFTOpcodes.opcode_desc, result, args} =
        in ListPair.appEq emit (#args desc, args); jEnd out end
      | BinOut _ => let
          val () = bOpcode out opcode
-         val () = bVarint out result
+         val () = if null (#results desc) then () else bVarint out result
          fun emit (_: arg_spec, v) =
            case v of
              VId n         => bVarint out n

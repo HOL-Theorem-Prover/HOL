@@ -28,17 +28,17 @@ fun transcode {input, input_binary, output, output_binary} =
 
     val rh : PFTReader.ruleset_handler = fn opc => fn sr =>
       let val desc = PFTOpcodes.lookup_desc descs opc
-          val result = #readVarint sr ()
+          val result = if null (#results desc) then 0 else #readVarint sr ()
           val args = PFTReader.read_raw_args desc sr
       in PFTWriter.write_raw out
            {opcode=opc, desc=desc, result=result, args=args}
       end
 
-    val {n_ty, n_tm, n_th, n_ci, ...} =
+    val {n_ty, n_tm, n_th, ...} =
       PFTReader.read {file = input, binary = input_binary,
                       format_handler = fh, ruleset_handler = rh}
   in PFTWriter.closeOut out
-       {n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci}
+       {n_ty = n_ty, n_tm = n_tm, n_th = n_th}
   end
 
 end

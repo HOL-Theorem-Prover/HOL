@@ -119,9 +119,9 @@ fun read_footer_raw file = let
   val () = if opc = 0xFF then ()
            else raise Fail "PFTReader: bad footer opcode"
   val vi = mk_readVarint r
-  val n_ty = vi () val n_tm = vi () val n_th = vi () val n_ci = vi ()
+  val n_ty = vi () val n_tm = vi () val n_th = vi ()
   val () = #close r ()
-in {n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci,
+in {n_ty = n_ty, n_tm = n_tm, n_th = n_th,
     footer_len = footer_len, file_size = file_size} end
 
 (* ========================================================================= *)
@@ -160,13 +160,12 @@ fun read_limits_jsonl file = let
   end
 in {n_ty = getField last_line "n_ty",
     n_tm = getField last_line "n_tm",
-    n_th = getField last_line "n_th",
-    n_ci = getField last_line "n_ci"} end
+    n_th = getField last_line "n_th"} end
 
 fun read_limits {file, binary} =
   if binary then let
-    val {n_ty, n_tm, n_th, n_ci, ...} = read_footer_raw file
-  in {n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci} end
+    val {n_ty, n_tm, n_th, ...} = read_footer_raw file
+  in {n_ty = n_ty, n_tm = n_tm, n_th = n_th} end
   else read_limits_jsonl file
 
 fun read_header {file, binary} =
@@ -187,7 +186,7 @@ fun read_header {file, binary} =
 (* ========================================================================= *)
 
 fun read_binary file (fh: format_handler) (rh: ruleset_handler) = let
-  val {n_ty, n_tm, n_th, n_ci, footer_len, file_size} =
+  val {n_ty, n_tm, n_th, footer_len, file_size} =
     read_footer_raw file
   val cmd_end = file_size - footer_len - 2
   val r = open_bin_reader file
@@ -236,11 +235,9 @@ fun read_binary file (fh: format_handler) (rh: ruleset_handler) = let
     | 0xE0 => #del fh ("ty", vi())
     | 0xE1 => #del fh ("tm", vi())
     | 0xE2 => #del fh ("th", vi())
-    | 0xE3 => #del fh ("ci", vi())
     | 0xF0 => let val a = vi() val b = vi() in #del_range fh ("ty",a,b) end
     | 0xF1 => let val a = vi() val b = vi() in #del_range fh ("tm",a,b) end
     | 0xF2 => let val a = vi() val b = vi() in #del_range fh ("th",a,b) end
-    | 0xF3 => let val a = vi() val b = vi() in #del_range fh ("ci",a,b) end
     (* Debug commands *)
     | 0xEF => let val th = vi()
                   val n = vi()
@@ -258,7 +255,7 @@ fun read_binary file (fh: format_handler) (rh: ruleset_handler) = let
   val () = cmd_loop ()
   val () = #close r ()
 in {version = version, ruleset = ruleset,
-    n_ty = n_ty, n_tm = n_tm, n_th = n_th, n_ci = n_ci} end
+    n_ty = n_ty, n_tm = n_tm, n_th = n_th} end
 
 (* ========================================================================= *)
 (* HOL4 ruleset handler                                                      *)
@@ -297,9 +294,9 @@ type handler = {
   def_tyop: int * int * string -> unit,
   def_spec: int * int * string list -> unit,
   def_spec_gen: int * int * string list -> unit,
-  compute_init: int * int * int
+  compute_init: int * int
                 * (string * int) list * (string * int) list -> unit,
-  compute: int * int * int * int list -> unit
+  compute: int * int * int list -> unit
 }
 
 fun make_handler (h: handler) : ruleset_handler = fn opc => fn sr => let
@@ -362,12 +359,12 @@ in case opc of
             in #def_spec h (id, th, #readStringList sr ()) end
   | 0x42 => let val id = vi() val th = vi()
             in #def_spec_gen h (id, th, #readStringList sr ()) end
-  | 0x43 => let val id = vi() val ty1 = vi() val ty2 = vi()
+  | 0x43 => let val ty1 = vi() val ty2 = vi()
                 val eqns = #readStringVarintPairs sr ()
                 val terms = #readStringVarintPairs sr ()
-            in #compute_init h (id, ty1, ty2, eqns, terms) end
-  | 0x44 => let val id = vi() val ci = vi() val tm = vi()
-            in #compute h (id, ci, tm, #readVarintList sr ()) end
+            in #compute_init h (ty1, ty2, eqns, terms) end
+  | 0x44 => let val id = vi() val tm = vi()
+            in #compute h (id, tm, #readVarintList sr ()) end
   | _ => raise Fail ("PFTReader.HOL4: unknown opcode 0x" ^
                       Int.fmt StringCvt.HEX opc)
 end

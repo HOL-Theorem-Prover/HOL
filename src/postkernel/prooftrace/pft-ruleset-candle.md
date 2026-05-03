@@ -105,8 +105,8 @@ directly in the kernel for efficiency.
 
 | Command | Arguments |
 |---------|-----------|
-| COMPUTE_INIT | id, ths: thm-id list |
-| COMPUTE | id, ci: compute-id, tm, ths: thm-id list |
+| COMPUTE_INIT | ths: thm-id list |
+| COMPUTE | id, tm, ths: thm-id list |
 
 ## Binary Opcodes
 
@@ -126,8 +126,8 @@ directly in the kernel for efficiency.
 | 0x21   | PROVE_HYP                  | id th1 th2                             |
 | 0x30   | new_specification          | id th n_names name...                  |
 | 0x31   | new_type_definition        | id th tyname absname repname           |
-| 0x40   | COMPUTE_INIT               | id n_ths th...                         |
-| 0x41   | COMPUTE                    | id ci tm n_ths th...                   |
+| 0x40   | COMPUTE_INIT               | n_ths th...                            |
+| 0x41   | COMPUTE                    | id tm n_ths th...                      |
 
 
 Note: In `new_type_definition`, the three names are encoded as strings.
@@ -170,8 +170,8 @@ A replayer should take care to swap them when reading if necessary.
 ### Computation
 
 ```json
-{"cmd":"COMPUTE_INIT","id":0,"ths":[1,2,3]}
-{"cmd":"COMPUTE","id":0,"ci":1,"tm":2,"ths":[3,4,5]}
+{"cmd":"COMPUTE_INIT","ths":[1,2,3]}
+{"cmd":"COMPUTE","id":0,"tm":2,"ths":[3,4,5]}
 ```
 
 ## Specification of the Theorem Commands
@@ -220,9 +220,12 @@ replayer must reserve both IDs.
 
 #### COMPUTE_INIT
 
-Initialises a compute context from a fixed list of characteristic equation
-theorems, provided in a specific order. Each theorem must have no
-hypotheses.
+Initialises the ambient compute context from a fixed list of characteristic
+equation theorems, provided in a specific order. It produces no object. A
+trace may contain at most one `COMPUTE_INIT`; if present, it must occur before
+any `COMPUTE`. If a trace contains `COMPUTE` but no `COMPUTE_INIT`, the
+replayer must already have an initialized ambient compute context. Each
+theorem must have no hypotheses.
 
 The characteristic equations use BIT0/BIT1 numeral encoding, with `_0` as
 the zero constant and `NUMERAL` as the numeral wrapper. The compute value
@@ -297,7 +300,7 @@ The required equations (in order):
 
 #### COMPUTE
 
-Takes a compute context `ci`, a list of code equation theorems
+Takes a list of code equation theorems
 `[th1,...,thn]`, and a term `t`. Returns `⊢ t = v` (no hypotheses) where `v`
 is the normal form of `t` under evaluation.
 

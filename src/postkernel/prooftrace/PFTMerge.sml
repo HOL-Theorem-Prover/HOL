@@ -11,13 +11,13 @@ open PFTOpcodes
 (* Namespaces                                                                *)
 (* ========================================================================= *)
 
-val NS_TY = 0 val NS_TM = 1 val NS_TH = 2 val NS_CI = 3 val NUM_NS = 4
+val NS_TY = 0 val NS_TM = 1 val NS_TH = 2 val NUM_NS = 3
 
 fun ns_idx "ty" = NS_TY | ns_idx "tm" = NS_TM
-  | ns_idx "th" = NS_TH | ns_idx "ci" = NS_CI
+  | ns_idx "th" = NS_TH
   | ns_idx s = raise Fail ("PFTMerge: bad namespace " ^ s)
 
-val ns_names = Vector.fromList ["ty","tm","th","ci"]
+val ns_names = Vector.fromList ["ty","tm","th"]
 fun ns_name i = Vector.sub(ns_names, i)
 
 (* ========================================================================= *)
@@ -62,6 +62,8 @@ datatype cmd_kind =
   | CmdNewConst
   | CmdNewType
   | CmdAxiom
+  | CmdComputeInit
+  | CmdCompute
 
 type cmd_meta = {
   produced : (int * int) list, (* (ns_idx, id) *)
@@ -220,7 +222,7 @@ fun pass1_read_file (descs_ref: (int * opcode_desc) list ref)
     val rh : PFTReader.ruleset_handler = fn opc => fn sr =>
       let
         val desc = lookup_desc (!descs_ref) opc
-        val id = #readVarint sr ()
+        val id = if null (#results desc) then 0 else #readVarint sr ()
         val (consumed, {new_types, new_consts}) =
           collect_consumed sr (#args desc)
         val produced =
@@ -233,7 +235,10 @@ fun pass1_read_file (descs_ref: (int * opcode_desc) list ref)
                                | RNewConst  => true
                                | RNewConsts => true
                                | RNormal    => false) (#args desc)
-        val kind = if is_def then CmdDef else CmdNormal
+        val kind =
+          if #tag desc = "COMPUTE_INIT" then CmdComputeInit
+          else if #tag desc = "COMPUTE" then CmdCompute
+          else if is_def then CmdDef else CmdNormal
         val ci = add_cmd fs {produced=rev produced, consumed=consumed,
                              kind=kind, opcode=opc, ref_name=NONE}
         val () = List.app (fn n => add_type_introducer n ci) new_types
@@ -254,7 +259,8 @@ fun scan_index_file (descs_ref: (int * opcode_desc) list ref)
                     (file_idx: int) (file: string)
                     (save_table: (string, save_entry) Redblackmap.dict ref)
                     (const_introducer: (string, int * int) Redblackmap.dict ref)
-                    (type_introducer: (string, int * int) Redblackmap.dict ref) =
+                    (type_introducer: (string, int * int) Redblackmap.dict ref)
+                    (compute_inits: (int * int) list ref) =
   let
     val ci_ref = ref 0
     fun next_ci () = let val ci = !ci_ref in ci_ref := ci + 1; ci end
@@ -286,9 +292,12 @@ fun scan_index_file (descs_ref: (int * opcode_desc) list ref)
     val rh : PFTReader.ruleset_handler = fn opc => fn sr =>
       let
         val ci = next_ci ()
-        val _ = #readVarint sr ()
         val desc = lookup_desc (!descs_ref) opc
+        val _ = if null (#results desc) then 0 else #readVarint sr ()
         val (_, {new_types, new_consts}) = collect_consumed sr (#args desc)
+        val () = if #tag desc = "COMPUTE_INIT"
+                 then compute_inits := (file_idx, ci) :: !compute_inits
+                 else ()
         val () = List.app (fn n => add_type n ci) new_types
         val () = List.app (fn n => add_const n ci) new_consts
       in () end
@@ -330,6 +339,7 @@ fun compute_reachable
       (save_table: (string, save_entry) Redblackmap.dict)
       (const_introducer: (string, int * int) Redblackmap.dict)
       (type_introducer: (string, int * int) Redblackmap.dict)
+      (compute_inits: (int * int) list)
       (target_saves: (string * bool) list)
     : bool array option ref vector =
   let
@@ -341,6 +351,20 @@ fun compute_reachable
                     val a = Array.array(DArray.size (#cmds fs), false)
                 in Vector.sub(visited, fi) := SOME a; a end
     val worklist = ref [] : (int * int) list ref
+    val compute_seen = ref false
+
+    val warned_multiple_compute_inits = ref false
+
+    fun unique_compute_init () =
+      case compute_inits of
+        x :: _ =>
+          (case compute_inits of
+             [_] => ()
+           | _ => if !warned_multiple_compute_inits then ()
+                  else (print "WARNING: PFTMerge: reachable COMPUTE with multiple COMPUTE_INITs in inputs; using the first one\n";
+                        warned_multiple_compute_inits := true);
+           x)
+      | [] => raise Fail "PFTMerge: reachable COMPUTE but no COMPUTE_INIT in inputs"
 
     fun enqueue (fi, ci) =
       let val vis = ensure_visited fi
@@ -367,6 +391,13 @@ fun compute_reachable
             val fs = ensure_file_state fi
             val meta = DArray.sub(#cmds fs, ci)
         in
+          (* Stateful compute dependency: any reachable COMPUTE requires the
+             unique COMPUTE_INIT command in the inputs. *)
+          (case #kind meta of
+             CmdCompute =>
+               if !compute_seen then ()
+               else (compute_seen := true; enqueue (unique_compute_init ()))
+           | _ => ());
           (* Follow ID-level dependencies *)
           List.app (fn (ns, id) =>
             enqueue (fi, find_producer fs (ns, id)))
@@ -408,6 +439,7 @@ fun pass2_emit (file_states: file_state option ref vector)
                (save_table: (string, save_entry) Redblackmap.dict)
                (const_introducer: (string, int * int) Redblackmap.dict)
                (type_introducer: (string, int * int) Redblackmap.dict)
+               (compute_inits: (int * int) list)
                (inputs: string list)
                (target_saves: (string * bool) list)
                (output: string)
@@ -418,7 +450,7 @@ fun pass2_emit (file_states: file_state option ref vector)
     (* Included set as bool arrays for O(1) lookup; files not reached from
        the targets remain NONE and are skipped in later passes. *)
     val included = compute_reachable n_files ensure_file_state save_table
-                     const_introducer type_introducer target_saves
+                     const_introducer type_introducer compute_inits target_saves
 
     (* Per-namespace ID allocators *)
     val allocators = Vector.tabulate(NUM_NS, fn _ => IdAlloc.new ())
@@ -654,7 +686,7 @@ fun pass2_emit (file_states: file_state option ref vector)
         fun emit_hol4 opc id (sr: PFTReader.stream_reader) =
           let val vi = #readVarint sr val vs = #readString sr
               fun rTy x = ren NS_TY x fun rTm x = ren NS_TM x
-              fun rTh x = ren NS_TH x fun rCi x = ren NS_CI x
+              fun rTh x = ren NS_TH x
               val nid = if opc = 0x43 then 0 (* dummy: unused by COMPUTE_INIT *)
                         else rTh id
           in case opc of
@@ -742,16 +774,15 @@ fun pass2_emit (file_states: file_state option ref vector)
             | 0x42 => let val th = rTh(vi())
                       in PFTWriter.HOL4.def_spec_gen out nid th
                            (#readStringList sr ()) end
-            | 0x43 => let val nci = rCi id
-                          val ty1 = rTy(vi()) val ty2 = rTy(vi())
+            | 0x43 => let val ty1 = rTy(vi()) val ty2 = rTy(vi())
                           val eqns = map (fn (s,t) => (s, rTh t))
                                        (#readStringVarintPairs sr ())
                           val terms = map (fn (s,t) => (s, rTm t))
                                        (#readStringVarintPairs sr ())
-                      in PFTWriter.HOL4.compute_init out nci ty1 ty2
+                      in PFTWriter.HOL4.compute_init out ty1 ty2
                            eqns terms end
-            | 0x44 => let val ci = rCi(vi()) val tm = rTm(vi())
-                      in PFTWriter.HOL4.compute out nid ci tm
+            | 0x44 => let val tm = rTm(vi())
+                      in PFTWriter.HOL4.compute out nid tm
                            (map rTh (#readVarintList sr ())) end
             | _ => raise Fail ("PFTMerge: unknown HOL4 opcode 0x" ^
                                Int.fmt StringCvt.HEX opc)
@@ -761,7 +792,7 @@ fun pass2_emit (file_states: file_state option ref vector)
         fun emit_candle opc id (sr: PFTReader.stream_reader) =
           let val vi = #readVarint sr val vs = #readString sr
               fun rTy x = ren NS_TY x fun rTm x = ren NS_TM x
-              fun rTh x = ren NS_TH x fun rCi x = ren NS_CI x
+              fun rTh x = ren NS_TH x
               val nid = if opc = 0x40 then 0 (* dummy: unused by COMPUTE_INIT *)
                         else rTh id
           in case opc of
@@ -797,10 +828,10 @@ fun pass2_emit (file_states: file_state option ref vector)
                           val tyname = vs() val absname = vs()
                       in PFTWriter.Candle.new_type_definition out nid th
                            tyname absname (vs()) end
-            | 0x40 => PFTWriter.Candle.compute_init out (rCi id)
+            | 0x40 => PFTWriter.Candle.compute_init out
                         (map rTh (#readVarintList sr ()))
-            | 0x41 => let val ci = rCi(vi()) val tm = rTm(vi())
-                      in PFTWriter.Candle.compute out nid ci tm
+            | 0x41 => let val tm = rTm(vi())
+                      in PFTWriter.Candle.compute out nid tm
                            (map rTh (#readVarintList sr ())) end
             | _ => raise Fail ("PFTMerge: unknown Candle opcode 0x" ^
                                Int.fmt StringCvt.HEX opc)
@@ -811,14 +842,16 @@ fun pass2_emit (file_states: file_state option ref vector)
         val rh : PFTReader.ruleset_handler = fn opc => fn sr =>
           let val ci = next_ci ()
           in if is_included ci then
-               let val id = #readVarint sr ()
+               let val desc = lookup_desc descs opc
+                   val id = if null (#results desc) then 0 else #readVarint sr ()
                    val meta = DArray.sub(#cmds (current_fs ()), ci)
                in (if is_hol4 then emit_hol4 else emit_candle) opc id sr;
                   dec_consumed meta
                end
              else
-               let val _ = #readVarint sr ()
-               in ignore (#1 (collect_consumed sr (#args (lookup_desc descs opc))))
+               let val desc = lookup_desc descs opc
+                   val _ = if null (#results desc) then 0 else #readVarint sr ()
+               in ignore (#1 (collect_consumed sr (#args desc)))
                end
           end
 
@@ -852,8 +885,7 @@ fun pass2_emit (file_states: file_state option ref vector)
     val () = PFTWriter.closeOut out {
       n_ty = IdAlloc.peakCount (Vector.sub(allocators, NS_TY)),
       n_tm = IdAlloc.peakCount (Vector.sub(allocators, NS_TM)),
-      n_th = IdAlloc.peakCount (Vector.sub(allocators, NS_TH)),
-      n_ci = IdAlloc.peakCount (Vector.sub(allocators, NS_CI))}
+      n_th = IdAlloc.peakCount (Vector.sub(allocators, NS_TH))}
   in () end
 
 (* ========================================================================= *)
@@ -876,11 +908,12 @@ fun merge {inputs, targets, output, binary} =
     val save_table = ref (Redblackmap.mkDict String.compare)
     val const_introducer = ref (Redblackmap.mkDict String.compare)
     val type_introducer = ref (Redblackmap.mkDict String.compare)
+    val compute_inits = ref [] : (int * int) list ref
 
     (* Pass 1a: lightweight scan for global SAVE/definition names. *)
     val () = ignore (List.foldl (fn (file, fi) =>
       (scan_index_file descs_ref fi file save_table
-         const_introducer type_introducer;
+         const_introducer type_introducer compute_inits;
        fi + 1)) 0 inputs)
 
     (* Full per-file metadata is loaded lazily during reachability. *)
@@ -899,7 +932,7 @@ fun merge {inputs, targets, output, binary} =
 
     (* Pass 2: re-read and emit *)
     val () = pass2_emit file_states ensure_file_state (!save_table)
-               (!const_introducer) (!type_introducer)
+               (!const_introducer) (!type_introducer) (List.rev (!compute_inits))
                inputs target_saves
                output the_version the_ruleset (!descs_ref)
   in () end
