@@ -1,3 +1,7 @@
+---
+aliases:
+  - wlogLib.wlog_tac
+---
 ## `wlog_tac`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.wlog_tac : term quotation -> term quotation list -> tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`wlogLib.wlog_tac`](#wlogLib.wlog_tac).*
+
+<!-- END aliases-block -->
 
 Enrich the hypotheses with a proposition that can be assumed without
 loss of generality.

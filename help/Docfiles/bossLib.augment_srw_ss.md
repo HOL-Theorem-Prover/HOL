@@ -1,3 +1,7 @@
+---
+aliases:
+  - BasicProvers.augment_srw_ss
+---
 ## `augment_srw_ss`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.augment_srw_ss : simpLib.ssfrag list -> unit
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`BasicProvers.augment_srw_ss`](#BasicProvers.augment_srw_ss).*
+
+<!-- END aliases-block -->
 
 Augments the "stateful rewriter" with a list of `simpset` fragments.
 

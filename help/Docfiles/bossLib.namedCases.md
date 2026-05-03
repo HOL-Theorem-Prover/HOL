@@ -1,3 +1,7 @@
+---
+aliases:
+  - BasicProvers.namedCases
+---
 ## `namedCases`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.namedCases : string list -> tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`BasicProvers.namedCases`](#BasicProvers.namedCases).*
+
+<!-- END aliases-block -->
 
 Case split on type of leading universally quantified variable in the
 goal, using given names for introduced constructor arguments.

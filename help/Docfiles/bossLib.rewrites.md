@@ -1,3 +1,7 @@
+---
+aliases:
+  - simpLib.rewrites
+---
 ## `rewrites`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.rewrites : thm list -> ssfrag
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`simpLib.rewrites`](#simpLib.rewrites).*
+
+<!-- END aliases-block -->
 
 Creates an `ssfrag` value consisting of the given theorems as rewrites.
 

@@ -1,3 +1,7 @@
+---
+aliases:
+  - IndDefLib.Hol_reln
+---
 ## `Hol_reln`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.Hol_reln : term quotation -> (thm * thm * thm)
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`IndDefLib.Hol_reln`](#IndDefLib.Hol_reln).*
+
+<!-- END aliases-block -->
 
 Defines inductive relations.
 

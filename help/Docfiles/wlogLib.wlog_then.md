@@ -1,3 +1,7 @@
+---
+canonical: bossLib.wlog_then
+generated: true
+---
 ## `wlog_then`
 
 ``` hol4
@@ -6,7 +10,5 @@ wlogLib.wlog_then : term quotation -> term quotation list -> thm_tactic -> tacti
 
 ------------------------------------------------------------------------
 
-Apply a theorem-tactic using a proposition that can be assumed without
-loss of generality.
-
-`wlogLib.wlog_then` is identical to `bossLib.wlog_then`
+Re-exported from [`bossLib.wlog_then`](#bossLib.wlog_then). See that
+entry for full documentation.

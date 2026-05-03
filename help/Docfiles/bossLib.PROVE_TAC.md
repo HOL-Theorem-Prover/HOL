@@ -1,3 +1,7 @@
+---
+aliases:
+  - BasicProvers.PROVE_TAC
+---
 ## `PROVE_TAC`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.PROVE_TAC : thm list -> tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`BasicProvers.PROVE_TAC`](#BasicProvers.PROVE_TAC).*
+
+<!-- END aliases-block -->
 
 Solve a goal with use of hypotheses and supplied lemmas.
 

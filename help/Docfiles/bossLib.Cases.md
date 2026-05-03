@@ -1,3 +1,7 @@
+---
+aliases:
+  - BasicProvers.Cases
+---
 ## `Cases`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.Cases : tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`BasicProvers.Cases`](#BasicProvers.Cases).*
+
+<!-- END aliases-block -->
 
 Performs case analysis on the variable of the leading universally
 quantified variable of the goal.

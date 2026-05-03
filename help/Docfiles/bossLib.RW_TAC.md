@@ -1,3 +1,7 @@
+---
+aliases:
+  - BasicProvers.RW_TAC
+---
 ## `RW_TAC`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.RW_TAC : simpset -> thm list -> tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`BasicProvers.RW_TAC`](#BasicProvers.RW_TAC).*
+
+<!-- END aliases-block -->
 
 Simplification with case-splitting and built-in knowledge of declared
 datatypes.

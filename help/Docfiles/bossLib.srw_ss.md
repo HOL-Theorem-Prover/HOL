@@ -1,3 +1,7 @@
+---
+aliases:
+  - BasicProvers.srw_ss
+---
 ## `srw_ss`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.srw_ss : unit -> simpset
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`BasicProvers.srw_ss`](#BasicProvers.srw_ss).*
+
+<!-- END aliases-block -->
 
 Returns the "stateful rewriting" system's underlying `simpset`.
 

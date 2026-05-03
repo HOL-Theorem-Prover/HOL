@@ -1,3 +1,7 @@
+---
+aliases:
+  - TotalDefn.WF_REL_TAC
+---
 ## `WF_REL_TAC`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.WF_REL_TAC : term quotation -> tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`TotalDefn.WF_REL_TAC`](#TotalDefn.WF_REL_TAC).*
+
+<!-- END aliases-block -->
 
 Start termination proof.
 

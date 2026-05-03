@@ -1,3 +1,7 @@
+---
+aliases:
+  - BasicProvers.Induct
+---
 ## `Induct`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.Induct : tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`BasicProvers.Induct`](#BasicProvers.Induct).*
+
+<!-- END aliases-block -->
 
 Performs structural induction over the type of the goal's outermost
 universally quantified variable.

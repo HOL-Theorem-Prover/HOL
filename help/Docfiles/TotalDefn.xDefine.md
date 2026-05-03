@@ -1,3 +1,7 @@
+---
+canonical: bossLib.xDefine
+generated: true
+---
 ## `xDefine`
 
 ``` hol4
@@ -6,10 +10,5 @@ TotalDefn.xDefine : string -> term quotation -> thm
 
 ------------------------------------------------------------------------
 
-General purpose function definition facility.
-
-`bossLib.xDefine` is identical to `TotalDefn.xDefine`.
-
-### See also
-
-[`bossLib.xDefine`](#bossLib.xDefine)
+Re-exported from [`bossLib.xDefine`](#bossLib.xDefine). See that
+entry for full documentation.

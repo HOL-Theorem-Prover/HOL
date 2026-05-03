@@ -1,3 +1,7 @@
+---
+aliases:
+  - simpLib.ASM_SIMP_TAC
+---
 ## `ASM_SIMP_TAC`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.ASM_SIMP_TAC : simpset -> thm list -> tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`simpLib.ASM_SIMP_TAC`](#simpLib.ASM_SIMP_TAC).*
+
+<!-- END aliases-block -->
 
 Simplifies a goal using the simpset, the provided theorems, and the
 goal's assumptions.
