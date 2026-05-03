@@ -17,13 +17,6 @@ val () = List.app (fn s => PFTEmit.emit_theory{trace=mk_inp s, output=mk_out s, 
 val () = print "Wrote pft.jsonl files\n"
 *)
 
-(*
-fun mk_bin s = s ^ ".pft.bin";
-(* TODO: should rename before merging *)
-val () = List.app (fn s => PFTRename.rename {input=mk_raw s, output=mk_bin s}) seq;
-val () = print "Wrote renamed pft.bin files\n"
-*)
-
 val () = PFTMerge.merge {
   inputs = List.map mk_raw seq,
   targets = [PFTMerge.ThyAll ("arithmetic",false),

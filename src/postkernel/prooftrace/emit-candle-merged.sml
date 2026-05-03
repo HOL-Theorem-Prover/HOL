@@ -124,14 +124,14 @@ fun log s = print (s ^ "\n")
 
 fun emit_pfts () = let
 
-(* 1. Preamble — uses plain variable names, no rename needed *)
+(* 1. Preamble *)
 val () = log "Emitting candle preamble..."
 val () = PFTCandlePreamble.emit
   {output = preamble_bin, binary = true}
 
 (* 2. Per-theory PFTs.
-   EXPECT records are debug-only and downstream tools (merge/rename/
-   replay/transcode) don't handle opcode 0xEF, so turn them off. *)
+   EXPECT records are debug-only and downstream tools (merge/replay/transcode)
+   don't handle opcode 0xEF, so turn them off. *)
 val () = PFTEmit.emit_expect := false
 (*
 val () = PFTEmit.emit_expect := true

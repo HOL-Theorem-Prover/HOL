@@ -4,8 +4,8 @@ signature PFTEmit = sig
 
   (* When true, emit debug EXPECT records (opcode 0xEF) after each derived
      theorem, carrying its expected hypothesis term-ids and conclusion
-     term-id. Downstream tools that do not understand EXPECT (merge, rename,
-     replay, transcode) will reject input files that contain them. *)
+     term-id. Downstream tools that do not understand EXPECT (merge, replay,
+     transcode) will reject input files that contain them. *)
   val emit_expect : bool ref
 
   (* Convert a single theory's internal proof trace (.tr.gz) to PFT format.
