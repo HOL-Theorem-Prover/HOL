@@ -242,3 +242,17 @@ val _ = require_msg
    a perfectly valid export (as a theorem with suspendlabel hypotheses);
    export_theory no longer fails on unfinalised suspensions. *)
 val incomplete_th = Feedback.quiet_messages save_thm("incomplete_th", pq_th1)
+
+(* UNABBREV_TAC on a name with no matching abbrev assumption used to fail
+   inside FIRST_ASSUM with an empty error message; it should now report a
+   clear UNABBREV_TAC error mentioning the missing abbreviation. (#1483) *)
+val _ = tprint "UNABBREV_TAC missing abbrev gives clear error"
+val _ = shouldfail {
+  checkexn = check_HOL_ERRexn
+               (fn (_, fnnm, msg) =>
+                   fnnm = "UNABBREV_TAC" andalso
+                   String.isSubstring "MISSING_ABBR" msg),
+  printarg = K "UNABBREV_TAC \"MISSING_ABBR\" with no such abbrev",
+  printresult = goals_print,
+  testfn = (fn g => testtac (UNABBREV_TAC "MISSING_ABBR") g)
+} ([“(P:'a -> bool) x”], “(Q:'a -> bool) x”)
