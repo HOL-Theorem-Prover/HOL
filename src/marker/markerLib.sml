@@ -247,10 +247,13 @@ in
   CONV_TAC (K unbeta_goal) THEN MAP_EVERY ABB' (safe_inst_sort tminst)
 end gl;
 
-fun UNABBREV_TAC s =
+fun UNABBREV_TAC s gl =
  FIRST_X_ASSUM(SUBST_ALL_TAC o
                assert(equal s o fst o dest_var o lhs o concl) o
-               DeAbbrev);
+               DeAbbrev) gl
+ handle HOL_ERR _ =>
+   raise ERR "UNABBREV_TAC"
+         ("No assumption of the form `Abbrev (" ^ s ^ " = ...)`");
 
 val UNABBREV_ALL_TAC =
  let fun ttac th0 =
