@@ -89,6 +89,7 @@ structure STBSTab = Table(struct
   val ord = pair_compare(pair_compare(ST_compare, bool_compare), ST_compare)
   fun pp _ = HOLPP.add_string "<stbs-key>"
 end)
+type 'a stbstab = 'a STBSTab.table
 
 structure RElist_Tab = Table(struct
   type key = rule_element list

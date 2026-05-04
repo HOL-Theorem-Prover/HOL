@@ -18,6 +18,7 @@ structure Idtab = Table(
   val ord = id_compare
   fun pp ({Thy, Other} : id) = HOLPP.add_string (Thy ^ "$" ^ Other)
 )
+type 'a idtab = 'a Idtab.table
 
 type 'a sexppr = 'a -> HOLsexp.t
 
@@ -28,7 +29,7 @@ type 'a sexppr = 'a -> HOLsexp.t
 type stringtable =
      {size : int, map : int Symtab.table, list : string list}
 type idtable = {idsize : int,
-                idmap : int Idtab.table,
+                idmap : int idtab,
                 idlist : (int * int) list}
 
 val empty_strtable : stringtable =

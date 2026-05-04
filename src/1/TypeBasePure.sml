@@ -632,13 +632,6 @@ fun next_ty ty = mk_vartype(Lexis.tyvar_vary (dest_vartype ty))
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
-local
-  structure Typetab = Table(struct
-    type key = Type.hol_type
-    val ord = Type.compare
-    fun pp _ = HOLPP.add_string "<type>"
-  end)
-in
 fun normalise_ty ty = let
   fun recurse (acc as (dict,usethis)) tylist =
       case tylist of
@@ -664,7 +657,6 @@ fun normalise_ty ty = let
 in
   Type.type_subst inst ty
 end
-end (* local *)
 
 fun prim_get (db:typeBase) (thy,tyop) =
     case Type.op_arity {Thy = thy, Tyop = tyop} of

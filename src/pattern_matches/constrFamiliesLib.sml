@@ -55,13 +55,6 @@ fun list_mk_comb_subst (c, args) = (case args of
 
 fun next_ty ty = mk_vartype(Lexis.tyvar_vary (dest_vartype ty));
 
-local
-  structure Typetab = Table(struct
-    type key = hol_type
-    val ord = Type.compare
-    fun pp _ = HOLPP.add_string "<type>"
-  end)
-in
 fun normalise_ty ty = let
   fun recurse (acc as (dict,usethis)) tylist =
       case tylist of
@@ -87,7 +80,6 @@ fun normalise_ty ty = let
 in
   Type.type_subst inst ty
 end
-end (* local *)
 
 
 fun base_ty ty = let

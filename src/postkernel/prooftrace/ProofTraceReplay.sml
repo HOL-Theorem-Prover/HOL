@@ -67,7 +67,7 @@ fun thyname_from_path path =
 
 fun replay path =
   let val thyname = thyname_from_path path in
-  if inDomain(!trDB, thyname)
+  if Symtab.defined (!trDB) thyname
   then msg_print("skip ")
   else
 let

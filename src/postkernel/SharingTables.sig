@@ -8,12 +8,15 @@ sig
   type thminfo = DB_dtype.thminfo
   datatype raw_term = datatype RawTheory_dtype.raw_term
 
-  structure Idtab : TABLE where type Key.key = id
+  type 'a idtab  (* abstract; backed by a local Table instantiation
+                    keyed on `id` -- not exposed as a structure to
+                    avoid leaking the TABLE signature, which trips
+                    mosml on case-insensitive filesystems *)
 
   type stringtable =
        {size : int, map : int Symtab.table, list : string list}
   type idtable = {idsize : int,
-                  idmap : int Idtab.table,
+                  idmap : int idtab,
                   idlist : (int * int) list}
   type typetable = {tysize : int,
                     tymap : int Typetab.table,

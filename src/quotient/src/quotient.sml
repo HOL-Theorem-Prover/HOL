@@ -130,12 +130,6 @@ val _ = register_btrace("quotient", chatting);
 val caching = ref true; (* should be pure efficiency gain *)
 
 
-structure Typetab = Table(struct
-  type key = hol_type
-  val ord = Type.compare
-  fun pp _ = HOLPP.add_string "<type>"
-end)
-
 val quotient_cache : thm Typetab.table ref = ref Typetab.empty;
 
 val hits = ref 0;
