@@ -29,6 +29,21 @@ quantification, then RESQ_SPEC behaves like SPEC.
 Fails if the theorem's conclusion is not restricted universally
 quantified, or if type instantiation fails.
 
+### Example
+
+The following example shows how `RESQ_SPEC` renames bound variables if
+necessary, prior to substitution: a straightforward substitution would
+result in the clearly invalid theorem `(\y. 0 < y) y |- y = y`.
+
+``` hol4
+   > val th = RESQ_GEN ``x:num`` ``\y. 0 < y`` (REFL ``x:num``);
+   val th = |- !x :: \y. 0 < y. x = x : thm
+
+   > RESQ_SPEC ``y:num`` th;
+   val it = (\y'. 0 < y') y |- y = y : thm
+```
+
 ### See also
 
-[`res_quanLib.RESQ_HALF_SPECL`](#res_quanLib.RESQ_HALF_SPECL)
+[`res_quanLib.RESQ_HALF_SPECL`](#res_quanLib.RESQ_HALF_SPECL),
+[`res_quanLib.RESQ_SPECL`](#res_quanLib.RESQ_SPECL)

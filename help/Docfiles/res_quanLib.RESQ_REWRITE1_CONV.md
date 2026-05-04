@@ -41,4 +41,9 @@ no match is found or the theorem cannot be instantiated.
 ### See also
 
 [`res_quanLib.RESQ_REWRITE1_TAC`](#res_quanLib.RESQ_REWRITE1_TAC),
-[`res_quanLib.RESQ_REWR_CONV`](#res_quanLib.RESQ_REWR_CONV)
+[`res_quanLib.RESQ_REWR_CANON`](#res_quanLib.RESQ_REWR_CANON),
+[`Cond_rewrite.COND_REWR_TAC`](#Cond_rewrite.COND_REWR_TAC),
+[`Cond_rewrite.COND_REWRITE1_CONV`](#Cond_rewrite.COND_REWRITE1_CONV),
+[`Cond_rewrite.COND_REWR_CONV`](#Cond_rewrite.COND_REWR_CONV),
+[`Cond_rewrite.COND_REWR_CANON`](#Cond_rewrite.COND_REWR_CANON),
+[`Cond_rewrite.search_top_down`](#Cond_rewrite.search_top_down)

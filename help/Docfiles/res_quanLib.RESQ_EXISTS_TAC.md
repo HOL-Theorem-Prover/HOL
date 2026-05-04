@@ -1,7 +1,7 @@
 ## `RESQ_EXISTS_TAC`
 
 ``` hol4
-res_quanTools.RESQ_EXISTS_TAC : term -> tactic
+res_quanLib.RESQ_EXISTS_TAC : term -> tactic
 ```
 
 ------------------------------------------------------------------------

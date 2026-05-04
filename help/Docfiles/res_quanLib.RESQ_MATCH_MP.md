@@ -1,7 +1,7 @@
 ## `RESQ_MATCH_MP`
 
 ``` hol4
-res_quanTools.RESQ_MATCH_MP : (thm -> thm -> thm)
+res_quanLib.RESQ_MATCH_MP : (thm -> thm -> thm)
 ```
 
 ------------------------------------------------------------------------
@@ -31,4 +31,4 @@ variables which are free in `A1`, the first theorem's assumption list.
 ### See also
 
 [`Drule.MATCH_MP`](#Drule.MATCH_MP),
-[`res_quanTools.RESQ_HALF_SPEC`](#res_quanTools.RESQ_HALF_SPEC)
+[`res_quanLib.RESQ_HALF_SPEC`](#res_quanLib.RESQ_HALF_SPEC)

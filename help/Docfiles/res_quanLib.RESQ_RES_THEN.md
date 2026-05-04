@@ -1,7 +1,7 @@
 ## `RESQ_RES_THEN`
 
 ``` hol4
-res_quanTools.RESQ_RES_THEN : thm_tactic -> tactic
+res_quanLib.RESQ_RES_THEN : thm_tactic -> tactic
 ```
 
 ------------------------------------------------------------------------
@@ -34,9 +34,9 @@ universal quantifications in the assumptions, or if the theorem-tactic
 
 ### See also
 
-[`res_quanTools.RESQ_IMP_RES_TAC`](#res_quanTools.RESQ_IMP_RES_TAC),
-[`res_quanTools.RESQ_IMP_RES_THEN`](#res_quanTools.RESQ_IMP_RES_THEN),
-[`res_quanTools.RESQ_RES_TAC`](#res_quanTools.RESQ_RES_TAC),
+[`res_quanLib.RESQ_IMP_RES_TAC`](#res_quanLib.RESQ_IMP_RES_TAC),
+[`res_quanLib.RESQ_IMP_RES_THEN`](#res_quanLib.RESQ_IMP_RES_THEN),
+[`res_quanLib.RESQ_RES_TAC`](#res_quanLib.RESQ_RES_TAC),
 [`Thm_cont.IMP_RES_THEN`](#Thm_cont.IMP_RES_THEN),
 [`Tactic.IMP_RES_TAC`](#Tactic.IMP_RES_TAC),
 [`Drule.MATCH_MP`](#Drule.MATCH_MP),
