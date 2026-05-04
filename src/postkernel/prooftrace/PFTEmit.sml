@@ -2509,38 +2509,71 @@ fun emit_theory {trace, output, binary, ruleset} = let
      emit_abs.  Distinguishes COMB from ABS by checking comb_ht: all COMBs
      (heap and synthesised) are registered there; ABSs never are. *)
   and pft_subst_tm old_id new_id tm_id =
-    if tm_id = old_id then new_id
-    else let val f = tm_part1_of tm_id
-    in if f < 0 then tm_id (* VAR or CONST — no children *)
-       else let val x = tm_part2_of tm_id
-                val f' = pft_subst_tm old_id new_id f
-                val x' = pft_subst_tm old_id new_id x
-            in if f' = f andalso x' = x then tm_id
-               else case IntPairTable.lookup comb_ht (f, x) of
-                      SOME _ => emit_comb f' x'
-                    | NONE   => emit_abs f' x'
-            end
-    end
+    let
+      (* Local memo for this substitution only.  old_id and new_id are fixed
+         throughout the call, so tm_id alone is a complete key.  PFT terms are
+         DAGs; without memoization, shared subterms can be revisited
+         catastrophically even though emit_comb/emit_abs hash-cons the rebuilt
+         result.  The table is discarded when this substitution finishes, so
+         memory is bounded by the number of distinct reachable PFT nodes. *)
+      val memo : int PIntMap.t ref = ref PIntMap.empty
+      fun go t =
+        case (SOME (PIntMap.find t (!memo)) handle PIntMap.NotFound => NONE) of
+          SOME r => r
+        | NONE => let
+            val r =
+              if t = old_id then new_id
+              else let val f = tm_part1_of t
+              in if f < 0 then t (* VAR or CONST — no children *)
+                 else let val x = tm_part2_of t
+                          val f' = go f
+                          val x' = go x
+                      in if f' = f andalso x' = x then t
+                         else case IntPairTable.lookup comb_ht (f, x) of
+                                SOME _ => emit_comb f' x'
+                              | NONE   => emit_abs f' x'
+                      end
+              end
+            val () = memo := PIntMap.add t r (!memo)
+          in r end
+    in go tm_id end
 
   (* Like pft_subst_tm but only substitutes free occurrences of old_id.
      Tracks shadowing when entering ABS nodes. *)
   and pft_rename_free old_id new_id tm_id = let
+    (* Local memos for this rename only.  The result depends on tm_id and on
+       whether old_id is shadowed by an enclosing binder, so keep separate
+       tables for the two states.  The tables are discarded after the call. *)
+    val memo_free : int PIntMap.t ref = ref PIntMap.empty
+    val memo_shadowed : int PIntMap.t ref = ref PIntMap.empty
+    fun lookup shadowed t =
+      (SOME (PIntMap.find t (!(if shadowed then memo_shadowed else memo_free))))
+      handle PIntMap.NotFound => NONE
+    fun insert_m shadowed t r =
+      if shadowed then memo_shadowed := PIntMap.add t r (!memo_shadowed)
+      else memo_free := PIntMap.add t r (!memo_free)
     fun go shadowed t =
-      if t = old_id then (if shadowed then t else new_id)
-      else let val f = tm_part1_of t
-      in if f < 0 then t (* VAR or CONST *)
-         else let val x = tm_part2_of t
-         in if isSome (IntPairTable.lookup comb_ht (f, x)) then
-              (* COMB: recurse into both children *)
-              let val f' = go shadowed f
-                  val x' = go shadowed x
-              in if f' = f andalso x' = x then t else emit_comb f' x' end
-            else
-              (* ABS: binder is f, body is x; shadow if binder = old_id *)
-              let val x' = go (shadowed orelse f = old_id) x
-              in if x' = x then t else emit_abs f x' end
-         end
-      end
+      case lookup shadowed t of
+        SOME r => r
+      | NONE => let
+          val r =
+            if t = old_id then (if shadowed then t else new_id)
+            else let val f = tm_part1_of t
+            in if f < 0 then t (* VAR or CONST *)
+               else let val x = tm_part2_of t
+               in if isSome (IntPairTable.lookup comb_ht (f, x)) then
+                    (* COMB: recurse into both children *)
+                    let val f' = go shadowed f
+                        val x' = go shadowed x
+                    in if f' = f andalso x' = x then t else emit_comb f' x' end
+                  else
+                    (* ABS: binder is f, body is x; shadow if binder = old_id *)
+                    let val x' = go (shadowed orelse f = old_id) x
+                    in if x' = x then t else emit_abs f x' end
+               end
+            end
+          val () = insert_m shadowed t r
+        in r end
   in go false tm_id end
 
   (* ======================================================================= *)

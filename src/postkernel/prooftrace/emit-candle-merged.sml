@@ -51,7 +51,7 @@ val after_cv_theories = [
   "mllist", "mlmap", "mloption", "mlset", "mlstring", "cfFFIType",
   "ffi", "mlint", "jsonLang", "mlrat", "mlsexp", "displayLang", "mlvector",
   "export", "export_ag32", "export_arm7", "export_arm8", "export_mips",
-  "export_riscv", "export_x64", "mlprettyprinter", "namespace"(* , "ast",
+  "export_riscv", "export_x64", "mlprettyprinter", "namespace", "ast"(*,
   "asm", "asmSem", "asmProps", "arm", "arm_step", "arm7_target", "arm8",
   "arm8_step", "arm8_target", "ag32_target", "crepLang", "crep_arith",
   "crep_inline", "flatLang", "flat_elim", "fpSem", "closLang", "bvi",
