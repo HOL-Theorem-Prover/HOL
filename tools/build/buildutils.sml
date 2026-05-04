@@ -751,6 +751,63 @@ handle OS.SysErr(s, erropt) =>
             (case erropt of SOME s' => OS.errorMsg s' | _ => ""))
      | BuildExit => ()
 
+val theorygraph_dir = fullPath [HOLDIR, "help", "theorygraph"]
+
+(* Scan sigobj/ for the production theories — anything matching *Theory.sig
+   except "FinalTheory.sig" and *_emitTheory.sig.  Mirrors the filter used
+   by the old DOT script. *)
+fun list_sigobj_theories () =
+  let
+    val sigobj = fullPath [HOLDIR, "sigobj"]
+    val ds = HOLFileSys.openDir sigobj
+    fun close () = HOLFileSys.closeDir ds
+    fun thy_of f =
+        if String.isSuffix "Theory.sig" f then
+          let val base = String.substring (f, 0, size f - 10)
+          in
+            if base = "" orelse base = "Final" orelse
+               String.isSuffix "_emit" base
+            then NONE
+            else SOME base
+          end
+        else NONE
+    fun loop acc =
+        case HOLFileSys.readDir ds of
+            NONE => acc
+          | SOME f => loop (case thy_of f of SOME b => b :: acc | NONE => acc)
+  in
+    loop [] before close ()
+    handle e => (close (); raise e)
+  end
+
+fun write_theorygraph_html () =
+  let
+    val ostrm = HOLFileSys.openOut (theorygraph_dir ++ "theories.html")
+    fun out s = HOLFileSys.output (ostrm, s)
+  in
+    out "<!DOCTYPE html>\n\
+        \<html lang=\"en\">\n\
+        \<head>\n\
+        \<meta charset=\"utf-8\">\n\
+        \<meta name=\"viewport\" \
+             \content=\"width=device-width, initial-scale=1\">\n\
+        \<title>HOL Theory Hierarchy</title>\n\
+        \<style>\n\
+        \  body { font-family: system-ui, -apple-system, sans-serif;\n\
+        \         color: #1f2328; margin: 1.5rem; }\n\
+        \  h1 { font-size: 1.5rem; }\n\
+        \  object { display: block; max-width: 100%; }\n\
+        \</style>\n\
+        \</head>\n\
+        \<body>\n\
+        \<h1>HOL Theory Hierarchy (clickable)</h1>\n\
+        \<object data=\"theories.svg\" type=\"image/svg+xml\">\
+                \HOL Theory Map</object>\n\
+        \</body>\n\
+        \</html>\n";
+    HOLFileSys.closeOut ostrm
+  end
+
 fun write_theory_graph () =
   case Systeml.DOT_PATH of
       SOME dotexec =>
@@ -770,15 +827,24 @@ fun write_theory_graph () =
               \message from appearing again)\n")
       else
         let
-          val _ = print "Generating theory-graph and HTML theory signatures; \
-                        \this may take a while\n"
+          val _ = print "Generating theory-graph; this may take a while\n"
           val _ = print "  (Use build's --nograph option to skip this step.)\n"
-          val pfp = Systeml.protect o fullPath
-          val result =
-              OS.Process.system(pfp [HOLDIR, "bin", "hol"] ^ " < " ^
-                                pfp [HOLDIR, "help", "src-sml", "DOT"])
+          val theorytool =
+              fullPath [HOLDIR, "src", "portableML", "rawtheory", "theorytool"]
+          val svgfile = theorygraph_dir ++ "theories.svg"
+          val protect = Systeml.protect
+          val thys = List.map protect (list_sigobj_theories ())
+          val cmd =
+              String.concatWith " " (
+                ["cd", protect HOLDIR, "&&",
+                 protect theorytool, "--quiet", "--thygraph",
+                 "--url-base=" ^ protect theorygraph_dir] @
+                thys @
+                ["|", protect dotexec, "-Tsvg", "-o", protect svgfile]
+              )
+          val result = OS.Process.system cmd
         in
-          if OS.Process.isSuccess result then ()
+          if OS.Process.isSuccess result then write_theorygraph_html ()
           else warn "Theory graph construction failed.\n"
         end
     | NONE => warn "If you had a copy of the dot tool installed, I might try\n\

@@ -5,20 +5,24 @@ datatype action = ShowKeys
 datatype conf_record = CR of {
   action : action,
   help : bool,
-  quiet : bool
+  quiet : bool,
+  url_base : string option
 }
 
 val init_conf =
-  CR {action = ShowKeys, help = false, quiet = false}
+  CR {action = ShowKeys, help = false, quiet = false, url_base = NONE}
 
-fun set_action a (CR {help, quiet, ...}) =
-  CR {action = a, help = help, quiet = quiet}
+fun set_action a (CR {help, quiet, url_base, ...}) =
+  CR {action = a, help = help, quiet = quiet, url_base = url_base}
 
-fun set_help () (CR {action, quiet, ...}) =
-  CR {action = action, help = true, quiet = quiet}
+fun set_help () (CR {action, quiet, url_base, ...}) =
+  CR {action = action, help = true, quiet = quiet, url_base = url_base}
 
-fun set_quiet () (CR {action, help, ...}) =
-  CR {action = action, help = help, quiet = true}
+fun set_quiet () (CR {action, help, url_base, ...}) =
+  CR {action = action, help = help, quiet = true, url_base = url_base}
+
+fun set_url_base s (CR {action, help, quiet, ...}) =
+  CR {action = action, help = help, quiet = quiet, url_base = SOME s}
 
 val cline_options = [
   {short = "t", long = ["thygraph"],
@@ -27,6 +31,10 @@ val cline_options = [
   {short = "u", long = ["unused"],
    desc = GetOpt.NoArg (fn () => set_action ShowUnused),
    help = "Scan and report unused theorems"},
+  {short = "b", long = ["url-base"],
+   desc = GetOpt.ReqArg (set_url_base, "dir"),
+   help = "For --thygraph: emit per-node URLs as relative paths\n\
+          \from dir to each theory's .hol/docs/<thy>Theory.html"},
   {short = "q", long = ["quiet"],
    desc = GetOpt.NoArg set_quiet,
    help = "Suppress file scanning output"},
@@ -35,10 +43,14 @@ val cline_options = [
    help = "Show this message"}
 ]
 
-fun pp_dot_file (dom : string list, pairs : (string * string) list) =
+fun pp_dot_file thy_url (dom : string list, pairs : (string * string) list) =
     let
       open TextIO
       fun pr s = output(stdOut, s)
+      fun pp_node s =
+          case thy_url s of
+              NONE => pr ("  " ^ s ^ "\n")
+            | SOME u => pr ("  " ^ s ^ " [URL=\"" ^ u ^ "\"]\n")
     in
       pr "digraph G {\n";
       pr "  splines = ortho\n";
@@ -50,21 +62,38 @@ fun pp_dot_file (dom : string list, pairs : (string * string) list) =
       pr "  node [target=_parent shape=box3d margin=0.2 style=filled \
          \fillcolor=white fontcolor=darkgreen fontsize=30 fontname=Arial]\n";
       pr "  edge [arrowhead=dot]\n\n";
-      List.app
-        (fn s => pr ("  " ^ s ^ " [URL=\"" ^ s ^ "Theory.html\"]\n"))
-        dom;
+      List.app pp_node dom;
       pr "\n";
       List.app (fn (x,y) => pr ("  " ^ x ^ " -> " ^ y ^ "\n")) pairs;
       pr "}\n"
     end
 
-fun do_thygraph files (g, links) =
+(* Given an absolute base directory and an absolute target file, emit a
+   relative URL.  Falls back to the bare filename if the relativization
+   fails. *)
+fun relativize {base, target} =
+    OS.Path.mkRelative {path = target, relativeTo = base}
+      handle OS.Path.Path =>
+             #file (OS.Path.splitDirFile target)
+
+fun absolutize p =
+    if OS.Path.isAbsolute p then p
+    else OS.Path.mkAbsolute {path = p, relativeTo = OS.FileSys.getDir()}
+
+fun do_thygraph url_base files (g, links) =
     let
       open theorystats
       val parent_map = List.foldl (fn ((key, parents), acc) =>
           let val thy = #thy (#1 key)
               val ps = List.map #thy parents
           in Redblackmap.insert(acc, thy, ps) end)
+          (Redblackmap.mkDict String.compare) links
+
+      (* thy -> source directory (where its Script.sml / .hol/docs live) *)
+      val dir_map = List.foldl (fn ((key, _), acc) =>
+          let val thy = #thy (#1 key)
+              val dir = #2 key
+          in Redblackmap.insert(acc, thy, dir) end)
           (Redblackmap.mkDict String.compare) links
 
       val all_known_thys =
@@ -89,8 +118,28 @@ fun do_thygraph files (g, links) =
       val initial_visited = Redblackset.empty String.compare
       val (all_nodes_set, edges) = get_ancs target_thys initial_visited []
       val dom = Redblackset.listItems all_nodes_set
+
+      val thy_url : string -> string option =
+          case url_base of
+              NONE => (fn s => SOME (s ^ "Theory.html"))
+            | SOME base =>
+              let
+                val absbase = absolutize base
+              in
+                fn thy =>
+                  case Redblackmap.peek(dir_map, thy) of
+                      NONE => NONE
+                    | SOME thydir =>
+                      SOME (relativize {
+                              base = absbase,
+                              target = OS.Path.concat(
+                                absolutize thydir,
+                                ".hol/docs/" ^ thy ^ "Theory.html"
+                              )
+                            })
+              end
     in
-      pp_dot_file (dom, edges)
+      pp_dot_file thy_url (dom, edges)
     end
 
 fun warn s = (TextIO.output(TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
@@ -105,7 +154,7 @@ fun main() =
                        options = cline_options,
                        errFn = fn s => theorystats.die (s ^ "\n" ^ uinfo)}
                       (CommandLine.arguments())
-    val CR {action, help, quiet} =
+    val CR {action, help, quiet, url_base} =
         List.foldl (fn (f, acc) => f acc) init_conf cline_upds
   in
     if help then (
@@ -159,7 +208,7 @@ fun main() =
                     RawTheorykey.pp)
                    (TheoryGraph.keys g)
         )
-      | ShowThyGraph => do_thygraph files (g, links)
+      | ShowThyGraph => do_thygraph url_base files (g, links)
       | ShowUnused =>
         let
           val theories =

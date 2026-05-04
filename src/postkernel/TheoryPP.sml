@@ -15,7 +15,7 @@ type shared_readmaps = {strings : int -> string, terms : string -> Term.term}
 type thminfo = DB_dtype.thminfo
 type sig_info_record = {
   name        : string,
-  parents     : string list,
+  parents     : {name : string, url : string} list,
   all_thms    : (string * thm * thminfo) list
 }
 type struct_info_record = {
@@ -106,59 +106,165 @@ fun classify As Ds Ts [] = (As,Ds,Ts)
         | Thm => classify As Ds (r::Ts) rest
     end
 
-fun pp_doc pp_thm info_record = let
-  open PP
+fun html_escape s =
+    let
+      fun esc #"<" = "&lt;"
+        | esc #">" = "&gt;"
+        | esc #"&" = "&amp;"
+        | esc #"\"" = "&quot;"
+        | esc c = String.str c
+    in
+      String.translate esc s
+    end
+
+fun print_doc_html pp_thm info_record ostrm = let
   val {name,parents,all_thms} = info_record
-  val parents'     = sort parents
+  val parents' =
+      Lib.sort (fn p1 : {name:string,url:string} => fn p2 => #name p1 <= #name p2)
+               parents
   val rm_temp      = List.filter (fn (s, _, _) => not (is_temp_binding s))
   val all_thms'    = rm_temp all_thms
   val (axioms,definitions,theorems) = classify [] [] [] all_thms'
   val axioms'      = psort axioms
   val definitions' = psort definitions
   val theorems'    = psort theorems
-  fun vblock(header, ob_pr, obs) =
-    block CONSISTENT 2 [
-      add_string ("(*  "^header^ "  *)"), NL,
-      block CONSISTENT 0 (pr_list ob_pr [NL] obs)
-    ]
-  fun pparent s = String.concat ["structure ",Thry s," : ",ThrySig s]
-  val parentstring = "Parent theory of "^Lib.quote name
-  fun pr_parent s = block CONSISTENT 0 [
-                     add_string (String.concat ["[", s, "]"]),
-                     add_break(1,0),
-                     add_string parentstring]
-  fun pr_parents [] = []
-    | pr_parents slist =
-        [block CONSISTENT 0 (pr_list pr_parent [NL, NL] slist), NL, NL]
-
-  fun pr_thm class (s,th) =
-     block CONSISTENT 3 [
-       add_string (String.concat ["[", s, "]"]),
-       add_string ("  "^class), NL, NL,
-       if null (Thm.hyp th) andalso
-          (Tag.isEmpty (Thm.tag th) orelse Tag.isDisk (Thm.tag th))
-       then pp_thm th
-       else
-         with_flag(Globals.show_tags,true)
-                  (with_flag(Globals.show_assums, true) pp_thm) th
-     ]
-      handle e => (print ("Failed to print theorem in theory export: "^s^"\n");
-                   print (General.exnMessage e ^ "\n");
-                   raise e)
-  fun pr_thms _ [] = []
-    | pr_thms heading plist =
-       [block CONSISTENT 0 (pr_list (pr_thm heading) [NL,NL] plist), NL, NL]
-
   val filter_visible =
       List.mapPartial (fn (s, th, {private=false,...}:thminfo) => SOME (s,th)
                       |            _                 => NONE)
+  val axioms''      = filter_visible axioms'
+  val definitions'' = filter_visible definitions'
+  val theorems''    = filter_visible theorems'
+  fun out s = TextIO.output (ostrm, s)
+  fun pp_to_stream th =
+      let
+        val pretty =
+            if null (Thm.hyp th) andalso
+               (Tag.isEmpty (Thm.tag th) orelse Tag.isDisk (Thm.tag th))
+            then pp_thm th
+            else
+              with_flag (Globals.show_tags, true)
+                        (with_flag (Globals.show_assums, true) pp_thm) th
+      in
+        PP.prettyPrint (out o html_escape, 75) pretty
+      end
+  fun pr_thm (s, th) =
+      let val esc = html_escape s in
+        out "<div class=\"thm\" id=\""; out esc; out "\">\n";
+        out "<div class=\"thm-name\"><a class=\"anchor\" href=\"#";
+        out esc; out "\" aria-hidden=\"true\">#</a><code>";
+        out esc; out "</code></div>\n";
+        out "<pre>";
+        pp_to_stream th
+          handle e =>
+            (TextIO.print
+               ("Failed to print theorem in theory export: " ^ s ^ "\n");
+             TextIO.print (General.exnMessage e ^ "\n");
+             raise e);
+        out "</pre>\n</div>\n"
+      end
+  fun pr_thm_section _ [] = ()
+    | pr_thm_section heading plist =
+        (out "<section>\n<h2>"; out heading; out "</h2>\n";
+         List.app pr_thm plist;
+         out "</section>\n")
+  fun pr_parent ({name=pname, url} : {name:string,url:string}) =
+      (out "<li><a href=\""; out (html_escape url); out "\">";
+       out (html_escape pname); out "</a></li>\n")
 in
-  block CONSISTENT 3 (
-    pr_parents parents' @
-    pr_thms "Axiom" (filter_visible axioms') @
-    pr_thms "Definition" (filter_visible definitions') @
-    pr_thms "Theorem" (filter_visible theorems')
-  )
+  out "<!DOCTYPE html>\n\
+      \<html lang=\"en\">\n\
+      \<head>\n\
+      \<meta charset=\"UTF-8\">\n\
+      \<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
+      \<title>Theory: ";
+  out (html_escape name);
+  out "</title>\n\
+      \<style>\n\
+      \  :root {\n\
+      \    --bg: #ffffff;\n\
+      \    --fg: #1f2328;\n\
+      \    --muted: #57606a;\n\
+      \    --accent: #0969da;\n\
+      \    --pre-bg: #f6f8fa;\n\
+      \    --pre-border: #d0d7de;\n\
+      \    --rule: #d8dee4;\n\
+      \  }\n\
+      \  html { background: var(--bg); }\n\
+      \  body {\n\
+      \    font-family: system-ui, -apple-system, \"Segoe UI\", Roboto,\n\
+      \                 \"Helvetica Neue\", Arial, sans-serif;\n\
+      \    color: var(--fg);\n\
+      \    line-height: 1.55;\n\
+      \    max-width: 60rem;\n\
+      \    margin: 2rem auto;\n\
+      \    padding: 0 1.25rem 3rem;\n\
+      \  }\n\
+      \  h1 { font-size: 1.9rem; margin: 0 0 1.25rem; }\n\
+      \  h1 .thy-prefix { color: var(--muted); font-weight: 400; }\n\
+      \  h2 {\n\
+      \    font-size: 1.25rem;\n\
+      \    margin: 2rem 0 0.75rem;\n\
+      \    padding-bottom: 0.3rem;\n\
+      \    border-bottom: 1px solid var(--rule);\n\
+      \  }\n\
+      \  ul.parents { list-style: none; padding: 0; margin: 0 0 1rem; }\n\
+      \  ul.parents li { display: inline-block; margin: 0 0.5rem 0.4rem 0; }\n\
+      \  ul.parents a {\n\
+      \    background: var(--pre-bg);\n\
+      \    border: 1px solid var(--pre-border);\n\
+      \    border-radius: 999px;\n\
+      \    padding: 0.15rem 0.7rem;\n\
+      \    text-decoration: none;\n\
+      \    color: var(--accent);\n\
+      \    font-size: 0.92rem;\n\
+      \  }\n\
+      \  ul.parents a:hover { background: #eaeef2; }\n\
+      \  .thm { margin: 1.1rem 0; }\n\
+      \  .thm-name {\n\
+      \    font-size: 1rem;\n\
+      \    font-weight: 600;\n\
+      \    margin-bottom: 0.25rem;\n\
+      \  }\n\
+      \  .thm-name code {\n\
+      \    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n\
+      \    font-size: 0.95rem;\n\
+      \  }\n\
+      \  .anchor {\n\
+      \    color: var(--muted);\n\
+      \    text-decoration: none;\n\
+      \    margin-right: 0.4rem;\n\
+      \    opacity: 0;\n\
+      \    transition: opacity 0.1s;\n\
+      \  }\n\
+      \  .thm:hover .anchor, .thm:focus-within .anchor { opacity: 1; }\n\
+      \  .thm:target { background: #fff8c5; border-radius: 6px; }\n\
+      \  pre {\n\
+      \    background: var(--pre-bg);\n\
+      \    border: 1px solid var(--pre-border);\n\
+      \    border-left: 3px solid var(--accent);\n\
+      \    border-radius: 6px;\n\
+      \    padding: 0.65rem 0.9rem;\n\
+      \    margin: 0;\n\
+      \    overflow-x: auto;\n\
+      \    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n\
+      \    font-size: 0.92rem;\n\
+      \    line-height: 1.5;\n\
+      \  }\n\
+      \</style>\n\
+      \</head>\n\
+      \<body>\n\
+      \<h1><span class=\"thy-prefix\">Theory</span> ";
+  out (html_escape name);
+  out "</h1>\n";
+  (case parents' of
+       [] => ()
+     | _ => (out "<h2>Parents</h2>\n<ul class=\"parents\">\n";
+             List.app pr_parent parents';
+             out "</ul>\n"));
+  pr_thm_section "Axioms" axioms'';
+  pr_thm_section "Definitions" definitions'';
+  pr_thm_section "Theorems" theorems'';
+  out "</body>\n</html>\n"
 end
 
 fun pp_sig info_record = let
