@@ -13,7 +13,7 @@
            val spaces = CharVector.tabulate(f2i indent, fn _ => #" ")
            open PolyML
        in
-           PP.prettyPrint(TextIO.print, 70-f2i indent)
+           PP.prettyPrint(!scriptPrint, 70-f2i indent)
             (PrettyBlock(indent,true,[],[PrettyString (spaces ^ nm^" :"), PrettyBreak(1,2), typ_p]))
        end
 >>__ val printNameAndType = printNameAndType0 false
