@@ -188,10 +188,14 @@ fun remove_pid pid running =
           else go ((p,n)::acc) rest
   in go [] running end
 
+fun already_exists binfile =
+  (PFTReader.read_limits {binary=true, file=binfile}; true)
+  handle Fail _ => false | OS.SysErr _ => false
+
 fun run_emit_all max_jobs =
   let
     val exe = CommandLine.name ()
-    val todo = List.filter (fn j => not (OS.FileSys.access(job_output j, []))) jobs
+    val todo = List.filter (fn j => not (already_exists (job_output j))) jobs
     val () = PFTEmit.emit_expect := false
     val parallelism = Int.max(1, max_jobs)
     val total = length todo
