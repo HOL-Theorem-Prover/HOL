@@ -1,7 +1,7 @@
 ## `RESQ_IMP_RES_TAC`
 
 ``` hol4
-res_quanTools.RESQ_IMP_RES_TAC : thm_tactic
+res_quanLib.RESQ_IMP_RES_TAC : thm_tactic
 ```
 
 ------------------------------------------------------------------------
@@ -24,9 +24,9 @@ Never fails
 
 ### See also
 
-[`res_quanTools.RESQ_IMP_RES_THEN`](#res_quanTools.RESQ_IMP_RES_THEN),
-[`res_quanTools.RESQ_RES_THEN`](#res_quanTools.RESQ_RES_THEN),
-[`res_quanTools.RESQ_RES_TAC`](#res_quanTools.RESQ_RES_TAC),
+[`res_quanLib.RESQ_IMP_RES_THEN`](#res_quanLib.RESQ_IMP_RES_THEN),
+[`res_quanLib.RESQ_RES_THEN`](#res_quanLib.RESQ_RES_THEN),
+[`res_quanLib.RESQ_RES_TAC`](#res_quanLib.RESQ_RES_TAC),
 [`Thm_cont.IMP_RES_THEN`](#Thm_cont.IMP_RES_THEN),
 [`Tactic.IMP_RES_TAC`](#Tactic.IMP_RES_TAC),
 [`Drule.MATCH_MP`](#Drule.MATCH_MP),

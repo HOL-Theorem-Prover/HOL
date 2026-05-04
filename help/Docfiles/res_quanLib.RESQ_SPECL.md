@@ -1,7 +1,7 @@
 ## `RESQ_SPECL`
 
 ``` hol4
-res_quanTools.RESQ_SPECL : (term list -> thm -> thm)
+res_quanLib.RESQ_SPECL : (term list -> thm -> thm)
 ```
 
 ------------------------------------------------------------------------
@@ -38,5 +38,5 @@ quantified variable in the original theorem fails.
 
 ### See also
 
-[`res_quanTools.RESQ_GEN_TAC`](#res_quanTools.RESQ_GEN_TAC),
-[`res_quanTools.RESQ_SPEC`](#res_quanTools.RESQ_SPEC)
+[`res_quanLib.RESQ_GEN_TAC`](#res_quanLib.RESQ_GEN_TAC),
+[`res_quanLib.RESQ_SPEC`](#res_quanLib.RESQ_SPEC)

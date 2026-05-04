@@ -1,7 +1,7 @@
 ## `RESQ_GEN_TAC`
 
 ``` hol4
-res_quanTools.RESQ_GEN_TAC : tactic
+res_quanLib.RESQ_GEN_TAC : tactic
 ```
 
 ------------------------------------------------------------------------
@@ -31,8 +31,8 @@ the underlying term structure.
 
 ### See also
 
-[`res_quanTools.RESQ_SPEC`](#res_quanTools.RESQ_SPEC),
-[`res_quanTools.RESQ_SPECL`](#res_quanTools.RESQ_SPECL),
+[`res_quanLib.RESQ_SPEC`](#res_quanLib.RESQ_SPEC),
+[`res_quanLib.RESQ_SPECL`](#res_quanLib.RESQ_SPECL),
 [`Tactic.STRIP_TAC`](#Tactic.STRIP_TAC),
 [`Tactic.GEN_TAC`](#Tactic.GEN_TAC),
 [`Tactic.X_GEN_TAC`](#Tactic.X_GEN_TAC)

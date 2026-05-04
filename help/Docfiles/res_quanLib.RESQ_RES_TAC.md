@@ -1,7 +1,7 @@
 ## `RESQ_RES_TAC`
 
 ``` hol4
-res_quanTools.RESQ_RES_TAC : tactic
+res_quanLib.RESQ_RES_TAC : tactic
 ```
 
 ------------------------------------------------------------------------
@@ -23,9 +23,9 @@ to enrich the assumption set with some of its collective consequences.
 
 ### See also
 
-[`res_quanTools.RESQ_IMP_RES_TAC`](#res_quanTools.RESQ_IMP_RES_TAC),
-[`res_quanTools.RESQ_IMP_RES_THEN`](#res_quanTools.RESQ_IMP_RES_THEN),
-[`res_quanTools.RESQ_RES_THEN`](#res_quanTools.RESQ_RES_THEN),
+[`res_quanLib.RESQ_IMP_RES_TAC`](#res_quanLib.RESQ_IMP_RES_TAC),
+[`res_quanLib.RESQ_IMP_RES_THEN`](#res_quanLib.RESQ_IMP_RES_THEN),
+[`res_quanLib.RESQ_RES_THEN`](#res_quanLib.RESQ_RES_THEN),
 [`Tactic.IMP_RES_TAC`](#Tactic.IMP_RES_TAC),
 [`Thm_cont.IMP_RES_THEN`](#Thm_cont.IMP_RES_THEN),
 [`Drule.RES_CANON`](#Drule.RES_CANON),

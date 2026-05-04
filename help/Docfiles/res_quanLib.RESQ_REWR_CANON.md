@@ -30,4 +30,7 @@ This function fails is the input theorem is not in the correct form.
 ### See also
 
 [`res_quanLib.RESQ_REWRITE1_TAC`](#res_quanLib.RESQ_REWRITE1_TAC),
-[`res_quanLib.RESQ_REWRITE1_CONV`](#res_quanLib.RESQ_REWRITE1_CONV)
+[`res_quanLib.RESQ_REWRITE1_CONV`](#res_quanLib.RESQ_REWRITE1_CONV),
+[`Cond_rewrite.COND_REWR_CANON`](#Cond_rewrite.COND_REWR_CANON),
+[`Cond_rewrite.COND_REWR_TAC`](#Cond_rewrite.COND_REWR_TAC),
+[`Cond_rewrite.COND_REWR_CONV`](#Cond_rewrite.COND_REWR_CONV)
