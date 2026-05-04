@@ -743,7 +743,15 @@ fun emit_theory {trace, output, binary, ruleset} = let
     (* --- Per-rule Candle wrappers ---------------------------------------- *)
     (* Each allocates a fresh theorem ID, writes the command, returns the ID.*)
 
-    fun c_refl a           = let val id = alloc_th () in PFTWriter.Candle.refl out id a; id end
+    val refl_memo : int PIntMap.t ref = ref PIntMap.empty
+    fun c_refl a =
+      case (SOME (PIntMap.find a (!refl_memo)) handle PIntMap.NotFound => NONE) of
+        SOME id => id
+      | NONE => let val id = alloc_th ()
+        in PFTWriter.Candle.refl out id a;
+           refl_memo := PIntMap.add a id (!refl_memo);
+           id
+        end
     fun c_trans a b        = let val id = alloc_th () in PFTWriter.Candle.trans out id a b; id end
     fun c_mk_comb a b      = let val id = alloc_th () in PFTWriter.Candle.mk_comb out id a b; id end
     fun c_abs v th         = let val id = alloc_th () in PFTWriter.Candle.abs_thm out id v th; id end
