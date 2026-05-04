@@ -12,9 +12,20 @@ PS_STUFF =  $(PS_ROOT) ../Tools/umap
 PS_COMMAND = $(PS_STUFF) < $< > $@
 PS_NOUMAP = $(PS_ROOT) < $< > $@
 
-.PHONY: all
+.PHONY: all mdbook mdbook-serve
 
 all: system.pdf system.html drules.pdf drules.html description.pdf
+
+# Build the mdbook output for the chapters listed in SUMMARY.md.
+# The smdpp preprocessor is invoked dynamically by mdbook (see
+# book.toml); the output goes to ../book/Description.
+mdbook: ../Tools/smdpp
+	mdbook build
+
+# Convenience: serve the book locally at http://127.0.0.1:3000/.
+# Live-reloads when .smd / theme / book.toml change.
+mdbook-serve: ../Tools/smdpp
+	mdbook serve --hostname 127.0.0.1 --port 3000
 
 description.pdf: $(TEX_SOURCES)
 	latexmk -pdf description

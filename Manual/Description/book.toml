@@ -1,0 +1,18 @@
+[book]
+title = "The HOL System Description"
+authors = ["The HOL Development Team"]
+language = "en"
+src = "."
+
+[output.html]
+mathjax-support = true
+
+[preprocessor.smdpp]
+command = "../Tools/smdpp"
+renderers = ["html"]
+
+[build]
+# Outside the source directory so mdbook serve's watcher doesn't loop
+# rebuilding on its own output.
+build-dir = "../book/Description"
+create-missing = false
