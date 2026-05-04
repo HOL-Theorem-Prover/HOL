@@ -817,12 +817,14 @@ fun emit_theory {trace, output, binary, ruleset} = let
     (* === Candle derived-rule helpers ===
        These emit sequences of Candle commands and return theorem IDs. *)
 
-    (* do_MP: from ith: ⊢ a ==> b and th: ⊢ a, derive ⊢ b.
-       Uses MP_rth = {p} ⊢ (p ==> q) = q. *)
+    (* do_MP: from ith: A ⊢ a ==> b and ant_th: B ⊢ a, derive
+       A ∪ B ⊢ b using hypothesis-form proforma
+       candle$MP_HYP : {p ==> q, p} ⊢ q. *)
     fun do_MP ith a_tm b_tm ant_th =
-      let val rth = c_inst (candle_load_pth "candle$MP")
+      let val pth = c_inst (candle_load_pth "candle$MP_HYP")
                       [(pvar_p, a_tm), (pvar_q, b_tm)]
-      in c_eq_mp (c_eq_mp (c_deduct ant_th rth) ant_th) ith end
+          val tmp = c_prove_hyp ith pth
+      in c_prove_hyp ant_th tmp end
 
     (* do_CONJ: from th1: A ⊢ a and th2: B ⊢ b, derive A ∪ B ⊢ a ∧ b *)
     fun do_CONJ a_tm b_tm th1 th2 =
@@ -867,16 +869,16 @@ fun emit_theory {trace, output, binary, ruleset} = let
     (* do_SPEC: from t_tm, pred_tm: λv. s, th: A ⊢ ∀v. s, derive A ⊢ s[t/v] *)
     fun do_SPEC t_tm pred_tm forall_tm v_ty th_forall =
       let val Ab = emit_tyop "fun" [v_ty, bool_tyid]
-          val spec_inst = c_inst (c_inst_type (candle_load_pth "candle$SPEC")
+          val spec_hyp = c_inst (c_inst_type (candle_load_pth "candle$SPEC_HYP")
                             [(tyvar_A, v_ty)])
                             [(emit_var "P" Ab, pred_tm),
                              (emit_var "x" v_ty, t_tm)]
-          val mp_result = do_MP spec_inst forall_tm (emit_comb pred_tm t_tm) th_forall
+          val spec_result = c_prove_hyp th_forall spec_hyp
           val (actual_bv, _) = pft_dest_abs pred_tm
           val beta_th = c_beta (emit_comb pred_tm actual_bv)
           val beta_inst = if actual_bv = t_tm then beta_th
             else c_inst beta_th [(actual_bv, t_tm)]
-      in c_eq_mp beta_inst mp_result end
+      in c_eq_mp beta_inst spec_result end
 
     (* do_beta_reduce: from lam_tm (a PFT abs term) and arg_tm,
        derive ⊢ lam_tm arg_tm = body[arg/binder]. *)
