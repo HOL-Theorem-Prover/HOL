@@ -1,0 +1,564 @@
+(* smdpp.sml — mdbook preprocessor for scripted markdown (.smd) files.
+
+   Reads the [Context, Book] JSON pair from stdin (mdbook's preprocessor
+   protocol), runs polyscripter on each chapter's content, strips
+   pandoc-only artefacts (YAML frontmatter, \index{...} entries, raw
+   LaTeX fenced blocks), and writes the rewritten Book JSON to stdout.
+
+   The single Poly/ML session is shared across all chapters, so theory
+   loads and compiler state amortise.
+
+   Built by `buildheap` after polyscripter.sml; relies on the JSON
+   library (already loaded into bin/hol). *)
+
+(* ===== JSON printer ===== *)
+
+structure JSONPrinter : sig
+  val toString : JSON.value -> string
+  val output : (string -> unit) -> JSON.value -> unit
+end = struct
+
+  fun escString s =
+    let
+      fun pad4 n =
+        StringCvt.padLeft #"0" 4 (Int.fmt StringCvt.HEX n)
+      fun esc #"\"" = "\\\""
+        | esc #"\\" = "\\\\"
+        | esc #"\n" = "\\n"
+        | esc #"\r" = "\\r"
+        | esc #"\t" = "\\t"
+        | esc #"\b" = "\\b"
+        | esc #"\f" = "\\f"
+        | esc c =
+            if Char.ord c < 32 then "\\u" ^ pad4 (Char.ord c)
+            else String.str c
+    in
+      "\"" ^ String.translate esc s ^ "\""
+    end
+
+  fun outputItems put sep f xs =
+    let
+      fun loop _ [] = ()
+        | loop true (x::xs) = (f x; loop false xs)
+        | loop false (x::xs) = (put sep; f x; loop false xs)
+    in
+      loop true xs
+    end
+
+  fun output put v =
+    case v of
+        JSON.NULL => put "null"
+      | JSON.BOOL true => put "true"
+      | JSON.BOOL false => put "false"
+      | JSON.INT i => put (IntInf.toString i)
+      | JSON.FLOAT r =>
+          (* Real.toString uses ~ for negatives; rewrite to ASCII '-' *)
+          put (String.translate
+                 (fn #"~" => "-" | c => String.str c)
+                 (Real.toString r))
+      | JSON.STRING s => put (escString s)
+      | JSON.ARRAY vs =>
+          (put "["; outputItems put "," (output put) vs; put "]")
+      | JSON.OBJECT pairs =>
+          let
+            fun pair (k, v) =
+              (put (escString k); put ":"; output put v)
+          in
+            put "{"; outputItems put "," pair pairs; put "}"
+          end
+
+  fun toString v =
+    let val sb = SimpleBuffer.mkBuffer()
+    in output (#push sb) v; #read sb () end
+end
+
+(* ===== text transforms ===== *)
+
+(* Drop a YAML frontmatter block at the very start of the content
+   (between two `---` lines on their own).  Such frontmatter is
+   pandoc-targeted and serves no purpose for mdbook. *)
+fun dropFrontmatter s =
+  if String.isPrefix "---\n" s then
+    let
+      val lines = String.fields (fn c => c = #"\n") s
+      fun findEnd [] = NONE
+        | findEnd ("---" :: rest) = SOME rest
+        | findEnd (_ :: rest) = findEnd rest
+    in
+      case findEnd (tl lines) of
+          NONE => s
+        | SOME rest => String.concatWith "\n" rest
+    end
+  else s
+
+(* Strip \index{...} entries with brace counting. *)
+fun stripIndex s =
+  let
+    val sub = String.sub
+    val sz = String.size s
+    val cmd = "\\index{"
+    val cmdsz = String.size cmd
+    fun matchAt i =
+      i + cmdsz <= sz andalso
+      String.substring (s, i, cmdsz) = cmd
+    fun skipBraces (i, depth) =
+      if i >= sz then i
+      else case sub (s, i) of
+              #"{" => skipBraces (i+1, depth+1)
+            | #"}" => if depth = 1 then i+1
+                      else skipBraces (i+1, depth-1)
+            | _ => skipBraces (i+1, depth)
+    fun loop (i, acc) =
+      if i >= sz then String.implode (List.rev acc)
+      else if matchAt i then
+        loop (skipBraces (i + cmdsz, 1), acc)
+      else loop (i+1, sub (s, i) :: acc)
+  in
+    loop (0, [])
+  end
+
+(* Drop pandoc-style raw fenced blocks like ```{=latex} ... ```.
+   Mdbook would otherwise render the body as a code block. *)
+fun stripRawLatexBlocks s =
+  let
+    val lines = String.fields (fn c => c = #"\n") s
+    fun firstTok ln =
+      case String.tokens Char.isSpace ln of
+          [] => NONE
+        | t :: _ => SOME t
+    fun isFenceOpen ln =
+      case firstTok ln of
+          SOME t => String.isPrefix "```{=" t
+        | NONE => false
+    fun isFenceClose ln =
+      case firstTok ln of
+          SOME "```" => true
+        | _ => false
+    fun loop ([], acc, _) = List.rev acc
+      | loop (l :: rest, acc, true) =
+          if isFenceClose l then loop (rest, acc, false)
+          else loop (rest, acc, true)
+      | loop (l :: rest, acc, false) =
+          if isFenceOpen l then loop (rest, acc, true)
+          else loop (rest, l :: acc, false)
+  in
+    String.concatWith "\n" (loop (lines, [], false))
+  end
+
+(* Convert pandoc superscript syntax `^...^` to `<sup>...</sup>`.
+   Pandoc's default reader treats `^x^` as superscript when the body
+   has no whitespace; pulldown-cmark (mdbook) doesn't.  We avoid `^`
+   inside math: $...$ and $$...$$ blocks pass through untouched. *)
+fun convertSuperscripts s =
+  let
+    val sub = String.sub
+    val sz = String.size s
+    fun isBodyChar c = not (Char.isSpace c) andalso c <> #"^"
+    (* Try to find matching `^` for opening at i; bound by line end. *)
+    fun findClose j =
+      if j >= sz then NONE
+      else case sub (s, j) of
+              #"^" => SOME j
+            | #"\n" => NONE
+            | c => if isBodyChar c then findClose (j + 1) else NONE
+    fun outside (i, acc) =
+      if i >= sz then String.implode (List.rev acc)
+      else case sub (s, i) of
+              #"$" =>
+                if i + 1 < sz andalso sub (s, i+1) = #"$"
+                then mathSpan true (i+2, #"$" :: #"$" :: acc)
+                else mathSpan false (i+1, #"$" :: acc)
+            | #"`" => codeSpan (i+1, #"`" :: acc)
+            | #"^" =>
+                if i + 1 < sz andalso isBodyChar (sub (s, i+1)) then
+                  case findClose (i+1) of
+                      SOME j =>
+                        outside (j+1,
+                          List.revAppend
+                            (String.explode ("<sup>"
+                              ^ String.substring (s, i+1, j-i-1)
+                              ^ "</sup>"), acc))
+                    | NONE => outside (i+1, #"^" :: acc)
+                else outside (i+1, #"^" :: acc)
+            | c => outside (i+1, c :: acc)
+    and mathSpan isDisplay (i, acc) =
+      if i >= sz then String.implode (List.rev acc)
+      else if sub (s, i) = #"$" then
+        if isDisplay then
+          if i + 1 < sz andalso sub (s, i+1) = #"$"
+          then outside (i+2, #"$" :: #"$" :: acc)
+          else mathSpan isDisplay (i+1, #"$" :: acc)
+        else outside (i+1, #"$" :: acc)
+      else mathSpan isDisplay (i+1, sub (s, i) :: acc)
+    and codeSpan (i, acc) =
+      if i >= sz then String.implode (List.rev acc)
+      else case sub (s, i) of
+              #"`" => outside (i+1, #"`" :: acc)
+            | c => codeSpan (i+1, c :: acc)
+  in
+    outside (0, [])
+  end
+
+(* Inside $...$ inline math and $$...$$ display math, double every
+   backslash so that CommonMark's backslash-escape pass leaves the
+   original backslash intact for MathJax.  Without this, `\_`, `\{`,
+   `\}` and other LaTeX escapes get eaten before MathJax sees them. *)
+fun protectMath s =
+  let
+    val sub = String.sub
+    val sz = String.size s
+    fun emit c acc = c :: acc
+    fun emitStr str acc = List.revAppend (String.explode str, acc)
+    fun protect c acc =
+      if c = #"\\" then emitStr "\\\\" acc
+      else c :: acc
+    fun outside (i, acc) =
+      if i >= sz then String.implode (List.rev acc)
+      else if sub (s, i) = #"$" then
+        if i + 1 < sz andalso sub (s, i+1) = #"$" then
+          display (i+2, emitStr "$$" acc)
+        else
+          inline (i+1, emit #"$" acc)
+      else outside (i+1, emit (sub (s, i)) acc)
+    and inline (i, acc) =
+      if i >= sz then String.implode (List.rev acc)
+      else case sub (s, i) of
+              #"$" => outside (i+1, emit #"$" acc)
+            | c => inline (i+1, protect c acc)
+    and display (i, acc) =
+      if i >= sz then String.implode (List.rev acc)
+      else if sub (s, i) = #"$" andalso
+              i + 1 < sz andalso sub (s, i+1) = #"$" then
+        outside (i+2, emitStr "$$" acc)
+      else display (i+1, protect (sub (s, i)) acc)
+  in
+    outside (0, [])
+  end
+
+fun runScripted obuf s =
+  processString {input = s, debug = false,
+                 umap = Binarymap.mkDict String.compare,
+                 obuf = obuf}
+
+(* If the content has no top-level H1 heading anywhere, prepend
+   `# <name>` so the rendered chapter has a title.  Some .smd files
+   defer chapter-titling to the LaTeX driver (e.g., modern-syntax.smd
+   is wrapped by modern-syntax-chapter.tex); for mdbook we synthesise
+   the heading from the SUMMARY.md entry. *)
+fun hasH1 s =
+  let
+    val lines = String.fields (fn c => c = #"\n") s
+    fun isH1 ln =
+      String.isPrefix "# " ln orelse ln = "#"
+  in
+    List.exists isH1 lines
+  end
+
+fun ensureH1 name s =
+  if hasH1 s then s else "# " ^ name ^ "\n\n" ^ s
+
+fun preprocessContent obuf name s =
+  s |> dropFrontmatter
+    |> runScripted obuf
+    |> stripIndex
+    |> stripRawLatexBlocks
+    |> convertSuperscripts
+    |> protectMath
+    |> ensureH1 name
+
+(* GitHub-style heading slugger: lowercase, drop punctuation other
+   than space/`-`/`_`, replace spaces with `-`, collapse multiple
+   `-`s, trim.  Approximates pulldown-cmark's heading-id rule. *)
+fun slugify text =
+  let
+    fun strip c =
+      Char.isAlphaNum c orelse c = #" " orelse c = #"-" orelse c = #"_"
+    val lower = String.map Char.toLower text
+    val kept = String.translate
+                 (fn c => if strip c then String.str c
+                          else if c = #"\t" then " "
+                          else "")
+                 lower
+    val dashed = String.map (fn #" " => #"-" | c => c) kept
+    fun collapse [] = []
+      | collapse (#"-" :: (rest as #"-" :: _)) = collapse rest
+      | collapse (c :: rest) = c :: collapse rest
+    val r = String.implode (collapse (String.explode dashed))
+    val ss = Substring.full r
+    val ss = Substring.dropl (fn c => c = #"-") ss
+    val ss = Substring.dropr (fn c => c = #"-") ss
+  in
+    Substring.string ss
+  end
+
+(* Strip inline markdown formatting from heading text before slugging.
+   We drop *, _, ` (emphasis/code), and skip $...$ inline math.  This
+   is best-effort and matches what most heading text looks like. *)
+fun cleanHeading s =
+  let
+    val sub = String.sub
+    val sz = String.size s
+    fun loop (i, acc, inMath) =
+      if i >= sz then String.implode (List.rev acc)
+      else
+        let val c = sub (s, i)
+        in
+          if inMath then
+            if c = #"$" then loop (i+1, acc, false)
+            else loop (i+1, acc, inMath)
+          else
+            case c of
+                #"$" => loop (i+1, acc, true)
+              | #"*" => loop (i+1, acc, inMath)
+              | #"_" => loop (i+1, acc, inMath)
+              | #"`" => loop (i+1, acc, inMath)
+              | #"\\" =>
+                  (* skip a LaTeX command name following the backslash *)
+                  let
+                    fun skipLetters j =
+                      if j >= sz orelse not (Char.isAlpha (sub (s, j)))
+                      then j
+                      else skipLetters (j + 1)
+                    val j = skipLetters (i + 1)
+                  in
+                    loop (if j = i + 1 then i + 2 else j, acc, inMath)
+                  end
+              | _ => loop (i+1, c :: acc, inMath)
+        end
+  in
+    loop (0, [], false)
+  end
+
+(* Extract heading slugs from markdown content.  Heading lines start
+   with one or more `#`s, a space, then text. *)
+fun extractAnchors content =
+  let
+    val lines = String.fields (fn c => c = #"\n") content
+    fun headingText ln =
+      let
+        val ss = Substring.full ln
+        val ss = Substring.dropl (fn c => c = #"#") ss
+      in
+        if Substring.size ss = Substring.size (Substring.full ln) then NONE
+        else if Substring.size ss = 0 orelse
+                Substring.sub (ss, 0) <> #" " then NONE
+        else
+          let val txt = Substring.string (Substring.dropl Char.isSpace ss)
+          in SOME txt end
+      end
+    fun loop ([], acc) = List.rev acc
+      | loop (l :: rest, acc) =
+          case headingText l of
+              NONE => loop (rest, acc)
+            | SOME txt => loop (rest, slugify (cleanHeading txt) :: acc)
+  in
+    loop (lines, [])
+  end
+
+(* Rewrite `[text](#anchor)` in content so that anchors not present in
+   `localAnchors` get prefixed with the chapter file they live in.
+   Anchors not found anywhere are left as-is. *)
+fun rewriteLinks {localAnchors, registry} content =
+  let
+    val sub = String.sub
+    val sz = String.size content
+    fun lookup anchor =
+      List.find (fn (a, _) => a = anchor) registry
+    fun emit acc s = String.implode (List.rev acc) ^ s
+    (* Find the matching `)` for `(` at position i; bracket counting. *)
+    fun findClose (i, depth) =
+      if i >= sz then NONE
+      else case sub (content, i) of
+              #")" => if depth = 1 then SOME i
+                      else findClose (i+1, depth-1)
+            | #"(" => findClose (i+1, depth+1)
+            | _ => findClose (i+1, depth)
+    fun loop (i, acc) =
+      if i >= sz then String.implode (List.rev acc)
+      else
+        let val c = sub (content, i)
+        in
+          if c = #"]" andalso i + 1 < sz andalso
+             sub (content, i+1) = #"(" andalso
+             i + 2 < sz andalso sub (content, i+2) = #"#"
+          then
+            (* `](#...)` — a relative anchor link.  Find closing `)`. *)
+            case findClose (i+2, 1) of
+                NONE => loop (i+1, c :: acc)
+              | SOME j =>
+                let
+                  val anchor = String.substring (content, i+3, j - i - 3)
+                  fun toHtml f =
+                    let
+                      val {base, ...} = OS.Path.splitBaseExt f
+                    in OS.Path.joinBaseExt {base = base, ext = SOME "html"}
+                    end
+                  val replacement =
+                      if List.exists (fn a => a = anchor) localAnchors
+                      then "](#" ^ anchor ^ ")"
+                      else case lookup anchor of
+                              SOME (_, file) =>
+                                "](" ^ toHtml file ^ "#" ^ anchor ^ ")"
+                            | NONE => "](#" ^ anchor ^ ")"
+                  val acc' = List.revAppend
+                               (String.explode replacement, acc)
+                in
+                  loop (j+1, acc')
+                end
+          else loop (i+1, c :: acc)
+        end
+  in
+    loop (0, [])
+  end
+
+(* ===== book walker =====
+   mdbook Book JSON shape:
+     { "sections": [ <Item>, ... ], "__non_exhaustive": null }
+   where <Item> is one of:
+     {"Chapter": {"name":..., "content":..., "sub_items":[...], ...}}
+     {"Separator": null}
+     {"PartTitle": "..."}                                            *)
+
+fun stringField k fields =
+  case List.find (fn (k', _) => k = k') fields of
+      SOME (_, JSON.STRING s) => SOME s
+    | _ => NONE
+
+fun chapterName fields = Option.getOpt (stringField "name" fields, "")
+fun chapterPath fields = stringField "path" fields
+
+(* Pass 1: walk the book, expand each chapter's content via
+   preprocessContent, extract its heading slugs, and build a
+   (slug -> path) registry pointing at the chapter file the slug lives
+   in.  We replace each chapter's content with the preprocessed text
+   so we don't have to do the work twice. *)
+
+fun preprocessChapter obuf chap registry =
+  case chap of
+      JSON.OBJECT fields =>
+        let
+          val name = chapterName fields
+          val pathOpt = chapterPath fields
+          val (newContent, registry) =
+            case (stringField "content" fields, pathOpt) of
+                (SOME s, SOME p) =>
+                  let val s' = preprocessContent obuf name s
+                      val anchors = extractAnchors s'
+                      val newEntries = map (fn a => (a, p)) anchors
+                  in (SOME s', registry @ newEntries) end
+              | (SOME s, NONE) =>
+                  (SOME (preprocessContent obuf name s), registry)
+              | _ => (NONE, registry)
+          val (newSubItems, registry) =
+            case List.find (fn (k, _) => k = "sub_items") fields of
+                SOME (_, JSON.ARRAY xs) =>
+                  let
+                    fun loop ([], acc, reg) = (List.rev acc, reg)
+                      | loop (item :: rest, acc, reg) =
+                          let val (item', reg') =
+                                  preprocessItem obuf item reg
+                          in loop (rest, item' :: acc, reg') end
+                    val (xs', reg') = loop (xs, [], registry)
+                  in (SOME (JSON.ARRAY xs'), reg') end
+              | _ => (NONE, registry)
+          fun trField ("content", _) =
+                (case newContent of
+                     SOME s => ("content", JSON.STRING s)
+                   | NONE => ("content", JSON.NULL))
+            | trField ("sub_items", _) =
+                (case newSubItems of
+                     SOME v => ("sub_items", v)
+                   | NONE => ("sub_items", JSON.ARRAY []))
+            | trField kv = kv
+        in
+          (JSON.OBJECT (map trField fields), registry)
+        end
+    | _ => (chap, registry)
+and preprocessItem obuf item registry =
+  case item of
+      JSON.OBJECT [("Chapter", chap)] =>
+        let val (chap', reg') = preprocessChapter obuf chap registry
+        in (JSON.OBJECT [("Chapter", chap')], reg') end
+    | _ => (item, registry)
+
+(* Pass 2: walk the (now preprocessed) book again, rewriting links
+   that reference an anchor living in a different chapter file. *)
+
+fun rewriteChapter registry chap =
+  case chap of
+      JSON.OBJECT fields =>
+        let
+          val pathOpt = chapterPath fields
+          val localAnchors =
+            case stringField "content" fields of
+                SOME s => extractAnchors s
+              | NONE => []
+          fun trField ("content", JSON.STRING s) =
+                ("content",
+                 JSON.STRING (rewriteLinks
+                                {localAnchors = localAnchors,
+                                 registry = registry}
+                                s))
+            | trField ("sub_items", JSON.ARRAY xs) =
+                ("sub_items",
+                 JSON.ARRAY (map (rewriteItem registry) xs))
+            | trField kv = kv
+        in
+          JSON.OBJECT (map trField fields)
+        end
+    | _ => chap
+and rewriteItem registry item =
+  case item of
+      JSON.OBJECT [("Chapter", chap)] =>
+        JSON.OBJECT [("Chapter", rewriteChapter registry chap)]
+    | _ => item
+
+fun transformBook obuf book =
+  case book of
+      JSON.OBJECT fields =>
+        let
+          fun preprocSections xs =
+            let
+              fun loop ([], acc, reg) = (List.rev acc, reg)
+                | loop (item :: rest, acc, reg) =
+                    let val (item', reg') = preprocessItem obuf item reg
+                    in loop (rest, item' :: acc, reg') end
+            in loop (xs, [], []) end
+          fun trField ("sections", JSON.ARRAY xs) =
+                let
+                  val (xs', registry) = preprocSections xs
+                  val xs'' = map (rewriteItem registry) xs'
+                in
+                  ("sections", JSON.ARRAY xs'')
+                end
+            | trField kv = kv
+        in
+          JSON.OBJECT (map trField fields)
+        end
+    | _ => book
+
+(* ===== main ===== *)
+
+fun smdppMain () =
+  case CommandLine.arguments () of
+      ["supports", "html"] => OS.Process.exit OS.Process.success
+    | "supports" :: _ => OS.Process.exit OS.Process.failure
+    | [] =>
+        let
+          val obuf = setupPolyscripter ()
+          val raw = TextIO.inputAll TextIO.stdIn
+          val src = JSONParser.openString raw
+          val pair = JSONParser.parse src
+          val () = JSONParser.close src
+          val book = case pair of
+                         JSON.ARRAY [_, b] => b
+                       | _ => die "Expected [ctx, book] JSON on stdin"
+          val book' = transformBook obuf book
+        in
+          print (JSONPrinter.toString book');
+          TextIO.flushOut TextIO.stdOut
+        end
+    | _ => die ("Usage:\n  " ^ CommandLine.name() ^
+                " [supports <renderer>]")
+
+fun main () = smdppMain ()
