@@ -71,6 +71,12 @@ fun subst_pathvars modPath =
                 | SOME p => OS.Path.concat(p,rest)
             end
         end
+    else if OS.Path.isRelative modPath andalso
+            not (OS.FileSys.access(modPath, [OS.FileSys.A_READ]))
+    then
+      case lookup_holpath {vname = "HOLDIR"} of
+          SOME d => OS.Path.concat(OS.Path.concat(d, "sigobj"), modPath)
+        | NONE => modPath
     else modPath
   end
 

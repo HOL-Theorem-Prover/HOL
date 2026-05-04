@@ -55,7 +55,8 @@ fun isInteresting s =
     in
       case ext of
           SOME s => base <> "selftest" andalso
-                    (s = "sig" orelse s = "uo" orelse s = "ui")
+                    (s = "sig" orelse s = "uo" orelse s = "ui" orelse
+                     s = "dat")
         | NONE => false
     end
 

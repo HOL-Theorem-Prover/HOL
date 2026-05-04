@@ -8,6 +8,8 @@ struct
    Note how it only has side effects.
 *)
 
+val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
+
 local
   val exts = holpathdb.search_for_extensions
                ReadHMF.find_includes
