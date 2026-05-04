@@ -699,7 +699,7 @@ local fun dest tybase (pat,rhs) =
            in
              if null (op_set_diff aconv fvs patvars) andalso null (free_vars e)
                 andalso is_var v
-                (* andalso null_intersection fvs (free_vars (hd rhsides)) *)
+                andalso tm_null_intersection fvs (free_vars (hd rhsides))
              then flatten
                     (map (dest tybase) (zip [subst [v |-> e] pat, pat] rhsides))
              else [(pat,rhs)]
