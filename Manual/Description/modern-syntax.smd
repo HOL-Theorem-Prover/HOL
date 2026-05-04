@@ -111,48 +111,41 @@ For convenience, the `qualified` and `ignore_grammar` options can be given “al
 The `alias=`*ident* modifier does not make sense immediately after the `Ancestors` and `Libs` keywords;
 it should only be used after individual theory or library names to establish aliases for just those names.
 
---------------    -----  ---------------------
-⟨*theory*⟩         ::=   `Theory` ⟨*thyname*⟩⟨*build-mods*⟩^?^
-                         (⟨*ancestors*⟩ | ⟨*libraries*⟩)^\*^
-                         ⟨*thydecl*⟩^\*^
-⟨*build-mods*⟩     ::=   `[` ⟨*build-mod*⟩ (`,`⟨*build-mod*⟩)^\*^ `]`
-⟨*build-mod*⟩      ::=   `no_sig_docs`    |    `bare`
-⟨*ancestors*⟩      ::=   `Ancestors` ⟨*thy-modifier*⟩^?^ ⟨*ancestor-spec*⟩^\*^
-⟨*libraries*⟩      ::=   `Libs` ⟨*lib-modifier*⟩^?^ ⟨*lib-spec*⟩^\*^
-⟨*ancestor-spec*⟩  ::=   ⟨*thyname*⟩ ⟨*thy-modifier*⟩^?^
-⟨*lib-spec*⟩       ::=   ⟨*thyname*⟩ ⟨*lib-modifier*⟩^?^
-⟨*thy-modifier*⟩   ::=   `[`⟨*thy-attr*⟩(`,`⟨*thy-attr*⟩)^\*^`]`
-⟨*lib-modifier*⟩   ::=   `[`⟨*module-attr*⟩(`,`⟨*module-attr*⟩)^\*^`]`
-⟨*thy-attr*⟩       ::=   ⟨*module-attr*⟩     |     `ignore_grammar`
-⟨*module-attr*⟩    ::=   `qualified`     |     `alias=`⟨*ident*⟩
---------------    -----  ---------------------
+| Non-terminal | | Production |
+|---|---|---|
+| ⟨*theory*⟩ | ::= | `Theory` ⟨*thyname*⟩⟨*build-mods*⟩^?^<br>(⟨*ancestors*⟩ \| ⟨*libraries*⟩)^\*^<br>⟨*thydecl*⟩^\*^ |
+| ⟨*build-mods*⟩ | ::= | `[` ⟨*build-mod*⟩ (`,`⟨*build-mod*⟩)^\*^ `]` |
+| ⟨*build-mod*⟩ | ::= | `no_sig_docs`    \|    `bare` |
+| ⟨*ancestors*⟩ | ::= | `Ancestors` ⟨*thy-modifier*⟩^?^ ⟨*ancestor-spec*⟩^\*^ |
+| ⟨*libraries*⟩ | ::= | `Libs` ⟨*lib-modifier*⟩^?^ ⟨*lib-spec*⟩^\*^ |
+| ⟨*ancestor-spec*⟩ | ::= | ⟨*thyname*⟩ ⟨*thy-modifier*⟩^?^ |
+| ⟨*lib-spec*⟩ | ::= | ⟨*thyname*⟩ ⟨*lib-modifier*⟩^?^ |
+| ⟨*thy-modifier*⟩ | ::= | `[`⟨*thy-attr*⟩(`,`⟨*thy-attr*⟩)^\*^`]` |
+| ⟨*lib-modifier*⟩ | ::= | `[`⟨*module-attr*⟩(`,`⟨*module-attr*⟩)^\*^`]` |
+| ⟨*thy-attr*⟩ | ::= | ⟨*module-attr*⟩     \|     `ignore_grammar` |
+| ⟨*module-attr*⟩ | ::= | `qualified`     \|     `alias=`⟨*ident*⟩ |
 
 Table: Script File Syntax.
 Square brackets in the table are input characters; they are *not* meta-characters (unlike the parentheses, pipe symbols and superscripts).
 All keywords beginning with capital letters (`Theory`, `Ancestors`, `Libs`, ...) must occur in column 0 of the input file.
+```{=latex}
 \label{tab:script-file-syntax}
+```
 
---------------    -----  ---------------------
-⟨*thydecl*⟩        ::=   ⟨*SML-declaration*⟩    |    ⟨*theorem-decl*⟩    |    ⟨*definition-decl*⟩
-                    |    ⟨*parsing-decl*⟩    |    ⟨*quotation-decl*⟩
-⟨*theorem-decl*⟩   ::=   ⟨*thm-eqn*⟩   |   ⟨*thm-proof*⟩   |   ⟨*resumption*⟩   |   ⟨*final-thm*⟩
-⟨*thm-eqn*⟩        ::=   `Theorem` ⟨*ident*⟩⟨*thm-attrs*⟩ `=` ⟨*SML-expression*⟩
-⟨*thm-proof*⟩      ::=   `Theorem` ⟨*ident*⟩⟨*thm-attrs*⟩ `:` ⟨*thm-stmt*⟩
-                         `Proof`⟨*proof-attrs*⟩ ⟨*tactic*⟩
-                         `QED`
-⟨*defn-decl*⟩      ::=   ⟨*datatype-decl*⟩    |    ⟨*function-decl*⟩    |    ⟨*relation-decl*⟩
-⟨*datatype-decl*⟩  ::=   `Datatype:`⟨*datatype-spec*⟩ `End`
-⟨*relation-decl*⟩  ::=   (`Inductive`|`CoInductive`) ⟨*ident*⟩ `:` ⟨*relation-spec*⟩ `End`
-⟨*function-decl*⟩  ::=   `Definition` ⟨*ident*⟩⟨*defn-attrs*⟩ `:`
-                         ⟨*function-spec*⟩
-                         (`Termination` ⟨*tactic*⟩)^?^ `End`
-⟨*parsing-decl*⟩   ::=   `Overload` ⟨*quoted-ident*⟩⟨*overload-attrs*⟩^?^ `=` ⟨*SML-expression*⟩
-                    |    `Type` ⟨*quoted-ident*⟩⟨*type-attrs*⟩^?^ `=` ⟨*SML-expression*⟩
-⟨*quotation-decl*⟩ ::=   `Quote` (⟨*ident*⟩ `=`)^?^ ⟨*ident*⟩ `:` ⟨*quoted-material*⟩ `End`
-⟨*resumption*⟩     ::=   `Resume` ⟨*ident*⟩⟨*resumption-attrs*⟩ `:` ⟨*tactic*⟩
-                         `QED`
-⟨*final-thm*⟩      ::=   `Finalise` ⟨*ident*⟩⟨*thm-attrs*⟩
---------------    -----  ---------------------
+| Non-terminal | | Production |
+|---|---|---|
+| ⟨*thydecl*⟩ | ::= | ⟨*SML-declaration*⟩    \|    ⟨*theorem-decl*⟩    \|    ⟨*definition-decl*⟩<br>\|    ⟨*parsing-decl*⟩    \|    ⟨*quotation-decl*⟩ |
+| ⟨*theorem-decl*⟩ | ::= | ⟨*thm-eqn*⟩   \|   ⟨*thm-proof*⟩   \|   ⟨*resumption*⟩   \|   ⟨*final-thm*⟩ |
+| ⟨*thm-eqn*⟩ | ::= | `Theorem` ⟨*ident*⟩⟨*thm-attrs*⟩ `=` ⟨*SML-expression*⟩ |
+| ⟨*thm-proof*⟩ | ::= | `Theorem` ⟨*ident*⟩⟨*thm-attrs*⟩ `:` ⟨*thm-stmt*⟩<br>`Proof`⟨*proof-attrs*⟩ ⟨*tactic*⟩<br>`QED` |
+| ⟨*defn-decl*⟩ | ::= | ⟨*datatype-decl*⟩    \|    ⟨*function-decl*⟩    \|    ⟨*relation-decl*⟩ |
+| ⟨*datatype-decl*⟩ | ::= | `Datatype:`⟨*datatype-spec*⟩ `End` |
+| ⟨*relation-decl*⟩ | ::= | (`Inductive`\|`CoInductive`) ⟨*ident*⟩ `:` ⟨*relation-spec*⟩ `End` |
+| ⟨*function-decl*⟩ | ::= | `Definition` ⟨*ident*⟩⟨*defn-attrs*⟩ `:`<br>⟨*function-spec*⟩<br>(`Termination` ⟨*tactic*⟩)^?^ `End` |
+| ⟨*parsing-decl*⟩ | ::= | `Overload` ⟨*quoted-ident*⟩⟨*overload-attrs*⟩^?^ `=` ⟨*SML-expression*⟩<br>\|    `Type` ⟨*quoted-ident*⟩⟨*type-attrs*⟩^?^ `=` ⟨*SML-expression*⟩ |
+| ⟨*quotation-decl*⟩ | ::= | `Quote` (⟨*ident*⟩ `=`)^?^ ⟨*ident*⟩ `:` ⟨*quoted-material*⟩ `End` |
+| ⟨*resumption*⟩ | ::= | `Resume` ⟨*ident*⟩⟨*resumption-attrs*⟩ `:` ⟨*tactic*⟩<br>`QED` |
+| ⟨*final-thm*⟩ | ::= | `Finalise` ⟨*ident*⟩⟨*thm-attrs*⟩ |
 
 Table: Syntax for expressing theorem proofs, definitions and other theory changes. Again, upper-case keywords (`End` in particular, despite the table layout), must occur in column 0.
 
@@ -163,24 +156,22 @@ Table: Syntax for expressing theorem proofs, definitions and other theory change
 Many commands take a variety of attributes to modify or tweak the behaviour of the command.
 Attribute specifications are added to commands, usually after user-provided identifiers, within square brackets using a common syntax:
 
---------------  -----  -------------
-⟨*attr-spec*⟩    ::=   `[` ⟨*attribute*⟩ (`,`⟨*attribute*⟩)^\*^ `]`
-⟨*attribute*⟩    ::=   ⟨*ident*⟩ (`=` ⟨*ident*⟩^+^)^?^
---------------  -----  -------------
+| Non-terminal | | Production |
+|---|---|---|
+| ⟨*attr-spec*⟩ | ::= | `[` ⟨*attribute*⟩ (`,`⟨*attribute*⟩)^\*^ `]` |
+| ⟨*attribute*⟩ | ::= | ⟨*ident*⟩ (`=` ⟨*ident*⟩^+^)^?^ |
 
 If multiple identifiers appear to the right of an equals-sign in the above syntax, they are separated by whitespace.
 Libraries can enable more attributes than this core set for theorems and definitions; this allows theorem values to be stored in custom data-sets for later retrieval by customisable tools.
 
-Keyword             (Commonly used) Possible attributes
---------------      ----------------------
-`Definition`        `ind=`..., `nocompute`, `schematic`, `simp`
-`Overload`          `by_nametype`, `inferior`, `local`
-`Proof`             `exclude_frags`, `exclude_simps`
-`Resume`            `exclude_frags`, `exclude_simps`, `smlname`
-`Theorem`           `compute`, `cong`, `local`, `mono`, `rule_induction`, `simp`
-  (\& `Finalise`)
-`Type`              `local`, `pp`
---------------      ----------------------
+| Keyword                  | (Commonly used) Possible attributes |
+|--------------------------|-------------------------------------|
+| `Definition`             | `ind=`..., `nocompute`, `schematic`, `simp` |
+| `Overload`               | `by_nametype`, `inferior`, `local`  |
+| `Proof`                  | `exclude_frags`, `exclude_simps`    |
+| `Resume`                 | `exclude_frags`, `exclude_simps`, `smlname` |
+| `Theorem` (& `Finalise`) | `compute`, `cong`, `local`, `mono`, `rule_induction`, `simp` |
+| `Type`                   | `local`, `pp`                       |
 
 \index{Resume keyword@\ml{Resume} keyword}
 \index{special syntactic forms for scripts!Resume@\ml{Resume}}

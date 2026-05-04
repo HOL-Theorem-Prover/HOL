@@ -409,18 +409,18 @@ a HOL identifier can be of two forms:
    Unicode code characters that are not letters or digits are regarded as symbolic.
    The non-aggregating Unicode characters are listed in the table below:
 
-     Character        Codepoint     Character        Codepoint
-    -----------      -----------   -----------      -----------
-      $\neg$          `U+00AC`      $\langle$         `U+27E8`
-      $\lceil$        `U+2308`      $\rangle$         `U+27E9`
-      $\rceil$        `U+2309`      ⦃                 `U+2983`
-      $\lfloor$       `U+230A`      ⦄                 `U+2984`
-      $\rfloor$       `U+230B`      ⦇                 `U+2987`
-      $\llbracket$    `U+27E6`      ⦈                 `U+2988`
-      $\rrbracket$    `U+27E7`      ❲                 `U+2772`
-                                     ❳                 `U+2773`
+| Character     | Codepoint  | Character | Codepoint  |
+|---------------|------------|-----------|------------|
+| $\neg$        | `U+00AC`   | $\langle$ | `U+27E8`   |
+| $\lceil$      | `U+2308`   | $\rangle$ | `U+27E9`   |
+| $\rceil$      | `U+2309`   | ⦃         | `U+2983`   |
+| $\lfloor$     | `U+230A`   | ⦄         | `U+2984`   |
+| $\rfloor$     | `U+230B`   | ⦇         | `U+2987`   |
+| $\llbracket$  | `U+27E6`   | ⦈         | `U+2988`   |
+| $\rrbracket$  | `U+27E7`   | ❲         | `U+2772`   |
+|               |            | ❳         | `U+2773`   |
 
-    Table: Non-aggregating Unicode characters
+Table: Non-aggregating Unicode characters
 
 3.  A *number* is a string of one or more digits.
     If not the initial digit, an underscore can be used within the sequence to provide spacing.
@@ -619,33 +619,27 @@ The expressions in the same row are equivalent.
  !-- \multicolumn{3}{|c|}{ } \\
   -->
 
- *Kind of type*    *Quotation*                                                       *ML expression*
- ---------------   ---------------                                                   -------------------------
- Type variable      `:'`$\mathit{alphanum}$                                          `mk_vartype("'`$\mathit{alphanum}$`")`
- Type constant      `:`$\mathit{op}$                                                 `mk_type("`$\mathit{op}$`",[])`
-                    `:`$\mathit{thy}$`$`$\mathit{op}$                                `mk_thy_type{`
-                                                                                      $\;\;$`Thy="`$\mathit{thy}$`",Tyop="`$\mathit{op}$`", Args=[]}`
- Function type      `:`$\sigma_1$`->`$\sigma_2$                                      $\sigma_1$ `-->` $\sigma_2$
- Compound type      `:(`$\sigma_1,\dots,\sigma_n$`)`$\mathit{op}$                    `mk_type("`$\mathit{op}$`",[`$\sigma_1,\dots,\sigma_n$`])`
-                    `:(`$\sigma_1\dots,\sigma_n$`)`$\mathit{thy}$`$`$\mathit{op}$    `mk_thy_type{`
-                                                                                      $\;\;$`Thy="`$\mathit{thy}$`",Tyop="`$\mathit{op}$`",`
-                                                                                      $\;\;$`Args=[`$\sigma_1,\dots,\sigma_n$`]}`
+| *Kind of type* | *Quotation* | *ML expression* |
+|---|---|---|
+| Type variable | `:'`$\mathit{alphanum}$ | `mk_vartype("'`$\mathit{alphanum}$`")` |
+| Type constant | `:`$\mathit{op}$<br>`:`$\mathit{thy}$`$`$\mathit{op}$ | `mk_type("`$\mathit{op}$`",[])`<br>`mk_thy_type{`<br>&nbsp;&nbsp;`Thy="`$\mathit{thy}$`",Tyop="`$\mathit{op}$`", Args=[]}` |
+| Function type | `:`$\sigma_1$`->`$\sigma_2$ | $\sigma_1$ `-->` $\sigma_2$ |
+| Compound type | `:(`$\sigma_1,\dots,\sigma_n$`)`$\mathit{op}$<br>`:(`$\sigma_1\dots,\sigma_n$`)`$\mathit{thy}$`$`$\mathit{op}$ | `mk_type("`$\mathit{op}$`",[`$\sigma_1,\dots,\sigma_n$`])`<br>`mk_thy_type{`<br>&nbsp;&nbsp;`Thy="`$\mathit{thy}$`",Tyop="`$\mathit{op}$`",`<br>&nbsp;&nbsp;`Args=[`$\sigma_1,\dots,\sigma_n$`]}` |
 
- Table: Building Types *via* Quotations or ML
+Table: Building Types *via* Quotations or ML
 
 
 Equivalent ways of inputting the four primitive kinds of term are shown in
 the next table.
 
- *Kind of term*    *Quotation*                       *ML expression*
- ---------------   ------------                      -----------------
- Variable          $v$`:`$\sigma$                    `mk_var("`$v$`",`$\sigma$`)`
- Constant          $c$`:`$\sigma$                    `mk_const"`$c$`",`$\sigma$`)`
-                   $\mathit{thy}$`$`$c$`:`$\sigma$   `mk_thy_const{Thy="`$\mathit{thy}$`",Name="`$c$`",Ty=`$\sigma$`}`
- Combination       $t_1$ $t_2$                       `mk_comb(`$t_1$`, `$t_2$`)`
- Abstraction       `\`$x$`. `$t$                    `mk_abs(`$x$`, `$t$`)`
+| *Kind of term* | *Quotation* | *ML expression* |
+|---|---|---|
+| Variable | $v$`:`$\sigma$ | `mk_var("`$v$`",`$\sigma$`)` |
+| Constant | $c$`:`$\sigma$<br>$\mathit{thy}$`$`$c$`:`$\sigma$ | `mk_const("`$c$`",`$\sigma$`)`<br>`mk_thy_const{Thy="`$\mathit{thy}$`",Name="`$c$`",Ty=`$\sigma$`}` |
+| Combination | $t_1$ $t_2$ | `mk_comb(`$t_1$`, `$t_2$`)` |
+| Abstraction | `\`$x$`. `$t$ | `mk_abs(`$x$`, `$t$`)` |
 
- Table: Building Primitive Terms
+Table: Building Primitive Terms
 
 
 The following shows a few of these in action:
@@ -661,12 +655,12 @@ The following shows a few of these in action:
 In addition to the kinds of terms in the tables above, the parser also
 supports the following syntactic abbreviations.
 
- *Abbreviated term*             *Meaning*                                            *ML expression*
- ------------------             ----------                                           ----------------
- $t\;t_1 \cdots t_n$            `(`$\cdots$`((`$t$ $t_1$`)` $t_2$`)`$\cdots t_n$`)`  `list_mk_comb(`$t$`,[`$t_1,\dots,t_n$`])`
- `\`$x_1\cdots x_n$`.` $t$      `\`$x_1$`.`$\cdots$`\`$x_n$`.` $t$                   `list_mk_abs([`$x_1,\dots,x_n$`],`$t$`)`
+| *Abbreviated term* | *Meaning* | *ML expression* |
+|---|---|---|
+| $t\;t_1 \cdots t_n$ | `(`$\cdots$`((`$t$ $t_1$`)` $t_2$`)`$\cdots t_n$`)` | `list_mk_comb(`$t$`,[`$t_1,\dots,t_n$`])` |
+| `\`$x_1\cdots x_n$`.` $t$ | `\`$x_1$`.`$\cdots$`\`$x_n$`.` $t$ | `list_mk_abs([`$x_1,\dots,x_n$`],`$t$`)` |
 
- Table: Syntactic abbreviations
+Table: Syntactic abbreviations
 
 ## Theorems
 
