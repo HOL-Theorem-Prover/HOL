@@ -13,6 +13,8 @@ sig
   val subst_pathvars : string -> string
                   (* may complain to stdErr about malformed variable things *)
 
+  val add_search_dir : string -> unit
+  val resolve_file : string -> string
 
   (* pulls in contents of all the files with name filename that can be found
      starting at starter_dirs and moving up in the file hierarchy.

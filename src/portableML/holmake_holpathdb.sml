@@ -8,6 +8,8 @@ struct
    Note how it only has side effects.
 *)
 
+val _ = holpathdb.add_search_dir (OS.Path.concat(Systeml.HOLDIR, "sigobj"))
+
 local
   val exts = holpathdb.search_for_extensions
                ReadHMF.find_includes

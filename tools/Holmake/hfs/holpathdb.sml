@@ -164,4 +164,17 @@ fun search_for_extensions gen {skip,starter_dirs = dlist} =
   end
 
 
+val search_dirs : string list ref = ref []
+fun add_search_dir d = search_dirs := d :: !search_dirs
+
+fun resolve_file path =
+    if OS.FileSys.access(path, [OS.FileSys.A_READ]) then path
+    else
+      case List.find
+             (fn d => OS.FileSys.access(OS.Path.concat(d, path),
+                                        [OS.FileSys.A_READ]))
+             (!search_dirs)
+      of SOME d => OS.Path.concat(d, path)
+       | NONE => path
+
 end (* struct *)

@@ -19,8 +19,8 @@ else
   EXTRA_CLEANS = test
 endif
 
-# this test checks to see if the proj1ATheory.sml file has used the proj1
-# holpath variable in the call to load the proj1ATheory.dat file.
+# this test checks that proj1ATheory.sml uses a relative path
+# to load its .dat file via resolve_file.
 test: ../proj1/proj1ATheory.sml
-	grep 'subst_pathvars.*(proj1)' $(hol2fs $<)
+	grep 'resolve_file.*"proj1ATheory.dat"' $(hol2fs $<)
 	touch $@

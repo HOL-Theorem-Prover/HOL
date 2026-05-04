@@ -288,12 +288,7 @@ fun pp_struct hash (info_record : struct_info_record) = let
                 (add_newline >> add_newline)
                 l
       )
-  val datfile =
-      mlquote (
-        holpathdb.reverse_lookup {
-          path = OS.Path.concat(OS.FileSys.getDir(), name ^ "Theory.dat")
-        }
-      )
+  val datfile = mlquote (name ^ "Theory.dat")
   val m =
       block CONSISTENT 0 (
        add_string (String.concatWith " "
@@ -316,7 +311,7 @@ fun pp_struct hash (info_record : struct_info_record) = let
              block CONSISTENT 0 (
               add_string "structure TDB = struct" >> add_break(1,2) >>
               add_string "val path =" >> add_break(1,4) >>
-                add_string ("holpathdb.subst_pathvars "^datfile) >>
+                add_string ("holpathdb.resolve_file "^datfile) >>
                 add_break(1,2) >>
               add_string "val timestamp = HOLFileSys.modTime path" >> add_break(1,2) >>
               add_string "val thydata = " >> add_break(1,4) >>
