@@ -1,3 +1,7 @@
+---
+aliases:
+  - boolSyntax.list_mk_abs
+---
 ## `list_mk_abs`
 
 ``` hol4
@@ -5,6 +9,12 @@ Term.list_mk_abs : term list * term -> term
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`boolSyntax.list_mk_abs`](#boolSyntax.list_mk_abs).*
+
+<!-- END aliases-block -->
 
 Performs a sequence of lambda binding operations.
 

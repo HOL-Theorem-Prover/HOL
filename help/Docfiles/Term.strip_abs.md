@@ -1,3 +1,7 @@
+---
+aliases:
+  - boolSyntax.strip_abs
+---
 ## `strip_abs`
 
 ``` hol4
@@ -5,6 +9,12 @@ Term.strip_abs : term -> term list * term
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`boolSyntax.strip_abs`](#boolSyntax.strip_abs).*
+
+<!-- END aliases-block -->
 
 Break apart consecutive lambda abstractions.
 
