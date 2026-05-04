@@ -37,6 +37,10 @@ Interrupt.sml
 ../../../tools-poly/poly/Binarymap.sml
 ../../../tools-poly/poly/Binaryset.sig
 ../../../tools-poly/poly/Binaryset.sml
+Unsynchronized.sml
+../Table.sml
+../Symtab.sml
+../Inttab.sml
 ../UnicodeChars.sig
 ../UnicodeChars.sml
 ../Redblackmap.sig
@@ -45,12 +49,6 @@ Interrupt.sml
 ../Redblackset.sml
 ../HOLset.sig
 ../HOLset.sml
-../HOLdict.sig
-../HOLdict.sml
-Unsynchronized.sml
-../Table.sml
-../Symtab.sml
-../Inttab.sml
 ../mosml/concurrent/Sref.sig
 ../mosml/concurrent/Sref.sml
 ../seq.sig
