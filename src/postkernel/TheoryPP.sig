@@ -24,7 +24,7 @@ sig
  }
  type sig_info_record = {
    name        : string,
-   parents     : string list,
+   parents     : {name : string, url : string} list,
    all_thms    : (string * thm * thminfo) list
  }
 
@@ -34,7 +34,8 @@ sig
                parents     : string list,
                all_thms    : (string * thm * thminfo) list} PP.pprinter
 
- val pp_doc : thm PP.pprinter -> sig_info_record PP.pprinter
+ val print_doc_html :
+     thm PP.pprinter -> sig_info_record -> TextIO.outstream -> unit
 
 
  val pp_struct : string -> struct_info_record PP.pprinter

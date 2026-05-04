@@ -942,9 +942,33 @@ fun export_theory_return_hash () = let
   val all_thms = Symtab.fold foldthis facts []
   val concat = String.concat
   val name = thyname^"Theory"
+  val parent_names = map thyid_name (Graph.fringe())
   val sigthry = {name = thyname,
-                 parents = map thyid_name (Graph.fringe()),
+                 parents = parent_names,
                  all_thms = all_thms}
+  fun parent_doc_url pname =
+      case Binarymap.peek(!metadata, pname) of
+          NONE => NONE
+        | SOME {path = parent_dat, ...} =>
+          let val parent_src = OS.Path.dir parent_dat
+              val target =
+                  OS.Path.concat(
+                    parent_src,
+                    OS.Path.concat(".hol/docs", pname ^ "Theory.html"))
+              val curr_docs =
+                  OS.Path.concat(OS.FileSys.getDir(), ".hol/docs")
+          in
+              SOME (OS.Path.mkRelative {path = target, relativeTo = curr_docs})
+              handle OS.Path.Path => SOME (pname ^ "Theory.html")
+          end
+  val docthry =
+      {name = thyname,
+       parents =
+         List.mapPartial
+           (fn p => Option.map (fn url => {name = p, url = url})
+                               (parent_doc_url p))
+           parent_names,
+       all_thms = all_thms}
   fun mungethydata dmap = let
     fun foldthis (k,v,acc as (strlist,tmlist,dict)) =
         case v of
@@ -980,7 +1004,6 @@ fun export_theory_return_hash () = let
           val ostrm1 = Portable.open_out(concat["./",name,".sig"])
           val ostrm2 = Portable.open_out(concat["./",name,".sml"])
           val ostrm3 = Portable.open_out(holdatfile)
-          val sigdoc_strm = Portable.open_out (concat["./",name,".txt"])
           val time_now = total_cpu (Timer.checkCPUTimer Globals.hol_clock)
           val time_since = Time.-(time_now, !new_theory_time)
           val tstr = Lib.time_to_string time_since
@@ -993,7 +1016,15 @@ fun export_theory_return_hash () = let
         theory_out (TheoryPP.pp_sig sigthry) ostrm1;
         theory_out (TheoryPP.pp_struct hash structthry) ostrm2;
         if Feedback.get_tracefn "TheoryPP.include_docs" () = 1 then
-          theory_out (TheoryPP.pp_doc (!pp_thm) sigthry) sigdoc_strm
+          let val docsdir = ".hol/docs"
+              val () = HOLFS_dtype.createDirIfNecessary docsdir
+              val sigdoc_strm =
+                  Portable.open_out (OS.Path.concat(docsdir, name ^ ".html"))
+          in
+            (TheoryPP.print_doc_html (!pp_thm) docthry sigdoc_strm
+               handle e => (Portable.close_out sigdoc_strm; raise e);
+             Portable.close_out sigdoc_strm)
+          end
         else ();
         Tracing.trace_theory name {
           theory    = thyname,
