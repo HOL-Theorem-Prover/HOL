@@ -73,4 +73,14 @@ in
  >> ASM_SIMP_TAC std_ss [Abbr ‘^P’]
 end;
 
+(* This version doesn't call RW_TAC (but uses simp []), is assumption-safe. *)
+fun unbeta_tac ths tm = let
+    val P = genvar (type_of tm --> bool)
+in
+    CONV_TAC (UNBETA_CONV tm)
+ >> qmatch_abbrev_tac ‘^P _’
+ >> simp ths
+ >> ASM_SIMP_TAC std_ss [Abbr ‘^P’]
+end;
+
 end (* struct *)

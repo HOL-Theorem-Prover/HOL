@@ -2101,7 +2101,7 @@ QED
  *)
 Theorem hreduce_permutator_shared :
     !Ns n ls. LENGTH Ns <= n /\ n < LENGTH ls /\ ALL_DISTINCT ls /\
-             DISJOINT (set ls) (BIGUNION (IMAGE FV (set Ns)))
+              DISJOINT (set ls) (BIGUNION (IMAGE FV (set Ns)))
          ==> ?xs y. permutator n @* Ns -h->*
                     LAMl xs (LAM y (VAR y @* Ns @* MAP VAR xs)) /\
                     LENGTH xs = n - LENGTH Ns /\
