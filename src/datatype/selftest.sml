@@ -367,6 +367,34 @@ val _ = tprint "bare accessor name parses to constant"
 val _ = require_msg (check_result is_const) term_to_string Parse.Term
                     ‘polyrcd_pfld1’
 
+(* #906: FORALL_<rcd>, EXISTS_<rcd>, and related literal-form theorems
+   used to leak the fresh tyvars introduced by the record package's
+   type-changing fupdates. The conclusion of FORALL_polyrcd should
+   mention only the two tyvars actually declared by polyrcd. *)
+local
+  fun tvcount nm = length (type_vars_in_term (concl (DB.fetch "-" nm)))
+in
+val _ = tprint "FORALL_polyrcd has only polyrcd's tyvars (#906)"
+val _ = require_msg (check_result (fn n => n = 2)) Int.toString
+                    tvcount "FORALL_polyrcd"
+
+val _ = tprint "EXISTS_polyrcd has only polyrcd's tyvars (#906)"
+val _ = require_msg (check_result (fn n => n = 2)) Int.toString
+                    tvcount "EXISTS_polyrcd"
+
+val _ = tprint "polyrcd_literal_nchotomy has only polyrcd's tyvars (#906)"
+val _ = require_msg (check_result (fn n => n = 2)) Int.toString
+                    tvcount "polyrcd_literal_nchotomy"
+
+val _ = tprint "polyrcd_literal_11 has only polyrcd's tyvars (#906)"
+val _ = require_msg (check_result (fn n => n = 2)) Int.toString
+                    tvcount "polyrcd_literal_11"
+
+val _ = tprint "polyrcd_updates_eq_literal has only polyrcd's tyvars (#906)"
+val _ = require_msg (check_result (fn n => n = 2)) Int.toString
+                    tvcount "polyrcd_updates_eq_literal"
+end
+
 val _ = with_flag (Globals.linewidth, 40) pptest
                   ("multiline record 1",
                    ``<|fld1 := a very long expression indeed ;

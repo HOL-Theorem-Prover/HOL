@@ -524,14 +524,32 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   local
     fun rng_of_dom ty = ty |> dom_rng |> #1 |> dom_rng |> #2
     fun dom_of_dom ty = ty |> dom_rng |> #1 |> dom_rng |> #1
+    (* The fupdate constants in fupdfn_terms are type-changing: each
+       carries the field's original tyvars *and* fresh ones from
+       tysigma so callers may swap a field's type.  For the FORALL /
+       EXISTS / literal_equality / literal_nchotomy / literal_11
+       theorems below we don't need that capability — we want the
+       resulting iff/equation to live entirely at the record's
+       declared type variables.  Specialise each fupdate with the
+       reverse of its substitution so the result is a non-type-changing
+       fupdate at the record's original tyvars (#906). *)
+    val fupdfn_terms' =
+        map (fn (s, upd) =>
+                let
+                  val rev_s = map (fn {redex,residue} =>
+                                       {redex = residue, residue = redex}) s
+                in
+                  inst rev_s upd
+                end)
+            fupdfn_terms
     val value_vars =
         List.foldr
-          (fn ((_,updt), sofar) =>
+          (fn (updt, sofar) =>
               let val ty = rng_of_dom (type_of updt)
               in
                 mk_var_avds(app_letter ty, ty, var::sofar)::sofar
               end)
-          [var] fupdfn_terms |> (fn l => List.take(l, length fields))
+          [var] fupdfn_terms' |> (fn l => List.take(l, length fields))
     fun augvar n v = let
       val (nm, ty) = dest_var v
     in
@@ -540,17 +558,17 @@ fun prove_recordtype_thms (tyinfo, fields) = let
     val vvars1 = map (augvar 1) value_vars
     val vvars2 = map (augvar 2) value_vars
     val arb = mk_arb typ
-    fun foldthis ((s,upd),v,(s0,acc)) = let
+    fun foldthis (upd,v,acc) = let
       val ty = type_of v
       val K = Term.inst [alpha |-> ty, beta |-> dom_of_dom (type_of upd)] K_tm
     in
-      (s @ s0,mk_comb(mk_comb(inst s0 upd, mk_comb(K, v)), acc))
+      mk_comb(mk_comb(upd, mk_comb(K, v)), acc)
     end
-    val (_, lhs) = ListPair.foldr foldthis ([], var) (fupdfn_terms, value_vars)
-    val (_, rhs) = ListPair.foldr foldthis ([], arb) (fupdfn_terms, value_vars)
+    val lhs = ListPair.foldr foldthis var (fupdfn_terms', value_vars)
+    val rhs = ListPair.foldr foldthis arb (fupdfn_terms', value_vars)
 
-    val (_, lit1) = ListPair.foldr foldthis ([], arb) (fupdfn_terms, vvars1)
-    val (_, lit2) = ListPair.foldr foldthis ([], arb) (fupdfn_terms, vvars2)
+    val lit1 = ListPair.foldr foldthis arb (fupdfn_terms', vvars1)
+    val lit2 = ListPair.foldr foldthis arb (fupdfn_terms', vvars2)
 
     val literal_equality =
         GENL (var::value_vars)
@@ -559,38 +577,36 @@ fun prove_recordtype_thms (tyinfo, fields) = let
                                C SPEC cases_thm) [arb, var] THEN
                     REWRITE_TAC [fupdfn_thm, combinTheory.K_THM]))
 
-    val var' = inst tysigma var
-    val typ' = type_of var'
     val literal_nchotomy =
-        GEN var'
-            (prove(list_mk_exists(value_vars, mk_eq(var', rhs)),
+        GEN var
+            (prove(list_mk_exists(value_vars, mk_eq(var, rhs)),
                    MAP_EVERY (STRUCT_CASES_TAC o C ISPEC cases_thm)
-                             [arb, var'] THEN
+                             [arb, var] THEN
                              REWRITE_TAC [fupdfn_thm, accessor_thm, oneone_thm,
                                           combinTheory.K_THM] THEN
                              REPEAT Unwind.UNWIND_EXISTS_TAC))
 
-    val pred_r = mk_var_avds("P", typ' --> bool, var::value_vars)
-    val P_r = mk_comb(pred_r, var')
+    val pred_r = mk_var_avds("P", typ --> bool, var::value_vars)
+    val P_r = mk_comb(pred_r, var)
     val P_literal = mk_comb(pred_r, rhs)
-    val forall_goal = mk_eq(mk_forall(var', P_r),
+    val forall_goal = mk_eq(mk_forall(var, P_r),
                             list_mk_forall(value_vars, P_literal))
-    val exists_goal = mk_eq(mk_exists(var', P_r),
+    val exists_goal = mk_eq(mk_exists(var, P_r),
                             list_mk_exists(value_vars, P_literal))
     val forall_thm =
         GEN_ALL
           (prove(forall_goal,
                  EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
-                 X_GEN_TAC var' THEN
-                 STRUCT_CASES_TAC (ISPEC var' literal_nchotomy) THEN
+                 X_GEN_TAC var THEN
+                 STRUCT_CASES_TAC (ISPEC var literal_nchotomy) THEN
                  ASM_REWRITE_TAC []))
     val exists_thm =
         GEN_ALL
         (prove(exists_goal,
                EQ_TAC THENL [
-                 DISCH_THEN (X_CHOOSE_THEN var' ASSUME_TAC) THEN
+                 DISCH_THEN (X_CHOOSE_THEN var ASSUME_TAC) THEN
                  EVERY_TCL (map X_CHOOSE_THEN value_vars)
-                           SUBST_ALL_TAC (ISPEC var' literal_nchotomy) THEN
+                           SUBST_ALL_TAC (ISPEC var literal_nchotomy) THEN
                  MAP_EVERY EXISTS_TAC value_vars THEN ASM_REWRITE_TAC [],
                  DISCH_THEN (EVERY_TCL (map X_CHOOSE_THEN value_vars)
                                        ASSUME_TAC) THEN
