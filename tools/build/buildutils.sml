@@ -679,7 +679,6 @@ in
   | SOME"uo"     => idtransfer true df
   | SOME"so"     => idtransfer true df   (* for dynlibs *)
   | SOME"xable"  => idtransfer true df   (* for executables *)
-  | SOME"dat"    => idtransfer true df   (* for theory data *)
   | SOME"sig"    => (idtransfer false df; augmentSRCFILES (Path.base file))
   | SOME"sml"    => (case digest_sig file of
                        NONE => ()

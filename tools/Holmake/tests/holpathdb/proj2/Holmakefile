@@ -19,8 +19,8 @@ else
   EXTRA_CLEANS = test
 endif
 
-# this test checks that proj1ATheory.sml uses a relative path
-# to load its .dat file via resolve_file.
+# this test checks that proj1ATheory.sml loads its .dat file
+# via subst_pathvars (relative under poly, absolute under mosml).
 test: ../proj1/proj1ATheory.sml
-	grep 'resolve_file.*"proj1ATheory.dat"' $(hol2fs $<)
+	grep 'subst_pathvars.*proj1ATheory.dat"' $(hol2fs $<)
 	touch $@

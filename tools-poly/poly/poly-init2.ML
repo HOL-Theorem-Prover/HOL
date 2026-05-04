@@ -111,6 +111,7 @@ fun findUo modPath [] = NONE
       end;
 
 val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
+val _ = holpathdb.use_relative_paths := true
 
 fun loadUo ps use uo =
   let

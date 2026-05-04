@@ -44,6 +44,8 @@ fun db_dirs() = #rng (!holpath_db)
 
 fun warn s = TextIO.output(TextIO.stdErr, "WARNING: " ^ s ^ "\n")
 
+val use_relative_paths = ref false
+
 fun subst_pathvars modPath =
   let
     fun die s = (warn s; modPath)
@@ -163,18 +165,5 @@ fun search_for_extensions gen {skip,starter_dirs = dlist} =
     #1 (Binarymap.foldl foldthis ([],Binarymap.mkDict String.compare) dmap)
   end
 
-
-val search_dirs : string list ref = ref []
-fun add_search_dir d = search_dirs := d :: !search_dirs
-
-fun resolve_file path =
-    if OS.FileSys.access(path, [OS.FileSys.A_READ]) then path
-    else
-      case List.find
-             (fn d => OS.FileSys.access(OS.Path.concat(d, path),
-                                        [OS.FileSys.A_READ]))
-             (!search_dirs)
-      of SOME d => OS.Path.concat(d, path)
-       | NONE => path
 
 end (* struct *)
