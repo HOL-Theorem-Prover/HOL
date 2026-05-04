@@ -20,7 +20,7 @@ fun recMkDir dir =
 fun already_cached base key =
     OS.FileSys.access(OS.Path.concat(OS.Path.concat(base, "key"), key), [])
 
-fun upload base_url cachekey dir thyname (ofns : Holmake_tools.output_functions) =
+fun upload base_url cachekey dir filenames (ofns : Holmake_tools.output_functions) =
     case cachekey of
         HM_Cachekey.Missing _ => false
       | HM_Cachekey.Key key =>
@@ -28,25 +28,17 @@ fun upload base_url cachekey dir thyname (ofns : Holmake_tools.output_functions)
     let
         val {info, warn, ...} = ofns
         val _ = recMkDir base_url handle OS.SysErr _ => ()
-        val theory_exts = [".sig", ".sml", ".dat"]
-        fun is_theory_file f =
-            List.exists (fn ext => f = thyname ^ ext) theory_exts
-        fun scan_dir d =
-            let val ds = OS.FileSys.openDir d
-                fun loop acc =
-                    case OS.FileSys.readDir ds of
-                        NONE => (OS.FileSys.closeDir ds; acc)
-                      | SOME f =>
-                        if is_theory_file f then
-                            loop ({name = f, path = OS.Path.concat(d, f)} :: acc)
-                        else loop acc
-            in loop [] handle e => (OS.FileSys.closeDir ds; raise e) end
         val obj_dir = OS.Path.concat(dir, OS.Path.concat(".hol", "objs"))
-        val files =
-            scan_dir dir @
-            (if OS.FileSys.isDir obj_dir handle OS.SysErr _ => false
-             then scan_dir obj_dir
-             else [])
+        fun find_file f =
+            let val in_objs = OS.Path.concat(obj_dir, f)
+                val in_dir = OS.Path.concat(dir, f)
+                val path = if OS.FileSys.access(in_objs, []) then SOME in_objs
+                           else if OS.FileSys.access(in_dir, []) then SOME in_dir
+                           else NONE
+            in
+                Option.map (fn p => {name = f, path = p}) path
+            end
+        val files = List.mapPartial find_file filenames
         val data_dir = OS.Path.concat(base_url, "data")
         val _ = recMkDir data_dir handle OS.SysErr _ => ()
         fun process {name, path} =
@@ -67,7 +59,7 @@ fun upload base_url cachekey dir thyname (ofns : Holmake_tools.output_functions)
         val _ = TextIO.closeOut out
     in
         if ok then true
-        else (warn ("Cache failed for " ^ thyname); false)
+        else (warn "Cache upload failed"; false)
     end handle _ => false
 
 fun fetch base_url cachekey (ofns : Holmake_tools.output_functions) =

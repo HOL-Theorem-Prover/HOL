@@ -404,12 +404,23 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                     HM_Cachekey.Key k => HM_Cachekey.write_stamp stamp_path k
                   | HM_Cachekey.Missing _ => ()
             val cache_upload_dir = hmdir.toAbsPath (hmdir.curdir())
+            val cache_filenames = let
+              open HM_DepGraph
+              val nodes = find_nodes_by_command g
+                            (hmdir.curdir(),
+                             BuiltInCmd (BIC_BuildScript s, empty_incinfo))
+            in
+              List.mapPartial
+                (Option.map (fromFile o hm_target.filepart o #target) o
+                 peeknode g)
+                nodes
+            end
             fun write_cache () =
                 case cache_dir of
                     SOME url =>
                       ignore (HM_CacheFetch.upload url ck
                                 cache_upload_dir
-                                (OS.Path.file s ^ "Theory") outs)
+                                cache_filenames outs)
                   | NONE => ()
           in
             run_script cache_dir ck g extra scriptetc objectfiles

@@ -53,18 +53,28 @@ struct
       end
 in
 fun use s =
-  if has_dq s then
-    let
-      val filename = FileSys.tmpName()^".hol"
-    in
-      if Process.isSuccess (unquote_to s filename) then
-        (Meta.use filename; FileSys.remove filename)
-        handle e => (FileSys.remove filename handle _ => (); raise e)
-      else (TextIO.output(TextIO.stdOut,
-                          ("Failed to translate file: "^s^"\n"));
-            raise Fail "use")
-    end
-  else Meta.use s
+  let
+    val full = OS.Path.mkCanonical
+                 (OS.Path.mkAbsolute{path = s, relativeTo = FileSys.getDir()})
+    val fileDir = OS.Path.dir full
+    val oldDir = FileSys.getDir()
+    val _ = if fileDir <> "" then FileSys.chDir fileDir else ()
+  in
+    ((if has_dq full then
+        let
+          val filename = FileSys.tmpName()^".hol"
+        in
+          if Process.isSuccess (unquote_to full filename) then
+            (Meta.use filename; FileSys.remove filename)
+            handle e => (FileSys.remove filename handle _ => (); raise e)
+          else (TextIO.output(TextIO.stdOut,
+                              ("Failed to translate file: "^s^"\n"));
+                raise Fail "use")
+        end
+      else Meta.use full);
+     FileSys.chDir oldDir)
+    handle e => (FileSys.chDir oldDir handle _ => (); raise e)
+  end
 
 fun prim_use {quietOpen} s =
     with_flag (Meta.quietdec, quietOpen) use s
