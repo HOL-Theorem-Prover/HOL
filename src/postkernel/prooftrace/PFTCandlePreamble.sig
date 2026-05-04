@@ -30,10 +30,12 @@ signature PFTCandlePreamble = sig
        CONJUNCT2:      p /\ q |- q
        CONJ:           p, q |- p /\ q
        MP:             p |- (p ==> q) = q
+       MP_HYP:         p ==> q, p |- q
        DISCH:          |- ((p /\ q) = p) = (p ==> q)
        EQ_IMP_RULE1:   p = q |- p ==> q
        EQ_IMP_RULE2:   p = q |- q ==> p
        SPEC:           |- (!P) ==> P x
+       SPEC_HYP:       !P |- P x
        GEN:            |- (P = \x. T) = !P
        EXISTS:         P x |- ?P
        CHOOSE:         |- (?P) ==> (!x. P x ==> Q) ==> Q

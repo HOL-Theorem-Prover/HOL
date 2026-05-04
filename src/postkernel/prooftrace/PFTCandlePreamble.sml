@@ -476,6 +476,8 @@ fun emit {output, binary} = let
   val th_imp_unfolded = EQ_MP imp_unfold (ASSUME tm_imp_pq)
   val th_conj_from_imp = EQ_MP (SYM th_imp_unfolded) (ASSUME var_p)
   val imp_qth = PROVE_HYP th_conj_from_imp CONJUNCT2_pth
+  (* {p ==> q, p} ⊢ q.  Hypothesis-form MP proforma for cheaper replay. *)
+  val () = save "candle$MP_HYP" imp_qth
 
   (* Combine: {p} ⊢ (p ==> q) = q *)
   val MP_rth = DEDUCT_ANTISYM imp_pth imp_qth
@@ -599,7 +601,8 @@ fun emit {output, binary} = let
   val th_spec3 = TRANS th_spec2 (beta_reduce lam_x_T var_x var_x)
   (* {!P} ⊢ P x = T *)
   val th_spec4 = eqtElim th_spec3
-  (* {!P} ⊢ P x *)
+  (* {!P} ⊢ P x.  Hypothesis-form SPEC proforma for cheaper replay. *)
+  val () = save "candle$SPEC_HYP" th_spec4
   val tm_forallP_and_Px = mk_comb (mk_comb const_and tm_forall_P) tm_Px
   val SPEC_pth = do_DISCH tm_forall_P th_spec4 tm_Px tm_forallP_and_Px
   (* ⊢ (!P) ==> P x *)
