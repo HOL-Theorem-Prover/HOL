@@ -526,6 +526,27 @@ val _ = TypeBase.export [
 val _ = Hol_datatype `t1 = T1 of (((num, num) list_syn # t2) list)
     ;  t2 = T2 of t1`;
 
+(* #1086: the case-printer's strip_case used to merge clauses by
+   substituting [v |-> e] into a pattern when the inner case scrutinised
+   `v = e`, but it didn't check whether v still occurred in the
+   corresponding rhs. For a closed input like
+       case x of MCons y ys => if y = T then y else F | MNil => F
+   the merge produced
+       case x of MCons T ys => y | MCons y ys => F | MNil => F
+   with `y` orphaned in the first clause, so the printer rendered the
+   closed term as a string that fails to round-trip through the parser. *)
+val _ = Hol_datatype `boollist = MNil | MCons of bool => boollist`
+local
+  val orig =
+      Parse.Term`(\x. case x of MCons y ys => if y = T then y else F
+                              | MNil => F) z`
+  fun roundtrip t = Parse.Term [QUOTE (Parse.term_to_string t)]
+in
+val _ = tprint "case-printer keeps bound vars bound (#1086)"
+val _ = require_msg (check_result (aconv orig)) term_to_string
+                    roundtrip orig
+end
+
 val _ = OK ()
 
 val _ = Process.exit Process.success;
