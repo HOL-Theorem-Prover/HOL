@@ -201,8 +201,9 @@ fun run_emit_all max_jobs =
     val total = length todo
     val completed = ref 0
 
+    fun pad s n = s ^ CharVector.tabulate(n, (fn _ => #" "))
     fun truncate max s =
-      if String.size s <= max then s
+      if String.size s <= max then pad s (max - String.size s)
       else if max <= 3 then String.substring(s, 0, max)
       else String.substring(s, 0, max - 3) ^ "..."
 
@@ -213,8 +214,8 @@ fun run_emit_all max_jobs =
       (TextIO.output(TextIO.stdOut,
          "\rEmitting: " ^ Int.toString (!completed) ^ "/" ^
          Int.toString total ^ " done, " ^
-         Int.toString (length running) ^ " running, " ^
-         Int.toString (length pending) ^ " pending [" ^
+         Int.toString (length pending) ^ " pending, " ^
+         Int.toString (length running) ^ " running [" ^
          running_names running ^ "]");
        TextIO.flushOut TextIO.stdOut)
 
