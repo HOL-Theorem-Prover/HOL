@@ -1,8 +1,22 @@
 all: $(DEFAULT_TARGETS)
 .PHONY: all
 
-Termtab.uo Termtab.ui: Termtab.sml $(dprot $(SIGOBJ)/Table.ui)
+TABLE_UID = $(dprot $(SIGOBJ)/Table.ui)
+
+# Termtab/Typetab: pre-existing rules from develop; safe under both
+# poly and mosml.
+Termtab.uo Termtab.ui: Termtab.sml $(TABLE_UID)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
 
-Typetab.uo Typetab.ui: Typetab.sml $(dprot $(SIGOBJ)/Table.ui)
+Typetab.uo Typetab.ui: Typetab.sml $(TABLE_UID)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
+# Files instantiating the Table functor locally need explicit
+# Table.ui passed on the command line for mosml -- its dep
+# auto-detection misses functor applications.
+
+SharingTables.uo: SharingTables.sml SharingTables.ui $(TABLE_UID)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
+TheoryGraph.uo: TheoryGraph.sml TheoryGraph.ui $(TABLE_UID)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<

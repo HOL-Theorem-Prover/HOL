@@ -1,8 +1,23 @@
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
+TABLE_UID = $(dprot $(SIGOBJ)/Table.ui)
+
 LVTermNetFunctorApplied.uo: LVTermNetFunctorApplied.sml $(dprot $(SIGOBJ)/LVTermNetFunctor.ui) $(dprot $(SIGOBJ)/HOLset.ui)
 	$(HOLMOSMLC) -c $(protect $(SIGOBJ)/LVTermNetFunctor.ui) $<
+
+# Files instantiating the Table functor locally need an explicit
+# Table.ui argument; mosml's auto-detection doesn't pick up functor
+# applications.  Sibling .ui files are listed as prereqs so Holmake
+# builds them before this rule fires; mosml's implicit -I . then
+# resolves them at compile time.
+
+DefnBaseCore.uo: DefnBaseCore.sml DefnBaseCore.ui $(TABLE_UID) ThmSetData.ui
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
+Ho_Net.uo: Ho_Net.sml Ho_Net.ui $(TABLE_UID)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
 
 selftest.exe: selftest.uo simpfrag.uo $(dprot $(SIGOBJ)/term_pp.uo) \
               $(dprot $(SIGOBJ)/testutils.uo) $(dprot $(SIGOBJ)/TermParse.uo) \
