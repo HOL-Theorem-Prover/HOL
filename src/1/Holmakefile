@@ -12,7 +12,8 @@ LVTermNetFunctorApplied.uo: LVTermNetFunctorApplied.sml $(dprot $(SIGOBJ)/LVTerm
 # builds them before this rule fires; mosml's implicit -I . then
 # resolves them at compile time.
 
-DefnBaseCore.uo: DefnBaseCore.sml DefnBaseCore.ui $(TABLE_UID) ThmSetData.ui
+DefnBaseCore.uo: DefnBaseCore.sml DefnBaseCore.ui $(TABLE_UID) ThmSetData.ui \
+                 $(dprot $(SIGOBJ)/KNametab.ui)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
 
 Ho_Net.uo: Ho_Net.sml Ho_Net.ui $(TABLE_UID)

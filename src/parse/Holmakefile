@@ -28,18 +28,19 @@ LVTermNetFunctor.ui LVTermNetFunctor.uo: LVTermNetFunctor.sml $(dprot $(SIGOBJ)/
 LVTermNet.uo: LVTermNet.sml LVTermNet.ui $(TABLE_UID)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
 
-TypeNet.uo: TypeNet.sml TypeNet.ui $(TABLE_UID)
+TypeNet.uo: TypeNet.sml TypeNet.ui $(TABLE_UID) \
+            $(dprot $(SIGOBJ)/Typetab.ui)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
 
 term_grammar.uo: term_grammar.sml term_grammar.ui $(TABLE_UID) \
                  HOLgrammars.uo GrammarSpecials.uo term_grammar_dtype.uo \
-                 Absyn.ui
+                 Absyn.ui $(dprot $(SIGOBJ)/Symtab.ui)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
 
 parse_term.uo: parse_term.sml parse_term.ui $(TABLE_UID) \
                term_tokens.uo term_grammar.ui HOLgrammars.uo \
                GrammarSpecials.uo PrecAnalysis.ui parse_term_dtype.uo \
-               Absyn.ui
+               Absyn.ui $(dprot $(SIGOBJ)/Symtab.ui)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
 
 Overload.ui: Overload.sig LVTermNetFunctor.ui
