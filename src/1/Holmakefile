@@ -13,10 +13,12 @@ LVTermNetFunctorApplied.uo: LVTermNetFunctorApplied.sml $(dprot $(SIGOBJ)/LVTerm
 # resolves them at compile time.
 
 DefnBaseCore.uo: DefnBaseCore.sml DefnBaseCore.ui $(TABLE_UID) ThmSetData.ui \
+                 $(dprot $(SIGOBJ)/HolKernel.ui) \
                  $(dprot $(SIGOBJ)/KNametab.ui)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
 
-Ho_Net.uo: Ho_Net.sml Ho_Net.ui $(TABLE_UID)
+Ho_Net.uo: Ho_Net.sml Ho_Net.ui $(TABLE_UID) \
+           $(dprot $(SIGOBJ)/HolKernel.ui)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
 
 

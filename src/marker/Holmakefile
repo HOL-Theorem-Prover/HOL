@@ -12,7 +12,8 @@ endif
 # Table.ui passed explicitly because its dep auto-detection misses
 # functor applications.
 markerLib.uo: markerLib.sml markerLib.ui $(TABLE_UID) markerSyntax.uo \
-              markerTheory.uo $(dprot $(SIGOBJ)/KNametab.ui)
+              markerTheory.uo $(dprot $(SIGOBJ)/HolKernel.ui) \
+              $(dprot $(SIGOBJ)/KNametab.ui)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
 
 selftest.exe: selftest.uo
