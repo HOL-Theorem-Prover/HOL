@@ -1294,29 +1294,22 @@ But recall: if writing library code to prove and store theorems, the underlying 
 \index{theorem attributes|)}
 \index{Theorem (special syntactic form)@`Theorem` (special syntactic form)|)}
 
-##skip
+#### Exporting a Theory
 
-\paragraph{Exporting a theory}
+Once a theory segment has been constructed, it can be written out to a file, which, after compilation, can be imported into future sessions.
 
-Once a theory segment has been constructed, it can be written out to a
-file, which, after compilation, can be imported into future sessions.
-
-\begin{holboxed}
 \index{export_theory@`export_theory`|pin}
-\begin{verbatim}
-   export_theory : unit -> unit
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "Theory" "export_theory";
+```
 
-When {\small\verb+export_theory+} is called, all out-of-date entities
-are removed from the current segment. Also, the parenthood of the
-theory is computed. The current theory segment is written to file
-$name${\small{\tt Theory.sml}} in the current working directory.  The
-file $name${\small{\tt Theory.sig}}, which documents the contents of
-$name$, is also written to the current working directory.  Notice that
-the exported theory is not compiled by \HOL. That is left to an
-external tool, \holmake{} (see section~\ref{Holmake}), which maintains
-dependencies among collections of HOL theory segments.
+When `export_theory` is called, all out-of-date entities are removed from the current segment.
+Also, the parenthood of the theory is computed.
+The current theory segment is written to a file *name*`Theory.sml`, and the file *name*`Theory.sig`, which documents the contents of *name*, is also written.
+Notice that the exported theory is not compiled by HOL.
+That is left to an external tool, `Holmake` (see the section on `Holmake`), which maintains dependencies among collections of HOL theory segments.
+
+##skip
 
 
 ### ML functions for accessing theories}
