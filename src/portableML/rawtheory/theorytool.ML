@@ -6,23 +6,33 @@ datatype conf_record = CR of {
   action : action,
   help : bool,
   quiet : bool,
-  url_base : string option
+  url_base : string option,
+  paths_from : string option
 }
 
 val init_conf =
-  CR {action = ShowKeys, help = false, quiet = false, url_base = NONE}
+  CR {action = ShowKeys, help = false, quiet = false, url_base = NONE,
+      paths_from = NONE}
 
-fun set_action a (CR {help, quiet, url_base, ...}) =
-  CR {action = a, help = help, quiet = quiet, url_base = url_base}
+fun set_action a (CR {help, quiet, url_base, paths_from, ...}) =
+  CR {action = a, help = help, quiet = quiet, url_base = url_base,
+      paths_from = paths_from}
 
-fun set_help () (CR {action, quiet, url_base, ...}) =
-  CR {action = action, help = true, quiet = quiet, url_base = url_base}
+fun set_help () (CR {action, quiet, url_base, paths_from, ...}) =
+  CR {action = action, help = true, quiet = quiet, url_base = url_base,
+      paths_from = paths_from}
 
-fun set_quiet () (CR {action, help, url_base, ...}) =
-  CR {action = action, help = help, quiet = true, url_base = url_base}
+fun set_quiet () (CR {action, help, url_base, paths_from, ...}) =
+  CR {action = action, help = help, quiet = true, url_base = url_base,
+      paths_from = paths_from}
 
-fun set_url_base s (CR {action, help, quiet, ...}) =
-  CR {action = action, help = help, quiet = quiet, url_base = SOME s}
+fun set_url_base s (CR {action, help, quiet, paths_from, ...}) =
+  CR {action = action, help = help, quiet = quiet, url_base = SOME s,
+      paths_from = paths_from}
+
+fun set_paths_from s (CR {action, help, quiet, url_base, ...}) =
+  CR {action = action, help = help, quiet = quiet, url_base = url_base,
+      paths_from = SOME s}
 
 val cline_options = [
   {short = "t", long = ["thygraph"],
@@ -31,6 +41,10 @@ val cline_options = [
   {short = "u", long = ["unused"],
    desc = GetOpt.NoArg (fn () => set_action ShowUnused),
    help = "Scan and report unused theorems"},
+  {short = "p", long = ["paths-from"],
+   desc = GetOpt.ReqArg (set_paths_from, "file"),
+   help = "Load only the *Theory.dat paths listed (one per line) in file,\n\
+          \instead of scanning the file tree"},
   {short = "b", long = ["url-base"],
    desc = GetOpt.ReqArg (set_url_base, "dir"),
    help = "For --thygraph: emit per-node URLs as relative paths\n\
@@ -154,7 +168,7 @@ fun main() =
                        options = cline_options,
                        errFn = fn s => theorystats.die (s ^ "\n" ^ uinfo)}
                       (CommandLine.arguments())
-    val CR {action, help, quiet, url_base} =
+    val CR {action, help, quiet, url_base, paths_from} =
         List.foldl (fn (f, acc) => f acc) init_conf cline_upds
   in
     if help then (
@@ -181,19 +195,44 @@ fun main() =
       )
       open theorystats
 
-      val thy_file_map =
-        recurse_toDirs find_theory_files_action
-                       Symtab.empty
-                       [OS.FileSys.getDir()]
+      fun read_path_lines fname =
+          let
+            val instrm = TextIO.openIn fname
+            fun chomp s =
+                if size s > 0 andalso String.sub(s, size s - 1) = #"\n"
+                then String.substring(s, 0, size s - 1) else s
+            fun loop acc =
+                case TextIO.inputLine instrm of
+                    NONE => List.rev acc
+                  | SOME line =>
+                    let val l = chomp line in
+                      if l = "" then loop acc else loop (l :: acc)
+                    end
+          in
+            loop [] before TextIO.closeIn instrm
+          end handle e =>
+                     die ("Failed to read paths file " ^ fname ^ ": " ^
+                          General.exnMessage e)
 
       val (g, links) =
-        if not (null files) then
-          load_with_ancestors files thy_file_map
-                              (TheoryGraph.empty, [])
-        else
-          recurse_toDirs find_theory_action
-                         (TheoryGraph.empty, [])
-                         [OS.FileSys.getDir()]
+          case paths_from of
+              SOME fname =>
+              load_paths (read_path_lines fname) (TheoryGraph.empty, [])
+            | NONE =>
+              let
+                val thy_file_map =
+                  recurse_toDirs find_theory_files_action
+                                 Symtab.empty
+                                 [OS.FileSys.getDir()]
+              in
+                if not (null files) then
+                  load_with_ancestors files thy_file_map
+                                      (TheoryGraph.empty, [])
+                else
+                  recurse_toDirs find_theory_action
+                                 (TheoryGraph.empty, [])
+                                 [OS.FileSys.getDir()]
+              end
 
       val _ = if not quiet andalso is_tty then
                 (TextIO.output(

@@ -183,6 +183,14 @@ end
 structure ThmGraph = Graph(ThmRefKey)
 
 (* ----------------------------------------------------------------------
+    Load an explicit list of *Theory.dat paths (no tree scan).
+   ---------------------------------------------------------------------- *)
+
+fun load_paths paths (g, links) =
+    List.foldl (fn (p, A) => case readThy p A of SOME A' => A' | NONE => A)
+               (g, links) paths
+
+(* ----------------------------------------------------------------------
     Load theories and their ancestors
    ---------------------------------------------------------------------- *)
 
