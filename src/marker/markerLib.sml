@@ -974,34 +974,33 @@ open ThyDataSexp
 
 (* --- suspension.theorems store --- *)
 
-(* Key: (thy, name).  Theory qualification allows distinct theorems
-   with the same name in different theories. *)
-type susp_key = string * string
-
-val susp_key_compare = Portable.pair_compare (String.compare, String.compare)
-
-structure SuspTab = Table(struct
-  type key = susp_key
-  val ord = susp_key_compare
-  fun pp (s1,s2) = HOLPP.add_string (s1 ^ "$" ^ s2)
-end)
+(* Key: kernelname {Thy, Name}.  Theory qualification allows distinct
+   theorems with the same name in different theories.  Strictly a
+   slight bending of the semantics -- kernelnames are usually
+   logical entities like constants and type-operators -- but
+   reusing the existing top-level KNametab avoids defining a
+   parallel structure. *)
+type susp_key = KernelSig.kernelname
 
 datatype susp_delta =
     AddSuspended of susp_key * thm
   | RemoveSuspended of susp_key
 
-type susp_table = thm SuspTab.table
+type susp_table = thm KNametab.table
 
-val empty_susp_table : susp_table = SuspTab.empty
+val empty_susp_table : susp_table = KNametab.empty
 
 fun apply_susp_delta d (tab : susp_table) : susp_table =
     case d of
-        AddSuspended (k, th) => SuspTab.update (k, th) tab
-      | RemoveSuspended k => SuspTab.delete_safe k tab
+        AddSuspended (k, th) => KNametab.update (k, th) tab
+      | RemoveSuspended k => KNametab.delete_safe k tab
 
 val (susp_enc, susp_dec) = bij_ed (
-      (fn AddSuspended p => inl p | RemoveSuspended k => inr k),
-      (fn inl p => AddSuspended p | inr k => RemoveSuspended k)
+      (fn AddSuspended ({Thy,Name}, th) => inl ((Thy,Name), th)
+        | RemoveSuspended {Thy,Name} => inr (Thy,Name)),
+      (fn inl ((Thy,Name), th) =>
+              AddSuspended ({Thy=Thy,Name=Name}, th)
+        | inr (Thy,Name) => RemoveSuspended {Thy=Thy,Name=Name})
     ) (tagged_sum ("add", pair_ed (pair_ed (string_ed, string_ed), thm_ed))
                   ("rm", pair_ed (string_ed, string_ed)))
 
@@ -1110,15 +1109,15 @@ fun record_resumption_delta d =
    For unqualified lookup, scans the dictionary keys for any match.
    Returns (thy, thm) on success so caller knows which theory. *)
 fun lookup_suspension_qualified (thy, nm) =
-    case SuspTab.lookup (get_susp_global ()) (thy, nm) of
+    case KNametab.lookup (get_susp_global ()) {Thy = thy, Name = nm} of
         NONE => NONE
       | SOME th => SOME (thy, th)
 
 fun lookup_suspension_unqualified nm =
     let
       val tab = get_susp_global ()
-      val matches = SuspTab.fold
-            (fn ((t, n), th) => fn acc =>
+      val matches = KNametab.fold
+            (fn ({Thy = t, Name = n}, th) => fn acc =>
                 if n = nm then (t, th) :: acc else acc)
             tab []
     in
@@ -1149,7 +1148,8 @@ fun lookup_resumption {parent_thy, parent_name, label} =
    theorem DB. *)
 val _ = boolLib.suspended_theorem_recorder :=
     (fn (n, th) => record_suspension_delta
-                     (AddSuspended ((Theory.current_theory(), n), th)))
+                     (AddSuspended
+                        ({Thy = Theory.current_theory(), Name = n}, th)))
 
 (* ----------------------------------------------------------------------
     Finding the parent theorem for a Resume / Finalise.
@@ -1384,7 +1384,8 @@ fun finalise_suspended_thm loc nm0 =
             (* Drop this name from the suspension store so it's no
                longer considered pending.  (For FromDB there was no
                entry to drop anyway; the delta is harmless.) *)
-            val _ = record_suspension_delta (RemoveSuspended (parent_thy, name))
+            val _ = record_suspension_delta
+                      (RemoveSuspended {Thy = parent_thy, Name = name})
             (* Also clean up the resumption proofs for this theorem. *)
             val _ = record_resumption_delta (RemoveResumptions (parent_thy, name))
           in
