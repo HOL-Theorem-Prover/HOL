@@ -14,7 +14,7 @@ PS_NOUMAP = $(PS_ROOT) < $< > $@
 
 .PHONY: all mdbook mdbook-serve
 
-all: system.pdf drules.pdf description.pdf
+all: description.pdf
 
 # Build the mdbook output for the chapters listed in SUMMARY.md.
 # The smdpp preprocessor is invoked dynamically by mdbook (see
@@ -58,12 +58,6 @@ conv.tex: conv.stex $(PS_STUFF)
 drules.tex: drules.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
-drules.md: drules.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-drules.pdf: drules.md
-	pandoc --top-level-division=chapter -o $@ $<
-
 tactics.tex: tactics.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
@@ -91,12 +85,6 @@ libraries.tex: libraries.stex $(PS_STUFF) $(dprot $(SIGOBJ)/integerTheory.uo)
 system.tex: system.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
-system.md: system.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-system.pdf: system.md
-	pandoc --top-level-division=chapter -o $@ $<
-
 HolSat.tex: HolSat.stex $(PS_STUFF) zchaff.cnf
 	$(PS_COMMAND)
 
@@ -118,7 +106,7 @@ figures:
 
 EXTRA_CLEANS = drules.tex tactics.tex theories.tex libraries.tex \
                PatternMatchesLib.tex HolSat.tex definitions.tex \
-               system.tex system.md drules.md conv.tex math.tex \
+               system.tex conv.tex math.tex \
                description.pdf mdbook-serve.log \
                $(patsubst %,%.aux,$(TEX_CORES)) \
 	       description.log description.out \
