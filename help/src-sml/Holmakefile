@@ -5,7 +5,7 @@ EXTRA_CLEANS = Md2TeX.exe AliasGen.exe gen_extra_docfiles makebase.exe \
 MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
-all: makebase.exe
+all: makebase.exe AliasGen.exe
 
 ifdef POLY
 all:  gen_extra_docfiles

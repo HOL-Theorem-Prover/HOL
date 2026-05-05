@@ -1,3 +1,6 @@
 unicode-grep/unicode-grep
 parsing/HolLex.sml
-build
+# Ignore the compiled tools/build executable, but keep the
+# tools/build/ source directory tracked.
+/build
+!/build/
