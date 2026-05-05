@@ -99,8 +99,6 @@ header-includes: |
      )
    end
 
-# Derived Inference Rules
-
 In this section, HOL proofs and theorems are made concrete. The notion
 of *proof* is defined abstractly in the manual §LOGIC: a proof of a
 sequent $(\Gamma,t)$ from a set of sequents $\Delta$ (with respect to

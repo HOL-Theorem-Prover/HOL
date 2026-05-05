@@ -55,8 +55,11 @@ advanced_tactics.tex: advanced_tactics.stex $(PS_STUFF)
 conv.tex: conv.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
-drules.tex: drules.stex $(PS_STUFF)
-	$(PS_COMMAND)
+drules.md: drules.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+drules.tex: drules.md pdf-macros.lua
+	(printf '\\chapter{Derived Inference Rules}\\label{derived-rules}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
 
 tactics.tex: tactics.stex $(PS_STUFF)
 	$(PS_COMMAND)
@@ -107,7 +110,7 @@ suspension-resumption-subsection.tex: suspension-resumption.md pdf-macros.lua
 figures:
 	mpost -mem=metafun -tex=latex figure.mp
 
-EXTRA_CLEANS = drules.tex tactics.tex theories.tex libraries.tex \
+EXTRA_CLEANS = drules.tex drules.md tactics.tex theories.tex libraries.tex \
                PatternMatchesLib.tex HolSat.tex definitions.tex \
                system.tex system.md conv.tex math.tex \
                description.pdf mdbook-serve.log \
