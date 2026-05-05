@@ -620,7 +620,7 @@ The expressions in the same row are equivalent.
   -->
 
 | *Kind of type* | *Quotation* | *ML expression* |
-|---|---|---|
+|----------|--------------|----------------------|
 | Type variable | `:'`$\mathit{alphanum}$ | `mk_vartype("'`$\mathit{alphanum}$`")` |
 | Type constant | `:`$\mathit{op}$<br>`:`$\mathit{thy}$`$`$\mathit{op}$ | `mk_type("`$\mathit{op}$`",[])`<br>`mk_thy_type{`<br>&nbsp;&nbsp;`Thy="`$\mathit{thy}$`",Tyop="`$\mathit{op}$`", Args=[]}` |
 | Function type | `:`$\sigma_1$`->`$\sigma_2$ | $\sigma_1$ `-->` $\sigma_2$ |
@@ -633,7 +633,7 @@ Equivalent ways of inputting the four primitive kinds of term are shown in
 the next table.
 
 | *Kind of term* | *Quotation* | *ML expression* |
-|---|---|---|
+|----------|--------------|----------------------|
 | Variable | $v$`:`$\sigma$ | `mk_var("`$v$`",`$\sigma$`)` |
 | Constant | $c$`:`$\sigma$<br>$\mathit{thy}$`$`$c$`:`$\sigma$ | `mk_const("`$c$`",`$\sigma$`)`<br>`mk_thy_const{Thy="`$\mathit{thy}$`",Name="`$c$`",Ty=`$\sigma$`}` |
 | Combination | $t_1$ $t_2$ | `mk_comb(`$t_1$`, `$t_2$`)` |
@@ -656,7 +656,7 @@ In addition to the kinds of terms in the tables above, the parser also
 supports the following syntactic abbreviations.
 
 | *Abbreviated term* | *Meaning* | *ML expression* |
-|---|---|---|
+|---------|------------------------|-------------------|
 | $t\;t_1 \cdots t_n$ | `(`$\cdots$`((`$t$ $t_1$`)` $t_2$`)`$\cdots t_n$`)` | `list_mk_comb(`$t$`,[`$t_1,\dots,t_n$`])` |
 | `\`$x_1\cdots x_n$`.` $t$ | `\`$x_1$`.`$\cdots$`\`$x_n$`.` $t$ | `list_mk_abs([`$x_1,\dots,x_n$`],`$t$`)` |
 

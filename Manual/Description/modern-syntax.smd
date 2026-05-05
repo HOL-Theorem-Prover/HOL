@@ -112,7 +112,7 @@ The `alias=`*ident* modifier does not make sense immediately after the `Ancestor
 it should only be used after individual theory or library names to establish aliases for just those names.
 
 | Non-terminal | | Production |
-|---|---|---|
+|----------|:---:|--------------------------------|
 | ⟨*theory*⟩ | ::= | `Theory` ⟨*thyname*⟩⟨*build-mods*⟩^?^<br>(⟨*ancestors*⟩ \| ⟨*libraries*⟩)^\*^<br>⟨*thydecl*⟩^\*^ |
 | ⟨*build-mods*⟩ | ::= | `[` ⟨*build-mod*⟩ (`,`⟨*build-mod*⟩)^\*^ `]` |
 | ⟨*build-mod*⟩ | ::= | `no_sig_docs`    \|    `bare` |
@@ -133,7 +133,7 @@ All keywords beginning with capital letters (`Theory`, `Ancestors`, `Libs`, ...)
 ```
 
 | Non-terminal | | Production |
-|---|---|---|
+|----------|:---:|--------------------------------|
 | ⟨*thydecl*⟩ | ::= | ⟨*SML-declaration*⟩    \|    ⟨*theorem-decl*⟩    \|    ⟨*definition-decl*⟩<br>\|    ⟨*parsing-decl*⟩    \|    ⟨*quotation-decl*⟩ |
 | ⟨*theorem-decl*⟩ | ::= | ⟨*thm-eqn*⟩   \|   ⟨*thm-proof*⟩   \|   ⟨*resumption*⟩   \|   ⟨*final-thm*⟩ |
 | ⟨*thm-eqn*⟩ | ::= | `Theorem` ⟨*ident*⟩⟨*thm-attrs*⟩ `=` ⟨*SML-expression*⟩ |
@@ -157,7 +157,7 @@ Many commands take a variety of attributes to modify or tweak the behaviour of t
 Attribute specifications are added to commands, usually after user-provided identifiers, within square brackets using a common syntax:
 
 | Non-terminal | | Production |
-|---|---|---|
+|----------|:---:|--------------------------------|
 | ⟨*attr-spec*⟩ | ::= | `[` ⟨*attribute*⟩ (`,`⟨*attribute*⟩)^\*^ `]` |
 | ⟨*attribute*⟩ | ::= | ⟨*ident*⟩ (`=` ⟨*ident*⟩^+^)^?^ |
 
