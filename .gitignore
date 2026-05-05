@@ -85,6 +85,7 @@ help/theorygraph/theories.dot
 help/theorygraph/theories.imap
 help/theorygraph/theories.svg
 help/theorygraph/theories.pdf
+help/theorygraph/thypaths.txt
 
 src/bool/SharingTables.*
 src/emit/ML/*.sml
