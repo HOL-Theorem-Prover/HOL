@@ -2088,7 +2088,8 @@ Proof
      >- (qunabbrev_tac ‘zs’ \\
          MATCH_MP_TAC RNEWS_TAKE >> simp [Abbr ‘i’]) >> Rewr' \\
      Know ‘LAST (TAKE i zs) = EL (i - 1) zs’
-     >- (MATCH_MP_TAC LAST_TAKE_EL >> simp [Abbr ‘i’]) >> Rewr' \\
+     >- (MATCH_MP_TAC (REWRITE_RULE [PRE_SUB1] LAST_TAKE_EL) \\
+         simp [Abbr ‘i’]) >> Rewr' \\
      simp [Abbr ‘i’] \\
     ‘n + SUC (h - m) - 1 = n + (h - m)’ by simp [] >> POP_ORW \\
      Know ‘EL (h - m) as = EL (h - m) l’
