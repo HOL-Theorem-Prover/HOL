@@ -789,6 +789,10 @@ fun emit {output, binary} = let
   val lam_x_Px_imp_Q = mk_abs var_x tm_Px_imp_Q
   val tm_forall_x_Px_imp_Q = mk_comb const_forall lam_x_Px_imp_Q
   val tm_conj_ep_inner = mk_comb (mk_comb const_and tm_exists_P) tm_inner_imp_Q
+  (* Hypothesis form for cheaper replay: {?P, !x. P x ==> Q} ⊢ Q. *)
+  val CHOOSE_HYP_pth = do_MP th_spec_Q tm_forall_x_Px_imp_Q var_Q (ASSUME tm_forall_x_Px_imp_Q)
+  val () = save "candle$CHOOSE_HYP" CHOOSE_HYP_pth
+
   val CHOOSE_pth = do_DISCH tm_exists_P th_spec_Q tm_inner_imp_Q tm_conj_ep_inner
   (* ⊢ (?P) ==> (!x. P x ==> Q) ==> Q *)
   val () = save "candle$CHOOSE" CHOOSE_pth
@@ -1317,6 +1321,9 @@ fun emit {output, binary} = let
   val th_ccontr_inner = do_DISJ_CASES th_p_or_neg_p var_p tm_neg_p
                                        th_case_p th_p_from_F var_p
   (* {¬p==>F} ⊢ p *)
+
+  (* Hypothesis form for cheaper replay: {¬p ==> F} ⊢ p. *)
+  val () = save "candle$CCONTR_HYP" th_ccontr_inner
 
   (* DISCH: ⊢ (¬p==>F) ==> p *)
   val tm_conj_negF_p = mk_comb (mk_comb const_and tm_neg_p_imp_F) var_p

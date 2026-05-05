@@ -39,6 +39,7 @@ signature PFTCandlePreamble = sig
        GEN:            |- (P = \x. T) = !P
        EXISTS:         P x |- ?P
        CHOOSE:         |- (?P) ==> (!x. P x ==> Q) ==> Q
+       CHOOSE_HYP:     ?P, !x. P x ==> Q |- Q
        DISJ1:          p |- p \/ q
        DISJ2:          q |- p \/ q
        DISJ_CASES:     p \/ q, p ==> r, q ==> r |- r
@@ -48,6 +49,7 @@ signature PFTCandlePreamble = sig
        SELECT_AX_SPEC: |- !x. P x ==> P(@ P)          (P : A->bool free)
        EXCLUDED_MIDDLE:|- !t. t \/ ~t
        CCONTR:         |- (~p ==> F) ==> p
+       CCONTR_HYP:     ~p ==> F |- p
        BOOL_CASES_AX:  |- !t. (t = T) \/ (t = F)
 
      All theorems and definition equations are SAVEd under "candle$<name>".

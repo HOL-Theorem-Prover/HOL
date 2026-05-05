@@ -915,15 +915,15 @@ fun emit_theory {trace, output, binary, ruleset} = let
       val sel_inst = c_inst (c_inst_type (candle_load_pth "candle$SELECT_AX_SPEC")
                        [(tyvar_A, v_ty)])
                        [(var_P_Ab, pred_id)]
-      val choose_inst = c_inst (c_inst_type (candle_load_pth "candle$CHOOSE")
+      val choose_inst = c_inst (c_inst_type (candle_load_pth "candle$CHOOSE_HYP")
                           [(tyvar_A, v_ty)])
                           [(var_P_Ab, pred_id), (pvar_Q, pred_witness)]
       val bv_x_v = emit_binder "x" v_ty
       val forall_inner = emit_comb (emit_const "!" (emit_tyop "fun" [Ab, bool_tyid]))
         (emit_abs bv_x_v (emit_comb (emit_comb (imp_const) (emit_comb pred_id bv_x_v)) pred_witness))
       val imp_forall_pw = emit_comb (emit_comb (imp_const) forall_inner) pred_witness
-      val mp1 = do_MP choose_inst exists_concl_id imp_forall_pw exists_th
-      val result = do_MP mp1 forall_inner pred_witness sel_inst
+      val mp1 = c_prove_hyp exists_th choose_inst
+      val result = c_prove_hyp sel_inst mp1
     in (result, pred_id, pred_body_id, Ab, v_ty) end
 
   in
@@ -989,9 +989,10 @@ fun emit_theory {trace, output, binary, ruleset} = let
               val ne = c_inst (candle_load_pth "candle$NOT_ELIM")
                          [(pvar_p, rhs_tm)]
             in (c_prove_hyp a_th ne, rhs_tm, const_F_tm) end
-        val rth = c_inst (candle_load_pth "candle$MP")
+        val pth = c_inst (candle_load_pth "candle$MP_HYP")
                     [(pvar_p, p_tm), (pvar_q, q_tm)]
-      in r_eq_mp (c_prove_hyp b_th rth) a_th end
+        val tmp = c_prove_hyp a_th pth
+      in r_prove_hyp b_th tmp end
 
     | EQ_IMP_RULE1_prf a => let
         val a_th = th a
@@ -1121,7 +1122,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val r_tm = tm (heap_concl b)
         val pth = c_inst (candle_load_pth "candle$DISJ_CASES")
                     [(pvar_p, p_tm), (pvar_q, q_tm), (pvar_r, r_tm)]
-        val th3 = c_eq_mp (c_deduct a_th pth) a_th
+        val th3 = c_prove_hyp a_th pth
         val th4 = c_prove_hyp (do_DISCH p_tm r_tm b_th) th3
       in r_prove_hyp (do_DISCH q_tm r_tm c_th) th4 end
 
@@ -1130,10 +1131,9 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val neg_tm = emit_const "~" (emit_tyop "fun" [bool_tyid, bool_tyid])
         val neg_p = emit_comb neg_tm p_tm
         val disch_th = do_DISCH neg_p const_F_tm b_th
-        val ccontr_inst = c_inst (candle_load_pth "candle$CCONTR")
+        val ccontr_inst = c_inst (candle_load_pth "candle$CCONTR_HYP")
                             [(pvar_p, p_tm)]
-        val neg_p_imp_F = emit_comb (emit_comb imp_const neg_p) const_F_tm
-      in do_MP ccontr_inst neg_p_imp_F p_tm disch_th end
+      in c_prove_hyp disch_th ccontr_inst end
 
     | EXISTS_prf (a, b, c) => let
         val c_th = th c
@@ -1157,14 +1157,12 @@ fun emit_theory {trace, output, binary, ruleset} = let
         val imp_cmb_q = emit_comb (emit_comb imp_const cmb) q_tm
         val gen_v = do_GEN v_tm v_ty imp_cmb_q (do_DISCH cmb q_tm c_with_cmb)
         val Ab_v = emit_tyop "fun" [v_ty, bool_tyid]
-        val choose_inst = c_inst (c_inst_type (candle_load_pth "candle$CHOOSE")
+        val choose_inst = c_inst (c_inst_type (candle_load_pth "candle$CHOOSE_HYP")
                             [(tyvar_A, v_ty)])
                             [(emit_var "P" Ab_v, pred_tm), (pvar_Q, q_tm)]
         val forall_v_imp = emit_comb
           (emit_const "!" (emit_tyop "fun" [Ab_v, bool_tyid])) (emit_abs v_tm imp_cmb_q)
-        val imp_forall_q = emit_comb (emit_comb imp_const forall_v_imp) q_tm
-        val mp_choose1 = do_MP choose_inst exists_P_tm imp_forall_q b_th
-      in do_MP mp_choose1 forall_v_imp q_tm gen_v end
+      in c_prove_hyp gen_v (c_prove_hyp b_th choose_inst) end
 
     | SUBST_prf (a, b, c) => let
         val pairs = list heap (tuple2 heap (fn p => p, fn p => p)) a
@@ -1569,19 +1567,15 @@ fun emit_theory {trace, output, binary, ruleset} = let
             th_phi_from_xeq (* (λx'. x = rep x') x' ⊢ P x *)
         val pred_x'_imp_phi = emit_comb (emit_comb imp_const pred_x') phi_x (* (λx'. x = rep x') x' ⇒ P x *)
         val var_P_Ab_new = emit_var "P" Ab_new
-        val choose_inst_bwd = c_inst (c_inst_type (candle_load_pth "candle$CHOOSE")
+        val choose_inst_bwd = c_inst (c_inst_type (candle_load_pth "candle$CHOOSE_HYP")
                                 [(tyvar_A, new_ty)])
                                 [(var_P_Ab_new, pred_exists), (pvar_Q, phi_x)]
-                              (* ⊢ (∃x'. x = rep x') ⇒ (∀x''. (λx'. x = rep x') x'' ⇒ P x) ⇒ P x *)
+                              (* ∃x'. x = rep x', ∀x''. (λx'. x = rep x') x'' ⇒ P x ⊢ P x *)
         val forall_new_imp = emit_comb forall_new
             (emit_abs bv_x' pred_x'_imp_phi) (* ∀x'. (λx'. x = rep x') x' ⇒ P x *)
-        val th_bwd1 = do_MP choose_inst_bwd exist_x_eq
-                        (emit_comb (emit_comb imp_const forall_new_imp) phi_x)
-                        (c_assume exist_x_eq)
-                      (* ∃x'. x = rep x' ⊢ (∀x'. (λx'. x = rep x') x' ⇒ P x) ⇒ P x *)
         val th_bwd2 = do_DISCH pred_x' phi_x th_phi_from_pred_x' (* ⊢ (λx'. x = rep x') x' ⇒ P x *)
         val th_bwd3 = do_GEN bv_x' new_ty pred_x'_imp_phi th_bwd2 (* ⊢ ∀x'. (λx'. x = rep x') x' ⇒ P x *)
-        val th_bwd = do_MP th_bwd1 forall_new_imp phi_x th_bwd3
+        val th_bwd = c_prove_hyp th_bwd3 (c_prove_hyp (c_assume exist_x_eq) choose_inst_bwd)
                      (* ∃x'. x = rep x' ⊢ P x *)
 
         val th_char_x = c_deduct th_bwd th_fwd (* ⊢ P x = ∃x'. x = rep x' *)
