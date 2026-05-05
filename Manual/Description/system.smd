@@ -1406,301 +1406,184 @@ Failure occurs if:
 1. $t$ contains free variables that are not in any of the variable structures $v_1$, $\dots$, $v_n$ (this is equivalent to requiring $\lambda v_1\ \cdots\ v_n.\ t$ to be a closed term);
 2. there is a type variable in $v_1$, $\dots$, $v_n$ or $t$ that does not occur in the type of $c$.
 
-##skip
-
-#### Constant specifications}
-\label{conspec}
+#### Constant Specifications
 
 \index{specification of constants, in HOL logic@specification of constants, in HOL logic|(}
-%
 \index{extension, of HOL logic@extension, of HOL logic!by constant specification}
-%
-In \LOGIC{} a constant specification\index{constant specification extension, of HOL logic@constant specification extension, of HOL logic!ML function for@ML function for} for a theory ${\cal T}$
-is defined to be a pair:
-
-\[
-\langle(c_1,\ldots,c_n),\ \lquant{{x_1}_{\sigma_1}
-\cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\rangle
-\]
+\index{constant specification extension, of HOL logic@constant specification extension, of HOL logic!ML function for@ML function for}
+In §LOGIC a constant specification for a theory $\mathcal{T}$ is defined to be a pair:
+$$ \langle (c_1,\ldots,c_n),\ \forall {x_1}_{\sigma_1} \cdots {x_n}_{\sigma_n}.\ t_{\mathtt{bool}} \rangle $$
 such that:
 
-\begin{myenumerate}
-\item $c_1$, $\dots$, $c_n$ are distinct names;
-\item $\lquant{{x_1}_{\sigma_1}
-\cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\ \in\ {\sf Terms}_{\cal T}$;
-\item $tyvars(\lquant{{x_1}_{\sigma_1}
-\cdots {x_n}_{\sigma_n}}t_{\ty{bool}})\ \subseteq\ tyvars(\sigma_i)$ for
-$1\leq i\leq n$;
-\item $\equant{{x_1}_{\sigma_1}\ \cdots\ {x_n}_{\sigma_n}}t
-\ \in\ {\sf Theorems}_{\cal T}$.
-\end{myenumerate}
-The following ML function is used to make constant specifications in
-the HOL system.
+1. $c_1$, $\dots$, $c_n$ are distinct names;
+2. $\forall {x_1}_{\sigma_1} \cdots {x_n}_{\sigma_n}.\ t_{\mathtt{bool}} \in \mathsf{Terms}_{\mathcal{T}}$;
+3. $tyvars(\forall {x_1}_{\sigma_1} \cdots {x_n}_{\sigma_n}.\ t_{\mathtt{bool}}) \subseteq tyvars(\sigma_i)$ for $1 \leq i \leq n$;
+4. $\exists {x_1}_{\sigma_1}\ \cdots\ {x_n}_{\sigma_n}.\ t \in \mathsf{Theorems}_{\mathcal{T}}$.
 
-\begin{holboxed}
+The following ML function is used to make constant specifications in the HOL system.
+
 \index{new_specification@`new_specification`|pin}
-\begin{verbatim}
-   new_specification : string * string list * thm -> thm
-\end{verbatim}
-\end{holboxed}
-%
+```
+>>__ printNameAndType 4 "boolSyntax" "new_specification";
+```
+
 Evaluating:
-{
-\newcommand{\cone}{\ensuremath{c_1}}
-\newcommand{\cn}{\ensuremath{c_n}}
-\newcommand{\xone}{\ensuremath{x_1}}
-\newcommand{\xn}{\ensuremath{x_n}}
-\begin{alltt}
-   new_specification("\(\mathit{name}\)", ["\cone", ..., "\cn"],
-                     |- ?\xone ... \xn. \(t\)[\xone, ..., \xn])
-\end{alltt}
-}
-simultaneously  introduces  new constants  named $c_1$, $\dots$,
-$c_n$ satisfying the property:
+```
+   new_specification("name", ["c1", ..., "cn"],
+                     |- ?x1 ... xn. t[x1, ..., xn])
+```
+simultaneously introduces new constants named $c_1$, $\dots$, $c_n$ satisfying the property:
+$$ \vdash t[c_1, \ldots, c_n] $$
+This theorem is stored, with name *name*, as a definition in the current theory segment.
+A call to `new_specification` fails if:
 
-\[ \ml{|- }t\ml{[}c_1\ml{,}\ \ldots\ \ml{,}c_n\ml{]} \]
+1. the theorem argument has a non-empty assumption list;
+2. there are free variables in the theorem argument;
+3. $c_1$, $\dots$, $c_n$ are not distinct variables;
+4. the type of some $c_i$ does not contain all the type variables which occur in the term `\x1 ... xn. t[x1, ..., xn]`.
 
-\noindent This theorem is stored,
-with name $name$, as a definition in the current theory segment. A call to
-`new_specification` fails if:
-
-\begin{myenumerate}
-\item the theorem argument has a non-empty assumption list;
-\item there are free variables in the theorem argument;
-\item $c_1$, $\dots$, $c_n$ are not distinct variables;
-\item the type of some $c_i$ does not contain all the type
-variables which occur in the term
-\holtxt{\bs$x_1\ \cdots\ x_n$. $t$[$x_1$, $\ldots$, $x_n$]}.
-\end{myenumerate}
-%
 \index{specification of constants, in HOL logic@specification of constants, in HOL logic|)}
 
-#### Type definitions
+#### Type Definitions
 
 \index{extension, of HOL logic@extension, of HOL logic!by type definition|(}
-%
 \index{type definitions, in HOL logic@type definitions, in HOL logic|(}
-%
-In \LOGIC{} it is explained that
-defining
-%
-\index{type definitions, in HOL logic@type definitions, in HOL logic!introduction of}%
-\index{type definition extension, in HOL logic@type definition extension, in HOL logic!ML function for@ML function for|(}%
-%
-a new type $(\alpha_1,\ldots,\alpha_n)\ty{op}$ in a theory ${\cal T}$
-consists of introducing $\ty{op}$ as a new $n$-ary type operator and
+\index{type definitions, in HOL logic@type definitions, in HOL logic!introduction of}
+\index{type definition extension, in HOL logic@type definition extension, in HOL logic!ML function for@ML function for|(}
+In §LOGIC it is explained that defining a new type $(\alpha_1,\ldots,\alpha_n)\mathit{op}$ in a theory $\mathcal{T}$ consists of introducing $\mathit{op}$ as a new $n$-ary type operator and
+$$ \vdash \exists f_{(\alpha_1,\ldots,\alpha_n)\mathit{op} \to \sigma}.\ \mathsf{TyDef}\ p\ f $$
+\index{characteristic predicate, of type definitions}
+as a new axiom, where $p$ is a predicate characterizing a non-empty subset of an existing type $\sigma$.
+Formally, a type definition for a theory $\mathcal{T}$ is a 3-tuple
+$$ \langle \sigma,\ (\alpha_1,\ldots,\alpha_n)\mathit{op},\ p_{\sigma\to\mathtt{bool}} \rangle $$
+where:
 
-\[\turn \equant{f_{(\alpha_1,\ldots,\alpha_n)\ty{op}\fun\sigma}}\TyDef\ p\ f\]
-
-\noindent as a new axiom, where $p$ is a predicate
-characterizing\index{characteristic predicate, of type definitions} a
-non-empty subset of an existing type $\sigma$.  Formally, a type definition
-for a theory ${\cal T}$ is a $3$-tuple
-
-\[ \langle \sigma,\ (\alpha_1,\ldots,\alpha_n)\ty{op},
-    \ p_{\sigma\fun\ty{bool}}\rangle \]
-
-\noindent where:
-
-\begin{myenumerate}
-\item $\sigma\in{\sf Types}_{\cal T}$  and
-$tyvars(\sigma)\in\{\alpha_1, \ldots , \alpha_n\}$;
-\item \ty{op} is not the name of a type constant in ${\sf Struc}_{\cal T}$;
-\item $p\in{\sf Terms}_{\cal T}$ is a closed term of
-type $\sigma\fun\ty{bool}$  and
-$tyvars(p)\subseteq\{\alpha_1, \ldots , \alpha_n\}$;
-\item $\equant{x_{\sigma}}p\ x \ \subseteq\ {\sf Theorems}_{\cal T}$.
-\end{myenumerate}
+1. $\sigma \in \mathsf{Types}_{\mathcal{T}}$ and $tyvars(\sigma) \in \{\alpha_1, \ldots, \alpha_n\}$;
+2. $\mathit{op}$ is not the name of a type constant in $\mathsf{Struc}_{\mathcal{T}}$;
+3. $p \in \mathsf{Terms}_{\mathcal{T}}$ is a closed term of type $\sigma\to\mathtt{bool}$ and $tyvars(p) \subseteq \{\alpha_1, \ldots, \alpha_n\}$;
+4. $\exists x_{\sigma}.\ p\ x \subseteq \mathsf{Theorems}_{\mathcal{T}}$.
 
 The following ML function makes a type definition in the HOL system.
 
-\begin{holboxed}
 \index{new_type_definition@`new_type_definition`|pin}
-\begin{verbatim}
-   new_type_definition : (string * thm) -> thm
-\end{verbatim}\end{holboxed}
+```
+>>__ printNameAndType 4 "boolSyntax" "new_type_definition";
+```
 
-\noindent If $t$ is a term of type
-$\sigma$\ml{->bool} containing $n$ distinct type variables, then
-evaluating:
-
-{\def\op{{\normalsize\sl op}}
-\begin{hol}
-\begin{alltt}
-   new_type_definition("{\op}", |- ?\(x\). \(t\) \(x\))
-\end{alltt}
-\end{hol}}
-
-\noindent results in \ty{op} being declared as a new $n$-ary type operator
-characterized by the definitional
-\index{definitional axioms}\index{type operators, in HOL logic@type operators, in HOL logic!definitional axioms for} axiom:
-\begin{hol}
-\begin{alltt}
-   |- ?rep. TYPE_DEFINITION \m{t} rep
-\end{alltt}
-\end{hol}
-
-\noindent which is stored as a definition with the automatically
-generated name
-\ty{op}`_TY_DEF`\index{TY_DEF@$\ldots$`_TY_DEF`}. The constant
-`TYPE_DEFINITION`\index{TYPE_DEFINITION@`TYPE_DEFINITION`}
+If $t$ is a term of type $\sigma$`->bool` containing $n$ distinct type variables, then evaluating:
+```
+   new_type_definition("op", |- ?x. t x)
+```
+results in *op* being declared as a new $n$-ary type operator characterized by the definitional axiom:
+\index{definitional axioms}
+\index{type operators, in HOL logic@type operators, in HOL logic!definitional axioms for}
+```
+   |- ?rep. TYPE_DEFINITION t rep
+```
+which is stored as a definition with the automatically generated name *op*`_TY_DEF`.
+\index{TY_DEF@$\ldots$`_TY_DEF`}
+The constant `TYPE_DEFINITION`
+\index{TYPE_DEFINITION@`TYPE_DEFINITION`}
 is defined in the theory `bool` by:
-
-\begin{hol}
-\begin{verbatim}
+```
    |- TYPE_DEFINITION (P:'a->bool) (rep:'b->'a) =
        (!x' x''. (rep x' = rep x'') ==> (x' = x'')) /\
        (!x. P x = (?x'. x = rep x'))
-\end{verbatim}
-\end{hol}
+```
 
-\noindent Executing \ml{new_type_definition("\ty{op}", |- ?}$x$\ml{.}\ $t\ x$\ml{)} fails if:
-\begin{myenumerate}
-\item $t$ does not have a type of the form $\sigma$\ml{->bool}.
-\end{myenumerate}
+Executing `new_type_definition("`*op*`", |- ?`$x$`. `$t\ x$`)` fails if:
+
+1. $t$ does not have a type of the form $\sigma$`->bool`.
+
 \index{extension, of HOL logic@extension, of HOL logic!by type definition|)}
 \index{theories, in HOL logic@theories, in HOL logic!extension of|)}
 \index{type definition extension, in HOL logic@type definition extension, in HOL logic!ML function for@ML function for|)}
 \index{type definitions, in HOL logic@type definitions, in HOL logic|)}
 
-\paragraph{Defining bijections}
+#### Defining Bijections
+
 \index{type definitions, in HOL logic@type definitions, in HOL logic!defining bijections for|(}
+The result of a type definition using `new_type_definition` is a theorem which asserts only the *existence* of a bijection
+\index{bijection of types, in HOL logic@bijection of types, in HOL logic}
+from the type it defines to the corresponding subset of an existing type.
+To introduce constants that in fact denote such a bijection and its inverse, the following ML function is provided:
 
-The result of a type definition using `new_type_definition` is a theorem
-which asserts only the {\it existence\/} of a
-bijection\index{bijection of types, in HOL logic@bijection of types, in HOL logic}
-from the type it defines to the corresponding subset of an existing type.  To
-introduce constants that in fact denote such a bijection and its inverse, the
-following ML function is provided:
-
-\begin{holboxed}
 \index{define_new_type_bijections@`define_new_type_bijections`|pin}
-\begin{verbatim}
-   define_new_type_bijections
-      : {name:string, ABS:string, REP:string, tyax:thm} -> thm
-\end{verbatim}\end{holboxed}
+```
+>>__ printNameAndType 4 "Drule" "define_new_type_bijections";
+```
 
-\noindent This function takes a record {\small\verb+{ABS, REP, name, tyax}+}.
-The {\verb+tyax+} argument must be a definitional axiom of the form returned by
-`new_type_definition`.  The {\verb+name+} argument is the name under which
-the constant definition (a constant specification, in fact) made by
-{\small\verb!define_new_type_bijections!} will be stored in the current theory
-segment, and the {\small\verb+ABS+} and {\small\verb+REP+} arguments
-are user-specified names for the two constants that are to be
-defined. These constants are defined so as to denote mutually inverse
-bijections between the defined type, whose definition is given by the
-supplied theorem, and the representing type of this defined
-type.
+This function takes a record `{ABS, REP, name, tyax}`.
+The `tyax` argument must be a definitional axiom of the form returned by `new_type_definition`.
+The `name` argument is the name under which the constant definition (a constant specification, in fact) made by `define_new_type_bijections` will be stored in the current theory segment, and the `ABS` and `REP` arguments are user-specified names for the two constants that are to be defined.
+These constants are defined so as to denote mutually inverse bijections between the defined type, whose definition is given by the supplied theorem, and the representing type of this defined type.
 
 Evaluating:
-
-\medskip
-{\def\op{{\normalsize\sl op}}
-\begin{hol}\begin{alltt}
+```
   define_new_type_bijections
-       \lb{}name="\m{name}", ABS="\m{abs}", REP="\m{rep}",
-        tyax = |- ?rep:newty->ty. TYPE_DEFINITION \m{P} rep\rb{}
-\end{alltt}\end{hol}}
+       {name="name", ABS="abs", REP="rep",
+        tyax = |- ?rep:newty->ty. TYPE_DEFINITION P rep}
+```
+automatically defines two new constants *abs*`:ty->newty` and *rep*`:ty->newty` such that:
+```
+   |- (!a. abs(rep a) = a) /\ (!r. P r = (rep(abs r) = r))
+```
 
-\medskip
+This theorem, which is the defining property for the constants *abs* and *rep*, is stored under the name `"name"` in the current theory segment.
+It is also the value returned by `define_new_type_bijections`.
+The theorem states that *abs* is the left inverse of *rep* and — for values satisfying *P* — that *rep* is the left inverse of *abs*.
 
-\noindent automatically defines two new constants
-\m{abs}{\small\verb!:ty->newty!} and \m{rep}{\small\verb!:ty->newty!}
-such that:
+A call to `define_new_type_bijections` *name* *abs* *rep* *th* fails if:
 
-{\def\bk{\char'134}
-\begin{hol}\begin{alltt}
-   |- (!a. \m{abs}(\m{rep} a) = a) /\bk (!r. \m{P} r = (\m{rep}(\m{abs} r) = r))
-\end{alltt}\end{hol}}
+1. *th* is not a theorem of the form returned by `new_type_definition`.
 
-\noindent This theorem, which is the defining property for the constants
-\m{abs} and \m{rep}, is stored under the name "\m{name}" in the current theory
-segment.  It is also the value returned by `define_new_type_bijections`.
-The theorem states that \m{abs} is the left inverse of \m{rep} and---for
-values satisfying \m{P}---that \m{rep} is the left inverse of \m{abs}.
-
-A call to
-\ml{define_new_type_bijections \m{name} \m{abs} \m{rep} \m{th}}
-fails if:
-
-\begin{myenumerate}
-\item $th$ is not a theorem of the form returned by
-`new_type_definition`.
-\end{myenumerate}%
 \index{type definitions, in HOL logic@type definitions, in HOL logic!defining bijections for|)}
 
-\paragraph{Properties of type bijections}
+#### Properties of Type Bijections
 
 \index{type definitions, in HOL logic@type definitions, in HOL logic!properties of bijections for|(}
+The following ML functions are provided for proving that the bijections introduced by `define_new_type_bijections` are injective (one-to-one) and surjective (onto):
 
-The following ML functions are provided for proving that the bijections
-introduced by `define_new_type_bijections` are injective (one-to-one)
-and surjective (onto):
-
-\begin{holboxed}
 \index{prove_rep_fn_one_one@`prove_rep_fn_one_one`|pin}
 \index{prove_rep_fn_onto@`prove_rep_fn_onto`|pin}
 \index{prove_abs_fn_one_one@`prove_abs_fn_one_one`|pin}
 \index{prove_abs_fn_onto@`prove_abs_fn_onto`|pin}
-\begin{verbatim}
-   prove_rep_fn_one_one : thm -> thm
-   prove_rep_fn_onto    : thm -> thm
-   prove_abs_fn_one_one : thm -> thm
-   prove_abs_fn_onto    : thm -> thm
-\end{verbatim}\end{holboxed}
+```
+>>__ printNameAndType 4 "Drule" "prove_rep_fn_one_one";
+>>__ printNameAndType 4 "Drule" "prove_rep_fn_onto";
+>>__ printNameAndType 4 "Drule" "prove_abs_fn_one_one";
+>>__ printNameAndType 4 "Drule" "prove_abs_fn_onto";
+```
 
-\noindent The theorem argument to each of these functions must be a theorem
-of the form returned by `define_new_type_bijections`:
+The theorem argument to each of these functions must be a theorem of the form returned by `define_new_type_bijections`:
+```
+   |- (!a. abs(rep a) = a) /\ (!r. P r = (rep(abs r) = r))
+```
 
-\begin{hol}
-\begin{alltt}
-   |- (!a. \m{abs}(\m{rep} a) = a) /\bs (!r. \m{P} r = (\m{rep}(\m{abs} r) = r))
-\end{alltt}
-\end{hol}
+If *th* is a theorem of this form, then evaluating `prove_rep_fn_one_one` *th* proves that the function *rep* is one-to-one, and returns the theorem:
+```
+   |- !a a'. (rep a = rep a') = (a = a')
+```
 
-\noindent If \m{th} is a theorem of this form, then evaluating
-\ml{prove_rep_fn_one_one \m{th}} proves that the function \m{rep} is
-one-to-one, and returns the theorem:
+Likewise, `prove_rep_fn_onto` *th* proves that *rep* is onto the set of values that satisfy *P*:
+```
+   |- !r. P r = (?a. r = rep a)
+```
 
-\begin{hol}
-\begin{alltt}
-   |- !a a'. (\m{rep} a = \m{rep} a') = (a = a')
-\end{alltt}
-\end{hol}
+Evaluating `prove_abs_fn_one_one` *th* proves that *abs* is one-to-one for values that satisfy *P*, and returns the theorem:
+```
+   |- !r r'. P r ==> P r' ==> ((abs r = abs r') = (r = r'))
+```
 
-\noindent Likewise, \ml{prove_rep_fn_onto \m{th}} proves that \m{rep} is
-onto the set of values that satisfy \m{P}:
+And evaluating `prove_abs_fn_onto` *th* proves that *abs* is onto, returning the theorem:
+```
+   |- !a. ?r. (a = abs r) /\ P r
+```
 
-\begin{hol}
-\begin{alltt}
-   |- !r. \m{P} r = (?a. r = \m{rep} a)
-\end{alltt}
-\end{hol}
-
-\noindent Evaluating \ml{prove_abs_fn_one_one \m{th}} proves that \m{abs}
-is one-to-one for values that satisfy \m{P}, and returns the theorem:
-
-\begin{hol}
-\begin{alltt}
-   |- !r r'. \m{P} r ==> \m{P} r' ==> ((\m{abs} r = \m{abs} r') = (r = r'))
-\end{alltt}
-\end{hol}
-
-\noindent And evaluating \ml{prove_abs_fn_onto \m{th}} proves that \m{abs}
-is onto, returning the theorem:
-
-\begin{hol}
-\begin{alltt}
-   |- !a. ?r. (a = \m{abs} r) /\bs \m{P} r
-\end{alltt}
-\end{hol}
-
-\noindent All four functions will fail if applied to any theorem that does not
-have the form of a theorem returned by `define_new_type_bijections`.
+All four functions will fail if applied to any theorem that does not have the form of a theorem returned by `define_new_type_bijections`.
 None of these functions saves anything in the current theory.
 
 \index{type definitions, in HOL logic@type definitions, in HOL logic!properties of bijections for|)}
-##endskip
 
 [^prim-inf-hypotheses]: Note that ‘hypotheses’ and ‘conclusion’ are also used for the components of sequents.
 [^four-axioms-simplification]: This is a simplification: in fact the various axioms are an extension of the basic logic.
