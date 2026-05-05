@@ -754,30 +754,58 @@ handle OS.SysErr(s, erropt) =>
 val theorygraph_dir = fullPath [HOLDIR, "help", "theorygraph"]
 
 (* Scan sigobj/ for the production theories — anything matching *Theory.sig
-   except "FinalTheory.sig" and *_emitTheory.sig.  Mirrors the filter used
-   by the old DOT script. *)
-fun list_sigobj_theories () =
+   except "FinalTheory.sig" and *_emitTheory.sig.  Each entry is a symlink
+   to <src>/.hol/objs/<thy>Theory.sig; rewriting the extension gives us the
+   .dat file paths to feed theorytool via --paths-from. *)
+fun list_sigobj_dats () =
   let
     val sigobj = fullPath [HOLDIR, "sigobj"]
     val ds = HOLFileSys.openDir sigobj
     fun close () = HOLFileSys.closeDir ds
-    fun thy_of f =
+    fun is_thy_sig f =
         if String.isSuffix "Theory.sig" f then
           let val base = String.substring (f, 0, size f - 10)
           in
-            if base = "" orelse base = "Final" orelse
-               String.isSuffix "_emit" base
-            then NONE
-            else SOME base
+            base <> "" andalso base <> "Final" andalso
+            not (String.isSuffix "_emit" base)
           end
-        else NONE
+        else false
+    fun dat_of_link sigobj_path =
+        (* sigobj/<thy>Theory.sig → <src>/.hol/objs/<thy>Theory.sig.
+           Return the *logical* "<src>/<thy>Theory.dat" path; HFS_NameMunge
+           routes that back through .hol/objs at access time. *)
+        let val tgt =
+                if OS.FileSys.isLink sigobj_path
+                then SOME (OS.FileSys.readLink sigobj_path)
+                else NONE
+        in case tgt of
+               NONE => NONE
+             | SOME t =>
+               let val {dir, file} = OS.Path.splitDirFile t
+                   val src = OS.Path.dir (OS.Path.dir dir)
+                   val {base, ...} = OS.Path.splitBaseExt file
+               in SOME (OS.Path.concat (src, base ^ ".dat")) end
+        end handle OS.SysErr _ => NONE
     fun loop acc =
         case HOLFileSys.readDir ds of
             NONE => acc
-          | SOME f => loop (case thy_of f of SOME b => b :: acc | NONE => acc)
+          | SOME f =>
+            if is_thy_sig f then
+              loop (case dat_of_link (OS.Path.concat (sigobj, f)) of
+                        SOME p => p :: acc | NONE => acc)
+            else loop acc
   in
     loop [] before close ()
     handle e => (close (); raise e)
+  end
+
+fun write_lines (path, lines) =
+  let val ostrm = HOLFileSys.openOut path
+  in
+    List.app (fn s => (HOLFileSys.output (ostrm, s);
+                       HOLFileSys.output (ostrm, "\n")))
+             lines;
+    HOLFileSys.closeOut ostrm
   end
 
 fun write_theorygraph_html () =
@@ -832,16 +860,17 @@ fun write_theory_graph () =
           val theorytool =
               fullPath [HOLDIR, "src", "portableML", "rawtheory", "theorytool"]
           val svgfile = theorygraph_dir ++ "theories.svg"
+          val pathsfile = theorygraph_dir ++ "thypaths.txt"
+          val () = write_lines (pathsfile, list_sigobj_dats ())
           val protect = Systeml.protect
-          val thys = List.map protect (list_sigobj_theories ())
           val cmd =
-              String.concatWith " " (
-                ["cd", protect HOLDIR, "&&",
-                 protect theorytool, "--quiet", "--thygraph",
-                 "--url-base=" ^ protect theorygraph_dir] @
-                thys @
-                ["|", protect dotexec, "-Tsvg", "-o", protect svgfile]
-              )
+              String.concatWith " " [
+                "cd", protect HOLDIR, "&&",
+                protect theorytool, "--quiet", "--thygraph",
+                "--url-base=" ^ protect theorygraph_dir,
+                "--paths-from=" ^ protect pathsfile,
+                "|", protect dotexec, "-Tsvg", "-o", protect svgfile
+              ]
           val result = OS.Process.system cmd
         in
           if OS.Process.isSuccess result then write_theorygraph_html ()
