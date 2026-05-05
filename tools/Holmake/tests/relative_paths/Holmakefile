@@ -1,0 +1,15 @@
+CLINE_OPTIONS = --qof
+
+all: $(DEFAULT_TARGETS) test
+.PHONY: all
+
+EXTRA_CLEANS = test
+
+# relativePath sets use_relative_paths := true before export_theory:
+#   expect subst_pathvars "relativePathTheory.dat" (just filename)
+# absolutePath sets use_relative_paths := false before export_theory:
+#   expect subst_pathvars "/absolute/path/absolutePathTheory.dat"
+test: relativePathTheory.sml absolutePathTheory.sml
+	grep 'subst_pathvars "relativePathTheory.dat"' $(hol2fs relativePathTheory.sml)
+	grep 'subst_pathvars "/' $(hol2fs absolutePathTheory.sml)
+	touch $@

@@ -5,6 +5,7 @@ DIRNAMES = \
   clinevars \
   holpathdb/proj2 \
   holpathdb/proj2/proj2A \
+  relative_paths \
   depchain1/dir3 \
   depchain2/dir1 \
   holdep \
