@@ -102,8 +102,6 @@ header-includes: |
    end
 
 
-# The HOL Logic in ML
-
 In this chapter, the concrete representation of the HOL logic is described.
 This involves describing the ML functions that comprise the interface to the logic (up to and including [§Theorems](#theorems));
 the quotation, parsing, and printing of logical types and terms [§Quotations](#quotations-parsing-and-printing);

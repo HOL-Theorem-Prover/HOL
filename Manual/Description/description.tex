@@ -29,6 +29,8 @@
 \usepackage{longtable}
 \usepackage{booktabs}
 \usepackage{calc}      % needed for \real{...} in pandoc-emitted column widths
+\providecommand{\tightlist}{% pandoc fragments emit this for tight lists
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \usepackage{etoolbox} % For patchcmd
 
 % Remove top and bottom horizontal lines from tables:

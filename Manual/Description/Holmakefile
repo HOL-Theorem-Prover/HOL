@@ -82,8 +82,11 @@ PatternMatchesLib.tex: PatternMatchesLib.stex $(PS_STUFF)
 libraries.tex: libraries.stex $(PS_STUFF) $(dprot $(SIGOBJ)/integerTheory.uo)
 	$(PS_COMMAND)
 
-system.tex: system.stex $(PS_STUFF)
-	$(PS_COMMAND)
+system.md: system.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+system.tex: system.md pdf-macros.lua
+	(printf '\\chapter{\\texorpdfstring{The \\HOL{} Logic in ML}{The HOL Logic in ML}}\\label{HOLsyschapter}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
 
 HolSat.tex: HolSat.stex $(PS_STUFF) zchaff.cnf
 	$(PS_COMMAND)
@@ -106,7 +109,7 @@ figures:
 
 EXTRA_CLEANS = drules.tex tactics.tex theories.tex libraries.tex \
                PatternMatchesLib.tex HolSat.tex definitions.tex \
-               system.tex conv.tex math.tex \
+               system.tex system.md conv.tex math.tex \
                description.pdf mdbook-serve.log \
                $(patsubst %,%.aux,$(TEX_CORES)) \
 	       description.log description.out \
