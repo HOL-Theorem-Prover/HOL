@@ -14,7 +14,7 @@ PS_NOUMAP = $(PS_ROOT) < $< > $@
 
 .PHONY: all mdbook mdbook-serve
 
-all: system.pdf system.html drules.pdf drules.html description.pdf
+all: system.pdf drules.pdf description.pdf
 
 # Build the mdbook output for the chapters listed in SUMMARY.md.
 # The smdpp preprocessor is invoked dynamically by mdbook (see
@@ -64,9 +64,6 @@ drules.md: drules.smd $(PS_STUFF)
 drules.pdf: drules.md
 	pandoc --top-level-division=chapter -o $@ $<
 
-drules.html: drules.md
-	pandoc -s -o $@ $<
-
 tactics.tex: tactics.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
@@ -99,9 +96,6 @@ system.md: system.smd $(PS_STUFF)
 
 system.pdf: system.md
 	pandoc --top-level-division=chapter -o $@ $<
-
-system.html: system.md
-	pandoc -s -o $@ $<
 
 HolSat.tex: HolSat.stex $(PS_STUFF) zchaff.cnf
 	$(PS_COMMAND)
