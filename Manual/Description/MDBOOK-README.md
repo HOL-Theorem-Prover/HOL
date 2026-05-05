@@ -11,7 +11,11 @@ math content from CommonMark backslash-escaping.
 From this directory:
 
     Holmake mdbook            # one-shot build (output: ../book/Description)
-    Holmake mdbook-serve      # localhost:3000 with live reload
+    Holmake mdbook-serve      # localhost:3000 with live reload (detached)
+    Holmake mdbook-serve LOG=1
+                              # ditto, but capture server output to
+                              # mdbook-serve.log here.  LOG=<path> sets
+                              # a custom log path; default is /dev/null.
 
 `Holmake mdbook` depends on `../Tools/smdpp` so the preprocessor binary
 is built automatically if missing.
@@ -22,15 +26,19 @@ directory — that's deliberate, so mdbook's serve-mode watcher doesn't
 loop rebuilding on its own output. Don't move `build-dir` back into
 the source tree without addressing that.
 
-If `Holmake mdbook-serve` fails with "Address already in use" on port
-3000, an mdbook server is already running (it survives shell exits
-because `mdbook serve` runs in the foreground of whatever invoked it,
-but a previous detached run may still be alive). Stop it with:
+`Holmake mdbook-serve` detaches the server into the background and
+prints the URL — your terminal stays free. The server keeps running
+until you kill it. If you re-run `Holmake mdbook-serve` while a
+previous server is still alive, the recipe pre-flight-checks port
+3000 and fails fast with a hint:
 
-    pkill -f 'mdbook serve'
+    Port 3000 already in use; stop the existing server first:
+      pkill -f 'mdbook serve'  (or: lsof -ti :3000 | xargs kill)
 
-then re-run `Holmake mdbook-serve`. If you want to find the offender
-explicitly, `lsof -i :3000` shows the listening process.
+`pkill -f 'mdbook serve'` is portable across macOS and Linux modern
+installations (BSD pkill and procps-ng pkill both support `-f`).
+The `lsof` form is a more robust fallback if there's any chance the
+process listening on 3000 isn't actually mdbook.
 
 ## Adding a chapter
 

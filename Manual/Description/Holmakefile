@@ -23,9 +23,24 @@ mdbook: ../Tools/smdpp
 	mdbook build
 
 # Convenience: serve the book locally at http://127.0.0.1:3000/.
-# Live-reloads when .smd / theme / book.toml change.
+# Live-reloads when .smd / theme / book.toml change.  Detaches into the
+# background; pass LOG=1 to capture the server's stdout/stderr to
+# mdbook-serve.log here, or LOG=<path> for a custom location.
 mdbook-serve: ../Tools/smdpp
-	mdbook serve --hostname 127.0.0.1 --port 3000
+	@msg() { { echo "$$1" >/dev/tty; } 2>/dev/null || echo "$$1" >&2; }; \
+	 if lsof -ti :3000 >/dev/null 2>&1; then \
+	   msg "Port 3000 already in use; stop the existing server first:"; \
+	   msg "  pkill -f 'mdbook serve'  (or: lsof -ti :3000 | xargs kill)"; \
+	   exit 1; \
+	 fi; \
+	 logfile="$(LOG)"; \
+	 [ "$$logfile" = 1 ] && logfile=mdbook-serve.log; \
+	 [ -z "$$logfile" ] && logfile=/dev/null; \
+	 (mdbook serve --hostname 127.0.0.1 --port 3000 \
+	    >"$$logfile" 2>&1 &); \
+	 msg "mdbook serving at http://127.0.0.1:3000/"; \
+	 [ "$$logfile" != /dev/null ] && msg "log: $$(pwd)/$$logfile"; \
+	 msg "stop: pkill -f 'mdbook serve'"
 
 description.pdf: $(TEX_SOURCES)
 	latexmk -pdf description
@@ -110,7 +125,7 @@ figures:
 EXTRA_CLEANS = drules.tex tactics.tex theories.tex libraries.tex \
                PatternMatchesLib.tex HolSat.tex definitions.tex \
                system.tex system.md drules.md conv.tex math.tex \
-               description.pdf \
+               description.pdf mdbook-serve.log \
                $(patsubst %,%.aux,$(TEX_CORES)) \
 	       description.log description.out \
                description.toc description.fls description.idx description.ilg \
