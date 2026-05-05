@@ -22,6 +22,16 @@ directory — that's deliberate, so mdbook's serve-mode watcher doesn't
 loop rebuilding on its own output. Don't move `build-dir` back into
 the source tree without addressing that.
 
+If `Holmake mdbook-serve` fails with "Address already in use" on port
+3000, an mdbook server is already running (it survives shell exits
+because `mdbook serve` runs in the foreground of whatever invoked it,
+but a previous detached run may still be alive). Stop it with:
+
+    pkill -f 'mdbook serve'
+
+then re-run `Holmake mdbook-serve`. If you want to find the offender
+explicitly, `lsof -i :3000` shows the listening process.
+
 ## Adding a chapter
 
 1. Drop a `<name>.smd` file next to the existing chapters.
@@ -63,12 +73,37 @@ mdbook MathJax wouldn't otherwise know about (e.g. `\llbracket`,
 `\rrbracket`). If you upgrade mdbook and the theme override
 disappears, you'll need to re-create it.
 
+## Tables
+
+Source files use **GFM pipe tables**:
+
+    | Header 1 | Header 2 |
+    |----------|----------|
+    | cell     | cell     |
+
+Pandoc and mdbook both understand pipe tables natively, so the same
+source feeds both pipelines. Pandoc multi-line tables (the kind with
+rows of `---` separators) do **not** render in mdbook — pulldown-cmark
+parses the dashes as `<hr>` and the rest as paragraphs — so don't use
+them.
+
+Cells with embedded line breaks (e.g., the multi-line BNF productions
+in `modern-syntax.smd`) use `<br>` rather than literal newlines, since
+GFM cells must fit on one source line. Cells containing a literal `|`
+need to escape it as `\|`.
+
+If pandoc estimates wide cell content, it emits LaTeX
+`\begin{longtable}` columns of the form
+
+    >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}
+
+which depends on the **`array`** and **`calc`** packages (in addition
+to `longtable` and `booktabs`). Both are already loaded by
+`description.tex`; if you start a new top-level LaTeX driver, remember
+to load all four.
+
 ## Known limitations
 
-- Pandoc multi-line tables (rows of `---` separators) don't render
-  natively in mdbook — pulldown-cmark sees the dashes as `<hr>` and
-  the rest as paragraphs. Convert them to GFM pipe tables in the
-  source; pandoc accepts both syntaxes so the LaTeX path still works.
 - Cross-references currently rewrite source-side anchors only.
   `\ref{tab:foo}` style refs carried over from `.stex` aren't
   translated.
