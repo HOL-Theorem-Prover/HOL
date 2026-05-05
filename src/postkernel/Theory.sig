@@ -145,6 +145,7 @@ sig
   val incorporate_types      : string -> (string*int) list -> unit
   val incorporate_consts     : string -> (string*hol_type) list -> unit
   val pp_thm                 : (thm -> HOLPP.pretty) ref
+  val pp_type                : (hol_type -> HOLPP.pretty) ref
 
   type metadata = {path: string, timestamp: Time.time}
   val record_metadata        : string -> metadata -> unit

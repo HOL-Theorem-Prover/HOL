@@ -113,8 +113,9 @@ fun hooks_or_abort td =
                           TheoryDelta.toString td ^ " with problem " ^
                           Feedback.exn_to_string e)
 
-(* This reference is set in course of loading the parsing library *)
+(* These references are set in course of loading the parsing library *)
 val pp_thm = ref (fn _:thm => PP.add_string "<thm>")
+val pp_type = ref (fn _:hol_type => PP.add_string "<ty>")
 
 (*---------------------------------------------------------------------------*
  * Unique identifiers, for securely linking a theory to its parents when     *
@@ -968,6 +969,8 @@ fun export_theory_return_hash () = let
            (fn p => Option.map (fn url => {name = p, url = url})
                                (parent_doc_url p))
            parent_names,
+       types = thy_types thyname,
+       constants = Lib.mapfilter Term.dest_const (thy_constants thyname),
        all_thms = all_thms}
   fun mungethydata dmap = let
     fun foldthis (k,v,acc as (strlist,tmlist,dict)) =
@@ -1025,7 +1028,9 @@ fun export_theory_return_hash () = let
               val script_html_path =
                   OS.Path.concat(docsdir, thyname ^ "Script.html")
           in
-            (TheoryPP.print_doc_html (!pp_thm) docthry sigdoc_strm
+            (TheoryPP.print_doc_html
+                {pp_thm = !pp_thm, pp_type = !pp_type}
+                docthry sigdoc_strm
                handle e => (Portable.close_out sigdoc_strm; raise e);
              Portable.close_out sigdoc_strm);
             if OS.FileSys.access(script_path, [OS.FileSys.A_READ]) then
