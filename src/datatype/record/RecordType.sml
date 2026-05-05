@@ -24,12 +24,6 @@ open Parse
 
 val K_tm = combinSyntax.K_tm
 
-structure Typetab = Table(struct
-  type key = hol_type
-  val ord = Type.compare
-  fun pp _ = HOLPP.add_string "<type>"
-end)
-
 val debugp = ref false
 fun DIAG s = if !debugp then print ("RecordType: " ^ s ^ "\n") else ()
 val ERR = mk_HOL_ERR "RecordType";
