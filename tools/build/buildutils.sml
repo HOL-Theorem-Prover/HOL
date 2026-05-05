@@ -790,7 +790,8 @@ in
   system_ps (fullPath [HOLDIR, "tools", "mllex", "mllex.exe"] ^ " Lexer.lex");
   system_ps (fullPath [HOLDIR, "tools", "mlyacc", "src", "mlyacc.exe"] ^ " Parser.grm");
   system_ps (POLYC ^ " poly-makebase.ML -o makebase.exe");
-  system_ps (POLYC ^ " poly-Doc2Html.ML -o gen_extra_docfiles")
+  system_ps (POLYC ^ " poly-Doc2Html.ML -o gen_extra_docfiles");
+  system_ps (POLYC ^ " poly-AliasGen.ML -o AliasGen.exe")
 end
 
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
@@ -840,7 +841,12 @@ fun build_help graph =
                           HOLFileSys.mkDir htmlpath)
      val cmd1     = [doc2html, docpath, htmlpath]
      val cmd2     = [fullPath [dir,"makebase.exe"]]
+     val cmd3     = [fullPath [dir,"AliasGen.exe"], "--check", docpath]
  in
+   if SYSTEML cmd3 then ()
+   else die "AliasGen --check failed: alias entries are out of sync. \
+            \Run help/src-sml/AliasGen.exe --regen help/Docfiles to fix."
+ ;
    if ML_SYSNAME <> "mosml" then (
      print "Generating HTML and plain text versions of Docfiles...\n" ;
      if SYSTEML cmd1 then print "...docfile translation done\n"
