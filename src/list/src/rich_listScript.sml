@@ -2854,9 +2854,10 @@ Proof
 QED
 
 Theorem LAST_TAKE_EL :
-    !l n. 0 < n /\ n <= LENGTH l ==> LAST (TAKE n l) = EL (n - 1) l
+    !l n. 0 < n /\ n <= LENGTH l ==> LAST (TAKE n l) = EL (PRE n) l
 Proof
-    Induct_on ‘l’ >> rw []
+    simp [PRE_SUB1]
+ >> Induct_on ‘l’ >> rw []
  >> simp [LAST_DEF]
  >> Cases_on ‘l = []’ >> fs []
  >- (‘n = 1’ by simp [] >> simp [])
