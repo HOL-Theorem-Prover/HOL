@@ -37,6 +37,8 @@ sig
  val print_doc_html :
      thm PP.pprinter -> sig_info_record -> TextIO.outstream -> unit
 
+ val write_script_html : {script_path : string, out_path : string} -> unit
+
 
  val pp_struct : string -> struct_info_record PP.pprinter
 
