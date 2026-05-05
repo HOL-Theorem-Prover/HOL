@@ -2,8 +2,7 @@ INCLUDES = ../Tools ../../examples/probability $(HOLDIR)/src/integer
 
 TEX_CORES = description title preface system conv drules tactics \
 	theories math definitions libraries misc HolSat PatternMatchesLib \
-        enumfset simplifier latex-munger modern-syntax-chapter advanced_tactics \
-        suspension-resumption-subsection
+        enumfset simplifier latex-munger modern-syntax-chapter
 
 TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex $(patsubst %,%.tex,$(TEX_CORES))
 
@@ -49,9 +48,6 @@ definitions.tex: definitions.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
 
-advanced_tactics.tex: advanced_tactics.stex $(PS_STUFF)
-	$(PS_COMMAND)
-
 conv.md: conv.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
@@ -64,8 +60,11 @@ drules.md: drules.smd $(PS_STUFF)
 drules.tex: drules.md pdf-macros.lua
 	(printf '\\chapter{Derived Inference Rules}\\label{derived-rules}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
 
-tactics.tex: tactics.stex $(PS_STUFF)
-	$(PS_COMMAND)
+tactics.md: tactics.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+tactics.tex: tactics.md pdf-macros.lua
+	(printf '\\chapter{Goal Directed Proof: Tactics and Tacticals}\\label{tactics-and-tacticals}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
 
 theories.tex: theories.stex $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo) \
 	$(dprot $(HOLDIR)/src/integer/integerTheory.uo) \
@@ -103,17 +102,11 @@ modern-syntax.md: modern-syntax.smd $(PS_STUFF)
 modern-syntax-chapter.tex: modern-syntax.md pdf-macros.lua
 	(printf '\\chapter{\\texorpdfstring{\\HOL{} Source File Syntax}{HOL Source File Syntax}}\\label{chap:modern-syntax}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
 
-suspension-resumption.md: suspension-resumption.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-suspension-resumption-subsection.tex: suspension-resumption.md pdf-macros.lua
-	(printf '\\subsection{Proof Suspension and Resumption}\\label{sec:suspend-resume}\n' ; pandoc --top-level-division=section --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
-
 # This builds figs/0.mps, figs/1.mps, ...
 figures:
 	mpost -mem=metafun -tex=latex figure.mp
 
-EXTRA_CLEANS = drules.tex drules.md tactics.tex theories.tex libraries.tex \
+EXTRA_CLEANS = drules.tex drules.md tactics.tex tactics.md theories.tex libraries.tex \
                PatternMatchesLib.tex HolSat.tex definitions.tex \
                system.tex system.md conv.tex conv.md math.tex \
                description.pdf mdbook-serve.log \
