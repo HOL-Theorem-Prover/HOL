@@ -58,13 +58,48 @@ fun printHOLPage version bgcolor HOLpath idIndex TheoryIndex (dbfile, outfile)
         val sigspath = normPath["src-sml","htmlsigs"]
         fun path front file = normPath[front, file^".html"]
 
+        (* For theory file <thy>Theory: resolve the sigobj/<thy>Theory.sig
+           symlink to find the source dir, and produce a URL pointing at
+           the rich per-theory doc that export_theory wrote into
+           <src>/.hol/docs/<thy>Theory.html, relative to help/. *)
+        val help_dir = OS.Path.concat (HOLpath, "help")
+        fun theory_doc_url file =
+            let val sigobj_sig =
+                    normPath [HOLpath, "sigobj", file ^ ".sig"]
+            in
+              if OS.FileSys.isLink sigobj_sig then
+                let val tgt = OS.FileSys.readLink sigobj_sig
+                    val {dir, ...} = OS.Path.splitDirFile tgt
+                    (* dir = <src>/.hol/objs *)
+                    val src = OS.Path.dir (OS.Path.dir dir)
+                    val abs_doc =
+                        OS.Path.concat (src,
+                          OS.Path.concat (".hol/docs", file ^ ".html"))
+                in
+                  SOME (OS.Path.mkRelative
+                          {path = abs_doc, relativeTo = help_dir})
+                end
+              else NONE
+            end handle OS.SysErr _ => NONE
+                     | OS.Path.Path => NONE
+
         fun class_of drop {comp=Str, file, line} =
              (case drop file
                of SOME name => SOME(name, path sigspath file)
                 | NONE => NONE)
           | class_of _ otherwise = NONE
 
-        val theory_of  = class_of dropTheory
+        fun theory_of {comp=Str, file, line} =
+             (case dropTheory file
+               of SOME name =>
+                  let val url =
+                          case theory_doc_url file of
+                              SOME u => u
+                            | NONE => path sigspath file
+                  in SOME (name, url) end
+                | NONE => NONE)
+          | theory_of _ = NONE
+
         val library_of = class_of dropLib
         val syntax_of  = class_of dropSyntax
         val simps_of   = class_of dropSimps

@@ -16,6 +16,8 @@ type thminfo = DB_dtype.thminfo
 type sig_info_record = {
   name        : string,
   parents     : {name : string, url : string} list,
+  types       : (string * int) list,
+  constants   : (string * hol_type) list,
   all_thms    : (string * thm * thminfo) list
 }
 type struct_info_record = {
@@ -118,8 +120,8 @@ fun html_escape s =
       String.translate esc s
     end
 
-fun print_doc_html pp_thm info_record ostrm = let
-  val {name,parents,all_thms} = info_record
+fun print_doc_html {pp_thm, pp_type = pp_type_user} info_record ostrm = let
+  val {name,parents,types,constants,all_thms} = info_record
   val parents' =
       Lib.sort (fn p1 : {name:string,url:string} => fn p2 => #name p1 <= #name p2)
                parents
@@ -167,6 +169,26 @@ fun print_doc_html pp_thm info_record ostrm = let
       in
         PP.prettyPrint (out o html_escape, 75) pretty
       end
+  fun type_to_string ty =
+      let val buf = ref []
+          fun pr s = buf := s :: !buf
+          val () = PP.prettyPrint (pr, 100) (pp_type_user ty)
+          val raw = String.concat (List.rev (!buf))
+          val raw = Substring.string (Substring.dropr Char.isSpace
+                                       (Substring.full raw))
+      in
+        if String.size raw > 0 andalso String.sub (raw, 0) = #":"
+        then String.extract (raw, 1, NONE)
+        else raw
+      end
+  (* Build a fully applied type for a theory's new type operator, using
+     fresh type variables 'a, 'b, ... for arguments, so the renderer
+     shows the operator with its argument count. *)
+  fun var_at i = "'" ^ String.str (Char.chr (Char.ord #"a" + i))
+  fun applied_ty (opname, arity) =
+      let val args = List.tabulate (arity, fn i => Type.mk_vartype (var_at i))
+      in Type.mk_thy_type {Tyop = opname, Thy = name, Args = args} end
+      handle _ => Type.mk_vartype (var_at 0)
   (* Octicons file-code-16 (MIT-licensed; https://primer.style/foundations/icons/file-code-16) *)
   val src_icon_svg =
       "<svg class=\"src-icon\" viewBox=\"0 0 16 16\" width=\"0.95em\" \
@@ -258,6 +280,35 @@ in
       \    font-size: 0.92rem;\n\
       \  }\n\
       \  ul.parents a:hover { background: #eaeef2; }\n\
+      \  .toc { margin: 0 0 1.75rem; }\n\
+      \  .toc h3 {\n\
+      \    font-size: 1.05rem; font-weight: 700; color: var(--fg);\n\
+      \    margin: 1.4rem 0 0.4rem;\n\
+      \    padding: 0.1rem 0 0.1rem 0.5rem;\n\
+      \    border-left: 4px solid var(--accent);\n\
+      \  }\n\
+      \  .toc-items {\n\
+      \    display: flex; flex-wrap: wrap; gap: 0.15rem 0.9rem;\n\
+      \    font-size: 0.92rem; line-height: 1.65;\n\
+      \  }\n\
+      \  .toc-items a {\n\
+      \    color: var(--accent); text-decoration: none;\n\
+      \    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n\
+      \    white-space: nowrap;\n\
+      \  }\n\
+      \  .toc-items a:hover { text-decoration: underline; }\n\
+      \  .toc-items code {\n\
+      \    color: var(--fg);\n\
+      \    background: var(--pre-bg);\n\
+      \    padding: 0 0.35rem; border-radius: 4px;\n\
+      \  }\n\
+      \  .toc-empty { color: var(--muted); font-style: italic; }\n\
+      \  ul.sig-list { list-style: none; padding: 0; margin: 0 0 1rem; }\n\
+      \  ul.sig-list li { margin: 0.25rem 0; }\n\
+      \  ul.sig-list code {\n\
+      \    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n\
+      \    font-size: 0.92rem;\n\
+      \  }\n\
       \  .thm { margin: 1.1rem 0; }\n\
       \  .thm-name {\n\
       \    font-size: 1rem;\n\
@@ -302,6 +353,62 @@ in
      | _ => (out "<h2>Parents</h2>\n<ul class=\"parents\">\n";
              List.app pr_parent parents';
              out "</ul>\n"));
+  let
+    fun pr_toc_group {linked} (heading, names) =
+        (out "<h3>"; out heading; out "</h3>\n<div class=\"toc-items\">";
+         (case names of
+              [] => out "<span class=\"toc-empty\">(none)</span>"
+            | _ =>
+              List.app
+                (fn nm =>
+                    if linked then
+                      (out "<a href=\"#"; out (html_escape nm); out "\">";
+                       out (html_escape nm); out "</a>")
+                    else
+                      (out "<code>"; out (html_escape nm); out "</code>"))
+                names);
+         out "</div>\n")
+    fun pr_toc_sig (heading, items) =
+        (out "<h3>"; out heading; out "</h3>\n";
+         case items of
+             [] => out "<div class=\"toc-items\">\
+                       \<span class=\"toc-empty\">(none)</span></div>\n"
+           | _ =>
+             (out "<ul class=\"sig-list\">\n";
+              List.app
+                (fn (lhs, rhs) =>
+                    (out "<li><code>"; out (html_escape lhs);
+                     out " : "; out (html_escape rhs); out "</code></li>\n"))
+                items;
+              out "</ul>\n"))
+    val tyop_items =
+        let val sorted =
+                Lib.sort (fn (a:string*int) => fn b => #1 a <= #1 b) types
+        in List.map
+             (fn (nm, arity) =>
+                 (nm, type_to_string (applied_ty (nm, arity))))
+             sorted
+        end
+    val const_items =
+        let val sorted =
+                Lib.sort (fn (a:string*hol_type) => fn b => #1 a <= #1 b)
+                         constants
+        in List.map (fn (nm, ty) => (nm, type_to_string ty)) sorted end
+    val visible_names =
+        List.map (fn (s, _, _) => s) o
+        List.filter (fn (_, _, {private=false, ...}:thminfo) => true | _ => false)
+    val ax_names = visible_names axioms'
+    val def_names = visible_names definitions'
+    val thm_names = visible_names theorems'
+  in
+    out "<section class=\"toc\">\n<h2>Contents</h2>\n";
+    pr_toc_sig ("Type operators", tyop_items);
+    pr_toc_sig ("Constants", const_items);
+    pr_toc_group {linked = true} ("Axioms", ax_names);
+    pr_toc_group {linked = true} ("Definitions", def_names);
+    pr_toc_group {linked = true} ("Theorems", thm_names);
+    out "</section>\n"
+  end;
   pr_thm_section "Axioms" axioms'';
   pr_thm_section "Definitions" definitions'';
   pr_thm_section "Theorems" theorems'';

@@ -25,6 +25,8 @@ sig
  type sig_info_record = {
    name        : string,
    parents     : {name : string, url : string} list,
+   types       : (string * int) list,
+   constants   : (string * hol_type) list,
    all_thms    : (string * thm * thminfo) list
  }
 
@@ -35,7 +37,8 @@ sig
                all_thms    : (string * thm * thminfo) list} PP.pprinter
 
  val print_doc_html :
-     thm PP.pprinter -> sig_info_record -> TextIO.outstream -> unit
+     {pp_thm : thm PP.pprinter, pp_type : hol_type PP.pprinter} ->
+     sig_info_record -> TextIO.outstream -> unit
 
  val write_script_html : {script_path : string, out_path : string} -> unit
 

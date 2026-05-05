@@ -1117,8 +1117,12 @@ val _ = let
       pp_thm
         |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
         |> trace ("paranoid string literal printing", 1)
+  val rawpp_type =
+      pp_type
+        |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
 in
-  Theory.pp_thm := rawpp_thm
+  Theory.pp_thm := rawpp_thm;
+  Theory.pp_type := rawpp_type
 end
 
 fun export_theorems_as_docfiles dirname thms = let
