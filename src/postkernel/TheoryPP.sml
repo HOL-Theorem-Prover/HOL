@@ -167,16 +167,24 @@ fun print_doc_html pp_thm info_record ostrm = let
       in
         PP.prettyPrint (out o html_escape, 75) pretty
       end
+  val src_icon_svg =
+      "<svg class=\"src-icon\" viewBox=\"0 0 16 16\" width=\"0.85em\" \
+      \height=\"0.85em\" aria-hidden=\"true\">\
+      \<path fill=\"currentColor\" \
+      \d=\"m11.28 3.22 4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 \
+      \0 1-1.06-1.06L13.94 8l-3.72-3.72a.75.75 0 0 1 1.06-1.06zm-6.56 \
+      \0a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.75.75 0 1 1-1.06 \
+      \1.06L.47 8.53a.75.75 0 0 1 0-1.06z\"/></svg>"
   fun pr_thm (s, th, loc) =
       let val esc = html_escape s in
         out "<div class=\"thm\" id=\""; out esc; out "\">\n";
-        out "<div class=\"thm-name\"><a class=\"anchor\" href=\"#";
-        out esc; out "\" aria-hidden=\"true\">#</a>";
+        out "<div class=\"thm-name\">";
         (case src_url loc of
              NONE => (out "<code>"; out esc; out "</code>")
            | SOME url =>
              (out "<a class=\"src-link\" href=\""; out (html_escape url);
-              out "\"><code>"; out esc; out "</code></a>"));
+              out "\"><code>"; out esc; out "</code>";
+              out src_icon_svg; out "</a>"));
         out "</div>\n<pre>";
         pp_to_stream th
           handle e =>
@@ -253,18 +261,16 @@ in
       \    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n\
       \    font-size: 0.95rem;\n\
       \  }\n\
-      \  .src-link { color: inherit; text-decoration: none; }\n\
-      \  .src-link:hover code {\n\
-      \    text-decoration: underline; color: var(--accent);\n\
-      \  }\n\
-      \  .anchor {\n\
-      \    color: var(--muted);\n\
+      \  .src-link {\n\
+      \    color: var(--accent);\n\
       \    text-decoration: none;\n\
-      \    margin-right: 0.4rem;\n\
-      \    opacity: 0;\n\
-      \    transition: opacity 0.1s;\n\
+      \    display: inline-flex;\n\
+      \    align-items: baseline;\n\
+      \    gap: 0.3em;\n\
       \  }\n\
-      \  .thm:hover .anchor, .thm:focus-within .anchor { opacity: 1; }\n\
+      \  .src-link:hover { text-decoration: underline; }\n\
+      \  .src-icon { opacity: 0.55; }\n\
+      \  .src-link:hover .src-icon { opacity: 1; }\n\
       \  .thm:target { background: #fff8c5; border-radius: 6px; }\n\
       \  pre {\n\
       \    background: var(--pre-bg);\n\
