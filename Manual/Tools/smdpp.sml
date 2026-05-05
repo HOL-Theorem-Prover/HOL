@@ -199,10 +199,14 @@ fun convertSuperscripts s =
     outside (0, [])
   end
 
-(* Inside $...$ inline math and $$...$$ display math, double every
-   backslash so that CommonMark's backslash-escape pass leaves the
-   original backslash intact for MathJax.  Without this, `\_`, `\{`,
-   `\}` and other LaTeX escapes get eaten before MathJax sees them. *)
+(* Inside $...$ inline math and $$...$$ display math, escape characters
+   that CommonMark would otherwise consume:
+     `\` doubled to `\\` so the original backslash survives the
+        backslash-escape pass for MathJax (`\_`, `\{`, `\}`, etc.).
+     `_` and `*` prefixed with `\` so pulldown-cmark's emphasis pass
+        doesn't pair them up across math content (e.g.
+        `\mathsf{Terms}_{\Sigma_{\Omega}}` would otherwise turn the
+        embedded `_` into <em> tags). *)
 fun protectMath s =
   let
     val sub = String.sub
@@ -210,8 +214,11 @@ fun protectMath s =
     fun emit c acc = c :: acc
     fun emitStr str acc = List.revAppend (String.explode str, acc)
     fun protect c acc =
-      if c = #"\\" then emitStr "\\\\" acc
-      else c :: acc
+      case c of
+          #"\\" => emitStr "\\\\" acc
+        | #"_"  => emitStr "\\_" acc
+        | #"*"  => emitStr "\\*" acc
+        | _ => c :: acc
     fun outside (i, acc) =
       if i >= sz then String.implode (List.rev acc)
       else if sub (s, i) = #"$" then
