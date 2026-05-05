@@ -1309,89 +1309,64 @@ The current theory segment is written to a file *name*`Theory.sml`, and the file
 Notice that the exported theory is not compiled by HOL.
 That is left to an external tool, `Holmake` (see the section on `Holmake`), which maintains dependencies among collections of HOL theory segments.
 
-##skip
-
-
-### ML functions for accessing theories}
+### ML functions for accessing theories
 
 \index{theories, in HOL logic@theories, in HOL logic!functions for accessing|(}
 \index{axioms!retrieval of, in HOL system@retrieval of, in HOL system|(}
-%
-The arguments of ML type `string` to `new_axiom`,
-`new_definition`, \etc, are the names of the corresponding axioms
-and definitions. These names are used when accessing theories with the
-functions `axiom`, `definition`, \etc, described below.
+The arguments of ML type `string` to `new_axiom`, `new_definition`, etc., are the names of the corresponding axioms and definitions.
+These names are used when accessing theories with the functions `axiom`, `definition`, etc., described below.
 
-The current theory
-%
 \index{theories, in HOL logic@theories, in HOL logic!hierarchies of}
-%
-can be extended by adding new parents, types, constants, axioms and
-definitions. Theories that are in the ancestry of the current theory
-cannot be extended in this way; they can be thought of as
-*frozen*.
+The current theory can be extended by adding new parents, types, constants, axioms and definitions.
+Theories that are in the ancestry of the current theory cannot be extended in this way; they can be thought of as *frozen*.
 
 There are various functions for loading the contents of theory files:
 
-\begin{holboxed}
 \index{parents@`parents`|pin}
 \index{types@`types`|pin}
 \index{constants@`constants`|pin}
-\begin{verbatim}
-   parents     : string -> string list
-   types       : string -> (int * string) list
-   constants   : string -> term list
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "Theory" "parents";
+>>__ printNameAndType 4 "Theory" "types";
+>>__ printNameAndType 4 "Theory" "constants";
+```
 
-\noindent The first argument is the name of a theory (which must be in the
-ancestry of the current theory segment); the result is a list of the
-components of the theory. The name of the current theory can be
-abbreviated by \ml{"-"}.
-%
-\index{ abbreviation, of HOL theory part names@\ml{-} (abbreviation, of HOL theory part names)}
-%
-For example, \ml{parents "-"} returns the parents of the current
-theory.
+The first argument is the name of a theory (which must be in the ancestry of the current theory segment); the result is a list of the components of the theory.
+The name of the current theory can be abbreviated by `"-"`.
+\index{ abbreviation, of HOL theory part names@`-` (abbreviation, of HOL theory part names)}
+For example, `parents "-"` returns the parents of the current theory.
 
-In the case of `types` a list of arity-name pairs is returned.
-Individual axioms, definitions and theorems can be read from the
-current theory using the following ML functions:
+In the case of `types` a list of name-arity pairs is returned.
+Individual axioms, definitions and theorems can be read from the current theory using the following ML functions:
 
-\begin{holboxed}
 \index{axiom (ML function)@`axiom` (ML function)|pin}
 \index{definition (ML function)@`definition` (ML function)|pin}
 \index{theorem (ML function)@`theorem` (ML function)|pin}
-\begin{verbatim}
-   axiom      : string -> thm
-   definition : string -> thm
-   theorem    : string -> thm
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "DB" "axiom";
+>>__ printNameAndType 4 "DB" "definition";
+>>__ printNameAndType 4 "DB" "theorem";
+```
 
-\noindent The first argument is the user supplied name of the axiom,
-definition or theorem in the current theory.  Further, a list of all
-of a theory's axioms, definitions and theorems can be retreived with
-the ML functions:
+The first argument is the user supplied name of the axiom, definition or theorem in the current theory.
+Further, a list of all of a theory's axioms, definitions and theorems can be retrieved with the ML functions:
 
-\begin{holboxed}
 \index{axioms (ML function)@`axioms` (ML function)|pin}
 \index{theorems (ML function)@`theorems` (ML function)|pin}
 \index{definitions (ML function)@`definitions` (ML function)|pin}
-\begin{verbatim}
-   axioms      : string -> (string * thm) list
-   definitions : string -> (string * thm) list
-   theorems    : string -> (string * thm) list
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "DB" "axioms";
+>>__ printNameAndType 4 "DB" "definitions";
+>>__ printNameAndType 4 "DB" "theorems";
+```
 
-The contents of the current theory can be printed in a readable format
-using the function `print_theory`.
-%
+The contents of the current theory can be printed in a readable format using the function `print_theory`.
 \index{printing, in HOL logic@printing, in HOL logic!of theories}
 \index{print_theory@`print_theory`}
 \index{axioms!retrieval of, in HOL system@retrieval of, in HOL system|)}
 \index{theories, in HOL logic@theories, in HOL logic!functions for accessing|)}
+
+##skip
 
 ### Functions for creating definitional extensions
 \index{extension, of HOL logic@extension, of HOL logic!definitional}
