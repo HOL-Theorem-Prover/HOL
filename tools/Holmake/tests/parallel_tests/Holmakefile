@@ -40,7 +40,8 @@ DIRNAMES += cachefetch \
             dirlock \
             heap-size \
             ignore_errors/j4 \
-            hollogs
+            hollogs \
+            issue1903
 endif
 
 

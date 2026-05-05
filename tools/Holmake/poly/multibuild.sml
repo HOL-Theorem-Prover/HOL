@@ -126,9 +126,10 @@ fun graphbuild optinfo g =
           ldir ++ safetag dir tag
         end
 
-    val (monitor, {bold,green,red,coloured_info = info}) =
+    val (monitor, {bold,green,red,coloured_info = info,final_report}) =
         MB_Monitor.new {info = info, warn = warn, genLogFile = genLF,
                         time_limit = time_limit,
+                        keep_going = keep_going,
                         multidir = is_multidir dirmap}
 
     fun dircomplete dir (good, bad) t =
@@ -390,7 +391,7 @@ fun graphbuild optinfo g =
                       provider = { initial = (g,true), genjob = genjob }}
   in
     do_work(worklist, monitor)
-    before release_all_locks()
+    before (release_all_locks(); final_report())
   end
 
 end
