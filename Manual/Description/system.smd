@@ -1230,75 +1230,71 @@ The second, `unlisted`, makes the theorem more difficult to access.
 This is appropriate when the theorem is being saved for the consumption of particular tools (which fact might be indicated by the use of other attributes), but the theorem is otherwise uninteresting, and unlikely to be something that a user is going to want to stumble across when searching or surveying theories.
 Concretely: unlisted theorems do not appear in theory signature files (so: cannot be accessed with the `xTheory.thm_name` syntax); and unlisted theorems will not be returned as the results of searches made for theorems using the functions in the `DB` module.
 
-##skip
-
 \index{Theorem (special syntactic form)@`Theorem` (special syntactic form)|(}
 \index{special syntactic forms for scripts!Theorem@`Theorem`}
 Instead of using the ML function `save_thm`, a special `Theorem` syntax is available for use in script files.
 One can write
-\begin{alltt}
-   Theorem \mname = \mth
-\end{alltt}
+```
+   Theorem name = th
+```
 to achieve the same effect as an SML declaration
-\begin{alltt}
-   val \mname = save_thm("\mname", \mth);
-\end{alltt}
+```
+   val name = save_thm("name", th);
+```
 Attributes can also be added; for example:
-\begin{alltt}
-   Theorem \mname{}[simp] = \mth
-\end{alltt}
+```
+   Theorem name[simp] = th
+```
 
-\smallskip \noindent
-If one wishes to prove a goal with a tactic (see Chapter~\ref{tactics-and-tacticals}), and store the resulting theorem, the combination of these actions can be achieved with the `store_thm` function:
-\begin{holboxed}
+If one wishes to prove a goal with a tactic (see the Tactics and Tacticals chapter), and store the resulting theorem, the combination of these actions can be achieved with the `store_thm` function:
 \index{store_thm@`store_thm`|pin}
 \index{store_thm@`store_thm`|seealso{`Theorem` (special syntactic form)}}
-\begin{verbatim}
-   store_thm : (string * term * tactic) -> thm
-\end{verbatim}
-\end{holboxed}
-A call to \ml{store_thm(\mname,$t$,\mtac)} results in the application of \mtac{} to goal $t$.
-If the tactic is successful, the resulting theorem is saved under the name \mname, as before.
+```
+>>__ printNameAndType 4 "Tactical" "store_thm";
+```
+A call to `store_thm(`*name*`,`$t$`,`*tac*`)` results in the application of *tac* to goal $t$.
+If the tactic is successful, the resulting theorem is saved under the name *name*, as before.
 Also as before, theorem attributes can be added to the name.
 
 \index{special syntactic forms for scripts!Theorem@`Theorem`}
 Finally, again for use in script files only, there is a `Theorem` syntax to replace `store_thm`, reducing the need to write the same name twice, and giving a cleaner appearance.
-One can write %
-\index{Proof keyword@`Proof` keyword}\index{QED keyword@`QED` keyword}%
+One can write
+\index{Proof keyword@`Proof` keyword}
+\index{QED keyword@`QED` keyword}
 \index{special syntactic forms for scripts!Proof@`Proof`}
 \index{special syntactic forms for scripts!QED@`QED`}
-\begin{alltt}
-   Theorem \mname[attr1,attr2,...]:
+```
+   Theorem name[attr1,attr2,...]:
      ...goal statement...
    Proof
      ...tactic...
    QED
-\end{alltt}
-The goal statement in this form is not an arbitrary term value, but must use the surface syntax used by the system parser (see Sections~\ref{sec:parsing} and~\ref{sec:parsing-printing}).
+```
+The goal statement in this form is not an arbitrary term value, but must use the surface syntax used by the system parser (see [§Quotations, Parsing and Printing](#quotations-parsing-and-printing)).
 For example:
-\begin{alltt}
+```
    Theorem IMP_CLAUSE[simp]:
      !p. (p ==> p) <=> T
    Proof
      rpt strip_tac
    QED
-\end{alltt}
+```
+(The tactic above is shown to illustrate the `Proof`/`QED` shape of the form rather than the proof itself; closing this goal will need a little more than `rpt strip_tac`.)
 Note further that the `Proof` and `QED` keywords must occur in the leftmost column of the script file so that the parser can know when the term and tactic arguments terminate.
 
 \index{special syntactic forms for scripts!Triviality@`Triviality`}
-This form has been deprecated and may be removed in a future release.
-It was used to abbreviate the `Theorem`-`local` combination (with either the \ml{=} or \ml{:} following).
-Instead of writing \ml{Theorem~foo[local,\dots]}, one can write \ml{Triviality~foo[\dots]}.
+Instead of writing `Theorem foo[local,...]`, one can write `Triviality foo[...]`.
+**NB:** This form has been deprecated and will be removed in a future release.
 
 The choice to use `Theorem` syntax, or to use `store_thm` or `save_thm` directly is a matter of users' aesthetic preference.
 But recall: if writing library code to prove and store theorems, the underlying `store_thm` must be used, as the special treatment of the `Theorem` keyword is only available in script files.
-%
-\index{theorems, in HOL logic@theorems, in HOL logic!saving of|)}%
-\index{saving theorems|)}%
+
+\index{theorems, in HOL logic@theorems, in HOL logic!saving of|)}
+\index{saving theorems|)}
 \index{theorem attributes|)}
 \index{Theorem (special syntactic form)@`Theorem` (special syntactic form)|)}
-%
-} % end local definition of mname, mth macros etc
+
+##skip
 
 \paragraph{Exporting a theory}
 
