@@ -417,7 +417,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val e = App (mkIdent (theory_, "Theory.export_theory"), unit)
     val e = if not noSigDocs then e else let
       val set_trace = mkIdent (theory_, "Feedback.set_trace")
-      val include_docs = mkString (theory_, "TheoryPP.include_docs")
+      val include_docs = mkString (theory_, "TheoryPP.include_html_docs")
       val zero = mkInt (theory_, 0)
       val exclude_docs = mkApp set_trace [include_docs, zero]
       in Infix {left = exclude_docs, id = (theory_, "before"), right = e} end

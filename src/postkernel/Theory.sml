@@ -1011,15 +1011,26 @@ fun export_theory_return_hash () = let
       in
         theory_out (TheoryPP.pp_sig sigthry) ostrm1;
         theory_out (TheoryPP.pp_struct hash structthry) ostrm2;
-        if Feedback.get_tracefn "TheoryPP.include_docs" () = 1 then
+        if Feedback.get_tracefn "TheoryPP.include_html_docs" () = 1 then
           let val docsdir = ".hol/docs"
               val () = HOLFS_dtype.createDirIfNecessary docsdir
               val sigdoc_strm =
                   Portable.open_out (OS.Path.concat(docsdir, name ^ ".html"))
+              val script_path =
+                  OS.Path.concat(OS.FileSys.getDir(), thyname ^ "Script.sml")
+              val script_html_path =
+                  OS.Path.concat(docsdir, thyname ^ "Script.html")
           in
             (TheoryPP.print_doc_html (!pp_thm) docthry sigdoc_strm
                handle e => (Portable.close_out sigdoc_strm; raise e);
-             Portable.close_out sigdoc_strm)
+             Portable.close_out sigdoc_strm);
+            if OS.FileSys.access(script_path, [OS.FileSys.A_READ]) then
+              TheoryPP.write_script_html
+                {script_path = script_path, out_path = script_html_path}
+              handle e =>
+                (mesg ("\nFailed to mirror " ^ thyname ^ "Script.sml: " ^
+                       General.exnMessage e ^ "\n"))
+            else ()
           end
         else ();
         Tracing.trace_theory name {

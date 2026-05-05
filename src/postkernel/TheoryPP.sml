@@ -93,8 +93,9 @@ fun pp_type mvartype mtype ty =
           ]
  end
 
-val include_docs = ref true
-val _ = Feedback.register_btrace ("TheoryPP.include_docs", include_docs)
+val include_html_docs = ref true
+val _ = Feedback.register_btrace
+          ("TheoryPP.include_html_docs", include_html_docs)
 
 fun classify As Ds Ts [] = (As,Ds,Ts)
   | classify As Ds Ts ((r as (s,th,i:thminfo))::rest) =
@@ -141,11 +142,15 @@ fun print_doc_html pp_thm info_record ostrm = let
           DB_dtype.Unknown => NONE
         | DB_dtype.Located {scriptpath, linenum, ...} =>
           let
-            val abssrc = holpathdb.subst_pathvars scriptpath
+            val abs_sml = holpathdb.subst_pathvars scriptpath
+            val {dir, file} = OS.Path.splitDirFile abs_sml
+            val {base, ...} = OS.Path.splitBaseExt file
+            val abs_html =
+                OS.Path.concat (dir,
+                  OS.Path.concat (".hol/docs", base ^ ".html"))
             val rel =
-                OS.Path.mkRelative {path = abssrc, relativeTo = curr_docs_dir}
-                handle OS.Path.Path =>
-                       #file (OS.Path.splitDirFile abssrc)
+                OS.Path.mkRelative {path = abs_html, relativeTo = curr_docs_dir}
+                handle OS.Path.Path => base ^ ".html"
           in
             SOME (rel ^ "#L" ^ Int.toString linenum)
           end
@@ -289,6 +294,77 @@ in
   pr_thm_section "Theorems" theorems'';
   out "</body>\n</html>\n"
 end
+
+(* Write an HTML mirror of a Script.sml file with anchored line numbers,
+   so that source-link URLs of the form "<thy>Script.html#Lnnn" land on
+   the right line in any browser. *)
+fun write_script_html {script_path, out_path} =
+    let
+      val instream = TextIO.openIn script_path
+      val ostream = TextIO.openOut out_path
+      fun out s = TextIO.output (ostream, s)
+      val {file, ...} = OS.Path.splitDirFile script_path
+      fun loop n =
+          case TextIO.inputLine instream of
+              NONE => ()
+            | SOME line =>
+              let
+                val len = size line
+                val (body, nl) =
+                    if len > 0 andalso String.sub(line, len - 1) = #"\n" then
+                      (String.substring(line, 0, len - 1), true)
+                    else (line, false)
+                val ns = Int.toString n
+              in
+                out "<span class=\"line\" id=\"L"; out ns; out "\">";
+                out "<span class=\"line-num\">"; out ns; out "</span>";
+                out (html_escape body);
+                out "</span>";
+                if nl then out "\n" else ();
+                loop (n + 1)
+              end
+    in
+      out "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n\
+          \<meta charset=\"UTF-8\">\n\
+          \<meta name=\"viewport\" \
+                \content=\"width=device-width, initial-scale=1\">\n\
+          \<title>Source: ";
+      out (html_escape file);
+      out "</title>\n\
+          \<style>\n\
+          \  :root { --bg:#ffffff; --fg:#1f2328; --muted:#6e7781;\n\
+          \          --pre-bg:#f6f8fa; --pre-border:#d0d7de; --hl:#fff8c5; }\n\
+          \  html { background: var(--bg); }\n\
+          \  body { font-family: system-ui, -apple-system, sans-serif;\n\
+          \         color: var(--fg); margin: 1.5rem auto; max-width: 80rem;\n\
+          \         padding: 0 1rem 3rem; line-height: 1.4; }\n\
+          \  h1 { font-size: 1.2rem; font-weight: 600; margin: 0 0 0.8rem; }\n\
+          \  pre {\n\
+          \    background: var(--pre-bg); border: 1px solid var(--pre-border);\n\
+          \    border-radius: 6px; padding: 0.6rem 0.9rem; margin: 0;\n\
+          \    overflow-x: auto;\n\
+          \    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,\n\
+          \                 monospace;\n\
+          \    font-size: 0.9rem; line-height: 1.5;\n\
+          \  }\n\
+          \  .line-num { display: inline-block; width: 4em;\n\
+          \              padding-right: 1em; text-align: right;\n\
+          \              color: var(--muted); user-select: none; }\n\
+          \  .line:target { background: var(--hl); }\n\
+          \</style>\n\
+          \</head>\n\
+          \<body>\n\
+          \<h1>";
+      out (html_escape file);
+      out "</h1>\n<pre>";
+      loop 1
+        handle e => (TextIO.closeIn instream;
+                     TextIO.closeOut ostream;
+                     raise e);
+      out "</pre>\n</body>\n</html>\n";
+      TextIO.closeIn instream;
+      TextIO.closeOut ostream
+    end
 
 fun pp_sig info_record = let
   open PP
