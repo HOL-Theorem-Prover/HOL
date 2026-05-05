@@ -1,12 +1,6 @@
 structure stringfindreplace :> stringfindreplace =
 struct
 
-structure Chartab = Table(struct
-  type key = char
-  val ord = Char.compare
-  val pp = HOLPP.add_string o Char.toString
-end)
-
 datatype 'a trie = Nd of 'a option * 'a trie Chartab.table
 
 fun dictOf (Nd(_, d)) = d

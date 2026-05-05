@@ -41,6 +41,7 @@ Unsynchronized.sml
 ../Table.sml
 ../Symtab.sml
 ../Inttab.sml
+../Chartab.sml
 ../UnicodeChars.sig
 ../UnicodeChars.sml
 ../Redblackmap.sig
