@@ -4,4 +4,5 @@
 
 - [The HOL Logic in ML](system.smd)
 - [Derived Inference Rules](drules.smd)
+- [Conversions](conv.smd)
 - [HOL Source File Syntax](modern-syntax.smd)

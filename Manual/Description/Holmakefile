@@ -52,8 +52,11 @@ definitions.tex: definitions.stex $(PS_STUFF)
 advanced_tactics.tex: advanced_tactics.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
-conv.tex: conv.stex $(PS_STUFF)
-	$(PS_COMMAND)
+conv.md: conv.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+conv.tex: conv.md pdf-macros.lua
+	(printf '\\chapter{Conversions}\\label{avra-conv}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
 
 drules.md: drules.smd $(PS_STUFF)
 	$(PS_NOUMAP)
@@ -112,7 +115,7 @@ figures:
 
 EXTRA_CLEANS = drules.tex drules.md tactics.tex theories.tex libraries.tex \
                PatternMatchesLib.tex HolSat.tex definitions.tex \
-               system.tex system.md conv.tex math.tex \
+               system.tex system.md conv.tex conv.md math.tex \
                description.pdf mdbook-serve.log \
                $(patsubst %,%.aux,$(TEX_CORES)) \
 	       description.log description.out \
