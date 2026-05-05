@@ -167,14 +167,21 @@ fun print_doc_html pp_thm info_record ostrm = let
       in
         PP.prettyPrint (out o html_escape, 75) pretty
       end
+  (* Octicons file-code-16 (MIT-licensed; https://primer.style/foundations/icons/file-code-16) *)
   val src_icon_svg =
-      "<svg class=\"src-icon\" viewBox=\"0 0 16 16\" width=\"0.85em\" \
-      \height=\"0.85em\" aria-hidden=\"true\">\
+      "<svg class=\"src-icon\" viewBox=\"0 0 16 16\" width=\"0.95em\" \
+      \height=\"0.95em\" aria-hidden=\"true\">\
       \<path fill=\"currentColor\" \
-      \d=\"m11.28 3.22 4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 \
-      \0 1-1.06-1.06L13.94 8l-3.72-3.72a.75.75 0 0 1 1.06-1.06zm-6.56 \
-      \0a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.75.75 0 1 1-1.06 \
-      \1.06L.47 8.53a.75.75 0 0 1 0-1.06z\"/></svg>"
+      \d=\"M4 1.75C4 .784 4.784 0 5.75 0h5.586c.464 0 .909.184 1.237.513l2.914\
+      \ 2.914c.329.328.513.773.513 1.237v8.586A1.75 1.75 0 0 1 14.25 15h-3a.75\
+      \.75 0 0 1 0-1.5h3a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 10 4.25V\
+      \1.5H5.75a.25.25 0 0 0-.25.25v2.5a.75.75 0 0 1-1.5 0Zm1.72 4.97a.75.75 0\
+      \ 0 1 1.06 0l2 2a.75.75 0 0 1 0 1.06l-2 2a.749.749 0 0 1-1.275-.326.749.\
+      \749 0 0 1 .215-.734l1.47-1.47-1.47-1.47a.75.75 0 0 1 0-1.06ZM3.28 7.78 \
+      \1.81 9.25l1.47 1.47a.751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018l-\
+      \2-2a.75.75 0 0 1 0-1.06l2-2a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018\
+      \ 1.042Zm8.22-6.218V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.91\
+      \4-.013-.011Z\"/></svg>"
   fun pr_thm (s, th, loc) =
       let val esc = html_escape s in
         out "<div class=\"thm\" id=\""; out esc; out "\">\n";
