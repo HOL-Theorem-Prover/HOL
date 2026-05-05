@@ -129,11 +129,26 @@ fun print_doc_html pp_thm info_record ostrm = let
   val definitions' = psort definitions
   val theorems'    = psort theorems
   val filter_visible =
-      List.mapPartial (fn (s, th, {private=false,...}:thminfo) => SOME (s,th)
-                      |            _                 => NONE)
+      List.mapPartial
+        (fn (s, th, {private=false, loc, ...}:thminfo) => SOME (s, th, loc)
+          | _ => NONE)
   val axioms''      = filter_visible axioms'
   val definitions'' = filter_visible definitions'
   val theorems''    = filter_visible theorems'
+  val curr_docs_dir = OS.Path.concat (OS.FileSys.getDir(), ".hol/docs")
+  fun src_url loc =
+      case loc of
+          DB_dtype.Unknown => NONE
+        | DB_dtype.Located {scriptpath, linenum, ...} =>
+          let
+            val abssrc = holpathdb.subst_pathvars scriptpath
+            val rel =
+                OS.Path.mkRelative {path = abssrc, relativeTo = curr_docs_dir}
+                handle OS.Path.Path =>
+                       #file (OS.Path.splitDirFile abssrc)
+          in
+            SOME (rel ^ "#L" ^ Int.toString linenum)
+          end
   fun out s = TextIO.output (ostrm, s)
   fun pp_to_stream th =
       let
@@ -147,13 +162,17 @@ fun print_doc_html pp_thm info_record ostrm = let
       in
         PP.prettyPrint (out o html_escape, 75) pretty
       end
-  fun pr_thm (s, th) =
+  fun pr_thm (s, th, loc) =
       let val esc = html_escape s in
         out "<div class=\"thm\" id=\""; out esc; out "\">\n";
         out "<div class=\"thm-name\"><a class=\"anchor\" href=\"#";
-        out esc; out "\" aria-hidden=\"true\">#</a><code>";
-        out esc; out "</code></div>\n";
-        out "<pre>";
+        out esc; out "\" aria-hidden=\"true\">#</a>";
+        (case src_url loc of
+             NONE => (out "<code>"; out esc; out "</code>")
+           | SOME url =>
+             (out "<a class=\"src-link\" href=\""; out (html_escape url);
+              out "\"><code>"; out esc; out "</code></a>"));
+        out "</div>\n<pre>";
         pp_to_stream th
           handle e =>
             (TextIO.print
@@ -228,6 +247,10 @@ in
       \  .thm-name code {\n\
       \    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n\
       \    font-size: 0.95rem;\n\
+      \  }\n\
+      \  .src-link { color: inherit; text-decoration: none; }\n\
+      \  .src-link:hover code {\n\
+      \    text-decoration: underline; color: var(--accent);\n\
       \  }\n\
       \  .anchor {\n\
       \    color: var(--muted);\n\
