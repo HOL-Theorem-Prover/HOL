@@ -1,10 +1,10 @@
-# Transform a DFA to an NFA
+# DFA to NFA
 
-The real inspiration in the proof is completed, but we still have to
-provide a translation from DFAs to NFAs. This is simple: the initial
-state of the DFA gets made into the (singleton) set of initial NFA
-states; similarly, the state resulting from a DFA transition becomes a
-(singleton) set of successor states for the NFA.
+To complete the other half of the proof we provide a translation from
+DFAs to NFAs and show it works. This is simple: the initial state of
+the DFA gets made into the (singleton) set of initial NFA states;
+similarly, the state resulting from a DFA transition becomes a
+(singleton) set of successor states for the NFA:
 
 ```
 Definition dfa_to_nfa_def:
@@ -18,8 +18,8 @@ Definition dfa_to_nfa_def:
 End
 ```
 
-The main lemma needed is to show by induction that evaluation of the
-constructed NFA is always a singleton that agrees with the DFA.
+By induction, evaluation of the constructed NFA is
+always a singleton set of states that agrees with the DFA.
 
 ```
 Theorem dfa_to_nfa_eval:
@@ -27,7 +27,8 @@ Theorem dfa_to_nfa_eval:
   ∀w q. EVERY M.Sigma w ⇒
         {dfa_eval M q w} = nfa_eval (dfa_to_nfa M) {q} w
 Proof
-  strip_tac >> Induct >> rw [nfa_eval_def, dfa_eval_def] >>
+  strip_tac >> Induct >>
+  rw [nfa_eval_def, dfa_eval_def] >>
   cong_tac NONE >> simp [dfa_to_nfa_def] >>
   rw [EXTENSION,EQ_IMP_THM,PULL_EXISTS] >>
   qexists_tac ‘{M.delta q h}’ >> simp[]

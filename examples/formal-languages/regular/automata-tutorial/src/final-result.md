@@ -13,3 +13,6 @@ Proof
       simp [GSYM dfa_to_nfa_correct,wf_dfa_to_nfa])
 QED
 ```
+
+See the Exercises for a discussion on how our proofs relate to
+standard presentations.

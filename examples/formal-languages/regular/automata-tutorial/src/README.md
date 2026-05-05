@@ -1,11 +1,10 @@
 # Introduction
 
-The goal of this tutorial is to show, in some detail, how proofs are
-actually done in HOL4. Towards that end, from a blank slate we
-formalize a basic result of automata theory, namely a proof of
-equivalence between the languages definable by deterministic
-finite-state automata (DFAs) and their non-deterministic analogues
-(NFAs).
+The goal of this tutorial is to show some definitions and proofs being
+performed in HOL4. From a blank slate we formalize a basic result of
+automata theory, namely a proof of equivalence between the languages
+definable by deterministic finite-state automata (DFAs) and their
+non-deterministic analogues (NFAs).
 
 We assume a working version of HOL4 plus some basic knowledge of the
 system:
@@ -21,7 +20,7 @@ them as we go along. See
 [Cheatsheet](https://hol-theorem-prover.org/cheatsheet.html) for a
 comprehensive range of useful tactics.
 
-## Theory Scripts (Reminder)
+## Theory Scripts (reminder)
 
 HOL4 formalizations are based on theory scripts. A *theory script* is
 an enhanced Standard ML (SML) file which
@@ -41,7 +40,7 @@ Theory tutorial
 Ancestors
   pred_set list
 Libs
-   dep_rewrite
+  dep_rewrite
 ```
 
 which specifies the following:
@@ -50,10 +49,10 @@ which specifies the following:
 
 - The ancestor theories (`Ancestors`) used by `tutorial` include at
   least `pred_set` and `list`, HOL4's standard theories for sets and
-  lists. Moreover, by virtue of being mentioned, these theories are
-  `open`ed, meaning that elements of them can be accessed directly,
-  e.g., as `NULL` instead of `listTheory.NULL`.
+  lists. By virtue of being listed, these theories are `open`, meaning
+  that elements of them can be accessed directly, *e.g.*, as `NULL`
+  instead of `listTheory.NULL`.
 
 - Further libraries (`Libs`) used include `dep_rewrite`. By being mentioned in
-  the `Libs` list, the `dep_rewrite` module is opened, so that we may
+  the `Libs` list, the `dep_rewrite` module is also open, so that we may
   use `DEP_REWRITE_TAC` instead of `dep_rewrite.DEP_REWRITE_TAC`.
