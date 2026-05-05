@@ -1366,72 +1366,47 @@ The contents of the current theory can be printed in a readable format using the
 \index{axioms!retrieval of, in HOL system@retrieval of, in HOL system|)}
 \index{theories, in HOL logic@theories, in HOL logic!functions for accessing|)}
 
-##skip
-
 ### Functions for creating definitional extensions
+
 \index{extension, of HOL logic@extension, of HOL logic!definitional}
 \index{definitional extension, of HOL logic@definitional extension, of HOL logic}
 \index{theories, in HOL logic@theories, in HOL logic!extension of|(}
+There are three kinds of definitional extensions: constant definitions, constant specifications and type definitions.
 
-There are three kinds of definitional extensions:
-constant definitions, constant specifications and type definitions.
+#### Constant Definitions
 
-#### Constant definitions}
-\label{sec:constant-definitions}
+\index{extension, of HOL logic@extension, of HOL logic!by constant definition}
+\index{constant definition extension, of HOL logic@constant definition extension, of HOL logic!ML function for@ML function for}
+In §LOGIC a constant definition over a signature $\Sigma_{\Omega}$ is defined to be an equation, *i.e.*, a formula of the form $c_{\sigma}=t_{\sigma}$, such that:
 
-In \LOGIC{} a constant definition
-%
-\index{extension, of HOL logic@extension, of HOL logic!by constant definition}%
-\index{constant definition extension, of HOL logic@constant definition extension, of HOL logic!ML function for@ML function for}%
-%
-over a signature $\Sigma_{\Omega}$ is defined to be an equation, *i.e.*,
-a formula of the form $c_{\sigma}=t_{\sigma}$, such that:
-\begin{myenumerate}
-\item $c$ is not the name of any constant in $\Sigma_{\Omega}$;
-\item $t_{\sigma}$ is a closed term in ${\sf Terms}_{\Sigma_{\Omega}}$;
-\item all the type variables occurring in $t_{\sigma}$ occur in $\sigma$.
-\end{myenumerate}
+1. $c$ is not the name of any constant in $\Sigma_{\Omega}$;
+2. $t_{\sigma}$ is a closed term in $\mathsf{Terms}_{\Sigma_{\Omega}}$;
+3. all the type variables occurring in $t_{\sigma}$ occur in $\sigma$.
 
-In \HOL, definitions can be slightly more general than this, in that
-an equation:
+In HOL, definitions can be slightly more general than this, in that an equation:
+$$ c\ v_1\ \cdots\ v_n\ =\ t $$
+is allowed to be a definition where $v_1$, $\dots$, $v_n$ are variable structures (*i.e.*, tuples of distinct variables).
+Such an equation is logically equivalent to:
+$$ c\ =\ \lambda v_1\ \cdots\ v_n.\ t $$
+which is a definition in the sense of §LOGIC if (i), (ii) and (iii) hold.
 
-\[ c\ v_1\ \cdots\ v_n\ =\ t \]
+\index{defining mechanisms, for HOL logic@defining mechanisms, for HOL logic}
+The following ML function creates a new definition in the current theory.
 
-\noindent is  allowed  to  be a  definition where  $v_1$, $\dots$, $v_n$ are
-variable structures (\ie, tuples of distinct variables).   Such  an equation is
-logically equivalent to:
-
-\[ c\ =\ \lambda v_1\ \cdots\ v_n.\  t \]
-
-\noindent which is a definition in the sense of \LOGIC{} if (i),
-(ii) and (iii) hold.
-
-The following  ML function  creates\index{defining mechanisms, for HOL logic@defining mechanisms, for HOL logic} a  new definition in
-the current theory.
-
-\begin{holboxed}
 \index{new_definition@`new_definition`|pin}
-\begin{verbatim}
-   new_definition : (string * term) -> thm
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "boolSyntax" "new_definition";
+```
 
-
-\noindent Evaluating
- \ml{new_definition("$name$", \holquote{$c\ v_1\ \cdots\ v_n\ =\ t$})},
-declares the sequent\\
-\ml{(\lb\rb{},$c = \lambda v_1\ \cdots\ v_n.\  t$)} to be a constant definition
+Evaluating `new_definition("`*name*`", “`$c\ v_1\ \cdots\ v_n\ =\ t$`”)` declares the sequent $(\{\},\ c = \lambda v_1\ \cdots\ v_n.\ t)$ to be a constant definition of the current theory.
 \index{definitions, adding to HOL logic@definitions, adding to HOL logic}
-of the current theory. The name associated with the definition in
-this theory is $name$.
+The name associated with the definition in this theory is *name*.
 Failure occurs if:
-\begin{myenumerate}
-\item $t$ contains free variables that are not in any of
-the variable structures $v_1$, $\dots$, $v_n$ (this is equivalent
-to requiring $\lambda v_1\ \cdots\ v_n.\  t$ to be a closed term);
-\item there is a type variable in  $v_1$, $\dots$, $v_n$ or $t$
-that does not occur in the type of $c$.
-\end{myenumerate}
+
+1. $t$ contains free variables that are not in any of the variable structures $v_1$, $\dots$, $v_n$ (this is equivalent to requiring $\lambda v_1\ \cdots\ v_n.\ t$ to be a closed term);
+2. there is a type variable in $v_1$, $\dots$, $v_n$ or $t$ that does not occur in the type of $c$.
+
+##skip
 
 #### Constant specifications}
 \label{conspec}
