@@ -64,13 +64,8 @@ fun quse s = let
   val _ = MDBG (fn _ => "Call quse " ^ s)
   val full = OS.Path.mkCanonical
                (OS.Path.mkAbsolute{path = s, relativeTo = HFS.getDir()})
-  val fileDir = OS.Path.dir full
-  val oldDir = OS.FileSys.getDir()
-  val _ = if fileDir <> "" then OS.FileSys.chDir fileDir else ()
-  val _ = (QUse.use s ;
-           OS.FileSys.chDir oldDir)
-          handle e => (OS.FileSys.chDir oldDir handle _ => (); raise e)
 in
+  QUse.use s ;
   loadpathdb := Binarymap.insert(!loadpathdb,OS.Path.file full,OS.Path.dir full)
 end handle
     OS.Path.Path => die ("Path exception in quse "^s)

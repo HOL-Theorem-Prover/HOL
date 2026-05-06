@@ -19,8 +19,8 @@ else
   EXTRA_CLEANS = test
 endif
 
-# this test checks that proj1ATheory.sml uses a bare relative path
-# to load its .dat file (not an absolute or holpath-variable path).
+# this test checks that proj1ATheory.sml uses #(FILE) to locate its
+# .dat file (not an absolute or holpath-variable path).
 test: ../proj1/proj1ATheory.sml
-	grep 'subst_pathvars.*"proj1ATheory.dat"' $(hol2fs $<)
+	grep '#(FILE)' $(hol2fs $<)
 	touch $@
