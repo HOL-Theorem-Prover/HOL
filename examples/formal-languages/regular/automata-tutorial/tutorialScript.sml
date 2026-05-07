@@ -1,5 +1,5 @@
 (*===========================================================================*)
-(* Source for a "how-to-use" HOL tutorial based on finite state machines     *)
+(* Source for a tutorial on initial part of finite state machine theory  *)
 (*                                                                           *)
 (* Handy guide for tactics:                                                  *)
 (*                                                                           *)
@@ -95,6 +95,18 @@ End
 Definition NFA_LANGS_def:
   NFA_LANGS = {nfa_lang N | wf_nfa N}
 End
+
+Theorem IN_NFA_LANGS:
+  L ∈ NFA_LANGS ⇔ ∃N. wf_nfa N ∧ L = nfa_lang N
+Proof
+  simp [NFA_LANGS_def] >> metis_tac[]
+QED
+
+Theorem IN_DFA_LANGS:
+  L ∈ DFA_LANGS ⇔ ∃M. wf_dfa M ∧ L = dfa_lang M
+Proof
+  simp [DFA_LANGS_def] >> metis_tac[]
+QED
 
 (*===========================================================================*)
 (* The subset construction translates an NFA to a DFA. This relies on a      *)
@@ -292,14 +304,16 @@ QED
 Theorem NFA_LANGS_EQ_DFA_LANGS:
   DFA_LANGS = NFA_LANGS
 Proof
-  simp [EXTENSION,NFA_LANGS_def,DFA_LANGS_def] >>
-  rpt (strip_tac ORELSE eq_tac)
-  >- (qexists_tac ‘dfa_to_nfa M’ >>
-      simp [GSYM dfa_to_nfa_correct,wf_dfa_to_nfa])
-  >- (qexists_tac ‘nfa_to_dfa N’ >>
-      simp [nfa_to_dfa_correct,wf_nfa_to_dfa])
+  simp [EXTENSION] >>
+  simp [IN_DFA_LANGS, IN_NFA_LANGS] >>
+  qx_gen_tac ‘L’ >> rw [EQ_IMP_THM]
+  >- (drule dfa_to_nfa_correct >>
+      simp [IN_DEF,FUN_EQ_THM] >>
+      metis_tac [wf_dfa_to_nfa])
+  >- (drule nfa_to_dfa_correct >>
+      simp [IN_DEF,FUN_EQ_THM] >>
+      metis_tac [wf_nfa_to_dfa])
 QED
-
 
 (*---------------------------------------------------------------------------*)
 (* Lemmas                                                                    *)
@@ -309,6 +323,12 @@ Theorem HD_APPEND[local,simp]:
  ∀l1 l2. l1 ≠ [] ⇒ HD (l1 ++ l2) = HD l1
 Proof
  Cases >> rw[]
+QED
+
+Theorem EVERY_LAST:
+  list ≠ [] ∧ EVERY P list ⇒ P (LAST list)
+Proof
+ rw[EVERY_EL,LAST_EL] >> fs[NOT_NIL_EQ_LENGTH_NOT_0]
 QED
 
 Theorem nfa_eval_append:
@@ -335,22 +355,17 @@ Definition nfa_trace_def:
   nfa_trace N _ _ = F
 End
 
-Definition accepting_nfa_trace_def:
-  accepting_nfa_trace N qs w <=>
-     nfa_trace N qs w ∧
-     HD qs ∈ N.initial ∧
-     LAST qs ∈ N.final
-End
-
-Definition trace_lang_def:
-  nfa_trace_lang N = {w | ∃qs. accepting_nfa_trace N qs w}
-End
-
-Theorem nfa_trace_end_state[simp]:
-  nfa_trace N qlist [] <=> ∃q. qlist = [q] ∧ q ∈ N.Q
+Theorem nfa_trace_word_nil[simp]:
+  nfa_trace N qs [] <=> ∃q. qs = [q] ∧ q ∈ N.Q
 Proof
-  Cases_on ‘qlist’ >- rw [nfa_trace_def] >>
+  Cases_on ‘qs’ >- rw [nfa_trace_def] >>
   Cases_on ‘t’ >> simp [nfa_trace_def]
+QED
+
+Theorem nfa_trace_single_state:
+  nfa_trace N [q] w ⇒ w = []
+Proof
+  Cases_on ‘w’ >> gvs[nfa_trace_def]
 QED
 
 Theorem nfa_trace_dest_states:
@@ -384,61 +399,152 @@ Proof
   recInduct nfa_trace_ind >> rw [nfa_trace_def] >> gvs [IN_DEF]
 QED
 
-Theorem nfa_trace_base:
-  wf_nfa N ⇒
-  (nfa_trace N qs [a] ⇔
-   ∃q1 q2. qs = [q1;q2] ∧ q1 ∈ N.Q ∧ q2 ∈ N.delta q1 a ∧ a ∈ N.Sigma)
+(*---------------------------------------------------------------------------*)
+(* Instance of a general fact: if a relation holds pairwise through a list,  *)
+(* then it holds pairwise on splittings of the list, provided the last       *)
+(* element of the prefix is related to the first element of the suffix.      *)
+(* Another instance is the following from sortingTheory:                     *)
+(*                                                                           *)
+(* Theorem SORTED_APPEND_GEN:                                                *)
+(*   SORTED R (L1 ++ L2) <=>                                                 *)
+(*       SORTED R L1 ∧ SORTED R L2 ∧                                         *)
+(*       (L1 = [] ∨ L2 = [] ∨ R (LAST L1) (HD L2))                           *)
+(*---------------------------------------------------------------------------*)
+
+Theorem nfa_trace_appendA:
+  wf_nfa N
+  ⇒ ∀qs1 qs2 w.
+    nfa_trace N (qs1 ++ qs2) w
+    ⇒ qs1 = [] ∨ qs2 = [] ∨
+      ∃w1 a w2.
+        w = w1 ++ (a :: w2) ∧
+        nfa_trace N qs1 w1 ∧
+        nfa_trace N qs2 w2 ∧
+        HD qs2 ∈ N.delta (LAST qs1) a
 Proof
-  Cases_on ‘qs’ >> gvs [nfa_trace_def] >>
-  Cases_on ‘t’ >> gvs [nfa_trace_def] >>
-  metis_tac[wf_nfa_def,SUBSET_DEF]
+  disch_tac >> Induct >> rw [] >>
+  Cases_on ‘qs2’ >> Cases_on ‘qs1’ >> gvs [] >> rw []
+  >- (Cases_on ‘w’ >> gvs [nfa_trace_def] >>
+      rename [‘a ∈ N.Sigma’, ‘q2 ∈ N.delta q1 a’,
+              ‘nfa_trace N (q2::qs) w’] >>
+      ntac 2 (first_assum (irule_at Any)) >>
+      qexists_tac ‘[]’ >> simp [nfa_trace_def]) >>
+  Cases_on ‘w’ >> gvs [nfa_trace_def] >>
+  rename [‘a ∈ N.Sigma’, ‘q2 ∈ N.delta q1 a’,
+          ‘nfa_trace N (q2::(qs1' ++ q3::qs2')) w’] >>
+  first_x_assum drule >> rw[] >>
+  ntac 2 (first_assum (irule_at Any)) >>
+  qexists_tac ‘a::w1’ >> simp [] >>
+  simp [nfa_trace_def]
+QED
+
+Theorem nfa_trace_appendB:
+  wf_nfa N
+  ⇒ ∀qs1 qs2 w1 w2 a.
+      a ∈ N.Sigma ∧
+      nfa_trace N qs1 w1 ∧
+      nfa_trace N qs2 w2 ∧
+      HD qs2 ∈ N.delta (LAST qs1) a
+       ⇒
+      nfa_trace N (qs1 ++ qs2) (w1 ++ (a::w2))
+Proof
+  disch_tac >> Induct >> rw [nfa_trace_def] >>
+  Cases_on ‘qs1’ >> gvs [nfa_trace_def] >> rw []
+  >- (imp_res_tac nfa_trace_single_state >> gvs [] >>
+      Cases_on ‘qs2’ >> gvs [nfa_trace_def]) >>
+  Cases_on ‘w1’ >> gvs [nfa_trace_def]
 QED
 
 Theorem nfa_trace_step:
   wf_nfa N ⇒
-  ∀w qs q a.
-   nfa_trace N (qs ++ [q]) (w ++ [a])
-    <=>
-   nfa_trace N qs w ∧ a ∈ N.Sigma ∧ q ∈ N.delta (LAST qs) a
+   (nfa_trace N (qs ++ [q]) (w ++ [a])
+     <=>
+    nfa_trace N qs w ∧ a ∈ N.Sigma ∧ q ∈ N.delta (LAST qs) a)
 Proof
-  cheat
+ disch_tac >> eq_tac >> disch_tac
+ >- (imp_res_tac nfa_trace_appendA >> gvs [] >>
+     imp_res_tac nfa_trace_single_state >> gvs [] >>
+     rev_drule_all nfa_trace_symbols >> simp [IN_DEF])
+ >- (irule nfa_trace_appendB >> rw [] >>
+     subgoal ‘LAST qs ∈ N.Q’ >-
+       (drule_all nfa_trace_states >>
+        drule_all nfa_trace_nonempty >>
+        rw [EVERY_LAST,IN_DEF]) >>
+     metis_tac [wf_nfa_def,SUBSET_DEF])
 QED
 
 Theorem nfa_eval_trace_lemma:
- wf_nfa N ⇒
- ∀w qset.
-   EVERY N.Sigma w ∧ qset ⊆ N.Q
+  wf_nfa N ⇒
+  ∀w qset.
+    EVERY N.Sigma w ∧ qset ⊆ N.Q
     ⇒ nfa_eval N qset w = {LAST qs | nfa_trace N qs w ∧ HD qs ∈ qset}
 Proof
- strip_tac >> recInduct SNOC_INDUCT >> rw[]
- >- (simp [nfa_eval_def] >> rw [EXTENSION,EQ_IMP_THM]
-     >- (qexists_tac ‘[x]’ >> gvs [nfa_trace_def,SUBSET_DEF]) >>
-     gvs []) >>
- simp [SNOC_APPEND, nfa_eval_append] >>
- simp [nfa_eval_def]  >>
- rename1 ‘w ++ [a]’ >>
- simp [EXTENSION,IN_Delta] >> rw [EQ_IMP_THM]
- >- (rename1 ‘q ∈ N.delta (LAST qs) a’ >>
-     qexists_tac ‘qs ++ [q]’ >> simp[] >> cheat)
- >- (simp [PULL_EXISTS] >>
-     drule_all nfa_trace_dest_states >> rw [] >>
-     gvs [nfa_trace_step] >>
-     first_assum (irule_at (Pos hd)) >> simp [] >>
-     pop_assum mp_tac >>
-     DEP_REWRITE_TAC[HD_APPEND] >>
-     metis_tac [nfa_trace_nonempty])
+  strip_tac >> recInduct SNOC_INDUCT >> rw[]
+  >- (simp [nfa_eval_def] >> rw [EXTENSION,EQ_IMP_THM]
+      >- (qexists_tac ‘[x]’ >> gvs [nfa_trace_def,SUBSET_DEF]) >>
+      gvs []) >>
+  simp [SNOC_APPEND, nfa_eval_append] >>
+  simp [nfa_eval_def] >> rename1 ‘w ++ [a]’ >>
+  simp [EXTENSION,IN_Delta] >> rw [EQ_IMP_THM]
+  >- (rename1 ‘q ∈ N.delta (LAST qs) a’ >>
+      irule_at Any (iffRL nfa_trace_step) >> simp [] >>
+      rpt (first_assum (irule_at Any)) >>
+      imp_res_tac nfa_trace_nonempty >>
+      simp [] >> simp [IN_DEF]) >>
+  simp [PULL_EXISTS] >>
+  drule_all nfa_trace_dest_states >> rw [] >>
+  gvs [nfa_trace_step] >>
+  first_assum (irule_at (Pos hd)) >> simp [] >>
+  imp_res_tac nfa_trace_nonempty >>
+  gvs []
 QED
 
-Theorem nfa_lang_equiv:
+Definition accepting_nfa_trace_def:
+  accepting_nfa_trace N qs w <=>
+     nfa_trace N qs w ∧
+     HD qs ∈ N.initial ∧
+     LAST qs ∈ N.final
+End
+
+(*---------------------------------------------------------------------------*)
+(* Up until this point we have been neglecting the idea of a word being      *)
+(* accepted by a trace.                                                      *)
+(*---------------------------------------------------------------------------*)
+
+Definition nfa_trace_lang_def:
+  nfa_trace_lang N = {w | ∃qs. accepting_nfa_trace N qs w}
+End
+
+Definition NFA_TRACE_LANGS_def:
+  NFA_TRACE_LANGS = {nfa_trace_lang N | wf_nfa N}
+End
+
+Theorem IN_NFA_TRACE_LANGS:
+  L ∈ NFA_TRACE_LANGS ⇔ ∃N. wf_nfa N ∧ L = nfa_trace_lang N
+Proof
+  simp [NFA_TRACE_LANGS_def] >> metis_tac[]
+QED
+
+Theorem nfa_lang_equal:
   wf_nfa N ⇒ nfa_lang N = nfa_trace_lang N
 Proof
-  rw [EXTENSION, nfa_lang_def, trace_lang_def,EQ_IMP_THM]
-  >- (‘N.initial ⊆ N.Q’ by metis_tac [wf_nfa_def] >>
-      gvs [nfa_eval_trace_lemma] >>
+  disch_tac >>
+  ‘N.initial ⊆ N.Q’ by metis_tac [wf_nfa_def] >>
+  rw [EXTENSION, nfa_lang_def, nfa_trace_lang_def, EQ_IMP_THM]
+  >- (gvs [nfa_eval_trace_lemma] >>
       simp [accepting_nfa_trace_def] >> metis_tac[])
-  >- cheat
-  >- (‘N.initial ⊆ N.Q’ by metis_tac [wf_nfa_def] >>
-      ‘EVERY N.Sigma x’ by cheat >>
-      rw [nfa_eval_trace_lemma,PULL_EXISTS] >>
-      gvs [accepting_nfa_trace_def] >> metis_tac[])
+  >- metis_tac [nfa_trace_symbols,accepting_nfa_trace_def]
+  >- (DEP_REWRITE_TAC [nfa_eval_trace_lemma] >>
+      gvs [accepting_nfa_trace_def] >>
+      metis_tac[nfa_trace_symbols])
+QED
+
+Theorem LANG_EQUIVS:
+  DFA_LANGS = NFA_LANGS ∧
+  NFA_LANGS = NFA_TRACE_LANGS
+Proof
+  simp [NFA_LANGS_EQ_DFA_LANGS] >>
+  simp [EXTENSION] >>
+  simp [IN_NFA_LANGS, IN_NFA_TRACE_LANGS] >>
+  metis_tac [nfa_lang_equal]
 QED
