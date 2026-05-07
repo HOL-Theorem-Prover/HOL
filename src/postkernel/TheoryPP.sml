@@ -404,7 +404,11 @@ in
     out "<section class=\"toc\">\n<h2>Contents</h2>\n";
     pr_toc_sig ("Type operators", tyop_items);
     pr_toc_sig ("Constants", const_items);
-    pr_toc_group {linked = true} ("Axioms", ax_names);
+    (* Most theories don't introduce axioms; skip the subsection
+       entirely rather than repeatedly reporting "(none)". *)
+    (case ax_names of
+         [] => ()
+       | _ => pr_toc_group {linked = true} ("Axioms", ax_names));
     pr_toc_group {linked = true} ("Definitions", def_names);
     pr_toc_group {linked = true} ("Theorems", thm_names);
     out "</section>\n"
