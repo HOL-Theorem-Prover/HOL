@@ -9,6 +9,9 @@ all: $(DEFAULT_TARGETS) selftest.exe
 selftest.exe: selftest.uo basis_emitTheory.uo ConstMapML.uo
 	$(HOLMOSMLC) -o $@ $<
 
+ML/combinML.sml: *basis_emitScript.sml
+ML/bagML.sml: *extended_emitScript.sml
+
 EXTRA_CLEANS = selftest.exe emit-selftest.log
 
 ifdef HOLSELFTESTLEVEL

@@ -804,6 +804,10 @@ exception CircularDependency
 exception BuildFailure
 exception NotFound
 
+fun no_extra_rule tgtopt =
+    case tgtopt of
+        NONE => true
+      | SOME tgt => not (isSome (extra_commands tgt))
 fun no_full_extra_rule tgtopt =
     case tgtopt of
         NONE => true
@@ -870,7 +874,7 @@ in
       (x as SOME n) => (g0, n)
     | NONE =>
       if not (hmdir.eqdir dir actual_dir) andalso
-         no_full_extra_rule (SOME tgt)
+         no_extra_rule (SOME tgt)
          (* path outside of current directory *)
       then (
         diag (fn _ => "Target "^pretty_tgt^" external to directory");
@@ -1095,7 +1099,7 @@ in
                                 phony = false, status = updstatus,
                                 command = BuiltInCmd
                                             (BIC_BuildScript fp, incinfo),
-                                dir = dir, extra = extra,
+                                dir = actual_dir, extra = extra,
                                 dependencies = depnodes} g1
                     end
             end
