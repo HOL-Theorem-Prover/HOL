@@ -37,7 +37,10 @@ for Edinburgh LCF.
 The first is the theory as a record of (among other things) facts already proved and thence available as lemmas
 \index{lemmas}
 without having to be re-proved.
-The second, the subject of the chapter on Derived Inference Rules, is the derived rule of inference as a meta-language procedure that implements a broad pattern of inference, but that also, at each application, generates every primitive step of the proof.
+The second, the subject of Chapter \ref{derived-rules}, is the
+derived rule of inference as a meta-language procedure that
+implements a broad pattern of inference, but that also, at each
+application, generates every primitive step of the proof.
 The third device is the tactic as a means of organizing the construction of proofs; and the use of tacticals for composing tactics.
 
 Even with recourse to derived inference rules, it is still surprisingly awkward to work forward,
@@ -145,18 +148,19 @@ Likewise, a tactic that is not strongly valid cannot result in a false theorem; 
 Tactics are specified using the following notation:
 \index{notation!for specification of tactics}
 
-|     | $\mathit{goal}$    |     |
-|-----|--------------------|-----|
-| $\mathit{goal}_1$ | $\mathit{goal}_2$ | $\dots$ $\mathit{goal}_n$ |
+$$
+\dfrac{\mathit{goal}}
+      {\mathit{goal}_1\quad\mathit{goal}_2\quad\dots\quad\mathit{goal}_n}
+$$
 
 For example, the tactic for decomposing conjunctions into two conjunct subgoals is called `conj_tac`.
 \index{conj_tac@`conj_tac`}
 (The tactic is also available under the name `CONJ_TAC`.)
 It is described by:
 
-|     | $t_1 \quad\land\quad t_2$ |     |
-|-----|---------------------------|-----|
-| $t_1$ |                          | $t_2$ |
+$$
+\dfrac{t_1\;\land\;t_2}{t_1\qquad t_2}
+$$
 
 This indicates that `conj_tac` reduces a goal of the form `(`$\Gamma$`,`$t_1$`/\`$t_2$`)` to subgoals `(`$\Gamma$`,`$t_1$`)` and `(`$\Gamma$`,`$t_2$`)`.
 The fact that the assumptions of the original goal are propagated unchanged to the two subgoals is indicated by the absence of assumptions in the notation.
@@ -166,9 +170,9 @@ Another example is `numLib.INDUCT_TAC`, a low-level tactic for performing mathem
 \index{INDUCT_TAC@`INDUCT_TAC`}
 \index{induction tactics}
 
-|     | $\forall n.\;t[n]$ |     |
-|-----|--------------------|-----|
-| $t[$`0`$]$ |             | $\{t[n]\}\ t[$`SUC `$n]$ |
+$$
+\dfrac{\forall n.\;t[n]}{t[\mathtt{0}]\qquad \{t[n]\}\;t[\mathtt{SUC}\;n]}
+$$
 
 Thus, `INDUCT_TAC` reduces a goal of the form `(`$\Gamma,\forall n.\;t[n]$`)` to a basis subgoal `(`$\Gamma$`,`$t[$`0`$]$`)` and an induction step subgoal `(`$\Gamma\cup\{t[n]\}$`,`$t[$`SUC `$n]$`)`.
 The induction assumption is indicated in the tactic notation with set brackets.
@@ -181,9 +185,9 @@ Some tactics never fail; for example
 \index{all_tac@`all_tac`}
 `all_tac`
 
-|     | $t$ |     |
-|-----|-----|-----|
-|     | $t$ |     |
+$$
+\dfrac{t}{t}
+$$
 
 is the identity tactic;
 \index{identity tactic}
@@ -341,9 +345,9 @@ It should be recalled that the ML type `thm_tactic` abbreviates `thm->tactic`, a
 **Summary:** Specializes a universally quantified theorem to an arbitrary value.
 Also available under the name `GEN_TAC`.
 
-|     | $\forall x.\,t[x]$ |     |
-|-----|--------------------|-----|
-|     | $t[x']$ |     |
+$$
+\dfrac{\forall x.\,t[x]}{t[x']}
+$$
 
 where $x'$ is a variant of $x$ not free in either goal or assumptions.
 
@@ -361,9 +365,9 @@ where $x'$ is a variant of $x$ not free in either goal or assumptions.
 \index{conjunction, in HOL logic@conjunction, in HOL logic!tactic for splitting of}
 **Summary:** Splits a goal $t_1\land t_2$ into two subgoals, $t_1$ and $t_2$.
 
-|     | $t_1$ `/\` $t_2$ |     |
-|-----|------------------|-----|
-| $t_1$ |              | $t_2$ |
+$$
+\dfrac{t_1\;\land\;t_2}{t_1\qquad t_2}
+$$
 
 **Use:** Solving conjunctive goals.
 `conj_tac` is also invoked by `strip_tac` (see below).
@@ -394,15 +398,15 @@ Often the best thing to do first is `rpt strip_tac`, where `rpt` is the tactical
 Let the relevant type have $m$ constructors $\mathsf{C}_1$ to $\mathsf{C}_m$, where $\mathsf{C}_i$ has $n_i$ arguments.
 If the term is a variable, then the variable is substituted out of the goal entirely:
 
-|     | $t$ |     |
-|-----|-----|-----|
-| $t[q := \mathsf{C}_1\,a_{11}\cdots a_{1n_1}]$ | $\cdots$ | $t[q := \mathsf{C}_m\,a_{m1}\cdots a_{mn_m}]$ |
+$$
+\dfrac{t}{t[q := \mathsf{C}_1\,a_{11}\cdots a_{1n_1}]\quad\cdots\quad t[q := \mathsf{C}_m\,a_{m1}\cdots a_{mn_m}]}
+$$
 
 If the term denoted by $q$ is not simply a variable (*e.g.*, ``Cases_on `n + 1` ``), then fresh assumptions are introduced:
 
-|     | $t$ |     |
-|-----|-----|-----|
-| $\{q = \mathsf{C}_1\,a_{11}\cdots a_{1n_1}\}t$ | $\cdots$ | $\{q = \mathsf{C}_m\,a_{m1}\cdots a_{mn_m}\}t$ |
+$$
+\dfrac{t}{\{q = \mathsf{C}_1\,a_{11}\cdots a_{1n_1}\}t\quad\cdots\quad\{q = \mathsf{C}_m\,a_{m1}\cdots a_{mn_m}\}t}
+$$
 
 **Use:** Case analysis.
 \index{Cases_on@`Cases_on`|)}
@@ -419,9 +423,9 @@ If the term denoted by $q$ is not simply a variable (*e.g.*, ``Cases_on `n + 1` 
 \index{tautologies, in rewriting tactic}
 Also written `REWRITE_TAC`.
 
-|     | $\{t_1, \ldots, t_m\}t$ |     |
-|-----|--------------------------|-----|
-|     | $\{t_1, \ldots, t_m\}t'$ |     |
+$$
+\dfrac{\{t_1, \ldots, t_m\}t}{\{t_1, \ldots, t_m\}t'}
+$$
 
 where $t'$ is obtained from $t$ as described.
 
@@ -460,22 +464,26 @@ See also the more powerful simplification tactics described in the simplifier ch
 **Summary:** `imp_res_tac `$\mathit{th}$ does a limited amount of automated theorem proving in the form of forward inference; it "resolves" the theorem $\mathit{th}$ with the assumptions of the goal and adds any new results to the assumptions.
 The specification for `imp_res_tac` is:
 
-|     | $\{t_1,\ldots,t_m\}t$ |     |
-|-----|------------------------|-----|
-|     | $\{t_1,\ldots,t_m,u_1,\ldots,u_n\}t$ |     |
+$$
+\dfrac{\{t_1,\ldots,t_m\}t}{\{t_1,\ldots,t_m,u_1,\ldots,u_n\}t}
+$$
 
 where $u_1$, $\dots$, $u_n$ are derived by "resolving" the theorem $\mathit{th}$ with the existing assumptions $t_1$, $\dots$, $t_m$.
 Resolution in HOL is not classical resolution, but just Modus Ponens with one-way pattern matching (not unification) and term and type instantiation.
 The general case is where $\mathit{th}$ is of the canonical form
 
-`|- !`$x_1\dots x_p$`. `$v_1$ ` ==> ` $v_2$ ` ==> ` $\dots$ ` ==> ` $v_q$ ` ==> ` $v$
+$$
+\vdash \forall x_1\ldots x_p.\;v_1\Rightarrow v_2\Rightarrow\ldots\Rightarrow v_q\Rightarrow v
+$$
 
 `imp_res_tac `$\mathit{th}$ then tries to specialize $x_1$, $\dots$, $x_p$ in succession so that $v_1$, $\dots$, $v_q$ match members of $\{t_1,\ldots,t_m\}$.
 Each time a match is found for some antecedent $v_i$, for $i$ successively equal to $1$, $2$, $\dots$, $q$, a term and type instantiation is made and the rule of Modus Ponens is applied.
 If all the antecedents $v_i$ (for $1 \leq i \leq q$) can be dismissed in this way, then the appropriate instance of $v$ is added to the assumptions.
 Otherwise, if only some initial sequence $v_1$, $\dots$, $v_k$ (for some $k$ where $1 < k < q$) of the assumptions can be dismissed, then the remaining implication:
 
-`|- ` $v_{k+1}$ ` ==> ` $\dots$ ` ==> ` $v_q$ ` ==> ` $v$
+$$
+\vdash v_{k+1}\Rightarrow\ldots\Rightarrow v_q\Rightarrow v
+$$
 
 is added to the assumptions.
 
@@ -515,9 +523,9 @@ With `THENL` (see [§Selective sequencing](#selective-sequencing)); for example,
 
 **Summary:** `eq_tac` splits an equational goal into two implications (the "if-case" and the "only-if" case):
 
-|     | $u \Leftrightarrow v$ |     |
-|-----|------------------------|-----|
-| $u\ \Rightarrow\ v$ |  | $v\ \Rightarrow\ u$ |
+$$
+\dfrac{u \Leftrightarrow v}{u\Rightarrow v\qquad v\Rightarrow u}
+$$
 
 **Use:** Proving logical equivalences, *i.e.*, goals of the form "$u \Leftrightarrow v$" where $u$ and $v$ are boolean terms.
 Note that the same end can often be achieved by rewriting with the theorem `EQ_IMP_THM`, which states
@@ -534,9 +542,9 @@ $$ \vdash (u \Leftrightarrow v) \Leftrightarrow (u \Rightarrow v) \land (v \Righ
 **Summary:** `EXISTS_TAC `$u$ reduces an existential goal $\exists x.\;t[x]$ to the subgoal $t[u]$.
 (In ASCII form, the existential is printed as a question mark.)
 
-|     | `?`$x$`. `$t[x]$ |     |
-|-----|-------------------|-----|
-|     | $t[u]$ |     |
+$$
+\dfrac{\exists x.\;t[x]}{t[u]}
+$$
 
 **Use:** Proving existential goals.
 
@@ -1093,7 +1101,8 @@ A theorem is bound to the provided name in the SML namespace, but is not yet sav
 \index{theorem resumption}
 \index{special syntactic forms for scripts!Resume@`Resume`}
 To resume work on the unproven subgoal, it is necessary to use the `Resume` form, specifying the theorem name first, and then providing the subgoal name as if it were a theorem/proof attribute.
-(See the chapter on HOL Source File Syntax for more on the syntax of attributes.)
+(See Chapter \ref{chap:modern-syntax} for more on the syntax of
+attributes.)
 
 Thus:
 
