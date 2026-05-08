@@ -50,6 +50,8 @@ fun print_dashes n =
     (print (StringCvt.padLeft #"-" (15 * n + theory_width) "");
      print "\n")
 
+fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
+
 fun read_file (fname,m) = let
   val instr = TextIO.openIn fname
   fun recurse m =
@@ -65,12 +67,17 @@ fun read_file (fname,m) = let
             | SOME (dups,m0) => (dups,m0)
         val newdata =
             if Binaryset.member(dups, thyname) then
-              basemaps
+              (warn ("[" ^ fname ^ "] duplicate entry for " ^ thyname ^
+                     " (ignored)");
+               basemaps)
             else
               case Binarymap.peek(times, thyname) of
                   NONE => (dups, Binarymap.insert(times, thyname, number))
-                | SOME _ => (Binaryset.add(dups, thyname),
-                             #1 (Binarymap.remove(times, thyname)))
+                | SOME _ =>
+                    (warn ("[" ^ fname ^ "] duplicate entry for " ^ thyname ^
+                           " (dropping all values)");
+                     (Binaryset.add(dups, thyname),
+                      #1 (Binarymap.remove(times, thyname))))
       in
         recurse (Binarymap.insert(m, fname, newdata))
       end
