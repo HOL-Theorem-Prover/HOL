@@ -81,7 +81,12 @@ local
       NONE => (warn "Vimhol's tail gave eof\n"; restartTail())
     | SOME line =>
       case String.tokens Char.isSpace line of
-          ["Interrupt"] => (warn "Vim interrupt\n"; Thread.broadcastInterrupt ())
+          ["Interrupt"] => (
+            warn "Vim interrupt\n";
+            if Thread.isActive (!rpid) then
+              Thread.interrupt (!rpid)
+            else
+              warn "No proof thread to interrupt\n")
         | ["ReadFile",tmp] => let open Thread Mutex ConditionVar in
             warn ("Vim input "^tmp^"\n");
             lock m;
@@ -95,7 +100,6 @@ local
           end
         | [] => ()
         | _ => warn ("Got this rubbish from Vim: "^line);
-    Thread.testInterrupt () handle Interrupt => (removeQueue(); Thread.exit());
     poller ()
   end
   val () = OS.Process.atExit stopTail
