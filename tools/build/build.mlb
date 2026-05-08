@@ -5,6 +5,7 @@ $(SML_LIB)/basis/basis.mlb
 buildcline_dtype.sml
 buildcline.sig
 buildcline.sml
+checkRegressions.sml
 buildutils.sig
 buildutils.sml
 ../../tools-poly/build.sml

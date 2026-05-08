@@ -1060,9 +1060,10 @@ in
         open Date
         val timestamp = fmt "%Y-%m-%dT%H%M" (fromTimeLocal (Time.now()))
         val newname = hostname^timestamp
+        val newpath = fullPath [logdir, newname]
       in
-        HOLFileSys.rename {old = logfilename,
-                           new = fullPath [logdir, newname]}
+        HOLFileSys.rename {old = logfilename, new = newpath};
+        checkRegressions.run {logdir = logdir, latest = newpath}
       end
     else safedelete logfilename
   else ()

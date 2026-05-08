@@ -58,6 +58,7 @@ val _ = use "../tools/build/buildcline_dtype.sml"
 val _ = use "../tools/util/FunctionalRecordUpdate.sml"
 val _ = use "../tools/build/buildcline.sig"
 val _ = use "../tools/build/buildcline.sml"
+val _ = use "../tools/build/checkRegressions.sml";
 val _ = use "../tools/build/buildutils.sig";
 val _ = use "../tools/build/buildutils.sml";
 val _ = use "build.sml";
