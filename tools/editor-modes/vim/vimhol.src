@@ -100,6 +100,7 @@ local
           end
         | [] => ()
         | _ => warn ("Got this rubbish from Vim: "^line);
+    Thread.testInterrupt () handle Interrupt => (removeQueue(); Thread.exit());
     poller ()
   end
   val () = OS.Process.atExit stopTail
