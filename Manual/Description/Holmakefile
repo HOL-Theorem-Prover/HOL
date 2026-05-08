@@ -9,7 +9,7 @@ TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex $(patsubst %,%.tex,$(TEX_CO
 PS_ROOT = ../Tools/polyscripter
 PS_STUFF =  $(PS_ROOT) ../Tools/umap
 PS_COMMAND = $(PS_STUFF) < $< > $@
-PS_NOUMAP = $(PS_ROOT) < $< > $@
+PS_NOUMAP = $(PS_ROOT) -md < $< > $@
 
 .PHONY: all mdbook mdbook-serve
 
@@ -66,12 +66,15 @@ tactics.md: tactics.smd $(PS_STUFF)
 tactics.tex: tactics.md pdf-macros.lua
 	(printf '\\chapter{Goal Directed Proof: Tactics and Tacticals}\\label{tactics-and-tacticals}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
 
-theories.tex: theories.stex $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo) \
+theories.md: theories.smd $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo) \
 	$(dprot $(HOLDIR)/src/integer/integerTheory.uo) \
 	$(dprot $(HOLDIR)/src/real/real_sigmaTheory.uo) \
 	$(dprot $(HOLDIR)/src/real/analysis/real_topologyTheory.uo) \
 	$(dprot $(SIGOBJ)/iterateTheory.uo)
-	$(PS_COMMAND)
+	$(PS_NOUMAP)
+
+theories.tex: theories.md pdf-macros.lua
+	(printf '\\chapter{Core Theories}\\label{HOLtheories}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
 
 math.tex: math.stex $(PS_STUFF) $(dprot $(SIGOBJ)/probabilityTheory.uo) \
     $(dprot $(SIGOBJ)/lebesgue_measureTheory.uo) \
@@ -106,7 +109,8 @@ modern-syntax-chapter.tex: modern-syntax.md pdf-macros.lua
 figures:
 	mpost -mem=metafun -tex=latex figure.mp
 
-EXTRA_CLEANS = drules.tex drules.md tactics.tex tactics.md theories.tex libraries.tex \
+EXTRA_CLEANS = drules.tex drules.md tactics.tex tactics.md \
+               theories.tex theories.md libraries.tex \
                PatternMatchesLib.tex HolSat.tex definitions.tex \
                system.tex system.md conv.tex conv.md math.tex \
                description.pdf mdbook-serve.log \

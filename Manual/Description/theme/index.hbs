@@ -72,7 +72,14 @@
                 upand: ["{\\unicode{x214B}}"],
                 // From bbm-defined \llbrace/\rrbrace in the source.
                 llbrace: ["{\\unicode{x2983}}"],
-                rrbrace: ["{\\unicode{x2984}}"]
+                rrbrace: ["{\\unicode{x2984}}"],
+                // Manual/LaTeX/commands.tex: \hilbert = \varepsilon.
+                hilbert: ["\\varepsilon"],
+                // Local macros for the bit-vectors subsection.
+                fcp: ["#1[#2]", 2],
+                worda: ["\\mathit{bool}[\\alpha]"],
+                wordb: ["\\mathit{bool}[\\beta]"],
+                wordc: ["\\mathit{bool}[\\gamma]"]
               }
             }
           });

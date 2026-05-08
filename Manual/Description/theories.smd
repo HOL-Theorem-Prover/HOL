@@ -1,0 +1,5136 @@
+```{=latex}
+% Chapter-local LaTeX macros for theories.tex.  YAML
+% header-includes don't survive `pandoc -t latex`, so these have to
+% live in a raw-LaTeX block in the chapter body.  Smdpp strips this
+% block for the mdbook output; the corresponding MathJax macros are
+% in theme/index.hbs.  Shared declarations (Unicode characters, the
+% \HOL macro, etc.) belong in desc-unicode.sty / commands.tex.
+\providecommand{\hilbert}{\varepsilon}
+\providecommand{\konst}[1]{\ensuremath{\mbox{\small{\textbf{\sf{#1}}}}}}
+\providecommand{\nil}{\mathbf{[} \;\mathbf{]}}
+\providecommand{\cons}[2]{{#1}\mathbf{:}\mathbf{:}{#2}}
+\providecommand{\subr}{\sb{\mathsf{r}}}
+\providecommand{\fcp}[2]{#1[#2]}
+\providecommand{\worda}{\fcp{\mathit{bool}}{\alpha}}
+\providecommand{\wordb}{\fcp{\mathit{bool}}{\beta}}
+\providecommand{\wordc}{\fcp{\mathit{bool}}{\gamma}}
+```
+
+<!-- PolyML setup boilerplate; see system.smd for the full version. -->
+>>__ structure PNV = PolyML.NameSpace.Values
+>>__ fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n"); OS.Process.exit OS.Process.failure)
+>>__ fun printNameAndType0 qp (indent:FixedInt.int) str nm =
+       let val sinfo = valOf $ #lookupStruct PolyML.globalNameSpace str
+                       handle Option => raise Fail ("Structure " ^ str ^ " not found")
+           val f2i = FixedInt.toInt
+           val snames = PolyML.NameSpace.Structures.contents sinfo
+           val sval = valOf (#lookupVal snames nm)
+                       handle Option => raise Fail ("Name " ^ nm ^ " not found in structure " ^ str)
+           val ctxt = if qp then NONE else SOME snames
+           val typ_p = PNV.printType(PNV.typeof sval, 100, ctxt)
+           val spaces = CharVector.tabulate(f2i indent, fn _ => #" ")
+           open PolyML
+       in
+           PP.prettyPrint(!scriptPrint, 70-f2i indent)
+            (PrettyBlock(indent,true,[],[PrettyString (spaces ^ nm^" :"), PrettyBreak(1,2), typ_p]))
+       end
+>>__ val printNameAndType = printNameAndType0 false
+
+
+\index{theories, in HOL logic@theories, in \HOL{} logic!hierarchies of}
+The HOL system provides a collection of theories on which to base
+verification tools or further theory development.  In the rest of this
+section, these theories are briefly described.  The sections that
+follow provide an overview of the contents of each theory.  For a
+complete list of all the axioms, definitions and theorems in HOL, see
+the online resources distributed with the system.  In particular, the
+HTML file `help/HOLindex.html` is a good place to start browsing the
+available theories.  For a graphical picture of the theory hierarchy,
+see `help/theorygraph/theories.html`.
+
+In addition, core theories of higher mathematics are described in
+Chapter \ref{ch:math}.
+
+## The Theory `min`
+
+The starting theory of HOL is the theory `min`.
+\index{min, the HOL theory@\ml{min}, the \HOL{} theory|(}
+In this theory, the type constant `bool` of booleans, the binary type
+operator $(\alpha,\beta)$`fun` of functions, and the type constant
+`ind` of individuals are declared.  Building on these types, three
+primitive constants
+\index{constants, in HOL logic@constants, in \HOL{} logic!primitive logical}
+\index{primitive constants, of HOL logic@primitive constants, of \HOL{} logic}
+are declared: equality, implication, and a choice operator:
+\index{ equality, in HOL logic@\ml{=} (equality, in \HOL{} logic)}
+\index{equality, in HOL logic@equality, in \HOL{} logic}
+
+Equality
+:   Equality (`= : 'a -> 'a -> bool`) is an infix operator.
+    \index{equality, in HOL logic@equality, in \HOL{} logic}
+
+Implication
+:   Implication (`==> : bool -> bool -> bool`) is the *material
+    implication* and is an infix operator that is right-associative,
+    i.e., `x ==> y ==> z` parses to the same term as
+    `x ==> (y ==> z)`.
+    \index{implication, in HOL logic@implication, in \HOL{} logic}
+
+Choice
+:   Equality and implication are standard predicate calculus notions,
+    but choice is more exotic: if $t$ is a term having type
+    $\sigma\to{}$`bool`, then `@x.`$\,t\,$`x` (or, equivalently,
+    `$@`$\,t$) denotes *some* member of the set whose
+    characteristic\index{characteristic predicate, of type definitions}
+    function is $t$.  If the set is empty, then `@x.`$\,t\,$`x`
+    denotes an arbitrary member of the set denoted by $\sigma$.  The
+    constant `@` is a higher order version of Hilbert's
+    \index{Hilbert, D.}\index{epsilon operator}
+    $\hilbert$-operator; it is related to the constant $\iota$ in
+    Church's formulation of higher order logic.  For more details,
+    see Church's \index{Church, A.} original paper \cite{Church},
+    Leisenring's \index{Leisenring, A.} book on Hilbert's
+    $\hilbert$-symbol \cite{Leisenring}, or Andrews' textbook on type
+    theory \cite{Andrews}.
+
+No theorems or axioms are placed in theory `min`.  The primitive rules
+of inference of HOL depend on the presence of `min`.
+\index{min, the HOL theory@\ml{min}, the \HOL{} theory|)}
+
+## Basic Theories
+
+The most basic theories in HOL provide support for a standard
+collection of types.  The theory `bool` defines the basis of the HOL
+logic, including the boolean operations and quantifiers.  On this
+platform, quite a bit of theorem-proving infrastructure can already be
+built.  Further basic types are developed in the theory of pairs
+(`prod`), disjoint sums (`sum`), the one-element type (`one`), and the
+`option` type.
+
+### The theory `bool`
+
+\index{axioms!primitive, of HOL logic@primitive, of \HOL{} logic|(}
+At start-up, the initial theory for users of the HOL system is called
+`bool`\index{HOL@\HOL{}}, which is constructed when the HOL system is
+built.  The theory `bool` is an extension of the combination of the
+"conceptual" theories `LOG` and `INIT`, described in the LOGIC manual.
+Thus it contains the four axioms
+\index{axioms!in bool theory@in \ml{bool} theory}
+for higher order logic.  These axioms, together with the rules of
+inference described in
+Section \ref{rules},
+constitute the core of the HOL logic.  Because of the way the HOL
+system evolved from LCF\index{LCF@\LCF}[^lcf-pp-lambda], the
+particular axiomatization of higher order logic it uses differs from
+the classical axiomatization due to Church\index{Church, A.}
+\cite{Church}.  The biggest difference is that in Church's formulation
+type variables
+\index{type variables, in HOL logic@type variables, in \HOL{} logic!differences from classical}
+are in the meta-language, whereas in the HOL logic they are part of
+the object language.
+
+[^lcf-pp-lambda]: To simplify the porting of the LCF theorem-proving
+    tools to the HOL system, the HOL logic was made as like
+    PP$\lambda$ (the logic built-in to LCF) as possible.
+
+The logical constants
+\index{logical constants, in HOL logic@logical constants, in \HOL{} logic}
+`T` (truth),
+\index{truth values, in HOL logic@truth values, in \HOL{} logic!constants for}
+`F` (falsity),
+`~` (negation),
+\index{ negation, in HOL logic@\holtxt{\~{}} (negation, in \HOL{} logic)}
+`/\` (conjunction),
+\index{ conjunction, in HOL logic@\holtxt{/\bs} (conjunction, in \HOL{} logic)}
+`\/` (disjunction),
+\index{ disjunction, in HOL logic@\holtxt{\bs/} (disjunction, in \HOL{} logic)}
+`!` (universal quantification),
+\index{ universal quantifier, in HOL logic@\holtxt{"!} (universal quantifier, in \HOL{} logic)}
+`?` (existential quantification),
+\index{ existential quantifier, in HOL logic@\holtxt{?} (existential quantifier, in \HOL{} logic)}
+and `?!` (unique existence quantifier)
+\index{ exists unique, in HOL logic@\holtxt{?"!} (exists unique, in \HOL{} logic)}
+can all be defined in terms of equality,
+\index{equality, in HOL logic@equality, in \HOL{} logic}
+implication and choice.  The definitions listed below are fairly
+standard; each one is preceded by its ML name.  Later definitions
+sometimes build on earlier ones.
+
+\index{truth values, in HOL logic@truth values, in \HOL{} logic!definition of}
+\index{T@\holtxt{T}!definitional axiom for}
+\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!definitional axiom for}
+\index{conjunction, in HOL logic@conjunction, in \HOL{} logic!definitional axiom for}
+\index{iff, in HOL logic@iff, in \HOL{} logic!definitional axiom for}
+\index{negation, in HOL logic@negation, in \HOL{} logic!definitional axiom for}
+\index{ exists unique, in HOL logic@\holtxt{?"!} (exists unique, in \HOL{} logic)}
+\index{F (falsity), the HOL constant@\holtxt{F} (falsity), the \HOL{} constant!definitional axiom for}
+\index{equality, in HOL logic@equality, in \HOL{} logic!primitive axiom for}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!definitional axiom for}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!definitional axiom for}
+\index{exists unique, in HOL logic@exists unique, in \HOL{} logic!definitional axiom for}
+```
+   T_DEF              |- T  = ((\x:bool. x) = (\x. x))
+
+   FORALL_DEF         |- !  = \P:'a->bool. P = (\x. T)
+
+   EXISTS_DEF         |- ?  = \P:'a->bool. P($@ P)
+
+   AND_DEF            |- /\ = \t1 t2. !t. (t1 ==> t2 ==> t) ==> t
+
+   OR_DEF             |- \/ = \t1 t2. !t. (t1 ==> t) ==> (t2 ==> t) ==> t
+
+   F_DEF              |- F  = !t. t
+
+   NOT_DEF            |- ~  = (\t. t ==> F)
+
+   EXISTS_UNIQUE_DEF  |- ?! = (\P. $? P /\ (!x y. P x /\ P y ==> (x = y)))
+```
+
+There are four
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!in four primitive axioms}
+axioms in the theory `bool`;
+\index{bool, the HOL theory@\ml{bool}, the \HOL{} theory}
+the first three are the following:
+
+\index{BOOL_CASES_AX@\ml{BOOL\_CASES\_AX}}
+\index{ETA_AX@\ml{ETA\_AX}}
+\index{SELECT_AX@\ml{SELECT\_AX}}
+\index{implication, in HOL logic@implication, in \HOL{} logic!primitive axiom for}
+\index{ choice function, in HOL logic@\holtxt{"@} (choice function, in \HOL{} logic)}
+\index{choice axiom}
+\index{axiom of choice}
+\index{axioms!of choice}
+\index{choice operator, in HOL logic@choice operator, in \HOL{} logic!primitive axiom for}
+```
+##thm BOOL_CASES_AX
+
+##thm ETA_AX
+
+##thm SELECT_AX
+```
+
+The fourth and last axiom of the HOL logic is the Axiom of
+Infinity\index{axiom of infinity}.  Its statement is phrased in terms
+of the function properties `ONE_ONE` and `ONTO`.  The definitions are:
+
+\index{ONE_ONE_DEF@\ml{ONE\_ONE\_DEF}}
+\index{ONTO_DEF@\ml{ONTO\_DEF}}
+\index{one-to-one predicate, in HOL logic@one-to-one predicate, in \HOL{} logic!definitional axiom for}
+\index{onto predicate, in HOL logic@onto predicate, in \HOL{} logic!definitional axiom for}
+```
+##thm ONE_ONE_DEF
+##thm ONTO_DEF
+```
+
+The Axiom of Infinity\index{axioms!in bool theory@in \ml{bool} theory}
+is
+
+\index{INFINITY_AX@\ml{INFINITY\_AX}}
+\index{axiom of infinity}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!in infinity axiom}
+```
+##thm INFINITY_AX
+```
+
+This asserts that there exists a one-to-one map from `ind` to itself
+that is not onto.  This implies that the type `ind` denotes an
+infinite set.
+\index{axioms!primitive, of HOL logic@primitive, of \HOL{} logic|)}
+
+The three other axioms of the theory `bool`, the rules of inference in
+Section \ref{rules}
+and the Axiom of Infinity are, together, sufficient for developing all
+of standard mathematics.  Thus, in principle, the user of the HOL
+system should never need to make a non-definitional
+\index{axioms!dispensibility of adding}
+\index{definitional theories}
+theory.  In practice, it is often very tempting to take the risk of
+introducing new axioms because deriving them from definitions can be
+tedious---proving that 'axioms' follow from definitions amounts to
+proving their consistency.
+
+**Further definitions.**
+The theory `bool` also supplies the definitions of a number of useful
+constants.
+
+\index{COND, the HOL constant@\holtxt{COND}, the \HOL{} constant}
+\index{LET, the HOL constant@\ml{LET}, the \HOL{} constant}
+\index{conditionals, in HOL logic@conditionals, in \HOL{} logic!definitional axiom for}
+```
+##thm LET_DEF
+##thm COND_DEF
+##thm IN_DEF
+```
+
+The constant `LET`
+\index{let-terms, in HOL logic@\holtxt{let}-terms, in \HOL{} logic!constant for}
+is used in representing terms containing local variable bindings
+(i.e., `let`-terms).
+\index{let-terms, in HOL logic@\holtxt{let}-terms, in \HOL{} logic!definitional axiom for}
+For example, the concrete syntax `let v = M in N` is translated by the
+parser to the term `LET (\v.N) M`.  For the full description of how
+`let` expressions are translated, see Section \ref{sec:let-exp}.
+
+The constant `COND` is used to represent conditional expressions.  The
+concrete syntax
+\index{terms, in HOL logic@terms, in \HOL{} logic!conditional}
+\index{conditionals, in HOL logic@conditionals, in \HOL{} logic}
+$\mathtt{if}\;t_1\;\mathtt{then}\;t_2\;\mathtt{else}\;t_3$ abbreviates
+the application `COND `$t_1$` `$t_2$` `$t_3$.
+
+The constant `IN` (written as an infix) is the basis of the modelling
+of sets by their characteristic functions.  The term $x$` IN `$P$ can
+be read as "$x$ is an element of the set $P$", or (more in line with
+its definition) as "the predicate $P$ is true of $x$".
+
+Finally, the polymorphic constant `ARB`$:\alpha$ denotes a fixed but
+arbitrary element.  `ARB` is occasionally useful when attempting to
+deal with the issue of partiality.
+
+#### Restricted quantifiers
+
+\index{restricted quantification}
+The theory `bool` also defines constants that implement *restricted
+quantification*.  This provides a means of simulating subtypes and
+dependent types with predicates.  The most heavily used are
+restrictions of the existential and universal quantifiers:
+
+```
+##thm RES_FORALL_DEF
+##thm RES_EXISTS_DEF
+
+##thm RES_ABSTRACT_DEF
+```
+
+The definition of `RES_ABSTRACT` is a characterising formula, rather
+than a direct equation.  There are two important properties
+
+- if $y$ is an element of $P$ then $(\lambda x :: P.\; M)\,y = M[y/x]$
+- if two restricted abstractions agree on all values over their
+  (common) restricting set, then they are equal.
+
+For completeness, restricted versions of unique existence and
+indefinite description are provided, although hardly used.
+
+```
+##thm RES_EXISTS_UNIQUE_DEF
+##thm RES_SELECT_DEF
+```
+
+The definition of `RES_EXISTS_UNIQUE` uses the restricted
+quantification syntax with the `::` symbol, referring to the earlier
+definitions `RES_EXISTS` and `RES_FORALL`.  The `::` syntax is used
+with restricted quantifiers to allow arbitrary predicates to restrict
+binding variables.  The HOL parser allows restricted quantification of
+all of a sequence of binding variables by putting the restriction at
+the end of the sequence, thus with a universal quantification:
+
+$$
+\forall x \, y \, z \, {\tt ::} \; P \, . \; Q(x,y,z)
+$$
+
+Here the predicate $P$ restricts all of $x$, $y$ and $z$.
+
+#### Derived syntactic forms
+
+\index{quotation, in HOL logic@quotation, in \HOL{} logic!of non-primitive terms|(}
+The HOL quotation parser
+\index{quotation, in HOL logic@quotation, in \HOL{} logic!parser for}
+can translate various standard logical notations
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of standard notations}
+into primitive terms.  For example, if `+` has been declared an infix
+\index{infixes, in HOL logic@infixes, in \HOL{} logic}
+(as explained in Section \ref{theoryfns}), as it is when
+`arithmeticTheory` has been loaded, then `` ``x+1`` ``
+is translated to `` ``$+ x 1`` ``.  The escape character `$`
+\index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as escape character}
+\index{declared constants, in HOL logic@declared constants, in \HOL{} logic}
+\index{infixes, in HOL logic@infixes, in \HOL{} logic}
+suppresses the infix behaviour of `+` and prevents the quotation
+parser getting confused.  In general, `$` can be used to suppress any
+special syntactic behaviour a token (such as `if`, `+` or `let`)
+\index{tokens!suppressing parsing behaviour of}
+might have.  This is illustrated in the table below, in which the
+terms in the column headed *ML quotation* are translated by the
+quotation parser to the corresponding terms in the column headed
+*Primitive term*.  Conversely, the terms in the latter column are
+always printed in the form shown in the former one.  The ML
+constructor expressions in the rightmost column evaluate to the same
+values (of type `term`) as the other quotations in the same row.
+
+\index{choice operator, in HOL logic@choice operator, in \HOL{} logic!syntax of}
+\index{ negation, in HOL logic@\holtxt{\~{}} (negation, in \HOL{} logic)}
+\index{ disjunction, in HOL logic@\holtxt{\bs/} (disjunction, in \HOL{} logic)}
+\index{ conjunction, in HOL logic@\holtxt{/\bs} (conjunction, in \HOL{} logic)}
+\index{ implication, in HOL logic@\holtxt{==>} (implication, in \HOL{} logic)}
+\index{ equality, in HOL logic@\ml{=} (equality, in \HOL{} logic)}
+\index{ universal quantifier, in HOL logic@\holtxt{"!} (universal quantifier, in \HOL{} logic)}
+\index{ existential quantifier, in HOL logic@\holtxt{?} (existential quantifier, in \HOL{} logic)}
+\index{ choice function, in HOL logic@\holtxt{"@} (choice function, in \HOL{} logic)}
+\index{terms, in HOL logic@terms, in \HOL{} logic!non-primitive}
+\index{terms, in HOL logic@terms, in \HOL{} logic!constructors for}
+\index{conditionals, in HOL logic@conditionals, in \HOL{} logic}
+\index{conjunction, in HOL logic@conjunction, in \HOL{} logic!constructor for}
+\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!constructor for}
+\index{equality, in HOL logic@equality, in \HOL{} logic!syntax of}
+\index{negation, in HOL logic@negation, in \HOL{} logic!syntax of}
+\index{negation, in HOL logic@negation, in \HOL{} logic!constructor for}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!syntax of}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!syntax of}
+\index{implication, in HOL logic@implication, in \HOL{} logic!syntax of}
+\index{mk_neg@\ml{mk\_neg}}
+\index{mk_disj@\ml{mk\_disj}}
+\index{mk_conj@\ml{mk\_conj}}
+\index{mk_imp@\ml{mk\_imp}}
+\index{mk_eq@\ml{mk\_eq}}
+\index{mk_forall@\ml{mk\_forall}}
+\index{mk_exists@\ml{mk\_exists}}
+\index{mk_select@\ml{mk\_select}}
+\index{mk_cond@\ml{mk\_cond}}
+\index{mk_let@\ml{mk\_let}}
+\index{conjunction, in HOL logic@conjunction, in \HOL{} logic!syntax of}
+
+Table: Non-primitive terms
+
+| Kind of term | ML quotation | Primitive term | Constructor expression |
+|----|----|----|----|
+| Negation | `~`$t$ | `$~ `$t$ | `mk_neg(`$t$`)` |
+| Disjunction | $t_1$`\/`$t_2$ | `$\/ `$t_1\,t_2$ | `mk_disj(`$t_1$`,`$t_2$`)` |
+| Conjunction | $t_1$`/\`$t_2$ | `$/\ `$t_1\,t_2$ | `mk_conj(`$t_1$`,`$t_2$`)` |
+| Implication | $t_1$`==>`$t_2$ | `$==> `$t_1\,t_2$ | `mk_imp(`$t_1$`,`$t_2$`)` |
+| Equality | $t_1$`=`$t_2$ | `$= `$t_1\,t_2$ | `mk_eq(`$t_1$`,`$t_2$`)` |
+| $\forall$-quantification | `!`$x.t$ | `$!(\`$x.t$`)` | `mk_forall(`$x$`,`$t$`)` |
+| $\exists$-quantification | `?`$x.t$ | `$?(\`$x.t$`)` | `mk_exists(`$x$`,`$t$`)` |
+| $\hilbert$-term | `@`$x.t$ | `$@(\`$x.t$`)` | `mk_select(`$x$`,`$t$`)` |
+| Conditional | `if `$t$` then `$t_1$` else `$t_2$ | `COND `$t\,t_1\,t_2$ | `mk_cond(`$t$`,`$t_1$`,`$t_2$`)` |
+| `let`-expression | `let `$x$`=`$t_1$` in `$t_2$ | `LET(\`$x.t_2$`)`$t_1$ | `mk_let(mk_abs(`$x$`,`$t_2$`),`$t_1$`)` |
+
+There are constructors, destructors and indicators for all the obvious
+constructs.  (Indicators, e.g., `is_neg`, return truth values
+indicating whether or not a term belongs to the syntax class in
+question.)  In addition to the constructors listed in the table there
+are constructors, destructors, and indicators for pairs and lists,
+namely `mk_pair`,
+\index{mk_pair@\ml{mk\_pair}}
+`mk_cons`
+\index{mk_cons@\ml{mk\_cons}}
+and `mk_list`
+\index{mk_list@\ml{mk\_list}}
+(see the REFERENCE manual).  The constants `COND` and `LET` are
+explained in the section on
+[The theory `bool`](#the-theory-bool) above.  The constants `\/`,
+\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!syntax of}
+`/\`, `==>` and `=` are examples of *infixes* and represent $\vee$,
+$\wedge$, $\Rightarrow$ and equality, respectively.  If $c$ is
+declared to be an infix, then the HOL parser will translate
+$t_1\;c\;t_2$ to $\mathtt{\$}c\;t_1\;t_2$.
+
+The constants `!`, `?` and `@` are examples of \label{binder}
+*binders*
+\index{binders, in HOL logic@binders, in \HOL{} logic}
+and represent $\forall$, $\exists$ and $\hilbert$, respectively.  If
+$c$ is declared to be a binder, then the HOL parser will translate
+$c\;x.t$ to the combination $\mathtt{\$}c\,(\lambda x.\,t)$ (i.e., the
+application of the constant $c$ to the representation of the
+abstraction $\lambda x.\,t$).
+\index{ function abstraction binder, in HOL logic@\holtxt{\bs} (function abstraction binder, in \HOL{} logic)}
+
+\index{variables, in HOL logic@variables, in \HOL{} logic!multiple bound}
+\index{list_mk_comb@\ml{list\_mk\_comb}|pin}
+\index{list_mk_abs@\ml{list\_mk\_abs}|pin}
+\index{list_mk_forall@\ml{list\_mk\_forall}|pin}
+\index{list_mk_exists@\ml{list\_mk\_exists}|pin}
+\index{combinations, in HOL logic@combinations, in \HOL{} logic!abbreviation for multiple}
+\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!abbreviation for multiple}
+\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!abbreviation for multiple}
+
+Table: Syntactic abbreviations
+
+| Abbreviated term | Meaning | Constructor expression |
+|----|----|----|
+| $t\,t_1\cdots t_n$ | `(`$\cdots$`(`$t\,t_1$`)`$\cdots t_n$`)` | `list_mk_comb(`$t$`,[`$t_1$`,` $\ldots$ `,`$t_n$`])` |
+| `\`$x_1\cdots x_n$`.`$t$ | `\`$x_1$`. `$\cdots$ `\`$x_n$`.`$t$ | `list_mk_abs([`$x_1$`,` $\ldots$ `,`$x_n$`],`$t$`)` |
+| `!`$x_1\cdots x_n$`.`$t$ | `!`$x_1$`. `$\cdots$ `!`$x_n$`.`$t$ | `list_mk_forall([`$x_1$`,` $\ldots$ `,`$x_n$`],`$t$`)` |
+| `?`$x_1\cdots x_n$`.`$t$ | `?`$x_1$`. `$\cdots$ `?`$x_n$`.`$t$ | `list_mk_exists([`$x_1$`,` $\ldots$ `,`$x_n$`],`$t$`)` |
+
+There are also constructors
+`list_mk_conj`\index{list_mk_conj@\ml{list\_mk\_conj}},
+`list_mk_disj`\index{list_mk_disj@\ml{list\_mk\_disj}},
+`list_mk_imp`\index{list_mk_imp@\ml{list\_mk\_imp}}
+for conjunctions, disjunctions, and implications respectively.  The
+corresponding destructor functions are called `strip_comb` etc.
+\index{term constructors, in HOL logic@term constructors, in \HOL{} logic}
+\index{terms, in HOL logic@terms, in \HOL{} logic!constructors for}
+\index{quotation, in HOL logic@quotation, in \HOL{} logic!of non-primitive terms|)}
+
+#### Theorems
+
+A large number of theorems involving the logical constants are
+pre-proved in the theory `bool`.  The following theorems illustrate
+how higher order logic allows concise expression of theorems
+supporting quantifier movement.
+
+```
+ LEFT_AND_FORALL_THM  |- !P Q. (!x. P x) /\ Q = !x. P x /\ Q
+ RIGHT_AND_FORALL_THM |- !P Q. P /\ (!x. Q x) = !x. P /\ Q x
+
+ LEFT_EXISTS_AND_THM  |- !P Q. (?x. P x /\ Q) = (?x. P x) /\ Q
+ RIGHT_EXISTS_AND_THM |- !P Q. (?x. P /\ Q x) = P /\ ?x. Q x
+
+ LEFT_FORALL_IMP_THM  |- !P Q. (!x. P x ==> Q) = (?x. P x) ==> Q
+ RIGHT_FORALL_IMP_THM |- !P Q. (!x. P ==> Q x) = P ==> !x. Q x
+
+ LEFT_EXISTS_IMP_THM  |- !P Q. (?x. P x ==> Q) = (!x. P x) ==> Q
+ RIGHT_EXISTS_IMP_THM |- !P Q. (?x. P ==> Q x) = P ==> ?x. Q x
+
+ LEFT_FORALL_OR_THM   |- !Q P. (!x. P x \/ Q) = (!x. P x) \/ Q
+ RIGHT_FORALL_OR_THM  |- !P Q. (!x. P \/ Q x) = P \/ !x. Q x
+
+ LEFT_OR_EXISTS_THM   |- !P Q. (?x. P x) \/ Q = ?x. P x \/ Q
+ RIGHT_OR_EXISTS_THM  |- !P Q. P \/ (?x. Q x) = ?x. P \/ Q x
+
+ EXISTS_OR_THM        |- !P Q. (?x. P x \/ Q x) = (?x. P x) \/ ?x. Q x
+ FORALL_AND_THM       |- !P Q. (!x. P x /\ Q x) = (!x. P x) /\ !x. Q x
+
+ NOT_EXISTS_THM       |- !P. ~(?x. P x) = !x. ~P x
+ NOT_FORALL_THM       |- !P. ~(!x. P x) = ?x. ~P x
+
+ SKOLEM_THM           |- !P. (!x. ?y. P x y) = ?f. !x. P x (f x)
+```
+
+Also, a theorem justifying Skolemization (`SKOLEM_THM`) is proved.
+Many other theorems may be found in `bool` theory.
+
+### Combinators
+
+\label{sec:combinTheory}
+
+\index{function composition, in HOL logic@function composition, in \HOL{} logic|(}
+The theory `combin`
+\index{combin@\theoryimp{combin}}
+\index{combinators, in HOL logic@combinators, in \HOL{} logic}
+contains the definitions of function composition (infixed `o`),
+\index{ function composition operator, in HOL logic@\ml{o} (function composition operator), in \HOL{} logic|(}
+a reversed function application operator,
+\index{ function application operator, in HOL logic@\ml{:>} ((reversed) function application operator), in \HOL{} logic}
+function override (infixed `=+`),
+\index{ function override operator, in HOL logic@\ml{=+} (function override opreator), in \HOL{} logic}
+and the combinators `S`,
+\index{S, the HOL constant@\ml{S}, the \HOL{} constant}
+`K`,
+\index{K, the HOL constant@\ml{K}, the \HOL{} constant}
+`I`,
+\index{I, the HOL constant@\ml{I}, the \HOL{} constant}
+`W`,
+\index{W, the HOL constant@\ml{W}, the \HOL{} constant}
+and `C`.
+\index{C, the HOL constant@\ml{C}, the \HOL{} constant}
+
+```
+>>__ open combinTheory
+##thm o_DEF
+##thm APP_DEF
+##thm UPDATE_def
+##thm K_DEF
+##thm S_DEF
+##thm I_DEF
+##thm W_DEF
+##thm C_DEF
+```
+
+The following elementary properties are proved in the theory `combin`:
+
+```
+##thm o_THM
+##thm o_ASSOC
+
+##thm UPDATE_EQ
+##thm UPDATE_COMMUTES
+##thm APPLY_UPDATE_THM
+
+##thm K_THM
+##thm S_THM
+##thm I_THM
+##thm W_THM
+##thm C_THM
+```
+
+The above illustrates that there are two ways of writing function
+update terms.  As per the definition above (`UPDATE_def`), the infix
+`=+` takes a key $k$ and a value $v$, and returns a higher-order
+function, which when in turn is passed a function $f$, returns a
+version of that function that has been updated to return $v$ when
+applied to $k$, and is otherwise the same as $f$.  The same effect
+can be achieved with the "substitution style" syntax:
+$f\llparenthesis k\mapsto v\rrparenthesis$.  There is an ASCII form
+of this notation as well:
+
+```
+>> ``(k2 =+ v2) ((k1 =+ v1) f)``;
+>> ``f (| k |-> v |)``;
+```
+
+\index{ function application operator, in HOL logic@\ml{:>} ((reversed) function application operator), in \HOL{} logic}
+There are no theorems about `:>`; its use is as a convenient syntax
+for function applications.  For example, chains of updates can lose
+some parentheses if written
+
+```
+   f :> (k1 =+ v1) :> (k2 =+ v2) :> (k3 =+ v3)
+```
+
+This presentation also makes the order in which functions are
+applied read from left-to-right.
+
+Having the symbols `o`, `S`, `K`, `I`, `W`, and `C` as built-in
+constants
+\index{variables, in HOL logic@variables, in \HOL{} logic!with constant names}
+is sometimes inconvenient because they are often wanted as mnemonic
+names for variables (e.g., `S` to range over sets and `o` to range
+over outputs).[^combin-shadow]  Variables with these names can be
+used in the current system if `o`, `S`, `K`, `I`, `W`, and `C` are
+first hidden (see Section \ref{hidden}).  In fact, this happens so
+often with the constant `C` that the name `C` is "hidden" by
+default.
+\index{flip, as alias for HOL constant C@\holtxt{flip}, as alias for \HOL{} constant \holtxt{C}}
+Instead, it can be written in fully-qualified form, as `combin$C`,
+or with the alias `flip`, as can be seen above.
+\index{ function composition operator, in HOL logic@\ml{o} (function composition operator), in \HOL{} logic|)}
+\index{function composition, in HOL logic@function composition, in \HOL{} logic|)}
+\index{constants, in HOL logic@constants, in \HOL{} logic!fully-qualified names of}
+
+[^combin-shadow]: Constants declared in new theories can freely
+    re-use these names, with ambiguous inputs resolved by type
+    inference.
+
+### Pairs
+
+\index{representing types, in HOL logic@representing types, in \HOL{} logic!pair example of|(}
+\index{pairs, in HOL logic@pairs, in \HOL{} logic|(}
+\index{product types!in HOL logic@in \HOL{} logic|(}
+
+The Cartesian product type operator
+\index{type operators, in HOL logic@type operators, in \HOL{} logic!for pairs}
+`prod`
+\index{prod, the HOL type operator@\holtxt{prod}, the \HOL{} type operator}
+is defined in the theory `pair`.  Values of type
+`(`$\sigma_1$`,`$\sigma_2$`)prod` are ordered pairs whose first
+component has type $\sigma_1$ and whose second component has type
+$\sigma_2$.  The HOL type parser
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of pairs}
+converts type expressions of the form `:`$\sigma_1$`#`$\sigma_2$
+\index{ product type operator, in HOL logic@\holtxt{\#} (product type operator, in \HOL{} logic)}
+into `(`$\sigma_1$`,`$\sigma_2$`)prod`,
+\index{ pair constructor, in HOL logic@\ml{,} (pair constructor, in \HOL{} logic)}
+and the printer inverts this transformation.  Pairs
+\index{pairing constructor, in HOL logic@pairing constructor, in \HOL{} logic}
+are constructed with an infixed comma symbol
+
+```
+   $, : 'a -> 'b -> 'a # 'b
+```
+
+so, for example, if $t_1$ and $t_2$ have types $\sigma_1$ and
+$\sigma_2$ respectively, then $t_1$`,`$t_2$ is a term with type
+$\sigma_1$`#`$\sigma_2$.  Usually, pairs are written within
+brackets: `(`$t_1$`,`$t_2$`)`.  The comma symbol associates
+\index{pairing constructor, in HOL logic@pairing constructor, in \HOL{} logic!associativity of}
+to the right, so that `(`$t_1$`,`$t_2$`,`$\ldots$`,`$t_n$`)` means
+`(`$t_1$`,(`$t_2$`,`$\ldots$`,`$t_n$`))`.
+
+**Defining the product type.**
+The type of Cartesian products is defined by representing a pair
+`(`$t_1$`,`$t_2$`)` by the function
+
+```
+   \a b. (a = t1) /\ (b = t2)
+```
+
+The representing type of $\sigma_1$`#`$\sigma_2$ is thus
+$\sigma_1$`->`$\sigma_2$`->bool`.  It is easy to prove the following
+theorem.[^prod-eta]
+
+```
+   |- ?p:'a->'b->bool. (\p. ?x y. p = \a b. (a = x) /\ (b = y)) p
+```
+
+The type operator `prod` is defined by invoking
+`new_type_definition`\index{new_type_definition@\ml{new\_type\_definition}}
+with this theorem which results in the definitional axiom
+\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for products}
+\index{axioms!in bool theory@in \ml{bool} theory}
+`prod_TY_DEF` shown below being asserted in the theory `pair`.
+
+```
+>>__ open pairTheory
+##thm prod_TY_DEF
+```
+
+Next, the representation and abstraction functions `REP_prod` and
+`ABS_prod` for the new type are introduced, along with the following
+characterizing theorem, by use of the function
+`define_new_type_bijections`.
+
+```
+##thm ABS_REP_prod
+```
+
+[^prod-eta]: This theorem has an un-reduced $\beta$-redex in order
+    to meet the interface required by the type definition principle.
+
+**Pairs and projections.**
+The infix constructor '`,`' is then defined to be an application of
+the abstraction function.  Subsequently, two crucial theorems are
+proved: `PAIR_EQ` asserts that equal pairs have equal components and
+`ABS_PAIR_THM` shows that every term having a product type can be
+decomposed into a pair of terms.
+
+\index{pairing constructor, in HOL logic@pairing constructor, in \HOL{} logic!definition of}
+\index{PAIR_EQ@\ml{PAIR\_EQ}}
+\index{ABS_PAIR_THM@\ml{ABS\_PAIR\_THM}}
+```
+##thm COMMA_DEF
+##thm PAIR_EQ
+##thm ABS_PAIR_THM
+```
+
+By Skolemizing `ABS_PAIR_THM` and making constant specifications for
+`FST` and `SND`, the following theorems are proved.
+
+\index{PAIR@\ml{PAIR}}
+\index{FST, the HOL constant@\ml{FST}, the \HOL{} constant!definition of}
+\index{SND, the HOL constant@\ml{SND}, the \HOL{} constant!definition of}
+\index{selectors, in HOL logic@selectors, in \HOL{} logic!for pairs}
+```
+##thm PAIR
+##thm FST
+##thm SND
+```
+\index{pairs, in HOL logic@pairs, in \HOL{} logic|)}
+\index{product types!in HOL logic@in \HOL{} logic|)}
+\index{representing types, in HOL logic@representing types, in \HOL{} logic!pair example of|)}
+
+**Pairs and functions.**
+In HOL, a function of type $\alpha\#\beta\to\gamma$ always has a
+counterpart of type $\alpha\to\beta\to\gamma$, and *vice versa*.
+This conversion is accomplished by the functions `CURRY` and
+`UNCURRY`.  These functions are inverses.
+
+\index{CURRY, the HOL constant@\ml{CURRY}, the \HOL{} constant}
+\index{UNCURRY, the HOL constant@\ml{UNCURRY}, the \HOL{} constant}
+```
+##thm CURRY_DEF
+##thm UNCURRY_DEF
+
+##thm CURRY_UNCURRY_THM
+##thm UNCURRY_CURRY_THM
+```
+
+**Mapping functions over a pair.**
+Functions $f:\alpha\to\gamma_1$ and $g:\beta\to\gamma_2$ can be
+applied component-wise (`##`, infix) over a pair of type
+$\alpha\#\beta$ to obtain a pair of type $\gamma_1\#\gamma_2$.
+
+\index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for pairs}
+\index{ PAIR_MAP function@\ml{\#\#} (\holtxt{PAIR\_MAP} function)}
+```
+##thm PAIR_MAP_THM
+```
+
+**Binders and pairs.**
+When doing proofs, statements involving tuples may take the form of
+a binding (quantification or $\lambda$-abstraction) of a variable
+with a product type.  It may be convenient in subsequent reasoning
+steps to replace the variables with tuples of variables.  The
+following theorems support this.
+
+```
+##thm FORALL_PROD
+##thm EXISTS_PROD
+##thm LAMBDA_PROD
+```
+
+The theorem `LAMBDA_PROD` involves a *paired abstraction*, discussed
+in Section \ref{HOL-varstruct}.
+
+**Wellfounded relations on pairs.**
+\index{wellfounded relations!lexicographic combination}
+Wellfoundedness, defined in Section \ref{prim-rec-conseq}, is a
+useful notion, especially for proving termination of recursive
+functions.  For pairs, the lexicographic combination of relations
+(`LEX`, infix) may be defined by using paired abstractions.  Then
+the theorem that lexicographic combination of wellfounded relations
+delivers a wellfounded relation is easy to prove.
+
+```
+##thm LEX_DEF
+##thm WF_LEX
+```
+
+#### Paired abstractions
+
+\label{HOL-varstruct}
+\index{pairs, in HOL logic@pairs, in \HOL{} logic!in abstractions|(}
+\index{pairs, in HOL logic@pairs, in \HOL{} logic!parsing of}
+\index{terms, in HOL logic@terms, in \HOL{} logic!pair|(}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of paired abstractions}
+\index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!paired|(}
+\index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!uncurrying, in paired|(}
+
+It is notationally convenient to include pairing in the lambda
+notation, as a simple pattern-matching mechanism.  The quotation
+parser
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of function abstractions}
+\index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!abbreviation for multiple}
+\index{terms, in HOL logic@terms, in \HOL{} logic!function abstraction}
+will convert the term `\(`$x_1$`,`$x_2$`).`$t$ to
+`UNCURRY(\`$x_1\,x_2$`.`$t$`)`.  The transformation is done
+recursively so that, for example,
+
+```
+   \(x1, x2, x3). t
+```
+
+is converted to
+
+```
+   UNCURRY (\x1. UNCURRY(\x2 x3. t))
+```
+
+More generally, the quotation parser repeatedly applies the
+transformation:
+
+$$
+\mathtt{\backslash(}v_1\mathtt{,}v_2\mathtt{).}t
+\quad\leadsto\quad
+\mathtt{UNCURRY(\backslash}v_1\mathtt{.\backslash}v_2\mathtt{.}t\mathtt{)}
+$$
+
+until no more variable structures remain.  For example:
+
+$$
+\begin{aligned}
+\mathtt{\backslash(}x\mathtt{,}y\mathtt{).}t
+  &\;\leadsto\;
+  \mathtt{UNCURRY(\backslash}x\,y\mathtt{.}t\mathtt{)}\\
+\mathtt{\backslash(}x_1\mathtt{,}x_2\mathtt{,}\ldots\mathtt{,}x_n\mathtt{).}t
+  &\;\leadsto\;
+  \mathtt{UNCURRY(\backslash}x_1\mathtt{.\backslash(}x_2\mathtt{,}\ldots\mathtt{,}x_n\mathtt{).}t\mathtt{)}\\
+\mathtt{\backslash((}x_1\mathtt{,}\ldots\mathtt{,}x_n\mathtt{),}y_1\mathtt{,}\ldots\mathtt{,}y_m\mathtt{).}t
+  &\;\leadsto\;
+  \mathtt{UNCURRY(\backslash(}x_1\mathtt{,}\ldots\mathtt{,}x_n\mathtt{).\backslash(}y_1\mathtt{,}\ldots\mathtt{,}y_m\mathtt{).}t\mathtt{)}
+\end{aligned}
+$$
+
+As a result of this parser translation, a variable structure, such
+as `(x,y)` in `\(x,y).x+y`, is not a subterm of the abstraction
+\index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!subterms of}
+in which it occurs; it disappears on parsing.
+\index{binders, in HOL logic@binders, in \HOL{} logic!parsing of}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of binders}
+This can lead to unexpected errors (accompanied by obscure error
+messages).  For example, antiquoting a pair into the bound variable
+position of a lambda abstraction fails:
+
+```
+>> ``\(x,y).x+y``;
+
+>> val p = Term `(x:num,y:num)`;
+
+>>+ Lib.try Term `\^p.x+y` handle _ => T
+```
+
+If $b$ is a binder, then `` `b(x_1,x_2).t` `` is parsed as
+`` `b(\(x_1,x_2).t)` ``, and hence transformed as above.  For
+example, `!(x,y). x > y` parses to `$!(UNCURRY(\x.\y. x > y))`.
+\index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!paired|)}
+\index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!uncurrying, in paired|)}
+\index{pairs, in HOL logic@pairs, in \HOL{} logic!in abstractions|)}
+\index{terms, in HOL logic@terms, in \HOL{} logic!pair|)}
+
+#### `let`-terms
+
+\label{sec:let-exp}
+
+The quotation parser
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of let-terms@of \holtxt{let}-terms}
+accepts `let`-terms
+\index{terms, in HOL logic@terms, in \HOL{} logic!let-@\holtxt{let}-}
+\index{let-terms, in HOL logic@\holtxt{let}-terms, in \HOL{} logic!as abbreviations}
+similar to those in ML.  For example, the following terms are
+allowed:
+
+```
+   let x = 1 and y = 2 in x+y
+
+   let f(x,y) = (x*x)+(y*y); a = 20*20; b = 50*49 in f(a,b)
+```
+
+`let`-terms are actually abbreviations for ordinary terms which are
+specially supported by the parser and pretty printer.  The constant
+`LET`
+\index{LET, the HOL constant@\ml{LET}, the \HOL{} constant}
+is defined (in the theory `bool`) by:
+\index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!relation to let-terms@relation to \ml{let}-terms}
+
+```
+   LET = (\f x. f x)
+```
+
+and is used to encode `let`-terms in the logic.  The parser
+repeatedly applies the transformations:
+
+$$
+\begin{aligned}
+\mathtt{let}\ f\,v_1\,\ldots\,v_n=t_1\ \mathtt{in}\ t_2
+  &\;\leadsto\;
+  \mathtt{LET(\backslash} f\mathtt{.}t_2\mathtt{)(\backslash}
+  v_1\,\ldots\,v_n\mathtt{.}t_1\mathtt{)}\\
+\mathtt{let}\ (v_1,\ldots,v_n)=t_1\ \mathtt{in}\ t_2
+  &\;\leadsto\;
+  \mathtt{LET(\backslash(}v_1\mathtt{,}\ldots\mathtt{,}v_n\mathtt{).}t_2\mathtt{)}t_1\\
+\mathtt{let}\ v_1=t_1\,\mathtt{and}\,\ldots\,\mathtt{and}\,v_n=t_n\ \mathtt{in}\ t
+  &\;\leadsto\;
+  \mathtt{LET(\ldots(LET(LET(\backslash}v_1\ldots v_n\mathtt{.}
+  t\mathtt{)}t_1\mathtt{)}t_2\mathtt{)\ldots)}t_n
+\end{aligned}
+$$
+
+The underlying structure of the term can be seen by applying
+destructor operations.  For example:
+
+```
+>> Term `let x = 1; y = 2; in x+y`;
+
+>> dest_comb it;
+
+>> Term `let (x,y) = (1,2) in x+y`;
+
+>> dest_comb it;
+```
+
+Readers are encouraged to convince themselves that the translations
+of `let`-terms represent the intuitive meaning suggested by the
+surface syntax.
+
+### Disjoint sums
+
+\index{disjoint unions, the HOL theory of@disjoint unions, the \HOL{} theory of|(}
+\index{sums (disjoint unions), the HOL theory of@sums (disjoint unions), the \HOL{} theory of|(}
+
+The theory `sum` defines the binary disjoint union type operator
+`sum`.  A type `(`$\sigma_1$`,`$\sigma_2$`)sum` denotes the disjoint
+union of types $\sigma_1$ and $\sigma_2$.  The type operator `sum`
+can be defined, just as `prod` was, but the details are omitted
+here.[^melham-sum]  The HOL parser
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of sum types}
+converts `` ``:`$\sigma_1$`+`$\sigma_2$`` ``
+\index{ disjoint union type operator, in HOL logic@\ml{+} (disjoint union type operator, in HOL logic)}
+into `` ``:(`$\sigma_1$`,`$\sigma_2$`)sum`` ``, and the printer
+inverts this.
+
+[^melham-sum]: The definition of disjoint unions in the HOL system
+    is due to Tom Melham. The technical details of this definition
+    can be found in \cite{Melham-banff}.
+
+The standard operations on sums are:
+
+\index{INL, the HOL constant@\ml{INL}, the \HOL{} constant}
+\index{INR, the HOL constant@\ml{INR}, the \HOL{} constant}
+\index{ISL, the HOL constant@\ml{ISL}, the \HOL{} constant}
+\index{ISR, the HOL constant@\ml{ISR}, the \HOL{} constant}
+\index{OUTL, the HOL constant@\ml{OUTL}, the \HOL{} constant}
+\index{OUTR, the HOL constant@\ml{OUTR}, the \HOL{} constant}
+```
+   INL  : 'a -> 'a + 'b
+   INR  : 'b -> 'a + 'b
+   ISL  : 'a + 'b -> bool
+   ISR  : 'a + 'b -> bool
+   OUTL : 'a + 'b -> 'a
+   OUTR : 'a + 'b -> 'b
+```
+
+These are all defined as constants in the theory `sum`.  The
+constants `INL` and `INR` inject into the left and right summands,
+respectively.  The constants `ISL` and `ISR` test for membership of
+the left and right summands, respectively.  The constants `OUTL` and
+`OUTR` project from a sum to the left and right summands,
+respectively.
+
+The following theorem is proved in the theory `sum`.  It provides a
+complete and abstract characterization of the disjoint sum type, and
+is used to justify the definition of functions over sums.
+
+```
+>>__ open sumTheory
+##thm sum_Axiom
+```
+
+Also provided are the following theorems having to do with the
+discriminator functions `ISL` and `ISR`:
+
+```
+##thm ISL
+##thm ISR
+
+##thm ISL_OR_ISR
+```
+
+The `sum` theory also provides the following theorems relating the
+projection functions and the discriminators.
+
+```
+##thm OUTL
+##thm OUTR
+
+##thm INL
+##thm INR
+```
+
+The sum type operator can be seen as functorial over its arguments
+and so has a "map" function, `SUM_MAP`, with definition and results
+showing its functoriality:
+
+```
+##thm SUM_MAP_def
+##thm SUM_MAP_I
+##thm SUM_MAP_o
+```
+\index{disjoint unions, the HOL theory of@disjoint unions, the \HOL{} theory of|)}
+\index{sums (disjoint unions), the HOL theory of@sums (disjoint unions), the \HOL{} theory of|)}
+
+### The one-element type
+
+\index{one, the HOL theory and type@\ml{one}, the \HOL{} theory and type}
+\index{unit, the HOL type (alias for one)@\ml{unit}, the \HOL{} type (alias for \holtxt{one})}
+
+The theory `one` defines the type `one` which contains one element.
+The type is also abbreviated as `unit`, which is the name of the
+analogous type in ML, and this is the type's preferred printing
+form.  The constant `one` denotes this one element, but, again by
+analogy with ML, the preferred parsing and printing form for this
+constant is `()`.[^one-paren-syntax]  The pre-proved theorems in the
+theory `one` are:
+
+\index{one_Axiom@\ml{one\_Axiom}}
+```
+>>__ open oneTheory; show_types := true;
+##thm one_axiom
+##thm one
+##thm one_Axiom
+>>__ show_types := false;
+```
+
+These three theorems are equivalent characterizations of the type
+with only one value.  The theory `one` is typically used in
+constructing more elaborate types.
+
+[^one-paren-syntax]: When using the parenthesis-version, the `one`
+    value's syntax consists of two parenthesis tokens, so that one
+    can write the value with white-space between the parentheses if
+    desired.
+
+#### The itself type
+
+\index{itself, the HOL type operator@\holtxt{itself}, the \HOL{} type operator}
+
+The unary `itself` type operator (in `boolTheory`) provides a family
+of singleton types akin to `one`.  Thus, for every type $\alpha$,
+`` `α itself` `` is a type containing just one value.  This value's
+name is `the_value`, but the parser and pretty-printer are set up so
+that for the type `` `α itself` ``, `the_value` can be written as
+`` `(:α)` `` (the syntax includes the parentheses).  For example,
+`(:num)` is the single value inhabiting the type `num itself`.
+
+The point of the itself type is that if one defines a function with
+`` `α itself` `` as the domain, the function picks out just one
+value in its range, and so one can think of the function as being
+one from the type to a value for the whole type.
+
+For example, one could define
+
+```
+   finite_univ (:'a) = FINITE (UNIV :'a set)
+```
+
+It would then be straightforward to prove the following theorems
+
+```
+   ⊢ finite_univ(:bool)
+   ⊢ ¬finite_univ(:num)
+   ⊢ finite_univ(:'a) ∧ finite_univ(:'b) ⇒ finite_univ(:'a # 'b)
+```
+
+The itself type is used in the Finite Cartesian Product
+construction that underlies the fixed-width word type (see Section
+\ref{sec:bit-vectors} below).
+
+### The option type
+
+\index{options, the HOL theory of@options, the \HOL{} theory of}
+
+The theory `option` defines a type operator `option` that 'lifts'
+its argument type, creating a type with all of the values of the
+argument and one other, specially distinguished value.  The
+constructors of this type are
+
+```
+   NONE : 'a option
+   SOME : 'a -> 'a option
+```
+
+Options can be used to model partial functions.  If a function of
+type $\alpha\rightarrow\beta$ does not have useful $\beta$ values
+for all $\alpha$ inputs, then this distinction can be marked by
+making the range of the function $\beta\,$`option`, and mapping the
+undefined $\alpha$ values to `NONE`.
+
+An inductive type, options have a recursion theorem supporting the
+definition of primitive recursive functions over option values.
+
+```
+>>__ open optionTheory
+##thm option_Axiom
+```
+
+The `option` theory also defines a case constant that allows one to
+inspect option values in a "pattern-matching" style.
+
+```
+   case e of
+     NONE => u
+   | SOME x => f x
+```
+
+The constant underlying this syntactic sugar is `option_CASE` with
+definition
+
+```
+##thm option_case_def
+```
+
+Another useful function maps a function over an option:
+\index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for options}
+
+```
+##thm OPTION_MAP_DEF
+```
+
+Finally, the `THE` function takes a `SOME` value to that
+constructor's argument, and is unspecified on `NONE`:
+
+```
+##thm THE_DEF
+```
+
+## Numbers
+
+The natural numbers, integers, and real numbers are provided in a
+series of theories.  Also available are theories of extended real
+numbers, $n$-bit words (numbers modulo $2^n$), floating point and
+fixed point numbers.
+
+### Natural numbers
+
+\label{sec:arithmetic}
+
+The natural numbers are developed in a series of theories: `num`,
+`prim_rec`, `arithmetic`, and `numeral`.  In `num`, the type of
+numbers is defined from the Axiom of Infinity, and Peano's axioms
+are derived.  In `prim_rec` the Primitive Recursion theorem is
+proved.  Based on that, a large theory treating the standard
+arithmetic operations is developed in `arithmetic`.  Lastly, a
+theory of numerals is developed in `numeral`.
+
+#### The theory `num`
+
+The theory `num`
+\index{num, the theory in HOL logic@\ml{num}, the theory in \HOL{} logic}
+defines the type `num` of natural numbers to be isomorphic to a
+countable subset of the primitive type `ind`.  In this theory, the
+constants `0`
+\index{ zero, in HOL logic@\ml{0} (zero, in \HOL{} logic)}
+and `SUC` (the successor function) are defined and Peano's axioms
+\index{axioms!in num theory@in \ml{num} theory}
+\index{Peano's axioms}
+\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for natural numbers}
+pre-proved in the form:
+
+\index{NOT_SUC@\ml{NOT\_SUC}}
+\index{INV_SUC@\ml{INV\_SUC}}
+\index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for natural numbers}
+```
+>>__ open numTheory
+##thm NOT_SUC
+##thm INV_SUC
+##thm INDUCTION
+```
+
+In higher order logic, Peano's axioms are sufficient for developing
+number theory because addition and multiplication can be defined.
+In first order logic these must be taken as primitive.  Note also
+that `INDUCTION` could not be stated as a single axiom in first
+order logic because predicates (e.g., `P`) cannot be quantified.
+
+#### The theory `prim_rec`
+
+\label{sec:prim-rec}
+\index{primitive recursion theorem!for numbers}
+\index{prim_rec, the HOL theory@\ml{prim\_rec}, the \HOL{} theory|(}
+
+In classical logic, unlike domain theory logics such as PP$\lambda$,
+\index{PPlambda (same as PPLAMBDA), of LCF system@\ml{PP}$\lambda$ (same as \ml{PPLAMBDA}), of \ml{LCF} system}
+arbitrary recursive definitions
+\index{recursive definitions, in classical logics}
+are not allowed.  For example, there is no function $f$ (of type
+`num->num`) such that
+
+```
+   !x. f x = (f x) + 1
+```
+
+Certain restricted forms of recursive
+\index{primitive recursive functions}
+definition do, however, uniquely define functions.  An important
+example are the *primitive recursive* functions.[^primrec-power]
+For any $x$ and $f$ the *primitive recursion theorem* tells us that
+there is a unique function `fn` such that:
+
+```
+   (fn 0 = x) /\ (!n. fn(SUC n) = f (fn n) n)
+```
+
+The primitive recursion theorem, named `num_Axiom` in HOL, follows
+from Peano's
+\index{Peano's axioms}
+axioms.
+
+\index{num_Axiom@\ml{num\_Axiom}}
+\index{characterizing theorem!for numbers}
+```
+>>__ open prim_recTheory
+##thm num_Axiom
+```
+
+The theorem states the validity of primitive recursive definitions
+on the natural numbers: for any `x` and `f` there exists a
+corresponding total function `fn` which satisfies the primitive
+recursive definition whose form is determined by `x` and `f`.
+
+[^primrec-power]: In higher order logic, primitive recursion is
+    much more powerful than in first order logic; for example,
+    Ackermann's function can be defined by primitive recursion in
+    higher order logic.
+
+**The less-than relation.**
+The less-than relation '`<`'
+\index{ less than, in HOL logic@\ml{<} (less than, in \HOL{} logic)}
+\index{less than, in HOL logic@less than, in \HOL{} logic}
+is most naturally defined by primitive recursion.  However, in our
+development it is needed for the proof of the primitive recursion
+theorem, so it must be defined before definition by primitive
+recursion is available.  The theory `prim_rec` therefore contains
+the following non-recursive definition of `<`:
+
+```
+##thm LESS_DEF
+```
+
+This definition says that `m < n` if there exists a set (with
+characteristic function `P`) that is downward
+closed[^downward-closed] and contains `m` but not `n`.
+\index{prim_rec, the HOL theory@\ml{prim\_rec}, the \HOL{} theory|)}
+
+[^downward-closed]: A set of numbers is *downward closed* if
+    whenever it contains the successor of a number, it also
+    contains the number.
+
+#### Mechanizing primitive recursive definitions
+
+\label{num-prim-rec}
+\index{recursive definitions, in HOL logic@recursive definitions, in \HOL{} logic!automated, for numbers}
+\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL{} system|(}
+
+The primitive
+\index{primitive recursive definitions, in HOL logic@primitive recursive definitions, in \HOL{} logic!justification of}
+recursion theorem can be used to justify any definition of a
+function on the natural numbers by primitive recursion.  For
+example, a primitive recursive definition in higher order logic of
+the form
+
+$$
+\begin{aligned}
+\mathtt{fun}\,0\,x_1\,\ldots\,x_i &= f_1[x_1,\ldots,x_i]\\
+\mathtt{fun}\,(\mathtt{SUC}\,n)\,x_1\,\ldots\,x_i
+  &= f_2[\mathtt{fun}\,n\,t_1\,\ldots\,t_i,\,n,\,x_1,\ldots,x_i]
+\end{aligned}
+$$
+
+where all the free variables in the terms $t_1,\ldots,t_i$ are
+contained in $\{n,x_1,\ldots,x_i\}$, is logically equivalent to:
+
+$$
+\begin{aligned}
+\mathtt{fun}\,0
+  &= \lambda x_1\,\ldots\,x_i.\,f_1[x_1,\ldots,x_i]\\
+\mathtt{fun}\,(\mathtt{SUC}\,n)
+  &= \lambda x_1\,\ldots\,x_i.\,f_2[\mathtt{fun}\,n\,t_1\,\ldots\,t_i,\,n,\,x_1,\ldots,x_i]\\
+  &= (\lambda f\,n\,x_1\,\ldots\,x_i.\,f_2[f\,t_1\,\ldots\,t_i,\,n,\,x_1,\ldots,x_i])\,(\mathtt{fun}\,n)\,n
+\end{aligned}
+$$
+
+The existence of a recursive function `fun` which satisfies these
+two equations follows directly from the primitive recursion theorem
+`num_Axiom` shown above.  Specializing the quantified variables `x`
+and `f` in a suitably type-instantiated version of `num_Axiom` so
+that
+
+$$
+\begin{aligned}
+x &= \lambda x_1\,\ldots\,x_i.\,f_1[x_1,\ldots,x_i]\quad\text{and}\\
+f &= \lambda f\,n\,x_1\,\ldots\,x_i.\,f_2[f\,t_1\,\ldots\,t_i,\,n,\,x_1,\ldots,x_i]
+\end{aligned}
+$$
+
+yields the existence theorem shown below:
+
+$$
+\begin{aligned}
+\vdash\,\exists\mathtt{fn}.\,
+  &\mathtt{fn}\,0 = \lambda x_1\,\ldots\,x_i.\,f_1[x_1,\ldots,x_i]\;\wedge\\
+  &\mathtt{fn}\,(\mathtt{SUC}\,n) = (\lambda f\,n\,x_1\,\ldots\,x_i.\,f_2[f\,t_1\,\ldots\,t_i,\,n,\,x_1,\ldots,x_i])\,(\mathtt{fn}\,n)\,n
+\end{aligned}
+$$
+
+This theorem allows a constant `fun` to be introduced (via the
+definitional mechanism of constant specifications—see Section
+\ref{conspec}) to denote the recursive function that satisfies the
+two equations in the body of the theorem.  Introducing a constant
+`fun` to name the function asserted to exist by the theorem shown
+above, and simplifying using $\beta$-reduction, yields the
+following theorem:
+
+$$
+\begin{aligned}
+\vdash\,
+  &\mathtt{fun}\,0 = \lambda x_1\,\ldots\,x_i.\,f_1[x_1,\ldots,x_i]\;\wedge\\
+  &\mathtt{fun}\,(\mathtt{SUC}\,n) = \lambda x_1\,\ldots\,x_i.\,f_2[\mathtt{fun}\,n\,t_1\,\ldots\,t_i,\,n,\,x_1,\ldots,x_i]
+\end{aligned}
+$$
+
+It follows immediately from this theorem that the constant `fun`
+satisfies the primitive recursive defining equations given by the
+theorem shown below:
+
+$$
+\begin{aligned}
+\vdash\,
+  &\mathtt{fun}\,0\,x_1\,\ldots\,x_i = f_1[x_1,\ldots,x_i]\\
+  &\mathtt{fun}\,(\mathtt{SUC}\,n)\,x_1\,\ldots\,x_i = f_2[\mathtt{fun}\,n\,t_1\,\ldots\,t_i,\,n,\,x_1,\ldots,x_i]
+\end{aligned}
+$$
+
+To automate the use of the primitive recursion theorem in deriving
+recursive definitions of this kind, the HOL system provides a
+function which automatically proves the existence of primitive
+recursive functions and then makes a constant specification to
+introduce the constant that denotes such a function:
+
+\index{new_recursive_definition@\ml{new\_recursive\_definition}|pin}
+```
+   new_recursive_definition :
+      {def : term, name : string, rec_axiom : thm} -> thm
+```
+
+In fact, `new_recursive_definition` handles primitive recursive
+definitions over a range of types, not just the natural numbers.
+For details, see the REFERENCE documentation.
+
+More conveniently still, the `Define` function (see Section
+\ref{sec:high-level-proof-steps}) supports primitive recursion,
+along with other styles of recursion, and does not require the user
+to quote the primitive recursion axiom.  It may, however, require
+termination proofs to be performed; fortunately, these need not be
+done for primitive recursions.
+
+#### Dependent choice and wellfoundedness
+
+\label{prim-rec-conseq}
+
+The primitive recursion theorem is useful beyond its main purpose
+of justifying recursive definitions.  For example, the theory
+`prim_rec` proves the Axiom of Dependent Choice (`DC`).
+
+\index{axiom of dependent choice (DC)@axiom of dependent choice (\ml{DC})}
+\index{axioms!of choice}
+```
+##thm DC
+```
+
+\index{wellfounded relations!absence of infinite descending chains}
+The proof uses `SELECT_AX`.  The theorem `DC` is useful when one
+wishes to build a function having a certain property from a
+relation.  For example, one way to define the wellfoundedness of a
+relation $R$ is to say that it has no infinite decreasing $R$
+chains.
+
+```
+##thm wellfounded_def
+##thm WF_IFF_WELLFOUNDED
+```
+
+By use of `DC`, this statement can be proved to be equal to the
+notion of wellfoundedness `WF` (namely, that every set has an
+$R$-minimal element) defined in the theory `relation`.
+
+Theorems asserting the wellfoundedness of the predecessor relation
+and the less-than relation, as well as the wellfoundedness of
+measure functions are also proved in `prim_rec`.
+
+\index{measure, the HOL constant@\holtxt{measure}, the \HOL{} constant}
+```
+##thm WF_PRED
+##thm WF_LESS
+
+##thm measure_def
+##thm measure_thm
+##thm WF_measure
+```
+
+### Arithmetic
+
+\index{arithmetic, the HOL theory of@arithmetic, the \HOL{} theory of}
+
+The HOL theory `arithmetic` contains primitive recursive definitions
+of the following standard arithmetic operators.
+
+\index{EXP, the HOL constant@\holtxt{EXP}, the \HOL{} constant}
+\index{ addition, in HOL logic@\holtxt{+} (addition, in \HOL{} logic)}
+\index{ subtraction, in HOL logic@\holtxt{-} (subtraction, in \HOL{} logic)}
+\index{ multiplication, in HOL logic@\holtxt{*} (multiplication, in \HOL{} logic)!on natural numbers}
+\index{ exponentiation, in HOL logic@\holtxt{**} (exponentiation, in \HOL{} logic)}
+\index{addition, in HOL logic@addition, in \HOL{} logic}
+\index{subtraction, in HOL logic@subtraction, in \HOL{} logic}
+\index{multiplication, in HOL logic@multiplication, in \HOL{} logic!on natural numbers}
+\index{exponentiation, in HOL logic@exponentiation, in \HOL{} logic!on natural numbers}
+```
+>>__ open arithmeticTheory
+##thm ADD
+
+##thm SUB
+
+##thm MULT
+
+##thm EXP
+```
+
+Note that `EXP` is an infix.  The infix notation `**` may be used
+in place of `EXP`.  Thus (`x EXP y`) means $x^y$, and so does
+(`x ** y`).  In addition, the parser special-cases superscript 2
+and 3 notations, so that `` `x²` `` is actually the same term as
+`x EXP 2`, and `` `x³` `` is the same term as `x EXP 3`.
+
+**Comparison operators.**
+A full set of comparison operators is defined in terms of `<`.
+
+\index{ greater than, in HOL logic@\ml{>} (greater than, in \HOL{} logic)}
+\index{ less or equal, in HOL logic@\ml{<=} (less or equal, in \HOL{} logic)}
+\index{ greater or equal, in HOL logic@\ml{>=} (greater or equal, in \HOL{} logic)}
+```
+##thm GREATER_DEF
+##thm LESS_OR_EQ
+##thm GREATER_OR_EQ
+```
+
+Note that in all of HOL's standard numeric theories, it is usual
+practice to avoid uses of the "greater-than" constants and to
+express everything with either $<$ or $\le$.
+
+**Division and modulus.**
+A constant specification is used to introduce division (`DIV`,
+infix) and modulus (`MOD`, infix) operators, together with their
+characterizing property.
+
+\index{MOD, the HOL constant@\ml{MOD}, the \HOL{} constant}
+\index{DIV, the HOL constant@\ml{DIV}, the \HOL{} constant}
+```
+##thm DIVISION
+```
+
+**Even and odd.**
+The properties of a number being even or odd are defined
+recursively.
+
+\index{EVEN, the HOL constant@\ml{EVEN}, the \HOL{} constant}
+\index{ODD, the HOL constant@\ml{ODD}, the \HOL{} constant}
+```
+##thm EVEN
+
+##thm ODD
+```
+
+**Maximum and minimum.**
+The minimum and maximum of two numbers are defined in the usual
+way.
+
+\index{MIN, the HOL constant@\ml{MIN}, the \HOL{} constant}
+\index{MAX, the HOL constant@\ml{MAX}, the \HOL{} constant}
+```
+##thm MAX_DEF
+##thm MIN_DEF
+```
+
+**Factorial.**
+\index{FACT, the HOL constant@\ml{FACT}, the \HOL{} constant}
+The factorial of a number is a primitive recursive definition.
+
+```
+##thm FACT
+```
+
+**Function iteration.**
+\index{FUNPOW, the HOL constant@\ml{FUNPOW}, the \HOL{} constant}
+The iterated application $f^n(x)$ of a function $f:\alpha\to\alpha$
+is defined by primitive recursion.  The definition (`FUNPOW`) is
+tail-recursive, which can be awkward to reason about.  An
+alternative characterization (`FUNPOW_SUC`) may be easier to apply
+when doing proofs.
+
+```
+##thm FUNPOW
+##thm FUNPOW_SUC
+```
+
+On this basis, an *ad hoc* but useful collection of over two
+hundred and fifty elementary theorems of arithmetic are proved
+when HOL is built and stored in the theory `arithmetic`.  For a
+complete list of the available theorems, see the REFERENCE manual.
+See also Section \ref{sec:while-loops} for discussion of the
+`LEAST` operator, which returns the least number satisfying a
+predicate.
+
+#### Grammar information
+
+The following table gives the parsing status of the arithmetic
+constants.
+
+| Operator | Strength | Associativity |
+|----------|----------|---------------|
+| `>=`     | 450      | non           |
+| `<=`     | 450      | non           |
+| `>`      | 450      | non           |
+| `<`      | 450      | non           |
+| `+`      | 500      | left          |
+| `-`      | 500      | left          |
+| `*`      | 600      | left          |
+| `DIV`    | 600      | left          |
+| `MOD`    | 650      | left          |
+| `EXP`    | 700      | right         |
+
+### Numerals
+
+\label{sec:numerals}
+
+The type `num`
+\index{num, the type in \HOL{} logic@\ml{num}, the type in \HOL{} logic}
+\index{numerals, in HOL logic@numerals, in \HOL{} logic}
+is usually thought of as being supplied with an infinite collection
+of numerals: `1`, `2`, `3`, etc.  However, the HOL logic has no way
+to define such infinite families of constants; instead, all numerals
+other than $0$ are actually built up from the constants introduced
+by the following definitions:
+
+```
+>>__ temp_remove_user_printer ("num.numeral_computations",“n:num”)
+##thm NUMERAL_DEF
+
+##thm BIT1
+##thm BIT2
+
+##thm ALT_ZERO
+```
+
+For example, the numeral $5$ is represented by the term
+
+$$
+\mathtt{NUMERAL}(\mathtt{BIT1}(\mathtt{BIT2}\;\mathtt{ZERO}))
+$$
+
+and the HOL parser and pretty-printer make such terms appear as
+numerals.  This binary representation for numerals allows for
+asymptotically efficient calculation.  Theorems supporting
+arithmetic calculations on numerals can be found in the `numeral`
+theory; these are mechanized by the `reduce` library.  Thus,
+arithmetic calculations are performed by deductive steps in HOL.
+For example the following calculation of $2^{(1023+14)/9}$ takes
+approximately 4,200 primitive inference steps and returns quickly:
+
+```
+>> Count.apply reduceLib.REDUCE_CONV ``2 EXP ((1023 + 14) DIV 9)``;
+```
+
+**Construction of numerals.**
+\index{numerals, in HOL logic@numerals, in \HOL{} logic!construction of}
+Numerals may of course be built using `mk_comb`, and taken apart
+with `dest_comb`; however, a more convenient interface to this
+functionality is provided by the functions `mk_numeral`,
+`dest_numeral`, and `is_numeral` (found in the structure
+`numSyntax`).  These entry-points make use of an ML structure
+`Arbnum` which implements arbitrary precision numbers `num`.  The
+following session shows how HOL numerals are constructed from
+elements of type `num` and how numerals are destructed.  The
+structure `Arbnum` provides a full collection of arithmetic
+operations, using the usual names for the operations, e.g., `+`,
+`*`, `-`, etc.
+
+```
+>> numSyntax.mk_numeral
+     (Arbnum.fromString "3432432423423423234");
+
+>> numSyntax.dest_numeral it;
+
+>> Arbnum.+(it,it);
+```
+
+**Numerals and the parser.**
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of numerals}
+\index{tokens!parsing numerals}
+\index{numerals, in HOL logic@numerals, in \HOL{} logic!parsing}
+Simple digit sequences are parsed as decimal numbers, but the
+parser also supports the input of numbers in binary, octal and
+hexadecimal notation.  Numbers may be written in binary and
+hexadecimal form by prefixing them with the strings `0b` and `0x`
+respectively.  The 'digits' `A`–`F` in hexadecimal numbers may be
+written in upper or lower case.  Binary numbers have their most
+significant digits left-most.  In the interests of backwards
+compatibility, octal numbers are not enabled by default, but if the
+reference `base_tokens.allow_octal_input` is set to `true`, then
+octal numbers are those that appear with leading zeroes.
+
+Finally, all numbers may be padded with underscore characters
+(`_`).  These can be used to groups digits for added legibility and
+have no semantic effect.
+
+Thus
+
+```
+>> ``0xAA``;
+
+>> ``0b1010_1011``;
+
+>> base_tokens.allow_octal_input := true;
+
+>> ``067``;
+```
+
+**Numerals and Peano numbers.**
+Numerals are related to numbers built from `0` and `SUC` via the
+derived inference rule `num_CONV`, found in the `numLib` library.
+
+\index{num_CONV@\ml{num\_CONV}|pin}
+```
+   num_CONV : term -> thm
+```
+
+`num_CONV` can be used to generate the '`SUC`' equation for any
+non-zero numeral.  For example:
+
+```
+>>_ open numLib;
+>> num_CONV ``2``;
+
+>> num_CONV ``3141592653``;
+```
+
+The `num_CONV` function works purely by inference.
+
+#### Overloading of arithmetic operators
+
+\label{arith-overloading}
+
+When other numeric theories are loaded (such as those for the reals
+or integers), numerals are overloaded so that the numeral `1` can
+actually stand for a natural number, an integer or a real value.
+The parser has a pass of overloading resolution in which it
+attempts to determine the actual type to give to a numeral.  For
+example, in the following session, the theory of integers is
+loaded, whereupon the numeral `2` is taken to be an integer.
+
+```
+>> load "integerTheory";
+
+>> ``2``;
+
+>> type_of it;
+```
+
+In order to precisely specify the desired type, the user can use
+single character suffixes ('`n`' for the natural numbers, and
+'`i`' for the integers):
+
+```
+>> type_of ``2n``;
+
+>> type_of ``42i``;
+```
+
+A numeric literal for a HOL type other than `num`, such as `42i`,
+is represented by the application of an *injection* function of
+type `num -> ty` to a numeral.  The injection function is different
+for each type `ty`.  See Section \ref{integers} for further
+discussion.
+
+The functions `mk_numeral`, `dest_numeral`, and `is_numeral` only
+work for numerals, and not for numeric literals with character
+suffixes other than `n`.  For information on how to install new
+character suffixes, consult the `add_numeral_form` entry in the
+REFERENCE manual.
+
+### Integers
+
+<!-- pandoc auto-generates \label{integers} from the heading -->
+\index{integers, the HOL theory of@integers, the \HOL{} theory of}
+
+There is an extensive theory of integers in HOL.  The type of
+integers is constructed as a quotient on pairs of natural numbers.
+A standard collection of operators are defined.  These are
+overloaded with similar operations on the natural numbers, and on
+the real numbers.  The constants defined in the integer theory
+include those found in the following table.
+
+\index{multiplication, in HOL logic@multiplication, in \HOL{} logic!on integers}
+\index{ multiplication, in HOL logic@\holtxt{*} (multiplication, in \HOL{} logic)!on integers}
+
+| Constant      | Overloaded symbol | Strength | Associativity |
+|---------------|-------------------|----------|---------------|
+| `int_ge`      | `>=`              | 450      | non           |
+| `int_le`      | `<=`              | 450      | non           |
+| `int_gt`      | `>`               | 450      | non           |
+| `int_lt`      | `<`               | 450      | non           |
+| `int_add`     | `+`               | 500      | left          |
+| `int_sub`     | `-`               | 500      | left          |
+| `int_mul`     | `*`               | 600      | left          |
+| `/`           |                   | 600      | left          |
+| `%`           |                   | 650      | left          |
+| `int_exp`     | `**`              | 700      | right         |
+| `int_of_num`  | `&`               | 900      | prefix        |
+| `int_neg`     | `~`               | 900      | prefix        |
+
+The overloaded symbol `& : num -> int` denotes the injection
+function from natural numbers to integers.  The following session
+illustrates how overloading and integers literals are treated.
+
+```
+>> “1i = &(1n + 0n)”;
+
+>> show_numeral_types := true;
+
+>> “&1 = &(1n + 0n)”;
+>>_ show_numeral_types := false;
+```
+
+In addition, there is an absolute value function `ABS`:
+
+```
+##thm integerTheory.INT_ABS
+```
+
+with the obvious definition.
+
+This then characterises the `Num` function which maps from
+integers back into natural numbers (of type `:int -> num`
+therefore):
+
+```
+##thm integerTheory.Num_EQ_ABS
+```
+
+### Rational numbers
+
+\label{rationals}
+\index{rational numbers, the HOL theory of@rationals, the \HOL{} theory of|(}
+
+The type of rationals is constructed as a quotient on ordered
+pairs of integers (the numerator and the denominator of a
+fraction) whose second component must not be zero.  To make
+things easier in the HOL theory, the sign of a rational number is
+always moved to the numerator.  So, the denominator is always
+positive.
+
+A standard collection of operators, which are overloaded with
+similar operations on the integers, are defined.  These include
+those found in the following table.  Injection from natural
+numbers is supported by the overloaded symbol `& : num -> rat`
+and the suffix `q`.
+
+| Constant      | Overloaded symbol | Strength | Associativity |
+|---------------|-------------------|----------|---------------|
+| `rat_geq`     | `>=`              | 450      | non           |
+| `rat_leq`     | `<=`              | 450      | non           |
+| `rat_gre`     | `>`               | 450      | non           |
+| `rat_les`     | `<`               | 450      | non           |
+| `rat_add`     | `+`               | 500      | left          |
+| `rat_sub`     | `-`               | 500      | left          |
+| `rat_minv`    |                   |          |               |
+| `rat_mul`     | `*`               | 600      | left          |
+| `rat_div`     | `/`               | 600      | left          |
+| `rat_ainv`    | `~`               | 900      | prefix        |
+| `rat_of_num`  | `&`               | 900      | prefix        |
+
+The theorems in the theory of rational numbers include field
+properties, arithmetic rules, manipulation of (in)equations and
+their reduction to (in)equations between integers, properties of
+less-than relations and the density of rational numbers.  For
+details, consult the REFERENCE manual and the source files.
+\index{rational numbers, the HOL theory of@rationals, the \HOL{} theory of|)}
+
+### Real numbers
+
+\label{reals}
+\index{real numbers, the HOL theory of@real numbers, the \HOL{} theory of|(}
+
+>>__ load "realTheory"; open realTheory
+>>__ load "real_sigmaTheory"; open real_sigmaTheory
+
+There is an extensive collection of theories that make up the
+development of real numbers and analysis in HOL, due to John
+Harrison \cite{jrh:thesis}.  We will only give a sketchy overview
+of the development; the interested reader should consult the
+REFERENCE manual and Harrison's thesis.
+
+The axioms for the real numbers are derived from the 'half reals'
+which are constructed from the 'half rationals'.  This part of the
+development is recorded in `hratTheory` and `hrealTheory`, but is
+not used once the reals have been constructed.  The real axioms
+are derived in the theory `realaxTheory`.  A standard collection
+of operators on the reals, and theorems about them, is found in
+`realaxTheory` and `realTheory`.  The operators and their parse
+status are listed in the following table.
+
+| Constant       | Overloaded symbol | Strength | Associativity |
+|----------------|-------------------|----------|---------------|
+| `real_ge`      | `>=`              | 450      | non           |
+| `real_lte`     | `<=`              | 450      | non           |
+| `real_gt`      | `>`               | 450      | non           |
+| `real_lt`      | `<`               | 450      | non           |
+| `real_add`     | `+`               | 500      | left          |
+| `real_sub`     | `-`               | 500      | left          |
+| `real_mul`     | `*`               | 600      | left          |
+| `real_div`     | `/`               | 600      | left          |
+| `pow`          |                   | 700      | right         |
+| `rpow`         |                   | 700      | right         |
+| `real_of_num`  | `&`               | 900      | prefix        |
+| `real_neg`     | `~`               | 900      | prefix        |
+
+On the basis of `realTheory`, the following sequence of theories
+is constructed:
+
+`real_sigma`
+:   Summation of real numbers (the $\Sigma$ operator, etc.)
+
+`topology`
+:   General topology.
+
+`metric`
+:   Metric spaces, including metric on the real line.
+
+`nets`
+:   Moore-Smith convergence nets, and special cases like
+    sequences.
+
+`real_topology`
+:   Topology of one-dimensional Euclidean space (Section
+    \ref{sec:topology}).
+
+`seq`
+:   Sequences and series of real numbers.
+
+`derivative`
+:   The *new* univariate differential calculus (Section
+    \ref{sec:calculus}).
+
+`lim`
+:   Limits, continuity and the *old* differentiation.
+
+`powser`
+:   Power series.
+
+`transc`
+:   Transcendental functions, e.g., exp, sin, cos, ln, root, sqrt,
+    pi, tan, asn, acs, atn.
+
+`integration`
+:   The *new* univariate integral calculus (Section
+    \ref{sec:calculus}).
+
+`integral`
+:   The *old* univariate integral calculus.
+
+\index{real numbers, the HOL theory of@real numbers, the \HOL{} theory of|)}
+
+\index{complex numbers, the HOL theory of@complex numbers, the \HOL{} theory of}
+HOL also includes a basic theory of the complex numbers
+(`complexTheory`), where the type `complex` is a type abbreviation
+for a pair of real numbers.  The $\sqrt{-1}$ value is the HOL
+constant `i`.  Numerals are supported (with the suffix `c`
+available to force numerals to be parsed as complex numbers).  The
+standard arithmetic operations are defined, with the appropriate
+theorems proved about them.
+
+### Extended real numbers
+
+\label{sec:extreal}
+\index{extended real numbers, the HOL theory of@extreal numbers, the \HOL{} theory of|(}
+
+The HOL provides an extensive theory of extended real numbers
+(`extreal`), originally developed by T. Mhamdi, O. Hasan, and
+S. Tahar \cite{Mhamdi:2011dd}.  With extended reals, the limit of
+a monotonic sequence is always defined, infinite when the sequence
+is divergent, but still defined and properties can be proven on
+it.
+
+It is often helpful to use the values $+\infty$ and $-\infty$ in
+calculations.  To do this properly, we have to consider the
+*extended real line* $\overline{\mathbb{R}} := [-\infty, +\infty]$.
+If we agree that $-\infty < x$ and $y < +\infty$ for all
+$x, y \in \mathbb{R}$, then $\overline{\mathbb{R}}$ inherits the
+ordering from $\mathbb{R}$ as well as the usual rules of addition,
+subtraction, multiplication and division of elements from
+$\mathbb{R}$.  The latter needs to be augmented as shown in Table
+\ref{tab:extrealAdd} \cite[p.~61]{Schilling:2017}:
+
+\begin{table}[ht]
+\caption{$+$, $-$, $\cdot$ and $/$ in $\overline{\mathbb{R}}$,
+where $x, y \in \mathbb{R}$ and $a, b \in (0, \infty)$}
+\label{tab:extrealAdd}
+\end{table}
+
+| $+$       | 0         | $y$       | $+\infty$ | $-\infty$ |
+|-----------|-----------|-----------|-----------|-----------|
+| 0         | 0         | $y$       | $+\infty$ | $-\infty$ |
+| $x$       | $x$       | $x+y$     | $+\infty$ | $-\infty$ |
+| $+\infty$ | $+\infty$ | $+\infty$ | $+\infty$ | $\nexists$ |
+| $-\infty$ | $-\infty$ | $-\infty$ | $\nexists$ | $-\infty$ |
+
+| $-$       | 0         | $y$       | $+\infty$ | $-\infty$ |
+|-----------|-----------|-----------|-----------|-----------|
+| 0         | 0         | $-y$      | $-\infty$ | $+\infty$ |
+| $x$       | $x$       | $x-y$     | $-\infty$ | $+\infty$ |
+| $+\infty$ | $+\infty$ | $+\infty$ | $\nexists$ | $+\infty$ |
+| $-\infty$ | $-\infty$ | $-\infty$ | $-\infty$ | $\nexists$ |
+
+| $\cdot$   | 0  | $\pm b$       | $+\infty$    | $-\infty$    |
+|-----------|----|---------------|--------------|--------------|
+| 0         | 0  | 0             | 0            | 0            |
+| $\pm a$   | 0  | $a\cdot b$    | $\pm\infty$  | $\mp\infty$  |
+| $+\infty$ | 0  | $\pm\infty$   | $+\infty$    | $-\infty$    |
+| $-\infty$ | 0  | $\mp\infty$   | $-\infty$    | $+\infty$    |
+
+| $/$       | 0          | $\pm b$       | $+\infty$  | $-\infty$  |
+|-----------|------------|---------------|------------|------------|
+| 0         | $\nexists$ | 0             | 0          | 0          |
+| $\pm a$   | $\nexists$ | $a/b$         | 0          | 0          |
+| $+\infty$ | $\nexists$ | $\pm\infty$   | $\nexists$ | $\nexists$ |
+| $-\infty$ | $\nexists$ | $\mp\infty$   | $\nexists$ | $\nexists$ |
+
+In HOL, the type of extended real numbers (*extreals* hereafter)
+is constructed by an algebraic datatype `extreal` (see Section
+\ref{sec:datatype}):
+
+```
+   Datatype `extreal = NegInf | PosInf | Normal real`
+```
+
+Thus `Normal r` denotes the extreal corresponding to the real
+number `r`, while `PosInf` and `NegInf` denote $+\infty$ and
+$-\infty$, respectively.  In order to precisely specify extreals
+corresponding to natural numbers, the user can use the single
+character suffix '`x`':
+
+```
+>>__ load "extrealTheory";
+>>__ open extrealTheory;
+>> type_of ``0x``;
+```
+
+The function `real` can be used to convert extreals back to the
+corresponding reals ($+\infty$ and $-\infty$ are mapped to `0x`).
+
+A standard collection of arithmetic operators[^extreal-divzero]
+and elementary functions on the extreals are defined and
+overloaded on the corresponding operators of real numbers, shown
+in Table \ref{tab:extrealOp}.
+
+[^extreal-divzero]: Note that, unlike the case of real numbers in
+    HOL, $0/0 = 0$ (or "division by zero" in general) does not
+    hold on extreals.  This particular design choice sometimes
+    makes proofs of extreal-related theorems a bit harder (but
+    more aligned with their textbook proofs), as whenever terms
+    like `inv x` or `1 / x` are involved, `x <> 0` must be proved
+    to proceed.
+
+\begin{table}[ht]
+\caption{Arithmetic operators and transcendental functions for extreals}
+\label{tab:extrealOp}
+\end{table}
+
+| Constant          | Overloaded symbol     | Strength | Associativity |
+|-------------------|-----------------------|----------|---------------|
+| `extreal_le`      | `<=`                  | 450      | non           |
+| `extreal_lt`      | `<`                   | 450      | non           |
+| `extreal_add`     | `+`                   | 500      | left          |
+| `extreal_sub`     | `-`                   | 500      | left          |
+| `extreal_mul`     | `*`                   | 600      | left          |
+| `extreal_div`     | `/`                   | 600      | left          |
+| `extreal_of_num`  | `&`                   | 900      | prefix        |
+| `extreal_ainv`    | `~` and `-`           | 900      | prefix        |
+| `extreal_inv`     | `inv`                 |          | prefix        |
+| `extreal_abs`     | `abs`                 |          | prefix        |
+| `extreal_pow`     | `pow`                 | 700      | right         |
+| `extreal_powr`    | `powr`                | 700      | right         |
+| `extreal_exp`     | `exp`                 |          | prefix        |
+| `extreal_sqrt`    | `sqrt`                |          | prefix        |
+| `extreal_logr`    | `logr`                |          | prefix        |
+| `extreal_lg`      | `lg`                  |          | prefix        |
+| `extreal_ln`      | `ln`                  |          | prefix        |
+
+The addition of extreals is not associative and commutative in
+general, because `PosInf + NegInf` and `NegInf + PosInf` are not
+defined (see Table \ref{tab:extrealAdd}).  To swap the elements of
+additions, the user must avoid mixing of PosInf and NegInf in the
+involved elements (e.g., by letting one of them be normal):
+
+```
+##thm add_comm
+##thm add_comm_normal
+##thm add_assoc
+```
+
+On the other hand, the set of extreals is a totally ordered set
+such that for all $a \in \overline{\mathbb{R}}$,
+$-\infty \leq a \leq +\infty$.  With this order,
+$\overline{\mathbb{R}}$ is a complete lattice where every subset
+has a supremum (`extreal_sup` or `sup`) and an infimum
+(`extreal_inf` or `inf`).  In particular, for empty sets (of
+extreals) we have:
+
+```
+##thm sup_empty
+##thm inf_empty
+```
+
+**Finite and infinite sum of extreals.**
+The sum of extreals over a finite set (`EXTREAL_SUM_IMAGE`,
+overloaded on `SIGMA`), $\sum_{i\in s} f(i)$, is defined by
+`pred_set.ITSET` (see Section \ref{sec:theory-of-sets}):
+
+```
+##thm EXTREAL_SUM_IMAGE_DEF
+```
+
+To actually work with `EXTREAL_SUM_IMAGE`, beside that $s$ must be
+a finite set, there must be no mixing of `PosInf` and `NegInf` in
+the values of `f`, i.e., either all $f(i)$ are not $+\infty$ or
+they are not $-\infty$ ($i \in s$).  The following theorem fully
+captures the properties of `EXTREAL_SUM_IMAGE`:
+
+```
+>>__ val oldwidth = !Globals.linewidth;
+     val _ = Globals.linewidth := oldwidth - 10;
+##thm EXTREAL_SUM_IMAGE_THM
+>>__ val _ = Globals.linewidth := oldwidth;
+```
+
+The (countably) infinite sum of extreals (`ext_suminf`, overloaded
+on `suminf`), $\sum_{i\in\mathbb{N}} f(i)$, is only defined on
+non-negative function $f$ as the supremum of the $n$th partial
+sum:
+
+```
+##thm ext_suminf_def
+```
+
+Thus mathematically `ext_suminf` represents *positive series*,
+which always has a unique nonnegative value: `PosInf` if the
+positive series is *divergent*, other normal extreals (i.e.,
+`< PosInf`) if the positive series is *convergent* (on that normal
+extreal).  A fundamental result for positive series says that it
+converges if and only if its $n$th partial sums are bounded:
+
+```
+##thm pos_summable
+```
+
+Finally, 2-dimensional (positive) infinite sums
+$\sum_{i,j\in\mathbb{N}} f(i,j)$ can be reduced to iterated sums
+$\sum_{i\in\mathbb{N}} \sum_{j\in\mathbb{N}} f(i,j)$ given an
+arbitrary bijection between $\mathbb{N}$ and
+$\mathbb{N}\times\mathbb{N}$:
+
+```
+##thm ext_suminf_2d_full
+```
+
+**Upper and lower limits of extreal sequences.**
+For a sequence of extreal numbers, the *limes inferior* or *lower
+limit* is defined as (see, e.g., Appendix A of
+\cite{Schilling:2017} for more details.)
+
+```
+##thm ext_liminf_def
+```
+
+and the *limes superior* or *upper limit* is defined as
+
+```
+##thm ext_limsup_def
+```
+
+Some basic properties of `ext_limsup` and `ext_liminf` are
+provided in `extreal` theory:
+
+```
+##thm ext_liminf_alt_limsup
+##thm ext_liminf_pos
+##thm ext_liminf_le_limsup
+##thm ext_limsup_alt_liminf
+##thm ext_limsup_pos
+```
+
+The most important property, however, that the normal limit of a
+sequence of extreal numbers (when forcely converted to real
+numbers) coincides with its upper and lower limits (in this case
+they are also the same), together with useful lemmas, are provided
+in `martingale` theory:
+
+```
+>>__ load "martingaleTheory";
+>>__ open martingaleTheory;
+##thm ext_limsup_thm
+
+##thm ext_limsup_le_subseq
+##thm ext_liminf_le_subseq
+##thm ext_limsup_imp_subseq
+##thm ext_liminf_imp_subseq
+```
+\index{extended real numbers, the HOL theory of@extreal numbers, the \HOL{} theory of|)}
+
+### Bit vectors
+
+\label{sec:bit-vectors}
+\index{bit vectors, the HOL theory of@bit vectors, the \HOL{} theory of|(}
+
+HOL provides a theory of bit vectors, or $n$-bit words.  For
+example, in computer architectures one finds: bytes/octets
+($n=8$), half-words ($n=16$), words ($n=32$) and long-words
+($n=64$).  In the theory `words`, bit vectors are represented as
+*finite Cartesian products*: an $n$-bit word is given type
+$\worda$ where the *size* of the type $\alpha$ determines the
+word length $n$.  This approach comes from an idea of John
+Harrison, which was presented at TPHOLs 2005.[^words-history]
+
+[^words-history]: The current theory subsumes previous word
+    theories — it evolved from a development based on an
+    equivalence class construction.  Wai Wong's word theory, which
+    was based on Paul Curzon's `rich_list` theory, is no longer
+    distributed with HOL.  The principle advantages of the current
+    theory are that there is just one theory for all word sizes
+    and that word length side conditions are not required.
+
+#### Finite Cartesian products
+
+\label{ss:fcpTheory}
+
+The HOL theory `fcp` introduces an infix type operator `**`,
+which is used to represent finite Cartesian products.[^fcp-port]
+The type `'a ** 'b`, or equivalently $\fcp{\mathit{a}}{\mathit{b}}$,
+is conceptually equivalent to:
+
+$$
+\underbrace{\mathit{a}\;\#\;\mathit{a}\;\#\;\cdots\;\#\;\mathit{a}}_{\mathtt{dimindex('b)}}
+$$
+
+where `dimindex('b)` is the cardinality of `univ(:'b)` when `'b`
+is finite and is one when it is infinite.  Thus,
+$\fcp{\mathit{a}}{\mathit{num}}$ is similar to `'a`, and
+$\fcp{\mathit{a}}{\mathit{bool}}$ is similar to `'a # 'a`.
+Numeral type names are supported, so one can freely work with
+indexing sets of any size, e.g., the type `32` has thirty-two
+elements and $\fcp{\mathit{bool}}{32}$ represents 32-bit words.
+
+[^fcp-port]: The theory of finite Cartesian products was ported
+    from HOL Light.
+
+The *components* of a finite Cartesian product are accessed with
+an indexing function
+
+```
+   fcp_index : 'a ** 'b -> num -> 'a
+```
+
+which is typically written with an infixed apostrophe: `x ' i`
+denotes the value of vector `x` at position `i`.  Typically,
+indices are constrained to be less than the size of
+`'b`.[^fcp-index-range]
+
+[^fcp-index-range]: Note that FCP indices in HOL Light are ranged
+    from 1 to `dimindex('b)`, while in HOL4 they are ranged from
+    0 to `dimindex('b) - 1`, thus is *less* than the size of `'b`.
+    Also note that the function `fcp_index` in HOL Light is
+    specified for index values: `f ' i = 0` when `i = 0` or
+    `i > dimindex('b)`.  In HOL4, however, `f ' i` is unspecified
+    when `i >= dimindex('b)`.
+
+The following theorem shows that two Cartesian products `x` and
+`y` are equal if, and only if, all of their components `x ' i`
+and `y ' i` are equal:
+
+```
+>>__ load "fcpTheory"; open fcpTheory;
+##thm CART_EQ
+```
+
+In order to construct Cartesian products, the theory `fcp`
+introduces a binder `FCP`, which is characterised by the following
+theorems:
+
+```
+##thm FCP_BETA
+##thm FCP_ETA
+```
+
+The theorem `FCP_BETA` shows that the components of `$FCP g` are
+determined by the function `g:num -> 'a`.  The theorem `FCP_ETA`
+shows that a binding can be eliminated when all of the components
+are identical to that of `x`.  These two theorems, together with
+`CART_EQ`, can be found in the *simpset* fragment `fcpLib.FCP_ss`.
+
+Finite Cartesian products provide a good means to model $n$-bit
+words.  That is to say, the type $\fcp{\mathit{bool}}{\mathit{a}}$
+can represent a binary word whose length $n$ corresponds with the
+size of the type `'a`.  The binder `FCP` provides a flexible
+means for defining words — one can supply a function `f:num ->
+bool` that gives the word's bit values, each of which can be
+accessed using the indexing map `fcp_index`.
+
+#### Bit theory
+
+\label{ss:bitTheory}
+
+The theory `bit` defines some bit operations over the natural
+numbers, e.g., `BITS`, `SLICE`, `BIT`, `BITWISE` and `BIT_MODIFY`.
+In this context, natural numbers are treated as binary words of
+unbounded length.  The operations in `bit` are primarily defined
+using `DIV`, `MOD` and `EXP`.  For example, from the definition
+of `BIT`, the following theorem holds:
+
+```
+>>__ load "bitTheory"; open bitTheory;
+##thm BIT_DEF
+```
+
+Here `BIT b n` states that the $b$-th bit (counted from the least
+significant bit, starting by 0) of $n$ is 1.  (In other words,
+`BIT b n` maps the $b$-th bit of $n$ from 0 to `false` and 1 to
+`true`.)
+
+On the other hand, `SBIT` can be used to construct a number by
+summing up values corresponding to each bits.  `SBIT b n`
+represents the *single* $n$-th bit value indicated by the Boolean
+value $b$, to be accumulated for constructing the destination
+number:
+
+```
+##thm SBIT_def
+```
+
+This theory is used in the development of the word theory and it
+also provides a mechanism for the efficient evaluation of some
+word operations via the theory `numeral_bit`.
+
+#### Words theory
+
+The theory `words` introduces a selection of polymorphic
+constants and operations, which can be type instantiated to any
+word size.  For example, word addition has type:
+
+$$
++:\worda \to \worda \to \worda
+$$
+
+If `'a` is instantiated to `32` then this operation corresponds
+with 32-bit addition.  All theorems about word operations apply
+for any word length.[^words-zero-len]
+
+[^words-zero-len]: Note that it is impossible to introduce words
+    of length zero because all types must be inhabited, and hence
+    their size will always be greater than or equal to one.
+
+**Some basic operations.**
+The function `w2n:` $\worda \to \mathit{num}$ gives the natural
+number value of a word.  If
+$x \in \mathit{bool}^{\{0,1,\ldots,n-1\}}$ is a finite Cartesian
+product representing an $n$-bit word then its natural number
+value is:
+
+$$
+\mathrm{w2n}(x) = \sum_{i=0}^{n-1}\textbf{if } x_i\textbf{ then } 2^i\textbf{ else } 0\,.
+$$
+
+The length of a word (the number $n$) is given by the function
+`word_len:` $\worda \to \mathit{num}$.  The function
+`n2w:` $\mathit{num} \to \worda$ maps from a number to a word,
+and the function `w2n:` $\worda \to \mathit{num}$ maps from a
+word to a number.  They are defined in HOL by:
+
+```
+>>__ load "wordsTheory"; open wordsTheory;
+##thm n2w_def
+##thm w2n_def
+```
+
+The suffix `w` is used to denote word literals, e.g., `255w` is
+the same as `n2w 255`.
+
+The function `w2w:` $\worda \to \wordb$ provides word-to-word
+conversion (casting):
+
+```
+##thm w2w_def
+```
+
+If $\beta$ is smaller than $\alpha$ then the higher bits of `w`
+will be lost (it performs bit extraction), otherwise the longer
+word will have the same value as the original (in effect
+providing zero padding).  However, if one were treating `w` as a
+two's complement number then the word needs to be sign extended,
+i.e.,
+
+$$
+\begin{aligned}
+\text{($-$ve)}\quad &1 b_{n-2}\cdots b_0 \;\mapsto\; 1\cdots 11 b_{n-2}\cdots b_0\\
+\text{($+$ve)}\quad &0 b_{n-2}\cdots b_0 \;\mapsto\; 0\cdots 00 b_{n-2}\cdots b_0
+\end{aligned}
+$$
+
+The function `sw2sw:` $\worda \to \wordb$ provides this sign
+extending version of `w2w`.
+
+A collection of operations are provided for mapping to and from
+strings and number (digit) lists, e.g.,
+
+```
+|- word_to_dec_string 876w = "876"
+```
+
+and
+
+```
+|- word_to_hex_list 876w = [12; 6; 3]
+```
+
+These function are specialised versions of `w2s` and `w2l`
+respectively.
+
+**Concatenation.**
+The operation `word_concat:` $\worda \to \wordb \to \wordc$
+concatenates words.  Note that the return type is not constrained.
+This means that two sixteen bit words can be concatenated to give
+a word of any length — which may be smaller or larger than the
+expected value of 32.  The related function `word_join` does
+return a word of the expected length, i.e., of type
+$\fcp{\mathit{bool}}{\alpha+\beta}$; however, the concatenation
+operation is more useful because we often want
+$\fcp{\mathit{bool}}{32}$ and not the logically distinct
+$\fcp{\mathit{bool}}{16+16}$.
+
+**Signed and unsigned words.**
+Words can be *viewed* as being either signed (using the two's
+complement representation) or as being unsigned.  However, this
+is not made explicit within the theory[^words-signed] and all of
+the arithmetic operations are defined using the natural numbers,
+i.e., via `w2n` and `n2w`.  In particular, addition and
+multiplication work naturally (have the same definition) under
+the two's complement representation.  This is not the case
+however with word-to-word conversion, orderings, division and
+right shifting, where signed and unsigned variants are needed.
+When operating over the natural numbers, some of the two's
+complement versions have slightly unnatural looking presentations.
+For example, with the signed (two's complement) version of "less
+than" we have `255w < (0w:word8)` because the word `255w` is
+actually taken to be representing the integer $-1$, whereas the
+unsigned version is more natural: `0w <+ (255w:word8)`.
+
+[^words-signed]: Words are not tagged as being signed/unsigned.
+    Mappings to/from the integers (`w2i` and `i2w`) are provided
+    in the theory `integer_word`.
+
+**Bit field operations.**
+The standard Boolean bit field operations are provided, i.e.,
+bitwise negation (one's complement), conjunction, disjunction
+and exclusive-or.  These functions are defined quite naturally
+using the Cartesian product binder; for example, bitwise
+conjunction is defined by:
+
+```
+|- !v w. v && w = FCP i. v ' i /\ w ' i .
+```
+
+There is also a collection of word *reduction* operations, which
+reduce bit vectors to 1-bit words, e.g.,
+
+$$
+\mathrm{reduce\_and}(x)\;'\;0 = \bigwedge_{i=0}^{n-1} x_i\,.
+$$
+
+The functions `word_lsb`, `word_msb` and `word_bit(i)` give the
+bit value of a word at positions $0$, $n-1$ and $i$ respectively.
+Four operations are provided for selecting bit fields, or
+sub-words: `word_bits` (`--`), `word_signed_bits` (`---`),
+`word_slice` (`''`) and `word_extract` (`><`).  For example,
+`word_bits 4 1` will select four bits starting from bit position
+1.  The slice function is an in-place variant (it zeroes bits
+outside of the bit range) and the extract function combines
+`word_bits` with a word cast (`w2w`).  The operation
+`word_signed_bits` is similar to `word_bits`, except that it
+sign-extends the bit field.
+
+The `bit_field_insert` operation inserts a bit field.  For
+example,
+
+```
+bit_field_insert 5 2 a b
+```
+
+is word `b` with bits 5–2 replaced by bits 3–0 of `a`.
+
+A word's bit ordering can be flipped over with `word_reverse`,
+i.e., bit zero is swapped with bit $n-1$ and so forth.
+
+The function
+`word_modify:(num -> bool -> bool) ->` $\worda \to \worda$
+changes a word by applying a map at each bit position.  This
+operation provides a very flexible and convenient mechanism for
+manipulating words, e.g.,
+
+```
+word_modify (\i b. if EVEN i then ~b else b) w
+```
+
+negates the bits of `w` that are in even positions.  Of course,
+the binder `FCP` also provides a very general means to represent
+words using a predicate; e.g., `$FCP ODD` represents a word where
+all the odd bits are set.
+
+**Shifts.**
+Six types of shifts are provided: logical shift left/right (`<<`
+and `>>>`), arithmetic shift right (`>>`), rotate left/right
+(`#<<` and `#>>`) and rotate right extended by 1 place
+(`word_rrx`).  These shifts are illustrated in Figure
+\ref{fig:shifts} and are defined in a similar manner to the other
+bit field operations.  For example, rotating right is defined by:
+
+```
+|- !w n. w #>> x = FCP i. w ' (i + x) MOD dimindex (:'a) .
+```
+
+Rotating left by $x$ places is defined as rotating right by
+$n - x \bmod n$ places.
+
+```{=latex}
+\begin{figure}
+\begin{center}
+\small
+\begin{tabular}{ll}
+\scalebox{.8}{\includegraphics{figs/lsl}} &
+\scalebox{.8}{\includegraphics{figs/lsr}} \\
+(a) Logical shift left: \texttt{w = v << x}. & (b) Logical shift right:
+\texttt{w = v >>> x}. \\[12pt]
+\scalebox{.8}{\includegraphics{figs/asr}} &
+\hspace{-5mm}\scalebox{.8}{\includegraphics{figs/ror}} \\
+(c) Arithmetic shift right: \texttt{w = v >> x}. & (d) Rotate right: \texttt{w
+= v \#>> x}. \\[12pt]
+\multicolumn{2}{c}{\scalebox{.8}{\includegraphics{figs/rrx}}} \\
+\multicolumn{2}{c}{(e) Rotate right extended by 1 place: \texttt{(d,w) =
+word\_rrx (c,v)}.}
+\end{tabular}
+\caption{Shift operations.}
+\label{fig:shifts}
+\end{center}
+\end{figure}
+```
+
+**Arithmetic and orderings.**
+The arithmetic operations are: addition, subtraction, unary
+minus (two's complement), logarithm (base-2), multiplication,
+modulus and division (signed and unsigned).  These operations are
+defined with respect to the natural numbers.  For example, word
+addition is defined by:
+
+```
+|- !v w. v + w = n2w (w2n v + w2n w)
+```
+
+The `+` on the left-hand side is word addition and on the right
+it is natural number addition.
+
+All of the standard word orderings are provided, with signed and
+unsigned versions of $<$, $\leq$, $>$ and $\geq$.  The unsigned
+versions are suffixed with a plus; for example, `<+` is unsigned
+"less than".
+
+**Constants.**
+The word theory also defines a few word constants:
+
+| Constant                    | Value           | Binary           |
+|-----------------------------|-----------------|------------------|
+| `word_T` or `UINT_MAXw`     | $2^l - 1$       | $11\cdots 11$    |
+| `word_L` or `INT_MINw`      | $2^{l-1}$       | $10\cdots 00$    |
+| `word_H` or `INT_MAXw`      | $2^{l-1} - 1$   | $01\cdots 11$    |
+
+**List of bit vector operations.**
+A list of operations is provided in the table below.
+
+| Operation              | Symbol               | Type                                       | Description                       |
+|------------------------|----------------------|--------------------------------------------|-----------------------------------|
+| `n2w`                  |        | $\mathit{num}\to\worda$                                  | Map from a natural number          |
+| `w2n`                  |        | $\worda\to\mathit{num}$                                  | Map to a natural number            |
+| `w2w`                  |        | $\worda\to\wordb$                                        | Map word-to-word (unsigned)        |
+| `sw2sw`                |        | $\worda\to\wordb$                                        | Map word-to-word (signed)          |
+| `w2l`                  |        | $\mathit{num}\to\worda\to\mathit{num}\,\mathit{list}$    | Map word to digit list             |
+| `l2w`                  |        | $\mathit{num}\to\mathit{num}\,\mathit{list}\to\worda$    | Map digit list to word             |
+| `w2s`                  |        | $\mathit{num}\to(\mathit{num}\to\mathit{char})\to\worda\to\mathit{string}$ | Map word to string |
+| `s2w`                  |        | $\mathit{num}\to(\mathit{char}\to\mathit{num})\to\mathit{string}\to\worda$ | Map string to word |
+| `word_len`             |        | $\worda\to\mathit{num}$                                  | The word length                    |
+| `word_lsb`             |        | $\worda\to\mathit{bool}$                                 | The least significant bit          |
+| `word_msb`             |        | $\worda\to\mathit{bool}$                                 | The most significant bit           |
+| `word_bit`             |        | $\mathit{num}\to\worda\to\mathit{bool}$                  | Test bit position                  |
+| `word_bits`            | `--`   | $\mathit{num}\to\mathit{num}\to\worda\to\worda$          | Select a bit field                 |
+| `word_signed_bits`     | `---`  | $\mathit{num}\to\mathit{num}\to\worda\to\worda$          | Sign-extend selected bit field     |
+| `word_slice`           | `''`   | $\mathit{num}\to\mathit{num}\to\worda\to\worda$          | Set bits outside field to zero     |
+| `word_extract`         | `><`   | $\mathit{num}\to\mathit{num}\to\worda\to\wordb$          | Extract (cast) a bit field         |
+| `word_reverse`         |        | $\worda\to\worda$                                        | Reverse the bit order              |
+| `bit_field_insert`     |        | $\mathit{num}\to\mathit{num}\to\worda\to\wordb\to\wordb$ | Insert a bit field                 |
+| `word_modify`          |        | $(\mathit{num}\to\mathit{bool}\to\mathit{bool})\to\worda\to\worda$ | Apply a function to each bit |
+| `word_join`            |        | $\worda\to\wordb\to\fcp{\mathit{bool}}{\alpha+\beta}$    | Join words                         |
+| `word_concat`          | `@@`   | $\worda\to\wordb\to\wordc$                               | Concatenate words                  |
+| `concat_word_list`     |        | $\worda\,\mathit{list}\to\wordb$                         | Concatenate list of words          |
+| `word_replicate`       |        | $\mathit{num}\to\worda\to\wordb$                         | Replicate word                     |
+| `word_or`              | \texttt{\textbar\textbar} | $\worda\to\worda\to\worda$            | Bitwise disjunction                |
+| `word_xor`             | `??`   | $\worda\to\worda\to\worda$                               | Bitwise exclusive-or               |
+| `word_and`             | `&&`   | $\worda\to\worda\to\worda$                               | Bitwise conjunction                |
+| `word_nor`             | \texttt{\textasciitilde\textbar\textbar} | $\worda\to\worda\to\worda$ | Bitwise NOR                        |
+| `word_xnor`            | `~??`  | $\worda\to\worda\to\worda$                               | Bitwise XNOR                       |
+| `word_nand`            | `~&&`  | $\worda\to\worda\to\worda$                               | Bitwise NAND                       |
+| `word_reduce`          |        | $(\mathit{bool}\to\mathit{bool}\to\mathit{bool})\to\worda\to\fcp{\mathit{bool}}{1}$ | Word reduction |
+| `reduce_or`            |        | $\worda\to\fcp{\mathit{bool}}{1}$                        | Disjunction reduction              |
+| `reduce_xor`           |        | $\worda\to\fcp{\mathit{bool}}{1}$                        | Exclusive-or reduction             |
+| `reduce_and`           |        | $\worda\to\fcp{\mathit{bool}}{1}$                        | Conjunction reduction              |
+| `reduce_nor`           |        | $\worda\to\fcp{\mathit{bool}}{1}$                        | NOR reduction                      |
+| `reduce_xnor`          |        | $\worda\to\fcp{\mathit{bool}}{1}$                        | XNOR reduction                     |
+| `reduce_nand`          |        | $\worda\to\fcp{\mathit{bool}}{1}$                        | NAND reduction                     |
+| `word_1comp`           | `~`    | $\worda\to\worda$                                        | One's complement                   |
+| `word_2comp`           | `-`    | $\worda\to\worda$                                        | Two's complement                   |
+| `word_add`             | `+`    | $\worda\to\worda\to\worda$                               | Addition                           |
+| `word_sub`             | `-`    | $\worda\to\worda\to\worda$                               | Subtraction                        |
+| `word_mul`             | `*`    | $\worda\to\worda\to\worda$                               | Multiplication                     |
+| `word_div`             | `//`   | $\worda\to\worda\to\worda$                               | Division (unsigned)                |
+| `word_sdiv`            | `/`    | $\worda\to\worda\to\worda$                               | Division (signed)                  |
+| `word_mod`             |        | $\worda\to\worda\to\worda$                               | Modulus                            |
+| `word_log2`            |        | $\worda\to\worda$                                        | Logarithm base-2                   |
+| `word_lsl`             | `<<`   | $\worda\to\mathit{num}\to\worda$                         | Logical shift left                 |
+| `word_lsr`             | `>>>`  | $\worda\to\mathit{num}\to\worda$                         | Logical shift right                |
+| `word_asr`             | `>>`   | $\worda\to\mathit{num}\to\worda$                         | Arithmetic shift right             |
+| `word_ror`             | `#>>`  | $\worda\to\mathit{num}\to\worda$                         | Rotate right                       |
+| `word_rol`             | `#<<`  | $\worda\to\mathit{num}\to\worda$                         | Rotate left                        |
+| `word_rrx`             |        | $\mathit{bool}\#\worda\to\mathit{bool}\#\worda$          | Rotate right extended by 1 place   |
+| `word_lt`              | `<`    | $\worda\to\worda\to\mathit{bool}$                        | Signed "less than"                 |
+| `word_le`              | `<=`   | $\worda\to\worda\to\mathit{bool}$                        | Signed "less than or equal"        |
+| `word_gt`              | `>`    | $\worda\to\worda\to\mathit{bool}$                        | Signed "greater than"              |
+| `word_ge`              | `>=`   | $\worda\to\worda\to\mathit{bool}$                        | Signed "greater than or equal"     |
+| `word_lo`              | `<+`   | $\worda\to\worda\to\mathit{bool}$                        | Unsigned "less than"               |
+| `word_ls`              | `<=+`  | $\worda\to\worda\to\mathit{bool}$                        | Unsigned "less than or equal"      |
+| `word_hi`              | `>+`   | $\worda\to\worda\to\mathit{bool}$                        | Unsigned "greater than"            |
+| `word_hs`              | `>=+`  | $\worda\to\worda\to\mathit{bool}$                        | Unsigned "greater than or equal"   |
+
+\index{bit vectors, the HOL theory of@bit vectors, the \HOL{} theory of|)}
+
+## Sequences
+
+HOL provides theories for various kinds of sequences: finite lists,
+lazy lists, paths, and finite strings.
+
+### Lists
+
+\label{sec:list}
+\index{list, the type operator in HOL logic@\ml{list}, the type operator in \HOL{} logic}
+\index{types, in HOL logic@types, in \HOL{} logic!tools for construction of}
+\index{lists, the HOL theory of@lists, the \HOL{} theory of|(}
+\index{ lists, the HOL theory of@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, the \HOL{} theory of)|(}
+
+>>__ open listTheory
+>>__ show_numeral_types := false
+
+\index{lists, the HOL theory of@lists, the \HOL{} theory of!constructors}
+HOL lists are inductively defined finite sequences where each
+element in a list has the same type.  The theory `list` introduces
+the unary type operator $\alpha\;\konst{list}$ by a type definition
+and a standard collection of list processing functions are
+defined.  The primitive constructors `NIL` and `CONS`
+
+\index{NIL, the HOL constant@\holtxt{NIL}, the \HOL{} constant}
+\index{CONS, the HOL constant@\holtxt{CONS}, the \HOL{} constant}
+```
+   NIL  : 'a list
+   CONS : 'a -> 'a list -> 'a list
+```
+
+are used to build lists and have been defined from the representing
+type for lists.  The HOL parser
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of list expressions}
+has been specially modified to parse the expression `[]` into
+`NIL`, to parse the expression `h::t` into `CONS h t`, and to
+parse the expression `[`$t_1$`;`$t_2$`;…;`$t_n$`]` into
+`CONS `$t_1$` (CONS `$t_2$` `$\cdots$` (CONS `$t_n$` NIL) `$\cdots$`)`.
+The HOL printer
+\index{printing, in HOL logic@printing, in \HOL{} logic!of list expressions}
+reverses these transformations.
+
+\index{list theorems, in HOL logic@list theorems, in \HOL{} logic}
+Based on the inductive characterization of the type, the following
+fundamental theorems about lists are proved and stored in the
+theory `list`.
+
+\index{list_Axiom@\ml{list\_Axiom}}
+\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for lists}
+\index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for lists}
+\index{characterizing theorem!for lists}
+\index{lists, the HOL theory of@lists the \HOL{} theory of!initiality theorem}
+\index{lists, the HOL theory of@lists the \HOL{} theory of!induction theorem}
+```
+##thm list_Axiom
+##thm list_INDUCT
+##thm list_CASES
+##thm CONS_11
+##thm NOT_NIL_CONS
+##thm NOT_CONS_NIL
+```
+
+The theorem `list_Axiom` shown above is analogous to the primitive
+recursion theorem
+\index{primitive recursion theorem!for lists}
+on the natural numbers discussed above in Section
+\ref{num-prim-rec}.  It states the validity of primitive recursive
+definitions on lists, and can be used to justify any such
+definition.  The ML function `new_recursive_definition` uses this
+theorem to do automatic
+\index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL{} system|)}
+proofs of the existence of primitive recursive functions on lists
+and then make constant specifications to introduce constants that
+denote such functions.
+
+The induction theorem for lists, `list_INDUCT`, provides the main
+proof tool used to reason about operations that manipulate lists.
+The theorem `list_CASES` is used to perform case analysis on
+whether a list is empty or not.
+
+The theorem `CONS_11` shows that `CONS` is injective; the theorems
+`NOT_NIL_CONS` and `NOT_CONS_NIL` show that `NIL` and `CONS` are
+distinct, i.e., cannot give rise to the same structure.  Together,
+these three theorems are used for equational reasoning about
+lists.
+
+The predicate `NULL` and the selectors
+\index{selectors, in HOL logic@selectors, in \HOL{} logic!for lists}
+`HD` and `TL` are defined in the theory `list` by
+
+\index{NULL, the HOL constant@\ml{NULL}, the \HOL{} constant}
+\index{HD, the HOL constant@\ml{HD}, the \HOL{} constant}
+\index{TL, the HOL constant@\ml{TL}, the \HOL{} constant}
+```
+##thm NULL
+##thm HD
+##thm TL_DEF
+```
+
+The nil-clause for the `TL` constant is included to make the
+function total, but does represent a case that often needs to be
+excluded.  For example:
+
+```
+##thm LIST_NOT_NIL
+```
+
+The following functions on lists are also defined in the theory
+`list`.
+
+**Case expressions.**
+\index{case expressions!over lists}
+Compound HOL expressions that branch based on whether a term is an
+empty or non-empty list have the surface syntax (roughly borrowed
+from ML)
+
+```
+   case e1
+    of [] => e2
+     | (h::t) => e3
+```
+
+Such an expression is translated to
+$\mathtt{list\_CASE}\;e_1\;e_2\;(\lambda h\;t.\;e_3)$ where the
+constant `list_CASE` is defined as follows:
+
+```
+##thm list_case_def
+```
+
+**List membership.**
+\index{MEM, the HOL notion of list membership@\holtxt{MEM}, the \HOL{} notion of list membership}
+Membership in a list, written using the `MEM` syntax, is
+characterised as follows:
+
+```
+##thm MEM
+```
+
+**Concatenation of lists.**
+\index{APPEND, the HOL constant@\ml{APPEND}, the \HOL{} constant}
+\index{concatenation, of lists!in HOL logic@in \HOL{} logic}
+\index{FLAT, the HOL constant@\ml{FLAT}, the \HOL{} constant}
+\index{SNOC, the HOL constant@\ml{SNOC}, the \HOL{} constant}
+
+Binary list concatenation (`APPEND`) may also be denoted by the
+infix operator `++`; thus the expression `L1 ++ L2` is translated
+into `APPEND L1 L2`.  The concatenation of a list of lists into a
+list is achieved by `FLAT`.  The special case where a single
+element is appended to the end of a list (the "opposite" of
+`CONS`, which adds elements to the front of a list), is
+implemented by `SNOC`.
+
+```
+##thm APPEND
+##thm FLAT
+##thm SNOC
+```
+
+**Numbers and lists.**
+\index{LENGTH, the HOL constant@\ml{LENGTH}, the \HOL{} constant}
+\index{list_size, the HOL constant@\ml{list\_size}, the \HOL{} constant}
+
+The length (`LENGTH`) and size (`list_size`) of a list are related
+notions.  The size of a list takes account of the size of each
+element of the list (given by parameter $f:\alpha\to\konst{num}$),
+while the length of the list ignores the size of each list
+element.  The alternate length definition (`LEN`) is
+tail-recursive.  Numbers can also be used to index into lists,
+extracting the element at the specified position.
+\index{EL, the HOL constant@\holtxt{EL}, the \HOL{} constant}
+```
+##thm LENGTH
+##thm LEN_DEF
+##thm list_size_def
+##thm EL
+```
+
+Note that the extraction of the $n$th element (as described in
+the theorem `EL`) of a list starts its indexing from 0.  If the
+length of the list $\ell$ is less than or equal to `n`, the
+result of `` `ℓ❲n❳` `` is unspecified.  The special syntax with
+the brackets hides the underlying constant, which is `EL` of type
+`:num -> 'a list -> 'a`.  It is legal to use the constant
+explicitly, writing `EL n ℓ`.
+
+\index{GENLIST, the HOL constant@\ml{GENLIST}, the \HOL{} constant}
+The `GENLIST` constant can be used to generate a list of a
+particular size, where the value of each element is independently
+determined by reference to a function that takes natural numbers
+(the set $\{0\dots n-1\}$) to element values:
+
+```
+##thm GENLIST
+##thm EL_GENLIST
+```
+
+\index{SNOC, the HOL constant@\ml{SNOC}, the \HOL{} constant}
+Working with `SNOC`, and thus the definition above, can
+occasionally be awkward, so a characterisation of `GENLIST`'s
+`SUC` clause in terms of `CONS` can also be useful:
+
+```
+##thm GENLIST_CONS
+```
+
+For more on the "indexed" treatment of lists, see Section
+\ref{sec:indexed-lists} below.
+
+**Mapping functions over lists.**
+\index{MAP, the HOL constant@\ml{MAP}, the \HOL{} constant}
+\index{MAP2, the HOL constant@\ml{MAP2}, the \HOL{} constant}
+\index{mapPartial, the HOL constant@\ml{mapPartial}, the \HOL{} constant}
+\index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for lists}
+
+There are functions for mapping a function $f:\alpha\to\beta$ over
+a single list (`MAP`), a "partial" function
+$f:\alpha\to\beta\,\mathsf{option}$ over a list (`mapPartial`), or
+a function $f:\alpha\to\beta\to\gamma$ over two lists (`MAP2`):
+
+```
+##thm MAP
+##thm mapPartial_def
+##thm MAP2_DEF
+```
+
+If passed lists of unequal length, `MAP2` returns a list of length
+equal to that of the shorter list.
+
+**Predicates over lists.**
+\index{FILTER, the HOL constant@\ml{FILTER}, the \HOL{} constant}
+\index{EVERY, the HOL constant@\ml{EVERY}, the \HOL{} constant}
+\index{nub, the HOL constant@\ml{nub}, the \HOL{} constant}
+\index{ALL_DISTINCT, the HOL constant@\ml{ALL\_DISTINCT}, the \HOL{} constant}
+\index{EXISTS, the HOL constant (over lists)@\ml{EXISTS}, the \HOL{} constant (over lists)}
+
+Predicates can be applied to lists in a universal sense (the
+predicate must hold of every element in the list) or an
+existential sense (the predicate must hold of some element in the
+list).  This functionality is supported by `EVERY` and `EXISTS`,
+respectively.  The elimination of all elements in list not
+satisfying a given predicate is performed by `FILTER`.
+
+```
+##thm EVERY_DEF
+##thm EXISTS_DEF
+##thm FILTER
+##thm ALL_DISTINCT
+```
+
+The predicate `ALL_DISTINCT` holds on a list just in case no
+element in the list is equal to any other.  A list can have its
+duplicates removed through the use of the `nub` constant:
+
+```
+##thm nub_def
+```
+
+**Relations over lists.**
+\index{EVERY2@\ml{EVERY2}|see{\ml{LIST\_REL}}}
+\index{LIST_REL, the HOL constant@\ml{LIST\_REL}, the \HOL{} constant}
+A binary relation on elements can be "lifted" to a relation on
+lists of such elements with the `LIST_REL` constant:
+
+```
+##thm LIST_REL_def
+```
+
+This can be viewed as an application of `EVERY`:
+
+```
+##thm LIST_REL_EVERY_ZIP
+```
+
+Acknowledging this view, the system overloads the name `EVERY2`
+to map to the same constant.
+
+```
+>> “EVERY2 (λm n. EVEN (m + n)) [1;2;3] [3;4;5]”;
+```
+
+Some theorems in `listTheory` have names that reflect this.
+
+Equally, `LIST_REL` can be seen as a test that checks the
+relation at all relevant indices:
+
+```
+##thm LIST_REL_EL_EQN
+```
+
+Finally, there is a natural induction principle for this constant
+(as *per* Section \ref{sec:proofs-with-inductive-relations}, the
+tactic ``Induct_on `LIST_REL``` applies it):
+
+```
+##thm LIST_REL_strongind
+```
+
+**Folding.**
+\index{FOLDL, the HOL constant@\ml{FOLDL}, the \HOL{} constant}
+\index{FOLDR, the HOL constant@\ml{FOLDR}, the \HOL{} constant}
+
+Applying a binary function $f:\alpha\to\beta\to\beta$ pairwise
+through a list and accumulating the result is known as *folding*.
+At times, it is necessary to do this operation from left-to-right
+(`FOLDL`), and at others the right-to-left direction (`FOLDR`) is
+required.
+
+```
+##thm FOLDL
+##thm FOLDR
+```
+
+**List reversal.**
+The reversal of a list (`REVERSE`) and its tail recursive
+counterpart `REV` are defined in `list`.
+
+```
+   REVERSE_DEF
+     |- (REVERSE [] = []) /\
+        (!h t. REVERSE (h::t) = REVERSE t ++ [h])
+   REV_DEF
+     |- (!acc. REV [] acc = acc) /\
+        (!h t acc. REV (h::t) acc = REV t (h::acc))
+```
+
+**Conversion to sets.**
+Lists can be converted to sets with the `LIST_TO_SET` constant,
+which is overloaded to the prettier name `set`.  The definition is
+made by primitive recursion in `listTheory`:
+
+```
+>> listTheory.LIST_TO_SET;
+```
+
+\index{MEM, the HOL notion of list membership@\holtxt{MEM}, the \HOL{} notion of list membership}
+Note that `MEM` is an overloaded form of syntax such that
+`MEM x l` is actually a pretty-printing of the underlying term
+`x ∈ set l`.
+
+Further support for translating between different kinds of
+collections may be found in the `container` theory.
+
+**Pairs and lists.**
+Two lists of equal length may be component-wise paired by the
+`ZIP` operation.  As with `MAP2`, the result of zipping lists of
+unequal lengths is a list whose length is that of the shorter
+argument.  The inverse operation, `UNZIP`, translates a list of
+pairs into a pair of lists.
+
+```
+##thm ZIP_def
+##thm UNZIP_THM
+```
+
+**Alternate access.**
+\index{LAST, the HOL constant@\ml{LAST}, the \HOL{} constant}
+\index{FRONT, the HOL constant@\ml{FRONT}, the \HOL{} constant}
+
+Lists are essentially treated in a stack-like manner.  However,
+at times it is convenient to access the last element (`LAST`) of
+a non-empty list directly.  The last element of a non-empty list
+is dropped by `FRONT`.
+
+```
+##thm LAST_DEF
+##thm FRONT_DEF
+##thm APPEND_FRONT_LAST
+```
+
+Joining the front part and the last element of a non-empty list
+yields the original list.  Both `LAST` and `FRONT` are
+unspecified on empty lists.
+
+**Prefix checking.**
+\index{isPREFIX, the HOL constant@\ml{isPREFIX}, the \HOL{} constant}
+The relation capturing whether a list $\ell_1$ is a prefix of
+$\ell_2$ (`isPREFIX`) can be defined by recursion.  The infix
+symbols `<<=` (ASCII) and $\preccurlyeq$ (U+227C) can also be
+used as notation for this partial order.
+
+```
+##thm68 isPREFIX_THM
+```
+
+The above theorem states that: the empty list is a prefix of any
+other list (clause 1); that no non-empty list is a prefix of the
+empty list (clause 2); and that a non-empty list is a prefix of
+another non-empty list if the first elements of the lists are the
+same, and if the tail of the first is a prefix of the tail of the
+second.
+
+For a complete list of available theorems in `list`, see the
+REFERENCE manual.  Further development of list theory can be found
+in `rich_list`.
+
+#### List permutations and sorting
+
+\index{permutations (of lists), the HOL theory of@permutations (of lists), the \HOL{} theory of}
+\index{sorting, the HOL theory of@sorting, the \HOL{} theory of}
+
+The `sorting` theory defines a notion of two lists being
+permutations of each other, then defines a general notion of
+sorting, then shows that Quicksort is a sorting function.  The
+`mergesort` theory defines Merge sort and shows that it is a
+stable sorting function.
+
+**List permutation.**
+Two lists are in permutation if they have exactly the same
+members, and each member has the same number of occurrences in
+both lists.  One definition (`PERM`) that captures this
+relationship is the following:
+
+```
+>>__ load "sortingTheory"; open sortingTheory
+##thm PERM_DEF
+##thm PERM_IND
+```
+
+A derived induction theorem (`PERM_IND`) is very useful in proofs
+about permutations.
+
+**Sorting.**
+A list is $R$-sorted if $R$ holds pairwise through the list.
+This notion (`SORTED`) is captured by a recursive definition.
+Then a function of type
+
+```
+   ('a -> 'a -> bool) -> 'a list -> 'a list
+```
+
+is a sorting function (`SORTS`) with respect to $R$ if it
+delivers a permutation of its input, and the result is
+$R$-sorted.
+
+```
+##thm SORTED_DEF
+##thm SORTS_DEF
+```
+
+Quicksort is defined in the usual functional programming style,
+and it is indeed a sorting function, provided $R$ is a transitive
+and total relation.
+
+```
+##thm QSORT_DEF
+##thm QSORT_SORTS
+```
+
+\index{lists, the HOL theory of@lists, the \HOL{} theory of!element adjacency}
+The notion of $R$ holding pairwise through a list can be
+expressed using the predicate `adjacent`, where
+$\mathtt{adjacent}\;\ell\;a\;b$ holds if values $a$ and $b$
+appear together (in that order) in list $\ell$.  Then, we have
+
+```
+##thm SORTED_adjacent
+```
+
+where the $\subseteq\subr$ relation is the notion of
+relation-subset (see Section \ref{def:rsubset}).  There are a
+number of other theorems in `listTheory` about adjacency,
+including for example:
+
+```
+##thm adjacent_REVERSE
+##thm adjacent_MAP
+```
+
+#### Indexed lists
+
+\label{sec:indexed-lists}
+\index{EL, the HOL constant@\holtxt{EL}, the \HOL{} constant|pin}
+\index{lists, the HOL theory of@lists, the \HOL{} theory of!retrieving elements by index}
+
+As mentioned earlier, lists can be indexed with the constant
+`EL`, viewing lists as partial functions from natural numbers
+(starting at 0!) into the element type.  The definition is given
+by primitive recursion over the index argument, in theorem `EL`:
+
+```
+##thm EL
+```
+
+\index{EL, the HOL constant@\holtxt{EL}, the \HOL{} constant!array subscript notation}
+The term underlying the pretty presentation $\ell\lbrbrak n\rbrbrak$
+is $\mathtt{EL}\;n\;\ell$; and both forms can be used when
+writing terms.  If desired, the pretty-printing with the
+"array-subscript" notation can be turned off by the invocation
+
+```
+   val _ = clear_overloads_on "fEL"
+```
+
+Note that because of the use of `HD` and `TL`, the value of
+$\ell\lbrbrak n\rbrbrak$ is unspecified when
+$n \geq \mathtt{LENGTH}\;\ell$.  Subsequently, many theorems
+involving `EL` have preconditions to preclude this possibility.
+
+For example, these theorems describing the relationship between
+`EL`, `MAP` and `MEM`:
+
+```
+##thm EL_MAP
+##thm MEM_EL
+```
+
+It is occasionally useful to be able to update lists at
+particular positions, viewing them as similar to programming
+language arrays.  The relevant constant is `LUPDATE`, where the
+term $\mathtt{LUPDATE}\;e\;n\;\ell$ has the same value as list
+$\ell$, except that the $n$-th element of the list is equal to
+$e$.
+\index{LUPDATE, the HOL constant@\holtxt{LUPDATE}, the \HOL{} constant}
+The definition illustrates the pretty syntax for the above
+($\ell\lbrbrak n\mapsto e\rbrbrak$), and is given in three
+clauses:
+
+```
+##thm LUPDATE_def
+```
+
+The definition implies that attempting to update a list at an
+index beyond the end of the list returns the input list
+unchanged.
+
+The basic characterisation of the link between `EL` and `LUPDATE`
+is
+
+```
+##thm EL_LUPDATE
+```
+
+The pretty syntax supports chained or nested `LUPDATE`
+applications using a list-like notation:
+
+```
+>> “LUPDATE v1 k1 (LUPDATE v2 k2 ℓ)”;
+```
+
+**The `indexedLists` theory.**
+The `indexedLists` theory defines a number of extra constants
+that are "aware" of lists as indexed values.  Some of these
+constants are:
+
+```
+   >>__ open indexedListsTheory
+   delN      : num -> 'a list -> 'a list
+   findi     : 'a -> 'a list -> num
+   LIST_RELi : (num -> 'a -> 'b -> bool) -> 'a list -> 'b list -> bool
+   MAPi      : (num -> 'a -> 'b) -> 'a list -> 'b list
+```
+
+The `findi` constant
+\index{lists, the HOL theory of@lists, the \HOL{} theory of!finding element indices}
+\index{findi, the HOL constant@\holtxt{findi}, the \HOL{} constant}
+is such that $\mathtt{findi}\;e\;\ell$ returns the first index of
+element $e$ within list $\ell$, or a number equal to $\ell$'s
+length, if $e$ is not present.  The definition is by recursion
+over the structure of the input list:
+
+```
+##thm findi_def
+```
+
+The `delN` constant
+\index{lists, the HOL theory of@lists, the \HOL{} theory of!removing elements by index}
+\index{delN, the HOL constant@\holtxt{delN}, the \HOL{} constant}
+is used to remove the $n$-th element from a list.  It is also
+defined by recursion over the structure of the input list:
+
+```
+##thm delN_def
+```
+
+The higher-order `MAPi` function
+\index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for lists, with indices}
+\index{MAPi, the HOL constant@\holtxt{MAPi}, the \HOL{} constant}
+exemplifies another set of constants within the `indexedLists`
+theory: its function parameter, which works on elements of the
+list argument is given access to the index of the list element as
+well as its value.  A simple example use might be to generate a
+numbered version of a list, using the term
+$\mathtt{MAPi}\;(\lambda i\;e.\;(i,e))$.  If this term were
+applied to the list `[a;c;d]` the resulting value would be
+`[(0,a);(1,c);(2,d)]`.
+
+An example theorem about `MAPi` relates it to `MEM`:
+
+```
+##thm MEM_MAPi
+```
+\index{lists, the HOL theory of@lists, the \HOL{} theory of|)}
+\index{ lists, the HOL theory of@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, the \HOL{} theory of)|)}
+
+### Possibly infinite sequences (`llist`)
+
+\index{lazy lists, the HOL theory of@``lazy'' lists, the \HOL{} theory of|(}
+
+The theory `llist` contains the definition of a type of possibly
+infinite sequences.  This type is similar to the "lazy lists" of
+programming languages like Haskell, hence the name of the theory.
+The `llist` theory has a number of constants that are analogous
+to constants in the theory of finite lists.  The `llist` versions
+of these constants have the same names, but with a capital '`L`'
+prepended.  Thus, some of the core constants in this theory are:
+
+```
+   LNIL  : 'a llist
+   LCONS : 'a -> 'a llist -> 'a llist
+   LHD   : 'a llist -> 'a option
+   LTL   : 'a llist -> 'a llist option
+```
+
+The `LHD` and `LTL` constants return `NONE` when applied to the
+empty sequence, `LNIL`.  This use of an option type is another
+way of modelling the essential partiality of these constants.
+(In the theory of lists, the analogous `HD` and `TL` functions
+simply have unspecified values when applied to empty lists.)
+
+The type `llist` is not inductive, and there is no primitive
+recursion theorem supporting the definition of functions that
+have domains of type `llist`.  Rather, `llist` is a coinductive
+type, and has an axiom that justifies the definition of
+(co-)recursive functions that map *into* the `llist` type:
+
+```
+   >>__ load "llistTheory"; open llistTheory
+   ##thm llist_Axiom
+```
+
+An equivalent form of the above is
+
+```
+##thm llist_Axiom_1
+```
+
+Other constants in the theory `llist` include `LMAP`, `LFINITE`,
+`LNTH`, `LTAKE`, `LDROP`, and `LFILTER`.  Their types are
+\index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for possibly infinite sequences}
+
+```
+   LMAP    : ('a -> 'b) -> 'a llist -> 'b llist
+   LFINITE : 'a llist -> bool
+   LNTH    : num -> 'a llist -> 'a option
+   LTAKE   : num -> 'a llist -> 'a list option
+   LDROP   : num -> 'a llist -> 'a llist option
+   LFILTER : ('a -> bool) -> 'a llist -> 'a llist
+```
+
+They are characterised by the following theorems
+
+```
+##thm LMAP
+##thm LFINITE_THM
+##thm LNTH_THM
+##thm LTAKE_THM
+##thm LDROP_THM
+##thm LFILTER_THM
+```
+
+**Concatenation.**
+Two lazy lists may be concatenated by `LAPPEND` (written below
+using its infix Unicode form `++`$_l$).  If the first lazy list
+is infinite, elements of the second are inaccessible in the
+result.  A lazy list of lazy lists can be flattened to a lazy
+list by `LFLATTEN`.
+
+```
+##thm LAPPEND
+##thm LFLATTEN_THM
+```
+
+**Lists and lazy lists.**
+Mapping back and forth from lists to lazy lists is accomplished
+by `fromList` and `toList`:
+
+```
+##thm fromList_def
+##thm toList_THM
+```
+
+Note that `toList ll = NONE` when `ll` is infinite.
+
+**Proof principles.**
+Finally, there are two very important proof principles for
+proving that two `llist` values are equal.  The first states that
+two sequences are equal if they return the same prefixes of
+length $n$ for all possible values of $n$:
+
+```
+##thm LTAKE_EQ
+```
+
+This theorem is subsequently used to derive the bisimulation
+principle:
+
+```
+##thm LLIST_BISIMULATION
+```
+
+The principle of bisimulation states that two `llist` values
+$l_1$ and $l_2$ are equal if (and only if) it is possible to find
+a relation $R$ such that
+
+- $R$ relates the two values, i.e., $R\;l_1\;l_2$; and
+- if $R$ holds of any two values $l_3$ and $l_4$, then either
+  - both $l_3$ and $l_4$ are empty; or
+  - the head elements of $l_3$ and $l_4$ are the same, and the
+    tails of those two values are again related by $R$
+
+Of course, a possible $R$ would be equality itself, but the
+strength of this theorem is that other, more convenient relations
+can also be used.
+\index{lazy lists, the HOL theory of@``lazy'' lists, the \HOL{} theory of|)}
+
+### Labelled paths (`path`)
+
+\index{labelled paths, the HOL theory of@labelled paths, the \HOL{} theory of|(}
+\index{reduction sequences, the HOL theory of@reduction sequences, the \HOL{} theory of|(}
+\index{paths (reduction sequences), the HOL theory of@paths (reduction sequences), the \HOL{} theory of|(}
+
+The theory `path` defines a binary type operator
+$(\alpha,\beta)\,\mathtt{path}$, which stands for possibly
+infinite paths of the following form
+
+$$
+\alpha_1 \stackrel{\beta_1}{\longrightarrow}
+\alpha_2 \stackrel{\beta_2}{\longrightarrow}
+\alpha_3 \stackrel{\beta_3}{\longrightarrow} \cdots
+\alpha_n \stackrel{\beta_n}{\longrightarrow}
+\alpha_{n+1} \stackrel{\beta_{n+1}}{\longrightarrow} \cdots
+$$
+
+The `path` type is thus an appropriate model for reduction
+sequences, where the $\alpha$ parameter corresponds to "states",
+and the $\beta$ parameter corresponds to the labels on the
+arrows.
+
+The model of $(\alpha,\beta)\,\mathtt{path}$ is
+$\alpha \times ((\alpha\times\beta)\,\mathtt{llist})$.  The type
+of paths has two constructors:
+
+```
+   stopped_at : 'a -> ('a,'b) path
+   pcons      : 'a -> 'b -> ('a,'b) path -> ('a,'b) path
+```
+
+The `stopped_at` constructor returns a path containing just one
+state, and no transitions.  (Thus, the reduction sequence has
+"stopped at" this state.)  The `pcons` constructor takes a
+state, a label, and a path, and returns a path which is now
+headed by the state argument, and which moves from that state
+via the label argument to the path.  Graphically,
+$\mathtt{pcons}\;x\;l\;p$ is equal to
+
+$$
+x \stackrel{l}{\longrightarrow}
+\underbrace{p_1 \stackrel{l_1}{\longrightarrow} p_2
+  \stackrel{l_2}{\longrightarrow} \cdots\quad}_p
+$$
+
+Other constants defined in theory `path` include
+\index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for labelled paths}
+
+```
+   finite  : ('a,'b) path -> bool
+   first   : ('a,'b) path -> 'a
+   labels  : ('a,'b) path -> 'b llist
+   last    : ('a,'b) path -> 'a
+   length  : ('a,'b) path -> num option
+   okpath  : ('a -> 'b -> 'a -> bool) -> ('a,'b) path -> bool
+   pconcat : ('a,'b) path -> 'b -> ('a,'b) path -> ('a,'b) path
+   pmap    : ('a -> 'c) -> ('b -> 'd) -> ('a,'b)path -> ('c,'d)path
+```
+
+The `first` function returns the first element of a path.  There
+always is such an element, and the defining equations are
+
+```
+>>__ load "pathTheory"
+>>__ open pathTheory;
+##thm first_thm
+```
+
+On the other hand, the `last` function does not always have a
+well-specified value, though it still has nice characterising
+equations:
+
+```
+##thm last_thm
+```
+
+The theorem for `finite` has a similar feel, but has a definite
+value (`F`, or *false*) on infinite paths, whereas the value of
+`last` on such paths is unspecified:
+
+```
+##thm finite_thm
+```
+
+The function `pconcat` concatenates two paths, linking them with
+a provided label.  If the first path is infinite, then the result
+is equal to that first path.  The defining equation is
+
+```
+##thm pconcat_thm
+```
+
+These equations are true even when the first argument to
+`pconcat` is an infinite path.
+
+The `okpath` predicate tests whether or not a path is a valid
+transition given a ternary transition relation.  Its
+characterising theorem is
+
+```
+##thm okpath_thm
+```
+
+There is also an induction principle that simplifies reasoning
+about finite $R$-paths:
+
+```
+##thm finite_okpath_ind
+```
+
+One can show that a set `P` of paths are all $R$-paths with the
+co-induction principle:
+
+```
+##thm okpath_co_ind
+```
+\index{labelled paths, the HOL theory of@labelled paths, the \HOL{} theory of|)}
+\index{reduction sequences, the HOL theory of@reduction sequences, the \HOL{} theory of|)}
+\index{paths (reduction sequences), the HOL theory of@paths (reduction sequences), the \HOL{} theory of|)}
+
+### Character strings (`string`)
+
+\label{sec:strings}
+\index{strings, the HOL theory of@strings, the \HOL{} theory of|(}
+
+The theory `string` defines a type of characters and a type of
+finite strings built from those characters, along with a useful
+suite of definitions for operating on strings.
+
+**Characters.**
+\index{characters, the HOL theory of@characters, the \HOL{} theory of}
+The type `char` is represented by the numbers less than 256.
+Two constants are defined: `CHR : `$\konst{num}\to\konst{char}$
+and `ORD : `$\konst{char}\to\konst{num}$.  The following
+theorems hold:
+
+```
+  CHR_ORD  |- !a. CHR (ORD a) = a
+  ORD_CHR  |- !r. r < 256 = (ORD (CHR r) = r)
+```
+
+\index{character literals}
+Character literals can also be entered using ML syntax, with a
+hash character immediately followed by a string literal of length
+one.  Thus:
+
+```
+>> load "stringTheory";
+>> val t = ``f #"c" #"\n"``;
+
+>> dest_comb ``#"\t"``;
+```
+
+**Strings.**
+The type `string` is an alias for the type `char list`.  All
+functions and predicates over lists are thus available for use
+over strings.  Some of these constants are overloaded so that
+they are printed (and can be parsed) with names that are more
+appropriate for the particular case of lists of characters.
+
+For example, `NIL` and `CONS` over strings have alternative
+names `EMPTYSTRING` and `STRING` respectively:
+
+\index{EMPTYSTRING, the HOL constant@\holtxt{EMPTYSTRING}, the \HOL{} constant}
+\index{STRING, the HOL constant@\holtxt{STRING}, the \HOL{} constant}
+```
+   EMPTYSTRING : string
+   STRING      : char -> string -> string
+```
+
+\index{string literals}
+The HOL parser maps the syntax `""` to `EMPTYSTRING`, and the HOL
+printer inverts this.  The parser expands string literals of the
+form `"`$c_1\,c_2\,\ldots\,c_n$`"` to the compound term
+
+$$
+\mathtt{STRING}\;c_1\;(\mathtt{STRING}\;c_2\,\ldots\,
+(\mathtt{STRING}\;c_{n-1}\;(\mathtt{STRING}\;
+c_n\;\mathtt{EMPTYSTRING}))\,\ldots\,)
+$$
+
+Of course, one could also write
+
+```
+>> ``[#"a"; #"b"]``;
+```
+
+String literals can be constructed using the various special
+escape sequences that are used in ML.  For example, `\n` for the
+newline character, and a backslash followed by three decimal
+digits for characters of the given number.
+
+```
+>> val t = ``"foo bar\n\001"``;
+```
+
+Note that if one wants to use the control-character syntax with
+the caret that the pretty-printer has chosen to use in printing
+the given string, and this occurs inside a quotation, then the
+caret will need to be doubled.  (See Section
+\ref{sec:quotation-antiquotation}.)
+
+As with numerals, string literals can be injected into other
+types, where it might make sense to have string literals appear
+to inhabit types in addition to the core system's `string` type.
+Such literals can be written with different delimiters to make it
+clear that such an injection has occurred.  For more on this
+facility, see the REFERENCE manual's description of the
+`add_strliteral_form` function.
+
+There is also a destructor function `DEST_STRING` for strings
+which returns an `option` type:
+
+```
+>>__ open stringTheory;
+##thm DEST_STRING_def
+```
+
+**Case expressions.**
+\index{case expressions!over strings}
+Compound HOL expressions that branch based on whether a term is
+an empty or non-empty string can be written with the surface
+syntax
+
+```
+   case s
+    of "" => e1
+     | STRING c rst => e2
+```
+
+Such an expression is actually a case-expression over the
+underlying list, and so the underlying constant is that for
+lists.
+
+**Length and concatenation.**
+A standard function `LENGTH` can be written `STRLEN` when applied
+to a string, and `APPEND` can be written as `STRCAT`.  There are
+also theorems characterising these constants in `stringTheory`,
+though they are simply instantiations of results from
+`listTheory`:
+
+```
+   STRLEN_THM
+     |- (STRLEN "" = 0) /\
+        (STRLEN (STRING c s) = 1 + STRLEN s)
+
+   STRCAT_EQNS =
+     |- (STRCAT "" s = s) /\
+        (STRCAT s "" = s) /\
+        (STRCAT (STRING c s1) s2 = STRING c (STRCAT s1 s2))
+```
+
+**Strings into numbers, and *vice versa*.**
+\index{strings, the HOL theory of@strings, the \HOL{} theory of!converting to and from numbers}
+\index{numerals, in HOL logic@numerals, in \HOL{} logic!parsing/printing of in the logic}
+
+>>__ load "ASCIInumbersTheory";
+>>__ open ASCIInumbersTheory
+
+It is natural to want to convert strings to and from (natural)
+numbers.  Constants supporting this for a variety of bases ($2$,
+$8$, $10$, and $16$) are defined in the theory
+`ASCIInumbersTheory`.  There the constants are named according to
+the scheme
+
+$$
+\mathtt{num\_}\{\mathtt{to},\mathtt{from}\}\mathtt{\_}\{\mathtt{bin},\mathtt{oct},\mathtt{dec},\mathtt{hex}\}\mathtt{\_string}
+$$
+
+making for a total of eight constants.  The two decimal constants
+are also available under the (overloaded) names `toString` and
+`toNum`.  The natural theorem expressing these last two are
+inverse is
+
+```
+##thm toNum_toString
+```
+
+and there is also a theorem specifying how long the strings
+produced by `toString` will be:
+
+```
+##thm LENGTH_num_to_dec_string
+```
+\index{strings, the HOL theory of@strings, the \HOL{} theory of|)}
+
+## Collections
+
+Several different notions of a collection of elements are
+available in HOL: sets, multisets, relations, and finite maps.
+
+### Sets (`pred_set`)
+
+\label{sec:theory-of-sets}
+\index{sets, the HOL theory of@sets, the \HOL{} theory of|(}
+
+>>__ open pred_setTheory
+
+An extensive development of set theory is available in the
+theory `pred_set`.  Sets are represented by functions of the type
+$\alpha\to\konst{bool}$, i.e., they are so-called characteristic
+functions.
+\index{characteristic functions!as basis for \HOL{} theory of sets}
+One can use the type abbreviation $\alpha\;\konst{set}$ instead
+of $\alpha\to\konst{bool}$.  Sets may be finite or infinite.  All
+of the elements in a set must have the same type.
+
+*Set membership* is the basic notion that formalized set theory
+is based on.  In HOL, membership is represented by a the infix
+constant `IN`, defined in theory `bool` for convenience.
+
+```
+##thm IN_DEF
+```
+
+The `IN` operator is merely a way of applying the characteristic
+function to an item, as the following trivial consequence of the
+definition shows:
+
+```
+##thm SPECIFICATION
+```
+
+Two sets are equal if they have the same elements.
+
+```
+##thm EXTENSION
+```
+
+The negation of set-membership is not a separate constant, but is
+available as a convenient overload (in both ASCII and Unicode
+forms).  Thus, instead of writing `~(e IN s)`, one can instead
+write `e NOTIN s` or `e ∉ s`.
+
+**Empty and universal sets.**
+\index{universal set}
+The empty set is the characteristic function that is constantly
+false.  The constant `EMPTY` denotes the empty set; it may be
+written as `{}` and `∅` (U+2205).  The universal set, `UNIV`, on
+a type is the characteristic function that is always true for
+elements of that type.
+
+```
+##thm EMPTY_DEF
+##thm UNIV_DEF
+```
+
+In addition to `UNIV` (perhaps with a type annotation `:'a set`),
+one may also write `univ(:'a)` to represent the universal set
+over type `:'a`.  The Unicode syntax `𝕌(:'a)` means the same.
+The Unicode symbol for $\mathbb{U}$ is U+1D54C, and may not exist
+in many fonts.
+
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!universal sets}
+One of these forms will be used to print `UNIV` by default.  The
+user trace (see Section \ref{sec:traces}) `"Univ pretty-printing"`
+can be set to zero to cancel this behaviour.  Additionally, the
+trace `"Unicode Univ printing"` can be used to stop the U+1D54C
+syntax from being used, even if the Unicode trace is set.
+
+The symbols `univ` and `𝕌` are high-priority prefixes (see
+Section \ref{sec:parseprint:fixities}), and overloaded patterns
+(see Section \ref{sec:parser:syntactic-patterns}) mapping a value
+of the itself type to the corresponding `UNIV` constant.  One
+effect is that one can write things like
+
+```
+   FINITE univ(:'a)
+```
+
+without the need for parentheses around `FINITE`'s argument.
+
+**Insertion, union, and intersection.**
+The insertion (`INSERT`, written infix) of an element into a set
+is defined with a set comprehension.  Set comprehension is
+discussed in the next subsection.  Set union (`UNION`, written
+infix) and intersection (`INTER`, also infix) are given their
+usual definitions by set comprehension.
+
+```
+##thm INSERT_DEF
+##thm UNION_DEF
+##thm INTER_DEF
+```
+
+`UNION` and `INTER` are binary operations.  Indexed union and
+intersection operations, i.e., $\bigcup_{i\in P}$ and
+$\bigcap_{i\in P}$ are provided by the definitions of `BIGUNION`
+and `BIGINTER`.
+
+```
+##thm BIGUNION
+##thm BIGINTER
+```
+
+Both `BIGUNION` and `BIGINTER` reduce a set of sets to a set and
+thus have the type
+$((\alpha\to\konst{bool})\to\konst{bool})\to(\alpha\to\konst{bool})$.
+
+**Subsets.**
+Set inclusion (`SUBSET`, infix), proper set inclusion (`PSUBSET`,
+infix), and power set (`POW`) are defined as follows:
+
+```
+##thm SUBSET_DEF
+##thm PSUBSET_DEF
+##thm POW_DEF
+```
+
+**Set difference and complement.**
+The difference between two sets (`DIFF`, infix) is defined by a
+set comprehension.  Based on that, the deletion of a single
+element (`DELETE`, infix) from a set is straightforward.  Since
+the universe of a type is always available via `UNIV`, the
+complement (`COMPL`) of a set may be taken.
+
+```
+##thm DIFF_DEF
+##thm DELETE_DEF
+##thm COMPL_DEF
+```
+
+**Functions on sets.**
+The image of a function $f:\alpha\to\beta$ on a set (`IMAGE`) is
+defined with a set comprehension.
+
+```
+##thm IMAGE_DEF
+```
+
+Injections, surjections, and bijections between sets are defined
+as follows:
+
+```
+##thm INJ_DEF
+##thm68 SURJ_DEF
+##thm BIJ_DEF
+```
+
+**Finite sets.**
+\index{finiteness!of sets}
+The finite sets (`FINITE`) are defined inductively as those built
+from the empty set by a finite number of insertions.
+
+```
+##thm FINITE_DEF
+```
+
+A set is infinite iff it is not finite, and there is an
+abbreviation in the system that parses `"INFINITE s"` into
+`"~FINITE s"`.  The pretty-printer reverses this transformation.
+
+The finite sets have an induction theorem:
+\index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for finite sets}
+
+```
+##thm FINITE_INDUCT
+```
+
+As mentioned, set operations apply to both finite and infinite
+sets.  However, some operations, such as cardinality (`CARD`),
+are only defined for finite sets.  (See Section
+\ref{ss:cardinals} for the theory of cardinality of possibly
+infinite sets.)
+\index{cardinality of (finite) sets}
+
+```
+##thm CARD_DEF
+```
+
+Since the finite and infinite sets are dealt with uniformly in
+`pred_set`, properties of operations on finite sets must
+explicitly include constraints about finiteness.  For example
+the following theorem relating cardinality and subsets is only
+true for finite sets.
+
+```
+##thm CARD_PSUBSET
+```
+
+An extensive suite of theorems dealing with finiteness and
+cardinality is available in `pred_set`.
+
+**Cross product.**
+The product of two sets (`CROSS`, infix) is defined with a set
+comprehension.
+
+```
+##thm CROSS_DEF
+```
+
+Cardinality and cross product are related by the following
+theorem:
+
+```
+##thm CARD_CROSS
+```
+
+**Recursive functions on sets.**
+Recursive functions on sets may be defined by wellfounded
+recursion.  Usually, the totality of such a function is
+established by measuring the cardinality of the (finite) set.
+However, another theorem may be used to justify a fold (`ITSET`)
+for finite sets.  Provided a function $f:\alpha\to\beta\to\beta$
+obeys a condition known as *left-commutativity*, namely,
+$f\;x\;(f\;y\;z) = f\;y\;(f\;x\;z)$, then $f$ can be applied by
+folding it on the set in a tail-recursive fashion.
+
+```
+##thm ITSET_THM
+
+##thm ITSET_EMPTY
+
+##thm COMMUTING_ITSET_INSERT
+```
+
+A recursive version is also available:
+
+```
+##thm COMMUTING_ITSET_RECURSES
+```
+
+For the full derivation, see the sources of `pred_set`.  The
+definition of `ITSET` allows, for example, the definition of
+summing the results of a function on a finite set of elements,
+from which a recursive characterization and other useful
+theorems are derived.
+
+```
+##thm SUM_IMAGE_DEF
+##thm SUM_IMAGE_THM
+```
+
+**Other definitions and theorems.**
+There are more definitions in `pred_set`, but they are not as
+heavily used as the ones presented here.  Similarly, most
+theorems in `pred_set` relate the various common set operations
+to each other, but do not express any deep theorems of set
+theory.
+
+However, one notable theorem is Koenig's Lemma, which states
+that every finitely branching infinite tree has an infinite
+path.  There are many ways to formulate this theorem, depending
+on how the notion of tree is formalized.  In HOL's formulation,
+the tree is characterised by making various assumptions about
+the finite-ness or otherwise of elements reachable using a
+relation `R`.  Then the following version of Koenig's Lemma is
+stated and proved:
+
+```
+##thm KoenigsLemma
+```
+
+#### Syntax for sets
+
+\index{set theory notation}
+\label{sec:set-syntax}
+
+The special purpose set-theoretic notations
+`{`$t_1; t_2; \ldots; t_n$`}` and `{`$t$` | `$p$`}` are
+recognized by the HOL parser and printer when the theory
+`pred_set` is loaded.
+
+The normal interpretation of `{`$t_1;t_2;\ldots;t_n$`}` is the
+finite set containing just $t_1, t_2, \ldots, t_n$.  This can be
+modelled by starting with the empty set and performing a
+sequence of insertions.  For example, `{1;2;3;4}` parses to
+
+```
+   1 INSERT (2 INSERT (3 INSERT (4 INSERT EMPTY)))
+```
+
+**Set comprehensions.**
+The normal interpretation of `{`$t$` | `$p$`}` is the set of all
+$t$s such that $p$.  In HOL, such syntax parses to:
+
+`GSPEC(\(`$x_1$`,…,`$x_n$`).(`$t$`,`$p$`))`
+
+where $x_1, \ldots, x_n$ are those free variables that occur in
+both $t$ and $p$ if both have at least one free variable.  If
+$t$ or $p$ has no free variables, then $x_1,\ldots,x_n$ are
+taken to be the free variables of the other term.  If both terms
+have free variables, but there is no overlap, then an error
+results.  The order in which the variables are listed in the
+variable structure of the paired abstraction is an unspecified
+function of the structure of $t$ (it is approximately left to
+right).  For example,
+
+```
+   {p+q | p < q /\ q < r}
+```
+
+parses to:
+
+```
+   GSPEC(\(p,q). ((p+q), (p < q /\ q < r)))
+```
+
+where `GSPEC` is characterized by:
+
+```
+##thm GSPECIFICATION
+```
+
+This somewhat cryptic specification can be understood by
+exercising an example.  The syntax
+
+```
+   a IN {p+q | p < q /\ q < r}
+```
+
+is mapped by the HOL parser to
+
+```
+   ##parsetm a IN GSPEC(\(p,q). ((p+q), (p < q /\ q < r)))
+```
+
+which, by `GSPECIFICATION`, is equal to
+
+```
+   ?x. (a,T) = (\(p,q). ((p+q), (p < q /\ q < r))) x
+```
+
+The existentially quantified variable `x` has a pair type, so it
+can be replaced by a pair `(p,q)` and a paired-$\beta$-reduction
+can be performed, yielding
+
+```
+   ?(p,q). (a,T) = ((p+q), (p < q /\ q < r))
+```
+
+which is equal to the intended meaning of the original syntax:
+
+```
+   ?(p,q). (a = p+q) /\ (p < q /\ q < r)
+```
+
+**Unambiguous set comprehensions.**
+There is also an unambiguous set comprehension syntax, which
+allows the user to specify which variables are to be quantified
+over in the abstraction that is the argument of `GSPEC`.  Terms
+of the form
+
+```
+   { t | vs | P }
+```
+
+generate sets containing values of the form given by `t`, where
+the variables mentioned in `vs` must satisfy the constraint
+`P`.  For example, the set
+
+```
+   { x + y | x | x < y }
+```
+
+is the set of numbers from `y` up to but not including `2 * y`.
+The set can be "read" computationally: draw out all those `x`
+that are less than `y`, and to each such `x` add `y`, thereby
+generating a set of numbers.
+
+In the example above, the underlying `GSPEC` term will be
+
+```
+   GSPEC (\x. (x + y, x < y))
+```
+
+The `vs` component of the unambiguous notation must be a single
+"variable structure" that might appear underneath a possibly
+paired abstraction as in Section \ref{HOL-varstruct}.  In other
+words, this
+
+```
+   { x + y | (x,y) | x < y }
+```
+
+is fine, but this
+
+```
+   { x + y | x y | x < y }
+```
+
+will raise an error.  (Additionally, the outermost parentheses
+around pairs in the `vs` position can be omitted.)
+
+The unambiguous notation is printed by the pretty-printer
+whenever the set to be printed can not be expressed with the
+default notation, or if the trace variable with name
+`pp_unambiguous_comprehensions` is set to `1`.  (If the same
+trace is set to `2`, then the unambiguous notation will never be
+used.)
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!set comprehensions}
+\index{sets, the HOL theory of@sets, the \HOL{} theory of|)}
+
+#### Decision procedure for set-theoretic theorems
+
+\index{set theory decision procedure}
+\label{sec:set-decision}
+
+HOL provides some tools (in `bossLib`) to automate the proof of
+some routine `pred_set` theorems by a reduction to first-order
+logic, ported from HOL Light.  They are based on `metisLib` (see
+Section \ref{sec:metisLib}).  Below are the entry-points: (see
+the REFERENCE manual for more details.)
+
+```
+   SET_TAC     : thm list -> tactic
+   ASM_SET_TAC : thm list -> tactic
+   SET_RULE    : term -> thm
+```
+
+The difference between `SET_TAC` and `ASM_SET_TAC` is that the
+latter one also makes use of assumptions.  With them, many
+simple set-theoretic results can be directly proved without
+finding needed lemmas in `pred_setTheory`.  For instance, a
+simple lemma from `util_probTheory`:
+
+```
+Theorem DISJOINT_RESTRICT_L :
+  !s t c. DISJOINT s t ==> DISJOINT (s INTER c) (t INTER c)
+Proof SET_TAC []
+QED
+```
+
+### Multisets (`bag`)
+
+\label{multiset}
+
+Multisets, also known as *bags*, are similar to sets, except
+that they allow repeat occurrences of an element.  Whereas sets
+are represented by functions of type $\alpha\to\konst{bool}$,
+which signal the presence, or absence, of an element, multisets
+are represented by functions of type $\alpha\to\konst{num}$,
+which give the multiplicity of each element in the multiset.
+Multisets may be finite or infinite.
+
+The type abbreviations $\alpha\;\konst{multiset}$ and
+$\alpha\;\konst{bag}$ can be used instead of
+$\alpha\to\konst{num}$.
+
+**Empty multiset.**
+The empty bag has no elements.  Thus, the function implementing
+it returns $0$ for every input.
+
+```
+>>__ load "bagTheory"; open bagTheory;
+##thm EMPTY_BAG
+```
+
+The special syntax `{||}` (the analogue of `[]` for lists, and
+`{}` for sets) is used for both printing and parsing, but the
+underlying constant is indeed called `EMPTY_BAG`, and this name
+can also be passed to the parser.
+
+**Membership.**
+Much of the theory can be based on the notion of membership in a
+bag.  There are two notions: does an element occur at least $n$
+times in a bag (`BAG_INN`); and does an element occur in a bag
+at all (`BAG_IN`).
+
+```
+##thm BAG_INN
+##thm BAG_IN
+```
+
+Two bags are equal if all elements have the same tally.
+
+```
+##thm BAG_EXTENSION
+```
+
+**Sub-multiset.**
+A sub-bag relationship (`SUB_BAG`) holds between $b_1$ and $b_2$
+provided that every element in $b_1$ occurs at least as often in
+$b_2$.  The notion of a proper sub-bag (`PSUB_BAG`) is easily
+defined.
+
+```
+##thm SUB_BAG
+##thm PSUB_BAG
+```
+
+**Insertion.**
+Inserting an element into a bag (`BAG_INSERT`) updates the tally
+for that element and leaves the others unchanged.
+
+```
+##thm BAG_INSERT
+```
+
+Explicitly-given multisets are supported by the syntax
+`{|`$t_1; t_2; \ldots; t_n$`|}`, where there may, of course, be
+repetitions.  This is modelled by starting with the empty
+multiset and performing a sequence of insertions.  For example,
+`{|1; 2; 3; 2; 1|}` parses to
+
+```
+   BAG_INSERT 1 (BAG_INSERT 2 (BAG_INSERT 3
+                                 (BAG_INSERT 2 (BAG_INSERT 1 {||}))))
+```
+
+**Union and difference.**
+The union (`BAG_UNION`) and difference (`BAG_DIFF`) operations
+on bags both reduce to an arithmetic calculation on their
+elements.  Deleting a single element from a bag may be expressed
+by taking the multiset difference with a single-element
+multiset; however, there is also a relational presentation
+(`BAG_DELETE`) which relates its first and last arguments only
+if the first contains exactly one more occurrence of the middle
+argument than the last.  This is not the same as using
+`BAG_DIFF` to remove a one-element bag because it insists that
+the element being removed actually appear in the larger bag.
+
+```
+##thm BAG_UNION
+##thm BAG_DIFF
+##thm BAG_DELETE
+```
+
+**Intersection, merge, and filter.**
+The intersection of two bags (`BAG_INTER`) takes the pointwise
+minimum.  The dual operation, merging (`BAG_MERGE`), takes the
+pointwise maximum.  A bag can be 'filtered' by a set to return
+the bag where all the elements not in the set have been dropped
+(`BAG_FILTER`).
+
+```
+##thm BAG_INTER
+##thm BAG_MERGE
+##thm BAG_FILTER_DEF
+```
+
+**Sets and multisets.**
+Moving between bags and sets is accomplished by the following
+two definitions.
+
+```
+##thm SET_OF_BAG
+##thm BAG_OF_SET
+```
+
+**Image.**
+Taking the image of a function on a multiset to get a new
+multiset seems to be simply a matter of applying the function to
+each element of the multiset.  However, there is a problem if
+$f$ is non-injective and the multiset is infinite.  For example,
+take the multiset consisting of all the natural numbers and
+apply $\lambda x.\;1$ to each element.  The resulting multiset
+would hold an infinite number of $1$s.  To avoid this requires
+some constraints: for example, stipulating that the function be
+only finitely non-injective, or that the input multiset be
+finite.  Such conditions would be onerous in proof; the
+compromise is to map the multipicity of problematic elements to
+$0$.
+
+```
+##thm BAG_IMAGE_DEF
+```
+
+**Finite multisets.**
+\index{finiteness!of multi-sets}
+The finite multisets (`FINITE_BAG`) are defined inductively as
+those built from the empty bag by a finite number of insertions.
+
+```
+##thm FINITE_BAG
+```
+
+The finite multisets have an induction theorem, and also a
+strong induction theorem.
+\index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for finite bags}
+
+```
+##thm FINITE_BAG_INDUCT
+
+##thm STRONG_FINITE_BAG_INDUCT
+```
+
+The cardinality (`BAG_CARD`) of a multiset counts the total
+number of occurrences.  It is only specified for finite
+multisets.
+
+```
+##thm BAG_CARD_THM
+```
+
+**Recursive functions on multisets.**
+Recursive functions on multiset may be defined by wellfounded
+recursion.  Usually, the totality of such a function is
+established by measuring the cardinality of the (finite)
+multiset.  However, a fold (`ITBAG`) for finite sets is provided.
+Provided a function $f:\alpha\to\beta\to\beta$ obeys a condition
+known as *left-commutativity*, namely,
+$f\;x\;(f\;y\;z) = f\;y\;(f\;x\;z)$, then $f$ can be applied by
+folding it on the multiset in a tail-recursive fashion.
+
+```
+##thm ITBAG_EMPTY
+##thm COMMUTING_ITBAG_INSERT
+```
+
+A recursive version is also available:
+
+```
+##thm COMMUTING_ITBAG_RECURSES
+```
+
+### Relations (`relation`)
+
+\label{relation}
+
+Mathematical relations can be represented in HOL by the type
+$\alpha\to\beta\to\konst{bool}$.  (In most applications, the
+type of a relation is an instance of
+$\alpha\to\alpha\to\konst{bool}$, but the extra generality
+doesn't hurt.)  The theory `relation` provides definitions of
+basic properties and operations on relations, defines various
+kinds of orders and closures, defines wellfoundedness and proves
+the wellfounded recursion theorem, and develops some basic
+results used in Term Rewriting.
+
+**Basic properties.**
+The following basic properties of relations are defined.
+
+```
+>>__ open relationTheory
+##thm transitive_def
+##thm reflexive_def
+##thm irreflexive_def
+##thm symmetric_def
+##thm antisymmetric_def
+##thm equivalence_def
+##thm trichotomous
+##thm total_def
+```
+
+**Basic operations.**
+The following basic operations on relations are defined: the
+empty relation (`EMPTY_REL`, or $\emptyset\subr$), relation
+composition (`O`, or $\circ\subr$, infix), inversion (`inv`, or
+$\_^{\mathsf{T}}$ (suffix superscript 'T')), domain (`RDOM`),
+and range (`RRANGE`).
+
+```
+##thm EMPTY_REL_DEF
+##thm O_DEF
+##thm inv_DEF
+##thm RDOM_DEF
+##thm RRANGE
+```
+
+Set operations lifted to work on relations include subset
+(`RSUBSET`, or $\subseteq\subr$, infix), union (`RUNION`, or
+$\cup\subr$, infix), intersection (`RINTER`, or $\cap\subr$,
+infix), complement (`RCOMPL`), and universe (`RUNIV`, or
+$\mathbb{U}\subr$).
+\label{def:rsubset}
+
+```
+##thm RSUBSET
+##thm RUNION
+##thm RINTER
+##thm RCOMPL
+##thm RUNIV
+```
+
+**Orders.**
+A sequence of definitions capturing various notions of order are
+made in `relation`.
+
+```
+##thm PreOrder
+##thm Order
+##thm WeakOrder
+##thm StrongOrder
+##thm LinearOrder
+##thm WeakLinearOrder
+##thm StrongLinearOrder
+```
+
+**Closures.**
+The transitive closure (`TC`) of a relation
+$R:\alpha\to\alpha\to\konst{bool}$ is defined inductively, as
+the least relation including $R$ and closed under transitivity.
+Similarly, the reflexive-transitive closure (`RTC`) is defined
+to be the least relation closed under transitivity and
+reflexivity.  The ASCII syntax for the transitive closure
+`R^+` is meant to suggest the prettier `R⁺`.  Similarly, `R^*`
+is meant to suggest `R∗`.  Indeed, with Unicode enabled,
+transitive closure will print with a superscript `+`, and `RTC`
+will print as a superscript asterisk.
+
+From the underlying definitions, one can recover the initial
+rules:
+
+```
+##thm TC_RULES
+##thm RTC_RULES
+##thm RTC_RULES_RIGHT1
+```
+
+Notice that `RTC_RULES`, in keeping with the definition of
+`RTC`, extends an `R`-step from `x` to `y` with a sequence of
+`R`-steps from `y` to `z` to construct `R* x z`.  The theorem
+`RTC_RULES_RIGHT1` first makes a sequence of `R` steps and then
+a single `R` step to form `R* x z`.  Similar alternative
+theorems are proved for case analysis and induction.
+
+For example, `TC_CASES1` and `TC_CASES2` in the following
+decompose `R+ x z` to either `R x y` followed by `R+ y z`
+(`TC_CASES1`) or `R+ x y` followed by `R y z` (`TC_CASES2`).
+
+```
+##thm TC_CASES1
+##thm TC_CASES2
+
+##thm RTC_CASES1
+##thm RTC_CASES2
+##thm RTC_CASES_RTC_TWICE
+```
+
+As well as the basic induction theorems for `TC` and `RTC`,
+there are so-called *strong* induction theorems, which have
+stronger induction hypotheses.
+
+```
+##thm TC_INDUCT
+##thm68 RTC_INDUCT
+##thm TC_STRONG_INDUCT
+##thm RTC_STRONG_INDUCT
+```
+
+Variants of these induction theorems are also available which
+break apart the closure from the left or right, as for the case
+analysis theorems.
+
+The reflexive (`RC`) and symmetric closures (`SC`) are
+straightforward to define.  The equivalence closure (`EQC`) is
+the symmetric then transitive then reflexive closure of $R$.
+When applied to an argument, as in `EQC R`, `EQC` is written
+with the suffix `^=`.  Note how the suffix binds more tightly
+than function application, so that in `EQC_DEF`, `RC` really is
+applied to the transitive closure of the symmetric closure of
+`R`.
+
+```
+##thm RC_DEF
+##thm SC_DEF
+##thm EQC_DEF
+```
+
+**Wellfounded relations.**
+\index{wellfounded relations!existence of minimal elements|(}
+
+A relation $R$ is wellfounded (`WF`) if every non-empty set has
+an $R$-minimal element.  Wellfoundedness is used to justify the
+principle of wellfounded induction (`WF_INDUCTION_THM`).
+
+```
+##thm WF_DEF
+##thm WF_INDUCTION_THM
+```
+
+The *wellfounded part* (`WFP`) of a relation can be inductively
+defined, from which its rules, case-analysis theorem and
+induction theorems may be derived.
+
+```
+##thm WFP_DEF
+##thm WFP_RULES
+##thm WFP_CASES
+##thm WFP_INDUCT
+##thm WFP_STRONG_INDUCT
+```
+
+Wellfoundedness can also be used to justify a general recursion
+theorem.  Intuitively, a collection of recursion equations can
+be admitted into the HOL logic with no loss of consistency
+provided that every possible sequence of recursive calls is
+finite.  Wellfounded relations are used to capture this notion:
+if there is a wellfounded relation $R$ on the domain of the
+desired function such that every sequence of recursive calls is
+$R$-decreasing, then the recursion equations specify a unique
+total function and the equations can be admitted into the
+logic.
+
+The recursion theorems `WFREC_COROLLARY` and `WF_RECURSION_THM`
+use the notion of a function restriction (`RESTRICT`) in order
+to force the recursive function to be applied to $R$-smaller
+arguments in recursive calls.
+
+```
+##thm RESTRICT_DEF
+##thm WFREC_COROLLARY
+
+##thm WF_RECURSION_THM
+```
+
+The theorems `WF_INDUCTION_THM` and `WFREC_COROLLARY` are used
+to automate recursive definitions; see Section \ref{TFL}.  A few
+basic operators for wellfounded relations are also defined,
+along with theorems stating that they propagate
+wellfoundedness.
+
+```
+##thm inv_image_def
+
+##thm WF_inv_image
+##thm WF_SUBSET
+##thm WF_TC
+##thm WF_EMPTY_REL
+```
+\index{wellfounded relations!existence of minimal elements}
+
+**Term Rewriting.**
+A few basic definitions from Term Rewriting theory (the diamond
+property (`diamond`), the Church-Rosser property (`CR` and
+`WCR`), and Strong Normalization (`SN`)) appear in `relation`.
+
+```
+##thm diamond_def
+##thm CR_def
+##thm WCR_def
+##thm SN_def
+```
+
+From those, Newman's Lemma is proved.
+
+```
+##thm Newmans_lemma
+```
+
+### Bisimulation for labelled transition systems (`bisimulation`)
+
+\label{bisimulation}
+
+HOL provides a minimal theory (`bisimulation`) for generating
+bisimulation and bisimulation relations \cite{Mil89} from any
+labelled transition relation of the type
+$\alpha\to\beta\to\alpha\to\konst{bool}$.  Suppose there is a
+user-defined labelled transition system (LTS) and `ts` is the
+transition relation in it, then `ts p l q` denotes a transition
+from $p$ to $q$ by an action $l$, i.e.,
+$p\overset{l}{\longrightarrow}q$.  A binary relation $R$ is
+called a *bisimulation* if `BISIM ts R` holds under the
+following definition:
+
+```
+>>__ load "bisimulationTheory";
+>>__ open bisimulationTheory;
+##thm BISIM_def
+```
+
+Furthermore, the bisimulation relation (or bisimilarity, usually
+denoted by $\sim$), `BISIM_REL ts`, is the *union* (in the sense
+of `RUNION`) of all bisimulations in this LTS, and it can be
+proven to be an equivalence relation: (the *original* definition
+hereafter)
+
+```
+##thm BISIM_REL_def
+##thm BISIM_REL_IS_EQUIV_REL
+```
+
+Bisimulation is a special case of coinduction, by far the most
+studied coinductive concept \cite{Sangiorgi2012}.  In practice
+it is hard to directly work with the above definition of
+`BISIM_REL`.  Partly for this reason, `BISIM_REL` is defined by
+the coinductive relation package (see Section
+\ref{sec:coinductive}):
+
+```
+CoInductive BISIM_REL :
+    !p q. (!l.
+            (!p'. ts p l p' ==> ?q'. ts q l q' /\ (BISIM_REL ts) p' q') /\
+            (!q'. ts q l q' ==> ?p'. ts p l p' /\ (BISIM_REL ts) p' q'))
+      ==> (BISIM_REL ts) p q
+End
+```
+
+which automatically generates the following coinduction
+principle:
+
+```
+##thm BISIM_REL_coind
+```
+
+A simple rewrite by `BISIM_def` shows that `BISIM_REL` defined
+in this way is actually equivalent to the original definition
+(which now becomes a theorem):[^bisim-original]
+
+```
+>> Q.SPECL [`ts`, `R`]
+           (REWRITE_RULE [GSYM BISIM_def, GSYM RSUBSET] BISIM_REL_coind);
+```
+
+[^bisim-original]: Starting with the *original definition* it is
+    not that easy to derive the coinduction principle, which is
+    very useful in practice.
+
+The bisimulation and bisimulation relation considered so far are
+the *strong* ones, in the sense that all involved transitions
+are *one-step* transitions.  To define *weak* bisimulation (and
+the corresponding weak bisimulation relation), beside the
+transition relation, the user must also designate a special
+unique action to be *invisible* (usually denoted by $\tau$).
+An *empty* transition (`ETS`) is the reflexive-transitive
+closure (`RTC`) of (one-step) invisible transitions:
+
+```
+##thm ETS_def
+```
+
+Then a *weak* transition (`WTS`) is a one-step transition (the
+action may be invisible) concatenated with two empty
+transitions:
+
+```
+##thm WTS_def
+```
+
+An empty transition `ETS ts tau p q` is usually denoted by
+$p\overset{\varepsilon}{\Longrightarrow}q$ (assuming `ts` and
+`tau` is clear from the context), and a weak transition
+`WTS ts tau p l q` is denoted by
+$p\overset{l}{\Longrightarrow}q$.  Note that a weak transition
+must have at least one transition (even it is $\tau$), while an
+empty transition may have no actual transition at all.  To
+simplify the informal definitions, we denote by
+$p\overset{\hat{a}}{\Longrightarrow}q$ the special notion of
+weak transitions such that, whenever the action $a$ is
+invisible, it is the same as
+$p\overset{\varepsilon}{\Longrightarrow}q$.
+
+A binary relation $R$ is a weak bisimulation if, whenever
+$p\;R\;q$,
+
+- $p\overset{a}{\longrightarrow}p'$ implies that there is $q'$
+  such that $q\overset{\hat{a}}{\Longrightarrow}q'$ and
+  $p'\;R\;q'$;
+- $q\overset{a}{\longrightarrow}q'$ implies that there is $p'$
+  such that $p\overset{\hat{a}}{\Longrightarrow}p'$ and
+  $p'\;R\;q'$.
+
+$p$ and $p$ are *weakly bisimilar*, written as $p\approx q$, if
+$p\;R\;q$ for some bisimulation $R$.
+
+Following the example of the strong case (including the use of
+the `CoInductive` command), below are the definition of weak
+bisimulation (`WBISIM`), the equivalent definition of weak
+bisimulation relation (`WBISIM_REL`) and the theorem saying
+`WBISIM_REL ts tau` is indeed an equivalence relation (in the
+LTS given by `ts` and `tau`):
+
+```
+##thm WBISIM_def
+##thm WBISIM_REL_def
+##thm WBISIM_REL_IS_EQUIV_REL
+```
+
+In `examples/CCS`, the HOL distribution includes a comprehensive
+formalization of Milner's Calculus of Communicating Systems
+(CCS) \cite{Mil89}, where the definitions of strong and weak
+bisimulations are based on the present `bisimulation` theory.
+
+### Finite maps (`finite_map`)
+
+\label{sec:finite-map}
+
+>>__ load "finite_mapTheory"; open finite_mapTheory;
+>>__ set_grammar_ancestry ["finite_map"]
+
+The theory `finite_map` formalizes a type
+$(\alpha,\beta)\,\mathtt{fmap}$ of finite functions.  These
+notionally have type $\alpha\to\beta$, but additionally have
+only finitely many elements in their domain.  Finite maps are
+useful for formalizing substitutions and arrays.  The
+representing type is $\alpha\to\beta+\konst{one}$, where only a
+finite number of the $\alpha$ map to a $\beta$ and the rest map
+to `one`.  The syntax $\alpha\,\mathtt{|->}\,\beta$ is recognized
+by the parser as an alternative to
+$(\alpha,\beta)\,\mathtt{fmap}$.
+
+**Basic notions.**
+The empty map (`FEMPTY`), the updating of a map (`FUPDATE`), the
+application of a map to an argument (`FAPPLY`), and the domain
+of a map (`FDOM`) are the main notions in the theory.
+
+```
+   FEMPTY  : 'a |-> 'b
+   FUPDATE : ('a |-> 'b) -> 'a # 'b -> ('a |-> 'b)
+   FAPPLY  : ('a |-> 'b) -> 'a -> 'b
+   FDOM    : ('a |-> 'b) -> 'a set
+```
+
+The HOL parser and printer will treat the syntax `f ' x` as the
+application of finite map `f` to argument `x`, i.e., as
+`FAPPLY f x`.  The notation `f |+ (k,v)` represents
+`FUPDATE f (k,v)`, i.e., the updating of finite map `f` by the
+pair `(k,v)`.  These are purely ASCII syntaxes, but the HOL
+printer and parser also support (and prefer, in the case of
+printing), $f\langle k\rangle$ for finite map application, and
+$f\langle k\mapsto v\rangle$ for `FUPDATE`.  As with lists (see
+Section \ref{sec:indexed-lists}), the update syntax between
+angle brackets supports multiple updates, allowing
+$f\langle k_1\mapsto v_1;\;k_2\mapsto v_2;\dots\rangle$.
+
+The basic constants have obscure definitions, from which more
+useful properties are then derived.  `FAPPLY_FUPDATE_THM`
+relates map update with map application.  `fmap_EXT` is an
+extensionality result: two maps are equal if they have the same
+domain and agree when applied to arguments in that domain.  One
+can prove properties of finite maps by induction on the
+construction of the map (`fmap_INDUCT`).  The cardinality of a
+finite map is just the cardinality of its domain (`FCARD_DEF`);
+from this a recursive characterization (`FCARD_FUPDATE`) is
+derived.
+
+```
+   ##thm FAPPLY_FUPDATE_THM
+   ##thm fmap_EXT
+   ##thm fmap_INDUCT
+   ##thm FCARD_DEF
+   ##thm FCARD_FUPDATE
+```
+
+Iterated updates (`FUPDATE_LIST`) to a map are useful.  The
+infix notation `|++` may also be used.  For example,
+`fm |++ [(k1,v1); (k2,v2)]` is equal to
+`(fm |+ (k1,v1)) |+ (k2,v2)`.
+
+```
+   ##thm FUPDATE_LIST
+   ##thm FUPDATE_LIST_THM
+```
+
+**Domain and range.**
+The domain of a finite map is the set of elements that it
+applies to; this can be characterized recursively
+(`FDOM_FUPDATE`).  The range of a map is defined in the usual
+way.
+
+```
+   ##thm FDOM_FUPDATE
+   ##thm FRANGE_DEF
+```
+
+A finite map may have its domain (`DRESTRICT`) or range
+(`RRESTRICT`) restricted by intersection with a set.  These
+notions have recursive versions as well (`DRESTRICT_FUPDATE` and
+`RRESTRICT_FUPDATE`).
+
+```
+   ##thm DRESTRICT_DEF
+   ##thm RRESTRICT_DEF
+   ##thm DRESTRICT_FUPDATE
+   ##thm RRESTRICT_FUPDATE
+```
+
+The removal of a single element from the domain of a map (`\\`,
+infix) is a simple application of `DRESTRICT`, but sufficiently
+useful to deserve its own definition.  Again, this concept has a
+alternate recursive presentation (`DOMSUB_FUPDATE_THM`).
+
+```
+   ##thm fmap_domsub
+   ##thm DOMSUB_FUPDATE_THM
+```
+
+Similarly, the removal of multiple elements from the domain of a
+map (`FDIFF`) is defined in terms of `DRESTRICT`.  It too has an
+alternate recursive presentation.
+
+```
+   ##thm FDIFF_def
+   ##thm FDIFF_FUPDATE
+```
+
+**Union and sub-maps.**
+Unlike set union, the union of two finite maps (`FUNION`) is not
+symmetric: the domain of the first map takes precedence.  The
+notion of a finite map being a submap of another (`SUBMAP`,
+infix) is an extension of how subsets are formalized.
+
+```
+   ##thm FUNION_DEF
+   ##thm SUBMAP_DEF
+```
+
+**Merges.**
+The key-aware merge of two finite maps (`FMERGE_WITH_KEY`)
+generalises the left-biased union of two finite maps (`FUNION`).
+In `FMERGE_WITH_KEY f m1 m2`, rather than the domain of `m1`
+taking precedence (as in `FUNION`), overlapping keys and their
+associated values are processed by the function parameter `f`.
+
+```
+   ##thm FMERGE_WITH_KEY_DEF
+```
+
+The key-ignorant merge of two finite maps (`FMERGE`) specialises
+`FMERGE_WITH_KEY`, and is itself a generalisation of `FUNION`.
+
+```
+   ##thm FMERGE_WITH_KEY_FMERGE
+   ##thm FMERGE_FUNION
+```
+
+**Finite maps and functions.**
+As much as possible, finite maps should be like ordinary
+functions.  Thus, if `f` is a finite map, then `FAPPLY f` is an
+ordinary function.  Similarly, there is an operation for
+*totalizing* a finite map (`FLOOKUP`) so that an application of
+it returns an ordinary function, the range of which is the
+option type.  An ordinary function can be turned into a finite
+map by restricting the function to a finite set of arguments
+(`FUN_FMAP_DEF`).
+
+```
+   ##thm FLOOKUP_DEF
+
+   ##thm FUN_FMAP_DEF
+```
+
+**Composition of maps.**
+\index{function composition, in HOL logic@function composition, in \HOL{} logic!of finite maps}
+
+There are three new definitions of composition, determined by
+whether the composed functions are finite maps or not.  The
+composition of two finite maps (`f_o_f`, infix) has domain
+constraints attached.  Composition of a finite map with an
+ordinary function (`o_f`, infix) applies the finite map first,
+then the ordinary function.  Composition of an ordinary function
+with a finite map (`f_o`, infix) applies the ordinary function
+and then the finite map; the application of the ordinary
+function is achieved by turning it into a finite map.
+
+```
+   ##thm f_o_f_DEF
+   ##thm o_f_DEF
+   ##thm f_o_DEF
+```
+
+## While Loops
+
+\label{sec:while-loops}
+
+It is a curious fact that higher order logic, although a logic
+of total functions, allows the definition of functions that
+don't seem total, at least from a computational perspective.
+An example is `WHILE`-loops.  The following equation is derived
+in theory `While`:
+
+```
+>>__ open WhileTheory
+##thm WHILE
+```
+
+Clearly, if `P` in this theorem was instantiated to
+$\lambda x.\;\konst{T}$, the resulting instance of `WHILE` would
+'run forever' if executed.  Why is such an "obviously" partial
+function definable in HOL?  The answer lies in a subtle
+definition of `WHILE`,[^while-jmoore] which uses the expressive
+power of HOL to surprising effect.  Consider the following total
+and non-recursive function:
+
+[^while-jmoore]: The original idea is due to J Moore, who
+    suggested it for use in ACL2.
+
+```
+  \x. if (?n. P (FUNPOW g n x))
+       then FUNPOW g (@n. P (FUNPOW g n x) /\
+                          !m.  m < n ==> ~P (FUNPOW g m x)) x
+       else ARB
+```
+
+This function does a case analysis on the iterations of function
+`g`: the finite ones return the first value in the iteration at
+which `P` holds (i.e., when the iteration stops); the infinite
+ones are mapped to `ARB`.  This function is used as the witness
+for `f` in the proof of the following theorem:
+
+```
+##thm ITERATION
+```
+
+From this, it is a simple application of Skolemization and
+`new_specification` to obtain the equation for `WHILE`.
+
+**Reasoning about `WHILE` loops.**
+The induction theorem for `WHILE` loops is proved by wellfounded
+induction, and carries wellfoundedness constraints limiting its
+application.  In order to apply `WHILE_INDUCTION`, the
+instantiations for `B` and `C` must be known before a
+wellfounded relation for `R` is found and used to eliminate the
+constraints.
+
+```
+##thm WHILE_INDUCTION
+```
+
+A more refined level of support is provided by the standard
+Hoare Logic `WHILE` rule, phrased in terms of Hoare triples
+(`HOARE_SPEC`).
+
+```
+##thm HOARE_SPEC_DEF
+##thm WHILE_RULE
+```
+
+As a follow-on, an operator for finding the least number with
+property `P` is defined.
+
+```
+##thm LEAST_DEF
+```
+
+The `LEAST` constant is treated as a binder by the parser, which
+explains the special printing of the name above.  Its use as a
+binder can be seen in:
+
+```
+##thm LEAST_LESS_EQ
+```
+
+A fundamental result, the operation of which is embodied in the
+tactic `LEAST_ELIM_TAC` is:
+
+```
+##thm LEAST_ELIM
+```
+
+If one wants a specified result even when the predicate is
+everywhere false, the `OLEAST` function (also treated as a
+binder by the parser and pretty-printer) may be helpful:
+
+```
+##thm OLEAST_def
+```
+
+More theorems for reasoning about `LEAST`, `OLEAST` and `WHILE`
+may be found in theory `While`.
+
+## Monads
+
+\index{monads|(}
+
+HOL's simple type system means that it is impossible to define a
+general type of monad in the way that is possible in programming
+languages such as Haskell.  Nonetheless, a number of the types
+predefined in HOL, such as options and lists, can indeed be seen
+as monads, and it is useful to be able to write functions over
+those types that leverage this view.  Equally, it is useful to
+be able to declare monads of one's own that can use the same
+syntactic facilities.
+
+Monads are defined by their "unit" and "bind" functions, and
+these can be composed in expressive ways.  In particular, HOL
+supports a syntax inspired by Haskell's do notation, wherein it
+is possible to write such functions as
+
+```
+>>__ load "monadsyntax";
+>>__ monadsyntax.add_monadsyntax();
+>>__ monadsyntax.enable_monad "list";
+>> Definition mapM_def:
+     mapM f [] = return [] ∧
+     mapM f (x::xs) = do
+        e  <- f x;
+        es <- mapM f xs;
+        return (e::es);
+      od
+   End
+
+>> type_of “mapM”;
+```
+
+Again, because HOL does not have a sufficiently expressive type
+system, though the notation is generic, the function is fixed to
+a particular monad instance.  In this case, the monad instance
+is that of lists.  We can use the `mapM` function to implement
+what one might term a cross-product operation on lists:
+
+```
+>> EVAL “mapM I [[1;2;3]; [a;b]; [x;y;z]]”;
+```
+
+The general abstract syntax is described by the following
+grammar
+
+$$
+\begin{array}{rcl}
+M &::=& e_{\alpha\,\mathtt{M}} \;\;\mid\;\; \mathtt{do}\;\,\mathit{binds}\,\;\mathtt{od} \;\;\mid\;\; \mathtt{return}\;e_\alpha\\
+\mathit{binds} &::=& \mathit{bind}\;\mathtt{;}^? \;\;\mid\;\; \mathit{bind}\,\mathtt{;}\,\;\mathit{binds}\\
+\mathit{bind} &::=& M \;\;\mid\;\; \mathit{vs}\;\,\mathtt{<-}\;M \;\;\mid\;\; \mathit{vs}\;\,\mathtt{<<-}\;e_\alpha
+\end{array}
+$$
+
+where $\mathit{e}_\tau$ is a HOL expression required to be of
+type $\tau$, and $\mathit{vs}$ is a single variable, or a tuple
+of variables (e.g., `(x,y,z)`).  If a given $M$ has type
+`:`$\alpha$` M` for a monad instance `M`, then writing a binding
+such as `v <- M` will require variable $v$ to have type
+$\alpha$.  This variable is then bound in later bindings within
+the same `do`-`od` block.  One can also bind variables directly
+to expressions of the appropriate type with the `<<-` arrow.
+This corresponds to an underlying `let`-term, but equally, one
+can see `v <<- e` as semantically equivalent to
+`v <- return e`.
+
+The special monad syntax has a straightforward translation into
+underlying HOL terms.  The `do`-`od` delimiters have no semantic
+effect; they can be viewed as a special form of parenthesis that
+identifies where the binding syntax is going to be
+used.[^monad-do-paren]  Subsequently, the translation from
+$\mathit{vs}\;\mathtt{<-}\,M_1\mathtt{;}\;M_2$ is to
+$\mathtt{monad\_bind}\;M_1\;(\lambda\mathit{vs}.\,M_2)$, making
+it clear that $\mathit{vs}$ can be used (and is bound) in $M_2$.
+If there is no variable-arrow on the first binding, then
+$M_1\mathtt{;}\;M_2$ translates to something equivalent to
+$\mathtt{monad\_bind}\;M_1\;(\mathtt{K}\;M_2)$, where `K` is the
+K-combinator from `combinTheory` (see Section
+\ref{sec:combinTheory}).  As already suggested,
+$\mathit{vs}\;\mathtt{<<-}\;e\mathtt{;}\;M$ translates to
+$\mathtt{let}\;\mathit{vs}\;\mathtt{=}\;e\;\mathtt{in}\;M$.
+Finally, the `return` keyword is an overloading for the monad
+instance's unit function (which will have type
+$\alpha\to\alpha\,\mathtt{M}$).
+
+[^monad-do-paren]: Indeed, writing `do M od` for a single
+    binding form $M$ will see the system print back $M$ on its
+    own.
+
+### Declaring monads
+
+Monad instances have to be declared if the system is to support
+their parsing and pretty-printing.  The function responsible is
+\index{declare_monad@\ml{declare\_monad}}
+`declare_monad` in the `monadsyntax` module.
+
+```
+>>__ val SOME ms_struct =
+       #lookupStruct PolyML.globalNameSpace "monadsyntax";
+>>__ val ms_ns = PolyML.NameSpace.Structures.contents ms_struct;
+>>__ val SOME minfo_ty = #lookupType ms_ns "monadinfo"
+>>__ val SOME dm_val = #lookupVal ms_ns "declare_monad"
+>>__ val dmval_p =
+       PolyML.NameSpace.Values.printWithType(dm_val,100,NONE)
+>>__ val minfo_p =
+       PolyML.NameSpace.TypeConstrs.print (minfo_ty, 100, NONE)
+>>__ val safeprint =
+        (!scriptPrint) o
+        String.translate
+          (fn #"{" => "\\{" | #"}" => "\\}" | c => str c)
+>>__ val _ = PP.prettyPrint(safeprint, 70) minfo_p
+>>__ val _ = PP.prettyPrint(safeprint, 70) dmval_p
+```
+
+The terms for the `bind` and `unit` fields are the terms
+implementing the corresponding monad functions.  For example,
+the bind function for the option function is `OPTION_BIND`,
+characterised by its defining theorem:
+
+```
+>>__ open optionTheory
+##thm OPTION_BIND_def
+```
+
+The unit function is just the `SOME` constructor for the type.
+
+All of the other fields in the `monadinfo` record can be left
+unspecified.  The `ignorebind` field is used to encode the
+situation where the user writes
+
+```
+   do m1; m2 od
+```
+
+meaning that though `m1` may return a value, the remainder of
+the function does not use that value.  As above, this can be
+handled through the use of the `K` combinator, which is what is
+done if the `ignorebind` field is set to `NONE`.  However, if
+desired, one can specify a specific term to be used in this
+situation.  For example, the system's encoding of the option
+monad uses a separate constant with exactly the definition one
+would expect:
+
+```
+##thm OPTION_IGNORE_BIND_def
+```
+
+The three remaining fields (`guard`, `fail` and `choice`) are
+relevant for monads with errors or failure modes.  The
+underlying property is that if $m_1$ is an error value, then
+$\mathtt{monad\_bind}\;m_1\;f \;\;=\;\; m_1$, meaning that
+attempting to sequence computations after an error just causes
+the error to be the result, without any use of the $f$ value.
+In this way, one might see $m_1$ as a computation that has
+thrown some sort of exception.
+
+If one specifies a `fail` term in declaring a monad, an overload
+is set up from the string `fail` to that term.  This is flexible
+enough to allow parameterised errors: make the term be the
+function that takes a parameter and returns a monad error value.
+There is no monad-specific support required for this concept:
+the overload is sufficient.
+
+When provided, the `guard` and `choice` terms are similarly
+established as overloads so that monadic code across different
+monads will look similar.  If one views `fail` as throwing an
+exception, then the `choice` notation allows for catching an
+exception and trying another computation.  The overload is to
+the infix `++` syntax, meaning that one can write
+$M_1\;\mathtt{++}\;M_2$ to represent the "choice" between $M_1$
+and $M_2$.  (Note that in the list monad, `++` is `APPEND`.
+This explains the choice of notation, though in the list monad,
+viewing "choice" as throwing and catching exceptions is actually
+harder to motivate.)
+
+Finally, the `guard` term (if given) overloads to the term
+`assert`, which is expected to be defined such that
+
+$$
+   \mathtt{assert}\;b\;\; = \;\;\textsf{if}\;b\;\textsf{then}\;\mathtt{return}\;()\;\textsf{else}\;\mathtt{fail}
+$$
+
+A typical use of `assert` might be in a function such as
+
+```
+  do
+     list <- some_monad;
+     assert(list <> []);
+     return (HD list + 1)
+  od
+```
+
+where the `assert` ensures that the subsequent call to `HD`
+makes sense.
+
+### Enabling monad syntax
+
+There are two steps to being able to use monadic syntax.  Both
+steps *persist*, meaning that their effects are preserved for
+the benefit of descendant theories.  Because of this
+persistence, the function calls implementing these two steps
+should only be used in `xScript.sml` files.  As with other
+parsing and pretty-printing functions, there are `temp_`
+versions of the functions.  These do not cause persistence and
+can safely be used in other `.sml` files (such as library
+implementations).
+
+The first step is to enable the generic monad syntax, by
+calling
+
+```
+   monadsyntax.enable_monadsyntax : unit -> unit
+```
+
+After this, one can write `do`…`od` blocks, even though without
+any specific instances enabled the output will be unhelpful (the
+`monad_bind` printed in the session below is actually a
+variable):
+
+```
+>>__ monadsyntax.disable_monadsyntax();
+>>__ List.app (monadsyntax.disable_monad o #1)
+              (monadsyntax.all_monads());
+>> monadsyntax.enable_monadsyntax();
+>> “do x <- M1; M2 od”;
+```
+
+One can see which monads have been declared with a call to
+`all_monads`:
+
+```
+>> monadsyntax.all_monads()
+```
+
+Particular monads can be enabled with calls to `enable_monad`.
+The most recently enabled is preferred when the context makes
+the choice ambiguous.
+
+```
+>> List.app monadsyntax.enable_monad ["list", "option"];
+
+>> val t = “do x <- M; return (x + 1) od”;
+>> type_of t;
+
+>> val t' = “do x <- MAP f l; return (x + 1); od”;
+>> type_of t';
+```
+
+Thanks to the persistence features of these API points, loading
+fresh theories may cause more monads to be declared and/or
+enabled:
+
+```
+>> load "errorStateMonadTheory";
+>> monadsyntax.all_monads();
+```
+
+Everything that has been enabled can in turn be disabled, with
+calls drawn from:
+
+```
+     disable_monad            : string -> unit
+     temp_disable_monad       : string -> unit
+
+     disable_monadsyntax      : unit -> unit
+     temp_disable_monadsyntax : unit -> unit
+```
+
+### Some built-in monad theories
+
+See Figure \ref{fig:bind-defns} for the bind definitions for a
+number of different monads that are present in the core HOL set
+of theories.
+
+```{=latex}
+\begin{figure}[hbtp]
+```
+
+```
+>>__ app load ["readerMonadTheory", "state_transformerTheory",
+               "errorStateMonadTheory"];
+>>__ List.app (fn (s,_) => monadsyntax.disable_monad s)
+              (monadsyntax.all_monads())
+>>__ val oldwidth = !Globals.linewidth;
+     val _ = Globals.linewidth := oldwidth - 10;
+>>__ hide "BIND";
+##thm errorStateMonadTheory.BIND_DEF
+
+##thm listTheory.LIST_BIND_THM
+
+##thm optionTheory.OPTION_BIND_def
+
+##thm readerMonadTheory.BIND_def
+
+##thm state_transformerTheory.BIND_DEF
+>>__ val _ = Globals.linewidth := oldwidth;
+```
+
+```{=latex}
+\caption{Monad bind definitions}
+\label{fig:bind-defns}
+\end{figure}
+```
+
+\index{monads|)}
+
+## Other Theories
+
+Other theories of interest in HOL are listed and briefly
+described in the table below.
+
+| Theory | Description |
+|---|---|
+| `poset` | Partial Orders, Knaster-Tarski theorem |
+| `divides`, `gcd` | Divisibility and the greatest common divisor |
+| `poly` | A theory of polynomials over $\mathbb{R}$, providing a collection of operations on polynomials, and theorems about them |
+| `Temporal_Logic`, `Omega_Automata` | Klaus Schneider's development of temporal logic and $\omega$-automata |
+| `ctl`, `mu` | Computation Tree Logic and the $\mu$-calculus.  See Hasan Amjad's thesis |
+| `lbtree` | Possibly infinitely deep (i.e., co-algebraic) binary trees |
+| `inftree` | Possibly infinitely branching, algebraic trees |

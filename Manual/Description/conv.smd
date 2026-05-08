@@ -581,7 +581,9 @@ For example:
 >> ADD_CONV ``101 + 102``;
 ```
 
-For more general arithmetic, the conversion `REDUCE_CONV` handles all of the operators in the theory of natural number arithmetic:
+For more general arithmetic, the conversion `REDUCE_CONV` handles
+all of the operators in the theory of natural number arithmetic
+(see Section \ref{sec:arithmetic}):
 \index{REDUCE_CONV@`REDUCE_CONV`}
 ```
 >> REDUCE_CONV ``2 * 3``;
@@ -756,7 +758,8 @@ The complete set is:
 ## Rewriting Tools
 
 \index{rewriting!as based on conversions|(}
-The rewriting tool `REWRITE_RULE` was introduced in the chapter on Derived Inference Rules.
+The rewriting tool `REWRITE_RULE` was introduced in
+Chapter \ref{derived-rules}.
 There are also rewriting conversions like `REWRITE_CONV`.
 All of the various rewriting tools provided in HOL are implemented by use of conversions.
 Certain new tools could also be built in a similar way.
@@ -840,7 +843,8 @@ The prefix `FILTER_` indicates that the rule only rewrites with those assumption
 ```
 
 \index{rewriting!list of tactics for|(}
-Tactics are introduced in the chapter on Tactics and Tacticals, but are listed here for reference.
+Tactics are introduced in Chapter \ref{tactics-and-tacticals}, but
+are listed here for reference.
 The tactics corresponding to the above rules are the following:
 ```
    REWRITE_TAC                       : thm list -> tactic

@@ -6,7 +6,7 @@
 \label{sec:ordinals}
 
 HOL provides the theory of ordinals and cardinals in \theoryimp{wellorderTheory},
-\theoryimp{cardinalTheory}, and \theoryimp{ordinalTheory}, etc.~\cite{Norrish:2013}.}
+\theoryimp{cardinalTheory}, and \theoryimp{ordinalTheory}, etc.~\cite{Norrish:2013}.
 Unfortunately, the typed logic implemented in the various HOL systems (including
 Isabelle/HOL) is not strong enough to define a type for all possible
 ordinal values.  It turns out, however, that for any fixed

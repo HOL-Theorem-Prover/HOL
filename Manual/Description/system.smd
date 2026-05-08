@@ -756,6 +756,8 @@ These points are illustrated with a theorem inferred, for example purposes, from
 
 ### Primitive Rules of Inference of the HOL Logic
 
+\label{rules}
+
 The primitive rules of inference of the logic were described abstractly in §LOGIC.
 The descriptions relied on meta-variables $t$, $t_1$, $t_2$, and so on.
 In the HOL logic, infinite families of primitive inferences are grouped together and thought of as single primitive inference schemes.
@@ -1042,6 +1044,8 @@ and pretty-printed by
 ```
 
 ## Theories
+
+\label{theoryfns}
 
 In §LOGIC a theory is described as a $4$-tuple
 
@@ -1406,6 +1410,8 @@ Failure occurs if:
 2. there is a type variable in $v_1$, $\dots$, $v_n$ or $t$ that does not occur in the type of $c$.
 
 #### Constant Specifications
+
+\label{conspec}
 
 \index{specification of constants, in HOL logic@specification of constants, in HOL logic|(}
 \index{extension, of HOL logic@extension, of HOL logic!by constant specification}
