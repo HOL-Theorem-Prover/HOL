@@ -1400,16 +1400,12 @@ Proof
   rw [in_nfa_lang_iff_accepting_exec,is_accepting_exec_def] >>
   eq_tac >-
     (rw [] THENL
-     [disj1_tac >> qexists_tac ‘MAP (FST o dec) qs’,
-      disj2_tac >> qexists_tac ‘MAP (SND o dec) qs’] >>
-     drule_all dfa_union_exec_split >>
-     (rw[]
-      >- (drule is_exec_nonempty >> rw[] >>
-          dep_rewrite.DEP_REWRITE_TAC [codec_pair] >> simp[] >>
-          metis_tac [is_nfa_def,SUBSET_DEF])
-      >- (drule is_exec_nonempty >> rw[] >>
-          dep_rewrite.DEP_REWRITE_TAC [codec_pair] >> simp[] >>
-          metis_tac [is_nfa_def,SUBSET_DEF])))
+       [disj1_tac >> qexists_tac ‘MAP (FST o dec) qs’,
+        disj2_tac >> qexists_tac ‘MAP (SND o dec) qs’] >>
+     drule_all dfa_union_exec_split >> rw[] >>
+     drule is_exec_nonempty >> rw[] >>
+     dep_rewrite.DEP_REWRITE_TAC [codec_pair] >> simp[] >>
+     metis_tac [is_nfa_def,SUBSET_DEF])
    >> rw[]
    >- (rename1 ‘is_exec N1 qs1 w’ >>
        drule is_exec_Sigma >> disch_tac >>
