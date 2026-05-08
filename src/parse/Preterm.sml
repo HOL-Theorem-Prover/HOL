@@ -4,7 +4,7 @@ struct
 open Feedback Lib GrammarSpecials;
 open errormonad typecheck_error
 
-infix >> >-
+infix >> >- ++?
 
 val ERR = mk_HOL_ERR "Preterm"
 val ERRloc = mk_HOL_ERRloc "Preterm"
@@ -389,12 +389,53 @@ fun filterM PM l =
     | h::t => PM h >- (fn b => if b then lift (cons h) (filterM PM t)
                                else filterM PM t)
 
+(* Decode the BIT1/BIT2/ZERO preterm tree representing a numeric literal
+   back to its Arbnum value, for use in error reporting. Returns NONE if
+   the tree doesn't have the expected structure (e.g. partially elaborated
+   or non-standard injection). *)
+fun decode_numeral_preterm pt =
+    let
+      open Arbnum
+      val a1 = one
+      val a2 = two
+      fun go pt =
+          case pt of
+            Const{Name = "0", Thy = "num", ...} => SOME zero
+          | Const{Name = "ZERO", Thy = "arithmetic", ...} => SOME zero
+          | Comb{Rator = Const{Name = "NUMERAL", Thy = "arithmetic", ...},
+                 Rand, ...} => go Rand
+          | Comb{Rator = Const{Name = "BIT1", Thy = "arithmetic", ...},
+                 Rand, ...} => Option.map (fn n => a2 * n + a1) (go Rand)
+          | Comb{Rator = Const{Name = "BIT2", Thy = "arithmetic", ...},
+                 Rand, ...} => Option.map (fn n => a2 * n + a2) (go Rand)
+          | _ => NONE
+    in go pt end
+
 fun remove_overloading_phase1 ptm =
   case ptm of
     Comb{Rator, Rand, Locn} =>
-      lift2 (fn t1 => fn t2 => Comb{Rator = t1, Rand = t2, Locn = Locn})
-            (remove_overloading_phase1 Rator)
-            (remove_overloading_phase1 Rand)
+      let
+        (* If elaborating Rator fails specifically because the
+           `_ inject_number` overload couldn't be resolved at the
+           required type, try to surface the actual numeric literal
+           in the error so the user isn't shown the internal
+           placeholder name. (#1747) *)
+        fun handler (OvlNoType(s, ty), errLoc) =
+              if s = fromNum_str then
+                case decode_numeral_preterm Rand of
+                    SOME n =>
+                      error (Misc ("Couldn't infer a type for the \
+                                   \numeric literal `" ^
+                                   Arbnum.toString n ^ "`"),
+                             Locn)
+                  | NONE => error (OvlNoType(s, ty), errLoc)
+              else error (OvlNoType(s, ty), errLoc)
+          | handler other = error other
+      in
+        lift2 (fn t1 => fn t2 => Comb{Rator = t1, Rand = t2, Locn = Locn})
+              (remove_overloading_phase1 Rator ++? handler)
+              (remove_overloading_phase1 Rand)
+      end
   | Abs{Bvar, Body, Locn} =>
       lift2 (fn t1 => fn t2 => Abs{Bvar = t1, Body = t2, Locn = Locn})
             (remove_overloading_phase1 Bvar)
