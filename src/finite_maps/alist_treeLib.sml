@@ -28,16 +28,16 @@ val err = mk_HOL_ERR "alist_treeLib"
 (* the repr set object *)
 datatype 'a alist_reprs = AList_Reprs of {R_thm: thm, conv: conv,
     dest: term -> 'a, cmp: ('a * 'a) -> order,
-    dict: (term, thm) Redblackmap.dict ref}
+    dict: thm Termtab.table ref}
 
 fun mk_alist_reprs R_thm conv dest cmp
     = AList_Reprs {R_thm = R_thm, conv = conv, cmp = cmp,
-        dest = dest, dict = ref (Redblackmap.mkDict Term.compare)}
+        dest = dest, dict = ref Termtab.empty}
 
 fun peek_functions_in_rs (AList_Reprs inn_rs)
-    = Redblackmap.listItems (! (#dict inn_rs)) |> map fst
+    = Termtab.dest (! (#dict inn_rs)) |> map fst
 
-fun peek_repr (AList_Reprs inn_rs) tm = Redblackmap.peek (! (#dict inn_rs), tm)
+fun peek_repr (AList_Reprs inn_rs) tm = Termtab.lookup (! (#dict inn_rs)) tm
 
 (* constructing is_insert thms *)
 
@@ -244,7 +244,7 @@ fun add_alist_repr rs thm = let
       | NONE => (mk_repr rs rhs
         |> CONV_RULE (RAND_CONV (REWR_CONV (SYM thm))))
   in
-    #dict inn_rs := Redblackmap.insert (! (#dict inn_rs), f, repr_thm)
+    #dict inn_rs := Termtab.update (f, repr_thm) (! (#dict inn_rs))
   end
 
 fun timeit msg f v = let

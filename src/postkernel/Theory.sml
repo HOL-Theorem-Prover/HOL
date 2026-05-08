@@ -204,11 +204,11 @@ type shared_readmaps = {strings : int -> string, terms : string -> term}
 
 datatype thydata = Loaded of UniversalType.t
                  | Pending of (HOLsexp.t * shared_readmaps) list
-type ThyDataMap = (string,thydata)Binarymap.dict
+type ThyDataMap = thydata Symtab.table
                   (* map from string identifying the "type" of the data,
                      e.g., "simp", "mono", "cong", "grammar_update",
                      "LaTeX map", to the data itself. *)
-val empty_datamap : ThyDataMap = Binarymap.mkDict String.compare
+val empty_datamap : ThyDataMap = Symtab.empty
 
 fun fact_thm (s, (th, _)) = th
 
@@ -240,11 +240,10 @@ in
 end (* local *)
 
 type metadata = {path: string, timestamp: Time.time}
-val metadata = ref ((Binarymap.mkDict String.compare):
-                    (string,metadata)Binarymap.dict)
+val metadata : metadata Symtab.table ref = ref Symtab.empty
 fun record_metadata thy md =
-  metadata := Binarymap.insert(!metadata, thy, md)
-fun thy_timestamp thy = #timestamp (Binarymap.find(!metadata, thy))
+  metadata := Symtab.update (thy, md) (!metadata)
+fun thy_timestamp thy = #timestamp (valOf (Symtab.lookup (!metadata) thy))
 
 
 (*---------------------------------------------------------------------------*
@@ -707,15 +706,13 @@ struct
                   read : shared_readmaps -> HOLsexp.t -> t option,
                   write : shared_writemaps -> t -> HOLsexp.t,
                   terms : t -> term list, strings : t -> string list}
-  val allthydata = ref (Binarymap.mkDict String.compare :
-                        (string, ThyDataMap) Binarymap.dict)
-  val dataops = ref (Binarymap.mkDict String.compare :
-                     (string, DataOps) Binarymap.dict)
+  val allthydata : ThyDataMap Symtab.table ref = ref Symtab.empty
+  val dataops : DataOps Symtab.table ref = ref Symtab.empty
 
   fun segment_data {thy,thydataty} = let
     val {thydata,name,...} = theCT()
     fun check_map m =
-        case Binarymap.peek(m, thydataty) of
+        case Symtab.lookup m thydataty of
           NONE => NONE
         | SOME (Loaded value) => SOME value
         | SOME (Pending _) => raise ERR "segment_data"
@@ -727,27 +724,26 @@ struct
                   " coming from current_theory\n");
        check_map thydata)
     else
-      case Binarymap.peek(!allthydata, thy) of
+      case Symtab.lookup (!allthydata) thy of
         NONE => NONE
       | SOME dmap => check_map dmap
   end
 
   fun segment_data_string (arg as {thy,thydataty}) =
-      case Binarymap.peek (!dataops, thydataty) of
+      case Symtab.lookup (!dataops) thydataty of
           SOME {pp,...} => Option.map pp (segment_data arg)
         | NONE => raise Fail ("No pp-fn for "^thydataty)
   val sexp_string_dbg = HOLPP.pp_to_string 75 HOLsexp.printer
 
   fun write_data_update {thydataty,data} =
-      case Binarymap.peek(!dataops, thydataty) of
+      case Symtab.lookup (!dataops) thydataty of
         NONE => raise ERR "write_data_update"
                           ("No operations defined for "^thydataty)
       | SOME {merge,pp,...} => let
           val (s as {thydata,...}) = theCT()
-          open Binarymap
           fun updatemap inmap = let
             val newdata =
-                case peek(inmap, thydataty) of
+                case Symtab.lookup inmap thydataty of
                   NONE => Loaded data
                 | SOME (Loaded t) => Loaded (merge(t, data))
                 | SOME (Pending ds) =>
@@ -768,38 +764,38 @@ struct
                             newdata_s ^ "\n"
                           end)
           in
-            insert(inmap,thydataty,newdata)
+            Symtab.update (thydataty, newdata) inmap
           end
         in
           makeCT (update_seg s (U #thydata (updatemap thydata)) $$)
         end
 
   fun set_theory_data {thydataty,data} =
-      case Binarymap.peek(!dataops, thydataty) of
+      case Symtab.lookup (!dataops) thydataty of
         NONE => raise ERR "set_theory_data"
                           ("No operations defined for "^thydataty)
       | SOME{pp,...} => let
           val (s as {thydata,...}) = theCT()
-          open Binarymap
         in
           DPRINT (fn _ => "Updating "^thydataty^" in segment with value " ^
                           pp data ^ "\n");
           makeCT
             (update_seg s
-                        (U #thydata (insert(thydata, thydataty, Loaded data)))
+                        (U #thydata
+                           (Symtab.update (thydataty, Loaded data) thydata))
                         $$)
         end
 
   fun temp_encoded_update (r as {thy,thydataty,data,shared_readmaps}) =
       let
         val (s as {thydata, name, ...}) = theCT()
-        open Binarymap
         fun updatemap inmap = let
           val baddecode = ERR "temp_encoded_update"
                           ("Bad decode for "^thydataty^" (" ^
                            sexp_string_dbg data ^ ")" )
           val newdata =
-              case (peek(inmap, thydataty), peek(!dataops,thydataty)) of
+              case (Symtab.lookup inmap thydataty,
+                    Symtab.lookup (!dataops) thydataty) of
                   (NONE, NONE) => Pending [(data,shared_readmaps)]
                 | (NONE, SOME {read,...}) =>
                   Loaded (valOf (read shared_readmaps data)
@@ -814,25 +810,24 @@ struct
                 | (SOME (Pending _), SOME _) =>
                   raise Fail "temp_encoded_update invariant failure 2"
         in
-          insert(inmap, thydataty, newdata)
+          Symtab.update (thydataty, newdata) inmap
         end
   in
     if thy = name then
       makeCT (update_seg s (U #thydata (updatemap thydata)) $$)
     else let
       val newsubmap =
-          case peek (!allthydata, thy) of
+          case Symtab.lookup (!allthydata) thy of
               NONE => updatemap empty_datamap
             | SOME dm => updatemap dm
     in
-      allthydata := insert(!allthydata, thy, newsubmap)
+      allthydata := Symtab.update (thy, newsubmap) (!allthydata)
     end
   end
 
 fun update_pending (m,r) thydataty = let
-  open Binarymap
   fun update1 inmap =
-      case peek(inmap, thydataty) of
+      case Symtab.lookup inmap thydataty of
         NONE => inmap
       | SOME (Loaded t) =>
           raise ERR "LoadableThyData.new"
@@ -844,13 +839,12 @@ fun update_pending (m,r) thydataty = let
           val ds' = List.rev ds
           val (d1,tmrd1) = hd ds'
         in
-          insert(inmap,thydataty,
-                 Loaded (List.foldl foldthis (valOf (r tmrd1 d1)) (tl ds')))
+          Symtab.update (thydataty,
+                         Loaded (List.foldl foldthis
+                                   (valOf (r tmrd1 d1)) (tl ds'))) inmap
         end
-  fun foldthis (k,v,acc) = insert(acc,k,update1 v)
-  val _ = allthydata := Binarymap.foldl foldthis
-                                        (Binarymap.mkDict String.compare)
-                                        (!allthydata)
+  fun foldthis (k,v) acc = Symtab.update (k, update1 v) acc
+  val _ = allthydata := Symtab.fold foldthis (!allthydata) Symtab.empty
   val (seg as {thydata,...}) = theCT()
 in
   makeCT (update_seg seg (U #thydata (update1 thydata)) $$)
@@ -867,9 +861,10 @@ fun 'a new {thydataty, merge, read, write, terms, strings, pp} = let
   fun pp' t = pp (vdest t)
 in
   update_pending (merge',read') thydataty;
-  dataops := Binarymap.insert(!dataops, thydataty,
-                              {merge=merge', read=read', write=write',
-                               terms=terms', pp=pp', strings=strings'});
+  dataops := Symtab.update
+                (thydataty,
+                 {merge=merge', read=read', write=write',
+                  terms=terms', pp=pp', strings=strings'}) (!dataops);
   (mk,dest)
 end
 
@@ -946,22 +941,23 @@ fun export_theory_return_hash () = let
                  parents = map thyid_name (Graph.fringe()),
                  all_thms = all_thms}
   fun mungethydata dmap = let
-    fun foldthis (k,v,acc as (strlist,tmlist,dict)) =
+    fun foldthis (k,v) (acc as (strlist,tmlist,dict)) =
         case v of
           Loaded t =>
           let
             val {write,terms,strings,...} =
-              Binarymap.find(!LoadableThyData.dataops, k)
-              handle Binarymap.NotFound =>
-                raise ERR "export_theory" ("Couldn't find thydata ops for "^k)
+                case Symtab.lookup (!LoadableThyData.dataops) k of
+                    SOME ops => ops
+                  | NONE => raise ERR "export_theory"
+                              ("Couldn't find thydata ops for "^k)
           in
             (strings t @ strlist,
              terms t @ tmlist,
-             Binarymap.insert(dict,k,(fn wrtm => write wrtm t)))
+             Symtab.update (k, fn wrtm => write wrtm t) dict)
           end
         | _ => acc
   in
-    Binarymap.foldl foldthis ([], [], Binarymap.mkDict String.compare) dmap
+    Symtab.fold foldthis dmap ([], [], Symtab.empty)
   end
   val structthry =
       {theory = thyname,

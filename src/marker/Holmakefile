@@ -1,10 +1,20 @@
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
+TABLE_UID = $(dprot $(SIGOBJ)/Table.ui)
+
 ifeq ($(KERNELID),otknl)
 all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 
 endif
+
+# markerLib.sml instantiates the Table functor locally; mosml needs
+# Table.ui passed explicitly because its dep auto-detection misses
+# functor applications.
+markerLib.uo: markerLib.sml markerLib.ui $(TABLE_UID) markerSyntax.uo \
+              markerTheory.uo $(dprot $(SIGOBJ)/HolKernel.ui) \
+              $(dprot $(SIGOBJ)/KNametab.ui)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<

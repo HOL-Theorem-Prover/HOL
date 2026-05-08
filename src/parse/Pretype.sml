@@ -9,12 +9,12 @@ val TCERR = mk_HOL_ERR "Pretype";
 
 structure Env =
 struct
-  type t = ((int,pretype) Binarymap.dict * int)
-  fun lookup (d,c) i = Binarymap.peek(d,i)
-  fun update (i,pty) (d,c) = (Binarymap.insert(d,i,pty), c)
-  val empty : t = (Binarymap.mkDict Int.compare, 0)
+  type t = (pretype Inttab.table * int)
+  fun lookup (d,c) i = Inttab.lookup d i
+  fun update (i,pty) (d,c) = (Inttab.update (i,pty) d, c)
+  val empty : t = (Inttab.empty, 0)
   fun new (d,c) = ((d,c+1), c)
-  fun toList (d,c) = List.tabulate(c, fn i => (i, Binarymap.peek(d,i)))
+  fun toList (d,c) = List.tabulate(c, fn i => (i, Inttab.lookup d i))
 end
 
 open typecheck_error

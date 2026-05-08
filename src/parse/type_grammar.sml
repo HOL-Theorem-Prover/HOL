@@ -26,9 +26,9 @@ fun break_qident s =
 
 datatype grammar = TYG of {
   rules : (int * grammar_rule) list,
-  parse_str : (kernelname, type_structure) HOLdict.dict,
+  parse_str : type_structure KNametab.table,
   str_print : (int * kernelname) TypeNet.typenet,
-  bare_names : (string, string) HOLdict.dict,
+  bare_names : string Symtab.table,
   tstamp   : int
 }
 
@@ -116,12 +116,12 @@ val params = params0 (HOLset.empty Int.compare)
 val num_params = HOLset.numItems o params
 
 fun suffix_arity (abbrevs, privs) s =
-  case HOLdict.peek (privs, s) of
+  case Symtab.lookup privs s of
       NONE => NONE
     | SOME thy =>
       let
       in
-        case HOLdict.peek(abbrevs, {Thy = thy, Name = s}) of
+        case KNametab.lookup abbrevs {Thy = thy, Name = s} of
             NONE => NONE (* shouldn't happen *)
           | SOME st => if typstruct_uptodate st then SOME (s, num_params st)
                        else NONE
@@ -191,25 +191,22 @@ fun new_qtyop (kid as {Name = name, Thy = thy}) g =
         in
           g |> fupdate_str_print
                  (fn tynet => TypeNet.insert(tynet,ty,(tstamp,kid)))
-            |> fupdate_parse_str (fn m => HOLdict.insert(m, kid, opstructure))
+            |> fupdate_parse_str (fn m => KNametab.update (kid, opstructure) m)
             |> fupdate_tstamp (fn i => i + 1)
-            |> fupdate_bare_names (fn m => HOLdict.insert(m, name, thy))
+            |> fupdate_bare_names (fn m => Symtab.update (name, thy) m)
         end
   end
 
-fun hide_tyop s =
-  fupdate_bare_names
-    (fn m => #1 (HOLdict.remove(m,s)) handle HOLdict.NotFound => m)
+fun hide_tyop s = fupdate_bare_names (Symtab.delete_safe s)
 
 val empty_grammar = TYG { rules = [],
-                          parse_str = HOLdict.mkDict KernelSig.name_compare,
-                          bare_names = HOLdict.mkDict String.compare,
+                          parse_str = KNametab.empty,
+                          bare_names = Symtab.empty,
                           str_print = TypeNet.empty,
                           tstamp = 0 }
 
-fun keys m = HOLdict.foldr (fn (k,v,acc) => k :: acc) [] m
-
-fun rules (TYG gr) = {infixes = #rules gr, suffixes = keys (#bare_names gr)}
+fun rules (TYG gr) =
+    {infixes = #rules gr, suffixes = Symtab.keys (#bare_names gr)}
 fun parse_map (TYG gr) = #parse_str gr
 fun print_map (TYG gr) = #str_print gr
 fun privabbs (TYG gr) = #bare_names gr
@@ -234,13 +231,14 @@ in
 end
 
 fun remove_knm_abbreviation g knm = let
-  val (dict, st) = HOLdict.remove(parse_map g, knm)
-  fun doprint pmap0 = #1 (TypeNet.delete(pmap0, structure_to_type st))
-                     handle HOLdict.NotFound => pmap0
+  val st = valOf (KNametab.lookup (parse_map g) knm)
+  val dict = KNametab.delete knm (parse_map g)
+  fun doprint pmap0 = #1 (TypeNet.delete (pmap0, structure_to_type st))
+                      handle TypeNet.NotFound => pmap0
   fun maybe_rmpriv d =
-    case HOLdict.peek (d, #Name knm) of
+    case Symtab.lookup d (#Name knm) of
         NONE => d
-      | SOME thy' => if thy' = #Thy knm then #1 (HOLdict.remove(d, #Name knm))
+      | SOME thy' => if thy' = #Thy knm then Symtab.delete (#Name knm) d
                      else d
 in
   g |> fupdate_parse_str (K dict)
@@ -251,27 +249,25 @@ end
 fun remove_abbreviation g s =
   let
     val (thyopt, nm) = break_qident s
-    fun parsemap nmcheck (knm,st,acc) =
-      if nmcheck knm then acc else HOLdict.insert(acc,knm,st)
+    fun parsemap nmcheck (knm,st) acc =
+      if nmcheck knm then acc else KNametab.update (knm,st) acc
     fun printmap nmcheck (ty,i as (_, knm),acc) =
         if nmcheck knm then acc else TypeNet.insert(acc,ty,i)
     fun thyprivrm thy m =
-      case HOLdict.peek (m, nm) of
+      case Symtab.lookup m nm of
           NONE => m
-        | SOME thy' => if thy' = thy then #1 (HOLdict.remove(m,nm))
+        | SOME thy' => if thy' = thy then Symtab.delete nm m
                        else m
     val (check,privrm) =
         case thyopt of
             NONE => ((fn knm => #Name knm = nm),
-                     (fn m => #1 (HOLdict.remove (m, nm))
-                              handle HOLdict.NotFound => m))
+                     (fn m => Symtab.delete_safe nm m))
           | SOME thy => (equal {Name = nm, Thy = thy}, thyprivrm thy)
   in
     g |> fupdate_bare_names privrm
       |> fupdate_str_print (TypeNet.fold (printmap check) TypeNet.empty)
       |> fupdate_parse_str
-           (HOLdict.foldl (parsemap check)
-                            (HOLdict.mkDict KernelSig.name_compare))
+           (fn d => KNametab.fold (parsemap check) d KNametab.empty)
   end
 
 fun type_to_structure ty =
@@ -279,10 +275,10 @@ fun type_to_structure ty =
     open Type
     val params = Listsort.sort Type.compare (type_vars ty)
     val (num_vars, pset) =
-        List.foldl (fn (ty,(i,pset)) => (i + 1, HOLdict.insert(pset,ty,i)))
-                   (0, HOLdict.mkDict Type.compare) params
+        List.foldl (fn (ty,(i,pset)) => (i + 1, Typetab.update (ty,i) pset))
+                   (0, Typetab.empty) params
     fun mk_structure pset ty =
-      if is_vartype ty then PARAM (HOLdict.find(pset, ty))
+      if is_vartype ty then PARAM (valOf (Typetab.lookup pset ty))
       else let
         val {Thy,Tyop,Args} = dest_thy_type ty
       in
@@ -297,7 +293,7 @@ fun new_abbreviation {knm,print,ty} tyg = let
   open Portable
   val st = type_to_structure ty
   val {Name = s, Thy = thy} = knm
-  val tyg = case HOLdict.peek(parse_map tyg, knm) of
+  val tyg = case KNametab.lookup (parse_map tyg) knm of
                 NONE => tyg
               | SOME st' =>
                 if st = st' then tyg
@@ -320,13 +316,13 @@ fun new_abbreviation {knm,print,ty} tyg = let
                    | _ => ()
   val (tstamp, tyg) = bump_tstamp tyg
   val result =
-    tyg |> fupdate_parse_str (fn d => HOLdict.insert(d,knm,st))
+    tyg |> fupdate_parse_str (fn d => KNametab.update (knm, st) d)
         |> (print ?
             fupdate_str_print
              (fn pmap => TypeNet.insert(pmap,
                                         structure_to_type st,
                                         (tstamp, knm))))
-        |> fupdate_bare_names(fn d => HOLdict.insert(d,s,thy))
+        |> fupdate_bare_names(fn d => Symtab.update (s, thy) d)
 in
   result
 end
@@ -336,9 +332,9 @@ fun rev_append [] acc = acc
   | rev_append (x::xs) acc = rev_append xs (x::acc)
 
 fun merge_abbrevs G (d1, d2) = let
-  fun merge_dictinsert (k,v,newdict) =
-      case HOLdict.peek(newdict,k) of
-        NONE => HOLdict.insert(newdict,k,v)
+  fun merge_dictinsert (k,v) newdict =
+      case KNametab.lookup newdict k of
+        NONE => KNametab.update (k, v) newdict
       | SOME v0 =>
         if v0 <> v then
           (Feedback.HOL_WARNING "parse_type" "merge_grammars"
@@ -352,14 +348,14 @@ fun merge_abbrevs G (d1, d2) = let
         else
           newdict
 in
-    HOLdict.foldr merge_dictinsert d1 d2
+    KNametab.fold_rev merge_dictinsert d1 d2
 end
 
 fun merge_pmaps (p1, p2) =
     TypeNet.fold (fn (ty,v,acc) => TypeNet.insert(acc,ty,v)) p1 p2
 
 fun merge_privs (p1, p2) =
-  HOLdict.foldl (fn (nm,thy,acc) => HOLdict.insert(acc,nm,thy)) p1 p2
+  Symtab.fold (fn (nm,thy) => fn acc => Symtab.update (nm, thy) acc) p1 p2
 
 fun merge_grammars (G1, G2) = let
   (* both grammars are sorted, with no adjacent suffixes *)
@@ -434,7 +430,7 @@ fun prettyprint_grammar G = let
 
   fun kid_string kid st =
     let
-      val ispriv = case HOLdict.peek (bare_names, #Name kid) of
+      val ispriv = case Symtab.lookup bare_names (#Name kid) of
                        SOME thy => thy = #Thy kid
                      | NONE => false
       val kns = if ispriv then #Name kid else KernelSig.name_toString kid
@@ -448,7 +444,7 @@ fun prettyprint_grammar G = let
     end
 
   val print_abbrevs = let
-    fun foldthis (k,st,acc as (mx,kstrs)) =
+    fun foldthis (k,st) (acc as (mx,kstrs)) =
         if typstruct_uptodate st then
           let
             val kstr = kid_string k st
@@ -456,7 +452,7 @@ fun prettyprint_grammar G = let
             (Int.max(mx,size kstr), (k,kstr,st)::kstrs)
           end
         else acc
-    val (lwidth, okabbrevs) = HOLdict.foldl foldthis (0, []) abbrevs
+    val (lwidth, okabbrevs) = KNametab.fold foldthis abbrevs (0, [])
   in
     if length okabbrevs > 0 then [
       NL, add_string "Type abbreviations:",
@@ -517,7 +513,7 @@ in
       add_break (1,2),
       block CONSISTENT 0 (
         pr_list print_rule [NL] g @ [add_break(1,0)] @
-        print_suffixes (keys bare_names) @
+        print_suffixes (Symtab.keys bare_names) @
         [add_break(1,0), add_string "       TY  ::=  TY[TY] (array type)"]
       )
     ] :: print_abbrevs
@@ -568,7 +564,7 @@ in
       val inst' = Listsort.sort instcmp inst
       val args = map #residue inst'
     in
-      case HOLdict.peek (bare_names, Name) of
+      case Symtab.lookup bare_names Name of
           NONE => {Thy = SOME Thy, Tyop = Name, Args = args}
         | SOME thy' => if Thy = thy' then {Thy = NONE, Tyop = Name, Args = args}
                        else {Thy = SOME Thy, Tyop = Name, Args = args}
@@ -610,9 +606,9 @@ fun insert_minop (s,arity,ty) g =
   let
     val kid = {Thy = "min", Name = s}
   in
-    g |> fupdate_parse_str (fn m => HOLdict.insert(m,kid, nparams s arity))
+    g |> fupdate_parse_str (fn m => KNametab.update (kid, nparams s arity) m)
       |> fupdate_str_print (fn n => TypeNet.insert(n,ty,(tstamp g, kid)))
-      |> fupdate_bare_names (fn m => HOLdict.insert(m,s,"min"))
+      |> fupdate_bare_names (fn m => Symtab.update (s, "min") m)
       |> fupdate_tstamp (fn i => i + 1)
   end
 

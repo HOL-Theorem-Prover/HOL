@@ -332,14 +332,17 @@ local
             (Conv.FORK_CONV (Conv.REWR_CONV rx2_thm, Conv.REWR_CONV u_thm))
           THENC EVAL)
       |> Drule.EQT_ELIM
-   val twm_map =
-      ref (Redblackmap.mkDict
-            (Lib.pair_compare (Lib.pair_compare (Type.compare, Type.compare),
-                               Term.compare))
-           : ((hol_type * hol_type) * term,
-              (term -> float) * conv) Redblackmap.dict)
+   structure TwmTab = Table(struct
+     type key = (hol_type * hol_type) * term
+     val ord = Lib.pair_compare
+                 (Lib.pair_compare (Type.compare, Type.compare),
+                  Term.compare)
+     fun pp _ = HOLPP.add_string "<twm-key>"
+   end)
+   val twm_map : ((term -> float) * conv) TwmTab.table ref =
+       ref TwmTab.empty
    fun lookup (x as (tw as (t, w), mode)) =
-      case Redblackmap.peek (!twm_map, x) of
+      case TwmTab.lookup (!twm_map) x of
          SOME y => y
        | NONE =>
            let
@@ -350,7 +353,7 @@ local
                            then threshold_CONV (mk_threshold tw)
                         else largest_CONV (mk_large tw)
               val y = (f, Conv.REWR_CONV thm)
-              val () = twm_map := Redblackmap.insert (!twm_map, x, y)
+              val () = twm_map := TwmTab.update (x, y) (!twm_map)
            in
               y
            end

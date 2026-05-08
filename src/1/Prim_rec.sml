@@ -140,11 +140,13 @@ fun prove_raw_recursive_functions_exist ax tm = let
   val raxs0 = rev_itlist gax (map (repeat rator o hd o snd) lpats) ([],table)
   val raxs = List.rev (fst raxs0)
   val axfns = map (repeat rator o lhand o snd o strip_forall) raxs
-  val dict = ListPair.foldl (fn (a,(b,_),d) => Binarymap.insert(d,a,b))
-                            (Binarymap.mkDict Term.compare)
+  val dict = ListPair.foldl (fn (a,(b,_),d) => Termtab.update (a,b) d)
+                            Termtab.empty
                             (axfns, lpats)
   val urfns =
-      map (fn v => Binarymap.find(dict,v) handle Binarymap.NotFound => v) exvs
+      map (fn v => case Termtab.lookup dict v of
+                       SOME b => b
+                     | NONE => v) exvs
   val axtm = list_mk_exists(exvs,list_mk_conj raxs)
   and urtm = list_mk_exists(urfns,tm)
   val ixth = mymatch_and_instantiate axth axtm urtm

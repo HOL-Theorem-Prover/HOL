@@ -8,11 +8,11 @@ type key = term
 type hypinfo = {hyps : term HOLset.set, thms : term HOLset.set}
 type data = (hypinfo * thm option) list
 
-type table = (key, data) Redblackmap.dict
-val empty_table = Redblackmap.mkDict Term.compare : table
+type table = data Termtab.table
+val empty_table : table = Termtab.empty
 
 type cache = table Sref.t
-fun c_insert c (k,v) = Sref.update c (fn t => Redblackmap.insert(t,k,v))
+fun c_insert c (k,v) = Sref.update c (fn t => Termtab.update (k,v) t)
 fun cvalue (c:cache) = Sref.value c
 fun new_cache() : cache = Sref.new empty_table
 
@@ -39,8 +39,7 @@ fun CACHE (filt,conv) = let
   fun cache_proc thms tm = let
     val _ = if (filt tm) then ()
             else failwith "CACHE_CCONV: not applicable"
-    val prevs = Redblackmap.find (cvalue cache, tm)
-                handle Redblackmap.NotFound => []
+    val prevs = Option.getOpt (Termtab.lookup (cvalue cache) tm, [])
     val curr = all_hyps thms
     fun ok (prev,SOME thm) = prev << curr
       | ok (prev,NONE) = curr << prev
@@ -72,7 +71,7 @@ end
 fun clear_cache cache = (Sref.update cache (fn c => empty_table))
 
 fun cache_values (cache : cache) = let
-  val items = Redblackmap.listItems (cvalue cache)
+  val items = Termtab.dest (cvalue cache)
   fun tolist (set, thmopt) = (hypinfo_list set, thmopt)
   fun ToList (k, stlist) = (k, map tolist stlist)
 in
@@ -115,14 +114,13 @@ end
    ---------------------------------------------------------------------- *)
 
 fun ccs G vs = let
-  (* G is a Binarymap from terms to term sets, with the set representing
+  (* G is a Termtab from terms to term sets, with the set representing
      the adjacent nodes in the graph.  The graph is undirected so
      there will be two entries for each link.
      vs is a list of all the terms in G. *)
   fun recurse acc visited v = let
     (* v is already in acc and visited *)
-    val neighbours = Binarymap.find (G, v)
-        handle Binarymap.NotFound => empty_tmset
+    val neighbours = Option.getOpt (Termtab.lookup G v, empty_tmset)
     fun visit_neighbour(n, (acc, visited)) =
         if HOLset.member(visited, n) then (acc, visited)
         else recurse (n::acc) (HOLset.add(visited, n)) n
@@ -146,19 +144,19 @@ fun make_links fvs_of (t, G) = let
   val fvs = fvs_of t
   fun mk_link1 t1 t2 G = let
     val newset =
-        case Binarymap.peek(G, t1) of
+        case Termtab.lookup G t1 of
           NONE => HOLset.singleton Term.compare t2
         | SOME s => HOLset.add(s, t2)
   in
-    Binarymap.insert(G, t1, newset)
+    Termtab.update (t1, newset) G
   end
   fun mk_link t1 t2 G = mk_link1 t1 t2 (mk_link1 t2 t1 G)
   fun mk_links [] G = G
     | mk_links [_] G = G
     | mk_links (x::y::rest) G = mk_link x y (mk_links (y::rest) G)
   fun enter_domain x G =
-      case Binarymap.peek (G, x) of
-        NONE => Binarymap.insert(G, x, HOLset.empty Term.compare)
+      case Termtab.lookup G x of
+        NONE => Termtab.update (x, HOLset.empty Term.compare) G
       | SOME _ => G
 in
   case fvs of
@@ -183,7 +181,7 @@ end
    same component anyway.
 *)
 fun build_graph fvs_of tmlist =
-    List.foldl (make_links fvs_of) (Binarymap.mkDict Term.compare) tmlist
+    List.foldl (make_links fvs_of) Termtab.empty tmlist
 
 (* given a list of list of variables; build a map where all the variables
    in the same list point to the same updatable reference cell *)
@@ -191,10 +189,10 @@ val build_var_to_group_map = let
   fun foldthis (tlist, acc) = let
     val r = Uref.new (empty_hypinfo, [] : thm list)
   in
-    List.foldl (fn (t, acc) => Binarymap.insert(acc, t, r)) acc tlist
+    List.foldl (fn (t, acc) => Termtab.update (t, r) acc) acc tlist
   end
 in
-  List.foldl foldthis (Binarymap.mkDict Term.compare)
+  List.foldl foldthis Termtab.empty
 end
 
 
@@ -214,8 +212,7 @@ end
 
 fun consider_false_context_cache table original_goal (ctxtlist:context list) =
     let
-      val cache_F = Redblackmap.find (table, boolSyntax.F)
-                    handle Redblackmap.NotFound => []
+      val cache_F = Option.getOpt (Termtab.lookup table boolSyntax.F, [])
       fun recurse acc ctxts =
           case ctxts of
             [] => possible_ctxts acc
@@ -241,8 +238,7 @@ fun prove_false_context (conv:thm list -> conv) (cache:cache) (ctxtlist:context 
         [] => raise mk_HOL_ERR "Cache" "RCACHE"
                                "No (more) possibly false contexts"
       | (hyps,thms)::cs => let
-          val oldval = Redblackmap.find (cvalue cache, F)
-                       handle Redblackmap.NotFound => []
+          val oldval = Option.getOpt (Termtab.lookup (cvalue cache) F, [])
           val conjs = list_mk_conj (map concl thms)
         in
           case Lib.total (conv thms) boolSyntax.F of
@@ -272,7 +268,7 @@ fun RCACHE (dpfvs, check, conv) = let
     case dpfvs c of
       [] => ()
     | (v::_) => let
-        val r = Binarymap.find(mp,v)
+        val r = valOf (Termtab.lookup mp v)
         val (oldhyps, oldthms) = !r
       in
         r := (hypinfo_addth(th, oldhyps), th::oldthms)
@@ -281,7 +277,7 @@ fun RCACHE (dpfvs, check, conv) = let
   fun decider ctxt t = let
     val _ = if check t then ()
             else raise mk_HOL_ERR "Cache" "RCACHE" "not applicable"
-    val prevs = Redblackmap.find (cvalue cache, t) handle NotFound => []
+    val prevs = Option.getOpt (Termtab.lookup (cvalue cache) t, [])
     val curr = all_hyps ctxt
     fun oksome (prev, SOME thm) = prev << curr
       | oksome (_, NONE) = false
@@ -301,7 +297,7 @@ fun RCACHE (dpfvs, check, conv) = let
             List.foldl foldthis ([], []) ctxt
         val G = build_graph dpfvs (t::ctxt_ts)
                 (* G a map from v to v's neighbours *)
-        val vs = Binarymap.foldl (fn (k,v,acc) => k::acc) [] G
+        val vs = Termtab.fold (fn (k,_) => fn acc => k::acc) G []
         val (comps, _) = ccs G vs
                 (* a list of lists of variables *)
         val group_map = build_var_to_group_map comps
@@ -313,15 +309,17 @@ fun RCACHE (dpfvs, check, conv) = let
         val (group_map', glstmtref) =
           case dpfvs t of
             [] => (group_map, Uref.new (empty_hypinfo, []))
-          | (glvar::_) => Binarymap.remove(group_map, glvar)
+          | (glvar::_) =>
+              let val r = valOf (Termtab.lookup group_map glvar)
+              in (Termtab.delete glvar group_map, r) end
 
         (* and the remaining contexts, ensuring there are no
            duplicate copies *)
-        fun foldthis (k, v, acc as (setlist, seenreflist)) =
+        fun foldthis (k, v) (acc as (setlist, seenreflist)) =
             if mem v seenreflist then acc
             else (!v::setlist, v::seenreflist)
         val (divided_clist0, _) =
-            Binarymap.foldl foldthis ([], [glstmtref]) group_map'
+            Termtab.fold foldthis group_map' ([], [glstmtref])
 
         (* fold in every ground hypothesis as a separate context, entire
            unto itself *)

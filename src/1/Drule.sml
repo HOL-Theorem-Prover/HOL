@@ -491,22 +491,24 @@ fun CONJUNCTS_AC (t1, t2) =
    let
       fun conjuncts dict th =
          conjuncts (conjuncts dict (CONJUNCT1 th)) (CONJUNCT2 th)
-         handle HOL_ERR _ => Redblackmap.insert (dict, concl th, th)
+         handle HOL_ERR _ => Termtab.update (concl th, th) dict
       fun prove_conj dict t =
          let
             val (l, r) = dest_conj t
          in
             CONJ (prove_conj dict l) (prove_conj dict r)
          end
-         handle HOL_ERR _ => Redblackmap.find (dict, t)
-      val empty = Redblackmap.mkDict compare
+         handle HOL_ERR _ =>
+                (case Termtab.lookup dict t of
+                     SOME th => th
+                   | NONE => raise ERR "CONJUNCTS_AC" "")
+      val empty = Termtab.empty
       val t1_imp_t2 = prove_conj (conjuncts empty (ASSUME t1)) t2
       val t2_imp_t1 = prove_conj (conjuncts empty (ASSUME t2)) t1
    in
       IMP_ANTISYM_RULE (DISCH t1 t1_imp_t2) (DISCH t2 t2_imp_t1)
    end
    handle HOL_ERR _ => raise ERR "CONJUNCTS_AC" ""
-        | Redblackmap.NotFound => raise ERR "CONJUNCTS_AC" ""
 
 (*---------------------------------------------------------------------------*
  * |- t1 = t2  if t1 and t2 are equivalent using idempotence, symmetry and   *
@@ -547,7 +549,7 @@ fun DISJUNCTS_AC (t1, t2) =
          in
             disjuncts (disjuncts dict (l, l_th)) (r, r_th)
          end
-         handle HOL_ERR _ => Redblackmap.insert (dict, t, th)
+         handle HOL_ERR _ => Termtab.update (t, th) dict
       fun prove_from_disj dict t =
          let
             val (l, r) = dest_disj t
@@ -555,15 +557,17 @@ fun DISJUNCTS_AC (t1, t2) =
             DISJ_CASES (ASSUME t) (prove_from_disj dict l)
                                   (prove_from_disj dict r)
          end
-         handle HOL_ERR _ => Redblackmap.find (dict, t)
-      val empty = Redblackmap.mkDict compare
+         handle HOL_ERR _ =>
+                (case Termtab.lookup dict t of
+                     SOME th => th
+                   | NONE => raise ERR "DISJUNCTS_AC" "")
+      val empty = Termtab.empty
       val t1_imp_t2 = prove_from_disj (disjuncts empty (t2, ASSUME t2)) t1
       val t2_imp_t1 = prove_from_disj (disjuncts empty (t1, ASSUME t1)) t2
    in
       IMP_ANTISYM_RULE (DISCH t1 t1_imp_t2) (DISCH t2 t2_imp_t1)
    end
    handle HOL_ERR _ => raise ERR "DISJUNCTS_AC" ""
-        | Redblackmap.NotFound => raise ERR "DISJUNCTS_AC" ""
 
 (*---------------------------------------------------------------------------*
  *           A,t |- t1 = t2                                                  *
@@ -1732,7 +1736,6 @@ in
                          handle HOL_ERR _ => RAND_CONV (BETA_VAR v Rand)
                       end
 
-   structure Map = Redblackmap
 
    (* count from zero to indicate last argument, up to #args - 1 to indicate
       first argument *)
@@ -1753,7 +1756,7 @@ in
             case dest_term t of
                LAMB (bv, body) =>
                  let
-                   val newposnmap = Map.insert (bvarposns, bv, curposn)
+                   val newposnmap = Termtab.update (bv, curposn) bvarposns
                    val (newdonemap, restore) =
                       (HOLset.delete (donebvars, bv),
                        fn m => HOLset.add (m, bv))
@@ -1772,7 +1775,7 @@ in
                    fun argfold (n, arg, A) =
                       recurse (curposn o arg_CONV n) bvarposns A arg
                  in
-                    case Map.peek (absmap, f) of
+                    case Termtab.lookup absmap f of
                       NONE => foldri argfold (donebvars, acc) args
                     | SOME abs_t =>
                        let
@@ -1782,7 +1785,7 @@ in
                                 ((arg, absv), acc as (dbvars, actionlist)) =
                              if HOLset.member (dbvars, arg)
                                 then acc
-                             else case Map.peek (bvarposns, arg) of
+                             else case Termtab.lookup bvarposns arg of
                                     NONE => acc
                                   | SOME p =>
                                     (HOLset.add (dbvars, arg),
@@ -1795,7 +1798,7 @@ in
                  end
              | _ => (donebvars, acc)
       in
-         recurse I (Map.mkDict Term.compare) (empty_tmset, []) (concl th)
+         recurse I Termtab.empty (empty_tmset, []) (concl th)
       end
 
    (* Modified HO_PART_MATCH by PVH on Apr. 25, 2005: code was broken;
@@ -1879,9 +1882,9 @@ in
                         if is_abs residue
                            andalso all (fn v => HOLset.member (tmbvs, v))
                                        (fst (strip_abs residue))
-                          then Map.insert (acc, redex, residue) else acc
+                          then Termtab.update (redex, residue) acc else acc
                      val bound_to_abs =
-                        List.foldl foldthis (Map.mkDict Term.compare) tmin
+                        List.foldl foldthis Termtab.empty tmin
                      val sth0 = INST_TYPE tyin sth
                      val sth0c = concl sth0
                      val (sth1, tmin') =
@@ -1903,7 +1906,7 @@ in
                                  tmin')
                              end
                      val sth2 =
-                          if Map.numItems bound_to_abs = 0
+                          if Termtab.size bound_to_abs = 0
                              then sth1
                           else CONV_RULE
                                  (EVERY_CONV (#2 (munge_bvars bound_to_abs sth1)))

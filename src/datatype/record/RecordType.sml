@@ -187,7 +187,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
     domtys [] (type_of constructor)
   end
   val varying_tyvs = let
-    val tymap = Binarymap.mkDict Type.compare : (hol_type,int) Binarymap.dict
+    val tymap : int Typetab.table = Typetab.empty
     fun recurse m tys =
       case tys of
           [] => m
@@ -195,16 +195,16 @@ fun prove_recordtype_thms (tyinfo, fields) = let
           let
             val tyvs = HOLset.fromList Type.compare (Type.type_vars ty)
             fun foldthis (tyv,m) =
-                case Binarymap.peek(m, tyv) of
-                    NONE => Binarymap.insert(m,tyv,1)
-                  | SOME i => Binarymap.insert(m,tyv,i+1)
+                case Typetab.lookup m tyv of
+                    NONE => Typetab.update (tyv,1) m
+                  | SOME i => Typetab.update (tyv,i+1) m
           in
             recurse (HOLset.foldl foldthis m tyvs) tyrest
           end
   in
-    Binarymap.foldl (fn (tyv,c,acc) => if c = 1 then tyv::acc else acc)
-                    []
-                    (recurse tymap types)
+    Typetab.fold (fn (tyv,c) => fn acc => if c = 1 then tyv::acc else acc)
+                 (recurse tymap types)
+                 []
   end
 
   val tysigma = let

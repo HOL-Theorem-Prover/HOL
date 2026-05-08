@@ -527,7 +527,7 @@ fun pp_term (G : grammar) TyG backend = let
     fun val_insert (tstamp,r) NONE = [(n,tstamp,r)]
       | val_insert (tstamp,r) (SOME l) = sortinsert (tstamp,r) l
     fun myinsert ((k, (tstamp, r)), acc) = let
-      val existing = HOLdict.peek(acc, k)
+      val existing = Symtab.lookup acc k
       val newvalue =
         case existing of
           NONE => [(n,tstamp,r)]
@@ -536,15 +536,13 @@ fun pp_term (G : grammar) TyG backend = let
           if tstamp > t' then (n,tstamp,r)::old::rest
           else old::(n,tstamp,r)::rest
     in
-      HOLdict.insert(acc, k, newvalue)
+      Symtab.update (k, newvalue) acc
     end
   in
     (List.foldl myinsert acc keys_n_rules)
   end
-  val rule_table = List.foldl insert
-                              (HOLdict.mkDict String.compare)
-                              (term_grammar.rules G)
-  fun lookup_term s = HOLdict.peek(rule_table, s)
+  val rule_table = List.foldl insert Symtab.empty (term_grammar.rules G)
+  fun lookup_term s = Symtab.lookup rule_table s
   val comb_prec = #1 (hd (valOf (lookup_term fnapp_special)))
     handle Option =>
       raise PP_ERR "pp_term" "Grammar has no function application"

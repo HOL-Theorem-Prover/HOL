@@ -42,21 +42,23 @@ struct
     (* "global" state references (could instead be passed as arguments to the
        following functions to obtain a purely functional implementation) *)
     val freshvar = ref 1
-    val dict = ref (HOLdict.mkDict Term.compare)
+    val dict : int Termtab.table ref = ref Termtab.empty
     (* the following functions essentially implement the production rules of
        the QDIMACS grammar *)
     (* term -> string *)
     fun variable_to_qdimacs tm =
       if Term.is_var tm then
-        Int.toString (HOLdict.find (!dict, tm)
-          handle HOLdict.NotFound =>
-            let
-              val fresh = !freshvar
-            in
-              freshvar := fresh + 1;
-              dict := HOLdict.insert (!dict, tm, fresh);
-              fresh
-            end)
+        Int.toString
+          (case Termtab.lookup (!dict) tm of
+               SOME i => i
+             | NONE =>
+               let
+                 val fresh = !freshvar
+               in
+                 freshvar := fresh + 1;
+                 dict := Termtab.update (tm, fresh) (!dict);
+                 fresh
+               end)
       else
         raise ERR "write_qdimacs_file"
           ("term is not a QBF (variable expected, subterm '" ^
@@ -148,13 +150,14 @@ struct
 
   fun dict_to_varfn dict : int -> Term.term =
   let
-    val inverted_dict = HOLdict.foldl (fn (t, i, dict) =>
-      HOLdict.insert (dict, i, t)) (HOLdict.mkDict Int.compare) dict
+    val inverted_dict = Termtab.fold (fn (t, i) => fn d =>
+      Inttab.update (i, t) d) dict Inttab.empty
   in
-    fn i => HOLdict.find (inverted_dict, i)
-      handle HOLdict.NotFound =>
-        raise Feedback.mk_HOL_ERR "QDimacs" "dict_to_varfn"
-          ("unknown index " ^ Int.toString i)
+    fn i => case Inttab.lookup inverted_dict i of
+                SOME t => t
+              | NONE =>
+                raise Feedback.mk_HOL_ERR "QDimacs" "dict_to_varfn"
+                  ("unknown index " ^ Int.toString i)
   end
 
 (* ------------------------------------------------------------------------- *)

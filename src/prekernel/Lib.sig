@@ -8,7 +8,7 @@ sig
    type ('a, 'b) istream
    type ('a, 'b) subst = {redex: 'a, residue: 'b} list
    type 'a set = 'a HOLset.set
-   type ('a, 'b) dict = ('a, 'b) HOLdict.dict
+   type ('a, 'b) dict = ('a, 'b) Redblackmap.dict
    val $  : ('a -> 'b) * 'a -> 'b
    val ## : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
    val ?> : ('a, 'c)verdict * ('a -> ('b, 'c)verdict) -> ('b, 'c)verdict

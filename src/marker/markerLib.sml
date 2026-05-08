@@ -977,29 +977,33 @@ open ThyDataSexp
 
 (* --- suspension.theorems store --- *)
 
-(* Key: (thy, name).  Theory qualification allows distinct theorems
-   with the same name in different theories. *)
-type susp_key = string * string
-
-val susp_key_compare = Portable.pair_compare (String.compare, String.compare)
+(* Key: kernelname {Thy, Name}.  Theory qualification allows distinct
+   theorems with the same name in different theories.  Strictly a
+   slight bending of the semantics -- kernelnames are usually
+   logical entities like constants and type-operators -- but
+   reusing the existing top-level KNametab avoids defining a
+   parallel structure. *)
+type susp_key = KernelSig.kernelname
 
 datatype susp_delta =
     AddSuspended of susp_key * thm
   | RemoveSuspended of susp_key
 
-type susp_table = (susp_key, thm) Binarymap.dict
+type susp_table = thm KNametab.table
 
-val empty_susp_table : susp_table = Binarymap.mkDict susp_key_compare
+val empty_susp_table : susp_table = KNametab.empty
 
 fun apply_susp_delta d (tab : susp_table) : susp_table =
     case d of
-        AddSuspended (k, th) => Binarymap.insert (tab, k, th)
-      | RemoveSuspended k =>
-          (fst (Binarymap.remove (tab, k)) handle Binarymap.NotFound => tab)
+        AddSuspended (k, th) => KNametab.update (k, th) tab
+      | RemoveSuspended k => KNametab.delete_safe k tab
 
 val (susp_enc, susp_dec) = bij_ed (
-      (fn AddSuspended p => inl p | RemoveSuspended k => inr k),
-      (fn inl p => AddSuspended p | inr k => RemoveSuspended k)
+      (fn AddSuspended ({Thy,Name}, th) => inl ((Thy,Name), th)
+        | RemoveSuspended {Thy,Name} => inr (Thy,Name)),
+      (fn inl ((Thy,Name), th) =>
+              AddSuspended ({Thy=Thy,Name=Name}, th)
+        | inr (Thy,Name) => RemoveSuspended {Thy=Thy,Name=Name})
     ) (tagged_sum ("add", pair_ed (pair_ed (string_ed, string_ed), thm_ed))
                   ("rm", pair_ed (string_ed, string_ed)))
 
@@ -1040,31 +1044,37 @@ fun triple_compare (c1, c2, c3) ((a1,a2,a3), (b1,b2,b3)) =
 val res_key_compare =
     triple_compare (String.compare, String.compare, String.compare)
 
+structure ResTab = Table(struct
+  type key = res_key
+  val ord = res_key_compare
+  fun pp (s1,s2,s3) = HOLPP.add_string (s1 ^ "$" ^ s2 ^ "$" ^ s3)
+end)
+
 datatype res_delta =
     AddResumption of res_key * thm
   | RemoveResumptions of string * string  (* parent_thy, parent_name *)
 
-type res_dict = (res_key, thm list) Binarymap.dict
+type res_dict = thm list ResTab.table
 
-val empty_res_dict : res_dict = Binarymap.mkDict res_key_compare
+val empty_res_dict : res_dict = ResTab.empty
 
 fun apply_res_delta d (dict : res_dict) : res_dict =
     case d of
         AddResumption (k, th) =>
           let val existing =
-                  case Binarymap.peek (dict, k) of
+                  case ResTab.lookup dict k of
                       NONE => []
                     | SOME ths => ths
           in
-            Binarymap.insert (dict, k, th :: existing)
+            ResTab.update (k, th :: existing) dict
           end
       | RemoveResumptions (thy, nm) =>
-          Binarymap.foldl
-            (fn (k as (t,n,_), v, acc) =>
+          ResTab.fold
+            (fn (k as (t,n,_), v) => fn acc =>
                 if t = thy andalso n = nm then acc
-                else Binarymap.insert (acc, k, v))
-            empty_res_dict
+                else ResTab.update (k, v) acc)
             dict
+            empty_res_dict
 
 val reskey_ed : res_key ed = pair3_ed (string_ed, string_ed, string_ed)
 
@@ -1102,16 +1112,17 @@ fun record_resumption_delta d =
    For unqualified lookup, scans the dictionary keys for any match.
    Returns (thy, thm) on success so caller knows which theory. *)
 fun lookup_suspension_qualified (thy, nm) =
-    case Binarymap.peek (get_susp_global (), (thy, nm)) of
+    case KNametab.lookup (get_susp_global ()) {Thy = thy, Name = nm} of
         NONE => NONE
       | SOME th => SOME (thy, th)
 
 fun lookup_suspension_unqualified nm =
     let
       val tab = get_susp_global ()
-      val matches = Binarymap.foldl
-            (fn ((t, n), th, acc) => if n = nm then (t, th) :: acc else acc)
-            [] tab
+      val matches = KNametab.fold
+            (fn ({Thy = t, Name = n}, th) => fn acc =>
+                if n = nm then (t, th) :: acc else acc)
+            tab []
     in
       case matches of
           [] => NONE
@@ -1130,8 +1141,8 @@ fun lookup_suspension nm =
       | _ => lookup_suspension_unqualified nm
 
 fun lookup_resumption {parent_thy, parent_name, label} =
-    case Binarymap.peek (get_res_global (),
-                        (parent_thy, parent_name, label)) of
+    case ResTab.lookup (get_res_global ())
+                       (parent_thy, parent_name, label) of
         NONE => []
       | SOME ths => ths
 
@@ -1140,7 +1151,8 @@ fun lookup_resumption {parent_thy, parent_name, label} =
    theorem DB. *)
 val _ = boolLib.suspended_theorem_recorder :=
     (fn (n, th) => record_suspension_delta
-                     (AddSuspended ((Theory.current_theory(), n), th)))
+                     (AddSuspended
+                        ({Thy = Theory.current_theory(), Name = n}, th)))
 
 (* ----------------------------------------------------------------------
     Finding the parent theorem for a Resume / Finalise.
@@ -1312,7 +1324,7 @@ fun assemble_finalised parent_thy parent_nm parent_th =
               let
                 val key = (parent_thy, parent_nm, label)
                 val candidates =
-                    case Binarymap.peek (get_res_global (), key) of
+                    case ResTab.lookup (get_res_global ()) key of
                         NONE => []
                       | SOME ths => ths
                 (* Pick the candidate whose conclusion aconv-matches
@@ -1375,7 +1387,8 @@ fun finalise_suspended_thm loc nm0 =
             (* Drop this name from the suspension store so it's no
                longer considered pending.  (For FromDB there was no
                entry to drop anyway; the delta is harmless.) *)
-            val _ = record_suspension_delta (RemoveSuspended (parent_thy, name))
+            val _ = record_suspension_delta
+                      (RemoveSuspended {Thy = parent_thy, Name = name})
             (* Also clean up the resumption proofs for this theorem. *)
             val _ = record_resumption_delta (RemoveResumptions (parent_thy, name))
           in

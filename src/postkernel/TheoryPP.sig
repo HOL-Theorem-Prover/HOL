@@ -20,7 +20,7 @@ sig
    all_thms    : (string * thm * thminfo) list,
    mldeps      : string list,
    thydata     : string list * Term.term list *
-                 (string,shared_writemaps -> HOLsexp.t)Binarymap.dict
+                 (shared_writemaps -> HOLsexp.t) Symtab.table
  }
  type sig_info_record = {
    name        : string,

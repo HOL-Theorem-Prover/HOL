@@ -1,12 +1,10 @@
 structure Profile :> Profile =
 struct
 
-open Binarymap
-
 type time = Time.time
 type call_info = {real: time, gc: time, sys: time, usr: time, n: int}
 
-val ptable = ref (Binarymap.mkDict String.compare : (string, call_info) dict)
+val ptable : call_info Symtab.table ref = ref Symtab.empty
 
 datatype 'a result = OK of 'a | Ex of exn
 
@@ -29,7 +27,7 @@ type timedata = {nongc: {usr: Time.time, sys: Time.time},
                  gc: {usr: Time.time, sys: Time.time}}
 
 fun add_profile nm timefx =
-   case peek (!ptable, nm) of
+   case Symtab.lookup (!ptable) nm of
       NONE =>
          let
             val ({nongc, gc}: timedata, real) = timefx
@@ -40,7 +38,7 @@ fun add_profile nm timefx =
                 n = 1,
                 real = real}
          in
-            ptable := insert (!ptable, nm, data)
+            ptable := Symtab.update (nm, data) (!ptable)
          end
     | SOME {usr = usr0, sys = sys0, gc = gc0, n = n0, real = real0} =>
          let
@@ -53,7 +51,7 @@ fun add_profile nm timefx =
                 n = Int.+ (n0, 1),
                 real = real0 + real1}
          in
-            ptable := insert (!ptable, nm, data)
+            ptable := Symtab.update (nm, data) (!ptable)
          end
 
 fun profile_exn_opt do_exn do_ok do_both nm f x =
@@ -76,13 +74,12 @@ fun profile_with_exn nm = profile_exn_opt (SOME false) true true nm
 fun profile_with_exn_name nm = profile_exn_opt (SOME true) true true nm
 fun profile_no_exn nm = profile_exn_opt NONE true false nm
 
-fun reset1 nm =
-   ptable := #1 (remove (!ptable, nm)) handle Binarymap.NotFound => ()
+fun reset1 nm = ptable := Symtab.delete_safe nm (!ptable)
 
-fun reset_all () = ptable := Binarymap.mkDict String.compare
+fun reset_all () = ptable := Symtab.empty
 
 fun results () = Listsort.sort (fn (i1, i2) => String.compare (#1 i1, #1 i2))
-                               (listItems (!ptable))
+                               (Symtab.dest (!ptable))
 
 fun foldl_map _ (acc, []) = (acc, [])
   | foldl_map f (acc, x :: xs) =

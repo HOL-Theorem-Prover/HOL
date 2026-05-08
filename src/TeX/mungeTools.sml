@@ -154,7 +154,7 @@ fun stringOpt pos s =
 
 
 
-type override_map = (string,(string * int))Binarymap.dict
+type override_map = (string * int) Symtab.table
 fun read_overrides fname = let
   val istrm = TextIO.openIn fname
               handle _ => usage()
@@ -183,11 +183,11 @@ fun read_overrides fname = let
                            acc)
                 | SOME n => let
                   in
-                    case Binarymap.peek(acc, word1) of
-                      NONE => Binarymap.insert(acc, word1, (word2, n))
+                    case Symtab.lookup acc word1 of
+                      NONE => Symtab.update (word1, (word2, n)) acc
                     | SOME _ => (warn ((count,0),
                                        fname ^ " rebinds " ^ word1);
-                                 Binarymap.insert(acc, word1, (word2, n)))
+                                 Symtab.update (word1, (word2, n)) acc)
                   end
               end
           end
@@ -195,7 +195,7 @@ fun read_overrides fname = let
           recurse (count + 1) acc'
         end
 in
-  recurse 1 (Binarymap.mkDict String.compare) before
+  recurse 1 Symtab.empty before
   TextIO.closeIn istrm
 end
 
@@ -247,11 +247,11 @@ fun optset_traces opts f =
     OptSet.fold (fn (e, f) => case e of TraceSet p => trace p f | _ => f) f opts
 
 val HOL = !EmitTeX.texPrefix
-val user_overrides = ref (Binarymap.mkDict String.compare)
+val user_overrides : (string * int) Symtab.table ref = ref Symtab.empty
 
 fun diag s = (TextIO.output(TextIO.stdErr, s ^ "\n");
               TextIO.flushOut TextIO.stdErr)
-fun overrides s = Binarymap.peek (!user_overrides, s)
+fun overrides s = Symtab.lookup (!user_overrides) s
 
 fun isChar x y = x = y
 
@@ -276,30 +276,28 @@ fun mkinst loc opts tm = let
   fun foldthis (v, acc) = let
     val (n,ty) = dest_var v
   in
-    Binarymap.insert(acc,n,ty)
+    Symtab.update (n, ty) acc
   end
-  val vtypemap = HOLset.foldl foldthis (Binarymap.mkDict String.compare) vs
-  fun foldthis ((nm1,nm2),acc) = let
-    val ty = Binarymap.find(vtypemap, nm2)
-  in
-    (mk_var(nm2,ty) |-> mk_var(nm1,ty)) :: acc
-  end handle Binarymap.NotFound => acc
+  val vtypemap = HOLset.foldl foldthis Symtab.empty vs
+  fun foldthis ((nm1,nm2),acc) =
+      case Symtab.lookup vtypemap nm2 of
+          NONE => acc
+        | SOME ty => (mk_var(nm2,ty) |-> mk_var(nm1,ty)) :: acc
 in
   (insts, tytheta, foldr foldthis [] insts)
 end
 
 fun mk_s2smap pairs = let
-  fun foldthis ((nm1,nm2), acc) = Binarymap.insert(acc, nm2, nm1)
-  val m = Binarymap.mkDict String.compare
+  fun foldthis ((nm1,nm2), acc) = Symtab.update (nm2, nm1) acc
 in
-   List.foldl foldthis m pairs
+   List.foldl foldthis Symtab.empty pairs
 end
 
 fun rename m t = let
   val (v0, _) = dest_abs t
   val (vnm, vty) = dest_var v0
 in
-  case Binarymap.peek (m, vnm) of
+  case Symtab.lookup m vnm of
     NONE => NO_CONV t
   | SOME newname => ALPHA_CONV (mk_var(newname,vty)) t
 end

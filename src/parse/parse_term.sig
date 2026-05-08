@@ -19,8 +19,12 @@ sig
       (term qbuf * term PStack, unit, string locn.located) errormonad.t
 
   datatype mx_order = datatype parse_term_dtype.mx_order
+  type 'a stbstab  (* abstract; backed by a local Table instantiation
+                      keyed on (stack_terminal * bool) * stack_terminal --
+                      not exposed as a structure to avoid leaking the
+                      TABLE signature, which trips mosml on
+                      case-insensitive filesystems *)
   val mk_prec_matrix :
-      term_grammar.grammar ->
-      ((stack_terminal * bool) * stack_terminal, mx_order) HOLdict.dict Uref.t
+      term_grammar.grammar -> mx_order stbstab Uref.t
 
 end
