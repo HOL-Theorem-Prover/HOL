@@ -15,7 +15,7 @@ fun run_in dir args =
 
 fun clean dir = ignore (run_in dir ["cleanAll"])
 
-fun build dir = run_in dir []
+fun build dir = run_in dir ["--no-cache"]
 
 (* -----------------------------------------------------------------------
    Test 1: Lock file is created during build
