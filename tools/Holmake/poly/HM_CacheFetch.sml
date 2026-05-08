@@ -13,21 +13,25 @@ fun copy src dest =
     in  loop (); true end
     handle _ => false
 
-fun recMkDir dir =
-    if OS.FileSys.access(dir, []) then ()
-    else (recMkDir (OS.Path.dir dir); OS.FileSys.mkDir dir)
+val mkDir = HOLFS_dtype.createDirIfNecessary
 
 fun already_cached base key =
     OS.FileSys.access(OS.Path.concat(OS.Path.concat(base, "key"), key), [])
+
+fun is_theory_output f =
+    String.isSuffix "Theory.sml" f orelse
+    String.isSuffix "Theory.sig" f orelse
+    String.isSuffix "Theory.dat" f
 
 fun upload base_url cachekey dir filenames (ofns : Holmake_tools.output_functions) =
     case cachekey of
         HM_Cachekey.Missing _ => false
       | HM_Cachekey.Key key =>
     if already_cached base_url key then true else
+    if not (List.all is_theory_output filenames) then false else
     let
         val {info, warn, ...} = ofns
-        val _ = recMkDir base_url handle OS.SysErr _ => ()
+        val _ = mkDir base_url handle OS.SysErr _ => ()
         val obj_dir = OS.Path.concat(dir, OS.Path.concat(".hol", "objs"))
         fun find_file f =
             let val in_objs = OS.Path.concat(obj_dir, f)
@@ -40,26 +44,34 @@ fun upload base_url cachekey dir filenames (ofns : Holmake_tools.output_function
             end
         val files = List.mapPartial find_file filenames
         val data_dir = OS.Path.concat(base_url, "data")
-        val _ = recMkDir data_dir handle OS.SysErr _ => ()
+        val _ = mkDir data_dir handle OS.SysErr _ => ()
         fun process {name, path} =
             let val hash = SHA1.sha1_file {filename = path}
                 val ok = copy path (OS.Path.concat(data_dir, hash))
             in
                 if ok then SOME (name, hash) else NONE
             end
+        val all_found = length files = length filenames
         val results = List.mapPartial process files
-        val ok = length results = length files
-        val _ = recMkDir (OS.Path.concat(base_url, "key")) handle OS.SysErr _ => ()
-        val manifest_path = OS.Path.concat(OS.Path.concat(base_url, "key"), key)
-        fun entry_to_json (name, hash) =
-            "{\"name\": \"" ^ name ^ "\", \"url\": \"/data/" ^ hash ^ "\"}"
-        val json = "{\"files\": [" ^ String.concatWith ", " (map entry_to_json results) ^ "]}"
-        val out = TextIO.openOut manifest_path
-        val _ = TextIO.output(out, json)
-        val _ = TextIO.closeOut out
+        val all_processed = length results = length files
+        val ok = all_found andalso all_processed
     in
-        if ok then true
-        else (warn "Cache upload failed"; false)
+        if ok then let
+            val _ = mkDir (OS.Path.concat(base_url, "key"))
+                    handle OS.SysErr _ => ()
+            val manifest_path =
+                OS.Path.concat(OS.Path.concat(base_url, "key"), key)
+            fun entry_to_json (name, hash) =
+                "{\"name\": \"" ^ name ^
+                "\", \"url\": \"/data/" ^ hash ^ "\"}"
+            val json = "{\"files\": [" ^
+                       String.concatWith ", "
+                         (map entry_to_json results) ^ "]}"
+            val out = TextIO.openOut manifest_path
+            val _ = TextIO.output(out, json)
+            val _ = TextIO.closeOut out
+        in true end
+        else (warn "Cache upload: not all files found; skipping"; false)
     end handle _ => false
 
 fun fetch base_url cachekey (ofns : Holmake_tools.output_functions) =
@@ -93,7 +105,9 @@ fun fetch base_url cachekey (ofns : Holmake_tools.output_functions) =
                 fun to_dest_dir s =
                     case HFS_NameMunge.HOLtoFS s of
                         NONE => s
-                      | SOME {fullfile, ...} => fullfile
+                      | SOME {fullfile, dir} =>
+                        (mkDir dir handle _ => ();
+                         fullfile)
                 val ok = List.all
                              (fn {name, url} =>
                                  fetch_to_file (base_url ^ url) (to_dest_dir name))
