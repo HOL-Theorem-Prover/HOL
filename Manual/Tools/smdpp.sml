@@ -91,7 +91,14 @@ fun dropFrontmatter s =
     end
   else s
 
-(* Strip \index{...} entries with brace counting. *)
+(* Strip \index{...} entries with brace counting.
+
+   Two-stage: first strip the substrings, then walk the result
+   line-by-line and drop any line that is now blank but had a
+   non-blank original.  Reason: `\index{...}` lines that leave
+   only whitespace after stripping break their enclosing
+   paragraph and (inside a definition-list continuation) make the
+   following 4-space-indented lines reparse as a code block. *)
 fun stripIndex s =
   let
     val sub = String.sub
@@ -113,8 +120,24 @@ fun stripIndex s =
       else if matchAt i then
         loop (skipBraces (i + cmdsz, 1), acc)
       else loop (i+1, sub (s, i) :: acc)
+    val stripped = loop (0, [])
+    val origLines = String.fields (fn c => c = #"\n") s
+    val newLines = String.fields (fn c => c = #"\n") stripped
+    (* Pair them up; drop a line if it's now blank but its
+       original was non-blank. *)
+    fun isBlank ln = CharVector.all Char.isSpace ln
+    fun zip (origs, news, acc) =
+      case (origs, news) of
+          ([], []) => List.rev acc
+        | (o1::orest, n1::nrest) =>
+            if isBlank n1 andalso not (isBlank o1) then
+              zip (orest, nrest, acc)
+            else
+              zip (orest, nrest, n1 :: acc)
+        | _ => List.rev acc @ news (* shouldn't happen *)
+    val kept = zip (origLines, newLines, [])
   in
-    loop (0, [])
+    String.concatWith "\n" kept
   end
 
 (* Drop pandoc-style raw fenced blocks like ```{=latex} ... ```.
@@ -206,7 +229,12 @@ fun convertSuperscripts s =
      `_` and `*` prefixed with `\` so pulldown-cmark's emphasis pass
         doesn't pair them up across math content (e.g.
         `\mathsf{Terms}_{\Sigma_{\Omega}}` would otherwise turn the
-        embedded `_` into <em> tags). *)
+        embedded `_` into <em> tags).
+   Code spans (`...`) and fenced code blocks (```...```) are passed
+   through verbatim: a stray `$` inside a code span or block must
+   not flip protectMath into math mode (otherwise everything between
+   that `$` and the next stray `$` -- possibly many lines later --
+   gets `_` and `\` over-escaped). *)
 fun protectMath s =
   let
     val sub = String.sub
@@ -219,14 +247,46 @@ fun protectMath s =
         | #"_"  => emitStr "\\_" acc
         | #"*"  => emitStr "\\*" acc
         | _ => c :: acc
+    (* Test whether position i starts a fenced-code-block delimiter:
+       three backticks at the start of a line (any leading
+       whitespace).  Return SOME (delim length) if so. *)
+    fun fenceAt i =
+      if i + 2 < sz andalso sub (s, i) = #"`"
+         andalso sub (s, i+1) = #"`" andalso sub (s, i+2) = #"`"
+         andalso (i = 0 orelse sub (s, i-1) = #"\n")
+      then SOME 3
+      else NONE
+    (* In "outside" state: looking for $...$ math, code spans, or
+       fenced code blocks. *)
     fun outside (i, acc) =
       if i >= sz then String.implode (List.rev acc)
-      else if sub (s, i) = #"$" then
-        if i + 1 < sz andalso sub (s, i+1) = #"$" then
-          display (i+2, emitStr "$$" acc)
-        else
-          inline (i+1, emit #"$" acc)
-      else outside (i+1, emit (sub (s, i)) acc)
+      else case fenceAt i of
+              SOME 3 => fenced (i+3, emitStr "```" acc)
+            | _ =>
+        case sub (s, i) of
+            #"`" => codespan (i+1, emit #"`" acc)
+          | #"$" =>
+              if i + 1 < sz andalso sub (s, i+1) = #"$" then
+                display (i+2, emitStr "$$" acc)
+              else
+                inline (i+1, emit #"$" acc)
+          | c => outside (i+1, emit c acc)
+    (* In a single-backtick code span, copy verbatim until the
+       closing backtick or end-of-line (CommonMark: code spans don't
+       cross newlines without backticks). *)
+    and codespan (i, acc) =
+      if i >= sz then String.implode (List.rev acc)
+      else case sub (s, i) of
+              #"`" => outside (i+1, emit #"`" acc)
+            | #"\n" => outside (i+1, emit #"\n" acc)
+            | c => codespan (i+1, emit c acc)
+    (* Inside a fenced code block, copy verbatim until the closing
+       triple-backtick (also at the start of a line). *)
+    and fenced (i, acc) =
+      if i >= sz then String.implode (List.rev acc)
+      else case fenceAt i of
+              SOME 3 => outside (i+3, emitStr "```" acc)
+            | _ => fenced (i+1, emit (sub (s, i)) acc)
     and inline (i, acc) =
       if i >= sz then String.implode (List.rev acc)
       else case sub (s, i) of
@@ -241,6 +301,13 @@ fun protectMath s =
   in
     outside (0, [])
   end
+
+(* Use the plain-text elision marker for the .smd path: the
+   default `\quad\textit{\small\dots{}output elided\dots{}}` is
+   LaTeX-flavoured and would render literally inside an mdbook
+   <pre><code> block.  This mirrors what polyscripter's `-md` CLI
+   flag does for the .smd -> .md path. *)
+val () = elision_string1 := elision_string1_plain
 
 fun runScripted obuf s =
   processString {input = s, debug = false,

@@ -110,6 +110,14 @@ fun umunge umap s =
 val elision_string1 =
     ref "\\quad\\textit{\\small\\dots{}output elided\\dots{}}\n"
 
+(* Plain-text alternative used when -md is passed.  The LaTeX form
+   above relied on the surrounding alltt environment to interpret
+   \textit etc.; .smd output ends up inside a fenced code block, which
+   pandoc lowers to verbatim, so the LaTeX would leak through as
+   literal characters. *)
+val elision_string1_plain =
+    "   ... output elided ...\n"
+
 fun deleteTrailingWhiteSpace s =
   let
     open Substring
@@ -626,7 +634,7 @@ fun read_umap fname =
 
 
 fun usage() =
-  "Usage:\n  "^ CommandLine.name() ^ " [-d] [umapfile]"
+  "Usage:\n  "^ CommandLine.name() ^ " [-d] [-md] [umapfile]"
 
 (* One-time setup shared between the CLI driver and external callers
    (e.g., the smdpp mdbook preprocessor).  Returns the compiler output
@@ -698,13 +706,17 @@ fun processString {input, debug, umap, obuf} =
 
 fun main () =
   let
-    val (debugp, umap) =
-        case CommandLine.arguments() of
-            [] => (false, Binarymap.mkDict String.compare)
-          | ["-d"] => (true, Binarymap.mkDict String.compare)
-          | [name] => (false, read_umap name)
-          | ["-d", name] => (true, read_umap name)
+    fun parseArgs (mdp, debugp, umap) args =
+        case args of
+            [] => (mdp, debugp, umap)
+          | "-md" :: rest => parseArgs (true, debugp, umap) rest
+          | "-d"  :: rest => parseArgs (mdp, true, umap) rest
+          | [name] => (mdp, debugp, read_umap name)
           | _ => die (usage())
+    val (mdp, debugp, umap) =
+        parseArgs (false, false, Binarymap.mkDict String.compare)
+                  (CommandLine.arguments())
+    val () = if mdp then elision_string1 := elision_string1_plain else ()
     val obuf = setupPolyscripter ()
     val cvn = PolyML.Compiler.compilerVersionNumber
     val _ = if cvn = 551 orelse cvn = 552 then
