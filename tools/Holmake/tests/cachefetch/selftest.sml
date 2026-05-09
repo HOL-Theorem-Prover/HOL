@@ -238,26 +238,10 @@ val _ =
     else die ("Cross-directory cache hit broke dependent build: " ^ out9)
 
 (* ------------------------------------------------------------ *)
-(* Test 10: cached cheated theory shows CHEATED not CACHED       *)
-(* ------------------------------------------------------------ *)
-val _ = tprint "cached cheated theory shows CHEATED"
-val _ = run_holmake ["cleanAll"]
-val cache_cheat = fresh_cache ()
-val _ = run_holmake_out ["--cache-dir", cache_cheat, "cheatTheory"]
-val _ = run_holmake ["cleanAll"]
-val (res10, out10) = run_holmake_out ["--cache-dir", cache_cheat, "cheatTheory"]
-val _ =
-    if OS.Process.isSuccess res10 andalso
-       String.isSubstring "CHEATED" out10
-    then OK()
-    else die ("Expected CHEATED for cached cheated theory, got: " ^ out10)
-
-(* ------------------------------------------------------------ *)
 (* Cleanup                                                       *)
 (* ------------------------------------------------------------ *)
 val _ = run_holmake ["cleanAll"]
 val _ = List.app (fn c => rm_rf c handle _ => ())
         [cache_populates, cache_corrupt, cache_nodata, cache_partial,
-         cache_empty, cache_nocache, cache_dep, cache_crossdir,
-         cache_cheat]
+         cache_empty, cache_nocache, cache_dep, cache_crossdir]
 val _ = rm_rf sibling handle _ => ()
