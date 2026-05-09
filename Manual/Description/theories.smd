@@ -1625,6 +1625,7 @@ Thus
 >> base_tokens.allow_octal_input := true;
 
 >> ``067``;
+>>__ base_tokens.allow_octal_input := false;
 ```
 
 **Numerals and Peano numbers.**
