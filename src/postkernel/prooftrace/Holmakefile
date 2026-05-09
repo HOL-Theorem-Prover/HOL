@@ -1,5 +1,7 @@
 .PHONY: all
 
+HAVE_MLTON = $(if $(NO_MLTON),,$(which mlton))
+ifneq ($(HAVE_MLTON),)
 replay-test: replay-test.mlb replay-test.sml
 	mlton -default-type intinf $<
 
@@ -10,6 +12,7 @@ ifdef HAVE_WORD64
 all: pft-replay-test replay-test
 else
 all: pft-replay-test
+endif
 endif
 
 EXTRA_CLEANS = replay-test pft-replay-test
