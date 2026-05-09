@@ -208,7 +208,7 @@ fun graphbuild optinfo g =
     fun genjob (g,ok) =
       case (ok,find_runnable g) of
           (false, _) => (release_all_locks(); GiveUpAndDie (g, false))
-       |  (true, NONE) => NoMoreJobs (g, ok)
+       |  (true, NONE) => (release_all_locks(); NoMoreJobs (g, ok))
        |  (true, SOME (n,nI : GraphExtra.t nodeInfo)) =>
           let
             val _ = diag ("Found runnable node "^node_toString n)
