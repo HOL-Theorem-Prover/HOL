@@ -921,9 +921,40 @@ local
       end
     | NONE => ()
   end
-  fun fromHOLFS x = case HFS_NameMunge.HOLtoFS x
-                      of NONE => x
-                       | SOME {fullfile,...} => fullfile
+  (* Atomic temp+rename used below when exporting a theory: writes go to
+     <path>.<pid>.tmp (alongside the eventual file in .hol/objs/), and the
+     rename into place only happens once every output has been written.
+     Without this, killing the build mid-export could leave 0-byte
+     fooTheory.{sig,sml} files that Holmake mistook for up-to-date outputs.
+     The pid suffix keeps the temp filename unique across concurrent
+     Holmake processes, which can both end up rebuilding the same theory
+     when sharing a dependency. *)
+  type tempstrm = {final : string, tmp : string,
+                   ostrm : TextIO.outstream}
+  fun tmp_pid_suffix () =
+      "." ^
+      SysWord.toString (Posix.Process.pidToWord (Posix.ProcEnv.getpid ())) ^
+      ".tmp"
+  fun open_temp logical_path : tempstrm =
+    let
+      val sfx = tmp_pid_suffix ()
+      val (final, tmp) =
+          case HFS_NameMunge.HOLtoFS logical_path of
+              NONE => (logical_path, logical_path ^ sfx)
+            | SOME {fullfile, dir} =>
+                (HOLFS_dtype.createDirIfNecessary dir;
+                 (fullfile, fullfile ^ sfx))
+    in
+      {final = final, tmp = tmp, ostrm = TextIO.openOut tmp}
+    end
+  fun commit_temp ({final, tmp, ostrm = _} : tempstrm) =
+    OS.FileSys.rename {old = tmp, new = final}
+    handle OS.SysErr _ =>
+      (OS.FileSys.remove final handle _ => ();
+       OS.FileSys.rename {old = tmp, new = final})
+  fun abort_temp ({tmp, ostrm, final = _} : tempstrm) =
+    (TextIO.closeOut ostrm handle _ => ();
+     OS.FileSys.remove tmp handle _ => ())
   val anonymous_thms = ref (0,[])
 in
 fun add_anonymous_thm th = let
@@ -999,61 +1030,70 @@ fun export_theory_return_hash () = let
  in
    case filter filtP (map #1 all_thms) of
      [] =>
-     (let val holdatfile = concat["./",name,".dat"]
-          val ostrm1 = Portable.open_out(concat["./",name,".sig"])
-          val ostrm2 = Portable.open_out(concat["./",name,".sml"])
-          val ostrm3 = Portable.open_out(holdatfile)
-          val time_now = total_cpu (Timer.checkCPUTimer Globals.hol_clock)
-          val time_since = Time.-(time_now, !new_theory_time)
-          val tstr = Lib.time_to_string time_since
-          val () = mesg ("Exporting theory "^Lib.quote thyname^" ... ");
-          val () = anonymous_thms := (0,[])
-          val () = theory_out (TheoryPP.pp_thydata structthry) ostrm3;
-          val datfile = fromHOLFS holdatfile
-          val hash = SHA1.sha1_file {filename=datfile}
+     (let fun thypath ext = concat["./",name,ext]
+          val datfile_t  = open_temp(thypath ".dat")
+          val sigfile_t  = open_temp(thypath ".sig")
+          val smlfile_t  = open_temp(thypath ".sml")
+          val temps      = [datfile_t, sigfile_t, smlfile_t]
+          fun cleanup () = List.app abort_temp temps
       in
-        theory_out (TheoryPP.pp_sig sigthry) ostrm1;
-        theory_out (TheoryPP.pp_struct hash structthry) ostrm2;
-        if Feedback.get_tracefn "TheoryPP.include_html_docs" () = 1 then
-          let val docsdir = ".hol/docs"
-              val () = HOLFS_dtype.createDirIfNecessary docsdir
-              val sigdoc_strm =
-                  Portable.open_out (OS.Path.concat(docsdir, name ^ ".html"))
-              val script_path =
-                  OS.Path.concat(OS.FileSys.getDir(), thyname ^ "Script.sml")
-              val script_html_path =
-                  OS.Path.concat(docsdir, thyname ^ "Script.html")
-          in
-            (TheoryPP.print_doc_html
-                {pp_thm = !pp_thm, pp_type = !pp_type}
-                docthry sigdoc_strm
-               handle e => (Portable.close_out sigdoc_strm; raise e);
-             Portable.close_out sigdoc_strm);
-            if OS.FileSys.access(script_path, [OS.FileSys.A_READ]) then
-              TheoryPP.write_script_html
-                {script_path = script_path, out_path = script_html_path}
-              handle e =>
-                (mesg ("\nFailed to mirror " ^ thyname ^ "Script.sml: " ^
-                       General.exnMessage e ^ "\n"))
-            else ()
-          end
-        else ();
-        Tracing.trace_theory name {
-          theory    = thyname,
-          parents   = #parents structthry,
-          types     = #types structthry,
-          constants = #constants structthry,
-          all_thms  = all_thms,
-          anon_thms = rev(#2(!anonymous_thms)),
-          mldeps    = #mldeps structthry };
-        mesg "done.\n";
-        if !report_times then
-          (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^ " to build\n");
-           maybe_log_time_to_disk thyname (Time.toString time_since))
-        else ();
-        hash
-      end
-        handle e => (Lib.say "\nFailure while writing theory!\n"; raise e))
+        (let
+           val time_now = total_cpu (Timer.checkCPUTimer Globals.hol_clock)
+           val time_since = Time.-(time_now, !new_theory_time)
+           val tstr = Lib.time_to_string time_since
+           val () = mesg ("Exporting theory "^Lib.quote thyname^" ... ");
+           val () = anonymous_thms := (0,[])
+           val () = theory_out (TheoryPP.pp_thydata structthry)
+                               (#ostrm datfile_t);
+           val hash = SHA1.sha1_file {filename = #tmp datfile_t}
+         in
+           theory_out (TheoryPP.pp_sig sigthry) (#ostrm sigfile_t);
+           theory_out (TheoryPP.pp_struct hash structthry) (#ostrm smlfile_t);
+           if Feedback.get_tracefn "TheoryPP.include_html_docs" () = 1 then
+             let val docsdir = ".hol/docs"
+                 val () = HOLFS_dtype.createDirIfNecessary docsdir
+                 val sigdoc_strm =
+                     Portable.open_out
+                       (OS.Path.concat(docsdir, name ^ ".html"))
+                 val script_path =
+                     OS.Path.concat(OS.FileSys.getDir(), thyname ^ "Script.sml")
+                 val script_html_path =
+                     OS.Path.concat(docsdir, thyname ^ "Script.html")
+             in
+               (TheoryPP.print_doc_html
+                   {pp_thm = !pp_thm, pp_type = !pp_type}
+                   docthry sigdoc_strm
+                  handle e => (Portable.close_out sigdoc_strm; raise e);
+                Portable.close_out sigdoc_strm);
+               if OS.FileSys.access(script_path, [OS.FileSys.A_READ]) then
+                 TheoryPP.write_script_html
+                   {script_path = script_path, out_path = script_html_path}
+                 handle e =>
+                   (mesg ("\nFailed to mirror " ^ thyname ^ "Script.sml: " ^
+                          General.exnMessage e ^ "\n"))
+               else ()
+             end
+           else ();
+           Tracing.trace_theory name {
+             theory    = thyname,
+             parents   = #parents structthry,
+             types     = #types structthry,
+             constants = #constants structthry,
+             all_thms  = all_thms,
+             anon_thms = rev(#2(!anonymous_thms)),
+             mldeps    = #mldeps structthry };
+           List.app commit_temp temps;
+           mesg "done.\n";
+           if !report_times then
+             (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^
+                    " to build\n");
+              maybe_log_time_to_disk thyname (Time.toString time_since))
+           else ();
+           hash
+         end
+         handle e => (cleanup ();
+                      Lib.say "\nFailure while writing theory!\n"; raise e))
+      end)
 
    | badnames =>
      (HOL_MESG
