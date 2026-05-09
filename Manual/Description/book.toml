@@ -7,6 +7,14 @@ src = "."
 [output.html]
 mathjax-support = true
 
+# Sidebar entries fold by default at level 1 and below: top-level
+# chapters stay visible, per-chapter section sub-entries (1.1, 1.2,
+# ...) are collapsed under a chevron until clicked.  Auto-expands
+# on navigation into a chapter.
+[output.html.fold]
+enable = true
+level = 1
+
 [preprocessor.smdpp]
 command = "../Tools/smdpp"
 renderers = ["html"]
