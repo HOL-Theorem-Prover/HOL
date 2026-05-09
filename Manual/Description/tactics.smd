@@ -1,3 +1,7 @@
+# Goal Directed Proof: Tactics and Tacticals
+
+\label{tactics-and-tacticals}
+
 <!-- PolyML code for extracting stuff from structures and printing types etc -->
 >>__ structure PNV = PolyML.NameSpace.Values
 >>__ fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n"); OS.Process.exit OS.Process.failure)

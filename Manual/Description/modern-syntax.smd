@@ -1,3 +1,7 @@
+# HOL Source File Syntax
+
+\label{chap:modern-syntax}
+
 \index{special syntactic forms for scripts|(}
 Files written by HOL users are of the same form as those written by HOL developers.
 In this way, HOL aims to be easy to extend, and this chapter’s description of HOL source files should be useful for users and developers both.

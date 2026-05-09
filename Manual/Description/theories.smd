@@ -1,3 +1,7 @@
+# Core Theories
+
+\label{HOLtheories}
+
 ```{=latex}
 % Chapter-local LaTeX macros for theories.tex.  YAML
 % header-includes don't survive `pandoc -t latex`, so these have to

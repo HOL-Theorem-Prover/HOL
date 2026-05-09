@@ -18,8 +18,17 @@ all: description.pdf
 # Build the mdbook output for the chapters listed in SUMMARY.md.
 # The smdpp preprocessor is invoked dynamically by mdbook (see
 # book.toml); the output goes to ../book/Description.
-mdbook: ../Tools/smdpp
+mdbook: ../Tools/smdpp SUMMARY.md
 	mdbook build
+
+# SUMMARY.md is generated from the chapter .smd sources by
+# Tools/gen_summary (chapter ordering is hard-coded in that
+# tool; titles and section sub-entries come from each .smd's
+# H1 / H2 headings).  Tracked in git so that direct `mdbook
+# build` invocations work, but regenerated whenever chapter
+# sources change.
+SUMMARY.md: ../Tools/gen_summary system.smd drules.smd conv.smd tactics.smd theories.smd modern-syntax.smd
+	../Tools/gen_summary > $@
 
 # Convenience: serve the book locally at http://127.0.0.1:3000/.
 # Live-reloads when .smd / theme / book.toml change.  Detaches into the
@@ -52,19 +61,19 @@ conv.md: conv.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 conv.tex: conv.md pdf-macros.lua
-	(printf '\\chapter{Conversions}\\label{avra-conv}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
+	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
 
 drules.md: drules.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 drules.tex: drules.md pdf-macros.lua
-	(printf '\\chapter{Derived Inference Rules}\\label{derived-rules}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
+	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
 
 tactics.md: tactics.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 tactics.tex: tactics.md pdf-macros.lua
-	(printf '\\chapter{Goal Directed Proof: Tactics and Tacticals}\\label{tactics-and-tacticals}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
+	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
 
 theories.md: theories.smd $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo) \
 	$(dprot $(HOLDIR)/src/integer/integerTheory.uo) \
@@ -74,7 +83,7 @@ theories.md: theories.smd $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo) \
 	$(PS_NOUMAP)
 
 theories.tex: theories.md pdf-macros.lua
-	(printf '\\chapter{Core Theories}\\label{HOLtheories}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
+	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
 
 math.tex: math.stex $(PS_STUFF) $(dprot $(SIGOBJ)/probabilityTheory.uo) \
     $(dprot $(SIGOBJ)/lebesgue_measureTheory.uo) \
@@ -94,7 +103,7 @@ system.md: system.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 system.tex: system.md pdf-macros.lua
-	(printf '\\chapter{\\texorpdfstring{The \\HOL{} Logic in ML}{The HOL Logic in ML}}\\label{HOLsyschapter}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
+	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
 
 HolSat.tex: HolSat.stex $(PS_STUFF) zchaff.cnf
 	$(PS_COMMAND)
@@ -103,7 +112,7 @@ modern-syntax.md: modern-syntax.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 modern-syntax-chapter.tex: modern-syntax.md pdf-macros.lua
-	(printf '\\chapter{\\texorpdfstring{\\HOL{} Source File Syntax}{HOL Source File Syntax}}\\label{chap:modern-syntax}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
+	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
 
 # This builds figs/0.mps, figs/1.mps, ...
 figures:

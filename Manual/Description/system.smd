@@ -72,6 +72,9 @@ header-includes: |
   \DeclareUnicodeCharacter{1D4AF}{\ensuremath{{\cal T}}}
 ---
 
+# The HOL Logic in ML
+
+\label{HOLsyschapter}
 
 <!-- PolyML code for extracting stuff from structures and printing types etc -->
 >>__ structure PNV = PolyML.NameSpace.Values
