@@ -91,19 +91,19 @@ fun dropFrontmatter s =
     end
   else s
 
-(* Strip \index{...} entries with brace counting.
-
-   Two-stage: first strip the substrings, then walk the result
-   line-by-line and drop any line that is now blank but had a
-   non-blank original.  Reason: `\index{...}` lines that leave
-   only whitespace after stripping break their enclosing
-   paragraph and (inside a definition-list continuation) make the
-   following 4-space-indented lines reparse as a code block. *)
-fun stripIndex s =
+(* Strip occurrences of `\<cmd>{...}` from the input, with brace
+   counting on the argument.  Two-stage: first remove the
+   substrings, then walk the result line-by-line and drop any
+   line that became blank because it consisted only of stripped
+   commands plus whitespace -- inside a definition-list
+   continuation those leftover blank lines break the paragraph
+   and cause the next 4-space-indented line to reparse as a code
+   block. *)
+fun stripCmd cmdName s =
   let
     val sub = String.sub
     val sz = String.size s
-    val cmd = "\\index{"
+    val cmd = "\\" ^ cmdName ^ "{"
     val cmdsz = String.size cmd
     fun matchAt i =
       i + cmdsz <= sz andalso
@@ -123,8 +123,6 @@ fun stripIndex s =
     val stripped = loop (0, [])
     val origLines = String.fields (fn c => c = #"\n") s
     val newLines = String.fields (fn c => c = #"\n") stripped
-    (* Pair them up; drop a line if it's now blank but its
-       original was non-blank. *)
     fun isBlank ln = CharVector.all Char.isSpace ln
     fun zip (origs, news, acc) =
       case (origs, news) of
@@ -139,6 +137,19 @@ fun stripIndex s =
   in
     String.concatWith "\n" kept
   end
+
+val stripIndex = stripCmd "index"
+
+(* Strip \label{...} and \ref{...} for the mdbook output.  Both
+   are LaTeX-specific (pandoc passes them through to the LaTeX
+   pipeline as raw_tex); leaving them in mdbook's HTML triggers
+   MathJax 2.7's AMSmath extension, which scans the whole
+   document for \ref/\label and renders unresolved \ref calls as
+   "???".  Resolving \ref to actual mdbook hyperlinks via a
+   label registry would be a more useful fix; for now stripping
+   removes the visual breakage. *)
+fun stripLabel s = stripCmd "label" s
+fun stripRef   s = stripCmd "ref"   s
 
 (* Drop pandoc-style raw fenced blocks like ```{=latex} ... ```.
    Mdbook would otherwise render the body as a code block. *)
@@ -335,6 +346,8 @@ fun preprocessContent obuf name s =
   s |> dropFrontmatter
     |> runScripted obuf
     |> stripIndex
+    |> stripLabel
+    |> stripRef
     |> stripRawLatexBlocks
     |> convertSuperscripts
     |> protectMath

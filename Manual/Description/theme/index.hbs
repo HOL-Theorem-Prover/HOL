@@ -98,6 +98,65 @@
         </script>
         <!-- Start loading toc.js asap -->
         <script src="{{ resource "toc.js" }}"></script>
+        <!-- Rewrite the draft-chapter sub-entries from SUMMARY.md into
+             clickable anchor links into the parent chapter.  mdbook's
+             SUMMARY.md doesn't natively support `chapter.md#anchor`
+             style sub-entries (it checks file existence including the
+             #anchor part), so we use draft entries (`- [Title]()`) and
+             post-process them here. -->
+        <script>
+        (function () {
+          function slugify(text) {
+            // Mirrors pulldown-cmark's heading-id rule: lowercase,
+            // non-alphanumeric -> hyphen, collapse, trim.
+            return text.toLowerCase()
+                       .replace(/[^a-z0-9]+/g, '-')
+                       .replace(/^-+|-+$/g, '');
+          }
+          function rewrite() {
+            const sectionLists = document.querySelectorAll('ol.section');
+            sectionLists.forEach(function (ol) {
+              // The parent chapter <li> is the previous sibling of the
+              // <li> that wraps this <ol class="section">.
+              const wrapperLi = ol.parentElement;
+              let prev = wrapperLi && wrapperLi.previousElementSibling;
+              while (prev && !prev.querySelector('a[href]')) {
+                prev = prev.previousElementSibling;
+              }
+              if (!prev) return;
+              const parentLink = prev.querySelector('a[href]');
+              if (!parentLink) return;
+              const parentHref = parentLink.getAttribute('href');
+              ol.querySelectorAll('li > div').forEach(function (div) {
+                // Strip the section-number prefix ("1.1.") to get the title.
+                const full = div.textContent.trim();
+                const m = full.match(/^[\d.]+\s*(.+)$/);
+                const title = m ? m[1] : full;
+                const anchor = slugify(title);
+                const a = document.createElement('a');
+                a.setAttribute('href', parentHref + '#' + anchor);
+                a.setAttribute('target', '_parent');
+                while (div.firstChild) a.appendChild(div.firstChild);
+                div.parentNode.replaceChild(a, div);
+              });
+            });
+          }
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', rewrite);
+          } else {
+            rewrite();
+          }
+          // Sidebar may also be loaded asynchronously by toc.js; poll
+          // briefly to catch the late-rendered case.
+          let tries = 0;
+          const iv = setInterval(function () {
+            if (document.querySelectorAll('ol.section li > div').length > 0) {
+              rewrite();
+            }
+            if (++tries > 20) clearInterval(iv);
+          }, 50);
+        })();
+        </script>
     </head>
     <body>
     <div id="mdbook-help-container">
