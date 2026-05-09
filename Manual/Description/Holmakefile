@@ -2,9 +2,11 @@ INCLUDES = ../Tools ../../examples/probability $(HOLDIR)/src/integer
 
 TEX_CORES = description title preface system conv drules tactics \
 	theories math definitions libraries misc HolSat PatternMatchesLib \
-        enumfset simplifier latex-munger modern-syntax-chapter
+        enumfset simplifier latex-munger modern-syntax
 
-TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex $(patsubst %,%.tex,$(TEX_CORES))
+TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex \
+              chapters-include.tex \
+              $(patsubst %,%.tex,$(TEX_CORES))
 
 PS_ROOT = ../Tools/polyscripter
 PS_STUFF =  $(PS_ROOT) ../Tools/umap
@@ -21,14 +23,22 @@ all: description.pdf
 mdbook: ../Tools/smdpp SUMMARY.md
 	mdbook build
 
-# SUMMARY.md is generated from the chapter .smd sources by
-# Tools/gen_summary (chapter ordering is hard-coded in that
-# tool; titles and section sub-entries come from each .smd's
-# H1 / H2 headings).  Tracked in git so that direct `mdbook
-# build` invocations work, but regenerated whenever chapter
-# sources change.
-SUMMARY.md: ../Tools/gen_summary system.smd drules.smd conv.smd tactics.smd theories.smd modern-syntax.smd
-	../Tools/gen_summary > $@
+# SUMMARY.md and chapters-include.tex are generated from
+# chapters.txt by Manual/Tools/gen_chap_lists.  chapters.txt
+# is the canonical chapter ordering for the manual; the
+# generator extracts mdbook chapter titles + section
+# sub-entries from each .smd's H1/H2 headings, and emits an
+# `\include{stem}` line for every stem (.smd or .stex or
+# hand-maintained .tex).  Both outputs are tracked in git so
+# that direct `mdbook build` / `latexmk` invocations work
+# without going through Holmake.
+SMDS = system.smd drules.smd conv.smd tactics.smd theories.smd modern-syntax.smd
+
+SUMMARY.md: ../Tools/gen_chap_lists chapters.txt $(SMDS)
+	../Tools/gen_chap_lists summary > $@
+
+chapters-include.tex: ../Tools/gen_chap_lists chapters.txt
+	../Tools/gen_chap_lists latex-include > $@
 
 # Convenience: serve the book locally at http://127.0.0.1:3000/.
 # Live-reloads when .smd / theme / book.toml change.  Detaches into the
@@ -111,7 +121,7 @@ HolSat.tex: HolSat.stex $(PS_STUFF) zchaff.cnf
 modern-syntax.md: modern-syntax.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
-modern-syntax-chapter.tex: modern-syntax.md pdf-macros.lua
+modern-syntax.tex: modern-syntax.md pdf-macros.lua
 	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
 
 # This builds figs/0.mps, figs/1.mps, ...
@@ -127,4 +137,5 @@ EXTRA_CLEANS = drules.tex drules.md tactics.tex tactics.md \
 	       description.log description.out \
                description.toc description.fls description.idx description.ilg \
                description.ind description.blg description.bbl \
-	       description.fdb_latexmk modern-syntax.md modern-syntax-chapter.tex
+	       description.fdb_latexmk modern-syntax.md modern-syntax.tex \
+	       chapters-include.tex SUMMARY.md

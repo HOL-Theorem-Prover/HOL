@@ -14,5 +14,7 @@ drules.md
 conv.md
 tactics.md
 theories.md
-modern-syntax-chapter.tex
+modern-syntax.tex
 modern-syntax.md
+chapters-include.tex
+SUMMARY.md

@@ -1,0 +1,22 @@
+# Numbered-chapter ordering for the Description manual.  Each
+# line is a stem; the LaTeX bundle includes <stem>.tex (built
+# from <stem>.smd via polyscripter+pandoc, from <stem>.stex via
+# polyscripter, or hand-maintained as <stem>.tex) and the mdbook
+# side picks up only those chapters that have a corresponding
+# <stem>.smd source.
+#
+# Front-matter chapters (title, preface, ack) and the
+# tableofcontents marker are still hand-coded in description.tex
+# because their ordering relative to \tableofcontents matters.
+# Lines starting with `#` and blank lines are ignored.
+
+system
+drules
+conv
+tactics
+theories
+math
+definitions
+libraries
+modern-syntax
+misc

@@ -118,16 +118,10 @@
 
    % \part{The HOL System \label{HOL-SYS}}
 
-   \include{system}                      % embedding HOL logic in ML
-   \include{drules}                      % derived rules
-   \include{conv}                        % conversions
-   \include{tactics}                     % tactics
-   \include{theories}
-   \include{math}                        % math theories
-   \include{definitions}
-   \include{libraries}
-   \include{modern-syntax-chapter}
-   \include{misc}
+   % chapters-include.tex is generated from chapters.txt by
+   % Manual/Tools/gen_chap_lists; the Holmakefile rebuilds it
+   % whenever chapters.txt changes.
+   \input{chapters-include}
 
    % ---------------------------------------------------------------------
    % part 3: Theorem Proving with HOL
