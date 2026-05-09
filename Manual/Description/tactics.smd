@@ -1121,6 +1121,7 @@ To finish their work on the whole theorem, the user must now "finalise" it.
 This step checks that the theorem has indeed had all of its subgoals proved and saves it, possibly alongside the usual collection of attributes:
 
     >> Finalise to_suspend[simp]
+    >>__ show_assums := false;
 
 If the subgoals associated with a name have not all been proved, the `Finalise` step will fail.
 Also, if a theorem has not been finalised by the end of the containing script-file, the theory-saving process will fail with an exception.

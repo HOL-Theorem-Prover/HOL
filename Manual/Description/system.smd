@@ -1028,7 +1028,8 @@ true.
 ```
 >> Globals.show_tags := true;
 
->> mk_thm([], Term `F`);;
+>> mk_thm([], Term `F`);
+>>__ Globals.show_tags := false;
 ```
 
 There are three elements to the left of the turnstile in the fully printed

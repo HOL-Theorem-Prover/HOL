@@ -240,6 +240,7 @@ shown below:
 >> Count.inferences UNDISCH th;
 
 >> Count.inferences UNDISCH it;
+>>__ show_assums := false;
 ```
 
 Each successful application of `UNDISCH` to a theorem invokes an
