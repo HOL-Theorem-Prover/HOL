@@ -5,10 +5,7 @@
    thresholds.  Intended to be invoked from buildutils.finish_logging on
    a successful build.
    ====================================================================== *)
-structure checkRegressions :>
-sig
-  val run : {logdir : string, latest : string} -> unit
-end =
+structure checkRegressions :> checkRegressions =
 struct
 
 (* Number of prior log files used to form the baseline. *)

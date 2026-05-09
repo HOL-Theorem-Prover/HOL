@@ -485,14 +485,22 @@ val _ = let
   val _ = let
     val utilsig = "buildutils.sig"
     val utilsml = "buildutils.sml"
+    val checkregsig = "checkRegressions.sig"
+    val checkregsml = "checkRegressions.sml"
     val coredir = Path.concat(holmakedir, "core")
     val depsdir = Path.concat(holmakedir, "deps")
     val hfsdir = Path.concat(holmakedir, "hfs")
     val hmfdir = Path.concat(holmakedir, "hmf")
     val parsingdir = Path.concat(holdir, "tools/parsing")
+    val incs = ["-I", holmakedir, "-I", coredir, "-I", depsdir,
+                "-I", hfsdir, "-I", hmfdir, "-I", parsingdir,
+                "-I", utildir, "-I", hmutildir,
+                "-I", Path.concat(holdir, "src/portableML")]
   in
-    if compile ["-I", holmakedir, "-I", coredir, "-I", depsdir, "-I", hfsdir, "-I", hmfdir, "-I", parsingdir, "-I", utildir, "-I", hmutildir, "-I", Path.concat(holdir, "src/portableML")] utilsig andalso
-       compile ["-I", holmakedir, "-I", coredir, "-I", depsdir, "-I", hfsdir, "-I", hmfdir, "-I", parsingdir, "-I", utildir, "-I", hmutildir, "-I", Path.concat(holdir, "src/portableML")] utilsml
+    if compile incs checkregsig andalso
+       compile incs checkregsml andalso
+       compile incs utilsig andalso
+       compile incs utilsml
     then ()
     else die "Failed to build buildutils module"
   end
