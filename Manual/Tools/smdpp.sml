@@ -148,32 +148,55 @@ val stripIndex = stripCmd "index"
    mdbook hyperlinks before stripLabel runs. *)
 fun stripLabel s = stripCmd "label" s
 
-(* Drop pandoc-style raw fenced blocks like ```{=latex} ... ```.
-   Mdbook would otherwise render the body as a code block. *)
-fun stripRawLatexBlocks s =
+(* Handle pandoc-style raw fenced blocks `` ```{=<fmt>} ... ``` ``.
+   The PDF pipeline runs through pandoc, which honours these
+   blocks natively (passing the body to the matching writer and
+   discarding the rest); mdbook's pulldown-cmark doesn't, so we
+   have to dispose of them ourselves:
+
+     {=mdbook}   strip the fence, keep the body so the markdown
+                 inside gets parsed normally.  Use this for
+                 mdbook-only content (typically table captions
+                 that LaTeX emits via \caption{...}).
+     anything    drop fence *and* body -- e.g. {=latex} chapter-
+       else      local macro definitions, or {=html} fragments
+                 we don't want in mdbook.                          *)
+fun handleRawBlocks s =
   let
     val lines = String.fields (fn c => c = #"\n") s
     fun firstTok ln =
       case String.tokens Char.isSpace ln of
           [] => NONE
         | t :: _ => SOME t
-    fun isFenceOpen ln =
+    (* Returns SOME format if `ln` opens a raw fenced block,
+       e.g. "```{=latex}" -> SOME "latex"; NONE otherwise. *)
+    fun fenceOpenFormat ln =
       case firstTok ln of
-          SOME t => String.isPrefix "```{=" t
-        | NONE => false
+          SOME t =>
+            if String.isPrefix "```{=" t andalso
+               String.isSuffix "}" t
+            then SOME (String.substring (t, 5, String.size t - 6))
+            else NONE
+        | NONE => NONE
     fun isFenceClose ln =
       case firstTok ln of
           SOME "```" => true
         | _ => false
+    datatype state = Outside | Stripping | Inlining
     fun loop ([], acc, _) = List.rev acc
-      | loop (l :: rest, acc, true) =
-          if isFenceClose l then loop (rest, acc, false)
-          else loop (rest, acc, true)
-      | loop (l :: rest, acc, false) =
-          if isFenceOpen l then loop (rest, acc, true)
-          else loop (rest, l :: acc, false)
+      | loop (l :: rest, acc, Stripping) =
+          if isFenceClose l then loop (rest, acc, Outside)
+          else loop (rest, acc, Stripping)
+      | loop (l :: rest, acc, Inlining) =
+          if isFenceClose l then loop (rest, acc, Outside)
+          else loop (rest, l :: acc, Inlining)
+      | loop (l :: rest, acc, Outside) =
+          case fenceOpenFormat l of
+              SOME "mdbook" => loop (rest, acc, Inlining)
+            | SOME _ => loop (rest, acc, Stripping)
+            | NONE => loop (rest, l :: acc, Outside)
   in
-    String.concatWith "\n" (loop (lines, [], false))
+    String.concatWith "\n" (loop (lines, [], Outside))
   end
 
 (* Convert pandoc superscript syntax `^...^` to `<sup>...</sup>`.
@@ -410,7 +433,7 @@ fun preprocessStage1 obuf s =
   s |> dropFrontmatter
     |> runScripted obuf
     |> stripIndex
-    |> stripRawLatexBlocks
+    |> handleRawBlocks
 
 (* Stage 2: with the registry in hand, resolve \ref{X} to a
    markdown link, then drop the (now-redundant) \label{X} marks
