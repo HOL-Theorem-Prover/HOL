@@ -2517,8 +2517,8 @@ The word theory also defines a few word constants:
 **List of bit vector operations.**
 A list of operations is provided in the table below.
 
-| Operation              | Symbol               | Type                                       | Description                       |
-|------------------------|----------------------|--------------------------------------------|-----------------------------------|
+| Operation              | Symbol  | Type                                                | Description                       |
+|------------------------|---------|-----------------------------------------------------|-----------------------------------|
 | `n2w`                  |        | $\mathit{num}\to\worda$                                  | Map from a natural number          |
 | `w2n`                  |        | $\worda\to\mathit{num}$                                  | Map to a natural number            |
 | `w2w`                  |        | $\worda\to\wordb$                                        | Map word-to-word (unsigned)        |
@@ -2542,10 +2542,10 @@ A list of operations is provided in the table below.
 | `word_concat`          | `@@`   | $\worda\to\wordb\to\wordc$                               | Concatenate words                  |
 | `concat_word_list`     |        | $\worda\,\mathit{list}\to\wordb$                         | Concatenate list of words          |
 | `word_replicate`       |        | $\mathit{num}\to\worda\to\wordb$                         | Replicate word                     |
-| `word_or`              | \texttt{\textbar\textbar} | $\worda\to\worda\to\worda$            | Bitwise disjunction                |
+| `word_or`              | <code>&#124;&#124;</code> | $\worda\to\worda\to\worda$        | Bitwise disjunction                |
 | `word_xor`             | `??`   | $\worda\to\worda\to\worda$                               | Bitwise exclusive-or               |
 | `word_and`             | `&&`   | $\worda\to\worda\to\worda$                               | Bitwise conjunction                |
-| `word_nor`             | \texttt{\textasciitilde\textbar\textbar} | $\worda\to\worda\to\worda$ | Bitwise NOR                        |
+| `word_nor`             | <code>~&#124;&#124;</code> | $\worda\to\worda\to\worda$       | Bitwise NOR                        |
 | `word_xnor`            | `~??`  | $\worda\to\worda\to\worda$                               | Bitwise XNOR                       |
 | `word_nand`            | `~&&`  | $\worda\to\worda\to\worda$                               | Bitwise NAND                       |
 | `word_reduce`          |        | $(\mathit{bool}\to\mathit{bool}\to\mathit{bool})\to\worda\to\fcp{\mathit{bool}}{1}$ | Word reduction |

@@ -15,17 +15,61 @@ local replacements = {
   end
 }
 
--- Walk each Str element looking for replacement keys; emit a list
--- of Inlines (some Str, some replacement-returned).  Match only at
--- token boundaries: the key must be followed by a non-letter
--- (punctuation, end-of-string), so e.g. `HOL` matches in
--- "the HOL system" and "HOLs" stays untouched.
+-- Match a RawInline against a literal HTML tag.  Pandoc always
+-- emits these as exactly `<code>` / `</code>` (no whitespace, no
+-- case variation), so a plain string compare suffices.
+local function isHtmlTag(elem, tag)
+  return elem.t == "RawInline" and elem.format == "html"
+         and elem.text == tag
+end
+
+-- Walk inlines, doing two things:
+--   1. Collapse `<code>X</code>` HTML pairs into pandoc `Code` so
+--      they render as \texttt{X} in the PDF (otherwise pandoc
+--      passes through the bare HTML, which in LaTeX output just
+--      drops the tags).  Note: assumes a text-only body -- any
+--      `Emph`/`Math`/etc. inside is flattened to plain text via
+--      stringify.  Fine for what we use it for (the
+--      cross-pipeline `<code>&#124;&#124;</code>` trick for `||`
+--      in pipe-table cells).
+--   2. Replace bare tokens (`HOL`, `SML`, `REFERENCE`) inside
+--      `Str` inlines with their PDF-friendly equivalents.  Match
+--      only at token boundaries (next char must be non-letter)
+--      so "HOL" matches in "the HOL system" but "HOLs" doesn't.
 function Inlines(inlines)
   local function isLetter(c)
     return c:match("[A-Za-z]") ~= nil
   end
+  -- Pass 1: fold `<code>...</code>` HTML pairs into Code inlines.
+  local folded = {}
+  local i = 1
+  while i <= #inlines do
+    local elem = inlines[i]
+    if isHtmlTag(elem, "<code>") then
+      local j, body, closed = i + 1, "", false
+      while j <= #inlines do
+        if isHtmlTag(inlines[j], "</code>") then
+          closed = true
+          break
+        end
+        body = body .. pandoc.utils.stringify(inlines[j])
+        j = j + 1
+      end
+      if closed then
+        table.insert(folded, pandoc.Code(body))
+        i = j + 1
+      else
+        table.insert(folded, elem)
+        i = i + 1
+      end
+    else
+      table.insert(folded, elem)
+      i = i + 1
+    end
+  end
+  -- Pass 2: token-replace inside the remaining Str inlines.
   local result = {}
-  for _, elem in ipairs(inlines) do
+  for _, elem in ipairs(folded) do
     if elem.t == "Str" then
       local text = elem.text
       local i = 1
