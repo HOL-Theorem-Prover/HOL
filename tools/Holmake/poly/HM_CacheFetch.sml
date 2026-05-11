@@ -115,18 +115,6 @@ fun fetch base_url cachekey (ofns : Holmake_tools.output_functions) =
                 val _ = if ok
                         then info "Cache hit! local theory building can be skipped."
                         else warn "Only managed a partial cache hit; theory will be built locally."
-                val _ = if ok then
-                  List.app (fn {name,...} =>
-                    if String.isSuffix "Theory.dat" name then
-                      let val s = TextIO.openIn (to_dest_dir name)
-                          val c = TextIO.inputAll s
-                      in TextIO.closeIn s;
-                         if String.isSubstring "\"cheat\"" c then
-                           info "(used CHEAT)"
-                         else ()
-                      end handle _ => ()
-                    else ()) files
-                else ()
             in
                 ok
             end

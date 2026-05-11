@@ -188,7 +188,7 @@ struct
             val _ = OS.FileSys.chDir dir
           in
             if try_cache () then
-              OS.Process.terminate OS.Process.success
+              OS.Process.exit OS.Process.success
             else
               exece(executable,nm_args,env)
           end
