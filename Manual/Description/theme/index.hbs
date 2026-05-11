@@ -168,17 +168,59 @@
               div.parentNode.replaceChild(a, div);
             });
           }
+          // Pull section numbers out of the sidebar and prepend them
+          // to the matching body headings.  Keeps mdbook's numbered
+          // sidebar consistent with what readers see at the top of
+          // each section in the main column (and matches the PDF).
+          function numberBodyHeadings() {
+            const numbersBySlug = new Map();
+            // The chapter title's <h1> in the body matches the active
+            // sidebar chapter link.
+            const active = document.querySelector('a.active');
+            if (active) {
+              const txt = (active.textContent || '').trim();
+              const m = txt.match(/^([\d.]+)\s*(.+)$/);
+              if (m) {
+                numbersBySlug.set(slugify(m[2]), m[1]);
+              }
+            }
+            // Sidebar section entries are either <a> (post-rewrite) or
+            // <div> (pre-rewrite); both work for textContent.
+            document.querySelectorAll('ol.section li > a, ol.section li > div')
+                    .forEach(function (el) {
+              const txt = (el.textContent || '').trim();
+              const m = txt.match(/^([\d.]+)\s*(.+)$/);
+              if (!m) return;
+              numbersBySlug.set(slugify(m[2]), m[1]);
+            });
+            document.querySelectorAll('main h1, main h2, main h3, main h4')
+                    .forEach(function (h) {
+              if (h.dataset.numbered === 'true' || !h.id) return;
+              const num = numbersBySlug.get(h.id);
+              if (!num) return;
+              const span = document.createElement('span');
+              span.className = 'section-num';
+              span.textContent = num + ' ';
+              h.insertBefore(span, h.firstChild);
+              h.dataset.numbered = 'true';
+            });
+          }
+          function applyAll() { rewrite(); numberBodyHeadings(); }
           if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', rewrite);
+            document.addEventListener('DOMContentLoaded', applyAll);
           } else {
-            rewrite();
+            applyAll();
           }
           // Sidebar may also be loaded asynchronously by toc.js; poll
           // briefly to catch the late-rendered case.
           let tries = 0;
           const iv = setInterval(function () {
-            if (document.querySelectorAll('ol.section li > div').length > 0) {
-              rewrite();
+            if (document.querySelectorAll('ol.section li > div').length > 0
+                || document.querySelectorAll(
+                     'main h1:not([data-numbered]), '
+                   + 'main h2:not([data-numbered]), '
+                   + 'main h3:not([data-numbered])').length > 0) {
+              applyAll();
             }
             if (++tries > 20) clearInterval(iv);
           }, 50);
