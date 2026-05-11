@@ -36,5 +36,10 @@ RawTheoryReader.sml
 
 theorystats.sig
 theorystats.sml
+
+(* Override smlnj-lib's GetOpt with our local copy (word-wraps long help). *)
+../../../tools/util/GetOpt.sig
+../../../tools/util/GetOpt.sml
+
 theorytool.ML
 mlton-theorytool.ML

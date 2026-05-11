@@ -12,10 +12,12 @@ HAVE_MLTON = $(if $(NO_MLTON),,$(which mlton))
 ifneq ($(HAVE_MLTON),)
 all: dat-printer theorytool
 
-dat-printer: dat-printer.mlb RawTermPP.sml RawTheoryReader.sig RawTheoryReader.sml mlton-datprinter.ML DatPrinterTool.ML
+GETOPT = ../../../tools/util/GetOpt.sig ../../../tools/util/GetOpt.sml
+
+dat-printer: dat-printer.mlb RawTermPP.sml RawTheoryReader.sig RawTheoryReader.sml mlton-datprinter.ML DatPrinterTool.ML $(GETOPT)
 	mlton -default-type intinf $<
 
-theorytool: theorytool.mlb theorystats.sml theorytool.ML mlton-theorytool.ML
+theorytool: theorytool.mlb theorystats.sml theorytool.ML mlton-theorytool.ML $(GETOPT)
 	mlton -default-type intinf $<
 
 else ifdef POLY

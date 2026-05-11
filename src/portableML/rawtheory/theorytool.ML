@@ -43,12 +43,12 @@ val cline_options = [
    help = "Scan and report unused theorems"},
   {short = "p", long = ["paths-from"],
    desc = GetOpt.ReqArg (set_paths_from, "file"),
-   help = "Load only the *Theory.dat paths listed (one per line) in file,\n\
+   help = "Load only the *Theory.dat paths listed (one per line) in file, \
           \instead of scanning the file tree"},
   {short = "b", long = ["url-base"],
    desc = GetOpt.ReqArg (set_url_base, "dir"),
-   help = "For --thygraph: emit per-node URLs as relative paths\n\
-          \from dir to each theory's .hol/docs/<thy>Theory.html"},
+   help = "For --thygraph: emit per-node URLs as relative paths from dir \
+          \to each theory's .hol/docs/<thy>Theory.html"},
   {short = "q", long = ["quiet"],
    desc = GetOpt.NoArg set_quiet,
    help = "Suppress file scanning output"},
