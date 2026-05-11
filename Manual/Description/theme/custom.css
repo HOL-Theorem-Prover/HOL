@@ -1,0 +1,23 @@
+/* Custom styling for tables that don't fit comfortably at their
+   natural pulldown-cmark widths.  Wrap such a table in
+   `<div class="wide-table"> ... </div>` in the .smd source.
+
+   The Symbol column (col 2) is monospace and short -- shrink it
+   to its content width.  The Type column (col 3) is the widest
+   and least readable when squeezed -- shrink the font instead,
+   which buys a lot of horizontal space without truncation. */
+
+.wide-table table {
+  table-layout: auto;
+}
+
+.wide-table th:nth-child(2),
+.wide-table td:nth-child(2) {
+  white-space: nowrap;
+  width: 1%;            /* shrink-to-fit */
+}
+
+.wide-table th:nth-child(3),
+.wide-table td:nth-child(3) {
+  font-size: 0.85em;
+}

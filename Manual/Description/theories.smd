@@ -2517,6 +2517,8 @@ The word theory also defines a few word constants:
 **List of bit vector operations.**
 A list of operations is provided in the table below.
 
+<div class="wide-table">
+
 | Operation              | Symbol  | Type                                                | Description                       |
 |------------------------|---------|-----------------------------------------------------|-----------------------------------|
 | `n2w`                  |        | $\mathit{num}\to\worda$                                  | Map from a natural number          |
@@ -2578,6 +2580,8 @@ A list of operations is provided in the table below.
 | `word_ls`              | `<=+`  | $\worda\to\worda\to\mathit{bool}$                        | Unsigned "less than or equal"      |
 | `word_hi`              | `>+`   | $\worda\to\worda\to\mathit{bool}$                        | Unsigned "greater than"            |
 | `word_hs`              | `>=+`  | $\worda\to\worda\to\mathit{bool}$                        | Unsigned "greater than or equal"   |
+
+</div>
 
 \index{bit vectors, the HOL theory of@bit vectors, the \HOL{} theory of|)}
 
