@@ -1252,6 +1252,23 @@ fun resume {suspension_name, label_name} tac =
                let
                  val goal = resumption_to_goal ncts
                  val sub_th = prove_goal (goal, tac)
+                 (* Reject resumption proofs that depend on the parent
+                    theorem's own suspendlabel hypotheses: those hyps
+                    will be re-introduced every time PROVE_HYP discharges
+                    them at Finalise, so assembly never converges. *)
+                 val parent_slabs = HOLset.filter (can dest_slab) (hypset th)
+                 val _ =
+                     List.app
+                       (fn h =>
+                         if HOLset.member (parent_slabs, h) then
+                           raise ERR "resume"
+                             ("Resumption proof for " ^ suspension_name ^
+                              "[" ^ label_name ^ "] depends on a \
+                              \suspendlabel hypothesis of " ^
+                              suspension_name ^ " itself; this would \
+                              \create a cycle at Finalise.")
+                         else ())
+                       (List.filter (can dest_slab) (hyp sub_th))
                  (* Build |- suspendlabel "lab" G_i for each hyp i and
                     record each as its own resumption delta. *)
                  val susp_thms =
@@ -1349,9 +1366,25 @@ fun assemble_finalised parent_thy parent_nm parent_th =
                                      current_th founds
           val remaining_susp_hyps = List.filter (Option.isSome o total dest_slab)
                                                 (hyp finalised)
+          (* Progress check: every slab from current_susp_hyps must
+             actually disappear in this iteration.  PROVE_HYP only
+             drops the targeted slab, so if any current slab reappears
+             in `remaining_susp_hyps` then some resumption proof
+             reintroduced the slab we were trying to discharge -- a
+             cycle.  New (unrelated) slabs appearing are fine; that's
+             how nested Resume works. *)
+          val any_reintroduced =
+              List.exists (fn h => tmem h remaining_susp_hyps)
+                          current_susp_hyps
       in
-          if null remaining_susp_hyps then finalised else
-          aux finalised remaining_susp_hyps
+          if null remaining_susp_hyps then finalised
+          else if any_reintroduced then
+            raise ERR "Finalise"
+              ("Assembly stalled for " ^ parent_thy ^ "$" ^ parent_nm ^
+               ": resumption proofs reintroduce the suspendlabel \
+               \hypotheses they are meant to discharge (likely a \
+               \circular dependency among Resume proofs).")
+          else aux finalised remaining_susp_hyps
       end
     in
       aux parent_th susp_hyps
