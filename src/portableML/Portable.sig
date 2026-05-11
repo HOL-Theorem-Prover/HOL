@@ -104,6 +104,8 @@ sig
   val make_counter : {init:int,inc:int} -> unit -> int
   val syncref : 'a -> {get:unit -> 'a, upd:('a -> 'b * 'a) -> 'b}
 
+  val unique_tmp_suffix : unit -> string
+
   val assoc1 : ''a -> (''a * 'b) list -> (''a * 'b) option
   val assoc2 : ''a -> ('b * ''a) list -> ('b * ''a) option
 

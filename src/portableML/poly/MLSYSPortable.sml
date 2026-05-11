@@ -78,4 +78,7 @@ fun syncref init =
      upd = fn f => Synchronized.change_result v f}
   end
 
+fun unique_tmp_suffix () =
+  SysWord.toString (Posix.Process.pidToWord (Posix.ProcEnv.getpid ()))
+
 end
