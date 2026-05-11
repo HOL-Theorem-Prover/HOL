@@ -1,11 +1,20 @@
+/* mdbook's default ~750px content width leaves a lot of empty
+   margin on a typical screen.  Widen it: the chapters here have
+   long type signatures and rule notations that benefit from
+   the extra real estate. */
+:root {
+  --content-max-width: 1100px;
+}
+
 /* Custom styling for tables that don't fit comfortably at their
    natural pulldown-cmark widths.  Wrap such a table in
    `<div class="wide-table"> ... </div>` in the .smd source.
 
    The Symbol column (col 2) is monospace and short -- shrink it
    to its content width.  The Type column (col 3) is the widest
-   and least readable when squeezed -- shrink the font instead,
-   which buys a lot of horizontal space without truncation. */
+   and least readable when squeezed -- shrink the body font (but
+   not the header, so the column label stays readable) and trim
+   cell padding to claw back a few more pixels. */
 
 .wide-table table {
   table-layout: auto;
@@ -17,7 +26,12 @@
   width: 1%;            /* shrink-to-fit */
 }
 
-.wide-table th:nth-child(3),
 .wide-table td:nth-child(3) {
   font-size: 0.85em;
+}
+
+.wide-table th,
+.wide-table td {
+  padding-left: 0.4em;
+  padding-right: 0.4em;
 }
