@@ -75,6 +75,13 @@
                 rrbrace: ["{\\unicode{x2984}}"],
                 // Manual/LaTeX/commands.tex: \hilbert = \varepsilon.
                 hilbert: ["\\varepsilon"],
+                // Chapter-local LaTeX macros from theories.smd.  The
+                // PDF definitions live in the {=latex} block at the
+                // top of that file; these are the MathJax mirrors.
+                konst: ["{\\mathsf{#1}}", 1],
+                nil: ["{\\mathbf{[}\\;\\mathbf{]}}"],
+                cons: ["{#1}\\mathbf{:}\\mathbf{:}{#2}", 2],
+                subr: ["_{\\mathsf{r}}"],
                 // Local macros for the bit-vectors subsection.
                 fcp: ["#1[#2]", 2],
                 worda: ["\\mathit{bool}[\\alpha]"],
