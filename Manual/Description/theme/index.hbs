@@ -120,32 +120,52 @@
                        .replace(/[^a-z0-9]+/g, '-')
                        .replace(/^-+|-+$/g, '');
           }
-          function rewrite() {
-            const sectionLists = document.querySelectorAll('ol.section');
-            sectionLists.forEach(function (ol) {
-              // The parent chapter <li> is the previous sibling of the
-              // <li> that wraps this <ol class="section">.
-              const wrapperLi = ol.parentElement;
-              let prev = wrapperLi && wrapperLi.previousElementSibling;
-              while (prev && !prev.querySelector('a[href]')) {
-                prev = prev.previousElementSibling;
+          // Walk up nested ol.section lists until we hit the
+          // top-level ol.chapter; the chapter's <a href> is the
+          // previous-sibling <li> of the outermost section's
+          // wrapper <li>.  Works for any nesting depth (H2, H3,
+          // H4, ...).
+          function findChapterHref(ol) {
+            let current = ol;
+            while (current) {
+              const wrapperLi = current.parentElement;
+              if (!wrapperLi) return null;
+              const parentOl = wrapperLi.parentElement;
+              if (!parentOl) return null;
+              if (!parentOl.classList.contains('section')) {
+                // parentOl is the top-level chapter list.
+                let prev = wrapperLi.previousElementSibling;
+                while (prev && !prev.querySelector('a[href]')) {
+                  prev = prev.previousElementSibling;
+                }
+                const a = prev && prev.querySelector('a[href]');
+                return a ? a.getAttribute('href') : null;
               }
-              if (!prev) return;
-              const parentLink = prev.querySelector('a[href]');
-              if (!parentLink) return;
-              const parentHref = parentLink.getAttribute('href');
-              ol.querySelectorAll('li > div').forEach(function (div) {
-                // Strip the section-number prefix ("1.1.") to get the title.
-                const full = div.textContent.trim();
-                const m = full.match(/^[\d.]+\s*(.+)$/);
-                const title = m ? m[1] : full;
-                const anchor = slugify(title);
-                const a = document.createElement('a');
-                a.setAttribute('href', parentHref + '#' + anchor);
-                a.setAttribute('target', '_parent');
-                while (div.firstChild) a.appendChild(div.firstChild);
-                div.parentNode.replaceChild(a, div);
-              });
+              current = parentOl;
+            }
+            return null;
+          }
+          function rewrite() {
+            // Only the leaf <li><div> entries in each section ol
+            // need rewriting (deeper section ols are handled when
+            // their own iteration runs).  Rewriting the same div
+            // twice is harmless but wasteful.
+            document.querySelectorAll('ol.section > li > div')
+                    .forEach(function (div) {
+              if (div.parentNode.querySelector('a[href]')) return;
+              const ol = div.parentNode.parentNode;     // outer ol
+              const parentHref = findChapterHref(ol);
+              if (!parentHref) return;
+              // Strip the section-number prefix ("1.1.") to get the title.
+              const full = div.textContent.trim();
+              const m = full.match(/^[\d.]+\s*(.+)$/);
+              const title = m ? m[1] : full;
+              const anchor = slugify(title);
+              const a = document.createElement('a');
+              a.setAttribute('href', parentHref + '#' + anchor);
+              a.setAttribute('target', '_parent');
+              while (div.firstChild) a.appendChild(div.firstChild);
+              div.parentNode.replaceChild(a, div);
             });
           }
           if (document.readyState === 'loading') {

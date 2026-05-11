@@ -56,7 +56,7 @@ fun parseChaptersFile path =
       List.map trim (List.filter keep lines)
     end
 
-(* --- .smd H1/H2 extraction ------------------------------------- *)
+(* --- .smd H1/H2/H3 extraction ---------------------------------- *)
 
 fun smdLines stem =
     let val all = readFile (stem ^ ".smd")
@@ -85,18 +85,38 @@ fun extractH1 ls =
             else go rest
     in go ls end
 
-fun extractH2s ls =
-    let fun go [] acc = List.rev acc
-          | go (l :: rest) acc =
-            if isHeading "## " l
-            then go rest (cleanTitle (stripPrefix "## " l) :: acc)
-            else go rest acc
-    in go ls [] end
+(* Walk lines tracking the current H2; return one entry per H2 with
+   its list of H3 titles in source order.  H3s appearing before the
+   first H2 are silently dropped (well-structured chapters don't
+   have these). *)
+fun extractSections ls =
+    let
+      fun close (NONE, _, acc) = acc
+        | close (SOME h2, h3s, acc) = (h2, List.rev h3s) :: acc
+      fun go [] curH2 curH3s acc =
+            List.rev (close (curH2, curH3s, acc))
+        | go (l :: rest) curH2 curH3s acc =
+            if isHeading "## " l then
+              let val t = cleanTitle (stripPrefix "## " l)
+                  val acc' = close (curH2, curH3s, acc)
+              in go rest (SOME t) [] acc' end
+            else if isHeading "### " l then
+              (case curH2 of
+                   NONE => go rest curH2 curH3s acc
+                 | SOME _ =>
+                     let val t = cleanTitle (stripPrefix "### " l)
+                     in go rest curH2 (t :: curH3s) acc end)
+            else go rest curH2 curH3s acc
+    in go ls NONE [] [] end
 
 (* --- SUMMARY.md output ----------------------------------------- *)
 
 fun emitSummary stems =
     let
+      fun emitH3 t = emit ("    - [" ^ t ^ "]()\n")
+      fun emitH2 (h2, h3s) =
+          ( emit ("  - [" ^ h2 ^ "]()\n")
+          ; List.app emitH3 h3s )
       fun emitChap stem =
           if not (fileExists (stem ^ ".smd")) then ()
           else let
@@ -104,10 +124,9 @@ fun emitSummary stems =
             val title = case extractH1 ls of
                             SOME t => t
                           | NONE => die ("No H1 in " ^ stem ^ ".smd")
-            val sections = extractH2s ls
           in
             emit ("- [" ^ title ^ "](" ^ stem ^ ".smd)\n");
-            List.app (fn s => emit ("  - [" ^ s ^ "]()\n")) sections
+            List.app emitH2 (extractSections ls)
           end
     in
       emit "# Summary\n\n# The HOL System\n\n";
