@@ -922,22 +922,18 @@ local
     | NONE => ()
   end
   (* Atomic temp+rename used below when exporting a theory: writes go to
-     <path>.<pid>.tmp (alongside the eventual file in .hol/objs/), and the
-     rename into place only happens once every output has been written.
-     Without this, killing the build mid-export could leave 0-byte
-     fooTheory.{sig,sml} files that Holmake mistook for up-to-date outputs.
-     The pid suffix keeps the temp filename unique across concurrent
-     Holmake processes, which can both end up rebuilding the same theory
-     when sharing a dependency. *)
+     <path>.<sfx>.tmp (alongside the eventual file in .hol/objs/), and
+     the rename into place only happens once every output has been
+     written.  Without this, killing the build mid-export could leave
+     0-byte fooTheory.{sig,sml} files that Holmake mistook for up-to-date
+     outputs.  Portable.unique_tmp_suffix keeps the temp filename unique
+     across concurrent Holmake processes, which can both end up
+     rebuilding the same theory when sharing a dependency. *)
   type tempstrm = {final : string, tmp : string,
                    ostrm : TextIO.outstream}
-  fun tmp_pid_suffix () =
-      "." ^
-      SysWord.toString (Posix.Process.pidToWord (Posix.ProcEnv.getpid ())) ^
-      ".tmp"
   fun open_temp logical_path : tempstrm =
     let
-      val sfx = tmp_pid_suffix ()
+      val sfx = "." ^ Portable.unique_tmp_suffix () ^ ".tmp"
       val (final, tmp) =
           case HFS_NameMunge.HOLtoFS logical_path of
               NONE => (logical_path, logical_path ^ sfx)
