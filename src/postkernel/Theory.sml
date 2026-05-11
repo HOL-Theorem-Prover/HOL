@@ -943,7 +943,7 @@ fun export_theory_return_hash () = let
                  parents = parent_names,
                  all_thms = all_thms}
   fun parent_doc_url pname =
-      case Binarymap.peek(!metadata, pname) of
+      case Symtab.lookup (!metadata) pname of
           NONE => NONE
         | SOME {path = parent_dat, ...} =>
           let val parent_src = OS.Path.dir parent_dat
