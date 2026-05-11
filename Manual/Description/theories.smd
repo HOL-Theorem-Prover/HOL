@@ -1904,11 +1904,20 @@ subtraction, multiplication and division of elements from
 $\mathbb{R}$.  The latter needs to be augmented as shown in Table
 \ref{tab:extrealAdd} \cite[p.~61]{Schilling:2017}:
 
+```{=latex}
 \begin{table}[ht]
 \caption{$+$, $-$, $\cdot$ and $/$ in $\overline{\mathbb{R}}$,
 where $x, y \in \mathbb{R}$ and $a, b \in (0, \infty)$}
 \label{tab:extrealAdd}
 \end{table}
+```
+
+```{=mdbook}
+*Table: $+$, $-$, $\cdot$ and $/$ in $\overline{\mathbb{R}}$,
+where $x, y \in \mathbb{R}$ and $a, b \in (0, \infty)$.*
+```
+
+**Addition.**
 
 | $+$       | 0         | $y$       | $+\infty$ | $-\infty$ |
 |-----------|-----------|-----------|-----------|-----------|
@@ -1917,6 +1926,8 @@ where $x, y \in \mathbb{R}$ and $a, b \in (0, \infty)$}
 | $+\infty$ | $+\infty$ | $+\infty$ | $+\infty$ | $\nexists$ |
 | $-\infty$ | $-\infty$ | $-\infty$ | $\nexists$ | $-\infty$ |
 
+**Subtraction.**
+
 | $-$       | 0         | $y$       | $+\infty$ | $-\infty$ |
 |-----------|-----------|-----------|-----------|-----------|
 | 0         | 0         | $-y$      | $-\infty$ | $+\infty$ |
@@ -1924,12 +1935,16 @@ where $x, y \in \mathbb{R}$ and $a, b \in (0, \infty)$}
 | $+\infty$ | $+\infty$ | $+\infty$ | $\nexists$ | $+\infty$ |
 | $-\infty$ | $-\infty$ | $-\infty$ | $-\infty$ | $\nexists$ |
 
+**Multiplication.**
+
 | $\cdot$   | 0  | $\pm b$       | $+\infty$    | $-\infty$    |
 |-----------|----|---------------|--------------|--------------|
 | 0         | 0  | 0             | 0            | 0            |
 | $\pm a$   | 0  | $a\cdot b$    | $\pm\infty$  | $\mp\infty$  |
 | $+\infty$ | 0  | $\pm\infty$   | $+\infty$    | $-\infty$    |
 | $-\infty$ | 0  | $\mp\infty$   | $-\infty$    | $+\infty$    |
+
+**Division.**
 
 | $/$       | 0          | $\pm b$       | $+\infty$  | $-\infty$  |
 |-----------|------------|---------------|------------|------------|
@@ -1974,10 +1989,16 @@ in Table \ref{tab:extrealOp}.
     like `inv x` or `1 / x` are involved, `x <> 0` must be proved
     to proceed.
 
+```{=latex}
 \begin{table}[ht]
 \caption{Arithmetic operators and transcendental functions for extreals}
 \label{tab:extrealOp}
 \end{table}
+```
+
+```{=mdbook}
+*Table: Arithmetic operators and transcendental functions for extreals.*
+```
 
 | Constant          | Overloaded symbol     | Strength | Associativity |
 |-------------------|-----------------------|----------|---------------|
