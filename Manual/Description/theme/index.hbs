@@ -145,6 +145,26 @@
             }
             return null;
           }
+          // Same-page anchor navigation doesn't trigger toc.js's
+          // active-link / .expanded logic.  Mirror what toc.js does
+          // for an active chapter link: mark this li, plus any
+          // previous-sibling chapter-item li of every ancestor li
+          // (the chapter / parent-section), as `expanded`.  Matches
+          // the structure mdbook generates and the walk in toc.js.
+          function expandAncestors(node) {
+            while (node) {
+              if (node.matches && node.matches('li.chapter-item')) {
+                node.classList.add('expanded');
+              }
+              if (node.tagName === 'LI'
+                  && node.previousElementSibling
+                  && node.previousElementSibling.classList
+                          .contains('chapter-item')) {
+                node.previousElementSibling.classList.add('expanded');
+              }
+              node = node.parentElement;
+            }
+          }
           function rewrite() {
             // Only the leaf <li><div> entries in each section ol
             // need rewriting (deeper section ols are handled when
@@ -164,9 +184,23 @@
               const a = document.createElement('a');
               a.setAttribute('href', parentHref + '#' + anchor);
               a.setAttribute('target', '_parent');
+              a.addEventListener('click', function () {
+                expandAncestors(a.parentElement);
+              });
               while (div.firstChild) a.appendChild(div.firstChild);
               div.parentNode.replaceChild(a, div);
             });
+          }
+          // If the URL already carries a #hash (either from a fresh
+          // page load or from cross-chapter navigation), find the
+          // matching sidebar entry and expand its ancestors so the
+          // user lands with the section already revealed.
+          function expandForCurrentHash() {
+            const hash = window.location.hash.slice(1);
+            if (!hash) return;
+            const match = document.querySelector(
+              'ol.section a[href$="#' + CSS.escape(hash) + '"]');
+            if (match) expandAncestors(match.parentElement);
           }
           // Pull section numbers out of the sidebar and prepend them
           // to the matching body headings.  Keeps mdbook's numbered
@@ -205,7 +239,11 @@
               h.dataset.numbered = 'true';
             });
           }
-          function applyAll() { rewrite(); numberBodyHeadings(); }
+          function applyAll() {
+            rewrite();
+            numberBodyHeadings();
+            expandForCurrentHash();
+          }
           if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', applyAll);
           } else {
