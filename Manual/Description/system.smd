@@ -111,7 +111,7 @@ This involves describing the ML functions that comprise the interface to the log
 the quotation, parsing, and printing of logical types and terms [§Quotations](#quotations-parsing-and-printing);
 the representation of theorems ([§Theorems](#theorems));
 the representation of theories ([§Theories](#theories));
-the fundamental HOL theory \texttt{bool} ([§bool](#the-theory-bool));
+the fundamental HOL theory `bool` ([§bool](#the-theory-bool));
 the primitive rules of inference
 ([§Rules](#primitive-rules-of-inference-of-the-hol-logic));
 and the methods for extending theories (throughout [§Theories](#theories) and also later in [§bossLib](#high-level-proof-bosslib)).

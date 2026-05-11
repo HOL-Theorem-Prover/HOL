@@ -18,9 +18,12 @@ PS_NOUMAP = $(PS_ROOT) -md < $< > $@
 all: description.pdf
 
 # Build the mdbook output for the chapters listed in SUMMARY.md.
-# The smdpp preprocessor is invoked dynamically by mdbook (see
-# book.toml); the output goes to ../book/Description.
-mdbook: ../Tools/smdpp SUMMARY.md
+# Source-check the .smd files first for raw-LaTeX patterns that
+# have caused mdbook regressions before (see mdbook-check.sh);
+# then run mdbook proper.  The smdpp preprocessor is invoked
+# dynamically by mdbook (see book.toml).
+mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh
+	../Tools/mdbook-check.sh .
 	mdbook build
 
 # SUMMARY.md and chapters-include.tex are generated from
