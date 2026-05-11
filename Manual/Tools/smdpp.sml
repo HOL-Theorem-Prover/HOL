@@ -140,16 +140,13 @@ fun stripCmd cmdName s =
 
 val stripIndex = stripCmd "index"
 
-(* Strip \label{...} and \ref{...} for the mdbook output.  Both
-   are LaTeX-specific (pandoc passes them through to the LaTeX
-   pipeline as raw_tex); leaving them in mdbook's HTML triggers
-   MathJax 2.7's AMSmath extension, which scans the whole
-   document for \ref/\label and renders unresolved \ref calls as
-   "???".  Resolving \ref to actual mdbook hyperlinks via a
-   label registry would be a more useful fix; for now stripping
-   removes the visual breakage. *)
+(* Strip \label{...} for the mdbook output: pandoc passes labels
+   through to the LaTeX pipeline as raw_tex, but in mdbook's HTML
+   they would just be inert noise.  The label *registry* built in
+   the scan pass below (see scanLabels) records what each label
+   pointed at, so resolveRefs can turn `\ref{X}` calls into real
+   mdbook hyperlinks before stripLabel runs. *)
 fun stripLabel s = stripCmd "label" s
-fun stripRef   s = stripCmd "ref"   s
 
 (* Drop pandoc-style raw fenced blocks like ```{=latex} ... ```.
    Mdbook would otherwise render the body as a code block. *)
@@ -342,13 +339,86 @@ fun hasH1 s =
 fun ensureH1 name s =
   if hasH1 s then s else "# " ^ name ^ "\n\n" ^ s
 
-fun preprocessContent obuf name s =
+(* Strip the chapter file's extension and append `.html`; used when
+   we resolve a cross-chapter `\ref` or `[text](#anchor)` and need
+   the URL of the target chapter's rendered page. *)
+fun toHtml f =
+  let val {base, ...} = OS.Path.splitBaseExt f
+  in OS.Path.joinBaseExt {base = base, ext = SOME "html"} end
+
+(* Find the index of the `}` that closes the group opening just
+   *before* position `start` (i.e. depth is already 1 at `start`).
+   Brace-counted so `\foo{\bar{baz}}` matches the outer `}`. *)
+fun findCloseBrace (s, start) =
+  let
+    val sub = String.sub
+    val sz = String.size s
+    fun loop (j, depth) =
+      if j >= sz then NONE
+      else case sub (s, j) of
+              #"{" => loop (j+1, depth+1)
+            | #"}" => if depth = 1 then SOME j
+                      else loop (j+1, depth-1)
+            | _ => loop (j+1, depth)
+  in loop (start, 1) end
+
+(* Replace each `\ref{X}` with a markdown link `[N.M.O](url)` where
+   N.M.O is the formatted section number recorded for X in the
+   label registry and `url` points to the heading-anchor in the
+   chapter where X was defined (omitting the file prefix when the
+   ref is to the current chapter).  Unknown labels are stripped
+   silently. *)
+fun resolveRefs {currentFile, labelRegistry} s =
+  let
+    val sub = String.sub
+    val sz = String.size s
+    val prefix = "\\ref{"
+    val psz = String.size prefix
+    fun lookup lbl =
+      List.find (fn (l, _, _, _) => l = lbl) labelRegistry
+    fun loop (i, acc) =
+      if i >= sz then String.implode (List.rev acc)
+      else if i + psz <= sz andalso
+              String.substring (s, i, psz) = prefix
+      then
+        case findCloseBrace (s, i + psz) of
+            NONE => loop (i+1, sub (s, i) :: acc)
+          | SOME j =>
+            let
+              val lbl = String.substring (s, i + psz, j - i - psz)
+              val replacement =
+                  case lookup lbl of
+                      SOME (_, file, anchor, num) =>
+                        let
+                          val url = if file = currentFile then
+                                      "#" ^ anchor
+                                    else
+                                      toHtml file ^ "#" ^ anchor
+                        in "[" ^ num ^ "](" ^ url ^ ")" end
+                    | NONE => ""
+            in
+              loop (j+1, List.revAppend
+                           (String.explode replacement, acc))
+            end
+      else loop (i+1, sub (s, i) :: acc)
+  in loop (0, []) end
+
+(* Stage 1: run polyscripter and the LaTeX-source strippers that
+   don't touch \label/\ref.  The scan pass walks this output to
+   build the label registry. *)
+fun preprocessStage1 obuf s =
   s |> dropFrontmatter
     |> runScripted obuf
     |> stripIndex
-    |> stripLabel
-    |> stripRef
     |> stripRawLatexBlocks
+
+(* Stage 2: with the registry in hand, resolve \ref{X} to a
+   markdown link, then drop the (now-redundant) \label{X} marks
+   and finish the markdown-side rewrites. *)
+fun preprocessStage2 {labelRegistry, currentFile, name} s =
+  s |> resolveRefs {currentFile = currentFile,
+                    labelRegistry = labelRegistry}
+    |> stripLabel
     |> convertSuperscripts
     |> protectMath
     |> ensureH1 name
@@ -416,30 +486,121 @@ fun cleanHeading s =
     loop (0, [], false)
   end
 
-(* Extract heading slugs from markdown content.  Heading lines start
-   with one or more `#`s, a space, then text. *)
+(* Canonical heading-text → mdbook-anchor: strip emphasis/math
+   noise, then slugify to match what pulldown-cmark assigns. *)
+val headingAnchor = slugify o cleanHeading
+
+(* Return the markdown heading level of a line ("# " → 1, ... up
+   to "#### " → 4) or NONE if it isn't a heading. *)
+fun headingLevel ln =
+  if String.isPrefix "#### " ln then SOME 4
+  else if String.isPrefix "### " ln then SOME 3
+  else if String.isPrefix "## " ln then SOME 2
+  else if String.isPrefix "# " ln then SOME 1
+  else NONE
+
+(* Drop the leading #s and following whitespace of a heading line. *)
+fun headingBody ln =
+  let
+    val ss = Substring.full ln
+    val ss = Substring.dropl (fn c => c = #"#") ss
+  in
+    Substring.string (Substring.dropl Char.isSpace ss)
+  end
+
+(* Extract heading slugs from markdown content. *)
 fun extractAnchors content =
   let
     val lines = String.fields (fn c => c = #"\n") content
-    fun headingText ln =
-      let
-        val ss = Substring.full ln
-        val ss = Substring.dropl (fn c => c = #"#") ss
-      in
-        if Substring.size ss = Substring.size (Substring.full ln) then NONE
-        else if Substring.size ss = 0 orelse
-                Substring.sub (ss, 0) <> #" " then NONE
-        else
-          let val txt = Substring.string (Substring.dropl Char.isSpace ss)
-          in SOME txt end
-      end
     fun loop ([], acc) = List.rev acc
       | loop (l :: rest, acc) =
-          case headingText l of
+          case headingLevel l of
               NONE => loop (rest, acc)
-            | SOME txt => loop (rest, slugify (cleanHeading txt) :: acc)
+            | SOME _ => loop (rest, headingAnchor (headingBody l) :: acc)
   in
     loop (lines, [])
+  end
+
+(* Walk a chapter's content tracking heading levels, and return
+   one entry per `\label{X}` found.  Each entry is
+
+       (label, chapter_file, heading_anchor, formatted_number)
+
+   where `formatted_number` is "N", "N.M", "N.M.O", or "N.M.O.P"
+   depending on how deeply nested the surrounding heading was.
+   We also auto-register each heading's own slug as a label, so
+   `\ref{slug}` resolves the way pandoc would (pandoc emits an
+   implicit `\label{slug}` for every section).
+
+   The chapter name seeds the anchor for labels that appear
+   *before* any heading (e.g. on the H1 line of a chapter that
+   ensureH1 will synthesise). *)
+fun scanLabels chapterNum chapterFile chapterName content =
+  let
+    val lines = String.fields (fn c => c = #"\n") content
+    (* The slug for a heading is computed *after* stripping any
+       inline \label{}/\ref{} from the heading text. *)
+    fun headingSlug ln =
+      let
+        val body = headingBody ln
+        val body = stripCmd "label" body
+        val body = stripCmd "ref" body
+      in headingAnchor body end
+    (* Find every `\label{X}` on a line; brace-counted body. *)
+    val prefix = "\\label{"
+    val psz = String.size prefix
+    fun findLabels ln =
+      let
+        val sz = String.size ln
+        fun loop (i, acc) =
+          if i >= sz then List.rev acc
+          else if i + psz <= sz andalso
+                  String.substring (ln, i, psz) = prefix
+          then
+            case findCloseBrace (ln, i + psz) of
+                NONE => List.rev acc
+              | SOME j =>
+                  let val lbl = String.substring (ln, i + psz, j - i - psz)
+                  in loop (j+1, lbl :: acc) end
+          else loop (i+1, acc)
+      in loop (0, []) end
+    fun fmtNumber (c, 0, _, _) = Int.toString c
+      | fmtNumber (c, s2, 0, _) =
+          Int.toString c ^ "." ^ Int.toString s2
+      | fmtNumber (c, s2, s3, 0) =
+          Int.toString c ^ "." ^ Int.toString s2 ^ "." ^ Int.toString s3
+      | fmtNumber (c, s2, s3, s4) =
+          Int.toString c ^ "." ^ Int.toString s2 ^ "." ^
+          Int.toString s3 ^ "." ^ Int.toString s4
+    val initAnchor = headingAnchor chapterName
+    (* Build the entry list with cons-then-reverse to avoid the
+       O(|acc|) cost of `acc @ ...` on every line. *)
+    fun loop ([], _, acc) = List.rev acc
+      | loop (ln :: rest, state as (_, s2, s3, s4), acc) =
+          let
+            val lvl = headingLevel ln
+            val state' =
+                case lvl of
+                    SOME 1 => (headingSlug ln, 0, 0, 0)
+                  | SOME 2 => (headingSlug ln, s2 + 1, 0, 0)
+                  | SOME 3 => (headingSlug ln, s2, s3 + 1, 0)
+                  | SOME 4 => (headingSlug ln, s2, s3, s4 + 1)
+                  | _ => state
+            val (anchor', s2', s3', s4') = state'
+            val numStr = fmtNumber (chapterNum, s2', s3', s4')
+            val acc =
+                case lvl of
+                    SOME _ => (anchor', chapterFile, anchor', numStr) :: acc
+                  | NONE => acc
+            val acc =
+                foldl (fn (lbl, a) =>
+                          (lbl, chapterFile, anchor', numStr) :: a)
+                      acc (findLabels ln)
+          in
+            loop (rest, state', acc)
+          end
+  in
+    loop (lines, (initAnchor, 0, 0, 0), [])
   end
 
 (* Rewrite `[text](#anchor)` in content so that anchors not present in
@@ -475,11 +636,6 @@ fun rewriteLinks {localAnchors, registry} content =
               | SOME j =>
                 let
                   val anchor = String.substring (content, i+3, j - i - 3)
-                  fun toHtml f =
-                    let
-                      val {base, ...} = OS.Path.splitBaseExt f
-                    in OS.Path.joinBaseExt {base = base, ext = SOME "html"}
-                    end
                   val replacement =
                       if List.exists (fn a => a = anchor) localAnchors
                       then "](#" ^ anchor ^ ")"
@@ -504,7 +660,19 @@ fun rewriteLinks {localAnchors, registry} content =
    where <Item> is one of:
      {"Chapter": {"name":..., "content":..., "sub_items":[...], ...}}
      {"Separator": null}
-     {"PartTitle": "..."}                                            *)
+     {"PartTitle": "..."}
+
+   We walk the book in three passes:
+
+     scan      Run polyscripter + initial stripping on every
+               chapter, assign a chapter number to each top-level
+               Chapter with content, and harvest `\label{X}` calls
+               into a label registry.
+     finalize  Use the registry to resolve `\ref{X}` to markdown
+               links, finish the rest of the markdown rewrites,
+               and harvest the resulting heading anchors.
+     rewrite   Rewrite cross-chapter `[text](#anchor)` links so
+               they pick up the chapter-file prefix.              *)
 
 fun stringField k fields =
   case List.find (fn (k', _) => k = k') fields of
@@ -514,40 +682,42 @@ fun stringField k fields =
 fun chapterName fields = Option.getOpt (stringField "name" fields, "")
 fun chapterPath fields = stringField "path" fields
 
-(* Pass 1: walk the book, expand each chapter's content via
-   preprocessContent, extract its heading slugs, and build a
-   (slug -> path) registry pointing at the chapter file the slug lives
-   in.  We replace each chapter's content with the preprocessed text
-   so we don't have to do the work twice. *)
+(* --- Pass 1: scan ---
+   Run polyscripter + the LaTeX-source strippers on every chapter,
+   assigning a chapter number to each top-level Chapter with content,
+   and harvest its `\label{X}` calls into the registry. *)
 
-fun preprocessChapter obuf chap registry =
+fun scanChapter obuf chap (chapterNumRef, labelReg) =
   case chap of
       JSON.OBJECT fields =>
         let
           val name = chapterName fields
           val pathOpt = chapterPath fields
-          val (newContent, registry) =
-            case (stringField "content" fields, pathOpt) of
-                (SOME s, SOME p) =>
-                  let val s' = preprocessContent obuf name s
-                      val anchors = extractAnchors s'
-                      val newEntries = map (fn a => (a, p)) anchors
-                  in (SOME s', registry @ newEntries) end
-              | (SOME s, NONE) =>
-                  (SOME (preprocessContent obuf name s), registry)
-              | _ => (NONE, registry)
-          val (newSubItems, registry) =
-            case List.find (fn (k, _) => k = "sub_items") fields of
-                SOME (_, JSON.ARRAY xs) =>
-                  let
-                    fun loop ([], acc, reg) = (List.rev acc, reg)
-                      | loop (item :: rest, acc, reg) =
-                          let val (item', reg') =
-                                  preprocessItem obuf item reg
-                          in loop (rest, item' :: acc, reg') end
-                    val (xs', reg') = loop (xs, [], registry)
-                  in (SOME (JSON.ARRAY xs'), reg') end
-              | _ => (NONE, registry)
+          val (newContent, labelReg) =
+              case (stringField "content" fields, pathOpt) of
+                  (SOME s, SOME p) =>
+                    let
+                      val () = chapterNumRef := !chapterNumRef + 1
+                      val s' = preprocessStage1 obuf s
+                      val labels =
+                          scanLabels (!chapterNumRef) p name s'
+                    in (SOME s', labelReg @ labels) end
+                | (SOME s, NONE) =>
+                    (SOME (preprocessStage1 obuf s), labelReg)
+                | _ => (NONE, labelReg)
+          val (newSubItems, labelReg) =
+              case List.find (fn (k, _) => k = "sub_items") fields of
+                  SOME (_, JSON.ARRAY xs) =>
+                    let
+                      fun loop ([], acc, reg) = (List.rev acc, reg)
+                        | loop (item :: rest, acc, reg) =
+                            let val (item', reg') =
+                                    scanItem obuf item
+                                              (chapterNumRef, reg)
+                            in loop (rest, item' :: acc, reg') end
+                      val (xs', reg') = loop (xs, [], labelReg)
+                    in (SOME (JSON.ARRAY xs'), reg') end
+                | _ => (NONE, labelReg)
           fun trField ("content", _) =
                 (case newContent of
                      SOME s => ("content", JSON.STRING s)
@@ -558,28 +728,95 @@ fun preprocessChapter obuf chap registry =
                    | NONE => ("sub_items", JSON.ARRAY []))
             | trField kv = kv
         in
-          (JSON.OBJECT (map trField fields), registry)
+          (JSON.OBJECT (map trField fields), labelReg)
         end
-    | _ => (chap, registry)
-and preprocessItem obuf item registry =
+    | _ => (chap, labelReg)
+and scanItem obuf item (chapterNumRef, labelReg) =
   case item of
       JSON.OBJECT [("Chapter", chap)] =>
-        let val (chap', reg') = preprocessChapter obuf chap registry
+        let val (chap', reg') =
+                scanChapter obuf chap (chapterNumRef, labelReg)
         in (JSON.OBJECT [("Chapter", chap')], reg') end
-    | _ => (item, registry)
+    | _ => (item, labelReg)
 
-(* Pass 2: walk the (now preprocessed) book again, rewriting links
-   that reference an anchor living in a different chapter file. *)
+(* --- Pass 2: finalize ---
+   With the label registry in hand, resolve `\ref{X}` to markdown
+   links, finish the markdown rewrites, and harvest heading anchors
+   so pass 3 can rewrite cross-chapter `[text](#anchor)` links. *)
+
+fun finalizeChapter labelRegistry chap anchorReg =
+  case chap of
+      JSON.OBJECT fields =>
+        let
+          val name = chapterName fields
+          val pathOpt = chapterPath fields
+          val (newContent, anchorReg) =
+              case (stringField "content" fields, pathOpt) of
+                  (SOME s, SOME p) =>
+                    let
+                      val s' = preprocessStage2
+                                 {labelRegistry = labelRegistry,
+                                  currentFile = p, name = name} s
+                      val anchors = extractAnchors s'
+                    in
+                      (SOME s',
+                       anchorReg @ map (fn a => (a, p)) anchors)
+                    end
+                | (SOME s, NONE) =>
+                    (SOME (preprocessStage2
+                             {labelRegistry = labelRegistry,
+                              currentFile = "", name = name} s),
+                     anchorReg)
+                | _ => (NONE, anchorReg)
+          val (newSubItems, anchorReg) =
+              case List.find (fn (k, _) => k = "sub_items") fields of
+                  SOME (_, JSON.ARRAY xs) =>
+                    let
+                      fun loop ([], acc, reg) = (List.rev acc, reg)
+                        | loop (item :: rest, acc, reg) =
+                            let val (item', reg') =
+                                  finalizeItem labelRegistry item reg
+                            in loop (rest, item' :: acc, reg') end
+                      val (xs', reg') = loop (xs, [], anchorReg)
+                    in (SOME (JSON.ARRAY xs'), reg') end
+                | _ => (NONE, anchorReg)
+          fun trField ("content", _) =
+                (case newContent of
+                     SOME s => ("content", JSON.STRING s)
+                   | NONE => ("content", JSON.NULL))
+            | trField ("sub_items", _) =
+                (case newSubItems of
+                     SOME v => ("sub_items", v)
+                   | NONE => ("sub_items", JSON.ARRAY []))
+            | trField kv = kv
+        in
+          (JSON.OBJECT (map trField fields), anchorReg)
+        end
+    | _ => (chap, anchorReg)
+and finalizeItem labelRegistry item anchorReg =
+  case item of
+      JSON.OBJECT [("Chapter", chap)] =>
+        let val (chap', reg') =
+                finalizeChapter labelRegistry chap anchorReg
+        in (JSON.OBJECT [("Chapter", chap')], reg') end
+    | _ => (item, anchorReg)
+
+(* --- Pass 3: rewrite cross-chapter [text](#anchor) links --- *)
 
 fun rewriteChapter registry chap =
   case chap of
       JSON.OBJECT fields =>
         let
-          val pathOpt = chapterPath fields
+          (* Anchors local to this chapter = those in the registry
+             pointing at this chapter's path.  Avoids a second
+             `extractAnchors` pass on the content. *)
           val localAnchors =
-            case stringField "content" fields of
-                SOME s => extractAnchors s
-              | NONE => []
+              case chapterPath fields of
+                  SOME p =>
+                    List.mapPartial
+                      (fn (a, f) => if f = p then SOME a else NONE)
+                      registry
+                | NONE => []
           fun trField ("content", JSON.STRING s) =
                 ("content",
                  JSON.STRING (rewriteLinks
@@ -604,19 +841,30 @@ fun transformBook obuf book =
   case book of
       JSON.OBJECT fields =>
         let
-          fun preprocSections xs =
-            let
-              fun loop ([], acc, reg) = (List.rev acc, reg)
-                | loop (item :: rest, acc, reg) =
-                    let val (item', reg') = preprocessItem obuf item reg
-                    in loop (rest, item' :: acc, reg') end
-            in loop (xs, [], []) end
+          val chapterNumRef = ref 0
+          fun scanSections xs =
+              let
+                fun loop ([], acc, reg) = (List.rev acc, reg)
+                  | loop (item :: rest, acc, reg) =
+                      let val (item', reg') =
+                              scanItem obuf item (chapterNumRef, reg)
+                      in loop (rest, item' :: acc, reg') end
+              in loop (xs, [], []) end
+          fun finalizeSections labelReg xs =
+              let
+                fun loop ([], acc, reg) = (List.rev acc, reg)
+                  | loop (item :: rest, acc, reg) =
+                      let val (item', reg') =
+                              finalizeItem labelReg item reg
+                      in loop (rest, item' :: acc, reg') end
+              in loop (xs, [], []) end
           fun trField ("sections", JSON.ARRAY xs) =
                 let
-                  val (xs', registry) = preprocSections xs
-                  val xs'' = map (rewriteItem registry) xs'
+                  val (xs1, labelReg)  = scanSections xs
+                  val (xs2, anchorReg) = finalizeSections labelReg xs1
+                  val xs3 = map (rewriteItem anchorReg) xs2
                 in
-                  ("sections", JSON.ARRAY xs'')
+                  ("sections", JSON.ARRAY xs3)
                 end
             | trField kv = kv
         in
