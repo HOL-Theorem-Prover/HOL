@@ -27,7 +27,7 @@ jobs:
             Z3_VERSION=4.13.0
             CVC_VERSION=5
             CSDP_VERSION=1
-            BUILDOPTS=--stdknl -j4 -t
+            BUILDOPTS=--no-cache --stdknl -j4 -t
 
   build-expk:
     runs-on: ubuntu-latest
@@ -49,7 +49,7 @@ jobs:
             Z3_VERSION=4.13.0
             CVC_VERSION=5
             CSDP_VERSION=1
-            BUILDOPTS=--expk -j4 -t
+            BUILDOPTS=--no-cache --expk -j4 -t
 
   build-mosml:
     runs-on: ubuntu-latest
@@ -68,7 +68,7 @@ jobs:
           push: false
           build-args: |
             SML=mosml
-            BUILDOPTS=--expk --seq=tools/sequences/upto-parallel -t
+            BUILDOPTS=--no-cache --expk --seq=tools/sequences/upto-parallel -t
 
   build-otknl:
     runs-on: ubuntu-latest
@@ -90,4 +90,4 @@ jobs:
             Z3_VERSION=4.13.0
             CVC_VERSION=5
             CSDP_VERSION=1
-            BUILDOPTS=--otknl -j2 --seq=tools/sequences/upto-parallel
+            BUILDOPTS=--no-cache --otknl -j2 --seq=tools/sequences/upto-parallel

@@ -1,3 +1,4 @@
+CLINE_OPTIONS = --no-cache
 INCLUDES = $(HOLDIR)/tools/cmp
 
 all: selftest.exe $(DEFAULT_TARGETS)
