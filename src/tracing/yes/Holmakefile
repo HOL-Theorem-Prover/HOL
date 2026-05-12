@@ -1,0 +1,10 @@
+ifdef POLY
+
+all: $(DEFAULT_TARGETS) $(HOLDIR)/bin/recode32
+
+$(HOLDIR)/bin/recode32: recode32.ML
+	$(POLYC) $< -o $@
+
+EXTRA_CLEANS = $(HOLDIR)/bin/recode32
+
+endif
