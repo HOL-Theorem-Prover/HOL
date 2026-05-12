@@ -35,7 +35,10 @@ mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh
 # hand-maintained .tex).  Both outputs are tracked in git so
 # that direct `mdbook build` / `latexmk` invocations work
 # without going through Holmake.
-SMDS = system.smd drules.smd conv.smd tactics.smd theories.smd modern-syntax.smd
+# All .smd chapters; pick them up automatically so adding a new
+# .smd file doesn't require a Holmakefile edit just to wire its
+# H1/H2/H3 entries into SUMMARY.md.
+SMDS = $(wildcard *.smd)
 
 SUMMARY.md: ../Tools/gen_chap_lists chapters.txt $(SMDS)
 	../Tools/gen_chap_lists summary > $@
@@ -98,10 +101,13 @@ theories.md: theories.smd $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo) \
 theories.tex: theories.md pdf-macros.lua
 	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
 
-math.tex: math.stex $(PS_STUFF) $(dprot $(SIGOBJ)/probabilityTheory.uo) \
+math.md: math.smd $(PS_STUFF) $(dprot $(SIGOBJ)/probabilityTheory.uo) \
     $(dprot $(SIGOBJ)/lebesgue_measureTheory.uo) \
-	$(HOLDIR)/examples/probability/large_numberTheory.uo
-	$(PS_COMMAND)
+    $(HOLDIR)/examples/probability/large_numberTheory.uo
+	$(PS_NOUMAP)
+
+math.tex: math.md pdf-macros.lua
+	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
 
 simplifier.tex: simplifier.stex $(PS_STUFF)
 	$(PS_COMMAND)
@@ -134,7 +140,7 @@ figures:
 EXTRA_CLEANS = drules.tex drules.md tactics.tex tactics.md \
                theories.tex theories.md libraries.tex \
                PatternMatchesLib.tex HolSat.tex definitions.tex \
-               system.tex system.md conv.tex conv.md math.tex \
+               system.tex system.md conv.tex conv.md math.tex math.md \
                description.pdf mdbook-serve.log \
                $(patsubst %,%.aux,$(TEX_CORES)) \
 	       description.log description.out \
