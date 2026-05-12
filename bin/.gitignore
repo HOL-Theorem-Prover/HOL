@@ -5,6 +5,7 @@ Holmake
 build
 hol
 unquote
+recode32
 hol.builder
 hol.builder0
 *.bat
