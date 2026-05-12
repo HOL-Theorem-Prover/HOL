@@ -1,9 +1,10 @@
-/* mdbook's default ~750px content width leaves a lot of empty
-   margin on a typical screen.  Widen it: the chapters here have
-   long type signatures and rule notations that benefit from
-   the extra real estate. */
+/* mdbook's default ~750px content width is comfortable for prose
+   but leaves the bit-vector operations table and a few other
+   wide displays clipped.  950px is a compromise: roomy enough on
+   a typical desktop for the wide elements, not so wide that text
+   feels cramped against the chrome on a 14" laptop screen. */
 :root {
-  --content-max-width: 1100px;
+  --content-max-width: 950px;
 }
 
 /* Custom styling for tables that don't fit comfortably at their
