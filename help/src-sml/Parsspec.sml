@@ -60,7 +60,10 @@ fun processSpec is str (((pos1, pos2), spec), res) =
 	  | EMPTYspec                   => res
 	  | SEQspec (spec1, spec2)      =>
 		processSpec is str (spec2, processSpec is str (spec1, res))
-	  | STRUCTUREspec moddescs      => res (* TODO: add link *)
+	  | STRUCTUREspec
+	       (MODDESCmoddesc (_, (_, AnonSigThing innerSpecs, _))) =>
+		foldl (processSpec is str) res innerSpecs
+	  | STRUCTUREspec _             => res
     end
 
 fun parseAndProcess dir str res =

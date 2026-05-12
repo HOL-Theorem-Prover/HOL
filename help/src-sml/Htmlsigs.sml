@@ -71,6 +71,76 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 	                             (Substring.full (TextIO.inputAll is))
 	val _ = TextIO.closeIn is
 
+	(* Line-scan for "structure X : sig" ... "end" so that per-id docfile
+	   resolution inside such a block can use the inner structure's name
+	   as the qualifier.  Only handles one-line opens; comments and string
+	   literals are not parsed, but real signature files don't put either
+	   "structure ... sig" or a bare "end" inside them. *)
+	val substructRanges : (string * int * int) list =
+	    let open Substring
+		fun openStruct line =
+		    let val ws = dropl Char.isSpace line
+		    in
+		      if isPrefix "structure " ws then
+			let val rest = dropl Char.isSpace (triml 10 ws)
+			    val (id, after) = splitl smlIdChar rest
+			    val after = dropl Char.isSpace after
+			in
+			  if not (isEmpty id) andalso isPrefix ":" after
+			  then let val tail =
+				       dropl Char.isSpace (triml 1 after)
+			       in
+				 if isPrefix "sig" tail andalso
+				    (size tail = 3 orelse
+				     not (smlIdChar (sub (tail, 3))))
+				 then SOME (string id)
+				 else NONE
+			       end
+			  else NONE
+			end
+		      else NONE
+		    end
+		fun isCloser line =
+		    let val ws = dropl Char.isSpace line
+		    in isPrefix "end" ws andalso
+		       (size ws = 3 orelse not (smlIdChar (sub (ws, 3))))
+		    end
+		fun scan _ stack acc [] = acc
+		  | scan lineno stack acc (line :: rest) =
+		    case openStruct line of
+			SOME name =>
+			  let val prefix =
+				  case stack of [] => ""
+					      | (q, _) :: _ => q ^ "."
+			  in scan (lineno + 1)
+				  ((prefix ^ name, lineno) :: stack) acc rest
+			  end
+		      | NONE =>
+			  if isCloser line then
+			    case stack of
+				[] => scan (lineno + 1) stack acc rest
+			      | (qname, startLine) :: stack' =>
+				  scan (lineno + 1) stack'
+				       ((qname, startLine, lineno) :: acc) rest
+			  else scan (lineno + 1) stack acc rest
+	    in
+		scan 1 [] [] lines
+	    end
+
+	fun currentStruct lineno =
+	    let
+	      fun fits (_, s, e) = s <= lineno andalso lineno <= e
+	      fun smaller ((_, s, e), (_, s', e')) = e - s < e' - s'
+	      fun pick (entry, NONE) = if fits entry then SOME entry else NONE
+		| pick (entry, best as SOME b) =
+		    if fits entry andalso smaller (entry, b) then SOME entry
+		    else best
+	    in
+	      case List.foldl pick NONE substructRanges of
+		  NONE => strName
+		| SOME (n, _, _) => n
+	    end
+
 	fun comp2str comp =
 	    let open Database
 	    in
@@ -186,17 +256,16 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
            end
 
         val aliasStrName =
-           fn "DefinitionDoc" => "Definition"
-            | "FinalType" => "Type"
+           fn "FinalType" => "Type"
             | "FinalTerm" => "Term"
             | "FinalThm" => "Thm"
             | "HolKernelDoc" => "HolKernel"
             | s => s
 
-        fun locate_docfile id =
+        fun locate_docfile curStr id =
            let open OS.FileSys OS.Path Database
                val id = removeTrailingColon id
-               val qualid = aliasStrName strName ^ "." ^ id
+               val qualid = aliasStrName curStr ^ "." ^ id
                fun trav [] = NONE
                  | trav({comp=Database.Term(x,SOME "HOL"),file,line}::rst)
                    = if x=qualid
@@ -222,7 +291,7 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 		if id = "" then ()
                  else if not (Binaryset.member (!anchors, link))
                       then if isThryFile then out id (* shouldn't happen *)
-                           else case locate_docfile id
+                           else case locate_docfile (currentStruct lineno) id
                                  of NONE => out id
                                   | SOME (file, id2) =>
                                       (idhref_full file id2
