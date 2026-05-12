@@ -94,6 +94,7 @@ datatype sh_proof =
 | EQ_IMP_RULE2_prf of thm ptr
 | EQ_MP_prf of thm ptr * thm ptr
 | EXISTS_prf of term ptr * term ptr * thm ptr
+| Exported_prf of string * thm_id ptr
 | GENL_prf of term list ptr * thm ptr
 | GEN_ABS_prf of term option ptr * term list ptr * thm ptr
 | GEN_prf of term ptr * thm ptr
@@ -101,6 +102,7 @@ datatype sh_proof =
 | INST_prf of (term * term) list ptr * thm ptr
 | MK_COMB_prf of thm ptr * thm ptr
 | MP_prf of thm ptr * thm ptr
+| Mark_prf of string * thm ptr
 | Mk_abs_prf of thm ptr * term ptr * thm ptr
 | Mk_comb_prf of thm ptr * thm ptr * thm ptr
 | NOT_ELIM_prf of thm ptr

@@ -314,6 +314,8 @@ let
     | deductAntisym_prf (a, b) => raise Fail "replay_thm: deductAntisym not yet implemented"
     | deleted_prf =>              raise Fail "replay_thm: deleted not yet implemented"
     | save_dep_prf a => th a
+    | Mark_prf (_, a) => th a
+    | Exported_prf _ => raise Fail "replay_thm: Exported not yet implemented"
   end) thm_ptr
 
   fun export p = let

@@ -206,6 +206,7 @@ datatype sh_proof =
 | EQ_IMP_RULE2_prf of thm ptr
 | EQ_MP_prf of thm ptr * thm ptr
 | EXISTS_prf of term ptr * term ptr * thm ptr
+| Exported_prf of string * thm_id ptr
 | GENL_prf of term list ptr * thm ptr
 | GEN_ABS_prf of term option ptr * term list ptr * thm ptr
 | GEN_prf of term ptr * thm ptr
@@ -213,6 +214,7 @@ datatype sh_proof =
 | INST_prf of (term,term)Lib.subst ptr * thm ptr
 | MK_COMB_prf of thm ptr * thm ptr
 | MP_prf of thm ptr * thm ptr
+| Mark_prf of string * thm ptr
 | Mk_abs_prf of thm ptr * term ptr * thm ptr
 | Mk_comb_prf of thm ptr * thm ptr * thm ptr
 | NOT_ELIM_prf of thm ptr
@@ -256,27 +258,29 @@ fun shProof c w = case arg' c w of f =>
   | 0w47 => EQ_IMP_RULE2_prf   (f 8)
   | 0w49 => EQ_MP_prf          (f 8, f 16)
   | 0w51 => EXISTS_prf         (f 8, f 16, f 24)
-  | 0w53 => GENL_prf           (f 8, f 16)
-  | 0w55 => GEN_ABS_prf        (f 8, f 16, f 24)
-  | 0w57 => GEN_prf            (f 8, f 16)
-  | 0w59 => INST_TYPE_prf      (f 8, f 16)
-  | 0w61 => INST_prf           (f 8, f 16)
-  | 0w63 => MK_COMB_prf        (f 8, f 16)
-  | 0w65 => MP_prf             (f 8, f 16)
-  | 0w67 => Mk_abs_prf         (f 8, f 16, f 24)
-  | 0w69 => Mk_comb_prf        (f 8, f 16, f 24)
-  | 0w71 => NOT_ELIM_prf       (f 8)
-  | 0w73 => NOT_INTRO_prf      (f 8)
-  | 0w75 => REFL_prf           (f 8)
-  | 0w77 => SPEC_prf           (f 8, f 16)
-  | 0w79 => SUBST_prf          (f 8, f 16, f 24)
-  | 0w81 => SYM_prf            (f 8)
-  | 0w83 => Specialize_prf     (f 8, f 16)
-  | 0w85 => TRANS_prf          (f 8, f 16)
-  | 0w87 => compute_prf        (f 8, f 16)
-  | 0w89 => deductAntisym_prf  (f 8, f 16)
-  | 0w91 => deleted_prf
-  | 0w93 => save_dep_prf       (f 8)
+  | 0w53 => Exported_prf       (str c (f 8), f 16)
+  | 0w55 => GENL_prf           (f 8, f 16)
+  | 0w57 => GEN_ABS_prf        (f 8, f 16, f 24)
+  | 0w59 => GEN_prf            (f 8, f 16)
+  | 0w61 => INST_TYPE_prf      (f 8, f 16)
+  | 0w63 => INST_prf           (f 8, f 16)
+  | 0w65 => MK_COMB_prf        (f 8, f 16)
+  | 0w67 => MP_prf             (f 8, f 16)
+  | 0w69 => Mark_prf           (str c (f 8), f 16)
+  | 0w71 => Mk_abs_prf         (f 8, f 16, f 24)
+  | 0w73 => Mk_comb_prf        (f 8, f 16, f 24)
+  | 0w75 => NOT_ELIM_prf       (f 8)
+  | 0w77 => NOT_INTRO_prf      (f 8)
+  | 0w79 => REFL_prf           (f 8)
+  | 0w81 => SPEC_prf           (f 8, f 16)
+  | 0w83 => SUBST_prf          (f 8, f 16, f 24)
+  | 0w85 => SYM_prf            (f 8)
+  | 0w87 => Specialize_prf     (f 8, f 16)
+  | 0w89 => TRANS_prf          (f 8, f 16)
+  | 0w91 => compute_prf        (f 8, f 16)
+  | 0w93 => deductAntisym_prf  (f 8, f 16)
+  | 0w95 => deleted_prf
+  | 0w97 => save_dep_prf       (f 8)
   | _ => raise Fail "shProof: parse error"
 
 fun shComputeArgs c w = case arg' c w of f =>

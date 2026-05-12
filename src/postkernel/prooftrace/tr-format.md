@@ -171,6 +171,7 @@ datatype proof
   | EQ_IMP_RULE2_prf of thm
   | EQ_MP_prf of thm * thm
   | EXISTS_prf of term * term * thm
+  | Exported_prf of string * thm_id
   | GENL_prf of term list * thm
   | GEN_ABS_prf of term option * term list * thm
   | GEN_prf of term * thm
@@ -178,6 +179,7 @@ datatype proof
   | INST_prf of (term * term) list * thm
   | MK_COMB_prf of thm * thm
   | MP_prf of thm * thm
+  | Mark_prf of string * thm
   | Mk_abs_prf of thm * term * thm
   | Mk_comb_prf of thm * thm * thm
   | NOT_ELIM_prf of thm
