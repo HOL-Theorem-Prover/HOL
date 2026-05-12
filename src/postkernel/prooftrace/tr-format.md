@@ -4,31 +4,39 @@ The output of the `--trknl` proof tracer ([#1309](https://github.com/HOL-Theorem
 is a compressed proof trace for each theory, e.g. `src/bool/.hol/objs/boolTheory.tr.gz`.
 If you uncompress it with `gzip`, the resulting data file is in the `.tr` file format.
 
-This is a PolyML memory dump, but it can still be decoded to get to the proof matter.
+There are two variants of the format: a **64-bit** variant (the original, produced
+by PolyML's `exportSmallToFD` directly) and a **32-bit** narrow variant (produced
+by the `recode32` pipeline stage). The 32-bit variant starts with an 8-byte magic
+`54 52 33 32 00 00 00 FF` (`"TR32\0\0\0\xFF"`); the 64-bit variant has no magic.
+The formats cannot collide because byte 7 of the magic is `FF`, which is not a valid
+flags byte (the flags byte of a 64-bit header occupies byte 7 and is always `00`–`03`).
 
-## File structure: bit level
+The 64-bit variant is a PolyML memory dump; the 32-bit variant recodes each word
+from 8 bytes to 4 bytes but preserves the same logical structure.
+
+## 64-bit file structure: bit level
 
 The outer structure of the dump is a sequence of objects, followed by a root pointer:
 
 ```c
-file ::= object* tagptr
+file64 ::= object64* tagptr64
 ```
 
-A tagged pointer `tagptr` is a little-endian 64 bit value which can be either an integer or a pointer.
+A tagged pointer `tagptr64` is a little-endian 64 bit value which can be either an integer or a pointer.
 If the low bit is `0`, then the remaining 63 bits are an index into the object list
 (1-based, with 0 denoting the null pointer), and if the low bit is `1` then the
 remaining bits denote a signed 63 bit integer.
 ```c
-tagptr ::= 0 ptr63 | 1 int63
+tagptr64 ::= 0 ptr63 | 1 int63
 ```
 
 An object begins with a 64 bit header word, with the top 8 bits reserved for flags:
 ```c
-header ::= len56 flags8
+header64 ::= len56 flags8
 ```
 In all cases, an object will have exactly `len56` 64-bit words following it:
 ```c
-object ::= header data64[len56]
+object64 ::= header64 data64[len56]
 ```
 The contents of those bytes depends on the object kind.
 
@@ -41,24 +49,70 @@ flags8 ::= 00xxxxxx  // 0: Regular
 ```
 * For the `Code` and `Closure` kinds, the exporter does not export the contents, and `len56` will be 0.
 
-* For `Bytes`, the data is a packed byte-array. The first word is the byte length of the array,
-  and it is followed by that many bytes. It is then padded to a multiple of 8 bytes.
-
-  ```c
-  bytes_data ::= blen64 data8[blen64] pad
-  ```
+* For `Bytes`, the data is an opaque byte region occupying `len56 * 8` bytes.
+  Some byte objects (notably strings) begin with an 8-byte word giving the logical
+  byte length of the array, followed by that many bytes of content and then padding
+  to an 8-byte boundary. Other byte-array-like objects (used internally by PolyML)
+  do **not** have a length prefix — the entire `len56 * 8` bytes are content.
+  Since the two cases cannot be distinguished from the header alone, consumers
+  that need to handle arbitrary byte objects should treat the whole region as opaque.
 
 * For `Regular`, the data is a sequence of tagged pointers:
   ```c
-  regular_data ::= tagptr[len56]
+  regular_data ::= tagptr64[len56]
   ```
+
+## 32-bit file structure
+
+The 32-bit variant has the same logical structure but every word is 4 bytes instead
+of 8. It is produced by the standalone `recode32` binary
+(`src/tracing/recode32.sml`) which reads a 64-bit dump from stdin and writes the
+32-bit form to stdout, streaming with constant memory.
+
+```c
+file32 ::= magic32 object32* tagptr32
+
+magic32 ::= 54 52 33 32 00 00 00 FF   // 8 bytes: "TR32\0\0\0\xFF"
+
+tagptr32 ::= 0 ptr31 | 1 int31   // 4-byte little-endian
+                                  // ptr: 31-bit object index (1-based)
+                                  // int: signed 31-bit integer
+
+header32 ::= len24 flags8        // 4-byte little-endian
+                                  // low 24 bits = word count, high 8 bits = flags
+object32 ::= header32 data32[len24]
+```
+
+**Regular** objects: each data slot is a `tagptr32` (4 bytes). Word count `len24`
+equals the 64-bit `len56` — same number of slots, each half as wide.
+
+**Bytes** objects: the recoder copies the original `len56 * 8` raw bytes verbatim.
+The 32-bit word count is `len24 = len56 * 2` (double the word count, half the word
+width, same byte count). The raw content is byte-identical to the 64-bit form,
+including any internal length prefix and padding. This means bytes objects have
+**no size reduction** in the 32-bit format; savings come only from Regular objects
+and headers.
+
+**Code/Closure** objects: `len24 = 0`, same as 64-bit.
+
+### Width assumptions
+
+The 32-bit format requires that all pointer indices fit in 31 bits and all integer
+values fit in 31 signed bits. Empirical verification across 279 CakeML theory files
+confirmed:
+* max pointer index: ~250M (~28 bits)
+* max absolute integer: ~15K (~14 bits)
+* max object word count: 10
+
+There is ample headroom. If a future file exceeds these limits, the recoder
+raises `Fail` rather than emitting truncated output.
 
 ## File structure: encoding types
 
 We can summarize the file structure more abstractly like so:
 
 ```c
-tagptr ::= int63 | ptr63
+tagptr ::= int | ptr
 bytes ::= int8*
 regular ::= tagptr*
 code ::= ()
@@ -69,7 +123,7 @@ file ::= object* tagptr
 
 If we ignore the indirection in `Ptr`, this can be represented as an ADT:
 ```sml
-datatype tagptr = Int of int63 | Ptr of object
+datatype tagptr = Int of int | Ptr of object
 and object = Bytes of word8 array | Regular of tagptr array | Code | Closure
 ```
 
@@ -193,7 +247,7 @@ datatype proof
   | compute_prf of (compute_args * thm list) * term
   | deductAntisym_prf of thm * thm
   | deleted_prf
-  | saved_prf of thm
+  | save_dep_prf of thm
 
 type compute_args =
   { num_type   : hol_type,

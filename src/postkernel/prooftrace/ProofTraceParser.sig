@@ -16,6 +16,11 @@ val parse: string -> root ptr * heap
 
 val heapSize: heap -> int
 
+(* Scan every tagptr in every Regular object and return the maximum observed
+   pointer index and the maximum absolute integer value. Used to verify that
+   the 32-bit recoder's 31-bit range is sufficient for a given trace. *)
+val scan_widths: heap -> {max_ptr: int, max_int: int, max_obj_len: int}
+
 datatype 'a any = Int of int | Bytes of Word8VectorSlice.slice | Obj of 'a list | Other
 val any: heap -> (unit, 'A) gparser -> ('b, 'A any) gparser
 
