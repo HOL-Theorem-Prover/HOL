@@ -51,12 +51,19 @@ sig
   | deductAntisym_prf of thm * thm
   | compute_prf of (compute_args * thm list) * term
   | save_dep_prf of thm
+  | Exported_prf of string * thm_id
+  | Mark_prf of string * thm
 
   val proof : thm -> proof
   val delete_proof : thm -> unit
+  val set_exported : thm -> string * thm_id -> unit
   val mk_proof_thm : proof -> term list * term -> thm
 
   val deductAntisym : thm -> thm -> thm
+
+  (* A no-op inference wrapper whose only purpose is to leave a named marker
+     in the proof trace. Logically an identity on the theorem. *)
+  val mark : string -> thm -> thm
 
   val set_definition_callback   : (thm -> unit) -> unit
   val clear_definition_callback : unit -> unit

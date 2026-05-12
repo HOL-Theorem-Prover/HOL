@@ -20,4 +20,14 @@ fun export (file, x: 'a) = let
 
 fun trace_theory name args = export(concat[".hol/objs/",name,".tr.gz"], args)
 
+fun export_proof {file, tag} th =
+  case !TraceMode.mode of
+    TraceMode.NoTrace => ()
+  | _ => let
+      val prf = Thm.proof th
+    in
+      export (file, prf);
+      Thm.set_exported th (file, tag)
+    end
+
 end
