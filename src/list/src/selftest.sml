@@ -295,3 +295,22 @@ val _ = List.app tpp [
       "l❲i❳", "l❲2 ↦ T; 3 ↦ F❳",
       "l❲2 ↦ T; 3 ↦ F❳❲i❳"
     ]
+
+val _ = app(test "ALL_EL_CONV" Term.compare term_to_string
+                 (ALL_EL_CONV BETA_CONV))
+           [(``EVERY (\x:bool. x) ([]:bool list)``, ``T``),
+            (``EVERY (\x:bool. x) [T; T; T]``, ``T``),
+            (``EVERY (\x:bool. x) [F; T; T]``, ``F``),
+            (``EVERY (\x:bool. x) [T; F; T]``, ``F``),
+            (``EVERY (\x:bool. x) [T; T; F]``, ``F``)]
+
+val _ = let
+  val tm = ``EVERY (\x:bool. x) [F; T; T]``
+  val calls = ref 0
+  fun strict_beta t = (calls := !calls + 1; BETA_CONV t)
+  val _ = ALL_EL_CONV strict_beta tm
+in
+  tprint "ALL_EL_CONV short-circuits on first F";
+  if !calls = 1 then OK()
+  else die ("FAILED (calls=" ^ Int.toString (!calls) ^ ")")
+end
