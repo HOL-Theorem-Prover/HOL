@@ -952,11 +952,28 @@ local
     (TextIO.closeOut ostrm handle _ => ();
      OS.FileSys.remove tmp handle _ => ())
   val anonymous_thms = ref (0,[])
+  val export_proof_counter = ref 0
 in
 fun add_anonymous_thm th = let
   val (n,ls) = !anonymous_thms
   val () = anonymous_thms := (n+1,th::ls)
 in n end
+
+fun export_proof (name, th) = let
+  val thyname = current_theory ()
+  val file = concat [".hol/objs/", thyname, "Theory.", name, ".tr.gz"]
+in
+  Tracing.export_proof {file = file, tag = Thm.SavedName name} th
+end
+
+fun export_proof_anon th = let
+  val n = !export_proof_counter
+  val () = export_proof_counter := n + 1
+  val thyname = current_theory ()
+  val file = concat [".hol/objs/", thyname, "Theory._anon", Int.toString n, ".tr.gz"]
+in
+  Tracing.export_proof {file = file, tag = Thm.SavedAnon n} th
+end
 fun export_theory_return_hash () = let
   val _ = hooks_or_abort (TheoryDelta.ExportTheory (current_theory()))
   val {name=thyname,facts,thydata,mldeps,...} = scrubCT()
@@ -1070,14 +1087,17 @@ fun export_theory_return_hash () = let
                else ()
              end
            else ();
-           Tracing.trace_theory name {
-             theory    = thyname,
-             parents   = #parents structthry,
-             types     = #types structthry,
-             constants = #constants structthry,
-             all_thms  = all_thms,
-             anon_thms = rev(#2(!anonymous_thms)),
-             mldeps    = #mldeps structthry };
+           (case !TraceMode.mode of
+              TraceMode.TraceAndExport =>
+                Tracing.trace_theory name {
+                  theory    = thyname,
+                  parents   = #parents structthry,
+                  types     = #types structthry,
+                  constants = #constants structthry,
+                  all_thms  = all_thms,
+                  anon_thms = rev(#2(!anonymous_thms)),
+                  mldeps    = #mldeps structthry }
+            | _ => ());
            List.app commit_temp temps;
            mesg "done.\n";
            if !report_times then

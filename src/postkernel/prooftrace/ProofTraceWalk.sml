@@ -189,6 +189,8 @@ fun walk {heap, thyname, named_thms, anon_thms,
       | deductAntisym_prf (a, b) => (th a; th b)
       | deleted_prf => ()
       | save_dep_prf a => th a
+      | Mark_prf (_, a) => th a
+      | Exported_prf _ => ()
     end
   and th p = (incr (castPtr p); walk_thm p)
 
