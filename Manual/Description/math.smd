@@ -76,11 +76,11 @@ ordinal with uncountably many predecessors is called $\omega_1$.
 [^acl2-ordinals]: Some contents here are taken from \cite{ACL2approach}
     (Section 6.3: The Ordinals).  Courtesy of ACL2 developers.
 
->>__ load "ordinalTheory";
+>>__ load "ordinalTheory"; open ordinalTheory;
      Parse.temp_set_grammars $ valOf $ grammarDB {thyname="ordinal"};
 ```
-##thm ordinalTheory.omega1_def
-##thm ordinalTheory.x_lt_omega1_countable
+##thm omega1_def
+##thm x_lt_omega1_countable
 ```
 
 ### Cardinals in HOL
@@ -102,10 +102,10 @@ Currently HOL does not have cardinal arithmetic, such as those
 possible to compare the cardinalities of any two infinite sets.
 Cardinality is defined in terms of bijective functions:
 
->>__ load "cardinalTheory";
+>>__ load "cardinalTheory"; open cardinalTheory;
      Parse.temp_set_grammars $ valOf $ grammarDB {thyname="cardinal"};
 ```
-##thm cardinalTheory.cardleq_def
+##thm cardleq_def
 ```
 
 ## Topology of One-Dimensional Euclidean Space
@@ -132,11 +132,11 @@ Borel-measurable spaces in measure theory:
 ```
 >>__ val oldwidth = !Globals.linewidth;
      val _ = Globals.linewidth := 70;
->>__ load "real_topologyTheory";
+>>__ load "real_topologyTheory"; open real_topologyTheory;
      Parse.temp_set_grammars $ valOf $ grammarDB {thyname="real_topology"};
-##thm real_topologyTheory.COMPACT_EQ_HEINE_BOREL
+##thm COMPACT_EQ_HEINE_BOREL
 
-##thm real_topologyTheory.COMPACT_EQ_BOUNDED_CLOSED
+##thm COMPACT_EQ_BOUNDED_CLOSED
 ```
 
 The concept of open (and closed) sets is fundamental and is needed,
@@ -144,9 +144,9 @@ for example, in the definition of Borel sets (see Section
 \ref{sec:borel}):
 
 ```
-##thm real_topologyTheory.open_def
+##thm open_def
 
-##thm real_topologyTheory.closed_def
+##thm closed_def
 ```
 
 >>__ val _ = Globals.linewidth := oldwidth;
@@ -211,9 +211,10 @@ definition, we see that the definition is much as an analyst might
 expect:
 
 >>__ load "limTheory"; load "derivativeTheory";
+     open limTheory derivativeTheory real_topologyTheory;
      Parse.temp_set_grammars $ valOf $ grammarDB {thyname="lim"};
 ```
-##thm limTheory.diffl
+##thm diffl
 ```
 
 ```{=latex}
@@ -233,7 +234,7 @@ as an analyst might expect: (cf. Figure \ref{fig:hasDerivative} for an
 illustration of this differentiation process.)
 
 ```
-##thm derivativeTheory.HAS_DERIVATIVE_AT
+##thm HAS_DERIVATIVE_AT
 ```
 
 ```{=latex}
@@ -246,7 +247,7 @@ illustration of this differentiation process.)
 ```
 
 ```
-##thm derivativeTheory.has_vector_derivative
+##thm has_vector_derivative
 ```
 
 Similarly, `(f has_vector_derivative f') (at x)` means that *the function
@@ -255,23 +256,23 @@ of combining theorems are proved.  For example, the derivative of a sum
 of two functions is the sum of their derivatives:
 
 ```
-##thm limTheory.DIFF_ADD
+##thm DIFF_ADD
 
-##thm derivativeTheory.HAS_DERIVATIVE_ADD
+##thm HAS_DERIVATIVE_ADD
 
-##thm limTheory.DIFF_MUL
+##thm DIFF_MUL
 
-##thm derivativeTheory.HAS_DERIVATIVE_MUL_AT
+##thm HAS_DERIVATIVE_MUL_AT
 
-##thm limTheory.DIFF_DIV
+##thm DIFF_DIV
 
-##thm limTheory.DIFF_CHAIN
+##thm DIFF_CHAIN
 
 ##thm limTheory.MVT
 
 ##thm derivativeTheory.MVT
 
-##thm limTheory.diffl_has_vector_derivative
+##thm diffl_has_vector_derivative
 ```
 
 A function is *differentiable* at certain point if it has derivative
@@ -285,7 +286,7 @@ binary operators.  The two operators are equivalent (when `continuous`
 is used with the `at` net) by the following bridging theorem:
 
 ```
-##thm limTheory.contl_eq_continuous_at
+##thm contl_eq_continuous_at
 ```
 
 However, using `continuous` it is also possible to express continuity
@@ -301,11 +302,11 @@ open or closed interval) is called `continuous_on`.[^uniform-cont]
     `COMPACT_UNIFORMLY_CONTINUOUS`, etc. in `real_topologyTheory`.
 
 ```
-##thm real_topologyTheory.continuous_on
+##thm continuous_on
 
-##thm real_topologyTheory.CONTINUOUS_ON_EQ_CONTINUOUS_AT
+##thm CONTINUOUS_ON_EQ_CONTINUOUS_AT
 
-##thm real_topologyTheory.CONTINUOUS_ON_EQ_CONTINUOUS_WITHIN
+##thm CONTINUOUS_ON_EQ_CONTINUOUS_WITHIN
 ```
 
 One of the most fundamental facts about continuous functions is the
@@ -316,11 +317,11 @@ $[a,b]$, and $f(a)\leqslant y\leqslant f(b)$ then there is some point
 $x$ in the interval where $f(x) = y$:
 
 ```
-##thm limTheory.IVT
+##thm IVT
 
-##thm real_topologyTheory.CONTINUOUS_ON_IVT
+##thm CONTINUOUS_ON_IVT
 
-##thm limTheory.IVT2
+##thm IVT2
 ```
 
 ### Integration
@@ -343,47 +344,48 @@ $[a,b]$, i.e. $\displaystyle\int_a^b f \,\mathrm{d}x$, is denoted by
 $f$ on a set $s$ of real numbers is `integral s f`.
 
 >>__ load "integralTheory"; load "integrationTheory";
+     open integralTheory integrationTheory;
      Parse.temp_set_grammars $ valOf $ grammarDB {thyname="integral"};
 ```
-##thm integralTheory.gauge
+##thm gauge
 
-##thm integralTheory.fine
+##thm fine
 
-##thm integralTheory.tdiv
+##thm tdiv
 
-##thm integralTheory.division
+##thm division
 
-##thm integralTheory.Dint
+##thm Dint
 
-##thm integralTheory.integral
+##thm integral
 ```
 
 In `integration`, ported from HOL Light, a more general form of
 Henstock-Kurzweil integration has been defined:
 
 ```
-##thm integrationTheory.gauge_def
+##thm gauge_def
 
-##thm integrationTheory.FINE
+##thm FINE
 
-##thm integrationTheory.tagged_partial_division_of
+##thm tagged_partial_division_of
 
-##thm integrationTheory.tagged_division_of
+##thm tagged_division_of
 
-##thm integrationTheory.has_integral_compact_interval
+##thm has_integral_compact_interval
 
-##thm integrationTheory.has_integral_def
+##thm has_integral_def
 
-##thm integrationTheory.integral_def
+##thm integral_def
 ```
 
 The fundamental theorem of calculus (in the equivalent forms of
 Riemann integral) is expressed below:
 
 ```
-##thm integralTheory.FTC1
+##thm FTC1
 
-##thm integrationTheory.FUNDAMENTAL_THEOREM_OF_CALCULUS
+##thm FUNDAMENTAL_THEOREM_OF_CALCULUS
 ```
 
 The above theorem requires that the function $f$ must be everywhere
@@ -394,16 +396,16 @@ in the following strong version of the fundamental theorem of
 calculus:
 
 ```
-##thm integrationTheory.FUNDAMENTAL_THEOREM_OF_CALCULUS_STRONG
+##thm FUNDAMENTAL_THEOREM_OF_CALCULUS_STRONG
 ```
 
 Finally, the following two bridging theorems can be used to convert
 between integrals of the `integral` and `integration` theories:
 
 ```
-##thm integralTheory.integral_old_to_new
+##thm integral_old_to_new
 
-##thm integralTheory.integral_new_to_old
+##thm integral_new_to_old
 ```
 
 ## Measure Theory
@@ -437,9 +439,10 @@ times, i.e. $\sigma$-algebra.  In HOL, a system of sets is a pair
 
 >>__ load "sigma_algebraTheory"; load "measureTheory";
      load "martingaleTheory";
+     open sigma_algebraTheory measureTheory martingaleTheory;
      Parse.temp_set_grammars $ valOf $ grammarDB {thyname="martingale"};
 ```
-##thm sigma_algebraTheory.subset_class_def
+##thm subset_class_def
 ```
 
 Given any system of sets `a = (sp,sts)`, the two functions `space`
@@ -454,9 +457,9 @@ are defined below:
     theories.
 
 ```
-##thm sigma_algebraTheory.algebra_def
+##thm algebra_def
 
-##thm sigma_algebraTheory.sigma_algebra_def
+##thm sigma_algebra_def
 ```
 
 There are several equivalent ways of defining $\sigma$-algebra.  The
@@ -464,7 +467,7 @@ following alternative definition (as a theorem), for instance,
 perfectly matches Definition 3.1 of \cite{Schilling:2017}:
 
 ```
-##thm sigma_algebraTheory.SIGMA_ALGEBRA_ALT_SPACE
+##thm SIGMA_ALGEBRA_ALT_SPACE
 ```
 
 Any measure (function) must be defined with respect to a *measure
@@ -480,11 +483,11 @@ function.  If `m = (sp,sts,mu)` is a measure space, the functions
     $\sigma$-algebra, while `(sp,sts)` a *measurable space*.
 
 ```
-##thm measureTheory.measure_space_def
+##thm measure_space_def
 
-##thm measureTheory.positive_def
+##thm positive_def
 
-##thm measureTheory.countably_additive_def
+##thm countably_additive_def
 ```
 
 In particular, if `(sp,sts,mu)` is `positive` and
@@ -492,7 +495,7 @@ In particular, if `(sp,sts,mu)` is `positive` and
 it is called a *premeasure* (space):
 
 ```
-##thm measureTheory.premeasure_def
+##thm premeasure_def
 ```
 
 The reason of introducing premeasure is that it is not a trivial
@@ -516,18 +519,18 @@ exists a smallest $\sigma$-algebra containing it (also called the
 $\sigma$-algebra *generated* from it), denoted by $\sigma(\cdot)$:
 
 ```
-##thm sigma_algebraTheory.sigma_def
+##thm sigma_def
 
-##thm sigma_algebraTheory.SIGMA_ALGEBRA_SIGMA
+##thm SIGMA_ALGEBRA_SIGMA
 
-##thm sigma_algebraTheory.SIGMA_SUBSET_SUBSETS
+##thm SIGMA_SUBSET_SUBSETS
 ```
 
 The following deep extension theorem for measures goes back to
 Carath&eacute;odory \cite{Schilling:2017}:
 
 ```
-##thm measureTheory.CARATHEODORY_SEMIRING
+##thm CARATHEODORY_SEMIRING
 ```
 
 In addition, the uniqueness of measures extended from generators is
@@ -535,11 +538,11 @@ guaranteed by the following theorem, given that the involved
 generators are stable under $\cap$ and $\sigma$-finite:
 
 ```
-##thm measureTheory.sigma_finite_def
+##thm sigma_finite_def
 
-##thm measureTheory.sigma_finite_measure_space_def
+##thm sigma_finite_measure_space_def
 
-##thm measureTheory.UNIQUENESS_OF_MEASURE
+##thm UNIQUENESS_OF_MEASURE
 ```
 
 ### Borel measurable function and sets
@@ -557,31 +560,31 @@ In HOL, the real-valued Borel sets `borel` $\mathscr{B}(\mathbb{R})$
 is the $\sigma$-algebra generated by open sets (of the type
 $\konst{real} \to \konst{bool}$).
 
->>__ load "real_borelTheory";
+>>__ load "real_borelTheory"; open real_borelTheory;
 ```
-##thm real_borelTheory.borel
+##thm borel
 ```
 
 `borel` can also be generated by half spaces, open or closed
 intervals:
 
 ```
-##thm real_borelTheory.borel_eq_le
-##thm real_borelTheory.borel_eq_less
-##thm real_borelTheory.borel_eq_gr
-##thm real_borelTheory.borel_eq_gr_le
-##thm real_borelTheory.borel_eq_gr_less
-##thm real_borelTheory.borel_eq_ge_le
-##thm real_borelTheory.borel_eq_ge_less
+##thm borel_eq_le
+##thm borel_eq_less
+##thm borel_eq_gr
+##thm borel_eq_gr_le
+##thm borel_eq_gr_less
+##thm borel_eq_ge_le
+##thm borel_eq_ge_less
 ```
 
 The extreal-valued Borel sets `Borel`
 $\mathscr{B}(\mathbb{\overline{R}})$ is defined by augmenting `borel`
 with infinities:
 
->>__ load "borelTheory";
+>>__ load "borelTheory"; open borelTheory;
 ```
-##thm borelTheory.Borel
+##thm Borel
 ```
 
 `Borel` can also be generated by half spaces (of the type
@@ -594,10 +597,10 @@ $\konst{extreal} \to \konst{bool}$):[^Borel-not-from-intervals]
     intervals.
 
 ```
-##thm borelTheory.Borel_def
-##thm borelTheory.Borel_eq_le
-##thm borelTheory.Borel_eq_gr
-##thm borelTheory.Borel_eq_ge
+##thm Borel_def
+##thm Borel_eq_le
+##thm Borel_eq_gr
+##thm Borel_eq_ge
 ```
 
 Let `a` and `b` be two measurable spaces ($\sigma$-algebras).  A map
@@ -607,7 +610,7 @@ the pre-image of every measurable set is a measurable set: (the
 definition is in `sigma_algebra` theory)
 
 ```
-##thm sigma_algebraTheory.measurable_def
+##thm measurable_def
 ```
 
 A function is called *Borel-measurable* if it is a measurable map
@@ -629,26 +632,26 @@ real-valued (or extreal-valued) Borel-measurable functions $f$ and
 $g$ is still Borel-measurable:
 
 ```
-##thm real_borelTheory.in_borel_measurable_add
+##thm in_borel_measurable_add
 
-##thm borelTheory.IN_MEASURABLE_BOREL_ADD'
+##thm IN_MEASURABLE_BOREL_ADD'
 
-##thm real_borelTheory.in_borel_measurable_sub
+##thm in_borel_measurable_sub
 
-##thm borelTheory.IN_MEASURABLE_BOREL_SUB'
+##thm IN_MEASURABLE_BOREL_SUB'
 
-##thm real_borelTheory.in_borel_measurable_mul
+##thm in_borel_measurable_mul
 
-##thm borelTheory.IN_MEASURABLE_BOREL_TIMES'
+##thm IN_MEASURABLE_BOREL_TIMES'
 ```
 
 Furthermore, if a real-valued function is Borel-measurable, so is
 its extreal-valued version.  The converse also holds.
 
 ```
-##thm borelTheory.IN_MEASURABLE_BOREL_IMP_BOREL'
+##thm IN_MEASURABLE_BOREL_IMP_BOREL'
 
-##thm borelTheory.in_borel_measurable_from_Borel
+##thm in_borel_measurable_from_Borel
 ```
 
 ### Construction of Borel measure space (`lborel`)
@@ -666,20 +669,20 @@ measure of $b - a \in \mathbb{\overline{R}}$.  The construction of
    "premeasure" `lambda0` on it:
 
    ```
-   ##thm real_borelTheory.right_open_interval
+   ##thm right_open_interval
 
-   ##thm real_borelTheory.right_open_intervals
+   ##thm right_open_intervals
 
-   ##thm borelTheory.lambda0_def
+   ##thm lambda0_def
    ```
 
 2. Prove that the set of all right open intervals is a semiring and
    the $\sigma$-algebra generated from it is nothing but `borel`:
 
    ```
-   ##thm real_borelTheory.right_open_intervals_semiring
+   ##thm right_open_intervals_semiring
 
-   ##thm real_borelTheory.right_open_intervals_sigma_borel
+   ##thm right_open_intervals_sigma_borel
    ```
 
 3. Prove `(space right_open_intervals, subsets right_open_intervals,
@@ -688,11 +691,11 @@ measure of $b - a \in \mathbb{\overline{R}}$.  The construction of
    `countably_additive`):
 
    ```
-   ##thm borelTheory.lborel0_additive
+   ##thm lborel0_additive
 
-   ##thm borelTheory.lborel0_finite_additive
+   ##thm lborel0_finite_additive
 
-   ##thm borelTheory.lborel0_premeasure
+   ##thm lborel0_premeasure
    ```
 
    (The proof of `lborel0_premeasure` depends on `real_topology`
@@ -704,30 +707,30 @@ measure of $b - a \in \mathbb{\overline{R}}$.  The construction of
    `lborel0`, denoted by `lborel`, which is now a measure space:
 
    ```
-   ##thm borelTheory.lborel_def
+   ##thm lborel_def
    ```
 
 Let `lambda = measure lborel` be an abbreviation, the measure of the
 following typical Borel sets are proved as theorems:
 
 ```
-##thm borelTheory.lambda_prop
+##thm lambda_prop
 
-##thm borelTheory.lambda_sing
+##thm lambda_sing
 
-##thm borelTheory.lambda_open_interval
+##thm lambda_open_interval
 
-##thm borelTheory.lambda_closed_interval
+##thm lambda_closed_interval
 ```
 
 Furthermore, the extreal-based Borel measurable space (`ext_lborel`)
 is defined by:
 
->>__ load "extrealTheory";
+>>__ load "extrealTheory"; open extrealTheory;
 ```
-##thm borelTheory.ext_lborel_def
+##thm ext_lborel_def
 
-##thm extrealTheory.real_set_def
+##thm real_set_def
 ```
 
 where `real_set` (`extreal` theory) converts a set of extreals to
@@ -735,9 +738,9 @@ the corresponding set of reals, filtering out $\pm\infty$.  It can be
 proven that `ext_lborel` is indeed a $\sigma$-finite measure space:
 
 ```
-##thm borelTheory.measure_space_ext_lborel
+##thm measure_space_ext_lborel
 
-##thm borelTheory.sigma_finite_ext_lborel
+##thm sigma_finite_ext_lborel
 ```
 
 ### Construction of Lebesgue measure space (`lebesgue`)
@@ -750,10 +753,10 @@ measure space*, denoted by `lebesgue`.  In `extreal` theory (at
 `$(HOLDIR)/examples/probability` directory), it is defined directly
 by Henstock-Kurzweil Integration (see Section \ref{ss:integration}):
 
->>__ load "lebesgue_measureTheory";
+>>__ load "lebesgue_measureTheory"; open lebesgue_measureTheory;
      Parse.temp_set_grammars $ valOf $ grammarDB {thyname="lebesgue_measure"};
 ```
-##thm lebesgue_measureTheory.lebesgue_def
+##thm lebesgue_def
 
 ##thm real_borelTheory.line
 ```
@@ -763,11 +766,11 @@ space.  The Lebesgue measure of closed intervals is also proven
 (directly by `integration` theory):
 
 ```
-##thm lebesgue_measureTheory.sigma_algebra_lebesgue
+##thm sigma_algebra_lebesgue
 
-##thm lebesgue_measureTheory.measure_space_lebesgue
+##thm measure_space_lebesgue
 
-##thm lebesgue_measureTheory.lebesgue_closed_interval
+##thm lebesgue_closed_interval
 ```
 
 Now comes the relationship between `lborel` and `lebesgue`, which
@@ -775,7 +778,7 @@ have two very different definitions.  In fact, all
 Borel-measurable sets are also Lebesgue-measurable sets:
 
 ```
-##thm lebesgue_measureTheory.borel_imp_lebesgue_sets
+##thm borel_imp_lebesgue_sets
 ```
 
 Finally, by uniqueness of measure, the two measure spaces `lborel`
@@ -783,7 +786,7 @@ and `lebesgue` coincide on Borel sets (recall that `lambda` is an
 abbreviation of `measure lborel`):
 
 ```
-##thm lebesgue_measureTheory.lebesgue_eq_lambda
+##thm lebesgue_eq_lambda
 ```
 
 ## Lebesgue Integration Theory
@@ -820,11 +823,12 @@ representations is captured by `pos_simple_fn`, while the integration
 of positive simple functions is defined by `pos_simple_fn_integral`:
 
 >>__ load "lebesgueTheory"; load "martingaleTheory";
+     open lebesgueTheory martingaleTheory;
      Parse.temp_set_grammars $ valOf $ grammarDB {thyname="martingale"};
 ```
-##thm lebesgueTheory.pos_simple_fn_def
+##thm pos_simple_fn_def
 
-##thm lebesgueTheory.pos_simple_fn_integral_def
+##thm pos_simple_fn_integral_def
 ```
 
 Since the representations of a positive simple function are not
@@ -836,11 +840,11 @@ defined as the supremum of all positive simple functions $g$ which is
 pointwise smaller than $f$:
 
 ```
-##thm lebesgueTheory.pos_fn_integral_def
+##thm pos_fn_integral_def
 
-##thm lebesgueTheory.psfs_def
+##thm psfs_def
 
-##thm lebesgueTheory.psfis_def
+##thm psfis_def
 ```
 
 For any positive function $f$, it is possible to construct a
@@ -852,7 +856,7 @@ Beppo Levi, see \cite[p.~75]{Schilling:2017}) reduces the integration
 of $f$ to the limit of integrations of $f_i$:
 
 ```
-##thm lebesgueTheory.lebesgue_monotone_convergence
+##thm lebesgue_monotone_convergence
 ```
 
 Finally, the (Lebesgue) integration of an arbitrary function $f$ is
@@ -860,7 +864,7 @@ defined by the subtraction of integrations of its positive and
 negative parts:
 
 ```
-##thm lebesgueTheory.integral_def
+##thm integral_def
 
 ##thm extrealTheory.fn_plus_def
 
@@ -875,7 +879,7 @@ Borel-measurable and the integrations of its positive and negative
 parts are both finite (i.e. not $+\infty$):
 
 ```
-##thm lebesgueTheory.integrable_def
+##thm integrable_def
 ```
 
 A large set of theorems are provided in `lebesgue` theory on the
@@ -883,7 +887,7 @@ properties of integrable functions and their integrations, including
 the following famous *Markov's inequality*:
 
 ```
-##thm lebesgueTheory.markov_inequality
+##thm markov_inequality
 ```
 
 ### Null sets and 'almost everywhere'
@@ -892,7 +896,7 @@ A measurable set is called *null set* (with respect to its measure
 space) if its measure is zero:
 
 ```
-##thm measureTheory.null_set_def
+##thm null_set_def
 ```
 
 A property $P(x)$ holds *almost everywhere* (AE) in a measure space
@@ -912,9 +916,9 @@ integration on null sets are very useful (Theorem 11.2 of
 \cite[p.~89-90]{Schilling:2017}):
 
 ```
-##thm lebesgueTheory.integral_abs_eq_0
+##thm integral_abs_eq_0
 
-##thm lebesgueTheory.integral_null_set
+##thm integral_null_set
 ```
 
 ### Radon-Nikod&yacute;m theorem
@@ -933,7 +937,7 @@ any set $s$ has zero measure in measure space $m$ it also has same
 zero measure in $v$:
 
 ```
-##thm measureTheory.measure_absolutely_continuous_def
+##thm measure_absolutely_continuous_def
 ```
 
 Then there exists a nonnegative Borel-measurable function $f$ such
@@ -941,9 +945,9 @@ that the (positive) integral of $f$ on any measurable set $s$ is
 exactly $v(s)$:
 
 ```
-##thm lebesgueTheory.Radon_Nikodym
+##thm Radon_Nikodym
 
-##thm lebesgueTheory.density_measure_def
+##thm density_measure_def
 ```
 
 Given two such measures $m$ and $v$, The function $f$ asserted by
@@ -952,7 +956,7 @@ $\displaystyle\frac{\mathrm{d}v}{\mathrm{d}m}$ in textbooks but
 overloaded on division in HOL):
 
 ```
-##thm martingaleTheory.RN_deriv_def
+##thm RN_deriv_def
 ```
 
 The overloading of `*` (`density_measure`) and `/` (`RN_deriv`) with
@@ -973,7 +977,7 @@ the family $\mathcal{A}\times\mathcal{B}$, denoted by `prod_sets A B`
 (in `sigma_algebra` theory):
 
 ```
-##thm sigma_algebraTheory.prod_sets_def
+##thm prod_sets_def
 ```
 
 is, in general, no $\sigma$-algebra — it contains only "rectangles".
@@ -994,16 +998,16 @@ considerations for $\mathcal{A}\otimes\mathcal{B}$ to generators
 $\mathcal{F}$ and $\mathcal{G}$ of $\mathcal{A}$ and $\mathcal{B}$:
 
 ```
-##thm martingaleTheory.PROD_SIGMA_OF_GENERATOR
+##thm PROD_SIGMA_OF_GENERATOR
 ```
 
 The uniqueness and existence of product measures are guaranteed by
 the following theorems:
 
 ```
-##thm martingaleTheory.EXISTENCE_OF_PROD_MEASURE
+##thm EXISTENCE_OF_PROD_MEASURE
 
-##thm martingaleTheory.UNIQUENESS_OF_PROD_MEASURE
+##thm UNIQUENESS_OF_PROD_MEASURE
 ```
 
 **Definition.** Let $(X,\mathcal{A})$ and $(Y,\mathcal{B})$ be two
@@ -1014,7 +1018,7 @@ $(X\times Y, \mathcal{A}\otimes\mathcal{B}, \mu\times\nu)$ is called
 the *product measure space*:
 
 ```
-##thm martingaleTheory.prod_measure_def
+##thm prod_measure_def
 ```
 
 As an application, the two-dimensional (real-valued) Borel measure
@@ -1022,9 +1026,9 @@ space (`lborel_2d`) is constructed by the following definition and
 theorem:
 
 ```
-##thm martingaleTheory.lborel_2d_def
+##thm lborel_2d_def
 
-##thm martingaleTheory.lborel_2d_prod_measure
+##thm lborel_2d_prod_measure
 ```
 
 The next step is to see how we can integrate w.r.t. $\mu\times\nu$.
@@ -1037,34 +1041,34 @@ more general functions but requires the (iterated) integrals to be
 finite:
 
 ```
-##thm martingaleTheory.TONELLI
+##thm TONELLI
 
-##thm martingaleTheory.FUBINI
+##thm FUBINI
 ```
 
 HOL also supports other types of "products".  In general, any three
 LISP-like pair operators can be used for building product measures:
 
 ```
-##thm martingaleTheory.pair_operation_def
+##thm pair_operation_def
 
-##thm martingaleTheory.pair_operation_pair
+##thm pair_operation_pair
 ```
 
 Besides `pairTheory`, one can also use `FCP_CONCAT`, `FCP_FST` and
 `FCP_SND` (`fcpTheory`):
 
 ```
-##thm martingaleTheory.pair_operation_FCP_CONCAT
+##thm pair_operation_FCP_CONCAT
 ```
 
 The general version of product space is defined on any pair
 operation:
 
 ```
-##thm martingaleTheory.general_cross_def
+##thm general_cross_def
 
-##thm martingaleTheory.general_prod_def
+##thm general_prod_def
 ```
 
 In fact, all the theorems about product measures, up to the
@@ -1075,7 +1079,7 @@ instance, the following theorem is the general version of
 `EXISTENCE_OF_PROD_MEASURE`:
 
 ```
-##thm martingaleTheory.existence_of_prod_measure_general
+##thm existence_of_prod_measure_general
 ```
 
 ### $\mathcal{L}^p$ spaces, semi-norm and important inequalities
@@ -1093,7 +1097,7 @@ $$\mathcal{L}^p(\mu) := \left\{ u \colon X\rightarrow\overline{\mathbb{R}} \colo
 Or formally:
 
 ```
-##thm martingaleTheory.lp_space_alt_finite
+##thm lp_space_alt_finite
 ```
 
 It is convenient to have the following *semi-norm* notation:
@@ -1103,7 +1107,7 @@ $$\|u\|_p := \left( \int \left|u(x)\right|^p \mu(\mathrm{d}x) \right)^{1/p}, \qq
 Or formally:
 
 ```
-##thm martingaleTheory.seminorm_normal
+##thm seminorm_normal
 ```
 
 Clearly, $u\in\mathcal{L}^p(\mu)$ if, and only if,
@@ -1111,9 +1115,9 @@ $u\in\mathcal{M}(\mathscr{A})$ and $\|u\|_p <\infty$.  Furthermore,
 $\|u\|_p$ implies that $u(x) = 0$ for almost every $x$.
 
 ```
-##thm martingaleTheory.lp_space_alt_seminorm
+##thm lp_space_alt_seminorm
 
-##thm martingaleTheory.seminorm_eq_0
+##thm seminorm_eq_0
 ```
 
 The triangle inequality for $\|\cdot\|_p$ and deeper results on
@@ -1127,21 +1131,21 @@ $\mathcal{L}^p$ depends on the following elementary inequality
 Then the following fundamental *H&ouml;lder's inequality* is proved:
 
 ```
-##thm martingaleTheory.Hoelder_inequality
+##thm Hoelder_inequality
 ```
 
 Holder's inequality with $p = q = 2$ is usually called the
 *Cauchy-Schwarz inequality*:
 
 ```
-##thm martingaleTheory.Cauchy_Schwarz_inequality
+##thm Cauchy_Schwarz_inequality
 ```
 
 Another consequence of Holder's inequality is the *Minkowski* or
 *triangle inequality for $\|\cdot\|_p$*:
 
 ```
-##thm martingaleTheory.Minkowski_inequality
+##thm Minkowski_inequality
 ```
 
 Holder's inequality is useful in Probability Theory, for example, for
@@ -1181,12 +1185,13 @@ of the triple.  Thus a probability space is nothing but a measure
 space where the measure of the sample space is one:
 
 >>__ load "probabilityTheory"; load "large_numberTheory";
+     open probabilityTheory large_numberTheory;
      Parse.temp_set_grammars $ valOf $ grammarDB {thyname="large_number"};
 ```
-##thm probabilityTheory.prob_space_def
-##thm probabilityTheory.p_space_def
-##thm probabilityTheory.events_def
-##thm probabilityTheory.prob_def
+##thm prob_space_def
+##thm p_space_def
+##thm events_def
+##thm prob_def
 ```
 
 If `E` is an event, the statement that "the probability of $E$ is
@@ -1225,11 +1230,11 @@ probability is increasing, additive and countably additive,
 respectively:
 
 ```
-##thm probabilityTheory.PROB_INCREASING
+##thm PROB_INCREASING
 
-##thm probabilityTheory.PROB_ADDITIVE
+##thm PROB_ADDITIVE
 
-##thm probabilityTheory.PROB_COUNTABLY_ADDITIVE
+##thm PROB_COUNTABLY_ADDITIVE
 ```
 
 Also note that, the type of probabilities is $\konst{extreal}$ in
@@ -1242,7 +1247,7 @@ many proofs (when dealing with extreal arithmetics):
     probabilities are real-valued, is still available.
 
 ```
-##thm probabilityTheory.PROB_FINITE
+##thm PROB_FINITE
 ```
 
 ### Conditional probability
@@ -1255,7 +1260,7 @@ $\mathscr{P}\{e_1 \mid e_2\}$, is denoted by `cond_prob p e1 e2` in
 HOL:
 
 ```
-##thm probabilityTheory.cond_prob_def
+##thm cond_prob_def
 ```
 
 Among other common properties, the *Total Probability Formula* and
@@ -1263,11 +1268,11 @@ the famous *Bayes' Rule* (specific and general versions)
 \cite[Chapter~V]{Feller:2004vv} are provided:
 
 ```
-##thm probabilityTheory.TOTAL_PROB_SIGMA
+##thm TOTAL_PROB_SIGMA
 
-##thm probabilityTheory.BAYES_RULE
+##thm BAYES_RULE
 
-##thm probabilityTheory.BAYES_RULE_GENERAL_SIGMA
+##thm BAYES_RULE_GENERAL_SIGMA
 ```
 
 ### Random variable
@@ -1282,9 +1287,9 @@ probability spaces to `Borel` sets.  They are called
 `real_random_variable`:
 
 ```
-##thm probabilityTheory.random_variable_def
+##thm random_variable_def
 
-##thm probabilityTheory.real_random_variable_def
+##thm real_random_variable_def
 ```
 
 Let the probability space be $(\Omega,\mathscr{F},\mathscr{P})$, a
@@ -1293,16 +1298,16 @@ $(\Omega,\mathscr{F})$, while a *distribution function* is a special
 distribution defined on half spaces $(-\infty,x]$:
 
 ```
-##thm probabilityTheory.distribution_def
+##thm distribution_def
 
-##thm probabilityTheory.distribution_function
+##thm distribution_function
 ```
 
 Note that the distribution (measure) of any random variable also
 forms a probability space with its target measurable space:
 
 ```
-##thm probabilityTheory.distribution_prob_space
+##thm distribution_prob_space
 ```
 
 ### Independence
@@ -1319,9 +1324,9 @@ events is said to be *pairwise independent* if each two of them are
 independent:
 
 ```
-##thm probabilityTheory.indep_def
+##thm indep_def
 
-##thm probabilityTheory.pairwise_indep_events_def
+##thm pairwise_indep_events_def
 ```
 
 More generally, a possibly infinite sequence of events
@@ -1334,14 +1339,14 @@ $$\mathscr{P}\{E_{\alpha_1} \cap E_{\alpha_2} \cap \cdots \cap E_{\alpha_j}\} = 
 or formally
 
 ```
-##thm probabilityTheory.indep_events_def
+##thm indep_events_def
 ```
 
 We shall on occasion also talk about independence of *collections*
 (sets) of events:
 
 ```
-##thm probabilityTheory.indep_families_def
+##thm indep_families_def
 ```
 
 We shall also talk about independence of r.v.'s.  Random variables
@@ -1349,7 +1354,7 @@ $X$ and $Y$ are independent if for all Borel sets $a$ and $b$, the
 events $X^{-1}(a)$ and $Y^{-1}(b)$ are independent:
 
 ```
-##thm probabilityTheory.indep_rv_def
+##thm indep_rv_def
 ```
 
 For sequences of events and r.v.'s there are also *pairwise*
@@ -1359,11 +1364,11 @@ as `pairwise_indep_events` and `indep_events`, respectively.  Note
 that total independence always implies pairwise independence:
 
 ```
-##thm probabilityTheory.total_imp_pairwise_indep_events
+##thm total_imp_pairwise_indep_events
 
-##thm probabilityTheory.total_imp_pairwise_indep_sets
+##thm total_imp_pairwise_indep_sets
 
-##thm probabilityTheory.total_imp_pairwise_indep_vars
+##thm total_imp_pairwise_indep_vars
 ```
 
 ### Limit events
@@ -1382,9 +1387,9 @@ or formally
 
 ##thm sigma_algebraTheory.set_liminf_def
 
-##thm probabilityTheory.EVENTS_LIMSUP
+##thm EVENTS_LIMSUP
 
-##thm probabilityTheory.EVENTS_LIMINF
+##thm EVENTS_LIMINF
 ```
 
 Intuitively, a point belongs to $\limsup_n E_n$ if and only if it
@@ -1396,9 +1401,9 @@ Borel-Cantelli lemma* \cite[p.~80]{Chung:2001}, are useful in proving
 other deep results in probability theory:
 
 ```
-##thm probabilityTheory.Borel_Cantelli_Lemma1
+##thm Borel_Cantelli_Lemma1
 
-##thm probabilityTheory.Borel_Cantelli_Lemma2p
+##thm Borel_Cantelli_Lemma2p
 ```
 
 ### Tail algebra and tail events
@@ -1411,7 +1416,7 @@ $$\tau = \bigcap_{n=1}^\infty \sigma(E_n, E_{n+1}, E_{n+2}, \ldots)$$
 or formally
 
 ```
-##thm probabilityTheory.tail_algebra_def
+##thm tail_algebra_def
 ```
 
 In words, an event $E \in \tau$ must have the property that for any
@@ -1424,7 +1429,7 @@ that, if the tail algebra is generated from independent events, the
 probability of remote events can only be zero or one:
 
 ```
-##thm probabilityTheory.Kolmogorov_0_1_Law
+##thm Kolmogorov_0_1_Law
 ```
 
 ### Mathematical expectation
@@ -1441,7 +1446,7 @@ Formally, expectation is nothing but a synonym of (Lebesgue)
 integration:
 
 ```
-##thm probabilityTheory.expectation_def
+##thm expectation_def
 ```
 
 Thus most properties of expectation in `probability` theory are
@@ -1450,7 +1455,7 @@ following theorem is the probability version of the *Markov's
 inequality*:
 
 ```
-##thm probabilityTheory.prob_markov_ineq
+##thm prob_markov_ineq
 ```
 
 In particular, for any random variable $X$ the value `expectation p
@@ -1466,9 +1471,9 @@ be $+\infty$; otherwise, and if $r$ is an integer, $\mathscr{E}((X -
 a)^r)$ is the corresponding *moment*:
 
 ```
-##thm probabilityTheory.absolute_moment_def
+##thm absolute_moment_def
 
-##thm probabilityTheory.moment_def
+##thm moment_def
 ```
 
 For $r = 1$, $a = 0$, this reduces to $\mathscr{E}(X)$ (expectation
@@ -1477,33 +1482,33 @@ That of order 2 is particularly important and is called the
 *variance*, usually denoted by $\sigma^2(X)$ or $\mathrm{var}(X)$:
 
 ```
-##thm probabilityTheory.central_moment_def
+##thm central_moment_def
 
-##thm probabilityTheory.variance_def
+##thm variance_def
 
-##thm probabilityTheory.variance_alt
+##thm variance_alt
 ```
 
 The formula $\sigma^2(X) = \mathscr{E}(X^2) - \mathscr{E}(X)^2$ is
 well known in elementary probability, so is Chebyshev's inequality:
 
 ```
-##thm probabilityTheory.variance_eq
+##thm variance_eq
 
-##thm probabilityTheory.chebyshev_ineq_variance
+##thm chebyshev_ineq_variance
 ```
 
 Note that, for the above formulae to hold, the r.v. $X$ must have
 *finite second moments*, which has several equivalent definitions:
 
 ```
-##thm probabilityTheory.finite_second_moments_def
+##thm finite_second_moments_def
 
-##thm probabilityTheory.finite_second_moments_literally
+##thm finite_second_moments_literally
 
-##thm probabilityTheory.finite_second_moments_eq_integrable_square
+##thm finite_second_moments_eq_integrable_square
 
-##thm probabilityTheory.finite_second_moments_eq_finite_variance
+##thm finite_second_moments_eq_finite_variance
 ```
 
 In particular, if a (finite-valued) random variable $X$ has finite
@@ -1511,7 +1516,7 @@ second moments, or equivalently $X^2$ is integrable, then $X$ itself
 is also integrable:
 
 ```
-##thm probabilityTheory.finite_second_moments_imp_integrable
+##thm finite_second_moments_imp_integrable
 ```
 
 Finally, for *uncorrelated* r.v.'s (i.e. $\mathscr{E}(XY) =
@@ -1519,10 +1524,10 @@ Finally, for *uncorrelated* r.v.'s (i.e. $\mathscr{E}(XY) =
 variance" holds:
 
 ```
-##thm probabilityTheory.uncorrelated_def
-##thm probabilityTheory.uncorrelated_vars_def
+##thm uncorrelated_def
+##thm uncorrelated_vars_def
 
-##thm probabilityTheory.variance_sum
+##thm variance_sum
 ```
 
 ### Convergence of random sequences
@@ -1575,7 +1580,7 @@ However, several equivalent theorems can be used to convert that
 $\liminf$.  The most important one is the following:
 
 ```
-##thm probabilityTheory.converge_AE_alt_limsup
+##thm converge_AE_alt_limsup
 ```
 
 Recall that $\limsup_n E_n$ means "$E_n$ occurs infinitely often"
@@ -1592,18 +1597,18 @@ cannot fit with the definition of "convergence a.e.".  Indeed, we
 can prove that "a.e." implies "in pr.":
 
 ```
-##thm probabilityTheory.converge_AE_imp_PR
+##thm converge_AE_imp_PR
 
-##thm probabilityTheory.converge_AE_imp_PR'
+##thm converge_AE_imp_PR'
 ```
 
 Note that in all above concepts the convergence "from $X$ to $Y$"
 and "from $X - Y$ to 0" are equivalent, for instance:
 
 ```
-##thm probabilityTheory.converge_AE_to_zero
+##thm converge_AE_to_zero
 
-##thm probabilityTheory.converge_PR_to_zero
+##thm converge_PR_to_zero
 ```
 
 On the other hand, $L^p$ convergence implies convergence in
@@ -1611,7 +1616,7 @@ probability, but so far only a special version (converge to zero,
 with integer-valued power) is provided:
 
 ```
-##thm probabilityTheory.converge_LP_imp_PR'
+##thm converge_LP_imp_PR'
 ```
 
 ### Limit theorems and the Laws of Large Numbers
@@ -1649,11 +1654,11 @@ of `LLN`, which has alternative definitions for different
 conditions, e.g.:
 
 ```
-##thm large_numberTheory.LLN_def
+##thm LLN_def
 
-##thm large_numberTheory.LLN_alt_converge_AE_IID
+##thm LLN_alt_converge_AE_IID
 
-##thm large_numberTheory.LLN_alt_converge_PR_IID
+##thm LLN_alt_converge_PR_IID
 ```
 
 For uncorrelated r.v.'s with a common bound of variance, the proof
@@ -1663,11 +1668,11 @@ probability \cite[p.~108]{Chung:2001}.  Under the same hypotheses it
 also converges to 0 almost everywhere:
 
 ```
-##thm large_numberTheory.WLLN_uncorrelated_L2
+##thm WLLN_uncorrelated_L2
 
-##thm large_numberTheory.WLLN_uncorrelated
+##thm WLLN_uncorrelated
 
-##thm large_numberTheory.SLLN_uncorrelated
+##thm SLLN_uncorrelated
 ```
 
 For (pairwise) independent r.v.'s with identical distributions
@@ -1675,9 +1680,9 @@ For (pairwise) independent r.v.'s with identical distributions
 also proven:
 
 ```
-##thm large_numberTheory.WLLN_IID
+##thm WLLN_IID
 
-##thm large_numberTheory.SLLN_IID
+##thm SLLN_IID
 ```
 
 The Strong Law of Large Numbers (for I.I.D. r.v.'s) admits a
@@ -1686,7 +1691,7 @@ is infinite, then the *upper limit* of $\displaystyle\frac{|S_n|}{n}$
 is almost-everywhere infinite \cite[p.~133]{Chung:2001}:
 
 ```
-##thm large_numberTheory.SLLN_IID_diverge
+##thm SLLN_IID_diverge
 ```
 
 ## Probability Theory (legacy)
