@@ -84,6 +84,9 @@ in
               (case thmsrc of
                    NONE => []
                  | SOME s => ["--thmsrc="^s]) @
+              (case cache_dir of
+                   NONE => ["--no-cache"]
+                 | SOME d => ["--cache-dir", d]) @
               phase_extras())
     analysis selftest_level
 end
