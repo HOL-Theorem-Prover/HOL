@@ -22,6 +22,7 @@ New features
 ------------
 -   `Theory` syntax now supports disabling the generation of documentation in `<thyname>Theory.sig` by following the theory name with the `[no_sig_docs]` annotation.
     Files that use this feature do not need to mention `Feedback.set_trace "TheoryPP.include_docs" 0` anymore.
+    (Indeed, see below, that trace doesn’t exist with that name anymore.)
 
 -   Lists and finite-map updates (previously achieved with `LUPDATE v i l` and `fm |+ (k,v)` syntax) can now be written with a syntax using the “maps to” arrow and special bracket delimiters.
     For `LUPDATE v i l`, one can write `l❲i ↦ v❳`, and for `fm |+ (k,v)`, one can write `fm⟨k ↦ v⟩`.
@@ -103,8 +104,7 @@ Incompatibilities
 -   The order of the list of type variables given by `Type.type_vars` and `Term.type_vars_in_term` have changed. User code should be written to not depend on this anyway.
 
 -   The trace `TheoryPP.include_docs` has been renamed to `TheoryPP.include_html_docs`.
-    Note that the now preferred way to have documentation omitted is to add the `[no_sig_docs]` annotation to the `Theory` declaration at the head of a `..Script.sml` file.
-    This continues to work even with this lower-level change.
+    Note that the now-preferred way to have documentation omitted is to add the `[no_sig_docs]` annotation to the `Theory` declaration at the head of a `..Script.sml` file.
 
 Deprecations
 ------------
