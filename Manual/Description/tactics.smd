@@ -994,6 +994,7 @@ On the goal with the disjunctive antecedent, this method again provides a compac
 >> g `((n = 0) \/ (n = 1)) ==> (n * n = n)`;
 
 >> e(disch_then(DISJ_CASES_THEN SUBST1_TAC));
+>>__ proofManagerLib.drop_all();
 ```
 
 This avoids the repeated popping and pushing of the stack solution, and likewise, gives a shorter ML expression.

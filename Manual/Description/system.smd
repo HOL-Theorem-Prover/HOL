@@ -359,6 +359,8 @@ the form `“`$\cdots$`”`.
 
 ### Lexical Matters
 
+\label{sec:HOL-lex}
+
 The name of a HOL variable can be any ML string, but the quotation mechanism will parse only names that are identifiers (see [§Identifiers](#identifiers) below).
 Using non-identifiers as variable names is discouraged except in special circumstances (for example, when writing derived rules that generate variables with names that are guaranteed to be different from existing names).
 The name of a type variable in the HOL logic is formed by a prime/apostophe (`'`) followed by an alphanumeric which itself contains no prime (see [§Type Variable Names](#type-variable-names) for examples).
@@ -1381,6 +1383,8 @@ The contents of the current theory can be printed in a readable format using the
 There are three kinds of definitional extensions: constant definitions, constant specifications and type definitions.
 
 #### Constant Definitions
+
+\label{sec:constant-definitions}
 
 \index{extension, of HOL logic@extension, of HOL logic!by constant definition}
 \index{constant definition extension, of HOL logic@constant definition extension, of HOL logic!ML function for@ML function for}
