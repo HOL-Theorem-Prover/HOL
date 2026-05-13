@@ -1,80 +1,83 @@
 #!/usr/bin/env bash
 #
-# Static check of .smd source files for raw-LaTeX patterns that
-# would leak into the mdbook output if not wrapped properly.
-# Run on the worktree; no build required.
+# Sanity check the rendered mdbook output for raw-LaTeX patterns
+# that should never appear in the published HTML.
 #
-# We mask out three legitimate-LaTeX contexts before grepping:
+# Operates on the *rendered* HTML (not the .smd source).  This is
+# the lazy-and-correct approach: if a problem reaches the HTML,
+# the user will see it, so check there directly rather than
+# parsing markdown / LaTeX / SML to predict whether it will.
 #
-#   ``` ... ```   fenced code blocks (polyscripter output, raw
-#                 {=latex}/{=mdbook} blocks)
-#   $...$  /  $$...$$   inline / display math (MathJax consumes
-#                       these client-side, so \texttt and friends
-#                       are fine here)
+# Usage: mdbook-check.sh <book-dir>
+#         e.g. mdbook-check.sh Manual/book/Description
 #
-# Anything matching the forbidden patterns outside those contexts
-# is reported as a hit; the user fixes the source and re-runs.
-# Source bugs we don't catch (smdpp \ref / \label resolution
-# failures, etc.) are smdpp's responsibility and would be caught
-# by smdpp's own tests.
-#
-# Usage: mdbook-check.sh [<smd-dir>]   (default: cwd)
+# Exits non-zero if any pattern matches; prints a hit list.
 
 set -eu
 
-dir=${1:-.}
+book=${1:?usage: mdbook-check.sh <book-dir>}
 
-if ! [ -d "$dir" ]; then
-  echo "mdbook-check: $dir is not a directory" >&2
+if ! [ -d "$book" ]; then
+  echo "mdbook-check: $book is not a directory" >&2
   exit 1
 fi
 
-# Emit each input line either verbatim (with $...$ math spans
-# stripped) or as a blank line if it's inside a ``` ... ``` fence.
-# Blank-line emission preserves source line numbers in grep output.
-mask_safe_zones() {
-  awk '
-    BEGIN          { in_fence = 0 }
-    /^```/         { in_fence = !in_fence; print ""; next }
-    in_fence       { print ""; next }
-                   { gsub(/\$\$[^$]*\$\$/, "")
-                     gsub(/\$[^$]*\$/, "")
-                     print }
-  ' "$1"
-}
-
-patterns=(
-  '\\texttt\{'
-  '\\textbar([^a-z]|$)'
-  '\\textasciitilde'
-  '\\begin\{table\}'
-  '\\end\{table\}'
-)
-descriptions=(
-  'raw \texttt{} -- use markdown `X` or a {=latex} raw block'
-  'raw \textbar -- use markdown or a {=latex} raw block'
-  'raw \textasciitilde -- use markdown or a {=latex} raw block'
-  'raw \begin{table} -- wrap in ```{=latex} ... ```'
-  'raw \end{table} -- wrap in ```{=latex} ... ```'
-)
-
 fail=0
-for f in "$dir"/*.smd; do
-  [ -e "$f" ] || continue
-  masked=$(mask_safe_zones "$f")
-  for i in "${!patterns[@]}"; do
-    hits=$(printf %s "$masked" | grep -nE "${patterns[$i]}" || true)
+
+# Lines containing $ are MathJax math contexts where \texttt /
+# \mathit / etc. are *legitimate* — they'll be rendered client-side
+# by MathJax.  We skip those.  Lines that mention MathJax (the
+# theme/index.hbs config block in each chapter's <head>) are also
+# skipped, since they contain literal `\\mathit{...}` etc. as JS
+# string contents.  The worda:/wordb:/wordc: tokens are the
+# MathJax-macro keys for theories.smd's \worda/\wordb/\wordc
+# (defined in theme/index.hbs in the chapter <head>): the
+# definition lines mention `\mathit{...}` as the macro body and
+# would otherwise trip the trapped-math check below.
+#
+# This is rough but practical: in our chapters there's no prose
+# line that contains a stray `$` without being math.
+filter='\$|MathJax|worda:|wordb:|wordc:'
+
+# (pattern, description) pairs.  Patterns are ERE.  Backslashes:
+# bash single quotes pass through verbatim, so `\\X` in source =
+# `\\X` to grep -E = the literal text `\X`.
+check() {
+  local pattern=$1 description=$2 f
+  for f in "$book"/*.html; do
+    [ -e "$f" ] || continue
+    case "$(basename "$f")" in print.html) continue ;; esac
+    local hits
+    hits=$(grep -nE "$pattern" "$f" 2>/dev/null \
+              | grep -Ev "$filter" || true)
     if [ -n "$hits" ]; then
-      echo "$f: ${descriptions[$i]}"
-      printf '%s\n' "$hits" | sed 's|^|  |'
-      echo
+      echo "$f: $description"
+      printf '%s\n' "$hits" | head -3 | sed 's|^|  |'
       fail=1
     fi
   done
-done
+}
+
+# Raw LaTeX text commands that should never reach mdbook HTML.
+check '\\texttt\{'        'raw \texttt{} leak'
+check '\\textbar([^a-z]|$)' 'raw \textbar leak'
+check '\\textasciitilde'  'raw \textasciitilde leak'
+check '\\begin\{table\}'  'raw \begin{table} leak'
+check '\\end\{table\}'    'raw \end{table} leak'
+check '\\ref\{'           'unresolved \ref{}'
+check '\\label\{'         'unstripped \label{}'
+
+# Double-backslash math signatures.  When `$$\mathit{...}$$` reaches
+# smdpp's protectMath pass it becomes `$$\\mathit{...}$$` (escaped
+# for MathJax).  If pulldown-cmark then puts that in a <pre><code>
+# block (e.g. because the $$ was indented inside a definition-list
+# body), the escaped form ends up as literal text in the HTML.
+# The double-backslash form is the unique signature of that bug.
+check '\\\\(mathit|mathtt|texttt|textbf|textit)\{' \
+      'math content trapped in code block (escaped \\X{...})'
 
 if [ "$fail" -ne 0 ]; then
-  echo "mdbook-check: source bugs detected (see hits above)." >&2
+  echo "mdbook-check: rendered-HTML leaks detected (see hits above)." >&2
   exit 1
 fi
 echo "mdbook-check: OK"

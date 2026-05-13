@@ -17,14 +17,14 @@ PS_NOUMAP = $(PS_ROOT) -md < $< > $@
 
 all: description.pdf
 
-# Build the mdbook output for the chapters listed in SUMMARY.md.
-# Source-check the .smd files first for raw-LaTeX patterns that
-# have caused mdbook regressions before (see mdbook-check.sh);
-# then run mdbook proper.  The smdpp preprocessor is invoked
-# dynamically by mdbook (see book.toml).
+# Build the mdbook output for the chapters listed in SUMMARY.md;
+# afterwards, scan the rendered HTML for raw-LaTeX leak patterns
+# that have caused mdbook regressions before (see
+# mdbook-check.sh).  The smdpp preprocessor is invoked dynamically
+# by mdbook (see book.toml).
 mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh
-	../Tools/mdbook-check.sh .
 	mdbook build
+	../Tools/mdbook-check.sh ../book/Description
 
 # SUMMARY.md and chapters-include.tex are generated from
 # chapters.txt by Manual/Tools/gen_chap_lists.  chapters.txt
@@ -147,4 +147,5 @@ EXTRA_CLEANS = drules.tex drules.md tactics.tex tactics.md \
                description.toc description.fls description.idx description.ilg \
                description.ind description.blg description.bbl \
 	       description.fdb_latexmk modern-syntax.md modern-syntax.tex \
-	       chapters-include.tex SUMMARY.md
+	       chapters-include.tex SUMMARY.md \
+	       ../book/Description/
