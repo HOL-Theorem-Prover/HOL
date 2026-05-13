@@ -69,8 +69,11 @@ mdbook-serve: ../Tools/smdpp
 description.pdf: $(TEX_SOURCES)
 	latexmk -pdf description
 
-definitions.tex: definitions.stex $(PS_STUFF)
-	$(PS_COMMAND)
+definitions.md: definitions.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+definitions.tex: definitions.md pdf-macros.lua
+	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
 
 
 conv.md: conv.smd $(PS_STUFF)
@@ -139,7 +142,8 @@ figures:
 
 EXTRA_CLEANS = drules.tex drules.md tactics.tex tactics.md \
                theories.tex theories.md libraries.tex \
-               PatternMatchesLib.tex HolSat.tex definitions.tex \
+               PatternMatchesLib.tex HolSat.tex \
+               definitions.tex definitions.md \
                system.tex system.md conv.tex conv.md math.tex math.md \
                description.pdf mdbook-serve.log \
                $(patsubst %,%.aux,$(TEX_CORES)) \
