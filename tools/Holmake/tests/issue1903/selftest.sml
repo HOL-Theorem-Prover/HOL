@@ -57,11 +57,17 @@ fun expect_failure (label, args, checks) =
           | NONE => OK()
     end
 
+(* --no-cache passed to every invocation: without it, the slow theories
+   may be cache-fetched (from a previous keep-going run that populated
+   the global cache) and exit successfully before badboy is detected as
+   failed, so no "killed" message ever appears.  We are testing the
+   collateral-kill reporting here, not the cache. *)
+
 (* Default mode: first failure aborts the build.  The slow theories are
    killed mid-flight; only one FAIL is reported. *)
 val _ = expect_failure (
   "Default mode: collateral 'killed' (not MKILLED) and final summary",
-  ["-j", "4"],
+  ["--no-cache", "-j", "4"],
   [("output should NOT contain 'MKILLED'", missing "MKILLED"),
    ("output should contain 'killed' for collateral",  has "killed"),
    ("output should contain a final '*** Holmake aborted'",
@@ -76,7 +82,7 @@ val _ = expect_failure (
    gets killed and "killed" should not appear in the output. *)
 val _ = expect_failure (
   "Keep-going mode: failures appear inline AND in final summary",
-  ["-k", "-j", "4"],
+  ["--no-cache", "-k", "-j", "4"],
   [("output should NOT contain 'MKILLED'", missing "MKILLED"),
    ("output should NOT contain 'killed' (slow jobs all finish)",
     missing "killed"),
