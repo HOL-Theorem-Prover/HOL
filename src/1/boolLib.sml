@@ -110,33 +110,57 @@ end (* local open *)
 
 val def_suffix = ref "_def"
 
-fun has_suspended_subgoals th =
-    let
-      open HolKernel
-      fun issusp_hyp t =
-          let
-            val (fx,_) = dest_comb t
-            val (sl_c, lnm) = dest_comb fx
-            val {Thy,Name,...} = dest_thy_const sl_c
-          in
-            Thy = "marker" andalso Name = "suspendlabel" andalso
-            is_var lnm
-          end handle HOL_ERR _ => false
+(* If t = `suspendlabel <lab> g` for a variable <lab>, return SOME <lab>. *)
+local open HolKernel in
+fun slab_lab_var t =
+    let val (fx, _) = dest_comb t
+        val (sl_c, lnm) = dest_comb fx
+        val {Thy, Name, ...} = dest_thy_const sl_c
     in
-      isSome (HOLset.find issusp_hyp (hypset th))
-    end
+      if Thy = "marker" andalso Name = "suspendlabel" andalso is_var lnm
+      then SOME lnm else NONE
+    end handle HOL_ERR _ => NONE
+end
 
-(* The label variable's name encodes a closure-variable count in the
-   format "N name". Decode to extract the user-visible name and count. *)
+fun has_suspended_subgoals th =
+    isSome (HOLset.find (isSome o slab_lab_var) (Thm.hypset th))
+
+(* The label variable's name encodes the closure-variable count and
+   the user-visible label, and -- for slabs that have been stamped at
+   save-time -- the owning theorem (thy, name).  Two formats:
+
+   Legacy: "N name"
+        N is the closure-variable count, then a single space, then
+        the user's label.
+
+   Owner-stamped: "Nthythmnamename"
+        Same closure count and label, but with the owning (thy, name)
+        embedded between the count and the label, delimited by SOH
+        (ASCII 1).  SOH never appears in HOL identifiers or normal
+        labels, so it's a safe in-band marker. *)
+val owner_sep = "\^A"
+
+fun encode_label (nm, n) = Int.toString n ^ " " ^ nm
+
+fun encode_label_owned ((thy, thmname), nm, n) =
+    Int.toString n ^ owner_sep ^ thy ^ owner_sep ^ thmname ^ owner_sep ^ nm
+
 fun decode_suspend_label s =
-    let val (prefix, rest) =
-            Substring.splitl (fn c => c <> #" ") (Substring.full s)
-    in
-      if Substring.isEmpty rest then (s, 0)
-      else case Int.fromString (Substring.string prefix) of
-               SOME n => (Substring.string (Substring.triml 1 rest), n)
-             | NONE => (s, 0)
-    end
+    case String.fields (fn c => c = #"\^A") s of
+        [n_str, thy, thmname, label] =>
+          (case Int.fromString n_str of
+               SOME n => (label, n, SOME (thy, thmname))
+             | NONE => (s, 0, NONE))
+      | _ =>
+          let val (prefix, rest) =
+                  Substring.splitl (fn c => c <> #" ") (Substring.full s)
+          in
+            if Substring.isEmpty rest then (s, 0, NONE)
+            else case Int.fromString (Substring.string prefix) of
+                     SOME n =>
+                       (Substring.string (Substring.triml 1 rest), n, NONE)
+                   | NONE => (s, 0, NONE)
+          end
 
 fun dest_suspended t =
     let
@@ -182,6 +206,34 @@ fun printable_keys nms =
             A)
         ctab
         []
+    end
+
+(* Rewrite each unstamped suspendlabel hypothesis of th so its label
+   variable encodes the owning (thy, name).  Slabs that already carry
+   a stamp are left untouched. *)
+fun stamp_slab_owners thy thmname th =
+    let
+      open HolKernel
+      fun build h =
+          Option.mapPartial
+            (fn lab_t =>
+                let val (raw, lty) = dest_var lab_t
+                    val (nm, n, owner_opt) = decode_suspend_label raw
+                in
+                  case owner_opt of
+                      SOME _ => NONE
+                    | NONE =>
+                        let val new_raw =
+                                encode_label_owned ((thy, thmname), nm, n)
+                        in
+                          SOME {redex = lab_t,
+                                residue = mk_var (new_raw, lty)}
+                        end
+                end)
+            (slab_lab_var h)
+      val subst = List.mapPartial build (hyp th)
+    in
+      if null subst then th else Thm.INST subst th
     end
 
 local
@@ -245,12 +297,18 @@ in
                       ("Ignoring attributes on suspended theorem " ^ n ^
                        "; apply them at Finalise time instead")
         else ();
-        (* Route the suspended theorem into markerLib's AncestryData
-           store for suspensions rather than saving it to the normal
-           theorem DB.  Finalise will save the clean form under this
-           name when all subgoals have been resumed. *)
-        !suspended_theorem_recorder (n, th);
-        th
+        (* Stamp each fresh slab hypothesis with its owning (thy, n)
+           so that find_res_for can resolve foreign-slab dependencies
+           when this theorem is cited inside another theorem's Resume
+           block.  Then route the (stamped) theorem into markerLib's
+           AncestryData store for suspensions; Finalise will save the
+           clean form under this name when all subgoals have been
+           resumed. *)
+        let val stamped = stamp_slab_owners (current_theory()) n th
+        in
+          !suspended_theorem_recorder (n, stamped);
+          stamped
+        end
       end
 end
 end (* local *)

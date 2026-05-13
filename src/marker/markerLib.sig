@@ -126,8 +126,13 @@ sig
       {parent_thy:string, parent_name:string, label:string} -> thm list
 
   val add_suspension_label : string -> thm -> thm
-  val resumption_to_goal : (int * term) list -> (term list * term)
-  val extract_suspended_goal : thm list -> string -> (int * term) list
+  (* Each entry of an ncts list is (lab_t, nclosure, closed_goal),
+     where lab_t is the raw label variable from the corresponding
+     slab hypothesis -- carrying any owner stamp it picked up at
+     save_thm_attrs time. *)
+  val resumption_to_goal : (term * int * term) list -> (term list * term)
+  val extract_suspended_goal :
+      thm list -> string -> (term * int * term) list
   val RESUME_TAC : tactic
 
 end (* sig *)

@@ -755,30 +755,35 @@ val (suspimp_t, mk_suspimp, dest_suspimp, is_suspimp) =
     syntax_fns2 "marker" "suspendimp"
 val strip_suspimp = strip_gen_left dest_suspimp
 
-(* The label variable's name encodes both a closure-variable count and the
-   user-supplied label name in the format "N name" where N is the number of
-   universally quantified closure variables wrapping the goal body.
-   The count is always present, even when 0.
-   Decoding is done by decode_suspend_label from boolLib. *)
-fun encode_label (nm, n) = Int.toString n ^ " " ^ nm
+(* Encoder/decoder live in boolLib.  Slabs created by `suspend` start
+   in the unstamped form; save_thm_attrs upgrades them once the
+   containing theorem's name is known. *)
+val encode_label = boolLib.encode_label
+val encode_label_owned = boolLib.encode_label_owned
 
-fun dest_slab t =
+fun dest_slab_full t =
     let val (f, xs) = strip_comb t
         val _ = same_const susp_t f orelse
-                raise ERR "dest_slab" "Term not a suspendlabel"
+                raise ERR "dest_slab_full" "Term not a suspendlabel"
     in
       case xs of
           [labt, arg] =>
             let val (raw, _) = dest_var labt
                                handle HOL_ERR _ =>
-                                      raise ERR "dest_slab"
+                                      raise ERR "dest_slab_full"
                                                 "Label argument invalid"
-                val (nm, nclosure) = boolLib.decode_suspend_label raw
+                val (nm, nclosure, owner) =
+                    boolLib.decode_suspend_label raw
             in
-              (nm, nclosure, arg)
+              {label = nm, closure = nclosure, arg = arg,
+               lab_t = labt, owner = owner}
             end
-        | _ => raise ERR "dest_slab" "Incomplete suspendlabel term"
+        | _ => raise ERR "dest_slab_full" "Incomplete suspendlabel term"
     end
+
+fun dest_slab t =
+    let val {label, closure, arg, ...} = dest_slab_full t
+    in (label, closure, arg) end
 
 (* to keep it tail-recursive, does it "backwards" *)
 fun list_mk_suspimp (asl, g) =
@@ -824,7 +829,10 @@ val labty = slab_def' |> concl |> dest_forall |> #1 |> dest_var |> #2
 fun sDISCH t th =
     CONV_RULE (RATOR_CONV (RATOR_CONV (K simp_def'))) $ DISCH t th
 
-fun add_suspension_label nm th = EQ_MP (SPECL [mk_var(nm, labty), concl th] slab_def') th
+fun add_suspension_label_raw lab_t th =
+    EQ_MP (SPECL [lab_t, concl th] slab_def') th
+fun add_suspension_label nm th =
+    add_suspension_label_raw (mk_var(nm, labty)) th
 
 val elimrc_conv = RATOR_CONV (RATOR_CONV (REWR_CONV resconj_def))
 val elimsi_conv = RATOR_CONV (RATOR_CONV (REWR_CONV suspendimp_def))
@@ -877,10 +885,11 @@ fun strip_n_foralls_vars 0 t = ([], t)
     in (v :: vs, rest)
     end
 
-(* Reconstruct |- suspendlabel (encoded_nm) closed_term from a user-proved
-   theorem th whose conclusion matches body (the term under the closure
-   foralls). *)
-fun prove_suspended0 nm nclosure s_t th tgt =
+(* Reconstruct |- suspendlabel <lab_t> closed_term from a user-proved
+   theorem th whose conclusion matches the body (the term under the
+   closure foralls).  lab_t threads through so owner-stamped slabs
+   reach add_suspension_label_raw with their stamp intact. *)
+fun prove_suspended0 lab_t nclosure s_t th tgt =
     let
       val (closure_vars, body) = strip_n_foralls_vars nclosure s_t
       val result =
@@ -892,31 +901,32 @@ fun prove_suspended0 nm nclosure s_t th tgt =
               itlist sDISCH imps th
             end
       val closed_result = GENL closure_vars result
-      val encoded_nm = encode_label(nm, nclosure)
     in
-      PROVE_HYP (add_suspension_label encoded_nm closed_result) tgt
+      PROVE_HYP (add_suspension_label_raw lab_t closed_result) tgt
     end
 
 (* prove_suspended: handle both single and multi-goal (resconj) cases.
-   ncts is the list of (nclosure, term) pairs from extract_suspended_goal. *)
-fun prove_suspended nm ncts th tgt =
+   ncts is the list of (lab_t, nclosure, term) triples from
+   extract_suspended_goal. *)
+fun prove_suspended ncts th tgt =
   case ncts of
-      [(nc, s_t)] => prove_suspended0 nm nc s_t th tgt
+      [(lab_t, nc, s_t)] => prove_suspended0 lab_t nc s_t th tgt
     | _ =>
       let val ths = RESCONJS th
-          fun foldthis ((nc, s_t), th, tgt) =
-              prove_suspended0 nm nc s_t th tgt
+          fun foldthis ((lab_t, nc, s_t), th, tgt) =
+              prove_suspended0 lab_t nc s_t th tgt
       in
         ListPair.foldl foldthis tgt (ncts, ths)
       end
 
-(* extract_suspended_goal: returns a list of (nclosure, term) pairs,
-   one per hypothesis with the given label. *)
+(* Returns a list of (lab_t, nclosure, closed_goal) triples, one per
+   hypothesis with the given label. *)
 fun extract_suspended_goal thms label =
     let
       fun myhyp t =
-          case total dest_slab t of
-              SOME (nm,nc,t0) => if nm = label then SOME (nc,t0) else NONE
+          case total dest_slab_full t of
+              SOME {label = nm, closure = nc, arg = t0, lab_t, ...} =>
+                if nm = label then SOME (lab_t, nc, t0) else NONE
             | NONE => NONE
       val to_ncts = List.mapPartial myhyp o hyp
     in
@@ -926,21 +936,22 @@ fun extract_suspended_goal thms label =
         | SOME ncts => ncts
     end
 
-(* resumption_to_goal: given the (nclosure, term) list from
+(* resumption_to_goal: given the (lab_t, nclosure, term) list from
    extract_suspended_goal, produce the goal to present to the user.
    For a single hypothesis, strip nclosure foralls then strip suspimps.
    For multiple hypotheses, strip each one's closure foralls individually,
    then combine with resconj. *)
 fun resumption_to_goal ncts =
     case ncts of
-        [(nclosure, r_t)] =>
+        [(_, nclosure, r_t)] =>
           let val (_, body) = strip_n_foralls_vars nclosure r_t
               val (asl0, g) = strip_suspimp body
           in
             (List.rev asl0, g)
           end
       | _ => ([], list_mk_resconj
-                    (map (fn (nc, t) => #2 (strip_n_foralls_vars nc t)) ncts))
+                    (map (fn (_, nc, t) => #2 (strip_n_foralls_vars nc t))
+                         ncts))
 
 
 fun prim_resume (th,label,tac) =
@@ -949,7 +960,7 @@ fun prim_resume (th,label,tac) =
         val sub_th = prove_goal(goal, tac)
     in
       {subresult = sub_th,
-       updated_main = prove_suspended label ncts sub_th th}
+       updated_main = prove_suspended ncts sub_th th}
     end
 
 (* ----------------------------------------------------------------------
@@ -1203,9 +1214,9 @@ fun find_parent nm : (parent_source * string * thm) option =
 (* Build |- suspendlabel "lab" G_i theorems for each matching
    hypothesis, reusing the closure-reconstruction logic of
    prove_suspended0. *)
-fun build_suspendlabel_thms label_nm (ncts, sub_th) =
+fun build_suspendlabel_thms (ncts, sub_th) =
     let
-      fun mk_susp_thm (nc, s_t) th =
+      fun mk_susp_thm (lab_t, nc, s_t) th =
         let
           val (closure_vars, body) = strip_n_foralls_vars nc s_t
           val result =
@@ -1214,9 +1225,8 @@ fun build_suspendlabel_thms label_nm (ncts, sub_th) =
                 let val (imps, _) = strip_suspimp body
                 in itlist sDISCH imps th end
           val closed_result = GENL closure_vars result
-          val encoded_nm = encode_label (label_nm, nc)
         in
-          add_suspension_label encoded_nm closed_result
+          add_suspension_label_raw lab_t closed_result
         end
     in
       case ncts of
@@ -1269,21 +1279,31 @@ fun resume {suspension_name, label_name} tac =
                               \create a cycle at Finalise.")
                          else ())
                        (List.filter (can dest_slab) (hyp sub_th))
-                 (* Build |- suspendlabel "lab" G_i for each hyp i and
-                    record each as its own resumption delta. *)
+                 (* Build |- suspendlabel <lab_t> G_i for each hyp i
+                    and record each as its own resumption delta. *)
                  val susp_thms =
-                     build_suspendlabel_thms
-                         label_name (ncts, sub_th)
+                     build_suspendlabel_thms (ncts, sub_th)
+                 (* For each slab hyp h that rth depends on, index rth
+                    under h's *owner* — read from h's stamp if present,
+                    otherwise fall back to the current Resume's parent
+                    (the suspNested case, where h was introduced by a
+                    suspend tactic inside this very Resume body). *)
                  fun record_suspend_resumptions rth =
-                     List.app (fn h =>
-                                  case total dest_slab h of
-                                      SOME (nm, _, _) =>
-                                      record_resumption_delta
-                                          (AddResumption
-                                               ((parent_thy, suspension_name, nm),
-                                                rth))
-                                    | NONE => ())
-                              (hyp rth)
+                     List.app
+                       (fn h =>
+                         case total dest_slab_full h of
+                             SOME {label = nm, owner, ...} =>
+                               let val (kt, kn) =
+                                       case owner of
+                                           SOME p => p
+                                         | NONE =>
+                                             (parent_thy, suspension_name)
+                               in
+                                 record_resumption_delta
+                                   (AddResumption ((kt, kn, nm), rth))
+                               end
+                           | NONE => ())
+                       (hyp rth)
                  val _ =
                      List.app
                          (fn rth => (
@@ -1334,32 +1354,60 @@ fun assemble_finalised parent_thy parent_nm parent_th =
       val susp_hyps =
           List.filter (Option.isSome o total dest_slab) (hyp parent_th)
       fun find_res_for hyp_t =
-          case total dest_slab hyp_t of
-              NONE => raise ERR "Finalise"
-                        "internal: non-suspendlabel hyp reached assembly"
-            | SOME (label, _, _) =>
-              let
-                val key = (parent_thy, parent_nm, label)
-                val candidates =
-                    case ResTab.lookup (get_res_global ()) key of
-                        NONE => []
-                      | SOME ths => ths
-                (* Pick the candidate whose conclusion aconv-matches
-                   the parent's hyp.  Multiple candidates can exist
-                   when the same label has multiple hypotheses (the
-                   resconj case): each hyp has a distinct term shape
-                   so one candidate will match. *)
-                val pick =
-                    List.find (fn rth => aconv (concl rth) hyp_t)
-                              candidates
-              in
-                case pick of
-                    SOME rth => rth
-                  | NONE =>
+          let
+            val {label, closure, arg = closed_goal, lab_t, owner} =
+                case total dest_slab_full hyp_t of
+                    SOME r => r
+                  | NONE => raise ERR "Finalise"
+                              "internal: non-suspendlabel hyp reached \
+                              \assembly"
+            (* Owner-stamped slabs (#1963) route through the slab's
+               own owner so foreign-slab dependencies resolve even
+               though we're inside a different theorem's assembly. *)
+            val (lookup_thy, lookup_nm) =
+                Option.getOpt (owner, (parent_thy, parent_nm))
+            val candidates =
+                case ResTab.lookup (get_res_global ())
+                                   (lookup_thy, lookup_nm, label) of
+                    NONE => []
+                  | SOME ths => ths
+            val pick =
+                List.find (fn rth => aconv (concl rth) hyp_t) candidates
+            (* If no in-store proof, the owner has already been
+               Finalised and its resumption entries GC'd; reconstruct
+               by re-attaching the suspension label to the closed form
+               of the clean DB theorem. *)
+            fun reconstruct_from_clean (owner_thy, owner_nm) =
+                case DB.lookup {Thy = owner_thy, Name = owner_nm} of
+                    NONE =>
                       raise ERR "Finalise"
-                        ("No resumption proof found for label " ^ label ^
-                         " of " ^ parent_thy ^ "$" ^ parent_nm)
-              end
+                        ("No resumption proof or finalised theorem \
+                         \found for " ^ owner_thy ^ "$" ^ owner_nm ^
+                         " (label " ^ label ^ ")")
+                  | SOME (clean_th, _) =>
+                    let val (vars, body) =
+                            strip_n_foralls_vars closure closed_goal
+                    in
+                      if aconv body (concl clean_th) then
+                        add_suspension_label_raw lab_t
+                          (GENL vars clean_th)
+                      else
+                        raise ERR "Finalise"
+                          ("Finalised theorem " ^ owner_thy ^ "$" ^
+                           owner_nm ^ " no longer matches its original \
+                           \suspension goal for label " ^ label ^
+                           "; has it been re-proved with a different \
+                           \statement?")
+                    end
+          in
+            case (pick, owner) of
+                (SOME rth, _) => rth
+              | (NONE, SOME p) => reconstruct_from_clean p
+              | (NONE, NONE) =>
+                  raise ERR "Finalise"
+                    ("No resumption proof found for label " ^ label ^
+                     " of " ^ parent_thy ^ "$" ^ parent_nm)
+          end
       fun aux current_th current_susp_hyps = let
           val founds = map find_res_for current_susp_hyps
           val finalised = List.foldl (fn (rth, acc) => PROVE_HYP rth acc)
