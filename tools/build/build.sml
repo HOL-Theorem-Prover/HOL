@@ -26,7 +26,11 @@ val _ = startup_check()
 
 val cline_record = process_cline ()
 val {cmdline,build_theory_graph,selftest_level,keepgoing,...} = cline_record
-val {extra={SRCDIRS},jobcount,relocbuild,debug,thmsrc,cache_dir,...} = cline_record
+val {extra={SRCDIRS},jobcount,relocbuild,debug,thmsrc,...} = cline_record
+
+(* Forward only the cache options the user actually wrote -- see comment
+   in tools-poly/build.sml for the same code there. *)
+val cache_args = extract_cache_args (CommandLine.arguments())
 
 
 open Systeml;
@@ -44,9 +48,7 @@ in
                                (case thmsrc of
                                     NONE => []
                                   | SOME s => ["--thmsrc="^s]) @
-                               (case cache_dir of
-                                    NONE => ["--no-cache"]
-                                  | SOME d => ["--cache-dir", d]))
+                               cache_args)
                      (fn _ => "")
                      selftest_level
 end
@@ -122,9 +124,6 @@ val holmake_exns = [
 
 fun build_hol symlink = let
 in
-  case cache_dir of
-      SOME d => print ("Using build cache: " ^ d ^ "\n")
-    | NONE => ();
   remove_all_holmkdirs();
   clean_sigobj();
   setup_logfile();

@@ -21,6 +21,17 @@ fun quote s = String.concat["\"", s, "\""];
 
 fun safedelete s = HOLFileSys.remove s handle OS.SysErr _ => ()
 
+fun extract_cache_args argv =
+  let
+    fun loop acc [] = List.rev acc
+      | loop acc ("--no-cache" :: rest) = loop ("--no-cache" :: acc) rest
+      | loop acc ("--cache-dir" :: v :: rest) =
+          loop (v :: "--cache-dir" :: acc) rest
+      | loop acc (a :: rest) =
+          if String.isPrefix "--cache-dir=" a then loop (a :: acc) rest
+          else loop acc rest
+  in loop [] argv end
+
 (* message emission *)
 fun die s =
     let open TextIO
