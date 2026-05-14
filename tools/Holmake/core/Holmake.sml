@@ -592,6 +592,25 @@ fun local_rule_info t =
       get_rule_info rules env t
     end
 
+(* Pattern-rule lookup is only meaningful when t lives in the current
+   directory (pattern rules are read from the local Holmakefile).
+   We match the bare filename against each rule's `%'-bearing target
+   pattern; the matcher returns deps as plain strings, which we lift
+   to `dep' values rooted at the current directory. *)
+fun pattern_rule_info t =
+    if hmdir.compare(hm_target.dirpart t, hmdir.curdir()) <> EQUAL then NONE
+    else
+      let
+        val (env, _, prs, _) = get_hmf()
+        val tgt_s = fromFile (hm_target.filepart t)
+      in
+        case match_pattern_rules env prs tgt_s of
+            NONE => NONE
+          | SOME {dependencies, commands} =>
+            SOME {dependencies = map filestr_to_tgt dependencies,
+                  commands = commands}
+      end
+
 fun extra_deps t =
       Option.map #dependencies (local_rule_info t)
 fun localstr_extra_deps s =
@@ -611,7 +630,33 @@ fun extra_targets() =
       Binarymap.foldr (fn (k,_,acc) => k::acc) [] rules
     end
 
-fun extra_rule_for t = local_rule_info t
+(* extra_rule_for combines the exact-match rule for t (if any) with
+   a matching pattern rule (if any), respecting GNU make's precedence:
+   - an exact rule with commands wins outright;
+   - otherwise, if a pattern rule matches, its commands fire and its
+     deps union with any deps from a recipe-less exact rule;
+   - otherwise the exact rule's deps-only entry (if any) is returned
+     unchanged.  Pattern rules never get consulted for targets outside
+     the current directory. *)
+fun extra_rule_for t =
+    let
+      val exact = local_rule_info t
+    in
+      case exact of
+          SOME {commands = _ :: _, ...} => exact
+        | _ =>
+          case pattern_rule_info t of
+              NONE => exact
+            | SOME {dependencies = pat_deps, commands = pat_cmds} =>
+              let
+                val ex_deps =
+                    case exact of
+                        SOME {dependencies, ...} => dependencies
+                      | NONE => []
+              in
+                SOME {dependencies = ex_deps @ pat_deps, commands = pat_cmds}
+              end
+    end
 fun dir_varying_envlist s =
     let val (env, _, _, _) = get_hmf()
     in

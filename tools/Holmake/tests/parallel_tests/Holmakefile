@@ -19,6 +19,7 @@ DIRNAMES = \
   doublecrnl \
   patrule_parse \
   patrule_match \
+  patrule_e2e \
   coproduct \
   noprereqs/dir1 \
   noprereqs/dir2 \
