@@ -17,6 +17,10 @@ type raw_rule_info = { targets : quotation, dependencies : quotation,
                        commands : quotation list }
 type ruledb =
      (string, {dependencies: string list, commands: quotation list}) Binarymap.dict
+type patrule = {targets : string list, deps : string list,
+                commands : quotation list}
+type patrules = patrule list
+val empty_patrules : patrules = []
 datatype token = HM_defn of {vname : string, rhs : quotation, extendp : bool}
                | HM_rule of raw_rule_info
 
@@ -332,13 +336,52 @@ fun app_insert (ddb, s, slist) =
       NONE => Binarymap.insert(ddb, s, slist)
     | SOME existing => Binarymap.insert(ddb, s, existing @ slist)
 
-fun extend_ruledb warn env {targets,dependencies,commands} (rdb,ddb) = let
+(* Classify a target string by its number of unescaped `%' characters
+   (0, 1, or >=2).  `\%' counts as a literal, consistent with the rest
+   of Holmake's `%' handling. *)
+datatype pct_count = NoPct | OnePct | ManyPct
+fun pct_count s =
+    let
+      open Substring
+      val ss = full s
+    in
+      case find_unescaped [#"%"] ss of
+          NONE => NoPct
+        | SOME i =>
+          case find_unescaped [#"%"] (slice(ss, i + 1, NONE)) of
+              NONE => OnePct
+            | SOME _ => ManyPct
+    end
+
+fun has_pct s = pct_count s <> NoPct
+
+fun extend_ruledb warn env {targets,dependencies,commands} (rdb,ddb,prs) = let
   val tgts = map dequote (tokenize (perform_substitution env targets))
   val deps = map dequote (tokenize (perform_substitution env dependencies))
+  val (pct_tgts, lit_tgts) = List.partition has_pct tgts
 in
-  if null commands then
+  if not (null pct_tgts) then
+    let
+      val () =
+          List.app (fn t => warn ("Pattern target `"^t^
+                                  "' has more than one `%'; "^
+                                  "only the first will be treated as "^
+                                  "the stem."))
+                   (List.filter (fn t => pct_count t = ManyPct) pct_tgts)
+      val () =
+          List.app (fn t => warn ("Mixed pattern/exact targets: literal "^
+                                  "target `"^t^"' will be ignored in this "^
+                                  "rule (only `%'-bearing targets contribute "^
+                                  "to the pattern)."))
+                   lit_tgts
+      val patrule = {targets = pct_tgts, deps = deps, commands = commands}
+    in
+      (rdb, ddb, prs @ [patrule], [])
+    end
+  else if null commands then
     (rdb,
-     List.foldl (fn (tgt, ddb) => app_insert(ddb, tgt, deps)) ddb tgts, tgts)
+     List.foldl (fn (tgt, ddb) => app_insert(ddb, tgt, deps)) ddb tgts,
+     prs, tgts)
   else let
       val info = {dependencies = deps, commands = commands}
       fun foldthis (t, dict) =
@@ -351,7 +394,7 @@ in
               Binarymap.insert(dict, t, info)
             end
     in
-      (List.foldl foldthis rdb tgts, ddb, tgts)
+      (List.foldl foldthis rdb tgts, ddb, prs, tgts)
     end
 end
 

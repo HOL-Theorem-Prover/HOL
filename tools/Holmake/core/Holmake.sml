@@ -177,6 +177,8 @@ type tgt_ruledb = (dep, {hmftext: string, dependencies:dep list,
                          commands : quotation list})
                     Binarymap.dict
 val empty_trdb : tgt_ruledb = Binarymap.mkDict hm_target.compare
+type patrules = Holmake_types.patrules
+val empty_patrules : patrules = Holmake_types.empty_patrules
 
 (* Extend the base environment with vars passed at commandline (foldl below),
    as well as environment variables "magically" derived from other options,
@@ -208,24 +210,25 @@ local
   val base = extend_with_cline_vars (read_holpathdb())
 
   val hmcache = ref (Binarymap.mkDict String.compare)
-  val default = (base,empty_trdb,NONE)
+  val default = (base,empty_trdb,empty_patrules,NONE)
   fun get_hmf0 d =
       if FileSys.access("Holmakefile", [FileSys.A_READ]) then
         let
-          val (env, rdb, tgt0) =
+          val (env, rdb, prs, tgt0) =
               ReadHMF.diagread {warn=warn0,die=die,info=info0}
                                "Holmakefile"
                                (extend_with_cline_vars (read_holpathdb()))
               handle Fail s =>
                      (die ("Bad Holmakefile in " ^ d ^ ": " ^ s);
-                      (base,Binarymap.mkDict String.compare,NONE))
+                      (base,Binarymap.mkDict String.compare,
+                       empty_patrules,NONE))
           fun hmfstr_to_tgt s = s |> filestr_to_tgt |> setHMF_text s
           fun foldthis (k,{commands,dependencies=deps0},A) =
               Binarymap.insert(A, filestr_to_tgt k,
                                {commands = commands, hmftext = k,
                                 dependencies = map hmfstr_to_tgt deps0})
         in
-          (env, Binarymap.foldl foldthis empty_trdb rdb,
+          (env, Binarymap.foldl foldthis empty_trdb rdb, prs,
            Option.map filestr_to_tgt tgt0)
         end
       else
@@ -246,7 +249,7 @@ fun get_hmf () =
 end
 
 fun getnewincs dir =
-    let val (env, _, _) = get_hmf()
+    let val (env, _, _, _) = get_hmf()
     in
       {includes = envlist env "INCLUDES" |> slist_to_dset dir,
        preincludes = envlist env "PRE_INCLUDES" |> slist_to_dset dir}
@@ -283,7 +286,7 @@ val starting_holmakefile =
                   else NONE
         | x => x
 
-val (start_hmenv, start_rules, start_tgt) = get_hmf()
+val (start_hmenv, start_rules, start_patrules, start_tgt) = get_hmf()
 
 val start_envlist = envlist start_hmenv
 val start_options = start_envlist "OPTIONS"
@@ -584,7 +587,7 @@ fun get_rule_info rdb env tgt =
       end
 
 fun local_rule_info t =
-    let val (env, rules, _) = get_hmf()
+    let val (env, rules, _, _) = get_hmf()
     in
       get_rule_info rules env t
     end
@@ -603,14 +606,14 @@ fun extra_commands t = Option.map #commands (local_rule_info t)
 
 fun extra_targets() =
     let
-      val (_, rules, _) = get_hmf()
+      val (_, rules, _, _) = get_hmf()
     in
       Binarymap.foldr (fn (k,_,acc) => k::acc) [] rules
     end
 
 fun extra_rule_for t = local_rule_info t
 fun dir_varying_envlist s =
-    let val (env, _, _) = get_hmf()
+    let val (env, _, _, _) = get_hmf()
     in
       envlist env s
     end
@@ -856,7 +859,7 @@ let
   val fullpath = fp dir target_s
   val fullpath_s = fps fullpath
   val pretty_tgt = hmdir.pretty_dir fullpath
-  val (env, _, _) = get_hmf()
+  val (env, _, _, _) = get_hmf()
   val extra = GraphExtra.get_extra { master_dir = original_dir,
                                      master_cline = option_value,
                                      envlist = envlist env }
@@ -1110,7 +1113,7 @@ fun get_targets dir =
     let
       val from_directory =
           deplist_to_set (generate_all_plausible_targets warn NONE)
-      val (_, rules, _) = get_hmf()
+      val (_, rules, _, _) = get_hmf()
     in
       Binarymap.foldl (fn (dep,v,acc) =>
                           if hm_target.filepart dep <> Unhandled ".PHONY" then
@@ -1191,7 +1194,7 @@ fun get_targets_recursively {incs, pres} =
     let
       val dirs = set_add original_dir (set_union incs pres)
       fun indir() =
-          let val (_, _, target1) = get_hmf()
+          let val (_, _, _, target1) = get_hmf()
           in
             generate_all_plausible_targets warn target1
           end

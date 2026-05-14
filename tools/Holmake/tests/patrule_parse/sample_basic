@@ -1,0 +1,7 @@
+FOO = bar
+
+%.uo: %.sml
+	mosmlc -toplevel -c $<
+
+all: foo.uo bar.uo
+	echo done

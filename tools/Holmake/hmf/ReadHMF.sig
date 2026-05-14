@@ -3,11 +3,12 @@ sig
 
   type env = Holmake_types.env
   type ruledb = Holmake_types.ruledb
-  val read : string -> env -> env * ruledb * string option
+  type patrules = Holmake_types.patrules
+  val read : string -> env -> env * ruledb * patrules * string option
 
   val diagread: {warn : string -> unit, info : string -> unit,
                  die : string -> unit } ->
-                string -> env -> env * ruledb * string option
+                string -> env -> env * ruledb * patrules * string option
 
   val find_includes : string -> string list
   val extend_path_with_includes :

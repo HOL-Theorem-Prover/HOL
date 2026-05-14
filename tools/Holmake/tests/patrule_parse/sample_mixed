@@ -1,0 +1,7 @@
+%.tex: %.smd
+	smdpp $<
+
+%.uo %.ui: %.sml common.ui
+	mosmlc -c $<
+
+specific.uo: extra.ui

@@ -17,6 +17,7 @@ DIRNAMES = \
   theorytarget \
   commandmacros \
   doublecrnl \
+  patrule_parse \
   coproduct \
   noprereqs/dir1 \
   noprereqs/dir2 \
