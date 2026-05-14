@@ -1,4 +1,8 @@
+ifdef POLY
+HOLMAKE_OPTS = --holstate=$(protect $(HOLDIR)/bin/hol.state0)
+endif
+
 gh569_info.log: doit.sh testd/Holmakefile
-	$(tee ./doit.sh $(protect $(HOLDIR)/bin/hol.state0) $(protect $(HOLDIR)/bin/Holmake), $@)
+	$(tee ./doit.sh $(protect $(HOLDIR)/bin/Holmake) $(HOLMAKE_OPTS), $@)
 
 EXTRA_CLEANS = gh569_info.log testd/stdout.txt testd/stderr.txt

@@ -4,20 +4,19 @@
 
 set -u
 
-if [ "$#" -ne 2 ]
+if [ "$#" -lt 1 ]
 then
     echo "Usage:"
-    echo "  $0 holstate holmake" 1>&2
+    echo "  $0 holmake [extra-holmake-args...]" 1>&2
     exit 2
 fi
 
-holstate=$1
-holmake=$2
+holmake=$1
+shift
 
 cd testd
 
-"$holmake" --holstate="$holstate" --no_overlay \
-    1>stdout.txt 2>stderr.txt
+"$holmake" "$@" --no_overlay 1>stdout.txt 2>stderr.txt
 rc=$?
 
 if [ $rc -eq 0 ]
@@ -29,7 +28,7 @@ fi
 
 if ! grep -q -E '/Holmakefile:[0-9]+: \*\*\* stop now\.  Stop\.$' \
                 stderr.txt ; then
-    echo "FAIL: expected $(error ...) message not seen in stderr:" 1>&2
+    echo 'FAIL: expected $(error ...) message not seen in stderr:' 1>&2
     cat stderr.txt 1>&2
     exit 1
 fi
