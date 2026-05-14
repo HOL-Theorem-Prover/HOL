@@ -1,0 +1,6 @@
+ifeq ($(error stop now),anything)
+endif
+
+.PHONY: all
+all:
+	@true

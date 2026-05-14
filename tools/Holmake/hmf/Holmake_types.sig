@@ -25,6 +25,8 @@ val env_fold : (string -> quotation -> 'b -> 'b) -> env -> 'b -> 'b
 val to_token : env -> pretoken -> token
 
 val perform_substitution : env -> quotation -> string
+val perform_substitution_at : internal_functions.loc option ->
+                              env -> quotation -> string
 
 val tokenize : string -> string list
 val dequote : string -> string

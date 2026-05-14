@@ -2,6 +2,15 @@ structure internal_functions :> internal_functions =
 struct
 
 structure FileSys = HOLFileSys
+
+exception HolmakeError of string
+
+type loc = {file : string, line : int}
+
+fun loc_prefix (NONE : loc option) = ""
+  | loc_prefix (SOME {file,line}) =
+      file ^ ":" ^ Int.toString line ^ ": "
+
 fun member e [] = false
   | member e (h::t) = e = h orelse member e t
 
@@ -312,8 +321,9 @@ fun hol2fs s =
         NONE => s
       | SOME {fullfile,...} => fullfile
 
-fun function_call (fnname, args, eval) = let
+fun function_call (fnname, args, eval, loc) = let
   open Substring
+  fun rejoin args = String.concatWith "," (map eval args)
 in
   case fnname of
     "if" =>
@@ -403,6 +413,15 @@ in
                   in
                     hol2fs (hd args_evalled)
                   end
+  | "info" =>
+      (TextIO.print (rejoin args ^ "\n"); "")
+  | "warning" =>
+      (TextIO.output (TextIO.stdErr,
+                      loc_prefix loc ^ rejoin args ^ "\n");
+       TextIO.flushOut TextIO.stdErr;
+       "")
+  | "error" =>
+      raise HolmakeError (loc_prefix loc ^ "*** " ^ rejoin args ^ ".  Stop.")
   | _ => raise Fail ("Unknown function name: "^fnname)
 end
 

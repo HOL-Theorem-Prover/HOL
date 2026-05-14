@@ -1,0 +1,4 @@
+gh569_info.log: doit.sh testd/Holmakefile
+	$(tee ./doit.sh $(protect $(HOLDIR)/bin/hol.state0) $(protect $(HOLDIR)/bin/Holmake), $@)
+
+EXTRA_CLEANS = gh569_info.log testd/stdout.txt testd/stderr.txt

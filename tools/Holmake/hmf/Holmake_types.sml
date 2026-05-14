@@ -258,7 +258,7 @@ in
   recurse 0 0 0 []
 end
 
-fun perform_substitution env q = let
+fun perform_substitution_at loc env q = let
   open Substring
   fun envfn s =
       case Binarymap.peek(env, s) of
@@ -287,7 +287,7 @@ fun perform_substitution env q = let
                                  (dropl Char.isSpace
                                         (dropr Char.isSpace spc_rest))
                 in
-                  [LIT (function_call (fnname, args, eval))]
+                  [LIT (function_call (fnname, args, eval, loc))]
                 end
               else let
                   val varname = eval ss
@@ -304,6 +304,8 @@ fun perform_substitution env q = let
 in
   finisher (recurse [] q)
 end
+
+val perform_substitution = perform_substitution_at NONE
 
 fun dequote s = let
   open Substring
