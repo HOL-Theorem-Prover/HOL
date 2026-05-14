@@ -11,7 +11,8 @@ datatype buildresult =
                                    bool,
                         other_nodes : HM_DepGraph.node list,
                         cache_dir : string option,
-                        cachekey : HM_Cachekey.compute_result }
+                        cachekey : HM_Cachekey.compute_result,
+                        prep_for_build : unit -> unit }
        | BR_Failed
 
 val RealFail = Failed{needed=true}
@@ -297,7 +298,8 @@ fun graphbuild optinfo g =
                       case bres of
                           BR_OK => k true g
                         | BR_Failed => k false g
-                        | BR_ClineK{cline, job_kont, other_nodes, cache_dir, cachekey} =>
+                        | BR_ClineK{cline, job_kont, other_nodes, cache_dir, cachekey,
+                                    prep_for_build} =>
                           let
                             val (thyc,ndi) = count_theories_needed other_nodes
                             fun b2res b = if b then OS.Process.success
@@ -321,10 +323,16 @@ fun graphbuild optinfo g =
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l
                             fun try_cache () =
-                              case cache_dir of
-                                  NONE => false
-                                | SOME url =>
-                                  HM_CacheFetch.fetch url cachekey outs
+                              let
+                                val fetched =
+                                    case cache_dir of
+                                        NONE => false
+                                      | SOME url =>
+                                        HM_CacheFetch.fetch url cachekey outs
+                              in
+                                if fetched then true
+                                else (prep_for_build (); false)
+                              end
                           in
                             diag ("New graph job for "^target_s^
                                   " with c/line: " ^ cline_str cline);

@@ -317,7 +317,15 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                    expecteds on_success =
       let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
-        val _ = app safedelete expecteds
+        (* The safedelete pass is defensive: with the build about to run
+           and write fresh outputs, deleting any pre-existing copies first
+           guards against a theory script that fails part-way through and
+           leaves stale half-outputs lying around.  We could probably do
+           without it.  But if we keep it, it must only fire on the
+           cache-miss path: on a cache hit the expected files have just
+           been put in place (possibly by a concurrent peer Holmake whose
+           lock we inherited) and we must not delete them. *)
+        fun prep_for_build () = app safedelete expecteds
         val useScript = fullPath [HOLDIR, "bin", "hol"]
         (* Poly/ML runtime options (--gcthreads, --maxheap) must come before subcommand *)
         val cline =
@@ -368,7 +376,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           BR_ClineK { cline = (useScript, cline), job_kont = cont,
                       other_nodes = other_nodes,
                       cache_dir = cache_dir,
-                      cachekey = ck }
+                      cachekey = ck,
+                      prep_for_build = prep_for_build }
       end
   in
     let
@@ -463,7 +472,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           in
             BR_ClineK {cline = cline, job_kont = (fn _ => OS.Process.isSuccess),
                        other_nodes = [], cache_dir = NONE,
-                       cachekey = HM_Cachekey.Missing []}
+                       cachekey = HM_Cachekey.Missing [],
+                       prep_for_build = fn () => ()}
           end
     end handle CompileFailed => BR_Failed
              | FileNotFound  => BR_Failed
@@ -512,11 +522,14 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   fun interpret_bres bres =
     case bres of
         BR_OK => true
-      | BR_ClineK{cline = (_,cl), job_kont = k, cache_dir, cachekey, ...} =>
+      | BR_ClineK{cline = (_,cl), job_kont = k, cache_dir, cachekey,
+                  prep_for_build, ...} =>
         let val fetched = case cache_dir of
                               SOME url => HM_CacheFetch.fetch url cachekey outs
                             | NONE => false
-        in if fetched then true else k warn (Systeml.systeml cl) end
+        in if fetched then true
+           else (prep_for_build (); k warn (Systeml.systeml cl))
+        end
       | BR_Failed => false
 
 
