@@ -32,7 +32,8 @@ fun normquote acc [] = List.rev acc
 (* for strings that are not commands *)
 fun is_special c = c = #"#" orelse c = #"$" orelse c = #"\\"
 
-fun ok_symbolvars c = c = #"<" orelse c = #"@"
+fun ok_symbolvars c = c = #"<" orelse c = #"@" orelse
+                      c = #"*" orelse c = #"^"
 
 fun check_for_vref (startc, endc) acc ss k = let
   open Substring
@@ -362,21 +363,25 @@ fun extend_ruledb warn env {targets,dependencies,commands} (rdb,ddb,prs) = let
 in
   if not (null pct_tgts) then
     let
+      val (well_formed, malformed) =
+          List.partition (fn t => pct_count t = OnePct) pct_tgts
       val () =
           List.app (fn t => warn ("Pattern target `"^t^
                                   "' has more than one `%'; "^
-                                  "only the first will be treated as "^
-                                  "the stem."))
-                   (List.filter (fn t => pct_count t = ManyPct) pct_tgts)
+                                  "ignoring this target."))
+                   malformed
       val () =
           List.app (fn t => warn ("Mixed pattern/exact targets: literal "^
                                   "target `"^t^"' will be ignored in this "^
                                   "rule (only `%'-bearing targets contribute "^
                                   "to the pattern)."))
                    lit_tgts
-      val patrule = {targets = pct_tgts, deps = deps, commands = commands}
     in
-      (rdb, ddb, prs @ [patrule], [])
+      if null well_formed then (rdb, ddb, prs, [])
+      else
+        let val patrule = {targets = well_formed, deps = deps,
+                           commands = commands}
+        in (rdb, ddb, prs @ [patrule], []) end
     end
   else if null commands then
     (rdb,
@@ -412,6 +417,35 @@ fun get_rule_info rdb env tgt =
         SOME {dependencies = dependencies,
               commands = map (perform_substitution env) commands}
       end
+
+fun match_pattern_rules env prs tgt =
+    let
+      fun first_stem [] = NONE
+        | first_stem (pat :: rest) =
+            case pattern_match pat tgt of
+                SOME s => SOME s
+              | NONE => first_stem rest
+      fun try [] = NONE
+        | try ({targets, deps, commands} :: rest) =
+            case first_stem targets of
+                NONE => try rest
+              | SOME stem =>
+                let
+                  val concrete_deps = map (fn d => pcsubst (stem, d)) deps
+                  val dep1 = case concrete_deps of
+                                 [] => "" | d :: _ => d
+                  val env = env |> ins("<", [LIT dep1])
+                                |> ins("@", [LIT tgt])
+                                |> ins("*", [LIT stem])
+                                |> ins("^", [LIT (String.concatWith " "
+                                                                   concrete_deps)])
+                in
+                  SOME {dependencies = concrete_deps,
+                        commands = map (perform_substitution env) commands}
+                end
+    in
+      try prs
+    end
 
 
 val base_environment0 = let

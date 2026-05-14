@@ -18,6 +18,7 @@ DIRNAMES = \
   commandmacros \
   doublecrnl \
   patrule_parse \
+  patrule_match \
   coproduct \
   noprereqs/dir1 \
   noprereqs/dir2 \
