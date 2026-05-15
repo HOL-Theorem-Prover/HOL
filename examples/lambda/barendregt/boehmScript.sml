@@ -2803,6 +2803,47 @@ Proof
  >> Q.EXISTS_TAC ‘q’ >> rw []
 QED
 
+Theorem subterm_width_tpm :
+    !X M p r pi.
+         FINITE X /\ FV M SUBSET X UNION RANK r /\
+         set (MAP FST pi) SUBSET RANK r /\
+         set (MAP SND pi) SUBSET RANK r ==>
+         subterm_width (tpm pi M) p = subterm_width M p
+Proof
+    rpt STRIP_TAC
+ >> Know ‘FV (tpm pi M) SUBSET X UNION RANK r’
+ >- (MATCH_MP_TAC FV_tpm_lemma \\
+     Q.EXISTS_TAC ‘r’ >> simp [] \\
+     ASM_SET_TAC [])
+ >> DISCH_TAC
+ (* applying subterm_width_thm *)
+ >> MP_TAC (Q.SPECL [‘X’, ‘M’, ‘p’, ‘r’] subterm_width_thm) >> simp []
+ >> DISCH_THEN K_TAC
+ >> MP_TAC (Q.SPECL [‘X’, ‘tpm pi M’, ‘p’, ‘r’] subterm_width_thm) >> simp []
+ >> DISCH_THEN K_TAC
+ >> qmatch_abbrev_tac ‘MAX_SET s1 = MAX_SET s2’
+ >> Suff ‘s1 = s2’ >- Rewr
+ >> rw [Once EXTENSION, Abbr ‘s1’, Abbr ‘s2’]
+ >> Suff ‘!q. q <<= p ==>
+             (if
+                subterm X (tpm pi M) q r <> NONE /\
+                solvable (subterm' X (tpm pi M) q r)
+              then
+                hnf_children_size (principal_hnf (subterm' X (tpm pi M) q r))
+              else 0) =
+             (if subterm X M q r <> NONE /\ solvable (subterm' X M q r) then
+              hnf_children_size (principal_hnf (subterm' X M q r))
+              else 0)’ >- METIS_TAC []
+ >> rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘X’, ‘q’, ‘M’, ‘pi’, ‘r’, ‘r’] subterm_tpm_lemma')
+ >> simp [] >> STRIP_TAC
+ >> Cases_on ‘subterm X M q r = NONE’ >> gs []
+ >> Q.PAT_X_ASSUM ‘tpm pi' (subterm' X M q r) = subterm' X (tpm pi M) q r’
+                  (simp o wrap o SYM)
+ >> Cases_on ‘solvable (subterm' X M q r)’ >> simp []
+ >> simp [principal_hnf_tpm']
+QED
+
 Theorem subterm_width_var[simp] :
     subterm_width (VAR y) p = 0
 Proof

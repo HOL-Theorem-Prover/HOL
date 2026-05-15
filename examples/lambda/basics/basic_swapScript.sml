@@ -387,6 +387,15 @@ Proof
  >> Q.EXISTS_TAC ‘j’ >> rw []
 QED
 
+Theorem DISJOINT_ROW_RNEWS :
+    !s r1 r2 n. FINITE s /\ r1 <> r2 ==> DISJOINT (ROW r1) (set (RNEWS r2 n s))
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC DISJOINT_SUBSET
+ >> Q.EXISTS_TAC ‘ROW r2’
+ >> simp [RNEWS_SUBSET_ROW, ROW_DISJOINT]
+QED
+
 Theorem DISJOINT_RNEWS :
     !r1 r2 n1 n2 s1 s2. FINITE s1 /\ FINITE s2 /\ r1 <> r2 ==>
         DISJOINT (set (RNEWS r1 n1 s1)) (set (RNEWS r2 n2 s2))
@@ -442,6 +451,12 @@ End
 (* |- !r n X. RNEW r n X = n2s (r *, (SUC (string_width X) + n)) *)
 Theorem RNEW = RNEW_def |> SRULE [RNEWS, alloc_def, GENLIST_LAST, LET_DEF]
 
+Theorem RNEW_IN_ROW :
+    !r n X. RNEW r n X IN ROW r
+Proof
+    rw [RNEW, ROW_DEF]
+QED
+
 Theorem RNEW_IN_RANK :
     !r n X. FINITE X ==> RNEW r n X IN RANK (SUC r)
 Proof
@@ -478,6 +493,19 @@ Proof
  >- RW_TAC std_ss [DISJOINT_ALT]
  >> simp [DISJOINT_UNION']
  >> simp [Abbr ‘vs’, DISJOINT_RNEWS_RANK']
+QED
+
+Theorem RNEW_EL_RNEWS :
+    !r n n' X. FINITE X /\ n < n' ==> RNEW r n X = EL n (RNEWS r n' X)
+Proof
+    RW_TAC std_ss [RNEW_def]
+ >> qabbrev_tac ‘vs = RNEWS r (SUC n) X’
+ >> MP_TAC (Q.SPECL [‘r’, ‘SUC n’, ‘X’] RNEWS_def)
+ >> RW_TAC std_ss []
+ >> ‘vs <> []’ by simp [NOT_NIL_EQ_LENGTH_NOT_0]
+ >> simp [LAST_EL]
+ >> MP_TAC (Q.SPECL [‘r’, ‘SUC n’, ‘n'’, ‘X’] RNEWS_TAKE)
+ >> simp [EL_TAKE]
 QED
 
 val _ = html_theory "basic_swap";
