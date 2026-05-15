@@ -96,4 +96,35 @@ val _ = List.app (rule_test INTEGER_RULE) [
        “d int_divides m ==> d int_divides (m * n:int)”)
       ];
 
+(* #1747: when overload-resolution fails for a numeric literal, the error
+   should name the literal itself (and read as English about a numeric
+   literal), not show the internal `_ inject_number` placeholder.
+   This requires multiple `_ inject_number` overloads to be active so
+   that resolution actually filters them all out — which is why this
+   test lives in src/integer rather than src/num/theories. *)
+local
+  fun parse_msg q =
+      (Parse.Term q; "<unexpected success>")
+      handle Feedback.HOL_ERR err => Feedback.message_of err
+  fun contains needle hay = String.isSubstring needle hay
+in
+val _ = tprint "#1747 numeric-literal error names the literal (0)"
+val _ = require_msg
+          (check_result
+             (fn m => contains "numeric literal" m
+                      andalso contains "`0`" m
+                      andalso not (contains "_ inject_number" m)))
+          (fn m => "got: " ^ m)
+          parse_msg `0 = T`
+
+val _ = tprint "#1747 numeric-literal error names the literal (42)"
+val _ = require_msg
+          (check_result
+             (fn m => contains "numeric literal" m
+                      andalso contains "`42`" m
+                      andalso not (contains "_ inject_number" m)))
+          (fn m => "got: " ^ m)
+          parse_msg `42 = T`
+end
+
 val _ = Process.exit Process.success;

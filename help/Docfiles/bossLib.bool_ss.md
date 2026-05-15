@@ -1,3 +1,8 @@
+---
+aliases:
+  - BasicProvers.bool_ss
+  - boolSimps.bool_ss
+---
 ## `bool_ss`
 
 ``` hol4
@@ -5,6 +10,12 @@ bossLib.bool_ss : simpset
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`BasicProvers.bool_ss`](#BasicProvers.bool_ss), [`boolSimps.bool_ss`](#boolSimps.bool_ss).*
+
+<!-- END aliases-block -->
 
 Basic simpset containing standard propositional and first order logic
 simplifications, plus beta conversion.

@@ -1,6 +1,6 @@
 Theory tree
 Ancestors
-  relation pred_set combin arithmetic list
+  relation pred_set combin arithmetic list rich_list
 Libs
   boolSimps ConseqConv
 
@@ -297,8 +297,6 @@ QED
 Definition MIN_LIST_def:   (MIN_LIST [] = 0) /\
                            (MIN_LIST (t::l) = FOLDR MIN t l)
 End
-Definition MAX_LIST_def:   MAX_LIST l = FOLDR MAX 0 l
-End
 
 Theorem MIN_MAX_LIST_THM:
   (MIN_LIST [] = 0) /\ (MAX_LIST [] = 0) /\
@@ -307,9 +305,10 @@ Theorem MIN_MAX_LIST_THM:
   (!n ns. (MAX_LIST (n::ns) = MAX n (MAX_LIST ns)))
 Proof
 
-SIMP_TAC list_ss [MIN_LIST_def, MAX_LIST_def] THEN
+SIMP_TAC list_ss [MIN_LIST_def, rich_listTheory.MAX_LIST_def] THEN
 Induct_on `ns` THEN
-ASM_SIMP_TAC list_ss [MIN_LIST_def, COND_RAND, COND_RATOR] THEN
+ASM_SIMP_TAC list_ss [MIN_LIST_def, COND_RAND, COND_RATOR,
+                      rich_listTheory.MAX_LIST_def] THEN
 PROVE_TAC[MIN_ASSOC, MIN_COMM]
 QED
 

@@ -1,4 +1,6 @@
 ---
+aliases:
+  - BasicProvers.&&
 title: bossLib.&&
 ---
 
@@ -9,6 +11,12 @@ op bossLib.&& : simpset * thm list -> simpset
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`BasicProvers.&&`](#BasicProvers..IYG).*
+
+<!-- END aliases-block -->
 
 Infix operator for adding theorems into a simpset.
 

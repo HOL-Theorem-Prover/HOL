@@ -365,9 +365,9 @@ local
   fun mk_set ts = Binaryset.addList (Binaryset.empty compare, ts);
   fun member x s = Binaryset.member (s,x);
 
-  val empty : (term, bool * int) Binarymap.dict = Binarymap.mkDict compare;
-  fun update ts x n = Binarymap.insert (ts,x,n);
-  fun lookup ts x = Binarymap.peek (ts,x);
+  val empty : (bool * int) Termtab.table = Termtab.empty;
+  fun update ts x n = Termtab.update (x,n) ts;
+  fun lookup ts x = Termtab.lookup ts x;
 
   fun bump Full _ = Full
     | bump Higher Full = Full

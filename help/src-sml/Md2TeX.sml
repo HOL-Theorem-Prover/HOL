@@ -116,11 +116,26 @@ fun fenceMunge s =
           | _ => s
         )
 
+(* Skip a YAML frontmatter block, if present.  Returns the first line
+   *after* the closing ---, or NONE on EOF. *)
+fun skip_frontmatter istrm =
+    case TextIO.inputLine istrm of
+        SOME "---\n" =>
+          let
+            fun drain () =
+                case TextIO.inputLine istrm of
+                    NONE => NONE
+                  | SOME "---\n" => TextIO.inputLine istrm
+                  | SOME _ => drain ()
+          in drain () end
+      | other => other
+
 fun catAFile fname =
     let val istrm = TextIO.openIn fname
-        val firstline =
-            case TextIO.inputLine istrm of
-                NONE => TextIO.closeIn istrm (* file empty ? *)
+        val firstline = skip_frontmatter istrm
+        val () =
+            case firstline of
+                NONE => () (* empty file or frontmatter-only *)
               | SOME s =>
                 if size s <> 0 andalso String.sub(s,0) <> #"#" then
                   (warn (fname ^ " does not header on first line");

@@ -1,3 +1,7 @@
+---
+aliases:
+  - TotalDefn.xDefine
+---
 ## `xDefine`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.xDefine : string -> term quotation -> thm
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`TotalDefn.xDefine`](#TotalDefn.xDefine).*
+
+<!-- END aliases-block -->
 
 General-purpose function definition facility.
 

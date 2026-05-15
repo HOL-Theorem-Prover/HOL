@@ -3,12 +3,7 @@ struct
 
 open HolKernel boolLib Streams
 
-fun Redblackmap_contains (m,v) =
-  let
-    exception found
-    val _ = Redblackmap.app (fn (_,v') => if v = v' then raise found else ()) m
-  in false end
-  handle found => true
+fun Symtab_contains (m,v) = Symtab.exists (fn (_,v') => v = v') m
 
 val ERR = Feedback.mk_HOL_ERR"match_goal";
 
@@ -21,8 +16,8 @@ type pattern = term quotation
 type matcher = name * pattern * bool
 
                (* (name, assumption number) *)
-type named_thms = (string, int) Redblackmap.dict
-val (empty_named_thms:named_thms) = Redblackmap.mkDict String.compare;
+type named_thms = int Symtab.table
+val (empty_named_thms:named_thms) = Symtab.empty;
 
 (* If you want to be able to treat certain type variables as constants (e.g.,
    if they are in the goal) then you need to keep track of the avoid_tys/tyIds
@@ -76,11 +71,11 @@ fun match_single fvs ((asl,w):goal)
   let
     fun add_nth NONE _ = SOME nths
       | add_nth (SOME l) i =
-        (case Redblackmap.peek(nths,l) of
+        (case Symtab.lookup nths l of
            NONE =>
-             if Redblackmap_contains(nths,i)
+             if Symtab_contains(nths,i)
              then NONE
-             else SOME (Redblackmap.insert(nths,l,i))
+             else SOME (Symtab.update (l,i) nths)
          | SOME j => if i = j then SOME nths else NONE)
 
     fun protect f NONE = K empty_stream
@@ -127,7 +122,7 @@ fun match_tac (ms:matcher list,mtac:mg_tactic) (g as (asl,w):goal) : goal list *
       let
         fun lookup_assum s =
           let
-            val i = Redblackmap.find(thms,s)
+            val i = valOf (Symtab.lookup thms s)
             val tm = List.nth(#1 g,i)
           in ASSUME tm end
         val s =

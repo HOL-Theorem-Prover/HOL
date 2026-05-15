@@ -1,13 +1,19 @@
-INCLUDES = ../../tools/cmp $(HOLDIR)/examples/misc
-EXTRA_CLEANS = polyscripter testoutput1
+INCLUDES = ../../tools/cmp $(HOLDIR)/examples/misc $(HOLDIR)/src/bag
+EXTRA_CLEANS = polyscripter smdpp gen_chap_lists testoutput1
 
 .PHONY: all
 
-all: polyscripter testoutput1
+all: polyscripter smdpp gen_chap_lists testoutput1
 
 polyscripter: polyscripter.sml $(dprot $(HOLDIR)/bin/hol.state)
 	env HOL_CONFIG='' $(protect $(HOLDIR)/bin/hol) buildheap Arbrat $< -o $@ --exe main
 
-testoutput1: testinput1 polyscripter umap expected1 $(dprot ../../tools/cmp/cmp.exe) $(HOLDIR)/examples/misc/root2Theory.uo
+smdpp: polyscripter.sml smdpp.sml $(dprot $(HOLDIR)/bin/hol.state)
+	env HOL_CONFIG='' $(protect $(HOLDIR)/bin/hol) buildheap Arbrat polyscripter.sml smdpp.sml -o $@ --exe main
+
+gen_chap_lists: gen_chap_lists.sml $(dprot $(HOLDIR)/bin/hol.state)
+	env HOL_CONFIG='' $(protect $(HOLDIR)/bin/hol) buildheap Arbrat $< -o $@ --exe main
+
+testoutput1: testinput1 polyscripter umap expected1 $(dprot ../../tools/cmp/cmp.exe) $(HOLDIR)/examples/misc/root2Theory.uo $(dprot $(HOLDIR)/src/bag/bagTheory.uo)
 	./polyscripter umap < $< > $@ && \
 	( ../../tools/cmp/cmp.exe $@ expected1 || ( rm testoutput1 && exit 1 ))

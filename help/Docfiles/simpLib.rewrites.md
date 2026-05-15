@@ -1,3 +1,7 @@
+---
+canonical: bossLib.rewrites
+generated: true
+---
 ## `rewrites`
 
 ``` hol4
@@ -6,10 +10,5 @@ simpLib.rewrites : thm list -> ssfrag
 
 ------------------------------------------------------------------------
 
-Create an `ssfrag` value consisting of the given theorems as rewrites.
-
-`bossLib.rewrites` is identical to `simpLib.rewrites`.
-
-### See also
-
-[`bossLib.rewrites`](#bossLib.rewrites)
+Re-exported from [`bossLib.rewrites`](#bossLib.rewrites). See that
+entry for full documentation.

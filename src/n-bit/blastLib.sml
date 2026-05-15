@@ -467,13 +467,18 @@ local
 
    val FCP_EQ_CONV = Conv.REWR_CONV FCP_EQ_EVERY THENC EVAL_CONV
 
-   val fcp_map = ref (Redblackmap.mkDict Arbnum.compare)
-                   : (Arbnum.num, Thm.thm) Redblackmap.dict ref
+   structure Numtab = Table(struct
+     type key = Arbnum.num
+     val ord = Arbnum.compare
+     val pp = HOLPP.add_string o Arbnum.toString
+   end)
+
+   val fcp_map : Thm.thm Numtab.table ref = ref Numtab.empty
 in
    fun fcp_eq_thm ty =
       case Lib.total (fcpLib.index_to_num o wordsSyntax.dest_word_type) ty of
          SOME n =>
-             (case Redblackmap.peek (!fcp_map, n) of
+             (case Numtab.lookup (!fcp_map) n of
                  SOME thm => thm
                | _ =>
                   let
@@ -481,7 +486,7 @@ in
                      val b = Term.mk_var ("b", ty)
                      val thm = FCP_EQ_CONV (boolSyntax.mk_eq (a,b))
                      val thm = Thm.GEN a (Thm.GEN b thm)
-                     val () = fcp_map := Redblackmap.insert (!fcp_map, n, thm)
+                     val () = fcp_map := Numtab.update (n, thm) (!fcp_map)
                   in
                      thm
                   end)

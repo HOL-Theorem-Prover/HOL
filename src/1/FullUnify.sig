@@ -13,8 +13,8 @@ sig
      val lookup_ty : t -> hol_type -> hol_type
      val lookup_tm : t -> term -> term
      val instE : t -> term -> term
-     val triTM : t -> (term,term)Binarymap.dict
-     val triTY : t -> (string,hol_type)Binarymap.dict
+     val triTM : t -> term Termtab.table
+     val triTY : t -> hol_type Symtab.table
      val fromEmpty : 'a EM -> 'a option
   end
 

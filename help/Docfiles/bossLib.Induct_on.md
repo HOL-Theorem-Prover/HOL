@@ -1,3 +1,7 @@
+---
+aliases:
+  - BasicProvers.Induct_on
+---
 ## `Induct_on`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.Induct_on : term quotation -> tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`BasicProvers.Induct_on`](#BasicProvers.Induct_on).*
+
+<!-- END aliases-block -->
 
 Performs structural induction, using the type of the given term.
 

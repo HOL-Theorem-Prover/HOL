@@ -1,3 +1,7 @@
+---
+canonical: bossLib.Hol_defn
+generated: true
+---
 ## `Hol_defn`
 
 ``` hol4
@@ -6,10 +10,5 @@ Defn.Hol_defn : string -> term quotation -> defn
 
 ------------------------------------------------------------------------
 
-Function definition facility.
-
-`bossLib.Hol_defn` is identical to `Defn.Hol_defn`.
-
-### See also
-
-[`bossLib.Hol_defn`](#bossLib.Hol_defn)
+Re-exported from [`bossLib.Hol_defn`](#bossLib.Hol_defn). See that
+entry for full documentation.

@@ -553,7 +553,7 @@ local
               (fn (s, _) =>
                  not (Lib.mem s ["bitstring$modify", "bitstring$bitwise",
                                  "words$word_modify", "words$word_reduce"]))
-         |> Redblackmap.fromList String.compare
+         |> List.foldl (fn ((k,v),m) => Symtab.update (k,v) m) Symtab.empty
   fun is_ground_arg tm =
     Lib.can bitstringSyntax.bitlist_of_term tm orelse
     Lib.can (bitstringSyntax.bitlist_of_term o fst o
@@ -567,7 +567,7 @@ local
   fun is_ground tm =
     case Lib.total boolSyntax.dest_strip_comb tm of
        SOME (name, l) =>
-         (case Redblackmap.peek (s, name) of
+         (case Symtab.lookup s name of
              SOME i => List.length l = i andalso List.all is_ground_arg l
            | NONE => false)
      | NONE => false

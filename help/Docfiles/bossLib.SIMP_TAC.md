@@ -1,3 +1,7 @@
+---
+aliases:
+  - simpLib.SIMP_TAC
+---
 ## `SIMP_TAC`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.SIMP_TAC : simpset -> thm list -> tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`simpLib.SIMP_TAC`](#simpLib.SIMP_TAC).*
+
+<!-- END aliases-block -->
 
 Simplifies the goal, using the given simpset and the additional theorems
 listed.

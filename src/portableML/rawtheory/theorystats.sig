@@ -18,6 +18,7 @@ val emit_scan_progress : (string -> unit) ref
 val recurse_toDirs : (string -> 'a -> 'a) -> 'a -> string list -> 'a
 val find_theory_files_action : string -> theory_locn_map -> theory_locn_map
 val find_theory_action : string -> thygraph_data -> thygraph_data
+val load_paths : string list -> thygraph_data -> thygraph_data
 val load_with_ancestors : string list -> theory_locn_map -> thygraph_data ->
                           thygraph_data
 val find_unused : (string * raw_nodedata) list ->

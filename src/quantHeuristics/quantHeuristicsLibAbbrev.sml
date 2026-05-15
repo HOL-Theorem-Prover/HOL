@@ -29,9 +29,9 @@ fun no_var_const_filter t =
   not ((is_var t) orelse (is_const t))
 
 local
-   fun find_tms (d:(term, int) Redblackmap.dict) tm =
+   fun find_tms (d : int Termtab.table) tm =
    let
-      val d = Redblackmap.update (d, tm, (fn vo => (getOpt (vo, 0)) + 1))
+      val d = Termtab.update (tm, getOpt (Termtab.lookup d tm, 0) + 1) d
    in
       find_tms d (body tm)
       handle HOL_ERR _ =>
@@ -40,7 +40,7 @@ local
           | NONE => d
    end
 
-   val empty_tm_dict:(term, int) Redblackmap.dict = Redblackmap.mkDict Term.compare
+   val empty_tm_dict : int Termtab.table = Termtab.empty
 
 in
    (* Returns a list of all the subterms of t that satisfy P ordered by the number of appearences in t.
@@ -48,9 +48,9 @@ in
    fun find_terms_count P t =
    let
       val d = find_tms empty_tm_dict t;
-      fun d_fun t = getOpt(Redblackmap.peek (d, t), 0)
+      fun d_fun t = getOpt (Termtab.lookup d t, 0)
 
-      val tL = Redblackmap.listItems d;
+      val tL = Termtab.dest d;
       val ftL = filter (fn (t, _) => P t) tL
       val stL = Lib.sort (fn (_, i) => fn (_, j:int) => (i > j)) ftL
       val ftL = map fst stL

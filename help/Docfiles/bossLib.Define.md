@@ -1,3 +1,7 @@
+---
+aliases:
+  - TotalDefn.Define
+---
 ## `Define`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.Define : term quotation -> thm
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`TotalDefn.Define`](#TotalDefn.Define).*
+
+<!-- END aliases-block -->
 
 General-purpose function definition facility.
 

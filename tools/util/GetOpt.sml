@@ -63,15 +63,47 @@ structure GetOpt :> GetOpt =
                     Int.max (size e1, m1),
                     Int.max (size e2, m2)
                   )) (0,0) fmtOptions
-          val indent = StringCvt.padLeft #" " (ms1 + ms2 + 6)
+          val prefixWidth = ms1 + ms2 + 6
+          val indent = StringCvt.padLeft #" " prefixWidth
           val pad = StringCvt.padRight #" "
+        (* Determine the terminal width, defaulting to 80 if $COLUMNS is unset
+         * or unparseable.  Keep a minimum description-column width so that
+         * pathologically long option names don't produce single-word lines.
+         *)
+          val cols =
+                case OS.Process.getEnv "COLUMNS"
+                 of SOME s => (case Int.fromString s
+                                of SOME n => if n > 0 then n else 80
+                                 | NONE => 80)
+                  | NONE => 80
+          val descrCol = Int.max (20, cols - prefixWidth)
+        (* Greedy word-wrap to descrCol; over-long words are kept whole on
+         * their own line rather than split mid-word.
+         *)
+          fun wordWrap s = let
+                val words = String.tokens Char.isSpace s
+                fun finish [] = []
+                  | finish cur = [String.concatWith " " (List.rev cur)]
+                fun loop ([], cur, _) = finish cur
+                  | loop (w::ws, [], _) = loop (ws, [w], size w)
+                  | loop (w::ws, cur, curLen) = let
+                      val wlen = size w
+                      in
+                        if curLen + 1 + wlen <= descrCol
+                          then loop (ws, w::cur, curLen + 1 + wlen)
+                          else String.concatWith " " (List.rev cur)
+                                  :: loop (ws, [w], wlen)
+                      end
+                in
+                  loop (words, [], 0)
+                end
           fun doEntry ((e1, e2, e3), l) = (
-                case String.fields (fn #"\n" => true | _ => false) e3
+                case wordWrap e3
                  of [] => concat["  ", pad ms1 e1, "  ", pad ms2 e2] :: l
-                  | [e3] => concat["  ", pad ms1 e1, "  ", pad ms2 e2, "  ", e3] :: l
                   | fst::rest =>
                       concat["  ", pad ms1 e1, "  ", pad ms2 e2, "  ", fst]
-                        :: List.foldr (fn (s, l) => (indent "" ^ s) :: l) l rest
+                        :: List.foldr (fn (s, l) => (indent "" ^ s) :: l)
+                                      l rest
                 (* end case *))
           val table = List.foldr doEntry [""] fmtOptions
           in

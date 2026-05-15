@@ -58,12 +58,12 @@ end;
     Store all rule inductions
    ---------------------------------------------------------------------- *)
 
-type rule_induction_map = ({Thy:string,Name:string},thm list) Binarymap.dict
+type rule_induction_map = thm list KNametab.table
 
 fun listdict_add (d, k, e) =
-    case Binarymap.peek(d, k) of
-      NONE => Binarymap.insert(d,k,[e])
-    | SOME l => Binarymap.insert(d,k,e::l)
+    case KNametab.lookup d k of
+      NONE => KNametab.update (k,[e]) d
+    | SOME l => KNametab.update (k,e::l) d
 
 fun ind_thm_to_consts thm = let
   open boolSyntax
@@ -98,7 +98,7 @@ val {update_global_value = rule_ind_apply_global_update,
       delta_ops = {apply_to_global = apply_delta,
                    uptodate_delta = K true,
                    thy_finaliser = NONE,
-                   initial_value = Binarymap.mkDict KernelSig.name_compare,
+                   initial_value = KNametab.empty,
                    apply_delta = apply_delta}
     }
 

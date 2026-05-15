@@ -5,13 +5,13 @@
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (*         : 2023-2024 Michael Norrish and Chun Tian                          *)
 (* ========================================================================== *)
+
 Theory basic_swap
 Ancestors
   arithmetic string pred_set list rich_list pair numpair
   string_num
 Libs
   boolSimps numLib hurdUtils
-
 
 (* ----------------------------------------------------------------------
     swapping over strings
@@ -235,6 +235,9 @@ Proof
  >> simp [EL_TAKE, EL_MAP]
 QED
 
+(* |- !r m n s. FINITE s /\ m <= n ==> RNEWS r m s = TAKE m (RNEWS r n s) *)
+Theorem RNEWS_TAKE = GSYM TAKE_RNEWS
+
 Theorem RNEWS_set :
     !r n s. set (RNEWS r n s) =
             {v | ?j. v = n2s (r *, j) /\
@@ -429,6 +432,52 @@ Theorem RNEWS_SUBSET_RANK :
 Proof
     rw [SUBSET_DEF, RNEWS_set, RANK]
  >> qexistsl_tac [‘r1’, ‘j’] >> rw []
+QED
+
+(* RNEW is the single fresh name at row r, column n, excluding X *)
+Definition RNEW_def :
+    RNEW r n X = LAST (RNEWS r (SUC n) X)
+End
+
+(* |- !r n X. RNEW r n X = n2s (r *, (SUC (string_width X) + n)) *)
+Theorem RNEW = RNEW_def |> SRULE [RNEWS, alloc_def, GENLIST_LAST, LET_DEF]
+
+Theorem RNEW_IN_RANK :
+    !r n X. FINITE X ==> RNEW r n X IN RANK (SUC r)
+Proof
+    RW_TAC std_ss [RNEW_def]
+ >> qabbrev_tac ‘vs = RNEWS r (SUC n) X’
+ >> MP_TAC (Q.SPECL [‘r’, ‘SUC n’, ‘X’] RNEWS_def)
+ >> RW_TAC std_ss []
+ >> ‘vs <> []’ by simp [NOT_NIL_EQ_LENGTH_NOT_0]
+ >> qabbrev_tac ‘z = LAST vs’
+ >> ‘MEM z vs’ by simp [Abbr ‘z’, LAST_MEM]
+ >> Suff ‘set vs SUBSET RANK (SUC r)’ >- rw [SUBSET_DEF]
+ >> simp [Abbr ‘vs’, RNEWS_SUBSET_RANK]
+QED
+
+Theorem RNEW_IN_RANK' :
+    !r n X. FINITE X ==> RNEW r n X IN X UNION RANK (SUC r)
+Proof
+    RW_TAC std_ss [IN_UNION]
+ >> DISJ2_TAC
+ >> MATCH_MP_TAC RNEW_IN_RANK >> art []
+QED
+
+Theorem RNEW_thm :
+    !r n X. FINITE X ==> RNEW r n X NOTIN (X UNION RANK r)
+Proof
+    RW_TAC std_ss [RNEW_def]
+ >> qabbrev_tac ‘vs = RNEWS r (SUC n) X’
+ >> MP_TAC (Q.SPECL [‘r’, ‘SUC n’, ‘X’] RNEWS_def)
+ >> RW_TAC std_ss []
+ >> ‘vs <> []’ by simp [NOT_NIL_EQ_LENGTH_NOT_0]
+ >> qabbrev_tac ‘z = LAST vs’
+ >> ‘MEM z vs’ by simp [Abbr ‘z’, LAST_MEM]
+ >> Suff ‘DISJOINT (set vs) (X UNION RANK r)’
+ >- RW_TAC std_ss [DISJOINT_ALT]
+ >> simp [DISJOINT_UNION']
+ >> simp [Abbr ‘vs’, DISJOINT_RNEWS_RANK']
 QED
 
 val _ = html_theory "basic_swap";

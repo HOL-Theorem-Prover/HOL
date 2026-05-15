@@ -1,3 +1,7 @@
+---
+aliases:
+  - simpLib.FULL_SIMP_TAC
+---
 ## `FULL_SIMP_TAC`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.FULL_SIMP_TAC : simpset -> thm list -> tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`simpLib.FULL_SIMP_TAC`](#simpLib.FULL_SIMP_TAC).*
+
+<!-- END aliases-block -->
 
 Simplifies the goal (assumptions as well as conclusion) with the given
 simpset.

@@ -1,3 +1,7 @@
+---
+aliases:
+  - wlogLib.wlog_then
+---
 ## `wlog_then`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.wlog_then : term quotation -> term quotation list -> thm_tactic -> tacti
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`wlogLib.wlog_then`](#wlogLib.wlog_then).*
+
+<!-- END aliases-block -->
 
 Apply a theorem-tactic using a proposition that can be assumed without
 loss of generality.

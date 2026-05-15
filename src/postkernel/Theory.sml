@@ -113,8 +113,9 @@ fun hooks_or_abort td =
                           TheoryDelta.toString td ^ " with problem " ^
                           Feedback.exn_to_string e)
 
-(* This reference is set in course of loading the parsing library *)
+(* These references are set in course of loading the parsing library *)
 val pp_thm = ref (fn _:thm => PP.add_string "<thm>")
+val pp_type = ref (fn _:hol_type => PP.add_string "<ty>")
 
 (*---------------------------------------------------------------------------*
  * Unique identifiers, for securely linking a theory to its parents when     *
@@ -204,11 +205,11 @@ type shared_readmaps = {strings : int -> string, terms : string -> term}
 
 datatype thydata = Loaded of UniversalType.t
                  | Pending of (HOLsexp.t * shared_readmaps) list
-type ThyDataMap = (string,thydata)Binarymap.dict
+type ThyDataMap = thydata Symtab.table
                   (* map from string identifying the "type" of the data,
                      e.g., "simp", "mono", "cong", "grammar_update",
                      "LaTeX map", to the data itself. *)
-val empty_datamap : ThyDataMap = Binarymap.mkDict String.compare
+val empty_datamap : ThyDataMap = Symtab.empty
 
 fun fact_thm (s, (th, _)) = th
 
@@ -240,11 +241,10 @@ in
 end (* local *)
 
 type metadata = {path: string, timestamp: Time.time}
-val metadata = ref ((Binarymap.mkDict String.compare):
-                    (string,metadata)Binarymap.dict)
+val metadata : metadata Symtab.table ref = ref Symtab.empty
 fun record_metadata thy md =
-  metadata := Binarymap.insert(!metadata, thy, md)
-fun thy_timestamp thy = #timestamp (Binarymap.find(!metadata, thy))
+  metadata := Symtab.update (thy, md) (!metadata)
+fun thy_timestamp thy = #timestamp (valOf (Symtab.lookup (!metadata) thy))
 
 
 (*---------------------------------------------------------------------------*
@@ -707,15 +707,13 @@ struct
                   read : shared_readmaps -> HOLsexp.t -> t option,
                   write : shared_writemaps -> t -> HOLsexp.t,
                   terms : t -> term list, strings : t -> string list}
-  val allthydata = ref (Binarymap.mkDict String.compare :
-                        (string, ThyDataMap) Binarymap.dict)
-  val dataops = ref (Binarymap.mkDict String.compare :
-                     (string, DataOps) Binarymap.dict)
+  val allthydata : ThyDataMap Symtab.table ref = ref Symtab.empty
+  val dataops : DataOps Symtab.table ref = ref Symtab.empty
 
   fun segment_data {thy,thydataty} = let
     val {thydata,name,...} = theCT()
     fun check_map m =
-        case Binarymap.peek(m, thydataty) of
+        case Symtab.lookup m thydataty of
           NONE => NONE
         | SOME (Loaded value) => SOME value
         | SOME (Pending _) => raise ERR "segment_data"
@@ -727,27 +725,26 @@ struct
                   " coming from current_theory\n");
        check_map thydata)
     else
-      case Binarymap.peek(!allthydata, thy) of
+      case Symtab.lookup (!allthydata) thy of
         NONE => NONE
       | SOME dmap => check_map dmap
   end
 
   fun segment_data_string (arg as {thy,thydataty}) =
-      case Binarymap.peek (!dataops, thydataty) of
+      case Symtab.lookup (!dataops) thydataty of
           SOME {pp,...} => Option.map pp (segment_data arg)
         | NONE => raise Fail ("No pp-fn for "^thydataty)
   val sexp_string_dbg = HOLPP.pp_to_string 75 HOLsexp.printer
 
   fun write_data_update {thydataty,data} =
-      case Binarymap.peek(!dataops, thydataty) of
+      case Symtab.lookup (!dataops) thydataty of
         NONE => raise ERR "write_data_update"
                           ("No operations defined for "^thydataty)
       | SOME {merge,pp,...} => let
           val (s as {thydata,...}) = theCT()
-          open Binarymap
           fun updatemap inmap = let
             val newdata =
-                case peek(inmap, thydataty) of
+                case Symtab.lookup inmap thydataty of
                   NONE => Loaded data
                 | SOME (Loaded t) => Loaded (merge(t, data))
                 | SOME (Pending ds) =>
@@ -768,38 +765,38 @@ struct
                             newdata_s ^ "\n"
                           end)
           in
-            insert(inmap,thydataty,newdata)
+            Symtab.update (thydataty, newdata) inmap
           end
         in
           makeCT (update_seg s (U #thydata (updatemap thydata)) $$)
         end
 
   fun set_theory_data {thydataty,data} =
-      case Binarymap.peek(!dataops, thydataty) of
+      case Symtab.lookup (!dataops) thydataty of
         NONE => raise ERR "set_theory_data"
                           ("No operations defined for "^thydataty)
       | SOME{pp,...} => let
           val (s as {thydata,...}) = theCT()
-          open Binarymap
         in
           DPRINT (fn _ => "Updating "^thydataty^" in segment with value " ^
                           pp data ^ "\n");
           makeCT
             (update_seg s
-                        (U #thydata (insert(thydata, thydataty, Loaded data)))
+                        (U #thydata
+                           (Symtab.update (thydataty, Loaded data) thydata))
                         $$)
         end
 
   fun temp_encoded_update (r as {thy,thydataty,data,shared_readmaps}) =
       let
         val (s as {thydata, name, ...}) = theCT()
-        open Binarymap
         fun updatemap inmap = let
           val baddecode = ERR "temp_encoded_update"
                           ("Bad decode for "^thydataty^" (" ^
                            sexp_string_dbg data ^ ")" )
           val newdata =
-              case (peek(inmap, thydataty), peek(!dataops,thydataty)) of
+              case (Symtab.lookup inmap thydataty,
+                    Symtab.lookup (!dataops) thydataty) of
                   (NONE, NONE) => Pending [(data,shared_readmaps)]
                 | (NONE, SOME {read,...}) =>
                   Loaded (valOf (read shared_readmaps data)
@@ -814,25 +811,24 @@ struct
                 | (SOME (Pending _), SOME _) =>
                   raise Fail "temp_encoded_update invariant failure 2"
         in
-          insert(inmap, thydataty, newdata)
+          Symtab.update (thydataty, newdata) inmap
         end
   in
     if thy = name then
       makeCT (update_seg s (U #thydata (updatemap thydata)) $$)
     else let
       val newsubmap =
-          case peek (!allthydata, thy) of
+          case Symtab.lookup (!allthydata) thy of
               NONE => updatemap empty_datamap
             | SOME dm => updatemap dm
     in
-      allthydata := insert(!allthydata, thy, newsubmap)
+      allthydata := Symtab.update (thy, newsubmap) (!allthydata)
     end
   end
 
 fun update_pending (m,r) thydataty = let
-  open Binarymap
   fun update1 inmap =
-      case peek(inmap, thydataty) of
+      case Symtab.lookup inmap thydataty of
         NONE => inmap
       | SOME (Loaded t) =>
           raise ERR "LoadableThyData.new"
@@ -844,13 +840,12 @@ fun update_pending (m,r) thydataty = let
           val ds' = List.rev ds
           val (d1,tmrd1) = hd ds'
         in
-          insert(inmap,thydataty,
-                 Loaded (List.foldl foldthis (valOf (r tmrd1 d1)) (tl ds')))
+          Symtab.update (thydataty,
+                         Loaded (List.foldl foldthis
+                                   (valOf (r tmrd1 d1)) (tl ds'))) inmap
         end
-  fun foldthis (k,v,acc) = insert(acc,k,update1 v)
-  val _ = allthydata := Binarymap.foldl foldthis
-                                        (Binarymap.mkDict String.compare)
-                                        (!allthydata)
+  fun foldthis (k,v) acc = Symtab.update (k, update1 v) acc
+  val _ = allthydata := Symtab.fold foldthis (!allthydata) Symtab.empty
   val (seg as {thydata,...}) = theCT()
 in
   makeCT (update_seg seg (U #thydata (update1 thydata)) $$)
@@ -867,9 +862,10 @@ fun 'a new {thydataty, merge, read, write, terms, strings, pp} = let
   fun pp' t = pp (vdest t)
 in
   update_pending (merge',read') thydataty;
-  dataops := Binarymap.insert(!dataops, thydataty,
-                              {merge=merge', read=read', write=write',
-                               terms=terms', pp=pp', strings=strings'});
+  dataops := Symtab.update
+                (thydataty,
+                 {merge=merge', read=read', write=write',
+                  terms=terms', pp=pp', strings=strings'}) (!dataops);
   (mk,dest)
 end
 
@@ -925,15 +921,59 @@ local
       end
     | NONE => ()
   end
-  fun fromHOLFS x = case HFS_NameMunge.HOLtoFS x
-                      of NONE => x
-                       | SOME {fullfile,...} => fullfile
+  (* Atomic temp+rename used below when exporting a theory: writes go to
+     <path>.<sfx>.tmp (alongside the eventual file in .hol/objs/), and
+     the rename into place only happens once every output has been
+     written.  Without this, killing the build mid-export could leave
+     0-byte fooTheory.{sig,sml} files that Holmake mistook for up-to-date
+     outputs.  Portable.unique_tmp_suffix keeps the temp filename unique
+     across concurrent Holmake processes, which can both end up
+     rebuilding the same theory when sharing a dependency. *)
+  type tempstrm = {final : string, tmp : string,
+                   ostrm : TextIO.outstream}
+  fun open_temp logical_path : tempstrm =
+    let
+      val sfx = "." ^ Portable.unique_tmp_suffix () ^ ".tmp"
+      val (final, tmp) =
+          case HFS_NameMunge.HOLtoFS logical_path of
+              NONE => (logical_path, logical_path ^ sfx)
+            | SOME {fullfile, dir} =>
+                (HOLFS_dtype.createDirIfNecessary dir;
+                 (fullfile, fullfile ^ sfx))
+    in
+      {final = final, tmp = tmp, ostrm = TextIO.openOut tmp}
+    end
+  fun commit_temp ({final, tmp, ostrm = _} : tempstrm) =
+    OS.FileSys.rename {old = tmp, new = final}
+    handle OS.SysErr _ =>
+      (OS.FileSys.remove final handle _ => ();
+       OS.FileSys.rename {old = tmp, new = final})
+  fun abort_temp ({tmp, ostrm, final = _} : tempstrm) =
+    (TextIO.closeOut ostrm handle _ => ();
+     OS.FileSys.remove tmp handle _ => ())
   val anonymous_thms = ref (0,[])
+  val export_proof_counter = ref 0
 in
 fun add_anonymous_thm th = let
   val (n,ls) = !anonymous_thms
   val () = anonymous_thms := (n+1,th::ls)
 in n end
+
+fun export_proof (name, th) = let
+  val thyname = current_theory ()
+  val file = concat [".hol/objs/", thyname, "Theory.", name, ".tr.gz"]
+in
+  Tracing.export_proof {file = file, tag = Thm.SavedName name} th
+end
+
+fun export_proof_anon th = let
+  val n = !export_proof_counter
+  val () = export_proof_counter := n + 1
+  val thyname = current_theory ()
+  val file = concat [".hol/objs/", thyname, "Theory._anon", Int.toString n, ".tr.gz"]
+in
+  Tracing.export_proof {file = file, tag = Thm.SavedAnon n} th
+end
 fun export_theory_return_hash () = let
   val _ = hooks_or_abort (TheoryDelta.ExportTheory (current_theory()))
   val {name=thyname,facts,thydata,mldeps,...} = scrubCT()
@@ -942,26 +982,53 @@ fun export_theory_return_hash () = let
   val all_thms = Symtab.fold foldthis facts []
   val concat = String.concat
   val name = thyname^"Theory"
+  val parent_names = map thyid_name (Graph.fringe())
   val sigthry = {name = thyname,
-                 parents = map thyid_name (Graph.fringe()),
+                 parents = parent_names,
                  all_thms = all_thms}
+  fun parent_doc_url pname =
+      case Symtab.lookup (!metadata) pname of
+          NONE => NONE
+        | SOME {path = parent_dat, ...} =>
+          let val parent_src = OS.Path.dir parent_dat
+              val target =
+                  OS.Path.concat(
+                    parent_src,
+                    OS.Path.concat(".hol/docs", pname ^ "Theory.html"))
+              val curr_docs =
+                  OS.Path.concat(OS.FileSys.getDir(), ".hol/docs")
+          in
+              SOME (OS.Path.mkRelative {path = target, relativeTo = curr_docs})
+              handle OS.Path.Path => SOME (pname ^ "Theory.html")
+          end
+  val docthry =
+      {name = thyname,
+       parents =
+         List.mapPartial
+           (fn p => Option.map (fn url => {name = p, url = url})
+                               (parent_doc_url p))
+           parent_names,
+       types = thy_types thyname,
+       constants = Lib.mapfilter Term.dest_const (thy_constants thyname),
+       all_thms = all_thms}
   fun mungethydata dmap = let
-    fun foldthis (k,v,acc as (strlist,tmlist,dict)) =
+    fun foldthis (k,v) (acc as (strlist,tmlist,dict)) =
         case v of
           Loaded t =>
           let
             val {write,terms,strings,...} =
-              Binarymap.find(!LoadableThyData.dataops, k)
-              handle Binarymap.NotFound =>
-                raise ERR "export_theory" ("Couldn't find thydata ops for "^k)
+                case Symtab.lookup (!LoadableThyData.dataops) k of
+                    SOME ops => ops
+                  | NONE => raise ERR "export_theory"
+                              ("Couldn't find thydata ops for "^k)
           in
             (strings t @ strlist,
              terms t @ tmlist,
-             Binarymap.insert(dict,k,(fn wrtm => write wrtm t)))
+             Symtab.update (k, fn wrtm => write wrtm t) dict)
           end
         | _ => acc
   in
-    Binarymap.foldl foldthis ([], [], Binarymap.mkDict String.compare) dmap
+    Symtab.fold foldthis dmap ([], [], Symtab.empty)
   end
   val structthry =
       {theory = thyname,
@@ -976,41 +1043,73 @@ fun export_theory_return_hash () = let
  in
    case filter filtP (map #1 all_thms) of
      [] =>
-     (let val holdatfile = concat["./",name,".dat"]
-          val ostrm1 = Portable.open_out(concat["./",name,".sig"])
-          val ostrm2 = Portable.open_out(concat["./",name,".sml"])
-          val ostrm3 = Portable.open_out(holdatfile)
-          val sigdoc_strm = Portable.open_out (concat["./",name,".txt"])
-          val time_now = total_cpu (Timer.checkCPUTimer Globals.hol_clock)
-          val time_since = Time.-(time_now, !new_theory_time)
-          val tstr = Lib.time_to_string time_since
-          val () = mesg ("Exporting theory "^Lib.quote thyname^" ... ");
-          val () = anonymous_thms := (0,[])
-          val () = theory_out (TheoryPP.pp_thydata structthry) ostrm3;
-          val datfile = fromHOLFS holdatfile
-          val hash = SHA1.sha1_file {filename=datfile}
+     (let fun thypath ext = concat["./",name,ext]
+          val datfile_t  = open_temp(thypath ".dat")
+          val sigfile_t  = open_temp(thypath ".sig")
+          val smlfile_t  = open_temp(thypath ".sml")
+          val temps      = [datfile_t, sigfile_t, smlfile_t]
+          fun cleanup () = List.app abort_temp temps
       in
-        theory_out (TheoryPP.pp_sig sigthry) ostrm1;
-        theory_out (TheoryPP.pp_struct hash structthry) ostrm2;
-        if Feedback.get_tracefn "TheoryPP.include_docs" () = 1 then
-          theory_out (TheoryPP.pp_doc (!pp_thm) sigthry) sigdoc_strm
-        else ();
-        Tracing.trace_theory name {
-          theory    = thyname,
-          parents   = #parents structthry,
-          types     = #types structthry,
-          constants = #constants structthry,
-          all_thms  = all_thms,
-          anon_thms = rev(#2(!anonymous_thms)),
-          mldeps    = #mldeps structthry };
-        mesg "done.\n";
-        if !report_times then
-          (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^ " to build\n");
-           maybe_log_time_to_disk thyname (Time.toString time_since))
-        else ();
-        hash
-      end
-        handle e => (Lib.say "\nFailure while writing theory!\n"; raise e))
+        (let
+           val time_now = total_cpu (Timer.checkCPUTimer Globals.hol_clock)
+           val time_since = Time.-(time_now, !new_theory_time)
+           val tstr = Lib.time_to_string time_since
+           val () = mesg ("Exporting theory "^Lib.quote thyname^" ... ");
+           val () = anonymous_thms := (0,[])
+           val () = theory_out (TheoryPP.pp_thydata structthry)
+                               (#ostrm datfile_t);
+           val hash = SHA1.sha1_file {filename = #tmp datfile_t}
+         in
+           theory_out (TheoryPP.pp_sig sigthry) (#ostrm sigfile_t);
+           theory_out (TheoryPP.pp_struct hash structthry) (#ostrm smlfile_t);
+           if Feedback.get_tracefn "TheoryPP.include_html_docs" () = 1 then
+             let val docsdir = ".hol/docs"
+                 val () = HOLFS_dtype.createDirIfNecessary docsdir
+                 val sigdoc_strm =
+                     Portable.open_out
+                       (OS.Path.concat(docsdir, name ^ ".html"))
+                 val script_path =
+                     OS.Path.concat(OS.FileSys.getDir(), thyname ^ "Script.sml")
+                 val script_html_path =
+                     OS.Path.concat(docsdir, thyname ^ "Script.html")
+             in
+               (TheoryPP.print_doc_html
+                   {pp_thm = !pp_thm, pp_type = !pp_type}
+                   docthry sigdoc_strm
+                  handle e => (Portable.close_out sigdoc_strm; raise e);
+                Portable.close_out sigdoc_strm);
+               if OS.FileSys.access(script_path, [OS.FileSys.A_READ]) then
+                 TheoryPP.write_script_html
+                   {script_path = script_path, out_path = script_html_path}
+                 handle e =>
+                   (mesg ("\nFailed to mirror " ^ thyname ^ "Script.sml: " ^
+                          General.exnMessage e ^ "\n"))
+               else ()
+             end
+           else ();
+           (case !TraceMode.mode of
+              TraceMode.TraceAndExport =>
+                Tracing.trace_theory name {
+                  theory    = thyname,
+                  parents   = #parents structthry,
+                  types     = #types structthry,
+                  constants = #constants structthry,
+                  all_thms  = all_thms,
+                  anon_thms = rev(#2(!anonymous_thms)),
+                  mldeps    = #mldeps structthry }
+            | _ => ());
+           List.app commit_temp temps;
+           mesg "done.\n";
+           if !report_times then
+             (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^
+                    " to build\n");
+              maybe_log_time_to_disk thyname (Time.toString time_since))
+           else ();
+           hash
+         end
+         handle e => (cleanup ();
+                      Lib.say "\nFailure while writing theory!\n"; raise e))
+      end)
 
    | badnames =>
      (HOL_MESG

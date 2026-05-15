@@ -7,14 +7,20 @@ val ERR = mk_HOL_ERR "flookupLib"
 
 (* ------------------------------------------------------------------------- *)
 
-fun memoize size cmp f =
+structure Typetab = Table(struct
+  type key = hol_type
+  val ord = Type.compare
+  fun pp _ = HOLPP.add_string "<type>"
+end)
+
+fun memoize size f =
    let
-      val d = ref (Redblackmap.mkDict cmp)
+      val d : 'b Typetab.table ref = ref Typetab.empty
       val k = ref []
       val finite = 0 < size
    in
       fn v =>
-         case Redblackmap.peek (!d, v) of
+         case Typetab.lookup (!d) v of
             SOME r => r
           | NONE =>
                let
@@ -22,15 +28,15 @@ fun memoize size cmp f =
                in
                   if finite
                      then (k := !k @ [v]
-                           ; if size < Redblackmap.numItems (!d)
+                           ; if size < Typetab.size (!d)
                                 then case List.getItem (!k) of
                                         SOME (h, t) =>
-                                          (d := fst (Redblackmap.remove (!d, h))
+                                          (d := Typetab.delete h (!d)
                                            ; k := t)
                                       | NONE => raise ERR "memoize" "empty"
                               else ())
                   else ()
-                  ; d := Redblackmap.insert (!d, v, r)
+                  ; d := Typetab.update (v, r) (!d)
                   ; r
                end
    end
@@ -41,7 +47,7 @@ local
    val eqf_into = List.map (EQF_INTRO o SPEC_ALL) o CONJUNCTS
 in
    val datatype_eq_conv =
-      memoize 20 Type.compare
+      memoize 20
         (fn ty =>
             case Lib.total TypeBase.distinct_of ty of
                SOME th =>
@@ -131,20 +137,20 @@ in
             List.foldl
                (fn (t, (d, th)) =>
                  (case Lib.total (rule o id_rule o Thm.INST [x |-> t]) th of
-                     SOME r => Redblackmap.insert (d, t, r)
+                     SOME r => Termtab.update (t, r) d
                    | NONE => d,
                   Conv.RIGHT_CONV_RULE
                      (Conv.REWR_CONV (Thm.INST [a |-> t] flookup_rest)) th))
-               (Redblackmap.mkDict Term.compare, th) tms
+               (Termtab.empty, th) tms
          val dict'' =
             List.foldl
                (fn (t, d) =>
-                  case Redblackmap.peek (dict, t) of
-                     SOME r => Redblackmap.insert
-                                 (d, t,
+                  case Termtab.lookup dict t of
+                     SOME r => Termtab.update
+                                 (t,
                                   (rule o
                                    Conv.RIGHT_CONV_RULE (Conv.REWR_CONV r))
-                                      (Thm.INST [x |-> t] rest'))
+                                      (Thm.INST [x |-> t] rest')) d
                    | NONE => raise err) dict' old_tms
          val rest'' = if is_refl rest
                          then rest'
@@ -175,11 +181,9 @@ val new_const_size = ref 100
    -------------------------------------------------------------------------- *)
 
 local
-   val completed_fmap_convs =
-      ref (Redblackmap.mkDict Term.compare: (term, conv) Redblackmap.dict)
-   val head_fmaps =
-      ref (Redblackmap.mkDict Term.compare:
-             (term, (term, thm) Redblackmap.dict * thm) Redblackmap.dict)
+   val completed_fmap_convs : conv Termtab.table ref = ref Termtab.empty
+   val head_fmaps : (thm Termtab.table * thm) Termtab.table ref =
+      ref Termtab.empty
    fun introduce_fmap_consts _ = ALL_CONV
    val const_number = ref 0
    val flookup_fallback_conv =
@@ -192,7 +196,7 @@ local
       let
          val i = snd (finite_mapSyntax.dest_flookup tm)
       in
-         case Redblackmap.peek (dict, i) of
+         case Termtab.lookup dict i of
             SOME thm => Conv.REWR_CONV thm tm
           | NONE => let
                        val x = Term.rand (boolSyntax.rhs (Thm.concl rest))
@@ -217,18 +221,17 @@ local
                val sym_def = SYM def
                val (c', tm) = boolSyntax.dest_eq (Thm.concl def)
                val (dict, rest) =
-                  extend_flookup_thms
-                    (Redblackmap.mkDict Term.compare, Thm.REFL c) tm
+                  extend_flookup_thms (Termtab.empty, Thm.REFL c) tm
                val cnv = Conv.REWR_CONV sym_def
                val rule =
                   Conv.CONV_RULE
                      (Conv.LAND_CONV (Conv.RATOR_CONV (Conv.RAND_CONV cnv)))
-               val dict = Redblackmap.transform rule dict
+               val dict = Termtab.map (fn _ => rule) dict
                val rest = rule rest
                val () =
                   completed_fmap_convs :=
-                  Redblackmap.insert
-                    (!completed_fmap_convs, c', DICT_REST_CONV (dict, rest))
+                  Termtab.update
+                    (c', DICT_REST_CONV (dict, rest)) (!completed_fmap_convs)
             in
                iter (sym_def :: a) (c', List.drop (l, !new_const_size))
             end
@@ -247,21 +250,20 @@ in
          if not (List.null (Term.free_vars tm))
             then flookup_fallback_conv tm
          else if List.null ups
-            then case Redblackmap.peek (!completed_fmap_convs, base) of
+            then case Termtab.lookup (!completed_fmap_convs) base of
                     SOME cnv => cnv tm
                   | NONE => flookup_fallback_conv tm
          else if n < !new_const_size
             then let
                     val dr =
-                       case Redblackmap.peek (!head_fmaps, base) of
+                       case Termtab.lookup (!head_fmaps) base of
                           SOME dr => dr
-                        | NONE =>
-                            (Redblackmap.mkDict Term.compare, Thm.REFL base)
+                        | NONE => (Termtab.empty, Thm.REFL base)
                  in
                     case Lib.total (extend_flookup_thms dr) fm of
                        SOME dr' =>
                           ( head_fmaps :=
-                               Redblackmap.insert (!head_fmaps, base, dr')
+                               Termtab.update (base, dr') (!head_fmaps)
                           ; DICT_REST_CONV dr' tm
                           )
                      | NONE => flookup_fallback_conv tm

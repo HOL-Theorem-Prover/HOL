@@ -1,3 +1,7 @@
+---
+aliases:
+  - simpLib.SIMP_CONV
+---
 ## `SIMP_CONV`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.SIMP_CONV : simpset -> thm list -> conv
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`simpLib.SIMP_CONV`](#simpLib.SIMP_CONV).*
+
+<!-- END aliases-block -->
 
 Applies a simpset and a list of rewrite rules to simplify a term.
 

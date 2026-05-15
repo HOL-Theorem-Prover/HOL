@@ -1,3 +1,7 @@
+---
+aliases:
+  - BasicProvers.PROVE
+---
 ## `PROVE`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.PROVE : thm list -> term -> thm
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`BasicProvers.PROVE`](#BasicProvers.PROVE).*
+
+<!-- END aliases-block -->
 
 Prove a theorem with use of supplied lemmas.
 

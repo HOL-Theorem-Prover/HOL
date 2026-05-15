@@ -289,20 +289,19 @@ in
 end
 
 fun count_vars tm = let
-  open Binarymap
   fun recurse (tm,dict) =
     case strip_comb tm of
       (f, []) => let
       in let
         val n = #1 (dest_var f)
       in
-        case peek(dict,n) of
-          NONE => insert(dict, n, 1)
-        | SOME i => insert(dict, n, i+1)
+        case Symtab.lookup dict n of
+          NONE => Symtab.update (n, 1) dict
+        | SOME i => Symtab.update (n, i+1) dict
       end handle HOL_ERR _ => dict end
     | (_, args) => List.foldl recurse dict args
 in
-  listItems (recurse (tm, mkDict String.compare))
+  Symtab.dest (recurse (tm, Symtab.empty))
 end
 
 (* dealing with constraints of the form lo < x /\ x <= hi *)

@@ -111,16 +111,20 @@ fun finalise solver infile is_cnf th tmpname in_name =
 exception initexp of thm;
 fun initialise infile is_cnf tm =
     let val (cnfv,vc,svm,sva,tmpname,in_name,ntm,lfn,clauseth) =
-            if isSome infile
-            then let val fname = valOf infile
-                     val (tm,svm,sva) = genReadDimacs fname
-                     val (cnfv,vc,lfn,clauseth) = to_cnf is_cnf (mk_neg tm)
-                 in (cnfv,vc,svm,sva,"",fname,mk_neg tm,lfn,clauseth) end
-            else let val (cnfv,vc,lfn,clauseth) = to_cnf is_cnf (mk_neg tm)
-                     val (tmpname,cnfname,sva,svm) =
-                         generateDimacs (SOME vc) tm (SOME clauseth)
-                                        (SOME (Array.length clauseth))
-                 in (cnfv,vc,svm,sva,tmpname,cnfname,mk_neg tm,lfn,clauseth) end
+            (if isSome infile
+             then let val fname = valOf infile
+                      val (tm,svm,sva) = genReadDimacs fname
+                      val (cnfv,vc,lfn,clauseth) = to_cnf is_cnf (mk_neg tm)
+                  in (cnfv,vc,svm,sva,"",fname,mk_neg tm,lfn,clauseth) end
+             else let val (cnfv,vc,lfn,clauseth) = to_cnf is_cnf (mk_neg tm)
+                      val (tmpname,cnfname,sva,svm) =
+                          generateDimacs (SOME vc) tm (SOME clauseth)
+                                         (SOME (Array.length clauseth))
+                  in (cnfv,vc,svm,sva,tmpname,cnfname,mk_neg tm,lfn,clauseth)
+                  end)
+            handle to_cnf_unsat nottm_thm =>
+              (* nottm_thm : |- ~(~tm), peel double-negation to get |- tm *)
+              raise initexp (CONV_RULE NOT_NOT_CONV nottm_thm)
     in if vc=0 then
          (* no vars: all 'presimp'-ified conjuncts were either T or F *)
            let val th0 = presimp_conv (dest_neg ntm)

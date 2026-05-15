@@ -112,6 +112,20 @@
 \newcommand{\theory}[1]{\hbox{{\small\tt #1}}}
 \newcommand{\theoryimp}[1]{\texttt{#1}}
 
+% Chapter-local macros for the theories chapter (used in the
+% Pairs/Lists/Bit-vectors subsections).  Originally defined inside
+% theories.stex; promoted here so math.smd (which also uses \konst)
+% and any future .smd chapters get them too.  Use \providecommand to
+% avoid clashing with any chapter-local redefinitions.
+\providecommand{\konst}[1]{\ensuremath{\mbox{\small{\textbf{\sf{#1}}}}}}
+\providecommand{\nil}{\mathbf{[} \;\mathbf{]}}
+\providecommand{\cons}[2]{{#1}\mathbf{:}\mathbf{:}{#2}}
+\providecommand{\subr}{\sb{\mathsf{r}}}
+\providecommand{\fcp}[2]{#1[#2]}
+\providecommand{\worda}{\fcp{\mathit{bool}}{\alpha}}
+\providecommand{\wordb}{\fcp{\mathit{bool}}{\beta}}
+\providecommand{\wordc}{\fcp{\mathit{bool}}{\gamma}}
+
 \newcommand{\con}[1]{{\sf #1}}
 \newcommand{\rul}[1]{{\tt #1}}
 \newcommand{\ty}[1]{\textsl{#1}}

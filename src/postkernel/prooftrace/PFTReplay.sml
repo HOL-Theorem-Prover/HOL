@@ -8,15 +8,15 @@ infix |->
 (* trDB: theorem database keyed by "Thy$name" / "Thy#n"                      *)
 (* ========================================================================= *)
 
-type trDB = (string, thm) Redblackmap.dict
+type trDB = thm Symtab.table
 
-val empty_trDB = Redblackmap.mkDict String.compare
+val empty_trDB : trDB = Symtab.empty
 
-fun lookup (db: trDB) key = Redblackmap.peek(db, key)
+fun lookup (db: trDB) key = Symtab.lookup db key
 
-fun size (db: trDB) = Redblackmap.numItems db
+fun size (db: trDB) = Symtab.size db
 
-fun listItems (db: trDB) = Redblackmap.listItems db
+fun listItems (db: trDB) = Symtab.dest db
 
 (* ========================================================================= *)
 (* Filename parsing                                                          *)
@@ -152,10 +152,10 @@ fun replay (db: trDB) file = let
     in set_th (id, mk_axiom_thm(Nonce.mk ax_name, c)) end,
 
     save = fn (name, th) =>
-      db_ref := Redblackmap.insert(!db_ref, name, get_th th),
+      db_ref := Symtab.update (name, get_th th) (!db_ref),
 
     load = fn (id, name) =>
-      (case Redblackmap.peek(!db_ref, name) of
+      (case Symtab.lookup (!db_ref) name of
          SOME th => set_th (id, th)
        | NONE => raise Fail ("PFTReplay: load: not found: " ^ name)),
 

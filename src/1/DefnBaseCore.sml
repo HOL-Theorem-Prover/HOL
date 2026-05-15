@@ -7,19 +7,25 @@ struct
 open HolKernel boolSyntax Drule
 
 type kname = KernelSig.kernelname
-type defnstore = (string * kname, string * thm) Binarymap.dict
+
+structure DStab = Table(struct
+  type key = string * kname
+  val ord = pair_compare(String.compare, KernelSig.name_compare)
+  fun pp (s,k) = HOLPP.add_string (s ^ "," ^ KernelSig.name_toString k)
+end)
+
 datatype defn_thm = STDEQNS of thm | OTHER of thm
 fun thm_of (STDEQNS th) = th | thm_of (OTHER th) = th
 type defn_presentation = {const: term, thmname: kname, thm : defn_thm}
+type defnstore = (kname * defn_thm) DStab.table
 
 
-val empty_dstore =
-    Binarymap.mkDict(pair_compare(String.compare, KernelSig.name_compare))
+val empty_dstore : defnstore = DStab.empty
 
 fun list_insert m k v =
-    case Binarymap.peek(m,k) of
-        NONE => Binarymap.insert(m,k,[v])
-      | SOME vs => Binarymap.insert(m,k,v::vs)
+    case KNametab.lookup m k of
+        NONE => KNametab.update (k,[v]) m
+      | SOME vs => KNametab.update (k,v::vs) m
 
 fun to_kid {Thy,Name,Ty} = {Thy = Thy, Name = Name}
 val prim_dest_const = to_kid o dest_thy_const
@@ -31,7 +37,7 @@ fun register_nonstd_p tag (thname as {Thy,...} :kname) thm dstore =
           let val cinfo as {Thy = tthy,...} = prim_dest_const t
           in
             tthy = Thy andalso (
-            case Binarymap.peek(dstore, (tag, cinfo)) of
+            case DStab.lookup dstore (tag, cinfo) of
                 NONE => true
               | SOME (_, defth) => not (uptodate_thm $ thm_of defth)
             )
@@ -41,7 +47,7 @@ fun register_nonstd_p tag (thname as {Thy,...} :kname) thm dstore =
                              (Binaryset.empty KernelSig.name_compare)
                              cs
       fun fold (cinfo, A) =
-          Binarymap.insert(A, (tag, cinfo), (thname, OTHER thm))
+          DStab.update ((tag, cinfo), (thname, OTHER thm)) A
     in
       Binaryset.foldl fold dstore cinfS
     end
@@ -63,14 +69,14 @@ val constants_of_defn = mk_set o map #1 o defn_eqns
 fun register_defn_p tag (thname, thm) dstore =
     let
       val m = List.foldr (fn ((t,th),A) => list_insert A t th)
-                         (Binarymap.mkDict KernelSig.name_compare)
+                         KNametab.empty
                          (defn_eqns thm)
-      open Binarymap
     in
-      foldl
-        (fn (k,cs,A) => insert(A,(tag,k),(thname, STDEQNS $ LIST_CONJ cs)))
-        dstore
+      KNametab.fold
+        (fn (k,cs) => fn A =>
+            DStab.update ((tag,k), (thname, STDEQNS $ LIST_CONJ cs)) A)
         m
+        dstore
     end handle nonstdform => register_nonstd_p tag thname thm dstore
 
 fun add_thy thyname dstore =
@@ -92,10 +98,10 @@ val initial_dstore =
 
 
 fun remove_def s dstore =
-    Binarymap.foldl (fn (k,v as (nm, th), A) =>
-                        if s <> nm then Binarymap.insert(A,k,v) else A)
-                    empty_dstore
-                    dstore
+    DStab.fold (fn (k, v as (nm, th)) => fn A =>
+                   if s <> nm then DStab.update (k,v) A else A)
+               dstore
+               empty_dstore
 
 fun udef_apply (ThmSetData.ADD v) dstore = register_defn_p "user" v dstore
   | udef_apply (ThmSetData.REMOVE s) dstore =
@@ -133,25 +139,25 @@ fun lookup_userdef_p dstore c =
                                     "lookup_userdef" "Not a constant"
       val k = ("user", {Name=Name,Thy=Thy})
     in
-      Option.map (presentation k) $ Binarymap.peek(dstore, k)
+      Option.map (presentation k) $ DStab.lookup dstore k
     end
 fun lookup_userdef c = lookup_userdef_p (get_userdefs_db()) c
 
 fun current_userdefs () =
-    let fun foldthis (k as (tag,kid), v, A) =
+    let fun foldthis (k as (tag,kid), v) A =
             if tag = "user" then presentation k v::A else A
     in
-      Binarymap.foldl foldthis [] $ get_userdefs_db()
+      DStab.fold foldthis (get_userdefs_db()) []
     end
 
 fun thy_userdefs {thyname} =
     let
-      fun foldthis (k as (tag, kid), v, A) =
+      fun foldthis (k as (tag, kid), v) A =
           if tag = "user" andalso #Thy kid = thyname then
             presentation k v :: A
           else A
     in
-      Binarymap.foldl foldthis [] $ get_userdefs_db()
+      DStab.fold foldthis (get_userdefs_db()) []
     end
 
 
@@ -167,8 +173,8 @@ fun thy_userdefs {thyname} =
    ---------------------------------------------------------------------- *)
 
 
-type indnstore = (KernelSig.kernelname, thm * kname list) Binarymap.dict
-val empty_istore = Binarymap.mkDict KernelSig.name_compare
+type indnstore = (thm * kname list) KNametab.table
+val empty_istore : indnstore = KNametab.empty
 
 (* the 'delta' is a thm * term list, with each term a constant *)
 local open ThyDataSexp
@@ -227,8 +233,8 @@ fun register_indn_p (ind, knms) istore =
       val _ = ListPair.all check (Ps, cs)
     in
       List.foldl (fn (c, A) =>
-                     Binarymap.insert(A, c |> dest_thy_const |> to_kid,
-                                      (ind,knms)))
+                     KNametab.update (c |> dest_thy_const |> to_kid,
+                                      (ind,knms)) A)
                  istore
                  cs
     end
@@ -257,7 +263,7 @@ fun lookup_indn_p istore c =
                 handle HOL_ERR _ => raise mk_HOL_ERR "DefnBase"
                                           "lookup_indn" "Not a constant"
     in
-      Binarymap.peek (istore, knm)
+      KNametab.lookup istore knm
     end
 fun lookup_indn c = lookup_indn_p (the_istore()) c
 

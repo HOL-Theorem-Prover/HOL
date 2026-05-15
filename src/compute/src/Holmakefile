@@ -1,6 +1,15 @@
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
+TABLE_UID = $(dprot $(SIGOBJ)/Table.ui)
+
+# clauses.sml instantiates the Table functor locally; mosml needs
+# Table.ui passed explicitly because its dep auto-detection misses
+# functor applications.
+clauses.uo: clauses.sml clauses.ui $(TABLE_UID) compute_rules.uo \
+            $(dprot $(SIGOBJ)/HolKernel.ui)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 

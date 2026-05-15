@@ -37,6 +37,10 @@ RawTheoryReader.sml
 RawTermPP.sig
 RawTermPP.sml
 
+(* Override smlnj-lib's GetOpt with our local copy (word-wraps long help). *)
+../../../tools/util/GetOpt.sig
+../../../tools/util/GetOpt.sml
+
 DatPrinterTool.ML
 
 mlton-datprinter.ML

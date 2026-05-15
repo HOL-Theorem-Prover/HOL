@@ -15,9 +15,9 @@ sig
   val min_grammar      : grammar
   val rules            : grammar -> {infixes: (int * grammar_rule) list,
                                      suffixes : string list}
-  val parse_map    : grammar -> (kernelname,type_structure) HOLdict.dict
+  val parse_map    : grammar -> type_structure KNametab.table
   val print_map    : grammar -> (int * kernelname) TypeNet.typenet
-  val privileged_abbrevs : grammar -> (string,string) HOLdict.dict
+  val privileged_abbrevs : grammar -> string Symtab.table
 
   val abb_dest_type : grammar -> Type.hol_type ->
                       {Thy : string option, Tyop : string,

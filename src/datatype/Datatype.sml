@@ -151,16 +151,15 @@ fun check_constrs_unique_in_theory asts = let
         handle HOL_ERR _ => []
     fun foldthis (c,fm) =
         if uptodate_term c then
-          Binarymap.insert(fm, #Name (dest_thy_const c), tyname)
+          Symtab.update (#Name (dest_thy_const c), tyname) fm
         else fm
   in
     foldl foldthis fm tys_cons
   end
   val current_constructors =
-      List.foldl current_constructors (Binarymap.mkDict String.compare)
-                 current_types
+      List.foldl current_constructors Symtab.empty current_types
   fun calculate_intersection ((tyname, conname), acc) =
-      case Binarymap.peek(current_constructors, conname) of
+      case Symtab.lookup current_constructors conname of
         NONE => acc
       | SOME ty' => (tyname, conname, ty') :: acc
   val common = List.rev (foldl calculate_intersection [] constrs)

@@ -17,16 +17,16 @@ fun count_vars ds acc =
     | lit::lits => let
         val v = dest_neg lit handle HOL_ERR _ => lit
       in
-        case Binarymap.peek (acc, v) of
-          NONE => count_vars lits (Binarymap.insert(acc,v,1))
-        | SOME n => count_vars lits (Binarymap.insert(acc,v,n + 1))
+        case Termtab.lookup acc v of
+          NONE => count_vars lits (Termtab.update (v,1) acc)
+        | SOME n => count_vars lits (Termtab.update (v,n + 1) acc)
       end
 
 fun getBiggest acc =
-    #1 (Binarymap.foldl(fn (v,cnt,a as (bestv,bestcnt)) =>
-                           if cnt > bestcnt then (v,cnt) else a)
-                       (boolSyntax.T, 0)
-                       acc)
+    #1 (Termtab.fold (fn (v,cnt) => fn (a as (bestv,bestcnt)) =>
+                         if cnt > bestcnt then (v,cnt) else a)
+                     acc
+                     (boolSyntax.T, 0))
 
 (* The first unit we see, or the var that occurs most often *)
 fun find_splitting_var phi = let
@@ -39,7 +39,7 @@ fun find_splitting_var phi = let
         | _ => recurse (count_vars ds acc) cs
       end
 in
-  recurse (Binarymap.mkDict Term.compare) (strip_conj phi)
+  recurse Termtab.empty (strip_conj phi)
 end
 
 fun casesplit v th = let (*th is [assignments, cnf] |- current *)
@@ -55,12 +55,13 @@ fun mk_satmap th = let
   fun foldthis (t,acc) = let
     val (l,r) = dest_eq t
   in
-    Binarymap.insert(acc,l,r)
+    Termtab.update (l,r) acc
   end handle HOL_ERR _ => acc
-  val fmap = HOLset.foldl foldthis (Binarymap.mkDict Term.compare) hyps
+  val fmap = HOLset.foldl foldthis Termtab.empty hyps
 in
-  Sat (fn v => Binarymap.find(fmap,v)
-          handle Binarymap.NotFound => boolSyntax.T)
+  Sat (fn v => case Termtab.lookup fmap v of
+                   SOME t => t
+                 | NONE => boolSyntax.T)
 end
 
 fun CoreDPLL initial_th = let (* [ci] |- cnf *)

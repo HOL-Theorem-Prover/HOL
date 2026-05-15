@@ -106,6 +106,6 @@ jobs:
             CVC_VERSION=${{ github.event.inputs.CVC }}
             YICES_VERSION=${{ github.event.inputs.Yices }}
             # NOTE: the arg value cannot be quoted here:
-            BUILDOPTS=--${{ github.event.inputs.kernel || env.default_kernel }} -j${{ github.event.inputs.concurrency || env.default_concurrency }} ${{ github.event.inputs.more-options }}
+            BUILDOPTS=--no-cache --${{ github.event.inputs.kernel || env.default_kernel }} -j${{ github.event.inputs.concurrency || env.default_concurrency }} ${{ github.event.inputs.more-options }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

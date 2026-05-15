@@ -188,7 +188,14 @@ struct
             val _ = OS.FileSys.chDir dir
           in
             if try_cache () then
-              OS.Process.exit OS.Process.success
+              (* Posix.Process.exit (_exit) instead of OS.Process.exit
+                 so the child does not run atExit handlers inherited
+                 from the parent.  Notably, Holmake's atExit registers
+                 finish_logging false on its current-make-log; running
+                 that in this child would race the parent's postmortem
+                 and rename the log to hmlog-bad-* even on a successful
+                 cache hit. *)
+              Posix.Process.exit 0w0
             else
               exece(executable,nm_args,env)
           end

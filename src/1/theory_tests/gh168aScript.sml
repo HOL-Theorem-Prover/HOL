@@ -5,7 +5,7 @@ Libs
   HolKernel Parse boolLib
 
 val thy =
-    HOLdict.find(type_grammar.privileged_abbrevs (type_grammar()), "foo")
+    valOf (Symtab.lookup (type_grammar.privileged_abbrevs (type_grammar())) "foo")
 
 val _ = disable_tyabbrev_printing (thy^"$foo")
 

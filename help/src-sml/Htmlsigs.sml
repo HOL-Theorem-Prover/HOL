@@ -319,6 +319,10 @@ fun processSigfile db version bgcolor stoplist
    case ext
     of SOME "sig" =>
 	if List.exists (fn name => base = name) stoplist then ()
+	(* Theory.sig files are now rendered into per-theory HTML by
+	   export_theory at <src>/.hol/docs/<thy>Theory.html, so we no
+	   longer produce a sigobj-driven copy here. *)
+	else if isTheorysig sigfile then ()
 	else processSig db version bgcolor HOLpath SRCFILES
 	                (OS.Path.concat(sigdir, sigfile))
 	                (OS.Path.concat(htmldir, htmlfile))
@@ -389,28 +393,67 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
                             firstsymb := false)
                       else ()
 	    end
-	fun mkref line file = idhref file line file
+	(* Resolve sigobj/<thy>Theory.sig to the per-theory doc URL relative
+	   to the file we are currently writing.  Returns NONE for non-theory
+	   files or if the symlink resolution fails. *)
+	val outfile_dir = OS.Path.dir outfile
+	fun theory_doc_url thy_file =
+	    let val sigobj_sig =
+		    OS.Path.concat (HOLpath,
+		      OS.Path.concat ("sigobj", thy_file ^ ".sig"))
+	    in
+	      if OS.FileSys.isLink sigobj_sig then
+		let val tgt = OS.FileSys.readLink sigobj_sig
+		    val {dir, ...} = OS.Path.splitDirFile tgt
+		    val src = OS.Path.dir (OS.Path.dir dir)
+		    val abs_doc =
+			OS.Path.concat (src,
+			  OS.Path.concat (".hol/docs", thy_file ^ ".html"))
+		in
+		  SOME (OS.Path.mkRelative
+			  {path = abs_doc, relativeTo = outfile_dir})
+		end
+	      else NONE
+	    end handle OS.SysErr _ => NONE
+		     | OS.Path.Path => NONE
+	fun is_theory_file f = isSome (destProperSuffix "Theory" f)
+	fun mkref key line file =
+	    if is_theory_file file then
+	      case theory_doc_url file of
+		  SOME url => href file (url ^ "#" ^ key)
+		| NONE => idhref file line file
+	    else idhref file line file
+	fun mkstrref file =
+	    if is_theory_file file then
+	      case theory_doc_url file of
+		  SOME url => href "structure" url
+		| NONE => strhref file "structure"
+	    else strhref file "structure"
 	fun mkHOLref docfile =
             case find_most_appealing HOLpath docfile
              of SOME file => href "Docfile" file
               | NONE => out "not linked"
 	fun nextfile last [] = out ")\n"
 	  | nextfile last ((e1 as {comp, file, line}) :: erest) =
-	    if comp=last then (out ", "; mkref line file; nextfile last erest)
-	                 else (out ")\n"; newitem e1 erest)
+	    if comp=last then (
+	      let val key = Database.getname e1 in
+		out ", "; mkref key line file; nextfile last erest
+	      end
+	    ) else (out ")\n"; newitem e1 erest)
 	and newitem (e1 as {comp, file, line}) erest =
 	    let val key = Database.getname e1
 	    in separator (String.sub(key, 0))
              ; out "<li><b>"; out key; out "</b> ("
              ; (case comp
-                 of Str    => strhref key "structure"
-                  | Val id => (out "value; "; mkref line file)
-                  | Typ id => (out "type; ";  mkref line file)
-                  | Exc id => (out "exception; "; mkref line file)
-                  | Con id => (out "constructor; "; mkref line file)
-                  | Term (id, NONE) => mkref line file
+                 of Str    => mkstrref file
+                  | Val id => (out "value; "; mkref key line file)
+                  | Typ id => (out "type; ";  mkref key line file)
+                  | Exc id => (out "exception; "; mkref key line file)
+                  | Con id => (out "constructor; "; mkref key line file)
+                  | Term (id, NONE) => mkref key line file
 (*                | Term (id, SOME "HOL") => (out "HOL; "; mkHOLref file) *)
-                  | Term (id, SOME kind) => (out kind;out"; ";mkref line file)
+                  | Term (id, SOME kind) =>
+		      (out kind;out"; ";mkref key line file)
              ; nextfile comp erest)
 	    end
 	fun prentries []            = ()

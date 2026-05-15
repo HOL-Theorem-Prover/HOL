@@ -208,7 +208,7 @@ arrange to use different grammars if they desire.  %
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!grammars for}
 %
 Strictly, parsing occurs after lexing has split the input into a
-series of tokens.  For more on lexing, see Section~\ref{HOL-lex}.
+series of tokens.  For more on lexing, see Section~\ref{sec:HOL-lex}.
 \begin{description}
 \item[Concrete Syntax:] Features such as infixes, binders and mix-fix
   forms are translated away, creating an intermediate, ``abstract

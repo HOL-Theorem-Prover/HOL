@@ -47,7 +47,7 @@ fun gen_mktm (r as {values,combine,null,perkey}) attrs =
 fun string_of_key k =
     case k of
         "exclude_simps" => "simpLib.remove_simps"
-      | "exclude_frags" => "simpLib.remove_ssfrags"
+      | "exclude_frags" => "simpLib.exclude_ssfrags"
       | _ => k
 fun mk_tacmodifier_string alist =
     case alist of

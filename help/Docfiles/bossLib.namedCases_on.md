@@ -1,3 +1,7 @@
+---
+aliases:
+  - BasicProvers.namedCases_on
+---
 ## `namedCases_on`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.namedCases_on : term quotation -> string list -> tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`BasicProvers.namedCases_on`](#BasicProvers.namedCases_on).*
+
+<!-- END aliases-block -->
 
 Case split on type of given term, using given names for introduced
 constructor arguments.

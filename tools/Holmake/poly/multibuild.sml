@@ -10,8 +10,9 @@ datatype buildresult =
                         job_kont : (string -> unit) -> OS.Process.status ->
                                    bool,
                         other_nodes : HM_DepGraph.node list,
-                        cache_url : (HM_Core_Cline.cache_op * string) option,
-			cachekey : HM_Cachekey.compute_result }
+                        cache_dir : string option,
+                        cachekey : HM_Cachekey.compute_result,
+                        prep_for_build : unit -> unit }
        | BR_Failed
 
 val RealFail = Failed{needed=true}
@@ -126,9 +127,10 @@ fun graphbuild optinfo g =
           ldir ++ safetag dir tag
         end
 
-    val (monitor, {bold,green,red,coloured_info = info}) =
+    val (monitor, {bold,green,red,coloured_info = info,final_report}) =
         MB_Monitor.new {info = info, warn = warn, genLogFile = genLF,
                         time_limit = time_limit,
+                        keep_going = keep_going,
                         multidir = is_multidir dirmap}
 
     fun dircomplete dir (good, bad) t =
@@ -296,7 +298,8 @@ fun graphbuild optinfo g =
                       case bres of
                           BR_OK => k true g
                         | BR_Failed => k false g
-                        | BR_ClineK{cline, job_kont, other_nodes, cache_url, cachekey} =>
+                        | BR_ClineK{cline, job_kont, other_nodes, cache_dir, cachekey,
+                                    prep_for_build} =>
                           let
                             val (thyc,ndi) = count_theories_needed other_nodes
                             fun b2res b = if b then OS.Process.success
@@ -320,11 +323,16 @@ fun graphbuild optinfo g =
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l
                             fun try_cache () =
-                              case cache_url of
-                                  NONE => false
-                                | SOME (HM_Core_Cline.Fetch, url) =>
-                                  HM_CacheFetch.fetch url cachekey outs
-                                | SOME (HM_Core_Cline.Write, _) => false
+                              let
+                                val fetched =
+                                    case cache_dir of
+                                        NONE => false
+                                      | SOME url =>
+                                        HM_CacheFetch.fetch url cachekey outs
+                              in
+                                if fetched then true
+                                else (prep_for_build (); false)
+                              end
                           in
                             diag ("New graph job for "^target_s^
                                   " with c/line: " ^ cline_str cline);
@@ -390,7 +398,7 @@ fun graphbuild optinfo g =
                       provider = { initial = (g,true), genjob = genjob }}
   in
     do_work(worklist, monitor)
-    before release_all_locks()
+    before (release_all_locks(); final_report())
   end
 
 end

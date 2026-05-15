@@ -676,7 +676,7 @@ fun build_tns ptys tynames = let
     val bound_args = filter_this_next dv ptys [];
     val indexes = map (fn e => index_of (pretypeToName e) tynames) bound_args
 in
-    mk_eq (“tns :num list”, mk_list (indexes, numSyntax.num)
+    mk_eq (“tns :num list”, mk_list (indexes, numSyntax.num))
 end;
 
 fun pretypeIsNominal pty =

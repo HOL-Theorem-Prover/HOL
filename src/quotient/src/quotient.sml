@@ -130,27 +130,23 @@ val _ = register_btrace("quotient", chatting);
 val caching = ref true; (* should be pure efficiency gain *)
 
 
-structure Map = Redblackmap
-
-(* Redblackmap has the same signature as Binarymap. *)
-
-val quotient_cache = ref ((Map.mkDict Type.compare) :(hol_type, thm) Map.dict);
+val quotient_cache : thm Typetab.table ref = ref Typetab.empty;
 
 val hits = ref 0;
 val misses = ref 0;
 
 fun reset_cache () =
-      (quotient_cache := (Map.mkDict Type.compare : (hol_type, thm)Map.dict);
+      (quotient_cache := Typetab.empty;
        hits := 0; misses := 0)
 
 fun list_cache () = (if !chatting andalso !caching then (
                      print (    "Hits = " ^ Int.toString (!hits) ^
                             ", Misses = " ^ Int.toString (!misses) ^
                             ", Cache size = " ^
-                             Int.toString (Map.numItems (!quotient_cache))
+                             Int.toString (Typetab.size (!quotient_cache))
                               ^ "\n"))
                      else ();
-                     Map.listItems (!quotient_cache))
+                     Typetab.dest (!quotient_cache))
 
 fun del_imps tm = if is_imp tm then (del_imps o #conseq o dest_imp) tm
                                else tm;
@@ -2382,7 +2378,7 @@ would include
                     tyop_ty_ths
 
         fun insert_cache ty qth =
-            (quotient_cache := Map.insert(!quotient_cache, ty, qth); qth)
+            (quotient_cache := Typetab.update (ty, qth) (!quotient_cache); qth)
 
 (* The function get_quotient produces the quotient theorem for type ty. *)
 
@@ -2412,7 +2408,7 @@ would include
 
         fun get_quotient1 ty =
            if !caching then
-              case Map.peek(!quotient_cache, ty) of
+              case Typetab.lookup (!quotient_cache) ty of
                  SOME th => (hits := !hits + 1; th)
                | NONE    => (misses := !misses + 1;
                              insert_cache ty (get_quotient ty))

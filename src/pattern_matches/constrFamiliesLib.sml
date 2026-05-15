@@ -62,8 +62,8 @@ fun normalise_ty ty = let
       | ty :: rest => let
         in
           if is_vartype ty then
-            case Binarymap.peek(dict,ty) of
-                NONE => recurse (Binarymap.insert(dict,ty,usethis),
+            case Typetab.lookup dict ty of
+                NONE => recurse (Typetab.update (ty, usethis) dict,
                                  next_ty usethis)
                                 rest
               | SOME _ => recurse acc rest
@@ -73,10 +73,10 @@ fun normalise_ty ty = let
               recurse acc (Args @ rest)
             end
         end
-  val (inst0, _) = recurse (Binarymap.mkDict Type.compare, Type.alpha) [ty]
-  val inst = Binarymap.foldl (fn (tyk,tyv,acc) => (tyk |-> tyv)::acc)
-                             []
-                             inst0
+  val (inst0, _) = recurse (Typetab.empty, Type.alpha) [ty]
+  val inst = Typetab.fold (fn (tyk,tyv) => fn acc => (tyk |-> tyv)::acc)
+                          inst0
+                          []
 in
   Type.type_subst inst ty
 end
@@ -567,15 +567,17 @@ val thePmatchCompileDB = ref empty
 fun lookup_typeBase_constructorFamily ty = let
   val b_ty = base_ty ty
 in
-  SOME (b_ty, TypeNet.find (!typeConstrFamsDB, b_ty)) handle
-     NotFound => let
-       val cf = constructorFamily_of_typebase b_ty
-       val net = !typeConstrFamsDB
-       val net'= TypeNet.insert (net, b_ty, cf)
-       val _ = typeConstrFamsDB := net'
-     in
-       SOME (b_ty, cf)
-     end
+  case TypeNet.peek (!typeConstrFamsDB, b_ty) of
+      SOME cf => SOME (b_ty, cf)
+    | NONE =>
+      let
+        val cf = constructorFamily_of_typebase b_ty
+        val net = !typeConstrFamsDB
+        val net'= TypeNet.insert (net, b_ty, cf)
+        val _ = typeConstrFamsDB := net'
+      in
+        SOME (b_ty, cf)
+      end
 end handle HOL_ERR _ => NONE
 
 
@@ -784,7 +786,7 @@ fun pmatch_compile_db_add_constrFam (db : pmatch_compile_db) cf = {
     val cl = (#constructors cf)
     val ty = normalise_ty (#cl_type cl)
     val net = #pcdb_constrFams db
-    val cfs = TypeNet.find (net, ty) handle NotFound => []
+    val cfs = case TypeNet.peek (net, ty) of SOME l => l | NONE => []
     val net' = TypeNet.insert (net, ty, cf::cfs)
   in
     net'

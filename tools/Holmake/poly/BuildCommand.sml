@@ -242,6 +242,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val jobs = #jobs (#core optv)
   val time_limit = #time_limit optv
   val maxheap = #maxheap optv
+  val cache_dir = #cache_dir (#core optv)
   val chatty = if jobs = 1 then #chatty outs else (fn _ => ())
   val info = if jobs = 1 then #info outs else (fn _ => ())
 
@@ -312,11 +313,19 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     in
         ((script,[scriptuo,scriptui,script]), objectfiles)
     end
-    fun run_script use_cache deps g (extra:GraphExtra.t) (script, intermediates) objectfiles
+    fun run_script cache_dir ck g (extra:GraphExtra.t) (script, intermediates) objectfiles
                    expecteds on_success =
       let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
-        val _ = app safedelete expecteds
+        (* The safedelete pass is defensive: with the build about to run
+           and write fresh outputs, deleting any pre-existing copies first
+           guards against a theory script that fails part-way through and
+           leaves stale half-outputs lying around.  We could probably do
+           without it.  But if we keep it, it must only fire on the
+           cache-miss path: on a cache hit the expected files have just
+           been put in place (possibly by a concurrent peer Holmake whose
+           lock we inherited) and we must not delete them. *)
+        fun prep_for_build () = app safedelete expecteds
         val useScript = fullPath [HOLDIR, "bin", "hol"]
         (* Poly/ML runtime options (--gcthreads, --maxheap) must come before subcommand *)
         val cline =
@@ -366,8 +375,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       in
           BR_ClineK { cline = (useScript, cline), job_kont = cont,
                       other_nodes = other_nodes,
-                      cache_url = use_cache,
-                      cachekey = HM_Cachekey.compute_for_deps deps }
+                      cache_dir = cache_dir,
+                      cachekey = ck,
+                      prep_for_build = prep_for_build }
       end
   in
     let
@@ -397,14 +407,34 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                   | NONE => s ^ "Theory.dat"
             val stamp_path = HM_Cachekey.stamp_path_for_datfile datFS
             val _ = HM_Cachekey.remove_stamp stamp_path
+            val ck = HM_Cachekey.compute_for_deps deps
             fun write_stamp () =
-                case HM_Cachekey.compute_for_deps deps of
+                case ck of
                     HM_Cachekey.Key k => HM_Cachekey.write_stamp stamp_path k
                   | HM_Cachekey.Missing _ => ()
+            val cache_upload_dir = hmdir.toAbsPath (hmdir.curdir())
+            val cache_filenames = let
+              open HM_DepGraph
+              val nodes = find_nodes_by_command g
+                            (hmdir.curdir(),
+                             BuiltInCmd (BIC_BuildScript s, empty_incinfo))
+            in
+              List.mapPartial
+                (Option.map (fromFile o hm_target.filepart o #target) o
+                 peeknode g)
+                nodes
+            end
+            fun write_cache () =
+                case cache_dir of
+                    SOME url =>
+                      ignore (HM_CacheFetch.upload url ck
+                                cache_upload_dir
+                                cache_filenames outs)
+                  | NONE => ()
           in
-            run_script (#cache_url (#core optv)) deps g extra scriptetc objectfiles
+            run_script cache_dir ck g extra scriptetc objectfiles
                        [s^"Theory.sml", s^"Theory.sig", s^"Theory.dat"]
-                       write_stamp
+                       (fn () => (write_stamp(); write_cache()))
           end
         | BuildArticle (s0, deps : dep list, extra) =>
           let
@@ -425,7 +455,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             val ((script,inters),objectfiles) =
                 setup_script s (deps,extra) loggingextras
           in
-            run_script NONE deps g extra (script,fakescript_str :: inters) objectfiles
+            run_script NONE (HM_Cachekey.Missing []) g extra
+                       (script,fakescript_str :: inters) objectfiles
                        [s] (fn () => ())
           end
         | ProcessArticle (s,extra) =>
@@ -440,8 +471,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                   "opentheory info --article -o " ^ art ^ " " ^ raw_art])
           in
             BR_ClineK {cline = cline, job_kont = (fn _ => OS.Process.isSuccess),
-                       other_nodes = [], cache_url = NONE,
-                       cachekey = HM_Cachekey.Missing []}
+                       other_nodes = [], cache_dir = NONE,
+                       cachekey = HM_Cachekey.Missing [],
+                       prep_for_build = fn () => ()}
           end
     end handle CompileFailed => BR_Failed
              | FileNotFound  => BR_Failed
@@ -490,13 +522,14 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   fun interpret_bres bres =
     case bres of
         BR_OK => true
-      | BR_ClineK{cline = (_,cl), job_kont = k, cache_url, cachekey, ...} =>
-        (case cache_url of
-             SOME (HM_Core_Cline.Fetch, url) =>
-                 HM_CacheFetch.fetch url cachekey outs orelse
-                 k warn (Systeml.systeml cl)
-           | SOME (HM_Core_Cline.Write, _) => k warn (Systeml.systeml cl)
-           | NONE => k warn (Systeml.systeml cl))
+      | BR_ClineK{cline = (_,cl), job_kont = k, cache_dir, cachekey,
+                  prep_for_build, ...} =>
+        let val fetched = case cache_dir of
+                              SOME url => HM_CacheFetch.fetch url cachekey outs
+                            | NONE => false
+        in if fetched then true
+           else (prep_for_build (); k warn (Systeml.systeml cl))
+        end
       | BR_Failed => false
 
 

@@ -27,4 +27,5 @@ quantification.
 
 ### See also
 
-[`res_quanLib.RESQ_SPEC`](#res_quanLib.RESQ_SPEC)
+[`res_quanLib.RESQ_SPEC`](#res_quanLib.RESQ_SPEC),
+[`res_quanLib.RESQ_SPECL`](#res_quanLib.RESQ_SPECL)

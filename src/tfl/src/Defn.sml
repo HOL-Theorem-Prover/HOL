@@ -1738,8 +1738,8 @@ fun defn_absyn_to_term a = let
   fun foldthis (pv as Preterm.Var{Name,Ty,Locn}, env) =
     if String.sub(Name,0) = #"_" then return env
     else
-      (case Binarymap.peek(env,Name) of
-           NONE => return (Binarymap.insert(env,Name,pv))
+      (case Symtab.lookup env Name of
+           NONE => return (Symtab.update (Name,pv) env)
          | SOME pv' =>
              Preterm.ptype_of pv' >- (fn pty' => Pretype.unify Ty pty') >>
              return env)
@@ -1763,7 +1763,7 @@ fun defn_absyn_to_term a = let
       let
         val all_frees = op_U Preterm.veq (map ptdefn_freevars pts)
       in
-        foldlM foldthis (Binarymap.mkDict String.compare) all_frees >>
+        foldlM foldthis Symtab.empty all_frees >>
         construct_final_term pts
       end)
 in

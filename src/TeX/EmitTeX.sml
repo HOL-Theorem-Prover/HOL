@@ -264,7 +264,7 @@ local
      | c     => c
 
   fun string_map (s,sz) =
-      case Binarymap.peek(TexTokenMap.the_map(), s) of
+      case Symtab.lookup (TexTokenMap.the_map()) s of
         SOME {info = result, ...} => result
       | NONE => (UTF8.translate char_map s,
                  case sz of NONE => String.size s | SOME sz => sz)

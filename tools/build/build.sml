@@ -28,6 +28,10 @@ val cline_record = process_cline ()
 val {cmdline,build_theory_graph,selftest_level,keepgoing,...} = cline_record
 val {extra={SRCDIRS},jobcount,relocbuild,debug,thmsrc,...} = cline_record
 
+(* Forward only the cache options the user actually wrote -- see comment
+   in tools-poly/build.sml for the same code there. *)
+val cache_args = extract_cache_args (CommandLine.arguments())
+
 
 open Systeml;
 
@@ -43,7 +47,8 @@ in
                                (if keepgoing then ["-k"] else []) @
                                (case thmsrc of
                                     NONE => []
-                                  | SOME s => ["--thmsrc="^s]))
+                                  | SOME s => ["--thmsrc="^s]) @
+                               cache_args)
                      (fn _ => "")
                      selftest_level
 end

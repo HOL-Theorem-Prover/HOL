@@ -1,3 +1,7 @@
+---
+aliases:
+  - Defn.Hol_defn
+---
 ## `Hol_defn`
 
 ``` hol4
@@ -5,6 +9,12 @@ bossLib.Hol_defn : string -> term quotation -> defn
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`Defn.Hol_defn`](#Defn.Hol_defn).*
+
+<!-- END aliases-block -->
 
 General-purpose function definition facility.
 

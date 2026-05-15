@@ -1,0 +1,38 @@
+/* mdbook's default ~750px content width is comfortable for prose
+   but leaves the bit-vector operations table and a few other
+   wide displays clipped.  950px is a compromise: roomy enough on
+   a typical desktop for the wide elements, not so wide that text
+   feels cramped against the chrome on a 14" laptop screen. */
+:root {
+  --content-max-width: 950px;
+}
+
+/* Custom styling for tables that don't fit comfortably at their
+   natural pulldown-cmark widths.  Wrap such a table in
+   `<div class="wide-table"> ... </div>` in the .smd source.
+
+   The Symbol column (col 2) is monospace and short -- shrink it
+   to its content width.  The Type column (col 3) is the widest
+   and least readable when squeezed -- shrink the body font (but
+   not the header, so the column label stays readable) and trim
+   cell padding to claw back a few more pixels. */
+
+.wide-table table {
+  table-layout: auto;
+}
+
+.wide-table th:nth-child(2),
+.wide-table td:nth-child(2) {
+  white-space: nowrap;
+  width: 1%;            /* shrink-to-fit */
+}
+
+.wide-table td:nth-child(3) {
+  font-size: 0.85em;
+}
+
+.wide-table th,
+.wide-table td {
+  padding-left: 0.4em;
+  padding-right: 0.4em;
+}

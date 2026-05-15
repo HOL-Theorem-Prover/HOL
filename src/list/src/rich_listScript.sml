@@ -2853,6 +2853,21 @@ Proof
     FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) [] ]
 QED
 
+Theorem LAST_TAKE_EL :
+    !l n. 0 < n /\ n <= LENGTH l ==> LAST (TAKE n l) = EL (PRE n) l
+Proof
+    simp [PRE_SUB1]
+ >> Induct_on ‘l’ >> rw []
+ >> simp [LAST_DEF]
+ >> Cases_on ‘l = []’ >> fs []
+ >- (‘n = 1’ by simp [] >> simp [])
+ >> Cases_on ‘n <= 1’
+ >- (‘n = 1’ by simp [] >> simp [])
+ >> simp [EL_CONS]
+ >> ‘PRE (n - 1) = n - 2’ by simp []
+ >> simp []
+QED
+
 val SUB_ADD_lem =
    numLib.DECIDE ``!l n m. n + m <= l ==> ((l - (n + m)) + n = l - m)``
 
@@ -3175,6 +3190,14 @@ Proof
  >> rw [LENGTH_TAKE]
 QED
 
+Theorem IS_PREFIX_MEM :
+    !l l1 e. l1 <<= l /\ MEM e l1 ==> MEM e l
+Proof
+    RW_TAC std_ss [IS_PREFIX_EQ_TAKE']
+ >> MATCH_MP_TAC MEM_TAKE
+ >> Q.EXISTS_TAC ‘n’ >> ASM_REWRITE_TAC []
+QED
+
 (* NOTE: This theorem can also be proved by IS_PREFIX_LENGTH_ANTI and
    prefixes_is_prefix_total, but IS_PREFIX_EQ_TAKE is more natural.
  *)
@@ -3201,8 +3224,7 @@ Proof
  >> rw [LENGTH_FRONT, FRONT_TAKE]
  >> Q.EXISTS_TAC ‘n - 1’ >> rw []
  >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
- >> MATCH_MP_TAC TAKE_FRONT
- >> rw []
+ >> MATCH_MP_TAC TAKE_FRONT >> simp []
 QED
 
 Theorem IS_PREFIX_FRONT_CASES :
@@ -6835,6 +6857,30 @@ Theorem MAX_LIST_LE:
     !h t. MAX_LIST t <= MAX_LIST (h::t)
 Proof
   rw_tac std_ss[MAX_LIST_def]
+QED
+
+Theorem MAX_LIST_APPEND :
+    !l1 l2. MAX_LIST (l1 ++ l2) = MAX (MAX_LIST l1) (MAX_LIST l2)
+Proof
+    Induct_on ‘l1’ >> rw [MAX_ASSOC]
+QED
+
+Theorem MAX_LIST_APPEND_COMM :
+    !l1 l2. MAX_LIST (l1 ++ l2) = MAX_LIST (l2 ++ l1)
+Proof
+    rw [MAX_LIST_APPEND, Once MAX_COMM]
+QED
+
+Theorem MAX_LIST_LE_PREFIX :
+    !l1 l2. l1 <<= l2 ==> MAX_LIST l1 <= MAX_LIST l2
+Proof
+    rw [IS_PREFIX_APPEND]
+ >> ONCE_REWRITE_TAC [MAX_LIST_APPEND_COMM]
+ >> qid_spec_tac ‘l’
+ >> Induct_on ‘l’ >- simp []
+ >> Q.X_GEN_TAC ‘h’
+ >> Q_TAC (TRANS_TAC LESS_EQ_TRANS) ‘MAX_LIST (l ++ l1)’
+ >> simp [APPEND, MAX_LIST_LE]
 QED
 
 (* Theorem: (!x. f x <= g x) ==> !ls. MAX_LIST (MAP f ls) <= MAX_LIST (MAP g ls) *)

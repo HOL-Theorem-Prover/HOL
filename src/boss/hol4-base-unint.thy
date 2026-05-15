@@ -267,6 +267,7 @@ rich-list {
   import: pair
   import: list
   import: arithmetic
+  import: numeral
   import: pred-set
   import: relation
   import: divides

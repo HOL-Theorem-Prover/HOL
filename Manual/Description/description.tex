@@ -25,8 +25,12 @@
 \usepackage{fancyvrb}
 \usepackage[format=hang,justification=raggedright]{caption}  % multi-line figure caption
 \usepackage{desc-unicode}
+\usepackage{array}     % needed for >{...}p{...} column specs that pandoc emits
 \usepackage{longtable}
 \usepackage{booktabs}
+\usepackage{calc}      % needed for \real{...} in pandoc-emitted column widths
+\providecommand{\tightlist}{% pandoc fragments emit this for tight lists
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \usepackage{etoolbox} % For patchcmd
 
 % Remove top and bottom horizontal lines from tables:
@@ -114,17 +118,10 @@
 
    % \part{The HOL System \label{HOL-SYS}}
 
-   \include{system}                      % embedding HOL logic in ML
-   \include{drules}                      % derived rules
-   \include{conv}                        % conversions
-   \include{tactics}                     % tactics
-     \include{advanced_tactics}          % a section within tactics chapter
-   \include{theories}
-   \include{math}                        % math theories
-   \include{definitions}
-   \include{libraries}
-   \include{modern-syntax-chapter}
-   \include{misc}
+   % chapters-include.tex is generated from chapters.txt by
+   % Manual/Tools/gen_chap_lists; the Holmakefile rebuilds it
+   % whenever chapters.txt changes.
+   \input{chapters-include}
 
    % ---------------------------------------------------------------------
    % part 3: Theorem Proving with HOL

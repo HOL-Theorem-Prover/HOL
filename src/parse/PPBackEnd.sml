@@ -28,14 +28,16 @@ type output_colors = {
 (* Full styles                      *)
 (* -------------------------------- *)
 
-val UserStyle_dict = ref
-   (Redblackmap.mkDict String.compare:
-     (string, pp_style list * (string * pp_style list) list) Redblackmap.dict)
+val UserStyle_dict :
+    (pp_style list * (string * pp_style list) list) Symtab.table ref =
+    ref Symtab.empty
 
 fun register_UserStyle backendOpt sty stL =
 let
    val (default_stL, bstL) =
-       Redblackmap.find (!UserStyle_dict, sty) handle NotFound => (stL,[])
+       case Symtab.lookup (!UserStyle_dict) sty of
+           SOME entry => entry
+         | NONE => (stL, [])
 
    val default_stL = if isSome(backendOpt) then default_stL else stL
    val bstL = if isSome(backendOpt) then
@@ -44,23 +46,24 @@ let
 
    val _ =
        UserStyle_dict :=
-       Redblackmap.insert (!UserStyle_dict, sty, (default_stL, bstL))
+       Symtab.update (sty, (default_stL, bstL)) (!UserStyle_dict)
 in
    ()
 end;
 
 fun lookup_UserStyle backend sty =
 let
-   val (default_stL, bstL) = Redblackmap.find (!UserStyle_dict, sty)
-       handle NotFound =>
-       (register_UserStyle NONE sty []; ([],[]))
+   val (default_stL, bstL) =
+       case Symtab.lookup (!UserStyle_dict) sty of
+           SOME entry => entry
+         | NONE => (register_UserStyle NONE sty []; ([],[]))
    val styL = Lib.assoc backend bstL handle Feedback.HOL_ERR _ => default_stL
 in
    styL
 end
 
 fun known_UserStyles () =
-   map Lib.fst (Redblackmap.listItems (!UserStyle_dict))
+   map Lib.fst (Symtab.dest (!UserStyle_dict))
 
 
 (* fullstyle:

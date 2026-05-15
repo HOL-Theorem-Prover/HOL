@@ -1,11 +1,11 @@
 OPTIONS = NO_OVERLAY
-EXTRA_CLEANS = Md2TeX.exe gen_extra_docfiles makebase.exe \
+EXTRA_CLEANS = Md2TeX.exe AliasGen.exe gen_extra_docfiles makebase.exe \
                Lexer.lex.sml Parser.grm-sig.sml Parser.grm.sml \
                Parser.grm.sig
 MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
-all: makebase.exe
+all: makebase.exe AliasGen.exe
 
 ifdef POLY
 all:  gen_extra_docfiles
@@ -17,6 +17,9 @@ makebase.exe: poly-makebase.ML makebase.sml Parser.grm.sml Parser.grm.sig Lexer.
 	$(POLYC) -o $@ $<
 
 Md2TeX.exe: poly-Md2TeX.ML Md2TeX.uo
+	$(POLYC) -o $@ $<
+
+AliasGen.exe: poly-AliasGen.ML AliasGen.uo
 	$(POLYC) -o $@ $<
 
 Parser.grm.sig Parser.grm.sml: Parser.grm
@@ -33,6 +36,9 @@ Doc2Html.exe : runDoc2Html.uo Doc2Html.uo ParseDoc.uo Flash.uo
 	$(HOLMOSMLC) -o Doc2Html.exe runDoc2Html.uo
 
 Md2TeX.exe: runMd2TeX.uo Md2TeX.uo
+	$(HOLMOSMLC) -o $@ $<
+
+AliasGen.exe: runAliasGen.uo AliasGen.uo
 	$(HOLMOSMLC) -o $@ $<
 
 Parser.grm-sig.sml Parser.grm.sml: Parser.grm

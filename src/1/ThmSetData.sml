@@ -300,19 +300,19 @@ fun export_with_ancestry
     Some simple instances
    ---------------------------------------------------------------------- *)
 
-type simple_dictionary = (string,thm) Binarymap.dict
+type simple_dictionary = thm Symtab.table
 fun sdict_apply_delta delta (d : simple_dictionary) =
     case delta of
-        ADD({Thy,Name}, th) => Binarymap.insert(d, Thy ^ "." ^ Name, th)
-      | REMOVE n => #1 (Binarymap.remove(d, n)) handle NotFound => d
+        ADD({Thy,Name}, th) => Symtab.update (Thy ^ "." ^ Name, th) d
+      | REMOVE n => Symtab.delete_safe n d
 fun simple_dictionary_ops i =
     {apply_to_global = sdict_apply_delta, apply_delta = sdict_apply_delta,
      thy_finaliser = NONE, uptodate_delta = K true, initial_value = i}
 fun export_simple_dictionary {settype,initial} =
     let
       val i =
-          List.foldl (fn ((n,th), d) => Binarymap.insert(d, n, th))
-                     (Binarymap.mkDict String.compare) initial
+          List.foldl (fn ((n,th), d) => Symtab.update (n, th) d)
+                     Symtab.empty initial
       val ops as {apply_delta,...} = simple_dictionary_ops i
       val res = export_with_ancestry {settype = settype, delta_ops = ops}
       val updgv = #update_global_value res
@@ -326,17 +326,18 @@ fun export_simple_dictionary {settype,initial} =
        temp_export = temp_export,
        export = (fn s => (temp_export s; #record_delta res (mk_add s))),
        getDB = getDB,
-       get_thms = Binarymap.foldl (fn (n,th,A) => th::A) [] o getDB,
+       get_thms = (fn db => Symtab.fold (fn (_,th) => fn A => th::A) db []) o
+                  getDB,
        temp_setDB = updgv o K}
     end
 
 fun sdict_withflag_thms({getDB,temp_setDB}, thms) f x =
     let
-      open Binarymap
       val (_, tdb) =
-          List.foldl (fn (th,(n,db)) => (n + 1, insert(db, Int.toString n, th)))
-                     (0, mkDict String.compare)
-                     thms
+          List.foldl
+            (fn (th,(n,db)) => (n + 1, Symtab.update (Int.toString n, th) db))
+            (0, Symtab.empty)
+            thms
     in
       Portable.genwith_flag({get=getDB,set=temp_setDB}, tdb) f x
     end
@@ -374,7 +375,6 @@ fun export_alist {settype,initial} =
 
 fun alist_withflag_thms({getDB,temp_setDB}, thms) f x =
     let
-      open Binarymap
       val (_, tdb) =
           List.foldr (fn (th,(n,db)) => (n + 1, (Int.toString n, th)::db))
                      (0, []) thms

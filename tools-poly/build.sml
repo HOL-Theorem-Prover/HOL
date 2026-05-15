@@ -27,6 +27,12 @@ val {cmdline,build_theory_graph,selftest_level,...} = cline_record
 val {debug,jobcount,relocbuild,extra={SRCDIRS,...},...} = cline_record
 val {multithread,keepgoing,timelimit,thmsrc,...} = cline_record
 
+(* Forward only the cache options the user actually wrote, so that a
+   Holmakefile's CLINE_OPTIONS = --no-cache (etc.) isn't quietly
+   overridden by a synthesised default at the sub-Holmake command-line.
+   Defaults are left to each sub-Holmake to compute for itself. *)
+val cache_args = extract_cache_args (CommandLine.arguments())
+
 open Systeml;
 
 fun phase_extras () =
@@ -80,6 +86,7 @@ in
               (case thmsrc of
                    NONE => []
                  | SOME s => ["--thmsrc="^s]) @
+              cache_args @
               phase_extras())
     analysis selftest_level
 end

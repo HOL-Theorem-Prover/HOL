@@ -21,6 +21,17 @@ fun quote s = String.concat["\"", s, "\""];
 
 fun safedelete s = HOLFileSys.remove s handle OS.SysErr _ => ()
 
+fun extract_cache_args argv =
+  let
+    fun loop acc [] = List.rev acc
+      | loop acc ("--no-cache" :: rest) = loop ("--no-cache" :: acc) rest
+      | loop acc ("--cache-dir" :: v :: rest) =
+          loop (v :: "--cache-dir" :: acc) rest
+      | loop acc (a :: rest) =
+          if String.isPrefix "--cache-dir=" a then loop (a :: acc) rest
+          else loop acc rest
+  in loop [] argv end
+
 (* message emission *)
 fun die s =
     let open TextIO
@@ -386,6 +397,7 @@ in
           jobcount = jcount,
           keepgoing = #keepgoing option_record,
           multithread = #multithread option_record,
+          cache_dir = #cache_dir option_record,
           relocbuild = #relocbuild option_record,
           thmsrc = #thmsrc option_record,
           timelimit = #timelimit option_record}
@@ -751,6 +763,91 @@ handle OS.SysErr(s, erropt) =>
             (case erropt of SOME s' => OS.errorMsg s' | _ => ""))
      | BuildExit => ()
 
+val theorygraph_dir = fullPath [HOLDIR, "help", "theorygraph"]
+
+(* Scan sigobj/ for the production theories — anything matching *Theory.sig
+   except "FinalTheory.sig" and *_emitTheory.sig.  Each entry is a symlink
+   to <src>/.hol/objs/<thy>Theory.sig; rewriting the extension gives us the
+   .dat file paths to feed theorytool via --paths-from. *)
+fun list_sigobj_dats () =
+  let
+    val sigobj = fullPath [HOLDIR, "sigobj"]
+    val ds = HOLFileSys.openDir sigobj
+    fun close () = HOLFileSys.closeDir ds
+    fun is_thy_sig f =
+        if String.isSuffix "Theory.sig" f then
+          let val base = String.substring (f, 0, size f - 10)
+          in
+            base <> "" andalso base <> "Final" andalso
+            not (String.isSuffix "_emit" base)
+          end
+        else false
+    fun dat_of_link sigobj_path =
+        (* sigobj/<thy>Theory.sig → <src>/.hol/objs/<thy>Theory.sig.
+           Return the *logical* "<src>/<thy>Theory.dat" path; HFS_NameMunge
+           routes that back through .hol/objs at access time. *)
+        let val tgt =
+                if OS.FileSys.isLink sigobj_path
+                then SOME (OS.FileSys.readLink sigobj_path)
+                else NONE
+        in case tgt of
+               NONE => NONE
+             | SOME t =>
+               let val {dir, file} = OS.Path.splitDirFile t
+                   val src = OS.Path.dir (OS.Path.dir dir)
+                   val {base, ...} = OS.Path.splitBaseExt file
+               in SOME (OS.Path.concat (src, base ^ ".dat")) end
+        end handle OS.SysErr _ => NONE
+    fun loop acc =
+        case HOLFileSys.readDir ds of
+            NONE => acc
+          | SOME f =>
+            if is_thy_sig f then
+              loop (case dat_of_link (OS.Path.concat (sigobj, f)) of
+                        SOME p => p :: acc | NONE => acc)
+            else loop acc
+  in
+    loop [] before close ()
+    handle e => (close (); raise e)
+  end
+
+fun write_lines (path, lines) =
+  let val ostrm = HOLFileSys.openOut path
+  in
+    List.app (fn s => (HOLFileSys.output (ostrm, s);
+                       HOLFileSys.output (ostrm, "\n")))
+             lines;
+    HOLFileSys.closeOut ostrm
+  end
+
+fun write_theorygraph_html () =
+  let
+    val ostrm = HOLFileSys.openOut (theorygraph_dir ++ "theories.html")
+    fun out s = HOLFileSys.output (ostrm, s)
+  in
+    out "<!DOCTYPE html>\n\
+        \<html lang=\"en\">\n\
+        \<head>\n\
+        \<meta charset=\"utf-8\">\n\
+        \<meta name=\"viewport\" \
+             \content=\"width=device-width, initial-scale=1\">\n\
+        \<title>HOL Theory Hierarchy</title>\n\
+        \<style>\n\
+        \  body { font-family: system-ui, -apple-system, sans-serif;\n\
+        \         color: #1f2328; margin: 1.5rem; }\n\
+        \  h1 { font-size: 1.5rem; }\n\
+        \  object { display: block; max-width: 100%; }\n\
+        \</style>\n\
+        \</head>\n\
+        \<body>\n\
+        \<h1>HOL Theory Hierarchy (clickable)</h1>\n\
+        \<object data=\"theories.svg\" type=\"image/svg+xml\">\
+                \HOL Theory Map</object>\n\
+        \</body>\n\
+        \</html>\n";
+    HOLFileSys.closeOut ostrm
+  end
+
 fun write_theory_graph () =
   case Systeml.DOT_PATH of
       SOME dotexec =>
@@ -770,15 +867,25 @@ fun write_theory_graph () =
               \message from appearing again)\n")
       else
         let
-          val _ = print "Generating theory-graph and HTML theory signatures; \
-                        \this may take a while\n"
+          val _ = print "Generating theory-graph; this may take a while\n"
           val _ = print "  (Use build's --nograph option to skip this step.)\n"
-          val pfp = Systeml.protect o fullPath
-          val result =
-              OS.Process.system(pfp [HOLDIR, "bin", "hol"] ^ " < " ^
-                                pfp [HOLDIR, "help", "src-sml", "DOT"])
+          val theorytool =
+              fullPath [HOLDIR, "src", "portableML", "rawtheory", "theorytool"]
+          val svgfile = theorygraph_dir ++ "theories.svg"
+          val pathsfile = theorygraph_dir ++ "thypaths.txt"
+          val () = write_lines (pathsfile, list_sigobj_dats ())
+          val protect = Systeml.protect
+          val cmd =
+              String.concatWith " " [
+                "cd", protect HOLDIR, "&&",
+                protect theorytool, "--quiet", "--thygraph",
+                "--url-base=" ^ protect theorygraph_dir,
+                "--paths-from=" ^ protect pathsfile,
+                "|", protect dotexec, "-Tsvg", "-o", protect svgfile
+              ]
+          val result = OS.Process.system cmd
         in
-          if OS.Process.isSuccess result then ()
+          if OS.Process.isSuccess result then write_theorygraph_html ()
           else warn "Theory graph construction failed.\n"
         end
     | NONE => warn "If you had a copy of the dot tool installed, I might try\n\
@@ -790,7 +897,8 @@ in
   system_ps (fullPath [HOLDIR, "tools", "mllex", "mllex.exe"] ^ " Lexer.lex");
   system_ps (fullPath [HOLDIR, "tools", "mlyacc", "src", "mlyacc.exe"] ^ " Parser.grm");
   system_ps (POLYC ^ " poly-makebase.ML -o makebase.exe");
-  system_ps (POLYC ^ " poly-Doc2Html.ML -o gen_extra_docfiles")
+  system_ps (POLYC ^ " poly-Doc2Html.ML -o gen_extra_docfiles");
+  system_ps (POLYC ^ " poly-AliasGen.ML -o AliasGen.exe")
 end
 
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
@@ -840,7 +948,12 @@ fun build_help graph =
                           HOLFileSys.mkDir htmlpath)
      val cmd1     = [doc2html, docpath, htmlpath]
      val cmd2     = [fullPath [dir,"makebase.exe"]]
+     val cmd3     = [fullPath [dir,"AliasGen.exe"], "--check", docpath]
  in
+   if SYSTEML cmd3 then ()
+   else die "AliasGen --check failed: alias entries are out of sync. \
+            \Run help/src-sml/AliasGen.exe --regen help/Docfiles to fix."
+ ;
    if ML_SYSNAME <> "mosml" then (
      print "Generating HTML and plain text versions of Docfiles...\n" ;
      if SYSTEML cmd1 then print "...docfile translation done\n"
@@ -929,7 +1042,7 @@ fun process_cline () =
       end
     | Normal {extra = {seqname,kernelspec}, cmdline, multithread,
               build_theory_graph, jobcount, relocbuild, debug, keepgoing,
-              selftest_level, thmsrc, timelimit} =>
+              cache_dir, selftest_level, thmsrc, timelimit} =>
       let
         val SRCDIRS = read_buildsequence {kernelname = kernelspec} seqname
       in
@@ -944,6 +1057,7 @@ fun process_cline () =
            jobcount = jobcount,
            keepgoing = keepgoing,
            multithread = multithread,
+           cache_dir = cache_dir,
            relocbuild = relocbuild,
            selftest_level = selftest_level,
            thmsrc = thmsrc,

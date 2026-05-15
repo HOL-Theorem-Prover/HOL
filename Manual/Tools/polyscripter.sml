@@ -17,6 +17,14 @@ fun lnumdie linenum extra exn =
 
 val outputPrompt = ref "> "
 
+(* Global outstream for user scripts.  In CLI mode this points at
+   `print` (so user output goes to stdout, joining polyscripter's own
+   emission); when polyscripter is driven as a library (e.g., from the
+   smdpp mdbook preprocessor), processStream rebinds it to the
+   caller-supplied `output` callback so that user-script writes land
+   in the same captured stream as polyscripter's emission. *)
+val scriptPrint : (string -> unit) ref = ref print
+
 val args = {quietOpen = true, print = fn s => TextIO.output(TextIO.stdErr, s)}
 val quote = HOLSource.fromString args
 val default_linewidth = 77
@@ -101,6 +109,14 @@ fun umunge umap s =
 
 val elision_string1 =
     ref "\\quad\\textit{\\small\\dots{}output elided\\dots{}}\n"
+
+(* Plain-text alternative used when -md is passed.  The LaTeX form
+   above relied on the surrounding alltt environment to interpret
+   \textit etc.; .smd output ends up inside a fenced code block, which
+   pandoc lowers to verbatim, so the LaTeX would leak through as
+   literal characters. *)
+val elision_string1_plain =
+    "   ... output elided ...\n"
 
 fun deleteTrailingWhiteSpace s =
   let
@@ -618,54 +634,98 @@ fun read_umap fname =
 
 
 fun usage() =
-  "Usage:\n  "^ CommandLine.name() ^ " [-d] [umapfile]"
+  "Usage:\n  "^ CommandLine.name() ^ " [-d] [-md] [umapfile]"
 
-fun main () =
+(* One-time setup shared between the CLI driver and external callers
+   (e.g., the smdpp mdbook preprocessor).  Returns the compiler output
+   buffer used by process_line. *)
+fun setupPolyscripter () =
   let
-    val _ = PolyML.print_depth 100;
+    val _ = PolyML.print_depth 100
     val _ = Parse.current_backend := PPBackEnd.raw_terminal
-    val (debugp,umap) =
-        case CommandLine.arguments() of
-            [] => (false, Binarymap.mkDict String.compare)
-          | ["-d"] => (true, Binarymap.mkDict String.compare)
-          | [name] => (false, read_umap name)
-          | ["-d", name] => (true, read_umap name)
-          | _ => die (usage())
     val (obuf as {push = obPush, ...}) = SimpleBuffer.mkBuffer()
     val _ = ReadHMF.extend_path_with_includes {verbosity = 0, lpref = loadPath}
     val _ = Feedback.ERR_outstream := obPush
     val _ = Feedback.WARNING_outstream := obPush
     val _ = Feedback.MESG_outstream := obPush
-    val cvn = PolyML.Compiler.compilerVersionNumber
-    val _ = if cvn = 551 orelse cvn = 552 then
-              ignore (TextIO.inputLine TextIO.stdIn)
-            else ()
-    val lb = mklbuf TextIO.stdIn
-    fun recurse cstate lb : unit=
+  in
+    obuf
+  end
+
+(* Drive a single .smd document.  `obuf` should be a buffer obtained from
+   setupPolyscripter (and may be reused across documents to share Poly/ML
+   compiler state and theory loads).  `scriptPrint` is rebound to
+   `output` for the duration of the call so user-script writes land in
+   the same stream as polyscripter's emission. *)
+fun processStream {input, output, debug, umap, obuf} =
+  let
+    val savedScriptPrint = !scriptPrint
+    val () = scriptPrint := output
+    val lb = mklbuf input
+    fun recurse cstate =
       case current lb of
           NONE => ()
         | SOME line =>
           if String.isPrefix "##skip" line then
-            (advance lb; recurse (Skipping :: cstate) lb)
+            (advance lb; recurse (Skipping :: cstate))
           else if String.isPrefix "##endskip" line then
-            case cstate of
-                Skipping :: rest => (advance lb; recurse rest lb)
+            (case cstate of
+                Skipping :: rest => (advance lb; recurse rest)
               | _ => die ("Unbalanced ##endskip on line " ^
-                          Int.toString (linenum lb))
+                          Int.toString (linenum lb)))
           else
             case cstate of
-                Skipping :: _ => (advance lb; recurse cstate lb)
+                Skipping :: _ => (advance lb; recurse cstate)
               | _ =>
                 let
-                  val (i, output) =
-                      process_line debugp umap obuf line lb
+                  val (i, out) =
+                      process_line debug umap obuf line lb
                       handle e => die ("Untrapped exception: line "^
                                        Int.toString (linenum lb) ^ ": " ^
                                        exnMessage e)
                 in
-                  print (i ^ output);
-                  recurse cstate lb
+                  output (i ^ out);
+                  recurse cstate
                 end
   in
-    recurse [] lb
+    (recurse [] handle e => (scriptPrint := savedScriptPrint; raise e));
+    scriptPrint := savedScriptPrint
+  end
+
+fun processString {input, debug, umap, obuf} =
+  let
+    val sb = SimpleBuffer.mkBuffer ()
+  in
+    processStream {input = TextIO.openString input,
+                   output = #push sb,
+                   debug = debug,
+                   umap = umap,
+                   obuf = obuf};
+    #read sb ()
+  end
+
+fun main () =
+  let
+    fun parseArgs (mdp, debugp, umap) args =
+        case args of
+            [] => (mdp, debugp, umap)
+          | "-md" :: rest => parseArgs (true, debugp, umap) rest
+          | "-d"  :: rest => parseArgs (mdp, true, umap) rest
+          | [name] => (mdp, debugp, read_umap name)
+          | _ => die (usage())
+    val (mdp, debugp, umap) =
+        parseArgs (false, false, Binarymap.mkDict String.compare)
+                  (CommandLine.arguments())
+    val () = if mdp then elision_string1 := elision_string1_plain else ()
+    val obuf = setupPolyscripter ()
+    val cvn = PolyML.Compiler.compilerVersionNumber
+    val _ = if cvn = 551 orelse cvn = 552 then
+              ignore (TextIO.inputLine TextIO.stdIn)
+            else ()
+  in
+    processStream {input = TextIO.stdIn,
+                   output = print,
+                   debug = debugp,
+                   umap = umap,
+                   obuf = obuf}
   end

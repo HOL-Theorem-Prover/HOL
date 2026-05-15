@@ -699,16 +699,15 @@ val normalise_guards = TOP_SWEEP_ONCE_CONV normalise_guard
    ---------------------------------------------------------------------- *)
 
 fun cond_removal0 t = let
-  open Binarymap
   val condexps = List.map (hd o #2 o strip_comb) (find_terms is_cond t)
-  val empty_map = mkDict Term.compare
+  val empty_map = Termtab.empty
   fun my_insert(g, m) =
-      case peek(m,g) of
-        NONE => insert(m, g, 1)
-      | SOME n => insert(m, g, n + 1)
+      case Termtab.lookup m g of
+        NONE => Termtab.update (g, 1) m
+      | SOME n => Termtab.update (g, n + 1) m
   val final_map = List.foldl my_insert empty_map condexps
-  fun find_gt2 (t,n,l) = if n >= 2 then t::l else l
-  val gt2_guards = foldl find_gt2 [] final_map
+  fun find_gt2 (t,n) l = if n >= 2 then t::l else l
+  val gt2_guards = Termtab.fold find_gt2 final_map []
   val n = assert (curry op < 0) (length gt2_guards)
   val case_split = generate_nway_casesplit n
 in

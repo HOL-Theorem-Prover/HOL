@@ -253,8 +253,7 @@ fun data_entry_is_used
    (in_index orelse isSome pos_opt);
 
 
-val new_data_substore =
-    (Redblackmap.mkDict scomp):(string, data_entry) Redblackmap.dict
+val new_data_substore : data_entry Symtab.table = Symtab.empty
 
 val new_data_store  =  (*Thms, Terms, Types*)
    (new_data_substore, new_data_substore, new_data_substore);
@@ -265,17 +264,19 @@ val new_data_store  =  (*Thms, Terms, Types*)
    val key2 = "Term_ID_1"
    fun upf e = data_entry___add_page e "1";
 *)
-type data_store_ty = (string, data_entry) Redblackmap.dict *
-                     (string, data_entry) Redblackmap.dict *
-                     (string, data_entry) Redblackmap.dict
+type data_store_ty = data_entry Symtab.table *
+                     data_entry Symtab.table *
+                     data_entry Symtab.table
 
 local
    fun update_data_substore (allow_new,error_fun) sds (key:string) upf =
    let
-      open Redblackmap
-      val (ent,ok) = (find (sds, key),true)
-          handle NotFound => (default_data_entry, allow_new);
-      val sds' = if ok then (insert(sds,key,upf ent)) else (error_fun key;sds)
+      val (ent,ok) =
+          case Symtab.lookup sds key of
+              SOME e => (e, true)
+            | NONE => (default_data_entry, allow_new)
+      val sds' = if ok then Symtab.update (key, upf ent) sds
+                 else (error_fun key; sds)
    in
       sds'
    end;

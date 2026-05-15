@@ -20,11 +20,13 @@ sig
    all_thms    : (string * thm * thminfo) list,
    mldeps      : string list,
    thydata     : string list * Term.term list *
-                 (string,shared_writemaps -> HOLsexp.t)Binarymap.dict
+                 (shared_writemaps -> HOLsexp.t) Symtab.table
  }
  type sig_info_record = {
    name        : string,
-   parents     : string list,
+   parents     : {name : string, url : string} list,
+   types       : (string * int) list,
+   constants   : (string * hol_type) list,
    all_thms    : (string * thm * thminfo) list
  }
 
@@ -34,7 +36,11 @@ sig
                parents     : string list,
                all_thms    : (string * thm * thminfo) list} PP.pprinter
 
- val pp_doc : thm PP.pprinter -> sig_info_record PP.pprinter
+ val print_doc_html :
+     {pp_thm : thm PP.pprinter, pp_type : hol_type PP.pprinter} ->
+     sig_info_record -> TextIO.outstream -> unit
+
+ val write_script_html : {script_path : string, out_path : string} -> unit
 
 
  val pp_struct : string -> struct_info_record PP.pprinter

@@ -45,8 +45,7 @@ struct
                    "bad format - not an appropriately shaped list of 6 elements"
 end
 
-val monadDB =
-    ref (Binarymap.mkDict String.compare : (string,MonadInfo.t) Binarymap.dict);
+val monadDB : MonadInfo.t Symtab.table ref = ref Symtab.empty;
 
 fun write_keyval (nm, mi) =
   let
@@ -70,7 +69,7 @@ fun load_from_disk {thyname, data} =
   in
     case data of
         SOME (List keyvals) =>
-          monadDB := List.foldl (fn ((k,v), acc) => Binarymap.insert(acc,k,v))
+          monadDB := List.foldl (fn ((k,v), acc) => Symtab.update (k,v) acc)
                                 (!monadDB)
                                 (map dest_keyval keyvals)
       | NONE => ()
@@ -125,10 +124,10 @@ val {export = export_minfo, ...} = ThyDataSexp.new{
       merge = ThyDataSexp.alist_merge
     }
 
-fun predeclare (nm, t) = monadDB := Binarymap.insert(!monadDB, nm, t)
+fun predeclare (nm, t) = monadDB := Symtab.update (nm, t) (!monadDB)
 fun declare_monad p = (predeclare p; export_minfo (write_keyval p))
 
-fun all_monads () = Binarymap.listItems (!monadDB)
+fun all_monads () = Symtab.dest (!monadDB)
 
 
 fun to_vstruct a = let
@@ -408,7 +407,7 @@ fun mk_unitbind mbind =
   end
 
 fun getMI fname s =
-  case Binarymap.peek(!monadDB, s) of
+  case Symtab.lookup (!monadDB) s of
       NONE => raise ERR fname ("No such monad defined: "^s)
     | SOME mi => mi
 
