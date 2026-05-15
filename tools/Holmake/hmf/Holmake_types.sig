@@ -50,7 +50,8 @@ val extend_ruledb : (string -> unit) -> env -> raw_rule_info ->
                     (ruledb * depdb * patrules) ->
                     (ruledb * depdb * patrules * string list)
 val get_rule_info : ruledb -> env -> string -> rule_info option
-val match_pattern_rules : env -> patrules -> string -> rule_info option
+val match_pattern_rules :
+    (string -> bool) -> env -> patrules -> string -> rule_info option
 
 (*
 
@@ -64,11 +65,16 @@ val match_pattern_rules : env -> patrules -> string -> rule_info option
    appended to the patrules list in source order.  The warn function
    is used to output warning messages about the rule_info.
 
-   [match_pattern_rules env prs tgt] walks prs in order, returning
-   the rule_info of the first pattern rule that has a target pattern
-   matching tgt.  Stem substitution is applied to the rule's deps;
-   the recipe's quotations are then expanded with $@, $<, $* (stem),
-   and $^ (space-joined deps) bound in env.  Returns NONE if no
-   pattern rule matches.  *)
+   [match_pattern_rules can_make env prs tgt] walks prs in order,
+   returning the rule_info of the first pattern rule that (a) has a
+   target pattern matching tgt and (b) whose every substituted
+   dependency satisfies can_make.  can_make is the caller's
+   "this prereq is either present on disk or has a rule" check;
+   without it pattern rules would happily claim targets whose
+   declared prereqs don't exist and can't be built (GNU make's
+   two-phase implicit-rule search).  Stem substitution is applied
+   to the rule's deps; the recipe's quotations are then expanded
+   with $@, $<, $* (stem), and $^ (space-joined deps) bound in env.
+   Returns NONE if no pattern rule matches.  *)
 
 end

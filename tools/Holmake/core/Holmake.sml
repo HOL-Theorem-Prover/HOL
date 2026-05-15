@@ -596,15 +596,25 @@ fun local_rule_info t =
    directory (pattern rules are read from the local Holmakefile).
    We match the bare filename against each rule's `%'-bearing target
    pattern; the matcher returns deps as plain strings, which we lift
-   to `dep' values rooted at the current directory. *)
+   to `dep' values rooted at the current directory.
+
+   `can_make' implements GNU make's two-phase implicit-rule search:
+   a pattern rule is only applicable when every substituted prereq
+   either exists on disk or has an exact rule that builds it.
+   Without this guard a pattern like `%.tex: %.stex' would claim
+   every .tex target in the directory, including hand-maintained
+   ones whose .stex source doesn't exist. *)
 fun pattern_rule_info t =
     if hmdir.compare(hm_target.dirpart t, hmdir.curdir()) <> EQUAL then NONE
     else
       let
-        val (env, _, prs, _) = get_hmf()
+        val (env, rules, prs, _) = get_hmf()
         val tgt_s = fromFile (hm_target.filepart t)
+        fun can_make dep_s =
+            exists_readable dep_s orelse
+            isSome (Binarymap.peek (rules, filestr_to_tgt dep_s))
       in
-        case match_pattern_rules env prs tgt_s of
+        case match_pattern_rules can_make env prs tgt_s of
             NONE => NONE
           | SOME {dependencies, commands} =>
             SOME {dependencies = map filestr_to_tgt dependencies,

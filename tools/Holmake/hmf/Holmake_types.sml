@@ -418,7 +418,7 @@ fun get_rule_info rdb env tgt =
               commands = map (perform_substitution env) commands}
       end
 
-fun match_pattern_rules env prs tgt =
+fun match_pattern_rules can_make env prs tgt =
     let
       fun first_stem [] = NONE
         | first_stem (pat :: rest) =
@@ -432,16 +432,21 @@ fun match_pattern_rules env prs tgt =
               | SOME stem =>
                 let
                   val concrete_deps = map (fn d => pcsubst (stem, d)) deps
-                  val dep1 = case concrete_deps of
-                                 [] => "" | d :: _ => d
-                  val env = env |> ins("<", [LIT dep1])
-                                |> ins("@", [LIT tgt])
-                                |> ins("*", [LIT stem])
-                                |> ins("^", [LIT (String.concatWith " "
-                                                                   concrete_deps)])
                 in
-                  SOME {dependencies = concrete_deps,
-                        commands = map (perform_substitution env) commands}
+                  if not (List.all can_make concrete_deps) then try rest
+                  else
+                    let
+                      val dep1 = case concrete_deps of
+                                     [] => "" | d :: _ => d
+                      val env = env |> ins("<", [LIT dep1])
+                                    |> ins("@", [LIT tgt])
+                                    |> ins("*", [LIT stem])
+                                    |> ins("^", [LIT (String.concatWith " "
+                                                                   concrete_deps)])
+                    in
+                      SOME {dependencies = concrete_deps,
+                            commands = map (perform_substitution env) commands}
+                    end
                 end
     in
       try prs

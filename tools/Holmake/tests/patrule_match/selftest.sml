@@ -7,7 +7,10 @@ open testutils Holmake_types
 
 val (env, _, prs, _) = ReadHMF.read "sample" (base_environment())
 
-fun match t = match_pattern_rules env prs t
+(* Match-pure selftest: prereq existence is irrelevant here, so feed
+   the matcher a trivially-satisfied predicate.  The dispatcher
+   integration test (patrule_e2e) exercises the realistic predicate. *)
+fun match t = match_pattern_rules (fn _ => true) env prs t
 
 fun ri_str NONE = "NONE"
   | ri_str (SOME {dependencies, commands}) =
