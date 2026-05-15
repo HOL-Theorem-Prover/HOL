@@ -45,7 +45,7 @@ The ML type of conversions is `conv`:
 type conv = term -> thm
 ```
 
-\index{BETA_CONV@`BETA_CONV`}
+\index{BETA_CONV@\ml{BETA\_CONV}}
 For example, `BETA_CONV` is an ML function of type `conv` (*i.e.*, a conversion) that expresses $\beta$-conversion in HOL.
 It produces the appropriate equational theorem on $\beta$-redexes and fails elsewhere.
 
@@ -152,7 +152,7 @@ The whole reduction can therefore be accomplished by repeated application of `BE
 To transform `BETA_CONV` to achieve this effect, two operators on conversions are introduced.
 The first one, infixed, is `THENC`, which sequences conversions.
 
-\index{THENC@`THENC`|pin}
+\index{THENC@\ml{THENC}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "THENC";
 ```
@@ -163,7 +163,7 @@ If the evaluation of $c_1\ t_1$ or the evaluation of $c_2\ t_2$ fails, then so d
 
 The second, also infixed, is `ORELSEC`; this applies a second conversion if the application of the first one fails.
 
-\index{ORELSEC@`ORELSEC`|pin}
+\index{ORELSEC@\ml{ORELSEC}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "ORELSEC";
 ```
@@ -175,7 +175,7 @@ The functions `THENC` and `ORELSEC` are used to define the desired operator, `RE
 \index{repetition!of conversions}
 \index{successive application!conversion operator for}
 
-\index{REPEATC@`REPEATC`|pin}
+\index{REPEATC@\ml{REPEATC}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "REPEATC";
 ```
@@ -222,7 +222,7 @@ This is so even though the whole term is reduced, and the subterm at top level c
 
 To produce, from a conversion $c$, a conversion that applies $c$ to every subterm of a term, the function `DEPTH_CONV` can be applied to $c$:
 
-\index{DEPTH_CONV@`DEPTH_CONV`|pin}
+\index{DEPTH_CONV@\ml{DEPTH\_CONV}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "DEPTH_CONV";
 ```
@@ -232,7 +232,7 @@ $$ t \quad\mapsto\quad \mathtt{|-}\,t\,\mathtt{=}\,t' $$
 where $t'$ is obtained from $t$ by replacing every subterm $u$ by $v$ if $u$ reduces to $v$ by $c$.
 (Subterms for which $c\ u$ fails are left unchanged.)
 The definition leaves open the search strategy; in fact, `DEPTH_CONV `$c$
-\index{DEPTH_CONV@`DEPTH_CONV`!search strategy of}
+\index{DEPTH_CONV@\ml{DEPTH\_CONV}!search strategy of}
 traverses a term "bottom up", once, and left-to-right, repeatedly applying $c$ to each subterm until no longer applicable.
 This helps with the two problems thus far:
 
@@ -253,7 +253,7 @@ For example:
 
 The function `TOP_DEPTH_CONV` does more searching and reduction than `DEPTH_CONV`: it replaces every subterm $u$ by $v'$ if $u$ reduces to $v$ by $c$ and $v$ *recursively* reduces to $v'$ by `TOP_DEPTH_CONV `$c$.
 
-\index{TOP_DEPTH_CONV@`TOP_DEPTH_CONV`|pin}
+\index{TOP_DEPTH_CONV@\ml{TOP\_DEPTH\_CONV}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "TOP_DEPTH_CONV";
 ```
@@ -265,7 +265,7 @@ Thus:
 
 Finally, the simpler function `ONCE_DEPTH_CONV` is provided:
 
-\index{ONCE_DEPTH_CONV@`ONCE_DEPTH_CONV`|pin}
+\index{ONCE_DEPTH_CONV@\ml{ONCE\_DEPTH\_CONV}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "ONCE_DEPTH_CONV";
 ```
@@ -281,8 +281,8 @@ Finally, the simpler function `ONCE_DEPTH_CONV` is provided:
 The equational theorems returned by conversions are not always useful in equational form.
 To make the results more useful for theorem proving, a conversion can be converted to a rule or a tactic, using the functions `CONV_RULE` or `CONV_TAC`, respectively.
 
-\index{CONV_RULE@`CONV_RULE`|pin}
-\index{CONV_TAC@`CONV_TAC`|pin}
+\index{CONV_RULE@\ml{CONV\_RULE}|pin}
+\index{CONV_TAC@\ml{CONV\_TAC}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "CONV_RULE";
 >>__ printNameAndType 4 "Tactical" "CONV_TAC";
@@ -298,7 +298,7 @@ To make the results more useful for theorem proving, a conversion can be convert
 (The validation of `CONV_TAC` also uses `EQ_MP`.)
 For example, the built-in rule `BETA_RULE` reduces some of the $\beta$-redex subterms of a term.
 
-\index{BETA_RULE@`BETA_RULE`|pin}
+\index{BETA_RULE@\ml{BETA\_RULE}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "BETA_RULE";
 ```
@@ -340,9 +340,9 @@ These are described below; several are good illustrations themselves of how func
 The section culminates with the explanation of how `DEPTH_CONV`, `TOP_DEPTH_CONV`, and `ONCE_DEPTH_CONV` are built.
 
 The conversion `NO_CONV` is an identity for `ORELSEC`, useful in building functions.
-\index{ORELSEC@`ORELSEC`}
+\index{ORELSEC@\ml{ORELSEC}}
 
-\index{NO_CONV@`NO_CONV`|pin}
+\index{NO_CONV@\ml{NO\_CONV}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "NO_CONV";
 ```
@@ -351,7 +351,7 @@ The conversion `NO_CONV` is an identity for `ORELSEC`, useful in building functi
 
 The function `FIRST_CONV` returns $c\ t$ for the first conversion $c$, in a list of conversions, for which the evaluation of $c\ t$ succeeds.
 
-\index{FIRST_CONV@`FIRST_CONV`|pin}
+\index{FIRST_CONV@\ml{FIRST\_CONV}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "FIRST_CONV";
 ```
@@ -369,9 +369,9 @@ It is defined by:
 ```
 
 The conversion `ALL_CONV` is an identity for `THENC`, useful in building functions.
-\index{THENC@`THENC`}
+\index{THENC@\ml{THENC}}
 
-\index{ALL_CONV@`ALL_CONV`|pin}
+\index{ALL_CONV@\ml{ALL\_CONV}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "ALL_CONV";
 ```
@@ -381,7 +381,7 @@ It is defined as being identical to `REFL`.
 
 The function `EVERY_CONV` applies a list of conversions in sequence.
 
-\index{EVERY_CONV@`EVERY_CONV`|pin}
+\index{EVERY_CONV@\ml{EVERY\_CONV}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "EVERY_CONV";
 ```
@@ -400,7 +400,7 @@ It is defined by:
 
 The operator `CHANGED_CONV` converts one conversion to another that fails on arguments that it cannot change.
 
-\index{CHANGED_CONV@`CHANGED_CONV`|pin}
+\index{CHANGED_CONV@\ml{CHANGED\_CONV}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "CHANGED_CONV";
 ```
@@ -409,7 +409,7 @@ If $c\ t$ evaluates to `|- `$t$`=`$t'$, then `CHANGED_CONV `$c\ t$ also evaluate
 
 The operator `TRY_CONV` maps one conversion to another that always succeeds, by replacing failures with the identity conversion.
 
-\index{TRY_CONV@`TRY_CONV`|pin}
+\index{TRY_CONV@\ml{TRY\_CONV}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "TRY_CONV";
 ```
@@ -426,8 +426,8 @@ It is used in the implementation of `TOP_DEPTH_CONV` (given later).
 There are a number of operators for applying conversions to the immediate subterms of a term.
 These use the ML functions:
 
-\index{MK_COMB@`MK_COMB`|pin}
-\index{MK_ABS@`MK_ABS`|pin}
+\index{MK_COMB@\ml{MK\_COMB}|pin}
+\index{MK_ABS@\ml{MK\_ABS}|pin}
 ```
 >>__ printNameAndType 4 "Thm" "MK_COMB";
 >>__ printNameAndType 4 "Drule" "MK_ABS";
@@ -439,7 +439,7 @@ $$ \frac{\Gamma\,\mathtt{|-\,!}x\mathtt{.}u\mathtt{=}v}{\Gamma\,\mathtt{|-\,(}\b
 
 The function `SUB_CONV` applies a conversion to the immediate subterms of a term.
 
-\index{SUB_CONV@`SUB_CONV`|pin}
+\index{SUB_CONV@\ml{SUB\_CONV}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "SUB_CONV";
 ```
@@ -468,9 +468,9 @@ In particular:
 
 Three other useful conversion operators, also for applying conversions to the immediate subterms of a term, are as follows:
 
-\index{RATOR_CONV@`RATOR_CONV`|pin}
-\index{RAND_CONV@`RAND_CONV`|pin}
-\index{ABS_CONV@`ABS_CONV`|pin}
+\index{RATOR_CONV@\ml{RATOR\_CONV}|pin}
+\index{RAND_CONV@\ml{RAND\_CONV}|pin}
+\index{ABS_CONV@\ml{ABS\_CONV}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "RATOR_CONV";
 >>__ printNameAndType 4 "Conv" "RAND_CONV";
@@ -506,8 +506,8 @@ The following is an example session illustrating these immediate subterm convers
 ```
 
 Finally, the definitions of `DEPTH_CONV` and `TOP_DEPTH_CONV` are given below.
-\index{DEPTH_CONV@`DEPTH_CONV`}
-\index{TOP_DEPTH_CONV@`TOP_DEPTH_CONV`}
+\index{DEPTH_CONV@\ml{DEPTH\_CONV}}
+\index{TOP_DEPTH_CONV@\ml{TOP\_DEPTH\_CONV}}
 ```
    fun DEPTH_CONV c t =
     (SUB_CONV (DEPTH_CONV c) THENC (REPEATC c)) t
@@ -536,7 +536,7 @@ Many conversions are predefined in HOL; only those likely to be of general inter
 
 The conversion:
 
-\index{PAIRED_BETA_CONV@`PAIRED_BETA_CONV`|pin}
+\index{PAIRED_BETA_CONV@\ml{PAIRED\_BETA\_CONV}|pin}
 ```
 >>__ load "pairLib";
 >>__ printNameAndType 4 "pairLib" "PAIRED_BETA_CONV";
@@ -566,7 +566,7 @@ For example:
 
 The conversion:
 
-\index{ADD_CONV@`ADD_CONV`|pin}
+\index{ADD_CONV@\ml{ADD\_CONV}|pin}
 ```
 >>__ load "reduceLib";
 >>__ printNameAndType 4 "reduceLib" "ADD_CONV";
@@ -588,7 +588,7 @@ For example:
 For more general arithmetic, the conversion `REDUCE_CONV` handles
 all of the operators in the theory of natural number arithmetic
 (see Section \ref{sec:arithmetic}):
-\index{REDUCE_CONV@`REDUCE_CONV`}
+\index{REDUCE_CONV@\ml{REDUCE\_CONV}}
 ```
 >> REDUCE_CONV ``2 * 3``;
 
@@ -599,8 +599,8 @@ all of the operators in the theory of natural number arithmetic
 
 There are two useful built-in conversions for lists:
 
-\index{LENGTH_CONV@`LENGTH_CONV`|pin}
-\index{list_EQ_CONV@`list_EQ_CONV`|pin}
+\index{LENGTH_CONV@\ml{LENGTH\_CONV}|pin}
+\index{list_EQ_CONV@\ml{list\_EQ\_CONV}|pin}
 ```
 >>__ load "listLib";
 >>__ printNameAndType 4 "listLib" "LENGTH_CONV";
@@ -639,7 +639,7 @@ Two conversions are provided for a higher-order version of Skolemization (using 
 
 The conversion
 
-\index{X_SKOLEM_CONV@`X_SKOLEM_CONV`|pin}
+\index{X_SKOLEM_CONV@\ml{X\_SKOLEM\_CONV}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "X_SKOLEM_CONV";
 ```
@@ -770,7 +770,7 @@ Certain new tools could also be built in a similar way.
 
 The rewriting primitive in HOL is `REWR_CONV`:
 
-\index{REWR_CONV@`REWR_CONV`|pin}
+\index{REWR_CONV@\ml{REWR\_CONV}|pin}
 ```
 >>__ printNameAndType 4 "Conv" "REWR_CONV";
 ```
@@ -785,8 +785,8 @@ Below is an illustration.
 >> REWR_CONV ADD1 ``SUC 0``;
 ```
 
-\index{rewriting!use of DEPTH_CONV in@use of `DEPTH_CONV` in}
-\index{DEPTH_CONV@`DEPTH_CONV`!use of, in rewriting tools}
+\index{rewriting!use of DEPTH_CONV in@use of \ml{DEPTH\_CONV} in}
+\index{DEPTH_CONV@\ml{DEPTH\_CONV}!use of, in rewriting tools}
 All subterms of $t$ can be rewritten according to an equation $th$ using
 $$ \mathtt{DEPTH\_CONV(REWR\_CONV}\;th\mathtt{)} $$
 as shown below.
@@ -805,7 +805,7 @@ to be used as rewrites.
 The theorems in the list need not be in simple equational form (*e.g.*, a conjunction of equations is permissible); but are converted to equational form automatically (and internally).
 (For example, a conjunction of equations is split into its constituent conjuncts.)
 There are also a number of standard equations (representing common tautologies) held in the ML variable `basic_rewrites`,
-\index{basic_rewrites@`basic_rewrites`}
+\index{basic_rewrites@\ml{basic\_rewrites}}
 and these are used by some of the rewriting tools.
 All the built-in rewriting tools are listed below, for reference, beginning with the rules.
 (All are fully described in §REFERENCE.)
@@ -858,7 +858,7 @@ The tactics corresponding to the above rules are the following:
 ```
 
 The prefix `ASM_` indicates that the tactic rewrites using the assumptions of the goal as rewrites.
-\index{ASM_REWRITE_TAC@`ASM_REWRITE_TAC`}
+\index{ASM_REWRITE_TAC@\ml{ASM\_REWRITE\_TAC}}
 ```
    ASM_REWRITE_TAC                   : thm list -> tactic
    PURE_ASM_REWRITE_TAC              : thm list -> tactic

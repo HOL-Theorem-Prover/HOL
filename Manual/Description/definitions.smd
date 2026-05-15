@@ -2398,3 +2398,5 @@ principles" here.  HOL's core coalgebra types (`llist`, `path` and
 \ref{bisimulation} for a sample usage of coinductive relations on
 bisimulation.
 \index{coinductive relations|)}
+
+>>__ Parse.temp_set_grammars definitions_initial_grammars;

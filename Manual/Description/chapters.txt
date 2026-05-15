@@ -1,14 +1,45 @@
-# Numbered-chapter ordering for the Description manual.  Each
-# line is a stem; the LaTeX bundle includes <stem>.tex (built
-# from <stem>.smd via polyscripter+pandoc, from <stem>.stex via
-# polyscripter, or hand-maintained as <stem>.tex) and the mdbook
-# side picks up only those chapters that have a corresponding
-# <stem>.smd source.
+# Numbered-chapter ordering for the Description manual.
 #
-# Front-matter chapters (title, preface, ack) and the
-# tableofcontents marker are still hand-coded in description.tex
-# because their ordering relative to \tableofcontents matters.
-# Lines starting with `#` and blank lines are ignored.
+# Each top-level (un-indented) line is a chapter stem; lines with
+# leading whitespace are nested sub-files of the most recent
+# top-level stem.  Front-matter chapters (title, preface, ack)
+# and the tableofcontents marker are still hand-coded in
+# description.tex because their ordering relative to
+# \tableofcontents matters.  Lines starting with `#` and blank
+# lines are ignored.
+#
+# .smd source conventions:
+#
+#   - Top-level chapter .smd files start with a single H1:
+#         # Chapter Title
+#     Pandoc (with --top-level-division=chapter) maps the H1 to
+#     \chapter{} in the PDF; mdbook uses it as the page title.
+#
+#   - Nested sub-file .smd files start with a single H2 instead,
+#     no H1:
+#         ## Section Title
+#     The same pandoc invocation maps the H2 to \section{} so the
+#     sub-file's generated .tex slots cleanly into the parent's
+#     \input{<stem>}; mdbook uses the H2 as the sidebar link text
+#     for the sub-file's page.  Deeper levels (###, ####, ...)
+#     map to \subsection{}, \subsubsection{}, etc., as usual.
+#
+# Build behaviour:
+#
+#   - The LaTeX bundle includes <stem>.tex (built from <stem>.smd
+#     via polyscripter+pandoc, from <stem>.stex via polyscripter,
+#     or hand-maintained as <stem>.tex) for top-level stems only;
+#     nested stems are pulled in by their parent .tex's
+#     \input{<stem>}.
+#
+#   - The mdbook side picks up only those chapters and sub-files
+#     that have a corresponding <stem>.smd source.  Nested
+#     entries appear in the SUMMARY.md sidebar at the position
+#     where the parent .smd writes `\input{<stem>}` (typically
+#     inside a {=latex} raw block), so the sidebar order matches
+#     the PDF.  A sub-file declared here but lacking a .smd is
+#     silently skipped from the sidebar; the PDF still gets its
+#     content via the existing .stex/.tex source.
 
 system
 drules
@@ -18,5 +49,12 @@ theories
 math
 definitions
 libraries
+  simplifier
+  PatternMatchesLib
+  HolSat
+  HolQbf
+  HolSmt
+  QuantHeuristics
+  enumfset
 modern-syntax
 misc

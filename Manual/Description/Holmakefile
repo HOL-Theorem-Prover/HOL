@@ -13,32 +13,53 @@ PS_STUFF =  $(PS_ROOT) ../Tools/umap
 PS_COMMAND = $(PS_STUFF) < $< > $@
 PS_NOUMAP = $(PS_ROOT) -md < $< > $@
 
+# pandoc invocation for the .md -> .tex stage.  The same command
+# serves both top-level chapter .smd files (which start with a
+# `# Chapter Title` H1 -> \chapter{}) and nested sub-file .smd
+# files (which start at `## Section Title` H2 -> \section{}, so
+# they slot into the parent chapter's \input{<stem>}).
+PANDOC_MD = pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
+
 .PHONY: all mdbook mdbook-serve
 
 all: description.pdf
+
+# All .smd files (chapters and sub-files alike); pick them up
+# automatically so adding a new .smd file doesn't require a
+# Holmakefile edit just to wire its H1/H2/H3 entries into
+# SUMMARY.md and its theory-build deps into mdbook's prereq
+# chain.
+SMDS = $(wildcard *.smd)
+SMD_MDS = $(patsubst %.smd,%.md,$(SMDS))
 
 # Build the mdbook output for the chapters listed in SUMMARY.md;
 # afterwards, scan the rendered HTML for raw-LaTeX leak patterns
 # that have caused mdbook regressions before (see
 # mdbook-check.sh).  The smdpp preprocessor is invoked dynamically
 # by mdbook (see book.toml).
-mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh
+#
+# `mdbook build` invokes smdpp which polyscripter-runs each .smd
+# in-memory; the per-chapter .md rules below carry the theory-build
+# dependencies smdpp's runtime `load "X"` calls need (e.g. math.md
+# depends on `examples/probability/large_numberTheory.uo`).
+# Depending on $(SMD_MDS) ensures Holmake builds those .uo files
+# before mdbook runs, the same way description.pdf gets them via
+# $(TEX_SOURCES).
+mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS)
 	mdbook build
 	../Tools/mdbook-check.sh ../book/Description
+	../Tools/smdpp check-refs ../book/Description
 
 # SUMMARY.md and chapters-include.tex are generated from
 # chapters.txt by Manual/Tools/gen_chap_lists.  chapters.txt
-# is the canonical chapter ordering for the manual; the
-# generator extracts mdbook chapter titles + section
-# sub-entries from each .smd's H1/H2 headings, and emits an
-# `\include{stem}` line for every stem (.smd or .stex or
-# hand-maintained .tex).  Both outputs are tracked in git so
-# that direct `mdbook build` / `latexmk` invocations work
-# without going through Holmake.
-# All .smd chapters; pick them up automatically so adding a new
-# .smd file doesn't require a Holmakefile edit just to wire its
-# H1/H2/H3 entries into SUMMARY.md.
-SMDS = $(wildcard *.smd)
+# is the canonical chapter ordering for the manual; top-level
+# (un-indented) entries are chapters and indented entries are
+# their nested sub-files (built with $(PANDOC_SEC) so their H1
+# becomes \section{} inside the parent's \input).  The generator
+# extracts mdbook chapter titles + sub-entries from each .smd's
+# H1/H2/H3 headings, weaves in nested sub-file links at the
+# position of each `\input{<stem>}` in the parent .smd, and
+# emits `\include{stem}` lines for every top-level stem only.
 
 SUMMARY.md: ../Tools/gen_chap_lists chapters.txt $(SMDS)
 	../Tools/gen_chap_lists summary > $@
@@ -73,26 +94,26 @@ definitions.md: definitions.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 definitions.tex: definitions.md pdf-macros.lua
-	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
+	$(PANDOC_MD)
 
 
 conv.md: conv.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 conv.tex: conv.md pdf-macros.lua
-	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
+	$(PANDOC_MD)
 
 drules.md: drules.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 drules.tex: drules.md pdf-macros.lua
-	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
+	$(PANDOC_MD)
 
 tactics.md: tactics.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 tactics.tex: tactics.md pdf-macros.lua
-	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
+	$(PANDOC_MD)
 
 theories.md: theories.smd $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo) \
 	$(dprot $(HOLDIR)/src/integer/integerTheory.uo) \
@@ -102,7 +123,7 @@ theories.md: theories.smd $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo) \
 	$(PS_NOUMAP)
 
 theories.tex: theories.md pdf-macros.lua
-	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
+	$(PANDOC_MD)
 
 math.md: math.smd $(PS_STUFF) $(dprot $(SIGOBJ)/probabilityTheory.uo) \
     $(dprot $(SIGOBJ)/lebesgue_measureTheory.uo) \
@@ -110,39 +131,81 @@ math.md: math.smd $(PS_STUFF) $(dprot $(SIGOBJ)/probabilityTheory.uo) \
 	$(PS_NOUMAP)
 
 math.tex: math.md pdf-macros.lua
-	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
+	$(PANDOC_MD)
 
-simplifier.tex: simplifier.stex $(PS_STUFF)
-	$(PS_COMMAND)
+simplifier.md: simplifier.smd $(PS_STUFF)
+	$(PS_NOUMAP)
 
-PatternMatchesLib.tex: PatternMatchesLib.stex $(PS_STUFF)
-	$(PS_COMMAND)
+simplifier.tex: simplifier.md pdf-macros.lua
+	$(PANDOC_MD)
 
-libraries.tex: libraries.stex $(PS_STUFF) $(dprot $(SIGOBJ)/integerTheory.uo)
-	$(PS_COMMAND)
+PatternMatchesLib.md: PatternMatchesLib.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+PatternMatchesLib.tex: PatternMatchesLib.md pdf-macros.lua
+	$(PANDOC_MD)
+
+libraries.md: libraries.smd $(PS_STUFF) $(dprot $(SIGOBJ)/integerTheory.uo)
+	$(PS_NOUMAP)
+
+libraries.tex: libraries.md pdf-macros.lua
+	$(PANDOC_MD)
 
 system.md: system.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 system.tex: system.md pdf-macros.lua
-	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
+	$(PANDOC_MD)
 
-HolSat.tex: HolSat.stex $(PS_STUFF) zchaff.cnf
-	$(PS_COMMAND)
+HolSat.md: HolSat.smd $(PS_STUFF) zchaff.cnf
+	$(PS_NOUMAP)
+
+HolSat.tex: HolSat.md pdf-macros.lua
+	$(PANDOC_MD)
+
+HolQbf.md: HolQbf.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+HolQbf.tex: HolQbf.md pdf-macros.lua
+	$(PANDOC_MD)
+
+HolSmt.md: HolSmt.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+HolSmt.tex: HolSmt.md pdf-macros.lua
+	$(PANDOC_MD)
+
+QuantHeuristics.md: QuantHeuristics.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+QuantHeuristics.tex: QuantHeuristics.md pdf-macros.lua
+	$(PANDOC_MD)
+
+enumfset.md: enumfset.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+enumfset.tex: enumfset.md pdf-macros.lua
+	$(PANDOC_MD)
 
 modern-syntax.md: modern-syntax.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 modern-syntax.tex: modern-syntax.md pdf-macros.lua
-	pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
+	$(PANDOC_MD)
 
 # This builds figs/0.mps, figs/1.mps, ...
 figures:
 	mpost -mem=metafun -tex=latex figure.mp
 
 EXTRA_CLEANS = drules.tex drules.md tactics.tex tactics.md \
-               theories.tex theories.md libraries.tex \
-               PatternMatchesLib.tex HolSat.tex \
+               theories.tex theories.md libraries.tex libraries.md \
+               simplifier.tex simplifier.md \
+               PatternMatchesLib.tex PatternMatchesLib.md \
+               HolSat.tex HolSat.md \
+               HolQbf.tex HolQbf.md \
+               HolSmt.tex HolSmt.md \
+               QuantHeuristics.tex QuantHeuristics.md \
+               enumfset.tex enumfset.md \
                definitions.tex definitions.md \
                system.tex system.md conv.tex conv.md math.tex math.md \
                description.pdf mdbook-serve.log \

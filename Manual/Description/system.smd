@@ -114,7 +114,7 @@ the representation of theories ([§Theories](#theories));
 the fundamental HOL theory `bool` ([§bool](#the-theory-bool));
 the primitive rules of inference
 ([§Rules](#primitive-rules-of-inference-of-the-hol-logic));
-and the methods for extending theories (throughout [§Theories](#theories) and also later in [§bossLib](#high-level-proof-bosslib)).
+and the methods for extending theories (throughout [§Theories](#theories) and also later in [§bossLib](#high-level-proof--bosslib)).
 It is assumed that the reader is familiar with ML.
 If not, the introduction to ML in *Getting Started with HOL* in the TUTORIAL Part should be read first.
 
@@ -1239,8 +1239,8 @@ The second, `unlisted`, makes the theorem more difficult to access.
 This is appropriate when the theorem is being saved for the consumption of particular tools (which fact might be indicated by the use of other attributes), but the theorem is otherwise uninteresting, and unlikely to be something that a user is going to want to stumble across when searching or surveying theories.
 Concretely: unlisted theorems do not appear in theory signature files (so: cannot be accessed with the `xTheory.thm_name` syntax); and unlisted theorems will not be returned as the results of searches made for theorems using the functions in the `DB` module.
 
-\index{Theorem (special syntactic form)@`Theorem` (special syntactic form)|(}
-\index{special syntactic forms for scripts!Theorem@`Theorem`}
+\index{Theorem (special syntactic form)@\ml{Theorem} (special syntactic form)|(}
+\index{special syntactic forms for scripts!Theorem@\ml{Theorem}}
 Instead of using the ML function `save_thm`, a special `Theorem` syntax is available for use in script files.
 One can write
 ```
@@ -1256,8 +1256,8 @@ Attributes can also be added; for example:
 ```
 
 If one wishes to prove a goal with a tactic (see the Tactics and Tacticals chapter), and store the resulting theorem, the combination of these actions can be achieved with the `store_thm` function:
-\index{store_thm@`store_thm`|pin}
-\index{store_thm@`store_thm`|seealso{`Theorem` (special syntactic form)}}
+\index{store_thm@\ml{store\_thm}|pin}
+\index{store_thm@\ml{store\_thm}|seealso{\ml{Theorem} (special syntactic form)}}
 ```
 >>__ printNameAndType 4 "Tactical" "store_thm";
 ```
@@ -1265,13 +1265,13 @@ A call to `store_thm(`*name*`,`$t$`,`*tac*`)` results in the application of *tac
 If the tactic is successful, the resulting theorem is saved under the name *name*, as before.
 Also as before, theorem attributes can be added to the name.
 
-\index{special syntactic forms for scripts!Theorem@`Theorem`}
+\index{special syntactic forms for scripts!Theorem@\ml{Theorem}}
 Finally, again for use in script files only, there is a `Theorem` syntax to replace `store_thm`, reducing the need to write the same name twice, and giving a cleaner appearance.
 One can write
-\index{Proof keyword@`Proof` keyword}
-\index{QED keyword@`QED` keyword}
-\index{special syntactic forms for scripts!Proof@`Proof`}
-\index{special syntactic forms for scripts!QED@`QED`}
+\index{Proof keyword@\ml{Proof} keyword}
+\index{QED keyword@\ml{QED} keyword}
+\index{special syntactic forms for scripts!Proof@\ml{Proof}}
+\index{special syntactic forms for scripts!QED@\ml{QED}}
 ```
    Theorem name[attr1,attr2,...]:
      ...goal statement...
@@ -1291,7 +1291,7 @@ For example:
 (The tactic above is shown to illustrate the `Proof`/`QED` shape of the form rather than the proof itself; closing this goal will need a little more than `rpt strip_tac`.)
 Note further that the `Proof` and `QED` keywords must occur in the leftmost column of the script file so that the parser can know when the term and tactic arguments terminate.
 
-\index{special syntactic forms for scripts!Triviality@`Triviality`}
+\index{special syntactic forms for scripts!Triviality@\ml{Triviality}}
 Instead of writing `Theorem foo[local,...]`, one can write `Triviality foo[...]`.
 **NB:** This form has been deprecated and will be removed in a future release.
 
@@ -1301,13 +1301,13 @@ But recall: if writing library code to prove and store theorems, the underlying 
 \index{theorems, in HOL logic@theorems, in HOL logic!saving of|)}
 \index{saving theorems|)}
 \index{theorem attributes|)}
-\index{Theorem (special syntactic form)@`Theorem` (special syntactic form)|)}
+\index{Theorem (special syntactic form)@\ml{Theorem} (special syntactic form)|)}
 
 #### Exporting a Theory
 
 Once a theory segment has been constructed, it can be written out to a file, which, after compilation, can be imported into future sessions.
 
-\index{export_theory@`export_theory`|pin}
+\index{export_theory@\ml{export\_theory}|pin}
 ```
 >>__ printNameAndType 4 "Theory" "export_theory";
 ```
@@ -1331,9 +1331,9 @@ Theories that are in the ancestry of the current theory cannot be extended in th
 
 There are various functions for loading the contents of theory files:
 
-\index{parents@`parents`|pin}
-\index{types@`types`|pin}
-\index{constants@`constants`|pin}
+\index{parents@\ml{parents}|pin}
+\index{types@\ml{types}|pin}
+\index{constants@\ml{constants}|pin}
 ```
 >>__ printNameAndType 4 "Theory" "parents";
 >>__ printNameAndType 4 "Theory" "types";
@@ -1342,15 +1342,15 @@ There are various functions for loading the contents of theory files:
 
 The first argument is the name of a theory (which must be in the ancestry of the current theory segment); the result is a list of the components of the theory.
 The name of the current theory can be abbreviated by `"-"`.
-\index{ abbreviation, of HOL theory part names@`-` (abbreviation, of HOL theory part names)}
+\index{ abbreviation, of HOL theory part names@\ml{-} (abbreviation, of HOL theory part names)}
 For example, `parents "-"` returns the parents of the current theory.
 
 In the case of `types` a list of name-arity pairs is returned.
 Individual axioms, definitions and theorems can be read from the current theory using the following ML functions:
 
-\index{axiom (ML function)@`axiom` (ML function)|pin}
-\index{definition (ML function)@`definition` (ML function)|pin}
-\index{theorem (ML function)@`theorem` (ML function)|pin}
+\index{axiom (ML function)@\ml{axiom} (ML function)|pin}
+\index{definition (ML function)@\ml{definition} (ML function)|pin}
+\index{theorem (ML function)@\ml{theorem} (ML function)|pin}
 ```
 >>__ printNameAndType 4 "DB" "axiom";
 >>__ printNameAndType 4 "DB" "definition";
@@ -1360,9 +1360,9 @@ Individual axioms, definitions and theorems can be read from the current theory 
 The first argument is the user supplied name of the axiom, definition or theorem in the current theory.
 Further, a list of all of a theory's axioms, definitions and theorems can be retrieved with the ML functions:
 
-\index{axioms (ML function)@`axioms` (ML function)|pin}
-\index{theorems (ML function)@`theorems` (ML function)|pin}
-\index{definitions (ML function)@`definitions` (ML function)|pin}
+\index{axioms (ML function)@\ml{axioms} (ML function)|pin}
+\index{theorems (ML function)@\ml{theorems} (ML function)|pin}
+\index{definitions (ML function)@\ml{definitions} (ML function)|pin}
 ```
 >>__ printNameAndType 4 "DB" "axioms";
 >>__ printNameAndType 4 "DB" "definitions";
@@ -1371,7 +1371,7 @@ Further, a list of all of a theory's axioms, definitions and theorems can be ret
 
 The contents of the current theory can be printed in a readable format using the function `print_theory`.
 \index{printing, in HOL logic@printing, in HOL logic!of theories}
-\index{print_theory@`print_theory`}
+\index{print_theory@\ml{print\_theory}}
 \index{axioms!retrieval of, in HOL system@retrieval of, in HOL system|)}
 \index{theories, in HOL logic@theories, in HOL logic!functions for accessing|)}
 
@@ -1404,7 +1404,7 @@ which is a definition in the sense of §LOGIC if (i), (ii) and (iii) hold.
 \index{defining mechanisms, for HOL logic@defining mechanisms, for HOL logic}
 The following ML function creates a new definition in the current theory.
 
-\index{new_definition@`new_definition`|pin}
+\index{new_definition@\ml{new\_definition}|pin}
 ```
 >>__ printNameAndType 4 "boolSyntax" "new_definition";
 ```
@@ -1435,7 +1435,7 @@ such that:
 
 The following ML function is used to make constant specifications in the HOL system.
 
-\index{new_specification@`new_specification`|pin}
+\index{new_specification@\ml{new\_specification}|pin}
 ```
 >>__ printNameAndType 4 "boolSyntax" "new_specification";
 ```
@@ -1478,7 +1478,7 @@ where:
 
 The following ML function makes a type definition in the HOL system.
 
-\index{new_type_definition@`new_type_definition`|pin}
+\index{new_type_definition@\ml{new\_type\_definition}|pin}
 ```
 >>__ printNameAndType 4 "boolSyntax" "new_type_definition";
 ```
@@ -1494,9 +1494,9 @@ results in *op* being declared as a new $n$-ary type operator characterized by t
    |- ?rep. TYPE_DEFINITION t rep
 ```
 which is stored as a definition with the automatically generated name *op*`_TY_DEF`.
-\index{TY_DEF@$\ldots$`_TY_DEF`}
+\index{TY_DEF@$\ldots$\ml{\_TY\_DEF}}
 The constant `TYPE_DEFINITION`
-\index{TYPE_DEFINITION@`TYPE_DEFINITION`}
+\index{TYPE_DEFINITION@\ml{TYPE\_DEFINITION}}
 is defined in the theory `bool` by:
 ```
    |- TYPE_DEFINITION (P:'a->bool) (rep:'b->'a) =
@@ -1521,7 +1521,7 @@ The result of a type definition using `new_type_definition` is a theorem which a
 from the type it defines to the corresponding subset of an existing type.
 To introduce constants that in fact denote such a bijection and its inverse, the following ML function is provided:
 
-\index{define_new_type_bijections@`define_new_type_bijections`|pin}
+\index{define_new_type_bijections@\ml{define\_new\_type\_bijections}|pin}
 ```
 >>__ printNameAndType 4 "Drule" "define_new_type_bijections";
 ```
@@ -1557,10 +1557,10 @@ A call to `define_new_type_bijections` *name* *abs* *rep* *th* fails if:
 \index{type definitions, in HOL logic@type definitions, in HOL logic!properties of bijections for|(}
 The following ML functions are provided for proving that the bijections introduced by `define_new_type_bijections` are injective (one-to-one) and surjective (onto):
 
-\index{prove_rep_fn_one_one@`prove_rep_fn_one_one`|pin}
-\index{prove_rep_fn_onto@`prove_rep_fn_onto`|pin}
-\index{prove_abs_fn_one_one@`prove_abs_fn_one_one`|pin}
-\index{prove_abs_fn_onto@`prove_abs_fn_onto`|pin}
+\index{prove_rep_fn_one_one@\ml{prove\_rep\_fn\_one\_one}|pin}
+\index{prove_rep_fn_onto@\ml{prove\_rep\_fn\_onto}|pin}
+\index{prove_abs_fn_one_one@\ml{prove\_abs\_fn\_one\_one}|pin}
+\index{prove_abs_fn_onto@\ml{prove\_abs\_fn\_onto}|pin}
 ```
 >>__ printNameAndType 4 "Drule" "prove_rep_fn_one_one";
 >>__ printNameAndType 4 "Drule" "prove_rep_fn_onto";

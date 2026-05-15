@@ -1,5 +1,9 @@
 drules.tex
 HolSat.tex
+HolQbf.tex
+HolSmt.tex
+QuantHeuristics.tex
+enumfset.tex
 libraries.tex
 tactics.tex
 theories.tex
@@ -14,6 +18,16 @@ drules.md
 conv.md
 tactics.md
 theories.md
+math.md
+definitions.md
+libraries.md
+simplifier.md
+PatternMatchesLib.md
+HolSat.md
+HolQbf.md
+HolSmt.md
+QuantHeuristics.md
+enumfset.md
 modern-syntax.tex
 modern-syntax.md
 chapters-include.tex
