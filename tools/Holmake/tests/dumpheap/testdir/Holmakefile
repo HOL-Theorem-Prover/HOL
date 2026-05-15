@@ -2,4 +2,4 @@ ifdef POLY
 CLINE_OPTIONS = --holstate=../../../../../bin/hol.state0
 endif
 
-EXTRA_CLEANS = output usedCheat.anon_1.dumpedheap
+EXTRA_CLEANS = failing.bad_thm.dumpedheap noqof_output

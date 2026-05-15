@@ -3,6 +3,7 @@
 *Theory.sml
 *Theory.html
 *Theory.dat
+*.dumpedheap
 !Theory.sig
 !Theory.sml
 *.uo

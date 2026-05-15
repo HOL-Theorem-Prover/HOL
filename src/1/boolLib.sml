@@ -166,6 +166,31 @@ fun get_suspended_names th =
 val suspended_theorem_recorder : (string * thm -> unit) ref =
     ref (fn _ => ())
 
+(* Hook used by the dump-on-failure path below: proofManagerLib loads
+   later in the build than boolLib, so it cannot be referenced
+   statically; instead proofManagerLib installs the real implementation
+   (essentially proofManagerLib.set_goal) into this ref at load time.
+   The hook seeds the proof manager's state so that the dumped heap,
+   when reloaded via "bin/hol --holstate=<file>", presents the failing
+   goal ready for interactive exploration. *)
+val dump_setup_hook : (goal -> unit) ref = ref (fn _ => ())
+
+(* Name of the theorem currently being proved.  store_thm_at sets this
+   immediately before invoking Tactical.prove so that holmakebuild's
+   basic_prover (which only receives a goal, not a name) can construct
+   a sensible dump-file name on the --noqof failure path.  Cleared again
+   after the prove call so that user code invoking Tactical.prove
+   directly doesn't inherit a stale name. *)
+val current_thm_name : string ref = ref ""
+
+(* Counter used by dump_failure_state when no theorem name is in
+   scope (e.g. raw Tactical.prove invocations outside store_thm_at):
+   yields "anon_<N>.dumpedheap" rather than "<thy>..dumpedheap". *)
+local val n = ref 0 in
+  fun next_anon_thm_name () =
+      (n := !n + 1; "anon_" ^ Int.toString (!n))
+end
+
 (* printable_keys: collapse duplicate label names with a count annotation.
    Used when reporting which suspended subgoals remain in a theorem. *)
 fun printable_keys nms =
@@ -259,6 +284,19 @@ end (* local *)
    needs to see the suspension dictionaries).  The parser-level Finalise
    expansion calls markerLib.finalise_suspended_thm directly. *)
 
+(* Seed the proof manager with the failing goal, then write a Poly/ML
+   heap (a no-op under Moscow ML) to <theory>.<name>.dumpedheap in the
+   current directory.  Returns the file name so the caller can quote
+   it in messages. *)
+fun dump_failure_state (name, g) =
+  let val nm = if name = "" then next_anon_thm_name () else name
+      val file = Theory.current_theory() ^ "." ^ nm ^ ".dumpedheap"
+  in
+    (!dump_setup_hook) g;
+    Portable.save_heap file;
+    file
+  end
+
 local
   open Feedback
   fun tac_failure s1 s2 =
@@ -267,12 +305,24 @@ in
 fun store_thm_at loc (n0,t,tac) =
   let val attrblock = ThmAttribute.extract_attributes n0
       val name = #thmname attrblock
+      val _ = current_thm_name := name
       val th = Tactical.prove(t,tac)
                handle HOL_ERR herr =>
-               let val err_mesg = tac_failure name (message_of herr)
-                   val err = HOL_ERR (set_message err_mesg herr)
-               in render_exn
-                    (wrap_exn "boolLib" "store_thm_at" err) end
+               if !Globals.dumpheap_on_failure then
+                 let val file = dump_failure_state (name, ([], t))
+                 in
+                   TextIO.output (TextIO.stdErr,
+                     "Tactic failure proving " ^ Lib.quote name ^
+                     "; heap saved to " ^ file ^
+                     ".\nResume with: bin/hol --holstate=" ^ file ^ "\n");
+                   OS.Process.exit OS.Process.failure
+                 end
+               else
+                 let val err_mesg = tac_failure name (message_of herr)
+                     val err = HOL_ERR (set_message err_mesg herr)
+                 in render_exn
+                      (wrap_exn "boolLib" "store_thm_at" err) end
+      val _ = current_thm_name := ""
   in
     save_thm_attrs loc (attrblock,th)
     handle e => render_exn

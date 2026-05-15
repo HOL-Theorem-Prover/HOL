@@ -34,6 +34,7 @@ sig
 
   val interactive             : bool ref
   val print_thy_loads         : bool ref
+  val dumpheap_on_failure     : bool ref
 
   val hol_clock               : Timer.cpu_timer
   val emitMLDir               : string ref
