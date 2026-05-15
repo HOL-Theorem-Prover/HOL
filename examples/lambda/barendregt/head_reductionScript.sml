@@ -2635,6 +2635,18 @@ Proof
  >> simp []
 QED
 
+Theorem permutator_LAMl_size[simp] :
+    LAMl_size (permutator n) = SUC n
+Proof
+    simp [LAMl_size_hnf, permutator_def]
+QED
+
+Theorem hnf_permutator[simp] :
+    hnf (permutator n)
+Proof
+    simp [permutator_def, hnf_appstar]
+QED
+
 (* This theorem is more general than selector_thm *)
 Theorem hreduce_selector :
     !i n Ns. i < n /\ LENGTH Ns = n ==> selector i n @* Ns -h->* EL i Ns

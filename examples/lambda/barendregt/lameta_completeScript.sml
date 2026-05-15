@@ -190,13 +190,12 @@ QED
           solvable (subterm' X (apply pi M) q r))
  *)
 Theorem subtree_equiv_lemma_explicit :
-    !X Ms p r.
-       FINITE X /\ p <> [] /\ 0 < r /\ Ms <> [] /\
-       BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r /\
-       EVERY (\M. subterm X M p r <> NONE) Ms ==>
-       let pi = Boehm_construction X Ms p in
-           Boehm_transform pi /\
-           EVERY is_ready' (apply pi Ms) /\
+    !X Ms p r pi.
+           FINITE X /\ p <> [] /\ 0 < r /\ Ms <> [] /\
+           BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r /\
+           pi = Boehm_construction X Ms p ∧
+           EVERY (\M. subterm X M p r <> NONE) Ms
+       ==> EVERY is_ready' (apply pi Ms) /\
            EVERY (\M. p IN ltree_paths (BT' X M r)) (apply pi Ms) /\
           (!q M. MEM M Ms /\ q <<= p ==>
                 (solvable (subterm' X M q r) <=>
@@ -205,15 +204,15 @@ Theorem subtree_equiv_lemma_explicit :
                   (subtree_equiv X M N q r <=>
                    subtree_equiv X (apply pi M) (apply pi N) q r)
 Proof
-    rpt GEN_TAC >> simp [LET_DEF]
- >> STRIP_TAC
+    rpt GEN_TAC >> STRIP_TAC
  >> qabbrev_tac ‘Y = BIGUNION (IMAGE FV (set Ms))’
  >> ‘FINITE Y’ by (rw [Abbr ‘Y’] >> rw [])
+ >> Q.PAT_X_ASSUM ‘pi = _’ (REWRITE_TAC o wrap)
  >> qabbrev_tac ‘pi' = Boehm_construction X Ms p’
- >> CONJ_ASM1_TAC >- rw [Abbr ‘pi'’, Boehm_construction_transform]
- >> Q.PAT_X_ASSUM ‘EVERY _ Ms’ (STRIP_ASSUME_TAC o (REWRITE_RULE [EVERY_EL]))
+ >> ‘Boehm_transform pi'’ by PROVE_TAC [Boehm_construction_transform]
+ >> Q.PAT_X_ASSUM ‘EVERY _ Ms’ (STRIP_ASSUME_TAC o (SRULE [EVERY_EL]))
  >> qabbrev_tac ‘k = LENGTH Ms’
- >> qabbrev_tac ‘M = \i. EL i Ms’ >> fs []
+ >> qabbrev_tac ‘M = \i. EL i Ms’
  >> Know ‘!i. i < k ==> FV (M i) SUBSET X UNION RANK r’
  >- (rpt STRIP_TAC \\
      Q.PAT_X_ASSUM ‘Y SUBSET X UNION RANK r’ MP_TAC \\
@@ -239,8 +238,7 @@ Proof
  >> qabbrev_tac ‘M0 = \i. principal_hnf (M i)’
  >> Know ‘!i. i < k ==> hnf (M0 i)’
  >- (rw [Abbr ‘M0’] \\
-     MATCH_MP_TAC hnf_principal_hnf \\
-     rw [GSYM solvable_iff_has_hnf] >> fs [EVERY_EL])
+     MATCH_MP_TAC hnf_principal_hnf' >> simp [])
  >> DISCH_TAC
  >> qabbrev_tac ‘n = \i. LAMl_size (M0 i)’
  (* NOTE: This n_max was redefined from previous ‘MAX_SET (IMAGE n (count k))’ *)
@@ -1281,7 +1279,7 @@ Proof
  >> DISCH_TAC
  >> Know ‘!i. i < k ==> d_max <= LENGTH (hnf_children (H i))’
  >- (rw [Abbr ‘H’, GSYM appstar_APPEND] \\
-     simp [Abbr ‘Ns’] \\
+     simp [Abbr ‘Ns’] (* NOTE: the two simp [] cannot merge *) \\
      simp [Abbr ‘d_max'’])
  >> DISCH_TAC
  (* stage work, now connect ‘subterm X (M i) q’ with ‘subterm X (H i) q’ *)
@@ -5103,9 +5101,6 @@ QED
  *  subtree_equiv_lemma
  *---------------------------------------------------------------------------*)
 
-Theorem subtree_equiv_lemma_explicit'[local] =
-        subtree_equiv_lemma_explicit |> SIMP_RULE std_ss [LET_DEF]
-
 Theorem subtree_equiv_lemma :
     !X Ms p r.
        FINITE X /\ p <> [] /\ 0 < r /\ Ms <> [] /\
@@ -5136,9 +5131,10 @@ Proof
  >> Suff ‘EVERY (\M. FV M SUBSET X UNION RANK r)
                 (MAP (apply (Boehm_construction X Ms p)) Ms)’
  >- (Rewr \\
-     MATCH_MP_TAC subtree_equiv_lemma_explicit' >> art [])
- >> simp [EVERY_MEM, MEM_MAP]
- >> rw []
+     CONJ_TAC >- PROVE_TAC [Boehm_construction_transform] \\
+     qabbrev_tac ‘pi = Boehm_construction X Ms p’ \\
+     MATCH_MP_TAC subtree_equiv_lemma_explicit >> simp [])
+ >> simp [EVERY_MEM, MEM_MAP] >> rw []
  >> irule FV_apply_Boehm_construction >> art []
 QED
 
