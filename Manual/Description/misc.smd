@@ -424,6 +424,12 @@ hidden dependency information.
 Finally, users can directly affect the workings of `Holmake` with
 the following command-line options/flags:
 
+**`-C <directory>` or `--directory=<directory>`** Change to the
+given directory before doing anything else, mimicking `make`'s
+flag of the same name.  When `-C` is given more than once, each
+subsequent invocation is interpreted relative to the previous, so
+`-C foo -C bar` is equivalent to `-C foo/bar`.
+
 **`--cachekey <theory>`** Computes and prints a deterministic
 SHA1 hash (cache key) for the given theory target, then exits.
 The hash is based on the contents of the theory's dependencies:
