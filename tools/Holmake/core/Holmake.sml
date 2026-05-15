@@ -44,7 +44,6 @@ fun main() = let
 val execname = Path.file (CommandLine.name())
 fun warn s = stdErr_out (execname^": "^s^"\n")
 fun die s = (warn s; Process.exit Process.failure)
-val original_dir = hmdir.curdir()
 
 fun is_src_dir hmd =
     let val s = nice_dir (hmdir.pretty_dir hmd)
@@ -52,7 +51,6 @@ fun is_src_dir hmd =
       String.isPrefix "$(HOLDIR)/src/" s
     end
 fun in_src () = is_src_dir (hmdir.curdir())
-val originally_in_src = is_src_dir original_dir
 
 (* Global parameters, which get set at configuration time *)
 val HOLDIR0 = Systeml.HOLDIR;
@@ -103,6 +101,12 @@ val master_cleanp = List.exists (fn s => member s targets)
 
 val master_cline_nohmf =
     HM_Cline.default_options |> apply_updates master_cline_options
+
+(* Captured after apply_updates so that any -C/--directory options
+   have already taken effect and original_dir is the directory
+   Holmake will treat as its starting point. *)
+val original_dir = hmdir.curdir()
+val originally_in_src = is_src_dir original_dir
 
 fun read_holpathdb() =
     let

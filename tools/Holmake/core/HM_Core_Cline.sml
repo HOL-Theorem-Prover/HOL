@@ -176,6 +176,24 @@ fun set_hmakefile s =
                  else ();
                  updateT t (U #hmakefile (SOME s)) $$),
     hmakefile = SOME s, no_hmf = false }
+(* -C/--directory's update has a side effect (chdir) but apply_updates
+   runs twice (once before reading the Holmakefile, once after to
+   layer cmdline overrides on top of CLINE_OPTIONS). Each option
+   occurrence caches its absolute target on first run and reuses it
+   on subsequent runs, keeping the update idempotent. *)
+fun set_cwd s = let
+  val resolved = ref (NONE : string option)
+in
+  resfn (fn (wn, t) =>
+            ((case !resolved of
+                  SOME abs => OS.FileSys.chDir abs
+                | NONE =>
+                    (OS.FileSys.chDir s;
+                     resolved := SOME (OS.FileSys.getDir())))
+             handle OS.SysErr (msg, _) =>
+               Holmake_tools.die_with ("-C " ^ s ^ ": " ^ msg);
+             t))
+end
 fun set_holdir s =
   resfn (fn (wn, t) =>
             (if isSome (#holdir t) then
@@ -243,6 +261,9 @@ val core_option_descriptions = [
                updateT t (U #cache_dir NONE) $$)) },
   { help = "print cache key for a theory target", long = ["cachekey"],
     short = "", desc = ReqArg (set_cachekey, "theory") },
+  { help = "change to DIR before doing anything",
+    long = ["directory"], short = "C",
+    desc = ReqArg (set_cwd, "DIR") },
   { help = "turn on diagnostic messages", long = ["dbg"], short = "d",
     desc = OptArg (addDbg, "diag-cat")},
   { help = "fast build (replace tactics w/cheat)", long = ["fast"], short = "",
