@@ -193,6 +193,12 @@ modern-syntax.md: modern-syntax.smd $(PS_STUFF)
 modern-syntax.tex: modern-syntax.md pdf-macros.lua
 	$(PANDOC_MD)
 
+misc.md: misc.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+misc.tex: misc.md pdf-macros.lua
+	$(PANDOC_MD)
+
 # This builds figs/0.mps, figs/1.mps, ...
 figures:
 	mpost -mem=metafun -tex=latex figure.mp
@@ -214,5 +220,6 @@ EXTRA_CLEANS = drules.tex drules.md tactics.tex tactics.md \
                description.toc description.fls description.idx description.ilg \
                description.ind description.blg description.bbl \
 	       description.fdb_latexmk modern-syntax.md modern-syntax.tex \
+	       misc.md misc.tex \
 	       chapters-include.tex SUMMARY.md \
 	       ../book/Description/

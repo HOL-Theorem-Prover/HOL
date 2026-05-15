@@ -1,0 +1,1316 @@
+# Miscellaneous Features
+
+This section describes some of the features that exist for managing
+the interface
+\index{HOL system@\HOL{} system!adjustment of user interface of}
+to the HOL system.
+
+  - The help system.
+  - The trace system for controlling feedback and printing.
+  - `Holmake`: a tool for dependency maintenance in large
+    developments.
+  - Functions for counting the number of primitive inferences done
+    in an evaluation, and timing it.
+  - A tool for embedding pretty-printed HOL theorems, terms and
+    types in LaTeX documents.
+
+## Help
+
+There are several kinds of help available in HOL, all accessible
+through the same incantation:
+
+```
+    help <string>;
+```
+
+The kinds of help available are:
+
+**Moscow ML help.** \index{Moscow ML} (When using Moscow ML HOL)
+This is uniformly excellent.  Information for library routines is
+available, whether the library is loaded or not *via*
+`help "Lib"`.
+
+**HOL overview.** This is a short summary of important information
+about HOL.
+
+**HOL help.** This on-line help is intended to document all
+HOL-specific functions available to the user.  It is very detailed
+and often accurate; however, it can be out-of-date, refer to
+earlier versions of the system, or even be missing!
+
+**HOL structure information.** For most structures in the HOL
+source, one can get a listing of the entrypoints found in the
+accompanying signature.  This is helpful for locating functions
+and is automatically derived from the system sources, so it is
+always up-to-date.
+
+**Theory facts.** These are automatically derived from theory
+files, so they are always up-to-date.  The signature of each theory
+is available (since theories are represented by structures in
+HOL).  Also, each axiom, definition, and theorem in the theory can
+be accessed by name in the help system.  As such theorems are
+pretty-printed into the corresponding `Theory.sig` file, the help
+system will find both the declaration in the signature (e.g.,
+`val nm :thm`), and the entry for that theorem in the
+comment-block.
+
+Therefore the following example queries can be made:
+
+| Query                  | Result                                            |
+|------------------------|---------------------------------------------------|
+| `help "installPP"`     | Moscow ML help                                    |
+| `help "hol"`           | HOL overview                                      |
+| `help "aconv"`         | on-line HOL help                                  |
+| `help "Tactic"`        | HOL source structure information                  |
+| `help "boolTheory"`    | theory structure signature                        |
+| `help "list_Axiom"`    | theory structure signature and theorem statement  |
+
+## The Trace System
+
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback}
+\label{sec:traces}
+
+The trace system gives the user one central interface with which
+to control most of HOL's many different flags, though they are
+scattered all over the system, and defined in different modules.
+These flags are typically those that determine the level to which
+HOL tools provide information to the user while operating.  For
+example, a trace level of zero will usually make a tool remain
+completely silent while it operates.  The tool may still raise an
+exception when it fails, but it won't also output any messages
+saying so.
+
+There are three core functions, all in the `Feedback` structure:
+
+```
+   traces : unit ->
+            {default: int, max: int, name: string, trace_level: int} list
+
+   set_trace : string -> int -> unit
+   trace     : (string * int) -> ('a -> 'b) -> ('a -> 'b)
+```
+
+The `traces` function returns a list of all the traces in the
+system.  The `set_trace` function allows the user to set a trace
+directly.  The effect of this might be seen in a subsequent call
+to `traces()`.  Finally, the `trace` function allows for a trace
+to be temporarily set while a function executes, restoring the
+trace to its old value when the function returns (whether
+normally, or with an exception).
+
+## Maintaining HOL Formalizations with `Holmake`
+
+\label{Holmake}
+\index{Holmake@\holmake|(}
+
+The purpose of `Holmake` is to maintain dependencies in a HOL
+project (a collection of HOL files, possibly distributed over
+multiple directories).  A single invocation of `Holmake` will
+compute dependencies between files, (re)compile plain ML code,
+(re)compile and execute theory scripts, and (re)compile the
+resulting theory modules.  `Holmake` does not require the user to
+provide any explicit dependency information themselves.  `Holmake`
+can be very convenient to use, but there are some conventions and
+restrictions on it that must be followed, described below.
+
+`Holmake` can be accessed through
+
+```
+   <hol-dir>/bin/Holmake.
+```
+
+The development model that `Holmake` is designed to support is
+that there are two modes of work: theory construction and system
+revision.  In 'theory construction' mode, the user builds up a
+theory by interacting with HOL, perhaps over many sessions.  In
+'system rebuild' mode, a component that others depend on has been
+altered, so all modules dependent on it have to be brought up to
+date.  System rebuild mode is simpler so we deal with it first.
+
+### System rebuild
+
+A system rebuild happens when an existing theory has been improved
+in some way (augmented with a new theorem, a change to a
+definition, etc.), or perhaps some support ML code has been
+modified or added to the formalization under development.  The
+user needs to find and recompile just those modules affected by
+the change.  This is what an invocation of `Holmake` does, by
+identifying the out-of-date modules and re-compiling and
+re-executing them.
+
+### Theory construction
+
+A theory *my*`Theory` is constructed by writing the file
+*my*`Script.sml`.  In this file, the context (semantic, and also
+proof support) is established, by specifying parent theories and
+useful libraries.  In the course of building the theory, the user
+is writing what one might call the "HOL script language": this is
+a mixture of SML (used mostly to write tactics) and HOL material
+(inside definitions and theorem statements).  This script file is
+used to achieve inter-session persistence of the theory being
+constructed.
+
+Once the user finishes the perhaps long and arduous task of
+constructing a theory, the user should
+
+  1. check the script is separately compilable;
+  2. invoke `Holmake`.  This will (a) compile and execute the
+     script file; and (b) compile the resulting theory file.  After
+     this, the theory file is available for use.
+
+### Source conventions for script and SML files
+
+#### Script and theory files
+
+The file that generates the HOL theory *my*`Theory` must be called
+*my*`Script.sml`.  After the theory has been successfully
+generated, it can be `open`-ed at the head of other developments:
+
+```
+    open myTheory
+```
+
+\index{load (ML function)@\ml{load} (\ML{} function)}
+and it can be loaded interactively:
+
+```
+    load "myTheory";
+```
+
+The file `myScript.sml` should begin with the standard
+boilerplate:
+
+```
+    open HolKernel Parse boolLib bossLib
+
+    val _ = new_theory "my"
+```
+
+This "boilerplate" ensures that the standard tactics and SML
+commands will be in the namespace when the script file is
+compiled.  Interactively, these modules have already been loaded
+and `open`-ed, so what can be typed directly at `hol` cannot
+necessarily be included as-is in a script file.  In addition, if
+`myTheory` depends on other HOL theories, this ancestry should
+also be recorded in the script file.  The easiest way to achieve
+this is simply to `open` the relevant theories.  Conventionally,
+the `open` declarations for such theories appear just before the
+call to `new_theory`.  For example:
+
+```
+    open HolKernel Parse boolLib bossLib
+
+    open myfirstAncestorTheory OtherAncestorTheory
+
+    val _ = new_theory "my"
+```
+
+\index{load (ML function)@\ml{load} (\ML{} function)}
+Interactively, these may well be the names of theories that have
+been explicitly loaded into the context with the `load` function.
+In the interactive system, one has to explicitly `load` modules;
+on the other hand, the batch compiler will load modules
+automatically.  For example, in order to execute `open Foo` (or
+refer to values in structure `Foo`) in the interactive system, one
+must first have executed `load "Foo"`.  (This is on the assumption
+that structure `Foo` is defined in a file `Foo.sml`.)
+Contrarily, the batch compiler will reject files having
+occurrences of `load`, since `load` is only defined for the
+interactive system.
+
+In addition, simply referring to a theory's theorems using the
+'dot-notation' will make that theory an ancestor.  For example,
+
+```
+    Theorem mytheorem:
+      ...
+    Proof
+      simp[ThirdAncestorTheory.important_lemma] ...
+    QED
+```
+
+will record a dependency on `ThirdAncestoryTheory`, making it
+just as much an ancestor as the theories that have been explicitly
+`open`-ed elsewhere.  This "trick" is not good practice however,
+and can lead to strange behaviours when working interactively.
+If it feels important to keep the top-level SML namespace
+uncontaminated, the right idiom for the top of the script file is
+
+```
+    local open ThirdAncestorTheory in end
+```
+
+Finally, all script files should also end with the invocation:
+
+```
+    val _ = export_theory()
+```
+
+When the script is finally executed, this call writes the theory
+to disk.
+
+\index{special syntactic forms for scripts}
+The calls to `new_theory` and `export_theory` must bracket a
+sequence of SML declarations and/or uses of special syntactic
+forms for scripts (the so-called "modern syntax").  The special
+syntactic forms all map to SML declarations, and include uses of
+keywords like `Theorem`, `Type`, and `Overload`.  An SML
+declaration will typically be a `val`-binding, but might also be
+a function definition (*via* `fun`), an `open`, or even a
+`structure` declaration.  Declarations are *not* expressions.
+This means that script files should *not* include bare calls to
+HOL functions like `set_fixity`.  Instead, declarations such as
+the following need to be used:
+
+```
+    val _ = set_fixity "symbol" (Infixl 500);
+```
+
+This is because (due to restrictions imposed by Moscow ML\index{Moscow ML})
+the script file is required to be an ML structure, and the
+contents of a structure must be *declarations*, not expressions.
+Indeed, one is allowed to (and generally should) omit the
+bracketing
+
+```
+    structure myScript = struct
+    ...
+    end
+```
+
+lines, but the contents of the file are still interpreted as if
+belonging to a structure.
+
+Finally, take care not to have the string "`Theory`" appear at the
+end of the name of any of your files.  HOL generates files
+containing this string, and when it cleans up after itself, it
+removes such files using a regular expression.  This will also
+remove other files with names containing "`Theory.sml`" or
+"`Theory.sig`".  For example, if, in your development directory,
+you had a file of SML code named `MyTheory.sml` and you were also
+managing a HOL development there with `Holmake`, then
+`MyTheory.sml` would get deleted if `Holmake clean` were invoked.
+
+#### Other SML code
+
+When developing HOL libraries, one should again attempt to follow
+Moscow ML's conventions.  Most importantly, file names should
+match `signature` and `structure` names.  If this can be done, the
+automatic dependency analysis done by `Holmake` will work "out of
+the box".  A signature for module `foo` should always appear in
+file `foo.sig`, and should have the form
+
+```
+    signature foo =
+    sig
+      ...
+    end
+```
+
+The accompanying implementation of `foo` should appear in file
+`foo.sml`, and should have the form
+
+```
+    structure foo :> foo =
+    struct
+    ...
+    end
+```
+
+As with theory files, the contents of a `structure` must be a
+sequence of declarations only.  Neither sort of file should have
+any other declarations within it (before or after the `signature`
+or `structure`).
+
+Deviations from this general pattern are possible, but life is
+much simpler if such deviations can be avoided.  The HOL
+distribution[^misc-kernel-deviation] contains some examples of
+trickier situations where the guidelines need to be ignored.
+Ignoring the guidelines will generally result in the need for
+quite involved `Holmakefile`s (see
+Section \ref{sec:using-Holmakefiles} below).
+
+[^misc-kernel-deviation]: See, for example, the kernel
+    implementation in `src/0`.
+
+### Summary
+
+A complete theory construction might be performed by the following
+steps:
+
+  - Construct theory script, perhaps over many sessions;
+  - Transform script into separately compilable form;
+  - Invoke `Holmake` to generate the theory and compile it.
+
+After that, the theory is usable as an ML module.  This flow is
+demonstrated in the Euclid example of TUTORIAL.
+
+Alternatively, and probably with the help of one of the editor
+modes,[^misc-editor-modes] one can develop a theory with a script
+file that is always separately compilable.
+
+[^misc-editor-modes]: There are editor modes for `emacs`, `vim`,
+    and others.
+
+### `Holmake` Limitations
+
+Without information to the contrary, `Holmake` assumes that all
+files of interest are in the current directory or in HOL's master
+`sigobj` directory.  Using a `Holmakefile` (see
+Section \ref{sec:using-Holmakefiles}), it is possible to mention
+files in other directories (which can contain their own
+`Holmakefile`s), both as dependencies and as explicit targets with
+rules on how those targets should be built.
+
+\index{Holmake@\holmake!recursive invocation}
+\index{Holmake@\holmake!INCLUDES variable@\texttt{INCLUDES} variable}
+The right approach when a development spans multiple directories
+is to indicate that there is a dependency on other directories by
+using the `INCLUDES` variable in a
+`Holmakefile`.[^misc-includes-cli]  `Holmake` requires that, just
+as files must have an acyclic dependency graph, the directories
+containing those files must have a compatible, and acyclic,
+`INCLUDES` graph.  With `INCLUDES` information to hand, `Holmake`
+will process the entire `INCLUDES` graph, looking throughout the
+graph for theory files that the current directory may depend on,
+and rebuilding those remote targets as necessary.
+
+[^misc-includes-cli]: In one-off situations, it is also possible
+    to use the `-I` flag on `Holmake`'s command-line.
+
+Finally, it is borderline impossible (or at least, extremely
+difficult) to describe how theories are built from script files
+using, e.g., the Unix command-line.  This means that it is hard to
+independently control/script the processing of $x$`Script.sml`
+files; one must instead rely on the logic built into `Holmake` to
+do this.
+
+### `Holmake`'s command-line arguments
+
+\index{Holmake@\holmake!command-line arguments}
+Like `make`, `Holmake` takes command-line arguments corresponding
+to the targets that the user desires to build.  As a special case
+of this, theories and SML object files can be specified on the
+command-line by just giving the same string as would be passed to
+the `open` declaration form.[^misc-uo-suffix]  Command-line
+targets do not have to provide paths to directories where those
+targets are "housed" if there is only target of the given name in
+the combination of all `INCLUDE`-d directories.
+
+[^misc-uo-suffix]: Strictly, the files generated on disk for
+    these cases have a `.uo` suffix; this feature allows that
+    suffix to be omitted.
+
+If there are no command-line targets, then `Holmake` will look
+for a `Holmakefile` in the current directory.  If there is none,
+or if that file specifies no targets, then `Holmake` will attempt
+to build all SML modules and HOL theories it can detect in the
+current directory.  If there is a target in the `Holmakefile`,
+then `Holmake` will try to build the first such target (only).
+
+In addition, there are three special targets that can be used:
+
+**`clean`** Removes all compiled files (unless over-ridden by a
+make-file target of the same name, see
+Section \ref{sec:using-Holmakefiles} below).
+
+**`cleanDeps`** Removes all of the pre-computed dependency files.
+This can be an important thing to do if, for example, you have
+introduced a new `.sig` file on top of an existing `.sml` file.
+
+**`cleanAll`** Removes all compiled files as well as all of the
+hidden dependency information.
+
+Finally, users can directly affect the workings of `Holmake` with
+the following command-line options/flags:
+
+**`--cachekey <theory>`** Computes and prints a deterministic
+SHA1 hash (cache key) for the given theory target, then exits.
+The hash is based on the contents of the theory's dependencies:
+source files and ancestor `.dat` (theory data) files.
+Dependencies on `.uo` and `.ui` files are excluded; where a
+dependency on a `Theory.uo` or `Theory.ui` file exists, the
+corresponding `.dat` file is used instead.  Dependencies are
+sorted by filename (with hash as a tiebreaker) to produce a
+canonical, machine-independent ordering.  All dependencies must
+already be built; the command will fail if any dependency file
+does not exist.  This option is intended for use in caching built
+theories in CI or similar workflows: if the cache key has not
+changed, the theory does not need to be rebuilt.
+
+**`-f <theory>`** Toggles whether or not a theory should be built
+in "fast" mode.  Fast building causes tactic proofs (invocations
+of `prove`, `store_thm`, and the `Theorem`-`Proof`-`QED` form) to
+automatically succeed.  This lack of soundness is marked by the
+`fast_proof` oracle tag.  This tag will appear on all theorems
+proved in this way and all subsequent theorems that depend on
+such theorems.  `Holmake`'s default is not to build in fast mode.
+
+**`--fast`** Makes `Holmake`'s default be to build in fast mode
+(see above).
+
+**`--help` or `-h`** Prints out a useful option summary and exits.
+
+**`--holdir <directory>`** Associate this build with the given
+HOL directory, rather than the one this version of `Holmake` was
+configured to use by default.
+
+**`--holmakefile <file>`** Use the given file as a make-file.
+See Section \ref{sec:using-Holmakefiles} below for more on this.
+
+**`-I <directory>`** Look in specified directory for additional
+object files, including other HOL theories.  This option can be
+repeated, with multiple `-I`'s to allow for multiple directories
+to be referenced.  Files in directories specified in this way will
+be rebuilt if they are needed for the specified list of targets.
+
+**`--interactive` or `-i`** Causes the HOL code that runs when a
+theory building file is executed to have the flag
+`Globals.interactive` set to true.  This will alter the diagnostic
+output of a number of functions within the system.
+
+**`-j<n>` or `--jobs=<n>`** Specify the maximum number of parallel
+jobs `Holmake` should use when building targets.  Each job is a
+separate process, and so can only interfere with other jobs *via*
+their interactions with the file system.  Under Moscow ML this
+option is ignored; its `Holmake` can only run jobs sequentially.
+If not set, the default value for this option is 4.
+
+**`-k` or `--keep-going`** Causes `Holmake` to try to build all
+specified targets, rather than stopping as soon as one fails to
+build.
+
+**`--logging`** Causes `Holmake` to record the times taken to
+build any theory files it encounters.  The times are logged in a
+file in the current directory.  The name of this file includes the
+time when `Holmake` completed, and when on a Unix system, the name
+of the machine where the job was run.  If `Holmake` exits
+unsuccessfully, the filename is preceded by the string "`bad-`".
+Each line in the log-file is of the form *theory-name time-taken*,
+with the time recorded in seconds.
+
+**`--no_holmakefile`** Do not use a make-file, even if a file
+called `Holmakefile` is present in the current directory.
+
+**`--no_overlay`** Do not use an overlay file.  All HOL builds
+require the presence of a special overlay file from the kernel
+when compiling scripts and libraries.  This is not appropriate for
+compiling code that has no connection to HOL, so this option makes
+the compilation not use the overlay file.  This option is also
+used in building the kernel before the overlay itself has been
+compiled.
+
+**`--no_preexecs`** Do not search for or execute any
+`.hol_preexec` files in the file-system.  See
+Section \ref{sec:holmake-preexec} below for more on this facility.
+
+**`--no_prereqs`**
+\index{Holmake@\holmake!recursive invocation}
+Do not recursively attempt to build "include" directories before
+working in the current directory.  If a target in the current
+directory depends on something in another directory that does not
+exist, `Holmake` will fail to build it.  If the remote target
+exists, but is stale, it will be used in its stale state, come
+what may.
+
+**`--no_sigobj`** Do not link against HOL system's directory of
+HOL system files.  Use of this option goes some way towards
+turning `Holmake` into a general SML `make` system.  However, it
+will still attempt to do "HOL things" with files whose names end
+in `Script` and `Theory`.  This option implies `--no_overlay`.
+
+**`--overlay <file>`** Use the given file as the overlay rather
+than the default.
+
+**`--qof`, `--noqof`** Where q-o-f stands for "quit on failure".
+By default, if a tactic fails to prove a theorem, the running
+script exits with a failure.  Depending on the presence or
+absence of the `-k` flag, this failure to build a theory may
+cause `Holmake` to also exit (with a failure).  With the `--noqof`
+option, `Holmake` will cause the running script to use `mk_thm`
+to assert the failed goal, allowing the build to continue and
+other theorems to be proved.
+
+**`--quiet`** Minimise the amount of output produced by `Holmake`.
+Fatal error messages will still be written to the standard error
+stream.  Note that other programs called by `Holmake` will not be
+affected.
+
+**`-r`**
+\index{Holmake@\holmake!recursive invocation}
+Forces `Holmake` to behave more recursively than it would
+otherwise.  This overrides the `--no_prereqs` option.  When
+performing a "clean" action (prompted by `clean`, `cleanAll` or
+`cleanDeps` arguments), this cleaning is done recursively through
+all "includes" directories (which is not done otherwise).  When
+building normally, all targets in "includes" directories are
+built; normally only dependencies of targets in the current
+directory are built.
+
+**`--rebuild_deps`** Forces `Holmake` to always rebuild the
+dependency information for files it examines, whether or not it
+thinks it needs to.  This option is implemented by having
+`Holmake` wipe all of its dependency cache (as per the
+`cleanDeps` option above) before proceeding with the build.
+
+`Holmake` should never exit with error messages such as "Uncaught
+exception".  Such behaviour is a bug, please report it!
+
+### Using a make-file with `Holmake`
+
+\label{sec:using-Holmakefiles}
+
+`Holmake` will use a make-file to augment its behaviour if one is
+present in the current directory.  By default it will look for a
+file called `Holmakefile`, but it can be made to look at any file
+at all with the `--holmakefile` command-line option.  The
+combination of `Holmake` and a make-file is supposed to behave as
+much as possible like a standard implementation of `make`.
+
+A make-file consists of two types of entries, variable definitions
+and rules.  Outside of these entries, white-space is insignificant,
+but newline and `TAB` characters are very significant within them.
+Comments can be started with hash (`#`) characters and last until
+the end of the line.  Quoting is generally done with use of the
+back-slash (`\`) character.  In particular, a backslash-newline
+pair always allows a line to be continued as if the newline wasn't
+present at all.
+
+A variable definition is of the form
+$$\textsl{Ident} \;\;\textsl{op}\;\; \textsl{text}\;\; \texttt{<NEWLINE>}$$
+where $\textsl{op}$ is either `=` or `+=`.
+
+A rule is of the form
+$$\textsl{text } \texttt{:} \textsl{ text} \texttt{ <NEWLINE>} (\texttt{<TAB>}\textsl{text}\texttt{ <NEWLINE>})^*$$
+Henceforth, the text following a `TAB` character in a rule will be
+referred to as the *command text*.  Text elsewhere will be
+referred to as *normal text*.  Normal text has comments stripped
+from it, so hash characters there must be escaped with a
+back-slash character.  An *Ident* is any non-empty sequence of
+alpha-numeric characters, including the underscore (`_`).
+
+In some contexts, normal text is interpreted as a list of words.
+These lists use white-space as element separators.  If a word needs
+to include white-space itself, those white-space characters should
+be escaped with back-slashes.
+
+#### Variable definitions and references
+
+The text on the RHS of a variable definition can be substituted
+into any other context by using a *variable reference*, of the
+form `$(VARNAME)`.  References on right-hand sides are evaluated
+*late*, at time of use, not at time of definition.  This means
+it is permissible to have forward references.  This makes it
+impossible to write things like
+$$\texttt{VAR = \$(VAR) something\_new}$$
+because the eventual evaluation of `$(VAR)` would lead to an
+infinite loop.  GNU `make`'s facility for immediate definition of
+variables with `:=` is not supported, but the `+=` definition form
+does allow variables to be "extended".  In particular, this form
+"acts essentially as if you had included the extra text in the
+initial definition of the variable" (as *per* GNU `make`'s
+documentation).  Extending a variable `VAR` in this way does not
+constitute a *use* of this variable, so any variable references in
+its original definition will remain unexpanded until `VAR` is used
+in a rule.
+
+Note also that white-space around the equals-sign in a variable
+definition is stripped.  This means that
+$$\texttt{VAR =<whitespace><NEWLINE>}$$
+gives `VAR` the empty string as its value.[^misc-empty-var]
+
+[^misc-empty-var]: It is possible to give a variable a value of
+    pure whitespace by writing
+    `NOTHING =`
+    `ONE_SPACE = $(NOTHING) $(NOTHING)`
+
+Finally, note that the text inside a variable reference is itself
+evaluated.  This means that one can write something like
+`$(FOO_$(OS))` and have this first expand the `OS` variable,
+presumably giving rise to some useful string (such as `unix`), and
+then have the resulting variable (`FOO_unix`, say) expanded.  This
+effectively allows the construction of functions by cases (define
+variables `FOO_unix`, `FOO_macos` etc.; then use the nested
+variable reference above).  If the internal variable expands to
+something containing spaces, this will not turn a normal variable
+reference into a function call (see below).  On the other hand,
+if the initial reference contains a space, the function name
+component *will* be expanded, allowing implementation of a
+function by cases determining which text-manipulation function
+should be called.
+
+#### Rules
+
+Make-file rules are interpreted in the same way as by traditional
+`make`.  The files specified after the colon (if any) are those
+files that each target (the files before the colon) is said to
+"depend" on.  If any of these are newer than a target, then
+`Holmake` rebuilds that target according to the commands.  If
+there are no dependencies, then the commands are executed iff the
+target doesn't exist.  If there are no commands, and the target
+is not of a type that `Holmake` already knows how to build, then
+it will just make sure that the dependencies are up to date (this
+may or may not create the target).  If there are no commands
+attached to a rule, and the target is one that `Holmake` does know
+how to build, then the rule's extra dependencies are added to
+those that `Holmake` has managed to infer for itself, and
+`Holmake` will build the target using its built-in rule.  If
+commands are provided for a type of file that `Holmake` knows how
+to build itself, then the make-file's commands and dependencies
+take precedence, and only they will be executed.
+
+In addition, it is possible to indicate that the built-in process
+of generating theory files from script files generates side
+products.  This is done by writing a command-less rule of the form
+
+```
+   target : *thyScript.sml
+```
+
+where an asterisk character precedes the name of the script file.
+This indicates that the action of executing the code in
+`thyScript.sml` will not only generate the usual `thyTheory.sig`
+and `thyTheory.sml` files, but also the file `target`.  If
+`Holmake` is asked to build any of these three files, and any is
+absent or out of date with respect to `thyScript.sml` (or any
+other dependency), then the code in `thyScript.sml` will be run.
+
+If a command-line is preceded by a hyphen (`-`) character, then
+the rest of the line is executed, but its error-code is ignored.
+(Normally, a command-line raising an error will cause `Holmake`
+to conclude that the target can not be built.)  If a command-line
+is preceded by an at-sign (`@`), then that command-line will not
+be echoed to the screen when it is run.  These two options can be
+combined in either order at the start of a command-line.
+
+Command text is interpreted only minimally by `Holmake`.  On
+Unix, back-slashes are not interpreted at all.  On Windows,
+back-slashes followed by newlines are turned into spaces.
+Otherwise, command text is passed as is to the underlying command
+interpreter (`/bin/sh` say, on Unix, or `COMMAND.COM` on Windows).
+In particular, this means that hash-characters do *not* start
+comments on command-lines, and such "comments" will be passed to
+the shell, which may or may not treat them as comments when it
+sees them.
+
+#### Special targets
+
+Some target names for rules are handled specially by `Holmake`:
+
+  - Dependencies associated with the target name `.PHONY` are
+    taken to be list of other targets in the make-file that are
+    not actually the name of files to be built.  For example,
+    targets naming conceptual collections of files such as `all`
+    should be marked as "phony".  If a target is phony, then its
+    dependencies will be built even if a file of that name exists
+    and is newer than the dependencies.
+  - The special way that command-line arguments `clean`,
+    `cleanAll` and `cleanDeps` are handled means that targets of
+    those names will not work.  In order to extend cleaning
+    behaviour, use the `EXTRA_CLEANS` variable (see below).
+
+#### Functions
+
+\index{Holmake@\holmake!functions for text-manipulation}
+`Holmake` supports some simple functions for manipulating text.
+All functions are written with the general form
+`$(`*function-name* *arg*${}_1$`,`*arg*${}_2$`...,`*arg*${}_n$`)`.
+Arguments can not include commas (use variable references to
+variables whose value are commas instead), but can otherwise be
+arbitrary text.
+
+**`$(dprot arg)`** quotes (or "protects") the space characters
+that occur in a string so that the string will be treated as a
+unit if it occurs in a rule's dependency list.  For example, the
+file
+
+```
+   dep = foo bar
+   target: $(dep)
+      do_something
+```
+
+will see `target` as having two dependencies, not one, because
+spaces are used to delimit dependencies.  If a dependency's name
+includes spaces, then this function can be used to quote them for
+`Holmake`'s benefit.  Note that the `dprot` function does *not*
+do the same thing as `protect` on either Unix or Windows systems.
+
+**`$(findstring arg1,arg2)`** checks if `arg1` occurs in (is a
+sub-string of) `arg2`.  If it does so occur, the result is
+`arg1`, otherwise the result is the empty string.
+
+**`$(if arg1,arg2,arg3)`** examines `arg1`.  If it is the empty
+string, then the value of the whole is equal to the value of
+`arg3`.  Otherwise, the value is that of `arg2`.
+
+**`$(patsubst arg1,arg2,text)`** splits `text` into component
+words, and then transforms each word by attempting to see if it
+matches the pattern in `arg1`.  If so, it replaces that word with
+`arg2` (suitably instantiated).  If not, the word is left alone.
+The modified words are then reassembled into a white-space
+separated list and returned as the value.
+
+A pattern is any piece of text including no more than one
+occurrence of the percent (`%`) character.  The percent character
+matches any non-empty string.  All other characters must be
+matched literally.  The instantiation for `%` is remembered when
+the replacement is constructed.  Thus,
+$$\texttt{\$(patsubst \%.sml,\%.uo,\$(SMLFILES))}$$
+turns a list of files with suffixes `.sml` into the same list with
+the suffixes replaced with `.uo`.
+
+**`$(protect arg)`** wraps `arg` in appropriate quote characters
+to ensure that it will pass through the operating system's command
+shell unscathed.  This is important in the presence of file-names
+that include spaces or other shell-significant characters like
+less-than and greater-than.  Those make-file variables that point
+directly at executables (`MOSMLC`, `MOSMLLEX` etc.) are
+automatically protected in this way.  Others, which might be used
+in concatenation with other elements, are not so protected.  Thus,
+if `DIR` might include spaces, one should write
+
+```
+   $(protect $(DIR)/subdirectory/program)
+```
+
+so that the above will be read as one unit by the underlying
+shell.
+
+**`$(subst arg1,arg2,text)`** replaces every occurrence of `arg1`
+in `text` with `arg2`.
+
+**`$(tee arg1,arg2)`**
+\index{tee@\texttt{tee}!Holmake function@\texttt{Holmake} function}
+produces a (moderately complicated) shell command line that
+behaves like `arg1 | tee arg2`, but whose exit code is `arg1`'s
+rather than `tee`'s.
+
+**`$(which arg)`** is replaced by the full path to an executable
+and readable occurrence of a file called `arg` within a directory
+in the list of directories in the `PATH` environment variable.
+For example `$(which cat)` will usually expand to `/bin/cat` on
+Unix-like systems.  If there is no occurrence of `arg` in any
+directory in `PATH`, this function call expands to the empty
+string.
+
+**`$(wildcard pattern)`** expands the shell "glob" pattern (e.g.,
+`*Script.sml`) into the list of matching filenames.  If the
+pattern doesn't match any files, then the function returns
+`pattern` unchanged.
+
+#### Special and pre-defined variables
+
+\index{Holmake@\holmake!variables in makefiles}
+\index{Holmake@\holmake!INCLUDES variable@\texttt{INCLUDES} variable}
+If defined, the `INCLUDES` variable is used to add directories to
+the list of directories consulted when files are compiled and
+linked.  The effect is as if the directories specified had all
+been included on the command-line with `-I` options.  The
+`PRE_INCLUDES` variable works similarly, but the directories
+specified here are placed before any `INCLUDES` directories when
+dependency analysis is done.  Both `INCLUDES` and `PRE_INCLUDES`
+directories are consulted before the distribution's `sigobj`
+directory (containing all core material).
+
+\index{Holmake@\holmake!recursive invocation}
+By default, directories specified in the `INCLUDES` and
+`PRE_INCLUDES` directory are also built by `Holmake` before it
+attempts to build in the current directory.  If the `-r` ("force
+recursion") command-line flag is used, these directories are also
+"clean"-ed when a cleaning target is given to `Holmake`.
+
+\index{CLINE_OPTIONS (Holmakefile variable)@\texttt{CLINE\_OPTIONS} (Holmakefile variable)}
+The `CLINE_OPTIONS` variable is used for the specification of
+command-line switches that are presumably usually appropriate for
+calls to `Holmake` in the containing directory.  The options
+present in `CLINE_OPTIONS` are used to build a "base environment"
+of switches; this base environment is then overridden by whatever
+was actually passed on the command-line.  For example, a useful
+`CLINE_OPTIONS` line[^misc-cline-override] might be
+
+```
+    CLINE_OPTIONS = -j1 --noqof
+```
+
+Under Poly/ML, the similar `POLY_CLINE_OPTIONS` variable can be
+used to pass run-time options to the Poly/ML executable that is
+run during theory construction.
+
+[^misc-cline-override]: Note that a `--noqof` option in a makefile
+    might be overridden from the command-line with the otherwise
+    useless seeming `--qof` option.  In addition, the
+    `--no_hmakefile` command-line option will stop the makefile
+    from being consulted at all.
+
+\index{EXTRA_CLEANS (Holmakefile variable)@\texttt{EXTRA\_CLEANS} (Holmakefile variable)}
+The `EXTRA_CLEANS` variable is used to specify the name of
+additional files that should be deleted when a `Holmake clean`
+command is issued.
+
+Within a command, the variable `$<` is used to stand for the name
+of the first dependency of the rule.  The variable `$@` is used
+to stand for the target of the rule.
+
+Finally there are variables that expand to program names and other
+useful information:
+
+**`CP`** This variable is replaced by an operating-system
+appropriate program to perform a file copy.  The file to be
+copied is the first argument, the second is the place to copy
+to.  The second argument can be a directory.  (Under Unix, `CP`
+expands to `/bin/cp`; under Windows, it expands to `copy`.)
+
+**`DEBUG_FLAG`** This variable is replaced by `"--dbg"` if that
+flag was passed to `Holmake`, or the empty string if not.
+
+**`DEFAULT_TARGETS`**
+\index{DEFAULT_TARGETS (Holmakefile variable)@\texttt{DEFAULT\_TARGETS} (Holmakefile variable)}
+This variable expands to a list of the targets in the current
+directory that `Holmake` would build if there was no target in
+the Holmakefile, and no target was specified on the command-line.
+Thus, if one wishes to continue to have all these defaults built
+alongside an additional target, an appropriate idiom to use at
+the head of the file would be
+
+```
+    all: $(DEFAULT_TARGETS) mytarget1 mytarget2
+    .PHONY: all
+```
+
+followed by rules for building the new target(s).
+
+**`HAVE_WORD64`** Set (to value `"1"`) if the SML implementation
+provides a `Word64` structure, and undefined otherwise.
+
+**`HOLDIR`** The root of the HOL installation.
+
+**`HOLHEAP`** Under Poly/ML, this variable expands to the name of
+the heap that should be used to build this directory (to be used
+instead of the heap that underlies the `hol` executable).  See
+Section \ref{sec:polyml-heaps} below for more on using custom
+heaps with Poly/ML.
+
+**`HOLMOSMLC`** This variable is replaced by an invocation of
+the Moscow ML compiler along with the `-q` flag (necessary for
+handling quotations), and the usual `-I` include specifications
+(pre-includes, the hol-directory include, and the normal
+includes).
+
+**`HOLMOSMLC-C`** This variable is the same as `HOLMOSMLC`
+except that it finishes with a closing `-c` option (hence the
+name) followed by the name of the system's overlay file.  This is
+needed for compilation of HOL source files, but not for linking
+of HOL object code, which can be done with `HOLMOSMLC`.
+
+**`HOL_NUMJOBS`** The value of the `-j` option (4 by default
+under Poly/ML, 1 under Moscow ML) controlling the number of
+parallel jobs that `Holmake` will use.
+
+**`KERNELID`** The kernel option that was passed to HOL's `build`
+command, stripped of its leading hyphens.  This will typically be
+`stdknl` (the standard kernel) but may take on other values if
+other custom kernels are being used.
+
+**`ML_SYSNAME`** The name of the ML system being used: either
+`mosml` or `poly`.
+
+**`MLLEX`** This is the path of the `mllex` tool that is built
+as part of HOL's configuration.
+
+**`MLYACC`** This is the path of the `mlyacc` tool that is built
+as part of HOL's configuration.
+
+**`MOSMLC`** This is replaced by an invocation of the compiler
+along with just the normal includes.
+
+**`MOSMLLEX`** This is replaced by an invocation of the
+`mosmllex` program that comes with the Moscow ML distribution.
+
+**`MOSMLYAC`** This is replaced by an invocation of the
+`mosmlyac` program that comes with the Moscow ML distribution.
+
+**`MV`** This variable is replaced by an operating-system
+appropriate program to perform a file movement.  The file to be
+moved is the first argument, the second is the place to move
+to.  The second argument can be a directory.  (Under Unix, `MV`
+expands to `mv`; under Windows, it expands to `rename`.)
+
+**`OS`** This variable is replaced by the name of the current
+operating system, which will be one of the strings `"linux"`,
+`"solaris"`, `"macosx"`, `"unix"` (for all other Unices), or
+`"winNT"`, for all Microsoft Windows operating systems (those of
+the 21st century, anyway).
+
+**`SIGOBJ`** Effectively `$(HOLDIR)/sigobj`, where HOL object
+code is stored.
+
+**`UNQUOTE`** The location of the quotation-filter executable.
+
+The `MOSMLLEX` and `MOSMLYAC` abbreviations are really only
+useful if the originals aren't necessarily going to be on the
+user's "path".  For backwards compatibility, the five variables
+above including the sub-string "`MOSML`" in their names can also
+be used by simply writing their names directly (i.e., without the
+enclosing `$(...)`), as long as these references occur first on
+a command-line.
+
+Under Poly/ML, commands involving the variable `MOSMLC` are
+interpreted "appropriately".  If the behaviour is not as desired,
+we recommend using `ifdef POLY` (see below) to write rules that
+pertain only to HOL under Poly/ML.  We strongly discourage the
+use of `MOSMLYAC` and `MOSMLLEX`, even when running HOL under
+Moscow ML.
+
+If a reference is made to an otherwise undefined string, then it
+is treated as a reference to an environment variable.  If there
+is no such variable in the environment, then the variable is
+silently given the empty string as its value.
+
+#### Conditional parts of makefiles
+
+\index{Holmake@\holmake!conditional inclusion of sections}
+As in GNU `make`, parts of a `Holmakefile` can be included or
+excluded dynamically, depending on tests that can be performed on
+strings including variables.  This is similar to the way
+directives such as `#ifdef` can be used to control the C
+preprocessor.
+
+There are four possible directives in a `Holmakefile`: `ifdef`,
+`ifndef`, `ifeq` and `ifneq`.  The versions including the extra
+'n' character reverse the boolean sense of the test.  Conditional
+directives can be chained together with `else` directives, and
+must be terminated by the `endif` command.
+
+The following example is a file that only has any content if the
+`POLY` variable is defined, which happens when Poly/ML is the
+underlying SML system.
+
+```
+ifdef POLY
+TARGETS = target1 target2
+
+target1: dependency1
+      build_command -o target1 dependency1
+endif
+```
+
+The next example includes chained `else` commands:
+
+```
+ifeq "$(HOLDIR)" "foo"
+VAR = X
+else ifneq "$(HOLDIR)" "bar"
+VAR = Y
+else
+VAR = Z
+endif
+```
+
+\index{ifeq (Holmake directive)@\texttt{ifeq} (Holmake directive)}
+\index{ifneq (Holmake directive)@\texttt{ifneq} (Holmake directive)}
+The `ifneq` and `ifeq` forms test for string equality.  They can
+be passed their arguments as in the example, or delimited with
+apostrophes, or in parentheses with no delimiters, as in:
+
+```
+ifeq ($(HOLDIR),$(OTHERDIR))
+VAR = value
+endif
+```
+
+\index{ifdef (Holmake directive)@\texttt{ifdef} (Holmake directive)}
+\index{ifndef (Holmake directive)@\texttt{ifndef} (Holmake directive)}
+The definedness tests `ifdef` and `ifndef` test if a name has a
+non-null expansion in the current environment.  This test is just
+of one level of expansion.  In the following example, `VAR` is
+defined even though it ultimately expands to the empty string,
+but `NULL` is not.  The variable `FOOBAR` is also not defined.
+
+```
+NULL =
+VAR = $(NULL)
+```
+
+Note that environment variables with non-empty values are also
+considered to be defined.
+
+### Execution of Commands before `Holmake` Begins
+
+\label{sec:holmake-preexec}
+
+When building complicated projects, it may be useful to have
+programs executed before any invocation of `Holmake` properly
+begins.  This can be done through the use of `.hol_preexec`
+files.
+\index{Holmake@\holmake!hol_preexec files@\texttt{.hol\_preexec} files}
+\index{pre-execution files (Holmake)@pre-execution files (\holmake{})}
+When `Holmake` begins, and before it has even begun to examine
+`Holmakefile`s, it scans upwards in the directory hierarchy
+looking for files of this name.  This scanning will also follow
+`INCLUDES` directives, possibly causing a jump sideways in the
+hierarchy.
+
+When this scanning is complete, the contents of all these files
+will be executed as shell commands (using the `OS.Process.system`
+command, which is in turn a wrapper for the standard C library
+`system` function).  Each command will be interpreted in the
+directory containing it, and (under Unix at least), in an
+environment where the `HOLORIG` variable is set to the path of
+the directory where `Holmake` was originally invoked.  The
+commands are executed sequentially in a pre-order depth-first
+traversal of the directory hierarchy (relying on the behaviour of
+`String.compare` on paths).  If any command fails (returns a
+non-zero exit code), `Holmake` will abort; in this way
+pre-execution commands can be used as checks as well as commands
+that are supposed to bring about useful changes to the state of
+the file-system.
+
+**Warning:** This facility allows for code at a higher-level (in
+terms of the parent-child relationship between paths) in the
+file-system hierarchy to execute.  `Holmake` will log all such
+executions by default, printing out the commands as it executes
+them.  This execution does not happen with "clean" targets, or if
+the `-h` or `--no_preexecs` command-line options are used.  It is
+not possible to stop this behaviour by putting the `--no_preexecs`
+option into a `CLINE_OPTIONS` variable with a `Holmakefile`; all
+such execution will have occurred before any such are really
+consulted.
+
+\index{Holmake@\holmake|)}
+
+## Generating and Using Heaps in Poly/ML HOL
+
+\label{sec:polyml-heaps}
+
+\index{heaps (in Poly/ML)|(}
+\index{Poly/ML}
+\index{Moscow ML}
+Poly/ML has a nice facility whereby the state of one of its
+interactive sessions can be stored on disk and then reloaded.
+This allows for an efficient resumption of work in a known state.
+The HOL implementation uses this facility to implement the `hol`
+executable.  In Poly/ML, `hol` starts immediately.  In Moscow ML,
+`hol` starts up by visibly (and relatively slowly) "loading" the
+various source files that provide the system's functionality
+(e.g., `bossLib`).
+
+Users can use the same basic technology to "dump" heaps of their
+own.  Such heaps can be preloaded with source code implementing
+special-purpose reasoning facilities, and with various necessary
+background theories.  This can make developing big mechanisations
+considerably more pleasant.
+
+### Generating HOL heaps
+
+The easiest way to generate a HOL heap is to use the `hol
+buildheap` subcommand that is part of the standard `hol`
+executable for (Poly/ML) HOL.  This subcommand takes a list of
+object files to include in a heap, an optional heap to build upon
+(use the `-b` command-line switch; the default is to use the heap
+behind the core `hol` executable), and a required name for the
+new heap (the `-o` switch).  Thus the command-line
+
+```
+   hol buildheap -o realheap transcTheory polyTheory
+```
+
+would build a heap in the current directory called `realheap`,
+and would preload it with the standard theories of transcendental
+numbers and real-valued polynomials.
+
+A reasonable way to manage the generation of heaps is to use a
+`Holmakefile`.  For example, the `realheap` above might be
+generated with the source in
+Figure \ref{fig:realheap-makefile}.  The use of the special
+variable `HOLHEAP` has a number of nice side effects.  First, it
+makes the given file a dependency of all other products in the
+current directory.  This means that the HOL heap will be built
+first.  Secondly, the other products in the current directory
+will be built on top of that heap, not the default heap behind
+`hol`.
+
+```{=latex}
+\begin{figure}
+\begin{alltt}
+   ifdef POLY
+   HOLHEAP = realheap
+   OBJNAMES = polyTheory transcTheory
+   DEPS = $(patsubst %,$(dprot $(SIGOBJ)/%),$(OBJNAMES))
+
+   $(HOLHEAP): $(DEPS)
+           $(protect $(HOLDIR)/bin/hol) buildheap -o $@ $(OBJNAMES)
+   endif
+\end{alltt}
+\caption{A \texttt{Holmakefile} fragment for building a custom \HOL{} heap embodying the standard real number theories.
+If the heap's dependencies are not core \HOL{} theories as they are here, then both the dependency line and the arguments to \texttt{hol buildheap} will need to be adjusted to link to the directory containing the files.
+For core \HOL{} theories, the dependency has to mention the \texttt{SIGOBJ} directory, but when passing arguments to \texttt{hol buildheap}, that information doesn't need to be provided as \texttt{SIGOBJ} is always consulted by all \HOL{} builds.
+Finally, note how the use of the \texttt{dprot} and \texttt{protect} functions will ensure that \holmake{} will do the right thing even when \texttt{HOLDIR} contains spaces.}
+\label{fig:realheap-makefile}
+\end{figure}
+```
+
+```{=mdbook}
+**Figure: A `Holmakefile` fragment for building a custom HOL heap
+embodying the standard real number theories.**
+
+    ifdef POLY
+    HOLHEAP = realheap
+    OBJNAMES = polyTheory transcTheory
+    DEPS = $(patsubst %,$(dprot $(SIGOBJ)/%),$(OBJNAMES))
+
+    $(HOLHEAP): $(DEPS)
+            $(protect $(HOLDIR)/bin/hol) buildheap -o $@ $(OBJNAMES)
+    endif
+
+If the heap's dependencies are not core HOL theories as they are
+here, then both the dependency line and the arguments to `hol
+buildheap` will need to be adjusted to link to the directory
+containing the files.  For core HOL theories, the dependency has
+to mention the `SIGOBJ` directory, but when passing arguments to
+`hol buildheap`, that information doesn't need to be provided as
+`SIGOBJ` is always consulted by all HOL builds.  Finally, note
+how the use of the `dprot` and `protect` functions will ensure
+that `Holmake` will do the right thing even when `HOLDIR`
+contains spaces.
+```
+
+### Using HOL heaps
+
+As just described, if a `Holmakefile` specifies a `HOLHEAP`,
+then files in that directory will be built on top of that heap
+rather than the default.  This is also true if the specified heap
+is in another directory (i.e., the `HOLHEAP` line might specify a
+file such as `otherdir/myheap`).  In this case, the `Holmakefile`
+won't (shouldn't) include instructions on how to build that heap,
+but the advantages of that heap are still available.  Again, that
+heap is also considered a dependency for all files in the current
+directory, so that they will be rebuilt if it is newer than they
+are.
+
+It is obviously important to be able to use heaps interactively.
+If the standard `hol` executable is invoked in a directory where
+there is a `Holmakefile` specifying a heap, the default heap will
+not be used and the given heap will be used instead.  The fact
+that this is happening is mentioned as the interactive session
+begins.  For example:
+
+```
+---------------------------------------------------------------------
+       HOL-4 [Kananaskis 8 (stdknl, built Tue Jul 24 16:48:44 2012)]
+
+       For introductory HOL help, type: help "hol";
+---------------------------------------------------------------------
+
+[extending loadPath with Holmakefile INCLUDES variable]
+[In non-standard heap: computability-heap]
+Poly/ML 5.4.1 Release
+>
+```
+
+Finally, note that when using the `HOLHEAP` variable, heaps are
+required to be built before everything else in a directory, and
+that such heaps embody theories or SML sources that are
+*ancestral* to the directory in which the heap occurs.  Thus, if
+one wanted to package up a heap embodying the standard theories
+for the real numbers, and to do it in `src/real` (which feels
+natural), this heap could be built using the method described
+here, but could only be referred to as a `HOLHEAP` in the
+directories that used it, *not* in `src/real`'s `Holmakefile`.
+Subsequently, developments in other directories could use this
+heap by specifying
+
+```
+   $(HOLDIR)/src/real/realheap
+```
+
+as the value for their `HOLHEAP` variables.
+
+\index{heaps (in Poly/ML)|)}
+
+## Timing and Counting Theorems
+
+\index{counting inferences, in HOL proofs@counting inferences, in \HOL{} proofs|(}
+\index{inferences, in HOL logic@inferences, in \HOL{} logic!counting of|(}
+\index{timing of HOL evaluations@timing of \HOL{} evaluations|(}
+
+HOL can be made to record its use of primitive inferences,
+axioms, definitions and use of oracles.  Such recording is enabled
+with the function
+
+\index{counting_thms@\ml{counting\_thms}|pin}
+
+```
+   val counting_thms : bool -> unit
+```
+
+(This function as with all the others in this section is found in
+the `Count` structure.)
+
+Calling `counting_thms true` enables counting, and
+`counting_thms false` disables it.  The default is for counting to
+be disabled.  If it is enabled, whenever HOL performs a primitive
+inference (or accepts an axiom or definition) a counter is
+incremented.  A total count as well as counts per primitive
+inference are maintained.  The value of this counter is returned
+by the function:
+
+\index{thm_count@\ml{thm\_count}|pin}
+
+```
+  val thm_count : unit ->
+   {ASSUME : int, REFL : int, BETA_CONV : int, SUBST : int,
+    ABS : int, DISCH : int, MP : int, INST_TYPE : int, MK_COMB : int,
+    AP_TERM : int, AP_THM : int, ALPHA : int, ETA_CONV : int,
+    SYM : int, TRANS : int, EQ_MP : int, EQ_IMP_RULE : int,
+    INST : int, SPEC : int, GEN : int, EXISTS : int, CHOOSE : int,
+    CONJ : int, CONJUNCT1 : int, CONJUNCT2 : int, DISJ1 : int,
+    DISJ2 : int, DISJ_CASES : int, NOT_INTRO : int, NOT_ELIM : int,
+    CCONTR : int, GEN_ABS : int, definition : int, axiom : int,
+    from_disk : int, oracle :int, total :int }
+```
+
+This counter can be reset with the function:
+
+\index{reset_thm_count@\ml{reset\_thm\_count}|pin}
+
+```
+   val reset_thm_count : unit -> unit
+```
+
+Finally, the `Count` structure also includes another function
+which easily enables the number of inferences performed by an SML
+procedure to be assessed:
+
+\index{Count.apply@\ml{Count.apply}|pin}
+
+```
+   val apply : ('a -> 'b) -> 'a -> 'b
+```
+
+An invocation, `Count.apply f x`, applies the function `f` to
+the argument `x` and performs a count of inferences during this
+time.  This function also records the total time taken in the
+execution of the application.
+
+For example, timing the action of `numLib`'s `ARITH_CONV`:
+
+```
+- Count.apply numLib.ARITH_CONV ``x > y ==> 2 * x > y``;
+runtime: 0.010s,    gctime: 0.000s,     systime: 0.000s.
+Axioms asserted: 0.
+Definitions made: 0.
+Oracle invocations: 0.
+Theorems loaded from disk: 0.
+HOL primitive inference steps: 165.
+Total: 165.
+> val it = |- x > y ==> 2 * x > y = T : thm
+```
+
+\index{counting inferences, in HOL proofs@counting inferences, in \HOL{} proofs|)}
+\index{inferences, in HOL logic@inferences, in \HOL{} logic!counting of|)}
+\index{timing of HOL evaluations@timing of \HOL{} evaluations|)}
+
+```{=latex}
+\input{latex-munger}
+```
