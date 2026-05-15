@@ -1,5 +1,3 @@
-ifneq ($(which mlton),)
-
 .PHONY: all
 
 HAVE_MLTON = $(if $(NO_MLTON),,$(which mlton))
@@ -15,8 +13,6 @@ all: pft-replay-test replay-test
 else
 all: pft-replay-test
 endif
-endif
-
 endif
 
 EXTRA_CLEANS = replay-test pft-replay-test
