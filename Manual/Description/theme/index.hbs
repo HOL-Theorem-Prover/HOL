@@ -86,7 +86,13 @@
                 fcp: ["#1[#2]", 2],
                 worda: ["\\mathit{bool}[\\alpha]"],
                 wordb: ["\\mathit{bool}[\\beta]"],
-                wordc: ["\\mathit{bool}[\\gamma]"]
+                wordc: ["\\mathit{bool}[\\gamma]"],
+                // Chapter-local macros from libraries.smd.
+                term: ["\\mathit{term}"],
+                type: ["\\mathit{type}"],
+                // From commands.tex: \holtxt renders HOL syntax in
+                // typewriter; \ml does the same outside math mode.
+                holtxt: ["{\\mathtt{#1}}", 1]
               }
             }
           });
@@ -114,10 +120,16 @@
         <script>
         (function () {
           function slugify(text) {
-            // Mirrors pulldown-cmark's heading-id rule: lowercase,
-            // non-alphanumeric -> hyphen, collapse, trim.
+            // Mirrors pulldown-cmark's heading-id rule: lowercase;
+            // drop characters that aren't alphanumeric, space, `-`,
+            // or `_`; then convert each remaining space to `-`
+            // (without collapsing consecutive `-`s).  Collapsing
+            // here gives the wrong anchor for headings whose source
+            // contained an em-dash flanked by spaces (the em-dash
+            // is dropped, leaving two spaces -> two `-`s).
             return text.toLowerCase()
-                       .replace(/[^a-z0-9]+/g, '-')
+                       .replace(/[^a-z0-9 _-]+/g, '')
+                       .replace(/ /g, '-')
                        .replace(/^-+|-+$/g, '');
           }
           // Walk up nested ol.section lists until we hit the
@@ -165,6 +177,18 @@
               node = node.parentElement;
             }
           }
+          // Drop the `expanded` class from every chapter-item in the
+          // sidebar.  Used to clear stale state from previously-clicked
+          // subsections before re-expanding the path to the new click
+          // target, so the sidebar shows only one open branch at a
+          // time (the path to the current section).
+          function collapseAllExpanded() {
+            document.querySelectorAll(
+              '#sidebar li.chapter-item.expanded'
+            ).forEach(function (li) {
+              li.classList.remove('expanded');
+            });
+          }
           function rewrite() {
             // Only the leaf <li><div> entries in each section ol
             // need rewriting (deeper section ols are handled when
@@ -185,6 +209,7 @@
               a.setAttribute('href', parentHref + '#' + anchor);
               a.setAttribute('target', '_parent');
               a.addEventListener('click', function () {
+                collapseAllExpanded();
                 expandAncestors(a.parentElement);
               });
               while (div.firstChild) a.appendChild(div.firstChild);

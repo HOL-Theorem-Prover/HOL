@@ -428,18 +428,22 @@ fun resolveRefs {currentFile, labelRegistry} s =
 
 (* Stage 1: run polyscripter and the LaTeX-source strippers that
    don't touch \label/\ref.  The scan pass walks this output to
-   build the label registry. *)
+   build the label registry.  handleRawBlocks is deferred to stage 2
+   so scanLabels can still see `\input{X}` lines living inside
+   `{=latex}` raw blocks — those mark the source positions where
+   mdbook slots in sub-file sub-sections, and scanLabels needs them
+   to keep sub-section numbers aligned with SUMMARY.md. *)
 fun preprocessStage1 obuf s =
   s |> dropFrontmatter
     |> runScripted obuf
     |> stripIndex
-    |> handleRawBlocks
 
 (* Stage 2: with the registry in hand, resolve \ref{X} to a
    markdown link, then drop the (now-redundant) \label{X} marks
    and finish the markdown-side rewrites. *)
 fun preprocessStage2 {labelRegistry, currentFile, name} s =
-  s |> resolveRefs {currentFile = currentFile,
+  s |> handleRawBlocks
+    |> resolveRefs {currentFile = currentFile,
                     labelRegistry = labelRegistry}
     |> stripLabel
     |> convertSuperscripts
@@ -460,11 +464,10 @@ fun slugify text =
                           else "")
                  lower
     val dashed = String.map (fn #" " => #"-" | c => c) kept
-    fun collapse [] = []
-      | collapse (#"-" :: (rest as #"-" :: _)) = collapse rest
-      | collapse (c :: rest) = c :: collapse rest
-    val r = String.implode (collapse (String.explode dashed))
-    val ss = Substring.full r
+    (* Don't collapse consecutive dashes — pulldown-cmark keeps them
+       (e.g. `simp_tac : foo` slugs to `simp_tac--foo`), and a mismatch
+       here means `\ref{X}` URLs point at non-existent anchors. *)
+    val ss = Substring.full dashed
     val ss = Substring.dropl (fn c => c = #"-") ss
     val ss = Substring.dropr (fn c => c = #"-") ss
   in
@@ -490,7 +493,6 @@ fun cleanHeading s =
             case c of
                 #"$" => loop (i+1, acc, true)
               | #"*" => loop (i+1, acc, inMath)
-              | #"_" => loop (i+1, acc, inMath)
               | #"`" => loop (i+1, acc, inMath)
               | #"\\" =>
                   (* skip a LaTeX command name following the backslash *)
@@ -558,9 +560,49 @@ fun extractAnchors content =
    The chapter name seeds the anchor for labels that appear
    *before* any heading (e.g. on the H1 line of a chapter that
    ensureH1 will synthesise). *)
-fun scanLabels chapterNum chapterFile chapterName content =
+(* `chapterPrefix` is the canonical mdbook section number for the
+   chapter (e.g. [8] for a top-level chapter, [8, 5] for a sub-file
+   slotted at SUMMARY.md position 8.5).  Internal sub-section
+   numbering (s2, s3, s4 below) appends to this prefix.
+
+   `titleLvl = length chapterPrefix` tells scanLabels which heading
+   level corresponds to the chapter's own title — H1 for top-level
+   chapters, H2 for sub-files.  Headings one level deeper bump s2,
+   then s3, then s4.
+
+   On top-level chapters whose source `\input{X}`s an existing
+   `X.smd` sub-file, the `\input{}` occupies one slot in the parent
+   chapter's sub-section numbering even though it carries no H2 of
+   its own.  scanLabels bumps s2 at such lines so that later H2s
+   line up with the SUMMARY.md positions mdbook will assign them. *)
+fun scanLabels chapterPrefix chapterFile chapterName content =
   let
     val lines = String.fields (fn c => c = #"\n") content
+    val titleLvl = List.length chapterPrefix
+    (* Mirror pulldown-cmark's per-page heading-id rule: when the
+       same base slug appears more than once in a chapter's content,
+       the Nth (1-indexed N>1) occurrence gets `-N-1` appended.
+       For sub-files (titleLvl > 1) mdbook also auto-emits an H1 at
+       the top of the page whose slug matches chapterName; the
+       content's leading H2 then collides with that auto-H1 and
+       gets `-1` appended.  Seed seenSlugs so we account for it. *)
+    val seenSlugs = ref ([] : (string * int) list)
+    val () =
+        if titleLvl > 1 then
+          seenSlugs := [(headingAnchor chapterName, 1)]
+        else ()
+    fun nextSlug raw =
+      let
+        val cnt =
+            case List.find (fn (s, _) => s = raw) (!seenSlugs) of
+                SOME (_, n) => n
+              | NONE => 0
+        val s = if cnt = 0 then raw
+                else raw ^ "-" ^ Int.toString cnt
+        val () = seenSlugs :=
+                   (raw, cnt + 1) ::
+                   List.filter (fn (s, _) => s <> raw) (!seenSlugs)
+      in s end
     (* The slug for a heading is computed *after* stripping any
        inline \label{}/\ref{} from the heading text. *)
     fun headingSlug ln =
@@ -568,17 +610,17 @@ fun scanLabels chapterNum chapterFile chapterName content =
         val body = headingBody ln
         val body = stripCmd "label" body
         val body = stripCmd "ref" body
-      in headingAnchor body end
+      in nextSlug (headingAnchor body) end
     (* Find every `\label{X}` on a line; brace-counted body. *)
-    val prefix = "\\label{"
-    val psz = String.size prefix
+    val labelPrefix = "\\label{"
+    val psz = String.size labelPrefix
     fun findLabels ln =
       let
         val sz = String.size ln
         fun loop (i, acc) =
           if i >= sz then List.rev acc
           else if i + psz <= sz andalso
-                  String.substring (ln, i, psz) = prefix
+                  String.substring (ln, i, psz) = labelPrefix
           then
             case findCloseBrace (ln, i + psz) of
                 NONE => List.rev acc
@@ -587,30 +629,73 @@ fun scanLabels chapterNum chapterFile chapterName content =
                   in loop (j+1, lbl :: acc) end
           else loop (i+1, acc)
       in loop (0, []) end
-    fun fmtNumber (c, 0, _, _) = Int.toString c
-      | fmtNumber (c, s2, 0, _) =
-          Int.toString c ^ "." ^ Int.toString s2
-      | fmtNumber (c, s2, s3, 0) =
-          Int.toString c ^ "." ^ Int.toString s2 ^ "." ^ Int.toString s3
-      | fmtNumber (c, s2, s3, s4) =
-          Int.toString c ^ "." ^ Int.toString s2 ^ "." ^
-          Int.toString s3 ^ "." ^ Int.toString s4
+    (* Detect `\input{X}` lines; return the brace body, otherwise
+       NONE.  Used to spot sub-file insertion points. *)
+    val inputMarker = "\\input{"
+    val ipsz = String.size inputMarker
+    fun findInputStem ln =
+      let
+        val sz = String.size ln
+        fun loop i =
+          if i + ipsz > sz then NONE
+          else if String.substring (ln, i, ipsz) = inputMarker
+          then case findCloseBrace (ln, i + ipsz) of
+                   NONE => NONE
+                 | SOME j =>
+                     SOME (String.substring
+                             (ln, i + ipsz, j - i - ipsz))
+          else loop (i + 1)
+      in loop 0 end
+    fun stripDotTex s =
+      if String.isSuffix ".tex" s
+      then String.substring (s, 0, String.size s - 4)
+      else s
+    fun isSubfileInput ln =
+      case findInputStem ln of
+          SOME raw =>
+            let val stem = stripDotTex raw
+            in OS.FileSys.access (stem ^ ".smd", [OS.FileSys.A_READ]) end
+        | NONE => false
+    (* Format `chapterPrefix @ tail` joined by `.`, where `tail`
+       drops trailing zeros from (s2, s3, s4). *)
+    fun fmtNumber (s2, s3, s4) =
+      let
+        val tail = if s2 = 0 then []
+                   else if s3 = 0 then [s2]
+                   else if s4 = 0 then [s2, s3]
+                   else [s2, s3, s4]
+      in
+        String.concatWith "."
+          (List.map Int.toString (chapterPrefix @ tail))
+      end
     val initAnchor = headingAnchor chapterName
-    (* Build the entry list with cons-then-reverse to avoid the
-       O(|acc|) cost of `acc @ ...` on every line. *)
+    (* state = (anchor-for-labels-on-this-line, s2, s3, s4).
+       Heading-level effects depend on the heading's offset from
+       `titleLvl`: offset 0 is the chapter title (reset internal
+       counters), offset 1..3 bump s2/s3/s4.  An `\input{X.smd}`
+       line acts like an offset-1 heading without an anchor. *)
     fun loop ([], _, acc) = List.rev acc
       | loop (ln :: rest, state as (_, s2, s3, s4), acc) =
           let
             val lvl = headingLevel ln
             val state' =
                 case lvl of
-                    SOME 1 => (headingSlug ln, 0, 0, 0)
-                  | SOME 2 => (headingSlug ln, s2 + 1, 0, 0)
-                  | SOME 3 => (headingSlug ln, s2, s3 + 1, 0)
-                  | SOME 4 => (headingSlug ln, s2, s3, s4 + 1)
-                  | _ => state
+                    SOME h_lvl =>
+                      let val offset = h_lvl - titleLvl
+                      in
+                        if offset = 0 then (headingSlug ln, 0, 0, 0)
+                        else if offset = 1 then (headingSlug ln, s2 + 1, 0, 0)
+                        else if offset = 2 then (headingSlug ln, s2, s3 + 1, 0)
+                        else if offset = 3 then (headingSlug ln, s2, s3, s4 + 1)
+                        else state
+                      end
+                  | NONE =>
+                      if titleLvl = 1 andalso isSubfileInput ln
+                      then let val (anchor, _, _, _) = state
+                           in (anchor, s2 + 1, 0, 0) end
+                      else state
             val (anchor', s2', s3', s4') = state'
-            val numStr = fmtNumber (chapterNum, s2', s3', s4')
+            val numStr = fmtNumber (s2', s3', s4')
             val acc =
                 case lvl of
                     SOME _ => (anchor', chapterFile, anchor', numStr) :: acc
@@ -704,26 +789,42 @@ fun stringField k fields =
 
 fun chapterName fields = Option.getOpt (stringField "name" fields, "")
 fun chapterPath fields = stringField "path" fields
+(* The `number` field is mdbook's canonical section path for the
+   chapter — `[8]` for a top-level chapter, `[8, 5]` for a sub-file
+   at SUMMARY.md position 8.5, and so on.  Returns NONE only for
+   unnumbered chapters (prefix-/suffix-chapters, separators); for
+   our manual every Chapter we care about is numbered. *)
+fun chapterNumber fields =
+  case List.find (fn (k, _) => k = "number") fields of
+      SOME (_, JSON.ARRAY xs) =>
+        let
+          fun toInt (JSON.INT i) = SOME (IntInf.toInt i)
+            | toInt _ = NONE
+          val ints = List.mapPartial toInt xs
+        in
+          if List.length ints = List.length xs
+          then SOME ints else NONE
+        end
+    | _ => NONE
 
 (* --- Pass 1: scan ---
    Run polyscripter + the LaTeX-source strippers on every chapter,
-   assigning a chapter number to each top-level Chapter with content,
-   and harvest its `\label{X}` calls into the registry. *)
+   read each chapter's `number` straight from mdbook's JSON, and
+   harvest its `\label{X}` calls into the registry. *)
 
-fun scanChapter obuf chap (chapterNumRef, labelReg) =
+fun scanChapter obuf chap labelReg =
   case chap of
       JSON.OBJECT fields =>
         let
           val name = chapterName fields
           val pathOpt = chapterPath fields
+          val prefix = Option.getOpt (chapterNumber fields, [])
           val (newContent, labelReg) =
               case (stringField "content" fields, pathOpt) of
                   (SOME s, SOME p) =>
                     let
-                      val () = chapterNumRef := !chapterNumRef + 1
                       val s' = preprocessStage1 obuf s
-                      val labels =
-                          scanLabels (!chapterNumRef) p name s'
+                      val labels = scanLabels prefix p name s'
                     in (SOME s', labelReg @ labels) end
                 | (SOME s, NONE) =>
                     (SOME (preprocessStage1 obuf s), labelReg)
@@ -735,8 +836,7 @@ fun scanChapter obuf chap (chapterNumRef, labelReg) =
                       fun loop ([], acc, reg) = (List.rev acc, reg)
                         | loop (item :: rest, acc, reg) =
                             let val (item', reg') =
-                                    scanItem obuf item
-                                              (chapterNumRef, reg)
+                                    scanItem obuf item reg
                             in loop (rest, item' :: acc, reg') end
                       val (xs', reg') = loop (xs, [], labelReg)
                     in (SOME (JSON.ARRAY xs'), reg') end
@@ -754,11 +854,10 @@ fun scanChapter obuf chap (chapterNumRef, labelReg) =
           (JSON.OBJECT (map trField fields), labelReg)
         end
     | _ => (chap, labelReg)
-and scanItem obuf item (chapterNumRef, labelReg) =
+and scanItem obuf item labelReg =
   case item of
       JSON.OBJECT [("Chapter", chap)] =>
-        let val (chap', reg') =
-                scanChapter obuf chap (chapterNumRef, labelReg)
+        let val (chap', reg') = scanChapter obuf chap labelReg
         in (JSON.OBJECT [("Chapter", chap')], reg') end
     | _ => (item, labelReg)
 
@@ -864,13 +963,12 @@ fun transformBook obuf book =
   case book of
       JSON.OBJECT fields =>
         let
-          val chapterNumRef = ref 0
           fun scanSections xs =
               let
                 fun loop ([], acc, reg) = (List.rev acc, reg)
                   | loop (item :: rest, acc, reg) =
                       let val (item', reg') =
-                              scanItem obuf item (chapterNumRef, reg)
+                              scanItem obuf item reg
                       in loop (rest, item' :: acc, reg') end
               in loop (xs, [], []) end
           fun finalizeSections labelReg xs =
@@ -895,12 +993,395 @@ fun transformBook obuf book =
         end
     | _ => book
 
+(* ===== check-refs sub-command =====
+
+   Cross-check a rendered mdbook output directory: for every
+   `<a href="page.html#anchor">N.M.O</a>` link, verify the displayed
+   N.M.O matches the section number the target heading actually
+   carries.  Catches the class of regression where smdpp's section
+   numbering drifts from mdbook's interleaved sidebar numbering
+   (the hyperlink lands at the right anchor but the displayed
+   number is stale).
+
+   Build a {(page, anchor) -> number} map by reading toc.html for
+   chapter prefixes and sidebar entries, then walking each page's
+   <hN id="X"> headings in DOM order to derive numbers for deeper
+   levels the sidebar doesn't enumerate. *)
+
+fun strFindFrom needle haystack start =
+  let
+    val nlen = String.size needle
+    val hlen = String.size haystack
+    fun loop i =
+      if i + nlen > hlen then NONE
+      else if String.substring (haystack, i, nlen) = needle
+      then SOME i
+      else loop (i + 1)
+  in loop start end
+
+fun readUntilChar stop haystack start =
+  let
+    val hlen = String.size haystack
+    fun loop i =
+      if i >= hlen orelse String.sub (haystack, i) = stop
+      then (String.substring (haystack, start, i - start), i)
+      else loop (i + 1)
+  in loop start end
+
+fun parseSecNum s =
+  List.mapPartial Int.fromString
+    (String.tokens (fn c => c = #".") s)
+
+fun fmtSecNum xs = String.concatWith "." (map Int.toString xs)
+
+fun trimSpace s =
+  let val ss = Substring.full s
+      val ss = Substring.dropl Char.isSpace ss
+      val ss = Substring.dropr Char.isSpace ss
+  in Substring.string ss end
+
+fun readFileAll path =
+  let val ins = TextIO.openIn path
+      val s = TextIO.inputAll ins
+      val () = TextIO.closeIn ins
+  in s end
+
+(* Walk toc.html.  For each chapter-item LI, find the strong-tagged
+   section number, the title text, and any preceding <a href> that
+   marks the entry as a real page.  Track descendantPage[depth] so
+   draft chapters resolve to their parent's page rather than
+   accidentally inheriting a sibling sub-file's page. *)
+fun parseSidebarTOC tocHtml =
+  let
+    val liMarker = "<li class=\"chapter-item"
+    val strongMarker = "<strong aria-hidden=\"true\">"
+    val hrefMarker = " href=\""
+    val pagePrefix = ref ([] : (string * int list) list)
+    val sidebarAnchor = ref ([] : ((string * string) * string) list)
+    val descendantPage = ref ([] : (int * string option) list)
+    fun setDescendant d p =
+      descendantPage := (d, p) ::
+        List.filter (fn (d', _) => d' <> d) (!descendantPage)
+    fun dropDeeper d =
+      descendantPage :=
+        List.filter (fn (d', _) => d' <= d) (!descendantPage)
+    fun lookupDescendant d =
+      case List.find (fn (d', _) => d' = d) (!descendantPage) of
+          SOME (_, p) => p
+        | NONE => NONE
+    fun walk pos =
+      case strFindFrom liMarker tocHtml pos of
+          NONE => ()
+        | SOME liPos =>
+          let
+            val liEnd = Option.getOpt
+                          (strFindFrom "</li>" tocHtml liPos,
+                           String.size tocHtml)
+            val strongPos =
+              case strFindFrom strongMarker tocHtml liPos of
+                  NONE => NONE
+                | SOME sp =>
+                    if sp < liEnd then SOME sp else NONE
+          in
+            case strongPos of
+                NONE => walk (liPos + String.size liMarker)
+              | SOME sp =>
+                let
+                  val numStart = sp + String.size strongMarker
+                  val (numText, numTextEnd) =
+                    readUntilChar #"<" tocHtml numStart
+                  val numTrimmed =
+                    if String.size numText > 0 andalso
+                       String.sub (numText, String.size numText - 1) = #"."
+                    then String.substring (numText, 0, String.size numText - 1)
+                    else numText
+                  val nums = parseSecNum numTrimmed
+                  val depth = List.length nums
+                  val afterStrong =
+                    Option.getOpt
+                      (strFindFrom "</strong>" tocHtml numTextEnd,
+                       numTextEnd)
+                  val titleStart = afterStrong + String.size "</strong>"
+                  val (titleRaw, titleEnd) =
+                    readUntilChar #"<" tocHtml titleStart
+                  val title = trimSpace titleRaw
+                  val ownPage =
+                    case strFindFrom hrefMarker tocHtml liPos of
+                        NONE => NONE
+                      | SOME hp =>
+                          if hp >= sp then NONE
+                          else
+                            let val hs = hp + String.size hrefMarker
+                                val (hv, _) = readUntilChar #"\"" tocHtml hs
+                            in SOME hv end
+                  val () =
+                    case ownPage of
+                        SOME p =>
+                          (pagePrefix := (p, nums) :: !pagePrefix;
+                           setDescendant depth (SOME p))
+                      | NONE =>
+                          setDescendant depth
+                            (if depth > 1 then lookupDescendant (depth - 1)
+                             else NONE)
+                  val () = dropDeeper depth
+                  val resolvedPage =
+                    case ownPage of
+                        SOME p => SOME p
+                      | NONE =>
+                          if depth > 1 then lookupDescendant (depth - 1)
+                          else NONE
+                  val () =
+                    case resolvedPage of
+                        SOME p =>
+                          sidebarAnchor :=
+                            ((p, slugify title), numTrimmed) ::
+                            !sidebarAnchor
+                      | NONE => ()
+                in walk titleEnd end
+          end
+    val () = walk 0
+  in (!pagePrefix, !sidebarAnchor) end
+
+(* Walk an HTML file's <hN id="X"> tags in DOM order; for each,
+   assign the section number smdpp would record.  Sidebar entries
+   are trusted at the right level (so interleaved sub-files line
+   up); deeper levels fall back to a per-page counter.  When a
+   sidebar slug collides with a heading at a different DOM level
+   (pulldown-cmark's `-N` suffix mechanic), the level mismatch is
+   detected and the counter takes over. *)
+fun parsePageHeadingsImpl prefix sidebarForPage pageHtml =
+  let
+    val titleLvl = List.length prefix
+    val maxLevel = titleLvl + 3
+    val prefixStr = fmtSecNum prefix
+    val seen = ref ([] : (string * string) list)
+    val pathRef = ref ([] : int list)
+    fun currentNum () = fmtSecNum (prefix @ !pathRef)
+    val hlen = String.size pageHtml
+    fun findHeading start =
+      let
+        fun loop i =
+          if i + 5 > hlen then NONE
+          else if String.sub (pageHtml, i) = #"<"
+                  andalso String.sub (pageHtml, i + 1) = #"h"
+                  andalso Char.isDigit (String.sub (pageHtml, i + 2))
+                  andalso let val c = String.sub (pageHtml, i + 3)
+                          in c = #" " orelse c = #"\t" end
+          then
+            let
+              val hLvl = Char.ord (String.sub (pageHtml, i + 2)) -
+                         Char.ord #"0"
+              val tagEnd = Option.getOpt
+                             (strFindFrom ">" pageHtml i, hlen)
+              val idPos = strFindFrom " id=\"" pageHtml i
+            in
+              case idPos of
+                  SOME ip =>
+                    if ip < tagEnd andalso hLvl >= 1 andalso hLvl <= 6 then
+                      let val ans = ip + String.size " id=\""
+                          val (anchor, ane) = readUntilChar #"\"" pageHtml ans
+                      in SOME (hLvl, anchor, ane + 1) end
+                    else loop (i + 1)
+                | NONE => loop (i + 1)
+            end
+          else loop (i + 1)
+      in loop start end
+    fun lookupSidebar a =
+      case List.find (fn (k, _) => k = a) sidebarForPage of
+          SOME (_, v) => SOME v | NONE => NONE
+    fun remember (a, n) = seen := (a, n) :: !seen
+    fun stepCounter hLvl =
+      let
+        val targetLen = hLvl - titleLvl
+        val truncated =
+          if List.length (!pathRef) > targetLen
+          then List.take (!pathRef, targetLen)
+          else !pathRef
+        fun padTo n xs =
+          if List.length xs >= n then xs
+          else padTo n (xs @ [0])
+        val padded = padTo targetLen truncated
+        val (rest, last) =
+          case List.rev padded of
+              x :: r => (List.rev r, x)
+            | [] => ([], 0)
+        val next = rest @ [last + 1]
+      in pathRef := next; fmtSecNum (prefix @ next) end
+    fun handleHeading hLvl anchor =
+      if hLvl <= titleLvl then
+        remember (anchor, prefixStr)
+      else
+        let
+          fun viaCounter () =
+            if hLvl > maxLevel
+            then remember (anchor, currentNum ())
+            else remember (anchor, stepCounter hLvl)
+        in
+          case lookupSidebar anchor of
+              SOME sb =>
+                let
+                  val sbNums = parseSecNum sb
+                  val sbRel = List.length sbNums - List.length prefix
+                  val domRel = hLvl - titleLvl
+                in
+                  if sbRel = domRel then
+                    (pathRef := List.drop (sbNums, List.length prefix);
+                     remember (anchor, sb))
+                  else viaCounter ()
+                end
+            | NONE => viaCounter ()
+        end
+    fun loop pos =
+      case findHeading pos of
+          NONE => ()
+        | SOME (hLvl, anchor, nextPos) =>
+            (handleHeading hLvl anchor; loop nextPos)
+    val () = loop 0
+  in !seen end
+
+(* Scan `pageHtml` for <a ...href="X#A"...>TEXT</a> links whose
+   TEXT is a section-number pattern, and verify each against
+   pageHeadings. *)
+fun checkPageRefs selfPage pageHtml pageHeadings =
+  let
+    val hlen = String.size pageHtml
+    val errs = ref ([] : (string * string * string * string) list)
+    fun isSecNum s =
+      let val cs = String.explode s
+      in cs <> [] andalso
+         List.all (fn c => Char.isDigit c orelse c = #".") cs andalso
+         Char.isDigit (hd cs) andalso Char.isDigit (List.last cs)
+      end
+    fun lookup page anchor =
+      case List.find (fn (p, _) => p = page) pageHeadings of
+          NONE => NONE
+        | SOME (_, hs) =>
+            (case List.find (fn (a, _) => a = anchor) hs of
+                 NONE => NONE
+               | SOME (_, n) => SOME n)
+    fun walk start =
+      case strFindFrom "<a " pageHtml start of
+          NONE => ()
+        | SOME ap =>
+          let
+            val attrStart = ap + 3
+            val tagEnd = Option.getOpt
+                           (strFindFrom ">" pageHtml attrStart, hlen)
+            val hrefP = strFindFrom " href=\"" pageHtml attrStart
+          in
+            case hrefP of
+                SOME hp =>
+                  if hp < tagEnd then
+                    let
+                      val hs = hp + String.size " href=\""
+                      val (hvalue, _) = readUntilChar #"\"" pageHtml hs
+                      val (host, anchor) =
+                        if hvalue = "" then ("", "")
+                        else if String.sub (hvalue, 0) = #"#"
+                        then ("", String.extract (hvalue, 1, NONE))
+                        else
+                          (case String.fields (fn c => c = #"#") hvalue of
+                               [h, a] => (h, a)
+                             | _ => ("", ""))
+                      val aClose = strFindFrom "</a>" pageHtml (tagEnd + 1)
+                    in
+                      case aClose of
+                          NONE => walk (tagEnd + 1)
+                        | SOME ac =>
+                          let
+                            val text =
+                              String.substring (pageHtml, tagEnd + 1,
+                                                ac - tagEnd - 1)
+                            val text' = trimSpace text
+                            val page = if host = "" then selfPage else host
+                          in
+                            if anchor <> "" andalso isSecNum text'
+                            then case lookup page anchor of
+                                     NONE => ()
+                                   | SOME expected =>
+                                       if text' <> expected
+                                       then errs := (page, anchor, text', expected) :: !errs
+                                       else ()
+                            else ();
+                            walk (ac + 4)
+                          end
+                    end
+                  else walk (tagEnd + 1)
+              | NONE => walk (tagEnd + 1)
+          end
+    val () = walk 0
+  in !errs end
+
+fun checkRefsMain bookDir =
+  let
+    val tocPath = OS.Path.concat (bookDir, "toc.html")
+    val () =
+      if OS.FileSys.access (tocPath, [OS.FileSys.A_READ]) then ()
+      else die ("check-refs: " ^ tocPath ^ " missing")
+    val (pagePrefix, sidebarAnchor) =
+      parseSidebarTOC (readFileAll tocPath)
+    fun sidebarForPage page =
+      List.mapPartial
+        (fn ((p, a), n) => if p = page then SOME (a, n) else NONE)
+        sidebarAnchor
+    (* Read each chapter HTML once into (page, html) and reuse for
+       both the heading walk and the ref-link walk. *)
+    val pageHtml =
+      List.mapPartial
+        (fn (page, _) =>
+           let val path = OS.Path.concat (bookDir, page)
+           in if OS.FileSys.access (path, [OS.FileSys.A_READ])
+              then SOME (page, readFileAll path)
+              else NONE
+           end)
+        pagePrefix
+    fun lookupHtml page =
+      case List.find (fn (p, _) => p = page) pageHtml of
+          SOME (_, h) => SOME h
+        | NONE => NONE
+    val pageHeadings =
+      List.map
+        (fn (page, prefix) =>
+           case lookupHtml page of
+               SOME html =>
+                 (page, parsePageHeadingsImpl prefix
+                          (sidebarForPage page) html)
+             | NONE => (page, []))
+        pagePrefix
+    val total = ref 0
+    val () =
+      List.app
+        (fn (name, html) =>
+           let
+             val path = OS.Path.concat (bookDir, name)
+             val errs = checkPageRefs name html pageHeadings
+           in
+             List.app
+               (fn (page, anchor, shown, expected) =>
+                  (print (path ^ ": link to " ^ page ^ "#" ^ anchor ^
+                          " displays " ^ shown ^
+                          " but heading number is " ^ expected ^ "\n");
+                   total := !total + 1))
+               (List.rev errs)
+           end)
+        pageHtml
+  in
+    if !total > 0 then
+      (TextIO.output (TextIO.stdErr,
+        "check-refs: " ^ Int.toString (!total) ^
+        " cross-reference mismatch(es).\n");
+       OS.Process.exit OS.Process.failure)
+    else
+      OS.Process.exit OS.Process.success
+  end
+
 (* ===== main ===== *)
 
 fun smdppMain () =
   case CommandLine.arguments () of
       ["supports", "html"] => OS.Process.exit OS.Process.success
     | "supports" :: _ => OS.Process.exit OS.Process.failure
+    | ["check-refs", bookDir] => checkRefsMain bookDir
     | [] =>
         let
           val obuf = setupPolyscripter ()
@@ -917,6 +1398,6 @@ fun smdppMain () =
           TextIO.flushOut TextIO.stdOut
         end
     | _ => die ("Usage:\n  " ^ CommandLine.name() ^
-                " [supports <renderer>]")
+                " [supports <renderer> | check-refs <book-dir>]")
 
 fun main () = smdppMain ()

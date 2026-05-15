@@ -37,7 +37,7 @@ fail=0
 #
 # This is rough but practical: in our chapters there's no prose
 # line that contains a stray `$` without being math.
-filter='\$|MathJax|worda:|wordb:|wordc:'
+filter='\$|MathJax|worda:|wordb:|wordc:|term:|type:|holtxt:'
 
 # (pattern, description) pairs.  Patterns are ERE.  Backslashes:
 # bash single quotes pass through verbatim, so `\\X` in source =
