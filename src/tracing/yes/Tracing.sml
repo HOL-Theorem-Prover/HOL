@@ -5,7 +5,7 @@ open TheoryPP
 (* When true, trace_theory recodes the PolyML heap dump from 64-bit to 32-bit
    before gzipping. Produces a backward-incompatible format marked by an
    8-byte magic "TR32\0\0\0\xFF". *)
-val recode_32bit = ref true
+val recode_32bit = ref false
 
 val recode32_path = ref (
   (case OS.Process.getEnv "HOLDIR" of SOME d => d | NONE => ".") ^ "/bin/recode32")
