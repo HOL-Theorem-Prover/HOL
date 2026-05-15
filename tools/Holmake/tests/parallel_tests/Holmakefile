@@ -42,6 +42,7 @@ DIRNAMES += cache_reflink \
             depchain_heap/ \
             depchain_heap/dir2 \
             dirlock \
+            dumpheap \
             heap-size \
             ignore_errors/j4 \
             hollogs \

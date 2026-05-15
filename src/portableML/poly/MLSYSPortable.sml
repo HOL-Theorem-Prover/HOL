@@ -81,4 +81,6 @@ fun syncref init =
 fun unique_tmp_suffix () =
   SysWord.toString (Posix.Process.pidToWord (Posix.ProcEnv.getpid ()))
 
+fun save_heap file = PolyML.SaveState.saveChild (file, 1)
+
 end

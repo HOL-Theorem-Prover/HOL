@@ -165,4 +165,10 @@ val std_goal_pp  = Manager.std_goal_pp
 val pp_proof = Manager.pp_proof
 val pp_proofs = Manager.pp_proofs
 
+(* Install the dump-on-failure hook used by boolLib.store_thm_at /
+   holmakebuild.basic_prover: seed the proof manager with the failing
+   goal so the dumped heap, when reloaded, presents that goal ready
+   for interactive exploration. *)
+val _ = boolLib.dump_setup_hook := (fn g => ignore (set_goal g))
+
 end (* proofManagerLib *)

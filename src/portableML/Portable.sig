@@ -106,6 +106,10 @@ sig
 
   val unique_tmp_suffix : unit -> string
 
+  (* Save a Poly/ML heap (child of the currently-loaded state) to the
+     given path.  A no-op under Moscow ML. *)
+  val save_heap : string -> unit
+
   val assoc1 : ''a -> (''a * 'b) list -> (''a * 'b) option
   val assoc2 : ''a -> ('b * ''a) list -> ('b * ''a) option
 

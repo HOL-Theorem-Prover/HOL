@@ -13,6 +13,14 @@ local
            ("*** Proof of \n  " ^ Parse.term_to_string (#2 g) ^
             "\n*** failed (used CHEAT).\n")
          ; HOL_MESG (exn_to_string e)
+         ; if !Globals.dumpheap_on_failure then
+             let val file =
+                   boolLib.dump_failure_state (!boolLib.current_thm_name, g)
+             in
+               HOL_MESG ("Heap saved to " ^ file ^
+                         "; resume with: bin/hol --holstate=" ^ file)
+             end
+           else ()
          ; Thm.mk_oracle_thm holmake_tag g)
 in
    val () = Tactical.set_prover basic_prover

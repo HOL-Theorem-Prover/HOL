@@ -51,4 +51,6 @@ fun syncref init =
 fun unique_tmp_suffix () =
   SysWord.toString (Posix.Process.pidToWord (Posix.ProcEnv.getpid ()))
 
+fun save_heap (_:string) = ()
+
 end
