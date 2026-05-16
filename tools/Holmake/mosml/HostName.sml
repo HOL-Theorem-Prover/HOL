@@ -1,7 +1,7 @@
 (* Hostname lookup for Moscow ML builds.  Moscow ML's basis lacks the
    Posix module, so we fall back to shelling out via Mosml.run.  The
    Poly/ML and mlton paths use tools/Holmake/poly/HostName.sml. *)
-structure HostName : sig val get : unit -> string end =
+structure HostName :> HostName =
 struct
   fun get () =
       case Mosml.run "hostname" [] "" of
