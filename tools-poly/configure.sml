@@ -260,6 +260,7 @@ in
    "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n"),
    "val MV =" -->       ("val MV = "^quote MV^"\n"),
    "val CP =" -->       ("val CP = "^quote CP^"\n"),
+   "val clone_cmd =" --> ("val clone_cmd = "^optquote clone_cmd^"\n"),
    "val SHASUM ="   --> ("val SHASUM = "^quote SHASUM^"\n"),
    "val haveWord64 ="-->("val haveWord64 = "^
                          Bool.toString

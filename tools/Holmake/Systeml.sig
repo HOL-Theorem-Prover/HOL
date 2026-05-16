@@ -35,6 +35,14 @@ sig
   val DOT_PATH : string option
   val MV : string
   val CP : string
+
+  (* Command for cloning a file with copy-on-write semantics
+     (independent inode, shared backing blocks where the filesystem
+     allows it; byte-copy fallback otherwise).  Used by the Holmake
+     product cache to avoid the metadata-sharing trap of hardlinks
+     across repos that share a cache directory.  NONE on platforms
+     where no such command is available. *)
+  val clone_cmd : string option
   val SHASUM : string
   val DEFAULT_STATE : string
   val haveWord64 : bool

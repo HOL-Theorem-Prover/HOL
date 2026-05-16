@@ -4,36 +4,61 @@ struct
 val pid_s = SysWord.toString
               (Posix.Process.pidToWord (Posix.ProcEnv.getpid()))
 
-(* Place [src]'s contents at [dest] atomically: stage at a per-pid temp
-   file (either by hard-linking from [src], or by copying its bytes if
-   the link fails, e.g. across filesystems), then rename over [dest].
-   The rename is atomic, so a concurrent reader of [dest] sees either
-   the previous contents or the new contents, never a partial write. *)
+(* Byte-copy [src] to [dst]; returns true on success.  Used as a
+   fallback when no reflink-capable cp is available, or when the
+   reflink invocation fails (e.g. filesystem doesn't support it and
+   the cp variant doesn't fall back internally). *)
+fun byte_copy src dst =
+    let val instr  = BinIO.openIn src
+        val outstr = BinIO.openOut dst
+        fun loop () =
+            let val v = BinIO.inputN (instr, 1024)
+            in  if Word8Vector.length v = 0
+                then (BinIO.flushOut outstr; BinIO.closeOut outstr;
+                      BinIO.closeIn instr; true)
+                else (BinIO.output (outstr, v); loop ())
+            end
+    in loop () end
+    handle _ => false
+
+(* Stage [src]'s contents at [dst] with an independent inode.  Tries
+   the platform's reflink-capable cp first (gives hardlink-style space
+   efficiency on CoW filesystems like APFS/btrfs/XFS-with-reflink
+   while keeping inodes separate); falls back to a byte-copy when
+   no clone command is configured or it fails.
+
+   Independent inodes matter for the Holmake product cache: a previous
+   implementation hard-linked into the cache, so a subsequent
+   setTime(dst, NONE) bumped the mtime on the *shared* inode, which
+   propagated to any sibling repo whose local Theory.* was also hard-
+   linked to the same cache entry.  The sibling would then see its
+   local Theory.* as newer than its derived .ui/.uo and spuriously
+   rebuild them. *)
+fun clone_or_copy src dst =
+    case Systeml.clone_cmd of
+        SOME cmd =>
+          if OS.Process.isSuccess
+               (OS.Process.system (cmd ^ " " ^ Systeml.protect src ^
+                                   " " ^ Systeml.protect dst))
+          then true
+          else byte_copy src dst
+      | NONE => byte_copy src dst
+
+(* Place [src]'s contents at [dest] atomically: stage at a per-pid
+   temp file via clone_or_copy, then rename over [dest].  The rename
+   is atomic, so a concurrent reader of [dest] sees either the
+   previous contents or the new contents, never a partial write. *)
 fun copy src dest =
     let
       val tmp = dest ^ ".tmp." ^ pid_s
       val _ = OS.FileSys.remove tmp handle _ => ()
       fun fail () = (OS.FileSys.remove tmp handle _ => (); false)
-      val staged_ok =
-          (Posix.FileSys.link {old = src, new = tmp}; true)
-          handle _ =>
-            let val instr  = BinIO.openIn src
-                val outstr = BinIO.openOut tmp
-                fun loop () =
-                    let val v = BinIO.inputN (instr, 1024)
-                    in  if Word8Vector.length v = 0
-                        then (BinIO.flushOut outstr; BinIO.closeOut outstr;
-                              BinIO.closeIn instr; true)
-                        else (BinIO.output (outstr, v); loop ())
-                    end
-            in loop () end
-            handle _ => false
     in
-      if not staged_ok then fail ()
+      if not (clone_or_copy src tmp) then fail ()
       else
-        (* Hard-linked tmp shares src's mtime with the cache; touch to
-           "now" so the link path is indistinguishable from a byte-copy
-           to downstream timestamp-based rebuild checks. *)
+        (* Touch tmp's (independent) inode to "now" so the cache hit
+           looks newer than any in-tree dependency to downstream
+           timestamp-based rebuild checks. *)
         (OS.FileSys.setTime (tmp, NONE) handle _ => ();
          OS.FileSys.rename {old = tmp, new = dest}; true)
         handle _ => fail ()
