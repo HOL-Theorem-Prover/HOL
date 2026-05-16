@@ -388,4 +388,39 @@ val _ = List.app testq2bnf [
                      [K“:bool”, mutrec_var "foo"]))])
     ]
 
+(* github issue #517: type errors in case expressions should report in
+   surface `case ... of ... => ...` syntax and never leak the parser's
+   internal case-magic constants (fakeconst blob, raw `case_arg` /
+   `case_split` / `case_arrow` combinators) into the error message. *)
+local
+  fun parse_msg q =
+      (Parse.Term q; "<unexpected success>")
+      handle Feedback.HOL_ERR err => Feedback.message_of err
+  fun contains needle hay = String.isSubstring needle hay
+  val forbidden = [GrammarSpecials.fakeconst_special,
+                   "case_arg", "case_split", "case_arrow"]
+  fun readable m =
+      contains "case" m andalso contains "=>" m andalso
+      List.all (fn bad => not (contains bad m)) forbidden
+  fun mk_test desc q =
+      (tprint ("Case type-error readable (#517): " ^ desc);
+       require_msg (check_result readable) (fn m => "got: " ^ m)
+                   parse_msg q)
+in
+val _ = mk_test "outer case Comb (bool scrutinee, option pattern)"
+                `case T of NONE => T | SOME x => x`
+val _ = mk_test "outer case Comb (num option scrutinee, bool arms)"
+                `case (NONE : num option) of NONE => T | SOME n => n`
+val _ = mk_test "outer case Comb (bool scrutinee, pair pattern)"
+                `case T of (x,y) => x`
+(* case as a function argument exercises remove_case_magic on a complete
+   case via the safe_decase wrapper *)
+val _ = mk_test "case as function argument"
+                `FST (case (NONE : bool option) of NONE => T | SOME b => b)`
+(* arms with different return types exercises the arms-disagree formatter
+   (case_split-headed Rator) *)
+val _ = mk_test "case arms with disagreeing return types"
+                `case T of T => () | F => T`
+end
+
 val _ = Process.exit Process.success
