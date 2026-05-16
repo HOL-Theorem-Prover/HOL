@@ -83,9 +83,6 @@ euclid.tex: euclid.stex ../Tools/umap ../Tools/polyscripter euclid-extras.ML
 parity.tex: parity.stex ../Tools/umap ../Tools/polyscripter
 	$(PS_COMMAND)
 
-writinghol.tex: writinghol.stex ../Tools/umap ../Tools/polyscripter
-	$(PS_COMMAND)
-
 combin.tex: combin.stex ../Tools/umap ../Tools/polyscripter
 	$(PS_COMMAND)
 
@@ -112,11 +109,14 @@ ml.md: ml.smd $(PS_STUFF)
 ml.tex: ml.md pdf-macros.lua
 	$(PANDOC_MD)
 
+writinghol.md: writinghol.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+writinghol.tex: writinghol.md pdf-macros.lua
+	$(PANDOC_MD)
+
 # Template for a translated chapter (uncomment + adapt when a .smd
-# version of any of the above lands).  Description uses $(PS_NOUMAP)
-# for everything; writinghol needs $(PS_STUFF) (umap on) when it is
-# translated, since the chapter is all about the Unicode/ASCII tour
-# the umap layer drives.
+# version of any of the above lands).
 #
 # foo.md: foo.smd $(PS_STUFF)
 #	$(PS_NOUMAP)
