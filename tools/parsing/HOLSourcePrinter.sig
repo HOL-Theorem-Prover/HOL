@@ -45,10 +45,14 @@ end
     characters as needed to bring the output's current line number up
     to the line of the incoming span.  The newlines are emitted as a
     Word8Vector of 0x0A bytes via str, so encoding stays consistent
-    with the underlying byte sink.  This is what lets the printer
-    reproduce the original line layout: as long as mkLine reports
-    truthful line numbers (typically `#line o fileline` from the AST's
-    event log), the printed text re-aligns to the source line breaks.
+    with the underlying byte sink.  The line tracking is best-effort:
+    when the output for a span has not yet overshot the source line
+    numbers, subsequent startSpan calls realign by inserting newlines;
+    when a single surface line expands to many output lines (typical
+    for a HOL declaration rewritten to a sequence of SML decls), the
+    printer overshoots and later "jump to line N" requests become
+    no-ops -- relative line breaks still convey something useful, but
+    absolute line numbers drift away from the source.
 
     Public entry points.  Both take an error-sink callback for the
     diagnostics emitted by the AST itself (e.g. when printing

@@ -415,24 +415,18 @@ end;
         ExpExpansion / ExpEmpty / ExpBad markers.
       - row : record-row entries (DotDotDot, LabEq, LabAs,
         LabExpansion).
-      - dec : top-level declarations.  Standard SML
-        (DecVal/Fun/Type/Datatype/Abstype/Exception/Local/Open/Infix
-        /Infixr/Nonfix/Structure/Signature/Include/Sharing/Functor
-        /Exp), plus the HOL-extension declarations:
-
-          HOLTheory / HOLTheoryEnd            - Theory foo[attrs] ...
-          HOLDefinition                       - Definition ... End
-          HOLDatatype                         - Datatype: ... End
-          HOLQuoteDecl                        - Quote id [= e]: ... End
-          HOLInductiveDecl                    - [Co]Inductive id: ...
-          HOLType                             - Type / Overload
-          HOLSimpleThm                        - Theorem id[attrs] = exp
-          HOLTheoremDecl                      - Theorem ... QED
-          HOLResume / HOLFinalise             - suspended-proof support
-          HOLLinePragmaWith / HOLFilePragmaWith
-                                              - #(LINE=...) / #(FILE=)
-
-        plus DecMosmlPrimVal for Moscow ML compatibility, DecBad for
+      - dec : top-level declarations.  Standard SML declarations
+        (DecVal / DecFun / DecType / DecDatatype / DecAbstype /
+        DecException / DecLocal / DecOpen / DecInfix(r) / DecNonfix /
+        DecStructure / DecSignature / DecInclude / DecSharing /
+        DecFunctor / DecExp / DecMosmlPrimVal), plus HOL-extension
+        declarations (HOLTheory / HOLTheoryEnd, HOLDefinition,
+        HOLDatatype, HOLQuoteDecl, HOLInductiveDecl, HOLType,
+        HOLSimpleThm, HOLTheoremDecl, HOLResume, HOLFinalise,
+        HOLLinePragmaWith, HOLFilePragmaWith).  Each HOL constructor
+        carries an inline (** ... *) annotation showing its surface
+        form -- this Overview does not duplicate them.  Two
+        non-surface variants round out the type: DecBad for
         unparseable input, and DecExpansion as an "original ~> result"
         wrapper produced by HOLSourceExpand.
       - funarg, sigexp, strexp, qdecl : the structure / signature /
@@ -465,14 +459,10 @@ end;
         their raw character contents, handling \NNN / \uXXXX /
         line-continuation escapes.
 
-    Span accessors.  For each AST sort there is a *Stop (and where
-    useful *Start, *Span) function: idStop / idSpan, tyStart / tyStop
-    / tySpan, tybindStop, conbindStop, datbindStop, expStart /
-    expStop / expSpan, exbindStop, valbindStop, mosmlPrimvalbindStop,
-    sigexpStart / sigexpStop / sigexpSpan, strexpSpan, sigbindStop,
-    structbindStop, headerStop, decStart / decStop / decSpan,
-    functorbindStop.  These walk only as far as needed to find the
-    extent.
+    Span accessors.  For each AST sort there is a *Stop function
+    (and where useful *Start and *Span -- e.g. tyStart / tyStop /
+    tySpan, expStart / expStop / expSpan, decStart / decStop /
+    decSpan).  These walk only as far as needed to find the extent.
 
     Source position tracking.  The lexer emits a stream of events
     (FileEvent, LineEvent, LineColEvent) capturing changes in the
@@ -487,7 +477,9 @@ end;
     queries arrive in roughly increasing offset order.
 
     isOnlyComments tests whether a substring of the source consists
-    entirely of whitespace and (possibly nested) (* ... *) comments;
-    used by the printer and expander to decide where lossless
-    line-pragma insertions are safe.
+    entirely of whitespace and (possibly nested) (* ... *) comments.
+    Used by HOLSourceExpand when splitting an Inductive / CoInductive
+    quote at DefinitionLabel boundaries, to recognise (and drop)
+    quote-literal fragments that carry no semantic content between
+    labels.
    ---------------------------------------------------------------------- *)

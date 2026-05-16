@@ -57,13 +57,17 @@ end
 
     parseSML : string -> (int -> string) -> errSink -> scope -> result
 
+    where errSink is shorthand (in this Overview only, not a SML
+    type) for the curried error-reporter type
+      (DString.dstring * HOLSourceAST.events) -> int * int -> string
+                                                              -> unit
+
     Inputs:
       - file : the filename used for diagnostics.
       - read : 1024-byte (or so) chunked source reader; called as
         needed when the buffer runs short.  An empty return signals
         EOF.
-      - errSink : (body, events) -> (start, stop) -> string -> unit
-        Curried error reporter.  The outer (body, events) capture is
+      - errSink : as above.  The outer (body, events) capture is
         normally pre-applied via simpleParseError or
         filelineParseError; the inner two arguments are the offending
         source span and a human-readable description.
@@ -102,9 +106,10 @@ end
         ("foo.sml:12:34-12:40: parse error: ...").  This is what a
         Holmake-driven build feeds in.
 
-    The parser is intentionally a single recursive-descent module,
-    not a parser-generator product; this is what makes it possible
-    to (a) feed input lazily and parse a declaration at a time, and
-    (b) recover from local syntax errors without abandoning the
-    rest of the file.
+    The parser is intentionally a single hand-written recursive-
+    descent module rather than a parser-generator product.  This is
+    what makes local syntax-error recovery straightforward: synthetic
+    ExpBad / DecBad nodes and right=NONE closer fields carry the
+    disturbance up to the consumer rather than aborting, so the rest
+    of the file is still parsed.
    ---------------------------------------------------------------------- *)
