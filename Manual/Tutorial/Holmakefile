@@ -95,6 +95,14 @@ combin.tex: combin.stex ../Tools/umap ../Tools/polyscripter
 proof-tools.tex: proof-tools.stex ../Tools/umap ../Tools/polyscripter ../../examples/dpll.sml
 	$(PS_COMMAND)
 
+# .md -> .tex rules for chapters translated to .smd.
+
+more-examples.md: more-examples.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+more-examples.tex: more-examples.md pdf-macros.lua
+	$(PANDOC_MD)
+
 # Template for a translated chapter (uncomment + adapt when a .smd
 # version of any of the above lands).  Description uses $(PS_NOUMAP)
 # for everything; writinghol needs $(PS_STUFF) (umap on) when it is
