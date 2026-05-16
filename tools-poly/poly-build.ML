@@ -60,6 +60,7 @@ val _ = use "../tools/build/buildcline.sig"
 val _ = use "../tools/build/buildcline.sml"
 val _ = use "../tools/build/checkRegressions.sig";
 val _ = use "../tools/build/checkRegressions.sml";
+val _ = use "../tools/Holmake/poly/HostName.sml";
 val _ = use "../tools/build/buildutils.sig";
 val _ = use "../tools/build/buildutils.sml";
 val _ = use "build.sml";

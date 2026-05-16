@@ -25,5 +25,6 @@ $(SML_LIB)/basis/basis.mlb
 ../poly/MB_Monitor.sml
 ../poly/multibuild.sml
 ../poly/BuildCommand.sml
+../poly/HostName.sml
 ../core/Holmake.sml
 mlton-Holmake.sml

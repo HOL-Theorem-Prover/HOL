@@ -429,6 +429,7 @@ val _ =
     compile ["-I", "mosml", "-I", "core", "-I", "deps", "-I", "../util", "-I", "util", "-I", "../parsing", "-I", "hfs", "-I", "hmf"] "BuildCommand.sig";
     FileSys.chDir "mosml";
     compile ["-I", "..", "-I", "../core", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "BuildCommand.sml";
+    compile [] "HostName.sml";
     FileSys.chDir "../core";
     compile ["-I", "..", "-I", "../mosml", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "Holmake.sml";
     FileSys.chDir "../mosml";

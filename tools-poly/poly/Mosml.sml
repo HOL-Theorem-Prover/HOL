@@ -4,6 +4,25 @@ struct
 datatype runresult =
     Success of string
   | Failure of string
+
+(* OS.FileSys.tmpName uses Poly's P_tmpdir (=/tmp); under restrictive
+   sandboxes (e.g. macOS sandbox-exec) writes to /tmp may be denied
+   even when $TMPDIR is writable, so we honour $TMPDIR explicitly. *)
+local
+  val counter = ref 0
+in
+fun mk_tmpname prefix =
+    let val dir = case OS.Process.getEnv "TMPDIR" of
+                      SOME d => d
+                    | NONE => "/tmp"
+        val pid = SysWord.toString
+                    (Posix.Process.pidToWord (Posix.ProcEnv.getpid ()))
+        val n = !counter before counter := !counter + 1
+    in
+      OS.Path.concat (dir, prefix ^ "-" ^ pid ^ "-" ^ Int.toString n)
+    end
+end
+
 fun run cmd args inp =
     let fun catenate xs =
 	    String.concat (List.foldr (fn (s, res) => s :: " " :: res) [] xs)
@@ -16,8 +35,8 @@ fun run cmd args inp =
 		val is  = openIn filename
 		val res = inputAll is
 	    in closeIn is; res end
-	val infile  = OS.FileSys.tmpName ()
-	val outfile = OS.FileSys.tmpName ()
+	val infile  = mk_tmpname "Mosml-in"
+	val outfile = mk_tmpname "Mosml-out"
     in let
 	val _ = write infile (Byte.stringToBytes inp)
 	val cmdline =

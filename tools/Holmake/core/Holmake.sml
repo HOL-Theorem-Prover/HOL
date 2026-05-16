@@ -341,12 +341,7 @@ val _ = diag "startup"
 
 (* set up logging *)
 val logfilename = Systeml.make_log_file
-val hostname = if Systeml.isUnix then
-                 case Mosml.run "hostname" [] "" of
-                   Mosml.Success s => String.substring(s,0,size s - 1) ^ "-"
-                                      (* substring to drop \n in output *)
-                 | _ => ""
-               else "" (* what to do under windows? *)
+val hostname = if Systeml.isUnix then HostName.get () ^ "-" else ""
 
 fun finish_logging buildok = let
 in
