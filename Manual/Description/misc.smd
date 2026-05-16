@@ -693,6 +693,121 @@ comments on command-lines, and such "comments" will be passed to
 the shell, which may or may not treat them as comments when it
 sees them.
 
+#### Pattern rules
+
+\index{Holmake@\holmake!pattern rules}
+\index{pattern rules (Holmakefile)@pattern rules (`Holmakefile`)}
+A rule whose target(s) contain the percent (`%`) character is a
+**pattern rule**.  Pattern rules supply a single recipe for an
+open-ended family of targets, with the `%` acting as a wildcard
+("stem") that is substituted into the recipe and into the rule's
+prerequisites.  The shape of a percent-pattern is the same as that
+used by `$(patsubst ...)` (see below): one `%` per pattern, matching
+any non-empty string; a literal `%` is written as `\%`.
+
+The simplest form of pattern rule is
+
+```
+%.ext: %.other
+        recipe using $<, $@, etc.
+```
+
+When `Holmake` is asked to build a target whose name fits `%.ext`
+with some stem `S`, it looks for a file named `S.other` (or a rule
+that builds it) and runs the recipe.  Multiple targets in a single
+rule are permitted and share both the prerequisites and the
+recipe; each target is matched against the percent-pattern
+independently:
+
+```
+%.uo %.ui: %.sml common.ui
+        $(MOSMLC) -c $<
+```
+
+Within a pattern rule's recipe the following automatic variables
+are bound:
+
+  - **`$@`**: the target being built (`foo.uo` in the example
+    above).
+  - **`$<`**: the first matched prerequisite (`foo.sml`).
+  - **`$*`**: the stem the percent matched (`foo`).
+  - **`$^`**: the (space-joined) full list of prerequisites
+    (`foo.sml common.ui`).
+
+\index{Holmake@\holmake!pattern rules!additional prerequisites}
+A pattern rule can be combined with an ordinary command-less rule
+to give a particular target *additional* prerequisites without
+disturbing the recipe.  For instance, building on the pattern rule
+above, writing
+
+```
+specific.uo: extra.ui
+```
+
+adds `extra.ui` as a prerequisite of `specific.uo`; the recipe
+still comes from the `%.uo %.ui: %.sml common.ui` pattern, and
+`$^` expands to include the extra dependency.
+
+\index{Holmake@\holmake!pattern rules!applicability}
+A pattern rule is only **applicable** to a target when each of the
+target's substituted prerequisites either already exists on disk
+or is itself the target of some explicit rule.  This is the same
+two-phase implicit-rule search performed by GNU `make`; without
+it, a rule like `%.tex: %.stex` would also claim hand-maintained
+`.tex` files in the same directory whose `.stex` source does not
+exist.
+
+\index{Holmake@\holmake!pattern rules!precedence}
+The precedence rules between pattern rules and the other kinds of
+rule are as follows.  For a target *T*, `Holmake` consults, in
+order:
+
+  1. an explicit rule for *T* that carries a recipe;
+  2. `Holmake`'s built-in productions for source files (`Script.sml`
+     to `Theory.{sml,sig,uo}`, `.sml` to `.uo`, `.sig` to `.ui`),
+     when applicable;
+  3. pattern rules in the order they appear in the `Holmakefile`;
+  4. the existing-file/no-rule fallback.
+
+In particular, the built-in productions take precedence over any
+user-supplied pattern rule that would otherwise match a target of
+those shapes.  A user who needs to override a built-in production
+can still do so with an explicit recipe-carrying rule for the
+specific target.
+
+**Example.**  Suppose a directory holds several `.stex` chapter
+sources that are all processed into `.tex` by a script called
+`polyscripter`.  Without pattern rules, each chapter needs its
+own rule:
+
+```
+euclid.tex: euclid.stex ../Tools/polyscripter
+        ../Tools/polyscripter < $< > $@
+
+parity.tex: parity.stex ../Tools/polyscripter
+        ../Tools/polyscripter < $< > $@
+
+# ... and so on for each chapter
+```
+
+A single pattern rule covers all of them, with chapter-specific
+extra prerequisites listed separately:
+
+```
+%.tex: %.stex ../Tools/polyscripter
+        ../Tools/polyscripter < $< > $@
+
+euclid.tex: euclid-extras.ML
+proof-tools.tex: ../../examples/dpll.sml
+```
+
+Because of the applicability rule above, hand-maintained `.tex`
+files such as `tutorial.tex` (which have no corresponding
+`.stex`) are not affected by this pattern: `Holmake` sees that
+`tutorial.stex` neither exists nor has a rule, rejects the
+pattern, and falls through to treating `tutorial.tex` as an
+ordinary leaf file.
+
 #### Special targets
 
 Some target names for rules are handled specially by `Holmake`:
