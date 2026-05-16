@@ -4,3 +4,6 @@ ml.tex
 combin.tex
 proof-tools.tex
 writinghol.tex
+SUMMARY.md
+chapters-include.tex
+mdbook-serve.log

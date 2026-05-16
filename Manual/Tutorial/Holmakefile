@@ -1,25 +1,118 @@
 INCLUDES = ../Tools
 
-EXTRA_CLEANS = tutorial.pdf euclid.tex parity.tex ml.tex combin.tex \
-               proof-tools.tex writinghol.tex $(wildcard *.aux)
+# Core LaTeX file stems that contribute to tutorial.pdf.  Front
+# matter (title, preface) and the hand-rolled bibliography
+# (references) are still hand-coded in tutorial.tex; everything
+# else is wired in through chapters-include.tex which gen_chap_lists
+# generates from chapters.txt.
+TEX_CORES = tutorial title preface intro ml writinghol euclid \
+            parity combin proof-tools more-examples references
 
-tutorial.pdf: tutorial.tex euclid.tex logic.tex preface.tex proof-tools.tex theories.tex combin.tex parity.tex ml.tex more-examples.tex intro.tex writinghol.tex
+TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex \
+              chapters-include.tex \
+              $(patsubst %,%.tex,$(TEX_CORES))
+
+PS_ROOT = ../Tools/polyscripter
+PS_STUFF = $(PS_ROOT) ../Tools/umap
+PS_COMMAND = $(PS_STUFF) < $< > $@
+PS_NOUMAP = $(PS_ROOT) -md < $< > $@
+
+# pandoc invocation for the .md -> .tex stage.  Same as the
+# Description Holmakefile uses.
+PANDOC_MD = pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
+
+.PHONY: all mdbook mdbook-serve
+
+all: tutorial.pdf
+
+# All .smd files in the directory; pick them up automatically so
+# adding a new .smd doesn't require a Holmakefile edit just to wire
+# its dependencies into the mdbook prereq chain.
+SMDS = $(wildcard *.smd)
+SMD_MDS = $(patsubst %.smd,%.md,$(SMDS))
+
+# Build the mdbook output for the chapters listed in SUMMARY.md;
+# afterwards, scan the rendered HTML for raw-LaTeX leak patterns and
+# cross-reference number drift.
+mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS)
+	mdbook build
+	../Tools/mdbook-check.sh ../book/Tutorial
+	../Tools/smdpp check-refs ../book/Tutorial
+
+# SUMMARY.md and chapters-include.tex are generated from
+# chapters.txt by Manual/Tools/gen_chap_lists.
+SUMMARY.md: ../Tools/gen_chap_lists chapters.txt $(SMDS)
+	../Tools/gen_chap_lists summary > $@
+
+chapters-include.tex: ../Tools/gen_chap_lists chapters.txt
+	../Tools/gen_chap_lists latex-include > $@
+
+# Convenience: serve the book locally at http://127.0.0.1:3001/.
+# Port 3001 (instead of Description's 3000) so the two manuals can
+# be served side by side.  Detaches into the background; pass LOG=1
+# to capture the server's stdout/stderr to mdbook-serve.log here,
+# or LOG=<path> for a custom location.
+mdbook-serve: ../Tools/smdpp
+	@msg() { { echo "$$1" >/dev/tty; } 2>/dev/null || echo "$$1" >&2; }; \
+	 if lsof -ti :3001 >/dev/null 2>&1; then \
+	   msg "Port 3001 already in use; stop the existing server first:"; \
+	   msg "  pkill -f 'mdbook serve'  (or: lsof -ti :3001 | xargs kill)"; \
+	   exit 1; \
+	 fi; \
+	 logfile="$(LOG)"; \
+	 [ "$$logfile" = 1 ] && logfile=mdbook-serve.log; \
+	 [ -z "$$logfile" ] && logfile=/dev/null; \
+	 (mdbook serve --hostname 127.0.0.1 --port 3001 \
+	    >"$$logfile" 2>&1 &); \
+	 msg "mdbook serving at http://127.0.0.1:3001/"; \
+	 [ "$$logfile" != /dev/null ] && msg "log: $$(pwd)/$$logfile"; \
+	 msg "stop: pkill -f 'mdbook serve'"
+
+tutorial.pdf: $(TEX_SOURCES)
 	latexmk -pdf tutorial
 
+# Legacy .stex -> .tex rules, used by chapters that haven't been
+# translated to .smd yet.  As each chapter gains a .smd, its
+# .stex rule below should be removed and replaced with the matching
+# .md -> .tex pandoc rule (see commented-out template at the end of
+# this file).
+
 euclid.tex: euclid.stex ../Tools/umap ../Tools/polyscripter euclid-extras.ML
-	../Tools/polyscripter ../Tools/umap < $< > $@
+	$(PS_COMMAND)
 
 parity.tex: parity.stex ../Tools/umap ../Tools/polyscripter
-	../Tools/polyscripter ../Tools/umap < $< > $@
+	$(PS_COMMAND)
 
 writinghol.tex: writinghol.stex ../Tools/umap ../Tools/polyscripter
-	../Tools/polyscripter ../Tools/umap < $< > $@
+	$(PS_COMMAND)
 
 ml.tex: ml.stex ../Tools/umap ../Tools/polyscripter
-	../Tools/polyscripter ../Tools/umap < $< > $@
+	$(PS_COMMAND)
 
 combin.tex: combin.stex ../Tools/umap ../Tools/polyscripter
-	../Tools/polyscripter ../Tools/umap < $< > $@
+	$(PS_COMMAND)
 
 proof-tools.tex: proof-tools.stex ../Tools/umap ../Tools/polyscripter ../../examples/dpll.sml
-	../Tools/polyscripter ../Tools/umap < $< > $@
+	$(PS_COMMAND)
+
+# Template for a translated chapter (uncomment + adapt when a .smd
+# version of any of the above lands).  Description uses $(PS_NOUMAP)
+# for everything; writinghol needs $(PS_STUFF) (umap on) when it is
+# translated, since the chapter is all about the Unicode/ASCII tour
+# the umap layer drives.
+#
+# foo.md: foo.smd $(PS_STUFF)
+#	$(PS_NOUMAP)
+#
+# foo.tex: foo.md pdf-macros.lua
+#	$(PANDOC_MD)
+
+EXTRA_CLEANS = tutorial.pdf SUMMARY.md chapters-include.tex \
+               euclid.tex parity.tex ml.tex combin.tex \
+               proof-tools.tex writinghol.tex \
+               $(patsubst %,%.aux,$(TEX_CORES)) \
+               tutorial.log tutorial.out tutorial.toc \
+               tutorial.fls tutorial.idx tutorial.ilg tutorial.ind \
+               tutorial.blg tutorial.bbl tutorial.fdb_latexmk \
+               mdbook-serve.log \
+               ../book/Tutorial/

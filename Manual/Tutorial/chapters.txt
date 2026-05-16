@@ -1,0 +1,32 @@
+# Numbered-chapter ordering for the Tutorial manual.
+#
+# Each top-level (un-indented) line is a chapter stem; lines with
+# leading whitespace are nested sub-files of the most recent
+# top-level stem.  Front-matter chapters (title, preface) and the
+# tableofcontents marker are still hand-coded in tutorial.tex
+# because their ordering relative to \tableofcontents matters.
+# Lines starting with `#` and blank lines are ignored.
+#
+# .smd source conventions and build behaviour: see
+# Manual/Description/chapters.txt for the canonical write-up.
+#
+# Tutorial scope (translation-in-progress):
+#
+#   - Chapters listed below are the ones currently included by
+#     tutorial.tex's \input{chapters-include.tex}.
+#   - references.tex (the hand-rolled bibliography) is deliberately
+#     omitted -- the PDF still gets it via a hand-coded
+#     \include{references}; mdbook will pick it up once a citation
+#     story shared with Description's BibTeX setup is in place.
+#   - logic.tex, tool.tex, binomial.stex and the binomial appendix
+#     are commented out in tutorial.tex and not in scope for this
+#     translation pass.
+
+intro
+ml
+writinghol
+euclid
+parity
+combin
+proof-tools
+more-examples
