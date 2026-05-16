@@ -86,9 +86,6 @@ parity.tex: parity.stex ../Tools/umap ../Tools/polyscripter
 writinghol.tex: writinghol.stex ../Tools/umap ../Tools/polyscripter
 	$(PS_COMMAND)
 
-ml.tex: ml.stex ../Tools/umap ../Tools/polyscripter
-	$(PS_COMMAND)
-
 combin.tex: combin.stex ../Tools/umap ../Tools/polyscripter
 	$(PS_COMMAND)
 
@@ -107,6 +104,12 @@ intro.md: intro.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 intro.tex: intro.md pdf-macros.lua
+	$(PANDOC_MD)
+
+ml.md: ml.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+ml.tex: ml.md pdf-macros.lua
 	$(PANDOC_MD)
 
 # Template for a translated chapter (uncomment + adapt when a .smd
