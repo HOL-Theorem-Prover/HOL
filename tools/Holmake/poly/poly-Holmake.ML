@@ -32,6 +32,7 @@ val _ = useC "poly/ProcessMultiplexor";
 val _ = useC "poly/MB_Monitor";
 val _ = useS "poly/multibuild";
 val _ = useS "poly/BuildCommand";
+val _ = useC "core/HostName";
 val _ = useS "core/Holmake";
 
 val die_with = Holmake.die_with
