@@ -529,7 +529,10 @@ absence of the `-k` flag, this failure to build a theory may
 cause `Holmake` to also exit (with a failure).  With the `--noqof`
 option, `Holmake` will cause the running script to use `mk_thm`
 to assert the failed goal, allowing the build to continue and
-other theorems to be proved.
+other theorems to be proved.  Either way, the running script
+also writes a Poly/ML heap snapshot so that the failing proof
+can be inspected interactively — see
+Section \ref{sec:holmake-dumpheap} below.
 
 **`--quiet`** Minimise the amount of output produced by `Holmake`.
 Fatal error messages will still be written to the standard error
@@ -555,6 +558,49 @@ thinks it needs to.  This option is implemented by having
 
 `Holmake` should never exit with error messages such as "Uncaught
 exception".  Such behaviour is a bug, please report it!
+
+### Heap dumps on tactic failure
+
+\label{sec:holmake-dumpheap}
+\index{Holmake@\holmake!dumped heaps}
+\index{dumpedheap files}
+
+When a tactic fails inside `store_thm`, `Q.store_thm`, or the
+`Theorem`-`Proof`-`QED` form during a non-interactive `Holmake`
+build, the running script's Poly/ML heap is saved to a file named
+
+```
+   <theory>.<thmname>.dumpedheap
+```
+
+in the script's working directory.  Before the heap is written,
+the proof manager is seeded with the failing goal so that, on
+reload, the failing proof is sitting on the goal stack ready to be
+explored.  Resume with
+
+```
+   bin/hol --holstate=<theory>.<thmname>.dumpedheap
+```
+
+and the standard proof-manager commands (`e`, `b`, `p`, ...) work
+as usual against the original goal.
+
+The dump is produced in both `--qof` and `--noqof` modes:
+
+  - Under `--qof` (the default), the heap is saved and `Holmake`
+    then exits with failure on the first failing proof.
+
+  - Under `--noqof`, the heap is saved, a CHEAT-tagged oracle
+    theorem is substituted for the failing proof, and the build
+    continues.  A script that fails on multiple proofs will
+    therefore leave multiple `.dumpedheap` files behind.
+
+Under `--fast` the tactic is never evaluated, so no dump is
+produced.  The mechanism is also a no-op under Moscow ML, which
+has no equivalent of Poly/ML's `SaveState.saveChild`.
+
+Dumped heaps are not removed automatically; they can be deleted
+freely once the failing proof has been resolved.
 
 ### Using a make-file with `Holmake`
 
