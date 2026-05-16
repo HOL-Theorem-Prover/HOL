@@ -80,9 +80,6 @@ tutorial.pdf: $(TEX_SOURCES)
 euclid.tex: euclid.stex ../Tools/umap ../Tools/polyscripter euclid-extras.ML
 	$(PS_COMMAND)
 
-parity.tex: parity.stex ../Tools/umap ../Tools/polyscripter
-	$(PS_COMMAND)
-
 combin.tex: combin.stex ../Tools/umap ../Tools/polyscripter
 	$(PS_COMMAND)
 
@@ -113,6 +110,12 @@ writinghol.md: writinghol.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 writinghol.tex: writinghol.md pdf-macros.lua
+	$(PANDOC_MD)
+
+parity.md: parity.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+parity.tex: parity.md pdf-macros.lua
 	$(PANDOC_MD)
 
 # Template for a translated chapter (uncomment + adapt when a .smd
