@@ -1,5 +1,4 @@
-ifeq ($(error stop now),anything)
-endif
+$(error stop now)
 
 .PHONY: all
 all:

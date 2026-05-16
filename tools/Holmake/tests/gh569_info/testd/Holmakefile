@@ -1,20 +1,14 @@
-# Holmake's parser rejects a bare function-call line at the top level, so
-# calls go via ifeq.  Holmake's ifeq arg-splitter is not paren-aware, so
-# function calls with more than one argument go via an intermediate
-# variable, which is expanded by argtokenize (which IS paren-aware).
+$(info top-level-info)
+$(warning top-level-warning)
 
-ifeq ($(info top-level-info)$(warning top-level-warning),)
-endif
-
+# LAZY is never referenced, so its $(info) must not fire.
 LAZY = $(info DO-NOT-FIRE)
 
-IFRESULT = $(if 1,$(info chosen-branch),$(info wrong-branch))
-ifeq ($(IFRESULT),)
-endif
+# $(if) only evaluates the chosen branch.
+$(if 1,$(info chosen-branch),$(info wrong-branch))
 
-COMMA_VAR = $(info one,two,three)
-ifeq ($(COMMA_VAR),)
-endif
+# Commas inside a function call are rejoined literally on output.
+$(info one,two,three)
 
 .PHONY: all
 all:

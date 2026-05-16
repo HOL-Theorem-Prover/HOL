@@ -270,8 +270,24 @@ in
           if c1 = #"\t" then error b "TAB starts an unattached command"
           else
             case first_special s' of
-                NONE => error b ("Unrecognised character: \""^
-                                 String.toString (str c1) ^ "\"")
+                NONE =>
+                  if c1 = #"$" then
+                    (* bare top-level function call (e.g. $(info ...));
+                       expand for its side effects and discard the result.
+                       Anything non-blank after expansion is a typo. *)
+                    let
+                      val txt = strip_trailing_comment s'
+                      val q = extract_normal_quotation (Substring.full txt)
+                      val result = substitute b env q
+                    in
+                      if CharVector.all Char.isSpace result then
+                        process_line env (condstate, advance b)
+                      else
+                        error b ("Top-level expression has non-empty \
+                                 \expansion: \"" ^ result ^ "\"")
+                    end
+                  else error b ("Unrecognised character: \""^
+                                String.toString (str c1) ^ "\"")
               | SOME "=" => ((condstate, advance b),
                               DEFN (strip_trailing_comment s))
               | SOME "+=" => ((condstate, advance b),
