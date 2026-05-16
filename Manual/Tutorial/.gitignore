@@ -6,6 +6,8 @@ proof-tools.tex
 writinghol.tex
 more-examples.tex
 more-examples.md
+intro.tex
+intro.md
 SUMMARY.md
 chapters-include.tex
 mdbook-serve.log

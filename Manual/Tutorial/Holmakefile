@@ -103,6 +103,12 @@ more-examples.md: more-examples.smd $(PS_STUFF)
 more-examples.tex: more-examples.md pdf-macros.lua
 	$(PANDOC_MD)
 
+intro.md: intro.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+intro.tex: intro.md pdf-macros.lua
+	$(PANDOC_MD)
+
 # Template for a translated chapter (uncomment + adapt when a .smd
 # version of any of the above lands).  Description uses $(PS_NOUMAP)
 # for everything; writinghol needs $(PS_STUFF) (umap on) when it is
