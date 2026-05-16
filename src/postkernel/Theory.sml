@@ -901,10 +901,20 @@ val _ = Feedback.register_btrace ("report_thy_times", report_times)
 
 local
   val mesg = Lib.with_flag(Feedback.MESG_to_string, Lib.I) HOL_MESG
+  fun rel_to_holdir d = let
+    val h = Systeml.HOLDIR
+  in
+    if d = h then ""
+    else if String.isPrefix (h ^ "/") d then
+      String.extract (d, size h + 1, NONE)
+    else d
+  end
+  fun thy_log_key thyname =
+    case rel_to_holdir (FileSys.getDir()) of
+      "" => thyname
+    | rel => rel ^ "/" ^ thyname
   fun maybe_log_time_to_disk thyname timestr = let
     open FileSys
-    fun concatl pl = List.foldl (fn (p2,p1) => Path.concat(p1,p2))
-                                (hd pl) (tl pl)
     val filename_opt = let
       val build = Systeml.build_log_file
       val currentdir = Systeml.make_log_file
@@ -916,7 +926,7 @@ local
       SOME s => let
         val fs = TextIO.openAppend s
       in
-        TextIO.output(fs, thyname ^ " " ^ timestr ^ "\n");
+        TextIO.output(fs, thy_log_key thyname ^ " " ^ timestr ^ "\n");
         TextIO.closeOut fs
       end
     | NONE => ()

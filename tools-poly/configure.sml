@@ -345,8 +345,10 @@ local
   val yaccdir = fullPath [holdir, "tools", "mlyacc", "src"]
   val qfdir = fullPath [holdir, "tools", "quote-filter"]
   val hmakedir = fullPath [toolsdir, "Holmake"]
+  val builddir = fullPath [holdir, "tools", "build"]
   val hmakebin = fullPath [holdir, "bin", "Holmake"]
   val buildbin = fullPath [holdir, "bin", "build"]
+  val comparelogsbin = fullPath [holdir, "bin", "comparelogs"]
   val qfbin = fullPath [holdir, "bin", "unquote"]
   val lexer = fullPath [lexdir, "mllex.exe"]
   val yaccer = fullPath [yaccdir, "mlyacc.exe"]
@@ -366,6 +368,7 @@ in
 
 val _ = remove hmakebin;
 val _ = remove buildbin;
+val _ = remove comparelogsbin;
 val _ = remove lexer;
 val _ = remove yaccer;
 val _ = remove qfbin;
@@ -450,6 +453,12 @@ val _ = work_in_dir "holdeptool" (fullPath [HOLDIR, "tools", "Holmake", "poly"])
 val _ = work_in_dir "build" toolsdir
                     (fn () => polyc_compile (SOME "../tools/build/build.mlb")
                                             "poly-build.ML" buildbin)
+
+(* comparelogs *)
+val _ = work_in_dir "comparelogs" builddir
+                    (fn () => polyc_compile (SOME "comparelogs.mlb")
+                                            "poly-comparelogs.ML"
+                                            comparelogsbin)
 
 (* hol - the main HOL executable *)
 (* Note: heapname functionality is now available via 'hol heapname' subcommand *)

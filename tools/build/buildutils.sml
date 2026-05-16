@@ -1163,14 +1163,17 @@ end handle IO.Io _ => warn "Couldn't set up build-logs"
 
 fun finish_logging buildok = let
 in
-  if HOLFileSys.access(logfilename, []) then let
-      open Date
-      val timestamp = fmt "%Y-%m-%dT%H%M" (fromTimeLocal (Time.now()))
-      val newname0 = hostname^timestamp
-      val newname = (if buildok then "" else "bad-") ^ newname0
-    in
-      HOLFileSys.rename {old = logfilename, new = fullPath [logdir, newname]}
-    end
+  if HOLFileSys.access(logfilename, []) then
+    if buildok then let
+        open Date
+        val timestamp = fmt "%Y-%m-%dT%H%M" (fromTimeLocal (Time.now()))
+        val newname = hostname^timestamp
+        val newpath = fullPath [logdir, newname]
+      in
+        HOLFileSys.rename {old = logfilename, new = newpath};
+        checkRegressions.run {logdir = logdir, latest = newpath}
+      end
+    else safedelete logfilename
   else ()
 end handle IO.Io _ => warn "Had problems making permanent record of build log"
 
