@@ -19,8 +19,10 @@ end
     specific surface forms (Theorem, Definition, Datatype, Inductive /
     CoInductive, Type, Overload, Quote, Theory, Resume, Finalise, the
     #(LINE=)/(FILE=) pragma variants, etc.) and rewrites it into pure
-    SML by emitting calls to the HOL kernel and library functions that
-    realise each construct.
+    SML by emitting calls to the HOL library functions
+    (Q.store_thm, TotalDefn.qDefine, Theory.new_theory,
+    Parse.set_grammar_ancestry, IndDefLib.xHol_reln, markerLib.*,
+    etc.) that realise each construct.
 
     Every expansion is returned as a DecExpansion {orig, result}, so
     the original surface span is preserved alongside the synthesised
@@ -36,9 +38,12 @@ end
         store_thm_at, TotalDefn.qDefine vs located_qDefine, depending
         on whether the source originates in a known file.
       - parseError : int * int -> string -> unit
-        Reports any unrecognised or malformed attributes encountered
-        during expansion (e.g. unknown keys on [attrs], unsupported
-        argument shapes for [smlname], [induction], etc.).
+        Caller-supplied error sink, invoked with a source span and a
+        human-readable message whenever expansion hits an unrecognised
+        or malformed attribute (e.g. unknown keys on [attrs],
+        unsupported argument shapes for [smlname], [induction]).  The
+        caller chooses the failure semantics -- raise, log, or
+        accumulate -- the expander itself does not abort.
       - quietOpen : bool
         When true, theory-level `open`s are wrapped between
         HOL_Interactive.start_open () and HOL_Interactive.end_open (),
@@ -90,12 +95,11 @@ end
     DecBad turns into `val _ = raise Fail "malformed"`.
 
     Expressions go through expandExp.  The notable transformation is
-    that SuccessorML "or-patterns" (Or {...}) are detected in
-    binding/pattern positions and either expanded into multiple match
-    arms (case / fn / handle), or rejected via parseError when they
-    appear somewhere multiple arms cannot be synthesised (val
-    bindings raise HasOrPat, which is caught and replaced with
-    ExpBad).
+    SuccessorML "or-patterns" (Or {...}).  In case / fn / handle
+    positions each alternative is duplicated across multiple match
+    arms.  In val bindings, where no such duplication is sound, the
+    expander raises HasOrPat internally, catches it, reports through
+    parseError, and emits ExpBad in place.
 
     Quote handling.  expandQuote start stop toks builds the SML list
     of QUOTE / ANTIQUOTE fragments from the parsed qdecl list,
