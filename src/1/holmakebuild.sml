@@ -13,7 +13,9 @@ local
            ("*** Proof of \n  " ^ Parse.term_to_string (#2 g) ^
             "\n*** failed (used CHEAT).\n")
          ; HOL_MESG (exn_to_string e)
-         ; if !Globals.dumpheap_on_failure then
+         ; if !Globals.dumpheap_on_failure andalso
+              not (!Globals.interactive)
+           then
              let val file =
                    boolLib.dump_failure_state (!boolLib.current_thm_name, g)
              in

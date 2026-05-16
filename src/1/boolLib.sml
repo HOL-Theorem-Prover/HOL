@@ -308,7 +308,9 @@ fun store_thm_at loc (n0,t,tac) =
       val _ = current_thm_name := name
       val th = Tactical.prove(t,tac)
                handle HOL_ERR herr =>
-               if !Globals.dumpheap_on_failure then
+               if !Globals.dumpheap_on_failure andalso
+                  not (!Globals.interactive)
+               then
                  let val file = dump_failure_state (name, ([], t))
                  in
                    TextIO.output (TextIO.stdErr,
