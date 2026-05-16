@@ -177,6 +177,8 @@ type tgt_ruledb = (dep, {hmftext: string, dependencies:dep list,
                          commands : quotation list})
                     Binarymap.dict
 val empty_trdb : tgt_ruledb = Binarymap.mkDict hm_target.compare
+type patrules = Holmake_types.patrules
+val empty_patrules : patrules = Holmake_types.empty_patrules
 
 (* Extend the base environment with vars passed at commandline (foldl below),
    as well as environment variables "magically" derived from other options,
@@ -208,24 +210,25 @@ local
   val base = extend_with_cline_vars (read_holpathdb())
 
   val hmcache = ref (Binarymap.mkDict String.compare)
-  val default = (base,empty_trdb,NONE)
+  val default = (base,empty_trdb,empty_patrules,NONE)
   fun get_hmf0 d =
       if FileSys.access("Holmakefile", [FileSys.A_READ]) then
         let
-          val (env, rdb, tgt0) =
+          val (env, rdb, prs, tgt0) =
               ReadHMF.diagread {warn=warn0,die=die,info=info0}
                                "Holmakefile"
                                (extend_with_cline_vars (read_holpathdb()))
               handle Fail s =>
                      (die ("Bad Holmakefile in " ^ d ^ ": " ^ s);
-                      (base,Binarymap.mkDict String.compare,NONE))
+                      (base,Binarymap.mkDict String.compare,
+                       empty_patrules,NONE))
           fun hmfstr_to_tgt s = s |> filestr_to_tgt |> setHMF_text s
           fun foldthis (k,{commands,dependencies=deps0},A) =
               Binarymap.insert(A, filestr_to_tgt k,
                                {commands = commands, hmftext = k,
                                 dependencies = map hmfstr_to_tgt deps0})
         in
-          (env, Binarymap.foldl foldthis empty_trdb rdb,
+          (env, Binarymap.foldl foldthis empty_trdb rdb, prs,
            Option.map filestr_to_tgt tgt0)
         end
       else
@@ -246,7 +249,7 @@ fun get_hmf () =
 end
 
 fun getnewincs dir =
-    let val (env, _, _) = get_hmf()
+    let val (env, _, _, _) = get_hmf()
     in
       {includes = envlist env "INCLUDES" |> slist_to_dset dir,
        preincludes = envlist env "PRE_INCLUDES" |> slist_to_dset dir}
@@ -283,7 +286,7 @@ val starting_holmakefile =
                   else NONE
         | x => x
 
-val (start_hmenv, start_rules, start_tgt) = get_hmf()
+val (start_hmenv, start_rules, start_patrules, start_tgt) = get_hmf()
 
 val start_envlist = envlist start_hmenv
 val start_options = start_envlist "OPTIONS"
@@ -579,10 +582,39 @@ fun get_rule_info rdb env tgt =
       end
 
 fun local_rule_info t =
-    let val (env, rules, _) = get_hmf()
+    let val (env, rules, _, _) = get_hmf()
     in
       get_rule_info rules env t
     end
+
+(* Pattern-rule lookup is only meaningful when t lives in the current
+   directory (pattern rules are read from the local Holmakefile).
+   We match the bare filename against each rule's `%'-bearing target
+   pattern; the matcher returns deps as plain strings, which we lift
+   to `dep' values rooted at the current directory.
+
+   `can_make' implements GNU make's two-phase implicit-rule search:
+   a pattern rule is only applicable when every substituted prereq
+   either exists on disk or has an exact rule that builds it.
+   Without this guard a pattern like `%.tex: %.stex' would claim
+   every .tex target in the directory, including hand-maintained
+   ones whose .stex source doesn't exist. *)
+fun pattern_rule_info t =
+    if hmdir.compare(hm_target.dirpart t, hmdir.curdir()) <> EQUAL then NONE
+    else
+      let
+        val (env, rules, prs, _) = get_hmf()
+        val tgt_s = fromFile (hm_target.filepart t)
+        fun can_make dep_s =
+            exists_readable dep_s orelse
+            isSome (Binarymap.peek (rules, filestr_to_tgt dep_s))
+      in
+        case match_pattern_rules can_make env prs tgt_s of
+            NONE => NONE
+          | SOME {dependencies, commands} =>
+            SOME {dependencies = map filestr_to_tgt dependencies,
+                  commands = commands}
+      end
 
 fun extra_deps t =
       Option.map #dependencies (local_rule_info t)
@@ -598,14 +630,40 @@ fun extra_commands t = Option.map #commands (local_rule_info t)
 
 fun extra_targets() =
     let
-      val (_, rules, _) = get_hmf()
+      val (_, rules, _, _) = get_hmf()
     in
       Binarymap.foldr (fn (k,_,acc) => k::acc) [] rules
     end
 
-fun extra_rule_for t = local_rule_info t
+(* extra_rule_for combines the exact-match rule for t (if any) with
+   a matching pattern rule (if any), respecting GNU make's precedence:
+   - an exact rule with commands wins outright;
+   - otherwise, if a pattern rule matches, its commands fire and its
+     deps union with any deps from a recipe-less exact rule;
+   - otherwise the exact rule's deps-only entry (if any) is returned
+     unchanged.  Pattern rules never get consulted for targets outside
+     the current directory. *)
+fun extra_rule_for t =
+    let
+      val exact = local_rule_info t
+    in
+      case exact of
+          SOME {commands = _ :: _, ...} => exact
+        | _ =>
+          case pattern_rule_info t of
+              NONE => exact
+            | SOME {dependencies = pat_deps, commands = pat_cmds} =>
+              let
+                val ex_deps =
+                    case exact of
+                        SOME {dependencies, ...} => dependencies
+                      | NONE => []
+              in
+                SOME {dependencies = ex_deps @ pat_deps, commands = pat_cmds}
+              end
+    end
 fun dir_varying_envlist s =
-    let val (env, _, _) = get_hmf()
+    let val (env, _, _, _) = get_hmf()
     in
       envlist env s
     end
@@ -851,7 +909,7 @@ let
   val fullpath = fp dir target_s
   val fullpath_s = fps fullpath
   val pretty_tgt = hmdir.pretty_dir fullpath
-  val (env, _, _) = get_hmf()
+  val (env, _, _, _) = get_hmf()
   val extra = GraphExtra.get_extra { master_dir = original_dir,
                                      master_cline = option_value,
                                      envlist = envlist env }
@@ -1105,7 +1163,7 @@ fun get_targets dir =
     let
       val from_directory =
           deplist_to_set (generate_all_plausible_targets warn NONE)
-      val (_, rules, _) = get_hmf()
+      val (_, rules, _, _) = get_hmf()
     in
       Binarymap.foldl (fn (dep,v,acc) =>
                           if hm_target.filepart dep <> Unhandled ".PHONY" then
@@ -1186,7 +1244,7 @@ fun get_targets_recursively {incs, pres} =
     let
       val dirs = set_add original_dir (set_union incs pres)
       fun indir() =
-          let val (_, _, target1) = get_hmf()
+          let val (_, _, _, target1) = get_hmf()
           in
             generate_all_plausible_targets warn target1
           end

@@ -492,7 +492,7 @@ fun hmakefile_data HOLDIR =
             base_environment()
               |> env_extend ("HOLSELFTESTLEVEL", [LIT "3"])
               |> env_extend ("KERNELID", [LIT "stdknl"])
-        val (env, _, _) = ReadHMF.diagread qdiags "Holmakefile" env0
+        val (env, _, _, _) = ReadHMF.diagread qdiags "Holmakefile" env0
         fun envlist id =
             map dequote (tokenize (perform_substitution env [VREF id]))
       in

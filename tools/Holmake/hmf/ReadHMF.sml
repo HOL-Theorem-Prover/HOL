@@ -280,12 +280,13 @@ in
     end
 end
 
-fun readall diags fname (acc as (tgt1,env,ruledb,depdb,defs_seen)) csb =
+fun readall diags fname
+            (acc as (tgt1,env,ruledb,depdb,patrules,defs_seen)) csb =
     let
       val {warn=warn0,die=die0,info=info0} = diags
       fun aug f s = f ("*** " ^ fname ^ ": " ^ s)
       val warn = aug warn0 and die = aug die0 and info = aug info0
-      fun recurse (acc as (tgt1,env,ruledb,depdb,defs_seen)) csb =
+      fun recurse (acc as (tgt1,env,ruledb,depdb,patrules,defs_seen)) csb =
           case process_line env csb of
               (csb as (cs, b), EOF) =>
               let
@@ -300,7 +301,7 @@ fun readall diags fname (acc as (tgt1,env,ruledb,depdb,defs_seen)) csb =
                                       {dependencies = dependencies @ deps,
                                        commands = commands})
               in
-                (env,Binarymap.foldl foldthis ruledb depdb,tgt1)
+                (env,Binarymap.foldl foldthis ruledb depdb,patrules,tgt1)
               end
             | (csb, x) =>
               (case to_token env x of
@@ -315,17 +316,18 @@ fun readall diags fname (acc as (tgt1,env,ruledb,depdb,defs_seen)) csb =
                               " (use += instead?)")
                     else ();
                     recurse (tgt1,env_extend (vname,rhs) env, ruledb, depdb,
-                             Binaryset.add(defs_seen, vname)) csb)
+                             patrules, Binaryset.add(defs_seen, vname)) csb)
                  | HM_rule rinfo =>
                    let
-                     val (rdb',depdb',tgts) =
-                         extend_ruledb warn env rinfo (ruledb,depdb)
+                     val (rdb',depdb',patrules',tgts) =
+                         extend_ruledb warn env rinfo
+                                       (ruledb,depdb,patrules)
                      val tgt1' =
                          case tgt1 of
                              NONE => List.find (fn s => s <> ".PHONY") tgts
                            | _ => tgt1
                    in
-                     recurse (tgt1',env,rdb',depdb',defs_seen) csb
+                     recurse (tgt1',env,rdb',depdb',patrules',defs_seen) csb
                    end)
     in
       recurse acc csb
@@ -334,6 +336,7 @@ fun readall diags fname (acc as (tgt1,env,ruledb,depdb,defs_seen)) csb =
 fun diagread diags fname env =
     readall diags fname (NONE, env, empty_ruledb,
                          Binarymap.mkDict String.compare,
+                         empty_patrules,
                          Binaryset.empty String.compare)
             (empty_condstate, init_buf fname)
 
@@ -354,7 +357,7 @@ fun find_includes0 dirname =
   in
     if OS.FileSys.access(hm_fname, [OS.FileSys.A_READ]) then
       let
-        val (e, _, _) = read hm_fname (base_environment())
+        val (e, _, _, _) = read hm_fname (base_environment())
         val raw_incs = readlist e "INCLUDES" @ readlist e "PRE_INCLUDES"
       in
         map (fn p => OS.Path.mkAbsolute {path = p, relativeTo = dirname})
@@ -397,7 +400,7 @@ fun extend_path_with_includes0 (A as (visited,prem,postm)) dir verbosity =
           in
             List.foldl foldthis (base_environment()) extensions
           end
-          val (env, _, _) = read (dir ++ "Holmakefile") base_env
+          val (env, _, _, _) = read (dir ++ "Holmakefile") base_env
           fun envlist id =
               map dequote (tokenize (perform_substitution env [VREF id]))
           fun diag nm incs =
