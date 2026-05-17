@@ -1,0 +1,1248 @@
+# Example: Combinatory Logic
+
+\label{chap:combin}
+
+```{=latex}
+% Chapter-local LaTeX macros.  YAML header-includes don't survive
+% `pandoc -t latex`, so these live in a raw-LaTeX block in the
+% chapter body.  Smdpp strips this block for mdbook; the matching
+% MathJax mirrors are in theme/index.hbs.
+\providecommand{\eos}{\hfill{}$\cdots\diamond\cdots$\hfill{}\vspace{5mm}}
+\providecommand{\mathpredn}{\mathbin{-\!\!\!\mid\mid\!\rightarrow}}
+\providecommand{\KC}{\con{K}}
+\providecommand{\SC}{\con{S}}
+```
+
+## Introduction
+
+\label{sec:Introduction}
+
+This small case study is a formalisation of (variable-free)
+combinatory logic.  This logic is of foundational importance in
+theoretical computer science, and has a very rich theory.  The
+example builds principally on a development done by Tom Melham.
+The complete script for the development is available as
+`clScript.sml` in the `examples/ind_def` directory of the
+distribution.  It is self-contained and so includes the answers
+to the exercises set at the end of this document.
+
+The HOL sessions assume that the Unicode trace is *on* (as it is
+by default), meaning that even though the inputs may be written
+in pure ASCII, the output still uses nice Unicode output (symbols
+such as $\forall$ and $\Rightarrow$).  The Unicode symbols could
+also be used in the input.
+
+## The type of combinators
+
+\label{sec:Type-Combinators}
+
+The first thing we need to do is define the type of
+*combinators*.  There are just two of these, $\KC{}$ and $\SC$,
+but we also need to be able to *combine* them, and for this we
+need to introduce the notion of application.  For lack of a
+better ASCII symbol, we will use the hash (`#`) to represent this
+in the logic.  Finally, we will start by "hiding" the names `S`
+and `K` so that the constants of these names from the existing
+HOL theories won't interfere with parsing.
+
+```
+>>_ hide "K"; hide "S";
+>> Datatype: cl = K | S | # cl cl
+   End
+```
+
+We also want the `#` to be an infix, so we set its fixity to be a
+tight left-associative infix:
+
+```
+>> set_fixity "#" (Infixl 1100);
+```
+
+## Combinator reductions
+
+\label{sec:Comb-Reduct}
+
+Combinatory logic is the study of how values of this type can
+evolve given various rules describing how they change.
+Therefore, our next step is to define the reductions that
+combinators can undergo.  There are two basic rules:
+
+$$\begin{array}{l@{\;\;\rightarrow\;\;}l}
+\KC\;x\;y & x\\
+\SC\;f\;g\;x & (f\,x)(g\,x)
+\end{array}$$
+
+Here, in our description outside of HOL, we use juxtaposition
+instead of the `#`.  Further, juxtaposition is also
+left-associative, so that $\con{K}\;x\;y$ should be read as
+$\con{K}\;\#\;x\;\#\;y$ which is in turn
+$(\con{K}\;\#\;x)\;\#\;y$.
+
+Given a term in the logic, we want these reductions to be able
+to fire at any point, not just at the top level, so we need two
+further congruence rules:
+
+$$
+\begin{array}{c}
+\dfrac{x\;\;\rightarrow\;\;x'}{x\;y\;\;\rightarrow\;\;x'\;y}
+\qquad
+\dfrac{y\;\;\rightarrow\;\;y'}{x\;y\;\;\rightarrow\;\;x\;y'}
+\end{array}
+$$
+
+In HOL, we can capture this relation with an inductive
+definition.  First we need to set our arrow symbol up as an infix
+to make everything that bit prettier.  The `set_mapped_fixity`
+function lets the arrow be our surface syntax, but maps to the
+name `redn` underneath.  Making constants have pure alphanumeric
+names is generally a good idea.
+
+```
+>> set_mapped_fixity {fixity = Infix(NONASSOC, 450),
+                      tok = "-->", term_name = "redn"};
+```
+
+We make our arrow symbol non-associative, thereby making it a
+parse error to write `x --> y --> z`.  It would be nice to be
+able to write this and have it mean `x --> y /\ y --> z`, but
+this is not presently possible with the HOL parser.
+
+Our next step is to actually define the relation, using the
+`Inductive` syntax.  Using the provided stem `redn` as a base,
+the underlying facility proves a number of theorems for us, and
+shows us three: `redn_rules`, `redn_ind`, `redn_cases`.  These
+theorems are available in the ML session under those names, and
+are also saved under those names when the theory is exported.
+
+```
+>> Inductive redn:
+     (!x y f. x --> y   ==>    f # x --> f # y) /\
+     (!f g x. f --> g   ==>    f # x --> g # x) /\
+     (!x y.   K # x # y --> x) /\
+     (!f g x. S # f # g # x --> (f # x) # (g # x))
+   End
+```
+
+Using the `redn_rules` theorem we can demonstrate single steps of
+our reduction relation:
+
+```
+>> PROVE [redn_rules] ``S # (K # x # x) --> S # x``;
+```
+
+The system we have just defined is as powerful as the
+$\lambda$-calculus, Turing machines, and all the other standard
+models of computation.
+
+One useful result about the combinatory logic is that it is
+*confluent*.  Consider the term $\SC\;z\;(\KC\;\KC)\;(\KC\;y\;x)$.
+It can make two reductions, to $\SC\;z\;(\KC\;\KC)\;y$ and also
+to $(z\;(\KC\;y\;x))\,(\KC\;\KC\;(\KC\;y\;x))$.  Do these two
+choices of reduction mean that from this point on the terms have
+two completely separate histories?  Roughly speaking, to be
+confluent means that the answer to this question is *no*.
+
+## Transitive closure and confluence
+
+\label{sec:Transitive-Clos-Conf}
+
+A notion crucial to that of confluence is that of *transitive
+closure*.  We have defined a system that evolves by specifying
+how an algebraic value can evolve into possible successor values
+in one step.  The natural next question is to ask for a
+characterisation of evolution over one or more steps of the
+$\rightarrow$ relation.
+
+In fact, we will define a relation that holds between two values
+if the second can be reached from the first in zero or more
+steps.  This is the *reflexive, transitive closure* of our
+original relation.  However, rather than tie our new definition
+to our original relation, we will develop this notion
+independently and prove a variety of results that are true of
+any system, not just our system of combinatory logic.
+
+So, we begin our abstract digression with another inductive
+definition.  Our new constant is $\con{RTC}$, such that
+$\con{RTC}\;R\;x\;y$ is true if it is possible to get from $x$
+to $y$ with zero or more "steps" of the $R$ relation.  (The
+standard notation for $\con{RTC}\;R$ is $R^*$; we will see HOL
+try to approximate this with the text `R^*`.)  We can express
+this idea with just two rules.  The first
+
+$$\dfrac{}{\con{RTC}\;R\;x\;x}$$
+
+says that it's always possible to get from $x$ to $x$ in zero or
+more steps.  The second
+
+$$\dfrac{R\;x\;y \qquad \con{RTC}\;R\;y\;z}{\con{RTC}\;R\;x\;z}$$
+
+says that if you can take a single step from $x$ to $y$, and
+then take zero or more steps to get $y$ to $z$, then it's
+possible to take zero or more steps to get between $x$ and $z$.
+The realisation of these rules in HOL is again straightforward.
+
+(As it happens, $\con{RTC}$ is already a defined constant in the
+context we're working in (it is found in `relationTheory`), so
+we'll hide it from view before we begin.  We thus avoid messages
+telling us that we are inputting ambiguous terms.  The
+ambiguities would always be resolved in the favour of more
+recent definition, but the warnings are annoying.  We inherit
+the nice syntax for the old constant with our new one.)
+
+```
+>> val _ = hide "RTC";
+
+>> Inductive RTC:
+    (!x.     RTC R x x) /\
+    (!x y z. R x y /\ RTC R y z ==> RTC R x z)
+   End
+```
+
+Now let us go back to the notion of confluence.  We want this to
+mean something like: "though a system may take different paths
+in the short-term, those two paths can always end up in the same
+place".  This suggests that we define confluent thus:
+
+```
+>> Definition confluent_def:
+     confluent R =
+       !x y z. RTC R x y /\ RTC R x z ==>
+               ?u. RTC R y u /\ RTC R z u
+   End
+```
+
+This property states of $R$ that we can "complete the diamond";
+if we have
+
+```{=latex}
+\begin{center}
+\begin{tikzpicture}[scale=.8,transform shape]
+\node (middle) {};
+\node (x) [above=of middle] {$x$};
+\node (y) [left=of middle] {$y$};
+\node (z) [right=of middle] {$z$};
+\path (x) edge [->,thick] node[auto,swap] {$*$} (y);
+\path (x) edge [->,thick] node[auto] {$*$} (z);
+\end{tikzpicture}
+\end{center}
+```
+
+```{=mdbook}
+*Diagram:* $x$ with two arrows labelled $*$ going down-left to $y$
+and down-right to $z$.
+```
+
+then we can complete with a fresh value $u$:
+
+```{=latex}
+\begin{center}
+\begin{tikzpicture}[scale=.8,transform shape]
+\node (middle) {};
+\node (x) [above=of middle] {$x$};
+\node (y) [left=of middle] {$y$};
+\node (z) [right=of middle] {$z$};
+\node (u) [below=of middle] {$u$};
+\path (x) edge [->,thick] node[auto,swap] {$*$} (y);
+\path (x) edge [->,thick] node[auto] {$*$} (z);
+\path (y) edge [->,thick,densely dotted] node[auto,swap] {$*$} (u);
+\path (z) edge [->,thick,densely dotted] node[auto] {$*$} (u);
+\end{tikzpicture}
+\end{center}
+```
+
+```{=mdbook}
+*Diagram:* the same as above with a $u$ vertex below the middle,
+and dotted arrows labelled $*$ from $y$ down-right to $u$ and from
+$z$ down-left to $u$.
+```
+
+One nice property of confluent relations is that from any one
+starting point they produce no more than one *normal form*,
+where a normal form is a value from which no further steps can
+be taken.
+
+```
+>> Definition normform_def:  normform R x = !y. ~R x y
+   End
+```
+
+In other words, a system has an $R$-normal form at $x$ if there
+are no connections via $R$ to any other values.  (We could have
+written `~?y. R x y` as our RHS for the definition above.)
+
+We can now prove the following:
+
+```
+>> g `!R. confluent R ==>
+          !x y z.
+            RTC R x y /\ normform R y /\
+            RTC R x z /\ normform R z ==> (y = z)`;
+```
+
+We rewrite with the definition of confluence:
+
+```
+>> e (rw[confluent_def]);
+```
+
+Our confluence property is now assumption 0, and we can use it
+to infer that there is a $u$ at the base of the diamond:
+
+```
+>> e (`?u. RTC R y u /\ RTC R z u` by metis_tac []);
+```
+
+So, from $y$ we can take zero or more steps to get to $u$ and
+similarly from $z$.  But, we also know that we're at an
+$R$-normal form at both $y$ and $z$.  We can't take any steps at
+all from these values.  We can conclude both that $u = y$ and
+$u = z$, and this in turn means that $y = z$, which is our goal.
+So we can finish with
+
+```
+>> e (metis_tac [normform_def, RTC_cases]);
+```
+
+Packaged up so as to remove the sub-goal package commands, we
+can prove and save the theorem for future use by:
+
+```
+>> Theorem confluent_normforms_unique:
+     !R. confluent R ==>
+         !x y z. RTC R x y /\ normform R y /\
+                 RTC R x z /\ normform R z ==> y = z
+   Proof
+     rw[confluent_def] >>
+     `?u. RTC R y u /\ RTC R z u` by metis_tac [] >>
+     metis_tac [normform_def, RTC_cases]
+   QED
+```
+
+\eos
+
+Clearly confluence is a nice property for a system to have.  The
+question is how we might manage to prove it.  Let's start by
+defining the diamond property that we used in the definition of
+confluence.  We'll again hide the existing definition of
+"diamond":
+
+```
+>> val _ = hide "diamond";
+>> Definition diamond_def:
+     diamond R = !x y z. R x y /\ R x z ==> ?u. R y u /\ R z u
+   End
+```
+
+Now we clearly have that confluence of a relation is equivalent
+to the reflexive, transitive closure of that relation having the
+diamond property.
+
+```
+>> Theorem confluent_diamond_RTC:
+      !R. confluent R = diamond (RTC R)
+   Proof   rw[confluent_def, diamond_def]
+   QED
+```
+
+So far so good.  How then do we show the diamond property for
+$\con{RTC}\;R$?  The answer that leaps to mind is to hope that
+if the original relation has the diamond property, then maybe
+the reflexive and transitive closure will too.  The theorem we
+want is
+
+$$\con{diamond}\;R \;\Rightarrow\; \con{diamond}\,(\con{RTC}\;R)$$
+
+Graphically, this is hoping that from $x$ with single $R$-arrows
+to $y$ (left) and $z$ (right), and a destination $u$ reachable
+from both $y$ and $z$ (the small diamond), we will be able to
+conclude that with two `RTC R`-paths from $x$ to $p$ and from
+$x$ to $q$, the diamond can be completed: there is some $r$
+reachable from both $p$ and $q$ via $\con{RTC}\;R$ paths going
+through $u$.  The presence of two instances of $\con{RTC}\;R$ is
+an indication that this proof will require two inductions.  With
+the first we will prove the "lop-sided" version: if $x$ takes
+one step in one direction (to $z$) and many steps in another (to
+$p$), then the diamond property for $R$ will guarantee us the
+existence of $r$, to which we will be able to take many steps
+from both $p$ and $z$.
+
+We state the goal so we can easily strip away the outermost
+assumption (that $R$ has the diamond property) before beginning
+the rule induction.[^combin-dropn]
+
+[^combin-dropn]: In this and subsequent proofs using the
+    sub-goal package, we will present the proof manager as if
+    the goal to be proved is the first ever on this stack.  In
+    other words, we have done a `dropn 1;` after every
+    successful proof to remove the evidence of the old goal.  In
+    practice, there is no harm in leaving these goals on the
+    proof manager's stack.
+
+```
+>>__ dropn 1;
+>> g `!R. diamond R ==>
+          !x p z. RTC R x p /\ R x z ==>
+                  ?u. RTC R p u /\ RTC R z u`;
+```
+
+First, we strip away the diamond property assumption (two things
+need to be stripped: the outermost universal quantifier and the
+antecedent of the implication).  If we use `rw` at this point,
+we strip away too much so we have to be more precise and use the
+lower level tool `strip_tac`.  This tactic will remove a
+universal quantification, an implication or a conjunction:
+
+```
+>> e (strip_tac >> strip_tac);
+```
+
+Now we can use the induction principle for reflexive and
+transitive closure (alternatively, we perform a "rule
+induction").  To do this, we use the `Induct_on` command that is
+also used to do structural induction on algebraic data types
+(such as numbers and lists).  We provide the name of the
+constant whose induction principle we want to use, and the
+tactic does the rest:
+
+```
+>> e (Induct_on `RTC`);
+```
+
+Let's strip the goal as much as possible with the aim of making
+what remains to be proved easier to see:
+
+```
+>> e (rw[]);
+```
+
+This first goal is easy.  It corresponds to the case where the
+many steps from $x$ to $p$ are actually no steps at all, and $p$
+and $x$ are actually the same place.  In the other direction,
+$x$ has taken one step to $z$, and we need to find somewhere
+reachable in zero or more steps from both $x$ and $z$.  Given
+what we know so far, the only candidate is $z$ itself.  In fact,
+we don't even need to provide this witness explicitly:
+`metis_tac` will find it for us, as long as we tell it what the
+rules governing $\con{RTC}$ are:
+
+```
+>> e (metis_tac [RTC_rules]);
+```
+
+And what of this remaining goal?  Assumptions one and four
+between them are the top of an $R$-diamond.  Let's use the fact
+that we have the diamond property for $R$ and infer that there
+exists a $v$ to which $x'$ and $z$ can both take single steps:
+
+```
+>> e (`?v. R x' v /\ R z v` by metis_tac [diamond_def]);
+```
+
+Now we can apply our induction hypothesis (assumption 3) to
+complete the long, lop-sided strip of the diamond.  We will
+conclude that there is a $u$ such that $R^*\;p\;u$ and
+$R^*\;v\;u$.  We actually need a $u$ such that
+$\con{RTC}\;R\;z\;u$, but because there is a single $R$-step
+between $z$ and $v$ we have that as well.  All we need to provide
+`metis_tac` is the rules for $\con{RTC}$:
+
+```
+>> e (metis_tac [RTC_rules]);
+##assert can top_thm()
+```
+
+Again we can (and should) package up the lemma, avoiding the
+sub-goal package commands:
+
+```
+##eval Theorem R_RTC_diamond:
+         !R. diamond R ⇒
+             !x p z. RTC R x p ∧ R x z ⇒
+                     ∃u. RTC R p u ∧ RTC R z u
+       Proof
+         strip_tac >> strip_tac >> Induct_on `RTC` >> rw[]
+         >- metis_tac [RTC_rules]
+         >- (`?v. R x' v /\ R z v` by metis_tac [diamond_def] >>
+             metis_tac [RTC_rules])
+       QED
+```
+
+\eos
+
+Now we can move on to proving that if $R$ has the diamond
+property, so too does $R^*$.  We want to prove this by induction
+again.  We state the goal as the obvious
+
+$$\con{diamond}\;R\;\Rightarrow\;\con{diamond}\,(R^*)$$
+
+expecting to strip away the LHS of the goal as an assumption
+(which will feed into the lemma we just proved), and to perform
+another "RTC-induction" on what the second `diamond` expands
+into:
+
+```
+>>__ dropn 1;
+>> g `!R. diamond R ==> diamond (RTC R)`;
+```
+
+So, we begin by stripping away the diamond property assumption.
+Then, we expand with the definition of `diamond` in the goal.
+
+```
+>> e (strip_tac >> strip_tac >> simp[diamond_def]);
+```
+
+We see that the simplifier has kept the diamond-assumption
+untouched, but has exposed two `RTC` terms in the goal.  In
+order to make it clear that we wish to induct on the first, we
+can write a more elaborate pattern when we induct:
+
+```
+>> e (Induct_on `RTC R x y` >> rw[]);
+```
+
+The first goal is again an easy one, corresponding to the case
+where the trip from $x$ to $y$ has been one of no steps
+whatsoever.
+
+```
+>> e (metis_tac [RTC_rules]);
+```
+
+This goal is very similar to the one we saw earlier.  We have
+the top of a ("lop-sided") diamond in assumptions 1 and 4, so we
+can infer the existence of a common destination for $x'$ and
+$z$:
+
+```
+>> e (`?v. RTC R x' v /\ RTC R z v` by metis_tac [R_RTC_diamond]);
+```
+
+At this point in the last proof we were able to finish it all
+off by just appealing to the rules for $\con{RTC}$.  This time
+it is not quite so straightforward.  When we use the induction
+hypothesis (assumption 3), we can conclude that there is a $u$
+to which both $y$ and $v$ can connect in zero or more steps, but
+in order to show that this $u$ is reachable from $z$, we need to
+be able to conclude $R^*\;z\;u$ when we know that $R^*\;z\;v$
+(assumption 6 above) and $R^*\;v\;u$ (our consequence of the
+inductive hypothesis).  We leave the proof of this general
+result as an exercise, and here assume that it is already proved
+as the theorem `RTC_RTC`.
+
+```
+>>__ Theorem RTC_RTC:
+       !R x y z. RTC R x y /\ RTC R y z ==> RTC R x z
+     Proof
+       gen_tac >> Induct_on `RTC R x y` >> metis_tac [RTC_rules]
+     QED
+>> e (metis_tac [RTC_rules, RTC_RTC]);
+```
+
+We can now package up our desired result:
+
+```
+##eval Theorem diamond_RTC:
+         !R. diamond R ==> diamond (RTC R)
+       Proof
+         strip_tac >> strip_tac >> simp[diamond_def] >>
+         Induct_on `RTC R x y` >> rw[]
+         >-  metis_tac[RTC_rules]
+         >- (`?v. RTC R x' v /\ RTC R z v` by metis_tac[R_RTC_diamond] >>
+             metis_tac [RTC_RTC, RTC_rules])
+       QED
+```
+
+## Back to combinators
+
+\label{sec:Return-to-Land}
+
+Now, we are in a position to return to the real object of study
+and prove confluence for combinatory logic.  We have done an
+abstract development and established that
+
+$$
+\begin{array}{rcl}
+\con{diamond}\;R & \Rightarrow & \con{diamond}\,(\con{RTC}\;R)\\
+\con{diamond}\,(\con{RTC}\;R) & \equiv & \con{confluent}\;R\\
+\end{array}
+$$
+
+(We have also established a couple of other useful results along
+the way.)
+
+Sadly, it just isn't the case that $\rightarrow$, our one-step
+relation for combinators, has the diamond property.  A
+counter-example is $\KC\;\SC\;(\KC\;\KC\;\KC)$.  Its possible
+evolution can be described graphically: $\KC\;\SC\;(\KC\;\KC\;\KC)$
+reduces both to $\SC$ (by the outer $\KC\;x\;y\to x$ rule, with
+$x = \SC$ and $y = \KC\;\KC\;\KC$) and to $\KC\;\SC\;\KC$ (by
+the inner $\KC$-redex $\KC\;\KC\;\KC\to\KC$).  The latter then
+reduces to $\SC$ as well.
+
+If we had the diamond property, it should be possible to find a
+common destination for $\KC\;\SC\;\KC$ and $\SC$.  However,
+$\SC$ doesn't admit any reductions whatsoever, so there isn't a
+common destination.[^combin-simpler-counter]
+
+[^combin-simpler-counter]: In fact our counter-example is more
+    complicated than necessary.  The fact that $\KC\;\SC\;\KC$
+    has a reduction to the normal form $\SC$ also acts as a
+    counter-example.  Can you see why?
+
+This is a problem.  We are going to have to take another
+approach.  We will define another reduction strategy (*parallel
+reduction*), and prove that its reflexive, transitive closure is
+actually the same relation as our original's reflexive and
+transitive closure.  Then we will also show that parallel
+reduction has the diamond property.  This will establish that
+its reflexive, transitive closure has it too.  Then, because
+they are the same relation, we will have that the reflexive,
+transitive closure of our original relation has the diamond
+property, and therefore, our original relation will be
+confluent.
+
+### Parallel reduction
+
+\label{sec:Parallel-Reduction}
+
+Our new relation allows for any number of reductions to occur in
+parallel.  We use the `-||->` symbol to indicate parallel
+reduction because of its own parallel lines, and use `predn` to
+name the constant:
+
+```
+>> set_mapped_fixity {tok = "-||->", fixity = Infix(NONASSOC, 450),
+                      term_name = "predn"};
+```
+
+Then we can define parallel reduction itself.  The rules look
+very similar to those for $\rightarrow$.  The difference is that
+we allow the reflexive transition, and say that an application
+of $x\;u$ can be transformed to $y\;v$ if there are
+transformations taking $x$ to $y$ and $u$ to $v$.  This is why
+we must have reflexivity incidentally.  Without it, a term like
+$(\KC\;x\;y)\,\KC$ couldn't reduce because while the LHS of the
+application ($\KC\;x\;y$) can reduce, its RHS ($\KC$) can't.
+
+```
+>>_ Inductive predn:
+      (!x. x -||-> x) /\
+      (!x y u v. x -||-> y /\ u -||-> v
+                        ==>
+                 x # u -||-> y # v) /\
+      (!x y. K # x # y -||-> x) /\
+      (!f g x. S # f # g # x -||-> (f # x) # (g # x))
+    End
+```
+
+### Using `RTC`
+
+\label{sec:Using-RTC}
+
+Now we can set up nice syntax for the reflexive and transitive
+closures of our two relations.  We will use ASCII symbols for
+both that consist of the original symbol followed by an
+asterisk.  Note also how, in defining the two relations, we have
+to use the `$` character to "escape" the symbols' usual
+fixities.  This is exactly analogous to the way in which ML's
+`op` keyword is used.  First, we create the desired symbol for
+the concrete syntax, and then we "overload" it so that the
+parser will expand it to the desired form.
+
+```
+>> set_fixity "-->*" (Infix(NONASSOC, 450));
+
+>> Overload "-->*" = “RTC redn”;
+```
+
+We do exactly the same thing for the reflexive and transitive
+closure of our parallel reduction.
+
+```
+>> set_fixity "-||->*" (Infix(NONASSOC, 450));
+
+>> Overload "-||->*" = ``RTC predn``;
+```
+
+Incidentally, in conjunction with `PROVE` we can now
+automatically demonstrate relatively long chains of reductions:
+
+```
+>> PROVE [RTC_rules, redn_rules] ``S # K # K # x -->* x``;
+
+>> PROVE [RTC_rules, redn_rules]
+    ``S # (S # (K # S) # K) # (S # K # K) # f # x -->*
+      f # (f # x)``;
+```
+
+(The latter sequence is seven reductions long.)
+
+### Proving the `RTC`s are the same
+
+\label{sec:Proving-RTCs-same}
+
+We start with the easier direction, and show that everything in
+$\rightarrow^*$ is in $\mathpredn^*$.  Because $\con{RTC}$ is
+monotone (which fact is left to the reader to prove), we can
+reduce this to showing that
+$x\rightarrow y\Rightarrow x\mathpredn y$.
+
+Our goal:
+
+```
+>>__ dropn 1;
+>> g `!x y. x -->* y ==> x -||->* y`;
+```
+
+We back-chain using our monotonicity result:
+
+```
+>>__ Theorem RTC_monotone:
+       !R1 R2. (!x y. R1 x y ==> R2 x y) ==>
+               (!x y. RTC R1 x y ==> RTC R2 x y)
+     Proof
+       ntac 3 strip_tac >> Induct_on `RTC` >>
+       metis_tac [RTC_rules]
+     QED
+>> e (match_mp_tac RTC_monotone);
+```
+
+Now we can induct over the rules for $\rightarrow$:
+
+```
+>> e (Induct_on `x --> y`);
+```
+
+We could split the 4-way conjunction apart into four goals, but
+there is no real need.  It is quite clear that each follows
+immediately from the rules for parallel reduction.
+
+```
+>> e (metis_tac [predn_rules]);
+```
+
+Packaged into a tidy little sub-goal-package-free parcel, our
+proof is
+
+```
+##eval Theorem RTCredn_RTCpredn:
+         !x y. x -->* y   ==>   x -||->* y
+       Proof
+         match_mp_tac RTC_monotone >>
+         Induct_on `x --> y` >> metis_tac [predn_rules]
+       QED
+```
+
+\eos
+
+Our next proof is in the other direction.  It should be clear
+that we will not just be able to appeal to the monotonicity of
+$\con{RTC}$ this time; one step of the parallel reduction
+relation can not be mirrored with one step of the original
+reduction relation.  It's clear that mirroring one step of the
+parallel reduction relation might take many steps of the
+original relation.  Let's prove that then:
+
+```
+>>__ dropn 1;
+>> g `!x y. x -||-> y   ==>   x -->* y`;
+```
+
+This time our induction will be over the rules defining the
+parallel reduction relation.
+
+```
+>> e (Induct_on `x -||-> y`);
+```
+
+There are four conjuncts here, and it should be clear that all
+but the second can be proved immediately by appeal to the rules
+for the transitive closure and for $\rightarrow$ itself.  So, we
+split apart the conjunctions, use a `THEN1` to discharge the
+first subgoal, thus putting the second subgoal into focus to be
+dealt with more carefully. Note that `>-` is sugar for `THEN1`.
+
+```
+>> e (rpt conj_tac >- metis_tac[RTC_rules, redn_rules]);
+```
+
+What of this sub-goal?  If we look at it for long enough, we
+should see that it is another monotonicity fact.  More
+accurately, we need what is called a *congruence* result for
+`-->*`.  In this form, it's not quite right for easy proof.
+Let's go away and prove `RTCredn_ap_monotonic` separately.
+(Another exercise!)  Our new theorem should state
+
+```
+Theorem RTCredn_ap_congruence:
+  !x y. x -->* y ==> !z. x # z -->* y # z /\ z # x -->* z # y
+Proof  ...
+QED
+```
+
+```
+>>__ Theorem RTCredn_ap_congruence:
+       !x y. x -->* y ==> !z. x # z -->* y # z /\ z # x -->* z # y
+     Proof Induct_on `RTC` >> metis_tac [RTC_rules, redn_rules]
+     QED
+```
+
+Now that we have this, our sub-goal is almost immediately
+provable.  Using it, we know that
+
+$$
+\begin{array}{c}
+x\;x' \rightarrow^* y\;x' \\
+y\;x' \rightarrow^* y\;y'
+\end{array}
+$$
+
+All we need to do is "stitch together" the two transitions above
+and go from $x\;x'$ to $y\;y'$.  We can do this by appealing to
+our earlier `RTC_RTC` result.
+
+```
+>> e (metis_tac [RTC_RTC, RTCredn_ap_congruence]);
+```
+
+But given that we can finish off what we thought was an awkward
+branch with just another application of `metis_tac`, we don't
+need to use our fancy branching footwork at the stage before.
+Instead, we can just merge the theorem lists passed to both
+invocations, dispense with the `rpt conj_tac` and have a very
+short tactic proof indeed:
+
+```
+##eval Theorem predn_RTCredn:
+         !x y. x -||-> y  ==>  x -->* y
+       Proof
+         Induct_on `x -||-> y` >>
+         metis_tac [RTC_rules, redn_rules, RTC_RTC,
+                    RTCredn_ap_congruence]
+       QED
+```
+
+\eos
+
+Now it's time to prove that if a number of parallel reduction
+steps are chained together, then we can mirror this with some
+number of steps using the original reduction relation.  Our
+goal:
+
+```
+>>__ dropn 1;
+>> g `!x y. x -||->* y  ==> x -->* y`;
+```
+
+We use the appropriate induction principle to get to:
+
+```
+>> e (Induct_on `RTC`);
+```
+
+This we can finish off in one step.  The first conjunct is
+obvious, and in the second the `x -||-> y` and our last result
+combine to tell us that `x -->* y`.  Then this can be chained
+together with the other assumption in the second conjunct and
+we're done.
+
+```
+>> e (metis_tac [RTC_rules, predn_RTCredn, RTC_RTC]);
+```
+
+Packaged up, this proof is:
+
+```
+##eval Theorem RTCpredn_RTCredn:
+         !x y. x -||->* y   ==>  x -->* y
+       Proof
+         Induct_on `RTC` >>
+         metis_tac [predn_RTCredn, RTC_RTC, RTC_rules]
+       QED
+```
+
+\eos
+
+Our final act is to use what we have so far to conclude that
+$\rightarrow^*$ and $\mathpredn^*$ are equal.  We state our goal:
+
+```
+>>__ dropn 1;
+>> g `$-||->* = $-->*`;
+```
+
+We want to now appeal to extensionality.  The simplest way to do
+this is to rewrite with the theorem `FUN_EQ_THM`:
+
+```
+>> FUN_EQ_THM;
+```
+
+So, we rewrite:
+
+```
+>> e (rw[FUN_EQ_THM]);
+```
+
+This goal is an easy consequence of our two earlier
+implications.
+
+```
+>> e (metis_tac [RTCpredn_RTCredn, RTCredn_RTCpredn]);
+```
+
+Packaged, the proof is:
+
+```
+##eval Theorem RTCpredn_EQ_RTCredn:
+         $-||->* = $-->*
+       Proof rw [FUN_EQ_THM] >>
+             metis_tac [RTCpredn_RTCredn, RTCredn_RTCpredn]
+       QED
+```
+
+### Proving a diamond property for parallel reduction
+
+\label{sec:predn-diamond}
+
+Now we just have one substantial proof to go.  Before we can
+even begin, there are a number of minor lemmas we will need to
+prove first.  These are basically specialisations of the theorem
+`predn_cases`.  The problem with that theorem is that it is not
+easy to use as a rewrite or simplification rule: it would cause
+the simplifier to loop because there are instances of the
+left-hand-side pattern (`x -||-> y`) on its right-hand-side.  If
+we specialise the variable corresponding to the pattern's `x`,
+then the looping can be removed.  In particular, we want
+exhaustive characterisations of the possibilities when the
+following terms undergo a parallel reduction: $x\;y$, $\KC$,
+$\SC$, $\KC\;x$, $\SC\;x$, $\KC\;x\;y$, $\SC\;x\;y$ and
+$\SC\;x\;y\;z$.
+
+To do this, we will write a little function that derives
+characterisations automatically:
+
+```
+>> fun characterise t = SIMP_RULE (srw_ss()) [] (SPEC t predn_cases);
+```
+
+The `characterise` function specialises the theorem `predn_cases`
+with the input term, and then simplifies.  The `srw_ss()`
+simpset includes information about the injectivity and
+disjointness of constructors and eliminates obvious
+impossibilities.  For example,
+
+```
+>> val K_predn = characterise ``K``;
+
+>> val S_predn = characterise ``S``;
+```
+
+Unfortunately, what we get back from other inputs is not so
+good:
+
+```
+>> val Sx_predn0 = characterise ``S # x``;
+```
+
+That first disjunct is redundant, as the following demonstrates:
+
+```
+##eval Theorem Sx_predn[local]:
+         !x y. S # x -||-> y <=> ?z. y = S # z /\ x -||-> z
+       Proof   rw[EQ_IMP_THM, Sx_predn0, predn_rules, S_predn]
+       QED
+```
+
+Our `characterise` function will just have to help us in the
+proofs that follow.
+
+```
+##eval Theorem Kx_predn[local]:
+         !x y. K # x -||-> y <=> ?z. y = K # z /\ x -||-> z
+       Proof   rw[characterise ``K # x``, predn_rules, K_predn, EQ_IMP_THM]
+       QED
+```
+
+What of $\KC\;x\;y$?  A little thought demonstrates that there
+really must be two cases this time.
+
+```
+##eval Theorem Kxy_predn[local]:
+         !x y z.
+              K # x # y -||-> z <=>
+              (?u v. z = K # u # v /\ x -||-> u /\ y -||-> v) \/
+              z = x
+       Proof
+         rw[EQ_IMP_THM, characterise ``K # x # y``, predn_rules, Kx_predn]
+       QED
+```
+
+By way of contrast, there is only one case for $\SC\;x\;y$
+because it is not yet a "redex" at the top-level.
+
+```
+##eval Theorem Sxy_predn[local]:
+         !x y z. S # x # y -||-> z <=>
+                 ?u v. z = S # u # v /\ x -||-> u /\ y -||-> v
+       Proof
+         rw[characterise ``S # x # y``, predn_rules, EQ_IMP_THM, Sx_predn]
+       QED
+```
+
+Next, the characterisation for $\SC\;x\;y\;z$:
+
+```
+##eval Theorem Sxyz_predn[local]:
+         ∀w x y z. S # w # x # y -||-> z <=>
+                   (∃p q r. z = S # p # q # r ∧
+                            w -||-> p ∧ x -||-> q ∧ y -||-> r) ∨
+                   z = (w # y) # (x # y)
+       Proof
+         rw[characterise ``S # w # x # y``, predn_rules, EQ_IMP_THM, Sxy_predn]
+       QED
+```
+
+Last of all, we want a characterisation for $x\;y$.  What
+`characterise` gives us this time can't be improved upon, for
+all that we might look upon the four disjunctions and despair.
+
+```
+>> val x_ap_y_predn = characterise ``x # y``;
+```
+
+\eos
+
+Now we are ready to prove the final goal.  It is
+
+```
+>>__ dropn 1;
+>> g `!x y. x -||-> y ==>
+            !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u`;
+```
+
+We now induct and split the goal into its individual conjuncts:
+
+```
+>> e (Induct_on `x -||-> y` >> rpt conj_tac);
+```
+
+The first goal is easily disposed of.  The witness we would
+provide for this case is simply `z`, but `metis_tac` will do the
+work for us:
+
+```
+>> e (metis_tac [predn_rules]);
+```
+
+The next goal includes two instances of terms of the form
+`x # y -||-> z`.  We can use our `x_ap_y_predn` theorem here.
+However, if we rewrite indiscriminately with it, we will really
+confuse the goal.  We want to rewrite just the assumption, not
+the instance underneath the existential quantifier.  Starting
+everything by repeatedly stripping can't lead us too far astray.
+
+```
+>> e (rw[]);
+```
+
+We need to split up assumption 4.  We can get it out of the
+assumption list using the `qpat_x_assum` theorem-tactical.  We
+will write
+
+```
+qpat_x_assum `_ # _ -||-> _`
+  (strip_assume_tac o SIMP_RULE (srw_ss()) [x_ap_y_predn])
+```
+
+The quotation specifies the pattern that we want to match: we
+want the term that has an application term reducing, and as
+there is just one such, we can use "don't care" underscore
+patterns for the various arguments.  The second argument
+specifies how we are going to transform the theorem.  Reading
+the compositions from right to left, first we will simplify with
+the `x_ap_y_predn` theorem (the simplifier invocation here is
+like that we used in the definition of the `characterise`
+function), and then we will assume the result back into the
+assumptions, stripping disjunctions and existentials as we
+go.[^combin-qpat-vs-by]
+
+[^combin-qpat-vs-by]: An alternative to using `qpat_x_assum` is
+    to use `by` instead: you would have to state the four-way
+    disjunction yourself, but the proof would be more
+    "declarative" in style, and though wordier, might be more
+    maintainable.
+
+We already know that doing this is going to produce four new
+sub-goals (there were four disjuncts in the `x_ap_y_predn`
+theorem).  We'll follow up the use of `strip_assume_tac` with
+`rw` to eliminate any equalities that might appear as
+assumptions.
+
+So:
+
+```
+>>__ set_trace "Goalstack.howmany_printed_subgoals" 1;
+>> e (qpat_x_assum `_ # _ -||-> _`
+       (strip_assume_tac o SIMP_RULE (srw_ss()) [x_ap_y_predn]) >>
+      rw[]);
+```
+
+This first sub-goal is an easy consequence of the rules for
+parallel reduction.  Because we've elided the somewhat
+voluminous output, we call `p()` to print the next sub-goal
+again:
+
+```
+>>_ e (metis_tac[predn_rules]);
+>> p();
+```
+
+This goal requires application of the two inductive hypotheses
+as well as the rules for parallel reduction, but is again
+straightforward for `metis_tac`:
+
+```
+>>_ e (metis_tac[predn_rules]);
+>> p();
+```
+
+Now our next goal (the third of the four) features a term
+`K # z -||-> y` in the assumptions.  We have a theorem that
+pertains to just this situation.  But before applying it
+willy-nilly, let us try to figure out exactly what the situation
+is.  Our theorem tells us that `y` must actually be of the form
+`K # w` for some `w`, and that there must be an arrow between
+`z` and `w`.  Thus:
+
+```
+>> e (`?w. (y = K # w) /\ (z -||-> w)` by metis_tac [Kx_predn]);
+```
+
+On inspection, it becomes clear that the `u` must be `w`.  The
+first conjunct requires `K # w # y' -||-> w`, which we have
+because this is what $\KC$s do, and the second conjunct is
+already in the assumption list.  Rewriting (eliminating that
+equality in the assumption list first will make `metis_tac`'s
+job that much easier), and then first order reasoning will solve
+this goal:
+
+```
+>> e (rw [] >> metis_tac [predn_rules]);
+```
+
+This case involving $\SC$ is analogous.  Here's the tactic to
+apply:
+
+```
+>> e (`?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)`
+         by metis_tac [Sxy_predn] >>
+      rw [] >> metis_tac [predn_rules]);
+```
+
+This next goal features a `K # x # y -||-> z` term that we have
+a theorem for already.  Let's speculatively use a call to
+`metis_tac` to eliminate the simple cases immediately
+(`Kxy_predn` is a disjunct so we'll get two sub-goals if we
+don't eliminate anything).
+
+```
+>> e (rw[Kxy_predn] >> metis_tac[predn_rules]);
+```
+
+We got both cases immediately, and have moved onto the last
+case.  We can try the same strategy.
+
+```
+>> e (rw[Sxyz_predn] >> metis_tac [predn_rules]);
+##assert can top_thm()
+```
+
+The final goal proof can be packaged into:
+
+```
+##eval Theorem predn_diamond_lemma[local]:
+         !x y. x -||-> y ==>
+               !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u
+       Proof
+         Induct_on ‘x -||-> y’ >> rpt conj_tac
+         >- metis_tac [predn_rules]
+         >- (rw[] >>
+             qpat_x_assum ‘_ # _ -||-> _’
+               (strip_assume_tac o SIMP_RULE std_ss [x_ap_y_predn]) >>
+             rw[]
+             >- metis_tac[predn_rules]
+             >- metis_tac[predn_rules]
+             >- (‘?w. (y = K # w) /\ (z -||-> w)’ by metis_tac [Kx_predn] >>
+                 rw[] >> metis_tac [predn_rules])
+             >- (‘?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)’ by
+                    metis_tac [Sxy_predn] >>
+                 rw [] >> metis_tac [predn_rules]))
+         >- (rw[Kxy_predn] >> metis_tac [predn_rules])
+         >- (rw[Sxyz_predn] >> metis_tac [predn_rules])
+       QED
+```
+
+\eos
+
+We are on the home straight.  The lemma can be turned into a
+statement involving the `diamond` constant directly:
+
+```
+##eval Theorem predn_diamond:
+         diamond predn
+       Proof metis_tac [diamond_def, predn_diamond_lemma]
+       QED
+```
+
+And now we can prove that our original relation is confluent in
+similar fashion:
+
+```
+##eval Theorem confluent_redn:
+         confluent redn
+       Proof metis_tac [predn_diamond, confluent_diamond_RTC,
+                        RTCpredn_EQ_RTCredn, diamond_RTC]
+       QED
+```
+
+## Exercises
+
+If necessary, answers to the first three exercises can be found
+by examining the source file in `examples/ind_def/clScript.sml`.
+
+1. Prove that
+
+   $$\con{RTC}\;R \;x\;y \;\land\; \con{RTC}\;R\;y\;z \;\Rightarrow\; \con{RTC}\;R\;x\;z$$
+
+   You will need to prove the goal by induction, and will probably
+   need to massage it slightly first to get it to match the
+   appropriate induction principle.  Store the theorem under the
+   name `RTC_RTC`.
+
+2. Another induction.  Show that
+
+   $$(\forall x\,y.\; R_1\;x\;y\Rightarrow R_2\;x\;y) \Rightarrow (\forall x\,y.\; \con{RTC}\;R_1\;x\;y \Rightarrow \con{RTC}\;R_2\;x\;y)$$
+
+   Call the resulting theorem `RTC_monotone`.
+
+3. Yet another $\con{RTC}$ induction, but where $R$ is no longer
+   abstract, and is instead the original reduction relation.
+   Prove
+
+   $$x \rightarrow^* y \;\Rightarrow\; \forall z.\;\; x\;z \rightarrow^* y\;z \;\land\; z\;x \rightarrow^* z\;y$$
+
+   Call it `RTCredn_ap_congruence`.
+
+4. Come up with a counter-example for the following property:
+
+   $$
+   \left(\begin{array}{l}
+     \forall x\,y\,z.\\
+     \quad R\;x\;y\;\land\; R\;x\;z \;\Rightarrow\\
+     \quad\quad \exists u.\;\con{RTC}\;R\;y\;u \;\land\;\con{RTC}\;R\;z\;u
+   \end{array}\right)
+   \;\Rightarrow\;
+   \con{diamond}\;(\con{RTC}\;R)
+   $$

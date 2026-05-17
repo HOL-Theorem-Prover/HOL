@@ -92,7 +92,15 @@
                 type: ["\\mathit{type}"],
                 // From commands.tex: \holtxt renders HOL syntax in
                 // typewriter; \ml does the same outside math mode.
-                holtxt: ["{\\mathtt{#1}}", 1]
+                holtxt: ["{\\mathtt{#1}}", 1],
+                // Chapter-local LaTeX macros from combin.smd.  The PDF
+                // definitions live in the {=latex} block at the top of
+                // that file; these are the MathJax mirrors.  \con comes
+                // from Manual/LaTeX/commands.tex (\con{X} = \sf X).
+                con: ["{\\mathsf{#1}}", 1],
+                KC: ["{\\mathsf{K}}"],
+                SC: ["{\\mathsf{S}}"],
+                mathpredn: ["\\mathbin{-\\!\\!\\!\\mid\\mid\\!\\rightarrow}"]
               }
             }
           });
