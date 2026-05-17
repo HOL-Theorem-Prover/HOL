@@ -231,6 +231,14 @@
           // to the matching body headings.  Keeps mdbook's numbered
           // sidebar consistent with what readers see at the top of
           // each section in the main column (and matches the PDF).
+          //
+          // Scoping the section-entry walk to the *active* chapter's
+          // sub-list matters: chapters routinely share heading text
+          // (e.g. multiple chapters have an "Exercises" section), and
+          // a flat map keyed by slugify(heading) would let later
+          // chapters' numbers overwrite earlier ones — so on chapter
+          // N the body's "Exercises" heading would render with chapter
+          // M's number (M > N).
           function numberBodyHeadings() {
             const numbersBySlug = new Map();
             // The chapter title's <h1> in the body matches the active
@@ -243,10 +251,22 @@
                 numbersBySlug.set(slugify(m[2]), m[1]);
               }
             }
+            // mdbook puts a chapter's sub-section <ol class="section">
+            // in the <li> that immediately follows the chapter's own
+            // <li> in the top-level <ol class="chapter">.  Walk only
+            // *that* sub-list, so we don't pick up other chapters'
+            // numbers for headings that share text with ours.
+            let sectionsRoot = null;
+            if (active) {
+              const chapterLi = active.closest('li.chapter-item');
+              const next = chapterLi && chapterLi.nextElementSibling;
+              if (next) sectionsRoot = next.querySelector('ol.section');
+            }
+            const scope = sectionsRoot || document;
             // Sidebar section entries are either <a> (post-rewrite) or
             // <div> (pre-rewrite); both work for textContent.
-            document.querySelectorAll('ol.section li > a, ol.section li > div')
-                    .forEach(function (el) {
+            scope.querySelectorAll('ol.section li > a, ol.section li > div')
+                 .forEach(function (el) {
               const txt = (el.textContent || '').trim();
               const m = txt.match(/^([\d.]+)\s*(.+)$/);
               if (!m) return;
