@@ -220,7 +220,7 @@ the file `libpolymain.a`.  When working with Moscow ML, the
 `mosmldir` value must be the name of the directory containing the
 Moscow ML binaries (`mosmlc`, `mosml`, `mosmllex` etc).
 
-Subsequent values (`CC` and `GNUMAKE`) are needed for "optional"
+Subsequent values (`CC` and `GNUMAKE`) are needed for “optional”
 components of the system.  The first gives a string suitable for
 invoking the system's C compiler, and the second specifies a
 `make` program.

@@ -217,9 +217,9 @@ stored in the database.
 - distinctness of the constructors
 - structural induction theorem
 - case analysis theorem
-- definition of the 'case' constant for the type
+- definition of the ‘case’ constant for the type
 - congruence theorem for the case constant
-- definition of the 'size' of the type
+- definition of the ‘size’ of the type
 
 When the HOL system starts up, the `TypeBase` already contains the
 relevant entries for the types `bool`, `prod`, `num`, `option`, and
@@ -311,7 +311,7 @@ Other non-recursive types may be defined as well:
 
 Turning to recursive types, we have already seen a type of binary
 trees having polymorphic values at internal nodes.  This time, we
-will declare it in "paired" format.
+will declare it in “paired” format.
 
 ```
 >> Datatype:
@@ -334,7 +334,7 @@ The basic syntax of the named lambda calculus is easy to describe:
    End
 ```
 
-The syntax for 'de Bruijn' terms is roughly similar:
+The syntax for ‘de Bruijn’ terms is roughly similar:
 
 ```
 >> Datatype:
@@ -356,7 +356,7 @@ need to be explicitly declared.
    End
 ```
 
-A type of 'first order terms' can be declared as follows:
+A type of ‘first order terms’ can be declared as follows:
 
 ```
 >> Datatype:
@@ -432,7 +432,7 @@ is doomed to fail.
     End
 ```
 
-So called 'nested types', which are occasionally quite useful,
+So called ‘nested types’, which are occasionally quite useful,
 cannot at present be built with `Datatype`:
 
 ```
@@ -475,13 +475,13 @@ Thus, for a type named `ty`, the primitive recursion theorem is
 stored under `ty_Axiom` and the induction theorem is put under
 `ty_induction`.  Other consequences include the distinctness of
 constructors (`ty_distinct`), and the injectivity of constructors
-(`ty_11`).  A 'degenerate' version of `ty_induction` is also stored
+(`ty_11`).  A ‘degenerate’ version of `ty_induction` is also stored
 under `ty_nchotomy`: it provides for reasoning by cases on the
 construction of elements of `ty`.  Finally, some special-purpose
 theorems are stored: for example, `ty_case_cong` holds a congruence
-theorem for "case" statements on elements of `ty`.  These case
+theorem for “case” statements on elements of `ty`.  These case
 statements are defined by `ty_case_def`.  Also, a definition of the
-"size" of the type is added to the current theory, under the name
+“size” of the type is added to the current theory, under the name
 `ty_size_def`.
 
 For example, invoking
@@ -717,15 +717,15 @@ their records are getting too large.
 
 HOL provides a library for defining new types which are quotients
 of existing types, with respect to partial equivalence relations.
-This library is described in *"Higher Order Quotients in Higher
-Order Logic"* [HOQ], from which the following description is
+This library is described in *“Higher Order Quotients in Higher
+Order Logic”* [HOQ], from which the following description is
 taken.
 
 The quotient library is accessed by opening `quotientLib`, which
 makes all its tools and theorems accessible.
 
 The definition of new types corresponding to the quotients of
-existing types by equivalence relations is called "lifting" the
+existing types by equivalence relations is called “lifting” the
 types from a lower, more representational level to a higher, more
 abstract level.  Both levels describe similar objects, but some
 details which are apparent at the lower level are no longer
@@ -951,11 +951,11 @@ A simple example of a case expression is
             | _ => "many"
 ```
 
-This could have been expressed using several "if-then-else"
+This could have been expressed using several “if-then-else”
 constructs, but the case expression is much more compact and
 clean, with the selection between various choices made clearly
 evident.  Internally though, it is compiled to nested
-"if-then-else" statements.
+“if-then-else” statements.
 
 In addition to literals as patterns, as above, patterns may be
 constructor expressions.  Many standard HOL types have
@@ -1383,7 +1383,7 @@ since that theorem would be identical to the induction theorem
 resulting from the declaration of the datatype.
 
 Part of the process of the automatic termination proof involves
-the use of "termination simplification" theorems.  These encode
+the use of “termination simplification” theorems.  These encode
 facts about the way in which arguments to desired functions may be
 smaller than originals.  For example, with the theory of
 fixed-width words (see Section \ref{sec:bit-vectors}) in the
@@ -1421,7 +1421,7 @@ associated induction theorem, its name is derived as follows:
 
 We will give a number of examples that display the range of
 functions that may be defined with `Definition`.  First, we have a
-recursive function that uses "destructors" in the recursive call.
+recursive function that uses “destructors” in the recursive call.
 
 ```
 >> Definition fact_def:
@@ -1437,7 +1437,7 @@ Since `fact` is not primitive recursive, an induction theorem for
 ```
 
 Next we have a recursive function with relatively complex
-pattern-matching.  We use the `induction=` "attribute" to require a
+pattern-matching.  We use the `induction=` “attribute” to require a
 non-standard name for the generated induction theorem.
 
 ```
@@ -1732,7 +1732,7 @@ Now we can invoke `WF_REL_TAC`:
 
 Both conjuncts of this goal are quite easy to prove.
 
-The technique of "weighting" nodes in a datatype in order to prove
+The technique of “weighting” nodes in a datatype in order to prove
 termination also goes by the name of *polynomial interpretation*.
 It must be admitted that finding the correct weighting for a
 termination proof is more an art than a science.  Typically, one
@@ -1779,10 +1779,10 @@ means that $p$ has failed to match, so the algorithm advances one
 character ahead in $s$ and starts matching from the beginning of
 $p_0$.  If $s$ is empty, however, then we return `F`.  Note that
 $\mathit{rst}$ and $s$ both represent the string being searched:
-$\mathit{rst}$ is a "local" version of $s$: we recurse into
+$\mathit{rst}$ is a “local” version of $s$: we recurse into
 $\mathit{rst}$ as long as there are matches with the pattern $p$.
 However, if the search eventually fails, then $s$, which
-"remembers" where the search started from, is used to restart the
+“remembers” where the search started from, is used to restart the
 search.
 
 So much for the behaviour of the function.  Why does it terminate?
@@ -1844,7 +1844,7 @@ definition of factorial:
   fact n = if n=0 then 1 else n * fact (n-1)
 ```
 
-In the absence of knowledge of how the "if-then-else" construct
+In the absence of knowledge of how the “if-then-else” construct
 affects the *context* of recursive calls, `Hol_defn` would extract
 the termination constraints:
 
@@ -1868,7 +1868,7 @@ to `Hol_defn`:
 
 This theorem is understood by `Hol_defn` as an ordered sequence of
 instructions to follow when the termination condition extractor
-hits an "if-then-else".  The theorem is read as follows: when an
+hits an “if-then-else”.  The theorem is read as follows: when an
 instance "`if `$B$` then `$X$` else `$Y$" is encountered while the
 extractor traverses the function definition, do the following:
 
@@ -1907,16 +1907,16 @@ and are easy to prove.  The notion of *context* of a recursive
 call is defined by the set of congruence rules used in extracting
 termination conditions.  This set can be obtained by invoking
 `DefnBase.read_congs`, and manipulated by `DefnBase.add_cong`,
-`DefnBase.drop_cong` and `DefnBase.export_cong`.  The "add" and
-"drop" functions only affect the current state of the congruence
-database; in contrast, the "export" function provides a way for
+`DefnBase.drop_cong` and `DefnBase.export_cong`.  The “add” and
+“drop” functions only affect the current state of the congruence
+database; in contrast, the “export” function provides a way for
 theories to specify that a particular theorem should be added to
 the congruence database in all descendant theories.
 \index{congruence rules!in termination analysis|)}
 
 #### Higher-order recursion and congruence rules
 
-A "higher-order" recursion is one in which a higher-order function
+A “higher-order” recursion is one in which a higher-order function
 is used to apply the recursive function to arguments.  In order
 for the correct termination conditions to be proved for such a
 recursion, congruence rules for the higher order function must be
@@ -2100,7 +2100,7 @@ $$
 $$
 
 The (optional) $\mathit{sv}_i$ terms that appear after a constant
-name are so-called "schematic variables".  The same variables must
+name are so-called “schematic variables”.  The same variables must
 always follow all new constants throughout the definition.  These
 variables and the names of the constants-to-be must not be
 quantified over in each $\langle\mathit{clause}\rangle$.  A
@@ -2125,7 +2125,7 @@ segment.
   `Inductive` syntax.
 - $\mathit{ind}$ is the induction principle for the relations,
   saved under the name `<stem>_ind`.
-- $\mathit{cases}$ is the so-called "cases" or "inversion"
+- $\mathit{cases}$ is the so-called “cases” or “inversion”
   theorem for the relations, saved under the name
   `<stem>_cases`.  A cases theorem is of the form
 
@@ -2144,7 +2144,7 @@ segment.
 
 \index{xHol_reln, defining inductive relations@\ml{xHol\_reln}, defining inductive relations}
 \index{inductive relations!xHol_reln (ML function)@\ml{xHol\_reln} (ML function)}
-If the "stem" of the first constant defined in a set of clauses is
+If the “stem” of the first constant defined in a set of clauses is
 such that resulting ML bindings in an exported theory file will
 result in illegal ML, then the `xHol_reln` function should be
 used.  The `xHol_reln` function is analogous to the `xDefine`
@@ -2192,7 +2192,7 @@ will export rules as `rule1` and `foo_rule2`.
 
 #### Strong induction principles
 
-So called "strong" versions of induction principles (in which
+So called “strong” versions of induction principles (in which
 instances of the relation being defined appear as extra
 hypotheses), are automatically proved when an inductive definition
 is made.
@@ -2296,14 +2296,14 @@ need not be contiguous.
 \label{sec:proofs-with-inductive-relations}
 \index{inductive relations!performing proofs}
 
-The "rules" theorem of an inductive relation provides a
+The “rules” theorem of an inductive relation provides a
 straightforward way of proving arguments belong to a relation.  If
 confronted with a goal of the form `R x y`, one might make
 progress by performing a `MATCH_MP_TAC` (or perhaps, an
-`HO_MATCH_MP_TAC`) with one of the implications in the "rules"
+`HO_MATCH_MP_TAC`) with one of the implications in the “rules”
 theorem.
 
-The "cases" theorem can be used for the same purpose because it is
+The “cases” theorem can be used for the same purpose because it is
 an equality, of the general form `R x y` $\Leftrightarrow$ $\ldots$.
 Because the right-hand side of this theorem will often include
 other occurrences of the relation, it is generally not safe to
@@ -2317,7 +2317,7 @@ simply rewrite with it.
 The rewriting-control directives `Once`, `SimpLHS` and `SimpRHS`
 can be useful here.
 \index{FULL_SIMP_TAC@\ml{FULL\_SIMP\_TAC}}
-In addition, the "cases" theorem can be used as an "elimination"
+In addition, the “cases” theorem can be used as an “elimination”
 form: if one has an assumption of the form `R x y`, rewriting this
 (perhaps with `FULL_SIMP_TAC` if the term occurs in the goal's
 assumptions) into the possible ways it may have come about is
@@ -2343,7 +2343,7 @@ The low-level approach to goals of this form is to apply
 \index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
 A slightly more high-level approach is use the `Induct_on`
 tactic, which will actually use the automatically generated
-"strong" induction principle.[^strongind]
+“strong” induction principle.[^strongind]
 (This tactic is also used to perform structural inductions over
 algebraic data types; see the `bossLib` section of the Libraries
 chapter.)  When
@@ -2386,14 +2386,14 @@ current theory segment.
   `CoInductive` syntax.
 - $\mathit{coind}$ is the coinduction principle for the relations,
   saved under the name `<stem>_coind`.
-- $\mathit{cases}$ is the so-called "cases" or "inversion"
+- $\mathit{cases}$ is the so-called “cases” or “inversion”
   theorem for the relations, saved under the name
   `<stem>_cases`, and is used to decompose an element in the
   relation into the possible ways of obtaining it by the rules.
 
-Note that "schematic variables" are also supported by
-`Hol_coreln`, while there is no concept of "strong coinduction
-principles" here.  HOL's core coalgebra types (`llist`, `path` and
+Note that “schematic variables” are also supported by
+`Hol_coreln`, while there is no concept of “strong coinduction
+principles” here.  HOL's core coalgebra types (`llist`, `path` and
 `lbtree`) are all based on coinductive relations.  See Section
 \ref{bisimulation} for a sample usage of coinductive relations on
 bisimulation.

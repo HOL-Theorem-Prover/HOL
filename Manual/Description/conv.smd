@@ -110,7 +110,7 @@ The next section introduces the conversion-building tools in general.
 
 ## Indicating Unchangedness
 
-All conversions may raise the special exception `Conv.UNCHANGED` on an input term `t`, as a "short-hand" instead of returning the reflexive theorem `|- t = t`.
+All conversions may raise the special exception `Conv.UNCHANGED` on an input term `t`, as a “short-hand” instead of returning the reflexive theorem `|- t = t`.
 This is done for efficiency reasons.
 All of the connectives described below in [§Conversion Combining Operators](#conversion-combining-operators) handle this exception appropriately.
 The standard function `QCONV` is provided to automatically handle this exception in contexts where it would be inappropriate (typically where a conversion is being called to provide a theorem directly).
@@ -233,7 +233,7 @@ where $t'$ is obtained from $t$ by replacing every subterm $u$ by $v$ if $u$ red
 (Subterms for which $c\ u$ fails are left unchanged.)
 The definition leaves open the search strategy; in fact, `DEPTH_CONV `$c$
 \index{DEPTH_CONV@\ml{DEPTH\_CONV}!search strategy of}
-traverses a term "bottom up", once, and left-to-right, repeatedly applying $c$ to each subterm until no longer applicable.
+traverses a term “bottom up”, once, and left-to-right, repeatedly applying $c$ to each subterm until no longer applicable.
 This helps with the two problems thus far:
 
 ```

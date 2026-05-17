@@ -37,7 +37,7 @@ the simplifier and the first order prover.
 **`fol.sml`** This file illustrates John Harrison's implementation
 of a model-elimination style first order prover.
 
-**`lambda`** This directory develops theories of a "de Bruijn"
+**`lambda`** This directory develops theories of a “de Bruijn”
 style lambda calculus, and also a name-carrying version.  (Both
 are untyped.)  The development is a revision of the proofs
 underlying the paper *"5 Axioms of Alpha Conversion", Andy Gordon

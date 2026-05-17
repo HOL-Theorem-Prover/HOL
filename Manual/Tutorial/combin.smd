@@ -41,7 +41,7 @@ The first thing we need to do is define the type of
 but we also need to be able to *combine* them, and for this we
 need to introduce the notion of application.  For lack of a
 better ASCII symbol, we will use the hash (`#`) to represent this
-in the logic.  Finally, we will start by "hiding" the names `S`
+in the logic.  Finally, we will start by “hiding” the names `S`
 and `K` so that the constants of these names from the existing
 HOL theories won't interfere with parsing.
 
@@ -164,7 +164,7 @@ any system, not just our system of combinatory logic.
 So, we begin our abstract digression with another inductive
 definition.  Our new constant is $\con{RTC}$, such that
 $\con{RTC}\;R\;x\;y$ is true if it is possible to get from $x$
-to $y$ with zero or more "steps" of the $R$ relation.  (The
+to $y$ with zero or more “steps” of the $R$ relation.  (The
 standard notation for $\con{RTC}\;R$ is $R^*$; we will see HOL
 try to approximate this with the text `R^*`.)  We can express
 this idea with just two rules.  The first
@@ -199,9 +199,9 @@ the nice syntax for the old constant with our new one.)
 ```
 
 Now let us go back to the notion of confluence.  We want this to
-mean something like: "though a system may take different paths
+mean something like: “though a system may take different paths
 in the short-term, those two paths can always end up in the same
-place".  This suggests that we define confluent thus:
+place”.  This suggests that we define confluent thus:
 
 ```
 >> Definition confluent_def:
@@ -211,7 +211,7 @@ place".  This suggests that we define confluent thus:
    End
 ```
 
-This property states of $R$ that we can "complete the diamond";
+This property states of $R$ that we can “complete the diamond”;
 if we have
 
 ```{=latex}
@@ -324,7 +324,7 @@ Clearly confluence is a nice property for a system to have.  The
 question is how we might manage to prove it.  Let's start by
 defining the diamond property that we used in the definition of
 confluence.  We'll again hide the existing definition of
-"diamond":
+“diamond”:
 
 ```
 >> val _ = hide "diamond";
@@ -360,7 +360,7 @@ $x$ to $q$, the diamond can be completed: there is some $r$
 reachable from both $p$ and $q$ via $\con{RTC}\;R$ paths going
 through $u$.  The presence of two instances of $\con{RTC}\;R$ is
 an indication that this proof will require two inductions.  With
-the first we will prove the "lop-sided" version: if $x$ takes
+the first we will prove the “lop-sided” version: if $x$ takes
 one step in one direction (to $z$) and many steps in another (to
 $p$), then the diamond property for $R$ will guarantee us the
 existence of $r$, to which we will be able to take many steps
@@ -397,8 +397,8 @@ universal quantification, an implication or a conjunction:
 ```
 
 Now we can use the induction principle for reflexive and
-transitive closure (alternatively, we perform a "rule
-induction").  To do this, we use the `Induct_on` command that is
+transitive closure (alternatively, we perform a “rule
+induction”).  To do this, we use the `Induct_on` command that is
 also used to do structural induction on algebraic data types
 (such as numbers and lists).  We provide the name of the
 constant whose induction principle we want to use, and the
@@ -477,7 +477,7 @@ $$\con{diamond}\;R\;\Rightarrow\;\con{diamond}\,(R^*)$$
 
 expecting to strip away the LHS of the goal as an assumption
 (which will feed into the lemma we just proved), and to perform
-another "RTC-induction" on what the second `diamond` expands
+another “RTC-induction” on what the second `diamond` expands
 into:
 
 ```
@@ -510,7 +510,7 @@ whatsoever.
 ```
 
 This goal is very similar to the one we saw earlier.  We have
-the top of a ("lop-sided") diamond in assumptions 1 and 4, so we
+the top of a (“lop-sided”) diamond in assumptions 1 and 4, so we
 can infer the existence of a common destination for $x'$ and
 $z$:
 
@@ -644,10 +644,10 @@ Now we can set up nice syntax for the reflexive and transitive
 closures of our two relations.  We will use ASCII symbols for
 both that consist of the original symbol followed by an
 asterisk.  Note also how, in defining the two relations, we have
-to use the `$` character to "escape" the symbols' usual
+to use the `$` character to “escape” the symbols' usual
 fixities.  This is exactly analogous to the way in which ML's
 `op` keyword is used.  First, we create the desired symbol for
-the concrete syntax, and then we "overload" it so that the
+the concrete syntax, and then we “overload” it so that the
 parser will expand it to the desired form.
 
 ```
@@ -798,7 +798,7 @@ y\;x' \rightarrow^* y\;y'
 \end{array}
 $$
 
-All we need to do is "stitch together" the two transitions above
+All we need to do is “stitch together” the two transitions above
 and go from $x\;x'$ to $y\;y'$.  We can do this by appealing to
 our earlier `RTC_RTC` result.
 
@@ -980,7 +980,7 @@ really must be two cases this time.
 ```
 
 By way of contrast, there is only one case for $\SC\;x\;y$
-because it is not yet a "redex" at the top-level.
+because it is not yet a “redex” at the top-level.
 
 ```
 ##eval Theorem Sxy_predn[local]:
@@ -1058,7 +1058,7 @@ qpat_x_assum `_ # _ -||-> _`
 
 The quotation specifies the pattern that we want to match: we
 want the term that has an application term reducing, and as
-there is just one such, we can use "don't care" underscore
+there is just one such, we can use “don't care” underscore
 patterns for the various arguments.  The second argument
 specifies how we are going to transform the theorem.  Reading
 the compositions from right to left, first we will simplify with
@@ -1071,7 +1071,7 @@ go.[^combin-qpat-vs-by]
 [^combin-qpat-vs-by]: An alternative to using `qpat_x_assum` is
     to use `by` instead: you would have to state the four-way
     disjunction yourself, but the proof would be more
-    "declarative" in style, and though wordier, might be more
+    “declarative” in style, and though wordier, might be more
     maintainable.
 
 We already know that doing this is going to produce four new

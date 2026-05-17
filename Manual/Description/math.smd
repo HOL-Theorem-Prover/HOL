@@ -47,7 +47,7 @@ their purposes.
 \label{ss:ordinals}
 
 The ordinals are an extension of the natural numbers[^acl2-ordinals].
-The idea is to add new "numbers" after the naturals.  For example, if we
+The idea is to add new “numbers” after the naturals.  For example, if we
 add $\omega$, we get $0$, $1$, $2$, $\ldots$, $\omega$, where
 $0 < 1 < 2 < \cdots < \omega$.  Notice that this new set extends the
 naturals and is countable.  In addition, under this ordering it has a
@@ -58,7 +58,7 @@ $\omega\times 2$.  Notice that (the ordinals less than) $\omega\times 2$
 is what you get if you put two copies of (the ordinals less than)
 $\omega$ next to each other, i.e., $0, 1, \ldots, 0, 1, \ldots$ (and
 then rename the elements in the second copy).  Continuing to add
-"numbers", we get $\omega$, $\omega\times 2$, $\omega\times 3$,
+“numbers”, we get $\omega$, $\omega\times 2$, $\omega\times 3$,
 $\ldots$, $\omega^2$.  Now we have introduced ordinal exponentiation.
 Note that $\omega^2$ is what you get if you put $\omega$ copies of
 $\omega$, one after the other (and rename elements).  We will pick up
@@ -201,7 +201,7 @@ the following:
 
 $$f'(x) = \lim_{h\rightarrow 0}\frac{f(x+h) - f(x)}{h}$$
 
-One might expect to find a higher-order 'derivative' function `deriv`
+One might expect to find a higher-order ‘derivative’ function `deriv`
 $\colon (\mathbb{R}\rightarrow\mathbb{R})\rightarrow(\mathbb{R}\rightarrow\mathbb{R})$
 mapping a function $f$ to its derivative $f'$.  Actually, no such
 thing is defined in HOL, but rather a ternary operator `diffl`
@@ -422,7 +422,7 @@ and volume (in three dimensions) in Euclidean spaces.  In HOL's
 `measure` theory, a measure is a set function of the type $(\alpha
 \to \konst{bool}) \to \konst{extreal}$.[^real-measure-legacy] (See
 Section \ref{sec:extreal} for more details of extended real numbers.)
-This allows us to express, for example, the "length" of the entire
+This allows us to express, for example, the “length” of the entire
 real line $\mathbb{R}$, i.e. `PosInf`.
 
 [^real-measure-legacy]: The legacy `real_measure` theory, where the
@@ -666,7 +666,7 @@ measure of $b - a \in \mathbb{\overline{R}}$.  The construction of
 `lborel` is done by extending a premeasure in the following steps:
 
 1. Define the system of all *right-open intervals* and a
-   "premeasure" `lambda0` on it:
+   “premeasure” `lambda0` on it:
 
    ```
    ##thm right_open_interval
@@ -811,7 +811,7 @@ a finite sum:
 
 $$f = \sum_{j=0}^M y_j \mathbf{1}_{A_j}, \quad \text{where $\forall x\in A_j.\,f(x) = y_j$.}\quad\quad (\text{eq:posSimpleFn})$$
 
-And the "integration" of $f$ is simply $\sum_{j=0}^M y_j\mu(A_j)$,
+And the “integration” of $f$ is simply $\sum_{j=0}^M y_j\mu(A_j)$,
 where $\mu$ is the measure function of a measure space, e.g.
 `lborel` and `lebesgue` constructed in Section \ref{sec:borel}.
 Note that the representations of positive simple functions are not
@@ -890,7 +890,7 @@ the following famous *Markov's inequality*:
 ##thm markov_inequality
 ```
 
-### Null sets and 'almost everywhere'
+### Null sets and ‘almost everywhere’
 
 A measurable set is called *null set* (with respect to its measure
 space) if its measure is zero:
@@ -910,7 +910,7 @@ $P(x)$ holds for every $x$ excluding a null set:
 ##thm borelTheory.AE_DEF
 ```
 
-'Almost everywhere' is the basis of AE convergence in probability
+‘Almost everywhere’ is the basis of AE convergence in probability
 theory (see the next section).  The following two theorems about the
 integration on null sets are very useful (Theorem 11.2 of
 \cite[p.~89-90]{Schilling:2017}):
@@ -923,13 +923,13 @@ integration on null sets are very useful (Theorem 11.2 of
 
 ### Radon-Nikod&yacute;m theorem
 
-So far there is no concept "derivative" being discussed.  In Lebesgue
+So far there is no concept “derivative” being discussed.  In Lebesgue
 integration, *Radon-Nikod&yacute;m (RN) Theorem* (see, e.g.,
 \cite[p.~230]{Schilling:2017} or \cite[p.~382]{Fitzpatrick:2010vd})
-has the position of "Fundamental Theorem of Calculus" as in Riemann
+has the position of “Fundamental Theorem of Calculus” as in Riemann
 Integration.  Recall in Lebesgue's theory one starts directly from
-the concept "integration" without defining "derivative" first.  It
-is RN theorem which introduces the concept of "derivative" for
+the concept “integration” without defining “derivative” first.  It
+is RN theorem which introduces the concept of “derivative” for
 Lebesgue integration and asserts its existence.  The theorem says
 that for any $\sigma$-finite measure space $m$, if there is another
 measure $v$ absolutely continuous with respect to $m$, i.e. whenever
@@ -980,7 +980,7 @@ the family $\mathcal{A}\times\mathcal{B}$, denoted by `prod_sets A B`
 ##thm prod_sets_def
 ```
 
-is, in general, no $\sigma$-algebra — it contains only "rectangles".
+is, in general, no $\sigma$-algebra — it contains only “rectangles”.
 
 **Definition.** Let $(X,\mathcal{A})$ and $(Y,\mathcal{B})$ be two
 measurable spaces, then the $\sigma$-algebra
@@ -1046,7 +1046,7 @@ finite:
 ##thm FUBINI
 ```
 
-HOL also supports other types of "products".  In general, any three
+HOL also supports other types of “products”.  In general, any three
 LISP-like pair operators can be used for building product measures:
 
 ```
@@ -1174,7 +1174,7 @@ a *probability space* (`prob_space`) is an ordered triple
 $(\Omega,\mathscr{F},\mathscr{P})$ where,
 
 - $\Omega$ is a set of points $\omega$, also called a *sample space*
-  (of "elementary events" or outcomes);
+  (of “elementary events” or outcomes);
 - $\mathscr{F}$ is a $\sigma$-algebra of subsets of $\Omega$;
 - $\mathscr{P}$ is a probability measure on $\mathscr{F}$
   ($\mathscr{P}\{\cdot\} \in [0,1]$).
@@ -1194,8 +1194,8 @@ space where the measure of the sample space is one:
 ##thm prob_def
 ```
 
-If `E` is an event, the statement that "the probability of $E$ is
-$r$" ($\mathscr{P}\{E\} = r$) is denoted by `prob p e = r` in HOL.
+If `E` is an event, the statement that “the probability of $E$ is
+$r$” ($\mathscr{P}\{E\} = r$) is denoted by `prob p e = r` in HOL.
 As probability theory is based on set theory, it is useful to have a
 table (see Table \ref{tab:probability}) displaying the ways in which
 various concepts are interpreted in the two theories.
@@ -1252,7 +1252,7 @@ many proofs (when dealing with extreal arithmetics):
 
 ### Conditional probability
 
-HOL provides a formalization of elementary "conditional probability"
+HOL provides a formalization of elementary “conditional probability”
 \cite[p.~21]{Shiryaev:2016vm}, originally developed by Liya Liu in
 2012, in both `probability` and `real_probability` theories.  The
 probability that $e_1$ occurs assuming $e_2$ occurs, i.e.
@@ -1277,8 +1277,8 @@ the famous *Bayes' Rule* (specific and general versions)
 
 ### Random variable
 
-The concept "random variable" (r.v.) serves to define quantities
-describing the results of "measurements" in random experiments.  A
+The concept “random variable” (r.v.) serves to define quantities
+describing the results of “measurements” in random experiments.  A
 random variable is a measurable function from a probability space $p$
 to a $\sigma$-algebra (measurable space) $s$, denoted by
 `random_variable X p s` in HOL.  However, many theorems in
@@ -1376,7 +1376,7 @@ that total independence always implies pairwise independence:
 An important concept in set theory is that of the "$\limsup$" and
 "$\liminf$" of a sequence of sets.  These notions can be defined for
 subsets of an arbitrary sample space.  Let $E_n$ be any sequence of
-events, we define the following two "limit events":
+events, we define the following two “limit events”:
 
 $$\limsup_n E_n = \bigcap_{m=1}^{\infty} \bigcup_{n=m}^{\infty} E_n, \qquad \liminf_n E_n = \bigcup_{m=1}^{\infty} \bigcap_{n=m}^{\infty} E_n.$$
 
@@ -1520,8 +1520,8 @@ is also integrable:
 ```
 
 Finally, for *uncorrelated* r.v.'s (i.e. $\mathscr{E}(XY) =
-\mathscr{E}(X)\mathscr{E}(Y)$), the following "additivity of the
-variance" holds:
+\mathscr{E}(X)\mathscr{E}(Y)$), the following “additivity of the
+variance” holds:
 
 ```
 ##thm uncorrelated_def
@@ -1576,25 +1576,25 @@ And it is actually very hard to work directly with `converge_AE`,
 which says that, except for a null set, for all other point $\omega$
 in the sample space, the limit of $X_n(\omega)$ is $Y(\omega)$.
 However, several equivalent theorems can be used to convert that
-"limit" to something else, namely $\sup$, $\inf$, $\limsup$ and
+“limit” to something else, namely $\sup$, $\inf$, $\limsup$ and
 $\liminf$.  The most important one is the following:
 
 ```
 ##thm converge_AE_alt_limsup
 ```
 
-Recall that $\limsup_n E_n$ means "$E_n$ occurs infinitely often"
-(cf. Borel-Cantelli Lemma).  Now it should be clear why "convergence
-a.e." implies "convergence in pr.": the former says that it is
+Recall that $\limsup_n E_n$ means “$E_n$ occurs infinitely often”
+(cf. Borel-Cantelli Lemma).  Now it should be clear why “convergence
+a.e.” implies “convergence in pr.”: the former says that it is
 impossible (zero probability) that $|X_n(\omega) - Y(\omega)| > e$
-holds "infinitely often" when $n$ increases.  In another words,
+holds “infinitely often” when $n$ increases.  In another words,
 after certain $N$, for all $n > N$, $\mathscr{P}(|X_n(\omega) -
-Y(\omega)| > e)$ is exactly zero.  Of course this implies "in pr."
-which only requires this probability be "close to zero".  The
+Y(\omega)| > e)$ is exactly zero.  Of course this implies “in pr.”
+which only requires this probability be “close to zero”.  The
 converse does not hold, simply because a probability very small and
 close to zero is still not zero, thus it is not a null set, and
-cannot fit with the definition of "convergence a.e.".  Indeed, we
-can prove that "a.e." implies "in pr.":
+cannot fit with the definition of “convergence a.e.”.  Indeed, we
+can prove that “a.e.” implies “in pr.”:
 
 ```
 ##thm converge_AE_imp_PR
@@ -1602,8 +1602,8 @@ can prove that "a.e." implies "in pr.":
 ##thm converge_AE_imp_PR'
 ```
 
-Note that in all above concepts the convergence "from $X$ to $Y$"
-and "from $X - Y$ to 0" are equivalent, for instance:
+Note that in all above concepts the convergence “from $X$ to $Y$”
+and “from $X - Y$ to 0” are equivalent, for instance:
 
 ```
 ##thm converge_AE_to_zero
@@ -1641,7 +1641,7 @@ $X$ that were actually observed.  For large $n$ the average $(X_1 +
 large numbers give substance and precision to this vague intuitive
 description \cite[p.~221]{Feller:2004vv}.
 
-More generally, the so-called "Law of Large Numbers" (LLN) deals
+More generally, the so-called “Law of Large Numbers” (LLN) deals
 with the partial sums of an infinite sequence of random variables
 $S_n = \sum_{j=1}^n X_j$.  Under certain conditions
 $(S_n - \mathscr{E}(S_n))/n$ converges to 0, in probability (weak

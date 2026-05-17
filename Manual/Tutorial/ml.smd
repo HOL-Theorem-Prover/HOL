@@ -31,9 +31,9 @@ A common way to achieve this is to work inside `Emacs` with a
 text window and a shell window.
 
 After typing a command into the edit (text) window it can be
-transferred to the shell and evaluated in HOL by 'cut-and-paste'.
+transferred to the shell and evaluated in HOL by ‘cut-and-paste’.
 In `Emacs` this is done by copying the text into a buffer and
-then 'yanking' it into the shell.  The advantage of working via
+then ‘yanking’ it into the shell.  The advantage of working via
 an editor is that if the command has an error, then the text can
 simply be edited and used again; it also records the commands in
 a file which can then be used again (via a batch load) later.  In
@@ -75,7 +75,7 @@ the word `val`.  It consists of the value of the expression
 followed, after a colon, by its type.  The SML type checker
 infers the type of expressions using methods invented by Robin
 Milner \cite{Milner-types}.  The type `int list` is the type of
-'lists of integers'; `list` is a unary type operator.  The type
+‘lists of integers’; `list` is a unary type operator.  The type
 system of SML is very similar to the type system of the HOL
 logic.
 

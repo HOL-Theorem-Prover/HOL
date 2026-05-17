@@ -35,7 +35,7 @@ in HOL: when more than one way to prove something is possible, we
 will consider the choices; when a difficulty arises, we will
 attempt to explain how to fight one's way clear.
 
-One 'drives' HOL by interacting with the ML top-level loop,
+One ‘drives’ HOL by interacting with the ML top-level loop,
 perhaps mediated *via* an editor such as `emacs` or `vim`.  In
 this interaction style, ML function calls are made to bring in
 already-established logical context, *e.g.*, *via* `load`; to
@@ -100,7 +100,7 @@ divisors other than $1$ and itself:
 There is more ASCII syntax to observe here: `<>` for not-equals,
 and `!` for the universal quantifier.
 
-That concludes the definitions to be made. Now we "just" have to
+That concludes the definitions to be made. Now we “just” have to
 prove that there are infinitely many prime numbers. If we were
 coming to this problem fresh, then we would have to go through a
 not-well-understood and often tremendously difficult process of
@@ -235,7 +235,7 @@ popped off the goalstack, prettyprinted to the output, and the
 theorem becomes available for use by the level of the stack. When
 all the sub-goals required by *that* level are proven, the
 corresponding goal at that level can be proven too.  This
-'unwinding' process continues until the stack is empty, or until
+‘unwinding’ process continues until the stack is empty, or until
 it hits a goal with more than one remaining unproved subgoal.
 This process may be hard to visualize,[^euclid-stack-vs-tree] but
 that doesn't matter, since the goalstack was expressly written to
@@ -1055,10 +1055,10 @@ Thus we have the hypothesis that all $p$ beyond a certain
 unspecified $n$ are not prime, and our task is to show that this
 cannot be. At this point we take advantage of Euclid's great
 inspiration and we build an explicit term from $n$. In the
-informal proof we are asked to 'consider' the term
+informal proof we are asked to ‘consider’ the term
 $\mathtt{FACT}\ n + 1$.[^euclid-parser-precedence]  This term
 will have certain properties (*i.e.*, it has a prime factor) that
-lead to contradiction.  Question: how do we 'consider' this term
+lead to contradiction.  Question: how do we ‘consider’ this term
 in the formal HOL proof?  Answer: by instantiating a lemma with
 it and bringing the lemma into the proof. The lemma and its
 instantiation are:[^euclid-spec-rule]
@@ -1103,7 +1103,7 @@ the top goal by simplification:
 >> e (rw[FACT_LESS, DECIDE ``!x. x<>0 <=> 0 < x``]);
 ```
 
-Notice the 'on-the-fly' use of `DECIDE` to provide an *ad hoc*
+Notice the ‘on-the-fly’ use of `DECIDE` to provide an *ad hoc*
 rewrite. Looking at the remaining goal, one might think that our
 aim, to prove falsity, has been lost. But this is not so: a goal
 $\neg P \lor \neg Q$ is logically equivalent to
@@ -1136,7 +1136,7 @@ Euclid's theorem is now proved, and we can rest. However, this
 presentation of the final proof will be unsatisfactory to some,
 because the proof is completely hidden in the invocation of the
 automated reasoner. Well then, let's try another proof, this time
-employing the so-called 'assertional' style. When used uniformly,
+employing the so-called ‘assertional’ style. When used uniformly,
 this can allow a readable linear presentation that mirrors the
 informal proof. The following proves Euclid's theorem in the
 assertional style. We think it is fairly readable, certainly much
@@ -1188,7 +1188,7 @@ script into the correct form.
 We'll give an illustration of converting to a form that can be
 compiled using the script `<holdir>/examples/euclid.sml` as our
 base-line.  This file is already close to being in the right
-form.  It has all of the proofs of the theorems in "sewn-up" form
+form.  It has all of the proofs of the theorems in “sewn-up” form
 so that when run, it does not involve the goal-stack at all.  In
 its given form, it can be run as input to HOL thus:
 
@@ -1226,7 +1226,7 @@ The next line that poses a difficulty is
 While it is legitimate to type expressions directly into the
 interactive system, the compiler requires that every top-level
 phrase be a declaration.  We satisfy this requirement by altering
-this line into a "do nothing" declaration that does not record
+this line into a “do nothing” declaration that does not record
 the result of the expression:
 
 ```
@@ -1302,8 +1302,8 @@ $ ../../bin/hol
 The reader has now seen an interesting theorem proved, in great
 detail, in HOL. The discussion illustrated the high-level tools
 provided in `bossLib` and touched on issues including tool
-selection, undo, 'tactic polishing', exploratory simplification,
-and the 'forking-off' of new proof attempts. We also attempted to
+selection, undo, ‘tactic polishing’, exploratory simplification,
+and the ‘forking-off’ of new proof attempts. We also attempted to
 give a flavour of the thought processes a user would employ.
 Following is a more-or-less random collection of other
 observations.

@@ -250,7 +250,7 @@ Squolem's performance is not necessarily state-of-the-art anymore).
 
 The need to install a QBF solver locally poses an entry barrier.
 It would be much more convenient to have a web server running one
-(or several) QBF solvers, roughly similar to the "System on TPTP"
+(or several) QBF solvers, roughly similar to the “System on TPTP”
 interface that G. Sutcliffe provides for first-order theorem
 provers (<http://www.cs.miami.edu/~tptp/cgi-bin/SystemOnTPTP>).
 

@@ -218,14 +218,14 @@ one can write
 ```
 
 and if an underlying call to `type_abbrev_pp` is desired, the
-`[pp]` "attribute" should be added to the name, thus:
+`[pp]` “attribute” should be added to the name, thus:
 
 ```
    Type set[pp] = “:'a -> bool”
 ```
 
 \index{local@\ml{local}!as attribute for type abbreviations}
-If a "temporary" abbreviation is required (one whose effect will
+If a “temporary” abbreviation is required (one whose effect will
 not be apparent in descendent theories), then the `local`
 attribute can also be added to the `Type` syntax, or the SML
 functions `temp_type_abbrev` and `temp_type_abbrev_pp`
@@ -256,7 +256,7 @@ Strictly, parsing occurs after lexing has split the input into a
 series of tokens.  For more on lexing, see Section \ref{sec:HOL-lex}.
 
 **Concrete Syntax:** Features such as infixes, binders and mix-fix forms are
-translated away, creating an intermediate, "abstract syntax"
+translated away, creating an intermediate, “abstract syntax”
 form (ML type `Absyn`).  The possible fixities are
 discussed in Section \ref{sec:parseprint:fixities} below.
 Concrete syntax forms are added to the grammar with functions
@@ -304,10 +304,10 @@ parameters.)
 
 The standard grammar includes a rule that associates the
 special mix-fix form for if-then-else expressions with the
-underlying "name" `COND`.  It is `COND` that will eventually
+underlying “name” `COND`.  It is `COND` that will eventually
 be resolved as the constant `bool$COND`.
 
-If the "quotation" syntax with a bare dollar is used,
+If the “quotation” syntax with a bare dollar is used,
 \index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as escape character}
 \index{tokens!suppressing parsing behaviour of|(}
 then this phase of the parser will not treat strings as part
@@ -333,7 +333,7 @@ left-hand argument.  When the successful result of parsing is
 handed to the next phase, the fact that there is a constant
 called `+` will give the input its desired meaning.
 
-Symbols can also be "escaped" by enclosing them in
+Symbols can also be “escaped” by enclosing them in
 parentheses.  Thus, the above could be written `“(+) x”` for
 the same effect.
 \index{tokens!suppressing parsing behaviour of|)}
@@ -366,7 +366,7 @@ A bound name is the first argument to a `LAM` constructor,
 an identifier occurring on the left-hand side of a
 case-expression's arrow, or an identifier occurring within a
 set comprehension's pattern.  A constant is a string that is
-present in the domain of the grammar's "overload map".  Free
+present in the domain of the grammar's “overload map”.  Free
 variables are all other identifiers.  Free variables of the
 same name in a term will all have the same type.  Identifiers
 are tested to see if they are bound, and then to see if they
@@ -382,14 +382,14 @@ successor constant.
 
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!overloading}
 \index{overloading|see{parsing, of \HOL{} logic, overloading}}
-The "overload map" is a map from strings to lists of terms.
+The “overload map” is a map from strings to lists of terms.
 The terms are usually just constants, but can be arbitrary
-terms (giving rise to "syntactic macros" or
-"patterns").\index{syntactic macros}
+terms (giving rise to “syntactic macros” or
+“patterns”).\index{syntactic macros}
 This facility is used to allow a name such as `+` to map to
 different addition constants in theories such as
 `arithmetic`, `integer`, and
-`words`.  In this way the "real" names of the
+`words`.  In this way the “real” names of the
 constants can be divorced from what the user types.  In the
 case of addition, the natural number plus actually is called
 `+` (strictly, `arithmetic$+`); but over the integers, it is
@@ -521,7 +521,7 @@ same name, but with the string `u` used as the token.
 Roughly speaking, HOL considers characters to be divided into
 three classes: alphanumerics, non-aggregating symbols and symbols.
 This affects the behaviour of the lexer when it encounters strings
-of characters.  Unless there is a specific "mixed" token already
+of characters.  Unless there is a specific “mixed” token already
 in the grammar, tokens split when the character class changes.
 Thus, in the string
 
@@ -605,11 +605,11 @@ use the `Overload` syntactic form:
 ```
 
 (The `name` can be a bare SML alpha-numeric identifier or
-enclosed in string-literal quotes; names that are "symbolic" in
+enclosed in string-literal quotes; names that are “symbolic” in
 any way *must* be enclosed in string-literal double quotes.  For
 example, `Overload "-@-" = “...”`.)  Depending on the choice of
 attributes, this will map into a call to one of a variety of
-underlying "overload-on" functions.
+underlying “overload-on” functions.
 \index{overload_on (ML function)@\ml{overload\_on} (\ML{} function)}
 The default (without any attributes) calls `overload_on`,
 whose effect is to make an entry in the map that will be exported
@@ -628,7 +628,7 @@ The other attribute that can be used is `inferior`, which
 causes the entry to be made, but makes it the pretty-printer's
 last choice when matching terms are printed.
 
-All of this functionality ultimately stems from the "overload map"
+All of this functionality ultimately stems from the “overload map”
 mentioned earlier.  This is actually a combination of maps, one
 for parsing, and one for printing.  The parsing map is from names
 to lists of terms, and determines how the names that appear in a
@@ -688,7 +688,7 @@ to instantiation by type inference.
 
 ##### Pretty-printing and syntactic patterns
 
-The second part of the "overload map" is a map from terms to
+The second part of the “overload map” is a map from terms to
 strings, specifying how terms should be turned back into
 identifiers.  (Though it does not actually construct an
 `Absyn` value, this process reverses the name resolution phase
@@ -719,7 +719,7 @@ variables (recall that the `x` and `y` in this example were
 bound by an abstraction), then these will not be instantiable.
 
 There is one further nicety in the use of this facility:
-"bigger" matches, covering more of a term, take precedence.  The
+“bigger” matches, covering more of a term, take precedence.  The
 difficulty this can cause is illustrated in the `IS_PREFIX`
 pattern from `rich_listTheory`.  For the sake of
 backwards compatibility this identifier maps to
@@ -816,7 +816,7 @@ know that `xty` must in fact be `bool` in order for the type
 instance to be well-formed.  Knowing this, we can deduce that the
 type of `x` must be `bool`.
 
-Ignoring the jargon ("scheme" and "instance") in the previous
+Ignoring the jargon (“scheme” and “instance”) in the previous
 paragraph, we have conducted a type assignment to the term
 structure, ending up with a well-typed term.  It would be very
 tedious for users to conduct such argumentation by hand for each
@@ -953,7 +953,7 @@ type-check).
 
 Suffixes appear after their arguments.  There are suffixes `^+`,
 `^*` and `^=` corresponding to the transitive, the reflexive and
-transitive, and the "equivalence" closure used in
+transitive, and the “equivalence” closure used in
 `relationTheory` (Section \ref{relation}).  Suffixes are
 associated with a precedence just as infixes and prefixes are.
 If `p` is a prefix, `i` an infix, and `s` a suffix, then there are
@@ -1004,7 +1004,7 @@ operators.
 Here we describe how to achieve some useful effects with the
 parser in HOL.
 
-**Aliasing:** If one wants a special syntax to be an "alias" for a normal
+**Aliasing:** If one wants a special syntax to be an “alias” for a normal
 HOL form, this is easy to achieve; both examples so far
 have effectively done this.  However, if one just wants to
 have a normal one-for-one substitution of one string for
@@ -1052,7 +1052,7 @@ $$
   \mathtt{if}\;\; \dots \;\;\mathtt{then}\;\;\dots\;\;
   \mathtt{else}\;\;\dots
 $$
-Because there needs to be a "dangling" term to the right, the
+Because there needs to be a “dangling” term to the right, the
 appropriate fixity is `Prefix`.  Knowing that the
 underlying term constant is called `COND`, the simplest way
 to achieve the desired syntax is:
@@ -1131,7 +1131,7 @@ with the same names as previously declared (or built-in)
 constants (e.g., `o`, `I`, `S`, etc.).  The name $x$ is
 still a constant for the constructors, theories, etc.; `hide`
 affects parsing and printing by removing the given name from the
-"overload map" described above in
+“overload map” described above in
 Section \ref{sec:parser:architecture}.  Note that the effect of
 `hide` is *temporary*; its effects do not persist in theories
 descended from the current one.  See the REFERENCE entry for
@@ -1262,7 +1262,7 @@ treats the back-slash.)  Thus:
 >> “f ^ x”;
 ```
 
-Finally, if a single caret is followed by a "symbol" character,
+Finally, if a single caret is followed by a “symbol” character,
 then the caret and symbol are passed through to HOL unchanged.
 Thus the following example illustrates two different ways of
 writing the same thing (in the first input, two carets become
@@ -1328,7 +1328,7 @@ of `ty_antiq`.  For example,
 \label{sec:generalised-quotation-syntax}
 
 \index{special syntactic forms for scripts!Quote@\ml{Quote}}
-In line with various "modern" syntaxes (e.g., `Theorem` and
+In line with various “modern” syntaxes (e.g., `Theorem` and
 `Definition`), it is possible to define custom quotation
 tooling using the `Quote` keyword.  There are two forms.  The
 first is
@@ -1504,7 +1504,7 @@ If you wish to set this value for the current proof attempt, the
 function `set_backup` can be used.  If the size of the backup
 list is set to be smaller than it currently is, the undo list
 will be immediately truncated.  You can not undo a
-"proofs-level" operation, such as `set_goal` or `drop`.
+“proofs-level” operation, such as `set_goal` or `drop`.
 
 ### Viewing the state of the proof manager
 
@@ -1800,7 +1800,7 @@ first-order logic.  There are three main entry-points:
 ```
 
 Each of these tactics attempts to prove the goal.  They will
-either succeed in doing so, or fail with a "depth exceeded"
+either succeed in doing so, or fail with a “depth exceeded”
 exception.  If the branching factor in the search-space is high,
 the `meson` tactics may also take a very long time to reach the
 maximum depth.
@@ -2040,7 +2040,7 @@ Occasionally, one does *not* want a definition automatically
 added to the global compset.
 \index{theorem attributes!nocompute@\ml{nocompute}}
 The easiest way to achieve this is to use the `nocompute`
-"pseudo-attribute":[^nocomputetheorem]
+“pseudo-attribute”:[^nocomputetheorem]
 
 [^nocomputetheorem]: The `nocompute` attribute does nothing
     when applied to `Theorem` declarations.
@@ -2441,7 +2441,7 @@ version `intLib.INTEGER_TAC`) ported from HOL-Light can
 solve some simple equations about divisibility of integers, e.g.
 `d int_divides m ==> d int_divides (m * n)`.  As part of the
 procedure, multivariate polynomials of integer are expanded to
-their "normal forms" (with respect to certain ordering), and
+their “normal forms” (with respect to certain ordering), and
 thus equations between equivalent such polynomials can be
 decided, e.g.
 `w * y + x * z - (w * z + x * y) = (w - x) * (y - z)`.
@@ -2604,7 +2604,7 @@ problem entirely.
 It can be a nuisance to add type annotations when specifying the
 return type for operations such as: `word_extract`,
 `word_concat`, `concat_word_list` and `word_replicate`.  This
-is because there is often a "standard" length that could be
+is because there is often a “standard” length that could be
 guessed, e.g., concatenation usually sums the constituent word
 lengths.  A facility for word length guessing is controlled by
 the reference `wordsLib.guessing_word_lengths`, which is

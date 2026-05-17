@@ -117,7 +117,7 @@ built.  Further basic types are developed in the theory of pairs
 At start-up, the initial theory for users of the HOL system is called
 `bool`\index{HOL@\HOL{}}, which is constructed when the HOL system is
 built.  The theory `bool` is an extension of the combination of the
-"conceptual" theories `LOG` and `INIT`, described in the LOGIC manual.
+“conceptual” theories `LOG` and `INIT`, described in the LOGIC manual.
 Thus it contains the four axioms
 \index{axioms!in bool theory@in \ml{bool} theory}
 for higher order logic.  These axioms, together with the rules of
@@ -250,7 +250,7 @@ system should never need to make a non-definitional
 \index{definitional theories}
 theory.  In practice, it is often very tempting to take the risk of
 introducing new axioms because deriving them from definitions can be
-tedious---proving that 'axioms' follow from definitions amounts to
+tedious---proving that ‘axioms’ follow from definitions amounts to
 proving their consistency.
 
 **Further definitions.**
@@ -285,7 +285,7 @@ the application `COND `$t_1$` `$t_2$` `$t_3$.
 The constant `IN` (written as an infix) is the basis of the modelling
 of sets by their characteristic functions.  The term $x$` IN `$P$ can
 be read as "$x$ is an element of the set $P$", or (more in line with
-its definition) as "the predicate $P$ is true of $x$".
+its definition) as “the predicate $P$ is true of $x$”.
 
 Finally, the polymorphic constant `ARB`$:\alpha$ denotes a fixed but
 arbitrary element.  `ARB` is occasionally useful when attempting to
@@ -565,7 +565,7 @@ update terms.  As per the definition above (`UPDATE_def`), the infix
 function, which when in turn is passed a function $f$, returns a
 version of that function that has been updated to return $v$ when
 applied to $k$, and is otherwise the same as $f$.  The same effect
-can be achieved with the "substitution style" syntax:
+can be achieved with the “substitution style” syntax:
 $f\llparenthesis k\mapsto v\rrparenthesis$.  There is an ASCII form
 of this notation as well:
 
@@ -594,7 +594,7 @@ names for variables (e.g., `S` to range over sets and `o` to range
 over outputs).[^combin-shadow]  Variables with these names can be
 used in the current system if `o`, `S`, `K`, `I`, `W`, and `C` are
 first hidden (see Section \ref{hidden}).  In fact, this happens so
-often with the constant `C` that the name `C` is "hidden" by
+often with the constant `C` that the name `C` is “hidden” by
 default.
 \index{flip, as alias for HOL constant C@\holtxt{flip}, as alias for \HOL{} constant \holtxt{C}}
 Instead, it can be written in fully-qualified form, as `combin$C`,
@@ -992,7 +992,7 @@ projection functions and the discriminators.
 ```
 
 The sum type operator can be seen as functorial over its arguments
-and so has a "map" function, `SUM_MAP`, with definition and results
+and so has a “map” function, `SUM_MAP`, with definition and results
 showing its functoriality:
 
 ```
@@ -1073,7 +1073,7 @@ construction that underlies the fixed-width word type (see Section
 
 \index{options, the HOL theory of@options, the \HOL{} theory of}
 
-The theory `option` defines a type operator `option` that 'lifts'
+The theory `option` defines a type operator `option` that ‘lifts’
 its argument type, creating a type with all of the values of the
 argument and one other, specially distinguished value.  The
 constructors of this type are
@@ -1098,7 +1098,7 @@ definition of primitive recursive functions over option values.
 ```
 
 The `option` theory also defines a case constant that allows one to
-inspect option values in a "pattern-matching" style.
+inspect option values in a “pattern-matching” style.
 
 ```
    case e of
@@ -1447,7 +1447,7 @@ A full set of comparison operators is defined in terms of `<`.
 ```
 
 Note that in all of HOL's standard numeric theories, it is usual
-practice to avoid uses of the "greater-than" constants and to
+practice to avoid uses of the “greater-than” constants and to
 express everything with either $<$ or $\le$.
 
 **Division and modulus.**
@@ -1604,7 +1604,7 @@ Simple digit sequences are parsed as decimal numbers, but the
 parser also supports the input of numbers in binary, octal and
 hexadecimal notation.  Numbers may be written in binary and
 hexadecimal form by prefixing them with the strings `0b` and `0x`
-respectively.  The 'digits' `A`–`F` in hexadecimal numbers may be
+respectively.  The ‘digits’ `A`–`F` in hexadecimal numbers may be
 written in upper or lower case.  Binary numbers have their most
 significant digits left-most.  In the interests of backwards
 compatibility, octal numbers are not enabled by default, but if the
@@ -1803,8 +1803,8 @@ Harrison \cite{jrh:thesis}.  We will only give a sketchy overview
 of the development; the interested reader should consult the
 REFERENCE manual and Harrison's thesis.
 
-The axioms for the real numbers are derived from the 'half reals'
-which are constructed from the 'half rationals'.  This part of the
+The axioms for the real numbers are derived from the ‘half reals’
+which are constructed from the ‘half rationals’.  This part of the
 development is recorded in `hratTheory` and `hrealTheory`, but is
 not used once the reals have been constructed.  The real axioms
 are derived in the theory `realaxTheory`.  A standard collection
@@ -1982,7 +1982,7 @@ overloaded on the corresponding operators of real numbers, shown
 in Table \ref{tab:extrealOp}.
 
 [^extreal-divzero]: Note that, unlike the case of real numbers in
-    HOL, $0/0 = 0$ (or "division by zero" in general) does not
+    HOL, $0/0 = 0$ (or “division by zero” in general) does not
     hold on extreals.  This particular design choice sometimes
     makes proofs of extreal-related theorems a bit harder (but
     more aligned with their textbook proofs), as whenever terms
@@ -2382,8 +2382,8 @@ however with word-to-word conversion, orderings, division and
 right shifting, where signed and unsigned variants are needed.
 When operating over the natural numbers, some of the two's
 complement versions have slightly unnatural looking presentations.
-For example, with the signed (two's complement) version of "less
-than" we have `255w < (0w:word8)` because the word `255w` is
+For example, with the signed (two's complement) version of “less
+than” we have `255w < (0w:word8)` because the word `255w` is
 actually taken to be representing the integer $-1$, whereas the
 unsigned version is more natural: `0w <+ (255w:word8)`.
 
@@ -2503,7 +2503,7 @@ it is natural number addition.
 All of the standard word orderings are provided, with signed and
 unsigned versions of $<$, $\leq$, $>$ and $\geq$.  The unsigned
 versions are suffixed with a plus; for example, `<+` is unsigned
-"less than".
+“less than”.
 
 **Constants.**
 The word theory also defines a few word constants:
@@ -2517,7 +2517,7 @@ The word theory also defines a few word constants:
 **List of bit vector operations.**
 A list of operations is provided in the table below.
 
-<div class="wide-table">
+<div class=“wide-table”>
 
 | Operation              | Symbol  | Type                                                | Description                       |
 |------------------------|---------|-----------------------------------------------------|-----------------------------------|
@@ -2572,14 +2572,14 @@ A list of operations is provided in the table below.
 | `word_ror`             | `#>>`  | $\worda\to\mathit{num}\to\worda$                         | Rotate right                       |
 | `word_rol`             | `#<<`  | $\worda\to\mathit{num}\to\worda$                         | Rotate left                        |
 | `word_rrx`             |        | $\mathit{bool}\#\worda\to\mathit{bool}\#\worda$          | Rotate right extended by 1 place   |
-| `word_lt`              | `<`    | $\worda\to\worda\to\mathit{bool}$                        | Signed "less than"                 |
-| `word_le`              | `<=`   | $\worda\to\worda\to\mathit{bool}$                        | Signed "less than or equal"        |
-| `word_gt`              | `>`    | $\worda\to\worda\to\mathit{bool}$                        | Signed "greater than"              |
-| `word_ge`              | `>=`   | $\worda\to\worda\to\mathit{bool}$                        | Signed "greater than or equal"     |
-| `word_lo`              | `<+`   | $\worda\to\worda\to\mathit{bool}$                        | Unsigned "less than"               |
-| `word_ls`              | `<=+`  | $\worda\to\worda\to\mathit{bool}$                        | Unsigned "less than or equal"      |
-| `word_hi`              | `>+`   | $\worda\to\worda\to\mathit{bool}$                        | Unsigned "greater than"            |
-| `word_hs`              | `>=+`  | $\worda\to\worda\to\mathit{bool}$                        | Unsigned "greater than or equal"   |
+| `word_lt`              | `<`    | $\worda\to\worda\to\mathit{bool}$                        | Signed “less than”                 |
+| `word_le`              | `<=`   | $\worda\to\worda\to\mathit{bool}$                        | Signed “less than or equal”        |
+| `word_gt`              | `>`    | $\worda\to\worda\to\mathit{bool}$                        | Signed “greater than”              |
+| `word_ge`              | `>=`   | $\worda\to\worda\to\mathit{bool}$                        | Signed “greater than or equal”     |
+| `word_lo`              | `<+`   | $\worda\to\worda\to\mathit{bool}$                        | Unsigned “less than”               |
+| `word_ls`              | `<=+`  | $\worda\to\worda\to\mathit{bool}$                        | Unsigned “less than or equal”      |
+| `word_hi`              | `>+`   | $\worda\to\worda\to\mathit{bool}$                        | Unsigned “greater than”            |
+| `word_hs`              | `>=+`  | $\worda\to\worda\to\mathit{bool}$                        | Unsigned “greater than or equal”   |
 
 </div>
 
@@ -2733,7 +2733,7 @@ Binary list concatenation (`APPEND`) may also be denoted by the
 infix operator `++`; thus the expression `L1 ++ L2` is translated
 into `APPEND L1 L2`.  The concatenation of a list of lists into a
 list is achieved by `FLAT`.  The special case where a single
-element is appended to the end of a list (the "opposite" of
+element is appended to the end of a list (the “opposite” of
 `CONS`, which adds elements to the front of a list), is
 implemented by `SNOC`.
 
@@ -2790,7 +2790,7 @@ occasionally be awkward, so a characterisation of `GENLIST`'s
 ##thm GENLIST_CONS
 ```
 
-For more on the "indexed" treatment of lists, see Section
+For more on the “indexed” treatment of lists, see Section
 \ref{sec:indexed-lists} below.
 
 **Mapping functions over lists.**
@@ -2800,7 +2800,7 @@ For more on the "indexed" treatment of lists, see Section
 \index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for lists}
 
 There are functions for mapping a function $f:\alpha\to\beta$ over
-a single list (`MAP`), a "partial" function
+a single list (`MAP`), a “partial” function
 $f:\alpha\to\beta\,\mathsf{option}$ over a list (`mapPartial`), or
 a function $f:\alpha\to\beta\to\gamma$ over two lists (`MAP2`):
 
@@ -2845,7 +2845,7 @@ duplicates removed through the use of the `nub` constant:
 **Relations over lists.**
 \index{EVERY2@\ml{EVERY2}|see{\ml{LIST\_REL}}}
 \index{LIST_REL, the HOL constant@\ml{LIST\_REL}, the \HOL{} constant}
-A binary relation on elements can be "lifted" to a relation on
+A binary relation on elements can be “lifted” to a relation on
 lists of such elements with the `LIST_REL` constant:
 
 ```
@@ -3072,7 +3072,7 @@ by primitive recursion over the index argument, in theorem `EL`:
 The term underlying the pretty presentation $\ell\lbrbrak n\rbrbrak$
 is $\mathtt{EL}\;n\;\ell$; and both forms can be used when
 writing terms.  If desired, the pretty-printing with the
-"array-subscript" notation can be turned off by the invocation
+“array-subscript” notation can be turned off by the invocation
 
 ```
    val _ = clear_overloads_on "fEL"
@@ -3126,7 +3126,7 @@ applications using a list-like notation:
 
 **The `indexedLists` theory.**
 The `indexedLists` theory defines a number of extra constants
-that are "aware" of lists as indexed values.  Some of these
+that are “aware” of lists as indexed values.  Some of these
 constants are:
 
 ```
@@ -3184,7 +3184,7 @@ An example theorem about `MAPi` relates it to `MEM`:
 \index{lazy lists, the HOL theory of@``lazy'' lists, the \HOL{} theory of|(}
 
 The theory `llist` contains the definition of a type of possibly
-infinite sequences.  This type is similar to the "lazy lists" of
+infinite sequences.  This type is similar to the “lazy lists” of
 programming languages like Haskell, hence the name of the theory.
 The `llist` theory has a number of constants that are analogous
 to constants in the theory of finite lists.  The `llist` versions
@@ -3319,7 +3319,7 @@ $$
 $$
 
 The `path` type is thus an appropriate model for reduction
-sequences, where the $\alpha$ parameter corresponds to "states",
+sequences, where the $\alpha$ parameter corresponds to “states”,
 and the $\beta$ parameter corresponds to the labels on the
 arrows.
 
@@ -3334,7 +3334,7 @@ of paths has two constructors:
 
 The `stopped_at` constructor returns a path containing just one
 state, and no transitions.  (Thus, the reduction sequence has
-"stopped at" this state.)  The `pcons` constructor takes a
+“stopped at” this state.)  The `pcons` constructor takes a
 state, a label, and a path, and returns a path which is now
 headed by the state argument, and which moves from that state
 via the label argument to the path.  Graphically,
@@ -3957,7 +3957,7 @@ the variables mentioned in `vs` must satisfy the constraint
 ```
 
 is the set of numbers from `y` up to but not including `2 * y`.
-The set can be "read" computationally: draw out all those `x`
+The set can be “read” computationally: draw out all those `x`
 that are less than `y`, and to each such `x` add `y`, thereby
 generating a set of numbers.
 
@@ -3968,7 +3968,7 @@ In the example above, the underlying `GSPEC` term will be
 ```
 
 The `vs` component of the unambiguous notation must be a single
-"variable structure" that might appear underneath a possibly
+“variable structure” that might appear underneath a possibly
 paired abstraction as in Section \ref{HOL-varstruct}.  In other
 words, this
 
@@ -4122,7 +4122,7 @@ the element being removed actually appear in the larger bag.
 **Intersection, merge, and filter.**
 The intersection of two bags (`BAG_INTER`) takes the pointwise
 minimum.  The dual operation, merging (`BAG_MERGE`), takes the
-pointwise maximum.  A bag can be 'filtered' by a set to return
+pointwise maximum.  A bag can be ‘filtered’ by a set to return
 the bag where all the elements not in the set have been dropped
 (`BAG_FILTER`).
 
@@ -4240,7 +4240,7 @@ The following basic properties of relations are defined.
 The following basic operations on relations are defined: the
 empty relation (`EMPTY_REL`, or $\emptyset\subr$), relation
 composition (`O`, or $\circ\subr$, infix), inversion (`inv`, or
-$\_^{\mathsf{T}}$ (suffix superscript 'T')), domain (`RDOM`),
+$\_^{\mathsf{T}}$ (suffix superscript ‘T’)), domain (`RDOM`),
 and range (`RRANGE`).
 
 ```
@@ -4760,7 +4760,7 @@ in theory `While`:
 
 Clearly, if `P` in this theorem was instantiated to
 $\lambda x.\;\konst{T}$, the resulting instance of `WHILE` would
-'run forever' if executed.  Why is such an "obviously" partial
+‘run forever’ if executed.  Why is such an “obviously” partial
 function definable in HOL?  The answer lies in a subtle
 definition of `WHILE`,[^while-jmoore] which uses the expressive
 power of HOL to surprising effect.  Consider the following total
@@ -4856,7 +4856,7 @@ those types that leverage this view.  Equally, it is useful to
 be able to declare monads of one's own that can use the same
 syntactic facilities.
 
-Monads are defined by their "unit" and "bind" functions, and
+Monads are defined by their “unit” and “bind” functions, and
 these can be composed in expressive ways.  In particular, HOL
 supports a syntax inspired by Haskell's do notation, wherein it
 is possible to write such functions as
@@ -5013,10 +5013,10 @@ monads will look similar.  If one views `fail` as throwing an
 exception, then the `choice` notation allows for catching an
 exception and trying another computation.  The overload is to
 the infix `++` syntax, meaning that one can write
-$M_1\;\mathtt{++}\;M_2$ to represent the "choice" between $M_1$
+$M_1\;\mathtt{++}\;M_2$ to represent the “choice” between $M_1$
 and $M_2$.  (Note that in the list monad, `++` is `APPEND`.
 This explains the choice of notation, though in the list monad,
-viewing "choice" as throwing and catching exceptions is actually
+viewing “choice” as throwing and catching exceptions is actually
 harder to motivate.)
 
 Finally, the `guard` term (if given) overloads to the term

@@ -306,7 +306,7 @@ In addition, for reasons that are mostly historical, not all the
 inferences that are derived in terms of the abstract logic are
 actually derived in the current version of the HOL system.  That is,
 there are currently a number of rules that are installed in the system
-on an "axiomatic" basis, all of which should be derived by explicit
+on an “axiomatic” basis, all of which should be derived by explicit
 inference.  These rules' status does not actually compromise the
 consistency of the logic.  In effect, the existing HOL system has a
 deductive system more comprehensive than the one presented abstractly,
@@ -1002,7 +1002,7 @@ For readability, let $\mathcal{M} = \lambda{x_1\cdots x_n}.\; t'[x_1,\ldots,x_n]
 
 Included in the set of derived inferences provided in HOL is a group
 of rules with complex definitions that do a limited amount of
-"automatic" theorem-proving in the form of rewriting.  The ideas and
+“automatic” theorem-proving in the form of rewriting.  The ideas and
 implementation were originally developed by Milner and Wadsworth for
 Edinburgh LCF, and were later implemented more flexibly and
 efficiently by Paulson and Huet for Cambridge LCF.  One basic
@@ -1013,7 +1013,7 @@ the same.
 
 `REWRITE_RULE` uses a list of equational theorems (theorems whose
 conclusions can be regarded as having the form $t_1 = t_2$) to replace
-any subterms of an object theorem that "match" $t_1$ by the
+any subterms of an object theorem that “match” $t_1$ by the
 corresponding instance of $t_2$. The rule matches recursively and to
 any depth, until no more replacements can be made, using internally
 defined search, matching and instantiation algorithms.  The validity
@@ -1035,7 +1035,7 @@ other in the rewriting process to transform the original theorem.
 The application of `REWRITE_RULE`, in the session below, illustrates
 that replacements are made at all levels of the structure of a term.
 The example is a formula of natural number arithmetic: the infixes `>`
-and `<` are the usual "greater than" and "less than" relations,
+and `<` are the usual “greater than” and “less than” relations,
 respectively, and `SUC` names the usual successor function on natural
 numbers.  Use is made of the pre-existing definition of `>`, bound to
 `arithmeticTheory.GREATER_DEF` in SML (see §REFERENCE).  The inference

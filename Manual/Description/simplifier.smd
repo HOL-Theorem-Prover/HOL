@@ -50,7 +50,7 @@ expressible as simple theorems:
 
 In this example, the simplifier performed a $\beta$-reduction in
 the first conjunct under the existential quantifier, and then did
-an "unwinding" or "one-point" reduction, recognising that the only
+an “unwinding” or “one-point” reduction, recognising that the only
 possible value for the quantified variable `x` was the value `z`.
 
 The second argument to `SIMP_CONV` is a list of theorems to be
@@ -83,7 +83,7 @@ arguments.
 \index{simplification!tactics}
 
 The simplifier is implemented around the conversion `SIMP_CONV`
-introduced above.  This is a function for "converting" terms into
+introduced above.  This is a function for “converting” terms into
 theorems.  To apply the simplifier to goals (alternatively, to
 perform tactic-based proofs with the simplifier), HOL provides
 a number of tactics, all of which are available in `bossLib`.
@@ -96,7 +96,7 @@ $$
 $$
 where the various $\mathit{th}_i$ are theorems that are passed to
 the simplifier and used as additional rewrites.  There is a
-*simpset* used here, but it is implicit: the global, "stateful"
+*simpset* used here, but it is implicit: the global, “stateful”
 *simpset*, embodying all of a theory and a theory's ancestors'
 useful simplification technology.  For more on the stateful
 *simpset*, see Section \ref{sec:srw-ss} below.
@@ -144,7 +144,7 @@ The `simp` tactic is implemented with the low-level tactic
 A call to `rw[`$\mathit{th}_1,\dots,\mathit{th}_n$`]` is similar in
 behaviour to `simp` with the same arguments but does its
 simplification while interleaving phases of aggressive
-"goal-stripping".  In particular, `rw` begins by stripping all
+“goal-stripping”.  In particular, `rw` begins by stripping all
 outermost universal quantifiers and conjunctions.  It follows this
 with elimination of variables `v` that appear in assumptions of the
 form `v = e` or `e = v` (where `v` cannot be free in `e`).  After a
@@ -171,8 +171,8 @@ goal-splitting as the low-level tactic `rw_tac`.
 
 \index{gs (simplification tactic)@\ml{gs} (simplification tactic)}
 
-The `gs` tactic (where "gs" should be read as "global
-simplification") simplifies both the assumptions of a goal as well
+The `gs` tactic (where “gs” should be read as “global
+simplification”) simplifies both the assumptions of a goal as well
 as its conclusion.  The assumptions are repeatedly simplified with
 respect to each other, meaning that the process begins by
 simplifying the oldest assumption with all the other (newer)
@@ -193,8 +193,8 @@ $p \land q$ will turn into two assumptions, $p$ and $q$), will
 cause a case-split if the assumption is a disjunction, and will
 choose fresh variable names to eliminate existential quantifiers.
 \index{gns (simplification tactic)@\ml{gs} (simplification tactic)}
-If this "stripping" is not desired, the `gns` variant of `gs`
-can be used (‘n’ for "no strip").
+If this “stripping” is not desired, the `gns` variant of `gs`
+can be used (‘n’ for “no strip”).
 
 \index{gvs (simplification tactic)@\ml{gvs} (simplification tactic)}
 \index{gnvs (simplification tactic)@\ml{gvs} (simplification tactic)}
@@ -347,7 +347,7 @@ simplified the rest of the goal.
 \index{rw_tac@\ml{rw\_tac}}
 
 Though its type is the same as the simplification tactics already
-described, `rw_tac` is "augmented" in two ways:
+described, `rw_tac` is “augmented” in two ways:
 
   - When simplifying the goal, the provided *simpset* is augmented
     not only with the theorems explicitly passed in the second
@@ -357,7 +357,7 @@ described, `rw_tac` is "augmented" in two ways:
     These rewrites include results about record field selectors
     and updators, as well as distinctness and injectivity theorems
     for data type constructors.
-  - `rw_tac` also repeatedly "strips" the goal in the same way
+  - `rw_tac` also repeatedly “strips” the goal in the same way
     as the high-level `rw` tactic (see above).
 
 The augmentation of the provided *simpset* that occurs before
@@ -441,7 +441,7 @@ natural numbers to `bool_ss`.
 ```
 
 With the natural numbers, the `std_ss` *simpset* can calculate
-with ground values, and also includes a suite of "obvious rewrites"
+with ground values, and also includes a suite of “obvious rewrites”
 for formulas including variables.
 
 ```
@@ -604,7 +604,7 @@ Equally, the example above could be written:
 ```
 
 As a general rule, `(srw_ss())` includes all of its context's
-"obvious rewrites", as well as code to do standard calculations
+“obvious rewrites”, as well as code to do standard calculations
 (such as the arithmetic performed in the above example).  It does
 not include decision procedures that may exhibit occasional poor
 performance, so the *simpset* fragments containing these
@@ -626,7 +626,7 @@ performs this construction:
 
 where `++` is an infix.  In general, it is best to build on top
 of the `pure_ss` *simpset* or one of its descendants in order
-to pick up the default "filter" function for converting theorems to
+to pick up the default “filter” function for converting theorems to
 rewrite rules.  (This filtering process is described below in
 Section \ref{sec:generating-rewrite-rules}.)
 
@@ -833,7 +833,7 @@ an individual `simp` call.
 
 \label{sec:simplifier-rewriting}
 
-Rewriting is the simplifier's "core operation".  This section
+Rewriting is the simplifier's “core operation”.  This section
 describes the action of rewriting in more detail.
 
 #### Basic rewriting
@@ -962,7 +962,7 @@ $$
 Instead, the simplifier will transform its input theorems to
 extract rewrites of this form itself.  The exact transformation
 performed is dependent on the *simpset* being used: each
-*simpset* contains its own "filter" function which is applied to
+*simpset* contains its own “filter” function which is applied to
 theorems that are added to it.  Most *simpset*s use the filter
 function from the `pure_ss` *simpset* (see
 Section \ref{sec:purebool-ss}).  However, when a *simpset*
@@ -972,11 +972,11 @@ type `controlled_thm\ ->\ controlled_thm\ list`, and is
 applied to each of the theorems produced by the existing
 *simpset*'s filter.
 \index{simplification!guaranteeing termination}
-(A "controlled" theorem is one that is accompanied by a piece of
-"control" data expressing the limit (if any) on the number of
+(A “controlled” theorem is one that is accompanied by a piece of
+“control” data expressing the limit (if any) on the number of
 times it can be applied.  See
 Section \ref{sec:simp-special-rewrite-forms} for how users can
-introduce these limits.  The "control" type appears in the SML
+introduce these limits.  The “control” type appears in the SML
 module `BoundedRewrites`.)
 
 The rewrite-producing filter in `pure_ss` strips away
@@ -1139,10 +1139,10 @@ $$
 {\Gamma \cup \Delta \vdash f(x) = g(y)}
 $$
 When specifying the action of the simplifier, these rules should
-be read upwards.  With `ABS`, for example, the rule says "when
+be read upwards.  With `ABS`, for example, the rule says “when
 simplifying an abstraction, simplify the body $t_1$ to some new
 $t_2$, and then the result is formed by re-abstracting with the
-bound variable $x$."
+bound variable $x$.”
 
 Further congruence rules should be added to the simplifier in the
 form of theorems, via the `congs` field of the records passed
@@ -1185,9 +1185,9 @@ $$
 \vdash (P = P') \Rightarrow (P' \Rightarrow (Q = Q')) \Rightarrow
 (P \Rightarrow Q = P' \Rightarrow Q')
 $$
-This rule should be read: "When simplifying $P\Rightarrow Q$, first
+This rule should be read: “When simplifying $P\Rightarrow Q$, first
 simplify $P$ to $P'$.  Then assume $P'$, and simplify $Q$ to $Q'$.
-Then the result is $P' \Rightarrow Q'$."
+Then the result is $P' \Rightarrow Q'$.”
 
 The rule for conditional expressions is
 $$
@@ -1336,7 +1336,7 @@ list of variables that should be treated as constants when finding
 pattern matches.  The second component is the term pattern itself.
 Matching against this component is *not* done by the higher-order
 match of Section \ref{sec:simp-homatch}, but by a higher-order
-"term-net".  This form of matching does not aim to be precise; it
+“term-net”.  This form of matching does not aim to be precise; it
 is used to efficiently eliminate clearly impossible matches.  It
 does not check types, and does not check multiple bindings.  This
 means that the conversion will not only be applied to terms that
@@ -1392,7 +1392,7 @@ constructor `REDUCER`:
 
 The `context` type is an alias for the built-in SML type
 `exn`, that of exceptions.  The exceptions here are used as a
-"universal type", capable of storing data of any type.  For
+“universal type”, capable of storing data of any type.  For
 example, if the desired data is a pair of an integer and a
 boolean, then the following declaration could be made:
 
@@ -1495,7 +1495,7 @@ number of times an individual rewrite will be applied.
    Ntimes : thm -> int -> thm
 ```
 
-A theorem "wrapped" in the `Once` function will only be applied
+A theorem “wrapped” in the `Once` function will only be applied
 once when the simplifier is applied to a given term.  A theorem
 wrapped in `Ntimes` will be applied as many times as given in
 the integer parameter.
@@ -1587,7 +1587,7 @@ assumption that matches the pattern is excluded from further
 simplification.  By default, the matching requires the pattern to
 match the entirety of the assumption statement.  However, if the
 pattern concludes with the comment `(* sa *)` (with or without the
-spaces; "sa" stands for "sub-assumption"), the matching succeeds
+spaces; “sa” stands for “sub-assumption”), the matching succeeds
 (and the assumption is excluded) if the pattern matches any
 sub-term of the assumption.  Thus:
 
@@ -1646,7 +1646,7 @@ variables, e.g.:
    |- f x y = ... f (g x y) z ...
 ```
 
-Theorems of a similar shape are also returned as the "cases"
+Theorems of a similar shape are also returned as the “cases”
 theorems from inductive definitions.
 
 Whatever their origin, such theorems are the classic example of
@@ -1734,12 +1734,12 @@ simplification terminates.
 \index{simplification!with pre-orders}
 
 In addition to simplifying with respect to equality, it is also
-possible to use the simplifier to "rewrite" with respect to a
+possible to use the simplifier to “rewrite” with respect to a
 relation that is reflexive and transitive (a *preorder*).  This
 can be a very powerful way of working with transition relations in
 operational semantics.
 
-Imagine, for example, that one has set up a "deep embedding" of
+Imagine, for example, that one has set up a “deep embedding” of
 the $\lambda$-calculus.  This will entail the definition of a new
 type (`lamterm`, say) within the logic, as well as definitions of
 appropriate functions (e.g., substitution) and relations over
@@ -1827,13 +1827,13 @@ The fields of the record that is the first argument are:
 
 `subsets`
 :   Theorems of the form $R'\,x\,y \Rightarrow R\,x\,y$.  These are
-    used to augment the resulting *simpset*'s "filter" so that
+    used to augment the resulting *simpset*'s “filter” so that
     theorems in the context mentioning $R'$ will derive useful
     rewrites involving $R$.  In the example of $\beta$-reduction,
     one might also have a relation $\rightarrow_{wh}^*$ for
     weak-head reduction.  Any weak-head reduction is also a
     $\beta$-reduction, so it can be useful to have the simplifier
-    automatically "promote" facts about weak-head reduction to
+    automatically “promote” facts about weak-head reduction to
     facts about $\beta$-reduction, and to then use them as rewrites.
 
 `rewrs`

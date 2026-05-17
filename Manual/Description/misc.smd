@@ -121,9 +121,9 @@ restrictions on it that must be followed, described below.
 
 The development model that `Holmake` is designed to support is
 that there are two modes of work: theory construction and system
-revision.  In 'theory construction' mode, the user builds up a
+revision.  In ‘theory construction’ mode, the user builds up a
 theory by interacting with HOL, perhaps over many sessions.  In
-'system rebuild' mode, a component that others depend on has been
+‘system rebuild’ mode, a component that others depend on has been
 altered, so all modules dependent on it have to be brought up to
 date.  System rebuild mode is simpler so we deal with it first.
 
@@ -144,7 +144,7 @@ A theory *my*`Theory` is constructed by writing the file
 *my*`Script.sml`.  In this file, the context (semantic, and also
 proof support) is established, by specifying parent theories and
 useful libraries.  In the course of building the theory, the user
-is writing what one might call the "HOL script language": this is
+is writing what one might call the “HOL script language”: this is
 a mixture of SML (used mostly to write tactics) and HOL material
 (inside definitions and theorem statements).  This script file is
 used to achieve inter-session persistence of the theory being
@@ -186,7 +186,7 @@ boilerplate:
     val _ = new_theory "my"
 ```
 
-This "boilerplate" ensures that the standard tactics and SML
+This “boilerplate” ensures that the standard tactics and SML
 commands will be in the namespace when the script file is
 compiled.  Interactively, these modules have already been loaded
 and `open`-ed, so what can be typed directly at `hol` cannot
@@ -219,7 +219,7 @@ occurrences of `load`, since `load` is only defined for the
 interactive system.
 
 In addition, simply referring to a theory's theorems using the
-'dot-notation' will make that theory an ancestor.  For example,
+‘dot-notation’ will make that theory an ancestor.  For example,
 
 ```
     Theorem mytheorem:
@@ -231,7 +231,7 @@ In addition, simply referring to a theory's theorems using the
 
 will record a dependency on `ThirdAncestoryTheory`, making it
 just as much an ancestor as the theories that have been explicitly
-`open`-ed elsewhere.  This "trick" is not good practice however,
+`open`-ed elsewhere.  This “trick” is not good practice however,
 and can lead to strange behaviours when working interactively.
 If it feels important to keep the top-level SML namespace
 uncontaminated, the right idiom for the top of the script file is
@@ -252,7 +252,7 @@ to disk.
 \index{special syntactic forms for scripts}
 The calls to `new_theory` and `export_theory` must bracket a
 sequence of SML declarations and/or uses of special syntactic
-forms for scripts (the so-called "modern syntax").  The special
+forms for scripts (the so-called “modern syntax”).  The special
 syntactic forms all map to SML declarations, and include uses of
 keywords like `Theorem`, `Type`, and `Overload`.  An SML
 declaration will typically be a `val`-binding, but might also be
@@ -296,8 +296,8 @@ managing a HOL development there with `Holmake`, then
 When developing HOL libraries, one should again attempt to follow
 Moscow ML's conventions.  Most importantly, file names should
 match `signature` and `structure` names.  If this can be done, the
-automatic dependency analysis done by `Holmake` will work "out of
-the box".  A signature for module `foo` should always appear in
+automatic dependency analysis done by `Holmake` will work “out of
+the box”.  A signature for module `foo` should always appear in
 file `foo.sig`, and should have the form
 
 ```
@@ -394,7 +394,7 @@ of this, theories and SML object files can be specified on the
 command-line by just giving the same string as would be passed to
 the `open` declaration form.[^misc-uo-suffix]  Command-line
 targets do not have to provide paths to directories where those
-targets are "housed" if there is only target of the given name in
+targets are “housed” if there is only target of the given name in
 the combination of all `INCLUDE`-d directories.
 
 [^misc-uo-suffix]: Strictly, the files generated on disk for
@@ -445,7 +445,7 @@ theories in CI or similar workflows: if the cache key has not
 changed, the theory does not need to be rebuilt.
 
 **`-f <theory>`** Toggles whether or not a theory should be built
-in "fast" mode.  Fast building causes tactic proofs (invocations
+in “fast” mode.  Fast building causes tactic proofs (invocations
 of `prove`, `store_thm`, and the `Theorem`-`Proof`-`QED` form) to
 automatically succeed.  This lack of soundness is marked by the
 `fast_proof` oracle tag.  This tag will appear on all theorems
@@ -512,7 +512,7 @@ Section \ref{sec:holmake-preexec} below for more on this facility.
 
 **`--no_prereqs`**
 \index{Holmake@\holmake!recursive invocation}
-Do not recursively attempt to build "include" directories before
+Do not recursively attempt to build “include” directories before
 working in the current directory.  If a target in the current
 directory depends on something in another directory that does not
 exist, `Holmake` will fail to build it.  If the remote target
@@ -522,13 +522,13 @@ what may.
 **`--no_sigobj`** Do not link against HOL system's directory of
 HOL system files.  Use of this option goes some way towards
 turning `Holmake` into a general SML `make` system.  However, it
-will still attempt to do "HOL things" with files whose names end
+will still attempt to do “HOL things” with files whose names end
 in `Script` and `Theory`.  This option implies `--no_overlay`.
 
 **`--overlay <file>`** Use the given file as the overlay rather
 than the default.
 
-**`--qof`, `--noqof`** Where q-o-f stands for "quit on failure".
+**`--qof`, `--noqof`** Where q-o-f stands for “quit on failure”.
 By default, if a tactic fails to prove a theorem, the running
 script exits with a failure.  Depending on the presence or
 absence of the `-k` flag, this failure to build a theory may
@@ -549,10 +549,10 @@ affected.
 \index{Holmake@\holmake!recursive invocation}
 Forces `Holmake` to behave more recursively than it would
 otherwise.  This overrides the `--no_prereqs` option.  When
-performing a "clean" action (prompted by `clean`, `cleanAll` or
+performing a “clean” action (prompted by `clean`, `cleanAll` or
 `cleanDeps` arguments), this cleaning is done recursively through
-all "includes" directories (which is not done otherwise).  When
-building normally, all targets in "includes" directories are
+all “includes” directories (which is not done otherwise).  When
+building normally, all targets in “includes” directories are
 built; normally only dependencies of targets in the current
 directory are built.
 
@@ -562,8 +562,8 @@ thinks it needs to.  This option is implemented by having
 `Holmake` wipe all of its dependency cache (as per the
 `cleanDeps` option above) before proceeding with the build.
 
-`Holmake` should never exit with error messages such as "Uncaught
-exception".  Such behaviour is a bug, please report it!
+`Holmake` should never exit with error messages such as “Uncaught
+exception”.  Such behaviour is a bug, please report it!
 
 ### Heap dumps on tactic failure
 
@@ -658,9 +658,9 @@ $$\texttt{VAR = \$(VAR) something\_new}$$
 because the eventual evaluation of `$(VAR)` would lead to an
 infinite loop.  GNU `make`'s facility for immediate definition of
 variables with `:=` is not supported, but the `+=` definition form
-does allow variables to be "extended".  In particular, this form
-"acts essentially as if you had included the extra text in the
-initial definition of the variable" (as *per* GNU `make`'s
+does allow variables to be “extended”.  In particular, this form
+“acts essentially as if you had included the extra text in the
+initial definition of the variable” (as *per* GNU `make`'s
 documentation).  Extending a variable `VAR` in this way does not
 constitute a *use* of this variable, so any variable references in
 its original definition will remain unexpanded until `VAR` is used
@@ -696,7 +696,7 @@ should be called.
 Make-file rules are interpreted in the same way as by traditional
 `make`.  The files specified after the colon (if any) are those
 files that each target (the files before the colon) is said to
-"depend" on.  If any of these are newer than a target, then
+“depend” on.  If any of these are newer than a target, then
 `Holmake` rebuilds that target according to the commands.  If
 there are no dependencies, then the commands are executed iff the
 target doesn't exist.  If there are no commands, and the target
@@ -741,7 +741,7 @@ back-slashes followed by newlines are turned into spaces.
 Otherwise, command text is passed as is to the underlying command
 interpreter (`/bin/sh` say, on Unix, or `COMMAND.COM` on Windows).
 In particular, this means that hash-characters do *not* start
-comments on command-lines, and such "comments" will be passed to
+comments on command-lines, and such “comments” will be passed to
 the shell, which may or may not treat them as comments when it
 sees them.
 
@@ -868,7 +868,7 @@ Some target names for rules are handled specially by `Holmake`:
     taken to be list of other targets in the make-file that are
     not actually the name of files to be built.  For example,
     targets naming conceptual collections of files such as `all`
-    should be marked as "phony".  If a target is phony, then its
+    should be marked as “phony”.  If a target is phony, then its
     dependencies will be built even if a file of that name exists
     and is newer than the dependencies.
   - The special way that command-line arguments `clean`,
@@ -886,7 +886,7 @@ Arguments can not include commas (use variable references to
 variables whose value are commas instead), but can otherwise be
 arbitrary text.
 
-**`$(dprot arg)`** quotes (or "protects") the space characters
+**`$(dprot arg)`** quotes (or “protects”) the space characters
 that occur in a string so that the string will be treated as a
 unit if it occurs in a rule's dependency list.  For example, the
 file
@@ -961,7 +961,7 @@ Unix-like systems.  If there is no occurrence of `arg` in any
 directory in `PATH`, this function call expands to the empty
 string.
 
-**`$(wildcard pattern)`** expands the shell "glob" pattern (e.g.,
+**`$(wildcard pattern)`** expands the shell “glob” pattern (e.g.,
 `*Script.sml`) into the list of matching filenames.  If the
 pattern doesn't match any files, then the function returns
 `pattern` unchanged.
@@ -983,15 +983,15 @@ directory (containing all core material).
 \index{Holmake@\holmake!recursive invocation}
 By default, directories specified in the `INCLUDES` and
 `PRE_INCLUDES` directory are also built by `Holmake` before it
-attempts to build in the current directory.  If the `-r` ("force
-recursion") command-line flag is used, these directories are also
-"clean"-ed when a cleaning target is given to `Holmake`.
+attempts to build in the current directory.  If the `-r` (“force
+recursion”) command-line flag is used, these directories are also
+“clean”-ed when a cleaning target is given to `Holmake`.
 
 \index{CLINE_OPTIONS (Holmakefile variable)@\texttt{CLINE\_OPTIONS} (Holmakefile variable)}
 The `CLINE_OPTIONS` variable is used for the specification of
 command-line switches that are presumably usually appropriate for
 calls to `Holmake` in the containing directory.  The options
-present in `CLINE_OPTIONS` are used to build a "base environment"
+present in `CLINE_OPTIONS` are used to build a “base environment”
 of switches; this base environment is then overridden by whatever
 was actually passed on the command-line.  For example, a useful
 `CLINE_OPTIONS` line[^misc-cline-override] might be
@@ -1116,14 +1116,14 @@ code is stored.
 
 The `MOSMLLEX` and `MOSMLYAC` abbreviations are really only
 useful if the originals aren't necessarily going to be on the
-user's "path".  For backwards compatibility, the five variables
+user's “path”.  For backwards compatibility, the five variables
 above including the sub-string "`MOSML`" in their names can also
 be used by simply writing their names directly (i.e., without the
 enclosing `$(...)`), as long as these references occur first on
 a command-line.
 
 Under Poly/ML, commands involving the variable `MOSMLC` are
-interpreted "appropriately".  If the behaviour is not as desired,
+interpreted “appropriately”.  If the behaviour is not as desired,
 we recommend using `ifdef POLY` (see below) to write rules that
 pertain only to HOL under Poly/ML.  We strongly discourage the
 use of `MOSMLYAC` and `MOSMLLEX`, even when running HOL under
@@ -1145,7 +1145,7 @@ preprocessor.
 
 There are four possible directives in a `Holmakefile`: `ifdef`,
 `ifndef`, `ifeq` and `ifneq`.  The versions including the extra
-'n' character reverse the boolean sense of the test.  Conditional
+‘n’ character reverse the boolean sense of the test.  Conditional
 directives can be chained together with `else` directives, and
 must be terminated by the `endif` command.
 
@@ -1237,7 +1237,7 @@ the file-system.
 terms of the parent-child relationship between paths) in the
 file-system hierarchy to execute.  `Holmake` will log all such
 executions by default, printing out the commands as it executes
-them.  This execution does not happen with "clean" targets, or if
+them.  This execution does not happen with “clean” targets, or if
 the `-h` or `--no_preexecs` command-line options are used.  It is
 not possible to stop this behaviour by putting the `--no_preexecs`
 option into a `CLINE_OPTIONS` variable with a `Holmakefile`; all
@@ -1258,11 +1258,11 @@ interactive sessions can be stored on disk and then reloaded.
 This allows for an efficient resumption of work in a known state.
 The HOL implementation uses this facility to implement the `hol`
 executable.  In Poly/ML, `hol` starts immediately.  In Moscow ML,
-`hol` starts up by visibly (and relatively slowly) "loading" the
+`hol` starts up by visibly (and relatively slowly) “loading” the
 various source files that provide the system's functionality
 (e.g., `bossLib`).
 
-Users can use the same basic technology to "dump" heaps of their
+Users can use the same basic technology to “dump” heaps of their
 own.  Such heaps can be preloaded with source code implementing
 special-purpose reasoning facilities, and with various necessary
 background theories.  This can make developing big mechanisations

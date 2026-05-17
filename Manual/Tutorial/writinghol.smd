@@ -126,7 +126,7 @@ this definition can be made,[^writing-pmatch-easier] allowing us
 to see the way the definition theorem is printed back.  We can
 also ask the system to print the new constant's type:
 
-[^writing-pmatch-easier]: The usual "HOL" way to define this
+[^writing-pmatch-easier]: The usual “HOL” way to define this
     function, with pattern-matching, wouldn't be so complicated.
 
 ```
@@ -170,7 +170,7 @@ $\tau_1 \texttt{\#} \tau_2 \texttt{\#} \tau_3$ maps to $\tau_1
 type operator is right-associative).
 
 ML uses the `op` keyword to remove infix status from function
-forms.  In HOL one can either "wrap" the operator in
+forms.  In HOL one can either “wrap” the operator in
 parentheses[^writing-star-paren] or precede it with a `$`-sign.
 Further, infixes in ML take pairs; in HOL they are curried:
 
@@ -187,7 +187,7 @@ Further, infixes in ML take pairs; in HOL they are curried:
 ```
 
 ML insists that arguments of `datatype` constructors be tuples
-("uncurried"), and that type arguments be provided to new types.
+(“uncurried”), and that type arguments be provided to new types.
 HOL insists that type arguments be omitted, and allows either
 form of argument to constructors (though it's generally better
 practice to *not* use tuples).  In ML:

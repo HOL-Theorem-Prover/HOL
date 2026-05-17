@@ -36,8 +36,8 @@ of three elements `LESS`, `EQUAL`, `GREATER`.  A polymorphic
 defined type, `'a toto`, has been created isomorphic to the class
 of functions `: 'a -> 'a -> cpn` satisfying a predicate
 `totoTheory.TotOrd` which axiomatizes total order-hood.  The
-representation function for the type is called `apto` (for "apply
-total order").  Specifically what is needed in order to use `ty`
+representation function for the type is called `apto` (for “apply
+total order”).  Specifically what is needed in order to use `ty`
 as an element [argument] type is (the name of) an element of type
 `ty toto`, say `tyto`, and a conversion, say `tyto_CONV`, that
 will reduce terms of the form `apto tyto x y` to one of `LESS`,

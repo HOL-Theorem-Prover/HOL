@@ -10,7 +10,7 @@ described.
 
 Two implementations of the tool are given to illustrate various
 styles of proof programming. The first implementation is the
-obvious one, but is inefficient because of the 'brute force'
+obvious one, but is inefficient because of the ‘brute force’
 method used. The second implementation attempts to be a great
 deal more intelligent.  Extensions to the tools to allow more
 general applicability are also discussed.
@@ -290,8 +290,8 @@ exponential increase in the size of a formula.  (Consider using
 them to convert an input in Disjunctive Normal Form, a
 disjunction of conjunctions of literals, into CNF.)
 
-A better approach is to convert to what is known as "definitional
-CNF". HOL includes functions to do this in the structure
+A better approach is to convert to what is known as “definitional
+CNF”. HOL includes functions to do this in the structure
 `defCNF`.  Unfortunately, this approach adds extra, existential,
 quantifiers to the formula.  For example
 
@@ -396,7 +396,7 @@ $$\vdash (\forall x.\;P(x) \Rightarrow Q) = ((\exists x.\;P(x)) \Rightarrow Q)$$
 \label{sec:dpll-procedure}
 
 The DPLL procedure can be seen as a slight variation on the
-basic "truth table" technique we have already seen.  As with
+basic “truth table” technique we have already seen.  As with
 that procedure, the core operation is a case-split on a boolean
 variable.  There are two significant differences though: DPLL
 can be seen as a search for a satisfying assignment, so that if
@@ -556,7 +556,7 @@ We can put these fragments together and write the top-level
 
 All that remains to be done is to figure out which variable to
 case-split on.  The most important variables to split on are
-those that appear in what are called "unit clauses", a clause
+those that appear in what are called “unit clauses”, a clause
 containing just one literal.  If there is a unit clause in a
 formula then it is of the form
 
@@ -569,8 +569,8 @@ $$\phi \land \neg v \land \phi'$$
 In either situation, splitting on $v$ will always result in a
 branch that evaluates directly to false.  We thus eliminate a
 variable without increasing the size of the problem.  The
-process of eliminating unit clauses is usually called "unit
-propagation".  Unit propagation is not usually thought of as a
+process of eliminating unit clauses is usually called “unit
+propagation”.  Unit propagation is not usually thought of as a
 case-splitting operation, but doing it this way makes our code
 simpler.
 
@@ -687,7 +687,7 @@ quantified, with all free variables bound, and for each literal
 to be a variable or the negation of a variable.  This makes
 `DPLL_UNIV` a little unfriendly when it comes to using it as
 part of the proof of a goal.  In this section, we will write one
-further "wrapper" layer to wrap around `DPLL_UNIV`, producing a
+further “wrapper” layer to wrap around `DPLL_UNIV`, producing a
 tool that can be applied to many more goals.
 
 **Relaxing the Quantification Requirement.**

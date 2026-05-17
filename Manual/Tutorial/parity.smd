@@ -12,7 +12,7 @@ is to accomplish two things:
 
 Concerning (ii), note that although the theorems proved are, in
 fact, rather simple, the way they are proved illustrates the kind
-of intricate 'proof engineering' that is typical.  The proofs
+of intricate ‘proof engineering’ that is typical.  The proofs
 could be done more elegantly, but presenting them that way would
 defeat the purpose of illustrating various features of HOL. It is
 hoped that the small example here will give the reader a feel for
@@ -37,8 +37,8 @@ been an even number of `T`'s input on `in`.  A theory named
 verification of the device. All the ML input in the boxes below
 can be found in the file `examples/parity/PARITYScript.sml`. It
 is suggested that the reader interactively input this to get a
-'hands on' feel for the example. The goal of the case study is to
-illustrate detailed 'proof hacking' on a small and fairly simple
+‘hands on’ feel for the example. The goal of the case study is to
+illustrate detailed ‘proof hacking’ on a small and fairly simple
 example.
 
 ## Specification
@@ -191,7 +191,7 @@ The lemma just proved suggests that the parity checker can be
 implemented by holding the parity value in a register and then
 complementing the contents of the register whenever `T` is input.
 To make the implementation more interesting, it will be assumed
-that registers 'power up' storing `F`. Thus the output at time
+that registers ‘power up’ storing `F`. Thus the output at time
 `0` cannot be taken directly from a register, because the output
 of the parity checker at time `0` is specified to be `T`. Another
 tricky thing to notice is that if `t>0`, then the output of the
@@ -204,7 +204,7 @@ intended to implement this specification.  (The leftmost input to
 `MUX` is the selector.)  This works by storing the parity of the
 sequence input so far in the lower of the two registers.  Each
 time `T` is input at `in`, this stored value is complemented.
-Registers are assumed to 'power up' in a state in which they are
+Registers are assumed to ‘power up’ in a state in which they are
 storing `F`.  The second register (connected to `ONE`) initially
 outputs `F` and then outputs `T` forever.  Its role is just to
 ensure that the device works during the first cycle by connecting
@@ -302,7 +302,7 @@ at a lower level.
 ```
 
 The final combinational device needed is a multiplexer.  This is
-a 'hardware conditional'; the input `sw` selects which of the
+a ‘hardware conditional’; the input `sw` selects which of the
 other two inputs are to be connected to the output `out`.
 
 ```

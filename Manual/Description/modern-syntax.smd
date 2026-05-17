@@ -192,7 +192,7 @@ The following describes the attributes listed above:
 `compute`
 
 :   Used with `Theorem` forms.
-    This causes the theorem value to be added to the global "computation set" that is used by `EVAL`.
+    This causes the theorem value to be added to the global “computation set” that is used by `EVAL`.
 \index{theorem attributes!compute@\ml{compute}}
 
 `cong`
@@ -227,13 +227,13 @@ The following describes the attributes listed above:
 `inferior`
 
 :   Used with `Overload`.
-    Makes the chosen overload "least liked" by the parsing and printing machinery.
+    Makes the chosen overload “least liked” by the parsing and printing machinery.
     It will be chosen last when resolving ambiguous parses, and will only be used when printing if no other overload matches.
 
 `local`
 
 :   Used with `Overload`, `Theorem`, and `Type`.
-    Makes the "effect" of the corresponding keyword local to the script file, meaning it will not persist into descendent theories.
+    Makes the “effect” of the corresponding keyword local to the script file, meaning it will not persist into descendent theories.
     In the case of `Theorem`, this means the theorem will not be exported, and so it will not be possible to refer to it as `fooTheory.ident` in descendents.
     For the parsing directives, the changes to the grammar are not exported.
 
@@ -250,7 +250,7 @@ The following describes the attributes listed above:
 `nocompute`
 
 :   Used with `Definition`.
-    This stops the definition theorem from being added to `EVAL`’s global "computation set", which otherwise happens by default.
+    This stops the definition theorem from being added to `EVAL`’s global “computation set”, which otherwise happens by default.
 
 `pp`
 
