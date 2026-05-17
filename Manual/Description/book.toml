@@ -1,5 +1,5 @@
 [book]
-title = "The HOL System Description"
+title = "HOL: Description"
 authors = ["The HOL Development Team"]
 language = "en"
 src = "."

@@ -3,6 +3,7 @@
 % =====================================================================
 
 \documentclass[12pt,fleqn]{book}
+\input{book-title}    % defines \HOLbookTitle from book.toml's title
 \usepackage[notindex]{tocbibind}
 
 \usepackage[numbers,sort&compress]{natbib}
@@ -62,7 +63,7 @@
 
 \usepackage[hidelinks,hypertexnames=false]{hyperref}
 \hypersetup{
-  pdftitle={The HOL System DESCRIPTION},
+  pdftitle={\HOLbookTitle},
   pdfauthor={The HOL4 contributors},
   pdfsubject={HOL4},
   pdfkeywords={Interactive Theorem Proving; Higher Order Logic},

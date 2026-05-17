@@ -232,7 +232,7 @@ fun emitSubEntries (children : string list) (ls : string list) =
                  | NONE => go rest sawH2)
     in go ls false end
 
-fun emitSummary (chaps : chap list) =
+fun emitSummary (bookTitle : string) (chaps : chap list) =
     let
       fun emitChap (stem, children) =
           if not (fileExists (stem ^ ".smd")) then ()
@@ -246,7 +246,7 @@ fun emitSummary (chaps : chap list) =
             emitSubEntries children ls
           end
     in
-      emit "# Summary\n\n# The HOL System\n\n";
+      emit ("# Summary\n\n# " ^ bookTitle ^ "\n\n");
       List.app emitChap chaps
     end
 
@@ -262,7 +262,9 @@ fun emitLatexInclude (chaps : chap list) =
 fun main () =
     let val chaps = parseChaptersFile "chapters.txt"
     in case CommandLine.arguments () of
-           ["summary"]       => emitSummary chaps
-         | ["latex-include"] => emitLatexInclude chaps
-         | _ => die "usage: gen_chap_lists summary | latex-include"
+           ["summary"]              => emitSummary "The HOL System" chaps
+         | ["summary", title]       => emitSummary title chaps
+         | ["latex-include"]        => emitLatexInclude chaps
+         | _ => die ("usage: gen_chap_lists summary [book-title] " ^
+                     "| latex-include")
     end

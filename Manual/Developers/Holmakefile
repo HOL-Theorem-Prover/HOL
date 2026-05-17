@@ -1,6 +1,7 @@
 .PHONY: all
 
-TARGETS = developers.pdf developers.html
+TARGETS = developers.pdf developers.html \
+          manual-authoring.pdf manual-authoring.html
 
 all: $(TARGETS)
 
@@ -8,6 +9,12 @@ developers.pdf: developers.md hol4.latex
 	pandoc --template=hol4 $< -o $@
 
 developers.html: developers.md
+	pandoc -s $< -o $@
+
+manual-authoring.pdf: manual-authoring.md hol4.latex
+	pandoc --template=hol4 $< -o $@
+
+manual-authoring.html: manual-authoring.md
 	pandoc -s $< -o $@
 
 EXTRA_CLEANS = $(TARGETS)

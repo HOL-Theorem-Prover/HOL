@@ -9,7 +9,7 @@ TEX_CORES = tutorial title preface intro ml writinghol euclid \
             parity combin proof-tools more-examples references
 
 TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex \
-              chapters-include.tex \
+              chapters-include.tex book-title.tex \
               $(patsubst %,%.tex,$(TEX_CORES))
 
 PS_ROOT = ../Tools/polyscripter
@@ -40,12 +40,24 @@ mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS)
 	../Tools/smdpp check-refs ../book/Tutorial
 
 # SUMMARY.md and chapters-include.tex are generated from
-# chapters.txt by Manual/Tools/gen_chap_lists.
-SUMMARY.md: ../Tools/gen_chap_lists chapters.txt $(SMDS)
-	../Tools/gen_chap_lists summary > $@
+# chapters.txt by Manual/Tools/gen_chap_lists.  The mdbook H1 at
+# the top of the sidebar uses the book title from book.toml so
+# there's a single canonical source for the manual's name (also
+# read by book-title.tex for the PDF; see below).
+SUMMARY.md: ../Tools/gen_chap_lists chapters.txt book.toml $(SMDS)
+	../Tools/gen_chap_lists summary \
+	   "$$(awk -F\" '/^title/ {print $$2; exit}' book.toml)" > $@
 
 chapters-include.tex: ../Tools/gen_chap_lists chapters.txt
 	../Tools/gen_chap_lists latex-include > $@
+
+# Generate a one-line LaTeX macro file whose body is the book
+# title from book.toml; title.tex and tutorial.tex (via
+# \HOLbookTitle) consume it.  Keeps the PDF cover and the
+# hyperref pdftitle in sync with the mdbook title automatically.
+book-title.tex: book.toml
+	printf '\\providecommand{\\HOLbookTitle}{%s}\n' \
+	   "$$(awk -F\" '/^title/ {print $$2; exit}' book.toml)" > $@
 
 # Convenience: serve the book locally at http://127.0.0.1:3001/.
 # Port 3001 (instead of Description's 3000) so the two manuals can
@@ -141,6 +153,7 @@ proof-tools.tex: proof-tools.md pdf-macros.lua
 #	$(PANDOC_MD)
 
 EXTRA_CLEANS = tutorial.pdf SUMMARY.md chapters-include.tex \
+               book-title.tex \
                euclid.tex parity.tex ml.tex combin.tex \
                proof-tools.tex writinghol.tex \
                $(patsubst %,%.aux,$(TEX_CORES)) \

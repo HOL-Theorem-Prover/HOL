@@ -3,6 +3,7 @@
 % =====================================================================
 
 \documentclass[12pt,fleqn]{book}
+\input{book-title}    % defines \HOLbookTitle from book.toml's title
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
@@ -13,7 +14,8 @@
 \usepackage{graphicx}
 \usepackage{../Description/desc-unicode}  % HOL Unicode codepoints
                                           % shared with Description.
-\usepackage[hidelinks,hypertexnames=false,pdftitle={The HOL System TUTORIAL}]{hyperref}
+\usepackage[hidelinks,hypertexnames=false]{hyperref}
+\hypersetup{pdftitle={\HOLbookTitle}}
 %HEVEA \usepackage{epsfig}
 
 \renewcommand\leadsto\rightarrow
