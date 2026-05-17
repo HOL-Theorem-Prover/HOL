@@ -1,13 +1,14 @@
 # Automata
 
 An automaton processes a *word*, a list of symbols drawn from an
-*alphabet*. (Basically a word is a string, although it may draw from a
-non-traditional set of symbols.) Processing goes symbol-by-symbol from
-left to right through the word. At each step the automaton is in a
-*state* and it transitions to a new state when it reads the next
-symbol. Once the word has been fully traversed the automaton decides
-whether to accept or reject the word; this is done by looking to see
-if the current state is an *accepting* one or not.
+*alphabet*. Basically a word is a string, although it may be drawn
+from a non-traditional set of symbols. Processing goes
+symbol-by-symbol from left to right through the word. At each step the
+automaton is in a *state* and it transitions to a new state after it
+reads the next symbol. Once the word has been fully traversed the
+automaton decides whether to *accept* or *reject* the word; this is
+done by looking to see if the current state is an *accepting* one or
+not.
 
 For this tutorial we have a very simple notion of state: a state is
 just a natural number.
@@ -51,10 +52,10 @@ Evaluation iterates through the list of symbols, updating the state
 (variable *q*) for each symbol seen, and returning the state the
 machine is in once the end of the word is encountered. Notice that the
 definition of evaluation makes no mention of start states or final
-states. Those components come in when automata are treated as ways to
-compute sets.
+states. Those components come in later, when automata are treated as
+ways to compute sets.
 
-A notion of well-formedness of DFAs is also needed since not all possible
+A notion of wellformedness of DFAs is also needed since not all possible
 values of the `dfa` type make sense.
 
 ```
@@ -70,7 +71,7 @@ End
 
 A wellformed DFA must have a finite set of states and the words it
 processes must be built from its (finite) alphabet. The other
-constraints imply that a well-formed DFA never strays outside of its
+constraints imply that a wellformed DFA never strays outside of its
 state set.
 
 > [!WARNING]
@@ -107,18 +108,28 @@ Datatype:
 End
 ```
 
-NFA evaluation is defined by recursion on the word argument.  A step
-of NFA evaluation `Delta N qset a` moves from the (possibly empty) set
-of states \\(\mathit{qset} = \\{q_1, \ldots, q_n\\} \\) to a successor
-set of states by
+NFA evaluation is also defined by recursion on the word.
 
-1. For each \\(q_i \in \\mathit{qset}\\), an `M.delta` step is made on
+```
+Definition nfa_eval_def:
+  nfa_eval N qset [] = qset ∧
+  nfa_eval N qset (a::w) = nfa_eval N (Delta N qset a) w
+End
+```
+
+A step of NFA evaluation `Delta N qset a` moves from the (possibly
+empty) set of states \\(\mathit{qset} = \\{q_1, \ldots, q_n\\} \\) to
+a successor set of states by
+
+1. For each \\(q_i \in \\mathit{qset}\\), an `N.delta` step is made on
    symbol `a`, delivering a finite set of \\(q_i\\)-successors.
 
 2. This gives a set of sets which all get unioned together:
 \\[
- M.delta\\; q_1 \\; a \cup \ldots\cup  M.delta\\; q_n\\; a
+ N.delta\\; q_1 \\; a \cup \ldots\cup  N.delta\\; q_n\\; a
 \\]
+
+This is expressed by the following definition:
 
 ```
 Definition Delta_def:
@@ -130,12 +141,11 @@ We can think about NFA evaluation as evolving the fringe of a tree
 where the fringe at each step of evaluation represents the states that
 the machine might be in.
 
-```
-Definition nfa_eval_def:
-  nfa_eval N qset [] = qset ∧
-  nfa_eval N qset (a::w) = nfa_eval N (Delta N qset a) w
-End
-```
+> [!NOTE]
+> An efficient C implementation of `nfa_eval` forms the backend of Ken
+> Thompson's regexp matcher, which is used in lots of Unix
+> utilities. See [this paper](https://swtch.com/~rsc/regexp/regexp1.html)
+> for an interesting discussion.
 
 A wellformed NFA obeys ostensibly similar requirements as a wellformed
 DFA, adjusting for its usage of sets of states.
@@ -151,31 +161,28 @@ Definition wf_nfa_def:
 End
 ```
 
-> [!NOTE]
-> The definition of wellformedness for NFAs allows the states of the
-> machine and the alphabet to be empty. The initial and final states
-> can also be empty, and the transition function could return an empty
-> set for every input, including well-formed ones. Indeed the
-> following theorem is straightforward:
->
-> ```
-> Theorem wf_nfa_vacuous:
->   wf_nfa <|
->     Q       := ∅ ;
->     Sigma   := ∅ ;
->     delta   := λq a. ∅ ;
->     initial := ∅ ;
->     final   := ∅
->   |>
-> Proof
->   simp [wf_nfa_def]
-> QED
-> ```
->
-> In contrast, a wellformed DFA has to have an initial state, so it
-> has at least one state, and every state must provide a transition to
-> a next state for every symbol in the alphabet.
+The definition of wellformedness for NFAs allows the states of the
+machine and the alphabet to be empty. The initial and final states
+can also be empty, and the transition function could return an empty
+set for every input, including wellformed ones. The following
+theorem shows that a vacuous NFA is wellformed:
+```
+Theorem wf_nfa_vacuous:
+  wf_nfa <|
+    Q       := ∅ ;
+    Sigma   := ∅ ;
+    delta   := λq a. ∅ ;
+    initial := ∅ ;
+    final   := ∅
+  |>
+Proof
+  simp [wf_nfa_def]
+QED
+```
 
+In contrast, a wellformed DFA has to have an initial state, so it has
+at least one state, and every state must provide a transition to a
+next state for every symbol in the alphabet.
 
 ## Automata and Languages
 
@@ -197,7 +204,7 @@ End
 
 An NFA `N` accepts word `w` if `w` is a word drawn from `N.Sigma` and
 execution on `w` starts with the set of states `N.initial` and ends in
-a set of states with a non-empty overlap with `M.final`.
+a set of states having a non-empty overlap with `M.final`.
 
 ```
 Definition nfa_lang_def:
