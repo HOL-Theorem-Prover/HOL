@@ -77,9 +77,6 @@ tutorial.pdf: $(TEX_SOURCES)
 # .md -> .tex pandoc rule (see commented-out template at the end of
 # this file).
 
-euclid.tex: euclid.stex ../Tools/umap ../Tools/polyscripter euclid-extras.ML
-	$(PS_COMMAND)
-
 combin.tex: combin.stex ../Tools/umap ../Tools/polyscripter
 	$(PS_COMMAND)
 
@@ -116,6 +113,14 @@ parity.md: parity.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 parity.tex: parity.md pdf-macros.lua
+	$(PANDOC_MD)
+
+# euclid uses `##use euclid-extras.ML` so the side file is a
+# dependency for the .md rule (polyscripter reads it).
+euclid.md: euclid.smd $(PS_STUFF) euclid-extras.ML
+	$(PS_NOUMAP)
+
+euclid.tex: euclid.md pdf-macros.lua
 	$(PANDOC_MD)
 
 # Template for a translated chapter (uncomment + adapt when a .smd
