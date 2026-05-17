@@ -1,0 +1,9 @@
+CLINE_OPTIONS = --no-cache
+
+dashC_lastmaker-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe dashC_lastmaker-selftest.log altHolmake

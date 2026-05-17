@@ -97,8 +97,17 @@ sig
   val check_distrib : string -> string option
     (* check_distrib s returns SOME(HOLDIR/bin/s) if we are under some HOLDIR.*)
   val do_lastmade_checks: output_functions ->
-                          {no_lastmakercheck : bool} ->
+                          {no_lastmakercheck : bool,
+                           target_dir : string option} ->
                           unit
+    (* target_dir = SOME d runs the lastmaker check (and the
+       check_distrib parent walk) as if cwd were d, without
+       leaving the process there: cwd is restored on normal
+       return, and on Systeml.exec the saved cwd is restored
+       first so the spawned shell sees the caller's pre-call
+       cwd.  Used so the early lastmaker call from Holmake.sml
+       can target the user's -C/--directory argument without
+       getting in the way of the later cline-parse chdir. *)
 
 
   (* File IO *)

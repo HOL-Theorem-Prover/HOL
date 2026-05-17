@@ -306,11 +306,36 @@ in
   traverse() before chDir start
 end
 
-fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
+(* Caller passes target_dir = SOME d to peek at the lastmaker state of
+   directory d without yet moving the running process there.  We
+   chdir into d for the lookups (so DEPDIR-relative path resolution
+   and check_distrib's parent walk both operate on d), call
+   find_my_path *before* the chdir (it relies on the original cwd to
+   resolve a `./bin/Holmake`-style invocation), and either:
+
+     - on Systeml.exec, restore the saved cwd first, so the spawned
+       shell inherits the caller's pre-chdir cwd (the exec'd child
+       then handles -C/--directory through the normal cline parse,
+       i.e. exactly one chdir, not two);
+
+     - on the normal return path, restore the saved cwd before
+       returning so the caller's apply_updates/set_cwd flow does
+       the chdir at its usual point and there's no observable
+       cwd change from this call. *)
+fun do_lastmade_checks (ofns : output_functions)
+                       {no_lastmakercheck, target_dir} = let
   val {warn,diag,...} = ofns
   val diag = diag "lastmadecheck"
-  val mypath = find_my_path()
+  val mypath = find_my_path()      (* before any chdir *)
   val _ = diag (K ("running "^mypath))
+  val saved_cwd = FileSys.getDir()
+  val () = case target_dir of
+               NONE => ()
+             | SOME d => (FileSys.chDir d
+                          handle OS.SysErr (msg, _) =>
+                            die_with ("-C " ^ d ^ ": " ^ msg))
+  fun restore_cwd () = FileSys.chDir saved_cwd handle OS.SysErr _ => ()
+  fun exec_in_saved_cwd args = (restore_cwd(); Systeml.exec args)
   val lastmakerfilename = OS.Path.concat (DEPDIR, "lastmaker")
   fun write_lastmaker_file () = let
     val _ = createDirIfNecessary DEPDIR
@@ -343,8 +368,8 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
                   (warn ("*** Switching to execute "^path);
                    warn ("*** (Honouring last Holmake call in this directory)");
                    warn ("*** (Use --nolmbc flag to stop this.)");
-                   Systeml.exec(path,
-                                path::"--nolmbc"::CommandLine.arguments()))
+                   exec_in_saved_cwd
+                     (path, path::"--nolmbc"::CommandLine.arguments()))
               else (warn "Garbage in Last Maker file";
                     write_lastmaker_file())
             end
@@ -352,7 +377,7 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
       else write_lastmaker_file()
 in
   diag (K "Looking to see if I am in a HOL distribution.");
-  case check_distrib "Holmake" of
+  (case check_distrib "Holmake" of
     NONE => let
     in
       diag (K "Not in a HOL distribution");
@@ -365,7 +390,8 @@ in
     else
       (warn ("*** Switching to execute "^p);
        warn ("*** (As we are in/under its HOLDIR)");
-       Systeml.exec (p, p::"--nolmbc"::CommandLine.arguments()))
+       exec_in_saved_cwd (p, p::"--nolmbc"::CommandLine.arguments())));
+  restore_cwd ()
 end
 
 fun chatty_remove act (ofns : output_functions) s =

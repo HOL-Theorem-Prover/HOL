@@ -97,6 +97,33 @@ fun getcline args =
     (opts, vars, targets)
   end
 
+(* Run the lastmaker / "am I in the right HOLDIR?" checks BEFORE
+   the full cline parse and any chdir.  We peek at -C/--directory
+   and --nolmbc directly out of argv so do_lastmade_checks can
+   target the user's intended working directory (where its
+   .HOLMK/lastmaker file lives), but the running process stays in
+   its original cwd.  If lastmaker exec-switches to a different
+   Holmake binary, the spawned shell inherits the original cwd and
+   the child's own cline parse handles -C the normal way (one
+   chdir, via set_cwd).  If we don't exec-switch, control falls
+   through to the regular getcline/apply_updates flow below, which
+   sees the same argv and chdirs at its usual point. *)
+local
+  val rawargs = CommandLine.arguments()
+  fun peek_chdir [] = NONE
+    | peek_chdir ("-C" :: d :: _) = SOME d
+    | peek_chdir ("--directory" :: d :: _) = SOME d
+    | peek_chdir (a :: rest) =
+        if String.isPrefix "--directory=" a then
+          SOME (String.extract (a, size "--directory=", NONE))
+        else peek_chdir rest
+in
+val _ = do_lastmade_checks default_ofns
+          {no_lastmakercheck =
+             List.exists (fn s => s = "--nolmbc") rawargs,
+           target_dir = peek_chdir rawargs}
+end
+
 val (master_cline_options, cline_vars, targets) =
   getcline (CommandLine.arguments())
 
@@ -343,8 +370,6 @@ val scan_output_functions =
 *)
 val pass_option_value =
     HM_Cline.fupd_core (HM_Core_Cline.fupd_includes (fn _ => [])) option_value
-
-val _ = do_lastmade_checks outputfns {no_lastmakercheck = no_lastmakercheck}
 
 val _ = diag "startup" (fn _ => "CommandLine.name() = "^CommandLine.name())
 val _ = diag "startup"
