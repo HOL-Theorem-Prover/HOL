@@ -77,9 +77,6 @@ tutorial.pdf: $(TEX_SOURCES)
 # .md -> .tex pandoc rule (see commented-out template at the end of
 # this file).
 
-proof-tools.tex: proof-tools.stex ../Tools/umap ../Tools/polyscripter ../../examples/dpll.sml
-	$(PS_COMMAND)
-
 # .md -> .tex rules for chapters translated to .smd.
 
 more-examples.md: more-examples.smd $(PS_STUFF)
@@ -124,6 +121,14 @@ combin.md: combin.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 combin.tex: combin.md pdf-macros.lua
+	$(PANDOC_MD)
+
+# proof-tools.smd uses `##use ../../examples/dpll.sml` so the
+# side file is a dependency for the .md rule.
+proof-tools.md: proof-tools.smd $(PS_STUFF) ../../examples/dpll.sml
+	$(PS_NOUMAP)
+
+proof-tools.tex: proof-tools.md pdf-macros.lua
 	$(PANDOC_MD)
 
 # Template for a translated chapter (uncomment + adapt when a .smd
