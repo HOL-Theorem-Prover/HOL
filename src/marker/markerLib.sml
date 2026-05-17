@@ -1154,6 +1154,21 @@ val _ = boolLib.suspended_theorem_recorder :=
                      (AddSuspended
                         ({Thy = Theory.current_theory(), Name = n}, th)))
 
+(* Given a suspendlabel term, return SOME (Thy, Name) for the
+   already-registered suspended theorem that carries it as a hyp, or
+   NONE if no registered theorem owns it -- in which case the slab
+   must be fresh, i.e. introduced by the proof currently in progress.
+   Used both by save_thm_attrs (via the boolLib shim below) and by
+   resume to reject bodies that consume already-suspended theorems. *)
+fun slab_owner_lookup slab =
+    KNametab.get_first
+      (fn ({Thy, Name}, th) =>
+          if HOLset.member (Thm.hypset th, slab) then SOME (Thy, Name)
+          else NONE)
+      (get_susp_global ())
+
+val _ = boolLib.slab_owner_lookup := slab_owner_lookup
+
 (* ----------------------------------------------------------------------
     Finding the parent theorem for a Resume / Finalise.
 
@@ -1252,23 +1267,39 @@ fun resume {suspension_name, label_name} tac =
                let
                  val goal = resumption_to_goal ncts
                  val sub_th = prove_goal (goal, tac)
-                 (* Reject resumption proofs that depend on the parent
-                    theorem's own suspendlabel hypotheses: those hyps
-                    will be re-introduced every time PROVE_HYP discharges
-                    them at Finalise, so assembly never converges. *)
-                 val parent_slabs = HOLset.filter (can dest_slab) (hypset th)
+                 (* A resumption proof may consume only finalised
+                    theorems.  A slab in sub_th's hyps whose owner is
+                    some already-registered suspended theorem means
+                    the body cited either another still-suspended
+                    theorem (cross-theorem use) or the parent itself
+                    (self-cycle, #1960); both are forbidden.  Fresh
+                    slabs whose owner is unknown are legitimate
+                    re-suspends -- the user is deferring the subgoal
+                    further. *)
+                 val owned_in_body =
+                     List.mapPartial
+                       (fn h => case slab_owner_lookup h of
+                                    NONE => NONE
+                                  | SOME (t,n) => SOME (h, t, n))
+                       (List.filter (can dest_slab) (hyp sub_th))
                  val _ =
-                     List.app
-                       (fn h =>
-                         if HOLset.member (parent_slabs, h) then
+                     case owned_in_body of
+                         [] => ()
+                       | owned =>
+                         let val refs = String.concatWith ", "
+                               (map (fn (_,Thy,Name) =>
+                                        KernelSig.name_toString
+                                          {Thy=Thy,Name=Name})
+                                    owned)
+                         in
                            raise ERR "resume"
                              ("Resumption proof for " ^ suspension_name ^
-                              "[" ^ label_name ^ "] depends on a \
-                              \suspendlabel hypothesis of " ^
-                              suspension_name ^ " itself; this would \
-                              \create a cycle at Finalise.")
-                         else ())
-                       (List.filter (can dest_slab) (hyp sub_th))
+                              "[" ^ label_name ^
+                              "] cites still-suspended theorem(s): " ^
+                              refs ^ ".  Only finalised theorems may \
+                              \appear in a Resume body; finalise the \
+                              \cited theorem(s) first.")
+                         end
                  (* Build |- suspendlabel "lab" G_i for each hyp i and
                     record each as its own resumption delta. *)
                  val susp_thms =
@@ -1429,5 +1460,36 @@ fun finalise_suspended_thm loc nm0 =
           end
     end
 
+(* ----------------------------------------------------------------------
+    Safety net at export_theory time: no theorem persisted to the
+    current theory's DB may retain a suspendlabel hypothesis.
+
+    save_thm_attrs and resume already block this at the offending
+    line, but DB inserts via Theory.gen_save_thm (or its
+    save_thm/save_private_thm wrappers) bypass save_thm_attrs.  This
+    hook catches anything that slipped through.
+   ---------------------------------------------------------------------- *)
+
+local
+  open Theory TheoryDelta
+  fun fmt_offender (n, th) =
+      if boolLib.has_suspended_subgoals th then
+        SOME (n ^ " [" ^ String.concatWith ", "
+                           (boolLib.get_suspended_names th) ^ "]")
+      else NONE
+in
+val _ = register_hook
+  ("markerLib.no_suspended_in_DB",
+   fn ExportTheory _ =>
+        (case List.mapPartial fmt_offender (current_theorems ()) of
+             [] => ()
+           | offenders =>
+             raise ERR "export_theory"
+               ("Theorems in the current theory retain suspendlabel \
+                \hypotheses: " ^ String.concatWith ", " offenders ^
+                ".  A theorem may only use already-finalised theorems; \
+                \only `Resume X[label]` may consume a still-suspended X."))
+     | _ => ())
+end
 
 end (* struct *)

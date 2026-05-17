@@ -158,11 +158,11 @@ fun get_suspended_names th =
       HOLset.foldl foldthis [] (Thm.hypset th)
     end
 
-(* Shim for markerLib to install a recorder that routes suspended
-   theorems into the suspension.theorems AncestryData store.  This
-   module (boolLib) sits below markerLib in the dependency graph, so
-   we cannot call into it directly; markerLib populates the ref when
-   it loads.  Same pattern as term_pp.casesplit_munger. *)
+(* Shims for markerLib to install hooks that route suspended theorems
+   into, and consult, the suspension.theorems AncestryData store.
+   This module (boolLib) sits below markerLib in the dependency
+   graph, so we cannot call into it directly; markerLib populates the
+   refs when it loads.  Same pattern as term_pp.casesplit_munger. *)
 val suspended_theorem_recorder : (string * thm -> unit) ref =
     ref (fn _ => ())
 
@@ -190,6 +190,13 @@ local val n = ref 0 in
   fun next_anon_thm_name () =
       (n := !n + 1; "anon_" ^ Int.toString (!n))
 end
+
+(* Given a suspendlabel term, return SOME (thy, name) for the
+   already-registered suspended theorem that carries it as a hyp,
+   or NONE if no registered theorem owns it.  save_thm_attrs uses
+   this to reject theorems that cite still-suspended theorems. *)
+val slab_owner_lookup : (term -> (string * string) option) ref =
+    ref (fn _ => NONE)
 
 (* printable_keys: collapse duplicate label names with a count annotation.
    Used when reporting which suspended subgoals remain in a theorem. *)
@@ -247,36 +254,61 @@ fun save_thm_attrs loc (attrblock:ThmAttribute.attrblock, th) = let
   val storemod = if rebindok then trace("Theory.allow_rebinds", 1)
                  else (fn f => f)
   fun do_attr (k,vs) = attrf {thm = th, name = n, attrname = k, args = vs}
+  val slabs_with_labels =
+      HOLset.foldl
+        (fn (t,A) =>
+            case dest_suspended t of NONE => A | SOME (lab,_) => (t,lab)::A)
+        [] (Thm.hypset th)
+  fun classify_foreign (slab, lab) =
+      case !slab_owner_lookup slab of
+          NONE => NONE
+        | SOME (Thy,Name) =>
+            if Thy = Theory.current_theory () andalso Name = n then NONE
+            else SOME (lab, {Thy=Thy, Name=Name})
+  val foreign = List.mapPartial classify_foreign slabs_with_labels
 in
-  case get_suspended_names th of
-      [] => storemod save(n,th) before app do_attr attrs
-    | susp_names =>
-      let
-      in
-        case printable_keys susp_names of
-            [nstr] =>
-            HOL_MESG (
-              "Stashing suspended theorem " ^ n ^
-              " with pending subgoal: " ^ nstr ^ "."
-            )
-          | strs =>
-            HOL_MESG (
-              "Stashing suspended theorem " ^ n ^
-              " with pending subgoals: " ^
-              String.concatWith ", " strs ^ "."
-            );
-        if localp orelse not (null attrs) then
-          HOL_WARNING "boolLib" "save_thm_attrs"
-                      ("Ignoring attributes on suspended theorem " ^ n ^
-                       "; apply them at Finalise time instead")
-        else ();
-        (* Route the suspended theorem into markerLib's AncestryData
-           store for suspensions rather than saving it to the normal
-           theorem DB.  Finalise will save the clean form under this
-           name when all subgoals have been resumed. *)
-        !suspended_theorem_recorder (n, th);
-        th
-      end
+  case (slabs_with_labels, foreign) of
+      ([], _) => storemod save(n,th) before app do_attr attrs
+    | (_, []) =>
+        let
+        in
+          (case printable_keys (map #2 slabs_with_labels) of
+               [nstr] =>
+               HOL_MESG (
+                 "Stashing suspended theorem " ^ n ^
+                 " with pending subgoal: " ^ nstr ^ "."
+               )
+             | strs =>
+               HOL_MESG (
+                 "Stashing suspended theorem " ^ n ^
+                 " with pending subgoals: " ^
+                 String.concatWith ", " strs ^ "."
+               ));
+          if localp orelse not (null attrs) then
+            HOL_WARNING "boolLib" "save_thm_attrs"
+                        ("Ignoring attributes on suspended theorem " ^ n ^
+                         "; apply them at Finalise time instead")
+          else ();
+          (* Route the suspended theorem into markerLib's AncestryData
+             store for suspensions rather than saving it to the normal
+             theorem DB.  Finalise will save the clean form under this
+             name when all subgoals have been resumed. *)
+          !suspended_theorem_recorder (n, th);
+          th
+        end
+    | (_, foreigns) =>
+        let
+          fun fmt (lab, kn) =
+              KernelSig.name_toString kn ^ "[" ^ lab ^ "]"
+          val refs = String.concatWith ", " (map fmt foreigns)
+          val plural = case foreigns of [_] => " " | _ => "s "
+        in
+          raise ERR "save_thm_attrs"
+            ("Theorem " ^ Lib.quote n ^
+             " cites still-suspended theorem" ^ plural ^ refs ^
+             ".  Only `Resume X[label]` may consume a still-suspended X; \
+             \finalise the cited theorem(s) first.")
+        end
 end
 end (* local *)
 
