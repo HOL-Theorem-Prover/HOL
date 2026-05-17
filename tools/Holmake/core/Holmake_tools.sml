@@ -849,6 +849,29 @@ fun concatWithf p d [] = ""
     end
 
 
+(* issue #679: catch fooScript.sml vs FooScript.sml collisions early. *)
+fun warn_case_collisions warn src_files =
+    let
+      fun add_one (f, m) =
+          let
+            val k = String.map Char.toLower f
+            val prev = Option.getOpt(Binarymap.peek(m, k), [])
+          in
+            Binarymap.insert(m, k, f :: prev)
+          end
+      val groups = List.foldl add_one
+                              (Binarymap.mkDict String.compare)
+                              src_files
+      fun report (_, fs as _::_::_) =
+            warn ("case-only filename collision in " ^
+                  OS.FileSys.getDir() ^ ": " ^
+                  String.concatWith ", " (List.rev fs) ^
+                  " (the same file on case-insensitive filesystems)")
+        | report _ = ()
+    in
+      Binarymap.app report groups
+    end
+
 fun generate_all_plausible_targets warn first_target =
     case first_target of
         SOME d => [d]
@@ -875,6 +898,7 @@ fun generate_all_plausible_targets warn first_target =
                 | SML _ => true
                 | _ => false
           val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)
+          val () = warn_case_collisions warn src_files
           fun src_to_target (SIG (Script s)) = UO (Theory s)
             | src_to_target (SML (Script s)) = UO (Theory s)
             | src_to_target (SML s) = (UO s)
