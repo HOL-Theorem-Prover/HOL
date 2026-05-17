@@ -41,6 +41,7 @@ DIRNAMES = \
 ifdef POLY
 DIRNAMES += cache_reflink \
             cachefetch \
+            cachekey_transitive_parent \
             cheatspotting \
             depchain_heap/ \
             depchain_heap/dir2 \

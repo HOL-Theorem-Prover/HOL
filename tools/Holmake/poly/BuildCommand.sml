@@ -372,11 +372,37 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                BuiltInCmd (BIC_BuildScript script_part, empty_incinfo))
               (* incinfos not consulted for comparison so empty value ok here *)
         end
+        (* Directories where parent Theory.dat files might live --
+           every directory that has appeared as a target or dep in the
+           graph.  HM_CacheFetch uses this to find current parents
+           when validating cached .dat files; this lets downstream
+           projects (with their own theory hierarchies outside core
+           HOL's sigobj) benefit from the cache. *)
+        val search_dirs = let
+          open HM_DepGraph
+          val ns = listNodes g
+          fun add_dir (d, acc) =
+              let val s = hmdir.toAbsPath d
+              in if List.exists (fn x => x = s) acc then acc
+                 else s :: acc
+              end
+          fun add_node ((_, nI), acc) =
+              let val acc = add_dir (hm_target.dirpart (#target nI), acc)
+              in
+                List.foldl
+                  (fn ((_,d),acc) => add_dir (hm_target.dirpart d, acc))
+                  acc
+                  (#dependencies nI)
+              end
+        in
+          List.foldl add_node [] ns
+        end
       in
           BR_ClineK { cline = (useScript, cline), job_kont = cont,
                       other_nodes = other_nodes,
                       cache_dir = cache_dir,
                       cachekey = ck,
+                      search_dirs = search_dirs,
                       prep_for_build = prep_for_build }
       end
   in
@@ -473,6 +499,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             BR_ClineK {cline = cline, job_kont = (fn _ => OS.Process.isSuccess),
                        other_nodes = [], cache_dir = NONE,
                        cachekey = HM_Cachekey.Missing [],
+                       search_dirs = [],
                        prep_for_build = fn () => ()}
           end
     end handle CompileFailed => BR_Failed
@@ -523,9 +550,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     case bres of
         BR_OK => true
       | BR_ClineK{cline = (_,cl), job_kont = k, cache_dir, cachekey,
-                  prep_for_build, ...} =>
+                  search_dirs, prep_for_build, ...} =>
         let val fetched = case cache_dir of
-                              SOME url => HM_CacheFetch.fetch url cachekey outs
+                              SOME url => HM_CacheFetch.fetch url cachekey
+                                            search_dirs outs
                             | NONE => false
         in if fetched then true
            else (prep_for_build (); k warn (Systeml.systeml cl))

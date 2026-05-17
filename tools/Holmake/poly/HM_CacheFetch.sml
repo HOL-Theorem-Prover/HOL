@@ -74,6 +74,139 @@ fun is_theory_output f =
     String.isSuffix "Theory.sig" f orelse
     String.isSuffix "Theory.dat" f
 
+(* --- Fetch-time parent-hash validation -------------------------------
+
+   The cachekey can miss transitive theory parents (see GitHub #1980),
+   so a cache hit may return a Theory.dat whose recorded parent hashes
+   no longer match the current on-disk parents.  Loading that .dat
+   would fail link_parents.  Detect and treat as a cache miss.
+
+   We avoid adding HOLsexp to Holmake's mlb (the cleaner option) by
+   doing a small textual scan of the .dat header.  The format is
+   stable:
+       (theory ("<thyname>" ("<parent1>" . "<hash1>") ... )
+        (core-data ...) ...)
+   Each parent is encoded as a sub-list ("<thy>" . "<hash>"), all
+   inside the first sub-list of (theory ...).  We only scan the
+   substring up to "(core-data" to avoid matching string pairs that
+   might appear inside the theorem tables. *)
+
+fun read_file path =
+    let val ins = TextIO.openIn path
+        val s = TextIO.inputAll ins
+        val _ = TextIO.closeIn ins
+    in s end
+    handle _ => ""
+
+fun extract_parents dat_path =
+    let
+      val content = read_file dat_path
+      val full = Substring.full content
+      val (_, after_theory) = Substring.position "(theory " full
+      val (header, _) = Substring.position "(core-data" after_theory
+      fun loop ss acc =
+          let val (_, rest) = Substring.position "(\"" ss
+          in
+            if Substring.size rest < 2 then List.rev acc
+            else
+              let
+                val after_open = Substring.triml 2 rest
+                val (xss, ass) = Substring.position "\"" after_open
+              in
+                if Substring.size ass < 1 then List.rev acc
+                else
+                  let val ass1 = Substring.triml 1 ass (* skip closing " *)
+                  in
+                    if Substring.isPrefix " . \"" ass1 then
+                      let
+                        val ass2 = Substring.triml 4 ass1
+                        val (yss, ass3) = Substring.position "\"" ass2
+                      in
+                        if Substring.size ass3 >= 1 then
+                          loop (Substring.triml 1 ass3)
+                               ((Substring.string xss,
+                                 Substring.string yss) :: acc)
+                        else List.rev acc
+                      end
+                    else loop ass1 acc
+                  end
+              end
+          end
+    in
+      loop header []
+    end
+    handle _ => []
+
+(* Locate the current on-disk Theory.dat for [thy].  We look in sigobj
+   first (where exported theories live, with .uo as a symlink to the
+   source dir); if that resolves, the .dat sits next to the resolved
+   .uo.  Returns NONE if we cannot locate a current .dat: the caller
+   should treat that as a validation failure since we cannot verify
+   the cached .dat's parent hash. *)
+val SIGOBJ = OS.Path.concat (Systeml.HOLDIR, "sigobj")
+
+(* Locate the current on-disk Theory.dat for [thy].  We try, in order:
+
+   (a) Each directory in [search_dirs] (which the caller derives from
+       the dep graph's known targets / deps -- so this covers downstream
+       projects with their own theory hierarchies that are NOT
+       linkToSigobj'd into core HOL's sigobj).  For each dir D we try
+       D/.hol/objs/<thy>Theory.dat (the Poly/ML munged location) and
+       D/<thy>Theory.dat (the Moscow ML / unmunged location).
+   (b) sigobj/<thy>Theory.dat, falling back to following the
+       sigobj/<thy>Theory.uo symlink via realPath and looking next to
+       the resolved .uo -- handles core HOL where theories are
+       linkToSigobj'd. *)
+fun find_parent_dat search_dirs thy =
+    let
+      val basename = thy ^ "Theory"
+      val datname = basename ^ ".dat"
+      fun access p = OS.FileSys.access (p, [OS.FileSys.A_READ])
+                     handle _ => false
+      fun in_dir d =
+          let val munged = OS.Path.concat (d,
+                              OS.Path.concat (".hol",
+                                 OS.Path.concat ("objs", datname)))
+              val plain = OS.Path.concat (d, datname)
+          in
+            if access munged then SOME munged
+            else if access plain then SOME plain
+            else NONE
+          end
+      fun first f [] = NONE
+        | first f (x :: xs) = case f x of SOME y => SOME y | NONE => first f xs
+      val sigobj_uo = OS.Path.concat (SIGOBJ, basename ^ ".uo")
+      val sigobj_dat = OS.Path.concat (SIGOBJ, datname)
+    in
+      case first in_dir search_dirs of
+          SOME p => SOME p
+        | NONE =>
+          if access sigobj_dat then SOME sigobj_dat
+          else if access sigobj_uo then
+            let val real_uo = OS.FileSys.realPath sigobj_uo
+                val real_dir = OS.Path.dir real_uo
+                val candidate = OS.Path.concat (real_dir, datname)
+            in
+              if access candidate then SOME candidate else NONE
+            end handle OS.SysErr _ => NONE
+          else NONE
+    end
+
+(* Validate that the parent hashes recorded in [dat_path] match the
+   hashes of the current on-disk parents. *)
+fun validate_dat search_dirs dat_path =
+    let
+      val parents = extract_parents dat_path
+      fun check (thy, recorded_hash) =
+          case find_parent_dat search_dirs thy of
+              NONE => false   (* can't locate current parent; fail-safe *)
+            | SOME path =>
+                (SHA1.sha1_file {filename = path} = recorded_hash
+                 handle _ => false)
+    in
+      List.all check parents
+    end
+
 fun upload base_url cachekey dir filenames (ofns : Holmake_tools.output_functions) =
     case cachekey of
         HM_Cachekey.Missing _ => false
@@ -125,7 +258,7 @@ fun upload base_url cachekey dir filenames (ofns : Holmake_tools.output_function
         else (warn "Cache upload: not all files found; skipping"; false)
     end handle _ => false
 
-fun fetch base_url cachekey (ofns : Holmake_tools.output_functions) =
+fun fetch base_url cachekey search_dirs (ofns : Holmake_tools.output_functions) =
     case cachekey of
         HM_Cachekey.Missing _ => false
       | HM_Cachekey.Key key =>
@@ -159,15 +292,44 @@ fun fetch base_url cachekey (ofns : Holmake_tools.output_functions) =
                       | SOME {fullfile, dir} =>
                         (mkDir dir handle _ => ();
                          fullfile)
-                val ok = List.all
-                             (fn {name, url} =>
-                                 fetch_to_file (base_url ^ url) (to_dest_dir name))
-                             files
-                val _ = if ok
-                        then info "Cache hit! local theory building can be skipped."
-                        else warn "Only managed a partial cache hit; theory will be built locally."
+                val fetched = map (fn {name, url} =>
+                                     let val dest = to_dest_dir name
+                                         val ok = fetch_to_file
+                                                    (base_url ^ url) dest
+                                     in {name = name, dest = dest, ok = ok}
+                                     end)
+                                  files
+                val all_fetched = List.all #ok fetched
+                fun cleanup_fetched () =
+                    List.app (fn {dest, ok, ...} =>
+                                 if ok then
+                                   OS.FileSys.remove dest handle _ => ()
+                                 else ())
+                             fetched
             in
-                ok
+                if not all_fetched then
+                  (cleanup_fetched ();
+                   warn "Only managed a partial cache hit; theory will be built locally.";
+                   false)
+                else
+                  let
+                    val all_valid =
+                        List.all
+                          (fn {name, dest, ...} =>
+                              not (String.isSuffix "Theory.dat" name)
+                              orelse validate_dat search_dirs dest)
+                          fetched
+                  in
+                    if all_valid then
+                      (info "Cache hit! local theory building can be skipped.";
+                       true)
+                    else
+                      (cleanup_fetched ();
+                       warn "Cache hit ignored: parent hashes do not match \
+                            \current on-disk parents; theory will be built \
+                            \locally.";
+                       false)
+                  end
             end
             handle _ => let
                 val _ = warn "Something went wrong; theory will be built locally."
