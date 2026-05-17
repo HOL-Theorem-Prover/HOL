@@ -12,6 +12,7 @@ datatype buildresult =
                         other_nodes : HM_DepGraph.node list,
                         cache_dir : string option,
                         cachekey : HM_Cachekey.compute_result,
+                        search_dirs : string list,
                         prep_for_build : unit -> unit }
        | BR_Failed
 
@@ -299,7 +300,7 @@ fun graphbuild optinfo g =
                           BR_OK => k true g
                         | BR_Failed => k false g
                         | BR_ClineK{cline, job_kont, other_nodes, cache_dir, cachekey,
-                                    prep_for_build} =>
+                                    search_dirs, prep_for_build} =>
                           let
                             val (thyc,ndi) = count_theories_needed other_nodes
                             fun b2res b = if b then OS.Process.success
@@ -328,7 +329,8 @@ fun graphbuild optinfo g =
                                     case cache_dir of
                                         NONE => false
                                       | SOME url =>
-                                        HM_CacheFetch.fetch url cachekey outs
+                                        HM_CacheFetch.fetch url cachekey
+                                          search_dirs outs
                               in
                                 if fetched then true
                                 else (prep_for_build (); false)
