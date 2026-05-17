@@ -57,6 +57,11 @@ fun advance (b as B r) =
 fun error (B r) s =
     raise Fail (#name r ^":"^Int.toString (#lnum r)^": "^s)
 
+fun bufloc (B r) : internal_functions.loc option =
+    SOME {file = #name r, line = #lnum r}
+
+fun substitute b env q = perform_substitution_at (bufloc b) env q
+
 fun strip_leading_wspace s = let
   open Substring
   val ss = full s
@@ -137,7 +142,7 @@ fun evaluate_cond b env s =
             else (true, 5, "ifdef")
         val s' = strip_leading_wspace (String.extract(s, sz, NONE))
         val q = extract_normal_quotation (Substring.full s')
-        val s2 = perform_substitution env q
+        val s2 = substitute b env q
       in
         case String.tokens Char.isSpace s2 of
           [s] => (case lookup env s of
@@ -177,7 +182,7 @@ fun evaluate_cond b env s =
               end
         val (q1, q2) = (extract_normal_quotation (ss arg1),
                         extract_normal_quotation (ss arg2))
-        val (s1, s2) = (perform_substitution env q1, perform_substitution env q2)
+        val (s1, s2) = (substitute b env q1, substitute b env q2)
       in
         SOME ((s1 = s2) = sense)
       end
@@ -265,8 +270,24 @@ in
           if c1 = #"\t" then error b "TAB starts an unattached command"
           else
             case first_special s' of
-                NONE => error b ("Unrecognised character: \""^
-                                 String.toString (str c1) ^ "\"")
+                NONE =>
+                  if c1 = #"$" then
+                    (* bare top-level function call (e.g. $(info ...));
+                       expand for its side effects and discard the result.
+                       Anything non-blank after expansion is a typo. *)
+                    let
+                      val txt = strip_trailing_comment s'
+                      val q = extract_normal_quotation (Substring.full txt)
+                      val result = substitute b env q
+                    in
+                      if CharVector.all Char.isSpace result then
+                        process_line env (condstate, advance b)
+                      else
+                        error b ("Top-level expression has non-empty \
+                                 \expansion: \"" ^ result ^ "\"")
+                    end
+                  else error b ("Unrecognised character: \""^
+                                String.toString (str c1) ^ "\"")
               | SOME "=" => ((condstate, advance b),
                               DEFN (strip_trailing_comment s))
               | SOME "+=" => ((condstate, advance b),

@@ -619,9 +619,14 @@ at all with the `--holmakefile` command-line option.  The
 combination of `Holmake` and a make-file is supposed to behave as
 much as possible like a standard implementation of `make`.
 
-A make-file consists of two types of entries, variable definitions
-and rules.  Outside of these entries, white-space is insignificant,
-but newline and `TAB` characters are very significant within them.
+A make-file consists of three kinds of entries: variable
+definitions, rules, and *top-level function-call expressions*.
+A top-level function-call expression is a line whose first
+non-whitespace character is `$` (e.g. `$(info hello)`); the line
+is expanded for its side effects and its result is discarded
+(reported as an error if it is non-empty).  Outside of these
+entries, white-space is insignificant, but newline and `TAB`
+characters are very significant within them.
 Comments can be started with hash (`#`) characters and last until
 the end of the line.  Quoting is generally done with use of the
 back-slash (`\`) character.  In particular, a backslash-newline
@@ -882,9 +887,11 @@ Some target names for rules are handled specially by `Holmake`:
 `Holmake` supports some simple functions for manipulating text.
 All functions are written with the general form
 `$(`*function-name* *arg*${}_1$`,`*arg*${}_2$`...,`*arg*${}_n$`)`.
-Arguments can not include commas (use variable references to
-variables whose value are commas instead), but can otherwise be
-arbitrary text.
+Arguments to most functions cannot include commas: use a variable
+reference to a variable whose value is a comma instead.  The
+exceptions are `$(info)`, `$(warning)` and `$(error)`, which rejoin
+their arguments with literal commas before emitting them.
+Otherwise, arguments can be arbitrary text.
 
 **`$(dprot arg)`** quotes (or “protects”) the space characters
 that occur in a string so that the string will be treated as a
@@ -903,6 +910,16 @@ includes spaces, then this function can be used to quote them for
 `Holmake`'s benefit.  Note that the `dprot` function does *not*
 do the same thing as `protect` on either Unix or Windows systems.
 
+**`$(error msg)`**
+\index{error@\texttt{error}!Holmake function@\texttt{Holmake} function}
+(a GNU `make` compatibility function) writes
+`<file>:<line>: *** <msg>.  Stop.`
+to standard error and aborts `Holmake` with a non-zero exit
+status.  The reported location is the *use* site — i.e. for
+`X = $(error oops)`, the message points at the line that
+references `$(X)`, not the line that defined `X`.  (GNU `make`
+reports the definition site instead.)
+
 **`$(findstring arg1,arg2)`** checks if `arg1` occurs in (is a
 sub-string of) `arg2`.  If it does so occur, the result is
 `arg1`, otherwise the result is the empty string.
@@ -910,6 +927,13 @@ sub-string of) `arg2`.  If it does so occur, the result is
 **`$(if arg1,arg2,arg3)`** examines `arg1`.  If it is the empty
 string, then the value of the whole is equal to the value of
 `arg3`.  Otherwise, the value is that of `arg2`.
+
+**`$(info msg)`**
+\index{info@\texttt{info}!Holmake function@\texttt{Holmake} function}
+(a GNU `make` compatibility function) writes `msg` followed by a
+newline to standard output.  The expansion of the call itself is
+the empty string.  Unlike `$(warning)` and `$(error)`, no
+`<file>:<line>:` prefix is added.
 
 **`$(patsubst arg1,arg2,text)`** splits `text` into component
 words, and then transforms each word by attempting to see if it
@@ -952,6 +976,15 @@ in `text` with `arg2`.
 produces a (moderately complicated) shell command line that
 behaves like `arg1 | tee arg2`, but whose exit code is `arg1`'s
 rather than `tee`'s.
+
+**`$(warning msg)`**
+\index{warning@\texttt{warning}!Holmake function@\texttt{Holmake} function}
+(a GNU `make` compatibility function) writes
+`<file>:<line>: <msg>`
+followed by a newline to standard error.  The expansion of the
+call itself is the empty string.  As with `$(error)`, the
+location reported is the *use* site rather than the definition
+site.
 
 **`$(which arg)`** is replaced by the full path to an executable
 and readable occurrence of a file called `arg` within a directory

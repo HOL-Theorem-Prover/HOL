@@ -44,6 +44,10 @@ fun main() = let
 val execname = Path.file (CommandLine.name())
 fun warn s = stdErr_out (execname^": "^s^"\n")
 fun die s = (warn s; Process.exit Process.failure)
+(* like die, but without the "Holmake:" prefix: $(error ...) and other
+   GNU-make-style abort messages already carry their own "file:line:"
+   prefix and shouldn't be re-tagged. *)
+fun die_raw s = (stdErr_out (s ^ "\n"); Process.exit Process.failure)
 
 fun is_src_dir hmd =
     let val s = nice_dir (hmdir.pretty_dir hmd)
@@ -222,7 +226,8 @@ local
               ReadHMF.diagread {warn=warn0,die=die,info=info0}
                                "Holmakefile"
                                (extend_with_cline_vars (read_holpathdb()))
-              handle Fail s =>
+              handle internal_functions.HolmakeError s => die_raw s
+                   | Fail s =>
                      (die ("Bad Holmakefile in " ^ d ^ ": " ^ s);
                       (base,Binarymap.mkDict String.compare,
                        empty_patrules,NONE))
@@ -1453,14 +1458,16 @@ in
       SOME thyname => let
         open Process
         val result = do_cachekey thyname
-            handle Fail s => die ("Fail exception: "^s^"\n")
+            handle internal_functions.HolmakeError s => die_raw s
+                 | Fail s => die ("Fail exception: "^s^"\n")
       in
         exit result
       end
     | NONE => let
       open Process
       val result = work()
-          handle Fail s => die ("Fail exception: "^s^"\n")
+          handle internal_functions.HolmakeError s => die_raw s
+               | Fail s => die ("Fail exception: "^s^"\n")
     in
       exit result
     end

@@ -1,6 +1,10 @@
 signature internal_functions =
 sig
 
+  exception HolmakeError of string
+
+  type loc = {file : string, line : int}
+
   val subst : (string * string * string) -> string
   val pcsubst : (string * string) -> string
   val patsubst : (string * string * string) -> string
@@ -12,7 +16,8 @@ sig
   val which : string -> string
   val function_call : (string *
                        Substring.substring list *
-                       (Substring.substring -> string)) -> string
+                       (Substring.substring -> string) *
+                       loc option) -> string
   val hol2fs : string -> string
 
 end
@@ -65,11 +70,22 @@ end
    that match are returned. If the pattern doesn't match any files,
    the string is returned as is.
 
-   [function_call(fnname, args, eval)] evaluates the internal function
+   [function_call(fnname, args, eval, loc)] evaluates the internal function
    fnname when applied to arguments args.  These args are not
    evaluated to strings to allow for functions (like if) that don't
    necessarily look at all of their arguments.  Evaluation is provided
-   by the eval function.
+   by the eval function.  The optional loc records the file and line at
+   which the function call appears, and is used by the GNU make
+   compatibility functions info/warning/error to prefix their messages.
+   Note that this is the use site rather than the definition site of the
+   variable in which the call appears (so immediately-expanded uses get
+   the location of the assignment, while deferred uses get the location
+   where the variable is mentioned).
+
+   [HolmakeError msg] is raised by $(error ...).  It is caught at
+   Holmake's top level rather than going through the generic Fail
+   handler so that abort messages keep their bare "file:line: ***"
+   prefix.
 
    [hol2fs s] converts "HOL filename" s to a filename that will actually
    work on the machine.

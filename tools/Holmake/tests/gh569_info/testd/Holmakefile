@@ -1,0 +1,15 @@
+$(info top-level-info)
+$(warning top-level-warning)
+
+# LAZY is never referenced, so its $(info) must not fire.
+LAZY = $(info DO-NOT-FIRE)
+
+# $(if) only evaluates the chosen branch.
+$(if 1,$(info chosen-branch),$(info wrong-branch))
+
+# Commas inside a function call are rejoined literally on output.
+$(info one,two,three)
+
+.PHONY: all
+all:
+	@true

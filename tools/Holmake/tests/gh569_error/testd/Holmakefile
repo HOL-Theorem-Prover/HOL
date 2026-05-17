@@ -1,0 +1,5 @@
+$(error stop now)
+
+.PHONY: all
+all:
+	@true
