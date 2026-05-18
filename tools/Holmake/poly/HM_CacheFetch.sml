@@ -44,25 +44,39 @@ fun clone_or_copy src dst =
           else byte_copy src dst
       | NONE => byte_copy src dst
 
-(* Place [src]'s contents at [dest] atomically: stage at a per-pid
-   temp file via clone_or_copy, then rename over [dest].  The rename
-   is atomic, so a concurrent reader of [dest] sees either the
-   previous contents or the new contents, never a partial write. *)
-fun copy src dest =
+(* Stage [src]'s contents at a per-pid temp file next to [dest] and
+   return the temp path on success.  The caller is responsible for
+   either committing the temp to [dest] via [commit_staged] or
+   discarding it via [discard_staged]. *)
+fun stage src dest =
     let
       val tmp = dest ^ ".tmp." ^ pid_s
       val _ = OS.FileSys.remove tmp handle _ => ()
-      fun fail () = (OS.FileSys.remove tmp handle _ => (); false)
     in
-      if not (clone_or_copy src tmp) then fail ()
+      if not (clone_or_copy src tmp) then
+        (OS.FileSys.remove tmp handle _ => (); NONE)
       else
         (* Touch tmp's (independent) inode to "now" so the cache hit
            looks newer than any in-tree dependency to downstream
            timestamp-based rebuild checks. *)
         (OS.FileSys.setTime (tmp, NONE) handle _ => ();
-         OS.FileSys.rename {old = tmp, new = dest}; true)
-        handle _ => fail ()
+         SOME tmp)
     end
+
+fun commit_staged tmp dest =
+    (OS.FileSys.rename {old = tmp, new = dest}; true)
+    handle _ => (OS.FileSys.remove tmp handle _ => (); false)
+
+fun discard_staged tmp =
+    OS.FileSys.remove tmp handle _ => ()
+
+(* Place [src]'s contents at [dest] atomically: stage then commit.
+   Kept for upload's per-file copy into the cache's data/ directory
+   where staged validation isn't needed. *)
+fun copy src dest =
+    case stage src dest of
+        NONE => false
+      | SOME tmp => commit_staged tmp dest
 
 val mkDir = HOLFS_dtype.createDirIfNecessary
 
@@ -292,39 +306,50 @@ fun fetch base_url cachekey search_dirs (ofns : Holmake_tools.output_functions) 
                       | SOME {fullfile, dir} =>
                         (mkDir dir handle _ => ();
                          fullfile)
-                val fetched = map (fn {name, url} =>
-                                     let val dest = to_dest_dir name
-                                         val ok = fetch_to_file
-                                                    (base_url ^ url) dest
-                                     in {name = name, dest = dest, ok = ok}
-                                     end)
+                (* Stage all files to tmp paths first (NOT yet visible
+                   at their dest paths).  Validate from tmp.  Only
+                   commit (rename tmp -> dest) if validation passes.
+                   This avoids exposing potentially-stale cache contents
+                   to concurrent Holmake processes that might read the
+                   dest paths while validation is still in progress. *)
+                val staged = map (fn {name, url} =>
+                                    let val dest = to_dest_dir name
+                                        val tmp_opt = stage
+                                                       (base_url ^ url) dest
+                                    in {name = name, dest = dest,
+                                        tmp = tmp_opt}
+                                    end)
                                   files
-                val all_fetched = List.all #ok fetched
-                fun cleanup_fetched () =
-                    List.app (fn {dest, ok, ...} =>
-                                 if ok then
-                                   OS.FileSys.remove dest handle _ => ()
-                                 else ())
-                             fetched
+                fun discard_all () =
+                    List.app (fn {tmp = SOME t, ...} => discard_staged t
+                               | _ => ())
+                             staged
+                val all_staged = List.all (fn {tmp, ...} => isSome tmp) staged
             in
-                if not all_fetched then
-                  (cleanup_fetched ();
-                   warn "Only managed a partial cache hit; theory will be built locally.";
+                if not all_staged then
+                  (discard_all ();
+                   warn "Only managed a partial cache hit; theory will \
+                        \be built locally.";
                    false)
                 else
                   let
                     val all_valid =
                         List.all
-                          (fn {name, dest, ...} =>
+                          (fn {name, tmp = SOME t, ...} =>
                               not (String.isSuffix "Theory.dat" name)
-                              orelse validate_dat search_dirs dest)
-                          fetched
+                              orelse validate_dat search_dirs t
+                            | _ => false)
+                          staged
                   in
                     if all_valid then
-                      (info "Cache hit! local theory building can be skipped.";
+                      (List.app (fn {tmp = SOME t, dest, ...} =>
+                                    ignore (commit_staged t dest)
+                                  | _ => ())
+                                staged;
+                       info "Cache hit! local theory building can be skipped.";
                        true)
                     else
-                      (cleanup_fetched ();
+                      (discard_all ();
                        warn "Cache hit ignored: parent hashes do not match \
                             \current on-disk parents; theory will be built \
                             \locally.";
