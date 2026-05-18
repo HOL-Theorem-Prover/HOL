@@ -76,7 +76,7 @@ jobs:
       -
         name: Docker meta
         id: meta
-        uses: docker/metadata-action@v7
+        uses: docker/metadata-action@v6
         with:
           images: ${{ secrets.DOCKER_HUB_USERNAME }}/hol-dev
           tags: |
