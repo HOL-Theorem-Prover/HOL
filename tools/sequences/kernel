@@ -5,7 +5,6 @@
 !tools/Holmake/tests/wildcard
 !tools/Holmake/tests/dashn_works
 !tools/Holmake/tests/dashC_works
-!tools/Holmake/tests/dashC_lastmaker
 !tools/Holmake/tests/dupcommands
 !tools/Holmake/tests/varextension
 tools/set_mtime
@@ -33,6 +32,7 @@ src/postkernel/prooftrace
 # these three directories are required to even run hol --bare
 src/parse
 !tools/Holmake/tests/badincludes
+!tools/Holmake/tests/dashC_lastmaker
 src/opentheory
 (otknl)src/opentheory/logging
 src/bool

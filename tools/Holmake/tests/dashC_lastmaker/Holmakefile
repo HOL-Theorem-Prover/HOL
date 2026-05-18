@@ -1,9 +1,16 @@
-CLINE_OPTIONS = --no-cache
+CLINE_OPTIONS = --no-cache --no_overlay
 
-dashC_lastmaker-selftest.log: selftest.exe
-	$(tee ./$<, $@)
+all: selftest.exe
+.PHONY: all
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.exe dashC_lastmaker-selftest.log altHolmake
+
+ifdef HOLSELFTESTLEVEL
+all: dashC_lastmaker-selftest.log
+
+dashC_lastmaker-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+endif
