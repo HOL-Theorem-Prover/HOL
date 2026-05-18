@@ -2808,8 +2808,8 @@ Definition Boehm_construction' :
     let n_max = MAX_LIST (MAP (\e. subterm_length e p) Ms);
         d_max = MAX_LIST (MAP (\e. vsubterm_width e p) Ms) + n_max;
         k     = LENGTH Ms;
-        Y    = BIGUNION (IMAGE FV (set Ms));
-        vs0   = NEWS (n_max + SUC d_max + k) (X UNION Y);
+        Z    = BIGUNION (IMAGE FV (set Ms));
+        vs0   = NEWS (n_max + SUC d_max + k) (X UNION Z);
         vs    = TAKE n_max vs0;
         xs    = DROP n_max vs0;
         M0 i  = principal_hnf (EL i Ms);
@@ -2847,8 +2847,7 @@ Proof
  >> Q.X_GEN_TAC ‘N’
  >> DISCH_TAC
  >> UNBETA_TAC [Boehm_construction'] “Boehm_construction' X Ms' p”
- (* re-define Y *)
- >> qunabbrev_tac ‘Y'’
+ >> qunabbrev_tac ‘Z’
  >> qabbrev_tac ‘Y = BIGUNION (IMAGE FV (set Ms'))’
  >> ‘FINITE Y’ by (rw [Abbr ‘Y’] >> rw [])
  >> simp [Boehm_apply_APPEND]
