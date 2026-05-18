@@ -26,8 +26,12 @@ val output = "dashC_lastmaker-output"
 val real_holmake = Globals.HOLDIR ++ "bin" ++ "Holmake"
 
 val _ = safedel sym
-val _ = Posix.FileSys.symlink {old = real_holmake, new = sym}
-        handle e => die ("Could not create symlink: " ^ exnMessage e)
+val _ =
+    let val cmd = "ln -s " ^ real_holmake ^ " " ^ sym
+    in
+      if OS.Process.isSuccess (OS.Process.system cmd) then ()
+      else die ("Could not create symlink: " ^ cmd)
+    end
 
 val _ = OS.Process.atExit (fn () => (safedel sym; safedel output))
 
