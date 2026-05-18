@@ -8,4 +8,6 @@ emptyscript-selftest.log: selftest.exe
 selftest.exe: selftest.uo
 	$(MOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe emptyscript-selftest.log dir/make.log
+# selftest drives Holmake in dir/ -- not visited by parallel_tests
+# INCLUDES.  Add its .hol/ tree so build cleanAll removes it.
+EXTRA_CLEANS = selftest.exe emptyscript-selftest.log dir/make.log dir/.hol/

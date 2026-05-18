@@ -1,0 +1,6 @@
+# selftest drives Holmake in test1/ and test2/ -- not visited by
+# parallel_tests INCLUDES (which targets ../phony_tgt, this dir, but
+# not test1/ or test2/).  Provide a top Holmakefile whose only purpose
+# is to list those subdirs' artifacts in EXTRA_CLEANS so build cleanAll
+# removes them.
+EXTRA_CLEANS = test1/.hol/ test1/output test2/.hol/ test2/output

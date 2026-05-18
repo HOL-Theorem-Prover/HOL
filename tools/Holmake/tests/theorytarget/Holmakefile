@@ -8,4 +8,6 @@ theorytarget-selftest.log: selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe theorytarget-selftest.log
+# selftest drives Holmake in subdir/ -- not visited by parallel_tests
+# INCLUDES.  List its .hol/ tree here so build cleanAll removes it.
+EXTRA_CLEANS = selftest.exe theorytarget-selftest.log subdir/.hol/

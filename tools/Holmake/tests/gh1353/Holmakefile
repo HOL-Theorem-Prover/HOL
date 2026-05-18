@@ -1,4 +1,7 @@
 gh1353.log: doit.sh testd/bugScript.sml
 	$(tee ./doit.sh $(protect $(HOLDIR)/bin/hol.state0) $(protect $(HOLDIR)/bin/Holmake), $@)
 
-EXTRA_CLEANS = gh1353.log
+# doit.sh drives Holmake in testd/ -- a subdir build does not visit
+# via parallel_tests INCLUDES.  List its .hol/ tree here so build
+# cleanAll removes it.
+EXTRA_CLEANS = gh1353.log testd/.hol/
