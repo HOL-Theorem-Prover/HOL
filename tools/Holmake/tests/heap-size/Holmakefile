@@ -6,6 +6,8 @@ heap-size-selftest.log: selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = heap-size-selftest.log selftest.exe
+# selftest drives Holmake in test/ -- not visited by parallel_tests
+# INCLUDES.  List its .hol/ tree here so build cleanAll removes it.
+EXTRA_CLEANS = heap-size-selftest.log selftest.exe test/.hol/
 
 endif

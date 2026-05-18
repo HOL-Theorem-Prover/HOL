@@ -4,4 +4,8 @@ hmclinevars-selftest.log: selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = hmclinevars-selftest.log selftest.exe
+# selftest drives Holmake in test/ and test/rec1/ -- subdirs build does
+# not visit via parallel_tests INCLUDES.  List their .hol/ trees here
+# so build cleanAll removes them.
+EXTRA_CLEANS = hmclinevars-selftest.log selftest.exe \
+               test/.hol/ test/rec1/.hol/
