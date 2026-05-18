@@ -1469,7 +1469,7 @@ How does one actually do a goalstack proof then?  In most cases,
 the application of tactics to the current goal is done with the
 function `expand`.  In the rare case that one wants to apply
 an *invalid* tactic, then `expandf` is used.  (For an
-explanation of invalid tactics, see Section \ref{tactics}.)  The
+explanation of invalid tactics, see Section \ref{tactics-goals-and-validations}.)  The
 abbreviation `e` may also be used to expand a tactic.
 
 ### Undo

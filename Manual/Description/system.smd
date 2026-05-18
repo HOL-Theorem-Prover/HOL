@@ -1255,7 +1255,7 @@ Attributes can also be added; for example:
    Theorem name[simp] = th
 ```
 
-If one wishes to prove a goal with a tactic (see the Tactics and Tacticals chapter), and store the resulting theorem, the combination of these actions can be achieved with the `store_thm` function:
+If one wishes to prove a goal with a tactic (see Chapter \ref{tactics-and-tacticals}), and store the resulting theorem, the combination of these actions can be achieved with the `store_thm` function:
 \index{store_thm@\ml{store\_thm}|pin}
 \index{store_thm@\ml{store\_thm}|seealso{\ml{Theorem} (special syntactic form)}}
 ```
