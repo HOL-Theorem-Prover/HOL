@@ -75,11 +75,11 @@ The three existing chapters (`system.smd`, `drules.smd`,
 
 Math is rendered client-side by MathJax 2.7 (loaded from cdnjs). The
 default config recognises only `\(…\)` and `$$…$$`, so
-`theme/index.hbs` injects a `tex2jax` script setting `inlineMath` to
-include `$…$`. The same script can also define LaTeX macros that
-mdbook MathJax wouldn't otherwise know about (e.g. `\llbracket`,
-`\rrbracket`). If you upgrade mdbook and the theme override
-disappears, you'll need to re-create it.
+`Manual/theme/index.hbs` injects a `tex2jax` script setting
+`inlineMath` to include `$…$`. The same script can also define LaTeX
+macros that mdbook MathJax wouldn't otherwise know about (e.g.
+`\llbracket`, `\rrbracket`). If you upgrade mdbook and the theme
+override disappears, you'll need to re-create it.
 
 ## Tables
 

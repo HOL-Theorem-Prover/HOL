@@ -27,11 +27,11 @@ fail=0
 # Lines containing $ are MathJax math contexts where \texttt /
 # \mathit / etc. are *legitimate* — they'll be rendered client-side
 # by MathJax.  We skip those.  Lines that mention MathJax (the
-# theme/index.hbs config block in each chapter's <head>) are also
-# skipped, since they contain literal `\\mathit{...}` etc. as JS
-# string contents.  The worda:/wordb:/wordc: tokens are the
+# Manual/theme/index.hbs config block in each chapter's <head>) are
+# also skipped, since they contain literal `\\mathit{...}` etc. as
+# JS string contents.  The worda:/wordb:/wordc: tokens are the
 # MathJax-macro keys for theories.smd's \worda/\wordb/\wordc
-# (defined in theme/index.hbs in the chapter <head>): the
+# (defined in Manual/theme/index.hbs in the chapter <head>): the
 # definition lines mention `\mathit{...}` as the macro body and
 # would otherwise trip the trapped-math check below.
 #

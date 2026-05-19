@@ -764,7 +764,7 @@ fun rewriteLinks {localAnchors, registry} content =
 
 (* ===== book walker =====
    mdbook Book JSON shape:
-     { "sections": [ <Item>, ... ], "__non_exhaustive": null }
+     { "items": [ <Item>, ... ], "__non_exhaustive": null }
    where <Item> is one of:
      {"Chapter": {"name":..., "content":..., "sub_items":[...], ...}}
      {"Separator": null}
@@ -963,7 +963,7 @@ fun transformBook obuf book =
   case book of
       JSON.OBJECT fields =>
         let
-          fun scanSections xs =
+          fun scanItems xs =
               let
                 fun loop ([], acc, reg) = (List.rev acc, reg)
                   | loop (item :: rest, acc, reg) =
@@ -971,7 +971,7 @@ fun transformBook obuf book =
                               scanItem obuf item reg
                       in loop (rest, item' :: acc, reg') end
               in loop (xs, [], []) end
-          fun finalizeSections labelReg xs =
+          fun finalizeItems labelReg xs =
               let
                 fun loop ([], acc, reg) = (List.rev acc, reg)
                   | loop (item :: rest, acc, reg) =
@@ -979,13 +979,13 @@ fun transformBook obuf book =
                               finalizeItem labelReg item reg
                       in loop (rest, item' :: acc, reg') end
               in loop (xs, [], []) end
-          fun trField ("sections", JSON.ARRAY xs) =
+          fun trField ("items", JSON.ARRAY xs) =
                 let
-                  val (xs1, labelReg)  = scanSections xs
-                  val (xs2, anchorReg) = finalizeSections labelReg xs1
+                  val (xs1, labelReg)  = scanItems xs
+                  val (xs2, anchorReg) = finalizeItems labelReg xs1
                   val xs3 = map (rewriteItem anchorReg) xs2
                 in
-                  ("sections", JSON.ARRAY xs3)
+                  ("items", JSON.ARRAY xs3)
                 end
             | trField kv = kv
         in

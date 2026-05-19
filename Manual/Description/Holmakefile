@@ -97,8 +97,24 @@ mdbook-serve: ../Tools/smdpp
 	 [ "$$logfile" != /dev/null ] && msg "log: $$(pwd)/$$logfile"; \
 	 msg "stop: pkill -f 'mdbook serve'"
 
+# latexmk-side flags:
+#   -bibtex: this latexmk (4.79) doesn't auto-invoke bibtex from
+#     the .aux's \bibdata line on its own; the explicit flag forces
+#     it through.
+#   -f: pdflatex returns exit 1 on natbib warnings about undefined
+#     citations in early passes, which without -f makes latexmk
+#     abort the loop; we treat the actual PDF's existence as the
+#     success signal.
+# Trailing pdflatex pass: latexmk's convergence loop sometimes
+# stops one pass too early when the second bibtex run produces
+# the same .bbl as the first -- but pdflatex still needs another
+# pass to incorporate the \bibcite entries it has only just
+# written to its own .aux for early-document citations.
 description.pdf: $(TEX_SOURCES)
-	latexmk -pdf description
+	rm -f $@; \
+	latexmk -pdf -bibtex -f -interaction=nonstopmode description; \
+	pdflatex -interaction=nonstopmode description > /dev/null; \
+	test -s $@
 
 definitions.md: definitions.smd $(PS_STUFF)
 	$(PS_NOUMAP)

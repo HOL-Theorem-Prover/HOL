@@ -75,9 +75,10 @@
                 rrbrace: ["{\\unicode{x2984}}"],
                 // Manual/LaTeX/commands.tex: \hilbert = \varepsilon.
                 hilbert: ["\\varepsilon"],
-                // Chapter-local LaTeX macros from theories.smd.  The
-                // PDF definitions live in the {=latex} block at the
-                // top of that file; these are the MathJax mirrors.
+                // Chapter-local LaTeX macros from Description's
+                // theories.smd.  The PDF definitions live in the
+                // {=latex} block at the top of that file; these are
+                // the MathJax mirrors.
                 konst: ["{\\mathsf{#1}}", 1],
                 nil: ["{\\mathbf{[}\\;\\mathbf{]}}"],
                 cons: ["{#1}\\mathbf{:}\\mathbf{:}{#2}", 2],
@@ -87,12 +88,20 @@
                 worda: ["\\mathit{bool}[\\alpha]"],
                 wordb: ["\\mathit{bool}[\\beta]"],
                 wordc: ["\\mathit{bool}[\\gamma]"],
-                // Chapter-local macros from libraries.smd.
+                // Chapter-local macros from Description's libraries.smd.
                 term: ["\\mathit{term}"],
                 type: ["\\mathit{type}"],
                 // From commands.tex: \holtxt renders HOL syntax in
                 // typewriter; \ml does the same outside math mode.
-                holtxt: ["{\\mathtt{#1}}", 1]
+                holtxt: ["{\\mathtt{#1}}", 1],
+                // Chapter-local LaTeX macros from Tutorial's combin.smd.
+                // The PDF definitions live in the {=latex} block at the
+                // top of that file; these are the MathJax mirrors.  \con
+                // comes from Manual/LaTeX/commands.tex (\con{X} = \sf X).
+                con: ["{\\mathsf{#1}}", 1],
+                KC: ["{\\mathsf{K}}"],
+                SC: ["{\\mathsf{S}}"],
+                mathpredn: ["\\mathbin{-\\!\\!\\!\\mid\\mid\\!\\rightarrow}"]
               }
             }
           });
@@ -468,17 +477,17 @@
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                        {{#previous}}
-                            <a rel="prev" href="{{ path_to_root }}{{link}}" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        {{#if previous}}
+                            <a rel="prev" href="{{ path_to_root }}{{previous.link}}" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
-                        {{/previous}}
+                        {{/if}}
 
-                        {{#next}}
-                            <a rel="next prefetch" href="{{ path_to_root }}{{link}}" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        {{#if next}}
+                            <a rel="next prefetch" href="{{ path_to_root }}{{next.link}}" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
-                        {{/next}}
+                        {{/if}}
 
                         <div style="clear: both"></div>
                     </nav>
@@ -486,17 +495,17 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                {{#previous}}
-                    <a rel="prev" href="{{ path_to_root }}{{link}}" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                {{#if previous}}
+                    <a rel="prev" href="{{ path_to_root }}{{previous.link}}" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
-                {{/previous}}
+                {{/if}}
 
-                {{#next}}
-                    <a rel="next prefetch" href="{{ path_to_root }}{{link}}" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                {{#if next}}
+                    <a rel="next prefetch" href="{{ path_to_root }}{{next.link}}" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
-                {{/next}}
+                {{/if}}
             </nav>
 
         </div>

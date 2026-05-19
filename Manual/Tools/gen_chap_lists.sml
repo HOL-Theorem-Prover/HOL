@@ -116,7 +116,8 @@ fun isHeading pre s =
 fun stripPrefix pre s = trim (String.extract (s, size pre, NONE))
 
 (* Backticks in headings (e.g. `## The Theory `min``) are dropped
-   so the slug-rewriting JS in theme/index.hbs sees a plain title. *)
+   so the slug-rewriting JS in Manual/theme/index.hbs sees a plain
+   title. *)
 fun cleanTitle s =
     String.translate (fn #"`" => "" | c => str c) s
 
