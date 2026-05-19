@@ -194,6 +194,36 @@ creation writes into `/repo/.git/worktrees/<name>/`, and keeping
 infrastructure ops on the sudo-capable account matches the role
 split.
 
+If you'd rather drive this from a macOS shell as a one-liner, drop
+the following into your `~/.bashrc`:
+
+    linux-branch() {
+      if (( $# != 1 )); then
+        echo "usage: linux-branch <name>" >&2
+        return 2
+      fi
+      orb -m hol4 sudo -u claude -H bash -c '
+        set -e
+        name=$1
+        cd /repo
+        git worktree add -b "$name" ".claude/worktrees/$name" origin/develop
+        cd ".claude/worktrees/$name"
+        exec claude --dangerously-skip-permissions
+      ' linux-branch "$1"
+    }
+
+`linux-branch some-feature` then creates branch `some-feature` off
+`origin/develop` (matching the repo's "branch off develop" convention)
+in `/repo/.claude/worktrees/some-feature/`, and drops you into Claude
+there.  Run `git -C ~/HOL-vm fetch origin develop` on macOS first if
+the base point matters.
+
+Note this trades the role split: the worktree gets created as the
+`claude` user rather than the default user.  The virtio-fs perms on
+`/repo` don't care, but if a `sandbox` stanza ever creeps back into a
+`.claude/settings.local.json` (see "Don't ship a sandbox stanza")
+you'll see `Device or resource busy` on `.git/config` writes.
+
 ### Resuming work on an existing worktree
 
 Once a worktree exists, a single one-liner is enough:
