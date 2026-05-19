@@ -21,12 +21,12 @@ jobs:
         sudo apt-get install -y build-essential pandoc curl
 
     - name: Checkout HOL
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         path: hol
 
     - name: Checkout HOL webpages
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         repository: hol-theorem-prover/hol-webpages
         path: hol-webpages
