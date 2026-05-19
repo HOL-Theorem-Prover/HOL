@@ -1117,24 +1117,97 @@ extension (see `hol-non-heap-extension-re') is included."
             (push full heaps))))
       (nreverse heaps))))
 
+(defun hol--buffer-theory-name ()
+  "Return the theory name implied by the current buffer's file, or nil.
+A buffer visiting `<thy>Script.sml' has theory `<thy>'."
+  (when-let* ((bf (buffer-file-name))
+              (name (file-name-nondirectory bf))
+              ((string-match "\\`\\(.+\\)Script\\.sml\\'" name)))
+    (match-string 1 name)))
+
+(defun hol--buffer-file-mtime ()
+  "Return the on-disk mtime of the current buffer's file, or nil."
+  (when-let* ((bf (buffer-file-name))
+              (attrs (file-attributes bf)))
+    (file-attribute-modification-time attrs)))
+
+(defun hol--heap-matches-thy-p (path thy)
+  "Non-nil when PATH names a `<THY>.<thmname>.dumpedheap' file."
+  (and thy
+       (let ((name (file-name-nondirectory path)))
+         (and (string-suffix-p ".dumpedheap" name)
+              (string-prefix-p (concat thy ".") name)))))
+
+(defun hol--heap-fresh-p (path buffer-mtime)
+  "Non-nil when PATH's mtime is at or after BUFFER-MTIME.
+Returns nil if BUFFER-MTIME or PATH's mtime is unavailable."
+  (when buffer-mtime
+    (when-let* ((attrs (file-attributes path))
+                (heap-mtime (file-attribute-modification-time attrs)))
+      (not (time-less-p heap-mtime buffer-mtime)))))
+
+(defun hol--rank-heaps (heaps thy buffer-mtime)
+  "Return HEAPS sorted by descending priority for selection.
+
+A file named `<THY>.<thmname>.dumpedheap' is preferred most, especially
+when its mtime is at or after BUFFER-MTIME; other `.dumpedheap' files
+come next (preferring fresh ones); remaining \"heap\"-named files trail.
+THY or BUFFER-MTIME may be nil, in which case the corresponding
+refinement is dropped."
+  (let ((scored
+         (mapcar
+          (lambda (p)
+            (let* ((name (file-name-nondirectory p))
+                   (dumpedp (string-suffix-p ".dumpedheap" name))
+                   (matches-thy (hol--heap-matches-thy-p p thy))
+                   (fresh (hol--heap-fresh-p p buffer-mtime))
+                   (score (cond
+                           ((and matches-thy fresh) 5)
+                           (matches-thy 4)
+                           ((and dumpedp fresh) 3)
+                           (dumpedp 2)
+                           (t 1))))
+              (cons score p)))
+          heaps)))
+    (mapcar #'cdr
+            (sort scored (lambda (a b) (> (car a) (car b)))))))
+
 (defun hol--prompt-heap (dir)
   "Prompt for a dumped-heap selection when starting HOL in DIR.
 
 Returns nil to keep bin/hol's default behaviour (auto-detect from any
 Holmakefile), the symbol `bare' to pass --bare, or an absolute heap
 pathname to pass via --holstate=PATH.  If no candidates exist in DIR,
-returns nil without prompting."
+returns nil without prompting.
+
+Candidates are ranked by `hol--rank-heaps' against the current buffer's
+theory and mtime; the top fresh theory-matching heap, if any, becomes
+the prompt's default (RET selects it).  The *Completions* buffer is
+shown automatically so the priority ordering is visible."
   (let ((candidates (hol--candidate-heaps dir)))
     (when candidates
-      (let* ((alist (append
-                     '(("[default]" . default)
-                       ("[bare]"    . bare))
+      (let* ((thy (hol--buffer-theory-name))
+             (mtime (hol--buffer-file-mtime))
+             (ranked (hol--rank-heaps candidates thy mtime))
+             (top-fresh-match
+              (cl-find-if (lambda (p)
+                            (and (hol--heap-matches-thy-p p thy)
+                                 (hol--heap-fresh-p p mtime)))
+                          ranked))
+             (alist (append
                      (mapcar (lambda (p)
                                (cons (file-relative-name p dir) p))
-                             candidates)))
-             (choice (completing-read
-                      "HOL startup heap: "
-                      (mapcar #'car alist) nil t nil nil "[default]")))
+                             ranked)
+                     '(("[default]" . default)
+                       ("[bare]"    . bare))))
+             (def-label (if top-fresh-match
+                            (file-relative-name top-fresh-match dir)
+                          "[default]"))
+             (choice
+              (minibuffer-with-setup-hook #'minibuffer-completion-help
+                (completing-read
+                 (format "HOL startup heap (default %s): " def-label)
+                 (mapcar #'car alist) nil t nil nil def-label))))
         (pcase (cdr (assoc choice alist))
           ('default nil)
           ('bare 'bare)
