@@ -988,7 +988,7 @@ containing the HOL window, but keep the current frame uppermost."
     (comint-send-string buf commandstring)))
 
 (defvar hol-module-qualification-regexp
-          "[[:space:]]*\\[[A-Za-z0-9=, \t\n]*\\]")
+          "[[:space:]]*\\[[^]]*\\]")
 
 (defun hol-load-modules-in-region (ancp start end)
   "Attempts to load all of the words in the region as modules; with prefix arg

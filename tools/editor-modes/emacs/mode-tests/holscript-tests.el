@@ -123,3 +123,58 @@
 (ert-deftest holscript-term-at-point ()
   "hol-term-at-point correct"
   (holscript-fixture-both "sampleScript.sml" 'holscript-tap-test))
+
+(defun hol-module-qualification-fullmatch-p (s)
+  (let ((m (string-match hol-module-qualification-regexp s)))
+    (and m (= 0 m) (= (match-end 0) (length s)))))
+
+(ert-deftest hol-module-qualification-regexp-attrs ()
+  "Attribute block regexp matches names/values containing _ and other
+identifier-class characters."
+  (should (hol-module-qualification-fullmatch-p "[ignore_grammar]"))
+  (should (hol-module-qualification-fullmatch-p " [bare]"))
+  (should (hol-module-qualification-fullmatch-p "[induction=foo_bar]"))
+  (should (hol-module-qualification-fullmatch-p "[a, b_c, d=e]"))
+  (should (hol-module-qualification-fullmatch-p "[\n  ignore_grammar\n]"))
+  (should-not (hol-module-qualification-fullmatch-p "ignore_grammar"))
+  (should-not (hol-module-qualification-fullmatch-p "[unterminated")))
+
+(defun holscript-record-loads (input thunk)
+  "Insert INPUT into a holscript-mode buffer, advise hol-load-string to
+record its argument, run THUNK from point-min, and return the recorded
+arguments in call order."
+  (let ((loads nil))
+    (cl-letf (((symbol-function 'hol-load-string)
+               (lambda (s) (push s loads))))
+      (with-temp-buffer
+        (let ((holscript-mode-hook nil)) (holscript-mode))
+        (insert input)
+        (goto-char (point-min))
+        (funcall thunk))
+      (nreverse loads))))
+
+(ert-deftest hol-load-modules-in-region-skips-underscored-attr ()
+  "Per-ancestor [foo_bar] attributes must not leak as module names."
+  (should
+   (equal
+    (holscript-record-loads
+     "foo[ignore_grammar] bar"
+     (lambda ()
+       (hol-load-modules-in-region t (point-min) (point-max))))
+    '("fooTheory" "barTheory"))))
+
+(ert-deftest hol-ancestors-attribute-block-skipped ()
+  "Attribute on the Ancestors keyword itself is skipped (mirrors the
+relevant slice of send-string-to-hol's behaviour after matching
+Ancestors); the bracketed attribute name must not be loaded as a
+module."
+  (should
+   (equal
+    (holscript-record-loads
+     "Ancestors[ignore_grammar]\n  wordConvs parmove\n"
+     (lambda ()
+       (re-search-forward "^Ancestors\\_>")
+       (when (looking-at hol-module-qualification-regexp)
+         (goto-char (match-end 0)))
+       (hol-load-modules-in-region t (point) (point-max))))
+    '("wordConvsTheory" "parmoveTheory"))))
