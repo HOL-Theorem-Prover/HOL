@@ -79,7 +79,7 @@ Command  | Description
 `hu`     | Send region to HOL in quiet mode.
 `hl`     | Process `load`s for the selected region (e.g. a script file header), as determined by `holdep`.
 `hg`     | Send region (should be a quotation) to `g`, to start a new proof.
-`hG`     | Send region to `new_goalstack` after quoting it, to start a new proof. Any trailing `Proof[...]` modifiers are passed to HOL too.
+`hG`     | Send region to `new_goalstack` after quoting it, to start a new proof. Any trailing `Proof[...]` modifiers are passed to HOL too. If the region contains a `Resume <thm>[<label>]:` header, instead resume the suspended sub-goal of `<thm>` at `<label>` via `markerLib.set_suspended_goal` — the same entry point Holmake uses to set up Resume bodies. The parent theorem must already have been processed up to its `QED` so the suspension is registered.
 `he`     | Send region (should be a tactic) to `e`, to expand a tactic.
 `hS`     | Send region (should be a quotation) as a new subgoal.
 `hF`     | Send region (should be a quotation) to be proved sufficient then proved.
