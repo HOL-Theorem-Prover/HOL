@@ -42,7 +42,7 @@ generally prettier Unicode form.  By default, the parser will
 accept either and the printer will choose to use the Unicode form.
 Thus
 
-```
+```repl
 >> [“p ∧ q”, ``p /\ q``];
 
 >> [“∀x:α. P x ⇒ ¬Q x”, “!x:'a. P x ⇒ ~Q x”];
@@ -51,7 +51,7 @@ Thus
 It is possible to turn Unicode printing off and on by setting the
 `PP.avoid_unicode` trace:
 
-```
+```repl
 >> set_trace "PP.avoid_unicode" 1;
 >> “x ∈ A”;
 
@@ -129,7 +129,7 @@ also ask the system to print the new constant's type:
 [^writing-pmatch-easier]: The usual “HOL” way to define this
     function, with pattern-matching, wouldn't be so complicated.
 
-```
+```repl
 >> val zip_def =
      tDefine "zip" ‘zip (l1, l2) = if NULL l1 ∨ NULL l2 then []
                                    else (HD l1, HD l2) :: zip (TL l1, TL l2)’
@@ -153,7 +153,7 @@ than `'a` and `'b`.
 Lists, sets and other types with syntax for enumerating elements
 use a semicolon rather than a comma to separate elements.  Thus
 
-```
+```repl
 >> [1,2,3,4] (* ML *);
 
 >> “[1;2;3;4] (* HOL *)”;
@@ -178,7 +178,7 @@ Further, infixes in ML take pairs; in HOL they are curried:
     can't wrap this in parentheses because the result then looks
     like comment syntax.
 
-```
+```repl
 >> op+ (3,4) (* ML *);
 >> map op* [(1,2), (3,4)] (* ML *);
 
@@ -192,14 +192,14 @@ HOL insists that type arguments be omitted, and allows either
 form of argument to constructors (though it's generally better
 practice to *not* use tuples).  In ML:
 
-```
+```repl
 >> datatype 'a tree = Lf | Nd of ('a tree * 'a * 'a tree);
 >> fun size Lf = 0 | size (Nd(l,_,r)) = 1 + size l + size r;
 ```
 
 In HOL:
 
-```
+```repl
 >> Datatype: tree = Lf | Nd tree α tree
    End
 
@@ -214,14 +214,14 @@ ML uses `~` as the unary negation operator on numeric types.  HOL
 allows it in this role (as well as for boolean negation), but
 also allows `-` for numeric negation.  First the ML behaviour:
 
-```
+```repl
 >> ~3;
 >>+ -3;
 ```
 
 In HOL:
 
-```
+```repl
 >>_ load "intLib";
 >> EVAL “~3 + 4”;
 >> EVAL “-3 * 4”;

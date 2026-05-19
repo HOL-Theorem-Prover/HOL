@@ -18,7 +18,7 @@ PS_NOUMAP = $(PS_ROOT) -md < $< > $@
 # `# Chapter Title` H1 -> \chapter{}) and nested sub-file .smd
 # files (which start at `## Section Title` H2 -> \section{}, so
 # they slot into the parent chapter's \input{<stem>}).
-PANDOC_MD = pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $< > $@
+PANDOC_MD = pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=../pdf-macros.lua -t latex $< > $@
 
 .PHONY: all mdbook mdbook-serve
 
@@ -122,7 +122,7 @@ description.pdf: $(TEX_SOURCES)
 %.md: %.smd
 	$(PS_NOUMAP)
 
-%.tex: %.md pdf-macros.lua
+%.tex: %.md ../pdf-macros.lua
 	$(PANDOC_MD)
 
 # $(PS_STUFF) lives in ../Tools/ and is only built on demand, so the

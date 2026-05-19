@@ -68,7 +68,7 @@ The next, and final, step is to rewrite with this theorem:
 
 This enables the following
 
-```
+```repl
 >> tautDP ``!p q. p /\ q /\ ~p``;
 
 >> tautDP ``!p. p \/ ~p``
@@ -76,7 +76,7 @@ This enables the following
 
 and even the marginally more intimidating
 
-```
+```repl
 >> time tautDP
      ``!p q c a. ~(((~a \/ p /\ ~q \/ ~p /\ q) /\
                     (~(p /\ ~q \/ ~p /\ q) \/ a)) /\
@@ -219,7 +219,7 @@ Putting all of the above together, we can write our wrapper
 function, which we will call `DPLL_UNIV`, with the `UNIV` suffix
 reminding us that the input must be universally quantified.
 
-```
+```repl
 >>__ datatype result = Unsat of thm | Sat of term -> term
      fun DPLL (t : term) = raise Fail "Not yet implemented"
      fun toCNF (t : term) = raise Fail "Not yet implemented"
@@ -295,7 +295,7 @@ CNF”. HOL includes functions to do this in the structure
 `defCNF`.  Unfortunately, this approach adds extra, existential,
 quantifiers to the formula.  For example
 
-```
+```repl
 >>__ load "defCNF";
 >> defCNF.DEF_CNF_CONV ``p \/ (q /\ r)``;
 ```
@@ -356,7 +356,7 @@ conversion to CNF produces an existential quantification, we use
 the proof sketched above.  Otherwise, the transformation can be
 the identity function, `I`:
 
-```
+```repl
 >>__ fun CoreDPLL (x:term) : result = raise Fail "Not yet implemented"
 ##eval fun DPLL t = let
          val (transform, body) = let
@@ -521,7 +521,7 @@ $$\vdash \forall t.\;(t = \mathtt{T}) \lor (t = \mathtt{F})$$
 We can put these fragments together and write the top-level
 `CoreDPLL` function (below).
 
-```
+```repl
 >>__ fun find_splitting_var (c:term) : term = raise Fail ""
 ##eval fun CoreDPLL form = let
          val initial_th = ASSUME form
@@ -645,7 +645,7 @@ example, the generalisation of the following term, with 29
 variables, takes our function less than a second to demonstrate
 as a tautology:
 
-```
+```repl
 ##eval val t0 = ``
          (s0_0 = (x_0 = ~y_0)) /\ (c0_1 = x_0 /\ y_0) /\
          (s0_1 = ((x_1 = ~y_1) = ~c0_1)) /\

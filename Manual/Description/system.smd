@@ -143,7 +143,7 @@ See [§Theories](#theories)
 for details of how such declarations are made. There are two primitive
 constructor
 functions for values of type `hol_type`
-```
+```repl
 >>__ printNameAndType 4 "Type" "mk_vartype"
 >>__ printNameAndType 4 "Type" "mk_thy_type"
 ```
@@ -184,14 +184,14 @@ A few common type variables
 have been constructed and bound to ML identifers, *e.g.*, `alpha` is the type variable `'a` and `beta` is the type variable `'b`.
 Thus the ML code `alpha --> bool` is equal to, but much more concise than
 
-```
+```repl
 >> mk_thy_type{Tyop="fun", Thy="min",
                Args=[mk_vartype "'a",
                      mk_thy_type{Tyop="bool", Thy="min", Args=[]}]}
 ```
 There are two primitive destructor
 functions for values of type `hol_type`:
-```
+```repl
 >>__ printNameAndType 4 "Type" "dest_vartype";
 >>__ printNameAndType 4 "Type" "dest_thy_type";
 ```
@@ -216,13 +216,13 @@ constants have been declared in the current theory. See
 There are four primitive constructor
 functions for values of type `term`:
 
-```
+```repl
 >>__ printNameAndType 4 "Term" "mk_var"
 ```
 `mk_var(`$x$`,`$\sigma$`)` evaluates to a variable
 with name $x$ and type $\sigma$; it always succeeds.
 
-```
+```repl
 >>__ printNameAndType 4 "Term" "mk_thy_const"
 ```
 `mk_thy_const{Name =`$\;\mathit{c}$`,Thy =`$\;\mathit{thyname}$`,Ty =`$\;\sigma$`}` evaluates to a term representing the constant
@@ -233,7 +233,7 @@ with name $c$ and type $\sigma$; it fails if:
 (the generic type of a constant is established when the constant is defined;
 see [§Theories](#theories)).
 
-```
+```repl
 >>__ printNameAndType 4 "Term" "mk_comb"
 ```
 
@@ -244,7 +244,7 @@ It fails if:
 2. the type of $t_1$ has the form $\sigma_1\to\sigma_2$, but the
 type of $t_2$ is not equal to $\sigma_1$.
 
-```
+```repl
 >>__ printNameAndType 4 "Term" "mk_abs"
 ```
 
@@ -253,7 +253,7 @@ the abstraction $\lambda x.\;t$; it fails if $x$ is not a variable.
 
 There are four primitive destructor functions on terms:
 
-```
+```repl
 >>__ printNameAndType 4 "Term" "dest_var";
 >>__ printNameAndType 4 "Term" "dest_thy_const";
 >>__ printNameAndType 4 "Term" "dest_comb";
@@ -273,13 +273,13 @@ Other useful destructor functions are
 See §REFERENCE for details.
 
 The function
-```
+```repl
 >>__ printNameAndType 4 "Term" "type_of"
 ```
 returns the type of a term.
 
 The function
-```
+```repl
 >>__ printNameAndType 4 "Term" "aconv"
 ```
 implements the $\alpha$-convertibility test for
@@ -301,7 +301,7 @@ For example, the ML
 expression `“:bool -> bool”` denotes exactly the same
 value (of ML type `hol_type`) as
 
-```
+```repl
 >> mk_thy_type{
     Tyop = "fun",Thy = "min",
     Args = [
@@ -312,7 +312,7 @@ value (of ML type `hol_type`) as
 and the expression `“\x. x + 1”`
 can be used instead of
 
-```
+```repl
 >> val numty = mk_thy_type{Tyop="num",Thy="num",Args=[]}
 >> val tedious = mk_abs
     (mk_var("x",numty),
@@ -343,7 +343,7 @@ Types are printed
 in the form `“:`$\mathit{type}$`”`.
 For example, the ML value of type `hol_type` representing
 $\alpha\to(\mathtt{ind}\to\mathtt{bool})$ would be printed out as below:
-```
+```repl
 >> let
      val ind_ty = mk_thy_type{Tyop="ind", Thy="min", Args=[]}
    in
@@ -479,14 +479,14 @@ For more on these syntaxes, see [§Numerals](#numerals) and [§Strings](#strings
 
 As the definition of `parsed` in the session above suggests, there are ASCII alternatives to the Unicode syntax.
 To repeat that definition:
-```
+```repl
 >> val parsed = ``\x. x + 1``;
 ```
 The backslash can be used instead of $\lambda$, and the ` `` ` symbol can be used instead of both the “ and ” symbols.
 Similarly, the logical connectives have both ASCII and Unicode forms (see [§Grammar](#viewing-the-grammar) below), and either can be used (even within the same term), except that the begin- and end-delimiters must be of the same type.
 Usually the system prefers to print its output with the Unicode symbols.
 Thus:
-```
+```repl
 >> val t1 = ``!x y. x < y ==> ?z. x + z = y``;
 
 >> val t2 = “∀x. ∃y. x < y ∧ y < x + 1”;
@@ -512,7 +512,7 @@ using the ML API, since the type checker uses the heuristic that all
 variables in a term with the same name have the same type.
 This is illustrated in the following session.
 
-```
+```repl
 ##linelen_limit 65
 >>+ ``x = (x = 1)``;
 ##poplinelen_limit
@@ -521,7 +521,7 @@ This is illustrated in the following session.
 The desired value can be directly constructed by the primitive constructor
 functions:
 
-```
+```repl
 >> mk_eq
    (mk_var("x",bool),
     mk_eq(mk_var("x",numty),
@@ -541,7 +541,7 @@ This treatment of types within quotations is inherited from LCF.
 As with programming languages, the grammar governing the parsing of terms and types includes a notion of precedence.
 As with standard mathematics, for example, if we write `2 + 3 * 6`, we expect this to denote the abstract syntax tree that groups the `3` and `6` together, giving a value of 20 for the term.
 Again as is usual, to adjust parses in the face of precedence one can use parentheses:
-```
+```repl
 >> EVAL “2 + 3 * 6”;
 
 >> EVAL “(2 + 3) * 6”;
@@ -554,7 +554,7 @@ For example, `f(x + 6)`.
 
 Finally, drawing inspiration from the Haskell programming language, HOL also supports the dollar-sign as a *low* precedence function application symbol.
 In this way, one has an option that can result in needing to write fewer parentheses:
-```
+```repl
 >> EVAL “FACT $ SUC $ 2 + 3”;
 ```
 Note that, as above, the pretty-printer will always print terms with the “invisible” function application symbol and parentheses as necessary, even if they were input with dollar-signs.
@@ -570,7 +570,7 @@ the parser with the functions `type_grammar` and
 
 For example, in the following session, we see that the type grammar used in the startup context of HOL has the type operators `fun`, `sum`, `prod`, `list`, `recspace`, `num`, `option`, `one`, `cv`, `ind`, and `bool`:
 
-```
+```repl
 >>__ pushLineWidth 65;
 >> type_grammar();
 >>__ popLineWidth();
@@ -583,7 +583,7 @@ The next session shows the (abbreviated) output from invoking the `term_grammar`
 The deleted output includes more rules, a listing of all constants known to the system, including prefix operators, and a list of all overloadings currrently in force.
 The grammar rules shown include precedence levels, concrete syntax, and how various forms map to actual names (*e.g.*, `if`-`then`-`else` maps to the name `COND`, and `⇒` maps to actual name `==>`). 
 
-```
+```repl
 ##linecount_limit 25 25
 ##linelen_limit 70
 >>__ pushLineWidth 70;
@@ -602,7 +602,7 @@ At times such flexibility is quite useful; however, it can happen that one wishe
 In that case, the notation $\mathit{thy}$`$`$\mathit{const}$ may be used in the parser to designate the constant $\mathit{const}$ declared in theory $\mathit{thy}$.
 In the following example, the less-than operator is explicitly specified.
 
-```
+```repl
 >> “prim_rec$< x y”;
 ```
 Note how the `<` symbol is not treated as an infix by the
@@ -647,7 +647,7 @@ Table: Building Primitive Terms
 
 
 The following shows a few of these in action:
-```
+```repl
 >> val c = mk_const("CONS",
                     mk_vartype("'a") -->
                     mk_type("list", [mk_vartype("'a")]) -->
@@ -697,14 +697,14 @@ Sets in this context are represented by an implementation of the ML signature `H
 
 A theorem in the abstract is represented concretely in the HOL system by a value with the ML abstract type `thm`.
 The type `thm` has a destructor function
-```
+```repl
 >>__ printNameAndType 4 "Thm" "dest_thm"
 ```
 which returns a pair consisting of a list of the hypotheses and the conclusion, respectively, of a theorem.
 The order of assumptions in the list should not be relied on.
 Using `dest_thm`, two further destructor functions are derived:
 
-```
+```repl
 >>__ printNameAndType 4 "Thm" "hyp"
 >>__ printNameAndType 4 "Thm" "concl"
 ```
@@ -712,7 +712,7 @@ Using `dest_thm`, two further destructor functions are derived:
 \noindent for extracting the hypothesis list and the conclusion, respectively,
 of a theorem.
 A theorem's hypotheses are also available in the set form with the function
-```
+```repl
 >>__ printNameAndType 4 "Thm" "hypset";
 ```
 
@@ -730,14 +730,14 @@ In that manual, the axioms were presented in abstract form.
 Concretely, axioms are just theorem values that are introduced through the use of the ML function `new_axiom` (see [§Theory Operations](#ml-functions-for-theory-operations) below).
 For example, the axiom `BOOL_CASES_AX` mentioned in §LOGIC is printed in HOL as follows (where `T` and `F` are the HOL logic's constants representing truth and falsity, respectively):
 
-```
+```repl
 >> BOOL_CASES_AX;
 ```
 Note the special print format, with the $\vdash$ notation used to indicate ML type `thm` status; as well as the absence of HOL quotation marks in the ML context.
 
 
 The session below illustrates the use of the destructor functions:
-```
+```repl
 >> hyp BOOL_CASES_AX;
 
 >> concl BOOL_CASES_AX;
@@ -750,7 +750,7 @@ as periods (*i.e.*, full stops or dots).
 The flag `show_assums` allows theorems to be printed with hypotheses shown in full.
 These points are illustrated with a theorem inferred, for example purposes, from another axiom mentioned in §LOGIC, `SELECT_AX`.
 
-```
+```repl
 >> val th = UNDISCH (SPEC_ALL SELECT_AX);
 
 >> show_assums := true;
@@ -789,7 +789,7 @@ The machine-readable ASCII notation is used for the logical constants.
 
 #### Assumption Introduction
 
-```
+```repl
 >>__ printNameAndType 4 "Thm" "ASSUME";
 ```
 
@@ -805,7 +805,7 @@ Failure occurs if $t$ is not of type `bool`.
 
 #### Reflexivity
 
-```
+```repl
 >>__ printNameAndType 4 "Thm" "REFL";
 ```
 
@@ -818,7 +818,7 @@ Failure occurs if $t$ is not of type `bool`.
 
 #### Beta-Conversion
 
-```
+```repl
 >>__ printNameAndType 4 "Thm" "BETA_CONV";
 ```
 
@@ -862,7 +862,7 @@ Failure occurs if the argument to `BETA_CONV` is not a $\beta$-redex
 The first argument to `SUBST` is a list of what are effectively pairs in the widely used `(τ₁,τ₂)Lib.subst` ML type.
 Each element in these lists is a record of type `{redex:τ₁,residue:τ₂}` with the intention that the `redex` value is to be replaced by the `residue` value.
 Such values can be constructed with the infix arrow `|->`, so that, for example:
-```
+```repl
 >> 3 |-> "foo";
 ```
 In `SUBST`, the `redex` values are variables $x_i$ and the theorems are $\Gamma_i\vdash t_i = t'_i$.
@@ -883,7 +883,7 @@ Failure occurs if:
 
 The following is a somewhat contrived example of using `SUBST`:
 
-```
+```repl
 >> val th1 = EVAL “1 + 1”;
 >> val th2 = EVAL “2 * 3”;
 
@@ -896,7 +896,7 @@ The following is a somewhat contrived example of using `SUBST`:
 
 #### Abstraction
 
-```
+```repl
 >>__ printNameAndType 4 "Thm" "ABS";
 ```
 
@@ -938,7 +938,7 @@ instantiating each occurrence of `αᵢ` in the theorem `th` to
 not a type variable.
 
 For example:
-```
+```repl
 >> show_types := true;
 >> INST_TYPE [“:α” |-> “:num”] listTheory.LENGTH;
 >>__ show_types := false;
@@ -947,7 +947,7 @@ For example:
 
 #### Discharging an Assumption
 
-```
+```repl
 >>__ printNameAndType 4 "Thm" "DISCH";
 ```
 
@@ -969,7 +969,7 @@ type `:bool`.
 #### Modus Ponens
 
 
-```
+```repl
 >>__ printNameAndType 4 "Thm" "MP";
 ```
 
@@ -1004,14 +1004,14 @@ proved solely by deductive steps in the HOL logic.
 
 A tagged theorem can be created via
 
-```
+```repl
 >>__ printNameAndType 4 "Thm" "mk_oracle_thm"
 ```
 
 which directly creates the requested theorem and attaches the given
 tag to it. The tag is created with a call to
 
-```
+```repl
 >>__ printNameAndType 4 "Tag" "read"
 ```
 
@@ -1027,7 +1027,7 @@ checking’ for tactics.
 The tags in a theorem can be viewed by setting `Globals.show_tags` to
 true.
 
-```
+```repl
 >> Globals.show_tags := true;
 
 >> mk_thm([], Term `F`);
@@ -1039,13 +1039,13 @@ representation of a theorem: the first two[^tagfn] comprise the tags component a
 third is the standard assumption list. The tag component of a theorem
 can be extracted by
 
-```
+```repl
 >>__ printNameAndType 4 "Thm" "tag"
 ```
 
 and pretty-printed by
 
-```
+```repl
 >>__ printNameAndType 4 "Tag" "pp_tag"
 ```
 
@@ -1103,7 +1103,7 @@ represented by the current theory segment together with its
 ancestry. The name of the current theory segment is returned by the ML
 function:
 
-```
+```repl
 >>__ printNameAndType 4 "Theory" "current_theory"
 ```
 
@@ -1113,7 +1113,7 @@ If `hol --bare` is used, then only `min` and `bool` will be loaded.
 When the `hol` executable is used, a richer context is loaded.
 
 The exact set of theories loaded can be determined with the `ancestry` command.
-```
+```repl
 >>__ printNameAndType 4 "Theory" "ancestry"
 ```
 
@@ -1123,7 +1123,7 @@ of the theory hierarchy.  The argument is the name of a theory (or
 `ancestry` will respond with a list of the argument's ancestors
 in the theory hierarchy.
 
-```
+```repl
 >> ancestry "-";
 ```
 
@@ -1131,7 +1131,7 @@ in the theory hierarchy.
 #### Creating a Theory Segment
 
 A new theory segment is created by a call to `new_theory`.
-```
+```repl
 >>__ printNameAndType 4 "Theory" "new_theory"
 ```
 This allocates a new ‘area’ where subsequent theory operations take effect.
@@ -1188,7 +1188,7 @@ needed since higher-level definition facilities will invoke these as
 necessary. However, these functions can be useful for those writing
 proof tools and derived definition principles.
 
-```
+```repl
 >>__ printNameAndType 4 "Theory" "new_type";
 ```
 Executing `new_type("`$\mathit{op}$`", `$n$`)` makes $\mathit{op}$
@@ -1196,7 +1196,7 @@ a new $n$-ary type operator in the current theory.
 If $\mathit{op}$ is not an allowed name for a type, a warning will be issued.
 
 
-```
+```repl
 >>__ printNameAndType 4 "Theory" "new_constant";
 ```
 
@@ -1206,7 +1206,7 @@ for all $c_{\sigma'}$ where $\sigma'$ is an instance of $\sigma$.
 The type $\sigma$ is called the *generic type* of $c$.
 If $c$ is not an allowed name for a constant, a warning will be issued.
 
-```
+```repl
 >>__ printNameAndType 4 "Theory" "new_axiom";
 ```
 
@@ -1219,7 +1219,7 @@ Failure occurs if:
 
 Once a theorem has been proved, it can be saved with the function
 
-```
+```repl
 >>__ printNameAndType 4 "Theory" "save_thm"
 ```
 
@@ -1258,7 +1258,7 @@ Attributes can also be added; for example:
 If one wishes to prove a goal with a tactic (see Chapter \ref{tactics-and-tacticals}), and store the resulting theorem, the combination of these actions can be achieved with the `store_thm` function:
 \index{store_thm@\ml{store\_thm}|pin}
 \index{store_thm@\ml{store\_thm}|seealso{\ml{Theorem} (special syntactic form)}}
-```
+```repl
 >>__ printNameAndType 4 "Tactical" "store_thm";
 ```
 A call to `store_thm(`*name*`,`$t$`,`*tac*`)` results in the application of *tac* to goal $t$.
@@ -1308,7 +1308,7 @@ But recall: if writing library code to prove and store theorems, the underlying 
 Once a theory segment has been constructed, it can be written out to a file, which, after compilation, can be imported into future sessions.
 
 \index{export_theory@\ml{export\_theory}|pin}
-```
+```repl
 >>__ printNameAndType 4 "Theory" "export_theory";
 ```
 
@@ -1334,7 +1334,7 @@ There are various functions for loading the contents of theory files:
 \index{parents@\ml{parents}|pin}
 \index{types@\ml{types}|pin}
 \index{constants@\ml{constants}|pin}
-```
+```repl
 >>__ printNameAndType 4 "Theory" "parents";
 >>__ printNameAndType 4 "Theory" "types";
 >>__ printNameAndType 4 "Theory" "constants";
@@ -1351,7 +1351,7 @@ Individual axioms, definitions and theorems can be read from the current theory 
 \index{axiom (ML function)@\ml{axiom} (ML function)|pin}
 \index{definition (ML function)@\ml{definition} (ML function)|pin}
 \index{theorem (ML function)@\ml{theorem} (ML function)|pin}
-```
+```repl
 >>__ printNameAndType 4 "DB" "axiom";
 >>__ printNameAndType 4 "DB" "definition";
 >>__ printNameAndType 4 "DB" "theorem";
@@ -1363,7 +1363,7 @@ Further, a list of all of a theory's axioms, definitions and theorems can be ret
 \index{axioms (ML function)@\ml{axioms} (ML function)|pin}
 \index{theorems (ML function)@\ml{theorems} (ML function)|pin}
 \index{definitions (ML function)@\ml{definitions} (ML function)|pin}
-```
+```repl
 >>__ printNameAndType 4 "DB" "axioms";
 >>__ printNameAndType 4 "DB" "definitions";
 >>__ printNameAndType 4 "DB" "theorems";
@@ -1405,7 +1405,7 @@ which is a definition in the sense of §LOGIC if (i), (ii) and (iii) hold.
 The following ML function creates a new definition in the current theory.
 
 \index{new_definition@\ml{new\_definition}|pin}
-```
+```repl
 >>__ printNameAndType 4 "boolSyntax" "new_definition";
 ```
 
@@ -1436,7 +1436,7 @@ such that:
 The following ML function is used to make constant specifications in the HOL system.
 
 \index{new_specification@\ml{new\_specification}|pin}
-```
+```repl
 >>__ printNameAndType 4 "boolSyntax" "new_specification";
 ```
 
@@ -1479,7 +1479,7 @@ where:
 The following ML function makes a type definition in the HOL system.
 
 \index{new_type_definition@\ml{new\_type\_definition}|pin}
-```
+```repl
 >>__ printNameAndType 4 "boolSyntax" "new_type_definition";
 ```
 
@@ -1522,7 +1522,7 @@ from the type it defines to the corresponding subset of an existing type.
 To introduce constants that in fact denote such a bijection and its inverse, the following ML function is provided:
 
 \index{define_new_type_bijections@\ml{define\_new\_type\_bijections}|pin}
-```
+```repl
 >>__ printNameAndType 4 "Drule" "define_new_type_bijections";
 ```
 
@@ -1561,7 +1561,7 @@ The following ML functions are provided for proving that the bijections introduc
 \index{prove_rep_fn_onto@\ml{prove\_rep\_fn\_onto}|pin}
 \index{prove_abs_fn_one_one@\ml{prove\_abs\_fn\_one\_one}|pin}
 \index{prove_abs_fn_onto@\ml{prove\_abs\_fn\_onto}|pin}
-```
+```repl
 >>__ printNameAndType 4 "Drule" "prove_rep_fn_one_one";
 >>__ printNameAndType 4 "Drule" "prove_rep_fn_onto";
 >>__ printNameAndType 4 "Drule" "prove_abs_fn_one_one";

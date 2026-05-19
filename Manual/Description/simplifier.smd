@@ -35,7 +35,7 @@ of HOL's major theories.  For example, the *simpset* `bool_ss`
 in `boolSimps` embodies all of the usual rewrite theorems one
 would want over boolean formulas:
 
-```
+```repl
 >>__ show_types := false;
 >> SIMP_CONV bool_ss [] ``p /\ T \/ ~(q /\ r)``;
 ```
@@ -44,7 +44,7 @@ In addition to rewriting with the obvious theorems, `bool_ss`
 is also capable of performing simplifications that are not
 expressible as simple theorems:
 
-```
+```repl
 >> SIMP_CONV bool_ss [] ``?x. (\y. P (f y)) x /\ (x = z)``;
 ```
 
@@ -67,7 +67,7 @@ unappealing increase in term size (there are two occurrences of $p$
 on the right hand side of the theorem).  Nonetheless, it is clear
 that this theorem may be appropriate on occasion:
 
-```
+```repl
 >>_ open arithmeticTheory;
 >> SIMP_CONV bossLib.arith_ss [LEFT_ADD_DISTRIB] ``p * (n + 1)``;
 ```
@@ -129,7 +129,7 @@ into rewrite rules in the same way as theorems passed in the list
 given as the tactic's argument.  For example, an assumption `~P`
 will be treated as the rewrite `|- P = F`.
 
-```
+```repl
 >>_ g ‘x < 3 /\ P x ==> x < 20 DIV 2’;
 >> e (simp[]);
 ```
@@ -273,7 +273,7 @@ Like `simp_tac`, `asm_simp_tac` simplifies the current
 goal (leaving the assumptions untouched), but includes the goal's
 assumptions as extra rewrite rules.  Thus:
 
-```
+```repl
 >>__ g ‘(x = 3) ==> P x’;
 >>- e strip_tac;
 
@@ -312,7 +312,7 @@ from bottom to top.
 
 The following demonstrates a simple use of `full_simp_tac`:
 
-```
+```repl
 >>__ drop();
 >>__ g `f (x:num) < 10  /\ (x = 4) ==> 4 + x < 10`;
 >>- e strip_tac;
@@ -327,7 +327,7 @@ opposite order, only the `x` of the goal would have changed.
 
 The next session demonstrates more interesting behaviour:
 
-```
+```repl
 >>__ drop(); g‘x <= 4n ==> f x + 1 < 10’;
 >>- e strip_tac;
 
@@ -420,7 +420,7 @@ explained in Section \ref{sec:simplifier-rewriting} below, but can
 be illustrated by some examples (the first also demonstrates
 unwinding under a universal quantifier):
 
-```
+```repl
 >> SIMP_CONV bool_ss [] “!x. (x = 3) /\ P x ==> Q x /\ P 3”;
 
 >> SIMP_CONV bool_ss [] “if x <> 3 then P x else Q x”;
@@ -434,7 +434,7 @@ The `std_ss` *simpset* is defined in `bossLib`, and adds
 rewrite rules pertinent to the types of sums, pairs, options and
 natural numbers to `bool_ss`.
 
-```
+```repl
 >> SIMP_CONV std_ss [] “FST (x,y) + OUTR (INR z)”;
 
 >> SIMP_CONV std_ss [] “case SOME x of NONE => P | SOME y => f y”;
@@ -444,7 +444,7 @@ With the natural numbers, the `std_ss` *simpset* can calculate
 with ground values, and also includes a suite of “obvious rewrites”
 for formulas including variables.
 
-```
+```repl
 >> SIMP_CONV std_ss [] “P (0 <= x) /\ Q (y + x - y)”;
 
 >> SIMP_CONV std_ss [] “23 * 6 + 7 ** 2 - 31 DIV 3”;
@@ -464,7 +464,7 @@ Section \ref{sec:numLib} below.
 These two facets of the `arith_ss` *simpset* are demonstrated
 here:
 
-```
+```repl
 >> SIMP_CONV arith_ss [] ``x < 3 /\ P x ==> x < 20 DIV 2``;
 
 >> SIMP_CONV arith_ss [] ``2 * x + y - x + y``;
@@ -474,7 +474,7 @@ Note that subtraction over the natural numbers works in ways that
 can seem unintuitive.  In particular, coefficient normalisation may
 not occur when first expected:
 
-```
+```repl
 >>+ SIMP_CONV arith_ss [] ``2 * x + y - z + y``;
 ```
 
@@ -500,7 +500,7 @@ Conveniently, `list_ss` also includes rewrites for the
 functions defined by primitive recursion over lists.  Examples
 include `MAP`, `FILTER` and `LENGTH`.  Thus:
 
-```
+```repl
 >> SIMP_CONV list_ss [] ``MAP (\x. x + 1) [1;2;3;4]``;
 
 >> SIMP_CONV list_ss [] ``FILTER (\x. x < 4) [1;2;y + 4]``;
@@ -515,7 +515,7 @@ Note that this functionality is also provided by `computeLib`
 (see Section \ref{sec:computeLib} below); `computeLib` is more
 efficient, but less general than the simplifier.  For example:
 
-```
+```repl
 >> EVAL ``FILTER (\x. x < 4) [1;2;y + 4]``;
 ```
 
@@ -543,7 +543,7 @@ choice in all situations where the simplifier is used.
 
 This versatility is illustrated in the following example:
 
-```
+```repl
 >> Datatype: tree = Leaf | Node num tree tree
    End
 
@@ -569,7 +569,7 @@ theorems in the current segment (those that will be exported when
 to the underlying *simpset* in the current session, but they will
 be added in future sessions when the current theory is reloaded.
 
-```
+```repl
 >> Definition tsize_def:
      (tsize Leaf = 0) /\
      (tsize (Node n t1 t2) = n + tsize t1 + tsize t2)
@@ -596,7 +596,7 @@ QED
 is a way of avoiding having to write a call to `export_rewrites`.
 Equally, the example above could be written:
 
-```
+```repl
 >>_ Definition tsize_def[simp]:
       (tsize Leaf = 0) /\
       (tsize (Node n t1 t2) = n + tsize t1 + tsize t2)
@@ -740,7 +740,7 @@ when it is applied to a particular goal.  For example:
      `++` parses as list APPEND for the SIMP_CONV demo below. -->
 >>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="list"};
 
-```
+```repl
 >> SIMP_CONV (srw_ss()) [] “x ++ (y ++ z)”;
 
 >>+ SIMP_CONV (srw_ss() -* ["APPEND_ASSOC"]) [] “x ++ (y ++ z)”;
@@ -752,14 +752,14 @@ to use are visible if *simpset* values are printed out in the
 interactive session.  The example below demonstrates removing
 beta-conversion:
 
-```
+```repl
 ##assert Exn.capture (SIMP_CONV (bool_ss -* ["BETA_CONV"]) []) “(\x. x + 3) 10” |> Exn.get_exn |> isSome
 >>+ SIMP_CONV (bool_ss -* ["BETA_CONV"]) [] “(\x. x + 3) 10”;
 ```
 
 Further, because a theorem like `AND_CLAUSES`
 
-```
+```repl
 >>__ val oldlw = !linewidth; linewidth := 60;
 ##thm AND_CLAUSES
 >>__ linewidth := oldlw;
@@ -770,7 +770,7 @@ rewrites.  Specific sub-rewrites can be removed from a *simpset*
 without affecting others derived from the same original theorem by
 appending numbers to the theorem name:
 
-```
+```repl
 >>+ SIMP_CONV (bool_ss -* ["AND_CLAUSES"]) [] “(T ∧ p) ∧ (q ∧ T)”;
 
 ##assert SIMP_CONV (bool_ss -* ["AND_CLAUSES.1"]) [] “(T ∧ p) ∧ (q ∧ T)” |> concl |> rhs |> aconv “(T ∧ p) ∧ q”
@@ -787,7 +787,7 @@ exclude a rewrite.  For example, sometimes the associativity of
 list-append can be annoying (here it masks the rewrite defining
 list-append):
 
-```
+```repl
 >>__ proofManagerLib.drop_all();
 >>_ g `f (x ++ (h::t ++ y)) = f (x ++ h::(t ++ y))`;
 >> e (simp[]);
@@ -796,7 +796,7 @@ list-append):
 We can prevent the application of this normalising rewrite with
 the `Excl` form:
 
-```
+```repl
 >>_ b();
 >> e (simp[Excl "APPEND_ASSOC"]);
 ```
@@ -811,7 +811,7 @@ SML identifier with the `_ss` suffix removed.  Thus, one can
 use high-level tactics with the arithmetic decision procedure
 removed:
 
-```
+```repl
 >>__ proofManagerLib.drop_all();
 >>_ g ‘x < 5*2 ==> x < 13’;
 >> e (simp[ExclSF "ARITH"]);
@@ -1249,7 +1249,7 @@ fragment's `ac` field.
 For example, the following *simpset* fragment will cause
 AC-normalisation of disjunctions
 
-```
+```repl
 >>__ load "simpLib";
 >>__ open simpLib;
 ##eval[DISJ_ss] SSFRAG { name = NONE,
@@ -1273,7 +1273,7 @@ Assuming the *simpset* fragment above is bound to the SML
 identifier `DISJ_ss`, its behaviour is demonstrated in the
 following example:
 
-```
+```repl
 >> SIMP_CONV (bool_ss ++ DISJ_ss) [] ``p /\ q \/ r \/ P z``;
 ```
 
@@ -1291,7 +1291,7 @@ AC theorems can also be added to *simpset*s via the theorem-list
 part of the tactic and conversion interface, using the special
 rewrite form `AC`:
 
-```
+```repl
 >> SIMP_CONV bool_ss [AC DISJ_ASSOC DISJ_COMM] ``p /\ q \/ r \/ P z``;
 ```
 
@@ -1378,7 +1378,7 @@ The `dprocs` field requires lists of values of the type
 `Traverse.reducer`.  These values are constructed with the
 constructor `REDUCER`:
 
-```
+```repl
 >>__ val SOME trav_str = #lookupStruct PolyML.globalNameSpace "Traverse";
 >>__ val travns = PolyML.NameSpace.Structures.contents trav_str
 >>__ val SOME redval = #lookupVal travns "REDUCER"
@@ -1517,7 +1517,7 @@ but this form can be useful when rewrites are conditional and the
 simplifier may have failed to discharge side-conditions.  For
 example:
 
-```
+```repl
 >> val th = arithmeticTheory.ZERO_MOD;
 >>+ simp[Req0 th] ([], ``0 MOD z``);
 
@@ -1549,7 +1549,7 @@ the rewrite or other component that is to be removed.  For example,
 the standard stateful simpset includes the theorem stating that
 $x < x + y \Leftrightarrow 0 < y$, with name `X_LT_X_PLUS`:
 
-```
+```repl
 >> simp[] ([], “x < x + 2 * y”);
 
 >> simp[Excl "X_LT_X_PLUS"] ([], “x < x + 2 * y”);
@@ -1558,7 +1558,7 @@ $x < x + y \Leftrightarrow 0 < y$, with name `X_LT_X_PLUS`:
 In addition to rewrites, conversions and decision procedures can
 also be temporarily excluded in this way:
 
-```
+```repl
 >> simp[Excl "BETA_CONV"] ([], “(λx. x + 10) (6 * z)”);
 ```
 
@@ -1575,7 +1575,7 @@ assumptions (it otherwise tries to use all of a goal's assumptions)
 with the `NoAsms` and `IgnAsm` forms.  The `NoAsms` form
 prevents the use of all of a goal's assumptions:
 
-```
+```repl
 >> simp[NoAsms] ([“x = 3”], “x < 10”);
 ##assert (#2(hd(#1(simp[NoAsms]([“x =3”], “x < 10”)))) ~~ “x < 10”)
 ```
@@ -1591,7 +1591,7 @@ spaces; “sa” stands for “sub-assumption”), the matching succeeds
 (and the assumption is excluded) if the pattern matches any
 sub-term of the assumption.  Thus:
 
-```
+```repl
 >> simp[IgnAsm‘x = _’] ([“x = F”, “y = T”], “p ∧ x ∧ y”);
 
 >> simp[IgnAsm‘F’] ([“x = F”, “y = T”], “p ∧ x ∧ y”); (* nothing matches *)
@@ -1610,7 +1610,7 @@ The `SF` theorem form provides a way to augment a simplification
 with a *simpset* fragment.  For example, one can rewrite with
 conjunctions as assumptions using the `CONJ_ss` fragment:
 
-```
+```repl
 >>__ proofManagerLib.drop_all();
 >>_ g ‘x = 10 ∧ x < 16’;
 >> e (simp[SF CONJ_ss]);

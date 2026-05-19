@@ -566,7 +566,7 @@ overloading resolution is being performed.
 >>__ load "integerTheory";
 >>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="integer"};
 
-```
+```repl
 >> load "integerTheory";
 
 >> Term `~~x`;
@@ -582,7 +582,7 @@ In the following session, the `~~x` in the first quotation has
 type `:bool`, while in the second, a type constraint ensures that
 `~~x` has type `:int`.
 
-```
+```repl
 >>__ show_types := true;
 >> Term `~(x = ~~x)`;
 
@@ -1181,7 +1181,7 @@ The default print depth is $-1$, which is interpreted as meaning
 no maximum.  Subterms nested more deeply than the maximum print
 depth are printed as `...`.  For example:
 
-```
+```repl
 >>__ show_types := false;
 >> arithmeticTheory.ADD_CLAUSES;
 
@@ -1207,7 +1207,7 @@ ML interactive loop, they look rather ugly because of the special
 filtering that is done to these values before the ML interpreter
 even sees them:
 
-```
+```repl
 >> val q = ‘f x = 3’;
 ```
 
@@ -1226,7 +1226,7 @@ doubled back-ticks as delimiters.  For the type parser, the first
 non-space character after the leading delimiter must also be a
 colon.  Thus:
 
-```
+```repl
 >> val t1 = “\x:num. x + 3”;
 >> val t2 = ``p /\ q``;
 
@@ -1256,7 +1256,7 @@ Otherwise, one caret can be obtained by writing two in a row.
 (This last rule is analogous to the way in SML string syntax
 treats the back-slash.)  Thus:
 
-```
+```repl
 >> “f ^` x”;
 
 >> “f ^ x”;
@@ -1268,7 +1268,7 @@ Thus the following example illustrates two different ways of
 writing the same thing (in the first input, two carets become
 one):
 
-```
+```repl
 >> “f ^^+ x”;
 
 >>+ ``f ^+ x``;
@@ -1292,7 +1292,7 @@ variable $x$.  In this case `^(`$x$`)` can be abbreviated by
 
 The following session illustrates antiquotation.
 
-```
+```repl
 >>_ load "intLib";
 >>__ remove_ovl_mapping "+" {Name = "int_add", Thy = "integer"};
 >> val y = “x+1”;
@@ -1304,7 +1304,7 @@ The following session illustrates antiquotation.
 
 Types may be antiquoted as well:
 
-```
+```repl
 >> val pred = “:'a -> bool”;
 
 >> “:^pred -> bool”;
@@ -1317,7 +1317,7 @@ terms, antiquoting a type into a term quotation requires the use
 of `ty_antiq`.  For example,
 \index{ty_antiq@\ml{ty\_antiq}}
 
-```
+```repl
 >>+ “!P:^pred. P x ==> Q x”;
 
 >> “!P:^(ty_antiq pred). P x ==> Q x”;
@@ -1899,7 +1899,7 @@ function definitions.  In the following example, loading
 definitions, that of Quicksort (`QSORT`) in particular, and then
 we can evaluate `QSORT` on a concrete list.
 
-```
+```repl
 >> load "sortingTheory";
 
 >> EVAL ``QSORT (<=) [76;34;102;3;4]``;
@@ -1917,7 +1917,7 @@ input, symbolic execution can deliver an interesting result.
 However, if there is not enough information in the input to allow
 the algorithm any traction, no expansion will take place.
 
-```
+```repl
 >> EVAL ``REVERSE [u;v;w;x;y;z]``;
 
 >> EVAL ``REVERSE alist``;
@@ -1931,13 +1931,13 @@ generate enormous terms.  The usual cause is conditionals with
 variables in the test.  For example, the following definition is
 provably equal to `FACT`,
 
-```
+```repl
 >> Define `fact n = if n=0 then 1 else n * fact (n-1)`;
 ```
 
 But the two definitions evaluate completely differently.
 
-```
+```repl
 >> EVAL ``FACT n``;
 
 > EVAL ``fact n``;
@@ -1951,7 +1951,7 @@ expanding.  A rudimentary monitoring facility shows the
 behaviour, first on a ground argument, then on a symbolic
 argument.
 
-```
+```repl
 >> val [fact] = decls "fact";
 >> computeLib.monitoring := SOME (same_const fact);
 
@@ -2018,7 +2018,7 @@ definitional facilities will automatically use the SML function
 `numLib.SUC_TO_NUMERAL_DEFN_CONV` to derive equations over
 numerals from an equation over `SUC`.
 
-```
+```repl
 >>_ Definition mod3_def:
       mod3 0 = 0 /\
       mod3 (SUC n) = let m = mod3 n in
@@ -2045,7 +2045,7 @@ The easiest way to achieve this is to use the `nocompute`
 [^nocomputetheorem]: The `nocompute` attribute does nothing
     when applied to `Theorem` declarations.
 
-```
+```repl
 >> Definition f_def[nocompute]: f x = x + 10
    End
 >> EVAL ``f 6``;
@@ -2060,7 +2060,7 @@ declaration.
 \index{theorem attributes!compute@\ml{compute}}
 For example, one might write
 
-```
+```repl
 >> Theorem f_6[compute]: f 6 = 16
    Proof simp[f_def]
    QED
@@ -2112,7 +2112,7 @@ function and use it in a computation with `cv_compute`.
 is not the recommended workflow for using it.  Instead, use
 `cv_transLib` (Section \ref{ssec:cv-trans-lib}).
 
-```
+```repl
 >> load "cv_computeLib";
 >> Definition square_def:
      square x = cv_mul x x
@@ -2226,7 +2226,7 @@ examples, available in `exampleTheory` in
 `examples/cv_compute`, and has been modified to showcase
 let-bindings:
 
-```
+```repl
 >> load "cv_computeLib";
 >>__ open cvTheory;
 
@@ -2282,7 +2282,7 @@ soundness of this procedure depends on various constants and
 types having certain meanings; for example, that `+` is natural
 number addition, and that the following holds:
 
-```
+```repl
 >>__ open arithmeticTheory;
 ##thm ADD
 ```
@@ -2376,7 +2376,7 @@ instead of interacting directly with the `:cv` type.
 >>__ load "cv_transLib";
 >>__ cv_memLib.verbosity_level := cv_memLib.Silent;
 
-```
+```repl
 >> load "cv_transLib";
 >> load "cv_stdTheory";
 
@@ -2479,7 +2479,7 @@ construction of custom *compsets* and conversions.
 >>__ load "wordsLib";
 >>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"};
 
-```
+```repl
 >> load "wordsLib";
 
 >> EVAL ``8w + 9w:word4``;
@@ -2495,7 +2495,7 @@ or unsatisfactory results.
 Words can be parsed in binary, decimal and hexadecimal.  For
 example:
 
-```
+```repl
 >> ``0b111010w : word8``;
 
 >> ``0x3Aw : word8``;
@@ -2505,7 +2505,7 @@ It is possible to parse octal numbers, but this must be enabled
 first by setting the reference `base_tokens.allow_octal_input`
 to true.  For example:
 
-```
+```repl
 >> ``072w : word8``;
 
 >> base_tokens.allow_octal_input:=true;
@@ -2518,7 +2518,7 @@ Words can be pretty-printed using the standard number bases.
 For example, the function `wordsLib.output_words_as_bin`
 will select binary format:
 
-```
+```repl
 >> wordsLib.output_words_as_bin();
 
 >> EVAL ``($FCP ODD):word16``;
@@ -2537,7 +2537,7 @@ The trace variable `"word printing"` provides an alternative
 method for changing the output number base — it is particularly
 suited to temporarily selecting a number base, for example:
 
-```
+```repl
 >> Feedback.trace ("word printing", 1) Parse.term_to_string ``32w``;
 ```
 
@@ -2553,7 +2553,7 @@ as convenient parsing abbreviations for `:bool[4]` and
 sizes.  Users wishing to use this notation for non-standard word
 sizes can use the function `wordsLib.mk_word_size`:
 
-```
+```repl
 >>+ Lib.try Parse.Type `:word15` handle _ => bool;
 
 >> wordsLib.mk_word_size 15;
@@ -2575,7 +2575,7 @@ the functions `wordsLib.deprecate_word` and
 following session, the selection of word operators is
 deprecated:
 
-```
+```repl
 >> type_of ``a + b``;
 
 >> wordsLib.deprecate_word();
@@ -2587,7 +2587,7 @@ In the above, natural number addition is chosen in preference to
 word addition.  Conversely, words are preferred over the
 integers below:
 
-```
+```repl
 >>__ temp_overload_on("+", ``int_add``);
 
 >> type_of ``a + b``;
@@ -2612,7 +2612,7 @@ false by default.  The guesses are made during a post-processing
 step that occurs after the application of `Parse.Term`.  This
 is demonstrated below.
 
-```
+```repl
 >> wordsLib.guessing_word_lengths:=true;
 
 >> ``concat_word_list [(4 >< 1) (w:word32); w2; w3]``;
@@ -2671,13 +2671,13 @@ reasoning about the equality of arithmetic word expressions.
 The behaviour of the fragments listed above are demonstrated
 using the following function:
 
-```
+```repl
 >> fun conv ss = SIMP_CONV (pure_ss++ss) [];
 ```
 
 The following session demonstrates `SIZES_ss`:
 
-```
+```repl
 >> conv wordsLib.SIZES_ss ``dimindex(:12)``;
 
 >> conv wordsLib.SIZES_ss ``FINITE univ(:32)``;
@@ -2686,7 +2686,7 @@ The following session demonstrates `SIZES_ss`:
 The fragment `BIT_ss` converts `BIT` into membership test
 over a set of (high) bit positions:
 
-```
+```repl
 >> conv wordsLib.BIT_ss ``BIT 3 5``;
 
 >> conv wordsLib.BIT_ss ``BIT i 123``;
@@ -2696,7 +2696,7 @@ This simplification provides some support for reasoning about
 bitwise operations over arbitrary word lengths.  The arithmetic,
 logic and shift fragments help tidy up basic word expressions:
 
-```
+```repl
 >> conv wordsLib.WORD_LOGIC_ss ``a && 12w || 11w && a``;
 
 >> conv wordsLib.WORD_ARITH_ss ``3w * b + a + 2w * b - a * 4w:word2``;
@@ -2707,7 +2707,7 @@ logic and shift fragments help tidy up basic word expressions:
 The remaining fragments are not included in `wordsLib.WORD_ss`
 or `srw_ss`.  The bit equality fragment is demonstrated below.
 
-```
+```repl
 >> SIMP_CONV (std_ss++wordsLib.WORD_BIT_EQ_ss) [] ``a && b = ~0w : word2``;
 ```
 
@@ -2715,21 +2715,21 @@ The extract fragment is useful for reasoning about bit-field
 operations and is best used in combination with
 `wordsLib.SIZES_ss` or `wordsLib.WORD_ss`, for example:
 
-```
+```repl
 >> SIMP_CONV (std_ss++wordsLib.SIZES_ss++wordsLib.WORD_EXTRACT_ss) []
      ``(4 -- 1) ((a:word3) @@ (b:word2)) : word5``;
 ```
 
 Finally, the fragment `WORD_MUL_LSL_ss` is demonstrated below.
 
-```
+```repl
 >> conv wordsLib.WORD_MUL_LSL_ss ``5w * a : word8``;
 ```
 
 Rewriting with the theorem `wordsTheory.WORD_MUL_LSL`
 provides an means to undo this simplification, for example:
 
-```
+```repl
 >> SIMP_CONV (std_ss++wordsLib.WORD_ARITH_ss) [wordsTheory.WORD_MUL_LSL]
      ``a << 2 + a : word8``;
 ```
@@ -2758,7 +2758,7 @@ word sizes are large and/or when there are many nested additions
 
 The following examples show `BBLAST_PROVE` in use:
 
-```
+```repl
 >>_ load "blastLib";
 >> blastLib.BBLAST_PROVE ``a + 2w <+ 4w <=> a <+ 2w \/ 13w <+ a :word4``;
 
@@ -2770,7 +2770,7 @@ conversion `BBLAST_CONV`.  This conversion can be used to
 convert bit-vector problems into a propositional form; for
 example:
 
-```
+```repl
 >> blastLib.BBLAST_CONV ``(((a : word16) + 5w) << 3) ' 5``;
 ```
 

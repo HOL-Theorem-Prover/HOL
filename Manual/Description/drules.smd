@@ -156,7 +156,7 @@ That is, the third theorem follows from the first and second.
 In the session below, the proof is performed in the HOL system,
 using the ML functions `ASSUME` and `MP`.
 
-```
+```repl
 >> show_assums := true;
 
 >> val th1 = ASSUME ``t1 ==> t2``
@@ -173,7 +173,7 @@ only the *modus ponens* step is counted.  We create an artificial
 function to see the count of all three inference steps in the second
 interaction:
 
-```
+```repl
 >> Count.inferences (MP (ASSUME ``t1 ==> t2``)) (ASSUME ``t1:bool``);
 
 >> fun f () = MP (ASSUME ``t1 ==> t2``) (ASSUME ``t1:bool``);
@@ -223,7 +223,7 @@ $\Gamma \vdash t_1 \Rightarrow t_2$, the theorem $\Gamma \cup\{t_1\}
 rule can be implemented in ML as a function (`UNDISCH`, say) that calls
 the appropriate sequence of primitive inferences. The ML definition of
 `UNDISCH` is simply
-```
+```repl
 >> fun UNDISCH th = MP th (ASSUME $ fst $ dest_imp $ concl th);
 ```
 
@@ -234,7 +234,7 @@ of the derived rule on a consequence of the axiom
 printing of theorems has been adjusted as above and `th` is bound as
 shown below:
 
-```
+```repl
 >> val th = SPEC ``t2:bool`` $ SPEC ``t1:bool`` IMP_ANTISYM_AX;
 
 >> Count.inferences UNDISCH th;
@@ -1042,7 +1042,7 @@ numbers.  Use is made of the pre-existing definition of `>`, bound to
 counting facility is used again, and the printing of theorems is
 adjusted as above.
 
-```
+```repl
 >> Count.inferences
      (REWRITE_RULE [arithmeticTheory.GREATER_DEF])
      (ASSUME ``SUC 3 > 0 /\ SUC 2 > 0 /\ SUC 1 > 0 /\ SUC 0 > 0``);

@@ -35,7 +35,7 @@ unused pattern variables and ensures that the names of variables
 used by the pattern, the guard and the right-hand-side of a row
 coincide.
 
-```
+```repl
 >>__ open patternMatchesLib;
 >>__ val _ = temp_enable_pmatch();
 >>__ SIMP_CONV (srw_ss()) [] ``SUC 0``;
@@ -49,7 +49,7 @@ Similarly, many \pmatch{} tools rely on each pattern of a case
 expression having the same number of columns.  This normal form
 is enforced by `PMATCH_EXPAND_COLS_CONV`.
 
-```
+```repl
 >> PMATCH_EXPAND_COLS_CONV ``pmatch (x,y,z) of
     (0,y,T) => y
   | xyz when ~ SND (SND xyz) => 2
@@ -63,7 +63,7 @@ making case expressions more readable.  It also renames used
 variables that start with an underscore.  This is rarely needed,
 though.
 
-```
+```repl
 >> PMATCH_INTRO_WILDCARDS_CONV ``pmatch (x,y,z) of
     (_x, y, z) => _x + y
   | (x, y, z) when z => x``
@@ -102,7 +102,7 @@ does not match.  The second line is kept, since depending on the
 value of `y` it might or might not match.  Since the third line
 matches in any case, the fourth one is deleted.
 
-```
+```repl
 >> PMATCH_CLEANUP_CONV ``pmatch (SOME (x:num),y) of
      (NONE, y) => 1
    | (x, 0) => 2
@@ -113,7 +113,7 @@ matches in any case, the fourth one is deleted.
 If the first row remaining matches, the case expression is
 evaluated:
 
-```
+```repl
 >> PMATCH_CLEANUP_CONV ``pmatch (SOME x, y) of
      (NONE, y) => 1
    | (SOME x, y) => x+y
@@ -123,7 +123,7 @@ evaluated:
 Similarly, if no row matches, the whole case expression is
 evaluated.
 
-```
+```repl
 >> PMATCH_CLEANUP_CONV ``pmatch (SOME (x:num), y:num) of (NONE, y) => 1``
 ```
 
@@ -136,7 +136,7 @@ matches the input value for this column, the column can be
 removed.  This situation usually arises after removing certain
 rows from a case expression via partial evaluation.
 
-```
+```repl
 >> PMATCH_SIMP_COLS_CONV ``pmatch (SOME x,y) of
    | (SOME x, 1) => x+y
    | (x, y) => 4``
@@ -146,7 +146,7 @@ Similarly, a column is partially evaluated if all rows contain
 either a variable, a wildcard or a term of the same constructor
 in this column.
 
-```
+```repl
 >> PMATCH_SIMP_COLS_CONV ``pmatch (SOME x,y) of
    | (SOME x, 1) => SOME (x+y)
    | (SOME 2, 2) => NONE
@@ -174,7 +174,7 @@ rows, which is slower but for example able to detect that row 5
 is redundant, is discussed in
 Section \ref{subsec:pmatch/remove-red}.
 
-```
+```repl
 >> PMATCH_REMOVE_FAST_REDUNDANT_CONV ``pmatch xy of
    | (SOME x, y) => 1 | (SOME 2, 3) => 2
    | (NONE, y) => 3 | (NONE, y) => 4
@@ -203,14 +203,14 @@ Thus `PMATCH_REMOVE_FAST_SUBSUMED_CONV` takes an additional
 boolean argument `ra`, which allows one to configure whether such
 rows are removed.
 
-```
+```repl
 >> PMATCH_REMOVE_FAST_SUBSUMED_CONV true ``pmatch xy of
    | (SOME 2, _) => 2 | (NONE, 3) => 1
    | (SOME x, _) => x | (NONE, y) => y
    | (x, 5) => ARB``
 ```
 
-```
+```repl
 >> PMATCH_REMOVE_FAST_SUBSUMED_CONV false ``pmatch xy of
    | (SOME 2, _) => 2 | (NONE, 3) => 1
    | (SOME x, _) => x | (NONE, y) => y
@@ -219,7 +219,7 @@ rows are removed.
 
 The `PMATCH_SIMP_CONV` conversion keeps such rows.
 
-```
+```repl
 >> PMATCH_SIMP_CONV ``pmatch xy of
    | (SOME 2, _) => 2 | (NONE, 3) => 1
    | (SOME x, _) => x | (NONE, y) => y
@@ -233,13 +233,13 @@ Section \ref{subsubsec:pmatch-cleanup}) is added to the internal
 database of `computeLib`.  This allows the efficient evaluation
 of ground terms that contain \pmatch{} case expressions.
 
-```
+```repl
 >> EVAL ``pmatch (SOME 3, SOME 4) of
    | (SOME x, SOME y) => SOME (x + y)
    | (_, _) => NONE``
 ```
 
-```
+```repl
 >> EVAL ``pmatch (NONE, SOME 4) of
    | (SOME x, SOME y) => SOME (x + y)
    | (_, _) => NONE``
@@ -269,7 +269,7 @@ introducing extra variables into the pattern and constraining
 their value by adding extra conditions to the guard.
 \index{PMATCH_REMOVE_DOUBLE_BIND_CONV@\ml{PMATCH\_REMOVE\_DOUBLE\_BIND\_CONV}}
 
-```
+```repl
 >> PMATCH_REMOVE_DOUBLE_BIND_CONV ``pmatch xy of
    | (x, x) when x > 0 => x + x
    | x.| (x, y) => x
@@ -290,7 +290,7 @@ removed.  Therefore, the conversion
 `PMATCH_SIMP_CONV`.
 \index{PMATCH_REMOVE_GUARDS_CONV@\ml{PMATCH\_REMOVE\_GUARDS\_CONV}}
 
-```
+```repl
 >> PMATCH_REMOVE_GUARDS_CONV ``pmatch (x, y) of
   | (x, 2) when EVEN x => x + x
   | (SUC x, y) when ODD x => y + x + SUC x
@@ -298,7 +298,7 @@ removed.  Therefore, the conversion
   | (x, _) => x+3``
 ```
 
-```
+```repl
 >> PMATCH_REMOVE_GUARDS_CONV ``pmatch (x, y) of
   | (x, 0) when EVEN x => (SOME x, T)
   | (x, 0) => (SOME x, F)
@@ -306,7 +306,7 @@ removed.  Therefore, the conversion
   | (_, _) => (NONE, F)``
 ```
 
-```
+```repl
 >> SIMP_CONV (std_ss ++ PMATCH_REMOVE_GUARDS_ss) [] ``pmatch x of
   | _ when x < 5 => 0
   | _ when x < 10 => 1
@@ -331,7 +331,7 @@ complicated.
 As an example consider the following definition of a zipping
 functions for lists.
 
-```
+```repl
 >>_ val MYZIP_def = Define `
  (MYZIP [] _ = []) /\
  (MYZIP _ [] = []) /\
@@ -340,7 +340,7 @@ functions for lists.
 >>- val MYZIP_def = MYZIP_def
 ```
 
-```
+```repl
 >>_ val MYZIP2_def = Pmatch.with_classic_heuristic Define `
  (MYZIP2 [] _ = []) /\
  (MYZIP2 _ [] = []) /\
@@ -358,7 +358,7 @@ desired (conditional) equations.
 \index{Define@\ml{Define}}
 \index{PMATCH_TO_TOP_RULE@\ml{PMATCH\_TO\_TOP\_RULE}}
 
-```
+```repl
 >>_ val MYZIP3_def = Define `
   MYZIP3 xl yl = (pmatch (xl, yl) of
    | ([], _) => []
@@ -372,7 +372,7 @@ Similarly, the resulting induction theorems are more predictable
 and contain fewer cases.  However, the structure tends not to be
 as nice.
 
-```
+```repl
 >>- val MYZIP_ind = DB.fetch "-" "MYZIP_ind"
 >>- val MYZIP2_ind = DB.fetch "-" "MYZIP2_ind"
 >>- val MYZIP3_ind = DB.fetch "-" "MYZIP3_ind"
@@ -384,7 +384,7 @@ The preconditions state that no previous row matched or that the
 result of such a matching row coincides with the result of the
 current row.
 
-```
+```repl
 >>_ val MYZIP4_def = Define `
   MYZIP4 xl yl = (pmatch (xl, yl) of
    | ([], []) => (NONE, [])
@@ -407,12 +407,12 @@ to lift to the top-level.  Therefore, it should usually be combined
 with something like `DEPTH_CONV`.
 \index{PMATCH_LIFT_BOOL_CONV@\ml{PMATCH\_LIFT\_BOOL\_CONV}}
 
-```
+```repl
 >> DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true) ``
   P /\ (f (pmatch x of [] => 0 | x::xs => x) = 5) /\ Q``
 ```
 
-```
+```repl
 >> DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false) ``
   P /\ (f (pmatch x of [] => 0 | x::xs => x) = 5) /\ Q``
 ```
@@ -436,7 +436,7 @@ supported by decision tree ones can be translated.  This means
 that no guards can be used and that all patterns need to be
 constructor patterns.
 
-```
+```repl
 >> PMATCH_ELIM_CONV
    ``pmatch (xy:(num option # num list)) of (NONE, x::xs) => 0``
 ```
@@ -450,12 +450,12 @@ corresponding conversions are named `PMATCH_INTRO_CONV` and
 `PMATCH_INTRO_CONV_NO_OPTIMISE`.
 \index{PMATCH_ELIM_CONV@\ml{PMATCH\_INTRO\_CONV}}
 
-```
+```repl
 >> PMATCH_INTRO_CONV
    ``case (xy:(num option # num list)) of (NONE, x::xs) => 0``
 ```
 
-```
+```repl
 >> PMATCH_INTRO_CONV_NO_OPTIMISE
    ``case (xy:(num option # num list)) of (NONE, x::xs) => 0``
 ```
@@ -485,7 +485,7 @@ guards or pattern variables bound multiple times.  These features
 need to be removed (see Section \ref{subsec:pmatch/remove-feat})
 before calling it.
 
-```
+```repl
 >> PMATCH_CASE_SPLIT_CONV
    ``pmatch l of (SOME x, SOME y) => SOME (x+y) | (_, _) => NONE``
 ```
@@ -550,7 +550,7 @@ of different column heuristics.
      | (_, _, F) => 3
      | (_, _, T) => 4``
 
-```
+```repl
 >> PMATCH_CASE_SPLIT_CONV_HEU colHeu_first_col t
 
 >> PMATCH_CASE_SPLIT_CONV_HEU colHeu_last_col t
@@ -606,7 +606,7 @@ constructor family for lists.
 
 First, we need to define a case-split function for `[]` and `SNOC`.
 
-```
+```repl
 >>_ val list_REVCASE_def = Define `
       list_REVCASE l c_nil c_snoc =
         (if l = [] then c_nil else (c_snoc (LAST l) (BUTLAST l)))`
@@ -618,7 +618,7 @@ Next, we define an exhaustive list of constructors.  This is the
 list of functions combined with names for the arguments of each
 constructor.
 
-```
+```repl
 >>_ open constrFamiliesLib
 >> val cl = make_constructorList true [
       (``[]:'a list``, []),
@@ -630,7 +630,7 @@ constructor family.  This requires proving the discussed
 properties.  In order to develop the necessary tactic,
 `set_constructorFamily` can be used.
 
-```
+```repl
 > set_constructorFamily (cl, ``list_REVCASE``)
 >>- set_constructorFamily (cl, case_const_tm)
 
@@ -640,14 +640,14 @@ properties.  In order to develop the necessary tactic,
 
 Finally, we can register this newly defined constructor family.
 
-```
+```repl
 >> val _ = pmatch_compile_db_register_constrFam cf
 ```
 
 Now this new family is available for pattern compilation.
 Notice, that the old constructors for lists are still present.
 
-```
+```repl
 >> PMATCH_CASE_SPLIT_CONV ``pmatch ll of
      (SNOC x xs, []) => x
    | ([], x::xs) => x
@@ -657,7 +657,7 @@ Notice, that the old constructors for lists are still present.
 Inexhaustive constructor families are often handy as well.
 Consider the example of red-black-trees defined as follows:
 
-```
+```repl
 >>_ val _ = Datatype `
     tree = Empty
          | Red tree 'a tree
@@ -710,7 +710,7 @@ inexhaustive constructor family.
        (\t1 n t2. f_else (Black t1 n t2))`
 >>_ val cl = make_constructorList false [(``Red``, ["t1", "n", "t2"])]
 
-```
+```repl
 > val cf = mk_constructorFamily (cl, ``tree_red_CASE``, ... some tactic ...)
 >>__ val cf = mk_constructorFamily (cl, ``tree_red_CASE``, cheat)
 >>_ val _ = pmatch_compile_db_register_constrFam cf
@@ -740,7 +740,7 @@ pattern is checkable *via* simple first order matching.
 Let's look at an example.  First we compile a case expression to
 a decision tree.
 
-```
+```repl
 >> PMATCH_CASE_SPLIT_CONV ``pmatch xy of
   | (SOME x, SOME y) => x + y
   | (_, SOME 0) => 0``
@@ -755,7 +755,7 @@ is a subpattern of `(_, SOME 0)`, but distinct from
 function compiles the list of input patterns to an
 nchotomy-theorem containing exactly these 4 patterns.
 
-```
+```repl
 >> nchotomy_of_pats [``\(x,y). (SOME (x:num), SOME (y:num))``,
                   ``\(xo:num option). (xo, SOME 0)``]
 ```
@@ -781,7 +781,7 @@ and the corresponding simpset fragment
 the example already discussed in
 Section \ref{subsec:pmatch/fast-remove-red}.
 
-```
+```repl
 >> PMATCH_REMOVE_REDUNDANT_CONV ``pmatch xy of
    | (SOME x, y) => 1 | (SOME 2, 3) => 2
    | (NONE, y) => 3 | (NONE, y) => 4
@@ -831,7 +831,7 @@ redundant rows.
 
 >> IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT_set_goal info 2
 
-```
+```repl
 > val info' = IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT info 2 ...
 >>- val info' = IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT info 2 bossLib.cheat
 
@@ -850,12 +850,12 @@ and thereby produce exhaustive \pmatch{} case expressions.  A
 flag determines whether these newly introduced rows should use
 guards.
 
-```
+```repl
 >> PMATCH_COMPLETE_CONV true ``pmatch (xy : (num option # num option)) of
        (SOME x, NONE) when x > 0 => 0 | (NONE, _) => 1``;
 ```
 
-```
+```repl
 >> PMATCH_COMPLETE_CONV false ``pmatch (xy : (num option # num option)) of
        (SOME x, NONE) when x > 0 => 0 | (NONE, _) => 1``;
 ```
@@ -867,7 +867,7 @@ guards.
 Similarly, exhaustiveness can be derived *via* pattern
 compilation.
 
-```
+```repl
 >> PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK
      ``pmatch (xy : (num option # num option)) of
        (SOME _, _) => 0 | (_, NONE) => 1 | (NONE, SOME _) => 2``
@@ -876,7 +876,7 @@ compilation.
 Often, the exhaustiveness can be proved much faster by just
 searching a matching row.
 
-```
+```repl
 >> PMATCH_IS_EXHAUSTIVE_FAST_CHECK ``pmatch (x:num option, y:num) of
        (SOME _, _) => 0 | (_, _) => 1``
 
@@ -893,12 +893,12 @@ by `SHOW_NCHOTOMY_CONSEQ_CONV`.
 Exhaustiveness is this time expressed in the form of an nchotomy
 theorem.  Missing cases are automatically added.
 
-```
+```repl
 >> SHOW_NCHOTOMY_CONSEQ_CONV
      ``!x:'a list. (x = []) \/ (?e. x = [e]) \/ (?e1 e2 l. x = e1::e2::l)``
 ```
 
-```
+```repl
 >> SHOW_NCHOTOMY_CONSEQ_CONV
      ``!x:'a list. (x = []) \/ (?e1 e2 l. x = e1::e2::l)``
 ```
@@ -915,7 +915,7 @@ To check whether a case expression can be exported, the function
 `analyse_pmatch` can be used.  The flag of this function
 indicates whether an exhaustiveness proof should be attempted.
 
-```
+```repl
 >> val info = analyse_pmatch false
    ``pmatch l of [] => 1 | [x] when (x > 2) => 2 | _ => 3``
 

@@ -45,3 +45,15 @@
 .on-this-page {
   display: none;
 }
+
+/* Polyscripter REPL interactions in the .smd sources are tagged as
+   ```repl, which pulldown-cmark emits as <pre><code class="language-repl">.
+   The HTML counterpart of the LaTeX `session` box: a left bar +
+   slight background tint so a REPL transcript is visually distinct
+   from a plain code sample.  Inherit the surrounding code-block
+   font and padding from mdbook's default `pre` rules.  */
+pre > code.language-repl {
+  border-left: 3px solid var(--links, #4183c4);
+  padding-left: 0.7em;
+  background: var(--quote-bg, rgba(120, 144, 156, 0.10));
+}

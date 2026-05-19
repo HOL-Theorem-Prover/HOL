@@ -124,21 +124,31 @@ function CodeBlock(item)
   if not FORMAT:match("latex") then
     return item
   end
-  local _, count = string.gsub(item.text, "\n", "")
-  -- Add 1 to account for the last line if it doesn't end with a newline
-  -- or if the string contains only one line without a newline.
-  -- If the string is empty, count will be 0.
-  if #item.text > 0 and item.text:sub(#item.text) ~= "\n" then
-      count = count + 1
-  end
   -- Wrap in `alltt` (not `verbatim`): polyscripter output contains Unicode
   -- characters (turnstile, sum, infinity, the various lambda-calculus
   -- glyphs HOL prints) that desc-unicode.sty rewrites at LaTeX time;
   -- those declarations only fire inside command-processing environments,
-  -- which `verbatim` is not but `alltt` is.  Long blocks still get
-  -- wrapped in `samepage` to keep them on one page.
-  local body = pandoc.RawBlock("latex",
-    "\\begin{alltt}\n" .. escapeAlltt(item.text) .. "\n\\end{alltt}")
+  -- which `verbatim` is not but `alltt` is.
+  local alltt =
+    "\\begin{alltt}\n" .. escapeAlltt(item.text) .. "\n\\end{alltt}"
+  -- ```repl blocks (polyscripter REPL interactions) get wrapped in the
+  -- `session` environment from LaTeX/commands.tex, which draws the
+  -- numbered left-bar/right-tab box that the original .stex manuals
+  -- used.  session's minipage already keeps the block together on one
+  -- page, so the samepage wrap is unnecessary for these.
+  if item.classes:includes("repl") then
+    return pandoc.RawBlock("latex",
+      "\\begin{session}" .. alltt .. "\\end{session}")
+  end
+  -- Plain code blocks: count lines so we can decide whether to wrap
+  -- long ones in samepage (keeps them on one page).
+  local _, count = string.gsub(item.text, "\n", "")
+  if #item.text > 0 and item.text:sub(#item.text) ~= "\n" then
+      count = count + 1
+  end
+  -- Plain code blocks: just the alltt; longer ones get samepage so
+  -- they don't break across pages.
+  local body = pandoc.RawBlock("latex", alltt)
   if count > 3 then
     return {
       pandoc.RawBlock("latex", "\\begin{samepage}"),

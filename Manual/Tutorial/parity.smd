@@ -54,7 +54,7 @@ To specify the device, a primitive recursive function `PARITY` is
 defined so that for $n>0$, `PARITY` $n\ f$ is true if the number
 of `T`'s in the sequence $f(1), \ldots, f(n)$ is even.
 
-```
+```repl
 >> Definition PARITY_def:
      (PARITY 0 f = T) /\
      (PARITY(SUC n) f = if f(SUC n) then ~PARITY n f
@@ -116,7 +116,7 @@ lemma is proved interactively using HOL's subgoal package.  The
 proof is started by putting the goal to be proved on a goal stack
 using the function `g` which takes a goal as argument.
 
-```
+```repl
 >> g ‘!inp out.
         (out 0 = T) /\
         (!t. out(SUC t) = (if inp(SUC t) then ~(out t) else out t)) ==>
@@ -132,14 +132,14 @@ applies it to the top goal; the resulting subgoals are pushed on
 to the goal stack.  The message `OK..` is printed out just before
 the tactic is applied.  The resulting subgoal is then printed.
 
-```
+```repl
 >> e(rpt gen_tac >> strip_tac);
 ```
 
 Next induction on `t` is done using `Induct`, which does
 induction on the outermost universally quantified variable.
 
-```
+```repl
 >> e Induct;
 ```
 
@@ -148,7 +148,7 @@ the horizontal lines of hyphens. The last goal printed is the one
 on the top of the stack, which is the basis case. This is solved
 by rewriting with its assumptions and the definition of `PARITY`.
 
-```
+```repl
 >> e(rw[PARITY_def]);
 ```
 
@@ -157,7 +157,7 @@ The top goal is proved, so the system pops it from the goal stack
 goal is the step case of the induction. This goal is also solved
 by rewriting.
 
-```
+```repl
 >> e(rw[PARITY_def]);
 ##assert can top_thm ()
 ```
@@ -179,7 +179,7 @@ returns the theorem just proved (*i.e.* on the top of the theorem
 stack) in the current theory, and we bind this to the ML name
 `UNIQUENESS_LEMMA`.
 
-```
+```repl
 >> val UNIQUENESS_LEMMA = top_thm();
 ```
 
@@ -277,7 +277,7 @@ predicates \cite{Why-HOL-paper}.  For example, the predicate
 `ONE` is true of a signal `out` if for all times `t` the value of
 `out` is `T`.
 
-```
+```repl
 >> Definition ONE_def: ONE(out:num->bool) = !t. out t = T
    End
 ```
@@ -295,7 +295,7 @@ value of `inp`. Inverters are thus modelled as having no delay.
 This is appropriate for a register-transfer level model, but not
 at a lower level.
 
-```
+```repl
 >> Definition NOT_def:
       NOT(inp, out:num->bool) = !t. out t = ~(inp t)
    End
@@ -305,7 +305,7 @@ The final combinational device needed is a multiplexer.  This is
 a ‘hardware conditional’; the input `sw` selects which of the
 other two inputs are to be connected to the output `out`.
 
-```
+```repl
 >> Definition MUX_def:
      MUX(sw,in1,in2,out:num->bool) =
        !t. out t = if sw t then in1 t else in2 t
@@ -320,7 +320,7 @@ the register outputs `F`.[^parity-time-zero]
 [^parity-time-zero]: Time `0` represents when the device is
     switched on.
 
-```
+```repl
 >> Definition REG_def:
      REG(inp,out:num->bool) =
         !t. out t = if (t=0) then F else inp(t-1)
@@ -333,7 +333,7 @@ then existentially quantifying the internal lines.  This
 technique is explained elsewhere (*e.g.* see
 \cite{Camilleri-et-al,Why-HOL-paper}).
 
-```
+```repl
 >> Definition PARITY_IMP_def:
      PARITY_IMP(inp,out) =
        ?l1 l2 l3 l4 l5.
@@ -361,7 +361,7 @@ First, the following lemma is proved; the correctness of the
 parity checker follows from this and `UNIQUENESS_LEMMA` by the
 transitivity of `==>`.
 
-```
+```repl
 >> g ‘!inp out.
         PARITY_IMP(inp,out) ==>
         (out 0 = T) /\
@@ -377,7 +377,7 @@ One of the built-in simplifications used by `REWRITE_TAC` is
 `|- ~(x = T) = x`.  `PURE_REWRITE_TAC` is used to prevent
 rewriting with this being done.
 
-```
+```repl
 >> e(PURE_REWRITE_TAC [PARITY_IMP_def, ONE_def, NOT_def,
                        MUX_def, REG_def] >>
      rpt strip_tac);
@@ -392,7 +392,7 @@ because the equations for `out`, `l2` and `l3` are mutually
 recursive.  Instead we use the first-order reasoner `metis_tac`
 to do the work:
 
-```
+```repl
 >> e(metis_tac []);
 ```
 
@@ -416,7 +416,7 @@ is of the form given by its first argument, and passes it to the
 second argument, a function which expects a theorem and returns
 a tactic.  Here it is in action:
 
-```
+```repl
 >> e (qpat_x_assum ‘!t. out t = X t’
        (fn th => REWRITE_TAC [SPEC “SUC t” th]));
 ```
@@ -433,14 +433,14 @@ Inspecting the goal above, it can be seen that the next step is
 to unwind the equations for the remaining lines of the circuit.
 We do using the standard simplifier `rw`.
 
-```
+```repl
 >> e (rw[]);
 ```
 
 The theorem just proved is named `PARITY_LEMMA` and saved in the
 current theory.
 
-```
+```repl
 >> val PARITY_LEMMA = top_thm ();
 ```
 
@@ -449,7 +449,7 @@ compound tactic.  Our initial goal can be expanded with a single
 tactic corresponding to the sequence of tactics that were used
 interactively:
 
-```
+```repl
 >>_ restart();
 >> e (PURE_REWRITE_TAC [PARITY_IMP_def, ONE_def, NOT_def,
                         MUX_def, REG_def] >>
@@ -462,7 +462,7 @@ interactively:
 
 Armed with `PARITY_LEMMA`, the final theorem is easily proved:
 
-```
+```repl
 >> Theorem PARITY_CORRECT:
      ∀inp out. PARITY_IMP(inp,out) ⇒ ∀t. out t = PARITY t inp
    Proof

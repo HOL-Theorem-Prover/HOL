@@ -56,7 +56,7 @@ sessions here, the prompt is `` `>` ``, so lines beginning with
 `` `>` `` are typed by the user, and other lines are the system's
 responses.
 
-```
+```repl
 $ bin/hol
 >>__ HOL_Interactive.print_banner (!scriptPrint);
 
@@ -83,7 +83,7 @@ The value of the last expression evaluated at the top-level not
 otherwise bound to a name is always remembered in a variable
 called `it`.
 
-```
+```repl
 >> val l = it;
 
 >> tl l;
@@ -106,7 +106,7 @@ Declarations have the form
 and result in the value of each expression $e_i$ being bound to
 the name $x_i$.
 
-```
+```repl
 >> val l1 = [1,2,3] and l2 = ["a","b","c"];
 ```
 
@@ -120,7 +120,7 @@ prepended.
 [^ml-string-escapes]: Newlines must be written as `\n`, and
     quotes as `\"`.
 
-```
+```repl
 >> explode "a b c";
 ```
 
@@ -136,7 +136,7 @@ The values `(1,2,3)`, `(1,(2,3))` and `((1,2), 3)` are all
 distinct and have types `int * int * int`, `int * (int * int)`
 and `(int * int) * int` respectively.
 
-```
+```repl
 >> val triple1 = (1,true,"abc");
 
 >> #2 triple1;
@@ -164,7 +164,7 @@ The function `zip`, below, converts a pair of lists
 to a list of pairs
 `[(`$x_1$`,`$y_1$`),`$\ldots$`,(`$x_n$`,`$y_n$`)]`.
 
-```
+```repl
 >> fun zip(l1,l2) =
     if null l1 orelse null l2 then []
     else (hd l1,hd l2) :: zip(tl l1,tl l2);
@@ -176,7 +176,7 @@ Functions may be *curried*, i.e. take their arguments 'one at a
 time' instead of as a tuple.  This is illustrated with the
 function `curried_zip` below:
 
-```
+```repl
 >> fun curried_zip l1 l2 = zip(l1,l2);
 
 >> fun zip_num l2 = curried_zip [0,1,2] l2;
@@ -203,7 +203,7 @@ $e_2$.[^ml-exception-handling]
     be handled in SML; consult a proper text for a better
     explanation.
 
-```
+```repl
 >>+ 3 div 0;
 
 >> 3 div 0 handle _ => 0;

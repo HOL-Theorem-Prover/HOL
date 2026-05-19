@@ -45,7 +45,7 @@ in the logic.  Finally, we will start by “hiding” the names `S`
 and `K` so that the constants of these names from the existing
 HOL theories won't interfere with parsing.
 
-```
+```repl
 >>_ hide "K"; hide "S";
 >> Datatype: cl = K | S | # cl cl
    End
@@ -54,7 +54,7 @@ HOL theories won't interfere with parsing.
 We also want the `#` to be an infix, so we set its fixity to be a
 tight left-associative infix:
 
-```
+```repl
 >> set_fixity "#" (Infixl 1100);
 ```
 
@@ -97,7 +97,7 @@ function lets the arrow be our surface syntax, but maps to the
 name `redn` underneath.  Making constants have pure alphanumeric
 names is generally a good idea.
 
-```
+```repl
 >> set_mapped_fixity {fixity = Infix(NONASSOC, 450),
                       tok = "-->", term_name = "redn"};
 ```
@@ -114,7 +114,7 @@ shows us three: `redn_rules`, `redn_ind`, `redn_cases`.  These
 theorems are available in the ML session under those names, and
 are also saved under those names when the theory is exported.
 
-```
+```repl
 >> Inductive redn:
      (!x y f. x --> y   ==>    f # x --> f # y) /\
      (!f g x. f --> g   ==>    f # x --> g # x) /\
@@ -126,7 +126,7 @@ are also saved under those names when the theory is exported.
 Using the `redn_rules` theorem we can demonstrate single steps of
 our reduction relation:
 
-```
+```repl
 >> PROVE [redn_rules] ``S # (K # x # x) --> S # x``;
 ```
 
@@ -189,7 +189,7 @@ ambiguities would always be resolved in the favour of more
 recent definition, but the warnings are annoying.  We inherit
 the nice syntax for the old constant with our new one.)
 
-```
+```repl
 >> val _ = hide "RTC";
 
 >> Inductive RTC:
@@ -203,7 +203,7 @@ mean something like: “though a system may take different paths
 in the short-term, those two paths can always end up in the same
 place”.  This suggests that we define confluent thus:
 
-```
+```repl
 >> Definition confluent_def:
      confluent R =
        !x y z. RTC R x y /\ RTC R x z ==>
@@ -261,7 +261,7 @@ starting point they produce no more than one *normal form*,
 where a normal form is a value from which no further steps can
 be taken.
 
-```
+```repl
 >> Definition normform_def:  normform R x = !y. ~R x y
    End
 ```
@@ -272,7 +272,7 @@ written `~?y. R x y` as our RHS for the definition above.)
 
 We can now prove the following:
 
-```
+```repl
 >> g `!R. confluent R ==>
           !x y z.
             RTC R x y /\ normform R y /\
@@ -281,14 +281,14 @@ We can now prove the following:
 
 We rewrite with the definition of confluence:
 
-```
+```repl
 >> e (rw[confluent_def]);
 ```
 
 Our confluence property is now assumption 0, and we can use it
 to infer that there is a $u$ at the base of the diamond:
 
-```
+```repl
 >> e (`?u. RTC R y u /\ RTC R z u` by metis_tac []);
 ```
 
@@ -299,14 +299,14 @@ all from these values.  We can conclude both that $u = y$ and
 $u = z$, and this in turn means that $y = z$, which is our goal.
 So we can finish with
 
-```
+```repl
 >> e (metis_tac [normform_def, RTC_cases]);
 ```
 
 Packaged up so as to remove the sub-goal package commands, we
 can prove and save the theorem for future use by:
 
-```
+```repl
 >> Theorem confluent_normforms_unique:
      !R. confluent R ==>
          !x y z. RTC R x y /\ normform R y /\
@@ -326,7 +326,7 @@ defining the diamond property that we used in the definition of
 confluence.  We'll again hide the existing definition of
 “diamond”:
 
-```
+```repl
 >> val _ = hide "diamond";
 >> Definition diamond_def:
      diamond R = !x y z. R x y /\ R x z ==> ?u. R y u /\ R z u
@@ -337,7 +337,7 @@ Now we clearly have that confluence of a relation is equivalent
 to the reflexive, transitive closure of that relation having the
 diamond property.
 
-```
+```repl
 >> Theorem confluent_diamond_RTC:
       !R. confluent R = diamond (RTC R)
    Proof   rw[confluent_def, diamond_def]
@@ -378,7 +378,7 @@ the rule induction.[^combin-dropn]
     practice, there is no harm in leaving these goals on the
     proof manager's stack.
 
-```
+```repl
 >>__ dropn 1;
 >> g `!R. diamond R ==>
           !x p z. RTC R x p /\ R x z ==>
@@ -392,7 +392,7 @@ we strip away too much so we have to be more precise and use the
 lower level tool `strip_tac`.  This tactic will remove a
 universal quantification, an implication or a conjunction:
 
-```
+```repl
 >> e (strip_tac >> strip_tac);
 ```
 
@@ -404,14 +404,14 @@ also used to do structural induction on algebraic data types
 constant whose induction principle we want to use, and the
 tactic does the rest:
 
-```
+```repl
 >> e (Induct_on `RTC`);
 ```
 
 Let's strip the goal as much as possible with the aim of making
 what remains to be proved easier to see:
 
-```
+```repl
 >> e (rw[]);
 ```
 
@@ -425,7 +425,7 @@ we don't even need to provide this witness explicitly:
 `metis_tac` will find it for us, as long as we tell it what the
 rules governing $\con{RTC}$ are:
 
-```
+```repl
 >> e (metis_tac [RTC_rules]);
 ```
 
@@ -434,7 +434,7 @@ between them are the top of an $R$-diamond.  Let's use the fact
 that we have the diamond property for $R$ and infer that there
 exists a $v$ to which $x'$ and $z$ can both take single steps:
 
-```
+```repl
 >> e (`?v. R x' v /\ R z v` by metis_tac [diamond_def]);
 ```
 
@@ -446,7 +446,7 @@ $\con{RTC}\;R\;z\;u$, but because there is a single $R$-step
 between $z$ and $v$ we have that as well.  All we need to provide
 `metis_tac` is the rules for $\con{RTC}$:
 
-```
+```repl
 >> e (metis_tac [RTC_rules]);
 ##assert can top_thm()
 ```
@@ -480,7 +480,7 @@ expecting to strip away the LHS of the goal as an assumption
 another “RTC-induction” on what the second `diamond` expands
 into:
 
-```
+```repl
 >>__ dropn 1;
 >> g `!R. diamond R ==> diamond (RTC R)`;
 ```
@@ -488,7 +488,7 @@ into:
 So, we begin by stripping away the diamond property assumption.
 Then, we expand with the definition of `diamond` in the goal.
 
-```
+```repl
 >> e (strip_tac >> strip_tac >> simp[diamond_def]);
 ```
 
@@ -497,7 +497,7 @@ untouched, but has exposed two `RTC` terms in the goal.  In
 order to make it clear that we wish to induct on the first, we
 can write a more elaborate pattern when we induct:
 
-```
+```repl
 >> e (Induct_on `RTC R x y` >> rw[]);
 ```
 
@@ -505,7 +505,7 @@ The first goal is again an easy one, corresponding to the case
 where the trip from $x$ to $y$ has been one of no steps
 whatsoever.
 
-```
+```repl
 >> e (metis_tac [RTC_rules]);
 ```
 
@@ -514,7 +514,7 @@ the top of a (“lop-sided”) diamond in assumptions 1 and 4, so we
 can infer the existence of a common destination for $x'$ and
 $z$:
 
-```
+```repl
 >> e (`?v. RTC R x' v /\ RTC R z v` by metis_tac [R_RTC_diamond]);
 ```
 
@@ -530,7 +530,7 @@ inductive hypothesis).  We leave the proof of this general
 result as an exercise, and here assume that it is already proved
 as the theorem `RTC_RTC`.
 
-```
+```repl
 >>__ Theorem RTC_RTC:
        !R x y z. RTC R x y /\ RTC R y z ==> RTC R x z
      Proof
@@ -611,7 +611,7 @@ parallel.  We use the `-||->` symbol to indicate parallel
 reduction because of its own parallel lines, and use `predn` to
 name the constant:
 
-```
+```repl
 >> set_mapped_fixity {tok = "-||->", fixity = Infix(NONASSOC, 450),
                       term_name = "predn"};
 ```
@@ -625,7 +625,7 @@ we must have reflexivity incidentally.  Without it, a term like
 $(\KC\;x\;y)\,\KC$ couldn't reduce because while the LHS of the
 application ($\KC\;x\;y$) can reduce, its RHS ($\KC$) can't.
 
-```
+```repl
 >>_ Inductive predn:
       (!x. x -||-> x) /\
       (!x y u v. x -||-> y /\ u -||-> v
@@ -650,7 +650,7 @@ fixities.  This is exactly analogous to the way in which ML's
 the concrete syntax, and then we “overload” it so that the
 parser will expand it to the desired form.
 
-```
+```repl
 >> set_fixity "-->*" (Infix(NONASSOC, 450));
 
 >> Overload "-->*" = “RTC redn”;
@@ -659,7 +659,7 @@ parser will expand it to the desired form.
 We do exactly the same thing for the reflexive and transitive
 closure of our parallel reduction.
 
-```
+```repl
 >> set_fixity "-||->*" (Infix(NONASSOC, 450));
 
 >> Overload "-||->*" = ``RTC predn``;
@@ -668,7 +668,7 @@ closure of our parallel reduction.
 Incidentally, in conjunction with `PROVE` we can now
 automatically demonstrate relatively long chains of reductions:
 
-```
+```repl
 >> PROVE [RTC_rules, redn_rules] ``S # K # K # x -->* x``;
 
 >> PROVE [RTC_rules, redn_rules]
@@ -690,14 +690,14 @@ $x\rightarrow y\Rightarrow x\mathpredn y$.
 
 Our goal:
 
-```
+```repl
 >>__ dropn 1;
 >> g `!x y. x -->* y ==> x -||->* y`;
 ```
 
 We back-chain using our monotonicity result:
 
-```
+```repl
 >>__ Theorem RTC_monotone:
        !R1 R2. (!x y. R1 x y ==> R2 x y) ==>
                (!x y. RTC R1 x y ==> RTC R2 x y)
@@ -710,7 +710,7 @@ We back-chain using our monotonicity result:
 
 Now we can induct over the rules for $\rightarrow$:
 
-```
+```repl
 >> e (Induct_on `x --> y`);
 ```
 
@@ -718,7 +718,7 @@ We could split the 4-way conjunction apart into four goals, but
 there is no real need.  It is quite clear that each follows
 immediately from the rules for parallel reduction.
 
-```
+```repl
 >> e (metis_tac [predn_rules]);
 ```
 
@@ -744,7 +744,7 @@ reduction relation.  It's clear that mirroring one step of the
 parallel reduction relation might take many steps of the
 original relation.  Let's prove that then:
 
-```
+```repl
 >>__ dropn 1;
 >> g `!x y. x -||-> y   ==>   x -->* y`;
 ```
@@ -752,7 +752,7 @@ original relation.  Let's prove that then:
 This time our induction will be over the rules defining the
 parallel reduction relation.
 
-```
+```repl
 >> e (Induct_on `x -||-> y`);
 ```
 
@@ -763,7 +763,7 @@ split apart the conjunctions, use a `THEN1` to discharge the
 first subgoal, thus putting the second subgoal into focus to be
 dealt with more carefully. Note that `>-` is sugar for `THEN1`.
 
-```
+```repl
 >> e (rpt conj_tac >- metis_tac[RTC_rules, redn_rules]);
 ```
 
@@ -781,7 +781,7 @@ Proof  ...
 QED
 ```
 
-```
+```repl
 >>__ Theorem RTCredn_ap_congruence:
        !x y. x -->* y ==> !z. x # z -->* y # z /\ z # x -->* z # y
      Proof Induct_on `RTC` >> metis_tac [RTC_rules, redn_rules]
@@ -802,7 +802,7 @@ All we need to do is “stitch together” the two transitions above
 and go from $x\;x'$ to $y\;y'$.  We can do this by appealing to
 our earlier `RTC_RTC` result.
 
-```
+```repl
 >> e (metis_tac [RTC_RTC, RTCredn_ap_congruence]);
 ```
 
@@ -830,14 +830,14 @@ steps are chained together, then we can mirror this with some
 number of steps using the original reduction relation.  Our
 goal:
 
-```
+```repl
 >>__ dropn 1;
 >> g `!x y. x -||->* y  ==> x -->* y`;
 ```
 
 We use the appropriate induction principle to get to:
 
-```
+```repl
 >> e (Induct_on `RTC`);
 ```
 
@@ -847,7 +847,7 @@ combine to tell us that `x -->* y`.  Then this can be chained
 together with the other assumption in the second conjunct and
 we're done.
 
-```
+```repl
 >> e (metis_tac [RTC_rules, predn_RTCredn, RTC_RTC]);
 ```
 
@@ -867,7 +867,7 @@ Packaged up, this proof is:
 Our final act is to use what we have so far to conclude that
 $\rightarrow^*$ and $\mathpredn^*$ are equal.  We state our goal:
 
-```
+```repl
 >>__ dropn 1;
 >> g `$-||->* = $-->*`;
 ```
@@ -875,20 +875,20 @@ $\rightarrow^*$ and $\mathpredn^*$ are equal.  We state our goal:
 We want to now appeal to extensionality.  The simplest way to do
 this is to rewrite with the theorem `FUN_EQ_THM`:
 
-```
+```repl
 >> FUN_EQ_THM;
 ```
 
 So, we rewrite:
 
-```
+```repl
 >> e (rw[FUN_EQ_THM]);
 ```
 
 This goal is an easy consequence of our two earlier
 implications.
 
-```
+```repl
 >> e (metis_tac [RTCpredn_RTCredn, RTCredn_RTCpredn]);
 ```
 
@@ -923,7 +923,7 @@ $\SC\;x\;y\;z$.
 To do this, we will write a little function that derives
 characterisations automatically:
 
-```
+```repl
 >> fun characterise t = SIMP_RULE (srw_ss()) [] (SPEC t predn_cases);
 ```
 
@@ -933,7 +933,7 @@ simpset includes information about the injectivity and
 disjointness of constructors and eliminates obvious
 impossibilities.  For example,
 
-```
+```repl
 >> val K_predn = characterise ``K``;
 
 >> val S_predn = characterise ``S``;
@@ -942,7 +942,7 @@ impossibilities.  For example,
 Unfortunately, what we get back from other inputs is not so
 good:
 
-```
+```repl
 >> val Sx_predn0 = characterise ``S # x``;
 ```
 
@@ -1008,7 +1008,7 @@ Last of all, we want a characterisation for $x\;y$.  What
 `characterise` gives us this time can't be improved upon, for
 all that we might look upon the four disjunctions and despair.
 
-```
+```repl
 >> val x_ap_y_predn = characterise ``x # y``;
 ```
 
@@ -1016,7 +1016,7 @@ all that we might look upon the four disjunctions and despair.
 
 Now we are ready to prove the final goal.  It is
 
-```
+```repl
 >>__ dropn 1;
 >> g `!x y. x -||-> y ==>
             !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u`;
@@ -1024,7 +1024,7 @@ Now we are ready to prove the final goal.  It is
 
 We now induct and split the goal into its individual conjuncts:
 
-```
+```repl
 >> e (Induct_on `x -||-> y` >> rpt conj_tac);
 ```
 
@@ -1032,7 +1032,7 @@ The first goal is easily disposed of.  The witness we would
 provide for this case is simply `z`, but `metis_tac` will do the
 work for us:
 
-```
+```repl
 >> e (metis_tac [predn_rules]);
 ```
 
@@ -1043,7 +1043,7 @@ confuse the goal.  We want to rewrite just the assumption, not
 the instance underneath the existential quantifier.  Starting
 everything by repeatedly stripping can't lead us too far astray.
 
-```
+```repl
 >> e (rw[]);
 ```
 
@@ -1082,7 +1082,7 @@ assumptions.
 
 So:
 
-```
+```repl
 >>__ set_trace "Goalstack.howmany_printed_subgoals" 1;
 >> e (qpat_x_assum `_ # _ -||-> _`
        (strip_assume_tac o SIMP_RULE (srw_ss()) [x_ap_y_predn]) >>
@@ -1094,7 +1094,7 @@ parallel reduction.  Because we've elided the somewhat
 voluminous output, we call `p()` to print the next sub-goal
 again:
 
-```
+```repl
 >>_ e (metis_tac[predn_rules]);
 >> p();
 ```
@@ -1103,7 +1103,7 @@ This goal requires application of the two inductive hypotheses
 as well as the rules for parallel reduction, but is again
 straightforward for `metis_tac`:
 
-```
+```repl
 >>_ e (metis_tac[predn_rules]);
 >> p();
 ```
@@ -1116,7 +1116,7 @@ is.  Our theorem tells us that `y` must actually be of the form
 `K # w` for some `w`, and that there must be an arrow between
 `z` and `w`.  Thus:
 
-```
+```repl
 >> e (`?w. (y = K # w) /\ (z -||-> w)` by metis_tac [Kx_predn]);
 ```
 
@@ -1128,14 +1128,14 @@ equality in the assumption list first will make `metis_tac`'s
 job that much easier), and then first order reasoning will solve
 this goal:
 
-```
+```repl
 >> e (rw [] >> metis_tac [predn_rules]);
 ```
 
 This case involving $\SC$ is analogous.  Here's the tactic to
 apply:
 
-```
+```repl
 >> e (`?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)`
          by metis_tac [Sxy_predn] >>
       rw [] >> metis_tac [predn_rules]);
@@ -1147,14 +1147,14 @@ a theorem for already.  Let's speculatively use a call to
 (`Kxy_predn` is a disjunct so we'll get two sub-goals if we
 don't eliminate anything).
 
-```
+```repl
 >> e (rw[Kxy_predn] >> metis_tac[predn_rules]);
 ```
 
 We got both cases immediately, and have moved onto the last
 case.  We can try the same strategy.
 
-```
+```repl
 >> e (rw[Sxyz_predn] >> metis_tac [predn_rules]);
 ##assert can top_thm()
 ```

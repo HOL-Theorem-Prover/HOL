@@ -29,7 +29,7 @@ during prototyping, or if proof is not required.
 The following example illustrates the use of `HolSatLib` for
 proving propositional tautologies:
 
-```
+```repl
 >>_ load "HolSatLib"; open HolSatLib;
 >>__ val oldwidth = !linewidth;
 >>__ linewidth := 70;
@@ -58,7 +58,7 @@ The next example illustrates using `HolSatLib` for satisfiability
 testing.  The idea is to negate the target term before passing it
 to `HolSatLib`.
 
-```
+```repl
 >> SAT_PROVE ``~((a ==> b) ==> (a=b))``
    handle HolSatLib.SAT_cex th => th;
 
@@ -197,7 +197,7 @@ provided in `src/HolSat/satConfig.sig`.  For example, to invoke
 ZChaff (assuming it is installed), on a file `zchaff.cnf`
 containing a DIMACS-formatted problem, we do:
 
-```
+```repl
 >>_ open satConfig;
 
 >> val c = base_config |> set_infile "zchaff.cnf"

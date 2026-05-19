@@ -49,7 +49,7 @@ Let's get started.  First, we start the system, with the command
 means that all of the ML bindings from the HOL theory of
 arithmetic are made available at the top level.
 
-```
+```repl
 >>_ open arithmeticTheory;
 ```
 
@@ -57,7 +57,7 @@ We now begin the formalization.  In order to define the concept
 of prime number, we first need to define the *divisibility*
 relation:
 
-```
+```repl
 >> Definition divides_def: divides a b = ?x. b = a * x
    End
 ```
@@ -83,7 +83,7 @@ to be in column zero.
 
 We want to treat `divides` as a (non-associating) infix:
 
-```
+```repl
 >> set_fixity "divides" (Infix(NONASSOC, 450));
 ```
 
@@ -91,7 +91,7 @@ Next we define the property of a number being *prime*: a number
 $p$ is prime if and only if it is not equal to $1$ and it has no
 divisors other than $1$ and itself:
 
-```
+```repl
 >> Definition prime_def:
      prime p <=> p <> 1 /\ !x. x divides p ==> (x=1) \/ (x=p)
    End
@@ -121,7 +121,7 @@ proofs by using the rewriter `rw` to unwind definitions and
 perform basic simplifications, often reducing a goal to its
 essence.
 
-```
+```repl
 >> rw;
 ```
 
@@ -201,7 +201,7 @@ $\forall x.\ x\ \mathtt{divides}\ 0$. A new proposition to be
 proved is entered to the proof manager via "`g`", which starts a
 fresh goalstack:
 
-```
+```repl
 >> g `!x. x divides 0`;
 ```
 
@@ -211,20 +211,20 @@ and echoes the given goal.  Now we expand the definition of
 keep distinct the $x$ of the goal and the $x$ in the definition of
 `divides`:
 
-```
+```repl
 >> e (rw[divides_def]);
 ```
 
 It is of course quite easy to instantiate the existential
 quantifier by hand.
 
-```
+```repl
 >> e (qexists_tac `0`);
 ```
 
 Then a simplification step finishes the proof.
 
-```
+```repl
 >> e (rw[]);
 ```
 
@@ -250,7 +250,7 @@ with `>>` to form a single tactic, we can try the proof again
 from the beginning (using the `restart` function) and this time
 it will take just one step:
 
-```
+```repl
 >>_ restart();
 
 >> e (rw[divides_def] >> qexists_tac `0` >> rw[]);
@@ -265,7 +265,7 @@ definition of `divides` and find the required instantiation for
     `MULT_CLAUSES` into the interactive loop to see exactly what
     it states.
 
-```
+```repl
 >>_ restart();
 
 >> e (metis_tac [divides_def, MULT_CLAUSES]);
@@ -277,7 +277,7 @@ goalstack package, we now want to have access to the theorem
 value that we have proved.  We use the `top_thm` function to do
 this, and then use `drop` to dispose of the stack:
 
-```
+```repl
 >> val DIVIDES_0 = top_thm();
 >> drop();
 ```
@@ -358,7 +358,7 @@ to just a single invocation of `metis_tac`:
 Let's see how this is proved.  The easiest way to start is to
 simplify with the definition of `divides`:
 
-```
+```repl
 >>_ g `!m n. m divides n ==> m <= n \/ (n = 0)`;
 
 >> e (rw[divides_def]);
@@ -387,7 +387,7 @@ list of theory names is empty, then all loaded theories are
 included in the search.  Let's look in the theory of arithmetic
 for the subterm to be rewritten.
 
-```
+```repl
 >> DB.match ["arithmetic"] ``m <= m * x``;
 ```
 
@@ -397,7 +397,7 @@ the other disjunct.  Because both are so generally useful, `rw`
 already has both rewrites in its internal database, and all we
 need to do is rewrite once more to get those rewrites applied:
 
-```
+```repl
 >> e (rw[]);
 ##assert can top_thm()
 ```
@@ -411,7 +411,7 @@ This syntax names the theorem, states the goal and provides the
 tactic that will prove that goal.  It then stores the theorem in
 the current theory under the given name.
 
-```
+```repl
 >> Theorem DIVIDES_LE:
      !m n. m divides n ==> m <= n \/ (n = 0)
    Proof rw[divides_def] >> rw[]
@@ -439,7 +439,7 @@ primitive recursion:
 :   ```
       (FACT 0 = 1) /\
       (!n. FACT (SUC n) = SUC n * FACT n)
-    ```
+    ```repl
 
 A polished proof of *DIVIDES_FACT* is the
 following[^euclid-uses-extras]:
@@ -494,7 +494,7 @@ can rely on the system to accurately calculate the cases of the
 induction for us.  If the inductive case turns out to be not what
 we expect, we will have to re-think our approach.
 
-```
+```repl
 >> g `!m n. 0 < m /\ m <= n ==> m divides (FACT n)`;
 ```
 
@@ -502,7 +502,7 @@ Instead of directly inducting on $n-m$, we will induct on a
 witness variable, obtained by use of the theorem
 `LESS_EQ_EXISTS`.
 
-```
+```repl
 >> LESS_EQ_EXISTS;
 ```
 
@@ -512,7 +512,7 @@ theorem.  We might prove the restatement as a separate lemma, but
 it is probably just as easy to do this inline with the (infix)
 `suffices_by` tactic:
 
-```
+```repl
 >> e (`!m p. 0 < m ==> m divides FACT(m + p)`
         suffices_by metis_tac[LESS_EQ_EXISTS]);
 ```
@@ -522,7 +522,7 @@ the first argument does indeed imply the original goal.  If that
 tactic succeeds (as it does here), we have a new goal to prove.
 Now we can perform the induction:
 
-```
+```repl
 >> e (Induct_on `p`);
 ```
 
@@ -531,7 +531,7 @@ The first goal the system expects us to prove is the lowest one
 printed (it's closest to the cursor), the base-case.  This can
 obviously be simplified:
 
-```
+```repl
 >> e (rw[]);
 ```
 
@@ -540,7 +540,7 @@ trivial goal; if it is a successor, then we can use the
 definition of `FACT` and the theorems `DIVIDES_RMUL` and
 `DIVIDES_REFL`.
 
-```
+```repl
 >> e (Cases_on `m`);
 ```
 
@@ -551,7 +551,7 @@ $x$ is less than itself), and then passing the resulting theorem
 to `METIS_TAC`, which can combine this with the contradictory
 assumption.
 
-```
+```repl
 >> e (metis_tac [DECIDE ``!x. ~(x < x)``]);
 ```
 
@@ -565,7 +565,7 @@ the sub-goal's assumptions.  Certainly, the simplifier has
 already been primed with the irreflexivity of less-than, so this
 seems natural.  This can be done with the `fs` tactic:
 
-```
+```repl
 >>_ b();
 >> e (fs[]);
 ```
@@ -573,7 +573,7 @@ seems natural.  This can be done with the `fs` tactic:
 Using the theorems identified above the remaining sub-goal can be
 proved with the simplifier `rw`.
 
-```
+```repl
 >> e (rw [FACT, DIVIDES_LMUL, DIVIDES_REFL]);
 ```
 
@@ -581,14 +581,14 @@ Now we have finished the base case of the induction and can move
 to the step case. An obvious thing to try is simplification with
 the definitions of addition and factorial:
 
-```
+```repl
 >> e (rw [FACT, ADD_CLAUSES]);
 ```
 
 And now, by `DIVIDES_RMUL` and the inductive hypothesis, we are
 done:
 
-```
+```repl
 >> e (rw[DIVIDES_RMUL]);
 ##assert can top_thm()
 ```
@@ -599,7 +599,7 @@ invocations we have just made. We assume that the sequence of
 invocations has been kept track of in a file or a text editor
 buffer. We would thus have something like the following:
 
-```
+```repl
 >>__ restart();
 ##eval e (`!m p. 0 < m ==> m divides FACT (m + p)`
             suffices_by metis_tac[LESS_EQ_EXISTS]);
@@ -621,7 +621,7 @@ We have added a numbering scheme to keep track of the branches in
 the proof. We can stitch the above together directly into the
 following compound tactic:
 
-```
+```repl
 ##eval[tac] `!m p.  0 < m ==> m divides FACT (m + p)`
               suffices_by metis_tac[LESS_EQ_EXISTS] >>
             Induct_on `p`
@@ -643,7 +643,7 @@ subproofs can be nested, as illustrated in the base case.
 
 This can be tested to see that we have made no errors:
 
-```
+```repl
 >>_ restart();
 >> e (`!m p.  0 < m ==> m divides FACT (m + p)`
                 suffices_by metis_tac[LESS_EQ_EXISTS] >>
@@ -665,7 +665,7 @@ that this tactic could be shortened.
 One obvious step would be to merge the two successive invocations
 of the simplifier in the step case:
 
-```
+```repl
 ##eval[tac] `!m p.  0 < m ==> m divides FACT (m + p)`
               suffices_by metis_tac[LESS_EQ_EXISTS] >>
             Induct_on `p`
@@ -685,7 +685,7 @@ precede the first `>-`, using `>>`.  When the `Induct` tactic
 generates two sub-goals, the step case's simplification will be
 applied to both of them:
 
-```
+```repl
 >>_ restart();
 >> e (`!m p.  0 < m ==> m divides FACT (m + p)`
          suffices_by metis_tac[LESS_EQ_EXISTS] >>
@@ -696,7 +696,7 @@ The step case has been dealt with, and as we hoped the base case
 has not been changed at all.  This means that our tactic can
 become
 
-```
+```repl
 ##eval[it] `!m p.  0 < m ==> m divides FACT (m + p)`
              suffices_by metis_tac[LESS_EQ_EXISTS] >>
            Induct_on `p` >>
@@ -724,7 +724,7 @@ confident that using `fs` in the same place would also work.
 Thus, we can merge the two sub-cases of the base-case into a
 single invocation of `fs`:
 
-```
+```repl
 ##eval[tac] `!m p.  0 < m ==> m divides FACT (m + p)`
               suffices_by metis_tac[LESS_EQ_EXISTS] >>
             Induct_on `p` >>
@@ -750,7 +750,7 @@ proof is really by induction on $n - m$. Can we express this
 directly? The answer is a qualified yes: the induction can be
 naturally stated, but it leads to somewhat less natural goals.
 
-```
+```repl
 >>_ restart();
 >> e (Induct_on `n - m`);
 ```
@@ -761,7 +761,7 @@ simplifier to strip both arms of the proof.  As before, use of
 induction.  (We might also use `rpt strip_tac` if we *didn't*
 want the simplification to happen.)
 
-```
+```repl
 >>_ b();
 >> e (Induct_on `n - m` >> rw[]);
 ```
@@ -770,14 +770,14 @@ Looking at the first goal, we can see (by the anti-symmetry of
 $\le$) that $m = n$.  We can prove this fact, using `rw` and add
 it to the hypotheses by use of the infix operator "`by`":
 
-```
+```repl
 >> e (`m = n` by rw[]);
 ```
 
 We can now use simplification again to propagate the newly
 derived equality throughout the goal.
 
-```
+```repl
 >> e (rw[]);
 ```
 
@@ -806,13 +806,13 @@ it easy for the simplifier to prove the goal.
 
 Thus:
 
-```
+```repl
 >> e (`?k. m = SUC k` by (Cases_on `m` >> fs[]));
 ```
 
 Now the tactic we used before can finish this off:
 
-```
+```repl
 >> e (fs[FACT, DIVIDES_LMUL, DIVIDES_REFL]);
 ```
 
@@ -822,14 +822,14 @@ can make progress by realizing that the hypotheses imply that
 $0 < n$ and so we can transform $n$ into a successor, thus
 enabling the unfolding of `FACT`, as in the previous proof:
 
-```
+```repl
 >> e (`0 < n` by rw[] >> `?k. n = SUC k` by (Cases_on `n` >> fs[]));
 ```
 
 The proof now finishes in much the same manner as the previous
 one:
 
-```
+```repl
 >> e (rw [FACT, DIVIDES_RMUL]);
 ##assert can top_thm()
 ```
@@ -848,7 +848,7 @@ all primes are positive. These are all quite simple to prove.
 :   `~prime 0`
 :   `rw[prime_def,DIVIDES_0]`
 
-```
+```repl
 >>__ val NOT_PRIME_0 = prove(``~prime 0``, rw[prime_def, DIVIDES_0])
 ```
 
@@ -857,7 +857,7 @@ all primes are positive. These are all quite simple to prove.
 :   `~prime 1`
 :   `rw[prime_def]`
 
-```
+```repl
 >>__ val NOT_PRIME_1 = prove(``~prime 1``, rw[prime_def])
 ```
 
@@ -868,7 +868,7 @@ all primes are positive. These are all quite simple to prove.
     rw[prime_def] >>
     metis_tac [DIVIDES_LE, DIVIDES_ZERO, DECIDE ``2<>0``,
                DECIDE ``x <= 2 <=> (x=0) \/ (x=1) \/ (x=2)``]
-    ```
+    ```repl
 
 ```
 >>__ val PRIME_2 = prove(``prime 2``,
@@ -921,7 +921,7 @@ We start by invoking complete induction. This gives us an
 inductive hypothesis that holds at every number $m$ strictly
 smaller than $n$:
 
-```
+```repl
 >>__ proofManagerLib.dropn (case proofManagerLib.status() of
        Manager.PRFS l => List.length l)
 >> g `!n. n <> 1 ==> ?p. prime p /\ p divides n`;
@@ -933,21 +933,21 @@ We can move the antecedent to the hypotheses and make our case
 split. Notice that the term given to `Cases_on` need not occur in
 the goal:
 
-```
+```repl
 >> e (rw[] >> Cases_on `prime n`);
 ```
 
 As mentioned, the first case is proved with the reflexivity of
 divisibility:
 
-```
+```repl
 >>_ e (metis_tac [DIVIDES_REFL]);
 ```
 
 In the second case, we can get a divisor of $n$ that isn't $1$ or
 $n$ (since $n$ is not prime):
 
-```
+```repl
 >> e (`?x. x divides n /\ x<>1 /\ x<>n` by metis_tac [prime_def]);
 ```
 
@@ -957,7 +957,7 @@ exposition.  Given the hypotheses, and by *DIVIDES_LE*, we can
 assert $x < n \lor n = 0$ and thus split the proof into two
 cases:
 
-```
+```repl
 >> e (`x < n \/ (n=0)` by metis_tac [DIVIDES_LE,LESS_OR_EQ]);
 ```
 
@@ -967,25 +967,25 @@ can then use the transitivity of divisibility to get the fact
 that this divisor of $x$ is also a divisor of $n$, thus finishing
 this branch of the proof:
 
-```
+```repl
 >> e (metis_tac [DIVIDES_TRANS]);
 ```
 
 The remaining goal can be clarified by simplification:
 
-```
+```repl
 >> e (rw[]);
 ```
 
 We know that everything divides 0:
 
-```
+```repl
 >> DIVIDES_0;
 ```
 
 So any prime will do for `p`.
 
-```
+```repl
 >> e (metis_tac [PRIME_2, DIVIDES_0]);
 >>__ val PRIME_FACTOR = top_thm();
 ```
@@ -1045,7 +1045,7 @@ and then is passed to the tactic `strip_assume_tac`.  This moves
 its argument to the assumption list of the goal after eliminating
 the existential quantification on $n$.
 
-```
+```repl
 >>_ g `!n. ?p. n < p /\ prime p`;
 
 >> e (spose_not_then strip_assume_tac);
@@ -1070,7 +1070,7 @@ instantiation are:[^euclid-spec-rule]
 [^euclid-spec-rule]: The function `SPEC` implements the rule of
     universal specialization.
 
-```
+```repl
 >> PRIME_FACTOR;
 
 >> val th = SPEC ``FACT n + 1`` PRIME_FACTOR;
@@ -1083,7 +1083,7 @@ proving $\vdash \neg(\mathtt{FACT}\ n + 1 = 1)$ and then applying
 proof), or one could bring `th` into the proof and simplify it
 *in situ*. We choose the latter approach.
 
-```
+```repl
 >> e (mp_tac (SPEC ``FACT n + 1`` PRIME_FACTOR));
 ```
 
@@ -1091,7 +1091,7 @@ The invocation `mp_tac` ($\vdash M$) applied to a goal
 $(\Delta, g)$ returns the goal $(\Delta, M \Rightarrow g)$.  Now
 we simplify:
 
-```
+```repl
 >> e (rw[]);
 ```
 
@@ -1099,7 +1099,7 @@ We recall that zero is less than every factorial, a fact found in
 `arithmeticTheory` under the name `FACT_LESS`. Thus we can solve
 the top goal by simplification:
 
-```
+```repl
 >> e (rw[FACT_LESS, DECIDE ``!x. x<>0 <=> 0 < x``]);
 ```
 
@@ -1115,7 +1115,7 @@ oriented right to left by use of `GSYM`.[^euclid-gsym]
 [^euclid-gsym]: Loosely speaking, `GSYM` swaps the left and right
     hand sides of any equations it finds.
 
-```
+```repl
 >> IMP_DISJ_THM;
 
 >> e (rw[GSYM IMP_DISJ_THM]);
@@ -1127,7 +1127,7 @@ divides `FACT n + 1`, then $p$ divides 1, meaning that $p = 1$.
 But then $p$ is not prime, at which point we are done.  This can
 all be packaged into a single invocation of `METIS_TAC`:
 
-```
+```repl
 >> e (metis_tac [DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE,
                  NOT_PRIME_1, NOT_LESS, PRIME_POS]);
 ```
