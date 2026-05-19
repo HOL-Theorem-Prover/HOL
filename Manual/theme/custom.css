@@ -36,3 +36,12 @@
   padding-left: 0.4em;
   padding-right: 0.4em;
 }
+
+/* mdbook 0.5.x adds a dynamic <div class="on-this-page"> sub-list
+   under the active chapter, built from the body's H2/H3 headings.
+   It duplicates the SUMMARY.md-driven subsection list our index.hbs
+   already turns into clickable, numbered anchors, so suppress it
+   for the active chapter. */
+.on-this-page {
+  display: none;
+}

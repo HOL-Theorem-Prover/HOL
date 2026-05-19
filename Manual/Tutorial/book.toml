@@ -7,7 +7,7 @@ src = "."
 [output.html]
 mathjax-support = true
 theme = "../theme"
-additional-css = ["../theme/custom.css"]
+additional-css = ["custom.css"]
 
 # Sidebar entries fold by default beyond the top level: top-level
 # chapters stay visible, per-chapter section sub-entries (1.1, 1.2,

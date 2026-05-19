@@ -39,9 +39,9 @@
         {{/if}}
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" id="highlight-css" href="{{ resource "highlight.css" }}">
-        <link rel="stylesheet" id="tomorrow-night-css" href="{{ resource "tomorrow-night.css" }}">
-        <link rel="stylesheet" id="ayu-highlight-css" href="{{ resource "ayu-highlight.css" }}">
+        <link rel="stylesheet" id="mdbook-highlight-css" href="{{ resource "highlight.css" }}">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="{{ resource "tomorrow-night.css" }}">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="{{ resource "ayu-highlight.css" }}">
 
         <!-- Custom theme stylesheets -->
         {{#each additional_css}}
@@ -147,47 +147,34 @@
                        .replace(/ /g, '-')
                        .replace(/^-+|-+$/g, '');
           }
-          // Walk up nested ol.section lists until we hit the
-          // top-level ol.chapter; the chapter's <a href> is the
-          // previous-sibling <li> of the outermost section's
-          // wrapper <li>.  Works for any nesting depth (H2, H3,
-          // H4, ...).
-          function findChapterHref(ol) {
-            let current = ol;
-            while (current) {
-              const wrapperLi = current.parentElement;
-              if (!wrapperLi) return null;
-              const parentOl = wrapperLi.parentElement;
-              if (!parentOl) return null;
-              if (!parentOl.classList.contains('section')) {
-                // parentOl is the top-level chapter list.
-                let prev = wrapperLi.previousElementSibling;
-                while (prev && !prev.querySelector('a[href]')) {
-                  prev = prev.previousElementSibling;
-                }
-                const a = prev && prev.querySelector('a[href]');
-                return a ? a.getAttribute('href') : null;
-              }
-              current = parentOl;
+          // Walk up from a draft <li> through enclosing ol.section /
+          // li.chapter-item pairs until we reach an ancestor li whose
+          // own wrapper span carries an <a href> -- that's the
+          // chapter (mdbook 0.5.x puts the chapter's wrapper and its
+          // sub-sections' ol.section as sibling children of the same
+          // li.chapter-item).
+          function findChapterHref(draftLi) {
+            let li = draftLi.parentElement;        // ol.section
+            while (li) {
+              li = li.parentElement;               // li.chapter-item or ol.chapter
+              if (!li || li.tagName !== 'LI') return null;
+              const a = li.querySelector(
+                ':scope > span.chapter-link-wrapper > a[href]');
+              if (a) return a.getAttribute('href');
+              li = li.parentElement;               // ol.section (next level up)
             }
             return null;
           }
           // Same-page anchor navigation doesn't trigger toc.js's
-          // active-link / .expanded logic.  Mirror what toc.js does
-          // for an active chapter link: mark this li, plus any
-          // previous-sibling chapter-item li of every ancestor li
-          // (the chapter / parent-section), as `expanded`.  Matches
-          // the structure mdbook generates and the walk in toc.js.
+          // active-link / .expanded logic.  Mark every ancestor
+          // li.chapter-item along the parent chain as `expanded` --
+          // the same walk mdbook 0.5.x's toc.js does for the active
+          // chapter on page load.
           function expandAncestors(node) {
             while (node) {
-              if (node.matches && node.matches('li.chapter-item')) {
-                node.classList.add('expanded');
-              }
               if (node.tagName === 'LI'
-                  && node.previousElementSibling
-                  && node.previousElementSibling.classList
-                          .contains('chapter-item')) {
-                node.previousElementSibling.classList.add('expanded');
+                  && node.classList.contains('chapter-item')) {
+                node.classList.add('expanded');
               }
               node = node.parentElement;
             }
@@ -199,24 +186,30 @@
           // time (the path to the current section).
           function collapseAllExpanded() {
             document.querySelectorAll(
-              '#sidebar li.chapter-item.expanded'
+              '#mdbook-sidebar li.chapter-item.expanded'
             ).forEach(function (li) {
               li.classList.remove('expanded');
             });
           }
           function rewrite() {
-            // Only the leaf <li><div> entries in each section ol
-            // need rewriting (deeper section ols are handled when
-            // their own iteration runs).  Rewriting the same div
-            // twice is harmless but wasteful.
-            document.querySelectorAll('ol.section > li > div')
-                    .forEach(function (div) {
-              if (div.parentNode.querySelector('a[href]')) return;
-              const ol = div.parentNode.parentNode;     // outer ol
-              const parentHref = findChapterHref(ol);
+            // mdbook 0.5.x renders a draft sub-entry as
+            //   <li><span class="chapter-link-wrapper"><span>1.1. Title</span>
+            //       [<a class="chapter-fold-toggle">]</span></li>
+            // (the inner <span> is the title; clickable entries use
+            // <a href> in its place).  Replace the inner <span> with
+            // an <a> pointing at the chapter's matching heading
+            // anchor.  Leaves the surrounding wrapper / fold-toggle
+            // untouched.
+            document.querySelectorAll(
+              'ol.section > li > span.chapter-link-wrapper > span:first-child'
+            ).forEach(function (titleSpan) {
+              const wrapper = titleSpan.parentElement;
+              if (wrapper.querySelector('a[href]')) return;
+              const draftLi = wrapper.parentElement;
+              const parentHref = findChapterHref(draftLi);
               if (!parentHref) return;
               // Strip the section-number prefix ("1.1.") to get the title.
-              const full = div.textContent.trim();
+              const full = titleSpan.textContent.trim();
               const m = full.match(/^[\d.]+\s*(.+)$/);
               const title = m ? m[1] : full;
               const anchor = slugify(title);
@@ -225,10 +218,10 @@
               a.setAttribute('target', '_parent');
               a.addEventListener('click', function () {
                 collapseAllExpanded();
-                expandAncestors(a.parentElement);
+                expandAncestors(draftLi);
               });
-              while (div.firstChild) a.appendChild(div.firstChild);
-              div.parentNode.replaceChild(a, div);
+              while (titleSpan.firstChild) a.appendChild(titleSpan.firstChild);
+              titleSpan.parentNode.replaceChild(a, titleSpan);
             });
           }
           // If the URL already carries a #hash (either from a fresh
@@ -266,22 +259,28 @@
                 numbersBySlug.set(slugify(m[2]), m[1]);
               }
             }
-            // mdbook puts a chapter's sub-section <ol class="section">
-            // in the <li> that immediately follows the chapter's own
-            // <li> in the top-level <ol class="chapter">.  Walk only
-            // *that* sub-list, so we don't pick up other chapters'
-            // numbers for headings that share text with ours.
+            // mdbook 0.5.x puts the chapter's wrapper span and its
+            // sub-section <ol class="section"> as sibling children of
+            // the same <li class="chapter-item">.  Scope the
+            // section-entry walk to *that* ol.section so we don't pick
+            // up other chapters' numbers for headings that share text
+            // with ours.
             let sectionsRoot = null;
             if (active) {
               const chapterLi = active.closest('li.chapter-item');
-              const next = chapterLi && chapterLi.nextElementSibling;
-              if (next) sectionsRoot = next.querySelector('ol.section');
+              if (chapterLi) {
+                sectionsRoot = chapterLi.querySelector(':scope > ol.section');
+              }
             }
             const scope = sectionsRoot || document;
-            // Sidebar section entries are either <a> (post-rewrite) or
-            // <div> (pre-rewrite); both work for textContent.
-            scope.querySelectorAll('ol.section li > a, ol.section li > div')
-                 .forEach(function (el) {
+            // Sidebar section entries' title sits inside
+            // <span class="chapter-link-wrapper">, as either an <a>
+            // (clickable or post-rewrite) or an inner <span>
+            // (pre-rewrite draft); both work for textContent.
+            scope.querySelectorAll(
+              'ol.section li > span.chapter-link-wrapper > a,'
+              + 'ol.section li > span.chapter-link-wrapper > span:first-child'
+            ).forEach(function (el) {
               const txt = (el.textContent || '').trim();
               const m = txt.match(/^([\d.]+)\s*(.+)$/);
               if (!m) return;
@@ -313,7 +312,9 @@
           // briefly to catch the late-rendered case.
           let tries = 0;
           const iv = setInterval(function () {
-            if (document.querySelectorAll('ol.section li > div').length > 0
+            if (document.querySelectorAll(
+                  'ol.section li > span.chapter-link-wrapper > span'
+                ).length > 0
                 || document.querySelectorAll(
                      'main h1:not([data-numbered]), '
                    + 'main h2:not([data-numbered]), '
@@ -339,7 +340,7 @@
             </div>
         </div>
     </div>
-    <div id="body-container">
+    <div id="mdbook-body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
@@ -368,12 +369,12 @@
             html.classList.add("js");
         </script>
 
-        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
             let sidebar = null;
-            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
@@ -388,40 +389,40 @@
             }
         </script>
 
-        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
                 <iframe class="sidebar-iframe-outer" src="{{ path_to_root }}toc.html"></iframe>
             </noscript>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
             </div>
         </nav>
 
-        <div id="page-wrapper" class="page-wrapper">
+        <div id="mdbook-page-wrapper" class="page-wrapper">
 
             <div class="page">
                 {{> header}}
-                <div id="menu-bar-hover-placeholder"></div>
-                <div id="menu-bar" class="menu-bar sticky">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
-                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
                             <i class="fa fa-bars"></i>
                         </label>
-                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
                             <i class="fa fa-paint-brush"></i>
                         </button>
-                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
                         </ul>
                         {{#if search_enabled}}
-                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                         {{/if}}
@@ -450,18 +451,18 @@
                 </div>
 
                 {{#if search_enabled}}
-                <div id="search-wrapper" class="hidden">
-                    <form id="searchbar-outer" class="searchbar-outer">
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
                         <div class="search-wrapper">
-                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
                             <div class="spinner-wrapper">
                                 <i class="fa fa-spinner fa-spin"></i>
                             </div>
                         </div>
                     </form>
-                    <div id="searchresults-outer" class="searchresults-outer hidden">
-                        <div id="searchresults-header" class="searchresults-header"></div>
-                        <ul id="searchresults">
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
                         </ul>
                     </div>
                 </div>
@@ -469,14 +470,14 @@
 
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
                 <script>
-                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
-                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
-                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
                         link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
                     });
                 </script>
 
-                <div id="content" class="content">
+                <div id="mdbook-content" class="content">
                     <main>
                         {{{ content }}}
                     </main>
