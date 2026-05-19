@@ -2803,6 +2803,37 @@ Proof
  >> Q.EXISTS_TAC ‘q’ >> rw []
 QED
 
+Theorem subterm_width_of_unsolvables :
+    !M p. unsolvable M ==> subterm_width M p = 0
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘p = []’ >- simp [subterm_width_nil]
+ >> rw [subterm_width_def]
+ >> Know ‘{q | q <<= p} = [] INSERT {q | q <<= p /\ q <> []}’
+ >- (rw [Once EXTENSION] \\
+     EQ_TAC >> rw [] >> simp [])
+ >> Rewr'
+ >> simp [IMAGE_INSERT]
+ >> qmatch_abbrev_tac ‘MAX_SET (0 INSERT s) = 0’
+ >> Know ‘FINITE s’
+ >- (qunabbrev_tac ‘s’ \\
+     irule IMAGE_FINITE \\
+     MATCH_MP_TAC FINITE_SUBSET \\
+     Q.EXISTS_TAC ‘{q | q <<= p}’ >> simp [FINITE_prefix] \\
+     SET_TAC [])
+ >> DISCH_TAC
+ >> simp [MAX_SET_THM]
+ >> Suff ‘s = {0}’ >- simp []
+ >> POP_ASSUM K_TAC
+ >> rw [Once EXTENSION, Abbr ‘s’]
+ >> reverse EQ_TAC
+ >- (rw [] \\
+     Q.EXISTS_TAC ‘p’ \\
+     simp [subterm_of_unsolvables])
+ >> rw []
+ >> simp [subterm_of_unsolvables]
+QED
+
 Theorem subterm_width_tpm :
     !X M p r pi.
          FINITE X /\ FV M SUBSET X UNION RANK r /\
@@ -6950,11 +6981,10 @@ Proof
 QED
 
 Theorem FV_apply_Boehm_construction :
-    !X Ms p r.
-       FINITE X /\ p <> [] /\ 0 < r /\ Ms <> [] /\
-       BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r ==>
-       !M. MEM M Ms ==>
-           FV (apply (Boehm_construction X Ms p) M) SUBSET X UNION RANK r
+    !X Ms p r. FINITE X /\ 0 < r /\
+               BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r ==>
+           !M. MEM M Ms ==>
+               FV (apply (Boehm_construction X Ms p) M) SUBSET X UNION RANK r
 Proof
     rpt GEN_TAC >> STRIP_TAC
  >> Q.X_GEN_TAC ‘N’
