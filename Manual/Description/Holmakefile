@@ -117,9 +117,8 @@ description.pdf: $(TEX_SOURCES)
 
 # Pattern rules for the per-chapter .smd -> .md -> .tex pipeline.
 # Hand-rolled .tex front matter (description.tex, title.tex,
-# preface.tex, latex-munger.tex) is safe: Holmake skips pattern
-# rules whose prereqs don't exist (see misc.smd's pattern-rule
-# applicability note).
+# preface.tex) is safe: Holmake skips pattern rules whose prereqs
+# don't exist (see misc.smd's pattern-rule applicability note).
 %.md: %.smd
 	$(PS_NOUMAP)
 

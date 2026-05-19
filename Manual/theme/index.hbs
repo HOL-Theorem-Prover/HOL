@@ -101,7 +101,13 @@
                 con: ["{\\mathsf{#1}}", 1],
                 KC: ["{\\mathsf{K}}"],
                 SC: ["{\\mathsf{S}}"],
-                mathpredn: ["\\mathbin{-\\!\\!\\!\\mid\\mid\\!\\rightarrow}"]
+                mathpredn: ["\\mathbin{-\\!\\!\\!\\mid\\mid\\!\\rightarrow}"],
+                // \infer from proof.sty (used in latex-munger.smd's
+                // examples of the `rule` and `stackedrule` options).
+                // The premises are passed in #2, ampersand-separated;
+                // wrap them in a matrix so MathJax accepts the &s and
+                // lays the premises side-by-side over the conclusion.
+                infer: ["{\\dfrac{\\begin{matrix}#2\\end{matrix}}{#1}}", 2]
               }
             }
           });

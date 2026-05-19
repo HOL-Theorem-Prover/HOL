@@ -58,3 +58,4 @@ libraries
   enumfset
 modern-syntax
 misc
+  latex-munger

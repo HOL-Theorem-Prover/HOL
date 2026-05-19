@@ -1,0 +1,974 @@
+## Embedding HOL in LaTeX
+
+\label{sec:embedding-hol-in-latex}
+\index{LaTeX@\LaTeX!embedding HOL@embedding in \HOL{}|(}
+
+When writing documents in LaTeX about one's favourite HOL
+development, one frequently wants to include pretty-printed terms,
+types and theorems from that development.  Done manually, this will
+typically require involved use of the `alltt` environment, and
+cutting and pasting from a HOL session or theory file.  The result
+is that one must also keep two copies of HOL texts synchronised: if
+the HOL development changes, the LaTeX document should change as
+well.
+
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})}
+This manual, and error-prone process is not necessary: the standard
+HOL distribution comes with a tool called `munge.exe` to automate
+the process, and to remove the duplicate copies of HOL text.
+(Strictly speaking, the distribution comes with a tool that itself
+creates `munge.exe`; see Section \ref{sec:munger-creation} below.)
+
+The basic philosophy is that a LaTeX document can be written “as
+normal”, but that three new LaTeX-like commands are available to the
+author.  The commands are not really processed by LaTeX: instead the
+source file must first be passed through the `munge.exe` filter.
+For example, one might write a document called `article.htex`.  This
+document contains instances of the new commands, and cannot be
+processed as is by LaTeX.  Instead one first runs
+
+```
+munge.exe < article.htex > article.tex
+```
+
+and then runs LaTeX on `article.tex`.  One would probably automate
+this process with a makefile of course.
+
+### Munging commands
+
+\label{sec:munging-commands}
+
+**Before starting.**  In order to use the munger, one must “include”
+(use the `\usepackage` command) the `holtexbasic.sty` style-file,
+which is found in the HOL source directory `src/TeX`.
+
+There are then three commands for inserting text corresponding to
+HOL entities into LaTeX documents: `\HOLtm`, `\HOLty` and `\HOLthm`.
+Each takes one argument, specifying something of the corresponding
+HOL type.  In addition, options can be specified in square brackets,
+just as would be done with a genuine LaTeX command.  For example,
+one can write
+
+```
+\HOLtm[tt]{P(SUC n) /\ q}
+```
+
+and one will get
+$$
+\texttt{$P$ (SUC $n$) $\land$ $q$}
+$$
+
+or something very close to it, appearing in the resulting
+document.[^lm-tt-output]  Note how the spacing in the input (nothing
+between the `P` and the `SUC n`) is *not* reflected in the output;
+this is because the input is parsed and pretty-printed with HOL.
+This means that if the HOL input is malformed, the `munge.exe`
+program will report errors.  Note also how the system knows that
+`P`, `n` and `q` are variables, and that `SUC` is not.  This
+analysis would not be possible without having HOL actually parse and
+print the term itself.
+
+[^lm-tt-output]: The output is a mixture of typewriter font and
+    math-mode characters embedded in a `\texttt` block within an
+    `\mbox`.
+
+The default behaviours of each command are as follows:
+
+**`\HOLty{`*string*`}`**
+\index{HOLty (munging command)@\HOLty{} (munging command)}
+Parses the string argument as a type (the input must include the
+leading colon), and prints it.  The output is suited for inclusion
+in the normal flow of LaTeX (it is an `\mbox`).
+
+**`\HOLtm{`*string*`}`**
+\index{HOLtm (munging command)@\HOLtm{} (munging command)}
+Parses the string argument as a term, and prints it.  Again, the
+output is wrapped in an `\mbox`.
+
+**Important:** If the string argument includes a right-brace
+character (i.e., the character `}`, which has ASCII code 125), then
+it must be escaped by preceding it with a backslash (`\`).
+Otherwise, the munger's lexer will incorrectly determine that the
+argument ends at that right-brace character rather than at a
+subsequent one.
+
+**`\HOLthm{`*thmspecifier*`}`**
+\index{HOLthm (munging command)@\HOLthm{} (munging command)}
+The argument should be of the form *theory*`.`*theorem-name*.  For
+example, `\HOLthm{bool.AND_CLAUSES}`.  This prints the specified
+theorem with a leading turnstile.
+
+\index{Datatype@\ml{Datatype}!printing in LaTeX@printing in \LaTeX{}}
+However, as a special case, if the theorem specified is a “datatype
+theorem” (with a name of the form `datatype_`*type-name*), a
+BNF-style description of the given type (one that has been defined
+with `Datatype`) will be printed.  Datatype theorems with these
+names are automatically generated when `Datatype` is run.  If the
+trace `EmitTeX: print datatypes compactly` is set to 1 (see the `tr`
+option below) the description is printed in a more compact form.
+Also, if the type is a collection of nullary constants (a type
+consisting of only “enumerated constants”), then it will always be
+printed compactly.  When not compact, all of a type's constructors
+will appear on the same line, or each will be on a separate line.
+This printing machinery recognises record types (see
+Section \ref{sec:records}) and prints them appropriately.
+
+By default, the output is *not* wrapped in an `\mbox`, making it
+best suited for inclusion in an environment such as `alltt`.  (The
+important characteristics of the `alltt` environment are that it
+respects layout in terms of newlines, while also allowing the
+insertion of LaTeX commands.  The `verbatim` environment does the
+former, but not the latter.)  If using math-mode printing, the
+output should be included in a `holmath` environment or similar.
+
+**Munging command options.**
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!command options}
+There are a great many options for controlling the behaviour of each
+of these commands.  Some apply to all three commands, others are
+specific to a subset.  If multiple options are desired, they should
+be separated by commas.  For example:
+`\HOLthm[nosp,p/t,>>]{bool.AND_CLAUSES}`.
+
+**`alltt`** Makes the argument suitable for inclusion in an `alltt`
+environment.  This is the default for `\HOLthm`.
+
+**`case`** (Only for use with `\HOLtm`.)  Causes the string to be
+parsed in such a way that any embedded `case` terms are only partly
+parsed, allowing their input form to appear when they are output.
+This preserves underscore-patterns, for example.
+
+**`conj`*n*** (Only for use with `\HOLthm`.)  Extracts the *n*th
+conjunct of a theorem.  The conjuncts are numbered starting at $1$,
+not $0$.  For example,
+
+```
+\HOLthm[conj3]{bool.AND_CLAUSES}
+```
+
+extracts the conjunct $\vdash \texttt{F} \land t \iff \texttt{F}$.
+
+**`def`** (Only for use with `\HOLthm`.)  Causes the theorem to be
+split into its constituent conjuncts, for each conjunct to have any
+outermost universal quantifiers removed, and for each to be printed
+on a line of its own.  The turnstiles usually printed in front of
+theorems are also omitted, and a special form of equality is printed
+for the top-level (“defining”) equality in each clause.  This works
+well with definitions (or characterising theorems) over multiple
+data type constructors, changing
+
+```
+⊢ (FACT 0 = 1) ∧ (∀n. FACT (SUC n) = SUC n * FACT n)
+```
+
+into
+
+```
+   FACT 0 ≜ 1
+   FACT (SUC n) ≜ SUC n * FACT n
+```
+
+If the special equality is not desired, the option `nodefsym` can be
+used to turn this off.  The special equality symbol can also be
+redefined by changing the LaTeX definition of the macro
+`\HOLTokenDefEquality`.
+
+There are two variations on the `def` option:
+
+**`spaceddef`:**
+\index{spaceddef, HOL in LaTeX option@\ml{spaceddef}, \HOL{} in \LaTeX{} option}
+This option adds extra blank lines between successive conjuncts of a
+definition.
+
+**`aligneddef`:**
+\index{aligneddef, HOL in LaTeX option@\ml{aligneddef}, \HOL{} in \LaTeX{} option}
+This option puts ampersands around the `\HOLTokenDefEquality` macro
+call in the emitted LaTeX.  If the LaTeX environment is an `array`
+or similar, this can ensure a nice column-based layout for one's
+definitions.
+
+Both options can be used together, but `aligneddef` will not work if
+`nodefsym` is also used; if this combination is really required, it
+would be better to temporarily redefine (use `\renewcommand`)
+`\HOLTokenDefEquality`.
+
+**`depth`=*n*** Causes printing to be done with a maximum print
+depth of *n*; see Section \ref{sec:pretty-print-depth}.
+
+**`K`** (Only for use with `\HOLtm`.)  The argument must be the name
+of a theorem (as per the `\HOLthm` command), and the theorem should
+be of the form
+$$
+\vdash f\;x\;t
+$$
+for some term $t$.  The command prints the term $t$.
+\index{combinators, in HOL logic@combinators, in \HOL{} logic}
+\index{K, the HOL constant@\ml{K}, the \HOL{} constant}
+The expectation is that $f$ will be the combinator `K` from
+`combinTheory` (see Section \ref{sec:combinTheory}), and that $x$
+will be truth (`T`), allowing $t$ to be anything at all.  In this
+way, large complicated terms that are not themselves theorems (or
+even of boolean type), can be stored in HOL theories, and then
+printed in LaTeX documents.
+
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!math mode}
+\index{math mode (in the LaTeX munger)@math mode (in the \LaTeX{} munger)}
+**`m` *space*, `nomath`** The `m` option makes
+HOL material be typeset in “math-mode”.  In particular, the output
+of the pretty-printer will be modified so that newline characters
+are replaced by `\\` commands.  This then requires that the
+surrounding LaTeX environment be array-like, so that the `\\`
+command will have the desired effect.
+
+In addition, because raw spaces have minimal effect in math-mode
+(something like `f x` will be typeset as $f x$), math-mode munging
+also replaces spaces with math-mode macros.  By default, the command
+`\;\;` is used, but if the `m` option is followed by some
+characters, each is interpreted as a single-letter macro name, with
+each macro concatenated together to provide the space command that
+will be used.
+
+For example, if the option is `m;`, then the spacing command will
+be `\;`.  If the option is `m;!`, then the spacing command will be
+`\;\!`.  The comma character cannot be used because it conflicts
+with parsing the list of options, but one can use `c` instead, so
+that the option `mc` will make the spacing command be `\,`.
+
+The `m` option can be installed globally with the `-m` command-line
+option.  If this option is enabled globally, it can be cancelled on
+a case-by-case basis by using the `nomath` option.  The `nomath`
+option also takes precedence over any `m` options that might occur.
+
+See also the discussion about math-mode munging in
+Section \ref{sec:math-mode-munging} below.
+
+**`merge`, `nomerge`** (For use with `\HOLtm` and `\HOLthm`.)  By
+default, the HOL pretty-printer is paranoid about token-merging, and
+will insert spaces between the tokens it emits to try to ensure that
+what is output can be read in again without error.  This behaviour
+can be frustrating when getting one's LaTeX to look “just so”, so it
+can be turned off with the `nomerge` option.
+
+Additionally, this behaviour can be turned off globally with the
+`--nomergeanalysis` option to the munger.  If this has been made the
+default, it may be useful to occasionally turn the merge analysis
+back on for a particular term or theorem; this is done with the
+`merge` option.  (In interactive HOL, the token-merging analysis is
+controlled by a trace variable called `"pp_avoids_symbol_merges"`.)
+
+**`nodollarparens`** (For use with `\HOLtm` and `\HOLthm`.) Causes
+the default escaping of syntactic sugar to be suppressed.
+\index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as escape character}
+\index{tokens!suppressing parsing behaviour of}
+The default behaviour is to use parentheses, so that
+
+```
+\HOLtm{$/\ p}
+```
+
+would get printed as $(\land)\;\,p$.  Note that this doesn't
+reflect the default behaviour in the interactive loop, which is to
+use dollar-signs (as in the input above); see
+Section \ref{sec:parser:architecture}.  However, with the
+`nodollarparens` option specified, nothing at all is printed to
+indicate that the special syntax has been “escaped”.
+
+**`nosp`** (Only for use with `\HOLthm`.)  By default, arguments to
+`\HOLthm` are fully specialised (i.e., they have `SPEC_ALL` applied
+to them), removing outermost universal quantifiers.  The `nosp`
+option prevents this.
+
+**`nostile`** (Only for use with `\HOLthm`.)  By default, arguments
+to `\HOLthm` are printed with a turnstile ($\vdash$).  If this
+option is present, the turnstile is not printed (and the theorem
+will have its left margin three spaces further left).  For
+controlling how the turnstile is printed when this option is not
+present, see the paragraph on Overrides in
+Section \ref{sec:running-munger}.
+
+**`of`** (Only for use with `\HOLty`.)  The argument is a string
+that parses to a *term*, not a type.  The behaviour is to print the
+type of this term.  Thus `\HOLty[of]{p /\ q}` will print `bool`.
+
+If the string includes right-braces, they must be escaped with
+back-slashes, just as with the arguments to `\HOLtm`.
+
+**`rule`** (Only for use with `\HOLtm` and `\HOLthm`.)  Prints a
+term (or a theorem's conclusion) using the `\infer` command
+(available as part of the `proof.sty` package).  This gives a nice,
+“natural deduction” presentation.
+\index{natural deduction!presentation style for the LaTeX munger@presentation style for the \LaTeX{} munger}
+For example, the term
+
+```
+(p \/ q) /\ (p ==> r) /\ (q ==> r) ==> r
+```
+
+will print as
+$$
+\infer{r}{p \lor q & p \Rightarrow r & q \Rightarrow r}
+$$
+Conjuncts to the left of the outermost implication (if any) will be
+split into hypotheses separated by whitespace.  For large rules,
+this style of presentation breaks down, as there may not be enough
+horizontal space on the page to fit in all the hypotheses.  In this
+situation, the `stackedrule` option is appropriate.
+
+The term or theorem must be within a LaTeX math-environment (it is
+typeset as if inline, with the `tt` option).
+
+For adding a name to the rule, see the `rulename` option below.
+
+**`rulename=`*name*** (Only has an effect with `rule` or
+`stackedrule`.)  Adds *name* as the optional argument to the
+`\infer` command when typesetting the rule.  The name is wrapped
+with `\HOLRuleName`, which by default is the same as `\textsf`.  For
+ease of parsing options, *name* should not contain braces, brackets,
+or commas.  (A name including such special characters could be
+typeset by renewing the `\HOLRuleName` command.)
+
+**`showtypes`*n*** (For use with `\HOLthm` and `\HOLtm`.)  Causes
+the term or theorem to be printed with the `types` trace set to
+level *n*.  The *n* is optional and defaults to $1$ if omitted
+(equivalent to having the `show_types` reference set to `true`).
+
+**`stackedrule`** (For use with `\HOLthm` and `\HOLtm`.)  This is
+similar to the `rule` option, but causes implication hypotheses to
+be presented as a “stack”, centered in a LaTeX array on top of one
+another.  Thus,
+
+```
+(p \/ q) /\ (p ==> r) /\ (q ==> r) ==> r
+```
+
+will print as
+$$
+\infer{r}{\begin{array}{c}p \lor q \\ p \Rightarrow r \\ q \Rightarrow r\end{array}}
+$$
+For this purely propositional example with single-letter variable
+names, the result looks a little odd, but if the hypotheses are
+textually larger, this option is indispensable.
+
+For adding a name to the rule, see the `rulename` option.
+
+**`tr'`*tracename*`'=`*n*** This option allows the temporary setting
+of the provided trace to the integer value *n*.  For example, one
+can set `pp_unambiguous_comprehensions` to $1$ to ensure that set
+comprehensions are printed with bound variables explicitly
+identified.  See Section \ref{sec:set-syntax} for more on set
+comprehensions, and Section \ref{sec:traces} for more on traces.
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!when munging to LaTeX@when munging to \LaTeX{}}
+
+**`tt`** Causes the term to be type-set as the argument to a LaTeX
+command `\HOLinline`.  By default `\HOLinline` wraps its argument
+in an `\mbox` (keeping it on a single line), applies `\textup` to
+force upright shape (even inside math contexts), and sets the
+contents in typewriter font.  See `holtexbasic.sty` for the exact
+definition.
+
+This makes the argument suitable for inclusion in standard LaTeX
+positions.  This is the default for `\HOLtm` and `\HOLty`.  (The
+`\HOLinline` command is defined in the `holtexbasic.sty` style
+file.)
+
+**`width=`*n*** Causes the argument to be typeset in lines of width
+*n*.  The default width is $63$, which seems to work well with 11pt
+fonts.  This default can also be changed at the time the `munge.exe`
+command is run (see Section \ref{sec:running-munger} below).
+
+**`-`*name***
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!overloading}
+This option causes the printing of the term or theorem to be done
+with respect to a grammar that has all overloading for *name*
+removed.  When used with `\HOLty`, prints the type with all type
+abbreviations for *name* removed.  For example, the command
+`\HOLtm[-+]{x + y}` will print as
+$$
+\mathtt{arithmetic\$+}\;x\;y
+$$
+because the underlying constant will no longer map to the string
+`"+"` and, in the absence of any other mappings for it, will be
+printed as a fully qualified name.
+
+\index{integers, the HOL theory of@integers, the \HOL{} theory of}
+If the theory of integers is loaded, then the command
+`\HOLtm[-+]{x + y:int}` will print as
+$$
+\mathtt{int\_add}\;x\;y
+$$
+because the mapping from the integer addition constant to `"+"` is
+removed, but the mapping to `"int_add"` remains, allowing that form
+to be what is printed.
+
+The `-` option can be useful when complicated notation involving
+overloads is first introduced in a document.
+
+**`>>` and `>>~`** Indents the argument.  These options only make
+sense when used with the `alltt` option (the additional spaces will
+have no effect when inside an `\mbox`).  The default indentation is
+two spaces; if a different indentation is desired, the option can be
+followed by digits specifying the number of space characters
+desired.  For example, `\HOLthm[>>10,...]{...}` will indent by 10
+spaces.
+
+Note that simply placing a command such as `\HOLthm` within its
+`alltt` block with a given indentation, for example
+
+```
+\begin{alltt}
+   \HOLthm{bool.AND_CLAUSES}
+\end{alltt}
+```
+
+will not do the right thing if the output spans multiple lines.
+Rather the first line of HOL output will be indented, and the
+subsequent lines will not.  The `>>` option lets the pretty-printer
+know that it is printing with a given indentation, affecting all
+lines of its output.
+
+The version with the tilde character (`~`) does not add indentation
+to the first line of output, but adds the specified amount (again 2,
+if no number is provided) to subsequent lines.  This allows one to
+achieve suitable alignment when other non-HOL text has been put onto
+the same line.  For example,
+
+```
+  AND_CLAUSES \HOLthm[width=46,>>~12]{bool.AND_CLAUSES}
+  TRUTH       \HOLthm[>>~12]{bool.TRUTH}
+  MAP         \HOLthm[>>~12,width=50]{list.MAP}
+```
+
+ensures correct vertical alignment when extra lines are printed, as
+they will be with the printing of `bool.AND_CLAUSES` and `list.MAP`.
+
+**$nm_1$`/`$nm_2$** (For use with `\HOLtm` and `\HOLthm`.)  Causes
+name $nm_1$ to be substituted for name $nm_2$ in the term or
+theorem.  This will rename both free and bound variables, wherever
+they occur throughout a term.  Because it uses instantiation, free
+variables in theorem hypotheses will get renamed, but bound
+variables in hypotheses are not affected.  (Hypotheses are not
+printed by default anyway of course.)
+
+If $nm_1$ and $nm_2$ both begin with the colon character then they
+are parsed as types, and type instantiation is performed on the term
+or theorem argument instead of variable substitution.
+
+**$s$`//`$t$** (For use with `\HOLtm`, `\HOLthm`, and `\HOLty`)
+Causes LaTeX string $s$ to be substituted for token $t$.  This
+allows one-off manipulation of the override map (see
+Section \ref{sec:running-munger} below).  The difference between
+this operation and the “normal substitution” done with a single
+slash (as above) is that it happens as the HOL entity is printed,
+whereas normal substitution happens before pretty-printing is done.
+If printing depends on particular variable name choices, the “last
+minute” manipulations possible with this form of substitution may be
+preferable.  The width of the LaTeX string is taken to be the width
+of the original token $t$.
+
+### Math-mode munging
+
+\label{sec:math-mode-munging}
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!math mode}
+\index{math mode (in the LaTeX munger)@math mode (in the \LaTeX{} munger)}
+
+There are a few steps needed to make math-mode munging a relatively
+painless affair.  First, there are two LaTeX macros from
+`holtexbasic.sty` that should probably be overridden:
+
+**`\HOLConst`** By default this will print names in typewriter font.
+In math mode, this will probably look better in sans serif,
+suggesting
+
+```
+\renewcommand{\HOLConst}[1]{\textsf{#1}}
+```
+
+Depending on personal taste, the `\HOLKeyword` macro might be
+redefined similarly.  This macro is used for keywords such as `if`.
+
+**`\HOLinline`** This macro, used to wrap standard `\HOLtm`
+arguments, puts text into typewriter font.  One possibility for its
+redefinition would be
+
+```
+\renewcommand{\HOLinline}[1]{\ensuremath{#1}}
+```
+
+Note that if the term being typeset causes the pretty-printer to
+break over multiple lines, LaTeX will complain because of the
+appearance of `\\` commands.  If necessary, this can be avoided on a
+case-by-case basis by setting the `width` option to a larger than
+normal width.
+
+When using math-mode munging, one also has to be aware of how larger
+pieces of text will appear.  In non-math-mode munging, material is
+usually put into `alltt` environments.  The recommended alternative
+for math-mode is to use the `\HOLmath` environment:
+
+```
+article text
+
+\begin{HOLmath}
+\HOLthm{bool.AND_CLAUSES}
+\end{HOLmath}
+```
+
+This uses a standard `array` environment within a `displaymath`.
+
+Occasionally, one will want to arrange blocks of HOL material within
+a larger math context.  The `HOLarray` environment is a simple alias
+for a single-column left-aligned array that one can use in these
+situations.
+
+### Creating a munger
+
+\label{sec:munger-creation}
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!creating a munger}
+
+The HOL distribution comes with a tool called `mkmunge.exe`.  This
+executable is used to create munge executables that behave as
+described in this section.  A typical invocation of `mkmunge.exe`
+is
+
+```
+mkmunge.exe <thy_1>Theory ... <thy_n>Theory
+```
+
+Each commandline argument to `mkmunge.exe` is the name of a HOL
+object file, so in addition to theory files, one can also include
+special purpose SML such as `monadsyntax`.
+
+The `mkmunge.exe` program can also take an optional `-o` argument
+that is used to specify the name of the output munger (the default
+is `munge.exe`).  For example
+
+```
+mkmunge.exe -o bagtexprocess bagTheory
+```
+
+The theories specified as arguments to `mkmunge.exe` determine what
+theorems are in scope for calls to `\HOLthm`, and also determine the
+grammars that will govern the parsing and printing of the HOL types,
+terms and theorems.
+
+Under Poly/ML, the `mkmunge.exe` executable also takes an optional
+`-b` option that can be used to specify a heap (see
+Section \ref{sec:polyml-heaps}) to use as a base.  Doing so allows
+for the incorporation of many theories at once, and will be more
+efficient than loading the heap's theories separately on top of the
+default HOL heap.  The use of a base heap argument to `mkmunge.exe`
+doesn't affect the efficiency of the resulting munging tool.
+
+Building and running a munger is typically something that one would
+want to do under the control of `Holmake`.  A miniature example of
+such a file is presented in Figure \ref{fig:holmake-munger}.  See
+Section \ref{Holmake} for more on `Holmake`'s capabilities.
+
+```{=latex}
+\begin{figure}
+\begin{alltt}
+INCLUDES = dir1 dir2
+
+all: paper.pdf
+.PHONY: all
+
+munge.exe: prettyPrintingTheory.uo
+        $(HOLDIR)/bin/mkmunge.exe -o $@ $<
+
+paper.pdf: paper.tex paper.bib
+        latexmk -pdf $<
+
+paper.tex: paper.htex overrides holtexbasic.sty munge.exe Holmakefile
+        ./munge.exe -w60 -m\textbackslash{}; overrides < $< > $@
+
+holtexbasic.sty: $(dprot $(HOLDIR)/src/TeX/holtexbasic.sty)
+        cp $< $@
+
+EXTRA_CLEANS = holtexbasic.sty munge.exe paper.pdf paper.tex
+\end{alltt}
+\caption{%
+A sample Holmakefile for building a paper that incorporates HOL
+material, where the user-written material is in the file
+\texttt{paper.htex} and a bibliography file \texttt{paper.bib}.
+This sample assumes that \texttt{prettyPrintingTheory} incorporates
+ancestor theories (presumably drawing from directories
+\texttt{dir1} and \texttt{dir2}), as well as paper-specific grammar
+changes (e.g., calls to \texttt{add\_rule}, \texttt{set\_fixity}).
+As with all Holmakefiles, the indentation under each target
+(\texttt{munge.exe}, \texttt{paper.pdf}, etc.) must be achieved with
+a TAB character.  For more on the options passed to
+\texttt{munge.exe}, see Section~\ref{sec:running-munger} below.
+}
+\label{fig:holmake-munger}
+\end{figure}
+```
+
+### Running a munger
+
+\label{sec:running-munger}
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!running a munger}
+
+Once created, a munger can be run as a filter command, consuming its
+standard input, and writing to standard output.  It may also write
+error messages and warnings to its standard error.
+
+Thus, a standard pattern of use is something like
+
+```
+munge.exe < article.htex > article.tex
+```
+
+However, there are a number of ways of further modifying the
+behaviour of the munger with command-line options.
+
+**Overrides.**  Most importantly, one can specify an “overrides
+file” to provide token-to-LaTeX replacements of what is
+pretty-printed.  The command-line would then look like
+
+```
+munge.exe overrides_file < article.htex > article.tex
+```
+
+The overrides file is a text file containing lines of the form
+
+```
+tok width tex
+```
+
+where `tok` is a HOL token, `width` is a number giving the width of
+the LaTeX, and `tex` is a LaTeX string.
+
+As a very simple example, an overrides file might consist of just
+one line:
+
+```
+pi1 2 \ensuremath{\pi_1}
+```
+
+This would cause the string `pi1` (presumably occurring in the
+various HOL entities as a variable name) to be replaced with the
+rather prettier $\pi_1$.  The `2` records the fact that the printer
+should record the provided LaTeX as being 2 characters wide.  This
+is important for the generation of reasonable line-breaks.
+
+Overrides for HOL tokens can also be provided within HOL theories,
+using the `TeX_notation` command (see
+Section \ref{sec:holtheories-tex-ready} below).
+
+By overriding the special token `$Turnstile$`, one can control the
+printing of the turnstile produced by `\HOLthm`.  The default setup
+is roughly equivalent to overriding `$Turnstile$` to
+`\HOLTokenTurnstile{}` followed by a space, giving a total width of
+`3`.  Overriding the turnstile in this way will probably be
+necessary in math-mode printing, where the turnstile character is
+typically of the same width as 5 `\;` invocations.  Providing the
+correct width is important in order to get lines past the first to
+line up with the left edge of the mathematical text rather than the
+turnstile.
+
+**Default width.**  A munger can specify the default width in which
+HOL will print its output with a `-w` option.  For example,
+
+```
+munge.exe -w70 < article.htex > article.tex
+```
+
+This default width can be overridden on a case-by-case basis with
+the `width=` option to any of the commands within a LaTeX document.
+
+**Preventing Merge Analysis.**  As mentioned above in the
+description of the `merge` and `nomerge` options to the `\HOLtm` and
+`\HOLthm` commands, the munger can be configured to not do
+token-merging avoidance by passing the `--nomergeanalysis` option to
+the munger.
+
+The `-w`, `--nomergeanalysis` and overrides file options can be
+given in any order.
+
+**Setting Math-mode Spacing.**  If one expects to include all of
+the various `\HOL` commands in LaTeX math contexts (as described
+above), then the `-m` option both sets the default width for
+math-mode spaces, and also enables math-mode typesetting by default.
+
+The specification of spacing is with a string of characters, as
+already described.  Note that if the command-line option includes
+any semi-colons or exclamation marks (e.g., `-mc;`), then they need
+to be quoted to prevent the shell from getting confused.  If the
+`-m` option appears without any additional characters, the default
+math-mode spacing will be `\;\;`.
+
+### Holindex
+
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!Holindex}
+
+Till now, it has been explained how the munger can be used as a
+preprocessor of LaTeX sources.  Sometimes a tighter interaction with
+LaTeX is beneficial.  Holindex is a LaTeX package that provides
+genuine LaTeX commands for inserting HOL-theorems, types and terms
+as well as many related commands.  This allows it to generate an
+index of all HOL-theorems, types and terms that occur in the
+document as well as providing citation commands for HOL entities in
+this index.  Holindex can be found in `src/TeX/`.  There is also a
+demonstration file available in this directory.
+
+**Using Holindex.**  To use Holindex add `\usepackage{holindex}` to
+the header of the LaTeX source file `article.tex`. Holindex loads
+the `underscore` package which might cause trouble with references
+and citations. In order to avoid problems, `holindex` should be
+included after packages like `natbib`. Holindex is used like BibTex
+or MakeIndex. A run of LaTeX on `jobname.tex` creates an auxiliary
+file called `article.hix`. The munger is used to process this file
+via
+
+```
+munge.exe -index article
+```
+
+This call generates two additional auxiliary files, `article.tde`
+and `article.tid`.  The following runs of LaTeX use these files.
+After modifying the source file, the munger can be rerun to update
+`article.tde` and `article.tid`.  If you are using emacs with AUCTeX
+to write your latex files, you might want to add
+
+```
+(eval-after-load "tex" '(add-to-list 'TeX-command-list
+   '("Holindex" "munge.exe -index %s"
+     TeX-run-background t t :help "Run Holindex") t))
+```
+
+to your emacs configuration file. This will allow you to run
+Holindex using AUCTeX.
+
+**Holindex commands.**
+
+**`\blockHOLthm{id}`, `\blockHOLtm{id}`, `\blockHOLty{id}`**  These
+commands typeset the theorem, term or type with the given `id` as
+the argument to a LaTeX command `\HOLblock`. They are intended for
+typesetting multiple lines in a new block.  For theorem ids of the
+form `theory.thm` are predefined. All other ids have to be defined
+before usage as explained below.
+
+**`\inlineHOLthm{id}`, `\inlineHOLtm{id}`, `\inlineHOLty{id}`**
+These commands are similar to `\blockHOLthm{id}`, `\blockHOLtm{id}`
+and `\blockHOLty{id}`. However, they are intended for inline
+typesetting and use `\HOLinline` instead of `\HOLblock`.
+
+**`\citeHOLthm{id}`, `\citeHOLtm{id}`, `\citeHOLty{id}`**  These
+commands cite a theorem, term or type.
+
+**`\mciteHOLthm{id,id,...id}`, `\mciteHOLtm{ids}`,
+`\mciteHOLty{ids}`**  These commands cite multiple theorems, terms
+or types.
+
+**`\citePureHOLthm{id}`, `\citePureHOLtm{id}`, `\citePureHOLty{id}`**
+These commands cite a theorems, terms or types.  They just typeset
+the number instead of the verbose form used by the `citeHOL` and
+`mciteHOL` commands.
+
+**`\citeHiddenHOLthm{id}`, `\citeHiddenHOLtm{id}`,
+`\citeHiddenHOLty{id}`**  These commands cite a theorems, terms or
+types, but not typeset anything. These commands can be used to add
+a page to the list of pages a theorem, term or type is cited.
+
+**`\printHOLIndex`, `\printHOLShortIndex`, `\printHOLLongIndex`**
+These commands typeset the index of all theorems, terms and types
+cited in the document.  There are two types of entries in the
+index: long and short ones. Short entries contain a unique number,
+the label of the theorem, term or type and the pages it is cited.
+Long entries contain additionally a representation as it would be
+inserted by `\blockHOL...` as well as an optional description.
+Theorems use by default short entries, while terms and types use
+long ones.  It is possible to change for each item whether a long
+or short entry should be used. `\printHOLIndex` prints the default
+index with mixed long and short entries.  `\printHOLLongIndex`
+typesets just long entries and `\printHOLShortIndex` just short
+ones.
+
+**Defining and formatting terms, types and theorems.**
+
+Most of the Holindex commands require an identifier of a theorem,
+term or type as arguments. Theorem identifiers of the form
+`theory.theorem` are predefined. All other identifiers need
+defining. Additionally one might want to change the default
+formatting options for these new identifiers as well as the old
+ones.  HOL definition files can be used for defining and setting
+the formatting options of identifiers. They are used by putting
+the command `\useHOLfile{`*filename.hdf*`}` in the header of your
+latex source file. These file use a syntax similar to BibTex. They
+consist of a list of entries of the form
+
+```
+@EntryType{id,
+  option = value,
+  boolFlag,
+  ...
+}
+```
+
+There are the following entry types:
+
+**`Thm`, `Theorem`**  used to define and format a theorem. If the
+identifier is of the form `theory.theorem`, the `content` option
+can be skipped. Otherwise, the `content` option should be of this
+form and a new identifier is defined for the given theorem. This
+is for example useful if the theorem name contains special
+characters or if a theorem should be printed with different
+formatting options.
+
+**`Term`**  used to define and format a term.
+
+**`Type`**  used to define and format a type.
+
+**`Thms`, `Theorems`**  used to set formatting options for a list
+of theorems. For example one might want to print long index entries
+for all theorems in a specific theory. For the `Theorems` entry the
+`id` part of the entry is given in the form `ids = [id,id,...]`.
+These `ids` may be theorem ids or special ids of the form
+`theorem.thmprefix*`.  For example, the id `arithmetic.LESS_EQ*`
+represents all theorems in theory `arithmetic` whose name starts
+with `LESS_EQ`.
+
+Options are name/value pairs. The value has to be quoted using
+quotation marks or HOL's quotation syntax. There are the following
+option names available:
+
+**`content`**  the content. For a term or type that's its HOL
+definition.  For theorems it is of the form `theory.theorem`.
+
+**`options`**  formatting options for the munger as described in
+Section \ref{sec:munging-commands}.  Please use the Holindex
+commands for typesetting inline or as a block instead of the
+options `tt` or `alltt`.
+
+**`label`**  the label that will appear in the index. For theorems
+the label is by default its name and the label given here will be
+added after the name.
+
+**`comment`**  LaTeX code that gets typeset as a comment /
+description for long index entries.
+
+**`latex`**  the LaTeX code for the item. There are very rare cases,
+when it might be useful to provide handwritten LaTeX code instead
+of the one generated by the munger. This option overrides the LaTeX
+produced by the munger.  It is recommended to use it very
+carefully.
+
+Besides options, there are also boolean flags that change the
+formatting of entries:
+
+**`force-index`**  adds the entry to the index, even if it is not
+cited in the document.
+
+**`long-index`**  use a long index-entry.
+
+**`short-index`**  use a long index-entry.
+
+Here is an example of such a HOL definition file:
+
+```
+@Term{term_id_1,
+   content = ``SOME_FUN = SUC a < 0 /\ 0 > SUC b``,
+   options = "width=20",
+   label = "a short description of term from external file",
+   comment = "some lengthy\\comment
+
+              with \textbf{formats} and newlines",
+   force_index
+}
+
+@Type{type_id_1,
+   content = ``:bool``
+}
+
+@Thm{arithmetic.LESS_SUCC_EQ_COR,
+   force-index, long-index
+}
+
+@Thm{thm_1,
+   label = "(second instance)",
+   content = "arithmetic.LESS_SUC_EQ_COR"
+}
+
+@Theorems{
+   ids = [arithmetic.LESS_ADD_SUC,
+          arithmetic.LESS_EQ*],
+   force-index
+}
+```
+
+**Configuring Holindex.**
+
+There are some commands that can be used to change the overall
+behaviour of Holindex. They should be used in the header directly
+after `holindex` is included.
+
+**`\setHOLlinewidth`** sets the default line-width. This
+corresponds to the `-w` option of the munger.
+
+**`\setHOLoverrides`** sets the “overrides file” to provide
+token-to-LaTeX replacements of what is pretty-printed.
+
+**`\useHOLfile`** is used to include a HOL definition file. Several
+such files might be included.
+
+**Additional documentation.**  For more information about Holindex,
+please refer to the demonstration file `src/TeX/holindex-demo.tex`.
+This file contains documentation for rarely used commands as well
+as explanations of how to customise Holindex.
+
+### Making HOL theories LaTeX-ready
+
+\label{sec:holtheories-tex-ready}
+
+Though one might specify all one's desired token-replacements in an
+`overrides` file, there is also support for specifying token
+replacements in the theory where tokens are first “defined”.  (Of
+course, *tokens* aren't defined *per se*, but the definition of
+particular constants will naturally give rise to the generation of
+corresponding tokens when those constants appear in HOL terms,
+types or theorems.)
+
+A token's printing form is given in a script-file with the
+`TeX_notation` command (from the `TexTokenMap` module).  This
+function has type
+
+```
+{ hol : string, TeX : string * int } -> unit
+```
+
+The `hol` field specifies the string of the token as HOL prints it.
+The `TeX` field specifies both the string that should be emitted
+into the LaTeX output, and the width that this string should be
+considered to have (as in the `overrides` file).
+
+For example, in `boolScript.sml`, there are calls:
+
+```
+val _ = TeX_notation { hol = "!", TeX = ("\\HOLTokenForall{}", 1)}
+val _ = TeX_notation { hol = UChar.forall,
+                       TeX = ("\\HOLTokenForall{}", 1)}
+```
+
+The `UChar` structure is a local binding in the script-file that
+points at the standard list of UTF8-encoded Unicode strings in the
+distribution (`UnicodeChars`).  Note also how the backslashes that
+are necessary for the LaTeX command have to be doubled because they
+are appearing in an SML string.
+
+Finally, rather than mapping the token directly to the string
+`\forall` as one might expect, the mapping introduces another level
+of indirection by mapping to `\HOLTokenForall`.  Bindings for this,
+and a number of other LaTeX commands are made in the file
+
+```
+src/TeX/holtexbasic.sty
+```
+
+which will need to be included in the LaTeX source file.  (Such
+bindings can be overridden with the use of the command
+`\renewcommand`.)
+
+Finally, all theory-bindings made with `TeX_notation` can be
+overridden with `overrides` files referenced at the time a munger
+is run.
+
+\index{LaTeX@\LaTeX!embedding HOL@embedding in \HOL{}|)}
