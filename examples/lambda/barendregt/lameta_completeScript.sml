@@ -4453,6 +4453,16 @@ Definition equivalent_def :
            ~solvable M /\ ~solvable N
 End
 
+val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                   fixity = Infix (NONASSOC, 450),
+                   paren_style = OnlyIfNecessary,
+                   pp_elements = [HardSpace 1, TOK (UTF8.chr 0x2248),
+                                  BreakSpace (1,0)],
+                   term_name = "equivalent" };
+
+val _ = TeX_notation { hol = UTF8.chr 0x2248,
+                       TeX = ("\\HOLTokenWeakEQ", 1) };
+
 (* A more general definition (but many existing hard proofs are still
    using the above “equivalent”).
  *)
@@ -4499,6 +4509,38 @@ Proof
  >> PROVE_TAC []
 QED
 
+Theorem equivalent2_trans :
+    !X t1 t2 t3 r. equivalent2 X t1 t2 r /\ equivalent2 X t2 t3 r ==>
+                   equivalent2 X t1 t3 r
+Proof
+    rpt STRIP_TAC
+ >> reverse (Cases_on ‘solvable t1’)
+ >- (Know ‘unsolvable t2’
+     >- (CCONTR_TAC >> fs [equivalent2_def]) >> DISCH_TAC \\
+     Know ‘unsolvable t3’
+     >- (CCONTR_TAC >> fs [equivalent2_def]) >> DISCH_TAC \\
+     simp [equivalent2_def])
+ >> Know ‘solvable t2’
+ >- (CCONTR_TAC >> fs [equivalent2_def])
+ >> DISCH_TAC
+ >> Know ‘solvable t3’
+ >- (CCONTR_TAC >> fs [equivalent2_def])
+ >> DISCH_TAC
+ >> NTAC 2 (Q.PAT_X_ASSUM ‘equivalent2 X _ _ r’ MP_TAC)
+ >> UNBETA_TAC [equivalent2_def] “equivalent2 X t1 t2 r”
+ >> unbeta_tac [equivalent2_def] “equivalent2 X t2 t3 r”
+ >> qabbrev_tac ‘P0 = principal_hnf t3’
+ >> qabbrev_tac ‘n3 = LAMl_size P0’
+ >> qabbrev_tac ‘vs3 = RNEWS r n3 X’
+ >> qabbrev_tac ‘P1 = principal_hnf (P0 @* MAP VAR vs3)’
+ >> qabbrev_tac ‘y3 = hnf_head P1’
+ >> qabbrev_tac ‘m3 = LENGTH (hnf_children P1)’
+ >> unbeta_tac [equivalent2_def] “equivalent2 X t1 t3 r”
+ >> NTAC 2 STRIP_TAC
+ >> Know ‘n1 + m2 + (n2 + m3) = n2 + m1 + (m2 + n3)’ >- simp []
+ >> simp []
+QED
+
 Theorem equivalent_alt_equivalent2 :
     !M N. equivalent M N <=> equivalent2 (FV M UNION FV N) M N 0
 Proof
@@ -4514,12 +4556,12 @@ Proof
      MATCH_MP_TAC TAKE_RNEWS >> simp [])
  >> DISCH_THEN (fs o wrap)
  >> Q.PAT_X_ASSUM ‘M1' = M1’ (fs o wrap)
- >> Q.PAT_X_ASSUM ‘m = m1’ (fs o wrap o SYM)
- >> Q.PAT_X_ASSUM ‘y = y1’ (fs o wrap o SYM)
+ >> Q.PAT_X_ASSUM ‘m   = m1’ (fs o wrap o SYM)
+ >> Q.PAT_X_ASSUM ‘y   = y1’ (fs o wrap o SYM)
  >> Q.PAT_X_ASSUM ‘N1' = N1’ (fs o wrap o SYM)
 QED
 
-(* NOTE: 0 < r is not necessary but makes the proof easier *)
+(* NOTE: “0 < r” is not necessary but makes the proof (much) easier. *)
 Theorem equivalent2_thm :
     !X M N r. FINITE X /\ 0 < r /\
               FV M SUBSET X UNION RANK r /\
@@ -4799,6 +4841,41 @@ QED
 (* |- !x y. equivalent x y <=> equivalent y x *)
 Theorem equivalent_comm = REWRITE_RULE [symmetric_def] equivalent_symmetric
 
+Theorem equivalent_trans :
+    !M1 M2 M3. equivalent M1 M2 /\ equivalent M2 M3 ==> equivalent M1 M3
+Proof
+    rpt GEN_TAC
+ >> qabbrev_tac ‘X = FV M1 UNION FV M2 UNION FV M3’
+ >> ‘FINITE X’ by simp [Abbr ‘X’]
+ >> ‘FV M1 SUBSET X UNION RANK 1 /\
+     FV M2 SUBSET X UNION RANK 1 /\
+     FV M3 SUBSET X UNION RANK 1’ by ASM_SET_TAC []
+ >> Know ‘equivalent M1 M2 = equivalent2 X M1 M2 1’
+ >- (SYM_TAC >> MATCH_MP_TAC equivalent2_thm >> simp [])
+ >> Rewr'
+ >> Know ‘equivalent M2 M3 = equivalent2 X M2 M3 1’
+ >- (SYM_TAC >> MATCH_MP_TAC equivalent2_thm >> simp [])
+ >> Rewr'
+ >> Know ‘equivalent M1 M3 = equivalent2 X M1 M3 1’
+ >- (SYM_TAC >> MATCH_MP_TAC equivalent2_thm >> simp [])
+ >> Rewr'
+ >> REWRITE_TAC [equivalent2_trans]
+QED
+
+Theorem equivalent_transitive :
+    transitive equivalent
+Proof
+    RW_TAC std_ss [transitive_def]
+ >> Q_TAC (TRANS_TAC equivalent_trans) ‘y’ >> art []
+QED
+
+Theorem equivalent_equivalence :
+    equivalence equivalent
+Proof
+    simp [equivalence_def,
+          equivalent_reflexive, equivalent_symmetric, equivalent_transitive]
+QED
+
 Theorem equivalent_of_solvables :
     !M N. solvable M /\ solvable N ==>
          (equivalent M N <=>
@@ -5063,6 +5140,10 @@ Proof
     rw [equivalent2_def]
 QED
 
+(*---------------------------------------------------------------------------*
+ *  subtree_equiv and equivalent (of subterm)
+ *---------------------------------------------------------------------------*)
+
 Theorem subtree_equiv_alt_equivalent2 :
     !X M N r. FINITE X /\
               FV M SUBSET X UNION RANK r /\
@@ -5134,6 +5215,48 @@ Proof
     rpt STRIP_TAC
  >> ASM_SIMP_TAC std_ss [subtree_equiv_alt_equivalent2]
  >> MATCH_MP_TAC equivalent2_thm >> art []
+QED
+
+Theorem subtree_equiv_alt_equivalent_subterm :
+    !X M N p r. FINITE X /\ 0 < r /\
+                FV M SUBSET X UNION RANK r /\
+                FV N SUBSET X UNION RANK r /\
+                subterm X M p r <> NONE /\
+                subterm X N p r <> NONE ==>
+               (subtree_equiv X M N p r <=>
+                equivalent (subterm' X M p r) (subterm' X N p r))
+Proof
+    rpt STRIP_TAC
+ >> NTAC 5 (POP_ASSUM MP_TAC)
+ >> qid_specl_tac [‘p’, ‘M’, ‘N’, ‘r’]
+ >> Induct_on ‘p’
+ >- rw [subtree_equiv_alt_equivalent]
+ (* stage work *)
+ >> rpt STRIP_TAC
+ >> NTAC 2 (POP_ASSUM MP_TAC)
+ >> UNBETA_TAC [subterm_def] “subterm X M (h::p) r”
+ >> UNBETA_TAC [subterm_def] “subterm X N (h::p) r”
+ >> NTAC 2 STRIP_TAC
+ >> Know ‘FV (EL h Ms) SUBSET X UNION RANK (SUC r)’
+ >- (MATCH_MP_TAC subterm_induction_lemma' \\
+     qexistsl_tac [‘M’, ‘M0’, ‘n’, ‘m’, ‘vs’, ‘M1’] >> simp [] \\
+     simp [Abbr ‘m’, Once EQ_SYM_EQ] \\
+     MATCH_MP_TAC hnf_children_size_alt \\
+     qexistsl_tac [‘X’, ‘M’, ‘r’, ‘n’, ‘vs’, ‘M1’] >> simp [])
+ >> DISCH_TAC
+ >> Know ‘FV (EL h Ms') SUBSET X UNION RANK (SUC r)’
+ >- (MATCH_MP_TAC subterm_induction_lemma' \\
+     qexistsl_tac [‘N’, ‘M0'’, ‘n'’, ‘m'’, ‘vs'’, ‘M1'’] >> simp [] \\
+     simp [Abbr ‘m'’, Once EQ_SYM_EQ] \\
+     MATCH_MP_TAC hnf_children_size_alt \\
+     qexistsl_tac [‘X’, ‘N’, ‘r’, ‘n'’, ‘vs'’, ‘M1'’] >> simp [])
+ >> DISCH_TAC
+ >> fs [subtree_equiv_def]
+ >> unbeta_tac [BT_def, Once ltree_unfold, BT_generator_def] “BT' X M r”
+ >> unbeta_tac [BT_def, Once ltree_unfold, BT_generator_def] “BT' X N r”
+ >> simp [GSYM BT_def, LMAP_fromList]
+ >> simp [ltree_el_def, head_equivalent_def]
+ >> simp [LNTH_fromList, EL_MAP]
 QED
 
 (*---------------------------------------------------------------------------*

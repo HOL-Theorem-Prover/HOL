@@ -744,20 +744,146 @@ Proof
       numLib.ARITH_TAC ]
 QED
 
-Theorem vsubterm_not_none_bnf :
+Theorem lameta_imp_equivalent2 :
+    !X M N r. FINITE X /\ FV M SUBSET X UNION RANK r /\
+                          FV N SUBSET X UNION RANK r /\ M === N
+          ==> equivalent2 X M N r
+Proof
+    rpt STRIP_TAC
+ >> reverse (Cases_on ‘solvable M’)
+ >- (‘unsolvable N’ by PROVE_TAC [lameta_solvable_cong] \\
+     simp [equivalent2_def])
+ >> ‘solvable N’ by PROVE_TAC [lameta_solvable_cong]
+ >> UNBETA_TAC [equivalent2_def] “equivalent2 X M N r”
+ (* stage work *)
+ >> Know ‘M0 === N0’
+ >- (Q_TAC (TRANS_TAC lameta_TRANS) ‘M’ \\
+     CONJ_TAC
+     >- (MATCH_MP_TAC lameq_imp_lameta \\
+         qunabbrev_tac ‘M0’ \\
+         MATCH_MP_TAC lameq_principal_hnf' >> art []) \\
+     Q_TAC (TRANS_TAC lameta_TRANS) ‘N’ >> art [] \\
+     MATCH_MP_TAC lameq_imp_lameta \\
+     qunabbrev_tac ‘N0’ \\
+     MATCH_MP_TAC lameq_SYM \\
+     MATCH_MP_TAC lameq_principal_hnf' >> art [])
+ >> DISCH_TAC
+ >> ‘?Z. M0 -be->* Z /\ N0 -be->* Z’ by METIS_TAC [lameta_CR]
+ (*
+    M -h->* M0 -be->*
+    |       |        \
+   ===     ===        Z
+    |       |        /
+    N -h->* N0 -be->*
+  *)
+ >> qunabbrev_tac ‘vs1’
+ >> Q_TAC (RNEWS_TAC (“vs1 :string list”, “r :num”, “n1 :num”)) ‘X’
+ >> ‘DISJOINT (set vs1) (FV M0)’ by METIS_TAC [subterm_disjoint_lemma']
+ >> qunabbrev_tac ‘y1’
+ >> Q_TAC (HNF_TAC (“M0 :term”, “vs1 :string list”,
+                    “y1 :string”, “args1 :term list”)) ‘M1’
+ >> Q.PAT_X_ASSUM ‘DISJOINT (set vs) (FV M0)’ K_TAC
+ >> ‘TAKE (LAMl_size M0) vs1 = vs1’ by rw []
+ >> POP_ASSUM (rfs o wrap)
+ (* repeat above steps for the other part *)
+ >> qunabbrev_tac ‘vs2’
+ >> Q_TAC (RNEWS_TAC (“vs2 :string list”, “r :num”, “n2 :num”)) ‘X’
+ >> ‘DISJOINT (set vs2) (FV N0)’ by METIS_TAC [subterm_disjoint_lemma']
+ >> qunabbrev_tac ‘y2’
+ >> Q_TAC (HNF_TAC (“N0 :term”, “vs2 :string list”,
+                    “y2 :string”, “args2 :term list”)) ‘N1’
+ >> Q.PAT_X_ASSUM ‘DISJOINT (set vs2) (FV N0)’ K_TAC
+ >> ‘TAKE (LAMl_size N0) vs2 = vs2’ by rw []
+ >> POP_ASSUM (rfs o wrap)
+ (* eliminating Ms and Ms' *)
+ >> simp [Abbr ‘m1’, Abbr ‘m2’]
+ >> qabbrev_tac ‘m1 = LENGTH args1’
+ >> qabbrev_tac ‘m2 = LENGTH args2’
+ >> Q.PAT_X_ASSUM ‘M0 = _’ (ASSUME_TAC o SYM)
+ >> Q.PAT_X_ASSUM ‘N0 = _’ (ASSUME_TAC o SYM)
+ (* applying hnf_bestar_cases *)
+ >> MP_TAC (Q.SPECL [‘vs1’, ‘y1’, ‘args1’, ‘Z’] hnf_bestar_cases) >> simp []
+ >> DISCH_THEN (qx_choosel_then [‘i1’, ‘Ns1’] STRIP_ASSUME_TAC)
+ >> Q.PAT_X_ASSUM ‘Z = _’ (ASSUME_TAC o SYM)
+ >> MP_TAC (Q.SPECL [‘vs2’, ‘y2’, ‘args2’, ‘Z’] hnf_bestar_cases) >> simp []
+ >> DISCH_THEN (qx_choosel_then [‘i2’, ‘Ns2’] STRIP_ASSUME_TAC)
+ >> Q.PAT_X_ASSUM ‘Z = _’ (ASSUME_TAC o SYM)
+ (*
+    M -h->* M0 -be->*
+    |       |        \
+   ===     ===        Z
+    |       |        /
+    N -h->* M0'-be->*
+
+   M0 = LAMl vs1 (VAR y1 @* args1)
+   Z  = LAMl (TAKE (n1 - i1) vs1) (VAR y1 @* (TAKE (m1 - i1) Ns1)
+   Z  = LAMl (TAKE (n2 - i2) vs2) (VAR y2 @* (TAKE (m2 - i2) Ns2)
+   N0 = LAMl vs2 (VAR y2 @* args2)
+ *)
+ >> Know ‘n2 - i2 = n1 - i1’
+ >- (Q.PAT_X_ASSUM ‘_ = Z’ (MP_TAC o AP_TERM “LAMl_size”) \\
+     REWRITE_TAC [LAMl_size_hnf] \\
+     simp [LENGTH_BUTLASTN] >> DISCH_TAC \\
+     Q.PAT_X_ASSUM ‘_ = Z’ (MP_TAC o AP_TERM “LAMl_size”) \\
+     REWRITE_TAC [LAMl_size_hnf] \\
+     simp [LENGTH_BUTLASTN])
+ >> DISCH_TAC
+ (* stage work *)
+ >> gs [BUTLASTN_TAKE_UNCOND, LASTN_DROP_UNCOND]
+ >> qabbrev_tac ‘n_max = MAX n1 n2’
+ >> ‘n1 <= n_max /\ n2 <= n_max’ by simp [Abbr ‘n_max’]
+ >> Q_TAC (RNEWS_TAC (“xs :string list”, “r :num”, “n_max :num”)) ‘X’
+ (* applying TAKE_RNEWS (and TAKE_TAKE) *)
+ >> Know ‘TAKE (n1 - i1) vs1 = TAKE (n1 - i1) xs’
+ >- (‘vs1 = TAKE n1 xs’ by METIS_TAC [TAKE_RNEWS] >> POP_ORW \\
+     irule TAKE_TAKE >> simp [])
+ >> DISCH_THEN (fs o wrap)
+ >> Q.PAT_X_ASSUM ‘LAMl (TAKE (n1 - i1) vs2) _ = Z’ MP_TAC
+ >> Know ‘TAKE (n1 - i1) vs2 = TAKE (n1 - i1) xs’
+ >- (Q.PAT_X_ASSUM ‘n2 - i2 = n1 - i1’ (REWRITE_TAC o wrap o SYM) \\
+    ‘vs2 = TAKE n2 xs’ by METIS_TAC [TAKE_RNEWS] >> POP_ORW \\
+     irule TAKE_TAKE >> simp [])
+ >> Rewr'
+ (* “y1 = y2” is proved here *)
+ >> Q.PAT_X_ASSUM ‘LAMl (TAKE (n1 - i1) xs) _ = Z’ (simp o wrap o SYM)
+ >> STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘y2 = y1’ (fs o wrap)
+ >> Know ‘m2 - i2 = m1 - i1’
+ >- (POP_ASSUM (MP_TAC o AP_TERM “LENGTH :term list -> num”) \\
+     simp [])
+ >> DISCH_TAC
+ >> simp []
+QED
+
+Theorem lameta_imp_equivalent :
+    !M N. M === N ==> equivalent M N
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘X = FV M UNION FV N’
+ >> ‘FINITE X’ by (rw [Abbr ‘X’] >> simp [])
+ >> Know ‘equivalent M N <=> equivalent2 X M N 1’
+ >- (SYM_TAC >> MATCH_MP_TAC equivalent2_thm \\
+     simp [Abbr ‘X’] >> SET_TAC [])
+ >> Rewr'
+ >> MATCH_MP_TAC lameta_imp_equivalent2 >> art []
+ >> simp [Abbr ‘X’] >> SET_TAC []
+QED
+
+Theorem vsubterm_solvable_bnf :
     !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\ bnf M ==>
-              vsubterm X M p r <> NONE
+              vsubterm X M p r <> NONE /\ solvable (vsubterm' X M p r)
 Proof
     rpt GEN_TAC >> STRIP_TAC
- >> NTAC 2 (POP_ASSUM MP_TAC)
+ >> ‘solvable M’ by PROVE_TAC [bnf_solvable]
+ >> NTAC 3 (POP_ASSUM MP_TAC)
  >> qid_specl_tac [‘p’, ‘M’, ‘r’]
  >> Induct_on ‘p’ >- simp []
  >> rpt GEN_TAC
- >> NTAC 2 DISCH_TAC
- >> ‘solvable M’ by PROVE_TAC [bnf_solvable]
- >> RW_TAC std_ss [vsubterm_def]
+ >> rpt DISCH_TAC
+ >> UNBETA_TAC [vsubterm_def] “vsubterm X M (h::p) r”
  >> Cases_on ‘h < m’ >> simp [Abbr ‘M2’]
  >- (FIRST_X_ASSUM irule \\
+     REWRITE_TAC [CONJ_ASSOC] \\
      reverse CONJ_TAC
      >- (MATCH_MP_TAC subterm_induction_lemma' \\
          qexistsl_tac [‘M’, ‘M0’, ‘n’, ‘m’, ‘vs’, ‘M1’] >> simp [] \\
@@ -774,13 +900,15 @@ Proof
     ‘Ms = args’ by simp [Abbr ‘Ms’] \\
      POP_ASSUM (rfs o wrap) \\
      qunabbrev_tac ‘Ms’ \\
-     MATCH_MP_TAC hnf_children_bnf \\
-     qexistsl_tac [‘vs’, ‘y’] \\
-     ASM_SIMP_TAC std_ss [] \\
-     Q.PAT_X_ASSUM ‘M0 = _’ (REWRITE_TAC o wrap o SYM) \\
-     Suff ‘M0 = M’ >- rw [] \\
-     qunabbrev_tac ‘M0’ \\
-     MATCH_MP_TAC principal_hnf_bnf >> art [])
+     CONJ_ASM1_TAC
+     >- (MATCH_MP_TAC hnf_children_bnf \\
+         qexistsl_tac [‘vs’, ‘y’] \\
+         ASM_SIMP_TAC std_ss [] \\
+         Q.PAT_X_ASSUM ‘M0 = _’ (REWRITE_TAC o wrap o SYM) \\
+         Suff ‘M0 = M’ >- rw [] \\
+         qunabbrev_tac ‘M0’ \\
+         MATCH_MP_TAC principal_hnf_bnf >> art []) \\
+     PROVE_TAC [bnf_solvable])
  >> Cases_on ‘p = []’ >- simp []
  >> Suff ‘z IN X UNION RANK (SUC r)’
  >- (DISCH_TAC >> simp [vsubterm_var])
@@ -788,11 +916,19 @@ Proof
  >> MATCH_MP_TAC RNEW_IN_RANK' >> art []
 QED
 
-Theorem vsubterm_not_none_has_bnf :
+(* |- !X M p r.
+        FINITE X /\ FV M SUBSET X UNION RANK r /\ bnf M ==>
+        vsubterm X M p r <> NONE
+ *)
+Theorem vsubterm_not_none_bnf = cj 1 vsubterm_solvable_bnf
+
+Theorem vsubterm_solvable_has_bnf :
     !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\ has_bnf M ==>
-              vsubterm X M p r <> NONE
+              vsubterm X M p r <> NONE /\ solvable (vsubterm' X M p r)
 Proof
-    rw [has_bnf_thm]
+    rpt GEN_TAC
+ >> REWRITE_TAC [has_bnf_thm]
+ >> STRIP_TAC
  >> ‘M == N’ by PROVE_TAC [betastar_lameq]
  >> Know ‘FV N SUBSET X UNION RANK r’
  >- (Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV M’ >> art [] \\
@@ -801,9 +937,20 @@ Proof
  >> Know ‘vsubterm X M p r = NONE <=> vsubterm X N p r = NONE’
  >- (MATCH_MP_TAC (cj 1 lameta_vsubterm_cong) >> art [] \\
      MATCH_MP_TAC lameq_imp_lameta >> art [])
+ >> DISCH_TAC
+ >> CONJ_ASM1_TAC
+ >- (simp [] \\
+     MATCH_MP_TAC vsubterm_not_none_bnf >> art [])
+ >> fs []
+ >> Know ‘solvable (vsubterm' X M p r) <=> solvable (vsubterm' X N p r)’
+ >- (MATCH_MP_TAC lameta_solvable_cong \\
+     irule (cj 2 lameta_vsubterm_cong) >> art [] \\
+     MATCH_MP_TAC lameq_imp_lameta >> art [])
  >> Rewr'
- >> MATCH_MP_TAC vsubterm_not_none_bnf >> art []
+ >> MATCH_MP_TAC (cj 2 vsubterm_solvable_bnf) >> art []
 QED
+
+Theorem vsubterm_not_none_has_bnf = cj 1 vsubterm_solvable_has_bnf
 
 Theorem lameta_vsubterm_cong_has_bnf :
     !X M N r. FINITE X /\ FV M SUBSET X UNION RANK r /\
@@ -3403,46 +3550,56 @@ Proof
  >> qexistsl_tac [‘d’, ‘y’, ‘k’] >> art []
 QED
 
-(* NOTE: In [subtree_equiv_lemma], “subtree_equiv X M N q r” is equivalent to
+(* NOTE: In [subtree_equiv_lemma], “subtree_equiv X M N q r”, is equivalent with
 
      equivalent (subterm' X M q r) (subterm' X N q r)
 
-   to avoid accessing their Boehm trees. Then we try to prove this HUGE lemma
-   for vsubterm:
+   by [subtree_equiv_alt_equivalent_subterm], to avoid accessing their BT. Then,
+   we try to prove the same conclusion (4) using vsubterm instead:
 
      equivalent (vsubterm' X M q r) (vsubterm' X N q r) <=>
      equivalent (vsubterm' X (apply pi M) q r)
                 (vsubterm' X (apply pi N) q r)
 
-   NOTE: “apply pi M” have bigger (or equal) Boehm tree than “M” (MEM M Ms), but
-   it's not true that “p IN ltree_paths (BT' X (apply pi M) p r)”, in other word
-   “subterm X (apply pi M) p r <> NONE”). However, it's true that “h < m”, i.e.,
-   “HD p < hnf_children_size (principal_hnf (apply pi M)”, that is equivalent to
-   “subterm X (apply pi M) [HD p] r <> NONE”. This is important for the selector
-   in [agree_upto_thm] to work.
+   NOTE: Adding the following conclusion (1):
+
+    (*1*) (!q M. MEM M Ms /\ q <<= p ==>
+                (subterm X M q r <> NONE ==>
+                 subterm X (apply pi M) q r <> NONE)) /\
+
+   to show the BT paths of “apply pi M” is greater-or-equal than the one of “M”.
+   This conclusion is useful when proving [subtree_equiv_lemma] as a corollary.
+
+   NOTE: Although “apply pi M” has a greater-or-equal Boehm tree than BT of “M”,
+   it's not true arbitrary p as a virtual path is inside BT of “apply pi M”: the
+   tree structure can only be "preserved" by the permutator (and other stuff) in
+   the Boehm transform. However, arbitrary p is for sure covered by the children
+   of BT root node: “HD p < hnf_children_size (principal_hnf (apply pi M)”, that
+   is equivalent to “subterm X (apply pi M) [HD p] r <> NONE”. This is important
+   for the selector in [agree_upto_thm] to work.
  *)
 Theorem vsubterm_equivalent_lemma :
     !X Ms p r pi.
            FINITE X /\ p <> [] /\ 0 < r /\
            BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r /\
-           pi = Boehm_construction' X Ms p /\ EVERY solvable Ms
-      ==> (!M. MEM M Ms ==>
+           pi = Boehm_construction' X Ms p /\ EVERY solvable Ms ==>
+    (*0*) (!M. MEM M Ms ==>
                is_ready' (apply pi M) /\
                HD p < hnf_children_size (principal_hnf (apply pi M))) /\
-          (!q M. MEM M Ms /\ q <<= p ==>
+    (*2*) (!q M. MEM M Ms /\ q <<= p ==>
                 (vsubterm X M q r = NONE <=>
                  vsubterm X (apply pi M) q r = NONE)) /\
-          (!q M. MEM M Ms /\ q <<= p /\
+    (*3*) (!q M. MEM M Ms /\ q <<= p /\
                  vsubterm X M q r <> NONE ==>
                 (solvable (vsubterm' X M q r) <=>
                  solvable (vsubterm' X (apply pi M) q r))) /\
-           !q M N. MEM M Ms /\ MEM N Ms /\ q <<= p /\
+    (*4*) (!q M N. MEM M Ms /\ MEM N Ms /\ q <<= p /\
                    vsubterm X M q r <> NONE /\
                    vsubterm X N q r <> NONE ==>
                   (equivalent (vsubterm' X M q r)
                               (vsubterm' X N q r) <=>
                    equivalent (vsubterm' X (apply pi M) q r)
-                              (vsubterm' X (apply pi N) q r))
+                              (vsubterm' X (apply pi N) q r)))
 Proof
     rpt GEN_TAC >> STRIP_TAC
  >> Q.PAT_X_ASSUM ‘pi = _’ (REWRITE_TAC o wrap)
@@ -7683,6 +7840,37 @@ Definition vsubterm_agree_upto_def :
                equivalent (vsubterm' X M q r) (vsubterm' X N q r))
 End
 
+Theorem vsubterm_agree_upto_has_bnf :
+    !X Ms p r. FINITE X /\ (!M. MEM M Ms ==> FV M SUBSET X UNION RANK r) /\
+               EVERY has_bnf Ms ==>
+              (vsubterm_agree_upto X Ms p r <=>
+               !q M N. q <<= p /\ q <> p /\ MEM M Ms /\ MEM N Ms ==>
+                       equivalent (vsubterm' X M q r) (vsubterm' X N q r))
+Proof
+    rw [EVERY_MEM]
+ >> ‘!q M. MEM M Ms ==> vsubterm X M q r <> NONE’
+       by PROVE_TAC [vsubterm_not_none_has_bnf]
+ >> REWRITE_TAC [vsubterm_agree_upto_def]
+ >> METIS_TAC []
+QED
+
+Theorem vsubterm_agree_upto_two_has_bnf :
+    !X M N p r. FINITE X /\
+                FV M SUBSET X UNION RANK r /\ has_bnf M /\
+                FV N SUBSET X UNION RANK r /\ has_bnf N ==>
+              (vsubterm_agree_upto X [M; N] p r <=>
+               !q. q <<= p /\ q <> p ==>
+                   equivalent (vsubterm' X M q r) (vsubterm' X N q r))
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘X’, ‘[M; N]’, ‘p’, ‘r’] vsubterm_agree_upto_has_bnf)
+ >> simp []
+ >> impl_tac >- METIS_TAC []
+ >> Rewr
+ >> EQ_TAC >> rw [equivalent_refl] >> simp [] (* one goal is left *)
+ >> simp [Once equivalent_comm]
+QED
+
 (* cf. agree_upto_lemma *)
 Theorem vsubterm_agree_upto_lemma :
     !X Ms p r. FINITE X /\ p <> [] /\ 0 < r /\
@@ -7734,6 +7922,24 @@ Definition vsubterm_faithful_def :
              equivalent (apply pi M) (apply pi N)))
 End
 
+Theorem vsubterm_faithful_has_bnf :
+    !p X Ms pi r.
+      FINITE X /\ (!M. MEM M Ms ==> FV M SUBSET X UNION RANK r) /\
+      EVERY has_bnf Ms ==>
+     (vsubterm_faithful p X Ms pi r <=>
+      (!M. MEM M Ms ==>
+          (solvable (vsubterm' X M p r) <=> solvable (apply pi M))) /\
+      (!M N. MEM M Ms /\ MEM N Ms ==>
+            (equivalent (vsubterm' X M p r) (vsubterm' X N p r) <=>
+             equivalent (apply pi M) (apply pi N))))
+Proof
+    rw [EVERY_MEM]
+ >> ‘!q M. MEM M Ms ==> vsubterm X M q r <> NONE’
+       by PROVE_TAC [vsubterm_not_none_has_bnf]
+ >> REWRITE_TAC [vsubterm_faithful_def]
+ >> METIS_TAC []
+QED
+
 Theorem vsubterm_faithful_two :
    !p X M N pi r.
        vsubterm_faithful p X [M; N] pi r <=>
@@ -7749,6 +7955,27 @@ Proof
     rpt STRIP_TAC
  >> EQ_TAC >> rw [vsubterm_faithful_def] >> gs []
  >> PROVE_TAC [equivalent_comm]
+QED
+
+Theorem vsubterm_faithful_two_has_bnf :
+   !p X M N pi r.
+      FINITE X /\
+      FV M SUBSET X UNION RANK r /\ has_bnf M /\
+      FV N SUBSET X UNION RANK r /\ has_bnf N
+    ==>
+     (vsubterm_faithful p X [M; N] pi r <=>
+      (solvable (vsubterm' X M p r) <=> solvable (apply pi M)) /\
+      (solvable (vsubterm' X N p r) <=> solvable (apply pi N)) /\
+      (equivalent (vsubterm' X M p r) (vsubterm' X N p r) <=>
+       equivalent (apply pi M) (apply pi N)))
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘[M; N]’, ‘pi’, ‘r’] vsubterm_faithful_has_bnf)
+ >> simp []
+ >> impl_tac >- METIS_TAC []
+ >> Rewr
+ >> EQ_TAC >> rw [equivalent_refl] >> simp [] (* one goal is left *)
+ >> METIS_TAC [equivalent_comm]
 QED
 
 Overload vsubterm_faithful' = “vsubterm_faithful []”
@@ -8176,6 +8403,194 @@ Proof
      >- (MATCH_MP_TAC hreduce_vsubterm_cong >> simp []) >> Rewr)
  >> simp [Abbr ‘t1’, Abbr ‘t2’]
  >> SYM_TAC >> MATCH_MP_TAC hreduce_equivalent_cong >> simp []
+QED
+
+Theorem subtree_equiv_alt_equivalent_vsubterm :
+    !X M N p r. FINITE X /\ 0 < r /\
+                FV M SUBSET X UNION RANK r /\
+                FV N SUBSET X UNION RANK r /\
+                subterm X M p r <> NONE /\
+                subterm X N p r <> NONE ==>
+               (subtree_equiv X M N p r <=>
+                equivalent (vsubterm' X M p r) (vsubterm' X N p r))
+Proof
+    RW_TAC std_ss [vsubterm_alt_subterm]
+ >> MATCH_MP_TAC subtree_equiv_alt_equivalent_subterm >> art []
+QED
+
+Theorem beta_separability :
+    !X M N r.
+       FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\ 0 < r /\
+       has_benf M /\ has_benf N /\ ~(lameta M N) ==>
+       !P Q. ?pi. Boehm_transform pi /\ apply pi M == P /\ apply pi N == Q
+Proof
+    rw [] (* has_benf --> has_bnf *)
+ >> qabbrev_tac ‘paths = ltree_paths (BT' X M r) UNION ltree_paths (BT' X N r)’
+ >> Know ‘FINITE paths’
+ >- (simp [Abbr ‘paths’, GSYM ltree_finite_alt_ltree_paths] \\
+     simp [ltree_finite_BT_has_bnf])
+ >> DISCH_TAC
+ >> ‘ltree_paths (BT' X M r) SUBSET paths /\
+     ltree_paths (BT' X N r) SUBSET paths’
+      by (qunabbrev_tac ‘paths’ >> SET_TAC [])
+ >> Know ‘parent_inclusive paths’
+ >- (qunabbrev_tac ‘paths’ \\
+     MATCH_MP_TAC parent_inclusive_union \\
+     rw [parent_inclusive_ltree_paths])
+ >> DISCH_TAC
+ >> Know ‘sibling_inclusive paths’
+ >- (qunabbrev_tac ‘paths’ \\
+     MATCH_MP_TAC sibling_inclusive_union \\
+     rw [sibling_inclusive_ltree_paths])
+ >> DISCH_TAC
+ >> qabbrev_tac ‘M' = eta_expand_upto X M r paths’
+ >> qabbrev_tac ‘N' = eta_expand_upto X N r paths’
+ >> MP_TAC (Q.SPECL [‘X’, ‘M’, ‘M'’, ‘r’, ‘paths’] eta_expand_upto_thm)
+ >> simp [] >> STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘X’, ‘N’, ‘N'’, ‘r’, ‘paths’] eta_expand_upto_thm)
+ >> simp [] >> STRIP_TAC
+ >> Know ‘~(M' == N')’
+ >- (CCONTR_TAC >> fs [] \\
+     Q.PAT_X_ASSUM ‘~lameta M N’ MP_TAC >> simp [] \\
+    ‘lameta M' N'’ by PROVE_TAC [lameq_imp_lameta] \\
+     MATCH_MP_TAC lameta_TRANS \\
+     Q.EXISTS_TAC ‘M'’ >> art [] \\
+     MATCH_MP_TAC lameta_TRANS \\
+     Q.EXISTS_TAC ‘N'’ >> art [] \\
+     MATCH_MP_TAC lameta_SYM >> art [])
+ >> DISCH_TAC
+ (* applying distinct_bnf_imp_not_subtree_equiv *)
+ >> MP_TAC (Q.SPECL [‘X’, ‘M'’, ‘N'’, ‘r’] distinct_bnf_imp_not_subtree_equiv)
+ >> RW_TAC std_ss [UNION_SUBSET]
+ (* applying subtree_equiv_alt_equivalent_vsubterm *)
+ >> qabbrev_tac ‘s = ltree_paths (BT' X M r) UNION ltree_paths (BT' X N r)’
+ >> Q.PAT_X_ASSUM ‘s = _’ (ASSUME_TAC o SYM) >> fs []
+ >> Know ‘subtree_equiv X M' N' p r <=>
+          equivalent (vsubterm' X M' p r) (vsubterm' X N' p r)’
+ >- (MATCH_MP_TAC subtree_equiv_alt_equivalent_vsubterm >> art [] \\
+     simp [GSYM BT_ltree_paths_thm])
+ >> DISCH_THEN (fs o wrap)
+ >> Know ‘!q. q <<= p /\ q <> p ==>
+              equivalent (vsubterm' X M' q r) (vsubterm' X N' q r)’
+ >- (rpt STRIP_TAC \\
+     Suff ‘equivalent (vsubterm' X M' q r) (vsubterm' X N' q r) <=>
+           subtree_equiv X M' N' q r’ >- simp [] \\
+     SYM_TAC >> MATCH_MP_TAC subtree_equiv_alt_equivalent_vsubterm >> art [] \\
+     simp [GSYM BT_ltree_paths_thm] \\
+     METIS_TAC [ltree_paths_inclusive, IN_UNION])
+ >> Q.PAT_X_ASSUM ‘!q. q <<= p /\ q <> p ==> subtree_equiv X M' N' q r’ K_TAC
+ >> DISCH_TAC
+ (* applying vsubterm_not_none_has_bnf *)
+ >> ‘!p. vsubterm X M p r <> NONE /\ vsubterm X N p r <> NONE’
+      by PROVE_TAC [vsubterm_not_none_has_bnf]
+ >> ‘!p. vsubterm X M' p r <> NONE /\ vsubterm X N' p r <> NONE’
+      by METIS_TAC [lameta_vsubterm_cong]
+ >> Know ‘!p. vsubterm' X M' p r === vsubterm' X M p r’
+ >- (Q.X_GEN_TAC ‘q’ \\
+     irule (cj 2 lameta_vsubterm_cong) >> art [] \\
+     MATCH_MP_TAC lameta_SYM >> art [])
+ >> DISCH_TAC
+ >> Know ‘!p. vsubterm' X N' p r === vsubterm' X N p r’
+ >- (Q.X_GEN_TAC ‘q’ \\
+     irule (cj 2 lameta_vsubterm_cong) >> art [] \\
+     MATCH_MP_TAC lameta_SYM >> art [])
+ >> DISCH_TAC
+ (* applying lameta_imp_equivalent *)
+ >> Know ‘~equivalent (vsubterm' X M p r) (vsubterm' X N p r)’
+ >- (CCONTR_TAC >> fs [] \\
+     Suff ‘equivalent (vsubterm' X M' p r) (vsubterm' X N' p r)’ >- simp [] \\
+     TRANS_TAC equivalent_trans “vsubterm' X M p r” \\
+     CONJ_TAC
+     >- (MATCH_MP_TAC lameta_imp_equivalent >> simp []) \\
+     TRANS_TAC equivalent_trans “vsubterm' X N p r” >> art [] \\
+     MATCH_MP_TAC lameta_imp_equivalent \\
+     MATCH_MP_TAC lameta_SYM >> simp [])
+ >> DISCH_TAC
+ >> Know ‘!q. q <<= p /\ q <> p ==>
+              equivalent (vsubterm' X M q r) (vsubterm' X N q r)’
+ >- (rpt STRIP_TAC \\
+    ‘equivalent (vsubterm' X M' q r) (vsubterm' X N' q r)’ by simp [] \\
+     TRANS_TAC equivalent_trans “vsubterm' X M' q r” \\
+     CONJ_TAC
+     >- (MATCH_MP_TAC lameta_imp_equivalent \\
+         MATCH_MP_TAC lameta_SYM >> simp []) \\
+     TRANS_TAC equivalent_trans “vsubterm' X N' q r” >> simp [] \\
+     MATCH_MP_TAC lameta_imp_equivalent >> simp [])
+ >> DISCH_TAC
+ (* applying vsubterm_agree_upto_two_has_bnf *)
+ >> ‘vsubterm_agree_upto X [M; N] p r’ by simp [vsubterm_agree_upto_two_has_bnf]
+ >> MP_TAC (Q.SPECL [‘X’, ‘[M; N]’, ‘p’, ‘r’] vsubterm_agree_upto_thm)
+ >> impl_tac >- (simp [] >> METIS_TAC [])
+ >> DISCH_THEN (Q.X_CHOOSE_THEN ‘p0’ STRIP_ASSUME_TAC)
+ >> POP_ASSUM MP_TAC
+ >> simp [vsubterm_faithful_two_has_bnf, vsubterm_solvable_has_bnf]
+ >> qmatch_abbrev_tac ‘solvable M0 /\ solvable N0 /\ _ ==> _’
+ >> STRIP_TAC
+ (* applying separability_lemma1 to finish the main proof *)
+ >> ‘?p1. Boehm_transform p1 /\ apply p1 M0 == P /\ apply p1 N0 == Q’
+      by PROVE_TAC [separability_lemma1]
+ >> Q.EXISTS_TAC ‘p1 ++ p0’
+ >> simp [Abbr ‘M0’, Abbr ‘N0’, Boehm_transform_APPEND, Boehm_apply_APPEND]
+QED
+
+Theorem beta_separability_final :
+    !M N. has_benf M /\ has_benf N /\ ~(lameta M N) ==>
+         !P Q. ?pi. Boehm_transform pi /\ apply pi M == P /\ apply pi N == Q
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘FV M UNION FV N’, ‘M’, ‘N’, ‘1’] beta_separability)
+ >> simp []
+ >> impl_tac >- SET_TAC []
+ >> DISCH_THEN (STRIP_ASSUME_TAC o Q.SPECL [‘P’, ‘Q’])
+ >> Q.EXISTS_TAC ‘pi’ >> art []
+QED
+
+Theorem closed_beta_separability :
+    !M N. has_benf M /\ has_benf N /\ ~(lameta M N) /\
+          closed M /\ closed N ==> !P Q. ?L. M @* L == P /\ N @* L == Q
+Proof
+    rpt STRIP_TAC
+ >> ‘?pi. Boehm_transform pi /\ apply pi M == P /\ apply pi N == Q’
+      by METIS_TAC [beta_separability_final]
+ >> ‘?L. !M. closed M ==> apply pi M == M @* L’
+      by METIS_TAC [Boehm_transform_lameq_appstar]
+ >> Q.EXISTS_TAC ‘L’
+ >> CONJ_TAC (* 2 subgoals *)
+ >| [ (* goal 1 (of 2) *)
+      Q_TAC (TRANS_TAC lameq_TRANS) ‘apply pi M’ >> art [] \\
+      MATCH_MP_TAC lameq_SYM \\
+      FIRST_X_ASSUM MATCH_MP_TAC >> art [],
+      (* goal 2 (of 2) *)
+      Q_TAC (TRANS_TAC lameq_TRANS) ‘apply pi N’ >> art [] \\
+      MATCH_MP_TAC lameq_SYM \\
+      FIRST_X_ASSUM MATCH_MP_TAC >> art [] ]
+QED
+
+Theorem distinct_benf_imp_incompatible :
+    !M N. has_benf M /\ has_benf N /\ ~(lameta M N) ==> M # N
+Proof
+    rw [incompatible_def, inconsistent_def]
+ >> MP_TAC (Q.SPECL [‘M’, ‘N’] beta_separability_final) >> rw []
+ >> POP_ASSUM (MP_TAC o Q.SPECL [‘M'’, ‘N'’])
+ >> STRIP_TAC
+ >> qabbrev_tac ‘eqns = {(M,N)}’
+ >> ‘(M,N) IN eqns’ by simp [Abbr ‘eqns’]
+ (* M' ~ apply pi M  ~ apply pi N ~ N' *)
+ >> Q_TAC (TRANS_TAC asmlam_trans) ‘apply pi N’ >> simp [lameq_asmlam]
+ >> Q_TAC (TRANS_TAC asmlam_trans) ‘apply pi M’
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC lameq_asmlam \\
+     simp [Once lameq_SYM])
+ >> Know ‘eqns^+ M N’
+ >- (MATCH_MP_TAC asmlam_eqn \\
+     rw [Abbr ‘eqns’, IN_UNION])
+ >> DISCH_TAC
+ >> Q.PAT_X_ASSUM ‘Boehm_transform pi’ MP_TAC
+ >> qid_spec_tac ‘pi’
+ >> LIST_INDUCT_TAC >> rw []
+ >> fs [solving_transform_def]
+ >- rw [asmlam_rules]
+ >> MATCH_MP_TAC asmlam_subst >> art []
 QED
 
 (* END *)
