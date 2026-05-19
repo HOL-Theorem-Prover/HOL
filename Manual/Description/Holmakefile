@@ -11,7 +11,6 @@ TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex \
 
 PS_ROOT = ../Tools/polyscripter
 PS_STUFF =  $(PS_ROOT) ../Tools/umap
-PS_COMMAND = $(PS_STUFF) < $< > $@
 PS_NOUMAP = $(PS_ROOT) -md < $< > $@
 
 # pandoc invocation for the .md -> .tex stage.  The same command
@@ -116,136 +115,52 @@ description.pdf: $(TEX_SOURCES)
 	pdflatex -interaction=nonstopmode description > /dev/null; \
 	test -s $@
 
-definitions.md: definitions.smd $(PS_STUFF)
+# Pattern rules for the per-chapter .smd -> .md -> .tex pipeline.
+# Hand-rolled .tex front matter (description.tex, title.tex,
+# preface.tex, latex-munger.tex) is safe: Holmake skips pattern
+# rules whose prereqs don't exist (see misc.smd's pattern-rule
+# applicability note).
+%.md: %.smd
 	$(PS_NOUMAP)
 
-definitions.tex: definitions.md pdf-macros.lua
+%.tex: %.md pdf-macros.lua
 	$(PANDOC_MD)
 
+# $(PS_STUFF) lives in ../Tools/ and is only built on demand, so the
+# pattern rule's applicability check (local rules + files only)
+# would reject %.md before ../Tools/polyscripter exists.  Declare it
+# as a recipe-less extra prereq on every .md, leaving the pattern
+# recipe to apply.
+$(SMD_MDS): $(PS_STUFF)
 
-conv.md: conv.smd $(PS_STUFF)
-	$(PS_NOUMAP)
+# Per-chapter extra prerequisites: theory-build deps or side files
+# polyscripter reads from a chapter's .smd via `##use`.  Recipe-less
+# rules slot in on top of the pattern rule above (see "additional
+# prerequisites" under pattern rules in misc.smd).
+theories.md: $(dprot $(SIGOBJ)/realTheory.uo) \
+             $(dprot $(HOLDIR)/src/integer/integerTheory.uo) \
+             $(dprot $(HOLDIR)/src/real/real_sigmaTheory.uo) \
+             $(dprot $(HOLDIR)/src/real/analysis/real_topologyTheory.uo) \
+             $(dprot $(SIGOBJ)/iterateTheory.uo)
 
-conv.tex: conv.md pdf-macros.lua
-	$(PANDOC_MD)
+math.md: $(dprot $(SIGOBJ)/probabilityTheory.uo) \
+         $(dprot $(SIGOBJ)/lebesgue_measureTheory.uo) \
+         $(HOLDIR)/examples/probability/large_numberTheory.uo
 
-drules.md: drules.smd $(PS_STUFF)
-	$(PS_NOUMAP)
+libraries.md: $(dprot $(SIGOBJ)/integerTheory.uo)
 
-drules.tex: drules.md pdf-macros.lua
-	$(PANDOC_MD)
-
-tactics.md: tactics.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-tactics.tex: tactics.md pdf-macros.lua
-	$(PANDOC_MD)
-
-theories.md: theories.smd $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo) \
-	$(dprot $(HOLDIR)/src/integer/integerTheory.uo) \
-	$(dprot $(HOLDIR)/src/real/real_sigmaTheory.uo) \
-	$(dprot $(HOLDIR)/src/real/analysis/real_topologyTheory.uo) \
-	$(dprot $(SIGOBJ)/iterateTheory.uo)
-	$(PS_NOUMAP)
-
-theories.tex: theories.md pdf-macros.lua
-	$(PANDOC_MD)
-
-math.md: math.smd $(PS_STUFF) $(dprot $(SIGOBJ)/probabilityTheory.uo) \
-    $(dprot $(SIGOBJ)/lebesgue_measureTheory.uo) \
-    $(HOLDIR)/examples/probability/large_numberTheory.uo
-	$(PS_NOUMAP)
-
-math.tex: math.md pdf-macros.lua
-	$(PANDOC_MD)
-
-simplifier.md: simplifier.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-simplifier.tex: simplifier.md pdf-macros.lua
-	$(PANDOC_MD)
-
-PatternMatchesLib.md: PatternMatchesLib.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-PatternMatchesLib.tex: PatternMatchesLib.md pdf-macros.lua
-	$(PANDOC_MD)
-
-libraries.md: libraries.smd $(PS_STUFF) $(dprot $(SIGOBJ)/integerTheory.uo)
-	$(PS_NOUMAP)
-
-libraries.tex: libraries.md pdf-macros.lua
-	$(PANDOC_MD)
-
-system.md: system.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-system.tex: system.md pdf-macros.lua
-	$(PANDOC_MD)
-
-HolSat.md: HolSat.smd $(PS_STUFF) zchaff.cnf
-	$(PS_NOUMAP)
-
-HolSat.tex: HolSat.md pdf-macros.lua
-	$(PANDOC_MD)
-
-HolQbf.md: HolQbf.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-HolQbf.tex: HolQbf.md pdf-macros.lua
-	$(PANDOC_MD)
-
-HolSmt.md: HolSmt.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-HolSmt.tex: HolSmt.md pdf-macros.lua
-	$(PANDOC_MD)
-
-QuantHeuristics.md: QuantHeuristics.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-QuantHeuristics.tex: QuantHeuristics.md pdf-macros.lua
-	$(PANDOC_MD)
-
-enumfset.md: enumfset.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-enumfset.tex: enumfset.md pdf-macros.lua
-	$(PANDOC_MD)
-
-modern-syntax.md: modern-syntax.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-modern-syntax.tex: modern-syntax.md pdf-macros.lua
-	$(PANDOC_MD)
-
-misc.md: misc.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-misc.tex: misc.md pdf-macros.lua
-	$(PANDOC_MD)
+HolSat.md: zchaff.cnf
 
 # This builds figs/0.mps, figs/1.mps, ...
 figures:
 	mpost -mem=metafun -tex=latex figure.mp
 
-EXTRA_CLEANS = drules.tex drules.md tactics.tex tactics.md \
-               theories.tex theories.md libraries.tex libraries.md \
-               simplifier.tex simplifier.md \
-               PatternMatchesLib.tex PatternMatchesLib.md \
-               HolSat.tex HolSat.md \
-               HolQbf.tex HolQbf.md \
-               HolSmt.tex HolSmt.md \
-               QuantHeuristics.tex QuantHeuristics.md \
-               enumfset.tex enumfset.md \
-               definitions.tex definitions.md \
-               system.tex system.md conv.tex conv.md math.tex math.md \
+EXTRA_CLEANS = $(SMD_MDS) $(patsubst %.smd,%.tex,$(SMDS)) \
                description.pdf mdbook-serve.log \
                $(patsubst %,%.aux,$(TEX_CORES)) \
-	       description.log description.out \
+               description.log description.out \
                description.toc description.fls description.idx description.ilg \
                description.ind description.blg description.bbl \
-	       description.fdb_latexmk modern-syntax.md modern-syntax.tex \
-	       misc.md misc.tex \
-	       chapters-include.tex book-title.tex SUMMARY.md \
-	       ../book/Description/
+               description.fdb_latexmk \
+               chapters-include.tex book-title.tex SUMMARY.md \
+               ../book/Description/
