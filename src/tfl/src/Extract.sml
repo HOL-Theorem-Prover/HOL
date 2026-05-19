@@ -383,7 +383,27 @@ fun simple cnv cps (ant,rst) =
 
 fun complex cnv cps (ant,rst) =
   let val context_frees = free_varsl (#context cps)
-    val ant' = rename_forall_prefix context_frees ant
+    (* The cong rule's universal prefix must also avoid the user's
+       lambda bound names. Otherwise, when the prefix is later
+       generalised by `itlist generalize` below, the binding-by-binding
+       `pairTools.PGEN` (which expands to sequential `Thm.INST`) can
+       collapse names: e.g. if theta is [x_cong |-> y_user,
+       y_cong |-> j_user] (residue of one binding = redex of another),
+       the first INST [j_user |-> y_cong] forces both pair positions to
+       become "y" in the resulting goal.  Pulling the user names into
+       the rename_forall_prefix avoidance list keeps redexes and
+       residues disjoint. *)
+    val vstruct_avoid =
+       let val (_, body0) = strip_forall ant
+           val (_, eq0) = strip_imp_only body0
+           val (lhs0, rhs0) = dest_eq eq0
+           val (_, args0) = strip_comb rhs0
+           val lhsFn0 = fst(dest_combn lhs0 (length args0))
+       in
+         free_varsl (fst (strip_pabs lhsFn0))
+       end handle HOL_ERR _ => []
+    val ant' = rename_forall_prefix
+                  (op_union aconv vstruct_avoid context_frees) ant
     val ant_frees = Term.free_vars ant'
     val (vlist,ceqn) = strip_forall ant'
     val (_,eq) = strip_imp_only ceqn

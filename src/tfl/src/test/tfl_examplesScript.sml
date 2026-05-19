@@ -169,3 +169,28 @@ val _ = tDefine "foo"
 `foo x = if (\x. x) x then foo F else ()`
 (WF_REL_TAC `measure (\x. if x then 1 else 0)`);
 
+(* GH #1961: a user pattern variable whose name coincides with the
+   pair_case_cong's universal-prefix bound name (here "y" in the first
+   pair position) used to lose the v = (y,j) binding from the extracted
+   termination condition, leaving the goal unprovable. *)
+val _ = let
+  val _ = Hol_defn "gh1961_foo"
+            `gh1961_foo (s:num list) i = if LENGTH s <= i then NONE
+                                          else SOME (9n:num, i + 1n)`
+  val defn = Hol_defn "gh1961_bar"
+    `gh1961_bar x s i = case gh1961_foo s i of
+                          NONE => SOME (x, i)
+                        | SOME (y, j) => gh1961_bar 0 s j`
+  val tcs = Defn.tcs_of defn
+  val target = ``v = (y:num, j:num)``
+  fun has_pair_eq t =
+    let val (_, body) = boolSyntax.strip_forall t
+        val ants = case Lib.total boolSyntax.dest_imp body
+                    of SOME (a, _) => boolSyntax.strip_conj a
+                     | NONE => []
+    in List.exists (aconv target) ants end
+in
+  if List.exists has_pair_eq tcs then ()
+  else raise Fail "gh1961: extracted TC missing the v = (y,j) constraint"
+end
+
