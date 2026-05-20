@@ -56,6 +56,12 @@ New examples
 
 -   The LaTeX munging technology has a tutorial document in the `examples/latex-generation` directory.
 
+-  `examples/lambda/barendregt`: new theories (`solvable`, `boehm`,
+   `lameta_complete`, `separability`, etc.) containing a formalisation
+   of Böhm trees, Böhm's separation theorem for untyped λ-calculus,
+   completeness of λη-equational theory, Wadsworth's theorem (solvable
+   iff has hnf), Takahashi's modern proofs about η-reduction, etc.
+
 Incompatibilities
 -----------------
 
