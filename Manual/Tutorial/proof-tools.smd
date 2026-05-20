@@ -636,9 +636,7 @@ scan of the tree, which we can do with the `foldl` function:
 
 \label{sec:dpll-performance}
 
-```
 ##use ../../examples/dpll.sml
-```
 
 Once inputs get even a little beyond the clearly trivial, the
 function we have written (at the top-level, `DPLL_UNIV`) performs
