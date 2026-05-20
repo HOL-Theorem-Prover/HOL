@@ -151,7 +151,7 @@ auth runs *as the `claude` user* so credentials land in
 read:
 
     orb -m hol4 sudo -u claude -H bash -c \
-      'cd /repo && claude --dangerously-skip-permissions'
+      'cd /repo && claude --dangerously-skip-permissions --add-dir /repo'
 
 It prints a URL + short code.  Open the URL on macOS, paste the code,
 Ctrl+D when done.  Subsequent runs re-use the persisted credentials.
@@ -182,7 +182,7 @@ drop into a shell rather than chaining one-liners:
     $ cd /repo
     $ git worktree add .claude/worktrees/<name> <base>
     $ cd .claude/worktrees/<name>
-    $ sudo -u claude -H claude --dangerously-skip-permissions
+    $ sudo -u claude -H claude --dangerously-skip-permissions --add-dir /repo
 
 `sudo -u claude -H` preserves the current working directory and sets
 `HOME=/home/claude` (so Claude finds its own `~/.claude/`).  When
@@ -209,7 +209,7 @@ the following into your `~/.bashrc`:
         cd /repo
         git worktree add -b "$name" ".claude/worktrees/$name" origin/develop
         cd ".claude/worktrees/$name"
-        exec claude --dangerously-skip-permissions
+        exec claude --dangerously-skip-permissions --add-dir /repo
       ' linux-branch "$1"
     }
 
@@ -230,7 +230,7 @@ you'll see `Device or resource busy` on `.git/config` writes.
 Once a worktree exists, a single one-liner is enough:
 
     orb -m hol4 sudo -u claude -H bash -c \
-      'cd /repo/.claude/worktrees/<name> && claude --dangerously-skip-permissions'
+      'cd /repo/.claude/worktrees/<name> && claude --dangerously-skip-permissions --add-dir /repo'
 
 ### Cwd-aware macOS alias
 
@@ -240,11 +240,21 @@ checkout location):
     function claude-vm() {
       local rel="${PWD#$HOME/HOL-vm}"
       orb -m hol4 sudo -u claude -H bash -c \
-        "cd /repo${rel} && claude --dangerously-skip-permissions"
+        "cd /repo${rel} && claude --dangerously-skip-permissions --add-dir /repo"
     }
 
 Then `cd ~/HOL-vm/.claude/worktrees/foo && claude-vm` lands at
 `/repo/.claude/worktrees/foo` inside the VM as `claude`.
+
+### Repo-shipped skills
+
+The `--add-dir /repo` flag on each launcher above isn't about file
+access (the session can already write all of `/repo`); it's so that
+project skills at `/repo/.claude/skills/<name>/SKILL.md` get discovered
+even when Claude starts inside a worktree.  Without it, the discovery
+walk stops at the worktree dir (git's `--show-toplevel` for a worktree
+is the worktree itself, not the parent repo) and skills shipped at
+the repo root are invisible.
 
 ## What you can / can't do inside the VM
 
