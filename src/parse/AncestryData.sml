@@ -198,13 +198,8 @@ fun gen_other_tds {tag,dec,enc,P} = let
      DB.lookup, so it can change on *any* event that mutates the binding
      table — NewBinding, UpdBinding, DelBinding.
      When retire_epoch is unchanged and the event is one that only fires
-     after a retire (NewConstant / NewTypeOp / DelConstant / DelTypeOp),
-     we know no entry's P result can have changed since the last scan. *)
-  fun memoable (TheoryDelta.NewConstant _) = true
-    | memoable (TheoryDelta.NewTypeOp _) = true
-    | memoable (TheoryDelta.DelConstant _) = true
-    | memoable (TheoryDelta.DelTypeOp _) = true
-    | memoable _ = false
+     after a retire (see TheoryDelta.retire_memoable), we know no
+     entry's P result can have changed since the last scan. *)
   fun scan t =
     case t of
         ThyDataSexp.List raw_ds =>
@@ -225,7 +220,8 @@ fun gen_other_tds {tag,dec,enc,P} = let
       | _ => raise ERR "gen_other_tds" ("Bad encoding (2) for tag: "^tag)
   in fn (t, thyevent) =>
     case KernelSig.retire_epoch () of cur =>
-    if memoable thyevent andalso !last_scan_epoch = cur then NONE
+    if TheoryDelta.retire_memoable thyevent andalso !last_scan_epoch = cur
+    then NONE
     else scan t before last_scan_epoch := cur
   end
 
