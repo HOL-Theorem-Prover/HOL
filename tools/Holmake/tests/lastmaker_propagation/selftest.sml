@@ -168,9 +168,13 @@ val _ = case read_lastmaker sub of
             if got = other_executable then ()
             else (dump out2;
                   die ("sub lastmaker was clobbered to: " ^ Lib.quote got))
+(* "Holmake died: lastmaker conflict in ..." prefixes both die_with
+   messages -- the "no tty" abort and the "aborted by user" abort
+   that fires when stdin_is_tty wrongly reports a tty (some Poly/ML
+   environments do that) and the subsequent inputLine returns NONE
+   from /dev/null.  Either is a correct conflict-and-abort outcome. *)
 val _ = if String.isSubstring "WARNING" out2 andalso
-           String.isSubstring "lastmaker" out2 andalso
-           String.isSubstring "no tty" out2
+           String.isSubstring "Holmake died: lastmaker conflict" out2
         then ()
         else (dump out2; die "expected conflict warning / abort msg not emitted")
 val _ = OK ()

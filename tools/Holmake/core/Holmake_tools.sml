@@ -350,21 +350,6 @@ fun read_existing_lastmaker () =
       end handle IO.Io _ => NONE
     else NONE
 
-(* Detect whether standard input is connected to a terminal.  Pure
-   SML basis (no Posix), and silently falls back to false on any
-   surprise -- non-interactive contexts must default to "abort"
-   without ever asking. *)
-fun stdin_is_tty () =
-    let val (rd as TextPrimIO.RD{ioDesc,...}, buf) =
-            TextIO.StreamIO.getReader (TextIO.getInstream TextIO.stdIn)
-        val _ = TextIO.setInstream
-                  (TextIO.stdIn, TextIO.StreamIO.mkInstream (rd, buf))
-    in
-      case ioDesc of
-          NONE => false
-        | SOME desc => OS.IO.kind desc = OS.IO.Kind.tty
-    end handle _ => false
-
 (* Once a Holmake invocation has decided to overwrite conflicting
    lastmakers -- either because --force-lastmaker was passed or
    because the user said `y' to one prompt -- the decision sticks
