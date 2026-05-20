@@ -188,14 +188,29 @@ struct
             val _ = OS.FileSys.chDir dir
           in
             if try_cache () then
-              (* Posix.Process.exit (_exit) instead of OS.Process.exit
-                 so the child does not run atExit handlers inherited
-                 from the parent.  Notably, Holmake's atExit registers
-                 finish_logging false on its current-make-log; running
-                 that in this child would race the parent's postmortem
-                 and rename the log to hmlog-bad-* even on a successful
-                 cache hit. *)
-              Posix.Process.exit 0w0
+              (* Don't call OS.Process.exit or Posix.Process.exit here:
+                 both hang in the forked child on this PolyML build
+                 (poly 5.9.2 / aarch64) -- exit appears to try to
+                 coordinate with PolyML runtime threads that were
+                 duplicated by fork() but aren't running, so the
+                 child sleeps in futex forever and the parent's
+                 waitpid never returns.  Cache-hit children would
+                 silently deadlock the whole build, with no useful
+                 diagnostic.
+                 Also, OS.Process.exit would run atExit handlers
+                 inherited from the parent: in Holmake's case that
+                 includes finish_logging false on its
+                 current-make-log, which races the parent's
+                 postmortem and renames the log to hmlog-bad-*
+                 even on a successful cache hit (see
+                 commit 37986571c).
+                 Both problems are sidestepped by exec'ing a no-op
+                 binary: exec replaces the whole process image, no
+                 PolyML cleanup runs, and the resulting process
+                 just exits 0. *)
+              exece("/usr/bin/true", ["true"], Posix.ProcEnv.environ())
+              handle OS.SysErr _ =>
+                exece("/bin/true", ["true"], Posix.ProcEnv.environ())
             else
               exece(executable,nm_args,env)
           end
