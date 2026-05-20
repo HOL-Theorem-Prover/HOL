@@ -112,10 +112,13 @@ sig
   val write_lastmaker_in_cwd : output_functions -> unit
     (* Records DEPDIR/lastmaker in the current working directory,
        using the path captured by do_lastmade_checks.  No-op if
-       do_lastmade_checks has not yet run.  Intended to be called
-       during the INCLUDES-recursion in Holmake.sml so that every
-       directory the current Holmake visits gains a lastmaker file,
-       not just the one Holmake was started in.
+       do_lastmade_checks has not yet run, or if Holmake started
+       under any HOLDIR (HOLDIR-relative resolution handles those
+       directories without a lastmaker file, and INCLUDES walks
+       starting under a HOLDIR don't leave it).  Intended to be
+       called during the INCLUDES-recursion in Holmake.sml so that
+       every directory the current Holmake visits gains a
+       lastmaker file, not just the one Holmake was started in.
 
        If a lastmaker file is already present and points at a
        different but still-usable Holmake binary, the conflict
