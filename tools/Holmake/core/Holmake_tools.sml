@@ -311,6 +311,17 @@ end
    first time it runs; read by write_lastmaker_in_cwd to propagate the
    same value into INCLUDES-visited directories. *)
 val cached_mypath : string option ref = ref NONE
+
+(* Whether the Holmake invocation was launched from inside any HOLDIR
+   (its own or a foreign one).  Filled by do_lastmade_checks on the
+   way through and consulted by write_lastmaker_in_cwd: HOLDIR-relative
+   resolution disambiguates inside-HOLDIR dirs on its own, and an
+   INCLUDES walk that starts inside a HOLDIR doesn't leave it (no
+   outward-pointing INCLUDES links), so one check at startup is
+   enough -- there's no reason to do an O(depth) check_distrib at
+   every visited directory. *)
+val started_under_holdir : bool ref = ref false
+
 val lastmakerfilename = OS.Path.concat (DEPDIR, "lastmaker")
 
 fun write_lastmaker_file_for mypath = let
@@ -437,9 +448,15 @@ fun prompt_lastmaker_conflict (ofns : output_functions) {existing, mine} =
          => overwrite (treat as garbage, same as do_lastmade_checks)
      - existing file holds a different usable Holmake path
          => prompt the user (TTY only) to either abort the run or
-            agree to overwrite; aborts outright when not on a TTY. *)
+            agree to overwrite; aborts outright when not on a TTY.
+
+   Short-circuits entirely when the Holmake invocation started
+   under any HOLDIR (see started_under_holdir): no lastmaker is
+   needed when HOLDIR-relative resolution is already definitive,
+   and INCLUDES walks starting inside a HOLDIR don't leave it. *)
 fun write_lastmaker_in_cwd (ofns : output_functions) =
-    case !cached_mypath of
+    if !started_under_holdir then ()
+    else case !cached_mypath of
         NONE => ()
       | SOME mypath =>
         case read_existing_lastmaker () of
@@ -471,13 +488,13 @@ fun write_lastmaker_in_cwd (ofns : output_functions) =
        the chdir at its usual point and there's no observable
        cwd change from this call.
 
-   On every non-exec path we write DEPDIR/lastmaker in the target
-   directory so the entry point is symmetric with the propagation
-   that write_lastmaker_in_cwd performs in INCLUDES-visited dirs.
-   Previously the "in the right HOL distribution" and "--nolmbc"
-   branches skipped the write; that asymmetry is no longer useful
-   now that downstream tooling (emacs mode, recursive Holmakes)
-   relies on the file being present wherever Holmake has been. *)
+   The start-dir write only happens via lmfile() in the
+   not-in-any-HOLDIR branch.  When we are under a HOLDIR --
+   whether our own or someone else's -- we deliberately don't
+   write: HOLDIR-relative resolution disambiguates the right
+   Holmake on its own, and the no-write behaviour matches what
+   write_lastmaker_in_cwd does for INCLUDES-visited dirs that
+   live under a HOLDIR. *)
 fun do_lastmade_checks (ofns : output_functions)
                        {no_lastmakercheck, target_dir} = let
   val {warn,diag,...} = ofns
@@ -527,22 +544,18 @@ fun do_lastmade_checks (ofns : output_functions)
 in
   diag (K "Looking to see if I am in a HOL distribution.");
   (case check_distrib "Holmake" of
-    NONE => let
-    in
-      diag (K "Not in a HOL distribution");
-      lmfile()
-    end
+    NONE => (started_under_holdir := false;
+             diag (K "Not in a HOL distribution");
+             lmfile())
   | SOME p =>
-    if p = mypath then
-      (diag (K "In the right HOL distribution");
-       write_lastmaker_file_for mypath)
-    else if no_lastmakercheck then
-      (diag (K "In the wrong distribution, but --nolmbc takes precedence.");
-       write_lastmaker_file_for mypath)
-    else
-      (warn ("*** Switching to execute "^p);
-       warn ("*** (As we are in/under its HOLDIR)");
-       exec_in_saved_cwd (p, p::"--nolmbc"::CommandLine.arguments())));
+    (started_under_holdir := true;
+     if p = mypath then diag (K "In the right HOL distribution")
+     else if no_lastmakercheck then
+       diag (K "In the wrong distribution, but --nolmbc takes precedence.")
+     else
+       (warn ("*** Switching to execute "^p);
+        warn ("*** (As we are in/under its HOLDIR)");
+        exec_in_saved_cwd (p, p::"--nolmbc"::CommandLine.arguments()))));
   restore_cwd ()
 end
 

@@ -7,6 +7,13 @@
    downstream tools (the emacs mode, recursive Holmake invocations on
    subtrees) can identify the right binary from any of them.
 
+   Propagation is intentionally skipped when Holmake is launched
+   from under any HOLDIR -- HOLDIR-relative resolution disambiguates
+   on its own, and INCLUDES walks starting inside a HOLDIR don't
+   leave it -- so the tests must drive Holmake from a directory that
+   isn't itself under a HOL distribution.  We build the fixture in a
+   fresh OS.FileSys.tmpName() directory for each run.
+
    To avoid silently destroying useful state when two HOL
    installations share a tree, propagation refuses to overwrite an
    existing lastmaker that points at a *different* usable Holmake
@@ -14,9 +21,11 @@
    between overwriting (and proceeding) or aborting; in any
    non-interactive context (no TTY -- the selftest harness, CI,
    child Holmakes, editor probes) the run aborts with a non-zero
-   exit code and the existing lastmaker is left alone.  A garbage
-   pointer (an executable that no longer exists) is treated as
-   stale and overwritten without prompting. *)
+   exit code and the existing lastmaker is left alone.  The
+   --force-lastmaker command-line flag suppresses the prompt and
+   forces overwrite-and-continue.  A garbage pointer (an executable
+   that no longer exists) is treated as stale and overwritten
+   without prompting. *)
 
 open testutils
 
@@ -29,6 +38,43 @@ fun read_file f =
 
 fun safedel p = OS.FileSys.remove p handle _ => ()
 fun safermdir p = OS.FileSys.rmDir p handle _ => ()
+
+fun mkdir_p p =
+    if OS.FileSys.access (p, []) then ()
+    else (mkdir_p (OS.Path.dir p);
+          OS.FileSys.mkDir p handle OS.SysErr _ => ())
+
+fun write_file path content =
+    let val s = TextIO.openOut path
+    in TextIO.output (s, content); TextIO.closeOut s end
+
+fun rm_rf path =
+    if OS.FileSys.isDir path handle _ => false then
+      let val ds = OS.FileSys.openDir path
+          fun loop () =
+              case OS.FileSys.readDir ds of
+                  NONE => (OS.FileSys.closeDir ds; safermdir path)
+                | SOME f => (rm_rf (path ++ f); loop ())
+      in loop () end
+    else safedel path
+
+(* Create a fresh tmpdir for fixtures, outside any HOLDIR so the
+   started_under_holdir short-circuit doesn't bypass propagation. *)
+fun mktmpdir () =
+    let val n = OS.FileSys.tmpName ()
+        val _ = safedel n
+        val _ = OS.FileSys.mkDir n
+    in n end
+
+val tmp_root = mktmpdir ()
+val fixture = tmp_root ++ "fixture"
+val sub     = fixture ++ "sub"
+val _ = mkdir_p sub
+val _ = write_file (fixture ++ "Holmakefile")
+          "INCLUDES = sub\nall: $(DEFAULT_TARGETS)\n.PHONY: all\n"
+val _ = write_file (sub ++ "Holmakefile")
+          "all: $(DEFAULT_TARGETS)\n.PHONY: all\n"
+val _ = OS.Process.atExit (fn () => rm_rf tmp_root)
 
 fun clean_lastmaker_in dir = let
   val depdir = dir ++ ".hol" ++ "make-deps"
@@ -50,23 +96,15 @@ fun read_lastmaker dir =
 
 fun write_lastmaker_with_content dir content =
     let val depdir = dir ++ ".hol" ++ "make-deps"
-        val _ = OS.FileSys.mkDir (dir ++ ".hol")
-                handle OS.SysErr _ => ()
-        val _ = OS.FileSys.mkDir depdir handle OS.SysErr _ => ()
-        val strm = TextIO.openOut (depdir ++ "lastmaker")
-    in TextIO.output (strm, content ^ "\n"); TextIO.closeOut strm end
+        val _ = mkdir_p depdir
+    in write_file (depdir ++ "lastmaker") (content ^ "\n") end
 
 val real_holmake = Globals.HOLDIR ++ "bin" ++ "Holmake"
-val fixture = "fixture"
-val sub     = fixture ++ "sub"
-
-fun cleanup () = (app clean_lastmaker_in [fixture, sub])
-val _ = cleanup()
-val _ = OS.Process.atExit cleanup
-
-val outputlog = "lastmaker_propagation-output"
+val outputlog = tmp_root ++ "output"
 val _ = safedel outputlog
 val _ = OS.Process.atExit (fn () => safedel outputlog)
+
+fun cleanup () = app clean_lastmaker_in [fixture, sub]
 
 (* Redirect stdin from /dev/null so the prompt branch in
    Holmake_tools sees "not a TTY" and aborts deterministically

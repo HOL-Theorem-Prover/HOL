@@ -6,9 +6,7 @@ all: selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe lastmaker_propagation-selftest.log \
-	lastmaker_propagation-output \
-	fixture/.hol fixture/sub/.hol
+EXTRA_CLEANS = selftest.exe lastmaker_propagation-selftest.log
 
 ifdef HOLSELFTESTLEVEL
 all: lastmaker_propagation-selftest.log
