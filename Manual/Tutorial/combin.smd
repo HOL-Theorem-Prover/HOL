@@ -69,9 +69,9 @@ evolve given various rules describing how they change.
 Therefore, our next step is to define the reductions that
 combinators can undergo.  There are two basic rules:
 
-$$\begin{array}{l@{\;\;\rightarrow\;\;}l}
-\KC\;x\;y & x\\
-\SC\;f\;g\;x & (f\,x)(g\,x)
+$$\begin{array}{lcl}
+\KC\;x\;y & \rightarrow & x\\
+\SC\;f\;g\;x & \rightarrow & (f\,x)(g\,x)
 \end{array}$$
 
 Here, in our description outside of HOL, we use juxtaposition

@@ -408,10 +408,10 @@
                 <div id="mdbook-menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
                         <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
-                            <i class="fa fa-bars"></i>
+                            {{fa "solid" "bars"}}
                         </label>
                         <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
-                            <i class="fa fa-paint-brush"></i>
+                            {{fa "solid" "paintbrush"}}
                         </button>
                         <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
                             <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
@@ -423,7 +423,7 @@
                         </ul>
                         {{#if search_enabled}}
                         <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
-                            <i class="fa fa-search"></i>
+                            {{fa "solid" "magnifying-glass"}}
                         </button>
                         {{/if}}
                     </div>
@@ -433,17 +433,17 @@
                     <div class="right-buttons">
                         {{#if print_enable}}
                         <a href="{{ path_to_root }}print.html" title="Print this book" aria-label="Print this book">
-                            <i id="print-button" class="fa fa-print"></i>
+                            {{fa "solid" "print" "print-button"}}
                         </a>
                         {{/if}}
                         {{#if git_repository_url}}
                         <a href="{{git_repository_url}}" title="Git repository" aria-label="Git repository">
-                            <i id="git-repository-button" class="fa {{git_repository_icon}}"></i>
+                            {{fa git_repository_icon_class git_repository_icon "git-repository-button"}}
                         </a>
                         {{/if}}
                         {{#if git_repository_edit_url}}
                         <a href="{{git_repository_edit_url}}" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
-                            <i id="git-edit-button" class="fa fa-edit"></i>
+                            {{fa "solid" "pencil" "git-edit-button"}}
                         </a>
                         {{/if}}
 
@@ -456,7 +456,7 @@
                         <div class="search-wrapper">
                             <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
                             <div class="spinner-wrapper">
-                                <i class="fa fa-spinner fa-spin"></i>
+                                {{fa "solid" "spinner" "fa-spin"}}
                             </div>
                         </div>
                     </form>
@@ -486,13 +486,13 @@
                         <!-- Mobile navigation buttons -->
                         {{#if previous}}
                             <a rel="prev" href="{{ path_to_root }}{{previous.link}}" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
-                                <i class="fa fa-angle-left"></i>
+                                {{fa "solid" "angle-left"}}
                             </a>
                         {{/if}}
 
                         {{#if next}}
                             <a rel="next prefetch" href="{{ path_to_root }}{{next.link}}" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
+                                {{fa "solid" "angle-right"}}
                             </a>
                         {{/if}}
 
@@ -504,13 +504,13 @@
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 {{#if previous}}
                     <a rel="prev" href="{{ path_to_root }}{{previous.link}}" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
-                        <i class="fa fa-angle-left"></i>
+                        {{fa "solid" "angle-left"}}
                     </a>
                 {{/if}}
 
                 {{#if next}}
                     <a rel="next prefetch" href="{{ path_to_root }}{{next.link}}" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
+                        {{fa "solid" "angle-right"}}
                     </a>
                 {{/if}}
             </nav>
