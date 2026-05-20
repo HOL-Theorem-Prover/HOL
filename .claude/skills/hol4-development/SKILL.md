@@ -90,6 +90,54 @@ poly < tools/smart-configure.sml
 
 then run `bin/build` as normal.
 
+## Cross-compiler portability
+
+HOL4 supports two SML implementations: **Poly/ML** (the primary,
+where day-to-day development happens) and **Moscow ML** (secondary,
+kept feature-compatible as far as the implementations allow). The
+Moscow ML CI check runs on every commit to GitHub, so a Poly/ML-only
+change that silently breaks mosml will surface quickly.
+
+Working assumption: feature parity where reasonable. When an
+implementation genuinely can't support something, document the gap
+rather than abandon the build target — Moscow ML's `Holmake` doesn't
+support `-j` for parallel builds, for example, and mosml users
+simply live with single-process compilation.
+
+### Source-level conventions driven by mosml
+
+The signature-file discipline in the codebase exists largely *because
+of* Moscow ML:
+
+- Signatures in `*.sig`, structures in `*.sml`, connected with
+  opaque ascription `:>`. The signature name, structure name, and
+  filename all share one identifier (typically lowercase), so a
+  module `foo` looks like:
+
+      (* foo.sig *)
+      signature foo = sig … end
+
+      (* foo.sml *)
+      structure foo :> foo = struct … end
+
+  Moscow ML enforces this match — Standard-SML mixed casing like
+  `structure Foo :> FOO` won't compile, and the filename has to
+  agree too.
+
+- For implementation-divergent modules, share a single `.sig`
+  between Poly/ML and Moscow ML, and provide different `.sml`
+  bodies under `src/portableML/poly/` and `src/portableML/mosml/`.
+  `MLSYSPortable` is the central place where this split is
+  mediated.
+
+### Build-sequence escape hatch
+
+The build sequence files (`tools/sequences/*`) can mark whole
+directories as not applicable to a particular implementation, so the
+build skips them entirely rather than failing. Use this for code that
+genuinely can't be made portable — preferable to scattering
+implementation-specific gates through individual files.
+
 ## REPL and friends
 
 - `bin/hol` — standard interactive REPL, loads `bossLib`.
