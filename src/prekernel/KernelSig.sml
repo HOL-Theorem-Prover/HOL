@@ -20,15 +20,15 @@ struct
      retired since the last scan.  A constant's uptodate flag only flips
      via retire_id, so the counter is a sound summary of "has any stored
      delta potentially become stale?". *)
-  val retire_counter = ref 0
-  fun retire_epoch () = !retire_counter
+  val retire_counter = Sref.new 0
+  fun retire_epoch () = Sref.value retire_counter
 
   fun name_of_id r = case !r of (n,_) => n
   fun uptodate_id r = case !r of (_,utd) => utd
   fun new_id n = ref (n, true)
   fun retire_id r = case !r of ({Thy,Name}, _) => (
     r := ({Thy = Thy, Name = Globals.old Name}, false);
-    retire_counter := !retire_counter + 1)
+    Sref.update retire_counter (fn n => n + 1))
   fun name_of r = case !r of  ({Thy=_,Name},_) => Name
   fun seg_of r = case !r of ({Thy,Name=_},_) => Thy
   fun id_toString id = name_toString (name_of_id id)
