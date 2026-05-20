@@ -10,9 +10,13 @@
    To avoid silently destroying useful state when two HOL
    installations share a tree, propagation refuses to overwrite an
    existing lastmaker that points at a *different* usable Holmake
-   binary, and emits a prominent warning instead.  A garbage
-   pointer (an executable that no longer exists) is treated as stale
-   and overwritten. *)
+   binary.  Interactively the user gets a y/N prompt to choose
+   between overwriting (and proceeding) or aborting; in any
+   non-interactive context (no TTY -- the selftest harness, CI,
+   child Holmakes, editor probes) the run aborts with a non-zero
+   exit code and the existing lastmaker is left alone.  A garbage
+   pointer (an executable that no longer exists) is treated as
+   stale and overwritten without prompting. *)
 
 open testutils
 
@@ -64,10 +68,13 @@ val outputlog = "lastmaker_propagation-output"
 val _ = safedel outputlog
 val _ = OS.Process.atExit (fn () => safedel outputlog)
 
+(* Redirect stdin from /dev/null so the prompt branch in
+   Holmake_tools sees "not a TTY" and aborts deterministically
+   instead of asking. *)
 fun run_holmake_in dir =
     let val cmd = String.concatWith " "
                     [real_holmake, "-C", dir, "--no-cache", "-n",
-                     ">", outputlog, "2>&1"]
+                     "<", "/dev/null", ">", outputlog, "2>&1"]
         val res = OS.Process.system cmd
         val out = read_file outputlog handle _ => ""
     in (res, out) end
@@ -99,20 +106,22 @@ val _ = case read_lastmaker sub of
 val _ = OK ()
 
 (* ----------------------------------------------------------------------
-   Test 2: conflicting existing lastmaker is preserved and warned
-   /bin/cat stands in as a "different but real executable" -- any
-   readable+executable file path will do.
+   Test 2: conflicting existing lastmaker non-interactively aborts the
+   build and leaves the existing file alone.  /bin/cat stands in as a
+   "different but real executable" -- any readable+executable file
+   path will do.
    ---------------------------------------------------------------------- *)
 val other_executable = "/bin/cat"
 val _ = if OS.FileSys.access (other_executable, [OS.FileSys.A_EXEC]) then ()
         else die ("test prerequisite missing: " ^ other_executable)
 
-val _ = tprint "conflicting lastmaker is preserved, with a warning"
+val _ = tprint "conflicting lastmaker aborts non-interactively, file preserved"
 val _ = cleanup()
 val _ = write_lastmaker_with_content sub other_executable
 val (res2, out2) = run_holmake_in fixture
-val _ = if OS.Process.isSuccess res2 then ()
-        else (dump out2; die "Holmake exited non-zero")
+val _ = if OS.Process.isSuccess res2 then
+          (dump out2; die "Holmake should have aborted but exited 0")
+        else ()
 val _ = case read_lastmaker sub of
             NONE => (dump out2; die "sub lastmaker disappeared")
           | SOME got =>
@@ -120,9 +129,10 @@ val _ = case read_lastmaker sub of
             else (dump out2;
                   die ("sub lastmaker was clobbered to: " ^ Lib.quote got))
 val _ = if String.isSubstring "WARNING" out2 andalso
-           String.isSubstring "lastmaker" out2
+           String.isSubstring "lastmaker" out2 andalso
+           String.isSubstring "no tty" out2
         then ()
-        else (dump out2; die "expected conflict warning not emitted")
+        else (dump out2; die "expected conflict warning / abort msg not emitted")
 val _ = OK ()
 
 (* ----------------------------------------------------------------------
