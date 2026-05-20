@@ -33,6 +33,7 @@ src/postkernel/prooftrace
 src/parse
 !tools/Holmake/tests/badincludes
 !tools/Holmake/tests/dashC_lastmaker
+!tools/Holmake/tests/lastmaker_propagation
 src/opentheory
 (otknl)src/opentheory/logging
 src/bool

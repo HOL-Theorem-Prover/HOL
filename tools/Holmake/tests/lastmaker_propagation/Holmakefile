@@ -1,0 +1,18 @@
+CLINE_OPTIONS = --no-cache --no_overlay
+
+all: selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe lastmaker_propagation-selftest.log \
+	lastmaker_propagation-output \
+	fixture/.hol fixture/sub/.hol
+
+ifdef HOLSELFTESTLEVEL
+all: lastmaker_propagation-selftest.log
+
+lastmaker_propagation-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+endif

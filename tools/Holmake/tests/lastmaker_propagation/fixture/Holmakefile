@@ -1,0 +1,3 @@
+INCLUDES = sub
+all: $(DEFAULT_TARGETS)
+.PHONY: all
