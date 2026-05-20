@@ -23,6 +23,42 @@ local function isHtmlTag(elem, tag)
          and elem.text == tag
 end
 
+-- HTML `<br>` inside a pipe-table cell is dropped by pandoc's default
+-- LaTeX writer, so the statement and proof in our euclid.smd theorem
+-- tables collapse onto a single \texttt{} run.  Map it to `\newline`
+-- (which works inside the p{width} columns pandoc uses for these
+-- tables).  Returning Pandoc's `LineBreak` would risk being turned
+-- into `\\` (a row separator) in a tabular cell.
+function RawInline(elem)
+  if elem.format == "html" and elem.text == "<br>" then
+    return pandoc.RawInline("latex", "\\newline ")
+  end
+end
+
+-- Leading non-breaking spaces at the start of a line in a p{} table
+-- cell are silently stripped by LaTeX (verified empirically; happens
+-- in longtable/tabular paragraph columns).  The `&nbsp;` indentation
+-- we use in euclid.smd theorem-listing rows (between the arrow and
+-- continuation lines) therefore vanishes in the PDF.  Replace any
+-- leading nbsp run with \hspace*{} which is NOT stripped.  Width:
+-- ~0.2em per nbsp matches the proportional-font visual offset of
+-- the same nbsps in mdbook output.
+function Str(elem)
+  if not (FORMAT and FORMAT:match("latex")) then return nil end
+  local text = elem.text
+  local n = 0
+  while text:sub(n*2 + 1, n*2 + 2) == "\xc2\xa0" do
+    n = n + 1
+  end
+  if n == 0 then return nil end
+  local hspace = pandoc.RawInline("latex",
+                                  "\\hspace*{" .. (0.2 * n) .. "em}")
+  local rest = text:sub(n*2 + 1)
+  if #rest == 0 then return hspace end
+  return { hspace, pandoc.Str(rest) }
+end
+
+
 -- Walk inlines, doing two things:
 --   1. Collapse `<code>X</code>` HTML pairs into pandoc `Code` so
 --      they render as \texttt{X} in the PDF (otherwise pandoc

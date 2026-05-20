@@ -37,6 +37,17 @@
   padding-right: 0.4em;
 }
 
+/* mdbook's default 3px vertical cell padding is too tight for the
+   multi-line theorem-listing tables in Manual/Tutorial/euclid.smd
+   (statement + proof stacked in one cell); the bottom of one row
+   ends up visually attached to the top of the next.  Bump the
+   vertical padding so the alternating row shading and 1px borders
+   give a clear gap. */
+table td {
+  padding-top: 0.7em;
+  padding-bottom: 0.7em;
+}
+
 /* mdbook 0.5.x adds a dynamic <div class="on-this-page"> sub-list
    under the active chapter, built from the body's H2/H3 headings.
    It duplicates the SUMMARY.md-driven subsection list our index.hbs
