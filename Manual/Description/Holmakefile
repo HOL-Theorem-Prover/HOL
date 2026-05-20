@@ -82,6 +82,7 @@ mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS) \
 	mdbook build
 	../Tools/mdbook-check.sh ../book/Description
 	../Tools/smdpp check-refs ../book/Description
+	../Tools/smdpp check-links ../book/Description
 
 # SUMMARY.md and chapters-include.tex are generated from
 # chapters.txt by Manual/Tools/gen_chap_lists.  chapters.txt

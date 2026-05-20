@@ -259,7 +259,7 @@ generalization, and so on, support the familiar patterns of inference.
 
 A number of derived inference rules are pre-defined when the HOL
 system is entered (`UNDISCH` is one of the first).  In
-[Section](standard-rule-derivation), the abstract derivations are given for
+[Section](#derivation-of-the-standard-rules), the abstract derivations are given for
 the pre-defined rules that reflect the more usual inference patterns
 of the predicate (and lambda) calculi.  Like those shown, some of the
 pre-defined derived rules in HOL generate relatively short proofs.
@@ -278,13 +278,13 @@ is these derived rules, rather than the primitive rules, that one
 normally uses in practice.  In this section, the derivations of some
 of the standard rules are given, in sequence.  These derivations only
 use the axioms and definitions in the theory `bool` (see
-[Section](boolfull), the eight primitive inferences of the HOL logic,
+[Section](#primitive-rules-of-inference-of-the-hol-logic), the eight primitive inferences of the HOL logic,
 and inferences defined earlier in the sequence.
 
 Theorems, in accordance with the definition given at the beginning of
 this chapter, are treated as rules without hypotheses; thus the
 derivation of a theorem resembles the derivation of a rule except in
-not having hypotheses. (The derivation of `TRUTH`, [Section](sec:T),
+not having hypotheses. (The derivation of `TRUTH`, [Section](#mathsft-introduction),
 is the only example given of this, but there are several others in
 HOL.)  There are also some rules that are intrinsically more general
 than theorems.  For example, for any two terms $t_1$ and $t_2$, the
@@ -292,7 +292,7 @@ theorem $\vdash(\lambda{x}.t_1)t_2 = t_1[t_2/x]$ follows by the
 primitive rule `BETA_CONV`. The rule `BETA_CONV` returns a theorem for
 each pair of terms $t_1$ and $t_2$, and is therefore equivalent to an
 infinite family of theorems. No single theorem can be expressed in the
-HOL logic that is equivalent to `BETA_CONV`.See [Chapter](avra-conv)
+HOL logic that is equivalent to `BETA_CONV`. See [Chapter](#conversions)
 for further discussion of this point.  Note that `UNDISCH` is not a
 rule of this sort, as it can, in fact, be expresed as a theorem.
 
@@ -1008,7 +1008,7 @@ Edinburgh LCF, and were later implemented more flexibly and
 efficiently by Paulson and Huet for Cambridge LCF.  One basic
 rewriting rule, `REWRITE_RULE`, is illustrated here. Although HOL
 proofs typically feature more elaborate rewriters (such as
-`SIMP_RULE`, documented in [Section](??)), the underlying ideas are
+`SIMP_RULE`, documented in [Section](#simplification--simplib)), the underlying ideas are
 the same.
 
 `REWRITE_RULE` uses a list of equational theorems (theorems whose
@@ -1020,7 +1020,7 @@ defined search, matching and instantiation algorithms.  The validity
 of `REWRITE_RULE` rests ultimately on the primitive rules `SUBST` (for
 making the substitutions); `INST_TYPE` (for instantiating types); and
 the derived rules for generalization and specialization (see
-[Section](sec:gen) and [Section](sec:spec) for instantiating terms.
+[Section](#generalization-forall-introduction) and [Section](#specialization-forall-elimination) for instantiating terms.
 The definition of `REWRITE_RULE` in ML also relies on a large number
 of general and HOL-oriented SML functions.
 
