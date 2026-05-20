@@ -4,4 +4,5 @@ selftest.log: selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.log selftest.exe .cache-iso .selftest-step.log
+EXTRA_CLEANS = selftest.log selftest.exe .cache-iso/ \
+               .selftest-step.log outer/qux
