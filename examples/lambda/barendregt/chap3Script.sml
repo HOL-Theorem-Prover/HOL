@@ -1731,6 +1731,15 @@ Proof
   METIS_TAC [RTC1_step, compat_closure_rules]
 QED
 
+Theorem betastar_appstar_cong :
+    !M N. M -b->* N ==> M @* args -b->* N @* args
+Proof
+    Induct_on ‘args’ >- simp []
+ >> rw [GSYM appstar_CONS]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> MATCH_MP_TAC betastar_APPl >> art []
+QED
+
 Theorem betastar_APPlr:
     M -b->* M' ==> N -b->* N' ==> M @@ N -b->* M' @@ N'
 Proof
@@ -1800,6 +1809,52 @@ Proof
      MATCH_MP_TAC compat_closure_R >> art [])
  >> MATCH_MP_TAC lameta_TRANS
  >> Q.EXISTS_TAC ‘N’ >> art []
+QED
+
+Theorem betastar_LAMl_appstar_disjoint :
+    !xs t args. DISJOINT (set xs) (FV t) /\ LENGTH xs = LENGTH args ==>
+                LAMl xs t @* args -b->* t
+Proof
+    Induct_on ‘xs’ >- simp []
+ >> rw []
+ >> Cases_on ‘args’ >> fs []
+ >> qabbrev_tac ‘M = LAMl xs t’
+ >> Q_TAC (TRANS_TAC betastar_TRANS) ‘M @* t'’
+ >> reverse CONJ_TAC
+ >- (qunabbrev_tac ‘M’ \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> MATCH_MP_TAC betastar_appstar_cong
+ >> MATCH_MP_TAC RTC_SUBSET
+ >> simp [ccbeta_rwt]
+ >> NTAC 2 DISJ2_TAC
+ >> SYM_TAC >> MATCH_MP_TAC lemma14b
+ >> simp [Abbr ‘M’, FV_LAMl]
+QED
+
+Theorem beta_I :
+    !M. I @@ M -b-> M
+Proof
+    rw [I_def, ccbeta_rwt]
+QED
+
+Theorem betastar_I :
+    !M. I @@ M -b->* M
+Proof
+    Q.X_GEN_TAC ‘M’
+ >> MATCH_MP_TAC RTC_SUBSET
+ >> REWRITE_TAC [beta_I]
+QED
+
+Theorem betastar_LAMl_appstar_VAR :
+    !xs. LAMl xs t @* MAP VAR xs -b->* t
+Proof
+    Induct_on ‘xs’ >> rw []
+ >> qabbrev_tac ‘M = LAMl xs t’
+ >> qabbrev_tac ‘args :term list = MAP VAR xs’
+ >> Q_TAC (TRANS_TAC betastar_TRANS) ‘M @* args’ >> art []
+ >> MATCH_MP_TAC betastar_appstar_cong
+ >> MATCH_MP_TAC RTC_SUBSET
+ >> simp [ccbeta_rwt]
 QED
 
 val _ = html_theory "chap3";

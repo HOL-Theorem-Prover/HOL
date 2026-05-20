@@ -2296,6 +2296,14 @@ Proof
  >> rw [lameq_sub_cong]
 QED
 
+Theorem solving_transform_betastar :
+    !f M N. solving_transform f /\ M -b->* N ==> f M -b->* f N
+Proof
+    rw [solving_transform_def, FUN_EQ_THM]
+ >- simp [betastar_APPl]
+ >> simp [reduction_beta_subst]
+QED
+
 (* Definition 10.3.3 (iii)
 
    NOTE: "Boehm transform is a finite composition of solving transforms
@@ -2478,6 +2486,14 @@ Proof
  >> fs [solving_transform_def]
  >- rw [lameta_rules]
  >> MATCH_MP_TAC lameta_subst >> art []
+QED
+
+Theorem Boehm_apply_betastar_cong :
+    !pi M N. Boehm_transform pi /\ M -b->* N ==> apply pi M -b->* apply pi N
+Proof
+    SNOC_INDUCT_TAC >> rw []
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+ >> MATCH_MP_TAC solving_transform_betastar >> art []
 QED
 
 Theorem Boehm_transform_APPEND :

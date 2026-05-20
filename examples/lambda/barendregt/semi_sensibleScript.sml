@@ -4,13 +4,13 @@
 (*                                                                            *)
 (* AUTHORS : 2025  The Australian National University (Chun Tian)             *)
 (* ========================================================================== *)
+
 Theory semi_sensible
 Ancestors
   list pred_set relation topology pair term chap2 chap3 chap4
-  horeduction boehm lameta_complete
+  horeduction boehm lameta_complete separability
 Libs
   numLib hurdUtils pred_setLib
-
 
 (* These theorems usually give unexpected results, should be applied manually *)
 val _ = temp_delsimps [
@@ -26,6 +26,8 @@ val _ = hide "Y";
 
 Overload FV  = “supp term_pmact”
 Overload VAR = “term$VAR”
+
+val _ = temp_clear_overloads_on "fEL"; (* use old EL syntax *)
 
 (* Definition 10.4.4 [1, p.256], but is generalized with a theory parameter.
 
@@ -178,7 +180,7 @@ Theorem eta_separable_def =
                           |> SRULE [lambdathy_lameta]
 
 Theorem eta_separable_thm :
-    !M N. has_benf M /\ has_benf N /\ ~(lameta M N) ==> eta_separable [M; N]
+    !M N. has_benf M /\ has_benf N /\ M =/== N ==> eta_separable [M; N]
 Proof
     rw [eta_separable_def]
  >> MP_TAC (Q.SPECL [‘M’, ‘N’] separability_final) >> simp []
@@ -209,6 +211,27 @@ Proof
  >> rw [lameq_imp_lameta]
 QED
 
+Theorem separable_thm :
+    !M N. has_benf M /\ has_benf N /\ M =/== N ==> separable [M; N]
+Proof
+    rw [separable_def]
+ >> MP_TAC (Q.SPECL [‘M’, ‘N’] beta_separability_final) >> simp []
+ >> DISCH_THEN (MP_TAC o Q.SPECL [‘EL 0 Ns’, ‘EL 1 Ns’])
+ >> STRIP_TAC
+ >> ‘?c. ctxt c /\ !M. apply pi M == c M’
+      by PROVE_TAC [Boehm_transform_lameq_ctxt]
+ >> Q.EXISTS_TAC ‘c’ >> art []
+ >> CONV_TAC (BOUNDED_FORALL_CONV (SIMP_CONV list_ss []))
+ >> CONJ_TAC
+ >- (Q_TAC (TRANS_TAC lameq_TRANS) ‘apply pi N’ >> art [] \\
+     MATCH_MP_TAC lameq_SYM >> art [])
+ >> CONV_TAC (BOUNDED_FORALL_CONV (SIMP_CONV list_ss []))
+ >> ASM_SIMP_TAC bool_ss [GSYM EL]
+ >> Q_TAC (TRANS_TAC lameq_TRANS) ‘apply pi M’ >> art []
+ >> MATCH_MP_TAC lameq_SYM >> art []
+QED
+
+(* END *)
 val _ = html_theory "semi_sensible";
 
 (* References:

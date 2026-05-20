@@ -988,6 +988,14 @@ QED
 Theorem hnf_principal_hnf' =
     REWRITE_RULE [GSYM solvable_iff_has_hnf] hnf_principal_hnf
 
+Theorem hreduces_principal_hnf :
+    !M. solvable M ==> M -h->* principal_hnf M
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘M’, ‘principal_hnf M’] principal_hnf_thm')
+ >> simp [hnf_principal_hnf']
+QED
+
 Theorem solvable_principal_hnf :
     !M. solvable M ==> solvable (principal_hnf M)
 Proof

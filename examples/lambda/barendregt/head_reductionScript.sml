@@ -63,6 +63,13 @@ Proof
   METIS_TAC []
 QED
 
+Theorem hreduces_betastar :
+    !M N. M -h->* N ==> M -b->* N
+Proof
+    HO_MATCH_MP_TAC RTC_INDUCT
+ >> METIS_TAC [RTC_RULES, hreduce_ccbeta]
+QED
+
 Theorem hreduce1_FV:
     ∀M N. M -h-> N ⇒ ∀v. v ∈ FV N ⇒ v ∈ FV M
 Proof
@@ -1827,6 +1834,32 @@ Proof
  >> rw [Once lameq_cases] >> DISJ1_TAC
  >> qexistsl_tac [‘x’, ‘P’] >> art []
  >> MATCH_MP_TAC (GSYM lemma14b)
+ >> Q.PAT_X_ASSUM ‘DISJOINT _ _’ MP_TAC
+ >> rw [DISJOINT_ALT]
+QED
+
+Theorem betastar_hnf_fresh_subst :
+    !as args P. (LENGTH args = LENGTH as) /\ DISJOINT (set as) (FV P) ==>
+                [LAMl as P/y] (VAR y @* args) -b->* P
+Proof
+    Induct_on ‘as’ using SNOC_INDUCT >> rw []
+ >> Cases_on ‘args = []’ >- fs []
+ >> ‘args = SNOC (LAST args) (FRONT args)’ by PROVE_TAC [SNOC_LAST_FRONT]
+ >> POP_ORW
+ >> REWRITE_TAC [appstar_SNOC, SUB_THM]
+ >> MATCH_MP_TAC betastar_TRANS
+ >> qabbrev_tac ‘M = [LAMl as (LAM x P)/y] (LAST args)’
+ >> Q.EXISTS_TAC ‘LAM x P @@ M’
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC betastar_APPl \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     rw [FV_thm, LENGTH_FRONT] \\
+     Q.PAT_X_ASSUM ‘DISJOINT _ _’ MP_TAC \\
+     rw [DISJOINT_ALT])
+ >> MATCH_MP_TAC RTC_SUBSET
+ >> simp [ccbeta_rwt]
+ >> NTAC 2 DISJ2_TAC
+ >> SYM_TAC >> MATCH_MP_TAC lemma14b
  >> Q.PAT_X_ASSUM ‘DISJOINT _ _’ MP_TAC
  >> rw [DISJOINT_ALT]
 QED
