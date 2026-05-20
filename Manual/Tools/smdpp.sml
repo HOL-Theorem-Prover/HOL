@@ -1312,6 +1312,352 @@ fun checkPageRefs selfPage pageHtml pageHeadings =
     val () = walk 0
   in !errs end
 
+(* ===== check-links ===== *)
+
+(* Collect every id="..." (and the JS-rewrite-equivalent name="...")
+   attribute value from an HTML string.  Over-collects (scripts, etc.)
+   but that only causes false negatives, never false positives. *)
+fun collectIdAttrs html =
+  let
+    val ids = ref ([] : string list)
+    fun scan marker pos =
+      case strFindFrom marker html pos of
+          NONE => ()
+        | SOME p =>
+            let val start = p + String.size marker
+                val (v, eend) = readUntilChar #"\"" html start
+            in ids := v :: !ids; scan marker eend end
+    val () = scan " id=\"" 0
+    val () = scan " name=\"" 0
+  in !ids end
+
+(* Collect every <a ... href="X"> from HTML.  We skip <link href="">
+   in <head> by requiring the opening "<a " marker. *)
+fun collectAnchorHrefs html =
+  let
+    val hrefs = ref ([] : string list)
+    val hlen = String.size html
+    fun walk pos =
+      case strFindFrom "<a " html pos of
+          NONE => ()
+        | SOME p =>
+            let
+              val tagEnd = Option.getOpt
+                             (strFindFrom ">" html p, hlen)
+              val hpos = strFindFrom " href=\"" html p
+            in
+              case hpos of
+                  SOME hp =>
+                    if hp < tagEnd then
+                      let val start = hp + 7
+                          val (v, eend) = readUntilChar #"\"" html start
+                      in hrefs := v :: !hrefs; walk eend end
+                    else walk (p + 3)
+                | NONE => walk (p + 3)
+            end
+    val () = walk 0
+  in !hrefs end
+
+(* Split "page.html#anchor", "page.html", "#anchor", or "" into
+   (pageOpt, anchorOpt). *)
+fun splitHref href =
+  case String.fields (fn c => c = #"#") href of
+      [p] => (if p = "" then NONE else SOME p, NONE)
+    | p :: a :: _ =>
+        (if p = "" then NONE else SOME p,
+         if a = "" then NONE else SOME a)
+    | [] => (NONE, NONE)
+
+(* Heuristic: skip hrefs we don't validate -- external schemes,
+   pure-asset references (CSS/JS/image/font), the mdbook generated
+   print page, and synthetic placeholder hrefs. *)
+fun skipHref href =
+  let
+    fun startsWith pre =
+      String.size href >= String.size pre andalso
+      String.substring (href, 0, String.size pre) = pre
+    fun endsWith suf =
+      String.size href >= String.size suf andalso
+      String.substring (href, String.size href - String.size suf,
+                        String.size suf) = suf
+  in
+    href = "" orelse href = "#" orelse
+    startsWith "http://" orelse startsWith "https://" orelse
+    startsWith "mailto:" orelse startsWith "javascript:" orelse
+    startsWith "data:" orelse startsWith "//" orelse
+    endsWith ".css" orelse endsWith ".js" orelse
+    endsWith ".png" orelse endsWith ".svg" orelse
+    endsWith ".jpg" orelse endsWith ".jpeg" orelse
+    endsWith ".gif" orelse endsWith ".ico" orelse
+    endsWith ".woff" orelse endsWith ".woff2" orelse
+    endsWith ".ttf" orelse endsWith ".eot" orelse
+    endsWith ".json" orelse endsWith ".pdf" orelse
+    href = "print.html"
+  end
+
+(* Decode the common HTML entities pulldown-cmark emits in heading
+   text: &amp; &lt; &gt; &quot; &#NN; (decimal numeric).  Used to
+   recover the JS .textContent before slugifying a draft sidebar
+   title -- without it, the literal entity characters (`&#92;` etc.)
+   feed `9`/`2` into the slug. *)
+fun decodeEntities s =
+  let
+    val slen = String.size s
+    val buf = ref ([] : char list)
+    fun emit c = buf := c :: !buf
+    fun namedEntity name =
+      case name of
+          "amp" => SOME #"&"
+        | "lt" => SOME #"<"
+        | "gt" => SOME #">"
+        | "quot" => SOME #"\""
+        | "apos" => SOME #"'"
+        | "nbsp" => SOME #" "
+        | _ => NONE
+    fun walk i =
+      if i >= slen then ()
+      else if String.sub (s, i) = #"&" then
+        let val semi = strFindFrom ";" s i
+        in case semi of
+               NONE => (emit #"&"; walk (i + 1))
+             | SOME sp =>
+                 if sp > i + 1 andalso sp - i <= 12 andalso
+                    String.sub (s, i + 1) = #"#"
+                 then
+                   let val numStart = i + 2
+                       val (numStr, base) =
+                         if numStart < sp andalso
+                            (String.sub (s, numStart) = #"x" orelse
+                             String.sub (s, numStart) = #"X")
+                         then (String.substring (s, numStart + 1,
+                                                 sp - numStart - 1),
+                               StringCvt.HEX)
+                         else (String.substring (s, numStart,
+                                                 sp - numStart),
+                               StringCvt.DEC)
+                   in case Int.scan base Substring.getc
+                          (Substring.full numStr) of
+                          SOME (n, _) =>
+                            if n > 0 andalso n < 128 then
+                              (emit (Char.chr n); walk (sp + 1))
+                            else (emit #"&"; walk (i + 1))
+                        | NONE => (emit #"&"; walk (i + 1))
+                   end
+                 else
+                   let val name = String.substring (s, i + 1, sp - i - 1)
+                   in case namedEntity name of
+                          SOME c => (emit c; walk (sp + 1))
+                        | NONE => (emit #"&"; walk (i + 1))
+                   end
+        end
+      else (emit (String.sub (s, i)); walk (i + 1))
+    val () = walk 0
+  in String.implode (List.rev (!buf)) end
+
+(* Walk toc.html, predicting the JS sidebar-rewrite URL for every
+   draft <li> (a chapter-item li whose <span class="chapter-link-wrapper">
+   first child is <span>, not <a>).
+   We mirror what `closest('li')`/wrapper-anchor walking does in the
+   browser: track an `<ol>`-nesting level (toc.html uses only
+   `<ol class="chapter">` at level 1 and nested `<ol class="section">`
+   for deeper levels), and at each level remember the chapter URL of
+   the most recently opened chapter-item li at that level (or NONE
+   if the most recent was a draft).  For a draft at level L, walk
+   down to find the nearest enclosing level with a real chapter URL
+   -- that's what the JS DOM-ancestor walk computes.
+   Returns a list of (predictedUrl, sourceTitle). *)
+fun predictDraftRewrites tocHtml =
+  let
+    val wrapMarker = "<span class=\"chapter-link-wrapper\">"
+    val strongMarker = "<strong aria-hidden=\"true\">"
+    val hrefMarker = " href=\""
+    val rewrites = ref ([] : (string * string) list)
+    val urls = ref ([] : (int * string option) list)
+    val level = ref 0
+    fun setUrl L v =
+      urls := (L, v) ::
+        List.filter (fn (L', _) => L' <> L) (!urls)
+    fun lookupUrl L =
+      case List.find (fn (L', _) => L' = L) (!urls) of
+          SOME (_, v) => v
+        | NONE => NONE
+    fun ancestorUrl L =
+      if L <= 0 then NONE
+      else case lookupUrl L of
+               SOME u => SOME u
+             | NONE => ancestorUrl (L - 1)
+    val hlen = String.size tocHtml
+    fun skipWS i =
+      if i < hlen andalso Char.isSpace (String.sub (tocHtml, i))
+      then skipWS (i + 1) else i
+    fun startsAt p s =
+      p + String.size s <= hlen andalso
+      String.substring (tocHtml, p, String.size s) = s
+    fun handleChapterItemAt p =
+      (* p is just past `<li class="chapter-item ...">`.  Look at the
+         next element after whitespace: if it's the wrapper-span, this
+         is a real chapter-item entry; otherwise (e.g. the outer li
+         that wraps a <li class="part-title"> sibling) skip. *)
+      let
+        val q = skipWS p
+      in
+        if not (startsAt q "<span class=\"chapter-link-wrapper\"")
+        then ()
+        else
+          let
+            val afterWrap = q + String.size wrapMarker
+            val firstChild = skipWS afterWrap
+            val isAnchor = startsAt firstChild "<a "
+          in
+            if isAnchor then
+              case strFindFrom hrefMarker tocHtml firstChild of
+                  SOME hp =>
+                    let
+                      val hs = hp + String.size hrefMarker
+                      val (hv, _) = readUntilChar #"\"" tocHtml hs
+                    in
+                      if not (CharVector.exists (fn c => c = #"#") hv)
+                      then setUrl (!level) (SOME hv)
+                      else setUrl (!level) NONE
+                    end
+                | NONE => setUrl (!level) NONE
+            else
+              (* Draft: extract title and predict URL. *)
+              let
+                val sp = strFindFrom strongMarker tocHtml q
+                val title =
+                  case sp of
+                      NONE => ""
+                    | SOME spos =>
+                        let
+                          val numStart = spos + String.size strongMarker
+                          val (_, numEnd) =
+                            readUntilChar #"<" tocHtml numStart
+                          val afterStrong =
+                            Option.getOpt
+                              (strFindFrom "</strong>" tocHtml numEnd,
+                               numEnd) + String.size "</strong>"
+                          val (raw, _) =
+                            readUntilChar #"<" tocHtml afterStrong
+                        in trimSpace raw end
+                val () = setUrl (!level) NONE
+              in
+                if title = "" then ()
+                else
+                  case ancestorUrl (!level - 1) of
+                      SOME chHref =>
+                        let val decoded = decodeEntities title
+                            val slug = slugify decoded
+                            val url = chHref ^ "#" ^ slug
+                        in rewrites := (url, decoded) :: !rewrites end
+                    | NONE => ()
+              end
+          end
+      end
+    fun walk p =
+      if p >= hlen then ()
+      else if startsAt p "<ol class=\"chapter\""
+              orelse startsAt p "<ol class=\"section\"" then
+        let val tagEnd = Option.getOpt
+                           (strFindFrom ">" tocHtml p, hlen) + 1
+        in level := !level + 1; setUrl (!level) NONE; walk tagEnd end
+      else if startsAt p "</ol>" then
+        (setUrl (!level) NONE;
+         level := !level - 1;
+         walk (p + 5))
+      else if startsAt p "<li class=\"chapter-item" then
+        let val tagEnd = Option.getOpt
+                           (strFindFrom ">" tocHtml p, hlen) + 1
+        in handleChapterItemAt tagEnd; walk tagEnd end
+      else walk (p + 1)
+    val () = walk 0
+  in List.rev (!rewrites) end
+
+fun checkLinksMain bookDir =
+  let
+    val tocPath = OS.Path.concat (bookDir, "toc.html")
+    val () =
+      if OS.FileSys.access (tocPath, [OS.FileSys.A_READ]) then ()
+      else die ("check-links: " ^ tocPath ^ " missing")
+    val tocHtml = readFileAll tocPath
+    val (pagePrefix, _) = parseSidebarTOC tocHtml
+    (* Per-page (page, html, idSet) for fast lookup. *)
+    val pageInfo =
+      List.mapPartial
+        (fn (page, _) =>
+           let val path = OS.Path.concat (bookDir, page)
+           in if OS.FileSys.access (path, [OS.FileSys.A_READ])
+              then let val h = readFileAll path
+                       val ids = collectIdAttrs h
+                   in SOME (page, h, ids) end
+              else NONE
+           end)
+        pagePrefix
+    fun pageExists p =
+      List.exists (fn (q, _, _) => q = p) pageInfo
+    fun anchorIn p a =
+      case List.find (fn (q, _, _) => q = p) pageInfo of
+          SOME (_, _, ids) => List.exists (fn x => x = a) ids
+        | NONE => false
+    val total = ref 0
+    fun reportErr msg = (print (msg ^ "\n"); total := !total + 1)
+    fun checkOne sourcePage href =
+      if skipHref href then ()
+      else
+        case splitHref href of
+            (NONE, NONE) => ()
+          | (NONE, SOME a) =>
+              if anchorIn sourcePage a then ()
+              else reportErr (OS.Path.concat (bookDir, sourcePage) ^
+                              ": href=\"#" ^ a ^ "\" -> anchor missing")
+          | (SOME p, NONE) =>
+              if pageExists p then ()
+              else reportErr (OS.Path.concat (bookDir, sourcePage) ^
+                              ": href=\"" ^ p ^ "\" -> page missing")
+          | (SOME p, SOME a) =>
+              if not (pageExists p) then
+                reportErr (OS.Path.concat (bookDir, sourcePage) ^
+                           ": href=\"" ^ href ^ "\" -> page missing")
+              else if not (anchorIn p a) then
+                reportErr (OS.Path.concat (bookDir, sourcePage) ^
+                           ": href=\"" ^ href ^ "\" -> anchor missing in " ^ p)
+              else ()
+    (* Static body / sidebar / nav <a href> validation, per chapter. *)
+    val () =
+      List.app
+        (fn (page, html, _) =>
+           List.app (checkOne page) (collectAnchorHrefs html))
+        pageInfo
+    (* JS-rewritten draft-sidebar URLs (predicted statically). *)
+    val () =
+      List.app
+        (fn (url, title) =>
+           if skipHref url then ()
+           else
+             case splitHref url of
+                 (SOME p, SOME a) =>
+                   if not (pageExists p) then
+                     reportErr (tocPath ^ ": sidebar draft \"" ^ title ^
+                                "\" rewrites to " ^ url ^ " -> page missing")
+                   else if not (anchorIn p a) then
+                     reportErr (tocPath ^ ": sidebar draft \"" ^ title ^
+                                "\" rewrites to " ^ url ^
+                                " -> anchor missing in " ^ p)
+                   else ()
+               | _ =>
+                   reportErr (tocPath ^ ": sidebar draft \"" ^ title ^
+                              "\" rewrites to malformed URL " ^ url))
+        (predictDraftRewrites tocHtml)
+  in
+    if !total > 0 then
+      (TextIO.output (TextIO.stdErr,
+        "check-links: " ^ Int.toString (!total) ^
+        " broken link(s).\n");
+       OS.Process.exit OS.Process.failure)
+    else
+      OS.Process.exit OS.Process.success
+  end
+
 fun checkRefsMain bookDir =
   let
     val tocPath = OS.Path.concat (bookDir, "toc.html")
@@ -1382,6 +1728,7 @@ fun smdppMain () =
       ["supports", "html"] => OS.Process.exit OS.Process.success
     | "supports" :: _ => OS.Process.exit OS.Process.failure
     | ["check-refs", bookDir] => checkRefsMain bookDir
+    | ["check-links", bookDir] => checkLinksMain bookDir
     | [] =>
         let
           val obuf = setupPolyscripter ()
@@ -1398,6 +1745,8 @@ fun smdppMain () =
           TextIO.flushOut TextIO.stdOut
         end
     | _ => die ("Usage:\n  " ^ CommandLine.name() ^
-                " [supports <renderer> | check-refs <book-dir>]")
+                " [supports <renderer> |\
+                \ check-refs <book-dir> |\
+                \ check-links <book-dir>]")
 
 fun main () = smdppMain ()
