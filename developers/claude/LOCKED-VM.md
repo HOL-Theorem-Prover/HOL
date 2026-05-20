@@ -202,6 +202,7 @@ the following into your `~/.bashrc`:
         echo "usage: linux-branch <name>" >&2
         return 2
       fi
+      git -C ~/HOL-vm fetch origin develop || return $?
       orb -m hol4 sudo -u claude -H bash -c '
         set -e
         name=$1
@@ -212,11 +213,11 @@ the following into your `~/.bashrc`:
       ' linux-branch "$1"
     }
 
-`linux-branch some-feature` then creates branch `some-feature` off
-`origin/develop` (matching the repo's "branch off develop" convention)
-in `/repo/.claude/worktrees/some-feature/`, and drops you into Claude
-there.  Run `git -C ~/HOL-vm fetch origin develop` on macOS first if
-the base point matters.
+`linux-branch some-feature` then fetches the latest `develop` on macOS
+(so the VM-side `origin/develop` ref is current), creates branch
+`some-feature` off it (matching the repo's "branch off develop"
+convention) in `/repo/.claude/worktrees/some-feature/`, and drops you
+into Claude there.
 
 Note this trades the role split: the worktree gets created as the
 `claude` user rather than the default user.  The virtio-fs perms on
