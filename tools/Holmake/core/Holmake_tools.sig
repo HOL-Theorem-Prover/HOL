@@ -109,6 +109,19 @@ sig
        can target the user's -C/--directory argument without
        getting in the way of the later cline-parse chdir. *)
 
+  val write_lastmaker_in_cwd : output_functions -> unit
+    (* Records DEPDIR/lastmaker in the current working directory,
+       using the path captured by do_lastmade_checks.  No-op if
+       do_lastmade_checks has not yet run.  Intended to be called
+       during the INCLUDES-recursion in Holmake.sml so that every
+       directory the current Holmake visits gains a lastmaker file,
+       not just the one Holmake was started in.
+
+       If a lastmaker file is already present and points at a
+       different but still-usable Holmake binary, the existing file
+       is left in place and a prominent warning is emitted through
+       OFNS -- never silently overwritten. *)
+
 
   (* File IO *)
   val string_part : File -> string

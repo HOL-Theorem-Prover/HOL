@@ -530,6 +530,7 @@ let
                      "\n  (Probably a result of bad INCLUDES spec.)")
       val _ = diag (fn _ => "recursively: Visited set = " ^ print_set visited)
       val _ = FileSys.chDir (hmdir.toAbsPath newdir)
+      val _ = write_lastmaker_in_cwd outputfns
       val result =
           case recur_abbrev newdir data
                             {incdirmap=incdirmap, visited=visited,
