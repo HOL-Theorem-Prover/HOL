@@ -71,13 +71,15 @@ val _ = OS.Process.atExit (fn () => safedel outputlog)
 (* Redirect stdin from /dev/null so the prompt branch in
    Holmake_tools sees "not a TTY" and aborts deterministically
    instead of asking. *)
-fun run_holmake_in dir =
+fun run_holmake_in_with extra_args dir =
     let val cmd = String.concatWith " "
-                    [real_holmake, "-C", dir, "--no-cache", "-n",
-                     "<", "/dev/null", ">", outputlog, "2>&1"]
+                    ([real_holmake, "-C", dir, "--no-cache", "-n"] @
+                     extra_args @
+                     ["<", "/dev/null", ">", outputlog, "2>&1"])
         val res = OS.Process.system cmd
         val out = read_file outputlog handle _ => ""
     in (res, out) end
+fun run_holmake_in dir = run_holmake_in_with [] dir
 
 fun dump out =
     (print "\n--- captured Holmake output ---\n"; print out;
@@ -136,7 +138,28 @@ val _ = if String.isSubstring "WARNING" out2 andalso
 val _ = OK ()
 
 (* ----------------------------------------------------------------------
-   Test 3: stale lastmaker (nonexistent path) is replaced silently
+   Test 3: --force-lastmaker overwrites a conflicting lastmaker even
+   without a TTY, still printing the warning so the user knows.
+   ---------------------------------------------------------------------- *)
+val _ = tprint "--force-lastmaker overwrites conflict non-interactively"
+val _ = cleanup()
+val _ = write_lastmaker_with_content sub other_executable
+val (resF, outF) = run_holmake_in_with ["--force-lastmaker"] fixture
+val _ = if OS.Process.isSuccess resF then ()
+        else (dump outF; die "Holmake aborted despite --force-lastmaker")
+val _ = case read_lastmaker sub of
+            NONE => (dump outF; die "sub lastmaker disappeared")
+          | SOME got =>
+            if got = real_holmake then ()
+            else (dump outF;
+                  die ("sub lastmaker not overwritten: " ^ Lib.quote got))
+val _ = if String.isSubstring "WARNING" outF
+        then ()
+        else (dump outF; die "expected conflict warning was suppressed")
+val _ = OK ()
+
+(* ----------------------------------------------------------------------
+   Test 4: stale lastmaker (nonexistent path) is replaced silently
    ---------------------------------------------------------------------- *)
 val _ = tprint "stale lastmaker pointing nowhere is replaced"
 val _ = cleanup()
