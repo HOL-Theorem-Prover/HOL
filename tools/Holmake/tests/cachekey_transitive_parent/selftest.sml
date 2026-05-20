@@ -112,7 +112,7 @@ fun restore_parent_v1 () = writeFile parentScript parentV1
 val _ =
   let
     (* Step 1: Build with parent v1.  Establishes the (buggy) cachekey
-       for child in the cache. *)
+       for wrapping_child in the cache. *)
     val _ = writeFile parentScript parentV1
     val (s1a, log1a) = run_holmake_in innerDir [] logfile
     val _ = mustSucceed (s1a, log1a, "Step 1 inner v1 build")
@@ -127,11 +127,11 @@ val _ =
 
     (* Step 3: Clean outer (this is what activates the bug -- the
        additional_theories augmentation in Holmake.sml requires the
-       generated childTheory.sml to exist on disk, which it doesn't
-       after cleanAll, so the cachekey is computed without parent in
-       scope).  Then rebuild outer.  If consumeScript runs cleanly,
-       the cachekey is correctly tracking parent.  If it fails with
-       link_parents, the bug is present. *)
+       generated wrapping_childTheory.sml to exist on disk, which it
+       doesn't after cleanAll, so the cachekey is computed without
+       parent in scope).  Then rebuild outer.  If consumeScript runs
+       cleanly, the cachekey is correctly tracking parent.  If it
+       fails with link_parents, the bug is present. *)
     val _ = rm_rf (outerDir ++ ".hol")
     val _ = rm_rf (outerDir ++ "qux")
     val (s3, log3) = run_holmake_in outerDir [] logfile
@@ -145,7 +145,7 @@ val _ =
             String.isSubstring "link_parents" log3
         val why =
             if link_parents_present then
-              "Stale child.dat fetched from cache; consume's \
+              "Stale wrapping_child.dat fetched from cache; consume's \
               \link_parents check failed against current parent.  \
               \This IS the bug under test (expected until fixed)."
             else

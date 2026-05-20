@@ -14,19 +14,27 @@ block and runs under `bin/build -t`.
 
 ## How it works
 
-`childScript.sml` opens `parentLib` (a regular SML structure in
-`inner/`), never `parentTheory` directly.  `parentLib` itself opens
+`wrapping_childScript.sml` opens `parentLib` (a regular SML structure
+in `inner/`), never `parentTheory` directly.  `parentLib` itself opens
 `parentTheory`.  The build order is:
 
-  parentTheory -> parentLib.uo -> childTheory -> consumeTheory
+  parentTheory -> parentLib.uo -> wrapping_childTheory -> consumeTheory
 
 with `consumeScript` declared as a coproduct producer (target `qux`
 in `outer/Holmakefile`) so that Holmake's product cache always skips
 the upload for it (see `is_theory_output` in
-`tools/Holmake/poly/HM_CacheFetch.sml`).  This forces consumeScript
-to actually execute on rebuild, which is where opening childTheory
-loads `child.dat` and the parent-hash check fires when the cached
-data is stale.
+`tools/Holmake/poly/HM_CacheFetch.sml`).  This forces consumeScript to
+actually execute on rebuild, which is where opening
+`wrapping_childTheory` loads `wrapping_child.dat` and the parent-hash
+check fires when the cached data is stale.
+
+The deliberately long theory name `wrapping_child` is chosen so that
+the .dat header's sexp pretty-printer wraps `(theory ...)` onto a new
+line (i.e. emits `(theory\n("wrapping_child" ...)` rather than
+`(theory ("...")`).  This exercises the newline case in
+`HM_CacheFetch.extract_parents`; with a shorter name the header fits
+on one line and the parser's space-only matcher would accept it
+regardless.
 
 The harness:
 

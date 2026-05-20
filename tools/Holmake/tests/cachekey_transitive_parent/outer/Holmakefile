@@ -9,7 +9,7 @@ endif
 # non-theory output (see is_theory_output in HM_CacheFetch.sml), so
 # this coproduct keeps consumeScript out of the cache entirely --
 # guaranteeing the script actually runs on rebuild, which is what
-# surfaces the stale child.dat as a link_parents failure.
+# surfaces the stale wrapping_child.dat as a link_parents failure.
 qux: *consumeScript.sml
 
 all: consumeTheory.uo qux

@@ -103,7 +103,13 @@ fun is_theory_output f =
    Each parent is encoded as a sub-list ("<thy>" . "<hash>"), all
    inside the first sub-list of (theory ...).  We only scan the
    substring up to "(core-data" to avoid matching string pairs that
-   might appear inside the theorem tables. *)
+   might appear inside the theorem tables.
+
+   HOLsexp pretty-prints with INCONSISTENT breaks, so the whitespace
+   immediately after "theory" can be a space OR a newline depending on
+   whether the thid+parents sublist fits on the same line: bool's tiny
+   ("bool" ("min" . "")) fits, but any theory with a 40-char SHA-1
+   parent hash typically doesn't and wraps.  We accept any whitespace. *)
 
 fun read_file path =
     let val ins = TextIO.openIn path
@@ -116,38 +122,43 @@ fun extract_parents dat_path =
     let
       val content = read_file dat_path
       val full = Substring.full content
-      val (_, after_theory) = Substring.position "(theory " full
-      val (header, _) = Substring.position "(core-data" after_theory
-      fun loop ss acc =
-          let val (_, rest) = Substring.position "(\"" ss
-          in
-            if Substring.size rest < 2 then List.rev acc
-            else
-              let
-                val after_open = Substring.triml 2 rest
-                val (xss, ass) = Substring.position "\"" after_open
+      val (_, at_theory) = Substring.position "(theory" full
+    in
+      if Substring.size at_theory < 7 then []
+      else
+        let
+          val after_theory =
+              Substring.dropl Char.isSpace (Substring.triml 7 at_theory)
+          val (header, _) = Substring.position "(core-data" after_theory
+          fun loop ss acc =
+              let val (_, rest) = Substring.position "(\"" ss
               in
-                if Substring.size ass < 1 then List.rev acc
+                if Substring.size rest < 2 then List.rev acc
                 else
-                  let val ass1 = Substring.triml 1 ass (* skip closing " *)
+                  let
+                    val after_open = Substring.triml 2 rest
+                    val (xss, ass) = Substring.position "\"" after_open
                   in
-                    if Substring.isPrefix " . \"" ass1 then
-                      let
-                        val ass2 = Substring.triml 4 ass1
-                        val (yss, ass3) = Substring.position "\"" ass2
+                    if Substring.size ass < 1 then List.rev acc
+                    else
+                      let val ass1 = Substring.triml 1 ass (* skip closing " *)
                       in
-                        if Substring.size ass3 >= 1 then
-                          loop (Substring.triml 1 ass3)
-                               ((Substring.string xss,
-                                 Substring.string yss) :: acc)
-                        else List.rev acc
+                        if Substring.isPrefix " . \"" ass1 then
+                          let
+                            val ass2 = Substring.triml 4 ass1
+                            val (yss, ass3) = Substring.position "\"" ass2
+                          in
+                            if Substring.size ass3 >= 1 then
+                              loop (Substring.triml 1 ass3)
+                                   ((Substring.string xss,
+                                     Substring.string yss) :: acc)
+                            else List.rev acc
+                          end
+                        else loop ass1 acc
                       end
-                    else loop ass1 acc
                   end
               end
-          end
-    in
-      loop header []
+        in loop header [] end
     end
     handle _ => []
 
@@ -207,7 +218,11 @@ fun find_parent_dat search_dirs thy =
     end
 
 (* Validate that the parent hashes recorded in [dat_path] match the
-   hashes of the current on-disk parents. *)
+   hashes of the current on-disk parents.  An empty extracted-parents
+   list means we couldn't parse the .dat header at all (every real
+   theory has at least one parent in its .dat -- bool records "min"
+   even though "min" has no .dat of its own) so we fail-safe and
+   reject the cache. *)
 fun validate_dat search_dirs dat_path =
     let
       val parents = extract_parents dat_path
@@ -218,7 +233,7 @@ fun validate_dat search_dirs dat_path =
                 (SHA1.sha1_file {filename = path} = recorded_hash
                  handle _ => false)
     in
-      List.all check parents
+      not (List.null parents) andalso List.all check parents
     end
 
 fun upload base_url cachekey dir filenames (ofns : Holmake_tools.output_functions) =
