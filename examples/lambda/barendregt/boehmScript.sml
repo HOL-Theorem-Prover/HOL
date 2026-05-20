@@ -6956,101 +6956,239 @@ Proof
  >> simp []
 QED
 
-(* NOTE: This is the explicit form of the Boehm transform constructed in the
-   next lemma. It assumes (at least):
+(*---------------------------------------------------------------------------*
+ *  head equivalence
+ *---------------------------------------------------------------------------*)
 
-   1) FINITE X
-   2) BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r (0 < r)
-   3) EVERY solvable Ms
+(* Definition 10.2.21 (i) [1, p.238]
+
+   NOTE: For ‘y1 = y2’ to be meaningful, here we assumed that vs1 and vs2
+   share the same prefix, i.e. either vs1 <<= vs2 or vs2 <<= vs1. In reality,
+   we have ‘vs1 = RNEWS r n1 X /\ vs2 = RNEWS r n2 X’ for some X and r.
  *)
-Definition Boehm_construction_def :
-    Boehm_construction X (Ms :term list) p =
-    let n_max = MAX_LIST (MAP (\e. subterm_length e p) Ms);
-        d_max = MAX_LIST (MAP (\e. subterm_width e p)  Ms) + n_max;
-        k     = LENGTH Ms;
-        X'    = BIGUNION (IMAGE FV (set Ms));
-        vs0   = NEWS (n_max + SUC d_max + k) (X UNION X');
-        vs    = TAKE n_max vs0;
-        xs    = DROP n_max vs0;
-        M0 i  = principal_hnf (EL i Ms);
-        M1 i  = principal_hnf (M0 i @* MAP VAR vs);
-        y  i  = hnf_headvar (M1 i);
-        P  i  = permutator (d_max + i);
-        p1    = MAP rightctxt (REVERSE (MAP VAR vs));
-        p2    = REVERSE (GENLIST (\i. [P i/y i]) k);
-        p3    = MAP rightctxt (REVERSE (MAP VAR xs))
-    in
-        p3 ++ p2 ++ p1
+Definition head_equivalent_def :
+    head_equivalent ((a1,m1) :BT_node # num option)
+                    ((a2,m2) :BT_node # num option) =
+    case (a1,a2) of
+      (SOME (vs1,y1),SOME (vs2,y2)) =>
+       y1 = y2 /\ LENGTH vs1 + THE m2 = LENGTH vs2 + THE m1
+    | (SOME _,NONE) => F
+    | (NONE,SOME _) => F
+    | (NONE,NONE)   => T
 End
 
-Theorem Boehm_construction_transform :
-    !X Ms p. Boehm_transform (Boehm_construction X Ms p)
+Theorem head_equivalent_refl[simp] :
+    head_equivalent A A
 Proof
-    RW_TAC std_ss [Boehm_construction_def]
- >> MATCH_MP_TAC Boehm_transform_APPEND
- >> reverse CONJ_TAC
- >- rw [Abbr ‘p1’, MAP_MAP_o, GSYM MAP_REVERSE]
- >> MATCH_MP_TAC Boehm_transform_APPEND
- >> CONJ_TAC
- >- rw [Abbr ‘p3’, MAP_MAP_o, GSYM MAP_REVERSE]
- >> rw [Boehm_transform_def, Abbr ‘p2’, EVERY_GENLIST]
+    Cases_on ‘A’ >> rw [head_equivalent_def]
+ >> Cases_on ‘q’ >> rw []
+ >> Cases_on ‘x’ >> rw []
 QED
 
-Theorem FV_apply_Boehm_construction :
-    !X Ms p r. FINITE X /\ 0 < r /\
-               BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r ==>
-           !M. MEM M Ms ==>
-               FV (apply (Boehm_construction X Ms p) M) SUBSET X UNION RANK r
+Theorem head_equivalent_sym :
+    !A B. head_equivalent A B ==> head_equivalent B A
 Proof
-    rpt GEN_TAC >> STRIP_TAC
- >> Q.X_GEN_TAC ‘N’
- >> DISCH_TAC
- >> UNBETA_TAC [Boehm_construction_def] “Boehm_construction X Ms p”
- >> qunabbrev_tac ‘X'’
- >> qabbrev_tac ‘Y = BIGUNION (IMAGE FV (set Ms))’
- >> ‘FINITE Y’ by (rw [Abbr ‘Y’] >> rw [])
- >> simp [Boehm_apply_APPEND]
- (* eliminate p3 *)
- >> simp [Abbr ‘p3’, Boehm_apply_MAP_rightctxt']
- >> reverse CONJ_TAC
- >- (Q_TAC (TRANS_TAC SUBSET_TRANS) ‘set vs0’ \\
-     rw [Abbr ‘xs’, LIST_TO_SET_DROP] \\
-     Suff ‘set vs0 SUBSET RANK r’ >- SET_TAC [] \\
-     Q_TAC (TRANS_TAC SUBSET_TRANS) ‘ROW 0’ >> rw [ROW_SUBSET_RANK] \\
-     qunabbrev_tac ‘vs0’ \\
-     MATCH_MP_TAC RNEWS_SUBSET_ROW >> rw [])
- (* eliminate p2 *)
- >> qabbrev_tac ‘sub = \k. GENLIST (\i. (P i,y i)) k’
- >> Know ‘!t. apply p2 t = t ISUB sub k’
- >- (simp [Abbr ‘p2’, Abbr ‘sub’] \\
-     Q.SPEC_TAC (‘k’, ‘j’) \\
-     Induct_on ‘j’ >- rw [] \\
-     rw [GENLIST, REVERSE_SNOC, ISUB_SNOC])
- >> DISCH_TAC
+    qx_genl_tac [‘A’, ‘B’]
+ >> Cases_on ‘A’ >> Cases_on ‘B’  >> simp [head_equivalent_def]
+ >> Cases_on ‘q’ >> Cases_on ‘q'’ >> simp []
+ >> Cases_on ‘x’ >> Cases_on ‘x'’ >> simp []
+QED
+
+Theorem head_equivalent_comm :
+    !A B. head_equivalent A B <=> head_equivalent B A
+Proof
+    rpt GEN_TAC
+ >> EQ_TAC >> rw [head_equivalent_sym]
+QED
+
+(* Definition 10.2.21 (ii) [1, p.238] *)
+Overload ltree_equiv = “OPTREL head_equivalent”
+
+Theorem ltree_equiv_refl[simp] :
+    ltree_equiv A A
+Proof
+    MATCH_MP_TAC OPTREL_refl >> rw []
+QED
+
+Theorem ltree_equiv_sym :
+    !A B. ltree_equiv A B ==> ltree_equiv B A
+Proof
+    rpt GEN_TAC
+ >> Cases_on ‘A’ >> Cases_on ‘B’ >> rw [OPTREL_THM]
+ >> rw [Once head_equivalent_comm]
+QED
+
+Theorem ltree_equiv_comm :
+    !A B. ltree_equiv A B <=> ltree_equiv B A
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC >> rw [ltree_equiv_sym]
+QED
+
+Theorem ltree_equiv_some_bot_imp :
+    !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\
+              ltree_equiv (SOME bot) (ltree_el (BT' X M r) p) ==>
+              ltree_el (BT' X M r) p = SOME bot
+Proof
+    rw [OPTREL_def]
+ >> Cases_on ‘y0’ >> fs [head_equivalent_def]
+ >> Cases_on ‘q’ >> fs []
+ >> METIS_TAC [BT_ltree_el_eq_some_none]
+QED
+
+(* |- !X M p r.
+        FINITE X /\ FV M SUBSET X UNION RANK r /\
+        ltree_equiv (ltree_el (BT' X M r) p) (SOME bot) ==>
+        ltree_el (BT' X M r) p = SOME bot
+ *)
+Theorem ltree_equiv_some_bot_imp' =
+    ONCE_REWRITE_RULE [ltree_equiv_comm] ltree_equiv_some_bot_imp
+
+(* Definition 10.2.32 (v) [1, p.245] *)
+Definition subtree_equiv_def :
+    subtree_equiv X M N p r =
+    ltree_equiv (ltree_el (BT' X M r) p) (ltree_el (BT' X N r) p)
+End
+
+Theorem subtree_equiv_refl[simp] :
+    subtree_equiv X M M p r
+Proof
+    rw [subtree_equiv_def]
+QED
+
+Theorem subtree_equiv_comm :
+    !X M N p r. subtree_equiv X M N p r <=> subtree_equiv X N M p r
+Proof
+    rw [subtree_equiv_def, Once ltree_equiv_comm]
+QED
+
+Theorem hreduce_subtree_equiv_cong :
+    !X M M' N N' p r. M -h->* M' /\ N -h->* N' ==>
+                     (subtree_equiv X M N p r <=> subtree_equiv X M' N' p r)
+Proof
+    rw [subtree_equiv_def]
+ >> Suff ‘BT' X M r = BT' X M' r /\ BT' X N r = BT' X N' r’
+ >- DISCH_THEN (fs o wrap)
+ >> rw [hreduce_BT_cong]
+QED
+
+Theorem subtree_equal_alt_subtree_equiv :
+    !X p M N r. FINITE X /\
+                FV M UNION FV N SUBSET X UNION RANK r /\
+                ltree_paths (BT' X M r) = ltree_paths (BT' X N r) ==>
+               (subtree_equal X M N p r <=> subtree_equiv X M N p r)
+Proof
+    Q.X_GEN_TAC ‘X’
+ >> REWRITE_TAC [UNION_SUBSET, GSYM CONJ_ASSOC]
+ >> Induct_on ‘p’
+ >- (rw [subtree_equal_def, subtree_equiv_def] \\
+     POP_ASSUM MP_TAC \\
+     Q_TAC (UNBETA_TAC [BT_def, BT_generator_def, Once ltree_unfold]) ‘BT' X M r’ \\
+     Q_TAC (UNBETA_TAC [BT_def, BT_generator_def, Once ltree_unfold]) ‘BT' X N r’ >|
+     [ (* goal 1 (of 4) *)
+       simp [head_equivalent_def, ltree_el_def, LMAP_fromList, LLENGTH_fromList] \\
+       rw [ltree_paths_alt_ltree_el, Once EXTENSION] \\
+       fs [Abbr ‘l’, Abbr ‘l'’, GSYM BT_def, MAP_MAP_o, o_DEF] \\
+       qunabbrevl_tac [‘vs’, ‘vs'’] \\
+       Q_TAC (RNEWS_TAC (“vs :string list”, “r :num”, “n :num”)) ‘X’ \\
+       Q_TAC (RNEWS_TAC (“vs' :string list”, “r :num”, “n' :num”)) ‘X’ \\
+       simp [] \\
+       EQ_TAC
+       >- (STRIP_TAC >> art [] \\
+          ‘n = n'’ by METIS_TAC [RNEWS_11'] \\
+           simp []) \\
+       Suff ‘LENGTH Ms = LENGTH Ms'’
+       >- (rw [] >> METIS_TAC []) \\
+       qabbrev_tac ‘m  = LENGTH Ms’ \\
+       qabbrev_tac ‘m' = LENGTH Ms'’ \\
+       CCONTR_TAC \\
+      ‘m < m' \/ m' < m’ by rw [] >| (* 2 subgoals *)
+       [ (* goal 1 (of 2) *)
+         Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o Q.SPEC ‘[m]’) \\
+         simp [ltree_el_def, LMAP_fromList, LLENGTH_fromList, LNTH_fromList,
+               EL_MAP] \\
+         simp [ltree_el],
+         (* goal 2 (of 2) *)
+         Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o Q.SPEC ‘[m']’) \\
+         simp [ltree_el_def, LMAP_fromList, LLENGTH_fromList, LNTH_fromList,
+               EL_MAP] \\
+         simp [ltree_el] ],
+       (* goal 2 (of 4) *)
+       simp [head_equivalent_def, ltree_el_def, LMAP_fromList, LLENGTH_fromList],
+       (* goal 3 (of 4) *)
+       simp [head_equivalent_def, ltree_el_def, LMAP_fromList, LLENGTH_fromList],
+       (* goal 4 (of 4) *)
+       simp [head_equivalent_def, ltree_el_def, LMAP_fromList, LLENGTH_fromList] ])
+ (* stage work *)
+ >> rpt STRIP_TAC
+ >> fs [subtree_equal_def, subtree_equiv_def]
+ >> POP_ASSUM MP_TAC
+ >> Q_TAC (UNBETA_TAC [BT_def, BT_generator_def, Once ltree_unfold]) ‘BT' X M r’
+ >> Q_TAC (UNBETA_TAC [BT_def, BT_generator_def, Once ltree_unfold]) ‘BT' X N r’
+ >| [ (* goal 1 (of 4) *)
+      simp [head_equivalent_def, ltree_el_def, LMAP_fromList, LLENGTH_fromList,
+            LNTH_fromList, Abbr ‘l’, Abbr ‘l'’, EL_MAP, GSYM BT_def,
+            ltree_paths_alt_ltree_el, Once EXTENSION, MAP_MAP_o, o_DEF] \\
+      DISCH_TAC \\
+      qabbrev_tac ‘m  = LENGTH Ms’ \\
+      qabbrev_tac ‘m' = LENGTH Ms'’ \\
+      Know ‘m = m'’
+      >- (CCONTR_TAC \\
+         ‘m < m' \/ m' < m’ by rw [] >| (* 2 subgoals *)
+          [ (* goal 1 (of 2) *)
+            Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o Q.SPEC ‘[m]’) \\
+            simp [ltree_el_def, LMAP_fromList, LLENGTH_fromList, LNTH_fromList,
+                  EL_MAP] \\
+            simp [ltree_el],
+            (* goal 2 (of 2) *)
+            Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o Q.SPEC ‘[m']’) \\
+            simp [ltree_el_def, LMAP_fromList, LLENGTH_fromList, LNTH_fromList,
+                  EL_MAP] \\
+            simp [ltree_el] ]) >> DISCH_THEN (ASSUME_TAC o SYM) \\
+      simp [] \\
+      Cases_on ‘h < m’ >> simp [] \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
+      CONJ_TAC
+      >- (MATCH_MP_TAC subterm_induction_lemma' \\
+          qexistsl_tac [‘M’, ‘M0’, ‘n’, ‘m’, ‘vs’, ‘M1’] >> simp [] \\
+          simp [Abbr ‘m’, Once EQ_SYM_EQ] \\
+          MATCH_MP_TAC hnf_children_size_alt \\
+          qexistsl_tac [‘X’, ‘M’, ‘r’, ‘n’, ‘vs’, ‘M1’] >> simp []) \\
+      CONJ_TAC
+      >- (MATCH_MP_TAC subterm_induction_lemma' \\
+          qexistsl_tac [‘N’, ‘M0'’, ‘n'’, ‘m'’, ‘vs'’, ‘M1'’] >> simp [] \\
+          Q.PAT_X_ASSUM ‘m' = m’ (REWRITE_TAC o wrap o SYM) \\
+          simp [Abbr ‘m'’, Once EQ_SYM_EQ] \\
+          MATCH_MP_TAC hnf_children_size_alt \\
+          qexistsl_tac [‘X’, ‘N’, ‘r’, ‘n'’, ‘vs'’, ‘M1'’] >> simp []) \\
+      rw [ltree_paths_alt_ltree_el, Once EXTENSION] \\
+      Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o Q.SPEC ‘h::x’) \\
+      simp [ltree_el_def, LMAP_fromList, LNTH_fromList, EL_MAP],
+      (* goal 2 (of 4) *)
+      simp [head_equivalent_def, ltree_el_def, LMAP_fromList, LLENGTH_fromList,
+            LNTH_fromList, Abbr ‘l’, EL_MAP, GSYM BT_def,
+            ltree_paths_alt_ltree_el, Once EXTENSION, MAP_MAP_o, o_DEF],
+      (* goal 3 (of 4) *)
+      simp [head_equivalent_def, ltree_el_def, LMAP_fromList, LLENGTH_fromList,
+            LNTH_fromList, Abbr ‘l’, EL_MAP, GSYM BT_def,
+            ltree_paths_alt_ltree_el, Once EXTENSION, MAP_MAP_o, o_DEF],
+      (* goal 4 (of 4) *)
+      simp [head_equivalent_def, ltree_el_def, LMAP_fromList, LLENGTH_fromList] ]
+QED
+
+Theorem distinct_bnf_imp_not_subtree_equiv :
+    !X M N r. FINITE X /\
+              FV M UNION FV N SUBSET X UNION RANK r /\
+              has_bnf M /\ has_bnf N /\ ~(M == N) /\
+              ltree_paths (BT' X M r) = ltree_paths (BT' X N r)
+          ==> ?p. p IN ltree_paths (BT' X M r) /\
+                 ~subtree_equiv X M N p r /\
+                 !q. q <<= p /\ q <> p ==> subtree_equiv X M N q r
+Proof
+    RW_TAC std_ss [GSYM subtree_equal_alt_subtree_equiv]
+ >> POP_ASSUM (ASSUME_TAC o SYM)
  >> simp []
- >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV (apply p1 N) UNION FVS (sub k)’
- >> CONJ_TAC >- rw [FV_ISUB_upperbound]
- >> Know ‘!j. DOM (sub j) = IMAGE y (count j) /\ FVS (sub j) = {}’
- >- (simp [Abbr ‘sub’] \\
-     Induct_on ‘j’ >- rw [DOM_DEF, FVS_DEF] \\
-     rw [GENLIST, REVERSE_SNOC, DOM_DEF, FVS_DEF, COUNT_SUC, DOM_SNOC, FVS_SNOC]
-     >- SET_TAC [] \\
-     rw [Abbr ‘P’, FV_permutator])
- >> DISCH_TAC
- >> simp []
- (* eliminate p1 *)
- >> simp [Abbr ‘p1’, Boehm_apply_MAP_rightctxt']
- >> reverse CONJ_TAC
- >- (Q_TAC (TRANS_TAC SUBSET_TRANS) ‘set vs0’ \\
-     rw [Abbr ‘vs’, LIST_TO_SET_TAKE] \\
-     Suff ‘set vs0 SUBSET RANK r’ >- SET_TAC [] \\
-     Q_TAC (TRANS_TAC SUBSET_TRANS) ‘ROW 0’ >> rw [ROW_SUBSET_RANK] \\
-     qunabbrev_tac ‘vs0’ \\
-     MATCH_MP_TAC RNEWS_SUBSET_ROW >> rw [])
- >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘Y’ >> art []
- >> rw [Abbr ‘Y’, SUBSET_DEF]
- >> Q.EXISTS_TAC ‘FV N’ >> art []
- >> Q.EXISTS_TAC ‘N’ >> art []
+ >> MATCH_MP_TAC distinct_bnf_imp_not_subtree_equal >> art []
 QED
 
 val _ = html_theory "boehm";
@@ -7060,5 +7198,4 @@ val _ = html_theory "boehm";
  [1] Barendregt, H.P.: The lambda calculus, its syntax and semantics.
      College Publications, London (1984).
  [2] https://en.wikipedia.org/wiki/Corrado_Böhm
-
  *)
