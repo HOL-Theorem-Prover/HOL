@@ -339,26 +339,80 @@ fun read_existing_lastmaker () =
       end handle IO.Io _ => NONE
     else NONE
 
-(* Stand-out warning when the lastmaker file we're about to propagate
-   already exists with conflicting content -- usually a sign that two
-   HOL installations are sharing this directory tree.  We deliberately
-   *don't* overwrite the existing file: doing so would silently
-   destroy the information needed to investigate the conflict. *)
-fun warn_lastmaker_conflict (ofns : output_functions) {existing, mine} =
+(* Detect whether standard input is connected to a terminal.  Pure
+   SML basis (no Posix), and silently falls back to false on any
+   surprise -- non-interactive contexts must default to "abort"
+   without ever asking. *)
+fun stdin_is_tty () =
+    let val (rd as TextPrimIO.RD{ioDesc,...}, buf) =
+            TextIO.StreamIO.getReader (TextIO.getInstream TextIO.stdIn)
+        val _ = TextIO.setInstream
+                  (TextIO.stdIn, TextIO.StreamIO.mkInstream (rd, buf))
+    in
+      case ioDesc of
+          NONE => false
+        | SOME desc => OS.IO.kind desc = OS.IO.Kind.tty
+    end handle _ => false
+
+(* Once the user accepts the prompt for one conflict, the decision
+   sticks for the rest of this Holmake invocation: any further
+   conflicting lastmakers we encounter during the INCLUDES walk are
+   overwritten without re-asking.  Refusing once aborts the whole
+   process, so SOME false isn't a state we need to represent. *)
+val lastmaker_overwrite_decided : bool ref = ref false
+
+(* Decide what to do when the lastmaker we're about to propagate
+   would overwrite an existing file pointing at a different live
+   Holmake binary.  Either:
+     - the user has already agreed to overwrite this run, or
+     - we're on a TTY and ask y/N (default abort), or
+     - we're not on a TTY and abort outright (a child Holmake, a
+       CI run, an editor probe -- none of these can answer a
+       prompt, and silently trashing an older build is wrong).
+   On the "continue" path we just return; the caller does the
+   overwrite.  On the "abort" path we die_with a clear message. *)
+fun prompt_lastmaker_conflict (ofns : output_functions) {existing, mine} =
+  if !lastmaker_overwrite_decided then ()
+  else
   let
     val {warn,...} = ofns
     val dir = FileSys.getDir()
     val sep = "*** =================================================="
   in
     warn sep;
-    warn ("*** WARNING: a different .hol/make-deps/lastmaker is present in");
-    warn ("***   " ^ dir);
-    warn ("*** existing: " ^ existing);
-    warn ("*** current:  " ^ mine);
-    warn ("*** Leaving the existing file in place.  Two HOL installations");
-    warn ("*** appear to be sharing this directory tree; pick one and");
-    warn ("*** remove the stale .hol/make-deps/lastmaker to silence this.");
-    warn sep
+    warn ("*** WARNING: " ^ OS.Path.concat (dir, lastmakerfilename));
+    warn ("*** points at a different Holmake binary:");
+    warn ("***   existing: " ^ existing);
+    warn ("***   current:  " ^ mine);
+    warn ("***");
+    warn ("*** Continuing will OVERWRITE this lastmaker.  The current");
+    warn ("*** Holmake will see artefacts here as stale and rebuild them,");
+    warn ("*** likely trashing the older build's state.  Abort if you'd");
+    warn ("*** rather finish what you were doing with the other Holmake.");
+    warn sep;
+    if not (stdin_is_tty ()) then
+      die_with ("lastmaker conflict in " ^ dir ^
+                ": aborting (no tty; clean up the lastmaker or " ^
+                "re-run interactively to choose)")
+    else
+      let
+        val () = HOLFileSys.output (HOLFileSys.stdErr, "Continue (y/N)? ")
+        val () = HOLFileSys.flushOut HOLFileSys.stdErr
+        val ans = TextIO.inputLine TextIO.stdIn
+        val resp = case ans of
+                       NONE => "n"
+                     | SOME s =>
+                       String.map Char.toLower
+                         (Substring.string
+                            (Substring.dropr Char.isSpace
+                               (Substring.dropl Char.isSpace
+                                  (Substring.full s))))
+      in
+        if resp = "y" orelse resp = "yes" then
+          lastmaker_overwrite_decided := true
+        else
+          die_with ("lastmaker conflict in " ^ dir ^ ": aborted by user")
+      end
   end
 
 (* Record DEPDIR/lastmaker in the current working directory, using the
@@ -378,7 +432,8 @@ fun warn_lastmaker_conflict (ofns : output_functions) {existing, mine} =
      - existing file holds a path that's no longer a usable executable
          => overwrite (treat as garbage, same as do_lastmade_checks)
      - existing file holds a different usable Holmake path
-         => emit a prominent warning, do NOT overwrite *)
+         => prompt the user (TTY only) to either abort the run or
+            agree to overwrite; aborts outright when not on a TTY. *)
 fun write_lastmaker_in_cwd (ofns : output_functions) =
     case !cached_mypath of
         NONE => ()
@@ -390,8 +445,10 @@ fun write_lastmaker_in_cwd (ofns : output_functions) =
             else if not (FileSys.access
                            (existing, [FileSys.A_READ, FileSys.A_EXEC]))
             then write_lastmaker_file_for mypath  (* garbage; replace *)
-            else warn_lastmaker_conflict ofns
-                   {existing = existing, mine = mypath}
+            else (prompt_lastmaker_conflict ofns
+                    {existing = existing, mine = mypath};
+                  (* reaches here iff the user agreed to overwrite *)
+                  write_lastmaker_file_for mypath)
 
 (* Caller passes target_dir = SOME d to peek at the lastmaker state of
    directory d without yet moving the running process there.  We

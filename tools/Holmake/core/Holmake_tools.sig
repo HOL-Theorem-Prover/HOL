@@ -118,9 +118,11 @@ sig
        not just the one Holmake was started in.
 
        If a lastmaker file is already present and points at a
-       different but still-usable Holmake binary, the existing file
-       is left in place and a prominent warning is emitted through
-       OFNS -- never silently overwritten. *)
+       different but still-usable Holmake binary, the user is asked
+       (on a TTY) whether to overwrite-and-continue or abort.  When
+       stdin is not a TTY the call aborts the process via die_with
+       -- silently smashing a foreign build's state would be wrong,
+       and a non-interactive caller has no way to consent. *)
 
 
   (* File IO *)
