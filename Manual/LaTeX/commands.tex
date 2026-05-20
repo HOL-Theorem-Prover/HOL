@@ -197,39 +197,42 @@
 % ---------------------------------------------------------------------
 % Macros for little HOL sessions displayed in boxes.
 %
-% Usage: (1) \setcounter{sessioncount}{1} resets the session counter
-%
-%        (2) \begin{session}\begin{verbatim}
+% Usage:  \begin{session}\begin{alltt}
 %             .
 %              < lines from hol session >
 %             .
-%            \end{verbatim}\end{session}
+%         \end{alltt}\end{session}
 %
-%            typesets the session in a numbered box.
+% Renders the body with a heavy coloured rule down the left margin
+% and a small indent, matching the mdbook side's
+% `pre > code.language-repl` styling.  The session counter and
+% numbered framebox that earlier versions of this command used are
+% gone -- the counter wasn't referenced anywhere outside the env
+% itself.
 % ---------------------------------------------------------------------
 
-\newlength{\hsbw}
-\setlength{\hsbw}{\textwidth}
-\addtolength{\hsbw}{-\arrayrulewidth}
-\addtolength{\hsbw}{-\tabcolsep}
+\usepackage{xcolor}
+\usepackage{mdframed}
+
 \newcommand\HOLSpacing{13pt}
+% Bar colour matches mdbook's --links variable (Light theme); the
+% PDF doesn't have themes so we just use the light default.
+\definecolor{HOLsessionbar}{rgb}{0.255,0.514,0.812}
 
-\newcounter{sessioncount}
-\setcounter{sessioncount}{0}
-
-\newenvironment{session}{\begin{flushleft}
- \refstepcounter{sessioncount}
- \begin{tabular}{@{}|c@{}|@{}}\hline
- \begin{minipage}[b]{\hsbw}
- \vspace*{-.5pt}
- \begin{flushright}
- \rule{0.01in}{.15in}\rule{0.3in}{0.01in}\hspace{-0.35in}
- \raisebox{0.04in}{\makebox[0.3in][c]{\footnotesize\sl \thesessioncount}}
- \end{flushright}
- \vspace*{-.55in}
- \begingroup\small\baselineskip\HOLSpacing}{\endgroup\end{minipage}\\ \hline
- \end{tabular}
- \end{flushleft}}
+\newmdenv[
+  topline=false, bottomline=false, rightline=false,
+  leftline=true,
+  linewidth=3pt,
+  linecolor=HOLsessionbar,
+  leftmargin=0pt, rightmargin=0pt,
+  innerleftmargin=0.6em, innerrightmargin=0pt,
+  innertopmargin=0.2ex, innerbottommargin=0.2ex,
+  skipabove=0.5\baselineskip,
+  skipbelow=0.5\baselineskip,
+]{sessionframe}
+\newenvironment{session}
+  {\begin{sessionframe}\small}
+  {\end{sessionframe}}
 
 % ---------------------------------------------------------------------
 % Macro for boxed ML functions, etc.
