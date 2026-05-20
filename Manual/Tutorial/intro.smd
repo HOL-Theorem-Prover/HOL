@@ -2,6 +2,8 @@
 
 \label{install}
 
+>>__ proofManagerLib.drop_all();
+
 This chapter describes how to get the HOL system and how to install
 it.  It is generally assumed that some sort of Unix system is being
 used, but the instructions that follow should apply *mutatis

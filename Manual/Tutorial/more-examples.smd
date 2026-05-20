@@ -2,6 +2,8 @@
 
 \label{chap:more-examples}
 
+>>__ proofManagerLib.drop_all();
+
 In addition to the examples already covered in this text, the HOL
 distribution comes with a variety of instructive examples in the
 `examples` directory.  There the following examples (among

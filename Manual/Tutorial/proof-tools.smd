@@ -2,6 +2,8 @@
 
 \label{chap:proof-tools}
 
+>>__ proofManagerLib.drop_all();
+
 Users of HOL can create their own theorem proving tools by
 combining predefined rules and tactics. The ML type-discipline
 ensures that only logically sound methods can be used to create

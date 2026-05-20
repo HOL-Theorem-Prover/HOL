@@ -2,6 +2,8 @@
 
 \label{chap:combin}
 
+>>__ proofManagerLib.drop_all();
+
 ```{=latex}
 % Chapter-local LaTeX macros.  YAML header-includes don't survive
 % `pandoc -t latex`, so these live in a raw-LaTeX block in the
@@ -318,7 +320,12 @@ can prove and save the theorem for future use by:
    QED
 ```
 
+```{=latex}
 \eos
+```
+```{=mdbook}
+<p style="text-align:center;margin:1em 0">⋯⋄⋯</p>
+```
 
 Clearly confluence is a nice property for a system to have.  The
 question is how we might manage to prove it.  Let's start by
@@ -467,7 +474,12 @@ sub-goal package commands:
        QED
 ```
 
+```{=latex}
 \eos
+```
+```{=mdbook}
+<p style="text-align:center;margin:1em 0">⋯⋄⋯</p>
+```
 
 Now we can move on to proving that if $R$ has the diamond
 property, so too does $R^*$.  We want to prove this by induction
@@ -734,7 +746,12 @@ proof is
        QED
 ```
 
+```{=latex}
 \eos
+```
+```{=mdbook}
+<p style="text-align:center;margin:1em 0">⋯⋄⋯</p>
+```
 
 Our next proof is in the other direction.  It should be clear
 that we will not just be able to appeal to the monotonicity of
@@ -823,7 +840,12 @@ short tactic proof indeed:
        QED
 ```
 
+```{=latex}
 \eos
+```
+```{=mdbook}
+<p style="text-align:center;margin:1em 0">⋯⋄⋯</p>
+```
 
 Now it's time to prove that if a number of parallel reduction
 steps are chained together, then we can mirror this with some
@@ -862,7 +884,12 @@ Packaged up, this proof is:
        QED
 ```
 
+```{=latex}
 \eos
+```
+```{=mdbook}
+<p style="text-align:center;margin:1em 0">⋯⋄⋯</p>
+```
 
 Our final act is to use what we have so far to conclude that
 $\rightarrow^*$ and $\mathpredn^*$ are equal.  We state our goal:
@@ -1012,7 +1039,12 @@ all that we might look upon the four disjunctions and despair.
 >> val x_ap_y_predn = characterise ``x # y``;
 ```
 
+```{=latex}
 \eos
+```
+```{=mdbook}
+<p style="text-align:center;margin:1em 0">⋯⋄⋯</p>
+```
 
 Now we are ready to prove the final goal.  It is
 
@@ -1184,7 +1216,12 @@ The final goal proof can be packaged into:
        QED
 ```
 
+```{=latex}
 \eos
+```
+```{=mdbook}
+<p style="text-align:center;margin:1em 0">⋯⋄⋯</p>
+```
 
 We are on the home straight.  The lemma can be turned into a
 statement involving the `diamond` constant directly:

@@ -2,6 +2,8 @@
 
 \label{chap:writing-hol}
 
+>>__ proofManagerLib.drop_all();
+
 The ML language is literally the HOL system's *meta-language*.
 We use it to manipulate and interact with the terms, types and
 theorems of higher-order logic.  Ultimately this is done with ML

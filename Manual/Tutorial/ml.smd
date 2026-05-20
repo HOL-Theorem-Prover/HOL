@@ -2,6 +2,8 @@
 
 \label{ML}
 
+>>__ proofManagerLib.drop_all();
+
 This chapter is a brief introduction to the meta-language SML.
 The aim is just to give a feel for what it is like to interact
 with the language.  A more detailed introduction can be found in

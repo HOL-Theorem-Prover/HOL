@@ -2,6 +2,8 @@
 
 \label{chap:euclid}
 
+>>__ proofManagerLib.drop_all();
+
 <!-- Snapshot the grammar smdpp's shared session arrives with so we
      can restore it at chapter end.  Then pin the grammar to
      numeralTheory's, which predates writinghol's `load "intLib"`

@@ -2,6 +2,8 @@
 
 \label{parity}
 
+>>__ proofManagerLib.drop_all();
+
 This chapter consists of a worked example: the specification and
 verification of a simple sequential parity checker.  The intention
 is to accomplish two things:
