@@ -32,6 +32,38 @@ all: description.pdf
 SMDS = $(wildcard *.smd)
 SMD_MDS = $(patsubst %.smd,%.md,$(SMDS))
 
+# SVG renderings of the chapter figures, for the mdbook side.  The
+# PDF side picks up the .mps / .pdf originals as usual.  Holmake
+# pattern rules only match targets in the current directory, so
+# each figure gets an explicit rule below.
+SVG_FIGS = figs/0.svg figs/1.svg \
+           figs/lsl.svg figs/lsr.svg figs/asr.svg \
+           figs/ror.svg figs/rrx.svg
+
+# MetaPost .mps -> .svg via mptopdf + pdftocairo.  mptopdf writes
+# <name>-mps.pdf in cwd; clean that up after extracting the SVG.
+figs/0.svg: figs/0.mps
+	cd figs && mptopdf 0.mps
+	pdftocairo -svg figs/0-mps.pdf $@
+	rm -f figs/0-mps.pdf figs/0.log
+
+figs/1.svg: figs/1.mps
+	cd figs && mptopdf 1.mps
+	pdftocairo -svg figs/1-mps.pdf $@
+	rm -f figs/1-mps.pdf figs/1.log
+
+# Pre-built .pdf figures -> .svg.
+figs/lsl.svg: figs/lsl.pdf
+	pdftocairo -svg $< $@
+figs/lsr.svg: figs/lsr.pdf
+	pdftocairo -svg $< $@
+figs/asr.svg: figs/asr.pdf
+	pdftocairo -svg $< $@
+figs/ror.svg: figs/ror.pdf
+	pdftocairo -svg $< $@
+figs/rrx.svg: figs/rrx.pdf
+	pdftocairo -svg $< $@
+
 # Build the mdbook output for the chapters listed in SUMMARY.md;
 # afterwards, scan the rendered HTML for raw-LaTeX leak patterns
 # that have caused mdbook regressions before (see
@@ -45,7 +77,8 @@ SMD_MDS = $(patsubst %.smd,%.md,$(SMDS))
 # Depending on $(SMD_MDS) ensures Holmake builds those .uo files
 # before mdbook runs, the same way description.pdf gets them via
 # $(TEX_SOURCES).
-mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS)
+mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS) \
+        $(SVG_FIGS)
 	mdbook build
 	../Tools/mdbook-check.sh ../book/Description
 	../Tools/smdpp check-refs ../book/Description
@@ -162,4 +195,5 @@ EXTRA_CLEANS = $(SMD_MDS) $(patsubst %.smd,%.tex,$(SMDS)) \
                description.ind description.blg description.bbl \
                description.fdb_latexmk \
                chapters-include.tex book-title.tex SUMMARY.md \
+               $(SVG_FIGS) \
                ../book/Description/

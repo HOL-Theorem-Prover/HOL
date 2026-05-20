@@ -160,7 +160,12 @@
               if (!li || li.tagName !== 'LI') return null;
               const a = li.querySelector(
                 ':scope > span.chapter-link-wrapper > a[href]');
-              if (a) return a.getAttribute('href');
+              // Skip already-rewritten ancestor drafts (their hrefs
+              // include `#anchor`); keep walking up until we hit the
+              // chapter's base URL.
+              if (a && !a.getAttribute('href').includes('#')) {
+                return a.getAttribute('href');
+              }
               li = li.parentElement;               // ol.section (next level up)
             }
             return null;

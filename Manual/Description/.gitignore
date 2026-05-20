@@ -37,3 +37,10 @@ latex-munger.md
 chapters-include.tex
 book-title.tex
 SUMMARY.md
+figs/0.svg
+figs/1.svg
+figs/lsl.svg
+figs/lsr.svg
+figs/asr.svg
+figs/ror.svg
+figs/rrx.svg

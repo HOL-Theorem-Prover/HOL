@@ -226,6 +226,10 @@ expect:
 \end{figure}
 ```
 
+```{=mdbook}
+<figure style="text-align:center"><img src="figs/0.svg" alt="The differentiation process of (f diffl l) x"><figcaption>The differentiation process of <code>(f diffl l) x</code></figcaption></figure>
+```
+
 `(f has_derivative f') (at x)` means 'the function $f$ has a derivative
 $f'$ at the point $x$', or `(f has_derivative f') (at x within s)` means
 'the function $f$ has a derivative $f'$ at the point $x$ within the set
@@ -244,6 +248,10 @@ illustration of this differentiation process.)
   \caption{The differentiation process of \holtxt{f has_derivative f'}}
   \label{fig:hasDerivative}
 \end{figure}
+```
+
+```{=mdbook}
+<figure style="text-align:center"><img src="figs/1.svg" alt="The differentiation process of f has_derivative f'"><figcaption>The differentiation process of <code>f has_derivative f'</code></figcaption></figure>
 ```
 
 ```repl

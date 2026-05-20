@@ -30,6 +30,10 @@
 \usepackage[line,arrow,frame,matrix]{xy}
 \usepackage{tikz}
 \usetikzlibrary{arrows,positioning}
+% Standalone lets \input{figs/<x>} pull in standalone-class TikZ
+% sources (which compile by themselves to PDF -> SVG for the
+% mdbook side) into the main document, stripping their preambles.
+\usepackage{standalone}
 \usepackage{../LaTeX/proof}
 
 % Packages and definitions emitted (or referenced) by

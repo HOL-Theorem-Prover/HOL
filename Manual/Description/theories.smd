@@ -2486,6 +2486,24 @@ word\_rrx (c,v)}.}
 \end{figure}
 ```
 
+```{=mdbook}
+<figure style="text-align:center">
+<table style="margin:0 auto"><tbody>
+<tr><td><img src="figs/lsl.svg" alt="Logical shift left"></td>
+    <td><img src="figs/lsr.svg" alt="Logical shift right"></td></tr>
+<tr><td>(a) Logical shift left: <code>w = v &lt;&lt; x</code>.</td>
+    <td>(b) Logical shift right: <code>w = v &gt;&gt;&gt; x</code>.</td></tr>
+<tr><td><img src="figs/asr.svg" alt="Arithmetic shift right"></td>
+    <td><img src="figs/ror.svg" alt="Rotate right"></td></tr>
+<tr><td>(c) Arithmetic shift right: <code>w = v &gt;&gt; x</code>.</td>
+    <td>(d) Rotate right: <code>w = v #&gt;&gt; x</code>.</td></tr>
+<tr><td colspan="2" style="text-align:center"><img src="figs/rrx.svg" alt="Rotate right extended by 1 place"></td></tr>
+<tr><td colspan="2" style="text-align:center">(e) Rotate right extended by 1 place: <code>(d,w) = word_rrx (c,v)</code>.</td></tr>
+</tbody></table>
+<figcaption>Shift operations.</figcaption>
+</figure>
+```
+
 **Arithmetic and orderings.**
 The arithmetic operations are: addition, subtraction, unary
 minus (two's complement), logarithm (base-2), multiplication,

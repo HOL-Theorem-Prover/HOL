@@ -30,10 +30,33 @@ all: tutorial.pdf
 SMDS = $(wildcard *.smd)
 SMD_MDS = $(patsubst %.smd,%.md,$(SMDS))
 
+# SVG renderings of the chapter figures, for the mdbook side.  The
+# matching \input{} of each figure's standalone TikZ source lives
+# inside the {=latex} blocks of the chapter .smd files and is
+# picked up by the PDF pipeline as usual.  (Holmake pattern rules
+# don't support directory-prefixed targets, so each figure gets an
+# explicit rule.)
+SVG_FIGS = figs/combin-confluence.svg \
+           figs/combin-confluence-complete.svg
+
+figs/combin-confluence.svg: figs/combin-confluence.tex
+	cd figs && pdflatex -interaction=batchmode combin-confluence.tex
+	pdftocairo -svg figs/combin-confluence.pdf $@
+	rm -f figs/combin-confluence.aux figs/combin-confluence.log \
+	      figs/combin-confluence.pdf
+
+figs/combin-confluence-complete.svg: figs/combin-confluence-complete.tex
+	cd figs && pdflatex -interaction=batchmode combin-confluence-complete.tex
+	pdftocairo -svg figs/combin-confluence-complete.pdf $@
+	rm -f figs/combin-confluence-complete.aux \
+	      figs/combin-confluence-complete.log \
+	      figs/combin-confluence-complete.pdf
+
 # Build the mdbook output for the chapters listed in SUMMARY.md;
 # afterwards, scan the rendered HTML for raw-LaTeX leak patterns and
 # cross-reference number drift.
-mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS)
+mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS) \
+        $(SVG_FIGS)
 	mdbook build
 	../Tools/mdbook-check.sh ../book/Tutorial
 	../Tools/smdpp check-refs ../book/Tutorial
@@ -115,4 +138,8 @@ EXTRA_CLEANS = $(SMD_MDS) $(patsubst %.smd,%.tex,$(SMDS)) \
                tutorial.fls tutorial.idx tutorial.ilg tutorial.ind \
                tutorial.blg tutorial.bbl tutorial.fdb_latexmk \
                mdbook-serve.log \
+               $(SVG_FIGS) \
+               $(patsubst %.svg,%.pdf,$(SVG_FIGS)) \
+               $(patsubst %.svg,%.aux,$(SVG_FIGS)) \
+               $(patsubst %.svg,%.log,$(SVG_FIGS)) \
                ../book/Tutorial/

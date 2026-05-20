@@ -217,45 +217,21 @@ This property states of $R$ that we can “complete the diamond”;
 if we have
 
 ```{=latex}
-\begin{center}
-\begin{tikzpicture}[scale=.8,transform shape]
-\node (middle) {};
-\node (x) [above=of middle] {$x$};
-\node (y) [left=of middle] {$y$};
-\node (z) [right=of middle] {$z$};
-\path (x) edge [->,thick] node[auto,swap] {$*$} (y);
-\path (x) edge [->,thick] node[auto] {$*$} (z);
-\end{tikzpicture}
-\end{center}
+\begin{center}\input{figs/combin-confluence}\end{center}
 ```
 
 ```{=mdbook}
-*Diagram:* $x$ with two arrows labelled $*$ going down-left to $y$
-and down-right to $z$.
+<p style="text-align:center"><img src="figs/combin-confluence.svg" alt="x with two arrows labelled * going down-left to y and down-right to z"></p>
 ```
 
 then we can complete with a fresh value $u$:
 
 ```{=latex}
-\begin{center}
-\begin{tikzpicture}[scale=.8,transform shape]
-\node (middle) {};
-\node (x) [above=of middle] {$x$};
-\node (y) [left=of middle] {$y$};
-\node (z) [right=of middle] {$z$};
-\node (u) [below=of middle] {$u$};
-\path (x) edge [->,thick] node[auto,swap] {$*$} (y);
-\path (x) edge [->,thick] node[auto] {$*$} (z);
-\path (y) edge [->,thick,densely dotted] node[auto,swap] {$*$} (u);
-\path (z) edge [->,thick,densely dotted] node[auto] {$*$} (u);
-\end{tikzpicture}
-\end{center}
+\begin{center}\input{figs/combin-confluence-complete}\end{center}
 ```
 
 ```{=mdbook}
-*Diagram:* the same as above with a $u$ vertex below the middle,
-and dotted arrows labelled $*$ from $y$ down-right to $u$ and from
-$z$ down-left to $u$.
+<p style="text-align:center"><img src="figs/combin-confluence-complete.svg" alt="the previous diagram with a u vertex below middle, and dotted arrows labelled * from y down-right to u and from z down-left to u"></p>
 ```
 
 One nice property of confluent relations is that from any one
