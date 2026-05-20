@@ -152,6 +152,9 @@ fun read_holpathdb() =
     end
 
 val master_cline_option_value = #core master_cline_nohmf
+val _ = if #force_lastmaker master_cline_option_value
+        then set_lastmaker_force ()
+        else ()
 val usepfx = #jobs master_cline_option_value = 1
 val {warn=warn0,info=info0,diag=diag0,...} =
       output_functions {chattiness = chattiness_level master_cline_option_value,

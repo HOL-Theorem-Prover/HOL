@@ -118,11 +118,19 @@ sig
        not just the one Holmake was started in.
 
        If a lastmaker file is already present and points at a
-       different but still-usable Holmake binary, the user is asked
-       (on a TTY) whether to overwrite-and-continue or abort.  When
-       stdin is not a TTY the call aborts the process via die_with
-       -- silently smashing a foreign build's state would be wrong,
-       and a non-interactive caller has no way to consent. *)
+       different but still-usable Holmake binary, the conflict
+       warning is always emitted; then either the user is asked
+       (on a TTY) whether to overwrite-and-continue or abort, or
+       -- when stdin is not a TTY -- the call aborts the process
+       via die_with.  set_lastmaker_force suppresses the prompt
+       and forces overwrite-and-continue in both interactive and
+       non-interactive contexts (the warning still appears). *)
+
+  val set_lastmaker_force : unit -> unit
+    (* Tell write_lastmaker_in_cwd that any conflicting
+       lastmakers encountered during this Holmake invocation
+       should be overwritten without prompting.  Wired up to the
+       --force-lastmaker command-line flag in Holmake.sml. *)
 
 
   (* File IO *)

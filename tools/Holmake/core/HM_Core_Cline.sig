@@ -7,6 +7,7 @@ type t = {
   debug : {ins:string list, outs:string list} option,
   do_logging : bool,
   fast : bool,
+  force_lastmaker : bool,
   help : bool,
   holdir : string option,
   includes : string list,

@@ -354,26 +354,29 @@ fun stdin_is_tty () =
         | SOME desc => OS.IO.kind desc = OS.IO.Kind.tty
     end handle _ => false
 
-(* Once the user accepts the prompt for one conflict, the decision
-   sticks for the rest of this Holmake invocation: any further
-   conflicting lastmakers we encounter during the INCLUDES walk are
-   overwritten without re-asking.  Refusing once aborts the whole
-   process, so SOME false isn't a state we need to represent. *)
+(* Once a Holmake invocation has decided to overwrite conflicting
+   lastmakers -- either because --force-lastmaker was passed or
+   because the user said `y' to one prompt -- the decision sticks
+   for the rest of the run, and any further conflicts are
+   overwritten after the warning is printed but without re-asking.
+   Refusing a prompt aborts the whole process, so SOME false isn't
+   a state we need to represent. *)
 val lastmaker_overwrite_decided : bool ref = ref false
+
+fun set_lastmaker_force () = lastmaker_overwrite_decided := true
 
 (* Decide what to do when the lastmaker we're about to propagate
    would overwrite an existing file pointing at a different live
-   Holmake binary.  Either:
-     - the user has already agreed to overwrite this run, or
-     - we're on a TTY and ask y/N (default abort), or
-     - we're not on a TTY and abort outright (a child Holmake, a
-       CI run, an editor probe -- none of these can answer a
-       prompt, and silently trashing an older build is wrong).
-   On the "continue" path we just return; the caller does the
-   overwrite.  On the "abort" path we die_with a clear message. *)
+   Holmake binary.  In every case we first emit the conflict
+   warning so the user always sees what's happening; then:
+     - if the user (or --force-lastmaker) has already chosen to
+       overwrite, return silently and let the caller do the write;
+     - else on a TTY, ask `Continue (y/N)?'.  `y' flips the
+       always-overwrite flag, anything else aborts the run;
+     - else (no TTY: child Holmake, CI, editor probe, etc.) abort
+       outright -- silently smashing an older build is wrong, and
+       a non-interactive caller has no way to consent. *)
 fun prompt_lastmaker_conflict (ofns : output_functions) {existing, mine} =
-  if !lastmaker_overwrite_decided then ()
-  else
   let
     val {warn,...} = ofns
     val dir = FileSys.getDir()
@@ -390,10 +393,11 @@ fun prompt_lastmaker_conflict (ofns : output_functions) {existing, mine} =
     warn ("*** likely trashing the older build's state.  Abort if you'd");
     warn ("*** rather finish what you were doing with the other Holmake.");
     warn sep;
-    if not (stdin_is_tty ()) then
+    if !lastmaker_overwrite_decided then ()  (* --force-lastmaker, or prior y *)
+    else if not (stdin_is_tty ()) then
       die_with ("lastmaker conflict in " ^ dir ^
-                ": aborting (no tty; clean up the lastmaker or " ^
-                "re-run interactively to choose)")
+                ": aborting (no tty; pass --force-lastmaker, " ^
+                "clean up the lastmaker, or re-run interactively to choose)")
     else
       let
         val () = HOLFileSys.output (HOLFileSys.stdErr, "Continue (y/N)? ")
