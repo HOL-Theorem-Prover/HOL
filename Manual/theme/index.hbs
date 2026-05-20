@@ -136,14 +136,18 @@
         (function () {
           function slugify(text) {
             // Mirrors pulldown-cmark's heading-id rule: lowercase;
-            // drop characters that aren't alphanumeric, space, `-`,
-            // or `_`; then convert each remaining space to `-`
-            // (without collapsing consecutive `-`s).  Collapsing
-            // here gives the wrong anchor for headings whose source
-            // contained an em-dash flanked by spaces (the em-dash
-            // is dropped, leaving two spaces -> two `-`s).
+            // drop characters that aren't a Unicode letter / digit,
+            // space, `-`, or `_`; then convert each remaining space
+            // to `-` (without collapsing consecutive `-`s).
+            // Collapsing here gives the wrong anchor for headings
+            // whose source contained an em-dash flanked by spaces
+            // (the em-dash is dropped, leaving two spaces -> two
+            // `-`s).  \p{L}\p{N} (rather than [a-z0-9]) preserves
+            // diacritics: "Radon-Nikodým" -> "radon-nikodým"
+            // matches pulldown-cmark, while the ASCII-only form
+            // strips the ý and produces a dead anchor.
             return text.toLowerCase()
-                       .replace(/[^a-z0-9 _-]+/g, '')
+                       .replace(/[^\p{L}\p{N} _-]+/gu, '')
                        .replace(/ /g, '-')
                        .replace(/^-+|-+$/g, '');
           }

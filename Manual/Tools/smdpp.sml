@@ -453,21 +453,77 @@ fun preprocessStage2 {labelRegistry, currentFile, name} s =
 (* GitHub-style heading slugger: lowercase, drop punctuation other
    than space/`-`/`_`, replace spaces with `-`, collapse multiple
    `-`s, trim.  Approximates pulldown-cmark's heading-id rule. *)
+(* UTF-8 codepoint at byte offset i in s.  Returns (codepoint, nBytes).
+   Malformed bytes are passed through as Latin-1 codepoints. *)
+fun utf8Decode s i =
+  let
+    val slen = String.size s
+    val b0 = Char.ord (String.sub (s, i))
+    fun cont k =
+      if i + k < slen
+      then Char.ord (String.sub (s, i + k)) - 0x80
+      else 0
+  in
+    if b0 < 0x80 then (b0, 1)
+    else if b0 < 0xC0 then (b0, 1)
+    else if b0 < 0xE0 then ((b0 - 0xC0) * 64 + cont 1, 2)
+    else if b0 < 0xF0 then
+      ((b0 - 0xE0) * 4096 + cont 1 * 64 + cont 2, 3)
+    else
+      ((b0 - 0xF0) * 262144 + cont 1 * 4096 +
+       cont 2 * 64 + cont 3, 4)
+  end
+
+(* Approximation of Unicode general category L* (letters), covering
+   the ranges the HOL manuals actually use in heading text.  Letters
+   outside these ranges (CJK, Arabic, ...) would be dropped, but
+   none appear in the manual so a fuller table isn't justified. *)
+fun isUnicodeLetter cp =
+  (cp >= 0xC0 andalso cp <= 0xFF
+       andalso cp <> 0xD7 andalso cp <> 0xF7) orelse  (* Latin-1 *)
+  (cp >= 0x0100 andalso cp <= 0x024F) orelse          (* Latin Ext-A/B *)
+  (cp >= 0x0370 andalso cp <= 0x03FF                  (* Greek *)
+       andalso cp <> 0x0374 andalso cp <> 0x0375
+       andalso cp <> 0x037E andalso cp <> 0x0387) orelse
+  (cp >= 0x0400 andalso cp <= 0x04FF)                 (* Cyrillic *)
+
+(* Mirrors pulldown-cmark / mdbook's normalize_id: keep Unicode
+   letters and digits, `_`, `-`; convert ASCII whitespace to `-`;
+   lowercase ASCII letters; leave non-ASCII letters as-is (good
+   enough -- the manual's only non-ASCII letter is `ý`, already
+   lowercase in source).  Strip leading/trailing dashes; don't
+   collapse consecutive ones (pulldown-cmark keeps them, e.g.
+   "Foo — Bar" → "foo--bar", and any mismatch breaks anchor
+   resolution). *)
 fun slugify text =
   let
-    fun strip c =
-      Char.isAlphaNum c orelse c = #" " orelse c = #"-" orelse c = #"_"
-    val lower = String.map Char.toLower text
-    val kept = String.translate
-                 (fn c => if strip c then String.str c
-                          else if c = #"\t" then " "
-                          else "")
-                 lower
-    val dashed = String.map (fn #" " => #"-" | c => c) kept
-    (* Don't collapse consecutive dashes — pulldown-cmark keeps them
-       (e.g. `simp_tac : foo` slugs to `simp_tac--foo`), and a mismatch
-       here means `\ref{X}` URLs point at non-existent anchors. *)
-    val ss = Substring.full dashed
+    val tlen = String.size text
+    val buf = ref ([] : char list)
+    fun emitByte b = buf := b :: !buf
+    fun emitRange i n =
+      let fun loop k =
+            if k >= n then ()
+            else (emitByte (String.sub (text, i + k)); loop (k + 1))
+      in loop 0 end
+    fun walk i =
+      if i >= tlen then ()
+      else
+        let val (cp, n) = utf8Decode text i
+        in
+          if cp < 128 then
+            let val c = Char.chr cp
+                val () =
+                  if Char.isAlphaNum c orelse c = #"-" orelse c = #"_"
+                  then emitByte (Char.toLower c)
+                  else if c = #" " orelse c = #"\t" then emitByte #"-"
+                  else ()
+            in walk (i + 1) end
+          else
+            (if isUnicodeLetter cp then emitRange i n else ();
+             walk (i + n))
+        end
+    val () = walk 0
+    val ss = Substring.full (String.implode (List.rev (!buf)))
     val ss = Substring.dropl (fn c => c = #"-") ss
     val ss = Substring.dropr (fn c => c = #"-") ss
   in
