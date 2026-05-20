@@ -455,6 +455,11 @@ such theorems.  `Holmake`'s default is not to build in fast mode.
 **`--fast`** Makes `Holmake`'s default be to build in fast mode
 (see above).
 
+**`--force-lastmaker`** Overwrite any existing
+`.hol/make-deps/lastmaker` file that conflicts with the running
+`Holmake`'s path, without prompting or aborting.  See
+Section \ref{sec:holmake-lastmaker} below for the full picture.
+
 **`--help` or `-h`** Prints out a useful option summary and exits.
 
 **`--holdir <directory>`** Associate this build with the given
@@ -564,6 +569,70 @@ thinks it needs to.  This option is implemented by having
 
 `Holmake` should never exit with error messages such as “Uncaught
 exception”.  Such behaviour is a bug, please report it!
+
+### Multiple HOL installations and the `lastmaker` file
+
+\label{sec:holmake-lastmaker}
+\index{Holmake@\holmake!lastmaker file}
+\index{lastmaker file@\texttt{lastmaker} file}
+
+When a machine has more than one HOL installation,
+`.hol/make-deps/lastmaker` records the absolute path of the
+`Holmake` binary that most recently processed each directory.  The
+file is a single line of text and has two consumers.
+
+`Holmake` itself consults `lastmaker` at the start of every run.
+If the working directory is not under any HOL installation's
+tree[^lastmaker-holdir] and a `lastmaker` file already exists,
+`Holmake` exec-switches to the binary named there, so a directory
+previously built by another HOL installation is silently
+re-processed by that installation's `Holmake`.  The pre-existing
+`--nolmbc` flag suppresses both this exec-switch behaviour and the
+propagation writes described below; it is useful when one
+deliberately wants to run *this* `Holmake` over a tree built by a
+different installation.
+
+[^lastmaker-holdir]: When the working directory *is* under some
+    HOL installation's tree (`HOLDIR`/...), no `lastmaker` is
+    consulted: the directory hierarchy unambiguously identifies
+    the right `Holmake`.
+
+The second consumer is the editor modes (notably the `emacs` and
+`vim` modes), which read `lastmaker` to decide which `hol` binary
+to launch for an interactive session in that directory.
+
+\index{Holmake@\holmake!INCLUDES variable@\texttt{INCLUDES} variable}
+A `lastmaker` file is written in *every* directory `Holmake`
+visits during its `INCLUDES` walk, not just the directory
+`Holmake` was started in.  This way, opening a script in an
+`INCLUDES`'d subtree in an editor still picks the right binary.
+The propagation is suppressed (no `lastmaker` files are written)
+when the invocation itself was launched from inside any HOL
+installation: the directory hierarchy already disambiguates, and
+`INCLUDES` walks rooted inside an installation do not leave it.
+
+#### Conflicting `lastmaker` files
+
+When propagation would overwrite an existing `lastmaker` that
+points at a *different but still-usable* `Holmake` binary, the
+user is asked what to do.  The default ("N") aborts the build
+without modifying the existing file, preserving whatever state
+the other HOL installation left behind; answering "y" overwrites
+and proceeds, accepting that the current `Holmake` will treat the
+existing build artefacts as stale and likely rebuild them.
+
+When standard input is not connected to a terminal — a
+continuous-integration run, a recursively-spawned child `Holmake`,
+an editor probe — there is no way for the user to consent, so
+`Holmake` aborts with a non-zero exit code and leaves the existing
+`lastmaker` file alone.  The `--force-lastmaker` command-line flag
+suppresses the prompt and forces the overwrite in both interactive
+and non-interactive contexts; this is useful in batch contexts
+where the conflict is known and intentional.
+
+A `lastmaker` whose recorded path no longer resolves to a real
+executable is treated as garbage and replaced silently, without
+any prompt.
 
 ### Heap dumps on tactic failure
 
