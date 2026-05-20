@@ -238,4 +238,7 @@ val _ = html_theory "semi_sensible";
 
  [1] Barendregt, H.P.: The lambda calculus, its syntax and semantics.
      College Publications, London (1984).
+ [2] Coppo, M. et al.: (Semi-) separability of Finite Sets of Terms in Scott's
+     D-infinity-models of the Lambda-calculus. In: LNCS 62 - Automata, Languages
+     and Programming (ICALP 1978). Springer (1978).
  *)
