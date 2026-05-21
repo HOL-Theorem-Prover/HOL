@@ -822,13 +822,20 @@ fun scanLabels chapterPrefix chapterFile chapterName content =
     (* Mirror pulldown-cmark's per-page heading-id rule: when the
        same base slug appears more than once in a chapter's content,
        the Nth (1-indexed N>1) occurrence gets `-N-1` appended.
-       For sub-files (titleLvl > 1) mdbook also auto-emits an H1 at
-       the top of the page whose slug matches chapterName; the
-       content's leading H2 then collides with that auto-H1 and
-       gets `-1` appended.  Seed seenSlugs so we account for it. *)
+
+       For sub-files (titleLvl > 1) whose content has no heading at
+       all, smdpp's ensureH1 will prepend `# <chapterName>` (an H1
+       whose slug matches chapterName).  In that case seed seenSlugs
+       so any subsequent body heading with the same slug picks up
+       the `-1` suffix that pulldown-cmark will assign.
+
+       For sub-files whose content already starts at H2 (the common
+       case, e.g. HolSat.smd's `## The HolSat Library`), ensureH1
+       doesn't prepend anything -- the H2 is the page's first
+       heading and gets the un-disambiguated slug.  No seeding. *)
     val seenSlugs = ref ([] : (string * int) list)
     val () =
-        if titleLvl > 1 then
+        if titleLvl > 1 andalso not (hasHeading content) then
           seenSlugs := [(headingAnchor chapterName, 1)]
         else ()
     fun nextSlug raw =

@@ -190,7 +190,7 @@ theories.md: $(dprot $(SIGOBJ)/realTheory.uo) \
 
 math.md: $(dprot $(SIGOBJ)/probabilityTheory.uo) \
          $(dprot $(SIGOBJ)/lebesgue_measureTheory.uo) \
-         $(HOLDIR)/examples/probability/large_numberTheory.uo
+         $(dprot $(HOLDIR)/examples/probability/large_numberTheory.uo)
 
 libraries.md: $(dprot $(SIGOBJ)/integerTheory.uo)
 
