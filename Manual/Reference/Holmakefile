@@ -21,7 +21,9 @@ reference.pdf: reference.tex entries.tex $(OTHER)
 reference.html: entries.md
 	pandoc -s -o $@ $<
 
-entries.md: $(Helpd)/src-sml/Md2TeX.exe $(wildcard $(Helpd)/Docfiles/*.md)
+entries.md: $(Helpd)/src-sml/Md2TeX.exe \
+            $(wildcard $(Helpd)/Docfiles/*.md) \
+            $(wildcard $(Helpd)/Docfiles/*.smd)
 	$(Helpd)/src-sml/Md2TeX.exe ../../help/Docfiles > $@
 
 entries.tex: entries.md

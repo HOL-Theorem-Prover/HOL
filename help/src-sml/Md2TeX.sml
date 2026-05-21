@@ -40,8 +40,17 @@ fun getMDFiles dir =
                 let
                   val {base,ext} = OS.Path.splitBaseExt f
                 in
+                  (* `.smd` is the new canonical extension for
+                     entries (so they can carry polyscripter
+                     directives like Description and Tutorial
+                     chapters do); `.md` is accepted too for
+                     backwards-compat during transitions. *)
                   case ext of
                      SOME "md" =>
+                     loop ((OS.Path.joinBaseExt {
+                               base = decode_stem base,ext = ext
+                             }, OS.Path.concat(dir,f))::A)
+                   | SOME "smd" =>
                      loop ((OS.Path.joinBaseExt {
                                base = decode_stem base,ext = ext
                              }, OS.Path.concat(dir,f))::A)
