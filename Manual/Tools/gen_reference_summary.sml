@@ -51,19 +51,34 @@ fun dropExt name =
     then String.substring (name, 0, String.size name - 4)
     else name
 
-(* `splitName "Abbrev.AC.smd"` returns ("Abbrev", SOME "AC"); for
-   single-component `Lib.smd` it returns ("Lib", NONE). *)
+(* For an entry filename, return:
+   - the HOL structure name (used for sidebar grouping);
+   - the displayable function name, with the structure prefix dropped.
+
+   Filename conventions (mirroring Md2TeX.sml's `decode_stem`):
+     - `Foo.smd`        -> (struct = "Foo", display = NONE)
+                            single-component entry, e.g. docs for the
+                            structure as a whole.
+     - `Foo.bar.smd`    -> (struct = "Foo", display = "bar")
+                            plain function-in-structure entry.
+     - `Foo..xyz.smd`   -> (struct = "Foo", display = ".xyz")
+                            UC_ASCII_Encode'd function name (HOL ident
+                            containing chars like :, ?, *, ...).  We
+                            don't decode here -- linking the decoder
+                            into this build adds plumbing.  The
+                            leading `.` preserved in the display label
+                            hints that this entry is encoded. *)
 fun splitName name =
     let val stem = dropExt name
     in
       case String.fields (fn c => c = #".") stem of
-          [s] => (s, NONE)
-        | [s, f] => (s, SOME f)
+          [s]             => (s, NONE)
+        | [s, f]          => (s, SOME f)
+        | [s, "", encoded] =>
+            (s, SOME ("." ^ encoded))
         | s :: rest =>
-            (* Names like "foo..bar.smd" (UC_ASCII_Encode'd second
-               component) keep the joined remainder as the function
-               name; we don't decode here, just preserve the on-disk
-               filename for URLs. *)
+            (* No known producer of this shape; preserve the joined
+               remainder unaltered rather than die. *)
             (s, SOME (String.concatWith "." rest))
         | [] => (stem, NONE)
     end
@@ -122,16 +137,21 @@ fun sortBy cmp xs =
       | _   => let val (p, s) = takedrop (List.length xs div 2) xs
                in merge cmp (sortBy cmp p) (sortBy cmp s) end
 
-(* The display label for an entry: `Struct` for single-component,
-   `Struct.Function` for two-component. *)
+(* The display label for an entry in the per-structure sub-list:
+   for `Foo.smd` (single-component, the structure-itself entry) the
+   label is the structure name; for `Foo.bar.smd` and
+   `Foo..xyz.smd` (with `xyz` UC_ASCII_Encode'd) just the function
+   name -- the structure prefix is already visible in the parent
+   sidebar group heading.  splitName already decoded the encoded
+   form before we get here. *)
 fun entryLabel struct_ NONE = struct_
-  | entryLabel struct_ (SOME f) = struct_ ^ "." ^ f
+  | entryLabel _ (SOME f) = f
 
 (* The href for an entry: the filename (relative to src dir). *)
 fun entryHref filename = filename
 
 (* Backtick-wrap labels so the sidebar renders them in monospace
-   (entries are HOL identifiers, e.g. `Abbrev.GEN_ALPHA_CONV`). *)
+   (entries are HOL identifiers). *)
 fun renderEntry struct_ (func, filename) =
     "- [`" ^ entryLabel struct_ func ^ "`](" ^ entryHref filename ^ ")\n"
 

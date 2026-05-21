@@ -69,6 +69,18 @@ pre > code.language-repl {
   background: var(--quote-bg, rgba(120, 144, 156, 0.10));
 }
 
+/* Reference's sidebar has 1,613 entries -- the auto-generated
+   section numbers (`1.1.1`, `1.1.2`, ...) are noise that the
+   reader can't use for navigation.  Hide them in the Reference
+   book only; the bullet styling is mdbook's existing chapter-li
+   chrome.  The `hol-book-reference` class is set on <body> by the
+   JS in index.hbs that also marks the current manual-switcher
+   link.  Scoped to the sidebar so chapter pages' content (which
+   may legitimately use <strong>) is unaffected. */
+body.hol-book-reference #mdbook-sidebar strong[aria-hidden="true"] {
+  display: none;
+}
+
 /* Cross-manual switcher strip above the per-book menu bar.  See
    `hol-manual-switcher` block in Manual/theme/index.hbs.  Mimics
    mdbook's own menu-bar look-and-feel (the same `--bg`, `--fg` and
@@ -83,11 +95,12 @@ pre > code.language-repl {
   text-align: center;
   /* mdbook's .page sibling has `margin-block-start:
      calc(0px - var(--menu-bar-height))` to slide content under the
-     sticky menu-bar; that negative margin would draw .page on top
-     of this strip.  position:relative + z-index lifts the strip
-     into its own stacking layer so it's visible and clickable. */
+     sticky menu-bar.  The menu-bar inside .page sets z-index: 101
+     on itself, so any natural-flow strip above it without an even
+     higher z-index gets captured for both painting AND pointer
+     events.  Use z-index 200 to win on both. */
   position: relative;
-  z-index: 100;
+  z-index: 200;
 }
 .hol-manual-switcher a {
   color: var(--fg);

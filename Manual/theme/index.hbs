@@ -448,6 +448,15 @@
                             '#hol-manual-switcher a[data-hol-manual="' +
                             current + '"]');
                         if (match) match.classList.add('current');
+                        /* Tag <body> with the current book so CSS can
+                           opt out of features per-book.  Reference's
+                           1,613-entry sidebar has no useful section
+                           numbering -- the entries are looked up by
+                           name, not by sequence -- so custom.css
+                           hides the auto-generated `<strong>N.M.</strong>`
+                           and lets normal list bullets do the job. */
+                        document.body.classList.add(
+                            'hol-book-' + current.toLowerCase());
                     }
                 })();
             </script>
