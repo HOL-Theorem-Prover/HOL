@@ -1,0 +1,31 @@
+[book]
+title = "HOL: Reference"
+authors = ["The HOL Development Team"]
+language = "en"
+# Source is the help/Docfiles directory itself: 1,613 entry .smd
+# files plus a generated SUMMARY.md.  mdbook reads .smd via the
+# smdpp preprocessor (same as Description and Tutorial).
+src = "../../help/Docfiles"
+# `description` is read by Manual/Tools/gen_lander when generating
+# the top-level Manual/book/index.html; mdbook itself ignores it.
+description = "Per-entry reference for every HOL function, theorem, tactic, conversion, and theory."
+
+[output.html]
+mathjax-support = true
+theme = "../theme"
+additional-css = ["custom.css"]
+
+# Sidebar entries fold by default beyond the top level (mirrors
+# Description/Tutorial); structure-group part titles stay visible,
+# individual entries collapsed under the group heading until clicked.
+[output.html.fold]
+enable = true
+level = 0
+
+[preprocessor.smdpp]
+command = "../Tools/smdpp"
+renderers = ["html"]
+
+[build]
+build-dir = "../book/Reference"
+create-missing = false

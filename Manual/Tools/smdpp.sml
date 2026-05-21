@@ -345,22 +345,28 @@ fun runScripted obuf s =
                  umap = Binarymap.mkDict String.compare,
                  obuf = obuf}
 
-(* If the content has no top-level H1 heading anywhere, prepend
-   `# <name>` so the rendered chapter has a title.  Some .smd files
-   defer chapter-titling to the LaTeX driver (e.g., modern-syntax.smd
-   is wrapped by modern-syntax-chapter.tex); for mdbook we synthesise
-   the heading from the SUMMARY.md entry. *)
-fun hasH1 s =
+(* If the content has no heading at all, prepend `# <name>` so the
+   rendered chapter has a title.  Some .smd files defer chapter-
+   titling to the LaTeX driver (e.g., modern-syntax.smd is wrapped
+   by modern-syntax-chapter.tex); Reference manual entries start at
+   H2 (the entry's H2 is its title); a few .smd files might lack any
+   heading.  Only the last group needs synthesis; for those that do
+   have an H2/H3 already we let mdbook use that as the page heading
+   directly. *)
+fun hasHeading s =
   let
     val lines = String.fields (fn c => c = #"\n") s
-    fun isH1 ln =
-      String.isPrefix "# " ln orelse ln = "#"
+    fun isHeading ln =
+      String.isPrefix "# " ln orelse ln = "#" orelse
+      String.isPrefix "## " ln orelse ln = "##" orelse
+      String.isPrefix "### " ln orelse ln = "###" orelse
+      String.isPrefix "#### " ln orelse ln = "####"
   in
-    List.exists isH1 lines
+    List.exists isHeading lines
   end
 
 fun ensureH1 name s =
-  if hasH1 s then s else "# " ^ name ^ "\n\n" ^ s
+  if hasHeading s then s else "# " ^ name ^ "\n\n" ^ s
 
 (* Strip the chapter file's extension and append `.html`; used when
    we resolve a cross-chapter `\ref` or `[text](#anchor)` and need
@@ -895,12 +901,25 @@ fun rewriteLinks {localAnchors, registry} content =
               | SOME j =>
                 let
                   val anchor = String.substring (content, i+3, j - i - 3)
+                  (* When `anchor` matches the base of the resolved
+                     file (one of the chapter-base registry entries
+                     added in finalizeChapter), drop the fragment:
+                     the link is just "go to that entry's page", and
+                     the entry's H2 doesn't carry the literal anchor
+                     (pulldown-cmark slugifies it differently).  This
+                     keeps mdbook-check.sh quiet and is functionally
+                     identical for the reader -- the browser scrolls
+                     to the top of the page either way. *)
+                  fun stemOf f =
+                    #base (OS.Path.splitBaseExt f)
                   val replacement =
                       if List.exists (fn a => a = anchor) localAnchors
                       then "](#" ^ anchor ^ ")"
                       else case lookup anchor of
                               SOME (_, file) =>
-                                "](" ^ toHtml file ^ "#" ^ anchor ^ ")"
+                                if stemOf file = anchor
+                                then "](" ^ toHtml file ^ ")"
+                                else "](" ^ toHtml file ^ "#" ^ anchor ^ ")"
                             | NONE => "](#" ^ anchor ^ ")"
                   val acc' = List.revAppend
                                (String.explode replacement, acc)
@@ -1031,9 +1050,25 @@ fun finalizeChapter labelRegistry chap anchorReg =
                                  {labelRegistry = labelRegistry,
                                   currentFile = p, name = name} s
                       val anchors = extractAnchors s'
+                      (* Reference entries (e.g. `Foo.bar.smd`) carry
+                         their entry name in the filename; their bodies
+                         link to other entries via `#Foo.bar`-style
+                         same-page anchors -- a CommonMark fiction that
+                         "works" only when the whole reference manual
+                         is one big concatenated page (the legacy PDF
+                         path).  Under mdbook, where each entry is its
+                         own page, we register the chapter's filename
+                         base as an extra anchor pointing at the
+                         chapter itself, so rewriteLinks redirects
+                         `](#Foo.bar)` to `](Foo.bar.html#Foo.bar)`.
+                         Browsers resolve the missing fragment by
+                         scrolling to the top of the page -- which is
+                         the entry. *)
+                      val {base, ...} = OS.Path.splitBaseExt p
                     in
                       (SOME s',
-                       anchorReg @ map (fn a => (a, p)) anchors)
+                       anchorReg @ map (fn a => (a, p)) anchors
+                                 @ [(base, p)])
                     end
                 | (SOME s, NONE) =>
                     (SOME (preprocessStage2
@@ -1082,13 +1117,26 @@ fun rewriteChapter registry chap =
         let
           (* Anchors local to this chapter = those in the registry
              pointing at this chapter's path.  Avoids a second
-             `extractAnchors` pass on the content. *)
+             `extractAnchors` pass on the content.
+
+             Exclude the chapter's own filename-base entry (added by
+             finalizeChapter for cross-chapter resolution): without
+             this exclusion a Reference entry's "See also" link to
+             itself by name (`#Foo.bar` inside `Foo.bar.smd`) would
+             match localAnchors and stay as a broken `#Foo.bar`
+             same-page link instead of falling through to the
+             registry lookup that drops the fragment. *)
           val localAnchors =
               case chapterPath fields of
                   SOME p =>
-                    List.mapPartial
-                      (fn (a, f) => if f = p then SOME a else NONE)
-                      registry
+                    let val baseOfP = #base (OS.Path.splitBaseExt p)
+                    in
+                      List.mapPartial
+                        (fn (a, f) =>
+                            if f = p andalso a <> baseOfP
+                            then SOME a else NONE)
+                        registry
+                    end
                 | NONE => []
           fun trField ("content", JSON.STRING s) =
                 ("content",
@@ -1536,6 +1584,11 @@ fun skipHref href =
     startsWith "http://" orelse startsWith "https://" orelse
     startsWith "mailto:" orelse startsWith "javascript:" orelse
     startsWith "data:" orelse startsWith "//" orelse
+    (* Cross-book links from the persistent manual switcher (see
+       Manual/theme/index.hbs) leave the current book's directory,
+       so they're out of scope for this single-book check; the
+       cross-book validator (check-refs-all, future) covers them. *)
+    startsWith "../" orelse
     endsWith ".css" orelse endsWith ".js" orelse
     endsWith ".png" orelse endsWith ".svg" orelse
     endsWith ".jpg" orelse endsWith ".jpeg" orelse
