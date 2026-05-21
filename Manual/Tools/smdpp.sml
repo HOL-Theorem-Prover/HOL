@@ -385,6 +385,100 @@ fun findCloseBrace (s, start) =
             | _ => loop (j+1, depth)
   in loop (start, 1) end
 
+(* Loaded once from `cite-labels.tsv` at preprocessor startup (see
+   loadCiteLabels below).  Each row is (keys, locator, rendered-html)
+   matching the TSV emitted by `smdpp render-bib`.  Empty when the
+   labels file is missing — citations then pass through unrewritten
+   and the post-build mdbook-check.sh leak check surfaces them. *)
+val citeLabels : (string * string * string) list ref = ref []
+
+(* Read cite-labels.tsv from cwd; warn (don't die) if missing. *)
+fun loadCiteLabels () =
+  let
+    val path = "cite-labels.tsv"
+  in
+    if not (OS.FileSys.access (path, [OS.FileSys.A_READ])) then
+      (TextIO.output (TextIO.stdErr,
+         "smdpp: cite-labels.tsv not found in " ^
+         OS.FileSys.getDir () ^
+         "; \\cite{...} calls will pass through unrewritten\n");
+       citeLabels := [])
+    else
+      let
+        val content =
+            let val ins = TextIO.openIn path
+                val s = TextIO.inputAll ins
+                val () = TextIO.closeIn ins
+            in s end
+        val lines = String.fields (fn c => c = #"\n") content
+        fun parse line =
+          case String.fields (fn c => c = #"\t") line of
+              [k, l, h] => SOME (k, l, h)
+            | _ => NONE
+      in
+        citeLabels := List.mapPartial parse lines
+      end
+  end
+
+(* Replace each `\cite[loc]{keys}` (or `\cite{keys}`) with the
+   rendered-HTML span captured in the citation label registry.
+   Unknown call-sites are left untouched: the rendered HTML keeps
+   the literal `\cite{...}` text, which `mdbook-check.sh` then
+   reports as a leak.  Brace-counted on the key argument; loose
+   `]`-terminator on the locator (LaTeX locators never contain
+   literal `]`). *)
+fun rewriteCites s =
+  let
+    val sub = String.sub
+    val sz = String.size s
+    val marker = "\\cite"
+    val msz = String.size marker
+    fun isCmdEnd c = not (Char.isAlpha c)
+    fun lookup keys locator =
+      List.find (fn (k, l, _) => k = keys andalso l = locator)
+                (!citeLabels)
+    fun loop (i, acc) =
+      if i >= sz then String.implode (List.rev acc)
+      else if i + msz <= sz
+              andalso String.substring (s, i, msz) = marker
+              andalso (i + msz = sz orelse isCmdEnd (sub (s, i + msz)))
+      then
+        let
+          val k = i + msz
+          val (locator, afterLoc) =
+            if k < sz andalso sub (s, k) = #"[" then
+              let
+                fun findRBrack j =
+                  if j >= sz then NONE
+                  else if sub (s, j) = #"]" then SOME j
+                  else findRBrack (j + 1)
+              in
+                case findRBrack (k + 1) of
+                    SOME e =>
+                      (String.substring (s, k + 1, e - k - 1), e + 1)
+                  | NONE => ("", k)
+              end
+            else ("", k)
+        in
+          if afterLoc < sz andalso sub (s, afterLoc) = #"{" then
+            case findCloseBrace (s, afterLoc + 1) of
+                NONE => loop (i + 1, sub (s, i) :: acc)
+              | SOME e =>
+                let
+                  val keys =
+                    String.substring (s, afterLoc + 1, e - afterLoc - 1)
+                in
+                  case lookup keys locator of
+                      SOME (_, _, html) =>
+                        loop (e + 1,
+                              List.revAppend (String.explode html, acc))
+                    | NONE => loop (i + 1, sub (s, i) :: acc)
+                end
+          else loop (i + 1, sub (s, i) :: acc)
+        end
+      else loop (i + 1, sub (s, i) :: acc)
+  in loop (0, []) end
+
 (* Replace each `\ref{X}` with a markdown link `[N.M.O](url)` where
    N.M.O is the formatted section number recorded for X in the
    label registry and `url` points to the heading-anchor in the
@@ -446,6 +540,7 @@ fun preprocessStage2 {labelRegistry, currentFile, name} s =
     |> resolveRefs {currentFile = currentFile,
                     labelRegistry = labelRegistry}
     |> stripLabel
+    |> rewriteCites
     |> convertSuperscripts
     |> protectMath
     |> ensureH1 name
@@ -1777,6 +1872,349 @@ fun checkRefsMain bookDir =
       OS.Process.exit OS.Process.success
   end
 
+(* ===== render-bib sub-command =====
+   Scans the supplied .smd files for `\cite[loc]{keys}` call-sites,
+   runs pandoc citeproc once over a synthetic markdown doc with one
+   paragraph per unique call-site, and parses the resulting HTML to
+   extract:
+     - per-call-site rendered `<span class="citation">` markup, with
+       intra-bibliography href rewrites applied so links resolve from
+       any chapter to references.html;
+     - the bibliography `<div id="refs">` block.
+   Writes two files into the current directory:
+     references.md    — mdbook chapter wrapping the bibliography.
+     cite-labels.tsv  — smdpp's preprocessor reads this at mdbook
+                         build time to substitute `\cite{...}` calls.
+   Each TSV row is `keys<TAB>locator<TAB>rendered-html`, single-line. *)
+
+(* A single `\cite[loc]{keys}` occurrence in source.  `locator` is the
+   raw locator text without brackets (or "" if no `[..]` block);
+   `keys` is the raw comma-joined key list. *)
+type cite = { keys : string, locator : string }
+
+(* Find every `\cite[loc]{keys}` in `s`.  Brace-counted on the key
+   argument; loose `]`-terminator on the locator (locators never
+   contain literal `]` in practice).  Returns occurrences in source
+   order, possibly with duplicates. *)
+fun findCites s =
+  let
+    val sub = String.sub
+    val sz = String.size s
+    val marker = "\\cite"
+    val msz = String.size marker
+    fun isCmdEnd c =
+      not (Char.isAlpha c)
+    fun scan i acc =
+      if i + msz > sz then List.rev acc
+      else if String.substring (s, i, msz) = marker
+              andalso (i + msz = sz orelse isCmdEnd (sub (s, i + msz)))
+      then
+        let val k = i + msz
+            val (locator, k') =
+              if k < sz andalso sub (s, k) = #"[" then
+                let
+                  fun findRBrack j =
+                    if j >= sz then NONE
+                    else if sub (s, j) = #"]" then SOME j
+                    else findRBrack (j + 1)
+                in
+                  case findRBrack (k + 1) of
+                      SOME e =>
+                        (String.substring (s, k + 1, e - k - 1), e + 1)
+                    | NONE => ("", k)
+                end
+              else ("", k)
+        in
+          if k' < sz andalso sub (s, k') = #"{" then
+            case findCloseBrace (s, k' + 1) of
+                NONE => scan (i + 1) acc
+              | SOME e =>
+                let val keys = String.substring (s, k' + 1, e - k' - 1)
+                in scan (e + 1) ({keys = keys, locator = locator} :: acc) end
+          else scan (i + 1) acc
+        end
+      else scan (i + 1) acc
+  in scan 0 [] end
+
+(* Translate a LaTeX-flavoured locator into the form citeproc parses
+   after the comma in `[@key, loc]`.  Currently just `~` → ` `;
+   trim leading/trailing whitespace. *)
+fun normalizeLocator s =
+  let
+    val mapped = String.translate
+                   (fn #"~" => " " | c => String.str c) s
+  in trimSpace mapped end
+
+(* Build the `[@k1; @k2, loc]` citeproc syntax from a cite record.
+   Trims surrounding whitespace from each key. *)
+fun citeprocOf {keys, locator} =
+  let
+    val keyList =
+        List.map trimSpace (String.tokens (fn c => c = #",") keys)
+    val keyForm = String.concatWith "; " (List.map (fn k => "@" ^ k) keyList)
+    val locForm = normalizeLocator locator
+  in
+    if locForm = "" then "[" ^ keyForm ^ "]"
+    else "[" ^ keyForm ^ ", " ^ locForm ^ "]"
+  end
+
+(* Write `content` to `path`, overwriting. *)
+fun writeFile path content =
+  let val out = TextIO.openOut path
+  in TextIO.output (out, content); TextIO.closeOut out end
+
+(* Resolve `path` to an absolute filesystem path; passes through if
+   already absolute.  pandoc resolves bibliography/csl YAML paths
+   relative to its own cwd, which during render-bib is the book dir;
+   feeding absolute paths is robust regardless of where pandoc runs. *)
+fun absPath path =
+  if OS.Path.isAbsolute path then path
+  else OS.Path.mkAbsolute
+         {path = path, relativeTo = OS.FileSys.getDir ()}
+
+(* Run pandoc --citeproc --from markdown --to html5 < inputPath >
+   outputPath; die on failure. *)
+fun runPandoc inputPath outputPath =
+  let
+    val cmd =
+        "pandoc --citeproc --from markdown --to html5 " ^
+        inputPath ^ " > " ^ outputPath
+    val rc = OS.Process.system cmd
+  in
+    if OS.Process.isSuccess rc then ()
+    else die ("render-bib: pandoc invocation failed: " ^ cmd)
+  end
+
+(* Find every occurrence of `needle` in `haystack` and replace with
+   `replacement`.  Non-overlapping, left-to-right. *)
+fun replaceAll needle replacement haystack =
+  let
+    val nsz = String.size needle
+    val hsz = String.size haystack
+    fun loop i acc =
+      if i + nsz > hsz then
+        String.concat (List.rev (String.substring (haystack, i, hsz - i) :: acc))
+      else if String.substring (haystack, i, nsz) = needle then
+        loop (i + nsz) (replacement :: acc)
+      else
+        loop (i + 1) (String.str (String.sub (haystack, i)) :: acc)
+  in loop 0 [] end
+
+(* Collapse runs of ASCII whitespace (incl. tabs, newlines) to a
+   single space.  Trims leading/trailing whitespace. *)
+fun normalizeWhitespace s =
+  let
+    val sub = String.sub
+    val sz = String.size s
+    fun loop (i, prevSpace, acc) =
+      if i >= sz then String.implode (List.rev acc)
+      else
+        let val c = sub (s, i)
+        in
+          if Char.isSpace c then
+            if prevSpace orelse acc = [] then loop (i + 1, true, acc)
+            else loop (i + 1, true, #" " :: acc)
+          else loop (i + 1, false, c :: acc)
+        end
+    val collapsed = loop (0, true, [])
+    val ss = Substring.full collapsed
+    val ss = Substring.dropr (fn c => c = #" ") ss
+  in Substring.string ss end
+
+(* Locate the next `<span class="citation"` opening at or after
+   `start` in `html`, and return (span-content, position-after-span).
+   The span body is brace-balanced over nested `<span>` tags; the
+   actual citeproc output never nests <span> inside <span> for an
+   individual citation, but we depth-track anyway. *)
+fun extractCitationSpan html start =
+  let
+    val openMarker = "<span class=\"citation\""
+    val openTag = "<span"
+    val closeTag = "</span>"
+  in
+    case strFindFrom openMarker html start of
+        NONE => NONE
+      | SOME openPos =>
+        let
+          val hsz = String.size html
+          fun loop (i, depth) =
+            if i >= hsz then NONE
+            else if i + String.size closeTag <= hsz andalso
+                    String.substring (html, i, String.size closeTag)
+                    = closeTag
+            then
+              if depth = 1
+              then SOME (i + String.size closeTag)
+              else loop (i + String.size closeTag, depth - 1)
+            else if i + String.size openTag <= hsz andalso
+                    String.substring (html, i, String.size openTag)
+                    = openTag
+            then loop (i + String.size openTag, depth + 1)
+            else loop (i + 1, depth)
+        in
+          case loop (openPos + String.size openTag, 1) of
+              NONE => NONE
+            | SOME endPos =>
+                SOME (String.substring (html, openPos, endPos - openPos),
+                      endPos)
+        end
+  end
+
+(* Locate the `<div id="refs"` block and return its full markup
+   (opening tag through matching `</div>`), or "" if not found.
+   Depth-tracks nested <div> children (each csl-entry is one). *)
+fun extractRefsDiv html =
+  let
+    val marker = "<div id=\"refs\""
+    val openTag = "<div"
+    val closeTag = "</div>"
+  in
+    case strFindFrom marker html 0 of
+        NONE => ""
+      | SOME openPos =>
+        let
+          val hsz = String.size html
+          fun loop (i, depth) =
+            if i >= hsz then NONE
+            else if i + String.size closeTag <= hsz andalso
+                    String.substring (html, i, String.size closeTag)
+                    = closeTag
+            then
+              if depth = 1
+              then SOME (i + String.size closeTag)
+              else loop (i + String.size closeTag, depth - 1)
+            else if i + String.size openTag <= hsz andalso
+                    String.substring (html, i, String.size openTag)
+                    = openTag
+            then loop (i + String.size openTag, depth + 1)
+            else loop (i + 1, depth)
+        in
+          case loop (openPos + String.size openTag, 1) of
+              NONE => ""
+            | SOME endPos =>
+                String.substring (html, openPos, endPos - openPos)
+        end
+  end
+
+(* Build the synthetic markdown doc that drives the single pandoc
+   invocation.  One paragraph per unique cite, each prefixed with a
+   `%CITE-N%` sentinel so the resulting HTML's citation spans line
+   up with the input cite list. *)
+fun buildSynthetic absBib absCsl cites =
+  let
+    val header =
+        "---\nbibliography: " ^ absBib ^
+        "\ncsl: " ^ absCsl ^
+        "\nlink-citations: true\nsuppress-bibliography: false\n---\n\n"
+    fun row (i, cite) =
+        "%CITE-" ^ Int.toString i ^ "% " ^ citeprocOf cite ^ "\n\n"
+    fun loop _ [] acc = String.concat (List.rev acc)
+      | loop i (c :: rest) acc = loop (i + 1) rest (row (i, c) :: acc)
+    val body = loop 0 cites []
+    val tail = "::: {#refs}\n:::\n"
+  in header ^ body ^ tail end
+
+(* De-duplicate cites by (keys, locator).  Preserves first-seen order
+   so the resulting list is stable across runs. *)
+fun uniqueCites cites =
+  let
+    fun seen [] _ = false
+      | seen ({keys, locator} :: rest) c =
+          (keys = #keys c andalso locator = #locator c)
+          orelse seen rest c
+    fun loop [] acc = List.rev acc
+      | loop (c :: rest) acc =
+          if seen acc c then loop rest acc
+          else loop rest (c :: acc)
+  in loop cites [] end
+
+(* TSV row escaping is trivial here: the locator and keys are never
+   allowed to contain tabs (they come from LaTeX source where literal
+   tabs are banned).  The rendered HTML can hold whitespace, but
+   normalizeWhitespace already collapsed everything to single spaces
+   so no tabs survive. *)
+fun renderBibMain bibPath cslPath smdPaths =
+  let
+    val absBib = absPath bibPath
+    val absCsl = absPath cslPath
+    val () =
+      if OS.FileSys.access (absBib, [OS.FileSys.A_READ]) then ()
+      else die ("render-bib: bibliography not readable: " ^ absBib)
+    val () =
+      if OS.FileSys.access (absCsl, [OS.FileSys.A_READ]) then ()
+      else die ("render-bib: CSL not readable: " ^ absCsl)
+    val allCites =
+        List.concat
+          (List.map (fn p => findCites (readFileAll p)) smdPaths)
+    val cites = uniqueCites allCites
+    val () =
+      if List.null cites then
+        die "render-bib: no \\cite{...} calls found in the supplied .smd files"
+      else ()
+    val inputPath = OS.FileSys.tmpName ()
+    val outputPath = OS.FileSys.tmpName ()
+    val () = writeFile inputPath (buildSynthetic absBib absCsl cites)
+    val () = runPandoc inputPath outputPath
+    val html = readFileAll outputPath
+    val () = (OS.FileSys.remove inputPath; OS.FileSys.remove outputPath)
+              handle _ => ()
+    (* Capture per-cite spans.  We walk the HTML in source order,
+       advancing past each marker and grabbing the next citation
+       span — this matches up with our cite list because pandoc
+       preserves paragraph order. *)
+    fun grab cites0 pos rows =
+        case cites0 of
+            [] => List.rev rows
+          | c :: rest =>
+            let
+              val idx = List.length rows
+              val marker = "%CITE-" ^ Int.toString idx ^ "%"
+            in
+              case strFindFrom marker html pos of
+                  NONE => die ("render-bib: marker " ^ marker ^
+                               " not found in pandoc output")
+                | SOME mp =>
+                  let val afterMarker = mp + String.size marker
+                  in
+                    case extractCitationSpan html afterMarker of
+                        NONE => die ("render-bib: no citation span after " ^
+                                     marker)
+                      | SOME (raw, endPos) =>
+                        let
+                          val rewritten =
+                              replaceAll "href=\"#ref-"
+                                         "href=\"references.html#ref-" raw
+                          val flat = normalizeWhitespace rewritten
+                        in
+                          grab rest endPos ((c, flat) :: rows)
+                        end
+                  end
+            end
+    val labelled = grab cites 0 []
+    val refsDiv = extractRefsDiv html
+    val () =
+      if refsDiv = "" then die "render-bib: <div id=\"refs\"> not found"
+      else ()
+    val tsv =
+        String.concat
+          (List.map
+             (fn ({keys, locator}, html) =>
+                keys ^ "\t" ^ locator ^ "\t" ^ html ^ "\n")
+             labelled)
+    val refsMd =
+        "# References\n\n" ^ refsDiv ^ "\n"
+  in
+    writeFile "cite-labels.tsv" tsv;
+    writeFile "references.md" refsMd;
+    print ("render-bib: wrote " ^ Int.toString (List.length labelled) ^
+           " citation labels and " ^
+           Int.toString
+             (List.length
+                (String.tokens (fn c => c = #"\n") tsv)) ^
+           " TSV row(s); references.md " ^
+           Int.toString (String.size refsMd) ^ " bytes\n")
+  end
+
 (* ===== main ===== *)
 
 fun smdppMain () =
@@ -1785,8 +2223,13 @@ fun smdppMain () =
     | "supports" :: _ => OS.Process.exit OS.Process.failure
     | ["check-refs", bookDir] => checkRefsMain bookDir
     | ["check-links", bookDir] => checkLinksMain bookDir
+    | "render-bib" :: bib :: csl :: smds =>
+        if List.null smds then
+          die "Usage: smdpp render-bib BIB CSL SMD..."
+        else renderBibMain bib csl smds
     | [] =>
         let
+          val () = loadCiteLabels ()
           val obuf = setupPolyscripter ()
           val raw = TextIO.inputAll TextIO.stdIn
           val src = JSONParser.openString raw
@@ -1803,6 +2246,7 @@ fun smdppMain () =
     | _ => die ("Usage:\n  " ^ CommandLine.name() ^
                 " [supports <renderer> |\
                 \ check-refs <book-dir> |\
-                \ check-links <book-dir>]")
+                \ check-links <book-dir> |\
+                \ render-bib <bib> <csl> <smd>...]")
 
 fun main () = smdppMain ()

@@ -70,6 +70,7 @@ check '\\begin\{table\}'  'raw \begin{table} leak'
 check '\\end\{table\}'    'raw \end{table} leak'
 check '\\ref\{'           'unresolved \ref{}'
 check '\\label\{'         'unstripped \label{}'
+check '\\cite(\[[^]]*\])?\{' 'unresolved \cite{} (smdpp citation pass)'
 
 # Double-backslash math signatures.  When `$$\mathit{...}$$` reaches
 # smdpp's protectMath pass it becomes `$$\\mathit{...}$$` (escaped
