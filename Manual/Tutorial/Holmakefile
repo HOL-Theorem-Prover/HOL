@@ -19,7 +19,7 @@ PS_NOUMAP = $(PS_ROOT) -md < $< > $@
 
 # pandoc invocation for the .md -> .tex stage.  Same as the
 # Description Holmakefile uses.
-PANDOC_MD = pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=../pdf-macros.lua -t latex $< > $@
+PANDOC_MD = pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=../Tools/pdf-macros.lua -t latex $< > $@
 
 .PHONY: all mdbook mdbook-serve
 
@@ -138,7 +138,7 @@ tutorial.pdf: $(TEX_SOURCES)
 %.md: %.smd
 	$(PS_NOUMAP)
 
-%.tex: %.md ../pdf-macros.lua
+%.tex: %.md ../Tools/pdf-macros.lua
 	$(PANDOC_MD)
 
 # $(PS_STUFF) lives in ../Tools/ and is only built on demand, so the

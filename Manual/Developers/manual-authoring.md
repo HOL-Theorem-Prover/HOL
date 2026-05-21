@@ -30,7 +30,6 @@ Inside, the moving parts are:
 | `Holmakefile`                     | yes            | wires the two pipelines together.                               |
 | `<manual>.tex`                    | yes            | LaTeX driver: document class, preamble, `\include`s.            |
 | `title.tex`, `preface.tex`        | yes            | LaTeX-only front matter (cover + preface).                      |
-| `pdf-macros.lua`                  | yes            | pandoc filter (e.g. `HOL` → smallcaps).                         |
 | `book-title.tex`                  | **generated**  | one-line `\providecommand{\HOLbookTitle}{...}` derived from `book.toml`. |
 | `SUMMARY.md`                      | **generated**  | mdbook sidebar; produced from `chapters.txt` by `gen_chap_lists`. |
 | `chapters-include.tex`            | **generated**  | LaTeX `\include` block; also from `chapters.txt`.               |
@@ -40,6 +39,7 @@ Inside, the moving parts are:
 All generated files are listed in `.gitignore` and `EXTRA_CLEANS`.
 
 The mdbook page template (`index.hbs`) and stylesheet overrides (`custom.css`) live in `Manual/theme/`, shared by every manual via `theme = "../theme"` in each `book.toml`.
+The pandoc Lua filter (`pdf-macros.lua`, e.g. `HOL` → smallcaps) lives in `Manual/Tools/`, referenced from each `Holmakefile` as `../Tools/pdf-macros.lua`.
 
 # Canonical sources of truth
 
@@ -164,7 +164,7 @@ The two top-level targets (`mdbook` and `<manual>.pdf`) are the gating checks be
 
 # Adding a new manual
 
-  1. `mkdir Manual/<NewManual>` and copy `book.toml`, `pdf-macros.lua`, and a minimal `Holmakefile` from `Manual/Tutorial/` as a starting template.  (The mdbook theme is shared from `Manual/theme/`, picked up automatically via the `theme = "../theme"` line in the copied `book.toml`.)
+  1. `mkdir Manual/<NewManual>` and copy `book.toml` and a minimal `Holmakefile` from `Manual/Tutorial/` as a starting template.  (The mdbook theme is shared from `Manual/theme/`, picked up automatically via the `theme = "../theme"` line in the copied `book.toml`; the `pdf-macros.lua` pandoc filter is shared from `Manual/Tools/` and referenced from the copied `Holmakefile` as `../Tools/pdf-macros.lua`.)
   2. Edit `book.toml`'s `title` to the new manual's name; pick a distinct port for `mdbook-serve`; set `build-dir = "../book/<NewManual>"`.
   3. Write `<NewManual>.tex` (LaTeX driver) and `title.tex` (PDF cover); both use `\HOLbookTitle` from the auto-generated `book-title.tex`.
   4. Populate `chapters.txt` and add the chapters per the previous section.
