@@ -3,6 +3,9 @@ title = "HOL: Description"
 authors = ["The HOL Development Team"]
 language = "en"
 src = "."
+# `description` is read by Manual/Tools/gen_lander when generating
+# the top-level Manual/book/index.html; mdbook itself ignores it.
+description = "Reference description of the HOL system: the kernel, the libraries, and the theories distributed with HOL."
 
 [output.html]
 mathjax-support = true

@@ -413,6 +413,42 @@
 
             <div class="page">
                 {{> header}}
+                <!-- Cross-manual switcher: persistent links to every
+                     manual in this HOL doc site (Description, Tutorial,
+                     Reference) and a Home link to the top-level
+                     lander.  Sits above the per-book menu-bar so
+                     readers never lose sight of sibling manuals.
+                     The current-manual highlight is set by JS that
+                     matches the URL path segment against the link
+                     targets, since mdbook's Handlebars context has
+                     no `eq` helper to compare against book_title. -->
+                <div id="hol-manual-switcher" class="hol-manual-switcher">
+                    <a href="{{ path_to_root }}../index.html" data-hol-home>Home</a>
+                    <span class="sep" aria-hidden="true">·</span>
+                    <a href="{{ path_to_root }}../Description/" data-hol-manual="Description">Description</a>
+                    <a href="{{ path_to_root }}../Tutorial/" data-hol-manual="Tutorial">Tutorial</a>
+                    <a href="{{ path_to_root }}../Reference/" data-hol-manual="Reference">Reference</a>
+                </div>
+                <script>
+                    (function () {
+                        var segments = window.location.pathname.split('/');
+                        var current = null;
+                        for (var i = 0; i < segments.length; i++) {
+                            if (segments[i] === 'Description' ||
+                                segments[i] === 'Tutorial' ||
+                                segments[i] === 'Reference') {
+                                current = segments[i];
+                                break;
+                            }
+                        }
+                        if (current) {
+                            var match = document.querySelector(
+                                '#hol-manual-switcher a[data-hol-manual="' +
+                                current + '"]');
+                            if (match) match.classList.add('current');
+                        }
+                    })();
+                </script>
                 <div id="mdbook-menu-bar-hover-placeholder"></div>
                 <div id="mdbook-menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">

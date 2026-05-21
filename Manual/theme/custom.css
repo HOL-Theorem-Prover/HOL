@@ -69,6 +69,41 @@ pre > code.language-repl {
   background: var(--quote-bg, rgba(120, 144, 156, 0.10));
 }
 
+/* Cross-manual switcher strip above the per-book menu bar.  See
+   `hol-manual-switcher` block in Manual/theme/index.hbs.  Mimics
+   mdbook's own menu-bar look-and-feel (the same `--bg`, `--fg` and
+   `--sidebar-active` CSS variables the rest of the theme reads),
+   so the strip recolours in lock-step with the user's theme. */
+.hol-manual-switcher {
+  background: var(--bg);
+  color: var(--fg);
+  border-bottom: 1px solid var(--sidebar-active, #4183c4);
+  padding: 0.4em 1em;
+  font-size: 0.9em;
+  text-align: center;
+}
+.hol-manual-switcher a {
+  color: var(--fg);
+  text-decoration: none;
+  padding: 0.15em 0.5em;
+  border-radius: 3px;
+}
+.hol-manual-switcher a:hover {
+  background: var(--theme-hover, rgba(120, 144, 156, 0.10));
+  text-decoration: underline;
+}
+.hol-manual-switcher a.current {
+  background: var(--sidebar-active, #4183c4);
+  color: var(--sidebar-bg, white);
+}
+.hol-manual-switcher a.current:hover {
+  text-decoration: none;
+}
+.hol-manual-switcher .sep {
+  margin: 0 0.3em;
+  opacity: 0.5;
+}
+
 /* Bibliography entries on the References page.  pandoc citeproc
    emits each entry as <div class="csl-entry"> inside <div id="refs">,
    and chicago-author-date.csl sets `entry-spacing="0"` on the
