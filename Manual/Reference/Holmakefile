@@ -39,7 +39,8 @@ entries.tex: entries.md
 # help/Docfiles/ itself, alongside the entries (gitignored there).
 # ---------------------------------------------------------------------
 mdbook: ../Tools/smdpp ../Tools/mdbook-check.sh \
-        $(Helpd)/Docfiles/SUMMARY.md entries.list
+        $(Helpd)/Docfiles/SUMMARY.md entries.list \
+        labels.tsv ../Description/labels.tsv ../Tutorial/labels.tsv
 	mdbook build
 	../Tools/mdbook-check.sh ../book/Reference
 	../Tools/smdpp check-refs ../book/Reference
@@ -56,6 +57,12 @@ mdbook: ../Tools/smdpp ../Tools/mdbook-check.sh \
 $(Helpd)/Docfiles/SUMMARY.md: ../Tools/gen_reference_summary \
                               $(wildcard $(Helpd)/Docfiles/*.smd)
 	../Tools/gen_reference_summary $(Helpd)/Docfiles > $@
+
+# Scan-only label dump for cross-book `\ref{Book:label}` resolution.
+# See Manual/Description/Holmakefile for the rationale.
+labels.tsv: ../Tools/smdpp $(Helpd)/Docfiles/SUMMARY.md \
+            $(wildcard $(Helpd)/Docfiles/*.smd)
+	../Tools/smdpp dump-labels .
 
 # Lookup table for `\refentry{Foo.bar}` substitution in Description
 # / Tutorial / Reference's smdpp pass.  One line per entry name
@@ -85,7 +92,7 @@ mdbook-serve: ../Tools/smdpp
 	 msg "stop: pkill -f 'mdbook serve.*3003'"
 
 EXTRA_CLEANS = reference.pdf entries.md entries.tex \
-               $(Helpd)/Docfiles/SUMMARY.md entries.list \
+               $(Helpd)/Docfiles/SUMMARY.md entries.list labels.tsv \
                ../book/Reference/ \
                mdbook-serve.log \
                reference.aux reference.log reference.out \

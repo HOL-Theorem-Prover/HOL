@@ -58,11 +58,17 @@ figs/combin-confluence-complete.svg: figs/combin-confluence-complete.tex
 # cross-reference number drift.
 mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS) \
         $(SVG_FIGS) references.md cite-labels.tsv \
-        ../Reference/entries.list
+        ../Reference/entries.list \
+        labels.tsv ../Description/labels.tsv ../Reference/labels.tsv
 	mdbook build
 	../Tools/mdbook-check.sh ../book/Tutorial
 	../Tools/smdpp check-refs ../book/Tutorial
 	../Tools/smdpp check-links ../book/Tutorial
+
+# Scan-only label dump for cross-book `\ref{Book:label}` resolution.
+# See Manual/Description/Holmakefile for the rationale.
+labels.tsv: ../Tools/smdpp SUMMARY.md $(SMDS)
+	../Tools/smdpp dump-labels .
 
 # Render the bibliography chapter + per-call-site cite label table
 # in one shot via pandoc citeproc.  See Manual/Description/Holmakefile
@@ -159,7 +165,7 @@ proof-tools.md: ../../examples/dpll.sml
 EXTRA_CLEANS = $(SMD_MDS) $(patsubst %.smd,%.tex,$(SMDS)) \
                tutorial.pdf SUMMARY.md chapters-include.tex \
                book-title.tex \
-               references.md cite-labels.tsv \
+               references.md cite-labels.tsv labels.tsv \
                $(patsubst %,%.aux,$(TEX_CORES)) \
                tutorial.log tutorial.out tutorial.toc \
                tutorial.fls tutorial.idx tutorial.ilg tutorial.ind \

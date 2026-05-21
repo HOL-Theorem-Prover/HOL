@@ -391,6 +391,51 @@ fun findCloseBrace (s, start) =
             | _ => loop (j+1, depth)
   in loop (start, 1) end
 
+(* Cross-book label registry: at preprocessor startup, smdpp scans
+   `../*/labels.tsv` (one per sibling book) and loads each book's
+   labels into this map.  Each row is `(book, label, file, anchor,
+   num)`.  `book` is the sibling directory name (`Description`,
+   `Tutorial`, `Reference`).  `resolveRefs` looks up entries here
+   when it sees a `\ref{Book:label}` form. *)
+val crossBookLabels :
+    (string * string * string * string * string) list ref = ref []
+
+(* Hard-coded list of sibling book directory names.  In practice
+   the manuals live as siblings under `Manual/`, and there are
+   exactly three (Description, Tutorial, Reference) for now; if
+   another joins later, it needs adding here.  We accept that
+   over a fully-dynamic discovery to keep cross-book label
+   resolution explicit and predictable. *)
+val knownSiblingBooks = ["Description", "Tutorial", "Reference"]
+
+fun loadCrossBookLabels () =
+  let
+    fun loadOne book =
+      let val path = "../" ^ book ^ "/labels.tsv"
+      in
+        if not (OS.FileSys.access (path, [OS.FileSys.A_READ])) then ()
+        else
+          let
+            val content =
+                let val ins = TextIO.openIn path
+                    val s = TextIO.inputAll ins
+                    val () = TextIO.closeIn ins
+                in s end
+            val rows = String.fields (fn c => c = #"\n") content
+            fun parseRow row =
+              case String.fields (fn c => c = #"\t") row of
+                  [lbl, file, anchor, num] =>
+                    SOME (book, lbl, file, anchor, num)
+                | _ => NONE
+            val parsed = List.mapPartial parseRow rows
+            val () = crossBookLabels := parsed @ !crossBookLabels
+          in () end
+      end
+  in
+    crossBookLabels := [];
+    List.app loadOne knownSiblingBooks
+  end
+
 (* Loaded once from `cite-labels.tsv` at preprocessor startup (see
    loadCiteLabels below).  Each row is (keys, locator, rendered-html)
    matching the TSV emitted by `smdpp render-bib`.  Empty when the
@@ -579,8 +624,37 @@ fun resolveRefs {currentFile, labelRegistry} s =
     val sz = String.size s
     val prefix = "\\ref{"
     val psz = String.size prefix
-    fun lookup lbl =
+    fun localLookup lbl =
       List.find (fn (l, _, _, _) => l = lbl) labelRegistry
+    (* Split "Book:label" if the prefix matches a known sibling
+       book name.  Returns SOME (book, label) only for known book
+       names so labels with legitimate `:` content (rare but
+       legal) aren't false-positively split. *)
+    fun splitBookPrefix lbl =
+      case String.fields (fn c => c = #":") lbl of
+          [book, rest] =>
+            if List.exists (fn b => b = book) knownSiblingBooks
+            then SOME (book, rest)
+            else NONE
+        | _ => NONE
+    fun crossLookup book lbl =
+      List.find
+        (fn (b, l, _, _, _) => b = book andalso l = lbl)
+        (!crossBookLabels)
+    fun lookup lbl =
+      case splitBookPrefix lbl of
+          SOME (book, sublbl) =>
+            (case crossLookup book sublbl of
+                 SOME (_, _, file, anchor, num) =>
+                   SOME ("../" ^ book ^ "/" ^ toHtml file, anchor, num)
+               | NONE => NONE)
+        | NONE =>
+            (case localLookup lbl of
+                 SOME (_, file, anchor, num) =>
+                   SOME (if file = currentFile then ""
+                         else toHtml file,
+                         anchor, num)
+               | NONE => NONE)
     fun loop (i, acc) =
       if i >= sz then String.implode (List.rev acc)
       else if i + psz <= sz andalso
@@ -593,13 +667,8 @@ fun resolveRefs {currentFile, labelRegistry} s =
               val lbl = String.substring (s, i + psz, j - i - psz)
               val replacement =
                   case lookup lbl of
-                      SOME (_, file, anchor, num) =>
-                        let
-                          val url = if file = currentFile then
-                                      "#" ^ anchor
-                                    else
-                                      toHtml file ^ "#" ^ anchor
-                        in "[" ^ num ^ "](" ^ url ^ ")" end
+                      SOME (pageUrl, anchor, num) =>
+                        "[" ^ num ^ "](" ^ pageUrl ^ "#" ^ anchor ^ ")"
                     | NONE => ""
             in
               loop (j+1, List.revAppend
@@ -2358,6 +2427,210 @@ fun renderBibMain bibPath cslPath smdPaths =
            Int.toString (String.size refsMd) ^ " bytes\n")
   end
 
+(* ===== dump-labels sub-command =====
+   Scan a book's chapters in scan-only mode (no polyscripter,
+   no mdbook): walk SUMMARY.md to get chapter ordering, run the
+   existing `scanLabels` pass on each chapter's content, write
+   the resulting `(label, file, anchor, num)` tuples to
+   `<book-dir>/labels.tsv` (one row per tab-separated tuple).
+
+   This is the fast prereq for cross-book `\ref{Book:label}`:
+   each book emits its labels.tsv before any mdbook build, then
+   smdpp's preprocessor pass reads sibling labels.tsv files at
+   startup so `\ref{Book:label}` resolves to cross-book URLs. *)
+
+(* Parse SUMMARY.md.  Returns chapter entries in source order as
+   `(prefix-as-int-list, name, path)` tuples.  `prefix` follows
+   mdbook numbering (top-level [1], [2]; sub-chapters [2,1], [2,2]
+   inferred from two-space indentation).  Skips:
+     - the `# Summary` title and any other `#`-prefix part titles
+     - empty-link draft chapters (`- [Foo]()`); they have no path
+     - prefix/suffix chapters listed outside any `- [Foo](...)`
+       structure (we just don't emit them — they're rare).
+   Tolerates blank lines and arbitrary other markup between
+   chapter rows. *)
+fun parseSummary content =
+  let
+    val lines = String.fields (fn c => c = #"\n") content
+    fun countLeadingSpaces ln =
+      let val sz = String.size ln
+          fun loop i =
+            if i >= sz orelse String.sub (ln, i) <> #" " then i
+            else loop (i + 1)
+      in loop 0 end
+    fun isChapterRow ln =
+      let val ind = countLeadingSpaces ln
+          val rest = String.extract (ln, ind, NONE)
+      in
+        (String.isPrefix "- [" rest orelse String.isPrefix "* [" rest)
+      end
+    fun parseRow ln =
+      let
+        val ind = countLeadingSpaces ln
+        val depth = ind div 2
+        val rest = String.extract (ln, ind + 2, NONE)
+        (* `rest` now begins with `[Title](path)` -- find the
+           closing bracket of the title, then the open paren, then
+           the closing paren. *)
+        val sz = String.size rest
+        fun findChar c i =
+          if i >= sz then NONE
+          else if String.sub (rest, i) = c then SOME i
+          else findChar c (i + 1)
+      in
+        case findChar #"]" 0 of
+            NONE => NONE
+          | SOME closeBracket =>
+            if closeBracket + 1 >= sz orelse
+               String.sub (rest, closeBracket + 1) <> #"("
+            then NONE
+            else
+              case findChar #")" (closeBracket + 2) of
+                  NONE => NONE
+                | SOME closeParen =>
+                  let
+                    val title =
+                        String.substring (rest, 1, closeBracket - 1)
+                    val path =
+                        String.substring (rest, closeBracket + 2,
+                                          closeParen - closeBracket - 2)
+                  in
+                    if path = "" then NONE
+                    else SOME (depth, title, path)
+                  end
+      end
+    (* Walk rows tracking per-depth counters; emit prefix-paths. *)
+    val counters = Array.array (16, 0)  (* up to 16 levels *)
+    fun bumpDepth d =
+      let val () = Array.update (counters, d, Array.sub (counters, d) + 1)
+          (* reset deeper counters *)
+          fun resetDeeper i =
+            if i >= Array.length counters then ()
+            else (Array.update (counters, i, 0); resetDeeper (i + 1))
+          val () = resetDeeper (d + 1)
+          fun gatherPrefix i acc =
+            if i > d then List.rev acc
+            else gatherPrefix (i + 1) (Array.sub (counters, i) :: acc)
+      in gatherPrefix 0 [] end
+    fun loop [] acc = List.rev acc
+      | loop (ln :: rest) acc =
+          if not (isChapterRow ln) then loop rest acc
+          else case parseRow ln of
+              NONE => loop rest acc
+            | SOME (depth, title, path) =>
+                let val prefix = bumpDepth depth
+                in loop rest ((prefix, title, path) :: acc) end
+  in
+    loop lines []
+  end
+
+(* Lightweight per-chapter scan: read the .smd, drop frontmatter
+   and \index{} (mirrors stage 1 minus polyscripter and
+   stripIndex's secondary line-collapse), then scanLabels.
+
+   We deliberately don't run polyscripter: it's slow and produces
+   labels only as side-effects of HOL evaluation, which authors
+   don't typically reference from \ref.  Static \label{} calls in
+   the source survive; that's enough for cross-book \ref.
+
+   `readPath` is the on-disk path to the chapter source (src-dir-
+   relative); `regPath` is the bare filename `scanLabels` records
+   in the registry — this is what `toHtml` keys off, so the
+   resulting URL is `../Book/<basename>.html`, no `src` prefix. *)
+fun scanChapterFile (prefix, name, readPath, regPath) =
+  let
+    val content =
+        let val ins = TextIO.openIn readPath
+            val s = TextIO.inputAll ins
+            val () = TextIO.closeIn ins
+        in s end handle IO.Io _ =>
+          ( TextIO.output (TextIO.stdErr,
+              "dump-labels: warning: cannot read " ^ readPath ^
+              "; skipping\n");
+            "" )
+    val s = content |> dropFrontmatter |> stripIndex
+  in
+    scanLabels prefix regPath name s
+  end
+
+(* Find the book's `src` setting in book.toml; defaults to ".". *)
+fun readBookSrc tomlPath =
+  let
+    val content =
+        let val ins = TextIO.openIn tomlPath
+            val s = TextIO.inputAll ins
+            val () = TextIO.closeIn ins
+        in s end
+    val lines = String.fields (fn c => c = #"\n") content
+    fun parseQuoted s =
+      let val n = String.size s
+      in if n >= 2 andalso String.sub (s, 0) = #"\""
+            andalso String.sub (s, n - 1) = #"\""
+         then SOME (String.substring (s, 1, n - 2))
+         else NONE
+      end
+    fun findSrc [] = "."
+      | findSrc (ln :: rest) =
+          let val t = trimSpace ln
+          in
+            if String.isPrefix "src" t orelse
+               String.isPrefix "src " t
+            then
+              (* "src = \"…\"" *)
+              case List.find (fn c => c = #"=") (String.explode t) of
+                  NONE => findSrc rest
+                | SOME _ =>
+                  let val parts = String.tokens (fn c => c = #"=") t
+                  in case parts of
+                         [_, rhs] =>
+                           (case parseQuoted (trimSpace rhs) of
+                                SOME v => v
+                              | NONE => findSrc rest)
+                       | _ => findSrc rest
+                  end
+            else findSrc rest
+          end
+  in findSrc lines end
+
+fun dumpLabelsMain bookDir =
+  let
+    val origDir = OS.FileSys.getDir ()
+    val () = OS.FileSys.chDir bookDir
+    val src = readBookSrc "book.toml"
+              handle IO.Io _ => "."
+    val summaryPath = OS.Path.concat (src, "SUMMARY.md")
+    val () =
+      if OS.FileSys.access (summaryPath, [OS.FileSys.A_READ]) then ()
+      else die ("dump-labels: " ^ summaryPath ^ " missing")
+    val summary =
+        let val ins = TextIO.openIn summaryPath
+            val s = TextIO.inputAll ins
+            val () = TextIO.closeIn ins
+        in s end
+    val chapters = parseSummary summary
+    (* Two paths: one for reading off disk (src-prefixed), one for
+       the registry (just the chapter filename — this is what
+       toHtml keys off when building cross-book URLs). *)
+    fun pathsOf (prefix, name, path) =
+        (prefix, name, OS.Path.concat (src, path), path)
+    val labels =
+        List.concat (List.map (scanChapterFile o pathsOf) chapters)
+    (* Format labels.tsv: label TAB file TAB anchor TAB num *)
+    fun rowOf (lbl, file, anchor, num) =
+        lbl ^ "\t" ^ file ^ "\t" ^ anchor ^ "\t" ^ num ^ "\n"
+    val out = TextIO.openOut "labels.tsv"
+    val () = List.app (fn row => TextIO.output (out, rowOf row)) labels
+    val () = TextIO.closeOut out
+    val () = OS.FileSys.chDir origDir
+    val () = TextIO.output (TextIO.stdErr,
+              "dump-labels: " ^ bookDir ^
+              ": wrote " ^ Int.toString (List.length labels) ^
+              " label(s) to " ^ OS.Path.concat (bookDir, "labels.tsv") ^
+              "\n")
+  in
+    OS.Process.exit OS.Process.success
+  end
+
 (* ===== main ===== *)
 
 fun smdppMain () =
@@ -2370,10 +2643,12 @@ fun smdppMain () =
         if List.null smds then
           die "Usage: smdpp render-bib BIB CSL SMD..."
         else renderBibMain bib csl smds
+    | ["dump-labels", bookDir] => dumpLabelsMain bookDir
     | [] =>
         let
           val () = loadCiteLabels ()
           val () = loadRefEntries ()
+          val () = loadCrossBookLabels ()
           val obuf = setupPolyscripter ()
           val raw = TextIO.inputAll TextIO.stdIn
           val src = JSONParser.openString raw
@@ -2391,6 +2666,7 @@ fun smdppMain () =
                 " [supports <renderer> |\
                 \ check-refs <book-dir> |\
                 \ check-links <book-dir> |\
-                \ render-bib <bib> <csl> <smd>...]")
+                \ render-bib <bib> <csl> <smd>... |\
+                \ dump-labels <book-dir>]")
 
 fun main () = smdppMain ()
