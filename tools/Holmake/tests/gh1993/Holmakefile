@@ -9,4 +9,4 @@ EXTRA_CLEANS = gh1993.log testd/stdout.txt testd/stderr.txt \
   testd/badTheory.sml testd/badTheory.sig testd/badTheory.dat \
   testd/badTheory.uo testd/badTheory.ui \
   testd/badScript.uo testd/badScript.ui \
-  testd/.hol
+  testd/.hol/
