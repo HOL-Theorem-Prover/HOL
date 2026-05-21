@@ -1,3 +1,25 @@
+% Wrap left/right white brace-brackets (U+2983 / U+2984) in
+% accsupp's BeginAccSupp/EndAccSupp so PDF copy-paste round-trips
+% to the original Unicode codepoint rather than to the OMS-font
+% characters we composite the visual glyph from.  The DeclareUnicode
+% rules for 2983/2984 below reference these macros, so we need to
+% load accsupp and define them before the Declare lines run.
+\RequirePackage{accsupp}
+\newcommand*{\llbrace}{%
+  \BeginAccSupp{method=hex,unicode,ActualText=2983}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char102}%
+    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
+  \EndAccSupp{}%
+}
+\newcommand*{\rrbrace}{%
+  \BeginAccSupp{method=hex,unicode,ActualText=2984}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
+    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char103}%
+  \EndAccSupp{}%
+}
+
 \DeclareUnicodeCharacter{00AC}{\ensuremath{\neg}}
 \DeclareUnicodeCharacter{00B2}{\ensuremath{{}\sp{2}}}
 \DeclareUnicodeCharacter{00B3}{\ensuremath{{}\sp{3}}}
