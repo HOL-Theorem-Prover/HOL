@@ -51,7 +51,8 @@ DIRNAMES += cache_reflink \
             heap-size \
             ignore_errors/j4 \
             hollogs \
-            issue1903
+            issue1903 \
+            gh1979
 endif
 
 
