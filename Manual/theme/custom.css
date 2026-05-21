@@ -81,6 +81,13 @@ pre > code.language-repl {
   padding: 0.4em 1em;
   font-size: 0.9em;
   text-align: center;
+  /* mdbook's .page sibling has `margin-block-start:
+     calc(0px - var(--menu-bar-height))` to slide content under the
+     sticky menu-bar; that negative margin would draw .page on top
+     of this strip.  position:relative + z-index lifts the strip
+     into its own stacking layer so it's visible and clickable. */
+  position: relative;
+  z-index: 100;
 }
 .hol-manual-switcher a {
   color: var(--fg);
