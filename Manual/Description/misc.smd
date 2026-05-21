@@ -703,11 +703,11 @@ pair always allows a line to be continued as if the newline wasn't
 present at all.
 
 A variable definition is of the form
-$$\textsl{Ident} \;\;\textsl{op}\;\; \textsl{text}\;\; \texttt{<NEWLINE>}$$
+$$\textsl{Ident} \;\;\textsl{op}\;\; \textsl{text}\;\; \langle\texttt{NEWLINE}\rangle$$
 where $\textsl{op}$ is either `=` or `+=`.
 
 A rule is of the form
-$$\textsl{text } \texttt{:} \textsl{ text} \texttt{ <NEWLINE>} (\texttt{<TAB>}\textsl{text}\texttt{ <NEWLINE>})^*$$
+$$\textsl{text } \texttt{:} \textsl{ text} \;\; \langle\texttt{NEWLINE}\rangle \;\; (\langle\texttt{TAB}\rangle\textsl{text} \;\; \langle\texttt{NEWLINE}\rangle)^*$$
 Henceforth, the text following a `TAB` character in a rule will be
 referred to as the *command text*.  Text elsewhere will be
 referred to as *normal text*.  Normal text has comments stripped
@@ -742,7 +742,7 @@ in a rule.
 
 Note also that white-space around the equals-sign in a variable
 definition is stripped.  This means that
-$$\texttt{VAR =<whitespace><NEWLINE>}$$
+$$\texttt{VAR =}\langle\texttt{whitespace}\rangle\langle\texttt{NEWLINE}\rangle$$
 gives `VAR` the empty string as its value.[^misc-empty-var]
 
 [^misc-empty-var]: It is possible to give a variable a value of

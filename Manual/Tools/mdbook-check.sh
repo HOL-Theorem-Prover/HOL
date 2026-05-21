@@ -81,6 +81,22 @@ check '\\cite(\[[^]]*\])?\{' 'unresolved \cite{} (smdpp citation pass)'
 check '\\\\(mathit|mathtt|texttt|textbf|textit)\{' \
       'math content trapped in code block (escaped \\X{...})'
 
+# `<word>` inside a $$...$$ display-math block (anchored to start of
+# line, because legitimate display math always sits on its own line --
+# prose mentioning literal `$$` mid-sentence is what would otherwise
+# false-positive here, e.g. system.smd discussing how `$$` lexes in
+# HOL).  This is the rendered-HTML symptom of CommonMark parsing math
+# content as an HTML tag: source `$$\texttt{<NEWLINE>}$$` becomes
+# `$$\texttt{<newline>}$$` in HTML (note the lowercasing) and
+# pulldown-cmark injects a spurious `</newline>` at paragraph end,
+# corrupting the surrounding markup.  Fix at source by using
+# `\langle...\rangle` rather than literal `<word>` inside math.
+# use_filter=no because the standard filter skips any line containing
+# `$`, which would mask every display-math span.
+check '^\$\$[^$]*<[a-z]+>' \
+      '<word> pseudo-HTML tag inside $$math$$ (use \\langle...\\rangle)' \
+      no
+
 # Empty rendered code block.  Almost always the trace of a fenced
 # block whose body was entirely silent polyscripter directives
 # (`>>__`, `##use`, ...): the directives produced no output but the
