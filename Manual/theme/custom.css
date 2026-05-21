@@ -68,3 +68,12 @@ pre > code.language-repl {
   padding-left: 0.7em;
   background: var(--quote-bg, rgba(120, 144, 156, 0.10));
 }
+
+/* Bibliography entries on the References page.  pandoc citeproc
+   emits each entry as <div class="csl-entry"> inside <div id="refs">,
+   and chicago-author-date.csl sets `entry-spacing="0"` on the
+   wrapper -- so without an override the entries run together with no
+   visual gap.  Restore a one-line gap between entries. */
+div.csl-bib-body > div.csl-entry + div.csl-entry {
+  margin-top: 0.8em;
+}
