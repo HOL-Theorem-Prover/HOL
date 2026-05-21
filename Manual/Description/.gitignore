@@ -37,6 +37,8 @@ latex-munger.md
 chapters-include.tex
 book-title.tex
 SUMMARY.md
+references.md
+cite-labels.tsv
 figs/0.svg
 figs/1.svg
 figs/lsl.svg

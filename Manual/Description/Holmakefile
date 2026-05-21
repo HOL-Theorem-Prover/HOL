@@ -78,11 +78,22 @@ figs/rrx.svg: figs/rrx.pdf
 # before mdbook runs, the same way description.pdf gets them via
 # $(TEX_SOURCES).
 mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS) \
-        $(SVG_FIGS)
+        $(SVG_FIGS) references.md cite-labels.tsv
 	mdbook build
 	../Tools/mdbook-check.sh ../book/Description
 	../Tools/smdpp check-refs ../book/Description
 	../Tools/smdpp check-links ../book/Description
+
+# Render the bibliography chapter and the per-call-site cite label
+# table in one shot, via pandoc citeproc.  Both outputs share a
+# single `smdpp render-bib` invocation: references.md is the mdbook
+# chapter wrapping the rendered bibliography, and cite-labels.tsv is
+# smdpp's preprocessor-time lookup for substituting \cite{...} calls
+# in chapter content.  The PDF path doesn't use either -- natbib's
+# \bibliography{description} produces the bibliography directly.
+CSL = ../Tools/csl/chicago-author-date.csl
+references.md cite-labels.tsv: description.bib $(CSL) $(SMDS) ../Tools/smdpp
+	../Tools/smdpp render-bib description.bib $(CSL) $(SMDS)
 
 # SUMMARY.md and chapters-include.tex are generated from
 # chapters.txt by Manual/Tools/gen_chap_lists.  chapters.txt
@@ -196,5 +207,6 @@ EXTRA_CLEANS = $(SMD_MDS) $(patsubst %.smd,%.tex,$(SMDS)) \
                description.ind description.blg description.bbl \
                description.fdb_latexmk \
                chapters-include.tex book-title.tex SUMMARY.md \
+               references.md cite-labels.tsv \
                $(SVG_FIGS) \
                ../book/Description/

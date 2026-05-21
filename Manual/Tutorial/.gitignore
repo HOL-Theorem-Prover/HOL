@@ -17,6 +17,8 @@ ml.md
 SUMMARY.md
 chapters-include.tex
 book-title.tex
+references.md
+cite-labels.tsv
 mdbook-serve.log
 figs/*.svg
 figs/*.aux

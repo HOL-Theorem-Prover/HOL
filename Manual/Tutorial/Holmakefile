@@ -57,11 +57,18 @@ figs/combin-confluence-complete.svg: figs/combin-confluence-complete.tex
 # afterwards, scan the rendered HTML for raw-LaTeX leak patterns and
 # cross-reference number drift.
 mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS) \
-        $(SVG_FIGS)
+        $(SVG_FIGS) references.md cite-labels.tsv
 	mdbook build
 	../Tools/mdbook-check.sh ../book/Tutorial
 	../Tools/smdpp check-refs ../book/Tutorial
 	../Tools/smdpp check-links ../book/Tutorial
+
+# Render the bibliography chapter + per-call-site cite label table
+# in one shot via pandoc citeproc.  See Manual/Description/Holmakefile
+# for the rationale; this rule mirrors that one.
+CSL = ../Tools/csl/chicago-author-date.csl
+references.md cite-labels.tsv: tutorial.bib $(CSL) $(SMDS) ../Tools/smdpp
+	../Tools/smdpp render-bib tutorial.bib $(CSL) $(SMDS)
 
 # SUMMARY.md and chapters-include.tex are generated from
 # chapters.txt by Manual/Tools/gen_chap_lists.  The mdbook H1 at
@@ -125,9 +132,9 @@ tutorial.pdf: $(TEX_SOURCES)
 
 # Pattern rules for the per-chapter .smd -> .md -> .tex pipeline.
 # Hand-rolled .tex front matter (tutorial.tex, title.tex,
-# preface.tex, references.tex) is safe: Holmake skips pattern rules
-# whose prereqs don't exist (see Manual/Description/misc.smd's
-# pattern-rule applicability note).
+# preface.tex) is safe: Holmake skips pattern rules whose prereqs
+# don't exist (see Manual/Description/misc.smd's pattern-rule
+# applicability note).
 %.md: %.smd
 	$(PS_NOUMAP)
 
@@ -151,6 +158,7 @@ proof-tools.md: ../../examples/dpll.sml
 EXTRA_CLEANS = $(SMD_MDS) $(patsubst %.smd,%.tex,$(SMDS)) \
                tutorial.pdf SUMMARY.md chapters-include.tex \
                book-title.tex \
+               references.md cite-labels.tsv \
                $(patsubst %,%.aux,$(TEX_CORES)) \
                tutorial.log tutorial.out tutorial.toc \
                tutorial.fls tutorial.idx tutorial.ilg tutorial.ind \
