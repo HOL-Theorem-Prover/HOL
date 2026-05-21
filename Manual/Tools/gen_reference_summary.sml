@@ -61,13 +61,13 @@ fun dropExt name =
                             structure as a whole.
      - `Foo.bar.smd`    -> (struct = "Foo", display = "bar")
                             plain function-in-structure entry.
-     - `Foo..xyz.smd`   -> (struct = "Foo", display = ".xyz")
-                            UC_ASCII_Encode'd function name (HOL ident
-                            containing chars like :, ?, *, ...).  We
-                            don't decode here -- linking the decoder
-                            into this build adds plumbing.  The
-                            leading `.` preserved in the display label
-                            hints that this entry is encoded. *)
+     - `Foo..xyz.smd`   -> (struct = "Foo",
+                            display = UC_ASCII_Encode.decode "xyz")
+                            HOL identifier containing characters that
+                            aren't filesystem-safe (e.g. `:`, `?`,
+                            `*`) get their function name encoded; we
+                            decode here so the sidebar shows the real
+                            HOL name. *)
 fun splitName name =
     let val stem = dropExt name
     in
@@ -75,7 +75,7 @@ fun splitName name =
           [s]             => (s, NONE)
         | [s, f]          => (s, SOME f)
         | [s, "", encoded] =>
-            (s, SOME ("." ^ encoded))
+            (s, SOME (UC_ASCII_Encode.decode encoded))
         | s :: rest =>
             (* No known producer of this shape; preserve the joined
                remainder unaltered rather than die. *)
@@ -147,22 +147,34 @@ fun sortBy cmp xs =
 fun entryLabel struct_ NONE = struct_
   | entryLabel _ (SOME f) = f
 
-(* The href for an entry: the filename (relative to src dir). *)
-fun entryHref filename = filename
-
 (* Backtick-wrap labels so the sidebar renders them in monospace
    (entries are HOL identifiers). *)
 fun renderEntry struct_ (func, filename) =
-    "- [`" ^ entryLabel struct_ func ^ "`](" ^ entryHref filename ^ ")\n"
+    "  - [`" ^ entryLabel struct_ func ^ "`](" ^ filename ^ ")\n"
 
-(* mdbook part-title: `# Struct` as the section heading.  Renders
-   in the sidebar as a non-clickable group label. *)
+(* Emit one structure group.  If the group has a single-component
+   entry (`<Struct>.smd`, the docs for the structure as a whole),
+   use it as the parent's link target; otherwise emit a draft
+   chapter `[Struct]()` -- mdbook renders it as a non-clickable
+   parent under which the function entries are indented in the
+   sidebar.  Either way the per-function entries are indented two
+   spaces, which mdbook reads as a sub-chapter list. *)
 fun renderGroup (struct_, entries) =
-    "\n# " ^ struct_ ^ "\n\n" ^
-    String.concat (List.map (renderEntry struct_) entries)
+    let
+      (* If a single-component entry (display = NONE) exists, it's
+         the docs for the structure itself; use as parent link.  The
+         rest are emitted as sub-entries. *)
+      val (parent, children) =
+          case List.partition (fn (f, _) => not (Option.isSome f)) entries of
+              ([(_, filename)], rest) =>
+                ("- [" ^ struct_ ^ "](" ^ filename ^ ")\n", rest)
+            | _ => ("- [" ^ struct_ ^ "]()\n", entries)
+    in
+      parent ^ String.concat (List.map (renderEntry struct_) children)
+    end
 
 fun renderSummary groups =
-    "# Summary\n" ^
+    "# Summary\n\n" ^
     String.concat (List.map renderGroup groups)
 
 fun main () =
