@@ -1,15 +1,16 @@
 INCLUDES = ../Tools
 
 # Core LaTeX file stems that contribute to tutorial.pdf.  Front
-# matter (title, preface) and the hand-rolled bibliography
-# (references) are still hand-coded in tutorial.tex; everything
-# else is wired in through chapters-include.tex which gen_chap_lists
-# generates from chapters.txt.
+# matter (title, preface) is still hand-coded in tutorial.tex;
+# everything else is wired in through chapters-include.tex which
+# gen_chap_lists generates from chapters.txt.  The bibliography is
+# now produced from tutorial.bib via natbib (see tutorial.pdf
+# recipe below), mirroring Manual/Description/.
 TEX_CORES = tutorial title preface intro ml writinghol euclid \
-            parity combin proof-tools more-examples references
+            parity combin proof-tools more-examples
 
 TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex \
-              chapters-include.tex book-title.tex \
+              chapters-include.tex book-title.tex tutorial.bib \
               $(patsubst %,%.tex,$(TEX_CORES))
 
 PS_ROOT = ../Tools/polyscripter
@@ -103,8 +104,24 @@ mdbook-serve: ../Tools/smdpp
 	 [ "$$logfile" != /dev/null ] && msg "log: $$(pwd)/$$logfile"; \
 	 msg "stop: pkill -f 'mdbook serve'"
 
+# latexmk-side flags mirror Manual/Description/Holmakefile:
+#   -bibtex: this latexmk (4.79) doesn't auto-invoke bibtex from
+#     the .aux's \bibdata line on its own; the explicit flag forces
+#     it through.
+#   -f: pdflatex returns exit 1 on natbib warnings about undefined
+#     citations in early passes, which without -f makes latexmk
+#     abort the loop; we treat the actual PDF's existence as the
+#     success signal.
+# Trailing pdflatex pass: latexmk's convergence loop sometimes
+# stops one pass too early when the second bibtex run produces
+# the same .bbl as the first -- but pdflatex still needs another
+# pass to incorporate the \bibcite entries it has only just
+# written to its own .aux for early-document citations.
 tutorial.pdf: $(TEX_SOURCES)
-	latexmk -pdf tutorial
+	rm -f $@; \
+	latexmk -pdf -bibtex -f -interaction=nonstopmode tutorial; \
+	pdflatex -interaction=nonstopmode tutorial > /dev/null; \
+	test -s $@
 
 # Pattern rules for the per-chapter .smd -> .md -> .tex pipeline.
 # Hand-rolled .tex front matter (tutorial.tex, title.tex,
