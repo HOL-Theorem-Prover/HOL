@@ -39,7 +39,7 @@ entries.tex: entries.md
 # help/Docfiles/ itself, alongside the entries (gitignored there).
 # ---------------------------------------------------------------------
 mdbook: ../Tools/smdpp ../Tools/mdbook-check.sh \
-        $(Helpd)/Docfiles/SUMMARY.md
+        $(Helpd)/Docfiles/SUMMARY.md entries.list
 	mdbook build
 	../Tools/mdbook-check.sh ../book/Reference
 	../Tools/smdpp check-refs ../book/Reference
@@ -56,6 +56,14 @@ mdbook: ../Tools/smdpp ../Tools/mdbook-check.sh \
 $(Helpd)/Docfiles/SUMMARY.md: ../Tools/gen_reference_summary \
                               $(wildcard $(Helpd)/Docfiles/*.smd)
 	../Tools/gen_reference_summary $(Helpd)/Docfiles > $@
+
+# Lookup table for `\refentry{Foo.bar}` substitution in Description
+# / Tutorial / Reference's smdpp pass.  One line per entry name
+# (filename without .smd).  Sibling books' smdpp loads this at
+# preprocess startup and dies if it sees `\refentry{X}` with X
+# missing -- a typo / removed-entry guard.
+entries.list: $(wildcard $(Helpd)/Docfiles/*.smd)
+	ls $(Helpd)/Docfiles/*.smd | xargs -n1 basename | sed 's/\.smd$$//' > $@
 
 # Convenience: serve the Reference book locally at port 3003.  See
 # Manual/Description/Holmakefile for the per-manual mdbook-serve
@@ -77,7 +85,7 @@ mdbook-serve: ../Tools/smdpp
 	 msg "stop: pkill -f 'mdbook serve.*3003'"
 
 EXTRA_CLEANS = reference.pdf entries.md entries.tex \
-               $(Helpd)/Docfiles/SUMMARY.md \
+               $(Helpd)/Docfiles/SUMMARY.md entries.list \
                ../book/Reference/ \
                mdbook-serve.log \
                reference.aux reference.log reference.out \

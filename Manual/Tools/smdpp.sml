@@ -426,6 +426,88 @@ fun loadCiteLabels () =
       end
   end
 
+(* Loaded once from `../Reference/entries.list` at preprocessor
+   startup (see loadRefEntries below).  Each line names one entry
+   that exists in help/Docfiles/ (e.g. `BasicProvers.CASE_TAC`).
+   Used to resolve `\refentry{Foo.bar}` cross-manual references and
+   to error out at preprocess-time on typos / removed entries. *)
+val refEntries : string list ref = ref []
+
+(* Read ../Reference/entries.list relative to cwd; warn (don't die)
+   if missing -- e.g., on a Reference-only checkout where Description
+   hasn't been wired yet.  When the file is missing, `\refentry{}`
+   calls pass through unrewritten and mdbook-check.sh's leak check
+   surfaces them. *)
+fun loadRefEntries () =
+  let
+    val path = "../Reference/entries.list"
+  in
+    if not (OS.FileSys.access (path, [OS.FileSys.A_READ])) then
+      (TextIO.output (TextIO.stdErr,
+         "smdpp: " ^ path ^ " not found; \\refentry{...} calls " ^
+         "will pass through unrewritten\n");
+       refEntries := [])
+    else
+      let
+        val content =
+            let val ins = TextIO.openIn path
+                val s = TextIO.inputAll ins
+                val () = TextIO.closeIn ins
+            in s end
+        val lines = String.fields (fn c => c = #"\n") content
+        val entries = List.filter (fn s => s <> "") lines
+      in
+        refEntries := entries
+      end
+  end
+
+(* Replace each `\refentry{Foo.bar}` with a markdown link to the
+   matching entry page in the Reference manual.  Brace-counted on
+   the argument.  Unknown entry names abort the build with a clear
+   error -- catches typos and stale references at preprocess time
+   rather than letting them silently break links in the rendered
+   HTML.  Skipped when `refEntries` is empty (loadRefEntries
+   couldn't find entries.list); leaks then get surfaced by
+   mdbook-check.sh. *)
+fun rewriteRefEntry currentFile s =
+  let
+    val sub = String.sub
+    val sz = String.size s
+    val marker = "\\refentry{"
+    val msz = String.size marker
+    val knownEntries = !refEntries
+    fun knownEntry key = List.exists (fn e => e = key) knownEntries
+    fun loop (i, acc) =
+      if i >= sz then String.implode (List.rev acc)
+      else if i + msz <= sz andalso
+              String.substring (s, i, msz) = marker
+      then
+        case findCloseBrace (s, i + msz) of
+            NONE => loop (i + 1, sub (s, i) :: acc)
+          | SOME j =>
+            let
+              val key = String.substring (s, i + msz, j - i - msz)
+              val () =
+                if null knownEntries orelse knownEntry key then ()
+                else
+                  die ("smdpp: \\refentry{" ^ key ^ "} in " ^
+                       currentFile ^ " has no matching " ^
+                       "help/Docfiles/" ^ key ^ ".smd")
+              (* Path is relative to the current book's output dir.
+                 From book/<Book>/<chapter>.html, ../Reference/X.html
+                 resolves to book/Reference/X.html -- works uniformly
+                 across all books, including Reference itself
+                 (../Reference/X.html from book/Reference/Y.html is
+                 still book/Reference/X.html). *)
+              val replacement =
+                  "[`" ^ key ^ "`](../Reference/" ^ key ^ ".html)"
+            in
+              loop (j + 1, List.revAppend
+                             (String.explode replacement, acc))
+            end
+      else loop (i + 1, sub (s, i) :: acc)
+  in loop (0, []) end
+
 (* Replace each `\cite[loc]{keys}` (or `\cite{keys}`) with the
    rendered-HTML span captured in the citation label registry.
    Unknown call-sites are left untouched: the rendered HTML keeps
@@ -546,6 +628,7 @@ fun preprocessStage2 {labelRegistry, currentFile, name} s =
     |> resolveRefs {currentFile = currentFile,
                     labelRegistry = labelRegistry}
     |> stripLabel
+    |> rewriteRefEntry currentFile
     |> rewriteCites
     |> convertSuperscripts
     |> protectMath
@@ -2283,6 +2366,7 @@ fun smdppMain () =
     | [] =>
         let
           val () = loadCiteLabels ()
+          val () = loadRefEntries ()
           val obuf = setupPolyscripter ()
           val raw = TextIO.inputAll TextIO.stdIn
           val src = JSONParser.openString raw

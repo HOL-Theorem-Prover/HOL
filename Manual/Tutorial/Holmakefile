@@ -1,4 +1,4 @@
-INCLUDES = ../Tools
+INCLUDES = ../Tools ../Reference
 
 # Core LaTeX file stems that contribute to tutorial.pdf.  Front
 # matter (title, preface) is still hand-coded in tutorial.tex;
@@ -57,7 +57,8 @@ figs/combin-confluence-complete.svg: figs/combin-confluence-complete.tex
 # afterwards, scan the rendered HTML for raw-LaTeX leak patterns and
 # cross-reference number drift.
 mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS) \
-        $(SVG_FIGS) references.md cite-labels.tsv
+        $(SVG_FIGS) references.md cite-labels.tsv \
+        ../Reference/entries.list
 	mdbook build
 	../Tools/mdbook-check.sh ../book/Tutorial
 	../Tools/smdpp check-refs ../book/Tutorial

@@ -1,4 +1,4 @@
-INCLUDES = ../Tools ../../examples/probability $(HOLDIR)/src/integer
+INCLUDES = ../Tools ../Reference ../../examples/probability $(HOLDIR)/src/integer
 
 TEX_CORES = description title preface system conv drules tactics \
 	theories math definitions libraries misc HolSat HolQbf HolSmt \
@@ -78,7 +78,8 @@ figs/rrx.svg: figs/rrx.pdf
 # before mdbook runs, the same way description.pdf gets them via
 # $(TEX_SOURCES).
 mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS) \
-        $(SVG_FIGS) references.md cite-labels.tsv
+        $(SVG_FIGS) references.md cite-labels.tsv \
+        ../Reference/entries.list
 	mdbook build
 	../Tools/mdbook-check.sh ../book/Description
 	../Tools/smdpp check-refs ../book/Description
