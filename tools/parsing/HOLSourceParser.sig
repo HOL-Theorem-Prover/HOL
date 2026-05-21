@@ -22,6 +22,14 @@ val simpleParseError: (string -> unit) -> int * int -> string -> unit
 val filelineParseError: (string -> unit) ->
   DString.dstring * HOLSourceAST.events -> int * int -> string -> unit
 
+(* Wrap a print sink so that every call additionally flips a "had error"
+   flag.  Intended for callers that drive the parser as a build step and
+   need to translate "did the parser report any errors?" into an exit
+   status.  The sink in HOLSource.{file,stream,string,input}ToReader is
+   used solely for error reports, so counting calls = counting errors. *)
+val trackingPrint: (string -> unit) ->
+  {print: string -> unit, hadError: unit -> bool}
+
 val parseSML: string -> (int -> string) ->
   (DString.dstring * HOLSourceAST.events -> int * int -> string -> unit) ->
   scope -> result

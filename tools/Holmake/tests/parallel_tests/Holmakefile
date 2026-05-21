@@ -33,6 +33,7 @@ DIRNAMES = \
   gh604 \
   gh679 \
   gh1353 \
+  gh1993 \
   ignore_errors/j1 \
   qfreadTheoremsyntax \
   use-fnf \

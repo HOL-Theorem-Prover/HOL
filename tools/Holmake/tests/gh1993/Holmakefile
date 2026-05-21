@@ -1,0 +1,12 @@
+ifdef POLY
+HOLMAKE_OPTS = --holstate=$(protect $(HOLDIR)/bin/hol.state0)
+endif
+
+gh1993.log: doit.sh testd/Holmakefile testd/badScript.sml
+	$(tee ./doit.sh $(protect $(HOLDIR)/bin/Holmake) $(HOLMAKE_OPTS), $@)
+
+EXTRA_CLEANS = gh1993.log testd/stdout.txt testd/stderr.txt \
+  testd/badTheory.sml testd/badTheory.sig testd/badTheory.dat \
+  testd/badTheory.uo testd/badTheory.ui \
+  testd/badScript.uo testd/badScript.ui \
+  testd/.hol

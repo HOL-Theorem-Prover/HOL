@@ -570,6 +570,10 @@ in
                                          NONE => ""
                                        | SOME s => "\n" ^ s)))
                  (#checkfors options);
+        if QUse.hadError () then (
+          diag "Parse errors during run; exiting failure";
+          OS.Process.exit OS.Process.failure)
+        else ();
         diag "Run done; about to exit successfully";
         OS.Process.exit OS.Process.success
       end
