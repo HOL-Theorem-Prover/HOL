@@ -1,8 +1,14 @@
 structure HM_CacheFetch =
 struct
 
-val pid_s = SysWord.toString
-              (Posix.Process.pidToWord (Posix.ProcEnv.getpid()))
+(* The PID has to be sampled per call: Holmake is delivered as a
+   polyc-compiled binary whose saved Poly heap freezes any top-level
+   val.  A val pid_s computed at module load thus captures the build-
+   time PID, and every Holmake invocation that loads the heap sees the
+   same value -- so two concurrent Holmakes write to the same
+   ".tmp.<pid>" path and race on rename. *)
+fun pid_s () = SysWord.toString
+                 (Posix.Process.pidToWord (Posix.ProcEnv.getpid()))
 
 (* Byte-copy [src] to [dst]; returns true on success.  Used as a
    fallback when no reflink-capable cp is available, or when the
@@ -50,7 +56,7 @@ fun clone_or_copy src dst =
    discarding it via [discard_staged]. *)
 fun stage src dest =
     let
-      val tmp = dest ^ ".tmp." ^ pid_s
+      val tmp = dest ^ ".tmp." ^ pid_s ()
       val _ = OS.FileSys.remove tmp handle _ => ()
     in
       if not (clone_or_copy src tmp) then
