@@ -5,7 +5,12 @@
 \documentclass[12pt,fleqn]{book}
 \input{book-title}    % defines \HOLbookTitle from book.toml's title
 \usepackage[notindex]{tocbibind}
-\usepackage[numbers,sort&compress]{natbib}
+% authoryear + round + \cite≡\citep keeps the PDF citation style
+% in the same family as the mdbook (rendered via chicago-author-date
+% through pandoc citeproc).  See Manual/Description/description.tex
+% for the wider rationale.
+\usepackage[authoryear,round]{natbib}
+\let\cite\citep
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}

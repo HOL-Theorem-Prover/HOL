@@ -6,7 +6,23 @@
 \input{book-title}    % defines \HOLbookTitle from book.toml's title
 \usepackage[notindex]{tocbibind}
 
-\usepackage[numbers,sort&compress]{natbib}
+% Keep the PDF citation style in the same family as the mdbook
+% side, which renders via chicago-author-date.csl through pandoc
+% citeproc as `(Author Year)` and `(Author Year, loc)`.
+%
+%   [authoryear] selects the author-year mode (vs natbib's default
+%               [numbers] which would give "[1]" style cites).
+%   [round]     emits round parens instead of natbib's default
+%               square brackets, matching the mdbook's parens.
+%   \cite ≡ \citep ensures every `\cite{key}` in the .smd source
+%               renders parenthetically -- by default natbib aliases
+%               `\cite` to `\citet` (text-style "Author (Year)") on
+%               bare cites but to `\citep` on cites with locators,
+%               producing a mixed look across the document.  The
+%               .smd source predates this style choice, so a
+%               uniform \citep is the closest match to the mdbook.
+\usepackage[authoryear,round]{natbib}
+\let\cite\citep
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 
