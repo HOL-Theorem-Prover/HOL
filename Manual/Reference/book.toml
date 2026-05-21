@@ -15,12 +15,13 @@ mathjax-support = true
 theme = "../theme"
 additional-css = ["custom.css"]
 
-# Sidebar entries fold by default beyond the top level (mirrors
-# Description/Tutorial); structure-group part titles stay visible,
-# individual entries collapsed under the group heading until clicked.
+# With 1,613 entries, the fold UX gets annoying (click-to-expand,
+# click-elsewhere-doesn't-collapse, and per-state colour shifts
+# make the sidebar feel inconsistent).  Disable folding entirely
+# so every entry is always visible -- search and structure-group
+# scrolling handle navigation.
 [output.html.fold]
-enable = true
-level = 0
+enable = false
 
 [preprocessor.smdpp]
 command = "../Tools/smdpp"
