@@ -80,6 +80,12 @@ pre > code.language-repl {
 body.hol-book-reference #mdbook-sidebar strong[aria-hidden="true"] {
   display: none;
 }
+/* The same suppression for the body-heading numbers that
+   index.hbs's `numberBodyHeadings` JS auto-prepends to each
+   chapter's <h1>/<h2>/etc. by reading from the sidebar. */
+body.hol-book-reference main .section-num {
+  display: none;
+}
 
 /* Cross-manual switcher strip above the per-book menu bar.  See
    `hol-manual-switcher` block in Manual/theme/index.hbs.  Mimics
