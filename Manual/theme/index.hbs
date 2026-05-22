@@ -88,6 +88,13 @@
                 rrbrace: ["{\\unicode{x2984}}"],
                 // Manual/LaTeX/commands.tex: \hilbert = \varepsilon.
                 hilbert: ["\\varepsilon"],
+                // \textsl works inside LaTeX math mode (legitimate
+                // for slanted text in a formula) but MathJax 2.7
+                // doesn't recognise it as a math command and emits
+                // it as red error text.  Map to \mathit for the
+                // closest math-mode equivalent.  Used in misc.smd's
+                // Holmake grammar productions.
+                textsl: ["{\\mathit{#1}}", 1],
                 // Chapter-local LaTeX macros from Description's
                 // theories.smd.  The PDF definitions live in the
                 // {=latex} block at the top of that file; these are
