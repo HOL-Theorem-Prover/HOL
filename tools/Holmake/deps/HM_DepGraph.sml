@@ -70,9 +70,17 @@ fun command_compare (NoCmd, NoCmd) = EQUAL
   | command_compare (BuiltInCmd _, SomeCmd _) = GREATER
   | command_compare (BuiltInCmd (b1,_), BuiltInCmd (b2,_)) = bic_compare(b1,b2)
 
+(* file_hashes memoises SHA1.sha1_file results during a Holmake
+   invocation.  Lives on the dep graph because the graph already
+   threads through every place that needs to ask "what's this dep
+   file's hash?", and because (in shape) it's keyed by the same
+   [dep] identifier the graph uses for target_map.  Plain dict, no
+   ref: updates return a new graph in the existing functional
+   style. *)
 type 'a t = { nodes : (node, 'a nodeInfo) Map.dict,
               target_map : (dep,node) Map.dict,
-              command_map : (dir * command,node list) Map.dict }
+              command_map : (dir * command,node list) Map.dict,
+              file_hashes : (dep, string) Map.dict }
 
 
 fun fold f (g:'a t) A =
@@ -81,9 +89,18 @@ fun fold f (g:'a t) A =
 fun empty() : 'a t =
     { nodes = Map.mkDict node_compare,
       target_map = Map.mkDict hm_target.compare,
-      command_map = Map.mkDict (pair_compare(hmdir.compare, command_compare)) }
-fun fupd_nodes f ({nodes, target_map, command_map}: 'a t) : 'a t =
-  {nodes = f nodes, target_map = target_map, command_map = command_map}
+      command_map = Map.mkDict (pair_compare(hmdir.compare, command_compare)),
+      file_hashes = Map.mkDict hm_target.compare }
+fun fupd_nodes f ({nodes, target_map, command_map, file_hashes}: 'a t)
+    : 'a t =
+  {nodes = f nodes, target_map = target_map,
+   command_map = command_map, file_hashes = file_hashes}
+
+fun peek_file_hash (g : 'a t) d = Map.peek (#file_hashes g, d)
+fun set_file_hash (g : 'a t) d h : 'a t =
+    {nodes = #nodes g, target_map = #target_map g,
+     command_map = #command_map g,
+     file_hashes = Map.insert (#file_hashes g, d, h)}
 
 fun find_nodes_by_command (g : 'a t) dc =
   case Map.peek (#command_map g, dc) of
@@ -120,7 +137,8 @@ fun add_node (nI : 'a nodeInfo) (g :'a t) =
       in
         ({ nodes = Map.insert(#nodes g,n,nI),
            target_map = Map.insert(#target_map g, #target nI, n),
-           command_map = extend_map_list (#command_map g) (#dir nI,copt) n },
+           command_map = extend_map_list (#command_map g) (#dir nI,copt) n,
+           file_hashes = #file_hashes g },
          n)
       end
     val {target=tgt,dir,...} = nI
