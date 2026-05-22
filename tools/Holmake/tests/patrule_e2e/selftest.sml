@@ -20,10 +20,16 @@ fun touch n =
    bar.copy without an explicit per-target rule. *)
 
 val _ = hm "Cleaning" ["-r", "cleanAll"]
-           (fn () => List.all (not o present) ["foo.copy", "bar.copy"])
+           (fn () => List.all (not o present)
+                              ["foo.copy", "bar.copy", "sub/baz.copy"])
 
 val _ = hm "Default build produces foo.copy and bar.copy via pattern rule" []
            (fn () => present "foo.copy" andalso present "bar.copy")
+
+(* Cross-directory pattern `sub/%.copy: sub/%.txt' fires for the
+   subdirectory target without an explicit per-target rule. *)
+val _ = hm "Cross-directory pattern produces sub/baz.copy" []
+           (fn () => present "sub/baz.copy")
 
 (* bar.copy has an explicit recipe-less rule adding extra.txt as a
    prereq.  Touch extra.txt and bar.copy should rebuild; foo.copy

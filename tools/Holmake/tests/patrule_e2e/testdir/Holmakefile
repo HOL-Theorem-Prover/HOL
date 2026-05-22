@@ -9,11 +9,17 @@ CLINE_OPTIONS = --holstate=$(HOLDIR)/bin/hol.state0
 endif
 
 .PHONY: all
-all: foo.copy bar.copy
+all: foo.copy bar.copy sub/baz.copy
 
 %.copy: %.txt
 	cp $< $@
 
 bar.copy: extra.txt
 
-EXTRA_CLEANS = foo.copy bar.copy
+# Cross-directory pattern: target and prereq both literally prefixed
+# with `sub/'.  Exercises Holmake's relative-path threading from
+# pattern_rule_info into the matcher.
+sub/%.copy: sub/%.txt
+	cp $< $@
+
+EXTRA_CLEANS = foo.copy bar.copy sub/baz.copy

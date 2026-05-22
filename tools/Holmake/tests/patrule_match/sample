@@ -6,3 +6,6 @@
 
 %-tag.out: %.in extra.dat
 	cp $< $@
+
+sub/%.html: sub/%.md
+	pandoc -o sub/$*.html sub/$*.md

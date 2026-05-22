@@ -625,11 +625,19 @@ fun local_rule_info t =
       get_rule_info rules env t
     end
 
-(* Pattern-rule lookup is only meaningful when t lives in the current
-   directory (pattern rules are read from the local Holmakefile).
-   We match the bare filename against each rule's `%'-bearing target
-   pattern; the matcher returns deps as plain strings, which we lift
-   to `dep' values rooted at the current directory.
+(* Pattern-rule lookup applies to any target at or below the
+   Holmakefile's directory: a pattern with a literal directory
+   prefix (e.g. `sub/%.tex : sub/%.smd') matches targets in the
+   named subdirectory, and a bare pattern (e.g. `%.tex') matches
+   targets anywhere under the Holmakefile (the stem then absorbs
+   any directory separators).  Targets in parent or sibling
+   directories of the Holmakefile aren't reachable from this
+   ruleset and yield NONE.
+
+   The matcher takes the target's path relative to the
+   Holmakefile's directory; substituted dep strings come back the
+   same way and lift through `filestr_to_tgt' (whose `hmdir.extendp'
+   already handles directory components correctly).
 
    `can_make' implements GNU make's two-phase implicit-rule search:
    a pattern rule is only applicable when every substituted prereq
@@ -637,22 +645,34 @@ fun local_rule_info t =
    Without this guard a pattern like `%.tex: %.stex' would claim
    every .tex target in the directory, including hand-maintained
    ones whose .stex source doesn't exist. *)
+fun rel_to_curdir t =
+    let
+      val cwd_abs = hmdir.toAbsPath (hmdir.curdir())
+      val tgt_dir_abs = hmdir.toAbsPath (hm_target.dirpart t)
+      val tgt_file = fromFile (hm_target.filepart t)
+    in
+      if tgt_dir_abs = cwd_abs then SOME tgt_file
+      else if String.isPrefix (cwd_abs ^ "/") tgt_dir_abs then
+        SOME (String.extract (tgt_dir_abs, size cwd_abs + 1, NONE)
+              ^ "/" ^ tgt_file)
+      else NONE
+    end
 fun pattern_rule_info t =
-    if hmdir.compare(hm_target.dirpart t, hmdir.curdir()) <> EQUAL then NONE
-    else
-      let
-        val (env, rules, prs, _) = get_hmf()
-        val tgt_s = fromFile (hm_target.filepart t)
-        fun can_make dep_s =
-            exists_readable dep_s orelse
-            isSome (Binarymap.peek (rules, filestr_to_tgt dep_s))
-      in
-        case match_pattern_rules can_make env prs tgt_s of
-            NONE => NONE
-          | SOME {dependencies, commands} =>
-            SOME {dependencies = map filestr_to_tgt dependencies,
-                  commands = commands}
-      end
+    case rel_to_curdir t of
+        NONE => NONE
+      | SOME tgt_s =>
+        let
+          val (env, rules, prs, _) = get_hmf()
+          fun can_make dep_s =
+              exists_readable dep_s orelse
+              isSome (Binarymap.peek (rules, filestr_to_tgt dep_s))
+        in
+          case match_pattern_rules can_make env prs tgt_s of
+              NONE => NONE
+            | SOME {dependencies, commands} =>
+              SOME {dependencies = map filestr_to_tgt dependencies,
+                    commands = commands}
+        end
 
 fun extra_deps t =
       Option.map #dependencies (local_rule_info t)
@@ -679,8 +699,10 @@ fun extra_targets() =
    - otherwise, if a pattern rule matches, its commands fire and its
      deps union with any deps from a recipe-less exact rule;
    - otherwise the exact rule's deps-only entry (if any) is returned
-     unchanged.  Pattern rules never get consulted for targets outside
-     the current directory. *)
+     unchanged.  Pattern rules are scoped to the current Holmakefile's
+     directory tree: they can match targets in subdirectories of cwd
+     (via a literal prefix like `sub/%.x' or via the bare `%.x' whose
+     stem absorbs `/'), but not in parent or sibling directories. *)
 fun extra_rule_for t =
     let
       val exact = local_rule_info t
@@ -965,8 +987,10 @@ in
       (x as SOME n) => (g0, n)
     | NONE =>
       if not (hmdir.eqdir dir actual_dir) andalso
-         no_extra_rule (SOME tgt)
-         (* path outside of current directory *)
+         no_extra_rule (SOME tgt) andalso
+         not (isSome (pattern_rule_info tgt))
+         (* path outside of current directory and no local pattern
+            rule claims it *)
       then (
         diag (fn _ => "Target "^pretty_tgt^" external to directory");
         add_node {target = tgt, seqnum = 0, phony = false,

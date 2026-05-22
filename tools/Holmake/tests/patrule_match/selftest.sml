@@ -56,3 +56,10 @@ val _ = tprint "Stem can contain a directory separator"
 val _ = req (fn SOME {dependencies=["sub/x.smd"], commands=[c]} =>
                  c = "pandoc -o sub/x.tex sub/x.smd"
               | _ => false) "sub/x.tex"
+
+(* pattern target with a literal directory prefix matches a target
+   in that subdirectory; stem is just the filename, not the path. *)
+val _ = tprint "Pattern target can have a literal directory prefix"
+val _ = req (fn SOME {dependencies=["sub/page.md"], commands=[c]} =>
+                 c = "pandoc -o sub/page.html sub/page.md"
+              | _ => false) "sub/page.html"
