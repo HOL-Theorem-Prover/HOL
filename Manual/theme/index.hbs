@@ -15,6 +15,19 @@
         <!-- Custom HTML head -->
         {{> head}}
 
+        <!-- HOL_MANUALS: shared config consumed by Manual/theme/
+             searcher.js (for cross-book search loading) and by the
+             manual-switcher highlight JS further down the page.
+             Keep this list in sync with the top-level Manual/Holmake-
+             file's gen_lander invocation; if a fourth manual joins
+             the site, add it here so its searchindex.js gets
+             loaded alongside the others. -->
+        <script>
+            window.HOL_MANUALS = {
+                books: ['Description', 'Tutorial', 'Reference']
+            };
+        </script>
+
         <meta name="description" content="{{ description }}">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
@@ -433,12 +446,13 @@
             </div>
             <script>
                 (function () {
+                    var books = (window.HOL_MANUALS &&
+                                 window.HOL_MANUALS.books) ||
+                                ['Description', 'Tutorial', 'Reference'];
                     var segments = window.location.pathname.split('/');
                     var current = null;
                     for (var i = 0; i < segments.length; i++) {
-                        if (segments[i] === 'Description' ||
-                            segments[i] === 'Tutorial' ||
-                            segments[i] === 'Reference') {
+                        if (books.indexOf(segments[i]) !== -1) {
                             current = segments[i];
                             break;
                         }
@@ -513,7 +527,7 @@
                 <div id="mdbook-search-wrapper" class="hidden">
                     <form id="mdbook-searchbar-outer" class="searchbar-outer">
                         <div class="search-wrapper">
-                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search all manuals ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
                             <div class="spinner-wrapper">
                                 {{fa "solid" "spinner" "fa-spin"}}
                             </div>
@@ -637,7 +651,12 @@
         {{#if search_js}}
         <script src="{{ resource "elasticlunr.min.js" }}"></script>
         <script src="{{ resource "mark.min.js" }}"></script>
-        <script src="{{ resource "searcher.js" }}"></script>
+        <!-- mdbook's bundled searcher.js is deliberately not loaded
+             here.  Cross-book search needs the replacement at
+             Manual/theme/hol-searcher.js, which each book.toml lists
+             as `[output.html] additional-js = ["hol-searcher.js"]`
+             so mdbook copies it into the per-book output and emits
+             its own <script> tag for it. -->
         {{/if}}
 
         <script src="{{ resource "clipboard.min.js" }}"></script>

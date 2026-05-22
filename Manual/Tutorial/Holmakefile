@@ -61,6 +61,9 @@ mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS) \
         ../Reference/entries.list \
         labels.tsv ../Description/labels.tsv ../Reference/labels.tsv
 	mdbook build
+	# See Manual/Description/Holmakefile for the rationale.
+	cd ../book/Tutorial && \
+	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
 	../Tools/mdbook-check.sh ../book/Tutorial
 	../Tools/smdpp check-refs ../book/Tutorial
 	../Tools/smdpp check-links ../book/Tutorial

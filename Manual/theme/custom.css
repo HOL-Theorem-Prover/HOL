@@ -130,6 +130,29 @@ body.hol-book-reference main .section-num {
   opacity: 0.5;
 }
 
+/* Group headers inside the search result list: the cross-book
+   searcher in Manual/theme/searcher.js renders results grouped
+   by source book ("Description", "Tutorial", "Reference"),
+   prefixed by a non-clickable header <li> with this class.
+   Visual cue similar to a category divider. */
+#mdbook-searchresults li.hol-book-group {
+  list-style: none;
+  font-weight: bold;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--searchresults-header-fg, var(--fg));
+  border-bottom: 1px solid var(--searchresults-border-color,
+                                rgba(120, 144, 156, 0.30));
+  padding: 0.6em 0 0.3em;
+  margin: 0;
+}
+/* The very first group header sits flush with the result-count
+   line; suppress its top padding so it doesn't add visual space. */
+#mdbook-searchresults li.hol-book-group:first-child {
+  padding-top: 0;
+}
+
 /* Bibliography entries on the References page.  pandoc citeproc
    emits each entry as <div class="csl-entry"> inside <div id="refs">,
    and chicago-author-date.csl sets `entry-spacing="0"` on the

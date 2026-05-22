@@ -82,6 +82,12 @@ mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS) \
         ../Reference/entries.list \
         labels.tsv ../Tutorial/labels.tsv ../Reference/labels.tsv
 	mdbook build
+	# Stable searchindex.js -> searchindex-<hash>.js symlink: the
+	# cross-book searcher loads sibling indices from `../<Book>/
+	# searchindex.js`, but mdbook hashes the actual filename
+	# whenever content changes.  Resolve the hash here.
+	cd ../book/Description && \
+	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
 	../Tools/mdbook-check.sh ../book/Description
 	../Tools/smdpp check-refs ../book/Description
 	../Tools/smdpp check-links ../book/Description

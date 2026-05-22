@@ -11,6 +11,9 @@ description = "Step-by-step introduction to HOL through worked examples."
 mathjax-support = true
 theme = "../theme"
 additional-css = ["custom.css"]
+# Cross-book search; see Manual/Description/book.toml for the
+# additional-js / symlink rationale.
+additional-js = ["hol-searcher.js"]
 
 # Sidebar entries fold by default beyond the top level: top-level
 # chapters stay visible, per-chapter section sub-entries (1.1, 1.2,

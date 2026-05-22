@@ -14,6 +14,9 @@ description = "Per-entry reference for every HOL function, theorem, tactic, conv
 mathjax-support = true
 theme = "../theme"
 additional-css = ["custom.css"]
+# Cross-book search; see Manual/Description/book.toml for the
+# additional-js / symlink rationale.
+additional-js = ["hol-searcher.js"]
 
 # With 1,613 entries, the fold UX gets annoying (click-to-expand,
 # click-elsewhere-doesn't-collapse, and per-state colour shifts
