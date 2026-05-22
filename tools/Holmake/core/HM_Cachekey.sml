@@ -69,7 +69,7 @@ fun resolve_dat_path dep holpath =
           | _ => fspath
     end
 
-fun compute_for_deps raw_deps =
+fun compute_for_deps g raw_deps =
     let
       val deps =
           let val depset =
@@ -85,7 +85,8 @@ fun compute_for_deps raw_deps =
                     let val p = tgt_toString dep
                         val path = resolve_dat_path dep p
                     in
-                      { name = fromFile (hm_target.filepart dep),
+                      { dep = dep,
+                        name = fromFile (hm_target.filepart dep),
                         path = path }
                     end)
                 (Binaryset.listItems depset)
@@ -96,13 +97,26 @@ fun compute_for_deps raw_deps =
                       deps
     in
       case missing of
-          _ :: _ => Missing missing
+          _ :: _ =>
+            (Missing (map (fn {name,path,...} => {name=name,path=path})
+                          missing),
+             g)
         | [] =>
           let
-            val hashed_deps =
-                map (fn {name, path} =>
-                        (name, SHA1.sha1_file {filename = path}))
-                    deps
+            (* Memoise per-dep file hashes on the graph: a shared
+               parent (boolTheory.dat, optionTheory.dat, etc.) gets
+               hashed once across all targets that reference it
+               instead of once per target. *)
+            fun hash_one ({dep, name, path}, (acc, g)) =
+                case HM_DepGraph.peek_file_hash g dep of
+                    SOME h => ((name, h) :: acc, g)
+                  | NONE =>
+                    let val h = SHA1.sha1_file {filename = path}
+                    in ((name, h) :: acc,
+                        HM_DepGraph.set_file_hash g dep h)
+                    end
+            val (hashed_deps_rev, g') = List.foldl hash_one ([], g) deps
+            val hashed_deps = List.rev hashed_deps_rev
             val sorted_hashes =
                 Listsort.sort (pair_compare (String.compare, String.compare))
                               hashed_deps
@@ -116,14 +130,15 @@ fun compute_for_deps raw_deps =
             val key = SHA1.sha1_file {filename = tmpfile}
             val _ = OS.FileSys.remove tmpfile handle OS.SysErr _ => ()
           in
-            Key key
+            (Key key, g')
           end
     end
 
 fun compute_for_node depgraph node =
     case HM_DepGraph.peeknode depgraph node of
         NONE => raise Fail "HM_Cachekey.compute_for_node: node not found"
-      | SOME nodeinfo => compute_for_deps (map #2 (#dependencies nodeinfo))
+      | SOME nodeinfo =>
+          compute_for_deps depgraph (map #2 (#dependencies nodeinfo))
 
 (* --------------------------------------------------------------------
    Stamp files.  For a theory-target foo, the stamp sits next to the

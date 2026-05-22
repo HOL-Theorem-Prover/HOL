@@ -1020,21 +1020,29 @@ in
               in
                 HM_Cachekey.stamp_path_for_datfile datFS
               end
-          fun stamp_matches thy =
+          fun stamp_matches g thy =
               case HM_Cachekey.read_stamp (theory_stamp_path thy) of
-                  NONE => false
+                  NONE => (false, g)
                 | SOME recorded =>
-                  (case HM_Cachekey.compute_for_deps (map #2 depnodes) of
-                       HM_Cachekey.Key k => k = recorded
-                     | HM_Cachekey.Missing _ => false)
-          val cachekey_uptodate =
-              cline_rebuild_strategy = HM_Cachekey_dtype.Cachekey andalso
-              (case bic of
-                   BIC_BuildScript thy =>
-                     exists_readable fullpath_s andalso
-                     null unbuilt_deps andalso
-                     stamp_matches thy
-                 | _ => false)
+                  let val (ck, g') =
+                          HM_Cachekey.compute_for_deps g
+                                                       (map #2 depnodes)
+                  in
+                    case ck of
+                        HM_Cachekey.Key k => (k = recorded, g')
+                      | HM_Cachekey.Missing _ => (false, g')
+                  end
+          val (cachekey_uptodate, g3) =
+              if cline_rebuild_strategy <> HM_Cachekey_dtype.Cachekey then
+                (false, g2)
+              else
+                (case bic of
+                     BIC_BuildScript thy =>
+                       if exists_readable fullpath_s andalso
+                          null unbuilt_deps
+                       then stamp_matches g2 thy
+                       else (false, g2)
+                   | _ => (false, g2))
           val needs_building =
               not cachekey_uptodate andalso
               (not (null unbuilt_deps) orelse
@@ -1050,7 +1058,7 @@ in
                                else Succeeded,
                       extra = extra,
                       command = BuiltInCmd (bic,incinfo), dir = hmdir.curdir(),
-                      dependencies = depnodes } g2
+                      dependencies = depnodes } g3
         end
       else
         case extra_rule_for tgt of
@@ -1465,7 +1473,7 @@ fun do_cachekey thyname =
               HM_DepGraph.BuiltInCmd (HM_DepGraph.BIC_BuildScript _, _) => ()
             | _ => die ("--cachekey: " ^ thyname ^ " is not a theory target")
     in
-      case HM_Cachekey.compute_for_node depgraph node of
+      case #1 (HM_Cachekey.compute_for_node depgraph node) of
           HM_Cachekey.Key k => (print (k ^ "\n"); OS.Process.success)
         | HM_Cachekey.Missing ms =>
           let val first = hd ms

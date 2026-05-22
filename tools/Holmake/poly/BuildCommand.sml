@@ -433,7 +433,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                   | NONE => s ^ "Theory.dat"
             val stamp_path = HM_Cachekey.stamp_path_for_datfile datFS
             val _ = HM_Cachekey.remove_stamp stamp_path
-            val ck = HM_Cachekey.compute_for_deps deps
+            (* Discard the cache-updated graph: this code runs inside
+               a forked child whose graph state isn't visible to
+               anyone after the build completes. *)
+            val ck = #1 (HM_Cachekey.compute_for_deps g deps)
             fun write_stamp () =
                 case ck of
                     HM_Cachekey.Key k => HM_Cachekey.write_stamp stamp_path k
