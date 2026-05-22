@@ -1325,6 +1325,67 @@ VAR = $(NULL)
 Note that environment variables with non-empty values are also
 considered to be defined.
 
+#### Including other makefiles
+
+\index{Holmake@\holmake!including other makefiles}
+\index{include (Holmake directive)@\texttt{include} (Holmake directive)}
+\index{-include (Holmake directive)@\texttt{-include} (Holmake directive)}
+\index{sinclude (Holmake directive)@\texttt{sinclude} (Holmake directive)}
+As in GNU `make`, a `Holmakefile` can pull in another file's
+contents inline.  Three directives are supported:
+
+```
+include   FILE1 FILE2 ...
+-include  FILE1 FILE2 ...
+sinclude  FILE1 FILE2 ...
+```
+
+The `include` form is mandatory: if any named file is missing,
+`Holmake` reports an error and stops.  The `-include` and
+`sinclude` forms are synonyms for the missing-file-tolerant variant
+— missing files are silently skipped.
+
+Filenames are whitespace-separated; multiple files on one
+directive line are read in order.  `$(VAR)` references in the
+filename are expanded against the variables defined *so far in the
+including file*, matching GNU `make`'s immediate-expansion timing,
+so
+
+```
+SUBDIR = config
+include $(SUBDIR)/local.mk
+```
+
+reads `config/local.mk`.  Relative paths are resolved against the
+directory of the *including* file, not the current working
+directory, so a `Holmakefile` in `foo/bar/` saying
+`include ../shared.mk` picks up `foo/shared.mk` regardless of
+where `Holmake` was invoked from.
+
+Includes nest: an included file may itself contain further
+`include` directives.  Cycles (`A` includes `B` includes `A`) are
+detected and reported as an error.  Conditional directives must
+balance *within each file* — an `ifdef` opened in an included file
+must be closed in the same file (just as GNU `make` requires) —
+but it is fine to wrap an `include` directive in a conditional in
+the including file.
+
+A typical use is to factor a list of common variables out of a
+group of sibling `Holmakefile`s into a single shared snippet:
+
+```
+# shared.mk
+COMMON_FLAGS = -I ../foo -I ../bar
+SOURCES = main.sml util.sml
+```
+
+```
+# subdir/Holmakefile
+include ../shared.mk
+target.uo: $(SOURCES)
+   $(HOLMOSMLC) $(COMMON_FLAGS) -c -o $@ $(SOURCES)
+```
+
 ### Execution of Commands before `Holmake` Begins
 
 \label{sec:holmake-preexec}

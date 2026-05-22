@@ -1,0 +1,4 @@
+BEFORE = b
+-include there_is_no_such_file
+sinclude another_nonexistent_file
+AFTER = a

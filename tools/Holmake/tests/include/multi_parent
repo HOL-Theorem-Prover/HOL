@@ -1,0 +1,2 @@
+include multi_one multi_two
+PARENT_VAR = parent
