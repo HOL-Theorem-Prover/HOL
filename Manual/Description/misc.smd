@@ -109,9 +109,9 @@ multiple directories).  A single invocation of `Holmake` will
 compute dependencies between files, (re)compile plain ML code,
 (re)compile and execute theory scripts, and (re)compile the
 resulting theory modules.  `Holmake` does not require the user to
-provide any explicit dependency information themselves.  `Holmake`
-can be very convenient to use, but there are some conventions and
-restrictions on it that must be followed, described below.
+provide any explicit dependency information themselves.  The
+conventions it relies on for source-file naming and ancestry
+declaration are described below.
 
 `Holmake` can be accessed through
 
@@ -352,7 +352,7 @@ file that is always separately compilable.
 [^misc-editor-modes]: There are editor modes for `emacs`, `vim`,
     and others.
 
-### `Holmake` Limitations
+### Multi-directory projects
 
 Without information to the contrary, `Holmake` assumes that all
 files of interest are in the current directory or in HOL's master
@@ -377,13 +377,6 @@ and rebuilding those remote targets as necessary.
 
 [^misc-includes-cli]: In one-off situations, it is also possible
     to use the `-I` flag on `Holmake`'s command-line.
-
-Finally, it is borderline impossible (or at least, extremely
-difficult) to describe how theories are built from script files
-using, e.g., the Unix command-line.  This means that it is hard to
-independently control/script the processing of $x$`Script.sml`
-files; one must instead rely on the logic built into `Holmake` to
-do this.
 
 ### `Holmake`'s command-line arguments
 
