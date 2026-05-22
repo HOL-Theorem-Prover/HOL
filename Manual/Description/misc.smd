@@ -934,6 +934,34 @@ files such as `tutorial.tex` (which have no corresponding
 pattern, and falls through to treating `tutorial.tex` as an
 ordinary leaf file.
 
+\index{Holmake@\holmake!pattern rules!cross-directory targets}
+**Pattern targets in subdirectories.**  A pattern target may carry
+a literal directory prefix, in which case it matches targets in
+that subdirectory of the `Holmakefile`'s own directory.  For
+instance, the rule
+
+```
+figs/%.svg: figs/%.mps
+        cd figs && mptopdf $*.mps
+        pdftocairo -svg figs/$*-mps.pdf $@
+```
+
+claims every `figs/*.svg` whose matching `figs/*.mps` source
+exists (and only those — the applicability rule still applies),
+and would collapse a dozen explicit per-figure rules into one.
+The path is interpreted relative to the directory holding the
+`Holmakefile`; patterns can reach into subdirectories but not
+across into siblings or upward into parents.
+
+A pattern with *no* literal directory prefix also fires for
+targets in subdirectories: the stem then absorbs the directory
+separator.  Writing `%.svg: %.mps` would match `figs/0.svg` with
+stem `figs/0`, looking for `figs/0.mps` as the prerequisite.  Use
+whichever form expresses the intent more clearly: an explicit
+prefix is usually clearer when the rule is scoped to a specific
+subdirectory, while the bare form is handy for "convert every
+`.x` to `.y`, wherever it lives" recipes.
+
 #### Special targets
 
 Some target names for rules are handled specially by `Holmake`:
