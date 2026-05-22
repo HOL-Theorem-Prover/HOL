@@ -11,6 +11,12 @@ description = "Reference description of the HOL system: the kernel, the librarie
 mathjax-support = true
 theme = "../theme"
 additional-css = ["custom.css"]
+# Disable pulldown-cmark's smart-punctuation pass: it transforms
+# straight ASCII `'` into curly `’` even inside `$$ ... $$` math
+# blocks, which breaks e.g. libraries.smd's HOL type-variable
+# tokens (`'a`, `'b`, ...).  Curly quotes in prose are written
+# explicitly as Unicode in the .smd source where wanted.
+smart-punctuation = false
 # Cross-book search: hol-searcher.js is a symlink to ../theme/
 # hol-searcher.js (the shared source), referenced here by its
 # in-book filename because mdbook copies additional-js entries

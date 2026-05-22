@@ -150,18 +150,30 @@ type operators) can be inspected using the function
 ```
 
 ```{=mdbook}
+$$
+\begin{array}{lcl}
+\tau &::=& \tau \;\odot\; \tau \;\;|\;\; \mathit{vtype} \;\;|\;\; \mathit{tyop} \;\;|\;\;
+           \mathtt{(} \;\mathit{tylist}\;\mathtt{)} \;\mathit{tyop} \;\;|\;\; \tau \;\mathit{tyop}
+           \;\;|\;\; \mathtt{(}\;\tau\;\mathtt{)} \;\;|\;\; \tau\mathtt{[}\tau\mathtt{]}\\
+\odot &::=& \mathtt{->} \;\;|\;\; \mathtt{\#} \;\;|\;\; \mathtt{+} \;\;|\;\; \cdots\\
+\mathit{vtype} &::=& \mathtt{'a} \;\;|\;\; \mathtt{'b} \;\;|\;\; \mathtt{'c} \;\;|\;\; \cdots\\
+\mathit{tylist} &::=& \tau \;\;|\;\; \tau \;\mathtt{,}\;\mathit{tylist}\\
+\mathit{tyop} &::=& \mathtt{bool} \;\;|\;\; \mathtt{list} \;\;|\;\; \mathtt{num} \;\;|\;\;
+           \mathtt{fun} \;\;|\;\; \cdots
+\end{array}
+$$
+
 **Figure \ref{fig:abstract-type-grammar}.** An abstract grammar for
-HOL types.  Type expressions $\tau$ are built from infix type
-operators ($\odot$ — e.g. `->`, `#`, `+`, …), type variables
-(`'a`, `'b`, …), and type operators (`bool`, `list`, `num`, `fun`,
-…) applied to argument lists.  Infixes always bind more weakly
-than type operators (and type-subscripting `t[u]`), so that
+HOL types ($\tau$).  Infixes ($\odot$) always bind more weakly
+than type operators ($\mathit{tyop}$) (and type-subscripting
+$\tau\mathtt{[}\tau\mathtt{]}$), so that
 $\tau_1 \;\odot\; \tau_2\;\mathit{tyop}$ is always parsed as
 $\tau_1 \;\odot\; (\tau_2\;\mathit{tyop})$.  Different infixes can
 have different priorities, and infixes at different priority levels
 can associate differently (to the left, to the right, or not at
-all).  Users can extend both categories by making new type
-definitions and by directly manipulating the grammar.
+all).  Users can extend the categories $\odot$ and $\mathit{tyop}$
+by making new type definitions, and by directly manipulating the
+grammar.
 ```
 
 #### Type infixes

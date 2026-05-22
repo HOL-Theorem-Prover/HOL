@@ -14,6 +14,10 @@ description = "Per-entry reference for every HOL function, theorem, tactic, conv
 mathjax-support = true
 theme = "../theme"
 additional-css = ["custom.css"]
+# See Manual/Description/book.toml for the smart-punctuation
+# rationale: pulldown-cmark smart-quotes straight `'` inside
+# math blocks, which we don't want.
+smart-punctuation = false
 # Cross-book search; see Manual/Description/book.toml for the
 # additional-js / symlink rationale.
 additional-js = ["hol-searcher.js"]
