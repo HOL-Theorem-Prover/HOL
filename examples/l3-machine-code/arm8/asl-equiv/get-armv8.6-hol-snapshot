@@ -8,6 +8,6 @@ git checkout 9f9bb9a9e6a133876152124ce3c30993a61fa7c9
 # Without this the generated .sig is ~1.3 GB, which trips a 32-bit Int
 # overflow in the MLton-built Holmake during dependency analysis.
 script=A64_ISA_v86A/armv86aScript.sml
-if ! grep -q '"TheoryPP.include_docs"' "$script"; then
-    sed -i '/^val _ = export_theory()/i val _ = Feedback.set_trace "TheoryPP.include_docs" 0;\n' "$script"
+if ! grep -q '"TheoryPP.include_html_docs"' "$script"; then
+    sed -i '/^val _ = export_theory()/i val _ = Feedback.set_trace "TheoryPP.include_html_docs" 0;\n' "$script"
 fi
