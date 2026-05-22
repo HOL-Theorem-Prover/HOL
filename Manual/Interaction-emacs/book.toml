@@ -1,0 +1,37 @@
+[book]
+title = "HOL: Interaction (emacs)"
+authors = ["The HOL Development Team"]
+language = "en"
+src = "."
+# `description` is read by Manual/Tools/gen_lander when generating
+# the top-level Manual/book/index.html; mdbook itself ignores it.
+description = "Driving HOL from Emacs: hol-mode keystrokes, goal navigation, theorem search, common proof tactics, and the editor side of the proof workflow."
+
+[output.html]
+mathjax-support = true
+theme = "../theme"
+additional-css = ["custom.css"]
+# See Manual/Description/book.toml for the smart-punctuation
+# rationale: pulldown-cmark smart-quotes straight `'` inside
+# math blocks, which we don't want.
+smart-punctuation = false
+# Cross-book search; see Manual/Description/book.toml for the
+# additional-js / symlink rationale.
+additional-js = ["hol-searcher.js"]
+
+# Single-chapter book: nothing to fold beyond the chapter itself.
+# Leave folding enabled for visual consistency with Description and
+# Tutorial; level=0 keeps the sole chapter entry visible by default.
+[output.html.fold]
+enable = true
+level = 0
+
+[preprocessor.smdpp]
+command = "../Tools/smdpp"
+renderers = ["html"]
+
+[build]
+# Outside the source directory so mdbook serve's watcher doesn't loop
+# rebuilding on its own output.
+build-dir = "../book/Interaction-emacs"
+create-missing = false

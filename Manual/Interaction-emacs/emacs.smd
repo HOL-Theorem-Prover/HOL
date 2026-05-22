@@ -1,0 +1,373 @@
+# Interaction with HOL4 (via emacs)
+
+\label{interaction}
+
+>>__ proofManagerLib.drop_all();
+
+HOL comes with emacs modes that make script files look prettier, and
+help when interacting with HOL sessions.  To install the scripts, add
+the following lines to your emacs initialisation file (`.emacs` or
+`.emacs.d/init.el`) with `<path>` replaced with the full path to your
+HOL4 installation:
+
+```elisp
+(load "<path>/HOL/tools/editor-modes/emacs/hol-mode")
+(load "<path>/HOL/tools/editor-modes/emacs/hol-unicode")
+```
+
+If your version of emacs does not highlight the active region by
+default, also add the following line to your initialisation file:
+
+```elisp
+(transient-mark-mode 1)
+```
+
+Restart emacs to make these changes take effect.
+
+## Starting a HOL4 session
+
+1. Start emacs.
+2. Press `C-x C-f` to open a file (its name should have suffix
+   `Script.sml`).
+3. Press `M-h H`, then press `RET` or down arrow and then `RET`.
+
+The HOL window should look something like this:
+
+```
+---------------------------------------------------------------------
+       HOL-4 [Kananaskis 13 (stdknl, built Tue Feb 18 15:39:00 2020)]
+
+       For introductory HOL help, type: help "hol";
+       To exit type <Control>-D
+---------------------------------------------------------------------
+> > > > >
+```
+
+## Copying input into HOL4 (Opening a theory)
+
+\label{copy}
+
+First, make sure you know how to select text in emacs.  Either:
+
+- Move the cursor while holding the shift key; or
+- Hit `C-space`, and then move the cursor normally; or
+- Use the mouse (hold the primary button and drag).
+
+To copy and paste the selected region into the HOL session press
+`M-h M-r`.  For example, selecting the following line, and then
+pressing `M-h M-r`
+
+```hol4
+open arithmeticTheory listTheory;
+```
+
+makes HOL4 open the library theories for arithmetic (over natural
+numbers) and lists.  This should not produce any significant output.
+
+## Starting a goal-oriented proof
+
+Most HOL4 proofs are constructed using an interactive *goal stack*
+and then put together using tactic combinators (see
+[Saving the resulting theorem](#saving-the-resulting-theorem) and
+[Saving proofs based on multiple tactics](#saving-proofs-based-on-multiple-tactics)).
+To start the goal stack:
+
+1. Write the outline of a theorem, in this case called `less_add_1`.
+   One can type $\forall$ by pressing the `!` key.  More key
+   shortcuts will be explained below.
+
+    ```hol4
+    Theorem less_add_1:
+      ∀n. n < n + 1
+    Proof
+
+    QED
+    ```
+
+2. Move the cursor between the `Theorem`-line and `Proof`-line.
+3. Press `M-h g` to push the goal onto the goal stack.
+
+The HOL4 window should look something like this:
+
+```repl
+>> g `!n. n < n + 1`;
+```
+
+### Typing Special Symbols in Emacs
+
+As above, we can write $\forall$ as `!` in HOL4.  Indeed, with the
+special HOL-input map turned on in Emacs (which happens by default,
+and is indicated by the presence of a $\Pi$ on the left of the
+modeline), typing `!` will produce a $\forall$ character
+automatically.  A number of other connectives are handled in similar
+ways.  There are also many abbreviations for even more common
+Unicode characters on `Control`-`Shift` modifiers (i.e., keys that
+are pressed at the same time as the Control and Shift modifier keys
+are held down).  For example, `C-S-l` gives a $\lambda$ character.
+Finally, there are yet more options when a leading backslash is
+typed.  For example `\a` will generate an $\alpha$ character (as
+will typing out `\alpha` in full).  In some situations, the
+machinery is even more sophisticated.  If one types `\l`, this will
+generate a listing of many different left arrow options in the
+mini-buffer.  If a space character is entered, the currently
+highlighted option will be selected.  Alternatively, pick a number
+or move the cursor with left and right arrow keys to choose that
+option (which will become the default option for next time).  See
+the [Unicode input bindings table](#unicode-input-bindings) below
+for more information.
+
+### Most important key bindings in the emacs HOL4 mode
+
+| Key       | Action                       | Key        | Action                          |
+|-----------|------------------------------|------------|---------------------------------|
+| `M-h H`   | start HOL                    | `M-h g`    | push goal onto goal stack       |
+| `M-h M-r` | copy region into HOL         | `M-h e`    | apply tactic to goal            |
+| `M-h C-t` | display types on/off         | `M-h b`    | move back in proof              |
+| `M-h C-c` | interrupt HOL                | `M-h p`    | print current goal              |
+| `` ` ``   | writes `‘ ’`                 | `M-h d`    | drop current goal               |
+| ``` `` ``` | writes `“ ”`                | `M-h M-s`  | start subgoal proof for `by`    |
+
+Note that all of these actions are also available in the HOL menu
+within Emacs.
+
+### Unicode input bindings
+
+\label{tab:unicode-input}
+
+| Symbol            | Control-Shift keybinding  | "Quail" binding(s)              |
+|-------------------|---------------------------|---------------------------------|
+| $\forall$         | `C-S-!`                   | `!`   `\all`                    |
+| $\exists$         | `C-S-?`                   | `?`   `\exists`                 |
+| $\land$           | `C-S-&`                   | `/\`  `\and`                    |
+| $\lor$            | `C-S-\|`                  | `\/`  `\or`                     |
+| $\neg$            | `C-S-~`                   | `\neg`                          |
+| $\iff$            | `C-S-=`                   | `\lr=` `\iff` $^\dagger$        |
+| $\neq$            | `C-M-S-\ =`               | `<>`  `\neq`                    |
+| $\Rightarrow$     | `C-M-S->`                 | `==>` `\r=` $^\dagger$          |
+| $\alpha$          | `C-S-a`                   | `\a`  `\alpha`                  |
+| $\beta$           | `C-S-b`                   | `\b`  `\beta`                   |
+| $\gamma$          | `C-S-g`                   | `\g`  `\gamma`                  |
+| $\Gamma$          | `C-M-S-g`                 | `\GG` `\Gamma`                  |
+| $\delta$          | `C-S-d`                   | `\d`  `\delta`                  |
+| $\Delta$          | `C-M-S-d`                 | `\GD` `\Delta`                  |
+| $\lambda$         | `C-S-l`                   | `\lambda`                       |
+| $\Lambda$         | `C-M-S-l`                 | `\GL` `\Lambda`                 |
+| …                 | …                         | …                               |
+| $\cup$            | `C-S-u`                   | `\cup`  `\union` $^\dagger$     |
+| $\cap$            | `C-S-i`                   | `\cap`  `\i`     $^\dagger$     |
+| $\in$             | `C-S-:`                   | `\in`                           |
+| $\notin$          | `C-M-S-\ :`               | `\notin`                        |
+| $\emptyset$       | `C-M-S-\ 0`               | `\empty`                        |
+| $\subseteq$       | `C-S-c`                   | `\subseteq`                     |
+| $\llparenthesis$  | `C-M-S-( C-M-S-\|`        |                                 |
+| $\rrparenthesis$  | `C-M-S-) C-M-S-\|`        |                                 |
+| $\llbracket$      | `C-S-[`                   | `\(` $^\dagger$                 |
+| $\rrbracket$      | `C-S-]`                   | `\)` $^\dagger$                 |
+| $\langle$         | `C-M-S-( C-S-<`           | `\langle` `\(` $^\dagger$       |
+| $\rangle$         | `C-M-S-) C-S->`           | `\rangle` `\)` $^\dagger$       |
+
+Multiple keys (separated by spaces) in the Control-Shift column
+indicate that a sequence of keys must be struck to achieve the
+desired character.  (For example, the `C-M-S-\` prefix is used to
+open up a set of bindings for characters with various forms of slash
+through them; following that with a colon puts a slash through the
+$\in$ symbol.)  Quail bindings are enabled if there is a $\Pi$
+character visible on the left of the current buffer's mode-line.
+Quail can be toggled on and off with the `C-\` keybinding.  Full
+details of the "quail" input map can be seen interactively by
+typing the command `M-x hol-input-show-translations`.  Quail
+bindings marked with daggers ($^\dagger$) are those that lead to
+multi-way selections that need to be made with numbers or
+left-right arrow keys.  Finally note that it is always possible to
+enter characters without special processing by first typing a
+`C-q`.
+
+## Applying a tactic
+
+\label{apply}
+
+Make progress in a proof using *proof tactics*.
+
+1. Write the name of a tactic, e.g. `decide_tac`; see
+   [Common proof tactics](tactics.md) for more tactics.
+2. Select the text of the tactic.
+3. Press `M-h e` to apply the tactic.
+
+A tactic makes HOL4 update the current goal.  The HOL4 window will
+either display the new goal(s) or print:
+
+```
+    Initial goal proved.
+    |- ∀n. n < n + 1 : goalstack
+```
+
+You can undo the effect of the applied tactic by pressing `M-h b`.
+Press `M-h p` to view the current goal.  To go all the way back to
+the start of the proof (to restart), press `M-h R`.
+
+## Ending a goal-oriented proof
+
+One can pop goals off the goal stack by pressing `M-h d`, which
+gives:
+
+```repl
+>> drop();
+```
+
+## Saving the resulting theorem
+
+\label{prove1}
+
+The tactic should be written between the `Proof`-line and the
+`QED`-line.
+
+```hol4
+Theorem less_add_1:
+  ∀n. n < n + 1
+Proof
+  decide_tac
+QED
+```
+
+When the above lines are copied into HOL4 (using text-selection
+then `M-h M-r`, as described in
+[Copying input into HOL4](#copying-input-into-hol4-opening-a-theory)),
+HOL4 responds with:
+
+```repl
+>> open arithmeticTheory;
+>> Theorem less_add_1:
+     ∀n. n < n + 1
+   Proof
+     decide_tac
+   QED
+```
+
+## Saving proofs based on multiple tactics
+
+\label{prove2}
+
+Suppose we have proved the goal `∀n. n <= n * n` with the following
+tactics.  Note that `‘n’` (with the "pretty" single quotation marks)
+can be produced by typing `` `n` ``.
+
+```hol4
+Induct_on ‘n’                  (* comment: induction on n  *)
+
+  decide_tac                   (* comment: solve base case *)
+
+  asm_simp_tac bool_ss [MULT]  (* comment: simplify goal   *)
+  decide_tac                   (* comment: solve step case *)
+```
+
+Tactics can be composed together for `Theorem` using `>>` and `>-`.
+The `>>` operator is an infix that composes two tactics into one.
+The `>-` is used to prove subgoals: `>-` *tactic* proves the first
+subgoal using *tactic*.
+
+Here is the entire proof when composed using `>>` and `>-`.
+
+```hol4
+Theorem less_eq_mult:
+  ∀n:num. n <= n * n
+Proof
+  Induct_on ‘n’
+  >- decide_tac
+  >- (asm_simp_tac bool_ss [MULT] >> decide_tac)
+QED
+```
+
+Copy the above into HOL4 using text-selection, and then `M-h M-r`,
+as in [Copying input into HOL4](#copying-input-into-hol4-opening-a-theory).
+
+## Displaying types in HOL4
+
+HOL4 does not by default display types.  Press `M-h C-t` to switch
+printing of type information on or off.
+
+## Interrupting HOL4
+
+Press `M-h C-c` to interrupt HOL4 --- useful when a tactic fails to
+terminate (e.g. `metis_tac` often fails to terminate when
+unsuccessfully applied).
+
+## Making a definition
+
+\label{definition}
+
+Functions are defined using `Definition ... End`, e.g. a function
+that squares a natural number is defined as follows.
+
+```hol4
+Definition SQUARE_def:
+  SQUARE n = n * n
+End
+```
+
+Data-types are defined using `Datatype ... End`, e.g. a binary tree
+which holds values of type `'a` (a type variable) at the leaves:
+
+```hol4
+Datatype:
+  TREE = LEAF 'a | BRANCH TREE TREE
+End
+```
+
+A valid tree is e.g. `BRANCH (LEAF 5) (BRANCH (LEAF 1) (LEAF 7))`
+with type `num TREE`, where `num` is the type name for a natural
+number.  We can define recursive functions, e.g.
+
+```hol4
+Definition MAP_TREE_def:
+  (MAP_TREE f (LEAF n) = LEAF (f n)) ∧
+  (MAP_TREE f (BRANCH u v) = BRANCH (MAP_TREE f u) (MAP_TREE f v))
+End
+```
+
+`SQUARE_def` and `MAP_TREE_def` are theorems containing the above
+definitions.  Theorems describing `TREE` can be retrieved by
+copying the following into HOL4 by pressing `C-space` then
+`M-h M-r`, as described in
+[Copying input into HOL4](#copying-input-into-hol4-opening-a-theory).
+
+```hol4
+val TREE_11 = fetch "-" "TREE_11";
+val TREE_distinct = fetch "-" "TREE_distinct";
+```
+
+## Making a theory
+
+Proofs and definitions are stored in files called scripts, e.g. we
+can store the definitions from above in a file called
+`less_lemmaScript.sml`, which should begin with the lines
+
+```hol4
+open HolKernel boolLib bossLib Parse
+val _ = new_theory "less_lemma";
+```
+
+and end with the line
+
+```hol4
+val _ = export_theory();
+```
+
+Thus, the entire file can be:
+
+```hol4
+open HolKernel boolLib bossLib Parse
+val _ = new_theory "less_lemma";
+
+Theorem less_add_1:
+  ∀n. n < n + 1
+Proof
+  decide_tac
+QED
+
+val _ = export_theory();
+```
+
+The theory file `less_lemmaTheory` is created by executing
+`Holmake` in the directory where `less_lemmaScript.sml` is stored.
+A human readable version of the compiled theory is stored under
+`less_lemmaTheory.sig`.

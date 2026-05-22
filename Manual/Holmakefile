@@ -19,9 +19,11 @@ cheatsheet: Cheatsheet/cheatsheet.html
 # Unified mdbook site -- one landing page at book/index.html with
 # per-manual subdirectories underneath.  Each per-manual mdbook
 # build is invoked recursively via its own Holmakefile.
-.PHONY: mdbook description-mdbook tutorial-mdbook reference-mdbook mdbook-serve
+.PHONY: mdbook description-mdbook tutorial-mdbook reference-mdbook \
+        interaction-emacs-mdbook mdbook-serve
 
-mdbook: description-mdbook tutorial-mdbook reference-mdbook book/index.html
+mdbook: description-mdbook tutorial-mdbook reference-mdbook \
+        interaction-emacs-mdbook book/index.html
 
 description-mdbook:
 	cd Description && $(protect $(HOLDIR)/bin/Holmake) mdbook
@@ -32,15 +34,17 @@ tutorial-mdbook:
 reference-mdbook:
 	cd Reference && $(protect $(HOLDIR)/bin/Holmake) mdbook
 
+interaction-emacs-mdbook:
+	cd Interaction-emacs && $(protect $(HOLDIR)/bin/Holmake) mdbook
+
 # Static landing page produced by Manual/Tools/gen_lander.  Cards
 # for each manual whose book.toml is passed on the command line.
-# Reference will join once its mdbook side ships (Phase B of the
-# unified-site plan).
 book/index.html: Tools/gen_lander Description/book.toml Tutorial/book.toml \
-                 Reference/book.toml
+                 Reference/book.toml Interaction-emacs/book.toml
 	mkdir -p book
 	./Tools/gen_lander Description/book.toml Tutorial/book.toml \
-	                   Reference/book.toml > $@
+	                   Reference/book.toml \
+	                   Interaction-emacs/book.toml > $@
 
 # Serve the unified site for cross-manual review.  Detaches into
 # the background like the per-manual mdbook-serve recipes; pass

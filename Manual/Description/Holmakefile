@@ -68,7 +68,8 @@ figs/%.svg: figs/%.pdf
 mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS) \
         $(SVG_FIGS) references.md cite-labels.tsv \
         ../Reference/entries.list \
-        labels.tsv ../Tutorial/labels.tsv ../Reference/labels.tsv
+        labels.tsv ../Tutorial/labels.tsv ../Reference/labels.tsv \
+        ../Interaction-emacs/labels.tsv
 	mdbook build
 	# Stable searchindex.js -> searchindex-<hash>.js symlink: the
 	# cross-book searcher loads sibling indices from `../<Book>/

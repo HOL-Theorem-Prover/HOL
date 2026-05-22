@@ -59,7 +59,8 @@ figs/combin-confluence-complete.svg: figs/combin-confluence-complete.tex
 mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS) \
         $(SVG_FIGS) references.md cite-labels.tsv \
         ../Reference/entries.list \
-        labels.tsv ../Description/labels.tsv ../Reference/labels.tsv
+        labels.tsv ../Description/labels.tsv ../Reference/labels.tsv \
+        ../Interaction-emacs/labels.tsv
 	mdbook build
 	# See Manual/Description/Holmakefile for the rationale.
 	cd ../book/Tutorial && \

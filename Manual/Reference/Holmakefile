@@ -40,7 +40,8 @@ entries.tex: entries.md
 # ---------------------------------------------------------------------
 mdbook: ../Tools/smdpp ../Tools/mdbook-check.sh \
         $(Helpd)/Docfiles/SUMMARY.md entries.list \
-        labels.tsv ../Description/labels.tsv ../Tutorial/labels.tsv
+        labels.tsv ../Description/labels.tsv ../Tutorial/labels.tsv \
+        ../Interaction-emacs/labels.tsv
 	mdbook build
 	# See Manual/Description/Holmakefile for the rationale.
 	cd ../book/Reference && \

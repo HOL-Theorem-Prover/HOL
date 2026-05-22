@@ -1,0 +1,200 @@
+# Common proof tactics
+
+\label{tactics}
+
+Most HOL4 proofs are carried out by stating a goal and then
+applying *proof tactics* that reduce the goal.  This section
+describes basic use of the most important proof tactics.  Press
+`C-space` then `M-h e` to apply a tactic (see
+[Applying a tactic](emacs.md#applying-a-tactic)).
+
+## Automatic provers
+
+Simple goals can often be proved automatically by `metis_tac`,
+`decide_tac` or `EVAL_TAC`.  Of these, `metis_tac` is first-order
+prover which is good at general problems, but requires the user to
+supply a list of relevant theorems, e.g. the following goal is
+proved by `metis_tac [MOD_TIMES2, MOD_MOD, MOD_PLUS]`.
+
+```hol4
+∀k. 0 < k ==> ∀m p n. (m MOD k * p + n) MOD k = (m * p + n) MOD k
+```
+
+`decide_tac` handles linear arithmetic over natural numbers, e.g.
+`decide_tac` solves:
+
+```hol4
+∀m n k. m < n ∧ n < m+k ∧ k <= 3 ∧ ~(n = m+1) ==> (n = m+2)
+```
+
+`EVAL_TAC` is good at fully instantiated goals, e.g. `EVAL_TAC`
+solves:
+
+```hol4
+0 < 5 ∧ (HD [4;5;6;7] + 2**32 = 3500 DIV 7 + 4294966800)
+```
+
+## Proof set-up
+
+Goals that contain top-level universal quantifiers (`∀x.`),
+implication (`==>`) or conjunction (`∧`) are often taken apart
+using `rpt strip_tac` or just `strip_tac`, e.g. the goal
+`∀x. (∀z. x < h z) ==> ∃y. f x = y` becomes the following.
+(Assumptions are written under the line.)
+
+```
+    ∃y. f x = y
+    ------------------------------------
+      ∀z. x < h z
+```
+
+## Existential quantifiers
+
+Goals that have a top-level existential quantifier can be given a
+witness using `qexists_tac`, e.g. `qexists_tac ‘1’` applied to goal
+`∃n. ∀k. n * k = k` produces goal `∀k. 1 * k = k`.
+
+## Rewrites
+
+Most HOL4 proofs are based on rewriting using equality theorems,
+e.g.
+
+```hol4
+ADD_0:            |- ∀n. n + 0 = n
+LESS_MOD:         |- ∀n k. k < n ==> (k MOD n = k)
+```
+
+`asm_simp_tac` and `full_simp_tac` are two commonly used rewriting
+tactics, e.g. suppose the goal is the following:
+
+```
+    5 + 0 + m = (m MOD 10) + (5 MOD 8)
+    ------------------------------------
+      0.  p = 2 + 0 + (m MOD 10)
+      1.  m < 10
+```
+
+`asm_simp_tac bool_ss [ADD_0, LESS_MOD]` rewrites the goal using
+the supplied theorems together with the current goal's assumptions
+and some boolean simplifications `bool_ss`:
+
+```
+    5 + m = m + (5 MOD 8)
+    ------------------------------------
+      0.  p = 2 + 0 + (m MOD 10)
+      1.  m < 10
+```
+
+`full_simp_tac bool_ss [ADD_0, LESS_MOD]` does the same except
+that it also applies the rewrites to the assumptions:
+
+```
+    5 + m = m + (5 MOD 8)
+    ------------------------------------
+      0.  p = 2 + m
+      1.  m < 10
+```
+
+`bool_ss` can be replaced by `std_ss`, which is a stronger
+simplification set that would infer `5 < 8` and hence simplify
+`5 MOD 8` as well.  I recommend that the interested reader also
+reads about `AC`, `Once` and `srw_tac`.
+
+## Induction
+
+Use the tactic `Induct_on ‘x’` to start an induction on `x`.  Here
+`x` can be any variable with a recursively defined type, e.g. a
+natural number, a list or a `TREE` as defined in
+[Making a definition](emacs.md#making-a-definition).  One can start a complete (or strong)
+induction over the natural number `n` using
+`completeInduct_on ‘n’`.  As with `Cases_on` one can also induct
+on terms (e.g., `Induct_on ‘hi - lo’`), though these proofs can be
+harder to carry out.
+
+## Case splits
+
+A goal can be split into cases using `Cases_on ‘x’`.  The goal is
+split according to the constructors of the type of `x`, e.g. for
+the following goal
+
+```hol4
+∀x. ~(x = []) ==> (x = HD x::TL x)
+```
+
+`Cases_on ‘x’` splits the goal into two:
+
+```hol4
+~(h::t = []) ==> (h::t = HD (h::t)::TL (h::t))
+
+~([] = []) ==> ([] = HD []::TL [])
+```
+
+Case splits on boolean expressions are also useful, e.g.
+`Cases_on ‘n < 5’`.
+
+## Subproofs
+
+It is often useful to start a mini-proof inside a larger proof,
+e.g. for the goal
+
+```
+    foo n
+    ------------------------------------
+      0 < n
+```
+
+we might want to prove `h n = g n` assuming `0 < n`.  We can start
+such a subproof by typing ``sg `h n = g n` ``.[^subgoal-binding]
+
+[^subgoal-binding]: You can also use the emacs binding `M-h M-s`
+with the cursor inside the sub-goal.
+
+The new goal stack:
+
+```
+    foo n
+    ------------------------------------
+      0.  0 < n
+      1.  h n = g n
+
+    h n = g n
+    ------------------------------------
+      0 < n
+```
+
+If `h n = g n` can be proved in one step, e.g. using
+`metis_tac [MY_LEMMA]`, then apply
+``‘h n = g n’ by metis_tac [MY_LEMMA]`` instead of
+``sg `h n = g n` ``.  If the sub-goal requires multiple steps the
+tactic after the `by` will need to be parenthesised:
+``‘goal’ by (tac₁ >> tac₂ ...)``.
+
+## Proof by contradiction
+
+Use `CCONTR_TAC` to add the negation of the goal to the
+assumptions.  The task is then to prove that one of the
+assumptions of the goal is false.  One can e.g. add more
+assumptions using ``‘...’ by ...``, described above, until one
+assumption is the negation of another assumption (and then apply
+`metis_tac []`).
+
+## More tactics
+
+\label{html}
+
+An HTML reference of all tactics and proof tools is created when
+HOL4 is compiled.  Replace `<path>` with the path to your HOL4
+installation.
+
+```
+<path>/HOL4/help/src/htmlsigs/idIndex.html
+```
+
+The reference provides an easy way to access both the
+implementations of tactics as well as their documentation (where
+such exists).  The interested reader may want to look up the
+following:
+
+```
+CONV_TAC  disj1_tac  disj2_tac  match_mp_tac  mp_tac  pat_assum  Q
+```

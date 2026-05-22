@@ -1,0 +1,62 @@
+% Hand-written PDF wrapper for the Interaction (emacs) manual.  The
+% chapter bodies live in <chapter>.smd; polyscripter + pandoc turn
+% those into <chapter>.tex (body fragments, no preamble), which this
+% file \input{}s in the order listed in chapters.txt.
+%
+% Document class is `report' so each chapter's H1 -> \chapter{...}
+% rendering (pandoc --top-level-division=chapter) yields numbered
+% chapters; article doesn't have \chapter.
+%
+% We hand-roll the wrapper rather than driving pandoc with
+% --standalone because pandoc's default LaTeX template hard-codes
+% \usepackage{lmodern}, which isn't available on all build hosts.
+% Keeping the preamble local matches what the other manuals
+% (Description, Tutorial) do.
+\documentclass[a4paper,11pt]{report}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+% Math packages: amssymb provides \forall, \exists, \alpha, ...
+% which pandoc emits for the Unicode codepoints in the chapter
+% source's inline math.  amsmath is a soft dependency for misc
+% display-math constructs.
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{upquote,alltt,url}
+% Tables: pandoc-generated chapters use `longtable' columns with
+% `>{\raggedright}p{... \real{N} ...}' specs that need `array' for
+% the >{} prefix and `calc' for \real.  Without calc, latex aborts
+% the column spec with "Illegal character in array arg", and the
+% whole table is skipped -- which cascades into a broken aux file,
+% which in turn drops the TOC entries that should reference it.
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{calc}
+\providecommand{\tightlist}{% pandoc fragments emit this for tight lists
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\newcounter{none}                 % referenced by pandoc longtable captions
+% Shared HOL Unicode codepoint declarations (∀, ∃, ∈, ⟦, ⟧, ...)
+% used in chapter source for HOL syntax.  Lives under Description/
+% but is also pulled in by Tutorial via the same path.
+\usepackage{../Description/desc-unicode}
+% hyperref defines \href (for pandoc-emitted markdown links) and
+% \texorpdfstring (for pandoc-emitted chapter titles that contain
+% LaTeX commands like \textsc).  hidelinks suppresses the coloured
+% boxes around link text; hypertexnames=false matches the
+% Description/Tutorial wrappers.
+\usepackage[hidelinks,hypertexnames=false]{hyperref}
+\input{../LaTeX/commands}
+
+\title{HOL: Interaction (emacs)}
+\author{The HOL Development Team}
+\date{}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\input{intro}
+\input{emacs}
+\input{search}
+\input{tactics}
+\input{reading}
+\end{document}
