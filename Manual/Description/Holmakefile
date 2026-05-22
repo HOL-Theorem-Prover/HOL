@@ -1,5 +1,13 @@
 INCLUDES = ../Tools ../Reference ../../examples/probability $(HOLDIR)/src/integer
 
+# Cross-manual labels.tsv prereq list for the mdbook target.
+# MANUALS comes from $(HOLDIR)/Manual/manuals.txt (one stem per
+# line); $(patsubst $(THIS),,...) drops the self-entry; the second
+# $(patsubst) prefixes ../<M>/labels.tsv.
+MANUALS = $(shell cat $(HOLDIR)/Manual/manuals.txt)
+THIS = Description
+SIBLING_LABELS = $(patsubst %,../%/labels.tsv,$(patsubst $(THIS),,$(MANUALS)))
+
 TEX_CORES = description title preface system conv drules tactics \
 	theories math definitions libraries misc HolSat HolQbf HolSmt \
 	PatternMatchesLib QuantHeuristics enumfset simplifier \
@@ -65,11 +73,19 @@ figs/%.svg: figs/%.pdf
 # Depending on $(SMD_MDS) ensures Holmake builds those .uo files
 # before mdbook runs, the same way description.pdf gets them via
 # $(TEX_SOURCES).
-mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS) \
+# `mdbook` is a recipe-less PHONY alias for the real file target
+# below: it just lets the per-manual `Holmake mdbook` (and the
+# aggregator's Description/mdbook) name stand while the actual work
+# is gated on `../book/Description/index.html`'s mtime, so re-runs
+# with no source changes are no-ops instead of re-invoking mdbook
+# and the post-build checks unconditionally.
+mdbook: ../book/Description/index.html
+
+../book/Description/index.html: ../Tools/smdpp SUMMARY.md \
+        ../Tools/mdbook-check.sh $(SMD_MDS) \
         $(SVG_FIGS) references.md cite-labels.tsv \
         ../Reference/entries.list \
-        labels.tsv ../Tutorial/labels.tsv ../Reference/labels.tsv \
-        ../Interaction-emacs/labels.tsv
+        labels.tsv $(SIBLING_LABELS)
 	mdbook build
 	# Stable searchindex.js -> searchindex-<hash>.js symlink: the
 	# cross-book searcher loads sibling indices from `../<Book>/

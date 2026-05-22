@@ -9,6 +9,12 @@ Helpd=../../help
 
 INCLUDES = $(Helpd)/src-sml ../Tools
 
+# Cross-manual labels.tsv prereq list for the mdbook target.
+# See Manual/Description/Holmakefile for the rationale.
+MANUALS = $(shell cat $(HOLDIR)/Manual/manuals.txt)
+THIS = Reference
+SIBLING_LABELS = $(patsubst %,../%/labels.tsv,$(patsubst $(THIS),,$(MANUALS)))
+
 OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex \
         ../LaTeX/ref-macros.tex
 
@@ -38,10 +44,13 @@ entries.tex: entries.md
 # filename).  SUMMARY.md is generated from the file listing into
 # help/Docfiles/ itself, alongside the entries (gitignored there).
 # ---------------------------------------------------------------------
-mdbook: ../Tools/smdpp ../Tools/mdbook-check.sh \
+# Recipe-less PHONY alias; the real gate is the file target below.
+# See Manual/Description/Holmakefile for the rationale.
+mdbook: ../book/Reference/index.html
+
+../book/Reference/index.html: ../Tools/smdpp ../Tools/mdbook-check.sh \
         $(Helpd)/Docfiles/SUMMARY.md entries.list \
-        labels.tsv ../Description/labels.tsv ../Tutorial/labels.tsv \
-        ../Interaction-emacs/labels.tsv
+        labels.tsv $(SIBLING_LABELS)
 	mdbook build
 	# See Manual/Description/Holmakefile for the rationale.
 	cd ../book/Reference && \

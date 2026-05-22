@@ -1,5 +1,11 @@
 INCLUDES = ../Tools
 
+# Cross-manual labels.tsv prereq list for the mdbook target.
+# See Manual/Description/Holmakefile for the rationale.
+MANUALS = $(shell cat $(HOLDIR)/Manual/manuals.txt)
+THIS = Interaction-emacs
+SIBLING_LABELS = $(patsubst %,../%/labels.tsv,$(patsubst $(THIS),,$(MANUALS)))
+
 PS_ROOT = ../Tools/polyscripter
 PS_STUFF = $(PS_ROOT) ../Tools/umap
 PS_NOUMAP = $(PS_ROOT) -md < $< > $@
@@ -26,9 +32,13 @@ SMD_MDS = $(patsubst %.smd,%.md,$(SMDS))
 # book.toml).  Cross-book \ref{Book:label} support requires every
 # manual's labels.tsv on disk first; see Manual/Description/
 # Holmakefile for the rationale.
-mdbook: ../Tools/smdpp SUMMARY.md ../Tools/mdbook-check.sh $(SMD_MDS) \
-        labels.tsv ../Description/labels.tsv ../Tutorial/labels.tsv \
-        ../Reference/labels.tsv
+# Recipe-less PHONY alias; the real gate is the file target below.
+# See Manual/Description/Holmakefile for the rationale.
+mdbook: ../book/Interaction-emacs/index.html
+
+../book/Interaction-emacs/index.html: ../Tools/smdpp SUMMARY.md \
+        ../Tools/mdbook-check.sh $(SMD_MDS) \
+        labels.tsv $(SIBLING_LABELS)
 	mdbook build
 	# Stable searchindex.js symlink for the cross-book searcher;
 	# see Manual/Description/Holmakefile for the rationale.

@@ -17,34 +17,26 @@ quick: Quick/quick.pdf
 cheatsheet: Cheatsheet/cheatsheet.html
 
 # Unified mdbook site -- one landing page at book/index.html with
-# per-manual subdirectories underneath.  Each per-manual mdbook
-# build is invoked recursively via its own Holmakefile.
-.PHONY: mdbook description-mdbook tutorial-mdbook reference-mdbook \
-        interaction-emacs-mdbook mdbook-serve
+# per-manual subdirectories underneath.  Both the per-manual and
+# aggregator targets are derived from the MANUALS list read out
+# of `manuals.txt' (one stem per line) -- so adding a new manual
+# is a one-line edit there, and the same shell-read is repeated
+# in each per-manual Holmakefile (anchored on $(HOLDIR) so the
+# path resolves the same way no matter which cwd Holmake started
+# in).
+MANUALS = $(shell cat $(HOLDIR)/Manual/manuals.txt)
+MDBOOK_TARGETS = $(patsubst %,%/mdbook,$(MANUALS))
+BOOK_TOMLS = $(patsubst %,%/book.toml,$(MANUALS))
 
-mdbook: description-mdbook tutorial-mdbook reference-mdbook \
-        interaction-emacs-mdbook book/index.html
+.PHONY: mdbook mdbook-serve
 
-description-mdbook:
-	cd Description && $(protect $(HOLDIR)/bin/Holmake) mdbook
-
-tutorial-mdbook:
-	cd Tutorial && $(protect $(HOLDIR)/bin/Holmake) mdbook
-
-reference-mdbook:
-	cd Reference && $(protect $(HOLDIR)/bin/Holmake) mdbook
-
-interaction-emacs-mdbook:
-	cd Interaction-emacs && $(protect $(HOLDIR)/bin/Holmake) mdbook
+mdbook: $(MDBOOK_TARGETS) book/index.html
 
 # Static landing page produced by Manual/Tools/gen_lander.  Cards
 # for each manual whose book.toml is passed on the command line.
-book/index.html: Tools/gen_lander Description/book.toml Tutorial/book.toml \
-                 Reference/book.toml Interaction-emacs/book.toml
+book/index.html: Tools/gen_lander $(BOOK_TOMLS)
 	mkdir -p book
-	./Tools/gen_lander Description/book.toml Tutorial/book.toml \
-	                   Reference/book.toml \
-	                   Interaction-emacs/book.toml > $@
+	./Tools/gen_lander $(BOOK_TOMLS) > $@
 
 # Serve the unified site for cross-manual review.  Detaches into
 # the background like the per-manual mdbook-serve recipes; pass
