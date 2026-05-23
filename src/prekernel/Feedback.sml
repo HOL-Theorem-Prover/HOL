@@ -114,6 +114,7 @@ val ERR = mk_HOL_ERR "Feedback"  (* local to this file *)
 val emit_ERR     = ref true
 val emit_MESG    = ref true
 val emit_WARNING = ref true
+val emit_INFO    = ref true
 val WARNINGs_as_ERRs = ref false
 
 fun out strm s = (TextIO.output(strm, s); TextIO.flushOut strm)
@@ -121,9 +122,11 @@ fun out strm s = (TextIO.output(strm, s); TextIO.flushOut strm)
 val ERR_outstream     = ref (out TextIO.stdErr)
 val MESG_outstream    = ref (out TextIO.stdOut)
 val WARNING_outstream = ref (out TextIO.stdOut)
+val INFO_outstream    = ref (out TextIO.stdOut)
 
 fun quiet_warnings f = Portable.with_flag (emit_WARNING, false) f
 fun quiet_messages f = Portable.with_flag (emit_MESG, false) f
+fun quiet_info f     = Portable.with_flag (emit_INFO, false) f
 
 (*---------------------------------------------------------------------------*
  * Formatting and output for exceptions, messages, and warnings.             *
@@ -138,9 +141,12 @@ fun format_WARNING structName fnName mesg =
    String.concat
       ["<<HOL warning: ", structName, ".", fnName, ": ", mesg, ">>\n"]
 
+fun format_INFO s = s
+
 val ERR_to_string     = ref format_ERR
 val MESG_to_string    = ref format_MESG
 val WARNING_to_string = ref format_WARNING
+val INFO_to_string    = ref format_INFO
 
 fun output_ERR s = if !emit_ERR then !ERR_outstream s else ()
 
@@ -223,6 +229,9 @@ fun HOL_WARNING s1 s2 s3 =
 
 fun HOL_WARNINGloc s1 s2 locn s3 =
    HOL_WARNING s1 s2 (locn.toString locn ^ " :\n" ^ s3)
+
+fun HOL_INFO s =
+    if !emit_INFO then !INFO_outstream (!INFO_to_string s) else ()
 
 (*---------------------------------------------------------------------------*
  * Traces, numeric flags; the higher setting, the more verbose the output.   *

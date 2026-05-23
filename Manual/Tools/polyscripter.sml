@@ -648,6 +648,7 @@ fun setupPolyscripter () =
     val _ = Feedback.ERR_outstream := obPush
     val _ = Feedback.WARNING_outstream := obPush
     val _ = Feedback.MESG_outstream := obPush
+    val _ = Feedback.INFO_outstream := obPush
   in
     obuf
   end
