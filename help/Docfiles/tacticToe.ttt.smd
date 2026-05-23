@@ -29,11 +29,11 @@ reconstruct.
 ### Example
 
 ``` hol4
->> load "tttUnfold"; load "tacticToe"; open tacticToe;
+- load "tttUnfold"; load "tacticToe"; open tacticToe;
 
->>+ tttUnfold.ttt_record (); (* takes multiple hours the first time it is called *)
+- tttUnfold.ttt_record (); (* takes multiple hours the first time it is called *)
 
->>+ ttt ([],``1+1=2``);
+- ttt ([],``1+1=2``);
 ```
 
 ### Comments
