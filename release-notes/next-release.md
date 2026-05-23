@@ -45,6 +45,11 @@ Bugs fixed
 
 -   We also fixed another [kernel soundness bug](https://github.com/HOL-Theorem-Prover/HOL/issues/1870) found by Ramana Kumar in the technology used to push constants from `bool` back into the kernel.
 
+-   The contextual decision-procedure cache used by the arithmetic simpset fragments (`numSimps.ARITH_ss`, `realSimps.REAL_ARITH_ss`, `intSimps.OMEGA_ss`/`COOPER_ss`, and `bagSimps.SBAG_SOLVE_ss`) was unbounded.
+    In long-running sessions the cache accumulated entries — both in number of cached goals and in the per-key list of `(context, result)` pairs under each goal — and `simp` invocations slowed down approximately linearly with session length, dominated by linear scans of the per-key list under `boolSyntax.F`.
+    The cache now uses LRU eviction on the keyspace and a per-key list cap, with both bounds set at cache-creation time.
+    See the `Cache.sig` header for the new `{capacity, per_key_cap}` constructor argument.
+
 New theories
 ------------
 
@@ -97,6 +102,10 @@ Incompatibilities
 | `REAL_LT_RMUL'` | `REAL_LT_RMUL_NEG` | `!x y z. z < 0 ==> (x * z < y * z <=> y < x)` |
 
 -   For better compatibility with HOL Light (making code-porting easier), arithmetic theory’s `GREATER_EQ` theorem (stating *m ≥ n ⇔ n ≤ m*) is now also available in that theory under the name `GE`.
+
+-   `Cache.CACHE` and `Cache.RCACHE` (used to build cached versions of contextual decision procedures) now take a `{capacity:int, per_key_cap:int}` record argument as their first parameter.
+    `capacity` bounds the number of distinct goal terms held in the cache (LRU-evicted when exceeded); `per_key_cap` bounds the list of `(context, result)` pairs stored under each goal (oldest pair dropped when exceeded).
+    Direct callers must update their constructor invocations; in-tree callers (`numSimps`, `realSimps`, `intSimps`, `bagSimps`) have been updated to pass `{capacity=2000, per_key_cap=32}`.
 
 -   The function `Parse.remove_user_printer` now returns `unit`.
 
