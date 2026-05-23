@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `tag`
 
 ``` hol4
@@ -20,11 +21,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- Thm.tag (mk_thm([],F));
-> val it = Kerneltypes.TAG(["MK_THM"], []) : tag
+>> Thm.tag (mk_thm([],F));
 
-- Thm.tag NOT_FORALL_THM;
-> val it = Kerneltypes.TAG([], []) : tag
+>> Thm.tag NOT_FORALL_THM;
 ```
 
 ### See also

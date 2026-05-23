@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `op_arity`
 
 ``` hol4
@@ -20,11 +21,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- op_arity{Tyop="fun", Thy="min"};
-> val it = SOME 2 : int option
+>> op_arity{Tyop="fun", Thy="min"};
 
-- op_arity{Tyop="foo", Thy="min"};
-> val it = NONE : int option
+>> op_arity{Tyop="foo", Thy="min"};
 ```
 
 ### See also

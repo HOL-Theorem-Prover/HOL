@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `BINDER_CONV`
 
 ``` hol4
@@ -19,8 +20,7 @@ If `conv N` fails, or if `v` is free in `A`.
 ### Example
 
 ``` hol4
-- BINDER_CONV SYM_CONV (Term `\x. x + 0 = x`);
-> val it = |- (\x. x + 0 = x) = \x. x = x + 0 : thm
+>> BINDER_CONV SYM_CONV (Term `\x. x + 0 = x`);
 ```
 
 ### Comments

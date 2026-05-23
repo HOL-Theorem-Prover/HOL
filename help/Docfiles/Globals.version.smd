@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `version`
 
 ``` hol4
@@ -11,8 +12,7 @@ The version number of the `HOL` system being run.
 ### Example
 
 ``` hol4
-- Globals.version;
-> val it = 2 : int
+>> Globals.version;
 ```
 
 ### See also

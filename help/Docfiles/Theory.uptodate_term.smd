@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `uptodate_term`
 
 ``` hol4
@@ -34,22 +35,15 @@ Never fails.
 ### Example
 
 ``` hol4
-- Define `fact x = if x=0 then 1 else x * fact (x-1)`;
-Equations stored under "fact_def".
-Induction stored under "fact_ind".
-> val it = |- fact x = (if x = 0 then 1 else x * fact (x - 1)) : thm
+>> Define `utdtfact x = if x=0 then 1 else x * utdtfact (x-1)`;
 
-- val M = Term `!x. 0 < fact x`;
-> val M = `!x. 0 < fact x` : term
+>> val M = Term `!x. 0 < utdtfact x`;
 
-- uptodate_term M;
-> val it = true : bool
+>> uptodate_term M;
 
-- delete_const "fact";
-> val it = () : unit
+>> delete_const "utdtfact";
 
-- uptodate_term M;
-> val it = false : bool
+>> uptodate_term M;
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `BETA_CONV`
 
 ``` hol4
@@ -26,11 +27,9 @@ inference rules of the HOL system.
 ### Example
 
 ``` hol4
-- BETA_CONV (Term `(\x.x+1)y`);
-> val it = |- (\x. x + 1)y = y + 1 :thm
+>> BETA_CONV (Term `(\x.x+1)y`);
 
-- BETA_CONV (Term `(\x y. x+y)y`);
-> val it = |- (\x y. x + y)y = (\y'. y + y') : thm
+>> BETA_CONV (Term `(\x y. x+y)y`);
 ```
 
 ### See also

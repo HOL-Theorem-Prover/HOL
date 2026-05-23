@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `mk_let`
 
 ``` hol4
@@ -22,8 +23,7 @@ of `N` must equal the domain of the type of `M`.
 ### Example
 
 ``` hol4
-- mk_let(Term`\x. x \/ x`, Term`Q /\ R`);
-> val it = `let x = Q /\ R in x \/ x` : term
+>> mk_let(Term`\x. x \/ x`, Term`Q /\ R`);
 ```
 
 ### Comments

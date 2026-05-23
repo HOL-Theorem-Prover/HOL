@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `GEN_VALIDATE`
 
 ``` hol4
@@ -27,46 +28,21 @@ Also fails if `tac` fails when applied to the given goal.
 ### Example
 
 For example, where theorem `uthr'` is `[p', q] |- r`
+>>__ val uthr' = mk_thm([``p':bool``, ``q:bool``], ``r:bool``)
 
 ``` hol4
-1 subgoal:
-val it =
+##linecount_limit 2 _
+>>- set_goal([``p:bool``, ``q:bool``], ``r:bool``);
+##linecount_limit 0 _
 
-r
-------------------------------------
-  0.  p
-  1.  q
-
-> e (VALIDATE (ACCEPT_TAC uthr')) ;
-OK..
-1 subgoal:
-val it =
-
-p'
-------------------------------------
-  p
-:
-   proof
+>> e (VALIDATE (ACCEPT_TAC uthr')) ;
 ```
 
 but, instead of that,
+>>__ b();
 
 ``` hol4
-> e (GEN_VALIDATE false (ACCEPT_TAC uthr')) ;
-OK..
-2 subgoals:
-val it =
-
-q
-------------------------------------
-  0.  p
-  1.  q
-
-
-p'
-------------------------------------
-  0.  p
-  1.  q
+>> e (GEN_VALIDATE false (ACCEPT_TAC uthr')) ;
 ```
 
 Use `GEN_VALIDATE false` rather than `VALIDATE` when programming

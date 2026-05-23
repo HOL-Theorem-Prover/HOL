@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `subst_assoc`
 
 ``` hol4
@@ -22,8 +23,7 @@ traversal of the substitution.
 ### Example
 
 ``` hol4
-- subst_assoc is_abs [T |-> F, Term `\x.x` |-> Term `combin$I`];
-> val it = SOME`I` : term option
+>> subst_assoc is_abs [T |-> F, Term `\x.x` |-> Term `combin$I`];
 ```
 
 ### See also

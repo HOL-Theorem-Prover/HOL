@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `dest_thm`
 
 ``` hol4
@@ -17,8 +18,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- dest_thm (ASSUME (Term `p=T`));
-> val it = ([`p = T`], `p = T`) : term list * term
+>> dest_thm (ASSUME (Term `p=T`));
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `enable_monad`
 
 ``` hol4
@@ -30,19 +31,15 @@ variable `f` is one that either increments the first element of a list
 and returns that value, or returns 0.
 
 ``` hol4
-> enable_monadsyntax(); enable_monad "option";
-val it = () : unit
-val it = () : unit
+>>__ load "monadsyntax";
 
-> val f = “λl. do x <- oHD l; return (x + 1); od ++ return 0”
-val f = “λl. do x <- oHD l; SOME (x + 1); od ++ SOME 0” : term
+>> monadsyntax.enable_monadsyntax(); monadsyntax.enable_monad "option";
 
-> EVAL “^f [3; 10]”;
-val it = ⊢ (λl. do x <- oHD l; SOME (x + 1) od ⧺ SOME 0) [3; 10] = SOME 4:
-   thm
+>> val f = “λl. do x <- oHD l; return (x + 1); od ++ return 0”
 
-> EVAL “^f []”;
-val it = ⊢ (λl. do x <- oHD l; SOME (x + 1) od ⧺ SOME 0) [] = SOME 0: thm
+>> EVAL “^f [3; 10]”;
+
+>> EVAL “^f []”;
 ```
 
 Note how the `return` keyword is not printed as such by the parser; it

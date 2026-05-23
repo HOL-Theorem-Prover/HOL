@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `clear_overloads_on`
 
 ``` hol4
@@ -22,18 +23,14 @@ effect.
 ### Example
 
 ``` hol4
-- load "realTheory";
-> val it = () : unit
-- realTheory.REAL_INV_LT1;
-> val it = |- !x. 0 < x /\ x < 1 ==> 1 < inv x : thm
-- clear_overloads_on "<";
-> val it = () : unit
-- realTheory.REAL_INV_LT1;
-> val it = |- !x. 0 real_lt x /\ x real_lt 1 ==> 1 real_lt inv x : thm
-- clear_overloads_on "&";
-> val it = () : unit
-- realTheory.REAL_INV_LT1;
-> val it = |- !x. 0r real_lt x /\ x real_lt 1r ==> 1r real_lt inv x : thm
+>>__ load "realTheory";
+>>__ val clear_overloads_initial_grammars = (Parse.type_grammar(), Parse.term_grammar());
+>> realTheory.REAL_INV_LT1;
+>> clear_overloads_on "<";
+>> realTheory.REAL_INV_LT1;
+>> clear_overloads_on "&";
+>> realTheory.REAL_INV_LT1;
+>>__ Parse.temp_set_grammars clear_overloads_initial_grammars;
 ```
 
 If overloading gets too confusing, this function should help to clear

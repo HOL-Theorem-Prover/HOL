@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `underAIs`
 
 ``` hol4
@@ -28,9 +29,8 @@ of guarding implications.
 ### Example
 
 ``` hol4
-> underAIs (EXISTS (“∃m. (k * n) MOD m = 0”, “n:num”))
+>> underAIs (EXISTS (“∃m. (k * n) MOD m = 0”, “n:num”))
            arithmeticTheory.MOD_EQ_0;
-val it = ⊢ ∀n. 0 < n ⇒ ∀k. ∃m. (k * n) MOD m = 0: thm
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `DISJUNCTS_AC`
 
 ``` hol4
@@ -22,8 +23,7 @@ Fails if `t1` and `t2` are not equivalent, as described above.
 ### Example
 
 ``` hol4
-- DISJUNCTS_AC (Term `(P \/ Q) \/ R`, Term `R \/ (Q \/ R) \/ P`);
-> val it = |- (P \/ Q) \/ R = R \/ (Q \/ R) \/ P : thm
+>> DISJUNCTS_AC (Term `(P \/ Q) \/ R`, Term `R \/ (Q \/ R) \/ P`);
 ```
 
 Used to reorder a disjunction. First sort the disjuncts in a term `t1`

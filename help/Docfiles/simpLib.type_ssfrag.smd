@@ -1,15 +1,16 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `type_ssfrag`
 
 ``` hol4
-simpLib.type_ssfrag : string -> ssfrag
+simpLib.type_ssfrag : hol_type -> ssfrag
 ```
 
 ------------------------------------------------------------------------
 
 Returns a simpset fragment for simplifying types' constructors.
 
-A call to `type_ssfrag(s)` function returns a simpset fragment that
-embodies simplification routines for the type named by the string `s`.
+A call to `type_ssfrag ty` function returns a simpset fragment that
+embodies simplification routines for the type `ty`.
 The fragment includes rewrites that express injectivity and disjointness
 of constructors, and which simplify `case` expressions applied to terms
 that have constructors at the outermost level.
@@ -22,22 +23,9 @@ Fails if the string argument does not correspond to a type stored in the
 ### Example
 
 ``` hol4
-- val ss = simpLib.type_ssfrag "list";
-> val ss =
-    simpLib.SSFRAG{ac = [], congs = [], convs = [], dprocs = [],
-                   filter = NONE,
-                   rewrs =
-                     [|- (!v f. case v f [] = v) /\
-                         !v f a0 a1. case v f (a0::a1) = f a0 a1,
-                      |- !a1 a0. ~([] = a0::a1),
-                      |- !a1 a0. ~(a0::a1 = []),
-                      |- !a0 a1 a0' a1'. (a0::a1 = a0'::a1') =
-                                         (a0 = a0') /\ (a1 = a1')]}
-     : ssfrag
+>> val ss = simpLib.type_ssfrag “:'a list”;
 
-- SIMP_CONV (bool_ss ++ ss) [] ``h::t = []``;
-<<HOL message: inventing new type variable names: 'a>>
-> val it = |- (h::t = []) = F : thm
+>> SIMP_CONV (bool_ss ++ ss) [] ``h::t = []``;
 ```
 
 ### Comments

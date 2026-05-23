@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `ASM_SIMP_RULE`
 
 ``` hol4
@@ -16,8 +17,9 @@ Never fails, but may diverge.
 ### Example
 
 ``` hol4
-- ASM_SIMP_RULE bool_ss [] (ASSUME (Term `x = 3`))
-> val it =  [.] |- T : thm
+>>__ load "simpLib";
+
+>> simpLib.ASM_SIMP_RULE bool_ss [] (ASSUME (Term `x = 3`))
 ```
 
 The assumptions can be used to simplify the conclusion of the theorem.

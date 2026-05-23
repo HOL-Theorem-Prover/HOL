@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `gen_find_terms`
 
 ``` hol4
@@ -28,22 +29,15 @@ any of the sub-terms of `t`.
 ### Example
 
 ``` hol4
-> gen_find_terms (fn x => SOME x) ``SUC x``;
-val it =
-   [([], ``x``), ([], ``SUC``), ([], ``SUC x``)]:
-   (term list * term) list
+>> gen_find_terms (fn x => SOME x) ``SUC x``;
 
-> gen_find_terms
+>> gen_find_terms
     (fn (bvs,t) => if null bvs andalso
                       (is_var t orelse numSyntax.is_numeral t)
                    then
                      Lib.total (match_term ``x:num``) t
                    else NONE)
     ``SUC z + (\y. y) 5``;
-val it =
-   [([{redex = ``x``, residue = ``5``}], []),
-    ([{redex = ``x``, residue = ``z``}], [])]:
-   ((term, term) Term.subst * (hol_type, hol_type) Term.subst) list
 ```
 
 ### See also

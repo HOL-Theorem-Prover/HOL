@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `timeout`
 
 ``` hol4
@@ -18,18 +19,13 @@ Fails when the call to `f` exceeds the time limit or if `f` fails.
 ### Example
 
 ``` hol4
-- load "smlTimeout"; open smlTimeout;
-(* output omitted *)
-> val it = () : unit
+>> load "smlTimeout"; open smlTimeout;
 
-- timeout 0.1 (fn (x:int) => (raise Match):int) 5;
-> Exception- Match raised
+>>+ timeout 0.1 (fn (x:int) => (raise Match):int) 5;
 
-- timeout 0.2 OS.Process.sleep (Time.fromReal 2.0);
-> Exception- FunctionTimeout raised
+>>+ timeout 0.2 OS.Process.sleep (Time.fromReal 2.0);
 
-- timeout 1.0 (fn x => x) 5;
-> val it = 5: int
+>> timeout 1.0 (fn x => x) 5;
 ```
 
 ### Comments

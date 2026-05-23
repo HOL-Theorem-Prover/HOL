@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `type_var_in`
 
 ``` hol4
@@ -18,11 +19,9 @@ Fails if `tyv` is not a type variable.
 ### Example
 
 ``` hol4
-- type_var_in alpha (bool --> alpha);
-> val it = true : bool
+>> type_var_in alpha (bool --> alpha);
 
-- type_var_in alpha bool;
-> val it = false : bool
+>> type_var_in alpha bool;
 ```
 
 ### Comments

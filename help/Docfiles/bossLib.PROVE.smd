@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ---
 aliases:
   - BasicProvers.PROVE
@@ -30,17 +31,13 @@ If the proof search fails, or if `M` does not have type `bool`.
 ### Example
 
 ``` hol4
-- PROVE []  (concl SKOLEM_THM);
-Meson search level: ........
-> val it = |- !P. (!x. ?y. P x y) = ?f. !x. P x (f x) : thm
+>> PROVE []  (concl SKOLEM_THM);
 
-- let open arithmeticTheory
+>> let open arithmeticTheory
   in
     PROVE [ADD_ASSOC, ADD_SYM, ADD_CLAUSES]
       (Term `x + 0 + y + z = y + (z + x)`)
   end;
-Meson search level: ............
-> val it = |- x + 0 + y + z = y + (z + x) : thm
 ```
 
 ### Comments

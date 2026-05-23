@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `output_words_as_bin`
 
 ``` hol4
@@ -14,9 +15,10 @@ format.
 ### Example
 
 ``` hol4
-- wordsLib.output_words_as_bin();
-- EVAL “$FCP ODD : word8”;
-> val it = |- $FCP ODD = 0b10101010w : thm
+>>__ load "wordsLib";
+
+>>+ wordsLib.output_words_as_bin();
+>>+ EVAL “$FCP ODD : word8”;
 ```
 
 ### See also

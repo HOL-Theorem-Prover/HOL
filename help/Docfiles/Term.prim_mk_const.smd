@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `prim_mk_const`
 
 ``` hol4
@@ -18,11 +19,9 @@ If `Name` is not the name of a constant declared in theory `Thy`.
 ### Example
 
 ``` hol4
-- prim_mk_const {Thy="min", Name="="};
-> val it = `$=` : term
+>> prim_mk_const {Thy="min", Name="="};
 
-- type_of it;
-> val it = `:'a -> 'a -> bool` : hol_type
+>> type_of it;
 ```
 
 ### Comments

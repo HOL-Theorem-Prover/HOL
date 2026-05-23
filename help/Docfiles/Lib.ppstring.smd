@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `ppstring`
 
 ``` hol4
@@ -22,8 +23,7 @@ value.
 ### Example
 
 ``` hol4
-> ppstring PP.add_string "hello"
-val it = "hello": string
+>> ppstring PP.add_string "hello"
 ```
 
 ### Comments

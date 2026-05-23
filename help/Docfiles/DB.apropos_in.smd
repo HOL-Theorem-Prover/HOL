@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `apropos_in`
 
 ``` hol4
@@ -19,18 +20,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- DB.apropos (Term `(!x y. P x y) ==> Q`);
-<<HOL message: inventing new type variable names: 'a, 'b>>
-> val it =
-    [(("ind_type", "INJ_INVERSE2"),
-      (|- !P.
-            (!x1 y1 x2 y2. (P x1 y1 = P x2 y2) = (x1 = x2) /\ (y1 = y2)) ==>
-            ?X Y. !x y. (X (P x y) = x) /\ (Y (P x y) = y), Thm)),
-     (("pair", "pair_induction"),
-      (|- (!p_1 p_2. P (p_1,p_2)) ==> !p. P p, Thm))] :
-  ((string * string) * (thm * class)) list
+>> DB.apropos (Term `(!x y. P x y) ==> Q`);
 
-- DB.apropos_in (Term `(x, y)`) it ;
+>>+ DB.apropos_in (Term `(x, y)`) it ;
     [(("pair", "pair_induction"),
       (|- (!p_1 p_2. P (p_1,p_2)) ==> !p. P p, Thm))] :
   ((string * string) * (thm * class)) list

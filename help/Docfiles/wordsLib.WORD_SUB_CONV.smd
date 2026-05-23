@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `WORD_SUB_CONV`
 
 ``` hol4
@@ -13,18 +14,11 @@ complement) and subtraction wherever possible.
 ### Example
 
 ``` hol4
-> wordsLib.WORD_SUB_CONV “a + -3w * b + -1w * c = -1w * d + e: 'a word”;
-val it =
-   |- (a + -3w * b + -1w * c = -1w * d + e) <=> (a - 3w * b - c = e - d):
-   thm
+>>__ load "wordsLib";
 
-> wordsLib.WORD_SUB_CONV “-1w * a: 'a word”;
-val it = |- -1w * a = -a: thm
+>>+ wordsLib.WORD_SUB_CONV “a + -3w * b + -1w * c = -1w * d + e: 'a word”;
 
-wordsLib.WORD_SUB_CONV “-1w * a + -2w * b: 'a word”;
-val it =
-   |- -1w * a + -2w * b = -(2w * b + a):
-   thm
+>>+ wordsLib.WORD_SUB_CONV “-1w * a: 'a word”;
 ```
 
 ### Comments

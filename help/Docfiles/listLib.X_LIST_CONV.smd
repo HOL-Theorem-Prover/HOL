@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `X_LIST_CONV`
 
 ``` hol4
@@ -125,11 +126,9 @@ base elements.
 ### Example
 
 ``` hol4
-- val MULTL = new_definition("MULTL",“MULTL l = FOLDR $* 1 l”);
-val MULTL = |- !l. MULTL l = FOLDR $* 1 l : thm
+>> val MULTL = new_definition("MULTL",“MULTL l = FOLDR $* 1 l”);
 
-- X_LIST_CONV {{Fold_thms = MULTL, Aux_thms = []}} “MULTL (CONS x l)”;
-|- MULTL (CONS x l) = x * MULTL l
+>>+ X_LIST_CONV {{Fold_thms = MULTL, Aux_thms = []}} “MULTL (CONS x l)”;
 ```
 
 ### Failure

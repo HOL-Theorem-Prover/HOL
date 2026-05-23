@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `clear_overloads`
 
 ``` hol4
@@ -25,22 +26,13 @@ to view their internal structure), and finally we reset the current
 grammars to the original ones.
 
 ``` hol4
-> ratTheory.RATND_RAT_OF_NUM;
-val it = |- (RATN (&n) = &n) /\ (RATD (&n) = 1): thm
-> rich_listTheory.MEM_TAKE;
-val it = |- !m l. m <= LENGTH l ==> !x. MEM x (TAKE m l) ==> MEM x l: thm
+>>__ load "ratTheory";
 
-val (tyG, tmG) = Parse.current_grammars () ;
-Parse.temp_set_grammars (tyG, term_grammar.clear_overloads tmG) ;
+>> ratTheory.RATND_RAT_OF_NUM;
+>> rich_listTheory.MEM_TAKE;
 
-> ratTheory.RATND_RAT_OF_NUM;
-val it = |- (RATN (rat_of_num n) = int_of_num n) /\ 
-  (RATD (rat_of_num n) = 1n): thm
-> rich_listTheory.MEM_TAKE;
-val it = |- !m l.  m <= LENGTH l ==>
-  !x. x IN LIST_TO_SET (TAKE m l) ==> x IN LIST_TO_SET l: thm
-
-Parse.temp_set_grammars (tyG, tmG) ;
+>> ratTheory.RATND_RAT_OF_NUM;
+>> rich_listTheory.MEM_TAKE;
 ```
 
 ### Comments

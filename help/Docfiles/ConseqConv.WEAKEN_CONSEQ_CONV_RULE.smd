@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `WEAKEN_CONSEQ_CONV_RULE`
 
 ``` hol4

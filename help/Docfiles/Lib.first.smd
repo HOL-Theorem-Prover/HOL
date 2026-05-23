@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `first`
 
 ``` hol4
@@ -22,16 +23,11 @@ holds of, it may happen that an application of `P` to an element of
 ### Example
 
 ``` hol4
-- first (fn i => i mod 2 = 0) [1,3,4,5];
-> val it = 4 : int
+>> first (fn i => i mod 2 = 0) [1,3,4,5];
 
-- first (fn i => i mod 2 = 0) [1,3,5,7];
-! Uncaught exception:
-! HOL_ERR
+>>+ first (fn i => i mod 2 = 0) [1,3,5,7];
 
-- first (fn _ => raise Fail "") [1];
-! Uncaught exception:
-! Fail  ""
+>>+ first (fn _ => raise Fail "") [1];
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `parents`
 
 ``` hol4
@@ -20,17 +21,13 @@ Fails if the named theory is not an ancestor of the current theory.
 ### Example
 
 ``` hol4
-- parents "bool";
-> val it = ["min"] : string list
+>> parents "bool";
 
-- parents "min";
-> val it = [] : string list
+>> parents "min";
 
-- current_theory();
-> val it = "scratch" : string
+>> current_theory();
 
-- parents "-";
-> val it = ["list", "option"] : string list
+>> parents "-";
 ```
 
 ### See also

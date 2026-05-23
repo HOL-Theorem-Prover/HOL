@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `NoAsms`
 
 ``` hol4
@@ -22,11 +23,9 @@ Never fails.
 ### Example
 
 ``` hol4
-> simp[] ([“x = T”], “p ∧ x”);
-val it = ([([“x ⇔ T”], “p”)], fn): goal list * validation
+>> simp[] ([“x = T”], “p ∧ x”);
 
-> simp[NoAsms] ([“x = T”], “p ∧ x”);
-val it = ([([“x ⇔ T”], “p ∧ x”)], fn): goal list * validation
+>> simp[NoAsms] ([“x = T”], “p ∧ x”);
 ```
 
 ### See also

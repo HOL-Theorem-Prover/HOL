@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `expand_list`
 
 ``` hol4
@@ -50,36 +51,11 @@ invalid.
 ### Example
 
 ``` hol4
-> expand_list (ALLGOALS CONJ_TAC) ;
-OK..
-NO_PROOFSException- NO_PROOFS raised
+>> g `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`;
 
-> g `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`;
-> val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
+>> expand CONJ_TAC;
 
-     : proofs
-
-> expand CONJ_TAC;
-OK..
-2 subgoals:
-> val it =
-    TL [1; 2; 3] = [2; 3]
-
-
-    HD [1; 2; 3] = 1
-
-     : proof
-
-> expand_list (ALLGOALS (REWRITE_TAC[listTheory.HD,listTheory.TL])) ;
-OK..
-val it =
-   Initial goal proved.
-   |- (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3]):
-      proof
+>> expand_list (ALLGOALS (REWRITE_TAC[listTheory.HD,listTheory.TL])) ;
 ```
 
 Doing a step in an interactive goal-directed proof, in particular, a

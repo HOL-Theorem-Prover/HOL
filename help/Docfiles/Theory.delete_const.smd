@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `delete_const`
 
 ``` hol4
@@ -29,19 +30,13 @@ warning will be issued, but an exception will not be raised.
 ### Example
 
 ``` hol4
-- Define `foo x = if x=0 then 1 else x * foo (x-1)`;
-Equations stored under "foo_def".
-Induction stored under "foo_ind".
-> val it = |- foo x = (if x = 0 then 1 else x * foo (x - 1)) : thm
+>> Define `foo x = if x=0 then 1 else x * foo (x-1)`;
 
-- val th = EVAL (Term `foo 4`);
-> val th = |- foo 4 = 24 : thm
+>> val th = EVAL (Term `foo 4`);
 
-- delete_const "foo";
-> val it = () : unit
+>> delete_const "foo";
 
-- th;
-> val it = |- scratch$old->foo<-old 4 = 24 : thm
+>> th;
 ```
 
 ### Comments

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `random_tnn`
 
 ``` hol4
@@ -25,9 +26,10 @@ Fails if the list of dimensions is empty.
 ### Example
 
 ``` hol4
-- val tnn = 
-    random_tnn [(``h: bool -> bool``,[4,10,1]),(``$~``,[4,8,4]),(F,[0,4])];
-> val tnn = <Redblackmap(3)>: tnn
+>>__ load "mlTreeNeuralNetwork";
+
+>> val tnn = 
+    mlTreeNeuralNetwork.random_tnn [(``h: bool -> bool``,[4,10,1]),(``$~``,[4,8,4]),(F,[0,4])];
 ```
 
 ### Comments

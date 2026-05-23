@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `var_occurs`
 
 ``` hol4
@@ -18,11 +19,9 @@ If the first argument is not a variable.
 ### Example
 
 ``` hol4
-- var_occurs (Term`x:bool`) (Term `a /\ b ==> x`);
-> val it = true : bool
+>> var_occurs (Term`x:bool`) (Term `a /\ b ==> x`);
 
-- var_occurs (Term`x:bool`) (Term `!x. a /\ b ==> x`);
-> val it = false : bool
+>> var_occurs (Term`x:bool`) (Term `!x. a /\ b ==> x`);
 ```
 
 ### Comments

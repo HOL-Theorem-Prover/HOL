@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `spine_pair`
 
 ``` hol4
@@ -11,8 +12,9 @@ Breaks a paired structure into its constituent pieces.
 ### Example
 
 ``` hol4
-- spine_pair (Term `((1,2),(3,4))`);
-> val it = [`(1,2)`, `3`, `4`] : term list
+>>__ load "pairSyntax";
+
+>> pairSyntax.spine_pair (Term `((1,2),(3,4))`);
 ```
 
 ### Comments

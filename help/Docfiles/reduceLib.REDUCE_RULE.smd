@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `REDUCE_RULE`
 
 ``` hol4
@@ -18,11 +19,9 @@ Never fails, but may just return the original theorem.
 ### Example
 
 ``` hol4
-> reduceLib.REDUCE_RULE (ASSUME “x = 100 + (60 - 17)”);
-val it = [.] ⊢ x = 143 : thm
+>> reduceLib.REDUCE_RULE (ASSUME “x = 100 + (60 - 17)”);
 
-> reduceLib.REDUCE_RULE (REFL “100 + 12 DIV 6”);
-val it = ⊢ T : thm
+>> reduceLib.REDUCE_RULE (REFL “100 + 12 DIV 6”);
 ```
 
 ### See also

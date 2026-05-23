@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `listDB`
 
 ``` hol4
@@ -15,8 +16,7 @@ theory segments currently loaded.
 ### Example
 
 ``` hol4
-- length (listDB());
-> val it = 736 : int
+>> length (listDB());
 ```
 
 ### See also

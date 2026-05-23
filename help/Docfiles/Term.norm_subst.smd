@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `norm_subst`
 
 ``` hol4
@@ -34,21 +35,11 @@ Never fails.
 ### Example
 
 ``` hol4
-- val ((S,Ids),(T,Idt)) = raw_match [] empty_varset
+>> val ((tmS,Ids),(tyS,Idt)) = raw_match [] empty_varset
                     (Term `\x:'a. x = f (y:'b)`)
                     (Term `\a.    a = ~p`) ([],[]);
-> val S = [{redex = `(f :'b -> 'a)`, residue = `$~`},
-           {redex = `(y :'b)`,       residue = `(p :bool)`}]
-    : (term, term) subst
 
-  val T = [{redex = `:'b`, residue = `:bool`},
-           {redex = `:'a`, residue = `:bool`}]
-        : (hol_type, hol_type) subst
-
-- val (S',_) = norm_subst ((S,Ids),(T,Idt)) ;
-> val S' = [{redex = `(y :bool)`,          residue = `(p :bool)`},
-        {redex = `(f :bool -> bool)`, residue = `$~`}]
-      : (term, term) subst
+>> val (tmS',_) = norm_subst ((tmS,Ids),(tyS,Idt)) ;
 ```
 
 ### Comments

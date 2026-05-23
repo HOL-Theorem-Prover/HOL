@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `OR_EL_CONV`
 
 ``` hol4
@@ -29,20 +30,15 @@ boolean constants.
 ### Example
 
 ``` hol4
-- OR_EL_CONV “OR_EL [T;F;F;T]”;
-|- OR_EL [T;F;F;T] = T
+>>__ load "listLib";
 
+>> listLib.OR_EL_CONV “OR_EL [T;F;F;T]”;
 
-- OR_EL_CONV “OR_EL [F;F;F]”;
-|- OR_EL [F;F;F] = F
+>> listLib.OR_EL_CONV “OR_EL [F;F;F]”;
 
+>> listLib.OR_EL_CONV “OR_EL [F;x;y]”;
 
-- OR_EL_CONV “OR_EL [F;x;y]”;
-|- OR_EL [F; x; y] = x \/ y
-
-
-- OR_EL_CONV “OR_EL [x;T;y]”;
-|- OR_EL [x; T; y] = T
+>> listLib.OR_EL_CONV “OR_EL [x;T;y]”;
 ```
 
 ### Failure

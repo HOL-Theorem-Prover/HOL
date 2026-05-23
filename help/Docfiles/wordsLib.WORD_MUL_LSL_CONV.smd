@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `WORD_MUL_LSL_CONV`
 
 ``` hol4
@@ -14,8 +15,9 @@ literal into a sum of left shifts.
 ### Example
 
 ``` hol4
-- WORD_MUL_LSL_CONV “49w * a”
-> val it = |- 49w * a = a << 5 + a << 4 + a : thm
+>>__ load "wordsLib";
+
+>>+ wordsLib.WORD_MUL_LSL_CONV “49w * a”
 ```
 
 ### See also

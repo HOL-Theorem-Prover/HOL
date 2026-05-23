@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `dest_numeral`
 
 ``` hol4
@@ -28,8 +29,12 @@ The system prettyprinter will print a numeral as a string of digits.
 ### Example
 
 ``` hol4
-- dest_numeral ``1234``;
-> val it = 1234 : num
+>>__ load "numSyntax";
+>>__ val dest_numeral_initial_grammars = (Parse.type_grammar(), Parse.term_grammar());
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+
+>> numSyntax.dest_numeral ``1234``;
+>>__ Parse.temp_set_grammars dest_numeral_initial_grammars;
 ```
 
 ### Failure

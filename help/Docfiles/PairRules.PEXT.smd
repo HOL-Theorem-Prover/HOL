@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PEXT`
 
 ``` hol4
@@ -26,8 +27,9 @@ either of the functions `t1` or `t2`.
 ### Example
 
 ``` hol4
-- PEXT (ASSUME (Term `!(x,y). ((f:('a#'a)->'a) (x,y)) = (g (x,y))`));
-> val it =  [.] |- f = g : thm
+>>__ load "PairRules";
+
+>> PairRules.PEXT (ASSUME (Term `!(x,y). ((f:('a#'a)->'a) (x,y)) = (g (x,y))`));
 ```
 
 ### See also

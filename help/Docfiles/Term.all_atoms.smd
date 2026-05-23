@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `all_atoms`
 
 ``` hol4
@@ -25,22 +26,13 @@ Never fails.
 ### Example
 
 ``` hol4
-> HOLset.listItems (all_atoms ``!v. v /\ p``);
-val it = [``p``, ``v``, ``$!``, ``$/\``]: term list
+>> HOLset.listItems (all_atoms ``!v. v /\ p``);
 
-> show_types := true;
-val it = () : unit
+>> show_types := true;
 
-> HOLset.listItems (all_atoms ``!v. v /\ !f. f v``);
-val it =
-   [``(f :bool -> bool)``, ``(v :bool)``,
-    ``($! :(bool -> bool) -> bool)``,
-    ``($! :((bool -> bool) -> bool) -> bool)``,
-    ``$/\``]: term list
+>> HOLset.listItems (all_atoms ``!v. v /\ !f. f v``);
 
-> HOLset.listItems (all_atoms ``!v:'a. T``);
-val it =
-   [``(v :'a)``, ``($! :('a -> bool) -> bool)``, ``T``]: term list
+>> HOLset.listItems (all_atoms ``!v:'a. T``);
 ```
 
 ### Comments

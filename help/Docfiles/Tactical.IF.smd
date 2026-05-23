@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `IF`
 
 ``` hol4
@@ -25,24 +26,13 @@ fail.
 ### Example
 
 ``` hol4
-> IF CONJ_TAC CONJ_TAC DISCH_TAC ([], “(p1 ∧ p2) ∧ (q1 ∧ q2)”);
-val it = ([([], “p1”), ([], “p2”), ([], “q1”), ([], “q2”)], fn):
-   goal list * validation
+>> IF CONJ_TAC CONJ_TAC DISCH_TAC ([], “(p1 ∧ p2) ∧ (q1 ∧ q2)”);
 
-> IF CONJ_TAC CONJ_TAC DISCH_TAC ([], “p ⇒ q”);
-val it = ([([“p”], “q”)], fn): goal list * validation
+>> IF CONJ_TAC CONJ_TAC DISCH_TAC ([], “p ⇒ q”);
 
-> IF CONJ_TAC CONJ_TAC DISCH_TAC ([], ``(p1 ∧ p2) ∧ q``);
-Exception-
-   HOL_ERR
-     {message = "", origin_function = "CONJ_TAC", origin_structure =
-      "Tactic", source_location = <??>} raised
+>>+ IF CONJ_TAC CONJ_TAC DISCH_TAC ([], ``(p1 ∧ p2) ∧ q``);
 
-> IF CONJ_TAC CONJ_TAC DISCH_TAC ([], “p ∨ q”);
-Exception-
-   HOL_ERR
-     {message = "", origin_function = "DISCH_TAC", origin_structure =
-      "Tactic", source_location = <??>} raised
+>>+ IF CONJ_TAC CONJ_TAC DISCH_TAC ([], “p ∨ q”);
 ```
 
 ### Comments

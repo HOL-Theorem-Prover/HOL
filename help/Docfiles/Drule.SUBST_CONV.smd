@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `SUBST_CONV`
 
 ``` hol4
@@ -56,32 +57,30 @@ the theorem `thi`.
 The values
 
 ``` hol4
-   - val thm0 = SPEC (Term`0`) ADD1
-     and thm1 = SPEC (Term`1`) ADD1
-     and x = Term`x:num` and y = Term`y:num`;
-
-   > val thm0 = |- SUC 0 = 0 + 1 : thm
-     val thm1 = |- SUC 1 = 1 + 1 : thm
-     val x = `x` : term
-     val y = `y` : term
+   >>__ val subst_conv_initial_grammars = (Parse.type_grammar(), Parse.term_grammar());
+   >>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+   >> val ADD1 = arithmeticTheory.ADD1
+   >> val thm0 = SPEC (Term`0`) ADD1
+      and thm1 = SPEC (Term`1`) ADD1
+      and x = Term`x:num` and y = Term`y:num`;
 ```
 
 can be used to substitute selected occurrences of the terms `SUC 0` and
 `SUC 1`
 
 ``` hol4
-- SUBST_CONV [{redex=x, residue=thm0},{redex=y,residue=thm1}]
-             (Term`(x + y) > SUC 1`)
-             (Term`(SUC 0 + SUC 1) > SUC 1`);
-> val it = |- SUC 0 + SUC 1 > SUC 1 = (0 + 1) + 1 + 1 > SUC 1 : thm
+   >> SUBST_CONV [{redex=x, residue=thm0},{redex=y,residue=thm1}]
+                 “x + y > SUC 1”
+                 “SUC 0 + SUC 1 > SUC 1”;
 ```
 
 The `|->` syntax can also be used:
 
 ``` hol4
-- SUBST_CONV [x |-> thm0, y |-> thm1]
-             (Term`(x + y) > SUC 1`)
-             (Term`(SUC 0 + SUC 1) > SUC 1`);
+   >> SUBST_CONV [x |-> thm0, y |-> thm1]
+                 “x + y > SUC 1”
+                 “SUC 0 + SUC 1 > SUC 1”;
+   >>__ Parse.temp_set_grammars subst_conv_initial_grammars;
 ```
 
 `SUBST_CONV` is used when substituting at selected occurrences of terms

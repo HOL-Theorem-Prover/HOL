@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `cv_trans_deep_embedding`
 
 ``` hol4
@@ -23,32 +24,21 @@ embedding.
 ### Example
 
 ``` hol4
-> Datatype:
+>>__ load "cv_transLib";
+
+>> Datatype:
     exp = Const num | Add exp exp
   End
-<<HOL message: Defined type: "exp">>
-> Definition sem_def:
+>> Definition sem_def:
     sem (Const n) = n ∧
     sem (Add e1 e2) = sem e1 + sem e2
   End
-Definition has been stored under "sem_def"
-val sem_def =
-   ⊢ (∀n. sem (Const n) = n) ∧ ∀e1 e2. sem (Add e1 e2) = sem e1 + sem e2: thm
-> Definition deep_def:
+>> Definition deep_def:
     deep = Add (Const 5) (Add (Const 2) (Const 3))
   End
-Definition has been stored under "deep_def"
-val deep_def = ⊢ deep = Add (Const 5) (Add (Const 2) (Const 3)): thm
-> cv_trans sem_def;
-Definition has been stored under "from_scratch_exp_def"
-Equations stored under "cv_sem_def".
-Induction stored under "cv_sem_ind".
-Finished translating sem, stored in cv_sem_thm
-val it = (): unit
-> cv_trans_deep_embedding EVAL deep_def;
-val it = (): unit
-> cv_eval “sem deep”;
-val it = ⊢ sem deep = 10: thm
+>> cv_transLib.cv_trans sem_def;
+>> cv_transLib.cv_trans_deep_embedding EVAL deep_def;
+>> cv_transLib.cv_eval “sem deep”;
 ```
 
 ### Comments

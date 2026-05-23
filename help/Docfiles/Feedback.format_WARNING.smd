@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `format_WARNING`
 
 ``` hol4
@@ -19,8 +20,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- print (format_WARNING "Module" "function" "Gadzooks!");
-<<HOL warning: Module.function: Gadzooks!>>
+>> print (format_WARNING "Module" "function" "Gadzooks!");
 ```
 
 ### See also

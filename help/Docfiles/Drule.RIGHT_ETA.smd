@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `RIGHT_ETA`
 
 ``` hol4
@@ -23,11 +24,9 @@ theorem is not an equation.
 ### Example
 
 ``` hol4
-- val INC_DEF = new_definition ("INC_DEF", Term`INC = \x. 1 + x`);
-> val INC_DEF = |- INC = (\x. 1 + x) : thm
+>> val INC_DEF = new_definition ("INC_DEF", Term`INC = \x. 1 + x`);
 
-- RIGHT_ETA INC_DEF;
-> val it = |- INC = $+ 1 : thm
+>> RIGHT_ETA INC_DEF;
 ```
 
 ### See also

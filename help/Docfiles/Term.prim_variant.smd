@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `prim_variant`
 
 ``` hol4
@@ -19,11 +20,9 @@ or if `t` is not a variable.
 ### Example
 
 ``` hol4
-- variant [] (mk_var("T",bool));
-> val it = `T'` : term
+>> variant [] (mk_var("T",bool));
 
-- prim_variant [] (mk_var("T",bool));
-> val it = `T` : term
+>> prim_variant [] (mk_var("T",bool));
 ```
 
 ### Comments

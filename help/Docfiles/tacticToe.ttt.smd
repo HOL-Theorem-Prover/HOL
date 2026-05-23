@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `ttt`
 
 ``` hol4
@@ -28,20 +29,11 @@ reconstruct.
 ### Example
 
 ``` hol4
-- load "tttUnfold"; load "tacticToe"; open tacticToe;
-(* output omitted *)
-> val it = () : unit
+>> load "tttUnfold"; load "tacticToe"; open tacticToe;
 
-- tttUnfold.ttt_record (); (* takes multiple hours the first time it is called *)
-(* output omitted *)
-> val it = (): unit
+>>+ tttUnfold.ttt_record (); (* takes multiple hours the first time it is called *)
 
-- ttt ([],``1+1=2``);
-Loading 3091 theorems 
-Loading 12126 tactics
-tactictoe found a proof:
-  (SRW_TAC []) []
-> val it = ([], fn): goal list * validation
+>>+ ttt ([],``1+1=2``);
 ```
 
 ### Comments

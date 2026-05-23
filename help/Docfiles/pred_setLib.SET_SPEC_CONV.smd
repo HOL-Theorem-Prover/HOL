@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `SET_SPEC_CONV`
 
 ``` hol4
@@ -31,11 +32,11 @@ expression `E` and in the proposition `P`.
 ### Example
 
 ``` hol4
-- SET_SPEC_CONV ``12 IN {n | n > N}``;
-|- 12 IN {n | n > N} = 12 > N
+>>__ load "pred_setLib";
 
-- SET_SPEC_CONV ``p IN {(n,m) | n < m}``;
-|- p IN {(n,m) | n < m} = (?n m. (p = n,m) /\ n < m)
+>> pred_setLib.SET_SPEC_CONV ``12 IN {n | n > N}``;
+
+>> pred_setLib.SET_SPEC_CONV ``p IN {(n,m) | n < m}``;
 ```
 
 ### Failure

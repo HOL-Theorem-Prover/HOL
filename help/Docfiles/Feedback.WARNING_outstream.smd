@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `WARNING_outstream`
 
 ``` hol4
@@ -16,23 +17,17 @@ The default value of `WARNING_outstream` is `TextIO.stdOut`.
 ### Example
 
 ``` hol4
-- val ostrm = TextIO.openOut "foo";
-> val ostrm = <outstream> : outstream
+>> val ostrm = TextIO.openOut "foo";
 
-- WARNING_outstream := ostrm;
-> val it = () : unit
+>>+ WARNING_outstream := ostrm;
 
-- HOL_WARNING "Module" "Function" "Sufferin' Succotash!";
-> val it = () : unit
+>> HOL_WARNING "Module" "Function" "Sufferin' Succotash!";
 
-- TextIO.closeOut ostrm;
-> val it = () : unit
+>> TextIO.closeOut ostrm;
 
-- val istrm = TextIO.openIn "foo";
-> val istrm = <instream> : instream
+>> val istrm = TextIO.openIn "foo";
 
-- print (TextIO.inputAll istrm);
-<<HOL warning: Module.Function: Sufferin' Succotash!>>
+>> print (TextIO.inputAll istrm);
 ```
 
 ### See also

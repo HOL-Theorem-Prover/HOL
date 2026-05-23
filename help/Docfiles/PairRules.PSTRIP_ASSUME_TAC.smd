@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PSTRIP_ASSUME_TAC`
 
 ``` hol4

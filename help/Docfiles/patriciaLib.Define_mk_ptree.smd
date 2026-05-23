@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `Define_mk_ptree`
 
 ``` hol4
@@ -31,58 +32,36 @@ The following session shows the construction of Patricia trees in ML,
 which are then imported into HOL.
 
 ``` hol4
-open patriciaLib;
-...
-> val ptree = Define_mk_ptree "ptree" (int_ptree_of_list [(1,``1``), (2, ``2``)]);
-<<HOL message: Saved IS_PTREE theorem for new constant "ptree">>
-val ptree = |- ptree = Branch 0 0 (Leaf 1 1) (Leaf 2 2): thm
-> DB.theorem "ptree_is_ptree_thm";
-val it = |- IS_PTREE ptree: thm
+>>__ load "patriciaLib";
+>>__ val dmp_initial_grammars = (Parse.type_grammar(), Parse.term_grammar());
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
 
-> val _ = Globals.max_print_depth := 7;
-> let
+>> open patriciaLib;
+>> val ptree = patriciaLib.Define_mk_ptree "ptree" (int_ptree_of_list [(1,``1``), (2, ``2``)]);
+>> DB.fetch "-" "ptree_def";
+
+>> val _ = Globals.max_print_depth := 7;
+  let
     fun pp _ _ (_: term_ptree) = PolyML.PrettyString "<ptree>"
   in
     PolyML.addPrettyPrinter pp
   end;
-val it = (): unit
 
-> val random_ptree =
+>> val random_ptree =
   real_time patriciaLib.ptree_of_ints
     (Random.rangelist (0,100000) (10000,Random.newgenseed 1.0));
-realtime: 0.091s
-val random_ptree = <ptree>: term_ptree
 
-> val random = real_time (patriciaLib.Define_mk_ptree "random") random_ptree;
-<<HOL warning: patriciaLib.Define_ptree: Failed to prove IS_PTREE (is_ptree_term_size_limit might be too small).>>
-realtime: 0.196s
-val random =
-   |- random =
-   Branch 0 0
-     (... ... 1 (... ... (... ... ))
-        (... ... (... ... ) (... ... (... ... ))))
-     (Branch 0 1 (... ... (... ... ) (... ... (... ... )))
-        (... ... 2 (... ... (... ... ))
-           (... ... (... ... ) (... ... (... ... ))))):
-   thm
+>> val random = real_time (patriciaLib.Define_mk_ptree "random") random_ptree;
 
-> patriciaLib.size random_ptree;
-val it = 9517: int
-> real_time EVAL ``SIZE random``;
-realtime: 3.531s
-val it = |- SIZE random = 9517: thm
+>> patriciaLib.size random_ptree;
+>> real_time EVAL ``SIZE random``;
 
-> int_peek random_ptree 3;
-val it = SOME ``()``: term option
-> real_time EVAL ``random ' 3``;
-realtime: 0.004s
-val it = |- random ' 3 = SOME (): thm
+>> int_peek random_ptree 3;
+>> real_time PTREE_CONV ``random ' 3``;
 
-> int_peek random_ptree 100;
-val it = NONE: term option
-> real_time EVAL ``random ' 100``;
-realtime: 0.004s
-val it = |- random ' 100 = NONE: thm
+>> int_peek random_ptree 100;
+>> real_time EVAL ``random ' 100``;
+>>__ Parse.temp_set_grammars dmp_initial_grammars;
 ```
 
 ### See also
@@ -90,3 +69,5 @@ val it = |- random ' 100 = NONE: thm
 [`patriciaLib.mk_ptree`](#patriciaLib.mk_ptree),
 [`patriciaLib.PTREE_CONV`](#patriciaLib.PTREE_CONV),
 [`patriciaLib.PTREE_DEFN_CONV`](#patriciaLib.PTREE_DEFN_CONV)
+
+>>__ Globals.max_print_depth := ~1

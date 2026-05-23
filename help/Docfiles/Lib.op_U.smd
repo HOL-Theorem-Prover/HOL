@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `op_U`
 
 ``` hol4
@@ -22,9 +23,8 @@ lists.
 ### Example
 
 ``` hol4
-- op_U (fn x => fn y => x mod 2 = y mod 2)
+>> op_U (fn x => fn y => x mod 2 = y mod 2)
        [[1,2,3], [4,5,6], [2,4,6,8,10]];
-> val it = [5, 2, 4, 6, 8, 10] : int list
 ```
 
 ### Comments

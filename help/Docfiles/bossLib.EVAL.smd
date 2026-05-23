@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `EVAL`
 
 ``` hol4
@@ -22,9 +23,7 @@ Never fails, but may diverge.
 ### Example
 
 ``` hol4
-- EVAL (Term `REVERSE (MAP (\x. x + a) [x;y;z])`);
-> val it = |- REVERSE (MAP (\x. x + a) [x; y; z]) = [z + a; y + a; x + a]
-   : thm
+>> EVAL (Term `REVERSE (MAP (\x. x + a) [x;y;z])`);
 ```
 
 ### Comments

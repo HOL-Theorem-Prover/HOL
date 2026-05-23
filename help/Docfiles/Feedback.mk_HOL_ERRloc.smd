@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `mk_HOL_ERRloc`
 
 ``` hol4
@@ -18,15 +19,9 @@ Never fails.
 ### Example
 
 ``` hol4
-> val exloc = let open locn in Loc (LocA(0,0), LocA(3,42)) end;
-val exloc = 1:0-4:42: locn.locn
+>> val exloc = let open locn in Loc (LocA(0,0), LocA(3,42)) end;
 
-> mk_HOL_ERRloc "<Module>" "<function>" exloc "<message>";
-val it =
-   HOL_ERR
-     (at <Module>.<function>:
-          between line 1, character 0 and line 4, character 42: <message>):
-   exn
+>> mk_HOL_ERRloc "<Module>" "<function>" exloc "<message>";
 ```
 
 ### See also

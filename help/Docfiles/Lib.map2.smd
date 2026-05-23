@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `map2`
 
 ``` hol4
@@ -18,8 +19,7 @@ Fails if the two lists are of different lengths. Also fails if any
 ### Example
 
 ``` hol4
-- map2 (curry op+) [1,2,3] [3,2,1];
-> val it = [4, 4, 4] : int list
+>> map2 (curry op+) [1,2,3] [3,2,1];
 ```
 
 ### See also

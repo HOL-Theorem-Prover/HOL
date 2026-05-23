@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `CONSEQ_TOP_REWRITE_CONV`
 
 ``` hol4

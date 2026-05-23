@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `op_mem`
 
 ``` hol4
@@ -19,8 +20,7 @@ Only fails if an application of `eq` fails.
 ### Example
 
 ``` hol4
-- op_mem aconv (Term `\x. x /\ y`) [T, Term `\z. z /\ y`, F];
-> val it = true : bool
+>> op_mem aconv (Term `\x. x /\ y`) [T, Term `\z. z /\ y`, F];
 ```
 
 ### Comments

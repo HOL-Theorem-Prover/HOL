@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `data`
 
 ``` hol4
@@ -22,10 +23,7 @@ classification `class`, stored in theory segment `thy` under `name`.
 ### Example
 
 ``` hol4
-- DB.find "BOOL_CASES_AX";
-> val it = [(("bool", "BOOL_CASES_AX"),
-            (|- !t. (t = T) \/ (t = F), Axm))]
-   : ((string * string) * (thm * class)) list
+>> DB.find "BOOL_CASES_AX";
 ```
 
 ### See also

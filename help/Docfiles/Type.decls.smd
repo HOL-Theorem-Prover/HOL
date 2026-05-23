@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `decls`
 
 ``` hol4
@@ -18,8 +19,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- Type.decls "prod";
-> val it = [{Thy = "pair", Tyop = "prod"}] : {Thy:string, Tyop:string} list
+>> Type.decls "prod";
 ```
 
 ### Comments

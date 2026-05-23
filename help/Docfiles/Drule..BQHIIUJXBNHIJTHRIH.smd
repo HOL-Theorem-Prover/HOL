@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ---
 title: Drule.PART_MATCH’
 ---
@@ -24,14 +25,11 @@ Fails when `PART_MATCH` would fail.
 ### Example
 
 ``` hol4
-> IMP_DISJ_THM;
-val it = ⊢ ∀A B. A ⇒ B ⇔ ¬A ∨ B: thm
+>> IMP_DISJ_THM;
 
-> PART_MATCH (rand o lhs) IMP_DISJ_THM “p /\ A”;
-val it = ⊢ A ⇒ p ∧ A ⇔ ¬A ∨ p ∧ A: thm
+>> PART_MATCH (rand o lhs) IMP_DISJ_THM “p /\ A”;
 
-> PART_MATCH' (rand o lhs) IMP_DISJ_THM “p /\ A”;
-val it = ⊢ ∀A'. A' ⇒ p ∧ A ⇔ ¬A' ∨ p ∧ A: thm
+>> PART_MATCH' (rand o lhs) IMP_DISJ_THM “p /\ A”;
 ```
 
 ### See also

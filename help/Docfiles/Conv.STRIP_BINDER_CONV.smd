@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `STRIP_BINDER_CONV`
 
 ``` hol4
@@ -22,13 +23,10 @@ hypotheses of `conv M`.
 ### Example
 
 ``` hol4
-- STRIP_BINDER_CONV NONE BETA_CONV (Term `\u v w. (\a. a + v * w) u`);
-> val it = |- (\u v w. (\a. a + v * w) u) = (\u v w. u + v * w) : thm
+>> STRIP_BINDER_CONV NONE BETA_CONV (Term `\u v w. (\a. a + v * w) u`);
 
-- STRIP_BINDER_CONV (SOME existential) SYM_CONV
+>> STRIP_BINDER_CONV (SOME existential) SYM_CONV
                     (Term `?u v w x y. u + v = w + x + y`);
-> val it = |- (?u v w x y. u + v = w + x + y) =
-               ?u v w x y. w + x + y = u + v : thm
 ```
 
 ### Comments

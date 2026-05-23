@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `try`
 
 ``` hol4
@@ -25,16 +26,9 @@ exception.
 ### Example
 
 ``` hol4
-- mk_comb (T,F);
-! Uncaught exception:
-! HOL_ERR
+>>+ mk_comb (T,F);
 
-- try mk_comb (T,F);
-
-Exception raised at Term.mk_comb:
-incompatible types
-! Uncaught exception:
-! HOL_ERR
+>>+ try mk_comb (T,F);
 ```
 
 Evaluation order can be significant. ML evaluates `try M N` by

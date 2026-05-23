@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `SF`
 
 ``` hol4
@@ -28,11 +29,9 @@ part of a script's execution, this registration is unlikely to persist.
 ### Example
 
 ``` hol4
-> SIMP_CONV bool_ss [SF ETA_ss] “P (λx. f x) ∧ Q”;
-val it = ⊢ P (λx. f x) ∧ Q ⇔ P f ∧ Q : thm
+>> SIMP_CONV bool_ss [SF ETA_ss] “P (λx. f x) ∧ Q”;
 
-> simp[SF ETA_ss] ([], “P (λx. f x) ∧ Q”);
-val it = ([([], “P f ∧ Q”)], fn): goal list * validation
+>> simp[SF ETA_ss] ([], “P (λx. f x) ∧ Q”);
 ```
 
 ### See also

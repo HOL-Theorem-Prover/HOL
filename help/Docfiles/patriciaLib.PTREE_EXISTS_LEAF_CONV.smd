@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PTREE_EXISTS_LEAF_CONV`
 
 ``` hol4
@@ -21,18 +22,14 @@ application of `patricia$EXISTS_LEAF`.
 ### Example
 
 ``` hol4
-- patriciaLib.PTREE_EXISTS_LEAF_CONV ``EXISTS_LEAF (=) Empty``;
-> val it = |- EXISTS_LEAF $= <{}> <=> F: thm
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
 
-- patriciaLib.PTREE_EXISTS_LEAF_CONV ``EXISTS_LEAF (\x y. y = 2) (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
-> val it =
-   |- EXISTS_LEAF (\x y. y = 2) (Branch 0 0 (Leaf 3 2) (Leaf 2 1)) <=> T:
-   thm
+>>+ patriciaLib.PTREE_EXISTS_LEAF_CONV ``EXISTS_LEAF (=) Empty``;
 
-- patriciaLib.PTREE_EXISTS_LEAF_CONV ``EXISTS_LEAF (\x y. y = 3) (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
-> val it =
-   |- EXISTS_LEAF (\x y. y = 3) (Branch 0 0 (Leaf 3 2) (Leaf 2 1)) <=> F:
-   thm
+>>+ patriciaLib.PTREE_EXISTS_LEAF_CONV ``EXISTS_LEAF (\x y. y = 2) (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
+
+>>+ patriciaLib.PTREE_EXISTS_LEAF_CONV ``EXISTS_LEAF (\x y. y = 3) (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
 ```
 
 ### See also

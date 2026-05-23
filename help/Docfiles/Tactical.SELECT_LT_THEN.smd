@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `SELECT_LT_THEN`
 
 ``` hol4
@@ -27,20 +28,11 @@ subgoal produced by applying `tac1` to the current goals.
 ### Example
 
 ``` hol4
-> SELECT_LT_THEN DISJ1_TAC ALL_TAC
->  [([], “T ∨ s”), ([], “p ⇒ q”), ([“a ∨ b”], “p ∨ q”)]
-val it =
-  ([([], “T”), ([“a ∨ b”], “p”), ([], “p ⇒ q”)], fn):
-  goal list * list_validation
+>> SELECT_LT_THEN DISJ1_TAC ALL_TAC
+   [([], “T ∨ s”), ([], “p ⇒ q”), ([“a ∨ b”], “p ∨ q”)]
 
-
-
-> SELECT_LT_THEN DISJ1_TAC (ACCEPT_TAC TRUTH)
->   [([], “T ∨ s”), ([], “p ⇒ q”), ([“a ∨ b”], “p ∨ q”)]
-Exception-
-   HOL_ERR
-     {message = "Could not apply second tactic", origin_function =
-      "SELECT_LT_THEN", origin_structure = "Tactical"} raised
+>>+ SELECT_LT_THEN DISJ1_TAC (ACCEPT_TAC TRUTH)
+    [([], “T ∨ s”), ([], “p ⇒ q”), ([“a ∨ b”], “p ∨ q”)]
 ```
 
 ### See also

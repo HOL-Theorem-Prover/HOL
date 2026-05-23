@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `trace`
 
 ``` hol4
@@ -23,34 +24,12 @@ variable. Also fails if the function invocation fails.
 ### Example
 
 ``` hol4
-- load "mesonLib";
+>> load "mesonLib";
 
-- trace ("meson",2) prove
+>> trace ("meson",2) prove
      (concl SKOLEM_THM,mesonLib.MESON_TAC []);
 
-0 inferences so far. Searching with maximum size 0.
-0 inferences so far. Searching with maximum size 1.
-Internal goal solved with 2 MESON inferences.
-0 inferences so far. Searching with maximum size 0.
-0 inferences so far. Searching with maximum size 1.
-Internal goal solved with 2 MESON inferences.
-0 inferences so far. Searching with maximum size 0.
-0 inferences so far. Searching with maximum size 1.
-Internal goal solved with 2 MESON inferences.
-0 inferences so far. Searching with maximum size 0.
-0 inferences so far. Searching with maximum size 1.
-Internal goal solved with 2 MESON inferences.
-  solved with 2 MESON inferences.
-
-> val it = |- !P. (!x. ?y. P x y) = ?f. !x. P x (f x) : thm
-
-- traces();
-
-> val it =
-    [{default = 1, name = "meson", trace_level = 1},
-     {default = 10, name = "Subgoal number", trace_level = 10},
-     {default = 0, name = "Rewrite", trace_level = 0},
-     {default = 0, name = "Ho_Rewrite", trace_level = 0}]
+>> traces();
 ```
 
 ### See also

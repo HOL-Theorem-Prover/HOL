@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `list_mk_anylet`
 
 ``` hol4
@@ -32,7 +33,7 @@ list_mk_anylet
     [(``(y:'a, z:ind)``, ``M:'a#ind``)],
     [(``f (x:'a):bool``, ``N:bool``),
      (``g:bool->'a``,    ``K (v:'a):bool->'a``)]], ``g (f (x:'a):bool):'a``);
-> val it = `let x = P in
+>> val it = `let x = P in
             let (y,z) = M in
             let f x = N
             and g = K v

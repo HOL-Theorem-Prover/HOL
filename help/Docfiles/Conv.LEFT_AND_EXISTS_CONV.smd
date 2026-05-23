@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `LEFT_AND_EXISTS_CONV`
 
 ``` hol4

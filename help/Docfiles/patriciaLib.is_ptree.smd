@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `is_ptree`
 
 ``` hol4
@@ -14,14 +15,14 @@ term is a well-constructed, ground Patricia tree.
 ### Example
 
 ``` hol4
-- is_ptree ``t:unit ptree``;
-val it = false: bool
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
 
-- is_ptree ``Branch 1 2 (Leaf 2 2) (Leaf 3 3)``;
-val it = false: bool
+>> patriciaLib.is_ptree ``t:unit ptree``;
 
-- is_ptree ``Branch 0 0 (Leaf 1 1) (Leaf 2 2)``;
-val it = true: bool
+>> patriciaLib.is_ptree ``Branch 1 2 (Leaf 2 2) (Leaf 3 3)``;
+
+>> patriciaLib.is_ptree ``Branch 0 0 (Leaf 1 1) (Leaf 2 2)``;
 ```
 
 ### See also

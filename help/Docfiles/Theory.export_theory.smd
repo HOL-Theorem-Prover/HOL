@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `export_theory`
 
 ``` hol4
@@ -46,15 +47,11 @@ with `set_MLname`, and then `export_theory` may be attempted again.
 ### Example
 
 ``` hol4
-> save_thm("foo", REFL “x:bool”);
-val it = |- x = x : thm
+>> save_thm("foo", REFL “x:bool”);
 
-> Globals.interactive := false;
-val it = () : unit
+>> Globals.interactive := false;
 
-> export_theory();
-Exporting theory "scratch" ... done.
-val it = () : unit
+>> export_theory();
 ```
 
 ### Comments

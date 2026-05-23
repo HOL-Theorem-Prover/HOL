@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `set_known_constants`
 
 ``` hol4
@@ -24,23 +25,14 @@ ignored.
 ### Example
 
 ``` hol4
-- known_constants();
-> val it =
-    ["bool_case", "ARB", "TYPE_DEFINITION", "ONTO", "ONE_ONE", "COND",
-     "LET", "?!", "~", "F", "\\/", "/\\", "!", "T", "?", "@",
-     "==>", "="]
-    : string list
-- Term`p /\ q`;
-> val it = `p /\ q` : term
-- set_known_constants (Lib.subtract (known_constants()) ["/\\"]);
-> val it = () : unit
-- Term`p /\ q`;
-<<HOL message: inventing new type variable names: 'a, 'b, 'c.>>
-> val it = `p /\ q` : term
-- strip_comb it;
-> val it = (`$/\`, [`p`, `q`]) : term * term list
-- dest_var (#1 it);
-> val it = ("/\\", `:'a -> 'b -> 'c`) : string * hol_type
+>>__ val skc_initial_grammars = (Parse.type_grammar(), Parse.term_grammar());
+>> known_constants();
+>> Term`p /\ q`;
+>> set_known_constants (Lib.subtract (known_constants()) ["/\\"]);
+>> Term`p /\ q`;
+>> strip_comb it;
+>> dest_var (#1 it);
+>>__ Parse.temp_set_grammars skc_initial_grammars;
 ```
 
 When writing library code that calls the parser, it can be useful to

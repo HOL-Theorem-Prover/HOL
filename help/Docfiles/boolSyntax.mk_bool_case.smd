@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `mk_bool_case`
 
 ``` hol4
@@ -21,10 +22,7 @@ have the same type.
 ### Example
 
 ``` hol4
-- mk_bool_case (Term`f x`,Term`b:'b`,Term`x:bool`);
-<<HOL message: inventing new type variable names: 'a, 'b>>
-
-> val it = `case x of T -> f x || F -> b` : term
+>> mk_bool_case (Term`f x`,Term`b:'b`,Term`x:bool`);
 ```
 
 ### See also

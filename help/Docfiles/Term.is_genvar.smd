@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `is_genvar`
 
 ``` hol4
@@ -18,11 +19,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- is_genvar (genvar bool);
-> val it = true : bool
+>> is_genvar (genvar bool);
 
-- is_genvar (mk_var ("%%genvar%%3",bool));
-> val it = true : bool
+>> is_genvar (mk_var ("%%genvar%%3",bool));
 ```
 
 ### Comments

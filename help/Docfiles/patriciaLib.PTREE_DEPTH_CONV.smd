@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PTREE_DEPTH_CONV`
 
 ``` hol4
@@ -20,11 +21,12 @@ application of `patricia$DEPTH`.
 ### Example
 
 ``` hol4
-- patriciaLib.PTREE_DEPTH_CONV ``DEPTH Empty``;
-> val it = |- DEPTH <{}> = 0: thm
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
 
-- patriciaLib.PTREE_DEPTH_CONV ``DEPTH (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
-> val it = |- DEPTH (Branch 0 0 (Leaf 3 2) (Leaf 2 1)) = 2: thm
+>> patriciaLib.PTREE_DEPTH_CONV ``DEPTH Empty``;
+
+>> patriciaLib.PTREE_DEPTH_CONV ``DEPTH (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
 ```
 
 ### See also

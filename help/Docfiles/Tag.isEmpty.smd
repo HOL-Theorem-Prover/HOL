@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `isEmpty`
 
 ``` hol4
@@ -18,8 +19,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- Tag.isEmpty (Thm.tag NOT_FORALL_THM);
-> val it = true : bool
+>> Tag.isEmpty (Thm.tag NOT_FORALL_THM);
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `aconv`
 
 ``` hol4
@@ -20,8 +21,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- aconv (Term `?x y. x /\ y`) (Term `?y x. y /\ x`)
-> val it = true : bool
+>> aconv (Term `?x y. x /\ y`) (Term `?y x. y /\ x`)
 ```
 
 ### See also

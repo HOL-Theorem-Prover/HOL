@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `REV_FULL_SIMP_TAC`
 
 ``` hol4

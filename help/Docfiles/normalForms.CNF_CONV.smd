@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `CNF_CONV`
 
 ``` hol4
@@ -34,15 +35,15 @@ variables may be functions, as a result of Skolemization.
 ### Example
 
 ``` hol4
-- CNF_CONV ``!x. P x ==> ?y z. Q y \/ ~?z. P z /\ Q z``;
-> val it =
-    |- (!x. P x ==> ?y z. Q y \/ ~?z. P z /\ Q z) =
-       ?y. !x x'. Q (y x) \/ ~P x' \/ ~Q x' \/ ~P x : thm
+>>__ load "normalForms";
+
+>> normalForms.CNF_CONV ``!x. P x ==> ?y z. Q y \/ ~?z. P z /\ Q z``;
 ```
 
 ### Example
 
 ``` hol4
-- CNF_CONV ``~(~(x = y) = z) = ~(x = ~(y = z))``;
-> val it = |- (~(~(x = y) = z) = ~(x = ~(y = z))) = T : thm
+>>__ load "normalForms";
+
+>> normalForms.CNF_CONV ``~(~(x = y) = z) = ~(x = ~(y = z))``;
 ```

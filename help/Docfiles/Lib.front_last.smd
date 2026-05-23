@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `front_last`
 
 ``` hol4
@@ -16,11 +17,9 @@ Fails if the list is empty.
 ### Example
 
 ``` hol4
-- front_last [1];
-> val it = ([],1) : int list * int
+>> front_last [1];
 
-- front_last [1,2,3];
-> val it = ([1,2],3) : int list * int
+>> front_last [1,2,3];
 ```
 
 ### See also

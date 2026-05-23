@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `matches`
 
 ``` hol4
@@ -18,13 +19,9 @@ Never fails.
 ### Example
 
 ``` hol4
-> DB.matches (Term `(a = b) = c`) EQ_CLAUSES ;
-<<HOL message: inventing new type variable names: 'a>>
-val it = true: bool
+>> DB.matches (Term `(a = b) = c`) EQ_CLAUSES ;
 
-> DB.matches (Term `(a = b) = c`)  EQ_TRANS ;
-<<HOL message: inventing new type variable names: 'a>>
-val it = false: bool
+>> DB.matches (Term `(a = b) = c`)  EQ_TRANS ;
 ```
 
 ### Comments

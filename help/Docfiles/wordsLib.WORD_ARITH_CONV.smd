@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `WORD_ARITH_CONV`
 
 ``` hol4
@@ -16,11 +17,11 @@ into a canonical form.
 `WORD_ARITH_CONV` fixes the sign of equalities.
 
 ``` hol4
-- SIMP_CONV (std_ss++WORD_ARITH_ss++WORD_ARITH_EQ_ss) [] “$- a = b : 'a word”
-> val it = |- ($- a = b) = ($- 1w * a + $- 1w * b = 0w) : thm
+>>__ load "wordsLib";
 
-- WORD_ARITH_CONV “$- a = b : 'a word”
-> val it = |- ($- a = b) = (a + b = 0w) : thm
+>>+ SIMP_CONV (std_ss++wordsLib.WORD_ARITH_ss++wordsLib.WORD_ARITH_EQ_ss) [] “$- a = b : 'a word”
+
+>>+ wordsLib.WORD_ARITH_CONV “$- a = b : 'a word”
 ```
 
 ### Comments

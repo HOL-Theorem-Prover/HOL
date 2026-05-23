@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `LESS_CONV`
 
 ``` hol4
@@ -13,8 +14,7 @@ natural number literal.
 ### Example
 
 ``` hol4
-> wordsLib.LESS_CONV “n < 4n”;
-val it =
-   |- n < 4 <=> (n = 3) \/ (n = 2) \/ (n = 1) \/ (n = 0):
-   thm
+>>__ load "wordsLib";
+
+>>+ wordsLib.LESS_CONV “n < 4n”;
 ```

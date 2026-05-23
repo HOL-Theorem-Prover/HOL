@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `set_diff`
 
 ``` hol4
@@ -18,11 +19,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- set_diff [] [1,2];
-> val it = [] : int list
+>> set_diff [] [1,2];
 
-- set_diff [1,2,3] [2,1];
-> val it = [3] : int list
+>> set_diff [1,2,3] [2,1];
 ```
 
 ### Comments

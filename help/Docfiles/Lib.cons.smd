@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `cons`
 
 ``` hol4
@@ -19,6 +20,5 @@ Never fails.
 ### Example
 
 ``` hol4
-- map (cons 1) [[],[2],[2,3]];
-> val it = [[1], [1, 2], [1, 2, 3]] : int list list
+>> map (cons 1) [[],[2],[2,3]];
 ```

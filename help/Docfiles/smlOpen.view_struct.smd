@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `view_struct`
 
 ``` hol4
@@ -21,22 +22,10 @@ Fails if the structure `s` cannot be loaded by a script in the directory
 ### Example
 
 ``` hol4
-- load "smlOpen"; open smlOpen;
-(* output omitted *)
-> val it = () : unit
+>> load "smlOpen"; open smlOpen;
 
-- view_struct "Math";
-val it =
-   (["sin", "sinh", "cos", "tan", "cosh", "e", "asin", "tanh", "atan2", "ln",
-     "acos", "log10", "pi", "sqrt", "atan", "exp", "pow"], [], [], []):
-   string list * string list * string list * string list
-
-(* viewing substructures is also possible *)
-- view_struct "HolKernel.Definition";
-val it =
-   (["new_definition", "new_specification", "gen_new_specification",
-     "new_definition_hook", "new_type_definition"], [], [], []):
-   string list * string list * string list * string list
+>> view_struct "Math";
+>> view_struct "HolKernel.Definition";
 ```
 
 ### Comments

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PTREE_IN_PTREE_CONV`
 
 ``` hol4
@@ -21,11 +22,12 @@ application of `patricia$IN_PTREE`.
 ### Example
 
 ``` hol4
-- patriciaLib.PTREE_IN_PTREE_CONV ``1 IN_PTREE Empty``;
-> val it = |- 1 IN_PTREE <{}> <=> F: thm
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
 
-- patriciaLib.PTREE_IN_PTREE_CONV ``3 IN_PTREE (Branch 0 0 (Leaf 3 ()) (Leaf 2 ()))``;
-> val it = |- 3 IN_PTREE Branch 0 0 (Leaf 3 ()) (Leaf 2 ()) <=> T: thm
+>>+ patriciaLib.PTREE_IN_PTREE_CONV ``1 IN_PTREE Empty``;
+
+>>+ patriciaLib.PTREE_IN_PTREE_CONV ``3 IN_PTREE (Branch 0 0 (Leaf 3 ()) (Leaf 2 ()))``;
 ```
 
 ### See also

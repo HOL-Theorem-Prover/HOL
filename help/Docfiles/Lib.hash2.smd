@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `##`
 
 ``` hol4
@@ -18,8 +19,7 @@ If `f x` or `g y` fails.
 ### Example
 
 ``` hol4
-- (I ## dest_imp) (strip_forall (Term `!x y z. x /\ y ==> z /\ p`));
-> val it = ([`x`, `y`, `z`], (`x /\ y`, `z /\ p`))
+>> (I ## dest_imp) (strip_forall (Term `!x y z. x /\ y ==> z /\ p`));
 ```
 
 ### Comments

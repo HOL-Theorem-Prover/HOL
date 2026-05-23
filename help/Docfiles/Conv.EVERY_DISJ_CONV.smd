@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `EVERY_DISJ_CONV`
 
 ``` hol4
@@ -33,13 +34,11 @@ top-level disjuncts in the term.
 ### Example
 
 ``` hol4
-- EVERY_DISJ_CONV BETA_CONV
+>>__ load "reduceLib";
+
+>> EVERY_DISJ_CONV BETA_CONV
     (Term`(\x. x /\ p) q \/ (\x. x) r \/ (\y. s /\ y) u`);
-> val it =
-    |- (\x. x /\ p) q \/ (\x. x) r \/ (\y. s /\ y) u = q /\ p \/ r \/ s /\ u
-    : thm
-- EVERY_DISJ_CONV REDUCE_CONV ``3 < x \/ 2 < 3 \/ 2 EXP 1000 < 10``;
-> val it = |- 3 < x \/ 2 < 3 \/ 2 EXP 1000 < 10 = T : thm
+>> EVERY_DISJ_CONV reduceLib.REDUCE_CONV ``3 < x \/ 2 < 3 \/ 2 EXP 1000 < 10``;
 ```
 
 Useful for applying a conversion to all of the "significant" sub-terms

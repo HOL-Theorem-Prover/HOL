@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `set_backup`
 
 ``` hol4
@@ -19,53 +20,17 @@ see `set_goal`.
 ### Example
 
 ``` hol4
-- set_backup 0;
-()  unit
+>>+ set_backup 0;
 
-- g `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`;
-> val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
+>> g `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`;
 
-     : proofs
+>> e CONJ_TAC;
 
-- e CONJ_TAC;
-OK..
-2 subgoals:
-> val it =
-    TL [1; 2; 3] = [2; 3]
+>> e (REWRITE_TAC[listTheory.HD]);
 
+>> b();
 
-    HD [1; 2; 3] = 1
-
-     :proof
-
-- e (REWRITE_TAC[listTheory.HD]);
-OK..
-
-Goal proved.
-|- HD [1; 2; 3] = 1
-
-Remaining subgoals:
-> val it =
-    TL [1; 2; 3] = [2; 3]
-
-     : proof
-
-- b();
-> val it =
-    TL [1; 2; 3] = [2; 3]
-
-
-    HD [1; 2; 3] = 1
-
-     : proof
-
-- b();
-! Uncaught exception:
-! CANT_BACKUP_ANYMORE
+>> b();
 ```
 
 ### See also

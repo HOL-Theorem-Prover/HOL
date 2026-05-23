@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `mk_anylet`
 
 ``` hol4
@@ -30,12 +31,12 @@ corresponding `bi`.
 ### Example
 
 ``` hol4
-- strip_comb (mk_anylet ([(Term`x`, Term`M`)], Term`N x`));
-> val it = (`LET`, [`\x. N x`, `M`]) : term * term list
+>>__ load "pairSyntax";
 
-- mk_anylet ([(``f (x:'a,y:'b):'c``, ``M:'c``), (``g (z:'c) :'d``, ``N:'d``)],
+>> strip_comb (pairSyntax.mk_anylet ([(Term`x`, Term`M`)], Term`N x`));
+
+>>+ pairSyntax.mk_anylet ([(``f (x:'a,y:'b):'c``, ``M:'c``), (``g (z:'c) :'d``, ``N:'d``)],
              ``g (f (a:'a,b:'b):'c):'d`);
-> val it = ``let f (x,y) = M and g z = N in g (f (a,b))`` : term
 ```
 
 Programming that involves manipulation of term syntax.

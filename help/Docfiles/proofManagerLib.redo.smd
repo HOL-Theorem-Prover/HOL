@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `redo`
 
 ``` hol4
@@ -22,44 +23,13 @@ The function `redo` will fail if the redo list is empty.
 ### Example
 
 ``` hol4
-- g `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`;
-> val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
+>> g `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`;
 
-     : proofs
+>> e CONJ_TAC;
 
-- e CONJ_TAC;
-OK..
-2 subgoals:
-> val it =
-    TL [1; 2; 3] = [2; 3]
+>> backup();
 
-
-    HD [1; 2; 3] = 1
-
-2 subgoals
-     : proof
-
-- backup();
-> val it =
-    Initial goal:
-
-    (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
-
-     : proof
-
-- redo();
-> val it =
-    TL [1; 2; 3] = [2; 3]
-
-
-    HD [1; 2; 3] = 1
-
-2 subgoals
-     : proof
+>> redo();
 ```
 
 Back tracking in a goal-directed proof to undo errors or try different

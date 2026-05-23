@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `bool_compset`
 
 ``` hol4
@@ -16,8 +17,9 @@ conjunction, disjunction, and negation.
 ### Example
 
 ``` hol4
-- CBV_CONV bool_compset (Term `F ==> (T \/ F)`);
-> val it = |- F ==> (T \/ F) = T : thm
+>>__ load "computeLib";
+
+>> computeLib.CBV_CONV computeLib.bool_compset (Term `F ==> (T \/ F)`);
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `commafy`
 
 ``` hol4
@@ -17,15 +18,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- commafy ["donkey", "mule", "horse", "camel", "llama"];
-> val it =
-    ["donkey", ", ", "mule", ", ", "horse", ", ", "camel", ", ", "llama"] :
-  string list
+>> commafy ["donkey", "mule", "horse", "camel", "llama"];
 
-- print (String.concat it ^ "\n");
-donkey, mule, horse, camel, llama
-> val it = () : unit
+>> print (String.concat it ^ "\n");
 
-- commafy ["foo"];
-> val it = ["foo"] : string list
+>> commafy ["foo"];
 ```

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `assoc2`
 
 ``` hol4
@@ -22,8 +23,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- assoc2 2 [(1,4),(3,2),(2,5),(2,6)];
-> val it = SOME (3, 2) : (int * int) option
+>> assoc2 2 [(1,4),(3,2),(2,5),(2,6)];
 ```
 
 ### See also

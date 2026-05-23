@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ---
 aliases:
   - simpLib.SIMP_CONV
@@ -111,8 +112,7 @@ procedure implemented in this way.
 ### Example
 
 ``` hol4
-- SIMP_CONV arith_ss [] ``(\x. x + 3) 4``;
-> val it = |- (\x. x + 3) 4 = 7 : thm
+>> SIMP_CONV arith_ss [] ``(\x. x + 3) 4``;
 ```
 
 `SIMP_CONV` is a powerful way of manipulating terms. Other functions in

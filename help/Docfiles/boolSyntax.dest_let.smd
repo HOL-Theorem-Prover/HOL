@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `dest_let`
 
 ``` hol4
@@ -14,8 +15,7 @@ If `M` is a term of the form `LET M N`, then `dest_let M` returns
 ### Example
 
 ``` hol4
-- dest_let (Term `let x = P /\ Q in x \/ x`);
-> val it = (`\x. x \/ x`, `P /\ Q`) : term * term
+>>+ dest_let (Term `let x = P /\ Q in x \/ x`);
 ```
 
 ### Failure

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `UNCURRY_CONV`
 
 ``` hol4
@@ -11,8 +12,9 @@ Uncurrys an application of an abstraction.
 ### Example
 
 ``` hol4
-- UNCURRY_CONV (Term `(\x y. x + y) 1 2`);
-> val it = |- (\x y. x + y) 1 2 = (\(x,y). x + y) (1,2) : thm
+>>__ load "PairRules";
+
+>> PairRules.UNCURRY_CONV (Term `(\x y. x + y) 1 2`);
 ```
 
 ### Failure

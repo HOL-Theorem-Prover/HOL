@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `find_terms`
 
 ``` hol4
@@ -21,14 +22,11 @@ Only fails if the predicate fails on one of the term's sub-terms.
 ### Example
 
 ``` hol4
-- find_terms (fn _ => true) ``x + y``;
-> val it = [``y``, ``x``, ``$+``, ``$+ x``, ``x + y``]
+>> find_terms (fn _ => true) ``x + y``;
 
-- find_terms Literal.is_numeral ``x + y``;
-> val it = [] : term list
+>> find_terms Literal.is_numeral ``x + y``;
 
-- find_terms Literal.is_numeral ``1 + x + 2 + y``;
-> val it = [``2``, ``1``] : term list
+>> find_terms Literal.is_numeral ``1 + x + 2 + y``;
 ```
 
 ### See also

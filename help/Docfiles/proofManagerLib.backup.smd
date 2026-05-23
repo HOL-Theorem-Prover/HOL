@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `backup`
 
 ``` hol4
@@ -30,39 +31,13 @@ The function `backup` will fail if the backup list is empty.
 ### Example
 
 ``` hol4
-- g `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`;
-> val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
+>> g `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`;
 
-     : proofs
+>> e CONJ_TAC;
 
-- e CONJ_TAC;
-OK..
-2 subgoals:
-> val it =
-    TL [1; 2; 3] = [2; 3]
+>> backup();
 
-
-    HD [1; 2; 3] = 1
-
-     : proof
-
-- backup();
-> val it =
-    Initial goal:
-
-    (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
-
-     : proof
-
-- e (REWRITE_TAC[listTheory.HD, listTheory.TL]);
-OK..
-> val it =
-    Initial goal proved.
-    |- (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3]) : proof
+>> e (REWRITE_TAC[listTheory.HD, listTheory.TL]);
 ```
 
 Back tracking in a goal-directed proof to undo errors or try different

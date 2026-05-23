@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `MP_CONV`
 
 ``` hol4
@@ -22,9 +23,8 @@ done by calling `MP` on `|- P ==> Q` and `|- P`.
 ### Example
 
 ``` hol4
-- load "realLib"; open realTheory realLib;
-- MP_CONV REAL_ARITH (Q.SPEC `1` REAL_DOWN);
-> val it = |- ?y. 0 < y /\ y < 1: thm
+>> load "realLib"; open realTheory realLib;
+>> MP_CONV REAL_ARITH (Q.SPEC `1` REAL_DOWN);
 ```
 
 ### Comments

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `SELECT_LT`
 
 ``` hol4
@@ -24,10 +25,7 @@ list-tactic also never fails.
 ### Example
 
 ``` hol4
-> SELECT_LT CONJ_TAC [([], “r ∧ s”), ([], “p ⇒ q”), ([“a ∨ b”], “p ∧ q”)]
-val it =
-  ([([], “r”), ([], “s”), ([“a ∨ b”], “p”), ([“a ∨ b”], “q”), ([], “p ⇒ q”)], fn):
-  goal list * list_validation
+>> SELECT_LT CONJ_TAC [([], “r ∧ s”), ([], “p ⇒ q”), ([“a ∨ b”], “p ∧ q”)]
 ```
 
 ### See also

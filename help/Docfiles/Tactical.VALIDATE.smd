@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `VALIDATE`
 
 ``` hol4
@@ -29,65 +30,27 @@ Also fails if `tac` fails when applied to the given goal.
 ### Example
 
 For example, where theorem `uth'` is `[p'] |- q`
+>>__ val uth' = mk_thm([``p':bool``], ``q:bool``)
 
 ``` hol4
-1 subgoal:
-val it =
+##linecount_limit 2 _
+>>- set_goal([``p:bool``], ``q:bool``)
+##linecount_limit 0 _
 
-q
-------------------------------------
-  p
-:
-   proof
+>>+ e (ACCEPT_TAC uth') ;
 
-> e (ACCEPT_TAC uth') ;
-OK..
-
-Exception raised at Tactical.VALID:
-Invalid tactic [...]
-
-> e (VALIDATE (ACCEPT_TAC uth')) ;
-OK..
-1 subgoal:
-val it =
-
-p'
-------------------------------------
-  p
-:
-   proof
+>> e (VALIDATE (ACCEPT_TAC uth')) ;
 ```
 
 Given a goal with an implication in the assumptions, one can split it
 into two subgoals.
-
+>>__ drop_all();
 ``` hol4
-1 subgoal:
-val it =
+##linecount_limit 2 _
+>>- set_goal([``p==>q``], ``r:bool``)
+##linecount_limit 0 _
 
-r
-------------------------------------
-  p ==> q
-:
-   proof
-
-> e (VALIDATE (POP_ASSUM (ASSUME_TAC o UNDISCH))) ;
-
-OK..
-2 subgoals:
-val it =
-
-r
-------------------------------------
-  q
-
-p
-------------------------------------
-  p ==> q
-
-2 subgoals
-:
-   proof
+>> e (VALIDATE (POP_ASSUM (ASSUME_TAC o UNDISCH))) ;
 ```
 
 Meanwhile, to propose a term, prove it as a subgoal and then use it to

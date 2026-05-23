@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `ty_antiq`
 
 ``` hol4
@@ -22,27 +23,17 @@ bound to ML value `ty`. Attempting to antiquote ty directly into the
 term won't work:
 
 ``` hol4
-val ty = ``:num list``;
-> val ty = `:num list` : hol_type
+>> val ty = ``:num list``;
 
-- ``x : ^ty``;
-! Toplevel input:
-! Term `x : ^ty`;
-!            ^^
-! Type clash: expression of type
-!   hol_type
-! cannot have type
-!   term
+>>+ “x : ^ty”;
 ```
 
 Use of `ty_antiq` solves the problem:
 
 ``` hol4
-- ``x : ^(ty_antiq ty)``;
-> val it = `x` : term
+>> ``x : ^(ty_antiq ty)``;
 
-- type_of it;
-> val it = `:num list` : hol_type
+>> type_of it;
 ```
 
 ### See also

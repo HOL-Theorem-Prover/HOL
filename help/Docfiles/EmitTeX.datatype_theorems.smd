@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `datatype_theorems`
 
 ``` hol4
@@ -22,14 +23,11 @@ segment, the empty list is returned.
 ### Example
 
 ``` hol4
-- new_theory "example";
-<<HOL message: Created theory "example">>
-> val it = () : unit
-- val _ = Hol_datatype `example = First | Second`;
-<<HOL message: Defined type: "example">>
-- EmitTeX.datatype_theorems "example";
-> val it = [("example", |- DATATYPE (example First Second))] :
-  (string * thm) list
+>>__ load "EmitTeX";
+
+>> new_theory "example";
+>> val _ = Hol_datatype `example = First | Second`;
+>> EmitTeX.datatype_theorems "example";
 ```
 
 ### See also

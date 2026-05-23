@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `add_infix_type`
 
 ``` hol4
@@ -36,15 +37,10 @@ different associativity.
 ### Example
 
 ``` hol4
-- Hol_datatype `atree = Nd of 'v => ('k # atree) list`;
-<<HOL message: Defined type: "atree">>
-> val it = () : unit
+>> Hol_datatype `atree = Nd of 'v => ('k # atree) list`;
 
-- add_infix_type { Assoc = LEFT, Name = "atree",
+>> add_infix_type { Assoc = LEFT, Name = "atree",
                    ParseName = SOME ">->", Prec = 65 };
-> val it = () : unit
 
-- type_of ``Nd``;
-<<HOL message: inventing new type variable names: 'a, 'b>>
-> val it = ``:'a -> ('b # ('b >-> 'a)) list -> 'b >-> 'a`` : hol_type
+>> type_of ``Nd``;
 ```

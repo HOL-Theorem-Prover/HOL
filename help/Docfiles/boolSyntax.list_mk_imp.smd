@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `list_mk_imp`
 
 ``` hol4
@@ -19,15 +20,11 @@ terms is empty the type of `t` can be anything.
 ### Example
 
 ``` hol4
-- list_mk_imp ([T,F],T);
-> val it = `T ==> F ==> T` : term
+>> list_mk_imp ([T,F],T);
 
+>>+ try list_mk_imp ([T,F],mk_var("x",alpha));
 
-- try list_mk_imp ([T,F],mk_var("x",alpha));
-evaluation failed     list_mk_imp
-
-- list_mk_imp ([],mk_var("x",alpha));
-> val it = `x` : term
+>> list_mk_imp ([],mk_var("x",alpha));
 ```
 
 ### See also

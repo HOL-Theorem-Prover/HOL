@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `output_words_as_hex`
 
 ``` hol4
@@ -14,9 +15,10 @@ hexadecimal format.
 ### Example
 
 ``` hol4
-- wordsLib.output_words_as_hex();
-- EVAL “44w : word32 << 3”
-> val it = |- 0x2Cw << 3 = 0x160w : thm
+>>__ load "wordsLib";
+
+>>+ wordsLib.output_words_as_hex();
+>>+ EVAL “44w : word32 << 3”
 ```
 
 ### See also

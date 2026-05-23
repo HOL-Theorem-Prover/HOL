@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `mk_word_size`
 
 ``` hol4
@@ -15,12 +16,11 @@ words of length `n`. Theorems for `dimindex(:n)`, `dimword(:n)` and
 ### Example
 
 ``` hol4
-- mk_word_size 128
-> val it = () : unit
-- “:word128”
-> val it = “:bool[128]” : hol_type
-- theorem "dimword_128"
-> val it = |- dimword (:128) = 340282366920938463463374607431768211456 : thm
+>>__ load "wordsLib";
+
+>>+ wordsLib.mk_word_size 128
+>>+ “:word128”
+>>+ theorem "dimword_128"
 ```
 
 ### Comments

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `trypluck`
 
 ``` hol4
@@ -26,9 +27,7 @@ the list.
 ### Example
 
 ``` hol4
-- val (x,rst) = trypluck BETA_CONV [``1``,``(\x. x+2) 3``, ``p + q``];
-> val x = |- (\x. x + 2) 3 = 3 + 2 : thm
-  val rst = [``1``, ``p + q``] : term list
+>> val (x,rst) = trypluck BETA_CONV [``1``,``(\x. x+2) 3``, ``p + q``];
 ```
 
 ### See also

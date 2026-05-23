@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `apply`
 
 ``` hol4
@@ -17,14 +18,7 @@ about the function call.
 ### Example
 
 ``` hol4
-- Count.apply (CONJUNCTS o SPEC_ALL) AND_CLAUSES;
-runtime: 0.000s,    gctime: 0.000s,     systime: 0.000s.
-Axioms: 0, Defs: 0, Disk: 0, Orcl: 0, Prims: 9; Total: 9
-val it =
-   [|- T /\ t <=> t,
-    |- t /\ T <=> t, |- F /\ t <=> F,
-    |- t /\ F <=> F,
-    |- t /\ t <=> t]: thm list
+>> Count.apply (CONJUNCTS o SPEC_ALL) AND_CLAUSES;
 ```
 
 ### Failure

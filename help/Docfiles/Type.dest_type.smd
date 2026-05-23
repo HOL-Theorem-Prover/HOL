@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `dest_type`
 
 ``` hol4
@@ -19,11 +20,9 @@ Fails if `ty` is a type variable.
 ### Example
 
 ``` hol4
-- dest_type bool;
-> val it = ("bool", []) : string * hol_type list
+>> dest_type bool;
 
-- dest_type (alpha --> bool);
-> val it = ("fun", [`:'a`, `:bool`]) : string * hol_type list
+>> dest_type (alpha --> bool);
 ```
 
 ### Comments

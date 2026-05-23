@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `axioms`
 
 ``` hol4
@@ -21,12 +22,7 @@ segment, the empty list is returned.
 ### Example
 
 ``` hol4
-- axioms "bool";
-> val it =
-    [("INFINITY_AX", |- ?f. ONE_ONE f /\ ~ONTO f),
-     ("SELECT_AX", |- !P x. P x ==> P ($@ P)),
-     ("ETA_AX", |- !t. (\x. t x) = t),
-     ("BOOL_CASES_AX", |- !t. (t = T) \/ (t = F))] : (string * thm) list
+>> axioms "bool";
 ```
 
 ### See also

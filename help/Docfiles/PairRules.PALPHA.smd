@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PALPHA`
 
 ``` hol4
@@ -28,8 +29,9 @@ Fails unless the terms provided are alpha-equivalent.
 ### Example
 
 ``` hol4
-- PALPHA (Term `\(x:'a,y:'a). (x,y)`) (Term`\xy:'a#'a. xy`);
-> val it = |- (\(x,y). (x,y)) = (\xy. xy) : thm
+>>__ load "PairRules";
+
+>> PairRules.PALPHA (Term `\(x:'a,y:'a). (x,y)`) (Term`\xy:'a#'a. xy`);
 ```
 
 ### Comments

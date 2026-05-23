@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `output_words_as_oct`
 
 ``` hol4
@@ -14,14 +15,13 @@ format.
 ### Example
 
 ``` hol4
-- “032w:word5”;
-> val it = “32w” : term
-- wordsLib.output_words_as_oct();
-- “032w:word5”;
-> val it = “032w” : term
-- wordsLib.output_words_as_dec();
-- “032w:word5”;
-> val it = “26w” : term
+>>__ load "wordsLib";
+
+>>+ “032w:word5”;
+>>+ wordsLib.output_words_as_oct();
+>>+ “032w:word5”;
+>>+ wordsLib.output_words_as_dec();
+>>+ “032w:word5”;
 ```
 
 ### Comments

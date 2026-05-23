@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `WORD_SHIFT_ss`
 
 ``` hol4
@@ -17,22 +18,19 @@ More simplification is possible when used in combination with
 ### Example
 
 ``` hol4
-- SIMP_CONV (std_ss++WORD_SHIFT_ss) [] “a << 2 << 3 + a >> 3 >> 2 + a >>> 1 >>> 2 + a #<< 1 #<< 2”
-<<HOL message: inventing new type variable names: 'a>>
-> val it =
-    |- a << 2 << 3 + a >> 3 >> 2 + a >>> 1 >>> 2 + a #<< 1 #<< 2 =
-       a << 5 + a >> 5 + a >>> 3 + a #<< 3 : thm
+>>__ load "wordsLib";
 
-- SIMP_CONV (std_ss++WORD_SHIFT_ss) [] “a >> 0 + 0w << n + a #<< 2 #>> 2”
-<<HOL message: inventing new type variable names: 'a>>
-> val it = |- a >> 0 + 0w << n + a #<< 2 #>> 2 = a + 0w + a : thm
+>>+ SIMP_CONV (std_ss++wordsLib.WORD_SHIFT_ss) [] “a << 2 << 3 + a >> 3 >> 2 + a >>> 1 >>> 2 + a #<< 1 #<< 2”
+
+>>+ SIMP_CONV (std_ss++wordsLib.WORD_SHIFT_ss) [] “a >> 0 + 0w << n + a #<< 2 #>> 2”
 ```
 
 More simplification is possible when the word length is known.
 
 ``` hol4
-- SIMP_CONV (std_ss++SIZES_ss++WORD_SHIFT_ss) [] “a << 4 + (a #<< 6) : word4”
-> val it = |- a << 4 = 0w + a #<< 2 : thm
+>>__ load "wordsLib";
+
+>>+ SIMP_CONV (std_ss++wordsLib.SIZES_ss++wordsLib.WORD_SHIFT_ss) [] “a << 4 + (a #<< 6) : word4”
 ```
 
 ### Comments

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `assert`
 
 ``` hol4
@@ -20,18 +21,13 @@ an exception `e`, then `assert p x` raises `e`.
 ### Example
 
 ``` hol4
-- null [];
-> val it = true : bool
+>> null [];
 
-- assert null ([]:int list);
-> val it = [] : int list
+>> assert null ([]:int list);
 
-- null [1];
-> false : bool
+>> null [1];
 
-- assert null [1];
-! Uncaught exception:
-! HOL_ERR <poly>
+>>+ assert null [1];
 ```
 
 ### See also

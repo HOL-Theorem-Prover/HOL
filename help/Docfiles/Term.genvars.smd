@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `genvars`
 
 ``` hol4
@@ -19,8 +20,7 @@ returned.
 ### Example
 
 ``` hol4
-- genvars alpha 3;
-> val it = [`%%genvar%%1558`, `%%genvar%%1559`, `%%genvar%%1560`] : term list
+>> genvars alpha 3;
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `SIZES_CONV`
 
 ``` hol4
@@ -11,8 +12,9 @@ Evaluates `dimindex`, `dimword` and `INT_MIN`.
 ### Example
 
 ``` hol4
-- SIZES_CONV “dimword(:32)”
-> val it = |- dimword (:32) = 4294967296 : thm
+>>__ load "wordsLib";
+
+>>+ wordsLib.SIZES_CONV “dimword(:32)”
 ```
 
 ### Comments

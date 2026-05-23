@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `print_datatypes`
 
 ``` hol4
@@ -21,14 +22,11 @@ segment then no output will be produced.
 ### Example
 
 ``` hol4
-- new_theory "example";
-<<HOL message: Created theory "example">>
-> val it = () : unit
-- val _ = Hol_datatype `example = First | Second`;
-<<HOL message: Defined type: "example">>
-- EmitTeX.print_datatypes "example";
-example = First | Second
-> val it = () : unit
+>>__ load "EmitTeX";
+
+>> new_theory "example";
+>> val _ = Hol_datatype `example = First | Second`;
+>> EmitTeX.print_datatypes "example";
 ```
 
 ### See also

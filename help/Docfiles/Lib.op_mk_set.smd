@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `op_mk_set`
 
 ``` hol4
@@ -21,10 +22,9 @@ If an application of `eq` fails when applied to two elements of `list`.
 ### Example
 
 ``` hol4
-- op_mk_set aconv [Term `\x y. x /\ y`,
+>> op_mk_set aconv [Term `\x y. x /\ y`,
                    Term `\y x. y /\ x`,
                    Term `\z a. z /\ a`];
-> val it = [`\z a. z /\ a`] : term list
 ```
 
 ### Comments

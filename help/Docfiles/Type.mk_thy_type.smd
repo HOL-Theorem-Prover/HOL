@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `mk_thy_type`
 
 ``` hol4
@@ -23,13 +24,9 @@ in the ancestry of the current theory, or if `n` is not the length of
 ### Example
 
 ``` hol4
-- mk_thy_type {Tyop="fun", Thy="min", Args = [alpha,bool]};
-> val it = `:'a -> bool` : hol_type
+>> mk_thy_type {Tyop="fun", Thy="min", Args = [alpha,bool]};
 
-- try mk_thy_type {Tyop="bar", Thy="foo", Args = []};
-
-Exception raised at Type.mk_thy_type:
-"foo$bar" not found
+>>+ try mk_thy_type {Tyop="bar", Thy="foo", Args = []};
 ```
 
 ### Comments

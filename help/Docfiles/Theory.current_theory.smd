@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `current_theory`
 
 ``` hol4
@@ -41,15 +42,11 @@ to disk.
 ### Example
 
 ``` hol4
-- current_theory();
-> val it = "scratch" : string
+>> current_theory();
 
-- new_theory "foo";
-<<HOL message: Created theory "foo">>
-> val it = () : unit
+>> new_theory "foo";
 
-- current_theory();
-> val it = "foo" : string
+>> current_theory();
 ```
 
 ### Failure

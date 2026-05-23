@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `mk_ptree`
 
 ``` hol4
@@ -20,14 +21,12 @@ tree do not all have the same type.
 ### Example
 
 ``` hol4
-- mk_ptree (int_ptree_of_list [(1,``T``), (2, ``2``)]);
-Exception-
-   HOL_ERR
-  {message = "", origin_function = "mk_branch", origin_structure =
-  "HolKernel"} raised
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
 
-- mk_ptree (int_ptree_of_list [(1,``1``), (2, ``2``)]);
-val it = ``Branch 0 0 (Leaf 1 1) (Leaf 2 2)``: term
+>>+ patriciaLib.mk_ptree (patriciaLib.int_ptree_of_list [(1,``T``), (2, ``2``)]);
+
+>> patriciaLib.mk_ptree (patriciaLib.int_ptree_of_list [(1,``1``), (2, ``2``)]);
 ```
 
 ### Comments

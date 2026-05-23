@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `SUC_TO_NUMERAL_DEFN_CONV`
 
 ``` hol4
@@ -27,15 +28,9 @@ This procedure uses the following theorem:
 ### Example
 
 ``` hol4
-- CONV_RULE SUC_TO_NUMERAL_DEFN_CONV arithmeticTheory.FACT;
-> val it =
-    |- (FACT 0 = 1) /\
-       (!n.
-          FACT (NUMERAL (BIT1 n)) =
-            NUMERAL (BIT1 n) * FACT (NUMERAL (BIT1 n) - 1)) /\
-       !n.
-         FACT (NUMERAL (BIT2 n)) =
-           NUMERAL (BIT2 n) * FACT (NUMERAL (BIT1 n)) : thm
+>>__ load "numLib";
+
+>> CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV arithmeticTheory.FACT;
 ```
 
 ### Failure

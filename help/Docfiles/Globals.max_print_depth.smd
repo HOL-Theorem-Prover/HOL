@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `max_print_depth`
 
 ``` hol4
@@ -31,12 +32,5 @@ To change the maximum depth setting to `10`, the command will be:
 The theorem `numeralTheory.numeral_distrib` then prints as follows:
 
 ``` hol4
-- numeralTheory.numeral_distrib;
-> val it =
-    |- (!n. 0 + n = n) /\ (!n. n + 0 = n) /\
-       (!n m. NUMERAL n + NUMERAL m = NUMERAL (iZ (n + m))) /\
-       (!n. 0 * n = 0) /\ (!n. n * 0 = 0) /\
-       (!n m. ... ... * ... ... = NUMERAL (... * ...)) /\
-       (!n. ... - ... = 0) /\ (!n. ... = ...) /\ (!... .... ...) /\ ... /\ ...
-     : thm
+>> numeralTheory.numeral_distrib;
 ```

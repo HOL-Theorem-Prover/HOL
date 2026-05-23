@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `STRIP_QUANT_CONV`
 
 ``` hol4
@@ -25,12 +26,8 @@ term. Also fails if some of `[v1,...,vn]` are free in the hypotheses of
 ### Example
 
 ``` hol4
-- STRIP_QUANT_CONV (STRIP_QUANT_CONV SYM_CONV)
+>> STRIP_QUANT_CONV (STRIP_QUANT_CONV SYM_CONV)
     (Term `!x y z. ?!p q r. x + y*z = p*q + r`);
-
-> val it =
-    |- (!x y z. ?!p q r. x + y * z = p * q + r) =
-        !x y z. ?!p q r. p * q + r = x + y * z : thm
 ```
 
 ### Comments

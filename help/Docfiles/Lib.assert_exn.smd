@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `assert_exn`
 
 ``` hol4
@@ -20,18 +21,13 @@ an exception `ex`, then `assert_exn p x e` raises `ex`.
 ### Example
 
 ``` hol4
-- null [];
-> val it = true : bool
+>> null [];
 
-- assert_exn null ([]:int list) (Fail "non-empty list");
-> val it = [] : int list
+>> assert_exn null ([]:int list) (Fail "non-empty list");
 
-- null [1];
-> false : bool
+>> null [1];
 
-- assert_exn null [1] (Fail "non-empty list");;
-! Uncaught exception:
-! Fail  "non-empty list"
+>>+ assert_exn null [1] (Fail "non-empty list");;
 ```
 
 ### See also

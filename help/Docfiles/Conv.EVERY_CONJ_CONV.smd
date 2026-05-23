@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `EVERY_CONJ_CONV`
 
 ``` hol4
@@ -33,10 +34,8 @@ top-level conjuncts in a term.
 ### Example
 
 ``` hol4
-- EVERY_CONJ_CONV BETA_CONV (Term`(\x. x /\ y) p`);
-> val it = |- (\x. x /\ y) p = p /\ y : thm
-- EVERY_CONJ_CONV BETA_CONV (Term`(\y. y /\ p) q /\ (\z. z) r`);
-> val it = |- (\y. y /\ p) q /\ (\z. z) r = (q /\ p) /\ r : thm
+>> EVERY_CONJ_CONV BETA_CONV (Term`(\x. x /\ y) p`);
+>> EVERY_CONJ_CONV BETA_CONV (Term`(\y. y /\ p) q /\ (\z. z) r`);
 ```
 
 Useful for applying a conversion to all of the "significant" sub-terms

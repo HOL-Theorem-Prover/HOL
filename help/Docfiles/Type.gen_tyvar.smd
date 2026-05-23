@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `gen_tyvar`
 
 ``` hol4
@@ -19,18 +20,11 @@ Never fails.
 ### Example
 
 ``` hol4
-- gen_tyvar();
-> val it = `:%%gen_tyvar%%1` : hol_type
+>> gen_tyvar();
 
-- try Type `:%%gen_tyvar%%1`;
+>>+ try Type `:%%gen_tyvar%%1`;
 
-Exception raised at Parse.hol_type parser:
-Couldn't make any sense with remaining input of "%%gen_tyvar%%1"
-
-- try mk_vartype "%%gen_tyvar%%1";
-
-Exception raised at Type.mk_vartype:
-incorrect syntax
+>>+ try mk_vartype "%%gen_tyvar%%1";
 ```
 
 ### Comments

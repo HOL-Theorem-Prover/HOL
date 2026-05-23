@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `rename_bvar`
 
 ``` hol4
@@ -19,11 +20,9 @@ If `M` is not a lambda abstraction.
 ### Example
 
 ``` hol4
-- rename_bvar "x" (Term `\v. v ==> w`);
-> val it = `\x. x ==> w` : term
+>> rename_bvar "x" (Term `\v. v ==> w`);
 
-- rename_bvar "x" (Term `\y. y /\ x`);
-> val it = `\x'. x' /\ x` : term
+>> rename_bvar "x" (Term `\y. y /\ x`);
 ```
 
 ### Comments

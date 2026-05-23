@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `EXPAND_ALL_BUT_CONV`
 
 ``` hol4

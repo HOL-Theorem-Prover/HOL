@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `trye`
 
 ``` hol4
@@ -29,16 +30,11 @@ Fails if the function application fails.
 ### Example
 
 ``` hol4
-- hd [];
-! Uncaught exception:
-! Empty
+>>+ hd [];
 
-- trye hd [];
-! Uncaught exception:
-! HOL_ERR
+>>+ trye hd [];
 
-- trye (fn _ => raise Interrupt) 1;
-> Interrupted
+>>+ trye (fn _ => raise Interrupt) 1;
 ```
 
 ### See also

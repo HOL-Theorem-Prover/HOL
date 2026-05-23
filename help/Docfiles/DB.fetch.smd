@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `fetch`
 
 ``` hol4
@@ -19,8 +20,7 @@ If the specified theorem, axiom, or definition cannot be located.
 ### Example
 
 ``` hol4
-- DB.fetch "bool" "NOT_FORALL_THM";
-> val it = |- !P. ~(!x. P x) = ?x. ~P x : thm
+>> DB.fetch "bool" "NOT_FORALL_THM";
 ```
 
 ### See also

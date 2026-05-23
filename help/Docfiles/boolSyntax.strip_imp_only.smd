@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `strip_imp_only`
 
 ``` hol4
@@ -24,11 +25,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- strip_imp_only (Term `(T ==> F) ==> (T ==> F)`);
-> val it = ([`T ==> F`, `T`], `F`) : term list * term
+>> strip_imp_only (Term `(T ==> F) ==> (T ==> F)`);
 
-- strip_imp_only (Term `t1 ==> t2 ==> t3 ==> ~t`);
-> val it = ([`t1`, `t2`, `t3`], `~t`) : term list * term
+>> strip_imp_only (Term `t1 ==> t2 ==> t3 ==> ~t`);
 ```
 
 ### See also

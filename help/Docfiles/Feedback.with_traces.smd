@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `with_traces`
 
 ``` hol4
@@ -32,26 +33,20 @@ if the function invocation fails.
 
 First we define a convenience function.
 ``` hol4
-> fun pr_thm th = (print_thm th; print "\n");
-val pr_thm = fn: thm -> unit
+>> fun pr_thm th = (print_thm th; print "\n");
 ```
 
 Now we examine a theorem with and without traces set to local values.
 
 ``` hol4
-> map current_trace ["assumptions", "types"] ;
-val it = [0, 0]: int list
+>> map current_trace ["assumptions", "types"] ;
 
-> pr_thm EQ_SYM_EQ;
-⊢ ∀x y. x = y ⇔ y = x
-val it = (): unit
+>> pr_thm EQ_SYM_EQ;
 
-> with_traces [("assumptions",1), ("types",1)] pr_thm EQ_SYM_EQ;
+>>+ with_traces [("assumptions",1), ("types",1)] pr_thm EQ_SYM_EQ;
  [] ⊢ ∀(x :α) (y :α). x = y ⇔ y = x
-val it = (): unit
 
-> map current_trace ["assumptions", "types"] ;
-val it = [0, 0]: int list
+>> map current_trace ["assumptions", "types"] ;
 ```
 
 ### See also

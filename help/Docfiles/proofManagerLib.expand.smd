@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `expand`
 
 ``` hol4
@@ -7,6 +8,7 @@ proofManagerLib.expand : tactic -> proof
 ------------------------------------------------------------------------
 
 Applies a tactic to the current goal, stacking the resulting subgoals.
+>>__ drop_all()
 
 The function `expand` is part of the subgoal package. It may be
 abbreviated by the function `e`. It applies a tactic to the current goal
@@ -46,104 +48,40 @@ will also fail in cases when the tactic is invalid.
 ### Example
 
 ``` hol4
-- expand CONJ_TAC;
-- expand CONJ_TAC;
-OK..
-NO_PROOFS! Uncaught exception:
-! NO_PROOFS
+>> g `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`;
 
-- g `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`;
-> val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
+>> expand CONJ_TAC;
 
-     : proofs
+>> expand (REWRITE_TAC[listTheory.HD]);
 
-- expand CONJ_TAC;
-OK..
-2 subgoals:
-> val it =
-    TL [1; 2; 3] = [2; 3]
-
-
-    HD [1; 2; 3] = 1
-
-     : proof
-
-- expand (REWRITE_TAC[listTheory.HD]);
-OK..
-
-Goal proved.
-|- HD [1; 2; 3] = 1
-
-Remaining subgoals:
-> val it =
-    TL [1; 2; 3] = [2; 3]
-
-     : proof
-
-- expand (REWRITE_TAC[listTheory.TL]);
-OK..
-
-Goal proved.
-|- TL [1; 2; 3] = [2; 3]
-> val it =
-    Initial goal proved.
-    |- (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3]) : proof
+>> expand (REWRITE_TAC[listTheory.TL]);
 ```
 
 In the following example an invalid tactic is used. It is invalid
 because it assumes something that is not on the assumption list of the
 goal. The justification adds this assumption to the assumption list so
 the justification would not prove the goal that was set.
+>>__ drop_all()
 
 ``` hol4
-- g `1=2`;
-> val it =
-    Proof manager status: 2 proofs.
-    2. Completed: |- (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
-    1. Incomplete:
-         Initial goal:
-         1 = 2
-
-     : proofs
-- expand (REWRITE_TAC[ASSUME (Term `1=2`)]);
-OK..
-
-Exception raised at Tactical.VALID:
-Invalid tactic
-! Uncaught exception:
-! HOL_ERR
+>> g `1=2`;
+>>+ expand (REWRITE_TAC[ASSUME (Term `1=2`)]);
 ```
 
-Note that an invalid tactic may "succeed". Thus, where `tac1` is
+Note that an invalid tactic may “succeed”. Thus, where `tac1` is
 invalid, and `tac2` is valid (and both succeed), `FIRST [tac1, tac2]` is
 invalid. For example, where theorem `uth` is `[p] |- q` and `uth'` is
 `[p'] |- q`
+>>__ val uth = mk_thm([``p:bool``], ``q:bool``)
+>>__ val uth' = mk_thm([``p':bool``], ``q:bool``)
+>>__ drop_all()
 
 ``` hol4
-1 subgoal:
-val it =
+>>- set_goal([``p:bool``], ``q:bool``);
 
-q
-------------------------------------
-  p
-:
-   proof
+>>+ e (FIRST (map ACCEPT_TAC [uth', uth])) ;
 
-> e (FIRST (map ACCEPT_TAC [uth', uth])) ;
-OK..
-
-Exception raised at Tactical.VALID:
-Invalid tactic [...]
-
-> e (FIRST (map (VALID o ACCEPT_TAC) [uth', uth])) ;
-OK..
-
-Goal proved.
- [p] |- q
+>> e (FIRST (map (VALID o ACCEPT_TAC) [uth', uth])) ;
 ```
 
 Doing a step in an interactive goal-directed proof.

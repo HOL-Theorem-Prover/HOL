@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `WORD_DIV_LSR_CONV`
 
 ``` hol4
@@ -12,8 +13,9 @@ division by a power of two with applications of logical right-shift.
 ### Example
 
 ``` hol4
-> wordsLib.WORD_DIV_LSR_CONV “w // 8w : word8”;
-val it = |- w // 8w = w >>> 3: thm
+>>__ load "wordsLib";
+
+>>+ wordsLib.WORD_DIV_LSR_CONV “w // 8w : word8”;
 ```
 
 ### Comments

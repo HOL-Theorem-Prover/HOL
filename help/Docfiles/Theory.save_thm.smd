@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `save_thm`
 
 ``` hol4
@@ -23,11 +24,9 @@ valid ML alphanumeric identifier, `save_thm` will not fail, but
 ### Example
 
 ``` hol4
-- val foo = save_thm("foo", REFL (Term `x:bool`));
-> val foo = |- x = x : thm
+>> val savethm_demo = save_thm("savethm_demo", REFL (Term `x:bool`));
 
-- current_theorems();
-> val it = [("foo", |- x = x)] : (string * thm) list
+>> current_theorems();
 ```
 
 ### Comments

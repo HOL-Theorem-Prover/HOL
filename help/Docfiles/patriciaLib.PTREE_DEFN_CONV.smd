@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PTREE_DEFN_CONV`
 
 ``` hol4
@@ -16,18 +17,14 @@ and `c` where `k` is a natural number literal.
 ### Example
 
 ``` hol4
-- val ptree = Define_mk_ptree "ptree" (int_ptree_of_list [(1,``1``), (2, ``2``)]);
-<<HOL message: Saved IS_PTREE theorem for new constant "ptree">>
-val ptree = |- ptree = Branch 0 0 (Leaf 1 1) (Leaf 2 2): thm
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
 
-- PTREE_DEFN_CONV ``ptree \\ 1``;
-val it = |- ptree \\ 1 = Leaf 2 2: thm
+>> val ptree = patriciaLib.Define_mk_ptree "ptree" (patriciaLib.int_ptree_of_list [(1,``1``), (2, ``2``)]);
 
-- PTREE_DEFN_CONV ``ptree |+ (3,3)``;
-val it =
-   |- ptree |+ (3,3) =
-   Branch 0 0 (Branch 1 1 (Leaf 3 3) (Leaf 1 1)) (Leaf 2 2):
-   thm
+>> patriciaLib.PTREE_DEFN_CONV ``ptree \\ 1``;
+
+>> patriciaLib.PTREE_DEFN_CONV ``ptree |+ (3,3)``;
 ```
 
 ### Comments

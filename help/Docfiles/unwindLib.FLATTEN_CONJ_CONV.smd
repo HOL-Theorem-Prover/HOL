@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `FLATTEN_CONJ_CONV`
 
 ``` hol4

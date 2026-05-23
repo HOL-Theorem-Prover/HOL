@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `hash`
 
 ``` hol4
@@ -22,8 +23,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- hash 13 "ishkabibble" (0,0);
-> val it = 5 : int
+>>+ hash 13 "ishkabibble" (0,0);
 ```
 
 ### Comments

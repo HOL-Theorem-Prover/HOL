@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `RAND_CONV`
 
 ``` hol4
@@ -30,8 +31,7 @@ that maps a term `t` to a theorem `|- t = t'`).
 ### Example
 
 ``` hol4
-- RAND_CONV numLib.num_CONV (Term `SUC 2`);
-> val it = |- SUC 2 = SUC(SUC 1) : thm
+>> RAND_CONV numLib.num_CONV (Term `SUC 2`);
 ```
 
 ### See also

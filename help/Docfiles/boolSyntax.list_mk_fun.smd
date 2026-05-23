@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `list_mk_fun`
 
 ``` hol4
@@ -17,8 +18,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- list_mk_fun ([alpha,bool],beta);
-> val it = `:'a -> bool -> 'b` : hol_type
+>> list_mk_fun ([alpha,bool],beta);
 ```
 
 ### See also

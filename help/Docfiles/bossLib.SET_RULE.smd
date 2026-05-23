@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `SET_RULE`
 
 ``` hol4
@@ -19,10 +20,7 @@ needed lemmas in `pred_setTheory`.
 ### Example
 
 ``` hol4
-- SET_RULE ``!s t c. DISJOINT s t ==> DISJOINT (s INTER c) (t INTER c)``;
-<<HOL message: inventing new type variable names: 'a>>
-metis: r[+0+5]+0+0+0+0+1#
-> val it = |- !s t c. DISJOINT s t ==> DISJOINT (s INTER c) (t INTER c): thm
+>> SET_RULE ``!s t c. DISJOINT s t ==> DISJOINT (s INTER c) (t INTER c)``;
 ```
 
 ### Failure

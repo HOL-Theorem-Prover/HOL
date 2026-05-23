@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `ADD_SGS_TAC`
 
 ``` hol4
@@ -38,38 +39,17 @@ Given a goal with an implication in the assumptions, one can split it
 into two subgoals, defining an auxiliary function
 
 ``` hol4
-fun split_imp_asm th =
-  let val (tm, thu) = UNDISCH_TM th ;
-  in ADD_SGS_TAC [tm] (ASSUME_TAC thu) end ;
+>> fun split_imp_asm th =
+     let val (tm, thu) = UNDISCH_TM th ;
+     in ADD_SGS_TAC [tm] (ASSUME_TAC thu) end ;
 ```
 
 This can be used as follows:
 
 ``` hol4
-1 subgoal:
-val it =
+>>- set_goal([``p ==> q``], ``r:bool``)
 
-r
-------------------------------------
-  p ==> q
-:
-   proof
-
-> e (FIRST_X_ASSUM split_imp_asm) ;
-
-OK..
-2 subgoals:
-val it =
-
-r
-------------------------------------
-  q
-
-p
-
-2 subgoals
-:
-   proof
+>> e (FIRST_X_ASSUM split_imp_asm) ;
 ```
 
 To propose a term, prove it as a subgoal and then use it to prove the
@@ -78,5 +58,5 @@ goal, as is done using `SUBGOAL_THEN tm ASSUME_TAC`, can also be done by
 
 ### See also
 
-[`Tactical.VALIDATE`](#Tactical.VALIDATE),
+[Tactic.impl_tac](#Tactic.impl_tac), [`Tactical.VALIDATE`](#Tactical.VALIDATE),
 [`Tactical.GEN_VALIDATE`](#Tactical.GEN_VALIDATE)

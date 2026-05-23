@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PSPEC_TAC`
 
 ``` hol4
@@ -27,20 +28,14 @@ as `q`.
 ### Example
 
 ``` hol4
-- g `1 + 2 = 2 + 1`;
-> val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         1 + 2 = 2 + 1
+>>__ load "PairRules";
+>>__ val pspec_tac_initial_grammars = (Parse.type_grammar(), Parse.term_grammar());
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 
-- e (PSPEC_TAC (Term`(1,2)`, Term`(x:num,y:num)`));
-OK..
-1 subgoal:
-> val it =
-    !(x,y). x + y = y + x
+>> g `1 + 2 = 2 + 1`;
 
-     : proof
+>> e (PairRules.PSPEC_TAC (Term`(1,2)`, Term`(x:num,y:num)`));
+>>__ Parse.temp_set_grammars pspec_tac_initial_grammars;
 ```
 
 Removing unnecessary speciality in a goal, particularly as a prelude to

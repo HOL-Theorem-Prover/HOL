@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `all2`
 
 ``` hol4
@@ -37,22 +38,13 @@ the length of `l1` is not equal to the length of `l2`.
 ### Example
 
 ``` hol4
-- all2 equal [1,2,3] [1,2,3];
-> val it = true : bool
+>> all2 equal [1,2,3] [1,2,3];
 
-- all2 equal [1,2,3] [1,2,3,4] handle e => Raise e;
+>>+ all2 equal [1,2,3] [1,2,3,4] handle e => Raise e;
 
-Exception raised at Lib.all2:
-different length lists
-! Uncaught exception:
-! HOL_ERR
+>> all2 (fn _ => fn _ => raise Fail "") [] [];
 
-- all2 (fn _ => fn _ => raise Fail "") [] [];
-> val it = true : bool
-
-- all2 (fn _ => fn _ => raise Fail "") [1] [1];
-! Uncaught exception:
-! Fail  ""
+>>+ all2 (fn _ => fn _ => raise Fail "") [1] [1];
 ```
 
 ### See also

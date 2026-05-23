@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `type_varsl`
 
 ``` hol4
@@ -18,8 +19,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- type_varsl [alpha, beta, bool, ((alpha --> beta) --> bool --> beta)];
-> val it = [`:'a`, `:'b`] : hol_type list
+>> type_varsl [alpha, beta, bool, ((alpha --> beta) --> bool --> beta)];
 ```
 
 ### Comments

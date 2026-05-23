@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `end_itlist`
 
 ``` hol4
@@ -19,8 +20,7 @@ Fails if list is empty, or if an application of `f` raises an exception.
 ### Example
 
 ``` hol4
-- end_itlist (curry op+) [1,2,3,4];
-> val it = 10 : int
+>> end_itlist (curry op+) [1,2,3,4];
 ```
 
 ### See also

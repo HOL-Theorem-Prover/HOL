@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `el`
 
 ``` hol4
@@ -19,8 +20,7 @@ the length of the list.
 ### Example
 
 ``` hol4
-- el 3 [1,2,7,1];
-> val it = 7 : int
+>> el 3 [1,2,7,1];
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `Raise`
 
 ``` hol4
@@ -20,12 +21,7 @@ Never fails, since it always succeeds in raising the supplied exception.
 ### Example
 
 ``` hol4
-- Raise (mk_HOL_ERR "Foo" "bar" "incomprehensible input");
-
-Exception raised at Foo.bar:
-incomprehensible input
-! Uncaught exception:
-! HOL_ERR
+>>+ Raise (mk_HOL_ERR "Foo" "bar" "incomprehensible input");
 ```
 
 ### See also

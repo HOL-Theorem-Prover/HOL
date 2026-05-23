@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `list_mk_conj`
 
 ``` hol4
@@ -18,16 +19,11 @@ or more of which are not of type `bool`.
 ### Example
 
 ``` hol4
-- list_mk_conj [T,F,T];
-> val it = `T /\ F /\ T` : term
+>> list_mk_conj [T,F,T];
 
-- try list_mk_conj [T,mk_var("x",alpha),F];
+>>+ try list_mk_conj [T,mk_var("x",alpha),F];
 
-Exception raised at boolSyntax.mk_conj:
-Non-boolean argument
-
-- list_mk_conj [mk_var("x",alpha)];
-> val it = `x` : term
+>> list_mk_conj [mk_var("x",alpha)];
 ```
 
 ### See also

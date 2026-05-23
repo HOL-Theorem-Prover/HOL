@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `strip_disj`
 
 ``` hol4
@@ -25,8 +26,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- strip_disj (Term `(a \/ b) \/ c \/ d`);
-> val it = [`a`, `b`, `c`, `d`] : term list
+>> strip_disj (Term `(a \/ b) \/ c \/ d`);
 ```
 
 ### See also

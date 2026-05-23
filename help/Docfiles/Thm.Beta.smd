@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `Beta`
 
 ``` hol4
@@ -26,14 +27,11 @@ equation is not a beta-redex.
 ### Example
 
 ``` hol4
-val th = REFL (Term `(K:'a ->'b->'a) x`);
-> val th = |- K x = K x : thm
+>> val th = REFL “(K:'a ->'b->'a) x”;
 
-- SUBS_OCCS [([2],combinTheory.K_DEF)] th;
-> val it = |- K x = (\x y. x) x : thm
+>> SUBS_OCCS [([2],combinTheory.K_DEF)] th;
 
-- Beta it;
-> val it = |- K x = (\y. x) : thm
+>> Beta it;
 ```
 
 ### Comments

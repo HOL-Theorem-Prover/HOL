@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `diminish_srw_ss`
 
 ``` hol4
@@ -31,27 +32,15 @@ corresponding fragment in the list that the function returns.
 ### Example
 
 ``` hol4
-- SIMP_CONV (srw_ss()) [] ``MAP ($+ 1) [3;4;5]``;
-> val it = |- MAP ($+ 1) [3; 4; 5] = [4; 5; 6] : thm
+>> SIMP_CONV (srw_ss()) [] ``MAP ($+ 1) [3;4;5]``;
 
-- val frags = diminish_srw_ss ["REDUCE"]
-> val frags =
-   [Simplification set: REDUCE
-    Conversions:
-      REDUCE_CONV (arithmetic reduction), keyed on pattern  ``EVEN x``
-      REDUCE_CONV (arithmetic reduction), keyed on pattern  ``ODD x``
-      REDUCE_CONV (arithmetic reduction), keyed on pattern  ``PRE x``
-      REDUCE_CONV (arithmetic reduction), keyed on pattern  ``SUC x``
-    ...] : ssfrag list
+>> val frags = diminish_srw_ss ["REDUCE"]
 
-- SIMP_CONV (srw_ss()) [] ``MAP ($+ 1) [3;4;5]``;
-> val it = |- MAP ($+ 1) [3; 4; 5] = [1 + 3; 1 + 4; 1 + 5] : thm
+>> SIMP_CONV (srw_ss()) [] ``MAP ($+ 1) [3;4;5]``;
 
-- augment_srw_ss frags;
-> val it = () : unit
+>>+ augment_srw_ss frags;
 
-- SIMP_CONV (srw_ss()) [] ``MAP ($+ 1) [3;4;5]``;
-> val it = |- MAP ($+ 1) [3; 4; 5] = [4; 5; 6] : thm
+>> SIMP_CONV (srw_ss()) [] ``MAP ($+ 1) [3;4;5]``;
 ```
 
 ### See also

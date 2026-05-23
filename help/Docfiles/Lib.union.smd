@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `union`
 
 ``` hol4
@@ -22,14 +23,11 @@ Never fails.
 ### Example
 
 ``` hol4
-- union [1,2,3] [1,5,4,3];
-val it = [2,1,5,4,3] : int list
+>> union [1,2,3] [1,5,4,3];
 
-- union [1,1,1] [1,2,3,2];
-val it = [1,2,3,2] : int list
+>> union [1,1,1] [1,2,3,2];
 
-- union [1,2,3,2] [1,1,1] ;
-val it = [3,2,1,1,1] : int list
+>> union [1,2,3,2] [1,1,1] ;
 ```
 
 ### Comments

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `emit_ERR`
 
 ``` hol4
@@ -18,19 +19,11 @@ The default value of `emit_ERR` is `true`.
 ### Example
 
 ``` hol4
-- Raise (mk_HOL_ERR "Module" "function" "message");
+>>+ Raise (mk_HOL_ERR "Module" "function" "message");
 
-Exception raised at Module.function:
-message
-! Uncaught exception:
-! HOL_ERR
+>> emit_ERR := false;
 
-- emit_ERR := false;
-> val it = () : unit
-
-- Raise (mk_HOL_ERR "Module" "function" "message");
-! Uncaught exception:
-! HOL_ERR
+>>+ Raise (mk_HOL_ERR "Module" "function" "message");
 ```
 
 ### See also

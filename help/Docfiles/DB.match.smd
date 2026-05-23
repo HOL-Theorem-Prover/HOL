@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `match`
 
 ``` hol4
@@ -25,28 +26,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- DB.match ["bool","pair"] (Term `(a = b) = c`);
-<<HOL message: inventing new type variable names: 'a>>
-> val it =
-    [(("bool", "EQ_CLAUSES"),
-      (|- !t.((T = t) = t) /\ ((t = T) = t) /\
-             ((F = t) = ~t) /\ ((t = F) = ~t), Db.Thm)),
-     (("bool", "EQ_EXPAND"),
-      (|- !t1 t2. (t1 = t2) = t1 /\ t2 \/ ~t1 /\ ~t2, Db.Thm)),
-     (("bool", "EQ_IMP_THM"),
-      (|- !t1 t2. (t1 = t2) = (t1 ==> t2) /\ (t2 ==> t1), Db.Thm)),
-     (("bool", "EQ_SYM_EQ"), (|- !x y. (x = y) = (y = x), Db.Thm)),
-     (("bool", "FUN_EQ_THM"), (|- !f g. (f = g) = !x. f x = g x, Db.Thm)),
-     (("bool", "OR_IMP_THM"), (|- !A B. (A = B \/ A) = B ==> A, Db.Thm)),
-     (("bool", "REFL_CLAUSE"), (|- !x. (x = x) = T, Db.Thm)),
-     (("pair", "CLOSED_PAIR_EQ"),
-      (|- !x y a b. ((x,y) = (a,b)) = (x = a) /\ (y = b), Db.Thm)),
-     (("pair", "CURRY_ONE_ONE_THM"),
-      (|- (CURRY f = CURRY g) = (f = g), Db.Thm)),
-     (("pair", "PAIR_EQ"), (|- ((x,y) = (a,b)) = (x = a) /\ (y = b), Db.Thm)),
-     (("pair", "UNCURRY_ONE_ONE_THM"),
-      (|- (UNCURRY f = UNCURRY g) = (f = g), Db.Thm))] :
-  ((string * string) * (thm * class)) list
+>> DB.match ["bool","pair"] (Term `(a = b) = c`);
 ```
 
 ### Comments

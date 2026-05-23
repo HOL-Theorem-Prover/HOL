@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ---
 aliases:
   - boolSyntax.strip_abs
@@ -29,11 +30,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- strip_abs (Term `\x y z. x ==> y ==> z`);
-> val it = ([`x`, `y`, `z`], `x ==> y ==> z`) : term list * term
+>> strip_abs (Term `\x y z. x ==> y ==> z`);
 
-- strip_abs T;
-> val it = ([], `T`) : term list * term
+>> strip_abs T;
 ```
 
 ### Comments

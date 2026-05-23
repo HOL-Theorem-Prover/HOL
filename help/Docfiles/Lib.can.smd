@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `can`
 
 ``` hol4
@@ -18,15 +19,11 @@ Only fails if `f x` raises the `Interrupt` exception.
 ### Example
 
 ``` hol4
-- hd [];
-! Uncaught exception:
-! Empty
+>>+ hd [];
 
-- can hd [];
-> val it = false : bool
+>> can hd [];
 
-- can (fn _ => raise Interrupt) 3;
-> Interrupted.
+>>+ can (fn _ => raise Interrupt) 3;
 ```
 
 ### See also

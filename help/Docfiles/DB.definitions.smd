@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `definitions`
 
 ``` hol4
@@ -21,14 +22,7 @@ segment, the empty list is returned.
 ### Example
 
 ``` hol4
-- definitions "combin";
-> val it =
-    [("C_DEF", |- combin$C = (\f x y. f y x)),
-     ("I_DEF", |- I = S K K),
-     ("K_DEF", |- K = (\x y. x)),
-     ("o_DEF", |- !f g. f o g = (\x. f (g x))),
-     ("S_DEF", |- S = (\f g x. f x (g x))),
-     ("W_DEF", |- W = (\f x. f x x))] : (string * thm) list
+>> definitions "combin";
 ```
 
 ### See also

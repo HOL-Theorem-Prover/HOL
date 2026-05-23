@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `beta_conv`
 
 ``` hol4
@@ -24,11 +25,9 @@ If `M` is not the application of an abstraction to an argument.
 ### Example
 
 ``` hol4
-- beta_conv (mk_comb (Term `\(x:'a) (y:'b). x`, Term `(P:bool -> 'a) Q`));
-> val it = `\y. P Q` : term
+>> beta_conv (mk_comb (Term `\(x:'a) (y:'b). x`, Term `(P:bool -> 'a) Q`));
 
-- beta_conv (mk_comb (Term `\(x:'a) (y:'b) (y':'b). x`, Term `y:'a`));
-> val it = `\y'. y` : term
+>> beta_conv (mk_comb (Term `\(x:'a) (y:'b) (y':'b). x`, Term `y:'a`));
 ```
 
 ### Comments

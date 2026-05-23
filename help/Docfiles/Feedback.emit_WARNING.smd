@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `emit_WARNING`
 
 ``` hol4
@@ -17,15 +18,11 @@ The default value of `emit_WARNING` is `true`.
 ### Example
 
 ``` hol4
-- HOL_WARNING "Clock" "watcher" "Time is running out.";
-<<HOL warning: Clock.watcher: Time is running out.>>
-> val it = () : unit
+>> HOL_WARNING "Clock" "watcher" "Time is running out.";
 
-- emit_WARNING := false;
-> val it = () : unit
+>> emit_WARNING := false;
 
-- HOL_WARNING "Clock" "watcher" "Time is running out.";
-> val it = () : unit
+>> HOL_WARNING "Clock" "watcher" "Time is running out.";
 ```
 
 ### See also

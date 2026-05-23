@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `RATOR_CONV`
 
 ``` hol4
@@ -30,8 +31,7 @@ that maps a term `t` to a theorem `|- t = t'`).
 ### Example
 
 ``` hol4
-- RATOR_CONV BETA_CONV (Term `(\x y. x + y) 1 2`);
-> val it = |- (\x y. x + y)1 2 = (\y. 1 + y) 2 : thm
+>> RATOR_CONV BETA_CONV (Term `(\x y. x + y) 1 2`);
 ```
 
 ### See also

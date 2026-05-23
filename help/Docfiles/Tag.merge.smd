@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `merge`
 
 ``` hol4
@@ -19,11 +20,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- Tag.merge (Tag.read "foo") (Tag.read "bar");
-> val it = Kerneltypes.TAG(["bar", "foo"], []) : tag
+>> Tag.merge (Tag.read "foo") (Tag.read "bar");
 
-- Tag.merge it (Tag.read "foo");
-> val it = Kerneltypes.TAG(["bar", "foo"], []) : tag
+>> Tag.merge it (Tag.read "foo");
 ```
 
 ### Comments

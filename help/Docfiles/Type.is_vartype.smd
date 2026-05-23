@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `is_vartype`
 
 ``` hol4
@@ -15,14 +16,11 @@ Never fails.
 ### Example
 
 ``` hol4
-- is_vartype Type.alpha;
-> val it = true : bool
+>> is_vartype Type.alpha;
 
-- is_vartype bool;
-> val it = false : bool
+>> is_vartype bool;
 
-- is_vartype (Type `:'a  -> bool`);
-> val it = false : bool
+>> is_vartype (Type `:'a  -> bool`);
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `compare`
 
 ``` hol4
@@ -18,8 +19,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- Type.compare (bool, alpha --> alpha);
-> val it = LESS : order
+>> Type.compare (bool, alpha --> alpha);
 ```
 
 ### Comments

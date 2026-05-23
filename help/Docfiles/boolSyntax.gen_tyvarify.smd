@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `gen_tyvarify`
 
 ``` hol4
@@ -18,10 +19,8 @@ Never fails.
 ### Example
 
 ``` hol4
-> show_types := true;
-> gen_tyvarify “h::t”;
-<<HOL message: inventing new type variable names: 'a>>
-val it = “(h :%%gen_tyvar%%30)::(t :%%gen_tyvar%%30 list)”: term
+>> show_types := true;
+  gen_tyvarify “h::t”;
 ```
 
 ### See also

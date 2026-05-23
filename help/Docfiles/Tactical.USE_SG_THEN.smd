@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `USE_SG_THEN`
 
 ``` hol4
@@ -56,26 +57,7 @@ r
 :
    proof
 
-> elt (USE_SG_THEN ASSUME_TAC 1 2) ;
-OK..
-2 subgoals:
-val it =
-
-r \/ s
-------------------------------------
-  0.  p
-  1.  q
-  2.  r
-
-
-r
-------------------------------------
-  0.  p
-  1.  q
-
-2 subgoals
-:
-   proof
+>>+ elt (USE_SG_THEN ASSUME_TAC 1 2) ;
 ```
 
 Here is an example where the assumptions differ. Subgoal 2 is used to
@@ -98,25 +80,7 @@ r
 :
    proof
 
-> elt (VALIDATE_LT (USE_SG_THEN ACCEPT_TAC 2 1)) ;
-OK..
-2 subgoals:
-val it =
-
-r
-------------------------------------
-  0.  p'
-  1.  q
-
-
-p'
-------------------------------------
-  0.  p
-  1.  q
-
-2 subgoals
-:
-   proof
+>>+ elt (VALIDATE_LT (USE_SG_THEN ACCEPT_TAC 2 1)) ;
 ```
 
 ### Comments

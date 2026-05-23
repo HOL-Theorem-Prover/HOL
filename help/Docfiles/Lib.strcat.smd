@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `strcat`
 
 ``` hol4
@@ -15,12 +16,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- strcat "1" "";
-> val it = "1" : string
+>> strcat "1" "";
 
-- strcat "hello" "world";
-> val it = "helloworld" : string
+>> strcat "hello" "world";
 
-- strcat "hello" (strcat " " "world");
-> val it = "hello world" : string
+>> strcat "hello" (strcat " " "world");
 ```

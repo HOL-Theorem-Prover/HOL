@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `with_flag`
 
 ``` hol4
@@ -20,16 +21,11 @@ before raising the exception from `f x`.
 ### Example
 
 ``` hol4
-- fun print_term_nl tm = (print_term tm; print "\n");
-> val print_term_nl = fn : term -> unit
+>> fun print_term_nl tm = (print_term tm; print "\n");
 
-- with_flag (show_types, true) print_term_nl (concl T_DEF);
-T = ((\(x :bool). x) = (\(x :bool). x))
-> val it = () : unit
+>> with_flag (show_types, true) print_term_nl (concl T_DEF);
 
-- print_term_nl (concl T_DEF);
-T = ((\(x. x) = (\x. x))
-> val it = () : unit
+>> print_term_nl (concl T_DEF);
 ```
 
 ### See also

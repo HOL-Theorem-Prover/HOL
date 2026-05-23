@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `IgnAsm`
 
 ``` hol4
@@ -31,17 +32,13 @@ the goal, so that this pattern does not match the assumption about
 variable `y`:
 
 ``` hol4
-> simp[IgnAsm‘x = _’] ([“x = F”, “y = T”], “p ∧ x ∧ y”);
-val it = ([([“x ⇔ F”, “y ⇔ T”], “p ∧ x”)], fn): goal list * validation 
+>> simp[IgnAsm‘x = _’] ([“x = F”, “y = T”], “p ∧ x ∧ y”);
 
-> simp[IgnAsm‘F’] ([“x = F”, “y = T”], “p ∧ x ∧ y”);
-val it = ([([“x ⇔ T”, “y ⇔ T”], “F”)], fn): goal list * validation 
+>> simp[IgnAsm‘F’] ([“x = F”, “y = T”], “p ∧ x ∧ y”);
 
-> simp[IgnAsm‘F (* sa *)’] ([“x = F”, “y = T”], “p ∧ x ∧ y”);
-val it = ([([“x ⇔ T”, “y ⇔ T”], “p ∧ x”)], fn): goal list * validation 
+>> simp[IgnAsm‘F (* sa *)’] ([“x = F”, “y = T”], “p ∧ x ∧ y”);
 
-> simp[IgnAsm‘_ = _’] ([“x = F”, “y = T”, “p:bool”], “p ∧ x ∧ y”);
-val it = ([([“x ⇔ F”, “y ⇔ T”, “p”], “x ∧ y”)], fn): goal list * validation
+>> simp[IgnAsm‘_ = _’] ([“x = F”, “y = T”, “p:bool”], “p ∧ x ∧ y”);
 ```
 
 ### See also

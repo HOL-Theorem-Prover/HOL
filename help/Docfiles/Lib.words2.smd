@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `words2`
 
 ``` hol4
@@ -23,11 +24,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- words2  "/"  "/the/cat//sat/on//the/mat/";
-> val it = ["the", "cat", "sat", "on", "the", "mat"] : string list
+>> words2  "/"  "/the/cat//sat/on//the/mat/";
 
-- words2  "//"  "/the/cat//sat/on//the/mat/";
-> val it = ["/the/cat//sat/on//the/mat/"] : string list
+>> words2  "//"  "/the/cat//sat/on//the/mat/";
 ```
 
 ### Comments

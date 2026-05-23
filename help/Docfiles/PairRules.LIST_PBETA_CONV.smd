@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `LIST_PBETA_CONV`
 
 ``` hol4
@@ -32,8 +33,9 @@ avoid variable capture.
 ### Example
 
 ``` hol4
-- LIST_PBETA_CONV (Term `(\(a,b) (c,d) . a + b + c + d) (1,2) (3,4)`);
-> val it = |- (\(a,b) (c,d). a + b + c + d) (1,2) (3,4) = 1 + 2 + 3 + 4 : thm
+>>__ load "PairRules";
+
+>> PairRules.LIST_PBETA_CONV (Term `(\(a,b) (c,d) . a + b + c + d) (1,2) (3,4)`);
 ```
 
 ### See also

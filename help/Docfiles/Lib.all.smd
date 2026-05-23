@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `all`
 
 ``` hol4
@@ -19,18 +20,13 @@ exception `e`, then `all P [x0,...,x(j-1),xj,...,xn]` raises `e`.
 ### Example
 
 ``` hol4
-- all (equal 3) [3,3,3];
-> val it = true : bool
+>> all (equal 3) [3,3,3];
 
-- all (equal 3) [];
-> val it = true : bool
+>> all (equal 3) [];
 
-- all (fn _ => raise Fail "") [];
-> val it = true : bool
+>> all (fn _ => raise Fail "") [];
 
-- all (fn _ => raise Fail "") [1];
-! Uncaught exception:
-! Fail  ""
+>>+ all (fn _ => raise Fail "") [1];
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `associate_restriction`
 
 ``` hol4
@@ -62,25 +63,16 @@ Never fails.
 ### Example
 
 ``` hol4
-- new_binder_definition("DURING", ``DURING(p:num#num->bool) = $!p``);
-> val it = |- !p. $DURING p = $! p : thm
+>> new_binder_definition("DURING", ``DURING(p:num#num->bool) = $!p``);
 
-- ``DURING x::(m,n). p x``;
-<<HOL warning: parse_term.parse_term: on line 2, characters 4-23:
-parse_term: No restricted quantifier associated with DURING>>
+>>+ ``DURING x::(m,n). p x``;
 
-[...]
-
-- new_definition("RES_DURING",
+>> new_definition("RES_DURING",
                  ``RES_DURING(m,n)p = !x. m<=x /\ x<=n ==> p x``);
-> val it = |- !m n p. RES_DURING (m,n) p = !x. m <= x /\ x <= n ==> p x : thm
 
-- associate_restriction("DURING","RES_DURING");
-> val it = () : unit
+>> associate_restriction("DURING","RES_DURING");
 
-- ``DURING x::(m,n). p x``;
-> val it = ``DURING x::(m,n). p x`` : term
+>> ``DURING x::(m,n). p x``;
 
-- dest_comb it;
-> val it = (``RES_DURING (m,n)``, ``\x. p x``) : term * term
+>> dest_comb it;
 ```

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `BBLAST_CONV`
 
 ``` hol4
@@ -51,29 +52,22 @@ e.g. `(expr1 -- expr2) w`.
 Word orderings are handled:
 
 ``` hol4
-- blastLib.BBLAST_CONV ``!a b. ~word_msb a /\ ~word_msb b ==> (a <+ b = a < b:word32)``;
-val it =
-   |- (!a b. ~word_msb a /\ ~word_msb b ==> (a <+ b <=> a < b)) <=> T
-   : thm
+>>__ load "blastLib";
+
+>>+ blastLib.BBLAST_CONV ``!a b. ~word_msb a /\ ~word_msb b ==> (a <+ b = a < b:word32)``;
 ```
 
 In some cases the result will be a proposition over bit values:
 
 ``` hol4
-- blastLib.BBLAST_CONV ``!a. (a + 1w:word8) ' 1``;
-val it =
-   |- (!a. (a + 1w) ' 1) <=> !a. a ' 1 <=> ~a ' 0
-   : thm
+>> blastLib.BBLAST_CONV ``!a. (a + 1w:word8) ' 1``;
 ```
 
 This conversion is especially useful where "logical" and "arithmetic"
 bit-vector operations are combined:
 
 ``` hol4
-- blastLib.BBLAST_CONV ``!a. ((((((a:word8) * 16w) + 0x10w)) && 0xF0w) >>> 4) = (3 -- 0) (a + 1w)``;
-val it =
-   |- (!a. (a * 16w + 16w && 240w) >>> 4 = (3 -- 0) (a + 1w)) <=> T
-   : thm
+>> blastLib.BBLAST_CONV ``!a. ((((((a:word8) * 16w) + 0x10w)) && 0xF0w) >>> 4) = (3 -- 0) (a + 1w)``;
 ```
 
 ### See also

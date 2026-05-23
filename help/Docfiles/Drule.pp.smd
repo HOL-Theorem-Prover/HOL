@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `pp`
 
 ``` hol4
@@ -50,11 +51,11 @@ in the given theorem.
 ### Example
 
 ``` hol4
-> sortingTheory.ALL_DISTINCT_PERM;
-val it = ⊢ ∀l1 l2. PERM l1 l2 ⇒ (ALL_DISTINCT l1 ⇔ ALL_DISTINCT l2)
+>>__ load "sortingTheory";
 
-> it |> iffLR |> pp (Pos last);
-val it = ⊢ ∀l1. ALL_DISTINCT l1 ⇒ ∀l2. PERM l1 l2 ⇒ ALL_DISTINCT l2: thm
+>> sortingTheory.ALL_DISTINCT_PERM;
+
+>> it |> iffLR |> pp (Pos last);
 ```
 
 ### See also

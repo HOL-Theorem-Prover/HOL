@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `COMB2_CONV`
 
 ``` hol4
@@ -27,9 +28,7 @@ fails when applied to the respective sub-terms.
 ### Example
 
 ``` hol4
-> COMB2_CONV (ALL_CONV, numLib.REDUCE_CONV) ``f (10 * 3)``;
-<<HOL message: inventing new type variable names: 'a>>
-val it = |- f (10 * 3) = f 30 : thm
+>> COMB2_CONV (ALL_CONV, numLib.REDUCE_CONV) ``f (10 * 3)``;
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `EXPAND_REDUCE_CONV`
 
 ``` hol4
@@ -13,11 +14,9 @@ The conversion `EXPAND_REDUCE_CONV` expands out applications of
 ### Example
 
 ``` hol4
-> wordsLib.EXPAND_REDUCE_CONV “reduce_and (w: word4)”;
-val it =
-   |- reduce_and w =
-   (((3 >< 3) w && (2 >< 2) w) && (1 >< 1) w) && (0 >< 0) w:
-   thm
+>>__ load "wordsLib";
+
+>>+ wordsLib.EXPAND_REDUCE_CONV “reduce_and (w: word4)”;
 ```
 
 ### See also

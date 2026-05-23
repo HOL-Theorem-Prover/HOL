@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `FAST_QUANT_INSTANTIATE_CONV`
 
 ``` hol4

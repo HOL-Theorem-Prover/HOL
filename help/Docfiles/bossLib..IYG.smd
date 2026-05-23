@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ---
 aliases:
   - BasicProvers.&&
@@ -31,10 +32,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- open bossLib;
-... <output elided> ...
-- val ss = boolSimps.bool_ss && pairTheory.pair_rws;
-> val ss = <simpset> : simpset
+##linecount_limit 0 10
+>> val ss = boolSimps.bool_ss && pairLib.pair_rws;
+##linecount_limit 0 _
 ```
 
 ### Comments

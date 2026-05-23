@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `mk_primed_var`
 
 ``` hol4
@@ -21,17 +22,13 @@ Never fails.
 ### Example
 
 ``` hol4
-- new_theory "wombat";
-> val it = () : unit
+>> new_theory "wombat";
 
-- mk_primed_var("x", bool);
-> val it = “x” : term
+>> mk_primed_var("x", bool);
 
-- new_constant("x", alpha);
-> val it = () : unit
+>> new_constant("x", alpha);
 
-- mk_primed_var("x", bool);
-> val it = “x'” : term
+>> mk_primed_var("x", bool);
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `WORD_ss`
 
 ``` hol4
@@ -15,18 +16,15 @@ evaluation.
 ### Example
 
 ``` hol4
-- SIMP_CONV (pure_ss++WORD_ss) [] “BIT i 42”
-> val it = |- BIT i 42 = i IN {1; 3; 5} : thm
+>>__ load "wordsLib";
 
-- SIMP_CONV (pure_ss++WORD_ss) [] “dimword(:42)”
-> val it = |- dimword (:42) = 4398046511104 : thm
+>>+ SIMP_CONV (pure_ss++wordsLib.WORD_ss) [] “BIT i 42”
 
-- SIMP_CONV (pure_ss++WORD_ss) [] “((a #<< 2 #>> 2 + a) && $- 1w) - a”
-<<HOL message: inventing new type variable names: 'a>>
-> val it = |- (a #<< 2 #>> 2 + a && $- 1w) - a = a : thm
+>>+ SIMP_CONV (pure_ss++wordsLib.WORD_ss) [] “dimword(:42)”
 
-- SIMP_CONV (pure_ss++WORD_ss) [] “(4 -- 2) ($- 1w : word8)”
-> val it = |- (4 -- 2) ($- 1w) = 7w : thm
+>>+ SIMP_CONV (pure_ss++wordsLib.WORD_ss) [] “((a #<< 2 #>> 2 + a) && $- 1w) - a”
+
+>>+ SIMP_CONV (pure_ss++wordsLib.WORD_ss) [] “(4 -- 2) ($- 1w : word8)”
 ```
 
 ### Comments

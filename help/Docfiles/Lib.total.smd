@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `total`
 
 ``` hol4
@@ -30,16 +31,11 @@ When application of the first argument to the second argument raises
 ### Example
 
 ``` hol4
-- 3 div 0;
-! Uncaught exception:
-! Div
+>>+ 3 div 0;
 
-- total (op div) (3,0);
-> val it = NONE : int option
+>> total (op div) (3,0);
 
-- (partial Div o total) (op div) (3,0);
-! Uncaught exception:
-! Div
+>>+ (partial Div o total) (op div) (3,0);
 ```
 
 ### See also

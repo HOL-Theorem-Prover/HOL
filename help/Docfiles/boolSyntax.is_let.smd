@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `is_let`
 
 ``` hol4
@@ -18,15 +19,11 @@ Never fails.
 ### Example
 
 ``` hol4
-- Term `LET f x`;
-<<HOL message: inventing new type variable names: 'a, 'b>>
-> val it = `LET f x` : term
+>> Term `LET f x`;
 
-- is_let it;
-> val it = true : bool
+>> is_let it;
 
-- is_let (Term `let x = P /\ Q in x \/ x`);
-> val it = true : bool
+>>+ is_let (Term `let x = P /\ Q in x \/ x`);
 ```
 
 ### See also

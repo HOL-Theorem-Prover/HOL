@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `sort_vars`
 
 ``` hol4
@@ -19,8 +20,7 @@ Never fails.
 ### Example
 
 ``` hol4
-> sort_vars ["a", "b", "d"] [``b:bool``, ``c:num``, ``d:bool``, ``a:'a``];
-val it = [``a``, ``b``, ``d``, ``c``] : term list
+>> sort_vars ["a", "b", "d"] [``b:bool``, ``c:num``, ``d:bool``, ``a:'a``];
 ```
 
 ### See also

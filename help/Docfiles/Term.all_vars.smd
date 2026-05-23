@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `all_vars`
 
 ``` hol4
@@ -18,8 +19,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- all_vars ``!x y. x /\ y /\ y ==> z``;
-> val it = [``z``, ``y``, ``x``] : term list
+>> all_vars ``!x y. x /\ y /\ y ==> z``;
 ```
 
 ### Comments

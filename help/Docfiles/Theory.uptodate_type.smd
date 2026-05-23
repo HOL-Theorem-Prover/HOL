@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `uptodate_type`
 
 ``` hol4
@@ -33,21 +34,15 @@ Never fails.
 ### Example
 
 ``` hol4
-- Hol_datatype `foo = A | B of 'a`;
-<<HOL message: Defined type: "foo">>
-> val it = () : unit
+>> Hol_datatype `foo = A | B of 'a`;
 
-- val ty = Type `:'a foo list`;
-> val ty = `:'a foo list` : hol_type
+>> val ty = Type `:'a foo list`;
 
-- uptodate_type ty;
-> val it = true : bool
+>> uptodate_type ty;
 
-- delete_type "foo";
-> val it = () : unit
+>> delete_type "foo";
 
-- uptodate_type ty;
-> val it = false : bool
+>> uptodate_type ty;
 ```
 
 ### See also

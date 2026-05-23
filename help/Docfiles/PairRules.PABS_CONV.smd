@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PABS_CONV`
 
 ``` hol4
@@ -30,8 +31,9 @@ that maps a term `t` to a theorem `|- t = t'`).
 ### Example
 
 ``` hol4
-- PABS_CONV SYM_CONV (Term `\(x,y). (1,2) = (x,y)`);
-> val it = |- (\(x,y). (1,2) = (x,y)) = (\(x,y). (x,y) = (1,2)) : thm
+>>__ load "PairRules";
+
+>> PairRules.PABS_CONV SYM_CONV (Term `\(x,y). (1,2) = (x,y)`);
 ```
 
 ### See also

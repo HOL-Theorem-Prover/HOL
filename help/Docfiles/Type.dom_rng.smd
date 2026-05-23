@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `dom_rng`
 
 ``` hol4
@@ -17,13 +18,9 @@ Fails if `ty` is not a function type.
 ### Example
 
 ``` hol4
-- dom_rng (bool --> alpha);
-> val it = (`:bool`, `:'a`) : hol_type * hol_type
+>> dom_rng (bool --> alpha);
 
-- try dom_rng bool;
-
-Exception raised at Type.dom_rng:
-not a function type
+>>+ try dom_rng bool;
 ```
 
 ### See also

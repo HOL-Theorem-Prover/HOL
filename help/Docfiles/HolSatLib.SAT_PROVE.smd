@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `SAT_PROVE`
 
 ``` hol4
@@ -24,14 +25,10 @@ returned, wrapped in an exception.
 ### Example
 
 ``` hol4
-- load "HolSatLib"; open HolSatLib;
-(* output omitted *)
-> val it = () : unit
-- SAT_PROVE ``(a ==> b) /\ (b ==> a) ==> (a=b)``;
-> val it = |- (a ==> b) /\ (b ==> a) ==> (a = b) : thm
-- SAT_PROVE ``~((a ==> b) /\ (b ==> a) ==> (a=b))``
+>> load "HolSatLib"; open HolSatLib;
+>> SAT_PROVE ``(a ==> b) /\ (b ==> a) ==> (a=b)``;
+>> SAT_PROVE ``~((a ==> b) /\ (b ==> a) ==> (a=b))``
     handle HolSatLib.SAT_cex th => th;
-> val it = |- ~b /\ a ==> ~~((a ==> b) /\ (b ==> a) ==> (a = b)) : thm
 ```
 
 ### Comments

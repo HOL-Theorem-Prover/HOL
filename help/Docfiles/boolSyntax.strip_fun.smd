@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `strip_fun`
 
 ``` hol4
@@ -24,8 +25,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- strip_fun (Type `:(a -> 'bool) -> ('b -> 'c)`);
-> val it = ([`:a -> 'bool`, `:'b`], `:'c`) : hol_type list * hol_type
+>>+ strip_fun (Type `:(a -> 'bool) -> ('b -> 'c)`);
 ```
 
 ### See also

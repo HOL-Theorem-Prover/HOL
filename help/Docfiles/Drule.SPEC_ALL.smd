@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `SPEC_ALL`
 
 ``` hol4
@@ -29,8 +30,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- SPEC_ALL CONJ_ASSOC;
-> val it = |- t1 /\ t2 /\ t3 = (t1 /\ t2) /\ t3 : thm
+>> SPEC_ALL CONJ_ASSOC;
 ```
 
 ### See also

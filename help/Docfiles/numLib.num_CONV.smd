@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `num_CONV`
 
 ``` hol4
@@ -11,8 +12,12 @@ Equates a non-zero numeral with the form `SUC x` for some `x`.
 ### Example
 
 ``` hol4
-- num_CONV ``1203``;
-> val it = |- 1203 = SUC 1202 : thm
+>>__ load "numLib";
+>>__ val num_CONV_initial_grammars = (Parse.type_grammar(), Parse.term_grammar());
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+
+>> numLib.num_CONV ``1203``;
+>>__ Parse.temp_set_grammars num_CONV_initial_grammars;
 ```
 
 ### Failure

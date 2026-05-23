@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `disable_tyabbrev_printing`
 
 ``` hol4
@@ -27,17 +28,15 @@ abbreviations keyed to the given name, a call to
 ### Example
 
 ``` hol4
-- type_abbrev("LIST", ``:'a list``)
-> val it = () : unit
+>>__ val dtp_initial_grammars = (Parse.type_grammar(), Parse.term_grammar());
+>> type_abbrev("LIST", ``:'a list``)
 
-- ``:num list``;
-> val it = ``:num LIST`` : hol_type
+>> ``:num list``;
 
-- disable_tyabbrev_printing "LIST";
-> val it = () : unit
+>> disable_tyabbrev_printing "LIST";
 
-- ``:num LIST``;
-> val it = ``:num list`` : hol_type
+>> ``:num LIST``;
+>>__ Parse.temp_set_grammars dtp_initial_grammars;
 ```
 
 ### Comments

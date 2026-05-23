@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `type_of`
 
 ``` hol4
@@ -15,6 +16,5 @@ Never fails.
 ### Example
 
 ``` hol4
-- type_of boolSyntax.universal;
-> val it = `:('a -> bool) -> bool` : hol_type
+>> type_of boolSyntax.universal;
 ```

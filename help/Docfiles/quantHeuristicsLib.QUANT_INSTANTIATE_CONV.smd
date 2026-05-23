@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `QUANT_INSTANTIATE_CONV`
 
 ``` hol4
@@ -20,22 +21,19 @@ information about user defined datatypes.
 ### Example
 
 ``` hol4
-> QUANT_INSTANTIATE_CONV [] ``?x. ((x=7) \/ (7 = x)) /\ P x``;
-val it = |- (?x. ((x=7) \/ (7 = x)) /\ P x) = P 7 : thm
+>>__ load "quantHeuristicsLibParameters";
 
-> QUANT_INSTANTIATE_CONV [] ``?x. !y. (x=7) /\ P x y``;
-val it = |- (?x. !y. (x=7) /\ P x y) = (!y. P 7 y) : thm
+>>__ load "quantHeuristicsLib";
 
+>> quantHeuristicsLib.QUANT_INSTANTIATE_CONV [] ``?x. ((x=7) \/ (7 = x)) /\ P x``;
 
-> QUANT_INSTANTIATE_CONV [] ``?x. (f(8 + 2) = f(x + 2)) /\ P(f (x + 2))``;
-val it = |- (?x. (f(8 + 2) = f(x + 2)) /\ P(f (x + 2))) = P(f (8 + 2)) : thm
+>> quantHeuristicsLib.QUANT_INSTANTIATE_CONV [] ``?x. !y. (x=7) /\ P x y``;
 
-> QUANT_INSTANTIATE_CONV [std_qp] ``!x. IS_SOME x ==> P x``;
-val it = |- (!x. IS_SOME x ==> P x) = (!x_x'. P (SOME x_x')) : thm
+>> quantHeuristicsLib.QUANT_INSTANTIATE_CONV [] ``?x. (f(8 + 2) = f(x + 2)) /\ P(f (x + 2))``;
 
-> QUANT_INSTANTIATE_CONV [std_qp] ``!l. (~(l = []) ==> (LENGTH l > 0))``;
-val it |- (!l. (~(l = []) ==> (LENGTH l > 0))) <=>
-          (!l_t l_h. LENGTH (l_h::l_t) > 0) : thm
+>> quantHeuristicsLib.QUANT_INSTANTIATE_CONV [quantHeuristicsLibParameters.std_qp] ``!x. IS_SOME x ==> P x``;
+
+>> quantHeuristicsLib.QUANT_INSTANTIATE_CONV [quantHeuristicsLibParameters.std_qp] ``!l. (~(l = []) ==> (LENGTH l > 0))``;
 ```
 
 ### See also

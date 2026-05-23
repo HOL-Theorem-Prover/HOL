@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `VALIDATE_LT`
 
 ``` hol4
@@ -34,49 +35,16 @@ Also fails if `ltac` fails when applied to the given goals.
 ### Example
 
 Where `uthr'` is `[p', q] |- r` and `uths'` is `[p, q'] |- s`
+>>__ val uthr' = mk_thm([``p':bool``, ``q:bool``], ``r:bool``)
+>>__ val uths' = mk_thm([``p:bool``, ``q':bool``], ``s:bool``)
+>>__ set_goal([], “p /\ q ==> r /\ s”)
 
 ``` hol4
-2 subgoals:
-val it =
+>>- e (REPEAT STRIP_TAC)
 
-s
-------------------------------------
-  0.  p
-  1.  q
+>>+ elt (ALLGOALS (FIRST (map ACCEPT_TAC [uthr', uths']))) ;
 
-r
-------------------------------------
-  0.  p
-  1.  q
-
-2 subgoals
-:
-   proof
-
-> elt (ALLGOALS (FIRST (map ACCEPT_TAC [uthr', uths']))) ;
-OK..
-
-Exception raised at Tactical.VALID_LT:
-Invalid list-tactic [...]
-
-> elt (VALIDATE_LT (ALLGOALS (FIRST (map ACCEPT_TAC [uthr', uths'])))) ;
-OK..
-2 subgoals:
-val it =
-
-q'
-------------------------------------
-  0.  p
-  1.  q
-
-p'
-------------------------------------
-  0.  p
-  1.  q
-
-2 subgoals
-:
-   proof
+>> elt (VALIDATE_LT (ALLGOALS (FIRST (map ACCEPT_TAC [uthr', uths'])))) ;
 ```
 
 Where a tactic `ltac` requires certain assumptions to be present in one

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `zDefine`
 
 ``` hol4
@@ -19,9 +20,8 @@ not used by `bossLib.EVAL` when evaluating expressions.
 ### Example
 
 ``` hol4
-- zDefine `foo = 10 ** 10 ** 10`
-- EVAL ``foo``;
-> val it = |- foo = foo: thm
+>> zDefine `foo = 10 ** 10 ** 10`
+>> EVAL ``foo``;
 ```
 
 ### Comments

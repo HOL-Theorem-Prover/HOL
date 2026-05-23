@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `exists_tyvar`
 
 ``` hol4
@@ -20,8 +21,7 @@ of searching `ty`.
 ### Example
 
 ``` hol4
-- exists_tyvar (equal beta) (alpha --> beta --> bool);
-> val it = true : bool
+>> exists_tyvar (equal beta) (alpha --> beta --> bool);
 ```
 
 ### Comments

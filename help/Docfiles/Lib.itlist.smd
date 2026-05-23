@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `itlist`
 
 ``` hol4
@@ -24,8 +25,7 @@ Fails if some application of `f` fails.
 ### Example
 
 ``` hol4
-- itlist (curry op+) [1,2,3,4] 0;
-val it = 10 : int
+>> itlist (curry op+) [1,2,3,4] 0;
 ```
 
 ### See also

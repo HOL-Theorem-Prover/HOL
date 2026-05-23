@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `pprint`
 
 ``` hol4
@@ -21,9 +22,9 @@ value.
 ### Example
 
 ``` hol4
-> pprint PP.add_string "hello";
-hello
-val it = (): unit
+>>__ load "Portable";
+
+>> Portable.pprint PP.add_string "hello";
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `format_ERR`
 
 ``` hol4
@@ -19,14 +20,10 @@ Never fails.
 ### Example
 
 ``` hol4
-- print
+>>+ print
    (format_ERR {origin_structure = "Foo",
                 origin_function = "bar",
                 message = "incomprehensible input"});
-
-Exception raised at Foo.bar:
-incomprehensible input
-> val it = () : unit
 ```
 
 ### See also

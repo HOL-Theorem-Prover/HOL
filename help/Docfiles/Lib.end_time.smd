@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `end_time`
 
 ``` hol4
@@ -19,15 +20,11 @@ Never fails.
 ### Example
 
 ``` hol4
-- val clock = start_time();
-> val clock = <cpu_timer> : cpu_timer
+>> val clock = start_time();
 
-- use "foo.sml";
-> ... output omitted ...
+>>+ use "foo.sml";
 
-- end_time clock;
-runtime: 525.996s,    gctime: 0.000s,     systime: 525.996s.
-> val it = () : unit
+>> end_time clock;
 ```
 
 ### Comments

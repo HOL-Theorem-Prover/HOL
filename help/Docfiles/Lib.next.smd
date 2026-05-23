@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `next`
 
 ``` hol4
@@ -18,11 +19,9 @@ the current state.
 ### Example
 
 ``` hol4
-- val istrm = mk_istream (fn x => x+1) 0 (concat "gsym" o int_to_string);
-> val it = <istream> : (int, string) istream
+>> val istrm = mk_istream (fn x => x+1) 0 (strcat "gsym" o int_to_string);
 
-- next istrm;
-> val it = <istream> : (int, string) istream
+>> next istrm;
 ```
 
 ### Comments

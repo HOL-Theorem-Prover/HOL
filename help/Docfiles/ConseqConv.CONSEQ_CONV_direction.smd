@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `CONSEQ_CONV_direction`
 
 ``` hol4
@@ -14,9 +15,9 @@ behave. Given a direction `dir` and a boolean term `t` the result of a
 directed consequence conversion `DCONSEQ_CONV` should be of the form
 
 ``` hol4
-- st ==> t for dir = CONSEQ_CONV_STRENGTHEN_direction
-- t ==> wt for dir = CONSEQ_CONV_WEAKEN_direction
-- st ==> t, t ==> wt or t = eqt for dir = CONSEQ_CONV_UNKNOWN_direction
+   st ==> t for dir = CONSEQ_CONV_STRENGTHEN_direction
+   t ==> wt for dir = CONSEQ_CONV_WEAKEN_direction
+   st ==> t, t ==> wt or t = eqt for dir = CONSEQ_CONV_UNKNOWN_direction
 ```
 
 ### See also

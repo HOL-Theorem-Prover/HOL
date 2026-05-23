@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `HOL_WARNING`
 
 ``` hol4
@@ -34,8 +35,7 @@ The invocation fails if the formatting or output routines fail.
 ### Example
 
 ``` hol4
-- HOL_WARNING "Module" "function" "stern message.";
-<<HOL warning: Module.function: stern message.>>
+>> HOL_WARNING "Module" "function" "stern message.";
 ```
 
 ### See also

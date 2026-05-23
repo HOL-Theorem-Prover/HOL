@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `curry`
 
 ``` hol4
@@ -22,11 +23,9 @@ fails.
 ### Example
 
 ``` hol4
-- val increment = curry op+ 1;
-> val it = increment = fn : int -> int
+>> val increment = curry op+ 1;
 
-- increment 6;
-> val it = 7 : int
+>> increment 6;
 ```
 
 ### See also

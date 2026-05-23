@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `mapfilter`
 
 ``` hol4
@@ -21,8 +22,7 @@ If `f x` raises `Interrupt` for some element `x` of `l`, then
 ### Example
 
 ``` hol4
-- mapfilter hd [[1,2,3],[4,5],[],[6,7,8],[]];
-> val it = [1, 4, 6] : int list
+>> mapfilter hd [[1,2,3],[4,5],[],[6,7,8],[]];
 ```
 
 ### See also

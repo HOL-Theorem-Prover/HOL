@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `dest_anylet`
 
 ``` hol4
@@ -25,13 +26,13 @@ Fails if `M` is not a let abstraction.
 ### Example
 
 ``` hol4
-- dest_anylet ``let f (x,y) = M and g z = N in g (f (a,b))``;
-> val it = ([(`f (x,y)`, `M`), (`g z`, `N`)], `g (f (a,b))`) :
+>>__ load "pairSyntax";
 
-- dest_anylet ``let f (x,y) = M in
+>> pairSyntax.dest_anylet ``let f (x,y) = M and g z = N in g (f (a,b))``;
+
+>> pairSyntax.dest_anylet ``let f (x,y) = M in
                 let g z = N
                 in g (f (a,b))``;
-> val it = ([(`f (x,y)`, `M`)], `let g z = N in g (f (a,b))`)
 ```
 
 Programming that involves manipulation of term syntax.

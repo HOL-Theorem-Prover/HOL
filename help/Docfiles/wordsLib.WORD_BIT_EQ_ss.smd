@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `WORD_BIT_EQ_ss`
 
 ``` hol4
@@ -17,23 +18,25 @@ of words.
 ### Example
 
 ``` hol4
-- SIMP_CONV (std_ss++WORD_BIT_EQ_ss) [] “a = b : 'a word”
-> val it = |- (a = b) = !i. i < dimindex (:'a) ==> (a ' i = b ' i) : thm
+>>__ load "wordsLib";
+
+>>+ SIMP_CONV (std_ss++wordsLib.WORD_BIT_EQ_ss) [] “a = b : 'a word”
 ```
 
 Further simplification occurs when the word length is known.
 
 ``` hol4
-- SIMP_CONV (std_ss++WORD_BIT_EQ_ss) [] “a = b : word2”
-> val it = |- (a = b) = (a ' 1 = b ' 1) /\ (a ' 0 = b ' 0) : thm
+>>__ load "wordsLib";
+
+>>+ SIMP_CONV (std_ss++wordsLib.WORD_BIT_EQ_ss) [] “a = b : word2”
 ```
 
 Best used in combination with decision procedures.
 
 ``` hol4
-- (SIMP_CONV (std_ss++WORD_BIT_EQ_ss) [] THENC tautLib.TAUT_CONV) “a && b && a = a && b”
-<<HOL message: inventing new type variable names: 'a>>
-> val it = |- (a && b && a = a && b) = T : thm
+>>__ load "wordsLib";
+
+>>+ (SIMP_CONV (std_ss++wordsLib.WORD_BIT_EQ_ss) [] THENC tautLib.TAUT_CONV) “a && b && a = a && b”
 ```
 
 ### Comments

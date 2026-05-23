@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `string_to_int`
 
 ``` hol4
@@ -18,15 +19,11 @@ If the string cannot be translated to an integer.
 ### Example
 
 ``` hol4
-- string_to_int "123";
-> val it = 123 : int
+>> string_to_int "123";
 
-- string_to_int "~123";
-> val it = ~123 : int
+>> string_to_int "~123";
 
-- string_to_int "foo";
-! Uncaught exception:
-! HOL_ERR
+>>+ string_to_int "foo";
 ```
 
 ### Comments

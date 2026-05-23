@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `FIRST_LT`
 
 ``` hol4
@@ -24,9 +25,7 @@ on each goal in the list `gl`.
 ### Example
 
 ``` hol4
-> FIRST_LT CONJ_TAC [([], “p ⇒ q”), ([“a ∨ b”], “p /\ q”)]
-val it = ([([“a ∨ b”], “p”), ([“a ∨ b”], “q”), ([], “p ⇒ q”)], fn):
-  goal list * list_validation
+>> FIRST_LT CONJ_TAC [([], “p ⇒ q”), ([“a ∨ b”], “p /\ q”)]
 ```
 
 ### See also

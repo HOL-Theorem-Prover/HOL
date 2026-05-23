@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `read`
 
 ``` hol4
@@ -20,8 +21,7 @@ characters.
 ### Example
 
 ``` hol4
-- Tag.read "Shamboozled";
-> val it = Kerneltypes.TAG(["Shamboozled"], []) : tag
+>> Tag.read "Shamboozled";
 ```
 
 ### See also

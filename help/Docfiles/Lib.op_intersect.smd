@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `op_intersect`
 
 ``` hol4
@@ -18,9 +19,8 @@ Fails if an application of `eq` fails.
 ### Example
 
 ``` hol4
-- op_intersect aconv [Term `\x:bool.x`, Term `\x y. x /\ y`]
+>> op_intersect aconv [Term `\x:bool.x`, Term `\x y. x /\ y`]
                      [Term `\y:bool.y`, Term `\x y. x /\ z`];
-> val it = [`\x. x`] : term list
 ```
 
 ### Comments

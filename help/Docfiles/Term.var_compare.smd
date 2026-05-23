@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `var_compare`
 
 ``` hol4
@@ -19,8 +20,7 @@ If `v1` and `v2` are not both variables.
 ### Example
 
 ``` hol4
-- var_compare (mk_var("x",bool), mk_var("x",bool --> bool));
-> val it = LESS : order
+>> var_compare (mk_var("x",bool), mk_var("x",bool --> bool));
 ```
 
 ### Comments

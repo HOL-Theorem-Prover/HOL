@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `null_intersection`
 
 ``` hol4
@@ -19,11 +20,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- null_intersection [1,2,3,4] [5,6,7,8];
-> val it = true : bool
+>> null_intersection [1,2,3,4] [5,6,7,8];
 
-- null_intersection [1,2,3,4] [8,5,3];
-> val it = false : bool
+>> null_intersection [1,2,3,4] [8,5,3];
 ```
 
 ### Comments

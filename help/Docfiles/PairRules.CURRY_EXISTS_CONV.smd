@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `CURRY_EXISTS_CONV`
 
 ``` hol4
@@ -12,13 +13,11 @@ quantifications.
 ### Example
 
 ``` hol4
-- CURRY_EXISTS_CONV (Term `?(x,y). x + y = y + x`);
-> val it = |- (?(x,y). x + y = y + x) = ?x y. x + y = y + x : thm
+>>__ load "PairRules";
 
-- CURRY_EXISTS_CONV (Term `?((w,x),(y,z)). w+x+y+z = z+y+x+w`);
-> val it =
-    |- (?((w,x),y,z). w + x + y + z = z + y + x + w) =
-       ?(w,x) (y,z). w + x + y + z = z + y + x + w : thm
+>> PairRules.CURRY_EXISTS_CONV (Term `?(x,y). x + y = y + x`);
+
+>> PairRules.CURRY_EXISTS_CONV (Term `?((w,x),(y,z)). w+x+y+z = z+y+x+w`);
 ```
 
 ### Failure

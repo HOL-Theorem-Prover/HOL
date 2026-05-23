@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PTREE_TRANSFORM_CONV`
 
 ``` hol4
@@ -20,14 +21,12 @@ application of `patricia$TRANSFORM`.
 ### Example
 
 ``` hol4
-- patriciaLib.PTREE_TRANSFORM_CONV ``TRANSFORM ODD Empty``;
-> val it = |- TRANSFORM ODD <{}> = <{}>: thm
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
 
-- patriciaLib.PTREE_TRANSFORM_CONV ``TRANSFORM ODD (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
-> val it =
-   |- TRANSFORM ODD (Branch 0 0 (Leaf 3 2) (Leaf 2 1)) =
-      Branch 0 0 (Leaf 3 F) (Leaf 2 T):
-   thm
+>>+ patriciaLib.PTREE_TRANSFORM_CONV ``TRANSFORM ODD Empty``;
+
+>>+ patriciaLib.PTREE_TRANSFORM_CONV ``TRANSFORM ODD (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
 ```
 
 ### See also

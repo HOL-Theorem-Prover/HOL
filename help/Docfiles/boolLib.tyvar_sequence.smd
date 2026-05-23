@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `tyvar_sequence`
 
 ``` hol4
@@ -20,8 +21,7 @@ Never fails. If `n` is negative the generated list is empty.
 ### Example
 
 ``` hol4
-> tyvar_sequence 3;
-val it = [“:α”, “:β”, “:γ”] : hol_type list
+>> tyvar_sequence 3;
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ---
 aliases:
   - wlogLib.wlog_tac
@@ -59,38 +60,16 @@ the appropriate symmetry theorems.
 In the following examples assume `arithmeticTheory` is open.
 
 ``` hol4
-> g(`ABS_DIFF x y + ABS_DIFF y z <= ABS_DIFF x z`);
-...
-> e(wlog_tac `x <= z` []);
-val it =
-   ABS_DIFF x y + ABS_DIFF y z <= ABS_DIFF x z
-   ------------------------------------
-    x <= z
-
-   ABS_DIFF x y + ABS_DIFF y z <= ABS_DIFF x z
-   ------------------------------------
-     0.  !x z y. x <= z ==> ABS_DIFF x y + ABS_DIFF y z <= ABS_DIFF x z
-     1.  ~(x <= z)
-2 subgoals : proof
+>> g(`ABS_DIFF x y + ABS_DIFF y z <= ABS_DIFF x z`);
+>> e(wlog_tac `x <= z` []);
 ```
 
 The first subgoal can be solved by
 `prove_tac [ABS_DIFF_SYM, LESS_EQ_CASES, ADD_COMM]`.
 
 ``` hol4
-> g`MAX x y <= z <=> x <= z /\ y <= z`
-...
-> e(wlog_tac `x <= y` []);
-val it =
-   MAX x y <= z <=> x <= z /\ y <= z
-   ------------------------------------
-    x <= y
-
-   MAX x y <= z <=> x <= z /\ y <= z
-   ------------------------------------
-     0.  !x y z. x <= y ==> (MAX x y <= z <=> x <= z /\ y <= z)
-     1.  ~(x <= y)
-2 subgoals : proof
+>> g`MAX x y <= z <=> x <= z /\ y <= z`
+>> e(wlog_tac `x <= y` []);
 ```
 
 The first subgoal can be solved by

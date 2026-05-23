@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `remove_word_printer`
 
 ``` hol4
@@ -15,15 +16,10 @@ normally mean that words output in decimal format.
 ### Example
 
 ``` hol4
-- load "wordsLib";
-...
-- “0x10000000w”;
-<<HOL message: inventing new type variable names: 'a>>
-> val it = “0x10000000w” : term
-- wordsLib.remove_word_printer();
-- “0x10000000w”;
-<<HOL message: inventing new type variable names: 'a>>
-> val it = “268435456w” : term
+>>+ load "wordsLib";
+>>+ “0x10000000w”;
+>>+ wordsLib.remove_word_printer();
+>>+ “0x10000000w”;
 ```
 
 ### See also

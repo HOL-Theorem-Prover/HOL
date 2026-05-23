@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `BINOP_CONV`
 
 ``` hol4
@@ -28,8 +29,9 @@ conversion at all.)
 ### Example
 
 ``` hol4
-- BINOP_CONV REDUCE_CONV (Term`3 * 4 + 6 * 7`);
-> val it = |- 3 * 4 + 6 * 7 = 12 + 42 : thm
+>>__ load "reduceLib";
+
+>> BINOP_CONV reduceLib.REDUCE_CONV (Term`3 * 4 + 6 * 7`);
 ```
 
 ### See also

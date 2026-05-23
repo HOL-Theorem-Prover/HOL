@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `set_eq`
 
 ``` hol4
@@ -19,11 +20,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- set_eq [1,2,1] [1,2,2,1];
-> val it = true : bool
+>> set_eq [1,2,1] [1,2,2,1];
 
-- set_eq [1,2,1] [2,1];
-> val it = true : bool
+>> set_eq [1,2,1] [2,1];
 ```
 
 ### Comments

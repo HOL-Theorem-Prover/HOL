@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PRENEX_CONV`
 
 ``` hol4
@@ -22,13 +23,11 @@ Never fails.
 ### Example
 
 ``` hol4
-> PRENEX_CONV ``!m n. (m <= n) ==> !p. (m < SUC(n + p))``;
-val it = |- (!m n. m <= n ==> (!p. m < (SUC(n + p)))) =
-            (!m n p. m <= n ==> m < (SUC(n + p)))
+>>__ load "Arith";
 
-> PRENEX_CONV ``!p. (!m. m >= p) = (p = 0)``;
-val it = |- (!p. (!m. m >= p) = (p = 0)) =
-            (!p m. ?m'. (m' >= p ==> (p = 0)) /\ ((p = 0) ==> m >= p))
+>> Arith.PRENEX_CONV ``!m n. (m <= n) ==> !p. (m < SUC(n + p))``;
+
+>> Arith.PRENEX_CONV ``!p. (!m. m >= p) = (p = 0)``;
 ```
 
 Useful as a preprocessor to decision procedures which require their

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `equal`
 
 ``` hol4
@@ -19,6 +20,5 @@ Never fails.
 ### Example
 
 ``` hol4
-- filter (equal 1) [1,2,1,4,5];
-> val it = [1, 1] : int list
+>> filter (equal 1) [1,2,1,4,5];
 ```

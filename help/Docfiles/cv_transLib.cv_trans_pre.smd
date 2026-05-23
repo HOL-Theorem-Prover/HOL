@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `cv_trans_pre`
 
 ``` hol4
@@ -24,20 +25,9 @@ the translator-defined `:cv` function.
 ### Example
 
 ``` hol4
-> cv_trans_pre "HD_pre" listTheory.HD;
-Finished translating HD, stored in cv_HD_thm
+>>__ load "cv_transLib";
 
-WARNING: definition of cv_HD has a precondition.
-You can set up the precondition proof as follows:
-
-Theorem HD_pre[cv_pre]:
-  ∀v. HD_pre v
-Proof
-  ho_match_mp_tac HD_ind (* for example *)
-  ...
-QED
-
-val it = ⊢ ∀v. HD_pre v ⇔ (∃t h. v = h::t) ∧ v ≠ []: thm
+>> cv_transLib.cv_trans_pre "HD_pre" listTheory.HD;
 ```
 
 ### Comments

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `cv_eval_raw`
 
 ``` hol4
@@ -19,17 +20,11 @@ Fails in the same ways as `cv_transLib.cv_eval`.
 ### Example
 
 ``` hol4
-> cv_trans rich_listTheory.REPLICATE;
-Equations stored under "cv_REPLICATE_def".
-Induction stored under "cv_REPLICATE_ind".
-Finished translating REPLICATE, stored in cv_REPLICATE_thm
-val it = (): unit
-> cv_eval “REPLICATE 3 (3:num)”;
-val it = ⊢ REPLICATE 3 3 = [3; 3; 3]: thm
-> cv_eval_raw “REPLICATE 3 (3:num)”;
-val it =
-   ⊢ REPLICATE 3 3 =
-     to_list cv$c2n (Pair (Num 3) (Pair (Num 3) (Pair (Num 3) (Num 0)))): thm
+>>__ load "cv_transLib";
+
+>> cv_transLib.cv_trans rich_listTheory.REPLICATE;
+>> cv_transLib.cv_eval “REPLICATE 3 (3:num)”;
+>> cv_transLib.cv_eval_raw “REPLICATE 3 (3:num)”;
 ```
 
 ### See also

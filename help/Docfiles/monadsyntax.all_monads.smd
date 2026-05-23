@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `all_monads`
 
 ``` hol4
@@ -22,17 +23,9 @@ Never fails.
 ### Example
 
 ``` hol4
-> all_monads();
-val it =
-   [("list",
-     {bind = “LIST_BIND”, choice = SOME (“$++”), fail = SOME (“[]”),
-      guard = SOME (“LIST_GUARD”), ignorebind = SOME (“LIST_IGNORE_BIND”),
-      unit = “λx. [x]”}),
-    ("option",
-     {bind = “OPTION_BIND”, choice = SOME (“OPTION_CHOICE”),
-      fail = SOME (“NONE”), guard = SOME (“OPTION_GUARD”),
-      ignorebind = SOME (“OPTION_IGNORE_BIND”), unit = “SOME”})]:
-   (string * monadinfo) list
+>>__ load "monadsyntax";
+
+>> monadsyntax.all_monads();
 ```
 
 ### See also

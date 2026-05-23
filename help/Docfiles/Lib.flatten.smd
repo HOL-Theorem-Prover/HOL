@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `flatten`
 
 ``` hol4
@@ -18,9 +19,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- flatten [[1,2,3],[],[4,5]];
-> val it = [1, 2, 3, 4, 5] : int list
+>> flatten [[1,2,3],[],[4,5]];
 
-- flatten ([[[]]] : int list list list);
-> val it =  [[]]  : int list list
+>> flatten ([[[]]] : int list list list);
 ```

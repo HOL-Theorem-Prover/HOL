@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `DNF_ss`
 
 ``` hol4
@@ -36,13 +37,8 @@ As a value rather than a function, `DNF_ss` can't fail.
 ### Example
 
 ``` hol4
-> SIMP_CONV (bool_ss ++ DNF_ss) []
+>> SIMP_CONV (bool_ss ++ DNF_ss) []
             ``!x. (?y. P x y) /\ Q z ==> R1 x z /\ R2 z x``;
-<<HOL message: inventing new type variable names: 'a, 'b, 'c>>
-val it =
-   |- (!x. (?y. P x y) /\ Q z ==> R1 x z /\ R2 z x) <=>
-        (!x y. P x y /\ Q z ==> R1 x z) /\
-        !x y. P x y /\ Q z ==> R2 z x : thm
 ```
 
 ### Comments

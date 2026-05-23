@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `selectDB`
 
 ``` hol4
@@ -30,11 +31,7 @@ Never fails.
 ### Example
 
 ``` hol4
-> DB.selectDB [SelTM “_ /\ _”, SelTHY "bool", SelNM "ASSOC"];
-val it =
-   [(("bool", "CONJ_ASSOC"),
-     (⊢ ∀t1 t2 t3. t1 ∧ t2 ∧ t3 ⇔ (t1 ∧ t2) ∧ t3, Thm))]: 
-   public_data list
+>> DB.selectDB [SelTM “_ /\ _”, SelTHY "bool", SelNM "ASSOC"];
 ```
 
 ### Comments

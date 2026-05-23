@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `find_term`
 
 ``` hol4
@@ -22,11 +23,9 @@ predicate.
 ### Example
 
 ``` hol4
-- find_term Literal.is_numeral ``2 + x + 3``;
-> val it = ``2`` : term
+>> find_term Literal.is_numeral ``2 + x + 3``;
 
-- find_term Literal.is_numeral ``x + y``;
-Exception HOL_ERR {...}
+>>+ find_term Literal.is_numeral ``x + y``;
 ```
 
 ### See also

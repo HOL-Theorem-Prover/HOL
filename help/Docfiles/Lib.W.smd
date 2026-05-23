@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `W`
 
 ``` hol4
@@ -19,12 +20,10 @@ that then gets applied to `x`.
 ### Example
 
 ``` hol4
-- load "tautLib";
-- tautLib.TAUT_PROVE (Term `(a = b) = (~a = ~b)`);
-> val it = |- (a = b) = (~a = ~b) : thm
+>> load "tautLib";
+>> tautLib.TAUT_PROVE (Term `(a:bool = b) = (~a = ~b)`);
 
-- W (GENL o free_vars o concl) it;
-> val it = |- !b a. (a = b) = (~a = ~b) : thm
+>> W (GENL o free_vars o concl) it;
 ```
 
 ### See also

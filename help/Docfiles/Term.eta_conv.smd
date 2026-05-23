@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `eta_conv`
 
 ``` hol4
@@ -22,8 +23,7 @@ If `M` is not of the specified form, or if `v` occurs free in `N`.
 ### Example
 
 ``` hol4
-- eta_conv (Term `\n. PRE n`);
-> val it = `PRE` : term
+>> eta_conv (Term `\n. PRE n`);
 ```
 
 ### Comments

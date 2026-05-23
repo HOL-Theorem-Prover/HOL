@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `mk_vartype`
 
 ``` hol4
@@ -15,13 +16,9 @@ Fails if the string does not begin with `'`.
 ### Example
 
 ``` hol4
-- mk_vartype "'giraffe";
-> val it = `:'giraffe` : hol_type
+>> mk_vartype "'giraffe";
 
-- try mk_vartype "test";
-
-Exception raised at Type.mk_vartype:
-incorrect syntax
+>>+ try mk_vartype "test";
 ```
 
 ### See also

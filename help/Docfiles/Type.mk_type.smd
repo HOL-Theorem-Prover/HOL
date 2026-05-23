@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `mk_type`
 
 ``` hol4
@@ -20,11 +21,9 @@ of `tyop`.
 ### Example
 
 ``` hol4
-- mk_type ("bool",[]);
-> val it = `:bool` : hol_type
+>> mk_type ("bool",[]);
 
-- mk_type ("fun",[alpha,it]);
-> val it = `:'a -> bool` : hol_type
+>> mk_type ("fun",[alpha,it]);
 ```
 
 ### Comments

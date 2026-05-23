@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `ADD_CONV`
 
 ``` hol4
@@ -26,8 +27,12 @@ denoted by `m` and `n`.
 ### Example
 
 ``` hol4
-> ADD_CONV ``75 + 25``;
-val it = |- 75 + 25 = 100 : thm
+>>__ load "reduceLib";
+>>__ val add_conv_initial_grammars = (Parse.type_grammar(), Parse.term_grammar());
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+
+>> reduceLib.ADD_CONV ``75 + 25``;
+>>__ Parse.temp_set_grammars add_conv_initial_grammars;
 ```
 
 ### See also

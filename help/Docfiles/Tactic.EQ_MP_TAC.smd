@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `EQ_MP_TAC`
 
 ``` hol4
@@ -21,9 +22,7 @@ Never fails.
 ### Example
 
 ``` hol4
-> EQ_MP_TAC (CONJ TRUTH TRUTH) ([], “p ∧ q”);
-val it = ([([], “T ∧ T ⇔ p ∧ q”)], fn):
-   (term list * term) list * (thm list -> thm)
+>> EQ_MP_TAC (CONJ TRUTH TRUTH) ([], “p ∧ q”);
 ```
 
 ### Comments

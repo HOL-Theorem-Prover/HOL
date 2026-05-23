@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `g`
 
 ``` hol4
@@ -31,16 +32,7 @@ Fails unless the argument term has type `bool`.
 ### Example
 
 ``` hol4
-- g `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`;
-> val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
-
-
-
-    : GoalstackPure.proofs
+>> g `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`;
 ```
 
 ### See also

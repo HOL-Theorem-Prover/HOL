@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `start_time`
 
 ``` hol4
@@ -19,8 +20,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- val clock = start_time ();
-> val clock = <cpu_timer> : cpu_timer
+>> val clock = start_time ();
 ```
 
 ### Comments

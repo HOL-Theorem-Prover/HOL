@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `compare`
 
 ``` hol4
@@ -19,11 +20,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- compare (T,F);
-> val it = GREATER : order
+>> compare (T,F);
 
-- compare (Term `\x y. x /\ y`, Term `\y z. y /\ z`);
-> val it = EQUAL : order
+>> compare (Term `\x y. x /\ y`, Term `\y z. y /\ z`);
 ```
 
 ### Comments

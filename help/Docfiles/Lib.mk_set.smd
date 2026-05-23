@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `mk_set`
 
 ``` hol4
@@ -19,8 +20,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- mk_set [1,1,1,2,2,2,3,3,4];
-> val it = [1, 2, 3, 4] : int list
+>> mk_set [1,1,1,2,2,2,3,3,4];
 ```
 
 ### Comments

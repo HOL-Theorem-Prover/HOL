@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `LIST_BETA_CONV`
 
 ``` hol4
@@ -32,8 +33,7 @@ avoid variable capture.
 ### Example
 
 ``` hol4
-- LIST_BETA_CONV (Term `(\x y. x+y) 1 2`);
-> val it = |- (\x y. x + y)1 2 = 1 + 2 : thm
+>> LIST_BETA_CONV (Term `(\x y. x+y) 1 2`);
 ```
 
 ### See also

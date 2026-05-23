@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `for_se`
 
 ``` hol4
@@ -19,15 +20,12 @@ If `f i` fails for `b <= i <= t`.
 ### Example
 
 ``` hol4
-- let val A = Array.array(26,#" ")
+>> let val A = Array.array(26,#" ")
   in
      for_se 0 25 (fn i => Array.update(A,i, Char.chr (i+97)))
    ; for_se 0 25 (print o Char.toString o curry Array.sub A)
    ; print "\n"
   end;
-
-abcdefghijklmnopqrstuvwxyz
-> val it = () : unit
 ```
 
 ### See also

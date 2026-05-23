@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `SIZES_ss`
 
 ``` hol4
@@ -15,10 +16,9 @@ numeric types.
 ### Example
 
 ``` hol4
-- SIMP_CONV (pure_ss++SIZES_ss) [] “dimindex(:32) + INT_MIN(:32) + dimword(:32)”
-> val it =
-    |- dimindex (:32) + INT_MIN (:32) + dimword (:32) =
-       32 + 2147483648 + 4294967296 : thm
+>>__ load "wordsLib";
+
+>>+ SIMP_CONV (pure_ss++wordsLib.SIZES_ss) [] “dimindex(:32) + INT_MIN(:32) + dimword(:32)”
 ```
 
 ### See also

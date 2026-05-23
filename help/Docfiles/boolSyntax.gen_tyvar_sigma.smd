@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `gen_tyvar_sigma`
 
 ``` hol4
@@ -21,12 +22,7 @@ Never fails.
 ### Example
 
 ``` hol4
-> gen_tyvar_sigma [“:'c”, “:'a”, “:'bob”];
-val it =
-   [{redex = “:γ”, residue = “:%%gen_tyvar%%30”},
-    {redex = “:α”, residue = “:%%gen_tyvar%%31”},
-    {redex = “:'bob”, residue = “:%%gen_tyvar%%32”}]:
-   (hol_type, hol_type) Lib.subst
+>> gen_tyvar_sigma [“:'c”, “:'a”, “:'bob”];
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `decls`
 
 ``` hol4
@@ -19,11 +20,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- decls "+";
-> val it = [`$+`] : term list
+>> decls "+";
 
-- map dest_thy_const it;
-> val it = [{Name = "+", Thy = "arithmetic", Ty = `:num -> num -> num`}] : ...
+>> map dest_thy_const it;
 ```
 
 ### Comments

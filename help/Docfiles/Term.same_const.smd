@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `same_const`
 
 ``` hol4
@@ -22,9 +23,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- same_const boolSyntax.universal (rator (concl BOOL_CASES_AX));
-
-> val it = true : bool
+>> same_const boolSyntax.universal (rator (concl BOOL_CASES_AX));
 ```
 
 ### See also

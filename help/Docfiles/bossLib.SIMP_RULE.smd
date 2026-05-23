@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ---
 aliases:
   - simpLib.SIMP_RULE
@@ -35,9 +36,8 @@ simplification (`FORALL_AND_THM` states
 `|- (!x. P x /\ Q x) = (!x. P x) /\ (!x. Q x)`):
 
 ``` hol4
-- SIMP_RULE bool_ss [boolTheory.FORALL_AND_THM]
+>> SIMP_RULE bool_ss [boolTheory.FORALL_AND_THM]
             (ASSUME (Term`!x. P (x + 1) /\ R x /\ x < y`));
-> val it =  [.] |- (!x. P (x + 1)) /\ (!x. R x) /\ (!x. x < y) : thm
 ```
 
 ### Comments

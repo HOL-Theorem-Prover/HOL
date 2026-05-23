@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PTREE_CONV`
 
 ``` hol4
@@ -29,54 +30,50 @@ val ptree = |- ptree = Branch 0 0 (Leaf 1 1) (Leaf 2 2): thm
 Adding a list of updates expands into applications of `ADD`:
 
 ``` hol4
-> real_time PTREE_CONV ``ptree |++ [(3,3); (4,4); (5,5); (6,6); (7,7)]``;
-realtime: 0.000s
-val it =
-   |- ptree |++ [(3,3); (4,4); (5,5); (6,6); (7,7)] =
-   ptree |+ (3,3) |+ (4,4) |+ (5,5) |+ (6,6) |+ (7,7):
-   thm
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
+
+>> real_time patriciaLib.PTREE_CONV ``ptree |++ [(3,3); (4,4); (5,5); (6,6); (7,7)]``;
 ```
 
 However, setting `ptree_new_defn_depth` will cause new definitions to be
 made:
 
 ``` hol4
-> ptree_new_defn_depth := 2;
-val it = (): unit
-> real_time PTREE_CONV ``ptree |++ [(3,3); (4,4); (5,5); (6,6); (7,7)]``;
-<<HOL message: Defined new ptree: ptree1>>
-<<HOL message: Defined new ptree: ptree2>>
-realtime: 0.006s
-val it = |- ptree |++ [(3,3); (4,4); (5,5); (6,6); (7,7)] = ptree2 |+ (7,7):
-   thm
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
+
+>> patriciaLib.ptree_new_defn_depth := 2;
+>> real_time patriciaLib.PTREE_CONV ``ptree |++ [(3,3); (4,4); (5,5); (6,6); (7,7)]``;
 ```
 
 New definitions will also be made when removing elements:
 
 ``` hol4
-> real_time PTREE_CONV ``ptree2 \\ 6 \\ 5``;
-<<HOL message: Defined new ptree: ptree3>>
-realtime: 0.001s
-val it = |- ptree2 \\ 6 \\ 5 = ptree3: thm
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
+
+>> real_time patriciaLib.PTREE_CONV ``ptree2 \\ 6 \\ 5``;
 ```
 
 Here, the conversion is not smart enough to work out that `ptree3` is
 the same as `ptree1`.
 
 ``` hol4
-> (DEPTH_CONV PTREE_DEFN_CONV THENC EVAL) ``ptree1 = ptree3``;
-val it = |- (ptree1 = ptree3) <=> T: thm
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
+
+>> (DEPTH_CONV patriciaLib.PTREE_DEFN_CONV THENC EVAL) ``ptree1 = ptree3``;
 ```
 
 Look-up behaves as expected:
 
 ``` hol4
-> real_time PTREE_CONV ``ptree1 ' 2``;
-realtime: 0.001s
-val it = |- ptree1 ' 2 = SOME 2: thm
-> real_time PTREE_CONV ``ptree1 ' 5``;
-realtime: 0.001s
-val it = |- ptree1 ' 5 = NONE: thm
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
+
+>> real_time patriciaLib.PTREE_CONV ``ptree1 ' 2``;
+>> real_time patriciaLib.PTREE_CONV ``ptree1 ' 5``;
 ```
 
 ### Comments

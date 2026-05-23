@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `BIT_ss`
 
 ``` hol4
@@ -13,11 +14,11 @@ The fragment `BIT_ss` rewrites the term `“BIT i n”` for ground `n`.
 ### Example
 
 ``` hol4
-- SIMP_CONV (std_ss++BIT_ss) [] “BIT i 33”;
-> val it = |- BIT i 33 = i IN {0; 5} : thm
+>>__ load "wordsLib";
 
-- SIMP_CONV (std_ss++BIT_ss) [] “BIT 5 33”;
-> val it = |- BIT 5 33 = T : thm
+>>+ SIMP_CONV (std_ss++wordsLib.BIT_ss) [] “BIT i 33”;
+
+>>+ SIMP_CONV (std_ss++wordsLib.BIT_ss) [] “BIT 5 33”;
 ```
 
 ### See also

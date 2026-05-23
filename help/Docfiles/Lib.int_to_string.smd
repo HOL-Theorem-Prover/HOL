@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `int_to_string`
 
 ``` hol4
@@ -17,11 +18,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- int_to_string 12323;
-> val it = "12323" : string
+>> int_to_string 12323;
 
-- int_to_string ~1;
-> val it = "~1" : string
+>> int_to_string ~1;
 ```
 
 ### Comments

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `MESG_outstream`
 
 ``` hol4
@@ -16,23 +17,17 @@ The default value of `MESG_outstream` is `TextIO.stdOut`.
 ### Example
 
 ``` hol4
-- val ostrm = TextIO.openOut "foo";
-> val ostrm = <outstream> : outstream
+>> val ostrm = TextIO.openOut "foo";
 
-- MESG_outstream := ostrm;
-> val it = () : unit
+>>+ MESG_outstream := ostrm;
 
-- HOL_MESG "Nattering nabobs of negativity.";
-> val it = () : unit
+>> HOL_MESG "Nattering nabobs of negativity.";
 
-- TextIO.closeOut ostrm;
-> val it = () : unit
+>> TextIO.closeOut ostrm;
 
-- val istrm = TextIO.openIn "foo";
-> val istrm = <instream> : instream
+>> val istrm = TextIO.openIn "foo";
 
-- print (TextIO.inputAll istrm);
-<<HOL message: Nattering nabobs of negativity.>>
+>> print (TextIO.inputAll istrm);
 ```
 
 ### See also

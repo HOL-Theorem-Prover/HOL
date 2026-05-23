@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `is_numeral`
 
 ``` hol4
@@ -27,8 +28,12 @@ The system prettyprinter will print a numeral as a string of digits.
 ### Example
 
 ``` hol4
-- is_numeral ``1234``;
-> val it = true : bool
+>>__ load "numSyntax";
+>>__ val is_numeral_initial_grammars = (Parse.type_grammar(), Parse.term_grammar());
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+
+>> numSyntax.is_numeral ``1234``;
+>>__ Parse.temp_set_grammars is_numeral_initial_grammars;
 ```
 
 ### Failure

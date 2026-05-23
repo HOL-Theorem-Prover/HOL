@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `type_vars_in_term`
 
 ``` hol4
@@ -18,8 +19,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- type_vars_in_term (concl boolTheory.ONE_ONE_DEF);
-> val it = [`:'b`, `:'a`] : hol_type list
+>> type_vars_in_term (concl boolTheory.ONE_ONE_DEF);
 ```
 
 ### See also

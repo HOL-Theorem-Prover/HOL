@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `exclude_ssfrags`
 
 ``` hol4
@@ -31,19 +32,14 @@ none of the names match a fragment in the simpset).
 ### Example
 
 ``` hol4
-> val base = simpLib.exclude_ssfrags ["ARITH"] (srw_ss());
-val base = ... : simpset
+>> val base = simpLib.exclude_ssfrags ["ARITH"] (srw_ss());
 
-
-> List.exists (fn n => n = "ARITH")
+>> List.exists (fn n => n = "ARITH")
               (simpLib.ssfrag_names_of (base ++ numSimps.ARITH_ss));
-val it = false : bool   (* ++ was a silent no-op *)
 
-
-> List.exists (fn n => n = "ARITH")
+>> List.exists (fn n => n = "ARITH")
               (simpLib.ssfrag_names_of
                  (simpLib.force_add base numSimps.ARITH_ss));
-val it = true : bool    (* force_add overrode the exclusion *)
 ```
 
 ### See also

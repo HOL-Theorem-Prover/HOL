@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PTREE_ADD_CONV`
 
 ``` hol4
@@ -22,11 +23,12 @@ application of `patricia$ADD` or `patricia$ADD_LIST`.
 ### Example
 
 ``` hol4
-- patriciaLib.PTREE_ADD_CONV ``Empty |+ (3, x:num)``;
-> val it = |- <{}> |+ (3,x) = Leaf 3 x: thm
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
 
-- DEPTH_CONV patriciaLib.PTREE_ADD_CONV ``Empty |+ (3, 2) |+ (2,1)``;
-> val it = |- <{}> |+ (3,2) |+ (2,1) = Branch 0 0 (Leaf 3 2) (Leaf 2 1): thm
+>> patriciaLib.PTREE_ADD_CONV ``Empty |+ (3, x:num)``;
+
+>> DEPTH_CONV patriciaLib.PTREE_ADD_CONV ``Empty |+ (3, 2) |+ (2,1)``;
 ```
 
 ### See also

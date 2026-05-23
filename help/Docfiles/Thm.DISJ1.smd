@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `DISJ1`
 
 ``` hol4
@@ -21,8 +22,7 @@ Fails unless the term argument is boolean.
 ### Example
 
 ``` hol4
-- DISJ1 TRUTH F;
-> val it = |- T \/ F : thm
+>> DISJ1 TRUTH F;
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PTREE_INSERT_PTREE_CONV`
 
 ``` hol4
@@ -21,11 +22,12 @@ application of `patricia$INSERT_PTREE`.
 ### Example
 
 ``` hol4
-- patriciaLib.PTREE_INSERT_PTREE_CONV ``2 INSERT_PTREE Empty``;
-> val it = |- <{2}> = Leaf 2 (): thm
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
 
-- DEPTH_CONV patriciaLib.PTREE_INSERT_PTREE_CONV ``3 INSERT_PTREE 2 INSERT_PTREE Empty``;
-> val it = |- <{3; 2}> = Branch 0 0 (Leaf 3 ()) (Leaf 2 ()): thm
+>> patriciaLib.PTREE_INSERT_PTREE_CONV ``2 INSERT_PTREE Empty``;
+
+>> DEPTH_CONV patriciaLib.PTREE_INSERT_PTREE_CONV ``3 INSERT_PTREE 2 INSERT_PTREE Empty``;
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PTREE_IS_PTREE_CONV`
 
 ``` hol4
@@ -21,14 +22,14 @@ application of `patricia$IS_PTREE`.
 ### Example
 
 ``` hol4
-- patriciaLib.PTREE_IS_PTREE_CONV ``IS_PTREE Empty``;
-> val it = |- IS_PTREE $= <{}> <=> T: thm
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
 
-- patriciaLib.PTREE_IS_PTREE_CONV ``IS_PTREE (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
-> val it = |- IS_PTREE (Branch 0 0 (Leaf 3 2) (Leaf 2 1)) <=> T: thm
+>> patriciaLib.PTREE_IS_PTREE_CONV ``IS_PTREE Empty``;
 
-- patriciaLib.PTREE_IS_PTREE_CONV ``IS_PTREE (Branch 0 0 (Leaf 3 2) (Leaf 1 1))``;
-> val it = |- IS_PTREE (Branch 0 0 (Leaf 3 2) (Leaf 1 1)) <=> F: thm
+>> patriciaLib.PTREE_IS_PTREE_CONV ``IS_PTREE (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
+
+>> patriciaLib.PTREE_IS_PTREE_CONV ``IS_PTREE (Branch 0 0 (Leaf 3 2) (Leaf 1 1))``;
 ```
 
 ### See also

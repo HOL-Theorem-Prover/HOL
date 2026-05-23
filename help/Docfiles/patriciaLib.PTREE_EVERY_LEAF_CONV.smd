@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PTREE_EVERY_LEAF_CONV`
 
 ``` hol4
@@ -21,19 +22,14 @@ application of `patricia$EVERY_LEAF`.
 ### Example
 
 ``` hol4
-- patriciaLib.PTREE_EVERY_LEAF_CONV ``EVERY_LEAF (=) Empty``;
-> val it = |- EVERY_LEAF $= <{}> <=> T: thm
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
 
-- patriciaLib.PTREE_EVERY_LEAF_CONV ``EVERY_LEAF (\x y. (x < 3) ==> (y = 1)) (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
-> val it =
-   |- EVERY_LEAF (\x y. x < 3 ==> (y = 1))
-        (Branch 0 0 (Leaf 3 2) (Leaf 2 1)) <=> T:
-   thm
+>>+ patriciaLib.PTREE_EVERY_LEAF_CONV ``EVERY_LEAF (=) Empty``;
 
-- patriciaLib.PTREE_EVERY_LEAF_CONV ``EVERY_LEAF (\x y. x < 2) (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
-> val it =
-   |- EVERY_LEAF (\x y. x < 2) (Branch 0 0 (Leaf 3 2) (Leaf 2 1)) <=> F:
-   thm
+>>+ patriciaLib.PTREE_EVERY_LEAF_CONV ``EVERY_LEAF (\x y. (x < 3) ==> (y = 1)) (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
+
+>>+ patriciaLib.PTREE_EVERY_LEAF_CONV ``EVERY_LEAF (\x y. x < 2) (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
 ```
 
 ### See also

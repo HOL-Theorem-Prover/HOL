@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `WORD_ARITH_EQ_ss`
 
 ``` hol4
@@ -17,9 +18,9 @@ can be used to test for the arithmetic equality of words.
 ### Example
 
 ``` hol4
-- SIMP_CONV (pure_ss++WORD_ARITH_ss++WORD_ARITH_EQ_ss) [] “3w * (a + b) = b + 3w * a”
-<<HOL message: inventing new type variable names: 'a>>
-> val it = |- (3w * (a + b) = b + 3w * a) = (2w * b = 0w) : thm
+>>__ load "wordsLib";
+
+>>+ SIMP_CONV (pure_ss++wordsLib.WORD_ARITH_ss++wordsLib.WORD_ARITH_EQ_ss) [] “3w * (a + b) = b + 3w * a”
 ```
 
 ### Comments

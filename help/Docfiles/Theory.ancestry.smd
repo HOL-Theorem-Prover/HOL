@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `ancestry`
 
 ``` hol4
@@ -20,17 +21,11 @@ Fails if `thy` is not an ancestor of the current theory.
 ### Example
 
 ``` hol4
-- load "bossLib";
-> val it = () : unit
+>> load "bossLib";
 
-- current_theory();
-> val it = "scratch" : string
+>> current_theory();
 
-- ancestry "-";
-> val it =
-    ["one", "option", "pair", "sum", "combin", "relation", "min", "bool",
-     "num", "prim_rec", "arithmetic", "numeral", "ind_type", "list"] :
-  string list
+>> ancestry "-";
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `cv_auto_trans`
 
 ``` hol4
@@ -28,19 +29,13 @@ function, the termination goal is pushed onto the goal stack.
 ### Example
 
 ``` hol4
-> Definition list_add1_def:
+>>__ load "cv_transLib";
+
+>> Definition list_add1_def:
     list_add1 xs = MAP SUC xs
   End
-Definition has been stored under "list_add1_def"
-val list_add1_def = ⊢ ∀xs. list_add1 xs = MAP SUC xs: thm
-> cv_auto_trans list_add1_def;
-Equations stored under "cv_MAP_SUC_def".
-Induction stored under "cv_MAP_SUC_ind".
-Finished translating MAP_SUC, stored in cv_MAP_SUC_thm
-Finished translating list_add1, stored in cv_list_add1_thm
-val it = (): unit
-> cv_eval “list_add1 [5; 6; 7]”;
-val it = ⊢ list_add1 [5; 6; 7] = [6; 7; 8]: thm
+>> cv_transLib.cv_auto_trans list_add1_def;
+>> cv_transLib.cv_eval “list_add1 [5; 6; 7]”;
 ```
 
 ### Comments

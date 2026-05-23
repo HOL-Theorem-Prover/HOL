@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `types`
 
 ``` hol4
@@ -21,14 +22,9 @@ Fails unless the named theory is an ancestor, or the current theory.
 ### Example
 
 ``` hol4
-- load "bossLib";
-> val it = () : unit
+>> load "bossLib";
 
-- itlist union (map types (ancestry "-")) [];
-> val it =
-    [("one", 0), ("option", 1), ("prod", 2), ("sum", 2),
-     ("fun", 2), ("ind", 0), ("bool", 0), ("num", 0),
-     ("recspace", 1), ("list", 1)] : (string * int) list
+>> itlist union (map types (ancestry "-")) [];
 ```
 
 ### See also

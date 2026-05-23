@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `pairarg_tac`
 
 ``` hol4
@@ -29,8 +30,7 @@ Fails if there is no such sub-term.
 ### Example
 
 ``` hol4
-> pairarg_tac ([], ``(\(x,y). x + y) p = 10``);
-val it = ([([``p = (x,y)``], ``(\(x,y). x + y) p = 10``)], fn)
+>> pairarg_tac ([], ``(\(x,y). x + y) p = 10``);
 ```
 
 ### See also

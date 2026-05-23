@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `partial`
 
 ``` hol4
@@ -29,15 +30,11 @@ When application of the second argument to the third argument returns
 ### Example
 
 ``` hol4
-- Int.fromString "foo";
-> val it = NONE : int option
+>> Int.fromString "foo";
 
-- partial (Fail "not convertable") Int.fromString "foo";
-! Uncaught exception:
-! Fail  "not convertable"
+>>+ partial (Fail "not convertable") Int.fromString "foo";
 
-- (total o partial (Fail "not convertable")) Int.fromString "foo";
-> val it = NONE : int option
+>> (total o partial (Fail "not convertable")) Int.fromString "foo";
 ```
 
 ### See also

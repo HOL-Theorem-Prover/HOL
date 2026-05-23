@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `delete_type`
 
 ``` hol4
@@ -37,23 +38,17 @@ segment, a warning will be issued, but an exception will not be raised.
 ### Example
 
 ``` hol4
-new_type ("foo", 2);
-> val it = () : unit
+>> new_type ("foo", 2);
 
-- val thm = REFL (Term `f:('a,'b)foo`);
-> val thm = |- f = f : thm
+>> val thm = REFL (Term `f:('a,'b)foo`);
 
-- delete_type "foo";
-> val it = () : unit
+>> delete_type "foo";
 
-- thm;
-> val it = |- f = f : thm
+>> thm;
 
-- show_types := true;
-> val it = () : unit
+>> show_types := true;
 
-- thm;
-> val it = |- (x :(('a, 'b) scratch$old->f<-old)) = x : thm
+>> thm;
 ```
 
 ### Comments

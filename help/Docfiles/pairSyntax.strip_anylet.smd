@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `strip_anylet`
 
 ``` hol4
@@ -23,16 +24,14 @@ Never fails.
 ### Example
 
 ``` hol4
-- strip_anylet ``let g x = A in
+>>__ load "pairSyntax";
+
+>> pairSyntax.strip_anylet ``let g x = A in
                  let v = g x y in
                  let f x y (a,b) = g a
                  and foo = M
                  in
                   f x foo v``;
-> val it =
-    ([[(`g x`, `A`)],
-      [(`v`, `g x y`)],
-      [(`f x y (a,b)`, `g a`), (`foo`, `M`)]], `f x foo v`)
 ```
 
 Programming that involves manipulation of term syntax.

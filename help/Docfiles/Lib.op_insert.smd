@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `op_insert`
 
 ``` hol4
@@ -18,16 +19,13 @@ Never fails.
 ### Example
 
 ``` hol4
-- op_insert (fn x => fn y => x = y mod 2) 1 [3,2];
-> val it = [3, 2] : int list
+>> op_insert (fn x => fn y => x = y mod 2) 1 [3,2];
 
-- op_insert aconv (Term `\x. x /\ y`)
+>> op_insert aconv (Term `\x. x /\ y`)
                   [T, Term `\z. z /\ y`, F];
-> val it = [`T`, `\z. z /\ y`, `F`] : term list
 
-- op_insert aconv (Term `\x. x /\ y`)
+>> op_insert aconv (Term `\x. x /\ y`)
                   [T, Term `\z. z /\ a`, F];
-> val it = [`\x. x /\ y`, `T`, `\z. z /\ a`, `F`] : term list
 ```
 
 ### Comments

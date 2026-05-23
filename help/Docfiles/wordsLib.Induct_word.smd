@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `Induct_word`
 
 ``` hol4
@@ -22,7 +23,9 @@ Given the goal
 one can apply `Induct_word` to begin a proof by induction.
 
 ``` hol4
-- e Induct_word
+>>__ load "wordsLib";
+
+>>+ e wordsLib.Induct_word
 ```
 
 This results in the base and step cases of the induction as new goals.

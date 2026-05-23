@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `new_recursive_definition`
 
 ``` hol4
@@ -122,7 +123,7 @@ nodes in a binary tree:
             rec_axiom = th,
             def = “(IsLeaf (NODE t1 t2) = F) /\
                      (IsLeaf (LEAF (x:'a)) = T)”};
-> val IsLeaf = |- (!t1 t2. IsLeaf (NODE t1 t2) = F) /\
+>>+ val IsLeaf = |- (!t1 t2. IsLeaf (NODE t1 t2) = F) /\
                   !x. IsLeaf (LEAF x) = T : thm
 ```
 

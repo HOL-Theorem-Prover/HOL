@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `with_exn`
 
 ``` hol4
@@ -21,12 +22,9 @@ When `f x` fails or is interrupted.
 ### Example
 
 ``` hol4
-- with_exn dest_comb (Term`\x. x /\ y`) (Fail "My kingdom for a horse");
-! Uncaught exception:
-! Fail  "My kingdom for a horse"
+>>+ with_exn dest_comb (Term`\x. x /\ y`) (Fail "My kingdom for a horse");
 
-- with_exn (fn _ => raise Interrupt) 1 (Fail "My kingdom for a horse");
-> Interrupted.
+>>+ with_exn (fn _ => raise Interrupt) 1 (Fail "My kingdom for a horse");
 ```
 
 ### Comments

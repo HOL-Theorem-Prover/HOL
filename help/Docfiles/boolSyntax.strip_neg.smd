@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `strip_neg`
 
 ``` hol4
@@ -18,12 +19,9 @@ Never fails.
 ### Example
 
 ``` hol4
-- strip_neg (Term `~~~~t`);
-> val it = (`t`, 4) : term * int
+>> strip_neg (Term `~~~~t`);
 
-- strip_neg (Term `x`);
-<<HOL message: inventing new type variable names: 'a>>
-> val it = (`x`, 0) : term * int
+>> strip_neg (Term `x`);
 ```
 
 ### Comments

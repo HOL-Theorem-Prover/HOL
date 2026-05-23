@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `EVAL_RULE`
 
 ``` hol4
@@ -22,14 +23,11 @@ Never fails, but may diverge.
 ### Example
 
 ``` hol4
-- val th = ASSUME(Term `x = MAP FACT (REVERSE [1;2;3;4;5;6;7;8;9;10])`);
-> val th =  [.] |- x = MAP FACT (REVERSE [1; 2; 3; 4; 5; 6; 7; 8; 9; 10])
+>> val th = ASSUME(Term `x = MAP FACT (REVERSE [1;2;3;4;5;6;7;8;9;10])`);
 
-- EVAL_RULE th;
-> val it =  [.] |- x = [3628800; 362880; 40320; 5040; 720; 120; 24; 6; 2; 1]
+>> EVAL_RULE th;
 
-- hyp it;
-> val it = [`x = MAP FACT (REVERSE [1; 2; 3; 4; 5; 6; 7; 8; 9; 10])`]
+>> hyp it;
 ```
 
 ### Comments

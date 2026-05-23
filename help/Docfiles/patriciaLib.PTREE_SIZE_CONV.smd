@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `PTREE_SIZE_CONV`
 
 ``` hol4
@@ -20,11 +21,12 @@ application of `patricia$SIZE`.
 ### Example
 
 ``` hol4
-- patriciaLib.PTREE_SIZE_CONV ``SIZE Empty``;
-> val it = |- SIZE <{}> = 0: thm
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
 
-- patriciaLib.PTREE_SIZE_CONV ``SIZE (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
-> val it = |- SIZE (Branch 0 0 (Leaf 3 2) (Leaf 2 1)) = 2: thm
+>> patriciaLib.PTREE_SIZE_CONV ``SIZE Empty``;
+
+>> patriciaLib.PTREE_SIZE_CONV ``SIZE (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
 ```
 
 ### See also

@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `add_rewrites`
 
 ``` hol4
@@ -18,16 +19,10 @@ Never fails.
 ### Example
 
 ``` hol4
-- load "pairTheory"; open pairTheory;
-  add_rewrites empty_rewrites (PAIR_MAP_THM::pair_rws);
+>>__ load "pairLib";
 
-> val it =
-    |- (f ## g) (x,y) = (f x,g y);
-    |- (FST x,SND x) = x;
-    |- FST (x,y) = x;
-    |- SND (x,y) = y
-    Number of rewrite rules = 4
-     : rewrites
+>> load "pairTheory"; open pairTheory;
+  add_rewrites empty_rewrites (PAIR_MAP_THM::pairLib.pair_rws);
 ```
 
 For building bespoke rewrite rule sets.

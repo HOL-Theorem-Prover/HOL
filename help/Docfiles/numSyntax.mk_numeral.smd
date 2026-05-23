@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `mk_numeral`
 
 ``` hol4
@@ -14,11 +15,11 @@ An invocation `mk_numeral n`, where `n` is an ML value of type
 ### Example
 
 ``` hol4
-- Arbnum.fromString "1234";
-> val it = 1234 : num
+>>__ load "numSyntax";
 
-- mk_numeral it;
-> val it = ``1234`` : term
+>> Arbnum.fromString "1234";
+
+>> numSyntax.mk_numeral it;
 ```
 
 ### Failure

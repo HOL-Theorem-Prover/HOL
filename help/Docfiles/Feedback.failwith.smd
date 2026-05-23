@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `failwith`
 
 ``` hol4
@@ -22,12 +23,7 @@ Always fails.
 ### Example
 
 ``` hol4
-- failwith "foo" handle e => Raise e;
-
-Exception raised at ??.failwith:
-foo
-! Uncaught exception:
-! HOL_ERR
+>>+ failwith "foo" handle e => Raise e;
 ```
 
 ### See also

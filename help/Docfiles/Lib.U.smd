@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `U`
 
 ``` hol4
@@ -19,8 +20,7 @@ Never fails.
 ### Example
 
 ``` hol4
-- U [[1,2,3], [4,5,6], [1,2,5]];
-> val it = [3, 6, 4, 1, 2, 5] : int list
+>> U [[1,2,3], [4,5,6], [1,2,5]];
 ```
 
 ### Comments

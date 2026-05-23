@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `FILTER_ASM_REWRITE_RULE`
 
 ``` hol4

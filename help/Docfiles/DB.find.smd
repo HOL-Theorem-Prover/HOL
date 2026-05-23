@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `find`
 
 ``` hol4
@@ -28,21 +29,7 @@ returned.
 ### Example
 
 ``` hol4
-- DB.find "inc";
-val it =
-    [(("arithmetic", "MULT_INCREASES"),
-      (⊢ ∀m n. 1 < m ∧ 0 < n ⇒ SUC n ≤ m * n, Thm)),
-     ...
-     (("list", "ALL_DISTINCT_EL_IMP"),
-      (⊢ ∀l n1 n2.
-          ALL_DISTINCT l ∧ n1 < LENGTH l ∧ n2 < LENGTH l ⇒
-          (EL n1 l = EL n2 l ⇔ n1 = n2), Thm)),
-     ...] : public_data list
-> DB.find "ass~conj";
-val it =
-   [(("bool", "CONJ_ASSOC"),
-     (⊢ ∀t1 t2 t3. t1 ∧ t2 ∧ t3 ⇔ (t1 ∧ t2) ∧ t3, Thm)),
-    (("combin", "ASSOC_CONJ"), (⊢ ASSOC $/\, Thm))]: public_data list
+>> DB.find "inc";
 ```
 
 Finding theorems in interactive proof sessions.

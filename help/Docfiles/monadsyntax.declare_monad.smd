@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `declare_monad`
 
 ``` hol4
@@ -50,7 +51,9 @@ subsequent uses of the do/od syntax are to be avoided.
 A set monad could be declared:
 
 ``` hol4
-> declare_monad("set", {
+>>__ load "monadsyntax";
+
+>> monadsyntax.declare_monad("set", {
     unit = “λa. {a}”, bind = “λs f. BIGUNION (IMAGE f s)”,
     ignorebind = NONE,
     fail = SOME “{}”, guard = SOME “λb. if b then {()} else {}”,

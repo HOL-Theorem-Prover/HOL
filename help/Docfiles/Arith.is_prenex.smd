@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `is_prenex`
 
 ``` hol4
@@ -19,11 +20,11 @@ Never fails.
 ### Example
 
 ``` hol4
-- is_prenex ``!x. ?y. x \/ y``;
-> val it = true : bool
+>>__ load "Arith";
 
-- is_prenex ``!x. x ==> (?y. x /\ y)``;
-> val it = false : bool
+>> Arith.is_prenex ``!x. ?y. x \/ y``;
+
+>> Arith.is_prenex ``!x. x ==> (?y. x /\ y)``;
 ```
 
 Useful for determining whether it is necessary to apply a prenex

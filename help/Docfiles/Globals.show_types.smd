@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `show_types`
 
 ``` hol4
@@ -22,14 +23,11 @@ Never fails.
 ### Example
 
 ``` hol4
-- BOOL_CASES_AX;;
-> val it = |- !t. (t = T) \/ (t = F) : thm
+>> BOOL_CASES_AX;;
 
-- show_types := true;
-> val it = () : unit
+>> show_types := true;
 
-- BOOL_CASES_AX;;
-> val it = |- !(t :bool). (t = T) \/ (t = F) : thm
+>> BOOL_CASES_AX;;
 ```
 
 ### Comments

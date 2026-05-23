@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `list_mk_comb`
 
 ``` hol4
@@ -19,16 +20,11 @@ particular the list of terms `t1`,...,`tn` may be empty.
 ### Example
 
 ``` hol4
-- list_mk_comb(conditional,[T, mk_var("one",alpha), mk_var("two",alpha)]);
-> val it = `(if T then one else two)` : term
+>> list_mk_comb(conditional,[T, mk_var("one",alpha), mk_var("two",alpha)]);
 
-- list_mk_comb(universal,[]);
-> val it = `$!` : term
+>> list_mk_comb(universal,[]);
 
-- try list_mk_comb(universal,[F]);
-
-Exception raised at Term.list_mk_comb:
-incompatible types
+>>+ try list_mk_comb(universal,[F]);
 ```
 
 ### See also

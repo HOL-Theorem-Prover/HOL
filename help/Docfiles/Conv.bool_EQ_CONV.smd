@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `bool_EQ_CONV`
 
 ``` hol4
@@ -38,9 +39,7 @@ terms or one of `t1` and `t2` is the constant `T`.
 ### Example
 
 ``` hol4
-- bool_EQ_CONV (Parse.Term `T = F`);
-val it = |- (T = F) = F : thm
+>> bool_EQ_CONV (Parse.Term `T = F`);
 
-- bool_EQ_CONV (Parse.Term `(0 < n) = T`);
-val it = |- (0 < n = T) = 0 < n : thm
+>> bool_EQ_CONV (Parse.Term `(0 < n) = T`);
 ```

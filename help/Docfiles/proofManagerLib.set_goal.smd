@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `set_goal`
 
 ``` hol4
@@ -22,14 +23,7 @@ Fails unless all terms in the goal are of type `bool`.
 ### Example
 
 ``` hol4
-- set_goal([], Term `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`);
-> val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
-
-     : proofs
+>> set_goal([], Term `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`);
 ```
 
 Starting an interactive proof session with the subgoal package.

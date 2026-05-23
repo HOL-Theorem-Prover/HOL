@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `RHS_CONV`
 
 ``` hol4
@@ -27,8 +28,9 @@ that maps a term `t` to a theorem `|- t = t'`).
 ### Example
 
 ``` hol4
-- RHS_CONV REDUCE_CONV (Term`7 = (3 + 5)`);
-> val it = |- (7 = (3 + 5)) = (7 = 8) : thm
+>>__ load "reduceLib";
+
+>> RHS_CONV reduceLib.REDUCE_CONV (Term`7 = (3 + 5)`);
 ```
 
 ### Comments

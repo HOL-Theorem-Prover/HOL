@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `syntax_fns`
 
 ``` hol4
@@ -24,47 +25,33 @@ To provide syntax support for unary operations from the theory `num`,
 one can use the following function:
 
 ``` hol4
-> val num1 = HolKernel.syntax_fns {n = 1, make = HolKernel.mk_monop, dest = HolKernel.dest_monop} "num";
-val num1 = fn:
-   string -> term * (term -> term) * (term -> term) * (term -> bool)
+>> val num1 = HolKernel.syntax_fns {n = 1, make = HolKernel.mk_monop, dest = HolKernel.dest_monop} "num";
 ```
 
 The following call then provides support for the `SUC` constant:
 
 ``` hol4
-> val (suc_tm, mk_suc, dest_suc, is_suc) = num1 "SUC";
-val dest_suc = fn: term -> term
-val is_suc = fn: term -> bool
-val mk_suc = fn: term -> term
-val suc_tm = ``SUC``: term
+>> val (suc_tm, mk_suc, dest_suc, is_suc) = num1 "SUC";
 ```
 
 A `SUC` term can be constructed with
 
 ``` hol4
-> val tm = mk_suc ``4n``;
-val tm = ``SUC 4``: term
+>> val tm = mk_suc ``4n``;
 ```
 
 The resulting term `tm` can be identified and destructed as follows:
 
 ``` hol4
-> is_suc tm;
-val it = true: bool
-> val v = dest_suc tm;
-val v = ``4``: term
+>> is_suc tm;
+>> val v = dest_suc tm;
 ```
 
 A standard error message is raised when `dest_suc` fails, e.g.
 
 ``` hol4
-> is_suc ``SUC``;
-val it = false: bool
-> val v = dest_suc ``SUC``;
-Exception-
-   HOL_ERR
-     {message = "", origin_function = "dest_SUC", origin_structure =
-     "numSyntax"} raised
+>> is_suc ``SUC``;
+>>+ val v = dest_suc ``SUC``;
 ```
 
 The value `n` in the call to `syntax_fns` acts purely as a sanity check.
@@ -72,11 +59,7 @@ For example, the following fails because `SUC` is not a binary
 operation:
 
 ``` hol4
-> HolKernel.syntax_fns {n = 2, make = HolKernel.mk_binop, dest = HolKernel.dest_binop} "num" "SUC";
-Exception-
-   HOL_ERR
-     {message = "bad number of arguments", origin_function = "systax_fns",
-       origin_structure = "numSyntax"} raised
+>>+ HolKernel.syntax_fns {n = 2, make = HolKernel.mk_binop, dest = HolKernel.dest_binop} "num" "SUC";
 ```
 
 Typically, the `dest` and `make` functions will be complementary (with
@@ -86,12 +69,12 @@ consideration. For example, the constant `bitstring$v2w` with type
 `bitstring->'a word` is supported as follows:
 
 ``` hol4
-> val tm = bitstringSyntax.mk_v2w (``l:bitstring``, ``:32``);
-val tm = ``v2w l``: term
-> type_of tm;
-val it = ``:word32``: hol_type
-> bitstringSyntax.dest_v2w tm;
-val it = (``l``, ``:32``): term * hol_type
+>>__ load "bitstringSyntax";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="bitstring"};
+
+>> val tm = bitstringSyntax.mk_v2w (``l:bitstring``, ``:32``);
+>> type_of tm;
+>> bitstringSyntax.dest_v2w tm;
 ```
 
 This is implemented as follows:

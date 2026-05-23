@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `WORD_BIT_EQ_CONV`
 
 ``` hol4
@@ -14,8 +15,9 @@ The conversion `WORD_BIT_EQ_CONV` performs simplification using
 ### Example
 
 ``` hol4
-- WORD_BIT_EQ_CONV “a << 2 >>> 1 = ((5 -- 0) a << 1) :word8”
-> val it = |- (a << 2 >>> 1 = (5 -- 0) a << 1) = T : thm
+>>__ load "wordsLib";
+
+>>+ wordsLib.WORD_BIT_EQ_CONV “a << 2 >>> 1 = ((5 -- 0) a << 1) :word8”
 ```
 
 ### See also

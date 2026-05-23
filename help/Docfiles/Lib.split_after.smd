@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `split_after`
 
 ``` hol4
@@ -20,21 +21,15 @@ If `k` is negative, or longer than the length of the list.
 ### Example
 
 ``` hol4
-- split_after 2 [1,2,3,4,5]
-> val it = ([1, 2], [3, 4, 5]) : int list * int list
+>> split_after 2 [1,2,3,4,5]
 
-- split_after 0 [1,2,3,4,5];
-> val it = ([], [1, 2, 3, 4, 5]) : int list * int list
+>> split_after 0 [1,2,3,4,5];
 
-- split_after 5 [1,2,3,4,5];
-> val it = ([1, 2, 3, 4, 5], []) : int list * int list
+>> split_after 5 [1,2,3,4,5];
 
-- split_after 6 [1,2,3,4,5];
-! Uncaught exception:
-! HOL_ERR
+>>+ split_after 6 [1,2,3,4,5];
 
-- split_after 0 ([]:int list);
-> val it = ([], []) : int list * int list
+>> split_after 0 ([]:int list);
 ```
 
 ### See also

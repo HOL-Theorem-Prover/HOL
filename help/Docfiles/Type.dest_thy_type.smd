@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `dest_thy_type`
 
 ``` hol4
@@ -21,12 +22,9 @@ Fails if `ty` is a type variable.
 ### Example
 
 ``` hol4
-- dest_thy_type “:'a -> bool”;
-> val it = {Args = [“:α”, “:bool”], Thy = "min", Tyop = "fun"} :
+>> dest_thy_type “:'a -> bool”;
 
-- try dest_thy_type alpha;
-
-Exception raised at Type.dest_thy_type:
+>>+ try dest_thy_type alpha;
 ```
 
 ### See also

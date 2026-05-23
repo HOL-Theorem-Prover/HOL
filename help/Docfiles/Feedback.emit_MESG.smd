@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `emit_MESG`
 
 ``` hol4
@@ -17,14 +18,11 @@ The default value of `emit_MESG` is `true`.
 ### Example
 
 ``` hol4
-- HOL_MESG "Joy to the world.";
-<<HOL message: Joy to the world.>>
+>> HOL_MESG "Joy to the world.";
 
-- emit_MESG := false;
-> val it = () : unit
+>> emit_MESG := false;
 
-- HOL_MESG "Peace on Earth.";
-> val it = () : unit
+>> HOL_MESG "Peace on Earth.";
 ```
 
 ### See also

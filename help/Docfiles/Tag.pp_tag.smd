@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `pp_tag`
 
 ``` hol4
@@ -20,10 +21,7 @@ Never fails.
 ### Example
 
 ``` hol4
-> show_tags := true;
-val it = () : unit
+>> show_tags := true;
 
-> Portable.pprint Tag.pp_tag (Tag.read "fooble");
-[oracles: fooble] [axioms: ]
-val it = (): unit
+>> Portable.pprint Tag.pp_tag (Tag.read "fooble");
 ```

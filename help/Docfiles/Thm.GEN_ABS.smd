@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `GEN_ABS`
 
 ``` hol4
@@ -39,11 +40,9 @@ type of the term to which it is applied (`AP_TERM` doesn't do this).
 ### Example
 
 ``` hol4
-- val th = REWRITE_CONV [] ``t /\ u /\ u``
-> val th = |- t /\ u /\ u = t /\ u : thm
+>> val th = REWRITE_CONV [] ``t /\ u /\ u``
 
-- GEN_ABS (SOME ``$!``) [``t:bool``, ``u:bool``] th;
-> val it = |- (!t u. t /\ u /\ u) <=> (!t u. t /\ u) : thm
+>> GEN_ABS (SOME ``$!``) [``t:bool``, ``u:bool``] th;
 ```
 
 ### Failure

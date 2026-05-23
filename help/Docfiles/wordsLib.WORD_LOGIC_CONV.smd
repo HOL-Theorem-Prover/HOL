@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `WORD_LOGIC_CONV`
 
 ``` hol4
@@ -14,9 +15,9 @@ canonical form.
 ### Example
 
 ``` hol4
-- WORD_LOGIC_CONV “a && (b !! ~a !! c)”
-<<HOL message: inventing new type variable names: 'a>>
-> val it = |- a && (b !! ~a !! c) = a && b !! a && c : thm
+>>__ load "wordsLib";
+
+>>+ wordsLib.WORD_LOGIC_CONV “a && (b !! ~a !! c)”
 ```
 
 ### See also

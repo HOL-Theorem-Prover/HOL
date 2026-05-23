@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `new_axiom`
 
 ``` hol4
@@ -24,8 +25,7 @@ Fails if the given term does not have type `bool`.
 ### Example
 
 ``` hol4
-- new_axiom("untrue", Term `!x. x = 1`);
-> val it = |- !x. x = 1 : thm
+>> new_axiom("untrue", Term `!x. x = 1`);
 ```
 
 ### Comments

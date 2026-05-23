@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `new_binder_definition`
 
 ``` hol4
@@ -55,11 +56,9 @@ type of `b`.
 The unique-existence quantifier `?!` is defined as follows.
 
 ``` hol4
-- new_binder_definition
+>>+ new_binder_definition
      (`EXISTS_UNIQUE_DEF`,
       Term`$?! = \P:(*->bool). ($? P) /\ (!x y. ((P x) /\ (P y)) ==> (x=y))`);
-
-> val it = |- $?! = (\P. $? P /\ (!x y. P x /\ P y ==> (x = y))) : thm
 ```
 
 ### Comments

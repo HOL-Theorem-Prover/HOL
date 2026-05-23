@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `ERR_outstream`
 
 ``` hol4
@@ -16,26 +17,17 @@ The default value of `ERR_outstream` is `TextIO.stdErr`.
 ### Example
 
 ``` hol4
-- val ostrm = TextIO.openOut "foo";
-> val ostrm = <outstream> : outstream
+>> val ostrm = TextIO.openOut "foo";
 
-- ERR_outstream := ostrm;
-> val it = () : unit
+>>+ ERR_outstream := ostrm;
 
-- Raise (mk_HOL_ERR "Foo" "bar" "incomprehensible input");
-! Uncaught exception:
-! HOL_ERR
+>>+ Raise (mk_HOL_ERR "Foo" "bar" "incomprehensible input");
 
-- TextIO.closeOut ostrm;
-> val it = () : unit
+>> TextIO.closeOut ostrm;
 
-- val istrm = TextIO.openIn "foo";
-> val istrm = <instream> : instream
+>> val istrm = TextIO.openIn "foo";
 
-- print (TextIO.inputAll istrm);
-
-Exception raised at Foo.bar:
-incomprehensible input
+>> print (TextIO.inputAll istrm);
 ```
 
 ### See also

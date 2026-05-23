@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `++`
 
 ``` hol4
@@ -22,10 +23,8 @@ Here we add the `UNWIND_ss` `ssfrag` value to the `pure_ss` simpset to
 exploit the former's point-wise elimination conversions.
 
 ``` hol4
-- SIMP_CONV (pureSimps.pure_ss ++ boolSimps.UNWIND_ss) []
+>> SIMP_CONV (pureSimps.pure_ss ++ boolSimps.UNWIND_ss) []
             (Term`!x. x ==> (?y. P(x,y) /\ (y = 5))`);
-
-> val it = |- (!x. x ==> (?y. P (x,y) /\ (y = 5))) = P (T,5) : thm
 ```
 
 ### See also

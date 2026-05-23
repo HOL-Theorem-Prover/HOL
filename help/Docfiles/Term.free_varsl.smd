@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `free_varsl`
 
 ``` hol4
@@ -18,9 +19,8 @@ Never fails.
 ### Example
 
 ``` hol4
-- free_varsl [Term `x /\ y /\ y ==> x`,
+>> free_varsl [Term `x /\ y /\ y ==> x`,
               Term `!x. x ==> p ==> y`];
-> val it = [`x`, `y`, `p`] : term list
 ```
 
 ### Comments

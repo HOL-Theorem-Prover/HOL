@@ -1,3 +1,4 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `strip_pair`
 
 ``` hol4
@@ -11,8 +12,9 @@ Recursively breaks a paired structure into its constituent pieces.
 ### Example
 
 ``` hol4
-- strip_pair (Term `((1,2),(3,4))`);
-> val it = [`1`, `2`, `3`, `4`] : term list
+>>__ load "pairSyntax";
+
+>> pairSyntax.strip_pair (Term `((1,2),(3,4))`);
 ```
 
 ### Comments
