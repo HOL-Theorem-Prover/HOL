@@ -20,9 +20,9 @@ Never fails
 ### Example
 
 ``` hol4
->> print (quote "foo\nbar" ^ "\n");
+>> quote "foo\nbar";
 
->> print (mlquote "foo\nbar" ^ "\n");
+>> mlquote "foo\nbar";
 ```
 
 ### See also

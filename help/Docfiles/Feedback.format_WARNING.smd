@@ -20,7 +20,7 @@ Never fails.
 ### Example
 
 ``` hol4
->> print (format_WARNING "Module" "function" "Gadzooks!");
+>> format_WARNING "Module" "function" "Gadzooks!";
 ```
 
 ### See also

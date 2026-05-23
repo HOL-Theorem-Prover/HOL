@@ -33,7 +33,7 @@ if the function invocation fails.
 
 First we define a convenience function.
 ``` hol4
->> fun pr_thm th = (print_thm th; print "\n");
+>> fun pr_thm th = Feedback.HOL_INFO (thm_to_string th ^ "\n");
 ```
 
 Now we examine a theorem with and without traces set to local values.
@@ -44,7 +44,6 @@ Now we examine a theorem with and without traces set to local values.
 >> pr_thm EQ_SYM_EQ;
 
 >>+ with_traces [("assumptions",1), ("types",1)] pr_thm EQ_SYM_EQ;
- [] ⊢ ∀(x :α) (y :α). x = y ⇔ y = x
 
 >> map current_trace ["assumptions", "types"] ;
 ```

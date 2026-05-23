@@ -20,7 +20,7 @@ Never fails.
 ``` hol4
 >> commafy ["donkey", "mule", "horse", "camel", "llama"];
 
->> print (String.concat it ^ "\n");
+>> String.concat it;
 
 >> commafy ["foo"];
 ```

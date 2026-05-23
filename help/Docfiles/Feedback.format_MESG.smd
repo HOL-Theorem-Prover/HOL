@@ -20,7 +20,7 @@ Never fails.
 ### Example
 
 ``` hol4
->> print (format_MESG "Hello world.");
+>> format_MESG "Hello world.";
 ```
 
 ### See also

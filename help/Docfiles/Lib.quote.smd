@@ -19,9 +19,9 @@ Never fails
 ### Example
 
 ``` hol4
->> print "foo\n";
+>> "foo";
 
->> print (quote "foo" ^ "\n");
+>> quote "foo";
 ```
 
 ### See also
