@@ -144,6 +144,12 @@ implementation-specific gates through individual files.
 - `bin/hol --bare` — minimal, only loads up to `boolLib`. Useful for
   reproducing low-level issues without the rest of the prelude in the
   way.
+- `bin/hol run script.sml` — runs an SML script file for its side
+  effects (loads the standard heap, evaluates the file, exits). The
+  right tool for one-off microbenchmarks, ad-hoc cache inspection, and
+  any "run this SML over the prelude" task that isn't part of the
+  build. See `bin/hol --help` for the full subcommand list
+  (`repl`, `lsp`, `buildheap`, `run`, `heapname`).
 - `bin/unquote` — the source preprocessor that turns HOL4's input
   syntax into plain SML. Expands quotations (`‘…’`, `“…”`) *and*
   the modern top-level keywords (`Theorem`, `Definition`, `Overload`,
@@ -214,6 +220,17 @@ look at it.)
 - `Manual/` — user-facing documentation, including
   `Manual/Developers/` which is the authoritative source for some
   conventions.
+- `developers/` — one-off scripts, microbenchmarks, dev tooling. Not
+  part of the build. Standalone `.sml` scripts here are typically run
+  via `bin/hol run developers/<script>.sml`.
+- `release-notes/next-release.md` — the changelog that becomes the
+  release notes for the next HOL4 release.  User-visible source changes
+  belong here, under one of: **New features**, **Bugs fixed**, **New
+  theories**, **New tools**, **New examples**, **Incompatibilities**,
+  **Deprecations**.  Performance fixes go under *Bugs fixed*; API
+  signature changes that callers must adapt to go under
+  *Incompatibilities*.  When in doubt, glance at the existing entries
+  for tone and granularity.
 
 ### Directories explicitly out of scope for code-quality work
 
