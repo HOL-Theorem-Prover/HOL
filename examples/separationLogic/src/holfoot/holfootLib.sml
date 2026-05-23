@@ -182,7 +182,7 @@ end;
 
 
 val (array_bound_DECIDE___YICES, _) =
-  Cache.CACHE ((K true), array_bound_DECIDE___YICES)
+  Cache.CACHE {capacity=2000, per_key_cap=32} ((K true), array_bound_DECIDE___YICES)
 
 val holfoot_use_yices = ref 0;
 val _ = Feedback.register_trace ("holfoot use Yices", holfoot_use_yices, 4);

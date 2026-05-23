@@ -259,4 +259,81 @@ in
               “case 11 of 0 => 3 | SUC n => n * 2”
 end
 
+val _ = let
+  open Cache
+  fun mk_test_cache cap =
+      CACHE {capacity=cap, per_key_cap=1000}
+            ((fn _ => true), (fn _ => fn tm => REFL tm))
+  fun touch (cconv, _) tm = ignore (cconv [] tm)
+  fun touch_all c tms = app (touch c) tms
+  fun keys_of (_, cache) = map #1 (cache_values cache)
+  fun expect b = if b then OK() else die "FAILED\n"
+
+  val _ = tprint "Cache: enforces capacity bound"
+  val c0 = mk_test_cache 4
+  val _ = touch_all c0 [“1n”, “2n”, “3n”, “4n”, “5n”, “6n”]
+  val _ = expect (length (keys_of c0) = 4)
+
+  val _ = tprint "Cache: drops least-recently-used key on overflow"
+  val c1 = mk_test_cache 4
+  val _ = touch_all c1 [“1n”, “2n”, “3n”, “4n”, “5n”]
+  val ks1 = keys_of c1
+  val _ = expect (length ks1 = 4 andalso
+                  not (List.exists (aconv “1n”) ks1) andalso
+                  List.exists (aconv “5n”) ks1)
+
+  val _ = tprint "Cache: cache hit bumps key to most-recently-used"
+  val c2 = mk_test_cache 4
+  val _ = touch_all c2 [“1n”, “2n”, “3n”, “4n”, “1n”, “5n”]
+  val ks2 = keys_of c2
+  val _ = expect (length ks2 = 4 andalso
+                  List.exists (aconv “1n”) ks2 andalso
+                  not (List.exists (aconv “2n”) ks2))
+
+  val _ = tprint "Cache: clear_cache resets the cache"
+  val c3 = mk_test_cache 4
+  val _ = touch_all c3 [“1n”, “2n”]
+  val _ = clear_cache (#2 c3)
+  val _ = expect (null (keys_of c3))
+  val _ = touch c3 “7n”
+  val _ = expect (length (keys_of c3) = 1)
+
+  val _ = tprint "Cache: per-key entry list bounded under repeated misses"
+  fun failing_conv (_:thm list) (_:term) : thm = failwith "always fails"
+  val pkc = 8
+  val (cconv4, cache4) =
+      CACHE {capacity=100, per_key_cap=pkc}
+            ((fn _ => true), failing_conv)
+  val key = “7n + 7n = 14n”  (* bool, as the failure-trace handler expects *)
+  fun assumption i = ASSUME (mk_var ("p_" ^ Int.toString i, Type.bool))
+  fun trial i = (cconv4 [assumption i] key; ()) handle _ => ()
+  val n_trials = 100
+  val _ = List.tabulate (n_trials, trial)
+  val stored =
+      case List.find (aconv key o #1) (cache_values cache4) of
+        NONE => []
+      | SOME (_, lst) => lst
+  (* Each stored entry's hypset contains the assumption's bool variable.
+     Stored list is cons-order — newest at head — so the surviving
+     indices should be n_trials-1 down to n_trials-pkc. *)
+  fun idx_of_entry (terms, _) =
+      case List.mapPartial
+             (fn t => if is_var t then
+                        Int.fromString
+                          (String.extract (#1 (dest_var t), 2, NONE))
+                      else NONE)
+             terms of
+        []     => NONE
+      | i :: _ => SOME i
+  val survivors = List.mapPartial idx_of_entry stored
+  val expected = List.tabulate (pkc, fn k => n_trials - 1 - k)
+  val _ = if length stored = pkc andalso survivors = expected then OK()
+          else die ("FAILED: " ^ Int.toString (length stored) ^
+                    " entries; survivors [" ^
+                    String.concatWith "," (map Int.toString survivors) ^
+                    "]\n")
+in
+  ()
+end
+
 val _ = Process.exit Process.success

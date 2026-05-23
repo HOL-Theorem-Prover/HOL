@@ -248,7 +248,7 @@ fun mkSS DPname DP = let
     fun check tm =
         type_of tm = Type.bool andalso is_arith tm andalso not (Teq tm)
   in
-    RCACHE (dpvars,check,CTXT_ARITH DP DPname)
+    RCACHE {capacity=2000, per_key_cap=32} (dpvars, check, CTXT_ARITH DP DPname)
   (* the check function determines whether or not a term might be handled
      by the decision procedure -- we want to handle F, because it's possible
      that we have accumulated a contradictory context. *)

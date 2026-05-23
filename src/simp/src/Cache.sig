@@ -28,6 +28,16 @@
     contradictory these will be tested for this (again, in independent
     groups).
 
+    Both CACHE and RCACHE take a {capacity, per_key_cap} argument.
+    `capacity` bounds the number of distinct key terms held in the
+    cache; when the cache would grow past it, the least-recently-used
+    key (and all of the (context, result) pairs stored under it) is
+    evicted.  `per_key_cap` bounds the per-key list of (context,
+    result) pairs; when a key's list would grow past it, the oldest
+    pair is dropped.  The latter is what keeps "hot" keys (notably
+    boolSyntax.F under RCACHE) from accumulating arbitrarily many
+    stale contexts that get scanned linearly on every lookup.
+
    ---------------------------------------------------------------------- *)
 
 signature Cache =
@@ -35,9 +45,13 @@ sig
   include Abbrev
 
   type cache
-  val CACHE :(term -> bool) * (thm list->conv) -> (thm list -> conv) * cache
-  val clear_cache : cache -> unit;
-  val cache_values : cache -> (term * (term list * thm option) list) list
-  val RCACHE : (term -> term list) * (term -> bool) * (thm list -> conv) ->
+  val CACHE  : {capacity:int, per_key_cap:int} ->
+               (term -> bool) * (thm list -> conv) ->
                (thm list -> conv) * cache
+  val RCACHE : {capacity:int, per_key_cap:int} ->
+               (term -> term list) * (term -> bool) * (thm list -> conv) ->
+               (thm list -> conv) * cache
+  val clear_cache    : cache -> unit
+  val cache_values   : cache -> (term * (term list * thm option) list) list
+  val cache_capacity : cache -> int
 end

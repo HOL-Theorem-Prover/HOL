@@ -8,13 +8,136 @@ type key = term
 type hypinfo = {hyps : term HOLset.set, thms : term HOLset.set}
 type data = (hypinfo * thm option) list
 
-type table = data Termtab.table
-val empty_table : table = Termtab.empty
+type entry = {seq : int, data : data}
 
-type cache = table Sref.t
-fun c_insert c (k,v) = Sref.update c (fn t => Termtab.update (k,v) t)
-fun cvalue (c:cache) = Sref.value c
-fun new_cache() : cache = Sref.new empty_table
+(* The mutable part of a cache.
+   Invariant: store(k) = {seq = i, ...}  iff  by_seq(i) = k.  i.e. by_seq
+   is the inverse of the seq# projection of store.  Maintained by every
+   mutator below. *)
+type state = {
+  store    : entry Termtab.table,
+  by_seq   : term Inttab.table,
+  next_seq : int
+}
+
+(* Sizing parameters are fixed at construction time and live on the cache
+   wrapper, not in the mutable state — so mutators never thread them
+   through their record reconstructions. *)
+type cache = {
+  state       : state Sref.t,
+  capacity    : int,
+  per_key_cap : int
+}
+
+val empty_state : state =
+    {store = Termtab.empty, by_seq = Inttab.empty, next_seq = 0}
+
+fun new_cache {capacity, per_key_cap} : cache =
+    {state = Sref.new empty_state,
+     capacity = capacity, per_key_cap = per_key_cap}
+
+(* When next_seq would overflow, renumber existing entries to 0..n-1.
+   Effectively unreachable on Poly/ML (63-bit Int); on Moscow ML's 31-bit
+   Int this fires at most once per ~10^9 cache operations.  If Int is
+   unbounded (Int.maxInt = NONE), renumbering is never needed. *)
+fun needs_renumber n =
+    case Int.maxInt of
+      NONE => false
+    | SOME m => n >= m - 16
+
+fun renumber ({store, by_seq, ...} : state) : state =
+    let
+      val items = Inttab.dest by_seq  (* in seq# order *)
+      val (store', by_seq', n) =
+          List.foldl
+            (fn ((_, k), (st, bs, i)) =>
+                case Termtab.lookup st k of
+                  NONE => (st, bs, i)
+                | SOME {data, ...} =>
+                  (Termtab.update (k, {seq = i, data = data}) st,
+                   Inttab.update (i, k) bs,
+                   i + 1))
+            (store, Inttab.empty, 0)
+            items
+    in
+      {store = store', by_seq = by_seq', next_seq = n}
+    end
+
+(* Move k to the front of the LRU order, storing data v under it. *)
+fun touch_with_data (st : state, k, v) : state =
+    let
+      val st = if needs_renumber (#next_seq st) then renumber st else st
+      val {store, by_seq, next_seq} = st
+      val by_seq1 =
+          case Termtab.lookup store k of
+            NONE => by_seq
+          | SOME {seq = old_seq, ...} => Inttab.delete_safe old_seq by_seq
+      val store' = Termtab.update (k, {seq = next_seq, data = v}) store
+      val by_seq' = Inttab.update (next_seq, k) by_seq1
+    in
+      {store = store', by_seq = by_seq', next_seq = next_seq + 1}
+    end
+
+(* Drop the LRU key until size <= capacity. *)
+fun evict_to_fit capacity (st : state) : state =
+    if Termtab.size (#store st) <= capacity then st
+    else
+      case Inttab.min (#by_seq st) of
+        NONE => st
+      | SOME (min_seq, evict_key) =>
+          let
+            val store' = Termtab.delete_safe evict_key (#store st)
+            val by_seq' = Inttab.delete_safe min_seq (#by_seq st)
+            val _ = trace(2,
+                          REDUCE("Cache: evicting LRU entry", evict_key))
+          in
+            evict_to_fit capacity
+              {store = store', by_seq = by_seq', next_seq = #next_seq st}
+          end
+
+(* Read without bumping: callers that immediately follow with c_insert
+   on the same key let the c_insert do the bump. *)
+fun peek (c : cache) k : data option =
+    Option.map #data (Termtab.lookup (#store (Sref.value (#state c))) k)
+
+(* Bump k to most-recently-used without changing its data.  Used at
+   terminal cache-hit sites where no insert follows. *)
+fun bump (c : cache) k : unit =
+    Sref.update (#state c)
+      (fn st =>
+          case Termtab.lookup (#store st) k of
+            NONE => st
+          | SOME {data, ...} => touch_with_data (st, k, data))
+
+(* Per-key cap (per the lru record) bounds the (hypinfo, thm option) list
+   under a single key.  Without this bound, "hot" keys — especially
+   boolSyntax.F, which prove_false_context writes to on every failed-
+   contradiction attempt — accumulate thousands of entries.  Every cache
+   consultation then scans the entire list (List.find in
+   consider_false_context_cache and in the RCACHE / CACHE main lookups),
+   making per-call cost grow linearly with session length.  Capping turns
+   that linear scan into a constant.  Dropping oldest entries can cost an
+   occasional re-prove when a query's context matched an evicted entry
+   — slower but always correct. *)
+fun take_at_most n xs =
+    let
+      fun loop _ acc [] = List.rev acc
+        | loop 0 acc _  = List.rev acc
+        | loop i acc (x :: rest) = loop (i - 1) (x :: acc) rest
+    in
+      loop n [] xs
+    end
+
+(* Insert/update k -> v, bump it, then evict if over capacity. *)
+fun c_insert (c : cache) (k, v) : unit =
+    Sref.update (#state c)
+      (fn st => evict_to_fit (#capacity c)
+                  (touch_with_data (st, k, take_at_most (#per_key_cap c) v)))
+
+fun clear_cache (c : cache) : unit =
+    Sref.update (#state c) (fn _ => empty_state)
+
+fun cache_capacity (c : cache) : int = #capacity c
 
 val empty_hypinfo = {hyps = empty_tmset, thms = empty_tmset}
 fun hypinfo_addth (th, {hyps,thms}) =
@@ -34,19 +157,23 @@ exception FIRST
 fun first p [] = raise FIRST
   | first p (h::t) = if p h then h else first p t
 
-fun CACHE (filt,conv) = let
-  val cache = new_cache()
+fun CACHE (spec : {capacity:int, per_key_cap:int}) (filt,conv) = let
+  val cache = new_cache spec
   fun cache_proc thms tm = let
     val _ = if (filt tm) then ()
             else failwith "CACHE_CCONV: not applicable"
-    val prevs = Option.getOpt (Termtab.lookup (cvalue cache) tm, [])
+    val prevs = Option.getOpt (peek cache tm, [])
     val curr = all_hyps thms
     fun ok (prev,SOME thm) = prev << curr
       | ok (prev,NONE) = curr << prev
   in
-    (case snd (first ok prevs) of
-       SOME x => (trace(1,PRODUCE(tm,"cache hit!",x)); x)
-     | NONE => failwith "cache hit was failure")
+    let val (_, res) = first ok prevs
+        val () = bump cache tm
+    in
+      case res of
+        SOME x => (trace(1,PRODUCE(tm,"cache hit!",x)); x)
+      | NONE => failwith "cache hit was failure"
+    end
     handle FIRST => let
              val thm = conv thms tm
                  handle e as (HOL_ERR _) =>
@@ -68,12 +195,10 @@ in
   (cache_proc, cache)
 end
 
-fun clear_cache cache = (Sref.update cache (fn c => empty_table))
-
 fun cache_values (cache : cache) = let
-  val items = Termtab.dest (cvalue cache)
+  val items = Termtab.dest (#store (Sref.value (#state cache)))
   fun tolist (set, thmopt) = (hypinfo_list set, thmopt)
-  fun ToList (k, stlist) = (k, map tolist stlist)
+  fun ToList (k, {data, ...} : entry) = (k, map tolist data)
 in
   map ToList items
 end
@@ -210,9 +335,12 @@ in
   mk_eq(t, if ty = bool then T else mk_arb ty)
 end
 
-fun consider_false_context_cache table original_goal (ctxtlist:context list) =
+(* Note: takes the cache ref (not a snapshot) so that a contradiction hit
+   can bump the F key. *)
+fun consider_false_context_cache (cache:cache) original_goal
+                                 (ctxtlist:context list) =
     let
-      val cache_F = Option.getOpt (Termtab.lookup table boolSyntax.F, [])
+      val cache_F = Option.getOpt (peek cache boolSyntax.F, [])
       fun recurse acc ctxts =
           case ctxts of
             [] => possible_ctxts acc
@@ -226,6 +354,7 @@ fun consider_false_context_cache table original_goal (ctxtlist:context list) =
               | SOME (_, SOME th) =>
                 (trace(1,PRODUCE(original_goal,
                                  "cache hit for contradiction", th));
+                 bump cache boolSyntax.F;
                  proved_it (CCONTR (mk_goal original_goal) (EQT_ELIM th)))
             end
     in
@@ -238,7 +367,7 @@ fun prove_false_context (conv:thm list -> conv) (cache:cache) (ctxtlist:context 
         [] => raise mk_HOL_ERR "Cache" "RCACHE"
                                "No (more) possibly false contexts"
       | (hyps,thms)::cs => let
-          val oldval = Option.getOpt (Termtab.lookup (cvalue cache) F, [])
+          val oldval = Option.getOpt (peek cache F, [])
           val conjs = list_mk_conj (map concl thms)
         in
           case Lib.total (conv thms) boolSyntax.F of
@@ -259,9 +388,9 @@ in
   recurse ctxtlist
 end
 
-fun RCACHE (dpfvs, check, conv) = let
+fun RCACHE (spec : {capacity:int, per_key_cap:int}) (dpfvs, check, conv) = let
   open Uref
-  val cache = new_cache()
+  val cache = new_cache spec
   fun build_up_ctxt mp th = let
     val c = concl th
   in
@@ -277,13 +406,14 @@ fun RCACHE (dpfvs, check, conv) = let
   fun decider ctxt t = let
     val _ = if check t then ()
             else raise mk_HOL_ERR "Cache" "RCACHE" "not applicable"
-    val prevs = Option.getOpt (Termtab.lookup (cvalue cache) t, [])
+    val prevs = Option.getOpt (peek cache t, [])
     val curr = all_hyps ctxt
     fun oksome (prev, SOME thm) = prev << curr
       | oksome (_, NONE) = false
   in
     case List.find oksome prevs of
-      SOME (_, SOME x) => (trace(1,PRODUCE(t, "cache hit!", x)); x)
+      SOME (_, SOME x) =>
+        (trace(1,PRODUCE(t, "cache hit!", x)); bump cache t; x)
     | SOME (_, NONE) => raise Fail "RCACHE: Invariant failure"
     | NONE => let
         (* do connected component analysis to test for false *)
@@ -337,7 +467,7 @@ fun RCACHE (dpfvs, check, conv) = let
             (* nothing cached, but should still try cache for proving
                false from the context *)
           in
-            case consider_false_context_cache (cvalue cache) t divided_clist
+            case consider_false_context_cache cache t divided_clist
             of
               proved_it th => th
             | possible_ctxts cs => let
@@ -368,7 +498,7 @@ fun RCACHE (dpfvs, check, conv) = let
                way or the other.  However, it's possible that part of the
                rest of the context goes to false *)
           in
-            case consider_false_context_cache (cvalue cache) t divided_clist of
+            case consider_false_context_cache cache t divided_clist of
               proved_it th => th
             | possible_ctxts cs => prove_false_context conv cache cs t
           end
