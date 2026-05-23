@@ -10,10 +10,9 @@ Helpd=../../help
 INCLUDES = $(Helpd)/src-sml ../Tools
 
 # Cross-manual labels.tsv prereq list for the mdbook target.
-# See Manual/Description/Holmakefile for the rationale.
-MANUALS = $(shell cat $(HOLDIR)/Manual/manuals.txt)
+# See Manual/mdbook.mk for MANUALS / SIBLING_LABELS.
 THIS = Reference
-SIBLING_LABELS = $(patsubst %,../%/labels.tsv,$(patsubst $(THIS),,$(MANUALS)))
+include ../mdbook.mk
 
 OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex \
         ../LaTeX/ref-macros.tex

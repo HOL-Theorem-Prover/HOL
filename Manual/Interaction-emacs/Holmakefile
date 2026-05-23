@@ -1,10 +1,9 @@
 INCLUDES = ../Tools
 
 # Cross-manual labels.tsv prereq list for the mdbook target.
-# See Manual/Description/Holmakefile for the rationale.
-MANUALS = $(shell cat $(HOLDIR)/Manual/manuals.txt)
+# See Manual/mdbook.mk for MANUALS / SIBLING_LABELS.
 THIS = Interaction-emacs
-SIBLING_LABELS = $(patsubst %,../%/labels.tsv,$(patsubst $(THIS),,$(MANUALS)))
+include ../mdbook.mk
 
 PS_ROOT = ../Tools/polyscripter
 PS_STUFF = $(PS_ROOT) ../Tools/umap

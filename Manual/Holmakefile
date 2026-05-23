@@ -17,14 +17,11 @@ quick: Quick/quick.pdf
 cheatsheet: Cheatsheet/cheatsheet.html
 
 # Unified mdbook site -- one landing page at book/index.html with
-# per-manual subdirectories underneath.  Both the per-manual and
-# aggregator targets are derived from the MANUALS list read out
-# of `manuals.txt' (one stem per line) -- so adding a new manual
-# is a one-line edit there, and the same shell-read is repeated
-# in each per-manual Holmakefile (anchored on $(HOLDIR) so the
-# path resolves the same way no matter which cwd Holmake started
-# in).
-MANUALS = $(shell cat $(HOLDIR)/Manual/manuals.txt)
+# per-manual subdirectories underneath.  Both the aggregator's
+# MDBOOK_TARGETS / BOOK_TOMLS and each per-manual Holmakefile's
+# SIBLING_LABELS list are derived from the MANUALS list defined
+# in mdbook.mk, so adding a new manual is a single-line edit there.
+include mdbook.mk
 MDBOOK_TARGETS = $(patsubst %,%/mdbook,$(MANUALS))
 BOOK_TOMLS = $(patsubst %,%/book.toml,$(MANUALS))
 

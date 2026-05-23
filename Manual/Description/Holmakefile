@@ -1,12 +1,9 @@
 INCLUDES = ../Tools ../Reference ../../examples/probability $(HOLDIR)/src/integer
 
 # Cross-manual labels.tsv prereq list for the mdbook target.
-# MANUALS comes from $(HOLDIR)/Manual/manuals.txt (one stem per
-# line); $(patsubst $(THIS),,...) drops the self-entry; the second
-# $(patsubst) prefixes ../<M>/labels.tsv.
-MANUALS = $(shell cat $(HOLDIR)/Manual/manuals.txt)
+# See Manual/mdbook.mk for MANUALS / SIBLING_LABELS.
 THIS = Description
-SIBLING_LABELS = $(patsubst %,../%/labels.tsv,$(patsubst $(THIS),,$(MANUALS)))
+include ../mdbook.mk
 
 TEX_CORES = description title preface system conv drules tactics \
 	theories math definitions libraries misc HolSat HolQbf HolSmt \

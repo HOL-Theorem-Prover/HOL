@@ -1,10 +1,9 @@
 INCLUDES = ../Tools ../Reference
 
 # Cross-manual labels.tsv prereq list for the mdbook target.
-# See Manual/Description/Holmakefile for the rationale.
-MANUALS = $(shell cat $(HOLDIR)/Manual/manuals.txt)
+# See Manual/mdbook.mk for MANUALS / SIBLING_LABELS.
 THIS = Tutorial
-SIBLING_LABELS = $(patsubst %,../%/labels.tsv,$(patsubst $(THIS),,$(MANUALS)))
+include ../mdbook.mk
 
 # Core LaTeX file stems that contribute to tutorial.pdf.  Front
 # matter (title, preface) is still hand-coded in tutorial.tex;
