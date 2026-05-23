@@ -7,6 +7,8 @@ $(SML_LIB)/basis/basis.mlb
 ../deps/HM_DepGraph.sml
 ../core/HM_BuildLock.sig
 ../core/HM_BuildLock.sml
+../core/HM_TheoryDat.sig
+../core/HM_TheoryDat.sml
 ../core/HM_Cachekey.sig
 ../core/HM_Cachekey.sml
 ../poly/HM_CacheFetch.sml

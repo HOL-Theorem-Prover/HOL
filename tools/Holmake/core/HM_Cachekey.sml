@@ -71,15 +71,44 @@ fun resolve_dat_path dep holpath =
 
 fun compute_for_deps g raw_deps =
     let
-      val deps =
-          let val depset =
-                  List.foldl
-                    (fn (dep, acc) =>
-                        case dep_to_hashable dep of
-                            SOME d => Binaryset.add (acc, d)
-                          | NONE => acc)
-                    hm_target.empty_tgtset
-                    raw_deps
+      val deps0 =
+          let
+            (* Stop walking at theory nodes: a theory's .dat content
+               (what gets hashed) already encodes the theory's
+               parents transitively via the recorded parent-hash
+               chain in its header, so pulling the parent theory's
+               *script* into this target's hash would be wrong.
+               Continue only through non-theory deps so the walk can
+               cross into a library's source dir to find the theory
+               parents that library brings in. *)
+            val depset = ref hm_target.empty_tgtset
+            val visited = ref hm_target.empty_tgtset
+            fun is_theory_filepart fp =
+                case fp of
+                    UO (Theory _) => true
+                  | UI (Theory _) => true
+                  | SML (Theory _) => true
+                  | SIG (Theory _) => true
+                  | DAT _ => true
+                  | _ => false
+            fun visit d =
+                if Binaryset.member (!visited, d) then ()
+                else
+                  (visited := Binaryset.add (!visited, d);
+                   (case dep_to_hashable d of
+                        SOME d' => depset := Binaryset.add (!depset, d')
+                      | NONE => ());
+                   if is_theory_filepart (hm_target.filepart d) then ()
+                   else
+                     case HM_DepGraph.target_node g d of
+                         NONE => ()
+                       | SOME n =>
+                         (case HM_DepGraph.peeknode g n of
+                              NONE => ()
+                            | SOME nI =>
+                              List.app (fn (_, d') => visit d')
+                                       (#dependencies nI)))
+            val _ = List.app visit raw_deps
           in
             map (fn dep =>
                     let val p = tgt_toString dep
@@ -89,7 +118,65 @@ fun compute_for_deps g raw_deps =
                         name = fromFile (hm_target.filepart dep),
                         path = path }
                     end)
-                (Binaryset.listItems depset)
+                (Binaryset.listItems (!depset))
+          end
+      (* Drop a theory from the hash inputs if some other theory in
+         the set transitively records it as a parent: the descendant's
+         .dat already captures the ancestor's content via the
+         recorded parent-hash chain, and hashing the ancestor as well
+         only inflates the cachekey scope. *)
+      val deps =
+          let
+            val theory_entries =
+                List.mapPartial
+                  (fn entry as {dep, ...} =>
+                      case hm_target.filepart dep of
+                          HOLFS_dtype.DAT s => SOME (s, entry)
+                        | _ => NONE)
+                  deps0
+            val in_set : (string, {dep:hm_target.t, name:string, path:string})
+                          Binarymap.dict =
+                List.foldl
+                  (fn ((s, e), m) => Binarymap.insert (m, s, e))
+                  (Binarymap.mkDict String.compare)
+                  theory_entries
+            val search_dirs =
+                List.foldl
+                  (fn ({path, ...}, acc) =>
+                      let val d = OS.Path.dir path
+                      in if List.exists (fn x => x = d) acc
+                         then acc else d :: acc end)
+                  []
+                  deps0
+            val ancestor_names : string Binaryset.set ref =
+                ref (Binaryset.empty String.compare)
+            val visited : string Binaryset.set ref =
+                ref (Binaryset.empty String.compare)
+            fun walk_path path =
+                List.app walk_name
+                         (map #1 (HM_TheoryDat.extract_parents path))
+            and walk_name pname =
+                if Binaryset.member (!visited, pname) then ()
+                else
+                  (visited := Binaryset.add (!visited, pname);
+                   ancestor_names := Binaryset.add (!ancestor_names, pname);
+                   case Binarymap.peek (in_set, pname) of
+                       SOME {path, ...} => walk_path path
+                     | NONE =>
+                       (case HM_TheoryDat.find_parent_dat
+                               search_dirs pname of
+                            SOME ppath => walk_path ppath
+                          | NONE => ()))
+            val _ = List.app (fn (_, {path, ...}) => walk_path path)
+                             theory_entries
+          in
+            List.filter
+              (fn {dep, ...} =>
+                  case hm_target.filepart dep of
+                      HOLFS_dtype.DAT s =>
+                        not (Binaryset.member (!ancestor_names, s))
+                    | _ => true)
+              deps0
           end
       val missing =
           List.filter (fn {path, ...} =>

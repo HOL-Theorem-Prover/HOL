@@ -842,6 +842,9 @@ in
                  let
                    open hm_target
                    val deps =
+                       (* Cross-dir deps don't recurse here -- their
+                          transitive closure is recorded in the dep
+                          graph by build_depgraph's external branch. *)
                        if hmdir.compare(dirpart d, hmdir.curdir()) <> EQUAL
                        then []
                        else
@@ -868,25 +871,7 @@ in
       val alldeps = set_addList (file_dependencies @ extra_impl_deps)
                                 (set_union tcdeps uo_deps)
     in
-      case f of
-        SML x => let
-          (* there may be theory files mentioned in the Theory.sml file that
-             aren't mentioned in the script file.  If so, we are really
-             dependent on these, and should add them.  They will be listed
-             in the dependencies for UO (Theory x). *)
-          val additional_theories =
-              if exists_readable (fromFile f) then
-                set_mapPartial
-                  (fn dep => case hm_target.filepart dep of
-                                 UO (Theory s) => SOME dep
-                               | _ => NONE)
-                  hm_target.empty_tgtset
-                  (get_implicit_dependencies incinfo (UO x))
-              else hm_target.empty_tgtset
-        in
-          set_union alldeps additional_theories
-        end
-      | _ => alldeps
+      alldeps
     end
   else
     deplist_to_set file_dependencies
@@ -948,6 +933,62 @@ fun cdset_member(set,stk) e = Binaryset.member(set,e)
 fun cdset_toString ((_,stk):cdset) =
     String.concatWith ">" (map #2 (List.rev stk))
 
+(* Read a cross-directory dep's source-directory depfile (without
+   rerunning holdep) and return its parsed deps.  The dep's [dirpart]
+   is typically sigobj (uploads symlink products there) but depfiles
+   live next to the actual sources; resolve the symlink to find the
+   real source directory. *)
+fun read_foreign_depfile tgt =
+    case holdep_arg (hm_target.filepart tgt) of
+        NONE => []
+      | SOME arg =>
+        let
+          val abs_path = hm_target.toString tgt
+          val fs_path =
+              case HFS_NameMunge.HOLtoFS abs_path of
+                  NONE => abs_path
+                | SOME {fullfile, ...} => fullfile
+          val real_objpath = OS.FileSys.realPath fs_path
+                             handle OS.SysErr _ => fs_path
+          val objdir_arcs_rev =
+              List.rev (#arcs (OS.Path.fromString HFS_NameMunge.HOLOBJDIR))
+          fun stripPrefix [] xs = SOME xs
+            | stripPrefix _ [] = NONE
+            | stripPrefix (p::ps) (x::xs) =
+                if p = x then stripPrefix ps xs else NONE
+          fun strip_hol_objs p =
+              let val {isAbs, vol, arcs} = OS.Path.fromString p
+                  val rev_arcs = List.rev arcs
+              in case rev_arcs of
+                     [] => NONE
+                   | _ :: rest =>
+                     Option.map
+                       (fn rest' =>
+                           OS.Path.toString
+                             {isAbs=isAbs, vol=vol,
+                              arcs=List.rev rest'})
+                       (stripPrefix objdir_arcs_rev rest)
+              end
+        in
+          case strip_hol_objs real_objpath of
+              NONE => []
+            | SOME real_srcdir =>
+              let
+                val foreign_depdir =
+                    OS.Path.concat (real_srcdir, DEPDIR)
+                val depfile = mk_depfile_name foreign_depdir
+                                              (fromFile arg)
+                val foreign_hmdir =
+                    hmdir.extendp {base = hmdir.curdir(),
+                                   extension = real_srcdir}
+              in
+                if exists_readable depfile then
+                  get_dependencies_from_file_in_dir
+                    foreign_hmdir depfile
+                else []
+              end
+        end
+
 (* is run in a directory at a time *)
 type g = GraphExtra.t HM_DepGraph.t
 fun build_depgraph cdset incinfo (tgt:dep) g0:(g * node) =
@@ -991,14 +1032,29 @@ in
          not (isSome (pattern_rule_info tgt))
          (* path outside of current directory and no local pattern
             rule claims it *)
-      then (
-        diag (fn _ => "Target "^pretty_tgt^" external to directory");
-        add_node {target = tgt, seqnum = 0, phony = false,
-                  status = if exists_readable fullpath_s then Succeeded
-                           else Failed{needed=false},
-                  dir = dir, extra = extra,
-                  command = NoCmd, dependencies = []} g0
-      )
+      then
+        let
+          (* Recurse into the external node's transitive deps so the
+             graph captures them.  The [target_node g0 tgt] check
+             above prevents infinite recursion on shared ancestors. *)
+          val foreign_deps = read_foreign_depfile tgt
+          val (g1, depnodes) =
+              List.foldl
+                (fn (d', (g, ns)) =>
+                    let val (g'', n) = build d' g
+                    in (g'', addF d' n :: ns) end)
+                (g0, [])
+                foreign_deps
+          val _ = diag (fn _ =>
+                    "Target "^pretty_tgt^" external; foreign deps = ["^
+                    pdlist foreign_deps ^"]")
+        in
+          add_node {target = tgt, seqnum = 0, phony = false,
+                    status = if exists_readable fullpath_s then Succeeded
+                             else Failed{needed=false},
+                    dir = dir, extra = extra,
+                    command = NoCmd, dependencies = depnodes} g1
+        end
       else if isSome pdep andalso no_full_extra_rule (SOME tgt) then
         let
           val pdep = hm_target.mk(dir, valOf pdep)

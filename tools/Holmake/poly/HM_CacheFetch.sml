@@ -101,127 +101,9 @@ fun is_theory_output f =
    no longer match the current on-disk parents.  Loading that .dat
    would fail link_parents.  Detect and treat as a cache miss.
 
-   We avoid adding HOLsexp to Holmake's mlb (the cleaner option) by
-   doing a small textual scan of the .dat header.  The format is
-   stable:
-       (theory ("<thyname>" ("<parent1>" . "<hash1>") ... )
-        (core-data ...) ...)
-   Each parent is encoded as a sub-list ("<thy>" . "<hash>"), all
-   inside the first sub-list of (theory ...).  We only scan the
-   substring up to "(core-data" to avoid matching string pairs that
-   might appear inside the theorem tables.
-
-   HOLsexp pretty-prints with INCONSISTENT breaks, so the whitespace
-   immediately after "theory" can be a space OR a newline depending on
-   whether the thid+parents sublist fits on the same line: bool's tiny
-   ("bool" ("min" . "")) fits, but any theory with a 40-char SHA-1
-   parent hash typically doesn't and wraps.  We accept any whitespace. *)
-
-fun read_file path =
-    let val ins = TextIO.openIn path
-        val s = TextIO.inputAll ins
-        val _ = TextIO.closeIn ins
-    in s end
-    handle _ => ""
-
-fun extract_parents dat_path =
-    let
-      val content = read_file dat_path
-      val full = Substring.full content
-      val (_, at_theory) = Substring.position "(theory" full
-    in
-      if Substring.size at_theory < 7 then []
-      else
-        let
-          val after_theory =
-              Substring.dropl Char.isSpace (Substring.triml 7 at_theory)
-          val (header, _) = Substring.position "(core-data" after_theory
-          fun loop ss acc =
-              let val (_, rest) = Substring.position "(\"" ss
-              in
-                if Substring.size rest < 2 then List.rev acc
-                else
-                  let
-                    val after_open = Substring.triml 2 rest
-                    val (xss, ass) = Substring.position "\"" after_open
-                  in
-                    if Substring.size ass < 1 then List.rev acc
-                    else
-                      let val ass1 = Substring.triml 1 ass (* skip closing " *)
-                      in
-                        if Substring.isPrefix " . \"" ass1 then
-                          let
-                            val ass2 = Substring.triml 4 ass1
-                            val (yss, ass3) = Substring.position "\"" ass2
-                          in
-                            if Substring.size ass3 >= 1 then
-                              loop (Substring.triml 1 ass3)
-                                   ((Substring.string xss,
-                                     Substring.string yss) :: acc)
-                            else List.rev acc
-                          end
-                        else loop ass1 acc
-                      end
-                  end
-              end
-        in loop header [] end
-    end
-    handle _ => []
-
-(* Locate the current on-disk Theory.dat for [thy].  We look in sigobj
-   first (where exported theories live, with .uo as a symlink to the
-   source dir); if that resolves, the .dat sits next to the resolved
-   .uo.  Returns NONE if we cannot locate a current .dat: the caller
-   should treat that as a validation failure since we cannot verify
-   the cached .dat's parent hash. *)
-val SIGOBJ = OS.Path.concat (Systeml.HOLDIR, "sigobj")
-
-(* Locate the current on-disk Theory.dat for [thy].  We try, in order:
-
-   (a) Each directory in [search_dirs] (which the caller derives from
-       the dep graph's known targets / deps -- so this covers downstream
-       projects with their own theory hierarchies that are NOT
-       linkToSigobj'd into core HOL's sigobj).  For each dir D we try
-       D/.hol/objs/<thy>Theory.dat (the Poly/ML munged location) and
-       D/<thy>Theory.dat (the Moscow ML / unmunged location).
-   (b) sigobj/<thy>Theory.dat, falling back to following the
-       sigobj/<thy>Theory.uo symlink via realPath and looking next to
-       the resolved .uo -- handles core HOL where theories are
-       linkToSigobj'd. *)
-fun find_parent_dat search_dirs thy =
-    let
-      val basename = thy ^ "Theory"
-      val datname = basename ^ ".dat"
-      fun access p = OS.FileSys.access (p, [OS.FileSys.A_READ])
-                     handle _ => false
-      fun in_dir d =
-          let val munged = OS.Path.concat (d,
-                              OS.Path.concat (".hol",
-                                 OS.Path.concat ("objs", datname)))
-              val plain = OS.Path.concat (d, datname)
-          in
-            if access munged then SOME munged
-            else if access plain then SOME plain
-            else NONE
-          end
-      fun first f [] = NONE
-        | first f (x :: xs) = case f x of SOME y => SOME y | NONE => first f xs
-      val sigobj_uo = OS.Path.concat (SIGOBJ, basename ^ ".uo")
-      val sigobj_dat = OS.Path.concat (SIGOBJ, datname)
-    in
-      case first in_dir search_dirs of
-          SOME p => SOME p
-        | NONE =>
-          if access sigobj_dat then SOME sigobj_dat
-          else if access sigobj_uo then
-            let val real_uo = OS.FileSys.realPath sigobj_uo
-                val real_dir = OS.Path.dir real_uo
-                val candidate = OS.Path.concat (real_dir, datname)
-            in
-              if access candidate then SOME candidate else NONE
-            end handle OS.SysErr _ => NONE
-          else NONE
-    end
+   The textual scan of the .dat header lives in core/HM_TheoryDat so
+   that HM_Cachekey can use the same parser without picking up a
+   dependency on this poly-only module. *)
 
 (* Validate that the parent hashes recorded in [dat_path] match the
    hashes of the current on-disk parents.  An empty extracted-parents
@@ -231,9 +113,9 @@ fun find_parent_dat search_dirs thy =
    reject the cache. *)
 fun validate_dat search_dirs dat_path =
     let
-      val parents = extract_parents dat_path
+      val parents = HM_TheoryDat.extract_parents dat_path
       fun check (thy, recorded_hash) =
-          case find_parent_dat search_dirs thy of
+          case HM_TheoryDat.find_parent_dat search_dirs thy of
               NONE => false   (* can't locate current parent; fail-safe *)
             | SOME path =>
                 (SHA1.sha1_file {filename = path} = recorded_hash

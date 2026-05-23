@@ -204,7 +204,8 @@ sig
     val tgtset_diff : t list -> t list -> t list
     val tgtexists_readable : t -> bool
     val localFile : File -> t
-    val filestr_to_tgt : string -> t (* directory dependent *)
+    val filestr_to_tgt : string -> t (* resolved against hmdir.curdir() *)
+    val filestr_to_tgt_in_dir : hmdir.t -> string -> t
     val setHMF_text : string -> t -> t
     val setFile : File -> t -> t
     val dirpart : t -> hmdir.t
@@ -225,6 +226,13 @@ sig
        extra_targets : dep list } ->
       File -> dep list
   exception HolDepFailed
+
+  val mk_depfile_name : string -> string -> string
+
+  (* Parse a depfile (typically produced by holdep) and return its RHS
+     entries.  Same-directory unqualified names are resolved against
+     [base]; absolute paths come through unchanged. *)
+  val get_dependencies_from_file_in_dir : hmdir.t -> string -> dep list
 
   val forces_update_of : string * string -> bool
   val depforces_update_of : dep * dep -> bool

@@ -827,13 +827,14 @@ fun tgtset_diff dl1 dl2 =
       recurse dl1
     end
 fun localFile f = (hmdir.curdir(), f, NONE)
-fun filestr_to_tgt s =
+fun filestr_to_tgt_in_dir base s =
     let
       val {dir,file} = OS.Path.splitDirFile s
-      val dir' = hmdir.extendp {base = hmdir.curdir(), extension = dir}
+      val dir' = hmdir.extendp {base = base, extension = dir}
     in
       (dir',toFile file,NONE)
     end
+fun filestr_to_tgt s = filestr_to_tgt_in_dir (hmdir.curdir()) s
 fun tgtexists_readable d = exists_readable (toString d)
 end (* struct *)
 
@@ -904,7 +905,7 @@ fun holdep_arg (UO c) = SOME (SML c)
 fun mk_depfile_name DEPDIR s = fullPath [DEPDIR, s^".d"]
 
 
-fun get_dependencies_from_file depfile = let
+fun get_dependencies_from_file_in_dir base depfile = let
   open hm_target
   fun get_whole_file s = let
     val instr = openIn (normPath s)
@@ -920,7 +921,7 @@ fun get_dependencies_from_file depfile = let
       val rhs = Substring.string (Substring.slice(rhs0, 1, NONE))
         handle Subscript => ""
     in
-      map filestr_to_tgt (realspace_delimited_fields rhs)
+      map (filestr_to_tgt_in_dir base) (realspace_delimited_fields rhs)
     end
   in
     List.concat (map process_line lines)
@@ -928,6 +929,9 @@ fun get_dependencies_from_file depfile = let
 in
   parse_result (get_whole_file depfile)
 end
+
+fun get_dependencies_from_file depfile =
+    get_dependencies_from_file_in_dir (hmdir.curdir()) depfile
 
 
 
