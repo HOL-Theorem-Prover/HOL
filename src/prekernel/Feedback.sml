@@ -233,6 +233,13 @@ fun HOL_WARNINGloc s1 s2 locn s3 =
 fun HOL_INFO s =
     if !emit_INFO then !INFO_outstream (!INFO_to_string s) else ()
 
+(* Route Portable.pprint through HOL_INFO so its output participates
+   in the INFO channel rather than escaping straight to OS stdout.
+   Portable is more primitive than Feedback (built first), so it can't
+   call HOL_INFO directly; here we patch its outstream ref now that
+   the function exists. *)
+val () = Portable.pprint_outstream := HOL_INFO
+
 (*---------------------------------------------------------------------------*
  * Traces, numeric flags; the higher setting, the more verbose the output.   *
  *---------------------------------------------------------------------------*)

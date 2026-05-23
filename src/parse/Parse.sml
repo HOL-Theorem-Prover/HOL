@@ -189,7 +189,7 @@ fun pp_type ty =
   end
 
 val type_to_string = rawterm_pp (ppstring pp_type)
-val print_type = print o type_to_string
+val print_type = HOL_INFO o type_to_string
 
 fun type_pp_with_delimiters ppfn ty =
   let
@@ -207,14 +207,14 @@ fun print_from_grammars (tyG, tmG) =
    ulower (term_pp.pp_term tmG tyG (!current_backend)))
 
 fun stdprint x =
-  HOLPP.prettyPrint (TextIO.print, !Globals.linewidth) x
+  HOLPP.prettyPrint (HOL_INFO, !Globals.linewidth) x
 
 fun print_term_by_grammar Gs t =
   let
     val (_, termprinter) = print_from_grammars Gs
   in
     stdprint (termprinter t) ;
-    print "\n"
+    HOL_INFO "\n"
   end
 
 fun term_to_string_by_grammar Gs t =
@@ -418,7 +418,7 @@ fun pp_thm th =
   end;
 
 val thm_to_string = rawterm_pp (ppstring pp_thm)
-val print_thm = print o thm_to_string
+val print_thm = HOL_INFO o thm_to_string
 
 (*---------------------------------------------------------------------------
      Parse into preterm type

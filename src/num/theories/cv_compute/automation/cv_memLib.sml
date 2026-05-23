@@ -19,7 +19,8 @@ val verbosity_level = ref Quiet;
 
 val use_long_names = ref false;
 
-fun cv_print_aux v f s = if verbosity_leq v (!verbosity_level) then print (f s) else ();
+fun cv_print_aux v f s =
+    if verbosity_leq v (!verbosity_level) then Feedback.HOL_INFO (f s) else ();
 fun cv_print v s = cv_print_aux v I s;
 fun cv_print_term v tm = cv_print_aux v term_to_string tm;
 fun cv_print_thm v th = cv_print_aux v thm_to_string th;

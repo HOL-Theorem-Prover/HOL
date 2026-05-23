@@ -1360,10 +1360,7 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
         end
   end handle Failloc (loc,s) =>
              (if !syntax_error_trace then
-                (print (locn.toString loc);
-                 print ":\n";
-                 print s;
-                 print "\n")
+                Feedback.HOL_INFO (locn.toString loc ^ ":\n" ^ s ^ "\n")
               else ();
               error (WARNloc_string loc s))
 
@@ -1499,7 +1496,7 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
                         locn.toString itlocn^" and " ^
                         locn.toString toplocn^".\n"
             in
-              if !syntax_error_trace then print msg
+              if !syntax_error_trace then Feedback.HOL_INFO msg
               else ();
               error (msg, toplocn)
             end

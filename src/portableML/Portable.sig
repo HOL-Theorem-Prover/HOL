@@ -255,6 +255,10 @@ sig
 
   type 'a quotation = 'a HOLPP.quotation
   val pprint : 'a HOLPP.pprinter -> 'a -> unit
+  (* Outstream used by `pprint`.  Defaults to `TextIO.print`; clients
+     that want pprint's output captured (e.g. polyscripter) can rebind
+     this ref. *)
+  val pprint_outstream : (string -> unit) ref
   val norm_quote : 'a quotation -> 'a quotation
   val quote_to_string : ('a -> string) -> 'a quotation -> string
   val quote_to_string_list : string quotation -> string list

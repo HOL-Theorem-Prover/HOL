@@ -116,21 +116,25 @@ fun theory_files script =
   end
 
 fun save_file file =
-  let
-    val dir = #dir (OS.Path.splitDirFile file)
-    val cmd = "cp -p " ^ file ^ " " ^ (file ^ ".tttsave")
-  in
-    cmd_in_dir dir cmd
-  end
+  if exists_file file then
+    let
+      val dir = #dir (OS.Path.splitDirFile file)
+      val cmd = "cp -p " ^ file ^ " " ^ (file ^ ".tttsave")
+    in
+      cmd_in_dir dir cmd
+    end
+  else ()
 
 fun restore_file file =
-  let
-   val dir = #dir (OS.Path.splitDirFile file)
-    val cmd1 = "cp -p " ^ (file ^ ".tttsave") ^ " " ^ file
-    val cmd2 = "rm " ^ (file ^ ".tttsave")
-  in
-    cmd_in_dir dir (cmd1 ^ "; " ^ cmd2)
-  end
+  if exists_file (file ^ ".tttsave") then
+    let
+      val dir = #dir (OS.Path.splitDirFile file)
+      val cmd1 = "cp -p " ^ (file ^ ".tttsave") ^ " " ^ file
+      val cmd2 = "rm " ^ (file ^ ".tttsave")
+    in
+      cmd_in_dir dir (cmd1 ^ "; " ^ cmd2)
+    end
+  else ()
 
 fun save_thyfiles script = app save_file (theory_files script)
 fun restore_thyfiles script = app restore_file (theory_files script)
