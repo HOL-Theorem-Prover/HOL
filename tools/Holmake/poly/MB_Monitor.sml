@@ -380,7 +380,12 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
                              "OK")
                   else
                     let
-                      val log = fullPath [dir,LOGDIR,delsml_sfx tag]
+                      (* Reuse genLogFile (applied to the same key on
+                         StartJob), not a hand-rolled `fullPath':
+                         tag can be an absolute path when the target
+                         lives outside the current build dir, and a
+                         raw concat then raises OS.Path.Path. *)
+                      val log = genLogFile{tag = tag, dir = dir}
                     in
                       tinfo (red, "FAIL<" ^ status_string ^ ">");
                       if keep_going then
