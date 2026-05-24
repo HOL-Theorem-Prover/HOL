@@ -37,6 +37,24 @@ New features
 
     The old `M-h C-u` binding which toggles Unicode pretty-printing in the output `*HOL*` buffer has now moved to `M-h u p`.
 
+-   `Holmake` has a new flag `--dirs` that re-interprets the
+    positional command-line arguments as *root directories* to
+    operate on, rather than build targets.
+    `Holmake --dirs d1 d2 …` is semantically similar to running
+    `Holmake` in each of `d1`, `d2`, … in turn, but fuses the
+    work into a single dependency graph dispatched under one
+    parallel scheduler.
+    Each root contributes its own “must build” targets (the
+    first target of its `Holmakefile`, with the same
+    plausible-targets fallback as a bare `Holmake`).
+    Each root's `INCLUDES` traversal starts from its own
+    ancestor chain, so mutual references between sibling roots
+    no longer trip the `INCLUDES`-loop detector — a workaround
+    users previously approximated with multiple `-I` flags but
+    that could fail.
+    Genuine cycles within a single root's `INCLUDES` chain are
+    still reported.
+
 Bugs fixed
 ----------
 

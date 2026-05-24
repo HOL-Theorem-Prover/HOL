@@ -3,10 +3,10 @@ struct
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate29 z
+  fun makeUpdateT z = makeUpdate30 z
 in
 fun updateT z = let
-  fun from cache_dir cachekey debug do_logging fast force_lastmaker
+  fun from cache_dir cachekey debug dirs do_logging fast force_lastmaker
            help hmakefile holdir includes
            interactive jobs json keep_going no_action no_hmakefile
            no_lastmaker_check no_overlay
@@ -16,7 +16,7 @@ fun updateT z = let
     {
       cache_dir = cache_dir,
       cachekey = cachekey,
-      debug = debug, do_logging = do_logging,
+      debug = debug, dirs = dirs, do_logging = do_logging,
       fast = fast, force_lastmaker = force_lastmaker,
       help = help, hmakefile = hmakefile, holdir = holdir,
       includes = includes, interactive = interactive, jobs = jobs,
@@ -37,11 +37,12 @@ fun updateT z = let
             no_overlay no_lastmaker_check no_hmakefile no_action keep_going
             json jobs interactive
             includes holdir
-            hmakefile help force_lastmaker fast do_logging debug cachekey cache_dir =
+            hmakefile help force_lastmaker fast do_logging dirs debug
+            cachekey cache_dir =
     {
       cache_dir = cache_dir,
       cachekey = cachekey,
-      debug = debug, do_logging = do_logging,
+      debug = debug, dirs = dirs, do_logging = do_logging,
       fast = fast, force_lastmaker = force_lastmaker,
       help = help, hmakefile = hmakefile, holdir = holdir,
       includes = includes, interactive = interactive, jobs = jobs,
@@ -55,14 +56,14 @@ fun updateT z = let
       rebuild_deps = rebuild_deps, recursive_build = recursive_build,
       recursive_clean = recursive_clean, thmsrc = thmsrc, verbose = verbose
     }
-  fun to f {cache_dir, cachekey, debug, do_logging, fast, force_lastmaker,
-            help, hmakefile, holdir,
+  fun to f {cache_dir, cachekey, debug, dirs, do_logging, fast,
+            force_lastmaker, help, hmakefile, holdir,
             includes, interactive, jobs, json, keep_going, no_action,
             no_hmakefile, no_lastmaker_check,
             no_overlay, no_preexecs, no_prereqs, opentheory,
             quiet, quit_on_failure, rebuild, rebuild_deps, recursive_build,
             recursive_clean, thmsrc, verbose} =
-    f cache_dir cachekey debug do_logging fast force_lastmaker
+    f cache_dir cachekey debug dirs do_logging fast force_lastmaker
       help hmakefile holdir includes
       interactive jobs json keep_going no_action no_hmakefile
       no_lastmaker_check no_overlay no_preexecs
@@ -83,6 +84,7 @@ type t = {
   cache_dir : string option,
   cachekey : string option,
   debug : {ins : string list, outs : string list} option,
+  dirs : bool,
   do_logging : bool,
   fast : bool,
   force_lastmaker : bool,
@@ -122,6 +124,7 @@ val default_core_options : t =
   cache_dir = default_cache_dir,
   cachekey = NONE,
   debug = NONE,
+  dirs = false,
   do_logging = false,
   fast = false,
   force_lastmaker = false,
@@ -273,6 +276,8 @@ val core_option_descriptions = [
     desc = ReqArg (set_cwd, "DIR") },
   { help = "turn on diagnostic messages", long = ["dbg"], short = "d",
     desc = OptArg (addDbg, "diag-cat")},
+  { help = "treat positional args as root directories",
+    long = ["dirs"], short = "", desc = mkBoolT #dirs },
   { help = "fast build (replace tactics w/cheat)", long = ["fast"], short = "",
     desc = mkBoolT #fast },
   { help = "overwrite any conflicting .hol/make-deps/lastmaker without prompting",

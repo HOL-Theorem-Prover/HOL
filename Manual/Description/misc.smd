@@ -437,6 +437,23 @@ does not exist.  This option is intended for use in caching built
 theories in CI or similar workflows: if the cache key has not
 changed, the theory does not need to be rebuilt.
 
+**`--dirs`** Treat the positional command-line arguments as
+*root directories* rather than build targets.  `Holmake` will
+visit each directory in turn — semantically as if invoked
+separately in each — but fuses the work into a single
+dependency graph and runs everything under one parallel build
+scheduler.  Each root contributes its own "must build" targets
+(the first target of its `Holmakefile`, falling back to the
+ordinary plausible-targets fallback when no `Holmakefile` is
+present).  Each root's `INCLUDES` traversal starts with its own
+ancestor chain, so mutual references between *sibling* roots no
+longer trip the `INCLUDES`-loop detector — but a genuine cycle
+within one root's `INCLUDES` chain is still reported.  Each
+directory reachable from any root is scanned and added to the
+unified graph exactly once.  Clean targets (`clean`,
+`cleanDeps`, `cleanAll`) are rejected as positional arguments
+when `--dirs` is given; supply at least one directory.
+
 **`-f <theory>`** Toggles whether or not a theory should be built
 in “fast” mode.  Fast building causes tactic proofs (invocations
 of `prove`, `store_thm`, and the `Theorem`-`Proof`-`QED` form) to

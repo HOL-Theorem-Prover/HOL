@@ -5,6 +5,7 @@ type t = {
   cachekey : string option,
   cache_dir : string option,
   debug : {ins:string list, outs:string list} option,
+  dirs : bool,
   do_logging : bool,
   fast : bool,
   force_lastmaker : bool,

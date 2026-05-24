@@ -127,8 +127,8 @@ end
 val (master_cline_options, cline_vars, targets) =
   getcline (CommandLine.arguments())
 
-val master_cleanp = List.exists (fn s => member s targets)
-                                ["clean", "cleanDeps", "cleanAll"]
+val clean_target_strings = ["clean", "cleanDeps", "cleanAll"]
+val master_cleanp = List.exists (fn s => member s targets) clean_target_strings
 
 val master_cline_nohmf =
     HM_Cline.default_options |> apply_updates master_cline_options
@@ -361,6 +361,7 @@ val cline_always_rebuild_deps = #rebuild_deps coption_value
 val cline_nobuild = #no_action coption_value
 val cline_recursive_build = #recursive_build coption_value
 val cline_recursive_clean = #recursive_clean coption_value
+val cline_dirs = #dirs coption_value
 val scan_output_functions =
     if isSome cline_cachekey orelse
        (show_json andalso chattiness_level coption_value <= 1) then
@@ -1366,6 +1367,68 @@ val idmap0 = extend_idmap original_dir
 
 fun toplevel_build_graph () = create_complete_graph cline_incs idmap0
 
+(* Behind the --dirs flag.  Threading each root through `recursively`
+   with its own ancestors = [root] is what stops cross-root INCLUDES
+   references from looking like cycles; genuine cycles inside one
+   root's chain are still flagged.  The shared `visited` set is what
+   keeps each directory's contribution to the unified graph
+   single-shot. *)
+fun create_complete_graph_for_roots roots idm =
+    let
+      val empty_visited = Binaryset.empty hmdir.compare
+      fun for_root (root, {graph, incdirmap, visited, must_build}) =
+          let
+            fun in_root () =
+                let
+                  val (_, _, _, target1) = get_hmf()
+                  val root_targets =
+                      generate_all_plausible_targets warn target1
+                  val all_must_build = root_targets @ must_build
+                in
+                  if Binaryset.member(visited, root) then
+                    {graph = graph, incdirmap = incdirmap, visited = visited,
+                     must_build = all_must_build}
+                  else
+                    let
+                      val {data = g', incdirmap = im', visited = v', ...} =
+                          recursively getnewincs (SOME cline_incs) {
+                            outputfns = scan_output_functions,
+                            verb = "Scanning",
+                            hm = extend_graph_in_dir,
+                            dirinfo = {incdirmap = incdirmap,
+                                       visited = visited,
+                                       ancestors = [root]},
+                            dir = root,
+                            data = graph
+                          }
+                    in
+                      {graph = g', incdirmap = im', visited = v',
+                       must_build = all_must_build}
+                    end
+                end
+          in
+            pushdir (hmdir.toAbsPath root) in_root ()
+          end
+      val {graph, visited, must_build, ...} =
+          List.foldl for_root
+                     {graph = HM_DepGraph.empty(),
+                      incdirmap = idm, visited = empty_visited,
+                      must_build = []}
+                     roots
+      val numScanned = Binaryset.numItems visited
+      val _ = if numScanned > 1 then
+                (#info_inline scan_output_functions
+                              ("Scanned " ^ Int.toString numScanned ^
+                               " directories");
+                 #info_inline_end scan_output_functions ())
+              else ()
+      val diag = diag "builddepgraph"
+    in
+      diag (fn _ => "Finished building complete dep graph (has " ^
+                    Int.toString (HM_DepGraph.size graph) ^ " nodes)");
+      (graph, must_build)
+    end
+
 fun get_targets_recursively {incs, pres} =
     let
       val dirs = set_add original_dir (set_union incs pres)
@@ -1394,7 +1457,84 @@ fun check_targets_are_in_graph graph tgts =
       List.all check1 tgts orelse OS.Process.exit OS.Process.failure
     end
 
+fun diag_built_graph targets depgraph =
+    (diag "core" (
+        fn _ =>
+           let
+             fun pr t = if hm_target.tgtexists_readable t then
+                          tgt_toString t
+                        else tgt_toString t ^ "(*)"
+           in
+             "Generated targets are: [" ^ concatWithf pr ", " targets ^ "]"
+           end
+      );
+     diag "core" (fn _ => "Dep.graph =\n" ^ HM_DepGraph.toString depgraph))
+
+fun dispatch_built_graph depgraph =
+    if cline_nobuild then
+      let val _ = print ("Dependency graph" ^
+                         HM_DepGraph.toString depgraph ^
+                         "\n\nTop-sorted:\n")
+          val sorted = HM_DepGraph.topo_sort depgraph
+          fun pr n =
+              case HM_DepGraph.peeknode depgraph n of
+                  NONE => die ("No node " ^ HM_DepGraph.node_toString n)
+                | SOME nI =>
+                  case #status nI of
+                      Pending {needed = true} =>
+                      print (hmdir.pretty_dir (#dir nI) ^ " - " ^
+                             hm_target.toString (#target nI) ^ "\n")
+                    | _ => ()
+      in
+        app pr sorted;
+        OS.Process.success
+      end
+    else if show_json then (
+      info (HM_DepGraph.toJSONString depgraph);
+      OS.Process.exit OS.Process.success
+    ) else
+      postmortem finish_logging outputfns (build_graph depgraph)
+      handle e => die ("Exception: " ^ General.exnMessage e)
+
+fun dirs_work () =
+    let
+      val _ = case targets of
+                  [] => die "--dirs given but no root directories supplied"
+                | _ => ()
+      val _ = case List.filter (fn x => member x clean_target_strings) targets
+               of [] => ()
+                | bad => die ("--dirs does not accept clean targets " ^
+                              "(found: " ^ String.concatWith " " bad ^ ")")
+      val roots =
+          map (fn s => hmdir.extendp {base = original_dir, extension = s})
+              targets
+      val _ =
+          List.app
+              (fn r =>
+                  let val p = hmdir.toAbsPath r
+                  in
+                    if FileSys.access (p, [FileSys.A_READ, FileSys.A_EXEC])
+                       andalso FileSys.isDir p
+                    then ()
+                    else die ("--dirs: " ^ hmdir.pretty_dir r ^
+                              " is not a readable directory")
+                  end)
+              roots
+      val (depgraph, must_build) =
+          create_complete_graph_for_roots roots idmap0
+      val depgraph =
+          if toplevel_no_prereqs then
+            mk_dirneeded (hmdir.curdir()) (mkneeded must_build depgraph)
+          else
+            mkneeded must_build depgraph
+    in
+      diag_built_graph must_build depgraph;
+      dispatch_built_graph depgraph
+    end
+
 fun work() =
+  if cline_dirs then dirs_work ()
+  else
     case targets of
       [] => let
         val (depgraph, local_incinfo) = toplevel_build_graph()
@@ -1406,49 +1546,13 @@ fun work() =
               mk_dirneeded (hmdir.curdir()) (mkneeded targets depgraph)
             else
               mkneeded targets depgraph
-        val _ = diag "core" (
-              fn _ =>
-                 let
-                   fun pr t = if hm_target.tgtexists_readable t then
-                                tgt_toString t
-                              else tgt_toString t ^ "(*)"
-                 in
-                   "Generated targets are: [" ^concatWithf pr ", " targets ^ "]"
-                 end
-            )
-        val _ = diag "core"
-                     (fn _ => "Dep.graph =\n" ^ HM_DepGraph.toString depgraph)
       in
-        if cline_nobuild then
-          let val _ = print ("Dependency graph" ^
-                             HM_DepGraph.toString depgraph ^
-                             "\n\nTop-sorted:\n")
-              val sorted = HM_DepGraph.topo_sort depgraph
-              fun pr n =
-                  case HM_DepGraph.peeknode depgraph n of
-                      NONE => die ("No node " ^
-                                   HM_DepGraph.node_toString n)
-                    | SOME nI =>
-                      case #status nI of
-                          Pending {needed = true} =>
-                          print (hmdir.pretty_dir (#dir nI) ^
-                                 " - " ^
-                                 hm_target.toString (#target nI) ^ "\n")
-                        | _ => ()
-              val _ = app pr sorted
-          in
-            OS.Process.success
-          end
-        else if show_json then (
-          info (HM_DepGraph.toJSONString depgraph);
-          OS.Process.exit OS.Process.success
-        ) else (* actually build default targets *)
-          postmortem finish_logging outputfns (build_graph depgraph)
-          handle e => die ("Exception: "^General.exnMessage e)
+        diag_built_graph targets depgraph;
+        dispatch_built_graph depgraph
       end
     | xs => let
         val cleanTargets =
-            List.filter (fn x => member x ["clean", "cleanDeps", "cleanAll"]) xs
+            List.filter (fn x => member x clean_target_strings) xs
         fun visit_and_clean tgts d =
             let
               val _ = FileSys.chDir (hmdir.toAbsPath d)
