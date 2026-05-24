@@ -157,6 +157,22 @@ def _under_hol_objdir(rel: Path) -> bool:
     return any(part in HOL_OBJDIRS for part in rel.parts)
 
 
+def _holmake_visited(d: Path) -> bool:
+    """True iff Holmake has visited ``d`` (non-empty .hol/make-deps).
+
+    Restricts the mutation population to source files Holmake actually
+    cares about for this build: a directory that contains no Holmake
+    dep cache wasn't entered during the build and its .sml/.sig files
+    can't influence the outcome. Excludes unrelated sub-projects
+    (e.g. tools/Holmake/tests/<fixture>/) when fuzzing under HOL's
+    checkout.
+    """
+    mdir = d / ".hol" / "make-deps"
+    if not mdir.is_dir():
+        return False
+    return any(mdir.iterdir())
+
+
 @dataclass
 class TreePopulation:
     sources:        list[Path] = field(default_factory=list)
@@ -166,10 +182,13 @@ class TreePopulation:
 def classify_tree(root: Path) -> TreePopulation:
     """Walk ``root`` once, bucketing files into sources / build products.
 
-    Holmakefile mutation is intentionally out-of-scope: failures would
-    blur into makefile parser quirks rather than telling us anything
-    about Holmake's incremental machinery, and the existing
-    ``lastmaker_propagation`` test already covers the re-read path.
+    Sources are only collected from directories Holmake has visited
+    (per ``_holmake_visited``); build products are collected from any
+    ``.hol/objs``-style area regardless. Holmakefile mutation is
+    intentionally out-of-scope: failures would blur into makefile
+    parser quirks rather than telling us anything about Holmake's
+    incremental machinery, and the existing ``lastmaker_propagation``
+    test already covers the re-read path.
     """
     pop = TreePopulation()
     if not root.exists():
@@ -179,20 +198,22 @@ def classify_tree(root: Path) -> TreePopulation:
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if not _walks_skip(d)]
 
-        rel_dir = Path(dirpath).relative_to(root) if dirpath != str(root) else Path()
+        cur = Path(dirpath)
+        rel_dir = cur.relative_to(root) if cur != root else Path()
         in_build_area = _under_hol_objdir(rel_dir)
+        visited = in_build_area or _holmake_visited(cur)
 
         for fn in filenames:
             if fn.endswith(BACKUP_SUFFIXES):
                 continue
-            p = Path(dirpath) / fn
+            p = cur / fn
             suffix = p.suffix
 
             if in_build_area or suffix in BUILD_PRODUCT_EXTS:
                 pop.build_products.append(p)
-            elif suffix in SOURCE_EXTS:
+            elif visited and suffix in SOURCE_EXTS:
                 pop.sources.append(p)
-            # anything else (Holmakefile, README, binaries, ...): ignored
+            # else: not in a Holmake-visited dir; skip as not-relevant
 
     return pop
 
@@ -344,6 +365,25 @@ def baseline(cfg: Config) -> int:
     else:
         print("[fuzz] baseline build OK")
     return rc
+
+
+def clean_make_deps(trees: list[Path]) -> int:
+    """Wipe every ``.hol/make-deps/`` under each tree.
+
+    The baseline Holmake invocation regenerates them; the wipe
+    ensures the visited-dir analysis used by ``classify_tree`` sees
+    only directories Holmake entered for *this* build, not stale
+    state from past unrelated builds in the same trees.
+    """
+    removed = 0
+    for tree in trees:
+        if not tree.is_dir():
+            continue
+        for mdir in tree.rglob(".hol/make-deps"):
+            if mdir.is_dir():
+                shutil.rmtree(mdir, ignore_errors=True)
+                removed += 1
+    return removed
 
 
 def detect_missing_trees(cfg: Config) -> None:
@@ -668,6 +708,9 @@ def main(argv: list[str]) -> int:
     print(f"[fuzz] runs={cfg.runs} mutations={cfg.mutations} jobs={cfg.jobs} "
           f"no_cache_prob={cfg.no_cache_prob}")
     print(f"[fuzz] seed         = {cfg.seed}")
+
+    n = clean_make_deps(cfg.trees)
+    print(f"[fuzz] cleared {n} stale .hol/make-deps/ dir(s) before baseline")
 
     rc = baseline(cfg)
     if rc != 0:
