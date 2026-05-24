@@ -76,8 +76,8 @@ tools/build-logs
 help/Docfiles/*.txt
 help/Docfiles/HTML/*
 help/HOLindex.html
-help/index.html
 help/HOL.Help
+help/HOL.LanderFragment.html
 help/src-sml/htmlsigs
 help/src-sml/index.tex
 help/src-sml/index.txt

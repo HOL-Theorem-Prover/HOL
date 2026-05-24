@@ -27,148 +27,171 @@ val dropLib    = destProperSuffix "Lib";
 val dropSyntax = destProperSuffix "Syntax";
 val dropSimps  = destProperSuffix "Simps";
 
-fun find_most_appealing HOLpath docfile =
-  let open OS.Path OS.FileSys
-      val {dir,file} = splitDirFile docfile
-      val {base,ext} = splitBaseExt file
-      val docfile_dir = concat(HOLpath,dir)
-      val htmldir  = concat(docfile_dir,"HTML")
-      val htmlfile = joinBaseExt{base=base,ext=SOME "html"}
-      val adocfile = joinBaseExt{base=base,ext=SOME "txt"}
-      val htmlpath = normPath[htmldir,htmlfile]
-      val adocpath = normPath[docfile_dir,adocfile]
-      val docpath  = normPath[docfile_dir,file]
-  in
-     if OS.FileSys.access(htmlpath,[A_READ]) then SOME htmlpath else
-     if OS.FileSys.access(adocpath,[A_READ]) then SOME adocpath else
-     if OS.FileSys.access(file,[A_READ]) then SOME docpath
-     else NONE
-  end;
-
-fun printHOLPage version bgcolor HOLpath idIndex TheoryIndex (dbfile, outfile)
-  = let val db = readbase dbfile
-	val os = TextIO.openOut outfile
-	fun out s = TextIO.output(os, s)
-	fun href anchor target =
-	    app out ["<A HREF=\"", target, "\">", anchor, "</A>"]
-	fun idhref file line anchor =
-	    href anchor (concat [file, ".html#line", Int.toString line])
-	fun strhref file anchor = href anchor (file ^ ".html")
-	fun mkref line file = idhref file line file
-        val sigspath = normPath["src-sml","htmlsigs"]
-        fun path front file = normPath[front, file^".html"]
-
-        (* For theory file <thy>Theory: resolve the sigobj/<thy>Theory.sig
-           symlink to find the source dir, and produce a URL pointing at
-           the rich per-theory doc that export_theory wrote into
-           <src>/.hol/docs/<thy>Theory.html, relative to help/. *)
-        val help_dir = OS.Path.concat (HOLpath, "help")
-        fun theory_doc_url file =
-            let val sigobj_sig =
-                    normPath [HOLpath, "sigobj", file ^ ".sig"]
-            in
-              if OS.FileSys.isLink sigobj_sig then
-                let val tgt = OS.FileSys.readLink sigobj_sig
-                    val {dir, ...} = OS.Path.splitDirFile tgt
-                    (* dir = <src>/.hol/objs *)
-                    val src = OS.Path.dir (OS.Path.dir dir)
-                    val abs_doc =
-                        OS.Path.concat (src,
-                          OS.Path.concat (".hol/docs", file ^ ".html"))
-                in
-                  SOME (OS.Path.mkRelative
-                          {path = abs_doc, relativeTo = help_dir})
-                end
-              else NONE
-            end handle OS.SysErr _ => NONE
-                     | OS.Path.Path => NONE
-
-        fun class_of drop {comp=Str, file, line} =
-             (case drop file
-               of SOME name => SOME(name, path sigspath file)
-                | NONE => NONE)
-          | class_of _ otherwise = NONE
-
-        fun theory_of {comp=Str, file, line} =
-             (case dropTheory file
-               of SOME name =>
-                  let val url =
-                          case theory_doc_url file of
-                              SOME u => u
-                            | NONE => path sigspath file
-                  in SOME (name, url) end
-                | NONE => NONE)
-          | theory_of _ = NONE
-
-        val library_of = class_of dropLib
-        val syntax_of  = class_of dropSyntax
-        val simps_of   = class_of dropSimps
-
-        fun misc_struct_of {comp=Str, file, line} =
-              if isSome (dropTheory file) orelse
-                 isSome (dropLib file) orelse
-                 isSome (dropSyntax file) orelse
-                 isSome (dropSimps file)
-              then NONE
-              else SOME(file, path sigspath file)
-          | misc_struct_of otherwise = NONE
-
-	fun prentries [] = ()
-	  | prentries ((anchor,path)::rst) =
-              let
-              in href anchor path
-               ; out "&nbsp;&nbsp;&nbsp;&nbsp;\n"
-               ; prentries rst
-              end
-	fun prtree f Empty = ()
-	  | prtree f (Node(key, entries, t1, t2)) =
-	    (prtree f t1;
-	     prentries (List.mapPartial f entries);
-	     prtree f t2)
+(* HTML escape: only the characters that change parsing in attribute /
+   text contexts. *)
+fun escape s =
+    let
+      fun ch #"&" = "&amp;"
+        | ch #"<" = "&lt;"
+        | ch #">" = "&gt;"
+        | ch #"\"" = "&quot;"
+        | ch c = String.str c
     in
-	out "<HTML>\
-	 \<HEAD><TITLE>HOL Reference Page</TITLE></HEAD>\n";
-	out "<BODY BGCOLOR=\""; out bgcolor; out "\">\n";
-	out "<H1>HOL Reference Page</H1>\n";
-
-	out "<DL>";
-
-        out"<DT><STRONG>LIBRARIES</STRONG>";
-        out"<DD>"; prtree library_of db;
-        out "<P>";
-
-        out"<DT><STRONG>THEORIES</STRONG>\n";
-        out "&nbsp;&nbsp;&nbsp;\n";
-        href "(Theory Graph)"
-             (normPath ["theorygraph","theories.html"]);
-        out "\n";
-        out"<DD>"; prtree theory_of db;
-        out "<P>";
-
-        out "<DT><STRONG>STRUCTURES</STRONG>";
-        out "<DD>"; prtree misc_struct_of db;
-        out "<P>";
-
-        out"<DT><STRONG>SYNTAX</STRONG>";
-        out"<DD>"; prtree syntax_of db;
-        out "<P>";
-
-        out"<DT><STRONG>SIMPLIFICATION SETS</STRONG>";
-        out"<DD>"; prtree simps_of db;
-        out "<P>";
-
-        out"<DT><STRONG>";
-        href "IDENTIFIERS"
-             (normPath["src-sml","htmlsigs","idIndex.html"]); (* was: idIndex *)
-        out "&nbsp;&nbsp;&nbsp;&nbsp;";
-        href "THEORY BINDINGS"
-             (normPath["src-sml","htmlsigs","TheoryIndex.html"]); (* was: TheoryIndex *)
-        out "</STRONG>";
-        out "<P>";
-	out "</DL>\n";
-
-	out "<BR><EM>"; out version; out "</EM>";
-	out "</BODY></HTML>\n";
-	TextIO.closeOut os
+      String.translate ch s
     end
+
+(* --------------------------------------------------------------------------
+   Resolve a theory's source-tree HTML doc and produce a URL relative to the
+   `theories/` directory that the lander Holmakefile populates with symlinks.
+
+   For each theory file <thy>Theory, sigobj/<thy>Theory.sig is a symlink
+   pointing into the source directory; from that we know the file's source
+   .hol/docs/ location.  We don't need to compute the absolute path here --
+   the symlink staging step handles that.  We just emit `theories/<file>.html`
+   when the file does have a per-theory doc, and fall back to the per-signature
+   HTML when it doesn't.  -------------------------------------------------- *)
+fun has_theory_doc HOLpath file =
+    let val sigobj_sig =
+            normPath [HOLpath, "sigobj", file ^ ".sig"]
+    in
+      OS.FileSys.isLink sigobj_sig andalso
+      let val tgt = OS.FileSys.readLink sigobj_sig
+          val {dir, ...} = OS.Path.splitDirFile tgt
+          (* dir = <src>/.hol/objs *)
+          val src = OS.Path.dir (OS.Path.dir dir)
+          val abs_doc =
+              OS.Path.concat (src,
+                OS.Path.concat (".hol/docs", file ^ ".html"))
+      in
+        OS.FileSys.access (abs_doc, [OS.FileSys.A_READ])
+      end
+    end handle OS.SysErr _ => false
+             | OS.Path.Path => false
+
+(* --------------------------------------------------------------------------
+   Classification predicates.  Each takes a Database entry and returns
+       SOME (display_name, SOME url)   -- listed with a hyperlink, or
+       SOME (display_name, NONE)       -- listed as plain text, or
+       NONE                            -- entry doesn't belong to this section.
+   URLs are relative to the lander at Manual/book/index.html.  ----------- *)
+fun mk_htmlsigs_url file = "htmlsigs/" ^ file ^ ".html"
+
+fun class_of drop {comp=Str, file, line} =
+     (case drop file
+       of SOME name => SOME (name, SOME (mk_htmlsigs_url file))
+        | NONE => NONE)
+  | class_of _ _ = NONE
+
+val library_of = class_of dropLib
+val syntax_of  = class_of dropSyntax
+val simps_of   = class_of dropSimps
+
+(* Per-theory HTML doc is generated by export_theory only when the script
+   actually re-runs (Holmake's cachekey machinery often skips that).  We
+   only emit a link when the doc exists in the source tree right now;
+   otherwise the theory is listed unlinked so the index stays complete
+   without dangling hrefs. *)
+fun theory_of HOLpath {comp=Str, file, line} =
+     (case dropTheory file
+       of SOME name =>
+          let val url = if has_theory_doc HOLpath file
+                        then SOME ("theories/" ^ file ^ ".html")
+                        else NONE
+          in SOME (name, url) end
+        | NONE => NONE)
+  | theory_of _ _ = NONE
+
+(* --------------------------------------------------------------------------
+   Tree-walk: gather all (name, url) pairs the filter accepts, in the BST's
+   in-order (= alphabetic) order.  -------------------------------------- *)
+fun gather f =
+  let
+    fun walk acc Empty = acc
+      | walk acc (Node(_, entries, t1, t2)) =
+        let val acc1 = walk acc t1
+            val acc2 = List.foldl
+                         (fn (e, a) => case f e of SOME p => p::a | NONE => a)
+                         acc1 entries
+        in walk acc2 t2 end
+  in fn db => List.rev (walk [] db) end
+
+(* --------------------------------------------------------------------------
+   Emit one `<section>` of the lander's index area.  Entries with a URL
+   render as a link; entries without (currently: theories that lack a
+   per-theory doc) render as plain `<span>` text marked .nolink so CSS
+   can dim them.  ------------------------------------------------------ *)
+fun renderSection out (heading, headingExtra, entries) =
+    let
+      fun ent (name, SOME url) =
+          app out ["      <li><a href=\"", escape url, "\">",
+                   escape name, "</a></li>\n"]
+        | ent (name, NONE) =
+          app out ["      <li><span class=\"nolink\">",
+                   escape name, "</span></li>\n"]
+    in
+      app out ["  <section class=\"ref-section\">\n",
+               "    <h2>", escape heading];
+      headingExtra ();
+      app out ["</h2>\n",
+               "    <ul class=\"refs\">\n"];
+      List.app ent entries;
+      app out ["    </ul>\n",
+               "  </section>\n"]
+    end
+
+(* --------------------------------------------------------------------------
+   Top-level: read the Help database and write the lander fragment.
+
+   The fragment is plain HTML body content (no <html>/<head>/<body>) intended
+   to be embedded into Manual/book/index.html by gen_lander.  The lander's
+   Holmakefile is responsible for staging `theories/` (symlinks to per-theory
+   <src>/.hol/docs/<thy>Theory.html), `htmlsigs/` (symlinks to
+   help/src-sml/htmlsigs/<file>.html), and `theory-graph/` (symlink to
+   help/theorygraph/) so the URLs we emit resolve.  ------------------- *)
+fun emitLanderFragment HOLpath (dbfile, outfile) =
+  let
+    val db = readbase dbfile
+    val os = TextIO.openOut outfile
+    fun out s = TextIO.output(os, s)
+    fun outApp ss = List.app out ss
+
+    val libs   = gather library_of db
+    val thys   = gather (theory_of HOLpath) db
+    val synts  = gather syntax_of db
+    val simps  = gather simps_of db
+
+    (* `dot` is optional in the build environment; without it
+       help/theorygraph/theories.html is never written, and a link to
+       it would 404.  Gate the "theory hierarchy" annotation on the
+       file actually being present. *)
+    val theoryGraphReady =
+        OS.FileSys.access
+          (normPath [HOLpath, "help", "theorygraph", "theories.html"],
+           [OS.FileSys.A_READ])
+
+    fun graphLink () =
+        if theoryGraphReady then
+          outApp [" <small>(",
+                  "<a href=\"theory-graph/theories.html\">theory hierarchy</a>",
+                  ")</small>"]
+        else ()
+    fun nullExtra () = ()
+  in
+    out "<!-- Generated by HOLPage.emitLanderFragment;\
+        \ do not edit by hand. -->\n";
+    renderSection out ("Libraries",        nullExtra,  libs);
+    renderSection out ("Theories",         graphLink,  thys);
+    renderSection out ("Syntax",           nullExtra,  synts);
+    renderSection out ("Simplification sets", nullExtra, simps);
+    out "  <section class=\"ref-section\">\n";
+    out "    <h2>Indexes</h2>\n";
+    out "    <ul class=\"refs\">\n";
+    out "      <li><a href=\"htmlsigs/idIndex.html\">\
+        \Identifier index</a></li>\n";
+    out "      <li><a href=\"htmlsigs/TheoryIndex.html\">\
+        \Theory bindings</a></li>\n";
+    out "    </ul>\n";
+    out "  </section>\n";
+    TextIO.closeOut os
+  end
 end

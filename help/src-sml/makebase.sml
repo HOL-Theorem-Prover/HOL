@@ -57,8 +57,11 @@ val libdirDef = normPath[HOLpath,"sigobj"]
 (* Default filename for the resulting help database: *)
 val helpfileDef = normPath[HOLpath, "help","HOL.Help"]
 
-(* Default filename for the HOL reference page: *)
-val HOLpageDef = normPath[HOLpath, "help","index.html"] (* was: HOLindex.html *)
+(* Default filename for the HOL reference fragment.  This is HTML body
+ * content (no <html>/<head>/<body> wrapper) intended to be embedded
+ * into the manual lander page (Manual/book/index.html) by gen_lander. *)
+val landerFragmentDef =
+    normPath[HOLpath, "help", "HOL.LanderFragment.html"]
 
 (* Default filename for the ASCII format database: *)
 val txtIndexDef = "index.txt"
@@ -221,7 +224,7 @@ val SRCFILES =
  end
 
 fun process (libdir, helpfile, txtIndex,
-             texIndex, htmldir, htmlIndex, htmlTheoryIndex, HOLpage)
+             texIndex, htmldir, htmlIndex, htmlTheoryIndex, landerFragment)
  =
  (print ("Reading signatures in directory " ^ libdir ^
         "\nand writing help database in file " ^ helpfile ^ "\n")
@@ -246,9 +249,8 @@ fun process (libdir, helpfile, txtIndex,
  ; Htmlsigs.printHTMLBase version bgcolor HOLpath
          isTheory "HOL THEORY BINDINGS" (helpfile, htmlTheoryIndex)
 
- ; print ("\nWriting HOLPage\n")
- ; HOLPage.printHOLPage version bgcolor HOLpath
-                        htmlIndex htmlTheoryIndex (helpfile, HOLpage)
+ ; print ("\nWriting lander fragment to " ^ landerFragment ^ "\n")
+ ; HOLPage.emitLanderFragment HOLpath (helpfile, landerFragment)
  )
 
 in
@@ -257,12 +259,12 @@ in
             process (libdirDef, helpfileDef,
                      txtIndexDef, texIndexDef,
                      htmlDirDef, htmlIndexDef,
-                     htmlTheoryIndexDef, HOLpageDef)
+                     htmlTheoryIndexDef, landerFragmentDef)
       | [libdir] =>
             process (libdir, helpfileDef,
                      txtIndexDef, texIndexDef,
                      htmlDirDef, htmlIndexDef,
-                     htmlTheoryIndexDef, HOLpageDef)
+                     htmlTheoryIndexDef, landerFragmentDef)
       | _ => print "Usage: makebase\n"
 end  (* main *)
 

@@ -1,14 +1,21 @@
-(* gen_lander BOOK_TOML...
+(* gen_lander [--fragment <path>] BOOK_TOML...
 
    Emit Manual/book/index.html on stdout: a static landing page
-   listing one card per manual.  Each argument is the path to a
-   manual's book.toml (e.g., `Manual/Description/book.toml`);
+   listing one card per manual.  Each `BOOK_TOML` argument is the
+   path to a manual's book.toml (e.g., `Manual/Description/book.toml`);
    the manual's directory name (`Description`) becomes the link
    target (`./Description/`), and the `title` and `description`
    fields from the `[book]` table of the .toml fill the card.
 
-   The page is intentionally minimal — system fonts, no JS,
-   inline CSS — so it works statically without any of mdbook's
+   If `--fragment <path>` is supplied, the file at <path> is read
+   verbatim and inlined after the manual cards as the page's
+   "Reference" area.  The fragment is expected to be HTML body
+   content -- the typical producer is HOLPage.emitLanderFragment,
+   which lists libraries, theories, syntax, simpsets and indexes
+   with URLs relative to Manual/book/.
+
+   The page is intentionally minimal -- system fonts, no JS,
+   inline CSS -- so it works statically without any of mdbook's
    per-book assets.  The per-manual mdbooks live at sibling
    subdirectories of Manual/book/. *)
 
@@ -122,16 +129,24 @@ fun renderCard path =
       "    </li>\n"
     end
 
-fun renderPage paths =
+fun renderPage (paths, fragment) =
     let
       val cards = String.concat (List.map renderCard paths)
+      val refSection =
+          case fragment of
+              NONE => ""
+            | SOME body =>
+                "  <h2 class=\"section\">Reference</h2>\n" ^
+                "  <p class=\"sub\">Generated indexes of installed\
+                  \ libraries, theories and signatures.</p>\n" ^
+                body
     in
       "<!doctype html>\n\
       \<html lang=\"en\">\n\
       \<head>\n\
       \  <meta charset=\"utf-8\">\n\
       \  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
-      \  <title>HOL Manuals</title>\n\
+      \  <title>HOL4 Documentation</title>\n\
       \  <style>\n\
       \    body {\n\
       \      max-width: 720px;\n\
@@ -144,6 +159,12 @@ fun renderPage paths =
       \      color: #222;\n\
       \    }\n\
       \    h1 { font-weight: 500; margin-bottom: 0.2em; }\n\
+      \    h2.section {\n\
+      \      font-weight: 500;\n\
+      \      margin-top: 3em;\n\
+      \      padding-bottom: 0.3em;\n\
+      \      border-bottom: 1px solid #e0e0e0;\n\
+      \    }\n\
       \    .sub { color: #666; margin-top: 0; margin-bottom: 2em; }\n\
       \    ul.manuals { list-style: none; padding: 0; }\n\
       \    ul.manuals li {\n\
@@ -157,27 +178,84 @@ fun renderPage paths =
       \    ul.manuals a:hover { text-decoration: underline; }\n\
       \    ul.manuals strong { font-size: 1.1em; }\n\
       \    ul.manuals p { margin: 0.4em 0 0; color: #555; }\n\
+      \    section.ref-section { margin-bottom: 2em; }\n\
+      \    section.ref-section h2 {\n\
+      \      font-size: 1.1em;\n\
+      \      font-weight: 500;\n\
+      \      margin: 1.2em 0 0.3em;\n\
+      \    }\n\
+      \    section.ref-section h2 small {\n\
+      \      font-size: 0.85em;\n\
+      \      color: #888;\n\
+      \      font-weight: normal;\n\
+      \    }\n\
+      \    section.ref-section h2 small a { color: #4183c4; }\n\
+      \    ul.refs {\n\
+      \      list-style: none;\n\
+      \      padding: 0;\n\
+      \      margin: 0;\n\
+      \      display: grid;\n\
+      \      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));\n\
+      \      gap: 0.2em 1em;\n\
+      \    }\n\
+      \    ul.refs a {\n\
+      \      color: #4183c4;\n\
+      \      text-decoration: none;\n\
+      \      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,\n\
+      \        \"Liberation Mono\", monospace;\n\
+      \      font-size: 0.95em;\n\
+      \    }\n\
+      \    ul.refs a:hover { text-decoration: underline; }\n\
+      \    ul.refs .nolink {\n\
+      \      color: #999;\n\
+      \      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,\n\
+      \        \"Liberation Mono\", monospace;\n\
+      \      font-size: 0.95em;\n\
+      \    }\n\
       \    @media (prefers-color-scheme: dark) {\n\
       \      body { background: #1a1a1a; color: #e0e0e0; }\n\
       \      .sub { color: #aaa; }\n\
+      \      h2.section { border-color: #333; }\n\
       \      ul.manuals li { border-color: #333; }\n\
       \      ul.manuals li:hover { border-color: #66aaff; }\n\
       \      ul.manuals a { color: #66aaff; }\n\
       \      ul.manuals p { color: #b0b0b0; }\n\
+      \      section.ref-section h2 small { color: #888; }\n\
+      \      section.ref-section h2 small a,\n\
+      \      ul.refs a { color: #66aaff; }\n\
+      \      ul.refs .nolink { color: #707070; }\n\
       \    }\n\
       \  </style>\n\
       \</head>\n\
       \<body>\n\
-      \  <h1>HOL Manuals</h1>\n\
+      \  <h1>HOL4 Documentation</h1>\n\
       \  <p class=\"sub\">Documentation for the HOL4 theorem prover.</p>\n\
+      \  <h2 class=\"section\">Manuals</h2>\n\
       \  <ul class=\"manuals\">\n" ^
       cards ^
-      "  </ul>\n\
-      \</body>\n\
+      "  </ul>\n" ^
+      refSection ^
+      "</body>\n\
       \</html>\n"
     end
 
+(* Parse leading `--fragment <path>` flag.
+   Returns (fragment_path_opt, rest). *)
+fun parseArgs ("--fragment" :: path :: rest) = (SOME path, rest)
+  | parseArgs args = (NONE, args)
+
 fun main () =
-    case CommandLine.arguments () of
-        [] => die "Usage: gen_lander BOOK_TOML..."
-      | paths => emit (renderPage paths)
+    let
+      val (fragPath, paths) = parseArgs (CommandLine.arguments ())
+      val fragment =
+          case fragPath of
+              NONE => NONE
+            | SOME p =>
+                SOME (readFile p
+                      handle IO.Io _ =>
+                        die ("gen_lander: cannot read fragment " ^ p))
+    in
+      case paths of
+          [] => die "Usage: gen_lander [--fragment <path>] BOOK_TOML..."
+        | _  => emit (renderPage (paths, fragment))
+    end

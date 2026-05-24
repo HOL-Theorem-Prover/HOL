@@ -20,8 +20,10 @@ Currently, we do the following:
   3. Generate an index of all HOL identifiers, with links to the
      documentation, and the host signature.
 
-  4. Generate a HOLPage which brings all the above together on one
-     sheet.
+  4. Generate a lander HTML fragment (HOL.LanderFragment.html) listing
+     libraries, theories, syntax modules, and simpsets.  This fragment
+     is embedded into the manual lander at Manual/book/index.html by
+     gen_lander, producing a single entry-point to all HOL documentation.
 
 To add documentation, one simply adds the ".doc" format files into
 the directory help/Docfiles. Each file must have the format
