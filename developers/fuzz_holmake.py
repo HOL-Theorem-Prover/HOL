@@ -510,6 +510,30 @@ def default_trees(master: Path, holdir: Path) -> list[Path]:
     return seen
 
 
+def default_tmp_dir(master: Path) -> Path:
+    """Per-master scratch under ~/.cache/fuzz_holmake/.
+
+    Must live OUTSIDE the master tree: the restore path is
+    "rm -rf live; clone snap -> live", so anything under master gets
+    nuked along with the live tree and the clone has nothing to
+    read.
+    """
+    h = hashlib.sha1(str(master.resolve()).encode()).hexdigest()[:8]
+    return Path.home() / ".cache" / "fuzz_holmake" / f"{master.name}-{h}"
+
+
+def _check_outside_trees(label: str, d: Path, trees: list[Path]) -> None:
+    for t in trees:
+        if is_inside(d, t):
+            raise SystemExit(
+                f"--{label} {d} is inside --tree {t}.\n"
+                f"  Snapshot+restore nukes the live tree before cloning "
+                f"the snap back; if the snap lives inside the tree, the "
+                f"snap gets nuked too.\n"
+                f"  Pick a --{label} outside every --tree."
+            )
+
+
 def parse_args(argv: list[str]) -> Config:
     ap = argparse.ArgumentParser(
         description="Fuzz-test Holmake's incremental build machinery.",
@@ -526,7 +550,8 @@ def parse_args(argv: list[str]) -> Config:
                     help="Holmake --cache-dir. Default: <tmp-dir>/cache.")
     ap.add_argument("--tmp-dir", type=Path, default=None,
                     help="Snapshot + failure storage root. "
-                         "Default: <master-dir>/.fuzz_holmake/.")
+                         "Default: ~/.cache/fuzz_holmake/<master>-<hash>/. "
+                         "Must live outside every --tree.")
     ap.add_argument("--holmake", type=str, default=None,
                     help="Path to Holmake binary. Default: $HOLDIR/bin/Holmake "
                          "or `which Holmake`.")
@@ -559,8 +584,11 @@ def parse_args(argv: list[str]) -> Config:
     if not any(is_inside(master, t) for t in trees):
         trees = [master] + trees
 
-    tmp_dir = (args.tmp_dir or (master / ".fuzz_holmake")).expanduser().resolve()
+    tmp_dir = (args.tmp_dir or default_tmp_dir(master)).expanduser().resolve()
     cache_dir = (args.cache_dir or (tmp_dir / "cache")).expanduser().resolve()
+
+    _check_outside_trees("tmp-dir", tmp_dir, trees)
+    _check_outside_trees("cache-dir", cache_dir, trees)
 
     # refuse to clobber the global default cache
     shared = (Path.home() / ".cache" / "HOL").resolve()
