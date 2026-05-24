@@ -132,11 +132,12 @@ in
         val _ = loop docfiles
         val command1 =
           "parallel --halt now,fail=1 --eta --arg-file " ^ tmp ^
-          " pandoc {} -s -c doc.css -o " ^ htmldir ^ "/{/.}.html --lua-filter=" ^
+          " pandoc {} -f markdown -s -c doc.css -o " ^ htmldir ^
+          "/{/.}.html --lua-filter=" ^
           (HOLDIR ++ "help/src-sml/internal-to-external.lua")
         val command2 =
           "parallel --halt now,fail=1 --eta --arg-file " ^ tmp ^
-          " pandoc {} -t plain -o " ^ docdir ^ "/{/.}.txt"
+          " pandoc {} -f markdown -t plain -o " ^ docdir ^ "/{/.}.txt"
       in
         do_commands [command1, command2]
       end
