@@ -410,6 +410,8 @@ val _ =
     compile ["-I", "..", "-I", "../core", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "HM_DepGraph.sig";
     compile ["-I", "..", "-I", "../core", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "HM_DepGraph.sml";
     FileSys.chDir "../core";
+    compile ["-I", "..", "-I", "../hfs"] "HM_TheoryDat.sig";
+    compile ["-I", "..", "-I", "../hfs"] "HM_TheoryDat.sml";
     compile ["-I", "..", "-I", "../deps", "-I", "../hfs", "-I", "../../parsing", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "HM_Cachekey.sig";
     compile ["-I", "..", "-I", "../deps", "-I", "../hfs", "-I", "../../parsing", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "HM_Cachekey.sml";
     compile ["-I", ".."] "HM_BuildLock.sig";
