@@ -24,6 +24,7 @@ import os
 import platform
 import random
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -48,6 +49,45 @@ DEFAULT_WEIGHTS = {
     "edit-source":  8,
 }
 DEFAULT_MUTATIONS = sum(DEFAULT_WEIGHTS.values())     # 30
+
+
+# ── interrupt handling ───────────────────────────────────────────────
+#
+# Ctrl-C (SIGINT)  -> abort the *current* round; treated as a failure
+#                     (snapshot + manifest + log preserved, live trees
+#                     restored from snap, fuzzer continues with the
+#                     next round).
+# Ctrl-\  (SIGQUIT) -> abort the *whole* campaign; the current round
+#                     is torn down the same way, then the main loop
+#                     exits before starting the next round.
+
+_interrupted = {"round": False, "campaign": False}
+_current_proc: list = [None]  # single-slot mutable holder for the running Popen
+
+
+def _kill_current_proc() -> None:
+    p = _current_proc[0]
+    if p is not None:
+        try:
+            p.terminate()
+        except ProcessLookupError:
+            pass
+
+
+def _on_sigint(signum, frame) -> None:
+    _interrupted["round"] = True
+    _kill_current_proc()
+
+
+def _on_sigquit(signum, frame) -> None:
+    _interrupted["campaign"] = True
+    _kill_current_proc()
+
+
+def install_signal_handlers() -> None:
+    signal.signal(signal.SIGINT, _on_sigint)
+    if hasattr(signal, "SIGQUIT"):
+        signal.signal(signal.SIGQUIT, _on_sigquit)
 
 
 # ── small utilities ──────────────────────────────────────────────────
@@ -359,6 +399,7 @@ def _stream_with_pty(cmd: list[str], cwd: str, log_path: Path) -> int:
             stdin=slave_fd, stdout=slave_fd, stderr=slave_fd,
             close_fds=True,
         )
+        _current_proc[0] = proc
         os.close(slave_fd)
         try:
             while True:
@@ -375,6 +416,7 @@ def _stream_with_pty(cmd: list[str], cwd: str, log_path: Path) -> int:
                 os.close(master_fd)
             except OSError:
                 pass
+            _current_proc[0] = None
         proc.wait()
         # leave a clean line after Holmake's last \r-overwrite
         sys.stdout.write("\n"); sys.stdout.flush()
@@ -397,9 +439,14 @@ def run_holmake(cfg: Config, log_path: Path, no_cache: bool = False) -> int:
     with log_path.open("wb") as logf:
         logf.write((" ".join(cmd) + "\n").encode())
         logf.flush()
-        r = subprocess.run(cmd, cwd=str(cfg.master_dir),
-                           stdout=logf, stderr=subprocess.STDOUT)
-    return r.returncode
+        proc = subprocess.Popen(cmd, cwd=str(cfg.master_dir),
+                                stdout=logf, stderr=subprocess.STDOUT)
+        _current_proc[0] = proc
+        try:
+            proc.wait()
+        finally:
+            _current_proc[0] = None
+    return proc.returncode
 
 
 def baseline(cfg: Config) -> int:
@@ -464,6 +511,7 @@ def detect_missing_trees(cfg: Config) -> None:
 
 def do_round(cfg: Config, rng: random.Random, run_idx: int) -> tuple[bool, str, bool]:
     """Run one fuzz round. Returns (success?, run_id, no_cache?)."""
+    _interrupted["round"] = False  # reset; campaign flag carries across rounds
     run_id = short_token(rng)
     run_dir = cfg.tmp_dir / "runs" / run_id
     run_dir.mkdir(parents=True)
@@ -529,14 +577,21 @@ def do_round(cfg: Config, rng: random.Random, run_idx: int) -> tuple[bool, str, 
 
     rc = run_holmake(cfg, run_dir / "holmake.log", no_cache=no_cache)
 
-    if rc == 0:
+    interrupted = "campaign" if _interrupted["campaign"] \
+                  else "round" if _interrupted["round"] else None
+
+    if rc == 0 and not interrupted:
         # drop the snapshot; the live trees are now a fresh baseline
         shutil.rmtree(run_dir)
         return True, run_id, no_cache
 
-    # failure path
+    # failure path (real build failure or user-interrupt)
     fail_dir = cfg.tmp_dir / "failures" / run_id
     err = _first_error_line(run_dir / "holmake.log")
+    if interrupted:
+        err = f"interrupted by user ({interrupted})"
+        manifest["interrupted"] = interrupted
+        (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
     if cfg.on_failure in ("restore-and-continue", "stop"):
         for t in cfg.trees:
             restore_tree(snap_root / tree_tokens[t], t, cfg.snap_method)
@@ -551,10 +606,16 @@ def do_round(cfg: Config, rng: random.Random, run_idx: int) -> tuple[bool, str, 
             f"{run_id}  seed={cfg.seed}  round={run_idx}  "
             f"mutations={len(manifest['mutations'])}  "
             f"no_cache={no_cache}  "
+            f"interrupted={interrupted or 'no'}  "
             f"first_error={err}\n"
         )
 
-    print(f"[fuzz] FAILURE in round {run_idx} (id={run_id}); preserved at {fail_dir}")
+    if interrupted:
+        print(f"[fuzz] INTERRUPTED ({interrupted}) in round {run_idx} "
+              f"(id={run_id}); preserved at {fail_dir}")
+    else:
+        print(f"[fuzz] FAILURE in round {run_idx} "
+              f"(id={run_id}); preserved at {fail_dir}")
     return False, run_id, no_cache
 
 
@@ -753,6 +814,7 @@ def resume(cfg: Config, run_id: str) -> int:
 def main(argv: list[str]) -> int:
     cfg = parse_args(argv)
     setup_dirs(cfg)
+    install_signal_handlers()
 
     if cfg.resume_id:
         return resume(cfg, cfg.resume_id)
@@ -771,6 +833,8 @@ def main(argv: list[str]) -> int:
     print(f"[fuzz] runs={cfg.runs} mutations={cfg.mutations} jobs={cfg.jobs} "
           f"no_cache_prob={cfg.no_cache_prob}")
     print(f"[fuzz] seed         = {cfg.seed}")
+    print(f"[fuzz] interrupts   = Ctrl-C fails current round; "
+          f"Ctrl-\\ aborts the campaign")
 
     n = clean_make_deps(cfg.trees)
     print(f"[fuzz] cleared {n} stale .hol/make-deps/ dir(s) before baseline")
@@ -793,6 +857,10 @@ def main(argv: list[str]) -> int:
             if cfg.on_failure == "stop":
                 print("[fuzz] --on-failure stop; exiting.")
                 return 1
+        if _interrupted["campaign"]:
+            print(f"[fuzz] campaign aborted by user after round {i}; "
+                  f"failures={failures}/{i}")
+            return 1
 
     print(f"[fuzz] done. failures={failures}/{cfg.runs}")
     return 0 if failures == 0 else 2
