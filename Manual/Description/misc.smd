@@ -378,6 +378,63 @@ and rebuilding those remote targets as necessary.
 [^misc-includes-cli]: In one-off situations, it is also possible
     to use the `-I` flag on `Holmake`'s command-line.
 
+### Cross-directory rules
+
+\index{Holmake@\holmake!cross-directory rules}
+`Holmake` reads every `Holmakefile` reachable from the starting
+directory through the `INCLUDES` graph and gathers their rules into
+a single shared rule database.  Each rule retains an association
+with the `Holmakefile` that wrote it -- its *owner* -- and the
+owner's directory is where that rule's recipe will run.  A target
+can pick up rule entries from more than one `Holmakefile`, and
+`Holmake` has to choose between them.
+
+For any target `T`, two `Holmakefile`s in the loaded set are
+eligible to provide `T`'s recipe:
+
+  - the `Holmakefile` in `T`'s **own directory** (if there is one),
+    called `T`'s *home `Holmakefile`*; and
+
+  - the `Holmakefile` that **named `T` as a prerequisite**, called
+    `T`'s *requestor* -- the one whose work caused `Holmake` to
+    need `T` in the first place.
+
+A `Holmakefile` that is neither the home nor the requestor cannot
+supply a rule for `T`, even if it is in scope: the search space is
+restricted to those two by design, so that the recipe a target
+ends up with is always pinned to a `Holmakefile` the reader can
+point at directly.
+
+In the common case `T` lives in the same directory as the
+`Holmakefile` that names it, so requestor and home coincide and
+there is only one rule to consider.  When they differ, three
+configurations arise:
+
+  - **The requestor provides the rule; the home `Holmakefile` does
+    not.**  Example: `src/proofman/Holmakefile` writes a rule for
+    `$(HOLDIR)/bin/hol.state0`.  The `bin/` directory has no
+    `Holmakefile`, so only `src/proofman/Holmakefile` has anything
+    to say about that target.  The recipe runs in `src/proofman`,
+    which is why it can refer to `proofManagerLib.uo` (a file in
+    `src/proofman`) without a path prefix.
+
+  - **The home `Holmakefile` provides the rule; the requestor does
+    not.**  Example: `Manual/Description/Holmakefile`'s `mdbook`
+    target lists `../Tutorial/labels.tsv` as a prerequisite, and
+    the rule building `labels.tsv` lives in
+    `Manual/Tutorial/Holmakefile`.  Only Tutorial has the rule;
+    the recipe runs in `Manual/Tutorial`.
+
+  - **Both provide a rule.**  `Holmake` refuses to pick one and
+    aborts with a `Conflicting rules` error naming both
+    `Holmakefile`s.  There is no defined precedence; remove the
+    duplicate.
+
+If neither `Holmakefile` provides a rule and `T` exists on disk,
+`T` is treated as an external prerequisite (no rebuild attempted).
+If neither provides a rule and `T` does not exist, `Holmake`
+reports `Don't know how to build necessary target(s)`.
+
 ### `Holmake`'s command-line arguments
 
 \index{Holmake@\holmake!command-line arguments}
