@@ -39,16 +39,21 @@ fun byte_copy src dst =
    propagated to any sibling repo whose local Theory.* was also hard-
    linked to the same cache entry.  The sibling would then see its
    local Theory.* as newer than its derived .ui/.uo and spuriously
-   rebuild them. *)
+   rebuild them.
+
+   The explicit existence check on [src] avoids cp printing its own
+   "cannot stat ..." stderr noise in the normal cache-miss path, where
+   the caller is probing for a key file that's expected to be absent. *)
 fun clone_or_copy src dst =
-    case Systeml.clone_cmd of
+    OS.FileSys.access(src, []) andalso
+    (case Systeml.clone_cmd of
         SOME cmd =>
           if OS.Process.isSuccess
                (OS.Process.system (cmd ^ " " ^ Systeml.protect src ^
                                    " " ^ Systeml.protect dst))
           then true
           else byte_copy src dst
-      | NONE => byte_copy src dst
+      | NONE => byte_copy src dst)
 
 (* Stage [src]'s contents at a per-pid temp file next to [dest] and
    return the temp path on success.  The caller is responsible for

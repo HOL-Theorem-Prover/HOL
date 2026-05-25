@@ -128,7 +128,8 @@ val _ = run_holmake ["cleanAll"]
 val (res4, out4) = run_holmake_out ["--cache-dir", cache_nodata, "fooTheory"]
 val _ =
     if OS.Process.isSuccess res4 andalso
-       HOLFileSys.access ("fooTheory.dat", [OS.FileSys.A_READ])
+       HOLFileSys.access ("fooTheory.dat", [OS.FileSys.A_READ]) andalso
+       not (String.isSubstring "cp:" out4)
     then OK()
     else die ("Expected fallback after missing data, got: " ^ out4)
 
@@ -150,7 +151,8 @@ val _ = run_holmake ["cleanAll"]
 val (res5, out5) = run_holmake_out ["--cache-dir", cache_partial, "fooTheory"]
 val _ =
     if OS.Process.isSuccess res5 andalso
-       HOLFileSys.access ("fooTheory.dat", [OS.FileSys.A_READ])
+       HOLFileSys.access ("fooTheory.dat", [OS.FileSys.A_READ]) andalso
+       not (String.isSubstring "cp:" out5)
     then OK()
     else die ("Expected fallback after partial cache hit, got: " ^ out5)
 
@@ -163,7 +165,8 @@ val cache_empty = fresh_cache ()
 val (res6, out6) = run_holmake_out ["--cache-dir", cache_empty, "fooTheory"]
 val _ =
     if OS.Process.isSuccess res6 andalso
-       HOLFileSys.access ("fooTheory.dat", [OS.FileSys.A_READ])
+       HOLFileSys.access ("fooTheory.dat", [OS.FileSys.A_READ]) andalso
+       not (String.isSubstring "cp:" out6)
     then OK()
     else die ("Expected clean miss and local build, got: " ^ out6)
 
