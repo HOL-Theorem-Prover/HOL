@@ -653,28 +653,66 @@ fun get_rule_info rdb env tgt =
               commands = map (perform_substitution env) commands}
       end
 
-(* Look up the rule for `t` in `t`'s home directory's Holmakefile.
-   When the aggregator INCLUDEs siblings (Description, Tutorial, ...),
-   a dep like `../Tutorial/labels.tsv' encountered while build_depgraph
-   runs in Description must consult Tutorial's rule database, not
-   Description's.  Pre-fix this consulted cwd's rdb only, and cross-
-   directory user-defined recipes were unreachable.
+(* Look up the rule for `t`.  A rule belongs to whichever Holmakefile
+   was being parsed when it was registered, NOT necessarily the dir
+   that holds the target file -- e.g. `src/proofman/Holmakefile' has
+   a rule for `$(HOLDIR)/bin/hol.state0' (target dirpart = bin/),
+   but the rule lives in proofman's rdb.
 
-   The lookup is gated on `is_known_dir' so we only consult Holmakefiles
-   that some already-read Holmakefile has named via INCLUDES (transitive
-   closure from cwd's Holmakefile and all its descendants).  Without
-   the gate, a prereq path that happens to point into an unrelated dir
-   (e.g. a test fixture's `testd/Holmakefile') would trigger us to read
-   that dir's Holmakefile speculatively, and any `$(error ...)' in it
-   would abort the whole build. *)
+   So: try cwd's Holmakefile first (the rule-defining file is
+   typically cwd while `recursively' descends through it).  Only if
+   that misses, and the target's dirpart is part of this build's
+   INCLUDES closure, consult the target's home Holmakefile -- this
+   is the cross-manual `SIBLING_LABELS' case where Tutorial's
+   Holmakefile has the rule for `Tutorial/labels.tsv' but it's
+   referenced from Description's mdbook recipe.
+
+   The closure gate (`is_known_dir') keeps us from speculatively
+   reading a stranger Holmakefile that happens to lie under a
+   referenced path (a test fixture's `testd/Holmakefile' whose
+   `$(error ...)' would otherwise abort the build). *)
 fun local_rule_info t =
-    let
-      val tgt_dir_abs = hmdir.toAbsPath (hm_target.dirpart t)
+    let val (env, rules, _, _) = get_hmf()
     in
-      if is_known_dir tgt_dir_abs then
-        let val (env, rules, _, _) = get_hmf_for_dir tgt_dir_abs
-        in get_rule_info rules env t end
-      else NONE
+      case get_rule_info rules env t of
+          SOME r => SOME r
+        | NONE =>
+          let
+            val tgt_dir_abs = hmdir.toAbsPath (hm_target.dirpart t)
+            val cwd_abs = hmdir.toAbsPath (hmdir.curdir())
+          in
+            if is_known_dir tgt_dir_abs andalso tgt_dir_abs <> cwd_abs
+            then
+              let val (env', rules', _, _) = get_hmf_for_dir tgt_dir_abs
+              in get_rule_info rules' env' t end
+            else NONE
+          end
+    end
+
+(* Returns the directory that actually holds the rule for `t' (the
+   home of the Holmakefile its recipe lives in), or `hmdir.curdir()'
+   when no rule exists anywhere in scope.  Used by `build_depgraph'
+   to set `node.dir' (the cwd ProcessMultiplexor uses for recipe
+   execution) and the env that feeds GraphExtra. *)
+fun rule_home t =
+    let val (_, cwd_rules, _, _) = get_hmf()
+    in
+      if isSome (Binarymap.peek(cwd_rules, t)) then hmdir.curdir()
+      else
+        let
+          val tgt_dir = hm_target.dirpart t
+          val tgt_dir_abs = hmdir.toAbsPath tgt_dir
+          val cwd_abs = hmdir.toAbsPath (hmdir.curdir())
+        in
+          if is_known_dir tgt_dir_abs andalso tgt_dir_abs <> cwd_abs
+          then
+            let val (_, rules', _, _) = get_hmf_for_dir tgt_dir_abs
+            in
+              if isSome (Binarymap.peek(rules', t)) then tgt_dir
+              else hmdir.curdir()
+            end
+          else hmdir.curdir()
+        end
     end
 
 (* Pattern-rule lookup applies to any target at or below the
@@ -1062,16 +1100,16 @@ let
   val fullpath = fp dir target_s
   val fullpath_s = fps fullpath
   val pretty_tgt = hmdir.pretty_dir fullpath
-  (* Use the target's home Holmakefile env when the dir is part of
-     this build's INCLUDES closure (so GraphExtra picks up the
-     right HOLHEAP etc.), but fall back to cwd's env for unrelated
-     cross-dir prereqs -- we mustn't speculatively read a stranger's
-     Holmakefile here, because any `$(error ...)' in it would
-     abort the whole build. *)
-  val tgt_dir_abs = hmdir.toAbsPath dir
-  val (env, _, _, _) =
-      if is_known_dir tgt_dir_abs then get_hmf_for_dir tgt_dir_abs
-      else get_hmf()
+  (* `rh' is the dir of the Holmakefile that actually carries the
+     rule for `tgt' -- cwd in the usual case, the target's home dir
+     when this is a cross-manual SIBLING_LABELS dep that's resolved
+     via the target's home rdb.  Used both for the env that feeds
+     GraphExtra (HOLHEAP etc. should come from the rule's Holmakefile,
+     not from whoever happens to reference the target) and for
+     `node.dir' (the cwd ProcessMultiplexor chdir's into before
+     running the recipe). *)
+  val rh = rule_home tgt
+  val (env, _, _, _) = get_hmf_for_dir (hmdir.toAbsPath rh)
   val extra = GraphExtra.get_extra { master_dir = original_dir,
                                      master_cline = option_value,
                                      envlist = envlist env }
@@ -1198,7 +1236,7 @@ in
                       status = if needs_building then Pending{needed=false}
                                else Succeeded,
                       extra = extra,
-                      command = BuiltInCmd (bic,incinfo), dir = dir,
+                      command = BuiltInCmd (bic,incinfo), dir = rh,
                       dependencies = depnodes } g3
         end
       else
@@ -1208,7 +1246,7 @@ in
               add_node {target = tgt, seqnum = 0, phony = false,
                         status = if exists_readable target_s then Succeeded
                                  else Failed{needed=false},
-                        command = NoCmd, dir = dir, extra = extra,
+                        command = NoCmd, dir = rh, extra = extra,
                         dependencies = []} g0
             )
           | SOME {dependencies, commands, ...} =>
@@ -1303,7 +1341,7 @@ in
                   val (g',n) = add_node {target = tgt, seqnum = seqnum,
                                          status = status, phony = is_phony,
                                          command = SomeCmd c, extra = extra,
-                                         dir = dir,
+                                         dir = rh,
                                          dependencies = depnode @ depnodes } g
                 in
                   (* This function needs to be folded l-to-r to ensure that
@@ -1326,7 +1364,7 @@ in
                     NONE =>
                     add_node {target = tgt, seqnum = 0, phony = is_phony,
                               status = status, command = NoCmd, extra = extra,
-                              dir = dir, dependencies = depnodes} g1
+                              dir = rh, dependencies = depnodes} g1
                   | SOME s =>
                     let
                       val updstatus =
