@@ -248,6 +248,25 @@ local
   val base = extend_with_cline_vars (read_holpathdb())
 
   val hmcache = ref (Binarymap.mkDict String.compare)
+
+  (* Dirs whose Holmakefile is safe for `local_rule_info' to consult
+     when resolving a cross-directory target.  Populated as we read
+     each Holmakefile: the dir it lives in is added, and so are every
+     INCLUDES/PRE_INCLUDES entry that Holmakefile names.  This makes
+     sibling-from-aggregator references work (Description's mdbook
+     dep on `../Tutorial/labels.tsv' resolves because Manual's
+     INCLUDES already named Tutorial) while leaving arbitrary
+     prereq paths into unrelated dirs (e.g. a test fixture's
+     `testd/Holmakefile' that lives outside any INCLUDES chain)
+     untouched -- speculatively reading those would fire any
+     `$(error ...)' in them.  Keyed by absolute path string to
+     match `hmcache'. *)
+  val known_dirs : string Binaryset.set ref =
+      ref (Binaryset.empty String.compare)
+  fun mark_known absdir =
+      known_dirs := Binaryset.add(!known_dirs, absdir)
+  fun mark_known_hmdirs ds =
+      Binaryset.app (fn d => mark_known (hmdir.toAbsPath d)) ds
   val default = (base,empty_trdb,empty_patrules,NONE)
   fun get_hmf0 d =
       if FileSys.access("Holmakefile", [FileSys.A_READ]) then
@@ -273,18 +292,32 @@ local
       else
         default
 in
-fun get_hmf () =
-    let
-      val d = FileSys.getDir()
-    in
-      case Binarymap.peek(!hmcache, d) of
-          NONE => let val result = get_hmf0 d
-                  in
-                    hmcache := Binarymap.insert (!hmcache, d, result);
-                    result
-                  end
-        | SOME r => r
-    end
+fun get_hmf_for_dir absdir =
+    case Binarymap.peek(!hmcache, absdir) of
+        SOME r => (mark_known absdir; r)
+      | NONE =>
+        let
+          val cur = FileSys.getDir()
+          val need_chdir = cur <> absdir
+          val () = if need_chdir then FileSys.chDir absdir else ()
+          val (result as (env, _, _, _)) =
+              get_hmf0 absdir
+              handle e => (if need_chdir then FileSys.chDir cur else ();
+                           raise e)
+          val () = if need_chdir then FileSys.chDir cur else ()
+          val dir_hm = hmdir.fromPath {origin = "", path = absdir}
+          val incs = envlist env "INCLUDES" |> slist_to_dset dir_hm
+          val pres = envlist env "PRE_INCLUDES" |> slist_to_dset dir_hm
+        in
+          hmcache := Binarymap.insert (!hmcache, absdir, result);
+          mark_known absdir;
+          mark_known_hmdirs incs;
+          mark_known_hmdirs pres;
+          result
+        end
+
+fun get_hmf () = get_hmf_for_dir (FileSys.getDir())
+fun is_known_dir absdir = Binaryset.member(!known_dirs, absdir)
 end
 
 fun getnewincs dir =
@@ -620,10 +653,28 @@ fun get_rule_info rdb env tgt =
               commands = map (perform_substitution env) commands}
       end
 
+(* Look up the rule for `t` in `t`'s home directory's Holmakefile.
+   When the aggregator INCLUDEs siblings (Description, Tutorial, ...),
+   a dep like `../Tutorial/labels.tsv' encountered while build_depgraph
+   runs in Description must consult Tutorial's rule database, not
+   Description's.  Pre-fix this consulted cwd's rdb only, and cross-
+   directory user-defined recipes were unreachable.
+
+   The lookup is gated on `is_known_dir' so we only consult Holmakefiles
+   that some already-read Holmakefile has named via INCLUDES (transitive
+   closure from cwd's Holmakefile and all its descendants).  Without
+   the gate, a prereq path that happens to point into an unrelated dir
+   (e.g. a test fixture's `testd/Holmakefile') would trigger us to read
+   that dir's Holmakefile speculatively, and any `$(error ...)' in it
+   would abort the whole build. *)
 fun local_rule_info t =
-    let val (env, rules, _, _) = get_hmf()
+    let
+      val tgt_dir_abs = hmdir.toAbsPath (hm_target.dirpart t)
     in
-      get_rule_info rules env t
+      if is_known_dir tgt_dir_abs then
+        let val (env, rules, _, _) = get_hmf_for_dir tgt_dir_abs
+        in get_rule_info rules env t end
+      else NONE
     end
 
 (* Pattern-rule lookup applies to any target at or below the
@@ -1011,7 +1062,16 @@ let
   val fullpath = fp dir target_s
   val fullpath_s = fps fullpath
   val pretty_tgt = hmdir.pretty_dir fullpath
-  val (env, _, _, _) = get_hmf()
+  (* Use the target's home Holmakefile env when the dir is part of
+     this build's INCLUDES closure (so GraphExtra picks up the
+     right HOLHEAP etc.), but fall back to cwd's env for unrelated
+     cross-dir prereqs -- we mustn't speculatively read a stranger's
+     Holmakefile here, because any `$(error ...)' in it would
+     abort the whole build. *)
+  val tgt_dir_abs = hmdir.toAbsPath dir
+  val (env, _, _, _) =
+      if is_known_dir tgt_dir_abs then get_hmf_for_dir tgt_dir_abs
+      else get_hmf()
   val extra = GraphExtra.get_extra { master_dir = original_dir,
                                      master_cline = option_value,
                                      envlist = envlist env }
@@ -1138,7 +1198,7 @@ in
                       status = if needs_building then Pending{needed=false}
                                else Succeeded,
                       extra = extra,
-                      command = BuiltInCmd (bic,incinfo), dir = hmdir.curdir(),
+                      command = BuiltInCmd (bic,incinfo), dir = dir,
                       dependencies = depnodes } g3
         end
       else
@@ -1148,7 +1208,7 @@ in
               add_node {target = tgt, seqnum = 0, phony = false,
                         status = if exists_readable target_s then Succeeded
                                  else Failed{needed=false},
-                        command = NoCmd, dir = hmdir.curdir(), extra = extra,
+                        command = NoCmd, dir = dir, extra = extra,
                         dependencies = []} g0
             )
           | SOME {dependencies, commands, ...} =>
@@ -1243,7 +1303,7 @@ in
                   val (g',n) = add_node {target = tgt, seqnum = seqnum,
                                          status = status, phony = is_phony,
                                          command = SomeCmd c, extra = extra,
-                                         dir = hmdir.curdir(),
+                                         dir = dir,
                                          dependencies = depnode @ depnodes } g
                 in
                   (* This function needs to be folded l-to-r to ensure that
@@ -1266,7 +1326,7 @@ in
                     NONE =>
                     add_node {target = tgt, seqnum = 0, phony = is_phony,
                               status = status, command = NoCmd, extra = extra,
-                              dir = hmdir.curdir(), dependencies = depnodes} g1
+                              dir = dir, dependencies = depnodes} g1
                   | SOME s =>
                     let
                       val updstatus =
