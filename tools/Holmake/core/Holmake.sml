@@ -670,24 +670,49 @@ fun get_rule_info rdb env tgt =
    The closure gate (`is_known_dir') keeps us from speculatively
    reading a stranger Holmakefile that happens to lie under a
    referenced path (a test fixture's `testd/Holmakefile' whose
-   `$(error ...)' would otherwise abort the build). *)
-fun local_rule_info t =
-    let val (env, rules, _, _) = get_hmf()
+   `$(error ...)' would otherwise abort the build).
+
+   If both rdbs claim the same target, die: we have no principled
+   precedence to resolve such a conflict, and silently picking one
+   of two real recipes is a footgun.  Returns the rule paired with
+   the dir of the Holmakefile that owns it (used by `build_depgraph'
+   to set `node.dir' and the env feeding GraphExtra). *)
+fun find_rule t =
+    let
+      val (cwd_env, cwd_rules, _, _) = get_hmf()
+      val cwd_dir = hmdir.curdir()
+      val cwd_abs = hmdir.toAbsPath cwd_dir
+      val tgt_dir = hm_target.dirpart t
+      val tgt_dir_abs = hmdir.toAbsPath tgt_dir
+      val cwd_has = isSome (Binarymap.peek(cwd_rules, t))
+      val home_data =
+          if is_known_dir tgt_dir_abs andalso tgt_dir_abs <> cwd_abs
+          then SOME (get_hmf_for_dir tgt_dir_abs)
+          else NONE
+      val home_has =
+          case home_data of
+              NONE => false
+            | SOME (_, rules', _, _) => isSome (Binarymap.peek(rules', t))
     in
-      case get_rule_info rules env t of
-          SOME r => SOME r
-        | NONE =>
-          let
-            val tgt_dir_abs = hmdir.toAbsPath (hm_target.dirpart t)
-            val cwd_abs = hmdir.toAbsPath (hmdir.curdir())
-          in
-            if is_known_dir tgt_dir_abs andalso tgt_dir_abs <> cwd_abs
-            then
-              let val (env', rules', _, _) = get_hmf_for_dir tgt_dir_abs
-              in get_rule_info rules' env' t end
-            else NONE
-          end
+      if cwd_has andalso home_has then
+        die ("Conflicting rules for `" ^ tgt_toString t ^
+             "': defined in both " ^ hmdir.pretty_dir cwd_dir ^
+             "/Holmakefile and " ^ hmdir.pretty_dir tgt_dir ^
+             "/Holmakefile.\n" ^
+             "Remove one of the duplicates.")
+      else if cwd_has then
+        Option.map (fn r => (r, cwd_dir))
+                   (get_rule_info cwd_rules cwd_env t)
+      else if home_has then
+        (case home_data of
+            SOME (env', rules', _, _) =>
+              Option.map (fn r => (r, tgt_dir))
+                         (get_rule_info rules' env' t)
+          | NONE => NONE)
+      else NONE
     end
+
+fun local_rule_info t = Option.map #1 (find_rule t)
 
 (* Returns the directory that actually holds the rule for `t' (the
    home of the Holmakefile its recipe lives in), or `hmdir.curdir()'
@@ -695,25 +720,9 @@ fun local_rule_info t =
    to set `node.dir' (the cwd ProcessMultiplexor uses for recipe
    execution) and the env that feeds GraphExtra. *)
 fun rule_home t =
-    let val (_, cwd_rules, _, _) = get_hmf()
-    in
-      if isSome (Binarymap.peek(cwd_rules, t)) then hmdir.curdir()
-      else
-        let
-          val tgt_dir = hm_target.dirpart t
-          val tgt_dir_abs = hmdir.toAbsPath tgt_dir
-          val cwd_abs = hmdir.toAbsPath (hmdir.curdir())
-        in
-          if is_known_dir tgt_dir_abs andalso tgt_dir_abs <> cwd_abs
-          then
-            let val (_, rules', _, _) = get_hmf_for_dir tgt_dir_abs
-            in
-              if isSome (Binarymap.peek(rules', t)) then tgt_dir
-              else hmdir.curdir()
-            end
-          else hmdir.curdir()
-        end
-    end
+    case find_rule t of
+        SOME (_, d) => d
+      | NONE => hmdir.curdir()
 
 (* Pattern-rule lookup applies to any target at or below the
    Holmakefile's directory: a pattern with a literal directory
