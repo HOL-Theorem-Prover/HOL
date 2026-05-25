@@ -327,6 +327,7 @@ class Config:
     on_failure:     str
     weights:        dict[str, int]
     no_cache_prob:  float = 0.5
+    quiet:          bool = False
     holdir:         Path | None = None
     resume_id:      str | None = None
     snap_method:    str = "rsync"
@@ -340,6 +341,46 @@ def tree_token(t: Path, taken: set[str]) -> str:
     return f"{base}-{h}"
 
 
+def _stream_with_pty(cmd: list[str], cwd: str, log_path: Path) -> int:
+    """Run cmd in a pty so it sees a TTY; tee output to stdout + log.
+
+    Lets Holmake emit its native TTY status line (overwriting via
+    ``\\r``) into the user's terminal while a full copy of the
+    output -- including the in-place overwrites -- still lands in
+    the log file for triage.
+    """
+    import pty
+    master_fd, slave_fd = pty.openpty()
+    with log_path.open("wb") as logf:
+        logf.write((" ".join(cmd) + "\n").encode())
+        logf.flush()
+        proc = subprocess.Popen(
+            cmd, cwd=cwd,
+            stdin=slave_fd, stdout=slave_fd, stderr=slave_fd,
+            close_fds=True,
+        )
+        os.close(slave_fd)
+        try:
+            while True:
+                try:
+                    data = os.read(master_fd, 4096)
+                except OSError:
+                    break
+                if not data:
+                    break
+                logf.write(data); logf.flush()
+                sys.stdout.buffer.write(data); sys.stdout.buffer.flush()
+        finally:
+            try:
+                os.close(master_fd)
+            except OSError:
+                pass
+        proc.wait()
+        # leave a clean line after Holmake's last \r-overwrite
+        sys.stdout.write("\n"); sys.stdout.flush()
+        return proc.returncode
+
+
 def run_holmake(cfg: Config, log_path: Path, no_cache: bool = False) -> int:
     cmd = [str(cfg.holmake), f"-j{cfg.jobs}"]
     if no_cache:
@@ -349,10 +390,15 @@ def run_holmake(cfg: Config, log_path: Path, no_cache: bool = False) -> int:
     if cfg.target:
         cmd.append(cfg.target)
     log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if not cfg.quiet and sys.stdout.isatty():
+        return _stream_with_pty(cmd, str(cfg.master_dir), log_path)
+
     with log_path.open("wb") as logf:
         logf.write((" ".join(cmd) + "\n").encode())
         logf.flush()
-        r = subprocess.run(cmd, cwd=str(cfg.master_dir), stdout=logf, stderr=subprocess.STDOUT)
+        r = subprocess.run(cmd, cwd=str(cfg.master_dir),
+                           stdout=logf, stderr=subprocess.STDOUT)
     return r.returncode
 
 
@@ -468,6 +514,18 @@ def do_round(cfg: Config, rng: random.Random, run_idx: int) -> tuple[bool, str, 
         manifest["mutations"].append(entry)
 
     (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
+
+    if not cfg.quiet:
+        cache_tag = "no-cache" if no_cache else "cached"
+        print(f"[fuzz] round {run_idx}/{cfg.runs} ({run_id}, {cache_tag}) -- "
+              f"{len(manifest['mutations'])} mutations:")
+        for entry in manifest["mutations"]:
+            note = ""
+            if entry.get("was_absent"):
+                note = "  (was absent)"
+            elif "error" in entry:
+                note = f"  (error: {entry['error']})"
+            print(f"  {entry['kind']:13}  {entry['path']}{note}")
 
     rc = run_holmake(cfg, run_dir / "holmake.log", no_cache=no_cache)
 
@@ -607,6 +665,10 @@ def parse_args(argv: list[str]) -> Config:
                          "the cache, 1 to never use it.")
     ap.add_argument("--on-failure", choices=["restore-and-continue", "stop", "preserve"],
                     default="restore-and-continue")
+    ap.add_argument("--quiet", "-q", action="store_true",
+                    help="Suppress per-round mutation listing and pass-through "
+                         "of Holmake's TTY output; keep just the one-line "
+                         "round summary.")
     ap.add_argument("--resume", type=str, default=None, metavar="<id>",
                     help="Restore live trees from a saved failure run, then exit.")
 
@@ -657,6 +719,7 @@ def parse_args(argv: list[str]) -> Config:
         on_failure=args.on_failure,
         weights=dict(DEFAULT_WEIGHTS),
         no_cache_prob=args.no_cache_prob,
+        quiet=args.quiet,
         holdir=holdir,
         resume_id=args.resume,
     )
