@@ -362,12 +362,25 @@ Definition lex_num_def:
     else (acc, c::cs))
 End
 
+Definition is_next_digit_def:
+  is_next_digit cs =
+    case cs of
+    | (c'::cs') => isDigit c'
+    | [] => F
+End
+
 Definition lex_int_def:
   lex_int [] = NONE /\
   (lex_int (c::cs) =
-    let sign = if c = #"-" then Negative else Positive in
-    let (nat_num, cs') = if sign = Negative then lex_num cs 0 else lex_num (c::cs) 0 in
-    SOME ((sign, nat_num), cs'))
+    if c = #"-" then
+      if is_next_digit cs then
+        let (nat_num, cs') = lex_num cs 0 in
+        SOME ((Negative, nat_num), cs')
+      else NONE
+    else if isDigit c then
+      let (nat_num, cs') = lex_num (c::cs) 0 in
+      SOME ((Positive, nat_num), cs')
+    else NONE)
 End
 
 
@@ -378,13 +391,6 @@ Definition lex_leading_zeroes_def:
     then lex_leading_zeroes cs (acc+1)
     else
       (( \ (a, b). if a = 0 then (if acc > 0 then (SOME (acc-1, a), b) else (NONE, b)) else (SOME (acc, a), b)) (lex_num (c::cs) 0)))
-End
-
-Definition is_next_digit_def:
-  is_next_digit cs =
-    case cs of
-    | (c'::cs') => isDigit c'
-    | [] => F
 End
 
 Definition lex_frac_def:
@@ -425,8 +431,12 @@ Definition has_leading_zero_def:
   has_leading_zero [] = F /\
   has_leading_zero (c::[]) = F /\
   has_leading_zero (c::c'::cs) =
-    if c = #"0" then isDigit c'
-    else if c' = #"-" then is_next_digit cs else F
+    if c = #"-" then
+      (case cs of
+       | c''::cs' => c' = #"0" /\ isDigit c''
+       | [] => F)
+    else if c = #"0" then isDigit c'
+    else F
 End
 
 Definition lex_sci_def:
