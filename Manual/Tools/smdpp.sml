@@ -440,7 +440,7 @@ fun loadCrossBookLabels () =
    loadCiteLabels below).  Each row is (keys, locator, rendered-html)
    matching the TSV emitted by `smdpp render-bib`.  Empty when the
    labels file is missing — citations then pass through unrewritten
-   and the post-build mdbook-check.sh leak check surfaces them. *)
+   and the post-build `smdpp check-html` leak check surfaces them. *)
 val citeLabels : (string * string * string) list ref = ref []
 
 (* Read cite-labels.tsv from cwd; warn (don't die) if missing. *)
@@ -481,7 +481,7 @@ val refEntries : string list ref = ref []
 (* Read ../Reference/entries.list relative to cwd; warn (don't die)
    if missing -- e.g., on a Reference-only checkout where Description
    hasn't been wired yet.  When the file is missing, `\refentry{}`
-   calls pass through unrewritten and mdbook-check.sh's leak check
+   calls pass through unrewritten and `smdpp check-html`'s leak check
    surfaces them. *)
 fun loadRefEntries () =
   let
@@ -513,7 +513,7 @@ fun loadRefEntries () =
    rather than letting them silently break links in the rendered
    HTML.  Skipped when `refEntries` is empty (loadRefEntries
    couldn't find entries.list); leaks then get surfaced by
-   mdbook-check.sh. *)
+   `smdpp check-html`. *)
 fun rewriteRefEntry currentFile s =
   let
     val sub = String.sub
@@ -556,7 +556,7 @@ fun rewriteRefEntry currentFile s =
 (* Replace each `\cite[loc]{keys}` (or `\cite{keys}`) with the
    rendered-HTML span captured in the citation label registry.
    Unknown call-sites are left untouched: the rendered HTML keeps
-   the literal `\cite{...}` text, which `mdbook-check.sh` then
+   the literal `\cite{...}` text, which `smdpp check-html` then
    reports as a leak.  Brace-counted on the key argument; loose
    `]`-terminator on the locator (LaTeX locators never contain
    literal `]`). *)
@@ -1066,7 +1066,7 @@ fun rewriteLinks {localAnchors, registry} content =
                      the link is just "go to that entry's page", and
                      the entry's H2 doesn't carry the literal anchor
                      (pulldown-cmark slugifies it differently).  This
-                     keeps mdbook-check.sh quiet and is functionally
+                     keeps `smdpp check-html` quiet and is functionally
                      identical for the reader -- the browser scrolls
                      to the top of the page either way. *)
                   fun stemOf f =
@@ -2084,6 +2084,289 @@ fun checkRefsMain bookDir =
       OS.Process.exit OS.Process.success
   end
 
+(* ===== check-html sub-command =====
+
+   Lint the rendered mdbook output for raw-LaTeX and other "leak"
+   patterns that should never reach published HTML.  This replaces
+   the old Manual/Tools/mdbook-check.sh: reading each *.html once
+   and applying all 17 checks in a single pass beats one grep
+   subprocess per (pattern, file), which dominated wall time for
+   the Reference manual's hundreds of entries.
+
+   Lines containing any of `$`, `MathJax`, `worda:`, `wordb:`,
+   `wordc:`, `term:`, `type:`, `holtxt:`, `textsl:`, `<!--`,
+   ` !--`, `-->`, `<code>` are dropped by the default checks (the
+   `$` filter alone covers MathJax math contexts where many of the
+   forbidden tokens are legitimate).  Two checks opt out of the
+   filter: the display-math `<word>` check (filter would mask
+   every `$$`-anchored line) and the empty-code-block check
+   (filter would mask the `<code>` we're looking for). *)
+
+fun checkHtmlMain bookDir =
+  let
+    val () =
+      if OS.FileSys.access (bookDir, []) andalso
+         OS.FileSys.isDir bookDir
+      then ()
+      else (TextIO.output (TextIO.stdErr,
+              "mdbook-check: " ^ bookDir ^ " is not a directory\n");
+            OS.Process.exit OS.Process.failure)
+
+    fun lineFilteredOut ln =
+      String.isSubstring "$" ln orelse
+      String.isSubstring "MathJax" ln orelse
+      String.isSubstring "worda:" ln orelse
+      String.isSubstring "wordb:" ln orelse
+      String.isSubstring "wordc:" ln orelse
+      String.isSubstring "term:" ln orelse
+      String.isSubstring "type:" ln orelse
+      String.isSubstring "holtxt:" ln orelse
+      String.isSubstring "textsl:" ln orelse
+      String.isSubstring "<!--" ln orelse
+      String.isSubstring " !--" ln orelse
+      String.isSubstring "-->" ln orelse
+      String.isSubstring "<code>" ln
+
+    fun isWordChar c =
+      Char.isAlphaNum c orelse c = #"_"
+
+    fun containsLit lit ln = String.isSubstring lit ln
+    fun containsAny lits ln =
+      List.exists (fn lit => containsLit lit ln) lits
+
+    (* `\textbar` not immediately followed by [a-z]. *)
+    fun hasTextbarLeak ln =
+      let
+        val sz = String.size ln
+        val needle = "\\textbar"
+        val nsz = String.size needle
+        fun look p =
+          if p + nsz > sz then false
+          else if String.substring (ln, p, nsz) = needle then
+            let
+              val q = p + nsz
+              val ok = q >= sz orelse
+                       let val c = String.sub (ln, q)
+                       in not (c >= #"a" andalso c <= #"z") end
+            in if ok then true else look (p + 1) end
+          else look (p + 1)
+      in look 0 end
+
+    (* `\cite` optionally followed by `[..]`, then `{`. *)
+    fun hasCiteLeak ln =
+      let
+        val sz = String.size ln
+        val needle = "\\cite"
+        val nsz = String.size needle
+        fun afterOptBracket p =
+          if p < sz andalso String.sub (ln, p) = #"[" then
+            let
+              fun scan q =
+                if q >= sz then NONE
+                else if String.sub (ln, q) = #"]" then SOME (q + 1)
+                else scan (q + 1)
+            in scan (p + 1) end
+          else SOME p
+        fun look p =
+          if p + nsz > sz then false
+          else if String.substring (ln, p, nsz) = needle then
+            let
+              val hit =
+                case afterOptBracket (p + nsz) of
+                    SOME q => q < sz andalso String.sub (ln, q) = #"{"
+                  | NONE => false
+            in if hit then true else look (p + 1) end
+          else look (p + 1)
+      in look 0 end
+
+    (* `\\X{` where X is mathit/mathtt/texttt/textbf/textit -- the
+       double-backslash signature of escaped MathJax content that
+       got trapped inside a <pre><code> block. *)
+    val mathTrapPrefixes =
+      ["\\\\mathit{", "\\\\mathtt{", "\\\\texttt{",
+       "\\\\textbf{", "\\\\textit{"]
+    fun hasMathTrap ln = containsAny mathTrapPrefixes ln
+
+    (* Line starting with `$$`, with a `<word>` pseudo-HTML tag
+       inside the math span (before the closing `$`). *)
+    fun hasDisplayMathTag ln =
+      let
+        val sz = String.size ln
+      in
+        sz >= 2 andalso
+        String.sub (ln, 0) = #"$" andalso String.sub (ln, 1) = #"$" andalso
+        let
+          fun findClose p =
+            if p >= sz orelse String.sub (ln, p) = #"$" then p
+            else findClose (p + 1)
+          val endPos = findClose 2
+          fun look p =
+            if p >= endPos then false
+            else if String.sub (ln, p) = #"<" then
+              let
+                fun scanWord q =
+                  if q < endPos andalso
+                     let val c = String.sub (ln, q)
+                     in c >= #"a" andalso c <= #"z" end
+                  then scanWord (q + 1)
+                  else q
+                val q' = scanWord (p + 1)
+                val matched =
+                  q' > p + 1 andalso q' < endPos andalso
+                  String.sub (ln, q') = #">"
+              in if matched then true else look (p + 1) end
+            else look (p + 1)
+        in look 2 end
+      end
+
+    (* `\providecommand` / `\newcommand` / `\renewcommand`, with a
+       non-word-character boundary after, matching ERE `\b`. *)
+    val macroDefLits =
+      ["\\providecommand", "\\newcommand", "\\renewcommand"]
+    fun hasMacroDefLeak ln =
+      let
+        val sz = String.size ln
+        fun matchAt lit p =
+          let val n = String.size lit
+          in p + n <= sz andalso
+             String.substring (ln, p, n) = lit andalso
+             (p + n = sz orelse
+              not (isWordChar (String.sub (ln, p + n))))
+          end
+        fun look p =
+          if p >= sz then false
+          else if List.exists (fn lit => matchAt lit p) macroDefLits then true
+          else look (p + 1)
+      in look 0 end
+
+    val envLeakLits =
+      ["\\begin{tikzpicture}", "\\begin{figure}",
+       "\\begin{center}", "\\begin{tabular}"]
+    fun hasEnvLeak ln = containsAny envLeakLits ln
+
+    (* `href="..."` whose URL portion contains two `#` characters.
+       Don't require a closing `"` -- the shell ERE
+       `href="[^"]*#[^"]*#` doesn't either. *)
+    fun hasDoubleHash ln =
+      let
+        val sz = String.size ln
+        val needle = "href=\""
+        val nsz = String.size needle
+        fun countHash q acc =
+          if q >= sz orelse String.sub (ln, q) = #"\"" then acc
+          else if String.sub (ln, q) = #"#" then countHash (q + 1) (acc + 1)
+          else countHash (q + 1) acc
+        fun look p =
+          if p + nsz > sz then false
+          else if String.substring (ln, p, nsz) = needle then
+            (countHash (p + nsz) 0 >= 2 orelse look (p + 1))
+          else look (p + 1)
+      in look 0 end
+
+    fun checkHtmlFile path failRef =
+      let
+        val content = readFileAll path
+        val lines = String.fields (fn c => c = #"\n") content
+        (* (lineNo, line, alreadyFiltered) triples, 1-indexed. *)
+        val numbered =
+          let
+            fun pair _ [] acc = List.rev acc
+              | pair n (ln :: rest) acc =
+                  pair (n + 1) rest ((n, ln, lineFilteredOut ln) :: acc)
+          in pair 1 lines [] end
+
+        fun report description hits =
+          case hits of
+              [] => ()
+            | _ =>
+                (print (path ^ ": " ^ description ^ "\n");
+                 List.app
+                   (fn (n, ln) =>
+                      print ("  " ^ Int.toString n ^ ":" ^ ln ^ "\n"))
+                   hits;
+                 failRef := true)
+
+        (* Collect up to 3 matching (lineNo, line) pairs. *)
+        fun collect useFilter test =
+          let
+            fun walk [] _ acc = List.rev acc
+              | walk _ 3 acc = List.rev acc
+              | walk ((n, ln, fo) :: rest) c acc =
+                  if useFilter andalso fo then walk rest c acc
+                  else if test ln then walk rest (c + 1) ((n, ln) :: acc)
+                  else walk rest c acc
+          in walk numbered 0 [] end
+
+        fun checkFiltered test description =
+          report description (collect true test)
+        fun checkUnfiltered test description =
+          report description (collect false test)
+      in
+        (* Order matches mdbook-check.sh:66-143 exactly so diffs
+           against the old shell output stay clean. *)
+        checkFiltered (containsLit "\\texttt{")        "raw \\texttt{} leak";
+        checkFiltered hasTextbarLeak                   "raw \\textbar leak";
+        checkFiltered (containsLit "\\textasciitilde")
+          "raw \\textasciitilde leak";
+        checkFiltered (containsLit "\\begin{table}")
+          "raw \\begin{table} leak";
+        checkFiltered (containsLit "\\end{table}")     "raw \\end{table} leak";
+        checkFiltered (containsLit "\\ref{")           "unresolved \\ref{}";
+        checkFiltered (containsLit "\\label{")         "unstripped \\label{}";
+        checkFiltered hasCiteLeak
+          "unresolved \\cite{} (smdpp citation pass)";
+        checkFiltered (containsLit "\\refentry{")
+          "unresolved \\refentry{} (smdpp \\refentry pass)";
+        checkFiltered hasMathTrap
+          "math content trapped in code block (escaped \\X{...})";
+        checkUnfiltered hasDisplayMathTag
+          "<word> pseudo-HTML tag inside $$math$$ (use \\langle...\\rangle)";
+        checkUnfiltered (containsLit "<pre><code></code></pre>")
+          ("empty rendered code block " ^
+           "(likely a fence around silent polyscripter setup)");
+        checkFiltered (containsLit "class=\"language-{=")
+          "{=fmt} raw block reached mdbook (smdpp didn't strip it)";
+        checkFiltered hasMacroDefLeak
+          "LaTeX macro-definition command leaked into mdbook";
+        checkFiltered hasEnvLeak
+          "LaTeX environment leaked into mdbook";
+        checkFiltered hasDoubleHash
+          "double-hash URL (sidebar rewrite picked up an anchored ancestor)";
+        checkFiltered (containsLit "<i class=\"fa fa-")
+          "FA4 webfont icon syntax leaked from theme template"
+      end
+
+    (* Enumerate `<bookDir>/*.html`, excluding print.html, in
+       lexicographic order (matching the shell glob). *)
+    fun listHtml dir =
+      let
+        val d = OS.FileSys.openDir dir
+        fun loop acc =
+          case OS.FileSys.readDir d of
+              NONE => acc
+            | SOME name =>
+                if String.isSuffix ".html" name andalso name <> "print.html"
+                then loop (name :: acc)
+                else loop acc
+        val raw = loop []
+        val () = OS.FileSys.closeDir d
+      in Listsort.sort String.compare raw end
+
+    val failRef = ref false
+    val () =
+      List.app
+        (fn name => checkHtmlFile (OS.Path.concat (bookDir, name)) failRef)
+        (listHtml bookDir)
+  in
+    if !failRef then
+      (TextIO.output (TextIO.stdErr,
+        "mdbook-check: rendered-HTML leaks detected (see hits above).\n");
+       OS.Process.exit OS.Process.failure)
+    else
+      (print "mdbook-check: OK\n";
+       OS.Process.exit OS.Process.success)
+  end
+
 (* ===== render-bib sub-command =====
    Scans the supplied .smd files for `\cite[loc]{keys}` call-sites,
    runs pandoc citeproc once over a synthetic markdown doc with one
@@ -2639,6 +2922,7 @@ fun smdppMain () =
     | "supports" :: _ => OS.Process.exit OS.Process.failure
     | ["check-refs", bookDir] => checkRefsMain bookDir
     | ["check-links", bookDir] => checkLinksMain bookDir
+    | ["check-html", bookDir] => checkHtmlMain bookDir
     | "render-bib" :: bib :: csl :: smds =>
         if List.null smds then
           die "Usage: smdpp render-bib BIB CSL SMD..."
@@ -2666,6 +2950,7 @@ fun smdppMain () =
                 " [supports <renderer> |\
                 \ check-refs <book-dir> |\
                 \ check-links <book-dir> |\
+                \ check-html <book-dir> |\
                 \ render-bib <bib> <csl> <smd>... |\
                 \ dump-labels <book-dir>]")
 

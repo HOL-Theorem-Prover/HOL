@@ -152,7 +152,7 @@ From the manual's directory:
 
 | Target                          | Effect                                                                  |
 |---------------------------------|-------------------------------------------------------------------------|
-| `Holmake mdbook`                | Generate `SUMMARY.md`, `references.md`, `cite-labels.tsv`, and `labels.tsv`; run `mdbook build`; then `mdbook-check.sh` + `smdpp check-refs` + `smdpp check-links`. |
+| `Holmake mdbook`                | Generate `SUMMARY.md`, `references.md`, `cite-labels.tsv`, and `labels.tsv`; run `mdbook build`; then `smdpp check-html` + `smdpp check-refs` + `smdpp check-links`. |
 | `Holmake <manual>.pdf`          | Generate `chapters-include.tex` + `book-title.tex` + per-chapter `.tex`, then `latexmk` (followed by an explicit trailing `pdflatex` pass for stubborn `.toc` convergence — see any manual's Holmakefile recipe for the rationale). |
 | `Holmake mdbook-serve LOG=1`    | Background `mdbook serve` with live-reload on a manual-specific port: Description 3000, Tutorial 3001, Reference 3003, Interaction (emacs) 3004. (Port 3002 is reserved for the unified site — see below.) |
 | `Holmake <chapter>.md`          | Run polyscripter on one chapter (per-chapter session — does **not** exercise the shared-session gotchas). |
