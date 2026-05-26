@@ -301,7 +301,10 @@ Definition lex_str_def:
   if c <> #"\\" then
     if c = #"\"" then
       SOME (Str (REVERSE acc), cs)
-    else lex_str cs (c::acc)
+    else
+      if ORD c < 32 then
+        NONE
+      else lex_str cs (c::acc)
   else
     case lex_escape_innards cs of
     | NONE => NONE
