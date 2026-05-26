@@ -108,15 +108,15 @@ Definition DFA_LANGS_def:
   DFA_LANGS = {dfa_lang M | wf_dfa M}
 End
 
+Definition NFA_LANGS_def:
+  NFA_LANGS = {nfa_lang N | wf_nfa N}
+End
+
 Theorem IN_DFA_LANGS:
   L ∈ DFA_LANGS ⇔ ∃M. wf_dfa M ∧ L = dfa_lang M
 Proof
   simp [DFA_LANGS_def] >> metis_tac[]
 QED
-
-Definition NFA_LANGS_def:
-  NFA_LANGS = {nfa_lang N | wf_nfa N}
-End
 
 Theorem IN_NFA_LANGS:
   L ∈ NFA_LANGS ⇔ ∃N. wf_nfa N ∧ L = nfa_lang N
@@ -349,7 +349,7 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
-(* Execution traces, ie, paths through "NFA computation trees", ie, the      *)
+(* Execution traces, ie, paths through "NFA computation trees". This is the  *)
 (* standard way of formalizing non-determinism for automata.                 *)
 (*---------------------------------------------------------------------------*)
 
@@ -370,8 +370,8 @@ Proof
   Cases_on ‘t’ >> simp [nfa_trace_def]
 QED
 
-Theorem nfa_trace_single_state:
-  nfa_trace N [q] w ⇒ w = []
+Theorem nfa_trace_single_state[simp]:
+  nfa_trace N [q] w ⇔ w = [] ∧ q ∈ N.Q
 Proof
   Cases_on ‘w’ >> gvs[nfa_trace_def]
 QED
@@ -408,10 +408,12 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
-(* Instance of a general fact: if a relation holds pairwise through a list,  *)
-(* then it holds pairwise on a splitting of the list, provided the last      *)
-(* element of the prefix is related to the first element of the suffix.      *)
-(* Another example is the following from sortingTheory:                      *)
+(* The following two theorems are instances of a general fact: a relation    *)
+(* holds pairwise through a list iff it holds for prefixes and suffixes of   *)
+(* the list. (Going from prefixes and suffixes with the property to the      *)
+(* property holding for "prefix ++ suffix" requires that the last element    *)
+(* of the prefix is related to the first element of the suffix.) A prime     *)
+(* example of this general fact is the following from sortingTheory:         *)
 (*                                                                           *)
 (* Theorem SORTED_APPEND_GEN:                                                *)
 (*   SORTED R (L1 ++ L2) <=>                                                 *)
@@ -432,18 +434,15 @@ Theorem nfa_trace_appendA:
         HD qs2 ∈ N.delta (LAST qs1) a
 Proof
   disch_tac >> Induct >> rw [] >>
-  Cases_on ‘qs2’ >> Cases_on ‘qs1’ >> gvs [] >> rw []
-  >- (Cases_on ‘w’ >> gvs [nfa_trace_def] >>
-      rename [‘a ∈ N.Sigma’, ‘q2 ∈ N.delta q1 a’,
-              ‘nfa_trace N (q2::qs) w’] >>
-      ntac 2 (first_assum (irule_at Any)) >>
-      qexists_tac ‘[]’ >> simp [nfa_trace_def]) >>
-  Cases_on ‘w’ >> gvs [nfa_trace_def] >>
-  rename [‘a ∈ N.Sigma’, ‘q2 ∈ N.delta q1 a’,
-          ‘nfa_trace N (q2::(qs1' ++ q3::qs2')) w’] >>
+  Cases_on ‘w’ >> gvs [] >> rename1 ‘a::w’ >>
+  Cases_on ‘qs1’ >> gvs []
+  >- (Cases_on ‘qs2’ >> gvs [nfa_trace_def] >>
+      ntac 2 (first_assum (irule_at Any)) >> simp []) >>
+  gvs [nfa_trace_def] >>
   first_x_assum drule >> rw[] >>
+  disj2_tac >>
   ntac 2 (first_assum (irule_at Any)) >>
-  qexists_tac ‘a::w1’ >> simp [] >>
+  qexists_tac ‘a::w1’ >>
   simp [nfa_trace_def]
 QED
 
@@ -459,20 +458,18 @@ Theorem nfa_trace_appendB:
 Proof
   disch_tac >> Induct >> rw [nfa_trace_def] >>
   Cases_on ‘qs1’ >> gvs [nfa_trace_def] >> rw []
-  >- (imp_res_tac nfa_trace_single_state >> gvs [] >>
-      Cases_on ‘qs2’ >> gvs [nfa_trace_def]) >>
+  >- (Cases_on ‘qs2’ >> gvs [nfa_trace_def]) >>
   Cases_on ‘w1’ >> gvs [nfa_trace_def]
 QED
 
 Theorem nfa_trace_step:
   wf_nfa N ⇒
    (nfa_trace N (qs ++ [q]) (w ++ [a])
-     <=>
+     ⇔
     nfa_trace N qs w ∧ a ∈ N.Sigma ∧ q ∈ N.delta (LAST qs) a)
 Proof
- disch_tac >> eq_tac >> disch_tac
+ rpt (disch_tac ORELSE eq_tac)
  >- (imp_res_tac nfa_trace_appendA >> gvs [] >>
-     imp_res_tac nfa_trace_single_state >> gvs [] >>
      rev_drule_all nfa_trace_symbols >> simp [IN_DEF])
  >- (irule nfa_trace_appendB >> rw [] >>
      subgoal ‘LAST qs ∈ N.Q’ >-
@@ -482,25 +479,30 @@ Proof
      metis_tac [wf_nfa_def,SUBSET_DEF])
 QED
 
+(*---------------------------------------------------------------------------*)
+(* Relationship between nfa_eval and traces                                  *)
+(*---------------------------------------------------------------------------*)
+
 Theorem nfa_eval_trace:
   wf_nfa N ⇒
   ∀w qset.
     EVERY N.Sigma w ∧ qset ⊆ N.Q
     ⇒ nfa_eval N qset w = {LAST qs | nfa_trace N qs w ∧ HD qs ∈ qset}
 Proof
-  strip_tac >> recInduct SNOC_INDUCT >> rw[]
-  >- (simp [nfa_eval_def] >> rw [EXTENSION,EQ_IMP_THM]
-      >- (qexists_tac ‘[x]’ >> gvs [nfa_trace_def,SUBSET_DEF]) >>
-      gvs []) >>
+  disch_tac >> recInduct SNOC_INDUCT >> rw[]
+  >- (simp [nfa_eval_def] >>
+      rw [EXTENSION,PULL_EXISTS] >>
+      metis_tac[SUBSET_DEF]) >>
   simp [SNOC_APPEND, nfa_eval_append] >>
   simp [nfa_eval_def] >> rename1 ‘w ++ [a]’ >>
-  simp [EXTENSION,IN_Delta] >> rw [EQ_IMP_THM]
+  simp [EXTENSION,IN_Delta,PULL_EXISTS] >>
+  rw [EQ_IMP_THM]
   >- (rename1 ‘q ∈ N.delta (LAST qs) a’ >>
-      irule_at Any (iffRL nfa_trace_step) >> simp [] >>
+      irule_at Any (iffRL nfa_trace_step) >>
+      simp [] >>
       rpt (first_assum (irule_at Any)) >>
       imp_res_tac nfa_trace_nonempty >>
       simp [] >> simp [IN_DEF]) >>
-  simp [PULL_EXISTS] >>
   drule_all nfa_trace_dest_states >> rw [] >>
   gvs [nfa_trace_step] >>
   first_assum (irule_at (Pos hd)) >> simp [] >>
@@ -548,42 +550,11 @@ Proof
       metis_tac[nfa_trace_symbols])
 QED
 
-Theorem LANG_EQUIVS:
-  DFA_LANGS = NFA_LANGS ∧
-  NFA_LANGS = NFA_TRACE_LANGS
+Theorem LANG_EQUIV:
+  DFA_LANGS = NFA_LANGS ∧ NFA_LANGS = NFA_TRACE_LANGS
 Proof
   simp [NFA_LANGS_EQ_DFA_LANGS] >>
   simp [EXTENSION] >>
-  simp [IN_NFA_LANGS, IN_NFA_TRACE_LANGS] >>
+  simp [IN_NFA_LANGS,IN_NFA_TRACE_LANGS] >>
   metis_tac [nfa_lang_equal]
 QED
-
-(*
-fun biginter equiv lol =
-    let val inter = op_intersect equiv
-    in itlist inter lol []
-    end
-
-fun CONJ_GOALS gl =
-  let val val n = length gl
-      val asl_kernel = biginter aconv (map fst gl)
-      fun disch_extras (asl,g) =
-          let val extras = op_set_diff aconv asl asl_kernel
-              val qvars =
-          in list_mk_imp(extras,g)
-          end
-      val gl' = [(asl_kernel, list_mk_conj (map disch_extras gl))]
-      fun vfn (ask,g')
-*)
-
-(*
-Definition foo_def:
-  foo s i = if LENGTH s ≤ i then NONE else SOME (9:num, i + 1)
-End
-
-Definition bar_def:
-  bar x s i = case foo s i of
-                NONE => SOME (x, i)
-              | SOME (y, j) => bar 0 s j
-End
-*)

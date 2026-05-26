@@ -5,15 +5,13 @@ recognized by DFAs are equal to the languages recognized by NFAs. This
 was first proved by Michael Rabin and Dana Scott in *Finite automata
 and their decision problems*, IBM Journal of Research and Development
 3(2), 114–125 (1959).  The *subset construction* forms the backbone of
-their proof; it works by mapping an NFA into an "equivalent" DFA.
-
+their proof; it works by translating an NFA into an "equivalent" DFA.
 The key insight is to make a state of the constructed DFA embody the
 states the NFA could possibly be in at a particular stage of
 processing the input word. The construction is conceptually appealing
-but it raises a technical problem: how to somehow arrange
-that the DFA state (a thing of type `:num`) *is* a set of NFA states
-(a thing of type `:num -> bool`). This cannot be accepted by the type
-system of HOL.
+but it raises a technical problem: how to somehow arrange that the DFA
+state (a thing of type `:num`) *is* a set of NFA states (a thing of
+type `:num -> bool`).
 
 ## Encoding subsets
 
@@ -33,7 +31,7 @@ the HOL logic, namely the *Hilbert Choice* operator.
 
 The Hilbert choice operator, written `@x. P x`, is syntax for
 expressing the notion "pick an *x* having property *P*".  (The Hilbert
-choice operator is also called the *Select* operator or even the
+choice operator is also called the *Select* operator or also the
 *Indefinite description* operator.) The Choice operator is a way to
 form a term---intended to have a given property---in a context where
 the property may not in fact hold. The expectation is that, in a
@@ -371,11 +369,11 @@ QED
 ```
 
 This expresses a commutative diagram, stating that evaluating an NFA
-on its input---and encoding the set of states of the resulting
-fringe---is equal to the result of evaluating the DFA constructed from
-the NFA. The proof is a quite straightforward induction on the input
-word `w`.  Things work out nicely since the pattern of recursion of
-both `nfa_eval` and `dfa_eval` is the same. The initial goal is
+on its input---and encoding the resulting set of states---is equal to
+the result of evaluating the DFA constructed from the NFA. The proof
+is a quite straightforward induction on the input word `w`.  Things
+work out well since the pattern of recursion of both `nfa_eval` and
+`dfa_eval` is the same. The initial goal is
 
 ```
   wf_nfa (N:'a nfa) ⇒
@@ -576,9 +574,9 @@ proof.) Now the goal
         dfa_eval (nfa_to_dfa N) (enc (Delta N (dec (enc qset)) h)) w
 ```
 
-remains. This is an equality with a great deal of repeated syntax on each side. In such cases
-`cong_tac : int option -> tactic` can help expose the core problem to be dealt with.
-Invoking
+remains. This is an equality with a great deal of repeated syntax on
+each side. In such cases `cong_tac : int option -> tactic` can help
+expose the core problem to be dealt with.  Invoking
 
 ```
   cong_tac NONE
@@ -637,10 +635,10 @@ val it =
 
 
 The `main_lemma` is used in the proof of language-level equivalence,
-but we will also need a tweaked version where, instead of *encoding*
-the results of NFA evaluation, we *decode* the results of DFA
-evaluation: This is obtained by applying the decoder to both the LHS
-and RHS of `main_lemma` and simplifying.
+but we will also need an alternate version where, instead of
+*encoding* the results of NFA evaluation, we *decode* the results of
+DFA evaluation: This version is obtained by applying the decoder to
+both the LHS and RHS of `main_lemma` and simplifying.
 
 ```
 Theorem main_lemma_alt:
@@ -691,9 +689,7 @@ So, let's have a look. The initial goal is
 ```
   wf_nfa N
   ⇒ ∀w. w ∈ dfa_lang (nfa_to_dfa N) <=> w ∈ nfa_lang N
-
 ```
-
 and invoking
 
 ```
