@@ -47,14 +47,14 @@ entries.tex: entries.md
 # See Manual/Description/Holmakefile for the rationale.
 mdbook: ../book/Reference/index.html
 
-../book/Reference/index.html: ../Tools/smdpp ../Tools/mdbook-check.sh \
+../book/Reference/index.html: ../Tools/smdpp \
         $(Helpd)/Docfiles/SUMMARY.md entries.list \
         labels.tsv $(SIBLING_LABELS)
 	mdbook build
 	# See Manual/Description/Holmakefile for the rationale.
 	cd ../book/Reference && \
 	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
-	../Tools/mdbook-check.sh ../book/Reference
+	../Tools/smdpp check-html ../book/Reference
 	../Tools/smdpp check-refs ../book/Reference
 	../Tools/smdpp check-links ../book/Reference || true
 # Reference entries' hand-curated "See also" sections reference the

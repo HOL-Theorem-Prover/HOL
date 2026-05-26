@@ -59,9 +59,9 @@ figs/%.svg: figs/%.pdf
 
 # Build the mdbook output for the chapters listed in SUMMARY.md;
 # afterwards, scan the rendered HTML for raw-LaTeX leak patterns
-# that have caused mdbook regressions before (see
-# mdbook-check.sh).  The smdpp preprocessor is invoked dynamically
-# by mdbook (see book.toml).
+# that have caused mdbook regressions before (see `smdpp
+# check-html`).  The smdpp preprocessor is invoked dynamically by
+# mdbook (see book.toml).
 #
 # `mdbook build` invokes smdpp which polyscripter-runs each .smd
 # in-memory; the per-chapter .md rules below carry the theory-build
@@ -79,7 +79,7 @@ figs/%.svg: figs/%.pdf
 mdbook: ../book/Description/index.html
 
 ../book/Description/index.html: ../Tools/smdpp SUMMARY.md \
-        ../Tools/mdbook-check.sh $(SMD_MDS) \
+        $(SMD_MDS) \
         $(SVG_FIGS) references.md cite-labels.tsv \
         ../Reference/entries.list \
         labels.tsv $(SIBLING_LABELS)
@@ -90,7 +90,7 @@ mdbook: ../book/Description/index.html
 	# whenever content changes.  Resolve the hash here.
 	cd ../book/Description && \
 	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
-	../Tools/mdbook-check.sh ../book/Description
+	../Tools/smdpp check-html ../book/Description
 	../Tools/smdpp check-refs ../book/Description
 	../Tools/smdpp check-links ../book/Description
 

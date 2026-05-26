@@ -66,7 +66,7 @@ figs/combin-confluence-complete.svg: figs/combin-confluence-complete.tex
 mdbook: ../book/Tutorial/index.html
 
 ../book/Tutorial/index.html: ../Tools/smdpp SUMMARY.md \
-        ../Tools/mdbook-check.sh $(SMD_MDS) \
+        $(SMD_MDS) \
         $(SVG_FIGS) references.md cite-labels.tsv \
         ../Reference/entries.list \
         labels.tsv $(SIBLING_LABELS)
@@ -74,7 +74,7 @@ mdbook: ../book/Tutorial/index.html
 	# See Manual/Description/Holmakefile for the rationale.
 	cd ../book/Tutorial && \
 	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
-	../Tools/mdbook-check.sh ../book/Tutorial
+	../Tools/smdpp check-html ../book/Tutorial
 	../Tools/smdpp check-refs ../book/Tutorial
 	../Tools/smdpp check-links ../book/Tutorial
 

@@ -2087,11 +2087,10 @@ fun checkRefsMain bookDir =
 (* ===== check-html sub-command =====
 
    Lint the rendered mdbook output for raw-LaTeX and other "leak"
-   patterns that should never reach published HTML.  This replaces
-   the old Manual/Tools/mdbook-check.sh: reading each *.html once
-   and applying all 17 checks in a single pass beats one grep
-   subprocess per (pattern, file), which dominated wall time for
-   the Reference manual's hundreds of entries.
+   patterns that should never reach published HTML.  Each *.html
+   is read once and all 17 patterns are applied in a single pass
+   -- one grep subprocess per (pattern x file) would dominate wall
+   time at the Reference manual's hundreds of entries.
 
    Lines containing any of `$`, `MathJax`, `worda:`, `wordb:`,
    `wordc:`, `term:`, `type:`, `holtxt:`, `textsl:`, `<!--`,
@@ -2302,8 +2301,6 @@ fun checkHtmlMain bookDir =
         fun checkUnfiltered test description =
           report description (collect false test)
       in
-        (* Order matches mdbook-check.sh:66-143 exactly so diffs
-           against the old shell output stay clean. *)
         checkFiltered (containsLit "\\texttt{")        "raw \\texttt{} leak";
         checkFiltered hasTextbarLeak                   "raw \\textbar leak";
         checkFiltered (containsLit "\\textasciitilde")
