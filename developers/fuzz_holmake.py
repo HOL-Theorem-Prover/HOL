@@ -381,6 +381,58 @@ def tree_token(t: Path, taken: set[str]) -> str:
     return f"{base}-{h}"
 
 
+def tree_tokens_for(trees: list[Path]) -> dict[Path, str]:
+    taken: set[str] = set()
+    mapping: dict[Path, str] = {}
+    for t in trees:
+        tok = tree_token(t, taken)
+        taken.add(tok)
+        mapping[t] = tok
+    return mapping
+
+
+# ── starting-state snapshot (restored on exit) ───────────────────────
+
+def _starting_state_dir(cfg: "Config") -> Path:
+    return cfg.tmp_dir / "starting_state"
+
+
+def snapshot_starting_state(cfg: "Config") -> None:
+    """Snapshot every --tree + cache_dir BEFORE anything mutates them.
+
+    Restored on fuzzer exit (natural, --on-failure stop, SIGQUIT, or
+    Python exception), so the user's working checkouts end the
+    session exactly as they began it. Snapshotting before
+    clean_make_deps and before the baseline build means the user
+    lands back at their pre-fuzz state, not the post-baseline-build
+    state.
+    """
+    snap = _starting_state_dir(cfg)
+    if snap.exists():
+        shutil.rmtree(snap)
+    snap.mkdir(parents=True)
+    for t, tok in tree_tokens_for(cfg.trees).items():
+        clone_tree(t, snap / tok, cfg.snap_method)
+    clone_tree(cfg.cache_dir, snap / "_cache", cfg.snap_method)
+
+
+def restore_starting_state(cfg: "Config") -> None:
+    snap = _starting_state_dir(cfg)
+    if not snap.exists():
+        return
+    print("[fuzz] restoring trees + cache to pre-fuzz state ...")
+    try:
+        for t, tok in tree_tokens_for(cfg.trees).items():
+            tree_snap = snap / tok
+            if tree_snap.exists():
+                restore_tree(tree_snap, t, cfg.snap_method)
+        cache_snap = snap / "_cache"
+        if cache_snap.exists():
+            restore_tree(cache_snap, cfg.cache_dir, cfg.snap_method)
+    except Exception as e:
+        print(f"[fuzz] WARN: restore failed: {e}", file=sys.stderr)
+
+
 def _stream_with_pty(cmd: list[str], cwd: str, log_path: Path) -> int:
     """Run cmd in a pty so it sees a TTY; tee output to stdout + log.
 
@@ -836,34 +888,40 @@ def main(argv: list[str]) -> int:
     print(f"[fuzz] interrupts   = Ctrl-C fails current round; "
           f"Ctrl-\\ aborts the campaign")
 
-    n = clean_make_deps(cfg.trees)
-    print(f"[fuzz] cleared {n} stale .hol/make-deps/ dir(s) before baseline")
+    print("[fuzz] snapping starting state (restored on exit) ...")
+    snapshot_starting_state(cfg)
 
-    rc = baseline(cfg)
-    if rc != 0:
-        return rc
+    try:
+        n = clean_make_deps(cfg.trees)
+        print(f"[fuzz] cleared {n} stale .hol/make-deps/ dir(s) before baseline")
 
-    detect_missing_trees(cfg)
+        rc = baseline(cfg)
+        if rc != 0:
+            return rc
 
-    rng = random.Random(cfg.seed)
-    failures = 0
-    for i in range(1, cfg.runs + 1):
-        ok, run_id, no_cache = do_round(cfg, rng, i)
-        status = "OK" if ok else "FAIL"
-        cache_tag = "no-cache" if no_cache else "cached"
-        print(f"[fuzz] round {i}/{cfg.runs} ({run_id}, {cache_tag}) -> {status}")
-        if not ok:
-            failures += 1
-            if cfg.on_failure == "stop":
-                print("[fuzz] --on-failure stop; exiting.")
+        detect_missing_trees(cfg)
+
+        rng = random.Random(cfg.seed)
+        failures = 0
+        for i in range(1, cfg.runs + 1):
+            ok, run_id, no_cache = do_round(cfg, rng, i)
+            status = "OK" if ok else "FAIL"
+            cache_tag = "no-cache" if no_cache else "cached"
+            print(f"[fuzz] round {i}/{cfg.runs} ({run_id}, {cache_tag}) -> {status}")
+            if not ok:
+                failures += 1
+                if cfg.on_failure == "stop":
+                    print("[fuzz] --on-failure stop; exiting.")
+                    return 1
+            if _interrupted["campaign"]:
+                print(f"[fuzz] campaign aborted by user after round {i}; "
+                      f"failures={failures}/{i}")
                 return 1
-        if _interrupted["campaign"]:
-            print(f"[fuzz] campaign aborted by user after round {i}; "
-                  f"failures={failures}/{i}")
-            return 1
 
-    print(f"[fuzz] done. failures={failures}/{cfg.runs}")
-    return 0 if failures == 0 else 2
+        print(f"[fuzz] done. failures={failures}/{cfg.runs}")
+        return 0 if failures == 0 else 2
+    finally:
+        restore_starting_state(cfg)
 
 
 if __name__ == "__main__":
