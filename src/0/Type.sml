@@ -133,10 +133,14 @@ local open KernelTypes KernelSig
 in
 fun break_type (Tyapp p) = p | break_type _ = raise ERR "break_type" "";
 
-fun dest_thy_type (Tyapp((tyc,_),A)) = {Thy=seg_of tyc,Tyop=name_of tyc,Args=A}
+fun dest_thy_type (Tyapp((tyc,_),A)) =
+    {Thy = seg_of tyc, Tyop = display_name_of_id tyc, Args = A}
   | dest_thy_type _ = raise ERR "dest_thy_type" "";
 
-fun dest_type (Tyapp((tyc,_),A)) = (name_of tyc, A)
+fun dest_type (ty as Tyapp _) =
+    let val {Tyop,Args,...} = dest_thy_type ty
+    in (Tyop, Args)
+    end
   | dest_type _ = raise ERR "dest_type" ""
 end;
 

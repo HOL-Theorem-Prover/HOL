@@ -22,7 +22,7 @@ sig
   val thm_pp_prefix           : string ref
   val thm_pp_suffix           : string ref
   val goal_line               : string ref
-  val old                     : string -> string
+  val oldify                  : int -> string -> string
   val pp_flags                : {show_types         : bool ref,
                                  show_numeral_types : bool ref}
 

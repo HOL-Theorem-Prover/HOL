@@ -210,16 +210,18 @@ fun mk_abs(v, body) =
 fun dest_var (Var p) = p
   | dest_var _ = raise ERR "dest_var" "Term not a variable"
 
-fun dest_const(Const(r, ty)) = (KernelSig.name_of r, ty)
-  | dest_const _ = raise ERR "dest_const" "Term not a constant"
+fun dest_thy_const (Const(id,ty)) =
+      let open KernelSig in
+        {Thy = seg_of id, Name = display_name_of_id id, Ty = ty}
+      end
+  | dest_thy_const _ = raise ERR"dest_thy_const" "not a const"
 
-fun dest_thy_const t = let
-  open KernelSig
-in
-  case t of
-    Const(r, ty) => {Thy = seg_of r, Name = name_of r, Ty = ty}
-  | _ => raise ERR "dest_thy_const" "Term not a constant"
-end
+fun dest_const (c as Const _) =
+    let val {Name,Ty,...} = dest_thy_const c
+    in
+      (Name,Ty)
+    end
+  | dest_const _ = raise ERR "dest_const" "not a const"
 
 fun dest_comb(App p) = p
   | dest_comb _ = raise ERR "dest_comb" "Term not a comb"

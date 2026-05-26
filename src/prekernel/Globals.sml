@@ -128,18 +128,10 @@ val checking_const_names = ref true
 
 (* ----------------------------------------------------------------------
     The syntax used to highlight out-of-date constants in the
-    prettyprinters for types and terms - must generate unique names
-    because this determines the name of out-of-date constants, which
-    might otherwise overlap, and be identified.
+    prettyprinters for types and terms
    ---------------------------------------------------------------------- *)
 
-val old =
-   let
-      val c = ref 0
-   in
-      fn s => String.concat ["old", Int.toString (!c), "->", s, "<-old"] before
-              c := !c + 1
-   end
+fun  oldify n s = String.concat ["old", Int.toString n, "->", s, "<-old"]
 
 val print_thy_loads = ref false
 

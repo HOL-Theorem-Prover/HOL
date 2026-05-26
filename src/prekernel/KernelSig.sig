@@ -17,6 +17,8 @@ sig
   val retire_epoch : unit -> int
   val name_of : kernelid -> string
   val seg_of : kernelid -> string
+  val epoch_of : kernelid -> int
+  val display_name_of_id : kernelid -> string  (* oldified iff retired *)
 
   type 'a symboltable
   datatype 'a symtab_error = Success of 'a

@@ -146,39 +146,61 @@ in
   app rm ["sml", "sig", "dat"]
 end
 
-exception InternalDie
-fun test f x = f x orelse raise InternalDie
+exception InternalDie of string
+fun test nm f x = f x orelse raise InternalDie nm
 fun oldconstants_test() = let
   val _ = tprint "Identity of old constants test"
+  val tab = ref Termtab.empty
+  val new_definition = fn (s,t) =>
+    let val th = new_definition(s,t)
+    in
+       tab := Termtab.update(lhs (concl th), th) (!tab);
+       th
+    end
   val defn1_t = mk_eq(mk_var("foo", bool), boolSyntax.T)
   val defn2_t = mk_eq(mk_var("foo", bool), boolSyntax.F)
   val defn1 = new_definition("foo", defn1_t)
   val defn2 = new_definition("foo2", defn2_t)
   val defn3 = new_definition("foo3", defn1_t)
+  val _ = Termtab.size (!tab) = 3 orelse raise InternalDie "Table.size = 3"
   val c1 = lhs (concl defn1)
   val c2 = lhs (concl defn2)
   val c3 = lhs (concl defn3)
-  val _ = test (fn (c1,c2) => Term.compare(c1, c2) <> EQUAL) (c1, c2)
-  val _ = test (not o uncurry aconv) (c1, c2)
-  val _ = test (not o uncurry aconv) (c1, c3)
-  val _ = test (not o uncurry aconv) (c2, c3)
-  val _ = test (String.isPrefix "old" o #Name o dest_thy_const) c1
-  val _ = test (String.isPrefix "old" o #Name o dest_thy_const) c2
+  val _ = List.app (fn k => tab := Termtab.delete k (!tab)) [c1,c2,c3]
+                   handle Termtab.UNDEF _ =>
+                          raise InternalDie "Termtab.delete safe"
+  val _ = test "c1<c2" (fn (c1,c2) => Term.compare(c1, c2) = LESS) (c1, c2)
+  val _ = test "c2<c3" (fn (c1,c2) => Term.compare(c1, c2) = LESS) (c2, c3)
+  val _ = test "c1 ~~ c2" (not o uncurry aconv) (c1, c2)
+  val _ = test "c1 ~~ c3" (not o uncurry aconv) (c1, c3)
+  val _ = test "c2 ~~ c3" (not o uncurry aconv) (c2, c3)
+  val _ = test "c1 = \"old..\""
+               (String.isPrefix "old" o #Name o dest_thy_const) c1
+  val _ = test "c2 = \"old..\""
+               (String.isPrefix "old" o #Name o dest_thy_const) c2
   val _ = new_theory "foo"
   val defn1 = new_definition("c", mk_eq(mk_var("c", bool), boolSyntax.T))
   val _ = new_theory "foo"
   val defn2 = new_definition("c", mk_eq(mk_var("c", bool), boolSyntax.T))
   val c1 = lhs (concl defn1)
   val c2 = lhs (concl defn2)
-  val _ = test (fn (c1, c2) => Term.compare(c1,c2) <> EQUAL) (c1, c2)
-  val _ = test (not o uncurry aconv) (c1, c2)
+  val _ = test "rebound c1=c2"
+               (fn (c1, c2) => Term.compare(c1,c2) <> EQUAL) (c1, c2)
+  val _ = test "rebound c1~~c2" (not o uncurry aconv) (c1, c2)
 in
   OK();
   cleanup()
 end handle e => (cleanup(); raise e)
 
 val _ = testutils.quietly oldconstants_test ()
-    handle InternalDie => die "Internal test failed";
+    handle InternalDie s => die ("Internal test failed: "^s);
+
+val _ = tprint "Checking type operator name identity thru deletion"
+val _ = new_type ("foo", 1)
+val foo1_ty = mk_type("foo", [bool])
+val _ = new_type ("foo", 1);
+val foo2_ty = mk_type("foo", [bool])
+val _ = require (check_result (equal LESS)) Type.compare (foo1_ty, foo2_ty)
 
 val _ = tprint "Testing functional-pretype 1 (pattern)"
 val _ = require (check_result (fn _ => true)) Parse.Term `x <> y ==> x <> y`
@@ -593,7 +615,7 @@ val _ = let
   val ((nm1,th1), (nm2, th2)) =
       case readresult of
           [x,y] => (x,y)
-        | _ => raise InternalDie
+        | _ => raise InternalDie "Read has bad list"
 in
   if nm1 = "AND_CLAUSES" andalso nm2 = "OR_CLAUSES" andalso
      aconv (th1 |> concl) (concl boolTheory.AND_CLAUSES) andalso
@@ -601,7 +623,7 @@ in
   then
     OK()
   else die ""
-end handle InternalDie => die ""
+end handle InternalDie s => die s
 
 val _ = let
   val _ = tprint "REWRITE with T (if this appears to hang it has failed)"
@@ -745,12 +767,12 @@ val _ = let
   val _ = tprint "Removing type abbreviation"
   val _ = quietly temp_type_abbrev_pp ("foo", ``:'a -> bool``)
   val s1 = type_to_string ``:bool -> bool``
-  val _ = s1 = ":bool foo" orelse raise InternalDie
+  val _ = s1 = ":bool foo" orelse raise InternalDie "type wrong"
   val _ = temp_remove_type_abbrev "foo"
   val s2 = type_to_string ``:bool -> bool``
 in
   if s2 = ":bool -> bool" then OK() else die ""
-end handle InternalDie => die ""
+end handle InternalDie s => die s
 
 fun nc (s,ty) =
   (quietly new_constant(s,ty); prim_mk_const{Name = s, Thy = current_theory()})
@@ -796,13 +818,14 @@ val _ = let
   val (sgs, vf) = POP_ASSUM irule g
   val rth = vf (map mk_thm sgs)
   val _ = aconv (concl rth) (#2 g) andalso length (hyp rth) = 1 andalso
-          aconv (hd (hyp rth)) (hd (#1 g)) orelse raise InternalDie
+          aconv (hd (hyp rth)) (hd (#1 g)) orelse
+          raise InternalDie "aconvs wrong"
 in
   case sgs of
       [([], sg)] => if aconv sg ``^P (b:'a)`` then OK()
                     else die ""
     | _ => die ""
-end handle InternalDie => die ""
+end handle InternalDie s => die s
 
 val _ = let
   val _ = tprint "irule 4 (thm from goal, extra vars)"
