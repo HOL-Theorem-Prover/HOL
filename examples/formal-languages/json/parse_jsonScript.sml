@@ -372,7 +372,7 @@ End
 
 
 Definition lex_leading_zeroes_def:
-  lex_leading_zeroes [] (acc:num) = (NONE, []) /\
+  lex_leading_zeroes [] (acc:num) = (if acc > 0 then SOME (acc-1, 0) else NONE, []) /\
   (lex_leading_zeroes (c::cs) acc =
     if c = #"0"
     then lex_leading_zeroes cs (acc+1)
@@ -380,44 +380,70 @@ Definition lex_leading_zeroes_def:
       (( \ (a, b). if a = 0 then (if acc > 0 then (SOME (acc-1, a), b) else (NONE, b)) else (SOME (acc, a), b)) (lex_num (c::cs) 0)))
 End
 
+Definition is_next_digit_def:
+  is_next_digit cs =
+    case cs of
+    | (c'::cs') => isDigit c'
+    | [] => F
+End
+
 Definition lex_frac_def:
-  lex_frac [] = (NONE, []) /\
+  lex_frac [] = SOME (NONE, []) /\
   (lex_frac (c::cs) =
     if c = #"." then
-     lex_leading_zeroes cs 0
-    else (NONE, c::cs))
+      if is_next_digit cs then
+        SOME $ lex_leading_zeroes cs 0
+      else NONE
+    else SOME (NONE, c::cs))
 End
 
 Definition lex_plus_def:
-  lex_plus [] = (NONE, []) /\
+  lex_plus [] = SOME (NONE, []) /\
   (lex_plus (c::cs) =
     if c = #"+" then
-     (case lex_int cs of
-         | SOME (int, cs') => (SOME int, cs')
-         | NONE => (NONE, c::cs))
+      if is_next_digit cs then
+        let (num, cs') = lex_num cs 0 in
+        SOME (SOME (Positive, num), cs')
+      else NONE
     else
-     (case lex_int (c::cs) of
-         | SOME (int, cs') => (SOME int, cs')
-         | NONE => (NONE, c::cs)))
+      if isDigit c \/ c = #"-" then
+        (case lex_int (c::cs) of
+         | SOME (int, cs') => SOME (SOME int, cs')
+         | NONE => SOME (NONE, c::cs))
+      else NONE)
 End
 
 Definition lex_exp_def:
-  lex_exp [] = (NONE, []) /\
+  lex_exp [] = SOME (NONE, []) /\
   (lex_exp (c::cs) =
     if (c = #"e" \/ c = #"E") then
      lex_plus cs
-    else (NONE, c::cs))
+    else SOME (NONE, c::cs))
+End
+
+Definition has_leading_zero_def:
+  has_leading_zero [] = F /\
+  has_leading_zero (c::[]) = F /\
+  has_leading_zero (c::c'::cs) =
+    if c = #"0" then isDigit c'
+    else if c' = #"-" then is_next_digit cs else F
 End
 
 Definition lex_sci_def:
   lex_sci [] = NONE /\
   (lex_sci (c::cs) =
-    case lex_int (c::cs) of
-    | SOME (integer, cs') =>
-      let (frac_opt, cs'') = lex_frac cs' in
-      let (exp_opt, cs''') = lex_exp cs'' in
-        SOME ((integer, frac_opt, exp_opt), cs''')
-    | NONE => NONE)
+    if ~has_leading_zero (c::cs) then
+      case lex_int (c::cs) of
+      | SOME (integer, cs') =>
+       (case lex_frac cs' of
+        | SOME (frac_opt, cs'') =>
+         (case lex_exp cs'' of
+          | SOME (exp_opt, cs''') =>
+            SOME ((integer, frac_opt, exp_opt), cs''')
+          | NONE => NONE)
+        | NONE => NONE)
+      | NONE => NONE
+    else NONE)
 End
 
 Theorem lex_num_SUFFIX:
@@ -481,21 +507,22 @@ Theorem lex_leading_zeroes_SUFFIX:
 Proof
   Induct
   >> (rw[lex_leading_zeroes_def])
+  >- (fs[IS_SUFFIX_APPEND])
   >- (
-    fs[IS_SUFFIX_APPEND,lex_leading_zeroes_def]
-    >> Cases_on `cs`
-    >- (fs[lex_leading_zeroes_def])
-    >> first_x_assum $ qspec_then `n+1` strip_assume_tac
-    >> qexists_tac ‘STRCAT "0" l’
-    >> gvs[])
+    fs[IS_SUFFIX_APPEND]
+    >> qpat_x_assum ‘_’ (fn thm => assume_tac $ Q.SPEC ‘n+1’ thm)
+    >> gs[]
+    >> qexists_tac ‘STRING #"0" l’
+    >> gs[])
   >> fs[IS_SUFFIX_APPEND,lex_leading_zeroes_def]
   >> Cases_on ‘n > 0’
   >> (fs[])
-  >> Cases_on `lex_num (STRING h cs) 0`
-  >> imp_res_tac lex_num_SUFFIX
-  >> gvs[IS_SUFFIX_APPEND]
-  >> Cases_on ‘q = 0’
-  >> (fs[])
+  >> (
+    Cases_on `lex_num (STRING h cs) 0`
+    >> imp_res_tac lex_num_SUFFIX
+    >> gvs[IS_SUFFIX_APPEND]
+    >> Cases_on ‘q = 0’
+    >> (fs[]))
 QED
 
 Theorem lex_leading_zeroes_LENGTH:
@@ -509,7 +536,7 @@ Proof
 QED
 
 Theorem lex_frac_SUFFIX:
-  !cs v. lex_frac cs = v ==> IS_SUFFIX cs $ SND v
+  !cs v. lex_frac cs = SOME v ==> IS_SUFFIX cs $ SND v
 Proof
   rpt strip_tac
   >> Cases_on `cs`
@@ -523,7 +550,7 @@ Proof
 QED
 
 Theorem lex_frac_LENGTH:
-  !cs v. lex_frac cs = v /\ cs <> SND v ==> LENGTH $ SND v < LENGTH cs
+  !cs v. lex_frac cs = SOME v /\ cs <> SND v ==> LENGTH $ SND v < LENGTH cs
 Proof
   rpt strip_tac
   >> Cases_on ‘v’
@@ -540,7 +567,7 @@ Proof
 QED
 
 Theorem lex_plus_LENGTH:
-  !cs v. lex_plus cs = v /\ cs <> SND v ==> LENGTH $ SND v < LENGTH cs
+  !cs v. lex_plus cs = SOME v /\ cs <> SND v ==> LENGTH $ SND v < LENGTH cs
 Proof
   rpt strip_tac
   >> Cases_on `cs`
@@ -548,20 +575,25 @@ Proof
   >> Cases_on `h = #"+"`
   >> (gs[])
   >- (
-    Cases_on `lex_int t`
+    Cases_on `lex_num t 0`
+    >> gvs[]
+    >> imp_res_tac lex_num_SUFFIX
+    >> gvs[IS_SUFFIX_APPEND])
+  >- (
+    Cases_on `lex_int (STRING h t)`
     >> (gvs[])
     >> Cases_on `x`
-    >> imp_res_tac lex_int_SUFFIX
+    >> gvs[]
+    >> imp_res_tac lex_int_LENGTH
     >> gvs[IS_SUFFIX_APPEND])
-  >> Cases_on `lex_int (STRING h t)`
-  >> (gvs[])
-  >> Cases_on `x`
+  >> Cases_on `lex_int (STRING #"-" t)`
+  >> (gvs[AllCaseEqs()])
   >> imp_res_tac lex_int_LENGTH
   >> gvs[IS_SUFFIX_APPEND]
 QED
 
 Theorem lex_exp_LENGTH:
-  !cs v. lex_exp cs = v /\ cs <> SND v ==> LENGTH $ SND v < LENGTH cs
+  !cs v. lex_exp cs = SOME v /\ cs <> SND v ==> LENGTH $ SND v < LENGTH cs
 Proof
   rpt strip_tac
   >> Cases_on `cs`
@@ -591,7 +623,11 @@ Proof
   >> fs[]
   >> Cases_on `lex_frac r`
   >> fs []
+  >> Cases_on `x`
+  >> fs[]
   >> Cases_on `lex_exp r'`
+  >> gvs[]
+  >> Cases_on `x`
   >> gvs[]
   >> Cases_on `STRING h t <> r`
   >> (Cases_on `r <> r'`)
@@ -770,4 +806,3 @@ EVAL ``parse (OUTL $ lex "{\"1\": {\"2\": {\"3\": [{\"4\": {}}]}}}" []) [] T``
 EVAL ``json_to_string $ Object [("a",Array [])]``
 EVAL ``json_to_string $ String "\u0022"``
 *)
-
