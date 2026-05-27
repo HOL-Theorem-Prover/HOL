@@ -418,7 +418,7 @@ Definition lex_plus_def:
       if isDigit c \/ c = #"-" then
         (case lex_int (c::cs) of
          | SOME (int, cs') => SOME (SOME int, cs')
-         | NONE => SOME (NONE, c::cs))
+         | NONE => NONE)
       else NONE)
 End
 
