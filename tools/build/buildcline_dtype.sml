@@ -21,12 +21,17 @@ val default_cache_dir =
       | (NONE, SOME h) => SOME (OS.Path.concat(OS.Path.concat(h, ".cache"), "HOL"))
       | (NONE, NONE) => NONE
 
+(* cache_dir defaults to NONE: caching is opt-in via --use-cache (which
+   the Holmake child sees and translates into cache_dir + cachekey
+   rebuild strategy).  This field is essentially plumbing -- bin/build
+   makes no decisions from it; the actual cache flag propagation is
+   done by extract_cache_args on raw argv. *)
 val initial : t =
     { kernelspec = NONE, jobcount = NONE, seqname = NONE, help = false,
       build_theory_graph = NONE, selftest = NONE, debug = false,
       relocbuild = false, multithread = NONE, keepgoing = false,
       thmsrc = NONE, timelimit = NONE,
-      cache_dir = default_cache_dir
+      cache_dir = NONE
     }
 
 type 'a final_options =

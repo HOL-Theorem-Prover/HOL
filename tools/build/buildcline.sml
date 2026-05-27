@@ -140,9 +140,12 @@ val cline_opt_descrs = [
   {help = "set cache directory", long = ["cache-dir"], short = "",
    desc = ReqArg ((fn s => { update = fn {warn,die,arg} =>
             updateT arg (U #cache_dir (SOME s)) $$ }), "dir")},
-  {help = "disable build caching", long = ["no-cache"], short = "",
+  {help = "disable build caching (default)", long = ["no-cache"], short = "",
    desc = NoArg (fn () => { update = fn {warn,die,arg} =>
             updateT arg (U #cache_dir NONE) $$ })},
+  {help = "enable build caching (passed through to Holmake)",
+   long = ["use-cache"], short = "",
+   desc = NoArg (fn () => { update = fn {warn,die,arg} => arg })},
   {help = "build with experimental kernel", long = ["expk"], short = "",
    desc = setKname "--expk"},
   {help = "build a theory dependency graph", long = ["graph"], short = "",

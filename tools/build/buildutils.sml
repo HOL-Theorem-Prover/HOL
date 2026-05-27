@@ -25,6 +25,7 @@ fun extract_cache_args argv =
   let
     fun loop acc [] = List.rev acc
       | loop acc ("--no-cache" :: rest) = loop ("--no-cache" :: acc) rest
+      | loop acc ("--use-cache" :: rest) = loop ("--use-cache" :: acc) rest
       | loop acc ("--cache-dir" :: v :: rest) =
           loop (v :: "--cache-dir" :: acc) rest
       | loop acc (a :: rest) =

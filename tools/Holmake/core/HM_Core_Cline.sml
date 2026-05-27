@@ -119,9 +119,11 @@ val default_cache_dir =
       | (NONE, SOME h) => SOME (OS.Path.concat(OS.Path.concat(h, ".cache"), "HOL"))
       | (NONE, NONE) => NONE
 
+(* Defaults are conservative: caching off, mtime-based rebuild.
+   Opt into the cache + cachekey machinery with `--use-cache`. *)
 val default_core_options : t =
 {
-  cache_dir = default_cache_dir,
+  cache_dir = NONE,
   cachekey = NONE,
   debug = NONE,
   dirs = false,
@@ -145,7 +147,7 @@ val default_core_options : t =
   opentheory = NONE,
   quiet = false,
   quit_on_failure = true,
-  rebuild = HM_Cachekey_dtype.Cachekey,
+  rebuild = HM_Cachekey_dtype.Mtime,
   rebuild_deps = false,
   recursive_build = false,
   recursive_clean = false,
@@ -266,9 +268,15 @@ val core_option_descriptions = [
   { help = "set cache directory", long = ["cache-dir"], short = "",
     desc = ReqArg (fn s => resfn (fn (wn,t) =>
                updateT t (U #cache_dir (SOME s)) $$), "directory") },
-  { help = "disable build caching", long = ["no-cache"], short = "",
+  { help = "disable build caching (default)", long = ["no-cache"], short = "",
     desc = NoArg (fn () => resfn (fn (wn,t) =>
                updateT t (U #cache_dir NONE) $$)) },
+  { help = "enable build caching: use default cache directory and \
+           \cachekey-based rebuild decisions",
+    long = ["use-cache"], short = "",
+    desc = NoArg (fn () => resfn (fn (wn,t) =>
+               updateT t (U #cache_dir default_cache_dir)
+                         (U #rebuild HM_Cachekey_dtype.Cachekey) $$)) },
   { help = "print cache key for a theory target", long = ["cachekey"],
     short = "", desc = ReqArg (set_cachekey, "theory") },
   { help = "change to DIR before doing anything",
@@ -331,7 +339,7 @@ val core_option_descriptions = [
   { help = "rebuild cached dependency files", short = "",
     long = ["rebuild_deps"], desc = mkBoolT #rebuild_deps },
   { help = "rebuild-decision strategy for theory targets \
-           \(mtime or cachekey [default])",
+           \(mtime [default] or cachekey)",
     short = "", long = ["rebuild"],
     desc = ReqArg (set_rebuild, "strategy") },
   { help = "both --recursive-{build,clean}", short = "r", long = [],

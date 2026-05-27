@@ -18,12 +18,12 @@ sig
 
   val extract_cache_args : string list -> string list
       (* [extract_cache_args argv] picks out the --cache-dir / --no-cache
-         tokens (in either separate or joined form) from [argv] and returns
-         them in argv order, preserving each option's argument.  Used by
-         the build driver to forward only what the user actually wrote,
-         so that a Holmakefile's CLINE_OPTIONS = --no-cache is not silently
-         overridden by a synthesised default --cache-dir at the sub-Holmake
-         command-line. *)
+         / --use-cache tokens (in either separate or joined form) from
+         [argv] and returns them in argv order, preserving each option's
+         argument.  Used by the build driver to forward only what the
+         user actually wrote, so that a Holmakefile's
+         CLINE_OPTIONS = --use-cache (or --no-cache) is not silently
+         overridden at the sub-Holmake command-line. *)
 
 
   val map_dir : (string * string -> unit) -> string -> unit
