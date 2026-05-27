@@ -836,6 +836,8 @@ fun filestr_to_tgt_in_dir base s =
     end
 fun filestr_to_tgt s = filestr_to_tgt_in_dir (hmdir.curdir()) s
 fun tgtexists_readable d = exists_readable (toString d)
+fun tgt_modTime d =
+    SOME (HOLFileSys.modTime (toString d)) handle _ => NONE
 end (* struct *)
 
 type dep = hm_target.t

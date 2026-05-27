@@ -1161,6 +1161,7 @@ in
                     status = if exists_readable fullpath_s then Succeeded
                              else Failed{needed=false},
                     dir = dir, extra = extra,
+                    mtime = hm_target.tgt_modTime tgt,
                     command = NoCmd, dependencies = depnodes} g1
         end
       else if isSome pdep andalso no_full_extra_rule (SOME tgt) then
@@ -1245,6 +1246,7 @@ in
                       status = if needs_building then Pending{needed=false}
                                else Succeeded,
                       extra = extra,
+                      mtime = hm_target.tgt_modTime tgt,
                       command = BuiltInCmd (bic,incinfo), dir = rh,
                       dependencies = depnodes } g3
         end
@@ -1256,6 +1258,7 @@ in
                         status = if exists_readable target_s then Succeeded
                                  else Failed{needed=false},
                         command = NoCmd, dir = rh, extra = extra,
+                        mtime = hm_target.tgt_modTime tgt,
                         dependencies = []} g0
             )
           | SOME {dependencies, commands, ...} =>
@@ -1345,12 +1348,15 @@ in
                       else ()
               val status = if needs_building then Pending{needed=false}
                            else Succeeded
+              val tgt_mtime = if is_phony then NONE
+                              else hm_target.tgt_modTime tgt
               fun foldthis (c, (depnode, seqnum, g)) =
                 let
                   val (g',n) = add_node {target = tgt, seqnum = seqnum,
                                          status = status, phony = is_phony,
                                          command = SomeCmd c, extra = extra,
                                          dir = rh,
+                                         mtime = tgt_mtime,
                                          dependencies = depnode @ depnodes } g
                 in
                   (* This function needs to be folded l-to-r to ensure that
@@ -1373,7 +1379,9 @@ in
                     NONE =>
                     add_node {target = tgt, seqnum = 0, phony = is_phony,
                               status = status, command = NoCmd, extra = extra,
-                              dir = rh, dependencies = depnodes} g1
+                              dir = rh,
+                              mtime = tgt_mtime,
+                              dependencies = depnodes} g1
                   | SOME s =>
                     let
                       val updstatus =
@@ -1387,6 +1395,7 @@ in
                                 command = BuiltInCmd
                                             (BIC_BuildScript fp, incinfo),
                                 dir = actual_dir, extra = extra,
+                                mtime = hm_target.tgt_modTime tgt,
                                 dependencies = depnodes} g1
                     end
             end

@@ -44,14 +44,16 @@ type dir = Holmake_tools.hmdir.t
 type 'a nodeInfo = { target : dep, status : target_status, extra : 'a,
                      command : command, phony : bool,
                      seqnum : int, dir : dir,
-                     dependencies : (node * Holmake_tools.dep) list  }
+                     dependencies : (node * Holmake_tools.dep) list,
+                     mtime : Time.time option }
 
 fun fupdStatus f (nI: 'a nodeInfo) : 'a nodeInfo =
   let
-    val {target,command,status,dependencies,seqnum,phony,dir,extra} = nI
+    val {target,command,status,dependencies,seqnum,phony,dir,extra,mtime} = nI
   in
     {target = target, status = f status, command = command, seqnum = seqnum,
-     dependencies = dependencies, phony = phony, dir = dir, extra = extra}
+     dependencies = dependencies, phony = phony, dir = dir, extra = extra,
+     mtime = mtime}
   end
 
 fun setStatus s = fupdStatus (fn _ => s)
@@ -208,9 +210,11 @@ fun pr_list s [] = apNIL
 fun nodeInfo_toJSON (n, nI : 'a nodeInfo) =
     let
       open Holmake_tools
-      val {target,status,command,dependencies,seqnum,phony,dir,...} = nI
+      val {target,status,command,dependencies,seqnum,phony,dir,mtime,...} = nI
       fun field fnm f v = apSING ("  \"" ^ fnm ^ "\" : " ^ f v)
       fun quote f x = "\"" ^ f x ^ "\""
+      fun mtimeJSON NONE = "null"
+        | mtimeJSON (SOME t) = Time.toString t
     in
       apSING "{\n" ++
       pr_list ",\n" [
@@ -225,6 +229,7 @@ fun nodeInfo_toJSON (n, nI : 'a nodeInfo) =
               dependencies,
         field "command" (fn c => "\"" ^ command_toString c ^ "\"") command,
         field "dir" (quote hmdir.toString) dir,
+        field "mtime" mtimeJSON mtime,
         field "needs_rebuild" (fn s => Bool.toString (s <> Succeeded)) status
       ] ++
       apSING "\n}"

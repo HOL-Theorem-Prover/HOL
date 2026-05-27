@@ -24,7 +24,13 @@ sig
   type 'a nodeInfo = { target : dep, status : target_status,
                        phony : bool, dir : dir,
                        command : command, seqnum : int, extra : 'a,
-                       dependencies : (node * dep) list }
+                       dependencies : (node * dep) list,
+                       mtime : Time.time option }
+    (* mtime is the target file's modTime at the moment the node was
+       added to the graph, or NONE if the file didn't exist or the
+       target is phony.  Snapshot, not live: build jobs that run
+       later won't update it.  Diagnostic only -- not consulted by
+       any rebuild-decision code. *)
   val nodeInfo_toString : 'a nodeInfo -> string
   val node_toString : node -> string
   val setStatus : target_status -> 'a nodeInfo -> 'a nodeInfo

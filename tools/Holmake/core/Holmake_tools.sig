@@ -203,6 +203,7 @@ sig
     val toString : t -> string
     val tgtset_diff : t list -> t list -> t list
     val tgtexists_readable : t -> bool
+    val tgt_modTime : t -> Time.time option
     val localFile : File -> t
     val filestr_to_tgt : string -> t (* resolved against hmdir.curdir() *)
     val filestr_to_tgt_in_dir : hmdir.t -> string -> t
