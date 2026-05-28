@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """hmntest: parse Holmake's --json output and report what still needs building.
 
-Run as:  hmntest.py <holmake-exe> <directory>
+Run as:  hmntest.py [directory] [--holmake PATH]
 
-Invokes the given Holmake binary with `-C <directory> --json`, parses the
+`directory` defaults to the current working directory.  `--holmake`
+defaults to the `bin/Holmake` of the surrounding HOL tree (walking up
+from `directory` looking for `sigobj/` + `bin/Holmake`), falling back
+to the binary recorded in `<directory>/.hol/make-deps/lastmaker`.
+
+Invokes the chosen Holmake with `-C <directory> --json`, parses the
 dep-graph it dumps, and prints one block per pending action: a comment
 listing the files that force the rebuild, followed by the user-facing
 command (a shell recipe for SomeCmd, `hol compile foo.{sml,sig}` for
@@ -106,19 +111,75 @@ def topo_order(pending_ids, by_id):
     return order
 
 
+def find_holmake(directory):
+    """Resolve a Holmake binary for `directory`.
+
+    Walks up from `directory` looking for a HOL tree root (`sigobj/`
+    plus `bin/Holmake`, the same marker Holmake's own check_distrib
+    uses).  Falls back to the binary recorded in
+    `<directory>/.hol/make-deps/lastmaker`.  Returns an absolute path
+    on success, None on failure.
+    """
+    d = os.path.abspath(directory)
+    while True:
+        sigobj = os.path.join(d, "sigobj")
+        holmake = os.path.join(d, "bin", "Holmake")
+        if (os.path.isdir(sigobj)
+                and os.access(sigobj, os.R_OK | os.X_OK)
+                and os.path.isfile(holmake)
+                and os.access(holmake, os.R_OK | os.X_OK)):
+            return holmake
+        parent = os.path.dirname(d)
+        if parent == d:
+            break
+        d = parent
+
+    lastmaker = os.path.join(
+        os.path.abspath(directory), ".hol", "make-deps", "lastmaker"
+    )
+    if os.path.isfile(lastmaker):
+        try:
+            with open(lastmaker) as f:
+                first = f.readline().rstrip()
+        except OSError:
+            return None
+        if first:
+            return first
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("holmake", help="path to the Holmake executable")
-    ap.add_argument("directory", help="directory to run Holmake in")
+    ap.add_argument("directory", nargs="?", default=os.getcwd(),
+                    help="directory to run Holmake in (default: cwd)")
+    ap.add_argument("--holmake", "-H", default=None,
+                    help="path to the Holmake executable (default: "
+                         "scan up from <directory> for bin/Holmake, "
+                         "then consult .hol/make-deps/lastmaker)")
     args = ap.parse_args()
+
+    holmake = args.holmake or find_holmake(args.directory)
+    if holmake is None:
+        print(f"hmntest: could not locate a Holmake binary for "
+              f"{args.directory!r}; pass --holmake explicitly",
+              file=sys.stderr)
+        return 1
 
     try:
         result = subprocess.run(
-            [args.holmake, "-C", args.directory, "--json"],
+            [holmake, "-C", args.directory, "--json"],
             capture_output=True, text=True, check=True,
         )
     except FileNotFoundError:
-        print(f"hmntest: holmake not found: {args.holmake}", file=sys.stderr)
+        print(f"hmntest: holmake not found: {holmake}", file=sys.stderr)
+        return 1
+    except PermissionError:
+        print(f"hmntest: holmake not executable: {holmake}", file=sys.stderr)
+        return 1
+    except OSError as e:
+        print(f"hmntest: cannot exec {holmake}: {e}\n"
+              f"  (possible architecture mismatch; pass --holmake to override)",
+              file=sys.stderr)
         return 1
     except subprocess.CalledProcessError as e:
         sys.stderr.write(e.stderr)
