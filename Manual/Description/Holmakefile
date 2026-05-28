@@ -1,4 +1,7 @@
-INCLUDES = ../Tools ../Reference ../../examples/probability $(HOLDIR)/src/integer
+INCLUDES = ../Tools ../Reference ../../examples/probability \
+           $(HOLDIR)/src/integer $(HOLDIR)/src/sort \
+           $(HOLDIR)/src/pred_set/src/more_theories \
+           $(HOLDIR)/src/num/theories/cv_compute/automation
 
 # Cross-manual labels.tsv prereq list for the mdbook target.
 # See Manual/mdbook.mk for MANUALS / SIBLING_LABELS.
@@ -198,17 +201,21 @@ $(SMD_MDS): $(PS_STUFF)
 # polyscripter reads from a chapter's .smd via `##use`.  Recipe-less
 # rules slot in on top of the pattern rule above (see "additional
 # prerequisites" under pattern rules in misc.smd).
-theories.md: $(dprot $(SIGOBJ)/realTheory.uo) \
+theories.md: $(dprot $(HOLDIR)/src/real/realTheory.uo) \
              $(dprot $(HOLDIR)/src/integer/integerTheory.uo) \
              $(dprot $(HOLDIR)/src/real/real_sigmaTheory.uo) \
              $(dprot $(HOLDIR)/src/real/analysis/real_topologyTheory.uo) \
              $(dprot $(SIGOBJ)/iterateTheory.uo)
 
-math.md: $(dprot $(SIGOBJ)/probabilityTheory.uo) \
-         $(dprot $(SIGOBJ)/lebesgue_measureTheory.uo) \
-         $(dprot $(HOLDIR)/examples/probability/large_numberTheory.uo)
+math.md: $(dprot $(HOLDIR)/src/probability/probabilityTheory.uo) \
+         $(dprot $(HOLDIR)/src/probability/lebesgue_measureTheory.uo) \
+         $(dprot $(HOLDIR)/examples/probability/large_numberTheory.uo) \
+         $(dprot $(HOLDIR)/src/pred_set/src/more_theories/ordinalTheory.uo)
 
-libraries.md: $(dprot $(SIGOBJ)/integerTheory.uo)
+libraries.md: $(dprot $(HOLDIR)/src/integer/integerTheory.uo) \
+              $(dprot $(HOLDIR)/src/sort/sortingTheory.uo) \
+              $(dprot $(HOLDIR)/src/num/theories/cv_compute/automation/cv_transLib.uo) \
+              $(dprot $(HOLDIR)/src/num/theories/cv_compute/automation/cv_stdTheory.uo)
 
 HolSat.md: zchaff.cnf
 
