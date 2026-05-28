@@ -316,7 +316,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     fun run_script cache_dir ck g (extra:GraphExtra.t) (script, intermediates) objectfiles
                    expecteds on_success =
       let
-        fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
+        fun safedelete s =
+            (diag (fn _ => "cleaning up " ^ s ^ " for script " ^ script);
+             FileSys.remove s handle OS.SysErr _ => ())
         (* The safedelete pass is defensive: with the build about to run
            and write fresh outputs, deleting any pre-existing copies first
            guards against a theory script that fails part-way through and

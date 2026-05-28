@@ -58,7 +58,8 @@ fun 'a graphbuildj1 static_info =
                 NONE => HM_BuildLock.nolock
               | SOME key =>
                   HM_BuildLock.acquire
-                    {dir = hmdir.toAbsPath (#dir nI), key = key, warn = warn}
+                    {dir = hmdir.toAbsPath (#dir nI), key = key,
+                     warn = warn, diag = diagK}
         fun recurse retval g =
           case find_runnable g of
               NONE => (retval, g)

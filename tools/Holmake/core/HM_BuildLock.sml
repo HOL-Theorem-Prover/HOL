@@ -1,7 +1,9 @@
 structure HM_BuildLock :> HM_BuildLock =
 struct
 
-datatype lockhandle = RealLock of Posix.IO.file_desc
+datatype lockhandle = RealLock of {fd: Posix.IO.file_desc,
+                                   lockpath: string,
+                                   diag: string -> unit}
                     | DummyLock
 
 val nolock = DummyLock
@@ -9,7 +11,9 @@ val nolock = DummyLock
 fun is_real (RealLock _) = true
   | is_real DummyLock = false
 
-fun release (RealLock fd) = (Posix.IO.close fd handle OS.SysErr _ => ())
+fun release (RealLock {fd, lockpath, diag}) =
+      (diag ("releasing lock " ^ lockpath);
+       Posix.IO.close fd handle OS.SysErr _ => ())
   | release DummyLock = ()
 
 infix ++
@@ -28,7 +32,7 @@ fun sanitize_key key =
                else "_")
       key
 
-fun acquire {dir, key, warn} =
+fun acquire {dir, key, warn, diag} =
     if not Systeml.isUnix then DummyLock
     else
       let
@@ -36,6 +40,7 @@ fun acquire {dir, key, warn} =
         val lockdir = dir ++ ".hol" ++ "locks"
         val _ = ensure_dir lockdir
         val lockpath = lockdir ++ (sanitize_key key ^ ".lock")
+        val _ = diag ("blocking on lock " ^ lockpath)
         open Posix.FileSys
         val fd = createf (lockpath, O_WRONLY, O.flags [O.trunc],
                           S.flags [S.irusr, S.iwusr])
@@ -46,6 +51,7 @@ fun acquire {dir, key, warn} =
             }
       in
         setlkw (fd, lock);
+        diag ("acquired lock " ^ lockpath);
         (* Write our PID into the lock file for diagnostics *)
         (let val pidstr = SysWord.toString
                             (Posix.Process.pidToWord (Posix.ProcEnv.getpid()))
@@ -55,7 +61,7 @@ fun acquire {dir, key, warn} =
                      Word8VectorSlice.slice(
                        Byte.stringToBytes pidstr, 0, NONE)))
          end handle _ => ());
-        RealLock fd
+        RealLock {fd = fd, lockpath = lockpath, diag = diag}
       end
       handle OS.SysErr (msg, _) =>
              (warn ("Failed to acquire build lock for " ^ key ^ " in " ^

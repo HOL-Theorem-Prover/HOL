@@ -91,7 +91,8 @@ fun graphbuild optinfo g =
             let val dir = #dir nI
                 val lk = (dir, key)
                 val lh = HM_BuildLock.acquire
-                           {dir = hmdir.toAbsPath dir, key = key, warn = warn}
+                           {dir = hmdir.toAbsPath dir, key = key,
+                            warn = warn, diag = diag}
             in
               target_locks := Map.insert(!target_locks, lk, lh);
               lh
@@ -211,7 +212,16 @@ fun graphbuild optinfo g =
     fun genjob (g,ok) =
       case (ok,find_runnable g) of
           (false, _) => (release_all_locks(); GiveUpAndDie (g, false))
-       |  (true, NONE) => (release_all_locks(); NoMoreJobs (g, ok))
+       |  (true, NONE) =>
+          (* Do NOT release_all_locks here: NoMoreJobs fires after every
+             dispatch cycle when find_runnable has nothing more to hand
+             out *for now*, but workers we already dispatched are still
+             holding their target locks for the duration of their own
+             work.  Each worker's own update closure will release its
+             lock when that worker completes; bulk-releasing here would
+             yank the locks out from under in-flight peer Holmakes that
+             are blocked waiting on them. *)
+          NoMoreJobs (g, ok)
        |  (true, SOME (n,nI : GraphExtra.t nodeInfo)) =>
           let
             val _ = diag ("Found runnable node "^node_toString n)
@@ -314,13 +324,25 @@ fun graphbuild optinfo g =
                                          g
                                          other_nodes
                             fun update ((g,ok), b, t) =
-                              (release_target_lock nI;
-                               if job_kont (fn s => ()) (b2res b) then
-                                (tgtcomplete(#dir nI, ndi, thyc, true, t);
-                                 (updall Succeeded g, true))
-                              else
-                                (tgtcomplete(#dir nI, ndi, thyc, false, t);
-                                 (updall RealFail g, keep_going)))
+                              let
+                                (* job_kont must run BEFORE release_target_lock:
+                                   for BIC_BuildScript it contains the post-
+                                   script safedelete that removes
+                                   <thy>Script.{ui,uo}, and a concurrent peer
+                                   Holmake that acquires the lock before this
+                                   cleanup runs will find its freshly-compiled
+                                   <thy>Script.ui yanked out from under
+                                   Poly's load step. *)
+                                val ok2 = job_kont (fn s => ()) (b2res b)
+                                val _ = release_target_lock nI
+                              in
+                                if ok2 then
+                                  (tgtcomplete(#dir nI, ndi, thyc, true, t);
+                                   (updall Succeeded g, true))
+                                else
+                                  (tgtcomplete(#dir nI, ndi, thyc, false, t);
+                                   (updall RealFail g, keep_going))
+                              end
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l
                             fun try_cache () =
