@@ -805,6 +805,17 @@ Proof
 QED
 *)
 
+Definition string_to_json_def:
+  string_to_json str =
+  case lex str [] of
+  | INR lex_msg => INR lex_msg
+  | INL ts =>
+      (case parse ts [] T of
+       | INL parse_msg => INR parse_msg
+       | INR (json, [], []) => INL json
+       | INR (_, _, _) => INR "parser exited prematurely")
+End
+
 (*
 Examples:
 EVAL ``lex "{}" []``
