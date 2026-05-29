@@ -1178,8 +1178,15 @@ proved to show the equivalence of the two integration systems:
 ##thm lebesgue_eq_gauge_integrable
 ```
 
-The basic form of a FTC-like theorem for Lebesgue integration, as a corollary of
-the above theorems and `FUNDAMENTAL_THEOREM_OF_CALCULUS`, is the follow one:
+Note that various forms of FTCs in `integration` theory can only compute the
+integration of a function over a closed or open interval (excluding at most a
+countable set of points, see `FUNDAMENTAL_THEOREM_OF_CALCULUS_STRONG`). On the
+other hand, Lebesgue integration always integrates a function over the entire
+measure space, and integrating over an interval is equivalent to integrating
+over the entire measure space the same function multiplied with an indicator
+function whose indicating set is the interval. The basic form of a FTC-like
+theorem for Lebesgue integration, based on `FUNDAMENTAL_THEOREM_OF_CALCULUS`, is
+the following one:
 
 ```repl
 ##thm FTC_integral_lborel
@@ -1187,12 +1194,14 @@ the above theorems and `FUNDAMENTAL_THEOREM_OF_CALCULUS`, is the follow one:
 
 To satisfy the integrability antecedents in the above theorem, one may need to
 find a _bound_ function `w` such that `!x. abs (g x) <= w x`, which is known to
-be integrable (in Lebesuge) or absolutely integrable (in Gauge).
+be integrable (in Lebesuge integration) or absolutely integrable (in Gauge
+integration).
 
-For improper integrals, i.e. integration over half intervals or the entire reals,
-one can use monotone or dominated convergence theorems to extend the interval
-integrals by a limiting process. (See `examples/probability/distribution` theory
-for some examples.)
+To compute improper integrals, i.e. integrals over half intervals or the entire
+reals, one can use monotone or Lebesgue dominated convergence theorems to obtain
+the improper integral as the limits of interval integrals.
+(See `examples/probability/distribution` for some examples of improper integrals
+related to normal distributions.)
 
 ## Probability Theory
 
