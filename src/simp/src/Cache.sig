@@ -51,7 +51,10 @@ sig
   val RCACHE : {capacity:int, per_key_cap:int} ->
                (term -> term list) * (term -> bool) * (thm list -> conv) ->
                (thm list -> conv) * cache
-  val clear_cache    : cache -> unit
-  val cache_values   : cache -> (term * (term list * thm option) list) list
-  val cache_capacity : cache -> int
+  val clear_cache       : cache -> unit
+  val cache_values      : cache -> (term * (term list * thm option) list) list
+  val cache_capacity    : cache -> int
+  val cache_per_key_cap : cache -> int
+  val set_capacity      : cache -> int -> unit
+  val set_per_key_cap   : cache -> int -> unit
 end

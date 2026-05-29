@@ -8,117 +8,165 @@ type key = term
 type hypinfo = {hyps : term HOLset.set, thms : term HOLset.set}
 type data = (hypinfo * thm option) list
 
-type entry = {seq : int, data : data}
-
-(* The mutable part of a cache.
-   Invariant: store(k) = {seq = i, ...}  iff  by_seq(i) = k.  i.e. by_seq
-   is the inverse of the seq# projection of store.  Maintained by every
-   mutator below. *)
-type state = {
-  store    : entry Termtab.table,
-  by_seq   : term Inttab.table,
-  next_seq : int
+(* Each cached key gets a heap-allocated node carrying its data and its
+   position in a doubly-linked LRU list.  Promotion on a hit only
+   rewrites the prev/next ref cells inside the node and its neighbours;
+   the Termtab is left untouched.  Wrapped in a single-constructor
+   datatype because SML `type` declarations are non-recursive. *)
+datatype node = N of {
+  key  : key,
+  data : data ref,
+  prev : node option ref,  (* NONE iff this node is head (MRU) *)
+  next : node option ref   (* NONE iff this node is tail (LRU) *)
 }
 
-(* Sizing parameters are fixed at construction time and live on the cache
-   wrapper, not in the mutable state — so mutators never thread them
-   through their record reconstructions. *)
-type cache = {
-  state       : state Sref.t,
+(* Invariants on a state value (maintained by every mutator below):
+   - head = NONE  <=>  tail = NONE  <=>  size = 0
+                  <=>  Termtab.size store = 0
+   - Following next from head reaches tail in exactly `size` steps;
+     symmetric for prev from tail.
+   - Termtab.lookup store k = SOME n  implies  #key n = k and n is in
+     the list.
+   - capacity and per_key_cap live in this same record so callers can
+     tune them on the fly via Cache.set_capacity / Cache.set_per_key_cap.
+     Mutating either records a fresh state value through the cache's
+     state ref, in the same way an insert/eviction does. *)
+type state = {
+  store       : node Termtab.table,
+  head        : node option,   (* MRU *)
+  tail        : node option,   (* LRU *)
+  size        : int,           (* explicit; avoids Termtab.size in hot path *)
   capacity    : int,
   per_key_cap : int
 }
 
-val empty_state : state =
-    {store = Termtab.empty, by_seq = Inttab.empty, next_seq = 0}
+type cache = state Sref.t
 
-fun new_cache {capacity, per_key_cap} : cache =
-    {state = Sref.new empty_state,
-     capacity = capacity, per_key_cap = per_key_cap}
+fun empty_state caps : state =
+    {store = Termtab.empty, head = NONE, tail = NONE, size = 0,
+     capacity = #capacity caps, per_key_cap = #per_key_cap caps}
 
-(* When next_seq would overflow, renumber existing entries to 0..n-1.
-   Effectively unreachable on Poly/ML (63-bit Int); on Moscow ML's 31-bit
-   Int this fires at most once per ~10^9 cache operations.  If Int is
-   unbounded (Int.maxInt = NONE), renumbering is never needed. *)
-fun needs_renumber n =
-    case Int.maxInt of
-      NONE => false
-    | SOME m => n >= m - 16
+fun new_cache caps : cache = Sref.new (empty_state caps)
 
-fun renumber ({store, by_seq, ...} : state) : state =
+(* ----------------------------------------------------------------------
+   DLL primitives.  Each operates on the supplied state and returns the
+   (possibly rebuilt) state record.  Node ref cells are mutated in
+   place; the record is rebuilt only when head/tail/size/store actually
+   change.
+
+   Identity of nodes is determined by the prev/next refs in context:
+   a node is at head iff its prev ref holds NONE, and at tail iff its
+   next ref holds NONE.  We never compare nodes with `=` (term keys are
+   not equality types).
+   ---------------------------------------------------------------------- *)
+
+(* Helper: rebuild a state record, threading through capacity / per_key_cap
+   from the source.  Avoids spelling out the two cap fields in every
+   rebuild site. *)
+fun with_state {store, head, tail, size} (st : state) : state =
+    {store = store, head = head, tail = tail, size = size,
+     capacity = #capacity st, per_key_cap = #per_key_cap st}
+
+(* Disconnect node `n` from its current position in the list.  Mutates
+   neighbours' next/prev to skip n and adjusts head/tail if n sat at
+   either end.  Leaves n.prev / n.next intact — the immediately following
+   link_at_head will overwrite them. *)
+fun unlink (st : state, N {prev, next, ...} : node) : state =
     let
-      val items = Inttab.dest by_seq  (* in seq# order *)
-      val (store', by_seq', n) =
-          List.foldl
-            (fn ((_, k), (st, bs, i)) =>
-                case Termtab.lookup st k of
-                  NONE => (st, bs, i)
-                | SOME {data, ...} =>
-                  (Termtab.update (k, {seq = i, data = data}) st,
-                   Inttab.update (i, k) bs,
-                   i + 1))
-            (store, Inttab.empty, 0)
-            items
+      val p = !prev
+      val q = !next
+      val () = case p of
+                 NONE => ()
+               | SOME (N {next = pnext, ...}) => pnext := q
+      val () = case q of
+                 NONE => ()
+               | SOME (N {prev = qprev, ...}) => qprev := p
+      val head' = case p of
+                    NONE   => q     (* n was head; successor is new head *)
+                  | SOME _ => #head st
+      val tail' = case q of
+                    NONE   => p     (* n was tail; predecessor is new tail *)
+                  | SOME _ => #tail st
     in
-      {store = store', by_seq = by_seq', next_seq = n}
+      with_state {store = #store st, head = head', tail = tail',
+                  size = #size st} st
     end
 
-(* Move k to the front of the LRU order, storing data v under it. *)
-fun touch_with_data (st : state, k, v) : state =
+(* Splice `n` in at the front (MRU).  Caller guarantees `n` is detached
+   from the list. *)
+fun link_at_head (st : state, n as N {prev, next, ...} : node) : state =
     let
-      val st = if needs_renumber (#next_seq st) then renumber st else st
-      val {store, by_seq, next_seq} = st
-      val by_seq1 =
-          case Termtab.lookup store k of
-            NONE => by_seq
-          | SOME {seq = old_seq, ...} => Inttab.delete_safe old_seq by_seq
-      val store' = Termtab.update (k, {seq = next_seq, data = v}) store
-      val by_seq' = Inttab.update (next_seq, k) by_seq1
+      val old_head = #head st
+      val () = prev := NONE
+      val () = next := old_head
+      val () = case old_head of
+                 NONE => ()
+               | SOME (N {prev = hprev, ...}) => hprev := SOME n
+      val tail' = case #tail st of
+                    NONE => SOME n            (* list was empty *)
+                  | t    => t
     in
-      {store = store', by_seq = by_seq', next_seq = next_seq + 1}
+      with_state {store = #store st, head = SOME n, tail = tail',
+                  size = #size st} st
     end
 
-(* Drop the LRU key until size <= capacity. *)
-fun evict_to_fit capacity (st : state) : state =
-    if Termtab.size (#store st) <= capacity then st
-    else
-      case Inttab.min (#by_seq st) of
-        NONE => st
-      | SOME (min_seq, evict_key) =>
-          let
-            val store' = Termtab.delete_safe evict_key (#store st)
-            val by_seq' = Inttab.delete_safe min_seq (#by_seq st)
-            val _ = trace(2,
-                          REDUCE("Cache: evicting LRU entry", evict_key))
-          in
-            evict_to_fit capacity
-              {store = store', by_seq = by_seq', next_seq = #next_seq st}
-          end
+(* Drop tail nodes until size <= capacity.  Called from c_insert (where
+   size grows by at most one per call, so the loop runs at most once)
+   and from set_capacity (where size may be many over the new cap). *)
+fun evict_to_fit (st : state) : state =
+    if #size st <= #capacity st then st
+    else case #tail st of
+           NONE => st  (* unreachable: size > 0 *)
+         | SOME (N {key = k, prev = tprev, ...}) =>
+           let
+             val store' = Termtab.delete_safe k (#store st)
+             val _ = trace(2,
+                           REDUCE("Cache: evicting LRU entry", k))
+             val p = !tprev
+             val () = case p of
+                        NONE => ()
+                      | SOME (N {next = pnext, ...}) => pnext := NONE
+             val head' = case p of
+                           NONE   => NONE         (* list now empty *)
+                         | SOME _ => #head st
+             val st' = with_state
+                         {store = store', head = head', tail = p,
+                          size = #size st - 1} st
+           in
+             evict_to_fit st'
+           end
 
 (* Read without bumping: callers that immediately follow with c_insert
-   on the same key let the c_insert do the bump. *)
+   on the same key let the c_insert do the bump.  Lock-free
+   (Sref.value): the snapshot is internally consistent and node.data
+   is a stable ref the caller may dereference safely. *)
 fun peek (c : cache) k : data option =
-    Option.map #data (Termtab.lookup (#store (Sref.value (#state c))) k)
+    case Termtab.lookup (#store (Sref.value c)) k of
+      NONE                  => NONE
+    | SOME (N {data, ...})  => SOME (!data)
 
 (* Bump k to most-recently-used without changing its data.  Used at
-   terminal cache-hit sites where no insert follows. *)
+   terminal cache-hit sites where no insert follows.  Short-circuits if
+   k is already at head. *)
 fun bump (c : cache) k : unit =
-    Sref.update (#state c)
-      (fn st =>
-          case Termtab.lookup (#store st) k of
-            NONE => st
-          | SOME {data, ...} => touch_with_data (st, k, data))
+    Sref.update c (fn st =>
+      case Termtab.lookup (#store st) k of
+        NONE                 => st
+      | SOME (n as N {prev, ...}) =>
+          (case !prev of
+             NONE   => st     (* already head — no list mutation *)
+           | SOME _ => link_at_head (unlink (st, n), n)))
 
-(* Per-key cap (per the lru record) bounds the (hypinfo, thm option) list
-   under a single key.  Without this bound, "hot" keys — especially
-   boolSyntax.F, which prove_false_context writes to on every failed-
-   contradiction attempt — accumulate thousands of entries.  Every cache
-   consultation then scans the entire list (List.find in
-   consider_false_context_cache and in the RCACHE / CACHE main lookups),
-   making per-call cost grow linearly with session length.  Capping turns
-   that linear scan into a constant.  Dropping oldest entries can cost an
-   occasional re-prove when a query's context matched an evicted entry
-   — slower but always correct. *)
+(* Per-key cap bounds the (hypinfo, thm option) list under a single key.
+   Without this bound, "hot" keys — especially boolSyntax.F, which
+   prove_false_context writes to on every failed-contradiction attempt
+   — accumulate thousands of entries.  Every cache consultation then
+   scans the entire list (List.find in consider_false_context_cache and
+   in the RCACHE / CACHE main lookups), making per-call cost grow
+   linearly with session length.  Capping turns that linear scan into a
+   constant.  Dropping oldest entries can cost an occasional re-prove
+   when a query's context matched an evicted entry — slower but always
+   correct. *)
 fun take_at_most n xs =
     let
       fun loop _ acc [] = List.rev acc
@@ -128,16 +176,73 @@ fun take_at_most n xs =
       loop n [] xs
     end
 
-(* Insert/update k -> v, bump it, then evict if over capacity. *)
+(* Insert/update k -> v, promote it, then evict if over capacity. *)
 fun c_insert (c : cache) (k, v) : unit =
-    Sref.update (#state c)
-      (fn st => evict_to_fit (#capacity c)
-                  (touch_with_data (st, k, take_at_most (#per_key_cap c) v)))
+    Sref.update c (fn st =>
+      let
+        val v' = take_at_most (#per_key_cap st) v
+      in
+        case Termtab.lookup (#store st) k of
+          SOME (n as N {data, prev, ...}) =>
+            let
+              val () = data := v'
+            in
+              case !prev of
+                NONE   => st     (* already head *)
+              | SOME _ => link_at_head (unlink (st, n), n)
+            end
+        | NONE =>
+            let
+              val n = N {key  = k,         data = ref v',
+                         prev = ref NONE,  next = ref NONE}
+              val store' = Termtab.update (k, n) (#store st)
+              val st1 = link_at_head
+                          (with_state {store = store',
+                                       head  = #head st,
+                                       tail  = #tail st,
+                                       size  = #size st + 1} st,
+                           n)
+            in
+              evict_to_fit st1
+            end
+      end)
 
+(* clear_cache preserves the current capacity / per_key_cap settings so
+   that a tuned cache stays tuned across a session-level reset. *)
 fun clear_cache (c : cache) : unit =
-    Sref.update (#state c) (fn _ => empty_state)
+    Sref.update c (fn st => empty_state {capacity    = #capacity st,
+                                         per_key_cap = #per_key_cap st})
 
-fun cache_capacity (c : cache) : int = #capacity c
+fun cache_capacity    (c : cache) : int = #capacity (Sref.value c)
+fun cache_per_key_cap (c : cache) : int = #per_key_cap (Sref.value c)
+
+(* Lower the global capacity (if necessary) and immediately evict to the
+   new bound.  Raising never evicts.  A reduction prompts an in-place
+   purge of the LRU tail until size <= n; chosen over lazy eviction so
+   that the user-observable state (cache_values, cache_capacity) reflects
+   the new cap immediately. *)
+fun set_capacity (c : cache) n =
+    Sref.update c (fn st =>
+      evict_to_fit
+        {store = #store st, head = #head st, tail = #tail st,
+         size = #size st, capacity = n, per_key_cap = #per_key_cap st})
+
+(* Set the per-key cap and immediately truncate every per-key data list
+   to the new bound (in-place on the node's data ref — no list structural
+   change).  Same rationale as set_capacity: the user-observable cache
+   reflects the new cap immediately. *)
+fun set_per_key_cap (c : cache) n =
+    Sref.update c (fn st =>
+      let
+        val () = Termtab.fold
+                   (fn (_, N {data, ...}) => fn () =>
+                       data := take_at_most n (!data))
+                   (#store st)
+                   ()
+      in
+        {store = #store st, head = #head st, tail = #tail st,
+         size = #size st, capacity = #capacity st, per_key_cap = n}
+      end)
 
 val empty_hypinfo = {hyps = empty_tmset, thms = empty_tmset}
 fun hypinfo_addth (th, {hyps,thms}) =
@@ -196,9 +301,9 @@ in
 end
 
 fun cache_values (cache : cache) = let
-  val items = Termtab.dest (#store (Sref.value (#state cache)))
+  val items = Termtab.dest (#store (Sref.value cache))
   fun tolist (set, thmopt) = (hypinfo_list set, thmopt)
-  fun ToList (k, {data, ...} : entry) = (k, map tolist data)
+  fun ToList (k, N {data, ...}) = (k, map tolist (!data))
 in
   map ToList items
 end
