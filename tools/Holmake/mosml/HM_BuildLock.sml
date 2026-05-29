@@ -12,6 +12,6 @@ fun is_real DummyLock = false
 
 fun release DummyLock = ()
 
-fun acquire {dir, key, warn} = DummyLock
+fun acquire {dir, key, warn, diag} = DummyLock
 
 end
