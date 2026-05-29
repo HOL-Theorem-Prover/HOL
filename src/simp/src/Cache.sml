@@ -521,26 +521,29 @@ fun RCACHE (spec : {capacity:int, per_key_cap:int}) (dpfvs, check, conv) = let
         (trace(1,PRODUCE(t, "cache hit!", x)); bump cache t; x)
     | SOME (_, NONE) => raise Fail "RCACHE: Invariant failure"
     | NONE => let
-        (* do connected component analysis to test for false *)
-        fun foldthis (th, (ctxt_ts, ground_ths)) = let
-          val c = concl th
-        in
-          if null (dpfvs c) then (ctxt_ts, th::ground_ths)
-          else (c::ctxt_ts, ground_ths)
-        end
-        val (ctxt_ts,ground_ctxt_ths) =
-            List.foldl foldthis ([], []) ctxt
+        (* No cached success matches the full hypothesis union; we have
+           to do real work.  Begin with the connected-component
+           analysis: split context theorems by which Presburger variables
+           they mention, plus collect any ground (variable-free)
+           hypotheses as singleton contexts. *)
+        fun split (th, (ctxt_ts, ground_ths)) =
+            let val c = concl th in
+              if null (dpfvs c) then (ctxt_ts, th::ground_ths)
+              else (c::ctxt_ts, ground_ths)
+            end
+        val (ctxt_ts, ground_ctxt_ths) = List.foldl split ([], []) ctxt
         val G = build_graph dpfvs (t::ctxt_ts)
-                (* G a map from v to v's neighbours *)
         val vs = Termtab.fold (fn (k,_) => fn acc => k::acc) G []
         val (comps, _) = ccs G vs
-                (* a list of lists of variables *)
         val group_map = build_var_to_group_map comps
         val _ = app (build_up_ctxt group_map) ctxt
-                  (* group map is a map from variables to all the
-                     ctxts (theorems) that are in that variable's component *)
 
-        (* now extract the ctxt relevant for the goal statement *)
+        (* Identify the component containing the goal's first DP-variable
+           if any.  For goals with no DP-variables (the prototypical case
+           being t = F, used to drive contradiction proofs), there is no
+           goal-relevant component and glstmtref is just a fresh empty
+           placeholder — it is not in group_map, so build_up_ctxt never
+           updates it. *)
         val (group_map', glstmtref) =
           case dpfvs t of
             [] => (group_map, Uref.new (empty_hypinfo, []))
@@ -548,65 +551,80 @@ fun RCACHE (spec : {capacity:int, per_key_cap:int}) (dpfvs, check, conv) = let
               let val r = valOf (Termtab.lookup group_map glvar)
               in (Termtab.delete glvar group_map, r) end
 
-        (* and the remaining contexts, ensuring there are no
-           duplicate copies *)
-        fun foldthis (k, v) (acc as (setlist, seenreflist)) =
-            if mem v seenreflist then acc
-            else (!v::setlist, v::seenreflist)
+        (* The list of contexts that should be tried for a contradiction
+           proof: every non-goal component, plus each ground hypothesis
+           as its own singleton. *)
+        fun unique (_, v) (acc as (setlist, seen)) =
+            if mem v seen then acc
+            else (!v::setlist, v::seen)
         val (divided_clist0, _) =
-            Termtab.fold foldthis group_map' ([], [glstmtref])
-
-        (* fold in every ground hypothesis as a separate context, entire
-           unto itself *)
+            Termtab.fold unique group_map' ([], [glstmtref])
         val divided_clist =
             divided_clist0 @
             map (fn th => (hypinfo_addth(th, empty_hypinfo), [th]))
                 ground_ctxt_ths
 
         val (glhyps, thmlist) = !glstmtref
-        fun oknone (prev, NONE) = glhyps << prev
-          | oknone _ = false
-      in
-        case List.find oknone prevs of
-          NONE => let
-            (* nothing cached, but should still try cache for proving
-               false from the context *)
-          in
-            case consider_false_context_cache cache t divided_clist
-            of
-              proved_it th => th
-            | possible_ctxts cs => let
-                (* cs is the list of things worth trying to prove, but
-                   in this situation should first try conv on the original
-                   goal because there's nothing in the cache about it *)
-              in
-                case Lib.total (conv thmlist) t of
-                  SOME th => let
-                  in
-                    trace(2,PRODUCE(t,"Inserting into cache:", th));
-                    c_insert cache (t, (glhyps,SOME th)::prevs);
-                    th
-                  end
-                | NONE => let
-                  in
-                    trace(2, REDUCE("Inserting failure to prove",
-                                    if hypinfo_isEmpty glhyps then t
-                                    else mk_imp(list_mk_conj
-                                                  (map concl thmlist), t)));
-                    c_insert cache (t, (glhyps, NONE)::prevs);
-                    prove_false_context conv cache cs t
-                  end
-              end
-          end
-        | SOME (_, NONE) => let
-            (* with the relevant context, our goal doesn't resolve one
-               way or the other.  However, it's possible that part of the
-               rest of the context goes to false *)
-          in
+
+        (* "Prove t by contradiction".  consider_false_context_cache
+           returns early if any cached F-proof matches one of our
+           components (the proof of t comes from CCONTR); otherwise it
+           drops components subsumed by a cached failure (the d.p. has
+           already failed on a superset, so it will fail again here —
+           note this is not a claim that the component is consistent,
+           only that the d.p. has nothing more to say about it) and
+           hands the survivors to prove_false_context, which runs the
+           d.p. on each in turn.  If every component is covered by a
+           cached failure, the survivor list is empty and
+           prove_false_context raises — exactly the "skip the d.p.
+           entirely" case. *)
+        fun by_contradiction () =
             case consider_false_context_cache cache t divided_clist of
               proved_it th => th
             | possible_ctxts cs => prove_false_context conv cache cs t
-          end
+
+        (* Same as by_contradiction, but with a direct d.p. attempt
+           inserted *between* the cached-F-proof check and the
+           per-component d.p.: if the cache yielded nothing, run
+           conv thmlist t on the goal-relevant context as a single
+           shot, cache the outcome (success or failure), and only
+           fall through to prove_false_context on the surviving
+           components if conv fails. *)
+        fun direct_then_contradiction () =
+            case consider_false_context_cache cache t divided_clist of
+              proved_it th => th
+            | possible_ctxts cs =>
+                (case Lib.total (conv thmlist) t of
+                   SOME th =>
+                     (trace(2, PRODUCE(t, "Inserting into cache:", th));
+                      c_insert cache (t, (glhyps, SOME th)::prevs);
+                      th)
+                 | NONE =>
+                     (trace(2,
+                            REDUCE("Inserting failure to prove",
+                                   if hypinfo_isEmpty glhyps then t
+                                   else mk_imp(list_mk_conj
+                                                 (map concl thmlist), t)));
+                      c_insert cache (t, (glhyps, NONE)::prevs);
+                      prove_false_context conv cache cs t))
+
+        (* `oknone` asks: has the direct d.p. attempt `conv thmlist t`
+           been tried unsuccessfully before, for a context at least as
+           large as the current goal-relevant one?  If so we can skip
+           it.  Note that when dpfvs t = [] (the t = F case, plus any
+           other goal with no DP-variables), glhyps = empty_hypinfo by
+           construction, and the test degenerates to "is there ANY
+           cached failure under this key?" — meaning the first call
+           does run conv (possibly succeeding on goals like
+           `∃b. b≠0 ∧ b≠1`), but subsequent calls that have already
+           failed once short-circuit straight to per-component
+           analysis. *)
+        fun oknone (prev, NONE) = glhyps << prev
+          | oknone _            = false
+      in
+        case List.find oknone prevs of
+          SOME (_, NONE) => by_contradiction ()
+        | NONE           => direct_then_contradiction ()
         | SOME _ => raise Fail "RCACHE: invariant failure the second"
       end
   end
