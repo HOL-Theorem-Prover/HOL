@@ -1168,8 +1168,6 @@ Note that, a (Borel-measurable) function is Lebesgue integrable iff it is Gauge
 absolutely integrable. In `lebesgue_measure` theory, the following theorems are
 proved to show the equivalence of the two integration systems:
 
->>__ load "lebesgue_measureTheory";
-     open lebesgue_measureTheory;
 ```repl
 ##thm lebesgue_eq_gauge_integral
 
