@@ -6,12 +6,12 @@ was first proved by Michael Rabin and Dana Scott in *Finite automata
 and their decision problems*, IBM Journal of Research and Development
 3(2), 114–125 (1959).  The *subset construction* forms the backbone of
 their proof; it works by translating an NFA into an "equivalent" DFA.
-The key insight is to make a state of the constructed DFA embody the
-states the NFA could possibly be in at a particular stage of
-processing the input word. The construction is conceptually appealing
-but it raises a technical problem: how to somehow arrange that the DFA
-state (a thing of type `:num`) *is* a set of NFA states (a thing of
-type `:num -> bool`).
+The key insight in the construction is to make a state of the
+constructed DFA embody the states the NFA could possibly be in at a
+particular stage of processing the input word. The idea is
+conceptually appealing but it raises a technical problem: how to
+somehow arrange that the DFA state (a thing of type `:num`) *is* a set
+of NFA states (a thing of type `:num -> bool`).
 
 ## Encoding subsets
 
@@ -25,9 +25,10 @@ states. Thus we want two functions
   decode : num -> num set
 ```
 
-such that `decode (encode s) = s`. There is a variety of ways to
-achieve this; we choose one that highlights a distinctive aspect of
-the HOL logic, namely the *Hilbert Choice* operator.
+such that `decode (encode s) = s`, for any `s ⊆ N.Q`. There is a
+variety of ways to achieve this; we choose one that highlights a
+distinctive aspect of the HOL logic, namely the *Hilbert Choice*
+operator.
 
 The Hilbert choice operator, written `@x. P x`, is syntax for
 expressing the notion "pick an *x* having property *P*".  (The Hilbert
@@ -311,9 +312,9 @@ That finishes the proof.
 > conventional presentations. See the Exercises for an example.
 
 
-### Abbreviating encode/decode
+## The subset construction
 
-We establish `enc` and `dec` as abbreviations for `encode N` and
+We first establish `enc` and `dec` as abbreviations for `encode N` and
 `decode N`, using the following declarations:
 
 ```
@@ -321,12 +322,9 @@ Overload "enc"[local] = “encode N”
 Overload "dec"[local] = “decode N”;
 ```
 
-
-## The subset construction
-
-The construction maps an NFA structure to a DFA structure, using the
-encoder to collapse subsets to states and the decoder to recover
-subsets from states.
+The subset construction maps an NFA structure to a DFA structure,
+using the encoder to collapse subsets to states and the decoder to
+recover subsets from states.
 
 ```
 Definition nfa_to_dfa_def:
@@ -628,14 +626,10 @@ val it =
        enc (nfa_eval N qset w) = dfa_eval (nfa_to_dfa N) (enc qset) w: proof
 ```
 
-## Packaging up the proof
-
-
 ## Language level equivalence
 
-
-The `main_lemma` is used in the proof of language-level equivalence,
-but we will also need an alternate version where, instead of
+Now we tackle the proof of language-level equivalence. This uses
+`main_lemma` but we also need an alternate version where, instead of
 *encoding* the results of NFA evaluation, we *decode* the results of
 DFA evaluation: This version is obtained by applying the decoder to
 both the LHS and RHS of `main_lemma` and simplifying.
@@ -643,14 +637,27 @@ both the LHS and RHS of `main_lemma` and simplifying.
 ```
 Theorem main_lemma_alt:
   wf_nfa (N:'a nfa) ∧
-  EVERY (λa. a ∈ N.Sigma) w ∧
-  qset ⊆ N.Q ⇒
-  nfa_eval N qset w = dec (dfa_eval (nfa_to_dfa N) (enc qset) w)
+  EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q
+  ⇒ nfa_eval N qset w = dec (dfa_eval (nfa_to_dfa N) (enc qset) w)
 Proof
-  strip_tac >> drule_all main_lemma >>
+  strip_tac >>
+  drule_all main_lemma >>
   disch_then (mp_tac o Q.AP_TERM ‘dec’) >>
   DEP_REWRITE_TAC [codec] >>
   metis_tac[nfa_eval_states]
+QED
+```
+
+This proof uses an easy lemma that shows that NFA evaluation does not
+stray outside the state space of the NFA:
+
+```
+Theorem nfa_eval_states:
+  wf_nfa N
+  ⇒ ∀w qset.
+      EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒ nfa_eval N qset w ⊆ N.Q
+Proof
+  disch_tac >> Induct >> rw [nfa_eval_def] >> rw [Delta_subset]
 QED
 ```
 
@@ -722,6 +729,62 @@ and a conclusion about NFA evaluation, so we'd like to rewrite the
 conclusion with `main_lemma_alt`.  Contrarily, in the second (top)
 case, we have an assumption about NFA evaluation and a conclusion
 about DFA evaluation, and we'd like to rewrite the conclusion with
-`main_lemma` (with LHS and RHS swapped). But, as is common, these both
-have slightly stubborn side-conditions and so we would like to use
-dependent rewriting.
+`main_lemma` (with LHS and RHS swapped). But, as is common, these
+rewrites both have slightly stubborn side-conditions and so dependent
+rewriting becomes the weapon of choice.
+
+So we will restart the proof
+
+```
+  restart()
+```
+
+and apply tailored dependent rewriting in each branch, using only the
+right rewrite for the branch. This is done via `THENL`.
+
+> [!NOTE]
+> `THENL` is an infix *tactical* that sequences tactics. It is similar
+> to `THEN` (infix, typically written `>>`) except that `tac THENL
+> [tac_1, ..., tac_n]` requires that `tac` creates
+> *n* subgoals, and applies `tac_i` to subgoal *i*.
+
+We use `THENL` to rewrite with `main_lemma_alt` in the first branch
+and `main_lemma` in the second:
+
+```
+  rw [dfa_lang_def,nfa_lang_def] >>
+  rw [EQ_IMP_THM,PULL_EXISTS] THENL
+  [DEP_ONCE_REWRITE_TAC [main_lemma_alt],
+   DEP_ONCE_REWRITE_TAC [GSYM main_lemma]]
+```
+
+which results in
+
+```
+    0.  wf_nfa N
+    1.  EVERY N.Sigma w
+    2.  nfa_eval N N.initial w ∩ N.final ≠ ∅
+   ------------------------------------
+        (wf_nfa N ∧ EVERY (λa. a ∈ N.Sigma) w ∧ N.initial ⊆ N.Q) ∧
+        ∃s. enc (nfa_eval N N.initial w) = enc s ∧ s ⊆ N.Q ∧ s ∩ N.final ≠ ∅
+
+    0.  wf_nfa N
+    1.  EVERY N.Sigma w
+    2.  dfa_eval (nfa_to_dfa N) (enc N.initial) w = enc s
+    3.  s ⊆ N.Q
+    4.  s ∩ N.final ≠ ∅
+   ------------------------------------
+        (wf_nfa N ∧ EVERY (λa. a ∈ N.Sigma) w ∧ N.initial ⊆ N.Q) ∧
+        dec (dfa_eval (nfa_to_dfa N) (enc N.initial) w) ∩ N.final ≠ ∅
+```
+
+Inspecting the result, we see that the rewrites have indeed taken
+place. However, the separate dependent rewrites have placed the same
+proof obligation
+
+```
+  (wf_nfa N ∧ EVERY (λa. a ∈ N.Sigma) w ∧ N.initial ⊆ N.Q)
+```
+
+on both goals. Since these are separate it seems that we will have to
+perform the (trivial) proof for each.

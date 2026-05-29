@@ -147,8 +147,8 @@ the machine might be in.
 > utilities. See [this paper](https://swtch.com/~rsc/regexp/regexp1.html)
 > for an interesting discussion.
 
-A wellformed NFA obeys ostensibly similar requirements as a wellformed
-DFA, adjusting for its usage of sets of states.
+A wellformed NFA obeys similar requirements as a wellformed DFA,
+adjusting for the usage of sets of states.
 
 ```
 Definition wf_nfa_def:

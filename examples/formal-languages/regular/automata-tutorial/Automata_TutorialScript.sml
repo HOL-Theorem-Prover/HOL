@@ -139,11 +139,13 @@ End
 Theorem codec:
   wf_nfa N ∧ s ⊆ N.Q ⇒ decode N (encode N s) = s
 Proof
-  strip_tac >> simp [decode_def,encode_def] >>
+  strip_tac >>
+  simp [decode_def,encode_def] >>
   SELECT_ELIM_TAC >> rw []
   >- metis_tac [FINITE_BIJ_COUNT, BIJ_SYM, wf_nfa_def, FINITE_POW] >>
   rename1 ‘BIJ f _ _’ >>
-  irule LINV_DEF >> metis_tac [IN_POW,BIJ_DEF]
+  irule LINV_DEF >>
+  metis_tac [IN_POW,BIJ_DEF]
 QED
 
 Overload "enc"[local] = “encode N”
@@ -183,10 +185,11 @@ Proof
       rw [SUBSET_DEF] >> irule_at Any EQ_REFL >>
       rw[IN_POW,SUBSET_DEF])
   >- metis_tac[]
-  >- (rw [SUBSET_DEF] >> metis_tac[]) >>
-  DEP_REWRITE_TAC[codec] >> simp [Delta_def] >> conj_tac
-  >- rw [wf_nfa_def] >>
-  irule_at Any EQ_REFL >> gvs [SUBSET_DEF] >> metis_tac[]
+  >- (rw [SUBSET_DEF] >> metis_tac[])
+  >- (DEP_REWRITE_TAC[codec] >> simp [Delta_def] >>
+      conj_tac >- rw [wf_nfa_def] >>
+      irule_at Any EQ_REFL >>
+      gvs [SUBSET_DEF] >> metis_tac[])
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -197,33 +200,26 @@ Theorem main_lemma:
   wf_nfa (N:'a nfa) ⇒
   ∀w qset.
     EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q
-    ⇒ enc (nfa_eval N qset w) = dfa_eval (nfa_to_dfa N) (enc qset) w
+    ⇒ dfa_eval (nfa_to_dfa N) (enc qset) w = enc (nfa_eval N qset w)
 Proof
   disch_tac >>
-  Induct >> rw [nfa_eval_def]
-  >- rw [dfa_eval_def] >>
-  simp [dfa_eval_def] >>
-  DEP_ASM_REWRITE_TAC [] >> conj_tac
-  >- metis_tac [Delta_subset] >>
-  DEP_REWRITE_TAC [codec] >> simp []
+  Induct >>
+  rw [nfa_eval_def,dfa_eval_def] >>
+  DEP_ASM_REWRITE_TAC [codec] >>
+  metis_tac [Delta_subset]
 QED
 
 Theorem nfa_eval_states:
-  wf_nfa N ⇒
-  ∀w qset.
-    EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q
-    ⇒ nfa_eval N qset w ⊆ N.Q
+  wf_nfa N
+  ⇒ ∀w qset.
+      EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒ nfa_eval N qset w ⊆ N.Q
 Proof
-  strip_tac >>
-  Induct >> rw [nfa_eval_def] >>
-  first_x_assum irule >>
-  rw [Delta_subset]
+  disch_tac >> Induct >> rw [nfa_eval_def] >> rw [Delta_subset]
 QED
 
 Theorem main_lemma_alt:
   wf_nfa (N:'a nfa) ∧
-  EVERY (λa. a ∈ N.Sigma) w ∧
-  qset ⊆ N.Q
+  EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q
   ⇒ nfa_eval N qset w = dec (dfa_eval (nfa_to_dfa N) (enc qset) w)
 Proof
   strip_tac >>
@@ -244,7 +240,7 @@ Proof
   rw [dfa_lang_def,nfa_lang_def] >>
   rw [EQ_IMP_THM,PULL_EXISTS] THENL
   [DEP_ONCE_REWRITE_TAC [main_lemma_alt],
-   DEP_ONCE_REWRITE_TAC [GSYM main_lemma]] >>
+   DEP_ONCE_REWRITE_TAC [main_lemma]] >>
   conj_tac >>~-  (* 4 subgoals, 2 identical *)
     ([‘wf_nfa N ∧ _’],
      simp [IN_DEF] >> metis_tac [wf_nfa_def])
@@ -256,7 +252,7 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
-(* Also need to map DFAs to NFAs, which is simpler                           *)
+(* Also need to map DFAs to NFAs                                             *)
 (*---------------------------------------------------------------------------*)
 
 Definition dfa_to_nfa_def:
@@ -286,25 +282,25 @@ Proof
 QED
 
 Theorem dfa_to_nfa_eval:
-  wf_dfa M ⇒
-  ∀w q. EVERY M.Sigma w ⇒
-        {dfa_eval M q w} = nfa_eval (dfa_to_nfa M) {q} w
+  wf_dfa M
+  ⇒ ∀w q. EVERY M.Sigma w
+          ⇒ nfa_eval (dfa_to_nfa M) {q} w = {dfa_eval M q w}
 Proof
-  strip_tac >> Induct >>
+  strip_tac >>
+  simp [Once EQ_SYM_EQ] >>
+  Induct >>
   rw [nfa_eval_def, dfa_eval_def] >>
   cong_tac NONE >>
-  simp [dfa_to_nfa_def,Delta_def] >>
-  rw [EXTENSION,EQ_IMP_THM,PULL_EXISTS] >>
-  qexists_tac ‘{M.delta q h}’ >> simp[]
+  simp [EXTENSION,IN_Delta]
 QED
 
 Theorem dfa_to_nfa_correct:
   wf_dfa M ⇒ ∀w. w ∈ dfa_lang M <=> w ∈ nfa_lang (dfa_to_nfa M)
 Proof
   rw [dfa_lang_def,nfa_lang_def] >>
-  rw [EQ_IMP_THM,PULL_EXISTS]
-  >- (simp [GSYM dfa_to_nfa_eval] >> simp [EXTENSION])
-  >- (gvs [GSYM dfa_to_nfa_eval] >> gvs [EXTENSION])
+  simp [DECIDE “((A ∧ B) = (A ∧ C)) ⇔ (A ⇒ B = C)”] >>
+  rw [dfa_to_nfa_eval] >>
+  simp [EXTENSION]
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -326,7 +322,7 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
-(* Execution traces, ie, paths through "NFA computation trees". This is the  *)
+(* Execution traces, ie, paths through NFA computation trees. This is the    *)
 (* standard way of formalizing non-determinism for automata.                 *)
 (*---------------------------------------------------------------------------*)
 
@@ -345,12 +341,6 @@ Theorem nfa_trace_word_nil[simp]:
 Proof
   Cases_on ‘qs’ >- rw [nfa_trace_def] >>
   Cases_on ‘t’ >> simp [nfa_trace_def]
-QED
-
-Theorem nfa_trace_single_state[simp]:
-  nfa_trace N [q] w ⇔ w = [] ∧ q ∈ N.Q
-Proof
-  Cases_on ‘w’ >> gvs[nfa_trace_def]
 QED
 
 Theorem nfa_trace_nonempty:
@@ -387,9 +377,10 @@ Theorem nfa_eval_trace:
     ⇒ nfa_eval N qset w = {LAST qs | nfa_trace N qs w ∧ HD qs ∈ qset}
 Proof
   disch_tac >>
-  Induct >> rw[] >>
+  Induct >> rw [] >>
   simp [nfa_eval_def]
-  >- (rw [EXTENSION,PULL_EXISTS] >> metis_tac[SUBSET_DEF]) >>
+  >- (rw [EXTENSION,PULL_EXISTS] >>
+      metis_tac[SUBSET_DEF]) >>
   rename1 ‘N.Sigma a’ >>
   DEP_ASM_REWRITE_TAC [] >>
   conj_tac >- metis_tac [Delta_subset,IN_DEF] >>
@@ -399,7 +390,7 @@ Proof
       imp_res_tac nfa_trace_nonempty >>
       simp [LAST_DEF] >>
       Cases_on ‘qs’ >> gvs [] >>
-      simp[nfa_trace_def] >>
+      simp [nfa_trace_def] >>
       metis_tac [IN_DEF,SUBSET_DEF])
   >- (simp [PULL_EXISTS] >>
       first_assum (irule_at Any) >>
@@ -434,7 +425,7 @@ Proof
   simp [NFA_TRACE_LANGS_def] >> metis_tac[]
 QED
 
-Theorem nfa_lang_equal:
+Theorem nfa_langs_equal:
   wf_nfa N ⇒ nfa_lang N = nfa_trace_lang N
 Proof
   disch_tac >>
@@ -448,11 +439,12 @@ Proof
       metis_tac[nfa_trace_symbols])
 QED
 
-Theorem LANG_EQUIV:
+Theorem LANGS_EQUIV:
   DFA_LANGS = NFA_LANGS ∧ NFA_LANGS = NFA_TRACE_LANGS
 Proof
   simp [NFA_LANGS_EQ_DFA_LANGS] >>
   simp [EXTENSION] >>
   simp [IN_NFA_LANGS,IN_NFA_TRACE_LANGS] >>
-  metis_tac [nfa_lang_equal]
+  metis_tac [nfa_langs_equal]
 QED
+B

@@ -37,9 +37,9 @@ The development has a few interesting aspects.
    states. We use Hilbert's Choice operator as a device for achieving
    this, and explore how to deal with choice terms in proofs.
 
-3. "Exotic" tactics used and explained: dependent rewriting in the
-   form `DEP_{ASM_}REWRITE_TAC`, and `cong_tac` for removing common term
-   structure from equalities.
+3. Usage of perhaps unfamiliar tactics. We use and explain dependent
+   rewriting in the form `DEP_{ASM_}REWRITE_TAC`, and `cong_tac` for
+   removing common term structure from equalities.
 
 ## Theory Script
 
@@ -51,12 +51,14 @@ a stylized Standard ML (SML) file which
   be run, either interactivelly or in batch mode.
 
 - When a formalization is complete the script can be processed to
-  create a succinct summary of the definitions and proofs.
+  create a succinct summary of the definitions and proofs. That
+  summary is what would be loaded into later developments that
+  require finite state automata theory.
 
 The complete theory script for our example lives at XXXX. It starts
 
 ```
-Theory tutorial
+Theory Automata_Tutorial
 Ancestors
   pred_set list
 Libs
