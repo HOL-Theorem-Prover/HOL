@@ -71,6 +71,15 @@ Bugs fixed
 New theories
 ------------
 
+-  `lebesgue_measure`: The equivalence of Lebesgue and Gauge integration.
+   A (measurable) function is Lebesgue integrable iff it is Gauge absolutely
+   integrable. Theorems in this theory (e.g., lebesgue_eq_gauge_integral,
+   lebesgue_eq_gauge_integral_alt, etc.) can be used to calculate concrete
+   Lebesgue integrals found in Probability applications, etc. (in form of
+  `integral lborel (Normal o f)` where `f IN borel_measurable borel`) by
+   Fundamental Theorem of Calculus (FTC) from `integration` theory, if the
+   anti-derivative of `f` is known (or computable by external CAS software).
+
 New tools
 ---------
 
