@@ -1,4 +1,7 @@
 CLINE_OPTIONS = -C subdir -n
+ifdef POLY
+CLINE_OPTIONS += --poly_not_hol
+endif
 
 # Holmake is invoked in subdir/ via -C -- not visited by parallel_tests
 # INCLUDES.  Add its .hol/ tree so build cleanAll removes it.

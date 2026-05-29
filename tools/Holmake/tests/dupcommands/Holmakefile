@@ -1,4 +1,7 @@
 CLINE_OPTIONS = -r
+ifdef POLY
+CLINE_OPTIONS += --poly_not_hol
+endif
 
 INCLUDES = sub1 sub2
 

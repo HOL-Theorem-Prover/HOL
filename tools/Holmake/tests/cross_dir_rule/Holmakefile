@@ -18,7 +18,9 @@
 # The recipes here are plain `echo`/`cat`; no HOL compilation is
 # involved, so --poly_not_hol skips the implicit hol.state dep that
 # would otherwise be added when Holmake runs in HOLDIR.
+ifdef POLY
 CLINE_OPTIONS = --poly_not_hol
+endif
 
 INCLUDES = description tutorial
 

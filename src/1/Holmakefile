@@ -1,3 +1,6 @@
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
