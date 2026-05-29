@@ -332,6 +332,20 @@ val _ = let
                     " entries; survivors [" ^
                     String.concatWith "," (map Int.toString survivors) ^
                     "]\n")
+
+  val _ = tprint "Cache: repeat call returns hit without rerunning conv"
+  val n_calls = ref 0
+  fun counting_conv (_:thm list) tm =
+      (n_calls := !n_calls + 1; REFL tm)
+  val (cconv5, _) =
+      CACHE {capacity=4, per_key_cap=4}
+            ((fn _ => true), counting_conv)
+  val r1 = cconv5 [] “1n”
+  val r2 = cconv5 [] “1n”
+  val r3 = cconv5 [] “2n”
+  val _ = expect (!n_calls = 2 andalso
+                  aconv (concl r1) (concl r2) andalso
+                  aconv (concl r3) (mk_eq (“2n”, “2n”)))
 in
   ()
 end
