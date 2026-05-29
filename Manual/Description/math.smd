@@ -971,7 +971,7 @@ The overloading of `*` (`density_measure`) and `/` (`RN_deriv`) with
 the particular argument order is to syntactically have
 `f * m / m = v / m = f`.
 
-#### Product measures and Fubini's theorem
+### Product measures and Fubini's theorem
 
 HOL provides some basic support for (binary) products of measure
 spaces (in `martingale` theory).
@@ -1159,6 +1159,40 @@ Another consequence of Holder's inequality is the *Minkowski* or
 Holder's inequality is useful in Probability Theory, for example, for
 proving that the sum of random variables having finite second moments
 (i.e. finite variance), has still finite second moments.
+
+### Equivalence of Lebesuge and Henstock-Kurzweil (Gauge) integration
+
+Concrete Lebesgue integrals in the `lborel` measure space may be calculated by
+Fundamental Theorem of Calculus (FTC) of Henstock-Kurzweil (Gauge) integrals.
+Note that, a (Borel-measurable) function is Lebesgue integrable iff it is Gauge
+absolutely integrable. In `lebesgue_measure` theory, the following theorems are
+proved to show the equivalence of the two integration systems:
+
+>>__ load "lebesgue_measureTheory";
+     open lebesgue_measureTheory;
+```repl
+##thm lebesgue_eq_gauge_integral
+
+##thm lebesgue_eq_gauge_integral_alt
+
+##thm lebesgue_eq_gauge_integrable
+```
+
+The basic form of a FTC-like theorem for Lebesgue integration, as a corollary of
+the above theorems and `FUNDAMENTAL_THEOREM_OF_CALCULUS`, is the follow one:
+
+```repl
+##thm FTC_integral_lborel
+```
+
+To satisfy the integrability antecedents in the above theorem, one may need to
+find a _bound_ function `w` such that `!x. abs (g x) <= w x`, which is known to
+be integrable (in Lebesuge) or absolutely integrable (in Gauge).
+
+For improper integrals, i.e. integration over half intervals or the entire reals,
+one can use monotone or dominated convergence theorems to extend the interval
+integrals by a limiting process. (See `examples/probability/distribution` theory
+for some examples.)
 
 ## Probability Theory
 
@@ -1772,4 +1806,3 @@ in general.  The algebraic structures consist of
 :   for finite fields, including existence and uniqueness.
 
 >>__ Parse.temp_set_grammars math_initial_grammars;
-

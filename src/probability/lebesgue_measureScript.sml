@@ -5136,15 +5136,43 @@ Proof
       MATCH_MP_TAC (cj 1 lebesgue_eq_gauge_integral_alt) >> art [] ]
 QED
 
-(* END *)
+Theorem FTC_integral_lborel :
+    !f f' g a b. a <= b /\
+             (!x. x IN interval [a,b] ==>
+                 (f has_vector_derivative f' x) (at x within interval [a,b])) /\
+              f' IN borel_measurable borel /\
+             (!x. g x = f' x * indicator (interval [a,b]) x) /\
+             (integrable lborel (Normal o g) \/
+              g absolutely_integrable_on UNIV) ==>
+              integral lborel (Normal o g) = Normal (f b - f a)
+Proof
+    rpt GEN_TAC
+ >> qabbrev_tac ‘P = (integrable lborel (Normal o g) \/
+                      g absolutely_integrable_on UNIV)’
+ >> STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘!x. g x = _’ (ASSUME_TAC o GSYM)
+ (* applying FTC *)
+ >> MP_TAC (Q.SPECL [‘f’, ‘f'’, ‘a’, ‘b’] FUNDAMENTAL_THEOREM_OF_CALCULUS)
+ >> simp [Once (GSYM HAS_INTEGRAL_MUL_INDICATOR)]
+ >> simp [HAS_INTEGRAL_INTEGRABLE_INTEGRAL]
+ >> STRIP_TAC
+ >> POP_ASSUM (REWRITE_TAC o wrap o SYM)
+ >> fs [Abbr ‘P’, SF ETA_ss]
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC (cj 2 lebesgue_eq_gauge_integral) >> art [],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC (cj 2 lebesgue_eq_gauge_integral_alt) >> art [] \\
+      Q.PAT_X_ASSUM ‘!x. _ = g x’ (ASSUME_TAC o GSYM) \\
+     ‘g = \x. f' x * indicator (interval [(a,b)]) x’ by rw [FUN_EQ_THM] \\
+      POP_ORW \\
+      HO_MATCH_MP_TAC in_borel_measurable_mul_indicator \\
+      simp [sigma_algebra_borel, CLOSED_interval, borel_measurable_sets] ]
+QED
 
 (* References:
 
   [1] Schilling, R.L.: Measures, Integrals and Martingales (Second Edition).
       Cambridge University Press (2017).
-  [2] Bartle, R.G.: A Modern Theory of Integration. American Mathematical Soc. (2001).
+  [2] Bartle, R.G.: A Modern Theory of Integration. American Math. Soc. (2001).
   [5] Wikipedia: https://en.wikipedia.org/wiki/Henri_Lebesgue
-  [7] Swartz, C.W., Kurtz, D.S.: Theories Of Integration: The Integrals Of Riemann,
-      Lebesgue, Henstock-kurzweil, And Mcshane (2nd Edition).
-      World Scientific Publishing Company (2011).
  *)
