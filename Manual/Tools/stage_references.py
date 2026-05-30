@@ -38,14 +38,25 @@ SVG_THEORY_RE = re.compile(
 )
 
 
-def find_source_docs(suffix):
-    """Yield absolute paths to every <src>/.hol/docs/*<suffix> under HOLDIR."""
-    for dirpath, _, filenames in os.walk(HOLDIR):
-        if not dirpath.endswith(os.path.join(".hol", "docs")):
+def canonical_thy_sources():
+    """Yield (thy_name, src_dir) for each theory installed in sigobj/.
+
+    Sigobj is the canonical "production theory" set; walking HOLDIR
+    generally would shadow a production theory's page whenever an
+    unrelated namesake script exists elsewhere in the tree."""
+    sigobj = HOLDIR / "sigobj"
+    for entry in sigobj.iterdir():
+        name = entry.name
+        if not name.endswith("Theory.sig"):
             continue
-        for name in filenames:
-            if name.endswith(suffix):
-                yield Path(dirpath) / name
+        thy_name = name[:-len("Theory.sig")]
+        if not thy_name or thy_name == "Final" or thy_name.endswith("_emit"):
+            continue
+        if not entry.is_symlink():
+            continue
+        # readlink() yields <src>/.hol/objs/<thy>Theory.sig; want <src>
+        src_dir = Path(os.readlink(entry)).parents[2]
+        yield (thy_name, src_dir)
 
 
 def stage_theory_pages():
@@ -59,15 +70,18 @@ def stage_theory_pages():
         shutil.rmtree(target)
     target.mkdir(parents=True)
 
-    for src in find_source_docs("Theory.html"):
-        content = src.read_bytes()
-        rewritten = THEORY_PARENT_RE.sub(rb'href="\1"', content)
-        (target / src.name).write_bytes(rewritten)
-
-    for src in find_source_docs("Script.html"):
+    for thy_name, src_dir in canonical_thy_sources():
+        docs = src_dir / ".hol" / "docs"
+        theory_html = docs / f"{thy_name}Theory.html"
+        if theory_html.is_file():
+            content = theory_html.read_bytes()
+            rewritten = THEORY_PARENT_RE.sub(rb'href="\1"', content)
+            (target / theory_html.name).write_bytes(rewritten)
         # Script.html pages don't contain cross-theory links worth
         # rewriting; copy as-is.
-        shutil.copy2(src, target / src.name)
+        script_html = docs / f"{thy_name}Script.html"
+        if script_html.is_file():
+            shutil.copy2(script_html, target / script_html.name)
 
 
 def stage_theory_graph():
