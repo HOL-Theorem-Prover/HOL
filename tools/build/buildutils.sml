@@ -386,7 +386,14 @@ fun get_cline () = let
       if seqspec = dfltbuildseq then
         write_options ("--"^knlspec::bgoption)
       else
-        write_options ("--"^knlspec::"--seq"::seqspec::bgoption)
+        let
+          val seqspec_abs =
+              if OS.Path.isAbsolute seqspec then seqspec
+              else OS.Path.mkAbsolute
+                     {path = seqspec, relativeTo = OS.FileSys.getDir()}
+        in
+          write_options ("--"^knlspec::"--seq"::seqspec_abs::bgoption)
+        end
 in
   Normal {build_theory_graph = buildgraph,
           cmdline = rest,
