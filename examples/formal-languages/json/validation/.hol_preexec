@@ -1,0 +1,1 @@
+[ -d "JSONTestSuite" ] || ./get-JSONTestSuite
