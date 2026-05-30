@@ -45,10 +45,11 @@ sig
   include Abbrev
 
   type cache
-  val CACHE  : {capacity:int, per_key_cap:int} ->
+  type capacity_info = {capacity:int, per_key_cap:int}
+  val CACHE  : capacity_info ->
                (term -> bool) * (thm list -> conv) ->
                (thm list -> conv) * cache
-  val RCACHE : {capacity:int, per_key_cap:int} ->
+  val RCACHE : capacity_info ->
                (term -> term list) * (term -> bool) * (thm list -> conv) ->
                (thm list -> conv) * cache
   val clear_cache       : cache -> unit

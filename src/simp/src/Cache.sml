@@ -8,47 +8,8 @@ type key = term
 
 type hypinfo = {hyps  : term HOLset.set,
                 thms  : term HOLset.set,
-                bloom : Word64.word}  (* see term_bloom below *)
+                bloom : BloomApprox.t}
 type data = (hypinfo * thm option) list
-
-local
-  val P : Word64.word = 0wx9E3779B185EBCA87  (* splitmix-style mixer *)
-  fun mix (a : Word64.word, b : Word64.word) : Word64.word =
-      let val a' = Word64.* (Word64.xorb (a, Word64.>> (a, 0w30)), P)
-      in Word64.+ (a', b) end
-  fun strhash s =
-      CharVector.foldl
-        (fn (c, h) => mix (h, Word64.fromInt (Char.ord c)))
-        (0w0 : Word64.word) s
-  fun term_hash t =
-      if is_var t then
-        let val (n, _) = dest_var t in strhash n end
-      else if is_const t then
-        let val {Name, Thy, ...} = dest_thy_const t
-        in mix (strhash Thy, strhash Name) end
-      else if is_comb t then
-        mix (term_hash (rator t), term_hash (rand t))
-      else if is_abs t then
-        mix (Word64.<< (term_hash (bvar t), 0w3), term_hash (body t))
-      else 0w0 : Word64.word
-in
-  (* Sets three 6-bit positions in a 64-bit filter for `t`.  The
-     hypinfo's bloom is the OR of `term_bloom` over its members,
-     which lets `<<` reject many non-subset pairs in two bitwise
-     ops before falling through to HOLset.isSubset. *)
-  fun term_bloom t =
-      let
-        val h    = term_hash t
-        val one  = 0w1  : Word64.word
-        val mask = 0wx3F : Word64.word
-        fun bit shift =
-            let val pos = Word64.toInt
-                            (Word64.andb (Word64.>> (h, shift), mask))
-            in Word64.<< (one, Word.fromInt pos) end
-      in
-        Word64.orb (Word64.orb (bit 0w0, bit 0w6), bit 0w16)
-      end
-end
 
 (* A DLL node carrying its data + position.  `datatype` (not `type`)
    because SML disallows recursive type aliases.  prev/next refs are
@@ -74,8 +35,9 @@ type state = {
 }
 
 type cache = state Sref.t
+type capacity_info = {capacity:int, per_key_cap:int}
 
-fun empty_state caps : state =
+fun empty_state (caps:capacity_info) : state =
     {store = Termtab.empty, head = NONE, tail = NONE,
      capacity = #capacity caps, per_key_cap = #per_key_cap caps}
 
@@ -248,26 +210,27 @@ fun set_per_key_cap (c : cache) n =
       end)
 
 val empty_hypinfo : hypinfo =
-    {hyps = empty_tmset, thms = empty_tmset, bloom = 0w0}
+    {hyps = empty_tmset, thms = empty_tmset, bloom = BloomApprox.empty}
 
 fun hypinfo_addth (th, {hyps, thms, bloom} : hypinfo) : hypinfo =
     let
       val newhyps = hypset th
       val c       = concl th
       val newbits =
-          HOLset.foldl (fn (h, acc) => Word64.orb (acc, term_bloom h))
-                       (term_bloom c) newhyps
+          HOLset.foldl
+            (fn (h, acc) => BloomApprox.union (acc, BloomApprox.from_term h))
+            (BloomApprox.from_term c) newhyps
     in
       {hyps  = HOLset.union (hyps, newhyps),
        thms  = HOLset.add (thms, c),
-       bloom = Word64.orb (bloom, newbits)}
+       bloom = BloomApprox.union (bloom, newbits)}
     end
 val all_hyps = List.foldl hypinfo_addth empty_hypinfo
 
 (* A subsetof B: Bloom-mask reject, then HOLset.isSubset. *)
 infix <<;
 fun {hyps=h1, thms=ths1, bloom=b1} << {hyps=h2, thms=ths2, bloom=b2} =
-    Word64.andb (b1, Word64.notb b2) = (0w0 : Word64.word) andalso
+    BloomApprox.maybeSubset (b1, b2) andalso
     HOLset.isSubset (h1, h2) andalso
     HOLset.isSubset (ths1, ths2)
 val _ = op<< : hypinfo * hypinfo -> bool
