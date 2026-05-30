@@ -3,17 +3,10 @@ ifdef POLY
 CLINE_OPTIONS += --poly_not_hol
 endif
 
-all: selftest.exe
-.PHONY: all
+lastmaker_propagation-selftest.log: selftest.exe
+	@$(tee ./$<, $@)
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.exe lastmaker_propagation-selftest.log
-
-ifdef HOLSELFTESTLEVEL
-all: lastmaker_propagation-selftest.log
-
-lastmaker_propagation-selftest.log: selftest.exe
-	$(tee ./$<, $@)
-endif

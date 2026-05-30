@@ -1,8 +1,8 @@
-CLINE_OPTIONS = -C subdir -n
-ifdef POLY
-CLINE_OPTIONS += --poly_not_hol
-endif
+dashC_works-selftest.log: selftest.exe
+	@$(tee ./$<, $@)
 
-# Holmake is invoked in subdir/ via -C -- not visited by parallel_tests
-# INCLUDES.  Add its .hol/ tree so build cleanAll removes it.
-EXTRA_CLEANS = subdir/.hol/
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe dashC_works-selftest.log dashC_works-output \
+               subdir/.hol/

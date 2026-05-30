@@ -3,17 +3,10 @@ ifdef POLY
 CLINE_OPTIONS += --poly_not_hol
 endif
 
-all: selftest.exe
-.PHONY: all
+dashC_lastmaker-selftest.log: selftest.exe
+	@$(tee ./$<, $@)
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.exe dashC_lastmaker-selftest.log altHolmake
-
-ifdef HOLSELFTESTLEVEL
-all: dashC_lastmaker-selftest.log
-
-dashC_lastmaker-selftest.log: selftest.exe
-	$(tee ./$<, $@)
-endif

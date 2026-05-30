@@ -39,7 +39,10 @@ DIRNAMES = \
   ignore_errors/j1 \
   qfreadTheoremsyntax \
   use-fnf \
-  time-logging
+  time-logging \
+  dashC_works \
+  dashC_lastmaker \
+  lastmaker_propagation
 
 ifdef POLY
 DIRNAMES += cache_reflink \
