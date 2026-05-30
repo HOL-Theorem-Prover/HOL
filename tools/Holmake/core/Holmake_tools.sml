@@ -242,12 +242,13 @@ fun shorten_name name =
   if OS.Path.file name = "Holmake" then "Holmake" else name
 
 fun output_functions {usepfx,chattiness=n,debug} = let
-  val execname = if usepfx then shorten_name (CommandLine.name()) ^ ": " else ""
   open HOLFileSys
   fun msg inlinep strm s =
     if s = "" then ()
     else
       let
+        val execname =
+            if usepfx then shorten_name (CommandLine.name()) ^ ": " else ""
         val ss = Substring.full s
         val (pfx_ss,sfx_ss) = Substring.splitl Char.isSpace ss
         val pfx = (if inlinep then "\r" else "") ^ Substring.string pfx_ss
