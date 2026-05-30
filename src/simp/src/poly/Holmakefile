@@ -1,4 +1,1 @@
-CLINE_OPTIONS = --no_overlay
-
-all: $(DEFAULT_TARGETS)
-.PHONY: all
+HOLHEAP = $(HOLDIR)/bin/hol.state0
