@@ -209,13 +209,21 @@ fun graphbuild optinfo g =
                    rest)
     val count_theories_needed = count_theories_needed0 (0,0)
 
-    fun genjob (g,ok) =
-      case (ok,find_runnable g) of
+    fun genjob (sctx as {jobs_running}) (g,ok) =
+      let
+        fun has_capacity (nI : GraphExtra.t nodeInfo) =
+            case #local_parallelism_limit nI of
+                NONE => true
+              | SOME n => jobs_running < n
+      in
+      case (ok,find_runnable_pred has_capacity g) of
           (false, _) => (release_all_locks(); GiveUpAndDie (g, false))
        |  (true, NONE) =>
           (* Do NOT release_all_locks here: NoMoreJobs fires after every
-             dispatch cycle when find_runnable has nothing more to hand
-             out *for now*, but workers we already dispatched are still
+             dispatch cycle when find_runnable_pred has nothing more to
+             hand out *for now* -- either because no node's deps are
+             ready, or because every ready node's LOCAL_PARALLELISM_LIMIT
+             is at its cap.  Workers we already dispatched are still
              holding their target locks for the duration of their own
              work.  Each worker's own update closure will release its
              lock when that worker completes; bulk-releasing here would
@@ -237,7 +245,8 @@ fun graphbuild optinfo g =
                  else ();
                  release_target_lock nI;
                  if b orelse keep_going then
-                   genjob (updnode(n, if b then Succeeded else RealFail) g,
+                   genjob sctx
+                          (updnode(n, if b then Succeeded else RealFail) g,
                            true)
                  else (release_all_locks(); GiveUpAndDie (g, ok)))
             val deps = map #2 (#dependencies nI)
@@ -250,7 +259,7 @@ fun graphbuild optinfo g =
             fun stdprocess() =
               case #command nI of
                   NoCmd => (release_target_lock nI;
-                            genjob (updnode (n,Succeeded) g, true))
+                            genjob sctx (updnode (n,Succeeded) g, true))
                 | cmd as SomeCmd c =>
                   let
                     val hypargs as {noecho,ignore_error,command=c} =
@@ -408,7 +417,7 @@ fun graphbuild optinfo g =
                  of
                     NONE => (diag ("Can skip work on "^target_s);
                              release_target_lock nI;
-                             genjob (updnode (n, Succeeded) g, true))
+                             genjob sctx (updnode (n, Succeeded) g, true))
                   | SOME (_,d) =>
                     (diag ("Dependency " ^ tgt_toString d ^
                            " forces rebuild of "^ target_s);
@@ -417,6 +426,7 @@ fun graphbuild optinfo g =
             else
               stdprocess()
           end
+      end
     val worklist =
         new_worklist {worklimit = jobs,
                       provider = { initial = (g,true), genjob = genjob }}

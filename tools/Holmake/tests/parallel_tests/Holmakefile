@@ -57,6 +57,7 @@ DIRNAMES += cache_reflink \
             ignore_errors/j4 \
             hollogs \
             issue1903 \
+            local_parallelism_limit \
             gh1979
 endif
 

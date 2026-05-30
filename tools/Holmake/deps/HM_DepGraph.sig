@@ -25,12 +25,18 @@ sig
                        phony : bool, dir : dir,
                        command : command, seqnum : int, extra : 'a,
                        dependencies : (node * dep) list,
-                       mtime : Time.time option }
+                       mtime : Time.time option,
+                       local_parallelism_limit : int option }
     (* mtime is the target file's modTime at the moment the node was
        added to the graph, or NONE if the file didn't exist or the
        target is phony.  Snapshot, not live: build jobs that run
        later won't update it.  Diagnostic only -- not consulted by
-       any rebuild-decision code. *)
+       any rebuild-decision code.
+
+       local_parallelism_limit is SOME n when the node's directory's
+       Holmakefile sets `LOCAL_PARALLELISM_LIMIT = n' (n > 0).  The
+       parallel scheduler refuses to dispatch this node unless the
+       total number of jobs running after dispatch would be <= n. *)
   val nodeInfo_toString : 'a nodeInfo -> string
   val node_toString : node -> string
   val setStatus : target_status -> 'a nodeInfo -> 'a nodeInfo
@@ -56,6 +62,14 @@ sig
   val topo_sort : 'a t -> node list
 
   val find_runnable : 'a t -> (node * 'a nodeInfo) option
+  val find_runnable_pred :
+      ('a nodeInfo -> bool) -> 'a t -> (node * 'a nodeInfo) option
+    (* Scans nodes in id order; returns the first runnable node (i.e.
+       Pending{needed=true} with all deps Succeeded) for which the
+       predicate also holds.  Predicate is expected to be cheap and
+       free of observable side effects -- it may be invoked many
+       times across successive scheduler turns and on each
+       candidate. *)
 
   val toString : 'a t -> string
   val toJSONString : 'a t -> string

@@ -45,15 +45,17 @@ type 'a nodeInfo = { target : dep, status : target_status, extra : 'a,
                      command : command, phony : bool,
                      seqnum : int, dir : dir,
                      dependencies : (node * Holmake_tools.dep) list,
-                     mtime : Time.time option }
+                     mtime : Time.time option,
+                     local_parallelism_limit : int option }
 
 fun fupdStatus f (nI: 'a nodeInfo) : 'a nodeInfo =
   let
-    val {target,command,status,dependencies,seqnum,phony,dir,extra,mtime} = nI
+    val {target,command,status,dependencies,seqnum,phony,dir,extra,mtime,
+         local_parallelism_limit} = nI
   in
     {target = target, status = f status, command = command, seqnum = seqnum,
      dependencies = dependencies, phony = phony, dir = dir, extra = extra,
-     mtime = mtime}
+     mtime = mtime, local_parallelism_limit = local_parallelism_limit}
   end
 
 fun setStatus s = fupdStatus (fn _ => s)
@@ -159,9 +161,8 @@ fun updnode (n, st) (g : 'a t) : 'a t =
       NONE => raise NoSuchNode
     | SOME nI => fupd_nodes (fn m => Map.insert(m, n, setStatus st nI)) g
 
-fun find_runnable (g : 'a t) =
+fun find_runnable_pred P (g : 'a t) =
   let
-    val sz = size g
     fun hasSucceeded (i,_) = #status (valOf (peeknode g i)) = Succeeded
     (* relying on invariant that all nodes up to size are in map *)
     fun search i =
@@ -169,12 +170,15 @@ fun find_runnable (g : 'a t) =
           NONE => NONE
         | SOME nI =>
           if #status nI = Pending{needed=true} andalso
-             List.all hasSucceeded (#dependencies nI)
+             List.all hasSucceeded (#dependencies nI) andalso
+             P nI
           then SOME (i,nI)
           else search (i + 1)
   in
     search 0
   end
+
+fun find_runnable g = find_runnable_pred (fn _ => true) g
 
 fun target_node (g:'a t) t = Map.peek(#target_map g,t)
 fun listNodes (g:'a t) = Map.foldr (fn (k,v,acc) => (k,v)::acc) [] (#nodes g)

@@ -55,6 +55,21 @@ New features
     Genuine cycles within a single root's `INCLUDES` chain are
     still reported.
 
+-   `Holmake` (under Poly/ML) understands a new per-directory
+    `Holmakefile` variable, `LOCAL_PARALLELISM_LIMIT = n`, which
+    caps the total number of concurrent jobs the parallel
+    scheduler will allow whenever a target from that directory
+    is dispatched.  `n = 1` gives a directory's targets
+    exclusive access — useful for memory-heavy theory builds
+    that would otherwise OOM when run alongside other jobs
+    under `-j N`.  `n = 2` allows at most two concurrent jobs
+    total while any of this directory's targets is running,
+    and so on.  An invalid right-hand side (non-integer, zero,
+    negative, multiple tokens) is reported with a warning and
+    the declaration is then ignored.  The variable has no
+    effect under Moscow ML (whose `Holmake` is always
+    sequential) or under Poly/ML `Holmake -j 1`.
+
 Bugs fixed
 ----------
 

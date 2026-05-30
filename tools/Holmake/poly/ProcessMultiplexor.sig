@@ -13,7 +13,12 @@ sig
   type exit_status = Posix.Process.exit_status
   datatype 'a genjob_result =
            NoMoreJobs of 'a | NewJob of ('a job * 'a) | GiveUpAndDie of 'a
-  type 'a workprovider = { initial : 'a, genjob : 'a -> 'a genjob_result }
+  (* Live scheduler view handed to `genjob' on each fill cycle.
+     A record so future fields can be added without churning
+     callers. *)
+  type sched_ctxt = { jobs_running : int }
+  type 'a workprovider =
+       { initial : 'a, genjob : sched_ctxt -> 'a -> 'a genjob_result }
   type 'a worklist
 
   datatype strmtype = OUT | ERR

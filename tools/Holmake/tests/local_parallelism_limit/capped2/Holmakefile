@@ -1,0 +1,27 @@
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
+
+LOCAL_PARALLELISM_LIMIT = 2
+
+CHECK = ../check.sh
+
+.PHONY: all t1 t2 t3 t4 t5 t6 clean
+
+all: t1 t2 t3 t4 t5 t6
+
+t1:
+	$(CHECK) 2 t1
+t2:
+	$(CHECK) 2 t2
+t3:
+	$(CHECK) 2 t3
+t4:
+	$(CHECK) 2 t4
+t5:
+	$(CHECK) 2 t5
+t6:
+	$(CHECK) 2 t6
+
+clean:
+	$(RM) .plimit.lock .plimit.count

@@ -1,0 +1,12 @@
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
+
+LOCAL_PARALLELISM_LIMIT = oops
+
+.PHONY: all clean
+
+all:
+	@echo all done
+
+clean:

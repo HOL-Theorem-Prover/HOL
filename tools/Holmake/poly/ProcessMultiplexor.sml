@@ -18,7 +18,9 @@ struct
                  update : 'a * bool * Time.time -> 'a}
   datatype 'a genjob_result =
            NoMoreJobs of 'a | NewJob of ('a job * 'a) | GiveUpAndDie of 'a
-  type 'a workprovider = { initial : 'a, genjob : 'a -> 'a genjob_result }
+  type sched_ctxt = { jobs_running : int }
+  type 'a workprovider =
+       { initial : 'a, genjob : sched_ctxt -> 'a -> 'a genjob_result }
 
   type 'a working_job = {
     tag : string,
@@ -113,7 +115,7 @@ struct
     current_state : 'a,
     worklimit : int,
     last_cutime : Time.time,
-    genjob : 'a -> 'a genjob_result
+    genjob : sched_ctxt -> 'a -> 'a genjob_result
   }
 
   fun inStreamInPoll (strm : TextIO.instream) =
@@ -266,10 +268,11 @@ struct
   fun fill_workq monitorfn (acc as (cmds, wl : 'a worklist)) =
     let
       val {current_jobs,current_state,genjob,worklimit,...} = wl
+      val running = Binarymap.numItems current_jobs
     in
-      if Binarymap.numItems current_jobs >= worklimit then acc
+      if running >= worklimit then acc
       else
-        case genjob current_state of
+        case genjob {jobs_running = running} current_state of
             NoMoreJobs s' => (cmds, updstate s' wl)
           | NewJob (job, state') =>
             let
@@ -340,7 +343,7 @@ struct
         [] => wl
       | KillAll :: rest =>
           wl |> killall mfn
-             |> (fn wl => updateWL wl (U #genjob NoMoreJobs) $$)
+             |> (fn wl => updateWL wl (U #genjob (fn _ => NoMoreJobs)) $$)
              |> execute_cmds mfn rest
       | Kill jk :: rest =>
           wl |> killjob mfn jk |> execute_cmds mfn rest
@@ -483,7 +486,7 @@ struct
             ([], 65)
             cmds0
       val cmds = List.rev cmds00
-      fun genjob clist =
+      fun genjob (_ : sched_ctxt) clist =
         let
           val (cdata, l) = findUpd (fn (_, (_, s)) => s = Waiting)
                                    (fn (k, (c, _)) => (k, (c, Running)))

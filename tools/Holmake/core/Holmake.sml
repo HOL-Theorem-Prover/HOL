@@ -267,6 +267,18 @@ local
       known_dirs := Binaryset.add(!known_dirs, absdir)
   fun mark_known_hmdirs ds =
       Binaryset.app (fn d => mark_known (hmdir.toAbsPath d)) ds
+  (* Dirs for which we've already emitted a LOCAL_PARALLELISM_LIMIT
+     warning, so we don't repeat it on every `limit_for_dir' call. *)
+  val plimit_warned : string Binaryset.set ref =
+      ref (Binaryset.empty String.compare)
+  fun plimit_bad absdir s =
+      "Holmakefile in " ^ absdir ^
+      ": ignoring LOCAL_PARALLELISM_LIMIT = '" ^ s ^
+      "' (need a single positive integer)"
+  fun plimit_warn absdir s =
+      if Binaryset.member(!plimit_warned, absdir) then ()
+      else (plimit_warned := Binaryset.add(!plimit_warned, absdir);
+            warn (plimit_bad absdir s))
   val default = (base,empty_trdb,empty_patrules,NONE)
   fun get_hmf0 d =
       if FileSys.access("Holmakefile", [FileSys.A_READ]) then
@@ -318,6 +330,29 @@ fun get_hmf_for_dir absdir =
 
 fun get_hmf () = get_hmf_for_dir (FileSys.getDir())
 fun is_known_dir absdir = Binaryset.member(!known_dirs, absdir)
+
+(* `limit_for_dir' must not trigger a Holmakefile read here: doing
+   so would chdir under code in `build_depgraph' that captures
+   `FileSys.getDir()' for rule lookup.  We only consult `hmcache'
+   directly.  If the dir's Holmakefile hasn't been read by the
+   normal `recursively' traversal (e.g. foreign-external nodes such
+   as sigobj references), we return NONE -- those nodes don't drive
+   jobs in this Holmake, so the limit is moot. *)
+fun limit_for_dir (d : hmdir.t) : int option =
+    let val absdir = hmdir.toAbsPath d
+    in
+      case Binarymap.peek(!hmcache, absdir) of
+          NONE => NONE
+        | SOME (env, _, _, _) =>
+          case envlist env "LOCAL_PARALLELISM_LIMIT" of
+              [] => NONE
+            | [s] =>
+              (case Int.fromString s of
+                   SOME n => if n > 0 then SOME n
+                             else (plimit_warn absdir s; NONE)
+                 | NONE => (plimit_warn absdir s; NONE))
+            | ss => (plimit_warn absdir (String.concatWith " " ss); NONE)
+    end
 end
 
 fun getnewincs dir =
@@ -1162,6 +1197,7 @@ in
                              else Failed{needed=false},
                     dir = dir, extra = extra,
                     mtime = hm_target.tgt_modTime tgt,
+                    local_parallelism_limit = limit_for_dir dir,
                     command = NoCmd, dependencies = depnodes} g1
         end
       else if isSome pdep andalso no_full_extra_rule (SOME tgt) then
@@ -1247,6 +1283,7 @@ in
                                else Succeeded,
                       extra = extra,
                       mtime = hm_target.tgt_modTime tgt,
+                      local_parallelism_limit = limit_for_dir rh,
                       command = BuiltInCmd (bic,incinfo), dir = rh,
                       dependencies = depnodes } g3
         end
@@ -1259,6 +1296,7 @@ in
                                  else Failed{needed=false},
                         command = NoCmd, dir = rh, extra = extra,
                         mtime = hm_target.tgt_modTime tgt,
+                        local_parallelism_limit = limit_for_dir rh,
                         dependencies = []} g0
             )
           | SOME {dependencies, commands, ...} =>
@@ -1357,6 +1395,8 @@ in
                                          command = SomeCmd c, extra = extra,
                                          dir = rh,
                                          mtime = tgt_mtime,
+                                         local_parallelism_limit =
+                                             limit_for_dir rh,
                                          dependencies = depnode @ depnodes } g
                 in
                   (* This function needs to be folded l-to-r to ensure that
@@ -1381,6 +1421,7 @@ in
                               status = status, command = NoCmd, extra = extra,
                               dir = rh,
                               mtime = tgt_mtime,
+                              local_parallelism_limit = limit_for_dir rh,
                               dependencies = depnodes} g1
                   | SOME s =>
                     let
@@ -1396,6 +1437,8 @@ in
                                             (BIC_BuildScript fp, incinfo),
                                 dir = actual_dir, extra = extra,
                                 mtime = hm_target.tgt_modTime tgt,
+                                local_parallelism_limit =
+                                    limit_for_dir actual_dir,
                                 dependencies = depnodes} g1
                     end
             end

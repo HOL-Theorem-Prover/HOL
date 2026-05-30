@@ -1276,6 +1276,18 @@ command, stripped of its leading hyphens.  This will typically be
 `stdknl` (the standard kernel) but may take on other values if
 other custom kernels are being used.
 
+**`LOCAL_PARALLELISM_LIMIT`** Under Poly/ML, setting this variable
+to a positive integer `n` instructs the parallel scheduler that no
+target in this directory may be dispatched unless the total number
+of jobs that would then be running across the whole build is at
+most `n`.  In particular, `LOCAL_PARALLELISM_LIMIT = 1` reserves
+exclusive use of the machine for any target in this directory
+(useful for theory builds whose memory footprint would otherwise
+provoke OOMs when run alongside other jobs under a large `-j N`).
+A right-hand side that is not a single positive integer is
+reported with a warning and ignored.  The variable has no effect
+under Moscow ML or under Poly/ML `Holmake -j 1`.
+
 **`ML_SYSNAME`** The name of the ML system being used: either
 `mosml` or `poly`.
 
