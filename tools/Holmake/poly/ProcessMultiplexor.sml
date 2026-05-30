@@ -366,11 +366,32 @@ struct
       fun exitstatus wj status (cs, wl) =
         let
           val {cutime,...} = Posix.ProcEnv.times()
-          val elapsed = Time.-(cutime, #last_cutime wl)
-          val msg = Terminated (wjkey wj, status, elapsed)
+          val elapsed_t = Time.-(cutime, #last_cutime wl)
+          (* The child has been waitpid'd, so its pipes' writer ends are
+             closed by the kernel.  Any buffered output the child produced
+             between the last poll round and the moment of exit is still in
+             the pipe buffer.  TextIO.closeIn would discard it -- and the
+             corresponding tag's tailbuffer in MB_Monitor would never see
+             it, so the failure-reporting summary would lose the child's
+             last words.  Drain both pipes here, emitting one Output event
+             per non-empty read, so the Terminated event that follows sees
+             a tailbuffer that includes the trailing data.  Since the
+             writer is gone, TextIO.input returns "" promptly at EOF
+             rather than blocking. *)
+          fun drain chan strm cs =
+              let val s = TextIO.input strm handle _ => ""
+              in
+                if size s = 0 then cs
+                else
+                  let val msg = Output(wjkey wj, elapsed wj, chan, s)
+                  in drain chan strm (monitor msg cs) end
+              end
+          val cs = drain OUT (#out wj) cs
+          val cs = drain ERR (#err wj) cs
+          val msg = Terminated (wjkey wj, status, elapsed_t)
           val cs' = monitor msg cs
           val newstate =
-              #update wj (#current_state wl, status = W_EXITED, elapsed)
+              #update wj (#current_state wl, status = W_EXITED, elapsed_t)
           val _ = TextIO.closeIn (#out wj)
           val _ = TextIO.closeIn (#err wj)
           val wl' = updateWL wl
