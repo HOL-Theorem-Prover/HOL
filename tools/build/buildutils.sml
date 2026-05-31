@@ -1011,6 +1011,20 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
      if use_mdbook then
        let
          val refdir = fullPath [HOLDIR, "Manual", "Reference"]
+         (* The Reference mdbook target depends on each sibling
+            manual's labels.tsv (for cross-book \ref{Book:label}
+            resolution -- see Manual/mdbook.mk SIBLING_LABELS).
+            Build those first.  Hardcoding the list mirrors
+            MANUALS in mdbook.mk; revisit if a manual is added. *)
+         val sibling_manuals = ["Description", "Tutorial",
+                                "Interaction-emacs"]
+         val () = print ("Building sibling labels for Reference mdbook...\n")
+         fun build_labels m =
+           let val mdir = fullPath [HOLDIR, "Manual", m]
+           in if SYSTEML [HOLMAKE, "-C", mdir, "labels.tsv"] then ()
+              else die ("Couldn't build Manual/" ^ m ^ "/labels.tsv")
+           end
+         val () = List.app build_labels sibling_manuals
          val () = print ("Building Reference mdbook (mdbook detected \
                          \in PATH)...\n")
        in
