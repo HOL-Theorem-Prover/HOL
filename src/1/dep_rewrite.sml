@@ -270,30 +270,44 @@ fun DEP_FIND_matches th =
             HO_PART_MATCH (dest_neg o snd o strip_imp_only) sth
             handle _ =>
             HO_PART_MATCH (snd o strip_imp_only) sth)
+       (* Reject matches whose instantiated antecedents would mention a
+          variable bound by the surrounding goal context: those
+          antecedents become top-level side conditions, so capturing a
+          bound variable turns the goal unprovable. See GitHub #1819. *)
+       fun check_no_capture bvs m =
+           let val (_, body) = strip_forall (concl m)
+               val (ants', _) = strip_imp_only body
+               val antvars = free_varsl ants'
+           in
+              if List.exists (fn v => op_mem aconv v bvs) antvars
+              then failwith "DEP_FIND_matches: \
+                            \bound variable captured in side condition"
+              else m
+           end
    in
-      match_fn
+      fn bvs => fn tm => check_no_capture bvs (match_fn tm)
    end
    handle _ => failwith "DEP_FIND_matches: bad theorem";
 
-fun SUB_matches (f:term->'a) tm =
+fun SUB_matches (f:term list -> term -> 'a) bvs tm =
    ( (* if debug_matches then (print_string "SUB_matches: ";
                     print_term tm; print_newline()) else (); *)
     if is_comb tm then
        (let val {Rator,Rand} = Rsyntax.dest_comb tm in
-        (f Rator handle _ => f Rand)
+        (f bvs Rator handle _ => f bvs Rand)
         end)
     else
     if is_abs tm then
        let val {Bvar,Body} = Rsyntax.dest_abs tm in
-           f Body
+           f (Bvar::bvs) Body
        end
     else failwith "SUB_matches");
 
-fun ONCE_DEPTH_matches (f:term->'a) tm =
+fun ONCE_DEPTH_matches (f:term list -> term -> 'a) bvs tm =
      ( (* if debug_matches then
         (print_string "ONCE_DEPTH_matches: "; print_term tm; print_newline())
       else (); *)
-       (f tm handle _ => (SUB_matches (ONCE_DEPTH_matches f) tm)));
+       (f bvs tm handle _ => (SUB_matches (ONCE_DEPTH_matches f) bvs tm)));
 
 
 
@@ -337,7 +351,7 @@ fun APPLY_IMP_THEN ttac th (asl,gl) =
                    else (); (**)
         val matched =
                repeat_apply
-                  (fn th => ONCE_DEPTH_matches (DEP_FIND_matches th) gl)
+                  (fn th => ONCE_DEPTH_matches (DEP_FIND_matches th) [] gl)
                   assemble_ants
                   (fn th1 => fn th2 => concl th1 ~~ concl th2)
                   th;

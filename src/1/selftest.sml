@@ -1482,6 +1482,30 @@ val _ = app unify_test [
       (“cle (t:'a) ($= t)”, “cle (s:'b) (t0:'c)”, true, false)
     ]
 
+(* Test for GitHub issue #1819: DEP_*_REWRITE_TAC must not splice side
+   conditions that mention a goal-bound variable as if it were free. *)
+val _ = tprint "GitHub #1819: dep_rewrite avoids bound-var capture"
+val _ = let
+  open dep_rewrite
+  val rule_tm =
+      “!x:bool. (f:bool->bool) x ==> ((a:bool->bool) x = b x)”
+  val rule = ASSUME rule_tm
+  val goal_tm =
+      “!x:bool. (f:bool->bool) x ==> ((a:bool->bool) x = b x)”
+  val orig_fvs = HOLset.fromList Term.compare (free_vars goal_tm)
+  fun fvs_of (asl, g) =
+      List.concat (map free_vars (g::asl))
+  fun no_new_fvs subgoals =
+      List.all (List.all (fn v => HOLset.member(orig_fvs, v)) o fvs_of)
+               subgoals
+  val ok =
+      let val (subgoals, _) = DEP_ONCE_REWRITE_TAC [rule] ([], goal_tm)
+      in no_new_fvs subgoals end
+      handle HOL_ERR _ => true
+in
+  if ok then OK() else die "side condition leaked a captured bound variable"
+end
+
 (* Test for #1870: redefinition of bool constants via prim_specification.
    This test must be last because prim_specification retires the old ?
    constant, corrupting state for any subsequent code that uses ?. *)
