@@ -13,7 +13,9 @@ type t = {kernelspec : string option,
           relocbuild : bool,
           thmsrc : string option,
           timelimit : int option,
-          cache_dir : string option}
+          cache_dir : string option,
+          no_mdbook : bool,
+          no_helpdocs : bool}
 
 val default_cache_dir =
     case (OS.Process.getEnv "XDG_CACHE_HOME", OS.Process.getEnv "HOME") of
@@ -31,7 +33,8 @@ val initial : t =
       build_theory_graph = NONE, selftest = NONE, debug = false,
       relocbuild = false, multithread = NONE, keepgoing = false,
       thmsrc = NONE, timelimit = NONE,
-      cache_dir = NONE
+      cache_dir = NONE,
+      no_mdbook = false, no_helpdocs = false
     }
 
 type 'a final_options =
@@ -46,7 +49,9 @@ type 'a final_options =
       cache_dir : string option,
       relocbuild : bool,
       thmsrc : string option,
-      timelimit : int option}
+      timelimit : int option,
+      no_mdbook : bool,
+      no_helpdocs : bool}
 
 
 

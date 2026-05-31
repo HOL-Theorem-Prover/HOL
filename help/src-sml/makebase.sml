@@ -254,18 +254,39 @@ fun process (libdir, helpfile, txtIndex,
  )
 
 in
-    case CommandLine.arguments () of
-        []       =>
-            process (libdirDef, helpfileDef,
-                     txtIndexDef, texIndexDef,
-                     htmlDirDef, htmlIndexDef,
-                     htmlTheoryIndexDef, landerFragmentDef)
-      | [libdir] =>
-            process (libdir, helpfileDef,
-                     txtIndexDef, texIndexDef,
-                     htmlDirDef, htmlIndexDef,
-                     htmlTheoryIndexDef, landerFragmentDef)
-      | _ => print "Usage: makebase\n"
+    let
+      (* Peel `--entry-url-base=<prefix>` off the argv before
+         positional dispatch.  Sets Htmlsigs.entry_url_base so that
+         per-entry hyperlinks in generated htmlsigs/<struct>.html
+         pages resolve via the chosen URL base (mdbook output or
+         the legacy Docfiles/HTML directory). *)
+      fun stripPrefix p s =
+          if String.isPrefix p s
+          then SOME (String.extract(s, String.size p, NONE))
+          else NONE
+      fun extract acc [] = (NONE, List.rev acc)
+        | extract acc (a :: rest) =
+            (case stripPrefix "--entry-url-base=" a of
+                 SOME v => (SOME v, List.revAppend(acc, rest))
+               | NONE => extract (a :: acc) rest)
+      val (urlBase, args) = extract [] (CommandLine.arguments ())
+      val () = case urlBase of
+                   NONE => ()
+                 | SOME b => Htmlsigs.entry_url_base := b
+    in
+      case args of
+          []       =>
+              process (libdirDef, helpfileDef,
+                       txtIndexDef, texIndexDef,
+                       htmlDirDef, htmlIndexDef,
+                       htmlTheoryIndexDef, landerFragmentDef)
+        | [libdir] =>
+              process (libdir, helpfileDef,
+                       txtIndexDef, texIndexDef,
+                       htmlDirDef, htmlIndexDef,
+                       htmlTheoryIndexDef, landerFragmentDef)
+        | _ => print "Usage: makebase [--entry-url-base=<prefix>] [<libdir>]\n"
+    end
 end  (* main *)
 
 end;

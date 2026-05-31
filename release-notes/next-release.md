@@ -37,6 +37,21 @@ New features
 
     The old `M-h C-u` binding which toggles Unicode pretty-printing in the output `*HOL*` buffer has now moved to `M-h u p`.
 
+-   `bin/build` has two new flags that control how per-entry HTML
+    pages for `help/Docfiles/*.smd` are produced.  By default, if
+    `mdbook` is on the user's PATH, `build_help` now invokes the
+    Manual/Reference mdbook target so that the generated
+    `help/src-sml/htmlsigs/<struct>.html` pages link straight into
+    the rendered reference book.  When `mdbook` is absent, the
+    fallback runs a single-shot `pandoc` pass to emit
+    `help/Docfiles/HTML/<entry>.html` (one pandoc invocation total,
+    not one per entry).  `bin/build --no-mdbook` forces the fallback
+    even when mdbook is present, and `bin/build --no-helpdocs` skips
+    the entire help-documentation build (no docfile processing, no
+    mdbook, no help DB) -- useful for partial build sequences that
+    don't compile every HOL library and so can't successfully
+    evaluate every polyscripter `>>` directive.
+
 -   `Holmake` has a new flag `--dirs` that re-interprets the
     positional command-line arguments as *root directories* to
     operate on, rather than build targets.
@@ -77,6 +92,12 @@ Bugs fixed
     Thanks to Ramana Kumar for finding these!
 
 -   We also fixed another [kernel soundness bug](https://github.com/HOL-Theorem-Prover/HOL/issues/1870) found by Ramana Kumar in the technology used to push constants from `bool` back into the kernel.
+
+-   `help/Docfiles/*.smd` entries had embedded polyscripter `>>` ML transcript directives (`>>`, `>>__`, `##eval`, etc.) but the pipeline that derived `help/Docfiles/*.txt` for the in-HOL `help` command, and the one that produced `entries.tex` for `Manual/Reference/reference.pdf`, both fed the raw markdown through pandoc without evaluating the directives.
+    The plain-text and PDF reference manuals therefore showed literal `>>` blockquote-mangled source instead of evaluated examples.
+    Both pipelines now consume a polyscripter-evaluated mirror of the Docfiles directory (produced at `Manual/build/Docfiles-processed/` during `build_help`); the mdbook Reference manual is also routed through the same mirror to share the single polyscripter pass.
+    The new pipeline invokes `pandoc` once per output format (rather than once per file) by concatenating the processed entries with sentinels and splitting the result, dropping the per-`help/Docfiles` build-step wall time from tens of seconds to a couple.
+    See `help/src-sml/process_docfiles.sml`; closes [#1834](https://github.com/HOL-Theorem-Prover/HOL/issues/1834).
 
 -   The contextual decision-procedure cache used by the arithmetic simpset fragments (`numSimps.ARITH_ss`, `realSimps.REAL_ARITH_ss`, `intSimps.OMEGA_ss`/`COOPER_ss`, and `bagSimps.SBAG_SOLVE_ss`) was unbounded.
     In long-running sessions the cache accumulated entries — both in number of cached goals and in the per-key list of `(context, result)` pairs under each goal — and `simp` invocations slowed down approximately linearly with session length, dominated by linear scans of the per-key list under `boolSyntax.F`.

@@ -3,9 +3,14 @@
 # =====================================================================
 
 # ---------------------------------------------------------------------
-# Pathnames: Helpd = hol help directory
+# Pathnames: Helpd = hol help directory; Processed = polyscripter-
+# evaluated mirror of help/Docfiles produced by bin/build's build_help
+# step (see help/src-sml/process_docfiles.sml).  Both PDF and mdbook
+# pipelines consume the processed directory so polyscripter `>>`
+# directives are evaluated exactly once per build.
 # ---------------------------------------------------------------------
 Helpd=../../help
+Processed=../build/Docfiles-processed
 
 INCLUDES = $(Helpd)/src-sml ../Tools
 
@@ -30,9 +35,8 @@ reference.pdf: reference.tex entries.tex $(OTHER)
 	latexmk -pdf reference
 
 entries.md: $(Helpd)/src-sml/Md2TeX.exe \
-            $(wildcard $(Helpd)/Docfiles/*.md) \
-            $(wildcard $(Helpd)/Docfiles/*.smd)
-	$(Helpd)/src-sml/Md2TeX.exe $(Helpd)/Docfiles > $@
+            $(wildcard $(Processed)/*.smd)
+	$(Helpd)/src-sml/Md2TeX.exe $(Processed) > $@
 
 entries.tex: entries.md
 	pandoc -V documentclass=book -o $@ $<
@@ -40,15 +44,16 @@ entries.tex: entries.md
 # ---------------------------------------------------------------------
 # mdbook pipeline: each entry .smd becomes one page; sidebar groups
 # entries by HOL structure (the first dot-separated component of the
-# filename).  SUMMARY.md is generated from the file listing into
-# help/Docfiles/ itself, alongside the entries (gitignored there).
+# filename).  SUMMARY.md is generated from the file listing into the
+# processed directory itself, alongside the (already-polyscripted)
+# entries (the whole tree is gitignored under Manual/build/).
 # ---------------------------------------------------------------------
 # Recipe-less PHONY alias; the real gate is the file target below.
 # See Manual/Description/Holmakefile for the rationale.
 mdbook: ../book/Reference/index.html
 
 ../book/Reference/index.html: ../Tools/smdpp \
-        $(Helpd)/Docfiles/SUMMARY.md entries.list \
+        $(Processed)/SUMMARY.md entries.list \
         labels.tsv $(SIBLING_LABELS)
 	mdbook build
 	# See Manual/Description/Holmakefile for the rationale.
@@ -66,14 +71,22 @@ mdbook: ../book/Reference/index.html
 # tooling failure -- so swallow the exit code (`|| true`) until the
 # audit completes.
 
-$(Helpd)/Docfiles/SUMMARY.md: ../Tools/gen_reference_summary \
-                              $(wildcard $(Helpd)/Docfiles/*.smd)
-	../Tools/gen_reference_summary $(Helpd)/Docfiles > $@
+# gen_reference_summary scans whatever directory you point it at,
+# so feeding it the processed mirror (where every *.smd has been
+# polyscripter-evaluated) yields a SUMMARY whose entry filenames
+# resolve cleanly inside the processed tree.  We list the source
+# .smd files as a prerequisite (not the processed mirror), since a
+# new source entry should trigger SUMMARY regeneration even before
+# process_docfiles has populated its counterpart in $(Processed).
+$(Processed)/SUMMARY.md: ../Tools/gen_reference_summary \
+                         $(wildcard $(Helpd)/Docfiles/*.smd)
+	mkdir -p $(Processed)
+	../Tools/gen_reference_summary $(Processed) > $@
 
 # Scan-only label dump for cross-book `\ref{Book:label}` resolution.
 # See Manual/Description/Holmakefile for the rationale.
-labels.tsv: ../Tools/smdpp $(Helpd)/Docfiles/SUMMARY.md \
-            $(wildcard $(Helpd)/Docfiles/*.smd)
+labels.tsv: ../Tools/smdpp $(Processed)/SUMMARY.md \
+            $(wildcard $(Processed)/*.smd)
 	../Tools/smdpp dump-labels .
 
 # Lookup table for `\refentry{Foo.bar}` substitution in Description
@@ -104,7 +117,7 @@ mdbook-serve: ../Tools/smdpp
 	 msg "stop: pkill -f 'mdbook serve.*3003'"
 
 EXTRA_CLEANS = reference.pdf entries.md entries.tex \
-               $(Helpd)/Docfiles/SUMMARY.md entries.list labels.tsv \
+               $(Processed)/SUMMARY.md entries.list labels.tsv \
                ../book/Reference/ \
                mdbook-serve.log \
                reference.aux reference.log reference.out \

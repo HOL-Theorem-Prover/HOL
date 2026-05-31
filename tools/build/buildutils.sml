@@ -408,7 +408,9 @@ in
           cache_dir = #cache_dir option_record,
           relocbuild = #relocbuild option_record,
           thmsrc = #thmsrc option_record,
-          timelimit = #timelimit option_record}
+          timelimit = #timelimit option_record,
+          no_mdbook = #no_mdbook option_record,
+          no_helpdocs = #no_helpdocs option_record}
 end handle DoClean s => (Clean s before safedelete Holmake_tools.kernelid_fname)
 
 (* ----------------------------------------------------------------------
@@ -899,20 +901,17 @@ fun write_theory_graph () =
     | NONE => warn "If you had a copy of the dot tool installed, I might try\n\
                    \*** to build a theory graph at this point"
 
-fun Poly_compilehelp() = let
-  open Systeml
-in
-  system_ps (fullPath [HOLDIR, "tools", "mllex", "mllex.exe"] ^ " Lexer.lex");
-  system_ps (fullPath [HOLDIR, "tools", "mlyacc", "src", "mlyacc.exe"] ^ " Parser.grm");
-  system_ps (POLYC ^ " poly-makebase.ML -o makebase.exe");
-  system_ps (POLYC ^ " poly-Doc2Html.ML -o gen_extra_docfiles");
-  system_ps (POLYC ^ " poly-AliasGen.ML -o AliasGen.exe")
-end
-
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
 val ML_SYSNAME = Systeml.ML_SYSNAME
 
-fun mosml_compilehelp () = ignore (SYSTEML [HOLMAKE, "all"])
+(* Holmake all in help/src-sml/ builds the per-SML-implementation set
+   of help tools: AliasGen.exe, makebase.exe under both, plus
+   process_docfiles under poly (which needs bin/hol.state for
+   polyscripter and is therefore declared inside an `ifdef POLY`
+   block in help/src-sml/Holmakefile). *)
+fun compile_help_tools () =
+  if SYSTEML [HOLMAKE, "all"] then ()
+  else die "Couldn't build help tools"
 
 fun build_adoc_files () = true
   (* for the moment, use markdown files as our "ASCII" documentation *)
@@ -939,37 +938,99 @@ in
   List.all make_adocs docdirs
 end *)
 
-fun build_help graph =
+(* Does an executable of the given name exist on PATH? *)
+fun which arg =
+  let
+    open OS.FileSys
+    val sepc = if Systeml.isUnix then #":" else #";"
+    fun check p =
+      let val fname = OS.Path.concat(p, arg)
+      in if access (fname, [A_READ, A_EXEC]) then SOME fname else NONE end
+    fun first [] = NONE
+      | first (p::ps) = (case check p of NONE => first ps | sm => sm)
+  in
+    case OS.Process.getEnv "PATH" of
+        NONE => if Systeml.isUnix then NONE else check "."
+      | SOME path =>
+        let val paths = (if Systeml.isUnix then [] else ["."]) @
+                        String.fields (fn c => c = sepc) path
+        in first paths end
+  end
+
+fun build_help {graph, no_mdbook, no_helpdocs} =
+ if no_helpdocs then
+   (print "Skipping help documentation build (--no-helpdocs).\n";
+    if graph then write_theory_graph() else ())
+ else
  let val dir = OS.Path.concat(OS.Path.concat (HOLDIR,"help"),"src-sml")
      val _ = HOLFileSys.chDir dir
 
-     (* builds the documentation tools called below *)
-     val _ = if ML_SYSNAME = "poly" then ignore (Poly_compilehelp())
-             else if ML_SYSNAME = "mosml" then mosml_compilehelp()
-             else raise Fail "Bogus ML_SYSNAME"
+     val _ = compile_help_tools()
 
-     val doc2html = fullPath [dir,"gen_extra_docfiles"]
-     val docpath  = fullPath [HOLDIR, "help", "Docfiles"]
-     val htmlpath = fullPath [docpath, "HTML"]
-     val _        = if (HOLFileSys.isDir htmlpath handle _ => false) then ()
-                    else (print ("Creating directory "^htmlpath^"\n");
-                          HOLFileSys.mkDir htmlpath)
-     val cmd1     = [doc2html, docpath, htmlpath]
-     val cmd2     = [fullPath [dir,"makebase.exe"]]
-     val cmd3     = [fullPath [dir,"AliasGen.exe"], "--check", docpath]
+     val process_docfiles = fullPath [dir, "process_docfiles"]
+     val docpath          = fullPath [HOLDIR, "help", "Docfiles"]
+     val processed_dir    = fullPath [HOLDIR, "Manual", "build",
+                                       "Docfiles-processed"]
+     val htmlpath         = fullPath [docpath, "HTML"]
+
+     val cmd_alias        = [fullPath [dir, "AliasGen.exe"], "--check", docpath]
+
+     val poly = ML_SYSNAME = "poly"
+     val mdbook_present = poly andalso
+                          (case which "mdbook" of SOME _ => true
+                                                | NONE => false)
+     val use_mdbook = poly andalso not no_mdbook andalso mdbook_present
+     val use_html_fallback = poly andalso not use_mdbook
+
+     (* Per-entry URL base relative to help/src-sml/htmlsigs/<struct>.html
+        (where the sig-page links from); see help/src-sml/Htmlsigs.sml. *)
+     val entry_url_base =
+         if use_mdbook then "../../../Manual/book/Reference/"
+         else if use_html_fallback then "../../Docfiles/HTML/"
+         else ""  (* mosml: sig-pages omit per-entry hrefs *)
  in
-   if SYSTEML cmd3 then ()
+   if SYSTEML cmd_alias then ()
    else die "AliasGen --check failed: alias entries are out of sync. \
             \Run help/src-sml/AliasGen.exe --regen help/Docfiles to fix."
  ;
-   if ML_SYSNAME <> "mosml" then (
-     print "Generating HTML and plain text versions of Docfiles...\n" ;
-     if SYSTEML cmd1 then print "...docfile translation done\n"
-     else die "Couldn't translate Docfiles"
+   if poly then (
+     let
+       val pdoc_args =
+           process_docfiles ::
+           docpath ::
+           processed_dir ::
+           (if use_html_fallback then [htmlpath] else [])
+       val () = print "Polyscripting Docfiles and generating .txt outputs...\n"
+     in
+       if SYSTEML pdoc_args then ()
+       else die "process_docfiles failed.  If you're running a partial \
+                \build sequence and don't need up-to-date help \
+                \documentation, re-run with --no-helpdocs to skip the \
+                \help-docs step entirely."
+     end ;
+     if use_mdbook then
+       let
+         val refdir = fullPath [HOLDIR, "Manual", "Reference"]
+         val () = print ("Building Reference mdbook (mdbook detected \
+                         \in PATH)...\n")
+       in
+         if SYSTEML [HOLMAKE, "-C", refdir, "mdbook"] then ()
+         else die "Reference mdbook build failed"
+       end
+     else ()
    ) else ()
  ;
-   if (print "Building Help DB\n"; SYSTEML cmd2) then ()
-   else die "Couldn't make help database"
+   let
+     val makebase = fullPath [dir, "makebase.exe"]
+     val makebase_args =
+         makebase ::
+         (if entry_url_base <> "" then
+            ["--entry-url-base=" ^ entry_url_base]
+          else [])
+   in
+     if (print "Building Help DB\n"; SYSTEML makebase_args) then ()
+     else die "Couldn't make help database"
+   end
  ;
    if graph then write_theory_graph()
    else ()
@@ -1050,12 +1111,15 @@ fun process_cline () =
       end
     | Normal {extra = {seqname,kernelspec}, cmdline, multithread,
               build_theory_graph, jobcount, relocbuild, debug, keepgoing,
-              cache_dir, selftest_level, thmsrc, timelimit} =>
+              cache_dir, selftest_level, thmsrc, timelimit,
+              no_mdbook, no_helpdocs} =>
       let
         val SRCDIRS = read_buildsequence {kernelname = kernelspec} seqname
       in
         if mem "help" cmdline then
-          (build_help build_theory_graph;
+          (build_help {graph = build_theory_graph,
+                       no_mdbook = no_mdbook,
+                       no_helpdocs = no_helpdocs};
            Process.exit Process.success)
         else
           {build_theory_graph=build_theory_graph,
@@ -1069,7 +1133,9 @@ fun process_cline () =
            relocbuild = relocbuild,
            selftest_level = selftest_level,
            thmsrc = thmsrc,
-           timelimit = timelimit
+           timelimit = timelimit,
+           no_mdbook = no_mdbook,
+           no_helpdocs = no_helpdocs
           }
       end
 

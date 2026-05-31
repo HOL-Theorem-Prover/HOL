@@ -2,10 +2,14 @@
 title = "HOL: Reference"
 authors = ["The HOL Development Team"]
 language = "en"
-# Source is the help/Docfiles directory itself: 1,613 entry .smd
-# files plus a generated SUMMARY.md.  mdbook reads .smd via the
-# smdpp preprocessor (same as Description and Tutorial).
-src = "../../help/Docfiles"
+# Source is the polyscripter-evaluated mirror of help/Docfiles,
+# produced by help/src-sml/process_docfiles during bin/build's
+# build_help step.  Each *.smd in the source tree is replaced by
+# its evaluated counterpart here (same .smd extension; the
+# evaluated `>>` directives have already been expanded).  The
+# `--no-polyscripter` flag on smdpp below skips a redundant
+# polyscripter pass for these pre-evaluated entries.
+src = "../build/Docfiles-processed"
 # `description` is read by Manual/Tools/gen_lander when generating
 # the top-level Manual/book/index.html; mdbook itself ignores it.
 description = "Per-entry reference for every HOL function, theorem, tactic, conversion, and theory."
@@ -31,7 +35,7 @@ additional-js = ["hol-searcher.js"]
 enable = false
 
 [preprocessor.smdpp]
-command = "../Tools/smdpp"
+command = "../Tools/smdpp --no-polyscripter"
 renderers = ["html"]
 
 [build]
