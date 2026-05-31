@@ -23,8 +23,19 @@
    resulting stream is split on the sentinel and each chunk is written
    to its own per-entry file. *)
 
-infix ++
-val op++ = OS.Path.concat
+(* No top-level `infix ++` here: `>>` directives in .smd files are
+   compiled in the same Poly/ML session as this file, and an infix
+   override would shadow whatever else `++` is in the HOL heap
+   (e.g. `simpLib.++ : simpset * ssfrag -> simpset`).  Use a plain
+   function instead. *)
+fun pjoin (a, b) = OS.Path.concat (a, b)
+
+(* Optional trace: print each entry name as it's processed.  Enabled
+   by setting PROCESS_DOCFILES_DEBUG=1 in the environment.
+   Wrapped in a function so the env lookup happens at run time, not
+   when the buildheap is saved. *)
+fun debug_progress () =
+    Option.isSome (OS.Process.getEnv "PROCESS_DOCFILES_DEBUG")
 
 fun warnLn s = (TextIO.output(TextIO.stdErr, s ^ "\n");
                 TextIO.flushOut TextIO.stdErr)
@@ -83,7 +94,11 @@ fun polyscript_all {src_dir, processed_dir, bases, obuf} =
     val umap = Binarymap.mkDict String.compare
     fun do_one entry =
       let
-        val srcfile = OS.Path.joinBaseExt {base = src_dir ++ entry,
+        val () = if debug_progress () then
+                   (TextIO.output(TextIO.stdErr, "  [" ^ entry ^ "]\n");
+                    TextIO.flushOut TextIO.stdErr)
+                 else ()
+        val srcfile = OS.Path.joinBaseExt {base = pjoin (src_dir, entry),
                                            ext = SOME "smd"}
         (* Keep the .smd extension on the processed side so that the
            SUMMARY.md generator (Manual/Tools/gen_reference_summary)
@@ -92,7 +107,7 @@ fun polyscript_all {src_dir, processed_dir, bases, obuf} =
            directory without any other changes.  The
            processed-vs-source distinction is conveyed by the
            directory name, not the extension. *)
-        val dstfile = OS.Path.joinBaseExt {base = processed_dir ++ entry,
+        val dstfile = OS.Path.joinBaseExt {base = pjoin (processed_dir, entry),
                                            ext = SOME "smd"}
         val instrm = TextIO.openIn srcfile
         val outstrm = TextIO.openOut dstfile
@@ -188,7 +203,7 @@ fun write_chunks {out_dir, ext, chunks, wrap} =
     val () = mkdir_p out_dir
     fun do_one (base, chunk) =
       let
-        val outfile = OS.Path.joinBaseExt {base = out_dir ++ base,
+        val outfile = OS.Path.joinBaseExt {base = pjoin (out_dir, base),
                                            ext = SOME ext}
         val ostrm = TextIO.openOut outfile
       in
@@ -267,8 +282,9 @@ fun process_docfiles_main () =
                 NONE => ()
               | SOME html_dir =>
                 let
-                  val luaFilter = Systeml.HOLDIR ++ "help" ++ "src-sml" ++
-                                  "internal-to-external.lua"
+                  val luaFilter =
+                      List.foldl pjoin Systeml.HOLDIR
+                                 ["help", "src-sml", "internal-to-external.lua"]
                   val html_out =
                       pandoc_once pdexe concat
                                   ["-t", "html",
