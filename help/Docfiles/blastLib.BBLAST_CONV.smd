@@ -1,4 +1,4 @@
->>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+>>__ load "blastLib"; Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"};
 ## `BBLAST_CONV`
 
 ``` hol4
