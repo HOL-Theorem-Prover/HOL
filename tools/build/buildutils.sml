@@ -366,25 +366,18 @@ fun get_cline () = let
                        \    use one of --expk, --stdknl, --otknl, --trknl to override");
                  String.extract(s,2,NONE)))
   val _ = write_kernelid knlspec
+  (* Build the theory graph by default; --graph is now redundant
+     (kept for backwards-compatible argv) since the only way to
+     disable graph generation is via --no-mdbook / --no-helpdocs,
+     which build_help consults directly. *)
   val buildgraph =
       case #build_theory_graph option_record of
-          NONE =>
-          (case List.find (fn s => s = "--graph" orelse s = "--nograph") oldopts
-            of
-               NONE => true
-             | SOME "--graph" =>
-               (warn "Using --graph option from earlier build; \
-                     \use --nograph to override"; true)
-             | SOME "--nograph" =>
-               (warn "Using --nograph option from earlier build; \
-                     \use --graph to override"; false)
-             | SOME _ => raise Fail "Really can't happen")
+          NONE => true
         | SOME b => b
-  val bgoption = if buildgraph then [] else ["--nograph"]
   val jcount = #jobcount option_record
   val _ =
       if seqspec = dfltbuildseq then
-        write_options ("--"^knlspec::bgoption)
+        write_options ["--"^knlspec]
       else
         let
           val seqspec_abs =
@@ -392,7 +385,7 @@ fun get_cline () = let
               else OS.Path.mkAbsolute
                      {path = seqspec, relativeTo = OS.FileSys.getDir()}
         in
-          write_options ("--"^knlspec::"--seq"::seqspec_abs::bgoption)
+          write_options ["--"^knlspec, "--seq", seqspec_abs]
         end
 in
   Normal {build_theory_graph = buildgraph,
@@ -873,12 +866,13 @@ fun write_theory_graph () =
               \***\n\
               \*** (Under Poly/ML you will have to delete bin/hol.state0 as \
               \well)\n***\n\
-              \*** (Or: build with --nograph to stop this \
-              \message from appearing again)\n")
+              \*** (Or: build with --no-mdbook or --no-helpdocs to \
+              \stop this message from appearing again)\n")
       else
         let
           val _ = print "Generating theory-graph; this may take a while\n"
-          val _ = print "  (Use build's --nograph option to skip this step.)\n"
+          val _ = print "  (Use build's --no-mdbook or --no-helpdocs option \
+                        \to skip this step.)\n"
           val theorytool =
               fullPath [HOLDIR, "src", "portableML", "rawtheory", "theorytool"]
           val svgfile = theorygraph_dir ++ "theories.svg"
@@ -958,9 +952,14 @@ fun which arg =
   end
 
 fun build_help {graph, no_mdbook, no_helpdocs} =
+ (* Skip the theory graph alongside any other doc-build skip:
+    `--no-mdbook` and `--no-helpdocs` are the only ways to opt out
+    of doc work now, and the theory graph is doc work. *)
+ let val want_graph = graph andalso not no_mdbook andalso not no_helpdocs
+ in
  if no_helpdocs then
    (print "Skipping help documentation build (--no-helpdocs).\n";
-    if graph then write_theory_graph() else ())
+    if want_graph then write_theory_graph() else ())
  else
  let val dir = OS.Path.concat(OS.Path.concat (HOLDIR,"help"),"src-sml")
      val _ = HOLFileSys.chDir dir
@@ -1046,8 +1045,9 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
      else die "Couldn't make help database"
    end
  ;
-   if graph then write_theory_graph()
+   if want_graph then write_theory_graph()
    else ()
+ end
  end
 
 fun cleanDirP P d =

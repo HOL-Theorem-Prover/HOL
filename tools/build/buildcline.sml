@@ -180,8 +180,6 @@ val cline_opt_descrs = [
           \compiled every HOL library",
    long = ["no-helpdocs"], short = "",
    desc = mkBool #no_helpdocs true},
-  {help = "don't build a thy dep. graph", long = ["nograph"], short = "",
-   desc = mkBoolOpt #build_theory_graph false},
   {help = "build with logging kernel", long = ["otknl"], short = "",
    desc = setKname "--otknl"},
   {help = "theorem source (dat or tr)", long = ["thmsrc"], short = "",
