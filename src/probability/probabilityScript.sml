@@ -9986,6 +9986,38 @@ Proof
  >> simp [MEASURE_SPACE_SPACE]
 QED
 
+Theorem converge_in_dist_cong_full:
+    ∀p X Y A B m.
+      prob_space p ∧
+      (∀n x. m ≤ n ∧ x ∈ p_space p ⇒ X n x = Y n x) ∧
+      (∀x. x ∈ p_space p ⇒ A x = B x) ⇒
+      ((X ⟶ A) (in_distribution p) ⇔ (Y ⟶ B) (in_distribution p))
+Proof
+    rw [converge_in_dist_def, EXTREAL_LIM_SEQUENTIALLY]
+ >> EQ_TAC >> rw []
+ >> Q.PAT_X_ASSUM ‘∀f. f ∈ C_b ext_euclidean ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘f’)
+ >> gvs []
+ >> POP_ASSUM (MP_TAC o (Q.SPEC ‘e’)) >> rw []
+ >> Q.EXISTS_TAC ‘MAX N m’ >> rw [MAX_LE]
+ >> Q.PAT_X_ASSUM ‘∀n. N ≤ n ⇒ _’(MP_TAC o (Q.SPEC ‘n’)) >> rw []
+ >> ‘expectation p (Normal ∘ f ∘ Y n) = expectation p (Normal ∘ f ∘ X n)’
+   by (irule expectation_cong >> METIS_TAC[o_DEF, extreal_11])
+ >> ‘expectation p (Normal ∘ f ∘ B) = expectation p (Normal ∘ f ∘ A)’
+   by (irule expectation_cong >> METIS_TAC[o_DEF, extreal_11])
+ >> fs []
+QED
+
+Theorem converge_in_dist_cong:
+    ∀p X Y Z m.
+      prob_space p ∧
+      (∀n x. m ≤ n ∧ x ∈ p_space p ⇒ X n x = Y n x) ⇒
+      ((X ⟶ Z) (in_distribution p) ⇔ (Y ⟶ Z) (in_distribution p))
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC converge_in_dist_cong_full
+ >> Q.EXISTS_TAC ‘m’ >> rw []
+QED
+
 (* tidy up theory exports, learnt from Magnus Myreen *)
 val _ = List.app Theory.delete_binding
   ["convergence_mode_TY_DEF",
