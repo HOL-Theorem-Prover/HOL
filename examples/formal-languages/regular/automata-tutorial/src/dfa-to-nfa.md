@@ -36,7 +36,7 @@ Proof
 QED
 ```
 
-Then it is easy to show
+Then it is easy to show that the DFA-to-NFA construction is correct.
 
 ```
 Theorem dfa_to_nfa_correct:
@@ -44,7 +44,7 @@ Theorem dfa_to_nfa_correct:
   ⇒ ∀w. w ∈ dfa_lang M <=> w ∈ nfa_lang (dfa_to_nfa M)
 Proof
   rw [dfa_lang_def,nfa_lang_def] >>
-  simp [DECIDE “((A ∧ B) = (A ∧ C)) ⇔ (A ⇒ B = C)”] >>
+  irule LEFT_AND_CONG >> simp [] >>
   rw [dfa_to_nfa_eval] >>
   simp [EXTENSION]
 QED

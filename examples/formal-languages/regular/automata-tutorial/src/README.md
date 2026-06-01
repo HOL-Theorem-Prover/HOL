@@ -17,7 +17,7 @@ system:
 HOL4 provides a large and extensible collection of inference tools but
 a relatively small set of tactics usually suffices. See
 [Cheatsheet](https://hol-theorem-prover.org/cheatsheet.html) for a
-good overview of the basics. We will discuss special aspects of our
+good overview of the basics. We will discuss special aspects of
 reasoning tools as they get used in proofs.
 
 ## Noteworthy Features
@@ -38,8 +38,9 @@ The development has a few interesting aspects.
    this, and explore how to deal with choice terms in proofs.
 
 3. Usage of perhaps unfamiliar tactics. We use and explain dependent
-   rewriting in the form `DEP_{ASM_}REWRITE_TAC`, and `cong_tac` for
-   removing common term structure from equalities.
+   rewriting in the form `DEP_{ASM_}REWRITE_TAC`, the `tac1 >>~-
+   (pats,tac2)` list tactical, the use of `SF ETA_ss` in the
+   simplifier, `THENL`, *etc*.
 
 ## Theory Script
 
@@ -55,7 +56,9 @@ a stylized Standard ML (SML) file which
   summary is what would be loaded into later developments that
   require finite state automata theory.
 
-The complete theory script for our example lives at XXXX. It starts
+The complete theory script for our example
+is [in the HOL4 repository](https://github.com/HOL-Theorem-Prover/HOL/tree/nfa-develop/examples/formal-languages/regular/automata-tutorial/Automata_TutorialScript.sml).
+It starts
 
 ```
 Theory Automata_Tutorial
@@ -67,10 +70,10 @@ Libs
 
 which specifies the following:
 
-- The current theory is named `tutorial`.
+- The current theory is named `Automata_Tutorial`.
 
-- The ancestor theories (`Ancestors`) used by `tutorial` include at
-  least `pred_set` and `list`, HOL4's standard theories for sets and
+- The ancestor theories (`Ancestors`) used by `Automata_Tutorial`
+  include `pred_set` and `list`, HOL4's standard theories for sets and
   lists. By virtue of being listed, these theories are `open`, meaning
   that elements of them can be accessed directly, *e.g.*, as `NULL`
   instead of `listTheory.NULL`.

@@ -33,7 +33,7 @@ operator.
 The Hilbert choice operator, written `@x. P x`, is syntax for
 expressing the notion "pick an *x* having property *P*".  (The Hilbert
 choice operator is also called the *Select* operator or also the
-*Indefinite description* operator.) The Choice operator is a way to
+*Indefinite Description* operator.) The Choice operator is a way to
 form a term---intended to have a given property---in a context where
 the property may not in fact hold. The expectation is that, in a
 later, richer, context, the property will hold, and then the term can
@@ -297,11 +297,10 @@ That finishes the proof.
 > lists or trees to represent state sets.
 
 > [!NOTE]
-> Our usage of Hilbert choice in this example amounts to a
-> kind of "eliminable but convenient" shorthand for some messier
-> reasoning. However the Choice operator can do much more: the full
-> power of the Axiom of Choice is available in HOL in the form of
-> the following axiom:
+> Our usage of Select in this example amounts to a kind of "eliminable
+> but convenient" shorthand for some messier reasoning. However the
+> Select operator can do much more: the full power of the Axiom of
+> Choice is available in HOL in the form of the following axiom:
 >
 > ```
 > SELECT_AX;
@@ -354,15 +353,14 @@ The key lemma about the subset construction is the following:
 Theorem main_lemma:
   wf_nfa (N:'a nfa) ⇒
   ∀w qset.
-   EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
-   enc (nfa_eval N qset w) = dfa_eval (nfa_to_dfa N) (enc qset) w
+    EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q
+    ⇒ dfa_eval (nfa_to_dfa N) (enc qset) w = enc (nfa_eval N qset w)
 Proof
-  disch_tac >> Induct >> rw [nfa_eval_def]
-  >- rw [dfa_eval_def] >>
-  simp [dfa_eval_def] >>
-  DEP_ASM_REWRITE_TAC [] >> conj_tac
-  >- metis_tac [Delta_subset] >>
-  DEP_REWRITE_TAC [codec] >> simp []
+  disch_tac >> Induct >>
+  rw [nfa_eval_def,dfa_eval_def] >>
+  DEP_ASM_REWRITE_TAC [] >>
+  DEP_REWRITE_TAC [codec] >>
+  simp [Delta_subset]
 QED
 ```
 
@@ -374,105 +372,59 @@ work out well since the pattern of recursion of both `nfa_eval` and
 `dfa_eval` is the same. The initial goal is
 
 ```
-  wf_nfa (N:'a nfa) ⇒
-    ∀w qset.
-     EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
-     enc (nfa_eval N qset w) = dfa_eval (nfa_to_dfa N) (enc qset) w
+  wf_nfa N ⇒
+  ∀w qset.
+    EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
+    dfa_eval (nfa_to_dfa N) (enc qset) w = enc (nfa_eval N qset w)
 ```
 
 It's important that `qset` be universally quantified since that will be
 important in applying the inductive hypothesis. The proof starts by exposing the
 variable to induct on (`w`), applying the induction tactic, and simplifying with the
-definition of `nfa_eval`:
+definitions of `dfa_eval` and `nfa_eval`:
 
 ```
-  disch_tac >> Induct >> rw [nfa_eval_def]
+  disch_tac >> Induct >>
+  rw [nfa_eval_def,dfa_eval_def]
 ```
 
-which results in two subgoals:
-
-```
-    0.  wf_nfa N
-    1.  ∀qset.
-          EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
-          enc (nfa_eval N qset w) = dfa_eval (nfa_to_dfa N) (enc qset) w
-    2.  h ∈ N.Sigma
-    3.  EVERY (λa. a ∈ N.Sigma) w
-    4.  qset ⊆ N.Q
-   ------------------------------------
-        enc (nfa_eval N (Delta N qset h) w) =
-        dfa_eval (nfa_to_dfa N) (enc qset) (h::w)
-
-    0.  wf_nfa N
-    1.  qset ⊆ N.Q
-   ------------------------------------
-        enc qset = dfa_eval (nfa_to_dfa N) (enc qset) []
-```
-
-The first subgoal is the base case of the induction. It has an
-application of `dfa_eval` that obviously should be reduced. Doing so
-
-```
-  rw [dfa_eval_def]
-```
-
-solves the subgoal and leaves the second subgoal; this is the
-inductive step of the proof:
+The base case of the induction gets automatically proved, and we are
+left with the inductive case:
 
 ```
     0.  wf_nfa N
     1.  ∀qset.
           EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
-          enc (nfa_eval N qset w) = dfa_eval (nfa_to_dfa N) (enc qset) w
+          dfa_eval (nfa_to_dfa N) (enc qset) w = enc (nfa_eval N qset w)
     2.  h ∈ N.Sigma
     3.  EVERY (λa. a ∈ N.Sigma) w
     4.  qset ⊆ N.Q
    ------------------------------------
-        enc (nfa_eval N (Delta N qset h) w) =
-        dfa_eval (nfa_to_dfa N) (enc qset) (h::w)
-```
-
-We should again reduce the `dfa_eval` expression:
-
-```
-  simp [dfa_eval_def]
-```
-
-which gives a clear picture of what is needed:
-
-```
-    0.  wf_nfa N
-    1.  ∀qset.
-          EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
-          enc (nfa_eval N qset w) = dfa_eval (nfa_to_dfa N) (enc qset) w
-    2.  h ∈ N.Sigma
-    3.  EVERY (λa. a ∈ N.Sigma) w
-    4.  qset ⊆ N.Q
-   ------------------------------------
-        enc (nfa_eval N (Delta N qset h) w) =
-        dfa_eval (nfa_to_dfa N) (enc (Delta N (dec (enc qset)) h)) w
+        dfa_eval (nfa_to_dfa N) (enc (Delta N (dec (enc qset)) h)) w =
+        enc (nfa_eval N (Delta N qset h) w)
 ```
 
 It is now time to use the inductive hypothesis (assumption `1`).  The
 LHS of it, namely
 
 ```
-  enc (nfa_eval N qset w)
+  dfa_eval (nfa_to_dfa N) (enc qset) w
 ```
 
 matches the LHS of the goal, namely
 
 ```
-enc (nfa_eval N (Delta N qset h) w)
+  dfa_eval (nfa_to_dfa N) (enc (Delta N (dec (enc qset)) h)) w
 ```
 
-by instantiating the quantified variable `qset` with the term `Delta N
-qset h`. Simplification will handle such instantiations automatically,
-but note that assumption `1` has two side-conditions that must be
-proved before the rewrite rule can fire. The first one can be already
-found in the assumptions, but the second is more stubborn.
+by instantiating the quantified variable `qset` with the term
+`Delta N(dec (enc qset)) h`. Simplification will handle such
+instantiations automatically, but note that assumption `1` has
+two side-conditions that must be proved before the rewrite rule
+can fire. The first one can be already found in the assumptions,
+but the second is more stubborn.
 
-> [!NOTE]
+> [!TIP]
 > This exemplifies a common proof scenario: an implication in the
 > assumptions, or an already-proved lemma, needs to be used in a
 > proof, but that is blocked until the antecedents of the implication
@@ -495,51 +447,60 @@ which includes the assumptions of the goal as possible rewrite
 rules. This succeeds in rewriting the goal by the IH and returns a
 goal that is a conjunction where the first conjunct is the stubborn
 side-condition on the IH and the second conjunct is the transformed
-goal. We split these
-
-```
-  conj_tac
-```
-
-which gives
+goal.
 
 ```
     0.  wf_nfa N
     1.  ∀qset.
           EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
-          enc (nfa_eval N qset w) = dfa_eval (nfa_to_dfa N) (enc qset) w
+          dfa_eval (nfa_to_dfa N) (enc qset) w = enc (nfa_eval N qset w)
     2.  h ∈ N.Sigma
     3.  EVERY (λa. a ∈ N.Sigma) w
     4.  qset ⊆ N.Q
    ------------------------------------
-        dfa_eval (nfa_to_dfa N) (enc (Delta N qset h)) w =
-        dfa_eval (nfa_to_dfa N) (enc (Delta N (dec (enc qset)) h)) w
-
-    0.  wf_nfa N
-    1.  ∀qset.
-          EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
-          enc (nfa_eval N qset w) = dfa_eval (nfa_to_dfa N) (enc qset) w
-    2.  h ∈ N.Sigma
-    3.  EVERY (λa. a ∈ N.Sigma) w
-    4.  qset ⊆ N.Q
-   ------------------------------------
-        Delta N qset h ⊆ N.Q
+        Delta N (dec (enc qset)) h ⊆ N.Q ∧
+        enc (nfa_eval N (Delta N (dec (enc qset)) h) w) =
+        enc (nfa_eval N (Delta N qset h) w)
 ```
 
-The bottom goal comprises the remaining side-condition of the IH. We
-are now faced with a question: *shall I be scruffy or neat*?  A *neat*
-person might create a new named theorem for this goal and cleanly
-place each proof step on a separate line, as in
+Inspecting this goal, one can see that the second conjunct is *nearly* an
+instance of reflexivity. All it would take is for `dec (enc qset)` to
+rewrite to `qset`, *i.e.*, simplify with `codec` from
+above. In fact `codec` will simplify both conjuncts. So we apply
+
+```
+  DEP_REWRITE_TAC [codec]
+```
+
+obtaining
+
+```
+    0.  wf_nfa N
+    1.  ... elided ...
+    2.  h ∈ N.Sigma
+    3.  EVERY (λa. a ∈ N.Sigma) w
+    4.  qset ⊆ N.Q
+   ------------------------------------
+        (wf_nfa N ∧ qset ⊆ N.Q) ∧ Delta N qset h ⊆ N.Q
+```
+
+Now it really only remains to show `Delta qset h ⊆ N.Q.` This raises a
+question: *shall I be scruffy or neat*?  A *scruffy* person might
+conclude the proof with a brutal but effective use of automation:
+
+```
+  gvs [Delta_def, wf_nfa_def, SUBSET_DEF] >> metis_tac[]
+```
+
+A *neat* person might separately create a new theorem for this subproof:
 
 ```
 Theorem Delta_subset:
-  wf_nfa N ∧ h ∈ N.Sigma ∧ qset ⊆ N.Q ⇒ Delta N qset h ⊆ N.Q
+  wf_nfa N ∧ h ∈ N.Sigma ∧ qset ⊆ N.Q
+  ⇒ Delta N qset h ⊆ N.Q
 Proof
-  rw [Delta_def] >>
-  rw [BIGUNION_SUBSET] >>
-  gvs [wf_nfa_def] >>
-  first_x_assum irule >>
-  metis_tac [SUBSET_DEF]
+  rw [SUBSET_DEF,IN_Delta] >>
+  metis_tac [wf_nfa_def,SUBSET_DEF]
 QED
 ```
 
@@ -549,90 +510,54 @@ and then use
   metis_tac [Delta_subset]
 ```
 
-to prove the goal. Alternatively, a *scruffy* might inline the proof
-with a brutal but effective use of automation:
+to finish the proof. It's a matter of personal preference (we chose
+"neat"):
 
 ```
-  gvs [Delta_def, wf_nfa_def, SUBSET_DEF] >> metis_tac[]
-```
+metis: r[+0+11]+0+0+0+0+0+0+0+0+0+1+0+1#
 
-It's a matter of personal preference. (We chose "neat" for this
-proof.) Now the goal
-
-```
-    0.  wf_nfa N
-    1.  ∀qset.
-          EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
-          enc (nfa_eval N qset w) = dfa_eval (nfa_to_dfa N) (enc qset) w
-    2.  h ∈ N.Sigma
-    3.  EVERY (λa. a ∈ N.Sigma) w
-    4.  qset ⊆ N.Q
-   ------------------------------------
-        dfa_eval (nfa_to_dfa N) (enc (Delta N qset h)) w =
-        dfa_eval (nfa_to_dfa N) (enc (Delta N (dec (enc qset)) h)) w
-```
-
-remains. This is an equality with a great deal of repeated syntax on
-each side. In such cases `cong_tac : int option -> tactic` can help
-expose the core problem to be dealt with.  Invoking
-
-```
-  cong_tac NONE
-```
-
-means "throw away common syntax as much as possible" and yields the goal
-
-```
-    0.  wf_nfa N
-    1.  ∀qset.
-          EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
-          enc (nfa_eval N qset w) = dfa_eval (nfa_to_dfa N) (enc qset) w
-    2.  h ∈ N.Sigma
-    3.  EVERY (λa. a ∈ N.Sigma) w
-    4.  qset ⊆ N.Q
-   ------------------------------------
-        qset = dec (enc qset)
-```
-
-Now is the time to finally apply `codec`. With the abbreviating
-overloads imposed above, this renders as
-
-```
-> codec;
-val it = ⊢ wf_nfa N ∧ s ⊆ N.Q ⇒ dec (enc s) = s: thm
-```
-
-and
-
-```
-   simp [codec]
-```
-
-is able to prove the side-conditions and prove the goal, finishing the
-proof.
-
-```
 Goal proved.
- [..] ⊢ qset = dec (enc qset)
+ [.....] ⊢ (wf_nfa N ∧ qset ⊆ N.Q) ∧ Delta N qset h ⊆ N.Q
 
-  .
-  .
-  .
+Goal proved.
+ [.....]
+⊢ Delta N (dec (enc qset)) h ⊆ N.Q ∧
+  enc (nfa_eval N (Delta N (dec (enc qset)) h) w) =
+  enc (nfa_eval N (Delta N qset h) w)
 val it =
    Initial goal proved.
    ⊢ wf_nfa N ⇒
      ∀w qset.
        EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
-       enc (nfa_eval N qset w) = dfa_eval (nfa_to_dfa N) (enc qset) w: proof
+       dfa_eval (nfa_to_dfa N) (enc qset) w = enc (nfa_eval N qset w): proof
 ```
+
+> [!NOTE]
+> The simplifier is powerful enough to handle all the post-induction
+> reasoning in this proof. Indeed, the tactic
+>
+> ```
+>  disch_tac >>
+>  Induct >>
+>  rw [nfa_eval_def, dfa_eval_def, Delta_subset, codec]
+> ```
+>
+> proves `main_lemma`. Notably, the invocations of
+> `DEP_ASM_REWRITE_TAC` were, in this case, not needed since the
+> simplifier could handle the necessary side-condition proofs.
+>
+> However, such a revision can be viewed as bad style since it
+> collapses three steps: first, expanding the evaluator definitions;
+> second, applying the IH; and third, applying `codec`, into one muddy
+> ball of chaos that just happens to work. In small proofs, this
+> collapsing of separate rewrite stages can be OK, but for larger
+> proofs it can result in nigh-impenetrable maintenance problems.
 
 ## Language level equivalence
 
-Now we tackle the proof of language-level equivalence. This uses
-`main_lemma` but we also need an alternate version where, instead of
-*encoding* the results of NFA evaluation, we *decode* the results of
-DFA evaluation: This version is obtained by applying the decoder to
-both the LHS and RHS of `main_lemma` and simplifying.
+Now we tackle the language-level equivalence. This uses `main_lemma`
+but we also need an alternate version where, instead of *encoding* the
+results of NFA evaluation, we *decode* the results of DFA evaluation:
 
 ```
 Theorem main_lemma_alt:
@@ -648,22 +573,148 @@ Proof
 QED
 ```
 
-This proof uses an easy lemma that shows that NFA evaluation does not
-stray outside the state space of the NFA:
+The proof of `main_lemma_alt` features a sometimes useful pattern of
+reasoning, so let's look at it. Our goal is to apply the decoder `dec`
+to both the LHS and RHS of `main_lemma` and then simplify. This can be
+accomplished, with some effort, by forward inference, but it is higher
+level to use tactics, and that is what we will now explain. After
+`strip_tac` the goal is
 
 ```
-Theorem nfa_eval_states:
-  wf_nfa N
-  ⇒ ∀w qset.
-      EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒ nfa_eval N qset w ⊆ N.Q
-Proof
-  disch_tac >> Induct >> rw [nfa_eval_def] >> rw [Delta_subset]
-QED
+    0.  wf_nfa N
+    1.  EVERY (λa. a ∈ N.Sigma) w
+    2.  qset ⊆ N.Q
+   ------------------------------------
+        nfa_eval N qset w = dec (dfa_eval (nfa_to_dfa N) (enc qset) w)
 ```
 
-With `main_lemma_alt` in hand, language-level correctness is an
-exercise in expanding definitions and applying the two versions of
-`main_lemma`:
+It is time to apply `main_lemma`. There are many ways to "apply" a
+lemma, *e.g.*, by using it to simplify the goal, but here that's not
+really possible. Instead we are going to transform the conclusion of
+`main_lemma` and use that to solve the goal. First we have to get
+`main_lemma` in the context of the tactic proof. The invocation
+
+```
+  drule_all main_lemma
+```
+
+uses the assumptions of the goal to satisfy the antecedents of `main_lemma`
+and puts the conclusion of the theorem as an antecedent to the goal:
+
+```
+    0.  wf_nfa N
+    1.  EVERY (λa. a ∈ N.Sigma) w
+    2.  qset ⊆ N.Q
+   ------------------------------------
+        dfa_eval (nfa_to_dfa N) (enc qset) w = enc (nfa_eval N qset w) ⇒
+        nfa_eval N qset w = dec (dfa_eval (nfa_to_dfa N) (enc qset) w)
+```
+
+> [!NOTE]
+> This sets up a style of proof where a formula sits as an antecedent
+> to the goal and is iteratively manipulated with forward inference
+> steps until it becomes useable by other tactics. In this proof style
+> (called "theorem continuations" by its inventor Larry Paulson) a
+> goal
+>
+> ```
+>     ...
+>   ------------------------------------
+>     formula ==> A
+> ```
+>
+> will get transformed by inference rule `rule : thm -> thm` to
+>
+> ```
+>      ...
+>    ------------------------------------
+>      rule (formula) ==> A
+> ```
+>
+> This is accomplished in three steps:
+>
+> 1. use `ASSUME` to make `formula` into a theorem `formula |- formula`
+> 1. apply `rule` to the theorem
+> 1. put `rule (formula)` back into its place in the goal
+>
+> In the guise of SML programming, this is
+>
+> ```
+>   disch_then (mp_tac o rule)
+> ```
+>
+> Consult the documentation for `disch_then` and `mp_tac` for more information.
+
+For our situation, `rule` is instantiated to```Q.AP_TERM `dec`;``` applying
+
+```
+  disch_then (mp_tac o Q.AP_TERM `dec`)
+```
+
+gives the new goal
+
+```
+    0.  wf_nfa N
+    1.  EVERY (λa. a ∈ N.Sigma) w
+    2.  qset ⊆ N.Q
+   ------------------------------------
+        dec (dfa_eval (nfa_to_dfa N) (enc qset) w) =
+        dec (enc (nfa_eval N qset w)) ⇒
+        nfa_eval N qset w = dec (dfa_eval (nfa_to_dfa N) (enc qset) w)
+```
+
+and we now have the conclusion of `main_lemma` where the LHS and RHS
+have had `dec` applied to them (a valid step since if `x = y` then `f
+x = f y`). There is an instance of `dec (enc ...)` in the goal and
+it is simplified with
+
+```
+  DEP_REWRITE_TAC [codec]
+```
+
+yielding
+
+```
+    0.  wf_nfa N
+    1.  EVERY (λa. a ∈ N.Sigma) w
+    2.  qset ⊆ N.Q
+   ------------------------------------
+        (wf_nfa N ∧ nfa_eval N qset w ⊆ N.Q) ∧
+        (dec (dfa_eval (nfa_to_dfa N) (enc qset) w) = nfa_eval N qset w ⇒
+         nfa_eval N qset w = dec (dfa_eval (nfa_to_dfa N) (enc qset) w))
+
+```
+
+Invoking the simplifier
+
+```
+  simp []
+```
+
+will prove our original goal and leave a final proof obligation
+
+```
+    0.  wf_nfa N
+    1.  EVERY (λa. a ∈ N.Sigma) w
+    2.  qset ⊆ N.Q
+   ------------------------------------
+        nfa_eval N qset w ⊆ N.Q
+```
+
+There is an easy lemma, named `nfa_eval_states`, proving this in the
+source. In fact, we can `undo` the call to `simp` and finish the proof
+with
+
+```
+  metis_tac [nfa_eval_states]
+```
+
+We have finished `main_lemma_alt`.
+
+### `nfa_to_dfa_correct`
+
+Language equivalence is an exercise in expanding definitions and
+applying the two versions of `main_lemma`. In full this looks like:
 
 ```
 Theorem nfa_to_dfa_correct:
@@ -673,29 +724,28 @@ Proof
   rw [dfa_lang_def,nfa_lang_def] >>
   rw [EQ_IMP_THM,PULL_EXISTS] THENL
   [DEP_ONCE_REWRITE_TAC [main_lemma_alt],
-   DEP_ONCE_REWRITE_TAC [GSYM main_lemma]] >>
-  conj_tac >>~-
+   DEP_ONCE_REWRITE_TAC [main_lemma]] >>
+  conj_tac >>~-  (* 4 subgoals, 2 identical *)
     ([‘wf_nfa N ∧ _’],
      simp [IN_DEF] >> metis_tac [wf_nfa_def])
   >- (simp [] >> DEP_REWRITE_TAC [codec] >> simp [])
   >- (irule_at Any EQ_REFL >> simp [] >>
-      irule nfa_eval_states >>
-      simp [SF ETA_ss,IN_DEF] >>
-      metis_tac [wf_nfa_def])
+      irule nfa_eval_states >> simp [] >>
+      reverse conj_tac >- metis_tac [wf_nfa_def] >>
+      simp [IN_DEF, SF ETA_ss])
 QED
 ```
 
 The proof breaks the goal down into a number of cases, some of which
 have identical proofs. Writing a tactic that is similar or identical
-for each case would be tedious and morally repugnant. (On the other
-hand, such explicitness *can* be a virtue in maintaining proofs done
-with complex tactics.)
+for each case would be tedious and morally repugnant, especially for
+large verifications. (On the other hand, such explicitness *can* be a
+virtue in maintaining proofs done with complex tactics.)
 
 So, let's have a look. The initial goal is
 
 ```
-  wf_nfa N
-  ⇒ ∀w. w ∈ dfa_lang (nfa_to_dfa N) <=> w ∈ nfa_lang N
+  wf_nfa N ⇒ ∀w. w ∈ dfa_lang (nfa_to_dfa N) <=> w ∈ nfa_lang N
 ```
 and invoking
 
@@ -724,38 +774,38 @@ the equivalence into implications and normalizes the resulting goals:
         nfa_eval N N.initial w ∩ N.final ≠ ∅
 ```
 
-In the first (bottom) case, we have an assumption about DFA evaluation
-and a conclusion about NFA evaluation, so we'd like to rewrite the
-conclusion with `main_lemma_alt`.  Contrarily, in the second (top)
-case, we have an assumption about NFA evaluation and a conclusion
-about DFA evaluation, and we'd like to rewrite the conclusion with
-`main_lemma` (with LHS and RHS swapped). But, as is common, these
-rewrites both have slightly stubborn side-conditions and so dependent
+In the first (bottom) case, we have a conclusion about NFA evaluation,
+and we'd like to rewrite it with `main_lemma_alt`.  Contrarily, in the
+second (top) case, we have a conclusion about DFA evaluation, and we'd
+like to rewrite it with `main_lemma`. But, as is common, these
+rewrites both have slightly stubborn side-conditions and dependent
 rewriting becomes the weapon of choice.
 
-So we will restart the proof
+We restart the proof
 
 ```
   restart()
 ```
 
 and apply tailored dependent rewriting in each branch, using only the
-right rewrite for the branch. This is done via `THENL`.
+single relevant rewrite for each branch. This is done via `THENL`.
 
 > [!NOTE]
 > `THENL` is an infix *tactical* that sequences tactics. It is similar
 > to `THEN` (infix, typically written `>>`) except that `tac THENL
 > [tac_1, ..., tac_n]` requires that `tac` creates
-> *n* subgoals, and applies `tac_i` to subgoal *i*.
+> *n* subgoals, and applies `tac_i` to subgoal `i`.
 
-We use `THENL` to rewrite with `main_lemma_alt` in the first branch
-and `main_lemma` in the second:
+We accordingly use `THENL` to rewrite with `main_lemma_alt` in the
+first branch and `main_lemma` in the second. Each dependent rewrite
+invocation will create a conjunction and we may as well break those up
+too, hence we append a `conj_tac`
 
 ```
   rw [dfa_lang_def,nfa_lang_def] >>
   rw [EQ_IMP_THM,PULL_EXISTS] THENL
   [DEP_ONCE_REWRITE_TAC [main_lemma_alt],
-   DEP_ONCE_REWRITE_TAC [GSYM main_lemma]]
+   DEP_ONCE_REWRITE_TAC [GSYM main_lemma]] >> conj_tac
 ```
 
 which results in
@@ -765,7 +815,97 @@ which results in
     1.  EVERY N.Sigma w
     2.  nfa_eval N N.initial w ∩ N.final ≠ ∅
    ------------------------------------
-        (wf_nfa N ∧ EVERY (λa. a ∈ N.Sigma) w ∧ N.initial ⊆ N.Q) ∧
+        ∃s. enc (nfa_eval N N.initial w) = enc s ∧ s ⊆ N.Q ∧ s ∩ N.final ≠ ∅
+
+    0.  wf_nfa N
+    1.  EVERY N.Sigma w
+    2.  nfa_eval N N.initial w ∩ N.final ≠ ∅
+   ------------------------------------
+        wf_nfa N ∧ EVERY (λa. a ∈ N.Sigma) w ∧ N.initial ⊆ N.Q
+
+    0.  wf_nfa N
+    1.  EVERY N.Sigma w
+    2.  dfa_eval (nfa_to_dfa N) (enc N.initial) w = enc s
+    3.  s ⊆ N.Q
+    4.  s ∩ N.final ≠ ∅
+   ------------------------------------
+        dec (dfa_eval (nfa_to_dfa N) (enc N.initial) w) ∩ N.final ≠ ∅
+
+    0.  wf_nfa N
+    1.  EVERY N.Sigma w
+    2.  dfa_eval (nfa_to_dfa N) (enc N.initial) w = enc s
+    3.  s ⊆ N.Q
+    4.  s ∩ N.final ≠ ∅
+   ------------------------------------
+        wf_nfa N ∧ EVERY (λa. a ∈ N.Sigma) w ∧ N.initial ⊆ N.Q
+```
+
+Inspecting the result, we see that the rewrites have indeed taken
+place. However, every second subgoal is the same:
+
+```
+  wf_nfa N ∧ EVERY (λa. a ∈ N.Sigma) w ∧ N.initial ⊆ N.Q
+```
+
+It seems that we will have to write the same tactic twice to prove
+these.  It's an admittedly simple sub-proof, but annoying, and such
+repetitions become aggravating in large verifications. To address
+this, there are tactics that use patterns to control the order in
+which goals are tackled. The one we will use is `tac1 >>~- (pats,
+tac2)`, where ```pats = [p1,...,pn]``` is a list of quotations
+expressing patterns. The idea is that subgoals arising from the
+application of tactic `tac1` that match `pats` will all have `tac2`
+applied to them (and `tac2` should prove all of those subgoals
+completely).
+
+For our example, we will use the pattern ``` `wf_nfa N /\ _` ```. Thus
+the tactic invocation under construction is
+
+```
+  tac1 >>~- ([`wf_nfa N /\ _`], tac2)
+```
+
+and we already have `tac1` (the tactic creating the 4 subgoals). It
+remains to determine `tac2`. Fortunately one of the instances of the
+pattern is the top goal:
+
+```
+    0.  wf_nfa N
+    1.  EVERY N.Sigma w
+    2.  dfa_eval (nfa_to_dfa N) (enc N.initial) w = enc s
+    3.  s ⊆ N.Q
+    4.  s ∩ N.final ≠ ∅
+   ------------------------------------
+        wf_nfa N ∧ EVERY (λa. a ∈ N.Sigma) w ∧ N.initial ⊆ N.Q
+```
+
+This isn't hard to prove:
+
+```
+  simp [IN_DEF] >> metis_tac [wf_nfa_def]
+```
+
+and so our compound tactic under construction is the following:
+
+```
+  rw [dfa_lang_def,nfa_lang_def] >>
+  rw [EQ_IMP_THM,PULL_EXISTS] THENL
+  [DEP_ONCE_REWRITE_TAC [main_lemma_alt],
+   DEP_ONCE_REWRITE_TAC [main_lemma]] >>
+  conj_tac >>~-  (* 4 subgoals, 2 identical *)
+    ([‘wf_nfa N ∧ _’],
+     simp [IN_DEF] >> metis_tac [wf_nfa_def])
+```
+
+Restarting the proof and applying this entire tactic, we may infer
+that the subgoals matching the pattern are proved because we are left
+with the final two goals:
+
+```
+    0.  wf_nfa N
+    1.  EVERY N.Sigma w
+    2.  nfa_eval N N.initial w ∩ N.final ≠ ∅
+   ------------------------------------
         ∃s. enc (nfa_eval N N.initial w) = enc s ∧ s ⊆ N.Q ∧ s ∩ N.final ≠ ∅
 
     0.  wf_nfa N
@@ -774,17 +914,198 @@ which results in
     3.  s ⊆ N.Q
     4.  s ∩ N.final ≠ ∅
    ------------------------------------
-        (wf_nfa N ∧ EVERY (λa. a ∈ N.Sigma) w ∧ N.initial ⊆ N.Q) ∧
         dec (dfa_eval (nfa_to_dfa N) (enc N.initial) w) ∩ N.final ≠ ∅
 ```
 
-Inspecting the result, we see that the rewrites have indeed taken
-place. However, the separate dependent rewrites have placed the same
-proof obligation
+The bottom-most goal (the top goal on the stack!) can be simplified
+from the assumptions, which a bit of inspection reveals will create an
+opportunity for `codec` again. Putting this together into
 
 ```
-  (wf_nfa N ∧ EVERY (λa. a ∈ N.Sigma) w ∧ N.initial ⊆ N.Q)
+  simp [] >> DEP_REWRITE_TAC [codec]
 ```
 
-on both goals. Since these are separate it seems that we will have to
-perform the (trivial) proof for each.
+gives a trivial goal
+
+```
+    0.  wf_nfa N
+    1.  EVERY N.Sigma w
+    2.  dfa_eval (nfa_to_dfa N) (enc N.initial) w = enc s
+    3.  s ⊆ N.Q
+    4.  s ∩ N.final ≠ ∅
+   ------------------------------------
+        (wf_nfa N ∧ s ⊆ N.Q) ∧ s ∩ N.final ≠ ∅
+```
+
+so we can tack on another `simp []` to obtain the full tactic for
+solving this goal:
+
+```
+  (simp [] >> DEP_REWRITE_TAC [codec] >> simp [])
+```
+
+This leaves the last of the four goals:
+
+```
+    0.  wf_nfa N
+    1.  EVERY N.Sigma w
+    2.  nfa_eval N N.initial w ∩ N.final ≠ ∅
+   ------------------------------------
+        ∃s. enc (nfa_eval N N.initial w) = enc s ∧ s ⊆ N.Q ∧ s ∩ N.final ≠ ∅
+```
+
+Proving existential goals can always be done by providing explicit
+witnesses, via `qexists_tac` for example, but there are also powerful
+alternatives available. For example, the witness for `s` may
+be found from either (A) assumption 2 or (B) by reflexivity from the first
+conjunct under the existential. The entrypoint for both of these proof
+steps is `irule_at`.
+
+1. Instantiating from assumption 2 is done via
+
+   ```
+     first_assum (irule_at Any)
+   ```
+
+   which says, roughly, "find the first assumption that first order
+   unifies with one of the conjuncts underneath the existential and use
+   that substitution to provide the existential witness, then remove
+   that conjunct". This results in
+
+   ```
+       0.  wf_nfa N
+       1.  EVERY N.Sigma w
+       2.  nfa_eval N N.initial w ∩ N.final ≠ ∅
+      ------------------------------------
+           enc (nfa_eval N N.initial w) = enc (nfa_eval N N.initial w) ∧
+           nfa_eval N N.initial w ⊆ N.Q
+   ```
+
+2. Instantiating from the first conjunct under the existential is written as
+
+   ```
+     irule_at Any EQ_REFL
+   ```
+
+   which says, roughly, "find the first conjunct under the existential
+   that is an instance of reflexivity, then use that substitution to
+   provide the existential witness, then remove the instantiated
+   conjunct". This yields
+
+   ```
+       0.  wf_nfa N
+       1.  EVERY N.Sigma w
+       2.  nfa_eval N N.initial w ∩ N.final ≠ ∅
+      ------------------------------------
+           nfa_eval N N.initial w ⊆ N.Q ∧ nfa_eval N N.initial w ∩ N.final ≠ ∅
+   ```
+
+In either case, after simplification, one is left with the goal
+
+```
+    0.  wf_nfa N
+    1.  EVERY N.Sigma w
+    2.  nfa_eval N N.initial w ∩ N.final ≠ ∅
+   ------------------------------------
+        nfa_eval N N.initial w ⊆ N.Q
+```
+
+and this is seemingly easily proved with `nfa_eval_states`. We are
+basically done. However, frustratingly,
+
+```
+  metis_tac [nfa_eval_states,wf_nfa_def]
+````
+
+will fail without providing a reason. To debug we backward chain
+with `irule`:
+
+```
+  irule nfa_eval_states
+```
+
+which instantiates the theorem and replaces the goal of proving the
+conclusion of the theorem by the goal of proving the antecedents:
+
+```
+    0.  wf_nfa N
+    1.  EVERY N.Sigma w
+    2.  nfa_eval N N.initial w ∩ N.final ≠ ∅
+   ------------------------------------
+        wf_nfa N ∧ EVERY (λa. a ∈ N.Sigma) w ∧ N.initial ⊆ N.Q
+```
+
+The first conjunct of the goal is in the assumptions and the third
+conjunct is part of `wf_nfa_def`, which leaves the second conjunct
+
+```
+  EVERY (λa. a ∈ N.Sigma) w
+```
+
+as the culprit: assumption 1 ought to simplify it, but won't. The
+problem is one of HOL's small annoyances: since predicates are used to
+model sets in HOL the notion of element `a` being in set `P` can be
+written either as `P a` or as `a ∈ P`: indeed it is trivial to prove
+`⊢ a ∈ P ⇔ P a`. One might think, therefore, that simplifying with
+this would solve the problem. But no:
+
+```
+  simp [IN_DEF]
+```
+
+yields
+
+```
+  EVERY (λa. N.Sigma a) w
+```
+
+and assumption 1 still refuses to fulfill its destiny! HOL provides an
+η-reduction rule that should help
+
+```
+> ETA_THM;
+val it = ⊢ ∀M. (λx. M x) = M: thm
+```
+
+but simplifying with it results in no change, for obscure reasons in
+the design of the simplifier. The rewrite *can* be made to fire by
+using a more primitive rewriter, but it can also be accomplished
+within the standard simplifier by including a special-purpose *simpset
+fragment* `ETA_ss`:
+
+```
+> ETA_ss;
+val it =
+   Simplification set fragment: ETA
+   Conversions:
+      ETA_CONV (eta reduction), keyed on pattern  “f (λx. g x)”
+      ETA_CONV (eta reduction), keyed on pattern  “λx y. f x y”: ssfrag
+```
+
+Note that the first pattern in the listed conversions covers our
+case. In order to add `ETA_ss` to the simplifier, we need to wrap it
+with the `SF` function. In summary
+
+```
+  simp [IN_DEF, SF ETA_ss]
+```
+
+will prove the goal
+
+```
+  EVERY (λa. a ∈ N.Sigma) w
+```
+
+and complete the proof.
+
+> [!TIP]
+> The best way to avoid this scenario is to exercise consistent
+> set-theory notation, especially with respect to ∈. If we had
+> expressed `nfa_eval_states` as
+>
+> ```
+>   wf_nfa N ⇒ ∀w qset. EVERY N.Sigma w ∧ qset ⊆ N.Q ⇒ nfa_eval N qset w ⊆ N.Q
+> ```
+>
+> there would not have been any issues. Still, one sometimes runs
+> into this problem, and it's important to know how to work around it.

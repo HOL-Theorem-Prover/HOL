@@ -82,13 +82,11 @@ Proof
 QED
 
 Theorem Delta_subset:
-  wf_nfa N ∧ h ∈ N.Sigma ∧ qset ⊆ N.Q ⇒ Delta N qset h ⊆ N.Q
+  wf_nfa N ∧ h ∈ N.Sigma ∧ qset ⊆ N.Q
+  ⇒ Delta N qset h ⊆ N.Q
 Proof
-  rw [Delta_def] >>
-  rw [BIGUNION_SUBSET] >>
-  gvs [wf_nfa_def] >>
-  first_x_assum irule >>
-  metis_tac [SUBSET_DEF]
+  rw [SUBSET_DEF,IN_Delta] >>
+  metis_tac [wf_nfa_def,SUBSET_DEF]
 QED
 
 (*===========================================================================*)
@@ -186,7 +184,8 @@ Proof
       rw[IN_POW,SUBSET_DEF])
   >- metis_tac[]
   >- (rw [SUBSET_DEF] >> metis_tac[])
-  >- (DEP_REWRITE_TAC[codec] >> simp [Delta_def] >>
+  >- (DEP_REWRITE_TAC[codec] >>
+      simp [Delta_def] >>
       conj_tac >- rw [wf_nfa_def] >>
       irule_at Any EQ_REFL >>
       gvs [SUBSET_DEF] >> metis_tac[])
@@ -202,19 +201,22 @@ Theorem main_lemma:
     EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q
     ⇒ dfa_eval (nfa_to_dfa N) (enc qset) w = enc (nfa_eval N qset w)
 Proof
-  disch_tac >>
-  Induct >>
+  disch_tac >> Induct >>
   rw [nfa_eval_def,dfa_eval_def] >>
-  DEP_ASM_REWRITE_TAC [codec] >>
-  metis_tac [Delta_subset]
+  DEP_ASM_REWRITE_TAC [] >>
+  DEP_REWRITE_TAC [codec] >>
+  simp [Delta_subset]
 QED
 
 Theorem nfa_eval_states:
   wf_nfa N
   ⇒ ∀w qset.
-      EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒ nfa_eval N qset w ⊆ N.Q
+      EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q
+      ⇒ nfa_eval N qset w ⊆ N.Q
 Proof
-  disch_tac >> Induct >> rw [nfa_eval_def] >> rw [Delta_subset]
+  disch_tac >> Induct >>
+  rw [nfa_eval_def] >>
+  rw [Delta_subset]
 QED
 
 Theorem main_lemma_alt:
@@ -246,9 +248,9 @@ Proof
      simp [IN_DEF] >> metis_tac [wf_nfa_def])
   >- (simp [] >> DEP_REWRITE_TAC [codec] >> simp [])
   >- (irule_at Any EQ_REFL >> simp [] >>
-      irule nfa_eval_states >>
-      simp [SF ETA_ss,IN_DEF] >>
-      metis_tac [wf_nfa_def])
+      irule nfa_eval_states >> simp [] >>
+      reverse conj_tac >- metis_tac [wf_nfa_def] >>
+      simp [IN_DEF, SF ETA_ss])
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -298,7 +300,7 @@ Theorem dfa_to_nfa_correct:
   wf_dfa M ⇒ ∀w. w ∈ dfa_lang M <=> w ∈ nfa_lang (dfa_to_nfa M)
 Proof
   rw [dfa_lang_def,nfa_lang_def] >>
-  simp [DECIDE “((A ∧ B) = (A ∧ C)) ⇔ (A ⇒ B = C)”] >>
+  irule LEFT_AND_CONG >> simp [] >>
   rw [dfa_to_nfa_eval] >>
   simp [EXTENSION]
 QED
@@ -311,14 +313,10 @@ Theorem NFA_LANGS_EQ_DFA_LANGS:
   DFA_LANGS = NFA_LANGS
 Proof
   simp [EXTENSION] >>
-  simp [IN_DFA_LANGS, IN_NFA_LANGS] >>
-  qx_gen_tac ‘L’ >> rw [EQ_IMP_THM]
-  >- (drule dfa_to_nfa_correct >>
-      simp [IN_DEF,FUN_EQ_THM] >>
-      metis_tac [wf_dfa_to_nfa])
-  >- (drule nfa_to_dfa_correct >>
-      simp [IN_DEF,FUN_EQ_THM] >>
-      metis_tac [wf_nfa_to_dfa])
+  metis_tac
+    [IN_DFA_LANGS, IN_NFA_LANGS,
+     dfa_to_nfa_correct,wf_dfa_to_nfa,
+     nfa_to_dfa_correct,wf_nfa_to_dfa,EXTENSION]
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -447,4 +445,3 @@ Proof
   simp [IN_NFA_LANGS,IN_NFA_TRACE_LANGS] >>
   metis_tac [nfa_langs_equal]
 QED
-B
