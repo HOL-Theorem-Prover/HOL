@@ -1,0 +1,11 @@
+%.tex: %.smd
+	pandoc -o $@ $<
+
+%.uo %.ui: %.sml common.ui
+	mosmlc -c $* stem=$* deps=$^
+
+%-tag.out: %.in extra.dat
+	cp $< $@
+
+sub/%.html: sub/%.md
+	pandoc -o sub/$*.html sub/$*.md

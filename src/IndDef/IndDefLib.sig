@@ -21,7 +21,7 @@ sig
   val export_mono   : string -> unit
   val thy_monos     : string -> thm list
 
-  type rule_induction_map = ({Thy:string,Name:string},thm list) Binarymap.dict
+  type rule_induction_map = thm list KNametab.table
   val thy_rule_inductions : string -> thm list
   val rule_induction_map : unit -> rule_induction_map
   val rule_induction_map_by_theory : {thyname : string} ->

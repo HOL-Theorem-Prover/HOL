@@ -1,0 +1,4 @@
+ifdef NOTSET
+include simple_child
+endif
+AFTER = a

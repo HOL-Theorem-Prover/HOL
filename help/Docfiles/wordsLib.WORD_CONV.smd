@@ -1,0 +1,29 @@
+>>__ load "wordsLib"; Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"};
+## `WORD_CONV`
+
+``` hol4
+wordsLib.WORD_CONV : conv
+```
+
+------------------------------------------------------------------------
+
+Conversion for words.
+
+The conversion `WORD_CONV` applies the simpset fragment `WORD_ss`.
+
+### Example
+
+``` hol4
+>>__ load "wordsLib";
+
+>>+ wordsLib.WORD_CONV “c * (a + b) !! (b + a) * c”
+```
+
+### See also
+
+[`wordsLib.WORD_ss`](#wordsLib.WORD_ss),
+[`wordsLib.WORD_ARITH_CONV`](#wordsLib.WORD_ARITH_CONV),
+[`wordsLib.WORD_LOGIC_CONV`](#wordsLib.WORD_LOGIC_CONV),
+[`wordsLib.WORD_MUL_LSL_CONV`](#wordsLib.WORD_MUL_LSL_CONV),
+[`wordsLib.WORD_BIT_EQ_CONV`](#wordsLib.WORD_BIT_EQ_CONV),
+[`wordsLib.WORD_EVAL_CONV`](#wordsLib.WORD_EVAL_CONV)

@@ -438,20 +438,21 @@ fun start {diag} = let
   type parse_data = {
     done: bool,
     pos: int,
-    mlParseTrees: PolyML.parseTree list,
+    builtTrees: HOL_IDE.built list,
     diags: report DArray.darray,
     plugins: plugin_data}
   fun emptyParseData n: parse_data = {
-    done = false, pos = 0, mlParseTrees = [], diags = DArray.new (n, Completed),
+    done = false, pos = 0, builtTrees = [],
+    diags = DArray.new (n, Completed),
     plugins = emptyPluginData }
-  fun addParseTree t {done, pos, mlParseTrees, diags, plugins} =
-    {done = done, pos = pos, mlParseTrees = t :: mlParseTrees, diags = diags, plugins = plugins}
-  fun setParsePos pos {done, pos = _, mlParseTrees, diags, plugins} =
-    {done = done, pos = pos, mlParseTrees = mlParseTrees, diags = diags, plugins = plugins}
-  fun setParseDone pos {done = _, pos = _, mlParseTrees, diags, plugins} =
-    {done = true, pos = pos, mlParseTrees = mlParseTrees, diags = diags, plugins = plugins}
-  fun setPlugins plugins {done, pos, mlParseTrees, diags, plugins = _} =
-    {done = done, pos = pos, mlParseTrees = mlParseTrees, diags = diags, plugins = plugins}
+  fun addBuiltTree t {done, pos, builtTrees, diags, plugins} =
+    {done = done, pos = pos, builtTrees = t :: builtTrees, diags = diags, plugins = plugins}
+  fun setParsePos pos {done, pos = _, builtTrees, diags, plugins} =
+    {done = done, pos = pos, builtTrees = builtTrees, diags = diags, plugins = plugins}
+  fun setParseDone pos {done = _, pos = _, builtTrees, diags, plugins} =
+    {done = true, pos = pos, builtTrees = builtTrees, diags = diags, plugins = plugins}
+  fun setPlugins plugins {done, pos, builtTrees, diags, plugins = _} =
+    {done = done, pos = pos, builtTrees = builtTrees, diags = diags, plugins = plugins}
 
   type text_data = {text: string, version: int, lines: lines}
   type compile_data = {parse: parse_data ref, text: text_data, thread: Thread.thread}
@@ -528,7 +529,7 @@ fun start {diag} = let
       handle _ => []
     end
 
-  fun compileForReport uri code lastPos mlParseTree report = let
+  fun compileForReport uri code lastPos builtTree report = let
     val _ = HOL_IDE.initialize {
       text = code,
       filename = uri,
@@ -539,8 +540,7 @@ fun start {diag} = let
       error = fn {hard, location, message, ...} => report (Error {
         hard = hard, pos = locToRange location, msg = encPretty textWidth message}),
       runtimeExn = fn e => report (exnToReport (!lastPos) e),
-      mlParseTree = mlParseTree,
-      holParseTree = fn _ => () }
+      builtTree = builtTree }
     in lastPos := size code end
 
   fun startCompile uri ({compile, lastTrees}:file_data) =
@@ -625,9 +625,9 @@ fun start {diag} = let
         | process Completed = raise Bind
         | process Interrupted = raise Bind
         | process (msg as Error _) = DArray.push (#diags (!trees), msg)
-      fun processTree t = trees := addParseTree t (!trees)
+      fun processBuiltTree t = trees := addBuiltTree t (!trees)
       in
-        compileForReport uri (#text text) lastPos processTree process;
+        compileForReport uri (#text text) lastPos processBuiltTree process;
         afterCompile (!lastPos, size (#text text)) (!ls);
         send (mkNotif "$/compileCompleted" (fn print => (
           print "{\"uri\":"; encString uri print; print "}")));
@@ -652,7 +652,7 @@ fun start {diag} = let
     in case state of NONE => getIfValid (!lastTrees) | state => state end
 
   fun hover uri v (startTarget, endTarget) = let
-    val ({plugins, mlParseTrees, ...}, text, endOffset) =
+    val ({plugins, builtTrees, ...}, text, endOffset) =
       case getState v endTarget of NONE => raise Empty | SOME s => s
     val startOffset = fromLineCol (#lines text) startTarget
     fun ppToString pp = let
@@ -667,11 +667,14 @@ fun start {diag} = let
     fun typeHover (loc, pp) = {range = SOME (locToRange loc), markdown = ppToString pp}
     fun process loc props = let
       fun fromProps [] out = out
-        | fromProps (PolyML.PTtype ty :: props) (isId, _) = fromProps props (isId, SOME ty)
-        | fromProps (PolyML.PTrefId i :: props) (_, ty) = fromProps props (SOME i, ty)
-        | fromProps (PolyML.PTdefId i :: props) (_, ty) = fromProps props (SOME i, ty)
+        | fromProps (HOL_IDE.PType ty :: props) (isId, _) = fromProps props (isId, SOME ty)
+        | fromProps (HOL_IDE.PRefId i :: props) (_, ty) = fromProps props (SOME i, ty)
+        | fromProps (HOL_IDE.PDefId i :: props) (_, ty) = fromProps props (SOME i, ty)
         | fromProps (_ :: props) out = fromProps props out
       val (isId, ty) = fromProps props (NONE, NONE)
+      val thyHov = case HOL_IDE.builtGetThy props of
+        NONE => []
+      | SOME name => [{range = SOME (locToRange loc), markdown = "Theory " ^ name}]
       val (id, value, help) = case isId of
         NONE => (NONE, NONE, [])
       | SOME i => let
@@ -683,7 +686,7 @@ fun start {diag} = let
           if lastIndexOf #"." id < 0 then let
             fun validate str = let
               fun look [] = false
-                | look (PolyML.PTstructureAt {file, ...} :: props) = let
+                | look (HOL_IDE.PStructureAt file :: props) = let
                   val basename = String.extract (file, lastIndexOf #"/" file + 1, NONE)
                   val stem = String.extract (basename, 0, SOME (lastIndexOf #"." basename))
                   in str = stem orelse look props end
@@ -699,19 +702,19 @@ fun start {diag} = let
         val help = map (fn d => {range = range, markdown = d}) help
         val isGlobalId = i = 0 orelse let
           fun look [] = NONE
-            | look (PolyML.PTdeclaredAt loc :: _) = SOME loc
+            | look (HOL_IDE.PDeclaredAt loc :: _) = SOME loc
             | look (_ :: props) = look props
           fun lookRefs [] = false
-            | lookRefs (PolyML.PTreferences (exp, _) :: _) = exp
+            | lookRefs (HOL_IDE.PReferences exp :: _) = exp
             | lookRefs (_ :: props) = lookRefs props
           in
             case look props of
               NONE => false
             | SOME {startPosition, endPosition, ...} =>
-              case HOL_IDE.navigateTo' mlParseTrees
-                  {startOffset = startPosition, endOffset = endPosition} of
+              case HOL_IDE.builtNavigateTo' builtTrees
+                  {startOffset = FixedInt.fromInt startPosition, endOffset = FixedInt.fromInt endPosition} of
                 NONE => false
-              | SOME (_, props) => lookRefs props
+              | SOME (HOL_IDE.Built (_, declProps, _), _) => lookRefs declProps
           end
         val value = if isGlobalId then #lookupVal PolyML.globalNameSpace id else NONE
         in (SOME id, value, help) end
@@ -740,15 +743,15 @@ fun start {diag} = let
                   PrettyBreak(1, 2), ty])
               @ [PrettyBreak(1, 2), PrettyString "="]),
              PrettyBreak(1, 0), value]))]
-      in help @ out end
+      in thyHov @ help @ out end
     fun fromTree NONE = []
-      | fromTree (pt as (SOME (loc, props))) =
-        case process loc props of
-          [] => fromTree (HOL_IDE.moveUp pt)
+      | fromTree (pt as (SOME (HOL_IDE.Built ((s, e), props, _), _))) =
+        case process {startPosition = s, endPosition = e} props of
+          [] => fromTree (HOL_IDE.builtMoveUp pt)
         | out => out
     fun f () = let
       val offset' = {startOffset = FixedInt.fromInt startOffset, endOffset = FixedInt.fromInt endOffset}
-      in fromTree (HOL_IDE.navigateTo' mlParseTrees offset') end
+      in fromTree (HOL_IDE.builtNavigateTo' builtTrees offset') end
     val out = case out of [] => f () | _ => out
     val _ = case out of [] => raise Empty | _ => ()
     fun merge ({range = NONE, ...}, a) = a
@@ -763,20 +766,20 @@ fun start {diag} = let
     fun fromFileLine {origin, file, line} = let
       val range = ((line, 0), (line+1, 0))
       in {origin = origin, uri = SOME file, range = range, selRange = range} end
-    val ({plugins, mlParseTrees, ...}, text, offset) =
+    val ({plugins, builtTrees, ...}, text, offset) =
       case getState v target of NONE => raise Empty | SOME s => s
     val ctx = {uri = uri, lines = #lines text, plugins = plugins, fromFileLine = fromFileLine}
     val out = !LSPExtension.gotoDefinition (ctx, offset)
     fun f () = let
       fun fromProps [] r = r
-        | fromProps (PolyML.PTdeclaredAt loc :: _) (file, ty, _) = (file, ty, SOME loc)
-        | fromProps (PolyML.PTstructureAt {file,...} :: props) (_, ty, df) =
+        | fromProps (HOL_IDE.PDeclaredAt loc :: _) (file, ty, _) = (file, ty, SOME loc)
+        | fromProps (HOL_IDE.PStructureAt file :: props) (_, ty, df) =
           fromProps props (SOME file, ty, df)
-        | fromProps (PolyML.PTtype ty :: props) (file, _, df) = fromProps props (file, SOME ty, df)
+        | fromProps (HOL_IDE.PType ty :: props) (file, _, df) = fromProps props (file, SOME ty, df)
         | fromProps (_ :: props) r = fromProps props r
       val offset' = {startOffset = FixedInt.fromInt offset, endOffset = FixedInt.fromInt offset}
-      val ({startPosition, endPosition, ...}, props) =
-        case HOL_IDE.navigateTo' mlParseTrees offset' of NONE => raise Empty | SOME pt => pt
+      val (HOL_IDE.Built ((startPosition, endPosition), props, _), _) =
+        case HOL_IDE.builtNavigateTo' builtTrees offset' of NONE => raise Empty | SOME pt => pt
       val start = FixedInt.toInt startPosition
       val stop = FixedInt.toInt endPosition
       val origin = SOME (getLineCol (#lines text) start, getLineCol (#lines text) stop)
@@ -785,11 +788,9 @@ fun start {diag} = let
       | (file, ty, SOME loc) => (file, ty, loc)
       fun fromPolyLoc {file, startLine, startPosition, endPosition, ...} =
         if file = "" then let
-          val start = FixedInt.toInt startPosition
-          val stop = FixedInt.toInt endPosition
-          val range = (getLineCol (#lines text) start, getLineCol (#lines text) stop)
+          val range = (getLineCol (#lines text) startPosition, getLineCol (#lines text) endPosition)
           in {origin = origin, uri = NONE, range = range, selRange = range} end
-        else fromFileLine {origin = origin, file = file, line = FixedInt.toInt startLine - 1}
+        else fromFileLine {origin = origin, file = file, line = startLine - 1}
       val newLoc = case (file, ty) of
         (SOME file, SOME _) =>
         !LSPExtension.fixupTheoremLink {uri = file, text = #text text, start = start, stop = stop}

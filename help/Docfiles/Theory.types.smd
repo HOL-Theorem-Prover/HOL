@@ -1,0 +1,39 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `types`
+
+``` hol4
+Theory.types : string -> (string * int) list
+```
+
+------------------------------------------------------------------------
+
+Lists the types in the named theory.
+
+The function `types` should be applied to a string which is the name of
+an ancestor theory (including the current theory; the special string
+`"-"` is always interpreted as the current theory). It returns a list of
+all the type constructors declared in the named theory, in the form of
+arity-name pairs.
+
+### Failure
+
+Fails unless the named theory is an ancestor, or the current theory.
+
+### Example
+
+``` hol4
+>> load "bossLib";
+
+>> itlist union (map types (ancestry "-")) [];
+```
+
+### See also
+
+[`Theory.constants`](#Theory.constants),
+[`Theory.current_axioms`](#Theory.current_axioms),
+[`Theory.current_definitions`](#Theory.current_definitions),
+[`Theory.current_theorems`](#Theory.current_theorems),
+[`Theory.new_type`](#Theory.new_type),
+[`Definition.new_type_definition`](#Definition.new_type_definition),
+[`Theory.parents`](#Theory.parents),
+[`Theory.ancestry`](#Theory.ancestry)

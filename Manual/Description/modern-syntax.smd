@@ -1,3 +1,7 @@
+# HOL Source File Syntax
+
+\label{chap:modern-syntax}
+
 \index{special syntactic forms for scripts|(}
 Files written by HOL users are of the same form as those written by HOL developers.
 In this way, HOL aims to be easy to extend, and this chapter’s description of HOL source files should be useful for users and developers both.
@@ -53,7 +57,7 @@ When writing a theory called `name`, the user must write a file with name `nameS
 This will ultimately generate an SML structure that users will be able to refer to as `nameTheory`.
 That generated structure will contain bindings for the user’s definitions and theorems.
 For example, HOL comes with a `dividesScript.sml` that when built allows:
-```
+```repl
 >>__ load "dividesTheory";
 >> dividesTheory.prime_def;
 ```
@@ -111,48 +115,41 @@ For convenience, the `qualified` and `ignore_grammar` options can be given “al
 The `alias=`*ident* modifier does not make sense immediately after the `Ancestors` and `Libs` keywords;
 it should only be used after individual theory or library names to establish aliases for just those names.
 
---------------    -----  ---------------------
-⟨*theory*⟩         ::=   `Theory` ⟨*thyname*⟩⟨*build-mods*⟩^?^
-                         (⟨*ancestors*⟩ | ⟨*libraries*⟩)^\*^
-                         ⟨*thydecl*⟩^\*^
-⟨*build-mods*⟩     ::=   `[` ⟨*build-mod*⟩ (`,`⟨*build-mod*⟩)^\*^ `]`
-⟨*build-mod*⟩      ::=   `no_sig_docs`    |    `bare`
-⟨*ancestors*⟩      ::=   `Ancestors` ⟨*thy-modifier*⟩^?^ ⟨*ancestor-spec*⟩^\*^
-⟨*libraries*⟩      ::=   `Libs` ⟨*lib-modifier*⟩^?^ ⟨*lib-spec*⟩^\*^
-⟨*ancestor-spec*⟩  ::=   ⟨*thyname*⟩ ⟨*thy-modifier*⟩^?^
-⟨*lib-spec*⟩       ::=   ⟨*thyname*⟩ ⟨*lib-modifier*⟩^?^
-⟨*thy-modifier*⟩   ::=   `[`⟨*thy-attr*⟩(`,`⟨*thy-attr*⟩)^\*^`]`
-⟨*lib-modifier*⟩   ::=   `[`⟨*module-attr*⟩(`,`⟨*module-attr*⟩)^\*^`]`
-⟨*thy-attr*⟩       ::=   ⟨*module-attr*⟩     |     `ignore_grammar`
-⟨*module-attr*⟩    ::=   `qualified`     |     `alias=`⟨*ident*⟩
---------------    -----  ---------------------
+| Non-terminal | | Production |
+|----------|:---:|--------------------------------|
+| ⟨*theory*⟩ | ::= | `Theory` ⟨*thyname*⟩⟨*build-mods*⟩^?^<br>(⟨*ancestors*⟩ \| ⟨*libraries*⟩)^\*^<br>⟨*thydecl*⟩^\*^ |
+| ⟨*build-mods*⟩ | ::= | `[` ⟨*build-mod*⟩ (`,`⟨*build-mod*⟩)^\*^ `]` |
+| ⟨*build-mod*⟩ | ::= | `no_sig_docs`    \|    `bare` |
+| ⟨*ancestors*⟩ | ::= | `Ancestors` ⟨*thy-modifier*⟩^?^ ⟨*ancestor-spec*⟩^\*^ |
+| ⟨*libraries*⟩ | ::= | `Libs` ⟨*lib-modifier*⟩^?^ ⟨*lib-spec*⟩^\*^ |
+| ⟨*ancestor-spec*⟩ | ::= | ⟨*thyname*⟩ ⟨*thy-modifier*⟩^?^ |
+| ⟨*lib-spec*⟩ | ::= | ⟨*thyname*⟩ ⟨*lib-modifier*⟩^?^ |
+| ⟨*thy-modifier*⟩ | ::= | `[`⟨*thy-attr*⟩(`,`⟨*thy-attr*⟩)^\*^`]` |
+| ⟨*lib-modifier*⟩ | ::= | `[`⟨*module-attr*⟩(`,`⟨*module-attr*⟩)^\*^`]` |
+| ⟨*thy-attr*⟩ | ::= | ⟨*module-attr*⟩     \|     `ignore_grammar` |
+| ⟨*module-attr*⟩ | ::= | `qualified`     \|     `alias=`⟨*ident*⟩ |
 
 Table: Script File Syntax.
 Square brackets in the table are input characters; they are *not* meta-characters (unlike the parentheses, pipe symbols and superscripts).
 All keywords beginning with capital letters (`Theory`, `Ancestors`, `Libs`, ...) must occur in column 0 of the input file.
+```{=latex}
 \label{tab:script-file-syntax}
+```
 
---------------    -----  ---------------------
-⟨*thydecl*⟩        ::=   ⟨*SML-declaration*⟩    |    ⟨*theorem-decl*⟩    |    ⟨*definition-decl*⟩
-                    |    ⟨*parsing-decl*⟩    |    ⟨*quotation-decl*⟩
-⟨*theorem-decl*⟩   ::=   ⟨*thm-eqn*⟩   |   ⟨*thm-proof*⟩   |   ⟨*resumption*⟩   |   ⟨*final-thm*⟩
-⟨*thm-eqn*⟩        ::=   `Theorem` ⟨*ident*⟩⟨*thm-attrs*⟩ `=` ⟨*SML-expression*⟩
-⟨*thm-proof*⟩      ::=   `Theorem` ⟨*ident*⟩⟨*thm-attrs*⟩ `:` ⟨*thm-stmt*⟩
-                         `Proof`⟨*proof-attrs*⟩ ⟨*tactic*⟩
-                         `QED`
-⟨*defn-decl*⟩      ::=   ⟨*datatype-decl*⟩    |    ⟨*function-decl*⟩    |    ⟨*relation-decl*⟩
-⟨*datatype-decl*⟩  ::=   `Datatype:`⟨*datatype-spec*⟩ `End`
-⟨*relation-decl*⟩  ::=   (`Inductive`|`CoInductive`) ⟨*ident*⟩ `:` ⟨*relation-spec*⟩ `End`
-⟨*function-decl*⟩  ::=   `Definition` ⟨*ident*⟩⟨*defn-attrs*⟩ `:`
-                         ⟨*function-spec*⟩
-                         (`Termination` ⟨*tactic*⟩)^?^ `End`
-⟨*parsing-decl*⟩   ::=   `Overload` ⟨*quoted-ident*⟩⟨*overload-attrs*⟩^?^ `=` ⟨*SML-expression*⟩
-                    |    `Type` ⟨*quoted-ident*⟩⟨*type-attrs*⟩^?^ `=` ⟨*SML-expression*⟩
-⟨*quotation-decl*⟩ ::=   `Quote` (⟨*ident*⟩ `=`)^?^ ⟨*ident*⟩ `:` ⟨*quoted-material*⟩ `End`
-⟨*resumption*⟩     ::=   `Resume` ⟨*ident*⟩⟨*resumption-attrs*⟩ `:` ⟨*tactic*⟩
-                         `QED`
-⟨*final-thm*⟩      ::=   `Finalise` ⟨*ident*⟩⟨*thm-attrs*⟩
---------------    -----  ---------------------
+| Non-terminal | | Production |
+|----------|:---:|--------------------------------|
+| ⟨*thydecl*⟩ | ::= | ⟨*SML-declaration*⟩    \|    ⟨*theorem-decl*⟩    \|    ⟨*definition-decl*⟩<br>\|    ⟨*parsing-decl*⟩    \|    ⟨*quotation-decl*⟩ |
+| ⟨*theorem-decl*⟩ | ::= | ⟨*thm-eqn*⟩   \|   ⟨*thm-proof*⟩   \|   ⟨*resumption*⟩   \|   ⟨*final-thm*⟩ |
+| ⟨*thm-eqn*⟩ | ::= | `Theorem` ⟨*ident*⟩⟨*thm-attrs*⟩ `=` ⟨*SML-expression*⟩ |
+| ⟨*thm-proof*⟩ | ::= | `Theorem` ⟨*ident*⟩⟨*thm-attrs*⟩ `:` ⟨*thm-stmt*⟩<br>`Proof`⟨*proof-attrs*⟩ ⟨*tactic*⟩<br>`QED` |
+| ⟨*defn-decl*⟩ | ::= | ⟨*datatype-decl*⟩    \|    ⟨*function-decl*⟩    \|    ⟨*relation-decl*⟩ |
+| ⟨*datatype-decl*⟩ | ::= | `Datatype:`⟨*datatype-spec*⟩ `End` |
+| ⟨*relation-decl*⟩ | ::= | (`Inductive`\|`CoInductive`) ⟨*ident*⟩ `:` ⟨*relation-spec*⟩ `End` |
+| ⟨*function-decl*⟩ | ::= | `Definition` ⟨*ident*⟩⟨*defn-attrs*⟩ `:`<br>⟨*function-spec*⟩<br>(`Termination` ⟨*tactic*⟩)^?^ `End` |
+| ⟨*parsing-decl*⟩ | ::= | `Overload` ⟨*quoted-ident*⟩⟨*overload-attrs*⟩^?^ `=` ⟨*SML-expression*⟩<br>\|    `Type` ⟨*quoted-ident*⟩⟨*type-attrs*⟩^?^ `=` ⟨*SML-expression*⟩ |
+| ⟨*quotation-decl*⟩ | ::= | `Quote` (⟨*ident*⟩ `=`)^?^ ⟨*ident*⟩ `:` ⟨*quoted-material*⟩ `End` |
+| ⟨*resumption*⟩ | ::= | `Resume` ⟨*ident*⟩⟨*resumption-attrs*⟩ `:` ⟨*tactic*⟩<br>`QED` |
+| ⟨*final-thm*⟩ | ::= | `Finalise` ⟨*ident*⟩⟨*thm-attrs*⟩ |
 
 Table: Syntax for expressing theorem proofs, definitions and other theory changes. Again, upper-case keywords (`End` in particular, despite the table layout), must occur in column 0.
 
@@ -163,24 +160,22 @@ Table: Syntax for expressing theorem proofs, definitions and other theory change
 Many commands take a variety of attributes to modify or tweak the behaviour of the command.
 Attribute specifications are added to commands, usually after user-provided identifiers, within square brackets using a common syntax:
 
---------------  -----  -------------
-⟨*attr-spec*⟩    ::=   `[` ⟨*attribute*⟩ (`,`⟨*attribute*⟩)^\*^ `]`
-⟨*attribute*⟩    ::=   ⟨*ident*⟩ (`=` ⟨*ident*⟩^+^)^?^
---------------  -----  -------------
+| Non-terminal | | Production |
+|----------|:---:|--------------------------------|
+| ⟨*attr-spec*⟩ | ::= | `[` ⟨*attribute*⟩ (`,`⟨*attribute*⟩)^\*^ `]` |
+| ⟨*attribute*⟩ | ::= | ⟨*ident*⟩ (`=` ⟨*ident*⟩^+^)^?^ |
 
 If multiple identifiers appear to the right of an equals-sign in the above syntax, they are separated by whitespace.
 Libraries can enable more attributes than this core set for theorems and definitions; this allows theorem values to be stored in custom data-sets for later retrieval by customisable tools.
 
-Keyword             (Commonly used) Possible attributes
---------------      ----------------------
-`Definition`        `ind=`..., `nocompute`, `schematic`, `simp`
-`Overload`          `by_nametype`, `inferior`, `local`
-`Proof`             `exclude_frags`, `exclude_simps`
-`Resume`            `exclude_frags`, `exclude_simps`, `smlname`
-`Theorem`           `compute`, `cong`, `local`, `mono`, `rule_induction`, `simp`
-  (\& `Finalise`)
-`Type`              `local`, `pp`
---------------      ----------------------
+| Keyword                  | (Commonly used) Possible attributes |
+|--------------------------|-------------------------------------|
+| `Definition`             | `ind=`..., `nocompute`, `schematic`, `simp` |
+| `Overload`               | `by_nametype`, `inferior`, `local`  |
+| `Proof`                  | `exclude_frags`, `exclude_simps`    |
+| `Resume`                 | `exclude_frags`, `exclude_simps`, `smlname` |
+| `Theorem` (& `Finalise`) | `compute`, `cong`, `local`, `mono`, `rule_induction`, `simp` |
+| `Type`                   | `local`, `pp`                       |
 
 \index{Resume keyword@\ml{Resume} keyword}
 \index{special syntactic forms for scripts!Resume@\ml{Resume}}
@@ -197,7 +192,7 @@ The following describes the attributes listed above:
 `compute`
 
 :   Used with `Theorem` forms.
-    This causes the theorem value to be added to the global "computation set" that is used by `EVAL`.
+    This causes the theorem value to be added to the global “computation set” that is used by `EVAL`.
 \index{theorem attributes!compute@\ml{compute}}
 
 `cong`
@@ -214,6 +209,8 @@ The following describes the attributes listed above:
 
 :   Used with `Proof` or `Resume`.
     The list of fragment names following is removed from the global simpset for the duration of the given proof, affecting all simplifier tactics that refer to the global simpset.
+    The exclusion is *sticky*: while it is in effect, attempts to add back a fragment with one of the named names via the `++` operator (including those performed implicitly by derived simpsets such as the one used by `simp[]`) are silent no-ops.
+    To opt back in for a specific simplification call, use the `SF` marker in its theorem-list argument (e.g. `simp[SF ARITH_ss]` inside a `Proof[exclude_frags = ARITH]` body re-enables `ARITH_ss` for that one call).
 
 `exclude_simps`=...
 
@@ -230,13 +227,13 @@ The following describes the attributes listed above:
 `inferior`
 
 :   Used with `Overload`.
-    Makes the chosen overload "least liked" by the parsing and printing machinery.
+    Makes the chosen overload “least liked” by the parsing and printing machinery.
     It will be chosen last when resolving ambiguous parses, and will only be used when printing if no other overload matches.
 
 `local`
 
 :   Used with `Overload`, `Theorem`, and `Type`.
-    Makes the "effect" of the corresponding keyword local to the script file, meaning it will not persist into descendent theories.
+    Makes the “effect” of the corresponding keyword local to the script file, meaning it will not persist into descendent theories.
     In the case of `Theorem`, this means the theorem will not be exported, and so it will not be possible to refer to it as `fooTheory.ident` in descendents.
     For the parsing directives, the changes to the grammar are not exported.
 
@@ -253,7 +250,7 @@ The following describes the attributes listed above:
 `nocompute`
 
 :   Used with `Definition`.
-    This stops the definition theorem from being added to `EVAL`’s global "computation set", which otherwise happens by default.
+    This stops the definition theorem from being added to `EVAL`’s global “computation set”, which otherwise happens by default.
 
 `pp`
 

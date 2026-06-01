@@ -230,7 +230,8 @@ struct
       end
   end
 
-  fun equal ((compare, t1, _), (_, t2, _)) =
+  fun equal ((compare, t1, n1), (_, t2, n2)) =
+      n1 = n2 andalso
       let fun loop x y stack1 stack2 =
               case compare(x, y) of
                   EQUAL =>
@@ -239,13 +240,14 @@ struct
                      | (NONE, NONE)               => true
                      | _                          => false)
                 | _ => false
-      in  (* FIXME: here is lots of room for optimizations *)
+      in
           case (get [t1], get [t2]) of
               (SOME(x, stack1), SOME(y, stack2)) => loop x y stack1 stack2
             | (NONE, NONE)                       => true
             | _                                  => false end
 
-  fun isSubset ((compare, t1, _), (_, t2, _)) =
+  fun isSubset ((compare, t1, n1), (_, t2, n2)) =
+      n1 <= n2 andalso
       let fun loop x y stack1 stack2 =
               case compare(x, y) of
                   EQUAL =>
@@ -258,7 +260,7 @@ struct
                   (case get stack2 of
                        SOME(y, stack2) => loop x y stack1 stack2
                      | NONE            => false)
-      in  (* FIXME: here is lots of room for optimizations *)
+      in
           case (get [t1], get [t2]) of
               (SOME(x, stack1), SOME(y, stack2)) => loop x y stack1 stack2
             | (NONE, _)                          => true

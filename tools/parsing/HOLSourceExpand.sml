@@ -62,7 +62,7 @@ fun doProofKvals _ [] tac = tac
     val args = case bind of NONE => [] | SOME {vals, eq_=_} => map mkString vals
     val key = case key of
       "exclude_simps" => "simpLib.remove_simps"
-    | "exclude_frags" => "simpLib.remove_ssfrags"
+    | "exclude_frags" => "simpLib.exclude_ssfrags"
     | _ => key
     in App (mkIdent (p, key), mkList (p, args)) end
   fun mktm (kv, e) = Infix {left = e, id = (p, "o"), right = mktm1 kv}
@@ -306,7 +306,13 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
   | expandDec top (DecLocal {local_, dec1, in_, dec2, end_, stop}) =
     DecLocal {local_ = local_, dec1 = map (expandDec false) dec1, in_ = in_,
       dec2 = map (expandDec top) dec2, end_ = end_, stop = stop}
-  | expandDec _ (dec as DecOpen _) = dec
+  | expandDec top (dec as DecOpen {open_, ...}) =
+    if top andalso quietOpen then let
+      val unit = Unit {left = open_, right = open_}
+      fun f x acc = mkSemi (valWild open_ (App (mkIdent (open_, x), unit)) :: acc)
+      val acc = mkSemi (dec :: f "HOL_Interactive.start_open" [])
+      in DecExpansion {orig = dec, result = rev (f "HOL_Interactive.end_open" acc)} end
+    else dec
   | expandDec _ (dec as DecInfix _) = dec
   | expandDec _ (dec as DecInfixr _) = dec
   | expandDec _ (dec as DecNonfix _) = dec
@@ -411,7 +417,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val e = App (mkIdent (theory_, "Theory.export_theory"), unit)
     val e = if not noSigDocs then e else let
       val set_trace = mkIdent (theory_, "Feedback.set_trace")
-      val include_docs = mkString (theory_, "TheoryPP.include_docs")
+      val include_docs = mkString (theory_, "TheoryPP.include_html_docs")
       val zero = mkInt (theory_, 0)
       val exclude_docs = mkApp set_trace [include_docs, zero]
       in Infix {left = exclude_docs, id = (theory_, "before"), right = e} end
@@ -551,7 +557,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     in DecExpansion {orig = dec, result = [valPat resume_ subname e]} end
   | expandDec _ (dec as HOLFinalise {finalise_, id, attrs, ...}) = let
     val fileline = fileline (#1 id)
-    val e = mkLocString' (finalise_, "boolLib.finalise_suspended_thm") fileline
+    val e = mkLocString' (finalise_, "markerLib.finalise_suspended_thm") fileline
     val e = App (e, mkNameAttrs mkKval id attrs)
     in DecExpansion {orig = dec, result = [valPat finalise_ (mkIdent id) e]} end
 

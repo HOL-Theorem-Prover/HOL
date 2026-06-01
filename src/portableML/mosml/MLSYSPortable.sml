@@ -50,4 +50,10 @@ fun syncref init =
     }
   end
 
+(* Mosml builds are never run in parallel, so a "real" pid is unnecessary;
+   tmpName gives us a fresh unique string per call. *)
+fun unique_tmp_suffix () = OS.Path.file (OS.FileSys.tmpName ())
+
+fun save_heap (_:string) = ()
+
 end (* struct *)

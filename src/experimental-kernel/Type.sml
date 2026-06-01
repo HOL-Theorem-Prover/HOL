@@ -84,13 +84,6 @@ end
 val bool = mk_type("bool", [])
 val ind = mk_type("ind", [])
 
-fun dest_type (Tyv _) = raise ERR "dest_type" "Type a variable"
-  | dest_type (Tyapp(id, args)) = let
-      val {Thy, Name} = KernelSig.name_of_id id
-    in
-      (Name, args)
-    end
-
 fun is_type (Tyapp _) = true | is_type _ = false
 
 fun mk_thy_type {Thy, Tyop, Args} =
@@ -112,7 +105,16 @@ fun mk_thy_type {Thy, Tyop, Args} =
 
 fun dest_thy_type (Tyv _) = raise ERR "dest_thy_type" "Type a variable"
   | dest_thy_type (Tyapp(id, args)) =
-    {Thy = KernelSig.seg_of id, Tyop = KernelSig.name_of id, Args = args}
+    let open KernelSig in
+      {Thy = seg_of id, Tyop = display_name_of_id id, Args = args}
+    end
+
+fun dest_type (ty as Tyapp _) =
+    let val {Tyop,Args,...} = dest_thy_type ty
+    in
+      (Tyop, Args)
+    end
+  | dest_type _ = raise ERR "dest_type" ""
 
 fun decls s = let
   fun foldthis ({Thy,Name},v,acc) = if Name = s then {Thy=Thy,Tyop=Name}::acc

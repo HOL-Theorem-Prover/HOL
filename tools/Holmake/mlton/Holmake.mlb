@@ -7,6 +7,11 @@ $(SML_LIB)/basis/basis.mlb
 ../deps/HM_DepGraph.sml
 ../core/HM_BuildLock.sig
 ../core/HM_BuildLock.sml
+../core/HM_TheoryDat.sig
+../core/HM_TheoryDat.sml
+../core/HM_Cachekey.sig
+../core/HM_Cachekey.sml
+../poly/HM_CacheFetch.sml
 ../core/HM_GraphBuildJ1.sig
 ../core/HM_GraphBuildJ1.sml
 ../poly/HM_Cline.sig
@@ -22,5 +27,7 @@ $(SML_LIB)/basis/basis.mlb
 ../poly/MB_Monitor.sml
 ../poly/multibuild.sml
 ../poly/BuildCommand.sml
+../core/HostName.sig
+../core/HostName.sml
 ../core/Holmake.sml
 mlton-Holmake.sml

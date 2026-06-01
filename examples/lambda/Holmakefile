@@ -1,4 +1,4 @@
 CLINE_OPTIONS = -r
 
 INCLUDES = barendregt basics other-models typing wcbv-reasonable examples \
-           plotkin1975
+           cbpv-reasonable plotkin1975

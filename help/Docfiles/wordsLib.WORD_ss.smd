@@ -1,0 +1,48 @@
+>>__ load "wordsLib"; Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"}; open simpLib;
+## `WORD_ss`
+
+``` hol4
+wordsLib.WORD_ss : ssfrag
+```
+
+------------------------------------------------------------------------
+
+Simplification fragment for words.
+
+The fragment `WORD_ss` contains `BIT_ss`, `SIZES_ss`, `WORD_LOGIC_ss`,
+`WORD_ARITH_ss` and `WORD_SHIFT_ss`. It also performs ground term
+evaluation.
+
+### Example
+
+``` hol4
+>>__ load "wordsLib";
+
+>>+ SIMP_CONV (pure_ss++wordsLib.WORD_ss) [] “BIT i 42”
+
+>>+ SIMP_CONV (pure_ss++wordsLib.WORD_ss) [] “dimword(:42)”
+
+>>+ SIMP_CONV (pure_ss++wordsLib.WORD_ss) [] “((a #<< 2 #>> 2 + a) && $- 1w) - a”
+
+>>+ SIMP_CONV (pure_ss++wordsLib.WORD_ss) [] “(4 -- 2) ($- 1w : word8)”
+```
+
+### Comments
+
+The `WORD_ss` fragment does not include `WORD_ARITH_EQ_ss`,
+`WORD_BIT_EQ_ss`, `WORD_EXTRACT_ss` or `WORD_MUL_LSL_ss`. These extra
+fragments have more specialised applications.
+
+### See also
+
+[`wordsLib.WORD_CONV`](#wordsLib.WORD_CONV),
+[`fcpLib.FCP_ss`](#fcpLib.FCP_ss),
+[`wordsLib.BIT_ss`](#wordsLib.BIT_ss),
+[`wordsLib.SIZES_ss`](#wordsLib.SIZES_ss),
+[`wordsLib.WORD_ARITH_ss`](#wordsLib.WORD_ARITH_ss),
+[`wordsLib.WORD_LOGIC_ss`](#wordsLib.WORD_LOGIC_ss),
+[`wordsLib.WORD_ARITH_EQ_ss`](#wordsLib.WORD_ARITH_EQ_ss),
+[`wordsLib.WORD_BIT_EQ_ss`](#wordsLib.WORD_BIT_EQ_ss),
+[`wordsLib.WORD_SHIFT_ss`](#wordsLib.WORD_SHIFT_ss),
+[`wordsLib.WORD_EXTRACT_ss`](#wordsLib.WORD_EXTRACT_ss),
+[`wordsLib.WORD_MUL_LSL_ss`](#wordsLib.WORD_MUL_LSL_ss)

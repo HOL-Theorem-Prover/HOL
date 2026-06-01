@@ -1,0 +1,35 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `time`
+
+``` hol4
+Lib.time : ('a -> 'b) -> 'a -> 'b
+```
+
+------------------------------------------------------------------------
+
+Measure how long a function application takes.
+
+An application `time f x` starts a clock, applies `f` to `x`, and then
+checks the clock to see how long that took. It prints out the elapsed
+runtime, garbage collection time, and system time before returning the
+value of `f x`.
+
+### Failure
+
+If `f x` raises `e`, then `time f x` raises `e`, but still reports
+elapsed time.
+
+### Example
+
+``` hol4
+>> time (int_sort) (for 0 999 I);
+
+>> fun f x = f (x + 1);
+
+> time f 0; (* would need interrupting *)
+```
+
+### See also
+
+[`Lib.end_time`](#Lib.end_time), [`Lib.start_time`](#Lib.start_time),
+[`Count.thm_count`](#Count.thm_count)

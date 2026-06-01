@@ -1,107 +1,236 @@
-INCLUDES = ../Tools ../../examples/probability $(HOLDIR)/src/integer
+INCLUDES = ../Tools ../Reference ../../examples/probability \
+           $(HOLDIR)/src/integer $(HOLDIR)/src/sort \
+           $(HOLDIR)/src/pred_set/src/more_theories \
+           $(HOLDIR)/src/num/theories/cv_compute/automation
+
+# Cross-manual labels.tsv prereq list for the mdbook target.
+# See Manual/mdbook.mk for MANUALS / SIBLING_LABELS.
+THIS = Description
+include ../mdbook.mk
 
 TEX_CORES = description title preface system conv drules tactics \
-	theories math definitions libraries misc HolSat PatternMatchesLib \
-        enumfset simplifier latex-munger modern-syntax-chapter advanced_tactics \
-        suspension-resumption-subsection
+	theories math definitions libraries misc HolSat HolQbf HolSmt \
+	PatternMatchesLib QuantHeuristics enumfset simplifier \
+	latex-munger modern-syntax
 
-TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex $(patsubst %,%.tex,$(TEX_CORES))
+TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex \
+              chapters-include.tex book-title.tex \
+              $(patsubst %,%.tex,$(TEX_CORES))
 
 PS_ROOT = ../Tools/polyscripter
 PS_STUFF =  $(PS_ROOT) ../Tools/umap
-PS_COMMAND = $(PS_STUFF) < $< > $@
-PS_NOUMAP = $(PS_ROOT) < $< > $@
+PS_NOUMAP = $(PS_ROOT) -md < $< > $@
 
-.PHONY: all
+# pandoc invocation for the .md -> .tex stage.  The same command
+# serves both top-level chapter .smd files (which start with a
+# `# Chapter Title` H1 -> \chapter{}) and nested sub-file .smd
+# files (which start at `## Section Title` H2 -> \section{}, so
+# they slot into the parent chapter's \input{<stem>}).
+PANDOC_MD = pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=../Tools/pdf-macros.lua -t latex $< > $@
 
-all: system.pdf system.html drules.pdf drules.html description.pdf
+.PHONY: all mdbook mdbook-serve
 
+all: description.pdf
+
+# All .smd files (chapters and sub-files alike); pick them up
+# automatically so adding a new .smd file doesn't require a
+# Holmakefile edit just to wire its H1/H2/H3 entries into
+# SUMMARY.md and its theory-build deps into mdbook's prereq
+# chain.
+SMDS = $(wildcard *.smd)
+SMD_MDS = $(patsubst %.smd,%.md,$(SMDS))
+
+# SVG renderings of the chapter figures, for the mdbook side.  The
+# PDF side picks up the .mps / .pdf originals as usual.
+SVG_FIGS = figs/0.svg figs/1.svg \
+           figs/lsl.svg figs/lsr.svg figs/asr.svg \
+           figs/ror.svg figs/rrx.svg
+
+# MetaPost .mps -> .svg via mptopdf + pdftocairo, then pre-built
+# .pdf -> .svg directly.  Both use cross-directory pattern rules:
+# the literal `figs/' prefix scopes each pattern to the figures
+# subdirectory, so unrelated .svg or .mps files elsewhere don't
+# get caught.  mptopdf writes <name>-mps.pdf in cwd; clean that
+# up after extracting the SVG.
+figs/%.svg: figs/%.mps
+	cd figs && mptopdf $*.mps
+	pdftocairo -svg figs/$*-mps.pdf $@
+	rm -f figs/$*-mps.pdf figs/$*.log
+
+figs/%.svg: figs/%.pdf
+	pdftocairo -svg $< $@
+
+# Build the mdbook output for the chapters listed in SUMMARY.md;
+# afterwards, scan the rendered HTML for raw-LaTeX leak patterns
+# that have caused mdbook regressions before (see `smdpp
+# check-html`).  The smdpp preprocessor is invoked dynamically by
+# mdbook (see book.toml).
+#
+# `mdbook build` invokes smdpp which polyscripter-runs each .smd
+# in-memory; the per-chapter .md rules below carry the theory-build
+# dependencies smdpp's runtime `load "X"` calls need (e.g. math.md
+# depends on `examples/probability/large_numberTheory.uo`).
+# Depending on $(SMD_MDS) ensures Holmake builds those .uo files
+# before mdbook runs, the same way description.pdf gets them via
+# $(TEX_SOURCES).
+# `mdbook` is a recipe-less PHONY alias for the real file target
+# below: it just lets the per-manual `Holmake mdbook` (and the
+# aggregator's Description/mdbook) name stand while the actual work
+# is gated on `../book/Description/index.html`'s mtime, so re-runs
+# with no source changes are no-ops instead of re-invoking mdbook
+# and the post-build checks unconditionally.
+mdbook: ../book/Description/index.html
+
+../book/Description/index.html: ../Tools/smdpp SUMMARY.md \
+        $(SMD_MDS) \
+        $(SVG_FIGS) references.md cite-labels.tsv \
+        ../Reference/entries.list \
+        labels.tsv $(SIBLING_LABELS)
+	mdbook build
+	# Stable searchindex.js -> searchindex-<hash>.js symlink: the
+	# cross-book searcher loads sibling indices from `../<Book>/
+	# searchindex.js`, but mdbook hashes the actual filename
+	# whenever content changes.  Resolve the hash here.
+	cd ../book/Description && \
+	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
+	../Tools/smdpp check-html ../book/Description
+	../Tools/smdpp check-refs ../book/Description
+	../Tools/smdpp check-links ../book/Description
+
+# Scan-only label dump for cross-book `\ref{Book:label}` resolution.
+# Walks SUMMARY.md + chapter sources without invoking polyscripter,
+# so it's fast (~1s) and is built as a prereq of every manual's
+# mdbook target (own + siblings) before anything slow runs.
+labels.tsv: ../Tools/smdpp SUMMARY.md $(SMDS)
+	../Tools/smdpp dump-labels .
+
+# Render the bibliography chapter and the per-call-site cite label
+# table in one shot, via pandoc citeproc.  Both outputs share a
+# single `smdpp render-bib` invocation: references.md is the mdbook
+# chapter wrapping the rendered bibliography, and cite-labels.tsv is
+# smdpp's preprocessor-time lookup for substituting \cite{...} calls
+# in chapter content.  The PDF path doesn't use either -- natbib's
+# \bibliography{description} produces the bibliography directly.
+CSL = ../Tools/csl/chicago-author-date.csl
+references.md cite-labels.tsv: description.bib $(CSL) $(SMDS) ../Tools/smdpp
+	../Tools/smdpp render-bib description.bib $(CSL) $(SMDS)
+
+# SUMMARY.md and chapters-include.tex are generated from
+# chapters.txt by Manual/Tools/gen_chap_lists.  chapters.txt
+# is the canonical chapter ordering for the manual; top-level
+# (un-indented) entries are chapters and indented entries are
+# their nested sub-files (built with $(PANDOC_SEC) so their H1
+# becomes \section{} inside the parent's \input).  The generator
+# extracts mdbook chapter titles + sub-entries from each .smd's
+# H1/H2/H3 headings, weaves in nested sub-file links at the
+# position of each `\input{<stem>}` in the parent .smd, and
+# emits `\include{stem}` lines for every top-level stem only.
+
+SUMMARY.md: ../Tools/gen_chap_lists chapters.txt book.toml $(SMDS)
+	../Tools/gen_chap_lists summary \
+	   "$$(awk -F\" '/^title/ {print $$2; exit}' book.toml)" > $@
+
+chapters-include.tex: ../Tools/gen_chap_lists chapters.txt
+	../Tools/gen_chap_lists latex-include > $@
+
+# Generate a one-line LaTeX macro file whose body is the book
+# title from book.toml; title.tex and description.tex (via
+# \HOLbookTitle) consume it.  Keeps the PDF cover and the
+# hyperref pdftitle in sync with the mdbook title automatically.
+book-title.tex: book.toml
+	printf '\\providecommand{\\HOLbookTitle}{%s}\n' \
+	   "$$(awk -F\" '/^title/ {print $$2; exit}' book.toml)" > $@
+
+# Convenience: serve the book locally at http://127.0.0.1:3000/.
+# Live-reloads when .smd / theme / book.toml change.  Detaches into the
+# background; pass LOG=1 to capture the server's stdout/stderr to
+# mdbook-serve.log here, or LOG=<path> for a custom location.
+mdbook-serve: ../Tools/smdpp
+	@msg() { { echo "$$1" >/dev/tty; } 2>/dev/null || echo "$$1" >&2; }; \
+	 if lsof -ti :3000 >/dev/null 2>&1; then \
+	   msg "Port 3000 already in use; stop the existing server first:"; \
+	   msg "  pkill -f 'mdbook serve'  (or: lsof -ti :3000 | xargs kill)"; \
+	   exit 1; \
+	 fi; \
+	 logfile="$(LOG)"; \
+	 [ "$$logfile" = 1 ] && logfile=mdbook-serve.log; \
+	 [ -z "$$logfile" ] && logfile=/dev/null; \
+	 (mdbook serve --hostname 127.0.0.1 --port 3000 \
+	    >"$$logfile" 2>&1 &); \
+	 msg "mdbook serving at http://127.0.0.1:3000/"; \
+	 [ "$$logfile" != /dev/null ] && msg "log: $$(pwd)/$$logfile"; \
+	 msg "stop: pkill -f 'mdbook serve'"
+
+# latexmk-side flags:
+#   -bibtex: this latexmk (4.79) doesn't auto-invoke bibtex from
+#     the .aux's \bibdata line on its own; the explicit flag forces
+#     it through.
+#   -f: pdflatex returns exit 1 on natbib warnings about undefined
+#     citations in early passes, which without -f makes latexmk
+#     abort the loop; we treat the actual PDF's existence as the
+#     success signal.
+# Trailing pdflatex pass: latexmk's convergence loop sometimes
+# stops one pass too early when the second bibtex run produces
+# the same .bbl as the first -- but pdflatex still needs another
+# pass to incorporate the \bibcite entries it has only just
+# written to its own .aux for early-document citations.
 description.pdf: $(TEX_SOURCES)
-	latexmk -pdf description
+	rm -f $@; \
+	latexmk -pdf -bibtex -f -interaction=nonstopmode description; \
+	pdflatex -interaction=nonstopmode description > /dev/null; \
+	test -s $@
 
-definitions.tex: definitions.stex $(PS_STUFF)
-	$(PS_COMMAND)
-
-
-advanced_tactics.tex: advanced_tactics.stex $(PS_STUFF)
-	$(PS_COMMAND)
-
-conv.tex: conv.stex $(PS_STUFF)
-	$(PS_COMMAND)
-
-drules.tex: drules.stex $(PS_STUFF)
-	$(PS_COMMAND)
-
-drules.md: drules.smd $(PS_STUFF)
+# Pattern rules for the per-chapter .smd -> .md -> .tex pipeline.
+# Hand-rolled .tex front matter (description.tex, title.tex,
+# preface.tex) is safe: Holmake skips pattern rules whose prereqs
+# don't exist (see misc.smd's pattern-rule applicability note).
+%.md: %.smd
 	$(PS_NOUMAP)
 
-drules.pdf: drules.md
-	pandoc --top-level-division=chapter -o $@ $<
+%.tex: %.md ../Tools/pdf-macros.lua
+	$(PANDOC_MD)
 
-drules.html: drules.md
-	pandoc -s -o $@ $<
+# $(PS_STUFF) lives in ../Tools/ and is only built on demand, so the
+# pattern rule's applicability check (local rules + files only)
+# would reject %.md before ../Tools/polyscripter exists.  Declare it
+# as a recipe-less extra prereq on every .md, leaving the pattern
+# recipe to apply.
+$(SMD_MDS): $(PS_STUFF)
 
-tactics.tex: tactics.stex $(PS_STUFF)
-	$(PS_COMMAND)
+# Per-chapter extra prerequisites: theory-build deps or side files
+# polyscripter reads from a chapter's .smd via `##use`.  Recipe-less
+# rules slot in on top of the pattern rule above (see "additional
+# prerequisites" under pattern rules in misc.smd).
+theories.md: $(dprot $(HOLDIR)/src/real/realTheory.uo) \
+             $(dprot $(HOLDIR)/src/integer/integerTheory.uo) \
+             $(dprot $(HOLDIR)/src/real/real_sigmaTheory.uo) \
+             $(dprot $(HOLDIR)/src/real/analysis/real_topologyTheory.uo) \
+             $(dprot $(SIGOBJ)/iterateTheory.uo)
 
-theories.tex: theories.stex $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo) \
-	$(dprot $(HOLDIR)/src/integer/integerTheory.uo) \
-	$(dprot $(HOLDIR)/src/real/real_sigmaTheory.uo) \
-	$(dprot $(HOLDIR)/src/real/analysis/real_topologyTheory.uo) \
-	$(dprot $(SIGOBJ)/iterateTheory.uo)
-	$(PS_COMMAND)
+math.md: $(dprot $(HOLDIR)/src/probability/probabilityTheory.uo) \
+         $(dprot $(HOLDIR)/src/probability/lebesgue_measureTheory.uo) \
+         $(dprot $(HOLDIR)/examples/probability/large_numberTheory.uo) \
+         $(dprot $(HOLDIR)/src/pred_set/src/more_theories/ordinalTheory.uo)
 
-math.tex: math.stex $(PS_STUFF) $(dprot $(SIGOBJ)/probabilityTheory.uo) \
-    $(dprot $(SIGOBJ)/lebesgue_measureTheory.uo) \
-	$(HOLDIR)/examples/probability/large_numberTheory.uo
-	$(PS_COMMAND)
+libraries.md: $(dprot $(HOLDIR)/src/integer/integerTheory.uo) \
+              $(dprot $(HOLDIR)/src/sort/sortingTheory.uo) \
+              $(dprot $(HOLDIR)/src/num/theories/cv_compute/automation/cv_transLib.uo) \
+              $(dprot $(HOLDIR)/src/num/theories/cv_compute/automation/cv_stdTheory.uo)
 
-simplifier.tex: simplifier.stex $(PS_STUFF)
-	$(PS_COMMAND)
-
-PatternMatchesLib.tex: PatternMatchesLib.stex $(PS_STUFF)
-	$(PS_COMMAND)
-
-libraries.tex: libraries.stex $(PS_STUFF) $(dprot $(SIGOBJ)/integerTheory.uo)
-	$(PS_COMMAND)
-
-system.tex: system.stex $(PS_STUFF)
-	$(PS_COMMAND)
-
-system.md: system.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-system.pdf: system.md
-	pandoc --top-level-division=chapter -o $@ $<
-
-system.html: system.md
-	pandoc -s -o $@ $<
-
-HolSat.tex: HolSat.stex $(PS_STUFF) zchaff.cnf
-	$(PS_COMMAND)
-
-modern-syntax.md: modern-syntax.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-modern-syntax-chapter.tex: modern-syntax.md pdf-macros.lua
-	(printf '\\chapter{\\texorpdfstring{\\HOL{} Source File Syntax}{HOL Source File Syntax}}\\label{chap:modern-syntax}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
-
-suspension-resumption.md: suspension-resumption.smd $(PS_STUFF)
-	$(PS_NOUMAP)
-
-suspension-resumption-subsection.tex: suspension-resumption.md pdf-macros.lua
-	(printf '\\subsection{Proof Suspension and Resumption}\\label{sec:suspend-resume}\n' ; pandoc --top-level-division=section --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
+HolSat.md: zchaff.cnf
 
 # This builds figs/0.mps, figs/1.mps, ...
 figures:
 	mpost -mem=metafun -tex=latex figure.mp
 
-EXTRA_CLEANS = drules.tex tactics.tex theories.tex libraries.tex \
-               PatternMatchesLib.tex HolSat.tex definitions.tex \
-               system.tex system.md drules.md conv.tex math.tex \
-               description.pdf \
+EXTRA_CLEANS = $(SMD_MDS) $(patsubst %.smd,%.tex,$(SMDS)) \
+               description.pdf mdbook-serve.log \
                $(patsubst %,%.aux,$(TEX_CORES)) \
-	       description.log description.out \
+               description.log description.out \
                description.toc description.fls description.idx description.ilg \
                description.ind description.blg description.bbl \
-	       description.fdb_latexmk modern-syntax.md modern-syntax-chapter.tex
+               description.fdb_latexmk \
+               chapters-include.tex book-title.tex SUMMARY.md \
+               references.md cite-labels.tsv labels.tsv \
+               $(SVG_FIGS) \
+               ../book/Description/

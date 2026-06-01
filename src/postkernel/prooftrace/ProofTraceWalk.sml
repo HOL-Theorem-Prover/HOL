@@ -1,6 +1,9 @@
 structure ProofTraceWalk :> ProofTraceWalk = struct
 
-open Lib Redblackmap ProofTraceParser
+open Lib ProofTraceParser
+
+fun update_at (tab, k, f) =
+    Symtab.update (k, f (Symtab.lookup tab k)) tab
 
 fun walk {heap, thyname, named_thms, anon_thms,
           incr, on_def_thm} = let
@@ -66,8 +69,8 @@ fun walk {heap, thyname, named_thms, anon_thms,
   fun is_closed tm_ptr = isPtr tm_ptr andalso compute_closedness tm_ptr < 0
 
   (* Walk state *)
-  val tm_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
-  val ty_defs : (string, thm ptr list) dict ref = ref (mkDict String.compare)
+  val tm_defs : thm ptr list Symtab.table ref = ref Symtab.empty
+  val ty_defs : thm ptr list Symtab.table ref = ref Symtab.empty
   val seen = BoolArray.array(heapSize heap, false)
 
   fun first_seen p =
@@ -114,7 +117,7 @@ fun walk {heap, thyname, named_thms, anon_thms,
                              thm_ptr::ls))
       fun check_thy defthy =
         if defthy = thyname then () else raise Fail "add_def thy"
-      fun add_const nm = tm_defs := update(!tm_defs, nm, add_thm_ptr nm)
+      fun add_const nm = tm_defs := update_at (!tm_defs, nm, add_thm_ptr nm)
       fun add_def_const p = let
         val (thy,nm) = get_const_id p
         val () = check_thy thy
@@ -151,7 +154,7 @@ fun walk {heap, thyname, named_thms, anon_thms,
           val () = th b
           val (thy,tyop) = get_type_id c
           val () = check_thy thy
-        in ty_defs := update(!ty_defs, tyop, add_thm_ptr tyop) end
+        in ty_defs := update_at (!ty_defs, tyop, add_thm_ptr tyop) end
       | Disk_prf _ => ()
       | EQ_IMP_RULE1_prf a => th a
       | EQ_IMP_RULE2_prf a => th a
@@ -186,6 +189,8 @@ fun walk {heap, thyname, named_thms, anon_thms,
       | deductAntisym_prf (a, b) => (th a; th b)
       | deleted_prf => ()
       | save_dep_prf a => th a
+      | Mark_prf (_, a) => th a
+      | Exported_prf _ => ()
     end
   and th p = (incr (castPtr p); walk_thm p)
 

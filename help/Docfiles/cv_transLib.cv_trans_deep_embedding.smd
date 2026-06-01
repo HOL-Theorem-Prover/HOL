@@ -1,0 +1,52 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `cv_trans_deep_embedding`
+
+``` hol4
+cv_transLib.cv_trans_deep_embedding : conv -> thm -> unit
+```
+
+------------------------------------------------------------------------
+
+Translates equations defining a deeply embedded AST to the `cv_compute`
+subset of HOL.
+
+This function is similar to `cv_transLib.cv_trans`, but can only
+translate constants. It is designed for the translation of large deep
+embeddings to `:cv` functions. It takes as an argument a conversion
+which must evaluate terms such as `from <deep_embedding>`
+(e.g. `computeLib.EVAL`).
+
+### Failure
+
+When the input term is not a constant defining a suitable deep
+embedding.
+
+### Example
+
+``` hol4
+>>__ load "cv_transLib";
+
+>> Datatype:
+    exp = Const num | Add exp exp
+  End
+>> Definition sem_def:
+    sem (Const n) = n ∧
+    sem (Add e1 e2) = sem e1 + sem e2
+  End
+>> Definition deep_def:
+    deep = Add (Const 5) (Add (Const 2) (Const 3))
+  End
+>> cv_transLib.cv_trans sem_def;
+>> cv_transLib.cv_trans_deep_embedding EVAL deep_def;
+>> cv_transLib.cv_eval “sem deep”;
+```
+
+### Comments
+
+Designed to produce definitions suitable for evaluation by
+`cv_transLib.cv_eval`.
+
+### See also
+
+[`cv_transLib.cv_trans`](#cv_transLib.cv_trans),
+[`cv_transLib.cv_eval`](#cv_transLib.cv_eval)

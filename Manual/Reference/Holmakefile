@@ -3,28 +3,124 @@
 # =====================================================================
 
 # ---------------------------------------------------------------------
-# Pathnames: Helpd = hol help directory, MAKEINDEX = makeindex program
+# Pathnames: Helpd = hol help directory; Processed = polyscripter-
+# evaluated mirror of help/Docfiles produced by bin/build's build_help
+# step (see help/src-sml/process_docfiles.sml).  Both PDF and mdbook
+# pipelines consume the processed directory so polyscripter `>>`
+# directives are evaluated exactly once per build.
 # ---------------------------------------------------------------------
 Helpd=../../help
+Processed=../build/Docfiles-processed
 
-INCLUDES = $(Helpd)/src-sml
+INCLUDES = $(Helpd)/src-sml ../Tools
+
+# Cross-manual labels.tsv prereq list for the mdbook target.
+# See Manual/mdbook.mk for MANUALS / SIBLING_LABELS.
+THIS = Reference
+include ../mdbook.mk
 
 OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex \
         ../LaTeX/ref-macros.tex
 
-all: reference.pdf reference.html
-.PHONY: all
+all: reference.pdf
+.PHONY: all mdbook mdbook-serve
 
+# ---------------------------------------------------------------------
+# PDF pipeline: Md2TeX concatenates every entry into one big chapter
+# (sorted alphabetically by function name); pandoc -> latexmk produces
+# the printable reference manual.  Unchanged in shape from before
+# Reference joined the mdbook pipeline.
+# ---------------------------------------------------------------------
 reference.pdf: reference.tex entries.tex $(OTHER)
 	latexmk -pdf reference
 
-reference.html: entries.md
-	pandoc -s -o $@ $<
-
-entries.md: $(Helpd)/src-sml/Md2TeX.exe $(wildcard $(Helpd)/Docfiles/*.md)
-	$(Helpd)/src-sml/Md2TeX.exe ../../help/Docfiles > $@
+entries.md: $(Helpd)/src-sml/Md2TeX.exe \
+            $(wildcard $(Processed)/*.smd)
+	$(Helpd)/src-sml/Md2TeX.exe $(Processed) > $@
 
 entries.tex: entries.md
 	pandoc -V documentclass=book -o $@ $<
 
-EXTRA_CLEANS = reference.html reference.pdf entries.md
+# ---------------------------------------------------------------------
+# mdbook pipeline: each entry .smd becomes one page; sidebar groups
+# entries by HOL structure (the first dot-separated component of the
+# filename).  SUMMARY.md is generated from the file listing into the
+# processed directory itself, alongside the (already-polyscripted)
+# entries (the whole tree is gitignored under Manual/build/).
+# ---------------------------------------------------------------------
+# Recipe-less PHONY alias; the real gate is the file target below.
+# See Manual/Description/Holmakefile for the rationale.
+mdbook: ../book/Reference/index.html
+
+../book/Reference/index.html: ../Tools/smdpp \
+        $(Processed)/SUMMARY.md entries.list \
+        labels.tsv $(SIBLING_LABELS)
+	mdbook build
+	# See Manual/Description/Holmakefile for the rationale.
+	cd ../book/Reference && \
+	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
+	../Tools/smdpp check-html ../book/Reference
+	../Tools/smdpp check-refs ../book/Reference
+	../Tools/smdpp check-links ../book/Reference || true
+# Reference entries' hand-curated "See also" sections reference the
+# legacy single-page anchor scheme (`#Foo.bar`).  Where `Foo.bar.smd`
+# exists, smdpp rewrites the link to the target entry's page; where
+# it doesn't (renamed or removed entries), the broken link survives
+# and check-links reports it.  These are source-content bugs in the
+# entries -- to be cleaned up entry-by-entry over time, not a
+# tooling failure -- so swallow the exit code (`|| true`) until the
+# audit completes.
+
+# gen_reference_summary scans whatever directory you point it at,
+# so feeding it the processed mirror (where every *.smd has been
+# polyscripter-evaluated) yields a SUMMARY whose entry filenames
+# resolve cleanly inside the processed tree.  We list the source
+# .smd files as a prerequisite (not the processed mirror), since a
+# new source entry should trigger SUMMARY regeneration even before
+# process_docfiles has populated its counterpart in $(Processed).
+$(Processed)/SUMMARY.md: ../Tools/gen_reference_summary \
+                         $(wildcard $(Helpd)/Docfiles/*.smd)
+	mkdir -p $(Processed)
+	../Tools/gen_reference_summary $(Processed) > $@
+
+# Scan-only label dump for cross-book `\ref{Book:label}` resolution.
+# See Manual/Description/Holmakefile for the rationale.
+labels.tsv: ../Tools/smdpp $(Processed)/SUMMARY.md \
+            $(wildcard $(Processed)/*.smd)
+	../Tools/smdpp dump-labels .
+
+# Lookup table for `\refentry{Foo.bar}` substitution in Description
+# / Tutorial / Reference's smdpp pass.  One line per entry name
+# (filename without .smd).  Sibling books' smdpp loads this at
+# preprocess startup and dies if it sees `\refentry{X}` with X
+# missing -- a typo / removed-entry guard.
+entries.list: $(wildcard $(Helpd)/Docfiles/*.smd)
+	ls $(Helpd)/Docfiles/*.smd | xargs -n1 basename | sed 's/\.smd$$//' > $@
+
+# Convenience: serve the Reference book locally at port 3003.  See
+# Manual/Description/Holmakefile for the per-manual mdbook-serve
+# rationale (live-reload edit loop on a dedicated port).
+mdbook-serve: ../Tools/smdpp
+	@msg() { { echo "$$1" >/dev/tty; } 2>/dev/null || echo "$$1" >&2; }; \
+	 if lsof -ti :3003 >/dev/null 2>&1; then \
+	   msg "Port 3003 already in use; stop the existing server first:"; \
+	   msg "  pkill -f 'mdbook serve.*3003'  (or: lsof -ti :3003 | xargs kill)"; \
+	   exit 1; \
+	 fi; \
+	 logfile="$(LOG)"; \
+	 [ "$$logfile" = 1 ] && logfile=mdbook-serve.log; \
+	 [ -z "$$logfile" ] && logfile=/dev/null; \
+	 (mdbook serve --hostname 0.0.0.0 --port 3003 \
+	    >"$$logfile" 2>&1 &); \
+	 msg "mdbook serving at http://127.0.0.1:3003/"; \
+	 [ "$$logfile" != /dev/null ] && msg "log: $$(pwd)/$$logfile"; \
+	 msg "stop: pkill -f 'mdbook serve.*3003'"
+
+EXTRA_CLEANS = reference.pdf entries.md entries.tex \
+               $(Processed)/SUMMARY.md entries.list labels.tsv \
+               ../book/Reference/ \
+               mdbook-serve.log \
+               reference.aux reference.log reference.out \
+               reference.toc reference.fls reference.idx reference.ilg \
+               reference.ind reference.blg reference.bbl \
+               reference.fdb_latexmk

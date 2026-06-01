@@ -7,7 +7,7 @@
 *)
 Theory tableauKT
 Ancestors
-  pair pred_set list relation modalBasics tableauBasics
+  pair pred_set list rich_list relation modalBasics tableauBasics
 
 
 Definition trule_def[simp]:
@@ -31,11 +31,6 @@ Definition modal_size_def[simp]:
   modal_size (NVar a) = 0 ∧
   modal_size (Conj a0 a1) = modal_size a0 + modal_size a1 ∧
   modal_size (Disj a0 a1) = modal_size a0 + modal_size a1
-End
-
-Definition max_list_def[simp]:
-  max_list []     = 0 ∧
-  max_list (h::t) = MAX h (max_list t)
 End
 
 Definition degree_def[simp]:
@@ -163,14 +158,14 @@ Proof
 QED
 
 Theorem max_2_lists[simp]:
-  ∀l1 l2. max_list (l1++l2) = MAX (max_list l1) (max_list l2)
+  ∀l1 l2. MAX_LIST (l1++l2) = MAX (MAX_LIST l1) (MAX_LIST l2)
 Proof
   Induct_on`l1` >> simp[] >> Induct_on`l2` >> simp[]
   >> rw[] >> simp[arithmeticTheory.MAX_ASSOC]
 QED
 
-Theorem max_list_diff[simp]:
-  ∀l1 l2 l3. max_list l2 < max_list l3 ⇒ max_list (l1++l2) <= max_list (l1++l3)
+Theorem MAX_LIST_diff[simp]:
+  ∀l1 l2 l3. MAX_LIST l2 < MAX_LIST l3 ⇒ MAX_LIST (l1++l2) <= MAX_LIST (l1++l3)
 Proof
   rw[]
 QED
@@ -182,8 +177,8 @@ Proof
   Induct_on`Σ` >> simp[AC arithmeticTheory.MAX_COMM arithmeticTheory.MAX_ASSOC]
 QED
 
-Theorem degree_max_list:
-∀Σ Γ.  degree (Σ, Γ) = max_list (MAP modal_size (Σ++Γ))
+Theorem degree_MAX_LIST:
+∀Σ Γ.  degree (Σ, Γ) = MAX_LIST (MAP modal_size (Σ++Γ))
 Proof
   Induct_on`Σ` >> Induct_on`Γ` >> simp[]
 QED
@@ -221,10 +216,10 @@ QED
 
 Theorem degree_inv[simp]:
   ∀Σ Γ Σ' Γ'.
-    Σ = Σ' ∧ ((max_list $ MAP modal_size Γ) < (max_list $ MAP modal_size Γ')) ⇒
+    Σ = Σ' ∧ ((MAX_LIST $ MAP modal_size Γ) < (MAX_LIST $ MAP modal_size Γ')) ⇒
     degree (Σ, Γ) <= degree (Σ', Γ')
 Proof
-  rw[degree_max_list]
+  rw[degree_MAX_LIST]
 QED
 
 Theorem conjsplit_degree:

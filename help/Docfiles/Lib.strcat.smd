@@ -1,0 +1,24 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `strcat`
+
+``` hol4
+Lib.strcat : string -> string -> string
+```
+
+------------------------------------------------------------------------
+
+Concatenates two ML strings.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>> strcat "1" "";
+
+>> strcat "hello" "world";
+
+>> strcat "hello" (strcat " " "world");
+```

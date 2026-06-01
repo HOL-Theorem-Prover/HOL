@@ -18,7 +18,7 @@ sig
    val WF_TAC        : tactic
 
    val termination_simps : unit -> thm list
-   val termination_simpdb : unit -> (string,thm) Binarymap.dict
+   val termination_simpdb : unit -> thm Symtab.table
    val temp_exclude_termsimp  : string -> unit
    val exclude_termsimp  : string -> unit
    val with_termsimps : thm list -> ('a -> 'b) -> ('a -> 'b)

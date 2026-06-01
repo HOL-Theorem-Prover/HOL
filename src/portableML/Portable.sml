@@ -838,7 +838,8 @@ fun with_ppstream ppstrm =
 type 'a quotation = 'a HOLPP.quotation
 open HOLPP HOLquotation
 
-fun pprint f x = prettyPrint(TextIO.print, 72) (f x)
+val pprint_outstream = ref TextIO.print
+fun pprint f x = prettyPrint(!pprint_outstream, 72) (f x)
 
 local
   fun strip_comments (d, a) s =

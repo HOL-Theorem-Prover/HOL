@@ -41,12 +41,12 @@ struct
       }
 
 
-  val tokmap = ref (Binarymap.mkDict String.compare)
+  val tokmap = ref Symtab.empty
   fun the_map() = !tokmap
 
   fun temp_TeX_notation0 src thy {hol,TeX} =
-      case Binarymap.peek (!tokmap, hol) of
-        NONE => tokmap := Binarymap.insert(!tokmap,hol,{thy = thy,info = TeX})
+      case Symtab.lookup (!tokmap) hol of
+        NONE => tokmap := Symtab.update (hol,{thy = thy,info = TeX}) (!tokmap)
       | SOME {thy = oldthy, info = oldt} => let
           fun ttoString (t,i) = "(\"" ^ String.toString t ^ "\", "^
                                 Int.toString i ^ ")"
@@ -58,7 +58,7 @@ struct
                          ttoString oldt^", from "^oldthy^"); now \""^
                          ttoString TeX^"\"")
           else ();
-          tokmap := Binarymap.insert(!tokmap,hol,{thy = thy,info = TeX})
+          tokmap := Symtab.update (hol,{thy = thy,info = TeX}) (!tokmap)
         end
 
   val temp_TeX_notation =

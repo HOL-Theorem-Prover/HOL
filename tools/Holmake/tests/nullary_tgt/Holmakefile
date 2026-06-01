@@ -1,0 +1,6 @@
+# selftest drives Holmake in test/ -- not visited by parallel_tests
+# INCLUDES (parallel_tests includes ../nullary_tgt, which is this dir,
+# but not test/).  Provide a top Holmakefile whose only purpose is to
+# list test/'s artifacts in EXTRA_CLEANS so build cleanAll removes
+# them.
+EXTRA_CLEANS = test/.hol/ test/output

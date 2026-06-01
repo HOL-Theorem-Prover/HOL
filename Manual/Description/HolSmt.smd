@@ -1,0 +1,299 @@
+## The `HolSmt` Library
+
+\label{sec:HolSmtLib}
+\index{HolSmtLib|(}
+\index{SMT solvers|see {HolSmtLib}}
+\index{decision procedures!SMT}
+
+The purpose of `HolSmtLib` is to provide a platform for
+experimenting with combinations of interactive theorem proving and
+Satisfiability Modulo Theories (SMT) solvers.  `HolSmtLib` was
+developed as part of a research project on *Expressive Multi-theory
+Reasoning for Interactive Verification* (EPSRC grant EP/F067909/1)
+from 2008 to 2011.  It is loosely inspired by `HolSatLib`
+(Section \ref{sec:HolSatLib}), and has been described in parts in
+the following publications:
+
+  - Tjark Weber: *SMT Solvers: New Oracles for the HOL Theorem
+    Prover*.  To appear in International Journal on Software Tools
+    for Technology Transfer (STTT), 2011.
+  - Sascha Böhme, Tjark Weber: *Fast LCF-Style Proof Reconstruction
+    for Z3*.  In Matt Kaufmann and Lawrence C. Paulson, editors,
+    Interactive Theorem Proving, First International Conference,
+    ITP 2010, Edinburgh, UK, July 11–14, 2010.  Proceedings, volume
+    6172 of Lecture Notes in Computer Science, pages 179–194.
+    Springer, 2010.
+
+`HolSmtLib` uses external SMT solvers to prove instances of SMT
+tautologies, i.e., formulas that are provable using (a combination
+of) propositional logic, equality reasoning, linear arithmetic on
+integers and reals, and decision procedures for bit vectors and
+arrays.  The supported fragment of higher-order logic varies with
+the SMT solver used, and is discussed in more detail below.  At
+least for Yices, it is a superset of the fragment supported by
+`bossLib.DECIDE` (and the performance of `HolSmtLib`, especially on
+big problems, should be much better).
+
+### Interface
+
+The library currently provides four tactics to invoke different SMT
+solvers, namely `CVC_ORACLE_TAC`, `YICES_TAC`, `Z3_ORACLE_TAC`, and
+`Z3_TAC`.  These tactics are defined in the `HolSmtLib` structure,
+which is the library's main entry point.  Given a goal $(\Gamma,
+\varphi)$ (where $\Gamma$ is a list of assumptions, and $\varphi$
+is the goal's conclusion), each tactic returns (i) an empty list of
+new goals, and (ii) a validation function that returns a theorem
+$\Gamma' \vdash \varphi$ (with $\Gamma' \subseteq \Gamma$).  These
+tactics fail if the SMT solver cannot prove the goal.[^smt-negate]
+In other words, these tactics solve the goal (or fail).  As with
+other tactics, `Tactical.TAC_PROOF` can be used to derive functions
+of type `goal -> thm`.
+
+[^smt-negate]: Internally, the goal's assumptions and the *negated*
+    conclusion are passed to the SMT solver.  If the SMT solver
+    determines that these formulas are unsatisfiable, then the
+    (unnegated) conclusion must be provable from the assumptions.
+
+For each tactic, the `HolSmtLib` structure additionally provides a
+corresponding function of type `term -> thm`.  These functions are
+called `CVC_ORACLE_PROVE`, `YICES_PROVE`, `Z3_ORACLE_PROVE`, and
+`Z3_PROVE`, respectively.  Applied to a formula $\varphi$, they
+return the theorem $\emptyset \vdash \varphi$ (or fail).
+
+Furthermore, the `HolSmtLib` structure provides three more tactics,
+namely `cvco_tac`, `z3o_tac` and `z3_tac`.  These tactics are
+equivalent to `CVC_ORACLE_TAC`, `Z3_ORACLE_TAC` and `Z3_TAC`
+(respectively), but additionally take a list of theorems which are
+used as lemmas in the proof, similarly to `METIS_TAC`.
+
+#### Oracles vs. proof reconstruction
+
+`CVC_ORACLE_TAC`, `YICES_TAC`, `Z3_ORACLE_TAC`, `cvco_tac` and
+`z3o_tac` use the SMT solver (cvc5, Yices, Z3, cvc5 and Z3,
+respectively) as an oracle: the solver's result is trusted.  Bugs
+in the SMT solver or in `HolSmtLib` could potentially lead to
+inconsistent theorems.  Accordingly, the derived theorem is tagged
+with an oracle tag.
+
+`Z3_TAC` and `z3_tac`, on the other hand, perform proof
+reconstruction.  They request a detailed proof from Z3, which is
+then checked in HOL.  One obtains a proper HOL theorem; no
+(additional) oracle tags are introduced.  However, Z3's proofs do
+not always contain enough information to allow efficient checking
+in HOL; therefore, proof reconstruction may be slow or fail.
+
+#### Supported subsets of higher-order logic
+
+`YICES_TAC` employs a translation into Yices's native input format.
+The interface supports types `bool`, `num`, `int`, `real`, `->`
+(i.e., function types), `prod` (i.e., tuples), fixed-width word
+types, inductive data types, records, and the following terms:
+equality, Boolean connectives (`T`, `F`, `==>`, `/\`, `\/`,
+negation, `if-then-else`, `bool-case`), quantifiers (`!`, `?`),
+numeric literals, arithmetic operators (`SUC`, `+`, `-`, `*`, `/`,
+unary minus, `DIV`, `MOD`, `ABS`, `MIN`, `MAX`), comparison
+operators (`<`, `<=`, `>`, `>=`, both on `num`, `int`, and `real`),
+function application, lambda abstraction, tuple selectors `FST`
+and `SND`, and various word operations.
+
+cvc5 and Z3 are integrated via a more restrictive translation into
+SMT-LIB 2 format, described below.  Therefore, Yices is typically
+the solver of choice at the moment (unless you need proof
+reconstruction, which is available for Z3 only).  However, there
+are a few operations (e.g., specific word operations) that are
+supported by the SMT-LIB format, but not by Yices.  See
+`selftest.sml` for further details.
+
+Terms of higher-order logic that are not supported by the
+respective target solver / translation are typically treated in
+one of three ways:
+
+  1. Some unsupported terms are replaced by equivalent supported
+     terms during a pre-processing step.  For instance, all tactics
+     first generalize the goal's conclusion by stripping outermost
+     universal quantifiers, and attempt to eliminate certain set
+     expressions by rewriting them into predicate applications:
+     e.g., `y IN {x | P x}` is replaced by `P y`.  The resulting
+     term is $\beta$-normalized.  Depending on the target solver,
+     further simplifications are performed.
+  2. Remaining unsupported constants are treated as uninterpreted,
+     i.e., replaced by fresh variables.  This should not affect
+     soundness, but it may render goals unprovable and lead to
+     spurious counterexamples.  To see all fresh variables
+     introduced by the translation, you can set `HolSmtLib`'s
+     tracing variable (see below) to a sufficiently high value.
+  3. Various syntactic side conditions are currently not enforced
+     by the translation and may result in invalid input to the SMT
+     solver.  For instance, Yices only allows *linear* arithmetic
+     (i.e., multiplication by constants) and word-shifts by
+     numeric literals (constants).  If the goal is outside the
+     allowed syntactic fragment, the SMT solver will typically
+     fail to decide the problem.  `HolSmtLib` at present only
+     provides a generic error message in this case.  Inspecting
+     the SMT solver's output might provide further hints.
+
+```{=latex}
+\begin{session}
+\begin{verbatim}
+- load "HolSmtLib"; open HolSmtLib;
+(* output omitted *)
+> val it = () : unit
+
+- show_tags := true;
+> val it = () : unit
+
+- CVC_ORACLE_PROVE ``(a ==> b) /\ (b ==> a) <=> (a <=> b)``;
+> val it = [oracles: DISK_THM, HolSmtLib] [axioms: ] []
+           |- (a ==> b) /\ (b ==> a) <=> (a <=> b) : thm
+
+- YICES_PROVE ``(a ==> b) /\ (b ==> a) <=> (a <=> b)``;
+> val it = [oracles: DISK_THM, HolSmtLib] [axioms: ] []
+           |- (a ==> b) /\ (b ==> a) <=> (a <=> b) : thm
+
+- Z3_ORACLE_PROVE ``(a ==> b) /\ (b ==> a) <=> (a <=> b)``;
+> val it = [oracles: DISK_THM, HolSmtLib] [axioms: ] []
+           |- (a ==> b) /\ (b ==> a) <=> (a <=> b) : thm
+
+- Z3_PROVE ``(a ==> b) /\ (b ==> a) <=> (a <=> b)``;
+> val it = [oracles: DISK_THM] [axioms: ] []
+           |- (a ==> b) /\ (b ==> a) <=> (a <=> b) : thm
+\end{verbatim}
+\end{session}
+```
+
+```{=mdbook}
+    - load "HolSmtLib"; open HolSmtLib;
+    (* output omitted *)
+    > val it = () : unit
+
+    - show_tags := true;
+    > val it = () : unit
+
+    - CVC_ORACLE_PROVE ``(a ==> b) /\ (b ==> a) <=> (a <=> b)``;
+    > val it = [oracles: DISK_THM, HolSmtLib] [axioms: ] []
+               |- (a ==> b) /\ (b ==> a) <=> (a <=> b) : thm
+
+    - YICES_PROVE ``(a ==> b) /\ (b ==> a) <=> (a <=> b)``;
+    > val it = [oracles: DISK_THM, HolSmtLib] [axioms: ] []
+               |- (a ==> b) /\ (b ==> a) <=> (a <=> b) : thm
+
+    - Z3_ORACLE_PROVE ``(a ==> b) /\ (b ==> a) <=> (a <=> b)``;
+    > val it = [oracles: DISK_THM, HolSmtLib] [axioms: ] []
+               |- (a ==> b) /\ (b ==> a) <=> (a <=> b) : thm
+
+    - Z3_PROVE ``(a ==> b) /\ (b ==> a) <=> (a <=> b)``;
+    > val it = [oracles: DISK_THM] [axioms: ] []
+               |- (a ==> b) /\ (b ==> a) <=> (a <=> b) : thm
+```
+
+#### Support for the SMT-LIB 2 file format
+
+SMT-LIB (see <https://smtlib.cs.uiowa.edu/>) is the standard input
+format for SMT solvers.  `HolSmtLib` supports (a subset of) version
+2.0 of this format.  A translation of HOL terms into SMT-LIB 2
+format is available in `SmtLib.sml`, and a parser for SMT-LIB 2
+files (translating them into HOL types, terms, and formulas) can
+be found in `SmtLib_Parser.sml`, with auxiliary functions in
+`SmtLib_{Logics,Theories}.sml`.
+
+The SMT-LIB 2 translation supports types `bool`, `num`, `int` and
+`real`, fixed-width word types, and the following terms: equality,
+Boolean connectives, quantifiers, numeric literals, arithmetic
+operators, comparison operators, function application, and various
+word operations.  Notably, the SMT-LIB interface does *not* support
+data types or records, and higher-order formulas.  See the files
+mentioned above and the examples in `selftest.sml` for further
+details.
+
+#### Tracing
+
+Tracing output can be controlled via
+`Feedback.set_trace "HolSmtLib"`.  See the source code in
+`Library.sml` for possible values.
+
+Communication between HOL and external SMT solvers is via temporary
+files.  These files are located in the standard temporary directory,
+typically `/tmp` on Unix machines.  The actual file names are
+generated at run-time, and can be shown by setting the above
+tracing variable to a sufficiently high value.
+
+The default behavior of `HolSmtLib` is to delete temporary files
+after successful invocation of the SMT solver.  This also can be
+changed via the above tracing variable.  If there is an error,
+files are retained in any case (but note that the operating system
+may delete temporary files automatically, e.g., when HOL exits).
+
+### Installing SMT solvers
+
+`HolSmtLib` has been tested with cvc5 1.3.0, Yices 1.0.40, and Z3
+4.15.3.  Later versions may or may not work.  (Yices 2 is not
+supported.)  To use `HolSmtLib`, you need to install at least one
+of these SMT solvers on your machine.  As mentioned before, Yices
+supports a larger fragment of higher-order logic than Z3, but
+proof reconstruction has been implemented only for Z3.
+
+cvc5 is available for various platforms from
+<https://cvc5.github.io/>.  After installation, you must set the
+environment variable `$HOL4_CVC_EXECUTABLE` to the pathname of the
+cvc5 executable, e.g., `/usr/bin/cvc5`, before you invoke HOL.
+
+Yices is available for various platforms from
+<https://yices.csl.sri.com/>.  After installation, you must set
+the environment variable `$HOL4_YICES_EXECUTABLE` to the pathname
+of the Yices executable, e.g., `/bin/yices`, before you invoke
+HOL.
+
+Z3 is available for various platforms from
+<https://github.com/Z3Prover/z3>.  After installation, you must
+set the environment variable `$HOL4_Z3_EXECUTABLE` to the pathname
+of the Z3 executable, e.g., `/bin/z3`, before you invoke HOL.
+
+It should be relatively straightforward to integrate other SMT
+solvers that support the SMT-LIB 2 input format as oracles.
+However, this will involve a (typically small) amount of Standard
+ML programming, e.g., to interpret the solver's output.  See
+`CVC.sml` and `Z3.sml` for some relevant code.
+
+### Wishlist
+
+The following features have not been implemented yet.  Please
+submit additional feature requests (or code contributions) via
+<https://github.com/HOL-Theorem-Prover/HOL>.
+
+#### Counterexamples
+
+For satisfiable input formulas, SMT solvers typically return a
+satisfying assignment.  This assignment could be displayed to the
+HOL user as a counterexample.  It could also be turned into a
+theorem, similar to the way `HolSatLib` treats satisfying
+assignments.
+
+#### Proof reconstruction
+
+Several other SMT solvers can also produce proofs, and it would be
+nice to offer HOL users more choice.  However, in the absence of a
+standard proof format for SMT solvers, it is perhaps not worth the
+implementation effort.
+
+#### Support for cvc5's and Z3's SMT-LIB extensions
+
+cvc5 and Z3 support extensions of the SMT-LIB language, e.g.,
+data types, sets, multisets/bags and strings.  `HolSmtLib` does
+not utilize these extensions yet when calling these SMT solvers.
+This would require the translation for these solvers to be
+distinct from the generic SMT-LIB translation.
+
+#### SMT solvers as a web service
+
+The need to install an SMT solver locally poses an entry barrier.
+It would be much more convenient to have a web server running one
+(or several) SMT solvers, roughly similar to the “System on TPTP”
+interface that G. Sutcliffe provides for first-order theorem
+provers (<http://www.cs.miami.edu/~tptp/cgi-bin/SystemOnTPTP>).
+For Isabelle/HOL, such a web service has been installed by
+S. Böhme in Munich, but unfortunately it is not publicly
+available.  Perhaps the SMT-EXEC initiative
+(<http://www.smtexec.org/>) could offer hardware or implementation
+support.
+
+\index{HolSmtLib|)}

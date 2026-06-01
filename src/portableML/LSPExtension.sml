@@ -37,14 +37,21 @@ fun getLineCol lines index = let
 fun fromLineCol lines (line, col) =
   if line = 0 then col else Vector.sub (lines, line - 1) + col
 
+(* Binarymap (rather than Symtab/Table) here because LSPExtension is
+   `use`d directly by tools-poly/poly/poly-init2.ML at bootstrap, before
+   any of src/portableML's Holmake-built modules (Symtab, Table, ...)
+   are available. *)
 type plugin_data = (string, UniversalType.t) Binarymap.dict
 val emptyPluginData = Binarymap.mkDict String.compare
 
 type 'a tag = string * ('a -> UniversalType.t) * (UniversalType.t -> 'a)
 
-fun getPluginData (map, (name, _, proj)) = Option.map proj (Binarymap.peek (map, name))
-fun setPluginData (map, (name, inj, _), SOME v) = Binarymap.insert (map, name, inj v)
-  | setPluginData (map, (name, _, _), NONE) = #1 (Binarymap.remove (map, name))
+fun getPluginData (map, (name, _, proj)) =
+    Option.map proj (Binarymap.peek (map, name))
+fun setPluginData (map, (name, inj, _), SOME v) =
+    Binarymap.insert (map, name, inj v)
+  | setPluginData (map, (name, _, _), NONE) =
+    #1 (Binarymap.remove (map, name)) handle NotFound => map
 
 type 'a plugin = {
   name: string,

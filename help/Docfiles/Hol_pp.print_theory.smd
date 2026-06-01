@@ -1,0 +1,28 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `print_theory`
+
+``` hol4
+Hol_pp.print_theory : string -> unit
+```
+
+------------------------------------------------------------------------
+
+Print a theory on the standard output.
+
+An invocation `print_theory s` will display the contents of the theory
+segment `s` on the standard output. The string `"-"` may be used to
+denote the current theory segment.
+
+### Failure
+
+If `s` is not the name of a loaded theory.
+
+### Example
+
+``` hol4
+>> print_theory "combin";
+```
+
+### See also
+
+[`DB.dest_theory`](#DB.dest_theory), [`DB.thy`](#DB.thy)

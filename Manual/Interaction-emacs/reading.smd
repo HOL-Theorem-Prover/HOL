@@ -1,0 +1,27 @@
+# Further reading and general advice
+
+\label{reading}
+
+General advice on using HOL4:
+
+1. State definitions carefully with the subsequent proofs in mind.
+2. Make proofs reusable by splitting them into multiple small
+   lemmas.
+3. Strive to make the most of library theories and rewriting.
+
+One can only learn HOL4 via examples, so try proving something.
+Example problems and solutions are presented in the *HOL Tutorial*,
+available under:
+
+<https://hol-theorem-prover.org/#doc>
+
+The same page also contains links to:
+
+- *HOL Description* --- a description of the HOL4 system.
+- *HOL Reference* --- a detailed description of proof tactics and
+  other tools.
+- *HOL Logic* --- a presentation of the underlying logic.
+
+For day-to-day look-ups, I find `print_match` (illustrated in
+[Searching for theorems and theories](search.md)) and the HTML
+reference (mentioned above) most helpful.

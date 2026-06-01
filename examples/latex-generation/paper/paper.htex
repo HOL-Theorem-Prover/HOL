@@ -10,7 +10,31 @@
 \usepackage{xcolor}
 \usepackage{macros}
 \usepackage{amssymb}
+% lstlinebgrd v0.1 (2012) defines listings' `numbers' key using `&'
+% to separate listings' SwitchCases entries, but modern listings
+% (>= ~2018, e.g. TeX Live 2022 in Debian bookworm) uses `:'. The
+% mismatch trips \PackageError during the package's own load (since
+% its default numbers=none falls into the SwitchCases default arm).
+% Suppress \PackageError just around the \usepackage, then re-issue
+% the key with the correct `:' syntax.
+\makeatletter
+\let\lst@orig@PackageError\PackageError
+\def\PackageError#1#2#3{}
+\makeatother
 \usepackage{lstlinebgrd}
+\makeatletter
+\let\PackageError\lst@orig@PackageError
+\lst@Key{numbers}{none}{%
+    \def\lst@PlaceNumber{\lst@linebgrd}%
+    \lstKV@SwitchCases{#1}%
+    {none:\\%
+     left:\def\lst@PlaceNumber{\llap{\normalfont
+                \lst@numberstyle{\thelstnumber}\kern\lst@numbersep}\lst@linebgrd}\\%
+     right:\def\lst@PlaceNumber{\rlap{\normalfont
+                \kern\linewidth \kern\lst@numbersep
+                \lst@numberstyle{\thelstnumber}}\lst@linebgrd}%
+    }{\PackageError{Listings}{Numbers #1 unknown}\@ehc}}
+\makeatother
 
 \definecolor{keycolor}{RGB}{172, 42, 42}
 \definecolor{vimvert}{RGB}{46, 139, 87}
@@ -215,7 +239,7 @@ The \LaTeX{} file that generates a PDF needs to include a standard set of packag
 In addition, the prelude to this file can redefine commands such as \verb|\HOLConst| to alter the style in which these are presented.
 
 \begin{figure}[htbp]
-\lstinputlisting[lastline=20,linebackgroundcolor={%
+\lstinputlisting[lastline=12,linebackgroundcolor={%
     \ifnum\value{lstnumber}=4
             \color{blue!10}
     \fi
@@ -233,7 +257,7 @@ In addition, the prelude to this file can redefine commands such as \verb|\HOLCo
     \fi
     }
 ]{paper.htex}
-\caption{The first 20 lines of the \texttt{.htex} file that generates this PDF. The critical lines are 4 (stops underscore characters in \texttt{alltt} environments from rendering strangely); 5 (allows underscores in \LaTeX{} \texttt{\bs{}label}'s); 7 (enables all of the \HOL{} macros); 8 (enables the natural deduction style presentation of implications (see Section~\ref{sec:inference-rules} below)) and 9 (importing the environment in which \texttt{\bs{}HOLthm}'s expect to be rendered).}
+\caption{The first 12 lines of the \texttt{.htex} file that generates this PDF. The critical lines are 4 (stops underscore characters in \texttt{alltt} environments from rendering strangely); 5 (allows underscores in \LaTeX{} \texttt{\bs{}label}'s); 7 (enables all of the \HOL{} macros); 8 (enables the natural deduction style presentation of implications (see Section~\ref{sec:inference-rules} below)) and 9 (importing the environment in which \texttt{\bs{}HOLthm}'s expect to be rendered).}
 \label{fig:paper-htex}
 \end{figure}
 

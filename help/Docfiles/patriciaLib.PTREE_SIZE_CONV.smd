@@ -1,0 +1,34 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `PTREE_SIZE_CONV`
+
+``` hol4
+patriciaLib.PTREE_SIZE_CONV : conv
+```
+
+------------------------------------------------------------------------
+
+Conversion for evaluating applications of `patricia$SIZE`.
+
+The conversion `PTREE_SIZE_CONV` evaluates terms of the form `SIZE t`
+where `t` is a well-formed Patricia tree (constructed by
+`patricia$Empty`, `patricia$Leaf` and `patricia$Branch`).
+
+### Failure
+
+The conversion will fail if the supplied term is not a suitable
+application of `patricia$SIZE`.
+
+### Example
+
+``` hol4
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
+
+>> patriciaLib.PTREE_SIZE_CONV ``SIZE Empty``;
+
+>> patriciaLib.PTREE_SIZE_CONV ``SIZE (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
+```
+
+### See also
+
+[`patriciaLib.PTREE_CONV`](#patriciaLib.PTREE_CONV)

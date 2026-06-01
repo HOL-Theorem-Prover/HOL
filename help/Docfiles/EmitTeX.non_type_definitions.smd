@@ -1,0 +1,41 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `non_type_definitions`
+
+``` hol4
+EmitTeX.non_type_definitions : string -> (string * thm) list
+```
+
+------------------------------------------------------------------------
+
+A versions of `definitions` that attempts to filter out definitions
+created by `Hol_datatype`.
+
+An invocation `non_type_definitions thy`, where `thy` is the name of a
+currently loaded theory segment, will return a list of the definitions
+stored in that theory. Each definition is paired with its name in the
+result.
+
+### Failure
+
+Never fails. If `thy` is not the name of a currently loaded theory
+segment, the empty list is returned.
+
+### Example
+
+``` hol4
+>>__ load "EmitTeX";
+
+>> new_theory "example";
+>> val _ = Hol_datatype `example = First | Second`;
+>> val example_def = Define
+    `(example First = Second) /\ (example Second = First)`;
+
+>> definitions "example";
+
+>> EmitTeX.non_type_definitions "example";
+```
+
+### See also
+
+[`DB.definitions`](#DB.definitions),
+[`bossLib.Hol_datatype`](#bossLib.Hol_datatype)

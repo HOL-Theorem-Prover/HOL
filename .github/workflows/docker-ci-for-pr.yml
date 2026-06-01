@@ -11,13 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: developers/docker-ci/Dockerfile
@@ -27,19 +27,19 @@ jobs:
             Z3_VERSION=4.13.0
             CVC_VERSION=5
             CSDP_VERSION=1
-            BUILDOPTS=--stdknl -j4 -t
+            BUILDOPTS=--no-cache --stdknl -j4 -t
 
   build-expk:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: developers/docker-ci/Dockerfile
@@ -49,38 +49,38 @@ jobs:
             Z3_VERSION=4.13.0
             CVC_VERSION=5
             CSDP_VERSION=1
-            BUILDOPTS=--expk -j4 -t
+            BUILDOPTS=--no-cache --expk -j4 -t
 
   build-mosml:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: developers/docker-ci/Dockerfile
           push: false
           build-args: |
             SML=mosml
-            BUILDOPTS=--expk --seq=tools/sequences/upto-parallel -t
+            BUILDOPTS=--no-cache --expk --seq=tools/sequences/upto-parallel -t
 
   build-otknl:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: developers/docker-ci/Dockerfile
@@ -90,4 +90,4 @@ jobs:
             Z3_VERSION=4.13.0
             CVC_VERSION=5
             CSDP_VERSION=1
-            BUILDOPTS=--otknl -j2 --seq=tools/sequences/upto-parallel
+            BUILDOPTS=--no-cache --otknl -j2 --seq=tools/sequences/upto-parallel

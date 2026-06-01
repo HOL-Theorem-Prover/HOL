@@ -1,0 +1,27 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `front_last`
+
+``` hol4
+Lib.front_last : 'a list -> 'a list * 'a
+```
+
+------------------------------------------------------------------------
+
+Takes a non-empty list `L` and returns a pair `(front,last)` such that
+`front @ [last] = L`.
+
+### Failure
+
+Fails if the list is empty.
+
+### Example
+
+``` hol4
+>> front_last [1];
+
+>> front_last [1,2,3];
+```
+
+### See also
+
+[`Lib.butlast`](#Lib.butlast), [`Lib.last`](#Lib.last)

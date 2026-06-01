@@ -1,0 +1,32 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `list_mk_disj`
+
+``` hol4
+boolSyntax.list_mk_disj : term list -> term
+```
+
+------------------------------------------------------------------------
+
+Constructs the disjunction of a list of terms.
+
+`list_mk_disj([t1,...,tn])` returns `t1 \/ ... \/ tn`.
+
+### Failure
+
+Fails if the list is empty or if the list has more than one element, one
+or more of which are not of type `bool`.
+
+### Example
+
+``` hol4
+>> list_mk_disj [T,F,T];
+
+>>+ try list_mk_disj [T,mk_var("x",alpha),F];
+
+>> list_mk_disj [mk_var("x",alpha)];
+```
+
+### See also
+
+[`boolSyntax.strip_disj`](#boolSyntax.strip_disj),
+[`boolSyntax.mk_disj`](#boolSyntax.mk_disj)

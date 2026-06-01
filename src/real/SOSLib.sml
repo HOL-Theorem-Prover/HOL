@@ -58,19 +58,19 @@ fun lcm_num (a:Arbnum.num) (b:Arbnum.num) : Arbnum.num =
 
 (* ===================================================================== *)
 (* Sparse finite maps for monomials and polynomials                      *)
-(* We use (term, int) Redblackmap for monomials (var -> power)           *)
-(* and (monomial, rat) for polynomials                                   *)
+(* Monomials are int Termtab.tables (var -> power); polynomials are     *)
+(* rat MonoTab.tables (monomial -> coefficient).                        *)
 (* ===================================================================== *)
 
 (* A monomial is a map from variables (terms) to positive integer powers *)
-type monomial = (term, int) Redblackmap.dict;
+type monomial = int Termtab.table;
 
-val mono_empty : monomial = Redblackmap.mkDict Term.compare;
+val mono_empty : monomial = Termtab.empty;
 
 (* Canonical monomial comparison for use as map keys *)
 fun mono_compare (m1:monomial, m2:monomial) =
-    let val l1 = Redblackmap.listItems m1
-        val l2 = Redblackmap.listItems m2
+    let val l1 = Termtab.dest m1
+        val l2 = Termtab.dest m2
         fun cmp ([], []) = EQUAL
           | cmp ([], _)  = LESS
           | cmp (_, [])  = GREATER
@@ -83,93 +83,99 @@ fun mono_compare (m1:monomial, m2:monomial) =
     in cmp(l1, l2)
     end;
 
+structure MonoTab = Table(
+  type key = monomial
+  val ord = mono_compare
+  fun pp _ = HOLPP.add_string "<monomial>"
+)
+
 val mono_1 : monomial = mono_empty;
 
-fun mono_var x : monomial = Redblackmap.insert(mono_empty, x, 1);
+fun mono_var x : monomial = Termtab.update (x, 1) mono_empty;
 
 fun mono_mul (m1:monomial) (m2:monomial) : monomial =
-    Redblackmap.foldl
-      (fn (v, p, acc) =>
-          case Redblackmap.peek(acc, v) of
-              NONE => Redblackmap.insert(acc, v, p)
+    Termtab.fold
+      (fn (v, p) => fn acc =>
+          case Termtab.lookup acc v of
+              NONE => Termtab.update (v, p) acc
             | SOME q => let val s = p + q in
-                          if s = 0 then #1(Redblackmap.remove(acc, v))
-                          else Redblackmap.insert(acc, v, s)
+                          if s = 0 then Termtab.delete v acc
+                          else Termtab.update (v, s) acc
                         end)
-      m1 m2;
+      m2 m1;
 
 fun mono_pow (m:monomial) 0 = mono_1
-  | mono_pow m k = Redblackmap.map (fn (_, p) => k * p) m;
+  | mono_pow m k = Termtab.map (fn _ => fn p => k * p) m;
 
 fun mono_degree (m:monomial) =
-    Redblackmap.foldl (fn (_, p, acc) => acc + p) 0 m;
+    Termtab.fold (fn (_, p) => fn acc => acc + p) m 0;
 
 fun mono_var_degree x (m:monomial) =
-    case Redblackmap.peek(m, x) of NONE => 0 | SOME p => p;
+    case Termtab.lookup m x of NONE => 0 | SOME p => p;
 
 fun mono_variables (m:monomial) : term list =
-    map #1 (Redblackmap.listItems m);
+    map #1 (Termtab.dest m);
 
-fun mono_is1 (m:monomial) = Redblackmap.numItems m = 0;
+fun mono_is1 (m:monomial) = Termtab.size m = 0;
 
 (* A polynomial is a map from monomials to rational coefficients *)
-type poly = (monomial, rat) Redblackmap.dict;
+type poly = rat MonoTab.table;
 
-val poly_empty : poly = Redblackmap.mkDict mono_compare;
+val poly_empty : poly = MonoTab.empty;
 
 val poly_0 : poly = poly_empty;
 
 fun poly_isconst (p:poly) =
-    Redblackmap.foldl (fn (m, _, acc) => acc andalso mono_is1 m) true p;
+    MonoTab.fold (fn (m, _) => fn acc => acc andalso mono_is1 m) p true;
 
 fun poly_const (c:rat) : poly =
     if c = rat0 then poly_0
-    else Redblackmap.insert(poly_empty, mono_1, c);
+    else MonoTab.update (mono_1, c) poly_empty;
 
 fun poly_var x : poly =
-    Redblackmap.insert(poly_empty, mono_var x, rat1);
+    MonoTab.update (mono_var x, rat1) poly_empty;
 
 fun poly_neg (p:poly) : poly =
-    Redblackmap.map (fn (_, c) => rat_neg c) p;
+    MonoTab.map (fn _ => fn c => rat_neg c) p;
 
 fun poly_cmul (c:rat) (p:poly) : poly =
     if c = rat0 then poly_0
-    else Redblackmap.map (fn (_, d) => rat_mul(c, d)) p;
+    else MonoTab.map (fn _ => fn d => rat_mul(c, d)) p;
 
 fun poly_add (p1:poly) (p2:poly) : poly =
-    Redblackmap.foldl
-      (fn (m, c, acc) =>
-          case Redblackmap.peek(acc, m) of
-              NONE => Redblackmap.insert(acc, m, c)
+    MonoTab.fold
+      (fn (m, c) => fn acc =>
+          case MonoTab.lookup acc m of
+              NONE => MonoTab.update (m, c) acc
             | SOME d => let val s = rat_add(c, d) in
-                          if s = rat0 then #1(Redblackmap.remove(acc, m))
-                          else Redblackmap.insert(acc, m, s)
+                          if s = rat0 then MonoTab.delete m acc
+                          else MonoTab.update (m, s) acc
                         end)
-      p1 p2;
+      p2 p1;
 
 fun poly_sub p1 p2 = poly_add p1 (poly_neg p2);
 
 fun poly_cmmul (c:rat, m:monomial) (p:poly) : poly =
     if c = rat0 then poly_0
     else
-      Redblackmap.foldl
-        (fn (m', d, acc) =>
+      MonoTab.fold
+        (fn (m', d) => fn acc =>
             let val m'' = mono_mul m m'
                 val cd = rat_mul(c, d)
-            in case Redblackmap.peek(acc, m'') of
-                   NONE => Redblackmap.insert(acc, m'', cd)
+            in case MonoTab.lookup acc m'' of
+                   NONE => MonoTab.update (m'', cd) acc
                  | SOME e => let val s = rat_add(cd, e) in
                                if s = rat0
-                               then #1(Redblackmap.remove(acc, m''))
-                               else Redblackmap.insert(acc, m'', s)
+                               then MonoTab.delete m'' acc
+                               else MonoTab.update (m'', s) acc
                              end
             end)
-        poly_0 p;
+        p poly_0;
 
 fun poly_mul (p1:poly) (p2:poly) : poly =
-    Redblackmap.foldl
-      (fn (m, c, acc) => poly_add (poly_cmmul (c, m) p2) acc)
-      poly_0 p1;
+    MonoTab.fold
+      (fn (m, c) => fn acc => poly_add (poly_cmmul (c, m) p2) acc)
+      p1 poly_0;
 
 fun poly_square p = poly_mul p p;
 
@@ -181,24 +187,24 @@ fun poly_pow p 0 = poly_const rat1
     end;
 
 fun poly_eval (p:poly) = (* evaluate at an empty assignment = constant term *)
-    Redblackmap.foldl
-      (fn (m, c, acc) =>
+    MonoTab.fold
+      (fn (m, c) => fn acc =>
           if mono_is1 m then rat_add(acc, c) else acc)
-      rat0 p;
+      p rat0;
 
 fun degree x (p:poly) =
-    Redblackmap.foldl (fn (m,_,acc) => Int.max(mono_var_degree x m, acc)) 0 p;
+    MonoTab.fold (fn (m,_) => fn acc => Int.max(mono_var_degree x m, acc)) p 0;
 
 fun multidegree (p:poly) =
-    Redblackmap.foldl (fn (m,_,acc) => Int.max(mono_degree m, acc)) 0 p;
+    MonoTab.fold (fn (m,_) => fn acc => Int.max(mono_degree m, acc)) p 0;
 
 fun poly_variables (p:poly) : term list =
-    let val vs = Redblackmap.foldl
-                   (fn (m,_,acc) => mono_variables m @ acc) [] p
+    let val vs = MonoTab.fold
+                   (fn (m,_) => fn acc => mono_variables m @ acc) p []
     in HOLset.listItems (HOLset.addList(empty_tmset, vs))
     end;
 
-fun poly_is0 (p:poly) = Redblackmap.numItems p = 0;
+fun poly_is0 (p:poly) = MonoTab.size p = 0;
 
 (* ===================================================================== *)
 (* Conversion between HOL terms and polynomials                          *)
@@ -267,7 +273,7 @@ fun term_of_varpow x 1 = x
     mk_comb(mk_comb(pow_tm, x), numSyntax.mk_numeral(Arbnum.fromInt k));
 
 fun term_of_monomial (m:monomial) =
-    let val items = Redblackmap.listItems m in
+    let val items = Termtab.dest m in
       case items of
           [] => realSyntax.one_tm
         | _ =>
@@ -291,7 +297,7 @@ fun term_of_poly (p:poly) =
     else
       let
         (* Sort monomials: higher degree first, then lexicographic *)
-        val items = Redblackmap.listItems p
+        val items = MonoTab.dest p
         fun cmp ((m1,_),(m2,_)) =
             case Int.compare(mono_degree m2, mono_degree m1) of
                 EQUAL => mono_compare(m1, m2)
@@ -312,18 +318,24 @@ fun term_of_poly (p:poly) =
 (* Matrices are ((rows,cols), ((int*int),rat) map)                       *)
 (* ===================================================================== *)
 
-(* We use IntRedBlackMap for vectors and a custom comparison for matrices *)
-structure IMap = Redblackmap;
+(* Vectors use Inttab (int keys); matrices use a local IntPairTab. *)
 
 fun int_compare (i:int, j:int) = Int.compare(i,j);
 fun intpair_compare ((i1,j1):int*int, (i2,j2):int*int) =
     case Int.compare(i1,i2) of EQUAL => Int.compare(j1,j2) | ord => ord;
 
-type vector = int * (int, rat) IMap.dict;
-type matrix = (int * int) * ((int * int), rat) IMap.dict;
+structure IntPairTab = Table(
+  type key = int * int
+  val ord = intpair_compare
+  fun pp (i,j) =
+      HOLPP.add_string ("(" ^ Int.toString i ^ "," ^ Int.toString j ^ ")")
+)
 
-val imap_empty = IMap.mkDict int_compare;
-val mmap_empty = IMap.mkDict intpair_compare;
+type vector = int * rat Inttab.table;
+type matrix = (int * int) * rat IntPairTab.table;
+
+val imap_empty = Inttab.empty;
+val mmap_empty = IntPairTab.empty;
 
 (* HOL Light's list-set union is "itlist insert", which preserves the left
    list's order. Variable order feeds directly into SOS basis construction
@@ -334,19 +346,19 @@ fun hl_union eq xs ys =
 fun vec_dim ((n, _):vector) = n;
 
 fun vec_el ((_, m):vector) i =
-    case IMap.peek(m, i) of NONE => rat0 | SOME c => c;
+    case Inttab.lookup m i of NONE => rat0 | SOME c => c;
 
 fun vec_0 n : vector = (n, imap_empty);
 
 fun vec_cmul c ((n, m):vector) : vector =
     if c = rat0 then vec_0 n
-    else (n, IMap.map (fn (_, x) => rat_mul(c, x)) m);
+    else (n, Inttab.map (fn _ => fn x => rat_mul(c, x)) m);
 
 fun vec_of_list l : vector =
     let val n = length l
     in (n, #2 (List.foldl (fn (c, (i, m)) =>
                               if c = rat0 then (i+1, m)
-                              else (i+1, IMap.insert(m, i, c)))
+                              else (i+1, Inttab.update (i, c) m))
                           (1, imap_empty) l))
     end;
 
@@ -354,38 +366,39 @@ fun vec_of_list l : vector =
 fun mat_dims ((d, _):matrix) = d;
 
 fun mat_el ((_, m):matrix) (i,j) =
-    case IMap.peek(m, (i,j)) of NONE => rat0 | SOME c => c;
+    case IntPairTab.lookup m (i,j) of NONE => rat0 | SOME c => c;
 
 fun mat_0 (r,c) : matrix = ((r,c), mmap_empty);
 
 fun mat_neg (((r,c), m):matrix) : matrix =
-    ((r,c), IMap.map (fn (_, x) => rat_neg x) m);
+    ((r,c), IntPairTab.map (fn _ => fn x => rat_neg x) m);
 
 fun mat_cmul k (((r,c), m):matrix) : matrix =
     if k = rat0 then mat_0 (r,c)
-    else ((r,c), IMap.map (fn (_, x) => rat_mul(k, x)) m);
+    else ((r,c), IntPairTab.map (fn _ => fn x => rat_mul(k, x)) m);
 
 fun mat_add (((r1,c1), m1):matrix) (((r2,c2), m2):matrix) : matrix =
     if r1 <> r2 orelse c1 <> c2
     then raise ERR "mat_add" "incompatible dimensions"
     else ((r1,c1),
-          IMap.foldl
-            (fn (ij, c, acc) =>
-                case IMap.peek(acc, ij) of
-                    NONE => IMap.insert(acc, ij, c)
+          IntPairTab.fold
+            (fn (ij, c) => fn acc =>
+                case IntPairTab.lookup acc ij of
+                    NONE => IntPairTab.update (ij, c) acc
                   | SOME d => let val s = rat_add(c,d) in
-                                if s = rat0 then #1(IMap.remove(acc, ij))
-                                else IMap.insert(acc, ij, s)
+                                if s = rat0
+                                then IntPairTab.delete ij acc
+                                else IntPairTab.update (ij, s) acc
                               end)
-            m1 m2);
+            m2 m1);
 
 fun mat_row k (((r,c), m):matrix) : vector =
-    (c, IMap.foldl
-          (fn ((i,j), v, acc) =>
-              if i = k then IMap.insert(acc, j, v) else acc)
-          imap_empty m);
+    (c, IntPairTab.fold
+          (fn ((i,j), v) => fn acc =>
+              if i = k then Inttab.update (j, v) acc else acc)
+          m imap_empty);
 
-fun mat_is0 (((_, _), m):matrix) = IMap.numItems m = 0;
+fun mat_is0 (((_, _), m):matrix) = IntPairTab.size m = 0;
 
 (* ===================================================================== *)
 (* Equation elimination (Gaussian elimination for parametric equations)   *)
@@ -400,45 +413,44 @@ type eqvar = int * int;
 fun eqvar_compare ((a1,b1):eqvar, (a2,b2):eqvar) =
     case Int.compare(a1,a2) of EQUAL => Int.compare(b1,b2) | ord => ord;
 
-type equation = (eqvar, rat) Redblackmap.dict;
-val eq_empty : equation = Redblackmap.mkDict eqvar_compare;
+type equation = rat IntPairTab.table;
+val eq_empty : equation = IntPairTab.empty;
 
 fun eq_cmul (c:rat) (eq:equation) : equation =
     if c = rat0 then eq_empty
-    else Redblackmap.map (fn (_, d) => rat_mul(c, d)) eq;
+    else IntPairTab.map (fn _ => fn d => rat_mul(c, d)) eq;
 
 fun eq_add (eq1:equation) (eq2:equation) : equation =
-    Redblackmap.foldl
-      (fn (v, c, acc) =>
-          case Redblackmap.peek(acc, v) of
-              NONE => Redblackmap.insert(acc, v, c)
+    IntPairTab.fold
+      (fn (v, c) => fn acc =>
+          case IntPairTab.lookup acc v of
+              NONE => IntPairTab.update (v, c) acc
             | SOME d => let val s = rat_add(c, d) in
-                          if s = rat0 then #1(Redblackmap.remove(acc, v))
-                          else Redblackmap.insert(acc, v, s)
+                          if s = rat0 then IntPairTab.delete v acc
+                          else IntPairTab.update (v, s) acc
                         end)
-      eq1 eq2;
+      eq2 eq1;
 
 fun eq_eval (assig: eqvar -> rat) (eq:equation) : rat =
-    Redblackmap.foldl (fn (v, c, acc) => rat_add(acc, rat_mul(assig v, c)))
-      rat0 eq;
+    IntPairTab.fold
+      (fn (v, c) => fn acc => rat_add(acc, rat_mul(assig v, c))) eq rat0;
 
-fun eq_is0 (eq:equation) = Redblackmap.numItems eq = 0;
+fun eq_is0 (eq:equation) = IntPairTab.size eq = 0;
 
-fun eq_peek (eq:equation) v = Redblackmap.peek(eq, v);
+fun eq_peek (eq:equation) v = IntPairTab.lookup eq v;
 
-fun eq_remove v (eq:equation) =
-    #1(Redblackmap.remove(eq, v)) handle NotFound => eq;
+fun eq_remove v (eq:equation) = IntPairTab.delete_safe v eq;
 
-fun eq_vars (eq:equation) = map #1 (Redblackmap.listItems eq);
+fun eq_vars (eq:equation) = map #1 (IntPairTab.dest eq);
 
 (* Eliminate all variables from a system of equations.
    Returns (free_vars, assignment) where assignment maps
    eliminated vars to equations in terms of free vars. *)
 fun eliminate_all_equations (one:eqvar) (eqs: equation list)
-    : eqvar list * (eqvar, equation) Redblackmap.dict =
+    : eqvar list * equation IntPairTab.table =
     let
       fun choose_variable (eq:equation) =
-          let val items = Redblackmap.listItems eq in
+          let val items = IntPairTab.dest eq in
             case items of
                 [] => raise ERR "choose_variable" "empty equation"
               | [(v,_)] => if eqvar_compare(v, one) = EQUAL
@@ -457,7 +469,7 @@ fun eliminate_all_equations (one:eqvar) (eqs: equation list)
                   else v
                 end
           end
-      val assig_empty = Redblackmap.mkDict eqvar_compare
+      val assig_empty = IntPairTab.empty
       fun elim dun [] = dun
         | elim dun (eq::oeqs) =
           if eq_is0 eq then elim dun oeqs
@@ -474,21 +486,21 @@ fun eliminate_all_equations (one:eqvar) (eqs: equation list)
                     | SOME b =>
                       eq_add (eq_remove v e)
                              (eq_cmul (rat_div(rat_neg b, a)) (eq_remove v eq))
-              val dun' = Redblackmap.insert(
-                           Redblackmap.map (fn (_, f) => subst_in f) dun,
-                           v, eq')
+              val dun' = IntPairTab.update
+                           (v, eq')
+                           (IntPairTab.map (fn _ => fn f => subst_in f) dun)
             in
               elim dun' (map subst_in oeqs)
             end
       val assig = elim assig_empty eqs
-      val vs = Redblackmap.foldl
-                 (fn (_, f, acc) =>
+      val vs = IntPairTab.fold
+                 (fn (_, f) => fn acc =>
                      let val fvs = List.filter
                                      (fn v => eqvar_compare(v, one) <> EQUAL)
                                      (eq_vars f)
                      in fvs @ acc
                      end)
-                 [] assig
+                 assig []
       val vs' = Lib.mk_set (Listsort.sort eqvar_compare vs)
     in (vs', assig)
     end;
@@ -500,13 +512,13 @@ fun solve_equations (one:eqvar) (eqs: equation list) =
       (* Map: free vars -> 0, 'one' -> -1 *)
       val vfn = fn v => if eqvar_compare(v, one) = EQUAL then rat_neg rat1
                         else rat0
-      val result = Redblackmap.map (fn (_, eq) => eq_eval vfn eq) assig
+      val result = IntPairTab.map (fn _ => fn eq => eq_eval vfn eq) assig
       (* Also add free vars -> 0 *)
       val result' = List.foldl
-                      (fn (v, acc) => Redblackmap.insert(acc, v, rat0))
+                      (fn (v, acc) => IntPairTab.update (v, rat0) acc)
                       result free_vars
       (* Verify *)
-      val lookup = fn v => case Redblackmap.peek(result', v) of
+      val lookup = fn v => case IntPairTab.lookup result' v of
                                NONE => if eqvar_compare(v, one) = EQUAL
                                        then rat_neg rat1 else rat0
                              | SOME c => c
@@ -535,7 +547,7 @@ fun diag (mat : matrix) =
               else if a_ii = rat0 then
                 (* Check row is zero *)
                 let val row_i = mat_row i m in
-                  if IMap.numItems (#2 row_i) = 0 then go (i+1) m
+                  if Inttab.size (#2 row_i) = 0 then go (i+1) m
                   else raise ERR "diag" "matrix not PSD (zero pivot, nonzero row)"
                 end
               else
@@ -553,7 +565,7 @@ fun diag (mat : matrix) =
                                       rat_mul(vec_el row_i j,
                                               vec_el v' k))
                         in if v <> rat0
-                           then acc := IMap.insert(!acc, (j,k), v)
+                           then acc := IntPairTab.update ((j,k), v) (!acc)
                            else ()
                         end)
                       (List.tabulate(n - i, fn x => x + i + 1)))
@@ -574,18 +586,18 @@ fun deration (d : (rat * vector) list) =
         fun adj (c, (n, m) : vector) =
             let
               (* Find LCM of denominators and GCD of numerators *)
-              val lcd = IMap.foldl
-                          (fn (_, v, acc) => lcm_num acc (rat_denom v))
-                          (Arbnum.fromInt 1) m
-              val gcn = IMap.foldl
-                          (fn (_, v, acc) =>
+              val lcd = Inttab.fold
+                          (fn (_, v) => fn acc => lcm_num acc (rat_denom v))
+                          m (Arbnum.fromInt 1)
+              val gcn = Inttab.fold
+                          (fn (_, v) => fn acc =>
                               gcd_num acc (Arbint.toNat(Arbint.abs(rat_numer v))))
-                          Arbnum.zero m
+                          m Arbnum.zero
               val gcn' = if gcn = Arbnum.zero then Arbnum.fromInt 1 else gcn
               val a = Arbrat.fromNat(Arbnum.div(lcd, gcn'))
               val a_sq = rat_mul(a, a)
             in (rat_div(c, a_sq),
-                (n, IMap.map (fn (_, x) => rat_mul(a, x)) m))
+                (n, Inttab.map (fn _ => fn x => rat_mul(a, x)) m))
             end
         val d' = map adj d
         (* Now find overall scaling *)
@@ -673,10 +685,10 @@ fun sdpa_of_problem (obj:vector) (mats : matrix list) =
       val m = length mats - 1
       val (n, _) = mat_dims (hd mats)
       fun fmt_entry matno ((_, mm):matrix) =
-          let val ents = IMap.foldl
-                (fn ((i,j), c, acc) =>
+          let val ents = IntPairTab.fold
+                (fn ((i,j), c) => fn acc =>
                     if i > j then acc else (i,j,c)::acc)
-                [] mm
+                mm []
               val sorted = Listsort.sort
                 (fn ((i1,j1,_),(i2,j2,_)) =>
                     case Int.compare(i1,i2) of
@@ -828,7 +840,7 @@ fun nice_rational n (x:rat) =
     end;
 
 fun nice_vector n ((dim, vm):vector) : vector =
-    (dim, IMap.map (fn (_, x) => nice_rational n x) vm);
+    (dim, Inttab.map (fn _ => fn x => nice_rational n x) vm);
 
 (* Run CSDP on an SDP problem, returning the raw exit code and dual vector.
    CSDP syntax: csdp <input.dat-s> <output.sol>
@@ -906,20 +918,20 @@ fun vec_const c n : vector =
     if c = rat0 then vec_0 n
     else
       (n, List.foldl
-            (fn (i, m) => IMap.insert(m, i, c))
+            (fn (i, m) => Inttab.update (i, c) m)
             imap_empty
             (List.tabulate(n, fn i => i + 1)));
 
 fun mat_column j (((rows, _), m):matrix) : vector =
-    (rows, IMap.foldl
-             (fn ((i, j'), c, acc) =>
-                 if j = j' then IMap.insert(acc, i, c) else acc)
-             imap_empty m);
+    (rows, IntPairTab.fold
+             (fn ((i, j'), c) => fn acc =>
+                 if j = j' then Inttab.update (i, c) acc else acc)
+             m imap_empty);
 
 fun diagonal ((n, vm):vector) : matrix =
-    ((n, n), IMap.foldl
-               (fn (i, c, acc) => IMap.insert(acc, (i, i), c))
-               mmap_empty vm);
+    ((n, n), Inttab.fold
+               (fn (i, c) => fn acc => IntPairTab.update ((i, i), c) acc)
+               vm mmap_empty);
 
 fun linear_program_basic (a:matrix) =
     let
@@ -973,7 +985,7 @@ fun in_convex_hull pts pt =
       val m = v + n - 1
       val base =
         List.foldl
-          (fn (i, acc) => IMap.insert(acc, (v + i, i + 1), rat1))
+          (fn (i, acc) => IntPairTab.update ((v + i, i + 1), rat1) acc)
           mmap_empty
           (List.tabulate(n, fn i => i + 1))
       val entries =
@@ -983,7 +995,8 @@ fun in_convex_hull pts pt =
                     val acc' =
                       #2 (List.foldl
                             (fn (x, (i, a)) =>
-                                (i + 1, IMap.insert(a, (i, j), Arbrat.fromInt x)))
+                                (i + 1,
+                                 IntPairTab.update ((i, j), Arbrat.fromInt x) a))
                             (1, acc) col)
                   in
                     (j + 1, acc')
@@ -1018,7 +1031,7 @@ fun all_monomials_upto vars ds =
         List.concat
           (List.tabulate(d+1, fn k =>
              map (fn m => if k = 0 then m
-                          else Redblackmap.insert(m, v, k))
+                          else Termtab.update (v, k) m)
                  (all_monomials_upto vs dds)));
 
 fun newton_polytope (pol:poly) =
@@ -1026,8 +1039,8 @@ fun newton_polytope (pol:poly) =
       val vars = poly_variables pol
       val mons =
         map (fn (m, _) => map (fn x =>
-              case Redblackmap.peek(m, x) of SOME k => k | NONE => 0) vars)
-            (Redblackmap.listItems pol)
+              case Termtab.lookup m x of SOME k => k | NONE => 0) vars)
+            (MonoTab.dest pol)
       val ds = map (fn x => (degree x pol + 1) div 2) vars
       val all = all_monomials_upto vars ds
       (* The HOL Light SOS search filters the half-degree basis through the
@@ -1038,7 +1051,7 @@ fun newton_polytope (pol:poly) =
         List.filter (fn m =>
           let
             val exps = map (fn x =>
-              2 * (case Redblackmap.peek(m, x) of SOME k => k | NONE => 0)) vars
+              2 * (case Termtab.lookup m x of SOME k => k | NONE => 0)) vars
           in
             in_convex_hull mons' exps
           end) all
@@ -1058,11 +1071,10 @@ fun gram_equations (pol:poly) (mons:monomial list) =
       val indexed_mons = ListPair.zip(mons, List.tabulate(n, fn i => i+1))
       (* For each pair (i,j) with i<=j, the Gram entry G[i,j] contributes
          to monomial mons[i]*mons[j] with coefficient 1 (if i=j) or 2 *)
-      val eqs_map = ref (Redblackmap.mkDict mono_compare
-                         : (monomial, equation) Redblackmap.dict)
-      fun get_eq m = case Redblackmap.peek(!eqs_map, m) of
+      val eqs_map : equation MonoTab.table ref = ref MonoTab.empty
+      fun get_eq m = case MonoTab.lookup (!eqs_map) m of
                          SOME eq => eq | NONE => eq_empty
-      fun set_eq m eq = eqs_map := Redblackmap.insert(!eqs_map, m, eq)
+      fun set_eq m eq = eqs_map := MonoTab.update (m, eq) (!eqs_map)
       val _ =
         List.app (fn (m1, i) =>
           List.app (fn (m2, j) =>
@@ -1071,7 +1083,7 @@ fun gram_equations (pol:poly) (mons:monomial list) =
               let val m = mono_mul m1 m2
                   val c = if i = j then rat1 else Arbrat.fromInt 2
                   val eq = get_eq m
-                  val eq' = Redblackmap.insert(eq, (i,j), c)
+                  val eq' = IntPairTab.update ((i,j), c) eq
               in set_eq m eq'
               end)
           indexed_mons)
@@ -1085,27 +1097,27 @@ fun gram_equations (pol:poly) (mons:monomial list) =
          But wait: c*(-1) = -c, so sum(...) + (-c) = 0 ⟹ sum(...) = c. YES.
          So we add (0,0) |-> c (the positive coefficient). *)
       val _ =
-        Redblackmap.app
+        List.app
           (fn (m, c) =>
               let val eq = get_eq m
-                  val eq' = Redblackmap.insert(eq, (0,0), c)
+                  val eq' = IntPairTab.update ((0,0), c) eq
               in set_eq m eq'
               end)
-          pol
+          (MonoTab.dest pol)
 
-      val eqs = map #2 (Redblackmap.listItems (!eqs_map))
+      val eqs = map #2 (MonoTab.dest (!eqs_map))
     in eqs
     end;
 
 (* Build polynomial from vector: sum_i vec[i] * mons[i-1] *)
 fun poly_of_lin (mons:monomial list) ((_, vm):vector) : poly =
-    IMap.foldl
-      (fn (i, c, acc) =>
+    Inttab.fold
+      (fn (i, c) => fn acc =>
           if c = rat0 then acc
           else let val m = List.nth(mons, i-1)
-               in poly_add acc (Redblackmap.insert(poly_empty, m, c))
+               in poly_add acc (MonoTab.update (m, c) poly_empty)
                end)
-      poly_0 vm;
+      vm poly_0;
 
 (* The main pure SOS function: try to decompose pol as a sum of squares
    using exact rational arithmetic only. *)
@@ -1124,15 +1136,15 @@ fun sumofsquares_pure (pol:poly) : rat * (rat * poly) list =
           let val entries = ref mmap_empty
               fun set (i,j) v =
                   if v <> rat0 then
-                    (entries := IMap.insert(!entries, (i,j), v);
-                     entries := IMap.insert(!entries, (j,i), v))
+                    (entries := IntPairTab.update ((i,j), v) (!entries);
+                     entries := IntPairTab.update ((j,i), v) (!entries))
                   else ()
           in
             List.app (fn i =>
               List.app (fn j =>
                 if i > j then ()
                 else
-                  let val v = case Redblackmap.peek(solution, (i,j)) of
+                  let val v = case IntPairTab.lookup solution (i,j) of
                                   SOME c => c | NONE => rat0
                   in set (i,j) v
                   end)
@@ -1183,20 +1195,20 @@ fun sumofsquares_csdp (pol:poly) : rat * (rat * poly) list =
           val allassig = assig
           fun mk_matrix v : matrix =
               let val entries = ref mmap_empty
-              in Redblackmap.app
+              in List.app
                    (fn (ij as (i,j), eq) =>
                        if i < 1 orelse j < 1 then ()
                        else
-                         let val c = case Redblackmap.peek(eq, v) of
+                         let val c = case IntPairTab.lookup eq v of
                                          SOME r => r | NONE => rat0
                          in if c <> rat0 then
-                              (entries := IMap.insert(!entries, (i,j), c);
+                              (entries := IntPairTab.update ((i,j), c) (!entries);
                                if i <> j then
-                                 entries := IMap.insert(!entries, (j,i), c)
+                                 entries := IntPairTab.update ((j,i), c) (!entries)
                                else ())
                             else ()
                          end)
-                   allassig;
+                   (IntPairTab.dest allassig);
                  ((n,n), !entries)
               end
           val mat = mat_neg (mk_matrix (0,0))
@@ -1212,28 +1224,28 @@ fun sumofsquares_csdp (pol:poly) : rat * (rat * poly) list =
           val allassig =
               List.foldl
                 (fn (v, acc) =>
-                    Redblackmap.insert(acc, v,
-                      Redblackmap.insert(eq_empty, v, rat1)))
+                    IntPairTab.update
+                      (v, IntPairTab.update (v, rat1) eq_empty) acc)
                 assig pvs
 
           (* For each variable v, build the matrix M_v where
              M_v[i,j] = coefficient of v in allassig[(i,j)] *)
           fun mk_matrix v : matrix =
               let val entries = ref mmap_empty
-              in Redblackmap.app
+              in List.app
                    (fn ((i,j), eq) =>
                        if i < 1 orelse j < 1 then ()
                        else
-                         let val c = case Redblackmap.peek(eq, v) of
+                         let val c = case IntPairTab.lookup eq v of
                                          SOME r => r | NONE => rat0
                          in if c <> rat0 then
-                              (entries := IMap.insert(!entries, (i,j), c);
+                              (entries := IntPairTab.update ((i,j), c) (!entries);
                                if i <> j then
-                                 entries := IMap.insert(!entries, (j,i), c)
+                                 entries := IntPairTab.update ((j,i), c) (!entries)
                                else ())
                             else ()
                          end)
-                   allassig;
+                   (IntPairTab.dest allassig);
                  ((n,n), !entries)
               end
 
@@ -1243,7 +1255,7 @@ fun sumofsquares_csdp (pol:poly) : rat * (rat * poly) list =
           val diagents =
               List.foldl
                 (fn (i, acc) =>
-                    case Redblackmap.peek(allassig, (i,i)) of
+                    case IntPairTab.lookup allassig (i,i) of
                         SOME e => eq_add acc e
                       | NONE => acc)
                 eq_empty (List.tabulate(n, fn i => i+1))
@@ -1255,7 +1267,7 @@ fun sumofsquares_csdp (pol:poly) : rat * (rat * poly) list =
           val mats = map mk_matrix qvars
           val obj_coeffs =
               map (fn v =>
-                      case Redblackmap.peek(diagents, v) of
+                      case IntPairTab.lookup diagents v of
                           SOME c => c | NONE => rat0)
                   pvs
           val obj = vec_of_list obj_coeffs
@@ -1358,43 +1370,50 @@ fun eqvar3_compare ((a1,b1,c1):eqvar3, (a2,b2,c2):eqvar3) =
                     | ord => ord)
       | ord => ord;
 
-type equation3 = (eqvar3, rat) Redblackmap.dict;
-val eq3_empty : equation3 = Redblackmap.mkDict eqvar3_compare;
+structure IntTripleTab = Table(
+  type key = eqvar3
+  val ord = eqvar3_compare
+  fun pp (i,j,k) =
+      HOLPP.add_string ("(" ^ Int.toString i ^ "," ^ Int.toString j ^ "," ^
+                        Int.toString k ^ ")")
+)
+
+type equation3 = rat IntTripleTab.table;
+val eq3_empty : equation3 = IntTripleTab.empty;
 
 fun eq3_cmul (c:rat) (eq:equation3) : equation3 =
     if c = rat0 then eq3_empty
-    else Redblackmap.map (fn (_, d) => rat_mul(c, d)) eq;
+    else IntTripleTab.map (fn _ => fn d => rat_mul(c, d)) eq;
 
 fun eq3_add (eq1:equation3) (eq2:equation3) : equation3 =
-    Redblackmap.foldl
-      (fn (v, c, acc) =>
-          case Redblackmap.peek(acc, v) of
-              NONE => Redblackmap.insert(acc, v, c)
+    IntTripleTab.fold
+      (fn (v, c) => fn acc =>
+          case IntTripleTab.lookup acc v of
+              NONE => IntTripleTab.update (v, c) acc
             | SOME d => let val s = rat_add(c, d) in
-                          if s = rat0 then #1(Redblackmap.remove(acc, v))
-                          else Redblackmap.insert(acc, v, s)
+                          if s = rat0 then IntTripleTab.delete v acc
+                          else IntTripleTab.update (v, s) acc
                         end)
-      eq1 eq2;
+      eq2 eq1;
 
 fun eq3_eval (assig: eqvar3 -> rat) (eq:equation3) : rat =
-    Redblackmap.foldl (fn (v, c, acc) => rat_add(acc, rat_mul(assig v, c)))
-      rat0 eq;
+    IntTripleTab.fold
+      (fn (v, c) => fn acc => rat_add(acc, rat_mul(assig v, c))) eq rat0;
 
-fun eq3_is0 (eq:equation3) = Redblackmap.numItems eq = 0;
+fun eq3_is0 (eq:equation3) = IntTripleTab.size eq = 0;
 
-fun eq3_peek (eq:equation3) v = Redblackmap.peek(eq, v);
+fun eq3_peek (eq:equation3) v = IntTripleTab.lookup eq v;
 
-fun eq3_remove v (eq:equation3) =
-    #1(Redblackmap.remove(eq, v)) handle NotFound => eq;
+fun eq3_remove v (eq:equation3) = IntTripleTab.delete_safe v eq;
 
-fun eq3_vars (eq:equation3) = map #1 (Redblackmap.listItems eq);
+fun eq3_vars (eq:equation3) = map #1 (IntTripleTab.dest eq);
 
 (* Eliminate all variables from a system of equations (3-tuple version) *)
 fun eliminate_all_equations3 (one:eqvar3) (eqs: equation3 list)
-    : eqvar3 list * (eqvar3, equation3) Redblackmap.dict =
+    : eqvar3 list * equation3 IntTripleTab.table =
     let
       fun choose_variable (eq:equation3) =
-          let val items = Redblackmap.listItems eq in
+          let val items = IntTripleTab.dest eq in
             case items of
                 [] => raise ERR "choose_variable3" "empty equation"
               | [(v,_)] => if eqvar3_compare(v, one) = EQUAL
@@ -1412,7 +1431,7 @@ fun eliminate_all_equations3 (one:eqvar3) (eqs: equation3 list)
                   else v
                 end
           end
-      val assig_empty = Redblackmap.mkDict eqvar3_compare
+      val assig_empty = IntTripleTab.empty
       fun elim dun [] = dun
         | elim dun (eq::oeqs) =
           if eq3_is0 eq then elim dun oeqs
@@ -1429,21 +1448,21 @@ fun eliminate_all_equations3 (one:eqvar3) (eqs: equation3 list)
                     | SOME b =>
                       eq3_add (eq3_remove v e)
                              (eq3_cmul (rat_div(rat_neg b, a)) (eq3_remove v eq))
-              val dun' = Redblackmap.insert(
-                           Redblackmap.map (fn (_, f) => subst_in f) dun,
-                           v, eq')
+              val dun' = IntTripleTab.update
+                           (v, eq')
+                           (IntTripleTab.map (fn _ => fn f => subst_in f) dun)
             in
               elim dun' (map subst_in oeqs)
             end
       val assig = elim assig_empty eqs
-      val vs = Redblackmap.foldl
-                 (fn (_, f, acc) =>
+      val vs = IntTripleTab.fold
+                 (fn (_, f) => fn acc =>
                      let val fvs = List.filter
                                      (fn v => eqvar3_compare(v, one) <> EQUAL)
                                      (eq3_vars f)
                      in fvs @ acc
                      end)
-                 [] assig
+                 assig []
       val vs' = Lib.mk_set (Listsort.sort eqvar3_compare vs)
     in (vs', assig)
     end;
@@ -1453,33 +1472,33 @@ fun eliminate_all_equations3 (one:eqvar3) (eqs: equation3 list)
 (* ===================================================================== *)
 
 (* 3D matrix type: (block, row, col) -> rat *)
-type bmatrix = (eqvar3, rat) Redblackmap.dict;
-val bmat_empty : bmatrix = Redblackmap.mkDict eqvar3_compare;
+type bmatrix = rat IntTripleTab.table;
+val bmat_empty : bmatrix = IntTripleTab.empty;
 
 fun bmatrix_add (m1:bmatrix) (m2:bmatrix) : bmatrix =
-    Redblackmap.foldl
-      (fn (k, c, acc) =>
-          case Redblackmap.peek(acc, k) of
-              NONE => Redblackmap.insert(acc, k, c)
+    IntTripleTab.fold
+      (fn (k, c) => fn acc =>
+          case IntTripleTab.lookup acc k of
+              NONE => IntTripleTab.update (k, c) acc
             | SOME d => let val s = rat_add(c, d) in
-                          if s = rat0 then #1(Redblackmap.remove(acc, k))
-                          else Redblackmap.insert(acc, k, s)
+                          if s = rat0 then IntTripleTab.delete k acc
+                          else IntTripleTab.update (k, s) acc
                         end)
-      m1 m2;
+      m2 m1;
 
 fun bmatrix_cmul (c:rat) (bm:bmatrix) : bmatrix =
     if c = rat0 then bmat_empty
-    else Redblackmap.map (fn (_, x) => rat_mul(c, x)) bm;
+    else IntTripleTab.map (fn _ => fn x => rat_mul(c, x)) bm;
 
 fun bmatrix_neg bm = bmatrix_cmul (rat_neg rat1) bm;
 
 (* SDPA-sparse for block diagonal matrix *)
 fun sdpa_of_blockdiagonal matno (bm:bmatrix) =
     let val pfx = Int.toString matno ^ " "
-        val ents = Redblackmap.foldl
-          (fn ((b,i,j), c, acc) =>
+        val ents = IntTripleTab.fold
+          (fn ((b,i,j), c) => fn acc =>
               if i > j then acc else ((b,i,j),c)::acc)
-          [] bm
+          bm []
         val sorted = Listsort.sort
           (fn (((b1,i1,j1),_),((b2,i2,j2),_)) =>
               case Int.compare(b1,b2) of
@@ -1514,10 +1533,10 @@ fun blocks (blocksizes:int list) (bm:bmatrix) : matrix list =
     let val indexed = ListPair.zip(blocksizes,
                                    List.tabulate(length blocksizes, fn i => i+1))
     in map (fn (bs, b0) =>
-         let val m = Redblackmap.foldl
-               (fn ((b,i,j), c, acc) =>
-                   if b = b0 then IMap.insert(acc, (i,j), c) else acc)
-               mmap_empty bm
+         let val m = IntTripleTab.fold
+               (fn ((b,i,j), c) => fn acc =>
+                   if b = b0 then IntPairTab.update ((i,j), c) acc else acc)
+               bm mmap_empty
          in ((bs,bs), m) : matrix
          end)
        indexed
@@ -1579,27 +1598,30 @@ fun run_csdp_blocks nblocks blocksizes (obj:vector) (mats:bmatrix list)
 fun scale_then solver (obj:vector) (mats:bmatrix list) : vector =
     let
       fun common_denom (bm:bmatrix) acc =
-          Redblackmap.foldl (fn (_, c, a) => lcm_num (rat_denom c) a) acc bm
+          IntTripleTab.fold
+            (fn (_, c) => fn a => lcm_num (rat_denom c) a) bm acc
       fun common_denom_vec ((_, vm):vector) acc =
-          IMap.foldl (fn (_, c, a) => lcm_num (rat_denom c) a) acc vm
+          Inttab.fold (fn (_, c) => fn a => lcm_num (rat_denom c) a) vm acc
       fun max_elt (bm:bmatrix) acc =
-          Redblackmap.foldl (fn (_, c, a) =>
-              let val ac = rat_abs c in if rat_gt(ac, a) then ac else a end)
-            acc bm
+          IntTripleTab.fold
+            (fn (_, c) => fn a =>
+                let val ac = rat_abs c
+                in if rat_gt(ac, a) then ac else a end)
+            bm acc
       fun pow2_scale e =
           if e >= 0 then rat_pow (Arbrat.fromInt 2) e
           else rat_div(rat1, rat_pow (Arbrat.fromInt 2) (~e))
       val cd1 = List.foldl (fn (m, a) => common_denom m a)
                   (Arbnum.fromInt 1) mats
       val cd2 = common_denom_vec obj (Arbnum.fromInt 1)
-      val mats' = map (Redblackmap.map (fn (_, x) =>
+      val mats' = map (IntTripleTab.map (fn _ => fn x =>
                          rat_mul(Arbrat.fromNat cd1, x))) mats
       val obj' = vec_cmul (Arbrat.fromNat cd2) obj
       (* Scale to reasonable magnitudes *)
       val max1 = List.foldl (fn (m, a) => max_elt m a) rat0 mats'
-      val max2 = IMap.foldl (fn (_, c, a) =>
+      val max2 = Inttab.fold (fn (_, c) => fn a =>
                      let val ac = rat_abs c in
-                       if rat_gt(ac, a) then ac else a end) rat0 (#2 obj')
+                       if rat_gt(ac, a) then ac else a end) (#2 obj') rat0
       fun log2_scale mx =
           if mx = rat0 then rat1
           else let val f = Real.fromLargeInt
@@ -1612,7 +1634,7 @@ fun scale_then solver (obj:vector) (mats:bmatrix list) : vector =
                end handle _ => rat1
       val scal1 = log2_scale max1
       val scal2 = log2_scale max2
-      val mats'' = map (Redblackmap.map (fn (_, x) => rat_mul(scal1, x))) mats'
+      val mats'' = map (IntTripleTab.map (fn _ => fn x => rat_mul(scal1, x))) mats'
       val obj'' = vec_cmul scal2 obj'
     in solver obj'' mats''
     end;
@@ -1623,35 +1645,35 @@ fun scale_then solver (obj:vector) (mats:bmatrix list) : vector =
 (* matrix variables). Each coefficient of the poly is a linear expr.    *)
 (* ===================================================================== *)
 
-type epoly = (monomial, equation3) Redblackmap.dict;
-val epoly_empty : epoly = Redblackmap.mkDict mono_compare;
+type epoly = equation3 MonoTab.table;
+val epoly_empty : epoly = MonoTab.empty;
 
 (* Multiply regular poly p by epoly q, accumulate into acc *)
 fun epoly_pmul (p:poly) (q:epoly) (acc:epoly) : epoly =
-    Redblackmap.foldl
-      (fn (m1, c, a) =>
-          Redblackmap.foldl
-            (fn (m2, e, b) =>
+    MonoTab.fold
+      (fn (m1, c) => fn a =>
+          MonoTab.fold
+            (fn (m2, e) => fn b =>
                 let val m = mono_mul m1 m2
-                    val es = case Redblackmap.peek(b, m) of
+                    val es = case MonoTab.lookup b m of
                                  SOME e0 => e0 | NONE => eq3_empty
-                in Redblackmap.insert(b, m, eq3_add (eq3_cmul c e) es)
+                in MonoTab.update (m, eq3_add (eq3_cmul c e) es) b
                 end)
-            a q)
-      acc p;
+            q a)
+      p acc;
 
 fun epoly_cmul (c:rat) (l:epoly) : epoly =
     if c = rat0 then epoly_empty
-    else Redblackmap.map (fn (_, e) => eq3_cmul c e) l;
+    else MonoTab.map (fn _ => fn e => eq3_cmul c e) l;
 
 (* Convert poly to epoly: each coefficient c at monomial m becomes
    (0,0,0) |=> -c  (convention: (0,0,0) evaluates to -1) *)
 fun epoly_of_poly (p:poly) : epoly =
-    Redblackmap.foldl
-      (fn (m, c, a) =>
-          Redblackmap.insert(a, m,
-            Redblackmap.insert(eq3_empty, (0,0,0), rat_neg c)))
-      epoly_empty p;
+    MonoTab.fold
+      (fn (m, c) => fn a =>
+          MonoTab.update
+            (m, IntTripleTab.update ((0,0,0), rat_neg c) eq3_empty) a)
+      p epoly_empty;
 
 (* ===================================================================== *)
 (* Positivstellensatz certificate search                                 *)
@@ -1669,7 +1691,7 @@ fun enumerate_monomials d (vars : term list) : monomial list =
         List.concat
           (List.tabulate(d+1, fn k =>
             map (fn m => if k = 0 then m
-                         else Redblackmap.insert(m, v, k))
+                         else Termtab.update (v, k) m)
                 (enumerate_monomials (d - k) vs)));
 
 (* Enumerate products of distinct input polys with degree <= d.
@@ -1711,8 +1733,8 @@ fun real_positivnullstellensatz_general linf d
           val nons = ListPair.zip(mons, List.tabulate(length mons, fn i => i+1))
       in (mons,
           List.foldl (fn ((m,n), acc) =>
-            Redblackmap.insert(acc, m,
-              Redblackmap.insert(eq3_empty, (~k, ~n, n), rat1)))
+            MonoTab.update
+              (m, IntTripleTab.update ((~k, ~n, n), rat1) eq3_empty) acc)
           epoly_empty nons)
       end
 
@@ -1729,10 +1751,12 @@ fun real_positivnullstellensatz_general linf d
               else
                 let val m = mono_mul m1 m2
                     val c = if n1 = n2 then rat1 else Arbrat.fromInt 2
-                    val es = case Redblackmap.peek(acc2, m) of
+                    val es = case MonoTab.lookup acc2 m of
                                  SOME e => e | NONE => eq3_empty
-                in Redblackmap.insert(acc2, m,
-                     eq3_add (Redblackmap.insert(eq3_empty, (k,n1,n2), c)) es)
+                in MonoTab.update
+                     (m, eq3_add
+                           (IntTripleTab.update ((k,n1,n2), c) eq3_empty) es)
+                     acc2
                 end)
             acc1 nons)
           epoly_empty nons)
@@ -1760,41 +1784,41 @@ fun real_positivnullstellensatz_general linf d
       end
 
     (* Extract equations (one per monomial in bigsum) *)
-    val eqns = Redblackmap.foldl (fn (_, e, acc) => e :: acc) [] bigsum
+    val eqns = MonoTab.fold (fn (_, e) => fn acc => e :: acc) bigsum []
 
     (* Eliminate to get free variables *)
     val (pvs, assig) = eliminate_all_equations3 (0,0,0) eqns
     val qvars = (0,0,0) :: pvs
     val allassig =
       List.foldl (fn (v, acc) =>
-                     Redblackmap.insert(acc, v,
-                       Redblackmap.insert(eq3_empty, v, rat1)))
+                     IntTripleTab.update
+                       (v, IntTripleTab.update (v, rat1) eq3_empty) acc)
                  assig pvs
 
     (* Build block-diagonal matrices for each variable *)
     fun mk_matrix v : bmatrix =
-      Redblackmap.foldl
-        (fn ((b,i,j), ass, m) =>
+      IntTripleTab.fold
+        (fn ((b,i,j), ass) => fn m =>
             if b < 0 then m (* skip ideal multiplier entries *)
-            else let val c = case Redblackmap.peek(ass, v) of
+            else let val c = case IntTripleTab.lookup ass v of
                                  SOME r => r | NONE => rat0
                  in if c = rat0 then m
-                    else let val m' = Redblackmap.insert(m, (b,j,i), c)
-                         in Redblackmap.insert(m', (b,i,j), c)
+                    else let val m' = IntTripleTab.update ((b,j,i), c) m
+                         in IntTripleTab.update ((b,i,j), c) m'
                          end
                  end)
-        bmat_empty allassig
+        allassig bmat_empty
 
     (* Objective: sum of diagonal entries *)
     val diagents =
-      Redblackmap.foldl
-        (fn ((b,i,j), e, a) =>
+      IntTripleTab.fold
+        (fn ((b,i,j), e) => fn a =>
             if b > 0 andalso i = j then eq3_add e a else a)
-        eq3_empty allassig
+        allassig eq3_empty
 
     val mats = map mk_matrix qvars
     val obj_coeffs =
-      map (fn v => case Redblackmap.peek(diagents, v) of
+      map (fn v => case IntTripleTab.lookup diagents v of
                        SOME c => c | NONE => rat0) pvs
     val obj = vec_of_list obj_coeffs
 
@@ -1843,40 +1867,40 @@ fun real_positivnullstellensatz_general linf d
 
     (* Reconstruct certificates *)
     val newassigs =
-      let val base = Redblackmap.insert(eq3_empty, (0,0,0), rat_neg rat1)
+      let val base = IntTripleTab.update ((0,0,0), rat_neg rat1) eq3_empty
       in List.foldl (fn (k, acc) =>
-           Redblackmap.insert(acc, List.nth(pvs, k-1), vec_el vec k))
+           IntTripleTab.update (List.nth(pvs, k-1), vec_el vec k) acc)
          base (List.tabulate(vec_dim vec, fn i => i+1))
       end
 
     val finalassigs =
-      Redblackmap.foldl
-        (fn (v, e, a) =>
-            Redblackmap.insert(a, v, eq3_eval (fn w =>
-              case Redblackmap.peek(newassigs, w) of
-                  SOME c => c | NONE => rat0) e))
-        newassigs allassig
+      IntTripleTab.fold
+        (fn (v, e) => fn a =>
+            IntTripleTab.update
+              (v, eq3_eval (fn w =>
+                    case IntTripleTab.lookup newassigs w of
+                        SOME c => c | NONE => rat0) e) a)
+        allassig newassigs
 
     fun poly_of_epoly (ep:epoly) : poly =
-      Redblackmap.foldl
-        (fn (m, e, a) =>
+      MonoTab.fold
+        (fn (m, e) => fn a =>
             let val c = eq3_eval (fn w =>
-                  case Redblackmap.peek(finalassigs, w) of
+                  case IntTripleTab.lookup finalassigs w of
                       SOME r => r | NONE => rat0) e
             in if c = rat0 then a
-               else poly_add a (Redblackmap.insert(poly_empty, m, c))
+               else poly_add a (MonoTab.update (m, c) poly_empty)
             end)
-        poly_0 ep
+        ep poly_0
 
     fun mk_sos mons dia =
       map (fn (c, (_, vm)) =>
-        (c, IMap.foldl
-              (fn (k, v, acc) =>
+        (c, Inttab.fold
+              (fn (k, v) => fn acc =>
                   if v = rat0 then acc
                   else poly_add acc
-                    (Redblackmap.insert(poly_empty,
-                       List.nth(mons, k-1), v)))
-              poly_0 vm))
+                    (MonoTab.update (List.nth(mons, k-1), v) poly_empty))
+              vm poly_0))
       dia
 
     val sqs_out = ListPair.map (fn (m, d) => mk_sos m d) (sqmonlist, ratdias)

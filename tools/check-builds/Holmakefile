@@ -1,4 +1,7 @@
 CLINE_OPTIONS = --no_overlay
+ifdef POLY
+CLINE_OPTIONS += --poly_not_hol
+endif
 
 ifdef POLY
 ./checkbuilds: poly-check-builds.ML check_builds.sml

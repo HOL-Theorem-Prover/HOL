@@ -264,7 +264,7 @@ local
      | c     => c
 
   fun string_map (s,sz) =
-      case Binarymap.peek(TexTokenMap.the_map(), s) of
+      case Symtab.lookup (TexTokenMap.the_map()) s of
         SOME {info = result, ...} => result
       | NONE => (UTF8.translate char_map s,
                  case sz of NONE => String.size s | SOME sz => sz)
@@ -534,7 +534,7 @@ val datatype_thm_to_string =
 
 fun print_datatypes s =
   app (fn (_,x) =>
-          HOLPP.prettyPrint(print,!Globals.linewidth)
+          HOLPP.prettyPrint(Feedback.HOL_INFO,!Globals.linewidth)
                            (Parse.mlower
                               (pp_datatype_theorem PPBackEnd.raw_terminal x)))
       (datatype_theorems s);
@@ -589,7 +589,7 @@ fun pp_theorem_as_tex ostrm =
     raw_pp_theorem_as_tex (K NONE) ostrm |> UnicodeOff
                                          |> trace ("pp_dollar_escapes", 0)
 
-fun pprint f = PP.prettyPrint (print, !Globals.linewidth) o f
+fun pprint f = PP.prettyPrint (Feedback.HOL_INFO, !Globals.linewidth) o f
 val pp_type_as_tex = fn ty => Parse.mlower (pp_type_as_tex ty)
 val pp_term_as_tex = fn tm => Parse.mlower (pp_term_as_tex tm)
 val pp_theorem_as_tex = fn th => Parse.mlower (pp_theorem_as_tex th)

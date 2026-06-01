@@ -16,6 +16,11 @@ val parse: string -> root ptr * heap
 
 val heapSize: heap -> int
 
+(* Scan every tagptr in every Regular object and return the maximum observed
+   pointer index and the maximum absolute integer value. Used to verify that
+   the 32-bit recoder's 31-bit range is sufficient for a given trace. *)
+val scan_widths: heap -> {max_ptr: int, max_int: int, max_obj_len: int}
+
 datatype 'a any = Int of int | Bytes of Word8VectorSlice.slice | Obj of 'a list | Other
 val any: heap -> (unit, 'A) gparser -> ('b, 'A any) gparser
 
@@ -94,6 +99,7 @@ datatype sh_proof =
 | EQ_IMP_RULE2_prf of thm ptr
 | EQ_MP_prf of thm ptr * thm ptr
 | EXISTS_prf of term ptr * term ptr * thm ptr
+| Exported_prf of string * thm_id ptr
 | GENL_prf of term list ptr * thm ptr
 | GEN_ABS_prf of term option ptr * term list ptr * thm ptr
 | GEN_prf of term ptr * thm ptr
@@ -101,6 +107,7 @@ datatype sh_proof =
 | INST_prf of (term * term) list ptr * thm ptr
 | MK_COMB_prf of thm ptr * thm ptr
 | MP_prf of thm ptr * thm ptr
+| Mark_prf of string * thm ptr
 | Mk_abs_prf of thm ptr * term ptr * thm ptr
 | Mk_comb_prf of thm ptr * thm ptr * thm ptr
 | NOT_ELIM_prf of thm ptr

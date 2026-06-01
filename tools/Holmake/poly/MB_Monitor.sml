@@ -120,6 +120,7 @@ val cheat_string =      "Saved CHEAT _"
 val fastcheat_string =  "Saved FAST-CHEAT _"
 val oracle_string =   "Saved ORACLE thm _"
 val used_cheat_string = "(used CHEAT)"
+val cachehit_string = "Cache hit!"
 
 fun delsml_sfx s =
   if String.isSuffix ".sml" s orelse String.isSuffix ".sig" s then
@@ -171,10 +172,14 @@ fun rlsquash_to wdth s =
 
 val rlsquash_to = nstr_subhandler rlsquash_to "rlsquash_to"
 
-fun new {info,warn,genLogFile,time_limit,multidir} =
+fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
   let
     val monitor_map =
         ref (Binarymap.mkDict jobkey_compare : (jobkey,procinfo)Binarymap.dict)
+    val failures :
+        {tag:string, dir:string, status:string, log:string,
+         fulllines:string list, lastpartial:string} list ref
+        = ref []
     val last_width_check = ref (Time.now())
     val width = ref (getWidth())
     val last_child_cputime = let
@@ -298,7 +303,7 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
             val tb = tailbuffer.new {
                   numlines = 50,
                   patterns = [cheat_string, oracle_string, used_cheat_string,
-                              fastcheat_string]
+                              fastcheat_string, cachehit_string]
                 }
           in
             monitor_map :=
@@ -368,20 +373,33 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
                       tinfo (boldyellow, "CHEATED")
                     else if seen fastcheat_string then
                       tinfo (boldyellow, "F-CHEAT")
+                    else if seen cachehit_string then
+                      tinfo (green, "CACHED")
                     else
                       tinfo ((if seen oracle_string then boldyellow else green),
                              "OK")
                   else
-                    (tinfo (red, "FAIL<" ^ status_string ^ ">");
-                     List.app (fn s => info (" " ^ dim s)) fulllines;
-                     if lastpartial <> "" then info (" " ^ dim lastpartial)
-                     else ();
-                     info (
-                       bold (
-                         " Full log: "^ fullPath [dir,LOGDIR,delsml_sfx tag]
-                       )
-                     )
-                    );
+                    let
+                      (* Reuse genLogFile (applied to the same key on
+                         StartJob), not a hand-rolled `fullPath':
+                         tag can be an absolute path when the target
+                         lives outside the current build dir, and a
+                         raw concat then raises OS.Path.Path. *)
+                      val log = genLogFile{tag = tag, dir = dir}
+                    in
+                      tinfo (red, "FAIL<" ^ status_string ^ ">");
+                      if keep_going then
+                        (List.app (fn s => info (" " ^ dim s)) fulllines;
+                         if lastpartial <> "" then
+                           info (" " ^ dim lastpartial)
+                         else ();
+                         info (bold (" Full log: " ^ log)))
+                      else ();
+                      failures := !failures @
+                        [{tag = tag, dir = dir, status = status_string,
+                          log = log, fulllines = fulllines,
+                          lastpartial = lastpartial}]
+                    end;
                   TextIO.closeOut strm;
                   monitor_map := #1 (Binarymap.remove(!monitor_map, jk));
                   display_map();
@@ -397,18 +415,45 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
           in
             stdhandle jk
                (fn {os = strm,tb, status = stat,...} =>
-                   (taginfo td dirstr utstr (red, "MKILLED");
+                   (taginfo td dirstr utstr (dim, "killed");
                     TextIO.closeOut strm;
                     monitor_map := #1 (Binarymap.remove(!monitor_map, jk));
                     display_map();
                     NONE))
           end
         | _ => NONE
+    fun final_report () =
+        case !failures of
+            [] => ()
+          | fs =>
+            let
+              val n = length fs
+              val tgt = if n = 1 then "target" else "targets"
+            in
+              info "";
+              info (red ("*** Holmake aborted - " ^ Int.toString n ^
+                         " " ^ tgt ^ " failed:"));
+              List.app
+                (fn {tag,dir,status,log,fulllines,lastpartial} =>
+                    let
+                      val dirpfx =
+                          if multidir then " in " ^ prettydir dir else ""
+                    in
+                      info (red "*** " ^ bold (delsml_sfx tag) ^ dirpfx ^
+                            " (status " ^ status ^ ")");
+                      List.app (fn s => info (" " ^ dim s)) fulllines;
+                      if lastpartial <> "" then info (" " ^ dim lastpartial)
+                      else ();
+                      info (bold (" Full log: " ^ log))
+                    end)
+                fs
+            end
   in
     (monitor,
      {coloured_info =
       (fn (s1,s2) => info (lrpad (infopfx ^ s1, s2 ^ " " ^ CLR_EOL))),
-      red = red, green = green, bold = bold})
+      red = red, green = green, bold = bold,
+      final_report = final_report})
   end
 
 

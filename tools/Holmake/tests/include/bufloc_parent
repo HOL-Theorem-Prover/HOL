@@ -1,0 +1,3 @@
+PARENT = before
+include bufloc_child
+PARENT2 = after

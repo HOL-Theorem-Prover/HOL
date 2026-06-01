@@ -41,10 +41,11 @@ fun fileToString (SML c) = "SML(" ^ codeTypeToString c ^ ")"
   | fileToString (Unhandled s) = "Unhandled(" ^ String.toString s ^ ")"
 
 fun createDirIfNecessary s =
+    (* Race-tolerant: a concurrent Holmake may create [s] between our
+       isDir check and our own mkDir.  We rely on mkDir's failure
+       handler to re-check via isDir and accept the race rather than
+       gating the whole thing on an access() that can stale-read. *)
     if OS.FileSys.isDir s handle OS.SysErr _ => false then ()
-    else if OS.FileSys.access(s,[]) then
-      raise Fail ("createDirIfNecessary: path " ^ s ^
-                  " already exists but is not a directory")
     else
       let val {dir,file} = OS.Path.splitDirFile s
       in
@@ -52,16 +53,25 @@ fun createDirIfNecessary s =
           if file = "" then ()
           else (OS.FileSys.mkDir file
                 handle OS.SysErr _ =>
-                       if OS.FileSys.isDir file then ()
-                       else raise Fail ("createDirIfNecessary: " ^ file))
+                       if OS.FileSys.isDir file
+                          handle OS.SysErr _ => false
+                       then ()
+                       else raise Fail ("createDirIfNecessary: path " ^
+                                        file ^
+                                        " already exists but is not \
+                                        \a directory"))
         else
           let val _ = createDirIfNecessary dir
           in
             if file <> "" then
               (OS.FileSys.mkDir s
                handle OS.SysErr _ =>
-                      if OS.FileSys.isDir s then ()
-                      else raise Fail ("createDirIfNecessary: " ^ s))
+                      if OS.FileSys.isDir s
+                         handle OS.SysErr _ => false
+                      then ()
+                      else raise Fail ("createDirIfNecessary: path " ^
+                                       s ^ " already exists but is \
+                                       \not a directory"))
             else ()
           end
       end

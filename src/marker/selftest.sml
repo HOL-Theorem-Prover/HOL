@@ -153,7 +153,7 @@ val _ = tprint "extract_suspended_goal (1)"
 val _ = require_msg
           (check_result (goal_eq ([q, p], p)))
           goal_print
-          (fn th => resumption_to_goal (extract_suspended_goal th "p"))
+          (fn th => resumption_to_goal (extract_suspended_goal [th] "p"))
           pq_th1
 
 val _ = tprint "extract_suspended_goal (2)"
@@ -167,13 +167,13 @@ val _ = require_msg
             )
           )
           goal_print
-          (fn th => resumption_to_goal (extract_suspended_goal th "pq"))
+          (fn th => resumption_to_goal (extract_suspended_goal [th] "pq"))
           pq_th2
 
 val _ = shouldfail {checkexn = is_struct_HOL_ERR "markerLib",
                     printarg = K "extract_suspended_goal fails (1)",
                     printresult = goal_print,
-                    testfn = (fn th => resumption_to_goal (extract_suspended_goal th "pq"))}
+                    testfn = (fn th => resumption_to_goal (extract_suspended_goal [th] "pq"))}
                    pq_th1
 
 val _ = show_assums := true
@@ -238,10 +238,21 @@ val _ = require_msg
                                 disch_then  ACCEPT_TAC))
           resconj_closure_th
 
+(* Under the new cross-file suspend/resume design, a suspended theorem is
+   a perfectly valid export (as a theorem with suspendlabel hypotheses);
+   export_theory no longer fails on unfinalised suspensions. *)
 val incomplete_th = Feedback.quiet_messages save_thm("incomplete_th", pq_th1)
+
+(* UNABBREV_TAC on a name with no matching abbrev assumption used to fail
+   inside FIRST_ASSUM with an empty error message; it should now report a
+   clear UNABBREV_TAC error mentioning the missing abbreviation. (#1483) *)
+val _ = tprint "UNABBREV_TAC missing abbrev gives clear error"
 val _ = shouldfail {
-      checkexn = is_struct_HOL_ERR "Theory",
-      printarg = K "export_theory fails on incomplete suspension",
-      printresult = K "()",
-      testfn = export_theory} ()
-val _ = boolLib.remove_suspension "incomplete_th"
+  checkexn = check_HOL_ERRexn
+               (fn (_, fnnm, msg) =>
+                   fnnm = "UNABBREV_TAC" andalso
+                   String.isSubstring "MISSING_ABBR" msg),
+  printarg = K "UNABBREV_TAC \"MISSING_ABBR\" with no such abbrev",
+  printresult = goals_print,
+  testfn = (fn g => testtac (UNABBREV_TAC "MISSING_ABBR") g)
+} ([“(P:'a -> bool) x”], “(Q:'a -> bool) x”)

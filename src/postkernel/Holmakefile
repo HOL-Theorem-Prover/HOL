@@ -1,5 +1,32 @@
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
 all: $(DEFAULT_TARGETS)
 .PHONY: all
 
-Termtab.uo Termtab.ui: Termtab.sml $(dprot $(SIGOBJ)/Table.ui)
+TABLE_UID = $(dprot $(SIGOBJ)/Table.ui)
+
+# Termtab/Typetab: pre-existing rules from develop; safe under both
+# poly and mosml.
+Termtab.uo Termtab.ui: Termtab.sml $(TABLE_UID)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
+Typetab.uo Typetab.ui: Typetab.sml $(TABLE_UID)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
+# Files instantiating the Table functor locally need explicit
+# Table.ui passed on the command line for mosml -- its dep
+# auto-detection misses functor applications.  Sibling/sigobj .ui
+# deps are listed explicitly so they end up in the .uo metadata
+# (poly's poly_compile bypasses Holdep's include-path search when
+# the recipe is custom).
+
+SharingTables.uo: SharingTables.sml SharingTables.ui $(TABLE_UID) \
+                  DB_dtype.uo \
+                  $(dprot $(SIGOBJ)/Term.ui) $(dprot $(SIGOBJ)/Type.ui) \
+                  $(dprot $(SIGOBJ)/RawTheoryReader.ui)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
+TheoryGraph.uo: TheoryGraph.sml TheoryGraph.ui $(TABLE_UID) Theory.uo \
+                $(dprot $(SIGOBJ)/Portable.ui)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<

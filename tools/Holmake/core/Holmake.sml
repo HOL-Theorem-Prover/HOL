@@ -44,7 +44,10 @@ fun main() = let
 val execname = Path.file (CommandLine.name())
 fun warn s = stdErr_out (execname^": "^s^"\n")
 fun die s = (warn s; Process.exit Process.failure)
-val original_dir = hmdir.curdir()
+(* like die, but without the "Holmake:" prefix: $(error ...) and other
+   GNU-make-style abort messages already carry their own "file:line:"
+   prefix and shouldn't be re-tagged. *)
+fun die_raw s = (stdErr_out (s ^ "\n"); Process.exit Process.failure)
 
 fun is_src_dir hmd =
     let val s = nice_dir (hmdir.pretty_dir hmd)
@@ -52,7 +55,6 @@ fun is_src_dir hmd =
       String.isPrefix "$(HOLDIR)/src/" s
     end
 fun in_src () = is_src_dir (hmdir.curdir())
-val originally_in_src = is_src_dir original_dir
 
 (* Global parameters, which get set at configuration time *)
 val HOLDIR0 = Systeml.HOLDIR;
@@ -95,14 +97,47 @@ fun getcline args =
     (opts, vars, targets)
   end
 
+(* Run the lastmaker / "am I in the right HOLDIR?" checks BEFORE
+   the full cline parse and any chdir.  We peek at -C/--directory
+   and --nolmbc directly out of argv so do_lastmade_checks can
+   target the user's intended working directory (where its
+   .HOLMK/lastmaker file lives), but the running process stays in
+   its original cwd.  If lastmaker exec-switches to a different
+   Holmake binary, the spawned shell inherits the original cwd and
+   the child's own cline parse handles -C the normal way (one
+   chdir, via set_cwd).  If we don't exec-switch, control falls
+   through to the regular getcline/apply_updates flow below, which
+   sees the same argv and chdirs at its usual point. *)
+local
+  val rawargs = CommandLine.arguments()
+  fun peek_chdir [] = NONE
+    | peek_chdir ("-C" :: d :: _) = SOME d
+    | peek_chdir ("--directory" :: d :: _) = SOME d
+    | peek_chdir (a :: rest) =
+        if String.isPrefix "--directory=" a then
+          SOME (String.extract (a, size "--directory=", NONE))
+        else peek_chdir rest
+in
+val _ = do_lastmade_checks default_ofns
+          {no_lastmakercheck =
+             List.exists (fn s => s = "--nolmbc") rawargs,
+           target_dir = peek_chdir rawargs}
+end
+
 val (master_cline_options, cline_vars, targets) =
   getcline (CommandLine.arguments())
 
-val master_cleanp = List.exists (fn s => member s targets)
-                                ["clean", "cleanDeps", "cleanAll"]
+val clean_target_strings = ["clean", "cleanDeps", "cleanAll"]
+val master_cleanp = List.exists (fn s => member s targets) clean_target_strings
 
 val master_cline_nohmf =
     HM_Cline.default_options |> apply_updates master_cline_options
+
+(* Captured after apply_updates so that any -C/--directory options
+   have already taken effect and original_dir is the directory
+   Holmake will treat as its starting point. *)
+val original_dir = hmdir.curdir()
+val originally_in_src = is_src_dir original_dir
 
 fun read_holpathdb() =
     let
@@ -117,6 +152,9 @@ fun read_holpathdb() =
     end
 
 val master_cline_option_value = #core master_cline_nohmf
+val _ = if #force_lastmaker master_cline_option_value
+        then set_lastmaker_force ()
+        else ()
 val usepfx = #jobs master_cline_option_value = 1
 val {warn=warn0,info=info0,diag=diag0,...} =
       output_functions {chattiness = chattiness_level master_cline_option_value,
@@ -177,6 +215,8 @@ type tgt_ruledb = (dep, {hmftext: string, dependencies:dep list,
                          commands : quotation list})
                     Binarymap.dict
 val empty_trdb : tgt_ruledb = Binarymap.mkDict hm_target.compare
+type patrules = Holmake_types.patrules
+val empty_patrules : patrules = Holmake_types.empty_patrules
 
 (* Extend the base environment with vars passed at commandline (foldl below),
    as well as environment variables "magically" derived from other options,
@@ -208,45 +248,115 @@ local
   val base = extend_with_cline_vars (read_holpathdb())
 
   val hmcache = ref (Binarymap.mkDict String.compare)
-  val default = (base,empty_trdb,NONE)
+
+  (* Dirs whose Holmakefile is safe for `local_rule_info' to consult
+     when resolving a cross-directory target.  Populated as we read
+     each Holmakefile: the dir it lives in is added, and so are every
+     INCLUDES/PRE_INCLUDES entry that Holmakefile names.  This makes
+     sibling-from-aggregator references work (Description's mdbook
+     dep on `../Tutorial/labels.tsv' resolves because Manual's
+     INCLUDES already named Tutorial) while leaving arbitrary
+     prereq paths into unrelated dirs (e.g. a test fixture's
+     `testd/Holmakefile' that lives outside any INCLUDES chain)
+     untouched -- speculatively reading those would fire any
+     `$(error ...)' in them.  Keyed by absolute path string to
+     match `hmcache'. *)
+  val known_dirs : string Binaryset.set ref =
+      ref (Binaryset.empty String.compare)
+  fun mark_known absdir =
+      known_dirs := Binaryset.add(!known_dirs, absdir)
+  fun mark_known_hmdirs ds =
+      Binaryset.app (fn d => mark_known (hmdir.toAbsPath d)) ds
+  (* Dirs for which we've already emitted a LOCAL_PARALLELISM_LIMIT
+     warning, so we don't repeat it on every `limit_for_dir' call. *)
+  val plimit_warned : string Binaryset.set ref =
+      ref (Binaryset.empty String.compare)
+  fun plimit_bad absdir s =
+      "Holmakefile in " ^ absdir ^
+      ": ignoring LOCAL_PARALLELISM_LIMIT = '" ^ s ^
+      "' (need a single positive integer)"
+  fun plimit_warn absdir s =
+      if Binaryset.member(!plimit_warned, absdir) then ()
+      else (plimit_warned := Binaryset.add(!plimit_warned, absdir);
+            warn (plimit_bad absdir s))
+  val default = (base,empty_trdb,empty_patrules,NONE)
   fun get_hmf0 d =
       if FileSys.access("Holmakefile", [FileSys.A_READ]) then
         let
-          val (env, rdb, tgt0) =
+          val (env, rdb, prs, tgt0) =
               ReadHMF.diagread {warn=warn0,die=die,info=info0}
                                "Holmakefile"
                                (extend_with_cline_vars (read_holpathdb()))
-              handle Fail s =>
+              handle internal_functions.HolmakeError s => die_raw s
+                   | Fail s =>
                      (die ("Bad Holmakefile in " ^ d ^ ": " ^ s);
-                      (base,Binarymap.mkDict String.compare,NONE))
+                      (base,Binarymap.mkDict String.compare,
+                       empty_patrules,NONE))
           fun hmfstr_to_tgt s = s |> filestr_to_tgt |> setHMF_text s
           fun foldthis (k,{commands,dependencies=deps0},A) =
               Binarymap.insert(A, filestr_to_tgt k,
                                {commands = commands, hmftext = k,
                                 dependencies = map hmfstr_to_tgt deps0})
         in
-          (env, Binarymap.foldl foldthis empty_trdb rdb,
+          (env, Binarymap.foldl foldthis empty_trdb rdb, prs,
            Option.map filestr_to_tgt tgt0)
         end
       else
         default
 in
-fun get_hmf () =
-    let
-      val d = FileSys.getDir()
+fun get_hmf_for_dir absdir =
+    case Binarymap.peek(!hmcache, absdir) of
+        SOME r => (mark_known absdir; r)
+      | NONE =>
+        let
+          val cur = FileSys.getDir()
+          val need_chdir = cur <> absdir
+          val () = if need_chdir then FileSys.chDir absdir else ()
+          val (result as (env, _, _, _)) =
+              get_hmf0 absdir
+              handle e => (if need_chdir then FileSys.chDir cur else ();
+                           raise e)
+          val () = if need_chdir then FileSys.chDir cur else ()
+          val dir_hm = hmdir.fromPath {origin = "", path = absdir}
+          val incs = envlist env "INCLUDES" |> slist_to_dset dir_hm
+          val pres = envlist env "PRE_INCLUDES" |> slist_to_dset dir_hm
+        in
+          hmcache := Binarymap.insert (!hmcache, absdir, result);
+          mark_known absdir;
+          mark_known_hmdirs incs;
+          mark_known_hmdirs pres;
+          result
+        end
+
+fun get_hmf () = get_hmf_for_dir (FileSys.getDir())
+fun is_known_dir absdir = Binaryset.member(!known_dirs, absdir)
+
+(* `limit_for_dir' must not trigger a Holmakefile read here: doing
+   so would chdir under code in `build_depgraph' that captures
+   `FileSys.getDir()' for rule lookup.  We only consult `hmcache'
+   directly.  If the dir's Holmakefile hasn't been read by the
+   normal `recursively' traversal (e.g. foreign-external nodes such
+   as sigobj references), we return NONE -- those nodes don't drive
+   jobs in this Holmake, so the limit is moot. *)
+fun limit_for_dir (d : hmdir.t) : int option =
+    let val absdir = hmdir.toAbsPath d
     in
-      case Binarymap.peek(!hmcache, d) of
-          NONE => let val result = get_hmf0 d
-                  in
-                    hmcache := Binarymap.insert (!hmcache, d, result);
-                    result
-                  end
-        | SOME r => r
+      case Binarymap.peek(!hmcache, absdir) of
+          NONE => NONE
+        | SOME (env, _, _, _) =>
+          case envlist env "LOCAL_PARALLELISM_LIMIT" of
+              [] => NONE
+            | [s] =>
+              (case Int.fromString s of
+                   SOME n => if n > 0 then SOME n
+                             else (plimit_warn absdir s; NONE)
+                 | NONE => (plimit_warn absdir s; NONE))
+            | ss => (plimit_warn absdir (String.concatWith " " ss); NONE)
     end
 end
 
 fun getnewincs dir =
-    let val (env, _, _) = get_hmf()
+    let val (env, _, _, _) = get_hmf()
     in
       {includes = envlist env "INCLUDES" |> slist_to_dset dir,
        preincludes = envlist env "PRE_INCLUDES" |> slist_to_dset dir}
@@ -283,7 +393,7 @@ val starting_holmakefile =
                   else NONE
         | x => x
 
-val (start_hmenv, start_rules, start_tgt) = get_hmf()
+val (start_hmenv, start_rules, start_patrules, start_tgt) = get_hmf()
 
 val start_envlist = envlist start_hmenv
 val start_options = start_envlist "OPTIONS"
@@ -310,6 +420,7 @@ val no_lastmakercheck = #no_lastmaker_check coption_value
 val show_usage = #help coption_value
 val show_json = #json coption_value
 val cline_cachekey = #cachekey coption_value
+val cline_rebuild_strategy = #rebuild coption_value
 val quit_on_failure = #quit_on_failure coption_value
 val toplevel_no_prereqs = #no_prereqs coption_value
 val toplevel_no_overlay = #no_overlay coption_value
@@ -318,6 +429,7 @@ val cline_always_rebuild_deps = #rebuild_deps coption_value
 val cline_nobuild = #no_action coption_value
 val cline_recursive_build = #recursive_build coption_value
 val cline_recursive_clean = #recursive_clean coption_value
+val cline_dirs = #dirs coption_value
 val scan_output_functions =
     if isSome cline_cachekey orelse
        (show_json andalso chattiness_level coption_value <= 1) then
@@ -331,8 +443,6 @@ val scan_output_functions =
 val pass_option_value =
     HM_Cline.fupd_core (HM_Core_Cline.fupd_includes (fn _ => [])) option_value
 
-val _ = do_lastmade_checks outputfns {no_lastmakercheck = no_lastmakercheck}
-
 val _ = diag "startup" (fn _ => "CommandLine.name() = "^CommandLine.name())
 val _ = diag "startup"
              (fn _ => "CommandLine.arguments() = "^
@@ -340,12 +450,7 @@ val _ = diag "startup"
 
 (* set up logging *)
 val logfilename = Systeml.make_log_file
-val hostname = if Systeml.isUnix then
-                 case Mosml.run "hostname" [] "" of
-                   Mosml.Success s => String.substring(s,0,size s - 1) ^ "-"
-                                      (* substring to drop \n in output *)
-                 | _ => ""
-               else "" (* what to do under windows? *)
+val hostname = if Systeml.isUnix then HostName.get () ^ "-" else ""
 
 fun finish_logging buildok = let
 in
@@ -497,6 +602,7 @@ let
                      "\n  (Probably a result of bad INCLUDES spec.)")
       val _ = diag (fn _ => "recursively: Visited set = " ^ print_set visited)
       val _ = FileSys.chDir (hmdir.toAbsPath newdir)
+      val _ = write_lastmaker_in_cwd outputfns
       val result =
           case recur_abbrev newdir data
                             {incdirmap=incdirmap, visited=visited,
@@ -582,11 +688,125 @@ fun get_rule_info rdb env tgt =
               commands = map (perform_substitution env) commands}
       end
 
-fun local_rule_info t =
-    let val (env, rules, _) = get_hmf()
+(* Look up the rule for `t`.  A rule belongs to whichever Holmakefile
+   was being parsed when it was registered, NOT necessarily the dir
+   that holds the target file -- e.g. `src/proofman/Holmakefile' has
+   a rule for `$(HOLDIR)/bin/hol.state0' (target dirpart = bin/),
+   but the rule lives in proofman's rdb.
+
+   So: try cwd's Holmakefile first (the rule-defining file is
+   typically cwd while `recursively' descends through it).  Only if
+   that misses, and the target's dirpart is part of this build's
+   INCLUDES closure, consult the target's home Holmakefile -- this
+   is the cross-manual `SIBLING_LABELS' case where Tutorial's
+   Holmakefile has the rule for `Tutorial/labels.tsv' but it's
+   referenced from Description's mdbook recipe.
+
+   The closure gate (`is_known_dir') keeps us from speculatively
+   reading a stranger Holmakefile that happens to lie under a
+   referenced path (a test fixture's `testd/Holmakefile' whose
+   `$(error ...)' would otherwise abort the build).
+
+   If both rdbs claim the same target, die: we have no principled
+   precedence to resolve such a conflict, and silently picking one
+   of two real recipes is a footgun.  Returns the rule paired with
+   the dir of the Holmakefile that owns it (used by `build_depgraph'
+   to set `node.dir' and the env feeding GraphExtra). *)
+fun find_rule t =
+    let
+      val (cwd_env, cwd_rules, _, _) = get_hmf()
+      val cwd_dir = hmdir.curdir()
+      val cwd_abs = hmdir.toAbsPath cwd_dir
+      val tgt_dir = hm_target.dirpart t
+      val tgt_dir_abs = hmdir.toAbsPath tgt_dir
+      val cwd_has = isSome (Binarymap.peek(cwd_rules, t))
+      val home_data =
+          if is_known_dir tgt_dir_abs andalso tgt_dir_abs <> cwd_abs
+          then SOME (get_hmf_for_dir tgt_dir_abs)
+          else NONE
+      val home_has =
+          case home_data of
+              NONE => false
+            | SOME (_, rules', _, _) => isSome (Binarymap.peek(rules', t))
     in
-      get_rule_info rules env t
+      if cwd_has andalso home_has then
+        die ("Conflicting rules for `" ^ tgt_toString t ^
+             "': defined in both " ^ hmdir.pretty_dir cwd_dir ^
+             "/Holmakefile and " ^ hmdir.pretty_dir tgt_dir ^
+             "/Holmakefile.\n" ^
+             "Remove one of the duplicates.")
+      else if cwd_has then
+        Option.map (fn r => (r, cwd_dir))
+                   (get_rule_info cwd_rules cwd_env t)
+      else if home_has then
+        (case home_data of
+            SOME (env', rules', _, _) =>
+              Option.map (fn r => (r, tgt_dir))
+                         (get_rule_info rules' env' t)
+          | NONE => NONE)
+      else NONE
     end
+
+fun local_rule_info t = Option.map #1 (find_rule t)
+
+(* Returns the directory that actually holds the rule for `t' (the
+   home of the Holmakefile its recipe lives in), or `hmdir.curdir()'
+   when no rule exists anywhere in scope.  Used by `build_depgraph'
+   to set `node.dir' (the cwd ProcessMultiplexor uses for recipe
+   execution) and the env that feeds GraphExtra. *)
+fun rule_home t =
+    case find_rule t of
+        SOME (_, d) => d
+      | NONE => hmdir.curdir()
+
+(* Pattern-rule lookup applies to any target at or below the
+   Holmakefile's directory: a pattern with a literal directory
+   prefix (e.g. `sub/%.tex : sub/%.smd') matches targets in the
+   named subdirectory, and a bare pattern (e.g. `%.tex') matches
+   targets anywhere under the Holmakefile (the stem then absorbs
+   any directory separators).  Targets in parent or sibling
+   directories of the Holmakefile aren't reachable from this
+   ruleset and yield NONE.
+
+   The matcher takes the target's path relative to the
+   Holmakefile's directory; substituted dep strings come back the
+   same way and lift through `filestr_to_tgt' (whose `hmdir.extendp'
+   already handles directory components correctly).
+
+   `can_make' implements GNU make's two-phase implicit-rule search:
+   a pattern rule is only applicable when every substituted prereq
+   either exists on disk or has an exact rule that builds it.
+   Without this guard a pattern like `%.tex: %.stex' would claim
+   every .tex target in the directory, including hand-maintained
+   ones whose .stex source doesn't exist. *)
+fun rel_to_curdir t =
+    let
+      val cwd_abs = hmdir.toAbsPath (hmdir.curdir())
+      val tgt_dir_abs = hmdir.toAbsPath (hm_target.dirpart t)
+      val tgt_file = fromFile (hm_target.filepart t)
+    in
+      if tgt_dir_abs = cwd_abs then SOME tgt_file
+      else if String.isPrefix (cwd_abs ^ "/") tgt_dir_abs then
+        SOME (String.extract (tgt_dir_abs, size cwd_abs + 1, NONE)
+              ^ "/" ^ tgt_file)
+      else NONE
+    end
+fun pattern_rule_info t =
+    case rel_to_curdir t of
+        NONE => NONE
+      | SOME tgt_s =>
+        let
+          val (env, rules, prs, _) = get_hmf()
+          fun can_make dep_s =
+              exists_readable dep_s orelse
+              isSome (Binarymap.peek (rules, filestr_to_tgt dep_s))
+        in
+          case match_pattern_rules can_make env prs tgt_s of
+              NONE => NONE
+            | SOME {dependencies, commands} =>
+              SOME {dependencies = map filestr_to_tgt dependencies,
+                    commands = commands}
+        end
 
 fun extra_deps t =
       Option.map #dependencies (local_rule_info t)
@@ -602,14 +822,42 @@ fun extra_commands t = Option.map #commands (local_rule_info t)
 
 fun extra_targets() =
     let
-      val (_, rules, _) = get_hmf()
+      val (_, rules, _, _) = get_hmf()
     in
       Binarymap.foldr (fn (k,_,acc) => k::acc) [] rules
     end
 
-fun extra_rule_for t = local_rule_info t
+(* extra_rule_for combines the exact-match rule for t (if any) with
+   a matching pattern rule (if any), respecting GNU make's precedence:
+   - an exact rule with commands wins outright;
+   - otherwise, if a pattern rule matches, its commands fire and its
+     deps union with any deps from a recipe-less exact rule;
+   - otherwise the exact rule's deps-only entry (if any) is returned
+     unchanged.  Pattern rules are scoped to the current Holmakefile's
+     directory tree: they can match targets in subdirectories of cwd
+     (via a literal prefix like `sub/%.x' or via the bare `%.x' whose
+     stem absorbs `/'), but not in parent or sibling directories. *)
+fun extra_rule_for t =
+    let
+      val exact = local_rule_info t
+    in
+      case exact of
+          SOME {commands = _ :: _, ...} => exact
+        | _ =>
+          case pattern_rule_info t of
+              NONE => exact
+            | SOME {dependencies = pat_deps, commands = pat_cmds} =>
+              let
+                val ex_deps =
+                    case exact of
+                        SOME {dependencies, ...} => dependencies
+                      | NONE => []
+              in
+                SOME {dependencies = ex_deps @ pat_deps, commands = pat_cmds}
+              end
+    end
 fun dir_varying_envlist s =
-    let val (env, _, _) = get_hmf()
+    let val (env, _, _, _) = get_hmf()
     in
       envlist env s
     end
@@ -728,6 +976,9 @@ in
                  let
                    open hm_target
                    val deps =
+                       (* Cross-dir deps don't recurse here -- their
+                          transitive closure is recorded in the dep
+                          graph by build_depgraph's external branch. *)
                        if hmdir.compare(dirpart d, hmdir.curdir()) <> EQUAL
                        then []
                        else
@@ -754,25 +1005,7 @@ in
       val alldeps = set_addList (file_dependencies @ extra_impl_deps)
                                 (set_union tcdeps uo_deps)
     in
-      case f of
-        SML x => let
-          (* there may be theory files mentioned in the Theory.sml file that
-             aren't mentioned in the script file.  If so, we are really
-             dependent on these, and should add them.  They will be listed
-             in the dependencies for UO (Theory x). *)
-          val additional_theories =
-              if exists_readable (fromFile f) then
-                set_mapPartial
-                  (fn dep => case hm_target.filepart dep of
-                                 UO (Theory s) => SOME dep
-                               | _ => NONE)
-                  hm_target.empty_tgtset
-                  (get_implicit_dependencies incinfo (UO x))
-              else hm_target.empty_tgtset
-        in
-          set_union alldeps additional_theories
-        end
-      | _ => alldeps
+      alldeps
     end
   else
     deplist_to_set file_dependencies
@@ -803,6 +1036,10 @@ exception CircularDependency
 exception BuildFailure
 exception NotFound
 
+fun no_extra_rule tgtopt =
+    case tgtopt of
+        NONE => true
+      | SOME tgt => not (isSome (extra_commands tgt))
 fun no_full_extra_rule tgtopt =
     case tgtopt of
         NONE => true
@@ -830,6 +1067,62 @@ fun cdset_member(set,stk) e = Binaryset.member(set,e)
 fun cdset_toString ((_,stk):cdset) =
     String.concatWith ">" (map #2 (List.rev stk))
 
+(* Read a cross-directory dep's source-directory depfile (without
+   rerunning holdep) and return its parsed deps.  The dep's [dirpart]
+   is typically sigobj (uploads symlink products there) but depfiles
+   live next to the actual sources; resolve the symlink to find the
+   real source directory. *)
+fun read_foreign_depfile tgt =
+    case holdep_arg (hm_target.filepart tgt) of
+        NONE => []
+      | SOME arg =>
+        let
+          val abs_path = hm_target.toString tgt
+          val fs_path =
+              case HFS_NameMunge.HOLtoFS abs_path of
+                  NONE => abs_path
+                | SOME {fullfile, ...} => fullfile
+          val real_objpath = OS.FileSys.realPath fs_path
+                             handle OS.SysErr _ => fs_path
+          val objdir_arcs_rev =
+              List.rev (#arcs (OS.Path.fromString HFS_NameMunge.HOLOBJDIR))
+          fun stripPrefix [] xs = SOME xs
+            | stripPrefix _ [] = NONE
+            | stripPrefix (p::ps) (x::xs) =
+                if p = x then stripPrefix ps xs else NONE
+          fun strip_hol_objs p =
+              let val {isAbs, vol, arcs} = OS.Path.fromString p
+                  val rev_arcs = List.rev arcs
+              in case rev_arcs of
+                     [] => NONE
+                   | _ :: rest =>
+                     Option.map
+                       (fn rest' =>
+                           OS.Path.toString
+                             {isAbs=isAbs, vol=vol,
+                              arcs=List.rev rest'})
+                       (stripPrefix objdir_arcs_rev rest)
+              end
+        in
+          case strip_hol_objs real_objpath of
+              NONE => []
+            | SOME real_srcdir =>
+              let
+                val foreign_depdir =
+                    OS.Path.concat (real_srcdir, DEPDIR)
+                val depfile = mk_depfile_name foreign_depdir
+                                              (fromFile arg)
+                val foreign_hmdir =
+                    hmdir.extendp {base = hmdir.curdir(),
+                                   extension = real_srcdir}
+              in
+                if exists_readable depfile then
+                  get_dependencies_from_file_in_dir
+                    foreign_hmdir depfile
+                else []
+              end
+        end
+
 (* is run in a directory at a time *)
 type g = GraphExtra.t HM_DepGraph.t
 fun build_depgraph cdset incinfo (tgt:dep) g0:(g * node) =
@@ -851,7 +1144,16 @@ let
   val fullpath = fp dir target_s
   val fullpath_s = fps fullpath
   val pretty_tgt = hmdir.pretty_dir fullpath
-  val (env, _, _) = get_hmf()
+  (* `rh' is the dir of the Holmakefile that actually carries the
+     rule for `tgt' -- cwd in the usual case, the target's home dir
+     when this is a cross-manual SIBLING_LABELS dep that's resolved
+     via the target's home rdb.  Used both for the env that feeds
+     GraphExtra (HOLHEAP etc. should come from the rule's Holmakefile,
+     not from whoever happens to reference the target) and for
+     `node.dir' (the cwd ProcessMultiplexor chdir's into before
+     running the recipe). *)
+  val rh = rule_home tgt
+  val (env, _, _, _) = get_hmf_for_dir (hmdir.toAbsPath rh)
   val extra = GraphExtra.get_extra { master_dir = original_dir,
                                      master_cline = option_value,
                                      envlist = envlist env }
@@ -869,16 +1171,35 @@ in
       (x as SOME n) => (g0, n)
     | NONE =>
       if not (hmdir.eqdir dir actual_dir) andalso
-         no_full_extra_rule (SOME tgt)
-         (* path outside of current directory *)
-      then (
-        diag (fn _ => "Target "^pretty_tgt^" external to directory");
-        add_node {target = tgt, seqnum = 0, phony = false,
-                  status = if exists_readable fullpath_s then Succeeded
-                           else Failed{needed=false},
-                  dir = dir, extra = extra,
-                  command = NoCmd, dependencies = []} g0
-      )
+         no_extra_rule (SOME tgt) andalso
+         not (isSome (pattern_rule_info tgt))
+         (* path outside of current directory and no local pattern
+            rule claims it *)
+      then
+        let
+          (* Recurse into the external node's transitive deps so the
+             graph captures them.  The [target_node g0 tgt] check
+             above prevents infinite recursion on shared ancestors. *)
+          val foreign_deps = read_foreign_depfile tgt
+          val (g1, depnodes) =
+              List.foldl
+                (fn (d', (g, ns)) =>
+                    let val (g'', n) = build d' g
+                    in (g'', addF d' n :: ns) end)
+                (g0, [])
+                foreign_deps
+          val _ = diag (fn _ =>
+                    "Target "^pretty_tgt^" external; foreign deps = ["^
+                    pdlist foreign_deps ^"]")
+        in
+          add_node {target = tgt, seqnum = 0, phony = false,
+                    status = if exists_readable fullpath_s then Succeeded
+                             else Failed{needed=false},
+                    dir = dir, extra = extra,
+                    mtime = hm_target.tgt_modTime tgt,
+                    local_parallelism_limit = limit_for_dir dir,
+                    command = NoCmd, dependencies = depnodes} g1
+        end
       else if isSome pdep andalso no_full_extra_rule (SOME tgt) then
         let
           val pdep = hm_target.mk(dir, valOf pdep)
@@ -905,22 +1226,66 @@ in
                                          is_pending stat orelse is_failed stat
                                        end)
                           depnodes
-          val needs_building =
-              not (null unbuilt_deps) orelse
-              set_exists (fn d => d depforces_update_of tgt)
-                         (set_add pdep secondaries)
           val bic = case toFile target_s of
                         SML (Theory s) => BIC_BuildScript s
                       | SIG (Theory s) => BIC_BuildScript s
                       | DAT s => BIC_BuildScript s
                       | _ => BIC_Compile
+          (* For theory targets, when --rebuild=cachekey is in force,
+             consult the cachekey stamp next to the .dat instead of
+             mtime.  Short-circuit to Succeeded when the target exists
+             on disk and the stamp records the current input hash. *)
+          fun theory_stamp_path thy =
+              let
+                val datHOL_s = fps (fp dir (thy ^ "Theory.dat"))
+                val datFS =
+                    case HFS_NameMunge.HOLtoFS datHOL_s of
+                        SOME {fullfile, ...} => fullfile
+                      | NONE => datHOL_s
+              in
+                HM_Cachekey.stamp_path_for_datfile datFS
+              end
+          fun stamp_matches g thy =
+              case HM_Cachekey.read_stamp (theory_stamp_path thy) of
+                  NONE => (false, g)
+                | SOME recorded =>
+                  let val (ck, g') =
+                          HM_Cachekey.compute_for_deps g
+                                                       (map #2 depnodes)
+                  in
+                    case ck of
+                        HM_Cachekey.Key k => (k = recorded, g')
+                      | HM_Cachekey.Missing _ => (false, g')
+                  end
+          val (cachekey_uptodate, g3) =
+              if cline_rebuild_strategy <> HM_Cachekey_dtype.Cachekey then
+                (false, g2)
+              else
+                (case bic of
+                     BIC_BuildScript thy =>
+                       if exists_readable fullpath_s andalso
+                          null unbuilt_deps
+                       then stamp_matches g2 thy
+                       else (false, g2)
+                   | _ => (false, g2))
+          val needs_building =
+              not cachekey_uptodate andalso
+              (not (null unbuilt_deps) orelse
+               set_exists (fn d => d depforces_update_of tgt)
+                          (set_add pdep secondaries))
+          val _ = if cachekey_uptodate then
+                    diag (fn _ => target_s ^
+                                  ": cachekey matches stamp, up-to-date")
+                  else ()
         in
             add_node {target = tgt, seqnum = 0, phony = false,
                       status = if needs_building then Pending{needed=false}
                                else Succeeded,
                       extra = extra,
-                      command = BuiltInCmd (bic,incinfo), dir = hmdir.curdir(),
-                      dependencies = depnodes } g2
+                      mtime = hm_target.tgt_modTime tgt,
+                      local_parallelism_limit = limit_for_dir rh,
+                      command = BuiltInCmd (bic,incinfo), dir = rh,
+                      dependencies = depnodes } g3
         end
       else
         case extra_rule_for tgt of
@@ -929,7 +1294,9 @@ in
               add_node {target = tgt, seqnum = 0, phony = false,
                         status = if exists_readable target_s then Succeeded
                                  else Failed{needed=false},
-                        command = NoCmd, dir = hmdir.curdir(), extra = extra,
+                        command = NoCmd, dir = rh, extra = extra,
+                        mtime = hm_target.tgt_modTime tgt,
+                        local_parallelism_limit = limit_for_dir rh,
                         dependencies = []} g0
             )
           | SOME {dependencies, commands, ...} =>
@@ -1019,12 +1386,17 @@ in
                       else ()
               val status = if needs_building then Pending{needed=false}
                            else Succeeded
+              val tgt_mtime = if is_phony then NONE
+                              else hm_target.tgt_modTime tgt
               fun foldthis (c, (depnode, seqnum, g)) =
                 let
                   val (g',n) = add_node {target = tgt, seqnum = seqnum,
                                          status = status, phony = is_phony,
                                          command = SomeCmd c, extra = extra,
-                                         dir = hmdir.curdir(),
+                                         dir = rh,
+                                         mtime = tgt_mtime,
+                                         local_parallelism_limit =
+                                             limit_for_dir rh,
                                          dependencies = depnode @ depnodes } g
                 in
                   (* This function needs to be folded l-to-r to ensure that
@@ -1047,7 +1419,10 @@ in
                     NONE =>
                     add_node {target = tgt, seqnum = 0, phony = is_phony,
                               status = status, command = NoCmd, extra = extra,
-                              dir = hmdir.curdir(), dependencies = depnodes} g1
+                              dir = rh,
+                              mtime = tgt_mtime,
+                              local_parallelism_limit = limit_for_dir rh,
+                              dependencies = depnodes} g1
                   | SOME s =>
                     let
                       val updstatus =
@@ -1060,7 +1435,10 @@ in
                                 phony = false, status = updstatus,
                                 command = BuiltInCmd
                                             (BIC_BuildScript fp, incinfo),
-                                dir = dir, extra = extra,
+                                dir = actual_dir, extra = extra,
+                                mtime = hm_target.tgt_modTime tgt,
+                                local_parallelism_limit =
+                                    limit_for_dir actual_dir,
                                 dependencies = depnodes} g1
                     end
             end
@@ -1071,7 +1449,7 @@ fun get_targets dir =
     let
       val from_directory =
           deplist_to_set (generate_all_plausible_targets warn NONE)
-      val (_, rules, _) = get_hmf()
+      val (_, rules, _, _) = get_hmf()
     in
       Binarymap.foldl (fn (dep,v,acc) =>
                           if hm_target.filepart dep <> Unhandled ".PHONY" then
@@ -1148,11 +1526,73 @@ val idmap0 = extend_idmap original_dir
 
 fun toplevel_build_graph () = create_complete_graph cline_incs idmap0
 
+(* Behind the --dirs flag.  Threading each root through `recursively`
+   with its own ancestors = [root] is what stops cross-root INCLUDES
+   references from looking like cycles; genuine cycles inside one
+   root's chain are still flagged.  The shared `visited` set is what
+   keeps each directory's contribution to the unified graph
+   single-shot. *)
+fun create_complete_graph_for_roots roots idm =
+    let
+      val empty_visited = Binaryset.empty hmdir.compare
+      fun for_root (root, {graph, incdirmap, visited, must_build}) =
+          let
+            fun in_root () =
+                let
+                  val (_, _, _, target1) = get_hmf()
+                  val root_targets =
+                      generate_all_plausible_targets warn target1
+                  val all_must_build = root_targets @ must_build
+                in
+                  if Binaryset.member(visited, root) then
+                    {graph = graph, incdirmap = incdirmap, visited = visited,
+                     must_build = all_must_build}
+                  else
+                    let
+                      val {data = g', incdirmap = im', visited = v', ...} =
+                          recursively getnewincs (SOME cline_incs) {
+                            outputfns = scan_output_functions,
+                            verb = "Scanning",
+                            hm = extend_graph_in_dir,
+                            dirinfo = {incdirmap = incdirmap,
+                                       visited = visited,
+                                       ancestors = [root]},
+                            dir = root,
+                            data = graph
+                          }
+                    in
+                      {graph = g', incdirmap = im', visited = v',
+                       must_build = all_must_build}
+                    end
+                end
+          in
+            pushdir (hmdir.toAbsPath root) in_root ()
+          end
+      val {graph, visited, must_build, ...} =
+          List.foldl for_root
+                     {graph = HM_DepGraph.empty(),
+                      incdirmap = idm, visited = empty_visited,
+                      must_build = []}
+                     roots
+      val numScanned = Binaryset.numItems visited
+      val _ = if numScanned > 1 then
+                (#info_inline scan_output_functions
+                              ("Scanned " ^ Int.toString numScanned ^
+                               " directories");
+                 #info_inline_end scan_output_functions ())
+              else ()
+      val diag = diag "builddepgraph"
+    in
+      diag (fn _ => "Finished building complete dep graph (has " ^
+                    Int.toString (HM_DepGraph.size graph) ^ " nodes)");
+      (graph, must_build)
+    end
+
 fun get_targets_recursively {incs, pres} =
     let
       val dirs = set_add original_dir (set_union incs pres)
       fun indir() =
-          let val (_, _, target1) = get_hmf()
+          let val (_, _, _, target1) = get_hmf()
           in
             generate_all_plausible_targets warn target1
           end
@@ -1176,7 +1616,84 @@ fun check_targets_are_in_graph graph tgts =
       List.all check1 tgts orelse OS.Process.exit OS.Process.failure
     end
 
+fun diag_built_graph targets depgraph =
+    (diag "core" (
+        fn _ =>
+           let
+             fun pr t = if hm_target.tgtexists_readable t then
+                          tgt_toString t
+                        else tgt_toString t ^ "(*)"
+           in
+             "Generated targets are: [" ^ concatWithf pr ", " targets ^ "]"
+           end
+      );
+     diag "core" (fn _ => "Dep.graph =\n" ^ HM_DepGraph.toString depgraph))
+
+fun dispatch_built_graph depgraph =
+    if cline_nobuild then
+      let val _ = print ("Dependency graph" ^
+                         HM_DepGraph.toString depgraph ^
+                         "\n\nTop-sorted:\n")
+          val sorted = HM_DepGraph.topo_sort depgraph
+          fun pr n =
+              case HM_DepGraph.peeknode depgraph n of
+                  NONE => die ("No node " ^ HM_DepGraph.node_toString n)
+                | SOME nI =>
+                  case #status nI of
+                      Pending {needed = true} =>
+                      print (hmdir.pretty_dir (#dir nI) ^ " - " ^
+                             hm_target.toString (#target nI) ^ "\n")
+                    | _ => ()
+      in
+        app pr sorted;
+        OS.Process.success
+      end
+    else if show_json then (
+      info (HM_DepGraph.toJSONString depgraph);
+      OS.Process.exit OS.Process.success
+    ) else
+      postmortem finish_logging outputfns (build_graph depgraph)
+      handle e => die ("Exception: " ^ General.exnMessage e)
+
+fun dirs_work () =
+    let
+      val _ = case targets of
+                  [] => die "--dirs given but no root directories supplied"
+                | _ => ()
+      val _ = case List.filter (fn x => member x clean_target_strings) targets
+               of [] => ()
+                | bad => die ("--dirs does not accept clean targets " ^
+                              "(found: " ^ String.concatWith " " bad ^ ")")
+      val roots =
+          map (fn s => hmdir.extendp {base = original_dir, extension = s})
+              targets
+      val _ =
+          List.app
+              (fn r =>
+                  let val p = hmdir.toAbsPath r
+                  in
+                    if FileSys.access (p, [FileSys.A_READ, FileSys.A_EXEC])
+                       andalso FileSys.isDir p
+                    then ()
+                    else die ("--dirs: " ^ hmdir.pretty_dir r ^
+                              " is not a readable directory")
+                  end)
+              roots
+      val (depgraph, must_build) =
+          create_complete_graph_for_roots roots idmap0
+      val depgraph =
+          if toplevel_no_prereqs then
+            mk_dirneeded (hmdir.curdir()) (mkneeded must_build depgraph)
+          else
+            mkneeded must_build depgraph
+    in
+      diag_built_graph must_build depgraph;
+      dispatch_built_graph depgraph
+    end
+
 fun work() =
+  if cline_dirs then dirs_work ()
+  else
     case targets of
       [] => let
         val (depgraph, local_incinfo) = toplevel_build_graph()
@@ -1188,49 +1705,13 @@ fun work() =
               mk_dirneeded (hmdir.curdir()) (mkneeded targets depgraph)
             else
               mkneeded targets depgraph
-        val _ = diag "core" (
-              fn _ =>
-                 let
-                   fun pr t = if hm_target.tgtexists_readable t then
-                                tgt_toString t
-                              else tgt_toString t ^ "(*)"
-                 in
-                   "Generated targets are: [" ^concatWithf pr ", " targets ^ "]"
-                 end
-            )
-        val _ = diag "core"
-                     (fn _ => "Dep.graph =\n" ^ HM_DepGraph.toString depgraph)
       in
-        if cline_nobuild then
-          let val _ = print ("Dependency graph" ^
-                             HM_DepGraph.toString depgraph ^
-                             "\n\nTop-sorted:\n")
-              val sorted = HM_DepGraph.topo_sort depgraph
-              fun pr n =
-                  case HM_DepGraph.peeknode depgraph n of
-                      NONE => die ("No node " ^
-                                   HM_DepGraph.node_toString n)
-                    | SOME nI =>
-                      case #status nI of
-                          Pending {needed = true} =>
-                          print (hmdir.pretty_dir (#dir nI) ^
-                                 " - " ^
-                                 hm_target.toString (#target nI) ^ "\n")
-                        | _ => ()
-              val _ = app pr sorted
-          in
-            OS.Process.success
-          end
-        else if show_json then (
-          info (HM_DepGraph.toJSONString depgraph);
-          OS.Process.exit OS.Process.success
-        ) else (* actually build default targets *)
-          postmortem finish_logging outputfns (build_graph depgraph)
-          handle e => die ("Exception: "^General.exnMessage e)
+        diag_built_graph targets depgraph;
+        dispatch_built_graph depgraph
       end
     | xs => let
         val cleanTargets =
-            List.filter (fn x => member x ["clean", "cleanDeps", "cleanAll"]) xs
+            List.filter (fn x => member x clean_target_strings) xs
         fun visit_and_clean tgts d =
             let
               val _ = FileSys.chDir (hmdir.toAbsPath d)
@@ -1315,6 +1796,7 @@ fun work() =
           end
       end
 
+
 fun do_cachekey thyname =
     let
       val dat_tgt = filestr_to_tgt (thyname ^ ".dat")
@@ -1333,97 +1815,15 @@ fun do_cachekey thyname =
           case #command nodeinfo of
               HM_DepGraph.BuiltInCmd (HM_DepGraph.BIC_BuildScript _, _) => ()
             | _ => die ("--cachekey: " ^ thyname ^ " is not a theory target")
-      (* Select files whose contents are relevant to the theory.
-         For .uo/.ui of Theory files, substitute the corresponding
-         .dat file (the actual theory content). Other .uo/.ui files
-         and the holheap state are excluded. *)
-      fun dep_to_hashable dep =
-          case hm_target.filepart dep of
-              DAT _ => SOME dep
-            | SML _ => SOME dep
-            | SIG _ => SOME dep
-            | ART _ => SOME dep
-            | UO (Theory s) =>
-                SOME (hm_target.setFile (DAT s) dep)
-            | UI (Theory s) =>
-                SOME (hm_target.setFile (DAT s) dep)
-            | _ => NONE
-      val deps =
-          let val depset =
-                  List.foldl
-                    (fn ((_, dep), acc) =>
-                        case dep_to_hashable dep of
-                            SOME d => Binaryset.add(acc, d)
-                          | NONE => acc)
-                    hm_target.empty_tgtset
-                    (#dependencies nodeinfo)
-          fun toFSpath s =
-              case HFS_NameMunge.HOLtoFS s of
-                  NONE => s
-                | SOME {fullfile, ...} => fullfile
-          in
-            map (fn dep =>
-                    let val p = tgt_toString dep
-                        val fspath = toFSpath p
-                        (* If this is a .dat converted from a .uo/.ui that
-                           lives in sigobj (symlinked), the .dat won't exist
-                           in sigobj. Resolve the .uo symlink to find the
-                           real directory where the .dat lives. *)
-                        val path =
-                            if OS.FileSys.access(fspath, []) then fspath
-                            else
-                              case hm_target.filepart dep of
-                                  DAT s =>
-                                  (let
-                                    val uoname = fromFile (UO (Theory s))
-                                    val dir = OS.Path.dir p
-                                    val uo_path =
-                                        if dir = "" then uoname
-                                        else OS.Path.concat(dir, uoname)
-                                    val uo_fspath = toFSpath uo_path
-                                    val real_uo = OS.FileSys.realPath uo_fspath
-                                    val real_dir = OS.Path.dir real_uo
-                                    val dat_name = fromFile (DAT s)
-                                    val dat_fspath =
-                                        OS.Path.concat(real_dir, dat_name)
-                                  in
-                                    dat_fspath
-                                  end handle OS.SysErr _ => fspath)
-                                | _ => fspath
-                    in { name = fromFile (hm_target.filepart dep),
-                         path = path }
-                    end)
-                (Binaryset.listItems depset)
-          end
-      val _ = List.app
-                (fn {name, path} =>
-                    if OS.FileSys.access(path, [OS.FileSys.A_READ]) then ()
-                    else die ("--cachekey: dependency " ^ name ^
-                              " (" ^ path ^ ") does not exist"))
-                deps
-      (* Compute hashes, then sort by (filename, hash) for a canonical
-         machine-independent ordering. Filename is the primary key; hash
-         breaks ties if two dependencies from different directories happen
-         to share a filename. *)
-      val hashed_deps =
-          map (fn {name, path} =>
-                  (name, SHA1.sha1_file {filename = path}))
-              deps
-      val sorted_hashes =
-          Listsort.sort (pair_compare (String.compare, String.compare))
-                        hashed_deps
-      val dep_hashes = map #2 sorted_hashes
-      val tmpfile = OS.FileSys.tmpName ()
-      val _ = let val out = TextIO.openOut tmpfile
-              in
-                List.app (fn h => TextIO.output(out, h)) dep_hashes;
-                TextIO.closeOut out
-              end
-      val cachekey = SHA1.sha1_file {filename = tmpfile}
-      val _ = OS.FileSys.remove tmpfile handle OS.SysErr _ => ()
     in
-      print (cachekey ^ "\n");
-      OS.Process.success
+      case #1 (HM_Cachekey.compute_for_node depgraph node) of
+          HM_Cachekey.Key k => (print (k ^ "\n"); OS.Process.success)
+        | HM_Cachekey.Missing ms =>
+          let val first = hd ms
+          in
+            die ("--cachekey: dependency " ^ #name first ^
+                 " (" ^ #path first ^ ") does not exist")
+          end
     end
 
 in
@@ -1438,14 +1838,16 @@ in
       SOME thyname => let
         open Process
         val result = do_cachekey thyname
-            handle Fail s => die ("Fail exception: "^s^"\n")
+            handle internal_functions.HolmakeError s => die_raw s
+                 | Fail s => die ("Fail exception: "^s^"\n")
       in
         exit result
       end
     | NONE => let
       open Process
       val result = work()
-          handle Fail s => die ("Fail exception: "^s^"\n")
+          handle internal_functions.HolmakeError s => die_raw s
+               | Fail s => die ("Fail exception: "^s^"\n")
     in
       exit result
     end

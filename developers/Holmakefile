@@ -1,24 +1,15 @@
 OPTIONS = NO_OVERLAY
-EXTRA_CLEANS = comparelogs generateBuildSummary genUseScript
-MLTON_SRCS = mlton-srcs/Binarymap.sml mlton-srcs/Listsort.sml comparelogs.mlb
+EXTRA_CLEANS = generateBuildSummary genUseScript
 
 .PHONY: all
-all: comparelogs generateBuildSummary
+all: generateBuildSummary
 
 ifdef POLY
 
 all: genUseScript
 
-comparelogs: poly-comparelogs.ML comparelogs.sml
-	$(POLYC) $< -o $@
-
 genUseScript: genUseScript.sml $(dprot $(HOLDIR)/tools/util/GetOpt.sml)
 	$(POLYC) $< -o $@
-
-else
-
-comparelogs: comparelogs.uo
-	$(MOSMLC) -o $@ $<
 
 endif
 

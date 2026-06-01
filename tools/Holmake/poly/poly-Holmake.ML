@@ -21,6 +21,9 @@ val _ = use "../../util/FunctionalRecordUpdate.sml";
 val _ = useC "core/HM_Core_Cline";
 val _ = useC "deps/HM_DepGraph";
 val _ = useC "core/HM_BuildLock";
+val _ = useC "core/HM_TheoryDat";
+val _ = useC "core/HM_Cachekey";
+val _ = useS "poly/HM_CacheFetch";
 val _ = useC "core/HM_GraphBuildJ1";
 val _ = useC "poly/HM_Cline";
 val _ = useC "poly/GraphExtra";
@@ -30,6 +33,7 @@ val _ = useC "poly/ProcessMultiplexor";
 val _ = useC "poly/MB_Monitor";
 val _ = useS "poly/multibuild";
 val _ = useS "poly/BuildCommand";
+val _ = useC "core/HostName";
 val _ = useS "core/Holmake";
 
 val die_with = Holmake.die_with

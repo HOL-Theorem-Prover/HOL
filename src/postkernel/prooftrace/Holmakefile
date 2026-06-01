@@ -1,9 +1,21 @@
-ifdef HAVE_WORD64
-all: $(DEFAULT_TARGETS)
-else
-all:
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
 endif
 .PHONY: all
 
+HAVE_MLTON = $(if $(NO_MLTON),,$(which mlton))
+ifneq ($(HAVE_MLTON),)
 replay-test: replay-test.mlb replay-test.sml
 	mlton -default-type intinf $<
+
+pft-replay-test: pft-replay-test.mlb pft-replay-test.sml
+	mlton -default-type intinf $<
+
+ifdef HAVE_WORD64
+all: pft-replay-test replay-test
+else
+all: pft-replay-test
+endif
+endif
+
+EXTRA_CLEANS = replay-test pft-replay-test

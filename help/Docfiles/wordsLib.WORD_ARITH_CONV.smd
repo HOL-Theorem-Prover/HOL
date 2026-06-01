@@ -1,0 +1,40 @@
+>>__ load "wordsLib"; Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"}; open simpLib;
+## `WORD_ARITH_CONV`
+
+``` hol4
+wordsLib.WORD_ARITH_CONV : conv
+```
+
+------------------------------------------------------------------------
+
+Conversion based on `WORD_ARITH_ss` and `WORD_ARITH_EQ_ss`.
+
+The conversion `WORD_ARITH_CONV` converts word arithmetic expressions
+into a canonical form.
+
+### Example
+
+`WORD_ARITH_CONV` fixes the sign of equalities.
+
+``` hol4
+>>__ load "wordsLib";
+
+>>+ SIMP_CONV (std_ss++wordsLib.WORD_ARITH_ss++wordsLib.WORD_ARITH_EQ_ss) [] “$- a = b : 'a word”
+
+>>+ wordsLib.WORD_ARITH_CONV “$- a = b : 'a word”
+```
+
+### Comments
+
+The fragment `WORD_ARITH_EQ_ss` and conversion `WORD_CONV` do not adjust
+the sign of equalities.
+
+### See also
+
+[`wordsLib.WORD_ARITH_ss`](#wordsLib.WORD_ARITH_ss),
+[`wordsLib.WORD_ARITH_EQ_ss`](#wordsLib.WORD_ARITH_EQ_ss),
+[`wordsLib.WORD_LOGIC_CONV`](#wordsLib.WORD_LOGIC_CONV),
+[`wordsLib.WORD_MUL_LSL_CONV`](#wordsLib.WORD_MUL_LSL_CONV),
+[`wordsLib.WORD_CONV`](#wordsLib.WORD_CONV),
+[`wordsLib.WORD_BIT_EQ_CONV`](#wordsLib.WORD_BIT_EQ_CONV),
+[`wordsLib.WORD_EVAL_CONV`](#wordsLib.WORD_EVAL_CONV)

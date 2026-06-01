@@ -33,22 +33,21 @@ structure CMap :> sig
   val listItems : 'a dict -> ({Name:string,Thy:string} * (hol_type * 'a) list) list
 end =
 struct
-  structure RBM = Redblackmap
   fun tstamp () = Time.toReal (Time.now())
-  type 'a dict = ({Name:string,Thy:string}, ('a * real) TypeNet.typenet)RBM.dict
+  type 'a dict = ('a * real) TypeNet.typenet KNametab.table
   fun listItems d =
-      RBM.listItems d |> map (fn (k,v) => (k, map (apsnd #1) (TypeNet.listItems v)))
+      KNametab.dest d |> map (fn (k,v) => (k, map (apsnd #1) (TypeNet.listItems v)))
   fun insert (d,k,v) = let
     val v = (v,tstamp())
     val {Name,Thy,Ty} = dest_thy_const k
     val rbk = {Name = Name, Thy = Thy}
   in
-    case RBM.peek(d, rbk) of
-      NONE => RBM.insert(d,rbk,TypeNet.insert(TypeNet.empty,Ty,v))
+    case KNametab.lookup d rbk of
+      NONE => KNametab.update (rbk, TypeNet.insert(TypeNet.empty,Ty,v)) d
     | SOME tynet => let
         val tynet' = TypeNet.insert(tynet,Ty,v)
       in
-        RBM.insert(d,rbk,tynet')
+        KNametab.update (rbk, tynet') d
       end
   end
 
@@ -56,7 +55,7 @@ struct
     val {Name,Thy,Ty} = dest_thy_const k
     val rbk = {Name = Name, Thy = Thy}
   in
-    case RBM.peek(d,rbk) of
+    case KNametab.lookup d rbk of
       NONE => NONE
     | SOME tynet => let
       in
@@ -84,15 +83,13 @@ struct
           end
       end
   end
-  fun cmp ({Name=n1,Thy=t1},{Name=n2,Thy=t2}) =
-      pair_compare(String.compare,String.compare) ((n1,t1),(n2,t2))
-  fun empty() = RBM.mkDict cmp
+  fun empty() = KNametab.empty
 
   fun exact_peek (d : 'a dict,k) = let
     val {Name,Thy,Ty} = dest_thy_const k
     val rbk = {Name = Name, Thy = Thy}
   in
-    case RBM.peek(d,rbk) of
+    case KNametab.lookup d rbk of
       NONE => NONE
     | SOME tynet => Option.map #1 (TypeNet.peek(tynet,Ty))
   end

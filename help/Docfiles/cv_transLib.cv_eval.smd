@@ -1,0 +1,42 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `cv_eval`
+
+``` hol4
+cv_transLib.cv_eval : term -> thm
+```
+
+------------------------------------------------------------------------
+
+Uses `cv_computeLib` to evaluate closed terms, equipped with
+translations from `cv_transLib`.
+
+Provides a user-friendly interface to `cv_computeLib.cv_compute`, as
+long as `cv_transLib` has been used to translate all constants in the
+given input term.
+
+### Failure
+
+When the input term contains either free variables or constants which
+have not yet been translated.
+
+### Example
+
+``` hol4
+>>__ load "cv_transLib";
+
+>> cv_transLib.cv_trans arithmeticTheory.FACT;
+>> cv_transLib.cv_eval “FACT 50”;
+```
+
+### See also
+
+[`cv_transLib.cv_trans`](#cv_transLib.cv_trans),
+[`cv_transLib.cv_trans_pre`](#cv_transLib.cv_trans_pre),
+[`cv_transLib.cv_trans_pre_rec`](#cv_transLib.cv_trans_pre_rec),
+[`cv_transLib.cv_trans_rec`](#cv_transLib.cv_trans_rec),
+[`cv_transLib.cv_auto_trans`](#cv_transLib.cv_auto_trans),
+[`cv_transLib.cv_auto_trans_pre`](#cv_transLib.cv_auto_trans_pre),
+[`cv_transLib.cv_auto_trans_pre_rec`](#cv_transLib.cv_auto_trans_pre_rec),
+[`cv_transLib.cv_auto_trans_rec`](#cv_transLib.cv_auto_trans_rec),
+[`cv_transLib.cv_eval_raw`](#cv_transLib.cv_eval_raw),
+[`cv_transLib.cv_termination_tac`](#cv_transLib.cv_termination_tac)

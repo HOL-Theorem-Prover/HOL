@@ -1,0 +1,38 @@
+>>__ load "wordsLib"; Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"};
+## `output_words_as_oct`
+
+``` hol4
+wordsLib.output_words_as_oct : unit -> unit
+```
+
+------------------------------------------------------------------------
+
+Makes word literals pretty-print as octal.
+
+A call to `output_words_as_oct` will make word literals output in octal
+format.
+
+### Example
+
+``` hol4
+>>__ load "wordsLib";
+
+>>+ “032w:word5”;
+>>+ wordsLib.output_words_as_oct();
+>>+ “032w:word5”;
+>>+ wordsLib.output_words_as_dec();
+>>+ “032w:word5”;
+```
+
+### Comments
+
+Printing and parsing in octal is controlled by the reference
+`base_tokens.allow_octal_input`. A call to `output_words_as_oct` sets
+this value to true.
+
+### See also
+
+[`wordsLib.remove_word_printer`](#wordsLib.remove_word_printer),
+[`wordsLib.output_words_as_dec`](#wordsLib.output_words_as_dec),
+[`wordsLib.output_words_as_bin`](#wordsLib.output_words_as_bin),
+[`wordsLib.output_words_as_hex`](#wordsLib.output_words_as_hex)

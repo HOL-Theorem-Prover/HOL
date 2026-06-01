@@ -2054,6 +2054,12 @@ Proof
   REWRITE_TAC [FRONT_DEF, NOT_CONS_NIL]
 QED
 
+Theorem FRONT_CONS_NOT_NIL :
+    !h t. t <> [] ==> FRONT (h::t) = h :: FRONT t
+Proof
+    RW_TAC std_ss [FRONT_DEF]
+QED
+
 Theorem LENGTH_FRONT_CONS[simp]:
  !x xs. LENGTH (FRONT (x::xs)) = LENGTH xs
 Proof

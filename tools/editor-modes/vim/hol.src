@@ -108,6 +108,26 @@ endf
 
 fu! HOLUQGoal()
   silent keepjumps normal pG
+  " If the yanked region contains a `Resume <thm>[<label>]:` header,
+  " set up the suspended sub-goal interactively via markerLib instead of
+  " falling through to the Theorem-block handling below.
+  let l:rthm = ''
+  let l:rlabel = ''
+  for l:i in range(1, line('$'))
+    let l:m = matchlist(getline(l:i), '^Resume\s\+\(\S\{-}\)\[\([^]]\+\)\]\s*:')
+    if !empty(l:m)
+      let l:rthm = l:m[1]
+      let l:rlabel = l:m[2]
+      break
+    endif
+  endfor
+  if l:rthm !=# ''
+    keepjumps %d_
+    call setline(1,
+      \ 'markerLib.set_suspended_goal {suspension_name = "' . l:rthm
+      \ . '", label_name = "' . l:rlabel . '"}')
+    return
+  endif
   if search('^Proof','cbW')
     silent keepjumps normal I``) (BasicProvers.mk_tacmod "
     silent keepjumps normal VGJ

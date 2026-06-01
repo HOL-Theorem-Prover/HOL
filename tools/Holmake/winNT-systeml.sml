@@ -97,6 +97,7 @@ val version = ""
 val ML_SYSNAME = ""
 val release = ""
 val DOT_PATH = ""
+val clone_cmd = ""
 val DEFAULT_STATE = fullPath [HOLDIR, "bin", "hol.state"]
 
 val isUnix = false

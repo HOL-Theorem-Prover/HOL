@@ -15,27 +15,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.USERNAME }}/hol-dev
           tags: |
             type=sha,prefix=ci-,suffix=-stdknl
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ env.USERNAME }}
           password: ${{ env.PASSWORD }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: developers/docker-ci/Dockerfile
@@ -46,7 +46,7 @@ jobs:
             CVC_VERSION=5
             CSDP_VERSION=1
             # NOTE: the arg value cannot be quoted here:
-            BUILDOPTS=--stdknl -j4 -t
+            BUILDOPTS=--no-cache --stdknl -j4 -t
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -54,27 +54,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.USERNAME }}/hol-dev
           tags: |
             type=sha,prefix=ci-,suffix=-expk
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ env.USERNAME }}
           password: ${{ env.PASSWORD }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: developers/docker-ci/Dockerfile
@@ -85,7 +85,7 @@ jobs:
             CVC_VERSION=5
             CSDP_VERSION=1
             # NOTE: the arg value cannot be quoted here:
-            BUILDOPTS=--expk -j4 -t
+            BUILDOPTS=--no-cache --expk -j4 -t
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -93,27 +93,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.USERNAME }}/hol-dev
           tags: |
             type=sha,prefix=ci-,suffix=-mosml
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ env.USERNAME }}
           password: ${{ env.PASSWORD }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: developers/docker-ci/Dockerfile
@@ -121,7 +121,7 @@ jobs:
           build-args: |
             SML=mosml
             # NOTE: the arg value cannot be quoted here:
-            BUILDOPTS=--expk --seq=tools/sequences/upto-parallel -t
+            BUILDOPTS=--no-cache --expk --seq=tools/sequences/upto-parallel -t
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -129,27 +129,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.USERNAME }}/hol-dev
           tags: |
             type=sha,prefix=ci-,suffix=-otknl
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ env.USERNAME }}
           password: ${{ env.PASSWORD }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: developers/docker-ci/Dockerfile
@@ -160,6 +160,6 @@ jobs:
             CVC_VERSION=5
             CSDP_VERSION=1
             # NOTE: the arg value cannot be quoted here:
-            BUILDOPTS=--otknl -j2 --seq=tools/sequences/upto-parallel
+            BUILDOPTS=--no-cache --otknl -j2 --seq=tools/sequences/upto-parallel
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

@@ -1,6 +1,7 @@
 (*===========================================================================*)
 (* Exercise the automatic termination prover                                 *)
 (*===========================================================================*)
+
 Theory termination_prover
 Ancestors
   words list arithmetic numpair[qualified] nlist[qualified]

@@ -3,9 +3,26 @@
 % =====================================================================
 
 \documentclass[12pt,fleqn]{book}
+\input{book-title}    % defines \HOLbookTitle from book.toml's title
 \usepackage[notindex]{tocbibind}
 
-\usepackage[numbers,sort&compress]{natbib}
+% Keep the PDF citation style in the same family as the mdbook
+% side, which renders via chicago-author-date.csl through pandoc
+% citeproc as `(Author Year)` and `(Author Year, loc)`.
+%
+%   [authoryear] selects the author-year mode (vs natbib's default
+%               [numbers] which would give "[1]" style cites).
+%   [round]     emits round parens instead of natbib's default
+%               square brackets, matching the mdbook's parens.
+%   \cite ≡ \citep ensures every `\cite{key}` in the .smd source
+%               renders parenthetically -- by default natbib aliases
+%               `\cite` to `\citet` (text-style "Author (Year)") on
+%               bare cites but to `\citep` on cites with locators,
+%               producing a mixed look across the document.  The
+%               .smd source predates this style choice, so a
+%               uniform \citep is the closest match to the mdbook.
+\usepackage[authoryear,round]{natbib}
+\let\cite\citep
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 
@@ -21,12 +38,34 @@
 \usepackage{../LaTeX/proof}
 \usepackage{supertabular}
 
+% holtexbasic.sty pulls in `underscore` without options.  Without
+% `[strings]`, underscore activates `_` at \begin{document} but
+% skips running its `\UnderscoreCommands` protection list, so the
+% active `_` breaks `\csname r@...\endcsname` lookups on label
+% names like `the-stateful-simpset-srw_ss` that pandoc emits.
+% Pre-load underscore with `[strings]` so the protections run.
+% holtexbasic's later unoptioned \usepackage{underscore} is then
+% a no-op (already loaded).
+%
+% Then pre-declare `\US_cite` so underscore's `\do\cite` step
+% skips its protection wrapper for `\cite`.  Underscore wraps
+% optional-arg-accepting commands such that `\cite[#1]{#2}` puts
+% `\cite[#1]` inside its own group, breaking natbib's parse and
+% leaving `[` as the (undefined) cite key.  None of the cite
+% keys this manual uses contain `_`, so we don't need cite-
+% argument protection in any case.
+\expandafter\def\csname US_cite\endcsname{}
+\usepackage[strings]{underscore}
 \usepackage{../../src/TeX/holtexbasic}
 \usepackage{fancyvrb}
 \usepackage[format=hang,justification=raggedright]{caption}  % multi-line figure caption
 \usepackage{desc-unicode}
+\usepackage{array}     % needed for >{...}p{...} column specs that pandoc emits
 \usepackage{longtable}
 \usepackage{booktabs}
+\usepackage{calc}      % needed for \real{...} in pandoc-emitted column widths
+\providecommand{\tightlist}{% pandoc fragments emit this for tight lists
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \usepackage{etoolbox} % For patchcmd
 
 % Remove top and bottom horizontal lines from tables:
@@ -58,7 +97,7 @@
 
 \usepackage[hidelinks,hypertexnames=false]{hyperref}
 \hypersetup{
-  pdftitle={The HOL System DESCRIPTION},
+  pdftitle={\HOLbookTitle},
   pdfauthor={The HOL4 contributors},
   pdfsubject={HOL4},
   pdfkeywords={Interactive Theorem Proving; Higher Order Logic},
@@ -74,7 +113,7 @@
 \newtheorem{definition}[equation]{Definition}
 \newcounter{none}
 
-\makeindex[intoc]
+\makeindex[intoc,name=description]
 \begin{document}
 
    \setlength{\unitlength}{1mm}           % unit of length = 1mm
@@ -114,17 +153,10 @@
 
    % \part{The HOL System \label{HOL-SYS}}
 
-   \include{system}                      % embedding HOL logic in ML
-   \include{drules}                      % derived rules
-   \include{conv}                        % conversions
-   \include{tactics}                     % tactics
-     \include{advanced_tactics}          % a section within tactics chapter
-   \include{theories}
-   \include{math}                        % math theories
-   \include{definitions}
-   \include{libraries}
-   \include{modern-syntax-chapter}
-   \include{misc}
+   % chapters-include.tex is generated from chapters.txt by
+   % Manual/Tools/gen_chap_lists; the Holmakefile rebuilds it
+   % whenever chapters.txt changes.
+   \input{chapters-include}
 
    % ---------------------------------------------------------------------
    % part 3: Theorem Proving with HOL

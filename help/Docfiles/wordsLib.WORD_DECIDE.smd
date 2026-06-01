@@ -1,0 +1,31 @@
+>>__ load "wordsLib"; Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"};
+## `WORD_DECIDE`
+
+``` hol4
+wordsLib.WORD_DECIDE : conv
+```
+
+------------------------------------------------------------------------
+
+A decision procedure for words.
+
+The conversion `WORD_DECIDE` is the same as
+`WORD_DP WORD_CONV bossLib.DECIDE`.
+
+### Example
+
+``` hol4
+>>__ load "wordsLib";
+
+>>+ wordsLib.WORD_DECIDE “a && (b !! a) = a !! a && b”
+
+>>+ wordsLib.WORD_DECIDE “a + 2w <+ 4w = a <+ 2w \/ 13w <+ a :word4”
+
+>>+ wordsLib.WORD_DECIDE “a < 0w = 1w <+ a : word2”
+
+>>+ wordsLib.WORD_DECIDE “(?w:word4. 14w <+ w) /\ ~(?w:word4. 15w <+ w)”
+```
+
+### See also
+
+[`wordsLib.WORD_DP`](#wordsLib.WORD_DP)

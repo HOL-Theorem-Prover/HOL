@@ -156,24 +156,24 @@ infix >* >>-
 val op>>- =  op >-
 fun (m1 >* m2) = lift2 (fn x => fn y => (x,y)) m1 m2
 type preterm = Preterm.preterm
-type env = (term, preterm) Binarymap.dict * int
+type env = preterm Termtab.table * int
 type 'a t = env -> env * 'a
 fun getmap E = (E, #1 E)
 val newconst : Preterm.preterm t = fn (vmap, i) =>
     ((vmap, i + 1), pmk_var("UC" ^ Int.toString i, i))
 fun newvar bv (m:'a t) : (preterm * 'a) t = fn (vmap,i) =>
     let val pv = pmk_var(#1 (dest_var bv) (* ^ Int.toString i *), i)
-        val vmap' = Binarymap.insert(vmap, bv, pv)
+        val vmap' = Termtab.update (bv, pv) vmap
         val ((vmap'',i'), result) = m (vmap', i + 1)
     in
       ((vmap, i'), (pv, result))
     end
 in
-val env0:env = (Binarymap.mkDict Term.compare, 0)
+val env0:env = (Termtab.empty, 0)
 fun build_preterm rdb ct : Preterm.preterm t =
     let
       fun varmap ct e =
-          case Binarymap.peek(e,ct) of
+          case Termtab.lookup e ct of
               NONE => raise Fail ("Free variable: "^term_to_string ct)
             | SOME pt => return pt
       fun recurse ct =

@@ -16,6 +16,15 @@ sig
   val process_cline :
       unit -> {SRCDIRS : (string * int) list} buildcline_dtype.final_options
 
+  val extract_cache_args : string list -> string list
+      (* [extract_cache_args argv] picks out the --cache-dir / --no-cache
+         / --use-cache tokens (in either separate or joined form) from
+         [argv] and returns them in argv order, preserving each option's
+         argument.  Used by the build driver to forward only what the
+         user actually wrote, so that a Holmakefile's
+         CLINE_OPTIONS = --use-cache (or --no-cache) is not silently
+         overridden at the sub-Holmake command-line. *)
+
 
   val map_dir : (string * string -> unit) -> string -> unit
                 (* f gets dirname * filename *)
@@ -51,8 +60,15 @@ sig
            dir is destination directory
            (d,f) is source file info (directory and file) *)
 
-  val build_help : bool -> unit
-    (* boolean says whether or not to build the theory graph *)
+  val build_help : {graph: bool, no_mdbook: bool, no_helpdocs: bool} ->
+                   unit
+    (* graph: build the theory dependency graph
+       no_mdbook: don't try to build the Reference mdbook (forces the
+         fallback per-entry HTML pandoc pass even if mdbook is in PATH)
+       no_helpdocs: skip the entire help-documentation build (no
+         process_docfiles, no mdbook, no makebase).  Useful for partial
+         build sequences that haven't compiled every HOL library and so
+         can't successfully evaluate polyscripter `>>` directives. *)
 
   val build_dir : (string -> unit) -> int -> (string * int) -> unit
       (* build_dir Holmake i (dir, j)

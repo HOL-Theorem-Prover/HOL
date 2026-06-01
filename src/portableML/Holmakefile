@@ -1,4 +1,7 @@
 CLINE_OPTIONS = --no_overlay
+ifdef POLY
+CLINE_OPTIONS += --poly_not_hol
+endif
 
 MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
@@ -24,6 +27,9 @@ Inttab.uo: Inttab.sml Table.ui
 	$(MOSMLC) Table.ui -c $<
 
 Symtab.uo: Symtab.sml Table.ui
+	$(MOSMLC) Table.ui -c $<
+
+Chartab.uo: Chartab.sml Table.ui
 	$(MOSMLC) Table.ui -c $<
 
 SymGraph.uo: SymGraph.sml Graph.ui

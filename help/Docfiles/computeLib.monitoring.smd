@@ -1,0 +1,42 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `monitoring`
+
+``` hol4
+computeLib.monitoring : (term -> bool) option ref
+```
+
+------------------------------------------------------------------------
+
+Monitoring support for evaluation.
+
+The reference variable `monitoring` provides a simple way to view the
+operation of `EVAL`, `EVAL_RULE`, and `EVAL_TAC`. The initial value of
+`monitoring` is `NONE`. If one wants to monitor the expansion of a
+function, defined with constant `c`, then setting `monitoring` to
+`SOME (same_const c)` will tell the system to print out the expansion of
+`c` by the evaluation entrypoints. To monitor the expansions of a
+collection of functions, defined with `c1`,...,`cn`, then `monitoring`
+can be set to
+
+``` hol4
+   SOME (fn x => same_const c1 x orelse ... orelse same_const cn x)
+```
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>> val [FACT] = decls "FACT";
+
+>> computeLib.monitoring := SOME (same_const FACT);
+
+>> EVAL (Term `FACT 4`);
+```
+
+### See also
+
+[`computeLib.RESTR_EVAL_CONV`](#computeLib.RESTR_EVAL_CONV),
+[`Term.decls`](#Term.decls)

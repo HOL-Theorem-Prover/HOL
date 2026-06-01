@@ -87,7 +87,7 @@ fun get_heap_name () =
             val _ = List.app holpathdb.extend_db holpathdb_extensions
             fun foldthis {vname,path} env = env_extend (vname, [LIT path]) env
             val env0 = holpathdb.fold foldthis (base_environment())
-            val (env, _, _) = ReadHMF.read "Holmakefile" env0
+            val (env, _, _, _) = ReadHMF.read "Holmakefile" env0
             fun envlist id =
                 map dequote (tokenize (perform_substitution env [VREF id]))
             val heap_v = envlist "HOLHEAP"
@@ -570,6 +570,10 @@ in
                                          NONE => ""
                                        | SOME s => "\n" ^ s)))
                  (#checkfors options);
+        if QUse.hadError () then (
+          diag "Parse errors during run; exiting failure";
+          OS.Process.exit OS.Process.failure)
+        else ();
         diag "Run done; about to exit successfully";
         OS.Process.exit OS.Process.success
       end

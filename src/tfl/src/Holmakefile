@@ -1,3 +1,4 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
 
 all: $(DEFAULT_TARGETS) selftest.exe
 

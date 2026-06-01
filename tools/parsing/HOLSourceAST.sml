@@ -632,7 +632,8 @@ fun isOnlyComments s = let
   fun go cm p =
     case cur p of
       #"\000" => true
-    | #"(" => cur (p+1) = #"*" andalso go (cm + 1) (p+2)
+    | #"(" => if cur (p+1) = #"*" then go (cm + 1) (p+2)
+              else cm > 0 andalso go cm (p+1)
     | #"*" => cm > 0 andalso if cur (p+1) = #")" then go (cm - 1) (p+2) else go cm (p+1)
     | c => (cm > 0 orelse Char.isSpace c) andalso go cm (p+1)
   in go 0 start end
@@ -670,8 +671,31 @@ fun updateCursorSimple ({body, evts, file, pos, line, col, idx}: cursor, p) = le
   val (line, col) = firstLine pos
   in {body = body, evts = evts, file = file, pos = p, line = line, col = col, idx = idx} end
 
-fun updateCursor (cur: cursor as {body, evts, pos, ...}, p): cursor =
-  if p < pos then updateCursor (newCursor body evts, p) (* TODO walk backwards *)
+fun updateCursor (cur: cursor as {body, evts, pos, line, col, idx, ...}, p): cursor =
+  if p < pos then
+    (* Backward seek. Falls back to reset only when events (e.g. #line pragmas)
+       were applied in (p, pos] and would need to be undone. *)
+    let val eventsCrossed =
+          idx > 0 andalso
+          eventPos (DArray.sub (#evts evts, idx - 1)) > p
+    in if eventsCrossed then updateCursor (newCursor body evts, p)
+       else if p >= pos - col then
+         (* p is on the same line as pos: pos - col is the line start *)
+         {body = body, evts = evts, file = #file cur,
+          pos = p, line = line, col = col - (pos - p), idx = idx}
+       else
+         (* p is on an earlier line: one backward scan finds both the newline
+            count (for line) and the line start (for col) *)
+         let fun scan i nls =
+               if i < 0 then (nls, 0)
+               else if DString.sub (body, i) = #"\n" then
+                 if i >= p then scan (i-1) (nls+1) else (nls, i+1)
+               else scan (i-1) nls
+             val (nls, lineStart) = scan (pos-1) 0
+         in {body = body, evts = evts, file = #file cur,
+             pos = p, line = line - nls, col = p - lineStart, idx = idx}
+         end
+    end
   else let
     fun readEvts (cur as {evts, idx, ...}) =
       case SOME (DArray.sub (#evts evts, idx)) handle Subscript => NONE of

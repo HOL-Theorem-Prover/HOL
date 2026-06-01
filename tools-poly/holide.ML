@@ -29,6 +29,10 @@ datatype props =
 | PIdContent of string
 | PDeclaredAt of {file: string, startLine: int, endLine: int, startPosition: int, endPosition: int}
 | PType of PolyML.NameSpace.Values.typeExpression
+| PRefId of FixedInt.int
+| PDefId of FixedInt.int
+| PStructureAt of string
+| PReferences of bool
 | POther of PolyML.ptProperties
 
 datatype built = Built of (FixedInt.int * FixedInt.int) * props list * built list
@@ -42,8 +46,7 @@ val initialize:
     progress: int -> unit,
     error: error -> unit,
     runtimeExn: exn -> unit,
-    mlParseTree: PolyML.parseTree -> unit,
-    holParseTree: HOLSourceAST.dec -> unit
+    builtTree: built -> unit
   } -> unit
 
 val moveUp: subtree -> subtree
@@ -58,6 +61,15 @@ val at: PolyML.parseTree list -> int list -> subtree
 
 val build: PolyML.parseTree -> built
 val buildList: PolyML.parseTree option -> built list
+
+type built_subtree = (built * built list) option
+type built_trees = built list
+
+val builtMoveUp: built_subtree -> built_subtree
+val builtNavigateTo: built_subtree -> {startOffset: FixedInt.int, endOffset: FixedInt.int} -> built_subtree
+val builtNavigateTo': built_trees -> {startOffset: FixedInt.int, endOffset: FixedInt.int} -> built_subtree
+
+val builtGetThy: props list -> string option
 
 end =
 struct
@@ -99,6 +111,10 @@ datatype props =
 | PIdContent of string
 | PDeclaredAt of {file: string, startLine: int, endLine: int, startPosition: int, endPosition: int}
 | PType of PolyML.NameSpace.Values.typeExpression
+| PRefId of FixedInt.int
+| PDefId of FixedInt.int
+| PStructureAt of string
+| PReferences of bool
 | POther of PolyML.ptProperties
 
 datatype built = Built of (FixedInt.int * FixedInt.int) * props list * built list
@@ -158,6 +174,10 @@ fun trProps [] = []
     PDeclaredAt {file = file, startLine = FixedInt.toInt startLine, endLine = FixedInt.toInt endLine,
                  startPosition = FixedInt.toInt startPosition, endPosition = FixedInt.toInt endPosition} :: trProps ls
   | trProps (PolyML.PTtype t :: ls) = PType t :: trProps ls
+  | trProps (PolyML.PTrefId i :: ls) = PRefId i :: trProps ls
+  | trProps (PolyML.PTdefId i :: ls) = PDefId i :: trProps ls
+  | trProps (PolyML.PTstructureAt {file,...} :: ls) = PStructureAt file :: trProps ls
+  | trProps (PolyML.PTreferences (exp, _) :: ls) = PReferences exp :: trProps ls
   | trProps (PolyML.PTparent _ :: ls) = trProps ls
   | trProps (PolyML.PTfirstChild _ :: ls) = trProps ls
   | trProps (PolyML.PTpreviousSibling _ :: ls) = trProps ls
@@ -619,7 +639,7 @@ end
 
 fun initialize {
   text, filename, parseError, compilerOut, toplevelOut, progress, error,
-  runtimeExn, mlParseTree, holParseTree
+  runtimeExn, builtTree
 } = let
   datatype chunk
     = Chunk of string
@@ -648,7 +668,6 @@ fun initialize {
     case parseDec () of
       NONE => true
     | SOME dec => (
-      holParseTree dec;
       case expandDec dec of
         HOLSourceAST.DecExpansion {result = [], ...} => fetchDec ()
       | dec => (
@@ -684,7 +703,7 @@ fun initialize {
       else (curToken := toState (); read2 ())
   val serial = ref 1
   fun ptFn NONE = ()
-    | ptFn (SOME pt) = (mlParseTree pt; ptRef := moveDown (SOME pt) :: !ptRef)
+    | ptFn (SOME pt) = ptRef := moveDown (SOME pt) :: !ptRef
   fun codeFn NONE () = ()
     | codeFn (SOME code) () = let
       val {fixes, values, structures, signatures, functors, types} = code ()
@@ -714,11 +733,19 @@ fun initialize {
     case !curToken of
       (_, "") => ()
     | _ => ((PolyML.compiler (read2, parameters) () handle e => runtimeExn e); finish ()))
+  fun emitBuilt () = let
+    val decs = !decsRef
+    val pts = rev (!ptRef)
+    val (acc, _) = annotateDecs decs (PTTop pts) []
+    in app builtTree (rev acc) end
+    handle _ => () (* annotation can fail if trees are out of sync *)
   fun loop () = (
     DArray.clear queue;
     if fetchDec () then () else (
-      idx := 0; spans := []; ptRef := []; curToken := toState ();
+      idx := 0; spans := []; curToken := toState ();
       finish ();
+      emitBuilt ();
+      ptRef := [];
       loop ()))
   in loop () end;
 
@@ -752,5 +779,48 @@ fun navigateTo' [] _ = NONE
     if startOffset < startPosition
     then navigateTo' trees target
     else navigateTo (SOME tree) target
+
+type built_subtree = (built * built list) option
+type built_trees = built list
+
+fun builtMoveUp NONE = NONE
+  | builtMoveUp (SOME (_, [])) = NONE
+  | builtMoveUp (SOME (_, parent :: rest)) = SOME (parent, rest)
+
+fun builtNavigateTo NONE _ = NONE
+  | builtNavigateTo (tree as SOME (Built (sp as (startPosition, endPosition), props, children), parents))
+               (target as {startOffset, endOffset}) =
+    if startOffset >= startPosition andalso endOffset <= endPosition
+    then (* It's this node or a child. *)
+      case children of
+        [] => tree (* No children. *)
+      | first :: rest => let
+        (* See which child it is. *)
+        fun findChild [] = NONE
+          | findChild (c :: cs) = let
+            val Built ((s, e), _, _) = c
+            in
+              if startOffset >= s andalso endOffset <= e
+              then SOME c
+              else findChild cs
+            end
+        in
+          case findChild (first :: rest) of
+            NONE => tree (* In this *)
+          | SOME child => builtNavigateTo (SOME (child, Built (sp, props, children) :: parents)) target
+        end
+    else (* Must go out. *)
+      builtNavigateTo (builtMoveUp tree) target
+
+fun builtNavigateTo' [] _ = NONE
+  | builtNavigateTo' ((tree as Built ((startPosition, _), _, _)) :: trees)
+                (target as {startOffset, ...}) =
+    if startOffset < startPosition
+    then builtNavigateTo' trees target
+    else builtNavigateTo (SOME (tree, [])) target
+
+fun builtGetThy [] = NONE
+  | builtGetThy (PThy s :: _) = SOME s
+  | builtGetThy (_ :: ps) = builtGetThy ps
 
 end;

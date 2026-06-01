@@ -45,4 +45,7 @@ struct
   fun qx_choosel_then [] ttac = ttac
     | qx_choosel_then (q::qs) ttac = qx_choose_then q (qx_choosel_then qs ttac)
 
+  fun qid_specl_tac []     = Tactical.ALL_TAC
+    | qid_specl_tac (h::t) = qid_specl_tac t >> qid_spec_tac h;
+
 end;

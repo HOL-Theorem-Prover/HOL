@@ -13,7 +13,7 @@ ARG BUILDPLATFORM
 
 # GitHub Actions' hardware specification for Linux virtual machines: 2-core CPU (x86_64)
 # By default we use 4 cores in other building environments (e.g. Docker Hub autobuilds)
-ARG BUILDOPTS="--expk -j4"
+ARG BUILDOPTS="--no-cache --expk -j4"
 ARG SML=poly
 
 WORKDIR /ML/HOL

@@ -1,0 +1,32 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `is_let`
+
+``` hol4
+boolSyntax.is_let : term -> bool
+```
+
+------------------------------------------------------------------------
+
+Tests a term to see if it is a `let`-expression.
+
+If `tm` is a term of the form `LET M N`, then `dest_let tm` returns
+`true`. Otherwise, it returns `false`.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>> Term `LET f x`;
+
+>> is_let it;
+
+>>+ is_let (Term `let x = P /\ Q in x \/ x`);
+```
+
+### See also
+
+[`boolSyntax.mk_let`](#boolSyntax.mk_let),
+[`boolSyntax.dest_let`](#boolSyntax.dest_let)

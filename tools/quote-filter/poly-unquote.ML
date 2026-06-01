@@ -50,6 +50,9 @@ fun main() = let
 
   fun read _ = TextIO.input instrm
   fun write s = TextIO.output (outstrm, s)
+  val {print = errPrint, hadError} =
+      HOLSourceParser.trackingPrint
+        (fn s => TextIO.output (TextIO.stdErr, s))
   val _ = if quotefixp then
     quotefix.run read write
   else let
@@ -57,13 +60,13 @@ fun main() = let
     val {read, ...} = mkPullTranslator {
       read = read,
       filename = infilename,
-      parseError = HOLSourceParser.filelineParseError (fn s => TextIO.output (TextIO.stdErr, s)),
+      parseError = HOLSourceParser.filelineParseError errPrint,
       quietOpen = quietOpen }
     fun loop () = case read () of "" => () | s => (write s; loop ())
     in loop () end
 in
   closefn ();
-  exit success
+  exit (if hadError () then failure else success)
 end handle e => (
   TextIO.output (TextIO.stdErr, "Uncaught exception" ^
     (case PolyML.Exception.exceptionLocation e of

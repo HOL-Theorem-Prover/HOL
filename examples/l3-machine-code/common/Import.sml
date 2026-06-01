@@ -57,7 +57,7 @@ fun log_constant s0 =
     end
 fun start thy = new_theory thy
 fun finish i = (
-  Feedback.set_trace "TheoryPP.include_docs" i;
+  Feedback.set_trace "TheoryPP.include_html_docs" i;
   export_theory ()
 )
 

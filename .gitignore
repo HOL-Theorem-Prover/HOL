@@ -3,6 +3,7 @@
 *Theory.sml
 *Theory.html
 *Theory.dat
+*.dumpedheap
 !Theory.sig
 !Theory.sml
 *.uo
@@ -75,8 +76,8 @@ tools/build-logs
 help/Docfiles/*.txt
 help/Docfiles/HTML/*
 help/HOLindex.html
-help/index.html
 help/HOL.Help
+help/HOL.LanderFragment.html
 help/src-sml/htmlsigs
 help/src-sml/index.tex
 help/src-sml/index.txt
@@ -85,6 +86,7 @@ help/theorygraph/theories.dot
 help/theorygraph/theories.imap
 help/theorygraph/theories.svg
 help/theorygraph/theories.pdf
+help/theorygraph/thypaths.txt
 
 src/bool/SharingTables.*
 src/emit/ML/*.sml
@@ -138,3 +140,6 @@ examples/l3-machine-code/**/*-heap
 *Script_ttt.sml
 *.tttsave
 /TAGS
+/.claude/*
+!/.claude/skills/
+CLAUDE.local.md

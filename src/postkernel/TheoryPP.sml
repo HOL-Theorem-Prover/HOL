@@ -13,6 +13,13 @@ type hol_type = Type.hol_type
 type shared_writemaps = {strings : string -> int, terms : Term.term -> string}
 type shared_readmaps = {strings : int -> string, terms : string -> Term.term}
 type thminfo = DB_dtype.thminfo
+type sig_info_record = {
+  name        : string,
+  parents     : {name : string, url : string} list,
+  types       : (string * int) list,
+  constants   : (string * hol_type) list,
+  all_thms    : (string * thm * thminfo) list
+}
 type struct_info_record = {
    theory      : string,
    parents     : (string*string) list,
@@ -21,7 +28,7 @@ type struct_info_record = {
    all_thms    : (string * thm * thminfo) list,
    mldeps      : string list,
    thydata     : string list * Term.term list *
-                 (string,shared_writemaps -> HOLsexp.t)Binarymap.dict
+                 (shared_writemaps -> HOLsexp.t) Symtab.table
  }
 
 open Feedback Lib Portable Dep;
@@ -36,8 +43,6 @@ fun dest_temp_binding s =
     String.extract(s, size temp_binding_pfx, NONE)
   else raise ERR "dest_temp_binding" "String not a temp-binding"
 
-
-val pp_sig_hook = ref (fn () => ());
 
 val concat = String.concat;
 val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
@@ -90,8 +95,9 @@ fun pp_type mvartype mtype ty =
           ]
  end
 
-val include_docs = ref true
-val _ = Feedback.register_btrace ("TheoryPP.include_docs", include_docs)
+val include_html_docs = ref true
+val _ = Feedback.register_btrace
+          ("TheoryPP.include_html_docs", include_html_docs)
 
 fun classify As Ds Ts [] = (As,Ds,Ts)
   | classify As Ds Ts ((r as (s,th,i:thminfo))::rest) =
@@ -103,8 +109,388 @@ fun classify As Ds Ts [] = (As,Ds,Ts)
         | Thm => classify As Ds (r::Ts) rest
     end
 
+fun html_escape s =
+    let
+      fun esc #"<" = "&lt;"
+        | esc #">" = "&gt;"
+        | esc #"&" = "&amp;"
+        | esc #"\"" = "&quot;"
+        | esc c = String.str c
+    in
+      String.translate esc s
+    end
 
-fun pp_sig pp_thm info_record = let
+fun print_doc_html {pp_thm, pp_type = pp_type_user} info_record ostrm = let
+  val {name,parents,types,constants,all_thms} = info_record
+  val parents' =
+      Lib.sort (fn p1 : {name:string,url:string} => fn p2 => #name p1 <= #name p2)
+               parents
+  val rm_temp      = List.filter (fn (s, _, _) => not (is_temp_binding s))
+  val all_thms'    = rm_temp all_thms
+  val (axioms,definitions,theorems) = classify [] [] [] all_thms'
+  val axioms'      = psort axioms
+  val definitions' = psort definitions
+  val theorems'    = psort theorems
+  val filter_visible =
+      List.mapPartial
+        (fn (s, th, {private=false, loc, ...}:thminfo) => SOME (s, th, loc)
+          | _ => NONE)
+  val axioms''      = filter_visible axioms'
+  val definitions'' = filter_visible definitions'
+  val theorems''    = filter_visible theorems'
+  val curr_docs_dir = OS.Path.concat (OS.FileSys.getDir(), ".hol/docs")
+  fun src_url loc =
+      case loc of
+          DB_dtype.Unknown => NONE
+        | DB_dtype.Located {scriptpath, linenum, ...} =>
+          let
+            val abs_sml = holpathdb.subst_pathvars scriptpath
+            val {dir, file} = OS.Path.splitDirFile abs_sml
+            val {base, ...} = OS.Path.splitBaseExt file
+            val abs_html =
+                OS.Path.concat (dir,
+                  OS.Path.concat (".hol/docs", base ^ ".html"))
+            val rel =
+                OS.Path.mkRelative {path = abs_html, relativeTo = curr_docs_dir}
+                handle OS.Path.Path => base ^ ".html"
+          in
+            SOME (rel ^ "#L" ^ Int.toString linenum)
+          end
+  fun out s = TextIO.output (ostrm, s)
+  fun pp_to_stream th =
+      let
+        val pretty =
+            if null (Thm.hyp th) andalso
+               (Tag.isEmpty (Thm.tag th) orelse Tag.isDisk (Thm.tag th))
+            then pp_thm th
+            else
+              with_flag (Globals.show_tags, true)
+                        (with_flag (Globals.show_assums, true) pp_thm) th
+      in
+        PP.prettyPrint (out o html_escape, 75) pretty
+      end
+  fun type_to_string ty =
+      let val buf = ref []
+          fun pr s = buf := s :: !buf
+          val () = PP.prettyPrint (pr, 100) (pp_type_user ty)
+          val raw = String.concat (List.rev (!buf))
+          val raw = Substring.string (Substring.dropr Char.isSpace
+                                       (Substring.full raw))
+      in
+        if String.size raw > 0 andalso String.sub (raw, 0) = #":"
+        then String.extract (raw, 1, NONE)
+        else raw
+      end
+  (* Build a fully applied type for a theory's new type operator, using
+     fresh type variables 'a, 'b, ... for arguments, so the renderer
+     shows the operator with its argument count. *)
+  fun var_at i = "'" ^ String.str (Char.chr (Char.ord #"a" + i))
+  fun applied_ty (opname, arity) =
+      let val args = List.tabulate (arity, fn i => Type.mk_vartype (var_at i))
+      in Type.mk_thy_type {Tyop = opname, Thy = name, Args = args} end
+      handle _ => Type.mk_vartype (var_at 0)
+  (* Octicons file-code-16 (MIT-licensed; https://primer.style/foundations/icons/file-code-16) *)
+  val src_icon_svg =
+      "<svg class=\"src-icon\" viewBox=\"0 0 16 16\" width=\"0.95em\" \
+      \height=\"0.95em\" aria-hidden=\"true\">\
+      \<path fill=\"currentColor\" \
+      \d=\"M4 1.75C4 .784 4.784 0 5.75 0h5.586c.464 0 .909.184 1.237.513l2.914\
+      \ 2.914c.329.328.513.773.513 1.237v8.586A1.75 1.75 0 0 1 14.25 15h-3a.75\
+      \.75 0 0 1 0-1.5h3a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 10 4.25V\
+      \1.5H5.75a.25.25 0 0 0-.25.25v2.5a.75.75 0 0 1-1.5 0Zm1.72 4.97a.75.75 0\
+      \ 0 1 1.06 0l2 2a.75.75 0 0 1 0 1.06l-2 2a.749.749 0 0 1-1.275-.326.749.\
+      \749 0 0 1 .215-.734l1.47-1.47-1.47-1.47a.75.75 0 0 1 0-1.06ZM3.28 7.78 \
+      \1.81 9.25l1.47 1.47a.751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018l-\
+      \2-2a.75.75 0 0 1 0-1.06l2-2a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018\
+      \ 1.042Zm8.22-6.218V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.91\
+      \4-.013-.011Z\"/></svg>"
+  fun pr_thm (s, th, loc) =
+      let val esc = html_escape s in
+        out "<div class=\"thm\" id=\""; out esc; out "\">\n";
+        out "<div class=\"thm-name\">";
+        (case src_url loc of
+             NONE => (out "<code>"; out esc; out "</code>")
+           | SOME url =>
+             (out "<a class=\"src-link\" href=\""; out (html_escape url);
+              out "\"><code>"; out esc; out "</code>";
+              out src_icon_svg; out "</a>"));
+        out "</div>\n<pre>";
+        pp_to_stream th
+          handle e =>
+            (TextIO.print
+               ("Failed to print theorem in theory export: " ^ s ^ "\n");
+             TextIO.print (General.exnMessage e ^ "\n");
+             raise e);
+        out "</pre>\n</div>\n"
+      end
+  fun pr_thm_section _ [] = ()
+    | pr_thm_section heading plist =
+        (out "<section>\n<h2>"; out heading; out "</h2>\n";
+         List.app pr_thm plist;
+         out "</section>\n")
+  fun pr_parent ({name=pname, url} : {name:string,url:string}) =
+      (out "<li><a href=\""; out (html_escape url); out "\">";
+       out (html_escape pname); out "</a></li>\n")
+in
+  out "<!DOCTYPE html>\n\
+      \<html lang=\"en\">\n\
+      \<head>\n\
+      \<meta charset=\"UTF-8\">\n\
+      \<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
+      \<title>Theory: ";
+  out (html_escape name);
+  out "</title>\n\
+      \<style>\n\
+      \  :root {\n\
+      \    --bg: #ffffff;\n\
+      \    --fg: #1f2328;\n\
+      \    --muted: #57606a;\n\
+      \    --accent: #0969da;\n\
+      \    --pre-bg: #f6f8fa;\n\
+      \    --pre-border: #d0d7de;\n\
+      \    --rule: #d8dee4;\n\
+      \  }\n\
+      \  html { background: var(--bg); }\n\
+      \  body {\n\
+      \    font-family: system-ui, -apple-system, \"Segoe UI\", Roboto,\n\
+      \                 \"Helvetica Neue\", Arial, sans-serif;\n\
+      \    color: var(--fg);\n\
+      \    line-height: 1.55;\n\
+      \    max-width: 60rem;\n\
+      \    margin: 2rem auto;\n\
+      \    padding: 0 1.25rem 3rem;\n\
+      \  }\n\
+      \  h1 { font-size: 1.9rem; margin: 0 0 1.25rem; }\n\
+      \  h1 .thy-prefix { color: var(--muted); font-weight: 400; }\n\
+      \  h2 {\n\
+      \    font-size: 1.25rem;\n\
+      \    margin: 2rem 0 0.75rem;\n\
+      \    padding-bottom: 0.3rem;\n\
+      \    border-bottom: 1px solid var(--rule);\n\
+      \  }\n\
+      \  ul.parents { list-style: none; padding: 0; margin: 0 0 1rem; }\n\
+      \  ul.parents li { display: inline-block; margin: 0 0.5rem 0.4rem 0; }\n\
+      \  ul.parents a {\n\
+      \    background: var(--pre-bg);\n\
+      \    border: 1px solid var(--pre-border);\n\
+      \    border-radius: 999px;\n\
+      \    padding: 0.15rem 0.7rem;\n\
+      \    text-decoration: none;\n\
+      \    color: var(--accent);\n\
+      \    font-size: 0.92rem;\n\
+      \  }\n\
+      \  ul.parents a:hover { background: #eaeef2; }\n\
+      \  .toc { margin: 0 0 1.75rem; }\n\
+      \  .toc h3 {\n\
+      \    font-size: 1.05rem; font-weight: 700; color: var(--fg);\n\
+      \    margin: 1.4rem 0 0.4rem;\n\
+      \    padding: 0.1rem 0 0.1rem 0.5rem;\n\
+      \    border-left: 4px solid var(--accent);\n\
+      \  }\n\
+      \  .toc-items {\n\
+      \    display: flex; flex-wrap: wrap; gap: 0.15rem 0.9rem;\n\
+      \    font-size: 0.92rem; line-height: 1.65;\n\
+      \  }\n\
+      \  .toc-items a {\n\
+      \    color: var(--accent); text-decoration: none;\n\
+      \    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n\
+      \    white-space: nowrap;\n\
+      \  }\n\
+      \  .toc-items a:hover { text-decoration: underline; }\n\
+      \  .toc-items code {\n\
+      \    color: var(--fg);\n\
+      \    background: var(--pre-bg);\n\
+      \    padding: 0 0.35rem; border-radius: 4px;\n\
+      \  }\n\
+      \  .toc-empty { color: var(--muted); font-style: italic; }\n\
+      \  ul.sig-list { list-style: none; padding: 0; margin: 0 0 1rem; }\n\
+      \  ul.sig-list li { margin: 0.25rem 0; }\n\
+      \  ul.sig-list code {\n\
+      \    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n\
+      \    font-size: 0.92rem;\n\
+      \  }\n\
+      \  .thm { margin: 1.1rem 0; }\n\
+      \  .thm-name {\n\
+      \    font-size: 1rem;\n\
+      \    font-weight: 600;\n\
+      \    margin-bottom: 0.25rem;\n\
+      \  }\n\
+      \  .thm-name code {\n\
+      \    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n\
+      \    font-size: 0.95rem;\n\
+      \  }\n\
+      \  .src-link {\n\
+      \    color: var(--accent);\n\
+      \    text-decoration: none;\n\
+      \    display: inline-flex;\n\
+      \    align-items: baseline;\n\
+      \    gap: 0.3em;\n\
+      \  }\n\
+      \  .src-link:hover { text-decoration: underline; }\n\
+      \  .src-icon { opacity: 0.55; }\n\
+      \  .src-link:hover .src-icon { opacity: 1; }\n\
+      \  .thm:target { background: #fff8c5; border-radius: 6px; }\n\
+      \  pre {\n\
+      \    background: var(--pre-bg);\n\
+      \    border: 1px solid var(--pre-border);\n\
+      \    border-left: 3px solid var(--accent);\n\
+      \    border-radius: 6px;\n\
+      \    padding: 0.65rem 0.9rem;\n\
+      \    margin: 0;\n\
+      \    overflow-x: auto;\n\
+      \    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n\
+      \    font-size: 0.92rem;\n\
+      \    line-height: 1.5;\n\
+      \  }\n\
+      \</style>\n\
+      \</head>\n\
+      \<body>\n\
+      \<h1><span class=\"thy-prefix\">Theory</span> ";
+  out (html_escape name);
+  out "</h1>\n";
+  (case parents' of
+       [] => ()
+     | _ => (out "<h2>Parents</h2>\n<ul class=\"parents\">\n";
+             List.app pr_parent parents';
+             out "</ul>\n"));
+  let
+    fun pr_toc_group {linked} (heading, names) =
+        (out "<h3>"; out heading; out "</h3>\n<div class=\"toc-items\">";
+         (case names of
+              [] => out "<span class=\"toc-empty\">(none)</span>"
+            | _ =>
+              List.app
+                (fn nm =>
+                    if linked then
+                      (out "<a href=\"#"; out (html_escape nm); out "\">";
+                       out (html_escape nm); out "</a>")
+                    else
+                      (out "<code>"; out (html_escape nm); out "</code>"))
+                names);
+         out "</div>\n")
+    fun pr_toc_sig (heading, items) =
+        (out "<h3>"; out heading; out "</h3>\n";
+         case items of
+             [] => out "<div class=\"toc-items\">\
+                       \<span class=\"toc-empty\">(none)</span></div>\n"
+           | _ =>
+             (out "<ul class=\"sig-list\">\n";
+              List.app
+                (fn (lhs, rhs) =>
+                    (out "<li><code>"; out (html_escape lhs);
+                     out " : "; out (html_escape rhs); out "</code></li>\n"))
+                items;
+              out "</ul>\n"))
+    val tyop_items =
+        let val sorted =
+                Lib.sort (fn (a:string*int) => fn b => #1 a <= #1 b) types
+        in List.map
+             (fn (nm, arity) =>
+                 (nm, type_to_string (applied_ty (nm, arity))))
+             sorted
+        end
+    val const_items =
+        let val sorted =
+                Lib.sort (fn (a:string*hol_type) => fn b => #1 a <= #1 b)
+                         constants
+        in List.map (fn (nm, ty) => (nm, type_to_string ty)) sorted end
+    val visible_names =
+        List.map (fn (s, _, _) => s) o
+        List.filter (fn (_, _, {private=false, ...}:thminfo) => true | _ => false)
+    val ax_names = visible_names axioms'
+    val def_names = visible_names definitions'
+    val thm_names = visible_names theorems'
+  in
+    out "<section class=\"toc\">\n<h2>Contents</h2>\n";
+    pr_toc_sig ("Type operators", tyop_items);
+    pr_toc_sig ("Constants", const_items);
+    (* Most theories don't introduce axioms; skip the subsection
+       entirely rather than repeatedly reporting "(none)". *)
+    (case ax_names of
+         [] => ()
+       | _ => pr_toc_group {linked = true} ("Axioms", ax_names));
+    pr_toc_group {linked = true} ("Definitions", def_names);
+    pr_toc_group {linked = true} ("Theorems", thm_names);
+    out "</section>\n"
+  end;
+  pr_thm_section "Axioms" axioms'';
+  pr_thm_section "Definitions" definitions'';
+  pr_thm_section "Theorems" theorems'';
+  out "</body>\n</html>\n"
+end
+
+(* Write an HTML mirror of a Script.sml file with anchored line numbers,
+   so that source-link URLs of the form "<thy>Script.html#Lnnn" land on
+   the right line in any browser. *)
+fun write_script_html {script_path, out_path} =
+    let
+      val instream = TextIO.openIn script_path
+      val ostream = TextIO.openOut out_path
+      fun out s = TextIO.output (ostream, s)
+      val {file, ...} = OS.Path.splitDirFile script_path
+      fun loop n =
+          case TextIO.inputLine instream of
+              NONE => ()
+            | SOME line =>
+              let
+                val len = size line
+                val (body, nl) =
+                    if len > 0 andalso String.sub(line, len - 1) = #"\n" then
+                      (String.substring(line, 0, len - 1), true)
+                    else (line, false)
+                val ns = Int.toString n
+              in
+                out "<span class=\"line\" id=\"L"; out ns; out "\">";
+                out "<span class=\"line-num\">"; out ns; out "</span>";
+                out (html_escape body);
+                out "</span>";
+                if nl then out "\n" else ();
+                loop (n + 1)
+              end
+    in
+      out "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n\
+          \<meta charset=\"UTF-8\">\n\
+          \<meta name=\"viewport\" \
+                \content=\"width=device-width, initial-scale=1\">\n\
+          \<title>Source: ";
+      out (html_escape file);
+      out "</title>\n\
+          \<style>\n\
+          \  :root { --bg:#ffffff; --fg:#1f2328; --muted:#6e7781;\n\
+          \          --pre-bg:#f6f8fa; --pre-border:#d0d7de; --hl:#fff8c5; }\n\
+          \  html { background: var(--bg); }\n\
+          \  body { font-family: system-ui, -apple-system, sans-serif;\n\
+          \         color: var(--fg); margin: 1.5rem auto; max-width: 80rem;\n\
+          \         padding: 0 1rem 3rem; line-height: 1.4; }\n\
+          \  h1 { font-size: 1.2rem; font-weight: 600; margin: 0 0 0.8rem; }\n\
+          \  pre {\n\
+          \    background: var(--pre-bg); border: 1px solid var(--pre-border);\n\
+          \    border-radius: 6px; padding: 0.6rem 0.9rem; margin: 0;\n\
+          \    overflow-x: auto;\n\
+          \    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,\n\
+          \                 monospace;\n\
+          \    font-size: 0.9rem; line-height: 1.5;\n\
+          \  }\n\
+          \  .line-num { display: inline-block; width: 4em;\n\
+          \              padding-right: 1em; text-align: right;\n\
+          \              color: var(--muted); user-select: none; }\n\
+          \  .line:target { background: var(--hl); }\n\
+          \</style>\n\
+          \</head>\n\
+          \<body>\n\
+          \<h1>";
+      out (html_escape file);
+      out "</h1>\n<pre>";
+      loop 1
+        handle e => (TextIO.closeIn instream;
+                     TextIO.closeOut ostream;
+                     raise e);
+      out "</pre>\n</body>\n</html>\n";
+      TextIO.closeIn instream;
+      TextIO.closeOut ostream
+    end
+
+fun pp_sig info_record = let
   open PP
   val {name,parents,all_thms} = info_record
   val parents'     = sort parents
@@ -119,49 +505,10 @@ fun pp_sig pp_thm info_record = let
       add_string ("(*  "^header^ "  *)"), NL,
       block CONSISTENT 0 (pr_list ob_pr [NL] obs)
     ]
-  fun pparent s = String.concat ["structure ",Thry s," : ",ThrySig s]
-  val parentstring = "Parent theory of "^Lib.quote name
-  fun pr_parent s = block CONSISTENT 0 [
-                     add_string (String.concat ["[", s, "]"]),
-                     add_break(1,0),
-                     add_string parentstring]
-  fun pr_parents [] = []
-    | pr_parents slist =
-        [block CONSISTENT 0 (pr_list pr_parent [NL, NL] slist), NL, NL]
-
-  fun pr_thm class (s,th) =
-     block CONSISTENT 3 [
-       add_string (String.concat ["[", s, "]"]),
-       add_string ("  "^class), NL, NL,
-       if null (Thm.hyp th) andalso
-          (Tag.isEmpty (Thm.tag th) orelse Tag.isDisk (Thm.tag th))
-       then pp_thm th
-       else
-         with_flag(Globals.show_tags,true)
-                  (with_flag(Globals.show_assums, true) pp_thm) th
-     ]
-      handle e => (print ("Failed to print theorem in theory export: "^s^"\n");
-                   print (General.exnMessage e ^ "\n");
-                   raise e)
-  fun pr_thms _ [] = []
-    | pr_thms heading plist =
-       [block CONSISTENT 0 (pr_list (pr_thm heading) [NL,NL] plist), NL, NL]
 
   val filter_visible =
       List.mapPartial (fn (s, th, {private=false,...}:thminfo) => SOME (s,th)
                       |            _                 => NONE)
-  fun pr_docs() =
-      if !include_docs then
-        (!pp_sig_hook();
-         [block CONSISTENT 3 (
-             [add_string "(*", NL] @
-             pr_parents parents' @
-             pr_thms "Axiom" (filter_visible axioms') @
-             pr_thms "Definition" (filter_visible definitions') @
-             pr_thms "Theorem" (filter_visible theorems')
-           ), NL,
-          add_string "*)", NL])
-      else []
   fun pthms (heading, ths) =
     vblock(heading,
            (fn (s,th,{private,...}:thminfo) =>
@@ -171,9 +518,9 @@ fun pp_sig pp_thm info_record = let
                         [add_string("val "^ s ^ " : thm")])),
            ths)
 in
-  block CONSISTENT 0 (
-    [add_string ("signature "^ThrySig name^" ="), NL,
-     block CONSISTENT 2 [
+  block CONSISTENT 0 [
+    add_string ("signature "^ThrySig name^" ="), NL,
+    block CONSISTENT 2 [
        add_string "sig", NL,
        block CONSISTENT 0 (
          [add_string"type thm = Thm.thm"] @
@@ -184,11 +531,9 @@ in
          (if null theorems' then []
           else [NL, NL, pthms ("Theorems", theorems')])
        )
-     ], NL
-    ] @
-    pr_docs() @
-    [add_string"end", NL]
-  )
+    ], NL,
+    add_string"end", NL
+  ]
 end;
 
 (*---------------------------------------------------------------------------
@@ -272,12 +617,6 @@ fun pp_struct hash (info_record : struct_info_record) = let
                 (add_newline >> add_newline)
                 l
       )
-  val datfile =
-      mlquote (
-        holpathdb.reverse_lookup {
-          path = OS.Path.concat(OS.FileSys.getDir(), name ^ "Theory.dat")
-        }
-      )
   val m =
       block CONSISTENT 0 (
        add_string (String.concatWith " "
@@ -300,7 +639,7 @@ fun pp_struct hash (info_record : struct_info_record) = let
              block CONSISTENT 0 (
               add_string "structure TDB = struct" >> add_break(1,2) >>
               add_string "val path =" >> add_break(1,4) >>
-                add_string ("holpathdb.subst_pathvars "^datfile) >>
+                add_string "OS.Path.base (#(FILE)) ^ \".dat\"" >>
                 add_break(1,2) >>
               add_string "val timestamp = HOLFileSys.modTime path" >> add_break(1,2) >>
               add_string "val thydata = " >> add_break(1,4) >>
@@ -392,10 +731,10 @@ fun pp_thydata (info_record : struct_info_record) = let
   val enc_cpl = HOLsexp.pair_encode(HOLsexp.String, fn x => x)
 
   fun list_loadable shared_writers thydata_map =
-    Binarymap.foldl
-      (fn (k, data, rest) => (k, data shared_writers) :: rest)
-      []
+    Symtab.fold
+      (fn (k, data) => fn rest => (k, data shared_writers) :: rest)
       thydata_map
+      []
   fun enc_loadable shared_writers thydata_map =
       let open HOLsexp in
         tagged_encode "loadable-thydata" (list_encode enc_cpl)

@@ -51,14 +51,15 @@ fun 'a graphbuildj1 static_info =
                   SOME (OS.Path.file thyname ^ "Script")
               | BuiltInCmd (BIC_Compile, _) =>
                   SOME (fromFile (hm_target.filepart (#target nI)))
-              | SomeCmd c => SOME ("cmd-" ^ c)
+              | SomeCmd c => SOME (fromFile (hm_target.filepart (#target nI)))
               | NoCmd => NONE
         fun acquire_for nI =
             case lock_key_for nI of
                 NONE => HM_BuildLock.nolock
               | SOME key =>
                   HM_BuildLock.acquire
-                    {dir = hmdir.toAbsPath (#dir nI), key = key, warn = warn}
+                    {dir = hmdir.toAbsPath (#dir nI), key = key,
+                     warn = warn, diag = diagK}
         fun recurse retval g =
           case find_runnable g of
               NONE => (retval, g)

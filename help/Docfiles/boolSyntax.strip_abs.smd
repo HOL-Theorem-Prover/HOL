@@ -1,0 +1,15 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+---
+canonical: Term.strip_abs
+generated: true
+---
+## `strip_abs`
+
+``` hol4
+boolSyntax.strip_abs : term -> term list * term
+```
+
+------------------------------------------------------------------------
+
+Re-exported from [`Term.strip_abs`](#Term.strip_abs). See that
+entry for full documentation.

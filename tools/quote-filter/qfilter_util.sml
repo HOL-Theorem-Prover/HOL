@@ -33,7 +33,8 @@ fun open_files intp qopn infn outfn =
           end
     in
       {instrm = is, outstrm = os, interactive = intp, quotefixp = false,
-       closefn = cb, infilename = infn, quietOpen = qopn}
+       closefn = cb, infilename = OS.FileSys.fullPath infn,
+       quietOpen = qopn}
     end
 
 fun usage strm status =

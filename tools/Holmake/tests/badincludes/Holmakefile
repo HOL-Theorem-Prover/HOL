@@ -1,4 +1,7 @@
 CLINE_OPTIONS = --no_overlay
+ifdef POLY
+CLINE_OPTIONS += --poly_not_hol
+endif
 
 all: selftest.exe
 .PHONY: all
@@ -6,7 +9,12 @@ all: selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe badincludes-selftest.log
+# selftest drives Holmake in various error-case subdirs.  The two that
+# actually produce .hol/ trees (the rest are intentionally malformed
+# and never reach build) need cleanup hooks so build cleanAll removes
+# their artifacts.
+EXTRA_CLEANS = selftest.exe badincludes-selftest.log \
+               warnincs/.hol/ loopish_but_ok/dir3/.hol/
 
 ifdef HOLSELFTESTLEVEL
 all: badincludes-selftest.log

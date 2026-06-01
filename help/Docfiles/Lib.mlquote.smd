@@ -1,0 +1,30 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `mlquote`
+
+``` hol4
+Lib.mlquote : string -> string
+```
+
+------------------------------------------------------------------------
+
+Put quotation marks around a string.
+
+Like `quote`, `mlquote s` puts quotation marks around a string. However,
+it also transforms the characters in a string so that, when printed, it
+would be a valid ML lexeme.
+
+### Failure
+
+Never fails
+
+### Example
+
+``` hol4
+>> quote "foo\nbar";
+
+>> mlquote "foo\nbar";
+```
+
+### See also
+
+[`Lib.quote`](#Lib.quote)

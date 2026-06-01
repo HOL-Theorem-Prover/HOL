@@ -4,7 +4,7 @@ struct
 open Feedback Lib GrammarSpecials;
 open errormonad typecheck_error
 
-infix >> >-
+infix >> >- ++?
 
 val ERR = mk_HOL_ERR "Preterm"
 val ERRloc = mk_HOL_ERRloc "Preterm"
@@ -389,12 +389,53 @@ fun filterM PM l =
     | h::t => PM h >- (fn b => if b then lift (cons h) (filterM PM t)
                                else filterM PM t)
 
+(* Decode the BIT1/BIT2/ZERO preterm tree representing a numeric literal
+   back to its Arbnum value, for use in error reporting. Returns NONE if
+   the tree doesn't have the expected structure (e.g. partially elaborated
+   or non-standard injection). *)
+fun decode_numeral_preterm pt =
+    let
+      open Arbnum
+      val a1 = one
+      val a2 = two
+      fun go pt =
+          case pt of
+            Const{Name = "0", Thy = "num", ...} => SOME zero
+          | Const{Name = "ZERO", Thy = "arithmetic", ...} => SOME zero
+          | Comb{Rator = Const{Name = "NUMERAL", Thy = "arithmetic", ...},
+                 Rand, ...} => go Rand
+          | Comb{Rator = Const{Name = "BIT1", Thy = "arithmetic", ...},
+                 Rand, ...} => Option.map (fn n => a2 * n + a1) (go Rand)
+          | Comb{Rator = Const{Name = "BIT2", Thy = "arithmetic", ...},
+                 Rand, ...} => Option.map (fn n => a2 * n + a2) (go Rand)
+          | _ => NONE
+    in go pt end
+
 fun remove_overloading_phase1 ptm =
   case ptm of
     Comb{Rator, Rand, Locn} =>
-      lift2 (fn t1 => fn t2 => Comb{Rator = t1, Rand = t2, Locn = Locn})
-            (remove_overloading_phase1 Rator)
-            (remove_overloading_phase1 Rand)
+      let
+        (* If elaborating Rator fails specifically because the
+           `_ inject_number` overload couldn't be resolved at the
+           required type, try to surface the actual numeric literal
+           in the error so the user isn't shown the internal
+           placeholder name. (#1747) *)
+        fun handler (OvlNoType(s, ty), errLoc) =
+              if s = fromNum_str then
+                case decode_numeral_preterm Rand of
+                    SOME n =>
+                      error (Misc ("Couldn't infer a type for the \
+                                   \numeric literal `" ^
+                                   Arbnum.toString n ^ "`"),
+                             Locn)
+                  | NONE => error (OvlNoType(s, ty), errLoc)
+              else error (OvlNoType(s, ty), errLoc)
+          | handler other = error other
+      in
+        lift2 (fn t1 => fn t2 => Comb{Rator = t1, Rand = t2, Locn = Locn})
+              (remove_overloading_phase1 Rator ++? handler)
+              (remove_overloading_phase1 Rand)
+      end
   | Abs{Bvar, Body, Locn} =>
       lift2 (fn t1 => fn t2 => Abs{Bvar = t1, Body = t2, Locn = Locn})
             (remove_overloading_phase1 Bvar)
@@ -587,6 +628,14 @@ fun is_atom (Var _) = true
   | is_atom t = false
 
 
+(* Forward declaration so typecheck_phase1's error messages can render
+   smashed terms after running them through `remove_case_magic` — this lets
+   ConstrainFail messages display recoverable case expressions in their
+   surface `case ... of ...` form rather than as raw case_arg / case_split /
+   case_arrow combinators.  The ref is assigned below after
+   remove_case_magic has been defined. *)
+val rcm_for_msg : (Term.term -> Term.term) ref = ref Lib.I
+
 local
   fun default_typrinter x = "<hol_type>"
   fun default_tmprinter x = "<term>"
@@ -595,12 +644,52 @@ local
   fun smashTm ptm =
     Lib.with_flag (Globals.notify_on_tyvar_guess, false)
                   (smash (overloading_resolution ptm >- (to_term o #1)))
+  fun safe_decase t = !rcm_for_msg t handle HOL_ERR _ => t
 in
 fun typecheck_phase1 printers = let
   val (ptm, pty) =
       case printers of
         SOME (x,y) => (x,y)
       | NONE => (default_tmprinter, default_typrinter)
+  fun pretty_tm t = ptm (safe_decase t)
+  fun bool_op nm t =
+      let val (f, args) = HolKernel.strip_comb t
+      in
+        case Lib.total Term.dest_thy_const f of
+            SOME {Name, Thy, ...} =>
+              if Name = nm andalso Thy = "bool" then SOME args
+              else NONE
+          | _ => NONE
+      end
+  fun ptm_arms t =
+      case bool_op case_split_special t of
+          SOME [l, r] => ptm_arms l ^ " | " ^ ptm_arms r
+        | _ =>
+          case bool_op case_arrow_special t of
+              SOME [pat, body] => pretty_tm pat ^ " => " ^ pretty_tm body
+            | _ => pretty_tm t
+  (* When the AppFail Comb is the partial split application
+     `case_split @ left_arms`, we know we are at the point where two arm
+     groups of a `case ... of ...` expression are being unified.  Reformat
+     the error so the user sees the arms, not the raw combinator term. *)
+  fun arms_disagree_msg left_arms Rand' unify_error =
+      String.concat
+        ["\nType error in case expression: arms have incompatible types.\n",
+         "  ", ptm_arms left_arms, " ",
+              pty(Term.type_of left_arms), "\n",
+         "  ", ptm_arms Rand', " ",
+              pty(Term.type_of Rand'), "\n",
+         "  Reason: ", errorMsg (#1 unify_error), "\n"]
+  (* When the AppFail Comb is `(case_arg @ scrutinee) @ split_tree`, the
+     whole case expression is split across Rator and Rand.  Rebuild a
+     surface `case <scrutinee> of <arms>` view rather than showing the
+     internal combinator structure. *)
+  fun case_app_msg scrut arms_tree unify_error =
+      String.concat
+        ["\nType error in case expression.\n",
+         "  case ", pretty_tm scrut, " ", pty(Term.type_of scrut), "\n",
+         "  of ", ptm_arms arms_tree, "\n",
+         "  Reason: ", errorMsg (#1 unify_error), "\n"]
   fun check(Comb{Rator, Rand, Locn}) =
     check Rator >> check Rand >>
     ptype_of Rator >- (fn rator_ty =>
@@ -610,11 +699,22 @@ fun typecheck_phase1 printers = let
      (fn unify_error => fn env =>
           let val Rator' = smashTm Rator env
               val Rand'  = smashTm Rand env
-              val message = String.concat
-                  ["\nType error in function application.\n",
-                   "  Function: ", ptm Rator', " ", pty(Term.type_of Rator'), "\n",
-                   "  Argument: ", ptm Rand',  " ", pty(Term.type_of Rand'), "\n",
-                   "  Reason: ",   errorMsg (#1 unify_error), "\n"]
+              val message =
+                  case bool_op core_case_special Rator' of
+                      SOME [scrut] =>
+                        case_app_msg scrut Rand' unify_error
+                    | _ =>
+                  case bool_op case_split_special Rator' of
+                      SOME [left_arms] =>
+                        arms_disagree_msg left_arms Rand' unify_error
+                    | _ =>
+                      String.concat
+                        ["\nType error in function application.\n",
+                         "  Function: ", pretty_tm Rator', " ",
+                         pty(Term.type_of Rator'), "\n",
+                         "  Argument: ", pretty_tm Rand',  " ",
+                         pty(Term.type_of Rand'), "\n",
+                         "  Reason: ",   errorMsg (#1 unify_error), "\n"]
           in
             Error (AppFail(Rator',Rand',message), locn Rand)
           end))))
@@ -628,7 +728,7 @@ fun typecheck_phase1 printers = let
                  val constraint = Pretype.toType Ty
                  val message = String.concat
                      ["\nType constraint failure: \n",
-                      "  Term: ", ptm real_term, " ", pty rty, "\n",
+                      "  Term: ", pretty_tm real_term, " ", pty rty, "\n",
                       "  Constraint: ", pty constraint, "\n"]
              in
                Error(ConstrainFail(real_term, constraint, message), Locn)
@@ -804,6 +904,8 @@ end
 fun remove_case_magic tm =
     if GrammarSpecials.case_initialised() then remove_case_magic0 tm
     else tm
+
+val () = rcm_for_msg := remove_case_magic
 
 val post_process_term = ref (I : term -> term);
 val typecheck_listener : (preterm * Pretype.Env.t) Listener.t =

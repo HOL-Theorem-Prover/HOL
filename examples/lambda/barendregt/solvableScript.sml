@@ -8,7 +8,7 @@ Theory solvable
 Ancestors
   arithmetic pred_set list rich_list sorting finite_map path
   relation pair basic_swap nomset term appFOLDL chap2 chap3
-  head_reduction standardisation horeduction normal_order
+  head_reduction standardisation horeduction normal_order takahashiS3
 Libs
   hurdUtils listLib binderLib reductionEval
 
@@ -988,6 +988,14 @@ QED
 Theorem hnf_principal_hnf' =
     REWRITE_RULE [GSYM solvable_iff_has_hnf] hnf_principal_hnf
 
+Theorem hreduces_principal_hnf :
+    !M. solvable M ==> M -h->* principal_hnf M
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘M’, ‘principal_hnf M’] principal_hnf_thm')
+ >> simp [hnf_principal_hnf']
+QED
+
 Theorem solvable_principal_hnf :
     !M. solvable M ==> solvable (principal_hnf M)
 Proof
@@ -1027,6 +1035,12 @@ Theorem principal_hnf_absfree_hnf[simp] :
 Proof
     MATCH_MP_TAC principal_hnf_reduce
  >> rw [hnf_appstar]
+QED
+
+Theorem principal_hnf_VAR[simp] :
+    principal_hnf (VAR y) = VAR y
+Proof
+    MATCH_MP_TAC principal_hnf_reduce >> simp []
 QED
 
 Theorem principal_hnf_stable :
@@ -1365,6 +1379,84 @@ Proof
  >> MATCH_MP_TAC lameq_solvable_cong_lemma >> art []
 QED
 
+Theorem unsolvable_APP_I:
+  unsolvable M ⇒ unsolvable (M @@ N)
+Proof
+  metis_tac[solvable_iff_has_hnf, has_hnf_APP_E]
+QED
+
+Theorem unsolvable_appstar_I:
+  ∀M Ns. unsolvable M ⇒ unsolvable (M @* Ns)
+Proof
+  Induct_on ‘Ns’ >> simp[unsolvable_APP_I]
+QED
+
+Theorem lameta_solvable_cong_lemma[local] :
+    !M N. closed M /\ closed N /\ M === N ==> (solvable M <=> solvable N)
+Proof
+    Suff ‘!M N. closed M /\ closed N /\ M === N /\ solvable M ==> solvable N’
+ >- METIS_TAC [lameta_SYM]
+ >> rpt STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘solvable M’
+     (MP_TAC o REWRITE_RULE [MATCH_MP solvable_alt_closed
+                                      (ASSUME “closed (M :term)”)])
+ >> STRIP_TAC
+ >> Know ‘N @* Ns === I’
+ >- (Q_TAC (TRANS_TAC lameta_TRANS) ‘M @* Ns’ \\
+     simp [lameq_imp_lameta] \\
+     MATCH_MP_TAC lameta_appstar_cong \\
+     simp [Once lameta_SYM])
+ >> DISCH_TAC
+ (* applying lameta_CR, with the following plan:
+    N @* Ns === I
+    N @* Ns -be->* I
+    ?P. N @* Ns -b->* P /\ P -e->* I
+    has_bnf P
+    has_bnf (N @* Ns)
+    has_hnf (N @* Ns)
+    solvable (N @* Ns)
+    solvable N
+  *)
+ >> POP_ASSUM (STRIP_ASSUME_TAC o MATCH_MP lameta_CR)
+ >> Know ‘Z = I’
+ >- (Suff ‘benf I’ >- METIS_TAC [benf_reduction_to_self] \\
+     simp [benf_def])
+ >> DISCH_THEN (fs o wrap)
+ >> ‘?P. N @* Ns -b->* P /\ reduction eta P I’ by METIS_TAC [takahashi_3_5]
+ >> Know ‘has_bnf P’
+ >- (MATCH_MP_TAC etastar_imp_has_bnf \\
+     Q.EXISTS_TAC ‘I’ >> art [] \\
+     MATCH_MP_TAC bnf_has_bnf >> simp [])
+ >> simp [has_bnf_thm]
+ >> DISCH_THEN (Q.X_CHOOSE_THEN ‘Q’ STRIP_ASSUME_TAC)
+ >> Know ‘has_bnf (N @* Ns)’
+ >- (simp [has_bnf_thm] \\
+     Q.EXISTS_TAC ‘Q’ >> art [] \\
+     PROVE_TAC [reduction_rules])
+ >> DISCH_TAC
+ >> ‘solvable (N @* Ns)’ by PROVE_TAC [has_bnf_hnf, solvable_iff_has_hnf]
+ >> PROVE_TAC [unsolvable_appstar_I]
+QED
+
+Theorem lameta_solvable_cong :
+    !M N. M === N ==> (solvable M <=> solvable N)
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘vs = SET_TO_LIST (FV M UNION FV N)’
+ >> qabbrev_tac ‘M0 = LAMl vs M’
+ >> qabbrev_tac ‘N0 = LAMl vs N’
+ >> Know ‘closed M0 /\ closed N0’
+ >- (rw [closed_def, Abbr ‘M0’, Abbr ‘N0’, Abbr ‘vs’, FV_LAMl] \\
+    ‘FINITE (FV M UNION FV N)’ by rw [] \\
+     simp [SET_TO_LIST_INV] >> SET_TAC [])
+ >> STRIP_TAC
+ (* applying solvable_iff_LAMl *)
+ >> ‘solvable M <=> solvable M0’ by (rw [Abbr ‘M0’]) >> POP_ORW
+ >> ‘solvable N <=> solvable N0’ by (rw [Abbr ‘N0’]) >> POP_ORW
+ >> ‘M0 === N0’ by rw [Abbr ‘M0’, Abbr ‘N0’, lameta_LAMl_cong]
+ >> MATCH_MP_TAC lameta_solvable_cong_lemma >> art []
+QED
+
 Theorem hreduce_solvable_cong :
     !M N. M -h->* N ==> (solvable M <=> solvable N)
 Proof
@@ -1392,77 +1484,8 @@ QED
 Theorem lameq_principal_hnf' =
         lameq_principal_hnf |> REWRITE_RULE [GSYM solvable_iff_has_hnf]
 
-Theorem hnf_ccbeta_appstar_rwt[local] :
-    !y Ms N. VAR y @* Ms -b-> N /\ Ms <> [] ==>
-             ?Ns. N = VAR y @* Ns /\ LENGTH Ns = LENGTH Ms /\
-                  !i. i < LENGTH Ms ==> EL i Ms -b->* EL i Ns
-Proof
-    Q.X_GEN_TAC ‘y’
- >> SNOC_INDUCT_TAC >> rw []
- >> fs [ccbeta_rwt] (* 2 subgoals *)
- >- (Cases_on ‘Ms = []’ >> fs [ccbeta_rwt] \\
-     Q.PAT_X_ASSUM ‘!N. P’ (MP_TAC o (Q.SPEC ‘M'’)) \\
-     RW_TAC std_ss [] \\
-     Q.EXISTS_TAC ‘SNOC x Ns’ >> rw [] \\
-    ‘i = LENGTH Ms \/ i < LENGTH Ms’ by rw []
-     >- (rw [EL_LENGTH_SNOC] \\
-         Q.PAT_X_ASSUM ‘LENGTH Ns = LENGTH Ms’ (REWRITE_TAC o wrap o SYM) \\
-         rw [EL_LENGTH_SNOC]) \\
-     rw [EL_SNOC])
- (* stage work *)
- >> Cases_on ‘Ms = []’ >> fs []
- >- (Q.EXISTS_TAC ‘[N']’ >> rw [])
- >> Q.EXISTS_TAC ‘SNOC N' Ms’
- >> rw [appstar_SNOC]
- >> ‘i = LENGTH Ms \/ i < LENGTH Ms’ by rw []
- >- (rw [EL_LENGTH_SNOC])
- >> rw [EL_SNOC]
-QED
-
-Theorem hnf_ccbeta_cases[local] :
-    !Ms. LAMl vs (VAR y @* Ms) -b-> N ==>
-         ?Ns. N = LAMl vs (VAR y @* Ns) /\
-              LENGTH Ns = LENGTH Ms /\
-              !i. i < LENGTH Ms ==> EL i Ms -b->* EL i Ns
-Proof
-    rw [ccbeta_LAMl_rwt]
- >> Suff ‘?Ns. M' = VAR y @* Ns /\ LENGTH Ns = LENGTH Ms /\
-              !i. i < LENGTH Ms ==> EL i Ms -b->* EL i Ns’
- >- (STRIP_TAC >> Q.EXISTS_TAC ‘Ns’ >> rw [])
- >> MATCH_MP_TAC hnf_ccbeta_appstar_rwt
- >> Cases_on ‘Ms = []’ >> fs [ccbeta_rwt]
-QED
-
-(* Lemma 8.3.16 [1, p.176] *)
-Theorem hnf_betastar_cases :
-    !vs y Ms N. LAMl vs (VAR y @* Ms) -b->* N ==>
-                ?Ns. N = LAMl vs (VAR y @* Ns) /\
-                     LENGTH Ns = LENGTH Ms /\
-                     !i. i < LENGTH Ms ==> EL i Ms -b->* EL i Ns
-Proof
-    NTAC 2 GEN_TAC
- >> Suff ‘!M N. M -b->* N ==>
-               !Ms. M = LAMl vs (VAR y @* Ms) ==>
-                   ?Ns. N = LAMl vs (VAR y @* Ns) /\
-                        LENGTH Ns = LENGTH Ms /\
-                        !i. i < LENGTH Ms ==> EL i Ms -b->* EL i Ns’
- >- METIS_TAC []
- >> HO_MATCH_MP_TAC RTC_INDUCT >> rw []
- >> Know ‘?Ns. M' = LAMl vs (VAR y @* Ns) /\
-               LENGTH Ns = LENGTH Ms /\
-               !i. i < LENGTH Ms ==> EL i Ms -b->* EL i Ns’
- >- (irule hnf_ccbeta_cases >> art [])
- >> STRIP_TAC
- >> Q.PAT_X_ASSUM ‘!Ms. M' = LAMl vs (VAR y @* Ms) ==> P’
-      (MP_TAC o (Q.SPEC ‘Ns’))
- >> RW_TAC std_ss [] (* this asserts Ns' *)
- >> Q.EXISTS_TAC ‘Ns'’ >> rw []
- >> MATCH_MP_TAC betastar_TRANS
- >> Q.EXISTS_TAC ‘EL i Ns’ >> rw []
-QED
-
 Theorem lameq_principal_hnf_lemma_general :
-    !r X M N. FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\
+    !X M N r. FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\
               hnf M /\ hnf N /\ M == N
           ==> LAMl_size M = LAMl_size N /\
               let n = LAMl_size M;
@@ -1579,7 +1602,8 @@ QED
  *)
 Theorem lameq_principal_hnf_lemma =
         lameq_principal_hnf_lemma_general
-     |> Q.SPEC ‘0’ |> SRULE [GSYM CONJ_ASSOC]
+     |> SPEC_ALL |> Q.GEN ‘r’ |> Q.SPEC ‘0’ |> SRULE [GSYM CONJ_ASSOC]
+     |> Q.GENL [‘X’, ‘M’, ‘N’]
 
 Theorem lameq_principal_hnf_size_eq :
     !M N. has_hnf M /\ has_hnf N /\ M == N ==>
@@ -1640,7 +1664,7 @@ Proof
  >> DISCH_TAC
  >> ‘hnf M0 /\ hnf N0’ by METIS_TAC [hnf_principal_hnf]
  (* applying lameq_principal_hnf_lemma *)
- >> MP_TAC (Q.SPECL [‘r’, ‘X’, ‘M0’, ‘N0’] lameq_principal_hnf_lemma_general)
+ >> MP_TAC (Q.SPECL [‘X’, ‘M0’, ‘N0’, ‘r’] lameq_principal_hnf_lemma_general)
  >> Suff ‘FV M0 SUBSET X UNION RANK r /\
           FV N0 SUBSET X UNION RANK r’ >- rw []
  (* applying principal_hnf_FV_SUBSET *)
@@ -1695,7 +1719,7 @@ Proof
  >> DISCH_TAC
  >> ‘hnf M0 /\ hnf N0’ by METIS_TAC [hnf_principal_hnf]
  (* applying lameq_principal_hnf_lemma *)
- >> MP_TAC (Q.SPECL [‘r’, ‘X’, ‘M0’, ‘N0’] lameq_principal_hnf_lemma_general)
+ >> MP_TAC (Q.SPECL [‘X’, ‘M0’, ‘N0’, ‘r’] lameq_principal_hnf_lemma_general)
  >> Suff ‘FV M0 SUBSET X UNION RANK r /\
           FV N0 SUBSET X UNION RANK r’ >- rw []
  (* applying principal_hnf_FV_SUBSET *)
@@ -1868,24 +1892,19 @@ QED
 Theorem principal_hnf_tpm' =
         principal_hnf_tpm |> REWRITE_RULE [GSYM solvable_iff_has_hnf]
 
+Theorem solvable_permutator[simp] :
+    solvable (permutator n)
+Proof
+    MATCH_MP_TAC hnf_solvable
+ >> REWRITE_TAC [hnf_permutator]
+QED
+
 (* Genericity, following
 
     Takahashi, Masako. *A Simple Proof of the Genericity Lemma*.
     Logic, Language and Computation: Festschrift in Honor of Satoru Takasu.
     1994, Springer. doi: 10.1007/BFb0032397
 *)
-
-Theorem unsolvable_APP_I:
-  unsolvable M ⇒ unsolvable (M @@ N)
-Proof
-  metis_tac[solvable_iff_has_hnf, has_hnf_APP_E]
-QED
-
-Theorem unsolvable_appstar_I:
-  ∀M Ns. unsolvable M ⇒ unsolvable (M @* Ns)
-Proof
-  Induct_on ‘Ns’ >> simp[unsolvable_APP_I]
-QED
 
 Theorem equal_hnfs_E:
   ∀xs ys x y Xs Ys.

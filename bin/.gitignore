@@ -3,8 +3,10 @@ hol.state0
 hol.state.min
 Holmake
 build
+comparelogs
 hol
 unquote
+recode32
 hol.builder
 hol.builder0
 *.bat

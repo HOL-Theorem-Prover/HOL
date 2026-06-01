@@ -74,7 +74,12 @@ fun stored_label (fvars,tm) =
        | _ => fail()
     end;
 
-open Binarymap
+structure LabelTab = Table(struct
+  type key = term_label
+  val ord = label_cmp
+  fun pp _ = HOLPP.add_string "<term_label>"
+end)
+
 fun label_for_lookup tm =
   let val (oper,args) = strip_comb tm
   in case dest_term oper
@@ -90,7 +95,7 @@ fun label_for_lookup tm =
      val empty = NODE(mkDict label_cmp, [])
    then empty can't be fully polymorphic, thanks to the call to
    mkDict. *)
-datatype 'a net = NODE of (term_label,'a net) dict * 'a list
+datatype 'a net = NODE of 'a net LabelTab.table * 'a list
                 | EMPTY of 'a list
 
 val empty = EMPTY []
@@ -98,16 +103,17 @@ val empty = EMPTY []
 
 
 fun edges (NODE(es, _)) = es
-  | edges (EMPTY _) = mkDict label_cmp
+  | edges (EMPTY _) = LabelTab.empty
 fun tips (NODE(_, ts)) = ts
   | tips (EMPTY ts) = ts
 fun add_tip e (NODE(es, tips)) = NODE(es, e::tips)
   | add_tip e (EMPTY tips) = EMPTY (e::tips)
 
-fun check_edge(NODE(es, _), label) = peek(es, label)
+fun check_edge(NODE(es, _), label) = LabelTab.lookup es label
   | check_edge(EMPTY _, label) = NONE
-fun new_edge(NODE(es, ts), label, n) = NODE(insert(es, label, n), ts)
-  | new_edge(EMPTY ts, label, n) = NODE(insert(mkDict label_cmp, label, n), ts)
+fun new_edge(NODE(es, ts), label, n) = NODE(LabelTab.update (label, n) es, ts)
+  | new_edge(EMPTY ts, label, n) =
+      NODE(LabelTab.update (label, n) LabelTab.empty, ts)
 
 
 fun net_update (elem, tms:(term list * term) list, net) =
@@ -144,12 +150,12 @@ fun enter (fvars,tm,elem) net = net_update(elem,[(fvars,tm)],net);
 fun lookup tm net = follow([tm],net);
 
 fun merge_nets (n1, n2) = let
-  fun add_node (lab, net, m) =
-      case peek(m, lab) of
-        SOME net' => insert(m, lab, merge_nets(net, net'))
-      | NONE => insert(m, lab, net)
+  fun add_node (lab, net) m =
+      case LabelTab.lookup m lab of
+        SOME net' => LabelTab.update (lab, merge_nets(net, net')) m
+      | NONE => LabelTab.update (lab, net) m
 in
-  NODE (foldl add_node (edges n1) (edges n2), tips n1 @ tips n2)
+  NODE (LabelTab.fold add_node (edges n2) (edges n1), tips n1 @ tips n2)
 end
 
 fun fold' f n A =
@@ -157,7 +163,7 @@ fun fold' f n A =
         NODE (children, vals) =>
         let val A1 = Portable.foldl' f vals A
         in
-          Binarymap.foldl (fn (_, n, A) => fold' f n A) A1 children
+          LabelTab.fold (fn (_, n) => fn A => fold' f n A) children A1
         end
       | EMPTY vs => Portable.foldl' f vs A
 
@@ -165,10 +171,10 @@ fun vfilter P n =
     case n of
         NODE (children, vals) =>
         let
-          val children' = Binarymap.map (fn (_, a) => vfilter P a) children
+          val children' = LabelTab.map (fn _ => fn a => vfilter P a) children
           val vals' = List.filter P vals
         in
-          if Binarymap.numItems children' = 0 then EMPTY vals'
+          if LabelTab.size children' = 0 then EMPTY vals'
           else NODE (children', vals')
         end
       | EMPTY vs => EMPTY (List.filter P vs)

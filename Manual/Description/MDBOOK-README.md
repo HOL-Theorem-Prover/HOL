@@ -1,0 +1,119 @@
+# mdbook setup for `Manual/Description`
+
+This manual can be browsed as an mdbook site. The `.smd` files are
+the canonical source; mdbook calls the `smdpp` preprocessor (built
+under `Manual/Tools/`) to expand polyscripter directives, drop
+pandoc-only artefacts, resolve cross-chapter references, and protect
+math content from CommonMark backslash-escaping.
+
+## Building
+
+From this directory:
+
+    Holmake mdbook            # one-shot build (output: ../book/Description)
+    Holmake mdbook-serve      # localhost:3000 with live reload (detached)
+    Holmake mdbook-serve LOG=1
+                              # ditto, but capture server output to
+                              # mdbook-serve.log here.  LOG=<path> sets
+                              # a custom log path; default is /dev/null.
+
+`Holmake mdbook` depends on `../Tools/smdpp` so the preprocessor binary
+is built automatically if missing.
+
+The build directory is `../book/Description` (i.e.
+`Manual/book/Description`) rather than a `book/` sibling of this
+directory — that's deliberate, so mdbook's serve-mode watcher doesn't
+loop rebuilding on its own output. Don't move `build-dir` back into
+the source tree without addressing that.
+
+`Holmake mdbook-serve` detaches the server into the background and
+prints the URL — your terminal stays free. The server keeps running
+until you kill it. If you re-run `Holmake mdbook-serve` while a
+previous server is still alive, the recipe pre-flight-checks port
+3000 and fails fast with a hint:
+
+    Port 3000 already in use; stop the existing server first:
+      pkill -f 'mdbook serve'  (or: lsof -ti :3000 | xargs kill)
+
+`pkill -f 'mdbook serve'` is portable across macOS and Linux modern
+installations (BSD pkill and procps-ng pkill both support `-f`).
+The `lsof` form is a more robust fallback if there's any chance the
+process listening on 3000 isn't actually mdbook.
+
+## Adding a chapter
+
+1. Drop a `<name>.smd` file next to the existing chapters.
+2. List it in `SUMMARY.md`.
+3. Optional: add a Holmake rule so the pandoc PDF path also picks it
+   up (see existing rules for `system.smd → system.md → system.pdf`).
+
+## What the smdpp preprocessor does
+
+For each chapter content string from mdbook, smdpp runs (in order):
+
+- Drop YAML frontmatter (pandoc-only).
+- Run polyscripter on `>>`/`##` directives.
+- Strip `\index{…}` (mdbook search replaces a printed index).
+- Strip pandoc raw blocks like ` ```{=latex} `…` ``` `.
+- Double backslashes inside `$…$` and `$$…$$` so `\_`, `\{`, `\}`
+  survive CommonMark escaping for MathJax.
+- Inject `# <chapter title>` if the source has no top-level H1.
+
+Then in a second pass over the whole book it rewrites
+`[text](#anchor)` links across chapters: anchors that live in a
+different chapter file get rewritten to
+`[text](other-chapter.html#anchor)`.
+
+User scripts in `.smd` preambles that want to print into the captured
+output stream should write through `!scriptPrint` (a polyscripter-
+provided ref of type `(string -> unit) ref`), not via `TextIO.print`.
+In CLI mode `!scriptPrint = print`, matching historical behaviour.
+The three existing chapters (`system.smd`, `drules.smd`,
+`suspension-resumption.smd`) already use this convention.
+
+## Math rendering
+
+Math is rendered client-side by MathJax 2.7 (loaded from cdnjs). The
+default config recognises only `\(…\)` and `$$…$$`, so
+`Manual/theme/index.hbs` injects a `tex2jax` script setting
+`inlineMath` to include `$…$`. The same script can also define LaTeX
+macros that mdbook MathJax wouldn't otherwise know about (e.g.
+`\llbracket`, `\rrbracket`). If you upgrade mdbook and the theme
+override disappears, you'll need to re-create it.
+
+## Tables
+
+Source files use **GFM pipe tables**:
+
+    | Header 1 | Header 2 |
+    |----------|----------|
+    | cell     | cell     |
+
+Pandoc and mdbook both understand pipe tables natively, so the same
+source feeds both pipelines. Pandoc multi-line tables (the kind with
+rows of `---` separators) do **not** render in mdbook — pulldown-cmark
+parses the dashes as `<hr>` and the rest as paragraphs — so don't use
+them.
+
+Cells with embedded line breaks (e.g., the multi-line BNF productions
+in `modern-syntax.smd`) use `<br>` rather than literal newlines, since
+GFM cells must fit on one source line. Cells containing a literal `|`
+need to escape it as `\|`.
+
+If pandoc estimates wide cell content, it emits LaTeX
+`\begin{longtable}` columns of the form
+
+    >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}
+
+which depends on the **`array`** and **`calc`** packages (in addition
+to `longtable` and `booktabs`). Both are already loaded by
+`description.tex`; if you start a new top-level LaTeX driver, remember
+to load all four.
+
+## Known limitations
+
+- Cross-references currently rewrite source-side anchors only.
+  `\ref{tab:foo}` style refs carried over from `.stex` aren't
+  translated.
+- `Manual/Description/Reference` is out of scope for this conversion;
+  it's generated by a different mechanism.

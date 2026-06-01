@@ -8,4 +8,8 @@ cachekey-selftest.log: selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe cachekey-selftest.log
+# selftest drives Holmake in subdir/, depdir/, sigobj_symlink/ -- subdirs
+# build does not visit via parallel_tests INCLUDES.  List their .hol/
+# trees here so build cleanAll removes them.
+EXTRA_CLEANS = selftest.exe cachekey-selftest.log \
+               depdir/.hol/ subdir/.hol/ sigobj_symlink/.hol/

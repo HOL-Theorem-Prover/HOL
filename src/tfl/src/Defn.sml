@@ -618,8 +618,8 @@ fun instantiate_wfrec_thm facts tup_eqs =
      val corollaries = map (C SPEC corollary') given_pats
      val eqns_consts = op_mk_set aconv (find_terms is_const functional)
      val (case_rewrites,congs) = extraction_thms eqns_consts facts
-     val RWcnv = REWRITES_CONV (add_rewrites empty_rewrites
-                                (literal_case_THM::case_rewrites))
+     val rwts = add_rewrites empty_rewrites (literal_case_THM::case_rewrites)
+     val RWcnv = REWRITES_CONV rwts
      val rule = unprotect_thm o
                 RIGHT_CONV_RULE
                    (LIST_BETA_CONV
@@ -631,7 +631,7 @@ fun instantiate_wfrec_thm facts tup_eqs =
     Listsort.sort Term.compare SV,
     WFR,
     pats,
-    Extract.simpls_of_congs congs,
+    congs,
     zip given_pats corollaries')
  end
 
@@ -1738,8 +1738,8 @@ fun defn_absyn_to_term a = let
   fun foldthis (pv as Preterm.Var{Name,Ty,Locn}, env) =
     if String.sub(Name,0) = #"_" then return env
     else
-      (case Binarymap.peek(env,Name) of
-           NONE => return (Binarymap.insert(env,Name,pv))
+      (case Symtab.lookup env Name of
+           NONE => return (Symtab.update (Name,pv) env)
          | SOME pv' =>
              Preterm.ptype_of pv' >- (fn pty' => Pretype.unify Ty pty') >>
              return env)
@@ -1763,7 +1763,7 @@ fun defn_absyn_to_term a = let
       let
         val all_frees = op_U Preterm.veq (map ptdefn_freevars pts)
       in
-        foldlM foldthis (Binarymap.mkDict String.compare) all_frees >>
+        foldlM foldthis Symtab.empty all_frees >>
         construct_final_term pts
       end)
 in
@@ -2050,7 +2050,7 @@ fun extract_tcs_from_term eqns =
  in map (Extract.extract FV congs p) pcs
  end
 
-fun build_eqns q = build_eqns_from_term (hd (parse_quote q))
-fun extract_tcs q = extract_tcs_from_term (hd (parse_quote q))
+fun build_eqns q  = build_eqns_from_term $ hd $ parse_quote q
+fun extract_tcs q = extract_tcs_from_term $ hd $ parse_quote q
 
 end (* Defn *)

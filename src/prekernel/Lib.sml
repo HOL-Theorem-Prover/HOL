@@ -306,7 +306,7 @@ fun topsort R =
 (* O(n*log(n)) time version
    deps = map from nodes to adjacency lists *)
 
-local open HOLdict in
+local open Redblackmap in
 type ('a, 'b) dict = ('a, 'b) dict
 
 fun dict_topsort deps =

@@ -1,3 +1,4 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
 ifdef HOLSELFTESTLEVEL
 meson-selftest.log: selftest.exe
 	$(tee ./selftest.exe,$@)

@@ -1,0 +1,31 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `REDUCE_RULE`
+
+``` hol4
+reduceLib.REDUCE_RULE : thm -> thm
+```
+
+------------------------------------------------------------------------
+
+Performs arithmetic or boolean reduction on a theorem at all levels
+possible.
+
+`REDUCE_RULE` attempts to transform a theorem by applying `REDUCE_CONV`.
+
+### Failure
+
+Never fails, but may just return the original theorem.
+
+### Example
+
+``` hol4
+>> reduceLib.REDUCE_RULE (ASSUME “x = 100 + (60 - 17)”);
+
+>> reduceLib.REDUCE_RULE (REFL “100 + 12 DIV 6”);
+```
+
+### See also
+
+[`reduceLib.RED_CONV`](#reduceLib.RED_CONV),
+[`reduceLib.REDUCE_CONV`](#reduceLib.REDUCE_CONV),
+[`reduceLib.REDUCE_TAC`](#reduceLib.REDUCE_TAC)

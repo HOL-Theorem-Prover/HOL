@@ -1,91 +1,23 @@
----
-header-includes: |
-  \usepackage{amssymb}
-  \usepackage{stmaryrd}
-  \usepackage{bbm}
-  \usepackage{accsupp}
-  \newcommand*{\llbrace}{%
-    \BeginAccSupp{method=hex,unicode,ActualText=2983}%
-      \textnormal{\usefont{OMS}{lmr}{m}{n}\char102}%
-      \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
-      \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
-    \EndAccSupp{}%
-  }
-  \newcommand*{\rrbrace}{%
-    \BeginAccSupp{method=hex,unicode,ActualText=2984}%
-      \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
-      \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
-      \textnormal{\usefont{OMS}{lmr}{m}{n}\char103}%
-    \EndAccSupp{}%
-  }
-  \DeclareUnicodeCharacter{393}{\ensuremath{\Gamma}}
-  \DeclareUnicodeCharacter{394}{\ensuremath{\Delta}}
-  \DeclareUnicodeCharacter{3B1}{$\alpha$}
-  \DeclareUnicodeCharacter{3B2}{$\beta$}
-  \DeclareUnicodeCharacter{3BB}{$\lambda$}
-  \DeclareUnicodeCharacter{3C3}{\ensuremath{\sigma}}
-  \DeclareUnicodeCharacter{3C4}{\ensuremath{\tau}}
-  \DeclareUnicodeCharacter{1D40}{\ensuremath{{}\sp{\top}}}
-  \DeclareUnicodeCharacter{1D62}{\ensuremath{{}\sb{i}}}
-  \DeclareUnicodeCharacter{1D63}{\ensuremath{{}\sb{r}}}
-  \DeclareUnicodeCharacter{201C}{\mbox{\textrm{\textquotedblleft}}}
-  \DeclareUnicodeCharacter{201D}{\mbox{\textrm{\textquotedblright}}}
-  \DeclareUnicodeCharacter{207A}{\ensuremath{{}\sp{+}}}
-  \DeclareUnicodeCharacter{2081}{\ensuremath{{}\sb{1}}}
-  \DeclareUnicodeCharacter{2082}{\ensuremath{{}\sb{2}}}
-  \DeclareUnicodeCharacter{2099}{\ensuremath{{}\sb{n}}}
-  \DeclareUnicodeCharacter{21A6}{$\mapsto$}
-  \DeclareUnicodeCharacter{21CE}{\ensuremath{\not\Leftrightarrow}}
-  \DeclareUnicodeCharacter{21D2}{$\Rightarrow$}
-  \DeclareUnicodeCharacter{21D4}{$\Leftrightarrow$}
-  \DeclareUnicodeCharacter{2200}{$\forall$}
-  \DeclareUnicodeCharacter{2203}{$\exists$}
-  \DeclareUnicodeCharacter{2208}{\ensuremath{\in}}
-  \DeclareUnicodeCharacter{2209}{\ensuremath{\not\in}}
-  \DeclareUnicodeCharacter{2212}{\ensuremath{{-}}}
-  \DeclareUnicodeCharacter{2218}{\ensuremath{\circ}}
-  \DeclareUnicodeCharacter{2227}{$\land$}
-  \DeclareUnicodeCharacter{2228}{$\lor$}
-  \DeclareUnicodeCharacter{2229}{\ensuremath{\cap}}
-  \DeclareUnicodeCharacter{222A}{\ensuremath{\cup}}
-  \DeclareUnicodeCharacter{2260}{\ensuremath{\ne}}
-  \DeclareUnicodeCharacter{2264}{\ensuremath{\le}}
-  \DeclareUnicodeCharacter{2265}{\ensuremath{\ge}}
-  \DeclareUnicodeCharacter{227C}{\ensuremath{\preceq}}
-  \DeclareUnicodeCharacter{2282}{\ensuremath{\subset}}
-  \DeclareUnicodeCharacter{2286}{$\subseteq$}
-  \DeclareUnicodeCharacter{2294}{\ensuremath{\sqcup}}
-  \DeclareUnicodeCharacter{2297}{\ensuremath{\otimes}}
-  \DeclareUnicodeCharacter{22A2}{$\vdash$}
-  \DeclareUnicodeCharacter{2983}{$\llbrace$}
-  \DeclareUnicodeCharacter{2984}{$\rrbrace$}
-  \DeclareUnicodeCharacter{2987}{\ensuremath{\llparenthesis}}
-  \DeclareUnicodeCharacter{2988}{\ensuremath{\rrparenthesis}}
-  \DeclareUnicodeCharacter{29FA}{\ensuremath{{+}\!\!{+}}}
-  \DeclareUnicodeCharacter{A673}{\ensuremath{\sp{*}}}
-  \DeclareUnicodeCharacter{1D49F}{\ensuremath{{\cal D}}}
-  \DeclareUnicodeCharacter{1D4A2}{\ensuremath{{\cal M}}}
-  \DeclareUnicodeCharacter{1D4AF}{\ensuremath{{\cal T}}}
-  \DeclareUnicodeCharacter{03B5}{\ensuremath{\varepsilon}}
-  \DeclareUnicodeCharacter{2026}{\ensuremath{\ldots}}
----
+# Derived Inference Rules
 
+\label{derived-rules}
 
 <!-- PolyML code for extracting stuff from structures and printing types etc -->
 >>__ structure PNV = PolyML.NameSpace.Values
 >>__ fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n"); OS.Process.exit OS.Process.failure)
->>__ fun printNameAndType0 qp indent str nm =
+>>__ fun printNameAndType0 qp (indent:FixedInt.int) str nm =
        let val sinfo = valOf $ #lookupStruct PolyML.globalNameSpace str
                        handle Option => raise Fail ("Structure " ^ str ^ " not found")
+           val f2i = FixedInt.toInt
            val snames = PolyML.NameSpace.Structures.contents sinfo
            val sval = valOf (#lookupVal snames nm)
                        handle Option => raise Fail ("Name " ^ nm ^ " not found in structure " ^ str)
            val ctxt = if qp then NONE else SOME snames
            val typ_p = PNV.printType(PNV.typeof sval, 100, ctxt)
-           val spaces = CharVector.tabulate(indent, fn _ => #" ")
+           val spaces = CharVector.tabulate(f2i indent, fn _ => #" ")
            open PolyML
        in
-           PP.prettyPrint(TextIO.print, 70-indent)
+           PP.prettyPrint(!scriptPrint, 70-f2i indent)
             (PrettyBlock(indent,true,[],[PrettyString (spaces ^ nm^" :"), PrettyBreak(1,2), typ_p]))
        end
 >>__ val printNameAndType = printNameAndType0 false
@@ -98,8 +30,6 @@ header-includes: |
                   | i::is => (linewidth := i; lwstk := is))
      )
    end
-
-# Derived Inference Rules
 
 In this section, HOL proofs and theorems are made concrete. The notion
 of *proof* is defined abstractly in the manual §LOGIC: a proof of a
@@ -154,7 +84,7 @@ That is, the third theorem follows from the first and second.
 In the session below, the proof is performed in the HOL system,
 using the ML functions `ASSUME` and `MP`.
 
-```
+```repl
 >> show_assums := true;
 
 >> val th1 = ASSUME ``t1 ==> t2``
@@ -171,7 +101,7 @@ only the *modus ponens* step is counted.  We create an artificial
 function to see the count of all three inference steps in the second
 interaction:
 
-```
+```repl
 >> Count.inferences (MP (ASSUME ``t1 ==> t2``)) (ASSUME ``t1:bool``);
 
 >> fun f () = MP (ASSUME ``t1 ==> t2``) (ASSUME ``t1:bool``);
@@ -221,7 +151,7 @@ $\Gamma \vdash t_1 \Rightarrow t_2$, the theorem $\Gamma \cup\{t_1\}
 rule can be implemented in ML as a function (`UNDISCH`, say) that calls
 the appropriate sequence of primitive inferences. The ML definition of
 `UNDISCH` is simply
-```
+```repl
 >> fun UNDISCH th = MP th (ASSUME $ fst $ dest_imp $ concl th);
 ```
 
@@ -232,12 +162,13 @@ of the derived rule on a consequence of the axiom
 printing of theorems has been adjusted as above and `th` is bound as
 shown below:
 
-```
+```repl
 >> val th = SPEC ``t2:bool`` $ SPEC ``t1:bool`` IMP_ANTISYM_AX;
 
 >> Count.inferences UNDISCH th;
 
 >> Count.inferences UNDISCH it;
+>>__ show_assums := false;
 ```
 
 Each successful application of `UNDISCH` to a theorem invokes an
@@ -256,7 +187,7 @@ generalization, and so on, support the familiar patterns of inference.
 
 A number of derived inference rules are pre-defined when the HOL
 system is entered (`UNDISCH` is one of the first).  In
-[Section](standard-rule-derivation), the abstract derivations are given for
+[Section](#derivation-of-the-standard-rules), the abstract derivations are given for
 the pre-defined rules that reflect the more usual inference patterns
 of the predicate (and lambda) calculi.  Like those shown, some of the
 pre-defined derived rules in HOL generate relatively short proofs.
@@ -275,13 +206,13 @@ is these derived rules, rather than the primitive rules, that one
 normally uses in practice.  In this section, the derivations of some
 of the standard rules are given, in sequence.  These derivations only
 use the axioms and definitions in the theory `bool` (see
-[Section](boolfull), the eight primitive inferences of the HOL logic,
+[Section](#primitive-rules-of-inference-of-the-hol-logic), the eight primitive inferences of the HOL logic,
 and inferences defined earlier in the sequence.
 
 Theorems, in accordance with the definition given at the beginning of
 this chapter, are treated as rules without hypotheses; thus the
 derivation of a theorem resembles the derivation of a rule except in
-not having hypotheses. (The derivation of `TRUTH`, [Section](sec:T),
+not having hypotheses. (The derivation of `TRUTH`, [Section](#mathsft-introduction),
 is the only example given of this, but there are several others in
 HOL.)  There are also some rules that are intrinsically more general
 than theorems.  For example, for any two terms $t_1$ and $t_2$, the
@@ -289,7 +220,7 @@ theorem $\vdash(\lambda{x}.t_1)t_2 = t_1[t_2/x]$ follows by the
 primitive rule `BETA_CONV`. The rule `BETA_CONV` returns a theorem for
 each pair of terms $t_1$ and $t_2$, and is therefore equivalent to an
 infinite family of theorems. No single theorem can be expressed in the
-HOL logic that is equivalent to `BETA_CONV`.See [Chapter](avra-conv)
+HOL logic that is equivalent to `BETA_CONV`. See [Chapter](#conversions)
 for further discussion of this point.  Note that `UNDISCH` is not a
 rule of this sort, as it can, in fact, be expresed as a theorem.
 
@@ -303,7 +234,7 @@ In addition, for reasons that are mostly historical, not all the
 inferences that are derived in terms of the abstract logic are
 actually derived in the current version of the HOL system.  That is,
 there are currently a number of rules that are installed in the system
-on an "axiomatic" basis, all of which should be derived by explicit
+on an “axiomatic” basis, all of which should be derived by explicit
 inference.  These rules' status does not actually compromise the
 consistency of the logic.  In effect, the existing HOL system has a
 deductive system more comprehensive than the one presented abstractly,
@@ -999,25 +930,25 @@ For readability, let $\mathcal{M} = \lambda{x_1\cdots x_n}.\; t'[x_1,\ldots,x_n]
 
 Included in the set of derived inferences provided in HOL is a group
 of rules with complex definitions that do a limited amount of
-"automatic" theorem-proving in the form of rewriting.  The ideas and
+“automatic” theorem-proving in the form of rewriting.  The ideas and
 implementation were originally developed by Milner and Wadsworth for
 Edinburgh LCF, and were later implemented more flexibly and
 efficiently by Paulson and Huet for Cambridge LCF.  One basic
 rewriting rule, `REWRITE_RULE`, is illustrated here. Although HOL
 proofs typically feature more elaborate rewriters (such as
-`SIMP_RULE`, documented in [Section](??)), the underlying ideas are
+`SIMP_RULE`, documented in [Section](#simplification--simplib)), the underlying ideas are
 the same.
 
 `REWRITE_RULE` uses a list of equational theorems (theorems whose
 conclusions can be regarded as having the form $t_1 = t_2$) to replace
-any subterms of an object theorem that "match" $t_1$ by the
+any subterms of an object theorem that “match” $t_1$ by the
 corresponding instance of $t_2$. The rule matches recursively and to
 any depth, until no more replacements can be made, using internally
 defined search, matching and instantiation algorithms.  The validity
 of `REWRITE_RULE` rests ultimately on the primitive rules `SUBST` (for
 making the substitutions); `INST_TYPE` (for instantiating types); and
 the derived rules for generalization and specialization (see
-[Section](sec:gen) and [Section](sec:spec) for instantiating terms.
+[Section](#generalization-forall-introduction) and [Section](#specialization-forall-elimination) for instantiating terms.
 The definition of `REWRITE_RULE` in ML also relies on a large number
 of general and HOL-oriented SML functions.
 
@@ -1032,14 +963,14 @@ other in the rewriting process to transform the original theorem.
 The application of `REWRITE_RULE`, in the session below, illustrates
 that replacements are made at all levels of the structure of a term.
 The example is a formula of natural number arithmetic: the infixes `>`
-and `<` are the usual "greater than" and "less than" relations,
+and `<` are the usual “greater than” and “less than” relations,
 respectively, and `SUC` names the usual successor function on natural
 numbers.  Use is made of the pre-existing definition of `>`, bound to
 `arithmeticTheory.GREATER_DEF` in SML (see §REFERENCE).  The inference
 counting facility is used again, and the printing of theorems is
 adjusted as above.
 
-```
+```repl
 >> Count.inferences
      (REWRITE_RULE [arithmeticTheory.GREATER_DEF])
      (ASSUME ``SUC 3 > 0 /\ SUC 2 > 0 /\ SUC 1 > 0 /\ SUC 0 > 0``);

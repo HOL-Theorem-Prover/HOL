@@ -242,6 +242,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val jobs = #jobs (#core optv)
   val time_limit = #time_limit optv
   val maxheap = #maxheap optv
+  val cache_dir = #cache_dir (#core optv)
   val chatty = if jobs = 1 then #chatty outs else (fn _ => ())
   val info = if jobs = 1 then #info outs else (fn _ => ())
 
@@ -312,10 +313,21 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     in
         ((script,[scriptuo,scriptui,script]), objectfiles)
     end
-    fun run_script g (extra:GraphExtra.t) (script, intermediates) objectfiles expecteds =
+    fun run_script cache_dir ck g (extra:GraphExtra.t) (script, intermediates) objectfiles
+                   expecteds on_success =
       let
-        fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
-        val _ = app safedelete expecteds
+        fun safedelete s =
+            (diag (fn _ => "cleaning up " ^ s ^ " for script " ^ script);
+             FileSys.remove s handle OS.SysErr _ => ())
+        (* The safedelete pass is defensive: with the build about to run
+           and write fresh outputs, deleting any pre-existing copies first
+           guards against a theory script that fails part-way through and
+           leaves stale half-outputs lying around.  We could probably do
+           without it.  But if we keep it, it must only fire on the
+           cache-miss path: on a cache hit the expected files have just
+           been put in place (possibly by a concurrent peer Holmake whose
+           lock we inherited) and we must not delete them. *)
+        fun prep_for_build () = app safedelete expecteds
         val useScript = fullPath [HOLDIR, "bin", "hol"]
         (* Poly/ML runtime options (--gcthreads, --maxheap) must come before subcommand *)
         val cline =
@@ -345,6 +357,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             val _ = if isSuccess res orelse debug = NONE then
                       app safedelete (script :: intermediates)
                     else ()
+            val _ = if isSuccess res then on_success () else ()
           in
             isSuccess res
           end
@@ -361,9 +374,38 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                BuiltInCmd (BIC_BuildScript script_part, empty_incinfo))
               (* incinfos not consulted for comparison so empty value ok here *)
         end
+        (* Directories where parent Theory.dat files might live --
+           every directory that has appeared as a target or dep in the
+           graph.  HM_CacheFetch uses this to find current parents
+           when validating cached .dat files; this lets downstream
+           projects (with their own theory hierarchies outside core
+           HOL's sigobj) benefit from the cache. *)
+        val search_dirs = let
+          open HM_DepGraph
+          val ns = listNodes g
+          fun add_dir (d, acc) =
+              let val s = hmdir.toAbsPath d
+              in if List.exists (fn x => x = s) acc then acc
+                 else s :: acc
+              end
+          fun add_node ((_, nI), acc) =
+              let val acc = add_dir (hm_target.dirpart (#target nI), acc)
+              in
+                List.foldl
+                  (fn ((_,d),acc) => add_dir (hm_target.dirpart d, acc))
+                  acc
+                  (#dependencies nI)
+              end
+        in
+          List.foldl add_node [] ns
+        end
       in
-        BR_ClineK { cline = (useScript, cline), job_kont = cont,
-                    other_nodes = other_nodes }
+          BR_ClineK { cline = (useScript, cline), job_kont = cont,
+                      other_nodes = other_nodes,
+                      cache_dir = cache_dir,
+                      cachekey = ck,
+                      search_dirs = search_dirs,
+                      prep_for_build = prep_for_build }
       end
   in
     let
@@ -383,9 +425,47 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         | BuildScript (s, deps, extra : GraphExtra.t) =>
           let
             val (scriptetc,objectfiles) = setup_script s (deps,extra) []
+            (* When the script run succeeds, record the cachekey of its
+               inputs to <thy>Theory.cachekey so that a subsequent
+               Holmake invocation under --rebuild=cachekey can decide
+               the target is up-to-date without re-running the script. *)
+            val datFS =
+                case HFS_NameMunge.HOLtoFS (s ^ "Theory.dat") of
+                    SOME {fullfile, ...} => fullfile
+                  | NONE => s ^ "Theory.dat"
+            val stamp_path = HM_Cachekey.stamp_path_for_datfile datFS
+            val _ = HM_Cachekey.remove_stamp stamp_path
+            (* Discard the cache-updated graph: this code runs inside
+               a forked child whose graph state isn't visible to
+               anyone after the build completes. *)
+            val ck = #1 (HM_Cachekey.compute_for_deps g deps)
+            fun write_stamp () =
+                case ck of
+                    HM_Cachekey.Key k => HM_Cachekey.write_stamp stamp_path k
+                  | HM_Cachekey.Missing _ => ()
+            val cache_upload_dir = hmdir.toAbsPath (hmdir.curdir())
+            val cache_filenames = let
+              open HM_DepGraph
+              val nodes = find_nodes_by_command g
+                            (hmdir.curdir(),
+                             BuiltInCmd (BIC_BuildScript s, empty_incinfo))
+            in
+              List.mapPartial
+                (Option.map (fromFile o hm_target.filepart o #target) o
+                 peeknode g)
+                nodes
+            end
+            fun write_cache () =
+                case cache_dir of
+                    SOME url =>
+                      ignore (HM_CacheFetch.upload url ck
+                                cache_upload_dir
+                                cache_filenames outs)
+                  | NONE => ()
           in
-            run_script g extra scriptetc objectfiles
+            run_script cache_dir ck g extra scriptetc objectfiles
                        [s^"Theory.sml", s^"Theory.sig", s^"Theory.dat"]
+                       (fn () => (write_stamp(); write_cache()))
           end
         | BuildArticle (s0, deps : dep list, extra) =>
           let
@@ -406,7 +486,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             val ((script,inters),objectfiles) =
                 setup_script s (deps,extra) loggingextras
           in
-            run_script g extra (script,fakescript_str :: inters) objectfiles [s]
+            run_script NONE (HM_Cachekey.Missing []) g extra
+                       (script,fakescript_str :: inters) objectfiles
+                       [s] (fn () => ())
           end
         | ProcessArticle (s,extra) =>
           let
@@ -420,7 +502,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                   "opentheory info --article -o " ^ art ^ " " ^ raw_art])
           in
             BR_ClineK {cline = cline, job_kont = (fn _ => OS.Process.isSuccess),
-                       other_nodes = []}
+                       other_nodes = [], cache_dir = NONE,
+                       cachekey = HM_Cachekey.Missing [],
+                       search_dirs = [],
+                       prep_for_build = fn () => ()}
           end
     end handle CompileFailed => BR_Failed
              | FileNotFound  => BR_Failed
@@ -469,8 +554,15 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   fun interpret_bres bres =
     case bres of
         BR_OK => true
-      | BR_ClineK{cline = (_,cl), job_kont = k, ...} =>
-          k warn (Systeml.systeml cl)
+      | BR_ClineK{cline = (_,cl), job_kont = k, cache_dir, cachekey,
+                  search_dirs, prep_for_build, ...} =>
+        let val fetched = case cache_dir of
+                              SOME url => HM_CacheFetch.fetch url cachekey
+                                            search_dirs outs
+                            | NONE => false
+        in if fetched then true
+           else (prep_for_build (); k warn (Systeml.systeml cl))
+        end
       | BR_Failed => false
 
 
@@ -500,15 +592,14 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     relocbuild = relocbuild,
                                     thmsrc = thmsrc,
                                     mosml_build_command = mosml_build_command,
-                                    warn = warn, tgtfatal = tgtfatal,
                                     keep_going = keep_going,
                                     diag =
                                       (fn s => diag "multibuild" (fn _ => s)),
-                                    info = #info outs,
                                     time_limit = time_limit,
                                     maxheap = maxheap,
                                     quiet = quiet_flag, hmenv = hmenv,
-                                    jobs = jobs } g |> interpret_graph)
+                                    jobs = jobs,
+                                    outs = outs } g |> interpret_graph)
 in
   {extra_impl_deps = [],
    build_graph = build_graph}

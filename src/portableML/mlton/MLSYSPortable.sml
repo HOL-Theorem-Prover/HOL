@@ -48,4 +48,9 @@ fun syncref init =
      upd = fn f => let val (r, v') = f (!v) in v := v'; r end}
   end
 
+fun unique_tmp_suffix () =
+  SysWord.toString (Posix.Process.pidToWord (Posix.ProcEnv.getpid ()))
+
+fun save_heap (_:string) = ()
+
 end

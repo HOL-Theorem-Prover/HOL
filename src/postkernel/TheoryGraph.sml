@@ -9,6 +9,12 @@ exception NotFound of thy
 val thy_compare : thy * thy -> order =
     inv_img_cmp #thyname String.compare
 
+structure Thytab = Table(struct
+  type key = thy
+  val ord = thy_compare
+  val pp = HOLPP.add_string o #thyname
+end)
+
 type thyset = thy HOLset.set
 
 fun toThy s : thy = {thyname = s}
@@ -16,16 +22,19 @@ val slist_to_thyset =
   List.foldl (fn (s,acc) => HOLset.add(acc,{thyname = s}))
              (HOLset.empty thy_compare)
 
-type t = (thy,thyset) Binarymap.dict
+type t = thyset Thytab.table
 
-val empty : t = Binarymap.mkDict thy_compare
+val empty : t = Thytab.empty
 
 fun member G thy =
-  case Binarymap.peek(G, thy) of
+  case Thytab.lookup G thy of
       NONE => false
     | SOME _ => true
 
-fun parents G thy = Binarymap.find (G, thy)
+fun parents G thy =
+  case Thytab.lookup G thy of
+      NONE => raise NotFound thy
+    | SOME ps => ps
 
 fun ancestors G thy =
   let
@@ -92,7 +101,7 @@ fun insert (newthy, parents) G =
       let
         val ps' = eliminate_redundant_ancestors G parents
       in
-        Binarymap.insert(G, newthy, HOLset.fromList thy_compare ps')
+        Thytab.update (newthy, HOLset.fromList thy_compare ps') G
       end
 
 fun current () =

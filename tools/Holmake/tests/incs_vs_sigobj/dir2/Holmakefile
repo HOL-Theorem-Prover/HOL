@@ -1,1 +1,2 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
 INCLUDES = ../dir1

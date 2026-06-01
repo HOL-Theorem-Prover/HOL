@@ -1,0 +1,47 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `dest_theory`
+
+``` hol4
+DB.dest_theory : string -> theory
+```
+
+------------------------------------------------------------------------
+
+Return the contents of a theory.
+
+An invocation `dest_theory s` returns a structure
+
+``` hol4
+   THEORY(s,{types, consts, parents, axioms, definitions, theorems})
+```
+
+where `types` is a list of `(string,int)` pairs that contains all the
+type operators declared in `s`, `consts` is a list of
+`(string,hol_type)` pairs enumerating all the term constants declared in
+`s`, `parents` is a list of strings denoting the parents of `s`,
+`axioms` is a list of `(string,thm)` pairs denoting the axioms asserted
+in `s`, `definitions` is a list of `(string,thm)` pairs denoting the
+definitions of `s`, and `theorems` is a list of `(string,thm)` pairs
+denoting the theorems proved and stored in `s`.
+
+The call `dest_theory "-"` may be used to access the contents of the
+current theory.
+
+### Failure
+
+If `s` is not the name of a loaded theory.
+
+### Example
+
+``` hol4
+>> dest_theory "option";
+```
+
+### Comments
+
+A prettyprinter is installed for the type `theory`, but the contents may
+still be accessed via pattern matching.
+
+### See also
+
+[`Hol_pp.print_theory`](#Hol_pp.print_theory)

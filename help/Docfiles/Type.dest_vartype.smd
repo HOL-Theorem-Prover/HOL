@@ -1,0 +1,28 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `dest_vartype`
+
+``` hol4
+Type.dest_vartype : hol_type -> string
+```
+
+------------------------------------------------------------------------
+
+Breaks a type variable down to its name.
+
+### Failure
+
+Fails with `dest_vartype` if the type is not a type variable.
+
+### Example
+
+``` hol4
+>> dest_vartype alpha;
+
+>>+ try dest_vartype bool;
+```
+
+### See also
+
+[`Type.mk_vartype`](#Type.mk_vartype),
+[`Type.is_vartype`](#Type.is_vartype),
+[`Type.dest_type`](#Type.dest_type)

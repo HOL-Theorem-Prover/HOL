@@ -9,7 +9,11 @@ datatype buildresult =
        | BR_ClineK of { cline : string * string list,
                         job_kont : (string -> unit) -> OS.Process.status ->
                                    bool,
-                        other_nodes : HM_DepGraph.node list }
+                        other_nodes : HM_DepGraph.node list,
+                        cache_dir : string option,
+                        cachekey : HM_Cachekey.compute_result,
+                        search_dirs : string list,
+                        prep_for_build : unit -> unit }
        | BR_Failed
 
 val RealFail = Failed{needed=true}
@@ -26,6 +30,7 @@ fun lmap_insert k v m =
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
 val loggingdir = ".hol/logs"
+fun K x y = x
 
 fun graph_dirinfo g =
     let
@@ -57,9 +62,11 @@ fun graphbuild optinfo g =
   let
     val { build_command,
           mosml_build_command : GraphExtra.t mosml_build_command,
-          warn, tgtfatal, diag,
-          keep_going, quiet, hmenv, jobs, info, time_limit, maxheap,
-          relocbuild, thmsrc } = optinfo
+          diag,
+          keep_going, quiet, hmenv, jobs, time_limit, maxheap,
+          relocbuild, thmsrc,
+          outs : Holmake_tools.output_functions } = optinfo
+    val {warn, info, tgtfatal, ...} = outs
     val _ = diag "Starting graphbuild"
     (* Per-target locking: track locks for active build targets *)
     type lockkey = hmdir.t * string
@@ -75,7 +82,7 @@ fun graphbuild optinfo g =
               SOME (OS.Path.file thyname ^ "Script")
           | BuiltInCmd (BIC_Compile, _) =>
               SOME (fromFile (hm_target.filepart (#target nI)))
-          | SomeCmd c => SOME ("cmd-" ^ c)
+          | SomeCmd c => SOME (fromFile (hm_target.filepart (#target nI)))
           | NoCmd => NONE
     fun acquire_target_lock nI =
         case lock_key_for nI of
@@ -84,7 +91,8 @@ fun graphbuild optinfo g =
             let val dir = #dir nI
                 val lk = (dir, key)
                 val lh = HM_BuildLock.acquire
-                           {dir = hmdir.toAbsPath dir, key = key, warn = warn}
+                           {dir = hmdir.toAbsPath dir, key = key,
+                            warn = warn, diag = diag}
             in
               target_locks := Map.insert(!target_locks, lk, lh);
               lh
@@ -121,9 +129,10 @@ fun graphbuild optinfo g =
           ldir ++ safetag dir tag
         end
 
-    val (monitor, {bold,green,red,coloured_info = info}) =
+    val (monitor, {bold,green,red,coloured_info = info,final_report}) =
         MB_Monitor.new {info = info, warn = warn, genLogFile = genLF,
                         time_limit = time_limit,
+                        keep_going = keep_going,
                         multidir = is_multidir dirmap}
 
     fun dircomplete dir (good, bad) t =
@@ -200,10 +209,27 @@ fun graphbuild optinfo g =
                    rest)
     val count_theories_needed = count_theories_needed0 (0,0)
 
-    fun genjob (g,ok) =
-      case (ok,find_runnable g) of
+    fun genjob (sctx as {jobs_running}) (g,ok) =
+      let
+        fun has_capacity (nI : GraphExtra.t nodeInfo) =
+            case #local_parallelism_limit nI of
+                NONE => true
+              | SOME n => jobs_running < n
+      in
+      case (ok,find_runnable_pred has_capacity g) of
           (false, _) => (release_all_locks(); GiveUpAndDie (g, false))
-       |  (true, NONE) => (release_all_locks(); NoMoreJobs (g, ok))
+       |  (true, NONE) =>
+          (* Do NOT release_all_locks here: NoMoreJobs fires after every
+             dispatch cycle when find_runnable_pred has nothing more to
+             hand out *for now* -- either because no node's deps are
+             ready, or because every ready node's LOCAL_PARALLELISM_LIMIT
+             is at its cap.  Workers we already dispatched are still
+             holding their target locks for the duration of their own
+             work.  Each worker's own update closure will release its
+             lock when that worker completes; bulk-releasing here would
+             yank the locks out from under in-flight peer Holmakes that
+             are blocked waiting on them. *)
+          NoMoreJobs (g, ok)
        |  (true, SOME (n,nI : GraphExtra.t nodeInfo)) =>
           let
             val _ = diag ("Found runnable node "^node_toString n)
@@ -219,7 +245,8 @@ fun graphbuild optinfo g =
                  else ();
                  release_target_lock nI;
                  if b orelse keep_going then
-                   genjob (updnode(n, if b then Succeeded else RealFail) g,
+                   genjob sctx
+                          (updnode(n, if b then Succeeded else RealFail) g,
                            true)
                  else (release_all_locks(); GiveUpAndDie (g, ok)))
             val deps = map #2 (#dependencies nI)
@@ -232,7 +259,7 @@ fun graphbuild optinfo g =
             fun stdprocess() =
               case #command nI of
                   NoCmd => (release_target_lock nI;
-                            genjob (updnode (n,Succeeded) g, true))
+                            genjob sctx (updnode (n,Succeeded) g, true))
                 | cmd as SomeCmd c =>
                   let
                     val hypargs as {noecho,ignore_error,command=c} =
@@ -278,7 +305,8 @@ fun graphbuild optinfo g =
                               end
                         in
                           NewJob ({tag = tag, command = shell_command c,
-                                   update = update, dir = dir},
+                                   update = update, try_cache = K false,
+                                   dir = dir},
                                   (updall(g, Running), true))
                         end
                   end
@@ -290,7 +318,8 @@ fun graphbuild optinfo g =
                       case bres of
                           BR_OK => k true g
                         | BR_Failed => k false g
-                        | BR_ClineK{cline, job_kont, other_nodes} =>
+                        | BR_ClineK{cline, job_kont, other_nodes, cache_dir, cachekey,
+                                    search_dirs, prep_for_build} =>
                           let
                             val (thyc,ndi) = count_theories_needed other_nodes
                             fun b2res b = if b then OS.Process.success
@@ -304,15 +333,39 @@ fun graphbuild optinfo g =
                                          g
                                          other_nodes
                             fun update ((g,ok), b, t) =
-                              (release_target_lock nI;
-                               if job_kont (fn s => ()) (b2res b) then
-                                (tgtcomplete(#dir nI, ndi, thyc, true, t);
-                                 (updall Succeeded g, true))
-                              else
-                                (tgtcomplete(#dir nI, ndi, thyc, false, t);
-                                 (updall RealFail g, keep_going)))
+                              let
+                                (* job_kont must run BEFORE release_target_lock:
+                                   for BIC_BuildScript it contains the post-
+                                   script safedelete that removes
+                                   <thy>Script.{ui,uo}, and a concurrent peer
+                                   Holmake that acquires the lock before this
+                                   cleanup runs will find its freshly-compiled
+                                   <thy>Script.ui yanked out from under
+                                   Poly's load step. *)
+                                val ok2 = job_kont (fn s => ()) (b2res b)
+                                val _ = release_target_lock nI
+                              in
+                                if ok2 then
+                                  (tgtcomplete(#dir nI, ndi, thyc, true, t);
+                                   (updall Succeeded g, true))
+                                else
+                                  (tgtcomplete(#dir nI, ndi, thyc, false, t);
+                                   (updall RealFail g, keep_going))
+                              end
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l
+                            fun try_cache () =
+                              let
+                                val fetched =
+                                    case cache_dir of
+                                        NONE => false
+                                      | SOME url =>
+                                        HM_CacheFetch.fetch url cachekey
+                                          search_dirs outs
+                              in
+                                if fetched then true
+                                else (prep_for_build (); false)
+                              end
                           in
                             diag ("New graph job for "^target_s^
                                   " with c/line: " ^ cline_str cline);
@@ -321,6 +374,7 @@ fun graphbuild optinfo g =
                                         (map node_toString other_nodes));
                             NewJob({tag = tag, dir = dir,
                                     command = cline_to_command cline,
+                                    try_cache = try_cache,
                                     update = update},
                                    (updall Running g, true))
                           end
@@ -363,7 +417,7 @@ fun graphbuild optinfo g =
                  of
                     NONE => (diag ("Can skip work on "^target_s);
                              release_target_lock nI;
-                             genjob (updnode (n, Succeeded) g, true))
+                             genjob sctx (updnode (n, Succeeded) g, true))
                   | SOME (_,d) =>
                     (diag ("Dependency " ^ tgt_toString d ^
                            " forces rebuild of "^ target_s);
@@ -372,12 +426,13 @@ fun graphbuild optinfo g =
             else
               stdprocess()
           end
+      end
     val worklist =
         new_worklist {worklimit = jobs,
                       provider = { initial = (g,true), genjob = genjob }}
   in
     do_work(worklist, monitor)
-    before release_all_locks()
+    before (release_all_locks(); final_report())
   end
 
 end

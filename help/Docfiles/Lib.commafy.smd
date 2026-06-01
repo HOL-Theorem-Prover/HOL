@@ -1,0 +1,26 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `commafy`
+
+``` hol4
+Lib.commafy : string list -> string list
+```
+
+------------------------------------------------------------------------
+
+Add commas into a list of strings.
+
+An application `commafy [s1,...,sn]` yields `[s1, ",", ..., ",", sn]`.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>> commafy ["donkey", "mule", "horse", "camel", "llama"];
+
+>> String.concat it;
+
+>> commafy ["foo"];
+```

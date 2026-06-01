@@ -340,8 +340,11 @@ fun ASSUM_BY_CONV conv thm = let
   in MP thm TRUTH handle HOL_ERR e => (print ("ASSUM_BY_CONV: conv-ed thm: "
     ^ Parse.thm_to_string thm ^ "\n"); raise (HOL_ERR e)) end
 
-fun add_count d k n = Redblackmap.update (d, k, fn NONE => n | SOME m => m + n)
-fun look_count d k = case Redblackmap.peek (d, k) of NONE => 0 | SOME n => n
+fun add_count d k n =
+    Termtab.update (k, case Termtab.lookup d k of
+                           NONE => n
+                         | SOME m => m + n) d
+fun look_count d k = case Termtab.lookup d k of NONE => 0 | SOME n => n
 
 local
    fun strip_build_opers t ops =
@@ -374,8 +377,7 @@ end
    order they appear in l1/l2, and l1rem and l2rem are the
    remainders. Fast: O(n) proof steps, O(nlogn) calculation. *)
 fun PERM_ELIM_COMMON_IMP common l1 l2 = let
-    val comm_tab = foldl (fn (x, d) => add_count d x 1)
-        (Redblackmap.mkDict Term.compare) common
+    val comm_tab = foldl (fn (x, d) => add_count d x 1) Termtab.empty common
     val (l1_comm, l1_rem) = strip_perm_list_div comm_tab l1
     val (l2_comm, l2_rem) = strip_perm_list_div comm_tab l2
     val thm = ISPECL [l1, l1_comm, l1_rem, l2, l2_comm, l2_rem]

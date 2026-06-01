@@ -478,15 +478,15 @@ fun new_varinfo () : varinfo =
 exception NotFound
 
 fun variable_information vs t = let
-  val table = ref (Redblackmap.mkDict Term.compare)
+  val table : varinfo Termtab.table ref = ref Termtab.empty
   fun ins_initial_recs v =
-    table := Redblackmap.insert (!table, v, new_varinfo())
+    table := Termtab.update (v, new_varinfo()) (!table)
   val _ = app ins_initial_recs vs
   fun examine_cv t = let
     val (c, v) = dest_mult t
     val c_i = int_of_term c
   in
-    case Redblackmap.peek (!table, v) of
+    case Termtab.lookup (!table) v of
       NONE => ()
     | SOME {maxupc, maxloc, numups, numlos} =>
       if Arbint.<(c_i, Arbint.zero) then (* upper bound *)
@@ -519,7 +519,7 @@ fun findleast gt f l =
 
 fun best_variable_to_eliminate vs t = let
   val table = variable_information vs t
-  val items = Redblackmap.listItems (!table)
+  val items = Termtab.dest (!table)
   fun is_vacuous (_, {numups, numlos,...}) = !numups = 0 orelse !numlos = 0
   fun is_exact (_, {maxloc, maxupc,...}) = !maxloc = Arbint.one orelse
                                            !maxupc = Arbint.one

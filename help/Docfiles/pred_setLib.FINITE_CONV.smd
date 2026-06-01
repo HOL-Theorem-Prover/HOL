@@ -1,0 +1,32 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `FINITE_CONV`
+
+``` hol4
+pred_setLib.FINITE_CONV : conv
+```
+
+------------------------------------------------------------------------
+
+Proves finiteness of sets of the form `{t1;...;tn}`.
+
+The conversion `FINITE_CONV` expects its term argument to be an
+assertion of the form `FINITE {t1;...;tn}`. Given such a term, the
+conversion returns the theorem
+
+``` hol4
+   |- FINITE {t1;...;tn} = T
+```
+
+### Example
+
+``` hol4
+>>__ load "pred_setLib";
+
+>> pred_setLib.FINITE_CONV ``FINITE {1;2;3}``;
+
+>> pred_setLib.FINITE_CONV ``FINITE ({}:num->bool)``;
+```
+
+### Failure
+
+Fails if applied to a term not of the form `FINITE {t1;...;tn}`.

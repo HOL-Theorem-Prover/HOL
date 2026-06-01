@@ -1,0 +1,38 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `MESG_outstream`
+
+``` hol4
+Feedback.MESG_outstream : TextIO.outstream ref
+```
+
+------------------------------------------------------------------------
+
+Reference to output stream used when printing `HOL_MESG`.
+
+The value of reference cell `MESG_outstream` controls where `HOL_MESG`
+prints its argument.
+
+The default value of `MESG_outstream` is `TextIO.stdOut`.
+
+### Example
+
+``` hol4
+>> val ostrm = TextIO.openOut "foo";
+
+>>+ MESG_outstream := ostrm;
+
+>> HOL_MESG "Nattering nabobs of negativity.";
+
+>> TextIO.closeOut ostrm;
+
+>> val istrm = TextIO.openIn "foo";
+
+>> print (TextIO.inputAll istrm);
+```
+
+### See also
+
+[`Feedback`](#Feedback), [`Feedback.HOL_MESG`](#Feedback.HOL_MESG),
+[`Feedback.ERR_outstream`](#Feedback.ERR_outstream),
+[`Feedback.WARNING_outstream`](#Feedback.WARNING_outstream),
+[`Feedback.emit_MESG`](#Feedback.emit_MESG)

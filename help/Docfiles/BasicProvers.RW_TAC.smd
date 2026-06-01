@@ -1,0 +1,15 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+---
+canonical: bossLib.RW_TAC
+generated: true
+---
+## `RW_TAC`
+
+``` hol4
+BasicProvers.RW_TAC : simpset -> thm list -> tactic
+```
+
+------------------------------------------------------------------------
+
+Re-exported from [`bossLib.RW_TAC`](#bossLib.RW_TAC). See that
+entry for full documentation.

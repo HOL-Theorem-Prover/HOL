@@ -1,12 +1,12 @@
 structure stringfindreplace :> stringfindreplace =
 struct
 
-datatype 'a trie = Nd of 'a option * (char, 'a trie) Binarymap.dict
+datatype 'a trie = Nd of 'a option * 'a trie Chartab.table
 
 fun dictOf (Nd(_, d)) = d
 fun valueOf (Nd(v,_)) = v
 
-fun empty() = Nd (NONE, Binarymap.mkDict Char.compare)
+fun empty() = Nd (NONE, Chartab.empty)
 
 fun insert (t, s, v) =
   let
@@ -18,11 +18,11 @@ fun insert (t, s, v) =
             NONE => Nd(SOME v, dict)
           | SOME (c, ss') =>
             let
-              val subt = case Binarymap.peek(dict, c) of
+              val subt = case Chartab.lookup dict c of
                              NONE => empty()
                            | SOME t => t
             in
-              Nd(val0, Binarymap.insert(dict,c,recurse subt ss'))
+              Nd(val0, Chartab.update (c, recurse subt ss') dict)
             end
       end
   in
@@ -37,7 +37,7 @@ fun foldl f acc t =
                       NONE => acc0
                     | SOME v => f(k,v,acc0)
       in
-        Binarymap.foldl (fn (c,t,a) => recurse (k ^ str c) a t) acc (dictOf t)
+        Chartab.fold (fn (c,t) => fn a => recurse (k ^ str c) a t) (dictOf t) acc
       end
   in
     recurse "" acc t
@@ -78,7 +78,7 @@ fun foldcheck trie0 s =
           fun newcellf inv old =
             if inv then old
             else
-              case Binarymap.peek(dictOf trie0, c) of
+              case Chartab.lookup (dictOf trie0) c of
                   NONE => old
                 | SOME t =>
                     (i, (t, Option.map (fn v => (v,1)) (valueOf t)))::old
@@ -88,7 +88,7 @@ fun foldcheck trie0 s =
               | ((cell as (starti, (t, bestopt)))::rest) =>
                 let
                 in
-                  case Binarymap.peek(dictOf t, c) of
+                  case Chartab.lookup (dictOf t) c of
                       NONE =>
                         (case bestopt of
                              NONE => updcells doneA continuingA

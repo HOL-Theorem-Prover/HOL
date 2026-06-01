@@ -1,0 +1,15 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+---
+canonical: bossLib.Hol_reln
+generated: true
+---
+## `Hol_reln`
+
+``` hol4
+IndDefLib.Hol_reln : term quotation -> thm * thm * thm
+```
+
+------------------------------------------------------------------------
+
+Re-exported from [`bossLib.Hol_reln`](#bossLib.Hol_reln). See that
+entry for full documentation.

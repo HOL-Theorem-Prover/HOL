@@ -46,7 +46,7 @@ fun load_thydata {thyname, path, hash} =
           List.mapPartial
             (fn raw =>
                 let val nm = #name raw
-                in case Redblackmap.peek(named_dict, nm) of
+                in case Symtab.lookup named_dict nm of
                        SOME th => SOME (nm, th, get_thminfo raw)
                      | NONE => NONE
                 end)

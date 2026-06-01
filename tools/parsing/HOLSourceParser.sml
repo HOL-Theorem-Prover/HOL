@@ -40,6 +40,12 @@ fun simpleParseError print (start, stop) s =
     "parse error at byte " ^
     Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n")
 
+fun trackingPrint print = let
+  val flag = ref false
+in
+  {print = fn s => (flag := true; print s), hadError = fn () => !flag}
+end
+
 fun filelineParseError print (body, events) =
   case mkFileline body events of fileline =>
   fn (start, stop) => fn s => let

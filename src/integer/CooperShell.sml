@@ -376,27 +376,28 @@ fun best_var vars tm = let
         fun foldthis (v, map) = let
           open Arbint
           val (a,b) = assess_leaf v negp t
-          val (a0,b0) = Binarymap.find(map, v)
-              handle Binarymap.NotFound => (zero,zero)
+          val (a0,b0) =
+              Option.getOpt (Termtab.lookup map v, (zero,zero))
         in
-          Binarymap.insert(map, v, (a + a0, b + b0))
+          Termtab.update (v, (a + a0, b + b0)) map
         end
       in
         List.foldl foldthis map vars
       end
   end
-  val initial_map = Binarymap.mkDict Term.compare
+  val initial_map = Termtab.empty
 in
   case vars of
     [] => NONE
   | [x] => SOME x
   | (v::vs) => let
       val final_map = assess false initial_map tm
-      val start = (v, Arbint.min(Binarymap.find(final_map, v))
-                      handle Binarymap.NotFound => Arbint.zero)
+      fun min_of v = case Termtab.lookup final_map v of
+                         SOME pair => Arbint.min pair
+                       | NONE => Arbint.zero
+      val start = (v, min_of v)
       fun findmin (v, acc as (minvar, minc)) = let
-        val vc = Arbint.min(Binarymap.find(final_map, v))
-                            handle Binarymap.NotFound => Arbint.zero
+        val vc = min_of v
       in
         if Arbint.<=(vc, minc) then (v, vc) else acc
       end

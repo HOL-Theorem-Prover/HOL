@@ -1,0 +1,31 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `fst`
+
+``` hol4
+Lib.fst : ('a * 'b) -> 'a
+```
+
+------------------------------------------------------------------------
+
+Extracts the first component of a pair.
+
+`fst (x,y)` returns `x`.
+
+### Failure
+
+Never fails. However, notice that `fst (x,y,z)` fails to typecheck,
+since `(x,y,z)` is not a pair.
+
+### Example
+
+``` hol4
+>> fst (1, "foo");
+
+>>+ fst (1, "foo", []);
+
+>> fst (1, ("foo", []));
+```
+
+### See also
+
+[`Lib.snd`](#Lib.snd)

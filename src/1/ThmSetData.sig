@@ -32,7 +32,7 @@ sig
       {settype : string, delta_ops : 'value ops} ->
       (setdelta,'value) AncestryData.fullresult
 
-  type simple_dictionary = (string,thm) Binarymap.dict
+  type simple_dictionary = thm Symtab.table
   val simple_dictionary_ops : simple_dictionary -> simple_dictionary ops
   val export_simple_dictionary :
       {settype : string, initial : (string * thm) list} ->

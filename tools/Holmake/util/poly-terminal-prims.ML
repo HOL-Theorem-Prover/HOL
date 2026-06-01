@@ -14,6 +14,9 @@ fun strmIsTTY (outstream : TextIO.outstream) =
       | SOME desc => (OS.IO.kind desc = OS.IO.Kind.tty)
   end
 
+fun stdin_is_tty () =
+    Posix.ProcEnv.isatty Posix.FileSys.stdin handle _ => false
+
 fun TERM_isANSI () =
     case OS.Process.getEnv "TERM" of
         NONE => false

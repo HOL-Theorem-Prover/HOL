@@ -104,6 +104,13 @@ and proof =
 | deductAntisym_prf of thm * thm
 | compute_prf of (compute_args * thm list) * term
 | save_dep_prf of thm
+| Exported_prf of string * thm_id
+  (* Stub left behind by export_proof: the full inference tree lives in an
+     external .tr.gz file (first field) under the saved name (second). *)
+| Mark_prf of string * thm
+  (* No-op wrapper inserted by the `mark` rule (below); identical at the
+     logical level to its argument, but visible in the trace as a named
+     boundary for source-level instrumentation. *)
 
 withtype compute_args =
   { cval_terms : (string * term) list,
@@ -113,9 +120,18 @@ withtype compute_args =
 
 fun proof (THM(_,_,_,p)) = !p
 fun delete_proof (THM(_,_,_,p)) =
-  (case !p of save_dep_prf (THM(_,_,_,inner)) => inner := deleted_prf
-            | _ => ();
+  (case !p of
+     save_dep_prf (THM(_,_,_,inner))   => inner := deleted_prf
+   | Mark_prf (_, THM(_,_,_,inner))    => inner := deleted_prf
+   | _ => ();
    p := deleted_prf)
+
+fun set_exported (THM(_,_,_,p)) (file, id) =
+  (case !p of
+     save_dep_prf (THM(_,_,_,inner))   => inner := deleted_prf
+   | Mark_prf (_, THM(_,_,_,inner))    => inner := deleted_prf
+   | _ => ();
+   p := Exported_prf (file, id))
 
 fun single_hyp tm = HOLset.singleton Term.compare tm
 val empty_hyp = Term.empty_tmset
@@ -331,7 +347,17 @@ end;
 
 fun dest_thm(t as THM(_,asl,w,_)) = (hyplist t,w) (* Compatible with old code. *)
 fun sdest_thm(THM(_,asl,w,_)) = (asl,w)
-fun make_thm R (x,y,z,p) = (Count.inc_count R; THM (x,y,z,ref p));   (* internal only *)
+(* internal only. When TraceMode is NoTrace, the supplied proof variant is
+   discarded and the thm's proof ref is initialized to deleted_prf instead.
+   The proof argument is still constructed by the caller (one tuple alloc
+   that immediately becomes nursery garbage), but the inference tree it
+   references is never retained. *)
+fun make_thm R (x,y,z,p) = (
+  Count.inc_count R;
+  THM (x,y,z,
+       ref (case !TraceMode.mode of
+              TraceMode.NoTrace => deleted_prf
+            | _                 => p)))
 
 fun thm_frees (t as THM(_,asl,c,_)) = free_varsl (c::hyplist t);
 
@@ -1548,6 +1574,12 @@ fun save_dep thy (th as (THM(t,h,c,p))) =
     thm_order := (!thm_order) + 1;
     THM(Tag.set_dep dep t,h,c,ref(save_dep_prf th))
   end
+
+(* mark: no-op inference wrapper. Preserves tag/hyps/concl; leaves a named
+   Mark_prf in the proof ref so the marker is visible in the trace. Does
+   not touch the Count counters because it is logically an identity rule. *)
+fun mark label (th as THM(t,h,c,_)) =
+  THM(t, h, c, ref (Mark_prf (label, th)))
 
 (* Some OpenTheory kernel rules *)
 fun deductAntisym (th1 as THM(o1,a1,c1,p1)) (th2 as THM(o2,a2,c2,p2)) = let

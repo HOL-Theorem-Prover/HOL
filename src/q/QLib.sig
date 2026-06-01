@@ -13,6 +13,7 @@ sig
   val qrefinel : term quotation list -> tactic
   val qsuff_tac : term quotation -> tactic
   val qid_spec_tac : term quotation -> tactic
+  val qid_specl_tac : term quotation list -> tactic
   val qspec_tac : term quotation * term quotation -> tactic
   val qspec_then : term quotation -> thm_tactic -> thm -> tactic
   val qspecl_then : term quotation list -> thm_tactic -> thm -> tactic

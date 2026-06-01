@@ -4,7 +4,7 @@ sig
   datatype command = Theorem | Term | Type
   type optionset
   type posn = int * int (* linenum, charnum *)
-  type override_map = (string,(string * int))Binarymap.dict
+  type override_map = (string * int) Symtab.table
 
   val parseOpts : posn -> string -> optionset
   val usage : unit -> 'a

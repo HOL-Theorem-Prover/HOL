@@ -1,3 +1,4 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
 EXTRA_CLEANS = soundness_check-selftest.log selftest.exe
 
 soundness_check-selftest.log: selftest.exe

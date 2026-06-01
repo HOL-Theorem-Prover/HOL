@@ -34,9 +34,8 @@ struct
   type resolution = literal list * cindex list
 
   datatype certificate =
-      VALID of (vindex, extension) HOLdict.dict
-        * (vindex, literal) HOLdict.dict
-    | INVALID of (cindex, resolution) HOLdict.dict * cindex
+      VALID of extension Inttab.table * literal Inttab.table
+    | INVALID of resolution Inttab.table * cindex
 
 (* ------------------------------------------------------------------------- *)
 (* read_certificate_file: reads a QBF certificate from a file                *)
@@ -71,13 +70,14 @@ struct
         "missing '0' terminator after extension literals"
       | extension_lits lits (literal :: xs) =
       extension_lits (int_from_string literal :: lits) xs
-    (* (vindex, extension) dict -> string list -> (vindex, extension) dict *)
+    (* extension Inttab.table -> string list -> extension Inttab.table *)
     fun extension ext [vindex, "I", lit1, lit2, lit3] =
-      HOLdict.insert (ext, int_from_string vindex,
+      Inttab.update (int_from_string vindex,
         ITE (int_from_string lit1, int_from_string lit2, int_from_string lit3))
+        ext
       | extension ext (vindex :: "A" :: lits) =
-      HOLdict.insert (ext, int_from_string vindex,
-        AND (extension_lits [] lits))
+      Inttab.update (int_from_string vindex,
+        AND (extension_lits [] lits)) ext
       | extension _ _ =
       raise ERR "read_certificate_file" "extension: invalid format"
     (* cindex list -> string list -> cindex list *)
@@ -104,33 +104,34 @@ struct
       | resolution_args _ [] =
         raise ERR "read_certificate_file"
           "resolution: missing '*' or '0' terminator"
-    (* (cindex, resolution) dict -> string list -> (cindex, resolution) dict *)
+    (* resolution Inttab.table -> string list -> resolution Inttab.table *)
     fun resolution res (cindex :: xs) =
-      HOLdict.insert (res, int_from_string cindex, resolution_args [] xs)
+      Inttab.update (int_from_string cindex, resolution_args [] xs) res
       | resolution _ _ =
       raise ERR "read_certificate_file" "resolution: clause index expected"
-    (* (vindex, literal) dict -> string list -> (vindex, literal) dict *)
+    (* literal Inttab.table -> string list -> literal Inttab.table *)
     fun valid_conclusion dict [] =
       dict
       | valid_conclusion dict (vindex :: literal :: xs) =
-      valid_conclusion (HOLdict.insert
-        (dict, int_from_string vindex, int_from_string literal)) xs
+      valid_conclusion
+        (Inttab.update (int_from_string vindex, int_from_string literal) dict)
+        xs
       | valid_conclusion _ _ =
       raise ERR "read_certificate_file"
         "vindex/literal pair expected in conclusion"
-    (* (vindex, extension) dict * (cindex, resolution) dict -> string list ->
+    (* extension Inttab.table * resolution Inttab.table -> string list ->
          conclusion *)
     fun conclusion (ext, res) ("VALID" :: xs) =
       let
-        val _ = HOLdict.isEmpty res orelse
+        val _ = Inttab.is_empty res orelse
           raise ERR "read_certificate_file"
             "conclusion is 'VALID', but there are resolutions"
       in
-        VALID (ext, valid_conclusion (HOLdict.mkDict Int.compare) xs)
+        VALID (ext, valid_conclusion Inttab.empty xs)
       end
       | conclusion (ext, res) ["INVALID", cindex] =
       let
-        val _ = HOLdict.isEmpty ext orelse
+        val _ = Inttab.is_empty ext orelse
           raise ERR "read_certificate_file"
             "conclusion is 'INVALID', but there are extensions"
       in
@@ -152,7 +153,7 @@ struct
         raise ERR "read_certificate_file" "missing conclusion"
   in
     (certificate
-       (HOLdict.mkDict Int.compare, HOLdict.mkDict Int.compare)
+       (Inttab.empty, Inttab.empty)
     o (map (String.tokens (Lib.C Lib.mem [#" ", #"\t", #"\n"])))
     o filter_header
     o List.filter (fn l => l <> "\n")
@@ -177,7 +178,6 @@ struct
 
   fun check t dict (VALID (exts,lits)) = let
     open Lib Thm Drule Term Type boolSyntax
-    open HOLset HOLdict
 
     val (var_to_index, index_to_var) = let
       open String Int Option
@@ -189,13 +189,14 @@ struct
          on indexes of extension variables as necessary,
          (using num_to_var for extensions) *)
       fun invert_dict d =
-        foldl (fn(v,n,d)=>insert(d,n,v)) (mkDict compare) d
+        Termtab.fold (fn (v,n) => fn d => Inttab.update (n, v) d) d Inttab.empty
       val tcid = ref (invert_dict dict)
-      fun update (n,v) = (tcid := insert(!tcid,n,v); v)
+      fun update (n,v) = (tcid := Inttab.update (n, v) (!tcid); v)
     in
-      (curry find dict,
-       fn n => find (!tcid,n)
-         handle NotFound => update (n,num_to_var n))
+      ((fn v => valOf (Termtab.lookup dict v)),
+       fn n => case Inttab.lookup (!tcid) n of
+                   SOME v => v
+                 | NONE => update (n, num_to_var n))
     end
 
     (* Strip quantifiers from t and return the matrix mat.
@@ -212,34 +213,44 @@ struct
        It will also map existential and universal variables to singleton
        lists containing the next bound variable (empty list for innermost) *)
     val (vars,mat,lits,deps,lvi) = let
-      val cmp = Int.compare
       fun enum vars t lits' deps lvi = let
         val ((v,t), is_forall) = (dest_forall t, true)
           handle Feedback.HOL_ERR _ => (dest_exists t, false)
         val vi = var_to_index v
         val (var,lits',deps) =
-          if is_forall then (Forall v,lits',deps) else let
-            val (tm,lits',deps) = let
-              val ext_lit = find(lits,vi)
-              val ext_index = Int.abs ext_lit
-              val tm = index_to_var ext_index
-              val tm = if ext_lit < 0 then mk_neg tm else tm
-            in (tm,lits',insert(deps,ext_index,[vi])) end
-            handle NotFound => (T,insert(lits',vi,0),deps)
-          in (Exists (v,tm),lits',deps) end
-        val deps = case lvi of NONE => deps | SOME lvi => insert(deps,lvi,[vi])
-      in enum (insert(vars,vi,var)) t lits' deps (SOME vi) end
+          if is_forall then (Forall v,lits',deps) else
+            (case Inttab.lookup lits vi of
+                 SOME ext_lit =>
+                 let
+                   val ext_index = Int.abs ext_lit
+                   val tm = index_to_var ext_index
+                   val tm = if ext_lit < 0 then mk_neg tm else tm
+                 in
+                   (Exists (v, tm), lits',
+                    Inttab.update (ext_index, [vi]) deps)
+                 end
+               | NONE => (Exists (v, T),
+                          Inttab.update (vi, 0) lits',
+                          deps))
+        val deps =
+            case lvi of
+                NONE => deps
+              | SOME lvi => Inttab.update (lvi, [vi]) deps
+      in enum (Inttab.update (vi, var) vars) t lits' deps (SOME vi) end
       handle Feedback.HOL_ERR _ => (vars,t,lits',deps,lvi)
-    in enum (mkDict Int.compare) t lits (mkDict Int.compare) NONE end
-    val deps = case lvi of NONE => deps | SOME lvi => insert(deps,lvi,[])
+    in enum Inttab.empty t lits Inttab.empty NONE end
+    val deps =
+        case lvi of
+            NONE => deps
+          | SOME lvi => Inttab.update (lvi, []) deps
 
     (* add all the hypotheses for the original existential variables
        onto the front of the matrix, so we end up with
        (v1 = e1) ==> (v2 = e2) ==> ... ==> mat *)
-    fun foldthis (_,Forall _,t) = t
-      | foldthis (_,Ext    _,t) = t
-      | foldthis (_,Exists (v,tm),t) = mk_imp(mk_eq(v,tm),t)
-    val mat = (foldl foldthis mat) vars
+    fun foldthis (_, Forall _) t = t
+      | foldthis (_, Ext _) t = t
+      | foldthis (_, Exists (v,tm)) t = mk_imp(mk_eq(v,tm),t)
+    val mat = Inttab.fold foldthis vars mat
 
     (* extension_to_term calculates a term corresponding
          to the definition of an extension variable,
@@ -254,7 +265,7 @@ struct
          if v is the test in an ITE, replace the ITE by its consequent
          etc. *)
     local
-      val empty = empty Int.compare
+      val empty = HOLset.empty Int.compare
       (* lit processes a literal l, accumulating dependencies in s.
          TFk is the continuation for when l has no witness.
            TFk is passed whether l was not negated
@@ -264,20 +275,21 @@ struct
              and s with the index of the witness added *)
       fun lit (l,s) TFk vk = let
         val index = Int.abs l
-      in let
-        val el = find(lits,index)
-      in if el = 0 then TFk (l > 0) else let
-        val ext_index = Int.abs el
-        val s = add(s,ext_index)
-        val v = index_to_var ext_index
-        val neg = if l < 0 then el > 0 else el < 0
-        val v = if neg then mk_neg v else v
-      in vk (v,s) end end
-      handle NotFound => let
-        val s = add(s,index)
-        val v = index_to_var index
-        val v = if l < 0 then mk_neg v else v
-      in vk (v,s) end end
+      in case Inttab.lookup lits index of
+             SOME el =>
+             if el = 0 then TFk (l > 0) else let
+               val ext_index = Int.abs el
+               val s = HOLset.add(s,ext_index)
+               val v = index_to_var ext_index
+               val neg = if l < 0 then el > 0 else el < 0
+               val v = if neg then mk_neg v else v
+             in vk (v,s) end
+           | NONE => let
+               val s = HOLset.add(s,index)
+               val v = index_to_var index
+               val v = if l < 0 then mk_neg v else v
+             in vk (v,s) end
+      end
       exception False
       fun afold (l,(t,s)) = lit (l,s)
         (fn true=>(t,s)|false=>raise False)
@@ -315,15 +327,19 @@ struct
        Fill in the rest of the vars map.
        Fill in the deps map by adding each extension variable
        to the list belonging to each variable appearing in its definition term. *)
-    fun foldthis (i,ext,(t,vars,deps)) = let
+    fun foldthis (i,ext) (t,vars,deps) = let
       val v = index_to_var i
       val (tm,ds) = extension_to_term ext
-      val vars = insert(vars,i,Ext(v,tm))
+      val vars = Inttab.update (i, Ext(v,tm)) vars
       val h = mk_eq(v,tm)
-      fun foldthis (n,d) = update (d,n,fn NONE => [i] | SOME ls => i::ls)
+      fun foldthis (n,d) =
+          Inttab.update
+            (n, case Inttab.lookup d n of
+                    NONE => [i]
+                  | SOME ls => i :: ls) d
       val deps = HOLset.foldl foldthis deps ds
     in (mk_imp(h,t),vars,deps) end
-    val (mat,vars,deps) = (foldl foldthis (mat,vars,deps)) exts
+    val (mat,vars,deps) = Inttab.fold foldthis exts (mat,vars,deps)
 
     val thm = (!sat_prove) mat
 
@@ -332,7 +348,7 @@ struct
     (* now deps is the list of variable indexes in the order
        they should be eliminated (quantified and have hypothesis discharged) *)
 
-    fun foldthis (i,th) = case find(vars,i) of
+    fun foldthis (i,th) = case valOf (Inttab.lookup vars i) of
       Forall v => (fn() => GEN v th) ()
     | Exists (v,w) => (fn () => let
         val th = EXISTS (mk_exists(v,concl th),v) th
@@ -372,10 +388,10 @@ struct
          variable's index and a Boolean that is true if the variable is
          universally quantified, and false if it is existentially quantified *)
       val var_dict = List.foldl (fn ((i, var, is_forall), var_dict) =>
-        HOLdict.insert (var_dict, var, (i, is_forall)))
-        (HOLdict.mkDict Term.var_compare) vars
+        Termtab.update (var, (i, is_forall)) var_dict)
+        Termtab.empty vars
       fun index_fn var =
-        HOLdict.find (var_dict, var)
+        valOf (Termtab.lookup var_dict var)
 
       val vars = List.rev vars
       fun foldthis (clause, (i, clause_dict)) =
@@ -383,8 +399,8 @@ struct
           val clause = QbfLibrary.CLAUSE_TO_SEQUENT clause
           val lits = QbfLibrary.literals_in_clause index_fn clause
         in
-          (i + 1, HOLdict.insert (clause_dict, i,
-            QbfLibrary.forall_reduce (clause, vars, matrix, lits)))
+          (i + 1, Inttab.update (i,
+            QbfLibrary.forall_reduce (clause, vars, matrix, lits)) clause_dict)
         end
 
       (* a dictionary that maps each clause identifier to a 4-tuple, which
@@ -394,22 +410,23 @@ struct
          this is 'matrix'), and 4. the list of literals in the clause (cf.
          'QbfLibrary.literals_in_clause' *)
       val clause_dict = Lib.snd (List.foldl foldthis
-        (1, HOLdict.mkDict Int.compare)
+        (1, Inttab.empty)
         (Drule.CONJUNCTS (Thm.ASSUME matrix)))
 
       (* depth-first recursion over the certificate (which represents a DAG),
          using QRESOLVE_CLAUSES to derive new clauses from existing ones *)
       fun derive (c_dict, index) =
-        case HOLdict.peek (c_dict, index) of
+        case Inttab.lookup c_dict index of
           SOME clause =>
           (c_dict, clause)
         | NONE =>
           let
-            val (_, indices) = HOLdict.find (dict, index)
-              handle HOLdict.NotFound =>
-                raise ERR "check"
-                  ("invalid certificate: no definition for clause ID " ^
-                   Int.toString index)
+            val (_, indices) =
+                case Inttab.lookup dict index of
+                    SOME r => r
+                  | NONE => raise ERR "check"
+                              ("invalid certificate: no definition for clause ID "
+                               ^ Int.toString index)
             val _ = if List.null indices then
                 raise ERR "check"
                   ("invalid certificate: empty definition for clause ID " ^
@@ -419,7 +436,7 @@ struct
             val clause = List.foldl (QbfLibrary.QRESOLVE_CLAUSES)
               (List.hd clauses) (List.tl clauses)
           in
-            (HOLdict.insert (c_dict, index, clause), clause)
+            (Inttab.update (index, clause) c_dict, clause)
           end
 
       (* derive "t |- F", using the certificate *)

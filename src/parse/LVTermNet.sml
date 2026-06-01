@@ -3,6 +3,8 @@ struct
 
 open HolKernel
 
+exception NotFound
+
 datatype label = V of int
                | C of {Name : string, Thy : string} * int
                | Lam of int
@@ -27,8 +29,20 @@ fun labcmp (p as (l1, l2)) =
     | (_, Lam _) => GREATER
     | (LV p1, LV p2) => pair_compare (String.compare, Int.compare) (p1, p2)
 
-datatype 'a N = LF of (key,'a list) HOLdict.dict
-              | ND of (label,'a N) HOLdict.dict
+structure KeyTab = Table(struct
+  type key = term list * term
+  val ord = tlt_compare
+  fun pp _ = HOLPP.add_string "<lvtm-key>"
+end)
+
+structure LabelTab = Table(struct
+  type key = label
+  val ord = labcmp
+  fun pp _ = HOLPP.add_string "<lvtm-label>"
+end)
+
+datatype 'a N = LF of 'a list KeyTab.table
+              | ND of 'a N LabelTab.table
               | EMPTY
 (* redundant EMPTY constructor is used to get around value polymorphism problem
    when creating a single value for empty below *)
@@ -37,7 +51,7 @@ type 'a lvtermnet = 'a N * int
 
 val empty = (EMPTY, 0)
 
-fun mkempty () = ND (HOLdict.mkDict labcmp)
+fun mkempty () = ND LabelTab.empty
 
 fun ndest_term (fvs, tm) = let
   val (f, args) = strip_comb tm
@@ -53,14 +67,14 @@ in
 end
 
 fun cons_insert (bmap, k, i) =
-    case HOLdict.peek(bmap,k) of
-      NONE => HOLdict.insert(bmap,k,[i])
-    | SOME items => HOLdict.insert(bmap,k,i::items)
+    case KeyTab.lookup bmap k of
+      NONE => KeyTab.update (k, [i]) bmap
+    | SOME items => KeyTab.update (k, i::items) bmap
 
 fun insert ((net,sz), k, item) = let
   fun newnode labs =
       case labs of
-        [] => LF (HOLdict.mkDict tlt_compare)
+        [] => LF KeyTab.empty
       | _ => mkempty()
   fun trav (net, tms) =
       case (net, tms) of
@@ -69,11 +83,11 @@ fun insert ((net,sz), k, item) = let
           val (lab, rest) = ndest_term k
           val ks = rest @ ks0
           val n' =
-              case HOLdict.peek(d,lab) of
+              case LabelTab.lookup d lab of
                 NONE => trav(newnode ks, ks)
               | SOME n => trav(n, ks)
         in
-          ND (HOLdict.insert(d, lab, n'))
+          ND (LabelTab.update (lab, n') d)
         end
       | (EMPTY, ks) => trav(mkempty(), ks)
       | _ => raise Fail "LVTermNet.insert: catastrophic invariant failure"
@@ -82,15 +96,11 @@ in
 end
 
 fun listItems (net, sz) = let
-  fun cons'(k,vs,acc) = List.foldl (fn (v,acc) => (k,v)::acc) acc vs
+  fun cons' (k,vs) acc = List.foldl (fn (v,acc) => (k,v)::acc) acc vs
   fun trav (net, acc) =
       case net of
-        LF d => HOLdict.foldl cons' acc d
-      | ND d => let
-          fun foldthis (k,v,acc) = trav(v,acc)
-        in
-          HOLdict.foldl foldthis acc d
-        end
+        LF d => KeyTab.fold cons' d acc
+      | ND d => LabelTab.fold (fn (_,v) => fn acc => trav(v,acc)) d acc
       | EMPTY => []
 in
   trav(net, [])
@@ -101,11 +111,13 @@ fun numItems (net, sz) = sz
 fun peek ((net,sz), k) = let
   fun trav (net, tms) =
       case (net, tms) of
-        (LF d, []) => (valOf (HOLdict.peek(d, k)) handle Option => [])
+        (LF d, []) => (case KeyTab.lookup d k of
+                           NONE => []
+                         | SOME items => items)
       | (ND d, k::ks) => let
           val (lab, rest) = ndest_term k
         in
-          case HOLdict.peek(d, lab) of
+          case LabelTab.lookup d lab of
             NONE => []
           | SOME n => trav(n, rest @ ks)
         end
@@ -129,9 +141,9 @@ end
 
 fun conslistItems (d, acc) = let
   fun listfold k (v,acc) = (k,v)::acc
-  fun mapfold (k,vs,acc) = List.foldl (listfold k) acc vs
+  fun mapfold (k,vs) acc = List.foldl (listfold k) acc vs
 in
-  HOLdict.foldl mapfold acc d
+  KeyTab.fold mapfold d acc
 end
 
 fun match ((net,sz), tm) = let
@@ -140,7 +152,7 @@ fun match ((net,sz), tm) = let
         (EMPTY, _) => []
       | (LF d, []) => conslistItems (d, acc)
       | (ND d, k::ks0) => let
-          val varresult = case HOLdict.peek(d, V 0) of
+          val varresult = case LabelTab.lookup d (V 0) of
                             NONE => acc
                           | SOME n => trav acc (n, ks0)
           val (lab, rest) = lookup_label k
@@ -149,7 +161,7 @@ fun match ((net,sz), tm) = let
             fun recurse acc n =
               if n = 0 then acc
               else
-                case HOLdict.peek (d, V n) of
+                case LabelTab.lookup d (V n) of
                     NONE => recurse acc (n - 1)
                   | SOME m => recurse
                                 (trav acc (m, List.drop(rest, restn - n) @ ks0))
@@ -158,7 +170,7 @@ fun match ((net,sz), tm) = let
             recurse varresult (length (#2 (strip_comb k)))
           end
         in
-          case HOLdict.peek (d, lab) of
+          case LabelTab.lookup d lab of
             NONE => varhead_results
           | SOME n => trav varhead_results (n, rest @ ks0)
         end
@@ -170,28 +182,30 @@ end
 fun delete ((net,sz), k) = let
   fun trav (p as (net, ks)) =
       case p of
-        (EMPTY, _) => raise HOLdict.NotFound
-      | (LF d, []) => let
-          val (d',removed) = HOLdict.remove(d, k)
-        in
-          if HOLdict.numItems d' = 0 then (NONE, removed)
-          else (SOME (LF d'), removed)
-        end
+        (EMPTY, _) => raise NotFound
+      | (LF d, []) =>
+        (case KeyTab.lookup d k of
+             NONE => raise NotFound
+           | SOME removed =>
+             let val d' = KeyTab.delete k d
+             in if KeyTab.size d' = 0 then (NONE, removed)
+                else (SOME (LF d'), removed)
+             end)
       | (ND d, k::ks) => let
           val (lab, rest) = ndest_term k
         in
-          case HOLdict.peek(d, lab) of
-            NONE => raise HOLdict.NotFound
+          case LabelTab.lookup d lab of
+            NONE => raise NotFound
           | SOME n => let
             in
               case trav (n, rest @ ks) of
                 (NONE, removed) => let
-                  val (d',_) = HOLdict.remove(d, lab)
+                  val d' = LabelTab.delete lab d
                 in
-                  if HOLdict.numItems d' = 0 then (NONE, removed)
+                  if LabelTab.size d' = 0 then (NONE, removed)
                   else (SOME (ND d'), removed)
                 end
-              | (SOME n', removed) => (SOME (ND (HOLdict.insert(d,lab,n'))),
+              | (SOME n', removed) => (SOME (ND (LabelTab.update (lab, n') d)),
                                        removed)
             end
         end
@@ -205,8 +219,8 @@ end
 fun app f (net, sz) = let
   fun trav n =
       case n of
-        LF d => HOLdict.app f d
-      | ND d => HOLdict.app (fn (lab, n) => trav n) d
+        LF d => List.app f (KeyTab.dest d)
+      | ND d => List.app (fn (_, n) => trav n) (LabelTab.dest d)
       | EMPTY => ()
 in
   trav net
@@ -214,36 +228,36 @@ end
 
 fun consfoldl f acc d = let
   fun listfold k (d, acc) = f (k, d, acc)
-  fun mapfold (k,vs,acc) = List.foldl (listfold k) acc vs
+  fun mapfold (k,vs) acc = List.foldl (listfold k) acc vs
 in
-  HOLdict.foldl mapfold acc d
+  KeyTab.fold mapfold d acc
 end
 
 fun fold f acc (net, sz) = let
   fun trav acc n =
       case n of
         LF d => consfoldl f acc d
-      | ND d => HOLdict.foldl (fn (lab,n',acc) => trav acc n') acc d
+      | ND d => LabelTab.fold (fn (_,n') => fn acc => trav acc n') d acc
       | EMPTY => acc
 in
   trav acc net
 end
 
 fun consmap f d = let
-  fun foldthis (k,vs,acc) = let
+  fun foldthis (k,vs) acc = let
     val bs = map (fn v => f(k,v)) vs
   in
-    HOLdict.insert(acc,k,bs)
+    KeyTab.update (k, bs) acc
   end
 in
-  HOLdict.foldl foldthis (HOLdict.mkDict tlt_compare) d
+  KeyTab.fold foldthis d KeyTab.empty
 end
 
 fun map f (net, sz) = let
   fun trav n =
       case n of
         LF d => LF (consmap f d)
-      | ND d => ND (HOLdict.transform trav d)
+      | ND d => ND (LabelTab.map (fn _ => fn n => trav n) d)
       | EMPTY => EMPTY
 in
   (trav net, sz)

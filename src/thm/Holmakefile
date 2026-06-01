@@ -1,4 +1,7 @@
 CLINE_OPTIONS = --no_overlay
+ifdef POLY
+CLINE_OPTIONS += --poly_not_hol
+endif
 
 FTHM_UI = $(protect $(SIGOBJ)/FinalThm-sig.ui)
 FTHM_UID = $(dprot $(SIGOBJ)/FinalThm-sig.ui)

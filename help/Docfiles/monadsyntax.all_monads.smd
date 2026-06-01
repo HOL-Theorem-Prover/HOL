@@ -1,0 +1,34 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `all_monads`
+
+``` hol4
+monadsyntax.all_monads :
+  unit ->
+  (string *
+   {bind : term, unit : term, ignorebind : term option,
+    choice : term option, fail : term option, guard : term option}) list
+```
+
+------------------------------------------------------------------------
+
+Lists all declared monads
+
+Returns a list of all declared monad types. These can be enabled with
+calls to `enable_monad`.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>__ load "monadsyntax";
+
+>> monadsyntax.all_monads();
+```
+
+### See also
+
+[`monadsyntax.declare_monad`](#monadsyntax.declare_monad),
+[`monadsyntax.enable_monad`](#monadsyntax.enable_monad)

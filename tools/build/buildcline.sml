@@ -9,11 +9,11 @@ type 'a cline_result = {
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate12 z
+  fun makeUpdateT z = makeUpdate15 z
 in
 fun updateT z = let
   fun from build_theory_graph debug help jobcount keepgoing kernelspec
-           multithread
+           multithread cache_dir no_mdbook no_helpdocs
            relocbuild selftest
            seqname thmsrc timelimit =
     {build_theory_graph = build_theory_graph,
@@ -23,13 +23,17 @@ fun updateT z = let
      keepgoing = keepgoing,
      kernelspec = kernelspec,
      multithread = multithread,
+     cache_dir = cache_dir,
+     no_mdbook = no_mdbook,
+     no_helpdocs = no_helpdocs,
      relocbuild = relocbuild,
      selftest = selftest,
      seqname = seqname,
      thmsrc = thmsrc,
      timelimit = timelimit}
-  fun from' timelimit thmsrc seqname selftest relocbuild multithread kernelspec
-            keepgoing
+  fun from' timelimit thmsrc seqname selftest relocbuild
+            no_helpdocs no_mdbook cache_dir multithread
+            kernelspec keepgoing
             jobcount help
             debug
             build_theory_graph =
@@ -40,17 +44,20 @@ fun updateT z = let
      keepgoing = keepgoing,
      kernelspec = kernelspec,
      multithread = multithread,
+     cache_dir = cache_dir,
+     no_mdbook = no_mdbook,
+     no_helpdocs = no_helpdocs,
      relocbuild = relocbuild,
      selftest = selftest,
      seqname = seqname,
      thmsrc = thmsrc,
      timelimit = timelimit}
   fun to f {build_theory_graph, debug, help, jobcount, keepgoing, kernelspec,
-            multithread,
+            multithread, cache_dir, no_mdbook, no_helpdocs,
             relocbuild,
             selftest, seqname, thmsrc, timelimit} =
     f build_theory_graph debug help jobcount keepgoing kernelspec multithread
-      relocbuild
+      cache_dir no_mdbook no_helpdocs relocbuild
       selftest
       seqname thmsrc
       timelimit
@@ -135,6 +142,15 @@ fun setThmSrc s =
                   "; expected dat or tr"); t) }
 
 val cline_opt_descrs = [
+  {help = "set cache directory", long = ["cache-dir"], short = "",
+   desc = ReqArg ((fn s => { update = fn {warn,die,arg} =>
+            updateT arg (U #cache_dir (SOME s)) $$ }), "dir")},
+  {help = "disable build caching (default)", long = ["no-cache"], short = "",
+   desc = NoArg (fn () => { update = fn {warn,die,arg} =>
+            updateT arg (U #cache_dir NONE) $$ })},
+  {help = "enable build caching (passed through to Holmake)",
+   long = ["use-cache"], short = "",
+   desc = NoArg (fn () => { update = fn {warn,die,arg} => arg })},
   {help = "build with experimental kernel", long = ["expk"], short = "",
    desc = setKname "--expk"},
   {help = "build a theory dependency graph", long = ["graph"], short = "",
@@ -156,8 +172,14 @@ val cline_opt_descrs = [
    desc = mkBool #keepgoing true},
   {help = "thread count", long = ["mt"], short = "",
    desc = optInt "thread count" 0 #multithread},
-  {help = "don't build a thy dep. graph", long = ["nograph"], short = "",
-   desc = mkBoolOpt #build_theory_graph false},
+  {help = "don't build the Reference mdbook (forces fallback per-entry HTML)",
+   long = ["no-mdbook"], short = "",
+   desc = mkBool #no_mdbook true},
+  {help = "skip the entire help-documentation build (no docfile processing, \
+          \no mdbook, no help DB); useful for partial builds that haven't \
+          \compiled every HOL library",
+   long = ["no-helpdocs"], short = "",
+   desc = mkBool #no_helpdocs true},
   {help = "build with logging kernel", long = ["otknl"], short = "",
    desc = setKname "--otknl"},
   {help = "theorem source (dat or tr)", long = ["thmsrc"], short = "",

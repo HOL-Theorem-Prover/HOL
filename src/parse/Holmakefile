@@ -1,3 +1,6 @@
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
 EXTRA_CLEANS = base_lexer.sml
 
 SELFTEST_DEPS = $(dprot $(SIGOBJ)/Lib.uo) $(dprot $(SIGOBJ)/Type.uo) \
@@ -5,6 +8,8 @@ SELFTEST_DEPS = $(dprot $(SIGOBJ)/Lib.uo) $(dprot $(SIGOBJ)/Type.uo) \
                 $(patsubst %.sml,%.uo,$(wildcard *.sml))
 
 UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+
+TABLE_UID = $(dprot $(SIGOBJ)/Table.ui)
 
 all: base_lexer.sml selftest.exe $(UOFILES)
 
@@ -15,8 +20,34 @@ base_lexer.sml: base_lexer
 
 base_lexer.uo: base_tokens.uo MLstring.uo
 
-LVTermNetFunctor.ui LVTermNetFunctor.uo: LVTermNetFunctor.sml $(dprot $(SIGOBJ)/HolKernel.ui)
-	$(HOLMOSMLC) $(protect $(SIGOBJ)/Overlay.ui) -toplevel -c $<
+# Files instantiating the Table functor locally need explicit
+# Table.ui passed on the command line for mosml -- its dep
+# auto-detection misses functor applications.  Sibling .ui files
+# are listed as prereqs so Holmake builds them first.
+
+LVTermNetFunctor.ui LVTermNetFunctor.uo: LVTermNetFunctor.sml $(dprot $(SIGOBJ)/HolKernel.ui) $(TABLE_UID)
+	$(HOLMOSMLC) Overlay.ui Table.ui -toplevel -c $<
+
+LVTermNet.uo: LVTermNet.sml LVTermNet.ui $(TABLE_UID) \
+              $(dprot $(SIGOBJ)/HolKernel.ui)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
+TypeNet.uo: TypeNet.sml TypeNet.ui $(TABLE_UID) \
+            $(dprot $(SIGOBJ)/HolKernel.ui) $(dprot $(SIGOBJ)/Typetab.ui)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
+term_grammar.uo: term_grammar.sml term_grammar.ui $(TABLE_UID) \
+                 HOLgrammars.uo GrammarSpecials.uo term_grammar_dtype.uo \
+                 Absyn.ui $(dprot $(SIGOBJ)/HolKernel.ui) \
+                 $(dprot $(SIGOBJ)/Symtab.ui)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
+
+parse_term.uo: parse_term.sml parse_term.ui $(TABLE_UID) \
+               term_tokens.uo term_grammar.ui HOLgrammars.uo \
+               GrammarSpecials.uo PrecAnalysis.ui parse_term_dtype.uo \
+               Absyn.ui $(dprot $(SIGOBJ)/HolKernel.ui) \
+               $(dprot $(SIGOBJ)/Symtab.ui)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
 
 Overload.ui: Overload.sig LVTermNetFunctor.ui
 	$(HOLMOSMLC) $(protect $(SIGOBJ)/Overlay.ui) LVTermNetFunctor.ui -c $<

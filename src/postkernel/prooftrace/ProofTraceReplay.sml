@@ -7,14 +7,14 @@ qload "ProofTraceParser";
 qload "PIntMap";
 *)
 
-open Feedback Lib Type Term Thm Redblackmap ProofTraceParser
+open Feedback Lib Type Term Thm ProofTraceParser
 
 infix |->
 
 fun mk_eq(l,r) = list_mk_comb(inst[alpha |-> type_of l]equality, [l,r])
 
-val trDB : (string, (string, thm) dict * thm list) dict ref
-  = ref (mkDict String.compare)
+val trDB : (thm Symtab.table * thm list) Symtab.table ref
+  = ref Symtab.empty
 
 datatype hol_obj = Ty of hol_type | Tm of term | Th of thm | Unknown
 fun destTy (Ty ty) = ty | destTy _ = raise Fail "destTy"
@@ -67,7 +67,7 @@ fun thyname_from_path path =
 
 fun replay path =
   let val thyname = thyname_from_path path in
-  if inDomain(!trDB, thyname)
+  if Symtab.defined (!trDB) thyname
   then msg_print("skip ")
   else
 let
@@ -122,7 +122,7 @@ let
   fun get_thm_id (id_ptr: thm_id ptr) = thmId heap id_ptr
 
   fun check_def map Thy nm =
-    if Thy = thyname then case peek (map, nm)
+    if Thy = thyname then case Symtab.lookup map nm
     of SOME thps => List.app (ignore o replay_thm) thps
      | _ => () else ()
 
@@ -242,14 +242,14 @@ let
       in prim_type_definition ({Thy=Thy, Tyop=Tyop}, thm) end
     | Disk_prf (thy, b) => let
         val id = get_thm_id b
-      in case peek(!trDB, thy) of
+      in case Symtab.lookup (!trDB) thy of
           NONE => raise NeedsAncestor thy
         | SOME (named,anons) => (case id of
             SavedAnon i => (
               List.nth(anons, i) handle Subscript =>
                 raise Fail ("Disk thy "^thy^":"^(Int.toString i)))
           | SavedName s => (
-              case peek(named, s) of
+              case Symtab.lookup named s of
                 NONE => raise Fail ("Disk thy "^thy^"$"^s)
               | SOME th => th))
       end
@@ -314,6 +314,8 @@ let
     | deductAntisym_prf (a, b) => raise Fail "replay_thm: deductAntisym not yet implemented"
     | deleted_prf =>              raise Fail "replay_thm: deleted not yet implemented"
     | save_dep_prf a => th a
+    | Mark_prf (_, a) => th a
+    | Exported_prf _ => raise Fail "replay_thm: Exported not yet implemented"
   end) thm_ptr
 
   fun export p = let
@@ -323,7 +325,9 @@ let
     val () = dbg_print " done\n"
   in (nm, th) end
 
-  val named = fromList String.compare (list heap export all_thms)
+  val named = List.foldl (fn ((k,v),m) => Symtab.update (k,v) m)
+                         Symtab.empty
+                         (list heap export all_thms)
   val anons = list heap replay_thm anon_thms
 
   fun ensure_const p = let
@@ -364,17 +368,17 @@ let
                Int.toString live_th, "th",
     "  pinned: ", Int.toString pinned_count,
     "  sat: ", Int.toString saturated,
-    "  named: ", Int.toString (numItems named),
+    "  named: ", Int.toString (Symtab.size named),
     "  anons: ", Int.toString (length anons), "\n"])
   in () end else ()
 
-in trDB := insert(!trDB, thyname, (named, anons)) end
+in trDB := Symtab.update (thyname, (named, anons)) (!trDB) end
 handle e as (NeedsAncestor s) => (print("Ancestor missing: "^s^"\n"); raise e)
      | e as (HOL_ERR m) => (print("HOL_ERR: "^(Feedback.message_of m)^"\n"); raise e)
 end (* let val thyname *)
 
-fun trDB_size () = foldl (fn (_,(n,a), acc) =>
-  acc + numItems n + length a) 0 (!trDB)
+fun trDB_size () = Symtab.fold (fn (_,(n,a)) => fn acc =>
+  acc + Symtab.size n + length a) (!trDB) 0
 
 fun replay_sequence [] = ()
   | replay_sequence (thy::thys) =
@@ -385,7 +389,7 @@ fun replay_sequence [] = ()
      (if !print_statistics then time else I) replay (thy ^ "Theory.tr.gz");
      replay_sequence thys)
 
-fun replayed_thms s = find(!trDB, s)
+fun replayed_thms s = valOf (Symtab.lookup (!trDB) s)
 
 (*
 

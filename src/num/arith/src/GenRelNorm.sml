@@ -38,13 +38,13 @@ fun gen_relnorm t = let
     fun base bmap t = let
       val (c,t0) = destf t
     in
-      case Binarymap.peek(bmap,t0) of
-        NONE => Binarymap.insert(bmap,t0, if left then (c,c,zero)
-                                          else (~c,zero,c))
+      case Termtab.lookup bmap t0 of
+        NONE => Termtab.update (t0, if left then (c,c,zero)
+                                    else (~c,zero,c)) bmap
       | SOME(tot,l,r) => if left then
-                           Binarymap.insert(bmap,t0,(tot + c, l + c, r))
+                           Termtab.update (t0,(tot + c, l + c, r)) bmap
                          else
-                           Binarymap.insert(bmap,t0,(tot - c, l, r + c))
+                           Termtab.update (t0,(tot - c, l, r + c)) bmap
     end
     fun recurse bmap t = let
       val (l,r) = dest t
@@ -54,17 +54,16 @@ fun gen_relnorm t = let
   in
     recurse bmap t
   end
-  val bmap = coeff_count (coeff_count (Binarymap.mkDict Term.compare) true l)
-                         false r
+  val bmap = coeff_count (coeff_count Termtab.empty true l) false r
   fun cons_mkf' (i,r) acc = if i = one then r::acc
                             else if i = zero then acc
                             else  mkf(i,r)::acc
-  fun foldthis (k,(tot,l,r),(common,ls,rs)) =
+  fun foldthis (k,(tot,l,r)) (common,ls,rs) =
       if l = zero then (common, ls, cons_mkf'(r,k) rs)
       else if r = zero then (common, cons_mkf'(l,k) ls, rs)
       else if tot < zero then (cons_mkf'(l,k) common, ls, cons_mkf'(r-l,k) rs)
       else (cons_mkf'(r,k) common, cons_mkf'(l-r,k) ls, rs)
-  val (common, ls, rs) = Binarymap.foldr foldthis ([],[],[]) bmap
+  val (common, ls, rs) = Termtab.fold_rev foldthis bmap ([],[],[])
   val _ = not (null common) orelse raise Conv.UNCHANGED
   val common_t = listmk common
   val left_thm = if null ls then addid common_t

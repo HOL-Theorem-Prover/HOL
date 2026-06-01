@@ -1,0 +1,15 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+---
+canonical: bossLib.wlog_then
+generated: true
+---
+## `wlog_then`
+
+``` hol4
+wlogLib.wlog_then : term quotation -> term quotation list -> thm_tactic -> tactic
+```
+
+------------------------------------------------------------------------
+
+Re-exported from [`bossLib.wlog_then`](#bossLib.wlog_then). See that
+entry for full documentation.

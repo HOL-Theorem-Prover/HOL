@@ -97,8 +97,43 @@ sig
   val check_distrib : string -> string option
     (* check_distrib s returns SOME(HOLDIR/bin/s) if we are under some HOLDIR.*)
   val do_lastmade_checks: output_functions ->
-                          {no_lastmakercheck : bool} ->
+                          {no_lastmakercheck : bool,
+                           target_dir : string option} ->
                           unit
+    (* target_dir = SOME d runs the lastmaker check (and the
+       check_distrib parent walk) as if cwd were d, without
+       leaving the process there: cwd is restored on normal
+       return, and on Systeml.exec the saved cwd is restored
+       first so the spawned shell sees the caller's pre-call
+       cwd.  Used so the early lastmaker call from Holmake.sml
+       can target the user's -C/--directory argument without
+       getting in the way of the later cline-parse chdir. *)
+
+  val write_lastmaker_in_cwd : output_functions -> unit
+    (* Records DEPDIR/lastmaker in the current working directory,
+       using the path captured by do_lastmade_checks.  No-op if
+       do_lastmade_checks has not yet run, or if Holmake started
+       under any HOLDIR (HOLDIR-relative resolution handles those
+       directories without a lastmaker file, and INCLUDES walks
+       starting under a HOLDIR don't leave it).  Intended to be
+       called during the INCLUDES-recursion in Holmake.sml so that
+       every directory the current Holmake visits gains a
+       lastmaker file, not just the one Holmake was started in.
+
+       If a lastmaker file is already present and points at a
+       different but still-usable Holmake binary, the conflict
+       warning is always emitted; then either the user is asked
+       (on a TTY) whether to overwrite-and-continue or abort, or
+       -- when stdin is not a TTY -- the call aborts the process
+       via die_with.  set_lastmaker_force suppresses the prompt
+       and forces overwrite-and-continue in both interactive and
+       non-interactive contexts (the warning still appears). *)
+
+  val set_lastmaker_force : unit -> unit
+    (* Tell write_lastmaker_in_cwd that any conflicting
+       lastmakers encountered during this Holmake invocation
+       should be overwritten without prompting.  Wired up to the
+       --force-lastmaker command-line flag in Holmake.sml. *)
 
 
   (* File IO *)
@@ -168,8 +203,10 @@ sig
     val toString : t -> string
     val tgtset_diff : t list -> t list -> t list
     val tgtexists_readable : t -> bool
+    val tgt_modTime : t -> Time.time option
     val localFile : File -> t
-    val filestr_to_tgt : string -> t (* directory dependent *)
+    val filestr_to_tgt : string -> t (* resolved against hmdir.curdir() *)
+    val filestr_to_tgt_in_dir : hmdir.t -> string -> t
     val setHMF_text : string -> t -> t
     val setFile : File -> t -> t
     val dirpart : t -> hmdir.t
@@ -190,6 +227,13 @@ sig
        extra_targets : dep list } ->
       File -> dep list
   exception HolDepFailed
+
+  val mk_depfile_name : string -> string -> string
+
+  (* Parse a depfile (typically produced by holdep) and return its RHS
+     entries.  Same-directory unqualified names are resolved against
+     [base]; absolute paths come through unchanged. *)
+  val get_dependencies_from_file_in_dir : hmdir.t -> string -> dep list
 
   val forces_update_of : string * string -> bool
   val depforces_update_of : dep * dep -> bool

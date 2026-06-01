@@ -1,0 +1,35 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `state`
+
+``` hol4
+Lib.state : ('a,'b) istream -> 'b
+```
+
+------------------------------------------------------------------------
+
+Project the state of an istream.
+
+An application `state istrm` yields the value of the current state of
+`istrm`.
+
+### Failure
+
+If the projection function supplied when building the stream fails on
+the current element of the state.
+
+### Example
+
+``` hol4
+>> val istrm = mk_istream (fn x => x+1) 0 (strcat "gsym" o int_to_string);
+
+>> state istrm;
+
+>> next (next istrm);
+
+>> state istrm;
+```
+
+### See also
+
+[`Lib.mk_istream`](#Lib.mk_istream), [`Lib.next`](#Lib.next),
+[`Lib.reset`](#Lib.reset)

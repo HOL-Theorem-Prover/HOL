@@ -21,6 +21,8 @@ stubs.sml
 ../Tag.sml
 ../Count.sig
 ../Count.sml
+../TraceMode.sig
+../TraceMode.sml
 
 (* Final*-sig files needed by Type.sig, Term.sig *)
 ../FinalType-sig.sml

@@ -1,0 +1,163 @@
+/* mdbook's default ~750px content width is comfortable for prose
+   but leaves the bit-vector operations table and a few other
+   wide displays clipped.  950px is a compromise: roomy enough on
+   a typical desktop for the wide elements, not so wide that text
+   feels cramped against the chrome on a 14" laptop screen. */
+:root {
+  --content-max-width: 950px;
+}
+
+/* Custom styling for tables that don't fit comfortably at their
+   natural pulldown-cmark widths.  Wrap such a table in
+   `<div class="wide-table"> ... </div>` in the .smd source.
+
+   The Symbol column (col 2) is monospace and short -- shrink it
+   to its content width.  The Type column (col 3) is the widest
+   and least readable when squeezed -- shrink the body font (but
+   not the header, so the column label stays readable) and trim
+   cell padding to claw back a few more pixels. */
+
+.wide-table table {
+  table-layout: auto;
+}
+
+.wide-table th:nth-child(2),
+.wide-table td:nth-child(2) {
+  white-space: nowrap;
+  width: 1%;            /* shrink-to-fit */
+}
+
+.wide-table td:nth-child(3) {
+  font-size: 0.85em;
+}
+
+.wide-table th,
+.wide-table td {
+  padding-left: 0.4em;
+  padding-right: 0.4em;
+}
+
+/* mdbook's default 3px vertical cell padding is too tight for the
+   multi-line theorem-listing tables in Manual/Tutorial/euclid.smd
+   (statement + proof stacked in one cell); the bottom of one row
+   ends up visually attached to the top of the next.  Bump the
+   vertical padding so the alternating row shading and 1px borders
+   give a clear gap. */
+table td {
+  padding-top: 0.7em;
+  padding-bottom: 0.7em;
+}
+
+/* mdbook 0.5.x adds a dynamic <div class="on-this-page"> sub-list
+   under the active chapter, built from the body's H2/H3 headings.
+   It duplicates the SUMMARY.md-driven subsection list our index.hbs
+   already turns into clickable, numbered anchors, so suppress it
+   for the active chapter. */
+.on-this-page {
+  display: none;
+}
+
+/* Polyscripter REPL interactions in the .smd sources are tagged as
+   ```repl, which pulldown-cmark emits as <pre><code class="language-repl">.
+   The HTML counterpart of the LaTeX `session` box: a left bar +
+   slight background tint so a REPL transcript is visually distinct
+   from a plain code sample.  Inherit the surrounding code-block
+   font and padding from mdbook's default `pre` rules.  */
+pre > code.language-repl {
+  border-left: 3px solid var(--links, #4183c4);
+  padding-left: 0.7em;
+  background: var(--quote-bg, rgba(120, 144, 156, 0.10));
+}
+
+/* Reference's sidebar has 1,613 entries -- the auto-generated
+   section numbers (`1.1.1`, `1.1.2`, ...) are noise that the
+   reader can't use for navigation.  Hide them in the Reference
+   book only; the bullet styling is mdbook's existing chapter-li
+   chrome.  The `hol-book-reference` class is set on <body> by the
+   JS in index.hbs that also marks the current manual-switcher
+   link.  Scoped to the sidebar so chapter pages' content (which
+   may legitimately use <strong>) is unaffected. */
+body.hol-book-reference #mdbook-sidebar strong[aria-hidden="true"] {
+  display: none;
+}
+/* The same suppression for the body-heading numbers that
+   index.hbs's `numberBodyHeadings` JS auto-prepends to each
+   chapter's <h1>/<h2>/etc. by reading from the sidebar. */
+body.hol-book-reference main .section-num {
+  display: none;
+}
+
+/* Cross-manual switcher strip above the per-book menu bar.  See
+   `hol-manual-switcher` block in Manual/theme/index.hbs.  Mimics
+   mdbook's own menu-bar look-and-feel (the same `--bg`, `--fg` and
+   `--sidebar-active` CSS variables the rest of the theme reads),
+   so the strip recolours in lock-step with the user's theme. */
+.hol-manual-switcher {
+  background: var(--bg);
+  color: var(--fg);
+  border-bottom: 1px solid var(--sidebar-active, #4183c4);
+  padding: 0.4em 1em;
+  font-size: 0.9em;
+  text-align: center;
+  /* mdbook's .page sibling has `margin-block-start:
+     calc(0px - var(--menu-bar-height))` to slide content under the
+     sticky menu-bar.  The menu-bar inside .page sets z-index: 101
+     on itself, so any natural-flow strip above it without an even
+     higher z-index gets captured for both painting AND pointer
+     events.  Use z-index 200 to win on both. */
+  position: relative;
+  z-index: 200;
+}
+.hol-manual-switcher a {
+  color: var(--fg);
+  text-decoration: none;
+  padding: 0.15em 0.5em;
+  border-radius: 3px;
+}
+.hol-manual-switcher a:hover {
+  background: var(--theme-hover, rgba(120, 144, 156, 0.10));
+  text-decoration: underline;
+}
+.hol-manual-switcher a.current {
+  background: var(--sidebar-active, #4183c4);
+  color: var(--sidebar-bg, white);
+}
+.hol-manual-switcher a.current:hover {
+  text-decoration: none;
+}
+.hol-manual-switcher .sep {
+  margin: 0 0.3em;
+  opacity: 0.5;
+}
+
+/* Group headers inside the search result list: the cross-book
+   searcher in Manual/theme/searcher.js renders results grouped
+   by source book ("Description", "Tutorial", "Reference"),
+   prefixed by a non-clickable header <li> with this class.
+   Visual cue similar to a category divider. */
+#mdbook-searchresults li.hol-book-group {
+  list-style: none;
+  font-weight: bold;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--searchresults-header-fg, var(--fg));
+  border-bottom: 1px solid var(--searchresults-border-color,
+                                rgba(120, 144, 156, 0.30));
+  padding: 0.6em 0 0.3em;
+  margin: 0;
+}
+/* The very first group header sits flush with the result-count
+   line; suppress its top padding so it doesn't add visual space. */
+#mdbook-searchresults li.hol-book-group:first-child {
+  padding-top: 0;
+}
+
+/* Bibliography entries on the References page.  pandoc citeproc
+   emits each entry as <div class="csl-entry"> inside <div id="refs">,
+   and chicago-author-date.csl sets `entry-spacing="0"` on the
+   wrapper -- so without an override the entries run together with no
+   visual gap.  Restore a one-line gap between entries. */
+div.csl-bib-body > div.csl-entry + div.csl-entry {
+  margin-top: 0.8em;
+}

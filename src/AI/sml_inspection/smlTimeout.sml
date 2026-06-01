@@ -25,7 +25,9 @@ fun interruptkill worker =
       if not (Thread.isActive worker) then () else
         if n > 0
         then loop (n-1)
-        else (print_endline "Warning: thread killed"; Thread.kill worker)
+        else (Feedback.HOL_WARNING "smlTimeout" "interruptkill"
+                                   "thread killed";
+              Thread.kill worker)
   in
     loop 100000000
   end

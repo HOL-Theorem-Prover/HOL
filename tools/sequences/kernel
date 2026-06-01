@@ -2,6 +2,7 @@
 !tools/Holmake/tests/holdep
 !tools/Holmake/tests/depchainloop
 !tools/Holmake/tests/recursiveclean
+!tools/Holmake/tests/dirs
 !tools/Holmake/tests/wildcard
 !tools/Holmake/tests/dashn_works
 !tools/Holmake/tests/dupcommands

@@ -1,0 +1,26 @@
+>>__ load "wordsLib"; Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"};
+## `SIZES_CONV`
+
+``` hol4
+wordsLib.SIZES_CONV : conv
+```
+
+------------------------------------------------------------------------
+
+Evaluates `dimindex`, `dimword` and `INT_MIN`.
+
+### Example
+
+``` hol4
+>>__ load "wordsLib";
+
+>>+ wordsLib.SIZES_CONV “dimword(:32)”
+```
+
+### Comments
+
+Evaluations are stored and so will be slightly faster when repeated.
+
+### See also
+
+[`wordsLib.SIZES_ss`](#wordsLib.SIZES_ss)

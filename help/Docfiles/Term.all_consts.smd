@@ -1,0 +1,28 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `all_consts`
+
+``` hol4
+Term.all_consts : unit -> term list
+```
+
+------------------------------------------------------------------------
+
+All known constants in the current theory.
+
+An invocation `all_consts` returns a list of all declared constants in
+the current theory, i.e., all constants in the current theory segment
+and in its ancestry.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>> all_consts();
+```
+
+### See also
+
+[`Parse.term_grammar`](#Parse.term_grammar)

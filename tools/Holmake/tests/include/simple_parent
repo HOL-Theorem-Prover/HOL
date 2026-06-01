@@ -1,0 +1,5 @@
+FOO = parent
+
+include simple_child
+
+BAR = parent

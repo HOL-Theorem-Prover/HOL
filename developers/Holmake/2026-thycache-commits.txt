@@ -1,0 +1,93 @@
+# This file lists the commits made in 2026 that implemented caching for Holmake
+# theory products (only), keyed on hashes of the underlying Script.sml file as well
+# as the immediate parent theories (their .dat files).
+
+# Each commit appears on a line by itself, with the first line of the commit
+# message above the SHA on a line beginning with a #
+
+# Add cachekey option to Holmake (#1820)
+e123aecd90978b618a941fe09eeead218e038a08
+
+# Cachekey: resolve sigobj symlinks to find .dat files
+1952a19041c9d391a02070a54659629bc7a28030
+
+# cachekey: fix sigobj .dat resolution and add regression test
+8a62e6aa36a00edd43ba5700b3c8e3b52cda5406
+
+# Avoid rebuilds based on mtime, using cachekey instead (#381, #1913)
+1ad8b7ed6b42758b4d8d83e1abeb05f539ba504e
+
+# Add support for Holmake building from a cache (#1911)
+e26190f3b2295dde080df77081117fbb2966ff70
+
+# Holmake cache UX refactor (#1937)
+853d5fbe468d7378a9b136434b60c85cd9e8381f
+
+# tools/Holmake/tests/issue1903: pass --no-cache to selftest
+eacecc851f9d12f23e5325f50dd9515d45906182
+
+# tools-poly/build.sml: propagate --cache-dir / --no-cache to Holmake
+c2bc75ba03690ca17a4f74b2bbe7f49cc066e2ab
+
+# Holmake: fix concurrent-build race in product cache fetch
+374acdd52b1c98cb40985fb551ce28a64363c84d
+
+# bin/build: forward only the cache flags the user actually typed
+4da4693e6f4f96cacd184e3939e4d061ed80ae61
+
+# Holmake: don't run parent atExit handlers in cache-fetch child
+37986571c9416b6a538b67963990443a08e48dbe
+
+# Holmake: stage cache fetches with reflinks instead of hardlinks
+93e9a4d138d84bf4f09c9231137a26960f1d1fba
+
+# Holmake tests: clean cross-directory artifacts via top-level EXTRA_CLEANS
+e25c68ddb6d5bfec95db500e51b65f8a7ed910ff
+
+# Add regression test for Holmake cachekey transitive parents
+970abd64b43d3f010fff5bfbd297dec1692db5f2
+
+# Holmake: validate Theory.dat parent hashes at cache fetch time
+50576d29f0318e3550f349931a92e493688b947e
+
+# Holmake: stage cache fetches to tmp, validate before exposing
+172e8e4e14bc35fe2a16a67468991b551a0d85b8
+
+# Holmake: parse Theory.dat parent list when (theory ...) is wrapped
+b822f1663c4a8197d3f7ab2c6b12c03d7927601b
+
+# Holmake: exec /usr/bin/true on cache hit instead of Posix.Process.exit
+67fdb8f1cc5adf461309cd4d04c19b1cd72b4ea4
+
+# Remove EXTRA_CLEANS properly in cachekey_transitive_parent test
+200ac5b2f78bb413c5eb9c626b06a42d526e3118
+
+# Holmake tests: gitignore artifacts left by gh569_* and cachekey_transitive_parent
+0140144343825a2aa7571c35ed4f9c81ce0b0b82
+
+# Holmake: sample stage tmp PID per call, not at module load
+cdafc1304f6a6b293d3038dfa023d075577b0d6d
+
+# Holmake: add a file_hashes field to HM_DepGraph
+792559caa4cf892194ffd4c40e8eb245ff579f6f
+
+# Holmake: memoise per-dep file hashes during cachekey computation
+bcf240bc0fb302441a9c68e87b10d04201260040
+
+# Holmake: discover theory parents statically; cachekey scoped to immediate parents
+12653dc18e54e0b92f447122312d6b308ea80637
+
+# Holmake/Mosml: compile HM_TheoryDat into the Mosml Holmake build
+c7b52ad03fb162477aad3544b5d81e2e194f467e
+
+# Holmake: silence stray `cp:` stderr on product-cache miss
+68de0aada37501ec8ab6f099dcf5cb1df2b4d571
+
+# Make src/1/theory_test tests use --no-cache
+26b355be49e64124e6b2214b7e540751e3dff78f
+
+# Holmake: invert cache+cachekey defaults; opt in via --use-cache
+db86c7929f2f8fa1ab679555882359496a70b298
+
+# Holmake: stamp each dep-graph node with a target mtime snapshot
+062432fef9ae8c3d2b595e6d2ec4325c4f034106

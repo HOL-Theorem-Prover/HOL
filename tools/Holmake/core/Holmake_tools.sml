@@ -242,12 +242,13 @@ fun shorten_name name =
   if OS.Path.file name = "Holmake" then "Holmake" else name
 
 fun output_functions {usepfx,chattiness=n,debug} = let
-  val execname = if usepfx then shorten_name (CommandLine.name()) ^ ": " else ""
   open HOLFileSys
   fun msg inlinep strm s =
     if s = "" then ()
     else
       let
+        val execname =
+            if usepfx then shorten_name (CommandLine.name()) ^ ": " else ""
         val ss = Substring.full s
         val (pfx_ss,sfx_ss) = Substring.splitl Char.isSpace ss
         val pfx = (if inlinep then "\r" else "") ^ Substring.string pfx_ss
@@ -306,19 +307,195 @@ in
   traverse() before chDir start
 end
 
-fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
+(* Path of the currently-running Holmake binary, as established by
+   find_my_path() before any chdir.  Filled by do_lastmade_checks the
+   first time it runs; read by write_lastmaker_in_cwd to propagate the
+   same value into INCLUDES-visited directories. *)
+val cached_mypath : string option ref = ref NONE
+
+(* Whether the Holmake invocation was launched from inside any HOLDIR
+   (its own or a foreign one).  Filled by do_lastmade_checks on the
+   way through and consulted by write_lastmaker_in_cwd: HOLDIR-relative
+   resolution disambiguates inside-HOLDIR dirs on its own, and an
+   INCLUDES walk that starts inside a HOLDIR doesn't leave it (no
+   outward-pointing INCLUDES links), so one check at startup is
+   enough -- there's no reason to do an O(depth) check_distrib at
+   every visited directory. *)
+val started_under_holdir : bool ref = ref false
+
+val lastmakerfilename = OS.Path.concat (DEPDIR, "lastmaker")
+
+fun write_lastmaker_file_for mypath = let
+  val _ = createDirIfNecessary DEPDIR
+  val outstr = openOut lastmakerfilename
+in
+  output(outstr, mypath ^ "\n");
+  closeOut outstr
+end handle IO.Io _ => ()
+
+(* Read an existing lastmaker file and return the binary path it
+   names (trimmed of trailing whitespace), or NONE if the file is
+   absent / unreadable / empty. *)
+fun read_existing_lastmaker () =
+    if FileSys.access (lastmakerfilename, [FileSys.A_READ]) then
+      let val istrm = openIn lastmakerfilename
+      in
+        case inputLine istrm of
+            NONE => (closeIn istrm; NONE)
+          | SOME s =>
+            let val trimmed = Substring.string
+                                (Substring.dropr Char.isSpace (Substring.full s))
+            in closeIn istrm;
+               if trimmed = "" then NONE else SOME trimmed
+            end
+      end handle IO.Io _ => NONE
+    else NONE
+
+(* Once a Holmake invocation has decided to overwrite conflicting
+   lastmakers -- either because --force-lastmaker was passed or
+   because the user said `y' to one prompt -- the decision sticks
+   for the rest of the run, and any further conflicts are
+   overwritten after the warning is printed but without re-asking.
+   Refusing a prompt aborts the whole process, so SOME false isn't
+   a state we need to represent. *)
+val lastmaker_overwrite_decided : bool ref = ref false
+
+fun set_lastmaker_force () = lastmaker_overwrite_decided := true
+
+(* Decide what to do when the lastmaker we're about to propagate
+   would overwrite an existing file pointing at a different live
+   Holmake binary.  In every case we first emit the conflict
+   warning so the user always sees what's happening; then:
+     - if the user (or --force-lastmaker) has already chosen to
+       overwrite, return silently and let the caller do the write;
+     - else on a TTY, ask `Continue (y/N)?'.  `y' flips the
+       always-overwrite flag, anything else aborts the run;
+     - else (no TTY: child Holmake, CI, editor probe, etc.) abort
+       outright -- silently smashing an older build is wrong, and
+       a non-interactive caller has no way to consent. *)
+fun prompt_lastmaker_conflict (ofns : output_functions) {existing, mine} =
+  let
+    val {warn,...} = ofns
+    val dir = FileSys.getDir()
+    val sep = "*** =================================================="
+  in
+    warn sep;
+    warn ("*** WARNING: " ^ OS.Path.concat (dir, lastmakerfilename));
+    warn ("*** points at a different Holmake binary:");
+    warn ("***   existing: " ^ existing);
+    warn ("***   current:  " ^ mine);
+    warn ("***");
+    warn ("*** Continuing will OVERWRITE this lastmaker.  The current");
+    warn ("*** Holmake will see artefacts here as stale and rebuild them,");
+    warn ("*** likely trashing the older build's state.  Abort if you'd");
+    warn ("*** rather finish what you were doing with the other Holmake.");
+    warn sep;
+    if !lastmaker_overwrite_decided then ()  (* --force-lastmaker, or prior y *)
+    else if not (stdin_is_tty ()) then
+      die_with ("lastmaker conflict in " ^ dir ^
+                ": aborting (no tty; pass --force-lastmaker, " ^
+                "clean up the lastmaker, or re-run interactively to choose)")
+    else
+      let
+        val () = HOLFileSys.output (HOLFileSys.stdErr, "Continue (y/N)? ")
+        val () = HOLFileSys.flushOut HOLFileSys.stdErr
+        val ans = TextIO.inputLine TextIO.stdIn
+        val resp = case ans of
+                       NONE => "n"
+                     | SOME s =>
+                       String.map Char.toLower
+                         (Substring.string
+                            (Substring.dropr Char.isSpace
+                               (Substring.dropl Char.isSpace
+                                  (Substring.full s))))
+      in
+        if resp = "y" orelse resp = "yes" then
+          lastmaker_overwrite_decided := true
+        else
+          die_with ("lastmaker conflict in " ^ dir ^ ": aborted by user")
+      end
+  end
+
+(* Record DEPDIR/lastmaker in the current working directory, using the
+   path captured by do_lastmade_checks.  Intended to be called from
+   the INCLUDES-recursion in Holmake.sml, after chdir'ing into each
+   visited directory, so the file ends up in every directory the
+   current Holmake invocation has visited -- not just the one it was
+   started from.
+
+   Behaviour matrix when called:
+     - cached_mypath unset (do_lastmade_checks hasn't run yet)
+         => no-op
+     - no existing lastmaker file
+         => write our path
+     - existing file matches our path
+         => no-op (already correct)
+     - existing file holds a path that's no longer a usable executable
+         => overwrite (treat as garbage, same as do_lastmade_checks)
+     - existing file holds a different usable Holmake path
+         => prompt the user (TTY only) to either abort the run or
+            agree to overwrite; aborts outright when not on a TTY.
+
+   Short-circuits entirely when the Holmake invocation started
+   under any HOLDIR (see started_under_holdir): no lastmaker is
+   needed when HOLDIR-relative resolution is already definitive,
+   and INCLUDES walks starting inside a HOLDIR don't leave it. *)
+fun write_lastmaker_in_cwd (ofns : output_functions) =
+    if !started_under_holdir then ()
+    else case !cached_mypath of
+        NONE => ()
+      | SOME mypath =>
+        case read_existing_lastmaker () of
+            NONE => write_lastmaker_file_for mypath
+          | SOME existing =>
+            if existing = mypath then ()
+            else if not (FileSys.access
+                           (existing, [FileSys.A_READ, FileSys.A_EXEC]))
+            then write_lastmaker_file_for mypath  (* garbage; replace *)
+            else (prompt_lastmaker_conflict ofns
+                    {existing = existing, mine = mypath};
+                  (* reaches here iff the user agreed to overwrite *)
+                  write_lastmaker_file_for mypath)
+
+(* Caller passes target_dir = SOME d to peek at the lastmaker state of
+   directory d without yet moving the running process there.  We
+   chdir into d for the lookups (so DEPDIR-relative path resolution
+   and check_distrib's parent walk both operate on d), call
+   find_my_path *before* the chdir (it relies on the original cwd to
+   resolve a `./bin/Holmake`-style invocation), and either:
+
+     - on Systeml.exec, restore the saved cwd first, so the spawned
+       shell inherits the caller's pre-chdir cwd (the exec'd child
+       then handles -C/--directory through the normal cline parse,
+       i.e. exactly one chdir, not two);
+
+     - on the normal return path, restore the saved cwd before
+       returning so the caller's apply_updates/set_cwd flow does
+       the chdir at its usual point and there's no observable
+       cwd change from this call.
+
+   The start-dir write only happens via lmfile() in the
+   not-in-any-HOLDIR branch.  When we are under a HOLDIR --
+   whether our own or someone else's -- we deliberately don't
+   write: HOLDIR-relative resolution disambiguates the right
+   Holmake on its own, and the no-write behaviour matches what
+   write_lastmaker_in_cwd does for INCLUDES-visited dirs that
+   live under a HOLDIR. *)
+fun do_lastmade_checks (ofns : output_functions)
+                       {no_lastmakercheck, target_dir} = let
   val {warn,diag,...} = ofns
   val diag = diag "lastmadecheck"
-  val mypath = find_my_path()
+  val mypath = find_my_path()      (* before any chdir *)
+  val () = cached_mypath := SOME mypath
   val _ = diag (K ("running "^mypath))
-  val lastmakerfilename = OS.Path.concat (DEPDIR, "lastmaker")
-  fun write_lastmaker_file () = let
-    val _ = createDirIfNecessary DEPDIR
-    val outstr = openOut lastmakerfilename
-  in
-    output(outstr, mypath ^ "\n");
-    closeOut outstr
-  end handle IO.Io _ => ()
+  val saved_cwd = FileSys.getDir()
+  val () = case target_dir of
+               NONE => ()
+             | SOME d => (FileSys.chDir d
+                          handle OS.SysErr (msg, _) =>
+                            die_with ("-C " ^ d ^ ": " ^ msg))
+  fun restore_cwd () = FileSys.chDir saved_cwd handle OS.SysErr _ => ()
+  fun exec_in_saved_cwd args = (restore_cwd(); Systeml.exec args)
 
   fun lmfile() =
       if not no_lastmakercheck andalso
@@ -330,7 +507,7 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
           case inputLine istrm of
             NONE => (warn "Empty Last Maker file";
                      closeIn istrm;
-                     write_lastmaker_file())
+                     write_lastmaker_file_for mypath)
           | SOME s => let
               open Substring
               val path = string (dropr Char.isSpace (full s))
@@ -343,29 +520,29 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
                   (warn ("*** Switching to execute "^path);
                    warn ("*** (Honouring last Holmake call in this directory)");
                    warn ("*** (Use --nolmbc flag to stop this.)");
-                   Systeml.exec(path,
-                                path::"--nolmbc"::CommandLine.arguments()))
+                   exec_in_saved_cwd
+                     (path, path::"--nolmbc"::CommandLine.arguments()))
               else (warn "Garbage in Last Maker file";
-                    write_lastmaker_file())
+                    write_lastmaker_file_for mypath)
             end
         end
-      else write_lastmaker_file()
+      else write_lastmaker_file_for mypath
 in
   diag (K "Looking to see if I am in a HOL distribution.");
-  case check_distrib "Holmake" of
-    NONE => let
-    in
-      diag (K "Not in a HOL distribution");
-      lmfile()
-    end
+  (case check_distrib "Holmake" of
+    NONE => (started_under_holdir := false;
+             diag (K "Not in a HOL distribution");
+             lmfile())
   | SOME p =>
-    if p = mypath then diag (K "In the right HOL distribution")
-    else if no_lastmakercheck then
-      diag (K "In the wrong distribution, but --nolmbc takes precedence.")
-    else
-      (warn ("*** Switching to execute "^p);
-       warn ("*** (As we are in/under its HOLDIR)");
-       Systeml.exec (p, p::"--nolmbc"::CommandLine.arguments()))
+    (started_under_holdir := true;
+     if p = mypath then diag (K "In the right HOL distribution")
+     else if no_lastmakercheck then
+       diag (K "In the wrong distribution, but --nolmbc takes precedence.")
+     else
+       (warn ("*** Switching to execute "^p);
+        warn ("*** (As we are in/under its HOLDIR)");
+        exec_in_saved_cwd (p, p::"--nolmbc"::CommandLine.arguments()))));
+  restore_cwd ()
 end
 
 fun chatty_remove act (ofns : output_functions) s =
@@ -651,14 +828,17 @@ fun tgtset_diff dl1 dl2 =
       recurse dl1
     end
 fun localFile f = (hmdir.curdir(), f, NONE)
-fun filestr_to_tgt s =
+fun filestr_to_tgt_in_dir base s =
     let
       val {dir,file} = OS.Path.splitDirFile s
-      val dir' = hmdir.extendp {base = hmdir.curdir(), extension = dir}
+      val dir' = hmdir.extendp {base = base, extension = dir}
     in
       (dir',toFile file,NONE)
     end
+fun filestr_to_tgt s = filestr_to_tgt_in_dir (hmdir.curdir()) s
 fun tgtexists_readable d = exists_readable (toString d)
+fun tgt_modTime d =
+    SOME (HOLFileSys.modTime (toString d)) handle _ => NONE
 end (* struct *)
 
 type dep = hm_target.t
@@ -728,7 +908,7 @@ fun holdep_arg (UO c) = SOME (SML c)
 fun mk_depfile_name DEPDIR s = fullPath [DEPDIR, s^".d"]
 
 
-fun get_dependencies_from_file depfile = let
+fun get_dependencies_from_file_in_dir base depfile = let
   open hm_target
   fun get_whole_file s = let
     val instr = openIn (normPath s)
@@ -744,7 +924,7 @@ fun get_dependencies_from_file depfile = let
       val rhs = Substring.string (Substring.slice(rhs0, 1, NONE))
         handle Subscript => ""
     in
-      map filestr_to_tgt (realspace_delimited_fields rhs)
+      map (filestr_to_tgt_in_dir base) (realspace_delimited_fields rhs)
     end
   in
     List.concat (map process_line lines)
@@ -752,6 +932,9 @@ fun get_dependencies_from_file depfile = let
 in
   parse_result (get_whole_file depfile)
 end
+
+fun get_dependencies_from_file depfile =
+    get_dependencies_from_file_in_dir (hmdir.curdir()) depfile
 
 
 
@@ -849,6 +1032,29 @@ fun concatWithf p d [] = ""
     end
 
 
+(* issue #679: catch fooScript.sml vs FooScript.sml collisions early. *)
+fun warn_case_collisions warn src_files =
+    let
+      fun add_one (f, m) =
+          let
+            val k = String.map Char.toLower f
+            val prev = Option.getOpt(Binarymap.peek(m, k), [])
+          in
+            Binarymap.insert(m, k, f :: prev)
+          end
+      val groups = List.foldl add_one
+                              (Binarymap.mkDict String.compare)
+                              src_files
+      fun report (_, fs as _::_::_) =
+            warn ("case-only filename collision in " ^
+                  OS.FileSys.getDir() ^ ": " ^
+                  String.concatWith ", " (List.rev fs) ^
+                  " (the same file on case-insensitive filesystems)")
+        | report _ = ()
+    in
+      Binarymap.app report groups
+    end
+
 fun generate_all_plausible_targets warn first_target =
     case first_target of
         SOME d => [d]
@@ -875,6 +1081,7 @@ fun generate_all_plausible_targets warn first_target =
                 | SML _ => true
                 | _ => false
           val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)
+          val () = warn_case_collisions warn src_files
           fun src_to_target (SIG (Script s)) = UO (Theory s)
             | src_to_target (SML (Script s)) = UO (Theory s)
             | src_to_target (SML s) = (UO s)

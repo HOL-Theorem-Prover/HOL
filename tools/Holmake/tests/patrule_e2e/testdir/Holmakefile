@@ -1,0 +1,25 @@
+# End-to-end test of pattern rules: %.copy is produced from %.txt by
+# a `cp' recipe, with no explicit per-target rule for foo.copy or
+# bar.copy.  bar.copy *additionally* depends on extra.txt via a
+# recipe-less rule, to exercise the deps-composition path (the
+# pattern rule supplies the recipe, the explicit rule adds prereqs).
+
+ifdef POLY
+CLINE_OPTIONS = --holstate=$(HOLDIR)/bin/hol.state0
+endif
+
+.PHONY: all
+all: foo.copy bar.copy sub/baz.copy
+
+%.copy: %.txt
+	cp $< $@
+
+bar.copy: extra.txt
+
+# Cross-directory pattern: target and prereq both literally prefixed
+# with `sub/'.  Exercises Holmake's relative-path threading from
+# pattern_rule_info into the matcher.
+sub/%.copy: sub/%.txt
+	cp $< $@
+
+EXTRA_CLEANS = foo.copy bar.copy sub/baz.copy

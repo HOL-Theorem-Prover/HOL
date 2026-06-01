@@ -1,6 +1,19 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
 .PHONY: all
-all: $(DEFAULT_TARGETS)
+all: $(DEFAULT_TARGETS) selftest.exe
 
 ifeq ($(KERNELID),otknl)
 all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 endif
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: holsat-selftest.log
+
+holsat-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1,$@)
+endif
+
+EXTRA_CLEANS = selftest.exe holsat-selftest.log

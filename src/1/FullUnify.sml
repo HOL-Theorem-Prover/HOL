@@ -19,16 +19,15 @@ struct
 
      where sigma is the type instantiation given by the map
   *)
-  type t = (string, hol_type) Binarymap.dict * (term, term) Binarymap.dict
+  type t = hol_type Symtab.table * term Termtab.table
   fun triTY ((d,_):t) = d
   fun triTM ((_, d):t) = d
   type 'a EM = (t, 'a) optmonad.optmonad
-  val empty : t =
-        (Binarymap.mkDict String.compare, Binarymap.mkDict Term.compare)
+  val empty : t = (Symtab.empty, Termtab.empty)
 
   fun lookup_ty0 tym ty =
       if is_vartype ty then
-        case Binarymap.peek(tym, dest_vartype ty) of
+        case Symtab.lookup tym (dest_vartype ty) of
             NONE => ty
           | SOME ty' => lookup_ty0 tym ty'
       else ty
@@ -45,7 +44,7 @@ struct
         val tm = instE E tm0
       in
         case dest_term tm of
-          VAR _ => (case Binarymap.peek(#2 E, tm) of
+          VAR _ => (case Termtab.lookup (#2 E) tm of
                         NONE => tm
                       | SOME tm' => lookup_tm E tm')
         | _ => tm
@@ -54,13 +53,13 @@ struct
 
 
   fun add_tybind (s,ty) : unit EM = fn (tym,tmm)  =>
-      case Binarymap.peek(tym, s) of
-          NONE => SOME ((Binarymap.insert(tym,s,ty), tmm), ())
+      case Symtab.lookup tym s of
+          NONE => SOME ((Symtab.update (s, ty) tym, tmm), ())
         | SOME _ => NONE
 
   fun add_tmbind (v, tm) : unit EM = fn (tym,tmm) =>
-      case Binarymap.peek(tmm, v) of
-          NONE => SOME((tym, Binarymap.insert(tmm,v,tm)), ())
+      case Termtab.lookup tmm v of
+          NONE => SOME((tym, Termtab.update (v, tm) tmm), ())
         | SOME _ => NONE
 
   fun fromEmpty (m : 'a EM) = Option.map #2 (m empty)
@@ -188,20 +187,21 @@ fun collapse_map (freeset,empty,dosub) subst =
 fun collapse0 E =
     let
       val mk_vartype = trace ("Vartype Format Complaint", 0) mk_vartype
-      fun EtoSUBST i E =
-          Binarymap.foldl
-            (fn (k,v,A) => {redex = i k, residue = v} :: A)
-            []
-            E
       val tymap =
           collapse_map (HOLset.fromList Type.compare o Type.type_vars,
                       HOLset.empty Type.compare,
                       Type.type_subst)
-                     (EtoSUBST mk_vartype (Env.triTY E))
+                     (Symtab.fold
+                        (fn (k,v) => fn A =>
+                            {redex = mk_vartype k, residue = v} :: A)
+                        (Env.triTY E) [])
       val tmmap0 = map (fn {residue,redex} =>
                            {residue = Term.inst tymap residue,
                             redex = Term.inst tymap redex})
-                       (EtoSUBST (fn x => x) (Env.triTM E))
+                       (Termtab.fold
+                          (fn (k,v) => fn A =>
+                              {redex = k, residue = v} :: A)
+                          (Env.triTM E) [])
     in
       (tymap,
        collapse_map (fn t => FVL [t] empty_tmset, empty_tmset, Term.subst) tmmap0

@@ -55,6 +55,14 @@ sig
   val add_anonymous_thm      : thm -> int (* for ThyDataSexp only *)
   val export_theory          : unit -> unit
 
+(* Externalize a theorem's proof tree to a side .tr.gz file, then flip
+   the proof ref to Exported_prf. The in-memory proof tree becomes
+   garbage-collectable. Named form uses the given name; anonymous form
+   assigns a sequential number. Both compute the file path automatically
+   from the current theory. *)
+  val export_proof           : string * thm -> unit
+  val export_proof_anon      : thm -> unit
+
 (* Make hooks available so that theory changes can be seen by
    "interested parties" *)
   val delta_hook : TheoryDelta.t Listener.t
@@ -145,6 +153,7 @@ sig
   val incorporate_types      : string -> (string*int) list -> unit
   val incorporate_consts     : string -> (string*hol_type) list -> unit
   val pp_thm                 : (thm -> HOLPP.pretty) ref
+  val pp_type                : (hol_type -> HOLPP.pretty) ref
 
   type metadata = {path: string, timestamp: Time.time}
   val record_metadata        : string -> metadata -> unit

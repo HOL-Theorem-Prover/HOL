@@ -1,0 +1,33 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `theorems`
+
+``` hol4
+DB.theorems : string -> (string * thm) list
+```
+
+------------------------------------------------------------------------
+
+All the theorems stored in the named theory.
+
+An invocation `theorems thy`, where `thy` is the name of a currently
+loaded theory segment, will return a list of the theorems stored in that
+theory. Axioms and definitions are excluded. Each theorem is paired with
+its name in the result. The string `"-"` may be used to denote the
+current theory segment.
+
+### Failure
+
+Never fails. If `thy` is not the name of a currently loaded theory
+segment, the empty list is returned.
+
+### Example
+
+``` hol4
+>> theorems "combin";
+```
+
+### See also
+
+[`DB.thy`](#DB.thy), [`DB.fetch`](#DB.fetch), [`DB.thms`](#DB.thms),
+[`DB.definitions`](#DB.definitions), [`DB.axioms`](#DB.axioms),
+[`DB.listDB`](#DB.listDB)

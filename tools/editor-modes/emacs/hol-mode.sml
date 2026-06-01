@@ -163,7 +163,7 @@ in
 end;
 
 fun print_current_hol_status hol_ex holmake_ex () = let
-  val _ = HOL_Interactive.print_banner()
+  val _ = HOL_Interactive.print_banner print
   val _ = print "\n";
   val _ = (print "Hol executable    : "; print hol_ex; print "\n");
   val _ = (print "Holmake executable: "; print holmake_ex; print "\n");
