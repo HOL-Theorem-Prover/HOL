@@ -3,6 +3,8 @@ sig
 
   include Abbrev
   type coninfo = {con_termP : thm, con_def : thm}
+
+  type operinfo  = {oper_termP : thm, oper_def : thm, oper_def' : thm option}
   type nomtyinfo = {term_ABS_pseudo11 : thm,
                         term_REP_11 : thm,
                         term_REP_t : term,

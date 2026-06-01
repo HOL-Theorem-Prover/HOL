@@ -77,9 +77,9 @@ val {term_ABS_pseudo11 = term_ABS_pseudo11_2,
     Pi-calculus operators
    ---------------------------------------------------------------------- *)
 
-val glam = genind_lam
 Overload pilp[local] = “genind ^lp”
 
+val glam = genind_lam
 fun toArb t = subst [“uu:string” |-> “ARB:string”] t
 
 (* Nil *)
