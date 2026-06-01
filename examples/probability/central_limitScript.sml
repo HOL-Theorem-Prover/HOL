@@ -6883,7 +6883,7 @@ Proof
      POP_ASSUM (rw o wrap o SYM) \\
      METIS_TAC [mul_comm, mul_assoc])
  >> rw []
-QED  
+QED
 
 (* NOTE: “!i. variance p (X i) < PosInf” can be derived from "finite third moments",
    i.e. “!n. integrable p (\x. (abs (X n x)) pow 3)”.
@@ -7051,7 +7051,7 @@ Theorem neg_abs_le:
 Proof
     METIS_TAC [le_abs, le_neg, neg_neg]
 QED
-  
+
 Theorem abs_expectation_le_expectation_abs:
     ∀p X.
       prob_space p ∧ real_random_variable X p ∧ integrable p X ⇒
@@ -7077,18 +7077,18 @@ Proof
  >> CONJ_TAC >- (METIS_TAC [integrable_abs, o_DEF, prob_space_def])
  >> rw [cj 1 le_abs]
 QED
-  
+
 Theorem abs_expectation_pow_le_expectation_abs_pow :
     ∀p X (n :num).
       prob_space p ∧ real_random_variable X p ∧ integrable p X ∧
       0 < n ∧ integrable p (λx. (abs (X x)) pow n) ⇒
       (abs (expectation p X)) pow n ≤ expectation p (λx. (abs (X x)) pow n)
-Proof  
+Proof
     rpt STRIP_TAC
  >> Cases_on ‘n = 1’ >> simp [abs_expectation_le_expectation_abs]
  >> ‘1 < n’ by simp []
  >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘Normal 1’, ‘Normal (&n)’] Lyapunov_ineq_rv)
- >> impl_tac        
+ >> impl_tac
  >- (gvs [normal_1, GSYM extreal_of_num_def] \\
      fs [L1_space_alt_integrable, prob_space_def] \\
      fs [lp_space_def, real_random_variable, events_def, p_space_def] \\
@@ -7122,9 +7122,9 @@ Proof
      ‘(B powr (&n)⁻¹) powr &n = B powr ((&n)⁻¹ * (&n))’
        by (irule powr_powr >> gvs [num_not_infty, inv_not_infty, lt_imp_ne]) \\
      POP_ORW >> gvs [mul_linv_pos, powr_1])
- >> gvs []         
+ >> gvs []
 QED
-                  
+
 Theorem absolute_third_moments_center_bound:
     ∀p X n. prob_space p ∧ (∀i. real_random_variable (X i) p) ∧
             (∀i. integrable p (λx. (abs (X i x))³)) ∧
@@ -7183,8 +7183,8 @@ Proof
      fs [integrable_const, prob_space_def] >> DISCH_TAC \\
      POP_ASSUM K_TAC \\
      METIS_TAC [expectation_const, prob_space_def])
- >> Rewr      
- >> MATCH_MP_TAC leeq_trans 
+ >> Rewr
+ >> MATCH_MP_TAC leeq_trans
  >> qexists ‘Normal 4 * expectation p (λx. (abs (X i x))³) +
              Normal 4 * expectation p (λx. (abs (X i x))³)’
  >> reverse CONJ_TAC
@@ -7345,7 +7345,7 @@ Proof
                          sqrt (second_moments p Y (SUC n))) ’
  >> Q.ABBREV_TAC ‘B = (λn x.
                          (∑ (λi. X i x) (count1 n) − expectation p (λx. ∑ (λi. X i x) (count1 n))) /
-                         sqrt (second_moments p X (SUC n)))’ 
+                         sqrt (second_moments p X (SUC n)))’
  >> MP_TAC (Q.SPECL [‘p’, ‘A’, ‘B’] converge_in_dist_cong) >> rw []
  >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘N’, ‘0’])
  >> Know ‘∀n x. 0 ≤ n ∧ x ∈ p_space p ⇒ A n x = B n x’
@@ -7386,8 +7386,8 @@ Proof
      HO_MATCH_MP_TAC EXTREAL_SUM_IMAGE_EQ' \\
      rw [Abbr ‘Y’] >> METIS_TAC [expectation_center, sub_rzero])
  >> gvs []
-QED  
-  
+QED
+
 val _ = html_theory "central_limit";
 
 (* References:
