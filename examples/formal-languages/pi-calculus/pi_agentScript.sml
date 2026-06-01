@@ -46,6 +46,9 @@ val d_tm = mk_var("d", rep_t);
 (* This is often useful for debugging purposes *)
 Overload LP = lp;
 
+val tydata1 = List.nth (tydata,0);
+val tydata2 = List.nth (tydata,1);
+
 (* type 1 (:pi) *)
 val {term_ABS_pseudo11 = term_ABS_pseudo11_1,
      term_REP_11 = term_REP_11_1,
@@ -56,7 +59,7 @@ val {term_ABS_pseudo11 = term_ABS_pseudo11_1,
      repabs_pseudo_id = repabs_pseudo_id1,
      term_REP_t = term_REP_t1,
      term_ABS_t = term_ABS_t1,
-     newty = newty1, ...} = List.nth (tydata,0);
+     newty = newty1} = tydata1;
 
 (* type 2 (:residual) *)
 val {term_ABS_pseudo11 = term_ABS_pseudo11_2,
@@ -68,7 +71,7 @@ val {term_ABS_pseudo11 = term_ABS_pseudo11_2,
      repabs_pseudo_id = repabs_pseudo_id2,
      term_REP_t = term_REP_t2,
      term_ABS_t = term_ABS_t2,
-     newty = newty2, ...} = List.nth (tydata,1);
+     newty = newty2} = tydata2;
 
 (* ----------------------------------------------------------------------
     Pi-calculus operators
@@ -76,6 +79,7 @@ val {term_ABS_pseudo11 = term_ABS_pseudo11_2,
 
 val glam = genind_lam
 Overload pilp[local] = “genind ^lp”
+
 fun toArb t = subst [“uu:string” |-> “ARB:string”] t
 
 (* Nil *)
@@ -92,7 +96,7 @@ val Nil_def' = prove(
   “^term_ABS_t1 ^Nil_pattern = ^Nil_t”,
     srw_tac [][Nil_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Nil_termP]);
 
-(* Tau prefix *)
+(* Tau pi *)
 val Tau_t = mk_var("Tau", “:^newty1 -> ^newty1”);
 val Tau_pattern = “GLAM uu [] rTau [] [^term_REP_t1 P]”;
 val Tau_def = new_definition(
@@ -106,7 +110,7 @@ val Tau_def' = prove(
   “^term_ABS_t1 ^Tau_pattern = ^Tau_t P”,
     srw_tac [][Tau_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Tau_termP]);
 
-(* Input prefix *)
+(* Input 'free 'bound pi *)
 val Input_t = mk_var("Input", “:string -> string -> ^newty1 -> ^newty1”);
 val Input_pattern = “GLAM x [a] rInput [^term_REP_t1 P] []”;
 val Input_def = new_definition(
@@ -117,7 +121,7 @@ val Input_termP = prove(
     match_mp_tac glam >> srw_tac [][genind_term_REP1]);
 val Input_t = defined_const Input_def;
 
-(* Output prefix *)
+(* Output 'free 'free pi *)
 val Output_t = mk_var("Output", “:string -> string -> ^newty1 -> ^newty1”);
 val Output_pattern = “GLAM uu [a; b] rOutput [] [^term_REP_t1 P]”;
 val Output_def = new_definition(
@@ -131,7 +135,7 @@ val Output_def' = prove(
   “^term_ABS_t1 ^Output_pattern = ^Output_t a b P”,
     srw_tac [][Output_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Output_termP]);
 
-(* Match *)
+(* Match 'free 'free pi *)
 val Match_t = mk_var("Match", “:string -> string -> ^newty1 -> ^newty1”);
 val Match_pattern = “GLAM uu [a; b] rMatch [] [^term_REP_t1 P]”;
 val Match_def = new_definition(
@@ -145,7 +149,7 @@ val Match_def' = prove(
   “^term_ABS_t1 ^Match_pattern = ^Match_t a b P”,
     srw_tac [][Match_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Match_termP]);
 
-(* Mismatch *)
+(* Mismatch 'free 'free pi *)
 val Mismatch_t = mk_var("Mismatch", “:string -> string -> ^newty1 -> ^newty1”);
 val Mismatch_pattern = “GLAM uu [a; b] rMismatch [] [^term_REP_t1 P]”;
 val Mismatch_def = new_definition(
@@ -159,7 +163,7 @@ val Mismatch_def' = prove(
   “^term_ABS_t1 ^Mismatch_pattern = ^Mismatch_t a b P”,
     srw_tac [][Mismatch_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Mismatch_termP]);
 
-(* Sum (Choice) *)
+(* Sum pi pi *)
 val Sum_t = mk_var("Sum", “:^newty1 -> ^newty1 -> ^newty1”);
 val Sum_pattern = “GLAM uu [] rSum [] [^term_REP_t1 P; ^term_REP_t1 Q]”;
 val Sum_def = new_definition(
@@ -173,7 +177,7 @@ val Sum_def' = prove(
   “^term_ABS_t1 ^Sum_pattern = ^Sum_t P Q”,
     srw_tac [][Sum_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Sum_termP]);
 
-(* Parallel Composition *)
+(* Par pi pi *)
 val Par_t = mk_var("Par", “:^newty1 -> ^newty1 -> ^newty1”);
 val Par_pattern = “GLAM uu [] rPar [] [^term_REP_t1 P; ^term_REP_t1 Q]”;
 val Par_def = new_definition(
@@ -187,7 +191,7 @@ val Par_def' = prove(
   “^term_ABS_t1 ^Par_pattern = ^Par_t P Q”,
     srw_tac [][Par_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Par_termP]);
 
-(* Restriction *)
+(* Res 'bound pi *)
 val Res_t = mk_var("Res", “:string -> ^newty1 -> ^newty1”);
 val Res_pattern = “GLAM v [] rRes [^term_REP_t1 P] []”;
 val Res_def = new_definition(
@@ -198,7 +202,7 @@ val Res_termP = prove(
     match_mp_tac glam >> srw_tac [][genind_term_REP1]);
 val Res_t = defined_const Res_def;
 
-(* TauR *)
+(* TauR pi *)
 val TauR_t = mk_var("TauR", “:^newty1 -> ^newty2”);
 val TauR_pattern = “GLAM uu [] rTauR [] [^term_REP_t1 P]”;
 val TauR_def = new_definition(
@@ -212,7 +216,18 @@ val TauR_def' = prove(
   “^term_ABS_t2 ^TauR_pattern = ^TauR_t P”,
     srw_tac [][TauR_def, GLAM_NIL_EQ, term_ABS_pseudo11_2, TauR_termP]);
 
-(* Bound output (residual) *)
+(* InputS 'free 'bound pi *)
+val InputS_t = mk_var("InputS", “:string -> string -> ^newty1 -> ^newty2”);
+val InputS_pattern = “GLAM x [a] rInputS [^term_REP_t1 P] []”;
+val InputS_def = new_definition(
+   "InputS_def",
+  “^InputS_t a x P = ^term_ABS_t2 ^InputS_pattern”);
+val InputS_termP = prove(
+    mk_comb(termP2, InputS_pattern),
+    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
+val InputS_t = defined_const InputS_def;
+
+(* BoundOutput 'free 'bound pi *)
 val BoundOutput_t =
     mk_var("BoundOutput", “:string -> string -> ^newty1 -> ^newty2”);
 val BoundOutput_pattern = “GLAM x [a] rBoundOutput [^term_REP_t1 P] []”;
@@ -224,18 +239,7 @@ val BoundOutput_termP = prove(
     match_mp_tac glam >> srw_tac [][genind_term_REP1]);
 val BoundOutput_t = defined_const BoundOutput_def;
 
-(* Input residual *)
-val InputS_t = mk_var("InputS", “:string -> string -> ^newty1 -> ^newty2”);
-val InputS_pattern = “GLAM x [a] rInputS [^term_REP_t1 P] []”;
-val InputS_def = new_definition(
-   "InputS_def",
-  “^InputS_t a x P = ^term_ABS_t2 ^InputS_pattern”);
-val InputS_termP = prove(
-    mk_comb(termP2, InputS_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
-val InputS_t = defined_const InputS_def;
-
-(* Free output (residual) *)
+(* FreeOutput 'free 'free pi *)
 val FreeOutput_t =
     mk_var("FreeOutput", “:string -> string -> ^newty1 -> ^newty2”);
 val FreeOutput_pattern = “GLAM uu [a; b] rFreeOutput [] [^term_REP_t1 P]”;

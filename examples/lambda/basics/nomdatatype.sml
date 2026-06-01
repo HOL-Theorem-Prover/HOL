@@ -621,7 +621,7 @@ val lp =
      n = 1 /\ lfvs = 2 /\ d = rFreeOutput /\ tns = [] /\ uns = [0]
     )”;
 
-Example 2 (mixed free and bound recursive terms; external data):
+Example 2 (mixed free and bound recursive terms; with external type :num):
 
 val q = ‘lterm = VAR 'free
                | APP lterm lterm
@@ -642,7 +642,7 @@ val lp = “λn lfvs (d:lrep) tns uns.
   uns is the list of indexes of unbounded (free) arguments.
 *)
 
-(* NOTE: index_of "b" ["a", "b", "c"] = “1 :num” *)
+(* index_of "b" ["a", "b", "c"] = “1 :num” *)
 local
     open Arbnum
     fun index_of_inner (n :num) e l =
@@ -652,6 +652,7 @@ in
 fun index_of e l = numSyntax.mk_numeral (index_of_inner Arbnum.zero e l)
 end;
 
+(* NOTE: “lfvs = _” where “_” is the number of “:free” of the constructor *)
 fun build_lfvs (ptys) = let
     val i = List.length (List.filter (fn e => e = dVartype (!free_tyname)) ptys)
 in
@@ -661,6 +662,7 @@ end;
 (* find_prev 2 [1,2,3,4,5] = 3 *)
 fun find_next e l = if hd l = e then hd (tl l) else find_next e (tl l);
 
+(* NOTE: The "dAQ" contructor is not supported *)
 fun pretypeToName pty =
     case pty of
         dVartype s => s
@@ -691,6 +693,7 @@ in
     mk_eq (“tns :num list”, mk_list (indexes, numSyntax.num))
 end;
 
+(* NOTE: The "dAQ" constructor is not supported *)
 fun pretypeIsNominal pty =
     case pty of
         dVartype s => false
@@ -754,7 +757,12 @@ in
     mk_eq (mk_var("d",rep_t), d_tm)
 end;
 
-(*
+(* NOTE: For lterm (LabelledTerm), the "LAMi" constructor has two recursive
+   parameters, the first is bound (because it's immediately after 'bound), the
+   second is free: LAMi num 'bound lterm lterm.
+
+   We need to make sure the generated tns and uns lists each contain one value:
+
 val data =
    [(``n = 0``, ``lfvs = 1``, "VAR", [], ``tns = []``, ``uns = []``),
     (``n = 0``, ``lfvs = 0``, "APP", [], ``tns = []``, ``uns = [0; 0]``),
@@ -785,6 +793,11 @@ in
     list_mk_abs ([n_tm, lfvs_tm, d_tm, tns_tm, uns_tm], list_mk_disj c_tms)
 end;
 
+(* NOTE: When calling "new_type_step1" for next tyname, the genind_exists slot
+   of nomtyinfo from previous calls of "new_type_step1", must be supplied.
+   This works for pi-calculus but perhaps not works for mutually exclusive types
+   that we haven't met yet.
+ *)
 fun build_tydata [] index lp ths = []
   | build_tydata (tyname::tynames) index lp ths =
     let val tyinfo = new_type_step1 tyname index ths {lp = lp};
@@ -793,6 +806,7 @@ fun build_tydata [] index lp ths = []
         tyinfo :: build_tydata tynames (index + 1) lp (th::ths)
     end;
 
+(* The final API (so far) *)
 fun nominal_datatype q = let
   val asts = parse_datatype q;
   val tynames = extract_tynames asts;
@@ -801,9 +815,9 @@ fun nominal_datatype q = let
   val tydata = build_tydata tynames 0 lp []
 in
     {tynames = tynames,
-     tydata = tydata,
-     rep_t = rep_t,
-     lp = lp}
+     tydata  = tydata,
+     rep_t   = rep_t,
+     lp      = lp}
 end;
 
 end (* struct *)

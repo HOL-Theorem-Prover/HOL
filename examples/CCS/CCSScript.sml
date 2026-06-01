@@ -351,7 +351,8 @@ val glam = genind_lam
 Overload ccslp[local] = “genind ^lp”
 
 fun toArb t = subst [“uu:string” |-> “ARB:string”] t
-(* var *)
+
+(* var 'free *)
 val var_t = mk_var("var", “:string -> ^newty”)
 val var_pattern = “GLAM uu [s] cvar [][]”
 val var_def = new_definition(
@@ -365,7 +366,7 @@ val var_def' = prove(
   “^term_ABS_t ^var_pattern = var s”,
   srw_tac[][var_def, GLAM_NIL_EQ, term_ABS_pseudo11, var_termP])
 
-(* prefix *)
+(* prefix ('a Action) CCS *)
 val prefix_t = mk_var("prefix", “:'a Action -> ^newty -> ^newty”);
 val prefix_pattern = “GLAM uu [] (cprefix u) [] [^term_REP_t E]”
 val prefix_def = new_definition(
@@ -387,7 +388,7 @@ val _ =
 
 val _ = TeX_notation { hol = "..", TeX = ("\\ensuremath{\\ldotp}", 1) };
 
-(* sum *)
+(* sum CCS CCS *)
 val sum_t = mk_var("sum", “:^newty -> ^newty -> ^newty”);
 val sum_pattern = “GLAM uu [] csum [] [^term_REP_t E1; ^term_REP_t E2]”
 val sum_def = new_definition(
@@ -404,7 +405,7 @@ val sum_def' = prove(
 val _ = overload_on ("+", ``sum``); (* priority: 500 *)
 val _ = TeX_notation { hol = "+", TeX = ("\\ensuremath{+}", 1) };
 
-(* par *)
+(* par CCS CCS *)
 val par_t = mk_var("par", “:^newty -> ^newty -> ^newty”);
 val par_pattern = “GLAM uu [] cpar [] [^term_REP_t E1; ^term_REP_t E2]”
 val par_def = new_definition(
@@ -424,7 +425,7 @@ val _ = set_mapped_fixity {fixity = Infixl 600,
 (* val _ = Unicode.unicode_version {u = UTF8.chr 0x007C, tmnm = "par"}; *)
 val _ = TeX_notation { hol = "||", TeX = ("\\ensuremath{\\mid}", 1) };
 
-(* restr *)
+(* restr ('a Label set) CCS *)
 val restr_t = mk_var("restr", “:'a Label set -> ^newty -> ^newty”);
 val restr_pattern = “GLAM uu [] (crestr L) [] [^term_REP_t E]”
 val restr_def = new_definition(
@@ -446,7 +447,7 @@ val _ = add_rule {term_name = "nu", fixity = Closefix,
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2))};
 
-(* relab *)
+(* relab CCS ('a Relebeling) *)
 val relab_t = mk_var("relab", “:^newty -> 'a Relabeling -> ^newty”);
 val relab_pattern = “GLAM uu [] (crelab rf) [] [^term_REP_t E]”
 val relab_def = new_definition(
@@ -460,7 +461,7 @@ val relab_def' = prove(
   “^term_ABS_t ^relab_pattern = ^relab_t E rf”,
     srw_tac [][relab_def, GLAM_NIL_EQ, term_ABS_pseudo11, relab_termP]);
 
-(* rec *)
+(* rec 'bound CCS *)
 val rec_t = mk_var("rec", “:string -> ^newty -> ^newty”);
 val rec_pattern = “GLAM X [] crec [^term_REP_t E] []”
 val rec_def = new_definition("rec_def", “^rec_t X E = ^term_ABS_t ^rec_pattern”);
