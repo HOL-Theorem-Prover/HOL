@@ -306,7 +306,8 @@ fun graphbuild optinfo g =
                         in
                           NewJob ({tag = tag, command = shell_command c,
                                    update = update, try_cache = K false,
-                                   dir = dir},
+                                   dir = dir,
+                                   ignore_error = ignore_error},
                                   (updall(g, Running), true))
                         end
                   end
@@ -375,7 +376,8 @@ fun graphbuild optinfo g =
                             NewJob({tag = tag, dir = dir,
                                     command = cline_to_command cline,
                                     try_cache = try_cache,
-                                    update = update},
+                                    update = update,
+                                    ignore_error = false},
                                    (updall Running g, true))
                           end
                     fun bc c f = pushdir dir (build_command g incinfo c) f

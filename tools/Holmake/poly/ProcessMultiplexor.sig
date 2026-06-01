@@ -5,7 +5,8 @@ sig
   type 'a job = {tag : string, command : command,
                  update : 'a * bool * Time.time -> 'a,
                  try_cache : unit -> bool,
-                 dir : string}
+                 dir : string,
+                 ignore_error : bool}
   type jobkey = Posix.ProcEnv.pid * {tag : string, dir : string}
   val jobkey_compare : jobkey * jobkey -> order
   val jobkey_toString : jobkey -> string
@@ -28,7 +29,7 @@ sig
          | Terminated of jobkey * exit_status * Time.time
          | MonitorKilled of jobkey * Time.time
          | EOF of jobkey * strmtype * Time.time
-         | StartJob of jobkey * {dir:string}
+         | StartJob of jobkey * {dir:string, ignore_error:bool}
   datatype client_cmd = Kill of jobkey | KillAll
   type monitor = monitor_message -> client_cmd option
   val text_monitor : monitor
