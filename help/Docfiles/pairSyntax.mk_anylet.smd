@@ -36,7 +36,7 @@ corresponding `bi`.
 >> strip_comb (pairSyntax.mk_anylet ([(Term`x`, Term`M`)], Term`N x`));
 
 >>+ pairSyntax.mk_anylet ([(``f (x:'a,y:'b):'c``, ``M:'c``), (``g (z:'c) :'d``, ``N:'d``)],
-             ``g (f (a:'a,b:'b):'c):'d`);
+             ``g (f (a:'a,b:'b):'c):'d``);
 ```
 
 Programming that involves manipulation of term syntax.
