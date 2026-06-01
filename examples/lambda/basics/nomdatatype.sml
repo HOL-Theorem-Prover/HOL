@@ -847,34 +847,68 @@ val Tau_def' = prove(
   “^term_ABS_t1 ^Tau_pattern = ^Tau_t P”,
     srw_tac [][Tau_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Tau_termP]);
 
-(* Input 'free 'bound pi *)
-val Input_t = mk_var("Input", “:string -> string -> ^newty1 -> ^newty1”);
-val Input_pattern = “GLAM x [a] rInput [^term_REP_t1 P] []”;
-val Input_def = new_definition(
-   "Input_def",
-  “^Input_t a x P = ^term_ABS_t1 ^Input_pattern”);
-val Input_termP = prove(
-    mk_comb(termP1, Input_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
-val Input_t = defined_const Input_def;
-
     only Tau_termP, Tau_def and Tau_def' (into operinfo), etc. are needed later.
  *)
-fun build_cons_inner cptys tyname tymap tydata = let
+fun pretypeToType2 pty tymap =
+  case pty of
+    dVartype s => if s = !free_tyname orelse s = !bound_tyname then
+                      “:string”
+                  else
+                      Type.mk_vartype s
+  | dTyop {Tyop = s, Thy, Args} => let
+    in
+      case Thy of
+        NONE => assoc s tymap (* a nominal type here *)
+      | SOME t => Type.mk_thy_type{Tyop = s, Thy = t,
+                                   Args = List.map pretypeToType Args}
+    end
+  | dAQ pty => pty;
+
+(* val Input_pattern = “GLAM x [a] rInput [^term_REP_t1 P] []”;
+
+   x is the only bound name (otherwise it's “uu :string” here)
+   [a] is the list of free names (a0, a1, a2, ...)
+   rInput is the repcode
+   [^term_REP_t1 P]: the first list is the (only) bound nominal argument (P)
+   []: the second list is free nominal arguments (Q0, Q1, Q2, ...)
+
+   External arguments are part of the repcode, e.g. in CCS:
+
+   val prefix_pattern = “GLAM uu [] (cprefix u) [] [^term_REP_t E]”
+
+   ``(GLAM :string ->
+            string list -> 'a -> 'a gterm list -> 'a gterm list -> 'a gterm)``
+   where 'a is instantiated to rep_t
+ *)
+val glam_t = “GLAM :string ->
+               string list -> 'a -> 'a gterm list -> 'a gterm list -> 'a gterm”;
+
+fun build_pattern tymap ty cname ptys rep_t = inst [alpha |-> rep_t] glam_t;
+
+fun build_constructor tymap ty cname ptys rep_t = let
+    val c_ty = list_mk_fun (List.map (fn e => pretypeToType2 e tymap) ptys, ty);
+    val c_t = mk_var(cname, c_ty);
+    val c_pattern = build_pattern tymap ty cname ptys rep_t
+in
+    (c_t, c_pattern)
+end;
+
+fun build_cons_inner cptys tyname tymap tydata rep_t = let
     val current_type = assoc tyname tymap
 in
     List.map (fn (c:string,ptys) =>
-                 (current_type,c)) cptys
+                 build_constructor tymap current_type c ptys rep_t) cptys
 end;
 
-fun build_cons tynames (asts :AST list) (tydata :nomtyinfo list) = let
+fun build_cons tynames (asts :AST list)
+                       (tydata :nomtyinfo list) rep_t = let
     val newtys = List.map (fn e => #newty e) tydata;
     val tymap = zip tynames newtys
 in
     List.concat (List.map (fn (tyname,df) =>
                               case df of
                                   Constructors cs =>
-                                  build_cons_inner cs tyname tymap tydata
+                                  build_cons_inner cs tyname tymap tydata rep_t
                                 | Record _ => []) asts)
 end;
 
@@ -885,7 +919,7 @@ fun nominal_datatype q = let
   val rep_t = define_repcode asts;
   val lp = build_lp asts rep_t;
   val tydata = build_tydata tynames 0 lp [];
-  val cons = build_cons tynames asts tydata
+  val cons = build_cons tynames asts tydata rep_t
 in
     {tynames = tynames,
      tydata  = tydata,
