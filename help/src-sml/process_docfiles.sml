@@ -112,11 +112,21 @@ fun polyscript_all {src_dir, processed_dir, bases, obuf} =
         val instrm = TextIO.openIn srcfile
         val outstrm = TextIO.openOut dstfile
         fun out s = (TextIO.output(outstrm, s); pushConcat s)
+        val () = resetParseError ()
       in
         processStream {input = instrm, output = out,
                        debug = false, umap = umap, obuf = obuf};
         TextIO.closeIn instrm;
         TextIO.closeOut outstrm;
+        (* HOLSource's parse errors land on stderr, but `>>+`
+           swallows the resulting Fail "Static Errors" so the
+           build proceeds with a broken example.  Treat any parse
+           error as fatal here -- the .smd is wrong at source and
+           the maintainer needs to know. *)
+        if hadParseError () then
+          dieLn ("process_docfiles: parse error in " ^ entry ^
+                 ".smd (see preceding stderr output)")
+        else ();
         pushConcat ("\n\n" ^ sentinel entry ^ "\n\n")
       end
   in
