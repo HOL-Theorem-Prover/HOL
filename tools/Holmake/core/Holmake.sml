@@ -267,6 +267,124 @@ local
       known_dirs := Binaryset.add(!known_dirs, absdir)
   fun mark_known_hmdirs ds =
       Binaryset.app (fn d => mark_known (hmdir.toAbsPath d)) ds
+
+  (* Project context: detected once at startup from `original_dir`'s
+     ancestor chain.  No per-dir lookup -- if `recursively` later
+     wanders into a dir whose own holproject.toml differs (e.g. an
+     aggregator like `parallel_builds/core` walks classical INCLUDES
+     into another project), we do NOT activate that other project.
+     That keeps the build deterministic and avoids ordering surprises
+     when INCLUDES reaches into someone else's project tree.
+
+     Project augmentation flows through `cline_incs` at the top-level
+     `recursively` invocation: every discovered dir + external_include
+     is added there, so the recursive walk visits them in classical
+     post-order and each dir's graph nodes are added before cwd's hm
+     dispatches the compile that references them. *)
+  val project_config : HMProject.config option =
+      if #no_project master_cline_option_value then NONE
+      else
+        case HMProject.find_root
+               { start = hmdir.toAbsPath original_dir } of
+            NONE => NONE
+          | SOME root =>
+            (SOME (HMProject.load { root = root })
+             handle Fail msg =>
+                    (warn0 ("holproject.toml at " ^ root ^
+                            " ignored: " ^ msg);
+                     NONE))
+
+  val project_dirs : string list =
+      case project_config of
+          NONE => []
+        | SOME cfg => HMProject.discover_dirs cfg
+
+  val project_externals : string list =
+      case project_config of
+          NONE => []
+        | SOME cfg => #external_includes cfg
+
+  (* Every dir that build-time machinery treats as an implicit
+     INCLUDES of every project dir.  Empty when project mode is off. *)
+  val project_active_dirs : string list = project_dirs @ project_externals
+
+  (* For find_rule's known-dirs gate: project dirs and their external
+     includes can be consulted on demand for cross-dir rule lookup. *)
+  val () = List.app mark_known project_active_dirs
+
+  (* Fatal duplicate-name check across project dirs (HOL has no
+     namespace separation, so any clash among reachable sources is
+     ambiguous for `open Foo`).  Run once at startup; externals are
+     not absorbed -- they live outside the project's source-namespace
+     responsibility. *)
+  val () =
+      if null project_dirs then ()
+      else
+        case HMProject.find_name_clashes project_dirs of
+            [] => ()
+          | clashes =>
+            let
+              fun fmt (file, dirs) =
+                  "  ambiguous source name '" ^ file ^ "' in:\n" ^
+                  String.concat
+                    (List.map (fn d => "    " ^ OS.Path.concat (d, file) ^
+                                       "\n") dirs)
+              val body = String.concat (List.map fmt clashes)
+            in
+              die ("holproject.toml: " ^
+                   Int.toString (List.length clashes) ^
+                   " ambiguous source name(s) reachable from this build:\n" ^
+                   body ^
+                   "Resolve by listing one of the offending directories in " ^
+                   "the [exclude] key of holproject.toml (or in " ^
+                   "[projects.<id>].exclude for a directory inside an " ^
+                   "external project), or by renaming one of the files.")
+            end
+
+  (* One-shot diag block (visible under `-d project'). *)
+  val () =
+      case project_config of
+          NONE =>
+            if #no_project master_cline_option_value then
+              diag0 "project"
+                    (fn _ => "--no-project: skipping holproject.toml lookup")
+            else
+              diag0 "project"
+                    (fn _ => "No holproject.toml found at or above " ^
+                             hmdir.toAbsPath original_dir)
+        | SOME cfg =>
+          let
+            val name = Option.getOpt (#name cfg, "<unnamed>")
+            fun pmsg s = diag0 "project" (fn _ => s)
+            fun plist label xs =
+                pmsg ("  " ^ label ^ ": [" ^
+                      String.concatWith ", " xs ^ "]")
+            fun ext_to_str (e : HMProject.external_project) =
+                #id e ^ " -> " ^ #path e
+          in
+            pmsg ("Project '" ^ name ^ "' rooted at " ^ #root cfg);
+            plist "externals" (List.map ext_to_str (#externals cfg));
+            List.app
+              (fn {id, exclude, path = _} =>
+                  if null exclude then ()
+                  else plist ("external " ^ id ^ " exclude") exclude)
+              (#externals cfg);
+            plist "exclude" (#exclude cfg);
+            plist "external_includes" project_externals;
+            pmsg ("  discovered " ^
+                  Int.toString (List.length project_dirs) ^
+                  " project directories");
+            List.app (fn d => pmsg ("    " ^ d)) project_dirs
+          end
+
+  (* Absolute excludes that apply when checking INCLUDES against the
+     project's [exclude] / [projects.<id>].exclude lists. *)
+  val project_excludes : string list =
+      case project_config of
+          NONE => []
+        | SOME cfg =>
+            #exclude cfg @
+            List.concat (List.map #exclude (#externals cfg))
   (* Dirs for which we've already emitted a LOCAL_PARALLELISM_LIMIT
      warning, so we don't repeat it on every `limit_for_dir' call. *)
   val plimit_warned : string Binaryset.set ref =
@@ -331,6 +449,18 @@ fun get_hmf_for_dir absdir =
 fun get_hmf () = get_hmf_for_dir (FileSys.getDir())
 fun is_known_dir absdir = Binaryset.member(!known_dirs, absdir)
 
+(* Project context, computed once at startup (see project_config and
+   friends above).  All four bindings are derived from cwd's ancestor
+   chain and stay constant for the rest of the Holmake run:
+     project_active_dirs : list of dirs (project + external_includes)
+       that act as implicit INCLUDES of every project dir;
+     project_excludes   : absolute paths of project-tree dirs the
+       config asks to skip;
+     project_active_root: the project root, for diag messages. *)
+val project_active_dirs = project_active_dirs
+val project_excludes    = project_excludes
+val project_active_root = Option.map #root project_config
+
 (* `limit_for_dir' must not trigger a Holmakefile read here: doing
    so would chdir under code in `build_depgraph' that captures
    `FileSys.getDir()' for rule lookup.  We only consult `hmcache'
@@ -355,11 +485,38 @@ fun limit_for_dir (d : hmdir.t) : int option =
     end
 end
 
+(* Compute INCLUDES + PRE_INCLUDES for `dir'.  Reads the Holmakefile
+   via get_hmf(), then enforces the INCLUDES-vs-[exclude] consistency
+   check: if the active project's [exclude] (or any external's
+   exclude) names a dir that the Holmakefile explicitly INCLUDEs, die.
+   The check fires only when project mode is active AND `dir' is a
+   project dir; otherwise it's a no-op. *)
 fun getnewincs dir =
-    let val (env, _, _, _) = get_hmf()
+    let
+      val (env, _, _, _) = get_hmf()
+      val raw_incs = envlist env "INCLUDES" |> slist_to_dset dir
+      val raw_pres = envlist env "PRE_INCLUDES" |> slist_to_dset dir
+      val abs_dir = hmdir.toAbsPath dir
+
+      val excl_set = Binaryset.addList
+                       (Binaryset.empty String.compare, project_excludes)
+      fun check_one d =
+          let val da = hmdir.toAbsPath d
+          in
+            if Binaryset.member (excl_set, da) then
+              die ("Holmakefile in " ^ abs_dir ^
+                   ": INCLUDES references " ^ da ^
+                   ", but that directory is listed in " ^
+                   "[exclude] of the project at " ^
+                   Option.getOpt (project_active_root, "?") ^
+                   ".  Resolve the contradiction: either remove the " ^
+                   "INCLUDES entry or remove the [exclude] entry.")
+            else ()
+          end
+      val () = Binaryset.app check_one raw_incs
+      val () = Binaryset.app check_one raw_pres
     in
-      {includes = envlist env "INCLUDES" |> slist_to_dset dir,
-       preincludes = envlist env "PRE_INCLUDES" |> slist_to_dset dir}
+      {includes = raw_incs, preincludes = raw_pres}
     end
 
 (* Examining the c/line options, determine whether to use a
@@ -1129,8 +1286,15 @@ fun build_depgraph cdset incinfo (tgt:dep) g0:(g * node) =
 let
   val dir = hm_target.dirpart tgt and target = hm_target.filepart tgt
   val {preincludes,includes} = incinfo
+  (* Project augmentation: project_active_dirs is empty unless a
+     holproject.toml was detected at startup, in which case it lists
+     every project dir + external_include so Holdep can resolve
+     unqualified `open Foo' references to a Foo.{sml,sig} living in
+     any project directory.  Appended last so explicit INCLUDES still
+     win on name clashes. *)
   val incinfo = {preincludes = preincludes,
-                 includes = includes @ std_include_flags}
+                 includes = includes @ std_include_flags @
+                            project_active_dirs}
   val pdep = primary_dependent target
   val target_s = tgt_toString tgt
   val actual_dir = hmdir.curdir()
@@ -1552,7 +1716,21 @@ end
 
 val _ = not cline_always_rebuild_deps orelse clean_deps()
 
-val cline_incs = slist_to_dset original_dir cline_additional_includes
+(* Top-level cline_incs gets the user's -I flags plus, when project
+   mode is active, every project dir + external_include (minus
+   original_dir itself so we don't trip recursively's cycle check on
+   our own pre-visited cwd).  cline_incs is unioned into the top dir's
+   recur_into at the start of `recursively`, which then walks each in
+   classical post-order: project dirs and externals get their `hm`
+   callbacks before cwd's, so their graph nodes are populated before
+   cwd's compile dispatch references them. *)
+val cwd_abs_canon = OS.Path.mkCanonical (hmdir.toAbsPath original_dir)
+val project_incs_dirs =
+    List.filter (fn d => OS.Path.mkCanonical d <> cwd_abs_canon)
+                project_active_dirs
+val cline_incs =
+    Binaryset.union (slist_to_dset original_dir cline_additional_includes,
+                     slist_to_dset original_dir project_incs_dirs)
 val idmap0 = extend_idmap original_dir
                     {pres = empty_dirset, incs = empty_dirset}
                     empty_incdirmap

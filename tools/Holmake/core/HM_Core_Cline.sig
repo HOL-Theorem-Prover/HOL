@@ -22,6 +22,7 @@ type t = {
   no_overlay : bool,
   no_preexecs : bool,
   no_prereqs : bool,
+  no_project : bool,
   opentheory : string option,
   quiet : bool,
   quit_on_failure : bool,

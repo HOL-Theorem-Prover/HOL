@@ -3,14 +3,14 @@ struct
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate30 z
+  fun makeUpdateT z = makeUpdate31 z
 in
 fun updateT z = let
   fun from cache_dir cachekey debug dirs do_logging fast force_lastmaker
            help hmakefile holdir includes
            interactive jobs json keep_going no_action no_hmakefile
            no_lastmaker_check no_overlay
-           no_preexecs no_prereqs opentheory quiet
+           no_preexecs no_prereqs no_project opentheory quiet
            quit_on_failure rebuild rebuild_deps recursive_build recursive_clean
            thmsrc verbose =
     {
@@ -24,6 +24,7 @@ fun updateT z = let
       no_action = no_action, no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_preexecs = no_preexecs, no_prereqs = no_prereqs,
+      no_project = no_project,
       opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
       rebuild = rebuild,
@@ -33,7 +34,7 @@ fun updateT z = let
   fun from' verbose thmsrc recursive_clean recursive_build rebuild_deps
             rebuild
             quit_on_failure
-            quiet opentheory no_prereqs no_preexecs
+            quiet opentheory no_project no_prereqs no_preexecs
             no_overlay no_lastmaker_check no_hmakefile no_action keep_going
             json jobs interactive
             includes holdir
@@ -50,6 +51,7 @@ fun updateT z = let
       no_action = no_action, no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_preexecs = no_preexecs, no_prereqs = no_prereqs,
+      no_project = no_project,
       opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
       rebuild = rebuild,
@@ -60,14 +62,14 @@ fun updateT z = let
             force_lastmaker, help, hmakefile, holdir,
             includes, interactive, jobs, json, keep_going, no_action,
             no_hmakefile, no_lastmaker_check,
-            no_overlay, no_preexecs, no_prereqs, opentheory,
+            no_overlay, no_preexecs, no_prereqs, no_project, opentheory,
             quiet, quit_on_failure, rebuild, rebuild_deps, recursive_build,
             recursive_clean, thmsrc, verbose} =
     f cache_dir cachekey debug dirs do_logging fast force_lastmaker
       help hmakefile holdir includes
       interactive jobs json keep_going no_action no_hmakefile
       no_lastmaker_check no_overlay no_preexecs
-      no_prereqs opentheory quiet
+      no_prereqs no_project opentheory quiet
       quit_on_failure rebuild rebuild_deps recursive_build recursive_clean
       thmsrc verbose
 in
@@ -102,6 +104,7 @@ type t = {
   no_overlay : bool,
   no_preexecs : bool,
   no_prereqs : bool,
+  no_project : bool,
   opentheory : string option,
   quiet : bool,
   quit_on_failure : bool,
@@ -144,6 +147,7 @@ val default_core_options : t =
   no_overlay = false,
   no_preexecs = false,
   no_prereqs = false,
+  no_project = false,
   opentheory = NONE,
   quiet = false,
   quit_on_failure = true,
@@ -321,6 +325,8 @@ val core_option_descriptions = [
     short = "", desc = mkBoolT #no_preexecs },
   { help = "don't build recursively in INCLUDES",
     long = ["no_prereqs"], short = "", desc = mkBoolT #no_prereqs },
+  { help = "ignore holproject.toml even if present",
+    long = ["no-project"], short = "", desc = mkBoolT #no_project },
   { help = "don't quit on failure", long = ["noqof"], short = "",
     desc = mkBoolF #quit_on_failure },
   { help = "use file as opentheory logging .uo",

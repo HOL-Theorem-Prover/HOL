@@ -435,6 +435,152 @@ If neither `Holmakefile` provides a rule and `T` exists on disk,
 If neither provides a rule and `T` does not exist, `Holmake`
 reports `Don't know how to build necessary target(s)`.
 
+### Project files: `holproject.toml`
+
+\index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}}
+\index{holproject.toml@\texttt{holproject.toml}|see{Holmake}}
+For a development that spans several sibling directories all owned by
+the same logical project, repeating `INCLUDES` lines in every
+sub-`Holmakefile` is tedious and error-prone.  Dropping a
+`holproject.toml` file at the root of the development lets `Holmake`
+discover the project's directory layout automatically: every directory
+below the file (except dot-directories and entries in `[exclude]`) is
+treated as if it were implicitly available to every other directory in
+the project, whether or not it carries a `Holmakefile`.
+
+The file is a small TOML document; the minimum is just a name:
+
+```
+name = "myproject"
+```
+
+With nothing else set, every directory below the file -- minus dot-dirs
+(`.git`, `.hol`, `.claude`, `.svn`) -- joins the project's *project
+directory set*.  Source-only directories without a `Holmakefile` are
+full members; users do not need to scatter empty `Holmakefile`s to
+mark sub-directories.  When `Holmake` is invoked from any directory
+inside the project (or at the root), it:
+
+  - finds the project file by walking from `cwd` upward;
+  - reads every project directory's `Holmakefile` (if any);
+  - treats the project directory set as additional implicit
+    `INCLUDES` -- so a `Holmakefile` in `dirA` no longer needs to
+    write `INCLUDES = ../dirB` to reach `dirB`'s targets or sources;
+  - resolves cross-directory rule lookups and `Holdep`'s source
+    search across the whole set, the same way classical `INCLUDES`
+    would.
+
+#### Schema
+
+The full schema (all keys optional except `name`):
+
+```
+name = "myproject"
+
+# Directories under the project root to keep out of the project
+# directory set.  Paths are relative to the project root.  Useful
+# for excluding scratch dirs, in-progress sub-projects, etc.
+exclude = ["scratch", "doc/build"]
+
+# Directories outside the project tree that every project dir
+# treats as an implicit INCLUDES.  Most commonly these will be
+# sibling examples/ subtrees; for projects linking to an already-
+# built HOL, sources under src/ are reached via sigobj/ and need
+# not be listed here.  $(HOLDIR) is substituted with the
+# configure-time HOLDIR path; non-absolute paths are resolved
+# relative to the project root.
+external_includes = [
+  "$(HOLDIR)/examples/foo",
+  "../sibling-project",
+]
+
+# Other projects this one depends on.  The `path` is where to find
+# that project on disk.  If the consumer's holproject.toml needs
+# to override a subset of that other project's contents (for name
+# clashes or to skip parts), an exclude list scopes to that
+# external.
+[projects.cakeml]
+path = "/home/me/dev/cakeml"
+exclude = ["scratch"]
+```
+
+A second file `holproject.local.toml`, intended to be gitignored,
+can sit alongside `holproject.toml` and carry the same
+`[projects.<id>]` tables.  Entries with the same `id` in the local
+file override entries in the committed file, letting individual
+developers point externals at their own local paths.
+
+#### Cross-directory build order
+
+`Holmake` walks the project directories in classical post-order at
+the top of the build:  every project directory's graph nodes are
+populated before the directory `Holmake` was invoked from has its
+own targets dispatched.  Cross-directory dependency edges between
+project directories are recorded automatically when `Holdep` finds
+a reference (an `open Foo` for a structure that lives in another
+project dir, or `Ancestors X` in a theory script naming a theory
+that lives in another project dir).
+
+The visiting order is alphabetical by absolute path.  If project
+dir `A`'s products depend on project dir `B`'s products, the
+project's directory names must arrange `B < A` lexicographically
+(or the user must add an explicit `INCLUDES = ../B` line in `A`'s
+`Holmakefile`, in which case classical traversal handles the order).
+In practice this is usually unsurprising and matches the
+naming the user already wants.
+
+#### Source-name disambiguation
+
+\index{Holmake@\holmake!ambiguous source names}
+HOL has no per-project namespace separation: `open Foo` resolves
+to a `Foo.uo` on the search path, with no qualifier saying which
+directory it came from.  So `Holmake` refuses to start if any two
+directories in the project's directory set contain a `.sml` or
+`.sig` source file with the same base name.  The error names every
+offending file and points the user at the `[exclude]` key as the
+remedy:
+
+```
+Holmake: holproject.toml: ambiguous source name 'Foo.sml' reachable
+from this build:
+  /repo/src/A/Foo.sml
+  /repo/src/B/Foo.sml
+Resolve by listing one of the offending directories in the
+[exclude] key of holproject.toml (or in [projects.<id>].exclude
+for a directory inside an external project), or by renaming one
+of the files.
+```
+
+The check covers `.sml` and `.sig` files, including theory scripts
+(e.g. duplicate `BarScript.sml` files in two project dirs would
+also fail -- the resulting `BarTheory` would be similarly
+ambiguous).
+
+#### Consistency: `INCLUDES` vs. `[exclude]`
+
+If a `Holmakefile` in a project dir explicitly writes
+`INCLUDES = ../foo` but the project file's `[exclude]` lists
+`../foo`, `Holmake` aborts with a message naming both the
+contradictory `Holmakefile` and the `[exclude]` entry.  The user
+must reconcile.
+
+#### When project mode does **not** activate
+
+`Holmake` decides once, at startup, whether project mode is on,
+based on whether a `holproject.toml` file lies on the chain of
+ancestor directories above `cwd`.  Project mode does *not* fire
+when `Holmake` walks into a project's directory tree via classical
+`INCLUDES` from an aggregator like `src/parallel_builds/core`: the
+aggregator's invocation is from outside the project and there's no
+project file in its own ancestor chain.  In that case the
+project's directories behave classically; their `INCLUDES` lines
+drive build order in the usual way.
+
+The `--no-project` command-line flag suppresses project-mode
+detection regardless of `holproject.toml`'s presence; useful for
+debugging or when a project's behaviour with and without project
+mode needs to be compared.
+
 ### `Holmake`'s command-line arguments
 
 \index{Holmake@\holmake!command-line arguments}
