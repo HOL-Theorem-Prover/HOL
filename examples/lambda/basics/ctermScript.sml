@@ -8,7 +8,7 @@ Libs
 val _ = (repcode := "ctrep");
 val _ = (rprefix := "ct");
 
-val {tynames, rep_t, lp} =
+val {tynames, tydata, rep_t, lp} =
     nominal_datatype
       ‘cterm = VAR 'free | APP cterm cterm | LAM 'bound cterm | CONST 'a’;
 
@@ -20,8 +20,8 @@ Definition is_ctc_def[simp]:
 End
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
-     termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
-    new_type_step1 tyname 0 [] {lp = lp};
+     termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty} =
+    hd tydata;
 
 val glam = genind_lam
 

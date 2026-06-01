@@ -8,7 +8,7 @@ Libs
 val _ = (repcode := "lrep");
 val _ = (rprefix := "l");
 
-val {tynames, rep_t, lp} =
+val {tynames, tydata, rep_t, lp} =
     nominal_datatype
       ‘lterm = VAR 'free
              | APP lterm lterm
@@ -18,8 +18,8 @@ val {tynames, rep_t, lp} =
 val tyname = hd tynames; (* "lterm" *)
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
-     termP, absrep_id, repabs_pseudo_id, newty, term_REP_t, term_ABS_t,...} =
-    new_type_step1 tyname 0 [] {lp = lp};
+     termP, absrep_id, repabs_pseudo_id, newty, term_REP_t, term_ABS_t} =
+    hd tydata;
 
 val _ = temp_overload_on ("termP", termP)
 

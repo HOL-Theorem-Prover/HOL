@@ -21,7 +21,7 @@ Libs
 (* calling nominal_datatype *)
 val _ = (repcode := "repcode");
 
-val {tynames, rep_t, lp} =
+val {tynames, tydata, rep_t, lp} =
     nominal_datatype
           ‘pi   = Nil                         (* 0 *)
                 | Tau pi                      (* tau.P *)
@@ -56,7 +56,7 @@ val {term_ABS_pseudo11 = term_ABS_pseudo11_1,
      repabs_pseudo_id = repabs_pseudo_id1,
      term_REP_t = term_REP_t1,
      term_ABS_t = term_ABS_t1,
-     newty = newty1, ...} = new_type_step1 tyname1 0 [] {lp = lp};
+     newty = newty1, ...} = List.nth (tydata,0);
 
 (* type 2 (:residual) *)
 val {term_ABS_pseudo11 = term_ABS_pseudo11_2,
@@ -68,8 +68,7 @@ val {term_ABS_pseudo11 = term_ABS_pseudo11_2,
      repabs_pseudo_id = repabs_pseudo_id2,
      term_REP_t = term_REP_t2,
      term_ABS_t = term_ABS_t2,
-     newty = newty2, ...} =
-     new_type_step1 tyname2 1 [genind_exists1] {lp = lp};
+     newty = newty2, ...} = List.nth (tydata,1);
 
 (* ----------------------------------------------------------------------
     Pi-calculus operators

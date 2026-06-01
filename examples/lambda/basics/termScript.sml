@@ -16,14 +16,14 @@ Libs
 val _ = set_fixity "=" (Infix(NONASSOC, 450))
 
 (* calling nominal_datatype *)
-val {tynames, rep_t, lp} =
+val {tynames, tydata, rep_t, lp} =
     nominal_datatype ‘term = VAR 'free | APP term term | LAM 'bound term’;
 
 val tyname = hd tynames; (* "term" *)
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
-     termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
-    new_type_step1 tyname 0 [] {lp = lp};
+     termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty} =
+    hd tydata;
 
 val glam = genind_lam
 

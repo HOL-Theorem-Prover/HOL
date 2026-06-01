@@ -318,7 +318,7 @@ Theorem APPLY_RELAB_THM =
 val _ = (repcode := "crep");
 val _ = (rprefix := "c");
 
-val {tynames, rep_t, lp} =
+val {tynames, tydata, rep_t, lp} =
     nominal_datatype
          ‘CCS = var 'free
               | prefix ('a Action) CCS
@@ -340,8 +340,8 @@ val d_tm = mk_var("d", rep_t);
 Overload LP = “lp”
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
-     termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
-    new_type_step1 tyname 0 [] {lp = lp};
+     termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty} =
+    hd tydata;
 
 (* ----------------------------------------------------------------------
     CCS operators

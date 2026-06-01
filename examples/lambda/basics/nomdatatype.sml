@@ -119,11 +119,23 @@ fun first2 l =
       (x::y::_) => (x,y)
     | _ => raise Fail "first2: list doesn't have at least two elements"
 
-(* NOTE: In case multiple mutually recursive nominal types are being defined, "witnesses"
-   argument takes a list of [genind_exists] theorems generated from previous calls to the
-   current function, otherwise the proof of term_exists may not succeed.
+(* NOTE: In case multiple mutually recursive nominal types are being defined,
+  "witnesses" argument takes a list of [genind_exists] theorems generated from
+   previous calls to the current function, otherwise the proof of term_exists
+   may not succeed.
  *)
-fun new_type_step1 tyname n witnesses {lp} = let
+type nomtyinfo = {term_ABS_pseudo11 : thm,
+                        term_REP_11 : thm,
+                        term_REP_t : term,
+                        term_ABS_t : term,
+                        absrep_id : thm,
+                        repabs_pseudo_id : thm,
+                        genind_term_REP : thm,
+                        genind_exists : thm,
+                        newty : hol_type,
+                        termP : term};
+
+fun new_type_step1 tyname n witnesses {lp} :nomtyinfo = let
   val list_mk_icomb = uncurry (List.foldl (mk_icomb o swap))
   val termP =
       list_mk_icomb (genind_t, [lp,numSyntax.mk_numeral (Arbnum.fromInt n)])
@@ -773,19 +785,25 @@ in
     list_mk_abs ([n_tm, lfvs_tm, d_tm, tns_tm, uns_tm], list_mk_disj c_tms)
 end;
 
-(* Step 1: parse datatype quotation
-   Step 2: define repcode (intermediate datatype)
-   Step 3: generate lp term
- *)
+fun build_tydata [] index lp ths = []
+  | build_tydata (tyname::tynames) index lp ths =
+    let val tyinfo = new_type_step1 tyname index ths {lp = lp};
+        val th = #genind_exists tyinfo
+    in
+        tyinfo :: build_tydata tynames (index + 1) lp (th::ths)
+    end;
+
 fun nominal_datatype q = let
   val asts = parse_datatype q;
   val tynames = extract_tynames asts;
   val rep_t = define_repcode asts;
-  val lp_tm = build_lp asts rep_t
+  val lp = build_lp asts rep_t;
+  val tydata = build_tydata tynames 0 lp []
 in
     {tynames = tynames,
+     tydata = tydata,
      rep_t = rep_t,
-     lp = lp_tm}
+     lp = lp}
 end;
 
 end (* struct *)
