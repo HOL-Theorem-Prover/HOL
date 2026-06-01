@@ -34,9 +34,22 @@ all: reference.pdf
 reference.pdf: reference.tex entries.tex $(OTHER)
 	latexmk -pdf reference
 
-entries.md: $(Helpd)/src-sml/Md2TeX.exe \
-            $(wildcard $(Processed)/*.smd)
+entries.md: $(Helpd)/src-sml/Md2TeX.exe $(Processed)/.stamp
 	$(Helpd)/src-sml/Md2TeX.exe $(Processed) > $@
+
+# process_docfiles is bulk: one HOL heap load polyscripts every
+# entry in one pass, so the smallest honest granularity is "rerun
+# the whole batch on any source change".  The `rm -rf` ensures the
+# tree only ever holds outputs for currently-existing sources --
+# without it, renaming/deleting a Docfile leaves orphans behind.
+$(Processed)/.stamp: $(Helpd)/src-sml/process_docfiles \
+                     $(wildcard $(Helpd)/Docfiles/*.smd)
+	rm -rf $(Processed)
+	mkdir -p $(Processed)
+	cd $(Helpd)/src-sml && \
+	  ./process_docfiles $(HOLDIR)/help/Docfiles \
+	                     $(HOLDIR)/Manual/build/Docfiles-processed
+	touch $@
 
 entries.tex: entries.md
 	pandoc -V documentclass=book -o $@ $<
@@ -74,19 +87,13 @@ mdbook: ../book/Reference/index.html
 # gen_reference_summary scans whatever directory you point it at,
 # so feeding it the processed mirror (where every *.smd has been
 # polyscripter-evaluated) yields a SUMMARY whose entry filenames
-# resolve cleanly inside the processed tree.  We list the source
-# .smd files as a prerequisite (not the processed mirror), since a
-# new source entry should trigger SUMMARY regeneration even before
-# process_docfiles has populated its counterpart in $(Processed).
-$(Processed)/SUMMARY.md: ../Tools/gen_reference_summary \
-                         $(wildcard $(Helpd)/Docfiles/*.smd)
-	mkdir -p $(Processed)
+# resolve cleanly inside the processed tree.
+$(Processed)/SUMMARY.md: ../Tools/gen_reference_summary $(Processed)/.stamp
 	../Tools/gen_reference_summary $(Processed) > $@
 
 # Scan-only label dump for cross-book `\ref{Book:label}` resolution.
 # See Manual/Description/Holmakefile for the rationale.
-labels.tsv: ../Tools/smdpp $(Processed)/SUMMARY.md \
-            $(wildcard $(Processed)/*.smd)
+labels.tsv: ../Tools/smdpp $(Processed)/SUMMARY.md $(Processed)/.stamp
 	../Tools/smdpp dump-labels .
 
 # Lookup table for `\refentry{Foo.bar}` substitution in Description
@@ -117,7 +124,7 @@ mdbook-serve: ../Tools/smdpp
 	 msg "stop: pkill -f 'mdbook serve.*3003'"
 
 EXTRA_CLEANS = reference.pdf entries.md entries.tex \
-               $(Processed)/SUMMARY.md entries.list labels.tsv \
+               $(Processed)/ entries.list labels.tsv \
                ../book/Reference/ \
                mdbook-serve.log \
                reference.aux reference.log reference.out \

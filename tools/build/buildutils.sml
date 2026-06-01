@@ -1001,7 +1001,16 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
            (if use_html_fallback then [htmlpath] else [])
        val () = print "Polyscripting Docfiles and generating .txt outputs...\n"
      in
-       if SYSTEML pdoc_args then ()
+       if SYSTEML pdoc_args then
+         (* Touch the .stamp the Manual/Reference Holmakefile keys
+            its $(Processed) rule off, so the follow-up Holmake
+            mdbook pass sees a fresh tree. *)
+         let val stamp = fullPath [processed_dir, ".stamp"]
+             val ostrm = TextIO.openOut stamp
+                         handle IO.Io {cause, ...} =>
+                           die ("Couldn't write " ^ stamp ^ ": " ^
+                                General.exnMessage cause)
+         in TextIO.closeOut ostrm end
        else die "process_docfiles failed.  If you're running a partial \
                 \build sequence and don't need up-to-date help \
                 \documentation, re-run with --no-helpdocs to skip the \

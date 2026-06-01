@@ -75,5 +75,6 @@ mdbook-serve: mdbook
 	 msg "stop: pkill -f 'http.server 3002'"
 
 EXTRA_CLEANS = book/index.html book/htmlsigs book/theory-graph \
-               book/.references.stamp
+               book/.references.stamp \
+               build/Docfiles-processed/
 
