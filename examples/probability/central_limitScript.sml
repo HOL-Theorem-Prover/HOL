@@ -19,35 +19,35 @@ val _ = ratLib.deprecate_rat();
 (* ------------------------------------------------------------------------- *)
 
 Theorem Lyapunov_ineq_lemma:
-    !m u p. measure_space m ∧
-            measure m (m_space m) < PosInf ∧
-            1 < p ∧ p < PosInf ∧
-            u ∈ lp_space p m  ⇒
-            ∫⁺ m (λx. abs (u x)) ≤ seminorm p m u * ((measure m (m_space m)) powr (1 - inv(p)))
+    !m u p. measure_space m /\
+            measure m (m_space m) < PosInf /\
+            1 < p /\ p < PosInf /\
+            u ∈ lp_space p m  ==>
+            pos_fn_integral m (λx. abs (u x)) ≤ seminorm p m u * ((measure m (m_space m)) powr (1 - inv(p)))
 Proof
     rpt STRIP_TAC
- >> ‘p ≠ PosInf’ by rw [lt_imp_ne]
+ >> ‘p <> PosInf’ by rw [lt_imp_ne]
  >> ‘0 < p’ by METIS_TAC [lt_trans, lt_01]
- >> ‘p ≠ 0’ by rw [lt_imp_ne]
- >> ‘inv(p) ≠ NegInf ∧ inv(p) ≠ PosInf’ by rw [inv_not_infty]
- >> ‘p ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
+ >> ‘p <> 0’ by rw [lt_imp_ne]
+ >> ‘inv(p) <> NegInf /\ inv(p) <> PosInf’ by rw [inv_not_infty]
+ >> ‘p <> NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
  >> ‘0 < inv (p)’ by METIS_TAC [inv_pos']
- >> ‘inv(p) ≠ 0’ by rw [lt_imp_ne]
+ >> ‘inv(p) <> 0’ by rw [lt_imp_ne]
  >> Know ‘inv (p) < 1’
  >- (‘1 * inv(p) < p * inv(p)’ by rw [lt_rmul] \\
      ‘p / p = p * inv(p)’ by rw [div_eq_mul_rinv] \\
      ‘p / p = 1’ by METIS_TAC [div_refl_pos] \\
      ‘inv(p) = 1 * inv(p)’ by rw [] >> METIS_TAC []) >> DISCH_TAC
  >> ‘0 < 1 - inv(p)’ by rw [sub_zero_lt]
- >> ‘1 - inv(p) ≠ 0’ by rw [lt_imp_ne]
- >> Know ‘1 - inv(p) ≠ NegInf’
- >- (‘∃a. inv(p) = Normal a’ by METIS_TAC [extreal_cases] \\
-     ‘∃c. Normal 1 - Normal a = Normal c’ by METIS_TAC [extreal_sub_def] \\
+ >> ‘1 - inv(p) <> 0’ by rw [lt_imp_ne]
+ >> Know ‘1 - inv(p) <> NegInf’
+ >- (‘?a. inv(p) = Normal a’ by METIS_TAC [extreal_cases] \\
+     ‘?c. Normal 1 - Normal a = Normal c’ by METIS_TAC [extreal_sub_def] \\
      Know ‘1 - inv(p) = Normal c’
      >- (‘1 = Normal 1’ by rw[] >> rw[]) >> rw []) >> DISCH_TAC
- >> Know ‘1 - inv(p) ≠ PosInf’
- >- (‘∃b. inv(p) = Normal b’ by METIS_TAC [extreal_cases]
-     >> ‘∃d. Normal 1 - Normal b = Normal d’ by METIS_TAC [extreal_sub_def]
+ >> Know ‘1 - inv(p) <> PosInf’
+ >- (‘?b. inv(p) = Normal b’ by METIS_TAC [extreal_cases]
+     >> ‘?d. Normal 1 - Normal b = Normal d’ by METIS_TAC [extreal_sub_def]
      >> Know ‘1 - inv(p) = Normal d’
      >- (‘1 = Normal 1’ by rw [] >> rw []) >> rw [])
  >> DISCH_TAC
@@ -61,7 +61,7 @@ Proof
                   MP_TAC (Q.SPECL [‘p’, ‘1’] inv_lt_antimono) \\
                   simp [lt_01, inv_one]) >>  rw [])
  >> DISCH_TAC
- >> Know ‘q ≠ PosInf’
+ >> Know ‘q <> PosInf’
  >- (Q.UNABBREV_TAC ‘q’ >> rw [inv_not_infty])
  >> DISCH_TAC
  >> MP_TAC (Q.SPECL [‘m’, ‘u’, ‘λx. 1’, ‘p’, ‘q’] Hoelder_inequality')
@@ -77,7 +77,7 @@ Proof
  >> impl_tac >> simp []
  >> DISCH_TAC
  >> ‘1 = Normal 1’ by rw [] >> rw []
- >> ‘measure m (m_space m) ≠ +∞’ by rw [lt_imp_ne] >> rw [mul_not_infty])
+ >> ‘measure m (m_space m) <> PosInf’ by rw [lt_imp_ne] >> rw [mul_not_infty])
  >> DISCH_TAC
  >> Know ‘seminorm q m (λx. 1) = ((measure m (m_space m)) powr (1 - inv(p)))’
  >- (rw [seminorm_def] \\
@@ -87,7 +87,7 @@ Proof
      Know ‘1 powr q = 1’
      >- (MATCH_MP_TAC one_powr >> MATCH_MP_TAC lt_imp_le >> rw []) >> DISCH_TAC  \\
     ‘1 = Normal 1’ by rw [] >> simp [] \\
-     Know ‘∫⁺ m (λx. Normal 1) =  measure m (m_space m)’
+     Know ‘pos_fn_integral m (λx. Normal 1) =  measure m (m_space m)’
      >- (MP_TAC (Q.SPECL [‘m’, ‘1’] pos_fn_integral_const) \\
          impl_tac >> simp [] \\
         ‘1 * measure m (m_space m) =  measure m (m_space m) ’ by rw [mul_lone] \\
@@ -96,26 +96,26 @@ Proof
 QED
 
 Theorem Lyapunov_ineq:
-    !m u r r'. measure_space m /\ u IN lp_space r m ∧  u IN lp_space r' m ∧
-               measure m (m_space m) < PosInf ∧
-               0 < r ∧
-               r < r' ∧
+    !m u r r'. measure_space m /\ u IN lp_space r m /\  u IN lp_space r' m /\
+               measure m (m_space m) < PosInf /\
+               0 < r /\
+               r < r' /\
                r' < PosInf  ==>
                seminorm r m u ≤ seminorm r' m u * (measure m (m_space m)) powr (inv(r) - inv(r'))
 Proof
     rpt STRIP_TAC
  >> ‘0 < r'’ by METIS_TAC [lt_trans]
  >> ‘r < PosInf’ by METIS_TAC [lt_trans]
- >> ‘r ≠ 0 ∧ r' ≠ 0’ by rw [lt_imp_ne]
- >> ‘r ≠ PosInf ∧ r' ≠ PosInf ’ by rw [lt_imp_ne]
- >> ‘NegInf < r ∧ NegInf < r'’ by METIS_TAC [extreal_0_simps, lt_trans]
- >> ‘r ≠ NegInf ∧ r' ≠ NegInf’ by METIS_TAC [lt_imp_ne]
+ >> ‘r <> 0 /\ r' <> 0’ by rw [lt_imp_ne]
+ >> ‘r <> PosInf /\ r' <> PosInf ’ by rw [lt_imp_ne]
+ >> ‘NegInf < r /\ NegInf < r'’ by METIS_TAC [extreal_0_simps, lt_trans]
+ >> ‘r <> NegInf /\ r' <> NegInf’ by METIS_TAC [lt_imp_ne]
  >> ‘inv r <> PosInf /\ inv r <> NegInf’ by (MATCH_MP_TAC inv_not_infty >> art [])
  >> ‘inv r' <> PosInf /\ inv r' <> NegInf’ by (MATCH_MP_TAC inv_not_infty >> art [])
- >> ‘0 < inv (r) ∧ 0 < inv (r')’ by METIS_TAC [inv_pos']
- >> ‘inv(r) ≠ 0 ∧ inv(r') ≠ 0’ by rw [lt_imp_ne]
- >> ‘inv(r') * r ≠ NegInf ∧ inv(r') * r ≠ PosInf’ by METIS_TAC [mul_not_infty2]
- >>  ‘r' * inv(r) ≠ NegInf ∧ r' * inv(r) ≠ PosInf’ by METIS_TAC [mul_not_infty2]
+ >> ‘0 < inv (r) /\ 0 < inv (r')’ by METIS_TAC [inv_pos']
+ >> ‘inv(r) <> 0 /\ inv(r') <> 0’ by rw [lt_imp_ne]
+ >> ‘inv(r') * r <> NegInf /\ inv(r') * r <> PosInf’ by METIS_TAC [mul_not_infty2]
+ >>  ‘r' * inv(r) <> NegInf /\ r' * inv(r) <> PosInf’ by METIS_TAC [mul_not_infty2]
  >> Know ‘1 < r' * r⁻¹’
  >- (‘r * inv(r) < r' * inv(r)’ by rw [lt_rmul] \\
      ‘r / r = r * inv(r)’ by rw [div_eq_mul_rinv] \\
@@ -124,14 +124,14 @@ Proof
  >> MP_TAC (Q.SPECL [‘m’, ‘λx. abs (u x) powr r’, ‘r'* inv(r)’]
             Lyapunov_ineq_lemma) >> impl_tac >> simp[]
  >- (CONJ_TAC
-     >- (‘∃a. r' * inv(r) = Normal a’ by METIS_TAC [extreal_cases] >> rw[lt_infty]) \\
+     >- (‘?a. r' * inv(r) = Normal a’ by METIS_TAC [extreal_cases] >> rw[lt_infty]) \\
      gs [lp_space_alt_finite] >> CONJ_TAC
      >- (HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS_POWR \\
          CONJ_TAC >- (‘u IN measurable (m_space m,measurable_sets m) Borel’
                         by gs [lp_space_def]) \\
          CONJ_TAC >- (MATCH_MP_TAC lt_imp_le >> rw []) >> simp []) \\
-     ‘∀x. abs (abs (u x) powr r) = abs (u x) powr r’ by rw [abs_pos, powr_pos, abs_refl] >> POP_ORW \\
-     ‘∀x. (abs (u x) powr r) powr (r' * r⁻¹) = abs (u x) powr (r * (r' * r⁻¹))’ by rw [powr_powr] >> POP_ORW \\
+     ‘!x. abs (abs (u x) powr r) = abs (u x) powr r’ by rw [abs_pos, powr_pos, abs_refl] >> POP_ORW \\
+     ‘!x. (abs (u x) powr r) powr (r' * r⁻¹) = abs (u x) powr (r * (r' * r⁻¹))’ by rw [powr_powr] >> POP_ORW \\
      ‘r * (r' * r⁻¹) = r * inv(r) * r'’ by PROVE_TAC [mul_comm, mul_assoc] \\
      ‘inv(r) * r = r / r’ by rw [GSYM div_eq_mul_linv] \\
      ‘r * inv(r) = inv(r) * r’ by PROVE_TAC [mul_comm] \\
@@ -141,25 +141,25 @@ Proof
  >- (Q.UNABBREV_TAC ‘mu’ \\
      MATCH_MP_TAC MEASURE_POSITIVE >> simp[] \\
      METIS_TAC[MEASURE_SPACE_MSPACE_MEASURABLE]) >> DISCH_TAC
- >> ‘∀x. abs (abs (u x) powr r) = abs (u x) powr r’ by rw [abs_pos, powr_pos, abs_refl]
+ >> ‘!x. abs (abs (u x) powr r) = abs (u x) powr r’ by rw [abs_pos, powr_pos, abs_refl]
  >> FULL_SIMP_TAC std_ss []
  >> Know ‘seminorm (r' * r⁻¹) m (λx. abs (u x) powr r) = (seminorm r' m u) powr r’
  >- (rw [seminorm_def] \\
-     ‘∀x. (abs (u x) powr r) powr (r' * r⁻¹) =  abs (u x) powr (r * (r' * r⁻¹))’ by rw [abs_pos, powr_powr] \\
+     ‘!x. (abs (u x) powr r) powr (r' * r⁻¹) =  abs (u x) powr (r * (r' * r⁻¹))’ by rw [abs_pos, powr_powr] \\
      POP_ORW \\
-     ‘∀x. abs (u x) powr (r * (r' * r⁻¹)) = abs (u x) powr (r⁻¹ * r * r')’ by PROVE_TAC [mul_assoc, mul_comm] \\
+     ‘!x. abs (u x) powr (r * (r' * r⁻¹)) = abs (u x) powr (r⁻¹ * r * r')’ by PROVE_TAC [mul_assoc, mul_comm] \\
      POP_ORW \\
-     ‘∀x. abs (u x) powr (r⁻¹ * r * r') = abs (u x) powr r'’ by rw [mul_linv_pos, mul_lone] \\
+     ‘!x. abs (u x) powr (r⁻¹ * r * r') = abs (u x) powr r'’ by rw [mul_linv_pos, mul_lone] \\
      POP_ORW \\
      ‘inv(r' * inv(r)) = inv(r') * r’ by rw [inv_mul, inv_inv] \\
      POP_ORW \\
-     Know ‘0 ≤ ∫⁺ m (λx. abs (u x) powr r')’
+     Know ‘0 ≤ pos_fn_integral m (λx. abs (u x) powr r')’
      >- (MATCH_MP_TAC pos_fn_integral_pos >> simp[] >> METIS_TAC [abs_pos, powr_pos]) >> DISCH_TAC \\
-     ‘∫⁺ m (λx. abs (u x) powr r') powr (r'⁻¹ * r) = (∫⁺ m (λx. abs (u x) powr r') powr r'⁻¹) powr r’
+     ‘pos_fn_integral m (λx. abs (u x) powr r') powr (r'⁻¹ * r) = (pos_fn_integral m (λx. abs (u x) powr r') powr r'⁻¹) powr r’
          by rw [GSYM powr_powr])
  >> DISCH_TAC >> FULL_SIMP_TAC std_ss []
- >> Q.ABBREV_TAC ‘A =  ∫⁺ m (λx. abs (u x) powr r)’
- >> Q.ABBREV_TAC ‘B =  seminorm r' m u powr r * mu powr (1 − (r' * r⁻¹)⁻¹)’ >> simp []
+ >> Q.ABBREV_TAC ‘A =  pos_fn_integral m (λx. abs (u x) powr r)’
+ >> Q.ABBREV_TAC ‘B =  seminorm r' m u powr r * mu powr (1 - (r' * r⁻¹)⁻¹)’ >> simp []
  >> Know ‘A powr inv(r) ≤ B powr inv(r)’
  >- (Know ‘0 ≤ A’
      >- (rw [Abbr ‘A’] \\
@@ -169,12 +169,12 @@ Proof
      >- (rw[Abbr ‘B’] \\
         ‘0 ≤ seminorm r' m u’ by PROVE_TAC [seminorm_pos] \\
         ‘0 ≤ seminorm r' m u powr r’ by PROVE_TAC [powr_pos] \\
-        ‘0 ≤  mu powr (1 − (r' * r⁻¹)⁻¹)’ by PROVE_TAC [powr_pos] \\
+        ‘0 ≤  mu powr (1 - (r' * r⁻¹)⁻¹)’ by PROVE_TAC [powr_pos] \\
          METIS_TAC [le_mul]) >> DISCH_TAC >> METIS_TAC [GSYM powr_mono_eq]) >> DISCH_TAC
  >> Q.UNABBREV_TAC ‘A’ >> Q.UNABBREV_TAC ‘B’
- >> ‘∫⁺ m (λx. abs (u x) powr r) powr inv(r) = seminorm r m u’ by rw [seminorm_def]
+ >> ‘pos_fn_integral m (λx. abs (u x) powr r) powr inv(r) = seminorm r m u’ by rw [seminorm_def]
  >> FULL_SIMP_TAC std_ss []
- >> Q.ABBREV_TAC ‘C = seminorm r' m u’ >> Q.ABBREV_TAC ‘D = mu powr (1 − (r' * r⁻¹)⁻¹)’ >> simp[]
+ >> Q.ABBREV_TAC ‘C = seminorm r' m u’ >> Q.ABBREV_TAC ‘D = mu powr (1 - (r' * r⁻¹)⁻¹)’ >> simp[]
  >> Know ‘(C powr r * D) powr r⁻¹ = C * D powr inv(r)’
  >- (‘0 ≤ C’ by PROVE_TAC [seminorm_pos] \\
      ‘0 ≤ C powr r’ by PROVE_TAC [powr_pos] \\
@@ -184,7 +184,7 @@ Proof
      ‘C powr (r * inv(r)) = C’ by METIS_TAC [GSYM div_eq_mul_rinv, div_refl_pos, powr_1] >> simp [])
  >> DISCH_TAC >> FULL_SIMP_TAC std_ss []
  >> Q.UNABBREV_TAC ‘C’ >> Q.UNABBREV_TAC ‘D’
- >> Know ‘(mu powr (1 − (r' * r⁻¹)⁻¹)) powr r⁻¹ = mu powr (r⁻¹ − r'⁻¹)’
+ >> Know ‘(mu powr (1 - (r' * r⁻¹)⁻¹)) powr r⁻¹ = mu powr (r⁻¹ - r'⁻¹)’
  >- (Know ‘r * inv(r') < 1’
      >- (‘r * inv(r') < r' * inv(r')’ by rw [lt_rmul] \\
          ‘r' / r' = r' * inv(r')’ by rw [div_eq_mul_rinv] \\
@@ -192,23 +192,23 @@ Proof
     ‘r * r'⁻¹ = r'⁻¹ * r’ by METIS_TAC [mul_comm] >> FULL_SIMP_TAC std_ss [] \\
     ‘(r' * r⁻¹)⁻¹ = inv(r') * r’ by METIS_TAC [inv_mul, inv_inv, mul_comm] >> simp [] \\
     ‘0 < 1 - inv(r') * r’ by METIS_TAC [sub_zero_lt] \\
-     Know ‘1 − r'⁻¹ * r ≠ PosInf’
-     >- (‘∃b. r'⁻¹ * r  = Normal b’ by METIS_TAC [extreal_cases] >> rw [sub_not_infty]) >> DISCH_TAC \\
-     ‘(mu powr (1 − r'⁻¹ * r)) powr r⁻¹ = mu powr ((1 − r'⁻¹ * r) * inv(r))’
+     Know ‘1 - r'⁻¹ * r <> PosInf’
+     >- (‘?b. r'⁻¹ * r  = Normal b’ by METIS_TAC [extreal_cases] >> rw [sub_not_infty]) >> DISCH_TAC \\
+     ‘(mu powr (1 - r'⁻¹ * r)) powr r⁻¹ = mu powr ((1 - r'⁻¹ * r) * inv(r))’
        by METIS_TAC [powr_powr] >> POP_ORW \\
-    ‘(1 − r'⁻¹ * r) * r⁻¹ =  r⁻¹ * (1 − r'⁻¹ * r)’ by METIS_TAC [mul_comm] >> POP_ORW \\
-    ‘r⁻¹ * (1 − r'⁻¹ * r) = ((r⁻¹) * 1) - (r⁻¹ * (r'⁻¹ * r))’ by rw [sub_ldistrib] >> POP_ORW \\
+    ‘(1 - r'⁻¹ * r) * r⁻¹ =  r⁻¹ * (1 - r'⁻¹ * r)’ by METIS_TAC [mul_comm] >> POP_ORW \\
+    ‘r⁻¹ * (1 - r'⁻¹ * r) = ((r⁻¹) * 1) - (r⁻¹ * (r'⁻¹ * r))’ by rw [sub_ldistrib] >> POP_ORW \\
     ‘r⁻¹ * (r'⁻¹ * r) = r⁻¹ * r * r'⁻¹’ by METIS_TAC [mul_assoc] >> POP_ORW \\
     ‘inv(r) * r = r / r’ by rw [GSYM div_eq_mul_linv] \\
     ‘r / r = 1’ by METIS_TAC [div_refl_pos] >> FULL_SIMP_TAC std_ss [] >> POP_ORW \\
-    ‘r⁻¹ * 1 − 1 * r'⁻¹ = r⁻¹ − r'⁻¹’ by rw [mul_rone] >> POP_ORW >> rw [])
+    ‘r⁻¹ * 1 - 1 * r'⁻¹ = r⁻¹ - r'⁻¹’ by rw [mul_rone] >> POP_ORW >> rw [])
  >> DISCH_TAC >> FULL_SIMP_TAC std_ss[]
 QED
 
 Theorem Lyapunov_ineq_rv:
-    !p u r r'. prob_space p /\ u IN lp_space r p ∧  u IN lp_space r' p ∧
-               0 < r ∧
-               r < r' ∧
+    !p u r r'. prob_space p /\ u IN lp_space r p /\  u IN lp_space r' p /\
+               0 < r /\
+               r < r' /\
                r' < PosInf  ==>
                seminorm r p u ≤ seminorm r' p u
 Proof
@@ -217,11 +217,11 @@ Proof
  >> MP_TAC (Q.SPECL [‘p’, ‘u’, ‘r’, ‘r'’] Lyapunov_ineq)
  >> impl_tac >> simp []
  >> DISCH_TAC
- >> Know ‘0 < r⁻¹ − r'⁻¹’
+ >> Know ‘0 < r⁻¹ - r'⁻¹’
  >- (‘0 < r'’ by METIS_TAC [lt_trans] \\
      ‘inv(r') < inv(r)’ by METIS_TAC [inv_lt_antimono] >> METIS_TAC [sub_zero_lt])
  >> DISCH_TAC
- >> Know ‘1 powr (r⁻¹ − r'⁻¹) = 1’
+ >> Know ‘1 powr (r⁻¹ - r'⁻¹) = 1’
  >- (MATCH_MP_TAC one_powr >> MATCH_MP_TAC lt_imp_le >> rw [])
  >> DISCH_TAC >> FULL_SIMP_TAC std_ss []
  >> ‘seminorm r' p u * 1 = seminorm r' p u’ by rw [mul_rone]
@@ -229,9 +229,9 @@ Proof
 QED
 
 Theorem lim_null :
-  ∀f l.
-    (∃N. ∀n. N ≤ n ⇒ f n ≠ +∞ ∧ f n ≠ −∞) ∧ l ≠ +∞ ∧ l ≠ −∞ ⇒
-    ((f --> l) sequentially ⇔ ((λn. (real (f n) − real l)) --> 0) sequentially)
+  !f l.
+    (?N. !n. N ≤ n ==> f n <> PosInf /\ f n <> NegInf) /\ l <> PosInf /\ l <> NegInf ==>
+    ((f --> l) sequentially <=> ((λn. (real (f n) - real l)) --> 0) sequentially)
 Proof
   rpt STRIP_TAC
   >> (MP_TAC o (Q.SPECL [‘sequentially’, ‘real o f’, ‘real l’]) o
@@ -251,15 +251,15 @@ Proof
 QED
 
 Theorem IN_PSPACE_PROD_SIGMA :
-    ∀a b z. z ∈ p_space (a × b) ⇔ FST z ∈ p_space a ∧ SND z ∈ p_space b
+    !a b z. z ∈ p_space (a × b) <=> FST z ∈ p_space a /\ SND z ∈ p_space b
 Proof
   simp [p_space_def, prod_measure_space_def]
 QED
 
 Theorem real_random_variable_fst :
-    ∀p q X.
-      prob_space p ∧ prob_space q ∧
-      real_random_variable X p ⇒
+    !p q X.
+      prob_space p /\ prob_space q /\
+      real_random_variable X p ==>
       real_random_variable (X ∘ FST) (p × q)
 Proof
     rpt STRIP_TAC
@@ -280,9 +280,9 @@ Proof
 QED
 
 Theorem real_random_variable_snd :
-    ∀p q X.
-      prob_space p ∧ prob_space q ∧
-      real_random_variable X q ⇒
+    !p q X.
+      prob_space p /\ prob_space q /\
+      real_random_variable X q ==>
       real_random_variable (X ∘ SND) (p × q)
 Proof
     rpt STRIP_TAC
@@ -307,16 +307,16 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 Theorem IN_MEASURABLE_BOREL_SUM_CMUL :
-    ∀a f g s z.
-      FINITE s ∧ sigma_algebra a ∧ (∀i. i ∈ s ⇒ f i ∈ Borel_measurable a) ∧
-      (∀x. x ∈ space a ⇒ g x = Normal z * ∑ (λi. f i x) s) ⇒
+    !a f g s z.
+      FINITE s /\ sigma_algebra a /\ (!i. i ∈ s ==> f i ∈ Borel_measurable a) /\
+      (!x. x ∈ space a ==> g x = Normal z * ∑ (λi. f i x) s) ==>
       g ∈ Borel_measurable a
 Proof
     RW_TAC std_ss []
  >> Cases_on `Normal z = 0`
  >- METIS_TAC [IN_MEASURABLE_BOREL_CONST, mul_lzero]
  >> Q.ABBREV_TAC ‘h = λx. ∑ (λi. (f: β -> α -> extreal) i x) s’
- >> ‘∀x. h x = ∑ (λi. f i x) s’ by rw[Abbr ‘h’]
+ >> ‘!x. h x = ∑ (λi. f i x) s’ by rw[Abbr ‘h’]
  >> MP_TAC (Q.SPECL [‘a’, ‘(f: 'b -> 'a -> extreal)’, ‘h’, ‘s’]
              IN_MEASURABLE_BOREL_SUM')
  >> impl_tac >- (METIS_TAC [])
@@ -333,10 +333,10 @@ Proof
 QED
 
 Theorem IN_BOREL_MEASURABLE_POW :
-    ∀a n f g.
-      sigma_algebra a ∧ f ∈ Borel_measurable a ∧
-      (∀x. x ∈ space a ⇒ g x = f x pow n) ∧
-      (∀x. x ∈ space a ⇒ f x ≠ −∞ ∧ f x ≠ +∞) ⇒
+    !a n f g.
+      sigma_algebra a /\ f ∈ Borel_measurable a /\
+      (!x. x ∈ space a ==> g x = f x pow n) /\
+      (!x. x ∈ space a ==> f x <> NegInf /\ f x <> PosInf) ==>
       g ∈ Borel_measurable a
 Proof
     STRIP_TAC
@@ -347,7 +347,7 @@ Proof
  >> fs [extreal_pow]
  >> irule IN_MEASURABLE_BOREL_MUL >> simp []
  >> qexistsl [‘f’, ‘λx. f x pow n’]
- >> ‘∀x. x ∈ space a ⇒ f x pow n ≠ −∞ ∧ f x pow n ≠ +∞’ by rw [pow_not_infty]
+ >> ‘!x. x ∈ space a ==> f x pow n <> NegInf /\ f x pow n <> PosInf’ by rw [pow_not_infty]
  >> simp []
  >> FIRST_X_ASSUM MATCH_MP_TAC
  >> qexists ‘f’ >> simp []
@@ -358,45 +358,45 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 Theorem sqrt_imp_PosInf :
-    ∀x. sqrt x = PosInf ∧ 0 ≤ x ⇔ x = PosInf
+    !x. sqrt x = PosInf /\ 0 ≤ x <=> x = PosInf
 Proof
     rw []
  >> EQ_TAC
  >- (STRIP_TAC \\
      CCONTR_TAC \\
-     ‘x ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans] \\
-     ‘∃r. Normal r = x’ by METIS_TAC [extreal_cases] \\
+     ‘x <> NegInf’ by METIS_TAC [extreal_0_simps, lt_trans] \\
+     ‘?r. Normal r = x’ by METIS_TAC [extreal_cases] \\
      rw [cj 1 extreal_sqrt_def] \\
      fs [extreal_sqrt_def])
  >> simp [cj 2 extreal_sqrt_def]
 QED
 
 Theorem sqrt_infty :
-    ∀x. x ≠ PosInf ∧ 0 ≤ x ⇒ sqrt x ≠ PosInf
+    !x. x <> PosInf /\ 0 ≤ x ==> sqrt x <> PosInf
 Proof
     rw []
  >> CCONTR_TAC
  >> fs [sqrt_imp_PosInf, cj 2 extreal_sqrt_def]
- >> ‘x ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
- >> ‘∃r. Normal r = x’ by METIS_TAC [extreal_cases]
+ >> ‘x <> NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
+ >> ‘?r. Normal r = x’ by METIS_TAC [extreal_cases]
  >> rw [cj 1 extreal_sqrt_def]
  >> fs [extreal_sqrt_def]
 QED
 
 Theorem sup_not_in_imp_le:
-    ∀s (a:extreal). (∀(x:extreal). a ≤ x ⇒ x ∉ s) ∧ a ∉ s ⇒ sup s ≤ a
+    !s (a:extreal). (!(x:extreal). a ≤ x ==> x ∉ s) /\ a ∉ s ==> sup s ≤ a
 Proof
   rpt STRIP_TAC
-  >> Know ‘∀x. x ∈ s ⇒ x < a’
+  >> Know ‘!x. x ∈ s ==> x < a’
   >- (GEN_TAC \\
       STRIP_TAC \\
-      Q.PAT_X_ASSUM ‘∀x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
+      Q.PAT_X_ASSUM ‘!x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
       CCONTR_TAC \\
       fs [extreal_not_lt])
   >> STRIP_TAC
   >> Know ‘sup s ≤ a’
   >- (rw [sup_le'] \\
-      Q.PAT_X_ASSUM ‘∀x. x IN s ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘y’) \\
+      Q.PAT_X_ASSUM ‘!x. x IN s ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘y’) \\
       gs [] \\
       METIS_TAC [lt_imp_le])
   >> DISCH_TAC
@@ -404,29 +404,29 @@ Proof
 QED
 
 Theorem lim_null_equiv_extreal_real :
-    ∀f l.
-          (∃N. ∀n. N ≤ n ⇒ f n ≠ +∞ ∧ f n ≠ −∞) ∧ l ≠ +∞ ∧ l ≠ −∞ ⇒
-          (((λx. f x − l) ⟶ 0) sequentially ⇔ ((λn. real (f n) − real l) ⟶ 0) sequentially)
+    !f l.
+          (?N. !n. N ≤ n ==> f n <> PosInf /\ f n <> NegInf) /\ l <> PosInf /\ l <> NegInf ==>
+          (((λx. f x - l) ⟶ 0) sequentially <=> ((λn. real (f n) - real l) ⟶ 0) sequentially)
 Proof
     rw [GSYM lim_null, EXTREAL_LIM_SEQUENTIALLY]
  >> EQ_TAC
  >- (STRIP_TAC \\
      qx_gen_tac ‘e’ \\
      rw [] \\
-     Q.PAT_X_ASSUM ‘∀e. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘e’) \\
+     Q.PAT_X_ASSUM ‘!e. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘e’) \\
      gs [] \\
      qexists ‘MAX N N'’ \\
      qx_gen_tac ‘n’ \\
      STRIP_TAC \\
-     Q.PAT_X_ASSUM ‘∀x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
+     Q.PAT_X_ASSUM ‘!x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
      gs [MAX_LE] \\
-     Know ‘dist extreal_mr1 (f n − l,0) = dist extreal_mr1 (f n,l)’
-     >- (‘∃r. Normal r = l’ by METIS_TAC [extreal_cases] \\
+     Know ‘dist extreal_mr1 (f n - l,0) = dist extreal_mr1 (f n,l)’
+     >- (‘?r. Normal r = l’ by METIS_TAC [extreal_cases] \\
          rw [] \\
-         Q.PAT_X_ASSUM ‘∀n. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
+         Q.PAT_X_ASSUM ‘!n. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
          gs [] \\
-         ‘∃a. Normal a = f n’ by METIS_TAC [extreal_cases] \\
-         ‘dist extreal_mr1 (f n − Normal r,0) = dist extreal_mr1 (Normal a − Normal r,0)’ by rw [] \\
+         ‘?a. Normal a = f n’ by METIS_TAC [extreal_cases] \\
+         ‘dist extreal_mr1 (f n - Normal r,0) = dist extreal_mr1 (Normal a - Normal r,0)’ by rw [] \\
          POP_ORW \\
          ‘dist extreal_mr1 (f n,Normal r) = dist extreal_mr1 (Normal a, Normal r)’ by rw [] \\
          POP_ORW \\
@@ -437,20 +437,20 @@ Proof
  >> STRIP_TAC
  >> qx_gen_tac ‘e’
  >> rw []
- >> Q.PAT_X_ASSUM ‘∀e. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘e’)
+ >> Q.PAT_X_ASSUM ‘!e. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘e’)
  >> gs []
  >> qexists ‘MAX N N'’
  >> qx_gen_tac ‘n’
  >> STRIP_TAC
- >> Q.PAT_X_ASSUM ‘∀x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’)
+ >> Q.PAT_X_ASSUM ‘!x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’)
  >> gs [MAX_LE]
- >> Know ‘dist extreal_mr1 (f n − l,0) = dist extreal_mr1 (f n,l)’
- >- (‘∃r. Normal r = l’ by METIS_TAC [extreal_cases] \\
+ >> Know ‘dist extreal_mr1 (f n - l,0) = dist extreal_mr1 (f n,l)’
+ >- (‘?r. Normal r = l’ by METIS_TAC [extreal_cases] \\
      rw [] \\
-     Q.PAT_X_ASSUM ‘∀n. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
+     Q.PAT_X_ASSUM ‘!n. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
      gs [] \\
-     ‘∃a. Normal a = f n’ by METIS_TAC [extreal_cases] \\
-     ‘dist extreal_mr1 (f n − Normal r,0) = dist extreal_mr1 (Normal a − Normal r,0)’ by rw [] \\
+     ‘?a. Normal a = f n’ by METIS_TAC [extreal_cases] \\
+     ‘dist extreal_mr1 (f n - Normal r,0) = dist extreal_mr1 (Normal a - Normal r,0)’ by rw [] \\
      POP_ORW \\
      ‘dist extreal_mr1 (f n,Normal r) = dist extreal_mr1 (Normal a, Normal r)’ by rw [] \\
      POP_ORW \\
@@ -465,9 +465,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 Theorem TAYLOR_REMAINDER :
-    ∀(n :num) x f.
-              ∃(M :extreal) t.
-                               abs (Normal (diffn n f t)) ≤ M ⇒
+    !(n :num) x f.
+              ?(M :extreal) t.
+                               abs (Normal (diffn n f t)) ≤ M ==>
       abs (Normal ((diffn n f t / ((&FACT n) :real))) * Normal x pow n) ≤
       M / (Normal (&FACT n)) * abs (Normal x) pow n
 Proof
@@ -492,20 +492,20 @@ Proof
  >- (EVAL_TAC \\
      rw [FACT_LESS, LE_1])
  >> DISCH_TAC
- >> ‘∀n. (0: real) <= &FACT n’ by METIS_TAC [REAL_LT_IMP_LE]
- >> ‘∀n. (0: real) ≠ &FACT n’ by METIS_TAC [REAL_LT_IMP_NE]
+ >> ‘!n. (0: real) <= &FACT n’ by METIS_TAC [REAL_LT_IMP_LE]
+ >> ‘!n. (0: real) <> &FACT n’ by METIS_TAC [REAL_LT_IMP_NE]
  >> Know ‘0 ≤ M’
  >- (simp [sup_le] \\
      rw [le_sup] \\
      METIS_TAC [abs_pos, le_trans])
  >> DISCH_TAC
- >> ‘NegInf ≠ M’ by METIS_TAC [extreal_0_simps, lt_trans]
+ >> ‘NegInf <> M’ by METIS_TAC [extreal_0_simps, lt_trans]
  >> Cases_on ‘M = PosInf’
  >- (‘M / Normal (&FACT n) = PosInf’ by METIS_TAC [infty_div] \\
      ‘0 < Normal (abs (x pow n))’ by rw [abs_gt_0] \\
      ‘M / Normal (&FACT n) * Normal (abs (x pow n)) = PosInf’ by METIS_TAC [mul_infty] \\
      rw [])
- >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases]
+ >> ‘?r. M = Normal r’ by METIS_TAC [extreal_cases]
  >> rw []
  >> ‘Normal (diffn n f t / &FACT n) * Normal (x pow n) =
      Normal (diffn n f t / &FACT n * x pow n)’ by METIS_TAC [extreal_mul_def]
@@ -533,12 +533,12 @@ Proof
 QED
 
 Definition CinftyR_def :
-    CinftyR = { f | (∀n x. higher_differentiable n f x) ∧
-                           (∀n. bounded (IMAGE (diffn n f) 𝕌(:real))) }
+    CinftyR = { f | (!n x. higher_differentiable n f x) /\
+                           (!n. bounded (IMAGE (diffn n f) 𝕌(:real))) }
 End
 
 Definition C_b_def :
-    C_b ⇔ { f | f continuous_on 𝕌(:real) ∧ bounded (IMAGE f 𝕌(:real)) }
+    C_b <=> { f | f continuous_on 𝕌(:real) /\ bounded (IMAGE f 𝕌(:real)) }
 End
 
 Theorem CinftyR_subset_C3 :
@@ -560,7 +560,7 @@ Theorem C1_subset_C_b :
     CnR 1 ⊆ C_b
 Proof
   rw [CnR_def, C_b_def, SUBSET_DEF]
-  >- (rename1 ‘∀x. higher_differentiable 1 f x’ \\
+  >- (rename1 ‘!x. higher_differentiable 1 f x’ \\
       MP_TAC (Q.SPECL [‘f’, ‘𝕌(:real)’] derivativeTheory.DIFFERENTIABLE_IMP_CONTINUOUS_ON) \\
       rw [] \\
       Suff ‘f differentiable_on 𝕌(:real)’
@@ -571,10 +571,10 @@ Proof
 QED
 
 Theorem CnR_subset_C_b :
-    ∀n. 0 < n ⇒ CnR n ⊆ C_b
+    !n. 0 < n ==> CnR n ⊆ C_b
 Proof
   rw [CnR_def, C_b_def, SUBSET_DEF]
-  >- (rename1 ‘∀x. higher_differentiable n f x’ \\
+  >- (rename1 ‘!x. higher_differentiable n f x’ \\
       MP_TAC (Q.SPECL [‘f’, ‘𝕌(:real)’] derivativeTheory.DIFFERENTIABLE_IMP_CONTINUOUS_ON) \\
       rw [] \\
       Suff ‘f differentiable_on 𝕌(:real)’
@@ -599,13 +599,13 @@ Proof
 QED
 
 Definition Lipschitz_fun_def :
-  Lipschitz_fun (f: real -> real) ⇔ ∃ l. (0 ≤ l) ∧ (∀ x y. abs (f x - f y) ≤ l * abs (x - y))
+  Lipschitz_fun (f: real -> real) <=> ? l. (0 ≤ l) /\ (! x y. abs (f x - f y) ≤ l * abs (x - y))
 End
 
 Theorem Lipschitz_fun_thm :
-    ∀f. Lipschitz_fun f ⇔
-          (∃l. 0 < l ∧ ∀x y. abs (f x - f y) ≤ l * abs (x - y)) ∨
-          (∀x y. f x = f y)
+    !f. Lipschitz_fun f <=>
+          (?l. 0 < l /\ !x y. abs (f x - f y) ≤ l * abs (x - y)) \/
+          (!x y. f x = f y)
 Proof
     rw [Lipschitz_fun_def]
  >> EQ_TAC >> rw []
@@ -623,7 +623,7 @@ Proof
 QED
 
 Definition C_bounded_lipschitz_def :
-    C_bounded_lipschitz ⇔ { f | Lipschitz_fun f ∧ bounded (IMAGE f 𝕌(:real)) }
+    C_bounded_lipschitz <=> { f | Lipschitz_fun f /\ bounded (IMAGE f 𝕌(:real)) }
 End
 
 Theorem class_lipschitz_subset_C_b :
@@ -637,13 +637,13 @@ Proof
     qexists ‘e / l’ \\
     CONJ_TAC >- (simp [REAL_LT_DIV]) \\
     rpt STRIP_TAC \\
-    Q.PAT_X_ASSUM ‘∀x y. _’ (MP_TAC o Q.SPECL [‘x'’, ‘x’]) >> rw [] \\
-    ‘l ≠ 0’ by METIS_TAC [REAL_POS_NZ] \\
-    MP_TAC (Q.SPECL [‘abs (f x' − (f:real -> real) x)’, ‘l * abs (x' − x)’, ‘e’] REAL_LET_TRANS) \\
+    Q.PAT_X_ASSUM ‘!x y. _’ (MP_TAC o Q.SPECL [‘x'’, ‘x’]) >> rw [] \\
+    ‘l <> 0’ by METIS_TAC [REAL_POS_NZ] \\
+    MP_TAC (Q.SPECL [‘abs (f x' - (f:real -> real) x)’, ‘l * abs (x' - x)’, ‘e’] REAL_LET_TRANS) \\
     simp [] \\
     STRIP_TAC \\
-    Suff ‘l * abs (x' − x) < e’ >- (fs []) \\
-    MP_TAC (Q.SPECL [‘l’, ‘abs (x' − x)’, ‘e / l’] REAL_LT_LMUL_IMP) >> simp [])
+    Suff ‘l * abs (x' - x) < e’ >- (fs []) \\
+    MP_TAC (Q.SPECL [‘l’, ‘abs (x' - x)’, ‘e / l’] REAL_LT_LMUL_IMP) >> simp [])
  >> rw []
  >> qexists ‘e’ >> rw []
  >> FIRST_X_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘x’, ‘x'’])
@@ -651,22 +651,22 @@ Proof
 QED
 
 Theorem higher_differentiable_bounded_imp_lipschitz :
-    ∀f. (∀x. higher_differentiable 1 f x) ∧
-        bounded (IMAGE (diffn 1 f) 𝕌(:real)) ⇒
+    !f. (!x. higher_differentiable 1 f x) /\
+        bounded (IMAGE (diffn 1 f) 𝕌(:real)) ==>
         Lipschitz_fun f
 Proof
     rpt STRIP_TAC
- >> ‘∀x. f contl x’ by METIS_TAC [higher_differentiable_imp_continuous,
+ >> ‘!x. f contl x’ by METIS_TAC [higher_differentiable_imp_continuous,
                                   GSYM limTheory.contl_eq_continuous_at]
- >> ‘∀x. f differentiable x’ by fs [higher_differentiable_1_eq_differentiable,
+ >> ‘!x. f differentiable x’ by fs [higher_differentiable_1_eq_differentiable,
                                     GSYM limTheory.differentiable_alt]
  >> fs [Lipschitz_fun_thm, bounded_def, diffn_1, higher_differentiable_1]
  >> Cases_on ‘a = 0’
  >- (DISJ2_TAC >> gs [] \\
      MATCH_MP_TAC limTheory.DIFF_ISCONST_ALL >> rw [] \\
-     Q.PAT_X_ASSUM ‘∀x. ∃y. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
-     Q.PAT_X_ASSUM ‘∀x. (∃x'. x = @y. (f diffl y) x') ⇒  _’ (STRIP_ASSUME_TAC o Q.SPEC ‘y’) \\
-     Know ‘∃x'. y = @y. (f diffl y) x'’
+     Q.PAT_X_ASSUM ‘!x. ?y. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
+     Q.PAT_X_ASSUM ‘!x. (?x'. x = @y. (f diffl y) x') ==>  _’ (STRIP_ASSUME_TAC o Q.SPEC ‘y’) \\
+     Know ‘?x'. y = @y. (f diffl y) x'’
      >- (qexists ‘x’ \\
          SELECT_ELIM_TAC >> rw []
          >- (qexists ‘y’ >> rw []) \\
@@ -676,10 +676,10 @@ Proof
  >> DISJ1_TAC
  >> qexists ‘a’
  >> STRONG_CONJ_TAC
- >- (Q.PAT_X_ASSUM ‘∀x. ∃y. (f diffl y) x’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
-     Q.PAT_X_ASSUM ‘∀x. (∃x'. x = @y. (f diffl y) x') ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘y’) \\
+ >- (Q.PAT_X_ASSUM ‘!x. ?y. (f diffl y) x’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
+     Q.PAT_X_ASSUM ‘!x. (?x'. x = @y. (f diffl y) x') ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘y’) \\
      gs [REAL_ABS_LE0] \\
-     Know ‘(∃x'. y = @y. (f diffl y) x')’
+     Know ‘(?x'. y = @y. (f diffl y) x')’
      >- (qexists ‘x’ \\
          SELECT_ELIM_TAC \\
          CONJ_TAC
@@ -702,10 +702,10 @@ Proof
  >- (MP_TAC (Q.SPECL [‘f’, ‘x’, ‘y’] limTheory.MVT) \\
      simp [] \\
      STRIP_TAC \\
-     ‘abs (f y − f x) = abs (l * (y − x))’ by rw [abs] \\
-     ‘abs (l * (y − x)) = abs l * abs (y - x)’ by rw [ABS_MUL] \\
-     Q.PAT_X_ASSUM ‘∀x. (∃x'. x = @y. (f diffl y) x') ⇒ abs x ≤ a’ (STRIP_ASSUME_TAC o Q.SPEC ‘l’) \\
-     Know ‘(∃x'. l = @y. (f diffl y) x')’
+     ‘abs (f y - f x) = abs (l * (y - x))’ by rw [abs] \\
+     ‘abs (l * (y - x)) = abs l * abs (y - x)’ by rw [ABS_MUL] \\
+     Q.PAT_X_ASSUM ‘!x. (?x'. x = @y. (f diffl y) x') ==> abs x ≤ a’ (STRIP_ASSUME_TAC o Q.SPEC ‘l’) \\
+     Know ‘(?x'. l = @y. (f diffl y) x')’
      >- (qexists ‘z’ \\
          SELECT_ELIM_TAC \\
          CONJ_TAC >- (qexists ‘l’ >> simp []) \\
@@ -713,18 +713,18 @@ Proof
          MATCH_MP_TAC limTheory.DIFF_UNIQ \\
          qexistsl [‘f’, ‘z’] >> rw []) \\
      DISCH_THEN (fs o wrap) \\
-     ‘0 ≤ abs (y − x)’ by METIS_TAC [ABS_POS] \\
-     ‘abs l * abs (y − x) ≤ a * abs (y − x)’ by METIS_TAC [REAL_LE_RMUL_IMP] \\
+     ‘0 ≤ abs (y - x)’ by METIS_TAC [ABS_POS] \\
+     ‘abs l * abs (y - x) ≤ a * abs (y - x)’ by METIS_TAC [REAL_LE_RMUL_IMP] \\
      gs [ABS_SUB])
  >> fs [REAL_NOT_LT]
  >> ‘y < x’ by  METIS_TAC [REAL_LT_LE]
  >> MP_TAC (Q.SPECL [‘f’, ‘y’, ‘x’] limTheory.MVT)
  >> simp []
  >> STRIP_TAC
- >> ‘abs (f x − f y) = abs (l * (x − y))’ by rw [abs]
- >> ‘abs (l * (x − y)) = abs l * abs (x - y)’ by rw [ABS_MUL]
- >> Q.PAT_X_ASSUM ‘∀x. (∃x'. x = @y. (f diffl y) x') ⇒ abs x ≤ a’ (STRIP_ASSUME_TAC o Q.SPEC ‘l’)
- >> Know ‘(∃x'. l = @y. (f diffl y) x')’
+ >> ‘abs (f x - f y) = abs (l * (x - y))’ by rw [abs]
+ >> ‘abs (l * (x - y)) = abs l * abs (x - y)’ by rw [ABS_MUL]
+ >> Q.PAT_X_ASSUM ‘!x. (?x'. x = @y. (f diffl y) x') ==> abs x ≤ a’ (STRIP_ASSUME_TAC o Q.SPEC ‘l’)
+ >> Know ‘(?x'. l = @y. (f diffl y) x')’
  >- (qexists ‘z’ \\
      SELECT_ELIM_TAC \\
      CONJ_TAC >- (qexists ‘l’ >> simp []) \\
@@ -739,15 +739,15 @@ Theorem C_infty_subset_class_lipschitz :
 Proof
     rw [C_bounded_lipschitz_def, CinftyR_def, SUBSET_DEF]
  >- (rename1 ‘Lipschitz_fun f’ \\
-     Q.PAT_X_ASSUM ‘∀n x. higher_differentiable n f x’ (MP_TAC o Q.SPEC ‘1’) \\
-     Q.PAT_X_ASSUM ‘∀n. _’ (MP_TAC o Q.SPEC ‘1’) \\
+     Q.PAT_X_ASSUM ‘!n x. higher_differentiable n f x’ (MP_TAC o Q.SPEC ‘1’) \\
+     Q.PAT_X_ASSUM ‘!n. _’ (MP_TAC o Q.SPEC ‘1’) \\
      METIS_TAC [higher_differentiable_bounded_imp_lipschitz])
  >> POP_ASSUM (MP_TAC o (Q.SPEC ‘0’))
  >> simp []
 QED
 
 Theorem in_borel_measurable_CnR :
-  ∀f. f IN CnR 3 ⇒
+  !f. f IN CnR 3 ==>
       f ∈ borel_measurable borel
 Proof
   rpt STRIP_TAC
@@ -765,9 +765,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 Theorem integrable_bounded_continuous :
-    ∀p X f. prob_space p ∧
-            real_random_variable X p ∧
-            f ∈ C_b ⇒
+    !p X f. prob_space p /\
+            real_random_variable X p /\
+            f ∈ C_b ==>
             integrable p (Normal ∘ f ∘ real ∘ X)
 Proof
     rw [C_b_def, bounded_def]
@@ -796,8 +796,8 @@ Proof
          rw []) \\
      qx_gen_tac ‘x’ \\
      STRIP_TAC \\
-     Q.PAT_X_ASSUM ‘∀x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘f (real (X x))’) \\
-     Know ‘∃x'. f (real (X x)) = f x'’
+     Q.PAT_X_ASSUM ‘!x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘f (real (X x))’) \\
+     Know ‘?x'. f (real (X x)) = f x'’
      >- (qexists ‘real (X x)’ \\
          simp []) \\
      DISCH_THEN (fs o wrap) \\
@@ -809,17 +809,17 @@ Proof
 QED
 
 Theorem integrable_sum_cdiv :
-    ∀p X s n. prob_space p ∧
-              (∀i. i IN (count n) ⇒ real_random_variable (X i) p) ∧
-              (∀i. i IN (count n) ⇒ integrable p (X i)) ∧
-              0 < s n ∧ s n ≠ +∞ ∧ s n ≠ −∞  ⇒
+    !p X s n. prob_space p /\
+              (!i. i IN (count n) ==> real_random_variable (X i) p) /\
+              (!i. i IN (count n) ==> integrable p (X i)) /\
+              0 < s n /\ s n <> PosInf /\ s n <> NegInf  ==>
               integrable p ((λx. ∑ (λi. X i x) (count n) / s n))
 Proof
     rpt STRIP_TAC
  >> BETA_TAC
- >> ‘∃r. Normal r = s n’ by METIS_TAC [extreal_cases]
+ >> ‘?r. Normal r = s n’ by METIS_TAC [extreal_cases]
  >> ‘0 < r’ by POP_ASSUM (fs o wrap o SYM)
- >> Know ‘∀x. ∑ (λi. X i x) (count n) / s n = ∑ (λi. X i x) (count n) / Normal r’
+ >> Know ‘!x. ∑ (λi. X i x) (count n) / s n = ∑ (λi. X i x) (count n) / Normal r’
  >- (qx_gen_tac ‘x’ \\
      POP_ORW \\
      rw [])
@@ -831,7 +831,7 @@ Proof
  >> Know ‘integrable p (λx. ∑ (λi. X i x) (count n) / Normal r)’
  >- (HO_MATCH_MP_TAC integrable_cdiv \\
      simp [] \\
-     ‘r ≠ 0’ by METIS_TAC [REAL_LT_IMP_NE] \\
+     ‘r <> 0’ by METIS_TAC [REAL_LT_IMP_NE] \\
      fs [prob_space_def])
  >> DISCH_TAC
  >> METIS_TAC []
@@ -842,11 +842,11 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 Theorem integrable_CnR_comp :
-    ∀p f X.
-      prob_space p ∧
-      real_random_variable X p ∧
-      integrable p X ∧
-      f ∈ CnR 3 ⇒
+    !p f X.
+      prob_space p /\
+      real_random_variable X p /\
+      integrable p X /\
+      f ∈ CnR 3 ==>
       integrable p (Normal ∘ f ∘ real ∘ X)
 Proof
   rpt STRIP_TAC
@@ -857,10 +857,10 @@ Proof
 QED
 
 Theorem real_random_variable_CnR_comp :
-    ∀p f X.
-      prob_space p ∧
-      real_random_variable X p ∧
-      f ∈ CnR 3 ⇒
+    !p f X.
+      prob_space p /\
+      real_random_variable X p /\
+      f ∈ CnR 3 ==>
       real_random_variable (Normal ∘ f ∘ real ∘ X) p
 Proof
     rw [real_random_variable_def, random_variable_def]
@@ -888,21 +888,21 @@ Proof
 QED
 
 Theorem add_not_infty_alt[local]:
-    ∀a b. a + b ≠ +∞ ∧ a ≠ NegInf ∧ b ≠ NegInf ⇒ a ≠ +∞ ∧ b ≠ +∞
+    !a b. a + b <> PosInf /\ a <> NegInf /\ b <> NegInf ==> a <> PosInf /\ b <> PosInf
 Proof
   RW_TAC std_ss []
   >> (CCONTR_TAC >> fs [add_infty])
 QED
 
 Theorem integrable_alt_def :
-    ∀m f. measure_space m ⇒ (integrable m f ⇔
-                               f ∈ Borel_measurable (measurable_space m) ∧ ∫ m (abs o f) ≠ PosInf)
+    !m f. measure_space m ==> (integrable m f <=>
+                               f ∈ Borel_measurable (measurable_space m) /\ ∫ m (abs o f) <> PosInf)
 Proof
     rw [integrable_def]
- >> ‘∫ m (abs ∘ f) = ∫⁺ m (abs ∘ f)’ by METIS_TAC [integral_abs_pos_fn]
+ >> ‘∫ m (abs ∘ f) = pos_fn_integral m (abs ∘ f)’ by METIS_TAC [integral_abs_pos_fn]
  >> simp [FN_ABS']
- >> ‘∀x. 0 ≤ f⁺ x’ by fs [FN_PLUS_ALT, le_max2]
- >> Know ‘∀x. 0 ≤ f⁻ x’
+ >> ‘!x. 0 ≤ f^+ x’ by fs [FN_PLUS_ALT, le_max2]
+ >> Know ‘!x. 0 ≤ f⁻ x’
  >- (rw [FN_MINUS_ALT] \\
      ‘min (f x) 0 ≤ 0’ by rw [min_le2] \\
      qmatch_abbrev_tac ‘0 ≤ -(a: extreal)’ \\
@@ -910,38 +910,38 @@ Proof
  >> DISCH_TAC
  >> EQ_TAC >> simp []
  >- (STRIP_TAC \\
-    Know ‘∫⁺ m (λx. f⁺ x + f⁻ x) = ∫⁺ m f⁺ + ∫⁺ m f⁻’
+    Know ‘pos_fn_integral m (λx. f^+ x + f⁻ x) = pos_fn_integral m f^+ + pos_fn_integral m f⁻’
     >- (irule pos_fn_integral_add \\
         simp [] \\
-        ‘f⁺ ∈ Borel_measurable (measurable_space m) ∧
+        ‘f^+ ∈ Borel_measurable (measurable_space m) /\
          f⁻ ∈ Borel_measurable (measurable_space m)’
           by METIS_TAC [IN_MEASURABLE_BOREL_PLUS_MINUS, measure_space_def] \\
         fs []) \\
     METIS_TAC [add_not_infty])
  >> STRIP_TAC
- >> Know ‘∫⁺ m (λx. f⁺ x + f⁻ x) = ∫⁺ m f⁺ + ∫⁺ m f⁻’
+ >> Know ‘pos_fn_integral m (λx. f^+ x + f⁻ x) = pos_fn_integral m f^+ + pos_fn_integral m f⁻’
  >- (irule pos_fn_integral_add \\
      simp [] \\
-     ‘f⁺ ∈ Borel_measurable (measurable_space m) ∧
+     ‘f^+ ∈ Borel_measurable (measurable_space m) /\
       f⁻ ∈ Borel_measurable (measurable_space m)’
        by METIS_TAC [IN_MEASURABLE_BOREL_PLUS_MINUS, measure_space_def] \\
      fs [])
  >> DISCH_THEN (fs o wrap)
  >> irule add_not_infty_alt
  >> art []
- >> ‘0 ≤ ∫⁺ m f⁺’ by METIS_TAC [pos_fn_integral_pos]
- >> ‘0 ≤ ∫⁺ m f⁻’ by METIS_TAC [pos_fn_integral_pos]
+ >> ‘0 ≤ pos_fn_integral m f^+’ by METIS_TAC [pos_fn_integral_pos]
+ >> ‘0 ≤ pos_fn_integral m f⁻’ by METIS_TAC [pos_fn_integral_pos]
  >> METIS_TAC [extreal_0_simps, lt_trans]
 QED
 
 Theorem integrable_fst :
-    ∀p q f.
-      prob_space p ∧ prob_space q ∧ integrable p f ⇒
+    !p q f.
+      prob_space p /\ prob_space q /\ integrable p f ==>
       integrable (p CROSS q) (f ∘ FST)
 Proof
     rw [prob_space_def]
  >> Q.ABBREV_TAC ‘r = p CROSS q’
- >> ‘sigma_finite_measure_space p ∧ sigma_finite_measure_space q’
+ >> ‘sigma_finite_measure_space p /\ sigma_finite_measure_space q’
    by METIS_TAC [prob_space_def, sigma_finite_measure_space_def, FINITE_IMP_SIGMA_FINITE, extreal_1_simps]
  >> Know ‘measure_space r’
  >- (rw [Abbr ‘r’] \\
@@ -969,31 +969,31 @@ Proof
      irule IN_MEASURABLE_BOREL_ABS' \\
      METIS_TAC [Abbr ‘r’, MEASURE_SPACE_SIGMA_ALGEBRA])
  >> Rewr
- >> ‘(∀s. FST s ∈ m_space p ∧ SND s ∈ m_space q ⇒ 0 ≤ h s)’ by (rw [Abbr ‘h’, IN_PSPACE_PROD_SIGMA])
+ >> ‘(!s. FST s ∈ m_space p /\ SND s ∈ m_space q ==> 0 ≤ h s)’ by (rw [Abbr ‘h’, IN_PSPACE_PROD_SIGMA])
  >> simp []
  >> DISCH_TAC
- >> Know ‘∫ r h = ∫⁺ r h’ >- (irule integral_pos_fn >> simp [Abbr ‘h’])
+ >> Know ‘∫ r h = pos_fn_integral r h’ >- (irule integral_pos_fn >> simp [Abbr ‘h’])
  >> DISCH_THEN (fs o wrap)
  >> rw [Abbr ‘h’]
- >> Know ‘0 ≤ ∫⁺ p (λx. abs (f x))’ >- (irule pos_fn_integral_pos >> simp [])
+ >> Know ‘0 ≤ pos_fn_integral p (λx. abs (f x))’ >- (irule pos_fn_integral_pos >> simp [])
  >> DISCH_TAC
- >> ‘∫⁺ p (λx. abs (f x)) ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_le]
- >> Know ‘∫ p (abs o f) = ∫⁺ p (abs o f)’ >- (irule integral_pos_fn >> rw [])
+ >> ‘pos_fn_integral p (λx. abs (f x)) <> NegInf’ by METIS_TAC [extreal_0_simps, lt_le]
+ >> Know ‘∫ p (abs o f) = pos_fn_integral p (abs o f)’ >- (irule integral_pos_fn >> rw [])
  >> DISCH_TAC
- >> ‘∫⁺ p (abs o f) = ∫⁺ p (λx. abs (f x))’ by METIS_TAC []
- >> ‘∃a. ∫⁺ p (λx. abs (f x)) = Normal a’ by METIS_TAC [extreal_cases]
+ >> ‘pos_fn_integral p (abs o f) = pos_fn_integral p (λx. abs (f x))’ by METIS_TAC []
+ >> ‘?a. pos_fn_integral p (λx. abs (f x)) = Normal a’ by METIS_TAC [extreal_cases]
  >> gs []
  >> fs [pos_fn_integral_const, extreal_1_simps]
 QED
 
 Theorem integrable_snd :
-    ∀p q f.
-      prob_space p ∧ prob_space q ∧ integrable q f ⇒
+    !p q f.
+      prob_space p /\ prob_space q /\ integrable q f ==>
       integrable (p CROSS q) (f ∘ SND)
 Proof
     rw [prob_space_def]
  >> Q.ABBREV_TAC ‘r = p CROSS q’
- >> ‘sigma_finite_measure_space p ∧ sigma_finite_measure_space q’
+ >> ‘sigma_finite_measure_space p /\ sigma_finite_measure_space q’
    by METIS_TAC [prob_space_def, sigma_finite_measure_space_def, FINITE_IMP_SIGMA_FINITE, extreal_1_simps]
  >> Know ‘measure_space r’
  >- (rw [Abbr ‘r’] \\
@@ -1021,19 +1021,19 @@ Proof
      irule IN_MEASURABLE_BOREL_ABS' \\
      METIS_TAC [Abbr ‘r’, MEASURE_SPACE_SIGMA_ALGEBRA])
  >> Rewr
- >> ‘(∀s. FST s ∈ m_space p ∧ SND s ∈ m_space q ⇒ 0 ≤ h s)’ by (rw [Abbr ‘h’, IN_PSPACE_PROD_SIGMA])
+ >> ‘(!s. FST s ∈ m_space p /\ SND s ∈ m_space q ==> 0 ≤ h s)’ by (rw [Abbr ‘h’, IN_PSPACE_PROD_SIGMA])
  >> simp []
  >> DISCH_TAC
- >> Know ‘∫ r h = ∫⁺ r h’ >- (irule integral_pos_fn >> simp [Abbr ‘h’])
+ >> Know ‘∫ r h = pos_fn_integral r h’ >- (irule integral_pos_fn >> simp [Abbr ‘h’])
  >> DISCH_THEN (fs o wrap)
  >> rw [Abbr ‘h’]
- >> Know ‘0 ≤ ∫⁺ q (λy. abs (f y))’ >- (irule pos_fn_integral_pos >> simp [])
+ >> Know ‘0 ≤ pos_fn_integral q (λy. abs (f y))’ >- (irule pos_fn_integral_pos >> simp [])
  >> DISCH_TAC
- >> ‘∫⁺ q (λy. abs (f y)) ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_le]
- >> Know ‘∫ q (abs o f) = ∫⁺ q (abs o f)’ >- (irule integral_pos_fn >> rw [])
+ >> ‘pos_fn_integral q (λy. abs (f y)) <> NegInf’ by METIS_TAC [extreal_0_simps, lt_le]
+ >> Know ‘∫ q (abs o f) = pos_fn_integral q (abs o f)’ >- (irule integral_pos_fn >> rw [])
  >> DISCH_TAC
- >> ‘∫⁺ q (abs o f) = ∫⁺ q (λy. abs (f y))’ by METIS_TAC []
- >> ‘∃a. ∫⁺ q (λy. abs (f y)) = Normal a’ by METIS_TAC [extreal_cases]
+ >> ‘pos_fn_integral q (abs o f) = pos_fn_integral q (λy. abs (f y))’ by METIS_TAC []
+ >> ‘?a. pos_fn_integral q (λy. abs (f y)) = Normal a’ by METIS_TAC [extreal_cases]
  >> gs []
  >> fs [pos_fn_integral_const, extreal_1_simps]
 QED
@@ -1042,16 +1042,16 @@ val expectation_compose_tactic =
     simp [] >> STRIP_TAC >> gs []
     >> irule integral_cong
     >> gs [] >> rw []
-    >> Q.PAT_X_ASSUM ‘∀x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’)
+    >> Q.PAT_X_ASSUM ‘!x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’)
     >> gs [p_space_def]
-    >> ‘∃a. f x = Normal a’ by METIS_TAC [extreal_cases]
+    >> ‘?a. f x = Normal a’ by METIS_TAC [extreal_cases]
     >> POP_ORW >> rw [integral_const];
 
 Theorem expectation_fst :
-    ∀p q f.
-      prob_space p ∧ prob_space q ∧
-      (∀x. x IN p_space p ⇒ (f x) ≠ PosInf ∧ (f x) ≠ NegInf) ∧
-      integrable p f ⇒
+    !p q f.
+      prob_space p /\ prob_space q /\
+      (!x. x IN p_space p ==> (f x) <> PosInf /\ (f x) <> NegInf) /\
+      integrable p f ==>
       expectation p f = expectation (p CROSS q) (f ∘ FST)
 Proof
     rpt STRIP_TAC
@@ -1063,7 +1063,7 @@ Proof
      irule MEASURABLE_SPACE_PROD \\
      simp [])
  >> DISCH_TAC
- >> ‘sigma_finite_measure_space p ∧ sigma_finite_measure_space q’
+ >> ‘sigma_finite_measure_space p /\ sigma_finite_measure_space q’
    by METIS_TAC [prob_space_def, sigma_finite_measure_space_def, FINITE_IMP_SIGMA_FINITE, extreal_1_simps]
  >> rw []
  >> gs [integrable_alt_def]
@@ -1074,7 +1074,7 @@ Proof
      irule MEASURABLE_FST \\
      METIS_TAC [MEASURE_SPACE_SIGMA_ALGEBRA])
  >> DISCH_TAC
- >> Know ‘∫⁺ (p × q) (abs ∘ f ∘ FST) ≠ +∞’
+ >> Know ‘pos_fn_integral (p × q) (abs ∘ f ∘ FST) <> PosInf’
  >- (Q.ABBREV_TAC ‘h = f o FST’ \\
      ‘h ∈ Borel_measurable (measurable_space r)’ by fs [] \\
      Know ‘measure_space r’
@@ -1093,10 +1093,10 @@ Proof
 QED
 
 Theorem expectation_snd :
-    ∀p q f.
-      prob_space p ∧ prob_space q ∧
-      (∀x. x IN p_space q ⇒ (f x) ≠ PosInf ∧ (f x) ≠ NegInf) ∧
-      integrable q f ⇒
+    !p q f.
+      prob_space p /\ prob_space q /\
+      (!x. x IN p_space q ==> (f x) <> PosInf /\ (f x) <> NegInf) /\
+      integrable q f ==>
       expectation q f = expectation (p CROSS q) (f ∘ SND)
 Proof
     rpt STRIP_TAC
@@ -1108,7 +1108,7 @@ Proof
      irule MEASURABLE_SPACE_PROD \\
      simp [])
  >> DISCH_TAC
- >> ‘sigma_finite_measure_space p ∧ sigma_finite_measure_space q’
+ >> ‘sigma_finite_measure_space p /\ sigma_finite_measure_space q’
    by METIS_TAC [prob_space_def, sigma_finite_measure_space_def, FINITE_IMP_SIGMA_FINITE, extreal_1_simps]
  >> rw []
  >> gs [integrable_alt_def]
@@ -1119,7 +1119,7 @@ Proof
      irule MEASURABLE_SND \\
      METIS_TAC [MEASURE_SPACE_SIGMA_ALGEBRA])
  >> DISCH_TAC
- >> Know ‘∫⁺ (p × q) (abs ∘ f ∘ SND) ≠ +∞’
+ >> Know ‘pos_fn_integral (p × q) (abs ∘ f ∘ SND) <> PosInf’
  >- (Q.ABBREV_TAC ‘h = f o SND’ \\
      ‘h ∈ Borel_measurable (measurable_space r)’ by fs [] \\
      Know ‘measure_space r’
@@ -1138,17 +1138,17 @@ Proof
 QED
 
 Theorem clt_real_random_variable_partial_sum1[local] :
-    ∀p X Y n.
-      prob_space p ∧
-      (∀i. real_random_variable (X i) p) ∧
-      (∀i. real_random_variable (Y i) p) ∧
-      (∀i. integrable p (X i)) ∧
-      (∀i. integrable p (Y i)) ⇒
-      (∀j. j < n ⇒
-           (∀Z. Z = (λj x. if x IN p_space p then
+    !p X Y n.
+      prob_space p /\
+      (!i. real_random_variable (X i) p) /\
+      (!i. real_random_variable (Y i) p) /\
+      (!i. integrable p (X i)) /\
+      (!i. integrable p (Y i)) ==>
+      (!j. j < n ==>
+           (!Z. Z = (λj x. if x IN p_space p then
                              (∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j))
-                           else 0) ⇒
-                real_random_variable (Z j) p ∧ integrable p (Z j)))
+                           else 0) ==>
+                real_random_variable (Z j) p /\ integrable p (Z j)))
 Proof
   rw []
   >> Q.ABBREV_TAC ‘Z = λx j. if x ∈ p_space p then
@@ -1166,7 +1166,7 @@ Proof
       MP_TAC (Q.SPECL [‘p’, ‘λx. ∑ (λi. Y i x) (count j)’,
                        ‘λx. ∑ (λi. X i x) (count n DIFF count1 j)’] real_random_variable_add) \\
       simp [Abbr ‘Z’] \\
-      Know ‘real_random_variable (λx. ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)) p ⇔
+      Know ‘real_random_variable (λx. ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)) p <=>
             real_random_variable (λx. if x ∈ p_space p then  ∑ (λi. Y i x) (count j) +
                                                              ∑ (λi. X i x) (count n DIFF count1 j)
                                       else 0) p’
@@ -1183,7 +1183,7 @@ Proof
   >> MP_TAC (Q.SPECL [‘p’, ‘λx. ∑ (λi. Y i x) (count j)’,
                       ‘λx. ∑ (λi. X i x) (count n DIFF count1 j)’] integrable_add')
   >> fs [prob_space_def, Abbr ‘Z’, p_space_def]
-  >> Know ‘integrable p (λx. ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)) ⇔
+  >> Know ‘integrable p (λx. ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)) <=>
            integrable p (λx. if x ∈ m_space p then  ∑ (λi. Y i x) (count j) +
                                                     ∑ (λi. X i x) (count n DIFF count1 j)
                              else 0)’
@@ -1191,43 +1191,43 @@ Proof
 QED
 
 val clt_sum2_tactic1 =
-    Know ‘∀j. real_random_variable (X' j) p’
+    Know ‘!j. real_random_variable (X' j) p’
     >- (rw [Abbr ‘X'’] >- (METIS_TAC [real_random_variable_zero])) \\
     DISCH_TAC \\
-    Know ‘∀j. integrable p (X' j)’
+    Know ‘!j. integrable p (X' j)’
     >- (rw [Abbr ‘X'’] >- (METIS_TAC [integrable_zero, prob_space_def])) \\
     DISCH_TAC \\
-    Know ‘∀j. real_random_variable (Y' j) p’
+    Know ‘!j. real_random_variable (Y' j) p’
     >- (rw [Abbr ‘Y'’] >- (METIS_TAC [real_random_variable_zero])) \\
     DISCH_TAC \\
-    Know ‘∀j. integrable p (Y' j)’
+    Know ‘!j. integrable p (Y' j)’
     >- (rw [Abbr ‘X'’] >- (METIS_TAC [integrable_zero, prob_space_def])) \\
     DISCH_TAC ;
 
 val clt_sum2_tactic2 =
     Know ‘∑ (λi. Y i x) (count j) = ∑ (λi. Y' i x) (count j)’
     >- (irule EXTREAL_SUM_IMAGE_EQ >> simp [] \\
-    ‘∀i. i < j ⇒ Y i x = Y' i x’ by rw [Abbr ‘Y'’] \\
+    ‘!i. i < j ==> Y i x = Y' i x’ by rw [Abbr ‘Y'’] \\
     METIS_TAC [LESS_TRANS, real_random_variable]) >> Rewr \\
     Know ‘∑ (λi. X' i x) (count n DIFF count1 j) = ∑ (λi. X i x) (count n DIFF count1 j)’
     >- (irule EXTREAL_SUM_IMAGE_EQ >> simp [] \\
-    ‘∀i. i IN (count n DIFF count1 j) ⇒ (∀x. X i x = X' i x)’
+    ‘!i. i IN (count n DIFF count1 j) ==> (!x. X i x = X' i x)’
     by rw [Abbr ‘X'’, count_def, count1_def, DIFF_DEF] \\
     METIS_TAC [LESS_TRANS, real_random_variable]) >> Rewr;
 
 Theorem clt_real_random_variable_partial_sum2[local] :
-    ∀p X Y Z n.
-      prob_space p ∧
-      (∀i. i < n ⇒
-           real_random_variable (X i) p ∧
-           real_random_variable (Y i) p ∧
-           integrable p (X i) ∧
-           integrable p (Y i)) ⇒
-      (∀j. j < n ⇒
-           (∀Z. Z = (λj x. if x IN p_space p then
+    !p X Y Z n.
+      prob_space p /\
+      (!i. i < n ==>
+           real_random_variable (X i) p /\
+           real_random_variable (Y i) p /\
+           integrable p (X i) /\
+           integrable p (Y i)) ==>
+      (!j. j < n ==>
+           (!Z. Z = (λj x. if x IN p_space p then
                              (∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j))
-                           else 0) ⇒
-                real_random_variable (Z j) p ∧ integrable p (Z j)))
+                           else 0) ==>
+                real_random_variable (Z j) p /\ integrable p (Z j)))
 Proof
     RW_TAC std_ss []
  >> Q.ABBREV_TAC ‘Z = λj x. if x IN p_space p then
@@ -1242,7 +1242,7 @@ Proof
      POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
      Suff ‘real_random_variable (λx. if x ∈ p_space p then
                                        ∑ (λi. Y' i x) (count j) + ∑ (λi. X' i x) (count n DIFF count1 j)
-                                     else 0) p ⇔
+                                     else 0) p <=>
              real_random_variable (λx. if x ∈ p_space p then
                                          ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)
                                        else 0) p’ >- (fs []) \\
@@ -1254,7 +1254,7 @@ Proof
  >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs []
  >> Suff ‘integrable p (λx. if x ∈ p_space p then
                               ∑ (λi. Y' i x) (count j) + ∑ (λi. X' i x) (count n DIFF count1 j)
-                            else 0) ⇔
+                            else 0) <=>
             integrable p (λx. if x ∈ p_space p then
                                 ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)
                               else 0)’ >- (fs [])
@@ -1263,19 +1263,19 @@ Proof
 QED
 
 Theorem random_variable_borel_imp_Borel :
-    ∀p X.
-      prob_space p ∧
-      (∀x. x ∈ p_space p ⇒ X x ≠ +∞ ∧ X x ≠ −∞) ∧
-      random_variable (real ∘ X) p borel ⇒
+    !p X.
+      prob_space p /\
+      (!x. x ∈ p_space p ==> X x <> PosInf /\ X x <> NegInf) /\
+      random_variable (real ∘ X) p borel ==>
       random_variable X p Borel
 Proof
     rpt STRIP_TAC
  >> fs [random_variable_def, p_space_def, events_def]
  >> MP_TAC (Q.SPECL [‘(measurable_space p)’, ‘real o X’] IN_MEASURABLE_BOREL_IMP_BOREL')
  >> fs [sigma_algebra_borel, prob_space_def]
- >> Know ‘∀x. x IN m_space p ⇒ (Normal ∘ real ∘ X) x = X x’
+ >> Know ‘!x. x IN m_space p ==> (Normal ∘ real ∘ X) x = X x’
  >- (rw [] \\
-     Q.PAT_X_ASSUM ‘∀x. x IN m_space p ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
+     Q.PAT_X_ASSUM ‘!x. x IN m_space p ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
      fs [normal_real])
  >> DISCH_TAC
  >> MP_TAC (Q.SPECL [‘(measurable_space p)’, ‘Normal ∘ real ∘ X’, ‘X’] IN_MEASURABLE_BOREL_CONG')
@@ -1283,28 +1283,28 @@ Proof
 QED
 
 Theorem in_measurable_borel_imp_Borel :
-  ∀p X.
-    prob_space p ∧
-    (∀x. x ∈ p_space p ⇒ X x ≠ +∞ ∧ X x ≠ −∞) ∧
-    real ∘ X ∈ borel_measurable (measurable_space p) ⇒
+  !p X.
+    prob_space p /\
+    (!x. x ∈ p_space p ==> X x <> PosInf /\ X x <> NegInf) /\
+    real ∘ X ∈ borel_measurable (measurable_space p) ==>
     X ∈ Borel_measurable (measurable_space p)
 Proof
   rpt STRIP_TAC
   >> MP_TAC (Q.SPECL [‘(measurable_space p)’, ‘real o X’] IN_MEASURABLE_BOREL_IMP_BOREL')
   >> fs [sigma_algebra_borel, prob_space_def, p_space_def]
-  >> Know ‘∀x. x IN m_space p ⇒ (Normal ∘ real ∘ X) x = X x’
-  >- (rw [] >> Q.PAT_X_ASSUM ‘∀x. x IN m_space p ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
+  >> Know ‘!x. x IN m_space p ==> (Normal ∘ real ∘ X) x = X x’
+  >- (rw [] >> Q.PAT_X_ASSUM ‘!x. x IN m_space p ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
       fs [normal_real]) >> DISCH_TAC
   >> MP_TAC (Q.SPECL [‘(measurable_space p)’, ‘Normal ∘ real ∘ X’, ‘X’] IN_MEASURABLE_BOREL_CONG')
   >> fs []
 QED
 
 Theorem clt_real_random_variable_sum_compose[local] :
-    ∀p X s f n. prob_space p ∧
-              (∀i. real_random_variable (X i) p) ∧
-              (∀i. integrable p (X i)) ∧
-              0 < s n ∧ s n ≠ +∞ ∧ s n ≠ −∞ ∧
-              f IN CnR 3 ⇒
+    !p X s f n. prob_space p /\
+              (!i. real_random_variable (X i) p) /\
+              (!i. integrable p (X i)) /\
+              0 < s n /\ s n <> PosInf /\ s n <> NegInf /\
+              f IN CnR 3 ==>
               real_random_variable (Normal ∘ f ∘ real ∘ ((λx. ∑ (λi. X i x) (count n) / s n))) p
 Proof
     rpt STRIP_TAC
@@ -1322,12 +1322,12 @@ Proof
 QED
 
 Theorem clt_expectation_not_infty[local] :
-    ∀p X f. prob_space p ∧
-            real_random_variable X p ∧
-            integrable p X ∧
-            f IN CnR 3 ⇒
-            expectation p (Normal ∘ f ∘ real ∘ X) ≠ +∞ ∧
-            expectation p (Normal ∘ f ∘ real ∘ X) ≠ −∞
+    !p X f. prob_space p /\
+            real_random_variable X p /\
+            integrable p X /\
+            f IN CnR 3 ==>
+            expectation p (Normal ∘ f ∘ real ∘ X) <> PosInf /\
+            expectation p (Normal ∘ f ∘ real ∘ X) <> NegInf
 Proof
     NTAC 4 STRIP_TAC
  >> MATCH_MP_TAC expectation_finite  >> simp []
@@ -1336,17 +1336,17 @@ Proof
 QED
 
 Theorem clt_expectation_sum_not_infty[local] :
-    ∀p X s R f n.
-      prob_space p ∧
-      (∀i. real_random_variable (X i) p) ∧
-      (∀i. integrable p (X i)) ∧
-      (∀i. variance p (X i) < +∞) ∧
-      (∀i. expectation p (X i) = 0) ∧
-      0 < s n ∧ s n ≠ +∞ ∧ s n ≠ −∞ ∧
-      R = (λn x. ∑ (λi. X i x) (count n) / s n) ∧
-      f ∈ CnR 3 ⇒
-        expectation p (Normal ∘ f ∘ real ∘ R n) ≠ +∞ ∧
-        expectation p (Normal ∘ f ∘ real ∘ R n) ≠ −∞
+    !p X s R f n.
+      prob_space p /\
+      (!i. real_random_variable (X i) p) /\
+      (!i. integrable p (X i)) /\
+      (!i. variance p (X i) < PosInf) /\
+      (!i. expectation p (X i) = 0) /\
+      0 < s n /\ s n <> PosInf /\ s n <> NegInf /\
+      R = (λn x. ∑ (λi. X i x) (count n) / s n) /\
+      f ∈ CnR 3 ==>
+        expectation p (Normal ∘ f ∘ real ∘ R n) <> PosInf /\
+        expectation p (Normal ∘ f ∘ real ∘ R n) <> NegInf
 Proof
     NTAC 7 STRIP_TAC
  >> MATCH_MP_TAC expectation_finite >> simp []
@@ -1358,19 +1358,19 @@ Proof
 QED
 
 Theorem add_sub_cancel [local]:
-    ∀x y z. x ≠ −∞ ∧ x ≠ +∞ ∧
-            y ≠ −∞ ∧ y ≠ +∞ ∧
-            z ≠ −∞ ∧ z ≠ +∞ ⇒
+    !x y z. x <> NegInf /\ x <> PosInf /\
+            y <> NegInf /\ y <> PosInf /\
+            z <> NegInf /\ z <> PosInf ==>
             x + y - (y + z) = x - z
 Proof
     rw []
- >> ‘∃a. x = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW
- >> ‘∃b. y = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW
- >> ‘∃c. z = Normal c’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> ‘?a. x = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> ‘?b. y = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> ‘?c. z = Normal c’ by METIS_TAC [extreal_cases] >> POP_ORW
  >> ‘Normal a + Normal b = Normal (a + b)’ by fs [extreal_add_def] >> POP_ORW
  >> ‘Normal b + Normal c = Normal (b + c)’ by fs [extreal_add_def] >> POP_ORW
- >> ‘Normal a − Normal c = Normal (a - c)’ by fs [extreal_sub_def] >> POP_ORW
- >> ‘Normal (a + b) − Normal (b + c) = Normal (a + b - (b + c))’ by fs [extreal_sub_def] >> POP_ORW
+ >> ‘Normal a - Normal c = Normal (a - c)’ by fs [extreal_sub_def] >> POP_ORW
+ >> ‘Normal (a + b) - Normal (b + c) = Normal (a + b - (b + c))’ by fs [extreal_sub_def] >> POP_ORW
  >> rw [extreal_11] >> REAL_ARITH_TAC
 QED
 
@@ -1403,7 +1403,7 @@ Definition ext_normal_pmeasure_def :
 End
 
 Theorem expectation_of_normal_rv' :
-    !p X mu sig. prob_space p /\ ext_normal_rv X p mu sig ∧ 0 < sig ==>
+    !p X mu sig. prob_space p /\ ext_normal_rv X p mu sig /\ 0 < sig ==>
                  integrable p X /\ expectation p X = Normal mu
 Proof
     NTAC 5 STRIP_TAC
@@ -1416,7 +1416,7 @@ Proof
 QED
 
 Theorem variance_of_normal_rv' :
-    !p X mu sig. prob_space p /\ ext_normal_rv X p mu sig ∧ 0 < sig ==>
+    !p X mu sig. prob_space p /\ ext_normal_rv X p mu sig /\ 0 < sig ==>
                  variance p X = Normal (sig pow 2)
 Proof
   NTAC 5 STRIP_TAC
@@ -1427,10 +1427,10 @@ Proof
 QED
 
 Theorem distribution_eq :
-  ∀p X.
-    prob_space p ∧
-    real_random_variable X p ⇒
-    (∀s. s IN subsets Borel ⇒ distribution p X s = distribution p (real o X) (real_set s))
+  !p X.
+    prob_space p /\
+    real_random_variable X p ==>
+    (!s. s IN subsets Borel ==> distribution p X s = distribution p (real o X) (real_set s))
 Proof
   rw [distribution_def, real_random_variable]
   >> AP_TERM_TAC
@@ -1441,7 +1441,7 @@ Proof
 QED
 
 Theorem std_normal_density_pos :
-    ∀x. 0 < std_normal_density x
+    !x. 0 < std_normal_density x
 Proof
     rpt STRIP_TAC
  >> MP_TAC (Q.SPECL [‘0’, ‘1’] normal_density_pos) >> simp []
@@ -1454,7 +1454,7 @@ Proof
 QED
 
 Theorem REAL_SUB_LE_SELF :
-  ∀a b:real. 0 ≤ b ⇒ a - b ≤ a
+  !a b:real. 0 ≤ b ==> a - b ≤ a
 Proof
   REAL_ARITH_TAC
 QED
@@ -1470,7 +1470,7 @@ Proof
      MATCH_MP_TAC REAL_LE_MUL \\
      simp [normal_density_nonneg, ABS_POS, REAL_POW_LE])
  >> DISCH_TAC
- >> ‘∀x. x ≠ 0 ⇒ 0 ≠ f x’ by rw [Abbr ‘f’, normal_density_pos, REAL_LT_01, REAL_LT_IMP_NE]
+ >> ‘!x. x <> 0 ==> 0 <> f x’ by rw [Abbr ‘f’, normal_density_pos, REAL_LT_01, REAL_LT_IMP_NE]
  >> Know ‘f IN borel_measurable borel’
  >- (qunabbrev_tac ‘f’ \\
      MATCH_MP_TAC in_borel_measurable_mul \\
@@ -1484,10 +1484,10 @@ Proof
      qexistsl [‘abs’, ‘λx. x’] \\
      simp [in_borel_measurable_I, in_measurable_borel_borel_abs])
  >> DISCH_TAC
- >> ‘∀x. 0 ≤ Normal (f x)’ by rw [GSYM (cj 13 extreal_0_simps)]
+ >> ‘!x. 0 ≤ Normal (f x)’ by rw [GSYM (cj 13 extreal_0_simps)]
  >> ‘0 ≤ ∫ lborel (λx. Normal (f x))’
    by (MATCH_MP_TAC integral_pos >> rw [])
- >> ‘∃r. ∫ lborel (λx. Normal (f x)) = Normal r’ by METIS_TAC [integrable_normal_integral]
+ >> ‘?r. ∫ lborel (λx. Normal (f x)) = Normal r’ by METIS_TAC [integrable_normal_integral]
  >> gs []
  >> CCONTR_TAC
  >> fs [REAL_NOT_LT]
@@ -1497,20 +1497,20 @@ Proof
  >> impl_tac >- (rw [AE_T, GSYM o_DEF] >> MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL \\
                  simp [lborel_def])
  >> STRIP_TAC >> gs []
- >> Know ‘{x | x ∈ m_space lborel ∧ f x ≠ 0} ∈ subsets borel’
+ >> Know ‘{x | x ∈ m_space lborel /\ f x <> 0} ∈ subsets borel’
     >- (MP_TAC (Q.SPECL [‘(f :real -> real)’, ‘borel’]
                  (INST_TYPE [“:'a” |-> “:real”] in_measurable_borel_not_sing)) \\
         rw [sigma_algebra_borel] \\
         POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘0’) \\
-        Suff ‘{x | x ∈ m_space lborel ∧ f x ≠ 0} = {x | f x ≠ 0} ∩ space borel’ >> rw [] \\
+        Suff ‘{x | x ∈ m_space lborel /\ f x <> 0} = {x | f x <> 0} ∩ space borel’ >> rw [] \\
         rw [EXTENSION, space_lborel, space_borel])
  >> DISCH_TAC
- >> Suff ‘0 < lambda {x | x ∈ m_space lborel ∧ f x ≠ 0}’ >- (fs [lt_imp_ne])
- >> MP_TAC (Q.SPECL [‘{x |  x ∈ m_space lborel ∧ (f :real -> real) x ≠ 0}’] (GSYM lebesgue_eq_lambda))
+ >> Suff ‘0 < lambda {x | x ∈ m_space lborel /\ f x <> 0}’ >- (fs [lt_imp_ne])
+ >> MP_TAC (Q.SPECL [‘{x |  x ∈ m_space lborel /\ (f :real -> real) x <> 0}’] (GSYM lebesgue_eq_lambda))
  >> rw []
- >> ‘{x | x ∈ m_space lborel ∧ f x ≠ 0} = {x | f x ≠ 0}’ by rw [Once EXTENSION, space_lborel] >> gs []
+ >> ‘{x | x ∈ m_space lborel /\ f x <> 0} = {x | f x <> 0}’ by rw [Once EXTENSION, space_lborel] >> gs []
  >> POP_ASSUM K_TAC
- >> Suff ‘0 < lmeasure (interval (0,1)) ∧ lmeasure (interval (0,1)) ≤ lmeasure {x | f x ≠ 0}’
+ >> Suff ‘0 < lmeasure (interval (0,1)) /\ lmeasure (interval (0,1)) ≤ lmeasure {x | f x <> 0}’
  >- (METIS_TAC [lte_trans, lt_imp_ne])
  >> CONJ_TAC >- (simp [lebesgue_open_interval, normal_1])
  >> MATCH_MP_TAC MEASURE_INCREASING
@@ -1523,8 +1523,8 @@ Proof
 QED
 
 Theorem ext_normal_rv_abs_third_moment'[local] :
-    ∀p X sig. prob_space p ∧ 0 < sig ∧
-              ext_normal_rv X p 0 sig ⇒
+    !p X sig. prob_space p /\ 0 < sig /\
+              ext_normal_rv X p 0 sig ==>
               (expectation p (λx. abs (X x) pow 3) =
                Normal (sig pow 3) * ∫ lborel (λx. Normal ((abs x) pow 3 * std_normal_density x)))
 Proof
@@ -1543,12 +1543,12 @@ Proof
  >> MP_TAC (Q.SPECL [‘0’, ‘sig’] normal_density_affine) >> rw []
  >> Q.ABBREV_TAC ‘f = λx. Normal ((abs x)³ * std_normal_density x)’
  >> ‘integrable lborel f’ by rw [Abbr ‘f’, integrable_std_normal_abs_cubic]
- >> Know ‘∀x. Normal (sig⁻¹ * (abs x)³ * std_normal_density (sig⁻¹ * x)) =
+ >> Know ‘!x. Normal (sig⁻¹ * (abs x)³ * std_normal_density (sig⁻¹ * x)) =
               Normal (sig²) * f (sig⁻¹ * x)’
  >- (rw [Abbr ‘f’, extreal_mul_eq] >> rpt DISJ2_TAC \\
      rw [ABS_MUL, POW_MUL] >> DISJ2_TAC \\
      fs [ABS_REDUCE, REAL_LE_INV_EQ, REAL_LT_IMP_LE] \\
-     ‘sig ≠ 0’ by METIS_TAC [REAL_LT_IMP_NE] \\
+     ‘sig <> 0’ by METIS_TAC [REAL_LT_IMP_NE] \\
      rw [nonzerop_def])
  >> Rewr
  >> MP_TAC (Q.SPECL [‘lborel’, ‘λx. f (sig⁻¹ * x)’, ‘sig pow 2’] (INST_TYPE [“:'a” |-> “:real”] integral_cmul))
@@ -1568,9 +1568,9 @@ Proof
 QED
 
 Theorem ext_normal_rv_moment_integrable :
-  ∀p X mu sig k.
-    prob_space p ∧ 0 < sig ∧
-    ext_normal_rv X p 0 sig ⇒
+  !p X mu sig k.
+    prob_space p /\ 0 < sig /\
+    ext_normal_rv X p 0 sig ==>
     integrable p (λx. abs (X x) pow 3)
 Proof
   rw [GSYM pow_abs, GSYM o_DEF]
@@ -1593,32 +1593,32 @@ QED
 (***********************************************************************)
 
 Theorem finite_variance_imp_second_moments:
-    ∀p X. (∀i. variance p (X i) < PosInf) ⇒
-          (∀i. second_moments p X i < PosInf)
+    !p X. (!i. variance p (X i) < PosInf) ==>
+          (!i. second_moments p X i < PosInf)
 Proof
     rw [variance_def, second_moments_def]
- >> ‘∀i. central_moment p (X i) 2 ≠ PosInf’ by METIS_TAC [lt_imp_ne]
- >> Suff ‘∑ (λi. central_moment p (X i) 2) (count i) ≠ +∞’
+ >> ‘!i. central_moment p (X i) 2 <> PosInf’ by METIS_TAC [lt_imp_ne]
+ >> Suff ‘∑ (λi. central_moment p (X i) 2) (count i) <> PosInf’
  >- (METIS_TAC [lt_infty])
  >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF >> simp []
 QED
 
 Theorem second_moments_variance_def:
-    ∀p X n. second_moments p X n = ∑ (λi. variance p (X i)) (count n)
+    !p X n. second_moments p X n = ∑ (λi. variance p (X i)) (count n)
 Proof
     rw [second_moments_def, variance_def]
 QED
 
 Theorem second_moments_pos:
-    ∀p X n. prob_space p ⇒ 0 ≤ second_moments p X n
+    !p X n. prob_space p ==> 0 ≤ second_moments p X n
 Proof
     rw [second_moments_variance_def]
  >> irule EXTREAL_SUM_IMAGE_POS >> simp [variance_pos]
 QED
 
 Theorem ext_normal_rv_integrable :
-    ∀p X mu sig.
-      0 < sig ∧ prob_space p ∧ ext_normal_rv X p mu sig ⇒
+    !p X mu sig.
+      0 < sig /\ prob_space p /\ ext_normal_rv X p mu sig ==>
       integrable p X
 Proof
     rpt STRIP_TAC
@@ -1631,10 +1631,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 Theorem partial_sum_telescoping:
-  ∀(X: num -> 'a -> real) Y Z (n:num) x (j:num).
-    j + 1 < n ∧
-    (∀j. Z j x = ∑ (λi. Y i x) (count j) +
-                 ∑ (λi. X i x) (count n DIFF count (SUC j))) ⇒
+  !(X: num -> 'a -> real) Y Z (n:num) x (j:num).
+    j + 1 < n /\
+    (!j. Z j x = ∑ (λi. Y i x) (count j) +
+                 ∑ (λi. X i x) (count n DIFF count (SUC j))) ==>
     Y j x + Z j x = X (j + 1) x + Z (j + 1) x
 Proof
   rw [ADD1]
@@ -1676,67 +1676,67 @@ Proof
 QED
 
 Theorem SUM_SUB_GEN :
-    ∀(f:num -> extreal) n.
-      (∀x. f x ≠ NegInf ∧ f x ≠ PosInf) ⇒
-      ∑ (λj. f j − f (j + 1)) (count n) = f 0 − f n
+    !(f:num -> extreal) n.
+      (!x. f x <> NegInf /\ f x <> PosInf) ==>
+      ∑ (λj. f j - f (j + 1)) (count n) = f 0 - f n
 Proof
     rpt STRIP_TAC
  >> Induct_on ‘n’
  >- (rw [EXTREAL_SUM_IMAGE_COUNT_ZERO, sub_refl])
  >> ‘count1 n = count n ∪ {n}’ by rw [Once EXTENSION]
  >> POP_ORW
- >> Know ‘∑ (λj. f j − f (j + 1)) (count n ∪ {n}) =
-          ∑ (λj. f j − f (j + 1)) (count n) + (f n - f (SUC n))’
- >- (Q.ABBREV_TAC ‘h = λj. f j − f (j + 1)’ \\
+ >> Know ‘∑ (λj. f j - f (j + 1)) (count n ∪ {n}) =
+          ∑ (λj. f j - f (j + 1)) (count n) + (f n - f (SUC n))’
+ >- (Q.ABBREV_TAC ‘h = λj. f j - f (j + 1)’ \\
      (MP_TAC o (Q.SPECL [‘count n’, ‘{n}’]) o
              (INST_TYPE [alpha |-> ``:num``])) EXTREAL_SUM_IMAGE_DISJOINT_UNION \\
      simp [] \\
      DISCH_TAC \\
      POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘h’) \\
-     Know ‘∀x. x < n ∨ x = n ⇒ h x ≠ −∞’
+     Know ‘!x. x < n \/ x = n ==> h x <> NegInf’
      >- (fs [Abbr ‘h’] \\
-         Know ‘∀x. x < n ∨ x = n ⇒ (λj. f j) x ≠ −∞’
+         Know ‘!x. x < n \/ x = n ==> (λj. f j) x <> NegInf’
          >- (BETA_TAC >> rw [GSYM le_lt]) >> DISCH_TAC \\
-         Know ‘∀x. x < n ∨ x = n ⇒ (λj. f (j + 1)) x ≠ −∞’
+         Know ‘!x. x < n \/ x = n ==> (λj. f (j + 1)) x <> NegInf’
          >- (BETA_TAC >> rw [GSYM le_lt]) >> DISCH_TAC \\
          fs [sub_not_infty]) >> DISCH_TAC \\
-     Know ‘∀x. x < n ∨ x = n ⇒ h x ≠ +∞’
+     Know ‘!x. x < n \/ x = n ==> h x <> PosInf’
      >- (fs [Abbr ‘h’] \\
-         Know ‘∀x. x < n ∨ x = n ⇒ (λj. f j) x ≠ +∞’
+         Know ‘!x. x < n \/ x = n ==> (λj. f j) x <> PosInf’
          >- (BETA_TAC >> rw [GSYM le_lt]) >> DISCH_TAC \\
-         Know ‘∀x. x < n ∨ x = n ⇒ (λj. f (j + 1)) x ≠ +∞’
+         Know ‘!x. x < n \/ x = n ==> (λj. f (j + 1)) x <> PosInf’
          >- (BETA_TAC >> rw [GSYM le_lt]) >> DISCH_TAC \\
          fs [sub_not_infty]) >> DISCH_TAC \\
      ‘∑ h (count n ∪ {n}) = ∑ h (count n) + h n’ by METIS_TAC [] >>  POP_ORW \\
      Q.PAT_X_ASSUM ‘ ∑ h (count n) = _’ (rw o wrap) >> rw [Abbr ‘h’, ADD1] \\
      DISCH_THEN (fs o wrap) \\
-     ‘f 0 ≠ NegInf ∧ f 0 ≠ PosInf’ by METIS_TAC [] \\
-     ‘f n ≠ NegInf ∧ f n ≠ PosInf’ by METIS_TAC [] \\
-     ‘f (SUC n) ≠ NegInf ∧ f (SUC n) ≠ PosInf’ by METIS_TAC []) >> Rewr' >> POP_ORW
- >> ‘f 0 ≠ NegInf ∧ f 0 ≠ PosInf’ by METIS_TAC []
- >> ‘f n ≠ NegInf ∧ f n ≠ PosInf’ by METIS_TAC []
- >> ‘f (SUC n) ≠ NegInf ∧ f (SUC n) ≠ PosInf’ by METIS_TAC []
+     ‘f 0 <> NegInf /\ f 0 <> PosInf’ by METIS_TAC [] \\
+     ‘f n <> NegInf /\ f n <> PosInf’ by METIS_TAC [] \\
+     ‘f (SUC n) <> NegInf /\ f (SUC n) <> PosInf’ by METIS_TAC []) >> Rewr' >> POP_ORW
+ >> ‘f 0 <> NegInf /\ f 0 <> PosInf’ by METIS_TAC []
+ >> ‘f n <> NegInf /\ f n <> PosInf’ by METIS_TAC []
+ >> ‘f (SUC n) <> NegInf /\ f (SUC n) <> PosInf’ by METIS_TAC []
  >> rw [add2_sub2]
  >> METIS_TAC [add_sub_cancel]
 QED
 
 Theorem SUM_SUB_GEN_WEAKEN :
-    ∀f n.
-      (∀j. j ≤ n ⇒ f j ≠ +∞ ∧ f j ≠ −∞) ⇒
-      ∑ (λj. f j − f (j + 1)) (count n) = f 0 − f n
+    !f n.
+      (!j. j ≤ n ==> f j <> PosInf /\ f j <> NegInf) ==>
+      ∑ (λj. f j - f (j + 1)) (count n) = f 0 - f n
 Proof
     rpt STRIP_TAC
  >> Q.ABBREV_TAC ‘g = λi. if i ≤ n then f i else 0’
- >> Know ‘∀i. g i ≠ +∞ ∧ g i ≠ −∞’
+ >> Know ‘!i. g i <> PosInf /\ g i <> NegInf’
  >- (GEN_TAC \\
      Cases_on ‘n < i’ >- (fs [Abbr ‘g’]) >> fs [NOT_LESS] \\
      Cases_on ‘i < n’
-     >- (Q.PAT_X_ASSUM ‘∀j. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> fs [Abbr ‘g’]) >> fs [NOT_LESS] \\
+     >- (Q.PAT_X_ASSUM ‘!j. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> fs [Abbr ‘g’]) >> fs [NOT_LESS] \\
       ‘i = n’ by fs [GSYM EQ_LESS_EQ] >> fs [Abbr ‘g’])
  >> STRIP_TAC
  >> MP_TAC (Q.SPECL [‘g’, ‘n’] SUM_SUB_GEN) >> fs [] >> DISCH_TAC
- >> Know ‘∑ (λj. g j − g (j + 1)) (count n) =
-          ∑ (λj. f j − f (j + 1)) (count n)’
+ >> Know ‘∑ (λj. g j - g (j + 1)) (count n) =
+          ∑ (λj. f j - f (j + 1)) (count n)’
  >- (irule EXTREAL_SUM_IMAGE_EQ >> simp [] \\
      CONJ_TAC >- (rw [Abbr ‘g’]) >> DISJ2_TAC \\
       rw [Abbr ‘g’] >> fs [sub_not_infty])
@@ -1744,12 +1744,12 @@ Proof
 QED
 
 Theorem abs_3[local]:
-    ∀x. abs (x pow 3) = (abs x) pow 3
+    !x. abs (x pow 3) = (abs x) pow 3
 Proof
     RW_TAC std_ss []
  >> Cases_on ‘x = PosInf’  >- (gs [] >> EVAL_TAC)
  >> Cases_on ‘x = NegInf’  >- (gs [] >> EVAL_TAC)
- >> ‘∃r. x = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> ‘?r. x = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW
  >> ‘Normal r pow 3 = Normal (r pow 3)’ by rw [extreal_pow_def]
  >> ‘abs (Normal r pow 3) = abs (Normal (r pow 3))’ by rw []
  >> ‘abs (Normal (r pow 3)) = Normal (abs (r pow 3))’ by rw [extreal_abs_def] >> gs []
@@ -1759,11 +1759,11 @@ Proof
 QED
 
 Theorem clt_expectation_sum_not_infty_normal_rv[local] :
-    ∀p N f. prob_space p ∧
-            ext_normal_rv N p 0 1 ∧
-            f ∈ CnR 3 ⇒
-            expectation p (Normal ∘ f ∘ real ∘ N) ≠ +∞ ∧
-            expectation p (Normal ∘ f ∘ real ∘ N) ≠ −∞
+    !p N f. prob_space p /\
+            ext_normal_rv N p 0 1 /\
+            f ∈ CnR 3 ==>
+            expectation p (Normal ∘ f ∘ real ∘ N) <> PosInf /\
+            expectation p (Normal ∘ f ∘ real ∘ N) <> NegInf
 Proof
     NTAC 4 STRIP_TAC
  >> MATCH_MP_TAC expectation_finite >> simp []
@@ -1774,8 +1774,8 @@ Proof
 QED
 
 Theorem lp_space_imp_L1_space :
-    ∀m p f. measure_space m ∧ measure m (m_space m) < +∞ ⇒
-            (1 ≤ p ∧ p ≠ +∞ ∧ f ∈ lp_space p m ⇒ f ∈ L1_space m)
+    !m p f. measure_space m /\ measure m (m_space m) < PosInf ==>
+            (1 ≤ p /\ p <> PosInf /\ f ∈ lp_space p m ==> f ∈ L1_space m)
 Proof
     RW_TAC std_ss []
  >> Cases_on ‘p = 1’
@@ -1788,45 +1788,45 @@ Proof
  >> MP_TAC (Q.SPECL [‘m’, ‘f’, ‘p’] Lyapunov_ineq_lemma)
  >> simp [lt_le]
  >> STRIP_TAC
- >> Know ‘seminorm p m f ≠ +∞’
+ >> Know ‘seminorm p m f <> PosInf’
  >- (MP_TAC (Q.SPECL [‘p’, ‘m’, ‘f’] lp_space_alt_seminorm) \\
      fs [] \\
      ‘0 < p’ by METIS_TAC [lt_01, lte_trans] \\
      fs [ineq_imp])
  >> DISCH_TAC
- >> Know ‘seminorm p m f ≠ NegInf’
+ >> Know ‘seminorm p m f <> NegInf’
  >- (‘0 ≤ seminorm p m f’ by METIS_TAC [seminorm_pos, lt_01, lte_trans] \\
      METIS_TAC [extreal_0_simps, lt_trans])
  >> DISCH_TAC
- >> ‘∃r. seminorm p m f = Normal r’ by METIS_TAC [extreal_cases]
+ >> ‘?r. seminorm p m f = Normal r’ by METIS_TAC [extreal_cases]
  >> fs []
  >> rpt (Q.PAT_X_ASSUM ‘T’ (K_TAC))
- >> Know ‘measure m (m_space m) powr (1 − p⁻¹) ≠ +∞ ∧ measure m (m_space m) powr (1 − p⁻¹) ≠ NegInf’
+ >> Know ‘measure m (m_space m) powr (1 - p⁻¹) <> PosInf /\ measure m (m_space m) powr (1 - p⁻¹) <> NegInf’
  >- (Know ‘0 ≤ measure m (m_space m)’
      >- (‘m_space m ∈ measurable_sets m’ by METIS_TAC [MEASURE_SPACE_SPACE] \\
          fs [measure_space_def, positive_def] \\
-         Q.PAT_X_ASSUM ‘∀s. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘m_space m’)) \\
+         Q.PAT_X_ASSUM ‘!s. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘m_space m’)) \\
      DISCH_TAC \\
      Know ‘0 < 1 - inv p’
      >- (‘inv p ≤ 1’ by METIS_TAC [lt_01, inv_le_antimono_imp, inv_one] \\
-         ‘0 ≠ p’ by METIS_TAC [lt_01, lte_trans, ineq_imp] \\
+         ‘0 <> p’ by METIS_TAC [lt_01, lte_trans, ineq_imp] \\
          ‘0 ≤ 1 - inv p’ by METIS_TAC [sub_zero_le, inv_not_infty] \\
          CCONTR_TAC \\
          fs [extreal_not_lt] \\
          ‘p = 1’ by METIS_TAC [le_antisym, sub_0, inv_one, lt_01, lte_trans, inv_inj]) \\
      DISCH_TAC \\
-     ‘measure m (m_space m) ≠ PosInf ∧ measure m (m_space m) ≠ NegInf’ by
+     ‘measure m (m_space m) <> PosInf /\ measure m (m_space m) <> NegInf’ by
        METIS_TAC [ineq_imp, extreal_0_simps, lt_trans] \\
-     ‘∃a. measure m (m_space m) = Normal a’ by METIS_TAC [extreal_cases] \\
+     ‘?a. measure m (m_space m) = Normal a’ by METIS_TAC [extreal_cases] \\
      fs [] \\
      rpt (Q.PAT_X_ASSUM ‘T’ (K_TAC)) \\
-     ‘0 ≤ Normal a powr (1 − p⁻¹)’ by rw [powr_pos] \\
-     ‘Normal a powr (1 − p⁻¹) ≠ −∞’ by METIS_TAC [extreal_0_simps, lt_trans] \\
+     ‘0 ≤ Normal a powr (1 - p⁻¹)’ by rw [powr_pos] \\
+     ‘Normal a powr (1 - p⁻¹) <> NegInf’ by METIS_TAC [extreal_0_simps, lt_trans] \\
      art [] \\
-     ‘1 - inv p ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans] \\
-     ‘0 ≠ p’ by METIS_TAC [lt_01, lte_trans, ineq_imp] \\
-     ‘1 - inv p ≠ PosInf’ by METIS_TAC [inv_not_infty, extreal_1_simps, sub_not_infty] \\
-     ‘∃b. 1 - inv p = Normal b’ by METIS_TAC [extreal_cases] \\
+     ‘1 - inv p <> NegInf’ by METIS_TAC [extreal_0_simps, lt_trans] \\
+     ‘0 <> p’ by METIS_TAC [lt_01, lte_trans, ineq_imp] \\
+     ‘1 - inv p <> PosInf’ by METIS_TAC [inv_not_infty, extreal_1_simps, sub_not_infty] \\
+     ‘?b. 1 - inv p = Normal b’ by METIS_TAC [extreal_cases] \\
      fs [] \\
       Cases_on ‘a = 0’
      >- (gs [normal_0] \\
@@ -1835,7 +1835,7 @@ Proof
      ‘0 < a’ by METIS_TAC [REAL_LT_LE] \\
      METIS_TAC [normal_powr, extreal_not_infty])
  >> DISCH_TAC
- >> ‘∃d. measure m (m_space m) powr (1 − p⁻¹) = Normal d’ by METIS_TAC [extreal_cases]
+ >> ‘?d. measure m (m_space m) powr (1 - p⁻¹) = Normal d’ by METIS_TAC [extreal_cases]
  >> fs [extreal_mul_eq]
  >> rpt (Q.PAT_X_ASSUM ‘T’ (K_TAC))
  >> ‘Normal (d * r) < PosInf’ by fs [lt_infty]
@@ -1843,7 +1843,7 @@ Proof
 QED
 
 Theorem pow_abs :
-  ∀c n. abs (c pow n) = (abs c) pow n
+  !c n. abs (c pow n) = (abs c) pow n
 Proof
   rpt STRIP_TAC
   >> Cases_on ‘c = PosInf’
@@ -1858,7 +1858,7 @@ Proof
       Cases_on ‘EVEN n’
       >- (gs [extreal_pow_def, extreal_abs_def]) \\
       gs [extreal_pow_def, extreal_abs_def])
-  >> ‘∃r. c = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW
+  >> ‘?r. c = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW
   >> ‘Normal r pow n = Normal (r pow n)’ by rw [extreal_pow_def] >> POP_ORW
   >> ‘abs (Normal (r pow n)) = Normal (abs (r pow n))’ by rw [extreal_abs_def] >> POP_ORW
   >> ‘abs (Normal r) = Normal (abs r)’ by rw [extreal_abs_def] >> POP_ORW
@@ -1867,7 +1867,7 @@ Proof
 QED
 
 Theorem powr_abs :
-    ∀c n. 0 ≤ c ∧ 0 < n ⇒ abs (c powr n) = abs c powr n
+    !c n. 0 ≤ c /\ 0 < n ==> abs (c powr n) = abs c powr n
 Proof
     rpt STRIP_TAC
  >> Cases_on ‘c = 0’
@@ -1876,22 +1876,22 @@ Proof
 QED
 
 Theorem clt_integrable_lemma :
-    ∀p X.
-          prob_space p ∧
-          real_random_variable X p ∧
-          expectation p (λx. (abs (X x)) pow 3) < PosInf ⇒
-          integrable p X ∧
-          integrable p (λx. (X x) pow 2) ∧
+    !p X.
+          prob_space p /\
+          real_random_variable X p /\
+          expectation p (λx. (abs (X x)) pow 3) < PosInf ==>
+          integrable p X /\
+          integrable p (λx. (X x) pow 2) /\
           integrable p (λx. (X x) pow 3)
 Proof
     NTAC 3 STRIP_TAC
  >> fs [real_random_variable, expectation_def]
  >> Know ‘X ∈ lp_space 3 p’
  >- (fs [lp_space_def, p_space_def, events_def] \\
-     ‘∀x. abs (X x) powr 3 = abs (X x) pow 3’ by METIS_TAC [gen_powr, abs_pos] \\
+     ‘!x. abs (X x) powr 3 = abs (X x) pow 3’ by METIS_TAC [gen_powr, abs_pos] \\
      POP_ORW \\
-     Know ‘∫ p (λx. (abs (X x))³) = ∫⁺ p (λx. (abs (X x))³)’
-     >- (‘∀x. (abs (X x))³ = abs ((X x)³)’ by rw [abs_3] \\
+     Know ‘∫ p (λx. (abs (X x))³) = pos_fn_integral p (λx. (abs (X x))³)’
+     >- (‘!x. (abs (X x))³ = abs ((X x)³)’ by rw [abs_3] \\
          POP_ORW \\
          MP_TAC (Q.SPECL [‘p’, ‘λx. (X x) pow 3’] integral_abs_pos_fn) \\
          fs [prob_space_def, o_DEF]) \\
@@ -1916,7 +1916,7 @@ Proof
      >- (MP_TAC (Q.SPECL [‘measurable_space p’, ‘3’, ‘X’, ‘λx. (X x)³’]
                          IN_BOREL_MEASURABLE_POW) \\
          fs [measure_space_def, p_space_def, events_def]) \\
-     ‘∀x. abs ((X x)³) = (abs (X x))³’ by rw [GSYM abs_3] \\
+     ‘!x. abs ((X x)³) = (abs (X x))³’ by rw [GSYM abs_3] \\
      rw [o_DEF] \\
      POP_ORW \\
      METIS_TAC [lt_imp_ne])
@@ -1931,7 +1931,7 @@ Proof
 QED
 
 Theorem REAL_SUM_IMAGE_COUNT_THREE[local] :
-    ∀(f :num -> real). ∑ f (count 3) = f 0 + f 1 + f 2
+    !(f :num -> real). ∑ f (count 3) = f 0 + f 1 + f 2
 Proof
   rw []
   >> ‘count 3 = {0;1;2}’ by RW_TAC real_ss [EXTENSION, IN_COUNT, IN_INSERT, IN_SING]
@@ -1945,7 +1945,7 @@ Proof
 QED
 
 val clt_tactic1 =
-    Know ‘∀n. s n ≠ NegInf ∧ s n ≠ PosInf’
+    Know ‘!n. s n <> NegInf /\ s n <> PosInf’
     >- (simp [Abbr ‘s’] \\
         qx_gen_tac ‘n’ \\
         CONJ_TAC
@@ -1958,13 +1958,13 @@ val clt_tactic1 =
             simp [variance_pos]) \\
         irule sqrt_infty \\
         CONJ_TAC
-        >- (Suff ‘second_moments p X n < +∞’
+        >- (Suff ‘second_moments p X n < PosInf’
             >- (METIS_TAC [lt_imp_ne]) \\
             irule finite_variance_imp_second_moments \\
             simp []) \\
         METIS_TAC [second_moments_pos])
     >> DISCH_TAC
-    >> Know ‘∀n. 0 ≤ s n’
+    >> Know ‘!n. 0 ≤ s n’
     >- (fs [variance_def, Abbr ‘s’] \\
         GEN_TAC \\
         MATCH_MP_TAC sqrt_pos_le \\
@@ -1980,14 +1980,14 @@ val clt_tactic1 =
         simp[] \\
         DISCH_TAC)
     >> DISCH_TAC
-    >> ‘∀n. 0 < s n’ by rw[lt_le];
+    >> ‘!n. 0 < s n’ by rw[lt_le];
 
 Theorem real_random_variable_prod_measure_fst[local] :
-    ∀p q X (N :num).
-      prob_space p ∧
-      prob_space (q :'a list m_space) ∧
-      (∀i. i < N ⇒ real_random_variable (X i) p) ⇒
-      (∀i. i < N ⇒ real_random_variable (X i ∘ FST) (p CROSS q))
+    !p q X (N :num).
+      prob_space p /\
+      prob_space (q :'a list m_space) /\
+      (!i. i < N ==> real_random_variable (X i) p) ==>
+      (!i. i < N ==> real_random_variable (X i ∘ FST) (p CROSS q))
 Proof
   rpt STRIP_TAC
   >> Know ‘(p_space (p × q),events (p × q)) =
@@ -2009,11 +2009,11 @@ Proof
 QED
 
 Theorem real_random_variable_prod_measure_snd[local] :
-  ∀p q X (N :num).
-    prob_space p ∧
-    prob_space (q :'a list m_space) ∧
-    (∀i. i < N ⇒ real_random_variable (X i) q) ⇒
-    (∀i. i < N ⇒ real_random_variable (X i ∘ SND) (p CROSS q))
+  !p q X (N :num).
+    prob_space p /\
+    prob_space (q :'a list m_space) /\
+    (!i. i < N ==> real_random_variable (X i) q) ==>
+    (!i. i < N ==> real_random_variable (X i ∘ SND) (p CROSS q))
 Proof
   rpt STRIP_TAC
   >> Know ‘(p_space (p × q),events (p × q)) =
@@ -2035,9 +2035,9 @@ Proof
 QED
 
 Theorem expectation_multidimentional_compose_fst[local] :
-  ∀p q f.
-    prob_space p ∧ prob_space (q :'a list m_space) ∧
-    (∀x. x ∈ p_space p ⇒ f x ≠ +∞ ∧ f x ≠ −∞) ∧ integrable p f ⇒
+  !p q f.
+    prob_space p /\ prob_space (q :'a list m_space) /\
+    (!x. x ∈ p_space p ==> f x <> PosInf /\ f x <> NegInf) /\ integrable p f ==>
     expectation p f = expectation (p × q) (f ∘ FST)
 Proof
   rpt STRIP_TAC
@@ -2047,9 +2047,9 @@ Proof
 QED
 
 Theorem expectation_multidimentional_compose_snd[local] :
-  ∀p q f.
-    prob_space p ∧ prob_space (q :'a list m_space) ∧
-    (∀x. x ∈ p_space q ⇒ f x ≠ +∞ ∧ f x ≠ −∞) ∧ integrable q f ⇒
+  !p q f.
+    prob_space p /\ prob_space (q :'a list m_space) /\
+    (!x. x ∈ p_space q ==> f x <> PosInf /\ f x <> NegInf) /\ integrable q f ==>
     expectation q f = expectation (p × q) (f ∘ SND)
 Proof
   rpt STRIP_TAC
@@ -2059,9 +2059,9 @@ Proof
 QED
 
 Theorem integrable_bounded_continuous_rv[local] :
-    ∀p X f. prob_space p ∧
-            random_variable X p borel ∧
-            f ∈ C_b ⇒
+    !p X f. prob_space p /\
+            random_variable X p borel /\
+            f ∈ C_b ==>
             integrable p (Normal ∘ f ∘ X)
 Proof
   rw [C_b_def, bounded_def]
@@ -2081,8 +2081,8 @@ Proof
          qexistsl [‘f’, ‘X’] \\
          rw []) \\
      rw [] \\
-     Q.PAT_X_ASSUM ‘∀x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘(f: real -> real) (X x)’) \\
-     Know ‘∃x'. f ((X x)) = f x'’
+     Q.PAT_X_ASSUM ‘!x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘(f: real -> real) (X x)’) \\
+     Know ‘?x'. f ((X x)) = f x'’
      >- (qexists ‘(X x)’ \\
          simp []) \\
      DISCH_THEN (fs o wrap) \\
@@ -2093,10 +2093,10 @@ Proof
 QED
 
 Theorem clt_expectation_not_infty_rv[local] :
-    ∀p X f. prob_space p ∧ random_variable X p Borel ∧ integrable p X ∧
-            f ∈ CnR 3 ⇒
-            expectation p (Normal ∘ f ∘ real ∘ X) ≠ +∞ ∧
-            expectation p (Normal ∘ f ∘ real ∘ X) ≠ −∞
+    !p X f. prob_space p /\ random_variable X p Borel /\ integrable p X /\
+            f ∈ CnR 3 ==>
+            expectation p (Normal ∘ f ∘ real ∘ X) <> PosInf /\
+            expectation p (Normal ∘ f ∘ real ∘ X) <> NegInf
 Proof
     NTAC 4 STRIP_TAC
  >> MATCH_MP_TAC expectation_finite
@@ -2111,18 +2111,18 @@ Proof
 QED
 
 Theorem clt_partial_sum_lemma[local] :
-    ∀p X Y Z f n.
-      prob_space p ∧
-      (∀i. i < n ⇒
-           real_random_variable (X i) p ∧
-           real_random_variable (Y i) p ∧
-           integrable p (X i) ∧
-           integrable p (Y i)) ⇒
-      (∀j. j ≤ n ⇒
-           (∀Z. Z = (λj x. if x IN p_space p then
+    !p X Y Z f n.
+      prob_space p /\
+      (!i. i < n ==>
+           real_random_variable (X i) p /\
+           real_random_variable (Y i) p /\
+           integrable p (X i) /\
+           integrable p (Y i)) ==>
+      (!j. j ≤ n ==>
+           (!Z. Z = (λj x. if x IN p_space p then
                              (∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count j))
-                           else 0) ⇒
-                real_random_variable (Z j) p ∧ integrable p (Z j)))
+                           else 0) ==>
+                real_random_variable (Z j) p /\ integrable p (Z j)))
 Proof
     rw []
  >> Q.ABBREV_TAC ‘Z = λx j. if x ∈ p_space p then
@@ -2140,7 +2140,7 @@ Proof
      MP_TAC (Q.SPECL [‘p’, ‘λx. ∑ (λi. Y i x) (count j)’,
                       ‘λx. ∑ (λi. X i x) (count n DIFF count j)’] real_random_variable_add) \\
      simp [Abbr ‘Z’] \\
-     Know ‘real_random_variable (λx. ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count j)) p ⇔
+     Know ‘real_random_variable (λx. ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count j)) p <=>
              real_random_variable (λx. if x ∈ p_space p then  ∑ (λi. Y i x) (count j) +
                                                               ∑ (λi. X i x) (count n DIFF count j)
                                        else 0) p’
@@ -2157,7 +2157,7 @@ Proof
  >> MP_TAC (Q.SPECL [‘p’, ‘λx. ∑ (λi. Y i x) (count j)’,
                      ‘λx. ∑ (λi. X i x) (count n DIFF count j)’] integrable_add')
  >> fs [prob_space_def, Abbr ‘Z’, p_space_def]
- >> Know ‘integrable p (λx. ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count j)) ⇔
+ >> Know ‘integrable p (λx. ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count j)) <=>
           integrable p (λx. if x ∈ m_space p then  ∑ (λi. Y i x) (count j) +
                                                    ∑ (λi. X i x) (count n DIFF count j)
                             else 0)’
@@ -2166,20 +2166,20 @@ QED
 
 (* eq 15 *)
 Theorem clt_Lindeberg_replacement_trick_bounded[local] :
-  ∀p X Y f s n.
-    prob_space p ∧ f ∈ CnR 3 ∧
-    (∀i. i < n ⇒ real_random_variable (X i) p ∧
-                 real_random_variable (Y i) p ∧
-                 integrable p (X i) ∧
-                 integrable p (Y i)) ∧
-    0 < s n ∧ s n ≠ +∞ ∧ s n ≠ −∞ ⇒
-    (∀j. j < n ⇒
-         (∀Z. Z = (λj x. if x IN p_space p then
+  !p X Y f s n.
+    prob_space p /\ f ∈ CnR 3 /\
+    (!i. i < n ==> real_random_variable (X i) p /\
+                 real_random_variable (Y i) p /\
+                 integrable p (X i) /\
+                 integrable p (Y i)) /\
+    0 < s n /\ s n <> PosInf /\ s n <> NegInf ==>
+    (!j. j < n ==>
+         (!Z. Z = (λj x. if x IN p_space p then
                            (∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j))
-                         else 0) ⇒
-              expectation p (Normal ∘ f ∘ real ∘ (λx. ∑ (λi. X i x) (count n) / s n)) −
+                         else 0) ==>
+              expectation p (Normal ∘ f ∘ real ∘ (λx. ∑ (λi. X i x) (count n) / s n)) -
                           expectation p (Normal ∘ f ∘ real ∘ (λx. ∑ (λi. Y i x) (count n) / s n)) =
-              ∑ (λj. expectation p (Normal ∘ f ∘ real ∘ (λx. (X j x + Z j x) / s n)) −
+              ∑ (λj. expectation p (Normal ∘ f ∘ real ∘ (λx. (X j x + Z j x) / s n)) -
                                  expectation p (Normal ∘ f ∘ real ∘ (λx. (Y j x + Z j x) / s n))) (count n)))
 Proof
   rw [] >> rename1 ‘k < n’
@@ -2191,7 +2191,7 @@ Proof
   >- (irule integrable_sum' >> fs [prob_space_def])
   >> DISCH_TAC
   >> Know ‘integrable p (λx. ∑ (λi. Y i x) (count n) / s n)’
-  >- (‘∃c. s n = Normal c’ by METIS_TAC [extreal_cases] \\
+  >- (‘?c. s n = Normal c’ by METIS_TAC [extreal_cases] \\
       fs [] \\
       Q.ABBREV_TAC ‘h = λx. ∑ (λi. Y i x) (count n)’ \\
       fs [] >> irule integrable_cdiv >> METIS_TAC [REAL_LT_LE, prob_space_def])
@@ -2200,7 +2200,7 @@ Proof
   >- (irule real_random_variable_sum >> fs [])
   >> DISCH_TAC
   >> Know ‘real_random_variable (λx. ∑ (λi. Y i x) (count n) / s n) p’
-  >- (‘∃c. s n = Normal c’ by METIS_TAC [extreal_cases] \\
+  >- (‘?c. s n = Normal c’ by METIS_TAC [extreal_cases] \\
       fs [] \\
       Q.ABBREV_TAC ‘h = λx. ∑ (λi. Y i x) (count n)’ \\
       fs [] >> irule real_random_variable_cdiv >> METIS_TAC [REAL_LT_LE])
@@ -2234,94 +2234,94 @@ Proof
   >> MP_TAC (Q.SPECL [‘λj. expectation p (g j)’, ‘n’] SUM_SUB_GEN_WEAKEN)
   >> impl_tac
   >- (Q.X_GEN_TAC ‘j’ >> STRIP_TAC \\
-      Q.PAT_X_ASSUM ‘∀j. j ≤ n ⇒
-                         real_random_variable (λx. G j x) p ∧  _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) \\
+      Q.PAT_X_ASSUM ‘!j. j ≤ n ==>
+                         real_random_variable (λx. G j x) p /\  _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) \\
       gs [Abbr ‘g’] \\
       MATCH_MP_TAC clt_expectation_not_infty \\
-      ‘∃a. s n = Normal a’ by METIS_TAC [extreal_cases] >> gs [] \\
+      ‘?a. s n = Normal a’ by METIS_TAC [extreal_cases] >> gs [] \\
       METIS_TAC [real_random_variable_cdiv, integrable_cdiv, GSYM prob_space_def, GSYM ETA_AX, REAL_LT_IMP_NE])
   >> BETA_TAC
   >> DISCH_THEN (fs o wrap o SYM)
   >> irule EXTREAL_SUM_IMAGE_EQ'
   >> simp []
   >> Q.X_GEN_TAC ‘j’ >> rw []
-  >> Q.PAT_X_ASSUM ‘∀j. j ≤ n ⇒ _’ K_TAC
+  >> Q.PAT_X_ASSUM ‘!j. j ≤ n ==> _’ K_TAC
   >> fs [Abbr ‘g’]
   >> Know ‘expectation p (Normal ∘ f ∘ real ∘ (λx. G j x / s n)) =
            expectation p (Normal ∘ f ∘ real ∘ (λx. (X j x + Z j x) / s n))’
   >- (irule expectation_cong >> simp [] \\
-      Know ‘∀x. x ∈ p_space p ⇒ G j x = (X j x + Z j x)’
+      Know ‘!x. x ∈ p_space p ==> G j x = (X j x + Z j x)’
       >- (simp [Abbr ‘G’, Abbr ‘Z’] \\
-          Know ‘∀x. x IN p_space p ⇒ X j x ≠ PosInf ∧ X j x ≠ NegInf’
-          >- (Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+          Know ‘!x. x IN p_space p ==> X j x <> PosInf /\ X j x <> NegInf’
+          >- (Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p /\ _’
                (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [real_random_variable_def]) \\
           DISCH_TAC \\
-          Know ‘∀x. x IN p_space p ⇒ ∑ (λi. Y i x) (count j) ≠ PosInf ∧ ∑ (λi. Y i x) (count j) ≠ NegInf’
+          Know ‘!x. x IN p_space p ==> ∑ (λi. Y i x) (count j) <> PosInf /\ ∑ (λi. Y i x) (count j) <> NegInf’
           >- (GEN_TAC >> STRIP_TAC >> CONJ_TAC
               >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [] \\
                   Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
                   ‘i < j’ by METIS_TAC [LESS_TRANS] \\
-                  Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+                  Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p /\ _’
                    (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
               irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] \\
               Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
               ‘i < j’ by METIS_TAC [LESS_TRANS] \\
-              Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+              Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p /\ _’
                (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
           DISCH_TAC \\
-          Know ‘∀x. x IN p_space p ⇒ ∑ (λi. X i x) (count n DIFF count j) ≠ PosInf ∧
-                                     ∑ (λi. X i x) (count n DIFF count j) ≠ NegInf’
+          Know ‘!x. x IN p_space p ==> ∑ (λi. X i x) (count n DIFF count j) <> PosInf /\
+                                     ∑ (λi. X i x) (count n DIFF count j) <> NegInf’
           >- (GEN_TAC >> STRIP_TAC >> CONJ_TAC
               >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [] \\
                   Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-                  Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+                  Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p /\ _’
                    (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
               irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] \\
               Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-              Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+              Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p /\ _’
                (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
           DISCH_TAC \\
-          Know ‘∀x. x IN p_space p ⇒ ∑ (λi. X i x) (count n DIFF count1 j) ≠ PosInf ∧
-                                     ∑ (λi. X i x) (count n DIFF count1 j) ≠ NegInf’
+          Know ‘!x. x IN p_space p ==> ∑ (λi. X i x) (count n DIFF count1 j) <> PosInf /\
+                                     ∑ (λi. X i x) (count n DIFF count1 j) <> NegInf’
           >- (GEN_TAC >> STRIP_TAC >> CONJ_TAC
               >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [] \\
                   Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-                  Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+                  Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p /\ _’
                    (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
               irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] \\
               Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-              Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+              Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p /\ _’
                (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
           DISCH_TAC \\
-          ‘∀x. x ∈ p_space p ⇒
+          ‘!x. x ∈ p_space p ==>
                X j x + (∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)) =
                X j x + ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)’
             by  METIS_TAC [add_assoc] \\
           POP_ASSUM (fs o wrap) \\
-          ‘∀x. x ∈ p_space p ⇒ X j x + ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j) =
+          ‘!x. x ∈ p_space p ==> X j x + ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j) =
                                ∑ (λi. Y i x) (count j) + X j x + ∑ (λi. X i x) (count n DIFF count1 j)’
             by METIS_TAC [add_comm] \\
           POP_ASSUM (fs o wrap) \\
-          ‘∀x. x ∈ p_space p ⇒ ∑ (λi. Y i x) (count j) + X j x + ∑ (λi. X i x) (count n DIFF count1 j) =
+          ‘!x. x ∈ p_space p ==> ∑ (λi. Y i x) (count j) + X j x + ∑ (λi. X i x) (count n DIFF count1 j) =
                                ∑ (λi. Y i x) (count j) + (X j x + ∑ (λi. X i x) (count n DIFF count1 j))’
             by METIS_TAC [GSYM add_assoc] \\
           POP_ASSUM (fs o wrap) \\
-          Know ‘∀x. x ∈ p_space p ⇒ ∑ (λi. X i x) (count n DIFF count j) =
+          Know ‘!x. x ∈ p_space p ==> ∑ (λi. X i x) (count n DIFF count j) =
                                     (X j x + ∑ (λi. X i x) (count n DIFF count1 j))’
           >- (GEN_TAC >> STRIP_TAC \\
-              Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒
-                                 ∑ (λi. X i x) (count n DIFF count1 j) ≠ +∞ ∧ _’
+              Q.PAT_X_ASSUM ‘!x. x ∈ p_space p ==>
+                                 ∑ (λi. X i x) (count n DIFF count1 j) <> PosInf /\ _’
                (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
               ‘X j x = ∑ (λi. X i x) {j}’ by rw [EXTREAL_SUM_IMAGE_SING] \\
               POP_ORW \\
               ‘count n DIFF count j = {j} UNION (count n DIFF count1 j)’ by rw [Once EXTENSION] \\
               POP_ORW \\
               irule EXTREAL_SUM_IMAGE_DISJOINT_UNION \\
-              Know ‘∀x'. x' ∈ {j} ∪ (count n DIFF count1 j) ⇒ (λi. X i x) x' ≠ +∞’
+              Know ‘!x'. x' ∈ {j} ∪ (count n DIFF count1 j) ==> (λi. X i x) x' <> PosInf’
               >- (‘count n DIFF count j = {j} UNION (count n DIFF count1 j)’ by rw [Once EXTENSION] \\
                   GEN_TAC >> STRIP_TAC \\
                   BETA_TAC >> fs [] \\
-                  Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+                  Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p /\ _’
                    (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) >> gs [real_random_variable_def]) \\
               DISCH_TAC >> fs [] >> DISJ2_TAC >> METIS_TAC []) \\
           DISCH_TAC \\
@@ -2331,65 +2331,65 @@ Proof
   >> Know ‘expectation p (Normal ∘ f ∘ real ∘ (λx. G (j + 1) x / s n)) =
            expectation p (Normal ∘ f ∘ real ∘ (λx. (Y j x + Z j x) / s n))’
   >- (irule expectation_cong >> simp [] \\
-      Know ‘∀x. x ∈ p_space p ⇒ G (j + 1) x = Y j x + Z j x’
+      Know ‘!x. x ∈ p_space p ==> G (j + 1) x = Y j x + Z j x’
       >- (simp [Abbr ‘G’, Abbr ‘Z’] \\
-          Know ‘∀x. x IN p_space p ⇒ Y j x ≠ PosInf ∧ Y j x ≠ NegInf’
-          >- (Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+          Know ‘!x. x IN p_space p ==> Y j x <> PosInf /\ Y j x <> NegInf’
+          >- (Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p /\ _’
                (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [real_random_variable_def]) \\
           DISCH_TAC \\
-          Know ‘∀x. x IN p_space p ⇒ ∑ (λi. Y i x) (count j) ≠ PosInf ∧ ∑ (λi. Y i x) (count j) ≠ NegInf’
+          Know ‘!x. x IN p_space p ==> ∑ (λi. Y i x) (count j) <> PosInf /\ ∑ (λi. Y i x) (count j) <> NegInf’
           >- (GEN_TAC >> STRIP_TAC >> CONJ_TAC
               >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [] \\
                   Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
                   ‘i < j’ by METIS_TAC [LESS_TRANS] \\
-                  Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+                  Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p /\ _’
                    (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
               irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] \\
               Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
               ‘i < j’ by METIS_TAC [LESS_TRANS] \\
-              Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+              Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p /\ _’
                (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
           DISCH_TAC \\
-          Know ‘∀x. x IN p_space p ⇒ ∑ (λi. Y i x) (count (j + 1)) ≠ PosInf ∧
-                                     ∑ (λi. Y i x) (count (j + 1)) ≠ NegInf’
+          Know ‘!x. x IN p_space p ==> ∑ (λi. Y i x) (count (j + 1)) <> PosInf /\
+                                     ∑ (λi. Y i x) (count (j + 1)) <> NegInf’
           >- (GEN_TAC >> STRIP_TAC \\
               ‘count (j + 1) = count j ∪ {j}’ by rw [Once EXTENSION] \\
               POP_ORW \\
               Know ‘∑ (λi. Y i x) (count j ∪ {j}) = ∑ (λi. Y i x) (count j) + ∑ (λi. Y i x) {j}’
               >- (irule EXTREAL_SUM_IMAGE_DISJOINT_UNION \\
                   simp [] >> DISJ2_TAC >> rw []
-                  >- (Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+                  >- (Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p /\ _’
                        (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) \\
                       ‘x' < n’ by METIS_TAC [LESS_TRANS] \\
                       gs [real_random_variable_def]) \\
-                  Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒ Y j x ≠ +∞ ∧ Y j x ≠ −∞’
+                  Q.PAT_X_ASSUM ‘!x. x ∈ p_space p ==> Y j x <> PosInf /\ Y j x <> NegInf’
                    (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> fs []) \\
               Rewr \\
-              NTAC 2 (Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’)) \\
+              NTAC 2 (Q.PAT_X_ASSUM ‘!x. x ∈ p_space p ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’)) \\
               gs [add_not_infty]) \\
           DISCH_TAC \\
-          Know ‘∀x. x ∈ p_space p ⇒
-                    ∑ (λi. X i x) (count n DIFF count1 j) ≠ +∞ ∧
-                    ∑ (λi. X i x) (count n DIFF count1 j) ≠ −∞’
+          Know ‘!x. x ∈ p_space p ==>
+                    ∑ (λi. X i x) (count n DIFF count1 j) <> PosInf /\
+                    ∑ (λi. X i x) (count n DIFF count1 j) <> NegInf’
           >- (GEN_TAC >> STRIP_TAC >> CONJ_TAC
               >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> simp [] \\
                   Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-                  Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+                  Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p /\ _’
                    (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
               irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> simp [] \\
               Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
-              Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+              Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p /\ _’
                (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [real_random_variable_def]) \\
           DISCH_TAC \\
-          ‘∀x. x ∈ p_space p ⇒
+          ‘!x. x ∈ p_space p ==>
                Y j x + (∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)) =
                Y j x + ∑ (λi. Y i x) (count j) + ∑ (λi. X i x) (count n DIFF count1 j)’
             by  METIS_TAC [add_assoc] \\
           POP_ASSUM (fs o wrap) \\
-          Know ‘∀x. x ∈ p_space p ⇒ ∑ (λi. Y i x) (count (j + 1)) = Y j x + ∑ (λi. Y i x) (count j)’
+          Know ‘!x. x ∈ p_space p ==> ∑ (λi. Y i x) (count (j + 1)) = Y j x + ∑ (λi. Y i x) (count j)’
           >- (GEN_TAC >> STRIP_TAC \\
-              Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒
-                                 ∑ (λi. Y i x) (count (j + 1)) ≠ +∞ ∧ _’
+              Q.PAT_X_ASSUM ‘!x. x ∈ p_space p ==>
+                                 ∑ (λi. Y i x) (count (j + 1)) <> PosInf /\ _’
                (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
               ‘Y j x = ∑ (λi. Y i x) {j}’ by rw [EXTREAL_SUM_IMAGE_SING] \\
               POP_ORW \\
@@ -2397,9 +2397,9 @@ Proof
               POP_ORW \\
               irule EXTREAL_SUM_IMAGE_DISJOINT_UNION \\
               simp [] >> DISJ2_TAC >> rw []
-              >- (Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒ Y j x ≠ +∞ ∧ Y j x ≠ −∞’
+              >- (Q.PAT_X_ASSUM ‘!x. x ∈ p_space p ==> Y j x <> PosInf /\ Y j x <> NegInf’
                    (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs []) \\
-              Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p ∧ _’
+              Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p /\ _’
                (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) \\
               ‘x' < n’ by METIS_TAC [LESS_TRANS] \\
               gs [real_random_variable_def]) \\
@@ -2411,9 +2411,9 @@ Proof
 QED
 
 Theorem IN_MEASURABLE_BOREL_CDIV :
-    ∀a f g z.
-      sigma_algebra a ∧ f ∈ Borel_measurable a ∧ z ≠ 0 ∧
-      (∀x. x ∈ space a ⇒ g x = f x / Normal z) ⇒
+    !a f g z.
+      sigma_algebra a /\ f ∈ Borel_measurable a /\ z <> 0 /\
+      (!x. x ∈ space a ==> g x = f x / Normal z) ==>
       g ∈ Borel_measurable a
 Proof
   rpt STRIP_TAC
@@ -2424,7 +2424,7 @@ Proof
 QED
 
 val taylor_tactic1 =
-    ‘Normal r ≠ 0’ by METIS_TAC [GSYM extreal_lt_eq, lt_le, normal_0] \\
+    ‘Normal r <> 0’ by METIS_TAC [GSYM extreal_lt_eq, lt_le, normal_0] \\
     Q.PAT_X_ASSUM ‘(Normal r)³ = Normal r³’ (rw o wrap o SYM) \\
     ‘abs (Normal r) = Normal r’ by METIS_TAC [GSYM abs_refl, GSYM extreal_lt_eq, normal_0, lt_imp_le] \\
     ‘0 < Normal r’ by METIS_TAC [GSYM extreal_lt_eq, normal_0] \\
@@ -2434,11 +2434,11 @@ val taylor_tactic1 =
     ‘0 < Normal r’ by METIS_TAC [GSYM extreal_lt_eq, normal_0] \\
     ‘(Normal c / Normal r)³ = (Normal c)³ / (Normal r)³’ by METIS_TAC [pow_div] \\
     POP_ORW \\
-    ‘(Normal r)³ ≠ 0’ by METIS_TAC [pow_pos_lt, GSYM extreal_lt_eq, normal_0, lt_le] \\
+    ‘(Normal r)³ <> 0’ by METIS_TAC [pow_pos_lt, GSYM extreal_lt_eq, normal_0, lt_le] \\
     METIS_TAC [abs_div, extreal_pow_def,extreal_not_infty];
 
 val taylor_tactic2 =
-    ‘Normal r ≠ 0’ by METIS_TAC [GSYM extreal_lt_eq, lt_le, normal_0] \\
+    ‘Normal r <> 0’ by METIS_TAC [GSYM extreal_lt_eq, lt_le, normal_0] \\
     ‘abs (Normal c / Normal r) = abs (Normal c) / abs (Normal r)’ by METIS_TAC [abs_div, extreal_not_infty] \\
     POP_ORW \\
     ‘abs (Normal r) = Normal r’ by METIS_TAC [GSYM abs_refl, GSYM extreal_lt_eq, normal_0, lt_imp_le] \\
@@ -2447,31 +2447,31 @@ val taylor_tactic2 =
     METIS_TAC [extreal_abs_def, pow_div,  extreal_not_infty];
 
 Theorem integrable_abs_third[local] :
-    ∀p X. prob_space p ∧
-          real_random_variable X p ∧
-          integrable p (λx. (abs (X x))³) ⇒ integrable p (λx. abs (X x)³)
+    !p X. prob_space p /\
+          real_random_variable X p /\
+          integrable p (λx. (abs (X x))³) ==> integrable p (λx. abs (X x)³)
 Proof
     rw [pow_abs]
 QED
 
 Theorem sum_eq_zero[local] :
-    ∀a b. a ≠ NegInf ∧ a ≠ PosInf ∧
-          b ≠ NegInf ∧ b ≠ PosInf ∧
-          0 ≤ a ∧ 0 ≤ b ∧ a + b = 0 ⇒ a = 0 ∧ b = 0
+    !a b. a <> NegInf /\ a <> PosInf /\
+          b <> NegInf /\ b <> PosInf /\
+          0 ≤ a /\ 0 ≤ b /\ a + b = 0 ==> a = 0 /\ b = 0
 Proof
     rpt STRIP_TAC
  >- (CCONTR_TAC
      >- (‘0 < a’ by METIS_TAC [lt_le] \\
          ‘0 < a + b’ by METIS_TAC [lte_add] \\
-         ‘0 ≠ a + b’ by METIS_TAC [lt_imp_ne] >> fs []))
+         ‘0 <> a + b’ by METIS_TAC [lt_imp_ne] >> fs []))
  >> CCONTR_TAC
  >- (‘0 < b’ by METIS_TAC [lt_le] \\
      ‘0 < a + b’ by METIS_TAC [let_add] \\
-     ‘0 ≠ a + b’ by METIS_TAC [lt_imp_ne] >> fs [])
+     ‘0 <> a + b’ by METIS_TAC [lt_imp_ne] >> fs [])
 QED
 
 Theorem real_random_variable_pow_three[local] :
-    ∀p X. prob_space p ∧ real_random_variable X p ⇒
+    !p X. prob_space p /\ real_random_variable X p ==>
           real_random_variable (λx. (X x)³) p
 Proof
   rpt STRIP_TAC
@@ -2482,29 +2482,29 @@ Proof
       qexistsl [‘X’, ‘3’] \\
       simp [])
   >> GEN_TAC >> STRIP_TAC
-  >> Q.PAT_X_ASSUM ‘∀x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’)
-  >> ‘∃r. X x = Normal r’ by METIS_TAC [extreal_cases] >> gs []
+  >> Q.PAT_X_ASSUM ‘!x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’)
+  >> ‘?r. X x = Normal r’ by METIS_TAC [extreal_cases] >> gs []
   >> METIS_TAC [pow_not_infty, extreal_not_infty]
 QED
 
 val taylor_tactic3 =
-    Know ‘expectation p (λx. abs (X j x)³) ≠ −∞ ∧
-          expectation p (λx. abs (X j x)³) ≠ +∞’
+    Know ‘expectation p (λx. abs (X j x)³) <> NegInf /\
+          expectation p (λx. abs (X j x)³) <> PosInf’
     >- (MP_TAC (Q.SPECL [‘p’, ‘λx. abs (X (j :num) x)³’] expectation_finite) \\
         simp [] \\
-        Q.PAT_X_ASSUM ‘∀j. j < n ⇒
-                           real_random_variable (X j) p ∧ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs []) \\
+        Q.PAT_X_ASSUM ‘!j. j < n ==>
+                           real_random_variable (X j) p /\ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs []) \\
     DISCH_TAC \\
-    Know ‘expectation p (λx. abs (Y j x)³) ≠ −∞ ∧
-          expectation p (λx. abs (Y j x)³) ≠ +∞’
+    Know ‘expectation p (λx. abs (Y j x)³) <> NegInf /\
+          expectation p (λx. abs (Y j x)³) <> PosInf’
      >- (MP_TAC (Q.SPECL [‘p’, ‘λx. abs (Y (j :num) x)³’] expectation_finite) \\
          simp [] \\
-         Q.PAT_X_ASSUM ‘∀j. j < n ⇒
-                            real_random_variable (X j) p ∧ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
+         Q.PAT_X_ASSUM ‘!j. j < n ==>
+                            real_random_variable (X j) p /\ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
          METIS_TAC []);
 
 Theorem REAL_EQ_ZERO[local] :
-    ∀a (b :real). 0 ≤ a ∧ 0 ≤ b ∧ a + b = 0 ⇒ a = 0 ∧ b = 0
+    !a (b :real). 0 ≤ a /\ 0 ≤ b /\ a + b = 0 ==> a = 0 /\ b = 0
 Proof
     rpt STRIP_TAC >> CCONTR_TAC
  >- (‘b = -a’ by fs [REAL_RNEG_UNIQ] \\
@@ -2516,8 +2516,8 @@ Proof
 QED
 
 Theorem AE_pow3_eq_0_imp_eq_0[local] :
-  ∀p f. prob_space p ⇒
-        ((AE x::p. (f x) pow 3 = 0) ⇔
+  !p f. prob_space p ==>
+        ((AE x::p. (f x) pow 3 = 0) <=>
          AE x::p. f x = 0)
 Proof
   rw [prob_space_def]
@@ -2527,25 +2527,25 @@ Proof
 QED
 
 Theorem AE_comp[local] :
-    ∀p f g h.
-      (AE x::p. f x = g x) ⇒ AE x::p. h (f x) = h (g x)
+    !p f g h.
+      (AE x::p. f x = g x) ==> AE x::p. h (f x) = h (g x)
 Proof
   rw [AE_DEF]
   >> qexists ‘N’ >> rw []
 QED
 
 Theorem integral_eq_third_moment[local] :
-    ∀p f X Y Z r.
-      prob_space p ∧
-      f ∈ CnR 3 ∧
-      0 < r ∧
-      real_random_variable X p ∧
-      real_random_variable Y p ∧
-      real_random_variable Z p ∧
-      integrable p (λx. (abs (X x))³) ∧
-      integrable p (λx. (abs (Y x))³) ∧
-      ∫ p (λx. abs (X x)³) = 0 ∧
-      ∫ p (λx. abs (Y x)³) = 0 ⇒
+    !p f X Y Z r.
+      prob_space p /\
+      f ∈ CnR 3 /\
+      0 < r /\
+      real_random_variable X p /\
+      real_random_variable Y p /\
+      real_random_variable Z p /\
+      integrable p (λx. (abs (X x))³) /\
+      integrable p (λx. (abs (Y x))³) /\
+      ∫ p (λx. abs (X x)³) = 0 /\
+      ∫ p (λx. abs (Y x)³) = 0 ==>
       ∫ p (Normal ∘ f ∘ real ∘ (λx. (X x + Z x) / Normal r)) =
       ∫ p (Normal ∘ f ∘ real ∘ (λx. (Y x + Z x) / Normal r))
 Proof
@@ -2570,9 +2570,9 @@ Proof
    by (MP_TAC (Q.SPECL [‘p’, ‘X’, ‘λx. 0’, ‘Z’, ‘Z’] AE_eq_add) >> simp [AE_T])
  >> ‘AE x::p. Y x + Z x = Z x’
    by (MP_TAC (Q.SPECL [‘p’, ‘Y’, ‘λx. 0’, ‘Z’, ‘Z’] AE_eq_add) >> simp [AE_T])
- >> Know ‘∀x. x IN m_space p ⇒ ((X x + Z x) = Z x ⇔ (X x + Z x) / Normal r = Z x / Normal r)’
- >- (rw [] >> ‘∃a. X x = Normal a’ by METIS_TAC [extreal_cases] \\
-     ‘∃c. Z x = Normal c’ by METIS_TAC [extreal_cases] >> gs [] \\
+ >> Know ‘!x. x IN m_space p ==> ((X x + Z x) = Z x <=> (X x + Z x) / Normal r = Z x / Normal r)’
+ >- (rw [] >> ‘?a. X x = Normal a’ by METIS_TAC [extreal_cases] \\
+     ‘?c. Z x = Normal c’ by METIS_TAC [extreal_cases] >> gs [] \\
      ‘Normal a + Normal c  = Normal (a + c)’ by METIS_TAC [extreal_add_def] >> gs [] \\
      EQ_TAC >> rw [] \\
      ‘(a + c) / r = c / r’ by METIS_TAC [extreal_div_eq, extreal_11, REAL_LT_IMP_NE] \\
@@ -2582,9 +2582,9 @@ Proof
  >> MP_TAC (Q.SPECL [‘p’, ‘λx. (((X :α -> extreal) x + Z x) / Normal r = (Z :α -> extreal) x / Normal r)’,
                      ‘λx. ((X :α -> extreal) x + Z x = (Z :α -> extreal) x)’] AE_cong)
  >> simp [] >> STRIP_TAC
- >> Know ‘∀x. x IN m_space p ⇒ ((Y x + Z x) = Z x ⇔ (Y x + Z x) / Normal r = Z x / Normal r)’
- >- (rw [] >> ‘∃a. Y x = Normal a’ by METIS_TAC [extreal_cases] \\
-     ‘∃c. Z x = Normal c’ by METIS_TAC [extreal_cases] >> gs [] \\
+ >> Know ‘!x. x IN m_space p ==> ((Y x + Z x) = Z x <=> (Y x + Z x) / Normal r = Z x / Normal r)’
+ >- (rw [] >> ‘?a. Y x = Normal a’ by METIS_TAC [extreal_cases] \\
+     ‘?c. Z x = Normal c’ by METIS_TAC [extreal_cases] >> gs [] \\
      ‘Normal a + Normal c  = Normal (a + c)’ by METIS_TAC [extreal_add_def] >> gs [] \\
      EQ_TAC >> rw [] \\
      ‘(a + c) / r = c / r’ by METIS_TAC [extreal_div_eq, extreal_11, REAL_LT_IMP_NE] \\
@@ -2607,15 +2607,15 @@ Proof
 QED
 
 Theorem sub_add_cancel[local] :
-    ∀x y z. x ≠ −∞ ∧ x ≠ +∞ ∧
-            y ≠ −∞ ∧ y ≠ +∞ ∧
-            z ≠ −∞ ∧ z ≠ +∞ ⇒
+    !x y z. x <> NegInf /\ x <> PosInf /\
+            y <> NegInf /\ y <> PosInf /\
+            z <> NegInf /\ z <> PosInf ==>
             x - y + (y - z) = x - z
 Proof
     rw []
- >> ‘∃a. x = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW
- >> ‘∃b. y = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW
- >> ‘∃c. z = Normal c’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> ‘?a. x = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> ‘?b. y = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> ‘?c. z = Normal c’ by METIS_TAC [extreal_cases] >> POP_ORW
  >> ‘Normal a - Normal b = Normal (a - b)’ by fs [extreal_sub_def] >> POP_ORW
  >> ‘Normal b - Normal c = Normal (b - c)’ by fs [extreal_sub_def] >> POP_ORW
  >> ‘Normal a - Normal c = Normal (a - c)’ by fs [extreal_sub_def] >> POP_ORW
@@ -2624,30 +2624,30 @@ Proof
 QED
 
 Theorem sup_abs_diff3_nonneg[local]:
-    ∀f. f ∈ CnR 3 ⇒
+    !f. f ∈ CnR 3 ==>
         0 ≤ sup (IMAGE (λt. abs (Normal (diffn 3 f t))) 𝕌(:real))
 Proof
   rw [CnR_def, le_sup]
   >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘abs (Normal (diffn 3 f t))’)
-  >> Know ‘∃t'. abs (Normal (diffn 3 f t)) = abs (Normal (diffn 3 f t'))’
+  >> Know ‘?t'. abs (Normal (diffn 3 f t)) = abs (Normal (diffn 3 f t'))’
   >- (qexists ‘t’ >> simp [])
   >> DISCH_THEN (fs o wrap)
   >> METIS_TAC [abs_pos, le_trans]
 QED
 
 Theorem taylor_remainder_bound_lemma[local] :
-  ∀f. f IN CnR 3 ⇒
-      (∀t. abs (Normal (diffn 3 f t)) ≤ sup (IMAGE (λt. abs (Normal (diffn 3 f t))) 𝕌(:real)))
+  !f. f IN CnR 3 ==>
+      (!t. abs (Normal (diffn 3 f t)) ≤ sup (IMAGE (λt. abs (Normal (diffn 3 f t))) 𝕌(:real)))
 Proof
   rw [le_sup]
   >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘abs (Normal (diffn 3 f t))’)
-  >> Know ‘∃t'. abs (Normal (diffn 3 f t)) = abs (Normal (diffn 3 f t'))’
+  >> Know ‘?t'. abs (Normal (diffn 3 f t)) = abs (Normal (diffn 3 f t'))’
   >- (qexists ‘t’ >> simp [])
   >> DISCH_THEN (fs o wrap)
 QED
 
 Theorem clt_sup_finite[local] :
-    ∀f. f IN CnR 3 ⇒ sup (IMAGE (λx. abs (Normal (diffn 3 f x))) UNIV) ≠ +∞
+    !f. f IN CnR 3 ==> sup (IMAGE (λx. abs (Normal (diffn 3 f x))) UNIV) <> PosInf
 Proof
   rw []
   >> Know ‘abs (sup (IMAGE (λx. abs (Normal (diffn 3 f x))) 𝕌(:real))) =
@@ -2655,12 +2655,12 @@ Proof
   >- (rw [abs_refl] >> METIS_TAC [sup_abs_diff3_nonneg])
   >> DISCH_TAC
   >> fs [CnR_def, bounded_def]
-  >> Q.PAT_X_ASSUM ‘∀m. m ≤ 3 ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘3’) >> gs []
+  >> Q.PAT_X_ASSUM ‘!m. m ≤ 3 ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘3’) >> gs []
   >> MP_TAC (Q.SPECL [‘λx. abs (Normal (diffn 3 f x))’, ‘Normal a’] (INST_TYPE [alpha |-> “:real”] sup_bounded'))
   >> impl_tac
   >- (rw [] \\
       POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘diffn 3 f n’) \\
-      Know ‘∃x'. diffn 3 f n = diffn 3 f x'’ >- (qexists ‘n’ >> simp []) \\
+      Know ‘?x'. diffn 3 f n = diffn 3 f x'’ >- (qexists ‘n’ >> simp []) \\
       DISCH_THEN (fs o wrap) \\
       METIS_TAC [GSYM extreal_le_eq, GSYM extreal_abs_def])
   >> gs []
@@ -2668,20 +2668,20 @@ Proof
 QED
 
 Theorem TAYLOR_REMAINDER_THIRD_ORDER_BOUND[local] :
-    ∀f a h M t.
-      f ∈ CnR 3 ∧
-      M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) 𝕌(:real)) ⇒
+    !f a h M t.
+      f ∈ CnR 3 /\
+      M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) 𝕌(:real)) ==>
       abs (Normal (1 / 6 * (h³ * diffn 3 f t))) ≤ M / 6 * abs (Normal h)³
 Proof
     rw []
  >> Q.ABBREV_TAC ‘M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) 𝕌(:real))’
- >> ‘M ≠ PosInf’ by METIS_TAC [clt_sup_finite]
+ >> ‘M <> PosInf’ by METIS_TAC [clt_sup_finite]
  >> ‘0 ≤ M’ by rw [Abbr ‘M’, sup_abs_diff3_nonneg]
- >> ‘M ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
+ >> ‘M <> NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
  >> MP_TAC (Q.SPEC ‘f’ taylor_remainder_bound_lemma)
  >> simp [] >> STRIP_TAC
  >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘t’)
- >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases] >> gs []
+ >> ‘?r. M = Normal r’ by METIS_TAC [extreal_cases] >> gs []
  >> ASM_SIMP_TAC std_ss [GSYM extreal_mul_eq]
  >> ASM_SIMP_TAC std_ss [abs_mul]
  >> ‘abs (Normal (1 / 6)) * (abs (Normal h³) * abs (Normal (diffn 3 f t))) =
@@ -2705,8 +2705,8 @@ Proof
 QED
 
 Theorem clt_real_random_variable_compose[local] :
-    ∀p X f.
-      prob_space p ∧ real_random_variable X p ∧ f ∈ CnR 3 ⇒
+    !p X f.
+      prob_space p /\ real_random_variable X p /\ f ∈ CnR 3 ==>
       real_random_variable (Normal ∘ f ∘ real ∘ X) p
 Proof
   rw [real_random_variable, prob_space_def, p_space_def, events_def]
@@ -2720,10 +2720,10 @@ Proof
 QED
 
 Theorem CnR_subset_class_lipschitz :
-    ∀n. 1 ≤ n ⇒ CnR n ⊆ C_bounded_lipschitz
+    !n. 1 ≤ n ==> CnR n ⊆ C_bounded_lipschitz
 Proof
   rw [CnR_def, C_bounded_lipschitz_def, SUBSET_DEF]
-  >> rename1 ‘∀x'. higher_differentiable n f x'’
+  >> rename1 ‘!x'. higher_differentiable n f x'’
   >- (MATCH_MP_TAC higher_differentiable_bounded_imp_lipschitz \\
       rw []
       >- (MATCH_MP_TAC higher_differentiable_mono \\
@@ -2735,7 +2735,7 @@ Proof
 QED
 
 Theorem diff_Lipschitz_from_CnR :
-    ∀n f. 2 ≤ n ∧ f ∈ CnR n ⇒ Lipschitz_fun (diffn (n − 1) f)
+    !n f. 2 ≤ n /\ f ∈ CnR n ==> Lipschitz_fun (diffn (n - 1) f)
 Proof
     rw [CnR_def]
  >> MATCH_MP_TAC higher_differentiable_bounded_imp_lipschitz
@@ -2745,9 +2745,9 @@ Proof
  >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘n’) >> gs []
  >> gs [bounded_def, IMAGE_DEF, IN_UNIV]
  >> qexists ‘a’ >> rw []
- >> rename1 ‘abs (diffn 1 (diffn (n − 1) f) x) ≤ a’
- >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘diffn 1 (diffn (n − 1) f) x’)
- >> Know ‘∃x'. diffn 1 (diffn (n − 1) f) x = diffn n f x'’
+ >> rename1 ‘abs (diffn 1 (diffn (n - 1) f) x) ≤ a’
+ >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘diffn 1 (diffn (n - 1) f) x’)
+ >> Know ‘?x'. diffn 1 (diffn (n - 1) f) x = diffn n f x'’
  >- (qexists ‘x’ >> rw [diffn_def] \\
      MP_TAC (Q.SPECL [‘n - 1’, ‘f’] diffn_SUC') \\
      rw [ADD1])
@@ -2755,28 +2755,28 @@ Proof
 QED
 
 Theorem CnR_mono :
-    ∀n m. m ≤ n ⇒ CnR n ⊆ CnR m
+    !n m. m ≤ n ==> CnR n ⊆ CnR m
 Proof
     rw [CnR_def, SUBSET_DEF]
  >> METIS_TAC [higher_differentiable_mono]
 QED
 
 Theorem TAYLOR_THIRD_ORDER_BOUND :
-    ∀f a h M.
-      f ∈ CnR 3 ∧
-      M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) 𝕌(:real)) ⇒
-      abs (Normal (f(a + h) − f a − diffn 1 f a * h − 1 / 2 * diffn 2 f a * h²)) ≤
+    !f a h M.
+      f ∈ CnR 3 /\
+      M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) 𝕌(:real)) ==>
+      abs (Normal (f(a + h) - f a - diffn 1 f a * h - 1 / 2 * diffn 2 f a * h²)) ≤
       M / 6 * (abs (Normal h)³)
 Proof
   rw []
   >> Q.ABBREV_TAC ‘M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) 𝕌(:real))’
-  >> ‘M ≠ PosInf’ by METIS_TAC [clt_sup_finite]
+  >> ‘M <> PosInf’ by METIS_TAC [clt_sup_finite]
   >> MP_TAC (Q.SPEC ‘f’ taylor_remainder_bound_lemma) >> simp []
   >> STRIP_TAC
   >> Cases_on ‘h = 0’
   >- (gs [mul_rzero, normal_0, abs_0, zero_pow] \\
       METIS_TAC [sub_refl, extreal_not_infty])
-  >> Know ‘a ≠ a + h’
+  >> Know ‘a <> a + h’
   >- (CCONTR_TAC >> fs [] \\
       METIS_TAC [REAL_ADD_RID, REAL_EQ_LADD])
   >> DISCH_TAC
@@ -2791,16 +2791,16 @@ Proof
   >> fs [dividesTheory.FACT_0, dividesTheory.FACT_1, dividesTheory.FACT_2]
   >> POP_ASSUM K_TAC
   >> ‘f a + h * diffn 1 f a + 1 / 2 * (h² * diffn 2 f a) +
-      1 / 6 * (h³ * diffn 3 f t) −
-      f a − h * diffn 1 f a − 1 / 2 * (h² * diffn 2 f a) =
+      1 / 6 * (h³ * diffn 3 f t) -
+      f a - h * diffn 1 f a - 1 / 2 * (h² * diffn 2 f a) =
       1 / 6 * (h³ * diffn 3 f t)’
     by REAL_ARITH_TAC >> POP_ASSUM (rw o wrap)
   >> simp [TAYLOR_REMAINDER_THIRD_ORDER_BOUND]
 QED
 
 Theorem higher_differentiable_continuous_on :
-    ∀m n f.
-      (∀x. higher_differentiable n f x) ∧ m < n ∧ 0 < n ⇒
+    !m n f.
+      (!x. higher_differentiable n f x) /\ m < n /\ 0 < n ==>
       diffn m f continuous_on 𝕌(:real)
 Proof
     Induct_on ‘m’
@@ -2811,7 +2811,7 @@ Proof
      MP_TAC (Q.SPECL [‘f’] higher_differentiable_imp_continuous) >> gs [] \\
      fs [continuous_at, continuous_on, IN_UNIV])
  >> rpt STRIP_TAC
- >> Know ‘∀x. higher_differentiable (SUC m) f x’
+ >> Know ‘!x. higher_differentiable (SUC m) f x’
  >- (rw [] \\
      HO_MATCH_MP_TAC higher_differentiable_mono \\
      qexists ‘n’ \\
@@ -2837,15 +2837,15 @@ Proof
 QED
 
 Theorem in_borel_measurable_diffn :
-    ∀f n m.
-      f ∈ CnR n ∧ m < n ∧ 0 < n ⇒
+    !f n m.
+      f ∈ CnR n /\ m < n /\ 0 < n ==>
       diffn m f ∈ borel_measurable borel
 Proof
     rpt STRIP_TAC
  >> MP_TAC (CnR_subset_C_b) >> rw []
  >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘n’)
  >> ‘f IN C_b’ by fs [SUBSET_DEF]
- >> Q.PAT_X_ASSUM ‘0 < n ⇒ CnR n ⊆ _’ K_TAC
+ >> Q.PAT_X_ASSUM ‘0 < n ==> CnR n ⊆ _’ K_TAC
  >> fs [C_b_def, CnR_def]
  >> MP_TAC (Q.SPEC ‘f’ in_borel_measurable_continuous_on)
  >> rw [] >> gs []
@@ -2880,8 +2880,8 @@ val taylor_diffn_tactic1 =
     DISCH_TAC ;
 
 Theorem real_random_variable_pow :
-    ∀p X (n: num).
-      prob_space p ∧ real_random_variable X p ⇒
+    !p X (n: num).
+      prob_space p /\ real_random_variable X p ==>
       real_random_variable (λx. (X x) pow n) p
 Proof
     rw [real_random_variable, p_space_def, prob_space_def, events_def, pow_not_infty]
@@ -2891,7 +2891,7 @@ Proof
 QED
 
 Theorem CONTINUOUS_ON_COMPOSE_UNIV :
-    ∀f g. f continuous_on 𝕌(:real) ∧ g continuous_on 𝕌(:real) ⇒
+    !f g. f continuous_on 𝕌(:real) /\ g continuous_on 𝕌(:real) ==>
           (f o g) continuous_on 𝕌(:real)
 Proof
     rpt STRIP_TAC
@@ -2902,7 +2902,7 @@ Proof
 QED
 
 Theorem bounded_o :
-    ∀f g. bounded (IMAGE f 𝕌(:real)) ∧ bounded (IMAGE g 𝕌(:real)) ⇒
+    !f g. bounded (IMAGE f 𝕌(:real)) /\ bounded (IMAGE g 𝕌(:real)) ==>
           bounded (IMAGE (f o g) 𝕌(:real))
 Proof
     rw [bounded_def]
@@ -2910,34 +2910,34 @@ Proof
  >> rename1 ‘max a b’  >> rw []
  >> rename1 ‘abs (f (g x))’
  >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘(g :real -> real) (x :real)’)
- >> Know ‘∃x'. g x = g x'’ >- (qexists ‘x’ >> simp [])
+ >> Know ‘?x'. g x = g x'’ >- (qexists ‘x’ >> simp [])
  >> DISCH_THEN (fs o wrap)
  >> FIRST_X_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘f ((g :real -> real) (x :real))’)
- >> Know ‘∃x'. f (g x) = f x'’ >- (qexists ‘g x’ >> simp [])
+ >> Know ‘?x'. f (g x) = f x'’ >- (qexists ‘g x’ >> simp [])
  >> DISCH_THEN (fs o wrap)
  >> ASM_SIMP_TAC std_ss [REAL_LE_MAX]
 QED
 
 Theorem C_b_o :
-    ∀f g. f ∈ C_b ∧ g ∈ C_b ⇒ f o g ∈ C_b
+    !f g. f ∈ C_b /\ g ∈ C_b ==> f o g ∈ C_b
 Proof
   rw [C_b_def, CONTINUOUS_ON_COMPOSE_UNIV, bounded_o]
 QED
 
 Theorem sup_abs_diffn_nonneg :
-   ∀f n. f ∈ CnR n ⇒
+   !f n. f ∈ CnR n ==>
          0 ≤ sup (IMAGE (λt. abs (Normal (diffn n f t))) 𝕌(:real))
 Proof
   rw [CnR_def, le_sup]
   >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘abs (Normal (diffn n f t))’)
-  >> Know ‘∃t'. abs (Normal (diffn n f t)) = abs (Normal (diffn n f t'))’
+  >> Know ‘?t'. abs (Normal (diffn n f t)) = abs (Normal (diffn n f t'))’
   >- (qexists ‘t’ >> simp [])
   >> DISCH_THEN (fs o wrap)
   >> METIS_TAC [abs_pos, le_trans]
 QED
 
 Theorem sup_abs_finite :
-    ∀f (n :num). f IN CnR n ⇒ sup (IMAGE (λx. abs (Normal (diffn n f x))) UNIV) ≠ +∞
+    !f (n :num). f IN CnR n ==> sup (IMAGE (λx. abs (Normal (diffn n f x))) UNIV) <> PosInf
 Proof
   rw []
   >> Know ‘abs (sup (IMAGE (λx. abs (Normal (diffn n f x))) 𝕌(:real))) =
@@ -2945,13 +2945,13 @@ Proof
   >- (rw [abs_refl] >> METIS_TAC [sup_abs_diffn_nonneg])
   >> DISCH_TAC
   >> fs [CnR_def, bounded_def]
-  >> Q.PAT_X_ASSUM ‘∀m. m ≤ n ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) >> gs []
+  >> Q.PAT_X_ASSUM ‘!m. m ≤ n ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) >> gs []
   >> MP_TAC (Q.SPECL [‘λx. abs (Normal (diffn n f x))’, ‘Normal a’]
                      (INST_TYPE [alpha |-> “:real”] sup_bounded'))
   >> impl_tac
   >- (Q.X_GEN_TAC ‘m’ \\
       POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘diffn n f m’) \\
-      Know ‘∃x'. diffn n f m = diffn n f x'’ >- (qexists ‘m’ >> simp []) \\
+      Know ‘?x'. diffn n f m = diffn n f x'’ >- (qexists ‘m’ >> simp []) \\
       DISCH_THEN (fs o wrap) \\
       METIS_TAC [GSYM extreal_le_eq, GSYM extreal_abs_def])
   >> gs []
@@ -2959,10 +2959,10 @@ Proof
 QED
 
 Theorem expectation_finite_eq_integrable :
-  ∀p X n.
-    prob_space p ∧ real_random_variable X p ⇒
-    (integrable p (λx. abs (X x) pow n) ⇔
-       expectation p (λx. abs (X x) pow n) < +∞)
+  !p X n.
+    prob_space p /\ real_random_variable X p ==>
+    (integrable p (λx. abs (X x) pow n) <=>
+       expectation p (λx. abs (X x) pow n) < PosInf)
 Proof
   rpt STRIP_TAC
   >> EQ_TAC >> rw [expectation_def, GSYM (cj 4 lt_infty), GSYM o_DEF, GSYM pow_abs]
@@ -2976,10 +2976,10 @@ Proof
 QED
 
 Theorem integrable_absolute_moments_mono :
-    ∀p X n.
-      prob_space p ∧ real_random_variable X p ∧
-      integrable p (λx. abs (X x) pow n) ⇒
-      (∀m. m ≤ n ⇒ integrable p (λx. (X x) pow m))
+    !p X n.
+      prob_space p /\ real_random_variable X p /\
+      integrable p (λx. abs (X x) pow n) ==>
+      (!m. m ≤ n ==> integrable p (λx. (X x) pow m))
 Proof
   rpt STRIP_TAC
   >> MATCH_MP_TAC integrable_from_abs
@@ -2995,12 +2995,12 @@ Proof
 QED
 
 Theorem integrable_mul_diffn1 :
-    ∀p X Z f.
-      prob_space p ∧
-      real_random_variable X p ∧
-      real_random_variable Z p ∧
-      expectation p (λx. (abs (X x)) pow 3) < PosInf ∧
-      f ∈ CnR 3 ⇒
+    !p X Z f.
+      prob_space p /\
+      real_random_variable X p /\
+      real_random_variable Z p /\
+      expectation p (λx. (abs (X x)) pow 3) < PosInf /\
+      f ∈ CnR 3 ==>
       integrable p (λx. Normal (real (X x) * diffn 1 f (real (Z x))))
 Proof
     rpt STRIP_TAC
@@ -3027,7 +3027,7 @@ Proof
          MATCH_MP_TAC in_borel_measurable_diffn \\
          qexists ‘3’ >> gs []) \\
      DISCH_TAC \\
-     (* finite_second_moments p (λx. Normal (real (X x))) ∧
+     (* finite_second_moments p (λx. Normal (real (X x))) /\
             finite_second_moments p (λx. Normal (diffn 1 f (real (Z x))))*)
      rw [finite_second_moments_eq_integrable_square, prob_space_def]
      >- (MP_TAC (Q.SPECL [‘p’, ‘λx. (Normal (real (X x))) pow 2’,
@@ -3047,13 +3047,13 @@ Proof
              MATCH_MP_TAC sup_abs_diffn_nonneg \\
              METIS_TAC [C3_subset_C1, SUBSET_DEF]) \\
          DISCH_TAC \\
-         ‘M ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans] \\
-         Know ‘M ≠ PosInf’
+         ‘M <> NegInf’ by METIS_TAC [extreal_0_simps, lt_trans] \\
+         Know ‘M <> PosInf’
          >- (rw [Abbr ‘M’] \\
              MATCH_MP_TAC sup_abs_finite \\
              METIS_TAC [C3_subset_C1, SUBSET_DEF]) \\
          DISCH_TAC \\
-         ‘∃a. M = Normal a’ by METIS_TAC [extreal_cases] >> gs [extreal_pow_def] \\
+         ‘?a. M = Normal a’ by METIS_TAC [extreal_cases] >> gs [extreal_pow_def] \\
          METIS_TAC [integrable_const, extreal_1_simps])
      (* (λx. Normal (diffn 1 f (real (Z x)))²) ∈ Borel_measurable (measurable_space p) *)
      >- (fs [Abbr ‘g’, p_space_def, events_def, GSYM extreal_pow_def] \\
@@ -3074,12 +3074,12 @@ Proof
 QED
 
 Theorem integrable_mul_diffn2 :
-    ∀p X Z f.
-      prob_space p ∧
-      real_random_variable X p ∧
-      real_random_variable Z p ∧
-      expectation p (λx. (abs (X x)) pow 3) < PosInf ∧
-      f ∈ CnR 3 ⇒
+    !p X Z f.
+      prob_space p /\
+      real_random_variable X p /\
+      real_random_variable Z p /\
+      expectation p (λx. (abs (X x)) pow 3) < PosInf /\
+      f ∈ CnR 3 ==>
       integrable p (λx. Normal (diffn 2 f (real (Z x))) * (X x)²)
 Proof
     rpt STRIP_TAC
@@ -3094,13 +3094,13 @@ Proof
          MATCH_MP_TAC sup_abs_diffn_nonneg \\
          MP_TAC (Q.SPECL [‘3’, ‘2’] CnR_mono) >> gs [SUBSET_DEF]) \\
      DISCH_TAC \\
-     ‘M ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans] \\
-     Know ‘M ≠ PosInf’
+     ‘M <> NegInf’ by METIS_TAC [extreal_0_simps, lt_trans] \\
+     Know ‘M <> PosInf’
      >- (rw [Abbr ‘M’] \\
          MATCH_MP_TAC sup_abs_finite \\
          MP_TAC (Q.SPECL [‘3’, ‘2’] CnR_mono) >> gs [SUBSET_DEF]) \\
      DISCH_TAC \\
-     ‘∃a. M = Normal a’ by METIS_TAC [extreal_cases] >> gs [] \\
+     ‘?a. M = Normal a’ by METIS_TAC [extreal_cases] >> gs [] \\
      METIS_TAC [integrable_cmul])
     >- (irule IN_MEASURABLE_BOREL_MUL' \\
         simp [MEASURE_SPACE_SIGMA_ALGEBRA] \\
@@ -3132,28 +3132,28 @@ Proof
 QED
 
 Theorem taylor_diffn_expectation_lemma[local] :
-    ∀p f X Z M.
-      prob_space p ∧
-      f ∈ CnR 3 ∧
-      real_random_variable X p ∧ real_random_variable Z p ∧
-      indep_vars p X Z Borel Borel ∧
-      expectation p (λx. (abs (X x)) pow 3) < PosInf ∧
-      integrable p Z ∧
-      M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) 𝕌(:real)) ⇒
-      abs (expectation p (λx. Normal (f (real (X x + Z x)))) −
-           expectation p (λx. Normal (f (real (Z x)))) −
+    !p f X Z M.
+      prob_space p /\
+      f ∈ CnR 3 /\
+      real_random_variable X p /\ real_random_variable Z p /\
+      indep_vars p X Z Borel Borel /\
+      expectation p (λx. (abs (X x)) pow 3) < PosInf /\
+      integrable p Z /\
+      M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) 𝕌(:real)) ==>
+      abs (expectation p (λx. Normal (f (real (X x + Z x)))) -
+           expectation p (λx. Normal (f (real (Z x)))) -
            expectation p (λx. Normal (real (X x))) *
-           expectation p (λx. Normal (diffn 1 f (real (Z x)))) −
+           expectation p (λx. Normal (diffn 1 f (real (Z x)))) -
            Normal (1 / 2) * expectation p (λx. Normal (diffn 2 f (real (Z x)))) *
            expectation p (λx. (X x) pow 2))
       ≤ M / 6 * expectation p (λx. abs (X x) pow 3)
 Proof
     rw []
  >> Q.ABBREV_TAC ‘M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) 𝕌(:real))’
- >> ‘M ≠ PosInf’ by METIS_TAC [clt_sup_finite]
+ >> ‘M <> PosInf’ by METIS_TAC [clt_sup_finite]
  >> ‘0 ≤ M’ by rw [Abbr ‘M’, sup_abs_diff3_nonneg]
- >> ‘M ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
- >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases] >> gs []
+ >> ‘M <> NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
+ >> ‘?r. M = Normal r’ by METIS_TAC [extreal_cases] >> gs []
  >> ‘6 = Normal 6’ by EVAL_TAC
  >> ‘Normal r / 6 = Normal (r / 6)’ by fs [extreal_div_eq]
  >> POP_ORW
@@ -3304,10 +3304,10 @@ Proof
  >> qmatch_abbrev_tac ‘abs (expectation p A - expectation p C - expectation p B) ≤ _’
  >> MP_TAC (Q.SPECL [‘p’, ‘A’, ‘C’] (GSYM expectation_sub))
  >> impl_tac
- (*integrable p A ∧ integrable p C*)
+ (*integrable p A /\ integrable p C*)
  >- (rw [prob_space_def, Abbr ‘A’, Abbr ‘C’]
     (*integrable p
-      (λx. Normal (f (real (X x + Z x))) − Normal (f (real (Z x))))*)
+      (λx. Normal (f (real (X x + Z x))) - Normal (f (real (Z x))))*)
      >- (MP_TAC (Q.SPECL [‘p’, ‘λx. Normal (f (real (X x + Z x)))’,
                           ‘λx. Normal (f (real (Z x)))’] integrable_sub') \\
          impl_tac
@@ -3319,11 +3319,11 @@ Proof
      (*integrable p (λx. Normal (real (X x) * diffn 1 f (real (Z x))))*)
      METIS_TAC [integrable_mul_diffn1, prob_space_def])
  >> Rewr
- >> MP_TAC (Q.SPECL [‘p’, ‘λx. A x − C x’, ‘B’] (GSYM expectation_sub))
+ >> MP_TAC (Q.SPECL [‘p’, ‘λx. A x - C x’, ‘B’] (GSYM expectation_sub))
  >> impl_tac
- (*integrable p (λx. A x − C x) ∧ integrable p B*)
+ (*integrable p (λx. A x - C x) /\ integrable p B*)
  >- (rw [prob_space_def, Abbr ‘A’, Abbr ‘B’, Abbr ‘C’]
-     >- (MP_TAC (Q.SPECL [‘p’, ‘λx. Normal (f (real (X x + Z x))) − Normal (f (real (Z x)))’,
+     >- (MP_TAC (Q.SPECL [‘p’, ‘λx. Normal (f (real (X x + Z x))) - Normal (f (real (Z x)))’,
                           ‘λx. Normal (real (X x) * diffn 1 f (real (Z x)))’] integrable_sub') \\
          impl_tac
          >- (rw []
@@ -3346,13 +3346,13 @@ Proof
      simp [])
  >> DISCH_THEN (rw o wrap)
  >> Q.ABBREV_TAC ‘H = λx. A x - C x’ >> gs []
- >> Know ‘abs (expectation p (λx. H x − B x)) ≤ expectation p (abs o (λx. H x − B x))’
+ >> Know ‘abs (expectation p (λx. H x - B x)) ≤ expectation p (abs o (λx. H x - B x))’
  >- (rw [expectation_def, GSYM o_DEF] \\
      irule integral_triangle_ineq >> simp [] \\
      irule integrable_sub' \\
-     (*integrable p (A - C) ∧ integrable p B*)
+     (*integrable p (A - C) /\ integrable p B*)
      rw [Abbr ‘H’, Abbr ‘B’, Abbr ‘C’, Abbr ‘A’]
-     >- (MP_TAC (Q.SPECL [‘p’, ‘λx. Normal (f (real (X x + Z x))) − Normal (f (real (Z x)))’,
+     >- (MP_TAC (Q.SPECL [‘p’, ‘λx. Normal (f (real (X x + Z x))) - Normal (f (real (Z x)))’,
                           ‘λx. Normal (real (X x) * diffn 1 f (real (Z x)))’]
                          integrable_sub') \\
          impl_tac
@@ -3374,14 +3374,14 @@ Proof
      simp [])
  >> DISCH_TAC
  >> MATCH_MP_TAC le_trans
- >> qexists ‘expectation p (abs ∘ (λx. H x − B x))’ >> gs []
+ >> qexists ‘expectation p (abs ∘ (λx. H x - B x))’ >> gs []
  >> MATCH_MP_TAC expectation_mono
  >> rw [prob_space_def]
  >- (MATCH_MP_TAC integrable_abs >> simp [] \\
      irule integrable_sub' \\
-     (*integrable p D ∧ integrable p B*)
+     (*integrable p D /\ integrable p B*)
      rw [Abbr ‘H’, Abbr ‘B’, Abbr ‘C’, Abbr ‘A’]
-     >- (MP_TAC (Q.SPECL [‘p’, ‘λx. Normal (f (real (X x + Z x))) − Normal (f (real (Z x)))’,
+     >- (MP_TAC (Q.SPECL [‘p’, ‘λx. Normal (f (real (X x + Z x))) - Normal (f (real (Z x)))’,
                           ‘λx. Normal (real (X x) * diffn 1 f (real (Z x)))’] integrable_sub') \\
          impl_tac
          >- (rw []
@@ -3416,7 +3416,7 @@ Proof
      POP_ORW \\
      METIS_TAC [normal_real, real_random_variable, pow_not_infty])
  >> Rewr
- >> qmatch_abbrev_tac ‘abs a ≤ b ⇒ abs c ≤ b’
+ >> qmatch_abbrev_tac ‘abs a ≤ b ==> abs c ≤ b’
  >> Suff ‘a = c’ >- (gs [])
  >> rw [Abbr ‘a’, Abbr ‘c’]
  >> ASM_SIMP_TAC std_ss [extreal_sub_eq, extreal_mul_eq]
@@ -3424,7 +3424,7 @@ Proof
  >> fs []
  >> ASM_SIMP_TAC std_ss [extreal_sub_eq, extreal_mul_eq]
  >> Know ‘(X x) pow 2 = Normal ((real (X x)) pow 2)’
- >- (‘(X x) pow 2 ≠ PosInf ∧ (X x) pow 2 ≠ NegInf’
+ >- (‘(X x) pow 2 <> PosInf /\ (X x) pow 2 <> NegInf’
        by METIS_TAC [real_random_variable, pow_not_infty] \\
      METIS_TAC [normal_real, pow_real, real_random_variable])
  >> DISCH_TAC
@@ -3437,25 +3437,25 @@ Proof
 QED
 
 Theorem abs_bounds_finite :
-    ∀x. abs x < PosInf ⇔ x ≠ NegInf ∧ x ≠ PosInf
+    !x. abs x < PosInf <=> x <> NegInf /\ x <> PosInf
 Proof
   rw [abs_bounds_lt, extreal_ainv_def, abs_not_infty, lt_infty]
 QED
 
 Theorem taylor_diffn_expectation_bound :
-    ∀p X Y Z f M.
-      prob_space p ∧
-      real_random_variable X p ∧ real_random_variable Y p ∧ real_random_variable Z p ∧
-      expectation p (λx. (abs (X x)) pow 3) < PosInf ∧
-      expectation p (λx. (abs (Y x)) pow 3) < PosInf ∧
-      integrable p Z ∧
-      expectation p (λx. X x) = 0 ∧
-      expectation p (λx. Y x) = 0 ∧
-      expectation p (λx. (X x) pow 2) = expectation p (λx. (Y x) pow 2) ∧
-      indep_vars p X Z Borel Borel ∧
-      indep_vars p Y Z Borel Borel ∧
-      f ∈ CnR 3 ∧
-      M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) UNIV) ⇒
+    !p X Y Z f M.
+      prob_space p /\
+      real_random_variable X p /\ real_random_variable Y p /\ real_random_variable Z p /\
+      expectation p (λx. (abs (X x)) pow 3) < PosInf /\
+      expectation p (λx. (abs (Y x)) pow 3) < PosInf /\
+      integrable p Z /\
+      expectation p (λx. X x) = 0 /\
+      expectation p (λx. Y x) = 0 /\
+      expectation p (λx. (X x) pow 2) = expectation p (λx. (Y x) pow 2) /\
+      indep_vars p X Z Borel Borel /\
+      indep_vars p Y Z Borel Borel /\
+      f ∈ CnR 3 /\
+      M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) UNIV) ==>
       abs (expectation p (Normal ∘ f ∘ real ∘ (λx. X x + Z x)) -
            expectation p (Normal ∘ f ∘ real ∘ (λx. Y x + Z x)))
       ≤ M / 6 * (expectation p (λx. (abs (X x))³) +
@@ -3467,11 +3467,11 @@ Proof
  >> MP_TAC (Q.SPECL [‘p’, ‘Y’] clt_integrable_lemma) >> rw []
  >> MP_TAC (Q.SPECL [‘p’, ‘f’, ‘X’, ‘Z’, ‘M’] taylor_diffn_expectation_lemma)
  >> simp []
- >> qmatch_abbrev_tac ‘abs A ≤ M / 6 * C ⇒ _’
+ >> qmatch_abbrev_tac ‘abs A ≤ M / 6 * C ==> _’
  >> rw []
  >> MP_TAC (Q.SPECL [‘p’, ‘f’, ‘Y’, ‘Z’, ‘M’] taylor_diffn_expectation_lemma)
  >> simp []
- >> qmatch_abbrev_tac ‘abs B ≤ M / 6 * H ⇒ _’
+ >> qmatch_abbrev_tac ‘abs B ≤ M / 6 * H ==> _’
  >> rw[]
  >> ‘0 ≤ C’ by (rw [Abbr ‘C’, GSYM pow_abs] >> irule expectation_pos >> rw [])
  >> ‘0 ≤ H’ by (rw [Abbr ‘H’, GSYM pow_abs] >> irule expectation_pos >> rw [])
@@ -3484,7 +3484,7 @@ Proof
  >- (MATCH_MP_TAC expectation_cong \\
      fs [real_random_variable, p_space_def, normal_real])
  >> gs [] >> DISCH_THEN (fs o wrap)
- >> Know ‘A - B = expectation p (λx. Normal (f (real (X x + Z x)))) −
+ >> Know ‘A - B = expectation p (λx. Normal (f (real (X x + Z x)))) -
                   expectation p (λx. Normal (f (real (Y x + Z x))))’
     >- (rw [Abbr ‘A’, Abbr ‘B’] \\
         Q.ABBREV_TAC ‘a = expectation p (λx. Normal (f (real (X x + Z x))))’ \\
@@ -3493,23 +3493,23 @@ Proof
         Q.ABBREV_TAC ‘d = Normal (1 / 2) *
                           expectation p (λx. Normal (diffn 2 f (real (Z x)))) *
                           expectation p (λx. (Y x)²)’ \\
-     Know ‘a ≠ PosInf ∧ a ≠ NegInf’
+     Know ‘a <> PosInf /\ a <> NegInf’
      >- (simp [Abbr ‘a’, GSYM o_DEF] \\
          irule clt_expectation_not_infty >> rw []
          >- (MATCH_MP_TAC integrable_add' >> fs [prob_space_def]) \\
          MATCH_MP_TAC real_random_variable_add >> fs []) \\
      DISCH_TAC \\
-     Know ‘b ≠ PosInf ∧ b ≠ NegInf’
+     Know ‘b <> PosInf /\ b <> NegInf’
      >- (simp [Abbr ‘b’, GSYM o_DEF] \\
          irule clt_expectation_not_infty >> rw []
          >- (MATCH_MP_TAC integrable_add' >> fs [prob_space_def]) \\
          MATCH_MP_TAC real_random_variable_add >> fs []) \\
      DISCH_TAC \\
-     Know ‘c ≠ PosInf ∧ c ≠ NegInf’
+     Know ‘c <> PosInf /\ c <> NegInf’
      >- (simp [Abbr ‘c’, GSYM o_DEF] \\
          irule clt_expectation_not_infty >> rw []) \\
      DISCH_TAC \\
-     Know ‘d ≠ PosInf ∧ d ≠ NegInf’
+     Know ‘d <> PosInf /\ d <> NegInf’
      >- (simp [Abbr ‘d’] \\
          MP_TAC (Q.SPECL [‘p’, ‘λx. Normal (diffn 2 f (real (Z x)))’, ‘1 / 2’] expectation_cmul) \\
          impl_tac
@@ -3580,56 +3580,56 @@ Proof
          >- (METIS_TAC [integrable_mul_diffn2, prob_space_def]) \\
          gs [mul_assoc]) \\
      DISCH_TAC \\
-     ‘∃x. a = Normal x’ by METIS_TAC [extreal_cases] \\
-     ‘∃y. b = Normal y’ by METIS_TAC [extreal_cases] \\
-     ‘∃z. c = Normal z’ by METIS_TAC [extreal_cases] \\
-    ‘∃w. d = Normal w’ by METIS_TAC [extreal_cases] >> gs [extreal_sub_eq] \\
+     ‘?x. a = Normal x’ by METIS_TAC [extreal_cases] \\
+     ‘?y. b = Normal y’ by METIS_TAC [extreal_cases] \\
+     ‘?z. c = Normal z’ by METIS_TAC [extreal_cases] \\
+    ‘?w. d = Normal w’ by METIS_TAC [extreal_cases] >> gs [extreal_sub_eq] \\
      REAL_ARITH_TAC)
  >> DISCH_THEN (rw o wrap o SYM)
  >> MATCH_MP_TAC le_trans
  >> qexists ‘abs A + abs B’
  >> simp [le_add2]
  >> MATCH_MP_TAC abs_triangle_neg
- >> ‘M ≠ PosInf’ by METIS_TAC [clt_sup_finite]
+ >> ‘M <> PosInf’ by METIS_TAC [clt_sup_finite]
  >> ‘0 ≤ M’ by rw [Abbr ‘M’, sup_abs_diff3_nonneg]
- >> ‘M ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
- >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases] >> gs []
- >> Know ‘C ≠ PosInf ∧ C ≠ NegInf’
+ >> ‘M <> NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
+ >> ‘?r. M = Normal r’ by METIS_TAC [extreal_cases] >> gs []
+ >> Know ‘C <> PosInf /\ C <> NegInf’
  >- (simp [lt_infty, Abbr ‘C’, GSYM pow_abs] \\
      MP_TAC (Q.SPECL [‘p’, ‘λx. abs (X x)³’] expectation_pos) \\
      simp [abs_pos] \\
      METIS_TAC [extreal_0_simps, lt_trans, lt_infty])
  >> DISCH_TAC
- >> ‘∃g. C = Normal g’ by METIS_TAC [extreal_cases] >> gs []
- >> Know ‘H ≠ PosInf ∧ H ≠ NegInf’
+ >> ‘?g. C = Normal g’ by METIS_TAC [extreal_cases] >> gs []
+ >> Know ‘H <> PosInf /\ H <> NegInf’
  >- (simp [lt_infty, Abbr ‘H’, GSYM pow_abs] \\
      MP_TAC (Q.SPECL [‘p’, ‘λx. abs (Y x)³’] expectation_pos) \\
      simp [abs_pos] \\
      METIS_TAC [extreal_0_simps, lt_trans, lt_infty])
  >> DISCH_TAC
- >> ‘∃h. H = Normal h’ by METIS_TAC [extreal_cases] >> gs []
+ >> ‘?h. H = Normal h’ by METIS_TAC [extreal_cases] >> gs []
  >> ‘6 = Normal 6’ by EVAL_TAC >> gs []
  >> fs [extreal_div_eq, extreal_mul_eq]
  >> METIS_TAC [lt_infty, let_trans, abs_bounds_finite]
 QED
 
 Theorem taylor_diffn_expectation_bound_scaled[local] :
-    ∀p X Y Z f M s n.
-      prob_space p ∧
-      (∀(j :num). j < n ⇒
-           real_random_variable (X j) p ∧ real_random_variable (Y j) p ∧ real_random_variable (Z j) p ∧
-           expectation p (λx. (abs (X j x)) pow 3) < PosInf ∧
-           expectation p (λx. (abs (Y j x)) pow 3) < PosInf ∧
-           integrable p (λx. Z j x) ∧
-           expectation p (λx. X j x) = 0 ∧
-           expectation p (λx. Y j x) = 0 ∧
-           expectation p (λx. (X j x) pow 2) = expectation p (λx. (Y j x) pow 2) ∧
-           indep_vars p (X j) (Z j) Borel Borel ∧
-           indep_vars p (Y j) (Z j) Borel Borel) ∧
-      f ∈ CnR 3 ∧
-      0 < s n ∧ s n ≠ +∞ ∧ s n ≠ −∞ ∧
-      M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) UNIV) ⇒
-      (∀(j :num). j < n ⇒
+    !p X Y Z f M s n.
+      prob_space p /\
+      (!(j :num). j < n ==>
+           real_random_variable (X j) p /\ real_random_variable (Y j) p /\ real_random_variable (Z j) p /\
+           expectation p (λx. (abs (X j x)) pow 3) < PosInf /\
+           expectation p (λx. (abs (Y j x)) pow 3) < PosInf /\
+           integrable p (λx. Z j x) /\
+           expectation p (λx. X j x) = 0 /\
+           expectation p (λx. Y j x) = 0 /\
+           expectation p (λx. (X j x) pow 2) = expectation p (λx. (Y j x) pow 2) /\
+           indep_vars p (X j) (Z j) Borel Borel /\
+           indep_vars p (Y j) (Z j) Borel Borel) /\
+      f ∈ CnR 3 /\
+      0 < s n /\ s n <> PosInf /\ s n <> NegInf /\
+      M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) UNIV) ==>
+      (!(j :num). j < n ==>
            abs (expectation p (Normal ∘ f ∘ real ∘ (λx. (X j x + Z j x) / s n)) -
                    expectation p (Normal ∘ f ∘ real ∘ (λx. (Y j x + Z j x) / s n)))
            ≤ M / (6 * (s n pow 3)) *
@@ -3637,9 +3637,9 @@ Theorem taylor_diffn_expectation_bound_scaled[local] :
 Proof
     rw []
  >> Q.ABBREV_TAC ‘M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) 𝕌(:real))’
- >> ‘M ≠ PosInf’ by METIS_TAC [clt_sup_finite, Abbr ‘M’, lt_le]
- >> ‘∃r. s n = Normal r’ by METIS_TAC [extreal_cases] >> gs []
- >> ‘r ≠ 0’ by METIS_TAC [REAL_LT_LE]
+ >> ‘M <> PosInf’ by METIS_TAC [clt_sup_finite, Abbr ‘M’, lt_le]
+ >> ‘?r. s n = Normal r’ by METIS_TAC [extreal_cases] >> gs []
+ >> ‘r <> 0’ by METIS_TAC [REAL_LT_LE]
  >> MP_TAC (Q.SPECL [‘p’, ‘X (j :num)’] clt_integrable_lemma) >> rw []
  >> MP_TAC (Q.SPECL [‘p’, ‘Y (j :num)’] clt_integrable_lemma) >> rw []
  >> Know ‘integrable p (λx. abs (X j x)³)’
@@ -3655,10 +3655,10 @@ Proof
  >> Q.ABBREV_TAC ‘X' = λj x. X j x / s n’
  >> Q.ABBREV_TAC ‘Y' = λj x. Y j x / s n’
  >> Q.ABBREV_TAC ‘Z' = λj x. Z j x / s n’
- >> Know ‘∀x. x IN p_space p ⇒ X' j x + Z' j x = (X j x + Z j x) / Normal r’
+ >> Know ‘!x. x IN p_space p ==> X' j x + Z' j x = (X j x + Z j x) / Normal r’
  >- (rw [Abbr ‘X'’, Abbr ‘Z'’] \\
      irule div_add >> simp [] \\
-     Q.PAT_X_ASSUM ‘∀j. j < n ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) \\
+     Q.PAT_X_ASSUM ‘!j. j < n ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) \\
      gs [real_random_variable_def])
  >> STRIP_TAC
  >> Know ‘expectation p
@@ -3666,10 +3666,10 @@ Proof
           expectation p (Normal ∘ f ∘ real ∘ (λx. X' j x + Z' j x))’
  >- (irule expectation_cong >> simp [extreal_11])
  >> Rewr
- >> Know ‘∀x. x IN p_space p ⇒ Y' j x + Z' j x = (Y j x + Z j x) / Normal r’
+ >> Know ‘!x. x IN p_space p ==> Y' j x + Z' j x = (Y j x + Z j x) / Normal r’
  >- (rw [Abbr ‘Y'’, Abbr ‘Z'’] \\
      irule div_add >> simp [] \\
-     Q.PAT_X_ASSUM ‘∀j. j < n ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) \\
+     Q.PAT_X_ASSUM ‘!j. j < n ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) \\
      gs [real_random_variable_def])
  >> STRIP_TAC
  >> Know ‘expectation p
@@ -3680,7 +3680,7 @@ Proof
              taylor_diffn_expectation_bound)
  >> impl_tac
  >- (simp [] >> rename1 ‘i < n’ \\
-     Q.PAT_X_ASSUM ‘∀j. j < n ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [] \\
+     Q.PAT_X_ASSUM ‘!j. j < n ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [] \\
      STRONG_CONJ_TAC
      >- (gs [Abbr ‘X'’] >> METIS_TAC [real_random_variable_cdiv]) \\
      DISCH_TAC \\
@@ -3690,7 +3690,7 @@ Proof
      STRONG_CONJ_TAC
      >- (gs [Abbr ‘Z'’] >> METIS_TAC [real_random_variable_cdiv]) \\
      DISCH_TAC \\
-     (* expectation p (λx. (abs (X' i x))³) < +∞ *)
+     (* expectation p (λx. (abs (X' i x))³) < PosInf *)
      STRONG_CONJ_TAC
      >- (rw [Abbr ‘X'’, GSYM pow_abs] \\
          rw [GSYM (cj 4 lt_infty)] \\
@@ -3700,17 +3700,17 @@ Proof
                          integrable_cong) \\
          impl_tac >- (fs [prob_space_def, p_space_def, real_random_variable] \\
                       rw [] \\
-                      Q.PAT_X_ASSUM ‘∀x. x ∈ m_space p ⇒ X i x ≠ −∞ ∧ X i x ≠ +∞’
+                      Q.PAT_X_ASSUM ‘!x. x ∈ m_space p ==> X i x <> NegInf /\ X i x <> PosInf’
                        (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
                       rw [extreal_pow_def, pow_div] \\
                       MATCH_MP_TAC abs_div \\
-                      ‘Normal r³ ≠ 0’ by rw [GSYM extreal_pow_def] >> simp [] \\
+                      ‘Normal r³ <> 0’ by rw [GSYM extreal_pow_def] >> simp [] \\
                       METIS_TAC [pow_not_infty]) \\
          DISCH_THEN (fs o wrap) \\
          rw [extreal_abs_def] \\
          HO_MATCH_MP_TAC integrable_cdiv >> fs [prob_space_def]) \\
      DISCH_TAC \\
-     (* expectation p (λx. (abs (Y' i x))³) < +∞ *)
+     (* expectation p (λx. (abs (Y' i x))³) < PosInf *)
      STRONG_CONJ_TAC
      >- (rw [Abbr ‘Y'’, GSYM pow_abs] \\
          rw [GSYM (cj 4 lt_infty)] \\
@@ -3720,11 +3720,11 @@ Proof
                          integrable_cong) \\
          impl_tac >- (fs [prob_space_def, p_space_def, real_random_variable] \\
                       rw [] \\
-                      Q.PAT_X_ASSUM ‘∀x. x ∈ m_space p ⇒ Y i x ≠ −∞ ∧ Y i x ≠ +∞’
+                      Q.PAT_X_ASSUM ‘!x. x ∈ m_space p ==> Y i x <> NegInf /\ Y i x <> PosInf’
                        (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
                       rw [extreal_pow_def, pow_div] \\
                       MATCH_MP_TAC abs_div \\
-                      ‘Normal r³ ≠ 0’ by rw [GSYM extreal_pow_def] >> simp [] \\
+                      ‘Normal r³ <> 0’ by rw [GSYM extreal_pow_def] >> simp [] \\
                       METIS_TAC [pow_not_infty]) \\
          DISCH_THEN (fs o wrap) \\
          rw [extreal_abs_def] \\
@@ -3755,7 +3755,7 @@ Proof
              DISCH_THEN (rw o wrap o SYM) \\
              MATCH_MP_TAC expectation_cong >> rw [] \\
              fs [real_random_variable] \\
-             Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒ X i x ≠ −∞ ∧ X i x ≠ +∞’
+             Q.PAT_X_ASSUM ‘!x. x ∈ p_space p ==> X i x <> NegInf /\ X i x <> PosInf’
               (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
              rw [extreal_pow_def, pow_div]) >> Rewr \\
          Know ‘expectation p (λx. ((Y i x / Normal r) pow 2)) =
@@ -3765,7 +3765,7 @@ Proof
              DISCH_THEN (rw o wrap o SYM) \\
              MATCH_MP_TAC expectation_cong >> rw [] \\
              fs [real_random_variable] \\
-             Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒ Y i x ≠ −∞ ∧ Y i x ≠ +∞’
+             Q.PAT_X_ASSUM ‘!x. x ∈ p_space p ==> Y i x <> NegInf /\ Y i x <> PosInf’
               (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
              rw [extreal_pow_def, pow_div]) >> Rewr \\
          fs []) \\
@@ -3800,13 +3800,13 @@ Proof
          MP_TAC (Q.SPECL [‘p’, ‘λx. abs (X (j :num) x)³’, ‘r pow 3’] expectation_cdiv) \\
          simp [] >> gs [] \\
          DISCH_THEN (fs o wrap o SYM) \\
-         Know ‘∀x. x IN p_space p ⇒ abs (X j x / Normal r)³ = abs ((X j x) pow 3) / Normal (r pow 3)’
+         Know ‘!x. x IN p_space p ==> abs (X j x / Normal r)³ = abs ((X j x) pow 3) / Normal (r pow 3)’
          >- (rw [] \\
-             Q.PAT_X_ASSUM ‘∀j. j < n ⇒
-                                real_random_variable (X j) p ∧ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
+             Q.PAT_X_ASSUM ‘!j. j < n ==>
+                                real_random_variable (X j) p /\ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
              fs [real_random_variable_def] \\
-             Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒ X j x ≠ −∞ ∧ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
-             ‘∃c. X j x = Normal c’ by METIS_TAC [extreal_cases] >> rw [] \\
+             Q.PAT_X_ASSUM ‘!x. x ∈ p_space p ==> X j x <> NegInf /\ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
+             ‘?c. X j x = Normal c’ by METIS_TAC [extreal_cases] >> rw [] \\
              taylor_tactic1) >> STRIP_TAC \\
          irule expectation_cong >> fs []) >> Rewr \\
      Know ‘expectation p (λx. abs (Y j x / Normal r)³) =
@@ -3815,13 +3815,13 @@ Proof
          MP_TAC (Q.SPECL [‘p’, ‘λx. abs (Y (j :num) x)³’, ‘r pow 3’] expectation_cdiv) \\
          simp [] >> gs [] \\
          DISCH_THEN (fs o wrap o SYM) \\
-         Know ‘∀x. x IN p_space p ⇒ abs (Y j x / Normal r)³ = abs ((Y j x) pow 3) / Normal (r pow 3)’
+         Know ‘!x. x IN p_space p ==> abs (Y j x / Normal r)³ = abs ((Y j x) pow 3) / Normal (r pow 3)’
          >- (rw [] \\
-             Q.PAT_X_ASSUM ‘∀j. j < n ⇒
-                                real_random_variable (X j) p ∧ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
+             Q.PAT_X_ASSUM ‘!j. j < n ==>
+                                real_random_variable (X j) p /\ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
              fs [real_random_variable_def] \\
-             Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒ Y j x ≠ −∞ ∧ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
-             ‘∃c. Y j x = Normal c’ by METIS_TAC [extreal_cases] >> rw [] \\
+             Q.PAT_X_ASSUM ‘!x. x ∈ p_space p ==> Y j x <> NegInf /\ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
+             ‘?c. Y j x = Normal c’ by METIS_TAC [extreal_cases] >> rw [] \\
              taylor_tactic1) >> STRIP_TAC \\
          irule expectation_cong >> fs []) >> Rewr \\
      Know ‘expectation p (λx. abs (X j x)³) / (Normal r)³ +
@@ -3829,26 +3829,26 @@ Proof
            (expectation p (λx. abs (X j x)³)  +
             expectation p (λx. abs (Y j x)³)) / (Normal r)³’
      >- (irule div_add \\
-         ‘(Normal r)³ ≠ 0’ by METIS_TAC [pow_pos_lt, GSYM extreal_lt_eq, normal_0, lt_le] \\
+         ‘(Normal r)³ <> 0’ by METIS_TAC [pow_pos_lt, GSYM extreal_lt_eq, normal_0, lt_le] \\
          simp [] \\
-         Know ‘expectation p (λx. abs (X j x)³) ≠ −∞ ∧
-               expectation p (λx. abs (X j x)³) ≠ +∞’
+         Know ‘expectation p (λx. abs (X j x)³) <> NegInf /\
+               expectation p (λx. abs (X j x)³) <> PosInf’
          >- (MP_TAC (Q.SPECL [‘p’, ‘λx. abs (X (j :num) x)³’] expectation_finite) \\
              simp [] \\
-             Q.PAT_X_ASSUM ‘∀j. j < n ⇒
-                                real_random_variable (X j) p ∧ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
+             Q.PAT_X_ASSUM ‘!j. j < n ==>
+                                real_random_variable (X j) p /\ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
              ‘integrable p (λx. abs (X j x)³)’ by METIS_TAC [integrable_abs_third] >> gs []) >> Rewr \\
          MP_TAC (Q.SPECL [‘p’, ‘λx. abs (Y (j :num) x)³’] expectation_finite) \\
          simp [] \\
-         Q.PAT_X_ASSUM ‘∀j. j < n ⇒
-                            real_random_variable (X j) p ∧ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
+         Q.PAT_X_ASSUM ‘!j. j < n ==>
+                            real_random_variable (X j) p /\ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
          ‘integrable p (λx. abs (Y j x)³)’ by METIS_TAC [integrable_abs_third] >> gs []) >> Rewr \\
      Q.ABBREV_TAC ‘h = (expectation p (λx. abs (X j x)³) + expectation p (λx. abs (Y j x)³))’ \\
-     Know ‘M ≠ NegInf’
-     >- (Know ‘∀t. abs (Normal (diffn 3 f t)) ≤ M’
+     Know ‘M <> NegInf’
+     >- (Know ‘!t. abs (Normal (diffn 3 f t)) ≤ M’
          >- (rw [Abbr ‘M’, le_sup] \\
              POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘abs (Normal (diffn 3 f t))’) \\
-             Know ‘∃t'. abs (Normal (diffn 3 f t)) = abs (Normal (diffn 3 f t'))’
+             Know ‘?t'. abs (Normal (diffn 3 f t)) = abs (Normal (diffn 3 f t'))’
              >- (qexists ‘t’ >> fs []) >> DISCH_THEN (fs o wrap)) >> STRIP_TAC \\
             METIS_TAC [abs_pos, le_trans, extreal_0_simps, lt_le])  \\
      DISCH_TAC \\
@@ -3861,21 +3861,21 @@ Proof
          rw [cj 14 extreal_0_simps]) >> Rewr \\
      Know ‘h / (Normal r)³ = h * inv ((Normal r)³)’
      >- (irule div_eq_mul_rinv \\
-         Know ‘expectation p (λx. abs (X j x)³) ≠ −∞ ∧
-               expectation p (λx. abs (X j x)³) ≠ +∞’
+         Know ‘expectation p (λx. abs (X j x)³) <> NegInf /\
+               expectation p (λx. abs (X j x)³) <> PosInf’
          >- (MP_TAC (Q.SPECL [‘p’, ‘λx. abs (X (j :num) x)³’] expectation_finite) \\
              simp [] \\
-             Q.PAT_X_ASSUM ‘∀j. j < n ⇒
-                                real_random_variable (X j) p ∧ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
+             Q.PAT_X_ASSUM ‘!j. j < n ==>
+                                real_random_variable (X j) p /\ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
              ‘integrable p (λx. abs (X j x)³)’ by METIS_TAC [integrable_abs_third] >> gs []) >> DISCH_TAC \\
-         Know ‘expectation p (λx. abs (Y j x)³) ≠ −∞ ∧
-               expectation p (λx. abs (Y j x)³) ≠ +∞’
+         Know ‘expectation p (λx. abs (Y j x)³) <> NegInf /\
+               expectation p (λx. abs (Y j x)³) <> PosInf’
          >- (MP_TAC (Q.SPECL [‘p’, ‘λx. abs (Y (j :num) x)³’] expectation_finite) \\
              simp [] \\
-             Q.PAT_X_ASSUM ‘∀j. j < n ⇒
-                                real_random_variable (X j) p ∧ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
+             Q.PAT_X_ASSUM ‘!j. j < n ==>
+                                real_random_variable (X j) p /\ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
              ‘integrable p (λx. abs (Y j x)³)’ by METIS_TAC [integrable_abs_third] >> gs []) >> DISCH_TAC \\
-         ‘h ≠ −∞ ∧ h ≠ +∞’ by METIS_TAC [Abbr ‘h’, add_not_infty] >> simp [] \\
+         ‘h <> NegInf /\ h <> PosInf’ by METIS_TAC [Abbr ‘h’, add_not_infty] >> simp [] \\
          METIS_TAC [pow_pos_lt, normal_0, GSYM extreal_lt_eq]) >> Rewr \\
      ‘M / 6 = M * inv 6’ by (irule div_eq_mul_rinv >> simp [] >> EVAL_TAC) >> POP_ORW \\
      ‘h * (Normal r)³ ⁻¹ = (Normal r)³ ⁻¹ * h’ by METIS_TAC [mul_comm] >> POP_ORW \\
@@ -3887,26 +3887,26 @@ QED
 
 (* eq 17 *)
 Theorem clt_lindeberg_taylor_error_bound[local] :
-  ∀r X Y Z f M s n.
-    prob_space r ∧
-    (∀(j :num). j < n ⇒
-                real_random_variable (X j) r ∧
-                real_random_variable (Y j) r ∧
-                real_random_variable (Z j) r ∧
-                integrable r (λx. (X j x)) ∧
-                integrable r (λx. (Y j x)) ∧
-                integrable r (λx. (Z j x)) ∧
-                integrable r (λx. (abs (X j x))³) ∧
-                integrable r (λx. (abs (Y j x))³) ∧
-                expectation r (λx. X j x) = 0 ∧
-                expectation r (λx. Y j x) = 0 ∧
-                expectation r (λx. (X j x)²) = expectation r (λx. (Y j x)²) ∧
-                indep_vars r (X j) (Z j) Borel Borel ∧
-                indep_vars r (Y j) (Z j) Borel Borel) ∧
-    f ∈ CnR 3 ∧
-    M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) UNIV) ∧
-    0 < s n ∧ s n ≠ +∞ ∧ s n ≠ −∞ ⇒
-    abs (∑ (λj. expectation r (Normal ∘ f ∘ real ∘ (λx. (X j x + Z j x) / s n)) −
+  !r X Y Z f M s n.
+    prob_space r /\
+    (!(j :num). j < n ==>
+                real_random_variable (X j) r /\
+                real_random_variable (Y j) r /\
+                real_random_variable (Z j) r /\
+                integrable r (λx. (X j x)) /\
+                integrable r (λx. (Y j x)) /\
+                integrable r (λx. (Z j x)) /\
+                integrable r (λx. (abs (X j x))³) /\
+                integrable r (λx. (abs (Y j x))³) /\
+                expectation r (λx. X j x) = 0 /\
+                expectation r (λx. Y j x) = 0 /\
+                expectation r (λx. (X j x)²) = expectation r (λx. (Y j x)²) /\
+                indep_vars r (X j) (Z j) Borel Borel /\
+                indep_vars r (Y j) (Z j) Borel Borel) /\
+    f ∈ CnR 3 /\
+    M = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) UNIV) /\
+    0 < s n /\ s n <> PosInf /\ s n <> NegInf ==>
+    abs (∑ (λj. expectation r (Normal ∘ f ∘ real ∘ (λx. (X j x + Z j x) / s n)) -
                             expectation r (Normal ∘ f ∘ real ∘ (λx. (Y j x + Z j x) / s n))) (count n)) ≤
     M / (6 * (s n) pow 3)  * ∑ (λj. expectation r (λx. (abs (X j x))³ + (abs (Y j x))³)) (count n)
 Proof
@@ -3916,11 +3916,11 @@ Proof
  >- (simp [] \\
      Q.X_GEN_TAC ‘j’ >> STRIP_TAC \\
      FIRST_X_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
-     (* expectation r (λx. (abs (X j x))³) < +∞ *)
+     (* expectation r (λx. (abs (X j x))³) < PosInf *)
      CONJ_TAC  >> (simp [GSYM lt_infty] \\
                    irule (cj 1 expectation_finite) >> simp []))
  >> rw []
- >> Know ‘∀t. abs (Normal (diffn 3 f t)) ≤
+ >> Know ‘!t. abs (Normal (diffn 3 f t)) ≤
               sup (IMAGE (λt. abs (Normal (diffn 3 f t))) 𝕌(:real))’
  >- (rw [le_sup] \\
      POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘abs (Normal (diffn 3 f t))’) \\
@@ -3930,7 +3930,7 @@ Proof
  >> Q.ABBREV_TAC ‘g = λj.  M / (6 * (s n)³) *
                            (expectation r (λx. (abs (X j x))³) +
                             expectation r (λx. (abs (Y j x))³))’
- >> Q.ABBREV_TAC ‘h = λj. expectation r (Normal ∘ f ∘ real ∘ (λx. (X j x + Z j x) / s n)) −
+ >> Q.ABBREV_TAC ‘h = λj. expectation r (Normal ∘ f ∘ real ∘ (λx. (X j x + Z j x) / s n)) -
                           expectation r (Normal ∘ f ∘ real ∘ (λx. (Y j x + Z j x) / s n))’
  >> gs []
  >> Know ‘∑ (λj. M / (6 * (s n)³) * (expectation r (λx. (abs (X j x))³) +
@@ -3939,13 +3939,13 @@ Proof
  >- (gs [Abbr ‘g’, Abbr ‘h’] \\
      Q.ABBREV_TAC ‘g = λj x. (abs (X j x))³’ \\
      Q.ABBREV_TAC ‘h = λj x. (abs (Y j x))³’ >> gs [] \\
-     Know ‘∀j. j < n ⇒ expectation r (λx. g j x) + expectation r (λx. h j x) =
+     Know ‘!j. j < n ==> expectation r (λx. g j x) + expectation r (λx. h j x) =
                        expectation r (λx. g j x + h j x)’
      >- (rw [] \\
          MP_TAC (Q.SPECL [‘r’, ‘g (j :num)’, ‘h (j :num)’] (GSYM expectation_add)) \\
          simp [] \\
-         Q.PAT_X_ASSUM ‘∀j. j < n ⇒
-                            real_random_variable (X j) r ∧ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) \\
+         Q.PAT_X_ASSUM ‘!j. j < n ==>
+                            real_random_variable (X j) r /\ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) \\
          METIS_TAC [ETA_AX]) \\
      DISCH_TAC \\
      Know ‘∑ (λj. expectation r (λx. g j x + h j x)) (count n) =
@@ -3954,23 +3954,23 @@ Proof
          Q.X_GEN_TAC ‘j’ >> rw []) >> rw [] \\
      Q.ABBREV_TAC ‘u = λj. expectation r (λx. g j x) + expectation r (λx. h j x)’ \\
      gs [] \\
-     Know ‘M / (6 * (s n)³) ≠ PosInf ∧  M / (6 * (s n)³) ≠ NegInf’
-     >- (‘∃a. s n = Normal a’ by METIS_TAC [extreal_cases] >> gs [] \\
-         ‘M ≠ PosInf’ by METIS_TAC [clt_sup_finite] \\
+     Know ‘M / (6 * (s n)³) <> PosInf /\  M / (6 * (s n)³) <> NegInf’
+     >- (‘?a. s n = Normal a’ by METIS_TAC [extreal_cases] >> gs [] \\
+         ‘M <> PosInf’ by METIS_TAC [clt_sup_finite] \\
          ‘0 ≤ M’ by rw [Abbr ‘M’, sup_abs_diff3_nonneg] \\
-         ‘M ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans] \\
-         ‘∃b. M = Normal b’ by METIS_TAC [extreal_cases] >> gs [] \\
+         ‘M <> NegInf’ by METIS_TAC [extreal_0_simps, lt_trans] \\
+         ‘?b. M = Normal b’ by METIS_TAC [extreal_cases] >> gs [] \\
          ‘6 = Normal 6’ by EVAL_TAC >> POP_ORW \\
-         ‘6 * a pow 3 ≠ 0’ by (MATCH_MP_TAC REAL_MUL_NZ >> simp [REAL_LT_IMP_NE]) \\
+         ‘6 * a pow 3 <> 0’ by (MATCH_MP_TAC REAL_MUL_NZ >> simp [REAL_LT_IMP_NE]) \\
          fs [extreal_div_eq, extreal_mul_eq, extreal_pow_def, lt_infty]) \\
      STRIP_TAC \\
-     ‘∃c.  M / (6 * (s n)³) = Normal c’ by METIS_TAC [extreal_cases] >> gs [] \\
+     ‘?c.  M / (6 * (s n)³) = Normal c’ by METIS_TAC [extreal_cases] >> gs [] \\
      irule EXTREAL_SUM_IMAGE_CMUL \\
      simp [] \\
      DISJ2_TAC >> rw [] \\
      MATCH_MP_TAC (cj 1 expectation_finite) >> simp [] \\
      MATCH_MP_TAC integrable_add' >> fs [prob_space_def] \\
-     Q.PAT_X_ASSUM ‘ ∀j. j < n ⇒ real_random_variable (X j) r ∧ _’
+     Q.PAT_X_ASSUM ‘ !j. j < n ==> real_random_variable (X j) r /\ _’
       (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
      METIS_TAC [GSYM ETA_AX])
  >> DISCH_THEN (rw o wrap o SYM)
@@ -3978,12 +3978,12 @@ Proof
             (INST_TYPE [alpha |-> “:num”])) EXTREAL_SUM_IMAGE_ABS_LE
  >> impl_tac
  >- (rw [] \\
-     Q.PAT_X_ASSUM ‘∀j. j < n ⇒ abs (h j) ≤ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
+     Q.PAT_X_ASSUM ‘!j. j < n ==> abs (h j) ≤ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
      simp [Abbr ‘g’, GSYM pow_abs]) >> gs []
 QED
 
 Theorem measure_density :
-    ∀m f s. measure (density m f) s = ∫⁺ m (λx. f x * 𝟙 s x)
+    !m f s. measure (density m f) s = pos_fn_integral m (λx. f x * 𝟙 s x)
 Proof
     rw [measure_def, density]
 QED
@@ -4001,16 +4001,16 @@ Proof
 QED
 
 Theorem random_variable_Borel_imp_borel :
-    ∀p X. prob_space p ∧ random_variable X p Borel ⇒ random_variable (real o X) p borel
+    !p X. prob_space p /\ random_variable X p Borel ==> random_variable (real o X) p borel
 Proof
     rw [random_variable_def, p_space_def, events_def, prob_space_def]
  >> irule in_borel_measurable_from_Borel >> simp [MEASURE_SPACE_SIGMA_ALGEBRA]
 QED
 
 Theorem MEASURABLE_PREIMAGE_BOREL :
-    ∀f m.
-      f ∈ Borel_measurable (measurable_space m) ⇒
-      ∀s. s ∈ subsets Borel ⇒
+    !f m.
+      f ∈ Borel_measurable (measurable_space m) ==>
+      !s. s ∈ subsets Borel ==>
          PREIMAGE f s ∩ m_space m ∈ measurable_sets m
 Proof
     rpt STRIP_TAC
@@ -4019,9 +4019,9 @@ Proof
 QED
 
 Theorem measurable_preimage_borel :
-    ∀f m.
-      f ∈ borel_measurable (measurable_space m) ⇒
-      ∀s. s ∈ subsets borel ⇒ PREIMAGE f s ∩ m_space m ∈ measurable_sets m
+    !f m.
+      f ∈ borel_measurable (measurable_space m) ==>
+      !s. s ∈ subsets borel ==> PREIMAGE f s ∩ m_space m ∈ measurable_sets m
 Proof
     rpt STRIP_TAC
  >> (MP_TAC o (Q.SPECL [‘measurable_space m’, ‘borel’, ‘f’]) o
@@ -4029,38 +4029,38 @@ Proof
 QED
 
 Theorem distribution_eq' :
-    ∀p X Y mu sig s.
-      prob_space p ∧
-      (∀x. x ∈ p_space p ⇒ X x = Y x) ⇒
-      (s ∈ subsets borel ⇒ distribution p X s = distribution p Y s)
+    !p X Y mu sig s.
+      prob_space p /\
+      (!x. x ∈ p_space p ==> X x = Y x) ==>
+      (s ∈ subsets borel ==> distribution p X s = distribution p Y s)
 Proof
     rw [distribution_def]
  >> AP_TERM_TAC
  >> rw [PREIMAGE_def, INTER_DEF, Once EXTENSION]
  >> EQ_TAC >> rw []
- >> Q.PAT_X_ASSUM ‘∀x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs []
+ >> Q.PAT_X_ASSUM ‘!x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs []
 QED
 
 Theorem normal_rv_cong :
-    ∀p X Y mu sig.
-      prob_space p ∧
-      (∀x. x ∈ p_space p ⇒ X x = Y x) ⇒
-      (normal_rv X p mu sig  ⇔ normal_rv Y p mu sig)
+    !p X Y mu sig.
+      prob_space p /\
+      (!x. x ∈ p_space p ==> X x = Y x) ==>
+      (normal_rv X p mu sig  <=> normal_rv Y p mu sig)
 Proof
     rpt STRIP_TAC
  >> (MP_TAC o (Q.SPECL [‘p’, ‘X’, ‘Y’, ‘borel’]) o
             (INST_TYPE [beta |-> “:real”])) random_variable_cong
  >> rw [normal_rv_def]
  >> EQ_TAC >> rw []
- >> Q.PAT_X_ASSUM ‘∀s. s ∈ subsets borel ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘s’) >> gs []
+ >> Q.PAT_X_ASSUM ‘!s. s ∈ subsets borel ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘s’) >> gs []
  >> POP_ASSUM (fs o wrap o SYM)
  >> METIS_TAC [distribution_eq']
 QED
 
 Theorem normal_rv_eq[local] :
-    ∀p X Y mu sig.
-      prob_space p ∧ normal_rv X p mu sig ∧
-      (∀x. x ∈ p_space p ⇒ Y x = X x) ⇒ normal_rv Y p mu sig
+    !p X Y mu sig.
+      prob_space p /\ normal_rv X p mu sig /\
+      (!x. x ∈ p_space p ==> Y x = X x) ==> normal_rv Y p mu sig
 Proof
     rw [normal_rv_def, random_variable_def, p_space_def, events_def]
  >- (irule in_borel_measurable_add \\
@@ -4069,7 +4069,7 @@ Proof
      irule in_borel_measurable_const \\
      fs [MEASURE_SPACE_SIGMA_ALGEBRA] \\
      qexists ‘0’ >> simp [])
- >> Q.PAT_X_ASSUM ‘∀s. s ∈ subsets borel ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘s’)
+ >> Q.PAT_X_ASSUM ‘!s. s ∈ subsets borel ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘s’)
  >> gs [] >> POP_ASSUM (rw o wrap o SYM)
  >> rw [distribution_def, PREIMAGE_def] >> AP_TERM_TAC
  >> rw [Once EXTENSION, INTER_DEF]
@@ -4079,7 +4079,7 @@ QED
 Theorem normal_rv_affine_weaken :
     !X p mu sig Y a b.
     prob_space p /\ a <> 0 /\ 0 < sig /\
-    normal_rv X p mu sig /\ (!x. x IN p_space p ⇒ Y x = b + a * X x) ==>
+    normal_rv X p mu sig /\ (!x. x IN p_space p ==> Y x = b + a * X x) ==>
     normal_rv Y p (b + a * mu) (abs a * sig)
 Proof
     rpt STRIP_TAC
@@ -4089,29 +4089,29 @@ Proof
 QED
 
 Theorem ext_normal_rv_affine :
-    ∀X p mu sig Y a b.
-      prob_space p ∧ a ≠ 0 ∧ 0 < sig ∧ ext_normal_rv X p mu sig ∧
-      (∀x. Y x = Normal b + (Normal a) * X x) ⇒
+    !X p mu sig Y a b.
+      prob_space p /\ a <> 0 /\ 0 < sig /\ ext_normal_rv X p mu sig /\
+      (!x. Y x = Normal b + (Normal a) * X x) ==>
       ext_normal_rv Y p (b + (a * mu)) ((abs a * sig))
 Proof
     rpt STRIP_TAC
  >> fs [ext_normal_rv_def]
  >> STRONG_CONJ_TAC
  >- (GEN_TAC >> STRIP_TAC \\
-     Q.PAT_X_ASSUM ‘∀x. x ∈ p_space p ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
-     ‘∃r. X x = Normal r’ by METIS_TAC [extreal_cases] >> fs [] \\
+     Q.PAT_X_ASSUM ‘!x. x ∈ p_space p ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
+     ‘?r. X x = Normal r’ by METIS_TAC [extreal_cases] >> fs [] \\
      METIS_TAC [extreal_not_infty, extreal_add_def, extreal_mul_def]) >> STRIP_TAC
  >> MP_TAC (Q.SPECL [‘real o X’, ‘p’, ‘mu’, ‘sig’, ‘real o Y’, ‘a’, ‘b’] normal_rv_affine_weaken)
  >> simp []
- >> ‘∀x. x ∈ p_space p ⇒
+ >> ‘!x. x ∈ p_space p ==>
          real (Normal b + Normal a * X x) = b + a * real (X x)’
    by METIS_TAC [extreal_cases, extreal_add_def, extreal_mul_def, real_normal] >> fs []
 QED
 
 Theorem MEASURABLE_EL'[local] :
-    ∀p p' n i.
-      prob_space p ∧ prob_space p' ∧
-      i < n ∧ measurable_space p' = sigma_lists (measurable_space p) n ⇒
+    !p p' n i.
+      prob_space p /\ prob_space p' /\
+      i < n /\ measurable_space p' = sigma_lists (measurable_space p) n ==>
       EL i ∈ measurable (measurable_space p') (measurable_space p)
 Proof
     rw []
@@ -4121,9 +4121,9 @@ Proof
 QED
 
 Theorem in_measurable_borel_comp :
-    ∀a b f g h.
-      f ∈ borel_measurable b ∧ g ∈ measurable a b ∧
-      (∀x. x ∈ space a ⇒ h x = f (g x)) ⇒
+    !a b f g h.
+      f ∈ borel_measurable b /\ g ∈ measurable a b /\
+      (!x. x ∈ space a ==> h x = f (g x)) ==>
       h ∈ borel_measurable a
 Proof
     rw [] >> dxrule_all_then assume_tac MEASURABLE_COMP
@@ -4131,7 +4131,7 @@ Proof
 QED
 
 val indep_vars_tactic1 =
-    Know ‘∀i x. i < n ∧ x ∈ p_space p' ⇒ EL i x ∈ p_space p’
+    Know ‘!i x. i < n /\ x ∈ p_space p' ==> EL i x ∈ p_space p’
     >- (rw [p_space_def, m_space_def, Once EXTENSION] \\
         ‘p_space p' = space (measurable_space p')’ by fs [p_space_def] \\
         ‘p_space p = space (measurable_space p)’ by fs [p_space_def] \\
@@ -4141,20 +4141,20 @@ val indep_vars_tactic1 =
         fs [IN_list_rectangle]) >> DISCH_TAC ;
 
 Theorem existence_of_indep_vars :
-    ∀(p :α m_space) N (D :num -> real) n.
-      prob_space p ∧ 0 < n ∧ ext_normal_rv N p 0 1 ∧
-      (∀i. i < n ⇒ 0 < (D i)) ⇒
-      ∃(p' :α list m_space) Y.
-        prob_space p' ∧ (∀(i :num). i < n ⇒ ext_normal_rv (Y i) p' 0 (D i)) ∧
+    !(p :α m_space) N (D :num -> real) n.
+      prob_space p /\ 0 < n /\ ext_normal_rv N p 0 1 /\
+      (!i. i < n ==> 0 < (D i)) ==>
+      ?(p' :α list m_space) Y.
+        prob_space p' /\ (!(i :num). i < n ==> ext_normal_rv (Y i) p' 0 (D i)) /\
         indep_vars p' Y (λi. Borel) (count n)
 Proof
     rpt STRIP_TAC
  >> Q.ABBREV_TAC ‘Y = λi x. Normal (D i) * (N x)’
- >> Know ‘∀(i :num). i < n ⇒ ext_normal_rv (Y i) p 0 (D i)’
+ >> Know ‘!(i :num). i < n ==> ext_normal_rv (Y i) p 0 (D i)’
  >- (rw [] \\
      MP_TAC (Q.SPECL [‘N’, ‘p’, ‘0’, ‘1’, ‘Y (i :num)’, ‘D (i :num)’, ‘0’] ext_normal_rv_affine) \\
      simp [] \\
-     ‘D i ≠ 0’ by METIS_TAC [REAL_LT_LE] >> simp [] \\
+     ‘D i <> 0’ by METIS_TAC [REAL_LT_LE] >> simp [] \\
      ‘abs (D i) = D i’ by METIS_TAC [ABS_REFL, REAL_LT_IMP_LE] \\
      simp [normal_0])
  >> DISCH_TAC
@@ -4170,7 +4170,7 @@ Proof
      >- (fs [random_variable_def, p_space_def, events_def] \\
          ‘sigma_lists (measurable_space p) n = measurable_space p'’ by rw [] \\
          POP_ORW \\
-         Q.PAT_X_ASSUM ‘ ∀i'. i' < n ⇒ (∀x. x ∈ m_space p ⇒ Y i' x ≠ +∞ ∧ Y i' x ≠ −∞) ∧ _’
+         Q.PAT_X_ASSUM ‘ !i'. i' < n ==> (!x. x ∈ m_space p ==> Y i' x <> PosInf /\ Y i' x <> NegInf) /\ _’
           (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [] \\
          (MP_TAC o (Q.SPECL [‘measurable_space p'’, ‘measurable_space p’, ‘real o Y (i :num)’,
                              ‘EL (i :num)’, ‘λx. real (Y i (EL i x))’]) o
@@ -4193,17 +4193,17 @@ Proof
          >- (Cases_on ‘j = i’ >> rw [])
          >- (POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> fs []) \\
             METIS_TAC [IN_INTER]) >> Rewr' \\
-     Q.PAT_X_ASSUM ‘∀i'. i' < n ⇒ (∀x. x ∈ p_space p ⇒ Y i' x ≠ +∞ ∧ Y i' x ≠ −∞) ∧ _’
+     Q.PAT_X_ASSUM ‘!i'. i' < n ==> (!x. x ∈ p_space p ==> Y i' x <> PosInf /\ Y i' x <> NegInf) /\ _’
       (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [] \\
-     Q.PAT_X_ASSUM ‘∀s'. s' ∈ subsets borel ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘s’) >> gs [] \\
+     Q.PAT_X_ASSUM ‘!s'. s' ∈ subsets borel ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘s’) >> gs [] \\
      POP_ASSUM (rw  o wrap o SYM) \\
-     Q.PAT_X_ASSUM ‘∀h. (∀i. i < n ⇒ h i ∈ events p) ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘h’) \\
-     Know ‘∀i. i < n ⇒ h i ∈ events p’
+     Q.PAT_X_ASSUM ‘!h. (!i. i < n ==> h i ∈ events p) ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘h’) \\
+     Know ‘!i. i < n ==> h i ∈ events p’
      >- (Q.X_GEN_TAC ‘j’ >> POP_ASSUM K_TAC >> rw [Abbr ‘h’]
          >- (fs [p_space_def, events_def, random_variable_def] \\
              METIS_TAC [measurable_preimage_borel, events_def, p_space_def]) \\
          METIS_TAC [EVENTS_SPACE]) >> STRIP_TAC >> gs [] \\
-     ‘∀i. i < n ⇒ count n = {i} ∪ (count n DELETE i)’
+     ‘!i. i < n ==> count n = {i} ∪ (count n DELETE i)’
        by rw [DELETE_DEF, UNION_DEF, DIFF_DEF, count_def, Once EXTENSION] \\
      POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [] >> POP_ORW \\
      Know ‘∏ (λx. prob p (h x)) ({i} ∪ (count n DELETE i)) =
@@ -4219,10 +4219,10 @@ Proof
      rw [PREIMAGE_def, Abbr ‘h’])
  >> rw [indep_vars_def, IN_DFUNSET]
  >> Q.ABBREV_TAC ‘h = λj. if j ∈ N' then PREIMAGE (Y j) (E j) ∩ p_space p else p_space p’
- >> Know ‘∀j. j IN N' ⇒ PREIMAGE (Y' j) (E j) ∩ p_space p' =
+ >> Know ‘!j. j IN N' ==> PREIMAGE (Y' j) (E j) ∩ p_space p' =
                         PREIMAGE (EL j) (PREIMAGE (Y j) (E j)) ∩ p_space p'’
  >- (rw [Abbr ‘Y'’, PREIMAGE_def, Once EXTENSION]) >> DISCH_TAC
- >> Know ‘∀j. j IN N' ⇒ PREIMAGE (EL j) (PREIMAGE (Y j) (E j)) ∩ p_space p' =
+ >> Know ‘!j. j IN N' ==> PREIMAGE (EL j) (PREIMAGE (Y j) (E j)) ∩ p_space p' =
                         PREIMAGE (EL j) (h j) ∩ p_space p' ’
  >- (rw [Abbr ‘h’, PREIMAGE_def, Once EXTENSION] \\
      EQ_TAC >> rw [] \\
@@ -4239,7 +4239,7 @@ Proof
           ∏ (λj. prob p' (PREIMAGE (EL j) (h j) ∩ p_space p')) N'’
  >- (irule EXTREAL_PROD_IMAGE_EQ >> METIS_TAC []) >> Rewr
  >> NTAC 2 POP_ORW
- >> Know ‘∀x. x ∈ p_space p' ⇒ LENGTH x = n’
+ >> Know ‘!x. x ∈ p_space p' ==> LENGTH x = n’
  >- (‘space (measurable_space p') = rectangle (λi. space (measurable_space p)) n’
        by METIS_TAC [space_sigma_lists, p_space_def] \\
      ‘p_space p' = rectangle (λi. p_space p) n’ by fs [p_space_def] \\
@@ -4254,7 +4254,7 @@ Proof
      >- (fs [GSYM MEMBER_NOT_EMPTY] \\
          POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) >> gs [])
         >- (Cases_on ‘j NOTIN N'’ >> gs [] \\
-            Know ‘∀i x. i < n ∧ x ∈ p_space p' ⇒ EL i x ∈ p_space p’
+            Know ‘!i x. i < n /\ x ∈ p_space p' ==> EL i x ∈ p_space p’
             >- (rw [p_space_def, m_space_def, Once EXTENSION] \\
                 ‘p_space p' = space (measurable_space p')’ by fs [p_space_def] \\
                 ‘p_space p = space (measurable_space p)’ by fs [p_space_def] \\
@@ -4264,11 +4264,11 @@ Proof
                 fs [IN_list_rectangle]) >> DISCH_TAC \\
             POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘j’, ‘x’]) >> gs [] \\
             fs [GSYM MEMBER_NOT_EMPTY] \\
-            Q.PAT_X_ASSUM ‘∀j. j ∈ N' ⇒ EL j x ∈ h j ∧ x ∈ p_space p'’ (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) >> gs [])
+            Q.PAT_X_ASSUM ‘!j. j ∈ N' ==> EL j x ∈ h j /\ x ∈ p_space p'’ (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) >> gs [])
      >- (fs [GSYM MEMBER_NOT_EMPTY] \\
-         Q.PAT_X_ASSUM ‘∀j. j ∈ N' ⇒ EL j x ∈ h j ∧ x ∈ p_space p'’ (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) >> gs [])
+         Q.PAT_X_ASSUM ‘!j. j ∈ N' ==> EL j x ∈ h j /\ x ∈ p_space p'’ (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) >> gs [])
      >- (‘j < LENGTH x’ by fs [SUBSET_DEF, count_def] \\
-         Q.PAT_X_ASSUM ‘∀j. j < LENGTH x ⇒ EL j x ∈ if j ∈ N' then h j else p_space p’
+         Q.PAT_X_ASSUM ‘!j. j < LENGTH x ==> EL j x ∈ if j ∈ N' then h j else p_space p’
           (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [])) >> Rewr
  >> Know ‘prob p' (rectangle h' n ∩ p_space p') = prob p' (rectangle h' n)’
  >- (Know ‘rectangle h' n ⊆ p_space p'’
@@ -4276,28 +4276,28 @@ Proof
            by METIS_TAC [space_sigma_lists, p_space_def] \\
          ‘p_space p' = rectangle (λi. p_space p) n’ by fs [p_space_def] \\
          gs [Abbr ‘h'’, SUBSET_DEF, list_rectangle_def] >> rw [] \\
-         Q.PAT_X_ASSUM ‘ ∀j. j < LENGTH x ⇒ EL j x ∈ if j ∈ N' then h j else p_space p’
+         Q.PAT_X_ASSUM ‘ !j. j < LENGTH x ==> EL j x ∈ if j ∈ N' then h j else p_space p’
           (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [] \\
          Cases_on ‘i IN N'’ >> fs [] \\
          fs [Abbr ‘h’, p_space_def]) >> DISCH_TAC \\
      ‘rectangle h' n ∩ p_space p' = rectangle h' n’ by METIS_TAC [SUBSET_INTER1] \\
      POP_ORW >> rw []) >> Rewr
  >> Know ‘prob p' (rectangle h' n) = ∏ (λj. prob p (h' j)) (count n)’
- >- (Q.PAT_X_ASSUM ‘∀h'. (∀i. i < n ⇒ h' i ∈ events p) ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘h'’) \\
-     Know ‘∀i. i < n ⇒ h' i ∈ events p’
+ >- (Q.PAT_X_ASSUM ‘!h'. (!i. i < n ==> h' i ∈ events p) ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘h'’) \\
+     Know ‘!i. i < n ==> h' i ∈ events p’
      >- (POP_ORW \\
          rw [Abbr ‘h'’, Abbr ‘h’]
          >- (fs [p_space_def, events_def, random_variable_def] \\
                 MP_TAC (Q.SPECL [‘Y (i :num)’, ‘p’] MEASURABLE_PREIMAGE_BOREL) \\
              Know ‘Y i ∈ Borel_measurable (measurable_space p)’
-             >- (Q.PAT_X_ASSUM ‘∀i. i < n ⇒ ext_normal_rv (Y i) p 0 (D i)’
+             >- (Q.PAT_X_ASSUM ‘!i. i < n ==> ext_normal_rv (Y i) p 0 (D i)’
                   (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [ext_normal_rv_def] \\
                  fs [normal_rv_def, random_variable_def, p_space_def, events_def] \\
                  METIS_TAC [in_measurable_borel_imp_Borel, p_space_def]) >> gs []) \\
          METIS_TAC [EVENTS_SPACE]) >> DISCH_THEN (fs o wrap)) >> Rewr
- >> Know ‘∀j. j IN N' ⇒ prob p' (f j) = prob p (h j)’
+ >> Know ‘!j. j IN N' ==> prob p' (f j) = prob p (h j)’
  >- (rw [Abbr ‘f’, Abbr ‘h’] \\
-     Q.PAT_X_ASSUM ‘∀x. x ∈ N' ⇒ E x ∈ subsets Borel’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
+     Q.PAT_X_ASSUM ‘!x. x ∈ N' ==> E x ∈ subsets Borel’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
      Q.ABBREV_TAC ‘A = PREIMAGE (Y j) (E j) ∩ p_space p’ \\
      Q.ABBREV_TAC ‘f = λj. EL j’ >> gs [] \\
      Q.ABBREV_TAC ‘g = λi. if i = j then A else p_space p’ \\
@@ -4311,23 +4311,23 @@ Proof
          >- (Cases_on ‘j = i’ >> rw [])
          >- (POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> fs [] \\
              ‘j < LENGTH x'’ by fs [SUBSET_DEF, count_def] >> gs []) \\
-         Q.PAT_X_ASSUM ‘∀i. i < LENGTH x' ⇒ f i x' ∈ if i = j then A else m_space p’
+         Q.PAT_X_ASSUM ‘!i. i < LENGTH x' ==> f i x' ∈ if i = j then A else m_space p’
           (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [] \\
          Cases_on ‘i = j’ >> rw [Abbr ‘A’] >> METIS_TAC []) >> rw [Abbr ‘f’] \\
-     Q.PAT_X_ASSUM ‘∀h'. (∀i. i < n ⇒ h' i ∈ events p) ⇒ _’
+     Q.PAT_X_ASSUM ‘!h'. (!i. i < n ==> h' i ∈ events p) ==> _’
       (STRIP_ASSUME_TAC o Q.SPEC ‘g’) \\
-     Know ‘(∀i. i < n ⇒ g i ∈ events p)’
+     Know ‘(!i. i < n ==> g i ∈ events p)’
      >- (POP_ORW >> rw [Abbr ‘g’, Abbr ‘A’]
          >- (fs [p_space_def, events_def, random_variable_def] \\
              MP_TAC (Q.SPECL [‘Y (i :num)’, ‘p’] MEASURABLE_PREIMAGE_BOREL) \\
              Know ‘Y i ∈ Borel_measurable (measurable_space p)’
-             >- (Q.PAT_X_ASSUM ‘∀i. i < n ⇒ ext_normal_rv (Y i) p 0 (D i)’
+             >- (Q.PAT_X_ASSUM ‘!i. i < n ==> ext_normal_rv (Y i) p 0 (D i)’
                   (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [ext_normal_rv_def] \\
                  fs [normal_rv_def, random_variable_def, p_space_def, events_def] \\
                  METIS_TAC [in_measurable_borel_imp_Borel, p_space_def]) >> gs []) \\
          METIS_TAC [EVENTS_SPACE]) >> DISCH_THEN (fs o wrap) \\
      rw [Abbr ‘g’] \\
-     ‘∀x. prob p (if x = j then A else p_space p) =
+     ‘!x. prob p (if x = j then A else p_space p) =
           if x ∈ {j} then prob p A else 1’ by rw [PROB_UNIV] >> POP_ORW \\
      (MP_TAC o (Q.SPECL [‘{j}’, ‘count n’, ‘λj. prob p A’]) o
              (INST_TYPE [alpha |-> “:num”])) EXTREAL_PROD_IMAGE_SUPPORT' >> rw [] \\
@@ -4335,7 +4335,7 @@ Proof
  >> Know ‘∏ (λj. prob p' (f j)) N' = ∏ (λj. prob p (h j)) N'’
  >- (irule EXTREAL_PROD_IMAGE_EQ >> METIS_TAC []) >> Rewr
  >> rw [Abbr ‘h'’]
- >> ‘∀j. prob p (if j ∈ N' then h j else p_space p) =
+ >> ‘!j. prob p (if j ∈ N' then h j else p_space p) =
          if j ∈ N' then prob p (h j) else 1’ by rw [PROB_UNIV]
  >> POP_ORW
  >> (MP_TAC o (Q.SPECL [‘N'’, ‘count n’, ‘λj. prob p (h (j :num))’]) o
@@ -4344,10 +4344,10 @@ Proof
 QED
 
 Theorem PROD_PROB_SPACE :
-    ∀p1 p2.  prob_space p1 ∧ prob_space p2 ⇒ prob_space (p1 CROSS p2)
+    !p1 p2.  prob_space p1 /\ prob_space p2 ==> prob_space (p1 CROSS p2)
 Proof
     rpt STRIP_TAC
- >> ‘sigma_finite p1 ∧ sigma_finite p2’ by METIS_TAC [PROB_SPACE_SIGMA_FINITE]
+ >> ‘sigma_finite p1 /\ sigma_finite p2’ by METIS_TAC [PROB_SPACE_SIGMA_FINITE]
  >> fs [prob_space_def, p_space_def, prob_def, events_def]
  >> STRONG_CONJ_TAC
  >- (irule measure_space_prod_measure \\
@@ -4362,19 +4362,19 @@ Proof
 QED
 
 Theorem PROB_BIGINTER_INDEP :
-    ∀p X N E. indep_vars p X (λi. Borel) N ∧ FINITE N ∧ N ≠ {} ∧
-              (∀i. i ∈ N ⇒ E i ∈ subsets Borel) ⇒
+    !p X N E. indep_vars p X (λi. Borel) N /\ FINITE N /\ N <> {} /\
+              (!i. i ∈ N ==> E i ∈ subsets Borel) ==>
               prob p (BIGINTER (IMAGE (λi. PREIMAGE (X i) (E i) ∩ p_space p) N)) =
               ∏ (λi. prob p (PREIMAGE (X i) (E i) ∩ p_space p)) N
 Proof
     rw [indep_vars_def, IN_DFUNSET]
- >> Q.PAT_X_ASSUM ‘∀E N'. _’ (STRIP_ASSUME_TAC o Q.SPECL [‘E’, ‘N’]) >> gs []
+ >> Q.PAT_X_ASSUM ‘!E N'. _’ (STRIP_ASSUME_TAC o Q.SPECL [‘E’, ‘N’]) >> gs []
  >> MATCH_MP_TAC EXTREAL_PROD_IMAGE_EQ >> rw []
 QED
 
 Theorem MEASURABLE_BIGINTER :
-    ∀m s.
-      measure_space m ∧ FINITE s ∧ s ≠ {} ∧ (∀x. x ∈ s ⇒ x ∈ measurable_sets m) ⇒
+    !m s.
+      measure_space m /\ FINITE s /\ s <> {} /\ (!x. x ∈ s ==> x ∈ measurable_sets m) ==>
       BIGINTER s ∈ measurable_sets m
 Proof
     rpt STRIP_TAC
@@ -4385,11 +4385,11 @@ Proof
 QED
 
 Theorem MEASURABLE_BIGINTER_IMAGE_PREIMAGE_BOREL :
-    ∀f m J.
-      measure_space m ∧
-      FINITE J ∧ J ≠ {} ∧
-      (∀i. i ∈ J ⇒ f i ∈ Borel_measurable (measurable_space m)) ⇒
-      (∀s. s ∈ subsets Borel ⇒
+    !f m J.
+      measure_space m /\
+      FINITE J /\ J <> {} /\
+      (!i. i ∈ J ==> f i ∈ Borel_measurable (measurable_space m)) ==>
+      (!s. s ∈ subsets Borel ==>
       BIGINTER (IMAGE (λi. PREIMAGE (f i) s ∩ m_space m) J) ∈ measurable_sets m)
 Proof
   rpt STRIP_TAC
@@ -4402,17 +4402,17 @@ Proof
 QED
 
 Theorem PSPACE_PROD :
-    ∀p1 p2.
-      prob_space p1 ∧ prob_space p2 ⇒
+    !p1 p2.
+      prob_space p1 /\ prob_space p2 ==>
       p_space (p1 × p2) = p_space p1 × p_space p2
 Proof
   rw [prob_space_def, p_space_def] >> METIS_TAC [SPACE_PROD]
 QED
 
 Theorem PROB_FST :
-    ∀p q A.
-      prob_space p ∧ prob_space q ∧
-      A ⊆ p_space p ∧ A IN events p ⇒
+    !p q A.
+      prob_space p /\ prob_space q /\
+      A ⊆ p_space p /\ A IN events p ==>
       prob (p × q) (PREIMAGE FST A ∩ p_space (p × q)) = prob p A
 Proof
     rpt STRIP_TAC
@@ -4427,9 +4427,9 @@ Proof
 QED
 
 Theorem PROB_SND :
-    ∀p q A.
-      prob_space p ∧ prob_space q ∧
-      A ⊆ p_space q ∧ A IN events q ⇒
+    !p q A.
+      prob_space p /\ prob_space q /\
+      A ⊆ p_space q /\ A IN events q ==>
       prob (p × q) (PREIMAGE SND A ∩ p_space (p × q)) = prob q A
 Proof
     rpt STRIP_TAC
@@ -4444,7 +4444,7 @@ Proof
 QED
 
 Theorem BIGINTER_IMAGE_PREIMAGE_FST_LEMMA :
-    ∀A X (N :'index set). FINITE N ∧ N ≠ {} ⇒
+    !A X (N :'index set). FINITE N /\ N <> {} ==>
             BIGINTER (IMAGE (λn. PREIMAGE FST (A n) ∩ X) N) =
             PREIMAGE FST (BIGINTER (IMAGE A N)) ∩ X
 Proof
@@ -4453,22 +4453,22 @@ Proof
  >> rw [GSYM SUBSET_ANTISYM_EQ, SUBSET_DEF]
  >> fs [GSYM MEMBER_NOT_EMPTY] >> rename1 ‘y IN N’
  >> rw [Abbr ‘B’, Abbr ‘G’]
- >- (Q.PAT_X_ASSUM ‘∀P. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE FST ((A :'index -> α -> bool) x') ∩ X’) \\
+ >- (Q.PAT_X_ASSUM ‘!P. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE FST ((A :'index -> α -> bool) x') ∩ X’) \\
      fs [IN_IMAGE] \\
-     Know ‘∃n. PREIMAGE FST (A x') ∩ X = PREIMAGE FST (A n) ∩ X ∧ n ∈ N’
+     Know ‘?n. PREIMAGE FST (A x') ∩ X = PREIMAGE FST (A n) ∩ X /\ n ∈ N’
      >- (qexists ‘x'’ >> fs []) >> DISCH_THEN (fs o wrap))
  >- (POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE FST ((A :'index -> α -> bool) y) ∩ X’) \\
      fs [IN_IMAGE] \\
-     Know ‘∃n. PREIMAGE FST (A y) ∩ X = PREIMAGE FST (A n) ∩ X ∧ n ∈ N’
+     Know ‘?n. PREIMAGE FST (A y) ∩ X = PREIMAGE FST (A n) ∩ X /\ n ∈ N’
      >- (qexists ‘y’ >> fs []) >> DISCH_THEN (fs o wrap))
  >> fs [IN_IMAGE, IN_PREIMAGE, PREIMAGE_def, INTER_DEF]
- >> Q.PAT_X_ASSUM ‘∀P. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘(A :'index -> α -> bool) n’)
- >> Know ‘∃x. A n = A x ∧ x ∈ N’
+ >> Q.PAT_X_ASSUM ‘!P. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘(A :'index -> α -> bool) n’)
+ >> Know ‘?x. A n = A x /\ x ∈ N’
  >- (qexists ‘n’ >> fs []) >> fs []
 QED
 
 Theorem BIGINTER_IMAGE_PREIMAGE_SND_LEMMA :
-    ∀A X (N :'index set). FINITE N ∧ N ≠ {} ⇒
+    !A X (N :'index set). FINITE N /\ N <> {} ==>
                           BIGINTER (IMAGE (λn. PREIMAGE SND (A n) ∩ X) N) =
                           PREIMAGE SND (BIGINTER (IMAGE A N)) ∩ X
 Proof
@@ -4477,27 +4477,27 @@ Proof
  >> rw [GSYM SUBSET_ANTISYM_EQ, SUBSET_DEF]
  >> fs [GSYM MEMBER_NOT_EMPTY] >> rename1 ‘y IN N’
  >> rw [Abbr ‘B’, Abbr ‘G’]
- >- (Q.PAT_X_ASSUM ‘∀P. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE SND ((A :'index -> α -> bool) x') ∩ X’) \\
+ >- (Q.PAT_X_ASSUM ‘!P. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE SND ((A :'index -> α -> bool) x') ∩ X’) \\
      fs [IN_IMAGE] \\
-     Know ‘∃n. PREIMAGE SND (A x') ∩ X = PREIMAGE SND (A n) ∩ X ∧ n ∈ N’
+     Know ‘?n. PREIMAGE SND (A x') ∩ X = PREIMAGE SND (A n) ∩ X /\ n ∈ N’
      >- (qexists ‘x'’ >> fs []) >> DISCH_THEN (fs o wrap))
  >- (POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE SND ((A :'index -> α -> bool) y) ∩ X’) \\
      fs [IN_IMAGE] \\
-     Know ‘∃n. PREIMAGE SND (A y) ∩ X = PREIMAGE SND (A n) ∩ X ∧ n ∈ N’
+     Know ‘?n. PREIMAGE SND (A y) ∩ X = PREIMAGE SND (A n) ∩ X /\ n ∈ N’
      >- (qexists ‘y’ >> fs []) >> DISCH_THEN (fs o wrap))
  >> fs [IN_IMAGE, IN_PREIMAGE, PREIMAGE_def, INTER_DEF]
- >> Q.PAT_X_ASSUM ‘∀P. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘(A :'index -> α -> bool) n’)
- >> Know ‘∃x. A n = A x ∧ x ∈ N’
+ >> Q.PAT_X_ASSUM ‘!P. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘(A :'index -> α -> bool) n’)
+ >> Know ‘?x. A n = A x /\ x ∈ N’
  >- (qexists ‘n’ >> fs []) >> fs []
 QED
 Theorem indep_vars_fst :
-    ∀p q X (J :'index set). prob_space p ∧ prob_space q ∧
-                              (∀i. i IN J ⇒ X i IN Borel_measurable (measurable_space p)) ∧
-                              indep_vars p X (λi. Borel) J ⇒
+    !p q X (J :'index set). prob_space p /\ prob_space q /\
+                              (!i. i IN J ==> X i IN Borel_measurable (measurable_space p)) /\
+                              indep_vars p X (λi. Borel) J ==>
                               indep_vars (p × q) (λi x. X i (FST x)) (λi. Borel) J
 Proof
     rw [indep_vars_def, IN_DFUNSET, o_DEF]
- >> Q.PAT_X_ASSUM ‘∀E N. _’ (STRIP_ASSUME_TAC o Q.SPECL [‘E’, ‘N’]) >> gs []
+ >> Q.PAT_X_ASSUM ‘!E N. _’ (STRIP_ASSUME_TAC o Q.SPECL [‘E’, ‘N’]) >> gs []
  >> Q.ABBREV_TAC ‘A = λn. PREIMAGE (X n) (E n) ∩ p_space p’
  >> Q.ABBREV_TAC ‘B = λn. PREIMAGE (λx. X n (FST x)) (E n) ∩ p_space (p × q)’
  >> Know ‘prob (p × q) (BIGINTER (IMAGE B N)) = prob p (BIGINTER (IMAGE A N))’
@@ -4509,21 +4509,21 @@ Proof
          >- (fs [GSYM MEMBER_NOT_EMPTY, Abbr ‘A’, SUBSET_DEF] >> rw [] \\
              POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE ((X :'index -> α -> extreal) x)
                                                    ((E :'index -> extreal -> bool) x) ∩ p_space p’) \\
-             Know ‘∃n. PREIMAGE (X x) (E x) ∩ p_space p =
-                       PREIMAGE (X n) (E n) ∩ p_space p ∧ n ∈ N’
+             Know ‘?n. PREIMAGE (X x) (E x) ∩ p_space p =
+                       PREIMAGE (X n) (E n) ∩ p_space p /\ n ∈ N’
              >- (qexists ‘x’ >> fs []) >> DISCH_THEN (fs o wrap)) >> Rewr \\
          Know ‘BIGINTER (IMAGE A N) ∈ events p’
-         >- (Know ‘∀n. n ∈ N ⇒ A n ∈ events p’
+         >- (Know ‘!n. n ∈ N ==> A n ∈ events p’
              >- (rw [Abbr ‘A’, events_def, p_space_def] \\
                  irule MEASURABLE_PREIMAGE_BOREL \\
                  fs [SUBSET_DEF]) \\
              DISCH_TAC \\
              irule EVENTS_BIGINTER_FN >> fs [finite_countable] \\
              rw [IMAGE_DEF, SUBSET_DEF] \\
-             Q.PAT_X_ASSUM ‘∀n. n ∈ N ⇒ A n ∈ events p’ (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) \\
+             Q.PAT_X_ASSUM ‘!n. n ∈ N ==> A n ∈ events p’ (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) \\
              fs []) >> Rewr) \\
      MP_TAC (Q.SPECL [‘A’, ‘p_space (p × q)’, ‘N’] BIGINTER_IMAGE_PREIMAGE_FST_LEMMA) \\
-     ‘N ≠ {}’ by METIS_TAC [MEMBER_NOT_EMPTY] >> gs [] >> DISCH_THEN (rw o wrap o SYM) \\
+     ‘N <> {}’ by METIS_TAC [MEMBER_NOT_EMPTY] >> gs [] >> DISCH_THEN (rw o wrap o SYM) \\
      AP_TERM_TAC >> rw [Abbr ‘B’, Abbr ‘A’, IMAGE_DEF, EXTENSION] \\
      EQ_TAC >> rw [] >> qexists ‘n’
      >- (rw [] >> rename1 ‘X n (FST y)’ \\
@@ -4543,13 +4543,13 @@ Proof
 QED
 
 Theorem indep_vars_snd :
-    ∀p q X (J :'index set). prob_space p ∧ prob_space q ∧
-                              (∀i. i IN J ⇒ X i IN Borel_measurable (measurable_space q)) ∧
-                              indep_vars q X (λi. Borel) J ⇒
+    !p q X (J :'index set). prob_space p /\ prob_space q /\
+                              (!i. i IN J ==> X i IN Borel_measurable (measurable_space q)) /\
+                              indep_vars q X (λi. Borel) J ==>
                               indep_vars (p × q) (λi x. X i (SND x)) (λi. Borel) J
 Proof
     rw [indep_vars_def, IN_DFUNSET, o_DEF]
- >> Q.PAT_X_ASSUM ‘∀E N. _’ (STRIP_ASSUME_TAC o Q.SPECL [‘E’, ‘N’]) >> gs []
+ >> Q.PAT_X_ASSUM ‘!E N. _’ (STRIP_ASSUME_TAC o Q.SPECL [‘E’, ‘N’]) >> gs []
  >> Q.ABBREV_TAC ‘A = λn. PREIMAGE (X n) (E n) ∩ p_space q’
  >> Q.ABBREV_TAC ‘B = λn. PREIMAGE (λx. X n (SND x)) (E n) ∩ p_space (p × q)’
  >> Know ‘prob (p × q) (BIGINTER (IMAGE B N)) = prob q (BIGINTER (IMAGE A N))’
@@ -4561,22 +4561,22 @@ Proof
          >- (fs [GSYM MEMBER_NOT_EMPTY, Abbr ‘A’, SUBSET_DEF] >> rw [] \\
              POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE ((X :'index -> β -> extreal) (x :'index))
                                                    ((E :'index -> extreal -> bool) (x :'index)) ∩ p_space q’) \\
-             Know ‘∃n. PREIMAGE (X x) (E x) ∩ p_space q =
-                       PREIMAGE (X n) (E n) ∩ p_space q ∧ n ∈ N’
+             Know ‘?n. PREIMAGE (X x) (E x) ∩ p_space q =
+                       PREIMAGE (X n) (E n) ∩ p_space q /\ n ∈ N’
              >- (qexists ‘x’ >> fs []) >> DISCH_THEN (fs o wrap)) >> Rewr \\
          Know ‘BIGINTER (IMAGE A N) ∈ events q’
-         >- (Know ‘∀n. n ∈ N ⇒ A n ∈ events q’
+         >- (Know ‘!n. n ∈ N ==> A n ∈ events q’
              >- (rw [Abbr ‘A’, events_def, p_space_def] \\
                  irule MEASURABLE_PREIMAGE_BOREL \\
                  fs [SUBSET_DEF]) \\
              DISCH_TAC \\
              irule EVENTS_BIGINTER_FN >> fs [finite_countable] \\
              rw [IMAGE_DEF, SUBSET_DEF] \\
-             Q.PAT_X_ASSUM ‘∀n. n ∈ N ⇒ A n ∈ events q’ (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) \\
+             Q.PAT_X_ASSUM ‘!n. n ∈ N ==> A n ∈ events q’ (STRIP_ASSUME_TAC o Q.SPEC ‘x'’) \\
              fs []) >> Rewr) \\
      (MP_TAC o (Q.SPECL [‘A’, ‘p_space (p × q)’, ‘N’]) o
              (INST_TYPE [alpha |-> “:'b”, beta |-> “:'a”])) BIGINTER_IMAGE_PREIMAGE_SND_LEMMA \\
-     ‘N ≠ {}’ by METIS_TAC [MEMBER_NOT_EMPTY] >> gs [] >> DISCH_THEN (rw o wrap o SYM) \\
+     ‘N <> {}’ by METIS_TAC [MEMBER_NOT_EMPTY] >> gs [] >> DISCH_THEN (rw o wrap o SYM) \\
      AP_TERM_TAC >> rw [Abbr ‘B’, Abbr ‘A’, IMAGE_DEF, EXTENSION] \\
      EQ_TAC >> rw [] >> qexists ‘n’
      >- (rw [] >> rename1 ‘X n (SND y)’ \\
@@ -4596,20 +4596,20 @@ Proof
 QED
 
 Theorem construct_auxiliary_seq[local] :
-    ∀p1 (p2 :'a list m_space) X Y (n :num).
-      prob_space p1 ∧ prob_space p2 ∧ 0 < n ∧
-      (∀i. i < n ⇒ real_random_variable (X i) p1) ∧
-      (∀i. i < n ⇒ real_random_variable (Y i) p2) ∧
-      indep_vars p1 X (λi. Borel) (count n) ∧
-      indep_vars p2 Y (λi. Borel) (count n) ⇒
-      ∃p X' Y' Z.
-        (p = p1 CROSS p2) ∧
-        (X' = λi. X i ∘ FST) ∧
-        (Y' = λi. Y i ∘ SND) ∧
-        prob_space p ∧
-        (∀i. i < n ⇒ real_random_variable (X' i) p) ∧
-        (∀i. i < n ⇒ real_random_variable (Y' i) p) ∧
-        (Z = λi x. if i < n then X' i x else Y' (i - n) x) ∧
+    !p1 (p2 :'a list m_space) X Y (n :num).
+      prob_space p1 /\ prob_space p2 /\ 0 < n /\
+      (!i. i < n ==> real_random_variable (X i) p1) /\
+      (!i. i < n ==> real_random_variable (Y i) p2) /\
+      indep_vars p1 X (λi. Borel) (count n) /\
+      indep_vars p2 Y (λi. Borel) (count n) ==>
+      ?p X' Y' Z.
+        (p = p1 CROSS p2) /\
+        (X' = λi. X i ∘ FST) /\
+        (Y' = λi. Y i ∘ SND) /\
+        prob_space p /\
+        (!i. i < n ==> real_random_variable (X' i) p) /\
+        (!i. i < n ==> real_random_variable (Y' i) p) /\
+        (Z = λi x. if i < n then X' i x else Y' (i - n) x) /\
         indep_vars p Z (λ(i :num). Borel) (count (2*n))
 Proof
     rpt STRIP_TAC
@@ -4625,14 +4625,14 @@ Proof
  >> STRONG_CONJ_TAC
  >- (METIS_TAC [Abbr ‘p’, Abbr ‘Y'’, real_random_variable_prod_measure_snd])
  >> STRIP_TAC >> fs [o_DEF]
- >> ‘count (2 * n) = {i | i < n} UNION {i | n ≤ i ∧ i < 2 * n}’ by rw [count_def, UNION_DEF, Once EXTENSION]
+ >> ‘count (2 * n) = {i | i < n} UNION {i | n ≤ i /\ i < 2 * n}’ by rw [count_def, UNION_DEF, Once EXTENSION]
  >> POP_ORW
- >> ‘∀i x. i < n ⇒ Z i x = X i (FST x)’ by rw [Abbr ‘Z’, Abbr ‘X'’]
- >> ‘∀i x. n ≤ i ∧ i < 2 * n ⇒ Z i x = Y (i - n) (SND x)’ by rw [Abbr ‘Z’, Abbr ‘Y'’]
+ >> ‘!i x. i < n ==> Z i x = X i (FST x)’ by rw [Abbr ‘Z’, Abbr ‘X'’]
+ >> ‘!i x. n ≤ i /\ i < 2 * n ==> Z i x = Y (i - n) (SND x)’ by rw [Abbr ‘Z’, Abbr ‘Y'’]
  >> rw [indep_vars_def, IN_DFUNSET]
  >> fs [Abbr ‘X'’, Abbr ‘Y'’, o_DEF]
- >> Q.ABBREV_TAC ‘N1 = {i | i ∈ N ∧ i < n}’
- >> Q.ABBREV_TAC ‘N2 = {i | i ∈ N ∧ n ≤ i ∧ i < 2 * n}’
+ >> Q.ABBREV_TAC ‘N1 = {i | i ∈ N /\ i < n}’
+ >> Q.ABBREV_TAC ‘N2 = {i | i ∈ N /\ n ≤ i /\ i < 2 * n}’
  >> Know ‘N = N1 UNION N2’
  >-(rw [Abbr ‘N1’, Abbr ‘N2’] >> rw [INTER_DEF, Once EXTENSION] \\
     EQ_TAC >> rw [] >> fs [SUBSET_DEF])
@@ -4640,10 +4640,10 @@ Proof
  >> Know ‘DISJOINT N1 N2’
  >- (rw [DISJOINT_ALT, Abbr ‘N1’, Abbr ‘N2’])
  >> DISCH_TAC
- >> Q.ABBREV_TAC ‘J = IMAGE (λi. i − n) N2’
+ >> Q.ABBREV_TAC ‘J = IMAGE (λi. i - n) N2’
  >> Q.ABBREV_TAC ‘E' = λi. E (i + n)’
  >> Q.ABBREV_TAC ‘A1 = BIGINTER (IMAGE (λi. PREIMAGE (λx. X i (FST x)) (E i) ∩ p_space (p1 × p2)) N1)’
- >> Q.ABBREV_TAC ‘A2 = BIGINTER (IMAGE (λi. PREIMAGE (λx. Y (i − n) (SND x)) (E i) ∩ p_space (p1 × p2)) N2)’
+ >> Q.ABBREV_TAC ‘A2 = BIGINTER (IMAGE (λi. PREIMAGE (λx. Y (i - n) (SND x)) (E i) ∩ p_space (p1 × p2)) N2)’
  >> Q.ABBREV_TAC ‘A3 = BIGINTER (IMAGE (λj. PREIMAGE (λx. Y j (SND x)) (E' j) ∩ p_space (p1 × p2)) J)’
  >> Know ‘N = N1 UNION N2’
  >-(rw [Abbr ‘N1’, Abbr ‘N2’] >> rw [INTER_DEF, Once EXTENSION] \\
@@ -4665,18 +4665,18 @@ Proof
      >- (AP_TERM_TAC >> rw [Abbr ‘N1’, Abbr ‘Z’, o_DEF, Once EXTENSION, IMAGE_DEF]
          >> EQ_TAC >> rw [] >> qexists ‘i’ >> gs []) >> Rewr \\
      Know ‘BIGINTER (IMAGE (λi. PREIMAGE (λx. Z i x) (E i) ∩ p_space (p1 × p2)) N2) =
-           BIGINTER (IMAGE (λi. PREIMAGE (λx. Y (i − n) (SND x)) (E i) ∩ p_space (p1 × p2)) N2)’
+           BIGINTER (IMAGE (λi. PREIMAGE (λx. Y (i - n) (SND x)) (E i) ∩ p_space (p1 × p2)) N2)’
      >- (AP_TERM_TAC >> rw [Abbr ‘N2’, Abbr ‘Z’, o_DEF, Once EXTENSION, IMAGE_DEF] \\
          EQ_TAC >> rw [] >> qexists ‘i’ >> gs []) >> Rewr) >> Rewr
  >> Q.ABBREV_TAC ‘r = p1 CROSS p2’
  >> Q.ABBREV_TAC ‘e1 = BIGINTER (IMAGE (λi. PREIMAGE (X i) (E i) ∩ p_space p1) N1)’
- >> Q.ABBREV_TAC ‘e2 = BIGINTER (IMAGE (λi. PREIMAGE (Y (i − n)) (E i) ∩ p_space p2) N2)’
- >> Know ‘∏ (λi. prob r (PREIMAGE (λx. Y (i − n) (SND x)) (E i) ∩ p_space r)) N2 =
+ >> Q.ABBREV_TAC ‘e2 = BIGINTER (IMAGE (λi. PREIMAGE (Y (i - n)) (E i) ∩ p_space p2) N2)’
+ >> Know ‘∏ (λi. prob r (PREIMAGE (λx. Y (i - n) (SND x)) (E i) ∩ p_space r)) N2 =
           ∏ (λi. prob r (PREIMAGE (λx. Y i (SND x)) (E' i) ∩ p_space r)) J’
  >- (rw [Abbr ‘E'’, Abbr ‘J’] \\
-     (MP_TAC o (Q.SPECL [‘N2’, ‘λi. i − n’]) o
+     (MP_TAC o (Q.SPECL [‘N2’, ‘λi. i - n’]) o
              (INST_TYPE [alpha |-> “:num”, beta |-> “:num”])) EXTREAL_PROD_IMAGE_IMAGE \\
-     Know ‘INJ (λi. i − n) N2 (IMAGE (λi. i − n) N2)’
+     Know ‘INJ (λi. i - n) N2 (IMAGE (λi. i - n) N2)’
      >- (rw [INJ_DEF, Abbr ‘N2’, IMAGE_DEF, Once EXTENSION]
          >- (qexists ‘i’ >> fs []) \\
          qexists ‘i’ >> fs []) >> Rewr \\
@@ -4689,25 +4689,25 @@ Proof
  >> Cases_on ‘N1 = {}’
  >- (fs [GSYM MEMBER_NOT_EMPTY, INTER_UNIV, Abbr ‘A1’] \\
      Q.PAT_X_ASSUM ‘T’ K_TAC \\
-     ‘∀i x. i IN N2 ⇒ Z i x = Y (i − n) (SND x)’ by fs [Abbr ‘Z’, Abbr ‘N2’] \\
+     ‘!i x. i IN N2 ==> Z i x = Y (i - n) (SND x)’ by fs [Abbr ‘Z’, Abbr ‘N2’] \\
      Know ‘BIGINTER (IMAGE (λi. PREIMAGE (λx. Z i x) (E i) ∩ p_space r) N2) =
-           BIGINTER (IMAGE (λi. PREIMAGE (λx. Y (i − n) (SND x)) (E i) ∩ p_space r) N2)’
+           BIGINTER (IMAGE (λi. PREIMAGE (λx. Y (i - n) (SND x)) (E i) ∩ p_space r) N2)’
      >- (AP_TERM_TAC >> rw [IMAGE_DEF, Once EXTENSION] \\
          EQ_TAC >> rw [] >> qexists ‘i’
          >> (Know ‘PREIMAGE (λx. Z i x) (E i) ∩ p_space r =
-                   PREIMAGE (λx. Y (i − n) (SND x)) (E i) ∩ p_space r’
+                   PREIMAGE (λx. Y (i - n) (SND x)) (E i) ∩ p_space r’
              >- (fs [Abbr ‘Z’]) >> METIS_TAC [])) >> Rewr \\
      ‘∏ (λi. prob r (PREIMAGE (λx. Z i x) (E i) ∩ p_space r)) N2 =
-      ∏ (λi. prob r (PREIMAGE (λx. Y (i − n) (SND x)) (E i) ∩ p_space r)) N2’
+      ∏ (λi. prob r (PREIMAGE (λx. Y (i - n) (SND x)) (E i) ∩ p_space r)) N2’
        by (irule EXTREAL_PROD_IMAGE_EQ >> rw []) >> POP_ORW >> fs [] \\
     (MP_TAC o (Q.SPECL [‘p1’, ‘p2’, ‘Y’, ‘J’]) o
             (INST_TYPE [beta |-> “:'a list”, alpha |-> “:'b”, gamma |-> “:num”,
                         “:'index” |-> “:num”])) indep_vars_snd \\
      simp [] >> fs [] \\
-     Know ‘∀i. i ∈ J ⇒ Y i ∈ Borel_measurable (measurable_space p2)’
+     Know ‘!i. i ∈ J ==> Y i ∈ Borel_measurable (measurable_space p2)’
      >- (rw [Abbr ‘J’] \\
          ‘i' - n < n’ by (fs [SUBSET_DEF] \\
-                          Q.PAT_X_ASSUM ‘∀x'. x' ∈ N ⇒ x' < n ∨ n ≤ x' ∧ x' < 2 * n’
+                          Q.PAT_X_ASSUM ‘!x'. x' ∈ N ==> x' < n \/ n ≤ x' /\ x' < 2 * n’
                            (STRIP_ASSUME_TAC o Q.SPEC ‘i'’) >> gs []) \\
          METIS_TAC [real_random_variable, events_def, p_space_def]) >> Rewr \\
      Know ‘indep_vars p2 Y (λi. Borel) J’
@@ -4717,17 +4717,17 @@ Proof
          METIS_TAC [indep_vars_subset]) >> Rewr \\
      rw [indep_vars_def, o_DEF] \\
      POP_ASSUM (MP_TAC o Q.SPECL [‘E'’, ‘J’]) >> gs [IN_DFUNSET] \\
-     Know ‘J ≠ ∅ ∧ FINITE J’
+     Know ‘J <> ∅ /\ FINITE J’
      >- (CONJ_TAC >- (CCONTR_TAC >> rw [IMAGE_EQ_EMPTY, Abbr ‘J’] >> fs [NOT_IN_EMPTY]) \\
          METIS_TAC [FINITE_IMAGE, Abbr ‘J’]) >> Rewr \\
-     Suff ‘∀i. i ∈ J ⇒ E' i ∈ subsets Borel’ >- (rw []) >> rw [Abbr ‘E'’] \\
-     Q.PAT_X_ASSUM ‘∀x. x ∈ N ⇒ E x ∈ subsets Borel’ (STRIP_ASSUME_TAC o Q.SPEC ‘i + n’) \\
+     Suff ‘!i. i ∈ J ==> E' i ∈ subsets Borel’ >- (rw []) >> rw [Abbr ‘E'’] \\
+     Q.PAT_X_ASSUM ‘!x. x ∈ N ==> E x ∈ subsets Borel’ (STRIP_ASSUME_TAC o Q.SPEC ‘i + n’) \\
      Know ‘i + n IN N’
      >- (fs [Abbr ‘J’] \\
          ‘n ≤ i'’ by fs [Abbr ‘N’] >> METIS_TAC [SUB_ADD]) >> fs [])
  >> Cases_on ‘N2 = {}’
  >- (fs [GSYM MEMBER_NOT_EMPTY, INTER_UNIV, Abbr ‘A2’] >> rw [Abbr ‘J’] \\
-     ‘∀i x. i IN N ⇒ Z i x = X i (FST x)’ by fs [Abbr ‘Z’, Abbr ‘N’] \\
+     ‘!i x. i IN N ==> Z i x = X i (FST x)’ by fs [Abbr ‘Z’, Abbr ‘N’] \\
      Know ‘BIGINTER (IMAGE (λi. PREIMAGE (λx. Z i x) (E i) ∩ p_space r) N) =
            BIGINTER (IMAGE (λi. PREIMAGE (λx. X i (FST x)) (E i) ∩ p_space r) N)’
      >- (AP_TERM_TAC >> rw [IMAGE_DEF, Once EXTENSION] \\
@@ -4743,7 +4743,7 @@ Proof
              (INST_TYPE [beta |-> “:'a list”, alpha |-> “:'b”, gamma |-> “:num”,
                          “:'index” |-> “:num”])) indep_vars_fst \\
      simp [] >> fs [] \\
-     Know ‘∀i. i ∈ N ⇒ X i ∈ Borel_measurable (measurable_space p1)’
+     Know ‘!i. i ∈ N ==> X i ∈ Borel_measurable (measurable_space p1)’
      >- (rw [Abbr ‘N’] >> METIS_TAC [real_random_variable, events_def, p_space_def]) >> Rewr \\
      Know ‘indep_vars p1 X (λi. Borel) N’
      >- (‘N SUBSET (count n)’ by fs [SUBSET_DEF, Abbr ‘N’] \\
@@ -4755,7 +4755,7 @@ Proof
           ∏ (λi. prob r (PREIMAGE (λx. Z i x) (E i) ∩ p_space r)) N1 *
           ∏ (λi. prob r (PREIMAGE (λx. Z i x) (E i) ∩ p_space r)) N2’
  >- (irule EXTREAL_PROD_IMAGE_DISJOINT_UNION >> fs [DISJOINT_DEF]) >> Rewr
- >> ‘∀i x. i IN N1 ⇒ Z i x = X i (FST x)’ by fs [Abbr ‘Z’, Abbr ‘N1’]
+ >> ‘!i x. i IN N1 ==> Z i x = X i (FST x)’ by fs [Abbr ‘Z’, Abbr ‘N1’]
  >> Know ‘BIGINTER (IMAGE (λi. PREIMAGE (λx. Z i x) (E i) ∩ p_space r) N1) =
           BIGINTER (IMAGE (λi. PREIMAGE (λx. X i (FST x)) (E i) ∩ p_space r) N1)’
  >- (AP_TERM_TAC >> rw [IMAGE_DEF, Once EXTENSION] \\
@@ -4766,26 +4766,26 @@ Proof
  >> ‘∏ (λi. prob r (PREIMAGE (λx. Z i x) (E i) ∩ p_space r)) N1 =
      ∏ (λi. prob r (PREIMAGE (λx. X i (FST x)) (E i) ∩ p_space r)) N1’
    by (irule EXTREAL_PROD_IMAGE_EQ >> rw []) >> POP_ORW >> fs []
- >> ‘∀i x. i IN N2 ⇒ Z i x = Y (i − n) (SND x)’ by fs [Abbr ‘Z’, Abbr ‘N2’]
+ >> ‘!i x. i IN N2 ==> Z i x = Y (i - n) (SND x)’ by fs [Abbr ‘Z’, Abbr ‘N2’]
  >> Know ‘BIGINTER (IMAGE (λi. PREIMAGE (λx. Z i x) (E i) ∩ p_space r) N2) =
-          BIGINTER (IMAGE (λi. PREIMAGE (λx. Y (i − n) (SND x)) (E i) ∩ p_space r) N2)’
+          BIGINTER (IMAGE (λi. PREIMAGE (λx. Y (i - n) (SND x)) (E i) ∩ p_space r) N2)’
  >- (AP_TERM_TAC >> rw [IMAGE_DEF, Once EXTENSION] \\
      EQ_TAC >> rw [] >> qexists ‘i’
      >> (Know ‘PREIMAGE (λx. Z i x) (E i) ∩ p_space r =
-               PREIMAGE (λx. Y (i − n) (SND x)) (E i) ∩ p_space r’
+               PREIMAGE (λx. Y (i - n) (SND x)) (E i) ∩ p_space r’
          >- (fs [Abbr ‘Z’]) >> METIS_TAC [])) >> Rewr >> fs []
  >> ‘∏ (λi. prob r (PREIMAGE (λx. Z i x) (E i) ∩ p_space r)) N2 =
-     ∏ (λi. prob r (PREIMAGE (λx. Y (i − n) (SND x)) (E i) ∩ p_space r)) N2’
+     ∏ (λi. prob r (PREIMAGE (λx. Y (i - n) (SND x)) (E i) ∩ p_space r)) N2’
      by (irule EXTREAL_PROD_IMAGE_EQ >> rw []) >> POP_ORW >> fs []
  >> Q.PAT_X_ASSUM ‘T’ K_TAC
- >> Know ‘e1 ∈ events p1 ∧ e2 ∈ events p2’
+ >> Know ‘e1 ∈ events p1 /\ e2 ∈ events p2’
  >- (CONJ_TAC
      >- (rw [Abbr ‘e1’] >> fs [p_space_def, events_def, real_random_variable_def, random_variable_def] \\
          irule MEASURABLE_BIGINTER \\
          fs [prob_space_def] >> rw [] \\
          irule MEASURABLE_PREIMAGE_BOREL \\
          ‘N1 SUBSET (count n)’ by fs [SUBSET_DEF, Abbr ‘N1’] \\
-            ‘∀i. i ∈ N1 ⇒ X i ∈ Borel_measurable (measurable_space p1)’ by fs [SUBSET_DEF, count_def] \\
+            ‘!i. i ∈ N1 ==> X i ∈ Borel_measurable (measurable_space p1)’ by fs [SUBSET_DEF, count_def] \\
          METIS_TAC []) \\
      rw [Abbr ‘e2’] >> fs [p_space_def, events_def, real_random_variable_def, random_variable_def] \\
      irule MEASURABLE_BIGINTER \\
@@ -4798,89 +4798,89 @@ Proof
      EQ_TAC >> rw []
      >- (rw [IN_PREIMAGE, IN_INTER]
          (* FST x ∈ PREIMAGE (X i) (E i) ∩ p_space p1 *)
-         >- (Q.PAT_X_ASSUM ‘∀P. (∃i. P = PREIMAGE (λx. X i (FST x)) (E i) ∩ p_space (p1 × p2) ∧ i ∈ N1) ⇒ _’
+         >- (Q.PAT_X_ASSUM ‘!P. (?i. P = PREIMAGE (λx. X i (FST x)) (E i) ∩ p_space (p1 × p2) /\ i ∈ N1) ==> _’
               (STRIP_ASSUME_TAC o Q.SPEC ‘{x | (X :num -> β -> extreal) (i :num) (FST x) ∈
                                                (E :num -> extreal -> bool) i} ∩ p_space (p1 × p2)’) \\
-             Know ‘∃i'. {x | X i (FST x) ∈ E i} ∩ p_space (p1 × p2) =
-                             PREIMAGE (λx. X i' (FST x)) (E i') ∩ p_space (p1 × p2) ∧ i' ∈ N1’
+             Know ‘?i'. {x | X i (FST x) ∈ E i} ∩ p_space (p1 × p2) =
+                             PREIMAGE (λx. X i' (FST x)) (E i') ∩ p_space (p1 × p2) /\ i' ∈ N1’
              >- (qexists ‘i’ >> METIS_TAC [PREIMAGE_def]) >> DISCH_THEN (fs o wrap)) \\
-         Q.PAT_X_ASSUM ‘∀P. (∃i. P = PREIMAGE (λx. X i (FST x)) (E i) ∩ p_space (p1 × p2) ∧ i ∈ N1) ⇒ _’
+         Q.PAT_X_ASSUM ‘!P. (?i. P = PREIMAGE (λx. X i (FST x)) (E i) ∩ p_space (p1 × p2) /\ i ∈ N1) ==> _’
           (STRIP_ASSUME_TAC o Q.SPEC ‘{x | (X :num -> β -> extreal) (i :num) (FST x) ∈
                                            (E :num -> extreal -> bool) i} ∩ p_space (p1 × p2)’) \\
-         Know ‘∃i'. {x | X i (FST x) ∈ E i} ∩ p_space (p1 × p2) =
-                         PREIMAGE (λx. X i' (FST x)) (E i') ∩ p_space (p1 × p2) ∧ i' ∈ N1’
+         Know ‘?i'. {x | X i (FST x) ∈ E i} ∩ p_space (p1 × p2) =
+                         PREIMAGE (λx. X i' (FST x)) (E i') ∩ p_space (p1 × p2) /\ i' ∈ N1’
          >- (qexists ‘i’ >> METIS_TAC [PREIMAGE_def]) >> DISCH_THEN (fs o wrap) \\
          METIS_TAC [IN_PSPACE_PROD_SIGMA])
      (* SND x ∈ p_space p2 *)
      >- (fs [GSYM MEMBER_NOT_EMPTY] >> rename1 ‘k ∈ N1’ \\
-         Q.PAT_X_ASSUM ‘∀P. (∃i. P = PREIMAGE (λx. X i (FST x)) (E i) ∩ p_space (p1 × p2) ∧ i ∈ N1) ⇒ _’
+         Q.PAT_X_ASSUM ‘!P. (?i. P = PREIMAGE (λx. X i (FST x)) (E i) ∩ p_space (p1 × p2) /\ i ∈ N1) ==> _’
           (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE (λx. (X :num -> β -> extreal) (k :num) (FST x))
                                       ((E :num -> extreal -> bool) k) ∩ p_space (p1 × p2)’) \\
-         Know ‘∃i. PREIMAGE (λx. X k (FST x)) (E k) ∩ p_space (p1 × p2) =
-                   PREIMAGE (λx. X i (FST x)) (E i) ∩ p_space (p1 × p2) ∧ i ∈ N1’
+         Know ‘?i. PREIMAGE (λx. X k (FST x)) (E k) ∩ p_space (p1 × p2) =
+                   PREIMAGE (λx. X i (FST x)) (E i) ∩ p_space (p1 × p2) /\ i ∈ N1’
          >- (fs [GSYM MEMBER_NOT_EMPTY] >>
              qexists ‘k’ >> METIS_TAC [PREIMAGE_def]) >> DISCH_THEN (fs o wrap) \\
          METIS_TAC [IN_PSPACE_PROD_SIGMA]) \\
      (* x ∈ PREIMAGE (λx. X i (FST x)) (E i) ∩ p_space (p1 × p2) *)
      rw [PREIMAGE_def]
      (*  X i (FST x) ∈ E i *)
-     >- (Q.PAT_X_ASSUM ‘∀P. (∃i. P = PREIMAGE (X i) (E i) ∩ p_space p1 ∧ i ∈ N1) ⇒ _’
+     >- (Q.PAT_X_ASSUM ‘!P. (?i. P = PREIMAGE (X i) (E i) ∩ p_space p1 /\ i ∈ N1) ==> _’
           (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE ((X :num -> β -> extreal) (i :num) )
                                       ((E :num -> extreal -> bool) (i :num)) ∩ p_space p1’)\\
-         Know ‘∃i'.
+         Know ‘?i'.
                  PREIMAGE (X i) (E i) ∩ p_space p1 =
-                 PREIMAGE (X i') (E i') ∩ p_space p1 ∧ i' ∈ N1’
+                 PREIMAGE (X i') (E i') ∩ p_space p1 /\ i' ∈ N1’
          >- (qexists ‘i’ >> rw []) >> DISCH_THEN (fs o wrap)) \\
      (* x ∈ p_space (p1 × p2) *)
      rw [IN_PSPACE_PROD_SIGMA] \\
-     Q.PAT_X_ASSUM ‘∀P. (∃i. P = PREIMAGE (X i) (E i) ∩ p_space p1 ∧ i ∈ N1) ⇒ _’
+     Q.PAT_X_ASSUM ‘!P. (?i. P = PREIMAGE (X i) (E i) ∩ p_space p1 /\ i ∈ N1) ==> _’
       (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE ((X :num -> β -> extreal) (i :num) )
                                   ((E :num -> extreal -> bool) (i :num)) ∩ p_space p1’) \\
-     Know ‘∃i'.
+     Know ‘?i'.
              PREIMAGE (X i) (E i) ∩ p_space p1 =
-             PREIMAGE (X i') (E i') ∩ p_space p1 ∧ i' ∈ N1’
+             PREIMAGE (X i') (E i') ∩ p_space p1 /\ i' ∈ N1’
      >- (qexists ‘i’ >> rw []) >> DISCH_THEN (fs o wrap)) >> Rewr
- >> Know ‘J ≠ ∅ ∧ FINITE J’
+ >> Know ‘J <> ∅ /\ FINITE J’
  >- (CONJ_TAC >- (CCONTR_TAC >> rw [IMAGE_EQ_EMPTY, Abbr ‘J’] >> fs [NOT_IN_EMPTY]) \\
      METIS_TAC [FINITE_IMAGE, Abbr ‘J’]) >> DISCH_TAC
  >> Know ‘A3 = p_space p1 CROSS e2’
  >- (rw [Abbr ‘A3’, Abbr ‘e2’, Abbr ‘r’, Once EXTENSION] \\
      EQ_TAC >> rw []
      >- (fs [GSYM MEMBER_NOT_EMPTY] >> rename1 ‘k ∈ J’ \\
-         Q.PAT_X_ASSUM ‘∀P. (∃j. P = PREIMAGE (λx. Y j (SND x)) (E' j) ∩ p_space (p1 × p2) ∧ j ∈ J) ⇒ _’
+         Q.PAT_X_ASSUM ‘!P. (?j. P = PREIMAGE (λx. Y j (SND x)) (E' j) ∩ p_space (p1 × p2) /\ j ∈ J) ==> _’
           (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE (λx. (Y :num -> α list -> extreal) (k :num) (SND x))
                                       ((E' :num -> extreal -> bool) k) ∩ p_space (p1 × p2)’) \\
-         Know ‘∃j. PREIMAGE (λx. Y k (SND x)) (E' k) ∩ p_space (p1 × p2) =
-                   PREIMAGE (λx. Y j (SND x)) (E' j) ∩ p_space (p1 × p2) ∧ j ∈ J’
+         Know ‘?j. PREIMAGE (λx. Y k (SND x)) (E' k) ∩ p_space (p1 × p2) =
+                   PREIMAGE (λx. Y j (SND x)) (E' j) ∩ p_space (p1 × p2) /\ j ∈ J’
          >- (fs [GSYM MEMBER_NOT_EMPTY] >>
              qexists ‘k’ >> METIS_TAC [PREIMAGE_def]) >> DISCH_THEN (fs o wrap) \\
          METIS_TAC [IN_PSPACE_PROD_SIGMA])
      >- (fs [Abbr ‘E'’] \\
-         Q.PAT_X_ASSUM ‘∀P. (∃j. P = PREIMAGE (λx. Y j (SND x)) (E (j + n)) ∩ p_space (p1 × p2) ∧ j ∈ J) ⇒ _’
-          (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE (λx. (Y :num -> α list -> extreal) (i − n) (SND x)) (E i) ∩
+         Q.PAT_X_ASSUM ‘!P. (?j. P = PREIMAGE (λx. Y j (SND x)) (E (j + n)) ∩ p_space (p1 × p2) /\ j ∈ J) ==> _’
+          (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE (λx. (Y :num -> α list -> extreal) (i - n) (SND x)) (E i) ∩
                                       p_space (p1 × p2)’) \\
-         Know ‘∃j. PREIMAGE (λx. Y (i − n) (SND x)) (E i) ∩ p_space (p1 × p2) =
-                   PREIMAGE (λx. Y j (SND x)) (E (j + n)) ∩ p_space (p1 × p2) ∧ j ∈ J’
+         Know ‘?j. PREIMAGE (λx. Y (i - n) (SND x)) (E i) ∩ p_space (p1 × p2) =
+                   PREIMAGE (λx. Y j (SND x)) (E (j + n)) ∩ p_space (p1 × p2) /\ j ∈ J’
          >- (qexists ‘i - n’ \\
              ‘n ≤ i’ by fs [Abbr ‘N2’] >> fs [SUB_ADD] \\
              fs [Abbr ‘J’] >> qexists ‘i’ >> fs []) >> DISCH_THEN (fs o wrap) \\
          METIS_TAC [IN_PSPACE_PROD_SIGMA]) \\
      fs [Abbr ‘J’] >> CONJ_TAC
      >- (‘n ≤ i’ by fs [Abbr ‘N2’] >> fs [Abbr ‘E'’, SUB_ADD] \\
-         Q.PAT_X_ASSUM ‘∀P. (∃i. P = PREIMAGE (Y (i − n)) (E i) ∩ p_space p2 ∧ i ∈ N2) ⇒ _’
-          (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE ((Y :num -> α list -> extreal) (i − n)) (E i) ∩
+         Q.PAT_X_ASSUM ‘!P. (?i. P = PREIMAGE (Y (i - n)) (E i) ∩ p_space p2 /\ i ∈ N2) ==> _’
+          (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE ((Y :num -> α list -> extreal) (i - n)) (E i) ∩
                                       p_space p2’)\\
-         Know ‘∃i'.
-                 PREIMAGE (Y (i − n)) (E i) ∩ p_space p2 =
-                 PREIMAGE (Y (i' − n)) (E i') ∩ p_space p2 ∧ i' ∈ N2’
+         Know ‘?i'.
+                 PREIMAGE (Y (i - n)) (E i) ∩ p_space p2 =
+                 PREIMAGE (Y (i' - n)) (E i') ∩ p_space p2 /\ i' ∈ N2’
          >- (qexists ‘i’ >> rw []) >> DISCH_THEN (fs o wrap)) \\
      rw [IN_PSPACE_PROD_SIGMA] \\
      fs [GSYM MEMBER_NOT_EMPTY] >> rename1 ‘i IN N2’ \\
-     Q.PAT_X_ASSUM ‘∀P. (∃i. P = PREIMAGE (Y (i − n)) (E i) ∩ p_space p2 ∧ i ∈ N2) ⇒ _’
-      (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE (Y (i − n)) ((E :num -> extreal -> bool) i) ∩ p_space p2’) \\
-     Know ‘∃i'.
-             PREIMAGE (Y (i − n)) (E i) ∩ p_space p2 =
-             PREIMAGE (Y (i' − n)) (E i') ∩ p_space p2 ∧ i' ∈ N2’
+     Q.PAT_X_ASSUM ‘!P. (?i. P = PREIMAGE (Y (i - n)) (E i) ∩ p_space p2 /\ i ∈ N2) ==> _’
+      (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE (Y (i - n)) ((E :num -> extreal -> bool) i) ∩ p_space p2’) \\
+     Know ‘?i'.
+             PREIMAGE (Y (i - n)) (E i) ∩ p_space p2 =
+             PREIMAGE (Y (i' - n)) (E i') ∩ p_space p2 /\ i' ∈ N2’
      >- (qexists ‘i’ >> rw []) >> DISCH_THEN (fs o wrap)) >> Rewr
  >> Know ‘prob r (e1 × p_space p2 ∩ p_space p1 × e2) = prob r (e1 CROSS e2)’
  >- (AP_TERM_TAC >> simp [Once EXTENSION, IN_CROSS] \\
@@ -4890,7 +4890,7 @@ Proof
          METIS_TAC [SUBSET_DEF]) \\
      ‘e1 SUBSET p_space p1’ by METIS_TAC [PROB_SPACE_SUBSET_PSPACE] \\
      METIS_TAC [SUBSET_DEF]) >> Rewr
- >> Q.PAT_X_ASSUM ‘∀e1 e2. e1 ∈ events p1 ∧ e2 ∈ events p2 ⇒ _’ (STRIP_ASSUME_TAC o Q.SPECL [‘e1’, ‘e2’])
+ >> Q.PAT_X_ASSUM ‘!e1 e2. e1 ∈ events p1 /\ e2 ∈ events p2 ==> _’ (STRIP_ASSUME_TAC o Q.SPECL [‘e1’, ‘e2’])
  >> gs []
  >> Know ‘∏ (λi. prob r (PREIMAGE (λx. Y i (SND x)) (E' i) ∩ p_space r)) J =
           ∏ (λi. prob p2 (PREIMAGE (Y i) (E' i) ∩ p_space p2)) J’
@@ -4905,10 +4905,10 @@ Proof
          Know ‘n + x IN N2’
          >- (fs [Abbr ‘J’] \\
              ‘n ≤ i’ by fs [Abbr ‘N2’] \\
-             ‘n + (i − n) = i’ by (POP_ASSUM MP_TAC >> numLib.ARITH_TAC) \\
+             ‘n + (i - n) = i’ by (POP_ASSUM MP_TAC >> numLib.ARITH_TAC) \\
              gs []) >> STRIP_TAC \\
          fs [] \\
-         Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (Y i) p2’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
+         Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (Y i) p2’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
          ‘x < n’ by fs [Abbr ‘J’, Abbr ‘N2’] \\
          METIS_TAC [real_random_variable, p_space_def, events_def]) >> Rewr \\
      DISCH_THEN (rw o wrap o SYM) \\
@@ -4924,7 +4924,7 @@ Proof
      >- (rw [Abbr ‘E'’, p_space_def, events_def] \\
          irule MEASURABLE_PREIMAGE_BOREL \\
          fs [] \\
-         Q.PAT_X_ASSUM ‘∀i. i < n ⇒ real_random_variable (X i) p1’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
+         Q.PAT_X_ASSUM ‘!i. i < n ==> real_random_variable (X i) p1’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
          ‘x < n’ by fs [Abbr ‘N1’] \\
          METIS_TAC [real_random_variable, p_space_def, events_def]) >> Rewr \\
      DISCH_THEN (rw o wrap o SYM) \\
@@ -4936,7 +4936,7 @@ Proof
      METIS_TAC [indep_vars_subset]) >> Rewr
  >> Know ‘prob p2 e2 = ∏ (λi. prob p2 (PREIMAGE (Y i) (E' i) ∩ p_space p2)) J’
  >- (simp [Abbr ‘e2’] \\
-     Know ‘BIGINTER (IMAGE (λi. PREIMAGE (Y (i − n)) (E i) ∩ p_space p2) N2) =
+     Know ‘BIGINTER (IMAGE (λi. PREIMAGE (Y (i - n)) (E i) ∩ p_space p2) N2) =
            BIGINTER (IMAGE (λj. PREIMAGE (Y j) (E (j + n)) ∩ p_space p2) J)’
      >- (AP_TERM_TAC >> rw [Abbr ‘N2’, Abbr ‘J’, o_DEF, Once EXTENSION, IMAGE_DEF]
          >> EQ_TAC >> rw []
@@ -4952,24 +4952,24 @@ Proof
          >- (rw [SUBSET_DEF, Abbr ‘J’, Abbr ‘N2’, IMAGE_DEF]
              >> (NTAC 2 (POP_ASSUM MP_TAC) >> numLib.ARITH_TAC)) >> DISCH_TAC \\
          METIS_TAC [indep_vars_subset]) >> Rewr \\
-     Know ‘∀i. i ∈ J ⇒ E (i + n) ∈ subsets Borel’
-     >- (rw [] >> Q.PAT_X_ASSUM ‘∀x. x ∈ N1 ∨ x ∈ N2 ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘i + n’) \\
+     Know ‘!i. i ∈ J ==> E (i + n) ∈ subsets Borel’
+     >- (rw [] >> Q.PAT_X_ASSUM ‘!x. x ∈ N1 \/ x ∈ N2 ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘i + n’) \\
          ‘i + n IN N2’ by fs [Abbr ‘N2’, Abbr ‘J’, IN_IMAGE] >> gs []) >> Rewr) >> Rewr
 QED
 
 Theorem indep_vars_Borel_imp_borel :
-    ∀p X Y. prob_space p ∧
-            (∀x. x ∈ p_space p ⇒ X x ≠ +∞ ∧ X x ≠ −∞) ∧
-            (∀x. x ∈ p_space p ⇒ Y x ≠ +∞ ∧ Y x ≠ −∞) ∧
-            indep_rv p X Y Borel Borel ⇒
+    !p X Y. prob_space p /\
+            (!x. x ∈ p_space p ==> X x <> PosInf /\ X x <> NegInf) /\
+            (!x. x ∈ p_space p ==> Y x <> PosInf /\ Y x <> NegInf) /\
+            indep_rv p X Y Borel Borel ==>
             indep_rv p (real ∘ X) (real ∘ Y) borel borel
 Proof
     rpt STRIP_TAC
  >> fs [indep_rv_def, indep_def, prob_space_def, events_def, p_space_def, o_DEF]
  >> Q.X_GEN_TAC ‘a’ >> Q.X_GEN_TAC ‘b’
- >> Q.PAT_X_ASSUM ‘∀a b. _’ (STRIP_ASSUME_TAC o Q.SPECL [‘IMAGE Normal a’, ‘IMAGE Normal b’])
+ >> Q.PAT_X_ASSUM ‘!a b. _’ (STRIP_ASSUME_TAC o Q.SPECL [‘IMAGE Normal a’, ‘IMAGE Normal b’])
  >> STRIP_TAC
- >> ‘IMAGE Normal a ∈ subsets Borel ∧ IMAGE Normal b ∈ subsets Borel’ by
+ >> ‘IMAGE Normal a ∈ subsets Borel /\ IMAGE Normal b ∈ subsets Borel’ by
    METIS_TAC [BOREL_MEASURABLE_SETS_NORMAL] >> gs []
  >> Know ‘PREIMAGE X (IMAGE Normal a) ∩ m_space p = PREIMAGE (λx. real (X x)) a ∩ m_space p’
  >- (rw [PREIMAGE_def, INTER_DEF, IMAGE_DEF, Once EXTENSION] \\
@@ -4995,7 +4995,7 @@ Proof
                      ‘sig1’, ‘sig2’] sum_indep_normal) >> simp []
  >> ‘indep_vars p (real ∘ X) (real ∘ Y) borel borel’ by METIS_TAC [indep_vars_Borel_imp_borel]
  >> POP_ORW >> rw [o_DEF]
- >> Know ‘∀x. x IN p_space p ⇒ real (X x) + real (Y x) = real (X x + Y x)’
+ >> Know ‘!x. x IN p_space p ==> real (X x) + real (Y x) = real (X x + Y x)’
     >- (rw [] \\
         ASM_SIMP_TAC std_ss [GSYM extreal_11, GSYM extreal_add_eq, normal_real, add_not_infty]) >> rw []
  >> MP_TAC (Q.SPECL [‘p’, ‘λx. real (X x) + real (Y x)’,
@@ -5004,21 +5004,21 @@ Proof
 QED
 
 Theorem REAL_SUM_IMAGE_COUNT_ONE :
-    ∀(f :num -> real). ∑ f (count 1) = f 0
+    !(f :num -> real). ∑ f (count 1) = f 0
 Proof
    rw [COUNT_ONE]
 QED
 
 Theorem sum_list_alt_FOLDL_lemma :
     !l e.
-          e ≠ PosInf ∧ e ≠ NegInf ∧
-          (∀x. MEM x l ⇒ x ≠ PosInf ∧ x ≠ NegInf) ==>
+          e <> PosInf /\ e <> NegInf /\
+          (!x. MEM x l ==> x <> PosInf /\ x <> NegInf) ==>
           ((FOLDL $+ e l) = (FOLDR $+ e l))
 Proof
   listLib.LIST_INDUCT_TAC
   >- (rw [FOLDR, FOLDL])
   >> rw [FOLDR, FOLDL]
-  >> Q.PAT_X_ASSUM ‘∀e. e ≠ PosInf ∧ _ ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘e’) >> gs []
+  >> Q.PAT_X_ASSUM ‘!e. e <> PosInf /\ _ ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘e’) >> gs []
   >> POP_ASSUM (rw o wrap o SYM)
   >> NTAC 3 (POP_ASSUM (MP_TAC))
   >> Q.SPEC_TAC (‘e’, ‘e’) >> Q.SPEC_TAC (‘l’, ‘l’)
@@ -5030,20 +5030,20 @@ Proof
   >- (Rewr' \\
       FIRST_X_ASSUM irule >> simp [] \\
       CONJ_TAC >- (METIS_TAC []) \\
-      Q.PAT_X_ASSUM ‘∀x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘h'’) >> fs [] \\
+      Q.PAT_X_ASSUM ‘!x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘h'’) >> fs [] \\
       METIS_TAC [add_not_infty])
   >> rw [Abbr ‘r’]
-  >> Know ‘h ≠ PosInf ∧ h ≠ NegInf’
-  >- (Q.PAT_X_ASSUM ‘∀x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘h’) >> fs [])
+  >> Know ‘h <> PosInf /\ h <> NegInf’
+  >- (Q.PAT_X_ASSUM ‘!x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘h’) >> fs [])
   >> STRIP_TAC
-  >> Know ‘h' ≠ PosInf ∧ h' ≠ NegInf’
-  >- (Q.PAT_X_ASSUM ‘∀x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘h'’) >> fs [])
+  >> Know ‘h' <> PosInf /\ h' <> NegInf’
+  >- (Q.PAT_X_ASSUM ‘!x. _’ (STRIP_ASSUME_TAC o Q.SPEC ‘h'’) >> fs [])
   >> STRIP_TAC
   >> METIS_TAC [add_assoc, add_comm, EXTREAL_EQ_LADD]
 QED
 
 Theorem sum_list_alt_FOLDL :
-    ∀l. (∀x. MEM x l ⇒ x ≠ +∞ ∧ x ≠ −∞) ⇒
+    !l. (!x. MEM x l ==> x <> PosInf /\ x <> NegInf) ==>
       sum_list l = FOLDL $+ 0 l
 Proof
     rpt STRIP_TAC
@@ -5052,12 +5052,12 @@ Proof
 QED
 
 Theorem sum_list_eq_EXTREAL_SUM_IMAGE :
-    ∀f s. FINITE s ∧ (∀x. x IN s ⇒ f x ≠ +∞ ∧ f x ≠ −∞) ⇒
+    !f s. FINITE s /\ (!x. x IN s ==> f x <> PosInf /\ f x <> NegInf) ==>
           ∑ f s = sum_list (MAP f (SET_TO_LIST s))
 Proof
     rpt STRIP_TAC
  >> Q.ABBREV_TAC ‘l = MAP f (SET_TO_LIST s)’
- >> Know ‘∀x. MEM x l ⇒ x ≠ +∞ ∧ x ≠ −∞’
+ >> Know ‘!x. MEM x l ==> x <> PosInf /\ x <> NegInf’
  >- (rw [Abbr ‘l’, MEM_MAP] >> METIS_TAC [])
  >> DISCH_TAC
  >> simp [sum_list_alt_FOLDL]
@@ -5065,60 +5065,60 @@ Proof
  >> ASM_SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_ALT_FOLDR, FOLDL_MAP, GSYM FOLDL_FOLDR_REVERSE]
  >> MATCH_MP_TAC FOLDL_CONG
  >> rw []
- >- (Q.PAT_X_ASSUM ‘∀x'. x' ∈ x INSERT t ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’)\\
+ >- (Q.PAT_X_ASSUM ‘!x'. x' ∈ x INSERT t ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’)\\
      gs [COMPONENT] \\
-     ‘∃r. f x = Normal r’ by METIS_TAC [extreal_cases] >> gs [] \\
+     ‘?r. f x = Normal r’ by METIS_TAC [extreal_cases] >> gs [] \\
      Cases_on ‘a = PosInf’ >- (fs [extreal_add_def]) \\
      Cases_on ‘a = NegInf’ >- (fs [extreal_add_def]) \\
-     ‘∃z. a = Normal z’ by METIS_TAC [extreal_cases] >> gs [] \\
+     ‘?z. a = Normal z’ by METIS_TAC [extreal_cases] >> gs [] \\
      rw [extreal_add_eq, REAL_ADD_COMM])
- >> Q.PAT_X_ASSUM ‘∀x'. x' ∈ x INSERT t ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x'’)
+ >> Q.PAT_X_ASSUM ‘!x'. x' ∈ x INSERT t ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘x'’)
  >> gs [IN_INSERT]
- >> ‘∃r. f x' = Normal r’ by METIS_TAC [extreal_cases] >> gs []
+ >> ‘?r. f x' = Normal r’ by METIS_TAC [extreal_cases] >> gs []
  >> Cases_on ‘a = PosInf’ >- (fs [extreal_add_def])
  >> Cases_on ‘a = NegInf’ >- (fs [extreal_add_def])
- >> ‘∃z. a = Normal z’ by METIS_TAC [extreal_cases] >> gs []
+ >> ‘?z. a = Normal z’ by METIS_TAC [extreal_cases] >> gs []
  >> rw [extreal_add_eq, REAL_ADD_COMM]
 QED
 
 Theorem indep_rv_eq :
-    ∀p f h g A B.
-      (∀x. x ∈ p_space p ⇒ f x = h x) ∧
-      indep_vars p f g A B ⇒
+    !p f h g A B.
+      (!x. x ∈ p_space p ==> f x = h x) /\
+      indep_vars p f g A B ==>
       indep_vars p h g A B
 Proof
     rw [indep_rv_def, indep_def]
- >- (Q.PAT_X_ASSUM ‘∀a b. _’ (STRIP_ASSUME_TAC o Q.SPECL [‘a’, ‘b’]) \\
+ >- (Q.PAT_X_ASSUM ‘!a b. _’ (STRIP_ASSUME_TAC o Q.SPECL [‘a’, ‘b’]) \\
      gs [PREIMAGE_def, INTER_DEF, p_space_def, events_def] \\
-     ‘{x | f x ∈ a ∧ x ∈ m_space p} = {x | h x ∈ a ∧ x ∈ m_space p}’ by ASM_SET_TAC [] \\
+     ‘{x | f x ∈ a /\ x ∈ m_space p} = {x | h x ∈ a /\ x ∈ m_space p}’ by ASM_SET_TAC [] \\
      gs [])
- >- (Q.PAT_X_ASSUM ‘∀a b. _’ (STRIP_ASSUME_TAC o Q.SPECL [‘a’, ‘b’]) \\
+ >- (Q.PAT_X_ASSUM ‘!a b. _’ (STRIP_ASSUME_TAC o Q.SPECL [‘a’, ‘b’]) \\
      gs [PREIMAGE_def, INTER_DEF, p_space_def, events_def])
- >> Q.PAT_X_ASSUM ‘∀a b. _’ (STRIP_ASSUME_TAC o Q.SPECL [‘a’, ‘b’])
+ >> Q.PAT_X_ASSUM ‘!a b. _’ (STRIP_ASSUME_TAC o Q.SPECL [‘a’, ‘b’])
  >> gs [PREIMAGE_def, INTER_DEF, p_space_def, events_def]
- >> ‘{x | f x ∈ a ∧ x ∈ m_space p} = {x | h x ∈ a ∧ x ∈ m_space p}’ by ASM_SET_TAC []
- >> ‘{x | (h x ∈ a ∧ x ∈ m_space p) ∧ g x ∈ b ∧ x ∈ m_space p} =
-     {x | (f x ∈ a ∧ x ∈ m_space p) ∧ g x ∈ b ∧ x ∈ m_space p}’ by ASM_SET_TAC []
+ >> ‘{x | f x ∈ a /\ x ∈ m_space p} = {x | h x ∈ a /\ x ∈ m_space p}’ by ASM_SET_TAC []
+ >> ‘{x | (h x ∈ a /\ x ∈ m_space p) /\ g x ∈ b /\ x ∈ m_space p} =
+     {x | (f x ∈ a /\ x ∈ m_space p) /\ g x ∈ b /\ x ∈ m_space p}’ by ASM_SET_TAC []
  >> gs []
 QED
 
 Theorem sumlist_not_infty :
-  ∀l. (∀e. MEM e l ⇒ e ≠ PosInf ∧ e ≠ NegInf) ⇒
-      sum_list l ≠ PosInf ∧ sum_list l ≠ NegInf
+  !l. (!e. MEM e l ==> e <> PosInf /\ e <> NegInf) ==>
+      sum_list l <> PosInf /\ sum_list l <> NegInf
 Proof
   Induct_on ‘l’ >> simp [DISJ_IMP_THM, FORALL_AND_THM, add_not_infty]
 QED
 
 Theorem sumlist_append :
-    ∀l1 l2. (∀e. MEM e l1 ⇒ e ≠ PosInf ∧ e ≠ NegInf) ∧
-            (∀e. MEM e l2 ⇒ e ≠ PosInf ∧ e ≠ NegInf) ==>
+    !l1 l2. (!e. MEM e l1 ==> e <> PosInf /\ e <> NegInf) /\
+            (!e. MEM e l2 ==> e <> PosInf /\ e <> NegInf) ==>
             sum_list (l1 ++ l2) = sum_list l1 + sum_list l2
 Proof
     Induct_on ‘l1’ >> simp [DISJ_IMP_THM, FORALL_AND_THM, add_assoc, sumlist_not_infty]
 QED
 
 Theorem EXTREAL_SUM_IMAGE_EQ_SUM_LIST :
-    ∀n f. (∀i. i < n ⇒ f i ≠ +∞ ∧ f i ≠ −∞) ⇒ ∑ (λi. f i) (count n) = sum_list (GENLIST f n)
+    !n f. (!i. i < n ==> f i <> PosInf /\ f i <> NegInf) ==> ∑ (λi. f i) (count n) = sum_list (GENLIST f n)
 Proof
     Induct_on ‘n’ >> rw []
  >> ‘count1 n = (count n) UNION {n}’
@@ -5132,9 +5132,9 @@ Proof
 QED
 
 Theorem sum_indep_lemma :
-    ∀n p X. prob_space p ∧ 0 < n ∧
-            (∀i. i ≤ n ⇒ real_random_variable (X i) p) ∧
-            indep_vars p X (λi. Borel) (count1 n) ⇒
+    !n p X. prob_space p /\ 0 < n /\
+            (!i. i ≤ n ==> real_random_variable (X i) p) /\
+            indep_vars p X (λi. Borel) (count1 n) ==>
             indep_vars p (λx. ∑ (λi. X i x) (count n)) (X n) Borel Borel
 Proof
     rpt STRIP_TAC
@@ -5145,7 +5145,7 @@ Proof
  >> ‘count1 n = (count n) UNION {n}’
    by fs [count1_def, count_def, UNION_DEF, Once EXTENSION] >> gs []
  >> fs [GENLIST, MAP_GENLIST]
- >> Suff ‘∀x. x IN p_space p ⇒ ∑ (λi. X i x) (count n) = sum_list (GENLIST (λn. X n x) n)’
+ >> Suff ‘!x. x IN p_space p ==> ∑ (λi. X i x) (count n) = sum_list (GENLIST (λn. X n x) n)’
  >- (rw [] \\
      irule indep_rv_eq \\
      qexists ‘λx. sum_list (GENLIST (λn. X n x) n)’ \\
@@ -5156,10 +5156,10 @@ Proof
 QED
 
 Theorem sum_indep_ext_normal' :
-    ∀p X mu sig n. prob_space p ∧ 0 < n ∧
-            (∀i. i < n ⇒ ext_normal_rv (X i) p (mu i) (sig i)) ∧
-            indep_vars p X (λi. Borel) (count n) ∧
-            (∀i. i < n ⇒ 0 < sig i) ⇒
+    !p X mu sig n. prob_space p /\ 0 < n /\
+            (!i. i < n ==> ext_normal_rv (X i) p (mu i) (sig i)) /\
+            indep_vars p X (λi. Borel) (count n) /\
+            (!i. i < n ==> 0 < sig i) ==>
                    ext_normal_rv (λx. ∑ (λi. X i x) (count n)) p
                                  (∑ (λi. mu i) (count n))
                                  (sqrt (∑ (λi. (sig i)²) (count n)))
@@ -5183,7 +5183,7 @@ Proof
     (* indep_vars p (λx. ∑ (λi. X i x) (count1 n)) (X (SUC n)) Borel Borel*)
     >- (MP_TAC (Q.SPECL [‘SUC n’, ‘p’, ‘X’] sum_indep_lemma) \\
         impl_tac >- (rw [] \\
-                     Q.PAT_X_ASSUM ‘∀i. i < SUC (SUC n) ⇒ ext_normal_rv (X i) p (mu i) (sig i)’
+                     Q.PAT_X_ASSUM ‘!i. i < SUC (SUC n) ==> ext_normal_rv (X i) p (mu i) (sig i)’
                       (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [ADD1] \\
                      fs [ext_normal_rv_def, normal_rv_def, random_variable_def, real_random_variable] \\
                      METIS_TAC [in_measurable_borel_imp_Borel, events_def, p_space_def]) \\
@@ -5221,30 +5221,30 @@ Proof
 QED
 
 Theorem extreal_lt[simp] :
-    &n < &m: extreal ⇔ n < m
+    &n < &m: extreal <=> n < m
 Proof
   rw [extreal_of_num_def]
 QED
 
 Theorem mul_ne_posinfty[simp] :
-  ∀e. e ≠ PosInf ⇒ &n * e ≠ PosInf ∧ e * &n ≠ PosInf
+  !e. e <> PosInf ==> &n * e <> PosInf /\ e * &n <> PosInf
 Proof
-  ‘∀e. e ≠ PosInf ⇒ &n * e ≠ PosInf’ suffices_by metis_tac[mul_comm] >>
+  ‘!e. e <> PosInf ==> &n * e <> PosInf’ suffices_by metis_tac[mul_comm] >>
   rw [extreal_of_num_def]
   >> irule (cj 2 mul_not_infty) >> simp []
 QED
 
 (*eq 18*)
 Theorem clt_Lyapunov_upper_bound[local] :
-  ∀p X Y. prob_space p ∧
-          real_random_variable X p ∧
-          expectation p (λx. (abs (X x))³) < +∞ ∧
-          expectation p X = 0 ∧
-          variance p X ≠ 0 ∧ variance p X < PosInf ⇒
+  !p X Y. prob_space p /\
+          real_random_variable X p /\
+          expectation p (λx. (abs (X x))³) < PosInf /\
+          expectation p X = 0 /\
+          variance p X <> 0 /\ variance p X < PosInf ==>
           Normal (sqrt (real (variance p X)) pow 3) ≤ expectation p (λx. (abs (X x)) pow 3)
 Proof
   rpt STRIP_TAC
-  >> Know ‘∫ p (λx. abs (X x) powr 3) = ∫⁺ p (λx. abs (X x) powr 3)’
+  >> Know ‘∫ p (λx. abs (X x) powr 3) = pos_fn_integral p (λx. abs (X x) powr 3)’
   >- (MATCH_MP_TAC integral_pos_fn \\
       fs [prob_space_def, abs_pos, powr_pos])
   >> DISCH_TAC
@@ -5259,8 +5259,8 @@ Proof
       fs [pow_abs, abs_abs, o_DEF, gen_powr] >> gs [])
   >> rw [seminorm_def, expectation_def]
   >> fs [gen_powr, powr_powr, variance_pos]
-  >> Q.ABBREV_TAC ‘A = ∫⁺ p (λx. abs (X x) powr 2)’
-  >> Q.ABBREV_TAC ‘B = ∫⁺ p (λx. abs (X x) powr 3)’
+  >> Q.ABBREV_TAC ‘A = pos_fn_integral p (λx. abs (X x) powr 2)’
+  >> Q.ABBREV_TAC ‘B = pos_fn_integral p (λx. abs (X x) powr 3)’
   >> ‘0 ≤ A’ by fs [Abbr ‘A’, pos_fn_integral_pos, abs_pos, powr_pos, prob_space_def]
   >> ‘0 ≤ B’ by fs [Abbr ‘B’, pos_fn_integral_pos, abs_pos, powr_pos, prob_space_def]
   >> Know ‘A powr (inv 2 * 3) ≤ B’
@@ -5282,14 +5282,14 @@ Proof
       simp [lt_le, powr_pos])
   >> DISCH_TAC
   >> ‘0 ≤ variance p X’ by METIS_TAC [variance_pos]
-  >> ‘variance p X ≠ NegInf /\ variance p X ≠ PosInf’
+  >> ‘variance p X <> NegInf /\ variance p X <> PosInf’
     by METIS_TAC [extreal_0_simps, lt_trans, lt_le] >> rw []
-  >> Know ‘sqrt (real (variance p X)) ≠ 0’
-  >- (‘∃a. variance p X = Normal a’ by METIS_TAC [extreal_cases] >> gs [real_normal] \\
+  >> Know ‘sqrt (real (variance p X)) <> 0’
+  >- (‘?a. variance p X = Normal a’ by METIS_TAC [extreal_cases] >> gs [real_normal] \\
       METIS_TAC [SQRT_POS_NE, REAL_LT_LE])
   >> DISCH_TAC
   >> Know ‘0 < real (variance p X)’
-  >- (‘∃a. variance p X = Normal a’ by METIS_TAC [extreal_cases] >> gs [real_normal] \\
+  >- (‘?a. variance p X = Normal a’ by METIS_TAC [extreal_cases] >> gs [real_normal] \\
       METIS_TAC [REAL_LT_LE])
   >> DISCH_TAC
   >> Know ‘Normal (sqrt (real (variance p X)))³ = (variance p X) powr ((inv 2) * 3)’
@@ -5314,7 +5314,7 @@ Proof
       impl_tac >- (simp [lt_mul, inv_pos', inv_not_infty]) \\
       Rewr >> rw [Abbr ‘A’, variance_eq] \\
       rw [sub_rzero, zero_pow, expectation_def] \\
-      ‘∀x. abs (X x) powr 2 = abs (X x) pow 2’ by METIS_TAC [abs_pos, gen_powr] \\
+      ‘!x. abs (X x) powr 2 = abs (X x) pow 2’ by METIS_TAC [abs_pos, gen_powr] \\
       POP_ORW \\
       rw [GSYM o_DEF, pow_abs] \\
       MP_TAC (Q.SPECL [‘p’, ‘λx. (X x) pow 2’] integral_pos_fn) \\
@@ -5354,10 +5354,10 @@ fun clt_finite_fst_snd a V thm =
     fs [prob_space_def, o_DEF];
 
 Theorem mul_div_assoc[local] :
-    ∀x y z.
-      x ≠ +∞ ∧ x ≠ −∞ ∧
-      y ≠ +∞ ∧ y ≠ −∞ ∧
-      0 < z ∧ z ≠ +∞ ⇒
+    !x y z.
+      x <> PosInf /\ x <> NegInf /\
+      y <> PosInf /\ y <> NegInf /\
+      0 < z /\ z <> PosInf ==>
       x * y / z = x * (y / z)
 Proof
     rpt STRIP_TAC
@@ -5369,16 +5369,16 @@ Proof
 QED
 
 Theorem EVENT_INTER_SUBR :
-    ∀p A. prob_space p ∧ A ⊆ p_space p ⇒ A ∩ p_space p = A
+    !p A. prob_space p /\ A ⊆ p_space p ==> A ∩ p_space p = A
 Proof
     rw [SUBSET_DEF, INTER_DEF, Once EXTENSION]
  >> EQ_TAC >> rw []
 QED
 
 Theorem PREIMAGE_FST :
-  ∀p q f A.
-    prob_space p ∧ prob_space q ⇒
-    (∀s. s ∈ subsets A ⇒
+  !p q f A.
+    prob_space p /\ prob_space q ==>
+    (!s. s ∈ subsets A ==>
          PREIMAGE (f ∘ FST) s ∩ p_space (p × q) =
          (PREIMAGE f s × p_space q) ∩ (p_space p × p_space q))
 Proof
@@ -5387,9 +5387,9 @@ Proof
 QED
 
 Theorem PREIMAGE_SND :
-    ∀p q f A.
-      prob_space p ∧ prob_space q ⇒
-      (∀s. s ∈ subsets A ⇒
+    !p q f A.
+      prob_space p /\ prob_space q ==>
+      (!s. s ∈ subsets A ==>
            PREIMAGE (f ∘ SND) s ∩ p_space (p × q) =
            (p_space p CROSS PREIMAGE f s) ∩ (p_space p × p_space q))
 Proof
@@ -5398,23 +5398,23 @@ Proof
 QED
 
 Theorem CROSS_INTER :
-    ∀s t u. s CROSS t INTER u CROSS t = (s INTER u) CROSS t
+    !s t u. s CROSS t INTER u CROSS t = (s INTER u) CROSS t
 Proof
     rw [CROSS_DEF, INTER_DEF, Once EXTENSION]
  >> EQ_TAC >> rw []
 QED
 
 Theorem CROSS_INTER' :
-    ∀s t u. t CROSS s INTER t CROSS u = t CROSS (s INTER u)
+    !s t u. t CROSS s INTER t CROSS u = t CROSS (s INTER u)
 Proof
     rw [CROSS_DEF, INTER_DEF, Once EXTENSION]
  >> EQ_TAC >> rw []
 QED
 
 Theorem MEASURABLE_PREIMAGE :
-    ∀f m A.
-      f ∈ measurable (measurable_space m) A ⇒
-      ∀s. s ∈ subsets A ⇒
+    !f m A.
+      f ∈ measurable (measurable_space m) A ==>
+      !s. s ∈ subsets A ==>
           PREIMAGE f s ∩ m_space m ∈ measurable_sets m
 Proof
     rpt STRIP_TAC
@@ -5423,10 +5423,10 @@ Proof
 QED
 
 Theorem PROB_FST' :
-    ∀p q X A.
-      prob_space p ∧ prob_space q ∧
-      X ∈ measurable (measurable_space p) A ⇒
-      (∀s. s ∈ subsets A ⇒
+    !p q X A.
+      prob_space p /\ prob_space q /\
+      X ∈ measurable (measurable_space p) A ==>
+      (!s. s ∈ subsets A ==>
            prob (p × q) (PREIMAGE (X ∘ FST) s ∩ p_space (p × q)) =
            prob p (PREIMAGE X s ∩ p_space p))
 Proof
@@ -5443,10 +5443,10 @@ Proof
 QED
 
 Theorem PROB_SND' :
-    ∀p q X A.
-      prob_space p ∧ prob_space q ∧
-      X ∈ measurable (measurable_space q) A ⇒
-      (∀s. s ∈ subsets A ⇒
+    !p q X A.
+      prob_space p /\ prob_space q /\
+      X ∈ measurable (measurable_space q) A ==>
+      (!s. s ∈ subsets A ==>
            prob (p × q) (PREIMAGE (X ∘ SND) s ∩ p_space (p × q)) =
            prob q (PREIMAGE X s INTER p_space q))
 Proof
@@ -5464,28 +5464,28 @@ Proof
 QED
 
 Theorem DISTRIBUTION_FST :
-    ∀p q X A.
-      prob_space p ∧ prob_space q ∧
-      X ∈ measurable (measurable_space p) A ⇒
-      (∀s. s ∈ subsets A ⇒
+    !p q X A.
+      prob_space p /\ prob_space q /\
+      X ∈ measurable (measurable_space p) A ==>
+      (!s. s ∈ subsets A ==>
            distribution (p × q) (X ∘ FST) s = distribution p X s)
 Proof
     METIS_TAC [distribution_def, PROB_FST']
 QED
 
 Theorem DISTRIBUTION_SND :
-    ∀p q X A.
-      prob_space p ∧ prob_space q ∧
-      X ∈ measurable (measurable_space q) A ⇒
-      (∀s. s ∈ subsets A ⇒
+    !p q X A.
+      prob_space p /\ prob_space q /\
+      X ∈ measurable (measurable_space q) A ==>
+      (!s. s ∈ subsets A ==>
            distribution (p × q) (X ∘ SND) s = distribution q X s)
 Proof
     METIS_TAC [distribution_def, PROB_SND']
 QED
 
 Theorem ext_normal_rv_fst :
-    ∀p q X mu sig.
-      prob_space p ∧ prob_space q ∧ ext_normal_rv X p mu sig ⇒
+    !p q X mu sig.
+      prob_space p /\ prob_space q /\ ext_normal_rv X p mu sig ==>
       ext_normal_rv (X ∘ FST) (p × q) mu sig
 Proof
     rpt STRIP_TAC
@@ -5506,15 +5506,15 @@ Proof
     fs [p_space_def, events_def] \\
     MATCH_MP_TAC in_measurable_borel_imp_Borel >> simp [p_space_def])
  >> rw []
- >> Q.PAT_X_ASSUM ‘∀s. s ∈ subsets borel ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘s’) >> gs []
+ >> Q.PAT_X_ASSUM ‘!s. s ∈ subsets borel ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘s’) >> gs []
  >> POP_ASSUM (rw o wrap o SYM)
  >> MP_TAC (Q.SPECL [‘p’, ‘q’, ‘real o X’, ‘borel’] (INST_TYPE [“:γ” |-> “:real”] DISTRIBUTION_FST))
  >> fs [p_space_def, events_def]
 QED
 
 Theorem ext_normal_rv_snd :
-    ∀p q X mu sig.
-      prob_space p ∧ prob_space q ∧ ext_normal_rv X q mu sig ⇒
+    !p q X mu sig.
+      prob_space p /\ prob_space q /\ ext_normal_rv X q mu sig ==>
       ext_normal_rv (X ∘ SND) (p × q) mu sig
 Proof
     rpt STRIP_TAC
@@ -5535,15 +5535,15 @@ Proof
      fs [p_space_def, events_def] \\
      MATCH_MP_TAC in_measurable_borel_imp_Borel >> simp [p_space_def])
  >> rw []
- >> Q.PAT_X_ASSUM ‘∀s. s ∈ subsets borel ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘s’) >> gs []
+ >> Q.PAT_X_ASSUM ‘!s. s ∈ subsets borel ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘s’) >> gs []
  >> POP_ASSUM (rw o wrap o SYM)
  >> MP_TAC (Q.SPECL [‘p’, ‘q’, ‘real o X’, ‘borel’] (INST_TYPE [“:γ” |-> “:real”] DISTRIBUTION_SND))
  >> fs [p_space_def, events_def]
 QED
 
 Theorem ext_normal_rv_cdiv :
-    ∀p X c mu sig.
-      prob_space p ∧ ext_normal_rv X p mu sig ∧ 0 < sig ∧ c ≠ 0 ⇒
+    !p X c mu sig.
+      prob_space p /\ ext_normal_rv X p mu sig /\ 0 < sig /\ c <> 0 ==>
       ext_normal_rv (λx. X x / Normal c) p (mu / c) (sig / abs c)
 Proof
     rw [real_div]
@@ -5554,10 +5554,10 @@ Proof
 QED
 
 Theorem expectation_from_distribution_eq :
-    ∀p q X Y f.
-      prob_space p ∧ prob_space q ∧ random_variable X p Borel ∧
-      random_variable Y q Borel ∧ f ∈ Borel_measurable Borel ∧
-      (∀s. s ∈ subsets Borel ⇒ distribution p X s = distribution q Y s) ⇒
+    !p q X Y f.
+      prob_space p /\ prob_space q /\ random_variable X p Borel /\
+      random_variable Y q Borel /\ f ∈ Borel_measurable Borel /\
+      (!s. s ∈ subsets Borel ==> distribution p X s = distribution q Y s) ==>
       expectation p (f ∘ X) = expectation q (f ∘ Y)
 Proof
     rpt STRIP_TAC
@@ -5572,9 +5572,9 @@ Proof
 QED
 
 Theorem distribution_real_eq :
-    ∀p X.
-    prob_space p ∧ real_random_variable X p ⇒
-    (∀s. s ∈ subsets Borel ⇒ distribution p (real o X) (real_set s) = distribution p X s)
+    !p X.
+    prob_space p /\ real_random_variable X p ==>
+    (!s. s ∈ subsets Borel ==> distribution p (real o X) (real_set s) = distribution p X s)
 Proof
     rw [distribution_def, real_set_def, real_random_variable]
  >> AP_TERM_TAC
@@ -5585,8 +5585,8 @@ Proof
 QED
 
 Theorem IN_MEASURABLE_BOREL_FST :
-    ∀a b f.
-      sigma_algebra a ∧ sigma_algebra b ∧ f ∈ Borel_measurable a ⇒
+    !a b f.
+      sigma_algebra a /\ sigma_algebra b /\ f ∈ Borel_measurable a ==>
       f o FST ∈ Borel_measurable (a CROSS b)
 Proof
     rpt STRIP_TAC
@@ -5596,8 +5596,8 @@ Proof
 QED
 
 Theorem IN_MEASURABLE_BOREL_SND :
-    ∀a b f.
-      sigma_algebra a ∧ sigma_algebra b ∧ f ∈ Borel_measurable b ⇒
+    !a b f.
+      sigma_algebra a /\ sigma_algebra b /\ f ∈ Borel_measurable b ==>
       f o SND ∈ Borel_measurable (a CROSS b)
 Proof
     rpt STRIP_TAC
@@ -5607,13 +5607,13 @@ Proof
 QED
 
 Theorem distribution_eq_comp :
-    ∀p q X Y f.
-      prob_space p ∧ prob_space q ∧
-      random_variable X p borel ∧
-      random_variable Y q borel ∧
-      (∀s. s IN subsets borel ⇒ distribution p X s = distribution q Y s) ∧
-      f ∈ borel_measurable borel ⇒
-      (∀s. s IN subsets borel ⇒ distribution p (f ∘ X) s = distribution q (f ∘ Y) s)
+    !p q X Y f.
+      prob_space p /\ prob_space q /\
+      random_variable X p borel /\
+      random_variable Y q borel /\
+      (!s. s IN subsets borel ==> distribution p X s = distribution q Y s) /\
+      f ∈ borel_measurable borel ==>
+      (!s. s IN subsets borel ==> distribution p (f ∘ X) s = distribution q (f ∘ Y) s)
 Proof
     rw [distribution_def, GSYM PREIMAGE_COMP]
  >> FIRST_X_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘PREIMAGE f (s :real -> bool)’)
@@ -5624,7 +5624,7 @@ Proof
 QED
 
 Theorem ne_imp_lt :
-    ∀(x :extreal) (y :extreal). x ≠ y ⇒ x < y ∨ y < x
+    !(x :extreal) (y :extreal). x <> y ==> x < y \/ y < x
 Proof
   rw []
   >> CCONTR_TAC
@@ -5632,10 +5632,10 @@ Proof
 QED
 
 Theorem variance_fst :
-    ∀p q f.
-      prob_space p ∧ prob_space q ∧
-      (∀x. x ∈ p_space p ⇒ f x ≠ +∞ ∧ f x ≠ −∞) ∧
-      integrable p f ∧ integrable p (λx. (f x) pow 2) ⇒
+    !p q f.
+      prob_space p /\ prob_space q /\
+      (!x. x ∈ p_space p ==> f x <> PosInf /\ f x <> NegInf) /\
+      integrable p f /\ integrable p (λx. (f x) pow 2) ==>
       variance p f = variance (p × q) (f ∘ FST)
 Proof
     rpt STRIP_TAC
@@ -5660,16 +5660,16 @@ Proof
  >> MP_TAC (Q.SPECL [‘p’, ‘q’, ‘λx. (f x) pow 2’] expectation_fst)
  >> impl_tac >- (fs [] >> Q.X_GEN_TAC ‘x’ >> STRIP_TAC \\
                  FIRST_X_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
-                 ‘∃r. f x = Normal r’ by METIS_TAC [extreal_cases] >> gs [] \\
+                 ‘?r. f x = Normal r’ by METIS_TAC [extreal_cases] >> gs [] \\
                  METIS_TAC [extreal_pow_def, extreal_not_infty])
  >> fs [o_DEF]
 QED
 
 Theorem variance_snd :
-    ∀p q f.
-      prob_space p ∧ prob_space q ∧
-      (∀x. x ∈ p_space q ⇒ f x ≠ +∞ ∧ f x ≠ −∞) ∧
-      integrable q f ∧ integrable q (λx. (f x) pow 2) ⇒
+    !p q f.
+      prob_space p /\ prob_space q /\
+      (!x. x ∈ p_space q ==> f x <> PosInf /\ f x <> NegInf) /\
+      integrable q f /\ integrable q (λx. (f x) pow 2) ==>
       variance q f = variance (p × q) (f ∘ SND)
 Proof
     rpt STRIP_TAC
@@ -5694,35 +5694,35 @@ Proof
  >> MP_TAC (Q.SPECL [‘p’, ‘q’, ‘λx. (f x) pow 2’] expectation_snd)
  >> impl_tac >- (fs [] >> Q.X_GEN_TAC ‘x’ >> STRIP_TAC \\
                  FIRST_X_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
-                 ‘∃r. f x = Normal r’ by METIS_TAC [extreal_cases] >> gs [] \\
+                 ‘?r. f x = Normal r’ by METIS_TAC [extreal_cases] >> gs [] \\
                  METIS_TAC [extreal_pow_def, extreal_not_infty])
  >> fs [o_DEF]
 QED
 
 Theorem REAL_LTEQ_TRANS :
-    ∀x y z. x < y ∧ y = z ⇒ x < (z :real)
+    !x y z. x < y /\ y = z ==> x < (z :real)
 Proof
     REAL_ARITH_TAC
 QED
 
 Theorem lteq_trans :
-    ∀x y z. x < y ∧ y = z ⇒ x < z
+    !x y z. x < y /\ y = z ==> x < z
 Proof
     RW_TAC std_ss [lt_refl, le_refl, extreal_lt_def, extreal_le_def]
  >> METIS_TAC [real_lt,REAL_LET_TRANS]
 QED
 
 Theorem real_lt_eq :
-    ∀x y. x ≠ +∞ ∧ x ≠ −∞ ∧ y ≠ +∞ ∧ y ≠ −∞ ⇒ (real x < real y ⇔ x < y)
+    !x y. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf ==> (real x < real y <=> x < y)
 Proof
     rpt STRIP_TAC
- >> ‘∃a. x = Normal a’ by METIS_TAC [extreal_cases]
- >> ‘∃b. y = Normal b’ by METIS_TAC [extreal_cases] >> gs []
+ >> ‘?a. x = Normal a’ by METIS_TAC [extreal_cases]
+ >> ‘?b. y = Normal b’ by METIS_TAC [extreal_cases] >> gs []
 QED
 
 Theorem indep_rv_const :
-  ∀p X c A B.
-    random_variable X p A ∧ prob_space p ⇒
+  !p X c A B.
+    random_variable X p A /\ prob_space p ==>
     indep_vars p X (λx. c) A B
 Proof
   rpt STRIP_TAC
@@ -5739,7 +5739,7 @@ QED
 
 val bn_not_infty_tactic =
     rw [Abbr ‘b’, absolute_third_moments_def, absolute_third_moment_def, absolute_moment_def]
-    (* ∑ (λi. expectation p (λx. (abs (X i x))³)) (count z) ≠ +∞ *)
+    (* ∑ (λi. expectation p (λx. (abs (X i x))³)) (count z) <> PosInf *)
     >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> rw [] \\
         MATCH_MP_TAC (cj 1 expectation_finite) >> fs []) \\
     irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> rw [] \\
@@ -5759,36 +5759,36 @@ val clt_tactic3_p1 =
     ‘1 ≤ n’ by METIS_TAC [MAX_LE, MAX_DEF] \\
     ‘0 < (1 :num)’ by simp [] \\
     ‘0 < n’ by METIS_TAC [LESS_LESS_EQ_TRANS] \\
-    ‘∀i. 0 ≤ variance p (X i)’ by METIS_TAC [variance_pos] \\
-    ‘∀i. variance p (X i) ≠ NegInf /\ variance p (X i) ≠ PosInf’
+    ‘!i. 0 ≤ variance p (X i)’ by METIS_TAC [variance_pos] \\
+    ‘!i. variance p (X i) <> NegInf /\ variance p (X i) <> PosInf’
       by METIS_TAC [extreal_0_simps, lt_trans, lt_le] >> rw [] \\
-    Know ‘∀i. i < SUC n ⇒ sqrt (real (variance p (X i))) ≠ 0’
-    >- (rw [] >> Q.PAT_X_ASSUM ‘∀i. variance p (X i) ≠ 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-        Q.PAT_X_ASSUM ‘∀i. 0 ≤ variance p (X i)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-        ‘∃a. variance p (X i) = Normal a’ by METIS_TAC [extreal_cases] >> gs [real_normal] \\
+    Know ‘!i. i < SUC n ==> sqrt (real (variance p (X i))) <> 0’
+    >- (rw [] >> Q.PAT_X_ASSUM ‘!i. variance p (X i) <> 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+        Q.PAT_X_ASSUM ‘!i. 0 ≤ variance p (X i)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+        ‘?a. variance p (X i) = Normal a’ by METIS_TAC [extreal_cases] >> gs [real_normal] \\
         METIS_TAC [SQRT_POS_NE, REAL_LT_LE]) \\
     DISCH_TAC \\
-    Know ‘∀i. i < SUC n ⇒ 0 < real (variance p (X i))’
-    >- (rw [] >> Q.PAT_X_ASSUM ‘∀i. variance p (X i) ≠ 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-        Q.PAT_X_ASSUM ‘∀i. 0 ≤ variance p (X i)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-        ‘∃a. variance p (X i) = Normal a’ by METIS_TAC [extreal_cases] >> gs [real_normal] \\
+    Know ‘!i. i < SUC n ==> 0 < real (variance p (X i))’
+    >- (rw [] >> Q.PAT_X_ASSUM ‘!i. variance p (X i) <> 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+        Q.PAT_X_ASSUM ‘!i. 0 ≤ variance p (X i)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+        ‘?a. variance p (X i) = Normal a’ by METIS_TAC [extreal_cases] >> gs [real_normal] \\
         METIS_TAC [REAL_LT_LE]) \\
     DISCH_TAC \\
-    Know ‘∀i. i < SUC n ⇒ 0 < variance p (X i)’
-    >- (rw [] >> Q.PAT_X_ASSUM ‘∀i. variance p (X i) ≠ 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-        Q.PAT_X_ASSUM ‘∀i. 0 ≤ variance p (X i)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> rw [lt_le]) \\
+    Know ‘!i. i < SUC n ==> 0 < variance p (X i)’
+    >- (rw [] >> Q.PAT_X_ASSUM ‘!i. variance p (X i) <> 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+        Q.PAT_X_ASSUM ‘!i. 0 ≤ variance p (X i)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> rw [lt_le]) \\
     Rewr \\
     rw [metricTheory.DIST_0, GSYM sub_real] \\
     Q.ABBREV_TAC ‘sig = λi. sqrt (real (variance p (X i)))’ >> fs [] \\
-    ‘∀i. i < SUC n ⇒ real (variance p (X i)) = (sig i) pow 2’ by rw [Abbr ‘sig’, SQRT_POW2, REAL_LT_IMP_LE] \\
+    ‘!i. i < SUC n ==> real (variance p (X i)) = (sig i) pow 2’ by rw [Abbr ‘sig’, SQRT_POW2, REAL_LT_IMP_LE] \\
     gs [] \\
-    Know ‘∀i. i < SUC n ⇒ 0 < sig i’
+    Know ‘!i. i < SUC n ==> 0 < sig i’
     >- (rw [Abbr ‘sig’] \\
         MATCH_MP_TAC SQRT_POS_LT \\
-        Q.PAT_X_ASSUM ‘∀i. variance p (X i) ≠ 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-        Q.PAT_X_ASSUM ‘∀i. 0 ≤ variance p (X i)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-        Q.PAT_X_ASSUM ‘∀i. variance p (X i) ≠ −∞ ∧ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-        ‘∃a. variance p (X i) = Normal a’ by METIS_TAC [extreal_cases] >> gs [REAL_LT_LE]) \\
+        Q.PAT_X_ASSUM ‘!i. variance p (X i) <> 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+        Q.PAT_X_ASSUM ‘!i. 0 ≤ variance p (X i)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+        Q.PAT_X_ASSUM ‘!i. variance p (X i) <> NegInf /\ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+        ‘?a. variance p (X i) = Normal a’ by METIS_TAC [extreal_cases] >> gs [REAL_LT_LE]) \\
     rw [];
 
 (* -------------------------------------------------------------------------- *)
@@ -5804,9 +5804,9 @@ val clt_tactic3_p2 =
  >> (MP_TAC o (Q.SPECL [‘p’, ‘p'’, ‘X’, ‘Y’, ‘SUC n’]) o
             (INST_TYPE [beta |-> “:'a”])) construct_auxiliary_seq
  >> simp []
- >> Know ‘∀i. i < (SUC n) ⇒ real_random_variable (Y i) p'’
+ >> Know ‘!i. i < (SUC n) ==> real_random_variable (Y i) p'’
  >- (rw [] \\
-     Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ ext_normal_rv (Y i) p' 0 (sig i)’
+     Q.PAT_X_ASSUM ‘!i. i < (SUC n) ==> ext_normal_rv (Y i) p' 0 (sig i)’
       (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
      gs [ext_normal_rv_def, normal_rv_def, real_random_variable_def] \\
      irule random_variable_borel_imp_Borel >> fs [])
@@ -5820,7 +5820,7 @@ val clt_tactic3_p2 =
 val clt_tactic3_p3 =
     Q.ABBREV_TAC ‘(Y' :num -> 'a # α list -> extreal) = λi. Y i o SND’ >> fs []
  >> Q.ABBREV_TAC ‘(X' :num -> 'a # α list -> extreal) = λi. X i o FST’ >> fs []
- >> ‘∀x. (R n ∘ FST) x = ∑ (λi. X' i x) (count (SUC n)) / s (SUC n)’ by rw [Abbr ‘X'’, Abbr ‘R’]
+ >> ‘!x. (R n ∘ FST) x = ∑ (λi. X' i x) (count (SUC n)) / s (SUC n)’ by rw [Abbr ‘X'’, Abbr ‘R’]
  >> Q.ABBREV_TAC ‘r = p CROSS p'’
  >> Know ‘expectation p (Normal ∘ f ∘ real ∘ R n) =
           expectation r (Normal ∘ f ∘ real ∘ R n o FST)’
@@ -5836,21 +5836,21 @@ val clt_tactic3_p3 =
  >> ‘expectation r (Normal ∘ f ∘ real ∘ g) = expectation r (Normal ∘ f ∘ real ∘ h)’
    by METIS_TAC [expectation_cong] >> POP_ORW
  >> rw [Abbr ‘h’]
- >> Know ‘∃c. s (SUC n) = Normal c’
- >- (Q.PAT_X_ASSUM ‘∀n. s n ≠ −∞ ∧ s n ≠ +∞’ (STRIP_ASSUME_TAC o Q.SPEC ‘SUC n’) \\
+ >> Know ‘?c. s (SUC n) = Normal c’
+ >- (Q.PAT_X_ASSUM ‘!n. s n <> NegInf /\ s n <> PosInf’ (STRIP_ASSUME_TAC o Q.SPEC ‘SUC n’) \\
      METIS_TAC [extreal_cases])
  >> DISCH_THEN (Q.X_CHOOSE_THEN ‘c’ ASSUME_TAC)
- >> Know ‘c ≠ 0 ∧ 0 < c’
- >- (Q.PAT_X_ASSUM ‘∀n. 0 < s (SUC n)’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) >> gs [REAL_LT_IMP_NE])
+ >> Know ‘c <> 0 /\ 0 < c’
+ >- (Q.PAT_X_ASSUM ‘!n. 0 < s (SUC n)’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) >> gs [REAL_LT_IMP_NE])
  >> STRIP_TAC
- >> ‘∀i. i < (SUC n) ⇒ integrable p' (Y i)’ by METIS_TAC [expectation_of_normal_rv']
- >> ‘∀i. i < (SUC n) ⇒ integrable p' (λx. (abs (Y i x)) pow 3)’ by METIS_TAC [ext_normal_rv_moment_integrable]
- >> Know ‘∀i. i < (SUC n) ⇒ integrable p' (λx. (Y i x) pow 3)’
+ >> ‘!i. i < (SUC n) ==> integrable p' (Y i)’ by METIS_TAC [expectation_of_normal_rv']
+ >> ‘!i. i < (SUC n) ==> integrable p' (λx. (abs (Y i x)) pow 3)’ by METIS_TAC [ext_normal_rv_moment_integrable]
+ >> Know ‘!i. i < (SUC n) ==> integrable p' (λx. (Y i x) pow 3)’
  >- (fs [GSYM pow_abs, GSYM o_DEF] >> rw [] \\
      irule integrable_from_abs >> fs [prob_space_def] \\
      irule IN_MEASURABLE_BOREL_POW  >> METIS_TAC [real_random_variable, p_space_def, events_def])
  >> STRIP_TAC
- >> Know ‘∀i. i < (SUC n) ⇒ integrable p' (λx. (Y i x) pow 2)’
+ >> Know ‘!i. i < (SUC n) ==> integrable p' (λx. (Y i x) pow 2)’
  >- (rw [] >> gs [expectation_finite_eq_integrable] \\
      irule integrable_absolute_moments_mono >> fs [] \\
      qexists ‘3’ >> fs [] >> METIS_TAC [expectation_finite_eq_integrable])
@@ -5864,7 +5864,7 @@ val clt_tactic3_p4 =
     Know ‘expectation p (Normal ∘ f ∘ real ∘ N) =
           expectation r (Normal ∘ f ∘ real ∘ (λx. ∑ (λi. Y' i x) (count (SUC n)) / Normal c))’
  >- (rw [Abbr ‘Y'’] \\
-     Know ‘∀i. i < (SUC n) ⇒ ext_normal_rv (Y i o SND) r 0 (sig i)’
+     Know ‘!i. i < (SUC n) ==> ext_normal_rv (Y i o SND) r 0 (sig i)’
      >- (rw [] \\
          MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘Y (i :num)’, ‘0’, ‘sig (i :num)’]
                   (INST_TYPE [“:'b” |-> “:'a list”] ext_normal_rv_snd)) \\
@@ -5901,11 +5901,11 @@ val clt_tactic3_p4 =
          MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘h ∘ SND’]
                   (INST_TYPE [“:'b” |-> “:'a list”] (cj 9 Fubini'))) \\
          impl_tac
-         >- (‘sigma_finite_measure_space p ∧ sigma_finite_measure_space p'’
+         >- (‘sigma_finite_measure_space p /\ sigma_finite_measure_space p'’
                by METIS_TAC [prob_space_def, sigma_finite_measure_space_def,
                              FINITE_IMP_SIGMA_FINITE, extreal_1_simps] \\
-             Know ‘∫ (p × p') (abs ∘ h ∘ SND) ≠ +∞’
-             >- (qmatch_abbrev_tac ‘∫ (p × p') (abs ∘ H) ≠ +∞’ \\
+             Know ‘∫ (p × p') (abs ∘ h ∘ SND) <> PosInf’
+             >- (qmatch_abbrev_tac ‘∫ (p × p') (abs ∘ H) <> PosInf’ \\
                  Know ‘real_random_variable H (p CROSS p')’
                  >- (rw [Abbr ‘H’] \\
                      MATCH_MP_TAC real_random_variable_snd \\
@@ -5927,9 +5927,9 @@ val clt_tactic3_p4 =
          rw [Abbr ‘h’, o_DEF] \\
          MATCH_MP_TAC integral_cong \\
          fs [prob_space_def, real_random_variable, p_space_def] >> rw [] \\
-         Q.PAT_X_ASSUM ‘∀x'. x' ∈ m_space p' ⇒ G x' ≠ −∞ ∧ G x' ≠ +∞’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’)
+         Q.PAT_X_ASSUM ‘!x'. x' ∈ m_space p' ==> G x' <> NegInf /\ G x' <> PosInf’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’)
          >> gs [p_space_def]
-         >> ‘∃a. G x = Normal a’ by METIS_TAC [extreal_cases]
+         >> ‘?a. G x = Normal a’ by METIS_TAC [extreal_cases]
          >> POP_ORW >> rw [integral_const]) \\
      Rewr \\
      Know ‘ext_normal_rv G p' 0 1’
@@ -5960,10 +5960,10 @@ val clt_tactic3_p4 =
          >- (MATCH_MP_TAC REAL_SUM_IMAGE_EQ >> rw [Abbr ‘E’] \\
              MP_TAC (Q.SPECL [‘p’, ‘λi. X (x :num) i’] variance_eq) \\
              impl_tac >- (fs [real_random_variable_def] \\
-                          Q.PAT_X_ASSUM ‘∀i. random_variable (X i) p Borel ∧ _’
+                          Q.PAT_X_ASSUM ‘!i. random_variable (X i) p Borel /\ _’
                            (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
                           METIS_TAC [ETA_AX]) \\
-             Q.PAT_X_ASSUM ‘∀i. expectation p (X i) = 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
+             Q.PAT_X_ASSUM ‘!i. expectation p (X i) = 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
              rw [SF ETA_ss, sub_rzero, zero_pow]) \\
          STRIP_TAC \\
          rw [second_moments_def, central_moment_def, moment_def] \\
@@ -5998,7 +5998,7 @@ val clt_tactic3_p4 =
      MP_TAC (Q.SPECL [‘p'’, ‘G’] (INST_TYPE [alpha |-> “:'a list”] distribution_real_eq)) \\
      rw [real_random_variable_def, random_variable_borel_imp_Borel] \\
      POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘t’) >> gs [] \\
-     Q.PAT_X_ASSUM ‘∀s. s ∈ subsets borel ⇒ distribution p' (real ∘ G) s = _’
+     Q.PAT_X_ASSUM ‘!s. s ∈ subsets borel ==> distribution p' (real ∘ G) s = _’
       (STRIP_ASSUME_TAC o Q.SPEC ‘real_set t’) \\
      gs [borel_measurable_real_set])
  >> DISCH_THEN (fs o wrap);
@@ -6014,7 +6014,7 @@ val clt_tactic3_p5 =
  >> (MP_TAC o (Q.SPECL [‘r’, ‘X'’, ‘Y'’, ‘f’, ‘s’, ‘SUC n’]) o
             (INST_TYPE [alpha |-> “:('a # 'a list)”])) clt_Lindeberg_replacement_trick_bounded
  >> simp []
- >> Know ‘∀i. i < (SUC n) ⇒ integrable r (X' i) ∧ integrable r (Y' i)’
+ >> Know ‘!i. i < (SUC n) ==> integrable r (X' i) /\ integrable r (Y' i)’
  >- (METIS_TAC [Abbr ‘X'’, Abbr ‘r’, Abbr ‘Y'’, integrable_fst, integrable_snd])
  >> DISCH_TAC >> simp []
  >> DISCH_TAC
@@ -6022,21 +6022,21 @@ val clt_tactic3_p5 =
             (INST_TYPE [alpha |-> “:('a # 'a list)”])) clt_real_random_variable_partial_sum2
  >> simp [] >> DISCH_TAC
  >> Q.ABBREV_TAC ‘(M :extreal) = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) UNIV)’
- >> ‘M ≠ PosInf’ by METIS_TAC [clt_sup_finite]
+ >> ‘M <> PosInf’ by METIS_TAC [clt_sup_finite]
  >> (MP_TAC o (Q.SPECL [‘r’, ‘X'’, ‘Y'’, ‘Z’, ‘f’, ‘M’, ‘s’, ‘SUC n’]) o
             (INST_TYPE [alpha |-> “:('a # 'a list)”])) clt_lindeberg_taylor_error_bound
  >> impl_tac
  >- (simp [] >> GEN_TAC >> STRIP_TAC \\
      STRONG_CONJ_TAC
-     >- (Q.PAT_X_ASSUM ‘∀j. j < (SUC n) ⇒ real_random_variable (λx. Z j x) r ∧ _’
+     >- (Q.PAT_X_ASSUM ‘!j. j < (SUC n) ==> real_random_variable (λx. Z j x) r /\ _’
           (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> METIS_TAC []) \\
      DISCH_TAC \\
      STRONG_CONJ_TAC
-     >- (Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ integrable r (X' i) ∧  _’
+     >- (Q.PAT_X_ASSUM ‘!i. i < (SUC n) ==> integrable r (X' i) /\  _’
           (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> METIS_TAC []) \\
      DISCH_TAC \\
      STRONG_CONJ_TAC
-     >- (Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ integrable r (X' i) ∧  _’
+     >- (Q.PAT_X_ASSUM ‘!i. i < (SUC n) ==> integrable r (X' i) /\  _’
           (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> METIS_TAC []) \\
      DISCH_TAC \\
      (*integrable r (λx. (abs (X' j x))³)*)
@@ -6065,7 +6065,7 @@ val clt_tactic3_p5 =
                   (INST_TYPE [“:'b” |-> “:'a list”] expectation_snd)) \\
          impl_tac >- (fs [real_random_variable]) \\
          rw [o_DEF] >> POP_ASSUM (rw o wrap o SYM) \\
-         Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ ext_normal_rv (Y i) p' 0 (sig i)’
+         Q.PAT_X_ASSUM ‘!i. i < (SUC n) ==> ext_normal_rv (Y i) p' 0 (sig i)’
           (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
          MP_TAC (Q.SPECL [‘p'’, ‘Y (j: num)’, ‘0’, ‘sig (j: num)’]
                   (INST_TYPE [“:'a” |-> “:'a list”] (cj 2 expectation_of_normal_rv'))) \\
@@ -6086,7 +6086,7 @@ val clt_tactic3_p5 =
                   (INST_TYPE [“:'b” |-> “:('a list)”] variance_snd)) \\
          impl_tac >- (fs [real_random_variable] >> METIS_TAC [ETA_AX]) \\
          rw [o_DEF] >> POP_ASSUM (rw o wrap o SYM) \\
-         Suff ‘variance p (λx. X j x) = Normal (sig j) pow 2  ∧
+         Suff ‘variance p (λx. X j x) = Normal (sig j) pow 2  /\
                variance p' (λx. Y j x) = Normal (sig j) pow 2’ >> rw [extreal_pow_def]
          >- (MP_TAC (Q.SPECL [‘variance p (λx. X (j :num) x)’, ‘Normal ((sig (j :num)) pow 2)’] real_11) \\
              impl_tac >- (fs [] >> METIS_TAC [ETA_AX]) \\
@@ -6096,18 +6096,18 @@ val clt_tactic3_p5 =
      simp [indep_rv_def] \\
      Q.ABBREV_TAC ‘Z0 = λj x. ∑ (λi. Y' i x) (count j) +
                               ∑ (λi. X' i x) (count (SUC n) DIFF count1 j)’ \\
-     ‘∀x. x ∈ p_space r ⇒ Z j x = Z0 j x’ by rw [Abbr ‘Z’, Abbr ‘Z0’] \\
-     ‘∀A. PREIMAGE (Z j) A ∩ p_space r = PREIMAGE (Z0 j) A ∩ p_space r’
+     ‘!x. x ∈ p_space r ==> Z j x = Z0 j x’ by rw [Abbr ‘Z’, Abbr ‘Z0’] \\
+     ‘!A. PREIMAGE (Z j) A ∩ p_space r = PREIMAGE (Z0 j) A ∩ p_space r’
        by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION] \\
            EQ_TAC >> rw [] >> METIS_TAC []) \\
      POP_ORW \\
      fs [GSYM indep_rv_def] \\
      Q.PAT_X_ASSUM ‘indep_vars r _ (λi. Borel) (count (2 * (SUC n)))’ (ASSUME_TAC) \\
-     Q.ABBREV_TAC ‘W0 = (λi x. if i < (SUC n) then X i (FST x) else Y (i − (SUC n)) (SND x))’ \\
+     Q.ABBREV_TAC ‘W0 = (λi x. if i < (SUC n) then X i (FST x) else Y (i - (SUC n)) (SND x))’ \\
      Q.ABBREV_TAC ‘t = (count (SUC n) DIFF count1 j) ∪ IMAGE (λi. (SUC n) + i) (count j)’ \\
-     ‘∀x. X' j x = W0 j x’ by rw [Abbr ‘W0’, Abbr ‘X'’] \\
-     ‘∀x. Y' j x = W0 (j + (SUC n)) x’ by rw [Abbr ‘W0’, Abbr ‘Y'’] \\
-     Know ‘∀x. x IN p_space r ⇒ Z0 j x = sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))’
+     ‘!x. X' j x = W0 j x’ by rw [Abbr ‘W0’, Abbr ‘X'’] \\
+     ‘!x. Y' j x = W0 (j + (SUC n)) x’ by rw [Abbr ‘W0’, Abbr ‘Y'’] \\
+     Know ‘!x. x IN p_space r ==> Z0 j x = sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))’
      >- (rw [] \\
          MP_TAC (Q.SPECL [‘λ(n :num). W0 n (x : α # α list)’, ‘t’]
                   (INST_TYPE [“:'a” |-> “:num”] sum_list_eq_EXTREAL_SUM_IMAGE)) \\
@@ -6125,13 +6125,13 @@ val clt_tactic3_p5 =
          Rewr \\
          rw [Abbr ‘W0’, Abbr ‘Z0’] \\
          Know ‘∑ (λi. X' i x) (count (SUC n) DIFF count1 j) =
-               ∑ (λn'. if n' < (SUC n) then X n' (FST x) else Y (n' − (SUC n)) (SND x))
+               ∑ (λn'. if n' < (SUC n) then X n' (FST x) else Y (n' - (SUC n)) (SND x))
                  (count (SUC n) DIFF count1 j)’
          >- (irule EXTREAL_SUM_IMAGE_EQ' >> rw [Abbr ‘X'’]) \\
          STRIP_TAC >> POP_ASSUM (rw o wrap o SYM) \\
-         Know ‘∑ (λi. Y' i x) (count j) = ∑ (λn'. if n' < SUC n then X n' (FST x) else Y (n' − SUC n) (SND x))
+         Know ‘∑ (λi. Y' i x) (count j) = ∑ (λn'. if n' < SUC n then X n' (FST x) else Y (n' - SUC n) (SND x))
                                             (IMAGE (λi. i + SUC n) (count j))’
-         >- (Q.ABBREV_TAC ‘W0 = λn'. if n' < (SUC n) then X n' (FST x) else Y (n' − (SUC n)) (SND x)’ \\
+         >- (Q.ABBREV_TAC ‘W0 = λn'. if n' < (SUC n) then X n' (FST x) else Y (n' - (SUC n)) (SND x)’ \\
              Q.ABBREV_TAC ‘W1 = λi. i + (SUC n)’ >> gs [] \\
              MATCH_MP_TAC EQ_TRANS \\
              qexists ‘∑ (W0 o W1) (count j)’ \\
@@ -6185,36 +6185,36 @@ val clt_tactic3_p5 =
                       STRONG_CONJ_TAC
                       >- (rw [ALL_DISTINCT_APPEND, ALL_DISTINCT_SET_TO_LIST, Abbr ‘t’]) \\
                       STRIP_TAC \\
-                      (* ∀n. MEM n ([j] ⧺ SET_TO_LIST t) ⇒ random_variable (W0 n) r Borel *)
+                      (* !n. MEM n ([j] ⧺ SET_TO_LIST t) ==> random_variable (W0 n) r Borel *)
                       STRONG_CONJ_TAC
                       >- (rw [MEM_APPEND, Abbr ‘W0’, Abbr ‘X'’, Abbr ‘Y'’] \\
                           fs [random_variable_def, real_random_variable, p_space_def, events_def, o_DEF] \\
                           Cases_on ‘n' < (SUC n)’ >- (gs []) \\
                           gs [NOT_LT] \\
-                          Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒
-                                             (λx. Y i (SND x)) ∈ Borel_measurable _ ∧ ∀x. x ∈ m_space r ⇒ _’
+                          Q.PAT_X_ASSUM ‘!i. i < (SUC n) ==>
+                                             (λx. Y i (SND x)) ∈ Borel_measurable _ /\ !x. x ∈ m_space r ==> _’
                            (STRIP_ASSUME_TAC o Q.SPEC ‘n' - (SUC n)’) \\
                           fs [Abbr ‘t’, MEM_SET_TO_LIST, UNION_DEF, DIFF_DEF, IMAGE_DEF, Once EXTENSION]) \\
                       STRIP_TAC >> simp [] \\
                       ‘FINITE t’ by rw [Abbr ‘t’] \\
                       CONJ_TAC >- (simp [GSYM NOT_NIL_EQ_LENGTH_NOT_0] \\
-                                   Suff ‘t ≠ {}’ >- (METIS_TAC [SET_TO_LIST_EMPTY_IFF]) \\
+                                   Suff ‘t <> {}’ >- (METIS_TAC [SET_TO_LIST_EMPTY_IFF]) \\
                                    rw [Abbr ‘t’, count_def, DIFF_DEF, count1_def,
                                        Once EXTENSION, MEMBER_NOT_EMPTY] \\
                                    qexists ‘1’ >> simp []) \\
                       simp [SET_TO_LIST_INV]) \\
          rw [] \\
          fs [indep_rv_def, indep_def] \\
-         Q.PAT_X_ASSUM ‘∀a b. a ∈ subsets Borel ∧ b ∈ subsets Borel ⇒ _’
+         Q.PAT_X_ASSUM ‘!a b. a ∈ subsets Borel /\ b ∈ subsets Borel ==> _’
           (STRIP_ASSUME_TAC o Q.SPECL [‘a1’, ‘a2’]) >> gs [] \\
-         ‘∀x. PREIMAGE (λx. W0 j x) a1 ∩ p_space r = PREIMAGE (X' j) a1 ∩ p_space r’
+         ‘!x. PREIMAGE (λx. W0 j x) a1 ∩ p_space r = PREIMAGE (X' j) a1 ∩ p_space r’
            by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION] \\
                EQ_TAC >> rw [] >> METIS_TAC []) \\
-         ‘∀x. PREIMAGE (λx. sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))) a2 ∩ p_space r =
+         ‘!x. PREIMAGE (λx. sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))) a2 ∩ p_space r =
               PREIMAGE (Z0 j) a2 ∩ p_space r’
            by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION] \\
                EQ_TAC >> rw [] >> METIS_TAC []) \\
-         ‘∀x. PREIMAGE (λx. W0 j x) a1 ∩ p_space r ∩
+         ‘!x. PREIMAGE (λx. W0 j x) a1 ∩ p_space r ∩
                        (PREIMAGE (λx. sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))) a2 ∩ p_space r) =
               PREIMAGE (X' j) a1 ∩ p_space r ∩ (PREIMAGE (Z0 j) a2 ∩ p_space r)’
            by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION, UNION_DEF] \\
@@ -6254,35 +6254,35 @@ val clt_tactic3_p5 =
                   STRONG_CONJ_TAC
                   >- (rw [ALL_DISTINCT_APPEND, ALL_DISTINCT_SET_TO_LIST, Abbr ‘t’]) \\
                   STRIP_TAC \\
-                  (* ∀n. MEM n ([j] ⧺ SET_TO_LIST t) ⇒ random_variable (W0 n) r Borel *)
+                  (* !n. MEM n ([j] ⧺ SET_TO_LIST t) ==> random_variable (W0 n) r Borel *)
                   STRONG_CONJ_TAC
                   >- (rw [MEM_APPEND, Abbr ‘W0’, Abbr ‘X'’, Abbr ‘Y'’] \\
                       fs [random_variable_def, real_random_variable, p_space_def, events_def, o_DEF] \\
                       Cases_on ‘n' < (SUC n)’ >- (gs []) \\
                       gs [NOT_LT] \\
-                      Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒
-                                         (λx. Y i (SND x)) ∈ Borel_measurable _ ∧ ∀x. x ∈ m_space r ⇒ _’
+                      Q.PAT_X_ASSUM ‘!i. i < (SUC n) ==>
+                                         (λx. Y i (SND x)) ∈ Borel_measurable _ /\ !x. x ∈ m_space r ==> _’
                        (STRIP_ASSUME_TAC o Q.SPEC ‘n' - (SUC n)’) \\
                       fs [Abbr ‘t’, MEM_SET_TO_LIST, UNION_DEF, DIFF_DEF, IMAGE_DEF, Once EXTENSION]) \\
                   STRIP_TAC >> simp [] \\
                   ‘FINITE t’ by rw [Abbr ‘t’] \\
                   CONJ_TAC >- (simp [GSYM NOT_NIL_EQ_LENGTH_NOT_0] \\
-                               Suff ‘t ≠ {}’ >- (METIS_TAC [SET_TO_LIST_EMPTY_IFF]) \\
+                               Suff ‘t <> {}’ >- (METIS_TAC [SET_TO_LIST_EMPTY_IFF]) \\
                                rw [Abbr ‘t’, count_def, DIFF_DEF, count1_def,
                                    Once EXTENSION, MEMBER_NOT_EMPTY] \\
                                qexists ‘1’ >> simp []) \\
                   simp [SET_TO_LIST_INV]) \\
      rw [] >> fs [indep_rv_def, indep_def] \\
-     Q.PAT_X_ASSUM ‘∀a b. a ∈ subsets Borel ∧ b ∈ subsets Borel ⇒ _’
+     Q.PAT_X_ASSUM ‘!a b. a ∈ subsets Borel /\ b ∈ subsets Borel ==> _’
       (STRIP_ASSUME_TAC o Q.SPECL [‘a1’, ‘a2’]) >> gs [] \\
-     ‘∀x. PREIMAGE (λx. W0 (j + (SUC n)) x) a1 ∩ p_space r = PREIMAGE (Y' j) a1 ∩ p_space r’
+     ‘!x. PREIMAGE (λx. W0 (j + (SUC n)) x) a1 ∩ p_space r = PREIMAGE (Y' j) a1 ∩ p_space r’
        by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION] \\
            EQ_TAC >> rw [] >> METIS_TAC []) \\
-     ‘∀x. PREIMAGE (λx. sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))) a2 ∩ p_space r =
+     ‘!x. PREIMAGE (λx. sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))) a2 ∩ p_space r =
           PREIMAGE (Z0 j) a2 ∩ p_space r’
        by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION] \\
            EQ_TAC >> rw [] >> METIS_TAC []) \\
-     ‘∀x. PREIMAGE (λx. W0 (j + (SUC n)) x) a1 ∩ p_space r ∩
+     ‘!x. PREIMAGE (λx. W0 (j + (SUC n)) x) a1 ∩ p_space r ∩
                    (PREIMAGE (λx. sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))) a2 ∩ p_space r) =
           PREIMAGE (Y' j) a1 ∩ p_space r ∩ (PREIMAGE (Z0 j) a2 ∩ p_space r)’
        by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION, UNION_DEF] \\
@@ -6295,14 +6295,14 @@ val clt_tactic3_p5 =
 (* -------------------------------------------------------------------------- *)
 
 val clt_tactic3_p6 =
-    Q.PAT_X_ASSUM ‘∀j. j < (SUC n) ⇒ expectation r (_) − expectation r (_) =
+    Q.PAT_X_ASSUM ‘!j. j < (SUC n) ==> expectation r (_) - expectation r (_) =
                                      ∑ (λj'. _) (count (SUC n))’
     (STRIP_ASSUME_TAC o Q.SPEC ‘(SUC n) - 1’)
 >> ‘(SUC n) - 1 < SUC n’ by fs [SUB_LESS] >> gs []
 >> qmatch_abbrev_tac ‘abs (real G) < e’
 >> ASM_SIMP_TAC std_ss [GSYM extreal_lt_eq]
->> Know ‘G ≠ PosInf ∧ G ≠ NegInf’
->- (Q.PAT_X_ASSUM ‘expectation r _ − expectation r _  = G’ (rw o wrap o SYM)
+>> Know ‘G <> PosInf /\ G <> NegInf’
+>- (Q.PAT_X_ASSUM ‘expectation r _ - expectation r _  = G’ (rw o wrap o SYM)
     >- (clt_g 2 1) \\
     clt_g 1 2) >> DISCH_TAC
 >> ASM_SIMP_TAC std_ss [abs_real, abs_not_infty, normal_real]
@@ -6321,17 +6321,17 @@ val clt_tactic3 =
     clt_tactic3_p6;
 
 Theorem clt_expectation_sum_not_infty1[local] :
-  ∀p X s R f n.
-    prob_space p ∧
-    (∀i. real_random_variable (X i) p) ∧
-    (∀i. integrable p (X i)) ∧
-    (∀i. variance p (X i) < +∞) ∧
-    (∀i. expectation p (X i) = 0) ∧
-    0 < s (SUC n) ∧ s (SUC n) ≠ +∞ ∧ s (SUC n) ≠ −∞ ∧
-    R = (λn x. ∑ (λi. X i x) (count (SUC n)) / s (SUC n)) ∧
-    f ∈ CnR 3 ⇒
-    expectation p (Normal ∘ f ∘ real ∘ R n) ≠ +∞ ∧
-    expectation p (Normal ∘ f ∘ real ∘ R n) ≠ −∞
+  !p X s R f n.
+    prob_space p /\
+    (!i. real_random_variable (X i) p) /\
+    (!i. integrable p (X i)) /\
+    (!i. variance p (X i) < PosInf) /\
+    (!i. expectation p (X i) = 0) /\
+    0 < s (SUC n) /\ s (SUC n) <> PosInf /\ s (SUC n) <> NegInf /\
+    R = (λn x. ∑ (λi. X i x) (count (SUC n)) / s (SUC n)) /\
+    f ∈ CnR 3 ==>
+    expectation p (Normal ∘ f ∘ real ∘ R n) <> PosInf /\
+    expectation p (Normal ∘ f ∘ real ∘ R n) <> NegInf
 Proof
     NTAC 7 STRIP_TAC
  >> MATCH_MP_TAC expectation_finite >> simp []
@@ -6350,23 +6350,23 @@ Definition CLT_def :
 End
 
 Theorem central_limit_theorem :
-    ∀p X N.
-      prob_space p ∧ ext_normal_rv N p 0 1 ∧
-      (∀i. real_random_variable (X i) p) ∧
-      (∀n. indep_vars p X (λi. Borel) (count n)) ∧
-      (∀i. expectation p (X i) = 0) ∧
-      (∀i. expectation p (λx. (abs (X i x))³) < PosInf) ∧
-      (∀i. variance p (X i) < PosInf) ∧
-      (∀i. variance p (X i) ≠ 0) ∧
+    !p X N.
+      prob_space p /\ ext_normal_rv N p 0 1 /\
+      (!i. real_random_variable (X i) p) /\
+      (!n. indep_vars p X (λi. Borel) (count n)) /\
+      (!i. expectation p (X i) = 0) /\
+      (!i. expectation p (λx. (abs (X i x))³) < PosInf) /\
+      (!i. variance p (X i) < PosInf) /\
+      (!i. variance p (X i) <> 0) /\
       ((\n. absolute_third_moments p X (SUC n) /
-            sqrt (second_moments p X (SUC n)) pow 3) --> 0) sequentially ⇒
+            sqrt (second_moments p X (SUC n)) pow 3) --> 0) sequentially ==>
       CLT p X N
 Proof
     RW_TAC std_ss [CLT_def]
  >> rw [Abbr ‘Z’]
- >> ‘∀i. integrable p (X i) ∧ integrable p (λx. (X i x) pow 2) ∧
+ >> ‘!i. integrable p (X i) /\ integrable p (λx. (X i x) pow 2) /\
          integrable p (λx. (X i x)³)’ by METIS_TAC [clt_integrable_lemma]
- >> Know ‘∀n. expectation p (λx. ∑ (λi. X i x) (count1 n)) = 0’
+ >> Know ‘!n. expectation p (λx. ∑ (λi. X i x) (count1 n)) = 0’
  >- (rw [] \\
      (MP_TAC o (Q.SPECL [‘p’, ‘(X :num -> α -> extreal)’, ‘count1 n’]) o
              (INST_TYPE [“ :'b” |-> “:num”])) expectation_sum \\
@@ -6375,13 +6375,13 @@ Proof
  >> Q.ABBREV_TAC ‘s = λn. sqrt (second_moments p X n)’ >> fs []
  >> Q.ABBREV_TAC ‘b = λn. absolute_third_moments p X n’ >> fs []
  >> Q.ABBREV_TAC ‘R = λn x. ∑ (λi. X i x) (count (SUC n)) / s (SUC n)’
- >> Know ‘∀n. 0 < s (SUC n)’
+ >> Know ‘!n. 0 < s (SUC n)’
  >- (rw [Abbr ‘s’] \\
      MATCH_MP_TAC sqrt_pos_lt >> rw [second_moments_def] \\
      MATCH_MP_TAC EXTREAL_SUM_IMAGE_SPOS >> rw [GSYM variance_def] \\
      MP_TAC (Q.SPECL [‘p’, ‘X (x :num)’] variance_pos) >>  rw [lt_le])
  >> DISCH_TAC
- >> Know ‘∀n. s n ≠ NegInf ∧ s n ≠ PosInf’
+ >> Know ‘!n. s n <> NegInf /\ s n <> PosInf’
  >- (simp [Abbr ‘s’] \\
      qx_gen_tac ‘n’ \\
      CONJ_TAC >- (Suff ‘0 ≤ sqrt (second_moments p X n)’
@@ -6394,16 +6394,16 @@ Proof
                   irule finite_variance_imp_second_moments >> simp []) \\
      METIS_TAC [second_moments_pos])
  >> DISCH_TAC
- >> ‘∀i. integrable p (λx. (abs (X i x))³)’
+ >> ‘!i. integrable p (λx. (abs (X i x))³)’
     by (rw [GSYM pow_abs, GSYM o_DEF] \\
         MATCH_MP_TAC integrable_abs >> fs [prob_space_def])
- >> Know ‘∀i. real_random_variable (R i) p’
+ >> Know ‘!i. real_random_variable (R i) p’
  >- (Q.X_GEN_TAC ‘n’ \\
      drule real_random_variable_sum_cdiv >> STRIP_TAC \\
      POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘X’, ‘s’, ‘SUC n’]) \\
      gs [] >> fs [Abbr ‘R’])
  >> DISCH_TAC
- >> Know ‘∀i. integrable p (R i)’
+ >> Know ‘!i. integrable p (R i)’
  >- (Q.X_GEN_TAC ‘n’ \\
      drule integrable_sum_cdiv >> STRIP_TAC \\
      POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘X’, ‘s’, ‘SUC n’]) \\
@@ -6415,15 +6415,15 @@ Proof
      METIS_TAC [random_variable_borel_imp_Borel])
  >> Rewr
  >> rw []
- >> Q.PAT_X_ASSUM ‘(R ⟶ N) (in_distribution p) ⇔ _’ K_TAC
+ >> Q.PAT_X_ASSUM ‘(R ⟶ N) (in_distribution p) <=> _’ K_TAC
  >> Q.ABBREV_TAC ‘M = λn. expectation p (Normal ∘ f ∘ real ∘ R n)’
  >> Q.ABBREV_TAC ‘Q = expectation p (Normal ∘ f ∘ real o N)’
- >> Know ‘Q ≠ PosInf ∧ Q ≠ −∞’
+ >> Know ‘Q <> PosInf /\ Q <> NegInf’
  >- (simp [Abbr ‘Q’] \\
      MATCH_MP_TAC clt_expectation_sum_not_infty_normal_rv \\
      rw [ext_normal_rv_def]) >> DISCH_TAC
 
- >> Know ‘∀n. 0 ≤ n ⇒ M n ≠ PosInf ∧ M n ≠ −∞’
+ >> Know ‘!n. 0 ≤ n ==> M n <> PosInf /\ M n <> NegInf’
  >- (Q.UNABBREV_TAC ‘M’ >> BETA_TAC \\
      MP_TAC (Q.SPECL [‘p’, ‘X’, ‘s’, ‘R’, ‘f’] clt_expectation_sum_not_infty1) \\
      simp []) >> DISCH_TAC
@@ -6435,34 +6435,34 @@ Proof
  (*To get n dimentionas from sequence (count n)*)
  >> MP_TAC (Q.SPECL [‘M’, ‘Q’] lim_null_equiv_extreal_real) >> rw []
  >> fs [LIM_SEQUENTIALLY]
- >> Q.PAT_X_ASSUM ‘((λx. M x − Q) ⟶ 0) sequentially ⇔ _’ K_TAC
+ >> Q.PAT_X_ASSUM ‘((λx. M x - Q) ⟶ 0) sequentially <=> _’ K_TAC
  (*To rewrite b n / s n pow 3 *)
     >> MP_TAC (Q.SPECL [‘λn. b (SUC n) / (s (SUC n))³’, ‘0’] lim_null_equiv_extreal_real)
 
  >> impl_tac >> simp []
  >- (qexists ‘1’ >> gs [] \\
      Q.X_GEN_TAC ‘z’ >> STRIP_TAC \\
-     Suff ‘b (SUC z) ≠ PosInf ∧ b (SUC z) ≠ NegInf’
+     Suff ‘b (SUC z) <> PosInf /\ b (SUC z) <> NegInf’
      >- (STRIP_TAC \\
-         ‘∃a. b (SUC z) = Normal a’ by METIS_TAC [extreal_cases] >> gs [] \\
+         ‘?a. b (SUC z) = Normal a’ by METIS_TAC [extreal_cases] >> gs [] \\
          MATCH_MP_TAC div_not_infty \\
          CCONTR_TAC >> fs [] \\
          MP_TAC (Q.SPECL [‘3’, ‘s ((SUC z) :num)’] pow_zero_imp) >> STRIP_TAC \\
-         Q.PAT_X_ASSUM ‘∀n. 0 < s (SUC n)’ (STRIP_ASSUME_TAC o Q.SPEC ‘z’) >> fs [lt_imp_ne]) \\
+         Q.PAT_X_ASSUM ‘!n. 0 < s (SUC n)’ (STRIP_ASSUME_TAC o Q.SPEC ‘z’) >> fs [lt_imp_ne]) \\
      bn_not_infty_tactic)
  >> STRIP_TAC
  >> fs [LIM_SEQUENTIALLY, metricTheory.dist] >> rw []
  >> Q.ABBREV_TAC ‘(A :extreal) = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) UNIV)’
- >> ‘A ≠ PosInf’ by METIS_TAC [clt_sup_finite]
+ >> ‘A <> PosInf’ by METIS_TAC [clt_sup_finite]
  >> ‘0 ≤ A’ by rw [Abbr ‘A’, sup_abs_diff3_nonneg]
- >> ‘A ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
- >> ‘A ≠ PosInf’ by METIS_TAC [lt_le]
- >> ‘∃m. A = Normal m’ by METIS_TAC [extreal_cases] >> gs [Abbr ‘A’]
+ >> ‘A <> NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
+ >> ‘A <> PosInf’ by METIS_TAC [lt_le]
+ >> ‘?m. A = Normal m’ by METIS_TAC [extreal_cases] >> gs [Abbr ‘A’]
  >> MP_TAC (cj 3 lborel_def) >> DISCH_TAC
  >> MP_TAC (integrable_std_normal_abs_cubic) >> DISCH_TAC
  >> Q.ABBREV_TAC ‘fu = λx. Normal ((abs x)³ * std_normal_density x)’
  >> ‘0 < ∫ lborel fu’ by rw [Abbr ‘fu’, standard_normal_abs_third_moment_pos]
- >> ‘∃c0. ∫ lborel fu = Normal c0’ by METIS_TAC [integrable_normal_integral] >> gs []
+ >> ‘?c0. ∫ lborel fu = Normal c0’ by METIS_TAC [integrable_normal_integral] >> gs []
  >> Q.ABBREV_TAC ‘U = m / 6 * (1 + c0)’
  >> Cases_on ‘m = 0’
  >- (‘U = 0’ by gs [mul_lzero, normal_0, extreal_pow_def] \\
@@ -6479,35 +6479,35 @@ Proof
      METIS_TAC [REAL_LT_ADD, REAL_LT_01])
  >> DISCH_TAC
  >> ‘0 < e / U’ by METIS_TAC [REAL_LT_DIV, REAL_LT_LE]
- >> Q.PAT_X_ASSUM ‘∀e. 0 < e ⇒ ∃N. ∀n. N ≤ n ⇒ _ < e’
+ >> Q.PAT_X_ASSUM ‘!e. 0 < e ==> ?N. !n. N ≤ n ==> _ < e’
      (STRIP_ASSUME_TAC o Q.SPEC ‘e / U’) >> gs []
  >> ‘0 < (2 :real)’ by simp []
  >> ‘0 < e / 2’ by METIS_TAC [REAL_LT_DIV]
  >> clt_tactic3
 
- >> Know ‘∀i. i < (SUC n) ⇒ integrable r (λx. (Y' i x)³)’
+ >> Know ‘!i. i < (SUC n) ==> integrable r (λx. (Y' i x)³)’
  >- (rw [Abbr ‘Y'’] \\
      MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (Y (i :num) x)³’]
               (INST_TYPE [beta |-> “:('a list)”] integrable_snd)) \\
      fs [prob_space_def, o_DEF]) >> DISCH_TAC
- >> Know ‘∀i. i < (SUC n) ⇒ integrable r (λx. (X' i x)³)’
+ >> Know ‘!i. i < (SUC n) ==> integrable r (λx. (X' i x)³)’
  >- (rw [Abbr ‘X'’] \\
      MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (X (i :num) x )³’]
               (INST_TYPE [beta |-> “:('a list)”] integrable_fst)) \\
      fs [prob_space_def, o_DEF]) >> DISCH_TAC
- >> Know ‘∀i. i < (SUC n) ⇒ expectation r (λx. (abs (X' i x))) ≠ PosInf ∧
-                      expectation r (λx. (abs (Y' i x))) ≠ PosInf ∧
-                      expectation r (λx. (abs (X' i x)) pow 3) ≠ PosInf ∧
-                      expectation r (λx. (abs (Y' i x)) pow 3) ≠ PosInf’
+ >> Know ‘!i. i < (SUC n) ==> expectation r (λx. (abs (X' i x))) <> PosInf /\
+                      expectation r (λx. (abs (Y' i x))) <> PosInf /\
+                      expectation r (λx. (abs (X' i x)) pow 3) <> PosInf /\
+                      expectation r (λx. (abs (Y' i x)) pow 3) <> PosInf’
  >- (rw [Abbr ‘X'’, Abbr ‘Y'’]
      >> MATCH_MP_TAC (cj 1 expectation_finite) >> simp [GSYM o_DEF, GSYM pow_abs] \\
      MATCH_MP_TAC integrable_abs \\
      fs [prob_space_def, o_DEF]) >> DISCH_TAC
 
- >> Know ‘∀i. i < (SUC n) ⇒ expectation r (λx. (abs (X' i x))) ≠ NegInf ∧
-                      expectation r (λx. (abs (Y' i x))) ≠ NegInf ∧
-                      expectation r (λx. (abs (X' i x)) pow 3) ≠ NegInf ∧
-                      expectation r (λx. (abs (Y' i x)) pow 3) ≠ NegInf’
+ >> Know ‘!i. i < (SUC n) ==> expectation r (λx. (abs (X' i x))) <> NegInf /\
+                      expectation r (λx. (abs (Y' i x))) <> NegInf /\
+                      expectation r (λx. (abs (X' i x)) pow 3) <> NegInf /\
+                      expectation r (λx. (abs (Y' i x)) pow 3) <> NegInf’
  >- (rw [Abbr ‘X'’, Abbr ‘Y'’]
      >> MATCH_MP_TAC (cj 2 expectation_finite) >> simp [GSYM o_DEF, GSYM pow_abs] \\
      MATCH_MP_TAC integrable_abs \\
@@ -6520,17 +6520,17 @@ Proof
                      expectation r (λx. (abs (Y' j x)) pow 3) / (Normal c) pow 3) (count (SUC n))’
     >- (‘(6 :extreal) = Normal (6 :real)’ by EVAL_TAC >> POP_ORW \\
      qmatch_abbrev_tac ‘Normal m / (Normal 6 * (Normal c)³) * B = _’ \\
-     Know ‘B ≠ PosInf ∧ B ≠ NegInf’
+     Know ‘B <> PosInf /\ B <> NegInf’
      >- (rw [Abbr ‘B’]
          >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> rw [] \\
-             (* expectation r (λx'. (abs (X' x x'))³ + (abs (Y' x x'))³) ≠ PosInf *)
+             (* expectation r (λx'. (abs (X' x x'))³ + (abs (Y' x x'))³) <> PosInf *)
              MATCH_MP_TAC (cj 1 expectation_finite) >> simp [] \\
              clt_tactic2) \\
          irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> rw [] \\
          MATCH_MP_TAC (cj 2 expectation_finite) >> simp [] \\
          clt_tactic2) >> DISCH_TAC \\
 
-     ‘∃d. B = Normal d’ by METIS_TAC [extreal_cases] >> gs [extreal_mul_eq] \\
+     ‘?d. B = Normal d’ by METIS_TAC [extreal_cases] >> gs [extreal_mul_eq] \\
      ‘0 < (Normal c) pow 3’ by METIS_TAC [GSYM extreal_lt_eq, normal_0, pow_pos_lt] \\
 
      Know ‘Normal m / (Normal 6 * (Normal c)³) * Normal d =
@@ -6540,12 +6540,12 @@ Proof
          ASM_SIMP_TAC std_ss [div_eq_mul_rinv, extreal_not_infty, mul_assoc, mul_comm] \\
          ASM_SIMP_TAC std_ss [rdiv_eq, lt_infty, extreal_pow_def] \\
          ‘0 < c pow 3’ by METIS_TAC [REAL_POW_LT] \\
-         ‘0 ≠ Normal 6’ by EVAL_TAC \\
-         ‘Normal (c pow 3) ≠ 0’ by METIS_TAC [GSYM extreal_lt_eq, normal_0, lt_imp_ne] \\
+         ‘0 <> Normal 6’ by EVAL_TAC \\
+         ‘Normal (c pow 3) <> 0’ by METIS_TAC [GSYM extreal_lt_eq, normal_0, lt_imp_ne] \\
          ASM_SIMP_TAC std_ss [inv_mul, lt_imp_ne, mul_assoc] \\
          simp [GSYM mul_assoc, mul_linv_pos]) >> Rewr \\
 
-     ‘0 ≠ (6 :real)’ by EVAL_TAC \\
+     ‘0 <> (6 :real)’ by EVAL_TAC \\
      ASM_SIMP_TAC std_ss [extreal_div_eq, mul_div_assoc, extreal_not_infty, pow_not_infty] \\
      simp [mul_lcancel] \\
      Q.PAT_X_ASSUM ‘B = Normal d’ (rw o wrap o SYM) \\
@@ -6568,62 +6568,62 @@ Proof
                expectation r (λx'. (abs (X' x x'))³) + expectation r (λx'. (abs (Y' x x'))³)’
          >- (Rewr >> irule (GSYM div_add) \\
              fs [extreal_pow_def, lt_imp_ne] >> gs [] \\
-             Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠ PosInf ∧ _’
+             Q.PAT_X_ASSUM ‘!i. i < (SUC n) ==> expectation r (λx. abs (X' i x)) <> PosInf /\ _’
               (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
-             Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠ NegInf ∧ _’
+             Q.PAT_X_ASSUM ‘!i. i < (SUC n) ==> expectation r (λx. abs (X' i x)) <> NegInf /\ _’
               (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs []) \\
          HO_MATCH_MP_TAC expectation_add \\
          fs [GSYM pow_abs, GSYM o_DEF] \\
          rw [] >> (MATCH_MP_TAC integrable_abs >> fs [prob_space_def])) \\
      DISJ2_TAC >> rw []
-     >-(Know ‘expectation r (λx'. (abs (X' x x'))³ + (abs (Y' x x'))³) ≠ PosInf ∧
-              expectation r (λx'. (abs (X' x x'))³ + (abs (Y' x x'))³) ≠ NegInf’
+     >-(Know ‘expectation r (λx'. (abs (X' x x'))³ + (abs (Y' x x'))³) <> PosInf /\
+              expectation r (λx'. (abs (X' x x'))³ + (abs (Y' x x'))³) <> NegInf’
         >- (MATCH_MP_TAC expectation_finite >> simp [] \\
             clt_tactic2) >> DISCH_TAC \\
-        ‘∃a. expectation r (λx'. (abs (X' x x'))³ + (abs (Y' x x'))³) = Normal a’ by METIS_TAC [extreal_cases] \\
+        ‘?a. expectation r (λx'. (abs (X' x x'))³ + (abs (Y' x x'))³) = Normal a’ by METIS_TAC [extreal_cases] \\
         gs [extreal_div_eq, extreal_not_infty]) \\
      irule (cj 2 add_not_infty) \\
 
-     Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠ PosInf ∧ _’
+     Q.PAT_X_ASSUM ‘!i. i < (SUC n) ==> expectation r (λx. abs (X' i x)) <> PosInf /\ _’
       (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
-     Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠  −∞ ∧ _’
+     Q.PAT_X_ASSUM ‘!i. i < (SUC n) ==> expectation r (λx. abs (X' i x)) <>  NegInf /\ _’
       (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
-     ‘∃a. expectation r (λx'. (abs (X' x x'))³) = Normal a’ by METIS_TAC [extreal_cases] \\
-     ‘∃z. expectation r (λx'. (abs (Y' x x'))³) = Normal z’ by METIS_TAC [extreal_cases] \\
+     ‘?a. expectation r (λx'. (abs (X' x x'))³) = Normal a’ by METIS_TAC [extreal_cases] \\
+     ‘?z. expectation r (λx'. (abs (Y' x x'))³) = Normal z’ by METIS_TAC [extreal_cases] \\
      gs [extreal_div_eq, extreal_not_infty])
  >> Rewr
  >> Q.ABBREV_TAC ‘A = λj. expectation r (λx. (abs (X' j x))³)’
  >> Q.ABBREV_TAC ‘B = λj. expectation r (λx. (abs (Y' j x))³)’
  >> gs []
 
- >> Know ‘∀i. i < (SUC n) ⇒ ext_normal_rv (Y' i) r 0 (sig i)’
+ >> Know ‘!i. i < (SUC n) ==> ext_normal_rv (Y' i) r 0 (sig i)’
  >- (rw [Abbr ‘Y'’, Abbr ‘r’] \\
      MATCH_MP_TAC ext_normal_rv_snd >> fs [])
  >> DISCH_TAC
- >> Know ‘∀i. A i = expectation p (λx. (abs (X i x)) pow 3)’
+ >> Know ‘!i. A i = expectation p (λx. (abs (X i x)) pow 3)’
  >- (rw [Abbr ‘A’, Abbr ‘r’, Abbr ‘X'’] \\
      MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (abs (X (i :num) x)) pow 3’]
               (INST_TYPE [“:'b” |-> “:'a list”] expectation_fst)) \\
      impl_tac >- (fs [real_random_variable, GSYM pow_abs] \\
-                  (* ∀x. x ∈ p_space p ⇒ abs (X i x)³ ≠ PosInf ∧ abs (X i x)³ ≠ −∞ *)
+                  (* !x. x ∈ p_space p ==> abs (X i x)³ <> PosInf /\ abs (X i x)³ <> NegInf *)
                   NTAC 2 STRIP_TAC \\
-                  Q.PAT_X_ASSUM ‘∀i. X i ∈ Borel_measurable (p_space p,events p) ∧ _’
+                  Q.PAT_X_ASSUM ‘!i. X i ∈ Borel_measurable (p_space p,events p) /\ _’
                    (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
                   POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
-                  ‘∃a. X i x = Normal a’ by METIS_TAC [extreal_cases] \\
+                  ‘?a. X i x = Normal a’ by METIS_TAC [extreal_cases] \\
                   METIS_TAC [extreal_abs_def, extreal_pow_def, extreal_not_infty]) \\
      rw [o_DEF]) >> rw []
 
- >> Know ‘∀i. i < (SUC n) ⇒ B i = expectation p' (λx. (abs (Y i x)) pow 3)’
+ >> Know ‘!i. i < (SUC n) ==> B i = expectation p' (λx. (abs (Y i x)) pow 3)’
  >- (rw [Abbr ‘B’, Abbr ‘r’, Abbr ‘Y'’] \\
      MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (abs (Y (i :num) x)) pow 3’]
               (INST_TYPE [“:'b” |-> “:'a list”] expectation_snd)) \\
      impl_tac >- (fs [real_random_variable, GSYM pow_abs] \\
                   NTAC 2 STRIP_TAC \\
-                  Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ Y i ∈ Borel_measurable (p_space p',events p') ∧ _’
+                  Q.PAT_X_ASSUM ‘!i. i < (SUC n) ==> Y i ∈ Borel_measurable (p_space p',events p') /\ _’
                    (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [] \\
                   POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
-                  ‘∃a. Y i x = Normal a’ by METIS_TAC [extreal_cases] \\
+                  ‘?a. Y i x = Normal a’ by METIS_TAC [extreal_cases] \\
                    METIS_TAC [extreal_abs_def, extreal_pow_def, extreal_not_infty]) \\
      rw [o_DEF])
  >> rw []
@@ -6645,9 +6645,9 @@ Proof
          gs [add_not_infty, extreal_pow_def]) \\
      Rewr >> rw [extreal_pow_def] \\
      ‘6 = Normal 6’ by EVAL_TAC \\
-     Suff ‘∑ (λj. L j + B j) (count (SUC n)) ≠ PosInf /\ ∑ (λj. L j + B j) (count (SUC n)) ≠ NegInf’
+     Suff ‘∑ (λj. L j + B j) (count (SUC n)) <> PosInf /\ ∑ (λj. L j + B j) (count (SUC n)) <> NegInf’
      >- (rw [] \\
-         ‘∃l. ∑ (λj. L j + B j) (count (SUC n)) = Normal l’ by METIS_TAC [extreal_cases] \\
+         ‘?l. ∑ (λj. L j + B j) (count (SUC n)) = Normal l’ by METIS_TAC [extreal_cases] \\
          gs [div_eq_mul_rinv, extreal_not_infty] \\
          ‘Normal l * inv (Normal (c pow 3)) = inv (Normal (c pow 3)) * Normal l’ by rw [mul_comm] \\
          POP_ORW \\
@@ -6665,34 +6665,34 @@ Proof
  >> MATCH_MP_TAC let_trans
  >> qexists ‘Normal U * (b (SUC n) / (s (SUC n)) pow 3)’
  >> reverse CONJ_TAC
- >- (Q.PAT_X_ASSUM ‘∀n. k ≤ n ⇒ _ < e * NZ U’
+ >- (Q.PAT_X_ASSUM ‘!n. k ≤ n ==> _ < e * NZ U’
       (STRIP_ASSUME_TAC o Q.SPEC ‘n’) >> gs [] \\
      MP_TAC (Q.SPECL [‘Normal U * (b (SUC (n :num)) / (Normal c)³)’, ‘Normal e’] real_lt_eq) \\
-     impl_tac >- (Suff ‘b (SUC n) ≠ PosInf ∧ b (SUC n) ≠ NegInf’
-                  >- (rw [] >> ‘∃y. b (SUC n) = Normal y’ by METIS_TAC [extreal_cases] \\
+     impl_tac >- (Suff ‘b (SUC n) <> PosInf /\ b (SUC n) <> NegInf’
+                  >- (rw [] >> ‘?y. b (SUC n) = Normal y’ by METIS_TAC [extreal_cases] \\
                       gs [extreal_pow_def, extreal_div_eq, extreal_mul_eq]) \\
                   bn_not_infty_tactic) \\
      rw [] >> POP_ASSUM (rw o wrap o SYM) \\
      MP_TAC (Q.SPECL [‘Normal U’, ‘b (SUC (n :num)) / (Normal c)³’] mul_real) \\
      gs [] \\
-     impl_tac >- (Suff ‘b (SUC n) ≠ PosInf ∧ b (SUC n) ≠ NegInf’
-                  >- (rw [] >> ‘∃y. b (SUC n) = Normal y’ by METIS_TAC [extreal_cases] \\
+     impl_tac >- (Suff ‘b (SUC n) <> PosInf /\ b (SUC n) <> NegInf’
+                  >- (rw [] >> ‘?y. b (SUC n) = Normal y’ by METIS_TAC [extreal_cases] \\
                       gs [extreal_pow_def, extreal_div_eq, extreal_mul_eq]) \\
                   bn_not_infty_tactic) \\
      Rewr \\
-     ‘U ≠ 0’ by METIS_TAC [REAL_LT_IMP_NE] \\
+     ‘U <> 0’ by METIS_TAC [REAL_LT_IMP_NE] \\
      fs [nonzerop_def] \\
      MATCH_MP_TAC REAL_LET_TRANS \\
      qexists ‘U * abs (real (b (SUC n) / (Normal c)³))’ >> gs [ABS_LE])
 
- >> Know ‘∀i. i < (SUC n) ⇒ B i = Normal c0 * (Normal ((sig i) pow 3))’
+ >> Know ‘!i. i < (SUC n) ==> B i = Normal c0 * (Normal ((sig i) pow 3))’
  >- (rw [] >> gs [] \\
      MP_TAC (Q.SPECL [‘p'’, ‘Y (i :num)’, ‘sig (i :num)’]
               (INST_TYPE [“:'a” |-> “:'a list”] ext_normal_rv_abs_third_moment')) \\
      rw [mul_comm])
  >> DISCH_TAC
 
- >> Know ‘∀i. i < (SUC n) ⇒ B i ≤ Normal c0 * A i’
+ >> Know ‘!i. i < (SUC n) ==> B i ≤ Normal c0 * A i’
  >- (rw [] \\
      HO_MATCH_MP_TAC le_lmul_imp >> gs [REAL_LT_IMP_LE] \\
      MATCH_MP_TAC eqle_trans \\
@@ -6700,14 +6700,14 @@ Proof
      rw [Abbr ‘sig’, Abbr ‘s’]
      >- (MP_TAC (Q.SPECL [‘p’, ‘λx. X (i :num) x’] variance_eq) \\
          impl_tac >- (fs [real_random_variable_def] \\
-                      Q.PAT_X_ASSUM ‘∀i. random_variable (X i) p Borel ∧ _’
+                      Q.PAT_X_ASSUM ‘!i. random_variable (X i) p Borel /\ _’
                        (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
                       METIS_TAC [ETA_AX]) \\
-         Q.PAT_X_ASSUM ‘∀i. expectation p (X i) = 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+         Q.PAT_X_ASSUM ‘!i. expectation p (X i) = 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
          rw [SF ETA_ss, sub_rzero, zero_pow] \\
          simp [GSYM extreal_sqrt_def, GSYM extreal_pow_def] \\
          MP_TAC (Q.SPECL [‘expectation p (λx. (X (i :num) x)²)’] normal_real) \\
-         Q.PAT_X_ASSUM ‘∀i. variance p (X i) ≠ −∞ ∧ variance p (X i) ≠ PosInf’
+         Q.PAT_X_ASSUM ‘!i. variance p (X i) <> NegInf /\ variance p (X i) <> PosInf’
           (MP_TAC o Q.SPEC ‘i’) >> rw [] \\
          MP_TAC (Q.SPECL [‘expectation p (λx. (X (i :num) x)²)’] sqrt_powr) \\
          rw [expectation_pos, le_pow2] \\
@@ -6720,7 +6720,7 @@ Proof
          gs [] >> impl_tac
          >- (reverse CONJ_TAC >- (MATCH_MP_TAC (cj 1 inv_not_infty) >> EVAL_TAC) \\
              MATCH_MP_TAC inv_pos' >> gs []) >> gs [mul_comm]) \\
-     ‘∀x. (X i x) pow 2 = (abs (X i x)) pow 2’ by rw [abs_pow2] >> POP_ORW \\
+     ‘!x. (X i x) pow 2 = (abs (X i x)) pow 2’ by rw [abs_pow2] >> POP_ORW \\
      Q.ABBREV_TAC ‘u = λx. abs (X i x)’ \\
      ‘expectation p (λx. (abs (X i x))²) powr (3 * 2⁻¹) = expectation p (λx. (u x) pow 2) powr (3 * 2⁻¹)’
        by rw [Abbr ‘u’] >> POP_ORW \\
@@ -6733,21 +6733,21 @@ Proof
                       irule IN_MEASURABLE_BOREL_COMP_BOREL \\
                       qexistsl [‘λx. x’, ‘λx. X i x’] \\
                       fs [IN_MEASURABLE_BOREL_BOREL_I, p_space_def, events_def] \\
-                      Q.PAT_X_ASSUM ‘∀i'. X i' ∈ Borel_measurable (measurable_space p) ∧ _’
+                      Q.PAT_X_ASSUM ‘!i'. X i' ∈ Borel_measurable (measurable_space p) /\ _’
                        (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
                       METIS_TAC [ETA_AX]) \\
-         Q.PAT_X_ASSUM ‘∀i. integrable p (X i) ∧ integrable p (λx. (X i x)²) ∧
+         Q.PAT_X_ASSUM ‘!i. integrable p (X i) /\ integrable p (λx. (X i x)²) /\
                             integrable p (λx. (X i x)³)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-         ‘∀x. abs (X i x) powr 2 = abs (X i x) pow 2’ by rw [GSYM gen_powr, abs_pos] \\
+         ‘!x. abs (X i x) powr 2 = abs (X i x) pow 2’ by rw [GSYM gen_powr, abs_pos] \\
          POP_ORW \\
          ‘integrable p (λx. (X i x)²) = integrable p (λx. (abs (X i x)²))’
            by (MATCH_MP_TAC integrable_cong >> fs [prob_space_def, pow_abs]) >> gs [] \\
-         ‘∀x. (X i x) pow 2 = (abs (X i x)) pow 2’ by rw [abs_pow2] >> POP_ORW \\
+         ‘!x. (X i x) pow 2 = (abs (X i x)) pow 2’ by rw [abs_pow2] >> POP_ORW \\
          MP_TAC (Q.SPECL [‘p’, ‘λx. (X (i :num) x) pow 2’] (INST_TYPE [“:'b” |-> “:'a”] integrable_abs_alt)) \\
          impl_tac
          >- (fs [prob_space_def, real_random_variable, p_space_def, events_def] \\
              MATCH_MP_TAC IN_MEASURABLE_BOREL_POW \\
-             Q.PAT_X_ASSUM ‘∀i'. X i' ∈ Borel_measurable (measurable_space p) ∧ _’
+             Q.PAT_X_ASSUM ‘!i'. X i' ∈ Borel_measurable (measurable_space p) /\ _’
               (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
              METIS_TAC [ETA_AX]) \\
          rw [o_DEF, pow_abs]) \\
@@ -6760,21 +6760,21 @@ Proof
                       irule IN_MEASURABLE_BOREL_COMP_BOREL \\
                       qexistsl [‘λx. x’, ‘λx. X i x’] \\
                       fs [IN_MEASURABLE_BOREL_BOREL_I, p_space_def, events_def] \\
-                      Q.PAT_X_ASSUM ‘∀i'. X i' ∈ Borel_measurable (measurable_space p) ∧ _’
+                      Q.PAT_X_ASSUM ‘!i'. X i' ∈ Borel_measurable (measurable_space p) /\ _’
                        (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
                       METIS_TAC [ETA_AX]) \\
-         Q.PAT_X_ASSUM ‘∀i. integrable p (X i) ∧ integrable p (λx. (X i x)²) ∧
+         Q.PAT_X_ASSUM ‘!i. integrable p (X i) /\ integrable p (λx. (X i x)²) /\
                             integrable p (λx. (X i x)³)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-         ‘∀x. abs (X i x) powr 2 = abs (X i x) pow 2’ by rw [GSYM gen_powr, abs_pos] \\
+         ‘!x. abs (X i x) powr 2 = abs (X i x) pow 2’ by rw [GSYM gen_powr, abs_pos] \\
          POP_ORW \\
          ‘integrable p (λx. (X i x)²) = integrable p (λx. (abs (X i x)²))’
            by (MATCH_MP_TAC integrable_cong >> fs [prob_space_def, pow_abs]) >> gs [] \\
-         ‘∀x. abs (X i x) powr 3 = abs (X i x) pow 3’ by rw [GSYM gen_powr, abs_pos] >> POP_ORW \\
+         ‘!x. abs (X i x) powr 3 = abs (X i x) pow 3’ by rw [GSYM gen_powr, abs_pos] >> POP_ORW \\
          MP_TAC (Q.SPECL [‘p’, ‘λx. (X (i :num) x) pow 3’] (INST_TYPE [“:'b” |-> “:'a”] integrable_abs_alt)) \\
          impl_tac
          >- (fs [prob_space_def, real_random_variable, p_space_def, events_def] \\
              MATCH_MP_TAC IN_MEASURABLE_BOREL_POW \\
-             Q.PAT_X_ASSUM ‘∀i'. X i' ∈ Borel_measurable (measurable_space p) ∧ _’
+             Q.PAT_X_ASSUM ‘!i'. X i' ∈ Borel_measurable (measurable_space p) /\ _’
               (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
              METIS_TAC [ETA_AX]) \\
          rw [o_DEF, pow_abs] \\
@@ -6784,18 +6784,18 @@ Proof
 
      MP_TAC (Q.SPECL [‘p’, ‘u’, ‘2’, ‘3’] Lyapunov_ineq_rv) >> rw [seminorm_def, expectation_def] \\
      fs [integral_abs_pos_fn, prob_space_def, GSYM o_DEF, GSYM pow_abs] \\
-     ‘∀x. abs (u x) = u x’ by rw [Abbr ‘u’, abs_abs] >> gs [] \\
+     ‘!x. abs (u x) = u x’ by rw [Abbr ‘u’, abs_abs] >> gs [] \\
      POP_ORW \\
-     ‘∀x. (u x) powr 2 = (u x) pow 2’ by rw [Abbr ‘u’, GSYM gen_powr, abs_pos] >> gs [] \\
+     ‘!x. (u x) powr 2 = (u x) pow 2’ by rw [Abbr ‘u’, GSYM gen_powr, abs_pos] >> gs [] \\
      POP_ORW \\
-     ‘∀x. (u x) powr 3 = (u x) pow 3’ by rw [Abbr ‘u’, GSYM gen_powr, abs_pos] >> gs [] \\
+     ‘!x. (u x) powr 3 = (u x) pow 3’ by rw [Abbr ‘u’, GSYM gen_powr, abs_pos] >> gs [] \\
      POP_ORW \\
-     Know ‘∫⁺ p (λx. (u x) pow 2) = ∫ p (λx. (u x) pow 2)’
+     Know ‘pos_fn_integral p (λx. (u x) pow 2) = ∫ p (λx. (u x) pow 2)’
      >- (ASM_SIMP_TAC std_ss [Abbr ‘u’, GSYM pow_abs, GSYM o_DEF] \\
          MATCH_MP_TAC (GSYM integral_abs_pos_fn) >> fs [prob_space_def]) \\
      rw [] >> gs [] \\
      POP_ASSUM K_TAC \\
-     Know ‘∫⁺ p (λx. (u x) pow 3) = ∫ p (λx. (u x) pow 3)’
+     Know ‘pos_fn_integral p (λx. (u x) pow 3) = ∫ p (λx. (u x) pow 3)’
      >- (ASM_SIMP_TAC std_ss [Abbr ‘u’, GSYM pow_abs, GSYM o_DEF] \\
          MATCH_MP_TAC (GSYM integral_abs_pos_fn) >> fs [prob_space_def]) \\
      rw [] >> gs [] \\
@@ -6860,8 +6860,8 @@ Proof
           Normal m / (6 * Normal c³) * ((1 + Normal c0) * b (SUC n))’
  >- (rw [extreal_pow_def] \\
      Q.ABBREV_TAC ‘l = 1 + c0’ >> gs [] \\
-     ‘b (SUC n) ≠ PosInf ∧ b (SUC n) ≠ NegInf’ by bn_not_infty_tactic \\
-     ‘∃b0. b (SUC n) = Normal b0’ by METIS_TAC [extreal_cases] >> gs [] \\
+     ‘b (SUC n) <> PosInf /\ b (SUC n) <> NegInf’ by bn_not_infty_tactic \\
+     ‘?b0. b (SUC n) = Normal b0’ by METIS_TAC [extreal_cases] >> gs [] \\
      ‘Normal b0 / Normal c³ = Normal b0 * inv (Normal (c pow 3))’
        by METIS_TAC [div_eq_mul_rinv, extreal_not_infty, extreal_pow_def, pow_pos_lt] \\
      POP_ORW \\
@@ -6883,7 +6883,7 @@ Proof
      POP_ASSUM (rw o wrap o SYM) \\
      METIS_TAC [mul_comm, mul_assoc])
  >> rw []
-QED  
+QED
 
 (* NOTE: “!i. variance p (X i) < PosInf” can be derived from "finite third moments",
    i.e. “!n. integrable p (\x. (abs (X n x)) pow 3)”.
@@ -6921,10 +6921,10 @@ Theorem expectation_center :
           expectation p (\x. X x - expectation p X) = 0
 Proof
     rpt STRIP_TAC
- >> ‘expectation p X ≠ PosInf ∧ expectation p X ≠ NegInf’
+ >> ‘expectation p X <> PosInf /\ expectation p X <> NegInf’
    by METIS_TAC [integrable_finite_integral, prob_space_def,
                  expectation_def, extreal_cases]
- >> ‘∃r. expectation p X = Normal r’ by METIS_TAC [extreal_cases] >> rw []
+ >> ‘?r. expectation p X = Normal r’ by METIS_TAC [extreal_cases] >> rw []
  >> ‘integrable p (λx. Normal r)’ by fs [prob_space_def, integrable_const]
  >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘λx. Normal r’] expectation_sub)
  >> rw [] >> POP_ORW
@@ -6932,46 +6932,46 @@ Proof
 QED
 
 Theorem variance_center :
-    !p X. prob_space p /\ integrable p X ∧
+    !p X. prob_space p /\ integrable p X /\
           real_random_variable X p ==>
           variance p (\x. X x - expectation p X) = variance p X
 Proof
   rpt STRIP_TAC
-  >> ‘expectation p X ≠ PosInf ∧ expectation p X ≠ NegInf’
+  >> ‘expectation p X <> PosInf /\ expectation p X <> NegInf’
     by METIS_TAC [integrable_finite_integral, prob_space_def,
                   expectation_def, extreal_cases]
-  >> ‘∃r. expectation p X = Normal r’ by METIS_TAC [extreal_cases] >> rw []
+  >> ‘?r. expectation p X = Normal r’ by METIS_TAC [extreal_cases] >> rw []
   >> HO_MATCH_MP_TAC variance_real_affine'
   >> METIS_TAC []
 QED
 
 Theorem abs_sub_pow3_bound[local]:
-   ∀a b.
-     a ≠ −∞ ∧ a ≠ +∞ ∧ b ≠ −∞ ∧ b ≠ +∞ ⇒
-     (abs (a − b))³ ≤ 4 * (abs a)³ + 4 * (abs b)³
+   !a b.
+     a <> NegInf /\ a <> PosInf /\ b <> NegInf /\ b <> PosInf ==>
+     (abs (a - b))³ ≤ 4 * (abs a)³ + 4 * (abs b)³
 Proof
     rpt STRIP_TAC
- >> ‘∃c. a = Normal c’ by METIS_TAC [extreal_cases]
- >> ‘∃d. b = Normal d’ by METIS_TAC [extreal_cases]
+ >> ‘?c. a = Normal c’ by METIS_TAC [extreal_cases]
+ >> ‘?d. b = Normal d’ by METIS_TAC [extreal_cases]
  >> simp [extreal_abs_def, extreal_sub_eq, extreal_pow_def]
  >> simp [GSYM add_ldistrib, extreal_add_eq]
  >> simp [extreal_of_num_def, extreal_mul_eq]
  >> ‘abs (c - d) ≤ abs c + abs d’ by REAL_ARITH_TAC
- >> ‘0 ≤ abs (c − d) ∧ 0 ≤ abs c ∧ 0 ≤ abs d’ by REAL_ARITH_TAC
- >> ‘abs (c − d) pow 3 ≤ (abs c + abs d) pow 3’ by METIS_TAC [POW_LE]
+ >> ‘0 ≤ abs (c - d) /\ 0 ≤ abs c /\ 0 ≤ abs d’ by REAL_ARITH_TAC
+ >> ‘abs (c - d) pow 3 ≤ (abs c + abs d) pow 3’ by METIS_TAC [POW_LE]
  >> MATCH_MP_TAC REAL_LE_TRANS
  >> qexists ‘(abs c + abs d) pow 3’ >> simp []
  >> Q.ABBREV_TAC ‘u = abs c’
  >> Q.ABBREV_TAC ‘v = abs d’
  >> ‘(u + v)³ = u³ + 3 * u² * v + 3 * u * v² + v³’ by REAL_ARITH_TAC
  >> POP_ORW
- >> ‘ u³ + 3 * u² * v + 3 * u * v² + v³ ≤ 4 * (u³ + v³) ⇔
+ >> ‘ u³ + 3 * u² * v + 3 * u * v² + v³ ≤ 4 * (u³ + v³) <=>
         0 ≤ 4 * (u³ + v³) - (u³ + 3 * u² * v + 3 * u * v² + v³)’ by REAL_ARITH_TAC
  >> POP_ORW
- >> ‘4 * (u³ + v³) − (u³ + 3 * u² * v + 3 * u * v² + v³) =
-     3 * (u³ − u² * v − u * v² + v³)’ by REAL_ARITH_TAC
+ >> ‘4 * (u³ + v³) - (u³ + 3 * u² * v + 3 * u * v² + v³) =
+     3 * (u³ - u² * v - u * v² + v³)’ by REAL_ARITH_TAC
  >> POP_ORW
- >> ‘u³ − u² * v − u * v² + v³ = (u + v) * (u − v)²’ by REAL_ARITH_TAC
+ >> ‘u³ - u² * v - u * v² + v³ = (u + v) * (u - v)²’ by REAL_ARITH_TAC
  >> POP_ORW
  >> MATCH_MP_TAC REAL_LE_MUL >> simp []
  >> MATCH_MP_TAC REAL_LE_MUL >> simp []
@@ -6979,8 +6979,8 @@ Proof
 QED
 
 Theorem extreal_mr1_dist_0_mono :
-    ∀x y.
-      0 ≤ x ∧ x ≤ y ⇒ dist extreal_mr1 (x,0) ≤ dist extreal_mr1 (y,0)
+    !x y.
+      0 ≤ x /\ x ≤ y ==> dist extreal_mr1 (x,0) ≤ dist extreal_mr1 (y,0)
 Proof
     rw []
  >> ‘0 ≤ y’ by METIS_TAC [le_trans]
@@ -6997,15 +6997,15 @@ Proof
 QED
 
 Theorem lim_sequentially_bound :
-    ∀f g.
-      (∀n. 0 ≤ f n) ∧ (∀n. f n ≤ g n) ∧ (g ⟶ 0) sequentially ⇒
+    !f g.
+      (!n. 0 ≤ f n) /\ (!n. f n ≤ g n) /\ (g ⟶ 0) sequentially ==>
       (f ⟶ 0) sequentially
 Proof
     rw [EXTREAL_LIM_SEQUENTIALLY]
- >> Q.PAT_X_ASSUM ‘∀e. 0 < e ⇒ ∃N. ∀n. N ≤ n ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘e’)
+ >> Q.PAT_X_ASSUM ‘!e. 0 < e ==> ?N. !n. N ≤ n ==> _’ (STRIP_ASSUME_TAC o Q.SPEC ‘e’)
  >> gvs []
  >> qexists ‘N’ >> rw []
- >> Q.PAT_X_ASSUM ‘∀n. N ≤ n ⇒ dist extreal_mr1 (g n,0) < e’  (STRIP_ASSUME_TAC o Q.SPEC ‘n’)
+ >> Q.PAT_X_ASSUM ‘!n. N ≤ n ==> dist extreal_mr1 (g n,0) < e’  (STRIP_ASSUME_TAC o Q.SPEC ‘n’)
  >> gvs []
  >> MATCH_MP_TAC REAL_LET_TRANS
  >> qexists ‘dist extreal_mr1 (g n,0)’ >> fs []
@@ -7013,7 +7013,7 @@ Proof
 QED
 
 Theorem absolute_third_moments_pos :
-    ∀p X n. prob_space p ⇒ 0 ≤ absolute_third_moments p X n
+    !p X n. prob_space p ==> 0 ≤ absolute_third_moments p X n
 Proof
     rw [absolute_third_moments_def, absolute_moment_def, absolute_third_moment_def]
  >> HO_MATCH_MP_TAC EXTREAL_SUM_IMAGE_POS >> rw []
@@ -7024,7 +7024,7 @@ val clt_integrable_sub_const_i =
  irule integrable_bounded >> fs [prob_space_def] \\
      CONJ_TAC >- (HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_POW \\
                   HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS \\
-                  qexists ‘λx. X i x − expectation p (X i)’ \\
+                  qexists ‘λx. X i x - expectation p (X i)’ \\
                   fs [MEASURE_SPACE_SIGMA_ALGEBRA] \\
                   irule IN_MEASURABLE_BOREL_SUB' \\
                   fs [MEASURE_SPACE_SIGMA_ALGEBRA] \\
@@ -7039,22 +7039,22 @@ val clt_integrable_sub_const_i =
                   METIS_TAC [integrable_finite_integral, p_space_def]) \\
      HO_MATCH_MP_TAC integrable_add' >> simp [] \\
      CONJ_TAC >- (METIS_TAC [integrable_cmul, extreal_of_num_def]) \\
-     ‘expectation p (X i) ≠ PosInf ∧ expectation p (X i) ≠ NegInf’
+     ‘expectation p (X i) <> PosInf /\ expectation p (X i) <> NegInf’
        by METIS_TAC [integrable_finite_integral, prob_space_def,
                      expectation_def, extreal_cases] \\
-     ‘∃r. expectation p (X i) = Normal r’ by METIS_TAC [extreal_cases] \\
+     ‘?r. expectation p (X i) = Normal r’ by METIS_TAC [extreal_cases] \\
      rw [extreal_abs_def, extreal_mul_eq, extreal_of_num_def, extreal_pow_def] \\
 irule integrable_const >> fs [extreal_1_simps];
 
 Theorem neg_abs_le:
-    ∀(a:extreal). -abs a ≤ a
+    !(a:extreal). -abs a ≤ a
 Proof
     METIS_TAC [le_abs, le_neg, neg_neg]
 QED
-  
+
 Theorem abs_expectation_le_expectation_abs:
-    ∀p X.
-      prob_space p ∧ real_random_variable X p ∧ integrable p X ⇒
+    !p X.
+      prob_space p /\ real_random_variable X p /\ integrable p X ==>
       abs (expectation p X) ≤ expectation p (λx. abs (X x))
 Proof
     rpt STRIP_TAC
@@ -7077,22 +7077,22 @@ Proof
  >> CONJ_TAC >- (METIS_TAC [integrable_abs, o_DEF, prob_space_def])
  >> rw [cj 1 le_abs]
 QED
-  
+
 Theorem abs_expectation_pow_le_expectation_abs_pow :
-    ∀p X (n :num).
-      prob_space p ∧ real_random_variable X p ∧ integrable p X ∧
-      0 < n ∧ integrable p (λx. (abs (X x)) pow n) ⇒
+    !p X (n :num).
+      prob_space p /\ real_random_variable X p /\ integrable p X /\
+      0 < n /\ integrable p (λx. (abs (X x)) pow n) ==>
       (abs (expectation p X)) pow n ≤ expectation p (λx. (abs (X x)) pow n)
-Proof  
+Proof
     rpt STRIP_TAC
  >> Cases_on ‘n = 1’ >> simp [abs_expectation_le_expectation_abs]
  >> ‘1 < n’ by simp []
  >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘Normal 1’, ‘Normal (&n)’] Lyapunov_ineq_rv)
- >> impl_tac        
+ >> impl_tac
  >- (gvs [normal_1, GSYM extreal_of_num_def] \\
      fs [L1_space_alt_integrable, prob_space_def] \\
      fs [lp_space_def, real_random_variable, events_def, p_space_def] \\
-     ‘∀x. abs (X x) powr &n = abs (X x) pow n’ by METIS_TAC [abs_pos, gen_powr] >> POP_ORW \\
+     ‘!x. abs (X x) powr &n = abs (X x) pow n’ by METIS_TAC [abs_pos, gen_powr] >> POP_ORW \\
      gvs [integrable_alt_def, abs_abs, o_DEF, pos_fn_integral_pos, integral_pos_fn, pow_abs, pow_pos_le])
  >> rw [seminorm_def, expectation_def, GSYM extreal_of_num_def, powr_1, abs_pos, inv_one]
  >> MATCH_MP_TAC le_trans
@@ -7100,11 +7100,11 @@ Proof
  >> CONJ_TAC >- (irule pow_le \\
                  METIS_TAC [GSYM expectation_def, abs_expectation_le_expectation_abs, abs_pos])
  >> gvs [powr_1, pos_fn_integral_pos, prob_space_def, p_space_def, abs_pos]
- >> ‘∫⁺ p (λx. abs (X x)) = ∫ p (λx. abs (X x))’
+ >> ‘pos_fn_integral p (λx. abs (X x)) = ∫ p (λx. abs (X x))’
    by (irule (GSYM integral_pos_fn) >> METIS_TAC [abs_pos, ETA_AX])
- >> ‘∀x. abs (X x) powr &n = abs (X x) pow n’ by METIS_TAC [abs_pos, gen_powr]
+ >> ‘!x. abs (X x) powr &n = abs (X x) pow n’ by METIS_TAC [abs_pos, gen_powr]
  >> gvs []
- >> ‘∫⁺ p (λx. abs (X x) pow n) = ∫ p (λx. abs (X x) pow n)’
+ >> ‘pos_fn_integral p (λx. abs (X x) pow n) = ∫ p (λx. abs (X x) pow n)’
    by (irule (GSYM integral_pos_fn) >> METIS_TAC [abs_pos, ETA_AX, pow_pos_le])
  >> gvs []
  >> NTAC 3 (POP_ASSUM K_TAC)
@@ -7122,30 +7122,30 @@ Proof
      ‘(B powr (&n)⁻¹) powr &n = B powr ((&n)⁻¹ * (&n))’
        by (irule powr_powr >> gvs [num_not_infty, inv_not_infty, lt_imp_ne]) \\
      POP_ORW >> gvs [mul_linv_pos, powr_1])
- >> gvs []         
+ >> gvs []
 QED
-                  
+
 Theorem absolute_third_moments_center_bound:
-    ∀p X n. prob_space p ∧ (∀i. real_random_variable (X i) p) ∧
-            (∀i. integrable p (λx. (abs (X i x))³)) ∧
-            (∀i. integrable p (λx. X i x)) ⇒
-            absolute_third_moments p (λi x. X i x − expectation p (X i)) n
+    !p X n. prob_space p /\ (!i. real_random_variable (X i) p) /\
+            (!i. integrable p (λx. (abs (X i x))³)) /\
+            (!i. integrable p (λx. X i x)) ==>
+            absolute_third_moments p (λi x. X i x - expectation p (X i)) n
             ≤ 8 * absolute_third_moments p X n
 Proof
     rw [absolute_third_moments_def, absolute_moment_def, absolute_third_moment_def]
- >> Know ‘∀i. integrable p (λx. (abs (X i x − expectation p (X i)))³)’
+ >> Know ‘!i. integrable p (λx. (abs (X i x - expectation p (X i)))³)’
  >- (Q.X_GEN_TAC ‘i’ >> clt_integrable_sub_const_i)
  >> DISCH_TAC
- >> Know ‘∀i. integrable p (λx. (abs (X i x))³ + (abs (expectation p (X i)))³)’
+ >> Know ‘!i. integrable p (λx. (abs (X i x))³ + (abs (expectation p (X i)))³)’
  >- (Q.X_GEN_TAC ‘i’ \\
      HO_MATCH_MP_TAC integrable_add' >> fs [prob_space_def] \\
-     ‘expectation p (X i) ≠ PosInf ∧ expectation p (X i) ≠ NegInf’
+     ‘expectation p (X i) <> PosInf /\ expectation p (X i) <> NegInf’
        by METIS_TAC [integrable_finite_integral, prob_space_def,
                      expectation_def, extreal_cases] \\
-     ‘∃r. expectation p (X i) = Normal r’ by METIS_TAC [extreal_cases] \\
+     ‘?r. expectation p (X i) = Normal r’ by METIS_TAC [extreal_cases] \\
      gvs [pow_abs, extreal_abs_def, extreal_pow_def, integrable_const])
  >> DISCH_TAC
- >> Know ‘∀i. integrable p (λx. Normal 4 * (abs (X i x))³ +
+ >> Know ‘!i. integrable p (λx. Normal 4 * (abs (X i x))³ +
                                 Normal 4 * (abs (expectation p (X i)))³)’
  >- (Q.X_GEN_TAC ‘i’ \\
      gvs [GSYM add_ldistrib_pos, abs_pos, GSYM pow_abs] \\
@@ -7155,7 +7155,7 @@ Proof
             (INST_TYPE [alpha |-> ``:num``])) (GSYM EXTREAL_SUM_IMAGE_CMUL)
  >> rw [extreal_of_num_def]
  >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘λi. expectation p (λx. (abs (X i x))³)’, ‘8’])
- >> ‘(∀x. x < n ⇒ (λi. expectation p (λx. (abs (X i x))³)) x ≠ −∞)’
+ >> ‘(!x. x < n ==> (λi. expectation p (λx. (abs (X i x))³)) x <> NegInf)’
    by METIS_TAC [cj 2 integrable_imp_finite_expectation] >> gvs []
  >> HO_MATCH_MP_TAC EXTREAL_SUM_IMAGE_MONO' >> simp []
  >> Q.X_GEN_TAC ‘i’ >> STRIP_TAC
@@ -7174,23 +7174,23 @@ Proof
           Normal 4 * (abs (expectation p (X i)))³’
  >- (gvs [expectation_cmul, GSYM add_ldistrib_pos, expectation_pos, abs_pos, pow_pos_le] \\
      gvs [mul_lcancel] \\
-     ‘expectation p (X i) ≠ PosInf ∧ expectation p (X i) ≠ NegInf’
+     ‘expectation p (X i) <> PosInf /\ expectation p (X i) <> NegInf’
        by METIS_TAC [integrable_finite_integral, prob_space_def,
                      expectation_def, extreal_cases] \\
-     ‘∃r. expectation p (X i) = Normal r’ by METIS_TAC [extreal_cases] \\
+     ‘?r. expectation p (X i) = Normal r’ by METIS_TAC [extreal_cases] \\
      gvs [pow_abs, extreal_abs_def, extreal_pow_def] \\
      MP_TAC (Q.SPECL [‘p’, ‘λx. (abs (X (i:num) x))³’, ‘λx. Normal (abs r)³’] (expectation_add)) \\
      fs [integrable_const, prob_space_def] >> DISCH_TAC \\
      POP_ASSUM K_TAC \\
      METIS_TAC [expectation_const, prob_space_def])
- >> Rewr      
- >> MATCH_MP_TAC leeq_trans 
+ >> Rewr
+ >> MATCH_MP_TAC leeq_trans
  >> qexists ‘Normal 4 * expectation p (λx. (abs (X i x))³) +
              Normal 4 * expectation p (λx. (abs (X i x))³)’
  >> reverse CONJ_TAC
- >- (‘expectation p (λx. (abs (X i x))³) ≠ NegInf ∧ expectation p (λx. (abs (X i x))³) ≠ PosInf’
+ >- (‘expectation p (λx. (abs (X i x))³) <> NegInf /\ expectation p (λx. (abs (X i x))³) <> PosInf’
        by METIS_TAC [integrable_imp_finite_expectation] \\
-     ‘∃r. expectation p (λx. (abs (X i x))³) = Normal r’ by METIS_TAC [extreal_cases] \\
+     ‘?r. expectation p (λx. (abs (X i x))³) = Normal r’ by METIS_TAC [extreal_cases] \\
      gvs [extreal_mul_eq, extreal_add_eq] >> REAL_ARITH_TAC)
  >> MATCH_MP_TAC le_ladd_imp
  >> MATCH_MP_TAC le_lmul_imp >> simp []
@@ -7200,21 +7200,21 @@ QED
 
 val clt_handle_moments =
     POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
-    Q.PAT_X_ASSUM ‘∀n. (sqrt (second_moments p X (SUC n)))³ ≠ +∞’
+    Q.PAT_X_ASSUM ‘!n. (sqrt (second_moments p X (SUC n)))³ <> PosInf’
      (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
-    Q.PAT_X_ASSUM ‘∀n. 0 < (sqrt (second_moments p X (SUC n)))³’
+    Q.PAT_X_ASSUM ‘!n. 0 < (sqrt (second_moments p X (SUC n)))³’
      (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
-    ‘∃r. (sqrt (second_moments p X (SUC n)))³ = Normal r’ by METIS_TAC [extreal_cases] \\
+    ‘?r. (sqrt (second_moments p X (SUC n)))³ = Normal r’ by METIS_TAC [extreal_cases] \\
     gvs [] \\
     ‘0 ≤ absolute_third_moments p X (SUC n)’ by METIS_TAC [absolute_third_moments_pos] \\
-    ‘absolute_third_moments p X (SUC n) ≠ NegInf’
+    ‘absolute_third_moments p X (SUC n) <> NegInf’
   by METIS_TAC [extreal_0_simps, lt_trans] \\
-    Know ‘absolute_third_moments p X (SUC n) ≠ PosInf’
+    Know ‘absolute_third_moments p X (SUC n) <> PosInf’
     >- (rw [absolute_third_moments_def, absolute_moment_def, absolute_third_moment_def] \\
         HO_MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF >> rw [] \\
         HO_MATCH_MP_TAC (cj 1 integrable_imp_finite_expectation) >> fs []) \\
     DISCH_TAC \\
-    ‘∃d. absolute_third_moments p X (SUC n) = Normal d’ by METIS_TAC [extreal_cases];
+    ‘?d. absolute_third_moments p X (SUC n) = Normal d’ by METIS_TAC [extreal_cases];
 
 Theorem CLT_Lyapunov :
     !p X N. prob_space p /\ ext_normal_rv N p 0 1 /\
@@ -7238,26 +7238,26 @@ Proof
  >> ‘!i. variance p (X i) < PosInf’
    by PROVE_TAC [finite_second_moments_eq_finite_variance]
  >> Q.ABBREV_TAC ‘Y = \i x. X i x - expectation p (X i)’
- >> Know ‘∀n. real_random_variable (Y n) p’
+ >> Know ‘!n. real_random_variable (Y n) p’
  >- (rw [Abbr ‘Y’] \\
      HO_MATCH_MP_TAC real_random_variable_sub >> gvs [] \\
      CONJ_TAC >- (METIS_TAC[]) \\
      MATCH_MP_TAC real_random_variable_const >> fs [] \\
      METIS_TAC [integrable_finite_integral, prob_space_def, expectation_def, extreal_cases])
  >> DISCH_TAC
- >> ‘∀n. real_random_variable (λx. abs (Y n x)) p’ by METIS_TAC [real_random_variable_abs]
- >> Know ‘∀n. expectation p (λx. (abs (Y n x))³) < +∞’
+ >> ‘!n. real_random_variable (λx. abs (Y n x)) p’ by METIS_TAC [real_random_variable_abs]
+ >> Know ‘!n. expectation p (λx. (abs (Y n x))³) < PosInf’
  >- (Q.X_GEN_TAC ‘i’ \\
      MP_TAC (Q.SPECL [‘p’, ‘Y (i :num)’, ‘3’] (GSYM expectation_finite_eq_integrable)) \\
      fs [] >> Rewr \\
      rw [Abbr ‘Y’] >> clt_integrable_sub_const_i)
  >> DISCH_TAC
- >> Know ‘∀i. integrable p (Y i)’
+ >> Know ‘!i. integrable p (Y i)’
  >- (rw [Abbr ‘Y’] \\
-     ‘expectation p (X i) ≠ PosInf ∧ expectation p (X i) ≠ NegInf’
+     ‘expectation p (X i) <> PosInf /\ expectation p (X i) <> NegInf’
        by METIS_TAC [integrable_finite_integral, prob_space_def,
                      expectation_def, extreal_cases] \\
-     ‘∃r. expectation p (X i) = Normal r’ by METIS_TAC [extreal_cases] \\
+     ‘?r. expectation p (X i) = Normal r’ by METIS_TAC [extreal_cases] \\
       HO_MATCH_MP_TAC integrable_sub' >> fs [prob_space_def] \\
      irule integrable_const >> fs [extreal_1_simps])
  >> DISCH_TAC
@@ -7265,11 +7265,11 @@ Proof
  >- (irule CLT_Lyapunov' >> simp [] \\
      CONJ_TAC
      >- (rw [Abbr ‘Y’] \\
-         ‘expectation p (X n) ≠ PosInf ∧ expectation p (X n) ≠ NegInf’
+         ‘expectation p (X n) <> PosInf /\ expectation p (X n) <> NegInf’
            by METIS_TAC [integrable_finite_integral, prob_space_def,
                          expectation_def, extreal_cases] \\
-         ‘∃r. expectation p (X n) = Normal r’ by METIS_TAC [extreal_cases] >> rw [] \\
-         Know ‘variance p (λx. X n x − Normal r) = variance p (λx. X n x)’
+         ‘?r. expectation p (X n) = Normal r’ by METIS_TAC [extreal_cases] >> rw [] \\
+         Know ‘variance p (λx. X n x - Normal r) = variance p (λx. X n x)’
          >- (HO_MATCH_MP_TAC variance_real_affine' \\
              METIS_TAC []) >> Rewr' \\
          METIS_TAC []) \\
@@ -7280,7 +7280,7 @@ Proof
                   irule (cj 3 clt_integrable_lemma) >> art [prob_space_def]) \\
      CONJ_TAC >- (rw [Abbr ‘Y’] \\
                   (MP_TAC o (Q.SPECL [‘p’, ‘(X :num -> α -> extreal)’, ‘λi. Borel’, ‘count n’,
-                                      ‘λ(i:num) (y :extreal). y − expectation p (X i)’]) o
+                                      ‘λ(i:num) (y :extreal). y - expectation p (X i)’]) o
                           (INST_TYPE [“:'index” |-> “:num”, beta |-> “:extreal”])) indep_vars_cong \\
                   impl_tac >- (fs [real_random_variable_def] \\
                                Q.X_GEN_TAC ‘i’ >> rw [] \\
@@ -7291,27 +7291,27 @@ Proof
                                simp [SIGMA_ALGEBRA_BOREL] \\
                                qexists ‘expectation p (X i)’ >> fs []) \\
                   fs [o_DEF]) \\
-     Know ‘∀n. sqrt (second_moments p Y (SUC n)) = sqrt (second_moments p X (SUC n))’
+     Know ‘!n. sqrt (second_moments p Y (SUC n)) = sqrt (second_moments p X (SUC n))’
      >- (rw [] >> AP_TERM_TAC \\
          rw [Abbr ‘Y’, second_moments_def] \\
          irule EXTREAL_SUM_IMAGE_EQ' >> rw [expectation_center, central_moment_def, moment_def] \\
          rw [GSYM variance_alt] >> METIS_TAC [variance_center]) >> Rewr \\
      irule lim_sequentially_bound \\
-     ‘∀n. 0 ≤ second_moments p X (SUC n)’ by METIS_TAC [second_moments_pos] \\
-     Know ‘∀n. 0 < second_moments p X (SUC n)’
+     ‘!n. 0 ≤ second_moments p X (SUC n)’ by METIS_TAC [second_moments_pos] \\
+     Know ‘!n. 0 < second_moments p X (SUC n)’
      >- (rw [second_moments_variance_def] \\
          irule EXTREAL_SUM_IMAGE_SPOS >> rw [] \\
          METIS_TAC [variance_pos, GSYM lt_le]) \\
      DISCH_TAC \\
-     ‘∀n. 0 < sqrt (second_moments p X (SUC n))’ by METIS_TAC [sqrt_pos_lt] \\
-     ‘∀n. 0 < (sqrt (second_moments p X (SUC n))) pow 3’ by METIS_TAC [pow_pos_lt] \\
-     Know ‘∀n. (sqrt (second_moments p X (SUC n)))³ ≠ PosInf’
+     ‘!n. 0 < sqrt (second_moments p X (SUC n))’ by METIS_TAC [sqrt_pos_lt] \\
+     ‘!n. 0 < (sqrt (second_moments p X (SUC n))) pow 3’ by METIS_TAC [pow_pos_lt] \\
+     Know ‘!n. (sqrt (second_moments p X (SUC n)))³ <> PosInf’
      >- (rw [] >> irule (cj 2 pow_not_infty) \\
          CONJ_TAC >- (METIS_TAC [sqrt_pos_le, extreal_0_simps, lt_trans]) \\
          irule sqrt_infty >> fs [] \\
          METIS_TAC [finite_variance_imp_second_moments, lt_imp_ne]) \\
      DISCH_TAC \\
-     Know ‘∀n. (sqrt (second_moments p X (SUC n)))³ ≠ NegInf’
+     Know ‘!n. (sqrt (second_moments p X (SUC n)))³ <> NegInf’
      >- (rw [] >> irule (cj 1 pow_not_infty) \\
          CONJ_TAC >- (METIS_TAC [sqrt_pos_le, extreal_0_simps, lt_trans]) \\
          irule sqrt_infty >> fs [] \\
@@ -7319,9 +7319,9 @@ Proof
      DISCH_TAC \\
      CONJ_TAC >- (Q.X_GEN_TAC ‘n’ \\
                   POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
-                  Q.PAT_X_ASSUM ‘∀n. (sqrt (second_moments p X (SUC n)))³ ≠ +∞’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
-                  Q.PAT_X_ASSUM ‘∀n. 0 < (sqrt (second_moments p X (SUC n)))³’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
-                  ‘∃r. (sqrt (second_moments p X (SUC n)))³ = Normal r’ by METIS_TAC [extreal_cases] \\
+                  Q.PAT_X_ASSUM ‘!n. (sqrt (second_moments p X (SUC n)))³ <> PosInf’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
+                  Q.PAT_X_ASSUM ‘!n. 0 < (sqrt (second_moments p X (SUC n)))³’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
+                  ‘?r. (sqrt (second_moments p X (SUC n)))³ = Normal r’ by METIS_TAC [extreal_cases] \\
                   gvs [] \\
                   irule le_div >> fs [absolute_third_moments_pos]) \\
      Q.ABBREV_TAC ‘g = λn. absolute_third_moments p X (SUC n) / (sqrt (second_moments p X (SUC n)))³’ \\
@@ -7341,53 +7341,53 @@ Proof
      fs [absolute_third_moments_center_bound, Abbr ‘Y’])
  >> rw [CLT_def]
  >> Q.ABBREV_TAC ‘A = (λn x.
-                         (∑ (λi. Y i x) (count1 n) −  expectation p (λx. ∑ (λi. Y i x) (count1 n))) /
+                         (∑ (λi. Y i x) (count1 n) -  expectation p (λx. ∑ (λi. Y i x) (count1 n))) /
                          sqrt (second_moments p Y (SUC n))) ’
  >> Q.ABBREV_TAC ‘B = (λn x.
-                         (∑ (λi. X i x) (count1 n) − expectation p (λx. ∑ (λi. X i x) (count1 n))) /
-                         sqrt (second_moments p X (SUC n)))’ 
+                         (∑ (λi. X i x) (count1 n) - expectation p (λx. ∑ (λi. X i x) (count1 n))) /
+                         sqrt (second_moments p X (SUC n)))’
  >> MP_TAC (Q.SPECL [‘p’, ‘A’, ‘B’] converge_in_dist_cong) >> rw []
  >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘N’, ‘0’])
- >> Know ‘∀n x. 0 ≤ n ∧ x ∈ p_space p ⇒ A n x = B n x’
+ >> Know ‘!n x. 0 ≤ n /\ x ∈ p_space p ==> A n x = B n x’
  >- (rw [Abbr ‘A’, Abbr ‘B’] \\
      Know ‘sqrt (second_moments p Y (SUC n)) = sqrt (second_moments p X (SUC n))’
      >- (AP_TERM_TAC \\
          rw [Abbr ‘Y’, second_moments_def] \\
          irule EXTREAL_SUM_IMAGE_EQ' >> rw [expectation_center, central_moment_def, moment_def] \\
          rw [GSYM variance_alt] >> METIS_TAC [variance_center]) >> Rewr \\
-     Suff ‘∑ (λi. Y i x) (count1 n) − expectation p (λx. ∑ (λi. Y i x) (count1 n)) =
-           ∑ (λi. X i x) (count1 n) − expectation p (λx. ∑ (λi. X i x) (count1 n))’ >> rw [] \\
+     Suff ‘∑ (λi. Y i x) (count1 n) - expectation p (λx. ∑ (λi. Y i x) (count1 n)) =
+           ∑ (λi. X i x) (count1 n) - expectation p (λx. ∑ (λi. X i x) (count1 n))’ >> rw [] \\
      ‘expectation p (λx. ∑ (λi. Y i x) (count1 n)) = ∑ (λi. expectation p (Y i)) (count1 n)’
        by (irule expectation_sum >> fs []) >> POP_ORW \\
      ‘expectation p (λx. ∑ (λi. X i x) (count1 n)) = ∑ (λi. expectation p (X i)) (count1 n)’
        by (irule expectation_sum >> fs [] >> METIS_TAC []) >> POP_ORW \\
-     Know ‘∑ (λi. Y i x) (count1 n) − ∑ (λi. expectation p (Y i)) (count1 n) =
+     Know ‘∑ (λi. Y i x) (count1 n) - ∑ (λi. expectation p (Y i)) (count1 n) =
            ∑ (λi. (Y i x) - (expectation p (Y i))) (count1 n)’
      >- ((MP_TAC o (Q.SPECL [‘count1 (n :num)’]) o
                  (INST_TYPE [alpha |-> “:num”])) (GSYM EXTREAL_SUM_IMAGE_SUB) \\
          impl_tac >- (fs []) >> rw [] \\
          POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘λi. Y i x’, ‘λi. expectation p (Y i)’]) \\
-         Suff ‘∀x'. x' < SUC n ⇒ (λi. Y i x) x' ≠ −∞ ∧ (λi. expectation p (Y i)) x' ≠ +∞’ >> gvs [] \\
+         Suff ‘!x'. x' < SUC n ==> (λi. Y i x) x' <> NegInf /\ (λi. expectation p (Y i)) x' <> PosInf’ >> gvs [] \\
          Q.X_GEN_TAC ‘i’ >> rw [Abbr ‘Y’]
          >- (HO_MATCH_MP_TAC (cj 1 sub_not_infty) \\
              fs [real_random_variable, p_space_def] \\
              METIS_TAC [integrable_imp_finite_expectation]) \\
          METIS_TAC [extreal_0_simps, expectation_center]) >> Rewr \\
-     Know ‘∑ (λi. X i x) (count1 n) − ∑ (λi. expectation p (X i)) (count1 n) =
+     Know ‘∑ (λi. X i x) (count1 n) - ∑ (λi. expectation p (X i)) (count1 n) =
            ∑ (λi. (X i x) - (expectation p (X i))) (count1 n)’
      >- ((MP_TAC o (Q.SPECL [‘count1 (n :num)’]) o
                  (INST_TYPE [alpha |-> “:num”])) (GSYM EXTREAL_SUM_IMAGE_SUB) \\
          impl_tac >- (fs []) >> rw [Abbr ‘Y’] \\
          POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘λi. X i x’, ‘λi. expectation p (X i)’]) \\
-         Suff ‘∀x'. x' < SUC n ⇒ (λi. X i x) x' ≠ −∞ ∧ (λi. expectation p (X i)) x' ≠ +∞’ >> gvs [] \\
+         Suff ‘!x'. x' < SUC n ==> (λi. X i x) x' <> NegInf /\ (λi. expectation p (X i)) x' <> PosInf’ >> gvs [] \\
          Q.X_GEN_TAC ‘i’ >> rw []
          >- (fs [real_random_variable, p_space_def]) \\
          METIS_TAC [integrable_imp_finite_expectation]) >> Rewr \\
      HO_MATCH_MP_TAC EXTREAL_SUM_IMAGE_EQ' \\
      rw [Abbr ‘Y’] >> METIS_TAC [expectation_center, sub_rzero])
  >> gvs []
-QED  
-  
+QED
+
 val _ = html_theory "central_limit";
 
 (* References:
