@@ -12,22 +12,19 @@ Controlling output stream used when printing `HOL_WARNING`
 The value of reference cell `WARNING_outstream` controls where
 `HOL_WARNING` prints its argument.
 
-The default value of `WARNING_outstream` is `TextIO.stdOut`.
+The default value of `WARNING_outstream` is a function that prints its argument to `TextIO.stdOut`.
 
 ### Example
 
+>>__ val oldos = !Feedback.WARNING_outstream;
 ``` hol4
->> val ostrm = TextIO.openOut "foo";
+>> val outputs = ref ([] : string list);
 
->>+ WARNING_outstream := ostrm;
+>> WARNING_outstream := (fn s => outputs := !outputs @ [s]);
 
 >> HOL_WARNING "Module" "Function" "Sufferin' Succotash!";
 
->> TextIO.closeOut ostrm;
-
->> val istrm = TextIO.openIn "foo";
-
->> print (TextIO.inputAll istrm);
+>> outputs;
 ```
 
 ### See also
@@ -37,3 +34,5 @@ The default value of `WARNING_outstream` is `TextIO.stdOut`.
 [`Feedback.ERR_outstream`](#Feedback.ERR_outstream),
 [`Feedback.MESG_outstream`](#Feedback.MESG_outstream),
 [`Feedback.emit_WARNING`](#Feedback.emit_WARNING)
+
+>>__ Feedback.WARNING_outstream := oldos;
