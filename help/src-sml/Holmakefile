@@ -1,5 +1,5 @@
 OPTIONS = NO_OVERLAY
-EXTRA_CLEANS = Md2TeX.exe AliasGen.exe gen_extra_docfiles makebase.exe \
+EXTRA_CLEANS = Md2TeX.exe AliasGen.exe process_docfiles makebase.exe \
                Lexer.lex.sml Parser.grm-sig.sml Parser.grm.sml \
                Parser.grm.sig
 MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
@@ -8,10 +8,19 @@ MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 all: makebase.exe AliasGen.exe
 
 ifdef POLY
-all:  gen_extra_docfiles
+all:  process_docfiles
 
-gen_extra_docfiles: poly-Doc2Html.ML Doc2Html.uo Flash.uo SHA1_MLshim.sig $(dprot $(HOLDIR)/src/portableML/poly/SHA1_ML.sml)
-	$(POLYC) -o $@ $<
+# process_docfiles drives polyscripter (Manual/Tools/polyscripter.sml)
+# over every help/Docfiles/*.smd, then runs pandoc once over the
+# concatenation to produce per-entry .txt (and optionally .html when
+# mdbook isn't available -- see tools/build/buildutils.sml).  It needs
+# the HOL heap to run polyscripter's `>>` ML directives, so it's built
+# via buildheap, like smdpp.
+process_docfiles: $(HOLDIR)/Manual/Tools/polyscripter.sml process_docfiles.sml \
+                  $(dprot $(HOLDIR)/bin/hol.state)
+	env HOL_CONFIG='' $(protect $(HOLDIR)/bin/hol) buildheap Arbrat \
+	    $(HOLDIR)/Manual/Tools/polyscripter.sml process_docfiles.sml \
+	    -o $@ --exe main
 
 makebase.exe: poly-makebase.ML makebase.sml HOLPage.sml \
               Database.sig Database.sml Htmlsigs.sig Htmlsigs.sml \
@@ -35,9 +44,6 @@ makebase.uo: makebase.sml MyDatabase.ui Htmlsigs.ui Parsspec.uo Keepers.uo Print
 
 makebase.exe : runmakebase.uo MyDatabase.uo Htmlsigs.uo Parser.grm.uo Parsspec.uo Printbase.uo makebase.uo
 	$(HOLMOSMLC) -I $(MLYACCLIB) $(MLYACCLIB_UIS) -o makebase.exe MyDatabase.uo runmakebase.uo
-
-Doc2Html.exe : runDoc2Html.uo Doc2Html.uo ParseDoc.uo Flash.uo
-	$(HOLMOSMLC) -o Doc2Html.exe runDoc2Html.uo
 
 Md2TeX.exe: runMd2TeX.uo Md2TeX.uo
 	$(HOLMOSMLC) -o $@ $<

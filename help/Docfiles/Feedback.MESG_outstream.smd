@@ -12,22 +12,19 @@ Reference to output stream used when printing `HOL_MESG`.
 The value of reference cell `MESG_outstream` controls where `HOL_MESG`
 prints its argument.
 
-The default value of `MESG_outstream` is `TextIO.stdOut`.
+The default value of `MESG_outstream` is a function that prints its argument to `TextIO.stdOut`.
 
 ### Example
 
+>>__ val oldos = !Feedback.MESG_outstream;
 ``` hol4
->> val ostrm = TextIO.openOut "foo";
+>> val outputs = ref ([] : string list);
 
->>+ MESG_outstream := ostrm;
+>> MESG_outstream := (fn s => outputs := !outputs @ [s]);
 
 >> HOL_MESG "Nattering nabobs of negativity.";
 
->> TextIO.closeOut ostrm;
-
->> val istrm = TextIO.openIn "foo";
-
->> print (TextIO.inputAll istrm);
+>> outputs;
 ```
 
 ### See also
@@ -36,3 +33,5 @@ The default value of `MESG_outstream` is `TextIO.stdOut`.
 [`Feedback.ERR_outstream`](#Feedback.ERR_outstream),
 [`Feedback.WARNING_outstream`](#Feedback.WARNING_outstream),
 [`Feedback.emit_MESG`](#Feedback.emit_MESG)
+
+>>__ Feedback.MESG_outstream := oldos;

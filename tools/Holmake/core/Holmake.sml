@@ -1257,6 +1257,33 @@ in
                         HM_Cachekey.Key k => (k = recorded, g')
                       | HM_Cachekey.Missing _ => (false, g')
                   end
+          (* If this target is a theory's compile product (fooTheory.uo
+             or fooTheory.ui), check the corresponding .dat node.
+             Theory compile products are built alongside the .dat from
+             the same script; under --rebuild=cachekey, when the .dat
+             node is Succeeded, the products inherit that status --
+             bypassing the mtime check that can spuriously fire on
+             parallel-built siblings whose mtimes can race against
+             each other. *)
+          fun theory_dat_succeeded () =
+              let
+                val thy_opt =
+                    case hm_target.filepart tgt of
+                        UO (Theory s) => SOME s
+                      | UI (Theory s) => SOME s
+                      | _ => NONE
+              in
+                case thy_opt of
+                    NONE => false
+                  | SOME s =>
+                    (case HM_DepGraph.target_node g2
+                                                 (hm_target.mk(dir, DAT s)) of
+                         NONE => false
+                       | SOME n =>
+                         (case HM_DepGraph.peeknode g2 n of
+                              SOME {status = Succeeded, ...} => true
+                            | _ => false))
+              end
           val (cachekey_uptodate, g3) =
               if cline_rebuild_strategy <> HM_Cachekey_dtype.Cachekey then
                 (false, g2)
@@ -1266,6 +1293,12 @@ in
                        if exists_readable fullpath_s andalso
                           null unbuilt_deps
                        then stamp_matches g2 thy
+                       else (false, g2)
+                   | BIC_Compile =>
+                       if exists_readable fullpath_s andalso
+                          null unbuilt_deps andalso
+                          theory_dat_succeeded ()
+                       then (true, g2)
                        else (false, g2)
                    | _ => (false, g2))
           val needs_building =

@@ -9,8 +9,18 @@ fun exnMessage (e:exn) =
     PP.pp_to_string 75 p e
   end
 
-fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
-             OS.Process.exit OS.Process.failure)
+(* External drivers (e.g. help/src-sml/process_docfiles) that loop
+   over many .smd inputs can set this to the current entry's name
+   so that die-style diagnostics name the source.  Default empty
+   keeps stand-alone CLI output unchanged. *)
+val currentSource : string ref = ref ""
+
+fun die s =
+  let val pfx = case !currentSource of "" => "" | s => "[" ^ s ^ "] "
+  in
+    TextIO.output(TextIO.stdErr, pfx ^ s ^ "\n");
+    OS.Process.exit OS.Process.failure
+  end
 fun lnumdie linenum extra exn =
   die ("Exception raised on line " ^ Int.toString linenum ^ ": "^
        extra ^ "\n" ^ exnMessage exn)
@@ -25,7 +35,22 @@ val outputPrompt = ref "> "
    in the same captured stream as polyscripter's emission. *)
 val scriptPrint : (string -> unit) ref = ref print
 
-val args = {quietOpen = true, print = fn s => TextIO.output(TextIO.stdErr, s)}
+(* HOLSource (the unquote pre-processor) reports parse errors --
+   unclosed quotations, stray punctuation, etc. -- by calling
+   `args.print`.  Track whether any such report happened during the
+   current chunk so external drivers (e.g. help/src-sml/process_docfiles)
+   that loop over many .smd inputs can detect a malformed `>>` block
+   even when the exception-tolerant `>>+` would otherwise swallow
+   the resulting Fail "Static Errors".  CLI behaviour is unchanged
+   -- the stderr output still happens; we just also raise a flag. *)
+val parseErrorFlag = ref false
+fun resetParseError () = parseErrorFlag := false
+fun hadParseError () = !parseErrorFlag
+
+val args =
+    {quietOpen = true,
+     print = fn s => (parseErrorFlag := true;
+                      TextIO.output(TextIO.stdErr, s))}
 val quote = HOLSource.fromString args
 val default_linewidth = 77
 

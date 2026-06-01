@@ -7,6 +7,9 @@ fun die s =
     (TextIO.output(TextIO.stdErr, s ^ "\n");
      OS.Process.exit OS.Process.failure)
 
+(* URL prefix for per-entry docfile hyperlinks.  See Htmlsigs.sig. *)
+val entry_url_base = ref ""
+
 
 fun indexbar out srcpath = out (String.concat
    ["<hr><table width=\"100%\">",
@@ -49,18 +52,29 @@ fun find_most_appealing HOLpath docfile =
   let open OS.Path OS.FileSys
       val {dir,file} = splitDirFile docfile
       val {base,ext} = splitBaseExt file
-      val docfile_dir = concat(HOLpath,dir)
-      val htmldir  = concat(docfile_dir,"HTML")
-      val htmlfile = joinBaseExt{base=base,ext=SOME "html"}
-      val adocfile = joinBaseExt{base=base,ext=SOME "txt"}
-      val htmlpath = concat(htmldir,htmlfile)
-      val adocpath = concat(docfile_dir,adocfile)
-      val docpath  = concat(docfile_dir,file)
   in
-     if OS.FileSys.access(htmlpath,[A_READ]) then SOME htmlpath else
-     if OS.FileSys.access(adocpath,[A_READ]) then SOME adocpath else
-     if OS.FileSys.access(file,[A_READ]) then SOME docpath
-     else NONE
+    (* When entry_url_base is set, callers want hyperlinks that resolve
+       relative to the generated htmlsigs/ page -- not absolute file://
+       paths.  The chosen base (e.g. mdbook Reference output, or the
+       fallback Docfiles/HTML directory) was decided by build_help and
+       passed in via makebase's --entry-url-base flag. *)
+    if !entry_url_base <> "" then
+      SOME (!entry_url_base ^ base ^ ".html")
+    else
+      let
+        val docfile_dir = concat(HOLpath,dir)
+        val htmldir  = concat(docfile_dir,"HTML")
+        val htmlfile = joinBaseExt{base=base,ext=SOME "html"}
+        val adocfile = joinBaseExt{base=base,ext=SOME "txt"}
+        val htmlpath = concat(htmldir,htmlfile)
+        val adocpath = concat(docfile_dir,adocfile)
+        val docpath  = concat(docfile_dir,file)
+      in
+        if OS.FileSys.access(htmlpath,[A_READ]) then SOME htmlpath else
+        if OS.FileSys.access(adocpath,[A_READ]) then SOME adocpath else
+        if OS.FileSys.access(file,[A_READ]) then SOME docpath
+        else NONE
+      end
   end;
 
 fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
@@ -243,8 +257,15 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 
 	fun idhref link id =
 	    (out "<a href=\"#"; out link; out "\">"; out id; out"</a>")
+	(* When entry_url_base is set, find_most_appealing has already
+	   produced a complete URL; otherwise `link` is a filesystem path
+	   that needs the file:// scheme. *)
 	fun idhref_full link id =
-	    (out "<a href=\"file://"; out link; out "\">"; out id; out"</a>")
+	    let val scheme = if !entry_url_base <> "" then "" else "file://"
+	    in
+	      (out "<a href=\""; out scheme; out link;
+	       out "\">"; out id; out"</a>")
+	    end
 
         fun removeTrailingColon id =
            let

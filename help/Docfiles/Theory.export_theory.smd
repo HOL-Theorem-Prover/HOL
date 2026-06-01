@@ -47,12 +47,17 @@ with `set_MLname`, and then `export_theory` may be attempted again.
 ### Example
 
 ``` hol4
->> save_thm("foo", REFL “x:bool”);
+save_thm("foo", REFL “x:bool”);
 
->> Globals.interactive := false;
+Globals.interactive := false;
 
->> export_theory();
+export_theory();
 ```
+
+(These calls are not evaluated by polyscripter when this entry is
+rendered: actually running `export_theory()` freezes the
+polyscripter session's current theory segment and breaks every
+subsequent `Definition` / `Theorem` example.)
 
 ### Comments
 

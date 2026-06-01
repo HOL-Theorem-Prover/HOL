@@ -35,7 +35,7 @@ As *per* [the standard installation instructions](http://hol-theorem-prover.org/
 
     Repeated calls to `build` should complete quickly: theorem-proving work will not be redone unnecessarily.
     The building of the theory graph can be slow however, and this *does* happen with every invocation of `build` by default.
-    To avoid this use `build`’s `--nograph` option.
+    To avoid this, pass `--no-mdbook` or `--no-helpdocs` to `build`: either flag skips the documentation pipeline (which includes the theory graph).
 
 # Configuration
 

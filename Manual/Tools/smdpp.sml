@@ -340,10 +340,21 @@ fun protectMath s =
    flag does for the .smd -> .md path. *)
 val () = elision_string1 := elision_string1_plain
 
+(* When the input has already been polyscripted upstream (e.g. by
+   help/src-sml/process_docfiles, which materialises a directory of
+   evaluated .md before mdbook is invoked), we want this preprocessor
+   to leave `>>` directives -- which by then no longer exist anyway --
+   alone and to skip the cost of loading the HOL heap a second time.
+   The Reference book.toml sets this via
+     command = "../Tools/smdpp --no-polyscripter"
+   while Description / Tutorial use the default. *)
+val noPolyscripter = ref false
+
 fun runScripted obuf s =
-  processString {input = s, debug = false,
-                 umap = Binarymap.mkDict String.compare,
-                 obuf = obuf}
+  if !noPolyscripter then s
+  else processString {input = s, debug = false,
+                      umap = Binarymap.mkDict String.compare,
+                      obuf = obuf}
 
 (* If the content has no heading at all, prepend `# <name>` so the
    rendered chapter has a title.  Some .smd files defer chapter-
@@ -2914,41 +2925,57 @@ fun dumpLabelsMain bookDir =
 (* ===== main ===== *)
 
 fun smdppMain () =
-  case CommandLine.arguments () of
-      ["supports", "html"] => OS.Process.exit OS.Process.success
-    | "supports" :: _ => OS.Process.exit OS.Process.failure
-    | ["check-refs", bookDir] => checkRefsMain bookDir
-    | ["check-links", bookDir] => checkLinksMain bookDir
-    | ["check-html", bookDir] => checkHtmlMain bookDir
-    | "render-bib" :: bib :: csl :: smds =>
-        if List.null smds then
-          die "Usage: smdpp render-bib BIB CSL SMD..."
-        else renderBibMain bib csl smds
-    | ["dump-labels", bookDir] => dumpLabelsMain bookDir
-    | [] =>
-        let
-          val () = loadCiteLabels ()
-          val () = loadRefEntries ()
-          val () = loadCrossBookLabels ()
-          val obuf = setupPolyscripter ()
-          val raw = TextIO.inputAll TextIO.stdIn
-          val src = JSONParser.openString raw
-          val pair = JSONParser.parse src
-          val () = JSONParser.close src
-          val book = case pair of
-                         JSON.ARRAY [_, b] => b
-                       | _ => die "Expected [ctx, book] JSON on stdin"
-          val book' = transformBook obuf book
-        in
-          print (JSONPrinter.toString book');
-          TextIO.flushOut TextIO.stdOut
-        end
-    | _ => die ("Usage:\n  " ^ CommandLine.name() ^
-                " [supports <renderer> |\
-                \ check-refs <book-dir> |\
-                \ check-links <book-dir> |\
-                \ check-html <book-dir> |\
-                \ render-bib <bib> <csl> <smd>... |\
-                \ dump-labels <book-dir>]")
+  let
+    (* Peel off --no-polyscripter wherever it appears at the front of argv;
+       remaining args dispatch the usual subcommands. *)
+    fun stripFlag (acc as (flagSeen, rest)) =
+      case rest of
+          "--no-polyscripter" :: r => stripFlag (true, r)
+        | _ => acc
+    val (sawFlag, args) = stripFlag (false, CommandLine.arguments ())
+    val () = noPolyscripter := sawFlag
+  in
+    case args of
+        ["supports", "html"] => OS.Process.exit OS.Process.success
+      | "supports" :: _ => OS.Process.exit OS.Process.failure
+      | ["check-refs", bookDir] => checkRefsMain bookDir
+      | ["check-links", bookDir] => checkLinksMain bookDir
+      | ["check-html", bookDir] => checkHtmlMain bookDir
+      | "render-bib" :: bib :: csl :: smds =>
+          if List.null smds then
+            die "Usage: smdpp render-bib BIB CSL SMD..."
+          else renderBibMain bib csl smds
+      | ["dump-labels", bookDir] => dumpLabelsMain bookDir
+      | [] =>
+          let
+            val () = loadCiteLabels ()
+            val () = loadRefEntries ()
+            val () = loadCrossBookLabels ()
+            (* When --no-polyscripter is in effect we skip the heap load:
+               runScripted will ignore obuf, so any dummy SimpleBuffer
+               of the right type will do. *)
+            val obuf = if !noPolyscripter then SimpleBuffer.mkBuffer ()
+                       else setupPolyscripter ()
+            val raw = TextIO.inputAll TextIO.stdIn
+            val src = JSONParser.openString raw
+            val pair = JSONParser.parse src
+            val () = JSONParser.close src
+            val book = case pair of
+                           JSON.ARRAY [_, b] => b
+                         | _ => die "Expected [ctx, book] JSON on stdin"
+            val book' = transformBook obuf book
+          in
+            print (JSONPrinter.toString book');
+            TextIO.flushOut TextIO.stdOut
+          end
+      | _ => die ("Usage:\n  " ^ CommandLine.name() ^
+                  " [--no-polyscripter]\
+                  \ [supports <renderer> |\
+                  \ check-refs <book-dir> |\
+                  \ check-links <book-dir> |\
+                  \ check-html <book-dir> |\
+                  \ render-bib <bib> <csl> <smd>... |\
+                  \ dump-labels <book-dir>]")
+  end
 
 fun main () = smdppMain ()

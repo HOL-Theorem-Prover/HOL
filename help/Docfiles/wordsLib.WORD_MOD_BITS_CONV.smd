@@ -1,4 +1,4 @@
->>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+>>__ load "wordsLib"; Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"};
 ## `WORD_MOD_BITS_CONV`
 
 ``` hol4

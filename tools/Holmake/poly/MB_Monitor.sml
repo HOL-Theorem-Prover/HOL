@@ -132,10 +132,12 @@ fun delsml_sfx s =
 val width_check_delay = Time.fromMilliseconds 1000
 
 type procinfo = {os : TextIO.outstream, tb : tailbuffer.t,
-                 status : monitor_status, start_time : Time.time}
+                 status : monitor_status, start_time : Time.time,
+                 ignore_error : bool}
 
-fun pinfo_upd (tb', stat) ({os,tb,status,start_time}:procinfo) =
-    {os = os, tb = tb', status = stat, start_time = start_time}
+fun pinfo_upd (tb', stat) ({os,tb,status,start_time,ignore_error}:procinfo) =
+    {os = os, tb = tb', status = stat, start_time = start_time,
+     ignore_error = ignore_error}
 
 
 fun prettydir dir =
@@ -297,7 +299,7 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
         end
     fun monitor msg =
       case msg of
-          StartJob (jk as (_, {tag,...}), {dir}) =>
+          StartJob (jk as (_, {tag,...}), {dir, ignore_error}) =>
           let
             val strm = TextIO.openOut (genLogFile{tag = tag, dir = dir})
             val tb = tailbuffer.new {
@@ -309,7 +311,8 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
             monitor_map :=
               Binarymap.insert(!monitor_map, jk,
                                {os = strm, tb = tb, status = MRunning #"|",
-                                start_time = Time.now()});
+                                start_time = Time.now(),
+                                ignore_error = ignore_error});
             startmsg tag;
             display_map();
             NONE
@@ -332,7 +335,8 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
                 end)
         | NothingSeen(jkey as (_, tag), {delay,...}) =>
           let
-            fun after_check (pi as {os = strm, status = stat, tb, start_time}) =
+            fun after_check (pi as {os = strm, status = stat, tb, start_time,
+                                    ignore_error}) =
               let
                 val stat' =
                     case stat of
@@ -355,7 +359,7 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
           end
         | Terminated(jk as (_, td as {tag,dir}), st, _) =>
           stdhandle jk
-            (fn {os = strm,tb,status=stat,start_time} =>
+            (fn {os = strm,tb,status=stat,start_time,ignore_error} =>
                 let
                   val {fulllines,lastpartial,patterns_seen} =
                     tailbuffer.output tb
@@ -368,7 +372,7 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
                   val dirstr = if multidir then prettydir dir else ""
                   val tinfo = taginfo td dirstr utstr
                 in
-                  if st = W_EXITED then
+                  if st = W_EXITED orelse ignore_error then
                     if seen cheat_string orelse seen used_cheat_string then
                       tinfo (boldyellow, "CHEATED")
                     else if seen fastcheat_string then

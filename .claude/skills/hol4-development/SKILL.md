@@ -36,8 +36,10 @@ tree. When editing existing code, match the indentation already present
 HOL4 has two layers of build tool:
 
 - **`bin/build`** — drives the whole tree. `bin/build -F` does a full
-  build. `bin/build --nograph` skips the theory graph regeneration
-  (faster). `bin/build --selftest 1|2|3` runs regression tests at
+  build. `bin/build --no-mdbook` or `bin/build --no-helpdocs` skips
+  the documentation pipeline (including the theory-graph
+  regeneration) and is the fast path. `bin/build --selftest 1|2|3`
+  runs regression tests at
   increasing depth. Kernel flags `--stdknl` (default de Bruijn),
   `--expk` (experimental name-type pairs), `--otknl` (OpenTheory)
   select which kernel to build against.

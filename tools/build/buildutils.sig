@@ -60,8 +60,15 @@ sig
            dir is destination directory
            (d,f) is source file info (directory and file) *)
 
-  val build_help : bool -> unit
-    (* boolean says whether or not to build the theory graph *)
+  val build_help : {graph: bool, no_mdbook: bool, no_helpdocs: bool} ->
+                   unit
+    (* graph: build the theory dependency graph
+       no_mdbook: don't try to build the Reference mdbook (forces the
+         fallback per-entry HTML pandoc pass even if mdbook is in PATH)
+       no_helpdocs: skip the entire help-documentation build (no
+         process_docfiles, no mdbook, no makebase).  Useful for partial
+         build sequences that haven't compiled every HOL library and so
+         can't successfully evaluate polyscripter `>>` directives. *)
 
   val build_dir : (string -> unit) -> int -> (string * int) -> unit
       (* build_dir Holmake i (dir, j)

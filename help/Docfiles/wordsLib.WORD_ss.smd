@@ -1,4 +1,4 @@
->>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+>>__ load "wordsLib"; Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"}; open simpLib;
 ## `WORD_ss`
 
 ``` hol4
