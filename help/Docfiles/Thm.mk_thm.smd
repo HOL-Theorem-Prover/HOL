@@ -30,14 +30,11 @@ of type `bool`.
 The following shows how to create a simple contradiction:
 
 ``` hol4
-   - val falsity = mk_thm([],boolSyntax.F);
-   > val falsity = |- F : thm
+   >> val falsity = mk_thm([],boolSyntax.F);
 
-   - Globals.show_tags := true;
-   > val it = () : unit
+   >> Globals.show_tags := true;
 
-   - falsity;
-   > val it = [oracles: MK_THM] [axioms: ] [] |- F : thm
+   >> falsity;
 ```
 
 ### Comments
@@ -64,3 +61,5 @@ with the aid of `mk_thm` is detectable by examining its tag.
 [`Theory.new_axiom`](#Theory.new_axiom),
 [`Thm.mk_oracle_thm`](#Thm.mk_oracle_thm), [`Thm.tag`](#Thm.tag),
 [`Globals.show_tags`](#Globals.show_tags)
+
+>>__ show_tags := false;
