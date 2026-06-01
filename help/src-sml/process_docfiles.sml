@@ -113,6 +113,9 @@ fun polyscript_all {src_dir, processed_dir, bases, obuf} =
         val outstrm = TextIO.openOut dstfile
         fun out s = (TextIO.output(outstrm, s); pushConcat s)
         val () = resetParseError ()
+        (* Name the entry on polyscripter's die-style diagnostics
+           so they identify which .smd is at fault. *)
+        val () = currentSource := entry ^ ".smd"
       in
         processStream {input = instrm, output = out,
                        debug = false, umap = umap, obuf = obuf};

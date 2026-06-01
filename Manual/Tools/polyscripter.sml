@@ -9,8 +9,18 @@ fun exnMessage (e:exn) =
     PP.pp_to_string 75 p e
   end
 
-fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
-             OS.Process.exit OS.Process.failure)
+(* External drivers (e.g. help/src-sml/process_docfiles) that loop
+   over many .smd inputs can set this to the current entry's name
+   so that die-style diagnostics name the source.  Default empty
+   keeps stand-alone CLI output unchanged. *)
+val currentSource : string ref = ref ""
+
+fun die s =
+  let val pfx = case !currentSource of "" => "" | s => "[" ^ s ^ "] "
+  in
+    TextIO.output(TextIO.stdErr, pfx ^ s ^ "\n");
+    OS.Process.exit OS.Process.failure
+  end
 fun lnumdie linenum extra exn =
   die ("Exception raised on line " ^ Int.toString linenum ^ ": "^
        extra ^ "\n" ^ exnMessage exn)
