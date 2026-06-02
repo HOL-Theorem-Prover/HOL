@@ -877,28 +877,44 @@ fun pretypeToType2 pty tymap =
 val GLAM = “GLAM :string ->
               string list -> 'a -> 'a gterm list -> 'a gterm list -> 'a gterm”;
 
-fun build_pattern (tymap,tydata,newty,cname,ptys,rep_t) = let
+fun build_pattern (tymap,tydata :nomtyinfo list,
+                   newty,cname,ptys,rep_t) = let
     val glam_t       = inst [alpha |-> rep_t] GLAM;
     val repcode_args = build_repcode_args ptys;
     val repcode      = build_repcode cname repcode_args rep_t;
     val dv_free      = dVartype (!free_tyname);
     val dv_bound     = dVartype (!bound_tyname);
     val free_names   = List.filter (fn e => e = dv_free) ptys;
-    val nfree        = List.length free_names;
+    val free_int     = List.length free_names;
     val free_args    = List.map (fn e => mk_var (e,“:string”))
-                                (gen_names "f" nfree []);
+                                (gen_names "f" free_int []);
     val free_args_t  = mk_list (free_args, “:string”);
     val bound_names  = List.filter (fn e => e = dv_bound) ptys;
     val bound_p      = not (null bound_names);
     val bound_arg    = if bound_p then “x :string” else “uu :string”
     val tynames      = List.map fst tymap;
-    val tns          = build_tns_inner ptys tynames;
-    val uns          = build_uns_inner ptys tynames;
+    val tns          = List.map int_of_term (build_tns_inner ptys tynames);
+    val uns          = List.map int_of_term (build_uns_inner ptys tynames);
+    val tns_rep      = List.map (fn i => #term_REP_t (List.nth (tydata,i))) tns;
+    val uns_rep      = List.map (fn i => #term_REP_t (List.nth (tydata,i))) uns;
+    val tns_argty    = List.map (fn i => #newty (List.nth (tydata,i))) tns;
+    val uns_argty    = List.map (fn i => #newty (List.nth (tydata,i))) uns;
+    val tns_argnames = gen_names "P" (List.length tns) [];
+    val uns_argnames = gen_names "Q" (List.length uns) [];
+    val tns_argv     = List.map mk_var (Lib.zip tns_argnames tns_argty);
+    val uns_argv     = List.map mk_var (Lib.zip uns_argnames uns_argty);
+    val tns_args     = List.map mk_comb (Lib.zip tns_rep tns_argv);
+    val uns_args     = List.map mk_comb (Lib.zip uns_rep uns_argv);
+    val arglist_ty   = type_subst [alpha |-> rep_t] “:'a gterm”;
+    val tns_t        = mk_list (tns_args, arglist_ty);
+    val uns_t        = mk_list (uns_args, arglist_ty);
     val pattern0     = mk_comb (glam_t, bound_arg);
     val pattern1     = mk_comb (pattern0, free_args_t);
     val pattern2     = mk_comb (pattern1, repcode);
+    val pattern3     = mk_comb (pattern2, tns_t);
+    val pattern4     = mk_comb (pattern3, uns_t);
 in
-    (pattern2, tns, uns)
+    pattern4
 end;
 
 (*
