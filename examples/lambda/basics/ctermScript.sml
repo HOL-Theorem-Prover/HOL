@@ -8,7 +8,7 @@ Libs
 val _ = (repcode := "ctrep");
 val _ = (rprefix := "ct");
 
-val {tynames, tydata, rep_t, lp} =
+val {tynames, tydata, rep_t, lp, operinfo} =
     nominal_datatype
       ‘cterm = VAR 'free | APP cterm cterm | LAM 'bound cterm | CONST 'a’;
 
@@ -23,60 +23,10 @@ val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty} =
     hd tydata;
 
-val glam = genind_lam
-
-val LAM_t = mk_var("LAM", ``:string -> ^newty -> ^newty``)
-val LAM_def = new_definition(
-  "LAM_def",
-  ``^LAM_t v t = ^term_ABS_t (GLAM v [] ctLAM [^term_REP_t t] [])``)
-val LAM_termP = prove(
-  mk_comb(termP, LAM_def |> SPEC_ALL |> concl |> rhs |> rand),
-  match_mp_tac glam >> srw_tac [][genind_term_REP]);
-val LAM_t = defined_const LAM_def
-
-val APP_t = mk_var("APP", ``:^newty -> ^newty -> ^newty``)
-val APP_def = new_definition(
-  "APP_def",
-  ``^APP_t t1 t2 =
-       ^term_ABS_t (GLAM ARB [] ctAPP [] [^term_REP_t t1; ^term_REP_t t2])``);
-val APP_termP = prove(
-  ``^termP (GLAM x [] ctAPP [] [^term_REP_t t1; ^term_REP_t t2])``,
-  match_mp_tac glam >> srw_tac [][genind_term_REP])
-val APP_t = defined_const APP_def
-
-val APP_def' = prove(
-  ``^term_ABS_t (GLAM v [] ctAPP [] [^term_REP_t t1; ^term_REP_t t2]) =
-    ^APP_t t1 t2``,
-  srw_tac [][APP_def, GLAM_NIL_EQ, term_ABS_pseudo11, APP_termP]);
-
-val VAR_t = mk_var("VAR", ``:string -> ^newty``)
-val VAR_def = new_definition(
-  "VAR_def",
-  ``^VAR_t s = ^term_ABS_t (GLAM ARB [s] ctVAR [][])``);
-Theorem VAR_termP[local]:
-  ^termP (GLAM u [v] ctVAR [][])
-Proof
-  srw_tac [][genind_rules]
-QED
-val VAR_t = defined_const VAR_def
-Theorem VAR_def':
-  ^term_ABS_t (GLAM u [v] ctVAR [][]) = VAR v
-Proof
-  srw_tac[][VAR_def, GLAM_NIL_EQ, term_ABS_pseudo11, VAR_termP]
-QED
-
-val CONST_t = mk_var("CONST", “:'a -> ^newty”)
-val CONST_def = new_definition(
-  "CONST_def",
-  “^CONST_t a = ^term_ABS_t (GLAM ARB [] (ctCONST a) [][])”);
-val CONST_termP = prove(
-  “^termP (GLAM v [] (ctCONST a) [][])”,
-  srw_tac[][genind_rules]);
-val CONST_t = defined_const CONST_def
-
-val CONST_def' = prove(
-  “^term_ABS_t (GLAM v [] (ctCONST a) [] []) = ^CONST_t a”,
-  srw_tac[][CONST_def, GLAM_NIL_EQ, term_ABS_pseudo11, CONST_termP]);
+val (_, LAM_termP,   LAM_def,   NONE)            = Lib.assoc "LAM" operinfo;
+val (_, APP_termP,   APP_def,   SOME APP_def')   = Lib.assoc "APP" operinfo;
+val (_, VAR_termP,   VAR_def,   SOME VAR_def')   = Lib.assoc "VAR" operinfo;
+val (_, CONST_termP, CONST_def, SOME CONST_def') = Lib.assoc "CONST" operinfo;
 
 val cons_info =
     [{con_termP = VAR_termP, con_def = SYM VAR_def'},

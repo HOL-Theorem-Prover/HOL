@@ -839,8 +839,6 @@ fun build_tydata [] index lp ths = []
         tyinfo :: build_tydata tynames (index + 1) lp (th :: ths)
     end;
 
-type operinfo = {oper_termP : thm, oper_def : thm, oper_def' : thm option};
-
 val glam = genind_lam;
 val toArb = subst [“uu:string” |-> “ARB:string”];
 
@@ -862,6 +860,58 @@ fun pretypeToType2 pty tymap =
     end
   | dAQ pty => pty;
 
+(* NOTE: This function translates ptys (pretypes) to a list of argument terms.
+   Naming conventions are the following:
+
+   External (repcode) arguments: a0, a1, ...
+   Free names: v0, v1, ...
+   Bound names (at most one is currently supported): x
+   Bound nominal arguments (at most one, in fact): P0, P1, ...
+   Free nominal arguments: Q0, Q1, ...
+
+   Order of all arguments must be preserved. Note that the only bound argument
+   must be immediately following the (only) bound name. And this is the only
+   way to know if a nominal argument is free or bound. This function only returns
+   a list of names following the naming conventions.
+ *)
+fun pretypeToType3 pty =
+  case pty of
+    dVartype s => if s = !free_tyname then "v"
+                  else if s = !bound_tyname then "x"
+                  else "a" (* repcode argument *)
+  | dTyop {Tyop = s, Thy, Args} => let
+    in
+      case Thy of
+        NONE   => "Q"
+      | SOME t => "a" (* repcode argument *)
+    end
+  | dAQ pty => "";
+
+(* NOTE: The parameters a v p g are used as counters for generating names. Each
+   round only one of them gets increased. Stupid but working.
+ *)
+fun build_args_inner [] a (x :bool) v p q = []
+  | build_args_inner (pty::ptys) a x v p q =
+    let val s = pretypeToType3 pty;
+        val s' = if s = "Q" andalso x then "P" else s;
+        val n  = if s' = "a" then
+                     s' ^ int_to_string a
+                 else if s' = "x" then s' (* only one is supported *)
+                 else if s' = "v" then s' ^ int_to_string v
+                 else if s' = "P" then s' ^ int_to_string p
+                 else if s' = "Q" then s' ^ int_to_string q
+                 else
+                     s';
+        val a' = if s' = "a" then a + 1 else a;
+        val v' = if s' = "v" then v + 1 else v;
+        val p' = if s' = "P" then p + 1 else p;
+        val q' = if s' = "Q" then q + 1 else q;
+    in
+        n :: build_args_inner ptys a' (s' = "x") v' p' q'
+    end;
+
+fun build_args ptys = build_args_inner ptys 0 false 0 0 0;
+
 (* val Input_pattern = “GLAM x [a] rInput [^term_REP_t1 P] []”;
 
    x is the only bound name (otherwise it's “uu :string” here)
@@ -877,8 +927,7 @@ fun pretypeToType2 pty tymap =
 val GLAM = “GLAM :string ->
               string list -> 'a -> 'a gterm list -> 'a gterm list -> 'a gterm”;
 
-fun build_pattern (tymap,tydata :nomtyinfo list,
-                   newty,cname,ptys,rep_t) = let
+fun build_pattern (tymap,tydata :nomtyinfo list,newty,cname,ptys,rep_t) = let
     val glam_t       = inst [alpha |-> rep_t] GLAM;
     val repcode_args = build_repcode_args ptys;
     val repcode      = build_repcode cname repcode_args rep_t;
@@ -887,7 +936,7 @@ fun build_pattern (tymap,tydata :nomtyinfo list,
     val free_names   = List.filter (fn e => e = dv_free) ptys;
     val free_int     = List.length free_names;
     val free_args    = List.map (fn e => mk_var (e,“:string”))
-                                (gen_names "f" free_int []);
+                                (gen_names "v" free_int []);
     val free_args_t  = mk_list (free_args, “:string”);
     val bound_names  = List.filter (fn e => e = dv_bound) ptys;
     val bound_p      = not (null bound_names);
@@ -913,11 +962,24 @@ fun build_pattern (tymap,tydata :nomtyinfo list,
     val pattern2     = mk_comb (pattern1, repcode);
     val pattern3     = mk_comb (pattern2, tns_t);
     val pattern4     = mk_comb (pattern3, uns_t);
+ (* NOTE: now we collect all constructor argument terms into a list, but
+    the order may be wrong. We need to use the list of names returned by
+    build_args to re-order it.
+  *)
+    val unordered    = List.concat [repcode_args,
+                                   free_args,
+                                   if bound_p then [bound_arg] else [],
+                                   tns_argv, uns_argv];
+    val argnames     = build_args ptys;
+    val arglist      =
+        List.map (fn e => valOf (List.find (fn v => fst (dest_var v) = e)
+                                           unordered)) argnames;
 in
-    pattern4
+    (pattern4, arglist, bound_p)
 end;
 
-(*
+(* Example 1 (bound_p = false):
+
 val Tau_t = mk_var("Tau", “:^newty1 -> ^newty1”);
 val Tau_pattern = “GLAM uu [] rTau [] [^term_REP_t1 P]”;
 val Tau_def = new_definition(
@@ -931,26 +993,55 @@ val Tau_def' = prove(
   “^term_ABS_t1 ^Tau_pattern = ^Tau_t P”,
     srw_tac [][Tau_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Tau_termP]);
 
+   Example 2 (bound_p = true):
+
+(* Input 'free 'bound pi *)
+val Input_t = mk_var("Input", “:string -> string -> ^newty1 -> ^newty1”);
+val Input_pattern = “GLAM x [a] rInput [^term_REP_t1 P] []”;
+val Input_def = new_definition(
+   "Input_def",
+  “^Input_t a x P = ^term_ABS_t1 ^Input_pattern”);
+val Input_termP = prove(
+    mk_comb(termP1, Input_pattern),
+    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
+val Input_t = defined_const Input_def;
+
     only Tau_termP, Tau_def and Tau_def' (into operinfo), etc. are needed later.
  *)
-fun build_constructor (tymap,tydata,newty,cname,ptys,rep_t) = let
-    val c_ty = list_mk_fun
-                 (List.map (fn e => pretypeToType2 e tymap) ptys,newty);
-    val c_t = mk_var (cname,c_ty);
-    val c_pattern = build_pattern (tymap,tydata,newty,cname,ptys,rep_t)
+fun build_constructor (tymap,tydata,tyname,cname,ptys,rep_t) = let
+    val newty   = Lib.assoc tyname tymap;
+    val c_ty    = list_mk_fun
+                    (List.map (fn e => pretypeToType2 e tymap) ptys,newty);
+    val c_t     = mk_var (cname,c_ty);
+    val (c_pattern,arglist,bound_p)
+                = build_pattern (tymap,tydata,newty,cname,ptys,rep_t);
+    val tynames = List.map fst tymap;
+    val index   = int_of_term (index_of tyname tynames);
+    val lhs     = list_mk_comb (c_t,arglist);
+    val tydata1 = List.nth (tydata,index);
+    val rhs     = mk_comb (#term_ABS_t tydata1,toArb c_pattern);
+    val c_def   = new_definition (cname ^ "_def", mk_eq (lhs,rhs));
+    val ths     = List.map #genind_term_REP tydata;
+    val c_termP = prove(mk_comb(#termP tydata1, c_pattern),
+                        match_mp_tac glam >> srw_tac [] ths);
+    val c_tm    = defined_const c_def;
+    val lhs'    = mk_comb (#term_ABS_t tydata1,c_pattern);
+    val rhs'    = list_mk_comb (c_tm,arglist);
+    val ths'    = [c_def, GLAM_NIL_EQ, #term_ABS_pseudo11 tydata1, c_termP];
+    val c_def'  = if bound_p then NONE
+                  else
+                      SOME (prove (mk_eq (lhs',rhs'),srw_tac [] ths'))
 in
-    (c_t, c_pattern)
+    (cname,(c_tm,c_termP,c_def,c_def'))
 end;
 
-fun build_cons_inner (cptys,tyname,tymap,tydata,rep_t) = let
-    val newty = Lib.assoc tyname tymap
-in
+fun build_operinfo_inner (cptys,tyname,tymap,tydata,rep_t) =
     List.map (fn (cname,ptys) =>
-                 build_constructor (tymap,tydata,newty,cname,ptys,rep_t)) cptys
-end;
+                 build_constructor (tymap,tydata,tyname,cname,ptys,rep_t))
+             cptys;
 
 (* This function builds definitional theorems for each constructor. *)
-fun build_cons tynames asts (tydata :nomtyinfo list) rep_t = let
+fun build_operinfo tynames asts (tydata :nomtyinfo list) rep_t = let
     val newtys = List.map (fn e => #newty e) tydata;
     val tymap = Lib.zip tynames newtys
 in
@@ -958,23 +1049,24 @@ in
         (List.map (fn (tyname,df) =>
                       case df of
                           Constructors cs =>
-                          build_cons_inner (cs,tyname,tymap,tydata,rep_t)
+                          build_operinfo_inner (cs,tyname,tymap,tydata,rep_t)
                         | Record _ => []) asts)
 end;
 
 (* The final API (so far) *)
 fun nominal_datatype q = let
-  val asts    = parse_datatype q;
-  val tynames = extract_tynames asts;
-  val rep_t   = define_repcode asts;
-  val lp      = build_lp asts rep_t;
-  val tydata  = build_tydata tynames 0 lp [];
-  val cons    = build_cons tynames asts tydata rep_t
+  val asts     = parse_datatype q;
+  val tynames  = extract_tynames asts;
+  val rep_t    = define_repcode asts;
+  val lp       = build_lp asts rep_t;
+  val tydata   = build_tydata tynames 0 lp [];
+  val operinfo = build_operinfo tynames asts tydata rep_t
 in
-    {tynames = tynames,
-     tydata  = tydata,
-     rep_t   = rep_t,
-     lp      = lp}
+    {tynames  = tynames,
+     tydata   = tydata,
+     rep_t    = rep_t,
+     lp       = lp,
+     operinfo = operinfo}
 end;
 
 end (* struct *)

@@ -4,7 +4,6 @@ sig
   include Abbrev
   type coninfo = {con_termP : thm, con_def : thm}
 
-  type operinfo  = {oper_termP : thm, oper_def : thm, oper_def' : thm option}
   type nomtyinfo = {term_ABS_pseudo11 : thm,
                         term_REP_11 : thm,
                         term_REP_t : term,
@@ -54,9 +53,10 @@ sig
   val repcode      : string ref
   val rprefix      : string ref
   val nominal_datatype : hol_type quotation ->
-                        {tynames : string list,
-                         tydata  : nomtyinfo list,
-                         rep_t   : hol_type,
-                         lp      : term}
-
+                        {tynames  : string list,
+                         tydata   : nomtyinfo list,
+                         rep_t    : hol_type,
+                         lp       : term,
+                         operinfo : (string *
+                                     (term * thm * thm * thm option)) list}
 end

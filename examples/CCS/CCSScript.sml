@@ -318,7 +318,7 @@ Theorem APPLY_RELAB_THM =
 val _ = (repcode := "crep");
 val _ = (rprefix := "c");
 
-val {tynames, tydata, rep_t, lp} =
+val {tynames, tydata, rep_t, lp, operinfo} =
     nominal_datatype
          ‘CCS = var 'free
               | prefix ('a Action) CCS
@@ -334,10 +334,8 @@ val {tynames, tydata, rep_t, lp} =
  *)
 val tyname = hd tynames; (* "CCS" *)
 
-(* val rep_t = “:'a crep” *)
-val d_tm = mk_var("d", rep_t);
-
 Overload LP = “lp”
+Overload ccslp[local] = “genind ^lp”
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty} =
@@ -347,38 +345,13 @@ val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
     CCS operators
    ---------------------------------------------------------------------- *)
 
-val glam = genind_lam
-Overload ccslp[local] = “genind ^lp”
-
-fun toArb t = subst [“uu:string” |-> “ARB:string”] t
-
-(* var 'free *)
-val var_t = mk_var("var", “:string -> ^newty”)
-val var_pattern = “GLAM uu [s] cvar [][]”
-val var_def = new_definition(
-   "var_def",
-   “^var_t s = ^term_ABS_t ^(toArb var_pattern)”);
-val var_termP = prove(
-  mk_comb(termP, var_pattern),
-  srw_tac [][genind_rules]);
-val var_t = defined_const var_def;
-val var_def' = prove(
-  “^term_ABS_t ^var_pattern = var s”,
-  srw_tac[][var_def, GLAM_NIL_EQ, term_ABS_pseudo11, var_termP])
-
-(* prefix ('a Action) CCS *)
-val prefix_t = mk_var("prefix", “:'a Action -> ^newty -> ^newty”);
-val prefix_pattern = “GLAM uu [] (cprefix u) [] [^term_REP_t E]”
-val prefix_def = new_definition(
-   "prefix_def",
-  “^prefix_t u E = ^term_ABS_t ^(toArb prefix_pattern)”);
-val prefix_termP = prove(
-  mk_comb(termP, prefix_pattern),
-  match_mp_tac glam >> srw_tac [][genind_term_REP]);
-val prefix_t = defined_const prefix_def;
-val prefix_def' = prove(
-  “^term_ABS_t ^prefix_pattern = ^prefix_t u E”,
-    srw_tac [][prefix_def, GLAM_NIL_EQ, term_ABS_pseudo11, prefix_termP]);
+val (_, var_termP,    var_def,    SOME var_def')    = Lib.assoc "var" operinfo;
+val (_, prefix_termP, prefix_def, SOME prefix_def') = Lib.assoc "prefix" operinfo;
+val (_, sum_termP,    sum_def,    SOME sum_def')    = Lib.assoc "sum" operinfo;
+val (_, par_termP,    par_def,    SOME par_def')    = Lib.assoc "par" operinfo;
+val (_, restr_termP,  restr_def,  SOME restr_def')  = Lib.assoc "restr" operinfo;
+val (_, relab_termP,  relab_def,  SOME relab_def')  = Lib.assoc "relab" operinfo;
+val (_, rec_termP,    rec_def,    NONE)             = Lib.assoc "rec" operinfo;
 
 val _ =
     add_rule { term_name = "prefix", fixity = Infixr 700,
@@ -388,56 +361,14 @@ val _ =
 
 val _ = TeX_notation { hol = "..", TeX = ("\\ensuremath{\\ldotp}", 1) };
 
-(* sum CCS CCS *)
-val sum_t = mk_var("sum", “:^newty -> ^newty -> ^newty”);
-val sum_pattern = “GLAM uu [] csum [] [^term_REP_t E1; ^term_REP_t E2]”
-val sum_def = new_definition(
-   "sum_def",
-  “^sum_t E1 E2 = ^term_ABS_t ^(toArb sum_pattern)”);
-val sum_termP = prove(
-  “^termP ^sum_pattern”,
-    match_mp_tac glam >> srw_tac [][genind_term_REP]);
-val sum_t = defined_const sum_def;
-val sum_def' = prove(
-  “^term_ABS_t ^sum_pattern = ^sum_t E1 E2”,
-    srw_tac [][sum_def, GLAM_NIL_EQ, term_ABS_pseudo11, sum_termP]);
-
 val _ = overload_on ("+", ``sum``); (* priority: 500 *)
 val _ = TeX_notation { hol = "+", TeX = ("\\ensuremath{+}", 1) };
-
-(* par CCS CCS *)
-val par_t = mk_var("par", “:^newty -> ^newty -> ^newty”);
-val par_pattern = “GLAM uu [] cpar [] [^term_REP_t E1; ^term_REP_t E2]”
-val par_def = new_definition(
-   "par_def",
-  “^par_t E1 E2 = ^term_ABS_t ^(toArb par_pattern)”);
-val par_termP = prove(
-  “^termP ^par_pattern”,
-    match_mp_tac glam >> srw_tac [][genind_term_REP]);
-val par_t = defined_const par_def;
-val par_def' = prove(
-  “^term_ABS_t ^par_pattern = ^par_t E1 E2”,
-    srw_tac [][par_def, GLAM_NIL_EQ, term_ABS_pseudo11, par_termP]);
 
 val _ = set_mapped_fixity {fixity = Infixl 600,
                            tok = "||", term_name = "par"};
 
 (* val _ = Unicode.unicode_version {u = UTF8.chr 0x007C, tmnm = "par"}; *)
 val _ = TeX_notation { hol = "||", TeX = ("\\ensuremath{\\mid}", 1) };
-
-(* restr ('a Label set) CCS *)
-val restr_t = mk_var("restr", “:'a Label set -> ^newty -> ^newty”);
-val restr_pattern = “GLAM uu [] (crestr L) [] [^term_REP_t E]”
-val restr_def = new_definition(
-   "restr_def",
-  “^restr_t L E = ^term_ABS_t ^(toArb restr_pattern)”);
-val restr_termP = prove(
-  mk_comb(termP, restr_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP]);
-val restr_t = defined_const restr_def;
-val restr_def' = prove(
-  “^term_ABS_t ^restr_pattern = ^restr_t L E”,
-    srw_tac [][restr_def, GLAM_NIL_EQ, term_ABS_pseudo11, restr_termP]);
 
 (* compact representation for single-action restriction *)
 val _ = overload_on("nu", “λ(n :'a) P. restr {name n} P”);
@@ -446,29 +377,6 @@ val _ = add_rule {term_name = "nu", fixity = Closefix,
                   pp_elements = [TOK ("(" ^ UnicodeChars.nu), TM, TOK ")"],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2))};
-
-(* relab CCS ('a Relebeling) *)
-val relab_t = mk_var("relab", “:^newty -> 'a Relabeling -> ^newty”);
-val relab_pattern = “GLAM uu [] (crelab rf) [] [^term_REP_t E]”
-val relab_def = new_definition(
-   "relab_def",
-  “^relab_t E rf = ^term_ABS_t ^(toArb relab_pattern)”);
-val relab_termP = prove(
-  mk_comb(termP, relab_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP]);
-val relab_t = defined_const relab_def;
-val relab_def' = prove(
-  “^term_ABS_t ^relab_pattern = ^relab_t E rf”,
-    srw_tac [][relab_def, GLAM_NIL_EQ, term_ABS_pseudo11, relab_termP]);
-
-(* rec 'bound CCS *)
-val rec_t = mk_var("rec", “:string -> ^newty -> ^newty”);
-val rec_pattern = “GLAM X [] crec [^term_REP_t E] []”
-val rec_def = new_definition("rec_def", “^rec_t X E = ^term_ABS_t ^rec_pattern”);
-val rec_termP = prove(
-  mk_comb(termP, rec_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP]);
-val rec_t = defined_const rec_def;
 
 (* ----------------------------------------------------------------------
     tpm (permutation of CCS recursion variables)
