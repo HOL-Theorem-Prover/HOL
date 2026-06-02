@@ -113,6 +113,9 @@ fun polyscript_all {src_dir, processed_dir, bases, obuf} =
         val outstrm = TextIO.openOut dstfile
         fun out s = (TextIO.output(outstrm, s); pushConcat s)
         val () = resetParseError ()
+        (* Name the entry on polyscripter's die-style diagnostics
+           so they identify which .smd is at fault. *)
+        val () = currentSource := entry ^ ".smd"
       in
         processStream {input = instrm, output = out,
                        debug = false, umap = umap, obuf = obuf};
@@ -292,9 +295,15 @@ fun process_docfiles_main () =
                 NONE => ()
               | SOME html_dir =>
                 let
+                  (* List.foldl passes the list element first; the
+                     accumulator must stay in the absolute-prefix slot
+                     of pjoin, because OS.Path.concat raises Path if
+                     its second argument is absolute. *)
                   val luaFilter =
-                      List.foldl pjoin Systeml.HOLDIR
-                                 ["help", "src-sml", "internal-to-external.lua"]
+                      List.foldl (fn (p, acc) => pjoin (acc, p))
+                                 Systeml.HOLDIR
+                                 ["help", "src-sml",
+                                  "internal-to-external.lua"]
                   val html_out =
                       pandoc_once pdexe concat
                                   ["-t", "html",
@@ -309,6 +318,11 @@ fun process_docfiles_main () =
   in
     ()
   end
+  (* Poly/ML --exe-main binaries exit silently on uncaught exceptions
+     (no stack trace, no error message), which left CI failures here
+     unattributable until the dieLn surfaced a name to look up. *)
+  handle e =>
+    dieLn ("process_docfiles: uncaught " ^ General.exnMessage e)
 
 (* buildheap --exe main runs `main` at startup. *)
 val main = process_docfiles_main

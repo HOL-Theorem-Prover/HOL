@@ -436,12 +436,24 @@ val _ =
     compile [] "HostName.sig";
     FileSys.chDir "../mosml";
     compile ["-I", "..", "-I", "../core"] "HostName.sml";
+    FileSys.chDir "../toml";
+    compile [] "TOMLerror.sml";
+    compile [] "TOMLvalue_dtype.sml";
+    compile [] "TOMLvalue.sig";
+    compile [] "TOMLvalue.sml";
+    compile [] "parseTOMLUtil.sml";
+    compile ["-toplevel"] "parseTOMLFunctor.sml";
+    compile ["parseTOMLFunctor.ui"] "parseTOML.sml";
+    compile [] "TOML.sig";
+    compile [] "TOML.sml";
     FileSys.chDir "../core";
-    compile ["-I", "..", "-I", "../mosml", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "Holmake.sml";
+    compile ["-I", "..", "-I", "../toml"] "HMProject.sig";
+    compile ["-I", "..", "-I", "../toml"] "HMProject.sml";
+    compile ["-I", "..", "-I", "../mosml", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf", "-I", "../toml", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "Holmake.sml";
     FileSys.chDir "../mosml";
     compile ["-I", "..", "-I", "../core"] "mosml_Holmake.sml";
     FileSys.chDir "..";
-    link{extras = ["-I", "mosml", "-I", "core", "-I", "deps", "-I", "util", "-I", "../util", "-I", "../parsing", "-I", "hfs", "-I", "hmf", "-I", "../../src/portableML", "-I", "../../src/portableML/mosml"], tgt = bin, srcobj = "mosml/mosml_Holmake.uo"};
+    link{extras = ["-I", "mosml", "-I", "core", "-I", "deps", "-I", "util", "-I", "../util", "-I", "../parsing", "-I", "hfs", "-I", "hmf", "-I", "toml", "-I", "../../src/portableML", "-I", "../../src/portableML/mosml"], tgt = bin, srcobj = "mosml/mosml_Holmake.uo"};
     mk_xable bin;
     FileSys.chDir cdir
   end

@@ -387,6 +387,18 @@ fun get_cline () = let
         in
           write_options ["--"^knlspec, "--seq", seqspec_abs]
         end
+  (* Polyscripter `>>` directives in help/Docfiles entries can do
+     things like `load "realLib"`; under a reduced --seq those
+     libraries haven't been built and the help-doc pass aborts on the
+     first miss.  Warn only when actually overriding so the message
+     doesn't double up for `--no-helpdocs --seq ...`. *)
+  val partial_seq = seqspec <> dfltbuildseq
+  val user_no_helpdocs = #no_helpdocs option_record
+  val no_helpdocs = user_no_helpdocs orelse partial_seq
+  val () = if partial_seq andalso not user_no_helpdocs then
+             warn ("Reduced build sequence (" ^ seqspec ^
+                   "); skipping help-doc build.")
+           else ()
 in
   Normal {build_theory_graph = buildgraph,
           cmdline = rest,
@@ -403,7 +415,7 @@ in
           thmsrc = #thmsrc option_record,
           timelimit = #timelimit option_record,
           no_mdbook = #no_mdbook option_record,
-          no_helpdocs = #no_helpdocs option_record}
+          no_helpdocs = no_helpdocs}
 end handle DoClean s => (Clean s before safedelete Holmake_tools.kernelid_fname)
 
 (* ----------------------------------------------------------------------
@@ -1001,7 +1013,16 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
            (if use_html_fallback then [htmlpath] else [])
        val () = print "Polyscripting Docfiles and generating .txt outputs...\n"
      in
-       if SYSTEML pdoc_args then ()
+       if SYSTEML pdoc_args then
+         (* Touch the .stamp the Manual/Reference Holmakefile keys
+            its $(Processed) rule off, so the follow-up Holmake
+            mdbook pass sees a fresh tree. *)
+         let val stamp = fullPath [processed_dir, ".stamp"]
+             val ostrm = TextIO.openOut stamp
+                         handle IO.Io {cause, ...} =>
+                           die ("Couldn't write " ^ stamp ^ ": " ^
+                                General.exnMessage cause)
+         in TextIO.closeOut ostrm end
        else die "process_docfiles failed.  If you're running a partial \
                 \build sequence and don't need up-to-date help \
                 \documentation, re-run with --no-helpdocs to skip the \

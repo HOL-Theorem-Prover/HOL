@@ -317,19 +317,7 @@
 \usepackage[only,llbracket,rrbracket,llparenthesis,rrparenthesis]{stmaryrd}
 \parskip 1ex
 \parindent 0ex
-\usepackage{accsupp} % for ensuring the right Unicode codepoint upon pasting
-
-\newcommand*{\llbrace}{%
-  \BeginAccSupp{method=hex,unicode,ActualText=2983}%
-    \textnormal{\usefont{OMS}{lmr}{m}{n}\char102}%
-    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
-    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
-  \EndAccSupp{}%
-}
-\newcommand*{\rrbrace}{%
-  \BeginAccSupp{method=hex,unicode,ActualText=2984}%
-    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
-    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
-    \textnormal{\usefont{OMS}{lmr}{m}{n}\char103}%
-  \EndAccSupp{}%
-}
+% \llbrace / \rrbrace (U+2983 / U+2984) live in
+% Manual/Description/desc-unicode.sty alongside their \DeclareUnicode-
+% Character mappings; the accsupp \BeginAccSupp wrapper they use is
+% loaded via desc-unicode.sty's \RequirePackage.

@@ -21,8 +21,10 @@ val _ = let
   val portableMLdir = Systeml.HOLDIR ++ "src" ++ "portableML"
   val portableMLpolydir = portableMLdir ++ "poly"
   val jsondir = portableMLdir ++ "json"
+  val tomldir = hmakedir ++ "toml"
   fun appportable s = (myuse portableMLdir (s ^ ".sig"); myuse portableMLdir (s ^ ".sml"))
   fun appjson s = (myuse jsondir (s ^ ".sig"); myuse jsondir (s ^ ".sml"))
+  fun apptoml s = (myuse tomldir (s ^ ".sig"); myuse tomldir (s ^ ".sml"))
   fun appthis s = (myuse hmakedir (s ^ ".sig"); myuse hmakedir (s ^ ".sml"))
   fun appcore s = (myuse coredir (s ^ ".sig"); myuse coredir (s ^ ".sml"))
   fun appdeps s = (myuse depsdir (s ^ ".sig"); myuse depsdir (s ^ ".sml"))
@@ -55,5 +57,13 @@ in
   myuse jsondir "JSON.sml";
   app appjson ["JSONErrors"];
   myuse jsondir "JSONSource.sml";
-  app appjson ["JSONParser", "JSONUtil"]
+  app appjson ["JSONParser", "JSONUtil"];
+  myuse tomldir "TOMLvalue_dtype.sml";
+  apptoml "TOMLvalue";
+  myuse tomldir "TOMLerror.sml";
+  myuse tomldir "parseTOMLUtil.sml";
+  myuse tomldir "parseTOMLFunctor.sml";
+  myuse tomldir "parseTOML.sml";
+  apptoml "TOML";
+  appcore "HMProject"
 end;

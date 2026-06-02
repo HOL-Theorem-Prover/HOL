@@ -15,7 +15,8 @@ struct
   type command = {executable: string, nm_args : string list, env : string list}
   type 'a job = {tag : string, command : command, dir : string,
                  try_cache : unit -> bool,
-                 update : 'a * bool * Time.time -> 'a}
+                 update : 'a * bool * Time.time -> 'a,
+                 ignore_error : bool}
   datatype 'a genjob_result =
            NoMoreJobs of 'a | NewJob of ('a job * 'a) | GiveUpAndDie of 'a
   type sched_ctxt = { jobs_running : int }
@@ -33,7 +34,8 @@ struct
     err : TextIO.instream,
     outeof : bool,
     erreof : bool,
-    pid : pid
+    pid : pid,
+    ignore_error : bool
   }
   type jobkey = pid * {dir:string, tag : string}
   datatype strmtype = OUT | ERR
@@ -43,30 +45,30 @@ struct
          | Terminated of jobkey * exit_status * Time.time
          | MonitorKilled of jobkey * Time.time
          | EOF of jobkey * strmtype * Time.time
-         | StartJob of jobkey * {dir:string}
+         | StartJob of jobkey * {dir:string, ignore_error:bool}
   datatype client_cmd = Kill of jobkey | KillAll
   type monitor = monitor_message -> client_cmd option
 
   local
     open FunctionalRecordUpdate
-    fun makeUpdateWJ z = makeUpdate11 z (* 10 fields *)
+    fun makeUpdateWJ z = makeUpdate12 z (* 12 fields *)
     fun makeUpdateWL z = makeUpdate5 z (* 5 fields *)
   in
     fun updateWJ z = let
       fun from dir tag command update starttime lastevent out err
-               outeof erreof pid =
+               outeof erreof pid ignore_error =
           {tag = tag, command = command, update = update, starttime = starttime,
            lastevent = lastevent, out = out, err = err, outeof = outeof,
-           erreof = erreof, pid = pid, dir = dir}
-      fun from' pid erreof outeof err out lastevent starttime update command
-                tag dir =
+           erreof = erreof, pid = pid, dir = dir, ignore_error = ignore_error}
+      fun from' ignore_error pid erreof outeof err out lastevent starttime
+                update command tag dir =
           {tag = tag, command = command, update = update, starttime = starttime,
            lastevent = lastevent, out = out, err = err, outeof = outeof,
-           erreof = erreof, pid = pid, dir = dir}
+           erreof = erreof, pid = pid, dir = dir, ignore_error = ignore_error}
       fun to f {tag, command, update, starttime, lastevent, out,
-                err, outeof, erreof, pid, dir} =
+                err, outeof, erreof, pid, dir, ignore_error} =
         f dir tag command update starttime lastevent out err
-          outeof erreof pid
+          outeof erreof pid ignore_error
     in
       makeUpdateWJ (from, from', to)
     end z
@@ -170,7 +172,7 @@ struct
   fun start_job (j : 'a job) : 'a working_job =
     let
       open Posix.Process Posix.IO
-      val {tag, command, update, try_cache, dir} = j
+      val {tag, command, update, try_cache, dir, ignore_error} = j
       val _ = OS.Path.isAbsolute dir orelse
               raise Fail "Relative path in job directory"
       val {executable,env,nm_args} = command
@@ -231,7 +233,8 @@ struct
               err = err, erreof = false,
               pid = pid,
               starttime = Time.now(),
-              lastevent = Time.now()
+              lastevent = Time.now(),
+              ignore_error = ignore_error
             }
           end
     end
@@ -244,7 +247,8 @@ struct
     let
       open Posix.Process
       val j :int job = {tag = s, command = simple_shell s, update = K 0,
-                        try_cache = K false, dir = "."}
+                        try_cache = K false, dir = ".",
+                        ignore_error = false}
       val wj = start_job j
       fun read pfx acc strm k =
         case TextIO.inputLine strm of
@@ -278,7 +282,9 @@ struct
             let
               val wj = start_job job
               val cmds' =
-                  case monitorfn (StartJob (wjkey wj, {dir= #dir job})) of
+                  case monitorfn (StartJob (wjkey wj,
+                                            {dir = #dir job,
+                                             ignore_error = #ignore_error job})) of
                       NONE => cmds
                     | SOME c => c::cmds
             in
@@ -501,7 +507,8 @@ struct
                     fupdAlist t (fn (c,_) => (c,Done b)) clist
               in
                 NewJob ({tag = t, command = simple_shell c, update = upd,
-                         try_cache = K false, dir = "."}, l)
+                         try_cache = K false, dir = ".",
+                         ignore_error = false}, l)
               end
         end
       val wl =

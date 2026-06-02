@@ -19,6 +19,11 @@ DIRNAMES = \
   theorytarget \
   commandmacros \
   doublecrnl \
+  projfile_module \
+  projfile_basic \
+  projfile_open_resolution \
+  projfile_name_clash \
+  projfile_synthetic \
   patrule_parse \
   patrule_match \
   patrule_e2e \

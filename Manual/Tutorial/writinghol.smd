@@ -93,7 +93,6 @@ $\;\;\mkern14mu\not\mathrel{\mkern-14mu}\iff$ & \texttt{<=/=>} & $\;\;\times$ & 
 *Table: Unicode/ASCII equivalents in HOL syntax.  Delimiters are
 the quotation marks that delimit whole terms or types, separating
 them from the ML level.*
-```
 
 | Boolean   |       | Sets             |          | Other theories     |              |
 |-----------|-------|------------------|----------|--------------------|--------------|
@@ -101,10 +100,11 @@ them from the ML level.*
 | $\exists$ | `?`   | $\notin$         | `NOTIN`  | $\ge$              | `>=`         |
 | $\neg$    | `~`   | $\cup$           | `UNION`  |                    |              |
 | $\land$   | `/\ ` | $\cap$           | `INTER`  | *Delimiters*       |              |
-| $\lor$    | `\/`  | $\subseteq$      | `SUBSET` | "..."              | `` `` ``...`` `` `` |
-| $\Rightarrow$ | `==>` | $\emptyset$  | `EMPTY`  | '...'              | `` `...` ``  |
-| $\iff$    | `<=>` | $\mathbb{U}(:\alpha)$ | `univ(:'a)` |              |              |
+| $\lor$    | `\/`  | $\subseteq$      | `SUBSET` | “...”              | ` ``...`` `  |
+| $\Rightarrow$ | `==>` | $\emptyset$  | `EMPTY`  | ‘...’              | `` `...` ``  |
+| $\iff$    | `<=>` | $\mathbb{U}(:\alpha)$ | `univ(:'a)` |              |            |
 | $\not\iff$ | `<=/=>` | $\times$      | `CROSS`  |                    |              |
+```
 
 ## HOL looks like ML
 
@@ -163,13 +163,12 @@ use a semicolon rather than a comma to separate elements.  Thus
 ```
 
 ML has three distinct types $\tau_1 \texttt{*} \tau_2 \texttt{*}
-\tau_3$, $(\tau_1 \texttt{*} \tau_2) \texttt{*} \tau_3$ and
+\tau_3$, $(\tau_1 \texttt{*} \tau_2) \texttt{*} \tau_3$, and
 $\tau_1 \texttt{*} (\tau_2 \texttt{*} \tau_3)$.  One might see
 these as a flat triple, and two flavours of pair with a nested
-pair as one or other component.  In HOL, the concrete syntax
-$\tau_1 \texttt{\#} \tau_2 \texttt{\#} \tau_3$ maps to $\tau_1
-\texttt{\#} (\tau_2 \texttt{\#} \tau_3)$ (*i.e.*, the infix `#`
-type operator is right-associative).
+pair as one or other component.
+HOL cannot model the first of these, and the concrete syntax $\tau_1 \texttt{\#} \tau_2 \texttt{\#} \tau_3$ maps to $\tau_1 \texttt{\#} (\tau_2 \texttt{\#} \tau_3)$ (*i.e.*, the infix `#` type operator is right-associative).
+One has to use parentheses to get the other association.
 
 ML uses the `op` keyword to remove infix status from function
 forms.  In HOL one can either “wrap” the operator in

@@ -43,7 +43,8 @@ SMD_MDS = $(patsubst %.smd,%.md,$(SMDS))
 # don't support directory-prefixed targets, so each figure gets an
 # explicit rule.)
 SVG_FIGS = figs/combin-confluence.svg \
-           figs/combin-confluence-complete.svg
+           figs/combin-confluence-complete.svg \
+           figs/parity-schematic.svg
 
 figs/combin-confluence.svg: figs/combin-confluence.tex
 	cd figs && pdflatex -interaction=batchmode combin-confluence.tex
@@ -57,6 +58,12 @@ figs/combin-confluence-complete.svg: figs/combin-confluence-complete.tex
 	rm -f figs/combin-confluence-complete.aux \
 	      figs/combin-confluence-complete.log \
 	      figs/combin-confluence-complete.pdf
+
+figs/parity-schematic.svg: figs/parity-schematic.tex ../LaTeX/pic-macros.tex
+	cd figs && pdflatex -interaction=batchmode parity-schematic.tex
+	pdftocairo -svg figs/parity-schematic.pdf $@
+	rm -f figs/parity-schematic.aux figs/parity-schematic.log \
+	      figs/parity-schematic.pdf
 
 # Build the mdbook output for the chapters listed in SUMMARY.md;
 # afterwards, scan the rendered HTML for raw-LaTeX leak patterns and

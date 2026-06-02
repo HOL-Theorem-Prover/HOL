@@ -85,6 +85,31 @@ New features
     effect under Moscow ML (whose `Holmake` is always
     sequential) or under Poly/ML `Holmake -j 1`.
 
+-   `Holmake` recognises a project-root marker file
+    `holproject.toml`: dropping one at the top of a multi-directory
+    development tells `Holmake` that every `Holmakefile`-bearing
+    directory below is part of the same project, and the usual
+    sub-directory `INCLUDES = ../sibling` lines tying them together
+    can be dropped.  Cross-directory rule and source resolution
+    (`open Foo` from one dir reaching a `Foo.sml` in a sibling,
+    `Ancestors X` in a theory script reaching a sibling's theory
+    products) then works automatically across the project.  The
+    file is a small TOML document declaring at minimum the project
+    name; optionally also an `[exclude]` list, an
+    `external_includes` list (for dirs outside the project tree
+    that act as implicit `INCLUDES` of every project dir), and
+    `[projects.<id>]` tables for dependencies on other projects.
+    A sibling `holproject.local.toml` is gitignored and lets
+    individual developers override `[projects.<id>].path` values.
+    Project mode activates only when `Holmake` is invoked from
+    inside a project (or at its root); a `--no-project` flag
+    suppresses it altogether.  Duplicate source names across
+    project directories (which would make `open Foo` ambiguous,
+    HOL having no per-project namespaces) abort the build with a
+    pointer at `[exclude]` as the remedy.  See the *Project
+    files* sub-section of *Maintaining HOL Formalizations with
+    Holmake* in the Description manual.
+
 Bugs fixed
 ----------
 

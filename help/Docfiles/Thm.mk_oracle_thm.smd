@@ -35,7 +35,7 @@ hereditary fashion to any theorem derived from the tagged theorem. Thus,
 if one examines a theorem with `Thm.tag` and finds that it has no tag,
 then the theorem has been derived purely by proof steps in the HOL
 logic. Otherwise, shortcuts have been taken, and the external tools,
-also known as 'oracles', used to make the shortcuts are signified by the
+also known as ‘oracles’, used to make the shortcuts are signified by the
 tags.
 
 ### Failure
@@ -51,33 +51,25 @@ In the following, we construct a tag and then make a rogue rule of
 inference.
 
 ``` hol4
-   - val tag = "SimonSays";
-   > val tag = "SimonSays" : string
+   >> val tag = "SimonSays";
 
-   - val SimonThm = mk_oracle_thm tag;
-   > val SimonThm = fn : term list * term -> thm
+   >> val SimonThm = mk_oracle_thm tag;
 
-   - val th = SimonThm ([], Term `!x. x`);
-   > val th = |- !x. x : thm
+   >> val th = SimonThm ([], Term `!x. x`);
 
-   - val th1 = SPEC F th;
-   > val th1 = |- F : thm
+   >> val th1 = SPEC F th;
 
-   - (show_tags := true; th1);
-   > val it = [oracles: SimonSays] [axioms: ] [] |- F : thm
+   >> (show_tags := true; th1);
 ```
 
 Tags accumulate in a manner similar to logical hypotheses.
 
 ``` hol4
-   - CONJ th1 th1;
-   > val it = [oracles: SimonSays] [axioms: ] [] |- F /\ F : thm
+   >> CONJ th1 th1;
 
-   - val SerenaThm = mk_oracle_thm "Serena";
-   > val SerenaThm = fn : term list * term -> thm
+   >> val SerenaThm = mk_oracle_thm "Serena";
 
-   - CONJ th1 (SerenaThm ([],T));
-   > val it = [oracles: Serena, SimonSays] [axioms: ] [] |- F /\ T : thm
+   >> CONJ th1 (SerenaThm ([],T));
 ```
 
 ### Comments
@@ -88,3 +80,5 @@ It is impossible to detach a tag from a theorem.
 
 [`Thm.add_tag`](#Thm.add_tag), [`Thm.mk_thm`](#Thm.mk_thm),
 [`Tag.read`](#Tag.read), [`Thm.tag`](#Thm.tag)
+
+>>__ show_tags := false;

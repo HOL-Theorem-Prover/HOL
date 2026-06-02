@@ -25,3 +25,5 @@ Never fails.
 
 >> Portable.pprint Tag.pp_tag (Tag.read "fooble");
 ```
+
+>>__ show_tags := false;
