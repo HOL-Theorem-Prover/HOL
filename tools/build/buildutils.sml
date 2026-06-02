@@ -508,8 +508,7 @@ fun hmakefile_data HOLDIR =
               |> env_extend ("HOLSELFTESTLEVEL", [LIT "3"])
               |> env_extend ("KERNELID", [LIT "stdknl"])
         val (env, _, _, _) = ReadHMF.diagread qdiags "Holmakefile" env0
-        fun envlist id =
-            map dequote (tokenize (perform_substitution env [VREF id]))
+        val envlist = Holmake_types.envlist qdiags env
       in
         {includes = envlist "PRE_INCLUDES" @ envlist "INCLUDES",
          extra_cleans = envlist "EXTRA_CLEANS",

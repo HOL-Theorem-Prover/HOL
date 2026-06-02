@@ -10,7 +10,8 @@ fun read fname = ReadHMF.read fname (base_environment())
    when the variable is unset (which Holmake's lookup represents
    by an empty quotation that substitutes to ""). *)
 fun lookup_val env name =
-    let val s = perform_substitution env [VREF name]
+    let val s = perform_substitution internal_functions.default_diags
+                                     env [VREF name]
     in if s = "" then NONE else SOME s
     end
 

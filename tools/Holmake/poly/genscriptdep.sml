@@ -19,8 +19,7 @@ fun get_includes () =
     let
       open Holmake_types
       val (env, _, _, _) = ReadHMF.read "Holmakefile" (base_environment())
-      fun envlist id =
-        map dequote (tokenize (perform_substitution env [VREF id]))
+      val envlist = Holmake_types.envlist internal_functions.default_diags env
     in
       envlist "PRE_INCLUDES" @ envlist "INCLUDES"
     end

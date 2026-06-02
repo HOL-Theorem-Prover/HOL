@@ -7,6 +7,16 @@ exception HolmakeError of string
 
 type loc = {file : string, line : int}
 
+type diags = {info : string -> unit,
+              warn : string -> unit,
+              die  : string -> unit}
+
+val default_diags : diags =
+    {info = HOLFileSys.println,
+     warn = fn s => HOLFileSys.stdErr_out (s ^ "\n"),
+     die  = fn s => (HOLFileSys.stdErr_out (s ^ "\n");
+                     OS.Process.exit OS.Process.failure)}
+
 fun loc_prefix (NONE : loc option) = ""
   | loc_prefix (SOME {file,line}) =
       file ^ ":" ^ Int.toString line ^ ": "
@@ -321,7 +331,7 @@ fun hol2fs s =
         NONE => s
       | SOME {fullfile,...} => fullfile
 
-fun function_call (fnname, args, eval, loc) = let
+fun function_call (diags : diags) (fnname, args, eval, loc) = let
   open Substring
   fun rejoin args = String.concatWith "," (map eval args)
 in
@@ -414,12 +424,9 @@ in
                     hol2fs (hd args_evalled)
                   end
   | "info" =>
-      (TextIO.print (rejoin args ^ "\n"); "")
+      (#info diags (rejoin args); "")
   | "warning" =>
-      (TextIO.output (TextIO.stdErr,
-                      loc_prefix loc ^ rejoin args ^ "\n");
-       TextIO.flushOut TextIO.stdErr;
-       "")
+      (#warn diags (loc_prefix loc ^ rejoin args); "")
   | "error" =>
       raise HolmakeError (loc_prefix loc ^ "*** " ^ rejoin args ^ ".  Stop.")
   | _ => raise Fail ("Unknown function name: "^fnname)

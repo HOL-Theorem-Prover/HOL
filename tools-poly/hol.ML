@@ -88,9 +88,8 @@ fun get_heap_name () =
             fun foldthis {vname,path} env = env_extend (vname, [LIT path]) env
             val env0 = holpathdb.fold foldthis (base_environment())
             val (env, _, _, _) = ReadHMF.read "Holmakefile" env0
-            fun envlist id =
-                map dequote (tokenize (perform_substitution env [VREF id]))
-            val heap_v = envlist "HOLHEAP"
+            val heap_v = Holmake_types.envlist
+                           internal_functions.default_diags env "HOLHEAP"
           in
             case heap_v of
                 [] => default

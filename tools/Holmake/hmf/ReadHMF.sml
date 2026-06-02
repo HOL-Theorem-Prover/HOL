@@ -105,8 +105,8 @@ type origin_line = { file : string, line : int, text : string }
 
 (* substitute_text: expand $(...) in a string against env.  loc is
    used only for error reports from the substitution machinery. *)
-fun substitute_text loc env s =
-    perform_substitution_at loc env
+fun substitute_text diags loc env s =
+    perform_substitution_at diags loc env
       (extract_normal_quotation (Substring.full s))
 
 (* `-include' and `sinclude' are GNU-make synonyms for the
@@ -173,7 +173,7 @@ fun read_all_lines istrm =
 
 (* `seen' is the canonical-path set of files on the current include
    stack, threaded through to detect cycles. *)
-fun flatten {env, fname, seen} =
+fun flatten diags {env, fname, seen} =
     let
       val abspath = OS.Path.mkAbsolute
                       {path=fname, relativeTo=OS.FileSys.getDir()}
@@ -194,7 +194,7 @@ fun flatten {env, fname, seen} =
       fun process_inc env n acc mandatory rest_text =
           let
             val loc = SOME {file = abspath, line = n}
-            val expanded = substitute_text loc env rest_text
+            val expanded = substitute_text diags loc env rest_text
             val paths = String.tokens Char.isSpace expanded
             val _ = if null paths then
                       raise Fail (abspath ^ ":" ^ Int.toString n ^
@@ -208,7 +208,7 @@ fun flatten {env, fname, seen} =
                   if OS.FileSys.access (incpath, [OS.FileSys.A_READ]) then
                     let
                       val (env', sub) =
-                          flatten {env=env, fname=incpath, seen=seen'}
+                          flatten diags {env=env, fname=incpath, seen=seen'}
                     in
                       (env', List.revAppend(sub, acc))
                     end
@@ -272,12 +272,12 @@ fun flatten {env, fname, seen} =
 datatype buf = B of { lines : origin_line list,
                       topname : string }
 
-fun init_buf env fname =
+fun init_buf diags env fname =
     let
       val abspath = OS.Path.mkAbsolute
                       {path=fname, relativeTo=OS.FileSys.getDir()}
-      val (_, lines) = flatten {env=env, fname=abspath,
-                                seen=Binaryset.empty String.compare}
+      val (_, lines) = flatten diags {env=env, fname=abspath,
+                                      seen=Binaryset.empty String.compare}
     in
       B { lines = lines, topname = abspath }
     end
@@ -304,7 +304,7 @@ fun error b s =
 fun bufloc b : internal_functions.loc option =
     SOME (current_origin b)
 
-fun substitute b env q = perform_substitution_at (bufloc b) env q
+fun substitute diags b env q = perform_substitution_at diags (bufloc b) env q
 
 fun read_delimited_string b dchar s = let
   (* assume s begins with dchar *)
@@ -337,14 +337,14 @@ in
   recurse (size ss - 1)
 end
 
-fun evaluate_cond b env s =
+fun evaluate_cond diags b env s =
     if String.isPrefix "ifdef" s orelse String.isPrefix "ifndef" s then let
         val (sense, sz, nm) =
             if String.sub(s,2) = #"n" then (false, 6, "ifndef")
             else (true, 5, "ifdef")
         val s' = strip_leading_wspace (String.extract(s, sz, NONE))
         val q = extract_normal_quotation (Substring.full s')
-        val s2 = substitute b env q
+        val s2 = substitute diags b env q
       in
         case String.tokens Char.isSpace s2 of
           [s] => (case lookup env s of
@@ -384,80 +384,80 @@ fun evaluate_cond b env s =
               end
         val (q1, q2) = (extract_normal_quotation (ss arg1),
                         extract_normal_quotation (ss arg2))
-        val (s1, s2) = (substitute b env q1, substitute b env q2)
+        val (s1, s2) = (substitute diags b env q1, substitute diags b env q2)
       in
         SOME ((s1 = s2) = sense)
       end
     else NONE
 
-fun getline env (condstate, b) =
+fun getline diags env (condstate, b) =
     case (currentline b, condstate) of
       (NONE, []) => (b, NONE, condstate)
     | (NONE, _ :: _) => error b "ReadHMF: unterminated conditional"
     | (SOME s, SkippingElses :: rest) => let
         val s = strip_leading_wspace s
       in
-        if String.isPrefix "endif" s then getline env (rest, advance b)
+        if String.isPrefix "endif" s then getline diags env (rest, advance b)
         else if String.isPrefix "ifdef" s orelse String.isPrefix "ifndef" s orelse
                 String.isPrefix "ifeq" s orelse String.isPrefix "ifneq" s
         then
-          getline env (SkippingElses::condstate, advance b)
+          getline diags env (SkippingElses::condstate, advance b)
         else
-          getline env (condstate, advance b)
+          getline diags env (condstate, advance b)
       end
     | (SOME s, NoTrueCondYet::rest) => let
         val s = strip_leading_wspace s
       in
-        if String.isPrefix "endif" s then getline env (rest, advance b)
+        if String.isPrefix "endif" s then getline diags env (rest, advance b)
         else if String.isPrefix "if" s then
-          getline env (SkippingElses :: condstate, advance b)
+          getline diags env (SkippingElses :: condstate, advance b)
         else if String.isPrefix "else" s then let
             val s = strip_leading_wspace (String.extract(s, 4, NONE))
           in
             if String.isPrefix "if" s then
-              case evaluate_cond b env s of
+              case evaluate_cond diags b env s of
                 NONE => error b "ReadHMF: bogus string following else"
-              | SOME false => getline env (condstate, advance b)
-              | SOME true => getline env (GrabbingText::rest, advance b)
-            else if s = "" then getline env (GrabbingText::rest, advance b)
+              | SOME false => getline diags env (condstate, advance b)
+              | SOME true => getline diags env (GrabbingText::rest, advance b)
+            else if s = "" then getline diags env (GrabbingText::rest, advance b)
             else error b "ReadHMF: bogus string following else"
           end
-        else getline env (condstate, advance b)
+        else getline diags env (condstate, advance b)
       end
     | (SOME s0, _) => let
         val s = strip_leading_wspace s0
       in
         if String.isPrefix "endif" s then
           if null condstate then error b "ReadHMF: unpaired endif"
-          else getline env (tl condstate, advance b)
+          else getline diags env (tl condstate, advance b)
         else if String.isPrefix "else" s then
           if null condstate then error b "ReadHMF: unpaired else"
-          else getline env (SkippingElses::tl condstate, advance b)
+          else getline diags env (SkippingElses::tl condstate, advance b)
         else if String.isPrefix "if" s then
-          case evaluate_cond b env s of
+          case evaluate_cond diags b env s of
             NONE => (b, SOME s0, condstate)
-          | SOME false => getline env (NoTrueCondYet::condstate, advance b)
-          | SOME true => getline env (GrabbingText::condstate, advance b)
+          | SOME false => getline diags env (NoTrueCondYet::condstate, advance b)
+          | SOME true => getline diags env (GrabbingText::condstate, advance b)
         else (b, SOME s0, condstate)
       end
 
-fun read_commands env (cs,b) head =
-    case getline env (cs, b) of
+fun read_commands diags env (cs,b) head =
+    case getline diags env (cs, b) of
       (b, NONE, cs) => ((cs, b), RULE head)
     | (b, SOME s, cs) => let
         val s' = strip_leading_wspace s
       in
         if s' = "" orelse String.sub(s',0) = #"#" then
-          read_commands env (cs, advance b) head
+          read_commands diags env (cs, advance b) head
         else
           case String.sub(s',0) of
-            #"\t" => read_commands env (cs, advance b) (head ^ s' ^ "\n")
+            #"\t" => read_commands diags env (cs, advance b) (head ^ s' ^ "\n")
           | c => ((cs, b), RULE head)
       end
 
 
-fun process_line env (condstate, b) = let
-  val (b, line_opt, condstate) = getline env (condstate, b)
+fun process_line diags env (condstate, b) = let
+  val (b, line_opt, condstate) = getline diags env (condstate, b)
 in
   case line_opt of
     NONE => ((condstate, b), EOF)
@@ -465,7 +465,7 @@ in
       val s' = strip_leading_wspace s
     in
       if s' = "" orelse String.sub(s',0) = #"#" then
-        process_line env (condstate, advance b)
+        process_line diags env (condstate, advance b)
       else let
           val c1 = String.sub(s',0)
         in
@@ -480,10 +480,10 @@ in
                     let
                       val txt = strip_trailing_comment s'
                       val q = extract_normal_quotation (Substring.full txt)
-                      val result = substitute b env q
+                      val result = substitute diags b env q
                     in
                       if CharVector.all Char.isSpace result then
-                        process_line env (condstate, advance b)
+                        process_line diags env (condstate, advance b)
                       else
                         error b ("Top-level expression has non-empty \
                                  \expansion: \"" ^ result ^ "\"")
@@ -495,6 +495,7 @@ in
               | SOME "+=" => ((condstate, advance b),
                               DEFN_EXTEND (strip_trailing_comment s))
               | SOME ":" => read_commands
+                                 diags
                                  env
                                  (condstate, advance b)
                                  (strip_trailing_comment s' ^ "\n")
@@ -510,7 +511,7 @@ fun readall diags fname
       fun aug f s = f ("*** " ^ fname ^ ": " ^ s)
       val warn = aug warn0 and die = aug die0 and info = aug info0
       fun recurse (acc as (tgt1,env,ruledb,depdb,patrules,defs_seen)) csb =
-          case process_line env csb of
+          case process_line diags env csb of
               (csb as (cs, b), EOF) =>
               let
                 val _ = close_buf b
@@ -543,7 +544,7 @@ fun readall diags fname
                  | HM_rule rinfo =>
                    let
                      val (rdb',depdb',patrules',tgts) =
-                         extend_ruledb warn env rinfo
+                         extend_ruledb diags warn env rinfo
                                        (ruledb,depdb,patrules)
                      val tgt1' =
                          case tgt1 of
@@ -561,27 +562,33 @@ fun diagread diags fname env =
                          Binarymap.mkDict String.compare,
                          empty_patrules,
                          Binaryset.empty String.compare)
-            (empty_condstate, init_buf env fname)
+            (empty_condstate, init_buf diags env fname)
 
-fun dflt_warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
-val read =
-    diagread {warn = dflt_warn,
-              die = fn s => (dflt_warn s ; OS.Process.exit OS.Process.failure),
-              info = fn s => (TextIO.print (s ^ "\n"))}
+val read = diagread internal_functions.default_diags
 
-fun readlist e vref =
-  map dequote (tokenize (perform_substitution e [VREF vref]))
+fun readlist diags e vref =
+  map dequote (tokenize (perform_substitution diags e [VREF vref]))
 
 
 fun find_includes0 dirname =
   let
-    fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
+    (* Pre-exec INCLUDES discovery: parse silently regardless of -q/-v
+       but keep $(error) live so it aborts this parse and the surrounding
+       handler treats the file as bogus.  The main graph-build parse
+       re-reads the same Holmakefile with the real diag channels, so any
+       $(info)/$(warning) fires exactly once then. *)
+    val silent_diags : internal_functions.diags =
+        {info = fn _ => (),
+         warn = fn _ => (),
+         die  = fn s => raise internal_functions.HolmakeError s}
+    val warn = #warn internal_functions.default_diags
     val hm_fname = OS.Path.concat(dirname, "Holmakefile")
   in
     if OS.FileSys.access(hm_fname, [OS.FileSys.A_READ]) then
       let
-        val (e, _, _, _) = read hm_fname (base_environment())
-        val raw_incs = readlist e "INCLUDES" @ readlist e "PRE_INCLUDES"
+        val (e, _, _, _) = diagread silent_diags hm_fname (base_environment())
+        val raw_incs = readlist silent_diags e "INCLUDES" @
+                       readlist silent_diags e "PRE_INCLUDES"
       in
         map (fn p => OS.Path.mkAbsolute {path = p, relativeTo = dirname})
             raw_incs
@@ -623,9 +630,15 @@ fun extend_path_with_includes0 (A as (visited,prem,postm)) dir verbosity =
           in
             List.foldl foldthis (base_environment()) extensions
           end
+          (* The cwd Holmakefile is not re-parsed through here -- it's
+             read once via diagread in Holmake.sml's get_hmf0 with the
+             real channels.  This call services ancestors' Holmakefiles
+             during INCLUDES traversal. *)
           val (env, _, _, _) = read (dir ++ "Holmakefile") base_env
           fun envlist id =
-              map dequote (tokenize (perform_substitution env [VREF id]))
+              map dequote (tokenize (perform_substitution
+                                       internal_functions.default_diags
+                                       env [VREF id]))
           fun diag nm incs =
               if null incs orelse verbosity < 2 then ()
               else

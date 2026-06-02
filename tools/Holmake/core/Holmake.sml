@@ -25,12 +25,7 @@ fun slist_to_dset basedir slist =
       (Binaryset.empty hmdir.compare) slist
 fun deplist_to_set ds = Binaryset.addList(hm_target.empty_tgtset, ds)
 val filestr_to_tgt = hm_target.filestr_to_tgt
-(* turn a variable name into a list *)
-fun envlist env id = let
-  open Holmake_types
-in
-  map dequote (tokenize (perform_substitution env [VREF id]))
-end
+val envlist = Holmake_types.envlist
 
 fun chattiness_level (switches : HM_Core_Cline.t) =
   case (#debug switches, #verbose switches, #quiet switches) of
@@ -160,6 +155,16 @@ val {warn=warn0,info=info0,diag=diag0,...} =
       output_functions {chattiness = chattiness_level master_cline_option_value,
                         debug = #debug master_cline_option_value,
                         usepfx = usepfx}
+
+(* Diag channels handed to ReadHMF parsing.  The info/warn fields are
+   the same output_functions channels that respect -q/-v/-d, so any
+   $(info)/$(warning) inside a Holmakefile naturally honours the
+   command-line chattiness setting.  die is the unprefixed die_raw
+   used by parser-internal "Bogus Holmakefile" failures; $(error)
+   itself still raises HolmakeError, caught by Holmake.sml's top
+   level. *)
+val hmf_diags : internal_functions.diags =
+    {info = info0, warn = warn0, die = die_raw}
 
 val _ = diag0 "startup"
           (fn _ => "Started and have initial diagnostic/messaging functions")
@@ -402,7 +407,7 @@ local
       if FileSys.access("Holmakefile", [FileSys.A_READ]) then
         let
           val (env, rdb, prs, tgt0) =
-              ReadHMF.diagread {warn=warn0,die=die,info=info0}
+              ReadHMF.diagread hmf_diags
                                "Holmakefile"
                                (extend_with_cline_vars (read_holpathdb()))
               handle internal_functions.HolmakeError s => die_raw s
@@ -436,8 +441,8 @@ fun get_hmf_for_dir absdir =
                            raise e)
           val () = if need_chdir then FileSys.chDir cur else ()
           val dir_hm = hmdir.fromPath {origin = "", path = absdir}
-          val incs = envlist env "INCLUDES" |> slist_to_dset dir_hm
-          val pres = envlist env "PRE_INCLUDES" |> slist_to_dset dir_hm
+          val incs = envlist hmf_diags env "INCLUDES" |> slist_to_dset dir_hm
+          val pres = envlist hmf_diags env "PRE_INCLUDES" |> slist_to_dset dir_hm
         in
           hmcache := Binarymap.insert (!hmcache, absdir, result);
           mark_known absdir;
@@ -474,7 +479,7 @@ fun limit_for_dir (d : hmdir.t) : int option =
       case Binarymap.peek(!hmcache, absdir) of
           NONE => NONE
         | SOME (env, _, _, _) =>
-          case envlist env "LOCAL_PARALLELISM_LIMIT" of
+          case envlist hmf_diags env "LOCAL_PARALLELISM_LIMIT" of
               [] => NONE
             | [s] =>
               (case Int.fromString s of
@@ -494,8 +499,8 @@ end
 fun getnewincs dir =
     let
       val (env, _, _, _) = get_hmf()
-      val raw_incs = envlist env "INCLUDES" |> slist_to_dset dir
-      val raw_pres = envlist env "PRE_INCLUDES" |> slist_to_dset dir
+      val raw_incs = envlist hmf_diags env "INCLUDES" |> slist_to_dset dir
+      val raw_pres = envlist hmf_diags env "PRE_INCLUDES" |> slist_to_dset dir
       val abs_dir = hmdir.toAbsPath dir
 
       val excl_set = Binaryset.addList
@@ -531,7 +536,7 @@ val (cline_hmakefile, cline_nohmf) =
 
 fun get_hmf_cline_updates hmenv =
   let
-    val hmf_cline = envlist hmenv "CLINE_OPTIONS"
+    val hmf_cline = envlist hmf_diags hmenv "CLINE_OPTIONS"
     val (hmf_options, _, hmf_rest) = getcline hmf_cline
     val _ = if null hmf_rest then ()
             else
@@ -552,7 +557,7 @@ val starting_holmakefile =
 
 val (start_hmenv, start_rules, start_patrules, start_tgt) = get_hmf()
 
-val start_envlist = envlist start_hmenv
+val start_envlist = envlist hmf_diags start_hmenv
 val start_options = start_envlist "OPTIONS"
 
 val option_value : HM_Cline.t =
@@ -842,7 +847,7 @@ fun get_rule_info rdb env tgt =
                       |> env_extend("@", [LIT hmftext])
       in
         SOME {dependencies = dependencies,
-              commands = map (perform_substitution env) commands}
+              commands = map (perform_substitution hmf_diags env) commands}
       end
 
 (* Look up the rule for `t`.  A rule belongs to whichever Holmakefile
@@ -958,7 +963,7 @@ fun pattern_rule_info t =
               exists_readable dep_s orelse
               isSome (Binarymap.peek (rules, filestr_to_tgt dep_s))
         in
-          case match_pattern_rules can_make env prs tgt_s of
+          case match_pattern_rules hmf_diags can_make env prs tgt_s of
               NONE => NONE
             | SOME {dependencies, commands} =>
               SOME {dependencies = map filestr_to_tgt dependencies,
@@ -1016,7 +1021,7 @@ fun extra_rule_for t =
 fun dir_varying_envlist s =
     let val (env, _, _, _) = get_hmf()
     in
-      envlist env s
+      envlist hmf_diags env s
     end
 
 fun extra_cleans() = dir_varying_envlist "EXTRA_CLEANS"
@@ -1320,7 +1325,7 @@ let
   val (env, _, _, _) = get_hmf_for_dir (hmdir.toAbsPath rh)
   val extra = GraphExtra.get_extra { master_dir = original_dir,
                                      master_cline = option_value,
-                                     envlist = envlist env }
+                                     envlist = envlist hmf_diags env }
   val extra_deps = if GraphExtra.canIgnore tgt extra then []
                    else GraphExtra.extra_deps extra
   val diag = fn f => diag "builddepgraph"

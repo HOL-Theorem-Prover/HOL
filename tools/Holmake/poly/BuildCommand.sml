@@ -514,11 +514,14 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     let
       open Holmake_types
       val isHolmosmlcc =
-          String.isPrefix (perform_substitution hm_env [VREF "HOLMOSMLC-C"]) c
+          String.isPrefix (perform_substitution internal_functions.default_diags
+                                                hm_env [VREF "HOLMOSMLC-C"]) c
       val isHolmosmlc =
-          String.isPrefix (perform_substitution hm_env [VREF "HOLMOSMLC"]) c
+          String.isPrefix (perform_substitution internal_functions.default_diags
+                                                hm_env [VREF "HOLMOSMLC"]) c
       val isMosmlc =
-          String.isPrefix (perform_substitution hm_env [VREF "MOSMLC"]) c
+          String.isPrefix (perform_substitution internal_functions.default_diags
+                                                hm_env [VREF "MOSMLC"]) c
       val {diag,...} = outs
       val diag = diag "mosml_build"
     in

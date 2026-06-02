@@ -258,7 +258,7 @@ in
   recurse 0 0 0 []
 end
 
-fun perform_substitution_at loc env q = let
+fun perform_substitution_at (diags : internal_functions.diags) loc env q = let
   open Substring
   fun envfn s =
       case Binarymap.peek(env, s) of
@@ -287,7 +287,7 @@ fun perform_substitution_at loc env q = let
                                  (dropl Char.isSpace
                                         (dropr Char.isSpace spc_rest))
                 in
-                  [LIT (function_call (fnname, args, eval, loc))]
+                  [LIT (function_call diags (fnname, args, eval, loc))]
                 end
               else let
                   val varname = eval ss
@@ -305,7 +305,7 @@ in
   finisher (recurse [] q)
 end
 
-val perform_substitution = perform_substitution_at NONE
+fun perform_substitution diags = perform_substitution_at diags NONE
 
 fun dequote s = let
   open Substring
@@ -328,6 +328,9 @@ fun dequote s = let
 in
   recurse [] ss
 end
+
+fun envlist diags env vname =
+    map dequote (tokenize (perform_substitution diags env [VREF vname]))
 
 fun is_pseudo_target s = s = ".PHONY"
 
@@ -358,9 +361,9 @@ fun pct_count s =
 
 fun has_pct s = pct_count s <> NoPct
 
-fun extend_ruledb warn env {targets,dependencies,commands} (rdb,ddb,prs) = let
-  val tgts = map dequote (tokenize (perform_substitution env targets))
-  val deps = map dequote (tokenize (perform_substitution env dependencies))
+fun extend_ruledb diags warn env {targets,dependencies,commands} (rdb,ddb,prs) = let
+  val tgts = map dequote (tokenize (perform_substitution diags env targets))
+  val deps = map dequote (tokenize (perform_substitution diags env dependencies))
   val (pct_tgts, lit_tgts) = List.partition has_pct tgts
 in
   if not (null pct_tgts) then
@@ -409,7 +412,7 @@ fun ins (k,v) env = Binarymap.insert(env,k,v)
 infix |>
 fun x |> f = f x
 
-fun get_rule_info rdb env tgt =
+fun get_rule_info diags rdb env tgt =
     case Binarymap.peek(rdb, tgt) of
       NONE => NONE
     | SOME {dependencies, commands} => let
@@ -417,10 +420,10 @@ fun get_rule_info rdb env tgt =
         val env = env |> ins("<", dep1) |> ins("@", [LIT tgt])
       in
         SOME {dependencies = dependencies,
-              commands = map (perform_substitution env) commands}
+              commands = map (perform_substitution diags env) commands}
       end
 
-fun match_pattern_rules can_make env prs tgt =
+fun match_pattern_rules diags can_make env prs tgt =
     let
       fun first_stem [] = NONE
         | first_stem (pat :: rest) =
@@ -447,7 +450,7 @@ fun match_pattern_rules can_make env prs tgt =
                                                                    concrete_deps)])
                     in
                       SOME {dependencies = concrete_deps,
-                            commands = map (perform_substitution env) commands}
+                            commands = map (perform_substitution diags env) commands}
                     end
                 end
     in

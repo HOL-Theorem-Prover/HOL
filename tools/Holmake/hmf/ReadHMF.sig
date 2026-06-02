@@ -6,8 +6,7 @@ sig
   type patrules = Holmake_types.patrules
   val read : string -> env -> env * ruledb * patrules * string option
 
-  val diagread: {warn : string -> unit, info : string -> unit,
-                 die : string -> unit } ->
+  val diagread: internal_functions.diags ->
                 string -> env -> env * ruledb * patrules * string option
 
   val find_includes : string -> string list

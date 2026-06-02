@@ -24,9 +24,17 @@ val env_fold : (string -> quotation -> 'b -> 'b) -> env -> 'b -> 'b
 
 val to_token : env -> pretoken -> token
 
-val perform_substitution : env -> quotation -> string
-val perform_substitution_at : internal_functions.loc option ->
-                              env -> quotation -> string
+val perform_substitution :
+    internal_functions.diags -> env -> quotation -> string
+val perform_substitution_at :
+    internal_functions.diags -> internal_functions.loc option ->
+    env -> quotation -> string
+
+(* envlist diags env vname expands $(vname) against env (firing any
+   $(info)/$(warning) it triggers through diags) and tokenises the
+   result on whitespace.  Most callers want this rather than the raw
+   perform_substitution. *)
+val envlist : internal_functions.diags -> env -> string -> string list
 
 val tokenize : string -> string list
 val dequote : string -> string
@@ -48,26 +56,33 @@ type patrule = {targets : string list, deps : string list,
 type patrules = patrule list
 val empty_ruledb : ruledb
 val empty_patrules : patrules
-val extend_ruledb : (string -> unit) -> env -> raw_rule_info ->
+val extend_ruledb : internal_functions.diags ->
+                    (string -> unit) -> env -> raw_rule_info ->
                     (ruledb * depdb * patrules) ->
                     (ruledb * depdb * patrules * string list)
-val get_rule_info : ruledb -> env -> string -> rule_info option
+val get_rule_info : internal_functions.diags ->
+                    ruledb -> env -> string -> rule_info option
 val match_pattern_rules :
+    internal_functions.diags ->
     (string -> bool) -> env -> patrules -> string -> rule_info option
 
 (*
 
-   [extend_ruledb warn env rule_info (rdb,ddb,prs)] returns a quadruple
-   of a rule database, dependency database, list of pattern rules, and
-   the non-pattern targets of the rule (used by callers to track the
-   first explicit target, which becomes the default goal).
+   [extend_ruledb diags warn env rule_info (rdb,ddb,prs)] returns a
+   quadruple of a rule database, dependency database, list of pattern
+   rules, and the non-pattern targets of the rule (used by callers to
+   track the first explicit target, which becomes the default goal).
 
    The rdb/ddb databases map exact-match target names to dependency
    and command information (via get_rule_info).  Pattern rules are
    appended to the patrules list in source order.  The warn function
-   is used to output warning messages about the rule_info.
+   is used to output warning messages about the rule_info.  diags
+   reaches the side-effecting GNU-make-compat functions
+   ($(info)/$(warning)) that may fire when targets or dependencies
+   contain $-references; pass internal_functions.default_diags from
+   contexts that don't have Holmake's chattiness machinery.
 
-   [match_pattern_rules can_make env prs tgt] walks prs in order,
+   [match_pattern_rules diags can_make env prs tgt] walks prs in order,
    returning the rule_info of the first pattern rule that (a) has a
    target pattern matching tgt and (b) whose every substituted
    dependency satisfies can_make.  can_make is the caller's
