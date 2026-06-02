@@ -120,9 +120,9 @@ Type state = “:num”
 
 The above describes a *deterministic* automaton: given its current
 state and input symbol, there is one and only one next state it can go
-to. Formally, a DFA is defined to be a 5-tuple \\(\langle Q,\Sigma,\delta,S,F
-\rangle \\), where *Q* is a finite set of states, \\(\Sigma\\) is a
-finite set of symbols from which *words* may be formed, \\(\delta\\)
+to. Formally, a DFA is defined to be a 5-tuple $\langle Q,\Sigma,\delta,S,F
+\rangle $, where *Q* is a finite set of states, $\Sigma$ is a
+finite set of symbols from which *words* may be formed, $\delta$
 is a transition function, *S* is the start state, and *F* is a set of
 final states. This 5-tuple is modelled by a record with 5 fields:
 
@@ -219,16 +219,16 @@ End
 ```
 
 A step of NFA evaluation `Delta N qset a` moves from the (possibly
-empty) set of states \\(\mathit{qset} = \\{q_1, \ldots, q_n\\} \\) to
+empty) set of states $\mathit{qset} = \{q_1, \ldots, q_n\} $ to
 a successor set of states by
 
-1. For each \\(q_i \in \\mathit{qset}\\), an `N.delta` step is made on
-   symbol `a`, delivering a finite set of \\(q_i\\)-successors.
+1. For each $q_i \in \mathit{qset}$, an `N.delta` step is made on
+   symbol `a`, delivering a finite set of $q_i$-successors.
 
 2. This gives a set of sets which all get unioned together:
-\\[
- N.delta\\; q_1 \\; a \cup \ldots\cup  N.delta\\; q_n\\; a
-\\]
+$$
+ N.delta\; q_1 \; a \cup \ldots\cup  N.delta\; q_n\; a
+$$
 
 This is expressed by the following definition:
 
@@ -1559,10 +1559,10 @@ how our "Final Result" relates to standard presentations.
 
 1. Another way to approach NFA execution---in fact the standard
    way---is to base it on execution traces. For an NFA *N* we say
-   that a list of states \\(\\mathit{qs} = [q_0, \\ldots q_n ] \\)
+   that a list of states $\mathit{qs} = [q_0, \ldots q_n]$
    drawn from `N.Q` is an *execution trace* for word *w* if
-   \\(\\mathit{qs}_{i+1} \in N.delta\\; \\mathit{qs}_i \\; w_i \\)
-   holds for each \\(i \in \\{0, \ldots, |w| - 1 \\} \\). This can be
+   $\mathit{qs}_{i+1} \in N.delta\; \mathit{qs}_i \; w_i$
+   holds for each $i \in \{0, \ldots, |w| - 1 \}$. This can be
    formulated as a recursive definition in the following way:
 
    ```
