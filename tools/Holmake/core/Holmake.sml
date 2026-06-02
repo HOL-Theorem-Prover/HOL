@@ -1463,8 +1463,7 @@ in
                           null unbuilt_deps andalso
                           theory_dat_succeeded ()
                        then (true, g2)
-                       else (false, g2)
-                   | _ => (false, g2))
+                       else (false, g2))
           val needs_building =
               not cachekey_uptodate andalso
               (not (null unbuilt_deps) orelse
