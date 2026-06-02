@@ -31,6 +31,8 @@ Never fails.
 >> mk_primed_var("x", bool);
 ```
 
+>>__ Theory.delete_const "x";
+
 ### See also
 
 [`Term.genvar`](#Term.genvar), [`Term.variant`](#Term.variant)
