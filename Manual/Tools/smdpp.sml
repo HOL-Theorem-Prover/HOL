@@ -279,12 +279,25 @@ fun protectMath s =
         | #"*"  => emitStr "\\*" acc
         | _ => c :: acc
     (* Test whether position i starts a fenced-code-block delimiter:
-       three backticks at the start of a line (any leading
-       whitespace).  Return SOME (delim length) if so. *)
+       three backticks following nothing but blockquote markers (`>`)
+       and whitespace back to the start of the line.  Allowing the
+       blockquote prefix is what lets a ```...``` fence nested inside
+       a `> ` blockquote register as a code block here -- otherwise a
+       stray `$` inside such a fenced block flips protectMath into
+       math mode and over-escapes underscores throughout the rest of
+       the file. *)
+    fun atFenceLineStart i =
+      if i = 0 then true
+      else case sub (s, i-1) of
+              #"\n" => true
+            | #" " => atFenceLineStart (i-1)
+            | #"\t" => atFenceLineStart (i-1)
+            | #">" => atFenceLineStart (i-1)
+            | _ => false
     fun fenceAt i =
       if i + 2 < sz andalso sub (s, i) = #"`"
          andalso sub (s, i+1) = #"`" andalso sub (s, i+2) = #"`"
-         andalso (i = 0 orelse sub (s, i-1) = #"\n")
+         andalso atFenceLineStart i
       then SOME 3
       else NONE
     (* In "outside" state: looking for $...$ math, code spans, or
