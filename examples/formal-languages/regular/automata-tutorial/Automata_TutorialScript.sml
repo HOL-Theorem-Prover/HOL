@@ -176,19 +176,17 @@ QED
 Theorem wf_nfa_to_dfa:
   wf_nfa N ⇒ wf_dfa (nfa_to_dfa N)
 Proof
-  rw [wf_nfa_def, wf_dfa_def, nfa_to_dfa_def]
-  >- (irule SUBSET_FINITE >>
-      qexists_tac ‘IMAGE enc (POW N.Q)’ >> conj_tac
-      >- metis_tac [IMAGE_FINITE,FINITE_POW] >>
-      rw [SUBSET_DEF] >> irule_at Any EQ_REFL >>
+  rw [wf_nfa_def, wf_dfa_def]
+  >- (‘FINITE $ IMAGE enc $ POW N.Q’ by
+         metis_tac [FINITE_POW, IMAGE_FINITE] >>
+      irule SUBSET_FINITE >>
+      first_x_assum $ irule_at (Pos hd) >>
       rw[IN_POW,SUBSET_DEF])
-  >- metis_tac[]
-  >- (rw [SUBSET_DEF] >> metis_tac[])
-  >- (DEP_REWRITE_TAC[codec] >>
-      simp [Delta_def] >>
-      conj_tac >- rw [wf_nfa_def] >>
-      irule_at Any EQ_REFL >>
-      gvs [SUBSET_DEF] >> metis_tac[])
+  >- metis_tac []
+  >- (rw [SUBSET_DEF] >> metis_tac [])
+  >- (irule_at Any EQ_REFL >>
+      DEP_REWRITE_TAC[codec] >>
+      metis_tac [Delta_subset, wf_nfa_def])
 QED
 
 (*---------------------------------------------------------------------------*)
