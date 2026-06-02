@@ -8,10 +8,18 @@ INCLUDES = ../Tools ../Reference ../../examples/probability \
 THIS = Description
 include ../mdbook.mk
 
-TEX_CORES = description title preface system conv drules tactics \
-	theories math definitions libraries misc HolSat HolQbf HolSmt \
-	PatternMatchesLib QuantHeuristics enumfset simplifier \
-	latex-munger modern-syntax
+# Pull CHAPTER_STEMS in from a generated chapter-stems.mk so
+# TEX_CORES tracks chapters.txt (both top-level chapters and
+# nested sub-files) automatically.  The .mk is built by the rule
+# below from gen_chap_lists; on a fresh checkout run
+# `Holmake chapter-stems.mk' once before the PDF or mdbook
+# targets (sinclude lets that bootstrap step succeed).
+sinclude chapter-stems.mk
+$(if $(CHAPTER_STEMS),,\
+  $(warning chapter-stems.mk not yet built; \
+            run `Holmake chapter-stems.mk' first))
+
+TEX_CORES = description title preface $(CHAPTER_STEMS)
 
 TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex \
               chapters-include.tex book-title.tex \
@@ -133,6 +141,9 @@ SUMMARY.md: ../Tools/gen_chap_lists chapters.txt book.toml $(SMDS)
 chapters-include.tex: ../Tools/gen_chap_lists chapters.txt
 	../Tools/gen_chap_lists latex-include > $@
 
+chapter-stems.mk: ../Tools/gen_chap_lists chapters.txt
+	../Tools/gen_chap_lists stems > $@
+
 # Generate a one-line LaTeX macro file whose body is the book
 # title from book.toml; title.tex and description.tex (via
 # \HOLbookTitle) consume it.  Keeps the PDF cover and the
@@ -230,7 +241,8 @@ EXTRA_CLEANS = $(SMD_MDS) $(patsubst %.smd,%.tex,$(SMDS)) \
                description.toc description.fls description.idx description.ilg \
                description.ind description.blg description.bbl \
                description.fdb_latexmk \
-               chapters-include.tex book-title.tex SUMMARY.md \
+               chapters-include.tex chapter-stems.mk \
+               book-title.tex SUMMARY.md \
                references.md cite-labels.tsv labels.tsv \
                $(SVG_FIGS) \
                ../book/Description/

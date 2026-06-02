@@ -5,14 +5,22 @@ INCLUDES = ../Tools ../Reference
 THIS = Tutorial
 include ../mdbook.mk
 
+# Pull CHAPTER_STEMS in from a generated chapter-stems.mk so
+# TEX_CORES tracks chapters.txt automatically.  The .mk is built
+# by the rule below from gen_chap_lists; on a fresh checkout run
+# `Holmake chapter-stems.mk' once before the PDF or mdbook
+# targets (sinclude lets that bootstrap step succeed).
+sinclude chapter-stems.mk
+$(if $(CHAPTER_STEMS),,\
+  $(warning chapter-stems.mk not yet built; \
+            run `Holmake chapter-stems.mk' first))
+
 # Core LaTeX file stems that contribute to tutorial.pdf.  Front
-# matter (title, preface) is still hand-coded in tutorial.tex;
-# everything else is wired in through chapters-include.tex which
-# gen_chap_lists generates from chapters.txt.  The bibliography is
-# now produced from tutorial.bib via natbib (see tutorial.pdf
-# recipe below), mirroring Manual/Description/.
-TEX_CORES = tutorial title preface intro ml writinghol euclid \
-            parity combin proof-tools more-examples automata
+# matter (title, preface) is hand-coded in tutorial.tex; the
+# chapter stems come from chapters.txt via CHAPTER_STEMS.  The
+# bibliography is produced from tutorial.bib via natbib (see
+# tutorial.pdf recipe below), mirroring Manual/Description/.
+TEX_CORES = tutorial title preface $(CHAPTER_STEMS)
 
 TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex \
               chapters-include.tex book-title.tex tutorial.bib \
@@ -109,6 +117,9 @@ SUMMARY.md: ../Tools/gen_chap_lists chapters.txt book.toml $(SMDS)
 chapters-include.tex: ../Tools/gen_chap_lists chapters.txt
 	../Tools/gen_chap_lists latex-include > $@
 
+chapter-stems.mk: ../Tools/gen_chap_lists chapters.txt
+	../Tools/gen_chap_lists stems > $@
+
 # Generate a one-line LaTeX macro file whose body is the book
 # title from book.toml; title.tex and tutorial.tex (via
 # \HOLbookTitle) consume it.  Keeps the PDF cover and the
@@ -184,7 +195,7 @@ proof-tools.md: ../../examples/dpll.sml
 
 EXTRA_CLEANS = $(SMD_MDS) $(patsubst %.smd,%.tex,$(SMDS)) \
                tutorial.pdf SUMMARY.md chapters-include.tex \
-               book-title.tex \
+               chapter-stems.mk book-title.tex \
                references.md cite-labels.tsv labels.tsv \
                $(patsubst %,%.aux,$(TEX_CORES)) \
                tutorial.log tutorial.out tutorial.toc \
