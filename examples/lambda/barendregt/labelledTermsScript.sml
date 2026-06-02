@@ -8,7 +8,7 @@ Libs
 val _ = (repcode := "lrep");
 val _ = (rprefix := "l");
 
-val {tynames, rep_t, lp} =
+val {tynames, tydata, rep_t, lp, operinfo} =
     nominal_datatype
       ‘lterm = VAR 'free
              | APP lterm lterm
@@ -18,63 +18,15 @@ val {tynames, rep_t, lp} =
 val tyname = hd tynames; (* "lterm" *)
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
-     termP, absrep_id, repabs_pseudo_id, newty, term_REP_t, term_ABS_t,...} =
-    new_type_step1 tyname 0 [] {lp = lp};
+     termP, absrep_id, repabs_pseudo_id, newty, term_REP_t, term_ABS_t} =
+    hd tydata;
 
 val _ = temp_overload_on ("termP", termP)
 
-val glam = genind_lam
-val qnewty = ty_antiq newty
-
-fun defined_const th = th |> concl |> strip_forall |> #2 |> lhs |> repeat rator
-
-val LAM_t = mk_var("LAM", “:string -> ^newty -> ^newty”)
-val LAM_def = new_definition(
-  "LAM_def",
-  “^LAM_t v t = ^term_ABS_t (GLAM v [] lLAM [^term_REP_t t] [])”);
-val LAM_termP = prove(
-  mk_comb(termP, LAM_def |> SPEC_ALL |> concl |> rhs |> rand),
-  match_mp_tac glam >> srw_tac [][genind_term_REP])
-val LAM_t = defined_const LAM_def
-
-(* NOTE: in ‘(LAMi n v t1) t2’, only t1 is bounded (by v), t2 is not. *)
-val LAMi_t = mk_var("LAMi", “:num -> string -> ^newty -> ^newty -> ^newty”)
-val LAMi_def = new_definition(
-  "LAMi_def",
-  “^LAMi_t n v t1 t2 =
-      ^term_ABS_t (GLAM v [] (lLAMi n) [^term_REP_t t1] [^term_REP_t t2])”);
-val LAMi_termP = prove(
-  mk_comb(termP, LAMi_def |> SPEC_ALL |> concl |> rhs |> rand),
-  match_mp_tac glam >> srw_tac [][genind_term_REP]);
-val LAMi_t = defined_const LAMi_def
-
-val APP_t = mk_var("APP", “:^newty -> ^newty -> ^newty”)
-val APP_pattern = “GLAM v [] lAPP [] [^term_REP_t t1; ^term_REP_t t2]”
-val APP_def = new_definition(
-  "APP_def",
-  “^APP_t t1 t2 =
-      ^term_ABS_t ^(subst [“v:string” |-> “ARB:string”] APP_pattern)”);
-val APP_t = defined_const APP_def
-val APP_termP = prove(
-  mk_comb(termP, APP_pattern),
-  match_mp_tac glam >> srw_tac [][genind_term_REP]);
-
-val APP_def' = prove(
-  “^term_ABS_t ^APP_pattern = ^APP_t t1 t2”,
-  srw_tac [][APP_def, GLAM_NIL_EQ, term_ABS_pseudo11, APP_termP]);
-
-val VAR_t = mk_var("VAR", “:string -> ^newty”)
-val VAR_pattern = “GLAM u [v] lVAR [][]”
-val VAR_def = new_definition(
-  "VAR_def",
-  “^VAR_t v = ^term_ABS_t ^(subst [“u:string” |-> “ARB:string”] VAR_pattern)”);
-val VAR_t = defined_const VAR_def
-val VAR_termP = prove(
-  mk_comb(termP, VAR_pattern),
-  match_mp_tac glam >> srw_tac [][genind_term_REP]);
-val VAR_def' = prove(
-  “^term_ABS_t ^VAR_pattern = ^VAR_t v”,
-  srw_tac[][VAR_def, GLAM_NIL_EQ, term_ABS_pseudo11, VAR_termP])
+val (LAM_t,  LAM_termP,  LAM_def,  NONE)          = Lib.assoc "LAM" operinfo;
+val (LAMi_t, LAMi_termP, LAMi_def, NONE)          = Lib.assoc "LAMi" operinfo;
+val (APP_t,  APP_termP,  APP_def,  SOME APP_def') = Lib.assoc "APP" operinfo;
+val (VAR_t,  VAR_termP,  VAR_def,  SOME VAR_def') = Lib.assoc "VAR" operinfo;
 
 val cons_info =
     [{con_termP = VAR_termP, con_def = SYM VAR_def'},
@@ -100,7 +52,6 @@ Proof
   METIS_TAC [pmact_inverse]
 QED
 
-(* support *)
 (* support *)
 val term_REP_eqv = prove(
    “support (fn_pmact ^t_pmact_t gt_pmact) ^term_REP_t {}” ,

@@ -16,59 +16,18 @@ Libs
 val _ = set_fixity "=" (Infix(NONASSOC, 450))
 
 (* calling nominal_datatype *)
-val {tynames, rep_t, lp} =
+val {tynames, tydata, rep_t, lp, operinfo} =
     nominal_datatype ‘term = VAR 'free | APP term term | LAM 'bound term’;
 
 val tyname = hd tynames; (* "term" *)
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
-     termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
-    new_type_step1 tyname 0 [] {lp = lp};
+     termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty} =
+    hd tydata;
 
-val glam = genind_lam
-
-val LAM_t = mk_var("LAM", ``:string -> ^newty -> ^newty``)
-val LAM_def = new_definition(
-  "LAM_def",
-  ``^LAM_t v t = ^term_ABS_t (GLAM v [] rLAM [^term_REP_t t] [])``);
-
-val LAM_termP = prove(
-  mk_comb(termP, LAM_def |> SPEC_ALL |> concl |> rhs |> rand),
-  match_mp_tac glam >> srw_tac [][genind_term_REP]);
-val LAM_t = defined_const LAM_def
-
-val APP_t = mk_var("APP", ``:^newty -> ^newty -> ^newty``)
-val APP_def = new_definition(
-  "APP_def",
-  ``^APP_t t1 t2 =
-       ^term_ABS_t (GLAM ARB [] rAPP []
-                         [^term_REP_t t1; ^term_REP_t t2])``);
-val APP_termP = prove(
-  ``^termP (GLAM x [] rAPP [] [^term_REP_t t1; ^term_REP_t t2])``,
-  match_mp_tac glam >> srw_tac [][genind_term_REP])
-val APP_t = defined_const APP_def
-
-Theorem APP_def':
-  ^term_ABS_t (GLAM v [] rAPP [] [^term_REP_t t1; ^term_REP_t t2]) =
-  ^APP_t t1 t2
-Proof srw_tac [][APP_def, GLAM_NIL_EQ, term_ABS_pseudo11, APP_termP]
-QED
-
-val VAR_t = mk_var("VAR", ``:string -> ^newty``)
-val VAR_def = new_definition(
-  "VAR_def",
-  ``^VAR_t s = ^term_ABS_t (GLAM ARB [s] rVAR [] [])``);
-Theorem VAR_termP[local]:
-  ^termP (GLAM u [v] rVAR [][])
-Proof irule glam >> srw_tac[][genind_term_REP]
-QED
-val VAR_t = defined_const VAR_def
-
-Theorem VAR_def':
-  ^term_ABS_t (GLAM u [v] rVAR [] []) = ^VAR_t v
-Proof
-  srw_tac[][VAR_def, GLAM_NIL_EQ, term_ABS_pseudo11, VAR_termP]
-QED
+val (_, LAM_termP, LAM_def, NONE)          = Lib.assoc "LAM" operinfo;
+val (_, APP_termP, APP_def, SOME APP_def') = Lib.assoc "APP" operinfo;
+val (_, VAR_termP, VAR_def, SOME VAR_def') = Lib.assoc "VAR" operinfo;
 
 val cons_info =
     [{con_termP = VAR_termP, con_def = SYM VAR_def'},

@@ -4,8 +4,7 @@ sig
   include Abbrev
   type coninfo = {con_termP : thm, con_def : thm}
 
-  val new_type_step1 : string -> int -> thm list -> {lp:term} ->
-                       {term_ABS_pseudo11 : thm,
+  type nomtyinfo = {term_ABS_pseudo11 : thm,
                         term_REP_11 : thm,
                         term_REP_t : term,
                         term_ABS_t : term,
@@ -15,6 +14,8 @@ sig
                         genind_exists : thm,
                         newty : hol_type,
                         termP : term}
+
+  val new_type_step1 : string -> int -> thm list -> {lp:term} -> nomtyinfo
 
   val termP_removal :
       {elimth : thm, absrep_id : thm, tpm_def : thm, termP : term,
@@ -52,8 +53,10 @@ sig
   val repcode      : string ref
   val rprefix      : string ref
   val nominal_datatype : hol_type quotation ->
-                        {tynames : string list,
-                         rep_t   : hol_type,
-                         lp      : term}
-
+                        {tynames  : string list,
+                         tydata   : nomtyinfo list,
+                         rep_t    : hol_type,
+                         lp       : term,
+                         operinfo : (string *
+                                     (term * thm * thm * thm option)) list}
 end
