@@ -12,7 +12,7 @@ include ../mdbook.mk
 # now produced from tutorial.bib via natbib (see tutorial.pdf
 # recipe below), mirroring Manual/Description/.
 TEX_CORES = tutorial title preface intro ml writinghol euclid \
-            parity combin proof-tools more-examples
+            parity combin proof-tools more-examples automata
 
 TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex \
               chapters-include.tex book-title.tex tutorial.bib \
