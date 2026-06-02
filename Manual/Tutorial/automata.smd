@@ -92,8 +92,6 @@ which specifies the following:
   the `Libs` list, the `dep_rewrite` module is also open, so that we may
   use `DEP_REWRITE_TAC` instead of `dep_rewrite.DEP_REWRITE_TAC`.
 
-===========================================================================
-===========================================================================
 
 ## Automata definitions
 
@@ -963,16 +961,16 @@ and puts the conclusion of the theorem as an antecedent to the goal:
 > goal
 >
 > ```
->     ...
->   ------------------------------------
+>     <assumptions>
+>   --------------------------
 >     formula ==> A
 > ```
 >
 > will get transformed by inference rule `rule : thm -> thm` to
 >
 > ```
->      ...
->    ------------------------------------
+>      <assumptions>
+>   --------------------------
 >      rule (formula) ==> A
 > ```
 >
@@ -982,13 +980,14 @@ and puts the conclusion of the theorem as an antecedent to the goal:
 > 1. apply `rule` to the theorem
 > 1. put `rule (formula)` back into its place in the goal
 >
-> In the guise of SML programming, this is
+> These steps are implemented in SML programming by
 >
 > ```
 >   disch_then (mp_tac o rule)
 > ```
 >
-> Consult the documentation for `disch_then` and `mp_tac` for more information.
+> and this can be used as a template that gets instantiated by
+> supplying different values for `rule`.
 
 For our situation, `rule` is instantiated to```Q.AP_TERM `dec`;``` applying
 
@@ -1203,11 +1202,11 @@ application of tactic `tac1` that match `pats` will all have `tac2`
 applied to them (and `tac2` should prove all of those subgoals
 completely).
 
-For our example, we will use the pattern ``` `wf_nfa N /\ _` ```. Thus
+For our example, we will use the pattern ``` `wf_nfa N ∧ _` ```. Thus
 the tactic invocation under construction is
 
 ```
-  tac1 >>~- ([`wf_nfa N /\ _`], tac2)
+  tac1 >>~- ([`wf_nfa N ∧ _`], tac2)
 ```
 
 and we already have `tac1` (the tactic creating the 4 subgoals). It
