@@ -60,8 +60,8 @@ val _ = tprint "Duplicate source name aborts Holmake startup"
 val rc = run_capture dirA ["--nolmbc"] out
 val msg = read_file out handle _ => ""
 val saw_name = String.isSubstring "ambiguous source name 'Foo.sml'" msg
-val saw_pathA = String.isSubstring (dirA ++ "Foo.sml") msg
-val saw_pathB = String.isSubstring (dirB ++ "Foo.sml") msg
+val saw_pathA = String.isSubstring "dirA/Foo.sml" msg
+val saw_pathB = String.isSubstring "dirB/Foo.sml" msg
 val _ = if not (OS.Process.isSuccess rc) andalso saw_name
            andalso saw_pathA andalso saw_pathB
         then OK ()
