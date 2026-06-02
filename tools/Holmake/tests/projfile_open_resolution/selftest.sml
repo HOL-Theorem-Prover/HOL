@@ -67,10 +67,8 @@ val _ = write_file (dirA ++ "Holmakefile")
 val _ = tprint "Open-resolution via holproject.toml (no INCLUDES)"
 val result = run_holmake_in dirA ["--nolmbc"]
 
-(* Theory products land under .hol/objs/ — check there. *)
 fun product_at d nm =
-    OS.FileSys.access (d ++ ".hol" ++ "objs" ++ nm, [])
-    handle OS.SysErr _ => false
+    HOLFileSys.access (d ++ nm, []) handle OS.SysErr _ => false
 
 val foo_built = product_at dirA "foo.uo"
 val bar_built = product_at dirB "Bar.uo"

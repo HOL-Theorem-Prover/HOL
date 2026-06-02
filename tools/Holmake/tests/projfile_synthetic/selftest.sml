@@ -80,8 +80,7 @@ val _ = tprint "Synthetic project: Holmake -r at root builds all subdirs"
 val result = run_holmake_in root ["--nolmbc"]
 
 fun product_at d nm =
-    OS.FileSys.access (d ++ ".hol" ++ "objs" ++ nm, [])
-    handle OS.SysErr _ => false
+    HOLFileSys.access (d ++ nm, []) handle OS.SysErr _ => false
 
 val a_built = product_at dirA "ATheory.uo"
             andalso product_at dirA "ATheory.dat"

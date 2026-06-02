@@ -19,7 +19,6 @@ DIRNAMES = \
   theorytarget \
   commandmacros \
   doublecrnl \
-  projfile_module \
   projfile_basic \
   projfile_open_resolution \
   projfile_name_clash \
@@ -63,7 +62,8 @@ DIRNAMES += cache_reflink \
             hollogs \
             issue1903 \
             local_parallelism_limit \
-            gh1979
+            gh1979 \
+            projfile_module
 endif
 
 
