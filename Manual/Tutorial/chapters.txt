@@ -30,6 +30,7 @@ writinghol
 euclid
 parity
 combin
+automata
 proof-tools
 more-examples
 references
