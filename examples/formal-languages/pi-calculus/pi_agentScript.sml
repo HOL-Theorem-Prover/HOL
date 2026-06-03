@@ -20,8 +20,9 @@ Libs
 
 (* calling nominal_datatype *)
 val _ = (repcode := "repcode");
+val _ = (tpm_name_pfx := ["t", "r"]);
 
-val {tynames, tydata, rep_t, lp, operinfo} =
+val {tynames, tyinfo, consinfo, tpminfo, rep_t, lp} =
     nominal_datatype
           ‘pi   = Nil                         (* 0 *)
                 | Tau pi                      (* tau.P *)
@@ -55,7 +56,7 @@ val {term_ABS_pseudo11 = term_ABS_pseudo11_1,
      repabs_pseudo_id = repabs_pseudo_id1,
      term_REP_t = term_REP_t1,
      term_ABS_t = term_ABS_t1,
-     newty = newty1} = List.nth (tydata,0);
+     newty = newty1} = List.nth (tyinfo,0);
 
 (* type 2 (:residual) *)
 val {term_ABS_pseudo11 = term_ABS_pseudo11_2,
@@ -67,78 +68,48 @@ val {term_ABS_pseudo11 = term_ABS_pseudo11_2,
      repabs_pseudo_id = repabs_pseudo_id2,
      term_REP_t = term_REP_t2,
      term_ABS_t = term_ABS_t2,
-     newty = newty2} = List.nth (tydata,1);
+     newty = newty2} = List.nth (tyinfo,1);
 
 (* ----------------------------------------------------------------------
     Pi-calculus operators
    ---------------------------------------------------------------------- *)
 
-val (_, Nil_termP, Nil_def, SOME Nil_def') = Lib.assoc "Nil" operinfo;
-val (_, Tau_termP, Tau_def, SOME Tau_def') = Lib.assoc "Tau" operinfo;
-val (_, Input_termP, Input_def, NONE)      = Lib.assoc "Input" operinfo;
-val (_, Output_termP, Output_def, SOME Output_def')
-                                           = Lib.assoc "Output" operinfo;
-val (_, Match_termP, Match_def, SOME Match_def')
-                                           = Lib.assoc "Match" operinfo;
-val (_, Mismatch_termP, Mismatch_def, SOME Mismatch_def')
-                                           = Lib.assoc "Mismatch" operinfo;
-val (_, Sum_termP, Sum_def, SOME Sum_def') = Lib.assoc "Sum" operinfo;
-val (_, Par_termP, Par_def, SOME Par_def') = Lib.assoc "Par" operinfo;
-val (_, Res_termP, Res_def, NONE)          = Lib.assoc "Res" operinfo;
-val (_, TauR_termP, TauR_def, SOME TauR_def')
-                                           = Lib.assoc "TauR" operinfo;
-val (_, InputS_termP, InputS_def, NONE)    = Lib.assoc "InputS" operinfo;
-val (_, BoundOutput_termP, BoundOutput_def, NONE)
-                                           = Lib.assoc "BoundOutput" operinfo;
-val (_, FreeOutput_termP, FreeOutput_def, SOME FreeOutput_def')
-                                           = Lib.assoc "FreeOutput" operinfo;
+val [Nil_def, Nil_def',
+     Tau_def, Tau_def', Input_def,
+     Output_def, Output_def',
+     Match_def, Match_def',
+     Mismatch_def, Mismatch_def',
+     Sum_def, Sum_def',
+     Par_def, Par_def', Res_def,
+     TauR_def, TauR_def',
+     InputS_def, BoundOutput_def,
+     FreeOutput_def, FreeOutput_def'] =
+    List.map (DB.fetch "-") ["Nil_def", "Nil_def'",
+                             "Tau_def", "Tau_def'", "Input_def",
+                             "Output_def", "Output_def'",
+                             "Match_def", "Match_def'",
+                             "Mismatch_def", "Mismatch_def'",
+                             "Sum_def", "Sum_def'",
+                             "Par_def", "Par_def'", "Res_def",
+                             "TauR_def", "TauR_def'",
+                             "InputS_def", "BoundOutput_def",
+                             "FreeOutput_def", "FreeOutput_def'"];
+
+val  cons_info = List.nth (consinfo, 0);
+val rcons_info = List.nth (consinfo, 1);
+
+val [Nil_termP, Tau_termP, Input_termP, Output_termP, Match_termP,
+     Mismatch_termP, Sum_termP, Par_termP, Res_termP] =
+    List.map #con_termP cons_info;
+
+val [TauR_termP, InputS_termP, BoundOutput_termP, FreeOutput_termP] =
+    List.map #con_termP rcons_info;
 
 (* ----------------------------------------------------------------------
     tpm - permutation of pi-calculus binding variables
    ---------------------------------------------------------------------- *)
 
-val cons_info =
-    [{con_termP = Nil_termP,      con_def = SYM Nil_def'},
-     {con_termP = Tau_termP,      con_def = SYM Tau_def'},
-     {con_termP = Input_termP,    con_def = Input_def},
-     {con_termP = Output_termP,   con_def = SYM Output_def'},
-     {con_termP = Match_termP,    con_def = SYM Match_def'},
-     {con_termP = Mismatch_termP, con_def = SYM Mismatch_def'},
-     {con_termP = Sum_termP,      con_def = SYM Sum_def'},
-     {con_termP = Par_termP,      con_def = SYM Par_def'},
-     {con_termP = Res_termP,      con_def = Res_def}];
-
-val tpm_name_pfx = "t";
-val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} =
-    define_permutation {name_pfx = tpm_name_pfx, name = tyname1,
-                        term_REP_t = term_REP_t1,
-                        term_ABS_t = term_ABS_t1,
-                        absrep_id = absrep_id1,
-                        repabs_pseudo_id = repabs_pseudo_id1,
-                        cons_info = cons_info,
-                        newty = newty1,
-                        genind_term_REP = genind_term_REP1};
-
-(* |- (!pi. tpm pi Nil = Nil) /\ (!pi P. tpm pi (Tau P) = Tau (tpm pi P)) /\
-      (!x pi a P.
-         tpm pi (Input a x P) =
-         Input (lswapstr pi a) (lswapstr pi x) (tpm pi P)) /\
-      (!pi b a P.
-         tpm pi (Output a b P) =
-         Output (lswapstr pi a) (lswapstr pi b) (tpm pi P)) /\
-      (!pi b a P.
-         tpm pi (Match a b P) =
-         Match (lswapstr pi a) (lswapstr pi b) (tpm pi P)) /\
-      (!pi b a P.
-         tpm pi (Mismatch a b P) =
-         Mismatch (lswapstr pi a) (lswapstr pi b) (tpm pi P)) /\
-      (!pi Q P. tpm pi (Sum P Q) = Sum (tpm pi P) (tpm pi Q)) /\
-      (!pi Q P. tpm pi (Par P Q) = Par (tpm pi P) (tpm pi Q)) /\
-      !v pi P. tpm pi (Res v P) = Res (lswapstr pi v) (tpm pi P)
- *)
-Theorem tpm_thm[allow_rebind] =
-        tpm_thm |> REWRITE_RULE [GSYM Input_def, Output_def',
-                                 Match_def', Mismatch_def'];
+val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} = List.nth (tpminfo,0);
 
 Theorem tpm_eqr :
     t = tpm pi u <=> tpm (REVERSE pi) t = (u :pi)
@@ -162,26 +133,10 @@ QED
     rpm - permutation of pi-calculus residuals
    ---------------------------------------------------------------------- *)
 
-val rcons_info =
-    [{con_termP = TauR_termP,        con_def = SYM TauR_def'},
-     {con_termP = BoundOutput_termP, con_def = BoundOutput_def},
-     {con_termP = InputS_termP,      con_def = InputS_def},
-     {con_termP = FreeOutput_termP,  con_def = SYM FreeOutput_def'}];
-
-val rpm_name_pfx = "r";
-
 val {tpm_thm = rpm_thm,
      term_REP_tpm = term_REP_rpm,
      t_pmact_t = r_pmact_t,
-     tpm_t = rpm_t} =
-    define_permutation {name_pfx = rpm_name_pfx, name = tyname2,
-                        term_REP_t = term_REP_t2,
-                        term_ABS_t = term_ABS_t2,
-                        absrep_id = absrep_id2,
-                        repabs_pseudo_id = repabs_pseudo_id2,
-                        cons_info = rcons_info,
-                        newty = newty2,
-                        genind_term_REP = genind_term_REP2};
+     tpm_t = rpm_t} = List.nth (tpminfo,1);
 
 (* |- (!pi P. rpm pi (TauR P) = TauR (tpm pi P)) /\
       (!x pi a P.

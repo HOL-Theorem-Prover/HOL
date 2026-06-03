@@ -15,6 +15,8 @@ sig
                         newty : hol_type,
                         termP : term}
 
+  type tpminfo = {t_pmact_t: term, term_REP_tpm: thm, tpm_t: term, tpm_thm: thm}
+
   val new_type_step1 : string -> int -> thm list -> {lp:term} -> nomtyinfo
 
   val termP_removal :
@@ -27,14 +29,11 @@ sig
          permutation action for the new type.  I.e., this will presumably
          be something like ``pmact something``. *)
 
-
   val define_permutation : { name_pfx : string, name : string,
                              term_REP_t : term, term_ABS_t : term,
                              absrep_id : thm, repabs_pseudo_id : thm,
                              cons_info : coninfo list, newty : hol_type,
-                             genind_term_REP : thm} ->
-                           { tpm_thm : thm, term_REP_tpm : thm,
-                             t_pmact_t : term, tpm_t : term}
+                             genind_term_REP : thm} -> tpminfo
 
   (* datatype utility functions *)
   val rpt_hyp_dest_conj : thm -> thm
@@ -52,11 +51,14 @@ sig
   val bound_tyname : string ref
   val repcode      : string ref
   val rprefix      : string ref
+  val tpm_name_pfx : string list ref
+
   val nominal_datatype : hol_type quotation ->
                         {tynames  : string list,
-                         tydata   : nomtyinfo list,
+                         tyinfo   : nomtyinfo list,
+                         consinfo : coninfo list list,
+                         tpminfo  : tpminfo list,
                          rep_t    : hol_type,
-                         lp       : term,
-                         operinfo : (string *
-                                     (term * thm * thm * thm option)) list}
+                         lp       : term}
+
 end

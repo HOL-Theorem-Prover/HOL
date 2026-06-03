@@ -289,9 +289,11 @@ val pmact_absrep' = pmact_bijections |> CONJUNCT2 |> GSYM
 
 fun Save_thm(n, th) = save_thm(n,th) before BasicProvers.export_rewrites [n]
 
+type tpminfo = {t_pmact_t: term, term_REP_tpm: thm, tpm_t: term, tpm_thm: thm}
+
 fun define_permutation { name_pfx, name, term_ABS_t, term_REP_t,
                          absrep_id, repabs_pseudo_id, newty,
-                         genind_term_REP, cons_info} = let
+                         genind_term_REP, cons_info} :tpminfo = let
   val tpm_name = name_pfx ^ "pm"
   val raw_tpm_name = "raw_" ^ tpm_name
   val raw_tpm_t = mk_var(raw_tpm_name, cpm_ty --> newty --> newty)
@@ -831,12 +833,12 @@ end;
    This works for pi-calculus but perhaps not works for mutually exclusive types
    that we haven't met yet.
  *)
-fun build_tydata [] index lp ths = []
-  | build_tydata (tyname::tynames) index lp ths =
+fun build_tyinfo [] index lp ths = []
+  | build_tyinfo (tyname::tynames) index lp ths =
     let val tyinfo = new_type_step1 tyname index ths {lp = lp};
         val th = #genind_exists tyinfo
     in
-        tyinfo :: build_tydata tynames (index + 1) lp (th :: ths)
+        tyinfo :: build_tyinfo tynames (index + 1) lp (th :: ths)
     end;
 
 val glam = genind_lam;
@@ -927,7 +929,7 @@ fun build_args ptys = build_args_inner ptys 0 false 0 0 0;
 val GLAM = “GLAM :string ->
               string list -> 'a -> 'a gterm list -> 'a gterm list -> 'a gterm”;
 
-fun build_pattern (tymap,tydata :nomtyinfo list,newty,cname,ptys,rep_t) = let
+fun build_pattern (tymap,tyinfo :nomtyinfo list,newty,cname,ptys,rep_t) = let
     val glam_t       = inst [alpha |-> rep_t] GLAM;
     val repcode_args = build_repcode_args ptys;
     val repcode      = build_repcode cname repcode_args rep_t;
@@ -944,10 +946,10 @@ fun build_pattern (tymap,tydata :nomtyinfo list,newty,cname,ptys,rep_t) = let
     val tynames      = List.map fst tymap;
     val tns          = List.map int_of_term (build_tns_inner ptys tynames);
     val uns          = List.map int_of_term (build_uns_inner ptys tynames);
-    val tns_rep      = List.map (fn i => #term_REP_t (List.nth (tydata,i))) tns;
-    val uns_rep      = List.map (fn i => #term_REP_t (List.nth (tydata,i))) uns;
-    val tns_argty    = List.map (fn i => #newty (List.nth (tydata,i))) tns;
-    val uns_argty    = List.map (fn i => #newty (List.nth (tydata,i))) uns;
+    val tns_rep      = List.map (fn i => #term_REP_t (List.nth (tyinfo,i))) tns;
+    val uns_rep      = List.map (fn i => #term_REP_t (List.nth (tyinfo,i))) uns;
+    val tns_argty    = List.map (fn i => #newty (List.nth (tyinfo,i))) tns;
+    val uns_argty    = List.map (fn i => #newty (List.nth (tyinfo,i))) uns;
     val tns_argnames = gen_names "P" (List.length tns) [];
     val uns_argnames = gen_names "Q" (List.length uns) [];
     val tns_argv     = List.map mk_var (Lib.zip tns_argnames tns_argty);
@@ -1008,50 +1010,68 @@ val Input_t = defined_const Input_def;
 
     only Tau_termP, Tau_def and Tau_def' (into operinfo), etc. are needed later.
  *)
-fun build_constructor (tymap,tydata,tyname,cname,ptys,rep_t) = let
+fun build_constructor (tymap,tyinfo,tyname,cname,ptys,rep_t) : coninfo = let
     val newty   = Lib.assoc tyname tymap;
     val c_ty    = list_mk_fun
                     (List.map (fn e => pretypeToType2 e tymap) ptys,newty);
     val c_t     = mk_var (cname,c_ty);
-    val (c_pattern,arglist,bound_p)
-                = build_pattern (tymap,tydata,newty,cname,ptys,rep_t);
+    val (c_pattern,arglist,boundp)
+                = build_pattern (tymap,tyinfo,newty,cname,ptys,rep_t);
     val tynames = List.map fst tymap;
     val index   = int_of_term (index_of tyname tynames);
     val lhs     = list_mk_comb (c_t,arglist);
-    val tydata1 = List.nth (tydata,index);
-    val rhs     = mk_comb (#term_ABS_t tydata1,toArb c_pattern);
+    val tyinfo1 = List.nth (tyinfo,index);
+    val rhs     = mk_comb (#term_ABS_t tyinfo1,toArb c_pattern);
     val c_def   = new_definition (cname ^ "_def", mk_eq (lhs,rhs));
-    val ths     = List.map #genind_term_REP tydata;
-    val c_termP = prove(mk_comb(#termP tydata1, c_pattern),
+    val ths     = List.map #genind_term_REP tyinfo;
+    val c_termP = prove(mk_comb(#termP tyinfo1, c_pattern),
                         match_mp_tac glam >> srw_tac [] ths);
     val c_tm    = defined_const c_def;
-    val lhs'    = mk_comb (#term_ABS_t tydata1,c_pattern);
+    val lhs'    = mk_comb (#term_ABS_t tyinfo1,c_pattern);
     val rhs'    = list_mk_comb (c_tm,arglist);
-    val ths'    = [c_def, GLAM_NIL_EQ, #term_ABS_pseudo11 tydata1, c_termP];
-    val c_def'  = if bound_p then NONE
-                  else
-                      SOME (prove (mk_eq (lhs',rhs'),srw_tac [] ths'))
+    val ths'    = [c_def, GLAM_NIL_EQ, #term_ABS_pseudo11 tyinfo1, c_termP];
+    val c_def'  = if boundp then NONE else
+                  SOME (store_thm (cname ^ "_def'",
+                                   mk_eq (lhs',rhs'),
+                                   srw_tac [] ths'))
 in
-    (cname,(c_tm,c_termP,c_def,c_def'))
+    {con_termP = c_termP,
+     con_def   = if boundp then c_def else SYM (valOf c_def')}
 end;
 
-fun build_operinfo_inner (cptys,tyname,tymap,tydata,rep_t) =
+fun build_consinfo_inner (cptys,tyname,tymap,tyinfo,rep_t) =
     List.map (fn (cname,ptys) =>
-                 build_constructor (tymap,tydata,tyname,cname,ptys,rep_t))
+                 build_constructor (tymap,tyinfo,tyname,cname,ptys,rep_t))
              cptys;
 
 (* This function builds definitional theorems for each constructor. *)
-fun build_operinfo tynames asts (tydata :nomtyinfo list) rep_t = let
-    val newtys = List.map (fn e => #newty e) tydata;
+fun build_consinfo tynames newtys asts (tyinfo :nomtyinfo list) rep_t = let
     val tymap = Lib.zip tynames newtys
 in
     List.concat
-        (List.map (fn (tyname,df) =>
-                      case df of
-                          Constructors cs =>
-                          build_operinfo_inner (cs,tyname,tymap,tydata,rep_t)
-                        | Record _ => []) asts)
+      (List.map (fn (tyname,df) =>
+                    case df of
+                        Constructors cs =>
+                          [build_consinfo_inner (cs,tyname,tymap,tyinfo,rep_t)]
+                      | Record _ => []) asts)
 end;
+
+val tpm_name_pfx = ref ["t"];
+
+fun build_tpm_inner tpm_name_pfx tyname newty cons_info (d :nomtyinfo) =
+    define_permutation {name_pfx = tpm_name_pfx, name = tyname,
+                        term_REP_t = #term_REP_t d,
+                        term_ABS_t = #term_ABS_t d,
+                        absrep_id = #absrep_id d,
+                        repabs_pseudo_id = #repabs_pseudo_id d,
+                        cons_info = cons_info,
+                        newty = newty,
+                        genind_term_REP = #genind_term_REP d};
+
+fun build_tpm [] [] [] [] [] = []
+  | build_tpm (p::prefix) (t::tynames) (n::newtys) (c::consinfo) (d::tyinfo) =
+    build_tpm_inner p t n c d ::
+    build_tpm prefix tynames newtys consinfo tyinfo;
 
 (* The final API (so far) *)
 fun nominal_datatype q = let
@@ -1059,14 +1079,17 @@ fun nominal_datatype q = let
   val tynames  = extract_tynames asts;
   val rep_t    = define_repcode asts;
   val lp       = build_lp asts rep_t;
-  val tydata   = build_tydata tynames 0 lp [];
-  val operinfo = build_operinfo tynames asts tydata rep_t
+  val tyinfo   = build_tyinfo tynames 0 lp [];
+  val newtys   = List.map (fn e => #newty e) tyinfo;
+  val consinfo = build_consinfo tynames newtys asts tyinfo rep_t;
+  val tpminfo  = build_tpm (!tpm_name_pfx) tynames newtys consinfo tyinfo
 in
     {tynames  = tynames,
-     tydata   = tydata,
+     tyinfo   = tyinfo,
+     consinfo = consinfo,
+     tpminfo  = tpminfo,
      rep_t    = rep_t,
-     lp       = lp,
-     operinfo = operinfo}
+     lp       = lp}
 end;
 
 end (* struct *)

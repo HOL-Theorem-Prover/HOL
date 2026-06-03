@@ -318,7 +318,7 @@ Theorem APPLY_RELAB_THM =
 val _ = (repcode := "crep");
 val _ = (rprefix := "c");
 
-val {tynames, tydata, rep_t, lp, operinfo} =
+val {tynames, tyinfo, consinfo, tpminfo, rep_t, lp} =
     nominal_datatype
          ‘CCS = var 'free
               | prefix ('a Action) CCS
@@ -339,19 +339,23 @@ Overload ccslp[local] = “genind ^lp”
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty} =
-    hd tydata;
+    hd tyinfo;
 
 (* ----------------------------------------------------------------------
     CCS operators
    ---------------------------------------------------------------------- *)
+val [var_def, var_def', prefix_def, prefix_def',
+     sum_def, sum_def', par_def, par_def',
+     restr_def, restr_def', relab_def, relab_def', rec_def] =
+    List.map (DB.fetch "-") ["var_def", "var_def'",
+                             "prefix_def", "prefix_def'",
+                             "sum_def", "sum_def'", "par_def", "par_def'",
+                             "restr_def", "restr_def'",
+                             "relab_def", "relab_def'", "rec_def"];
 
-val (_, var_termP,    var_def,    SOME var_def')    = Lib.assoc "var" operinfo;
-val (_, prefix_termP, prefix_def, SOME prefix_def') = Lib.assoc "prefix" operinfo;
-val (_, sum_termP,    sum_def,    SOME sum_def')    = Lib.assoc "sum" operinfo;
-val (_, par_termP,    par_def,    SOME par_def')    = Lib.assoc "par" operinfo;
-val (_, restr_termP,  restr_def,  SOME restr_def')  = Lib.assoc "restr" operinfo;
-val (_, relab_termP,  relab_def,  SOME relab_def')  = Lib.assoc "relab" operinfo;
-val (_, rec_termP,    rec_def,    NONE)             = Lib.assoc "rec" operinfo;
+val cons_info = hd consinfo;
+val [var_termP, prefix_termP, sum_termP, par_termP,
+     restr_termP, relab_termP, rec_termP] = List.map #con_termP cons_info;
 
 val _ =
     add_rule { term_name = "prefix", fixity = Infixr 700,
@@ -382,24 +386,7 @@ val _ = add_rule {term_name = "nu", fixity = Closefix,
     tpm (permutation of CCS recursion variables)
    ---------------------------------------------------------------------- *)
 
-val cons_info =
-    [{con_termP = var_termP,    con_def = SYM var_def'},
-     {con_termP = prefix_termP, con_def = SYM prefix_def'},
-     {con_termP = sum_termP,    con_def = SYM sum_def'},
-     {con_termP = par_termP,    con_def = SYM par_def'},
-     {con_termP = restr_termP,  con_def = SYM restr_def'},
-     {con_termP = relab_termP,  con_def = SYM relab_def'},
-     {con_termP = rec_termP,    con_def = rec_def}];
-
-val tpm_name_pfx = "t";
-val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} =
-    define_permutation {name_pfx = tpm_name_pfx, name = tyname,
-                        term_REP_t = term_REP_t,
-                        term_ABS_t = term_ABS_t,
-                        absrep_id = absrep_id,
-                        repabs_pseudo_id = repabs_pseudo_id,
-                        cons_info = cons_info, newty = newty,
-                        genind_term_REP = genind_term_REP};
+val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} = List.nth (tpminfo,0);
 
 Theorem tpm_eqr :
     t = tpm pi u <=> tpm (REVERSE pi) t = (u :'a CCS)
