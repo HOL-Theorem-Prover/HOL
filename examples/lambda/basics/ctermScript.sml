@@ -7,8 +7,9 @@ Libs
 (* calling nominal_datatype *)
 val _ = (repcode := "ctrep");
 val _ = (rprefix := "ct");
+val _ = (tpm_name_pfx := ["ct"]);
 
-val {tynames, tydata, rep_t, lp, operinfo} =
+val {tynames, tyinfo, consinfo, tpminfo, rep_t, lp} =
     nominal_datatype
       ‘cterm = VAR 'free | APP cterm cterm | LAM 'bound cterm | CONST 'a’;
 
@@ -21,27 +22,19 @@ End
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty} =
-    hd tydata;
+    hd tyinfo;
 
-val (_, LAM_termP,   LAM_def,   NONE)            = Lib.assoc "LAM" operinfo;
-val (_, APP_termP,   APP_def,   SOME APP_def')   = Lib.assoc "APP" operinfo;
-val (_, VAR_termP,   VAR_def,   SOME VAR_def')   = Lib.assoc "VAR" operinfo;
-val (_, CONST_termP, CONST_def, SOME CONST_def') = Lib.assoc "CONST" operinfo;
+val [LAM_def, APP_def, APP_def', VAR_def, VAR_def', CONST_def, CONST_def'] =
+    List.map (DB.fetch "-") ["LAM_def", "APP_def", "APP_def'",
+                             "VAR_def", "VAR_def'",
+                             "CONST_def", "CONST_def'"];
 
-val cons_info =
-    [{con_termP = VAR_termP, con_def = SYM VAR_def'},
-     {con_termP = APP_termP, con_def = SYM APP_def'},
-     {con_termP = LAM_termP, con_def = LAM_def},
-     {con_termP = CONST_termP, con_def = SYM CONST_def'}]
+val cons_info = hd consinfo;
+val [VAR_termP, APP_termP, LAM_termP, CONST_termP] =
+    List.map #con_termP cons_info;
 
-val tpm_name_pfx = "ct"
-val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} =
-    define_permutation {name_pfx = "ct", name = tyname,
-                        term_REP_t = term_REP_t,
-                        term_ABS_t = term_ABS_t, absrep_id = absrep_id,
-                        repabs_pseudo_id = repabs_pseudo_id,
-                        cons_info = cons_info, newty = newty,
-                        genind_term_REP = genind_term_REP}
+(* tpm *)
+val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} = List.nth (tpminfo,0);
 
 (* support *)
 val term_REP_eqv = prove(

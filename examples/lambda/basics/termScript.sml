@@ -16,33 +16,23 @@ Libs
 val _ = set_fixity "=" (Infix(NONASSOC, 450))
 
 (* calling nominal_datatype *)
-val {tynames, tydata, rep_t, lp, operinfo} =
+val {tynames, tyinfo, consinfo, tpminfo, rep_t, lp} =
     nominal_datatype ‘term = VAR 'free | APP term term | LAM 'bound term’;
 
 val tyname = hd tynames; (* "term" *)
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty} =
-    hd tydata;
+    hd tyinfo;
 
-val (_, LAM_termP, LAM_def, NONE)          = Lib.assoc "LAM" operinfo;
-val (_, APP_termP, APP_def, SOME APP_def') = Lib.assoc "APP" operinfo;
-val (_, VAR_termP, VAR_def, SOME VAR_def') = Lib.assoc "VAR" operinfo;
+val [LAM_def, APP_def, APP_def', VAR_def, VAR_def'] =
+    List.map (DB.fetch "-") ["LAM_def", "APP_def", "APP_def'",
+                             "VAR_def", "VAR_def'"];
 
-val cons_info =
-    [{con_termP = VAR_termP, con_def = SYM VAR_def'},
-     {con_termP = APP_termP, con_def = SYM APP_def'},
-     {con_termP = LAM_termP, con_def = LAM_def}]
+val cons_info = hd consinfo;
+val [VAR_termP, APP_termP, LAM_termP] = List.map #con_termP cons_info;
 
-(* tpm *)
-val tpm_name_pfx = "t"
-val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} =
-    define_permutation {name_pfx = "t", name = tyname,
-                        term_REP_t = term_REP_t,
-                        term_ABS_t = term_ABS_t, absrep_id = absrep_id,
-                        repabs_pseudo_id = repabs_pseudo_id,
-                        cons_info = cons_info, newty = newty,
-                        genind_term_REP = genind_term_REP};
+val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} = hd tpminfo;
 
 (* support *)
 val term_REP_eqv = prove(

@@ -7,8 +7,9 @@ Libs
 (* calling nominal_datatype *)
 val _ = (repcode := "lrep");
 val _ = (rprefix := "l");
+val _ = (tpm_name_pfx := ["lt"]);
 
-val {tynames, tydata, rep_t, lp, operinfo} =
+val {tynames, tyinfo, consinfo, tpminfo, rep_t, lp} =
     nominal_datatype
       ‘lterm = VAR 'free
              | APP lterm lterm
@@ -19,32 +20,23 @@ val tyname = hd tynames; (* "lterm" *)
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, newty, term_REP_t, term_ABS_t} =
-    hd tydata;
+    hd tyinfo;
 
 val _ = temp_overload_on ("termP", termP)
 
-val (LAM_t,  LAM_termP,  LAM_def,  NONE)          = Lib.assoc "LAM" operinfo;
-val (LAMi_t, LAMi_termP, LAMi_def, NONE)          = Lib.assoc "LAMi" operinfo;
-val (APP_t,  APP_termP,  APP_def,  SOME APP_def') = Lib.assoc "APP" operinfo;
-val (VAR_t,  VAR_termP,  VAR_def,  SOME VAR_def') = Lib.assoc "VAR" operinfo;
+val [LAM_def, LAMi_def, APP_def, APP_def', VAR_def, VAR_def'] =
+    List.map (DB.fetch "-") ["LAM_def", "LAMi_def", "APP_def", "APP_def'",
+                             "VAR_def", "VAR_def'"];
 
-val cons_info =
-    [{con_termP = VAR_termP, con_def = SYM VAR_def'},
-     {con_termP = APP_termP, con_def = SYM APP_def'},
-     {con_termP = LAM_termP, con_def = LAM_def},
-     {con_termP = LAMi_termP, con_def = LAMi_def}]
+val cons_info = hd consinfo;
+val [VAR_termP, APP_termP, LAM_termP, LAMi_termP] =
+    List.map #con_termP cons_info;
+
+val [VAR_t, APP_t, LAM_t, LAMi_t] =
+    List.map defined_const [VAR_def, APP_def, LAM_def, LAMi_def];
 
 (* tpm *)
-val name_pfx = "lt"
-val tpm_name = name_pfx ^ "pm"
-val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} =
-    define_permutation { name_pfx = "lt", name = tyname,
-                         term_REP_t = term_REP_t,
-                         term_ABS_t = term_ABS_t,
-                         absrep_id = absrep_id,
-                         repabs_pseudo_id = repabs_pseudo_id,
-                         cons_info = cons_info, newty = newty,
-                         genind_term_REP = genind_term_REP}
+val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} = List.nth (tpminfo,0);
 
 Theorem ltpm_eqr:
    (t = ltpm pi u) = (ltpm (REVERSE pi) t = u)
