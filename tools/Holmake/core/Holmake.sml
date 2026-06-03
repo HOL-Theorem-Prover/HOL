@@ -134,12 +134,27 @@ val master_cline_nohmf =
 val original_dir = hmdir.curdir()
 val originally_in_src = is_src_dir original_dir
 
+(* Register a name->path mapping in holpathdb.  Idempotent re-registration
+   (same vname → same path, e.g. when an upward walk discovers a project
+   file already seen at startup) is silently accepted.  A collision
+   (vname already registered to a different path) is fatal: the user has
+   to resolve before we proceed. *)
+fun register_holpath {vname,path} =
+    case holpathdb.lookup_holpath {vname = vname} of
+        NONE => holpathdb.extend_db {vname = vname, path = path}
+      | SOME existing =>
+          if existing = path then ()
+          else die ("holproject.toml at " ^ path ^
+                    " conflicts with prior registration of `" ^ vname ^
+                    "` for " ^ existing)
+
 fun read_holpathdb() =
     let
       val holpathdb_extensions =
           holpathdb.search_for_extensions (fn s => [])
             {starter_dirs = [FileSys.getDir()], skip = holpathdb.db_dirs()}
-      val _ = List.app holpathdb.extend_db holpathdb_extensions
+            handle Fail s => die s
+      val _ = List.app register_holpath holpathdb_extensions
       open Holmake_types
       fun foldthis {vname,path} env = env_extend (vname, [LIT path]) env
     in

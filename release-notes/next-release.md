@@ -106,7 +106,12 @@ New features
     suppresses it altogether.  Duplicate source names across
     project directories (which would make `open Foo` ambiguous,
     HOL having no per-project namespaces) abort the build with a
-    pointer at `[exclude]` as the remedy.  See the *Project
+    pointer at `[exclude]` as the remedy.  The `name` key also
+    registers the project's directory in `holpathdb`, replacing
+    the old `.holpath` marker file (whose only content was a
+    single line naming the directory); any in-tree or downstream
+    `.holpath` files must be migrated to a `holproject.toml`
+    containing `name = "<the-old-content>"`.  See the *Project
     files* sub-section of *Maintaining HOL Formalizations with
     Holmake* in the Description manual.
 

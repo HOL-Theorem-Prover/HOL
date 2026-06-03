@@ -127,40 +127,39 @@ fun files_upward_in_hierarchy gen_extras {diag} {filename, starter_dirs, skip} =
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1,p2)
 
-fun check_insert(m,k,v) =
+(* Pull the `name` key out of a holproject.toml's contents.  NONE means
+   the file has no `name` (no holpathdb registration contributed); SOME nm
+   means register `nm` at the file's directory.  Malformed TOML or a
+   non-string `name` raises Fail with a message naming the offending
+   path. *)
+fun extract_name dir contents =
   let
-    val _ =
-        case Binarymap.peek(m,k) of
-            NONE => ()
-          | SOME v' => if v' <> v then
-                         warn((v ++ ".holpath") ^ " overrides value for "^
-                              k ^ " from " ^ (v' ++ ".holpath"))
-                       else ()
+    val tbl = TOML.fromString contents
+              handle e =>
+                raise Fail ("Malformed holproject.toml at " ^
+                            (dir ++ "holproject.toml") ^ ": " ^
+                            General.exnMessage e)
   in
-    Binarymap.insert(m,k,v)
-  end
-
-fun process_filecontents s =
-  let
-    val sz = size s - 1
-    val nm = if String.sub(s,sz) = #"\n" then String.extract(s,0,SOME sz) else s
-  in
-    nm
+    case TOML.lookupInTable tbl ["name"] of
+        NONE => NONE
+      | SOME (TOMLvalue_dtype.STRING s) => SOME s
+      | SOME _ =>
+          raise Fail ("holproject.toml at " ^ (dir ++ "holproject.toml") ^
+                      ": `name` must be a string")
   end
 
 
 fun search_for_extensions gen {skip,starter_dirs = dlist} =
   let
     val dmap = files_upward_in_hierarchy gen {diag = fn _ => ()}
-                 {filename = ".holpath", starter_dirs = dlist, skip = skip}
-    fun foldthis (dstr,filecontents,(l,revmap)) =
-        let
-          val nm = process_filecontents filecontents
-        in
-          ({vname=nm,path=dstr}::l, check_insert(revmap,nm,dstr))
-        end
+                 {filename = "holproject.toml", starter_dirs = dlist,
+                  skip = skip}
+    fun foldthis (dstr,filecontents,l) =
+        case extract_name dstr filecontents of
+            NONE => l
+          | SOME nm => {vname=nm, path=dstr} :: l
   in
-    #1 (Binarymap.foldl foldthis ([],Binarymap.mkDict String.compare) dmap)
+    Binarymap.foldl foldthis [] dmap
   end
 
 

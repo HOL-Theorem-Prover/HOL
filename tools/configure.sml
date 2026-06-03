@@ -306,9 +306,19 @@ val _ =
     FileSys.chDir "../parsing";
     print "Calling mllex on HolLex\n";
     systeml [mllex, "HolLex"];
-    FileSys.chDir "../Holmake/hfs";
-    compile [] "holpathdb.sig";
-    compile [] "holpathdb.sml";
+    FileSys.chDir "../Holmake/toml";
+    compile [] "TOMLerror.sml";
+    compile [] "TOMLvalue_dtype.sml";
+    compile [] "TOMLvalue.sig";
+    compile [] "TOMLvalue.sml";
+    compile [] "parseTOMLUtil.sml";
+    compile ["-toplevel"] "parseTOMLFunctor.sml";
+    compile ["parseTOMLFunctor.ui"] "parseTOML.sml";
+    compile [] "TOML.sig";
+    compile [] "TOML.sml";
+    FileSys.chDir "../hfs";
+    compile ["-I", "../toml"] "holpathdb.sig";
+    compile ["-I", "../toml"] "holpathdb.sml";
     FileSys.chDir "../../util";
     compile ["-I", "../Holmake"] "regexpMatch.sig";
     compile ["-I", "../Holmake"] "regexpMatch.sml";
@@ -436,16 +446,6 @@ val _ =
     compile [] "HostName.sig";
     FileSys.chDir "../mosml";
     compile ["-I", "..", "-I", "../core"] "HostName.sml";
-    FileSys.chDir "../toml";
-    compile [] "TOMLerror.sml";
-    compile [] "TOMLvalue_dtype.sml";
-    compile [] "TOMLvalue.sig";
-    compile [] "TOMLvalue.sml";
-    compile [] "parseTOMLUtil.sml";
-    compile ["-toplevel"] "parseTOMLFunctor.sml";
-    compile ["parseTOMLFunctor.ui"] "parseTOML.sml";
-    compile [] "TOML.sig";
-    compile [] "TOML.sml";
     FileSys.chDir "../core";
     compile ["-I", "..", "-I", "../toml"] "HMProject.sig";
     compile ["-I", "..", "-I", "../toml"] "HMProject.sml";
@@ -510,9 +510,10 @@ val _ = let
     val depsdir = Path.concat(holmakedir, "deps")
     val hfsdir = Path.concat(holmakedir, "hfs")
     val hmfdir = Path.concat(holmakedir, "hmf")
+    val tomldir = Path.concat(holmakedir, "toml")
     val parsingdir = Path.concat(holdir, "tools/parsing")
     val incs = ["-I", holmakedir, "-I", coredir, "-I", depsdir,
-                "-I", hfsdir, "-I", hmfdir, "-I", parsingdir,
+                "-I", hfsdir, "-I", hmfdir, "-I", tomldir, "-I", parsingdir,
                 "-I", utildir, "-I", hmutildir,
                 "-I", Path.concat(holdir, "src/portableML")]
   in
@@ -533,6 +534,7 @@ val _ = let
        "-I", Path.concat(holmakedir, "deps"),
        "-I", Path.concat(holmakedir, "hfs"),
        "-I", Path.concat(holmakedir, "hmf"),
+       "-I", Path.concat(holmakedir, "toml"),
        "-I", Path.concat(holdir, "tools/parsing"),
        "-I", Path.concat(holdir, "src/portableML"),
        "-I", utildir,

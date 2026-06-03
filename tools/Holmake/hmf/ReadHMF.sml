@@ -620,7 +620,16 @@ fun extend_path_with_includes0 (A as (visited,prem,postm)) dir verbosity =
           val extensions =
               holpathdb.search_for_extensions find_includes
                 {starter_dirs = [dir], skip = Binaryset.empty String.compare}
-          val _ = List.app holpathdb.extend_db extensions
+          fun register {vname,path} =
+              case holpathdb.lookup_holpath {vname = vname} of
+                  NONE => holpathdb.extend_db {vname = vname, path = path}
+                | SOME existing =>
+                    if existing = path then ()
+                    else raise Fail
+                           ("holproject.toml at " ^ path ^
+                            " conflicts with prior registration of `" ^
+                            vname ^ "` for " ^ existing)
+          val _ = List.app register extensions
           val _ = if verbosity > 1 then
                     print ("Completed holpathdb analysis in " ^ dir ^ "\n")
                   else ()

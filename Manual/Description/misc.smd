@@ -510,6 +510,29 @@ can sit alongside `holproject.toml` and carry the same
 file override entries in the committed file, letting individual
 developers point externals at their own local paths.
 
+#### `name` and the path database
+
+\index{Holmake@\holmake!holpathdb}
+The `name` key doubles as the project's `holpathdb` registration:
+during startup `Holmake` walks the directory hierarchy for
+`holproject.toml` files and, for each file that sets a `name`,
+records that name as pointing at the file's directory.  Other
+`Holmakefile`s (and dependency files) can then refer to the
+project by `$(name)/relative/path` and have the prefix expand to
+an absolute path at build time.  Reverse lookup uses the
+registration to print paths portably in dependency lists.
+
+`name` is otherwise optional: a `holproject.toml` that omits
+`name` still drives project mode (the directory-set widening
+described above), it just contributes no path-database entry.
+
+Conflicting registrations are fatal: if two `holproject.toml`
+files reachable from the current build register the same name for
+different directories, or if a project's name collides with a
+built-in registration such as `HOLDIR`, `Holmake` reports the
+collision at startup and exits.  The user resolves by renaming
+one of the projects.
+
 #### Cross-directory build order
 
 `Holmake` walks the project directories in classical post-order at

@@ -2,6 +2,15 @@ $(SML_LIB)/basis/basis.mlb
 ../../tools-poly/poly/polytools-basic.mlb
 $(SML_LIB)/basis/mlton.mlb
 Systeml.sig
+toml/TOMLerror.sml
+toml/TOMLvalue_dtype.sml
+toml/TOMLvalue.sig
+toml/TOMLvalue.sml
+toml/parseTOMLUtil.sml
+toml/parseTOMLFunctor.sml
+toml/parseTOML.sml
+toml/TOML.sig
+toml/TOML.sml
 hfs/holpathdb.sig
 hfs/holpathdb.sml
 mlton/PolyML.sml

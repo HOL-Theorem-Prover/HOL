@@ -58,12 +58,7 @@ in
   app appjson ["JSONErrors"];
   myuse jsondir "JSONSource.sml";
   app appjson ["JSONParser", "JSONUtil"];
-  myuse tomldir "TOMLvalue_dtype.sml";
-  apptoml "TOMLvalue";
-  myuse tomldir "TOMLerror.sml";
-  myuse tomldir "parseTOMLUtil.sml";
-  myuse tomldir "parseTOMLFunctor.sml";
-  myuse tomldir "parseTOML.sml";
-  apptoml "TOML";
+  (* TOML library is loaded earlier (poly-init.ML), so that holpathdb
+     can parse holproject.toml.  Do not re-load here. *)
   appcore "HMProject"
 end;

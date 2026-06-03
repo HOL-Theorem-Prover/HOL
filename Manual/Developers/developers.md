@@ -299,6 +299,8 @@ Unless otherwise noted, they are built by the configuration process.
     This file is `use`-d in, and so made available by, `poly-init.ML`.
     Subsequently, there needs to be a call made to initialise the database with an entry for the `HOLDIR` key.
     This is done in `Holmake` within `poly/BuildCommand.sml`, and also within `poly-init2.ML` (for interactive use).
+    User-supplied entries come from `holproject.toml` files: when a project file's `name` key is set, the project root is registered under that name during `Holmake`'s upward walk for project files.
+    Conflicting registrations (same name pointing at different directories) are reported as fatal startup errors.
 
 `tools/sequences`
 :   Build sequence files.

@@ -55,15 +55,6 @@ hmf/ReadHMF.sml
 ../../src/portableML/json/JSONParser.sml
 ../../src/portableML/json/JSONUtil.sig
 ../../src/portableML/json/JSONUtil.sml
-toml/TOMLvalue_dtype.sml
-toml/TOMLvalue.sig
-toml/TOMLvalue.sml
-toml/TOMLerror.sml
-toml/parseTOMLUtil.sml
-toml/parseTOMLFunctor.sml
-toml/parseTOML.sml
-toml/TOML.sig
-toml/TOML.sml
 core/HMProject.sig
 core/HMProject.sml
 ../util/GetOpt.sig
