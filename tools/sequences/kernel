@@ -17,6 +17,7 @@ src/portableML/rawtheory
 [poly]src/portableML/json
 [poly]src/portableML/poly/concurrent
 [mosml]src/portableML/mosml/concurrent
+[mosml]tools/Holmake/toml
 !src/portableML/testsrc
 src/prekernel
 **KERNEL**
