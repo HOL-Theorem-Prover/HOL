@@ -33,7 +33,7 @@ The following shows how `match_term` could be used to match the
 conclusion of a theorem to a term.
 
 ``` hol4
-   >> val th = REFL “x:'a`”;
+   >> val th = REFL “x:'a”;
 
    >> match_term (concl th) “1 = 1”;
 
