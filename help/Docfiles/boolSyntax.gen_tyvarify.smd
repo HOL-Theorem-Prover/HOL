@@ -20,9 +20,11 @@ Never fails.
 
 ``` hol4
 >> show_types := true;
-  gen_tyvarify “h::t”;
+   gen_tyvarify “h::t”;
 ```
 
 ### See also
 
 [`Type.gen_tyvar`](#Type.gen_tyvar)
+
+>>__ show_types := false

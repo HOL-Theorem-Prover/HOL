@@ -31,21 +31,29 @@ conclusions of the other two theorems are not alpha-convertible.
 Specializing the built-in theorem `num_CASES` gives the theorem:
 
 ``` hol4
-   th = |- (m = 0) \/ (?n. m = SUC n)
+   >> val disj_th = SPEC “m:num” arithmeticTheory.num_CASES;
 ```
 
 Using two additional theorems, each having one disjunct as a hypothesis:
 
 ``` hol4
-   th1 = (m = 0 |- (PRE m = m) = (m = 0))
-   th2 = (?n. m = SUC n" |- (PRE m = m) = (m = 0))
+   >> show_assums := true;
+   >> val th1 = EQT_ELIM $
+        REWRITE_CONV [ASSUME “m = 0”, prim_recTheory.PRE] “PRE m = m ⇔ m = 0”;
+
+   >> val th2_0 =
+        REWRITE_CONV [ASSUME “m = SUC n”, prim_recTheory.PRE,
+                      arithmeticTheory.SUC_NOT_ZERO,
+                      GSYM prim_recTheory.SUC_ID]
+                     “PRE m = m ⇔ m = 0”;
+
+   >> val th2 = CHOOSE (“n:num”, ASSUME “∃n. m = SUC n”) (EQT_ELIM th2_0);
 ```
 
 a new theorem can be derived:
 
 ``` hol4
-   - DISJ_CASES th th1 th2;
-   > val it = |- (PRE m = m) = (m = 0) : thm
+   >> DISJ_CASES disj_th th1 th2;
 ```
 
 ### Comments
@@ -55,8 +63,10 @@ hypothesis, but otherwise `DISJ_CASES` is pointless.
 
 ### See also
 
+[`Thm.CHOOSE`](#Thm.CHOOSE),
 [`Tactic.DISJ_CASES_TAC`](#Tactic.DISJ_CASES_TAC),
 [`Thm_cont.DISJ_CASES_THEN`](#Thm_cont.DISJ_CASES_THEN),
 [`Thm_cont.DISJ_CASES_THEN2`](#Thm_cont.DISJ_CASES_THEN2),
 [`Drule.DISJ_CASES_UNION`](#Drule.DISJ_CASES_UNION),
 [`Thm.DISJ1`](#Thm.DISJ1), [`Thm.DISJ2`](#Thm.DISJ2)
+>>__ show_assums := false;

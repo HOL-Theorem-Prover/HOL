@@ -43,3 +43,4 @@ has type `term list -> term set -> term set`.
 ### See also
 
 [`Term.all_vars`](#Term.all_vars)
+>>__ show_types := false;

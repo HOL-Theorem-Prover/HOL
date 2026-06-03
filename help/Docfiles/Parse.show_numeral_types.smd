@@ -21,17 +21,15 @@ Never fails, as it is just an SML value.
 
 ### Example
 
-``` hol4
->>__ val snt_initial_grammars = (Parse.type_grammar(), Parse.term_grammar());
 >>__ load "integerTheory";
 >>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="integer"};
 
+``` hol4
 >> Term`~3`;
 
 >> show_numeral_types := true;
 
 >> Term`~3`;
->>__ Parse.temp_set_grammars snt_initial_grammars;
 ```
 
 Can help to disambiguate terms involving numerals.
@@ -40,3 +38,6 @@ Can help to disambiguate terms involving numerals.
 
 [`Parse.add_numeral_form`](#Parse.add_numeral_form),
 [`Globals.show_types`](#Globals.show_types)
+
+>>__ show_numeral_types := false
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};

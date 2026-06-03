@@ -42,3 +42,4 @@ not printing of types is enabled.
 ### See also
 
 [`Parse.print_term`](#Parse.print_term)
+>>__ show_types := false;

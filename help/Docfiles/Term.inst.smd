@@ -43,3 +43,4 @@ Never fails. A `redex` that is not a variable is simply ignored.
 ### See also
 
 [`Type.type_subst`](#Type.type_subst), [`Lib.|->`](#Lib..GZKQ4)
+>>__ show_types := false;

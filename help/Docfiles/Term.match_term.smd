@@ -33,37 +33,22 @@ The following shows how `match_term` could be used to match the
 conclusion of a theorem to a term.
 
 ``` hol4
-   > val th = REFL (Term `x:'a`);
-   val th = |- x = x : thm
+   >> val th = REFL “x:'a`”;
 
-   > match_term (concl th) (Term `1 = 1`);
-   val it = ([{redex = `x`, residue = `1`}],
-             [{redex = `:'a`, residue = `:num`}])
-     : term subst * hol_type subst
+   >> match_term (concl th) “1 = 1”;
 
-   > INST_TY_TERM it th;
-   val it = |- 1 = 1
+   >> INST_TY_TERM it th;
 ```
 
 The following shows an attempt to use a bad pattern (the pattern term
 `t` has two variables called `x` at different types):
 
 ``` hol4
-   > val _ = show_types := true;
-   > val t = list_mk_comb(``f:'a -> 'b -> 'c``, [``x:'a``, ``x:'b``]);
-   val t = ``(f : 'a -> 'b -> 'c) (x:'a) (x:'b)``;
+>> val _ = show_types := true;
 
-   > val (tminst, tyinst) = match_term t ``(g: 'a -> 'a -> 'b) a b``;
-   val tminst =
-      [{redex = ``(f :'a -> 'a -> 'b)``,
-        residue = ``(g :'a -> 'a -> 'b)``},
-       {redex = ``(x :'a)``, residue = ``(a :'a)``},
-       {redex = ``(x :'a)``, residue = ``(b :'a)``}]:
-      (term, term) Term.subst
-   val tyinst =
-      [{redex = ``:'c``, residue = ``:'b``},
-       {redex = ``:'b``, residue = ``:'a``}]:
-      (hol_type, hol_type) Term.subst
+>> val t = list_mk_comb(``f:'a -> 'b -> 'c``, [``x:'a``, ``x:'b``]);
+
+>> val (tminst, tyinst) = match_term t ``(g: 'a -> 'a -> 'b) a b``;
 ```
 
 The `tminst` value is unusable as it seeks to instantiate two different
@@ -80,3 +65,4 @@ For instantiating theorems `PART_MATCH` is usually easier to use.
 [`Type.match_type`](#Type.match_type),
 [`Drule.INST_TY_TERM`](#Drule.INST_TY_TERM),
 [`Drule.PART_MATCH`](#Drule.PART_MATCH)
+>>__ show_types := false
