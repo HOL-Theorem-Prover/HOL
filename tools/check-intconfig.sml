@@ -24,8 +24,10 @@ let
     if FileSys.access (f, [FileSys.A_READ]) then SOME f else NONE
   fun loadConfig f = let
       val oldq = HOL_Interactive.amquiet()
+      val absf = if Path.isAbsolute f then f
+                 else Path.mkAbsolute {path = f, relativeTo = FileSys.getDir()}
     in
-      print ("[Use-ing configuration file "^f^"]\n");
+      print ("[Use-ing configuration file "^absf^"]\n");
       oldq orelse HOL_Interactive.toggle_quietdec();
       use f;
       ignore (oldq orelse HOL_Interactive.toggle_quietdec())
