@@ -881,9 +881,7 @@ fun write_theory_graph () =
               \stop this message from appearing again)\n")
       else
         let
-          val _ = print "Generating theory-graph; this may take a while\n"
-          val _ = print "  (Use build's --no-mdbook or --no-helpdocs option \
-                        \to skip this step.)\n"
+          val _ = print "Generating theory-graph.\n"
           val theorytool =
               fullPath [HOLDIR, "src", "portableML", "rawtheory", "theorytool"]
           val svgfile = theorygraph_dir ++ "theories.svg"
