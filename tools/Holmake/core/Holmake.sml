@@ -477,8 +477,10 @@ fun is_known_dir absdir = Binaryset.member(!known_dirs, absdir)
      project_excludes   : absolute paths of project-tree dirs the
        config asks to skip;
      project_active_root: the project root, for diag messages. *)
+
+(* first two bindings look redundant; this is to escape the local-in-end *)
 val project_active_dirs = project_active_dirs
-val project_excludes    = project_excludes
+val project_excludes = project_excludes
 val project_active_root = Option.map #root project_config
 
 (* `limit_for_dir' must not trigger a Holmakefile read here: doing
@@ -518,20 +520,23 @@ fun getnewincs dir =
       val raw_pres = envlist hmf_diags env "PRE_INCLUDES" |> slist_to_dset dir
       val abs_dir = hmdir.toAbsPath dir
 
-      val excl_set = Binaryset.addList
-                       (Binaryset.empty String.compare, project_excludes)
+      val excl_pfxset =
+          List.foldl (fn (ex,fspt) => fspathTrie.insertPath ex fspt)
+                     fspathTrie.empty
+                     project_excludes
       fun check_one d =
           let val da = hmdir.toAbsPath d
           in
-            if Binaryset.member (excl_set, da) then
-              die ("Holmakefile in " ^ abs_dir ^
-                   ": INCLUDES references " ^ da ^
-                   ", but that directory is listed in " ^
-                   "[exclude] of the project at " ^
-                   Option.getOpt (project_active_root, "?") ^
-                   ".  Resolve the contradiction: either remove the " ^
-                   "INCLUDES entry or remove the [exclude] entry.")
-            else ()
+            case fspathTrie.hasPrefix excl_pfxset da of
+                SOME pfx =>
+                die ("\nHolmakefile in " ^ abs_dir ^
+                     ": INCLUDES references \n  " ^ da ^
+                     "\nbut that directory is subsumed by\n  " ^
+                     "[exclude] " ^ pfx ^ "\nof the project at " ^
+                     Option.getOpt (project_active_root, "?") ^
+                     ".  Resolve the contradiction: either remove the " ^
+                     "INCLUDES entry or remove the [exclude] entry.")
+              | NONE => ()
           end
       val () = Binaryset.app check_one raw_incs
       val () = Binaryset.app check_one raw_pres
@@ -758,7 +763,7 @@ let
                          else (fn s => (#tgtfatal outputfns s;
                                         OS.Process.exit OS.Process.failure))
             in
-              diag ("INCLUDES chain loops:\n  " ^
+              diag ("\nINCLUDES chain loops:\n  " ^
                     String.concatWith " -->\n  "
                                       (map hmdir.pretty_dir badchain))
             end

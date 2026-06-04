@@ -18,6 +18,7 @@ val _ = use "../hmcore.ML";
 val _ = useC "util/tailbuffer";
 val _ = (use "../../util/GetOpt.sig"; use "../../util/GetOpt.sml");
 val _ = use "../../util/FunctionalRecordUpdate.sml";
+val _ = useC "util/fspathTrie";
 val _ = useC "core/HM_Core_Cline";
 val _ = useC "deps/HM_DepGraph";
 val _ = useC "core/HM_BuildLock";

@@ -197,7 +197,7 @@ fun load { root } =
 
 (* ----------------------------------------------------------------------
    discover_dirs: DFS preorder under root and each external project,
-   collecting absolute paths of directories containing a Holmakefile.
+   collecting absolute paths of directories.
    ---------------------------------------------------------------------- *)
 fun list_subdirs dir =
     let

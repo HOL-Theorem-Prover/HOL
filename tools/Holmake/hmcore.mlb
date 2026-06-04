@@ -31,6 +31,8 @@ hmf/parse_glob.sig
 hmf/parse_glob.sml
 util/tailbuffer.sig
 util/tailbuffer.sml
+util/fspathTrie.sig
+util/fspathTrie.sml
 core/Holmake_tools_dtype.sml
 core/HM_Cachekey_dtype.sml
 util/terminal_primitives.sig
