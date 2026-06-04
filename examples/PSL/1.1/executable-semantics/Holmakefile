@@ -1,2 +1,1 @@
-PRE_INCLUDES=../../path ../../regexp
-INCLUDES=../official-semantics
+INCLUDES=../official-semantics ../../path ../../regexp

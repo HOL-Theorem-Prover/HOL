@@ -1,5 +1,4 @@
-INCLUDES = $(HOLDIR)/tools/cmp
-PRE_INCLUDES = ..
+INCLUDES = $(HOLDIR)/tools/cmp ..
 TEST_PROGS = test_coopers.exe test_omega.exe selftest.exe
 
 EXTRA_CLEANS = $(TEST_PROGS) tcooper genproblem gen_bc_problem \

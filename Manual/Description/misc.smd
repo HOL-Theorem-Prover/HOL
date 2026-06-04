@@ -1339,19 +1339,16 @@ pattern doesn't match any files, then the function returns
 If defined, the `INCLUDES` variable is used to add directories to
 the list of directories consulted when files are compiled and
 linked.  The effect is as if the directories specified had all
-been included on the command-line with `-I` options.  The
-`PRE_INCLUDES` variable works similarly, but the directories
-specified here are placed before any `INCLUDES` directories when
-dependency analysis is done.  Both `INCLUDES` and `PRE_INCLUDES`
+been included on the command-line with `-I` options.  The `INCLUDES` 
 directories are consulted before the distribution's `sigobj`
 directory (containing all core material).
 
 \index{Holmake@\holmake!recursive invocation}
-By default, directories specified in the `INCLUDES` and
-`PRE_INCLUDES` directory are also built by `Holmake` before it
-attempts to build in the current directory.  If the `-r` (“force
-recursion”) command-line flag is used, these directories are also
-“clean”-ed when a cleaning target is given to `Holmake`.
+By default, directories specified in the `INCLUDES` list are also
+built by `Holmake` before it attempts to build in the current
+directory. If the `-r` (“force recursion”) command-line flag is used,
+these directories are also “clean”-ed when a cleaning target is given
+to `Holmake`.
 
 \index{CLINE_OPTIONS (Holmakefile variable)@\texttt{CLINE\_OPTIONS} (Holmakefile variable)}
 The `CLINE_OPTIONS` variable is used for the specification of
