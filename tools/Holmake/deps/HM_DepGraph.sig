@@ -44,7 +44,8 @@ sig
 
   val empty : unit -> 'a t
   val add_node : 'a nodeInfo -> 'a t -> 'a t * node
-  val updnode : node * target_status -> 'a t -> 'a t
+  val updnode_tgtstatus : node * target_status -> 'a t -> 'a t
+  val updnode_fully : node * 'a nodeInfo -> 'a t -> 'a t
 
   (* File-hash memo (used by HM_Cachekey to avoid re-hashing shared
      dependencies during a single Holmake invocation). *)

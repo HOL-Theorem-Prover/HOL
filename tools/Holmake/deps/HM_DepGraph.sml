@@ -156,10 +156,15 @@ fun add_node (nI : 'a nodeInfo) (g :'a t) =
     newNode (#command nI)
   end
 
-fun updnode (n, st) (g : 'a t) : 'a t =
+fun updnode_tgtstatus (n, st) (g : 'a t) : 'a t =
   case peeknode g n of
       NONE => raise NoSuchNode
     | SOME nI => fupd_nodes (fn m => Map.insert(m, n, setStatus st nI)) g
+
+fun updnode_fully (n, nInfo) (g : 'a t) : 'a t =
+    case peeknode g n of
+        NONE => raise NoSuchNode
+      | SOME _ => fupd_nodes (fn m => Map.insert(m, n, nInfo)) g
 
 fun find_runnable_pred P (g : 'a t) =
   let
@@ -241,7 +246,7 @@ fun nodeInfo_toJSON (n, nI : 'a nodeInfo) =
 
 fun mkneeded tgts g =
     let
-      fun setneeded f n g = updnode(n,f{needed=true}) g
+      fun setneeded f n g = updnode_tgtstatus(n,f{needed=true}) g
       fun work visited wlist g =
           case wlist of
               [] => g

@@ -497,6 +497,7 @@ fun is_known_dir absdir = Binaryset.member(!known_dirs, absdir)
 val project_active_dirs = project_active_dirs
 val project_excludes = project_excludes
 val project_active_root = Option.map #root project_config
+val project_modep = isSome project_config
 
 (* `limit_for_dir' must not trigger a Holmakefile read here: doing
    so would chdir under code in `build_depgraph' that captures
@@ -1370,41 +1371,8 @@ let
   val _ = not (cdset_member cdset (dir,target_s)) orelse
           die (pretty_tgt ^ " seems to depend on itself failing\n" ^
                " Loop is : " ^ cdset_toString cdset ^ ">" ^ pretty_tgt)
-in
-  case target_node g0 tgt of
-      (x as SOME n) => (g0, n)
-    | NONE =>
-      if not (hmdir.eqdir dir actual_dir) andalso
-         no_extra_rule (SOME tgt) andalso
-         not (isSome (pattern_rule_info tgt))
-         (* path outside of current directory and no local pattern
-            rule claims it *)
-      then
-        let
-          (* Recurse into the external node's transitive deps so the
-             graph captures them.  The [target_node g0 tgt] check
-             above prevents infinite recursion on shared ancestors. *)
-          val foreign_deps = read_foreign_depfile tgt
-          val (g1, depnodes) =
-              List.foldl
-                (fn (d', (g, ns)) =>
-                    let val (g'', n) = build d' g
-                    in (g'', addF d' n :: ns) end)
-                (g0, [])
-                foreign_deps
-          val _ = diag (fn _ =>
-                    "Target "^pretty_tgt^" external; foreign deps = ["^
-                    pdlist foreign_deps ^"]")
-        in
-          add_node {target = tgt, seqnum = 0, phony = false,
-                    status = if exists_readable fullpath_s then Succeeded
-                             else Failed{needed=false},
-                    dir = dir, extra = extra,
-                    mtime = hm_target.tgt_modTime tgt,
-                    local_parallelism_limit = limit_for_dir dir,
-                    command = NoCmd, dependencies = depnodes} g1
-        end
-      else if isSome pdep andalso no_full_extra_rule (SOME tgt) then
+  fun buildNodeInfo g0 =
+      if isSome pdep andalso no_full_extra_rule (SOME tgt) then
         let
           val pdep = hm_target.mk(dir, valOf pdep)
           val (g1, pnode) = build pdep g0
@@ -1413,15 +1381,15 @@ in
           val secondaries =
               set_addList (get_explicit_dependencies target)
                           (get_implicit_dependencies incinfo target)
-                       |> set_addList extra_deps
+                          |> set_addList extra_deps
           val _ = diag (fn _ => target_s ^ " -secondaries-> " ^
                                 set_concatWith tgt_toString ", " secondaries)
           fun foldthis (d, (g, secnodes)) =
-            let
-              val (g', n) = build d g
-            in
-              (g', addF d n::secnodes)
-            end
+              let
+                val (g', n) = build d g
+              in
+                (g', addF d n::secnodes)
+              end
           val (g2, depnodes : (HM_DepGraph.node * dep) list) =
               Binaryset.foldl foldthis (g1, [addF pdep pnode]) secondaries
           val unbuilt_deps =
@@ -1471,17 +1439,15 @@ in
              each other. *)
           fun theory_dat_succeeded () =
               let
-                val thy_opt =
-                    case hm_target.filepart tgt of
-                        UO (Theory s) => SOME s
-                      | UI (Theory s) => SOME s
-                      | _ => NONE
+                val thy_opt = case hm_target.filepart tgt of
+                                  UO (Theory s) => SOME s
+                                | UI (Theory s) => SOME s
+                                | _ => NONE
               in
                 case thy_opt of
                     NONE => false
                   | SOME s =>
-                    (case HM_DepGraph.target_node g2
-                                                 (hm_target.mk(dir, DAT s)) of
+                    (case HM_DepGraph.target_node g2 (hm_target.mk(dir, DAT s)) of
                          NONE => false
                        | SOME n =>
                          (case HM_DepGraph.peeknode g2 n of
@@ -1494,16 +1460,16 @@ in
               else
                 (case bic of
                      BIC_BuildScript thy =>
-                       if exists_readable fullpath_s andalso
-                          null unbuilt_deps
-                       then stamp_matches g2 thy
-                       else (false, g2)
+                     if exists_readable fullpath_s andalso
+                        null unbuilt_deps
+                     then stamp_matches g2 thy
+                     else (false, g2)
                    | BIC_Compile =>
-                       if exists_readable fullpath_s andalso
-                          null unbuilt_deps andalso
-                          theory_dat_succeeded ()
-                       then (true, g2)
-                       else (false, g2))
+                     if exists_readable fullpath_s andalso
+                        null unbuilt_deps andalso
+                        theory_dat_succeeded ()
+                     then (true, g2)
+                     else (false, g2))
           val needs_building =
               not cachekey_uptodate andalso
               (not (null unbuilt_deps) orelse
@@ -1514,26 +1480,26 @@ in
                                   ": cachekey matches stamp, up-to-date")
                   else ()
         in
-            add_node {target = tgt, seqnum = 0, phony = false,
-                      status = if needs_building then Pending{needed=false}
-                               else Succeeded,
-                      extra = extra,
-                      mtime = hm_target.tgt_modTime tgt,
-                      local_parallelism_limit = limit_for_dir rh,
-                      command = BuiltInCmd (bic,incinfo), dir = rh,
-                      dependencies = depnodes } g3
+          ({target = tgt, seqnum = 0, phony = false,
+            status = if needs_building then Pending{needed=false}
+                     else Succeeded,
+            extra = extra,
+            mtime = hm_target.tgt_modTime tgt,
+            local_parallelism_limit = limit_for_dir rh,
+            command = BuiltInCmd (bic,incinfo), dir = rh,
+            dependencies = depnodes }, g3)
         end
       else
         case extra_rule_for tgt of
             NONE => (
               diag (fn _ => "No extra info/rule for target " ^ target_s);
-              add_node {target = tgt, seqnum = 0, phony = false,
-                        status = if exists_readable target_s then Succeeded
-                                 else Failed{needed=false},
-                        command = NoCmd, dir = rh, extra = extra,
-                        mtime = hm_target.tgt_modTime tgt,
-                        local_parallelism_limit = limit_for_dir rh,
-                        dependencies = []} g0
+              ({target = tgt, seqnum = 0, phony = false,
+                status = if exists_readable target_s then Succeeded
+                         else Failed{needed=false},
+                command = NoCmd, dir = rh, extra = extra,
+                mtime = hm_target.tgt_modTime tgt,
+                local_parallelism_limit = limit_for_dir rh,
+                dependencies = []}, g0)
             )
           | SOME {dependencies, commands, ...} =>
             let
@@ -1624,16 +1590,16 @@ in
                            else Succeeded
               val tgt_mtime = if is_phony then NONE
                               else hm_target.tgt_modTime tgt
-              fun foldthis (c, (depnode, seqnum, g)) =
+              fun commandNode (c, local_depnodes, seqnum) =
+                  {target = tgt, seqnum = seqnum,
+                   status = status, phony = is_phony,
+                   command = SomeCmd c, extra = extra,
+                   dir = rh, mtime = tgt_mtime,
+                   local_parallelism_limit = limit_for_dir rh,
+                   dependencies = local_depnodes @ depnodes }
+              fun foldthis (c, (depnodes, seqnum, g)) =
                 let
-                  val (g',n) = add_node {target = tgt, seqnum = seqnum,
-                                         status = status, phony = is_phony,
-                                         command = SomeCmd c, extra = extra,
-                                         dir = rh,
-                                         mtime = tgt_mtime,
-                                         local_parallelism_limit =
-                                             limit_for_dir rh,
-                                         dependencies = depnode @ depnodes } g
+                  val (g',n) = add_node (commandNode (c, depnodes, seqnum)) g
                 in
                   (* This function needs to be folded l-to-r to ensure that
                      the last node is the one that gets recorded in the target
@@ -1645,20 +1611,21 @@ in
             in
               if needs_building then
                 let
-                  val (lastnodelist, _, g) =
-                      List.foldl foldthis ([], 0, g1) commands
+                  val (pfx, lastc) = front_last commands
+                  val (lastnodelist, seqnum, g) = List.foldl foldthis ([], 0, g1) pfx
+                  val lastInfo = commandNode (lastc, lastnodelist, seqnum)
                 in
-                  (g, #1 (hd lastnodelist))
+                  (lastInfo, g)
                 end
               else
                 case starred_dep of
                     NONE =>
-                    add_node {target = tgt, seqnum = 0, phony = is_phony,
-                              status = status, command = NoCmd, extra = extra,
-                              dir = rh,
-                              mtime = tgt_mtime,
-                              local_parallelism_limit = limit_for_dir rh,
-                              dependencies = depnodes} g1
+                    ({target = tgt, seqnum = 0, phony = is_phony,
+                      status = status, command = NoCmd, extra = extra,
+                      dir = rh,
+                      mtime = tgt_mtime,
+                      local_parallelism_limit = limit_for_dir rh,
+                      dependencies = depnodes}, g1)
                   | SOME s =>
                     let
                       val updstatus =
@@ -1667,17 +1634,55 @@ in
                           else Succeeded
                       val fp = OS.Path.concat (hmdir.toAbsPath actual_dir, s)
                     in
-                      add_node {target = tgt, seqnum = 0,
-                                phony = false, status = updstatus,
-                                command = BuiltInCmd
-                                            (BIC_BuildScript fp, incinfo),
-                                dir = actual_dir, extra = extra,
-                                mtime = hm_target.tgt_modTime tgt,
-                                local_parallelism_limit =
-                                    limit_for_dir actual_dir,
-                                dependencies = depnodes} g1
+                      ({target = tgt, seqnum = 0,
+                        phony = false, status = updstatus,
+                        command = BuiltInCmd (BIC_BuildScript fp, incinfo),
+                        dir = actual_dir, extra = extra,
+                        mtime = hm_target.tgt_modTime tgt,
+                        local_parallelism_limit =
+                        limit_for_dir actual_dir,
+                        dependencies = depnodes}, g1)
                     end
             end
+in
+  case target_node g0 tgt of
+      (x as SOME node) =>
+      let
+        val nInfo = valOf (peeknode g0 node) handle Option =>
+                    raise Fail "depgraph build: invariant failure"
+      in
+        case #command nInfo of
+            NoCmd => if hmdir.eqdir (#dir nInfo) actual_dir then
+                       let
+                         val _ = diag (fn _ => "Update NoCmd node for " ^
+                                               hm_target.toString tgt)
+                         val (nInfo', g) = buildNodeInfo g0
+                       in
+                         (updnode_fully (node, nInfo') g, node)
+                       end
+                     else (g0, node)
+          | _ => (g0, node)
+      end
+    | NONE =>
+      if not (hmdir.eqdir dir actual_dir) andalso
+         no_extra_rule (SOME tgt) andalso
+         not (isSome (pattern_rule_info tgt))
+         (* path outside of current directory and no local rule (pattern or otherwise)
+            claims it *)
+      then (
+        diag (fn _ => hm_target.toString tgt ^ " appears foreign; adding placeholdir NoCmd");
+        add_node {target = tgt, seqnum = 0, phony = false,
+                  status = if exists_readable fullpath_s then Succeeded
+                           else Failed{needed=false},
+                  dir = dir, extra = extra,
+                  mtime = hm_target.tgt_modTime tgt,
+                  local_parallelism_limit = limit_for_dir dir,
+                  command = NoCmd, dependencies = []} g0
+      ) else
+        let val (nInfo, g) = buildNodeInfo g0
+        in
+          add_node nInfo g
+        end
 end
 
 (* called in dir *)
@@ -1776,22 +1781,32 @@ val idmap0 = extend_idmap original_dir
 
 fun toplevel_build_graph () = create_complete_graph cline_incs idmap0
 
-(* Behind the --dirs flag.  Threading each root through `recursively`
-   with its own ancestors = [root] is what stops cross-root INCLUDES
-   references from looking like cycles; genuine cycles inside one
-   root's chain are still flagged.  The shared `visited` set is what
-   keeps each directory's contribution to the unified graph
-   single-shot. *)
-fun create_complete_graph_for_roots roots idm =
+(* Behind the --dirs flag and "project mode".
+
+   Threading each root through `recursively` with its own ancestors =
+   [root] is what stops cross-root INCLUDES references from looking
+   like cycles; genuine cycles inside one root's chain are still
+   flagged.
+
+   The shared `visited` set is what keeps each directory's
+   contribution to the unified graph single-shot.
+
+   dirmode_roots is the set of roots that should be used to generate actual build
+   targets (in dirmode, this will be the set of directories the user has given on the
+   command-line), otherwise it will be the current working directory.
+*)
+fun create_complete_graph_for_roots roots dirmode_roots idm =
     let
       val empty_visited = Binaryset.empty hmdir.compare
-      fun for_root (root, {graph, incdirmap, visited, must_build}) =
+      fun for_root (root:hmdir.t, {graph, incdirmap, visited, must_build}) =
           let
             fun in_root () =
                 let
                   val (_, _, _, target1) = get_hmf()
                   val root_targets =
-                      generate_all_plausible_targets warn target1
+                      if Binaryset.member(dirmode_roots, root) then
+                        generate_all_plausible_targets warn target1
+                      else []
                   val all_must_build = root_targets @ must_build
                 in
                   if Binaryset.member(visited, root) then
@@ -1806,7 +1821,7 @@ fun create_complete_graph_for_roots roots idm =
                             hm = extend_graph_in_dir,
                             dirinfo = {incdirmap = incdirmap,
                                        visited = visited,
-                                       ancestors = [root]},
+                                       ancestors = if project_modep then [] else [root]},
                             dir = root,
                             data = graph
                           }
@@ -1905,18 +1920,14 @@ fun dispatch_built_graph depgraph =
       postmortem finish_logging outputfns (build_graph depgraph)
       handle e => die ("Exception: " ^ General.exnMessage e)
 
+fun hm_extend s = hmdir.extendp {base = original_dir, extension = s}
 fun dirs_work () =
     let
       val _ = case targets of
                   [] => die "--dirs given but no root directories supplied"
                 | _ => ()
-      val _ = case List.filter (fn x => member x clean_target_strings) targets
-               of [] => ()
-                | bad => die ("--dirs does not accept clean targets " ^
-                              "(found: " ^ String.concatWith " " bad ^ ")")
-      val roots =
-          map (fn s => hmdir.extendp {base = original_dir, extension = s})
-              targets
+      val hmd_targets = map hm_extend targets
+      val roots = hmd_targets @ map hm_extend project_active_dirs
       val _ =
           List.app
               (fn r =>
@@ -1930,7 +1941,10 @@ fun dirs_work () =
                   end)
               roots
       val (depgraph, must_build) =
-          create_complete_graph_for_roots roots idmap0
+          create_complete_graph_for_roots
+            roots
+            (Binaryset.addList(Binaryset.empty hmdir.compare, hmd_targets))
+            idmap0
       val depgraph =
           if toplevel_no_prereqs then
             mk_dirneeded (hmdir.curdir()) (mkneeded must_build depgraph)
@@ -1941,8 +1955,109 @@ fun dirs_work () =
       dispatch_built_graph depgraph
     end
 
+(* turns a c/line target name, probably a file like thing, but could also be "all" etc,
+   into a dep *)
+fun resolve_tgtname depgraph diep n =
+    let val {dir,file} = OS.Path.splitDirFile n
+        val cdir = hmdir.curdir()
+        open hm_target
+        fun maybe_die s = if diep then die s else NONE
+    in
+      if dir <> "" then SOME (filestr_to_tgt n)
+      else
+        let
+          fun foldthis (_, ni) A =
+              let val tgt = #target ni
+              in
+                if fromFile (filepart tgt) = n then tgt :: A else A
+              end
+          val candidates = HM_DepGraph.fold foldthis depgraph []
+        in
+          case candidates of
+              [] =>
+              if isSome (OS.Path.ext n) then
+                maybe_die ("Can't make sense of target " ^ n)
+              else
+                (case resolve_tgtname depgraph false (n ^ ".uo") of
+                     NONE => die ("Can't make sense of target " ^ n)
+                   | SOME c => SOME c)
+            | [c] => SOME c
+            | cs =>
+              case List.find (hmdir.eqdir cdir o dirpart) candidates
+               of
+                  SOME t => SOME t
+                | NONE =>
+                  maybe_die
+                    ("Target " ^ n ^ " ambiguous; " ^
+                     "could be from any of the following " ^
+                     "directories: " ^
+                     String.concatWith ", "
+                                       (map (hmdir.toString o dirpart) cs))
+        end
+    end
+
+fun projects_work () =
+    let
+      (* there is no --dirs flag, so targets are derived from cwd's
+         Holmakefile, or c/line *)
+      val (depgraph0, default_must_build) =
+          create_complete_graph_for_roots
+            (map hm_extend project_active_dirs)
+            (Binaryset.singleton hmdir.compare (hmdir.curdir()))
+            idmap0
+      val real_targets =
+          case targets of
+              [] => default_must_build
+            | _ => List.mapPartial (resolve_tgtname depgraph0 true) targets
+      val depgraph =
+          if toplevel_no_prereqs then
+            mk_dirneeded (hmdir.curdir()) (mkneeded real_targets depgraph0)
+          else
+            mkneeded real_targets depgraph0
+    in
+      diag_built_graph real_targets depgraph;
+      dispatch_built_graph depgraph
+    end
+
+val cleanTargets =
+    List.filter (fn x => member x clean_target_strings) targets
+
+fun clean_work() =
+    let
+      fun visit_and_clean tgts d =
+          let
+            val _ = FileSys.chDir (hmdir.toAbsPath d)
+          in
+            List.app do_clean_target tgts;
+            FileSys.chDir (hmdir.toAbsPath original_dir)
+          end
+    in
+      if cline_dirs then
+        die ("--dirs does not accept clean targets " ^
+             "(found: " ^ String.concatWith " " cleanTargets ^ ")")
+      else if not cline_recursive_clean then
+        (List.app (ignore o do_clean_target) cleanTargets;
+         finish_logging true;
+         OS.Process.success)
+      else (
+        recursively getnewincs (SOME cline_incs) {
+          outputfns = outputfns, verb = "Cleaning",
+          hm = (fn _ => fn _ => fn _ => fn _ =>
+                   List.app (ignore o do_clean_target) cleanTargets),
+          dirinfo = {incdirmap=idmap0, ancestors = [original_dir],
+                     visited = Binaryset.empty hmdir.compare},
+          dir = original_dir,
+          data = ()
+        };
+        OS.Process.success
+      )
+    end
+
+
 fun work() =
-  if cline_dirs then dirs_work ()
+  if not (null cleanTargets) then clean_work()
+  else if cline_dirs then dirs_work ()
+  else if project_modep then projects_work()
   else
     case targets of
       [] => let
@@ -1959,93 +2074,24 @@ fun work() =
         diag_built_graph targets depgraph;
         dispatch_built_graph depgraph
       end
-    | xs => let
-        val cleanTargets =
-            List.filter (fn x => member x clean_target_strings) xs
-        fun visit_and_clean tgts d =
-            let
-              val _ = FileSys.chDir (hmdir.toAbsPath d)
-            in
-              List.app do_clean_target tgts;
-              FileSys.chDir (hmdir.toAbsPath original_dir)
-            end
-      in
-        if not (null cleanTargets) then
-          if not cline_recursive_clean then
-            (List.app (ignore o do_clean_target) cleanTargets;
-             finish_logging true;
-             OS.Process.success)
-          else (
-            recursively getnewincs (SOME cline_incs) {
-              outputfns = outputfns, verb = "Cleaning",
-              hm = (fn _ => fn _ => fn _ => fn _ =>
-                       List.app (ignore o do_clean_target) cleanTargets),
-              dirinfo = {incdirmap=idmap0, ancestors = [original_dir],
-                         visited = Binaryset.empty hmdir.compare},
-              dir = original_dir,
-              data = ()
-            };
-            OS.Process.success
-          )
-        else
-          let
-            val (depgraph, local_incinfo) = toplevel_build_graph()
-            fun resolve_tgtname diep n =
-                let val {dir,file} = OS.Path.splitDirFile n
-                    val cdir = hmdir.curdir()
-                    open hm_target
-                    fun maybe_die s = if diep then die s else NONE
-                in
-                  if dir <> "" then SOME (filestr_to_tgt n)
-                  else
-                    let
-                      fun foldthis (_, ni) A =
-                          let val tgt = #target ni
-                          in
-                            if fromFile (filepart tgt) = n then tgt :: A else A
-                          end
-                      val candidates = HM_DepGraph.fold foldthis depgraph []
-                    in
-                      case candidates of
-                          [] =>
-                          if isSome (OS.Path.ext n) then
-                            maybe_die ("Can't make sense of target " ^ n)
-                          else
-                            (case resolve_tgtname false (n ^ ".uo") of
-                                 NONE => die ("Can't make sense of target " ^ n)
-                               | SOME c => SOME c)
-                        | [c] => SOME c
-                        | cs =>
-                          case List.find (hmdir.eqdir cdir o dirpart)
-                                         candidates
-                           of
-                              SOME t => SOME t
-                            | NONE =>
-                              maybe_die
-                                ("Target " ^ n ^ " ambiguous; " ^
-                                 "could be from any of the following " ^
-                                 "directories: " ^
-                                 String.concatWith ", "
-                                     (map (hmdir.toString o dirpart) cs))
-                    end
-                end
-            val targets = List.mapPartial (resolve_tgtname true) xs
-            val depgraph =
-                if toplevel_no_prereqs then
-                  mk_dirneeded (hmdir.curdir()) (mkneeded targets depgraph)
-                else
-                  mkneeded targets depgraph
-            val _ = check_targets_are_in_graph depgraph targets
-          in
-            if cline_nobuild then
-              (print ("Dependency graph" ^ HM_DepGraph.toString depgraph);
-               OS.Process.success)
+    | xs =>
+      let
+        val (depgraph, local_incinfo) = toplevel_build_graph()
+        val targets = List.mapPartial (resolve_tgtname depgraph true) xs
+        val depgraph =
+            if toplevel_no_prereqs then
+              mk_dirneeded (hmdir.curdir()) (mkneeded targets depgraph)
             else
-              postmortem finish_logging outputfns (build_graph depgraph)
-              handle e => die ("Exception: "^General.exnMessage e)
-          end
+              mkneeded targets depgraph
+        val _ = check_targets_are_in_graph depgraph targets
+      in
+        if cline_nobuild then
+          (print ("Dependency graph" ^ HM_DepGraph.toString depgraph);
+           OS.Process.success)
+        else
+          postmortem finish_logging outputfns (build_graph depgraph)
+          handle e => die ("Exception: "^General.exnMessage e)
       end
-
 
 fun do_cachekey thyname =
     let

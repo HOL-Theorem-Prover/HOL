@@ -1,16 +1,12 @@
-(* End-to-end test: a synthetic multi-dir project where one subdir's
+(*
+
+   End-to-end test: a synthetic multi-dir project where one subdir's
    theory has `Ancestors` reaching across to a sibling subdir's theory,
    with NO INCLUDES line anywhere.  Holmake is invoked at the project
-   root with `-r`; project mode picks up holproject.toml, adds every
-   project dir to cline_incs, and the build runs each subdir's
+   root, picks up holproject.toml, adds every project dir, and then runs
    Holmake in the right order with Holdep finding cross-dir source
    references via the project's include set.
-
-   Models the "stripped-down lambda" scenario without depending on
-   lambda's actual sources or HOL examples build sequence: a fresh
-   Holmake at the synthetic project's root has to find and build
-   everything from holproject.toml alone. *)
-
+*)
 open testutils
 
 val op++ = OS.Path.concat
@@ -62,7 +58,10 @@ fun holheap_decl () =
 (* Root Holmakefile: HOLHEAP + recursive-build so Holmake at the root
    triggers building every project dir's default targets. *)
 val _ = write_file (root ++ "Holmakefile")
-                   (holheap_decl () ^ "\nCLINE_OPTIONS = -r\n")
+                   (holheap_decl () ^
+                    "\nCLINE_OPTIONS = -r\n\n\
+                    \all: dirB/BTheory.uo dirA/ATheory.uo\n\
+                    \.PHONY: all\n")
 
 val _ = write_file (dirA ++ "Holmakefile") (holheap_decl ())
 val _ = write_file (dirA ++ "AScript.sml")
@@ -76,32 +75,45 @@ val _ = write_file (dirB ++ "BScript.sml")
   \Ancestors A\n\
   \Theorem b_truth = a_truth\n"
 
-val _ = tprint "Synthetic project: Holmake -r at root builds all subdirs"
-val result = run_holmake_in root ["--nolmbc"]
 
 fun product_at d nm =
     HOLFileSys.access (d ++ nm, []) handle OS.SysErr _ => false
 
-val a_built = product_at dirA "ATheory.uo"
-            andalso product_at dirA "ATheory.dat"
-val b_built = product_at dirB "BTheory.uo"
-            andalso product_at dirB "BTheory.dat"
+fun check_all_built result =
+    let
+      val a_built = product_at dirA "ATheory.uo"
+                    andalso product_at dirA "ATheory.dat"
+      val b_built = product_at dirB "BTheory.uo"
+                    andalso product_at dirB "BTheory.dat"
+    in
+      if OS.Process.isSuccess result andalso a_built andalso b_built then OK ()
+      else die ("FAILED: exit=" ^
+                Bool.toString (OS.Process.isSuccess result) ^
+                " ATheory.{uo,dat}=" ^ Bool.toString a_built ^
+                " BTheory.{uo,dat}=" ^ Bool.toString b_built)
+    end
 
-val _ = if OS.Process.isSuccess result andalso a_built andalso b_built
-        then OK ()
-        else die ("FAILED: exit=" ^
-                  Bool.toString (OS.Process.isSuccess result) ^
-                  " ATheory.{uo,dat}=" ^ Bool.toString a_built ^
-                  " BTheory.{uo,dat}=" ^ Bool.toString b_built)
+fun cleanup () =
+    let
+    in
+       ignore (run_holmake_in dirA ["--nolmbc", "cleanAll"]);
+       ignore (run_holmake_in dirB ["--nolmbc", "cleanAll"]);
+       ignore (run_holmake_in root ["--nolmbc", "cleanAll"])
+    end
+
+
+val _ = tprint "\nSynthetic project: Holmake at root builds all subdirs"
+val _ = check_all_built (run_holmake_in root ["--nolmbc"])
+val _ = cleanup()
+
+val _ = tprint "\n\nSynthetic project: Holmake in B builds"
+val _ = check_all_built (run_holmake_in dirB ["--nolmbc"])
+val _ = cleanup()
 
 (* Sanity check: the cross-dir resolution was via project mode, not
    accidental classical INCLUDES that snuck in somewhere.  Re-run
    with --no-project after cleaning -- Holdep must now fail to find
    ATheory and BTheory's compile should fail. *)
-val _ = ignore (run_holmake_in dirA ["--nolmbc", "cleanAll"])
-val _ = ignore (run_holmake_in dirB ["--nolmbc", "cleanAll"])
-val _ = ignore (run_holmake_in root ["--nolmbc", "cleanAll"])
-
 val _ = tprint "Same project with --no-project leaves BTheory unbuilt"
 val ctrl = run_holmake_in root ["--nolmbc", "--no-project"]
 val b_still_unbuilt = not (product_at dirB "BTheory.uo")

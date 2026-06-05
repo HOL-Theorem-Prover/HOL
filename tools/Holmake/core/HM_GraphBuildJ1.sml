@@ -29,9 +29,9 @@ fun b2status true = HM_DepGraph.Succeeded
   | b2status false = HM_DepGraph.Failed{needed=true}
 
 fun updall nodes st g =
-  List.foldl (fn (n,g) => HM_DepGraph.updnode(n,st) g) g nodes
+  List.foldl (fn (n,g) => HM_DepGraph.updnode_tgtstatus(n,st) g) g nodes
 
-fun upd1 node st g = HM_DepGraph.updnode(node,st) g
+fun upd1 node st g = HM_DepGraph.updnode_tgtstatus(node,st) g
 
 fun 'a graphbuildj1 static_info =
   let

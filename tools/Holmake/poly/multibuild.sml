@@ -240,6 +240,7 @@ fun graphbuild optinfo g =
             fun eBuildArticle (s,deps) = BuildArticle(s,deps,extra)
             fun eProcessArticle s = ProcessArticle(s,extra)
             val dir = Holmake_tools.hmdir.toAbsPath (#dir nI)
+            val updnode = updnode_tgtstatus
             fun k b g =
                 (if needed then tgtcomplete (#dir nI, 1, 0, b, Time.zeroTime)
                  else ();
