@@ -14,17 +14,22 @@ sig
                   (* may complain to stdErr about malformed variable things *)
 
 
-  (* pulls in contents of all the files with name filename that can be found
+  (* pulls in contents of all "matching files" that can be found
      starting at starter_dirs and moving up in the file hierarchy.
      In addition, for every directory, generate fresh places to also consider
      using the function argument.  Any given directory will only be visited
      once.  All strings encoding directories must be absolute paths.
-     Returns a map from directory name to file contents *)
+
+     Files are examined by looking for the names in the filenames list, the first that
+     exists is used.
+
+     Returns a map from directory name to filename * file-contents
+  *)
   val files_upward_in_hierarchy :
       (string -> string list) -> {diag: (unit -> string) -> unit} ->
-      {filename : string, starter_dirs : string list,
+      {filenames : string list, starter_dirs : string list,
        skip : string Binaryset.set} ->
-      (string, string) Binarymap.dict
+      (string, (string * string)) Binarymap.dict
 
   (* uses the above *)
   val search_for_extensions :

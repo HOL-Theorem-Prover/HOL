@@ -86,19 +86,32 @@ fun read_whole_file{filename} =
     end
 
 fun set_member s e = Binaryset.member(s,e)
-fun files_upward_in_hierarchy gen_extras {diag} {filename, starter_dirs, skip} =
+
+fun checkfile_is_bare filename =
     let
       val {arcs = farcs, isAbs = fabs, vol} = OS.Path.fromString filename
-      val _ = not fabs andalso length farcs = 1 andalso vol = "" orelse
-              raise Fail "files_upward_in_hierarchy: bad filename"
-      fun maybe_readfile d A =
-          let
-            val f = OS.Path.concat (d,filename)
-          in
-            if OS.FileSys.access(f,[OS.FileSys.A_READ]) then
-              Binarymap.insert(A, d, read_whole_file{filename = f})
-            else A
-          end
+    in
+      if not fabs andalso length farcs = 1 andalso vol = "" then ()
+      else
+        raise Fail ("files_upward_in_hierarchy: bad filename: "^filename)
+    end
+
+fun files_upward_in_hierarchy gen_extras {diag} {filenames, starter_dirs, skip} =
+    let
+      val _ = app checkfile_is_bare filenames
+      val _ = null filenames andalso
+              raise Fail "files_upward_in_hierarchy: empty filenames list"
+      fun maybe_readfiles filenames d A =
+          case filenames of
+              [] => A
+            | filename::fs =>
+              let
+                val f = OS.Path.concat (d,filename)
+              in
+                if OS.FileSys.access(f,[OS.FileSys.A_READ]) then
+                  Binarymap.insert(A, d, (filename, read_whole_file{filename = f}))
+                else maybe_readfiles fs d A
+              end
 
       fun recurse A visited worklist =
           case worklist of
@@ -108,7 +121,7 @@ fun files_upward_in_hierarchy gen_extras {diag} {filename, starter_dirs, skip} =
               let
                 val d = OS.Path.mkCanonical d0
                 val _ = diag (fn _ => "Visiting " ^ d)
-                val A' = maybe_readfile d A
+                val A' = maybe_readfiles filenames d A
                 val visited' = Binaryset.add(visited, d)
                 val parent = OS.Path.getParent d
                 val to_maybe_visit = parent :: gen_extras d
@@ -132,7 +145,7 @@ fun p1 ++ p2 = OS.Path.concat(p1,p2)
    means register `nm` at the file's directory.  Malformed TOML or a
    non-string `name` raises Fail with a message naming the offending
    path. *)
-fun extract_name dir contents =
+fun extract_from_toml dir contents =
   let
     val tbl = TOML.fromString contents
               handle e =>
@@ -148,16 +161,30 @@ fun extract_name dir contents =
                       ": `name` must be a string")
   end
 
+fun extract_from_holpath_file s =
+    let
+      val sz = size s - 1
+      val nm = if String.sub(s,sz) = #"\n" then String.extract(s,0,SOME sz) else s
+    in
+      nm
+    end
+
 
 fun search_for_extensions gen {skip,starter_dirs = dlist} =
   let
     val dmap = files_upward_in_hierarchy gen {diag = fn _ => ()}
-                 {filename = "holproject.toml", starter_dirs = dlist,
+                 {filenames = ["holproject.toml", ".holpath"], starter_dirs = dlist,
                   skip = skip}
-    fun foldthis (dstr,filecontents,l) =
-        case extract_name dstr filecontents of
-            NONE => l
-          | SOME nm => {vname=nm, path=dstr} :: l
+    fun foldthis (dstr,(fnm,filecontents),l) =
+        case fnm of
+            "holproject.toml" => (case extract_from_toml dstr filecontents of
+                                     NONE => l
+                                   | SOME nm => {vname=nm, path=dstr} :: l)
+          | ".holpath" => let val nm = extract_from_holpath_file filecontents
+                          in
+                            {vname = nm, path=dstr}::l
+                          end
+          | _ => l
   in
     Binarymap.foldl foldthis [] dmap
   end

@@ -206,7 +206,7 @@ val _ =
               (info0, "Not executing")
             else (warn0, "Executing")
         val esc = String.translate (fn #"'" => "'\\''" | c => str c)
-        fun appthis (k,c0) =
+        fun appthis (k,(_, c0)) =
             let
               open Substring
               val c =
