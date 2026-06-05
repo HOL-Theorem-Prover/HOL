@@ -354,6 +354,8 @@ val _ =
     FileSys.chDir "util";
     compile ["-I", ".."] "terminal_primitives.sig";
     compile ["-I", ".."] "terminal_primitives.sml";
+    compile [] "fspathTrie.sig";
+    compile [] "fspathTrie.sml";
     FileSys.chDir "../core";
     compile [] "Holmake_tools_dtype.sml";
     FileSys.chDir "../../../src/portableML";
