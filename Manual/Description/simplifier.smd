@@ -10,9 +10,9 @@
      can use. -->
 >>__ val simplifier_initial_grammars = (Parse.type_grammar(), Parse.term_grammar());
 
-The simplifier is HOL's most sophisticated rewriting engine.  It is
+The simplifier is HOL’s most sophisticated rewriting engine.  It is
 recommended as a general purpose work-horse during interactive
-theorem-proving.  As a rewriting tool, the simplifier's general role
+theorem-proving.  As a rewriting tool, the simplifier’s general role
 is to apply theorems of the general form
 $$
 \vdash l = r
@@ -31,7 +31,7 @@ The basic conversion is
 The first argument, a *simpset*, is the standard way of providing
 a collection of rewrite rules (and other data, to be explained
 below) to the simplifier.  There are *simpset*s accompanying most
-of HOL's major theories.  For example, the *simpset* `bool_ss`
+of HOL’s major theories.  For example, the *simpset* `bool_ss`
 in `boolSimps` embodies all of the usual rewrite theorems one
 would want over boolean formulas:
 
@@ -62,7 +62,7 @@ build a *simpset* value to embody these new rewrites.
 
 For example, the rewrite `arithmeticTheory.LEFT_ADD_DISTRIB`,
 which states that $p(m + n) = pm + pn$ is not part of any of
-HOL's standard *simpset*s.  This is because it can cause an
+HOL’s standard *simpset*s.  This is because it can cause an
 unappealing increase in term size (there are two occurrences of $p$
 on the right hand side of the theorem).  Nonetheless, it is clear
 that this theorem may be appropriate on occasion:
@@ -74,7 +74,7 @@ that this theorem may be appropriate on occasion:
 
 Note how the `arith_ss` *simpset* has not only simplified the
 intermediate `(p * 1)` term, but also re-ordered the addition to
-put the simpler term on the left, and sorted the multiplication's
+put the simpler term on the left, and sorted the multiplication’s
 arguments.
 
 ### High-Level Simplification Tactics
@@ -92,12 +92,12 @@ These tactics divide into two classes.
 The first and more commonly used class is of high-level tactics
 used in the form
 $$
-`tactic_name`[\mathit{th}_1,\dots,\mathit{th}_n]
+\mathtt{tactic\_name}[\mathit{th}_1,\dots,\mathit{th}_n]
 $$
 where the various $\mathit{th}_i$ are theorems that are passed to
 the simplifier and used as additional rewrites.  There is a
 *simpset* used here, but it is implicit: the global, “stateful”
-*simpset*, embodying all of a theory and a theory's ancestors'
+*simpset*, embodying all of a theory and a theory’s ancestors’
 useful simplification technology.  For more on the stateful
 *simpset*, see Section \ref{sec:srw-ss} below.
 
@@ -123,10 +123,10 @@ Section \ref{sec:simp-special-rewrite-forms}.
 A call to `simp[`$\mathit{th}_1,\dots,\mathit{th}_n$`]` simplifies
 the current goal, using the augmented stateful simpset described
 above, as well as the theorems passed in the argument list.
-Finally, all of the goal's assumptions are also used as a source of
+Finally, all of the goal’s assumptions are also used as a source of
 rewrites.  When an assumption is used by `simp`, it is converted
 into rewrite rules in the same way as theorems passed in the list
-given as the tactic's argument.  For example, an assumption `~P`
+given as the tactic’s argument.  For example, an assumption `~P`
 will be treated as the rewrite `|- P = F`.
 
 ```repl
@@ -182,7 +182,7 @@ assumption is simplified, using all the other assumptions
 passes through the list of all assumptions and then repeats if any
 of the assumptions changed.  When no further change occurs among
 the assumptions, all of the assumptions are used to simplify the
-goal's conclusion.
+goal’s conclusion.
 
 When an assumption $A_i$ is simplified, a theorem of the form
 $\vdash A_i \Leftrightarrow A_i'$ is produced.  Then $A_i'$ is
@@ -212,18 +212,18 @@ the opposite order, simplifying the newest assumption first.
 \index{fs (simplification tactic)@\ml{fs} (simplification tactic)}
 
 The `fs` tactic is similar to `gs` in that it simplifies not
-only a goal's conclusion but its assumptions as well.
+only a goal’s conclusion but its assumptions as well.
 
 It simplifies each assumption in turn, additionally using earlier
 assumptions in the simplification of later assumptions.  After
-being simplified, each assumption is added back into the goal's
+being simplified, each assumption is added back into the goal’s
 assumption list with the `strip_assume_tac` theorem-tactical.
 
 `fs` attacks the assumptions in the order in which they appear
-in the list of terms that represent the goal's assumptions.
+in the list of terms that represent the goal’s assumptions.
 Typically then, the first assumption to be simplified will be the
 assumption most recently added.  Viewed in the light of
-`goalstackLib`'s printing of goals, `FULL_SIMP_TAC` works
+`goalstackLib`’s printing of goals, `FULL_SIMP_TAC` works
 its way up the list of assumptions, from bottom to top.
 
 Unlike `gs`, the `fs` tactic makes exactly one pass over the
@@ -232,7 +232,7 @@ in principle more efficient, this comes at the cost of frequently
 being annoying to use.
 \index{rfs (simplification tactic)@\ml{rfs} (simplification tactic)}
 As with `gs`, there is an `rfs` variant to this tactic, which
-simplifies the goal's assumptions in reverse order (but again, only
+simplifies the goal’s assumptions in reverse order (but again, only
 once).
 
 The `fs` tactic is based on the low-level tactic
@@ -270,7 +270,7 @@ function `CONV_TAC`.
 \index{asm_simp_tac@\ml{asm\_simp\_tac}}
 
 Like `simp_tac`, `asm_simp_tac` simplifies the current
-goal (leaving the assumptions untouched), but includes the goal's
+goal (leaving the assumptions untouched), but includes the goal’s
 assumptions as extra rewrite rules.  Thus:
 
 ```repl
@@ -284,18 +284,18 @@ In this example, `asm_simp_tac` used `x = 3` as an additional
 rewrite rule, and replaced the `x` of `P x` with `3`.  When an
 assumption is used by `asm_simp_tac` it is converted into
 rewrite rules in the same way as theorems passed in the list given
-as the tactic's second argument.  For example, an assumption `~P`
+as the tactic’s second argument.  For example, an assumption `~P`
 will be treated as the rewrite `|- P = F`.
 
 #### `full_simp_tac : simpset -> thm list -> tactic`
 
 \index{full_simp_tac@\ml{full\_simp\_tac}}
 
-The tactic `full_simp_tac` simplifies not only a goal's
+The tactic `full_simp_tac` simplifies not only a goal’s
 conclusion but its assumptions as well.  It proceeds by simplifying
 each assumption in turn, additionally using earlier assumptions in
 the simplification of later assumptions.  After being simplified,
-each assumption is added back into the goal's assumption list with
+each assumption is added back into the goal’s assumption list with
 the `strip_assume_tac` theorem-tactical.  This means that
 assumptions that become conjunctions will have each conjunct
 assumed separately.  Assumptions that become disjunctions will
@@ -304,9 +304,9 @@ assumption is simplified to false, this will solve the goal.
 
 The `full_simp_tac` tactic attacks the assumptions in the
 order in which they appear in the list of terms that represent the
-goal's assumptions.  Typically then, the first assumption to be
+goal’s assumptions.  Typically then, the first assumption to be
 simplified will be the assumption most recently added.  Viewed in
-the light of `goalstackLib`'s printing of goals,
+the light of `goalstackLib`’s printing of goals,
 `full_simp_tac` works its way up the list of assumptions,
 from bottom to top.
 
@@ -352,7 +352,7 @@ described, `rw_tac` is “augmented” in two ways:
   - When simplifying the goal, the provided *simpset* is augmented
     not only with the theorems explicitly passed in the second
     argument, but also with all of the rewrite rules from the
-    `TypeBase`, as well as with the goal's assumptions.
+    `TypeBase`, as well as with the goal’s assumptions.
     \index{TypeBase@\ml{TypeBase}}
     These rewrites include results about record field selectors
     and updators, as well as distinctness and injectivity theorems
@@ -488,7 +488,7 @@ not equal when $2x + y < z$.
 
 The last pure *simpset* value in `bossLib`, `list_ss` adds
 rewrite theorems about the type of lists to `arith_ss`.  These
-rewrites include the obvious facts about the list type's
+rewrites include the obvious facts about the list type’s
 constructors `NIL` and `CONS`, such as the fact that `CONS` is
 injective:
 
@@ -603,7 +603,7 @@ Equally, the example above could be written:
     End
 ```
 
-As a general rule, `(srw_ss())` includes all of its context's
+As a general rule, `(srw_ss())` includes all of its context’s
 “obvious rewrites”, as well as code to do standard calculations
 (such as the arithmetic performed in the above example).  It does
 not include decision procedures that may exhibit occasional poor
@@ -646,7 +646,7 @@ fragments for the theory of natural numbers are found in
 `numSimps`, and fragments for lists are found in
 `listSimps`.
 
-Some of the distribution's standard *simpset* fragments are
+Some of the distribution’s standard *simpset* fragments are
 described in Table \ref{table:ssfrags}.  These and other *simpset*
 fragments are described in more detail in the REFERENCE.
 
@@ -682,13 +682,13 @@ Eliminates eta-redexes, \emph{i.e.}, terms of form $(\lambda x. M x)$ with $x$ n
 (Defined in `boolSimps`.)\\
 \end{tabular}
 \end{center}
-\caption{Some of HOL's standard *simpset* fragments}
+\caption{Some of HOL’s standard *simpset* fragments}
 \label{table:ssfrags}
 \end{table}
 ```
 
 ```{=mdbook}
-**Table \ref{table:ssfrags}.** Some of HOL's standard simpset
+**Table \ref{table:ssfrags}.** Some of HOL’s standard simpset
 fragments.
 
 | Fragment       | Description                                                                                                                                                                                                                                                            |
@@ -823,7 +823,7 @@ call in which it appears.  For an exclusion that persists across
 all the simplification tactics in a proof body, use the
 `Proof[exclude_frags\ =\ \ldots]` attribute (the
 `simpLib.exclude_ssfrags` function it relies on records the
-names in the *simpset*'s excluded set, so subsequent uses of
+names in the *simpset*’s excluded set, so subsequent uses of
 `++` also respect it; see Section \ref{sec:simpset-fragments}).
 Inside such a proof body, the `SF` marker can opt back in for
 an individual `simp` call.
@@ -833,7 +833,7 @@ an individual `simp` call.
 
 \label{sec:simplifier-rewriting}
 
-Rewriting is the simplifier's “core operation”.  This section
+Rewriting is the simplifier’s “core operation”.  This section
 describes the action of rewriting in more detail.
 
 #### Basic rewriting
@@ -859,7 +859,7 @@ $$
   \vdash \underbrace{(\dots t_0\dots)}_t = (\dots r' \dots)
 $$
 The traversal of the term to be simplified is repeated until no
-further matches for the simplifier's rewrite rules are found.  The
+further matches for the simplifier’s rewrite rules are found.  The
 traversal strategy is
 
   1. \label{enum:simp-traverse-toplevel}
@@ -871,7 +871,7 @@ traversal strategy is
      preference.  (This allows a certain amount of
      rewrite-overloading in the construction of *simpset*s.)
   2. \label{enum:simp-traverse-recurse}
-     Recurse into the term's sub-terms.  The way in which terms are
+     Recurse into the term’s sub-terms.  The way in which terms are
      traversed at this step can be controlled by *congruence rules*
      (an advanced feature, see Section \ref{sec:simp-congruences}
      below).
@@ -928,7 +928,7 @@ can prove that `0 < x + 1`, justifying the rewrite.
 
 Though conditional rewrites are powerful, not every theorem of the
 form described above is an appropriate choice.  A badly chosen
-rewrite may cause the simplifier's performance to degrade
+rewrite may cause the simplifier’s performance to degrade
 considerably, as it wastes time attempting to prove impossible
 side-conditions.  For example, the simplifier is not very good at
 finding existential witnesses.  This means that the conditional
@@ -970,7 +970,7 @@ fragment is added to a full simpset, the fragment can specify an
 additional filter component.  If specified, this function is of
 type `controlled_thm\ ->\ controlled_thm\ list`, and is
 applied to each of the theorems produced by the existing
-*simpset*'s filter.
+*simpset*’s filter.
 \index{simplification!guaranteeing termination}
 (A “controlled” theorem is one that is accompanied by a piece of
 “control” data expressing the limit (if any) on the number of
@@ -1113,7 +1113,7 @@ the free variable $y$.
 
 \label{sec:advanced-simplifier}
 
-This section describes some of the simplifier's advanced features.
+This section describes some of the simplifier’s advanced features.
 
 #### Congruence rules
 
@@ -1123,7 +1123,7 @@ This section describes some of the simplifier's advanced features.
 
 Congruence rules control the way the simplifier traverses a term.
 They also provide a mechanism by which additional assumptions can
-be added to the simplifier's context, representing information
+be added to the simplifier’s context, representing information
 about the containing context.  The simplest congruence rules are
 built into the `pure_ss` simpset.  They specify how to traverse
 application and abstraction terms.  At this fundamental level,
@@ -1227,7 +1227,7 @@ $$
 \end{array}
 $$
 users can choose to have the simplifier completely ignore a
-conditional's branches until that conditional's guard is
+conditional’s branches until that conditional’s guard is
 simplified to either true or false.
 
 As a convenience, congruence rules expressed in the format used by
@@ -1244,7 +1244,7 @@ and commutative constants.  This process is known as
 *AC-normalisation*.  The simplifier will perform AC-normalisation
 for those constants which have their associativity and
 commutativity theorems provided in a constituent *simpset*
-fragment's `ac` field.
+fragment’s `ac` field.
 
 For example, the following *simpset* fragment will cause
 AC-normalisation of disjunctions
@@ -1278,7 +1278,7 @@ following example:
 ```
 
 \index{arith_ss (simplification set)@\ml{arith\_ss} (simplification set)}
-The order of operands in the AC-normal form that the simplifer's
+The order of operands in the AC-normal form that the simplifer’s
 AC-normalisation works toward is unspecified.  However, the normal
 form is always right-associated.  Note also that the `arith_ss`
 *simpset*, and the `ARITH_ss` fragment which is its basis,
@@ -1324,7 +1324,7 @@ of values of type
 The `name` and `trace` fields are used when simplifier
 tracing is turned on.  If the conversion is applied, and if the
 simplifier trace level is greater than or equal to the `trace`
-field, then a message about the conversion's application (including
+field, then a message about the conversion’s application (including
 its `name`) will be emitted.
 
 The `key` field of the above record is used to specify the
@@ -1344,19 +1344,19 @@ are exact matches for the supplied pattern.
 
 Finally, the conversion itself.  Most uses of this facility are to
 add normal HOL conversions (of type `term->thm`), and this
-can be done by ignoring the `conv` field's first two parameters.
+can be done by ignoring the `conv` field’s first two parameters.
 For a conversion `myconv`, the standard idiom is to write
 `K\ (K\ myconv)`.  If the user desires, however, their code
 *can* refer to the first two parameters.  The second parameter is
 the stack of side-conditions that have been attempted so far.  The
-first enables the user's code to call back to the simplifier,
+first enables the user’s code to call back to the simplifier,
 passing the stack of side-conditions, and a new side-condition to
 solve.  The `term` argument must be of type `:bool`, and the
 recursive call will simplify it to true (and call `EQT_ELIM`
 to turn a term $t$ into the theorem $\vdash t$).  This restriction
 is lifted for decision procedures (see below), but for conversions
 the recursive call can *only* be used for side-condition discharge.
-Note also that it is the user's responsibility to pass an
+Note also that it is the user’s responsibility to pass an
 appropriately updated stack of side-conditions to the recursive
 invocation of the simplifier.
 
@@ -1411,7 +1411,7 @@ this form need to see it.  For example:
 
 When creating a value of `reducer` type, the user must provide
 an initial context, and two functions.  The first, `addcontext`,
-is called by the simplifier's traversal mechanism to give every
+is called by the simplifier’s traversal mechanism to give every
 embedded decision procedure access to theorems representing new
 context information.  For example, this function is called with
 theorems from the current assumptions in `ASM_SIMP_TAC`, and
@@ -1427,7 +1427,7 @@ When an embedded reducer is applied to a term, the provided
 `apply` function is called.  As well as the term to be
 transformed, the `apply` function is also passed a record
 containing a side-condition solver, a more general call-back to
-the simplifier, the decision procedure's current context, and the
+the simplifier, the decision procedure’s current context, and the
 stack of side-conditions attempted so far.  The stack and solver
 are the same as the additional arguments provided to user-supplied
 conversions.  The `conv` argument is call-back to the
@@ -1451,16 +1451,16 @@ exception rather than return instances of reflexivity.
 
 \label{sec:simp-special-rewrite-forms}
 
-Some of the simplifier's features can be accessed in a relatively
+Some of the simplifier’s features can be accessed in a relatively
 simple way by using SML functions to construct special theorem
 forms.  These special theorems can then be passed in the
-simplification tactics' theorem-list arguments.
+simplification tactics’ theorem-list arguments.
 
 \index{simplification theorem modifiers!AC@\ml{AC}}
 \index{AC (simplification theorem modifier)@\ml{AC} (simplification theorem modifier)}
 \index{simplification theorem modifiers!Cong@\ml{Cong}}
 \index{Cong (simplification theorem modifier)@\ml{Cong} (simplification theorem modifier)}
-Two of the simplifier's advanced features, AC-normalisation and
+Two of the simplifier’s advanced features, AC-normalisation and
 congruence rules can be accessed in this way.  Rather than
 construct a custom *simpset* fragment including the required AC
 or congruence rules, the user can instead use the functions
@@ -1571,9 +1571,9 @@ also be temporarily excluded in this way:
 \index{simplification!removing rewrites}
 
 It is possible to stop tactics such as `simp` from using
-assumptions (it otherwise tries to use all of a goal's assumptions)
+assumptions (it otherwise tries to use all of a goal’s assumptions)
 with the `NoAsms` and `IgnAsm` forms.  The `NoAsms` form
-prevents the use of all of a goal's assumptions:
+prevents the use of all of a goal’s assumptions:
 
 ```repl
 >> simp[NoAsms] ([“x = 3”], “x < 10”);
@@ -1628,7 +1628,7 @@ attribute (see Section \ref{sec:simpset-fragments}): writing
 \index{simplification!at particular sub-terms}
 
 We have already seen (Section \ref{sec:simp-congruences} above)
-that the simplifier's congruence technology can be used to force
+that the simplifier’s congruence technology can be used to force
 the simplifier to ignore particular terms.  The example in the
 section above discussed how a congruence rule might be used to
 ensure that only the guards of conditional expressions should be
@@ -1827,7 +1827,7 @@ The fields of the record that is the first argument are:
 
 `subsets`
 :   Theorems of the form $R'\,x\,y \Rightarrow R\,x\,y$.  These are
-    used to augment the resulting *simpset*'s “filter” so that
+    used to augment the resulting *simpset*’s “filter” so that
     theorems in the context mentioning $R'$ will derive useful
     rewrites involving $R$.  In the example of $\beta$-reduction,
     one might also have a relation $\rightarrow_{wh}^*$ for
@@ -1845,7 +1845,7 @@ The fields of the record that is the first argument are:
     definition of substitution.
 
 The application of this function to a *simpset* `ss` will produce
-an augmented `ss` that has all of `ss`'s existing behaviours, as
+an augmented `ss` that has all of `ss`’s existing behaviours, as
 well as the ability to rewrite with the given relation.
 
 #### Tracing the Simplifier
