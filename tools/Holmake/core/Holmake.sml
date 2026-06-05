@@ -189,11 +189,26 @@ val _ =
     if master_cleanp orelse #help master_cline_option_value then ()
     else
       let
+        fun project_external_includes d =
+            let val projfilename = OS.Path.concat (d, "holproject.toml")
+            in
+              if OS.FileSys.access(projfilename, [OS.FileSys.A_READ])
+              then
+                let
+                  val _ = diag0 "startup"
+                                (fn _ => "Consulting holproject.toml in " ^ d)
+                  val config = HMProject.load{root=d}
+                in
+                  #external_includes config
+                end handle Fail s => die ("Parse error in "^projfilename^": "^s)
+              else []
+            end
         val preexec_map =
             holpathdb.files_upward_in_hierarchy
-              ReadHMF.find_includes
+              (fn d => ReadHMF.find_includes d @
+                       project_external_includes d)
               {diag = diag0 "read-preexecs"}
-              {filename = ".hol_preexec",
+              {filenames = [".hol_preexec"],
                starter_dirs = [FileSys.getDir()],
                skip = empty_strset}
 
