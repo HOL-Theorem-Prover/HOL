@@ -4260,108 +4260,6 @@ Proof
  >> qexistsl_tac [‘X’, ‘r’, ‘M0’, ‘n’, ‘vs’, ‘M1’] >> simp []
 QED
 
-(*---------------------------------------------------------------------------*
- *  Boehm construction for vsubterm-based "Boehm out" technique
- *---------------------------------------------------------------------------*)
-
-Definition Boehm_construction_def :
-    Boehm_construction X (Ms :term list) p =
-    let n_max = MAX_LIST (MAP (\e. subterm_length e p) Ms);
-        d_max = MAX_LIST (MAP (\e. vsubterm_width e p) Ms) + n_max;
-        k     = LENGTH Ms;
-        Z    = BIGUNION (IMAGE FV (set Ms));
-        vs0   = NEWS (n_max + SUC d_max + k) (X UNION Z);
-        vs    = TAKE n_max vs0;
-        xs    = DROP n_max vs0;
-        M0 i  = principal_hnf (EL i Ms);
-        M1 i  = principal_hnf (M0 i @* MAP VAR vs);
-        y  i  = hnf_headvar (M1 i);
-        P  i  = permutator (d_max + i);
-        p1    = MAP rightctxt (REVERSE (MAP VAR vs));
-        p2    = REVERSE (GENLIST (\i. [P i/y i]) k);
-        p3    = MAP rightctxt (REVERSE (MAP VAR xs))
-    in
-        p3 ++ p2 ++ p1
-End
-
-Theorem Boehm_construction_transform :
-    !X Ms p. Boehm_transform (Boehm_construction X Ms p)
-Proof
-    RW_TAC std_ss [Boehm_construction_def]
- >> MATCH_MP_TAC Boehm_transform_APPEND
- >> reverse CONJ_TAC
- >- rw [Abbr ‘p1’, MAP_MAP_o, GSYM MAP_REVERSE]
- >> MATCH_MP_TAC Boehm_transform_APPEND
- >> CONJ_TAC
- >- rw [Abbr ‘p3’, MAP_MAP_o, GSYM MAP_REVERSE]
- >> rw [Boehm_transform_def, Abbr ‘p2’, EVERY_GENLIST]
-QED
-
-Theorem FV_apply_Boehm_construction :
-    !X Ms Ms' p r.
-       FINITE X /\ 0 < r /\ set Ms' SUBSET set Ms /\
-       BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r ==>
-      !M. MEM M Ms ==>
-          FV (apply (Boehm_construction X Ms' p) M) SUBSET X UNION RANK r
-Proof
-    rpt GEN_TAC >> STRIP_TAC
- >> Q.X_GEN_TAC ‘N’
- >> DISCH_TAC
- >> UNBETA_TAC [Boehm_construction_def] “Boehm_construction X Ms' p”
- >> qunabbrev_tac ‘Z’
- >> qabbrev_tac ‘Y = BIGUNION (IMAGE FV (set Ms'))’
- >> ‘FINITE Y’ by (rw [Abbr ‘Y’] >> rw [])
- >> simp [Boehm_apply_APPEND]
- >> Know ‘Y SUBSET X UNION RANK r’
- >- (Q_TAC (TRANS_TAC SUBSET_TRANS) ‘BIGUNION (IMAGE FV (set Ms))’ >> art [] \\
-     qunabbrev_tac ‘Y’ \\
-     rw [BIGUNION_IMAGE_SUBSET] \\
-     Q.PAT_X_ASSUM ‘set Ms' SUBSET set Ms’ MP_TAC \\
-     rw [SUBSET_DEF, IN_BIGUNION_IMAGE] \\
-     rename1 ‘e IN FV M’ \\
-     Q.EXISTS_TAC ‘M’ >> simp [])
- >> DISCH_TAC
- (* eliminate p3 *)
- >> simp [Abbr ‘p3’, Boehm_apply_MAP_rightctxt']
- >> reverse CONJ_TAC
- >- (Q_TAC (TRANS_TAC SUBSET_TRANS) ‘set vs0’ \\
-     rw [Abbr ‘xs’, LIST_TO_SET_DROP] \\
-     Suff ‘set vs0 SUBSET RANK r’ >- SET_TAC [] \\
-     Q_TAC (TRANS_TAC SUBSET_TRANS) ‘ROW 0’ >> rw [ROW_SUBSET_RANK] \\
-     qunabbrev_tac ‘vs0’ \\
-     MATCH_MP_TAC RNEWS_SUBSET_ROW >> rw [])
- (* eliminate p2 *)
- >> qabbrev_tac ‘sub = \k. GENLIST (\i. (P i,y i)) k’
- >> Know ‘!t. apply p2 t = t ISUB sub k’
- >- (simp [Abbr ‘p2’, Abbr ‘sub’] \\
-     Q.SPEC_TAC (‘k’, ‘j’) \\
-     Induct_on ‘j’ >- rw [] \\
-     rw [GENLIST, REVERSE_SNOC, ISUB_SNOC])
- >> DISCH_TAC
- >> simp []
- >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV (apply p1 N) UNION FVS (sub k)’
- >> CONJ_TAC >- rw [FV_ISUB_upperbound]
- >> Know ‘!j. DOM (sub j) = IMAGE y (count j) /\ FVS (sub j) = {}’
- >- (simp [Abbr ‘sub’] \\
-     Induct_on ‘j’ >- rw [DOM_DEF, FVS_DEF] \\
-     rw [GENLIST, REVERSE_SNOC, DOM_DEF, FVS_DEF, COUNT_SUC, DOM_SNOC, FVS_SNOC]
-     >- SET_TAC [] \\
-     rw [Abbr ‘P’, FV_permutator])
- >> DISCH_TAC
- >> simp []
- (* eliminate p1 *)
- >> simp [Abbr ‘p1’, Boehm_apply_MAP_rightctxt']
- >> reverse CONJ_TAC
- >- (Q_TAC (TRANS_TAC SUBSET_TRANS) ‘set vs0’ \\
-     rw [Abbr ‘vs’, LIST_TO_SET_TAKE] \\
-     Suff ‘set vs0 SUBSET RANK r’ >- SET_TAC [] \\
-     Q_TAC (TRANS_TAC SUBSET_TRANS) ‘ROW 0’ >> rw [ROW_SUBSET_RANK] \\
-     qunabbrev_tac ‘vs0’ \\
-     MATCH_MP_TAC RNEWS_SUBSET_ROW >> rw [])
- >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘BIGUNION (IMAGE FV (set Ms))’ >> art []
- >> Q.PAT_X_ASSUM ‘MEM N Ms’ MP_TAC >> SET_TAC []
-QED
-
 val vsubterm_fresh_subst_cong_tac =
     (Q.PAT_X_ASSUM ‘vsubterm X M2 q (SUC r) <> NONE’ MP_TAC \\
      reverse (Cases_on ‘h < m’) >> simp [Abbr ‘M2’, Abbr ‘M2'’]
@@ -4864,6 +4762,134 @@ Proof
  >> qexistsl_tac [‘d’, ‘y’, ‘k’] >> art []
 QED
 
+(*---------------------------------------------------------------------------*
+ *  Boehm construction for vsubterm-based "Boehm out" technique
+ *---------------------------------------------------------------------------*)
+
+Definition subterm_lengths_def :
+  subterm_lengths M ps = MAX_LIST (MAP (subterm_length M) ps)
+End
+
+Theorem subterm_lengths_thm :
+    !p ps M. MEM p ps ==> subterm_length M p <= subterm_lengths M ps
+Proof
+    rw [subterm_lengths_def]
+ >> MATCH_MP_TAC MAX_LIST_PROPERTY
+ >> simp [MEM_MAP]
+ >> Q.EXISTS_TAC ‘p’ >> art []
+QED
+
+Definition vsubterm_widths_def :
+  vsubterm_widths M ps = MAX_LIST (MAP (vsubterm_width M) ps)
+End
+
+Theorem vsubterm_widths_thm :
+    !p ps M. MEM p ps ==> vsubterm_width M p <= vsubterm_widths M ps
+Proof
+    rw [vsubterm_widths_def]
+ >> MATCH_MP_TAC MAX_LIST_PROPERTY
+ >> simp [MEM_MAP]
+ >> Q.EXISTS_TAC ‘p’ >> art []
+QED
+
+Definition Boehm_construction_def :
+    Boehm_construction X (Ms :term list) ps =
+    let n_max = MAX_LIST (MAP (\e. subterm_lengths e ps) Ms);
+        d_max = MAX_LIST (MAP (\e. vsubterm_widths e ps) Ms) + n_max;
+        k     = LENGTH Ms;
+        Z     = BIGUNION (IMAGE FV (set Ms));
+        vs0   = NEWS (n_max + SUC d_max + k) (X UNION Z);
+        vs    = TAKE n_max vs0;
+        xs    = DROP n_max vs0;
+        M0 i  = principal_hnf (EL i Ms);
+        M1 i  = principal_hnf (M0 i @* MAP VAR vs);
+        y  i  = hnf_headvar (M1 i);
+        P  i  = permutator (d_max + i);
+        p1    = MAP rightctxt (REVERSE (MAP VAR vs));
+        p2    = REVERSE (GENLIST (\i. [P i/y i]) k);
+        p3    = MAP rightctxt (REVERSE (MAP VAR xs))
+    in
+        p3 ++ p2 ++ p1
+End
+
+Theorem Boehm_construction_transform :
+    !X Ms ps. Boehm_transform (Boehm_construction X Ms ps)
+Proof
+    RW_TAC std_ss [Boehm_construction_def]
+ >> MATCH_MP_TAC Boehm_transform_APPEND
+ >> reverse CONJ_TAC
+ >- rw [Abbr ‘p1’, MAP_MAP_o, GSYM MAP_REVERSE]
+ >> MATCH_MP_TAC Boehm_transform_APPEND
+ >> CONJ_TAC
+ >- rw [Abbr ‘p3’, MAP_MAP_o, GSYM MAP_REVERSE]
+ >> rw [Boehm_transform_def, Abbr ‘p2’, EVERY_GENLIST]
+QED
+
+Theorem FV_apply_Boehm_construction :
+    !X Ms Ms' ps r.
+       FINITE X /\ 0 < r /\ set Ms' SUBSET set Ms /\
+       BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r ==>
+      !M. MEM M Ms ==>
+          FV (apply (Boehm_construction X Ms' ps) M) SUBSET X UNION RANK r
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> Q.X_GEN_TAC ‘N’
+ >> DISCH_TAC
+ >> UNBETA_TAC [Boehm_construction_def] “Boehm_construction X Ms' ps”
+ >> qunabbrev_tac ‘Z’
+ >> qabbrev_tac ‘Y = BIGUNION (IMAGE FV (set Ms'))’
+ >> ‘FINITE Y’ by (rw [Abbr ‘Y’] >> rw [])
+ >> simp [Boehm_apply_APPEND]
+ >> Know ‘Y SUBSET X UNION RANK r’
+ >- (Q_TAC (TRANS_TAC SUBSET_TRANS) ‘BIGUNION (IMAGE FV (set Ms))’ >> art [] \\
+     qunabbrev_tac ‘Y’ \\
+     rw [BIGUNION_IMAGE_SUBSET] \\
+     Q.PAT_X_ASSUM ‘set Ms' SUBSET set Ms’ MP_TAC \\
+     rw [SUBSET_DEF, IN_BIGUNION_IMAGE] \\
+     rename1 ‘e IN FV M’ \\
+     Q.EXISTS_TAC ‘M’ >> simp [])
+ >> DISCH_TAC
+ (* eliminate p3 *)
+ >> simp [Abbr ‘p3’, Boehm_apply_MAP_rightctxt']
+ >> reverse CONJ_TAC
+ >- (Q_TAC (TRANS_TAC SUBSET_TRANS) ‘set vs0’ \\
+     rw [Abbr ‘xs’, LIST_TO_SET_DROP] \\
+     Suff ‘set vs0 SUBSET RANK r’ >- SET_TAC [] \\
+     Q_TAC (TRANS_TAC SUBSET_TRANS) ‘ROW 0’ >> rw [ROW_SUBSET_RANK] \\
+     qunabbrev_tac ‘vs0’ \\
+     MATCH_MP_TAC RNEWS_SUBSET_ROW >> rw [])
+ (* eliminate p2 *)
+ >> qabbrev_tac ‘sub = \k. GENLIST (\i. (P i,y i)) k’
+ >> Know ‘!t. apply p2 t = t ISUB sub k’
+ >- (simp [Abbr ‘p2’, Abbr ‘sub’] \\
+     Q.SPEC_TAC (‘k’, ‘j’) \\
+     Induct_on ‘j’ >- rw [] \\
+     rw [GENLIST, REVERSE_SNOC, ISUB_SNOC])
+ >> DISCH_TAC
+ >> simp []
+ >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV (apply p1 N) UNION FVS (sub k)’
+ >> CONJ_TAC >- rw [FV_ISUB_upperbound]
+ >> Know ‘!j. DOM (sub j) = IMAGE y (count j) /\ FVS (sub j) = {}’
+ >- (simp [Abbr ‘sub’] \\
+     Induct_on ‘j’ >- rw [DOM_DEF, FVS_DEF] \\
+     rw [GENLIST, REVERSE_SNOC, DOM_DEF, FVS_DEF, COUNT_SUC, DOM_SNOC, FVS_SNOC]
+     >- SET_TAC [] \\
+     rw [Abbr ‘P’, FV_permutator])
+ >> DISCH_TAC
+ >> simp []
+ (* eliminate p1 *)
+ >> simp [Abbr ‘p1’, Boehm_apply_MAP_rightctxt']
+ >> reverse CONJ_TAC
+ >- (Q_TAC (TRANS_TAC SUBSET_TRANS) ‘set vs0’ \\
+     rw [Abbr ‘vs’, LIST_TO_SET_TAKE] \\
+     Suff ‘set vs0 SUBSET RANK r’ >- SET_TAC [] \\
+     Q_TAC (TRANS_TAC SUBSET_TRANS) ‘ROW 0’ >> rw [ROW_SUBSET_RANK] \\
+     qunabbrev_tac ‘vs0’ \\
+     MATCH_MP_TAC RNEWS_SUBSET_ROW >> rw [])
+ >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘BIGUNION (IMAGE FV (set Ms))’ >> art []
+ >> Q.PAT_X_ASSUM ‘MEM N Ms’ MP_TAC >> SET_TAC []
+QED
+
 (* NOTE: In [subtree_equiv_lemma], “subtree_equiv X M N q r”, is equivalent with
 
      equivalent (subterm' X M q r) (subterm' X N q r)
@@ -4891,15 +4917,17 @@ QED
    is equivalent to “subterm X (apply pi M) [HD p] r <> NONE”. This is important
    for the selector in [agree_upto_thm] to work.
  *)
-Theorem vsubterm_equivalent_lemma :
-    !X Ms p r pi.
-           FINITE X /\ p <> [] /\ 0 < r /\
+Theorem vsubterm_equivalent_lemma_multipath :
+    !X Ms ps r pi.
+           FINITE X /\ 0 < r /\
            BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r /\
-           pi = Boehm_construction X Ms p /\ EVERY solvable Ms ==>
+           pi = Boehm_construction X Ms ps /\ EVERY solvable Ms ==>
+       !p. MEM p ps /\ p <> [] ==>
           (!M. MEM M Ms ==>
                is_ready' (apply pi M) /\
                HD p < hnf_children_size (principal_hnf (apply pi M))) /\
-          (!q M. MEM M Ms /\ q <<= p /\ subterm X M q r <> NONE ==>
+          (!q M. MEM M Ms /\ q <<= p /\
+                 subterm X M q r <> NONE ==>
                  subterm X (apply pi M) q r <> NONE) /\
           (!q M. MEM M Ms /\ q <<= p ==>
                 (vsubterm X M q r = NONE <=>
@@ -4918,7 +4946,7 @@ Theorem vsubterm_equivalent_lemma :
 Proof
     rpt GEN_TAC >> STRIP_TAC
  >> Q.PAT_X_ASSUM ‘pi = _’ (REWRITE_TAC o wrap)
- >> qabbrev_tac ‘pi' = Boehm_construction X Ms p’
+ >> qabbrev_tac ‘pi' = Boehm_construction X Ms ps’
  >> ‘Boehm_transform pi'’ by PROVE_TAC [Boehm_construction_transform]
  (* define Y as the set of all FVs from all Ms *)
  >> qabbrev_tac ‘Y = BIGUNION (IMAGE FV (set Ms))’
@@ -4935,6 +4963,8 @@ Proof
      FIRST_X_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC ‘M i’ >> art [] \\
      rw [Abbr ‘M’, EL_MEM])
  >> DISCH_TAC
+ (* specialise ‘p’ *)
+ >> Q.X_GEN_TAC ‘p’ >> STRIP_TAC
  (* define M0 *)
  >> qabbrev_tac ‘M0 = \i. principal_hnf (M i)’
  >> Know ‘!i. i < k ==> hnf (M0 i)’
@@ -4943,11 +4973,16 @@ Proof
  >> DISCH_TAC
  >> qabbrev_tac ‘n = \i. LAMl_size (M0 i)’
  (* NOTE: This n_max was redefined from previous ‘MAX_SET (IMAGE n (count k))’ *)
- >> qabbrev_tac ‘n_max = MAX_LIST (MAP (\e. subterm_length e p) Ms)’
+ >> qabbrev_tac ‘n_max = MAX_LIST (MAP (\e. subterm_lengths e ps) Ms)’
  >> Know ‘!i. i < k ==> subterm_length (M i) p <= n_max’
  >- (rw [Abbr ‘n_max’] \\
-     MATCH_MP_TAC MAX_LIST_PROPERTY >> rw [MEM_MAP] \\
-     Q.EXISTS_TAC ‘M i’ >> rw [EL_MEM, Abbr ‘M’])
+     Q_TAC (TRANS_TAC LESS_EQ_TRANS)
+           ‘MAX_LIST (MAP (\e. subterm_length e p) Ms)’ \\
+     reverse CONJ_TAC
+     >- (irule MAX_LIST_MAP_LE >> rw [] \\
+         MATCH_MP_TAC subterm_lengths_thm >> art []) \\
+     MATCH_MP_TAC MAX_LIST_PROPERTY >> simp [MEM_MAP] \\
+     Q.EXISTS_TAC ‘M i’ >> simp [EL_MEM, Abbr ‘M’])
  >> DISCH_TAC
  >> Know ‘!i. i < k ==> n i <= n_max’
  >- (RW_TAC std_ss [] \\
@@ -4955,11 +4990,16 @@ Proof
      MP_TAC (Q.SPECL [‘X’, ‘(M :num -> term) i’, ‘p’, ‘r’]
                      subterm_length_first) >> simp [Abbr ‘n’])
  >> DISCH_TAC
- >> qabbrev_tac ‘d = MAX_LIST (MAP (\e. vsubterm_width e p) Ms)’
+ >> qabbrev_tac ‘d = MAX_LIST (MAP (\e. vsubterm_widths e ps) Ms)’
  >> Know ‘!i. i < k ==> vsubterm_width (M i) p <= d’
  >- (rw [Abbr ‘d’] \\
-     MATCH_MP_TAC MAX_LIST_PROPERTY >> rw [MEM_MAP] \\
-     Q.EXISTS_TAC ‘M i’ >> rw [EL_MEM, Abbr ‘M’])
+     Q_TAC (TRANS_TAC LESS_EQ_TRANS)
+           ‘MAX_LIST (MAP (\e. vsubterm_width e p) Ms)’ \\
+     reverse CONJ_TAC
+     >- (irule MAX_LIST_MAP_LE >> rw [] \\
+         MATCH_MP_TAC vsubterm_widths_thm >> art []) \\
+     MATCH_MP_TAC MAX_LIST_PROPERTY >> simp [MEM_MAP] \\
+     Q.EXISTS_TAC ‘M i’ >> simp [EL_MEM, Abbr ‘M’])
  >> DISCH_TAC
  (* NOTE: This is vsubterm_width property not shared by subterm_width *)
  >> Know ‘MAX_LIST p < d’
@@ -9055,6 +9095,36 @@ Proof
  >> simp [Abbr ‘d_max'’]
 QED
 
+Theorem vsubterm_equivalent_lemma :
+    !X Ms p r pi.
+           FINITE X /\ p <> [] /\ 0 < r /\
+           BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r /\
+           pi = Boehm_construction X Ms [p] /\ EVERY solvable Ms ==>
+          (!M. MEM M Ms ==>
+               is_ready' (apply pi M) /\
+               HD p < hnf_children_size (principal_hnf (apply pi M))) /\
+          (!q M. MEM M Ms /\ q <<= p /\ subterm X M q r <> NONE ==>
+                 subterm X (apply pi M) q r <> NONE) /\
+          (!q M. MEM M Ms /\ q <<= p ==>
+                (vsubterm X M q r = NONE <=>
+                 vsubterm X (apply pi M) q r = NONE)) /\
+          (!q M. MEM M Ms /\ q <<= p /\
+                 vsubterm X M q r <> NONE ==>
+                (solvable (vsubterm' X M q r) <=>
+                 solvable (vsubterm' X (apply pi M) q r))) /\
+          (!q M N. MEM M Ms /\ MEM N Ms /\ q <<= p /\
+                   vsubterm X M q r <> NONE /\
+                   vsubterm X N q r <> NONE ==>
+                  (equivalent (vsubterm' X M q r)
+                              (vsubterm' X N q r) <=>
+                   equivalent (vsubterm' X (apply pi M) q r)
+                              (vsubterm' X (apply pi N) q r)))
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> irule vsubterm_equivalent_lemma_multipath >> art []
+ >> Q.EXISTS_TAC ‘[p]’ >> simp []
+QED
+
 (* NOTE: Full version, where “EVERY solvable Ms” is removed, and “is_ready'”
    becomes “is_ready”. But the construction of pi is no more explicit.
  *)
@@ -9104,7 +9174,7 @@ Proof
      Q.PAT_X_ASSUM ‘MEM M Ms'’ MP_TAC \\
      rw [Abbr ‘Ms'’, MEM_FILTER])
  >> DISCH_TAC
- >> qabbrev_tac ‘pi' = Boehm_construction X Ms' p’
+ >> qabbrev_tac ‘pi' = Boehm_construction X Ms' [p]’
  >> MP_TAC (Q.SPECL [‘X’, ‘Ms'’, ‘p’, ‘r’, ‘pi'’] vsubterm_equivalent_lemma)
  >> rw []
  >> Q.EXISTS_TAC ‘pi'’

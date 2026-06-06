@@ -83,7 +83,7 @@ Proof
        (MP_TAC o Q.SPEC ‘M’) >> art [] \\
      MATCH_MP_TAC subterm_of_unsolvables >> art [])
  >> DISCH_TAC
- >> qabbrev_tac ‘pi = Boehm_construction X Ms p’
+ >> qabbrev_tac ‘pi = Boehm_construction X Ms [p]’
  >> MP_TAC (Q.SPECL [‘X’, ‘Ms’, ‘p’, ‘r’, ‘pi’] vsubterm_equivalent_lemma)
  >> simp []
  >> STRIP_TAC
