@@ -307,7 +307,7 @@ QED
 (* The NFA- and DFA-recognizable languages are the same                      *)
 (*---------------------------------------------------------------------------*)
 
-Theorem NFA_LANGS_EQ_DFA_LANGS:
+Theorem DFA_LANGS_EQ_NFA_LANGS:
   DFA_LANGS = NFA_LANGS
 Proof
   simp [EXTENSION] >>
@@ -438,7 +438,7 @@ QED
 Theorem LANGS_EQUIV:
   DFA_LANGS = NFA_LANGS ∧ NFA_LANGS = NFA_TRACE_LANGS
 Proof
-  simp [NFA_LANGS_EQ_DFA_LANGS] >>
+  simp [DFA_LANGS_EQ_NFA_LANGS] >>
   simp [EXTENSION] >>
   simp [IN_NFA_LANGS,IN_NFA_TRACE_LANGS] >>
   metis_tac [nfa_langs_equal]

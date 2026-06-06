@@ -1,4 +1,4 @@
-# Example: Automata
+# Example: Finite State Automata
 
 \label{chap:automata}
 
@@ -36,7 +36,7 @@ The development has a few interesting aspects.
    construction is formalized as an equivalence between two different
    evaluations, one being that of the (constructed) DFA and the other
    being evaluation of the original NFA. The proof is quite simple. In
-   the exercises, the connection with the standard notion of NFA
+   the Exercises, the connection with the standard notion of NFA
    language acceptance, *i.e.* the existence of a suitable *sequence*
    of states, then gets defined and related to NFA evaluation in a
    clean fashion.
@@ -48,7 +48,7 @@ The development has a few interesting aspects.
 3. Usage of perhaps unfamiliar tactics. We use and explain dependent
    rewriting in the form `DEP_{ASM_}REWRITE_TAC`, the `tac1 >>~-
    (pats,tac2)` list tactical, the use of `SF ETA_ss` in the
-   simplifier, `THENL`, `SELECT_ELIM_TAC`, *etc*.
+   simplifier, `THENL`, `SELECT_ELIM_TAC`, `irule_at`, *etc*.
 
 ### Theory Script
 
@@ -884,8 +884,9 @@ val it =
 > ```
 >
 > proves `main_lemma`. Notably, the invocations of
-> `DEP_ASM_REWRITE_TAC` were, in this case, not needed since the
-> simplifier could handle the necessary side-condition proofs.
+> `DEP_ASM_REWRITE_TAC` and `DEP_REWRITE_TAC` were, in this case, not
+> needed since the simplifier could handle the necessary
+> side-condition proofs.
 >
 > However, such a revision can be viewed as bad style since it
 > collapses three steps: first, expanding the evaluator definitions;
@@ -954,7 +955,7 @@ and puts the conclusion of the theorem as an antecedent to the goal:
 ```
 
 > [!NOTE]
-> This sets up a style of proof where a formula sits as an antecedent
+> This sets up a style of proof where a formula sits as the antecedent
 > to the goal and is iteratively manipulated with forward inference
 > steps until it becomes useable by other tactics. In this proof style
 > (called "theorem continuations" by its inventor Larry Paulson) a
@@ -1518,7 +1519,7 @@ well-formedness of the constructed automata have been omitted.
 Consult the theory script for details).
 
 ```
-Theorem NFA_LANGS_EQ_DFA_LANGS:
+Theorem DFA_LANGS_EQ_NFA_LANGS:
   DFA_LANGS = NFA_LANGS
 Proof
   simp [EXTENSION] >>
@@ -1569,8 +1570,10 @@ how our "Final Result" relates to standard presentations.
    Definition nfa_trace_def:
      nfa_trace N [q] [] = (q ∈ N.Q) ∧
      nfa_trace N (q1::q2::t) (a::w) =
-        (nfa_trace N (q2::t) w ∧
-         a ∈ N.Sigma ∧ q1 ∈ N.Q ∧ q2 ∈ N.delta q1 a) ∧
+        (a ∈ N.Sigma ∧
+         q1 ∈ N.Q ∧
+         q2 ∈ N.delta q1 a ∧
+         nfa_trace N (q2::t) w) ∧
      nfa_trace _ _ _ = F
    End
    ```
