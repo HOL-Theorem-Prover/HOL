@@ -2,7 +2,7 @@
 (* FILE    : separabilityScript.sml                                           *)
 (* TITLE   : Separability of lambda terms (additional work) [1, Chapter 10.4] *)
 (*                                                                            *)
-(* AUTHOR  : Chun Tian (binghe) <binghe.lisp@gmail.com> (2026)                *)
+(* AUTHOR  : 2026  Dalian University of Science and Technology (Chun Tian)    *)
 (* ========================================================================== *)
 
 Theory separability
