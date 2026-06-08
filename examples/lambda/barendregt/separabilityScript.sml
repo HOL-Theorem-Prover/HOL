@@ -10058,6 +10058,14 @@ Proof
  >> MATCH_MP_TAC asmlam_subst >> art []
 QED
 
+Theorem distinct_benf_imp_incompatible' :
+    !M N. benf M /\ benf N /\ M <> N ==> M # N
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC distinct_benf_imp_incompatible
+ >> simp [benf_has_benf, benf_lameta_iff_eq]
+QED
+
 (* END *)
 val _ = html_theory "separability";
 

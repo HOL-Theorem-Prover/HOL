@@ -13,6 +13,9 @@ Ancestors
 Libs
   boolSimps metisLib hurdUtils pred_setLib BasicProvers binderLib
 
+Theorem diamond_property_def = relationTheory.diamond_def
+Overload diamond_property = “relation$diamond”
+
 (* definition from p30 *)
 Definition beta_def:  beta M N = ?x body arg. (M = LAM x body @@ arg) /\
                                               (N = [arg/x]body)
@@ -290,12 +293,6 @@ Theorem bnf_reduction_to_self:
 Proof
   METIS_TAC [corollary3_2_1, beta_normal_form_bnf, RTC_RULES]
 QED
-
-local open relationTheory
-in
-val diamond_property_def = save_thm("diamond_property_def", diamond_def)
-end
-val _ = overload_on("diamond_property", ``relation$diamond``)
 
 (* This is not the same CR as appears in relationTheory. There
      CR R = diamond (RTC R)
@@ -771,6 +768,14 @@ Theorem betastar_lameq_bnf:
 Proof
   METIS_TAC [theorem3_13, beta_CR, betastar_lameq, bnf_reduction_to_self,
              lameq_betaconversion]
+QED
+
+Theorem bnf_lameq_iff_eq :
+    !M N. bnf M /\ bnf N ==> (M == N <=> M = N)
+Proof
+    rw [GSYM betastar_lameq_bnf]
+ >> simp [bnf_reduction_to_self]
+ >> PROVE_TAC []
 QED
 
 (* moved here from churchnumScript.sml *)
@@ -1490,6 +1495,21 @@ Theorem benf_reduction_to_self:
     !M N. benf M ==> (M -be->* N <=> N = M)
 Proof
     METIS_TAC [corollary3_2_1, beta_eta_normal_form_benf, RTC_RULES]
+QED
+
+Theorem bestar_lameta_benf:
+    !M N. benf N ==> (M -be->* N <=> M === N)
+Proof
+  METIS_TAC [theorem3_13, lameta_CR, bestar_lameta, benf_reduction_to_self,
+             beta_eta_lameta]
+QED
+
+Theorem benf_lameta_iff_eq :
+    !M N. benf M /\ benf N ==> (M === N <=> M = N)
+Proof
+    rw [GSYM bestar_lameta_benf]
+ >> simp [benf_reduction_to_self]
+ >> PROVE_TAC []
 QED
 
 Theorem strong_grandbeta_gen_ind =
