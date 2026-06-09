@@ -60,28 +60,21 @@ We first perform a match that requires type instantitations, and also
 alpha-convertibility.
 
 ``` hol4
-   > val ((S,_),(T,_)) =
+   >> val ((tmS,_),(tyS,_)) =
        raw_match [] empty_varset
-                 (Term `\x:'a. x = f (y:'b)`)
-                 (Term `\a.    a = ~p`) ([],[]);
-   val S =
-     [{redex = `(y :'b)`,       residue = `(p :bool)`},
-      {redex = `(f :'b -> 'a)`, residue = `$~`}] : ...
-
-   val T =
-     [{redex = `:'b`, residue = `:bool`},
-      {redex = `:'a`, residue = `:bool`}] : ...
+                 “\x:'a. x = f (y:'b)”
+                 “\a.    a = ~p” ([],[]);
 ```
 
 One of the main differences between `raw_match` and more refined
 derivatives of it, is that the returned substitutions are un-normalized
-by `raw_match`. If one naively applied `(S,T)` to `\x:'a. x = f (y:'b)`,
-type instantiation with `T` would be applied first, yielding
-`\x:bool. x = f (y:bool)`. Then substitution with `S` would be applied,
+by `raw_match`. If one naively applied `(tmS,tyS)` to `\x:'a. x = f (y:'b)`,
+type instantiation with `tyS` would be applied first, yielding
+`\x:bool. x = f (y:bool)`. Then substitution with `tmS` would be applied,
 unsuccessfully, since both `f` and `y` in the pattern term have been
 type instantiated, but the corresponding elements of the substitution
 haven't. Thus, higher level operations building on `raw_match` typically
-instantiate `S` by `T` to get `S'` before applying `(S',T)` to the
+instantiate `tmS` by `tyS` to get `tmS'` before applying `(tmS',tyT)` to the
 pattern term. This can be achieved by using `norm_subst`. However,
 `raw_match` exposes this level of detail to the programmer.
 

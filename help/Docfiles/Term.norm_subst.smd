@@ -36,8 +36,8 @@ Never fails.
 
 ``` hol4
 >> val ((tmS,Ids),(tyS,Idt)) = raw_match [] empty_varset
-                    (Term `\x:'a. x = f (y:'b)`)
-                    (Term `\a.    a = ~p`) ([],[]);
+                    “\x:'a. x = f (y:'b)”
+                    “\a.    a = ~p” ([],[]);
 
 >> val (tmS',_) = norm_subst ((tmS,Ids),(tyS,Idt)) ;
 ```
