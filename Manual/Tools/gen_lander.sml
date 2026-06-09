@@ -122,10 +122,11 @@ fun renderCard path =
       val href = name ^ "/index.html"
     in
       "    <li>\n" ^
-      "      <a href=\"" ^ escape href ^ "\"><strong>" ^
-        escape title ^ "</strong></a>\n" ^
+      "      <a href=\"" ^ escape href ^ "\">\n" ^
+      "        <strong>" ^ escape title ^ "</strong>\n" ^
       (if desc = "" then ""
-       else "      <p>" ^ escape desc ^ "</p>\n") ^
+       else "        <p>" ^ escape desc ^ "</p>\n") ^
+      "      </a>\n" ^
       "    </li>\n"
     end
 
@@ -149,7 +150,7 @@ fun renderPage (paths, fragment) =
       \  <title>HOL4 Documentation</title>\n\
       \  <style>\n\
       \    body {\n\
-      \      max-width: 720px;\n\
+      \      max-width: 960px;\n\
       \      margin: 4em auto;\n\
       \      padding: 0 1em;\n\
       \      font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\",\n\
@@ -166,18 +167,32 @@ fun renderPage (paths, fragment) =
       \      border-bottom: 1px solid #e0e0e0;\n\
       \    }\n\
       \    .sub { color: #666; margin-top: 0; margin-bottom: 2em; }\n\
-      \    ul.manuals { list-style: none; padding: 0; }\n\
+      \    ul.manuals {\n\
+      \      list-style: none;\n\
+      \      padding: 0;\n\
+      \      display: grid;\n\
+      \      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));\n\
+      \      gap: 1em;\n\
+      \    }\n\
       \    ul.manuals li {\n\
-      \      margin-bottom: 1.5em;\n\
-      \      padding: 1em 1.2em;\n\
       \      border: 1px solid #e0e0e0;\n\
       \      border-radius: 4px;\n\
       \    }\n\
       \    ul.manuals li:hover { border-color: #4183c4; }\n\
-      \    ul.manuals a { color: #4183c4; text-decoration: none; }\n\
-      \    ul.manuals a:hover { text-decoration: underline; }\n\
-      \    ul.manuals strong { font-size: 1.1em; }\n\
-      \    ul.manuals p { margin: 0.4em 0 0; color: #555; }\n\
+      \    ul.manuals a {\n\
+      \      display: block;\n\
+      \      padding: 0.8em 1em;\n\
+      \      color: inherit;\n\
+      \      text-decoration: none;\n\
+      \    }\n\
+      \    ul.manuals li:hover strong { text-decoration: underline; }\n\
+      \    ul.manuals strong { color: #4183c4; font-size: 1.05em; }\n\
+      \    ul.manuals p {\n\
+      \      margin: 0.4em 0 0;\n\
+      \      color: #555;\n\
+      \      font-size: 0.9em;\n\
+      \      line-height: 1.4;\n\
+      \    }\n\
       \    section.ref-section { margin-bottom: 2em; }\n\
       \    section.ref-section h2 {\n\
       \      font-size: 1.1em;\n\
@@ -218,7 +233,7 @@ fun renderPage (paths, fragment) =
       \      h2.section { border-color: #333; }\n\
       \      ul.manuals li { border-color: #333; }\n\
       \      ul.manuals li:hover { border-color: #66aaff; }\n\
-      \      ul.manuals a { color: #66aaff; }\n\
+      \      ul.manuals strong { color: #66aaff; }\n\
       \      ul.manuals p { color: #b0b0b0; }\n\
       \      section.ref-section h2 small { color: #888; }\n\
       \      section.ref-section h2 small a,\n\
