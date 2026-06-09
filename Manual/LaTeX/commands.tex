@@ -217,15 +217,20 @@
 \newcommand\HOLSpacing{13pt}
 % Bar colour matches mdbook's --links variable (Light theme); the
 % PDF doesn't have themes so we just use the light default.
+% Background tint mirrors the HTML side's `pre > code.language-repl`
+% rule (rgba(120,144,156,0.10) over white) so REPL sessions are
+% visually distinct from same-bar-colour admonitions like `[!NOTE]`.
 \definecolor{HOLsessionbar}{rgb}{0.255,0.514,0.812}
+\definecolor{HOLsessionbg}{HTML}{F1F3F5}
 
 \newmdenv[
   topline=false, bottomline=false, rightline=false,
   leftline=true,
   linewidth=3pt,
   linecolor=HOLsessionbar,
+  backgroundcolor=HOLsessionbg,
   leftmargin=0pt, rightmargin=0pt,
-  innerleftmargin=0.6em, innerrightmargin=0pt,
+  innerleftmargin=0.6em, innerrightmargin=0.6em,
   innertopmargin=0.2ex, innerbottommargin=0.2ex,
   skipabove=0.5\baselineskip,
   skipbelow=0.5\baselineskip,
