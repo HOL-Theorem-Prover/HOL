@@ -213,7 +213,7 @@ the same structure as DFAs, except that
    End
 ```
 
-We will express NFA evaluation by recursion on the word, using the following: 
+We will express NFA evaluation by recursion on the word, using the following:
 
 ```
 Definition nfa_eval_def:
@@ -231,7 +231,7 @@ a successor set of states by
 
 2. This gives a set of sets which all get unioned together:
 $$
- N.delta\; q_1 \; a \cup \ldots\cup  N.delta\; q_n\; a
+ N.\mathtt{delta}\; q_1 \; a \cup \ldots\cup  N.\mathtt{delta}\; q_n\; a
 $$
 
 This is expressed by the following definition:
@@ -264,15 +264,15 @@ the machine might be in.
 A wellformed NFA obeys similar requirements as a wellformed DFA,
 adjusting for the usage of sets of states.
 
-```
-Definition wf_nfa_def:
-  wf_nfa N ⇔
-    FINITE N.Q ∧
-    FINITE N.Sigma ∧
-    N.initial ⊆ N.Q ∧
-    N.final ⊆ N.Q ∧
-    (∀q a. a ∈ N.Sigma ∧ q ∈ N.Q ⇒ N.delta q a ⊆ N.Q)
-End
+```repl
+>> Definition wf_nfa_def:
+     wf_nfa N ⇔
+       FINITE N.Q ∧
+       FINITE N.Sigma ∧
+       N.initial ⊆ N.Q ∧
+       N.final ⊆ N.Q ∧
+       (∀q a. a ∈ N.Sigma ∧ q ∈ N.Q ⇒ N.delta q a ⊆ N.Q)
+   End
 ```
 
 The definition of wellformedness for NFAs allows the states of the
@@ -280,18 +280,18 @@ machine and the alphabet to be empty. The initial and final states
 can also be empty, and the transition function could return an empty
 set for every input, including wellformed ones. The following
 theorem shows that a vacuous NFA is wellformed:
-```
-Theorem wf_nfa_vacuous:
-  wf_nfa <|
-    Q       := ∅ ;
-    Sigma   := ∅ ;
-    delta   := λq a. ∅ ;
-    initial := ∅ ;
-    final   := ∅
-  |>
-Proof
-  simp [wf_nfa_def]
-QED
+```repl
+>> Theorem wf_nfa_vacuous:
+     wf_nfa <|
+       Q       := ∅ ;
+       Sigma   := ∅ ;
+       delta   := λq a. ∅ ;
+       initial := ∅ ;
+       final   := ∅
+     |>
+   Proof
+     simp [wf_nfa_def]
+   QED
 ```
 
 In contrast, a wellformed DFA has to have an initial state, so it has
@@ -312,32 +312,32 @@ an automaton can also be viewed mathematically as implementing a
 - execution on `w` starts in state `M.initial` and ends in one of the
   states in `M.final`.
 
-```
-Definition dfa_lang_def:
-  dfa_lang M = {w | EVERY M.Sigma w ∧ dfa_eval M M.initial w ∈ M.final}
-End
+```repl
+>> Definition dfa_lang_def:
+     dfa_lang M = {w | EVERY M.Sigma w ∧ dfa_eval M M.initial w ∈ M.final}
+   End
 ```
 
 An NFA `N` accepts word `w` if `w` is a word drawn from `N.Sigma` and
 execution on `w` starts with the set of states `N.initial` and ends in
 a set of states having a non-empty overlap with `M.final`.
 
-```
-Definition nfa_lang_def:
-  nfa_lang N = {w | EVERY N.Sigma w ∧ nfa_eval N N.initial w ∩ N.final ≠ ∅}
-End
+```repl
+>> Definition nfa_lang_def:
+     nfa_lang N = {w | EVERY N.Sigma w ∧ nfa_eval N N.initial w ∩ N.final ≠ ∅}
+   End
 ```
 
 We are now able to capture the languages implementable by DFAs and NFAs:
 
-```
-Definition DFA_LANGS_def:
-   DFA_LANGS = {dfa_lang M | wf_dfa M}
-End
+```repl
+>> Definition DFA_LANGS_def:
+      DFA_LANGS = {dfa_lang M | wf_dfa M}
+   End
 
-Definition NFA_LANGS_def:
-   NFA_LANGS = {nfa_lang N | wf_nfa N}
-End
+   Definition NFA_LANGS_def:
+      NFA_LANGS = {nfa_lang N | wf_nfa N}
+   End
 ```
 
 We will show how to prove these are the same in the following sections.
@@ -348,16 +348,15 @@ We will show how to prove these are the same in the following sections.
 
 A classic result of computer science theory is that the languages
 recognized by DFAs are equal to the languages recognized by NFAs. This
-was first proved by Michael Rabin and Dana Scott in *Finite automata
-and their decision problems*, IBM Journal of Research and Development
-3(2), 114–125 (1959).  The *subset construction* forms the backbone of
-their proof; it works by translating an NFA into an "equivalent" DFA.
-The key insight in the construction is to make a state of the
-constructed DFA embody the states the NFA could possibly be in at a
-particular stage of processing the input word. The idea is
-conceptually appealing but it raises a technical problem: how to
-somehow arrange that the DFA state (a thing of type `:num`) *is* a set
-of NFA states (a thing of type `:num -> bool`).
+was first proved by \citet{DBLP:journals/ibmrd/RabinS59}. The *subset
+construction* forms the backbone of their proof; it works by
+translating an NFA into an "equivalent" DFA. The key insight in the
+construction is to make a state of the constructed DFA embody the
+states the NFA could possibly be in at a particular stage of
+processing the input word. The idea is conceptually appealing but it
+raises a technical problem: how to somehow arrange that the DFA state
+(a thing of type `:num`) *is* a set of NFA states (a thing of type
+`:num -> bool`).
 
 ### Encoding subsets
 
