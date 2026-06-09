@@ -234,6 +234,40 @@
   {\begin{sessionframe}\small}
   {\end{sessionframe}}
 
+% GFM-style admonition blocks (`> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`,
+% `[!WARNING]`, `[!CAUTION]`).  Colours match mdbook 0.5's defaults,
+% which themselves match GitHub.  Lowered into LaTeX by the
+% `BlockQuote` handler in Manual/Tools/pdf-macros.lua.
+\definecolor{HOLalertNote}{HTML}{0969DA}
+\definecolor{HOLalertTip}{HTML}{1A7F37}
+\definecolor{HOLalertImportant}{HTML}{8250DF}
+\definecolor{HOLalertWarning}{HTML}{9A6700}
+\definecolor{HOLalertCaution}{HTML}{B52731}
+
+\newcommand\HOLnewAdmonition[3]{%
+  \newmdenv[
+    topline=false, bottomline=false, rightline=false,
+    leftline=true,
+    linewidth=3pt,
+    linecolor=#2,
+    leftmargin=0pt, rightmargin=0pt,
+    innerleftmargin=0.8em, innerrightmargin=0.6em,
+    innertopmargin=0.2ex, innerbottommargin=0.4ex,
+    skipabove=0.6\baselineskip,
+    skipbelow=0.6\baselineskip,
+    frametitle={\color{#2}\textbf{#3}},
+    frametitlerule=false,
+    frametitleaboveskip=0pt,
+    frametitlebelowskip=0.4ex,
+  ]{#1frame}%
+  \newenvironment{#1}{\begin{#1frame}}{\end{#1frame}}%
+}
+\HOLnewAdmonition{holnote}     {HOLalertNote}     {Note}
+\HOLnewAdmonition{holtip}      {HOLalertTip}      {Tip}
+\HOLnewAdmonition{holimportant}{HOLalertImportant}{Important}
+\HOLnewAdmonition{holwarning}  {HOLalertWarning}  {Warning}
+\HOLnewAdmonition{holcaution}  {HOLalertCaution}  {Caution}
+
 % ---------------------------------------------------------------------
 % Macro for boxed ML functions, etc.
 %

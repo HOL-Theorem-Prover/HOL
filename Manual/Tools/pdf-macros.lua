@@ -156,6 +156,57 @@ local function escapeAlltt(s)
   return s
 end
 
+-- GFM alert blocks: `> [!NOTE]` / `[!TIP]` / `[!IMPORTANT]` /
+-- `[!WARNING]` / `[!CAUTION]` followed by the body.  The marker
+-- always sits on its own line, then optionally a blank quoted
+-- line, then the body.  Pandoc parses the two forms as either
+-- (a) one Para whose first inlines are `[!KIND]` then SoftBreak
+-- then body, or (b) a Para containing only `[!KIND]` followed by
+-- further blocks for the body.  Convert either to the matching
+-- `\begin{holKIND}...\end{holKIND}` environment from
+-- Manual/LaTeX/commands.tex (the LaTeX env emits the coloured
+-- title row itself, so the marker is dropped here).
+local alertEnv = {
+  NOTE      = "holnote",
+  TIP       = "holtip",
+  IMPORTANT = "holimportant",
+  WARNING   = "holwarning",
+  CAUTION   = "holcaution",
+}
+function BlockQuote(item)
+  if not FORMAT:match("latex") then return nil end
+  local blocks = item.content
+  if #blocks == 0 or blocks[1].t ~= "Para" then return nil end
+  local inlines = blocks[1].content
+  local breakAt = nil
+  for i, e in ipairs(inlines) do
+    if e.t == "SoftBreak" or e.t == "LineBreak" then
+      breakAt = i; break
+    end
+  end
+  local firstLine
+  if breakAt then
+    firstLine = {}
+    for i = 1, breakAt - 1 do table.insert(firstLine, inlines[i]) end
+  else
+    firstLine = inlines
+  end
+  local kind = pandoc.utils.stringify(firstLine):match("^%[!(%u+)%]%s*$")
+  if not kind or not alertEnv[kind] then return nil end
+  local env = alertEnv[kind]
+  local body = {}
+  if breakAt then
+    local rest = {}
+    for i = breakAt + 1, #inlines do table.insert(rest, inlines[i]) end
+    if #rest > 0 then table.insert(body, pandoc.Para(rest)) end
+  end
+  for i = 2, #blocks do table.insert(body, blocks[i]) end
+  local out = {pandoc.RawBlock("latex", "\\begin{" .. env .. "}")}
+  for _, b in ipairs(body) do table.insert(out, b) end
+  table.insert(out, pandoc.RawBlock("latex", "\\end{" .. env .. "}"))
+  return out
+end
+
 function CodeBlock(item)
   if not FORMAT:match("latex") then
     return item
