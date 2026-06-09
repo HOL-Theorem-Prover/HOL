@@ -36,7 +36,7 @@ All of the following inline commands must be the first non-whitespace on the lin
     The `<dr>` number is the number of initial lines to drop, and, if present, the `<tk>` value is the number of lines to then “take” from the output.
     If omitted, or given as special value `_` (a single underscore), all remaining lines are “taken”.
     The initial value for this option is `0 _` (which prints all output).
--   The `##poplinelen_limit` command restores the previous `linecount_limit` value.
+-   The `##poplinecount_limit` command restores the previous `linecount_limit` value.
 -   The `##parsetm` and `##parsety` commands get the compiler to parse the (multi-line) argument as a HOL term or type and print it back to the output.
     The invocation is done by wrapping the input in `“`-`”` delimiters and adding a colon in the case of `##parsety`.
     These directives make it easy to include HOL terms and types in the input while also having them checked for syntactic validity.

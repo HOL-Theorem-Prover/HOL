@@ -31,6 +31,7 @@ none of the names match a fragment in the simpset).
 
 ### Example
 
+##linecount_limit 0 30
 ``` hol4
 >> val base = simpLib.exclude_ssfrags ["ARITH"] (srw_ss());
 
@@ -47,3 +48,5 @@ none of the names match a fragment in the simpset).
 [`simpLib.remove_ssfrags`](#simpLib.remove_ssfrags),
 [`simpLib.force_add`](#simpLib.force_add),
 [`bossLib.SF`](#bossLib.SF)
+
+##poplinecount_limit

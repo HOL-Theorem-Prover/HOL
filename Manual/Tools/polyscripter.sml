@@ -305,8 +305,7 @@ fun impose_linecount_limit s =
                   LESS => (List.take(lines, lim), "\n[...Output elided...]\n")
                 | _ => (lines, "\n")
         in
-          String.concatWith "\n" (List.take (lines', lim)) ^
-          closeWith
+          String.concatWith "\n" lines' ^ closeWith
         end
       | (dropc, SOME takec) =>
         let
