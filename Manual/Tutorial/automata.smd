@@ -72,11 +72,11 @@ It starts
 
 >>__ load "dep_rewrite";
 ```
->> Theory Automata_Tutorial
-   Ancestors
-     pred_set list
-   Libs
-     dep_rewrite
+Theory Automata_Tutorial
+Ancestors
+  pred_set list
+Libs
+  dep_rewrite
 ```
 
 which specifies the following:
