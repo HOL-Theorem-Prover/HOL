@@ -1025,6 +1025,23 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
                 \documentation, re-run with --no-helpdocs to skip the \
                 \help-docs step entirely."
      end ;
+     (* Pre-build chapter-stems.mk in each manual that `sinclude`s it,
+        so subsequent Holmake invocations there don't print the
+        `chapter-stems.mk not yet built' warning -- and so the
+        labels.tsv pass below doesn't either.  Stop-gap until Holmake
+        learns to generate these itself. *)
+     let
+       val stem_manuals = ["Description", "Tutorial"]
+       val () = print "Generating chapter-stems.mk in Description and \
+                      \Tutorial...\n"
+       fun build_stems m =
+         let val mdir = fullPath [HOLDIR, "Manual", m]
+         in if SYSTEML [HOLMAKE, "-C", mdir, "chapter-stems.mk"] then ()
+            else die ("Couldn't build Manual/" ^ m ^ "/chapter-stems.mk")
+         end
+     in
+       List.app build_stems stem_manuals
+     end ;
      if use_mdbook then
        let
          val refdir = fullPath [HOLDIR, "Manual", "Reference"]
