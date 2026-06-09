@@ -71,7 +71,10 @@ is [in the HOL4 repository](https://github.com/HOL-Theorem-Prover/HOL/tree/nfa-d
 It starts
 
 >>__ load "dep_rewrite";
-```
+<!-- tag it as repl, though there are no >>s present in order to get the nice rendering it
+     as something you might type into HOL.
+-->
+``` repl
 Theory Automata_Tutorial
 Ancestors
   pred_set list
@@ -111,7 +114,7 @@ not.
 For this tutorial we have a very simple notion of state: a state is
 just a natural number.
 
-```
+```repl
 >> Type state = “:num”
 ```
 
@@ -127,7 +130,7 @@ finite set of symbols from which *words* may be formed, $\delta$
 is a transition function, *S* is the start state, and *F* is a set of
 final states. This 5-tuple is modelled by a record with 5 fields:
 
-```
+```repl
 >> Datatype:
      dfa = <|
        Q       : state set ;
@@ -141,7 +144,7 @@ final states. This 5-tuple is modelled by a record with 5 fields:
 
 DFA evaluation is defined by recursion on the word:
 
-```
+```repl
 >> Definition dfa_eval_def:
      dfa_eval M q [] = q ∧
      dfa_eval M q (a::w) = dfa_eval M (M.delta q a) w
@@ -158,7 +161,7 @@ ways to compute sets.
 A notion of wellformedness of DFAs is also needed since not all possible
 values of the `dfa` type make sense.
 
-```
+```repl
 >> Definition wf_dfa_def:
      wf_dfa M ⇔
        FINITE M.Q ∧
@@ -198,7 +201,7 @@ the same structure as DFAs, except that
 - the start states are a set
 - a transition results in a set of successor states
 
-```
+```repl
 >> Datatype:
      nfa = <|
        Q       : state set ;
@@ -233,14 +236,14 @@ $$
 
 This is expressed by the following definition:
 
-```
+```repl
 >> Definition Delta_def:
      Delta N qset a = BIGUNION{N.delta q a | q | q ∈ qset}
    End
 ```
 
 This then allows the `nfa_eval` definition to be made:
-```
+```repl
 >> Definition nfa_eval_def:
      nfa_eval N qset [] = qset ∧
      nfa_eval N qset (a::w) = nfa_eval N (Delta N qset a) w
