@@ -460,12 +460,56 @@ fun loadCrossBookLabels () =
     List.app loadOne knownSiblingBooks
   end
 
+(* Distinguishes parenthetical `\cite` (pandoc `[@k]`, "(Author Year)")
+   from textual `\citet` (pandoc `@k`, "Author (Year)").  The PDF side
+   resolves both via natbib; for HTML we run the same key through
+   pandoc twice when both forms appear, since the rendered span
+   differs. *)
+datatype citeForm = Paren | Text
+
+fun formToString Paren = "p"
+  | formToString Text  = "t"
+
+fun formFromString "p" = SOME Paren
+  | formFromString "t" = SOME Text
+  | formFromString _   = NONE
+
+(* Detect a `\cite` or `\citet` command starting at position i.  Both
+   require a non-letter character (or end of string) immediately after
+   the command name so prefixes like `\citeX` don't false-positive.
+   Returns SOME (form, position-just-past-command-name). *)
+fun detectCite (s, i, sz) =
+  let
+    val sub = String.sub
+    fun isCmdEnd c = not (Char.isAlpha c)
+    val marker = "\\cite"
+    val msz = String.size marker
+  in
+    (* Cheap byte check first: detectCite is called for every position
+       in the input, so dodging the 5-char substring allocation at
+       non-`\` positions saves ~99% of intermediate strings on a
+       typical .smd file. *)
+    if i + msz > sz then NONE
+    else if sub (s, i) <> #"\\" then NONE
+    else if String.substring (s, i, msz) <> marker then NONE
+    else
+      let val k = i + msz in
+        if k < sz andalso sub (s, k) = #"t"
+           andalso (k + 1 = sz orelse isCmdEnd (sub (s, k + 1)))
+        then SOME (Text, k + 1)
+        else if k = sz orelse isCmdEnd (sub (s, k))
+        then SOME (Paren, k)
+        else NONE
+      end
+  end
+
 (* Loaded once from `cite-labels.tsv` at preprocessor startup (see
-   loadCiteLabels below).  Each row is (keys, locator, rendered-html)
-   matching the TSV emitted by `smdpp render-bib`.  Empty when the
-   labels file is missing — citations then pass through unrewritten
-   and the post-build `smdpp check-html` leak check surfaces them. *)
-val citeLabels : (string * string * string) list ref = ref []
+   loadCiteLabels below).  Each row is (keys, locator, form,
+   rendered-html) matching the TSV emitted by `smdpp render-bib`.
+   Empty when the labels file is missing — citations then pass through
+   unrewritten and the post-build `smdpp check-html` leak check
+   surfaces them. *)
+val citeLabels : (string * string * citeForm * string) list ref = ref []
 
 (* Read cite-labels.tsv from cwd; warn (don't die) if missing. *)
 fun loadCiteLabels () =
@@ -488,7 +532,10 @@ fun loadCiteLabels () =
         val lines = String.fields (fn c => c = #"\n") content
         fun parse line =
           case String.fields (fn c => c = #"\t") line of
-              [k, l, h] => SOME (k, l, h)
+              [k, l, f, h] =>
+                (case formFromString f of
+                     SOME form => SOME (k, l, form, h)
+                   | NONE => NONE)
             | _ => NONE
       in
         citeLabels := List.mapPartial parse lines
@@ -577,63 +624,62 @@ fun rewriteRefEntry currentFile s =
       else loop (i + 1, sub (s, i) :: acc)
   in loop (0, []) end
 
-(* Replace each `\cite[loc]{keys}` (or `\cite{keys}`) with the
-   rendered-HTML span captured in the citation label registry.
-   Unknown call-sites are left untouched: the rendered HTML keeps
-   the literal `\cite{...}` text, which `smdpp check-html` then
-   reports as a leak.  Brace-counted on the key argument; loose
-   `]`-terminator on the locator (LaTeX locators never contain
-   literal `]`). *)
+(* Replace each `\cite[loc]{keys}` / `\citet[loc]{keys}` with the
+   rendered-HTML span captured in the citation label registry, keyed
+   by form so the textual and parenthetical renderings of the same
+   key stay distinct.  Unknown call-sites are left untouched: the
+   rendered HTML keeps the literal `\cite{...}` text, which
+   `smdpp check-html` then reports as a leak.  Brace-counted on the
+   key argument; loose `]`-terminator on the locator (LaTeX locators
+   never contain literal `]`). *)
 fun rewriteCites s =
   let
     val sub = String.sub
     val sz = String.size s
-    val marker = "\\cite"
-    val msz = String.size marker
-    fun isCmdEnd c = not (Char.isAlpha c)
-    fun lookup keys locator =
-      List.find (fn (k, l, _) => k = keys andalso l = locator)
+    fun lookup keys locator form =
+      List.find (fn (k, l, f, _) =>
+                   k = keys andalso l = locator andalso f = form)
                 (!citeLabels)
     fun loop (i, acc) =
       if i >= sz then String.implode (List.rev acc)
-      else if i + msz <= sz
-              andalso String.substring (s, i, msz) = marker
-              andalso (i + msz = sz orelse isCmdEnd (sub (s, i + msz)))
-      then
-        let
-          val k = i + msz
-          val (locator, afterLoc) =
-            if k < sz andalso sub (s, k) = #"[" then
+      else
+        case detectCite (s, i, sz) of
+            SOME (form, k) =>
               let
-                fun findRBrack j =
-                  if j >= sz then NONE
-                  else if sub (s, j) = #"]" then SOME j
-                  else findRBrack (j + 1)
+                val (locator, afterLoc) =
+                  if k < sz andalso sub (s, k) = #"[" then
+                    let
+                      fun findRBrack j =
+                        if j >= sz then NONE
+                        else if sub (s, j) = #"]" then SOME j
+                        else findRBrack (j + 1)
+                    in
+                      case findRBrack (k + 1) of
+                          SOME e =>
+                            (String.substring (s, k + 1, e - k - 1), e + 1)
+                        | NONE => ("", k)
+                    end
+                  else ("", k)
               in
-                case findRBrack (k + 1) of
-                    SOME e =>
-                      (String.substring (s, k + 1, e - k - 1), e + 1)
-                  | NONE => ("", k)
+                if afterLoc < sz andalso sub (s, afterLoc) = #"{" then
+                  case findCloseBrace (s, afterLoc + 1) of
+                      NONE => loop (i + 1, sub (s, i) :: acc)
+                    | SOME e =>
+                      let
+                        val keys =
+                          String.substring
+                            (s, afterLoc + 1, e - afterLoc - 1)
+                      in
+                        case lookup keys locator form of
+                            SOME (_, _, _, html) =>
+                              loop (e + 1,
+                                    List.revAppend
+                                      (String.explode html, acc))
+                          | NONE => loop (i + 1, sub (s, i) :: acc)
+                      end
+                else loop (i + 1, sub (s, i) :: acc)
               end
-            else ("", k)
-        in
-          if afterLoc < sz andalso sub (s, afterLoc) = #"{" then
-            case findCloseBrace (s, afterLoc + 1) of
-                NONE => loop (i + 1, sub (s, i) :: acc)
-              | SOME e =>
-                let
-                  val keys =
-                    String.substring (s, afterLoc + 1, e - afterLoc - 1)
-                in
-                  case lookup keys locator of
-                      SOME (_, _, html) =>
-                        loop (e + 1,
-                              List.revAppend (String.explode html, acc))
-                    | NONE => loop (i + 1, sub (s, i) :: acc)
-                end
-          else loop (i + 1, sub (s, i) :: acc)
-        end
-      else loop (i + 1, sub (s, i) :: acc)
+          | NONE => loop (i + 1, sub (s, i) :: acc)
   in loop (0, []) end
 
 (* Replace each `\ref{X}` with a markdown link `[N.M.O](url)` where
@@ -2175,12 +2221,10 @@ fun checkHtmlMain bookDir =
           else look (p + 1)
       in look 0 end
 
-    (* `\cite` optionally followed by `[..]`, then `{`. *)
+    (* `\cite` or `\citet`, optionally followed by `[..]`, then `{`. *)
     fun hasCiteLeak ln =
       let
         val sz = String.size ln
-        val needle = "\\cite"
-        val nsz = String.size needle
         fun afterOptBracket p =
           if p < sz andalso String.sub (ln, p) = #"[" then
             let
@@ -2191,15 +2235,17 @@ fun checkHtmlMain bookDir =
             in scan (p + 1) end
           else SOME p
         fun look p =
-          if p + nsz > sz then false
-          else if String.substring (ln, p, nsz) = needle then
-            let
-              val hit =
-                case afterOptBracket (p + nsz) of
-                    SOME q => q < sz andalso String.sub (ln, q) = #"{"
-                  | NONE => false
-            in if hit then true else look (p + 1) end
-          else look (p + 1)
+          if p >= sz then false
+          else
+            case detectCite (ln, p, sz) of
+                NONE => look (p + 1)
+              | SOME (_, k) =>
+                let
+                  val hit =
+                    case afterOptBracket k of
+                        SOME q => q < sz andalso String.sub (ln, q) = #"{"
+                      | NONE => false
+                in if hit then true else look (p + 1) end
       in look 0 end
 
     (* `\\X{` where X is mathit/mathtt/texttt/textbf/textit -- the
@@ -2403,53 +2449,54 @@ fun checkHtmlMain bookDir =
                          build time to substitute `\cite{...}` calls.
    Each TSV row is `keys<TAB>locator<TAB>rendered-html`, single-line. *)
 
-(* A single `\cite[loc]{keys}` occurrence in source.  `locator` is the
-   raw locator text without brackets (or "" if no `[..]` block);
-   `keys` is the raw comma-joined key list. *)
-type cite = { keys : string, locator : string }
+(* A single `\cite[loc]{keys}` or `\citet[loc]{keys}` occurrence in
+   source.  `locator` is the raw locator text without brackets (or ""
+   if no `[..]` block); `keys` is the raw comma-joined key list;
+   `form` is Paren for `\cite`, Text for `\citet`. *)
+type cite = { keys : string, locator : string, form : citeForm }
 
-(* Find every `\cite[loc]{keys}` in `s`.  Brace-counted on the key
-   argument; loose `]`-terminator on the locator (locators never
-   contain literal `]` in practice).  Returns occurrences in source
-   order, possibly with duplicates. *)
+(* Find every `\cite[loc]{keys}` / `\citet[loc]{keys}` in `s`.
+   Brace-counted on the key argument; loose `]`-terminator on the
+   locator (locators never contain literal `]` in practice).  Returns
+   occurrences in source order, possibly with duplicates. *)
 fun findCites s =
   let
     val sub = String.sub
     val sz = String.size s
-    val marker = "\\cite"
-    val msz = String.size marker
-    fun isCmdEnd c =
-      not (Char.isAlpha c)
     fun scan i acc =
-      if i + msz > sz then List.rev acc
-      else if String.substring (s, i, msz) = marker
-              andalso (i + msz = sz orelse isCmdEnd (sub (s, i + msz)))
-      then
-        let val k = i + msz
-            val (locator, k') =
-              if k < sz andalso sub (s, k) = #"[" then
-                let
-                  fun findRBrack j =
-                    if j >= sz then NONE
-                    else if sub (s, j) = #"]" then SOME j
-                    else findRBrack (j + 1)
-                in
-                  case findRBrack (k + 1) of
-                      SOME e =>
-                        (String.substring (s, k + 1, e - k - 1), e + 1)
-                    | NONE => ("", k)
-                end
-              else ("", k)
-        in
-          if k' < sz andalso sub (s, k') = #"{" then
-            case findCloseBrace (s, k' + 1) of
-                NONE => scan (i + 1) acc
-              | SOME e =>
-                let val keys = String.substring (s, k' + 1, e - k' - 1)
-                in scan (e + 1) ({keys = keys, locator = locator} :: acc) end
-          else scan (i + 1) acc
-        end
-      else scan (i + 1) acc
+      if i >= sz then List.rev acc
+      else
+        case detectCite (s, i, sz) of
+            SOME (form, k) =>
+              let
+                val (locator, k') =
+                  if k < sz andalso sub (s, k) = #"[" then
+                    let
+                      fun findRBrack j =
+                        if j >= sz then NONE
+                        else if sub (s, j) = #"]" then SOME j
+                        else findRBrack (j + 1)
+                    in
+                      case findRBrack (k + 1) of
+                          SOME e =>
+                            (String.substring (s, k + 1, e - k - 1), e + 1)
+                        | NONE => ("", k)
+                    end
+                  else ("", k)
+              in
+                if k' < sz andalso sub (s, k') = #"{" then
+                  case findCloseBrace (s, k' + 1) of
+                      NONE => scan (i + 1) acc
+                    | SOME e =>
+                      let val keys =
+                        String.substring (s, k' + 1, e - k' - 1)
+                      in scan (e + 1)
+                              ({keys = keys, locator = locator,
+                                form = form} :: acc)
+                      end
+                else scan (i + 1) acc
+              end
+          | NONE => scan (i + 1) acc
   in scan 0 [] end
 
 (* Translate a LaTeX-flavoured locator into the form citeproc parses
@@ -2461,17 +2508,36 @@ fun normalizeLocator s =
                    (fn #"~" => " " | c => String.str c) s
   in trimSpace mapped end
 
-(* Build the `[@k1; @k2, loc]` citeproc syntax from a cite record.
-   Trims surrounding whitespace from each key. *)
-fun citeprocOf {keys, locator} =
+(* Build the pandoc-citeproc syntax from a cite record.  `Paren` form
+   (from `\cite`) emits `[@k1; @k2, loc]`, which pandoc renders as
+   "(Author Year)".  `Text` form (from `\citet`) emits `@k [loc]`,
+   which pandoc renders as "Author (Year)" textually.  pandoc has no
+   well-defined multi-key textual syntax, so multi-key `\citet` is
+   rejected at render-bib time. *)
+fun citeprocOf {keys, locator, form} =
   let
     val keyList =
         List.map trimSpace (String.tokens (fn c => c = #",") keys)
-    val keyForm = String.concatWith "; " (List.map (fn k => "@" ^ k) keyList)
     val locForm = normalizeLocator locator
   in
-    if locForm = "" then "[" ^ keyForm ^ "]"
-    else "[" ^ keyForm ^ ", " ^ locForm ^ "]"
+    case form of
+        Paren =>
+          let
+            val keyForm =
+                String.concatWith "; "
+                  (List.map (fn k => "@" ^ k) keyList)
+          in
+            if locForm = "" then "[" ^ keyForm ^ "]"
+            else "[" ^ keyForm ^ ", " ^ locForm ^ "]"
+          end
+      | Text =>
+          (case keyList of
+              [k] => if locForm = "" then "@" ^ k
+                     else "@" ^ k ^ " [" ^ locForm ^ "]"
+            | _ => die ("smdpp: \\citet{" ^ keys ^ "}: textual form " ^
+                        "requires a single key (pandoc has no clean " ^
+                        "multi-key textual syntax); use \\cite for " ^
+                        "parenthetical multi-key"))
   end
 
 (* Write `content` to `path`, overwriting. *)
@@ -2630,13 +2696,16 @@ fun buildSynthetic absBib absCsl cites =
     val tail = "::: {#refs}\n:::\n"
   in header ^ body ^ tail end
 
-(* De-duplicate cites by (keys, locator).  Preserves first-seen order
-   so the resulting list is stable across runs. *)
+(* De-duplicate cites by (keys, locator, form).  Preserves first-seen
+   order so the resulting list is stable across runs.  Form is part
+   of the key because the same source key can appear as both `\cite`
+   and `\citet` and the two renderings differ. *)
 fun uniqueCites cites =
   let
     fun seen [] _ = false
-      | seen ({keys, locator} :: rest) c =
-          (keys = #keys c andalso locator = #locator c)
+      | seen ({keys, locator, form} :: rest) c =
+          (keys = #keys c andalso locator = #locator c
+                          andalso form = #form c)
           orelse seen rest c
     fun loop [] acc = List.rev acc
       | loop (c :: rest) acc =
@@ -2714,8 +2783,9 @@ fun renderBibMain bibPath cslPath smdPaths =
     val tsv =
         String.concat
           (List.map
-             (fn ({keys, locator}, html) =>
-                keys ^ "\t" ^ locator ^ "\t" ^ html ^ "\n")
+             (fn ({keys, locator, form}, html) =>
+                keys ^ "\t" ^ locator ^ "\t" ^
+                formToString form ^ "\t" ^ html ^ "\n")
              labelled)
     val refsMd =
         "# References\n\n" ^ refsDiv ^ "\n"
