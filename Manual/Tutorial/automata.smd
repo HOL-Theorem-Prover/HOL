@@ -70,12 +70,13 @@ The complete theory script for our example
 is [in the HOL4 repository](https://github.com/HOL-Theorem-Prover/HOL/tree/nfa-develop/examples/formal-languages/regular/automata-tutorial/Automata_TutorialScript.sml).
 It starts
 
+>>__ load "dep_rewrite";
 ```
-Theory Automata_Tutorial
-Ancestors
-  pred_set list
-Libs
-  dep_rewrite
+>> Theory Automata_Tutorial
+   Ancestors
+     pred_set list
+   Libs
+     dep_rewrite
 ```
 
 which specifies the following:
@@ -111,7 +112,7 @@ For this tutorial we have a very simple notion of state: a state is
 just a natural number.
 
 ```
-Type state = “:num”
+>> Type state = “:num”
 ```
 
 ### Deterministic Finite-State Automata (DFAs)
@@ -127,24 +128,24 @@ is a transition function, *S* is the start state, and *F* is a set of
 final states. This 5-tuple is modelled by a record with 5 fields:
 
 ```
-Datatype:
-  dfa = <|
-    Q       : state set ;
-    Sigma   : 'a set ;
-    delta   : state -> 'a -> state;
-    initial : state;
-    final   : state set
-  |>
-End
+>> Datatype:
+     dfa = <|
+       Q       : state set ;
+       Sigma   : 'a set ;
+       delta   : state -> 'a -> state;
+       initial : state;
+       final   : state set
+     |>
+   End
 ```
 
 DFA evaluation is defined by recursion on the word:
 
 ```
-Definition dfa_eval_def:
-  dfa_eval M q [] = q ∧
-  dfa_eval M q (a::w) = dfa_eval M (M.delta q a) w
-End
+>> Definition dfa_eval_def:
+     dfa_eval M q [] = q ∧
+     dfa_eval M q (a::w) = dfa_eval M (M.delta q a) w
+   End
 ```
 
 Evaluation iterates through the list of symbols, updating the state
@@ -158,14 +159,14 @@ A notion of wellformedness of DFAs is also needed since not all possible
 values of the `dfa` type make sense.
 
 ```
-Definition wf_dfa_def:
-  wf_dfa M ⇔
-    FINITE M.Q ∧
-    FINITE M.Sigma ∧
-    M.initial ∈ M.Q ∧
-    M.final ⊆ M.Q ∧
-    (∀q a. a ∈ M.Sigma ∧ q ∈ M.Q ⇒ M.delta q a ∈ M.Q)
-End
+>> Definition wf_dfa_def:
+     wf_dfa M ⇔
+       FINITE M.Q ∧
+       FINITE M.Sigma ∧
+       M.initial ∈ M.Q ∧
+       M.final ⊆ M.Q ∧
+       (∀q a. a ∈ M.Sigma ∧ q ∈ M.Q ⇒ M.delta q a ∈ M.Q)
+   End
 ```
 
 A wellformed DFA must have a finite set of states and the words it
@@ -198,18 +199,18 @@ the same structure as DFAs, except that
 - a transition results in a set of successor states
 
 ```
-Datatype:
-  nfa = <|
-    Q       : state set ;
-    Sigma   : 'a set ;
-    delta   : state -> 'a -> state set;
-    initial : state set;
-    final   : state set
-  |>
-End
+>> Datatype:
+     nfa = <|
+       Q       : state set ;
+       Sigma   : 'a set ;
+       delta   : state -> 'a -> state set;
+       initial : state set;
+       final   : state set
+     |>
+   End
 ```
 
-NFA evaluation is also defined by recursion on the word.
+We will express NFA evaluation by recursion on the word, using the following: 
 
 ```
 Definition nfa_eval_def:
@@ -233,10 +234,19 @@ $$
 This is expressed by the following definition:
 
 ```
-Definition Delta_def:
-  Delta N qset a = BIGUNION{N.delta q a | q | q ∈ qset}
-End
+>> Definition Delta_def:
+     Delta N qset a = BIGUNION{N.delta q a | q | q ∈ qset}
+   End
 ```
+
+This then allows the `nfa_eval` definition to be made:
+```
+>> Definition nfa_eval_def:
+     nfa_eval N qset [] = qset ∧
+     nfa_eval N qset (a::w) = nfa_eval N (Delta N qset a) w
+   End
+```
+
 
 We can think about NFA evaluation as evolving the fringe of a tree
 where the fringe at each step of evaluation represents the states that
