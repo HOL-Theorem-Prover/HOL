@@ -167,7 +167,7 @@ ML has three distinct types $\tau_1 \texttt{*} \tau_2 \texttt{*}
 $\tau_1 \texttt{*} (\tau_2 \texttt{*} \tau_3)$.  One might see
 these as a flat triple, and two flavours of pair with a nested
 pair as one or other component.
-HOL cannot model the first of these, and the concrete syntax $\tau_1 \texttt{\#} \tau_2 \texttt{\#} \tau_3$ maps to $\tau_1 \texttt{\#} (\tau_2 \texttt{\#} \tau_3)$ (*i.e.*, the infix `#` type operator is right-associative).
+HOL cannot model the first of these, and the concrete syntax $\tau_1 \mathtt{\#} \tau_2 \mathtt{\#} \tau_3$ maps to $\tau_1 \mathtt{\#} (\tau_2 \mathtt{\#} \tau_3)$ (*i.e.*, the infix `#` type operator is right-associative).
 One has to use parentheses to get the other association.
 
 ML uses the `op` keyword to remove infix status from function
