@@ -103,7 +103,7 @@ them from the ML level.*
 | $\lor$    | `\/`  | $\subseteq$      | `SUBSET` | “...”              | ` ``...`` `  |
 | $\Rightarrow$ | `==>` | $\emptyset$  | `EMPTY`  | ‘...’              | `` `...` ``  |
 | $\iff$    | `<=>` | $\mathbb{U}(:\alpha)$ | `univ(:'a)` |              |            |
-| $\not\iff$ | `<=/=>` | $\times$      | `CROSS`  |                    |              |
+| $\nLeftrightarrow$ | `<=/=>` | $\times$      | `CROSS`  |                    |              |
 ```
 
 ## HOL looks like ML
