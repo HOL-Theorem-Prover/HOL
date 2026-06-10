@@ -2191,6 +2191,7 @@ fun checkHtmlMain bookDir =
       String.isSubstring "type:" ln orelse
       String.isSubstring "holtxt:" ln orelse
       String.isSubstring "textsl:" ln orelse
+      String.isSubstring "ty: [" ln orelse
       String.isSubstring "<!--" ln orelse
       String.isSubstring " !--" ln orelse
       String.isSubstring "-->" ln orelse

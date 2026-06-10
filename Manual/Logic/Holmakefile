@@ -1,9 +1,166 @@
-CHAPTERS = syntax preface semantics title
-OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex
+INCLUDES = ../Tools
 
-logic.pdf: logic.tex $(patsubst %,%.tex,$(CHAPTERS)) $(OTHER)
-	latexmk -pdf logic
+# Cross-manual labels.tsv prereq list for the mdbook target.
+# See Manual/mdbook.mk for MANUALS / SIBLING_LABELS.
+THIS = Logic
+include ../mdbook.mk
 
-EXTRA_CLEANS = $(patsubst %,%.aux,logic $(CHAPTERS)) logic.bbl logic.blg \
-               logic.fdb_latexmk logic.fls logic.log logic.out logic.pdf \
-               logic.toc
+# Pull CHAPTER_STEMS in from a generated chapter-stems.mk so
+# TEX_CORES tracks chapters.txt automatically.  The .mk is built
+# by the rule below from gen_chap_lists; on a fresh checkout run
+# `Holmake chapter-stems.mk' once before the PDF or mdbook
+# targets (sinclude lets that bootstrap step succeed).
+sinclude chapter-stems.mk
+$(if $(CHAPTER_STEMS),,\
+  $(warning chapter-stems.mk not yet built; \
+            run `Holmake chapter-stems.mk' first))
+
+# Core LaTeX file stems that contribute to logic.pdf.  Front
+# matter (title, preface) is hand-coded in logic.tex; the chapter
+# stems come from chapters.txt via CHAPTER_STEMS.  The bibliography
+# is produced from logic.bib via natbib (see logic.pdf recipe
+# below), mirroring Manual/Tutorial/.
+TEX_CORES = logic title preface $(CHAPTER_STEMS)
+
+TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex \
+              chapters-include.tex book-title.tex logic.bib \
+              $(patsubst %,%.tex,$(TEX_CORES))
+
+PS_ROOT = ../Tools/polyscripter
+PS_STUFF = $(PS_ROOT) ../Tools/umap
+PS_NOUMAP = $(PS_ROOT) -md < $< > $@
+
+# pandoc invocation for the .md -> .tex stage.  Same as the
+# Tutorial/Description Holmakefiles use.
+PANDOC_MD = pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=../Tools/pdf-macros.lua -t latex $< > $@
+
+.PHONY: all mdbook mdbook-serve
+
+all: logic.pdf
+
+# All .smd files in the directory; pick them up automatically so
+# adding a new .smd doesn't require a Holmakefile edit just to wire
+# its dependencies into the mdbook prereq chain.
+SMDS = $(wildcard *.smd)
+SMD_MDS = $(patsubst %.smd,%.md,$(SMDS))
+
+# Build the mdbook output for the chapters listed in SUMMARY.md;
+# afterwards, scan the rendered HTML for raw-LaTeX leak patterns and
+# cross-reference number drift.
+# Recipe-less PHONY alias; the real gate is the file target below.
+# See Manual/Description/Holmakefile for the rationale.
+mdbook: ../book/Logic/index.html
+
+../book/Logic/index.html: ../Tools/smdpp SUMMARY.md \
+        $(SMD_MDS) references.md cite-labels.tsv \
+        labels.tsv $(SIBLING_LABELS)
+	mdbook build
+	# See Manual/Description/Holmakefile for the rationale.
+	cd ../book/Logic && \
+	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
+	../Tools/smdpp check-html ../book/Logic
+	../Tools/smdpp check-refs ../book/Logic
+	../Tools/smdpp check-links ../book/Logic
+
+# Scan-only label dump for cross-book `\ref{Book:label}` resolution.
+# See Manual/Description/Holmakefile for the rationale.
+labels.tsv: ../Tools/smdpp SUMMARY.md $(SMDS)
+	../Tools/smdpp dump-labels .
+
+# Render the bibliography chapter + per-call-site cite label table
+# in one shot via pandoc citeproc.  See Manual/Description/Holmakefile
+# for the rationale; this rule mirrors that one.
+CSL = ../Tools/csl/chicago-author-date.csl
+references.md cite-labels.tsv: logic.bib $(CSL) $(SMDS) ../Tools/smdpp
+	../Tools/smdpp render-bib logic.bib $(CSL) $(SMDS)
+
+# SUMMARY.md and chapters-include.tex are generated from
+# chapters.txt by Manual/Tools/gen_chap_lists.  The mdbook H1 at
+# the top of the sidebar uses the book title from book.toml so
+# there's a single canonical source for the manual's name (also
+# read by book-title.tex for the PDF; see below).
+SUMMARY.md: ../Tools/gen_chap_lists chapters.txt book.toml $(SMDS)
+	../Tools/gen_chap_lists summary \
+	   "$$(awk -F\" '/^title/ {print $$2; exit}' book.toml)" > $@
+
+chapters-include.tex: ../Tools/gen_chap_lists chapters.txt
+	../Tools/gen_chap_lists latex-include > $@
+
+chapter-stems.mk: ../Tools/gen_chap_lists chapters.txt
+	../Tools/gen_chap_lists stems > $@
+
+# Generate a one-line LaTeX macro file whose body is the book
+# title from book.toml; title.tex and logic.tex (via
+# \HOLbookTitle) consume it.  Keeps the PDF cover and the
+# hyperref pdftitle in sync with the mdbook title automatically.
+book-title.tex: book.toml
+	printf '\\providecommand{\\HOLbookTitle}{%s}\n' \
+	   "$$(awk -F\" '/^title/ {print $$2; exit}' book.toml)" > $@
+
+# Convenience: serve the book locally at http://127.0.0.1:3003/.
+# Port 3003 (Description uses 3000, Tutorial 3001) so the manuals
+# can be served side by side.  Detaches into the background; pass
+# LOG=1 to capture the server's stdout/stderr to mdbook-serve.log
+# here, or LOG=<path> for a custom location.
+mdbook-serve: ../Tools/smdpp
+	@msg() { { echo "$$1" >/dev/tty; } 2>/dev/null || echo "$$1" >&2; }; \
+	 if lsof -ti :3003 >/dev/null 2>&1; then \
+	   msg "Port 3003 already in use; stop the existing server first:"; \
+	   msg "  pkill -f 'mdbook serve'  (or: lsof -ti :3003 | xargs kill)"; \
+	   exit 1; \
+	 fi; \
+	 logfile="$(LOG)"; \
+	 [ "$$logfile" = 1 ] && logfile=mdbook-serve.log; \
+	 [ -z "$$logfile" ] && logfile=/dev/null; \
+	 (mdbook serve --hostname 127.0.0.1 --port 3003 \
+	    >"$$logfile" 2>&1 &); \
+	 msg "mdbook serving at http://127.0.0.1:3003/"; \
+	 [ "$$logfile" != /dev/null ] && msg "log: $$(pwd)/$$logfile"; \
+	 msg "stop: pkill -f 'mdbook serve'"
+
+# latexmk-side flags mirror Manual/Tutorial/Holmakefile:
+#   -bibtex: this latexmk (4.79) doesn't auto-invoke bibtex from
+#     the .aux's \bibdata line on its own; the explicit flag forces
+#     it through.
+#   -f: pdflatex returns exit 1 on natbib warnings about undefined
+#     citations in early passes, which without -f makes latexmk
+#     abort the loop; we treat the actual PDF's existence as the
+#     success signal.
+# Trailing pdflatex pass: latexmk's convergence loop sometimes
+# stops one pass too early when the second bibtex run produces
+# the same .bbl as the first -- but pdflatex still needs another
+# pass to incorporate the \bibcite entries it has only just
+# written to its own .aux for early-document citations.
+logic.pdf: $(TEX_SOURCES)
+	rm -f $@; \
+	latexmk -pdf -bibtex -f -interaction=nonstopmode logic; \
+	pdflatex -interaction=nonstopmode logic > /dev/null; \
+	test -s $@
+
+# Pattern rules for the per-chapter .smd -> .md -> .tex pipeline.
+# Hand-rolled .tex front matter (logic.tex, title.tex, preface.tex)
+# is safe: Holmake skips pattern rules whose prereqs don't exist
+# (see Manual/Description/misc.smd's pattern-rule applicability note).
+%.md: %.smd
+	$(PS_NOUMAP)
+
+%.tex: %.md ../Tools/pdf-macros.lua
+	$(PANDOC_MD)
+
+# $(PS_STUFF) lives in ../Tools/ and is only built on demand, so the
+# pattern rule's applicability check (local rules + files only)
+# would reject %.md before ../Tools/polyscripter exists.  Declare it
+# as a recipe-less extra prereq on every .md, leaving the pattern
+# recipe to apply.
+$(SMD_MDS): $(PS_STUFF)
+
+EXTRA_CLEANS = $(SMD_MDS) $(patsubst %.smd,%.tex,$(SMDS)) \
+               logic.pdf SUMMARY.md chapters-include.tex \
+               chapter-stems.mk book-title.tex \
+               references.md cite-labels.tsv labels.tsv \
+               $(patsubst %,%.aux,$(TEX_CORES)) \
+               logic.log logic.out logic.toc \
+               logic.fls logic.idx logic.ilg logic.ind \
+               logic.blg logic.bbl logic.fdb_latexmk \
+               mdbook-serve.log \
+               ../book/Logic/

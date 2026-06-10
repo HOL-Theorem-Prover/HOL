@@ -24,7 +24,7 @@
              loaded alongside the others. -->
         <script>
             window.HOL_MANUALS = {
-                books: ['Description', 'Tutorial', 'Reference',
+                books: ['Description', 'Tutorial', 'Logic', 'Reference',
                         'Interaction-emacs']
             };
         </script>
@@ -128,7 +128,31 @@
                 // The premises are passed in #2, ampersand-separated;
                 // wrap them in a matrix so MathJax accepts the &s and
                 // lays the premises side-by-side over the conclusion.
-                infer: ["{\\dfrac{\\begin{matrix}#2\\end{matrix}}{#1}}", 2]
+                infer: ["{\\dfrac{\\begin{matrix}#2\\end{matrix}}{#1}}", 2],
+                // Math macros from Manual/LaTeX/commands.tex used by the
+                // Logic manual's syntax.smd / semantics.smd.  The PDF
+                // side gets these straight from commands.tex (logic.tex
+                // \inputs it); these are the MathJax mirrors.
+                fun: ["{\\to}"],
+                conj: ["\\;\\wedge\\;"],
+                imp: ["\\Rightarrow"],
+                turn: ["\\;\\vdash\\;"],
+                // \den{x} = denotational brackets [[x]] (commands.tex
+                // uses [\![ ]\!]; llbracket/rrbracket above render the
+                // same glyphs more crisply).
+                den: ["{\\llbracket #1\\rrbracket}", 1],
+                inds: ["{\\mathrm{I}}"],     // standard infinite set
+                ch: ["{\\mathrm{ch}}"],      // standard choice function
+                two: ["{\\mathrm{2}}"],      // standard 2-element set
+                ty: ["{\\mathit{#1}}", 1],   // type names
+                // Logical-constant names (commands.tex: \con{...}).
+                OneOne: ["{\\mathsf{One\\_One}}"],
+                Onto: ["{\\mathsf{Onto}}"],
+                TyDef: ["{\\mathsf{Type\\_Definition}}"],
+                // Quantifier binders (commands.tex \uquant/\equant/\lquant).
+                uquant: ["{\\forall #1.\\,}", 1],
+                equant: ["{\\exists #1.\\,}", 1],
+                lquant: ["{\\lambda #1.\\,}", 1]
               }
             }
           });
@@ -450,6 +474,7 @@
                 <span class="sep" aria-hidden="true">·</span>
                 <a href="{{ path_to_root }}../Description/" data-hol-manual="Description">Description</a>
                 <a href="{{ path_to_root }}../Tutorial/" data-hol-manual="Tutorial">Tutorial</a>
+                <a href="{{ path_to_root }}../Logic/" data-hol-manual="Logic">Logic</a>
                 <a href="{{ path_to_root }}../Reference/" data-hol-manual="Reference">Reference</a>
                 <a href="{{ path_to_root }}../Interaction-emacs/" data-hol-manual="Interaction-emacs">Interaction (emacs)</a>
             </div>
