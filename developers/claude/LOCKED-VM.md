@@ -507,6 +507,28 @@ If the set is empty, force a lookup to populate it:
 
     orb -m hol4 python3 -c "import socket; print(socket.gethostbyname('api.anthropic.com'))"
 
+### Claude times out / retries even though the IPv4 set is populated
+
+Symptom: connect timeouts and retries, but `curl -4 https://api.anthropic.com/`
+from inside the VM works fine.  Cause: OrbStack gives the guest a link-local
+IPv6 default route but no working global IPv6 egress, so when dnsmasq returns
+an `AAAA` record the client (node/Claude Code) tries IPv6 first and its SYNs
+hit the firewall's default drop (the `anthropic_ips_v6` set is never usefully
+populated).  Confirm:
+
+    orb -m hol4 getent hosts api.anthropic.com          # shows an IPv6 addr?
+    orb -m hol4 curl -6 -sS --max-time 12 https://api.anthropic.com/   # times out?
+
+Fix (already baked into the setup script via `filter-AAAA`; apply by hand on a
+VM provisioned before that change):
+
+    orb -m hol4 sudo bash -c \
+      'grep -qx filter-AAAA /etc/dnsmasq.d/anthropic.conf || \
+         echo filter-AAAA >> /etc/dnsmasq.d/anthropic.conf; \
+       systemctl restart dnsmasq'
+
+`getent hosts api.anthropic.com` should then return only an IPv4 address.
+
 ### Git fails with `Device or resource busy` on `.git/config`
 
 The `bwrap` sandbox is protecting `.git/config` and `.git/hooks/` —

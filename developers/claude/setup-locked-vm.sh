@@ -228,6 +228,11 @@ no-resolv
 no-poll
 server=1.1.1.1
 server=1.0.0.1
+# OrbStack gives the guest a link-local IPv6 default route but no working
+# global IPv6 egress, so AAAA answers send clients (node/Claude Code) down
+# an IPv6 path whose SYNs the firewall silently drops -> connect timeouts
+# and retries.  Strip AAAA so everything uses the working IPv4 allow-set.
+filter-AAAA
 # Add the resolved IPs of these hostnames to the nftables sets above.
 nftset=/api.anthropic.com/4#inet#filter#anthropic_ips_v4
 nftset=/api.anthropic.com/6#inet#filter#anthropic_ips_v6
