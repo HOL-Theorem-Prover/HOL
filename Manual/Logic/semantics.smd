@@ -7,7 +7,7 @@
 The result, if any, of a session with the HOL system is an object
 called a *theory*.  This object is closely related to what a logician
 would call a theory, but there are some differences arising from the
-needs of mechanical proof.  A HOL theory, like a logician's theory,
+needs of mechanical proof.  A HOL theory, like a logician’s theory,
 contains sets of types, constants, definitions and axioms.  In
 addition, however, a HOL theory, at any point in time, contains an
 explicit list of theorems that have already been proved from the
@@ -16,7 +16,7 @@ actually proved from those merely provable; hence they do not normally
 consider sets of proven theorems as part of a theory; rather, they
 take the theorems of a theory to be the (often infinite) set of all
 consequences of the axioms and definitions.  A related difference
-between logicians' theories and HOL theories is that for logicians,
+between logicians’ theories and HOL theories is that for logicians,
 theories are static objects, but in HOL they can be thought of as
 potentially extendable. For example, the HOL system provides tools for
 adding to theories and combining theories.  A typical interaction with
@@ -69,31 +69,31 @@ Intuitively, a model $M$ of $\Sigma_\Omega$ *satisfies* a sequent
 $(\Gamma, t)$ if any interpretation of relevant free variables as
 elements of $M$ making the formulas in $\Gamma$ true, also makes the
 formula $t$ true. To make this more precise, suppose
-$\Gamma=\{t_1,\ldots,t_p\}$ and let $\alpha\!s,\!x\!s$ be a context
+$\Gamma=\{t_1,\ldots,t_p\}$ and let $\mathit{\alpha{}s},\!\mathit{xs}$ be a context
 containing all the type variables and all the free variables occurring
-in the formulas $t,t_{1},\ldots,t_{p}$. Suppose that $\alpha\!s$ has
-length $n$, that $x\!s=x_{1},\ldots,x_{m}$ and that the type of
+in the formulas $t,t_{1},\ldots,t_{p}$. Suppose that $\mathit{\alpha{}s}$ has
+length $n$, that $\mathit{xs}=x_{1},\ldots,x_{m}$ and that the type of
 $x_{j}$ is $\sigma_{j}$. Since formulas are terms of type
 $\ty{bool}$, the semantics of terms defined in the previous chapter
-gives rise to elements $\den{\alpha\!s,\!x\!s.t}_M$ and
-$\den{\alpha\!s,\!x\!s.t_{k}}_M$ ($k=1,\ldots,p$) in
+gives rise to elements $\den{\mathit{\alpha{}s},\!\mathit{xs}.t}_M$ and
+$\den{\mathit{\alpha{}s},\!\mathit{xs}.t_{k}}_M$ ($k=1,\ldots,p$) in
 
-$$\prod_{X\!s\in{\cal U}^{n}} \left(
-\prod_{j=1}^{m}\den{\alpha\!s.\sigma_{j}}_M(X\!s)\right) \fun \:\two$$
+$$\prod_{\mathit{xs}\in{\cal U}^{n}} \left(
+\prod_{j=1}^{m}\den{\mathit{\alpha{}s}.\sigma_{j}}_M(\mathit{xs})\right) \fun \:\two$$
 
 Say that the model $M$ *satisfies* the sequent $(\Gamma,t)$ and write
 
 $$\Gamma \models_{M} t$$
 
-if for all $X\!s\in{\cal U}^{n}$ and all
-$y\!s\in\den{\alpha\!s.\sigma_{1}}_M(X\!s)\times\cdots\times
-\den{\alpha\!s.\sigma_{m}}_M(X\!s)$ with
+if for all $\mathit{xs}\in{\cal U}^{n}$ and all
+$\mathit{ys}\in\den{\mathit{\alpha{}s}.\sigma_{1}}_M(\mathit{xs})\times\cdots\times
+\den{\mathit{\alpha{}s}.\sigma_{m}}_M(\mathit{xs})$ with
 
-$$\den{\alpha\!s,\!x\!s.t_{k}}_M(X\!s)(y\!s)=1$$
+$$\den{\mathit{\alpha{}s},\!\mathit{xs}.t_{k}}_M(\mathit{xs})(\mathit{ys})=1$$
 
 for all $k=1,\ldots,p$, it is also the case that
 
-$$\den{\alpha\!s,\!x\!s.t}_M(X\!s)(y\!s)=1.$$
+$$\den{\mathit{\alpha{}s},\!\mathit{xs}.t}_M(\mathit{xs})(\mathit{ys})=1.$$
 
 (Recall that $\two$ is the set $\{0,1\}$.)
 
@@ -101,8 +101,8 @@ In the case $p=0$, the satisfaction of $(\{\},t)$ by $M$ will be
 written $\models_{M} t$. Thus $\models_{M} t$ means that the
 dependently typed function
 
-$$\den{t}_M \in \prod_{X\!s\in{\cal U}^{n}}
-\left(\prod_{j=1}^{m}\den{\alpha\!s.\sigma_{j}}_M(X\!s)\right) \fun \:\two$$
+$$\den{t}_M \in \prod_{\mathit{xs}\in{\cal U}^{n}}
+\left(\prod_{j=1}^{m}\den{\mathit{\alpha{}s}.\sigma_{j}}_M(\mathit{xs})\right) \fun \:\two$$
 
 is constant with value $1\in\two$.
 
@@ -213,7 +213,7 @@ t[\sigma_1,\ldots,\sigma_n/\alpha_1,\ldots,\alpha_n]}$$
   $\sigma_n$ for type variables $\alpha_1$, $\dots$, $\alpha_n$ in $t$,
   and where $\Gamma[\sigma_1,\ldots,\sigma_n/\alpha_1,\ldots,\alpha_n]$
   is the result of performing the same substitution across all of the
-  theorem's hypotheses.
+  theorem’s hypotheses.
 
 - After the instantiation, variables free in the input can not become
   bound, but distinct free variables in the input may become
@@ -249,7 +249,7 @@ was written by Robin Milner and is highly optimized. Because
 substitution is such a pervasive activity in proof, it was felt to be
 important that the system primitive be as fast as possible. From a
 logical point of view it would be better to have a simpler
-substitution primitive, such as 'Rule R' of Andrews' logic
+substitution primitive, such as ‘Rule R’ of Andrews’ logic
 ${\cal Q}_0$, and then to derive more complex rules from it.
 
 ### Soundness theorem
@@ -532,7 +532,7 @@ which extends `INIT` will be called a *standard theory*.
 The implementation combines the theories `LOG` and `INIT` into a
 theory `bool`.  It includes all of the constants and axioms from those
 theories, and includes a number of derived results about those
-constants.  For more on the implementation's `bool` theory, see
+constants.  For more on the implementation’s `bool` theory, see
 DESCRIPTION.
 
 ### Consistency
@@ -540,13 +540,13 @@ DESCRIPTION.
 \label{consistency}
 
 A (standard) theory is *consistent* if it is not the case that every
-sequent over its signature can be derived from the theory's axioms
+sequent over its signature can be derived from the theory’s axioms
 using the HOL logic, or equivalently, if the particular sequent
 $\turn\con{F}$ cannot be so derived.
 
 The existence of a (standard) model of a theory is sufficient to
 establish its consistency. For by the Soundness Theorem
-\ref{soundness}, any sequent that can be derived from the theory's
+\ref{soundness}, any sequent that can be derived from the theory’s
 axioms will be satisfied by the model, whereas the sequent
 $\turn\con{F}$ is never satisfied in any standard model.  So in
 particular, the initial theory `INIT` is consistent.
@@ -556,7 +556,7 @@ possess a standard model. This is because the notion of a *standard*
 model is quite restrictive---in particular there is no choice how to
 interpret the integers and their arithmetic in such a model. The
 famous incompleteness theorem of G&ouml;del ensures that there are sequents
-which are satisfied in all standard models (i.e. which are 'true'),
+which are satisfied in all standard models (i.e. which are ‘true’),
 but which are not provable in the HOL logic.
 
 ## Extensions of theories
@@ -580,8 +580,8 @@ model by $M$, one has for all $\sigma\in\mathsf{Types}_{\cal T}$,
 $t\in\mathsf{Terms}_{\cal T}$ and for all suitable contexts that
 
 $$\begin{array}{rcl}
-\den{\alpha\!s.\sigma}_{M}   & = & \den{\alpha\!s.\sigma}_{M'} \\
-\den{\alpha\!s,\!x\!s.t}_{M} & = & \den{\alpha\!s,\!x\!s.t}_{M'}.
+\den{\mathit{\alpha{}s}.\sigma}_{M}   & = & \den{\mathit{\alpha{}s}.\sigma}_{M'} \\
+\den{\mathit{\alpha{}s},\!\mathit{xs}.t}_{M} & = & \den{\mathit{\alpha{}s},\!\mathit{xs}.t}_{M'}.
 \end{array}$$
 
 Consequently if $(\Gamma,t)$ is a sequent over $\mathsf{Sig}_{\cal T}$
@@ -602,7 +602,7 @@ There are two main mechanisms for making extensions of theories in HOL:
 [^sem-tyspec-impl]: This theory extension mechanism is not implemented
     in the HOL4 system.
 
-The first mechanism allows 'loose specification' of constants (as in
+The first mechanism allows ‘loose specification’ of constants (as in
 the **Z** notation \cite{Z}, for example); the latter allows new types
 and type-operators to be introduced.  As special cases (when the thing
 being specified is uniquely determined) one also has:
@@ -629,7 +629,7 @@ introduce inconsistent axiomatizations, users of the HOL system are
 strongly advised to resist the temptation to add axioms, but to toil
 through definitional theories honestly.
 
-[^sem-russell]: See page 71 of Russell's book *Introduction to
+[^sem-russell]: See page 71 of Russell’s book *Introduction to
     Mathematical Philosophy*.
 
 ### Extension by constant definition
@@ -810,24 +810,24 @@ ${\cal T}{+_{\mathit{spec}}}\langle(\con{c}_1,\ldots,\con{c}_n),
 has a standard model if the theory ${\cal T}$ does.*
 
 **Proof** &nbsp; Suppose $M$ is a standard model of ${\cal T}$.  Let
-$\alpha\!s=\alpha_{1},\ldots,\alpha_{m}$ be the list of distinct type
-variables occurring in the formula $t$. Then $\alpha\!s,\!x\!s.t$ is a
-term-in-context, where $x\!s=x_{1},\ldots,x_{n}$. (Change any bound
-variables in $t$ to make them distinct from $x\!s$ if necessary.)
+$\mathit{\alpha{}s}=\alpha_{1},\ldots,\alpha_{m}$ be the list of distinct type
+variables occurring in the formula $t$. Then $\mathit{\alpha{}s},\!\mathit{xs}.t$ is a
+term-in-context, where $\mathit{xs}=x_{1},\ldots,x_{n}$. (Change any bound
+variables in $t$ to make them distinct from $\mathit{xs}$ if necessary.)
 Interpreting this term-in-context in the model $M$ yields
 
-$$\den{\alpha\!s,\!x\!s.t}_{M} \in \prod_{X\!s\in{\cal U}^{m}}
-\left(\prod_{i=1}^{n}\den{\alpha\!s.\sigma_{i}}_{M}(X\!s)\right)
+$$\den{\mathit{\alpha{}s},\!\mathit{xs}.t}_{M} \in \prod_{\mathit{xs}\in{\cal U}^{m}}
+\left(\prod_{i=1}^{n}\den{\mathit{\alpha{}s}.\sigma_{i}}_{M}(\mathit{xs})\right)
 \fun \two$$
 
-Now $\equant{x\!s}t$ is in $\mathsf{Theorems}_{\cal T}$ and hence by
+Now $\equant{\mathit{xs}}t$ is in $\mathsf{Theorems}_{\cal T}$ and hence by
 the Soundness Theorem \ref{soundness} this sequent is satisfied by
 $M$. Using the semantics of $\exists$ given in Section \ref{LOG}, this
-means that for all $X\!s\in{\cal U}^{m}$ the set
+means that for all $\mathit{xs}\in{\cal U}^{m}$ the set
 
-$$S(X\!s) = \{y\!s\in\den{\alpha\!s.\sigma_{1}}_{M}(X\!s) \times\cdots\times
-          \den{\alpha\!s.\sigma_{n}}_{M}(X\!s)\; : \;
-          \den{\alpha\!s,\!x\!s.t}_{M}(X\!s)(y\!s)=1 \}$$
+$$S(\mathit{xs}) = \{\mathit{ys}\in\den{\mathit{\alpha{}s}.\sigma_{1}}_{M}(\mathit{xs}) \times\cdots\times
+          \den{\mathit{\alpha{}s}.\sigma_{n}}_{M}(\mathit{xs})\; : \;
+          \den{\mathit{\alpha{}s},\!\mathit{xs}.t}_{M}(\mathit{xs})(\mathit{ys})=1 \}$$
 
 is non-empty. Since it is also a subset of a finite product of sets in
 $\cal U$, it follows that it is an element of $\cal U$ (using
@@ -835,10 +835,10 @@ properties **Sub** and **Prod** of the universe). So one can apply the
 global choice function $\ch\in\prod_{X\in{\cal U}}X$ to select a
 specific element
 
-$$(s_{1}(X\!s),\ldots,s_{n}(X\!s)) =
-\ch(S(X\!s)) \in \prod_{i=1}^{n}\den{\alpha\!s.\sigma_{i}}_{M}(X\!s)$$
+$$(s_{1}(\mathit{xs}),\ldots,s_{n}(\mathit{xs})) =
+\ch(S(\mathit{xs})) \in \prod_{i=1}^{n}\den{\mathit{\alpha{}s}.\sigma_{i}}_{M}(\mathit{xs})$$
 
-at which $\den{\alpha\!s,\!x\!s.t}_{M}(X\!s)$ takes the value $1$.
+at which $\den{\mathit{\alpha{}s},\!\mathit{xs}.t}_{M}(\mathit{xs})$ takes the value $1$.
 Extend $M$ to a model $M'$ of the signature of
 ${\cal T}{+_{\mathit{spec}}}\langle(\con{c}_1,\ldots,\con{c}_n),
 \lquant{{x_1}_{\sigma_1},\ldots,{x_n}_{\sigma_n}}t_{\ty{bool}}\rangle$
@@ -846,29 +846,29 @@ by defining its value at each new constant $(\con{c}_{i},\sigma_{i})$
 to be
 
 $$M'(\con{c}_{i},\sigma_{i}) =
-s_{i} \in \prod_{X\!s\in{\cal U}^{m}}\den{\sigma_{i}}_{M}(X\!s) .$$
+s_{i} \in \prod_{\mathit{xs}\in{\cal U}^{m}}\den{\sigma_{i}}_{M}(\mathit{xs}) .$$
 
 Note that the Condition (iii) in the definition of a constant
-specification ensures that $\alpha\!s$ is the canonical context of each
+specification ensures that $\mathit{\alpha{}s}$ is the canonical context of each
 type $\sigma_{i}$, so that
-$\den{\sigma_{i}}=\den{\alpha\!s.\sigma_{i}}$ and thus $s_{i}$ is
+$\den{\sigma_{i}}=\den{\mathit{\alpha{}s}.\sigma_{i}}$ and thus $s_{i}$ is
 indeed an element of the above product.
 
 Since $t$ is a term of the subtheory $\cal T$ of
 ${\cal T}{+_{\mathit{spec}}}\langle(\con{c}_1,\ldots,\con{c}_n),
 \lquant{{x_1}_{\sigma_1},\ldots,{x_n}_{\sigma_n}}t_{\ty{bool}}\rangle$,
 as remarked at the beginning of Section \ref{extensions}, one has that
-$\den{\alpha\!s,\!x\!s.t}_{M'} = \den{\alpha\!s,\!x\!s.t}_{M}$. Hence
-by definition of the $s_{i}$, for all $X\!s\in{\cal U}^{m}$
+$\den{\mathit{\alpha{}s},\!\mathit{xs}.t}_{M'} = \den{\mathit{\alpha{}s},\!\mathit{xs}.t}_{M}$. Hence
+by definition of the $s_{i}$, for all $\mathit{xs}\in{\cal U}^{m}$
 
-$$\den{\alpha\!s,\!x\!s.t}_{M'}(X\!s)(s_{1}(X\!s),\ldots,s_{n}(X\!s)) = 1$$
+$$\den{\mathit{\alpha{}s},\!\mathit{xs}.t}_{M'}(\mathit{xs})(s_{1}(\mathit{xs}),\ldots,s_{n}(\mathit{xs})) = 1$$
 
 Then using Lemma 4 in Section \ref{term-substitution} on the semantics
 of substitution together with the definition of
 $\den{\con{c}_{i}}_{M'}$, one finally obtains that for all
-$X\!s\in{\cal U}^{m}$
+$\mathit{xs}\in{\cal U}^{m}$
 
-$$\den{t[\con{c}_{1},\ldots,\con{c}_{n}/x_{1},\ldots,x_{n}]}_{M'}(X\!s)=1$$
+$$\den{t[\con{c}_{1},\ldots,\con{c}_{n}/x_{1},\ldots,x_{n}]}_{M'}(\mathit{xs})=1$$
 
 or in other words that $M'$ satisfies
 $t[\con{c}_{1},\ldots,\con{c}_{n}/x_{1},\ldots,x_{n}]$. Hence $M'$ is a
@@ -919,7 +919,7 @@ given in that Remark is not so much the method of extension by
 introducing constants, but rather the syntax of HOL which does not
 allow constants to depend explicitly on type variables (in the way
 that type operators can). Thus in the example one would like to
-introduce a 'polymorphic' constant $\con{c}_{\ty{bool}}(\alpha)$
+introduce a ‘polymorphic’ constant $\con{c}_{\ty{bool}}(\alpha)$
 explicitly depending upon $\alpha$, and define it to be
 $\equant{f_{\alpha\fun\alpha}} \OneOne \ f \conj \neg(\Onto \ f)$.
 Then in the extended theory one could derive
@@ -929,16 +929,16 @@ results since $\con{c}_{\ty{bool}}(\ty{ind})$ and
 $\con{c}_{\ty{bool}}(\ty{bool})$ are different.
 
 In the current version of HOL, constants are (name,type)-pairs. One
-can envision a slight extension of the HOL syntax with 'polymorphic'
-constants, specified by pairs $(\con{c},\alpha\!s.\sigma)$ where now
-$\alpha\!s.\sigma$ is a type-in-context and the list $\alpha\!s$ may
+can envision a slight extension of the HOL syntax with ‘polymorphic’
+constants, specified by pairs $(\con{c},\mathit{\alpha{}s}.\sigma)$ where now
+$\mathit{\alpha{}s}.\sigma$ is a type-in-context and the list $\mathit{\alpha{}s}$ may
 well contain extra type variables not occurring in $\sigma$. Such a
 pair would give rise to the particular constant term
-$\con{c}_\sigma(\alpha\!s)$, and more generally to constant terms
-$\con{c}_{\sigma'}(\tau\!s)$ obtained from this one by instantiating
+$\con{c}_\sigma(\mathit{\alpha{}s})$, and more generally to constant terms
+$\con{c}_{\sigma'}(\mathit{\tau{}s})$ obtained from this one by instantiating
 the type variables $\alpha_i$ with types $\tau_i$ (so $\sigma'$ is the
-instance of $\sigma$ obtained by substituting $\tau\!s$ for
-$\alpha\!s$). This new syntax of polymorphic constants is comparable to
+instance of $\sigma$ obtained by substituting $\mathit{\tau{}s}$ for
+$\mathit{\alpha{}s}$). This new syntax of polymorphic constants is comparable to
 the existing syntax of compound types (see Section \ref{types}): an
 $n$-ary type operator $\mathit{op}$ gives rise to a compound type
 $(\alpha_1,\ldots,\alpha_n){\mathit{op}}$ depending upon $n$ type
@@ -949,13 +949,13 @@ type the constant has).
 However, explicitly recording dependency of constants on type
 variables makes for a rather cumbersome syntax which in practice one
 would like to avoid where possible. It is possible to avoid it if the
-type context $\alpha\!s$ in $(\con{c},\alpha\!s.\sigma)$ is actually
+type context $\mathit{\alpha{}s}$ in $(\con{c},\mathit{\alpha{}s}.\sigma)$ is actually
 the *canonical* context of $\sigma$, i.e. contains exactly the type
 variables of $\sigma$.  For then one can apply Lemma 1 of Section
 \ref{instances-and-substitution} to deduce that the polymorphic
-constant $\con{c}_{\sigma'}(\tau\!s)$ can be abbreviated to the
-ordinary constant $\con{c}_{\sigma'}$ without ambiguity---the missing
-information $\tau\!s$ can be reconstructed from $\sigma'$ and the
+constant $\con{c}_{\sigma'}(\mathit{\tau{}s})$ can be abbreviated to the
+ordinary constant $\con{c}_{\sigma'}$ without ambiguity—the missing
+information $\mathit{\tau{}s}$ can be reconstructed from $\sigma'$ and the
 information about the constant $\con{c}$ given in the signature. From
 this perspective, the rather technical side Conditions (iii) in
 Sections \ref{defs} and \ref{specs} become rather less mysterious:
@@ -975,7 +975,7 @@ determines a set $\den{\sigma}$ in the universe $\cal U$. However,
 there are many more sets in $\cal U$ than there are types in `INIT`.
 In particular, whilst $\cal U$ is closed under the operation of taking
 a non-empty subset of $\den{\sigma}$, there is no corresponding
-mechanism for forming a 'subtype' of $\sigma$. Instead, subsets are
+mechanism for forming a ‘subtype’ of $\sigma$. Instead, subsets are
 denoted indirectly via characteristic functions, whereby a closed term
 $p$ of type $\sigma\fun\ty{bool}$ determines the subset
 $\{x\in\den{\sigma} : \den{p}(x)=1\}$ (which is a set in the universe
@@ -999,7 +999,7 @@ by choosing a representing type containing two type variables, say
 $\sigma[\alpha_1;\alpha_2]$, such that for any types $\sigma_1$ and
 $\sigma_2$, a subset of $\sigma[\sigma_1;\sigma_2]$ represents the
 cartesian product of $\sigma_1$ and $\sigma_2$.  The details of such a
-definition are given in DESCRIPTION's section on the theory of
+definition are given in DESCRIPTION’s section on the theory of
 cartesian products.
 
 Types in HOL must denote non-empty sets.  Thus it is only consistent
@@ -1114,7 +1114,7 @@ HOL4 system. It was proposed by T. Melham and refines a suggestion
 from R. Jones and R. Arthan.)
 
 The type definition mechanism allows one to introduce new types by
-giving a concrete representation of the type as a 'subtype' of an
+giving a concrete representation of the type as a ‘subtype’ of an
 existing type. One might instead wish to introduce a new type
 satisfying some property without having to give an explicit
 representation for the type. For example, one might want to extend
@@ -1187,9 +1187,9 @@ $$\langle (\alpha_1,\ldots,\alpha_n)\ty{op},\sigma,p,\alpha,\Gamma,q\rangle$$
 
 3. $p_{\sigma\fun\ty{bool}}$ is a closed term in
    $\mathsf{Terms}_{\cal T}$ whose type variables occur in
-   $\alpha\!s=\alpha_1,\ldots,\alpha_n$.
+   $\mathit{\alpha{}s}=\alpha_1,\ldots,\alpha_n$.
 
-4. $\alpha$ is a type variable distinct from those in $\alpha\!s$.
+4. $\alpha$ is a type variable distinct from those in $\mathit{\alpha{}s}$.
 
 5. $\Gamma$ is a list of closed formulas in $\mathsf{Terms}_{\cal T}$
    not involving the type variable $\alpha$.
@@ -1250,33 +1250,33 @@ ${\cal T}{+_{\mathit{tyspec}}}\langle
 (\alpha_1,\ldots,\alpha_n)\ty{op},\sigma,p,\alpha,\Gamma,q\rangle$ has
 a standard model if the theory ${\cal T}$ does.*
 
-**Proof** &nbsp; Write $\alpha\!s$ for $\alpha_1,\ldots,\alpha_n$, and
-suppose that $\alpha\!s'={\alpha'}_1,\ldots,{\alpha'}_m$ is the list of
+**Proof** &nbsp; Write $\mathit{\alpha{}s}$ for $\alpha_1,\ldots,\alpha_n$, and
+suppose that $\mathit{\alpha{}s}'={\alpha'}_1,\ldots,{\alpha'}_m$ is the list of
 type variables occurring in $\Gamma$ and $q$, but not already in the
-list $\alpha\!s,\alpha$.
+list $\mathit{\alpha{}s},\alpha$.
 
-Suppose $M$ is a standard model of ${\cal T}$. Since $\alpha\!s,.p$ is
+Suppose $M$ is a standard model of ${\cal T}$. Since $\mathit{\alpha{}s},.p$ is
 a term-in-context of type $\sigma\fun\ty{bool}$, interpreting it in $M$
 yields
 
-$$\den{\alpha\!s,.p}_{M}
-\in \prod_{X\!s\in{\cal U}^{n}}\den{\alpha\!s.\sigma\fun\ty{bool}}_M(X\!s)
-= \prod_{X\!s\in{\cal U}^{n}}
-   \den{\alpha\!s.\sigma}_M(X\!s)\fun\two .$$
+$$\den{\mathit{\alpha{}s},.p}_{M}
+\in \prod_{\mathit{xs}\in{\cal U}^{n}}\den{\mathit{\alpha{}s}.\sigma\fun\ty{bool}}_M(\mathit{xs})
+= \prod_{\mathit{xs}\in{\cal U}^{n}}
+   \den{\mathit{\alpha{}s}.\sigma}_M(\mathit{xs})\fun\two .$$
 
 There is no loss of generality in assuming that $\Gamma$ consists of a
 single formula $\gamma$. (Just replace $\Gamma$ by the conjunction of
 the formulas it contains, with the convention that this conjunction is
-$\con{T}$ if $\Gamma$ is empty.) By assumption on $\alpha\!s'$ and by
-Condition (iv), $\alpha\!s,\alpha\!s',.\gamma$ is a
+$\con{T}$ if $\Gamma$ is empty.) By assumption on $\mathit{\alpha{}s}'$ and by
+Condition (iv), $\mathit{\alpha{}s},\mathit{\alpha{}s}',.\gamma$ is a
 term-in-context.[^sem-commas] Interpreting it in $M$ yields
 
-$$\den{\alpha\!s,\alpha\!s',.\gamma}_{M}
-\in \prod_{(X\!s,X\!s')\in
-{\cal U}^{n+m}}\den{\alpha\!s,\alpha\!s'.\ty{bool}}_M(X\!s,X\!s')
+$$\den{\mathit{\alpha{}s},\mathit{\alpha{}s}',.\gamma}_{M}
+\in \prod_{(\mathit{xs},\mathit{xs}')\in
+{\cal U}^{n+m}}\den{\mathit{\alpha{}s},\mathit{\alpha{}s}'.\ty{bool}}_M(\mathit{xs},\mathit{xs}')
 ={\cal U}^{n+m}\fun\two$$
 
-[^sem-commas]: Note the two commas in $\alpha\!s,\alpha\!s',.\gamma$.
+[^sem-commas]: Note the two commas in $\mathit{\alpha{}s},\mathit{\alpha{}s}',.\gamma$.
     The first separates the two lists of type variables; the second
     splits type variables from term variables.
 
@@ -1285,23 +1285,23 @@ $\mathsf{Theorems}_{\cal T}$ and hence by the Soundness Theorem
 \ref{soundness} this sequent is satisfied by $M$. Using the semantics
 of $\exists$ given in Section \ref{LOG} and the definition of
 satisfaction of a sequent from Section \ref{sequents}, this means that
-for all $(X\!s,X\!s')\in{\cal U}^{n+m}$ if
-$\den{\alpha\!s,\alpha\!s',.\gamma}_M(X\!s,X\!s')=1$, then the set
+for all $(\mathit{xs},\mathit{xs}')\in{\cal U}^{n+m}$ if
+$\den{\mathit{\alpha{}s},\mathit{\alpha{}s}',.\gamma}_M(\mathit{xs},\mathit{xs}')=1$, then the set
 
-$$\{y\in\den{\alpha\!s.\sigma}_{M}\: :\: \den{\alpha\!s,.p}(X\!s)(y)=1\}$$
+$$\{y\in\den{\mathit{\alpha{}s}.\sigma}_{M}\: :\: \den{\mathit{\alpha{}s},.p}(\mathit{xs})(y)=1\}$$
 
 is non-empty. (This uses the fact that $p$ does not involve the type
-variables $\alpha\!s'$, so that by Lemma 4 in Section
+variables $\mathit{\alpha{}s}'$, so that by Lemma 4 in Section
 \ref{term-substitution}
-$\den{\alpha\!s,\alpha\!s',.p}_M(X\!s,X\!s')=\den{\alpha\!s,.p}_M(X\!s)$.)
+$\den{\mathit{\alpha{}s},\mathit{\alpha{}s}',.p}_M(\mathit{xs},\mathit{xs}')=\den{\mathit{\alpha{}s},.p}_M(\mathit{xs})$.)
 Since it is also a subset of a set in $\cal U$, it follows by property
 **Sub** of the universe that this set is an element of $\cal U$. So
 defining
 
-$$S(X\!s) = \left\{
+$$S(\mathit{xs}) = \left\{
 \begin{array}{ll}
-\{y\in\den{\alpha\!s.\sigma}_{M} : \den{\alpha\!s,.p}(X\!s)(y)=1\}
-  & \text{if } \den{\alpha\!s,.\gamma}_M(X\!s,X\!s')=1, \text{ some } X\!s'\\
+\{y\in\den{\mathit{\alpha{}s}.\sigma}_{M} : \den{\mathit{\alpha{}s},.p}(\mathit{xs})(y)=1\}
+  & \text{if } \den{\mathit{\alpha{}s},.\gamma}_M(\mathit{xs},\mathit{xs}')=1, \text{ some } \mathit{xs}'\\
 1 & \text{otherwise}
 \end{array}
 \right.$$
@@ -1313,40 +1313,40 @@ the values of $\sigma$, $p$, $\gamma$ and $q$ in $M'$ are the same as
 in $M$, since these expressions do not involve the new type constant
 $\ty{op}$.
 
-For each $X\!s\in{\cal U}^{n}$ define $i_{X\!s}$ to be the inclusion
+For each $\mathit{xs}\in{\cal U}^{n}$ define $i_{\mathit{xs}}$ to be the inclusion
 function for the subset
-$S(X\!s)\subseteq\den{\alpha\!s.\sigma}_{M}$ if
-$\den{\alpha\!s,\alpha\!s',.\gamma}_M(X\!s,X\!s')=1$ for some $X\!s'$,
-and otherwise to be the function $1\fun\den{\alpha\!s.\sigma}_{M}$
-sending $0\in 1$ to $\ch(\den{\alpha\!s.\sigma}_{M})$. Then
-$i_{X\!s}\in(S(X\!s)\fun\den{\alpha\!s.\sigma}_{M'}(X\!s))$ because
-$\den{\alpha\!s.\sigma}_{M'}=\den{\alpha\!s.\sigma}_M$. Using the
+$S(\mathit{xs})\subseteq\den{\mathit{\alpha{}s}.\sigma}_{M}$ if
+$\den{\mathit{\alpha{}s},\mathit{\alpha{}s}',.\gamma}_M(\mathit{xs},\mathit{xs}')=1$ for some $\mathit{xs}'$,
+and otherwise to be the function $1\fun\den{\mathit{\alpha{}s}.\sigma}_{M}$
+sending $0\in 1$ to $\ch(\den{\mathit{\alpha{}s}.\sigma}_{M})$. Then
+$i_{\mathit{xs}}\in(S(\mathit{xs})\fun\den{\mathit{\alpha{}s}.\sigma}_{M'}(\mathit{xs}))$ because
+$\den{\mathit{\alpha{}s}.\sigma}_{M'}=\den{\mathit{\alpha{}s}.\sigma}_M$. Using the
 semantics of $\TyDef$ given in Section \ref{LOG}, one has that for any
-$(X\!s,X\!s')\in{\cal U}^{n+m}$, if
-$\den{\alpha\!s,\alpha\!s',.\gamma}_{M'}(X\!s,X\!s')=1$ then
+$(\mathit{xs},\mathit{xs}')\in{\cal U}^{n+m}$, if
+$\den{\mathit{\alpha{}s},\mathit{\alpha{}s}',.\gamma}_{M'}(\mathit{xs},\mathit{xs}')=1$ then
 
-$$\den{\TyDef}_{M'}(\den{\alpha\!s.\sigma}_{M'} ,
-   S(X\!s))(\den{\alpha\!s,.p}_{M'})(i_{X\!s}) = 1.$$
+$$\den{\TyDef}_{M'}(\den{\mathit{\alpha{}s}.\sigma}_{M'} ,
+   S(\mathit{xs}))(\den{\mathit{\alpha{}s},.p}_{M'})(i_{\mathit{xs}}) = 1.$$
 
 Thus $M'$ satisfies the sequent
 
-$$(\gamma\ ,\ \equant{f_{(\alpha\!s)\ty{op}\fun\sigma}}\TyDef\ p\ f).$$
+$$(\gamma\ ,\ \equant{f_{(\mathit{\alpha{}s})\ty{op}\fun\sigma}}\TyDef\ p\ f).$$
 
 But since the sequent
 $(\gamma,(\equant{f_{\alpha\fun\sigma}}\TyDef\ p\ f)\ \imp\ q )$ is in
 $\mathsf{Theorems}_{\cal T}$, it is satisfied by the model $M$ and
 hence also by the model $M'$ (since the sequent does not involve the
 new type constant $\ty{op}$). Instantiating $\alpha$ to
-$(\alpha\!s)\ty{op}$ in this sequent (which is permissible since by
+$(\mathit{\alpha{}s})\ty{op}$ in this sequent (which is permissible since by
 Condition (iv) $\alpha$ does not occur in $\gamma$), one thus has that
 $M'$ satisfies the sequent
 
 $$(\gamma\ ,\
-(\equant{f_{(\alpha\!s)\ty{op}\fun\sigma}}\TyDef\ p\ f)\imp
-q[(\alpha\!s)\ty{op}/\alpha]).$$
+(\equant{f_{(\mathit{\alpha{}s})\ty{op}\fun\sigma}}\TyDef\ p\ f)\imp
+q[(\mathit{\alpha{}s})\ty{op}/\alpha]).$$
 
 Applying Modus Ponens, one concludes that $M'$ satisfies
-$(\gamma\ ,\ q[(\alpha\!s)\ty{op}/\alpha])$ and therefore $M'$ is a
+$(\gamma\ ,\ q[(\mathit{\alpha{}s})\ty{op}/\alpha])$ and therefore $M'$ is a
 model of ${\cal T}'$, as required.
 
 An extension by type definition is in fact a special case of extension

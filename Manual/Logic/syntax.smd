@@ -17,7 +17,7 @@ HOL logic, namely the programming language ML.  This is the language
 used to manipulate the HOL logic by users of the system.  It is hoped
 that because of context, no confusion results from these two uses of
 the word 'meta-language'.  When ML is the object of study (as in
-\cite{sml}), ML is the object language under consideration---and
+\cite{sml}), ML is the object language under consideration—and
 English is again the meta-language!
 
 The HOL syntax contains syntactic categories of types and terms whose
@@ -29,7 +29,7 @@ of the set theoretic model.[^syn-nonstd] This model is given in terms
 of a fixed set of sets $\cal U$, which will be called the
 *universe* and which is assumed to have the following properties.
 
-[^syn-nonstd]: There are other, 'non-standard' models of HOL, which
+[^syn-nonstd]: There are other, ‘non-standard’ models of HOL, which
     will not concern us here.
 
 **Inhab** &nbsp; Each element of $\cal U$ is a non-empty set.
@@ -66,7 +66,7 @@ By iterating **Prod**, one has that the cartesian product of any
 finite, non-zero number of sets in $\cal U$ is again in $\cal U$.
 $\cal U$ also contains the cartesian product of no sets, which is to
 say that it contains a one-element set (by virtue of **Sub** applied
-to any set in ${\cal U}$---**Infty** guarantees there is one); for
+to any set in ${\cal U}$—**Infty** guarantees there is one); for
 definiteness, a particular one-element set will be singled out.
 
 **Unit** &nbsp; $\cal U$ contains a distinguished one-element set $1=\{0\}$.
@@ -142,11 +142,11 @@ In more detail, the four kinds of types are as follows.
    $\sigma_1$ and *codomain* $\sigma_2$. It denotes the set of all
    (total) functions from the set denoted by its domain to the set
    denoted by its codomain. (In the literature $\sigma_1\fun\sigma_2$
-   is written without the arrow and backwards---i.e. as
+   is written without the arrow and backwards—i.e. as
    $\sigma_2\sigma_1$.) Note that syntactically $\fun$ is simply a
    distinguished type operator of arity 2 written with infix notation.
    It is singled out in the definition of HOL types because it will
-   always denote the same operation in any model of a HOL theory---in
+   always denote the same operation in any model of a HOL theory—in
    contrast to the other type operators which may be interpreted
    differently in different models. (See Section \ref{semantics-of-types}.)
 
@@ -239,18 +239,18 @@ consider a type variable to be involved in the semantics of a type
 $\sigma$ whether or not it actually occurs in $\sigma$, leading to the
 notion of a type-in-context.
 
-A *type context*, $\alpha\!s$, is simply a finite (possibly empty)
+A *type context*, $\mathit{\alpha{}s}$, is simply a finite (possibly empty)
 list of *distinct* type variables $\alpha_{1},\ldots,\alpha_{n}$.  A
-*type-in-context* is a pair, written $\alpha\!s.\sigma$, where
-$\alpha\!s$ is a type context, $\sigma$ is a type (over some given
+*type-in-context* is a pair, written $\mathit{\alpha{}s}.\sigma$, where
+$\mathit{\alpha{}s}$ is a type context, $\sigma$ is a type (over some given
 type structure) and all the type variables occurring in $\sigma$
-appear somewhere in the list $\alpha\!s$. The list $\alpha\!s$ may
+appear somewhere in the list $\mathit{\alpha{}s}$. The list $\mathit{\alpha{}s}$ may
 also contain type variables which do not occur in $\sigma$.
 
-For each $\sigma$ there are minimal contexts $\alpha\!s$ for which
-$\alpha\!s.\sigma$ is a type-in-context, which only differ by the
+For each $\sigma$ there are minimal contexts $\mathit{\alpha{}s}$ for which
+$\mathit{\alpha{}s}.\sigma$ is a type-in-context, which only differ by the
 order in which the type variables of $\sigma$ are listed in
-$\alpha\!s$. In order to select one such context, let us assume that
+$\mathit{\alpha{}s}$. In order to select one such context, let us assume that
 $\mathsf{TyVars}$ comes with a fixed total order and define the
 *canonical* context of the type $\sigma$ to consist of exactly the
 type variables it contains, listed in order.[^syn-unordered]
@@ -261,35 +261,35 @@ type variables it contains, listed in order.[^syn-unordered]
     semantics to be given below.
 
 Let $M$ be a model of a type structure $\Omega$. For each
-type-in-context $\alpha\!s.\sigma$ over $\Omega$, define a function
+type-in-context $\mathit{\alpha{}s}.\sigma$ over $\Omega$, define a function
 
-$$\den{\alpha\!s.\sigma}_{M}:{\cal U}^{n}\longrightarrow{\cal U}$$
+$$\den{\mathit{\alpha{}s}.\sigma}_{M}:{\cal U}^{n}\longrightarrow{\cal U}$$
 
 (where $n$ is the length of the context) by induction on the structure
 of $\sigma$ as follows.
 
 - If $\sigma$ is a type variable, it must be $\alpha_{i}$ for some
-  unique $i=1,\ldots,n$ and then $\den{\alpha\!s.\sigma}_{M}$ is the
+  unique $i=1,\ldots,n$ and then $\den{\mathit{\alpha{}s}.\sigma}_{M}$ is the
   $i$th projection function, which sends
   $(X_{1},\ldots,X_{n})\in{\cal U}^{n}$ to $X_{i}\in{\cal U}$.
 
 - If $\sigma$ is a function type $\sigma_{1}\fun\sigma_{2}$, then
-  $\den{\alpha\!s.\sigma}_M$ sends $X\!s\in{\cal U}^n$ to the set of
-  all functions from $\den{\alpha\!s.\sigma_1}_M(X\!s)$ to
-  $\den{\alpha\!s.\sigma_2}_M(X\!s)$. (This makes use of the property
+  $\den{\mathit{\alpha{}s}.\sigma}_M$ sends $\mathit{xs}\in{\cal U}^n$ to the set of
+  all functions from $\den{\mathit{\alpha{}s}.\sigma_1}_M(\mathit{xs})$ to
+  $\den{\mathit{\alpha{}s}.\sigma_2}_M(\mathit{xs})$. (This makes use of the property
   **Fun** of $\cal U$.)
 
 - If $\sigma$ is a compound type $(\sigma_{1},\ldots,\sigma_{m})\nu$,
-  then $\den{\alpha\!s.\sigma}_{M}$ sends $X\!s$ to
+  then $\den{\mathit{\alpha{}s}.\sigma}_{M}$ sends $\mathit{xs}$ to
   $M(\nu)(S_{1},\ldots,S_{m})$ where each $S_{j}$ is
-  $\den{\alpha\!s.\sigma_{j}}_{M}(X\!s)$.
+  $\den{\mathit{\alpha{}s}.\sigma_{j}}_{M}(\mathit{xs})$.
 
 One can now define the meaning of a type $\sigma$ in a model $M$ to be
 the function
 
 $$\den{\sigma}_{M}:{\cal U}^{n}\longrightarrow{\cal U}$$
 
-given by $\den{\alpha\!s.\sigma}_{M}$, where $\alpha\!s$ is the
+given by $\den{\mathit{\alpha{}s}.\sigma}_{M}$, where $\mathit{\alpha{}s}$ is the
 canonical context of $\sigma$. If $\sigma$ is monomorphic, then $n=0$
 and $\den{\sigma}_{M}$ can be identified with the element
 $\den{\sigma}_{M}()$ of $\cal U$. When the particular model $M$ is
@@ -319,7 +319,7 @@ $\textsl{b}$. Then:
 involve giving meanings to types in the presence of 'environments'
 assigning sets in $\cal U$ to all type variables. The use of
 types-in-contexts is almost the same as using partial environments
-with finite domains---it is just that the context ties down the
+with finite domains—it is just that the context ties down the
 admissible domain to a particular finite (ordered) set of type
 variables. At the level of types there is not much to choose between
 the two approaches.  However for the syntax and semantics of terms to
@@ -350,16 +350,16 @@ uniquely determined by $\sigma$ and $\sigma'$.*
 We also need to know how the semantics of types behaves with respect
 to substitution:
 
-**Lemma 2** &nbsp; *Given types-in-context $\beta\!s.\sigma$ and
-$\alpha\!s.\tau_i$ ($i=1,\ldots,p$, where $p$ is the length of
-$\beta\!s$), let $\sigma'$ be the instance $\sigma[\tau\!s/\beta\!s]$.
-Then $\alpha\!s.\sigma'$ is also a type-in-context and its meaning in
-any model $M$ is related to that of $\beta\!s.\sigma$ as follows. For
-all $X\!s\in{\cal U}^n$ (where $n$ is the length of $\alpha\!s$)*
+**Lemma 2** &nbsp; *Given types-in-context $\mathit{\beta{}s}.\sigma$ and
+$\mathit{\alpha{}s}.\tau_i$ ($i=1,\ldots,p$, where $p$ is the length of
+$\mathit{\beta{}s}$), let $\sigma'$ be the instance $\sigma[\mathit{\tau{}s}/\mathit{\beta{}s}]$.
+Then $\mathit{\alpha{}s}.\sigma'$ is also a type-in-context and its meaning in
+any model $M$ is related to that of $\mathit{\beta{}s}.\sigma$ as follows. For
+all $\mathit{xs}\in{\cal U}^n$ (where $n$ is the length of $\mathit{\alpha{}s}$)*
 
-$$\den{\alpha\!s.\sigma'}(X\!s) =
-\den{\beta\!s.\sigma}(\den{\alpha\!s.\tau_{1}}(X\!s),
-    \ldots ,\den{\alpha\!s.\tau_{p}}(X\!s))$$
+$$\den{\mathit{\alpha{}s}.\sigma'}(\mathit{xs}) =
+\den{\mathit{\beta{}s}.\sigma}(\den{\mathit{\alpha{}s}.\tau_{1}}(\mathit{xs}),
+    \ldots ,\den{\mathit{\alpha{}s}.\tau_{p}}(\mathit{xs}))$$
 
 Once again, the lemma can be proved by induction on the structure of
 $\sigma$.
@@ -454,7 +454,7 @@ $\lambda x_1.\ (\lambda x_2.\ \cdots\ (\lambda x_n.\ t)\ \cdots\ )$.
 
 A term is called polymorphic if it contains a type variable. Otherwise
 it is called monomorphic. Note that a term $t_{\sigma}$ may be
-polymorphic even though $\sigma$ is monomorphic --- for example,
+polymorphic even though $\sigma$ is monomorphic—for example,
 $(f_{\alpha\fun\textsl{b}}\ x_{\alpha})_{\textsl{b}}$, where
 $\textsl{b}$ is an atomic type. The expression $tyvars(t_{\sigma})$
 denotes the set of type variables occurring in $t_{\sigma}$.
@@ -470,29 +470,28 @@ are bound is called *closed*.
 
 \label{terms-in-context}
 
-A *context* $\alpha\!s,\!x\!s$ consists of a type context $\alpha\!s$
-together with a list $x\!s=x_{1},\ldots,x_{m}$ of distinct variables
-whose types only contain type variables from the list $\alpha\!s$.
+A *context* $\mathit{\alpha{}s},\!\mathit{xs}$ consists of a type context $\mathit{\alpha{}s}$
+together with a list $\mathit{xs}=x_{1},\ldots,x_{m}$ of distinct variables
+whose types only contain type variables from the list $\mathit{\alpha{}s}$.
 
-The condition that $x\!s$ contains *distinct* variables needs some
+The condition that $\mathit{xs}$ contains *distinct* variables needs some
 comment. Since a variable is specified by both a name and a type, it
-is permitted for $x\!s$ to contain repeated names, so long as
+is permitted for $\mathit{xs}$ to contain repeated names, so long as
 different types are attached to the names. This aspect of the syntax
 means that one has to proceed with caution when defining the meaning
 of type variable instantiation, since instantiation may cause
-variables to become equal 'accidentally': see Section
-\ref{term-substitution}.
+variables to become equal ‘accidentally’: see Section \ref{term-substitution}.
 
-A *term-in-context* $\alpha\!s,\!x\!s.t$ consists of a context
+A *term-in-context* $\mathit{\alpha{}s},\!\mathit{xs}.t$ consists of a context
 together with a term $t$ satisfying the following conditions.
 
-- $\alpha\!s$ contains any type variable that occurs in $x\!s$ and $t$.
+- $\mathit{\alpha{}s}$ contains any type variable that occurs in $\mathit{xs}$ and $t$.
 
-- $x\!s$ contains any variable that occurs freely in $t$.
+- $\mathit{xs}$ contains any variable that occurs freely in $t$.
 
-- $x\!s$ does not contain any variable that occurs bound in $t$.
+- $\mathit{xs}$ does not contain any variable that occurs bound in $t$.
 
-The context $\alpha\!s,\!x\!s$ may contain (type) variables which do
+The context $\mathit{\alpha{}s},\!\mathit{xs}$ may contain (type) variables which do
 not appear in $t$.  Note that the combination of the second and third
 conditions implies that a variable cannot have both free and bound
 occurrences in $t$. For an arbitrary term, there is always an
@@ -503,8 +502,8 @@ such terms. Then the meaning of an arbitrary term is taken to be the
 meaning of some $\alpha$-variant of it having no variable both free
 and bound. (The semantics will equate $\alpha$-variants, so it does
 not matter which is chosen.) Evidently for such a term there is a
-minimal context $\alpha\!s,\!x\!s$, unique up to the order in which
-variables are listed, for which $\alpha\!s,\!x\!s.t$ is a
+minimal context $\mathit{\alpha{}s},\!\mathit{xs}$, unique up to the order in which
+variables are listed, for which $\mathit{\alpha{}s},\!\mathit{xs}.t$ is a
 term-in-context. As for type variables, we will assume given a fixed
 total order on variables.  Then the unique minimal context with
 variables listed in order will be called the *canonical* context of
@@ -523,12 +522,12 @@ specified by a model of the type structure plus for each constant
 $(\con{c},\sigma)\in\Sigma_{\Omega}$ an element
 
 $$M(\con{c},\sigma) \in
-\prod_{X\!s\in{\cal U}^{n}}\den{\sigma}_{M}(X\!s)$$
+\prod_{\mathit{xs}\in{\cal U}^{n}}\den{\sigma}_{M}(\mathit{xs})$$
 
 of the indicated cartesian product, where $n$ is the number of type
 variables occurring in $\sigma$. In other words $M(\con{c},\sigma)$ is
-a (dependently typed) function assigning to each $X\!s\in{\cal U}^{n}$
-an element of $\den{\sigma}_{M}(X\!s)$. In the case that $n=0$ (so
+a (dependently typed) function assigning to each $\mathit{xs}\in{\cal U}^{n}$
+an element of $\den{\sigma}_{M}(\mathit{xs})$. In the case that $n=0$ (so
 that $\sigma$ is monomorphic), $\den{\sigma}_{M}$ was identified with
 a set in $\cal U$ and then $M(c,\sigma)$ can be identified with an
 element of that set.
@@ -539,7 +538,7 @@ elements of sets in $\cal U$ (the particular set involved being
 derived from the type of the term as in Section
 \ref{semantics-of-types}). More generally, if the closed term involves
 $n$ type variables then it is interpreted as an element of a product
-$\prod_{X\!s\in{\cal U}^{n}}Y(X\!s)$, where the function
+$\prod_{\mathit{xs}\in{\cal U}^{n}}Y(\mathit{xs})$, where the function
 $Y:{\cal U}^{n}\longrightarrow{\cal U}$ is derived from the type of
 the term (in a type context derived from the term). Thus the meaning
 of the term is a (dependently typed) function which, when applied to
@@ -556,52 +555,52 @@ term. Finally, the most general case is of a term involving $n$ type
 variables and $m$ free variables: it is interpreted as an element of a
 product
 
-$$\prod_{X\!s\in{\cal
-U}^{n}}Y_{1}(X\!s)\times\cdots\times Y_{m}(X\!s) \;\fun\; Y(X\!s)$$
+$$\prod_{\mathit{xs}\in{\cal
+U}^{n}}Y_{1}(\mathit{xs})\times\cdots\times Y_{m}(\mathit{xs}) \;\fun\; Y(\mathit{xs})$$
 
 where the functions $Y_{1},\ldots,Y_{m},Y:{\cal
 U}^{n}\longrightarrow{\cal U}$ are determined by the types of the free
 variables and the type of the term (in a type context derived from the
 term).
 
-More precisely, given a term-in-context $\alpha\!s,\!x\!s.t$ over
+More precisely, given a term-in-context $\mathit{\alpha{}s},\!\mathit{xs}.t$ over
 $\Sigma_{\Omega}$ suppose
 
 - $t$ has type $\tau$
 
-- $x\!s=x_{1},\ldots,x_{m}$ and each $x_{j}$ has type $\sigma_{j}$
+- $\mathit{xs}=x_{1},\ldots,x_{m}$ and each $x_{j}$ has type $\sigma_{j}$
 
-- $\alpha\!s=\alpha_{1},\ldots,\alpha_{n}$.
+- $\mathit{\alpha{}s}=\alpha_{1},\ldots,\alpha_{n}$.
 
-Then since $\alpha\!s,\!x\!s.t$ is a term-in-context, $\alpha\!s.\tau$
-and $\alpha\!s.\sigma_{j}$ are types-in-context, and hence give rise
-to functions $\den{\alpha\!s.\tau}_{M}$ and
-$\den{\alpha\!s.\sigma_{j}}_{M}$ from ${\cal U}^{n}$ to $\cal U$ as in
-Section \ref{semantics-of-types}. The meaning of $\alpha\!s,\!x\!s.t$
+Then since $\mathit{\alpha{}s},\!\mathit{xs}.t$ is a term-in-context, $\mathit{\alpha{}s}.\tau$
+and $\mathit{\alpha{}s}.\sigma_{j}$ are types-in-context, and hence give rise
+to functions $\den{\mathit{\alpha{}s}.\tau}_{M}$ and
+$\den{\mathit{\alpha{}s}.\sigma_{j}}_{M}$ from ${\cal U}^{n}$ to $\cal U$ as in
+Section \ref{semantics-of-types}. The meaning of $\mathit{\alpha{}s},\!\mathit{xs}.t$
 in the model $M$ will be given by an element
 
-$$\den{\alpha\!s,\!x\!s.t}_{M} \in \prod_{X\!s\in{\cal U}^{n}}
-\left(\prod_{j=1}^{m}\den{\alpha\!s.\sigma_{j}}_{M}(X\!s)\right)
-\fun \den{\alpha\!s.\tau}_{M}(X\!s) .$$
+$$\den{\mathit{\alpha{}s},\!\mathit{xs}.t}_{M} \in \prod_{\mathit{xs}\in{\cal U}^{n}}
+\left(\prod_{j=1}^{m}\den{\mathit{\alpha{}s}.\sigma_{j}}_{M}(\mathit{xs})\right)
+\fun \den{\mathit{\alpha{}s}.\tau}_{M}(\mathit{xs}) .$$
 
 In other words, given
 
 $$\begin{array}{rcl}
-X\!s & = & (X_{1},\ldots,X_{n})\in{\cal U}^{n} \\
-y\!s & = & (y_{1},\ldots,y_{m})\in\den{\alpha\!s.\sigma_{1}}_{M}(X\!s)
-           \times\cdots\times \den{\alpha\!s.\sigma_{m}}_{M}(X\!s)
+\mathit{xs} & = & (X_{1},\ldots,X_{n})\in{\cal U}^{n} \\
+\mathit{ys} & = & (y_{1},\ldots,y_{m})\in\den{\mathit{\alpha{}s}.\sigma_{1}}_{M}(\mathit{xs})
+           \times\cdots\times \den{\mathit{\alpha{}s}.\sigma_{m}}_{M}(\mathit{xs})
 \end{array}$$
 
-one gets an element $\den{\alpha\!s,\!x\!s.t}_{M}(X\!s)(y\!s)$ of
-$\den{\alpha\!s.\tau}_{M}(X\!s)$. The definition of
-$\den{\alpha\!s,\!x\!s.t}_{M}$ proceeds by induction on the structure
+one gets an element $\den{\mathit{\alpha{}s},\!\mathit{xs}.t}_{M}(\mathit{xs})(\mathit{ys})$ of
+$\den{\mathit{\alpha{}s}.\tau}_{M}(\mathit{xs})$. The definition of
+$\den{\mathit{\alpha{}s},\!\mathit{xs}.t}_{M}$ proceeds by induction on the structure
 of the term $t$, as follows. (As before, the subscript $M$ will be
 dropped from the semantic brackets $\den{\_}$ when the particular
 model involved is clear from the context.)
 
 - If $t$ is a variable, it must be $x_{j}$ for some unique
   $j=1,\ldots,m$, so $\tau=\sigma_{j}$ and then
-  $\den{\alpha\!s,\!x\!s.t}(X\!s)(y\!s)$ is defined to be $y_{j}$.
+  $\den{\mathit{\alpha{}s},\!\mathit{xs}.t}(\mathit{xs})(\mathit{ys})$ is defined to be $y_{j}$.
 
 - Suppose $t$ is a constant $\con{c}_{\sigma'}$, where
   $(\con{c},\sigma)\in\Sigma_{\Omega}$ and $\sigma'$ is an instance of
@@ -609,61 +608,61 @@ model involved is clear from the context.)
   $\sigma'=\sigma[\tau_{1},\ldots,\tau_{p}/\beta_{1},\ldots,\beta_{p}]$
   for uniquely determined types $\tau_{1},\ldots,\tau_{p}$ (where
   $\beta_{1},\ldots,\beta_{p}$ are the type variables occurring in
-  $\sigma$). Then define $\den{\alpha\!s,\!x\!s.t}(X\!s)(y\!s)$ to be
-  $M(\con{c},\sigma)(\den{\alpha\!s.\tau_{1}}(X\!s),
-  \ldots,\den{\alpha\!s.\tau_{p}}(X\!s))$, which is an element of
-  $\den{\alpha\!s.\tau}(X\!s)$ by Lemma 2 of
+  $\sigma$). Then define $\den{\mathit{\alpha{}s},\!\mathit{xs}.t}(\mathit{xs})(\mathit{ys})$ to be
+  $M(\con{c},\sigma)(\den{\mathit{\alpha{}s}.\tau_{1}}(\mathit{xs}),
+  \ldots,\den{\mathit{\alpha{}s}.\tau_{p}}(\mathit{xs}))$, which is an element of
+  $\den{\mathit{\alpha{}s}.\tau}(\mathit{xs})$ by Lemma 2 of
   \ref{instances-and-substitution} (since $\tau$ is $\sigma'$).
 
 - Suppose $t$ is a function application term $(t_{1}\ t_{2})$ where
   $t_{1}$ is of type $\tau'\fun\tau$ and $t_{2}$ is of type $\tau'$.
-  Then $f=\den{\alpha\!s,\!x\!s.t_{1}}(X\!s)(y\!s)$, being an element
-  of $\den{\alpha\!s.\tau'\fun\tau}(X\!s)$, is a function from the set
-  $\den{\alpha\!s.\tau'}(X\!s)$ to the set $\den{\alpha\!s.\tau}(X\!s)$
+  Then $f=\den{\mathit{\alpha{}s},\!\mathit{xs}.t_{1}}(\mathit{xs})(\mathit{ys})$, being an element
+  of $\den{\mathit{\alpha{}s}.\tau'\fun\tau}(\mathit{xs})$, is a function from the set
+  $\den{\mathit{\alpha{}s}.\tau'}(\mathit{xs})$ to the set $\den{\mathit{\alpha{}s}.\tau}(\mathit{xs})$
   which one can apply to the element
-  $y=\den{\alpha\!s,\!x\!s.t_{2}}(X\!s)(y\!s)$. Define
-  $\den{\alpha\!s,\!x\!s.t}(X\!s)(y\!s)$ to be $f(y)$.
+  $y=\den{\mathit{\alpha{}s},\!\mathit{xs}.t_{2}}(\mathit{xs})(\mathit{ys})$. Define
+  $\den{\mathit{\alpha{}s},\!\mathit{xs}.t}(\mathit{xs})(\mathit{ys})$ to be $f(y)$.
 
 - Suppose $t$ is the abstraction term $\lambda x.t_{2}$ where $x$ is
   of type $\tau_{1}$ and $t_{2}$ of type $\tau_{2}$. Thus
-  $\tau=\tau_{1}\fun\tau_{2}$ and $\den{\alpha\!s.\tau}(X\!s)$ is the
+  $\tau=\tau_{1}\fun\tau_{2}$ and $\den{\mathit{\alpha{}s}.\tau}(\mathit{xs})$ is the
   function set
-  $\den{\alpha\!s.\tau_{1}}(X\!s)\fun\den{\alpha\!s.\tau_{2}}(X\!s)$.
-  Define $\den{\alpha\!s,\!x\!s.t}(X\!s)(y\!s)$ to be the element of
+  $\den{\mathit{\alpha{}s}.\tau_{1}}(\mathit{xs})\fun\den{\mathit{\alpha{}s}.\tau_{2}}(\mathit{xs})$.
+  Define $\den{\mathit{\alpha{}s},\!\mathit{xs}.t}(\mathit{xs})(\mathit{ys})$ to be the element of
   this set which is the function sending
-  $y\in\den{\alpha\!s.\tau_{1}}(X\!s)$ to
-  $\den{\alpha\!s,\!x\!s,\!x.t_{2}}(X\!s)(y\!s,y)$. (Note that since
-  $\alpha\!s,\!x\!s.t$ is a term-in-context, by convention the bound
-  variable $x$ does not occur in $x\!s$ and thus
-  $\alpha\!s,\!x\!s,\!x.t_{2}$ is also a term-in-context.)
+  $y\in\den{\mathit{\alpha{}s}.\tau_{1}}(\mathit{xs})$ to
+  $\den{\mathit{\alpha{}s},\!\mathit{xs},\!x.t_{2}}(\mathit{xs})(\mathit{ys},y)$. (Note that since
+  $\mathit{\alpha{}s},\!\mathit{xs}.t$ is a term-in-context, by convention the bound
+  variable $x$ does not occur in $\mathit{xs}$ and thus
+  $\mathit{\alpha{}s},\!\mathit{xs},\!x.t_{2}$ is also a term-in-context.)
 
 Now define the meaning of a term $t_{\tau}$ in a model $M$ to be the
 dependently typed function
 
-$$\den{t_{\tau}} \in \prod_{X\!s\in{\cal U}^{n}}
-   \left(\prod_{j=1}^{m}\den{\alpha\!s.\sigma_{j}}(X\!s)\right)
-   \fun \den{\alpha\!s.\tau}(X\!s)$$
+$$\den{t_{\tau}} \in \prod_{\mathit{xs}\in{\cal U}^{n}}
+   \left(\prod_{j=1}^{m}\den{\mathit{\alpha{}s}.\sigma_{j}}(\mathit{xs})\right)
+   \fun \den{\mathit{\alpha{}s}.\tau}(\mathit{xs})$$
 
-given by $\den{\alpha\!s,\!x\!s.t_{\tau}}$, where $\alpha\!s,\!x\!s$ is
+given by $\den{\mathit{\alpha{}s},\!\mathit{xs}.t_{\tau}}$, where $\mathit{\alpha{}s},\!\mathit{xs}$ is
 the canonical context of $t_{\tau}$. So $n$ is the number of type
-variables in $t_{\tau}$, $\alpha\!s$ is a list of those type
+variables in $t_{\tau}$, $\mathit{\alpha{}s}$ is a list of those type
 variables, $m$ is the number of ordinary variables occurring freely in
 $t_{\tau}$ (assumed to be distinct from the bound variables of
 $t_{\tau}$) and the $\sigma_{j}$ are the types of those variables. (It
-is important to note that the list $\alpha\!s$, which is part of the
+is important to note that the list $\mathit{\alpha{}s}$, which is part of the
 canonical context of $t$, may be strictly bigger than the canonical
 type contexts of $\sigma_{j}$ or $\tau$. So it would not make sense to
 write just $\den{\sigma_{j}}$ or $\den{\tau}$ in the above definition.)
 
 If $t_{\tau}$ is a closed term, then $m=0$ and for each
-$X\!s\in{\cal U}^{n}$ one can identify $\den{t_{\tau}}$ with the
-element $\den{t_{\tau}}(X\!s)()\in\den{\alpha\!s.\tau}(X\!s)$. So for
+$\mathit{xs}\in{\cal U}^{n}$ one can identify $\den{t_{\tau}}$ with the
+element $\den{t_{\tau}}(\mathit{xs})()\in\den{\mathit{\alpha{}s}.\tau}(\mathit{xs})$. So for
 closed terms one gets
 
-$$\den{t_{\tau}} \in \prod_{X\!s\in{\cal U}^{n}}
-\den{\alpha\!s.\tau}(X\!s)$$
+$$\den{t_{\tau}} \in \prod_{\mathit{xs}\in{\cal U}^{n}}
+\den{\mathit{\alpha{}s}.\tau}(\mathit{xs})$$
 
-where $\alpha\!s$ is the list of type variables occurring in
+where $\mathit{\alpha{}s}$ is the list of type variables occurring in
 $t_{\tau}$ and $n$ is the length of that list. If moreover, no type
 variables occur in $t_{\tau}$, then $n=0$ and $\den{t_{\tau}}$ can be
 identified with the element $\den{t_{\tau}}()$ of the set
@@ -686,42 +685,42 @@ substitution of terms for variables.
 
 #### Substituting types for type variables in terms
 
-Suppose $t$ is a term, with canonical context $\alpha\!s,\!x\!s$ say,
-where $\alpha\!s = \alpha_1,\ldots,\alpha_n$, $x\!s = x_1,\ldots,x_m$
+Suppose $t$ is a term, with canonical context $\mathit{\alpha{}s},\!\mathit{xs}$ say,
+where $\mathit{\alpha{}s} = \alpha_1,\ldots,\alpha_n$, $\mathit{xs} = x_1,\ldots,x_m$
 and where for $j=1,\ldots,m$ the type of the variable $x_j$ is
-$\sigma_j$. If $\alpha\!s'.\tau_{i}$ ($i=1,\ldots,n$) are
+$\sigma_j$. If $\mathit{\alpha{}s}'.\tau_{i}$ ($i=1,\ldots,n$) are
 types-in-context, then substituting the types $\tau_{i}$ for the type
-variables $\alpha_{i}$ in the list $x\!s$, one obtains a new list of
-variables $x\!s'$. Thus the $j$th entry of $x\!s'$ has type
-$\sigma'_{j} = \sigma_{j}[\tau\!s/\alpha\!s]$. Only substitutions with
+variables $\alpha_{i}$ in the list $\mathit{xs}$, one obtains a new list of
+variables $\mathit{xs}'$. Thus the $j$th entry of $\mathit{xs}'$ has type
+$\sigma'_{j} = \sigma_{j}[\mathit{\tau{}s}/\mathit{\alpha{}s}]$. Only substitutions with
 the following property will be considered.
 
-> In instantiating the type variables $\alpha\!s$ with the types
-> $\tau\!s$, no two distinct variables in the list $x\!s$ become equal
-> in the list $x\!s'$.[^syn-ident]
+> In instantiating the type variables $\mathit{\alpha{}s}$ with the types
+> $\mathit{\tau{}s}$, no two distinct variables in the list $\mathit{xs}$ become equal
+> in the list $\mathit{xs}'$.[^syn-ident]
 
 [^syn-ident]: Such an identification of variables could occur if the
     variables had the same name component and their types became equal
     on instantiation.
 
-This condition ensures that $\alpha\!s',x\!s'$ really is a context.
-Then one obtains a new term-in-context $\alpha\!s',\!x\!s'.t'$ by
-substituting the types $\tau\!s=\tau_{1},\ldots,\tau_{n}$ for the type
-variables $\alpha\!s$ in $t$ (with suitable renaming of bound
+This condition ensures that $\mathit{\alpha{}s}',\mathit{xs}'$ really is a context.
+Then one obtains a new term-in-context $\mathit{\alpha{}s}',\!\mathit{xs}'.t'$ by
+substituting the types $\mathit{\tau{}s}=\tau_{1},\ldots,\tau_{n}$ for the type
+variables $\mathit{\alpha{}s}$ in $t$ (with suitable renaming of bound
 occurrences of variables to make them distinct from the variables in
-$x\!s'$). The notation
+$\mathit{xs}'$). The notation
 
-$$t[\tau\!s/\alpha\!s]$$
+$$t[\mathit{\tau{}s}/\mathit{\alpha{}s}]$$
 
 is used for the term $t'$.
 
-**Lemma 3** &nbsp; *The meaning of $\alpha\!s',\!x\!s'.t'$ in a model
-is related to that of $t$ as follows. For all $X\!s'\in{\cal U}^{n'}$
-(where $n'$ is the length of $\alpha\!s'$)*
+**Lemma 3** &nbsp; *The meaning of $\mathit{\alpha{}s}',\!\mathit{xs}'.t'$ in a model
+is related to that of $t$ as follows. For all $\mathit{xs}'\in{\cal U}^{n'}$
+(where $n'$ is the length of $\mathit{\alpha{}s}'$)*
 
-$$\den{\alpha\!s',\!x\!s'.t'}(X\!s') =
-   \den{t}(\den{\alpha\!s'.\tau_{1}}(X\!s'),\ldots,
-   \den{\alpha\!s'.\tau_{n}}(X\!s')).$$
+$$\den{\mathit{\alpha{}s}',\!\mathit{xs}'.t'}(\mathit{xs}') =
+   \den{t}(\den{\mathit{\alpha{}s}'.\tau_{1}}(\mathit{xs}'),\ldots,
+   \den{\mathit{\alpha{}s}'.\tau_{n}}(\mathit{xs}')).$$
 
 Lemma 2 in \ref{instances-and-substitution} is needed to see that both
 sides of the above equation are elements of the same set of functions.
@@ -730,31 +729,31 @@ of the term $t$.
 
 #### Substituting terms for variables in terms
 
-Suppose $t$ is a term, with canonical context $\alpha\!s,\!x\!s$ say,
-where $\alpha\!s = \alpha_1,\ldots,\alpha_n$, $x\!s = x_1,\ldots,x_m$
+Suppose $t$ is a term, with canonical context $\mathit{\alpha{}s},\!\mathit{xs}$ say,
+where $\mathit{\alpha{}s} = \alpha_1,\ldots,\alpha_n$, $\mathit{xs} = x_1,\ldots,x_m$
 and where for $j=1,\ldots,m$ the type of the variable $x_j$ is
-$\sigma_j$. If one has terms-in-context $\alpha\!s,\!x\!s'.t_{j}$ for
+$\sigma_j$. If one has terms-in-context $\mathit{\alpha{}s},\!\mathit{xs}'.t_{j}$ for
 $j=1,\ldots,m$ with $t_{j}$ of the same type as $x_{j}$, say
 $\sigma_{j}$, then one obtains a new term-in-context
-$\alpha\!s,\!x\!s'.t''$ by substituting the terms
-$t\!s=t_1,\ldots,t_m$ for the variables $x\!s$ in $t$ (with suitable
+$\mathit{\alpha{}s},\!\mathit{xs}'.t''$ by substituting the terms
+$\mathit{ts}=t_1,\ldots,t_m$ for the variables $\mathit{xs}$ in $t$ (with suitable
 renaming of bound occurrences of variables to prevent the free
 variables of the $t_{j}$ becoming bound after substitution). The
 notation
 
-$$t[t\!s/x\!s]$$
+$$t[\mathit{ts}/\mathit{xs}]$$
 
 is used for the term $t''$.
 
-**Lemma 4** &nbsp; *The meaning of $\alpha\!s,\!x\!s'.t''$ in a model
-is related to that of $t$ as follows. For all $X\!s\in{\cal U}^{n}$
-and all $y\!s'\in\den{\alpha\!s.\sigma'_{1}} \times\cdots\times
-\den{\alpha\!s.\sigma'_{m'}}$ (where $\sigma'_{j}$ is the type of
+**Lemma 4** &nbsp; *The meaning of $\mathit{\alpha{}s},\!\mathit{xs}'.t''$ in a model
+is related to that of $t$ as follows. For all $\mathit{xs}\in{\cal U}^{n}$
+and all $\mathit{ys}'\in\den{\mathit{\alpha{}s}.\sigma'_{1}} \times\cdots\times
+\den{\mathit{\alpha{}s}.\sigma'_{m'}}$ (where $\sigma'_{j}$ is the type of
 $x'_{j}$)*
 
-$$\den{\alpha\!s,\!x\!s'.t''}(X\!s)(y\!s') = \den{t}(X\!s)(
-\den{\alpha\!s,\!x\!s'.t_{1}}(X\!s)(y\!s'),\ldots,
-\den{\alpha\!s,\!x\!s'.t_{m}}(X\!s)(y\!s'))$$
+$$\den{\mathit{\alpha{}s},\!\mathit{xs}'.t''}(\mathit{xs})(\mathit{ys}') = \den{t}(\mathit{xs})(
+\den{\mathit{\alpha{}s},\!\mathit{xs}'.t_{1}}(\mathit{xs})(\mathit{ys}'),\ldots,
+\den{\mathit{\alpha{}s},\!\mathit{xs}'.t_{m}}(\mathit{xs})(\mathit{ys}'))$$
 
 Once again, this result is proved by induction on the structure of the
 term $t$.
