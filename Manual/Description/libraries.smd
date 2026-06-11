@@ -1233,7 +1233,7 @@ $$
 $$
 
 The term and type parsers can also be called implicitly by using
-double quotations (with "...", characters U+201C and U+201D), or
+double quotations (with “...”, characters U+201C and U+201D), or
 doubled back-ticks as delimiters.  For the type parser, the first
 non-space character after the leading delimiter must also be a
 colon.  Thus:
@@ -1245,45 +1245,23 @@ colon.  Thus:
 >> val ty = “:'a -> bool”;
 ```
 
-The expression bound to ML variable `t1` above is actually
-expanded to an application of the function `Parse.Term` to the
-quotation argument `\`p /\ q\``.  Similarly, the declaration of
-`ty`'s expression expands into an application of
-`Parse.Type` to the quotation `\`:'a -> bool\``.
+The expression bound to ML variable `t1` above is actually expanded to an application of the function `Parse.Term` to the quotation argument `‘p /\ q’`.
+Similarly, the declaration of `ty`’s expression expands into an application of `Parse.Type` to the quotation `‘:'a -> bool’`.
 
-The significant advantage of quotations over normal SML strings
-is that they can include new-line and backslash characters without
-requiring special quoting.  Newlines occur whenever terms get
-beyond the trivial in size, while backslashes occur in not just
-the representation of $\lambda$, but also the syntax for
-conjunction and disjunction.
+The significant advantage of quotations over normal SML strings is that they can include new-line and backslash characters without requiring special quoting.
+Newlines occur whenever terms get beyond the trivial in size, while backslashes occur in not just the ASCII representation of $\lambda$, but also the syntax for conjunction and disjunction.
 
-If a quotation is to include a back-quote character, then this
-should be done by using the quotation syntax's own escape
-character, the caret (`^`, ASCII character 94).  To get a bare
-caret, things are slightly more complicated.  If a sequence of
-carets is followed by white-space (including a newline), then
-that sequence of carets is passed to the HOL parser unchanged.
-Otherwise, one caret can be obtained by writing two in a row.
-(This last rule is analogous to the way in SML string syntax
-treats the back-slash.)  Thus:
+If a quotation is to include a back-quote character, then the single back-quote delimiters cannot be used; instead this must be done by using the `‘..’` syntax.
+Backquotes can also freely appear between the `“...”` delimiters.
+To include a caret in quoted material (otherwise used for antiquotations, see below), it must not be followed by an alphanumeric identifier, nor by parentheses.
+Thus:
 
 ```repl
->> “f ^` x”;
+>> ‘f `x’;
+
+>> ``f ^` x``;
 
 >> “f ^ x”;
-```
-
-Finally, if a single caret is followed by a “symbol” character,
-then the caret and symbol are passed through to HOL unchanged.
-Thus the following example illustrates two different ways of
-writing the same thing (in the first input, two carets become
-one):
-
-```repl
->> “f ^^+ x”;
-
->>+ ``f ^+ x``;
 ```
 
 The main use of the caret is to introduce *antiquotations* (as
@@ -1296,8 +1274,9 @@ expressions of the form `^(`$t$`)`
 \index{terms, in HOL logic@terms, in \HOL{} logic!antiquotation}
 \index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}
 An antiquotation `^(`$t$`)` evaluates to the SML value of $t$.
-For example, `x \/ ^(mk_conj(`\``y:bool``, ``z:bool``\`))`
-evaluates to the same term as `x \/ (y /\ z)`.  The most common
+For example, `x \/ ^(mk_conj(“y:bool”, “z:bool”))`
+evaluates to the same term as `x \/ (y /\ z)`.  
+The most common
 use of antiquotation is when the term $t$ is bound to an SML
 variable $x$.  In this case `^(`$x$`)` can be abbreviated by
 `^`$x$.
