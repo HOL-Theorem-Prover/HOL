@@ -4,7 +4,7 @@
 # per-book MDBOOK_TARGETS / BOOK_TOMLS lists.  Adding a new manual
 # is a one-line edit to MANUALS here.
 
-MANUALS = Description Tutorial Reference Interaction-emacs Logic
+MANUALS = Description Tutorial Reference Interaction-emacs Logic Developers
 
 # All sibling manuals' labels.tsv files, relative to the including
 # manual's directory: the first $(patsubst) drops the self-entry,

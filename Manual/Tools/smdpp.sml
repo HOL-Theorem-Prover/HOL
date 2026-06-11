@@ -363,6 +363,19 @@ val () = elision_string1 := elision_string1_plain
    while Description / Tutorial use the default. *)
 val noPolyscripter = ref false
 
+(* Plain-Markdown mode (--plain-markdown, implies --no-polyscripter):
+   the chapters are hand-authored Markdown that uses none of the .smd
+   LaTeX-command conventions, so skip the command-rewriting passes
+   (\index / \label / \ref / \refentry / \cite).  Those passes are
+   naive scanners that would otherwise rewrite literal
+   `\ref{...}` / `\label{...}` examples even inside backtick code
+   spans -- exactly what Manual/Developers/manual-authoring.md (the
+   doc that *describes* the .smd pipeline) is full of.  The
+   code-span-aware passes (protectMath) and the format-neutral ones
+   (dropFrontmatter, handleRawBlocks, convertSuperscripts, ensureH1)
+   still run.  Set by Manual/Developers/book.toml. *)
+val plainMarkdown = ref false
+
 fun runScripted obuf s =
   if !noPolyscripter then s
   else processString {input = s, debug = false,
@@ -757,21 +770,29 @@ fun resolveRefs {currentFile, labelRegistry} s =
 fun preprocessStage1 obuf s =
   s |> dropFrontmatter
     |> runScripted obuf
-    |> stripIndex
+    |> (if !plainMarkdown then (fn x => x) else stripIndex)
 
 (* Stage 2: with the registry in hand, resolve \ref{X} to a
    markdown link, then drop the (now-redundant) \label{X} marks
    and finish the markdown-side rewrites. *)
 fun preprocessStage2 {labelRegistry, currentFile, name} s =
-  s |> handleRawBlocks
-    |> resolveRefs {currentFile = currentFile,
-                    labelRegistry = labelRegistry}
-    |> stripLabel
-    |> rewriteRefEntry currentFile
-    |> rewriteCites
-    |> convertSuperscripts
-    |> protectMath
-    |> ensureH1 name
+  if !plainMarkdown then
+    (* Skip the LaTeX-command rewriters; keep the code-span-aware and
+       format-neutral passes.  See the plainMarkdown comment above. *)
+    s |> handleRawBlocks
+      |> convertSuperscripts
+      |> protectMath
+      |> ensureH1 name
+  else
+    s |> handleRawBlocks
+      |> resolveRefs {currentFile = currentFile,
+                      labelRegistry = labelRegistry}
+      |> stripLabel
+      |> rewriteRefEntry currentFile
+      |> rewriteCites
+      |> convertSuperscripts
+      |> protectMath
+      |> ensureH1 name
 
 (* GitHub-style heading slugger: lowercase, drop punctuation other
    than space/`-`/`_`, replace spaces with `-`, collapse multiple
@@ -3010,14 +3031,18 @@ fun dumpLabelsMain bookDir =
 
 fun smdppMain () =
   let
-    (* Peel off --no-polyscripter wherever it appears at the front of argv;
-       remaining args dispatch the usual subcommands. *)
-    fun stripFlag (acc as (flagSeen, rest)) =
+    (* Peel off --no-polyscripter / --plain-markdown wherever they
+       appear at the front of argv; remaining args dispatch the usual
+       subcommands.  --plain-markdown implies --no-polyscripter. *)
+    fun stripFlags (acc as (noPoly, plain, rest)) =
       case rest of
-          "--no-polyscripter" :: r => stripFlag (true, r)
+          "--no-polyscripter" :: r => stripFlags (true, plain, r)
+        | "--plain-markdown" :: r => stripFlags (true, true, r)
         | _ => acc
-    val (sawFlag, args) = stripFlag (false, CommandLine.arguments ())
-    val () = noPolyscripter := sawFlag
+    val (sawNoPoly, sawPlain, args) =
+      stripFlags (false, false, CommandLine.arguments ())
+    val () = noPolyscripter := sawNoPoly
+    val () = plainMarkdown := sawPlain
   in
     case args of
         ["supports", "html"] => OS.Process.exit OS.Process.success
@@ -3053,7 +3078,7 @@ fun smdppMain () =
             TextIO.flushOut TextIO.stdOut
           end
       | _ => die ("Usage:\n  " ^ CommandLine.name() ^
-                  " [--no-polyscripter]\
+                  " [--no-polyscripter] [--plain-markdown]\
                   \ [supports <renderer> |\
                   \ check-refs <book-dir> |\
                   \ check-links <book-dir> |\

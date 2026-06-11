@@ -1,5 +1,13 @@
-.PHONY: all
+INCLUDES = ../Tools
 
+# Cross-manual labels.tsv prereq list for the mdbook target.
+# See Manual/mdbook.mk for MANUALS / SIBLING_LABELS.
+THIS = Developers
+include ../mdbook.mk
+
+.PHONY: all mdbook mdbook-serve
+
+# Standalone pandoc artefacts (independent of the mdbook site).
 TARGETS = developers.pdf developers.html \
           manual-authoring.pdf manual-authoring.html
 
@@ -17,4 +25,48 @@ manual-authoring.pdf: manual-authoring.md hol4.latex
 manual-authoring.html: manual-authoring.md
 	pandoc -s $< -o $@
 
-EXTRA_CLEANS = $(TARGETS)
+# mdbook site.  Chapters are hand-authored Markdown (no .smd / no
+# polyscripter), listed in the committed SUMMARY.md; smdpp runs in
+# --plain-markdown mode (set in book.toml), which skips the LaTeX-
+# command rewriters.  That lets manual-authoring.md -- which documents
+# the .smd pipeline with literal \ref{}/\cite{}/\label{} examples in
+# code spans -- render verbatim rather than having those examples
+# eaten by the (non-code-aware) rewriters.
+MDBOOK_CHAPTERS = developers.md manual-authoring.md lsp-server.md
+
+mdbook: ../book/Developers/index.html
+
+../book/Developers/index.html: ../Tools/smdpp SUMMARY.md \
+        $(MDBOOK_CHAPTERS) \
+        labels.tsv $(SIBLING_LABELS)
+	mdbook build
+	# See Manual/Description/Holmakefile for the rationale.
+	cd ../book/Developers && \
+	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
+	../Tools/smdpp check-html ../book/Developers
+	../Tools/smdpp check-refs ../book/Developers
+	../Tools/smdpp check-links ../book/Developers
+
+# Scan-only label dump for cross-book `\ref{Book:label}` resolution.
+labels.tsv: ../Tools/smdpp SUMMARY.md $(MDBOOK_CHAPTERS)
+	../Tools/smdpp dump-labels .
+
+# Convenience: serve the book locally at http://127.0.0.1:3004/.
+# Ports: Description 3000, Tutorial 3001, Logic 3003, Developers 3004.
+mdbook-serve: ../Tools/smdpp
+	@msg() { { echo "$$1" >/dev/tty; } 2>/dev/null || echo "$$1" >&2; }; \
+	 if lsof -ti :3004 >/dev/null 2>&1; then \
+	   msg "Port 3004 already in use; stop the existing server first:"; \
+	   msg "  pkill -f 'mdbook serve'  (or: lsof -ti :3004 | xargs kill)"; \
+	   exit 1; \
+	 fi; \
+	 logfile="$(LOG)"; \
+	 [ "$$logfile" = 1 ] && logfile=mdbook-serve.log; \
+	 [ -z "$$logfile" ] && logfile=/dev/null; \
+	 (mdbook serve --hostname 127.0.0.1 --port 3004 \
+	    >"$$logfile" 2>&1 &); \
+	 msg "mdbook serving at http://127.0.0.1:3004/"; \
+	 [ "$$logfile" != /dev/null ] && msg "log: $$(pwd)/$$logfile"; \
+	 msg "stop: pkill -f 'mdbook serve'"
+
+EXTRA_CLEANS = $(TARGETS) labels.tsv mdbook-serve.log ../book/Developers/
