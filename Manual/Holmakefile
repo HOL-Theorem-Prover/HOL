@@ -25,7 +25,7 @@ include mdbook.mk
 MDBOOK_TARGETS = $(patsubst %,%/mdbook,$(MANUALS))
 BOOK_TOMLS = $(patsubst %,%/book.toml,$(MANUALS))
 
-.PHONY: mdbook mdbook-serve
+.PHONY: mdbook mdbook-serve mdbook-livewatch
 
 mdbook: $(MDBOOK_TARGETS) book/index.html book/.references.stamp
 
@@ -55,9 +55,11 @@ book/.references.stamp: $(LANDER_FRAGMENT) Tools/stage_references.py
 # Serve the unified site for cross-manual review.  Detaches into
 # the background like the per-manual mdbook-serve recipes; pass
 # LOG=1 to capture output to mdbook-serve.log (or LOG=<path> for
-# a custom location).  Live-reload is not provided here -- use the
-# per-manual mdbook-serve targets (port 3000 / 3001) when editing
-# a single manual.
+# a custom location).  This is a static server with no rebuild or
+# live-reload -- for an editing loop that auto-rebuilds the changed
+# manual and refreshes the browser (while keeping cross-book search,
+# which needs all manuals on one origin), use `mdbook-livewatch'
+# below.
 mdbook-serve: mdbook
 	@msg() { { echo "$$1" >/dev/tty; } 2>/dev/null || echo "$$1" >&2; }; \
 	 if lsof -ti :3002 >/dev/null 2>&1; then \
@@ -73,6 +75,22 @@ mdbook-serve: mdbook
 	 msg "Unified site serving at http://127.0.0.1:3002/"; \
 	 [ "$$logfile" != /dev/null ] && msg "log: $$(pwd)/$$logfile"; \
 	 msg "stop: pkill -f 'http.server 3002'"
+
+# Live unified preview: serves book/ on a single origin (so cross-book
+# search keeps working -- the searcher loads siblings via relative
+# ../<M>/searchindex.js) and live-reloads the browser on source edits,
+# rebuilding only the changed manual into book/<M>/.  Runs in the
+# foreground (Ctrl-C to stop) so its rebuild log is visible.  Requires
+# book/ to already exist -- run `Holmake mdbook' once first; the script
+# exits with a hint otherwise.  See Manual/Tools/mdbook-livewatch.py for
+# the watch/rebuild map and the preview-vs-release caveats.
+mdbook-livewatch:
+	@if lsof -ti :3002 >/dev/null 2>&1; then \
+	   echo "Port 3002 already in use; stop the existing server first" >&2; \
+	   echo "  pkill -f mdbook-livewatch  (or: lsof -ti :3002 | xargs kill)" >&2; \
+	   exit 1; \
+	 fi
+	python3 Tools/mdbook-livewatch.py --repo "$(HOLDIR)" --manuals "$(MANUALS)"
 
 EXTRA_CLEANS = book/index.html book/htmlsigs book/theory-graph \
                book/.references.stamp \
