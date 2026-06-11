@@ -28,7 +28,7 @@ currently loaded theory segment.
 ### Example
 
 ``` hol4
->> DB.thy "pair";
+>> List.take (DB.thy "pair", 3);
 ```
 
 ### See also

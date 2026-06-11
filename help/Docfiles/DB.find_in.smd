@@ -21,7 +21,9 @@ returned.
 ### Example
 
 ``` hol4
+##linecount_limit 0 15
 >> DB.find "inc";
+##poplinecount_limit
 
 >> DB.find_in "sum" it;
 ```

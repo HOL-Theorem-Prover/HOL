@@ -20,7 +20,9 @@ Never fails.
 ### Example
 
 ``` hol4
+##linecount_limit 0 15
 >> DB.apropos (Term `(!x y. P x y) ==> Q`);
+##poplinecount_limit
 
 >>+ DB.apropos_in (Term `(x, y)`) it ;
     [(("pair", "pair_induction"),

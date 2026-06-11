@@ -26,7 +26,9 @@ Never fails.
 ### Example
 
 ``` hol4
+##linecount_limit 0 15
 >> DB.match ["bool","pair"] (Term `(a = b) = c`);
+##poplinecount_limit
 ```
 
 ### Comments
@@ -39,5 +41,4 @@ For locating theorems when doing interactive proof.
 
 [`DB.matcher`](#DB.matcher), [`DB.matchp`](#DB.matchp),
 [`DB.find`](#DB.find), [`DB.theorems`](#DB.theorems),
-[`DB.thy`](#DB.thy), [`DB.listDB`](#DB.listDB),
-[`holyHammer.hh`](#holyHammer.hh)
+[`DB.thy`](#DB.thy), [`DB.listDB`](#DB.listDB)

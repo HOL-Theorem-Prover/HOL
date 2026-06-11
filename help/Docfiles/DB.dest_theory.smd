@@ -34,7 +34,9 @@ If `s` is not the name of a loaded theory.
 ### Example
 
 ``` hol4
+##linecount_limit 0 50
 >> dest_theory "option";
+##poplinecount_limit
 ```
 
 ### Comments

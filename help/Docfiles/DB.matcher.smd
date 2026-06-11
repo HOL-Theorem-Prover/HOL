@@ -26,9 +26,11 @@ Never fails, but may return an empty list.
 ### Example
 
 ``` hol4
+##linecount_limit 0 15
 >> DB.matcher match_term ["relation"] (Term `P \/ Q`);
 
 >> DB.matcher (ho_match_term [] empty_varset) [] (Term `?x. P x \/ Q x`);
+##poplinecount_limit
 ```
 
 ### Comments
@@ -38,5 +40,4 @@ Usually, `pm` will be a pattern-matcher, but it need not be.
 ### See also
 
 [`DB.match`](#DB.match), [`DB.apropos`](#DB.apropos),
-[`DB.matchp`](#DB.matchp), [`DB.find`](#DB.find),
-[`holyHammer.hh`](#holyHammer.hh)
+[`DB.matchp`](#DB.matchp), [`DB.find`](#DB.find)

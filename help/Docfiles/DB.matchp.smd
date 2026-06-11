@@ -26,11 +26,12 @@ The following query returns all unconditional rewrite rules in the
 theory `pair`.
 
 ``` hol4
+##linecount_limit 0 15
 >> matchp (is_eq o snd o strip_forall o concl) ["pair"];
+##poplinecount_limit
 ```
 
 ### See also
 
 [`DB.match`](#DB.match), [`DB.matcher`](#DB.matcher),
-[`DB.apropos`](#DB.apropos), [`DB.find`](#DB.find),
-[`holyHammer.hh`](#holyHammer.hh)
+[`DB.apropos`](#DB.apropos), [`DB.find`](#DB.find)

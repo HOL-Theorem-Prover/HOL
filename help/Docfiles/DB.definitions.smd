@@ -22,7 +22,9 @@ segment, the empty list is returned.
 ### Example
 
 ``` hol4
+##linecount_limit 0 15
 >> definitions "combin";
+##poplinecount_limit
 ```
 
 ### See also

@@ -43,5 +43,4 @@ tactic data. See more examples in `src/tactictoe/examples`.
 
 ### See also
 
-[`tacticToe.tactictoe`](#tacticToe.tactictoe),
-[`holyHammer.hh`](#holyHammer.hh)
+[`tacticToe.tactictoe`](#tacticToe.tactictoe)
