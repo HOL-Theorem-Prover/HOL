@@ -259,11 +259,13 @@ fun process_docfiles_main () =
           | [a, b, c] => (a, b, SOME c)
           | _ => dieLn (usage())
 
-    val pdexe =
-        case which "pandoc" of
-            SOME s => s
-          | NONE => (warnLn "Can't find pandoc in PATH; doing nothing.";
-                     OS.Process.exit OS.Process.success)
+    (* Pandoc is needed only for the .txt (and optional .html) passes
+       below; the .md mirror is produced by the polyscripter and needs
+       no pandoc.  So a missing pandoc downgrades to "no .txt/.html"
+       rather than aborting -- otherwise we'd leave processed_dir
+       uncreated and the caller's follow-up steps (e.g. the build's
+       Docfiles-processed/.stamp write) would fail with ENOENT. *)
+    val pandoc_opt = which "pandoc"
 
     val () = mkdir_p processed_dir
 
@@ -284,14 +286,23 @@ fun process_docfiles_main () =
                     bases = bases, obuf = obuf}
     val () = print ("...polyscripter pass done\n")
 
-    val txt_out = pandoc_once pdexe concat ["-t", "plain"]
-    val txt_chunks = split_chunks bases txt_out
-    val () = write_chunks {out_dir = src_dir, ext = "txt",
-                           chunks = txt_chunks, wrap = txt_wrap}
-    val () = print ("...wrote " ^ Int.toString (length txt_chunks) ^
-                    " .txt files to " ^ src_dir ^ "\n")
-
-    val () = case html_opt of
+    val () =
+      case pandoc_opt of
+          NONE =>
+            warnLn ("Can't find pandoc in PATH; wrote the mdbook .md \
+                    \mirror to " ^ processed_dir ^ " but skipped the \
+                    \.txt help text" ^
+                    (case html_opt of SOME _ => " and .html pages." | NONE => "."))
+        | SOME pdexe =>
+          let
+            val txt_out = pandoc_once pdexe concat ["-t", "plain"]
+            val txt_chunks = split_chunks bases txt_out
+            val () = write_chunks {out_dir = src_dir, ext = "txt",
+                                   chunks = txt_chunks, wrap = txt_wrap}
+            val () = print ("...wrote " ^ Int.toString (length txt_chunks) ^
+                            " .txt files to " ^ src_dir ^ "\n")
+          in
+            case html_opt of
                 NONE => ()
               | SOME html_dir =>
                 let
@@ -315,6 +326,7 @@ fun process_docfiles_main () =
                   print ("...wrote " ^ Int.toString (length html_chunks) ^
                          " .html files to " ^ html_dir ^ "\n")
                 end
+          end
   in
     ()
   end
