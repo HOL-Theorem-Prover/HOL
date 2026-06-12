@@ -132,10 +132,12 @@ also ask the system to print the new constant's type:
     function, with pattern-matching, wouldn't be so complicated.
 
 ```repl
->> val zip_def =
-     tDefine "zip" ‘zip (l1, l2) = if NULL l1 ∨ NULL l2 then []
-                                   else (HD l1, HD l2) :: zip (TL l1, TL l2)’
-         (WF_REL_TAC ‘measure (LENGTH o FST)’ >> Cases_on ‘l1’ >> simp[]);
+>> Definition zip_def:
+     zip (l1, l2) = if NULL l1 ∨ NULL l2 then []
+                    else (HD l1, HD l2) :: zip (TL l1, TL l2)
+   Termination
+     WF_REL_TAC ‘measure (LENGTH o FST)’ >> Cases_on ‘l1’ >> simp[]
+   End
 
 >> type_of “zip”;
 ```
