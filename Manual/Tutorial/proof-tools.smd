@@ -35,14 +35,14 @@ the free variables.
 ## Method 1: Truth Tables
 
 The first method to be implemented is the brute force method of
-trying all possible boolean combinations.  This approach's only
+trying all possible boolean combinations.  This approach’s only
 real virtue is that it is exceptionally easy to implement.  First
 we will prove the motivating theorem:
 
-```
-##eval val FORALL_BOOL = prove(
-         ``(!v. P v) <=> P T /\ P F``,
-         rw[EQ_IMP_THM] >> Cases_on `v` >> rw[]);
+```repl
+>> val FORALL_BOOL = prove(
+         “(!v. P v) <=> P T /\ P F”,
+         rw[EQ_IMP_THM] >> Cases_on ‘v’ >> rw[]);
 ```
 
 The proof proceeds by splitting the goal into two halves,
@@ -64,8 +64,8 @@ theorem is actually already proved in the theory `bool`.)
 
 The next, and final, step is to rewrite with this theorem:
 
-```
-##eval val tautDP = SIMP_CONV bool_ss [FORALL_BOOL]
+```repl
+>> val tautDP = SIMP_CONV bool_ss [FORALL_BOOL]
 ```
 
 This enables the following
@@ -87,10 +87,10 @@ and even the marginally more intimidating
 ```
 
 This is a dreadful algorithm for solving this problem.  The
-system's built-in function, `tautLib.TAUT_CONV`, solves the
+system’s built-in function, `tautLib.TAUT_CONV`, solves the
 problem above much faster.  The only real merit in this solution
 is that it took one line to write.  This is a general
-illustration of the truth that HOL's high-level tools,
+illustration of the truth that HOL’s high-level tools,
 particularly the simplifier, can provide fast prototypes for a
 variety of proof tasks.
 
@@ -103,9 +103,9 @@ state-of-the-art solvers today.  If we strip the universal
 quantifiers from our input formulas, our task can be seen as
 determining the validity of a propositional formula.  Testing
 the negation of such a formula for satisfiability is a test for
-validity: if the formula's negation is satisfiable, then it is
+validity: if the formula’s negation is satisfiable, then it is
 not valid (the satisfying assignment will make the original
-false); if the formula's negation is unsatisfiable, then the
+false); if the formula’s negation is unsatisfiable, then the
 formula is valid (no assignment can make it false).
 
 (The source code for this example is available in the file
@@ -180,7 +180,7 @@ application of `TRANS` to this and the theorem displayed above
 will derive the formula $\vdash \neg\varphi = F$.  In order to
 derive the final result, we will need to turn this into
 $\vdash\varphi$.  This is best done by proving a bespoke theorem
-embodying the equality (there isn't one such already in the
+embodying the equality (there isn’t one such already in the
 system):
 
 ```
@@ -251,11 +251,11 @@ reminding us that the input must be universally quantified.
 The auxiliary function `spec` that is used in the second case
 relies on the fact that `dest_forall` will raise a `HOL_ERR`
 exception if the term it is applied to is not universally
-quantified.  When `spec`'s argument is not universally
+quantified.  When `spec`’s argument is not universally
 quantified, this means that the recursion has bottomed out, and
-all of the original formula's universal variables have been
+all of the original formula’s universal variables have been
 specialised.  Then the resulting formula can be rewritten to
-false (`REWRITE_RULE`'s built-in rewrites will handle all of the
+false (`REWRITE_RULE`’s built-in rewrites will handle all of the
 necessary cases).
 
 The `DPLL_UNIV` function also uses `REWR_CONV` in two places.
@@ -342,10 +342,10 @@ where the individual variables $x_i$ of the first formula are
 replaced by calls to the $v$ function $v(i)$, and there is just
 one quantified variable, $v$.  This variation will not affect
 the operation of the proof sketched above.  And as long as we
-don't require literals to be variables or their negations, but
+don’t require literals to be variables or their negations, but
 also allow them to be terms of the form $v(i)$ and $\neg v(i)$
 as well, then the action of the DPLL procedure on the formula
-$\varphi'$ won't be affected either.
+$\varphi'$ won’t be affected either.
 
 Unfortunately for uniformity, in simple cases, the definitional
 CNF conversion functions may not result in any existential
@@ -382,9 +382,9 @@ the identity function, `I`:
 
 where we have still to implement the core DPLL procedure (called
 `CoreDPLL` above).  The above code uses `REWR_CONV` with the
-`IMP_F_EQ_F` theorem to affect two of the proof's
+`IMP_F_EQ_F` theorem to affect two of the proof’s
 transformations.  The `GSYM` function is used to flip the
-orientation of a theorem's top-level equalities.  Finally, the
+orientation of a theorem’s top-level equalities.  Finally, the
 `FORALL_IMP_CONV` conversion takes a term of the form
 
 $$\forall x.\;P(x) \Rightarrow Q$$
@@ -424,7 +424,7 @@ or $v = \mathtt{F}$.
 This suggests that a natural representation for our program
 state is a theorem: the hypotheses will represent the
 assignment, and the conclusion can be the current formula.  Of
-course, HOL theorems can't just be wished into existence.  In
+course, HOL theorems can’t just be wished into existence.  In
 this case, we can make everything sound by also assuming the
 initial formula.  Thus, when we begin our initial state will be
 $\phi\vdash\phi$.  After splitting on variable $v$, we will
@@ -453,7 +453,7 @@ The `casesplit` function is thus:
 ```
 
 A case-split can result in a formula that has been rewritten all
-the way to true or false.  These are the recursion's base cases.
+the way to true or false.  These are the recursion’s base cases.
 If the formula has been rewritten to true, then we have found a
 satisfying assignment, one that is now stored for us in the
 hypotheses of the theorem itself.  The following function,
@@ -678,7 +678,7 @@ built-in `TAUT_PROVE` function works in less than a hundredth of
 a second, by using an external tool to generate the proof of
 unsatisfiability, and then translating that proof back into HOL.)
 
-## Extending our Procedure's Applicability
+## Extending our Procedure’s Applicability
 
 \label{sec:dpll-applicability-extension}
 
@@ -693,10 +693,10 @@ tool that can be applied to many more goals.
 **Relaxing the Quantification Requirement.**
 The first step is to allow formulas that are not closed.  In
 order to hand on a formula that *is* closed to `DPLL_UNIV`, we
-can simply generalise over the formula's free variables.  If
+can simply generalise over the formula’s free variables.  If
 `DPLL_UNIV` then says that the new, ground formula is true, then
 so too will be the original.  On the other hand, if `DPLL_UNIV`
-says that the ground formula is false, then we can't conclude
+says that the ground formula is false, then we can’t conclude
 anything further and will have to raise an exception.
 
 Code implementing this is shown below:
@@ -741,7 +741,7 @@ not the constants true or false.
      else HOLset.add(acc, t)
 ```
 
-Note that we haven't explicitly attempted to pull apart boolean
+Note that we haven’t explicitly attempted to pull apart boolean
 negations (which one might do with `dest_neg`).  This is because
 `dest_imp` also destructs terms `~p`, returning `p` and `F` as
 the antecedent and conclusion.  We have also used a function
