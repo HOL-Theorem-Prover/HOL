@@ -71,6 +71,7 @@ is [in the HOL4 repository](https://github.com/HOL-Theorem-Prover/HOL/tree/nfa-d
 It starts
 
 >>__ load "dep_rewrite";
+>>__ open pred_setTheory listTheory dep_rewrite
 <!-- tag it as repl, though there are no >>s present in order to get the nice rendering it
      as something you might type into HOL.
 -->
@@ -350,7 +351,7 @@ A classic result of computer science theory is that the languages
 recognized by DFAs are equal to the languages recognized by NFAs. This
 was first proved by \citet{DBLP:journals/ibmrd/RabinS59}. The *subset
 construction* forms the backbone of their proof; it works by
-translating an NFA into an "equivalent" DFA. The key insight in the
+translating an NFA into an “equivalent” DFA. The key insight in the
 construction is to make a state of the constructed DFA embody the
 states the NFA could possibly be in at a particular stage of
 processing the input word. The idea is conceptually appealing but it
@@ -378,10 +379,10 @@ distinctive aspect of the HOL logic, namely the *Hilbert Choice*
 operator.
 
 The Hilbert choice operator, written `@x. P x`, is syntax for
-expressing the notion "pick an *x* having property *P*".  (The Hilbert
+expressing the notion “pick an *x* having property *P*”.  (The Hilbert
 choice operator is also called the *Select* operator or also the
 *Indefinite Description* operator.) The Choice operator is a way to
-form a term---intended to have a given property---in a context where
+form a term—intended to have a given property—in a context where
 the property may not in fact hold. The expectation is that, in a
 later, richer, context, the property will hold, and then the term can
 be reasoned with.
@@ -392,36 +393,44 @@ by picking a function `f` that is a bijection from the powerset `POW
 N.Q` of the states of `N` to a suitable set of numbers.
 (Note: `count n = {m | m < n}`.)
 
+```repl
+>> Definition encode_def:
+     encode (N:'a nfa) = @f. ∃b. BIJ f (POW N.Q) (count b)
+   End
 ```
-Definition encode_def:
-  encode N = @f. ∃b. BIJ f (POW N.Q) (count b)
-End
-```
+
+> [!NOTE]
+> We use the explicit type annotation `'a nfa` for parameter `N`
+> because the definition is ambiguous: when we write `N.Q` the parsing
+> process has to guess whether we mean `N` to be an NFA or a DFA (both
+> types have `Q` fields). If we leave the annotation out, we get an
+> alarming message about overload resolution and the system picks the
+> more recent possibility (NFA wins *vs* DFA).
 
 In general such an `f` doesn't exist. (Why?) But it does if `N` is a
 wellformed NFA, since then `N.Q` is finite and so the powerset of
 states is finite. But before we get to that reasoning we are also able
 to define the decoder function as the left inverse to the encoder:
 
-```
-Definition decode_def:
-  decode N = LINV (encode N) (POW N.Q)
-End
+```repl
+>> Definition decode_def:
+    decode N = LINV (encode N) (POW N.Q)
+   End
 ```
 
 We now create a context in which an encoder exists, and then our
 desired property has a compact proof:
 
-```
-Theorem codec:
-  wf_nfa N ∧ s ⊆ N.Q ⇒ decode N (encode N s) = s
-Proof
-  strip_tac >> simp [decode_def,encode_def] >>
-  SELECT_ELIM_TAC >> rw []
-  >- metis_tac [FINITE_BIJ_COUNT, BIJ_SYM, wf_nfa_def, FINITE_POW] >>
-  rename1 ‘BIJ f _ _’ >>
-  irule LINV_DEF >> metis_tac [IN_POW,BIJ_DEF]
-QED
+```repl
+>> Theorem codec:
+     wf_nfa N ∧ s ⊆ N.Q ⇒ decode N (encode N s) = s
+   Proof
+     strip_tac >> simp [decode_def,encode_def] >>
+     SELECT_ELIM_TAC >> rw []
+     >- metis_tac [FINITE_BIJ_COUNT, BIJ_SYM, wf_nfa_def, FINITE_POW] >>
+     rename1 ‘BIJ f _ _’ >>
+     irule LINV_DEF >> metis_tac [IN_POW,BIJ_DEF]
+   QED
 ```
 
 We will look at this proof in detail.
@@ -430,56 +439,47 @@ We will look at this proof in detail.
 
 \label{sec:automata-hilberts-choice}
 
+>>__ g `wf_nfa N /\ s ⊆ N.Q ⇒ decode N (encode N s) = s
+
 To the initial goal we apply `strip_tac` which yields the goal
 
-```
-    0.  wf_nfa N
-    1.  s ⊆ N.Q
-   ------------------------------------
-        decode N (encode N s) = s
+```repl
+##linecount_limit 4 _
+>>- e strip_tac
+##poplinecount_limit
 ```
 
 We bravely expand the definitions of both encoder and decoder:
 
-```
-  simp [decode_def,encode_def]
+```repl
+##eval[tac]  simp [decode_def,encode_def]
 ```
 
 only to be confronted by a horrible-looking goal:
 
-```
-    0.  wf_nfa N
-    1.  s ⊆ N.Q
-   ------------------------------------
-        LINV (@f. ∃b. BIJ f (POW N.Q) (count b)) (POW N.Q)
-          ((@f. ∃b. BIJ f (POW N.Q) (count b)) s) =
-        s
+```repl
+>>- e tac
 ```
 
 The definition of `encode` has been expanded twice, so we get two
-copies of the "choice" term. Although this looks daunting, there is a
+copies of the “choice” term. Although this looks daunting, there is a
 useful tactic for goals with Hilbert choice terms:
 
-```
-  SELECT_ELIM_TAC
+```repl
+##eval[tac]  SELECT_ELIM_TAC
 ```
 
 application of which generates a much nicer goal:
 
-```
-    0.  wf_nfa N
-    1.  s ⊆ N.Q
-   ------------------------------------
-        (∃x b. BIJ x (POW N.Q) (count b)) ∧
-        ∀x. (∃b. BIJ x (POW N.Q) (count b)) ⇒ LINV x (POW N.Q) (x s) = s
+```repl
+>>- e tac
 ```
 
 What has happened? We can make sense of it by looking at the theorem
 that `SELECT_ELIM_TAC` automates:
 
-```
-  > SELECT_ELIM_THM;
-  val it = ⊢ ∀P Q. (∃x. P x) ∧ (∀x. P x ⇒ Q x) ⇒ Q ($@ P): thm
+```repl
+>> SELECT_ELIM_THM;
 ```
 
 This effectively reduces reasoning that a choice term `@x. P x` has
@@ -492,23 +492,15 @@ present:
 
 Returning to the proof, we split into two goals:
 
-```
-  rw []
+```repl
+##eval[tac]  rw []
 ```
 
 This gives
 
-```
-    0.  wf_nfa N
-    1.  s ⊆ N.Q
-    2.  BIJ x (POW N.Q) (count b)
-   ------------------------------------
-        LINV x (POW N.Q) (x s) = s
-
-    0.  wf_nfa N
-    1.  s ⊆ N.Q
-   ------------------------------------
-        ∃x b. BIJ x (POW N.Q) (count b)
+```repl
+>>__ set_trace "Goalstack.howmany_printed_subgoals" 2
+>>- e tac
 ```
 
 The lower goal goes first. We now search for any theorem that could
@@ -518,66 +510,37 @@ search for any theorem stored under a name including both `BIJ` and
 case-insensitive. (The middle `~` symbol means that order is not
 relevant.) There are 4 results returned:
 
-```
-pred_setTheory.BIJ_NUM_COUNTABLE (THEOREM)
-------------------------------------------
-⊢ ∀s. (∃f. BIJ f 𝕌(:num) s) ⇒ countable s
-[$(HOLDIR)/src/pred_set/src/pred_setScript.sml:8710]
-
-
-pred_setTheory.COUNTABLE_ALT_BIJ (THEOREM)
-------------------------------------------
-⊢ ∀s. countable s ⇔ FINITE s ∨ BIJ (enumerate s) 𝕌(:num) s
-[$(HOLDIR)/src/pred_set/src/pred_setScript.sml:8728]
-
-
-pred_setTheory.FINITE_BIJ_COUNT (THEOREM)
------------------------------------------
-⊢ ∀s. FINITE s ⇒ ∃f b. BIJ f (count b) s
-[$(HOLDIR)/src/pred_set/src/pred_setScript.sml:4631]
-
-
-pred_setTheory.FINITE_BIJ_COUNT_EQ (THEOREM)
---------------------------------------------
-⊢ ∀s. FINITE s ⇔ ∃c n. BIJ c (count n) s
-[$(HOLDIR)/src/pred_set/src/pred_setScript.sml:4613]
+```repl
+>>- Hol_pp.print_find "bij~count"
 ```
 
 The last two are both usable. Let's work with `FINITE_BIJ_COUNT`.  One
-can reason as follows: "if `POW N.Q` is finite the theorem gives me a
+can reason as follows: “if `POW N.Q` is finite the theorem gives me a
 bijection `f` from a `count` set to it. But I actually need a
-bijection in the other direction, which I can get via `BIJ_SYM`". The
+bijection in the other direction, which I can get via `BIJ_SYM`”. The
 details of this become tedious (try it) but a call to `metis_tac`
 automates the proof:
 
-```
-  metis_tac [FINITE_BIJ_COUNT, BIJ_SYM, wf_nfa_def, FINITE_POW]
+```repl
+##eval[tac]  metis_tac [FINITE_BIJ_COUNT, BIJ_SYM, wf_nfa_def, FINITE_POW]
 ```
 
 The first conjunct is done. This leaves the goal
 
-```
-    0.  wf_nfa N
-    1.  s ⊆ N.Q
-    2.  BIJ x (POW N.Q) (count b)
-   ------------------------------------
-        LINV x (POW N.Q) (x s) = s
+```repl
+>>- e tac
 ```
 
 We can rename `x` to the more evocative `f` by giving a pattern:
 
-```
-  rename1 ‘BIJ f _ _’
+```repl
+##eval[tac]  rename1 ‘BIJ f _ _’
 ```
 
 This gives
 
-```
-    0.  wf_nfa N
-    1.  s ⊆ N.Q
-    2.  BIJ f (POW N.Q) (count b)
-   ------------------------------------
-        LINV f (POW N.Q) (f s) = s
+```repl
+>>- e tac
 ```
 
 A search with the pattern `LINV _ _ _ = _` finds two matching
@@ -592,47 +555,29 @@ pred_setTheory.LINV_DEF (THEOREM)
 
 Backchaining with this theorem
 
-```
-  irule LINV_DEF
+```repl
+##eval[tac]  irule LINV_DEF
 ```
 
 we obtain the goal
 
-```
-    0.  wf_nfa N
-    1.  s ⊆ N.Q
-    2.  BIJ f (POW N.Q) (count b)
-   ------------------------------------
-        s ∈ POW N.Q ∧ ∃t. INJ f (POW N.Q) t
+```repl
+>>- e tac
 ```
 
 Both conjuncts of this are direct consequences of the hypotheses
 and existing facts so we appeal to `metis_tac`:
 
-```
-  metis_tac [IN_POW,BIJ_DEF]
+```repl
+##eval[tac]  metis_tac [IN_POW,BIJ_DEF]
 ```
 
 This succeeds, `metis_tac` printing some progress information as it
 works, and then the proof unwinds, proving intermediate goals back to
 the original goal.
 
-```
-metis: r[+0+10]+0+0+0+0+0+0+0+0+1#
-r[+0+10]+0+0+0+0+0+1#
-
-Goal proved.
- [...] ⊢ s ∈ POW N.Q ∧ ∃t. INJ f (POW N.Q) t
-
-Goal proved.
- [...] ⊢ LINV f (POW N.Q) (f s) = s
-
-Goal proved.
- [...] ⊢ LINV x (POW N.Q) (x s) = s
-val it =
-   Initial goal proved.
-   ⊢ wf_nfa N ∧ s ⊆ N.Q ⇒ decode N (encode N s) = s: proof
->
+```repl
+>>- e tac
 ```
 
 That finishes the proof.
@@ -640,14 +585,14 @@ That finishes the proof.
 > [!NOTE]
 > Our usage of the Select operator is motivated by wanting a compact
 > formulation of encoding/decoding free of algorithmic details. In HOL
-> we can simply "pick a suitable bijection" and quickly derive the
+> we can simply “pick a suitable bijection” and quickly derive the
 > invertibility result needed. It is, however, non-constructive: a
 > computable implementation would require a concrete datatype such as
 > lists or trees to represent state sets.
 
 > [!NOTE]
-> Our usage of Select in this example amounts to a kind of "eliminable
-> but convenient" shorthand for some messier reasoning. However the
+> Our usage of Select in this example amounts to a kind of “eliminable
+> but convenient” shorthand for some messier reasoning. However the
 > Select operator can do much more: the full power of the Axiom of
 > Choice is available in HOL in the form of the following axiom:
 >
@@ -667,25 +612,34 @@ That finishes the proof.
 We first establish `enc` and `dec` as abbreviations for `encode N` and
 `decode N`, using the following declarations:
 
-```
-Overload "enc"[local] = “encode N”
-Overload "dec"[local] = “decode N”;
+```repl
+>> Overload "enc"[local] = “encode N”
+   Overload "dec"[local] = “decode N”;
 ```
 
 The subset construction maps an NFA structure to a DFA structure,
 using the encoder to collapse subsets to states and the decoder to
 recover subsets from states.
 
-```
-Definition nfa_to_dfa_def:
-  nfa_to_dfa N : 'a dfa =
-    <| Q       := {enc s | s | s ⊆ N.Q};
-       Sigma   := N.Sigma;
-       delta   := λqs a. enc (Delta N (dec qs) a);
-       initial := enc N.initial;
-       final   := {enc s | s | s ⊆ N.Q ∧ s ∩ N.final ≠ ∅}
-    |>
-End
+```repl
+>> Definition nfa_to_dfa_def:
+      nfa_to_dfa N : 'a dfa =
+          <| Q       := {enc s | s | s ⊆ N.Q};
+             Sigma   := N.Sigma;
+             delta   := λqs a. enc (Delta N (dec qs) a);
+             initial := enc N.initial;
+             final   := {enc s | s | s ⊆ N.Q ∧ s ∩ N.final ≠ ∅}
+          |>
+   End
+>>__ Theorem nfa_to_dfa_rwts[simp]:
+       (nfa_to_dfa N : 'a dfa).Q = {enc s | s | s ⊆ N.Q} ∧
+       (nfa_to_dfa N).Sigma = N.Sigma ∧
+       (nfa_to_dfa N).delta q a = enc (Delta N (dec q) a) ∧
+       (nfa_to_dfa N).initial = enc N.initial ∧
+       (nfa_to_dfa N).final = {enc s | s | s ⊆ N.Q ∧ s ∩ N.final ≠ ∅}
+     Proof
+      rw [nfa_to_dfa_def]
+     QED
 ```
 
 Thus the set of states of the constructed DFA is the set of encodings
@@ -702,7 +656,7 @@ encodes the result.
 
 The key lemma about the subset construction is the following:
 
-```
+```repl
 Theorem main_lemma:
   wf_nfa (N:'a nfa) ⇒
   ∀w qset.
@@ -718,17 +672,17 @@ QED
 ```
 
 This expresses a commutative diagram, stating that evaluating an NFA
-on its input---and encoding the resulting set of states---is equal to
+on its input—and encoding the resulting set of states—is equal to
 the result of evaluating the DFA constructed from the NFA. The proof
 is a quite straightforward induction on the input word `w`.  Things
 work out well since the pattern of recursion of both `nfa_eval` and
 `dfa_eval` is the same. The initial goal is
 
-```
-  wf_nfa N ⇒
-  ∀w qset.
-    EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
-    dfa_eval (nfa_to_dfa N) (enc qset) w = enc (nfa_eval N qset w)
+```repl
+##parsetm wf_nfa N ⇒
+          ∀w qset.
+            EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
+            dfa_eval (nfa_to_dfa N) (enc qset) w = enc (nfa_eval N qset w)
 ```
 
 It's important that `qset` be universally quantified since that will be
@@ -736,25 +690,17 @@ important in applying the inductive hypothesis. The proof starts by exposing the
 variable to induct on (`w`), applying the induction tactic, and simplifying with the
 definitions of `dfa_eval` and `nfa_eval`:
 
-```
-  disch_tac >> Induct >>
-  rw [nfa_eval_def,dfa_eval_def]
+>>__ drop_all();g `wf_nfa (N:'a nfa) ⇒ ∀w qset. EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒ dfa_eval (nfa_to_dfa N) (enc qset) w = enc (nfa_eval N qset w)`;
+```repl
+##eval[tac] disch_tac >> Induct >>
+            rw [nfa_eval_def,dfa_eval_def]
 ```
 
 The base case of the induction gets automatically proved, and we are
 left with the inductive case:
 
-```
-    0.  wf_nfa N
-    1.  ∀qset.
-          EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
-          dfa_eval (nfa_to_dfa N) (enc qset) w = enc (nfa_eval N qset w)
-    2.  h ∈ N.Sigma
-    3.  EVERY (λa. a ∈ N.Sigma) w
-    4.  qset ⊆ N.Q
-   ------------------------------------
-        dfa_eval (nfa_to_dfa N) (enc (Delta N (dec (enc qset)) h)) w =
-        enc (nfa_eval N (Delta N qset h) w)
+```repl
+>>- e tac
 ```
 
 It is now time to use the inductive hypothesis (assumption `1`).  The
@@ -792,8 +738,8 @@ but the second is more stubborn.
 In order to rewrite with the induction hypothesis (assumption `1`)
 we invoke a dependent rewrite tactic
 
-```
-  DEP_ASM_REWRITE_TAC []
+```repl
+##eval[tac] DEP_ASM_REWRITE_TAC []
 ```
 
 which includes the assumptions of the goal as possible rewrite
@@ -802,18 +748,8 @@ goal that is a conjunction where the first conjunct is the stubborn
 side-condition on the IH and the second conjunct is the transformed
 goal.
 
-```
-    0.  wf_nfa N
-    1.  ∀qset.
-          EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
-          dfa_eval (nfa_to_dfa N) (enc qset) w = enc (nfa_eval N qset w)
-    2.  h ∈ N.Sigma
-    3.  EVERY (λa. a ∈ N.Sigma) w
-    4.  qset ⊆ N.Q
-   ------------------------------------
-        Delta N (dec (enc qset)) h ⊆ N.Q ∧
-        enc (nfa_eval N (Delta N (dec (enc qset)) h) w) =
-        enc (nfa_eval N (Delta N qset h) w)
+```repl
+>>- e tac
 ```
 
 Inspecting this goal, one can see that the second conjunct is *nearly* an
@@ -821,20 +757,14 @@ instance of reflexivity. All it would take is for `dec (enc qset)` to
 rewrite to `qset`, *i.e.*, simplify with `codec` from
 above. In fact `codec` will simplify both conjuncts. So we apply
 
-```
-  DEP_REWRITE_TAC [codec]
+```repl
+##eval[tac] DEP_REWRITE_TAC [codec]
 ```
 
 obtaining
 
-```
-    0.  wf_nfa N
-    1.  ... elided ...
-    2.  h ∈ N.Sigma
-    3.  EVERY (λa. a ∈ N.Sigma) w
-    4.  qset ⊆ N.Q
-   ------------------------------------
-        (wf_nfa N ∧ qset ⊆ N.Q) ∧ Delta N qset h ⊆ N.Q
+```repl
+>>- e tac
 ```
 
 Now it really only remains to show `Delta qset h ⊆ N.Q.` This raises a
@@ -847,42 +777,32 @@ conclude the proof with a brutal but effective use of automation:
 
 A *neat* person might separately create a new theorem for this subproof:
 
-```
-Theorem Delta_subset:
-  wf_nfa N ∧ h ∈ N.Sigma ∧ qset ⊆ N.Q
-  ⇒ Delta N qset h ⊆ N.Q
-Proof
-  rw [SUBSET_DEF,IN_Delta] >>
-  metis_tac [wf_nfa_def,SUBSET_DEF]
-QED
+```repl
+>>__ Theorem IN_Delta:
+       q2 ∈ Delta N qset a <=> ∃q1. q1 ∈ qset ∧ q2 ∈ N.delta q1 a
+     Proof
+       simp [Delta_def] >> metis_tac[]
+     QED
+>> Theorem Delta_subset:
+     wf_nfa N ∧ h ∈ N.Sigma ∧ qset ⊆ N.Q
+     ⇒ Delta N qset h ⊆ N.Q
+   Proof
+     rw [SUBSET_DEF,IN_Delta] >>
+     metis_tac [wf_nfa_def,SUBSET_DEF]
+   QED
 ```
 
 and then use
 
-```
-  metis_tac [Delta_subset]
+```repl
+##eval[tac] metis_tac [Delta_subset]
 ```
 
 to finish the proof. It's a matter of personal preference (we chose
 "neat"):
 
-```
-metis: r[+0+11]+0+0+0+0+0+0+0+0+0+1+0+1#
-
-Goal proved.
- [.....] ⊢ (wf_nfa N ∧ qset ⊆ N.Q) ∧ Delta N qset h ⊆ N.Q
-
-Goal proved.
- [.....]
-⊢ Delta N (dec (enc qset)) h ⊆ N.Q ∧
-  enc (nfa_eval N (Delta N (dec (enc qset)) h) w) =
-  enc (nfa_eval N (Delta N qset h) w)
-val it =
-   Initial goal proved.
-   ⊢ wf_nfa N ⇒
-     ∀w qset.
-       EVERY (λa. a ∈ N.Sigma) w ∧ qset ⊆ N.Q ⇒
-       dfa_eval (nfa_to_dfa N) (enc qset) w = enc (nfa_eval N qset w): proof
+```repl
+>>- e tac
 ```
 
 > [!NOTE]
@@ -944,7 +864,7 @@ level to use tactics, and that is what we will now explain. After
         nfa_eval N qset w = dec (dfa_eval (nfa_to_dfa N) (enc qset) w)
 ```
 
-It is time to apply `main_lemma`. There are many ways to "apply" a
+It is time to apply `main_lemma`. There are many ways to “apply” a
 lemma, *e.g.*, by using it to simplify the goal, but here that's not
 really possible. Instead we are going to transform the conclusion of
 `main_lemma` and use that to solve the goal. First we have to get
@@ -970,7 +890,7 @@ and puts the conclusion of the theorem as an antecedent to the goal:
 > This sets up a style of proof where a formula sits as the antecedent
 > to the goal and is iteratively manipulated with forward inference
 > steps until it becomes useable by other tactics. In this proof style
-> (called "theorem continuations" by its inventor Larry Paulson) a
+> (called “theorem continuations” by its inventor Larry Paulson) a
 > goal
 >
 > ```
@@ -1324,10 +1244,10 @@ steps is `irule_at`.
      first_assum (irule_at Any)
    ```
 
-   which says, roughly, "find the first assumption that first order
+   which says, roughly, “find the first assumption that first order
    unifies with one of the conjuncts underneath the existential and use
    that substitution to provide the existential witness, then remove
-   that conjunct". This results in
+   that conjunct”. This results in
 
    ```
        0.  wf_nfa N
@@ -1344,10 +1264,10 @@ steps is `irule_at`.
      irule_at Any EQ_REFL
    ```
 
-   which says, roughly, "find the first conjunct under the existential
+   which says, roughly, “find the first conjunct under the existential
    that is an instance of reflexivity, then use that substitution to
    provide the existential witness, then remove the instantiated
-   conjunct". This yields
+   conjunct”. This yields
 
    ```
        0.  wf_nfa N
@@ -1372,7 +1292,7 @@ basically done. However, frustratingly,
 
 ```
   metis_tac [nfa_eval_states,wf_nfa_def]
-````
+```
 
 will fail without providing a reason. To debug we backward chain
 with `irule`:
@@ -1547,7 +1467,7 @@ simplifications and lemma applications revealed that `metis_tac` could
 perform the bulk of the work automatically.
 
 See the Exercises and consult the theory script for discussion on
-how our "Final Result" relates to standard presentations.
+how our “Final Result” relates to standard presentations.
 
 ## Exercises
 
