@@ -96,6 +96,14 @@
                 // closest math-mode equivalent.  Used in misc.smd's
                 // Holmake grammar productions.
                 textsl: ["{\\mathit{#1}}", 1],
+                // MathJax 2.7's default \vec is a small text-accent
+                // arrow positioned at the geometric centre of the
+                // argument; for italic letters (e.g. \vec{v}) the
+                // visual centre is right of that, so the arrow ends
+                // up sitting next to rather than over the variable.
+                // \overrightarrow uses an <mover> stretchy arrow
+                // that lays over the argument correctly.
+                vec: ["{\\overrightarrow{#1}}", 1],
                 // Chapter-local LaTeX macros from Description's
                 // theories.smd.  The PDF definitions live in the
                 // {=latex} block at the top of that file; these are
