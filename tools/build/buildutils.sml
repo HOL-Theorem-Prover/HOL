@@ -996,6 +996,36 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
          if use_mdbook then "../../../Manual/book/Reference/"
          else if use_html_fallback then "../../Docfiles/HTML/"
          else ""  (* mosml: sig-pages omit per-entry hrefs *)
+
+     local
+       open Holmake_types
+       fun quietly _ = ()
+       val qdiags = {info = quietly, die = quietly, warn = quietly}
+     in
+       fun mdbook_manuals () =
+         let
+           val path = fullPath [HOLDIR, "Manual", "mdbook.mk"]
+           val (env, _, _, _) =
+               ReadHMF.diagread qdiags path (base_environment())
+         in
+           case envlist qdiags env "MANUALS" of
+             [] => die ("Couldn't find MANUALS in " ^ path)
+           | ms => ms
+         end
+
+       fun manual_uses_chapter_stems m =
+         let
+           val hmf = fullPath [HOLDIR, "Manual", m, "Holmakefile"]
+         in
+           HOLFileSys.access (hmf, [HOLFileSys.A_READ]) andalso
+           let
+             val (env, rdb, _, _) =
+                 ReadHMF.diagread qdiags hmf (base_environment())
+           in
+             isSome (get_rule_info qdiags rdb env "chapter-stems.mk")
+           end
+         end
+     end
  in
    if SYSTEML cmd_alias then ()
    else die "AliasGen --check failed: alias entries are out of sync. \
@@ -1031,41 +1061,40 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
         labels.tsv pass below doesn't either.  Stop-gap until Holmake
         learns to generate these itself. *)
      let
-       val stem_manuals = ["Description", "Tutorial"]
-       val () = print "Generating chapter-stems.mk in Description and \
-                      \Tutorial...\n"
+       val manuals = mdbook_manuals ()
+       val stem_manuals = List.filter manual_uses_chapter_stems manuals
+       val () = print ("Generating chapter-stems.mk in " ^
+                       String.concatWith ", " stem_manuals ^ "...\n")
        fun build_stems m =
          let val mdir = fullPath [HOLDIR, "Manual", m]
          in if SYSTEML [HOLMAKE, "-C", mdir, "chapter-stems.mk"] then ()
             else die ("Couldn't build Manual/" ^ m ^ "/chapter-stems.mk")
          end
+       val () = List.app build_stems stem_manuals
      in
-       List.app build_stems stem_manuals
-     end ;
-     if use_mdbook then
-       let
-         val refdir = fullPath [HOLDIR, "Manual", "Reference"]
-         (* The Reference mdbook target depends on each sibling
-            manual's labels.tsv (for cross-book \ref{Book:label}
-            resolution -- see Manual/mdbook.mk SIBLING_LABELS).
-            Build those first.  Hardcoding the list mirrors
-            MANUALS in mdbook.mk; revisit if a manual is added. *)
-         val sibling_manuals = ["Description", "Tutorial",
-                                "Interaction-emacs"]
-         val () = print ("Building sibling labels for Reference mdbook...\n")
-         fun build_labels m =
-           let val mdir = fullPath [HOLDIR, "Manual", m]
-           in if SYSTEML [HOLMAKE, "-C", mdir, "labels.tsv"] then ()
-              else die ("Couldn't build Manual/" ^ m ^ "/labels.tsv")
-           end
-         val () = List.app build_labels sibling_manuals
-         val () = print ("Building Reference mdbook (mdbook detected \
-                         \in PATH)...\n")
-       in
-         if SYSTEML [HOLMAKE, "-C", refdir, "mdbook"] then ()
-         else die "Reference mdbook build failed"
-       end
-     else ()
+       if use_mdbook then
+         let
+           val refdir = fullPath [HOLDIR, "Manual", "Reference"]
+           (* The Reference mdbook target depends on each sibling
+              manual's labels.tsv (for cross-book \ref{Book:label}
+              resolution -- see Manual/mdbook.mk SIBLING_LABELS).
+              Build those first. *)
+           val sibling_manuals = List.filter (fn m => m <> "Reference") manuals
+           val () = print "Building sibling labels for Reference mdbook...\n"
+           fun build_labels m =
+             let val mdir = fullPath [HOLDIR, "Manual", m]
+             in if SYSTEML [HOLMAKE, "-C", mdir, "labels.tsv"] then ()
+                else die ("Couldn't build Manual/" ^ m ^ "/labels.tsv")
+             end
+           val () = List.app build_labels sibling_manuals
+           val () = print "Building Reference mdbook (mdbook detected \
+                          \in PATH)...\n"
+         in
+           if SYSTEML [HOLMAKE, "-C", refdir, "mdbook"] then ()
+           else die "Reference mdbook build failed"
+         end
+       else ()
+     end
    ) else ()
  ;
    let

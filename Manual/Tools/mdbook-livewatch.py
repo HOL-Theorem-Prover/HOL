@@ -96,10 +96,14 @@ def refix_searchindex(book_manual_dir):
     link.symlink_to(hits[0].name)
 
 
-# Fallback manual list when --manuals isn't passed; the canonical source is
-# Manual/mdbook.mk's MANUALS, which the Holmakefile target forwards.
-DEFAULT_MANUALS = ["Description", "Tutorial", "Reference",
-                   "Interaction-emacs", "Logic", "Developers"]
+def read_manuals_mk(repo):
+    """Return the MANUALS list declared in Manual/mdbook.mk."""
+    path = repo / "Manual" / "mdbook.mk"
+    for raw in path.read_text().splitlines():
+        tokens = raw.split("#", 1)[0].split()
+        if tokens[:2] == ["MANUALS", "="]:
+            return tokens[2:]
+    sys.exit(f"Couldn't find MANUALS in {path}")
 
 
 def build_manifest(repo, book_dir, manual_names):
@@ -325,7 +329,7 @@ def main():
     if not (book_dir / "index.html").is_file():
         sys.exit(f"{book_dir}/index.html missing -- run `Holmake mdbook` first.")
 
-    names = args.manuals.split() or DEFAULT_MANUALS
+    names = args.manuals.split() or read_manuals_mk(repo)
     manuals, theme_watch = build_manifest(repo, book_dir, names)
 
     t = threading.Thread(target=watcher,
