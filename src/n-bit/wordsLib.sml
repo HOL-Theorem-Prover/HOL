@@ -397,6 +397,9 @@ in
 end
 
 fun add_words_compset extras =
+ let val word_ty = fcpSyntax.mk_cart_type (bool,alpha)
+     val word_equality_tm = Term.inst [alpha |-> word_ty] boolSyntax.equality
+ in
   computeLib.extend_compset
    (computeLib.Extenders
       (if extras then
@@ -406,12 +409,12 @@ fun add_words_compset extras =
        else []) ::
     [computeLib.Defs thms,
      computeLib.Convs
-        ([(``words$BIT_SET : num -> num -> num set``, 2, BIT_SET_CONV),
-          (``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)] @
+        ([(wordsSyntax.bit_set_tm, 2, BIT_SET_CONV),
+          (word_equality_tm, 2, word_EQ_CONV)] @
          List.map (fn x => (x, 1, SIZES_CONV))
           [fcpSyntax.dimindex_tm, wordsSyntax.dimword_tm,
            wordsSyntax.uint_max_tm, wordsSyntax.int_min_tm,
-           wordsSyntax.int_max_tm, pred_setSyntax.finite_tm])])
+           wordsSyntax.int_max_tm, pred_setSyntax.finite_tm])]) end
 
 val () = computeLib.the_compset := add_words_compset false (!computeLib.the_compset)
 
