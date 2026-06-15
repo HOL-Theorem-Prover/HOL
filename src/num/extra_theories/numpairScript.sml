@@ -161,7 +161,7 @@ QED
 
 
 (* ----------------------------------------------------------------------
-    Numeric pair, fst and snd
+    Numeric pair, fst and snd -- Cantor's encoding
    ---------------------------------------------------------------------- *)
 
 Definition npair_def:
