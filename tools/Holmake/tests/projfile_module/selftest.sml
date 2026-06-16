@@ -44,11 +44,12 @@ val () = List.app mkdirs [
   proj ++ "excluded_dir",
   proj ++ ".hol",
   proj ++ ".git",
-  ext ++ "lib"
+  ext ++ "lib",
+  ext ++ "subWithProjectFile"
 ]
 
-(* `source_only/` deliberately has no Holmakefile -- the new semantic
-   is that directories below the project root join the project's set
+(* `source_only/` deliberately has no Holmakefile --
+   directories below the project root join the project's directory set
    regardless. *)
 val () = List.app touch [
   proj ++ "subA" ++ "Holmakefile",
@@ -59,7 +60,8 @@ val () = List.app touch [
   proj ++ ".hol" ++ "Holmakefile",
   proj ++ ".git" ++ "Holmakefile",
   ext ++ "Holmakefile",
-  ext ++ "lib" ++ "Holmakefile"
+  ext ++ "lib" ++ "Holmakefile",
+  ext ++ "subWithProjectFile" ++ "holproject.toml"
 ]
 
 val ext_rel = OS.Path.mkRelative {path = ext, relativeTo = proj}

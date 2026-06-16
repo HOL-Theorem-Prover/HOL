@@ -217,8 +217,10 @@ fun list_subdirs dir =
 
 fun discover_under start excludes =
     let
+      open OS.FileSys
       val excl_set = Binaryset.addList
                        (Binaryset.empty String.compare, excludes)
+      fun hasProjFile p = access(OS.Path.concat(p, "holproject.toml"), [A_READ])
       fun excluded p = Binaryset.member (excl_set, p)
       fun walk acc worklist =
           case worklist of
@@ -233,7 +235,8 @@ fun discover_under start excludes =
                        and `OS.Path.concat` with a name component
                        preserves canonicity). *)
                   in
-                    walk (d :: acc) (children @ ds)
+                    walk (d :: acc)
+                         (List.filter (not o hasProjFile) children @ ds)
                   end
     in
       walk [] [OS.Path.mkCanonical start]
