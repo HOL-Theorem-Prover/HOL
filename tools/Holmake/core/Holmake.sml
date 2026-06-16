@@ -2044,7 +2044,8 @@ fun clean_work() =
           outputfns = outputfns, verb = "Cleaning",
           hm = (fn _ => fn _ => fn _ => fn _ =>
                    List.app (ignore o do_clean_target) cleanTargets),
-          dirinfo = {incdirmap=idmap0, ancestors = [original_dir],
+          dirinfo = {incdirmap=idmap0,
+                     ancestors = if project_modep then [] else [original_dir],
                      visited = Binaryset.empty hmdir.compare},
           dir = original_dir,
           data = ()

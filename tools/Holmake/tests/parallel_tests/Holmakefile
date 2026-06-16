@@ -19,6 +19,7 @@ DIRNAMES = \
   theorytarget \
   commandmacros \
   doublecrnl \
+  projclean_loop \
   projfile_basic \
   projfile_holpath_override \
   projfile_open_resolution \
