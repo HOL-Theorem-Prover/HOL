@@ -20,6 +20,7 @@ DIRNAMES = \
   commandmacros \
   doublecrnl \
   projfile_basic \
+  projfile_holpath_override \
   projfile_open_resolution \
   projfile_name_clash \
   projfile_synthetic \

@@ -300,6 +300,7 @@ Unless otherwise noted, they are built by the configuration process.
     Subsequently, there needs to be a call made to initialise the database with an entry for the `HOLDIR` key.
     This is done in `Holmake` within `poly/BuildCommand.sml`, and also within `poly-init2.ML` (for interactive use).
     User-supplied entries come from `holproject.toml` files: when a project file's `name` key is set, the project root is registered under that name during `Holmake`'s upward walk for project files.
+    An optional `holpath` key overrides `name` for this registration only, leaving `name` free to serve as a human-facing project label distinct from the variable name (e.g. `name = "cakeml"` together with `holpath = "CAKEMLDIR"`).
     Conflicting registrations (same name pointing at different directories) are reported as fatal startup errors.
 
 `tools/sequences`

@@ -140,25 +140,31 @@ fun files_upward_in_hierarchy gen_extras {diag} {filenames, starter_dirs, skip} 
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1,p2)
 
-(* Pull the `name` key out of a holproject.toml's contents.  NONE means
-   the file has no `name` (no holpathdb registration contributed); SOME nm
-   means register `nm` at the file's directory.  Malformed TOML or a
-   non-string `name` raises Fail with a message naming the offending
-   path. *)
+(* Pull the holpath vname out of a holproject.toml's contents.  An
+   optional `holpath` key takes precedence; otherwise we fall back to
+   `name`.  This lets a project keep a human-facing `name` (e.g.
+   "cakeml") distinct from the variable name used in HOL paths (e.g.
+   "CAKEMLDIR").  NONE means neither key is set (no holpathdb
+   registration contributed).  Malformed TOML, or either key present
+   with a non-string value, raises Fail naming the offending path. *)
 fun extract_from_toml dir contents =
   let
+    val projfile = dir ++ "holproject.toml"
     val tbl = TOML.fromString contents
               handle e =>
-                raise Fail ("Malformed holproject.toml at " ^
-                            (dir ++ "holproject.toml") ^ ": " ^
-                            General.exnMessage e)
+                raise Fail ("Malformed holproject.toml at " ^ projfile ^
+                            ": " ^ General.exnMessage e)
+    fun lookup_string key =
+        case TOML.lookupInTable tbl [key] of
+            NONE => NONE
+          | SOME (TOMLvalue_dtype.STRING s) => SOME s
+          | SOME _ =>
+              raise Fail ("holproject.toml at " ^ projfile ^
+                          ": `" ^ key ^ "` must be a string")
   in
-    case TOML.lookupInTable tbl ["name"] of
-        NONE => NONE
-      | SOME (TOMLvalue_dtype.STRING s) => SOME s
-      | SOME _ =>
-          raise Fail ("holproject.toml at " ^ (dir ++ "holproject.toml") ^
-                      ": `name` must be a string")
+    case lookup_string "holpath" of
+        SOME s => SOME s
+      | NONE => lookup_string "name"
   end
 
 fun extract_from_holpath_file s =
