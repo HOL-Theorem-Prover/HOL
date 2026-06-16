@@ -57,11 +57,19 @@ fun strip s =
         val t = Substring.dropl Char.isSpace t
     in Substring.string t end
 
+(* getDir resolves symlinks (e.g. /var/tmp -> /private/var/tmp on
+   macOS), matching how Holmake's upward walk records project roots.
+   Without the roundtrip, comparisons against the tmpName-derived
+   string spuriously fail on platforms with symlinked tmp dirs. *)
 fun mk_root () =
     let val tmpname = OS.FileSys.tmpName ()
         val _ = OS.FileSys.remove tmpname handle OS.SysErr _ => ()
         val _ = OS.FileSys.mkDir tmpname
-    in tmpname end
+        val saved = OS.FileSys.getDir()
+        val _ = OS.FileSys.chDir tmpname
+        val resolved = OS.FileSys.getDir()
+        val _ = OS.FileSys.chDir saved
+    in resolved end
 
 (* ----------------------------------------------------------------------
    Sub-test 1: holpath overrides name.
