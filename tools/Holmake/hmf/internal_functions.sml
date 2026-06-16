@@ -279,7 +279,9 @@ fun which arg =
       let
         val fname = OS.Path.concat(p, arg)
       in
-        if access (fname, [A_READ, A_EXEC]) then SOME fname else NONE
+        if access (fname, [A_READ, A_EXEC]) andalso not (isDir fname) then
+          SOME fname
+        else NONE
       end
     fun smash NONE = "" | smash (SOME s) = s
   in
