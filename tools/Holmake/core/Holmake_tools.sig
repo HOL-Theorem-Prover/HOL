@@ -238,5 +238,12 @@ sig
   val forces_update_of : string * string -> bool
   val depforces_update_of : dep * dep -> bool
 
+  (* Scan-time per-directory listing cache.  See implementation in
+     Holmake_tools.sml.  [cached_exists] / [cached_tgtexists] answer
+     existence from a memoised set; [with_dircache] scopes the cache
+     so it cannot outlive the scan. *)
+  val cached_exists    : string -> bool
+  val cached_tgtexists : dep -> bool
+  val with_dircache    : (unit -> 'a) -> 'a
 
 end

@@ -844,6 +844,60 @@ end (* struct *)
 type dep = hm_target.t
 val tgt_toString = hm_target.toString
 
+(* Scan-time directory listing cache: turn the include-path
+   "probe each candidate dir with `access' per file" pattern into a
+   per-directory set-membership test.  The set is what
+   `access(_,[A_READ])' would succeed on under [absdir] -- entries of
+   the directory itself UNION entries of its .hol/objs/ subdirectory
+   (the HFS_NameMunge fakearc).  Building it through
+   read_files_with_objs makes membership mirror `access' exactly and
+   reuses mosml's flat-listing flavour without ifdefs.
+
+   Lifetime: scan-only.  The build phase creates files
+   (.uo/.ui/Theory.dat, ...) that would falsify a cached listing;
+   [with_dircache] clears the stash both on entry and on exit so it
+   cannot leak across the scan/build boundary. *)
+local
+  val empty_listing : string Binaryset.set = Binaryset.empty String.compare
+  fun raw_dir_listing absdir =
+      HOLFileSys.read_files_with_objs
+        {dirname = absdir} (fn _ => true)
+        (fn {base, ...} => fn s => Binaryset.add(s, base))
+        empty_listing
+      handle HOLFileSys.DirNotFound => empty_listing
+           | OS.SysErr _            => empty_listing
+  val stash : (string, string Binaryset.set) Binarymap.dict ref =
+      ref (Binarymap.mkDict String.compare)
+  fun clear_dir_cache () =
+      stash := Binarymap.mkDict String.compare
+  fun dir_listing absdir =
+      case Binarymap.peek (!stash, absdir) of
+          SOME s => s
+        | NONE   =>
+          let val s = raw_dir_listing absdir in
+            stash := Binarymap.insert (!stash, absdir, s); s
+          end
+in
+  fun cached_exists path =
+      let
+        val {dir, file} = OS.Path.splitDirFile path
+        val absdir =
+            if dir <> "" andalso OS.Path.isAbsolute dir then
+              OS.Path.mkCanonical dir
+            else
+              OS.Path.mkCanonical (
+                OS.Path.mkAbsolute
+                  {path = if dir = "" then "." else dir,
+                   relativeTo = OS.FileSys.getDir ()})
+      in
+        Binaryset.member (dir_listing absdir, file)
+      end
+  fun cached_tgtexists d = cached_exists (hm_target.toString d)
+  fun with_dircache f =
+      (clear_dir_cache ();
+       let val r = f () in clear_dir_cache (); r end)
+end
+
 (* dependency analysis *)
 exception HolDepFailed
 fun runholdep {ofs, extras, includes, arg, destination} = let
@@ -979,7 +1033,7 @@ in
       else
         []
     fun sigcheck x =
-        mapFind (fn tgt => tgtexists_readable tgt andalso
+        mapFind (fn tgt => cached_tgtexists tgt andalso
                            List.all (fn tgt' => tgt' <> tgt) phase1)
                 (fn d => filestr_to_tgt (OS.Path.concat(d, fromFile (SIG x))))
                 ("."::allincs)

@@ -996,7 +996,7 @@ fun pattern_rule_info t =
         let
           val (env, rules, prs, _) = get_hmf()
           fun can_make dep_s =
-              exists_readable dep_s orelse
+              cached_exists dep_s orelse
               isSome (Binarymap.peek (rules, filestr_to_tgt dep_s))
         in
           case match_pattern_rules hmf_diags can_make env prs tgt_s of
@@ -1314,7 +1314,7 @@ fun read_foreign_depfile tgt =
                     hmdir.extendp {base = hmdir.curdir(),
                                    extension = real_srcdir}
               in
-                if exists_readable depfile then
+                if cached_exists depfile then
                   get_dependencies_from_file_in_dir
                     foreign_hmdir depfile
                 else []
@@ -1460,12 +1460,12 @@ let
               else
                 (case bic of
                      BIC_BuildScript thy =>
-                     if exists_readable fullpath_s andalso
+                     if cached_exists fullpath_s andalso
                         null unbuilt_deps
                      then stamp_matches g2 thy
                      else (false, g2)
                    | BIC_Compile =>
-                     if exists_readable fullpath_s andalso
+                     if cached_exists fullpath_s andalso
                         null unbuilt_deps andalso
                         theory_dat_succeeded ()
                      then (true, g2)
@@ -1494,7 +1494,7 @@ let
             NONE => (
               diag (fn _ => "No extra info/rule for target " ^ target_s);
               ({target = tgt, seqnum = 0, phony = false,
-                status = if exists_readable target_s then Succeeded
+                status = if cached_exists target_s then Succeeded
                          else Failed{needed=false},
                 command = NoCmd, dir = rh, extra = extra,
                 mtime = hm_target.tgt_modTime tgt,
@@ -1672,7 +1672,7 @@ in
       then (
         diag (fn _ => hm_target.toString tgt ^ " appears foreign; adding placeholdir NoCmd");
         add_node {target = tgt, seqnum = 0, phony = false,
-                  status = if exists_readable fullpath_s then Succeeded
+                  status = if cached_exists fullpath_s then Succeeded
                            else Failed{needed=false},
                   dir = dir, extra = extra,
                   mtime = hm_target.tgt_modTime tgt,
@@ -1714,6 +1714,7 @@ fun extend_graph_in_dir incinfo warn dir graph =
     end
 
 fun create_complete_graph cline_incs idm =
+    with_dircache (fn () =>
     let
       val d = hmdir.curdir()
       val {data = g, incdirmap, visited, ...} =
@@ -1737,7 +1738,7 @@ fun create_complete_graph cline_incs idm =
       diag (fn _ => "Finished building complete dep graph (has " ^
                     Int.toString (HM_DepGraph.size g) ^ " nodes)");
       (g,idm_lookup incdirmap d)
-    end
+    end)
 
 fun clean_deps() =
   ( Holmake_tools.clean_depdir {depdirname = DEPDIR}
@@ -1796,6 +1797,7 @@ fun toplevel_build_graph () = create_complete_graph cline_incs idmap0
    command-line), otherwise it will be the current working directory.
 *)
 fun create_complete_graph_for_roots roots dirmode_roots idm =
+    with_dircache (fn () =>
     let
       val empty_visited = Binaryset.empty hmdir.compare
       fun for_root (root:hmdir.t, {graph, incdirmap, visited, must_build}) =
@@ -1851,7 +1853,7 @@ fun create_complete_graph_for_roots roots dirmode_roots idm =
       diag (fn _ => "Finished building complete dep graph (has " ^
                     Int.toString (HM_DepGraph.size graph) ^ " nodes)");
       (graph, must_build)
-    end
+    end)
 
 fun get_targets_recursively {incs, pres} =
     let
