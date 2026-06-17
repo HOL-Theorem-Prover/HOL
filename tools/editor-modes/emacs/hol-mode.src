@@ -1091,6 +1091,33 @@ Make-variable references are not expanded; the last assignment wins."
                (setq val (match-string 1)))
              val)))))
 
+(defun hol--executable-is-binary-p ()
+  "Non-nil when `hol-executable' is a native binary (i.e. Poly-built).
+The mosml `bin/hol' is a `#!'-prefixed shell wrapper that doesn't
+understand `heapname' or `--holstate='."
+  (and (stringp hol-executable)
+       (file-readable-p hol-executable)
+       (with-temp-buffer
+         (insert-file-contents-literally hol-executable nil 0 1)
+         (not (string= (buffer-string) "#")))))
+
+(defun hol--default-heap (dir)
+  "Return absolute path of the heap `bin/hol' would load by default in DIR.
+Delegates to `hol heapname' so the answer matches `bin/hol's own
+resolution exactly.  Returns nil when emacs can't ask (mosml wrapper,
+missing executable, or subprocess failure)."
+  (when (and dir
+             (file-accessible-directory-p dir)
+             (hol--executable-is-binary-p)
+             (file-executable-p hol-executable))
+    (with-temp-buffer
+      (let ((default-directory (file-name-as-directory
+                                (expand-file-name dir))))
+        (when (eq 0 (ignore-errors
+                      (call-process hol-executable nil t nil "heapname")))
+          (let ((out (string-trim (buffer-string))))
+            (and (> (length out) 0) out)))))))
+
 (defun hol--candidate-heaps (dir)
   "Return absolute paths of dumped-heap files living directly in DIR.
 
@@ -1182,8 +1209,12 @@ returns nil without prompting.
 
 Candidates are ranked by `hol--rank-heaps' against the current buffer's
 theory and mtime; the top fresh theory-matching heap, if any, becomes
-the prompt's default (RET selects it).  The *Completions* buffer is
-shown automatically so the priority ordering is visible."
+the prompt's default (RET selects it).  The entry that `bin/hol' would
+load by default is annotated with ` [default]'.  `$HOLDIR/bin/hol.state'
+is offered too when it exists, so the user can fall through to the
+system heap even when the Holmakefile names some other HOLHEAP.  The
+*Completions* buffer is shown automatically so the priority ordering
+is visible."
   (let ((candidates (hol--candidate-heaps dir)))
     (when candidates
       (let* ((thy (hol--buffer-theory-name))
@@ -1194,15 +1225,46 @@ shown automatically so the priority ordering is visible."
                             (and (hol--heap-matches-thy-p p thy)
                                  (hol--heap-fresh-p p mtime)))
                           ranked))
-             (alist (append
-                     (mapcar (lambda (p)
-                               (cons (file-relative-name p dir) p))
-                             ranked)
-                     '(("[default]" . default)
-                       ("[bare]"    . bare))))
-             (def-label (if top-fresh-match
-                            (file-relative-name top-fresh-match dir)
-                          "[default]"))
+             (default-path (hol--default-heap dir))
+             (hol-state (and (hol--executable-is-binary-p)
+                             (let ((p (expand-file-name
+                                       "bin/hol.state" hol-dir)))
+                               (and (file-regular-p p) p))))
+             (heap-paths
+              (let ((seen ranked) (extras nil))
+                (dolist (p (list default-path hol-state))
+                  (when (and p
+                             (file-regular-p p)
+                             (not (cl-find-if
+                                   (lambda (q) (file-equal-p p q))
+                                   seen)))
+                    (push p extras)
+                    (push p seen)))
+                (append ranked (nreverse extras))))
+             (default-suffix " [default]")
+             (default-label nil)
+             (annotate (lambda (label)
+                         (let ((tagged (concat label default-suffix)))
+                           (setq default-label tagged)
+                           tagged)))
+             (heap-pairs
+              (mapcar (lambda (p)
+                        (let ((label (file-relative-name p dir)))
+                          (cons (if (and default-path
+                                         (not default-label)
+                                         (file-equal-p p default-path))
+                                    (funcall annotate label)
+                                  label)
+                                p)))
+                      heap-paths))
+             (alist (append heap-pairs
+                            (unless default-label
+                              '(("[default]" . default)))
+                            '(("[bare]" . bare))))
+             (def-label (or (and top-fresh-match
+                                 (file-relative-name top-fresh-match dir))
+                            default-label
+                            "[default]"))
              (choice
               (minibuffer-with-setup-hook #'minibuffer-completion-help
                 (completing-read
