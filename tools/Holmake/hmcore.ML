@@ -53,7 +53,7 @@ in
   myuse portableMLpolydir "SHA1_ML.sig";
   myuse portableMLpolydir
     (if Systeml.haveWord64 then "w64-SHA1.ML" else "SHA1-byexec.ML");
-  app appportable ["SHA1"];
+  app appportable ["UTF8", "SHA1"];
   myuse jsondir "JSON.sml";
   app appjson ["JSONErrors"];
   myuse jsondir "JSONSource.sml";

@@ -78,6 +78,13 @@ fun 'a graphbuildj1 static_info =
                   let
                     val _ = HM_BuildLock.release lh
                     val g = upd (b2status res) g
+                    val _ =
+                        case (HM_Progress.note_completion g res (#command nI),
+                              #command nI) of
+                            (SOME knstr,
+                             BuiltInCmd (BIC_BuildScript thyname, _)) =>
+                              info (knstr ^ " " ^ OS.Path.file thyname)
+                          | _ => ()
                   in
                     if res then recurse retval g
                     else if keep_going then recurse OS.Process.failure g

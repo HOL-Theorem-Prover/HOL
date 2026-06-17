@@ -25,6 +25,7 @@ val _ = useC "core/HM_BuildLock";
 val _ = useC "core/HM_TheoryDat";
 val _ = useC "core/HM_Cachekey";
 val _ = useS "poly/HM_CacheFetch";
+val _ = useC "core/HM_Progress";
 val _ = useC "core/HM_GraphBuildJ1";
 val _ = useC "poly/HM_Cline";
 val _ = useC "poly/GraphExtra";

@@ -51,6 +51,14 @@ sig
      dependencies during a single Holmake invocation). *)
   val peek_file_hash : 'a t -> dep -> string option
   val set_file_hash  : 'a t -> dep -> string -> 'a t
+
+  val theories_built : 'a t -> int
+    (* Running count of dat-product nodes whose status has transitioned
+       to Succeeded during this Holmake invocation.  Maintained
+       incrementally by updnode_tgtstatus / updnode_fully. *)
+
+  val is_theory_dat_node : 'a nodeInfo -> bool
+    (* True iff the node builds the dat product of a theory script. *)
   val nodeStatus : 'a t -> node -> target_status
   val peeknode : 'a t -> node -> 'a nodeInfo option
   val target_node : 'a t -> dep -> node option

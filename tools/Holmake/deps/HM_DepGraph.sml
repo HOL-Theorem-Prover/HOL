@@ -84,7 +84,8 @@ fun command_compare (NoCmd, NoCmd) = EQUAL
 type 'a t = { nodes : (node, 'a nodeInfo) Map.dict,
               target_map : (dep,node) Map.dict,
               command_map : (dir * command,node list) Map.dict,
-              file_hashes : (dep, string) Map.dict }
+              file_hashes : (dep, string) Map.dict,
+              theories_built : int }
 
 
 fun fold f (g:'a t) A =
@@ -94,17 +95,27 @@ fun empty() : 'a t =
     { nodes = Map.mkDict node_compare,
       target_map = Map.mkDict hm_target.compare,
       command_map = Map.mkDict (pair_compare(hmdir.compare, command_compare)),
-      file_hashes = Map.mkDict hm_target.compare }
-fun fupd_nodes f ({nodes, target_map, command_map, file_hashes}: 'a t)
-    : 'a t =
+      file_hashes = Map.mkDict hm_target.compare,
+      theories_built = 0 }
+fun fupd_nodes f ({nodes, target_map, command_map, file_hashes,
+                   theories_built}: 'a t) : 'a t =
   {nodes = f nodes, target_map = target_map,
-   command_map = command_map, file_hashes = file_hashes}
+   command_map = command_map, file_hashes = file_hashes,
+   theories_built = theories_built}
+
+fun theories_built (g : 'a t) = #theories_built g
+
+fun is_theory_dat_node (nI : 'a nodeInfo) =
+    case (#command nI, hm_target.filepart (#target nI)) of
+        (BuiltInCmd (BIC_BuildScript _, _), DAT _) => true
+      | _ => false
 
 fun peek_file_hash (g : 'a t) d = Map.peek (#file_hashes g, d)
 fun set_file_hash (g : 'a t) d h : 'a t =
     {nodes = #nodes g, target_map = #target_map g,
      command_map = #command_map g,
-     file_hashes = Map.insert (#file_hashes g, d, h)}
+     file_hashes = Map.insert (#file_hashes g, d, h),
+     theories_built = #theories_built g}
 
 fun find_nodes_by_command (g : 'a t) dc =
   case Map.peek (#command_map g, dc) of
@@ -142,7 +153,8 @@ fun add_node (nI : 'a nodeInfo) (g :'a t) =
         ({ nodes = Map.insert(#nodes g,n,nI),
            target_map = Map.insert(#target_map g, #target nI, n),
            command_map = extend_map_list (#command_map g) (#dir nI,copt) n,
-           file_hashes = #file_hashes g },
+           file_hashes = #file_hashes g,
+           theories_built = #theories_built g },
          n)
       end
     val {target=tgt,dir,...} = nI
@@ -156,15 +168,26 @@ fun add_node (nI : 'a nodeInfo) (g :'a t) =
     newNode (#command nI)
   end
 
+fun bump_built_count (old_nI, new_st) g =
+    if #status old_nI <> Succeeded andalso new_st = Succeeded andalso
+       is_theory_dat_node old_nI
+    then {nodes = #nodes g, target_map = #target_map g,
+          command_map = #command_map g, file_hashes = #file_hashes g,
+          theories_built = #theories_built g + 1}
+    else g
+
 fun updnode_tgtstatus (n, st) (g : 'a t) : 'a t =
   case peeknode g n of
       NONE => raise NoSuchNode
-    | SOME nI => fupd_nodes (fn m => Map.insert(m, n, setStatus st nI)) g
+    | SOME nI => bump_built_count (nI, st)
+                   (fupd_nodes (fn m => Map.insert(m, n, setStatus st nI)) g)
 
 fun updnode_fully (n, nInfo) (g : 'a t) : 'a t =
     case peeknode g n of
         NONE => raise NoSuchNode
-      | SOME _ => fupd_nodes (fn m => Map.insert(m, n, nInfo)) g
+      | SOME old_nI =>
+        bump_built_count (old_nI, #status nInfo)
+          (fupd_nodes (fn m => Map.insert(m, n, nInfo)) g)
 
 fun find_runnable_pred P (g : 'a t) =
   let

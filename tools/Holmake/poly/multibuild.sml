@@ -302,7 +302,7 @@ fun graphbuild optinfo g =
                                                 ok, t)
                                 val _ = release_target_lock nI
                               in
-                                (g',ok')
+                                ((g',ok'), NONE)
                               end
                         in
                           NewJob ({tag = tag, command = shell_command c,
@@ -346,13 +346,14 @@ fun graphbuild optinfo g =
                                    Poly's load step. *)
                                 val ok2 = job_kont (fn s => ()) (b2res b)
                                 val _ = release_target_lock nI
+                                val g' = if ok2 then updall Succeeded g
+                                         else updall RealFail g
+                                val marker = HM_Progress.note_completion
+                                                 g' ok2 (#command nI)
+                                val _ = tgtcomplete(#dir nI, ndi, thyc, ok2, t)
                               in
-                                if ok2 then
-                                  (tgtcomplete(#dir nI, ndi, thyc, true, t);
-                                   (updall Succeeded g, true))
-                                else
-                                  (tgtcomplete(#dir nI, ndi, thyc, false, t);
-                                   (updall RealFail g, keep_going))
+                                ((g', if ok2 then true else keep_going),
+                                 marker)
                               end
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l

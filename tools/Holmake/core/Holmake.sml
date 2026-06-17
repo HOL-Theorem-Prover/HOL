@@ -1894,6 +1894,14 @@ fun diag_built_graph targets depgraph =
       );
      diag "core" (fn _ => "Dep.graph =\n" ^ HM_DepGraph.toString depgraph))
 
+fun count_needed_theories depgraph =
+    HM_DepGraph.fold
+      (fn (_, nI) => fn n =>
+          if HM_DepGraph.is_theory_dat_node nI andalso
+             #status nI = Pending {needed=true}
+          then n + 1 else n)
+      depgraph 0
+
 fun dispatch_built_graph depgraph =
     if cline_nobuild then
       let val _ = print ("Dependency graph" ^
@@ -1917,8 +1925,9 @@ fun dispatch_built_graph depgraph =
       info (HM_DepGraph.toJSONString depgraph);
       OS.Process.exit OS.Process.success
     ) else
-      postmortem finish_logging outputfns (build_graph depgraph)
-      handle e => die ("Exception: " ^ General.exnMessage e)
+      (HM_Progress.init info (count_needed_theories depgraph);
+       postmortem finish_logging outputfns (build_graph depgraph)
+       handle e => die ("Exception: " ^ General.exnMessage e))
 
 fun hm_extend s = hmdir.extendp {base = original_dir, extension = s}
 fun dirs_work () =
@@ -2090,8 +2099,9 @@ fun work() =
           (print ("Dependency graph" ^ HM_DepGraph.toString depgraph);
            OS.Process.success)
         else
-          postmortem finish_logging outputfns (build_graph depgraph)
-          handle e => die ("Exception: "^General.exnMessage e)
+          (HM_Progress.init info (count_needed_theories depgraph);
+           postmortem finish_logging outputfns (build_graph depgraph)
+           handle e => die ("Exception: "^General.exnMessage e))
       end
 
 fun do_cachekey thyname =

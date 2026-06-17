@@ -430,6 +430,8 @@ val _ =
     FileSys.chDir "../mosml";
     compile ["-I", "..", "-I", "../core"] "HM_BuildLock.sml";
     FileSys.chDir "../core";
+    compile ["-I", "../deps"] "HM_Progress.sig";
+    compile ["-I", "../deps"] "HM_Progress.sml";
     compile ["-I", "..", "-I", "../deps", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "HM_GraphBuildJ1.sig";
     compile ["-I", "..", "-I", "../deps", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "HM_GraphBuildJ1.sml";
     FileSys.chDir "..";

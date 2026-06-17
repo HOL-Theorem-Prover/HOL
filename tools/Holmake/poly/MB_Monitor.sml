@@ -277,13 +277,36 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
       case Binarymap.peek (!monitor_map, jkey) of
           NONE => (warn ("Lost monitor info for "^jobkey_toString jkey); NONE)
         | SOME info => f info
-    fun taginfo {tag,dir} dirstr timestr (colour,verdict) =
+    fun taginfo {tag,dir} dirstr timestr marker (colour,verdict) =
         let
-          val sfxsz = size timestr + 7
-          val sfxstr = timestr ^ colour (StringCvt.padLeft #" " 7 verdict)
-          val remspace = Width() - (sfxsz + 1)
           val tagstr = delsml_sfx tag
           val tagsz = size tagstr
+          val verdict_w = 7
+          val knfield_w = 7  (* enough for "[dd/dd]" or "[↓ddddd]" *)
+          val knsep_w = 1
+          val kn_fits =
+              tagsz + size timestr + verdict_w +
+              knsep_w + knfield_w <= Width()
+          val (knstr, kn_used_w) =
+              if not kn_fits then ("", 0)
+              else case marker of
+                  NONE =>
+                    (CharVector.tabulate(knsep_w + knfield_w, fn _ => #" "),
+                     knsep_w + knfield_w)
+                | SOME s =>
+                  let val dw = UTF8.size s
+                  in
+                    if dw <= knfield_w then
+                      (" " ^
+                       CharVector.tabulate(knfield_w - dw, fn _ => #" ") ^ s,
+                       knsep_w + knfield_w)
+                    else ("", 0)
+                  end
+          val sfxsz = size timestr + kn_used_w + verdict_w
+          val sfxstr =
+              timestr ^ knstr ^
+              colour (StringCvt.padLeft #" " verdict_w verdict)
+          val remspace = Width() - (sfxsz + 1)
           fun maybe_dim s = if size s <> 0 then dim s else s
         in
           info (infopfx ^ tagstr ^
@@ -357,7 +380,7 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
               (fn pinfo =>
                   check_time (delay, jkey, (fn () => after_check pinfo)))
           end
-        | Terminated(jk as (_, td as {tag,dir}), st, _) =>
+        | Terminated(jk as (_, td as {tag,dir}), st, _, marker) =>
           stdhandle jk
             (fn {os = strm,tb,status=stat,start_time,ignore_error} =>
                 let
@@ -370,7 +393,7 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
                   val _ = last_child_cputime := cutime
                   val utstr = compact_time 6 true "(" ")" this_childs_time
                   val dirstr = if multidir then prettydir dir else ""
-                  val tinfo = taginfo td dirstr utstr
+                  val tinfo = taginfo td dirstr utstr marker
                 in
                   if st = W_EXITED orelse ignore_error then
                     if seen cheat_string orelse seen used_cheat_string then
@@ -419,7 +442,7 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
           in
             stdhandle jk
                (fn {os = strm,tb, status = stat,...} =>
-                   (taginfo td dirstr utstr (dim, "killed");
+                   (taginfo td dirstr utstr NONE (dim, "killed");
                     TextIO.closeOut strm;
                     monitor_map := #1 (Binarymap.remove(!monitor_map, jk));
                     display_map();
