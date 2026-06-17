@@ -12,6 +12,8 @@ $(SML_LIB)/basis/basis.mlb
 ../core/HM_Cachekey.sig
 ../core/HM_Cachekey.sml
 ../poly/HM_CacheFetch.sml
+../core/HM_Progress.sig
+../core/HM_Progress.sml
 ../core/HM_GraphBuildJ1.sig
 ../core/HM_GraphBuildJ1.sml
 ../poly/HM_Cline.sig
