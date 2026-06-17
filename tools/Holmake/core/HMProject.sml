@@ -113,9 +113,28 @@ fun abs_relative_to base p =
       (if OS.Path.isAbsolute p then p
        else OS.Path.mkAbsolute { path = p, relativeTo = base })
 
+(* Excludes declared by the holproject.toml *at* `root', as absolute
+   canonical paths.  Parse / IO failures are non-fatal: a malformed
+   external project must not abort the consumer's build. *)
+fun excludes_declared_at root =
+    let
+      val pf = OS.Path.concat (root, PROJECT_FILE)
+    in
+      if not (file_exists pf) then []
+      else
+        (let
+           val tbl = TOML.fromFile pf
+           val rel = Option.getOpt (lookup_string_array tbl ["exclude"], [])
+         in
+           List.map (abs_relative_to root) rel
+         end
+         handle Fail _ => [] | IO.Io _ => [] | OS.SysErr _ => [])
+    end
+
 (* Read [projects.<id>] sub-tables; capture each's `path` and (optional)
-   `exclude` list.  Excludes are interpreted relative to that external's
-   path (not the consumer's root). *)
+   `exclude` list, unioned (non-recursively) with whatever the external
+   declares for itself in its own holproject.toml.  Excludes are
+   interpreted relative to that external's path. *)
 fun externals_from_table tbl rel_to =
     case lookup_table tbl ["projects"] of
         NONE => []
@@ -130,8 +149,14 @@ fun externals_from_table tbl rel_to =
                            val ext_excl_rel =
                                Option.getOpt
                                  (lookup_string_array inner ["exclude"], [])
-                           val ext_excl =
+                           val consumer_excl =
                                List.map (abs_relative_to ext_path) ext_excl_rel
+                           val inherited_excl = excludes_declared_at ext_path
+                           val ext_excl =
+                               Binaryset.listItems
+                                 (Binaryset.addList
+                                    (Binaryset.empty String.compare,
+                                     consumer_excl @ inherited_excl))
                          in
                            SOME { id = id, path = ext_path,
                                   exclude = ext_excl }

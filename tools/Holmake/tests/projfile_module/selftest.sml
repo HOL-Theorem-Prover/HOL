@@ -213,4 +213,132 @@ val _ =
                String.concatWith ", " (Binaryset.listItems got))
   end
 
+(* ---- inherit the external's own [exclude] ---- *)
+
+val inh_ext = scratch ++ "inh_ext"
+val inh_proj = scratch ++ "inh_proj"
+
+fun ext_excludes (cfg : HMProject.config) =
+    case #externals cfg of
+        [{id = "ext", path = _, exclude = excl}] => excl
+      | _ => (die "expected exactly one external named ext"; [])
+
+fun excl_contains excl d =
+    List.exists (fn p => OS.Path.mkCanonical p = OS.Path.mkCanonical d) excl
+
+val () = List.app mkdirs [
+  inh_ext ++ "keep",
+  inh_ext ++ "skipme",
+  inh_proj
+]
+val () = List.app touch [
+  inh_ext ++ "keep" ++ "Holmakefile",
+  inh_ext ++ "skipme" ++ "Holmakefile"
+]
+val () = write (inh_ext ++ "holproject.toml")
+  ("name = \"inh_ext\"\nexclude = [\"skipme\"]\n")
+
+val inh_ext_rel =
+    OS.Path.mkRelative {path = inh_ext, relativeTo = inh_proj}
+val () = write (inh_proj ++ "holproject.toml")
+  ("name = \"inh_proj\"\n\
+   \[projects.ext]\n\
+   \path = \"" ^ String.toString inh_ext_rel ^ "\"\n")
+
+val inh_cfg = HMProject.load { root = inh_proj }
+
+val _ = tprint "external's own [exclude] is inherited into its config"
+val _ =
+  let val excl = ext_excludes inh_cfg
+  in if excl_contains excl (inh_ext ++ "skipme") then OK ()
+     else die ("excludes did not include skipme; got [" ^
+               String.concatWith ", " excl ^ "]")
+  end
+
+val _ = tprint "discover_dirs honors inherited external exclude"
+val _ =
+  let val got = canon_set (HMProject.discover_dirs inh_cfg)
+      val kept = OS.Path.mkCanonical (inh_ext ++ "keep")
+      val skipped = OS.Path.mkCanonical (inh_ext ++ "skipme")
+  in if Binaryset.member (got, kept) andalso
+        not (Binaryset.member (got, skipped))
+     then OK ()
+     else die ("expected keep present, skipme absent; got " ^
+               String.concatWith ", " (Binaryset.listItems got))
+  end
+
+val () = mkdirs (inh_ext ++ "other")
+val () = touch (inh_ext ++ "other" ++ "Holmakefile")
+val () = write (inh_proj ++ "holproject.toml")
+  ("name = \"inh_proj\"\n\
+   \[projects.ext]\n\
+   \path = \"" ^ String.toString inh_ext_rel ^ "\"\n\
+   \exclude = [\"other\"]\n")
+
+val inh_cfg2 = HMProject.load { root = inh_proj }
+
+val _ = tprint "consumer and inherited excludes union, not override"
+val _ =
+  let val got = canon_set (HMProject.discover_dirs inh_cfg2)
+      val kept = OS.Path.mkCanonical (inh_ext ++ "keep")
+      val skipped = OS.Path.mkCanonical (inh_ext ++ "skipme")
+      val other = OS.Path.mkCanonical (inh_ext ++ "other")
+  in if Binaryset.member (got, kept) andalso
+        not (Binaryset.member (got, skipped)) andalso
+        not (Binaryset.member (got, other))
+     then OK ()
+     else die ("expected keep present, skipme+other absent; got " ^
+               String.concatWith ", " (Binaryset.listItems got))
+  end
+
+val () = write (inh_ext ++ "holproject.toml") "= = =\n"
+
+val _ = tprint "malformed external holproject.toml does not abort load"
+val inh_cfg3 =
+    HMProject.load { root = inh_proj }
+    handle e => (die ("load raised: " ^ General.exnMessage e); raise e)
+val _ = OK ()
+
+val _ = tprint "malformed external file yields no inherited excludes"
+val _ =
+  let val excl = ext_excludes inh_cfg3
+      val skipme_in = excl_contains excl (inh_ext ++ "skipme")
+      val other_in = excl_contains excl (inh_ext ++ "other")
+  in case (skipme_in, other_in) of
+         (true, _) =>
+           die ("skipme leaked through despite malformed file; got [" ^
+                String.concatWith ", " excl ^ "]")
+       | (_, false) =>
+           die ("expected consumer 'other' to still be excluded; got [" ^
+                String.concatWith ", " excl ^ "]")
+       | _ => OK ()
+  end
+
+(* Grandchild project carrying its own holproject.toml is pruned by
+   discover_under's hasProjFile filter regardless, so the recursion
+   stays one-level even without explicit guard. *)
+val () = write (inh_ext ++ "holproject.toml")
+  ("name = \"inh_ext\"\nexclude = [\"skipme\"]\n")
+val () = List.app mkdirs [
+  inh_ext ++ "sub",
+  inh_ext ++ "sub" ++ "nope"
+]
+val () = List.app touch [
+  inh_ext ++ "sub" ++ "Holmakefile",
+  inh_ext ++ "sub" ++ "nope" ++ "Holmakefile"
+]
+val () = write (inh_ext ++ "sub" ++ "holproject.toml")
+  ("name = \"grandchild\"\nexclude = [\"nope\"]\n")
+
+val inh_cfg4 = HMProject.load { root = inh_proj }
+
+val _ = tprint "external-of-external is not recursed into"
+val _ =
+  let val got = canon_set (HMProject.discover_dirs inh_cfg4)
+      val sub = OS.Path.mkCanonical (inh_ext ++ "sub")
+  in if not (Binaryset.member (got, sub))
+     then OK ()
+     else die "grandchild project dir leaked into discover_dirs"
+  end
+
 val () = rm_rf scratch
