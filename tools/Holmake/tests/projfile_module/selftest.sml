@@ -61,7 +61,8 @@ val () = List.app touch [
   proj ++ ".git" ++ "Holmakefile",
   ext ++ "Holmakefile",
   ext ++ "lib" ++ "Holmakefile",
-  ext ++ "subWithProjectFile" ++ "holproject.toml"
+  ext ++ "subWithProjectFile" ++ "holproject.toml",
+  ext ++ "holproject.toml"
 ]
 
 val ext_rel = OS.Path.mkRelative {path = ext, relativeTo = proj}
@@ -154,6 +155,7 @@ val _ =
 val alt_ext = scratch ++ "altproj"
 val () = mkdirs (alt_ext ++ "sub")
 val () = touch (alt_ext ++ "sub" ++ "Holmakefile")
+val () = touch (alt_ext ++ "holproject.toml")
 val () = write (proj ++ "holproject.local.toml")
   ("[projects.ext]\npath = \"" ^ String.toString alt_ext ^ "\"\n")
 
@@ -184,7 +186,8 @@ val () = List.app mkdirs [
 ]
 val () = List.app touch [
   ext_excl_root ++ "keep" ++ "Holmakefile",
-  ext_excl_root ++ "drop" ++ "Holmakefile"
+  ext_excl_root ++ "drop" ++ "Holmakefile",
+  ext_excl_root ++ "holproject.toml"
 ]
 val () = write (proj ++ "holproject.local.toml")
   ("[projects.ext]\npath = \"" ^ String.toString ext_excl_root ^ "\"\n\
@@ -291,34 +294,9 @@ val _ =
                String.concatWith ", " (Binaryset.listItems got))
   end
 
-val () = write (inh_ext ++ "holproject.toml") "= = =\n"
-
-val _ = tprint "malformed external holproject.toml does not abort load"
-val inh_cfg3 =
-    HMProject.load { root = inh_proj }
-    handle e => (die ("load raised: " ^ General.exnMessage e); raise e)
-val _ = OK ()
-
-val _ = tprint "malformed external file yields no inherited excludes"
-val _ =
-  let val excl = ext_excludes inh_cfg3
-      val skipme_in = excl_contains excl (inh_ext ++ "skipme")
-      val other_in = excl_contains excl (inh_ext ++ "other")
-  in case (skipme_in, other_in) of
-         (true, _) =>
-           die ("skipme leaked through despite malformed file; got [" ^
-                String.concatWith ", " excl ^ "]")
-       | (_, false) =>
-           die ("expected consumer 'other' to still be excluded; got [" ^
-                String.concatWith ", " excl ^ "]")
-       | _ => OK ()
-  end
-
 (* Grandchild project carrying its own holproject.toml is pruned by
    discover_under's hasProjFile filter regardless, so the recursion
    stays one-level even without explicit guard. *)
-val () = write (inh_ext ++ "holproject.toml")
-  ("name = \"inh_ext\"\nexclude = [\"skipme\"]\n")
 val () = List.app mkdirs [
   inh_ext ++ "sub",
   inh_ext ++ "sub" ++ "nope"
@@ -340,5 +318,80 @@ val _ =
      then OK ()
      else die "grandchild project dir leaked into discover_dirs"
   end
+
+(* ---- inherit the external's own [external_includes] ---- *)
+
+val ei_ext = scratch ++ "ei_ext"
+val ei_proj = scratch ++ "ei_proj"
+val ei_shared = scratch ++ "ei_shared"
+val ei_myinc = scratch ++ "ei_myinc"
+
+val () = List.app mkdirs [ei_ext, ei_proj, ei_shared, ei_myinc]
+
+val ei_ext_rel = OS.Path.mkRelative {path = ei_ext, relativeTo = ei_proj}
+
+val () = write (ei_ext ++ "holproject.toml")
+  ("name = \"ei_ext\"\n\
+   \external_includes = [\"../ei_shared\", \"$(HOLDIR)/src/whatever\"]\n")
+val () = write (ei_proj ++ "holproject.toml")
+  ("name = \"ei_proj\"\n\
+   \[projects.ext]\n\
+   \path = \"" ^ String.toString ei_ext_rel ^ "\"\n")
+
+val ei_cfg = HMProject.load { root = ei_proj }
+
+fun ext_inc (cfg : HMProject.config) = #external_includes cfg
+
+val _ = tprint
+   "inherited external_includes resolved against the external's root"
+val _ = if excl_contains (ext_inc ei_cfg) ei_shared then OK ()
+        else die ("got [" ^ String.concatWith ", " (ext_inc ei_cfg) ^ "]")
+
+val _ = tprint "$(HOLDIR) is expanded in inherited external_includes"
+val _ =
+  let val expected = Systeml.HOLDIR ++ "src" ++ "whatever"
+  in if excl_contains (ext_inc ei_cfg) expected then OK ()
+     else die ("expected " ^ expected ^ "; got [" ^
+               String.concatWith ", " (ext_inc ei_cfg) ^ "]")
+  end
+
+val () = write (ei_proj ++ "holproject.toml")
+  ("name = \"ei_proj\"\n\
+   \external_includes = [\"../ei_myinc\"]\n\
+   \[projects.ext]\n\
+   \path = \"" ^ String.toString ei_ext_rel ^ "\"\n")
+
+val ei_cfg2 = HMProject.load { root = ei_proj }
+
+val _ = tprint "consumer and inherited external_includes union, not override"
+val _ =
+  if excl_contains (ext_inc ei_cfg2) ei_shared andalso
+     excl_contains (ext_inc ei_cfg2) ei_myinc
+  then OK ()
+  else die ("got [" ^ String.concatWith ", " (ext_inc ei_cfg2) ^ "]")
+
+val () = write (ei_ext ++ "holproject.toml") "= = =\n"
+
+val _ = tprint
+   "malformed external holproject.toml aborts load with file path"
+val _ =
+  (HMProject.load { root = ei_proj };
+   die "expected load to abort")
+  handle Fail s =>
+    if String.isSubstring (ei_ext ++ "holproject.toml") s
+    then OK ()
+    else die ("Fail raised but external path not in message: " ^ s)
+
+val () = OS.FileSys.remove (ei_ext ++ "holproject.toml")
+
+val _ = tprint
+   "external with no holproject.toml aborts load with external's path"
+val _ =
+  (HMProject.load { root = ei_proj };
+   die "expected load to abort")
+  handle Fail s =>
+    if String.isSubstring ei_ext s
+    then OK ()
+    else die ("Fail raised but external root not in message: " ^ s)
 
 val () = rm_rf scratch

@@ -113,22 +113,40 @@ fun abs_relative_to base p =
       (if OS.Path.isAbsolute p then p
        else OS.Path.mkAbsolute { path = p, relativeTo = base })
 
-(* Excludes declared by the holproject.toml *at* `root', as absolute
-   canonical paths.  Parse / IO failures are non-fatal: a malformed
-   external project must not abort the consumer's build. *)
-fun excludes_declared_at root =
+(* Reads the holproject.toml *at* `root' --- the at-root file of a
+   referenced external project.  A [projects.<id>] reference is a
+   positive claim that the directory is itself a project, so a missing
+   or unparseable file is fatal: use external_includes for non-project
+   directories. *)
+fun read_external_decls root =
     let
       val pf = OS.Path.concat (root, PROJECT_FILE)
     in
-      if not (file_exists pf) then []
+      if not (file_exists pf) then
+        raise Fail ("no " ^ PROJECT_FILE ^ " at " ^ root)
       else
-        (let
-           val tbl = TOML.fromFile pf
-           val rel = Option.getOpt (lookup_string_array tbl ["exclude"], [])
-         in
-           List.map (abs_relative_to root) rel
-         end
-         handle Fail _ => [] | IO.Io _ => [] | OS.SysErr _ => [])
+        ((pf, TOML.fromFile pf)
+         handle e => raise Fail ("Failed to parse " ^ pf ^ ": " ^
+                                 General.exnMessage e))
+    end
+
+fun excludes_declared_at root =
+    let
+      val (pf, tbl) = read_external_decls root
+      val rel = Option.getOpt (lookup_string_array tbl ["exclude"], [])
+                handle Fail s => raise Fail (pf ^ ": " ^ s)
+    in
+      List.map (abs_relative_to root) rel
+    end
+
+fun external_includes_declared_at root =
+    let
+      val (pf, tbl) = read_external_decls root
+      val rel = Option.getOpt
+                  (lookup_string_array tbl ["external_includes"], [])
+                handle Fail s => raise Fail (pf ^ ": " ^ s)
+    in
+      List.map (abs_relative_to root o expand_holdir) rel
     end
 
 (* Read [projects.<id>] sub-tables; capture each's `path` and (optional)
@@ -209,8 +227,16 @@ fun load { root } =
 
       val ext_inc_rel =
           Option.getOpt (lookup_string_array ptbl ["external_includes"], [])
-      val external_includes =
+      val own_ext_inc =
           List.map (abs_relative_to root o expand_holdir) ext_inc_rel
+      val inherited_ext_inc =
+          List.concat
+            (List.map (fn e => external_includes_declared_at (#path e))
+                      externals)
+      val external_includes =
+          Binaryset.listItems
+            (Binaryset.addList (Binaryset.empty String.compare,
+                                own_ext_inc @ inherited_ext_inc))
 
     in
       { root = root,
