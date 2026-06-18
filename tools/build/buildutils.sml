@@ -990,12 +990,19 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
      val use_mdbook = poly andalso not no_mdbook andalso mdbook_present
      val use_html_fallback = poly andalso not use_mdbook
 
-     (* Per-entry URL base relative to help/src-sml/htmlsigs/<struct>.html
-        (where the sig-page links from); see help/src-sml/Htmlsigs.sml. *)
+     (* URL bases relative to Manual/book/htmlsigs/<struct>.html (where
+        the sig-page links from -- makebase writes the htmlsigs tree
+        there as part of the unified Manual/book/ deploy snapshot).
+        See help/src-sml/Htmlsigs.sml. *)
      val entry_url_base =
-         if use_mdbook then "../../../Manual/book/Reference/"
-         else if use_html_fallback then "../../Docfiles/HTML/"
+         if use_mdbook then "../Reference/"
+         else if use_html_fallback then "../../../help/Docfiles/HTML/"
          else ""  (* mosml: sig-pages omit per-entry hrefs *)
+     (* Theory URL base.  Empty -> Htmlsigs computes a source-tree
+        relative path (legacy/local).  "../theories/" matches where
+        stage_references.py stages per-theory pages under book/. *)
+     val theory_url_base =
+         if use_mdbook then "../theories/" else ""
 
      local
        open Holmake_types
@@ -1099,11 +1106,12 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
  ;
    let
      val makebase = fullPath [dir, "makebase.exe"]
+     fun urlFlag (flag, base) =
+         if base <> "" then [flag ^ "=" ^ base] else []
      val makebase_args =
          makebase ::
-         (if entry_url_base <> "" then
-            ["--entry-url-base=" ^ entry_url_base]
-          else [])
+         urlFlag ("--entry-url-base", entry_url_base) @
+         urlFlag ("--theory-url-base", theory_url_base)
    in
      if (print "Building Help DB\n"; SYSTEML makebase_args) then ()
      else die "Couldn't make help database"

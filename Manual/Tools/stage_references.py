@@ -6,7 +6,8 @@ source-tree locations (where their relative URLs assume the original
 layout) into the lander's book/theories/ and book/theory-graph/, and
 rewrites cross-file URLs so they resolve correctly from the lander
 layout (theories/, theory-graph/, htmlsigs/ are siblings of the
-lander's index.html).
+lander's index.html).  htmlsigs/ is owned by makebase (run by
+build_help) which writes it directly into book/htmlsigs/.
 
 Usage: stage_references.py HOLDIR BOOK_DIR
 """
@@ -36,23 +37,6 @@ THEORY_PARENT_RE = re.compile(
 SVG_THEORY_RE = re.compile(
     rb'((?:xlink:)?href)="[^"]*?/\.hol/docs/([^"/]+?\.html)"'
 )
-
-# Inside htmlsigs/*.html: links to Reference docfile pages.  The path
-# was computed for htmlsigs living at help/src-sml/htmlsigs/; after
-# staging into book/htmlsigs/, Reference/ is a sibling.
-HTMLSIGS_REF_RE = re.compile(
-    rb'href="\.\./\.\./\.\./Manual/book/Reference/'
-)
-
-# Inside htmlsigs/*.html: links to per-theory HTML pages live at each
-# theory's source-tree .hol/docs/.  After staging, all theory pages
-# collapse into book/theories/, so the entire prefix drops away.
-# Preserves any #fragment.
-HTMLSIGS_THEORY_RE = re.compile(
-    rb'href="\.\./\.\./\.\./[^"]*?/\.hol/docs/'
-    rb'([^"]+?Theory\.html(?:#[^"]*)?)"'
-)
-
 
 def canonical_thy_sources():
     """Yield (thy_name, src_dir) for each theory installed in sigobj/.
@@ -127,28 +111,6 @@ def stage_theory_graph():
     (target / "theories.svg").write_bytes(rewritten)
 
 
-def stage_htmlsigs():
-    """Copy per-signature HTML pages into book/htmlsigs/ and rewrite
-    cross-tree links (Reference docfiles, per-theory HTML) so they
-    resolve against the staged book/ siblings instead of the source
-    tree.  Without the rewrite every htmlsigs link out of the directory
-    dangles -- in the source tree they only resolved relative to
-    help/src-sml/htmlsigs/."""
-    target = BOOK / "htmlsigs"
-    src = HOLDIR / "help" / "src-sml" / "htmlsigs"
-    if target.is_symlink():
-        target.unlink()
-    elif target.exists():
-        shutil.rmtree(target)
-    shutil.copytree(src, target)
-    for path in target.glob("*.html"):
-        body = path.read_bytes()
-        body2 = HTMLSIGS_REF_RE.sub(rb'href="../Reference/', body)
-        body2 = HTMLSIGS_THEORY_RE.sub(rb'href="../theories/\1"', body2)
-        if body2 != body:
-            path.write_bytes(body2)
-
-
 # References to <thy>Theory.html (or <thy>Script.html) found in the
 # staged content.  Used to discover which theories are pointed at but
 # have no per-theory HTML in the build state.
@@ -211,7 +173,6 @@ def stub_missing_theories():
 def main():
     stage_theory_pages()
     stage_theory_graph()
-    stage_htmlsigs()
     stub_missing_theories()
 
 

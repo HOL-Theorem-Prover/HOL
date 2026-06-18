@@ -69,15 +69,23 @@ val txtIndexDef = "index.txt"
 (* Default filename for the LaTeX format database: *)
 val texIndexDef = "index.tex"
 
-(* Default directory for signatures in HTML format: *)
-val htmlDirDef = "htmlsigs"
+(* Default directory for signatures in HTML format.  The htmlsigs sit
+   alongside the per-manual mdbook output under Manual/book/, so the
+   built tree is a single deployable snapshot. *)
+val htmlDirDef = normPath[HOLpath,"Manual","book","htmlsigs"]
 
 (* Default filename for the HTML format database for identifiers: *)
-val htmlIndexDef = normPath[HOLpath,"help","src-sml",htmlDirDef,"idIndex.html"]
+val htmlIndexDef = normPath[htmlDirDef,"idIndex.html"]
 
 (* Default filename for the HTML format database for theories: *)
-val htmlTheoryIndexDef =
-   normPath[HOLpath,"help","src-sml",htmlDirDef,"TheoryIndex.html"]
+val htmlTheoryIndexDef = normPath[htmlDirDef,"TheoryIndex.html"]
+
+(* Recursive mkdir -- htmlDirDef sits under Manual/book/ which may not
+   exist yet on a fresh checkout. *)
+fun mkdir_p dir =
+    if dir = "" orelse dir = "." orelse OS.FileSys.access(dir, []) then ()
+    else (mkdir_p (OS.Path.dir dir);
+          OS.FileSys.mkDir dir handle OS.SysErr _ => ())
 
 (* Default filename for the LaTeX signatures: *)
 val texSigs = "texsigsigs.tex"
@@ -226,7 +234,8 @@ val SRCFILES =
 fun process (libdir, helpfile, txtIndex,
              texIndex, htmldir, htmlIndex, htmlTheoryIndex, landerFragment)
  =
- (print ("Reading signatures in directory " ^ libdir ^
+ (mkdir_p htmldir
+ ; print ("Reading signatures in directory " ^ libdir ^
         "\nand writing help database in file " ^ helpfile ^ "\n")
  ; dirToBase (libdir, docdirs, helpfile)
 
@@ -255,24 +264,30 @@ fun process (libdir, helpfile, txtIndex,
 
 in
     let
-      (* Peel `--entry-url-base=<prefix>` off the argv before
-         positional dispatch.  Sets Htmlsigs.entry_url_base so that
-         per-entry hyperlinks in generated htmlsigs/<struct>.html
-         pages resolve via the chosen URL base (mdbook output or
-         the legacy Docfiles/HTML directory). *)
+      (* Peel `--entry-url-base=<prefix>` and `--theory-url-base=<prefix>`
+         off the argv before positional dispatch.  These set
+         Htmlsigs.entry_url_base / Htmlsigs.theory_url_base so that
+         per-entry and per-theory hyperlinks in the generated htmlsigs
+         pages resolve via the chosen URL bases (the mdbook layout, or
+         the legacy Docfiles/HTML / source-tree layouts). *)
       fun stripPrefix p s =
           if String.isPrefix p s
           then SOME (String.extract(s, String.size p, NONE))
           else NONE
-      fun extract acc [] = (NONE, List.rev acc)
-        | extract acc (a :: rest) =
-            (case stripPrefix "--entry-url-base=" a of
+      fun extract prefix acc [] = (NONE, List.rev acc)
+        | extract prefix acc (a :: rest) =
+            (case stripPrefix prefix a of
                  SOME v => (SOME v, List.revAppend(acc, rest))
-               | NONE => extract (a :: acc) rest)
-      val (urlBase, args) = extract [] (CommandLine.arguments ())
-      val () = case urlBase of
+               | NONE => extract prefix (a :: acc) rest)
+      val (entryBase, args) =
+            extract "--entry-url-base=" [] (CommandLine.arguments ())
+      val (theoryBase, args) = extract "--theory-url-base=" [] args
+      val () = case entryBase of
                    NONE => ()
                  | SOME b => Htmlsigs.entry_url_base := b
+      val () = case theoryBase of
+                   NONE => ()
+                 | SOME b => Htmlsigs.theory_url_base := b
     in
       case args of
           []       =>
@@ -285,7 +300,8 @@ in
                        txtIndexDef, texIndexDef,
                        htmlDirDef, htmlIndexDef,
                        htmlTheoryIndexDef, landerFragmentDef)
-        | _ => print "Usage: makebase [--entry-url-base=<prefix>] [<libdir>]\n"
+        | _ => print "Usage: makebase [--entry-url-base=<prefix>] \
+                     \[--theory-url-base=<prefix>] [<libdir>]\n"
     end
 end  (* main *)
 

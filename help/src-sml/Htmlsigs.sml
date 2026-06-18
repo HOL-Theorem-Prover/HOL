@@ -10,6 +10,10 @@ fun die s =
 (* URL prefix for per-entry docfile hyperlinks.  See Htmlsigs.sig. *)
 val entry_url_base = ref ""
 
+(* URL prefix for per-theory hyperlinks in TheoryIndex.html.  See
+   Htmlsigs.sig. *)
+val theory_url_base = ref ""
+
 
 fun indexbar out srcpath = out (String.concat
    ["<hr><table width=\"100%\">",
@@ -483,11 +487,19 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
                             firstsymb := false)
                       else ()
 	    end
-	(* Resolve sigobj/<thy>Theory.sig to the per-theory doc URL relative
-	   to the file we are currently writing.  Returns NONE for non-theory
-	   files or if the symlink resolution fails. *)
+	(* Per-theory doc URL.  When theory_url_base is set (the mdbook
+	   layout, where staged theory pages all live at
+	   <book>/theories/<thy>Theory.html), emit a flat
+	   `<base><thy_file>.html` href.  Otherwise resolve
+	   sigobj/<thy>Theory.sig to the source tree's `.hol/docs/`
+	   location, relative to the file we are currently writing.
+	   Returns NONE for non-theory files or if the legacy symlink
+	   resolution fails. *)
 	val outfile_dir = OS.Path.dir outfile
 	fun theory_doc_url thy_file =
+	    if !theory_url_base <> "" then
+	      SOME (!theory_url_base ^ thy_file ^ ".html")
+	    else
 	    let val sigobj_sig =
 		    OS.Path.concat (HOLpath,
 		      OS.Path.concat ("sigobj", thy_file ^ ".sig"))
