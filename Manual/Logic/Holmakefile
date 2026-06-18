@@ -34,7 +34,7 @@ PS_NOUMAP = $(PS_ROOT) -md < $< > $@
 # Tutorial/Description Holmakefiles use.
 PANDOC_MD = pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=../Tools/pdf-macros.lua -t latex $< > $@
 
-.PHONY: all mdbook mdbook-serve
+.PHONY: all mdbook
 
 all: logic.pdf
 
@@ -97,27 +97,6 @@ book-title.tex: book.toml
 	printf '\\providecommand{\\HOLbookTitle}{%s}\n' \
 	   "$$(awk -F\" '/^title/ {print $$2; exit}' book.toml)" > $@
 
-# Convenience: serve the book locally at http://127.0.0.1:3003/.
-# Port 3003 (Description uses 3000, Tutorial 3001) so the manuals
-# can be served side by side.  Detaches into the background; pass
-# LOG=1 to capture the server's stdout/stderr to mdbook-serve.log
-# here, or LOG=<path> for a custom location.
-mdbook-serve: ../Tools/smdpp
-	@msg() { { echo "$$1" >/dev/tty; } 2>/dev/null || echo "$$1" >&2; }; \
-	 if lsof -ti :3003 >/dev/null 2>&1; then \
-	   msg "Port 3003 already in use; stop the existing server first:"; \
-	   msg "  pkill -f 'mdbook serve'  (or: lsof -ti :3003 | xargs kill)"; \
-	   exit 1; \
-	 fi; \
-	 logfile="$(LOG)"; \
-	 [ "$$logfile" = 1 ] && logfile=mdbook-serve.log; \
-	 [ -z "$$logfile" ] && logfile=/dev/null; \
-	 (mdbook serve --hostname 127.0.0.1 --port 3003 \
-	    >"$$logfile" 2>&1 &); \
-	 msg "mdbook serving at http://127.0.0.1:3003/"; \
-	 [ "$$logfile" != /dev/null ] && msg "log: $$(pwd)/$$logfile"; \
-	 msg "stop: pkill -f 'mdbook serve'"
-
 # latexmk-side flags mirror Manual/Tutorial/Holmakefile:
 #   -bibtex: this latexmk (4.79) doesn't auto-invoke bibtex from
 #     the .aux's \bibdata line on its own; the explicit flag forces
@@ -162,5 +141,4 @@ EXTRA_CLEANS = $(SMD_MDS) $(patsubst %.smd,%.tex,$(SMDS)) \
                logic.log logic.out logic.toc \
                logic.fls logic.idx logic.ilg logic.ind \
                logic.blg logic.bbl logic.fdb_latexmk \
-               mdbook-serve.log \
                ../book/Logic/

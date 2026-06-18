@@ -1,36 +1,56 @@
 #!/usr/bin/env python3
-"""Unified live-preview server for the HOL mdbook documentation site.
+"""Local preview server for the HOL mdbook documentation site.
 
-Serves the built `Manual/book/` tree from a *single origin* -- which is what
-cross-book search needs, since `theme/hol-searcher.js` loads each sibling
-manual's index via a relative `../<Manual>/searchindex.js` path -- and
-live-reloads the browser when a manual's sources change, rebuilding only the
-affected manual into `book/<Manual>/`.
+Wraps `Holmake mdbook` (unified) or per-manual `Holmake mdbook` with a
+foreground HTTP server so the freshly-built site can be browsed locally.
+This replaces the old `Holmake mdbook-serve` / `mdbook-livewatch` /
+per-manual `mdbook-serve` recipes: long-running server processes are
+started from a script rather than from Holmake.
 
-Stdlib only (no npm/pip): an `http.server.ThreadingHTTPServer` that injects a
-tiny Server-Sent-Events reload client into every HTML page, plus a polling
-watcher thread that maps a changed source file to its manual, rebuilds that
-manual's book, re-fixes the `searchindex.js -> searchindex-<hash>.js` symlink
-(mdbook re-hashes it every build; the recipe, not mdbook, makes the stable
-link), and pushes a reload.
+Default: rebuild and serve the unified site statically on port 3002.
 
-This is a *preview* tool: rebuilds run `mdbook build` (and, for Reference,
-process_docfiles) directly rather than the full `Holmake mdbook` target, so the
-generated sidecars (references.md, labels.tsv, generated SUMMARY.md, ...) and
-the `smdpp check-*` gates are not refreshed in the loop.  Run `Holmake mdbook`
-before committing.  Run `Holmake mdbook` once first to populate `book/`.
+    ./Tools/mdbook-preview.py                   # unified, static
+    ./Tools/mdbook-preview.py --live            # unified, watch+reload
+    ./Tools/mdbook-preview.py --manual Tutorial # one manual, static
+    ./Tools/mdbook-preview.py --manual Logic --live   # one manual, live
+
+`--live` for the unified site uses an in-tree watcher + SSE auto-reload:
+on source edits, only the affected manual is re-rendered via
+`mdbook build` and the browser reloads.  Sidecars (references.md,
+labels.tsv, generated SUMMARY.md, ...) and the `smdpp check-*` gates
+are NOT refreshed mid-loop -- the pre-serve `Holmake mdbook` covers
+them, and a fresh `Holmake mdbook` is still the gating check before
+committing.
+
+`--live` for a single manual delegates to mdbook's own `mdbook serve`,
+which provides livereload + auto-rebuild for that manual on its own.
+
+Stdlib only.  Requires `mdbook` on PATH for `--manual N --live`.
 """
 
 import argparse
 import http.server
-import os
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
 import threading
 import time
 from pathlib import Path
+
+
+# Canonical port per manual; `--port` overrides.  Distinct values so
+# any combination of these servers can run side by side.
+PORTS = {
+    None:                3002,  # unified site
+    "Description":       3000,
+    "Tutorial":          3001,
+    "Reference":         3003,
+    "Interaction-emacs": 3004,
+    "Logic":             3005,
+    "Developers":        3006,
+}
 
 
 # --------------------------------------------------------------------------
@@ -72,7 +92,7 @@ class Manual:
 
 
 def _log(msg):
-    print(f"[livewatch] {msg}", flush=True)
+    print(f"[mdbook-preview] {msg}", flush=True)
 
 
 def _run(cmd, cwd):
@@ -229,8 +249,8 @@ def watcher(manuals, theme_watch, book_dir, poll, debounce):
 
 
 # --------------------------------------------------------------------------
-# HTTP: static file server over book/, with SSE reload at /__livereload and a
-# reload-client snippet injected into every HTML page.
+# HTTP: static file server over book/, with optional SSE livereload (gated
+# by the `live` flag) injecting a reload client into every HTML page.
 # --------------------------------------------------------------------------
 _RELOAD_SNIPPET = (
     b"<script>(function(){try{var e=new EventSource('/__livereload');"
@@ -238,7 +258,7 @@ _RELOAD_SNIPPET = (
 )
 
 
-def make_handler(book_dir):
+def make_handler(book_dir, live):
     class Handler(http.server.SimpleHTTPRequestHandler):
         def __init__(self, *a, **kw):
             super().__init__(*a, directory=str(book_dir), **kw)
@@ -247,6 +267,8 @@ def make_handler(book_dir):
             pass  # quiet; the watcher does the interesting logging
 
         def do_GET(self):
+            if not live:
+                return super().do_GET()
             if self.path == "/__livereload":
                 return self._serve_sse()
             raw = self.path.split("?", 1)[0].split("#", 1)[0]
@@ -304,50 +326,115 @@ def make_handler(book_dir):
     return Handler
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__)
-    here = Path(__file__).resolve()
-    default_repo = here.parents[2]          # <repo>/Manual/Tools/this.py
-    ap.add_argument("--repo", type=Path, default=default_repo,
-                    help="HOL repo root (default: inferred from script path)")
-    ap.add_argument("--book", type=Path, default=None,
-                    help="book/ dir to serve (default: <repo>/Manual/book)")
-    ap.add_argument("--manuals", default="",
-                    help="space-separated manual names to watch; the "
-                         "Holmakefile passes mdbook.mk's $(MANUALS) so that "
-                         "stays the single source of truth")
-    ap.add_argument("--port", type=int, default=3002)
-    ap.add_argument("--host", default="0.0.0.0")
-    ap.add_argument("--poll", type=float, default=0.5,
-                    help="source mtime poll interval, seconds")
-    ap.add_argument("--debounce", type=float, default=0.4,
-                    help="quiet window after a change before rebuilding")
-    args = ap.parse_args()
+def check_port_free(host, port):
+    """Fail fast on port collision (before the slow Holmake step)."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        s.bind((host, port))
+    except OSError:
+        sys.exit(
+            f"Port {port} already in use; stop the existing server first.")
+    finally:
+        s.close()
 
-    repo = args.repo.resolve()
-    book_dir = (args.book or repo / "Manual" / "book").resolve()
-    if not (book_dir / "index.html").is_file():
-        sys.exit(f"{book_dir}/index.html missing -- run `Holmake mdbook` first.")
 
-    names = args.manuals.split() or read_manuals_mk(repo)
-    manuals, theme_watch = build_manifest(repo, book_dir, names)
+def ensure_built(repo, manual):
+    """Run `Holmake mdbook` so the served site matches a release build."""
+    cwd = repo / "Manual" / manual if manual else repo / "Manual"
+    label = f"Manual/{manual}" if manual else "Manual"
+    _log(f"building {label} via Holmake mdbook ...")
+    try:
+        subprocess.run(["Holmake", "mdbook"], cwd=cwd, check=True)
+    except FileNotFoundError:
+        sys.exit("Holmake not on PATH; add <repo>/bin to your shell's "
+                 "PATH and retry.")
+    except subprocess.CalledProcessError as e:
+        sys.exit(f"Holmake mdbook in {cwd} failed (exit {e.returncode}); "
+                 f"server not started.")
 
-    t = threading.Thread(target=watcher,
-                         args=(manuals, theme_watch, book_dir,
-                               args.poll, args.debounce),
-                         daemon=True)
-    t.start()
 
-    httpd = http.server.ThreadingHTTPServer((args.host, args.port),
-                                            make_handler(book_dir))
-    _log(f"serving {book_dir} at http://{args.host}:{args.port}/ "
-         f"(reload on edits to: {', '.join(m.name for m in manuals)}, theme)")
+def _serve_forever(httpd):
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
         _log("shutting down")
     finally:
         httpd.shutdown()
+
+
+def serve(book_dir, host, port, live=False):
+    """Foreground HTTP server over book_dir.  Caller starts any watcher."""
+    if not (book_dir / "index.html").is_file():
+        sys.exit(f"{book_dir}/index.html missing after Holmake mdbook -- "
+                 f"unexpected; aborting.")
+    httpd = http.server.ThreadingHTTPServer((host, port),
+                                            make_handler(book_dir, live))
+    mode = "live (watch + reload)" if live else "static"
+    _log(f"serving {book_dir} at http://{host}:{port}/  [{mode}]")
+    _serve_forever(httpd)
+
+
+def mdbook_serve(src_dir, host, port):
+    """Hand off to mdbook's own livereload server: it watches the manual's
+    sources and rebuilds + reloads automatically."""
+    _log(f"running mdbook serve in {src_dir} at http://{host}:{port}/  [live]")
+    try:
+        subprocess.run(
+            ["mdbook", "serve", "--hostname", host, "--port", str(port)],
+            cwd=src_dir, check=False)
+    except KeyboardInterrupt:
+        pass
+
+
+def start_unified_watcher(repo, book_dir, poll, debounce):
+    manuals, theme_watch = build_manifest(repo, book_dir,
+                                          read_manuals_mk(repo))
+    threading.Thread(target=watcher,
+                     args=(manuals, theme_watch, book_dir, poll, debounce),
+                     daemon=True).start()
+
+
+def main():
+    ap = argparse.ArgumentParser(
+        description="Local preview server for the HOL mdbook site.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__)
+    here = Path(__file__).resolve()
+    default_repo = here.parents[2]          # <repo>/Manual/Tools/this.py
+    ap.add_argument("--repo", type=Path, default=default_repo,
+                    help="HOL repo root (default: inferred from script path)")
+    ap.add_argument("--manual", default=None,
+                    choices=[m for m in PORTS if m is not None],
+                    help="serve just this manual (default: unified site)")
+    ap.add_argument("--live", action="store_true",
+                    help="enable livereload (unified: in-tree watcher + SSE; "
+                         "per-manual: mdbook's own livereload server)")
+    ap.add_argument("--port", type=int, default=None,
+                    help="override the canonical port for this scope")
+    ap.add_argument("--host", default="0.0.0.0")
+    ap.add_argument("--poll", type=float, default=0.5,
+                    help="(unified --live) source mtime poll interval, sec")
+    ap.add_argument("--debounce", type=float, default=0.4,
+                    help="(unified --live) quiet window after a change, sec")
+    args = ap.parse_args()
+
+    repo = args.repo.resolve()
+    port = args.port if args.port is not None else PORTS[args.manual]
+    manual_root = repo / "Manual"
+
+    check_port_free(args.host, port)
+    ensure_built(repo, args.manual)
+
+    if args.manual is None:
+        book_dir = (manual_root / "book").resolve()
+        if args.live:
+            start_unified_watcher(repo, book_dir, args.poll, args.debounce)
+        serve(book_dir, args.host, port, live=args.live)
+    elif args.live:
+        mdbook_serve(manual_root / args.manual, args.host, port)
+    else:
+        serve((manual_root / "book" / args.manual).resolve(), args.host, port)
 
 
 if __name__ == "__main__":

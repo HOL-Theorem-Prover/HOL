@@ -154,7 +154,7 @@ From the manual's directory:
 |---------------------------------|-------------------------------------------------------------------------|
 | `Holmake mdbook`                | Generate `SUMMARY.md`, `references.md`, `cite-labels.tsv`, and `labels.tsv`; run `mdbook build`; then `smdpp check-html` + `smdpp check-refs` + `smdpp check-links`. |
 | `Holmake <manual>.pdf`          | Generate `chapters-include.tex` + `book-title.tex` + per-chapter `.tex`, then `latexmk` (followed by an explicit trailing `pdflatex` pass for stubborn `.toc` convergence — see any manual's Holmakefile recipe for the rationale). |
-| `Holmake mdbook-serve LOG=1`    | Background `mdbook serve` with live-reload on a manual-specific port: Description 3000, Tutorial 3001, Reference 3003, Interaction (emacs) 3004. (Port 3002 is reserved for the unified site — see below.) |
+| `../Tools/mdbook-preview.py --manual <NAME> [--live]` (run from `Manual/`) | Build this manual via `Holmake mdbook` and serve `Manual/book/<NAME>/` in the foreground. Without `--live`: a plain static server; with `--live`: hand off to `mdbook serve`, which auto-rebuilds + livereloads on edits. Canonical ports: Description 3000, Tutorial 3001, Reference 3003, Interaction-emacs 3004, Logic 3005, Developers 3006 (3002 is the unified site — see below). `--port` overrides. |
 | `Holmake <chapter>.md`          | Run polyscripter on one chapter (per-chapter session — does **not** exercise the shared-session gotchas). |
 | `Holmake cleanAll`              | Remove all generated files in this dir.                                 |
 
@@ -211,7 +211,7 @@ From `Manual/` (not from inside any specific manual's directory):
 | Target                          | Effect                                                                              |
 |---------------------------------|-------------------------------------------------------------------------------------|
 | `Holmake mdbook`                | Build every per-manual book (one recursive `Holmake mdbook` per manual via the `<manual>-mdbook` PHONY targets), then regenerate `Manual/book/index.html` from the four `book.toml`s. |
-| `Holmake mdbook-serve LOG=1`    | Serve `Manual/book/` at <http://127.0.0.1:3002/> via a backgrounded `python3 -m http.server` (writing a log file). The server is purely static, so there's **no** live-reload here — re-run `Holmake mdbook` (or use a per-manual `mdbook serve` on its dedicated port) when iterating. |
+| `./Tools/mdbook-preview.py [--live]` (run from `Manual/`) | Build the unified site via `Holmake mdbook`, then serve `Manual/book/` at <http://127.0.0.1:3002/> in the foreground. Default is a plain static server; `--live` adds an in-tree watcher + SSE auto-reload — on a source edit only the affected manual is re-rendered via `mdbook build` and the browser reloads. Sidecars (`references.md`, `labels.tsv`, generated `SUMMARY.md`, ...) and the `smdpp check-*` gates are not refreshed mid-loop, so `Holmake mdbook` remains the gating check before committing. |
 
 `Holmake mdbook` from `Manual/` is the gating check before committing changes that touch more than one manual (cross-book `\ref{...}`, theme/template tweaks, etc.); the per-manual `Holmake mdbook` doesn't exercise the cross-book references.
 
@@ -228,7 +228,7 @@ From `Manual/` (not from inside any specific manual's directory):
 # Adding a new manual
 
   1. `mkdir Manual/<NewManual>` and copy `book.toml` and a minimal `Holmakefile` from `Manual/Tutorial/` as a starting template.  (The mdbook theme is shared from `Manual/theme/`, picked up automatically via the `theme = "../theme"` line in the copied `book.toml`; the `pdf-macros.lua` pandoc filter is shared from `Manual/Tools/` and referenced from the copied `Holmakefile` as `../Tools/pdf-macros.lua`.)
-  2. Edit `book.toml`'s `title` and `description` (the description shows up on the lander card emitted by `gen_lander`); set `build-dir = "../book/<NewManual>"`; pick a distinct `mdbook-serve` port (3000–3004 are taken).
+  2. Edit `book.toml`'s `title` and `description` (the description shows up on the lander card emitted by `gen_lander`); set `build-dir = "../book/<NewManual>"`; add an entry for the new manual to the `PORTS` table in `Manual/Tools/mdbook-preview.py` (3000–3006 are taken; 3002 is the unified site).
   3. Symlink the shared theme assets into the manual directory:
 
          cd Manual/<NewManual>

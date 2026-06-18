@@ -22,7 +22,6 @@ book-title.tex
 references.md
 cite-labels.tsv
 labels.tsv
-mdbook-serve.log
 figs/*.svg
 figs/*.aux
 figs/*.log

@@ -23,7 +23,7 @@ OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex \
         ../LaTeX/ref-macros.tex
 
 all: reference.pdf
-.PHONY: all mdbook mdbook-serve
+.PHONY: all mdbook
 
 # ---------------------------------------------------------------------
 # PDF pipeline: Md2TeX concatenates every entry into one big chapter
@@ -104,29 +104,9 @@ labels.tsv: ../Tools/smdpp $(Processed)/SUMMARY.md $(Processed)/.stamp
 entries.list: $(wildcard $(Helpd)/Docfiles/*.smd)
 	ls $(Helpd)/Docfiles/*.smd | xargs -n1 basename | sed 's/\.smd$$//' > $@
 
-# Convenience: serve the Reference book locally at port 3003.  See
-# Manual/Description/Holmakefile for the per-manual mdbook-serve
-# rationale (live-reload edit loop on a dedicated port).
-mdbook-serve: ../Tools/smdpp
-	@msg() { { echo "$$1" >/dev/tty; } 2>/dev/null || echo "$$1" >&2; }; \
-	 if lsof -ti :3003 >/dev/null 2>&1; then \
-	   msg "Port 3003 already in use; stop the existing server first:"; \
-	   msg "  pkill -f 'mdbook serve.*3003'  (or: lsof -ti :3003 | xargs kill)"; \
-	   exit 1; \
-	 fi; \
-	 logfile="$(LOG)"; \
-	 [ "$$logfile" = 1 ] && logfile=mdbook-serve.log; \
-	 [ -z "$$logfile" ] && logfile=/dev/null; \
-	 (mdbook serve --hostname 0.0.0.0 --port 3003 \
-	    >"$$logfile" 2>&1 &); \
-	 msg "mdbook serving at http://127.0.0.1:3003/"; \
-	 [ "$$logfile" != /dev/null ] && msg "log: $$(pwd)/$$logfile"; \
-	 msg "stop: pkill -f 'mdbook serve.*3003'"
-
 EXTRA_CLEANS = reference.pdf entries.md entries.tex \
                $(Processed)/ entries.list labels.tsv \
                ../book/Reference/ \
-               mdbook-serve.log \
                reference.aux reference.log reference.out \
                reference.toc reference.fls reference.idx reference.ilg \
                reference.ind reference.blg reference.bbl \

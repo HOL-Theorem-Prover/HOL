@@ -11,11 +11,15 @@ math content from CommonMark backslash-escaping.
 From this directory:
 
     Holmake mdbook            # one-shot build (output: ../book/Description)
-    Holmake mdbook-serve      # localhost:3000 with live reload (detached)
-    Holmake mdbook-serve LOG=1
-                              # ditto, but capture server output to
-                              # mdbook-serve.log here.  LOG=<path> sets
-                              # a custom log path; default is /dev/null.
+
+To preview the built book in a browser, run the foreground previewer
+from `Manual/` (one level up):
+
+    ../Tools/mdbook-preview.py --manual Description           # localhost:3000, static
+    ../Tools/mdbook-preview.py --manual Description --live    # localhost:3000, mdbook serve auto-reloads
+
+The previewer runs `Holmake mdbook` first, so the served book always
+matches a release build.  `--port` overrides the default 3000.
 
 `Holmake mdbook` depends on `../Tools/smdpp` so the preprocessor binary
 is built automatically if missing.
@@ -25,20 +29,6 @@ The build directory is `../book/Description` (i.e.
 directory — that's deliberate, so mdbook's serve-mode watcher doesn't
 loop rebuilding on its own output. Don't move `build-dir` back into
 the source tree without addressing that.
-
-`Holmake mdbook-serve` detaches the server into the background and
-prints the URL — your terminal stays free. The server keeps running
-until you kill it. If you re-run `Holmake mdbook-serve` while a
-previous server is still alive, the recipe pre-flight-checks port
-3000 and fails fast with a hint:
-
-    Port 3000 already in use; stop the existing server first:
-      pkill -f 'mdbook serve'  (or: lsof -ti :3000 | xargs kill)
-
-`pkill -f 'mdbook serve'` is portable across macOS and Linux modern
-installations (BSD pkill and procps-ng pkill both support `-f`).
-The `lsof` form is a more robust fallback if there's any chance the
-process listening on 3000 isn't actually mdbook.
 
 ## Adding a chapter
 
