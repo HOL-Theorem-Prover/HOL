@@ -112,13 +112,17 @@ def stage_theory_graph():
 
 
 def stage_htmlsigs():
-    """Per-signature HTML still works fine via a directory symlink;
-    contents reference each other by basename within htmlsigs/."""
+    """Copy per-signature HTML pages into book/htmlsigs/.  Contents
+    reference each other by basename within htmlsigs/, so a flat copy is
+    self-sufficient -- and a real-files copy means the staged book/ tree
+    is rsync-deployable without --copy-links."""
     target = BOOK / "htmlsigs"
     src = HOLDIR / "help" / "src-sml" / "htmlsigs"
-    if target.is_symlink() or target.exists():
-        target.unlink() if target.is_symlink() else shutil.rmtree(target)
-    target.symlink_to(src)
+    if target.is_symlink():
+        target.unlink()
+    elif target.exists():
+        shutil.rmtree(target)
+    shutil.copytree(src, target)
 
 
 # References to <thy>Theory.html (or <thy>Script.html) found in the
