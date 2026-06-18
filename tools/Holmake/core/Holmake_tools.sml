@@ -803,6 +803,41 @@ fun find_files ds P =
     recurse []
   end
 
+(* Scan-time modTime memo: every per-target staleness check (and the
+   downstream node-mtime stamps) probes a small set of source / depfile
+   paths over and over.  Memoising HOLFileSys.modTime by canonical
+   absolute path keeps that at one stat() per distinct file per scan.
+   The stash is cleared on entry to and exit from `with_dircache' (see
+   the existence cache below) so it cannot leak into the build phase,
+   where files are being created and mtimes change underneath. *)
+local
+  val mtime_stash : (string, Time.time option) Binarymap.dict ref =
+      ref (Binarymap.mkDict String.compare)
+in
+  fun clear_mtime_cache () =
+      mtime_stash := Binarymap.mkDict String.compare
+  fun cached_modTime path =
+      let
+        val key =
+            if path <> "" andalso OS.Path.isAbsolute path then
+              OS.Path.mkCanonical path
+            else
+              OS.Path.mkCanonical (
+                OS.Path.mkAbsolute
+                  {path = if path = "" then "." else path,
+                   relativeTo = OS.FileSys.getDir ()})
+      in
+        case Binarymap.peek (!mtime_stash, key) of
+            SOME r => r
+          | NONE =>
+            let val r = (SOME (HOLFileSys.modTime key))
+                        handle _ => NONE
+            in
+              mtime_stash := Binarymap.insert (!mtime_stash, key, r); r
+            end
+      end
+end
+
 (* targets are also dependencies, so the naming convention is to use variable
    names like deps and tgts both *)
 structure hm_target =
@@ -837,8 +872,7 @@ fun filestr_to_tgt_in_dir base s =
     end
 fun filestr_to_tgt s = filestr_to_tgt_in_dir (hmdir.curdir()) s
 fun tgtexists_readable d = exists_readable (toString d)
-fun tgt_modTime d =
-    SOME (HOLFileSys.modTime (toString d)) handle _ => NONE
+fun tgt_modTime d = cached_modTime (toString d)
 end (* struct *)
 
 type dep = hm_target.t
@@ -894,8 +928,9 @@ in
       end
   fun cached_tgtexists d = cached_exists (hm_target.toString d)
   fun with_dircache f =
-      (clear_dir_cache ();
-       let val r = f () in clear_dir_cache (); r end)
+      (clear_dir_cache (); clear_mtime_cache ();
+       let val r = f ()
+       in clear_dir_cache (); clear_mtime_cache (); r end)
 end
 
 (* dependency analysis *)
@@ -994,12 +1029,13 @@ fun get_dependencies_from_file depfile =
 
 
 infix forces_update_of
-fun (f1 forces_update_of f2) = let
-  open Time
-in
-  access(f1, []) andalso
-  (not (access(f2, [])) orelse HOLFileSys.modTime f1 > HOLFileSys.modTime f2)
-end
+fun (f1 forces_update_of f2) =
+    case cached_modTime f1 of
+        NONE => false
+      | SOME t1 =>
+          (case cached_modTime f2 of
+               NONE => true
+             | SOME t2 => Time.> (t1, t2))
 infix depforces_update_of
 fun (d1 depforces_update_of d2) =
     tgt_toString d1 forces_update_of tgt_toString d2
