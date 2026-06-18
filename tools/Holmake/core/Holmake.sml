@@ -10,7 +10,10 @@ struct
 open Systeml Holmake_tools Holmake_types HOLFileSys
 infix forces_update_of depforces_update_of cached_depforces_update_of |>
 
-structure FileSys = HOLFileSys
+(* Route getDir through HOLFileSys's cwd cache during the scan; see the note
+   in Holmake_tools.  Holmake is a fresh process and every chDir invalidates,
+   so this can't go stale the way the shared (bin/hol) getDir would. *)
+structure FileSys = struct open HOLFileSys val getDir = cached_getDir end
 structure Path = OS.Path
 structure Process = OS.Process
 

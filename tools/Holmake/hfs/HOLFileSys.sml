@@ -148,7 +148,28 @@ fun rename{old,new} =
 val isLink = readfn OS.FileSys.isLink
 val isDir = OS.FileSys.isDir
 val getDir = OS.FileSys.getDir
-val chDir = OS.FileSys.chDir
+(* cached_getDir caches the cwd for Holmake's dependency scan, where getDir is
+   called tens of thousands of times to absolutise relative paths in
+   cached_modTime / cached_exists; on macOS getcwd(3) walks the directory tree
+   opening each ancestor, ~60% of warm-scan CPU.  Only Holmake calls
+   cached_getDir; plain getDir above stays uncached, because this file is also
+   `use'd into the bin/hol runtime, which runs from a saved poly state -- a
+   cached cwd would be baked into the heap at state-build time and then read
+   back stale from another directory.  The cwd only changes via chDir, which
+   invalidates the cache; every cwd change in Holmake's process routes through
+   chDir (raw OS.FileSys cwd ops are poisoned in the scan modules), and
+   HFS_NameMunge.pushdir diverts/restores in a balanced pair without reading
+   the cache while diverted. *)
+local
+  val cwd : string option ref = ref NONE
+in
+  fun cached_getDir () =
+      case !cwd of
+          SOME d => d
+        | NONE => let val d = OS.FileSys.getDir() in cwd := SOME d; d end
+  fun invalidate_cwd () = cwd := NONE
+end
+fun chDir d = (OS.FileSys.chDir d; invalidate_cwd ())
 val mkDir = OS.FileSys.mkDir
 val rmDir = OS.FileSys.rmDir
 type dirstream = HFS_NameMunge.dirstream

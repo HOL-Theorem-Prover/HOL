@@ -7,7 +7,14 @@ open terminal_primitives
 open Holmake_tools_dtype
 open HOLFileSys
 
-structure FileSys = HOLFileSys
+(* Within Holmake, getDir is routed through the cwd cache (HOLFileSys's
+   cached_getDir): the dependency scan calls it tens of thousands of times
+   and macOS getcwd(3) walks the tree.  Safe here because Holmake is a fresh
+   process (no saved state to bake a stale cwd into) and every chDir
+   invalidates the cache.  HOLFileSys.getDir itself stays uncached for the
+   bin/hol runtime, which loads from a saved poly state. *)
+val getDir = cached_getDir
+structure FileSys = struct open HOLFileSys val getDir = cached_getDir end
 fun K x y = x
 
 fun |>(x,f) = f x
@@ -43,6 +50,23 @@ end
 
 
 structure Path = OS.Path
+
+(* All cwd operations must go through HOLFileSys, which caches getDir and
+   invalidates on chDir (macOS getcwd is ~60% of warm-scan CPU otherwise).
+   Poison the raw OS.FileSys cwd primitives here so any stray direct use is
+   a compile-time error rather than a silent re-introduction of per-call
+   getcwd.  getDir/chDir below resolve to HOLFileSys's (via `open' above);
+   other OS.FileSys operations remain available. *)
+structure OS =
+struct
+  open OS
+  structure FileSys =
+  struct
+    open OS.FileSys
+    val getDir = ()
+    val chDir = ()
+  end
+end
 
 val DEFAULT_OVERLAY = "Overlay.ui"
 fun member m [] = false
@@ -586,7 +610,7 @@ fun recursive_act ofns file_act dir_act name =
 fun clean1 (ofns : output_functions) s =
     let val _ = #diag ofns "tools"
                       (fn () => "clean1 " ^ s ^
-                                " [In: " ^ OS.FileSys.getDir() ^ "]")
+                                " [In: " ^ getDir() ^ "]")
     in
       if OS.FileSys.access (s, []) then
         if OS.FileSys.isDir s then
@@ -828,7 +852,7 @@ in
               OS.Path.mkCanonical (
                 OS.Path.mkAbsolute
                   {path = if path = "" then "." else path,
-                   relativeTo = OS.FileSys.getDir ()})
+                   relativeTo = cached_getDir ()})
       in
         case Binarymap.peek (!mtime_stash, key) of
             SOME r => r
@@ -925,7 +949,7 @@ in
               OS.Path.mkCanonical (
                 OS.Path.mkAbsolute
                   {path = if dir = "" then "." else dir,
-                   relativeTo = OS.FileSys.getDir ()})
+                   relativeTo = cached_getDir ()})
       in
         Binaryset.member (dir_listing absdir, file)
       end
@@ -1152,7 +1176,7 @@ fun warn_case_collisions warn src_files =
                               src_files
       fun report (_, fs as _::_::_) =
             warn ("case-only filename collision in " ^
-                  OS.FileSys.getDir() ^ ": " ^
+                  getDir() ^ ": " ^
                   String.concatWith ", " (List.rev fs) ^
                   " (the same file on case-insensitive filesystems)")
         | report _ = ()
