@@ -840,19 +840,31 @@ fun find_files ds P =
 local
   val mtime_stash : (string, Time.time option) Binarymap.dict ref =
       ref (Binarymap.mkDict String.compare)
+  fun canon path =
+      if path <> "" andalso OS.Path.isAbsolute path then
+        OS.Path.mkCanonical path
+      else
+        OS.Path.mkCanonical (
+          OS.Path.mkAbsolute
+            {path = if path = "" then "." else path,
+             relativeTo = cached_getDir ()})
 in
   fun clear_mtime_cache () =
       mtime_stash := Binarymap.mkDict String.compare
+  (* Stat one path and (re)record it in the memo.  Called after runholdep
+     writes a .d file mid-scan: the memo may already hold that file's
+     pre-write (absent) mtime, and the closure walk re-checks the same
+     depfile, so without this the staleness test re-fires runholdep on
+     every revisit (observed ~5x redundant analysis on a cold scan).
+     We insert the fresh mtime here rather than just evicting, so the
+     next check is a cache hit rather than another stat. *)
+  fun record_modTime path =
+      let val key = canon path
+          val r = (SOME (HOLFileSys.modTime key)) handle _ => NONE
+      in mtime_stash := Binarymap.insert (!mtime_stash, key, r) end
   fun cached_modTime path =
       let
-        val key =
-            if path <> "" andalso OS.Path.isAbsolute path then
-              OS.Path.mkCanonical path
-            else
-              OS.Path.mkCanonical (
-                OS.Path.mkAbsolute
-                  {path = if path = "" then "." else path,
-                   relativeTo = cached_getDir ()})
+        val key = canon path
       in
         case Binarymap.peek (!mtime_stash, key) of
             SOME r => r
@@ -995,7 +1007,11 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
   val outstr = openOut (normPath destination)
 in
   output(outstr, Holdep.encode_for_HOLMKfile holdep_result);
-  closeOut outstr
+  closeOut outstr;
+  (* the depfile now exists; record its mtime so a subsequent staleness
+     check sees the modtime of the freshly-written file instead of a
+     memoised absence *)
+  record_modTime destination
 end
 
 (* pull out a list of files that target depends on from depfile.  *)
