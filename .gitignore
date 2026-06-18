@@ -143,3 +143,4 @@ examples/l3-machine-code/**/*-heap
 /.claude/*
 !/.claude/skills/
 CLAUDE.local.md
+.agent-files
