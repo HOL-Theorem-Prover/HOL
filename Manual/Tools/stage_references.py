@@ -37,6 +37,22 @@ SVG_THEORY_RE = re.compile(
     rb'((?:xlink:)?href)="[^"]*?/\.hol/docs/([^"/]+?\.html)"'
 )
 
+# Inside htmlsigs/*.html: links to Reference docfile pages.  The path
+# was computed for htmlsigs living at help/src-sml/htmlsigs/; after
+# staging into book/htmlsigs/, Reference/ is a sibling.
+HTMLSIGS_REF_RE = re.compile(
+    rb'href="\.\./\.\./\.\./Manual/book/Reference/'
+)
+
+# Inside htmlsigs/*.html: links to per-theory HTML pages live at each
+# theory's source-tree .hol/docs/.  After staging, all theory pages
+# collapse into book/theories/, so the entire prefix drops away.
+# Preserves any #fragment.
+HTMLSIGS_THEORY_RE = re.compile(
+    rb'href="\.\./\.\./\.\./[^"]*?/\.hol/docs/'
+    rb'([^"]+?Theory\.html(?:#[^"]*)?)"'
+)
+
 
 def canonical_thy_sources():
     """Yield (thy_name, src_dir) for each theory installed in sigobj/.
@@ -112,10 +128,12 @@ def stage_theory_graph():
 
 
 def stage_htmlsigs():
-    """Copy per-signature HTML pages into book/htmlsigs/.  Contents
-    reference each other by basename within htmlsigs/, so a flat copy is
-    self-sufficient -- and a real-files copy means the staged book/ tree
-    is rsync-deployable without --copy-links."""
+    """Copy per-signature HTML pages into book/htmlsigs/ and rewrite
+    cross-tree links (Reference docfiles, per-theory HTML) so they
+    resolve against the staged book/ siblings instead of the source
+    tree.  Without the rewrite every htmlsigs link out of the directory
+    dangles -- in the source tree they only resolved relative to
+    help/src-sml/htmlsigs/."""
     target = BOOK / "htmlsigs"
     src = HOLDIR / "help" / "src-sml" / "htmlsigs"
     if target.is_symlink():
@@ -123,6 +141,12 @@ def stage_htmlsigs():
     elif target.exists():
         shutil.rmtree(target)
     shutil.copytree(src, target)
+    for path in target.glob("*.html"):
+        body = path.read_bytes()
+        body2 = HTMLSIGS_REF_RE.sub(rb'href="../Reference/', body)
+        body2 = HTMLSIGS_THEORY_RE.sub(rb'href="../theories/\1"', body2)
+        if body2 != body:
+            path.write_bytes(body2)
 
 
 # References to <thy>Theory.html (or <thy>Script.html) found in the
