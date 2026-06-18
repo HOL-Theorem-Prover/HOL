@@ -235,8 +235,15 @@ sig
      [base]; absolute paths come through unchanged. *)
   val get_dependencies_from_file_in_dir : hmdir.t -> string -> dep list
 
+  (* [forces_update_of] / [depforces_update_of] stat fresh on every
+     call and are the versions to use in the build phase, where files
+     change underneath.  The [cached_*] variants answer from the
+     scan-time modTime memo (see [cached_modTime] below) and must only
+     be used during the scan. *)
   val forces_update_of : string * string -> bool
   val depforces_update_of : dep * dep -> bool
+  val cached_forces_update_of : string * string -> bool
+  val cached_depforces_update_of : dep * dep -> bool
 
   (* Scan-time per-directory listing cache.  See implementation in
      Holmake_tools.sml.  [cached_exists] / [cached_tgtexists] answer

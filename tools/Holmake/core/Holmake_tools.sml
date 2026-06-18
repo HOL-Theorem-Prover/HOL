@@ -807,9 +807,12 @@ fun find_files ds P =
    downstream node-mtime stamps) probes a small set of source / depfile
    paths over and over.  Memoising HOLFileSys.modTime by canonical
    absolute path keeps that at one stat() per distinct file per scan.
-   The stash is cleared on entry to and exit from `with_dircache' (see
-   the existence cache below) so it cannot leak into the build phase,
-   where files are being created and mtimes change underneath. *)
+   Only scan-phase code calls cached_modTime (via tgt_modTime and the
+   cached_*forces_update_of operators below); the build phase uses the
+   uncached real_modTime, because it creates files and advances mtimes
+   underneath and a memoised value would be read back stale.  The stash
+   is also cleared on entry to and exit from `with_dircache' (see the
+   existence cache below) so it never persists between scans. *)
 local
   val mtime_stash : (string, Time.time option) Binarymap.dict ref =
       ref (Binarymap.mkDict String.compare)
@@ -1028,17 +1031,29 @@ fun get_dependencies_from_file depfile =
 
 
 
-infix forces_update_of
-fun (f1 forces_update_of f2) =
-    case cached_modTime f1 of
+(* f1 forces an update of f2 iff f1 exists and is strictly newer.  The
+   modTime lookup is a parameter so the same comparison serves both
+   phases: the build phase passes real_modTime (a fresh stat every
+   call, correct while files are being rebuilt underneath); the scan
+   phase passes cached_modTime (one stat per file per scan). *)
+fun gen_forces_update_of modTime (f1, f2) =
+    case modTime f1 of
         NONE => false
       | SOME t1 =>
-          (case cached_modTime f2 of
+          (case modTime f2 of
                NONE => true
              | SOME t2 => Time.> (t1, t2))
-infix depforces_update_of
+fun real_modTime p = (SOME (HOLFileSys.modTime p)) handle _ => NONE
+
+infix forces_update_of cached_forces_update_of
+fun (f1 forces_update_of f2) = gen_forces_update_of real_modTime (f1, f2)
+fun (f1 cached_forces_update_of f2) =
+    gen_forces_update_of cached_modTime (f1, f2)
+infix depforces_update_of cached_depforces_update_of
 fun (d1 depforces_update_of d2) =
     tgt_toString d1 forces_update_of tgt_toString d2
+fun (d1 cached_depforces_update_of d2) =
+    tgt_toString d1 cached_forces_update_of tgt_toString d2
 
 
 fun get_direct_dependencies {incinfo,DEPDIR,output_functions,extra_targets} f =
@@ -1054,7 +1069,7 @@ in
     val depfile = mk_depfile_name DEPDIR argname
     val allincs = preincludes @ includes
     val _ =
-      if argname forces_update_of depfile then
+      if argname cached_forces_update_of depfile then
         runholdep {ofs = output_functions, extras = extra_targets,
                    includes = allincs, arg = arg,
                    destination = depfile}

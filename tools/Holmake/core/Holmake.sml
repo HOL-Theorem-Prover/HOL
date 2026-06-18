@@ -8,7 +8,7 @@ structure Holmake =
 struct
 
 open Systeml Holmake_tools Holmake_types HOLFileSys
-infix forces_update_of depforces_update_of |>
+infix forces_update_of depforces_update_of cached_depforces_update_of |>
 
 structure FileSys = HOLFileSys
 structure Path = OS.Path
@@ -1473,7 +1473,7 @@ let
           val needs_building =
               not cachekey_uptodate andalso
               (not (null unbuilt_deps) orelse
-               set_exists (fn d => d depforces_update_of tgt)
+               set_exists (fn d => d cached_depforces_update_of tgt)
                           (set_add pdep secondaries))
           val _ = if cachekey_uptodate then
                     diag (fn _ => target_s ^
@@ -1576,7 +1576,7 @@ let
               val needs_building_by_deps_existence =
                   not (FileSys.access(target_s, [])) orelse
                   not (null unbuilt_deps) orelse
-                  List.exists (fn d => d depforces_update_of tgt)
+                  List.exists (fn d => d cached_depforces_update_of tgt)
                               dependencies orelse
                   is_phony
               val needs_building =
