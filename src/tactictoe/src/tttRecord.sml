@@ -153,9 +153,17 @@ fun fetch s reps =
   let val sthmo = thm_of_sml s in
     case sthmo of
       NONE =>
-        (if reps = ""
-         then (debug ("fetch_other: " ^ s); add_local_tag s)
-         else reps)
+        if reps = "" then
+          (debug ("fetch_other: " ^ s); add_local_tag s)
+        else if String.isSubstring "store_thm_at" reps then
+          (* reps would re-run a proof (and re-store the theorem, causing
+             a DUP) when s is a let-bound local that is not a global
+             thm binding.  Prefer a safe local-tag placeholder so the
+             surrounding tactic fails to replay cleanly and
+             record_proof falls back to the raw tactic, instead of
+             crashing the whole theory recording. *)
+          (debug ("fetch_local: " ^ s); add_local_tag s)
+        else reps
     | SOME (_,thm) =>
     let val nameo = dbfetch_of_depid thm in
       case nameo of
