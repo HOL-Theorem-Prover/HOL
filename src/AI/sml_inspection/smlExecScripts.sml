@@ -18,6 +18,12 @@ val ERR = mk_HOL_ERR "smlExecScripts"
 
 fun bare file = OS.Path.base (OS.Path.file file)
 fun remove_err s = FileSys.remove s handle SysErr _ => ()
+(* Literal (un-munged) existence check, matching what a shell `cp` sees.
+   aiLib.exists_file uses HOLFileSys.access, which silently rewrites
+   `dir/fooTheory.sml` to `dir/.hol/objs/fooTheory.sml`; that munged path
+   may exist even though the literal path passed to `cp` does not.  Use
+   this for the save/restore cp guards so the guard agrees with `cp`. *)
+fun lit_exists file = OS.FileSys.access (file, [])
 
 (* -------------------------------------------------------------------------
    Find the right heap for running a script
@@ -116,7 +122,7 @@ fun theory_files script =
   end
 
 fun save_file file =
-  if exists_file file then
+  if lit_exists file then
     let
       val dir = #dir (OS.Path.splitDirFile file)
       val cmd = "cp -p " ^ file ^ " " ^ (file ^ ".tttsave")
@@ -126,7 +132,7 @@ fun save_file file =
   else ()
 
 fun restore_file file =
-  if exists_file (file ^ ".tttsave") then
+  if lit_exists (file ^ ".tttsave") then
     let
       val dir = #dir (OS.Path.splitDirFile file)
       val cmd1 = "cp -p " ^ (file ^ ".tttsave") ^ " " ^ file
