@@ -374,6 +374,80 @@ fun extract_store_thm sl =
     NONE
     )
 
+(* For the modern Theorem/Proof/QED syntax, sketch_wrap feeds HOL's
+   source-expander output, which desugars each Theorem block to
+     val id = Q.store_thm_at (loc) ("name[attrs]", term, tac)
+   where tac = fn HOL__GOAL__foo => <user-tactic> HOL__GOAL__foo
+   (the expander wraps the user's tactic via wrapTac).  The store_thm
+   recognizer above does not see `store_thm_at` and cannot parse the
+   curried (loc)(args) shape, so such scripts record zero proofs.
+   extract_store_thm_at handles the curried form and unwraps the
+   goal-lambda so the recorded tactic is the user's tactic. *)
+
+(* take_group: given a sketch list starting with "(" (or "[" / "{"),
+   return the tokens inside that one balanced group (without the outer
+   delimiters) and the rest. *)
+fun take_group_aux d pl [] = raise ERR "take_group" "unbalanced"
+  | take_group_aux d pl (x :: m) =
+    case x of
+      Code (a,_) =>
+        if mem a ["(","[","{"] then take_group_aux (d + 1) (x :: pl) m
+        else if mem a [")","]","}"] then
+          if d <= 1 then (rev pl, m) else take_group_aux (d - 1) (x :: pl) m
+        else take_group_aux d (x :: pl) m
+    | _ => take_group_aux d (x :: pl) m
+
+fun take_group (Code(a,_) :: m) =
+      if a = "(" orelse a = "[" orelse a = "{" then take_group_aux 1 [] m
+      else raise ERR "take_group" ("expected (, got " ^ a)
+  | take_group _ = raise ERR "take_group" "not a paren"
+
+(* unwrap_fn: drop the `fn HOL__GOAL__foo => <tac> HOL__GOAL__foo` wrapper
+   that wrapTac produces, returning the user's tactic (sketch list).
+   The sketcher renders `fn X => BODY` as
+   Pattern ("fn", [X], "=>", sketched BODY), so match on Pattern. *)
+fun drop_goalarg_sketch sk =
+  case rev sk of
+    Code ("HOL__GOAL__foo",_) :: rest => rev rest
+  | _ => sk
+
+fun unwrap_fn sk =
+  case sk of
+    Pattern ("fn", _, "=>", body) :: _ =>
+      (case body of
+         Code ("(",_) :: _ => #1 (take_group body)
+       | _ => drop_goalarg_sketch body)
+  | _ => sk
+
+(* strip_attrs: drop a `[attrs]` suffix from a theorem name, e.g.
+   "o_THM[compute]" -> "o_THM", so tactic data is keyed by the real
+   theorem name (Q.store_thm_at applies the attrs separately). *)
+fun strip_attrs s =
+  case String.fields (fn c => c = #"[") s of (h :: _) => h | _ => s
+
+fun extract_store_thm_at sl =
+  let
+    (* sl is the content inside the first paren (the opening "(" was
+       dropped by `tl m` in the recognizer), i.e. the loc group content
+       followed by the args group:  <loc> ) ( <args> ) <rest> *)
+    val (locg, rest1) = split_codelevel ")" sl
+    val (argsg, cont) = take_group rest1
+    val (namel, l0)  = split_codelevel "," argsg
+    val (term, qtacw) = split_codelevel "," l0
+    val qtac = unwrap_fn qtacw
+    val name = original_code (last namel)
+  in
+    if is_quoted name
+    then SOME (rm_bbra_str (rm_squote name), locg, namel, term, qtac, cont)
+    else NONE
+  end
+  handle HOL_ERR _ =>
+    (
+    print_endline ("Warning: extract_store_thm_at: " ^
+      (String.concatWith " "(map original_code (first_n 10 sl))));
+    NONE
+    )
+
 fun extract_prove sl =
   let
     val (body,cont) = split_codelevel ")" sl
@@ -601,6 +675,31 @@ fun modified_program (h,d) p =
     (
     if mem (drop_sig a) ["export_theory"] then continue m
     else if h orelse d > 1 then a :: continue m
+    else if drop_sig a = "store_thm_at" andalso hd_code_par m
+      then
+      case extract_store_thm_at (tl m) of
+        NONE => a :: continue m
+      | SOME (name,locg,namel,term,qtac,cont) =>
+        let
+          val _ = is_thm_flag := true
+          val _ = incr n_store_thm
+          val tac1 = original_program qtac
+          val lflag = mem "let" tac1
+          val lflag_name = if lflag then "true" else "false"
+          val tac2 = ppstring_stac qtac
+          val cname = strip_attrs name
+        in
+          [a,"("] @ original_program locg @ [")","("] @
+          original_program namel @ [","] @ original_program term @
+          [","] @
+            ["let","val","tactictoe_tac1","="] @ tac1 @
+            ["val","tactictoe_tac2","=","tttRecord.app_wrap_proof",
+             mlquote cname,"\n",tac2] @
+            ["in","tttRecord.record_proof",mlquote cname,
+             lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
+          [")"]
+          @ continue cont
+        end
     else if mem (drop_sig a) store_thm_list andalso hd_code_par m
       then
       case extract_store_thm (tl m) of
