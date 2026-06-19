@@ -9,5 +9,5 @@ git checkout 9f9bb9a9e6a133876152124ce3c30993a61fa7c9
 # overflow in the MLton-built Holmake during dependency analysis.
 script=A64_ISA_v86A/armv86aScript.sml
 if ! grep -q '"TheoryPP.include_html_docs"' "$script"; then
-    sed -i '/^val _ = export_theory()/i val _ = Feedback.set_trace "TheoryPP.include_html_docs" 0;\n' "$script"
+    perl -i -pe 'print "val _ = Feedback.set_trace \"TheoryPP.include_html_docs\" 0;\n" if /^val _ = export_theory\(\)/' "$script"
 fi
