@@ -11,16 +11,17 @@
 #
 # Prerequisites:
 #   * HOLDIR exported to point at a built HOL4 tree (see below).
-#   * A full HOL4 build so that $HOLDIR/sigobj is populated:
-#       bin/build -F
+#   * The script runs a full HOL4 build (`bin/build -F`) to populate
+#     $HOLDIR/sigobj before recording.  Pass --no-build to skip this
+#     (e.g. for a re-run after a successful full build).
 #   * Recording opens many files; the script raises the soft open-file
 #     limit to 20000 (as recommended by src/tactictoe/EVALUATION).  If
 #     the hard limit is lower than 20000, raise it first in the shell
 #     that launches this script (e.g. via ulimit -Hn).
-#
 # Usage:
 #   export HOLDIR=/path/to/HOL
 #   ./src/tactictoe/examples/ttt_recordall.sh
+#   ./src/tactictoe/examples/ttt_recordall.sh --no-build
 #   ./src/tactictoe/examples/ttt_recordall.sh --keep
 #   ./src/tactictoe/examples/ttt_recordall.sh --output /path/to/out
 #   ./src/tactictoe/examples/ttt_recordall.sh --output /path/to/out \
@@ -41,15 +42,17 @@ set -euo pipefail
 
 # --- help ------------------------------------------------------------------
 usage() {
-  sed -n '2,46p' "${BASH_SOURCE[0]}"
+  sed -n '2,39p' "${BASH_SOURCE[0]}"
 }
 
 # --- parse arguments (before any environment checks) ----------------------
 keep=0
 output_dir=""
+no_build=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --keep) keep=1; shift ;;
+    --no-build) no_build=1; shift ;;
     -h|--help) usage; exit 0 ;;
     --output)
       if [ $# -lt 2 ]; then
@@ -76,11 +79,26 @@ if [ -z "${HOLDIR:-}" ]; then
 fi
 hol_dir="${HOLDIR}"
 hol_bin="${hol_dir}/bin/hol"
+build_bin="${hol_dir}/bin/build"
 
 if [ ! -x "${hol_bin}" ]; then
   echo "error: hol binary not found at ${hol_bin}" >&2
   echo "       is HOLDIR (${HOLDIR}) a built HOL4 tree?" >&2
   exit 1
+fi
+
+# --- full build (populates $HOLDIR/sigobj with the whole stdlib) ----------
+if [ "${no_build}" -eq 1 ]; then
+  echo "--no-build: skipping build; recording from the current sigobj."
+else
+  echo "Running full HOL4 build to populate ${hol_dir}/sigobj:"
+  echo "  ${build_bin} -F"
+  if [ ! -x "${build_bin}" ]; then
+    echo "error: build binary not found at ${build_bin}" >&2
+    exit 1
+  fi
+  "${build_bin}" -F
+  echo "build finished."
 fi
 
 # src/tactictoe/examples/ lives in the HOL4 tree; find it relative to
@@ -93,7 +111,12 @@ sigobj_dir="${hol_dir}/sigobj"
 if [ ! -d "${sigobj_dir}" ] ||
    ! ls "${sigobj_dir}"/*Theory.sig >/dev/null 2>&1; then
   echo "error: no *Theory.sig files under ${sigobj_dir}" >&2
-  echo "       build HOL4 first:  bin/build -F" >&2
+  if [ "${no_build}" -eq 1 ]; then
+    echo "       --no-build was given; build HOL4 first:  bin/build -F" >&2
+  else
+    echo "       the build above should have populated sigobj;" >&2
+    echo "       check the build output for failures." >&2
+  fi
   exit 1
 fi
 nthy=$(ls "${sigobj_dir}"/*Theory.sig 2>/dev/null | wc -l)
