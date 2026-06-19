@@ -35,9 +35,6 @@
 #   Scratch temp dirs (src/AI/sml_inspection/{open,buildheap},
 #   src/tactictoe/info, src/tactictoe/code) are NOT redirected and
 #   stay under $HOLDIR; they are cleaned up by this script.
-#
-# Expect ~8 hours for the full standard library
-# (see src/tactictoe/README).
 # ===========================================================================
 
 set -euo pipefail
@@ -223,7 +220,6 @@ cleanup_scratch() {
 echo
 echo "Starting hol to record tactic data for the whole"
 echo "standard library."
-echo "This takes ~8 hours."
 echo "Output: ${tacdata_path}"
 echo
 
