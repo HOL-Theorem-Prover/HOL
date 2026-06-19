@@ -30,6 +30,49 @@ val record_tactic_time = ref 2.0
 val record_proof_time = ref 20.0
 val name_glob = ref ""
 
+(* Substrings that mark a reproduction string (reps) as dangerous to
+   re-evaluate.  When `fetch s reps` is called for a local binding `s`
+   that is not a global theorem (thm_of_sml returns NONE), returning reps
+   verbatim would re-run the proof/definition it reproduces and re-store
+   the result, causing a DUP crash (e.g. `SIMPLE_GUESS_FORALL_def` in
+   quantHeuristics, whose reps re-runs `TotalDefn.located_qDefine`).
+   These cover the storing forms the TacticToe rewriter emits: theorem
+   stores (`store_thm_at`, `store_thm`, `save_thm_at`, ...) and
+   definition forms (`qDefine`, `xDefine`, `located_qDefine`, ...). *)
+val dangerous_store_substrings = [
+  "store_thm_at",
+  "save_thm_at",
+  "store_thm",
+  "save_thm",
+  "located_qDefine",
+  "located_xDefine",
+  "located_zDefine",
+  "located_bDefine",
+  "located_tDefine",
+  "located_dDefine",
+  "located_Define",
+  "qDefine",
+  "xDefine",
+  "zDefine",
+  "bDefine",
+  "tDefine",
+  "dDefine",
+  "new_definition",
+  "new_specification",
+  "new_type_definition",
+  "store_definition",
+  "Define",
+  "multiDefine",
+  "Hol_reln",
+  "Hol_coreln",
+  "new_binder_definition",
+  "define_new_type_bijections"
+]
+
+fun reps_is_dangerous reps =
+  List.exists (fn sub => String.isSubstring sub reps)
+    dangerous_store_substrings
+
 (* -------------------------------------------------------------------------
    Messages and profiling
    ------------------------------------------------------------------------- *)
@@ -155,13 +198,15 @@ fun fetch s reps =
       NONE =>
         if reps = "" then
           (debug ("fetch_other: " ^ s); add_local_tag s)
-        else if String.isSubstring "store_thm_at" reps then
-          (* reps would re-run a proof (and re-store the theorem, causing
-             a DUP) when s is a let-bound local that is not a global
-             thm binding.  Prefer a safe local-tag placeholder so the
-             surrounding tactic fails to replay cleanly and
-             record_proof falls back to the raw tactic, instead of
-             crashing the whole theory recording. *)
+        else if reps_is_dangerous reps then
+          (* reps would re-run a proof or definition (and re-store the
+             result, causing a DUP) when s is a let-bound local that is
+             not a global thm binding.  This happens for both theorem
+             stores (`store_thm_at`) and definition forms
+             (`located_qDefine`, `qDefine`, ...).  Prefer a safe
+             local-tag placeholder so the surrounding tactic fails to
+             replay cleanly and record_proof falls back to the raw
+             tactic, instead of crashing the whole theory recording. *)
           (debug ("fetch_local: " ^ s); add_local_tag s)
         else reps
     | SOME (_,thm) =>
