@@ -1,0 +1,5 @@
+ifeq ($(UNSET),)
+RESULT = matched
+else
+RESULT = nomatch
+endif

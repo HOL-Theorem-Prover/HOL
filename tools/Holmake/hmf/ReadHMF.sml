@@ -337,6 +337,24 @@ in
   recurse (size ss - 1)
 end
 
+(* First comma in `ss` at paren/brace depth 0.  `(` and `{` push
+   depth, `)` and `}` pop -- matches GNU make's treatment of
+   $(...) and ${...} as nesting forms when splitting ifeq args.
+   Returns the index of that comma, or NONE if there isn't one. *)
+fun find_toplevel_comma ss = let
+  open Substring
+  val n = size ss
+  fun recurse i depth =
+      if i >= n then NONE
+      else case sub(ss,i) of
+             #"," => if depth = 0 then SOME i else recurse (i+1) depth
+           | #"(" => recurse (i+1) (depth+1)
+           | #"{" => recurse (i+1) (depth+1)
+           | #")" => recurse (i+1) (depth-1)
+           | #"}" => recurse (i+1) (depth-1)
+           | _    => recurse (i+1) depth
+in recurse 0 0 end
+
 fun evaluate_cond diags b env s =
     if String.isPrefix "ifdef" s orelse String.isPrefix "ifndef" s then let
         val (sense, sz, nm) =
@@ -362,10 +380,13 @@ fun evaluate_cond diags b env s =
             case String.sub(s,0) of
               #"(" => let
                 open Substring
-                val (arg1s, blob2s) = position "," (full (String.extract(s,1,NONE)))
-                val _ = size blob2s <> 0 orelse
-                        error b (nm ^ " with parens requires args separated by \
-                                        \commas")
+                val inner = full (String.extract(s,1,NONE))
+                val (arg1s, blob2s) =
+                    case find_toplevel_comma inner of
+                      SOME i => (slice(inner,0,SOME i), slice(inner,i,NONE))
+                    | NONE =>
+                        error b (nm ^ " with parens requires args \
+                                       \separated by commas")
                 val (arg2s, parenblob) =
                     split_at_rightmost_rparen (slice(blob2s,1,NONE))
                 val _ = size parenblob <> 0 orelse

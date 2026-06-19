@@ -1,0 +1,7 @@
+condifeq-selftest.log: selftest.exe
+	$(tee ./selftest.exe,$@)
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = condifeq-selftest.log selftest.exe

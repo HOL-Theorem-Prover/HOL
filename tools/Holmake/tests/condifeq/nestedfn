@@ -1,0 +1,5 @@
+ifeq ($(patsubst %,%.c,a b),a.c b.c)
+RESULT = matched
+else
+RESULT = nomatch
+endif

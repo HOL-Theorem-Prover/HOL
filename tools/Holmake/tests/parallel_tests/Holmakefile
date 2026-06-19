@@ -18,6 +18,7 @@ DIRNAMES = \
   rebuild_cachekey \
   theorytarget \
   commandmacros \
+  condifeq \
   doublecrnl \
   projclean_loop \
   projfile_basic \
