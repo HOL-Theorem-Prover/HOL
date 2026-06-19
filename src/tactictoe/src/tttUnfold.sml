@@ -1186,10 +1186,11 @@ fun ttt_clean_record () =
 fun ttt_clean_savestate () =
   (ttt_clean_temp (); clean_dir (tactictoe_dir ^ "/savestate"))
 
-(* ttt_record_thy raises on a theory the rewriter can't handle (e.g.
-   pred_set, whose rewritten script DUPs a theorem).  For the batch
-   drivers below we don't want one such theory to abort the whole run,
-   so wrap each call: skip the theory, log why, and continue. *)
+(* ttt_record_thy may raise on a theory the rewriter cannot handle
+   (upstream limitations in tttUnfold's script rewriting).  For the
+   batch drivers below we don't want one such theory to abort the
+   whole run, so wrap each call: skip the theory, log why, and
+   continue. *)
 fun try_record_thy thy =
   ttt_record_thy thy
   handle e =>
