@@ -33,7 +33,8 @@
 #   --output DIR to redirect it: the script symlinks
 #   $HOLDIR/src/tactictoe/ttt_tacdata -> DIR before recording.
 #   Scratch temp dirs (src/AI/sml_inspection/{open,buildheap},
-#   src/tactictoe/info) are NOT redirected and stay under $HOLDIR.
+#   src/tactictoe/info, src/tactictoe/code) are NOT redirected and
+#   stay under $HOLDIR; they are cleaned up by this script.
 #
 # Expect ~8 hours for the full standard library
 # (see src/tactictoe/README).
@@ -186,9 +187,9 @@ else
   else
     echo "cleaning tactic database: ${tacdata_path}"
   fi
-  # Always clean the scratch temp dirs (ttt_clean_temp targets); these
-  # are not redirected and live under $HOLDIR.  Use rm -rf on their
-  # contents so ttt_record_thy starts fresh.
+  # Clean the scratch temp dirs (ttt_clean_temp targets) that exist
+  # before recording; recreate the empty ones so ttt_record_thy starts
+  # fresh.  These are not redirected and live under $HOLDIR.
   for d in \
       "${hol_dir}/src/AI/sml_inspection/open" \
       "${hol_dir}/src/AI/sml_inspection/buildheap" \
@@ -199,6 +200,24 @@ else
     mkdir -p "${d}"
   done
 fi
+
+# Scratch dirs removed after hol finishes (the recording creates them).
+# src/tactictoe/code is written by aiLib.sigobj_theories () during
+# load_sigobj () and is not needed once recording is done.
+post_run_scratch=(
+  "${hol_dir}/src/AI/sml_inspection/open"
+  "${hol_dir}/src/AI/sml_inspection/buildheap"
+  "${hol_dir}/src/tactictoe/info"
+  "${hol_dir}/src/tactictoe/code"
+)
+cleanup_scratch() {
+  local d
+  for d in "${post_run_scratch[@]}"; do
+    if [ -d "${d}" ]; then
+      rm -rf "${d}"
+    fi
+  done
+}
 
 # --- run hol ---------------------------------------------------------------
 echo
@@ -215,7 +234,13 @@ echo
 # it before invoking hol).
 tmp_sml="$(mktemp --suffix=.sml ttt_recordall.XXXXXX)"
 tmp_sml="$(readlink -f "${tmp_sml}")"
-trap 'rm -f "${tmp_sml}"' EXIT
+# Capture hol's exit status so the script can propagate it, then clean up
+# the temp file and recording scratch dirs (including src/tactictoe/code,
+# created during recording) on exit -- whether hol succeeded, failed, or
+# was interrupted.
+hol_rc=0
+trap 'rm -f "${tmp_sml}"; cleanup_scratch' EXIT
 printf '%s\n' "${feed}" > "${tmp_sml}"
 
-exec "${hol_bin}" run "${tmp_sml}"
+"${hol_bin}" run "${tmp_sml}" || hol_rc=$?
+exit ${hol_rc}
