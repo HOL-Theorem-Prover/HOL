@@ -29,12 +29,12 @@
 
    Resilience
    ----------
-   ttt_record () is `app ttt_record_thy thyl` and aborts on the first
-   theory that raises.  The TacticToe rewriter (tttUnfold) mishandles a
-   few scripts (e.g. pred_setScript.sml produces type-errored SML that
-   DUPs a theorem), so a single bad theory would otherwise kill the
-   whole run.  Instead we iterate ttt_record_thy per-theory, catch,
-   log, and continue so one failure skips only that theory.
+   ttt_record () skips a theory whose recording raises, logs it, and
+   continues with the rest, so a single un-recordable theory (e.g.
+   pred_set, which the TacticToe rewriter mishandles) no longer aborts
+   the whole run.  Incremental re-runs also just work: already-recorded
+   theories are skipped, and a theory that can't be recorded is retried
+   and skipped again.
 
    Prerequisites
    -------------
@@ -57,7 +57,7 @@ load "aiLib";
 load "tttSetup";
 load "tttUnfold";
 open aiLib;       (* load_sigobj                                            *)
-open tttUnfold;   (* ttt_record_thy, ttt_clean_record, ttt_ancestry        *)
+open tttUnfold;   (* ttt_record, ttt_clean_record                           *)
 
 (* Load every theory in $HOLDIR/sigobj = the entire standard library. *)
 load_sigobj ();
@@ -66,21 +66,4 @@ load_sigobj ();
 tttSetup.record_flag := true;
 tttSetup.record_savestate_flag := false;
 ttt_clean_record ();
-
-(* Like tttUnfold.ttt_record () but resilient: skip a theory whose
-   recording raises, log it, and continue with the rest.  Without this,
-   one un-recordable theory (e.g. pred_set) aborts the whole run. *)
-let
-  val thyl = ttt_ancestry (current_theory ())
-  val n = length thyl
-  fun loop (i, []) = ()
-    | loop (i, thy :: rest) =
-      ( print ("[" ^ Int.toString i ^ "/" ^ Int.toString n ^ "] "
-               ^ thy ^ "\n");
-        ( ttt_record_thy thy
-          handle e =>
-            print ("  SKIPPED " ^ thy ^ ": " ^ exnMessage e ^ "\n") );
-        loop (i + 1, rest) )
-in
-  loop (1, thyl)
-end;
+ttt_record ();

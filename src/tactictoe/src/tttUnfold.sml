@@ -1087,11 +1087,20 @@ fun ttt_clean_record () =
 fun ttt_clean_savestate () =
   (ttt_clean_temp (); clean_dir (tactictoe_dir ^ "/savestate"))
 
+(* ttt_record_thy raises on a theory the rewriter can't handle (e.g.
+   pred_set, whose rewritten script DUPs a theorem).  For the batch
+   drivers below we don't want one such theory to abort the whole run,
+   so wrap each call: skip the theory, log why, and continue. *)
+fun try_record_thy thy =
+  ttt_record_thy thy
+  handle e =>
+    print_endline ("ttt_record_thy: skipped " ^ thy ^ ": " ^ exnMessage e)
+
 fun ttt_record () =
   let
     val thyl1 = ttt_ancestry (current_theory ())
     val thyl2 = filter (not o exists_tacdata_ancestry) thyl1
-    val ((),t) = add_time (app ttt_record_thy) thyl2
+    val ((),t) = add_time (app try_record_thy) thyl2
   in
     print_endline ("ttt_record time: " ^ rts_round 4 t)
   end
@@ -1101,7 +1110,7 @@ fun ttt_record_savestate () =
   let
     val _ = ttt_clean_savestate ()
     val thyl1 = ttt_ancestry (current_theory ())
-    val ((),t) = add_time (app ttt_record_thy) thyl1
+    val ((),t) = add_time (app try_record_thy) thyl1
   in
     print_endline ("ttt_record time: " ^ rts_round 4 t)
   end
