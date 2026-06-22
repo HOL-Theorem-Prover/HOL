@@ -30,13 +30,6 @@
    function instead. *)
 fun pjoin (a, b) = OS.Path.concat (a, b)
 
-(* Optional trace: print each entry name as it's processed.  Enabled
-   by setting PROCESS_DOCFILES_DEBUG=1 in the environment.
-   Wrapped in a function so the env lookup happens at run time, not
-   when the buildheap is saved. *)
-fun debug_progress () =
-    Option.isSome (OS.Process.getEnv "PROCESS_DOCFILES_DEBUG")
-
 fun warnLn s = (TextIO.output(TextIO.stdErr, s ^ "\n");
                 TextIO.flushOut TextIO.stdErr)
 fun dieLn s = (warnLn s; OS.Process.exit OS.Process.failure)
@@ -87,17 +80,36 @@ val sentinel_prefix = "==HOL_DOC_BREAK_a8f3c2_"
 val sentinel_suffix = "=="
 fun sentinel base = sentinel_prefix ^ base ^ sentinel_suffix
 
-fun polyscript_all {src_dir, processed_dir, bases, obuf} =
+(* Per-entry progress reporting.  Two modes:
+
+   - default: one "<entry>.smd" line per file to stdout.  Intended
+     for invocation under Holmake, which weaves a child job's latest
+     output into its own TTY status; a silent tool there triggers
+     Holmake's "time since last output" counter, which reads as
+     "hung".
+
+   - show_progress=true: a spinner + decreasing-count on a single
+     \r-overwritten line via Flash.initialise_spinner.  Intended for
+     direct invocation (e.g. from bin/build), where one self-
+     overwriting line is tidier than scrolling 1500+ filenames. *)
+fun polyscript_all {src_dir, processed_dir, bases, obuf, show_progress} =
   let
     val concatBuf = SimpleBuffer.mkBuffer()
     val pushConcat = #push concatBuf
     val umap = Binarymap.mkDict String.compare
+    val (announce, finish_progress) =
+        if show_progress then
+          let val (tick, finish) =
+                  Flash.initialise_spinner ("", length bases)
+          in (fn _ => tick (), finish) end
+        else
+          (fn entry =>
+              (TextIO.output (TextIO.stdOut, "  " ^ entry ^ ".smd\n");
+               TextIO.flushOut TextIO.stdOut),
+           fn () => ())
     fun do_one entry =
       let
-        val () = if debug_progress () then
-                   (TextIO.output(TextIO.stdErr, "  [" ^ entry ^ "]\n");
-                    TextIO.flushOut TextIO.stdErr)
-                 else ()
+        val () = announce entry
         val srcfile = OS.Path.joinBaseExt {base = pjoin (src_dir, entry),
                                            ext = SOME "smd"}
         (* Keep the .smd extension on the processed side so that the
@@ -134,6 +146,7 @@ fun polyscript_all {src_dir, processed_dir, bases, obuf} =
       end
   in
     List.app do_one bases;
+    finish_progress ();
     #read concatBuf ()
   end
 
@@ -242,22 +255,51 @@ fun html_wrap base body =
 
 fun txt_wrap _ body = strip_outer_blanks body
 
-fun usage () =
-  "Usage:\n  " ^ CommandLine.name() ^
-  " <src-dir> <processed-dir> [<html-fallback-dir>]\n\
-  \  src-dir          directory of .smd source files (help/Docfiles)\n\
-  \  processed-dir    where to write polyscripter-processed .md\n\
-  \                   (e.g. Manual/build/Docfiles-processed)\n\
-  \  html-fallback-dir  optional; when given, also produces per-entry\n\
-  \                   HTML pages there via a second pandoc pass\n"
+(* Positional args:
+     <src-dir>        directory of .smd source files (help/Docfiles)
+     <processed-dir>  where to write polyscripter-processed .md
+                      (e.g. Manual/build/Docfiles-processed)
+     <html-dir>       optional; when given, also produces per-entry
+                      HTML pages there via a second pandoc pass *)
+datatype cline = CR of { show_progress : bool, help : bool }
+val cline_init = CR { show_progress = false, help = false }
+fun progress_upd b (CR {help, ...}) =
+  CR { show_progress = b, help = help }
+fun help_upd b (CR {show_progress, ...}) =
+  CR { show_progress = show_progress, help = b }
+
+val cline_options : (cline -> cline) GetOpt.opt_descr list = [
+  {short = "h", long = ["help"],
+   desc = GetOpt.NoArg (fn () => help_upd true),
+   help = "Show this message"},
+  {short = "", long = ["show-progress"],
+   desc = GetOpt.NoArg (fn () => progress_upd true),
+   help = "Animate a spinner + decreasing entry count on a single \
+          \line (suppresses the default per-entry filename output)."}
+]
 
 fun process_docfiles_main () =
   let
+    val uheader =
+        CommandLine.name() ^
+        " [options] <src-dir> <processed-dir> [<html-dir>]"
+    val uinfo =
+        GetOpt.usageInfo {header = uheader, options = cline_options}
+    val (upds, positional) =
+        GetOpt.getOpt {argOrder = GetOpt.Permute,
+                       options = cline_options,
+                       errFn = warnLn}
+                      (CommandLine.arguments ())
+    val CR {show_progress, help} =
+        List.foldl (fn (f, a) => f a) cline_init upds
+    val () = if help then
+               (print (uinfo ^ "\n"); OS.Process.exit OS.Process.success)
+             else ()
     val (src_dir, processed_dir, html_opt) =
-        case CommandLine.arguments () of
+        case positional of
             [a, b] => (a, b, NONE)
           | [a, b, c] => (a, b, SOME c)
-          | _ => dieLn (usage())
+          | _ => dieLn uinfo
 
     (* Pandoc is needed only for the .txt (and optional .html) passes
        below; the .md mirror is produced by the polyscripter and needs
@@ -283,7 +325,8 @@ fun process_docfiles_main () =
 
     val concat = polyscript_all
                    {src_dir = src_dir, processed_dir = processed_dir,
-                    bases = bases, obuf = obuf}
+                    bases = bases, obuf = obuf,
+                    show_progress = show_progress}
     val () = print ("...polyscripter pass done\n")
 
     val () =

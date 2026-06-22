@@ -1081,9 +1081,7 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
    if poly then (
      let
        val pdoc_args =
-           process_docfiles ::
-           docpath ::
-           processed_dir ::
+           [process_docfiles, "--show-progress", docpath, processed_dir] @
            (if use_html_fallback then [htmlpath] else [])
        val () = print "Polyscripting Docfiles and generating .txt outputs...\n"
      in
