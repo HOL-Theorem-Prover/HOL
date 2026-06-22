@@ -28,6 +28,7 @@ val thmdata_glob = ref empty_thmdata
 val pbl_glob = ref []
 val record_tactic_time = ref 2.0
 val record_proof_time = ref 20.0
+val record_proof_string_size = ref 50000
 val name_glob = ref ""
 
 (* Substrings that mark a reproduction string (reps) as dangerous to
@@ -174,19 +175,25 @@ fun wrap_proof ostac =
     (wstac, tactic_of_sml (!record_proof_time) wstac)
   end
 
-fun app_wrap_proof name ostac goal =
-  let
-    val (wstac,wtac) = total_time parse_time wrap_proof ostac
-    val _  = incr n_proof_parsed
-  in
-    let val (gl,v) = total_time replay_time
-      (timeout (!record_proof_time) wtac) goal
-    in
-      if null gl
-      then (incr n_proof_replayed; (gl,v))
-      else (debug "open goals"; raise ERR "app_wrap_proof" "open goals")
-    end
-  end
+fun app_wrap_proof name ostac =
+  if String.size ostac > !record_proof_string_size then
+    (fn _ =>
+      (debug ("proof string too large: " ^ name);
+       raise ERR "app_wrap_proof" name))
+  else
+    fn goal =>
+      let
+        val (wstac,wtac) = total_time parse_time wrap_proof ostac
+        val _ = incr n_proof_parsed
+      in
+        let val (gl,v) = total_time replay_time
+          (timeout (!record_proof_time) wtac) goal
+        in
+          if null gl
+          then (incr n_proof_replayed; (gl,v))
+          else (debug "open goals"; raise ERR "app_wrap_proof" "open goals")
+        end
+      end
 
 (* --------------------------------------------------------------------------
    Globalizing sml values (with special case for theorems)

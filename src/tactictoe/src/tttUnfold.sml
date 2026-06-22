@@ -693,8 +693,9 @@ fun modified_program (h,d) p =
           original_program namel @ [","] @ original_program term @
           [","] @
             ["let","val","tactictoe_tac1","="] @ tac1 @
-            ["val","tactictoe_tac2","=","tttRecord.app_wrap_proof",
-             mlquote cname,"\n",tac2] @
+            ["val","tactictoe_tac2","=","(","tttRecord.app_wrap_proof",
+             mlquote cname,"\n",tac2,"handle","_","=>",
+             "tactictoe_tac1",")"] @
             ["in","tttRecord.record_proof",mlquote cname,
              lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
           [")"]
@@ -716,8 +717,9 @@ fun modified_program (h,d) p =
           [a,"("] @ original_program namel @ [","] @ original_program term @
           [","] @
             ["let","val","tactictoe_tac1","="] @ tac1 @
-            ["val","tactictoe_tac2","=","tttRecord.app_wrap_proof",
-             mlquote name,"\n",tac2] @
+            ["val","tactictoe_tac2","=","(","tttRecord.app_wrap_proof",
+             mlquote name,"\n",tac2,"handle","_","=>",
+             "tactictoe_tac1",")"] @
             ["in","tttRecord.record_proof",
              mlquote name,lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
           [")"]
@@ -740,8 +742,9 @@ fun modified_program (h,d) p =
           [a,"("] @ original_program term @
           [","] @
             ["let","val","tactictoe_tac1","="] @ tac1 @
-            ["val","tactictoe_tac2","=","tttRecord.app_wrap_proof",
-             mlquote name,"\n",tac2] @
+            ["val","tactictoe_tac2","=","(","tttRecord.app_wrap_proof",
+             mlquote name,"\n",tac2,"handle","_","=>",
+             "tactictoe_tac1",")"] @
             ["in","tttRecord.record_proof",
              mlquote name,lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
           [")"]
