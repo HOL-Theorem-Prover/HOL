@@ -363,6 +363,14 @@ def _serve_forever(httpd):
         httpd.shutdown()
 
 
+def _display_host(host):
+    """A browser-connectable host for the printed URL.  We bind 0.0.0.0
+    (::) so the server is reachable on every interface, but those are
+    wildcard bind addresses, not destinations -- a browser wants
+    localhost.  Map them; leave an explicitly-given host alone."""
+    return "localhost" if host in ("0.0.0.0", "::") else host
+
+
 def serve(book_dir, host, port, live=False):
     """Foreground HTTP server over book_dir.  Caller starts any watcher."""
     if not (book_dir / "index.html").is_file():
@@ -371,14 +379,16 @@ def serve(book_dir, host, port, live=False):
     httpd = http.server.ThreadingHTTPServer((host, port),
                                             make_handler(book_dir, live))
     mode = "live (watch + reload)" if live else "static"
-    _log(f"serving {book_dir} at http://{host}:{port}/  [{mode}]")
+    _log(f"serving {book_dir} at http://{_display_host(host)}:{port}/  "
+         f"[{mode}]")
     _serve_forever(httpd)
 
 
 def mdbook_serve(src_dir, host, port):
     """Hand off to mdbook's own livereload server: it watches the manual's
     sources and rebuilds + reloads automatically."""
-    _log(f"running mdbook serve in {src_dir} at http://{host}:{port}/  [live]")
+    _log(f"running mdbook serve in {src_dir} at "
+         f"http://{_display_host(host)}:{port}/  [live]")
     try:
         subprocess.run(
             ["mdbook", "serve", "--hostname", host, "--port", str(port)],
