@@ -282,12 +282,16 @@ in
       val (entryBase, args) =
             extract "--entry-url-base=" [] (CommandLine.arguments ())
       val (theoryBase, args) = extract "--theory-url-base=" [] args
+      val (sourceBase, args) = extract "--source-url-base=" [] args
       val () = case entryBase of
                    NONE => ()
                  | SOME b => Htmlsigs.entry_url_base := b
       val () = case theoryBase of
                    NONE => ()
                  | SOME b => Htmlsigs.theory_url_base := b
+      val () = case sourceBase of
+                   NONE => ()
+                 | SOME b => Htmlsigs.source_url_base := b
     in
       case args of
           []       =>
@@ -301,7 +305,8 @@ in
                        htmlDirDef, htmlIndexDef,
                        htmlTheoryIndexDef, landerFragmentDef)
         | _ => print "Usage: makebase [--entry-url-base=<prefix>] \
-                     \[--theory-url-base=<prefix>] [<libdir>]\n"
+                     \[--theory-url-base=<prefix>] \
+                     \[--source-url-base=<prefix>] [<libdir>]\n"
     end
 end  (* main *)
 

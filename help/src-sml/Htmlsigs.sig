@@ -27,4 +27,16 @@ val entry_url_base : string ref
    emitted as `<prefix><thy>Theory.html`.  Set by makebase.sml from
    its --theory-url-base CLI flag. *)
 val theory_url_base : string ref
+
+(* URL base for the per-page "Source File" hyperlink.  When empty (the
+   default), a `file://<abspath>` URL is emitted -- usable only on the
+   build machine.  When set (e.g. a GitHub blob base like
+   "https://github.com/HOL-Theorem-Prover/HOL/blob/<ref>/"), the link
+   is emitted as `<base><src-path-relative-to-HOLDIR>`, with any
+   `.hol/objs/` object-directory segment stripped so it resolves to the
+   committed source/Script file.  Set by makebase.sml from its
+   --source-url-base CLI flag, which build_help in
+   tools/build/buildutils.sml supplies (pinned to the build commit) for
+   the deployed mdbook htmlsigs. *)
+val source_url_base : string ref
 end

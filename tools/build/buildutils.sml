@@ -1004,6 +1004,46 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
      val theory_url_base =
          if use_mdbook then "../theories/" else ""
 
+     (* "Source File" URL base.  The htmlsigs are deployed outside the
+        source tree, so the legacy file:// path is dead on the web.
+        For the mdbook/deploy build, point the links at GitHub, pinned
+        to the commit the docs were built from when this is a git
+        checkout; fall back to the release tag (the release-tarball
+        case, where that tag is exactly the right ref).  Empty for
+        local builds, where Htmlsigs keeps the file:// path. *)
+     val source_url_base =
+         if not use_mdbook then ""
+         else
+           let
+             val tmp = OS.FileSys.tmpName ()
+             val ok = OS.Process.isSuccess
+                        (OS.Process.system
+                           ("git -C \"" ^ HOLDIR ^ "\" rev-parse HEAD > \"" ^
+                            tmp ^ "\" 2>/dev/null"))
+             val sha =
+                 if ok then
+                   (let val is = TextIO.openIn tmp
+                        val l = TextIO.inputLine is
+                        val () = TextIO.closeIn is
+                    in case l of
+                           SOME s =>
+                             let val s = Substring.string
+                                   (Substring.dropr Char.isSpace
+                                                    (Substring.full s))
+                             in if s = "" then NONE else SOME s end
+                         | NONE => NONE
+                    end handle _ => NONE)
+                 else NONE
+             val () = (OS.FileSys.remove tmp handle _ => ())
+             val gitref =
+                 case sha of
+                     SOME s => s
+                   | NONE => CharVector.map Char.toLower Systeml.release ^
+                             "-" ^ Int.toString Systeml.version
+           in
+             "https://github.com/HOL-Theorem-Prover/HOL/blob/" ^ gitref ^ "/"
+           end
+
      local
        open Holmake_types
        fun quietly _ = ()
@@ -1111,7 +1151,8 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
      val makebase_args =
          makebase ::
          urlFlag ("--entry-url-base", entry_url_base) @
-         urlFlag ("--theory-url-base", theory_url_base)
+         urlFlag ("--theory-url-base", theory_url_base) @
+         urlFlag ("--source-url-base", source_url_base)
    in
      if (print "Building Help DB\n"; SYSTEML makebase_args) then ()
      else die "Couldn't make help database"

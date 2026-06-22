@@ -14,11 +14,42 @@ val entry_url_base = ref ""
    Htmlsigs.sig. *)
 val theory_url_base = ref ""
 
+(* URL prefix for the per-page "Source File" hyperlink.  See
+   Htmlsigs.sig. *)
+val source_url_base = ref ""
 
-fun indexbar out srcpath = out (String.concat
+
+(* Target for the per-page "Source File" link.  With source_url_base
+   set (web/deploy builds -- e.g. a GitHub blob URL), emit
+   <base><path-relative-to-HOLDIR>, stripping any `.hol/objs/`
+   object-directory indirection so the link lands on the committed
+   source/Script file.  Otherwise fall back to a local file:// URL,
+   which is what a developer browsing a local build wants. *)
+fun sourceHref HOLpath srcpath =
+    if !source_url_base = "" then "file://" ^ srcpath
+    else
+      case (if String.isPrefix HOLpath srcpath
+            then SOME (String.extract (srcpath, String.size HOLpath, NONE))
+            else NONE)
+       of NONE => "file://" ^ srcpath  (* not under HOLDIR; best effort *)
+        | SOME rest =>
+          let
+            val rel = if String.isPrefix "/" rest
+                      then String.extract (rest, 1, NONE) else rest
+            (* drop a ".hol/objs/" path segment (length 10) if present *)
+            val (pre, suf) =
+                Substring.position ".hol/objs/" (Substring.full rel)
+            val rel = if Substring.isEmpty suf then rel
+                      else Substring.string pre ^
+                           String.extract (Substring.string suf, 10, NONE)
+          in
+            !source_url_base ^ rel
+          end
+
+fun indexbar out HOLpath srcpath = out (String.concat
    ["<hr><table width=\"100%\">",
     "<tr align = center>\n",
-    "<th><a href=\"file://", srcpath,
+    "<th><a href=\"", sourceHref HOLpath srcpath,
     "\" type=\"text/plain\">Source File</a>\n",
     "<th><a href=\"idIndex.html\">Identifier index</A>\n",
     "<th><a href=\"TheoryIndex.html\">Theory binding index</A>\n",
@@ -395,11 +426,11 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
         out "</head>\n";
         out "<body>\n";
         out "<h1>Structure "; out strName; out "</h1>\n";
-        indexbar out srcfile;
+        indexbar out HOLpath srcfile;
         out "<pre>\n";
         traverse (pass2 (isTheorysig sigfile));
         out "</pre>";
-        indexbar out srcfile;
+        indexbar out HOLpath srcfile;
         out "<p><em>"; out version; out "</em></p>";
         out "</body></html>\n";
         TextIO.closeOut os
