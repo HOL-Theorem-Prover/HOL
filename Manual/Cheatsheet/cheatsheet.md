@@ -42,7 +42,7 @@ header-includes:
 
   - Use <code>help "<i>string</i>"</code> in the HOL4 REPL to examine documentation for ML-level identifiers.
 
-  - Bookmark the [HOL4 online helpdocs](https://hol-theorem-prover.org/kananaskis-14-helpdocs/help/HOLindex.html), for quick access to interactive documentation.
+  - Bookmark the [HOL4 online documentation](https://hol-theorem-prover.org/docs/latest/), for quick access to interactive documentation.
     This is particularly useful for discovering useful definitions in theories.
 
   - You can also search for constants by type, using <code>find_consts “:<i>type</i>”</code>.
