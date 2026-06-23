@@ -40,6 +40,68 @@
 
 set -euo pipefail
 
+# --- memory/cgroup diagnostics ---------------------------------------------
+fmt_mem() {
+  if [ "$1" = "max" ]; then
+    printf 'max'
+  elif command -v numfmt >/dev/null 2>&1; then
+    numfmt --to=iec --suffix=B "$1"
+  else
+    printf '%s bytes' "$1"
+  fi
+}
+
+print_memory_cgroup() {
+  local cg cur part val effective
+  cg="$(awk -F: '$1 == "0" { print $3; exit }' /proc/self/cgroup)"
+  [ -n "${cg}" ] || cg="/"
+
+  echo "Memory/cgroup diagnostics:"
+  echo "  cgroup: ${cg}"
+
+  if [ ! -d /sys/fs/cgroup ]; then
+    echo "  /sys/fs/cgroup not found"
+    return
+  fi
+
+  cur="/sys/fs/cgroup"
+  effective="max"
+  if [ -r "${cur}/memory.max" ]; then
+    val="$(cat "${cur}/memory.max")"
+    if [ "${val}" != "max" ]; then effective="${val}"; fi
+  fi
+
+  IFS='/' read -r -a parts <<< "${cg#/}"
+  for part in "${parts[@]}"; do
+    [ -n "${part}" ] || continue
+    cur="${cur}/${part}"
+    if [ -r "${cur}/memory.max" ]; then
+      val="$(cat "${cur}/memory.max")"
+      if [ "${val}" != "max" ] &&
+         { [ "${effective}" = "max" ] ||
+           [ "${val}" -lt "${effective}" ]; }; then
+        effective="${val}"
+      fi
+    fi
+  done
+
+  if [ -r "${cur}/memory.max" ]; then
+    echo "  memory.max here: $(fmt_mem "$(cat "${cur}/memory.max")")"
+  fi
+  echo "  effective memory.max: $(fmt_mem "${effective}")"
+  if [ -r "${cur}/memory.current" ]; then
+    echo "  memory.current: $(fmt_mem "$(cat "${cur}/memory.current")")"
+  fi
+  if [ -r "${cur}/memory.peak" ]; then
+    echo "  memory.peak: $(fmt_mem "$(cat "${cur}/memory.peak")")"
+  fi
+  if [ -r "${cur}/memory.swap.max" ]; then
+    echo "  memory.swap.max: $(fmt_mem "$(cat "${cur}/memory.swap.max")")"
+  fi
+}
+
+print_memory_cgroup
+
 # --- help ------------------------------------------------------------------
 usage() {
   sed -n '2,39p' "${BASH_SOURCE[0]}"

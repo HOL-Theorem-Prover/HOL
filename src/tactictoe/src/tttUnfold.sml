@@ -288,6 +288,12 @@ fun extract_infix inf_constr l =
 val store_thm_list =
   ["store_thm","maybe_thm","Store_thm","asm_store_thm"]
 
+(* Theorem/Proof/QED blocks are expanded by HOLSource to calls of
+   Q.store_thm_at.  These calls produce theorem values just like
+   store_thm, but have a curried source-location argument, so they need
+   separate parsing below. *)
+val store_thm_at_list = ["store_thm_at"]
+
 val name_thm_list =
   ["save_thm","new_specification",
   "new_definition","new_infixr_definition","new_infixl_definition",
@@ -298,6 +304,7 @@ val prove_list = ["prove","TAC_PROOF"]
 
 val watch_list_init =
   store_thm_list @
+  store_thm_at_list @
   name_thm_list @
   prove_list @
   ["tprove"] @
@@ -826,6 +833,7 @@ fun open_structure s = open_struct_aux [] s
    its arguments.
    ------------------------------------------------------------------------ *)
 
+fun is_store_thm_at x = mem (drop_sig x) store_thm_at_list
 fun is_watch_name x = mem (drop_sig x) (store_thm_list @ name_thm_list)
 
 fun mk_fetch b =
@@ -836,7 +844,13 @@ fun replace_fetch l = case l of
     [] => []
   | Code(a,Watch) :: m =>
     (
-    if is_watch_name a andalso hd_code_par2 m
+    if is_store_thm_at a andalso hd_code_par m
+    then
+      case extract_store_thm_at (tl m) of
+        SOME (name,_,_,_,_,cont) =>
+        mk_fetch (strip_attrs name) @ replace_fetch cont
+      | NONE => Code(a,Watch) :: replace_fetch m
+    else if is_watch_name a andalso hd_code_par2 m
     then
       let val x =
         if hd_code_par m
