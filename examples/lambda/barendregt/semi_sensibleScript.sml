@@ -136,7 +136,18 @@ Theorem separable_def =
         gen_separable_alt |> Q.SPEC ‘UNCURRY (==)’
                           |> SRULE [lambdathy_lameq]
 
-Theorem separable_incompatible :
+(* |- !Ms.
+        EVERY closed Ms ==>
+        (separable Ms <=>
+         !Ns.
+           LENGTH Ns = LENGTH Ms ==>
+           ?f. !i. i < LENGTH Ms ==> f @@ EL i Ms == EL i Ns)
+ *)
+Theorem separable_alt_closed =
+        gen_separable_alt_closed |> Q.SPEC ‘UNCURRY (==)’
+                                 |> SRULE [lambdathy_lameq]
+
+Theorem separable_imp_incompatible :
     !M N. separable [M; N] ==> M # N
 Proof
     rw [separable_def, incompatible_def]
@@ -160,10 +171,10 @@ Proof
  >> MATCH_MP_TAC asmlam_eqn >> rw []
 QED
 
-Theorem separable_not_lameq :
+Theorem separable_imp_not_lameq :
     !M N. separable [M; N] ==> ~(M == N)
 Proof
-    METIS_TAC [separable_incompatible, incompatible_not_lameq]
+    METIS_TAC [separable_imp_incompatible, incompatible_not_lameq]
 QED
 
 (* “eta_separable” is another common instance with beta- and eta-conversion. *)
@@ -178,6 +189,17 @@ Overload eta_separable = “gen_separable (UNCURRY lameta)”
 Theorem eta_separable_def =
         gen_separable_alt |> Q.SPEC ‘UNCURRY lameta’
                           |> SRULE [lambdathy_lameta]
+
+(* |- !Ms.
+        EVERY closed Ms ==>
+        (eta_separable Ms <=>
+         !Ns.
+           LENGTH Ns = LENGTH Ms ==>
+           ?f. !i. i < LENGTH Ms ==> f @@ EL i Ms === EL i Ns)
+ *)
+Theorem eta_separable_alt_closed =
+        gen_separable_alt_closed |> Q.SPEC ‘UNCURRY lameta’
+                                 |> SRULE [lambdathy_lameta]
 
 Theorem eta_separable_thm :
     !M N. has_benf M /\ has_benf N /\ M =/== N ==> eta_separable [M; N]
@@ -229,6 +251,14 @@ Proof
  >> ASM_SIMP_TAC bool_ss [GSYM EL]
  >> Q_TAC (TRANS_TAC lameq_TRANS) ‘apply pi M’ >> art []
  >> MATCH_MP_TAC lameq_SYM >> art []
+QED
+
+Theorem separable_thm' :
+    !M N. benf M /\ benf N /\ M <> N ==> separable [M; N]
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC separable_thm
+ >> simp [benf_has_benf, benf_lameta_iff_eq]
 QED
 
 (* END *)
