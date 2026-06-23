@@ -260,7 +260,7 @@ if [ "${keep}" -eq 1 ]; then
   echo "--keep: preserving existing tactic data; only recording"
   echo "         theories not yet recorded."
 else
-  # Wipe the tactic database and scratch temp dirs.
+  # Wipe the tactic database, scratch temp dirs, and old debug logs.
   if [ "${skip_clean_in_sml}" -eq 1 ]; then
     echo "cleaning output directory contents: ${output_dir}"
     if [ -d "${output_dir}" ]; then
@@ -269,13 +269,17 @@ else
   else
     echo "cleaning tactic database: ${tacdata_path}"
   fi
-  # Clean the scratch temp dirs (ttt_clean_temp targets) that exist
-  # before recording; recreate the empty ones so ttt_record_thy starts
-  # fresh.  These are not redirected and live under $HOLDIR.
+  # Clean the scratch temp dirs (ttt_clean_temp targets) and persistent
+  # debug logs that exist before recording; recreate the empty ones so
+  # ttt_record_thy starts fresh.  These are not redirected and live under
+  # $HOLDIR.
   for d in \
       "${hol_dir}/src/AI/sml_inspection/open" \
       "${hol_dir}/src/AI/sml_inspection/buildheap" \
-      "${hol_dir}/src/tactictoe/info"; do
+      "${hol_dir}/src/tactictoe/info" \
+      "${hol_dir}/src/tactictoe/log/lexer" \
+      "${hol_dir}/src/tactictoe/log/scripts" \
+      "${hol_dir}/src/tactictoe/log/info"; do
     if [ -d "${d}" ]; then
       rm -rf "${d}"
     fi
