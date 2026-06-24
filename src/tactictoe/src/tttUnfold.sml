@@ -1038,6 +1038,9 @@ fun output_header oc cthy =
   app (os oc) (bare_readl infix_file);
   (* debugging *)
   reflect_flag oc "aiLib.debug_flag" debug_flag;
+  (* cache root *)
+  osn oc ("val _ = tttSetup.set_tactictoe_cache_dir " ^
+          mlquote (tactictoe_dir_of ()));
   (* recording *)
   reflect_flag oc "tttSetup.record_flag" record_flag;
   reflect_flag oc "tttSetup.record_prove_flag" record_prove_flag;
@@ -1185,8 +1188,8 @@ fun ttt_record_thy thy = with_tactictoe_cache (fn () =>
     val scriptorg = find_script thy
     val _ = print_endline ("ttt_record_thy: " ^ thy ^ "\n  " ^ scriptorg)
     val (_,t) = add_time
-      smlExecScripts.exec_tttrecord_in_dir (OS.Path.dir scriptorg)
-        (tttsml_of scriptorg)
+      (smlExecScripts.exec_tttrecord_in_dir (OS.Path.dir scriptorg))
+      (tttsml_of scriptorg)
   in
     print_endline ("ttt_record_thy time: " ^ rts_round 4 t);
     if not (exists_tacdata_thy thy)

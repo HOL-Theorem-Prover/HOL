@@ -6,10 +6,12 @@ selftest.exe: selftest.uo
 
 EXTRA_CLEANS = selftest.exe tactictoe2-selftest.log
 
+SELFTEST_CACHE = $(HOLDIR)/src/tactictoe/selftest/.hol/tactictoe-cache
+
 ifdef HOLSELFTESTLEVEL
 all: tactictoe2-selftest.log
 
 tactictoe2-selftest.log: selftest.exe
-	$(tee ./selftest.exe 2>&1, $@)
+	$(tee env HOL4_TACTICTOE_CACHE=$(SELFTEST_CACHE) ./selftest.exe 2>&1, $@)
 
 endif
