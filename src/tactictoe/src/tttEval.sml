@@ -114,7 +114,7 @@ fun all_info dir file =
 
 fun compile_info exp =
   let
-    val dir = ttt_eval_dir ^ "/" ^ exp ^ "/out"
+    val dir = ttt_eval_dir_of () ^ "/" ^ exp ^ "/out"
     val filel = filter (String.isPrefix "buildheap_") (listDir dir)
     val statsl = map (all_info dir) filel
     val provenl = filter (fn x => #status x = "proven") statsl
@@ -168,7 +168,7 @@ fun write_graph file (s1,s2) l =
 
 fun proofl_exp exp =
   let
-    val dir = ttt_eval_dir ^ "/" ^ exp ^ "/out"
+    val dir = ttt_eval_dir_of () ^ "/" ^ exp ^ "/out"
     val filel = filter (String.isPrefix "buildheap_") (listDir dir)
     val totl = map (extract_info dir) filel
     val proofl = filter (fn (_,x,_) => is_proof x) totl
@@ -307,7 +307,7 @@ val cheat_flag = ref false
 fun prepare_global_data (thy,n) =
   let
     val _ = print_endline ("prepare_data: " ^ thy ^ " " ^ its n)
-    val calls = mlTacticData.import_calls (ttt_tacdata_dir ^ "/" ^ thy)
+    val calls = mlTacticData.import_calls (ttt_tacdata_dir_of () ^ "/" ^ thy)
     val m = if !cheat_flag then n + 1 else n
     val calls_before = filter (fn ((_,x,_),_) => x < m) calls
   in
@@ -360,23 +360,23 @@ fun run_evalscript smlfun expdir nnol file =
   (write_evalscript expdir smlfun nnol file;
    smlExecScripts.exec_ttteval (expdir ^ "/out") (file ^ "_eval.sml"))
 
-val savestatedir = tactictoe_dir ^ "/savestate"
+fun savestatedir () = tactictoe_dir_of () ^ "/savestate"
 
 val oldeval_flag = ref false
 fun is_oldeval file = readl (file ^ "_flags") = ["false","false"]
 
 fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
   let
-    val expdir = ttt_eval_dir ^ "/" ^ expname
+    val expdir = ttt_eval_dir_of () ^ "/" ^ expname
     val outdir = expdir ^ "/out"
     val valdir = expdir ^ "/val"
     val argdir = expdir ^ "/arg"
     val tnndir = expdir ^ "/tnn"
     val pbdir = expdir ^ "/pb"
     val _ = app mkDir_err
-      [ttt_eval_dir, expdir, outdir, valdir, argdir, pbdir, tnndir]
+      [ttt_eval_dir_of (), expdir, outdir, valdir, argdir, pbdir, tnndir]
     val (thyl',thyl'') = partition (fn x => mem x ["min","bool"]) thyl
-    val pbl = map (fn x => savestatedir ^ "/" ^ x ^ "_pbl") thyl''
+    val pbl = map (fn x => savestatedir () ^ "/" ^ x ^ "_pbl") thyl''
     fun f x = readl x handle
         Interrupt => raise Interrupt
       | _         => (print_endline x; [])
@@ -394,15 +394,15 @@ fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
 
 fun run_evalscript_filel smlfun expname (b,ncore) nnol filel =
   let
-    val savestatedir = tactictoe_dir ^ "/savestate"
-    val expdir = ttt_eval_dir ^ "/" ^ expname
+    val savestatedir = tactictoe_dir_of () ^ "/savestate"
+    val expdir = ttt_eval_dir_of () ^ "/" ^ expname
     val outdir = expdir ^ "/out"
     val valdir = expdir ^ "/val"
     val argdir = expdir ^ "/arg"
     val tnndir = expdir ^ "/tnn"
     val pbdir = expdir ^ "/pb"
     val _ = app mkDir_err
-      [ttt_eval_dir, expdir, outdir, valdir, argdir, pbdir, tnndir]
+      [ttt_eval_dir_of (), expdir, outdir, valdir, argdir, pbdir, tnndir]
     val _ = print_endline ("evaluation: " ^ its (length filel) ^ " problems")
     val (_,t) = add_time
       (parapp_queue ncore (run_evalscript smlfun expdir nnol)) filel
@@ -445,8 +445,8 @@ ttt_record_savestate (); (* includes clean savestate *)
 (*
 load "tttUnfold"; open tttUnfold aiLib;
 
-val tactictoe_dir = tttSetup.tactictoe_dir;
-val thmdata_dir = tactictoe_dir ^ "/thmdata";
+val tactictoe_dir = tttSetup.tactictoe_dir_of ();
+val thmdata_dir = tactictoe_dir_of () ^ "/thmdata";
 val _ = clean_dir thmdata_dir;
 
 load_sigobj ();
@@ -476,15 +476,15 @@ ttt_record_thmdata ();
 load "tttEval"; open aiLib tttSetup tttEval;
 val smlfun = "tttEval.ttt_eval";
 val expname = "test14";
-val savestatedir = tactictoe_dir ^ "/savestate";
-val expdir = ttt_eval_dir ^ "/" ^ expname;
+val savestatedir = tactictoe_dir_of () ^ "/savestate";
+val expdir = ttt_eval_dir_of () ^ "/" ^ expname;
 val outdir = expdir ^ "/out"
 val valdir = expdir ^ "/val"
 val argdir = expdir ^ "/arg"
 val tnndir = expdir ^ "/tnn"
 val pbdir = expdir ^ "/pb"
 val _ = app mkDir_err
-  [ttt_eval_dir, expdir, outdir, valdir, argdir, pbdir, tnndir];
+  [ttt_eval_dir_of (), expdir, outdir, valdir, argdir, pbdir, tnndir];
 val file = savestatedir ^ "/" ^ "relation_40";
 tttSetup.ttt_search_time := 30.0;
 tttSetup.ttt_metis_flag := true;
@@ -511,8 +511,8 @@ tttSetup.ttt_policy_coeff := 0.5;
 hh_flag := false; hh_timeout := 530;
 hh_ontop_flag := true; tttSearch.snap_flag := true; tttSearch.snap_n := 100;
 
-val savestatedir = tttSetup.tactictoe_dir ^ "/savestate";
-val evaldir = tttSetup.tactictoe_dir ^ "/eval";
+val savestatedir = tttSetup.tactictoe_dir_of () ^ "/savestate";
+val evaldir = tttSetup.ttt_eval_dir_of ();
 val filel = aiLib.readl (evaldir ^ "/hard_avail");
 fun trim s = savestatedir ^ "/" ^
   String.substring (s,12,String.size s - 5 - 12);
@@ -536,7 +536,7 @@ fun rltograph n rl = case rl of
 fun write_graph file (s1,s2) l =
   writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => rts a ^ " " ^ its b) l)
 write_graph
-  (tttSetup.ttt_eval_dir ^ "/graph/hard-eprover-1_graph")
+  (tttSetup.ttt_eval_dir_of () ^ "/graph/hard-eprover-1_graph")
   ("time","proofs") (rltograph 0 rl1);
 *)
 
@@ -607,7 +607,7 @@ val ttt_eval_string = "tttEval.ttt_eval"
 fun rlval_loop ncore expname thyl (gen,maxgen) =
   if gen > maxgen then () else
   let
-    fun gendir x = ttt_eval_dir ^ "/" ^ expname ^ "-gen" ^ its x
+    fun gendir x = ttt_eval_dir_of () ^ "/" ^ expname ^ "-gen" ^ its x
     fun valdir x = gendir x ^ "/val"
     val dirl = List.tabulate (gen,valdir)
     val exl = List.concat (map collect_ex dirl)
@@ -677,8 +677,8 @@ rlval_loop expname thyl (1,maxgen);
 (*
 open mlTreeNeuralNetwork aiLib;;
 
-val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
-fun tnnfile expname = tttSetup.ttt_eval_dir ^ "/" ^ expname ^ "/tnn/val";
+val expdir = tttSetup.ttt_eval_dir_of () ^ "/" ^ expname;
+fun tnnfile expname = tttSetup.ttt_eval_dir_of () ^ "/" ^ expname ^ "/tnn/val";
 
 val exl1 = collect_ex valdir;
 val exl2 = uniq_ex exl1;

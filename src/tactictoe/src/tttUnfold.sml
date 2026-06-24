@@ -1094,7 +1094,7 @@ fun sketch_wrap thy file =
     val s1 = HOLSource.inputFile {quietOpen = false, print = K()} file
     val s2 = rm_spaces (rm_comment s1)
     val sl = partial_sml_lexer s2
-    val lexdir = tactictoe_dir ^ "/log/lexer"
+    val lexdir = tactictoe_dir_of () ^ "/log/lexer"
     val _ = app mkDir_err [OS.Path.dir lexdir, lexdir]
     val _ = write_sl (lexdir ^ "/" ^ thy) sl
   in
@@ -1108,13 +1108,13 @@ fun unfold_wrap p = unfold 0 [dnew String.compare (map protect basis)] p
    ------------------------------------------------------------------------ *)
 
 fun tttsml_of file =
-  tactictoe_scratch_dir ^ "/scripts/" ^ OS.Path.base file ^ "_ttt.sml"
+  tactictoe_scratch_dir_of () ^ "/scripts/" ^ OS.Path.base file ^ "_ttt.sml"
 
 fun print_program cthy fileorg sl =
   let
     val _ = debug ("print_program: " ^ fileorg)
     val fileout = tttsml_of fileorg
-    val scriptdir = tactictoe_dir ^ "/log/scripts"
+    val scriptdir = tactictoe_dir_of () ^ "/log/scripts"
     val _ = app mkDir_err [OS.Path.dir fileout, OS.Path.dir scriptdir,
                             scriptdir]
     val oc = TextIO.openOut fileout
@@ -1123,7 +1123,7 @@ fun print_program cthy fileorg sl =
         val cmd = String.concatWith " "
           ["cp", shell_quote fileout, shell_quote (scriptdir ^ "/" ^ cthy)]
       in
-        cmd_in_dir tactictoe_dir cmd
+        cmd_in_dir (tactictoe_dir_of ()) cmd
       end
   in
     output_header oc cthy;
@@ -1197,17 +1197,17 @@ fun ttt_record_thy thy = with_tactictoe_cache (fn () =>
 
 fun ttt_clean_temp () =
   (
-  clean_dir (tactictoe_scratch_dir ^ "/sml_inspection/open");
-  clean_dir (tactictoe_scratch_dir ^ "/sml_inspection/buildheap");
-  clean_dir (tactictoe_dir ^ "/info");
-  clean_dir (tactictoe_scratch_dir ^ "/scripts")
+  clean_dir (tactictoe_scratch_dir_of () ^ "/sml_inspection/open");
+  clean_dir (tactictoe_scratch_dir_of () ^ "/sml_inspection/buildheap");
+  clean_dir (tactictoe_dir_of () ^ "/info");
+  clean_dir (tactictoe_scratch_dir_of () ^ "/scripts")
   )
 
 fun ttt_clean_record () =
-  (ttt_clean_temp (); clean_dir (tactictoe_dir ^ "/ttt_tacdata"))
+  (ttt_clean_temp (); clean_dir (ttt_tacdata_dir_of ()))
 
 fun ttt_clean_savestate () =
-  (ttt_clean_temp (); clean_dir (tactictoe_dir ^ "/savestate"))
+  (ttt_clean_temp (); clean_dir (tactictoe_dir_of () ^ "/savestate"))
 
 (* ttt_record_thy may raise on a theory the rewriter cannot handle
    (upstream limitations in tttUnfold's script rewriting).  For the
@@ -1293,8 +1293,11 @@ val default_record_config =
   { scope = CurrentAncestry, parallel = 1, force = false, dry_run = false,
     max_lock_age = Time.fromSeconds 7200 }
 
-val incremental_parallel_dir =
-  ref (tactictoe_scratch_dir ^ "/parallel/ttt_record_incremental")
+val incremental_parallel_dir = ref ""
+fun incremental_parallel_dir_of () =
+  if !incremental_parallel_dir = ""
+  then tactictoe_scratch_dir_of () ^ "/parallel/ttt_record_incremental"
+  else !incremental_parallel_dir
 
 fun apply_record_option opt (cfg : record_config) =
   let val {scope,parallel,force,dry_run,max_lock_age} = cfg in
@@ -1324,11 +1327,11 @@ fun ttt_record_incremental_opts opts =
 and ttt_record_incremental () =
   ttt_record_incremental_cfg default_record_config
 
-and manifest_file () = ttt_tacdata_dir ^ "/MANIFEST"
+and manifest_file () = ttt_tacdata_dir_of () ^ "/MANIFEST"
 
-and locks_dir () = ttt_tacdata_dir ^ "/.locks"
+and locks_dir () = ttt_tacdata_dir_of () ^ "/.locks"
 
-and tacdata_file thy = ttt_tacdata_dir ^ "/" ^ thy
+and tacdata_file thy = ttt_tacdata_dir_of () ^ "/" ^ thy
 
 and safe_sha256_file file = if exists_file file then sha256_file file else ""
 
@@ -1435,7 +1438,7 @@ and manifest_lines (prov : provenance) entries =
   end
 
 and write_manifest_full prov entries =
-  (mkDir_err ttt_tacdata_dir;
+  (mkDir_err (ttt_tacdata_dir_of ());
    writel_atomic (manifest_file ()) (manifest_lines prov entries))
 
 and find_entry thy entries =
@@ -1483,7 +1486,7 @@ and release_lock lock =
 
 and acquire_lock max_lock_age name =
   let
-    val _ = mkDir_err ttt_tacdata_dir
+    val _ = mkDir_err (ttt_tacdata_dir_of ())
     val _ = mkDir_err (locks_dir ())
     val lock = locks_dir () ^ "/" ^ name ^ ".lock"
     fun create () =
@@ -1771,9 +1774,9 @@ and incremental_record_extspec () =
   {
   self_dir = "$(HOLDIR)/src/tactictoe/src",
   self = "(tttUnfold.incremental_record_extspec ())",
-  parallel_dir = !incremental_parallel_dir,
+  parallel_dir = incremental_parallel_dir_of (),
   reflect_globals = "tttUnfold.incremental_parallel_dir := " ^
-    sml_string_literal (!incremental_parallel_dir),
+    sml_string_literal (incremental_parallel_dir_of ()),
   function = incremental_record_worker,
   write_param = write_worker_param,
   read_param = read_worker_param,
@@ -1802,9 +1805,9 @@ and ttt_record_incremental_cfg (cfg : record_config) =
         val src_hashes = #source_hashes plan
         val stale_names = map fst stale
         val _ = if parallel <= 1 then () else
-          (mkDir_err (tactictoe_scratch_dir ^ "/parallel");
+          (mkDir_err (tactictoe_scratch_dir_of () ^ "/parallel");
            incremental_parallel_dir :=
-             tactictoe_scratch_dir ^ "/parallel/ttt_record_incremental_" ^
+             tactictoe_scratch_dir_of () ^ "/parallel/ttt_record_incremental_" ^
              current_pid ())
         fun deps_failed failed thy =
           List.find (fn dep => mem dep failed) (ttt_ancestry thy)

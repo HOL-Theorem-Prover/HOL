@@ -4,6 +4,8 @@ sig
   include Abbrev
   datatype prover = Eprover | Z3 | Vampire
 
+  (* Defaults to $HOME/.cache/holyhammer, or HOL4_HOLYHAMMER_CACHE. *)
+  val hh_cache_dir : string ref
   val set_timeout : int -> unit
   val holyhammer  : term -> thm
   val hh          : tactic

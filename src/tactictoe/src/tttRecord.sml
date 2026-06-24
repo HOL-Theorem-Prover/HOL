@@ -124,7 +124,7 @@ fun info_thy thy =
 
 fun write_info thy =
   let
-    val infodir = tactictoe_dir ^ "/log/info"
+    val infodir = tactictoe_dir_of () ^ "/log/info"
     val _ = app mkDir_err [OS.Path.dir infodir, infodir]
     val infol = info_thy thy
   in
@@ -270,7 +270,7 @@ fun end_record_proof name =
    Thm data I/O
    ---------------------------------------------------------------------- *)
 
-val thmdata_dir = tactictoe_dir ^ "/thmdata"
+fun thmdata_dir () = tactictoe_dir_of () ^ "/thmdata"
 
 val namethm_glob = ref (dempty String.compare)
 
@@ -296,9 +296,9 @@ fun thm_compare (thm1,thm2) = goal_compare (dest_thm thm1, dest_thm thm2)
 
 fun export_thmdata () =
   let
-    val _ = mkDir_err thmdata_dir
+    val _ = mkDir_err (thmdata_dir ())
     val thmidl = map fst (snd (create_thmdata ()))
-    val file = thmdata_dir ^ "/" ^ current_theory () ^ "_" ^
+    val file = thmdata_dir () ^ "/" ^ current_theory () ^ "_" ^
       its (!savestate_level)
     val set = dset (cpl_compare String.compare thm_compare)
       (dlist (!namethm_glob))
@@ -321,7 +321,7 @@ fun export_thmdata () =
    Savestates
    ---------------------------------------------------------------------- *)
 
-val savestate_dir = tactictoe_dir ^ "/savestate"
+fun savestate_dir () = tactictoe_dir_of () ^ "/savestate"
 
 fun ttt_before_save_state () =
   (
@@ -330,7 +330,7 @@ fun ttt_before_save_state () =
     else ();
   if !export_thmdata_flag then export_thmdata () else ();
   if !record_savestate_flag
-    then (mkDir_err savestate_dir; PolyML.fullGC ())
+    then (mkDir_err (savestate_dir ()); PolyML.fullGC ())
     else ()
   )
 
@@ -338,7 +338,7 @@ fun ttt_save_state () =
   (
   if !record_savestate_flag then
   let
-    val prefix = savestate_dir ^ "/" ^ current_theory () ^ "_" ^
+    val prefix = savestate_dir () ^ "/" ^ current_theory () ^ "_" ^
       its (!savestate_level)
     val savestate_file = prefix ^ "_savestate"
     val _ = debug ("saving state to " ^ savestate_file)
@@ -354,9 +354,9 @@ fun ttt_after_save_state () = incr savestate_level
 
 fun save_goal lflag pflag g =
   let
-    val savestate_dir = tactictoe_dir ^ "/savestate"
-    val _ = mkDir_err savestate_dir
-    val prefix = savestate_dir ^ "/" ^ current_theory () ^ "_" ^
+    fun savestate_dir () = tactictoe_dir_of () ^ "/savestate"
+    val _ = mkDir_err (savestate_dir ())
+    val prefix = savestate_dir () ^ "/" ^ current_theory () ^ "_" ^
       its ((!savestate_level) - 1)
     val _ = pbl_glob := prefix :: (!pbl_glob)
     val goal_file = prefix ^ "_goal"
@@ -422,8 +422,8 @@ fun end_record_thy thy =
   else ();
   if !record_savestate_flag
   then
-    (mkDir_err (tactictoe_dir ^ "/savestate");
-     writel (tactictoe_dir ^ "/savestate/" ^ thy ^ "_pbl") (rev (!pbl_glob)))
+    (mkDir_err (savestate_dir ());
+     writel (savestate_dir () ^ "/" ^ thy ^ "_pbl") (rev (!pbl_glob)))
   else ();
   print_endline "export successful"
   )

@@ -84,7 +84,9 @@ fun select_tacfea tacdata gfea =
 val hh_use = ref false
 val hh_time = ref 30
 val hh_lemmas = ref NONE
-val atp_dir = ref (tactictoe_dir ^ "/provers")
+val atp_dir = ref ""
+fun atp_dir_of () =
+  if !atp_dir = "" then tactictoe_dir_of () ^ "/provers" else !atp_dir
 
 fun metis_avail () = quse_string "val _ = metisTools.METIS_TAC;"
 
@@ -140,7 +142,7 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
     val hho = if !hh_use then import_hh () else NONE
     fun predhh g =
       dfind g (!hh_cache) handle NotFound =>
-      let val r = (valOf hho) (!atp_dir) thmdata g in
+      let val r = (valOf hho) (atp_dir_of ()) thmdata g in
          hh_cache := dadd g r (!hh_cache); r
       end
     fun predthml g =

@@ -317,7 +317,7 @@ fun tf1_write_pb dir (thmid,(depthyl,depl)) =
 load "hhExportTf1"; open hhExportTf1;
 val thmid = ("arithmetic","ADD1");
 val depl = valOf (hhExportLib.depo_of_thmid thmid);
-val dir = HOLDIR ^ "/src/holyhammer/export_tf1_test";
+val dir = !holyHammer.hh_cache_dir ^ "/export_tf1_test";
 tf1_write_pb dir (thmid,([],depl));
 *)
 

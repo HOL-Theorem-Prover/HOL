@@ -17,7 +17,7 @@ type thmid = string * string
    Directory
    ------------------------------------------------------------------------- *)
 
-val hh_dir = HOLDIR ^ "/src/holyhammer"
+val hh_dir = holyhammer_cache_dir
 
 (* -------------------------------------------------------------------------
    Writer shortcuts

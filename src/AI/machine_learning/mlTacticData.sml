@@ -115,15 +115,16 @@ fun import_tacdata filel =
    ------------------------------------------------------------------------- *)
 
 val ttt_tacdata_dir = tactictoe_cache_dir ^ "/ttt_tacdata"
+fun ttt_tacdata_dir_of () = current_tactictoe_cache_dir () ^ "/ttt_tacdata"
 
 fun exists_tacdata_thy thy =
-  exists_file (ttt_tacdata_dir ^ "/" ^ thy)
+  exists_file (ttt_tacdata_dir_of () ^ "/" ^ thy)
 
 fun create_tacdata () =
   let
     fun test file = exists_file file
     val thyl = ancestry (current_theory ())
-    fun f x = ttt_tacdata_dir ^ "/" ^ x
+    fun f x = ttt_tacdata_dir_of () ^ "/" ^ x
     val filel = filter test (map f thyl)
     val thyl1 = map OS.Path.file filel
     val thyl2 = list_diff thyl thyl1
@@ -150,8 +151,9 @@ fun ttt_update_tacdata ((loc,call),{calld,taccov,symfreq}) =
 
 fun ttt_export_tacdata thy tacdata =
   let
-    val _ = mkDir_err ttt_tacdata_dir
-    val file = ttt_tacdata_dir ^ "/" ^ thy
+    val dir = ttt_tacdata_dir_of ()
+    val _ = mkDir_err dir
+    val file = dir ^ "/" ^ thy
   in
     export_tacdata thy file tacdata
   end

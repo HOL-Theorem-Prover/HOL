@@ -256,7 +256,7 @@ fun fof_write_pb dir (thmid,(depthyl,depl)) =
 load "hhExportFof"; open hhExportFof;
 val thmid = ("arithmetic","ADD1");
 val depl = valOf (hhExportLib.depo_of_thmid thmid);
-val dir = HOLDIR ^ "/src/holyhammer/export_fof_test";
+val dir = !holyHammer.hh_cache_dir ^ "/export_fof_test";
 fof_write_pb dir (thmid,depl);
 *)
 
@@ -370,7 +370,7 @@ load "mlNearestNeighbor"; open mlNearestNeighbor;
 val thmdata = create_thmdata ();
 val premises = thmknn_wdep thmdata n (feahash_of_goal goal);
 val namethml = thml_of_namel premises;
-val hh_dir = HOLDIR ^ "/src/holyhammer";
+val hh_dir = !holyHammer.hh_cache_dir;
 fof_export_pb hh_dir (cj,namethml);
 *)
 

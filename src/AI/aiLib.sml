@@ -83,10 +83,19 @@ fun home_dir () =
 
 fun home_cache_dir name = home_dir () ^ "/.cache/" ^ name
 
-val tactictoe_cache_dir =
-  case OS.Process.getEnv "HOL4_TACTICTOE_CACHE" of
+fun tool_cache_dir env name =
+  case OS.Process.getEnv env of
     SOME dir => dir
-  | NONE => home_cache_dir "tactictoe"
+  | NONE => home_cache_dir name
+
+val tactictoe_cache_dir =
+  tool_cache_dir "HOL4_TACTICTOE_CACHE" "tactictoe"
+
+val tactictoe_cache_dir_ref = ref tactictoe_cache_dir
+fun current_tactictoe_cache_dir () = !tactictoe_cache_dir_ref
+
+val holyhammer_cache_dir =
+  tool_cache_dir "HOL4_HOLYHAMMER_CACHE" "holyhammer"
 
 fun remove_file file =
   if exists_file file then ignore (OS.FileSys.remove file) else ()

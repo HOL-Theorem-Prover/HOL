@@ -47,7 +47,11 @@ sig
   val mkDir_err : string -> unit
   val home_dir : unit -> string
   val home_cache_dir : string -> string
+  val tool_cache_dir : string -> string -> string
   val tactictoe_cache_dir : string
+  val tactictoe_cache_dir_ref : string ref
+  val current_tactictoe_cache_dir : unit -> string
+  val holyhammer_cache_dir : string
   val run_cmd : string -> unit
   val cmd_in_dir : string -> string -> unit
   val exists_file : string -> bool
