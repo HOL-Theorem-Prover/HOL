@@ -22,6 +22,7 @@ DIRNAMES = \
   doublecrnl \
   projclean_loop \
   projfile_basic \
+  projfile_holmake_false \
   projfile_holpath_override \
   projfile_open_resolution \
   projfile_name_clash \

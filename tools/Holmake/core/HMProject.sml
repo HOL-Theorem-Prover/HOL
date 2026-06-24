@@ -9,7 +9,9 @@ type config = {
   name : string option,
   exclude : string list,
   externals : external_project list,
-  external_includes : string list
+  external_includes : string list,
+  holmake : bool,
+  dead_keys : string list
 }
 
 val PROJECT_FILE = "holproject.toml"
@@ -108,6 +110,17 @@ fun lookup_table tbl key =
       | SOME _ =>
           raise Fail ("key '" ^ key_name key ^ "' must be a table")
 
+fun lookup_bool tbl key =
+    case TOML.lookupInTable tbl key of
+        NONE => NONE
+      | SOME (TOMLvalue_dtype.BOOL b) => SOME b
+      | SOME _ =>
+          raise Fail ("key '" ^ key_name key ^ "' must be a boolean")
+
+(* Tag a `lookup_*'-raised Fail with the file path so users see which
+   holproject.toml is malformed, not just the offending key name. *)
+fun tag_path pf f = f () handle Fail s => raise Fail (pf ^ ": " ^ s)
+
 fun abs_relative_to base p =
     OS.Path.mkCanonical
       (if OS.Path.isAbsolute p then p
@@ -133,8 +146,9 @@ fun read_external_decls root =
 fun excludes_declared_at root =
     let
       val (pf, tbl) = read_external_decls root
-      val rel = Option.getOpt (lookup_string_array tbl ["exclude"], [])
-                handle Fail s => raise Fail (pf ^ ": " ^ s)
+      val rel = tag_path pf
+                  (fn () => Option.getOpt
+                              (lookup_string_array tbl ["exclude"], []))
     in
       List.map (abs_relative_to root) rel
     end
@@ -142,9 +156,9 @@ fun excludes_declared_at root =
 fun external_includes_declared_at root =
     let
       val (pf, tbl) = read_external_decls root
-      val rel = Option.getOpt
-                  (lookup_string_array tbl ["external_includes"], [])
-                handle Fail s => raise Fail (pf ^ ": " ^ s)
+      val rel = tag_path pf
+                  (fn () => Option.getOpt
+                              (lookup_string_array tbl ["external_includes"], []))
     in
       List.map (abs_relative_to root o expand_holdir) rel
     end
@@ -202,31 +216,48 @@ fun load { root } =
                                      General.exnMessage e))
           else NONE
 
-      val name = lookup_string ptbl ["name"]
+      val name = tag_path proj_path (fn () => lookup_string ptbl ["name"])
 
-      val exclude_rel = Option.getOpt (lookup_string_array ptbl ["exclude"], [])
-      val exclude = List.map (abs_relative_to root) exclude_rel
+      val holmake =
+          tag_path proj_path
+            (fn () => Option.getOpt (lookup_bool ptbl ["holmake"], true))
 
-      (* externals can be declared in either file; local overrides project. *)
-      val proj_externals = externals_from_table ptbl root
-      val local_externals =
-          case ltbl_opt of
-              NONE => []
-            | SOME t => externals_from_table t root
-      (* Dedup by id keeping the first occurrence in `local_externals
-         @ proj_externals'.  Local entries come first, so a local
-         file's [projects.<id>] overrides the same `<id>' in the
-         committed file. *)
+      val exclude_rel =
+          tag_path proj_path
+            (fn () => Option.getOpt (lookup_string_array ptbl ["exclude"], []))
+      val exclude = if holmake then List.map (abs_relative_to root) exclude_rel
+                    else []
+
+      (* externals can be declared in either file; local overrides project.
+         Skipped entirely under holmake = false: [projects.<id>] tables
+         carry no meaning outside project mode, so we don't read them or
+         follow their paths. *)
       val externals =
-          List.foldl
-            (fn (e, acc) =>
-                if List.exists (fn x => #id x = #id e) acc then acc
-                else acc @ [e])
-            []
-            (local_externals @ proj_externals)
+          if holmake then
+            let
+              val proj_externals = externals_from_table ptbl root
+              val local_externals =
+                  case ltbl_opt of
+                      NONE => []
+                    | SOME t => externals_from_table t root
+              (* Dedup by id keeping the first occurrence in
+                 `local_externals @ proj_externals'.  Local entries come
+                 first, so a local file's [projects.<id>] overrides the
+                 same `<id>' in the committed file. *)
+            in
+              List.foldl
+                (fn (e, acc) =>
+                    if List.exists (fn x => #id x = #id e) acc then acc
+                    else acc @ [e])
+                []
+                (local_externals @ proj_externals)
+            end
+          else []
 
       val ext_inc_rel =
-          Option.getOpt (lookup_string_array ptbl ["external_includes"], [])
+          tag_path proj_path
+            (fn () => Option.getOpt
+                        (lookup_string_array ptbl ["external_includes"], []))
       val own_ext_inc =
           List.map (abs_relative_to root o expand_holdir) ext_inc_rel
       val inherited_ext_inc =
@@ -238,12 +269,34 @@ fun load { root } =
             (Binaryset.addList (Binaryset.empty String.compare,
                                 own_ext_inc @ inherited_ext_inc))
 
+      (* Under holmake = false, project-mode-only keys are inert.  Collect
+         the present-but-ignored ones so the caller can warn.  `name`,
+         `holpath`, and `external_includes` stay live. *)
+      fun proj_ids_in suffix tbl =
+          case lookup_table tbl ["projects"] of
+              NONE => []
+            | SOME svs =>
+                List.mapPartial
+                  (fn (id, TOMLvalue_dtype.TABLE _) =>
+                         SOME ("[projects." ^ id ^ "]" ^ suffix)
+                    | _ => NONE)
+                  svs
+      val dead_keys =
+          if holmake then []
+          else
+            (case exclude_rel of [] => [] | _ => ["exclude"]) @
+            proj_ids_in "" ptbl @
+            (case ltbl_opt of NONE => []
+                            | SOME t => proj_ids_in " (local)" t)
+
     in
       { root = root,
         name = name,
         exclude = exclude,
         externals = externals,
-        external_includes = external_includes }
+        external_includes = external_includes,
+        holmake = holmake,
+        dead_keys = dead_keys }
     end
 
 (* ----------------------------------------------------------------------

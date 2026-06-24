@@ -111,9 +111,13 @@ New features
     the old `.holpath` marker file (whose only content was a
     single line naming the directory); any in-tree or downstream
     `.holpath` files must be migrated to a `holproject.toml`
-    containing `name = "<the-old-content>"`.  See the *Project
-    files* sub-section of *Maintaining HOL Formalizations with
-    Holmake* in the Description manual.
+    containing `name = "<the-old-content>"`.  An optional top-level
+    `holmake = false` key turns project mode off for that file
+    while keeping `holpathdb` registration and `external_includes`
+    inheritance live — a lightweight shim suitable for the root of
+    a multi-project tree (the HOL repository itself now ships such
+    a file).  See the *Project files* sub-section of *Maintaining
+    HOL Formalizations with Holmake* in the Description manual.
 
 Bugs fixed
 ----------

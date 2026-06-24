@@ -477,6 +477,14 @@ The full schema (all keys optional except `name`):
 ```
 name = "myproject"
 
+# Opt out of project mode without giving up the file's other
+# facilities.  Defaults to true; setting false suppresses the
+# directory-set widening, cross-dir rule resolution, and source-
+# name clash check, while leaving holpathdb registration (via
+# `name`/`holpath`) and `external_includes` inheritance in place.
+# See "Inheritance-only mode" below.
+holmake = true
+
 # Directories under the project root to keep out of the project
 # directory set.  Paths are relative to the project root.  Useful
 # for excluding scratch dirs, in-progress sub-projects, etc.
@@ -586,6 +594,33 @@ If a `Holmakefile` in a project dir explicitly writes
 `../foo`, `Holmake` aborts with a message naming both the
 contradictory `Holmakefile` and the `[exclude]` entry.  The user
 must reconcile.
+
+#### Inheritance-only mode: `holmake = false`
+
+\index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}!holmake key@\texttt{holmake} key}
+A `holproject.toml` containing `holmake = false` is parsed and its
+`name`/`holpath` and `external_includes` keys take effect as
+usual, but project mode is **not** activated: there is no
+directory-set widening, no cross-directory rule resolution, and no
+source-name clash check.  The file behaves as a lightweight
+inheritance shim — useful when the top of a larger tree wants to
+share `holpathdb` registrations or `external_includes` with every
+`Holmake` invocation below, without forcing the whole tree into a
+single project.
+
+Concretely, the canonical use is a shim at the root of a multi-
+project repository (the HOL repository itself is shipped with one):
+its presence stops `find_root`'s upward walk, supplies any
+`external_includes` declared in it, and otherwise lets each
+sub-development behave classically.
+
+Under `holmake = false` the project-mode-only keys `exclude` and
+`[projects.<id>]` are inert; `Holmake` warns at startup naming any
+that are present so the inconsistency can be removed.
+
+This is distinct from the `--no-project` command-line flag, which
+ignores the file entirely (no `external_includes`, no holpathdb
+registration from it).
 
 #### When project mode does **not** activate
 

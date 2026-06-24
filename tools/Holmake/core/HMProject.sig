@@ -22,13 +22,24 @@ sig
      -- typically other `examples/...' subtrees.  Each entry is
      resolved at load time: `$(HOLDIR)` is substituted with the
      configure-time HOLDIR; non-absolute paths are resolved against
-     `root`. *)
+     `root`.
+
+     `holmake` is the top-level `holmake = true|false` switch (default
+     `true`).  `false` opts out of project mode while leaving
+     `holpathdb` registration (via `name`/`holpath`) and
+     `external_includes` inheritance intact -- the file acts as a
+     lightweight inheritance shim rather than a project root.  Under
+     `holmake = false` the project-mode-only keys `exclude` and
+     `[projects.<id>]` are skipped during parsing and listed in
+     `dead_keys` so the caller can warn the user. *)
   type config = {
     root : string,
     name : string option,
     exclude : string list,
     externals : external_project list,
-    external_includes : string list
+    external_includes : string list,
+    holmake : bool,
+    dead_keys : string list
   }
 
   (* find_root {start} - walk upward from `start` looking for a
