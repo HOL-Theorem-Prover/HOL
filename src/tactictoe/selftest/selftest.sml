@@ -41,7 +41,6 @@ fun ttt_closes msg tm =
   handle e => die ("FAILED: " ^ exnMessage e)
 
 val cache_dir = HOLDIR ^ "/src/tactictoe/selftest/.hol/tactictoe-cache"
-val _ = aiLib.clean_dir cache_dir
 val _ = set_tactictoe_cache_dir cache_dir
 val datafile = cache_dir ^ "/ttt_tacdata/ConseqConv"
 
@@ -136,8 +135,8 @@ val _ = check "sha256_string is deterministic"
      h1 = h2 andalso h1 <> h3 andalso size h1 = 64
    end)
 
-val _ = passok "record ConseqConv tactic data"
-  (fn () => ttt_record_thy "ConseqConv")
+val _ = passok "incrementally record ConseqConv tactic data"
+  (fn () => ttt_record_incremental_opts [Scope (Theories ["ConseqConv"])])
 
 val _ = check "ConseqConv tactic data exists"
   (mlTacticData.exists_tacdata_thy "ConseqConv" andalso
@@ -226,3 +225,67 @@ val _ = check "find_script locates ConseqConvScript.sml"
 
 val _ = check "nonexistent tactic data is reported absent"
   (not (mlTacticData.exists_tacdata_thy "no_such_theory_for_ttt"))
+
+open arithmeticTheory dividesTheory gcdTheory
+
+fun proves_by msg tm tac =
+  (tprint msg;
+   let val th = TAC_PROOF (([],tm), tac) in
+     if aconv (concl th) tm then OK ()
+     else die ("FAILED: conclusion mismatch: " ^
+               term_to_string (concl th))
+   end)
+  handle e => die ("FAILED: " ^ exnMessage e)
+
+val proof_theories = ["arithmetic", "divides", "gcd"]
+
+val _ = passok "incrementally record proof.sml tactic data"
+  (fn () => ttt_record_incremental_opts [Scope (Theories proof_theories)])
+
+val _ = passok "proof.sml data is up-to-date after recording"
+  (fn () => ttt_record_incremental_opts
+    [Scope (Theories proof_theories), DryRun true])
+
+val _ = clean_ttt_tacdata_cache ()
+val _ = set_timeout 60.0
+
+val _ = proves_by "sqrt2 example: even square implies even number"
+  ``(divides 2 (a * a)) ==> divides 2 a``
+  (REWRITE_TAC [divides_def] THEN ttt)
+
+val _ = proves "sqrt2 example: equation gives even square"
+  ``(a * a = 2 * (b * b)) ==> divides 2 (a * a)``
+
+val _ = proves "sqrt2 example: equation gives even a"
+  ``(a * a = 2 * (b * b)) ==> divides 2 a``
+
+val _ = proves "sqrt2 example: even a gives four divides square"
+  ``divides 2 a ==> divides (2 * 2) (a * a)``
+
+val _ = proves "sqrt2 example: cancel common factor in divisibility"
+  ``divides (2 * x) (2 * y) ==> divides x y``
+
+val _ = proves "sqrt2 example: common divisibility reaches gcd"
+  ``(divides 2 a /\ divides 2 b) ==> divides 2 (gcd a b)``
+
+val _ = proves "sqrt2 example: one is not even"
+  ``~((x = 1) /\ divides 2 x)``
+
+val _ = proves "sqrt2 example: coprime gcd is not even"
+  ``~(gcd a b = 1 /\ divides 2 (gcd a b))``
+
+open listTheory rich_listTheory
+
+val demo_theories = ["arithmetic", "list", "rich_list", "indexedLists"]
+
+val _ = passok "incrementally record ttt_demo tactic data"
+  (fn () => ttt_record_incremental_opts [Scope (Theories demo_theories)])
+
+val _ = clean_ttt_tacdata_cache ()
+val _ = set_timeout 30.0
+
+val _ = proves "demo example: linear arithmetic"
+  ``(2 * x + 1 = 3) ==> (x = 1)``
+
+val _ = proves "demo example: constant map is replicate"
+  ``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``
