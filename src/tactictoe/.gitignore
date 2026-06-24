@@ -1,5 +1,7 @@
 eval/*
 ttt_tacdata/*
+!ttt_tacdata/MANIFEST
+!ttt_tacdata/MANIFEST.base
 savestate/*
 log/*
 tnn_for_tactictoe

@@ -1232,6 +1232,641 @@ fun ttt_record_savestate () =
     print_endline ("ttt_record time: " ^ rts_round 4 t)
   end
 
+(* -------------------------------------------------------------------------
+   Incremental recording
+   ------------------------------------------------------------------------ *)
+
+datatype record_scope =
+    CurrentAncestry
+  | Ancestry of string
+  | Theories of string list
+
+type record_config =
+  { scope        : record_scope,
+    parallel     : int,
+    force        : bool,
+    dry_run      : bool,
+    max_lock_age : Time.time }
+
+datatype record_option =
+    Scope of record_scope
+  | Parallel of int
+  | Force of bool
+  | DryRun of bool
+  | MaxLockAge of Time.time
+
+datatype reason =
+    TierA_direct
+  | TierB_cascade of string
+  | TierC_global
+  | TierC_format
+  | TierC_holstate
+  | Missing_data
+  | Missing_manifest_line
+  | Tampered_data
+  | Forced
+
+type manifest_entry =
+  { thy : string, data_sha256 : string, src_sha256 : string,
+    anc_version : int, recorded_at : int, failed : bool }
+
+type record_worker_param =
+  { force : bool, max_lock_age_seconds : int,
+    format_hash : string, global_hash : string, hol_hash : string,
+    src_hashes : (string * string) list, recorded_stale : string list }
+
+type manifest =
+  { format_version : int, format_hash : string, global_hash : string,
+    hol_hash : string, entries : manifest_entry list }
+
+type provenance = {format_hash : string, global_hash : string, hol_hash : string}
+
+val manifest_format_version = mlTacticData.format_version
+
+val default_record_config =
+  { scope = CurrentAncestry, parallel = 1, force = false, dry_run = false,
+    max_lock_age = Time.fromSeconds 7200 }
+
+val incremental_parallel_dir =
+  ref (default_parallel_dir ^ "/ttt_record_incremental")
+
+fun apply_record_option opt (cfg : record_config) =
+  let val {scope,parallel,force,dry_run,max_lock_age} = cfg in
+    case opt of
+      Scope scope' =>
+        {scope = scope', parallel = parallel, force = force,
+         dry_run = dry_run, max_lock_age = max_lock_age}
+    | Parallel parallel' =>
+        {scope = scope, parallel = Int.max (1,parallel'), force = force,
+         dry_run = dry_run, max_lock_age = max_lock_age}
+    | Force force' =>
+        {scope = scope, parallel = parallel, force = force',
+         dry_run = dry_run, max_lock_age = max_lock_age}
+    | DryRun dry_run' =>
+        {scope = scope, parallel = parallel, force = force,
+         dry_run = dry_run', max_lock_age = max_lock_age}
+    | MaxLockAge max_lock_age' =>
+        {scope = scope, parallel = parallel, force = force,
+         dry_run = dry_run, max_lock_age = max_lock_age'}
+  end
+
+fun ttt_record_incremental_opts opts =
+  ttt_record_incremental_cfg
+    (foldl (fn (opt,cfg) => apply_record_option opt cfg)
+       default_record_config opts)
+
+and ttt_record_incremental () =
+  ttt_record_incremental_cfg default_record_config
+
+and manifest_file () = ttt_tacdata_dir ^ "/MANIFEST"
+
+and locks_dir () = ttt_tacdata_dir ^ "/.locks"
+
+and tacdata_file thy = ttt_tacdata_dir ^ "/" ^ thy
+
+and safe_sha256_file file = if exists_file file then sha256_file file else ""
+
+and global_srcs () =
+  ["src/AI/machine_learning/mlFeature.sml",
+   "src/AI/sml_inspection/smlLexer.sml",
+   "src/AI/sml_inspection/smlParser.sml",
+   "src/tactictoe/src/tttToken.sml",
+   "src/tactictoe/src/tttRecord.sml",
+   "src/tactictoe/src/tttUnfold.sml",
+   "src/AI/machine_learning/mlTacticData.sml",
+   "src/AI/machine_learning/mlThmData.sml",
+   "src/tactictoe/src/tttLearn.sml",
+   "src/AI/sml_inspection/infix_file.sml",
+   "bin/hol.state0"]
+
+and global_hash () =
+  let
+    fun h rel = rel ^ " " ^ safe_sha256_file (HOLDIR ^ "/" ^ rel)
+  in
+    sha256_string (String.concatWith "\n" (map h (global_srcs ())) ^ "\n")
+  end
+
+and current_provenance () =
+  { format_hash =
+      safe_sha256_file (HOLDIR ^ "/src/AI/machine_learning/mlTacticData.sml"),
+    global_hash = global_hash (),
+    hol_hash = safe_sha256_file (HOLDIR ^ "/bin/hol.state0") }
+
+and int_of_string s =
+  case Int.fromString s of
+    SOME i => i
+  | NONE => raise ERR "int_of_string" s
+
+and parse_manifest_line line (m : manifest) =
+  let val tok = String.tokens Char.isSpace line in
+    case tok of
+      [] => m
+    | a :: _ =>
+      if String.isPrefix "#" a then m else
+      case tok of
+        ["format",v,h] =>
+          {format_version = int_of_string v, format_hash = h,
+           global_hash = #global_hash m, hol_hash = #hol_hash m,
+           entries = #entries m}
+      | ["global",h] =>
+          {format_version = #format_version m, format_hash = #format_hash m,
+           global_hash = h, hol_hash = #hol_hash m, entries = #entries m}
+      | ["hol"] =>
+          {format_version = #format_version m, format_hash = #format_hash m,
+           global_hash = #global_hash m, hol_hash = "", entries = #entries m}
+      | ["hol",h] =>
+          {format_version = #format_version m, format_hash = #format_hash m,
+           global_hash = #global_hash m, hol_hash = h, entries = #entries m}
+      | ["thy",thy,data,src,anc,t] =>
+          let
+            val recorded_at = int_of_string t
+            val entry = {thy = thy, data_sha256 = data, src_sha256 = src,
+                         anc_version = int_of_string anc,
+                         recorded_at = recorded_at,
+                         failed = data = "failed" orelse recorded_at < 0}
+          in
+            {format_version = #format_version m, format_hash = #format_hash m,
+             global_hash = #global_hash m, hol_hash = #hol_hash m,
+             entries = entry :: #entries m}
+          end
+      | _ => raise ERR "parse_manifest_line" line
+  end
+
+and read_manifest_full () =
+  if not (exists_file (manifest_file ())) then NONE else
+  let
+    val empty = {format_version = ~1, format_hash = "", global_hash = "",
+                 hol_hash = "", entries = []}
+    val m = foldl (fn (line,m) => parse_manifest_line line m)
+      empty (readl (manifest_file ()))
+  in
+    if #format_version m < 0 then NONE
+    else SOME {format_version = #format_version m, format_hash = #format_hash m,
+               global_hash = #global_hash m, hol_hash = #hol_hash m,
+               entries = rev (#entries m)}
+  end
+  handle _ => NONE
+
+and read_manifest () =
+  case read_manifest_full () of NONE => NONE | SOME m => SOME (#entries m)
+
+and entry_compare (e1 : manifest_entry, e2 : manifest_entry) =
+  String.compare (#thy e1, #thy e2)
+
+and manifest_lines (prov : provenance) entries =
+  let
+    val entries' = dict_sort entry_compare entries
+    fun line (e : manifest_entry) =
+      String.concatWith " "
+        ["thy", #thy e, #data_sha256 e, #src_sha256 e,
+         its (#anc_version e), its (#recorded_at e)]
+  in
+    ["# TacticToe tactic-data manifest. DO NOT EDIT by hand; managed by",
+     "# ttt_record_incremental. Format version: 2.",
+     "format " ^ its manifest_format_version ^ " " ^ #format_hash prov,
+     "global " ^ #global_hash prov,
+     "hol " ^ #hol_hash prov] @ map line entries'
+  end
+
+and write_manifest_full prov entries =
+  (mkDir_err ttt_tacdata_dir;
+   writel_atomic (manifest_file ()) (manifest_lines prov entries))
+
+and find_entry thy entries =
+  List.find (fn (e : manifest_entry) => #thy e = thy) entries
+
+and update_entry entry entries =
+  entry :: filter (fn (e : manifest_entry) => #thy e <> #thy entry) entries
+
+and current_pid () =
+  let
+    val tmp = OS.FileSys.tmpName ()
+    val _ = OS.Process.system ("sh -c 'echo $PPID' > " ^ tmp)
+    val pid = hd (readl tmp) handle _ => Portable.unique_tmp_suffix ()
+  in
+    remove_file tmp; pid
+  end
+
+and shell_pid_alive pid =
+  let
+    fun digit c = Char.isDigit c
+    val numeric = not (pid = "") andalso List.all digit (explode pid)
+    val status = if numeric
+      then OS.Process.system ("kill -0 " ^ pid ^ " >/dev/null 2>&1")
+      else OS.Process.failure
+  in
+    numeric andalso OS.Process.isSuccess status
+  end handle _ => false
+
+and lock_stale max_lock_age lock =
+  let
+    val holder = lock ^ "/holder"
+    val pid = hd (readl holder) handle _ => ""
+    val dead = not (pid = "") andalso List.all Char.isDigit (explode pid) andalso
+      not (shell_pid_alive pid)
+    val age = Time.- (Time.now (), OS.FileSys.modTime lock)
+      handle _ => Time.zeroTime
+    val old = Time.compare (age,max_lock_age) = GREATER
+  in
+    dead orelse old
+  end
+
+and release_lock lock =
+  (remove_file (lock ^ "/holder");
+   OS.FileSys.rmDir lock handle _ => remove_file lock handle _ => ())
+
+and acquire_lock max_lock_age name =
+  let
+    val _ = mkDir_err ttt_tacdata_dir
+    val _ = mkDir_err (locks_dir ())
+    val lock = locks_dir () ^ "/" ^ name ^ ".lock"
+    fun create () =
+      ((HOLFileSys.mkDir lock;
+        writel (lock ^ "/holder")
+          [current_pid (), Time.toString (Time.now ())];
+        SOME lock)
+       handle _ => NONE)
+  in
+    case create () of
+      SOME l => SOME l
+    | NONE =>
+        if exists_file lock andalso lock_stale max_lock_age lock
+        then (release_lock lock; create ())
+        else NONE
+  end
+
+and with_manifest_lock max_lock_age f =
+  let
+    fun loop 0 = raise ERR "with_manifest_lock" "MANIFEST lock held"
+      | loop n =
+        case acquire_lock max_lock_age "MANIFEST" of
+          NONE => (OS.Process.sleep (Time.fromSeconds 1); loop (n - 1))
+        | SOME lock =>
+            (let val r = f () in release_lock lock; r end
+             handle e => (release_lock lock; raise e))
+  in
+    loop 60
+  end
+
+and manifest_current (prov : provenance) (m : manifest) =
+  #format_version m = manifest_format_version andalso
+  #format_hash m = #format_hash prov andalso
+  #global_hash m = #global_hash prov andalso
+  #hol_hash m = #hol_hash prov
+
+and update_manifest_entry max_lock_age prov entry =
+  with_manifest_lock max_lock_age (fn () =>
+    let
+      val entries = case read_manifest_full () of
+          NONE => []
+        | SOME m => if manifest_current prov m then #entries m else []
+    in
+      write_manifest_full prov (update_entry entry entries)
+    end)
+
+and now_unix () = IntInf.toInt (Time.toSeconds (Time.now ())) handle _ => 0
+
+and source_hash thy = safe_sha256_file (find_script thy)
+
+and assoc_opt key l =
+  case List.find (fn (a,_) => a = key) l of NONE => NONE | SOME (_,b) => SOME b
+
+and theories_of_scope scope =
+  let
+    val thyl = case scope of
+        CurrentAncestry => ancestry (current_theory ())
+      | Ancestry thy => ancestry thy
+      | Theories thyl0 => thyl0 @ List.concat (map ancestry thyl0)
+    val thyl1 = sort_thyl (mk_sameorder_set String.compare thyl)
+  in
+    filter (fn x => not (mem x ["min","bool"])) thyl1
+  end
+
+and reason_to_string reason = case reason of
+    TierA_direct => "source hash changed"
+  | TierB_cascade dep => "ancestor was recorded this run: " ^ dep
+  | TierC_global => "global recorder provenance changed or manifest missing"
+  | TierC_format => "tactic-data format changed"
+  | TierC_holstate => "HOL state changed"
+  | Missing_data => "tactic data file is missing or failed"
+  | Missing_manifest_line => "manifest line is missing"
+  | Tampered_data => "data hash differs from manifest"
+  | Forced => "forced"
+
+and stale_reason force (prov : provenance) manOpt src_hashes stale thy =
+  if force then SOME Forced else
+  case manOpt of
+    NONE => SOME TierC_global
+  | SOME (m : manifest) =>
+    if #format_version m <> manifest_format_version orelse
+       #format_hash m <> #format_hash prov
+    then SOME TierC_format
+    else if #global_hash m <> #global_hash prov then SOME TierC_global
+    else if #hol_hash m <> #hol_hash prov then SOME TierC_holstate
+    else case find_entry thy (#entries m) of
+      NONE => SOME Missing_manifest_line
+    | SOME (e : manifest_entry) =>
+      let
+        val data_file = tacdata_file thy
+        val data_ok = exists_file data_file andalso
+          safe_sha256_file data_file = #data_sha256 e
+        val src_ok = assoc_opt thy src_hashes = SOME (#src_sha256 e)
+        val ancestors = ttt_ancestry thy
+        fun ancestor_src_changed dep =
+          case find_entry dep (#entries m) of
+            NONE => true
+          | SOME (de : manifest_entry) =>
+              assoc_opt dep src_hashes <> SOME (#src_sha256 de)
+        val dep_changed = List.find ancestor_src_changed ancestors
+        val dep_stale = List.find (fn dep => mem dep stale) ancestors
+      in
+        if #failed e then SOME Missing_data
+        else if not (exists_file data_file) then SOME Missing_data
+        else if not data_ok then SOME Tampered_data
+        else if not src_ok then SOME TierA_direct
+        else case dep_stale of
+          SOME dep => SOME (TierB_cascade dep)
+        | NONE =>
+          (case dep_changed of
+             SOME dep => SOME (TierB_cascade dep)
+           | NONE => NONE)
+      end
+
+and compute_record_plan force scope =
+  let
+    val prov = current_provenance ()
+    val man = read_manifest_full ()
+    val work = theories_of_scope scope
+    val src_hashes = map (fn thy => (thy, source_hash thy)) work
+    fun step thy (stale,up,stale_names) =
+      case stale_reason force prov man src_hashes stale_names thy of
+        NONE => (stale, thy :: up, stale_names)
+      | SOME r => ((thy,r) :: stale, up, thy :: stale_names)
+    val (stale,up,_) = foldl (fn (thy,acc) => step thy acc) ([],[],[]) work
+  in
+    {provenance = prov, source_hashes = src_hashes,
+     stale = rev stale, up_to_date = rev up, out_of_scope_ancestors = []}
+  end
+
+and ttt_record_plan scope =
+  let val p = compute_record_plan false scope in
+    {stale = #stale p, up_to_date = #up_to_date p,
+     out_of_scope_ancestors = #out_of_scope_ancestors p}
+  end
+
+and manifest_success_entry thy data_hash src_hash =
+  {thy = thy, data_sha256 = data_hash, src_sha256 = src_hash,
+   anc_version = length (ttt_ancestry thy), recorded_at = now_unix (),
+   failed = false}
+
+and manifest_failed_entry thy src_hash =
+  {thy = thy, data_sha256 = "failed", src_sha256 = src_hash,
+   anc_version = length (ttt_ancestry thy), recorded_at = ~1, failed = true}
+
+and worker_bool_to_string b = if b then "true" else "false"
+
+and worker_bool_from_string s =
+  if s = "true" then true else if s = "false" then false
+  else raise ERR "worker_bool_from_string" s
+
+and worker_value key sl =
+  case List.find (fn line =>
+      case String.tokens Char.isSpace line of
+        k :: _ => k = key
+      | _ => false) sl of
+    SOME line =>
+      (case String.tokens Char.isSpace line of
+         [_ ,v] => v
+       | _ => raise ERR "worker_value" key)
+  | NONE => raise ERR "worker_value" key
+
+and worker_encode s = if s = "" then "-" else s
+
+and worker_decode s = if s = "-" then "" else s
+
+and write_worker_param file (p : record_worker_param) =
+  let
+    fun src_line (thy,h) = String.concatWith " " ["src",thy,worker_encode h]
+    fun stale_line thy = "stale " ^ thy
+  in
+    writel file
+      (["force " ^ worker_bool_to_string (#force p),
+        "max_lock_age_seconds " ^ its (#max_lock_age_seconds p),
+        "format_hash " ^ worker_encode (#format_hash p),
+        "global_hash " ^ worker_encode (#global_hash p),
+        "hol_hash " ^ worker_encode (#hol_hash p)] @
+       map src_line (#src_hashes p) @ map stale_line (#recorded_stale p))
+  end
+
+and read_worker_param file =
+  let
+    val sl = readl file
+    fun src line = case String.tokens Char.isSpace line of
+        ["src",thy,h] => SOME (thy, worker_decode h)
+      | _ => NONE
+    fun stale line = case String.tokens Char.isSpace line of
+        ["stale",thy] => SOME thy
+      | _ => NONE
+  in
+    { force = worker_bool_from_string (worker_value "force" sl),
+      max_lock_age_seconds = int_of_string
+        (worker_value "max_lock_age_seconds" sl),
+      format_hash = worker_decode (worker_value "format_hash" sl),
+      global_hash = worker_decode (worker_value "global_hash" sl),
+      hol_hash = worker_decode (worker_value "hol_hash" sl),
+      src_hashes = List.mapPartial src sl,
+      recorded_stale = List.mapPartial stale sl }
+  end
+
+and write_worker_result file s = writel file [s]
+
+and read_worker_result file = hd (readl_rm file)
+
+and record_one (cfg : record_config) prov src_hashes recorded_stale thy =
+  let
+    val {force,max_lock_age,...} = cfg
+  in
+    case acquire_lock max_lock_age thy of
+      NONE =>
+        let val msg = "skipped: " ^ thy ^
+              "  reason: held by another process"
+        in print_endline msg; (false,msg) end
+    | SOME lock =>
+      (let
+        val refresh = thy :: ttt_ancestry thy
+        val fresh = map (fn x => (x, source_hash x)) refresh
+        val fresh_src_hashes = fresh @
+          filter (fn (x,_) => not (mem x refresh)) src_hashes
+        val fresh_man = read_manifest_full ()
+        val reason = stale_reason force prov fresh_man fresh_src_hashes
+          recorded_stale thy
+      in
+        case reason of
+          NONE =>
+            let val msg = "up-to-date after lock: " ^ thy in
+              print_endline msg; release_lock lock; (true,msg)
+            end
+        | SOME r =>
+          ((print_endline ("recording: " ^ thy ^
+               "  reason: " ^ reason_to_string r);
+            ttt_record_thy thy;
+            if not (exists_file (tacdata_file thy))
+            then raise ERR "record_one" ("missing data after recording " ^ thy)
+            else ();
+            let
+              val data_hash = sha256_file (tacdata_file thy)
+              val src_hash = source_hash thy
+              val entry = manifest_success_entry thy data_hash src_hash
+            in
+              let val msg = "recorded: " ^ thy ^
+                    "  data=" ^ data_hash ^ "  src=" ^ src_hash in
+                update_manifest_entry max_lock_age prov entry;
+                print_endline msg;
+                release_lock lock; (true,msg)
+              end
+            end)
+           handle e =>
+             let
+               val src_hash = source_hash thy handle _ => ""
+               val entry = manifest_failed_entry thy src_hash
+             in
+               let val msg = "failed: " ^ thy ^ "  " ^ exnMessage e in
+                 print_endline msg;
+                 update_manifest_entry max_lock_age prov entry handle _ => ();
+                 release_lock lock; (false,msg)
+               end
+             end)
+      end
+      handle e => (release_lock lock; raise e))
+  end
+
+and sml_string_literal s =
+  "\"" ^ String.translate
+    (fn #"\\" => "\\\\" | #"\"" => "\\\"" | #"\n" => "\\n"
+      | c => str c) s ^ "\""
+
+and incremental_record_worker (p : record_worker_param) thy =
+  let
+    val cfg =
+      { scope = Theories [], parallel = 1, force = #force p, dry_run = false,
+        max_lock_age = Time.fromSeconds
+          (Int.toLarge (#max_lock_age_seconds p)) }
+    val prov = {format_hash = #format_hash p, global_hash = #global_hash p,
+                hol_hash = #hol_hash p}
+    val _ = load (thy ^ "Theory") handle _ => ()
+  in
+    let val (ok,msg) = record_one cfg prov (#src_hashes p)
+          (#recorded_stale p) thy
+    in (if ok then "ok " else "fail ") ^ thy ^ "  " ^ msg end
+  end
+  handle e => "fail " ^ thy ^ "  " ^ exnMessage e
+
+and incremental_record_extspec () =
+  {
+  self_dir = "$(HOLDIR)/src/tactictoe/src",
+  self = "(tttUnfold.incremental_record_extspec ())",
+  parallel_dir = !incremental_parallel_dir,
+  reflect_globals = "tttUnfold.incremental_parallel_dir := " ^
+    sml_string_literal (!incremental_parallel_dir),
+  function = incremental_record_worker,
+  write_param = write_worker_param,
+  read_param = read_worker_param,
+  write_arg = (fn file => fn thy => writel file [thy]),
+  read_arg = (fn file => hd (readl file)),
+  write_result = write_worker_result,
+  read_result = read_worker_result
+  }
+
+and ttt_record_incremental_cfg (cfg : record_config) =
+  let
+    val {scope,parallel,force,dry_run,max_lock_age} = cfg
+    val plan = compute_record_plan force scope
+    val stale = #stale plan
+    val up = #up_to_date plan
+    val _ = app (fn thy => print_endline ("up-to-date: " ^ thy)) up
+    val _ = app (fn (thy,r) => print_endline
+      ("stale: " ^ thy ^ "  reason: " ^ reason_to_string r)) stale
+  in
+    if dry_run then
+      print_endline ("ttt_record_incremental dry-run: " ^ its (length stale) ^
+        " stale, " ^ its (length up) ^ " up-to-date")
+    else
+      let
+        val prov = #provenance plan
+        val src_hashes = #source_hashes plan
+        val stale_names = map fst stale
+        val _ = if parallel <= 1 then () else
+          (mkDir_err default_parallel_dir;
+           incremental_parallel_dir :=
+             default_parallel_dir ^ "/ttt_record_incremental_" ^ current_pid ())
+        fun deps_failed failed thy =
+          List.find (fn dep => mem dep failed) (ttt_ancestry thy)
+        fun stale_deps thy = filter (fn dep => mem dep stale_names)
+          (ttt_ancestry thy)
+        fun ready done thy = all (fn dep => mem dep done) (stale_deps thy)
+        fun make_batches done pending =
+          if null pending then [] else
+          let
+            val (readyl,later) = List.partition (ready done) pending
+          in
+            if null readyl then
+              raise ERR "ttt_record_incremental_cfg" "dependency cycle"
+            else readyl :: make_batches (done @ readyl) later
+          end
+        val batches = make_batches [] stale_names
+        fun worker_param done =
+          { force = force,
+            max_lock_age_seconds = IntInf.toInt (Time.toSeconds max_lock_age)
+              handle _ => 7200,
+            format_hash = #format_hash prov,
+            global_hash = #global_hash prov,
+            hol_hash = #hol_hash prov,
+            src_hashes = src_hashes,
+            recorded_stale = done }
+        fun outcome_ok s = String.isPrefix "ok " s
+        fun serial_record done thy =
+          let val (ok,msg) = record_one cfg prov src_hashes done thy in
+            (if ok then "ok " else "fail ") ^ thy ^ "  " ^ msg
+          end
+        fun run_parallel done batch =
+          let
+            val ncore = Int.min (parallel, length batch)
+            val param = worker_param done
+          in
+            if ncore <= 1 then map (serial_record done) batch else
+            let
+              val results = parmap_queue_extern ncore
+                (incremental_record_extspec ()) param batch
+            in
+              app (fn s => print_endline ("parallel result: " ^ s)) results;
+              results
+            end
+          end
+        fun run_batch batch (done,failed) =
+          let
+            fun no_failed_dep thy = not (isSome (deps_failed failed thy))
+            val (runnable,skipped) = List.partition no_failed_dep batch
+            fun print_skip thy =
+              let val dep = valOf (deps_failed failed thy) in
+                print_endline ("skipped: " ^ thy ^
+                  "  reason: failed ancestor " ^ dep)
+              end
+            val _ = app print_skip skipped
+            val results = if null runnable then []
+              else run_parallel done runnable
+            val pairs = combine (runnable,results)
+            val successes = map fst (filter (outcome_ok o snd) pairs)
+            val failures = map fst (filter (not o outcome_ok o snd) pairs)
+          in
+            (done @ successes, failed @ skipped @ failures)
+          end
+        val ((),t) = add_time (fn () =>
+          ignore (foldl (fn (batch,acc) => run_batch batch acc)
+            ([],[]) batches)) ()
+      in
+        print_endline ("ttt_record_incremental time: " ^ rts_round 4 t)
+      end
+  end
 
 
 end (* struct *)

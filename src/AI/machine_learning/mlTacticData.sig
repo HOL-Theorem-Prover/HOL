@@ -16,6 +16,7 @@ sig
     symfreq : (int,int) Redblackmap.dict
     }
   val empty_tacdata : tacdata
+  val format_version : int
 
   (* I/O *)
   val export_calls : string -> (loc * call) list -> unit

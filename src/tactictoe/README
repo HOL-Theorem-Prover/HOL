@@ -16,6 +16,27 @@ RECORDING all ancestor theories not recorded yet:
   ttt_record (); (* takes about 8 hours for the full standard library *)
   (* tip: use ttt_record_thy "foo" to only record the "foo" Theory *)
 
+INCREMENTAL RECORDING (recommended for repeated local updates):
+  load "tttUnfold"; open tttUnfold;
+  load "fooTheory";
+  ttt_record_incremental ();
+
+The incremental recorder writes src/tactictoe/ttt_tacdata/MANIFEST with
+content hashes for each recorded theory, the recorder sources, and hol.state0.
+A theory is re-recorded when its Script.sml hash changes, when an ancestor was
+re-recorded in the same topological pass, when the data file hash no longer
+matches the manifest, or when global recorder/format provenance changes.  It
+logs every up-to-date, stale, recorded, skipped, and failed decision.
+
+Useful variants:
+  ttt_record_incremental_opts [Scope (Theories ["foo"]), DryRun true];
+  ttt_record_incremental_opts [Scope (Ancestry "foo"), Force true];
+  ttt_record_incremental_opts [Scope (Ancestry "foo"), Parallel 4];
+
+Recording publishes tactic data and thmdata through atomic renames, and
+incremental runs use per-theory locks under ttt_tacdata/.locks plus a manifest
+lock, so concurrent readers never see a partially-written data file.
+
 WARNING: if fooTheory depends on structures not available in sigobj (or in the
 holstate), place a Holmakefile in the directory src/AI/sml_inspection/open
 (create it if it does not exist) with the line:

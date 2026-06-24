@@ -39,6 +39,8 @@ val empty_tacdata : tacdata =
   symfreq = dempty Int.compare
   }
 
+val format_version = 2
+
 (* -------------------------------------------------------------------------
    Exporting tactic data
    ------------------------------------------------------------------------- *)
@@ -58,7 +60,7 @@ fun export_calls file calls1 =
     val calls2 = filter (test o snd) calls1
     val _ = debug ("export_calls: " ^ its (length calls2) ^ " filtered calls")
   in
-    writel file (List.concat (map call_to_string calls2))
+    writel_atomic file (List.concat (map call_to_string calls2))
   end
 
 fun export_tacdata thy file tacdata =

@@ -309,8 +309,10 @@ fun export_thmdata () =
         (DB.thms (current_theory ()))
     val l1 = namethm_curthy @ thml_of_namel thmidl_namespace
     val l2 = filter (fn x => not (dmem x set)) l1
+    val tmp = file ^ "_temp"
   in
-    write_thmdata file l2;
+    write_thmdata tmp l2;
+    OS.FileSys.rename {old = tmp, new = file};
     namethm_glob := daddl l2 (!namethm_glob)
   end
 

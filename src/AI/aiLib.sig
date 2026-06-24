@@ -177,6 +177,9 @@ sig
     string -> string * string -> (int * int) list -> unit
   val readl_rm : string -> string list
   val writel_atomic : string -> string list -> unit
+  val read_file_atomic : string -> string list
+  val sha256_file : string -> string
+  val sha256_string : string -> string
   val listDir : string -> string list
   val listDir_all : string -> string list
 

@@ -1030,6 +1030,34 @@ fun writel_atomic file sl =
   (writel (file ^ "_temp") sl;
    OS.FileSys.rename {old = file ^ "_temp", new=file})
 
+fun read_file_atomic file = readl_empty file
+
+fun shell_quote s =
+  "'" ^ String.translate (fn #"'" => "'\\''" | c => str c) s ^ "'"
+
+fun sha256_file file =
+  let
+    val tmp = OS.FileSys.tmpName ()
+    val cmd = "sha256sum " ^ shell_quote file ^ " > " ^ shell_quote tmp
+    val status = OS.Process.system cmd
+    val ok = OS.Process.isSuccess status
+    val line = if ok then hd (readl tmp) else ""
+    val hash = hd (String.tokens Char.isSpace line)
+      handle _ => (remove_file tmp; raise ERR "sha256_file" file)
+  in
+    remove_file tmp;
+    if ok then hash else raise ERR "sha256_file" file
+  end
+
+fun sha256_string s =
+  let
+    val tmp = OS.FileSys.tmpName ()
+    val _ = write_file tmp s
+    val hash = sha256_file tmp
+  in
+    remove_file tmp; hash
+  end
+
 fun readl_rm file =
   let val sl = readl file in OS.FileSys.remove file; sl end
 
