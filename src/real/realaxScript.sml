@@ -77,7 +77,7 @@ Theorem REAL_INV_0 = REAL_INV_0;
 val _ =
    add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
               fixity = Suffix 2100,
-              paren_style = OnlyIfNecessary,
+              paren_style = ParoundPrec,
               pp_elements = [TOK (UnicodeChars.sup_minus ^ UnicodeChars.sup_1)],
               term_name = "realinv"};
 

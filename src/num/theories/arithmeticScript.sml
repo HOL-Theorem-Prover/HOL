@@ -162,7 +162,7 @@ Theorem EXP0[simp] = cj 1 EXP
 val _ = add_rule {fixity = Suffix 2100,
                   term_name = UnicodeChars.sup_2,
                   block_style = (AroundEachPhrase,(PP.CONSISTENT, 0)),
-                  paren_style = OnlyIfNecessary,
+                  paren_style = ParoundPrec,
                   pp_elements = [TOK UnicodeChars.sup_2]};
 
 val _ = overload_on (UnicodeChars.sup_2, “\x. x ** 2”);
@@ -171,7 +171,7 @@ val _ = TeX_notation {hol = UnicodeChars.sup_2, TeX = ("\\HOLTokenSupTwo{}", 1)}
 val _ = add_rule {fixity = Suffix 2100,
                   term_name = UnicodeChars.sup_3,
                   block_style = (AroundEachPhrase,(PP.CONSISTENT, 0)),
-                  paren_style = OnlyIfNecessary,
+                  paren_style = ParoundPrec,
                   pp_elements = [TOK UnicodeChars.sup_3]};
 
 val _ = overload_on (UnicodeChars.sup_3, “\x. x ** 3”);

@@ -2002,7 +2002,7 @@ val _ = add_record_field ("inv", ``monoid_inv``);
 val _ = add_rule{fixity = Suffix 2100,
                  term_name = "reciprocal",
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
-                 paren_style = OnlyIfNecessary,
+                 paren_style = ParoundPrec,
                  pp_elements = [TOK (UnicodeChars.sup_minus ^ UnicodeChars.sup_1)]};
 Overload reciprocal = ``monoid_inv g``
 Overload "|/" = ``reciprocal``(* for non-unicode input *)

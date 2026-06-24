@@ -310,7 +310,7 @@ val _ = overload_on (UnicodeChars.sup_3, “\x :extreal. x pow 3”);
 val _ = add_rule {fixity = Suffix 2100,
                   term_name = UnicodeChars.sup_4,
                   block_style = (AroundEachPhrase,(PP.CONSISTENT, 0)),
-                  paren_style = OnlyIfNecessary,
+                  paren_style = ParoundPrec,
                   pp_elements = [TOK UnicodeChars.sup_4]};
 
 val _ = overload_on (UnicodeChars.sup_4, “\x :extreal. x pow 4”);
