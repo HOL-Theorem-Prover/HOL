@@ -1,5 +1,8 @@
 signature smlOpen =
 sig
+  val open_dir : string ref
+  val openscript_dir : string ref
+
   (* functions called in the generated script which opens a structure *)
    val sml_cleanval : unit -> unit
    val sml_cleanstruct : string -> unit

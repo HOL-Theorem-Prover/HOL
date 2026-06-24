@@ -12,8 +12,8 @@ struct
 open HolKernel boolLib aiLib smlExecScripts
 
 val ERR = mk_HOL_ERR "smlOpen"
-val open_dir = HOLDIR ^ "/src/AI/sml_inspection/open"
-val openscript_dir = HOLDIR ^ "/src/AI/sml_inspection/openscript"
+val open_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/open")
+val openscript_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/openscript")
 
 (* -------------------------------------------------------------------------
    Generate SML code for exporting values of a structure
@@ -47,8 +47,8 @@ fun sml_cleanval () =
 
 fun sml_exportstruct s =
   let
-    val dir = open_dir ^ "/" ^ s
-    val _ = app mkDir_err [open_dir,dir]
+    val dir = !open_dir ^ "/" ^ s
+    val _ = app mkDir_err [!open_dir,dir]
     val l = filter test_val (#allVal PolyML.globalNameSpace ())
     val structures =
       filter (test_struct s) (#allStruct PolyML.globalNameSpace ())
@@ -63,6 +63,8 @@ fun sml_exportstruct s =
 fun export_struct_code s =
   [
    "open smlOpen;",
+   "smlOpen.open_dir := " ^ mlquote (!open_dir) ^ ";",
+   "smlOpen.openscript_dir := " ^ mlquote (!openscript_dir) ^ ";",
    "sml_cleanval ();",
    "sml_cleanstruct " ^ mlquote s ^ ";",
    "open " ^ s ^ ";",
@@ -75,15 +77,15 @@ fun export_struct_code s =
 
 fun export_struct s =
   let
-    val _ = mkDir_err openscript_dir
-    val script = openscript_dir ^ "/" ^ s ^ "__open__sml.sml"
+    val _ = mkDir_err (!openscript_dir)
+    val script = !openscript_dir ^ "/" ^ s ^ "__open__sml.sml"
   in
     writel script (export_struct_code s);
     exec_script script
   end
 
 fun import_struct s =
-  let val dir = open_dir ^ "/" ^ s in
+  let val dir = !open_dir ^ "/" ^ s in
     (readl (dir ^ "/values"), readl (dir ^ "/constructors"),
      readl (dir ^ "/exceptions"), readl (dir ^ "/structures"))
   end

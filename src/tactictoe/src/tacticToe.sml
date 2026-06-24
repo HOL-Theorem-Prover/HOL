@@ -216,7 +216,7 @@ fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
 
 val searchtree_glob = ref NONE
 
-fun tactictoe_aux vnno goal =
+fun tactictoe_aux vnno goal = with_tactictoe_cache (fn () =>
   if not (has_boolty_goal goal)
   then raise ERR "tactictoe" "type bool expected"
   else
@@ -235,7 +235,7 @@ fun tactictoe_aux vnno goal =
     val (staco,tac) = read_status proofstatus
   in
     tac
-  end
+  end)
 
 fun ttt goal = (tactictoe_aux NONE goal) goal
 
@@ -259,11 +259,11 @@ val confidence_tnn = eval_goal
    Proof suggestion
    ------------------------------------------------------------------------- *)
 
-fun suggest () =
+fun suggest () = with_tactictoe_cache (fn () =>
   let val s = suggest_proof (valOf (!searchtree_glob)) in
     print_endline s;
     hidef (tactic_of_sml (!ttt_search_time)) s
-  end
+  end)
 
 
 end (* struct *)

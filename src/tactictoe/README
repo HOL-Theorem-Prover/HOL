@@ -5,8 +5,8 @@ It searches for a proof by repeatedly applying suitable tactics for each goal st
 SKIPPING RECORDING of the HOL4 standard library:
   1) Download the file ttt_tacdata_kananaskis-14.tar.gz from
      http://grid01.ciirc.cvut.cz/~thibault/
-  2) Extract it in your HOL/src/tactictoe directory.
-     This creates the directory HOL/src/tactictoe/ttt_tacdata.
+  2) Extract it in $HOME/.cache/tactictoe (or in the directory named by
+     HOL4_TACTICTOE_CACHE).  This creates the ttt_tacdata directory.
   3) Optionally download from the same location
      "tnn_for_tactictoe" to a file "path_to_tnn"
 
@@ -21,7 +21,8 @@ INCREMENTAL RECORDING (recommended for repeated local updates):
   load "fooTheory";
   ttt_record_incremental ();
 
-The incremental recorder writes src/tactictoe/ttt_tacdata/MANIFEST with
+The incremental recorder writes ttt_tacdata/MANIFEST under the TacticToe
+cache root ($HOME/.cache/tactictoe by default, or HOL4_TACTICTOE_CACHE) with
 content hashes for each recorded theory, the recorder sources, and hol.state0.
 A theory is re-recorded when its Script.sml hash changes, when an ancestor was
 re-recorded in the same topological pass, when the data file hash no longer
@@ -38,8 +39,9 @@ incremental runs use per-theory locks under ttt_tacdata/.locks plus a manifest
 lock, so concurrent readers never see a partially-written data file.
 
 WARNING: if fooTheory depends on structures not available in sigobj (or in the
-holstate), place a Holmakefile in the directory src/AI/sml_inspection/open
-(create it if it does not exist) with the line:
+holstate), arrange for the generated structure-open script to see those
+custom structures; for example, place a Holmakefile in the TacticToe scratch
+open directory with the line:
   INCLUDES = directory-of-the-custom-structures
 Otherwise, the tactics and arguments declared in those structures will not be
 recorded.
@@ -67,9 +69,9 @@ USAGE after failure:
   suggest ();
 
 CLEANING:
-  TacticToe depends on data stored in src/tactictoe/ttt_tacdata and
-  src/AI/sml_inspection/open.
-  It is usually necessary to remove these directories before re-recording.
+  TacticToe depends on data stored in the TacticToe cache root
+  ($HOME/.cache/tactictoe by default, or HOL4_TACTICTOE_CACHE).
+  It is usually necessary to remove cached tactic data before re-recording.
   This can be done by calling tttUnfold.ttt_clean_record ().
 
 EXAMPLE: see examples in src/tactictoe/examples.
@@ -81,8 +83,10 @@ NOTES FOR DEVELOPERS:
   3) polyml values in src/tactictoe/src/tttUnfold.sml.
   Debugging directories:
   1) Output of the modified theory foo is can be found in
-     src/AI/sml_inspection/buildheap/buildheap_fooScript_ttt.
+     $HOME/.cache/tactictoe/tmp/<session>/sml_inspection/buildheap/
+     buildheap_fooScript_ttt.
      Set aiLib.debug_flag and to true or/and smlRedirect.hide_flag to false
      for more output.
-  2) A copy of the modified theory is saved under src/tactictoe/scripts
+  2) A copy of the modified theory is saved under
+     $HOME/.cache/tactictoe/log/scripts
      for further inspection.

@@ -15,6 +15,8 @@ open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "tttUnfold"
 
+fun load_sigobj () = with_tactictoe_cache aiLib.load_sigobj
+
 (* -----------------------------------------------------------------------
    Program representation and stack
    ----------------------------------------------------------------------- *)
@@ -1105,19 +1107,21 @@ fun unfold_wrap p = unfold 0 [dnew String.compare (map protect basis)] p
    Rewriting script
    ------------------------------------------------------------------------ *)
 
-fun tttsml_of file = OS.Path.base file ^ "_ttt.sml"
+fun tttsml_of file =
+  tactictoe_scratch_dir ^ "/scripts/" ^ OS.Path.base file ^ "_ttt.sml"
 
 fun print_program cthy fileorg sl =
   let
     val _ = debug ("print_program: " ^ fileorg)
     val fileout = tttsml_of fileorg
     val scriptdir = tactictoe_dir ^ "/log/scripts"
-    val _ = app mkDir_err [OS.Path.dir scriptdir, scriptdir]
+    val _ = app mkDir_err [OS.Path.dir fileout, OS.Path.dir scriptdir,
+                            scriptdir]
     val oc = TextIO.openOut fileout
     fun script_save () =
       let
         val cmd = String.concatWith " "
-          ["cp", fileout, scriptdir ^ "/" ^ cthy]
+          ["cp", shell_quote fileout, shell_quote (scriptdir ^ "/" ^ cthy)]
       in
         cmd_in_dir tactictoe_dir cmd
       end
@@ -1174,27 +1178,29 @@ fun exists_tacdata_ancestry thy =
   exists_tacdata_thy thy andalso
   all exists_tacdata_thy (ttt_ancestry thy)
 
-fun ttt_record_thy thy =
+fun ttt_record_thy thy = with_tactictoe_cache (fn () =>
   if mem thy ["min","bool"] then () else
   let
     val _ = ttt_rewrite_thy thy
     val scriptorg = find_script thy
     val _ = print_endline ("ttt_record_thy: " ^ thy ^ "\n  " ^ scriptorg)
     val (_,t) = add_time
-      smlExecScripts.exec_tttrecord (tttsml_of scriptorg)
+      smlExecScripts.exec_tttrecord_in_dir (OS.Path.dir scriptorg)
+        (tttsml_of scriptorg)
   in
     print_endline ("ttt_record_thy time: " ^ rts_round 4 t);
     if not (exists_tacdata_thy thy)
     then (print_endline "ttt_record_thy: failed";
           raise ERR "ttt_record_thy" thy)
     else ()
-  end
+  end)
 
 fun ttt_clean_temp () =
   (
-  clean_dir (HOLDIR ^ "/src/AI/sml_inspection/open");
-  clean_dir (HOLDIR ^ "/src/AI/sml_inspection/buildheap");
-  clean_dir (tactictoe_dir ^ "/info")
+  clean_dir (tactictoe_scratch_dir ^ "/sml_inspection/open");
+  clean_dir (tactictoe_scratch_dir ^ "/sml_inspection/buildheap");
+  clean_dir (tactictoe_dir ^ "/info");
+  clean_dir (tactictoe_scratch_dir ^ "/scripts")
   )
 
 fun ttt_clean_record () =
@@ -1288,7 +1294,7 @@ val default_record_config =
     max_lock_age = Time.fromSeconds 7200 }
 
 val incremental_parallel_dir =
-  ref (default_parallel_dir ^ "/ttt_record_incremental")
+  ref (tactictoe_scratch_dir ^ "/parallel/ttt_record_incremental")
 
 fun apply_record_option opt (cfg : record_config) =
   let val {scope,parallel,force,dry_run,max_lock_age} = cfg in
@@ -1796,9 +1802,10 @@ and ttt_record_incremental_cfg (cfg : record_config) =
         val src_hashes = #source_hashes plan
         val stale_names = map fst stale
         val _ = if parallel <= 1 then () else
-          (mkDir_err default_parallel_dir;
+          (mkDir_err (tactictoe_scratch_dir ^ "/parallel");
            incremental_parallel_dir :=
-             default_parallel_dir ^ "/ttt_record_incremental_" ^ current_pid ())
+             tactictoe_scratch_dir ^ "/parallel/ttt_record_incremental_" ^
+             current_pid ())
         fun deps_failed failed thy =
           List.find (fn dep => mem dep failed) (ttt_ancestry thy)
         fun stale_deps thy = filter (fn dep => mem dep stale_names)

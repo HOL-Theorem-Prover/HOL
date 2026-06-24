@@ -67,16 +67,38 @@ fun inter_increasing l1 l2 = case (l1,l2) of
 fun exists_file file = HOLFileSys.access (file, []);
 
 fun mkDir_err dir =
-  if exists_file dir then () else HOLFileSys.mkDir dir
+  if exists_file dir then () else
+  let val parent = OS.Path.dir dir in
+    if parent = dir orelse parent = "" orelse exists_file parent
+    then ()
+    else mkDir_err parent;
+    HOLFileSys.mkDir dir handle _ =>
+      if exists_file dir then () else raise ERR "mkDir_err" dir
+  end
+
+fun home_dir () =
+  case OS.Process.getEnv "HOME" of
+    SOME dir => dir
+  | NONE => raise ERR "home_dir" "HOME is not set"
+
+fun home_cache_dir name = home_dir () ^ "/.cache/" ^ name
+
+val tactictoe_cache_dir =
+  case OS.Process.getEnv "HOL4_TACTICTOE_CACHE" of
+    SOME dir => dir
+  | NONE => home_cache_dir "tactictoe"
 
 fun remove_file file =
   if exists_file file then ignore (OS.FileSys.remove file) else ()
 
+fun shell_quote s =
+  "'" ^ String.translate (fn #"'" => "'\\''" | c => str c) s ^ "'"
+
 fun run_cmd cmd = ignore (OS.Process.system cmd)
 
 (* TODO: Use OS to change dir? *)
-fun cmd_in_dir dir cmd = run_cmd ("cd " ^ dir ^ "; " ^ cmd)
-fun clean_dir dir = (run_cmd ("rm -r " ^ dir); mkDir_err dir)
+fun cmd_in_dir dir cmd = run_cmd ("cd " ^ shell_quote dir ^ "; " ^ cmd)
+fun clean_dir dir = (run_cmd ("rm -rf " ^ shell_quote dir); mkDir_err dir)
 
 (* ------------------------------------------------------------------------
    Comparisons
@@ -1027,13 +1049,16 @@ fun write_texgraph file (s1,s2) l =
   writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => its a ^ " " ^ its b) l);
 
 fun writel_atomic file sl =
-  (writel (file ^ "_temp") sl;
-   OS.FileSys.rename {old = file ^ "_temp", new=file})
+  let
+    val _ = mkDir_err (OS.Path.dir file)
+    val tmp = file ^ "." ^ Portable.unique_tmp_suffix () ^ ".tmp"
+  in
+    (writel tmp sl;
+     OS.FileSys.rename {old = tmp, new = file})
+    handle e => (remove_file tmp; raise e)
+  end
 
 fun read_file_atomic file = readl_empty file
-
-fun shell_quote s =
-  "'" ^ String.translate (fn #"'" => "'\\''" | c => str c) s ^ "'"
 
 fun sha256_file file =
   let
@@ -1353,9 +1378,11 @@ fun gamma_noise_gen alpha =
    Theories of the standard library (sigobj)
    ------------------------------------------------------------------------ *)
 
+val sigobj_theories_dir = ref (HOLDIR ^ "/src/tactictoe/code")
+
 fun sigobj_theories () =
   let
-    val ttt_code_dir = HOLDIR ^ "/src/tactictoe/code"
+    val ttt_code_dir = !sigobj_theories_dir
     val _    = mkDir_err ttt_code_dir
     val file = ttt_code_dir ^ "/theory_list"
     val sigdir = HOLDIR ^ "/sigobj"

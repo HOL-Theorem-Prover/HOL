@@ -16,8 +16,40 @@ open HolKernel Abbrev boolLib aiLib
    ------------------------------------------------------------------------- *)
 
 val infix_file = HOLDIR ^ "/src/AI/sml_inspection/infix_file.sml"
-val tactictoe_dir = HOLDIR ^ "/src/tactictoe"
+val tactictoe_dir = tactictoe_cache_dir
 val ttt_eval_dir = tactictoe_dir ^ "/eval"
+
+val tactictoe_scratch_dir =
+  tactictoe_dir ^ "/tmp/" ^ Portable.unique_tmp_suffix ()
+
+fun with_saved_ref r v f =
+  let val old = !r in
+    r := v;
+    (let val x = f () in r := old; x end
+     handle e => (r := old; raise e))
+  end
+
+fun with_tactictoe_cache f =
+  with_saved_ref sigobj_theories_dir (tactictoe_scratch_dir ^ "/code")
+  (fn () =>
+  with_saved_ref smlOpen.open_dir
+    (tactictoe_scratch_dir ^ "/sml_inspection/open")
+  (fn () =>
+  with_saved_ref smlOpen.openscript_dir
+    (tactictoe_scratch_dir ^ "/sml_inspection/openscript")
+  (fn () =>
+  with_saved_ref smlExecScripts.heapname_dir
+    (tactictoe_scratch_dir ^ "/sml_inspection/heapname")
+  (fn () =>
+  with_saved_ref smlExecScripts.genscriptdep_dir
+    (tactictoe_scratch_dir ^ "/sml_inspection/genscriptdep")
+  (fn () =>
+  with_saved_ref smlExecScripts.buildheap_dir
+    (tactictoe_scratch_dir ^ "/sml_inspection/buildheap")
+  (fn () =>
+  with_saved_ref smlRedirect.hide_file
+    (tactictoe_scratch_dir ^ "/sml_inspection/hide_file")
+    f))))))
 
 (* -------------------------------------------------------------------------
    Nearest neighbor parameters

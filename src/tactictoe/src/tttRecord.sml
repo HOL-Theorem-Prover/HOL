@@ -124,7 +124,7 @@ fun info_thy thy =
 
 fun write_info thy =
   let
-    val infodir = HOLDIR ^ "/src/tactictoe/log/info"
+    val infodir = tactictoe_dir ^ "/log/info"
     val _ = app mkDir_err [OS.Path.dir infodir, infodir]
     val infol = info_thy thy
   in
@@ -309,10 +309,11 @@ fun export_thmdata () =
         (DB.thms (current_theory ()))
     val l1 = namethm_curthy @ thml_of_namel thmidl_namespace
     val l2 = filter (fn x => not (dmem x set)) l1
-    val tmp = file ^ "_temp"
+    val tmp = file ^ "." ^ Portable.unique_tmp_suffix () ^ ".tmp"
   in
-    write_thmdata tmp l2;
-    OS.FileSys.rename {old = tmp, new = file};
+    ((write_thmdata tmp l2;
+      OS.FileSys.rename {old = tmp, new = file})
+     handle e => (remove_file tmp; raise e));
     namethm_glob := daddl l2 (!namethm_glob)
   end
 

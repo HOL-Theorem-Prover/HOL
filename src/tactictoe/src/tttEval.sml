@@ -252,6 +252,7 @@ fun hh_call fofdir thmdata goal =
   end end
 
 fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
+  with_tactictoe_cache (fn () =>
   let
     val pbid = thy ^ "_" ^ its n
     val valfile = expdir ^ "/val/" ^ pbid
@@ -261,24 +262,26 @@ fun ttt_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
     val _ = atp_dir := fofdir
     val _ = app mkDir_err [expdir ^ "/fof", fofdir]
     val mem = !hide_flag
+    fun restore () = hide_flag := mem
     val _ = hide_flag := false
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
+    fun eval () =
+      (if !hh_flag
+       then catch_err_ignore "hh_call" (hh_call fofdir thmdata) goal else
+       let val ((status,tree),t) = add_time
+         (main_tactictoe (thmdata,tacdata) nnol) goal
+         handle Interrupt => raise Interrupt
+           | e => (print_endline "Error"; raise e)
+       in
+         print_status status;
+         print_endline ("ttt_eval: " ^ rts_round 6 t);
+         export_valex valfile tree
+       end;
+       restore ())
   in
-    if !hh_flag
-      then catch_err_ignore "hh_call" (hh_call fofdir thmdata) goal else
-    let val ((status,tree),t) = add_time
-      (main_tactictoe (thmdata,tacdata) nnol) goal
-      handle Interrupt => raise Interrupt
-        | e => (print_endline "Error"; raise e)
-    in
-      print_status status;
-      print_endline ("ttt_eval: " ^ rts_round 6 t);
-      export_valex valfile tree
-    end
-    ;
-    hide_flag := mem
-  end
+    eval () handle e => (restore (); raise e)
+  end)
 
 (* ------------------------------------------------------------------------
    Evaluation: requires recorded savestates.
@@ -418,7 +421,7 @@ fun run_evalscript_filel smlfun expname (b,ncore) nnol filel =
 load "tttUnfold"; open tttUnfold;
 tttSetup.record_flag := true;
 tttSetup.record_savestate_flag := false;
-aiLib.load_sigobj ();
+load_sigobj ();
 ttt_clean_record ();
 ttt_record ();
 *)
@@ -431,7 +434,7 @@ ttt_record ();
 load "tttUnfold"; open tttUnfold;
 tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := true;
-aiLib.load_sigobj ();
+load_sigobj ();
 ttt_record_savestate (); (* includes clean savestate *)
 *)
 
@@ -442,11 +445,11 @@ ttt_record_savestate (); (* includes clean savestate *)
 (*
 load "tttUnfold"; open tttUnfold aiLib;
 
-val tactictoe_dir = HOLDIR ^ "/src/tactictoe";
+val tactictoe_dir = tttSetup.tactictoe_dir;
 val thmdata_dir = tactictoe_dir ^ "/thmdata";
 val _ = clean_dir thmdata_dir;
 
-aiLib.load_sigobj ();
+load_sigobj ();
 fun ttt_ancestry thy =
   filter (fn x => not (mem x ["min","bool"])) (sort_thyl (ancestry thy))
 
@@ -532,7 +535,8 @@ fun rltograph n rl = case rl of
 
 fun write_graph file (s1,s2) l =
   writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => rts a ^ " " ^ its b) l)
-write_graph  (HOLDIR ^ "/src/tactictoe/eval/graph/hard-eprover-1_graph")
+write_graph
+  (tttSetup.ttt_eval_dir ^ "/graph/hard-eprover-1_graph")
   ("time","proofs") (rltograph 0 rl1);
 *)
 
@@ -630,7 +634,7 @@ fun rlval ncore expname thyl maxgen =
 
 (*
 load "tttUnfold"; open tttUnfold;
-(* aiLib.load_sigobj (); *)
+(* tttUnfold.load_sigobj (); *)
 tttSetup.record_flag := false;
 tttSetup.record_savestate_flag := true;
 ttt_record_savestate (); (* includes clean savestate *)

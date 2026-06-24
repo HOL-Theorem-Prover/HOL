@@ -114,7 +114,7 @@ fun import_tacdata filel =
    Tactictoe database management
    ------------------------------------------------------------------------- *)
 
-val ttt_tacdata_dir = HOLDIR ^ "/src/tactictoe/ttt_tacdata"
+val ttt_tacdata_dir = tactictoe_cache_dir ^ "/ttt_tacdata"
 
 fun exists_tacdata_thy thy =
   exists_file (ttt_tacdata_dir ^ "/" ^ thy)

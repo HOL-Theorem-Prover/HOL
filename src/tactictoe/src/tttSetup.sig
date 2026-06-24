@@ -7,6 +7,8 @@ sig
   val infix_file : string
   val tactictoe_dir : string
   val ttt_eval_dir : string
+  val tactictoe_scratch_dir : string
+  val with_tactictoe_cache : (unit -> 'a) -> 'a
 
   (* nearest neighbor predictor *)
   val ttt_thmlarg_radius : int ref

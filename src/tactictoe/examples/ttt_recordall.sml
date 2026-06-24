@@ -7,8 +7,9 @@
 (*
    Goal
    ----
-   Produce a TacticToe tactic database (under src/tactictoe/ttt_tacdata)
-   covering every theory of the HOL4 standard library.
+   Produce a TacticToe tactic database (under
+   $HOME/.cache/tactictoe/ttt_tacdata by default) covering every theory
+   of the HOL4 standard library.
 
    How it works
    ------------
@@ -19,7 +20,7 @@
    of ALL theories currently loaded into the theory graph.  Hence
    ttt_record () records every theory that has been loaded.
 
-   aiLib.load_sigobj () loads every theory that is symlinked into
+   tttUnfold.load_sigobj () loads every theory that is symlinked into
    $HOLDIR/sigobj -- i.e. the whole standard library.  It runs
    `cd $HOLDIR/sigobj; find ... Theory.sig`, so it is independent of the
    current directory.  After load_sigobj () has run, ttt_record ()
@@ -48,8 +49,8 @@
         hol > use "src/tactictoe/examples/ttt_recordall.sml";
 
    ttt_clean_record () is called first, so any previously recorded (or
-   downloaded) data in src/tactictoe/ttt_tacdata is wiped before
-   recording afresh.  Comment out the ttt_clean_record () line below to
+   downloaded) data in the TacticToe cache is wiped before recording
+   afresh.  Comment out the ttt_clean_record () line below to
    instead accumulate / skip already-recorded theories.
 *)
 

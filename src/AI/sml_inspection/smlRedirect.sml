@@ -67,16 +67,17 @@ fun pop_output_file () =
 val hide_flag = ref true
 fun hide_in_file file f x =
   if not (!hide_flag) then f x else
-  (push_output_file {name=file, append=false};
+  (mkDir_err (OS.Path.dir file);
+   push_output_file {name=file, append=false};
     (
     let val r = f x in (pop_output_file (); r) end
     handle e => (pop_output_file (); raise e)
     )
   )
 
-val hide_file = HOLDIR ^ "/src/AI/sml_inspection/hide_file"
+val hide_file = ref (HOLDIR ^ "/src/AI/sml_inspection/hide_file")
 
-fun hidef f x = hide_in_file hide_file f x
+fun hidef f x = hide_in_file (!hide_file) f x
 
 
 

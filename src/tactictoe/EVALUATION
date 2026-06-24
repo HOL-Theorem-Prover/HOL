@@ -17,7 +17,7 @@ to replicate the experiments accompanying the paper
    session (takes an hour and requires 33 GB):
 
   load "tttUnfold"; open tttUnfold;
-  aiLib.load_sigobj ();
+  load_sigobj ();
   tttSetup.record_flag := false;
   tttSetup.record_savestate_flag := true;
   ttt_record_savestate (); (* starts by cleaning the savestate directory *)
@@ -30,11 +30,11 @@ to replicate the experiments accompanying the paper
   (* timeout *)
   tttSetup.ttt_search_time := 30.0;
   (* theories to be evaluated *)
-  aiLib.load_sigob (); (* for the full standard library *)
+  tttUnfold.load_sigobj (); (* for the full standard library *)
   val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
   (* number of cores used *)
   val ncore = 30;
-  (* directory src/tactictoe/eval/foo will contain the results *)
+  (* directory $HOME/.cache/tactictoe/eval/foo will contain the results *)
   val expname = "foo";
   (* default_reward *)
   tttSearch.default_reward = 1.0;

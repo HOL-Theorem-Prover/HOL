@@ -29,22 +29,26 @@ fun lit_exists file = OS.FileSys.access (file, [])
    Find the right heap for running a script
    ------------------------------------------------------------------------- *)
 
-val heapname_dir = HOLDIR ^ "/src/AI/sml_inspection/heapname"
+val heapname_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/heapname")
 val use_state0 = ref false
+val hol_bin = HOLDIR ^ "/bin/hol"
 
-fun find_heapname file =
+fun script_arg file = if OS.Path.isAbsolute file then file else OS.Path.file file
+
+fun find_heapname_in_dir dir file =
   if !use_state0 then HOLDIR ^ "/bin/hol.state0" else
   let
-    val _ = mkDir_err heapname_dir
-    val hol_bin = HOLDIR ^ "/bin/hol"
-    val fileout = heapname_dir ^ "/heapname_" ^ bare file
-    val cmd = String.concatWith " " [hol_bin,"heapname",">",fileout]
+    val _ = mkDir_err (!heapname_dir)
+    val fileout = !heapname_dir ^ "/heapname_" ^ bare file
+    val cmd = String.concatWith " "
+      [shell_quote hol_bin, "heapname", ">", shell_quote fileout]
   in
-    cmd_in_dir (OS.Path.dir file) cmd;
+    cmd_in_dir dir cmd;
     hd (readl fileout)
   end
   handle Interrupt => raise Interrupt | _ => raise ERR "find_heapname" file
 
+fun find_heapname file = find_heapname_in_dir (OS.Path.dir file) file
 
 val core_scripts = map (fn x => x ^ "Script_ttt")
   ["ConseqConv", "quantHeuristics", "patternMatches", "ind_type", "while",
@@ -53,30 +57,35 @@ val core_scripts = map (fn x => x ^ "Script_ttt")
    "numeral", "basicSize", "numpair", "pred_set", "list", "rich_list",
    "indexedLists"];
 
-fun find_tttheapname file =
+fun find_tttheapname_in_dir dir file =
   if mem (bare file) core_scripts
   then HOLDIR ^ "/bin/hol.state0"
-  else find_heapname file
+  else find_heapname_in_dir dir file
+
+fun find_tttheapname file = find_tttheapname_in_dir (OS.Path.dir file) file
 
 (* -------------------------------------------------------------------------
    Find script dependencies
    ------------------------------------------------------------------------- *)
 
-val genscriptdep_dir = HOLDIR ^ "/src/AI/sml_inspection/genscriptdep"
+val genscriptdep_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/genscriptdep")
 
-fun find_genscriptdep file =
+fun find_genscriptdep_in_dir dir file =
   let
-    val _ = mkDir_err genscriptdep_dir
+    val _ = mkDir_err (!genscriptdep_dir)
     val genscriptdep_bin = HOLDIR ^ "/bin/genscriptdep"
-    val fileout = genscriptdep_dir ^ "/genscriptdep_" ^ bare file
+    val fileout = !genscriptdep_dir ^ "/genscriptdep_" ^ bare file
     val cmd = String.concatWith " "
-      [genscriptdep_bin, OS.Path.file file, ">", fileout]
+      [shell_quote genscriptdep_bin, shell_quote (script_arg file), ">",
+       shell_quote fileout]
   in
-    cmd_in_dir (OS.Path.dir file) cmd;
+    cmd_in_dir dir cmd;
     map holpathdb.subst_pathvars (readl fileout)
   end
   handle Interrupt => raise Interrupt
     | _ => raise ERR "find_genscriptdep" file
+
+fun find_genscriptdep file = find_genscriptdep_in_dir (OS.Path.dir file) file
 
 (* -------------------------------------------------------------------------
    Execute the script (for its side effects)
@@ -84,22 +93,25 @@ fun find_genscriptdep file =
 
 val buildheap_options = ref ""
 val buildheap_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/buildheap")
-val hol_bin = HOLDIR ^ "/bin/hol"
 
-fun exec_scriptb b script =
+fun exec_scriptb_in_dir b dir script =
   let
     val _ = mkDir_err (!buildheap_dir)
     val fileout = !buildheap_dir ^ "/buildheap_" ^ bare script
-    val depl = find_genscriptdep script
-    val heap = if b then find_tttheapname script else find_heapname script
+    val depl = find_genscriptdep_in_dir dir script
+    val heap = if b then find_tttheapname_in_dir dir script
+               else find_heapname_in_dir dir script
     (* Poly/ML runtime options must come before subcommand *)
     val cmd = String.concatWith " "
-      ([hol_bin,"--gcthreads=1"] @ [!buildheap_options] @
-       ["run","--holstate=" ^ heap] @
-       depl @ [OS.Path.file script,">",fileout])
+      ([shell_quote hol_bin,"--gcthreads=1"] @ [!buildheap_options] @
+       ["run","--holstate=" ^ shell_quote heap] @
+       map shell_quote depl @
+       [shell_quote (script_arg script), ">", shell_quote fileout])
   in
-    cmd_in_dir (OS.Path.dir script) cmd
+    cmd_in_dir dir cmd
   end
+
+fun exec_scriptb b script = exec_scriptb_in_dir b (OS.Path.dir script) script
 
 val exec_script = exec_scriptb false
 
@@ -150,20 +162,24 @@ fun restore_thyfiles script = app restore_file (theory_files script)
    The recording script is erased at the end of the execution.
    ------------------------------------------------------------------------- *)
 
-fun exec_tttrecord script =
-  let fun cleanup () = (restore_thyfiles script; remove_err script) in
-    ((save_thyfiles script; exec_scriptb true script; cleanup ())
+fun exec_tttrecord_in_dir dir script =
+  let fun cleanup () = remove_err script in
+    ((exec_scriptb_in_dir true dir script; cleanup ())
     handle Interrupt => (cleanup (); raise Interrupt) | e => raise e)
   end
 
+fun exec_tttrecord script = exec_tttrecord_in_dir (OS.Path.dir script) script
+
 fun exec_ttteval dirout script =
   let
+    val _ = mkDir_err dirout
     val fileout = dirout ^ "/buildheap_" ^ bare script
     val heap = HOLDIR ^ "/bin/hol.state0"
     (* Poly/ML runtime options must come before subcommand *)
     val cmd = String.concatWith " "
-      ([hol_bin,"--gcthreads=1"] @ [!buildheap_options] @
-       ["run","--holstate=" ^ heap,OS.Path.file script,">",fileout])
+      ([shell_quote hol_bin,"--gcthreads=1"] @ [!buildheap_options] @
+       ["run","--holstate=" ^ shell_quote heap,
+        shell_quote (script_arg script),">",shell_quote fileout])
   in
     cmd_in_dir (OS.Path.dir script) cmd
   end
