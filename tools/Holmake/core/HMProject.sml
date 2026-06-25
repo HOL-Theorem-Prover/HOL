@@ -117,6 +117,16 @@ fun lookup_bool tbl key =
       | SOME _ =>
           raise Fail ("key '" ^ key_name key ^ "' must be a boolean")
 
+fun lookup_int tbl key =
+    case TOML.lookupInTable tbl key of
+        NONE => NONE
+      | SOME (TOMLvalue_dtype.INTEGER i) =>
+          (SOME (IntInf.toInt i)
+           handle Overflow =>
+             raise Fail ("key '" ^ key_name key ^ "' is out of range"))
+      | SOME _ =>
+          raise Fail ("key '" ^ key_name key ^ "' must be an integer")
+
 (* Tag a `lookup_*'-raised Fail with the file path so users see which
    holproject.toml is malformed, not just the offending key name. *)
 fun tag_path pf f = f () handle Fail s => raise Fail (pf ^ ": " ^ s)

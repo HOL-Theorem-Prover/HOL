@@ -81,4 +81,25 @@ sig
      discovered.  Returns [] on a non-readable directory. *)
   val source_files : string -> string list
 
+  (* Typed lookup helpers for `holproject.toml`-shaped TOML tables.
+     Each returns NONE only when the key is absent; if the key is
+     present but the value is the wrong variant, raises Fail with a
+     message naming the offending key.  Exposed so other readers of
+     `holproject.toml` (e.g. `h4pedant`) can reuse the same idiom. *)
+  val lookup_string : TOML.table -> TOML.key -> string option
+  val lookup_string_array : TOML.table -> TOML.key -> string list option
+  val lookup_bool : TOML.table -> TOML.key -> bool option
+  val lookup_int : TOML.table -> TOML.key -> int option
+  val lookup_table : TOML.table -> TOML.key -> TOML.table option
+
+  (* tag_path pf f - run `f`; if it raises Fail, re-raise with `pf:` as
+     a prefix so the message names the offending file.  Used to wrap
+     top-level key lookups during `load`-style parsing. *)
+  val tag_path : string -> (unit -> 'a) -> 'a
+
+  (* abs_relative_to base p - canonicalise `p`, resolving against
+     `base` if `p` is relative.  Exposed for path normalisation in
+     other holproject.toml consumers. *)
+  val abs_relative_to : string -> string -> string
+
 end

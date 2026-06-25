@@ -21,6 +21,7 @@ DIRNAMES = \
   condifeq \
   doublecrnl \
   projclean_loop \
+  h4pedant_config \
   projfile_basic \
   projfile_holmake_false \
   projfile_holpath_override \

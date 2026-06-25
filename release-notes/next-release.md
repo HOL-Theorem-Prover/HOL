@@ -116,8 +116,14 @@ New features
     while keeping `holpathdb` registration and `external_includes`
     inheritance live — a lightweight shim suitable for the root of
     a multi-project tree (the HOL repository itself now ships such
-    a file).  See the *Project files* sub-section of *Maintaining
-    HOL Formalizations with Holmake* in the Description manual.
+    a file).  An optional `[h4pedant]` section configures the
+    style-check tool with a global line-length limit, a
+    `unicode_ok` toggle, an `exclude` list of skipped subdirectories,
+    and a `[[h4pedant.dir]]` array of per-subdirectory overrides;
+    `h4pedant` with no positional arguments walks up to find the
+    project root and scans the whole tree.  See the *Project
+    files* sub-section of *Maintaining HOL Formalizations with
+    Holmake* in the Description manual.
 
 Bugs fixed
 ----------

@@ -9,7 +9,6 @@ endif
 .PHONY: all
 
 all: $(dprot $(HOLDIR)/tools/h4pedant/h4pedant)
-	$(protect $(HOLDIR)/tools/h4pedant/h4pedant) --nolinelen -u $(protect $(HOLDIR)/src) $(protect $(HOLDIR)/help/Docfiles)
-	$(protect $(HOLDIR)/tools/h4pedant/h4pedant) --nolinelen -u $(protect $(HOLDIR)/examples)
+	$(protect $(HOLDIR)/tools/h4pedant/h4pedant)
 
 endif
