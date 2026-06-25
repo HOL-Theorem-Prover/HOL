@@ -159,7 +159,8 @@ local
     val th1 =
       (* CONV_RULE (RENAME_VARS_CONV cnames) th
          is not good enough since it doesn't guarantee the cnames will be used
-        - primed variants could be used if they clash with existing constant names
+         - primed variants could be used if they clash with existing constant
+           names
       *)
       let
         val tm1 = concl th

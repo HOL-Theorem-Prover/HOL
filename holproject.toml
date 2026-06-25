@@ -10,7 +10,8 @@ holmake = false
 linelen = 80
 unicode_ok = false
 exclude = ["bin", "sigobj", "tools", "tools-poly",
-           "developers", "Manual", "help"]
+           "developers", "Manual", "help",
+           "examples/l3-machine-code/arm8/asl-equiv/armv8.6-asl-snapshot/"]
 
 [[h4pedant.dir]]
 path = "src"
@@ -21,3 +22,8 @@ linelen = 0
 path = "examples"
 unicode_ok = true
 linelen = 0
+
+[[h4pedant.dir]]
+path = "src/coretypes"
+unicode_ok = true
+linelen = 80

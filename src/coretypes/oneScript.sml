@@ -31,7 +31,8 @@ local open OpenTheoryMap in
 val ns = ["Data","Unit"]
 val _ = OpenTheory_tyop_name{tyop={Thy="one",Tyop="one"},name=(ns,"unit")}
 val _ = OpenTheory_const_name{const={Thy="one",Name="one"},name=(ns,"()")}
-val _ = OpenTheory_const_name{const={Thy="one",Name="one_CASE"},name=(ns,"case")}
+val _ = OpenTheory_const_name
+          {const={Thy="one",Name="one_CASE"},name=(ns,"case")}
 end
 
 (* ---------------------------------------------------------------------*)

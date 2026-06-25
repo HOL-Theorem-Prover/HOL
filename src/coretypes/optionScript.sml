@@ -34,9 +34,11 @@ val option_TY_DEF = new_type_definition ("option", option_not_empty);
 
 local
   val ns = ["Data","Option"]
-  val _ = OpenTheoryMap.OpenTheory_tyop_name{tyop={Thy="option",Tyop="option"},name=(ns,"option")}
+  val _ = OpenTheoryMap.OpenTheory_tyop_name
+             {tyop={Thy="option",Tyop="option"},name=(ns,"option")}
 in
-  fun ot0 x y = OpenTheoryMap.OpenTheory_const_name{const={Thy="option",Name=x},name=(ns,y)}
+  fun ot0 x y =
+    OpenTheoryMap.OpenTheory_const_name{const={Thy="option",Name=x},name=(ns,y)}
   fun ot x = ot0 x x
 end
 
@@ -145,7 +147,7 @@ Theorem NOT_NONE_SOME[simp]:
 Proof
   REWRITE_TAC [SOME_DEF,NONE_DEF,option_ABS_ONE_ONE,sumTheory.INR_neq_INL]
 QED
-(* [simp] not needed, as the simplifier automatically flips the equality for us *)
+(* [simp] not needed, as simplifier automatically flips the equality for us *)
 Theorem NOT_SOME_NONE = GSYM NOT_NONE_SOME
 val _ = computeLib.add_persistent_funs ["NOT_NONE_SOME", "NOT_SOME_NONE"]
 
@@ -443,7 +445,7 @@ Proof
 QED
 
 Theorem OPTION_MAP2_NONE[simp]:
-   (OPTION_MAP2 f (o1:'a option) (o2:'b option) = NONE) <=> (o1 = NONE) \/ (o2 = NONE)
+  OPTION_MAP2 f (o1:'a option) (o2:'b option) = NONE <=> o1 = NONE \/ o2 = NONE
 Proof
   OPTION_CASES_TAC “o1:'a option” THEN
   OPTION_CASES_TAC “o2:'b option” THEN
