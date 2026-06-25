@@ -1,3 +1,4 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
 CLINE_OPTIONS = -j1
 UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
 

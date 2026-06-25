@@ -1,0 +1,43 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `show_numeral_types`
+
+``` hol4
+Globals.show_numeral_types : bool ref
+```
+
+------------------------------------------------------------------------
+
+A flag which causes numerals to be printed with suffix annotation when
+true.
+
+This flag controls the pretty-printing of numeral forms that have been
+added to the global grammar with the function `add_numeral_form`. If the
+flag is true, then all numeric values are printed with the single-letter
+suffixes that identify which type the value is.
+
+### Failure
+
+Never fails, as it is just an SML value.
+
+### Example
+
+>>__ load "integerTheory";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="integer"};
+
+``` hol4
+>> Term`~3`;
+
+>> show_numeral_types := true;
+
+>> Term`~3`;
+```
+
+Can help to disambiguate terms involving numerals.
+
+### See also
+
+[`Parse.add_numeral_form`](#Parse.add_numeral_form),
+[`Globals.show_types`](#Globals.show_types)
+
+>>__ show_numeral_types := false
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};

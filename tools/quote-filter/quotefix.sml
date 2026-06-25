@@ -7,7 +7,7 @@ fun K a _ = a
 fun run read write = let
   val {parseDec, body, ...} = HOLSourceParser.parseSML "" read (K (K (K ()))) HOLSourceParser.initialScope
   val pos = ref 0
-  fun push p = (write (DString.extract (body, !pos, SOME p)); pos := p)
+  fun push p = (write (DString.extract (body, !pos, SOME (p - !pos))); pos := p)
   fun replace l (p, s) = if l = s then () else (push p; write l; pos := p + size s)
   fun doExp (Wild _) = ()
     | doExp (IntegerConstant _) = ()

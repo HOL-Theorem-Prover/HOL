@@ -1,0 +1,34 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `exn_to_string`
+
+``` hol4
+Feedback.exn_to_string : exn -> string
+```
+
+------------------------------------------------------------------------
+
+Map an exception into a string.
+
+The function `exn_to_string` maps an exception to a string. However, in
+the case of the `Interrupt` exception, it is not mapped to a string, but
+is instead raised. This avoids the possibility of suppressing the
+propagation of `Interrupt` to the top level.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>+ exn_to_string Interrupt;
+
+>> exn_to_string Div;
+
+>> exn_to_string (mk_HOL_ERR "Foo" "bar" "incomprehensible input");
+```
+
+### See also
+
+[`Feedback`](#Feedback), [`Feedback.HOL_ERR`](#Feedback.HOL_ERR),
+[`Feedback.ERR_to_string`](#Feedback.ERR_to_string)

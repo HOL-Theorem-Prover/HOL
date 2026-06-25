@@ -57,6 +57,7 @@ val DYNLIB = false
 val version = 0
 val release = ""
 val DOT_PATH = NONE
+val clone_cmd : string option = NONE
 val POLY = ""
 val POLYC = ""
 val DEFAULT_STATE = fullPath [HOLDIR, "bin", "hol.state"]

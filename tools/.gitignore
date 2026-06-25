@@ -1,4 +1,4 @@
-unicode-grep/unicode-grep
+h4pedant/h4pedant
 parsing/HolLex.sml
 # Ignore the compiled tools/build executable, but keep the
 # tools/build/ source directory tracked.

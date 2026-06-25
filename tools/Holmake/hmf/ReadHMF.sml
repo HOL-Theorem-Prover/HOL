@@ -32,30 +32,7 @@ in
   recurse (lnum, []) (TextIO.inputLine strm)
 end
 
-datatype buf = B of { lnum : int,
-                      strm : TextIO.instream,
-                      name : string,
-                      curr : (int * string) option }
-
-fun init_buf fname = let
-  val fname = OS.Path.mkAbsolute {path=fname, relativeTo=OS.FileSys.getDir()}
-  val istrm = TextIO.openIn fname
-in
-  B { lnum = 1, strm = istrm, curr = readline 1 istrm, name = fname }
-end
-
-fun close_buf (B r) = TextIO.closeIn (#strm r)
-
-fun currentline (B r) = Option.map #2 (#curr r)
-
-fun advance (b as B r) =
-  case #curr r of
-    NONE => b
-  | SOME (n,s) => B { lnum = n, strm = #strm r, name = #name r,
-                      curr = readline n (#strm r) }
-
-fun error (B r) s =
-    raise Fail (#name r ^":"^Int.toString (#lnum r)^": "^s)
+(* Lexical helpers shared between flatten and the parser. *)
 
 fun strip_leading_wspace s = let
   open Substring
@@ -99,6 +76,236 @@ end
 
 val ss = Substring.full
 
+(* ------------------------------------------------------------------
+   Include resolution: lexical pre-expansion.
+
+   `flatten' reads a Holmakefile (and any files it `include's),
+   returning a single flat list of origin-tagged lines that the rest
+   of the parser then consumes verbatim.  This avoids carrying any
+   stream-state across the three Holmakefile-read paths
+   (`find_includes0', `extend_path_with_includes0', `get_hmf0') --
+   each gets a fresh purely-functional flatten of the same input,
+   and there is no `parents'-stack to drift between them.
+
+   Supported directives:
+     include FILES         -- mandatory; errors if any file missing
+     -include FILES        -- optional; silently skips missing files
+     sinclude FILES        -- synonym for -include (GNU make compat)
+   Each FILES is a whitespace-separated list with $(VAR)s expanded
+   against the env built up by earlier DEFN lines.  Paths are
+   resolved relative to the including file's directory (GNU make
+   behaviour), not to whatever cwd Holmake was invoked from.  A
+   cycle (A includes B includes A) is detected and errors with the
+   offending canonical path.  Conditional balance is checked per
+   file: `ifdef X' opened in an included file must close in the
+   same file (matches GNU make).
+   ------------------------------------------------------------------ *)
+
+type origin_line = { file : string, line : int, text : string }
+
+(* substitute_text: expand $(...) in a string against env.  loc is
+   used only for error reports from the substitution machinery. *)
+fun substitute_text diags loc env s =
+    perform_substitution_at diags loc env
+      (extract_normal_quotation (Substring.full s))
+
+(* `-include' and `sinclude' are GNU-make synonyms for the
+   missing-file-tolerant form. *)
+val include_keywords =
+    [("include", true), ("-include", false), ("sinclude", false)]
+
+fun parse_include s =
+    let
+      fun afterKw kw =
+          if String.isPrefix kw s then
+            let val rest = String.extract(s, size kw, NONE)
+            in if rest = "" orelse Char.isSpace (String.sub(rest, 0))
+               then SOME (strip_leading_wspace rest)
+               else NONE
+            end
+          else NONE
+      fun scan [] = NONE
+        | scan ((kw, mand) :: rest) =
+          (case afterKw kw of
+               SOME r => SOME (mand, r)
+             | NONE => scan rest)
+    in
+      scan include_keywords
+    end
+
+(* `else' doesn't change the conditional depth -- it toggles within
+   an already-open conditional. *)
+fun cond_delta s =
+    if String.isPrefix "endif" s then ~1
+    else if String.isPrefix "ifdef" s orelse String.isPrefix "ifndef" s orelse
+            String.isPrefix "ifeq"  s orelse String.isPrefix "ifneq"  s
+    then 1
+    else 0
+
+(* Recognise DEFN lines so subsequent `include' directives can use
+   `$(VAR)' against the env-built-up-so-far.  Conditional state is
+   deliberately ignored: a spurious extra binding can only mis-route
+   a later `include' path under a key the parser-built env wouldn't
+   have had, never the other way round. *)
+fun maybe_extend_env env s =
+    case first_special s of
+        SOME "=" =>
+        (case to_token env (DEFN (strip_trailing_comment s)) of
+             HM_defn {vname, rhs, ...} => env_extend (vname, rhs) env
+           | _ => env)
+      | SOME "+=" =>
+        (case to_token env (DEFN_EXTEND (strip_trailing_comment s)) of
+             HM_defn {vname, rhs, ...} => env_extend (vname, rhs) env
+           | _ => env)
+      | _ => env
+
+(* Drains istrm via `readline' (the backslash-continuation-aware one
+   defined at top of file), not raw `TextIO.inputLine'. *)
+fun read_all_lines istrm =
+    let
+      fun recur lnum acc =
+          case readline lnum istrm of
+              NONE => List.rev acc
+            | SOME (n, s) => recur n ((lnum, s) :: acc)
+    in
+      recur 1 []
+    end
+
+(* `seen' is the canonical-path set of files on the current include
+   stack, threaded through to detect cycles. *)
+fun flatten diags {env, fname, seen} =
+    let
+      val abspath = OS.Path.mkAbsolute
+                      {path=fname, relativeTo=OS.FileSys.getDir()}
+      val canpath = OS.Path.mkCanonical abspath
+      val _ = if Binaryset.member(seen, canpath) then
+                raise Fail ("ReadHMF: include cycle re-entering `" ^
+                            canpath ^ "'")
+              else ()
+      val seen' = Binaryset.add(seen, canpath)
+      val containing_dir = OS.Path.dir abspath
+      val istrm = TextIO.openIn abspath
+                  handle _ => raise Fail ("ReadHMF: can't open `" ^
+                                          abspath ^ "'")
+      val rawlines = read_all_lines istrm
+                     handle e => (TextIO.closeIn istrm; raise e)
+      val () = TextIO.closeIn istrm
+      fun mkline n t = {file = abspath, line = n, text = t}
+      fun process_inc env n acc mandatory rest_text =
+          let
+            val loc = SOME {file = abspath, line = n}
+            val expanded = substitute_text diags loc env rest_text
+            val paths = String.tokens Char.isSpace expanded
+            val _ = if null paths then
+                      raise Fail (abspath ^ ":" ^ Int.toString n ^
+                                  ": `include' with no filenames")
+                    else ()
+            fun one (path, (env, acc)) =
+                let
+                  val incpath = OS.Path.mkAbsolute
+                                  {path=path, relativeTo=containing_dir}
+                in
+                  if OS.FileSys.access (incpath, [OS.FileSys.A_READ]) then
+                    let
+                      val (env', sub) =
+                          flatten diags {env=env, fname=incpath, seen=seen'}
+                    in
+                      (env', List.revAppend(sub, acc))
+                    end
+                  else if mandatory then
+                    raise Fail (abspath ^ ":" ^ Int.toString n ^
+                                ": can't open include file `" ^
+                                path ^ "'")
+                  else (env, acc)
+                end
+          in
+            List.foldl one (env, acc) paths
+          end
+      fun walk env depth [] acc =
+            if depth = 0 then (env, List.rev acc)
+            else raise Fail (abspath ^
+                             ": unterminated conditional (depth " ^
+                             Int.toString depth ^ " at EOF)")
+        | walk env depth ((n, raw) :: rest) acc =
+            let
+              val s = strip_leading_wspace raw
+            in
+              if s = "" orelse String.sub(s,0) = #"#" then
+                walk env depth rest (mkline n raw :: acc)
+              else
+                case parse_include s of
+                    SOME (mandatory, rest_text) =>
+                      let
+                        val rest_text = strip_trailing_comment rest_text
+                                        |> drop_twspace
+                        val (env', acc') =
+                            process_inc env n acc mandatory rest_text
+                      in
+                        walk env' depth rest acc'
+                      end
+                  | NONE =>
+                      let
+                        val depth' = depth + cond_delta s
+                        val _ = if depth' < 0 then
+                                  raise Fail (abspath ^ ":" ^
+                                              Int.toString n ^
+                                              ": unpaired `endif'")
+                                else ()
+                        val env' = maybe_extend_env env s
+                      in
+                        walk env' depth' rest (mkline n raw :: acc)
+                      end
+            end
+    in
+      walk env 0 rawlines []
+    end
+
+(* ------------------------------------------------------------------
+   Buf: a thin cursor over a flatten result.  Carries the topname
+   (the originally-opened Holmakefile, for context in error
+   messages that don't have a specific line) and the current
+   remainder of the flattened lines.  Advance is purely functional
+   -- it returns a new buf with the tail.  `close_buf' is a no-op
+   because flatten closes its TextIO streams as it goes.
+   ------------------------------------------------------------------ *)
+
+datatype buf = B of { lines : origin_line list,
+                      topname : string }
+
+fun init_buf diags env fname =
+    let
+      val abspath = OS.Path.mkAbsolute
+                      {path=fname, relativeTo=OS.FileSys.getDir()}
+      val (_, lines) = flatten diags {env=env, fname=abspath,
+                                      seen=Binaryset.empty String.compare}
+    in
+      B { lines = lines, topname = abspath }
+    end
+
+fun close_buf _ = ()
+
+fun currentline (B {lines=[], ...}) = NONE
+  | currentline (B {lines=x::_, ...}) = SOME (#text x)
+
+fun advance (B {lines=[], topname}) = B {lines=[], topname=topname}
+  | advance (B {lines=_::rest, topname}) =
+      B {lines=rest, topname=topname}
+
+fun current_origin (B {lines=[], topname}) =
+      {file=topname, line=0}
+  | current_origin (B {lines=x::_, ...}) =
+      {file = #file x, line = #line x}
+
+fun error b s =
+    let val {file, line} = current_origin b in
+      raise Fail (file ^ ":" ^ Int.toString line ^ ": " ^ s)
+    end
+
+fun bufloc b : internal_functions.loc option =
+    SOME (current_origin b)
+
+fun substitute diags b env q = perform_substitution_at diags (bufloc b) env q
+
 fun read_delimited_string b dchar s = let
   (* assume s begins with dchar *)
   val s' = String.extract(s,1,NONE)
@@ -130,14 +337,32 @@ in
   recurse (size ss - 1)
 end
 
-fun evaluate_cond b env s =
+(* First comma in `ss` at paren/brace depth 0.  `(` and `{` push
+   depth, `)` and `}` pop -- matches GNU make's treatment of
+   $(...) and ${...} as nesting forms when splitting ifeq args.
+   Returns the index of that comma, or NONE if there isn't one. *)
+fun find_toplevel_comma ss = let
+  open Substring
+  val n = size ss
+  fun recurse i depth =
+      if i >= n then NONE
+      else case sub(ss,i) of
+             #"," => if depth = 0 then SOME i else recurse (i+1) depth
+           | #"(" => recurse (i+1) (depth+1)
+           | #"{" => recurse (i+1) (depth+1)
+           | #")" => recurse (i+1) (depth-1)
+           | #"}" => recurse (i+1) (depth-1)
+           | _    => recurse (i+1) depth
+in recurse 0 0 end
+
+fun evaluate_cond diags b env s =
     if String.isPrefix "ifdef" s orelse String.isPrefix "ifndef" s then let
         val (sense, sz, nm) =
             if String.sub(s,2) = #"n" then (false, 6, "ifndef")
             else (true, 5, "ifdef")
         val s' = strip_leading_wspace (String.extract(s, sz, NONE))
         val q = extract_normal_quotation (Substring.full s')
-        val s2 = perform_substitution env q
+        val s2 = substitute diags b env q
       in
         case String.tokens Char.isSpace s2 of
           [s] => (case lookup env s of
@@ -155,10 +380,13 @@ fun evaluate_cond b env s =
             case String.sub(s,0) of
               #"(" => let
                 open Substring
-                val (arg1s, blob2s) = position "," (full (String.extract(s,1,NONE)))
-                val _ = size blob2s <> 0 orelse
-                        error b (nm ^ " with parens requires args separated by \
-                                        \commas")
+                val inner = full (String.extract(s,1,NONE))
+                val (arg1s, blob2s) =
+                    case find_toplevel_comma inner of
+                      SOME i => (slice(inner,0,SOME i), slice(inner,i,NONE))
+                    | NONE =>
+                        error b (nm ^ " with parens requires args \
+                                       \separated by commas")
                 val (arg2s, parenblob) =
                     split_at_rightmost_rparen (slice(blob2s,1,NONE))
                 val _ = size parenblob <> 0 orelse
@@ -177,80 +405,80 @@ fun evaluate_cond b env s =
               end
         val (q1, q2) = (extract_normal_quotation (ss arg1),
                         extract_normal_quotation (ss arg2))
-        val (s1, s2) = (perform_substitution env q1, perform_substitution env q2)
+        val (s1, s2) = (substitute diags b env q1, substitute diags b env q2)
       in
         SOME ((s1 = s2) = sense)
       end
     else NONE
 
-fun getline env (condstate, b) =
+fun getline diags env (condstate, b) =
     case (currentline b, condstate) of
       (NONE, []) => (b, NONE, condstate)
     | (NONE, _ :: _) => error b "ReadHMF: unterminated conditional"
     | (SOME s, SkippingElses :: rest) => let
         val s = strip_leading_wspace s
       in
-        if String.isPrefix "endif" s then getline env (rest, advance b)
+        if String.isPrefix "endif" s then getline diags env (rest, advance b)
         else if String.isPrefix "ifdef" s orelse String.isPrefix "ifndef" s orelse
                 String.isPrefix "ifeq" s orelse String.isPrefix "ifneq" s
         then
-          getline env (SkippingElses::condstate, advance b)
+          getline diags env (SkippingElses::condstate, advance b)
         else
-          getline env (condstate, advance b)
+          getline diags env (condstate, advance b)
       end
     | (SOME s, NoTrueCondYet::rest) => let
         val s = strip_leading_wspace s
       in
-        if String.isPrefix "endif" s then getline env (rest, advance b)
+        if String.isPrefix "endif" s then getline diags env (rest, advance b)
         else if String.isPrefix "if" s then
-          getline env (SkippingElses :: condstate, advance b)
+          getline diags env (SkippingElses :: condstate, advance b)
         else if String.isPrefix "else" s then let
             val s = strip_leading_wspace (String.extract(s, 4, NONE))
           in
             if String.isPrefix "if" s then
-              case evaluate_cond b env s of
+              case evaluate_cond diags b env s of
                 NONE => error b "ReadHMF: bogus string following else"
-              | SOME false => getline env (condstate, advance b)
-              | SOME true => getline env (GrabbingText::rest, advance b)
-            else if s = "" then getline env (GrabbingText::rest, advance b)
+              | SOME false => getline diags env (condstate, advance b)
+              | SOME true => getline diags env (GrabbingText::rest, advance b)
+            else if s = "" then getline diags env (GrabbingText::rest, advance b)
             else error b "ReadHMF: bogus string following else"
           end
-        else getline env (condstate, advance b)
+        else getline diags env (condstate, advance b)
       end
     | (SOME s0, _) => let
         val s = strip_leading_wspace s0
       in
         if String.isPrefix "endif" s then
           if null condstate then error b "ReadHMF: unpaired endif"
-          else getline env (tl condstate, advance b)
+          else getline diags env (tl condstate, advance b)
         else if String.isPrefix "else" s then
           if null condstate then error b "ReadHMF: unpaired else"
-          else getline env (SkippingElses::tl condstate, advance b)
+          else getline diags env (SkippingElses::tl condstate, advance b)
         else if String.isPrefix "if" s then
-          case evaluate_cond b env s of
+          case evaluate_cond diags b env s of
             NONE => (b, SOME s0, condstate)
-          | SOME false => getline env (NoTrueCondYet::condstate, advance b)
-          | SOME true => getline env (GrabbingText::condstate, advance b)
+          | SOME false => getline diags env (NoTrueCondYet::condstate, advance b)
+          | SOME true => getline diags env (GrabbingText::condstate, advance b)
         else (b, SOME s0, condstate)
       end
 
-fun read_commands env (cs,b) head =
-    case getline env (cs, b) of
+fun read_commands diags env (cs,b) head =
+    case getline diags env (cs, b) of
       (b, NONE, cs) => ((cs, b), RULE head)
     | (b, SOME s, cs) => let
         val s' = strip_leading_wspace s
       in
         if s' = "" orelse String.sub(s',0) = #"#" then
-          read_commands env (cs, advance b) head
+          read_commands diags env (cs, advance b) head
         else
           case String.sub(s',0) of
-            #"\t" => read_commands env (cs, advance b) (head ^ s' ^ "\n")
+            #"\t" => read_commands diags env (cs, advance b) (head ^ s' ^ "\n")
           | c => ((cs, b), RULE head)
       end
 
 
-fun process_line env (condstate, b) = let
-  val (b, line_opt, condstate) = getline env (condstate, b)
+fun process_line diags env (condstate, b) = let
+  val (b, line_opt, condstate) = getline diags env (condstate, b)
 in
   case line_opt of
     NONE => ((condstate, b), EOF)
@@ -258,20 +486,37 @@ in
       val s' = strip_leading_wspace s
     in
       if s' = "" orelse String.sub(s',0) = #"#" then
-        process_line env (condstate, advance b)
+        process_line diags env (condstate, advance b)
       else let
           val c1 = String.sub(s',0)
         in
           if c1 = #"\t" then error b "TAB starts an unattached command"
           else
             case first_special s' of
-                NONE => error b ("Unrecognised character: \""^
-                                 String.toString (str c1) ^ "\"")
+                NONE =>
+                  if c1 = #"$" then
+                    (* bare top-level function call (e.g. $(info ...));
+                       expand for its side effects and discard the result.
+                       Anything non-blank after expansion is a typo. *)
+                    let
+                      val txt = strip_trailing_comment s'
+                      val q = extract_normal_quotation (Substring.full txt)
+                      val result = substitute diags b env q
+                    in
+                      if CharVector.all Char.isSpace result then
+                        process_line diags env (condstate, advance b)
+                      else
+                        error b ("Top-level expression has non-empty \
+                                 \expansion: \"" ^ result ^ "\"")
+                    end
+                  else error b ("Unrecognised character: \""^
+                                String.toString (str c1) ^ "\"")
               | SOME "=" => ((condstate, advance b),
                               DEFN (strip_trailing_comment s))
               | SOME "+=" => ((condstate, advance b),
                               DEFN_EXTEND (strip_trailing_comment s))
               | SOME ":" => read_commands
+                                 diags
                                  env
                                  (condstate, advance b)
                                  (strip_trailing_comment s' ^ "\n")
@@ -280,13 +525,14 @@ in
     end
 end
 
-fun readall diags fname (acc as (tgt1,env,ruledb,depdb,defs_seen)) csb =
+fun readall diags fname
+            (acc as (tgt1,env,ruledb,depdb,patrules,defs_seen)) csb =
     let
       val {warn=warn0,die=die0,info=info0} = diags
       fun aug f s = f ("*** " ^ fname ^ ": " ^ s)
       val warn = aug warn0 and die = aug die0 and info = aug info0
-      fun recurse (acc as (tgt1,env,ruledb,depdb,defs_seen)) csb =
-          case process_line env csb of
+      fun recurse (acc as (tgt1,env,ruledb,depdb,patrules,defs_seen)) csb =
+          case process_line diags env csb of
               (csb as (cs, b), EOF) =>
               let
                 val _ = close_buf b
@@ -300,7 +546,7 @@ fun readall diags fname (acc as (tgt1,env,ruledb,depdb,defs_seen)) csb =
                                       {dependencies = dependencies @ deps,
                                        commands = commands})
               in
-                (env,Binarymap.foldl foldthis ruledb depdb,tgt1)
+                (env,Binarymap.foldl foldthis ruledb depdb,patrules,tgt1)
               end
             | (csb, x) =>
               (case to_token env x of
@@ -315,17 +561,18 @@ fun readall diags fname (acc as (tgt1,env,ruledb,depdb,defs_seen)) csb =
                               " (use += instead?)")
                     else ();
                     recurse (tgt1,env_extend (vname,rhs) env, ruledb, depdb,
-                             Binaryset.add(defs_seen, vname)) csb)
+                             patrules, Binaryset.add(defs_seen, vname)) csb)
                  | HM_rule rinfo =>
                    let
-                     val (rdb',depdb',tgts) =
-                         extend_ruledb warn env rinfo (ruledb,depdb)
+                     val (rdb',depdb',patrules',tgts) =
+                         extend_ruledb diags warn env rinfo
+                                       (ruledb,depdb,patrules)
                      val tgt1' =
                          case tgt1 of
                              NONE => List.find (fn s => s <> ".PHONY") tgts
                            | _ => tgt1
                    in
-                     recurse (tgt1',env,rdb',depdb',defs_seen) csb
+                     recurse (tgt1',env,rdb',depdb',patrules',defs_seen) csb
                    end)
     in
       recurse acc csb
@@ -334,28 +581,35 @@ fun readall diags fname (acc as (tgt1,env,ruledb,depdb,defs_seen)) csb =
 fun diagread diags fname env =
     readall diags fname (NONE, env, empty_ruledb,
                          Binarymap.mkDict String.compare,
+                         empty_patrules,
                          Binaryset.empty String.compare)
-            (empty_condstate, init_buf fname)
+            (empty_condstate, init_buf diags env fname)
 
-fun dflt_warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
-val read =
-    diagread {warn = dflt_warn,
-              die = fn s => (dflt_warn s ; OS.Process.exit OS.Process.failure),
-              info = fn s => (TextIO.print (s ^ "\n"))}
+val read = diagread internal_functions.default_diags
 
-fun readlist e vref =
-  map dequote (tokenize (perform_substitution e [VREF vref]))
+fun readlist diags e vref =
+  map dequote (tokenize (perform_substitution diags e [VREF vref]))
 
 
 fun find_includes0 dirname =
   let
-    fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
+    (* Pre-exec INCLUDES discovery: parse silently regardless of -q/-v
+       but keep $(error) live so it aborts this parse and the surrounding
+       handler treats the file as bogus.  The main graph-build parse
+       re-reads the same Holmakefile with the real diag channels, so any
+       $(info)/$(warning) fires exactly once then. *)
+    val silent_diags : internal_functions.diags =
+        {info = fn _ => (),
+         warn = fn _ => (),
+         die  = fn s => raise internal_functions.HolmakeError s}
+    val warn = #warn internal_functions.default_diags
     val hm_fname = OS.Path.concat(dirname, "Holmakefile")
   in
     if OS.FileSys.access(hm_fname, [OS.FileSys.A_READ]) then
       let
-        val (e, _, _) = read hm_fname (base_environment())
-        val raw_incs = readlist e "INCLUDES" @ readlist e "PRE_INCLUDES"
+        val (e, _, _, _) = diagread silent_diags hm_fname (base_environment())
+        val raw_incs = readlist silent_diags e "INCLUDES" @
+                       readlist silent_diags e "PRE_INCLUDES"
       in
         map (fn p => OS.Path.mkAbsolute {path = p, relativeTo = dirname})
             raw_incs
@@ -387,7 +641,16 @@ fun extend_path_with_includes0 (A as (visited,prem,postm)) dir verbosity =
           val extensions =
               holpathdb.search_for_extensions find_includes
                 {starter_dirs = [dir], skip = Binaryset.empty String.compare}
-          val _ = List.app holpathdb.extend_db extensions
+          fun register {vname,path} =
+              case holpathdb.lookup_holpath {vname = vname} of
+                  NONE => holpathdb.extend_db {vname = vname, path = path}
+                | SOME existing =>
+                    if existing = path then ()
+                    else raise Fail
+                           ("holproject.toml at " ^ path ^
+                            " conflicts with prior registration of `" ^
+                            vname ^ "` for " ^ existing)
+          val _ = List.app register extensions
           val _ = if verbosity > 1 then
                     print ("Completed holpathdb analysis in " ^ dir ^ "\n")
                   else ()
@@ -397,9 +660,15 @@ fun extend_path_with_includes0 (A as (visited,prem,postm)) dir verbosity =
           in
             List.foldl foldthis (base_environment()) extensions
           end
-          val (env, _, _) = read (dir ++ "Holmakefile") base_env
+          (* The cwd Holmakefile is not re-parsed through here -- it's
+             read once via diagread in Holmake.sml's get_hmf0 with the
+             real channels.  This call services ancestors' Holmakefiles
+             during INCLUDES traversal. *)
+          val (env, _, _, _) = read (dir ++ "Holmakefile") base_env
           fun envlist id =
-              map dequote (tokenize (perform_substitution env [VREF id]))
+              map dequote (tokenize (perform_substitution
+                                       internal_functions.default_diags
+                                       env [VREF id]))
           fun diag nm incs =
               if null incs orelse verbosity < 2 then ()
               else

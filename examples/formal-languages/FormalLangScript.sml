@@ -794,25 +794,50 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
-(* TODO: the "full string" versions of the following two theorems            *)
+(* Express occurrence of ε as a language. Makes some statements nicer.       *)
 (*---------------------------------------------------------------------------*)
+
+Definition EPSILON_ELT_def:
+  EPSILON_ELT L = L ∩ {ε}
+End
+
+Theorem IN_EPSILON_ELT:
+  x ∈ EPSILON_ELT L ⇔ x = ε ∧ x ∈ L
+Proof
+  rw[EPSILON_ELT_def] >> metis_tac[]
+QED
+
+Theorem EPSILON_ELT_LANG:
+  EPSILON_ELT L = if ε ∈ L then {ε} else ∅
+Proof
+  rw [EXTENSION,IN_EPSILON_ELT] >> metis_tac[]
+QED
+
+Theorem FINITE_EPSILON_ELT:
+  FINITE (EPSILON_ELT L)
+Proof
+  rw[EPSILON_ELT_LANG]
+QED
 
 Theorem LEFT_QUOTIENT_SYMBOL_DOT:
   LEFT_QUOTIENT [a] (L1 • L2) =
-    ((LEFT_QUOTIENT [a] L1 • L2)
-    ∪
-    (if ε ∈ L1 then LEFT_QUOTIENT [a] L2 else {}))
+    (LEFT_QUOTIENT [a] L1 • L2) ∪ EPSILON_ELT L1 • LEFT_QUOTIENT [a] L2
 Proof
-  rw[EXTENSION,EQ_IMP_THM] >>
-  gvs [IN_LEFT_QUOTIENT,IN_dot]
+  rw[EXTENSION,EQ_IMP_THM,IN_LEFT_QUOTIENT,IN_dot,IN_EPSILON_ELT]
   >- (Cases_on ‘u = ε’ >> gvs[] >> disj1_tac >>
       Cases_on ‘u’ >> gvs[] >> metis_tac[])
-  >- metis_tac [APPEND]
-  >- metis_tac [APPEND]
+  >> metis_tac [APPEND]
 QED
 
+(*
+Theorem LEFT_QUOTIENT_DOT:
+  LEFT_QUOTIENT w (A • B) = something complex
+Proof
+QED
+*)
+
 Theorem LEFT_QUOTIENT_SYMBOL_KSTAR:
-  LEFT_QUOTIENT [a] (KSTAR L) = LEFT_QUOTIENT [a] L • (KSTAR L)
+  LEFT_QUOTIENT [a] (KSTAR L) = LEFT_QUOTIENT [a] L • KSTAR L
 Proof
   rw[EXTENSION,EQ_IMP_THM] >>
   gvs [IN_LEFT_QUOTIENT,IN_dot]
@@ -826,6 +851,60 @@ Definition LEFT_QUOTIENTS_OF_def:
   LEFT_QUOTIENTS_OF [] L = [L] ∧
   LEFT_QUOTIENTS_OF (a::w) L = L :: LEFT_QUOTIENTS_OF w (LEFT_QUOTIENT [a] L)
 End
+
+Theorem LEFT_QUOTIENTS_OF_nonempty:
+  LEFT_QUOTIENTS_OF w L ≠ []
+Proof
+  Cases_on ‘w’ >> simp [LEFT_QUOTIENTS_OF_def]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* Left quotient by a language                                               *)
+(*---------------------------------------------------------------------------*)
+
+Definition LANG_LEFT_QUOTIENT_def:
+  LANG_LEFT_QUOTIENT L1 L2 = BIGUNION {LEFT_QUOTIENT w L2 | w ∈ L1}
+End
+
+Overload LLQT[local] = “LANG_LEFT_QUOTIENT”
+
+
+Theorem LANG_LEFT_QUOTIENT_EMPTYSET:
+  LLQT L ∅ = ∅
+Proof
+  rw [LANG_LEFT_QUOTIENT_def,EXTENSION] >>
+  simp [GSPEC_IMAGE,combinTheory.o_DEF] >>
+  rw_tac bool_ss [GSYM IMP_DISJ_THM] >> gvs[]
+QED
+
+Theorem LANG_LEFT_QUOTIENT_EPSILONSET:
+  LLQT L {ε} = EPSILON_ELT L
+Proof
+  simp [LANG_LEFT_QUOTIENT_def,EPSILON_ELT_def] >>
+  rw [EXTENSION,EQ_IMP_THM]
+  >- metis_tac[]
+  >- metis_tac[]
+  >- (qexists_tac ‘{ε}’ >> rw[] >> metis_tac[])
+QED
+
+(*
+Theorem LANG_LEFT_QUOTIENT_UNION:
+  LLQT L (A ∪ B) =  LLQT L A ∪ LLQT L B
+Proof
+  cheat
+QED
+
+Theorem LANG_LEFT_QUOTIENT_DOT:
+  LLQT L (A • B) = LLQT L A • B ∪ LLQT (LLQT A L) B
+Proof
+QED
+
+Theorem LANG_LEFT_QUOTIENT_KSTAR:
+  LLQT L (KSTAR A) =
+     EPSILON_ELT L ∪ LLQT (LLQT (KSTAR A) L) A • KSTAR A
+Proof
+QED
+*)
 
 (*---------------------------------------------------------------------------*)
 (* There's a coercion between symbols in an alphabet set A and the words     *)
@@ -974,14 +1053,15 @@ Proof
 QED
 
 Theorem FINITE_STATE_FINITE_SET:
-  FINITE L ⇒ FINITE_STATE (L,ALPHABET_OF L)
+  FINITE L ∧ FINITE A ∧ ALPHABET_OF L ⊆ A ⇒ FINITE_STATE (L,A)
 Proof
   rw[FINITE_STATE_def, INTRINSIC_STATES_def,
      LEFT_QUOTIENT_EPSILON,IS_FORMAL_LANG_def]
-  >- metis_tac[FINITE_ALPHABET_OF]
-  >- rw[SUBSET_DEF,word_alphabet_of]
+  >- (rw[SUBSET_DEF,word_alphabet_of] >>
+      gvs [ALPHABET_OF_def,SUBSET_DEF,PULL_EXISTS] >>
+      rw [EVERY_MEM] >> metis_tac[])
   >- (simp [combinTheory.o_DEF, GSPEC_IMAGE] >>
-      qabbrev_tac ‘words = λw. EVERY (λa. a ∈ ALPHABET_OF L) w’ >>
+      qabbrev_tac ‘words = λw. EVERY (λa. a ∈ A) w’ >>
       ‘words = words ∩ (PREFIXES L ∪ COMPL (PREFIXES L))’ by
          rw[EXTENSION,EQ_IMP_THM] >>
       pop_assum SUBST1_TAC >> rw[UNION_OVER_INTER]
@@ -991,16 +1071,39 @@ Proof
           metis_tac [LEFT_QUOTIENT_PREFIXES]))
 QED
 
+Theorem FINITE_STATE_FINITE_SET_EXACT:
+  FINITE L ⇒ FINITE_STATE (L,ALPHABET_OF L)
+Proof
+   strip_tac >> irule FINITE_STATE_FINITE_SET >>
+   metis_tac [FINITE_ALPHABET_OF,SUBSET_REFL]
+QED
+
 (*---------------------------------------------------------------------------*)
-(* Closure properties for FINITE_STATE                                       *)
+(* Closure properties for FINITE_STATE. NB: the quotienting of a language L  *)
+(* by A* here is not the same as the usual quotienting of one language by    *)
+(* another (LANG_LEFT_QUOTIENT above). The latter is usually written "K \ L" *)
+(* and results in a language. Here, we don't "BIGUNION" the results of       *)
+(* applying the quotient, so the result is a partition of L, and the         *)
+(* arguments are about the finiteness of the partition.                      *)
 (*---------------------------------------------------------------------------*)
+
+Theorem FINITE_STATE_UNION:
+  FINITE_STATE(L1,A) ∧ FINITE_STATE (L2,A) ⇒ FINITE_STATE(L1 ∪ L2, A)
+Proof
+  rw [FINITE_STATE_def,IS_FORMAL_LANG_def] >> gvs [INTRINSIC_STATES_def] >>
+  qabbrev_tac ‘L1derivs = {LEFT_QUOTIENT w L1 | EVERY (λa. a ∈ A) w}’ >>
+  qabbrev_tac ‘L2derivs = {LEFT_QUOTIENT w L2 | EVERY (λa. a ∈ A) w}’ >>
+  ‘FINITE (L1derivs × L2derivs)’ by metis_tac [FINITE_CROSS] >>
+  irule SUBSET_FINITE >>
+  qexists_tac ‘IMAGE (UNCURRY $UNION) (L1derivs × L2derivs)’ >>
+  conj_tac
+  >- (irule IMAGE_FINITE >> metis_tac[])
+  >- (rw[SUBSET_DEF] >>
+      qexists_tac ‘(LEFT_QUOTIENT w L1, LEFT_QUOTIENT w L2)’ >>
+      unabbrev_all_tac >> rw[] >> metis_tac[])
+QED
 
 fun Conjecture name q s = Parse.Term q
-
-val _ =
-  Conjecture "FINITE_STATE_UNION"
-    ‘FINITE_STATE(L1,A) ∧ FINITE_STATE (L2,A) ⇒ FINITE_STATE(L1 ∪ L2, A)’
-    "";
 
 val _ =
   Conjecture "FINITE_STATE_DOT"
@@ -1028,6 +1131,13 @@ Inductive REGSET:
 [~star:]
   (∀L. REGSET (L,A) ⇒ REGSET (KSTAR L, A))
 End
+
+val _ =
+  Conjecture "FINITE_STATE_SUBSET_REGSET"
+    ‘FINITE_STATE ⊆ REGSET’
+    "This might need an induction theorem for FINITE_STATE. There is a proof \
+     \ from Eilenberg that might be adaptable to this, but it goes through the \
+     \ automata representation."
 
 val _ =
   Conjecture "REGSET_SUBSET_FINITE_STATE"

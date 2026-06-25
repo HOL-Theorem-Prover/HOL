@@ -1,6 +1,16 @@
 signature internal_functions =
 sig
 
+  exception HolmakeError of string
+
+  type loc = {file : string, line : int}
+
+  type diags = {info : string -> unit,
+                warn : string -> unit,
+                die  : string -> unit}
+
+  val default_diags : diags
+
   val subst : (string * string * string) -> string
   val pcsubst : (string * string) -> string
   val patsubst : (string * string * string) -> string
@@ -10,9 +20,11 @@ sig
   val tee : string * string -> string
   val wildcard : string -> string list
   val which : string -> string
-  val function_call : (string *
+  val function_call : diags ->
+                      (string *
                        Substring.substring list *
-                       (Substring.substring -> string)) -> string
+                       (Substring.substring -> string) *
+                       loc option) -> string
   val hol2fs : string -> string
 
 end
@@ -65,11 +77,34 @@ end
    that match are returned. If the pattern doesn't match any files,
    the string is returned as is.
 
-   [function_call(fnname, args, eval)] evaluates the internal function
-   fnname when applied to arguments args.  These args are not
+   [function_call diags (fnname, args, eval, loc)] evaluates the internal
+   function fnname when applied to arguments args.  These args are not
    evaluated to strings to allow for functions (like if) that don't
    necessarily look at all of their arguments.  Evaluation is provided
-   by the eval function.
+   by the eval function.  The optional loc records the file and line at
+   which the function call appears, and is used by the GNU make
+   compatibility functions info/warning/error to prefix their messages.
+   Note that this is the use site rather than the definition site of the
+   variable in which the call appears (so immediately-expanded uses get
+   the location of the assignment, while deferred uses get the location
+   where the variable is mentioned).
+
+   The diags record carries the side-effect targets used by the GNU
+   make compatibility functions: $(info) writes to diags.info,
+   $(warning) writes to diags.warn.  $(error) still raises
+   HolmakeError directly, since callers (notably
+   ReadHMF.find_includes0) catch that exception to identify and skip
+   bogus Holmakefiles during pre-exec discovery.
+
+   [default_diags] is a diags record whose info/warn write to
+   TextIO.stdOut/stdErr and whose die writes to stderr and exits.
+   For callers that don't have Holmake's chattiness machinery in
+   scope (e.g. genscriptdep, selftests).
+
+   [HolmakeError msg] is raised by $(error ...).  It is caught at
+   Holmake's top level rather than going through the generic Fail
+   handler so that abort messages keep their bare "file:line: ***"
+   prefix.
 
    [hol2fs s] converts "HOL filename" s to a filename that will actually
    work on the machine.

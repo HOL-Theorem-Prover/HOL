@@ -197,39 +197,81 @@
 % ---------------------------------------------------------------------
 % Macros for little HOL sessions displayed in boxes.
 %
-% Usage: (1) \setcounter{sessioncount}{1} resets the session counter
-%
-%        (2) \begin{session}\begin{verbatim}
+% Usage:  \begin{session}\begin{alltt}
 %             .
 %              < lines from hol session >
 %             .
-%            \end{verbatim}\end{session}
+%         \end{alltt}\end{session}
 %
-%            typesets the session in a numbered box.
+% Renders the body with a heavy coloured rule down the left margin
+% and a small indent, matching the mdbook side's
+% `pre > code.language-repl` styling.  The session counter and
+% numbered framebox that earlier versions of this command used are
+% gone -- the counter wasn't referenced anywhere outside the env
+% itself.
 % ---------------------------------------------------------------------
 
-\newlength{\hsbw}
-\setlength{\hsbw}{\textwidth}
-\addtolength{\hsbw}{-\arrayrulewidth}
-\addtolength{\hsbw}{-\tabcolsep}
+\usepackage{xcolor}
+\usepackage{mdframed}
+
 \newcommand\HOLSpacing{13pt}
+% Bar colour matches mdbook's --links variable (Light theme); the
+% PDF doesn't have themes so we just use the light default.
+% Background tint mirrors the HTML side's `pre > code.language-repl`
+% rule (rgba(120,144,156,0.10) over white) so REPL sessions are
+% visually distinct from same-bar-colour admonitions like `[!NOTE]`.
+\definecolor{HOLsessionbar}{rgb}{0.255,0.514,0.812}
+\definecolor{HOLsessionbg}{HTML}{F1F3F5}
 
-\newcounter{sessioncount}
-\setcounter{sessioncount}{0}
+\newmdenv[
+  topline=false, bottomline=false, rightline=false,
+  leftline=true,
+  linewidth=3pt,
+  linecolor=HOLsessionbar,
+  backgroundcolor=HOLsessionbg,
+  leftmargin=0pt, rightmargin=0pt,
+  innerleftmargin=0.6em, innerrightmargin=0.6em,
+  innertopmargin=1mm, innerbottommargin=1mm,
+  skipabove=0.5\baselineskip,
+  skipbelow=0.5\baselineskip,
+]{sessionframe}
+\newenvironment{session}
+  {\begin{sessionframe}\small}
+  {\end{sessionframe}}
 
-\newenvironment{session}{\begin{flushleft}
- \refstepcounter{sessioncount}
- \begin{tabular}{@{}|c@{}|@{}}\hline
- \begin{minipage}[b]{\hsbw}
- \vspace*{-.5pt}
- \begin{flushright}
- \rule{0.01in}{.15in}\rule{0.3in}{0.01in}\hspace{-0.35in}
- \raisebox{0.04in}{\makebox[0.3in][c]{\footnotesize\sl \thesessioncount}}
- \end{flushright}
- \vspace*{-.55in}
- \begingroup\small\baselineskip\HOLSpacing}{\endgroup\end{minipage}\\ \hline
- \end{tabular}
- \end{flushleft}}
+% GFM-style admonition blocks (`> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`,
+% `[!WARNING]`, `[!CAUTION]`).  Colours match mdbook 0.5's defaults,
+% which themselves match GitHub.  Lowered into LaTeX by the
+% `BlockQuote` handler in Manual/Tools/pdf-macros.lua.
+\definecolor{HOLalertNote}{HTML}{0969DA}
+\definecolor{HOLalertTip}{HTML}{1A7F37}
+\definecolor{HOLalertImportant}{HTML}{8250DF}
+\definecolor{HOLalertWarning}{HTML}{9A6700}
+\definecolor{HOLalertCaution}{HTML}{B52731}
+
+\newcommand\HOLnewAdmonition[3]{%
+  \newmdenv[
+    topline=false, bottomline=false, rightline=false,
+    leftline=true,
+    linewidth=3pt,
+    linecolor=#2,
+    leftmargin=0pt, rightmargin=0pt,
+    innerleftmargin=0.8em, innerrightmargin=0.6em,
+    innertopmargin=0.2ex, innerbottommargin=0.4ex,
+    skipabove=0.6\baselineskip,
+    skipbelow=0.6\baselineskip,
+    frametitle={\color{#2}\textbf{#3}},
+    frametitlerule=false,
+    frametitleaboveskip=0pt,
+    frametitlebelowskip=0.4ex,
+  ]{#1frame}%
+  \newenvironment{#1}{\begin{#1frame}}{\end{#1frame}}%
+}
+\HOLnewAdmonition{holnote}     {HOLalertNote}     {Note}
+\HOLnewAdmonition{holtip}      {HOLalertTip}      {Tip}
+\HOLnewAdmonition{holimportant}{HOLalertImportant}{Important}
+\HOLnewAdmonition{holwarning}  {HOLalertWarning}  {Warning}
+\HOLnewAdmonition{holcaution}  {HOLalertCaution}  {Caution}
 
 % ---------------------------------------------------------------------
 % Macro for boxed ML functions, etc.
@@ -314,19 +356,7 @@
 \usepackage[only,llbracket,rrbracket,llparenthesis,rrparenthesis]{stmaryrd}
 \parskip 1ex
 \parindent 0ex
-\usepackage{accsupp} % for ensuring the right Unicode codepoint upon pasting
-
-\newcommand*{\llbrace}{%
-  \BeginAccSupp{method=hex,unicode,ActualText=2983}%
-    \textnormal{\usefont{OMS}{lmr}{m}{n}\char102}%
-    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
-    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
-  \EndAccSupp{}%
-}
-\newcommand*{\rrbrace}{%
-  \BeginAccSupp{method=hex,unicode,ActualText=2984}%
-    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
-    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
-    \textnormal{\usefont{OMS}{lmr}{m}{n}\char103}%
-  \EndAccSupp{}%
-}
+% \llbrace / \rrbrace (U+2983 / U+2984) live in
+% Manual/Description/desc-unicode.sty alongside their \DeclareUnicode-
+% Character mappings; the accsupp \BeginAccSupp wrapper they use is
+% loaded via desc-unicode.sty's \RequirePackage.

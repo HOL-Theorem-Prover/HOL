@@ -1,0 +1,36 @@
+val _ = PolyML.Compiler.prompt1:="";
+val _ = PolyML.Compiler.prompt2:="";
+val _ = PolyML.print_depth 0;
+
+use "../../src/portableML/DString.sig";
+use "../../src/portableML/DString.sml";
+use "../../src/portableML/DArray.sig";
+use "../../src/portableML/DArray.sml";
+use "../Holmake/Systeml.sig";
+use "../Holmake/Systeml.sml";
+use "../parsing/AttributeSyntax.sig";
+use "../parsing/AttributeSyntax.sml";
+use "../parsing/HolLex.sml";
+use "../util/SimpleBuffer.sig";
+use "../util/SimpleBuffer.sml";
+use "../Holmake/hfs/HOLFS_dtype.sml";
+use "../Holmake/hfs/HFS_NameMunge.sig";
+use "../Holmake/poly/HFS_NameMunge.sml";
+use "../Holmake/hfs/HOLFileSys.sig";
+use "../Holmake/hfs/HOLFileSys.sml";
+use "../../tools-poly/poly/Binarymap.sig";
+use "../../tools-poly/poly/Binarymap.sml";
+use "../parsing/HOLSourceAST.sig";
+use "../parsing/HOLSourceAST.sml";
+use "../parsing/HOLSourceParser.sig";
+use "../parsing/HOLSourceParser.sml";
+use "../parsing/HOLSourceExpand.sig";
+use "../parsing/HOLSourceExpand.sml";
+use "../parsing/HOLSourcePrinter.sig";
+use "../parsing/HOLSourcePrinter.sml";
+use "../parsing/HOLSource.sig";
+use "../parsing/HOLSource.sml";
+use "quotefix.sig";
+use "quotefix.sml";
+
+use "selftest.sml";

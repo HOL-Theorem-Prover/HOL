@@ -51,6 +51,7 @@ sig
   val isLink : string -> bool
   val isDir : string -> bool
   val getDir : unit -> string
+  val cached_getDir : unit -> string
   val chDir : string -> unit
   val mkDir : string -> unit
   val rename : {old : string, new : string} -> unit

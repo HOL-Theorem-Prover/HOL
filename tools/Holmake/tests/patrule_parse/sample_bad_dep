@@ -1,0 +1,2 @@
+foo.uo: %.sml
+	mosmlc -c $<

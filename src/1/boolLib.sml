@@ -158,13 +158,45 @@ fun get_suspended_names th =
       HOLset.foldl foldthis [] (Thm.hypset th)
     end
 
-(* Shim for markerLib to install a recorder that routes suspended
-   theorems into the suspension.theorems AncestryData store.  This
-   module (boolLib) sits below markerLib in the dependency graph, so
-   we cannot call into it directly; markerLib populates the ref when
-   it loads.  Same pattern as term_pp.casesplit_munger. *)
+(* Shims for markerLib to install hooks that route suspended theorems
+   into, and consult, the suspension.theorems AncestryData store.
+   This module (boolLib) sits below markerLib in the dependency
+   graph, so we cannot call into it directly; markerLib populates the
+   refs when it loads.  Same pattern as term_pp.casesplit_munger. *)
 val suspended_theorem_recorder : (string * thm -> unit) ref =
     ref (fn _ => ())
+
+(* Hook used by the dump-on-failure path below: proofManagerLib loads
+   later in the build than boolLib, so it cannot be referenced
+   statically; instead proofManagerLib installs the real implementation
+   (essentially proofManagerLib.set_goal) into this ref at load time.
+   The hook seeds the proof manager's state so that the dumped heap,
+   when reloaded via "bin/hol --holstate=<file>", presents the failing
+   goal ready for interactive exploration. *)
+val dump_setup_hook : (goal -> unit) ref = ref (fn _ => ())
+
+(* Name of the theorem currently being proved.  store_thm_at sets this
+   immediately before invoking Tactical.prove so that holmakebuild's
+   basic_prover (which only receives a goal, not a name) can construct
+   a sensible dump-file name on the --noqof failure path.  Cleared again
+   after the prove call so that user code invoking Tactical.prove
+   directly doesn't inherit a stale name. *)
+val current_thm_name : string ref = ref ""
+
+(* Counter used by dump_failure_state when no theorem name is in
+   scope (e.g. raw Tactical.prove invocations outside store_thm_at):
+   yields "anon_<N>.dumpedheap" rather than "<thy>..dumpedheap". *)
+local val n = ref 0 in
+  fun next_anon_thm_name () =
+      (n := !n + 1; "anon_" ^ Int.toString (!n))
+end
+
+(* Given a suspendlabel term, return SOME (thy, name) for the
+   already-registered suspended theorem that carries it as a hyp,
+   or NONE if no registered theorem owns it.  save_thm_attrs uses
+   this to reject theorems that cite still-suspended theorems. *)
+val slab_owner_lookup : (term -> (string * string) option) ref =
+    ref (fn _ => NONE)
 
 (* printable_keys: collapse duplicate label names with a count annotation.
    Used when reporting which suspended subgoals remain in a theorem. *)
@@ -222,42 +254,80 @@ fun save_thm_attrs loc (attrblock:ThmAttribute.attrblock, th) = let
   val storemod = if rebindok then trace("Theory.allow_rebinds", 1)
                  else (fn f => f)
   fun do_attr (k,vs) = attrf {thm = th, name = n, attrname = k, args = vs}
+  val slabs_with_labels =
+      HOLset.foldl
+        (fn (t,A) =>
+            case dest_suspended t of NONE => A | SOME (lab,_) => (t,lab)::A)
+        [] (Thm.hypset th)
+  fun classify_foreign (slab, lab) =
+      case !slab_owner_lookup slab of
+          NONE => NONE
+        | SOME (Thy,Name) =>
+            if Thy = Theory.current_theory () andalso Name = n then NONE
+            else SOME (lab, {Thy=Thy, Name=Name})
+  val foreign = List.mapPartial classify_foreign slabs_with_labels
 in
-  case get_suspended_names th of
-      [] => storemod save(n,th) before app do_attr attrs
-    | susp_names =>
-      let
-      in
-        case printable_keys susp_names of
-            [nstr] =>
-            HOL_MESG (
-              "Stashing suspended theorem " ^ n ^
-              " with pending subgoal: " ^ nstr ^ "."
-            )
-          | strs =>
-            HOL_MESG (
-              "Stashing suspended theorem " ^ n ^
-              " with pending subgoals: " ^
-              String.concatWith ", " strs ^ "."
-            );
-        if localp orelse not (null attrs) then
-          HOL_WARNING "boolLib" "save_thm_attrs"
-                      ("Ignoring attributes on suspended theorem " ^ n ^
-                       "; apply them at Finalise time instead")
-        else ();
-        (* Route the suspended theorem into markerLib's AncestryData
-           store for suspensions rather than saving it to the normal
-           theorem DB.  Finalise will save the clean form under this
-           name when all subgoals have been resumed. *)
-        !suspended_theorem_recorder (n, th);
-        th
-      end
+  case (slabs_with_labels, foreign) of
+      ([], _) => storemod save(n,th) before app do_attr attrs
+    | (_, []) =>
+        let
+        in
+          (case printable_keys (map #2 slabs_with_labels) of
+               [nstr] =>
+               HOL_MESG (
+                 "Stashing suspended theorem " ^ n ^
+                 " with pending subgoal: " ^ nstr ^ "."
+               )
+             | strs =>
+               HOL_MESG (
+                 "Stashing suspended theorem " ^ n ^
+                 " with pending subgoals: " ^
+                 String.concatWith ", " strs ^ "."
+               ));
+          if localp orelse not (null attrs) then
+            HOL_WARNING "boolLib" "save_thm_attrs"
+                        ("Ignoring attributes on suspended theorem " ^ n ^
+                         "; apply them at Finalise time instead")
+          else ();
+          (* Route the suspended theorem into markerLib's AncestryData
+             store for suspensions rather than saving it to the normal
+             theorem DB.  Finalise will save the clean form under this
+             name when all subgoals have been resumed. *)
+          !suspended_theorem_recorder (n, th);
+          th
+        end
+    | (_, foreigns) =>
+        let
+          fun fmt (lab, kn) =
+              KernelSig.name_toString kn ^ "[" ^ lab ^ "]"
+          val refs = String.concatWith ", " (map fmt foreigns)
+          val plural = case foreigns of [_] => " " | _ => "s "
+        in
+          raise ERR "save_thm_attrs"
+            ("Theorem " ^ Lib.quote n ^
+             " cites still-suspended theorem" ^ plural ^ refs ^
+             ".  Only `Resume X[label]` may consume a still-suspended X; \
+             \finalise the cited theorem(s) first.")
+        end
 end
 end (* local *)
 
 (* finalise_suspended_thm lives in markerLib (it uses AncestryData and
    needs to see the suspension dictionaries).  The parser-level Finalise
    expansion calls markerLib.finalise_suspended_thm directly. *)
+
+(* Seed the proof manager with the failing goal, then write a Poly/ML
+   heap (a no-op under Moscow ML) to <theory>.<name>.dumpedheap in the
+   current directory.  Returns the file name so the caller can quote
+   it in messages. *)
+fun dump_failure_state (name, g) =
+  let val nm = if name = "" then next_anon_thm_name () else name
+      val file = Theory.current_theory() ^ "." ^ nm ^ ".dumpedheap"
+  in
+    (!dump_setup_hook) g;
+    Portable.save_heap file;
+    file
+  end
 
 local
   open Feedback
@@ -267,12 +337,26 @@ in
 fun store_thm_at loc (n0,t,tac) =
   let val attrblock = ThmAttribute.extract_attributes n0
       val name = #thmname attrblock
+      val _ = current_thm_name := name
       val th = Tactical.prove(t,tac)
                handle HOL_ERR herr =>
-               let val err_mesg = tac_failure name (message_of herr)
-                   val err = HOL_ERR (set_message err_mesg herr)
-               in render_exn
-                    (wrap_exn "boolLib" "store_thm_at" err) end
+               if !Globals.dumpheap_on_failure andalso
+                  not (!Globals.interactive)
+               then
+                 let val file = dump_failure_state (name, ([], t))
+                 in
+                   TextIO.output (TextIO.stdErr,
+                     "Tactic failure proving " ^ Lib.quote name ^
+                     "; heap saved to " ^ file ^
+                     ".\nResume with: bin/hol --holstate=" ^ file ^ "\n");
+                   OS.Process.exit OS.Process.failure
+                 end
+               else
+                 let val err_mesg = tac_failure name (message_of herr)
+                     val err = HOL_ERR (set_message err_mesg herr)
+                 in render_exn
+                      (wrap_exn "boolLib" "store_thm_at" err) end
+      val _ = current_thm_name := ""
   in
     save_thm_attrs loc (attrblock,th)
     handle e => render_exn

@@ -35,7 +35,7 @@ As *per* [the standard installation instructions](http://hol-theorem-prover.org/
 
     Repeated calls to `build` should complete quickly: theorem-proving work will not be redone unnecessarily.
     The building of the theory graph can be slow however, and this *does* happen with every invocation of `build` by default.
-    To avoid this use `build`’s `--nograph` option.
+    To avoid this, pass `--no-mdbook` or `--no-helpdocs` to `build`: either flag skips the documentation pipeline (which includes the theory graph).
 
 # Configuration
 
@@ -273,11 +273,11 @@ Unless otherwise noted, they are built by the configuration process.
     This is used interactively (*via* a Unix filter that preprocesses all user-input under Moscow ML, or built into the Poly/ML REPL), and non-interactively (by being applied to source files).
     The core sources are in `tools/Holmake`, but the standalone executable is built in `tools/quote-filter` and it is moved to `bin/` as part of configuration.
 
-`unicode-grep`
+`h4pedant`
 :   Our tool for enforcing code style ([as documented below](#coding-standardsrequirements)).
     The command-line specifies the directories to scan, and options dictate which requirements are enforced/checked for.
     The enforcing of style is done by the `Holmakefile` in `src/portableML/testsrc`.
-    The executable is in `tools/unicode-grep`.
+    The executable is in `tools/h4pedant`.
 
 ## Other Tools Directories
 
@@ -299,6 +299,9 @@ Unless otherwise noted, they are built by the configuration process.
     This file is `use`-d in, and so made available by, `poly-init.ML`.
     Subsequently, there needs to be a call made to initialise the database with an entry for the `HOLDIR` key.
     This is done in `Holmake` within `poly/BuildCommand.sml`, and also within `poly-init2.ML` (for interactive use).
+    User-supplied entries come from `holproject.toml` files: when a project file's `name` key is set, the project root is registered under that name during `Holmake`'s upward walk for project files.
+    An optional `holpath` key overrides `name` for this registration only, leaving `name` free to serve as a human-facing project label distinct from the variable name (e.g. `name = "cakeml"` together with `holpath = "CAKEMLDIR"`).
+    Conflicting registrations (same name pointing at different directories) are reported as fatal startup errors.
 
 `tools/sequences`
 :   Build sequence files.

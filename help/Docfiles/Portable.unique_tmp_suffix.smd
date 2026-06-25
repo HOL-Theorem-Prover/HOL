@@ -1,0 +1,22 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `unique_tmp_suffix`
+
+``` hol4
+Portable.unique_tmp_suffix : unit -> string
+```
+
+------------------------------------------------------------------------
+
+A short string suitable for embedding in temp filenames so that two
+processes writing to the same logical path pick disjoint temp paths
+and can each rename their own result into place without colliding.
+
+Under Poly/ML the returned string is the decimal representation of
+the process id (`Posix.Process.pidToWord (Posix.ProcEnv.getpid ())`).
+Under Moscow ML, where HOL builds are never run in parallel, the
+result is derived from `OS.FileSys.tmpName`; it is still unique per
+call but is not the literal process id.
+
+### Failure
+
+Never fails.

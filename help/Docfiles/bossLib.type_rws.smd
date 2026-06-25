@@ -1,0 +1,40 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `type_rws`
+
+``` hol4
+bossLib.type_rws : hol_type -> thm list
+```
+
+------------------------------------------------------------------------
+
+List rewrites for a concrete type.
+
+An application `type_rws ty`, where `ty` is a declared datatype, returns
+a list of rewrite rules corresponding to the type. The list typically
+contains theorems about the distinctness and injectivity of
+constructors, the definition of the case constant introduced at the time
+the type was defined, and any extra rewrites coming from the use of
+records.
+
+### Failure
+
+If `ty` is not a declared datatype.
+
+### Example
+
+``` hol4
+>> type_rws ``:'a list``;
+
+>> Hol_datatype `point = <| x:num ; y:num |>`;
+
+>> type_rws ``:point``;
+```
+
+### Comments
+
+`RW_TAC` and `SRW_TAC` automatically include these rewrites.
+
+### See also
+
+[`bossLib.rewrites`](#bossLib.rewrites),
+[`bossLib.RW_TAC`](#bossLib.RW_TAC)

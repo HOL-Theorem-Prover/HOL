@@ -347,9 +347,9 @@ Proof
              DIVIDES_LEQ_OR_ZERO, DIVIDES_TRANS, ALL_DIVIDES_0]
 QED
 
-(*---------------------------------------------------------------------------*)
-(* For every number there is a larger prime.                                    *)
-(*---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    For every number there is a larger prime.
+   ---------------------------------------------------------------------- *)
 
 Theorem EUCLID:
    !n. ?p. n < p /\ prime p
@@ -734,16 +734,15 @@ Proof
 QED
 (* same as DIVIDES_EQN below *)
 
-(* Theorem: 0 < x /\ 0 < y /\ x <= y ==> !n. n DIV y <= n DIV x *)
 (* Proof:
    If n DIV y = 0,
       Then 0 <= n DIV x is trivially true.
    If n DIV y <> 0,
-     (n DIV y) * x <= (n DIV y) * y        by LE_MULT_LCANCEL, x <= y, n DIV y <> 0
-                   <= n                    by DIV_MULT_LE
-  Hence        (n DIV y) * x <= n          by LESS_EQ_TRANS
-  Then ((n DIV y) * x) DIV x <= n DIV x    by DIV_LE_MONOTONE
-  or                 n DIV y <= n DIV x    by MULT_DIV
+     (n DIV y) * x <= (n DIV y) * y       by LE_MULT_LCANCEL, x ≤ y, n DIV y ≠ 0
+                   <= n                   by DIV_MULT_LE
+  Hence        (n DIV y) * x <= n         by LESS_EQ_TRANS
+  Then ((n DIV y) * x) DIV x <= n DIV x   by DIV_LE_MONOTONE
+  or                 n DIV y <= n DIV x   by MULT_DIV
 *)
 Theorem DIV_LE_MONOTONE_REVERSE:
     !x y. 0 < x /\ 0 < y /\ x <= y ==> !n. n DIV y <= n DIV x
@@ -782,7 +781,6 @@ Proof
   rw_tac std_ss[DIVIDES_EQN, MULT_COMM]
 QED
 
-(* Theorem: 0 < n /\ n <= m ==> ((m - n) DIV n = m DIV n - 1) *)
 (* Proof:
    Apply DIV_SUB |> GEN_ALL |> SPEC ``1`` |> REWRITE_RULE[MULT_RIGHT_1];
    val it = |- !n m. 0 < n /\ n <= m ==> ((m - n) DIV n = m DIV n - 1): thm
@@ -790,7 +788,7 @@ QED
 Theorem SUB_DIV =
     DIV_SUB |> GEN ``n:num`` |> GEN ``m:num`` |> GEN ``q:num`` |> SPEC ``1``
             |> REWRITE_RULE[MULT_RIGHT_1];
-(* val SUB_DIV = |- !m n. 0 < n /\ n <= m ==> ((m - n) DIV n = m DIV n - 1): thm *)
+(* = |- !m n. 0 < n /\ n <= m ==> ((m - n) DIV n = m DIV n - 1) *)
 
 (* Theorem: 0 < n ==> !k m. (m MOD n = 0) ==> ((k * n = m) <=> (k = m DIV n)) *)
 (* Proof:
@@ -832,7 +830,8 @@ QED
 Theorem LE_MULT_LE_DIV:
     !n. 0 < n ==> !k m. (m MOD n = 0) ==> (m <= n * k <=> m DIV n <= k)
 Proof
-  metis_tac[DIVIDES_EQN, DIVIDES_MOD_0, MULT_COMM, LE_MULT_RCANCEL, NOT_ZERO_LT_ZERO]
+  metis_tac[DIVIDES_EQN, DIVIDES_MOD_0, MULT_COMM, LE_MULT_RCANCEL,
+            NOT_ZERO_LT_ZERO]
 QED
 
 (* Theorem: 0 < m ==> ((n DIV m = 0) /\ (n MOD m = 0) <=> (n = 0)) *)
@@ -946,11 +945,14 @@ Proof
 QED
 
 (* Note; converse need prime divisor:
-DIVIDES_EXP_BASE |- !a b n. prime a /\ 0 < n ==> (a divides b <=> a divides b ** n)
+DIVIDES_EXP_BASE
+  |- !a b n. prime a /\ 0 < n ==> (a divides b <=> a divides b ** n)
 Counter-example for a general base: 12 divides 36 = 6^2, but ~(12 divides 6)
 *)
 
-(* Better than: DIVIDES_ADD_1 |- !a b c. a divides b /\ a divides c ==> a divides b + c *)
+(* Better than:
+
+   DIVIDES_ADD_1 |- !a b c. a divides b /\ a divides c ==> a divides b + c *)
 
 (* Theorem: c divides a /\ c divides b ==> !h k. c divides (h * a + k * b) *)
 (* Proof:
@@ -969,7 +971,6 @@ Proof
   metis_tac[RIGHT_ADD_DISTRIB, MULT_ASSOC]
 QED
 
-(* Theorem: c divides a /\ c divides b ==> !h k d. (h * a = k * b + d) ==> c divides d *)
 (* Proof:
    If c = 0,
       0 divides a ==> a = 0     by ZERO_DIVIDES
@@ -985,7 +986,7 @@ QED
       or c divides d                 by DIVIDES_MOD_0
 *)
 Theorem divides_linear_sub:
-    !a b c. c divides a /\ c divides b ==> !h k d. (h * a = k * b + d) ==> c divides d
+  ∀a b c. c divides a ∧ c divides b ⇒ ∀h k d. h * a = k * b + d ⇒ c divides d
 Proof
   rpt strip_tac >>
   Cases_on `c = 0` >| [
@@ -995,7 +996,8 @@ Proof
     `0 < c` by decide_tac >>
     `(a MOD c = 0) /\ (b MOD c = 0)` by rw[GSYM DIVIDES_MOD_0] >>
     `0 = (h * a) MOD c` by metis_tac[MOD_TIMES2, ZERO_MOD, MULT_0] >>
-    `_ = (0 + d MOD c) MOD c` by metis_tac[MOD_PLUS, MOD_TIMES2, ZERO_MOD, MULT_0] >>
+    `_ = (0 + d MOD c) MOD c`
+      by metis_tac[MOD_PLUS, MOD_TIMES2, ZERO_MOD, MULT_0] >>
     `_ = d MOD c` by rw[MOD_MOD] >>
     rw[DIVIDES_MOD_0]
   ]

@@ -1,0 +1,41 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `ty_antiq`
+
+``` hol4
+Parse.ty_antiq : hol_type -> term
+```
+
+------------------------------------------------------------------------
+
+Make a variable named `ty_antiq`.
+
+Given a type `ty`, the ML invocation `ty_antiq ty` returns the HOL
+variable `ty_antiq : ty`. This provides a way to antiquote types into
+terms, which is necessary because the HOL term parser only allows terms
+to be antiquoted. The use of `ty_antiq` promotes a type to a term
+variable which can be antiquoted. The HOL parser detects occurrences of
+`ty_antiq ty` and inserts `ty` as a constraint.
+
+### Example
+
+Suppose we want to constrain a term to have type `num list`, which is
+bound to ML value `ty`. Attempting to antiquote ty directly into the
+term won't work:
+
+``` hol4
+>> val ty = ``:num list``;
+
+>>+ “x : ^ty”;
+```
+
+Use of `ty_antiq` solves the problem:
+
+``` hol4
+>> ``x : ^(ty_antiq ty)``;
+
+>> type_of it;
+```
+
+### See also
+
+[`Parse.Term`](#Parse.Term)

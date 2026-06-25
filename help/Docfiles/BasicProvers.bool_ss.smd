@@ -1,0 +1,15 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+---
+canonical: bossLib.bool_ss
+generated: true
+---
+## `bool_ss`
+
+``` hol4
+BasicProvers.bool_ss : simpset
+```
+
+------------------------------------------------------------------------
+
+Re-exported from [`bossLib.bool_ss`](#bossLib.bool_ss). See that
+entry for full documentation.

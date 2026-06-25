@@ -1,0 +1,3 @@
+ifeq ($(UNSET))
+RESULT = unreached
+endif

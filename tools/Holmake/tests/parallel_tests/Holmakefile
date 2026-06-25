@@ -1,8 +1,10 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
 CLINE_OPTIONS = -r
 DIRNAMES = \
   altquote1 \
   brokenstrings \
   clinevars \
+  cross_dir_rule \
   holpathdb/proj2 \
   holpathdb/proj2/proj2A \
   depchain1/dir3 \
@@ -16,7 +18,19 @@ DIRNAMES = \
   rebuild_cachekey \
   theorytarget \
   commandmacros \
+  condifeq \
   doublecrnl \
+  projclean_loop \
+  h4pedant_config \
+  projfile_basic \
+  projfile_holmake_false \
+  projfile_holpath_override \
+  projfile_open_resolution \
+  projfile_name_clash \
+  projfile_synthetic \
+  patrule_parse \
+  patrule_match \
+  patrule_e2e \
   coproduct \
   noprereqs/dir1 \
   noprereqs/dir2 \
@@ -25,23 +39,36 @@ DIRNAMES = \
   indepchildren \
   empty_script \
   deps_of_depthys \
+  gh569_info \
+  gh569_error \
   gh604 \
+  gh679 \
   gh1353 \
+  gh1993 \
   ignore_errors/j1 \
   qfreadTheoremsyntax \
   use-fnf \
-  time-logging
+  time-logging \
+  dashC_works \
+  dashC_lastmaker \
+  lastmaker_propagation
 
 ifdef POLY
-DIRNAMES += cachefetch \
+DIRNAMES += cache_reflink \
+            cachefetch \
+            cachekey_transitive_parent \
             cheatspotting \
             depchain_heap/ \
             depchain_heap/dir2 \
             dirlock \
+            dumpheap \
             heap-size \
             ignore_errors/j4 \
             hollogs \
-            issue1903
+            issue1903 \
+            local_parallelism_limit \
+            gh1979 \
+            projfile_module
 endif
 
 

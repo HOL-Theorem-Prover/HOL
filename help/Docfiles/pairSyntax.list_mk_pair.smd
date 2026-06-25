@@ -1,0 +1,29 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `list_mk_pair`
+
+``` hol4
+pairSyntax.list_mk_pair : term list -> term
+```
+
+------------------------------------------------------------------------
+
+Constructs a tuple from a list of terms.
+
+`list_mk_pair([t1,...,tn])` returns the term `(t1,...,tn)`.
+
+### Failure
+
+Fails if the list is empty.
+
+### Example
+
+``` hol4
+>> pairSyntax.list_mk_pair [Term `1`, T, Term `2`];
+
+>> pairSyntax.list_mk_pair [Term `1`];
+```
+
+### See also
+
+[`pairSyntax.strip_pair`](#pairSyntax.strip_pair),
+[`pairSyntax.mk_pair`](#pairSyntax.mk_pair)

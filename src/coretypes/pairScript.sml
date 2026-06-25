@@ -54,8 +54,10 @@ val _ = TeX_notation { hol = "#", TeX = ("\\HOLTokenProd{}", 1)}
 local
   val ns = ["Data","Pair"]
 in
-  val _ = OpenTheoryMap.OpenTheory_tyop_name{tyop={Thy="pair",Tyop="prod"},name=(ns,"*")}
-  fun ot0 x y = OpenTheoryMap.OpenTheory_const_name{const={Thy="pair",Name=x},name=(ns,y)}
+  val _ = OpenTheoryMap.OpenTheory_tyop_name
+                   {tyop={Thy="pair",Tyop="prod"},name=(ns,"*")}
+  fun ot0 x y =
+    OpenTheoryMap.OpenTheory_const_name{const={Thy="pair",Name=x},name=(ns,y)}
   fun ot x = ot0 x x
 end
 
@@ -103,7 +105,8 @@ Proof
   STRIP_TAC THEN ASM_REWRITE_TAC[]]
 QED
 
-Theorem CLOSED_PAIR_EQ[simp,compute] = itlist Q.GEN [`x`, `y`, `a`, `b`] PAIR_EQ;
+Theorem CLOSED_PAIR_EQ[simp,compute] =
+  itlist Q.GEN [`x`, `y`, `a`, `b`] PAIR_EQ;
 
 
 (*---------------------------------------------------------------------------
@@ -206,7 +209,10 @@ QED
 (* CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *)
 (*---------------------------------------------------------------------------*)
 
-val CURRY_DEF = Q.new_definition ("CURRY_DEF[simp]", `CURRY f x y :'c = f (x,y)`);
+val CURRY_DEF = new_definition(
+  "CURRY_DEF[simp]",
+  “CURRY f (x:'a) (y:'b) :'c = f (x,y)”
+);
 
 val UNCURRY = Q.new_definition
   ("UNCURRY",

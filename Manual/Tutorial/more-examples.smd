@@ -1,0 +1,62 @@
+# More Examples
+
+\label{chap:more-examples}
+
+>>__ proofManagerLib.drop_all();
+
+In addition to the examples already covered in this text, the HOL
+distribution comes with a variety of instructive examples in the
+`examples` directory.  There the following examples (among
+others) are to be found:
+
+**`autopilot.sml`** This example is a HOL rendition (by Mark
+Staples) of a PVS example due to Ricky Butler of NASA.  The example
+shows the use of the record-definition package, as well as
+illustrating some aspects of the automation available in HOL.
+
+**`bmark`** In this directory, there is a standard HOL benchmark:
+the proof of correctness of a multiplier circuit, due to Mike
+Gordon.
+
+**`euclid.sml`** This example is the same as that covered in
+Chapter \ref{chap:euclid}: a proof of Euclid's theorem on the
+infinitude of the prime numbers, extracted and modified from a much
+larger development due to John Harrison.  It illustrates the
+automation of HOL on a classic proof.
+
+**`ind_def`** This directory contains some examples of an inductive
+definition package in action.  Featured are an operational
+semantics for a small imperative programming language, a small
+process algebra, and combinatory logic with its type system.  The
+files were originally developed by Tom Melham and Juanito
+Camilleri and are extensively commented.  The last is the basis
+for Chapter \ref{chap:combin}.
+
+Most of the proofs in these theories can now be done much more
+easily by using some of the recently developed proof tools, namely
+the simplifier and the first order prover.
+
+**`fol.sml`** This file illustrates John Harrison's implementation
+of a model-elimination style first order prover.
+
+**`lambda`** This directory develops theories of a “de Bruijn”
+style lambda calculus, and also a name-carrying version.  (Both
+are untyped.)  The development is a revision of the proofs
+underlying the paper *"5 Axioms of Alpha Conversion", Andy Gordon
+and Tom Melham, Proceedings of TPHOLs'96, Springer LNCS 1125*.
+
+**`parity`** This sub-directory contains the files used in the
+parity example of Chapter \ref{parity}.
+
+**`MLsyntax`** This sub-directory contains an extended example of
+a facility for defining mutually recursive types, due to Elsa
+Gunter of Bell Labs.  In the example, the type of abstract syntax
+for a small but not totally unrealistic subset of ML is defined,
+along with a simple mutually recursive function over the syntax.
+
+**`Thery.sml`** A very short example due to Laurent Théry,
+demonstrating a cute inductive proof.
+
+**`RSA`** This directory develops some of the mathematics
+underlying the RSA cryptography scheme.  The theories have been
+produced by Laurent Théry of INRIA Sophia-Antipolis.

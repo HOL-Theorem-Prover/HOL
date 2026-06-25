@@ -4,6 +4,8 @@
 
 \documentclass[12pt,fleqn]{book}
 %\usepackage{amsmath}
+\usepackage{amssymb}     % \ggg, \mathbb, \preccurlyeq, \leftrightarrows, etc.,
+                         % referenced by ../Description/desc-unicode.sty
 \usepackage{alltt}
 \usepackage{../LaTeX/layout}
 \usepackage{imakeidx}
@@ -28,7 +30,11 @@
 
 \indexsetup{level=\chapter}
 \makeindex
-\input{ref-unicode}
+% Shared Unicode -> LaTeX codepoint mapping (also used by Description
+% and Tutorial); the support packages it depends on -- amssymb above,
+% stix via layout.sty, stmaryrd via ../LaTeX/commands.tex -- are all
+% loaded by this point.
+\usepackage{../Description/desc-unicode}
 
 \usepackage{titlesec}
 \usepackage[english]{babel}

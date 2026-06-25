@@ -1146,6 +1146,13 @@ Proof
  >> Q.EXISTS_TAC ‘M’ >> simp []
 QED
 
+Theorem benf_has_benf :
+    !M. benf M ==> has_benf M
+Proof
+    rw [has_benf_def]
+ >> Q.EXISTS_TAC ‘M’ >> simp [lameta_REFL]
+QED
+
 Theorem lameq_ssub_cong :
   !M N. M == N ==> ∀fm. fm ' M == fm ' N
 Proof

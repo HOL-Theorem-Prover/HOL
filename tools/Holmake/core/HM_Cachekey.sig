@@ -12,15 +12,24 @@ sig
            Key of string
          | Missing of {name : string, path : string} list
 
+  (* Both [compute_for_node] and [compute_for_deps] return the
+     updated graph alongside the cachekey: per-dep file hashes
+     they compute get memoised onto the graph so that subsequent
+     calls reusing any of the same dep files (very common when
+     many targets share parent theories) avoid re-reading and
+     re-hashing them. *)
   val compute_for_node :
-      'a HM_DepGraph.t -> HM_DepGraph.node -> compute_result
+      'a HM_DepGraph.t -> HM_DepGraph.node ->
+      compute_result * 'a HM_DepGraph.t
 
   (* Lower-level variant: compute the cachekey for a theory target
      given its direct dependency list directly (without needing a
      node already recorded in a depgraph).  Used from the rebuild-
      decision path, where the node is about to be created, and from
      BuildCommand after a successful script run. *)
-  val compute_for_deps : Holmake_tools.dep list -> compute_result
+  val compute_for_deps :
+      'a HM_DepGraph.t -> Holmake_tools.dep list ->
+      compute_result * 'a HM_DepGraph.t
 
   (* Filesystem helpers for cachekey stamp files.  Each theory-target
      .dat file has a sibling .cachekey file recording the cachekey of

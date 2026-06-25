@@ -1,0 +1,27 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `bool_compset`
+
+``` hol4
+computeLib.bool_compset : compset
+```
+
+------------------------------------------------------------------------
+
+A simplification set for use with `CBV_CONV` for basic computations.
+
+This compset is a simplification set for use with the compute
+library performing computations about operations on primitive booleans
+and other basic constants, such as LET, conditional, implication,
+conjunction, disjunction, and negation.
+
+### Example
+
+``` hol4
+>>__ load "computeLib";
+
+>> computeLib.CBV_CONV computeLib.bool_compset (Term `F ==> (T \/ F)`);
+```
+
+### See also
+
+[`computeLib.CBV_CONV`](#computeLib.CBV_CONV)

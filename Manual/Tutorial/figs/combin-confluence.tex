@@ -1,0 +1,13 @@
+\documentclass{standalone}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows}
+\begin{document}
+\begin{tikzpicture}[scale=.8,transform shape]
+\node (middle) {};
+\node (x) [above=of middle] {$x$};
+\node (y) [left=of middle] {$y$};
+\node (z) [right=of middle] {$z$};
+\path (x) edge [->,thick] node[auto,swap] {$*$} (y);
+\path (x) edge [->,thick] node[auto] {$*$} (z);
+\end{tikzpicture}
+\end{document}

@@ -108,12 +108,29 @@ fun findUo modPath [] = NONE
 
 val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
 
-fun loadUo ps use uo =
+fun checkLoadCase modName files =
+  let
+    val lc = String.map Char.toLower
+    val lcModName = lc modName
+    fun srcBase f = OS.Path.base (OS.Path.file f)
+    fun mismatch f =
+      let val b = srcBase f
+      in b <> modName andalso lc b = lcModName end
+  in
+    case List.find mismatch files of
+        NONE => ()
+      | SOME f =>
+          die ("load: requested \"" ^ modName ^
+               "\" but module is registered as \"" ^ srcBase f ^ "\"")
+  end
+
+fun loadUo ps use modName uo =
   let
     val i = HFS.openIn uo
     val files =
       String.tokens (fn c => c = #"\n") (HFS.inputAll i)
     val _ = HFS.closeIn i
+    val _ = checkLoadCase modName files
     fun str f = ">" ^ f ^ "< -- " ^ String.concatWith " -- " ps
     fun loadOne f =
       (case OS.Path.ext f of
@@ -135,7 +152,7 @@ and load ps use modPath =
     fun l ext =
       case findUo (modPath ^ ext) ("."::(!loadPath)) of
           NONE => die ("Cannot find file " ^ modPath ^ ext)
-        | SOME uo => loadUo ps use uo
+        | SOME uo => loadUo ps use modName uo
   in
     if Binaryset.member (!loadedMods, modName) then
       ()

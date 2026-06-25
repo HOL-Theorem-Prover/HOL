@@ -1,4 +1,0 @@
-$(SML_LIB)/basis/basis.mlb
-mlton-srcs/Binarymap.sml
-mlton-srcs/Listsort.sml
-comparelogs.sml

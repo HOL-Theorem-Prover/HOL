@@ -194,9 +194,9 @@ val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
                         | SOME v => [LIT v])
             val toks = ReadHMF.read "Holmakefile"
             val env = extend_env toks base_env
-            fun envlist id =
-                map dequote (tokenize (perform_substitution env [VREF id]))
-            val hmake_includes = envlist "INCLUDES"
+            val hmake_includes =
+                Holmake_types.envlist internal_functions.default_diags
+                                      env "INCLUDES"
           in
             case hmake_includes of
               [] => ()

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -e
+git clone --depth 1 https://github.com/nst/JSONTestSuite.git
+cd JSONTestSuite
+git checkout 1ef36fa01286573e846ac449e8683f8833c5b26a

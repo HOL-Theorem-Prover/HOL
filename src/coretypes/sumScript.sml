@@ -564,8 +564,12 @@ val _ = computeLib.add_persistent_funs ["sum_case_def", "INL_11", "INR_11",
 
 local
 val ns = ["Data","Sum"]
-fun add x y = OpenTheoryMap.OpenTheory_const_name{const={Thy="sum",Name=x},name=(ns,y)} in
-val _ = OpenTheoryMap.OpenTheory_tyop_name{tyop={Thy="sum",Tyop="sum"},name=(ns,"+")}
+fun add x y =
+  OpenTheoryMap.OpenTheory_const_name{const={Thy="sum",Name=x},name=(ns,y)}
+in
+val _ = OpenTheoryMap.OpenTheory_tyop_name{
+  tyop={Thy="sum",Tyop="sum"}, name=(ns,"+")
+}
 val _ = add "INR" "right"
 val _ = add "INL" "left"
 val _ = add "OUTR" "destRight"

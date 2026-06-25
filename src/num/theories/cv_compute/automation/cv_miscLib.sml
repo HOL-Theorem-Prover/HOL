@@ -62,7 +62,8 @@ val remove_fupd_conv = let
     val updates_def = TypeBase.updates_of ty
     val f = mk_var("f",ty --> type_of rest)
     val x = mk_var("x",ty)
-    val cons_tm = cases_of_def |> SPEC_ALL |> concl |> repeat (snd o dest_exists) |> rand
+    val cons_tm =
+        cases_of_def |> SPEC_ALL |> concl |> repeat (snd o dest_exists) |> rand
     val rhs_tm = mk_comb(f,cons_tm)
     val args = strip_comb cons_tm |> snd
     val r_tm = mk_icomb(mk_icomb(case_tm,x),list_mk_abs(args,rhs_tm))

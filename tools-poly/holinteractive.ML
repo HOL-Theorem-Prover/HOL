@@ -26,7 +26,7 @@ structure HOL_Interactive :>
   sig
     val toggle_quietdec : unit -> bool
     val amquiet : unit -> bool
-    val print_banner : unit -> unit
+    val print_banner : (string -> unit) -> unit
     val setquietp : bool -> bool (* returns old value *)
     val start_open : unit -> unit
     val end_open : unit -> unit
@@ -74,9 +74,8 @@ struct
   val line =
     "\n---------------------------------------------------------------------\n"
 
-  fun print_banner () =
-    TextIO.output (TextIO.stdOut,
-      line ^
+  fun print_banner emit =
+    emit (line ^
       "     " ^ id_string ^
       "     For introductory HOL help, type: help \"hol\";\n" ^
       "     " ^ exit_string ^

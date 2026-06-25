@@ -6,7 +6,15 @@
 % -------------------------------------------------------
 
 \NeedsTeXFormat{LaTeX2e}
-\usepackage{amssymb, underscore, fancyvrb, amsmath, stix}
+\usepackage{amssymb, underscore, fancyvrb, amsmath}
+
+% Borrow only the tortoise-shell brackets (U+2772/2773) from the STIX Type1
+% extension font, without letting stix.sty take over the math fonts.
+\DeclareFontEncoding{LS2}{}{}
+\DeclareFontSubstitution{LS2}{stixex}{m}{n}
+\DeclareSymbolFont{stixdelim}{LS2}{stixex}{m}{n}
+\DeclareMathDelimiter{\lbrbrak}{\mathopen} {stixdelim}{"EE}{stixdelim}{"14}
+\DeclareMathDelimiter{\rbrbrak}{\mathclose}{stixdelim}{"EF}{stixdelim}{"15}
 
 \fvset{commandchars=\\\{\},xleftmargin=1mm,framesep=1.2mm,fontsize=\small}
 
@@ -29,8 +37,8 @@
 \newenvironment{HOLarray}{\begin{array}[t]{l}}{\end{array}}
 
 \newcommand{\HOLKeyword}[1]{{\bfseries{\textsf{#1}}}}
-\newcommand{\HOLBoundVar}[1]{\textit{#1}}
-\newcommand{\HOLFreeVar}[1]{\textit{#1}}
+\newcommand{\HOLBoundVar}[1]{\ensuremath{\mathit{#1}}}
+\newcommand{\HOLFreeVar}[1]{\ensuremath{\mathit{#1}}}
 \newcommand{\HOLConst}[1]{\textsf{#1}}
 \newcommand{\HOLSymConst}[1]{#1}
 \newcommand{\HOLTyOp}[1]{\textsf{#1}}

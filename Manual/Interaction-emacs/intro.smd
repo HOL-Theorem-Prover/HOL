@@ -1,0 +1,15 @@
+# Introduction
+
+This document gives readers, with no experience in using HOL4, the
+most minimum knowledge needed to start using HOL4.  The aim is to
+give a concise description of the basics in a format usable as a
+beginners' reference manual.
+
+- [Interaction with HOL4 (via emacs)](emacs.md)
+- [Searching for theorems and theories](search.md)
+- [Common proof tactics](tactics.md)
+- [Further reading and general advice](reading.md)
+
+The text assumes that the reader has HOL4 installed.  You can
+download and install HOL4 following the instructions on
+<https://hol-theorem-prover.org>.

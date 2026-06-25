@@ -1,10 +1,10 @@
-PRE_INCLUDES=${HOLDIR}/examples/PSL/path
+INCLUDES=${HOLDIR}/examples/PSL/path
 
 ifdef POLY
-INCLUDES = ${HOLDIR}/examples/PSL/1.1/official-semantics \
+INCLUDES += ${HOLDIR}/examples/PSL/1.1/official-semantics \
 	../tools ../deep_embeddings ../translations
 else
-INCLUDES = ${HOLDIR}/examples/PSL/1.1/official-semantics \
+INCLUDES += ${HOLDIR}/examples/PSL/1.1/official-semantics \
 	${HOLDIR}/examples/HolBdd ${HOLDIR}/examples/muddy \
 	../tools ../deep_embeddings ../translations
 endif
@@ -17,7 +17,7 @@ ifdef HOL4_SMV_EXECUTABLE
 all: selftest.exe
 
 selftest.exe: selftest.uo modelCheckLib.uo
-	$(HOLMOSMLC) -I ${PRE_INCLUDES} -o $@ $<
+	$(HOLMOSMLC) -o $@ $<
 
 ifdef HOLSELFTESTLEVEL
 temporal_deepmc-selftest.log: selftest.exe

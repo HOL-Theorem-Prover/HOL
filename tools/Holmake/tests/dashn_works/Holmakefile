@@ -1,1 +1,4 @@
 CLINE_OPTIONS = -n
+ifdef POLY
+CLINE_OPTIONS += --poly_not_hol
+endif

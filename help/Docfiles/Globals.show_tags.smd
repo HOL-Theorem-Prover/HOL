@@ -1,0 +1,42 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `show_tags`
+
+``` hol4
+Globals.show_tags : bool ref
+```
+
+------------------------------------------------------------------------
+
+Flag for controlling display of tags in theorem prettyprinter.
+
+The flag `show_tags` controls the display of values of type `thm`. When
+set to `true`, the tag attached to a theorem will be printed when the
+theorem is printed. When set to `false`, no indication of the presence
+or absence of a tag will be displayed.
+
+### Example
+
+``` hol4
+>> show_tags := false;
+
+>> pairTheory.PAIR_MAP_THM;
+
+>> mk_thm ([],F);
+
+>> show_tags := true;
+
+>> pairTheory.PAIR_MAP_THM;
+
+>> mk_thm ([],F);
+```
+
+>>__ show_tags := false;
+
+### Comments
+
+The initial value of `show_tags` is `false`.
+
+### See also
+
+[`Thm.tag`](#Thm.tag), [`Thm.mk_oracle_thm`](#Thm.mk_oracle_thm),
+[`Thm.mk_thm`](#Thm.mk_thm)

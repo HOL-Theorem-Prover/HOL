@@ -1,3 +1,4 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
 EXTRA_CLEANS = selftest.exe num-selftest.log
 
 THYCORES = $(patsubst %Script.sml,%,$(wildcard *Script.sml))

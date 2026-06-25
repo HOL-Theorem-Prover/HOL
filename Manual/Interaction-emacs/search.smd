@@ -1,0 +1,79 @@
+# Searching for theorems and theories
+
+\label{search}
+
+HOL4 has a large collection of library theories.  The most commonly
+used are:
+
+| Theory              | Contents                                                   |
+|---------------------|------------------------------------------------------------|
+| `arithmeticTheory`  | natural numbers, e.g. `0, 1, 2, SUC 0, SUC 6`              |
+| `listTheory`        | lists, e.g. `[1;2;3] = 1::2::3::[], HD xs`                 |
+| `pred_setTheory`    | simple sets, e.g. `{1;2;3}, x IN s UNION t`                |
+| `pairTheory`        | pairs/tuples, e.g. `(1,x), (2,3,4,5), FST (x,y)`           |
+| `wordsTheory`       | n-bit words, e.g. `0w:word32, 1w:'a word, x !! 1w`         |
+
+Other standard theories include:
+
+```
+bagTheory  boolTheory  combinTheory  fcpTheory  finite_mapTheory
+fixedPointTheory  floatTheory  integerTheory  limTheory
+optionTheory  probTheory  ratTheory  realTheory
+relationTheory  rich_listTheory  ringTheory  seqTheory
+sortingTheory  state_transformerTheory  stringTheory  sumTheory
+topologyTheory  transcTheory  WhileTheory
+```
+
+The library theories are conveniently browsed using the following
+HTML reference page (created when HOL4 is compiled).  Replace
+`<path>` with the path to your HOL4 installation.
+
+```
+<path>/HOL/help/HOLindex.html
+```
+
+Once theories have been opened (see
+[Copying input into HOL4](emacs.md#copying-input-into-hol4-opening-a-theory)),
+one can search for theorems in the current context using `print_match`.  For example,
+with `arithmeticTheory` opened, doing `M-h M-r` with the following
+selected,
+
+```hol4
+print_match [] “n DIV m <= k”
+```
+
+prints a list of theorems containing $n\ \texttt{DIV}\ m \leq k$
+for some $n, m, k$:
+
+```repl
+>> print_match [] “n DIV m <= k”;
+```
+
+Try to write increasingly specific queries if the returned list is
+long, e.g. ``print_match [] `n DIV m` `` returns a list of length
+32.  Note that ``print_match [] `DIV` `` does not work since `DIV`
+is an infix operator, but ``print_match [] `$DIV` `` works.
+
+The key-binding `M-h m` (and the menu entry "DB match") will
+prompt for the term pattern to search for, and pass this query
+onto the HOL session (saving the need to type `print_match []` and
+the enclosing quotation marks).
+
+It is also possible to search over theorem *names* using the
+function `DB.find`, or the key-binding `M-h f`.  The string
+provided to this name is a regular expression that ignores case
+and scans all of the known theorems' names, searching for those
+that include a sub-string matching the regular expression.  In
+addition to the standard operators (`|`, `*`, …), a particularly
+useful addition is `~`, which is defined:
+
+$$\mathit{re}_1 \mathtt{\sim} \mathit{re}_2 \;=\;
+  (\mathtt{.}^{\mathtt{*}} \mathit{re}_1 \mathtt{.}^{\mathtt{*}})
+  \mathtt{\&}
+  (\mathtt{.}^{\mathtt{*}} \mathit{re}_2 \mathtt{.}^{\mathtt{*}})$$
+
+where $\mathtt{\&}$ is the regular expression intersection
+operator.  Thus, if one writes `DB.find "foo~bar"`, one will get
+back a list of all theorems whose names include both the strings
+`"foo"` and `"bar"`, which is useful if one is not sure about the
+order in which those substrings occur in the theorem name.

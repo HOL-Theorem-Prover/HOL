@@ -1374,12 +1374,9 @@ Proof
  >> rw [extreal_11] >> REAL_ARITH_TAC
 QED
 
-Definition third_moment_def:
-  third_moment p X = central_moment p X 3
-End
-
-Definition absolute_third_moment_def:
-  absolute_third_moment p X = absolute_moment p X 0 3
+(* NOTE: This is also a central moment (a = expectation p X) *)
+Definition absolute_third_moment_def :
+  absolute_third_moment p X = absolute_moment p X (expectation p X) 3
 End
 
 Definition absolute_third_moments_def :
@@ -1388,10 +1385,6 @@ End
 
 Definition second_moments_def:
   second_moments p X n = SIGMA (λi. central_moment p (X i) 2) (count n)
-End
-
-Definition third_moments_def:
-  third_moments p X n = SIGMA (λi. third_moment p (X i)) (count n)
 End
 
 Definition ext_normal_density_def:
@@ -6342,18 +6335,20 @@ Proof
 QED
 
 Definition CLT_def :
-    CLT p X N <=>
-      ((\n x. SIGMA (λi. X i x) (count (SUC n)) /
-              sqrt (second_moments p X (SUC n))) --> N) (in_distribution p)
+   CLT p X N =
+   let Z n x = SIGMA (\i. X i x) (count1 n) in
+     ((\n x. (Z n x - expectation p (Z n)) /
+              sqrt (second_moments p X (SUC n))) --> N)
+     (in_distribution p)
 End
 
-Theorem central_limit_theorem :
+Theorem central_limit_theorem[local] :
     ∀p X N.
       prob_space p ∧ ext_normal_rv N p 0 1 ∧
       (∀i. real_random_variable (X i) p) ∧
       (∀n. indep_vars p X (λi. Borel) (count n)) ∧
       (∀i. expectation p (X i) = 0) ∧
-      (∀i. expectation p (λx. (abs (X i x))³) < +∞) ∧
+      (∀i. expectation p (λx. (abs (X i x))³) < PosInf) ∧
       (∀i. variance p (X i) < PosInf) ∧
       (∀i. variance p (X i) ≠ 0) ∧
       ((\n. absolute_third_moments p X (SUC n) /
@@ -6361,6 +6356,15 @@ Theorem central_limit_theorem :
       CLT p X N
 Proof
     RW_TAC std_ss [CLT_def]
+ >> rw [Abbr ‘Z’]
+ >> ‘∀i. integrable p (X i) ∧ integrable p (λx. (X i x) pow 2) ∧
+         integrable p (λx. (X i x)³)’ by METIS_TAC [clt_integrable_lemma]
+ >> Know ‘∀n. expectation p (λx. ∑ (λi. X i x) (count1 n)) = 0’
+ >- (rw [] \\
+     (MP_TAC o (Q.SPECL [‘p’, ‘(X :num -> α -> extreal)’, ‘count1 n’]) o
+             (INST_TYPE [“ :'b” |-> “:num”])) expectation_sum \\
+     rw [EXTREAL_SUM_IMAGE_ZERO])
+ >> DISCH_TAC >> fs [extreal_0_simps]
  >> Q.ABBREV_TAC ‘s = λn. sqrt (second_moments p X n)’ >> fs []
  >> Q.ABBREV_TAC ‘b = λn. absolute_third_moments p X n’ >> fs []
  >> Q.ABBREV_TAC ‘R = λn x. ∑ (λi. X i x) (count (SUC n)) / s (SUC n)’
@@ -6378,13 +6382,11 @@ Proof
                   MATCH_MP_TAC sqrt_pos_le >> rw [second_moments_variance_def] \\
                   irule EXTREAL_SUM_IMAGE_POS >> simp [variance_pos]) \\
      irule sqrt_infty \\
-     CONJ_TAC >- (Suff ‘second_moments p X n < +∞’
+     CONJ_TAC >- (Suff ‘second_moments p X n < PosInf’
                   >- (METIS_TAC [lt_imp_ne]) \\
                   irule finite_variance_imp_second_moments >> simp []) \\
      METIS_TAC [second_moments_pos])
  >> DISCH_TAC
- >> ‘∀i. integrable p (X i) ∧ integrable p (λx. (X i x) pow 2) ∧
-         integrable p (λx. (X i x)³)’ by METIS_TAC [clt_integrable_lemma]
  >> ‘∀i. integrable p (λx. (abs (X i x))³)’
     by (rw [GSYM pow_abs, GSYM o_DEF] \\
         MATCH_MP_TAC integrable_abs >> fs [prob_space_def])
@@ -6409,12 +6411,12 @@ Proof
  >> Q.PAT_X_ASSUM ‘(R ⟶ N) (in_distribution p) ⇔ _’ K_TAC
  >> Q.ABBREV_TAC ‘M = λn. expectation p (Normal ∘ f ∘ real ∘ R n)’
  >> Q.ABBREV_TAC ‘Q = expectation p (Normal ∘ f ∘ real o N)’
- >> Know ‘Q ≠ +∞ ∧ Q ≠ −∞’
+ >> Know ‘Q ≠ PosInf ∧ Q ≠ −∞’
  >- (simp [Abbr ‘Q’] \\
      MATCH_MP_TAC clt_expectation_sum_not_infty_normal_rv \\
      rw [ext_normal_rv_def]) >> DISCH_TAC
 
- >> Know ‘∀n. 0 ≤ n ⇒ M n ≠ +∞ ∧ M n ≠ −∞’
+ >> Know ‘∀n. 0 ≤ n ⇒ M n ≠ PosInf ∧ M n ≠ −∞’
  >- (Q.UNABBREV_TAC ‘M’ >> BETA_TAC \\
      MP_TAC (Q.SPECL [‘p’, ‘X’, ‘s’, ‘R’, ‘f’] clt_expectation_sum_not_infty1) \\
      simp []) >> DISCH_TAC
@@ -6428,7 +6430,8 @@ Proof
  >> fs [LIM_SEQUENTIALLY]
  >> Q.PAT_X_ASSUM ‘((λx. M x − Q) ⟶ 0) sequentially ⇔ _’ K_TAC
  (*To rewrite b n / s n pow 3 *)
-    >> MP_TAC (Q.SPECL [‘λn. b (SUC n) / (s (SUC n))³’, ‘0’] lim_null_equiv_extreal_real)
+ >> MP_TAC (Q.SPECL [‘\n. b (SUC n) / s (SUC n) pow 3’, ‘0’]
+                    lim_null_equiv_extreal_real)
 
  >> impl_tac >> simp []
  >- (qexists ‘1’ >> gs [] \\
@@ -6509,12 +6512,12 @@ Proof
           Normal m / 6 *
           SIGMA (λj. expectation r (λx. (abs (X' j x)) pow 3) / (Normal c) pow 3 +
                      expectation r (λx. (abs (Y' j x)) pow 3) / (Normal c) pow 3) (count (SUC n))’
- >- (‘(6 :extreal) = Normal (6 :real)’ by EVAL_TAC >> POP_ORW \\
+    >- (‘(6 :extreal) = Normal (6 :real)’ by EVAL_TAC >> POP_ORW \\
      qmatch_abbrev_tac ‘Normal m / (Normal 6 * (Normal c)³) * B = _’ \\
      Know ‘B ≠ PosInf ∧ B ≠ NegInf’
      >- (rw [Abbr ‘B’]
          >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> rw [] \\
-             (* expectation r (λx'. (abs (X' x x'))³ + (abs (Y' x x'))³) ≠ +∞ *)
+             (* expectation r (λx'. (abs (X' x x'))³ + (abs (Y' x x'))³) ≠ PosInf *)
              MATCH_MP_TAC (cj 1 expectation_finite) >> simp [] \\
              clt_tactic2) \\
          irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> rw [] \\
@@ -6559,7 +6562,7 @@ Proof
                expectation r (λx'. (abs (X' x x'))³) + expectation r (λx'. (abs (Y' x x'))³)’
          >- (Rewr >> irule (GSYM div_add) \\
              fs [extreal_pow_def, lt_imp_ne] >> gs [] \\
-             Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠ +∞ ∧ _’
+             Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠ PosInf ∧ _’
               (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
              Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠ NegInf ∧ _’
               (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs []) \\
@@ -6575,7 +6578,7 @@ Proof
         gs [extreal_div_eq, extreal_not_infty]) \\
      irule (cj 2 add_not_infty) \\
 
-     Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠ +∞ ∧ _’
+     Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠ PosInf ∧ _’
       (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
      Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠  −∞ ∧ _’
       (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
@@ -6596,7 +6599,7 @@ Proof
      MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (abs (X (i :num) x)) pow 3’]
               (INST_TYPE [“:'b” |-> “:'a list”] expectation_fst)) \\
      impl_tac >- (fs [real_random_variable, GSYM pow_abs] \\
-                  (* ∀x. x ∈ p_space p ⇒ abs (X i x)³ ≠ +∞ ∧ abs (X i x)³ ≠ −∞ *)
+                  (* ∀x. x ∈ p_space p ⇒ abs (X i x)³ ≠ PosInf ∧ abs (X i x)³ ≠ −∞ *)
                   NTAC 2 STRIP_TAC \\
                   Q.PAT_X_ASSUM ‘∀i. X i ∈ Borel_measurable (p_space p,events p) ∧ _’
                    (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
@@ -6698,7 +6701,7 @@ Proof
          rw [SF ETA_ss, sub_rzero, zero_pow] \\
          simp [GSYM extreal_sqrt_def, GSYM extreal_pow_def] \\
          MP_TAC (Q.SPECL [‘expectation p (λx. (X (i :num) x)²)’] normal_real) \\
-         Q.PAT_X_ASSUM ‘∀i. variance p (X i) ≠ −∞ ∧ variance p (X i) ≠ +∞’
+         Q.PAT_X_ASSUM ‘∀i. variance p (X i) ≠ −∞ ∧ variance p (X i) ≠ PosInf’
           (MP_TAC o Q.SPEC ‘i’) >> rw [] \\
          MP_TAC (Q.SPECL [‘expectation p (λx. (X (i :num) x)²)’] sqrt_powr) \\
          rw [expectation_pos, le_pow2] \\
@@ -6881,7 +6884,7 @@ QED
 
    This version of CLT was originally published in [7].
  *)
-Theorem CLT_Lyapunov :
+Theorem CLT_Lyapunov'[local] :
   !p X N. prob_space p /\ ext_normal_rv N p 0 1 /\
          (!n. real_random_variable (X n) p) /\
          (!n. indep_vars p X (\i. Borel) (count n)) /\
@@ -6905,6 +6908,229 @@ Proof
  >> MATCH_MP_TAC central_limit_theorem >> art []
  >> rw [GSYM lt_infty, expectation_def]
  >> METIS_TAC [integrable_finite_integral, prob_space_def]
+QED
+
+Theorem expectation_center :
+    !p X. prob_space p /\ integrable p X ==>
+          expectation p (\x. X x - expectation p X) = 0
+Proof
+    rpt STRIP_TAC
+ >> ‘expectation p X ≠ PosInf ∧ expectation p X ≠ NegInf’
+   by METIS_TAC [integrable_finite_integral, prob_space_def,
+                 expectation_def, extreal_cases]
+ >> ‘∃r. expectation p X = Normal r’ by METIS_TAC [extreal_cases] >> rw []
+ >> ‘integrable p (λx. Normal r)’ by fs [prob_space_def, integrable_const]
+ >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘λx. Normal r’] expectation_sub)
+ >> rw [] >> POP_ORW
+ >> METIS_TAC [expectation_const, extreal_sub_eq, REAL_SUB_REFL, extreal_0_simps]
+QED
+
+Theorem variance_center :
+    !p X. prob_space p /\ integrable p X ∧
+          real_random_variable X p ==>
+          variance p (\x. X x - expectation p X) = variance p X
+Proof
+  rpt STRIP_TAC
+  >> ‘expectation p X ≠ PosInf ∧ expectation p X ≠ NegInf’
+    by METIS_TAC [integrable_finite_integral, prob_space_def,
+                  expectation_def, extreal_cases]
+  >> ‘∃r. expectation p X = Normal r’ by METIS_TAC [extreal_cases] >> rw []
+  >> HO_MATCH_MP_TAC variance_real_affine'
+  >> METIS_TAC []
+QED
+
+Theorem abs_sub_pow3_bound[local]:
+   ∀a b.
+     a ≠ −∞ ∧ a ≠ +∞ ∧ b ≠ −∞ ∧ b ≠ +∞ ⇒
+     (abs (a − b))³ ≤ 4 * (abs a)³ + 4 * (abs b)³
+Proof
+    rpt STRIP_TAC
+ >> ‘∃c. a = Normal c’ by METIS_TAC [extreal_cases]
+ >> ‘∃d. b = Normal d’ by METIS_TAC [extreal_cases]
+ >> simp [extreal_abs_def, extreal_sub_eq, extreal_pow_def]
+ >> simp [GSYM add_ldistrib, extreal_add_eq]
+ >> simp [extreal_of_num_def, extreal_mul_eq]
+ >> ‘abs (c - d) ≤ abs c + abs d’ by REAL_ARITH_TAC
+ >> ‘0 ≤ abs (c − d) ∧ 0 ≤ abs c ∧ 0 ≤ abs d’ by REAL_ARITH_TAC
+ >> ‘abs (c − d) pow 3 ≤ (abs c + abs d) pow 3’ by METIS_TAC [POW_LE]
+ >> MATCH_MP_TAC REAL_LE_TRANS
+ >> qexists ‘(abs c + abs d) pow 3’ >> simp []
+ >> Q.ABBREV_TAC ‘u = abs c’
+ >> Q.ABBREV_TAC ‘v = abs d’
+ >> ‘(u + v)³ = u³ + 3 * u² * v + 3 * u * v² + v³’ by REAL_ARITH_TAC
+ >> POP_ORW
+ >> ‘ u³ + 3 * u² * v + 3 * u * v² + v³ ≤ 4 * (u³ + v³) ⇔
+        0 ≤ 4 * (u³ + v³) - (u³ + 3 * u² * v + 3 * u * v² + v³)’ by REAL_ARITH_TAC
+ >> POP_ORW
+ >> ‘4 * (u³ + v³) − (u³ + 3 * u² * v + 3 * u * v² + v³) =
+     3 * (u³ − u² * v − u * v² + v³)’ by REAL_ARITH_TAC
+ >> POP_ORW
+ >> ‘u³ − u² * v − u * v² + v³ = (u + v) * (u − v)²’ by REAL_ARITH_TAC
+ >> POP_ORW
+ >> MATCH_MP_TAC REAL_LE_MUL >> simp []
+ >> MATCH_MP_TAC REAL_LE_MUL >> simp []
+ >> MATCH_MP_TAC REAL_LE_ADD >> simp []
+QED
+
+(* NOTE: This is the final version, which removes “!n. expectation p (X n) = 0)”
+   from the previous [CLT_Lyapunov'].
+ *)
+Theorem CLT_Lyapunov :
+    !p X N. prob_space p /\ ext_normal_rv N p 0 1 /\
+            (!n. real_random_variable (X n) p) /\
+            (!n. indep_vars p X (\i. Borel) (count n)) /\
+            (!n. integrable p (\x. (abs (X n x)) pow 3)) /\
+            (!n. variance p (X n) <> 0) /\
+            ((\n. absolute_third_moments p X (SUC n) /
+                  sqrt (second_moments p X (SUC n)) pow 3) --> 0) sequentially
+           ==> CLT p X N
+Proof
+   rpt STRIP_TAC
+ >> Know ‘!i. integrable p (\x. (X i x) pow 2)’
+ >- (Q.X_GEN_TAC ‘i’ \\
+     irule integrable_absolute_moments_mono >> art [] \\
+     Q.EXISTS_TAC ‘3’ >> simp [])
+ >> DISCH_TAC
+ >> ‘!i. integrable p (\x. (X i x))’ by METIS_TAC [integrable_from_square]
+ >> ‘!i. finite_second_moments p (X i)’
+   by METIS_TAC [finite_second_moments_eq_integrable_square]
+ >> ‘!i. variance p (X i) < PosInf’
+   by PROVE_TAC [finite_second_moments_eq_finite_variance]
+ >> Q.ABBREV_TAC ‘Y = \i x. X i x - expectation p (X i)’
+ >> Know ‘∀n. real_random_variable (Y n) p’
+ >- (rw [Abbr ‘Y’] \\
+     HO_MATCH_MP_TAC real_random_variable_sub >> gvs [] \\
+     CONJ_TAC >- (METIS_TAC[]) \\
+     MATCH_MP_TAC real_random_variable_const >> fs [] \\
+     METIS_TAC [integrable_finite_integral, prob_space_def, expectation_def, extreal_cases])
+ >> DISCH_TAC
+ >> ‘∀n. real_random_variable (λx. abs (Y n x)) p’ by METIS_TAC [real_random_variable_abs]
+ >> Know ‘∀n. expectation p (λx. (abs (Y n x))³) < +∞’
+ >- (Q.X_GEN_TAC ‘i’ \\
+     MP_TAC (Q.SPECL [‘p’, ‘Y (i :num)’, ‘3’] (GSYM expectation_finite_eq_integrable)) \\
+     fs [] >> Rewr \\
+     rw [Abbr ‘Y’] \\
+     irule integrable_bounded >> fs [prob_space_def] \\
+     CONJ_TAC >- (HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_POW \\
+                  HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS \\
+                  qexists ‘λx. X i x − expectation p (X i)’ \\
+                  fs [MEASURE_SPACE_SIGMA_ALGEBRA] \\
+                  irule IN_MEASURABLE_BOREL_SUB' \\
+                  fs [MEASURE_SPACE_SIGMA_ALGEBRA] \\
+                  qexistsl [‘λx. X i x’, ‘λx.  expectation p (X i)’] \\
+                  fs [IN_MEASURABLE_BOREL_CONST', MEASURE_SPACE_SIGMA_ALGEBRA,
+                      real_random_variable, p_space_def, events_def] \\
+                  METIS_TAC []) \\
+     qexists ‘λx. 4 * (abs (X i x))³ + 4 * (abs (expectation p (X i)))³’ \\
+     CONJ_TAC >- (rw [abs_abs, pow_abs] \\
+                  HO_MATCH_MP_TAC abs_sub_pow3_bound \\
+                  fs [real_random_variable, expectation_def] \\
+                  METIS_TAC [integrable_finite_integral, p_space_def]) \\
+     HO_MATCH_MP_TAC integrable_add' >> simp [] \\
+     CONJ_TAC >- (METIS_TAC [integrable_cmul, extreal_of_num_def]) \\
+     ‘expectation p (X i) ≠ PosInf ∧ expectation p (X i) ≠ NegInf’
+       by METIS_TAC [integrable_finite_integral, prob_space_def,
+                     expectation_def, extreal_cases] \\
+     ‘∃r. expectation p (X i) = Normal r’ by METIS_TAC [extreal_cases] \\
+     rw [extreal_abs_def, extreal_mul_eq, extreal_of_num_def, extreal_pow_def] \\
+     irule integrable_const >> fs [extreal_1_simps])
+ >> DISCH_TAC
+ >> Know ‘∀i. integrable p (Y i)’
+ >- (rw [Abbr ‘Y’] \\
+     ‘expectation p (X i) ≠ PosInf ∧ expectation p (X i) ≠ NegInf’
+       by METIS_TAC [integrable_finite_integral, prob_space_def,
+                     expectation_def, extreal_cases] \\
+     ‘∃r. expectation p (X i) = Normal r’ by METIS_TAC [extreal_cases] \\
+      HO_MATCH_MP_TAC integrable_sub' >> fs [prob_space_def] \\
+     irule integrable_const >> fs [extreal_1_simps])
+ >> DISCH_TAC
+ >> Know ‘CLT p Y N’
+ >- (irule CLT_Lyapunov' >> simp [] \\
+     CONJ_TAC
+     >- (rw [Abbr ‘Y’] \\
+         ‘expectation p (X n) ≠ PosInf ∧ expectation p (X n) ≠ NegInf’
+           by METIS_TAC [integrable_finite_integral, prob_space_def,
+                         expectation_def, extreal_cases] \\
+         ‘∃r. expectation p (X n) = Normal r’ by METIS_TAC [extreal_cases] >> rw [] \\
+         Know ‘variance p (λx. X n x − Normal r) = variance p (λx. X n x)’
+         >- (HO_MATCH_MP_TAC variance_real_affine' \\
+             METIS_TAC []) >> Rewr' \\
+         METIS_TAC []) \\
+     CONJ_ASM1_TAC
+     >- (rw [Abbr ‘Y’] \\
+         irule expectation_center >> METIS_TAC []) \\
+     CONJ_TAC >- (rw [GSYM pow_abs, GSYM o_DEF] \\
+                  irule integrable_abs >> fs [prob_space_def] \\
+                  irule (cj 3 clt_integrable_lemma) >> art [prob_space_def]) \\
+     CONJ_TAC >- (rw [Abbr ‘Y’] \\
+                  (MP_TAC o (Q.SPECL [‘p’, ‘(X :num -> α -> extreal)’, ‘λi. Borel’, ‘count n’,
+                                      ‘λ(i:num) (y :extreal). y − expectation p (X i)’]) o
+                          (INST_TYPE [“:'index” |-> “:num”, beta |-> “:extreal”])) indep_vars_cong \\
+                  impl_tac >- (fs [real_random_variable_def] \\
+                               Q.X_GEN_TAC ‘i’ >> rw [] \\
+                               irule IN_MEASURABLE_BOREL_SUB' >> simp [SIGMA_ALGEBRA_BOREL] \\
+                               qexistsl [‘λx. x’, ‘λx. expectation p (X i)’] \\
+                               fs [IN_MEASURABLE_BOREL_BOREL_I] \\
+                               irule IN_MEASURABLE_BOREL_CONST \\
+                               simp [SIGMA_ALGEBRA_BOREL] \\
+                               qexists ‘expectation p (X i)’ >> fs []) \\
+                  fs [o_DEF]) \\
+     Know ‘∀n. sqrt (second_moments p Y (SUC n)) = sqrt (second_moments p X (SUC n))’
+     >- (rw [] >> AP_TERM_TAC \\
+         rw [Abbr ‘Y’, second_moments_def] \\
+         irule EXTREAL_SUM_IMAGE_EQ' >> rw [expectation_center, central_moment_def, moment_def] \\
+         rw [GSYM variance_alt] >> METIS_TAC [variance_center]) >> Rewr \\
+     Suff ‘!n. absolute_third_moments p Y (SUC n) =
+               absolute_third_moments p X (SUC n)’ >- simp [] \\
+     rw [absolute_third_moments_def, absolute_third_moment_def,
+         absolute_moment_def])
+ >> rw [CLT_def]
+ >> Q.ABBREV_TAC ‘A = (λn x.
+                         (∑ (λi. Y i x) (count1 n) −  expectation p (λx. ∑ (λi. Y i x) (count1 n))) /
+                         sqrt (second_moments p Y (SUC n))) ’
+ >> Q.ABBREV_TAC ‘B = (λn x.
+                         (∑ (λi. X i x) (count1 n) − expectation p (λx. ∑ (λi. X i x) (count1 n))) /
+                         sqrt (second_moments p X (SUC n)))’
+ >> MP_TAC (Q.SPECL [‘p’, ‘A’, ‘B’] converge_in_dist_cong) >> rw []
+ >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘N’, ‘0’])
+ >> Know ‘∀n x. 0 ≤ n ∧ x ∈ p_space p ⇒ A n x = B n x’
+ >- (rw [Abbr ‘A’, Abbr ‘B’] \\
+     Know ‘sqrt (second_moments p Y (SUC n)) = sqrt (second_moments p X (SUC n))’
+     >- (AP_TERM_TAC \\
+         rw [Abbr ‘Y’, second_moments_def] \\
+         irule EXTREAL_SUM_IMAGE_EQ' >> rw [expectation_center, central_moment_def, moment_def] \\
+         rw [GSYM variance_alt] >> METIS_TAC [variance_center]) >> Rewr \\
+     Suff ‘∑ (λi. Y i x) (count1 n) − expectation p (λx. ∑ (λi. Y i x) (count1 n)) =
+           ∑ (λi. X i x) (count1 n) − expectation p (λx. ∑ (λi. X i x) (count1 n))’ >> rw [] \\
+     ‘expectation p (λx. ∑ (λi. Y i x) (count1 n)) = ∑ (λi. expectation p (Y i)) (count1 n)’
+       by (irule expectation_sum >> fs []) >> POP_ORW \\
+     ‘expectation p (λx. ∑ (λi. X i x) (count1 n)) = ∑ (λi. expectation p (X i)) (count1 n)’
+       by (irule expectation_sum >> fs [] >> METIS_TAC []) >> POP_ORW \\
+     Know ‘∑ (λi. Y i x) (count1 n) − ∑ (λi. expectation p (Y i)) (count1 n) =
+           ∑ (λi. (Y i x) - (expectation p (Y i))) (count1 n)’
+     >- ((MP_TAC o (Q.SPECL [‘count1 (n :num)’]) o
+                 (INST_TYPE [alpha |-> “:num”])) (GSYM EXTREAL_SUM_IMAGE_SUB) \\
+         impl_tac >- (fs []) >> rw [] \\
+         POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘λi. Y i x’, ‘λi. expectation p (Y i)’]) \\
+         Suff ‘∀x'. x' < SUC n ⇒ (λi. Y i x) x' ≠ −∞ ∧ (λi. expectation p (Y i)) x' ≠ +∞’ >> gvs [] \\
+         Q.X_GEN_TAC ‘i’ >> rw [Abbr ‘Y’]
+         >- (HO_MATCH_MP_TAC (cj 1 sub_not_infty) \\
+             fs [real_random_variable, p_space_def] \\
+             METIS_TAC [integrable_imp_finite_expectation]) \\
+         METIS_TAC [extreal_0_simps, expectation_center]) >> Rewr \\
+     Know ‘∑ (λi. X i x) (count1 n) − ∑ (λi. expectation p (X i)) (count1 n) =
+           ∑ (λi. (X i x) - (expectation p (X i))) (count1 n)’
+     >- ((MP_TAC o (Q.SPECL [‘count1 (n :num)’]) o
+                 (INST_TYPE [alpha |-> “:num”])) (GSYM EXTREAL_SUM_IMAGE_SUB) \\
+         impl_tac >- (fs []) >> rw [Abbr ‘Y’] \\
+         POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘λi. X i x’, ‘λi. expectation p (X i)’]) \\
+         Suff ‘∀x'. x' < SUC n ⇒ (λi. X i x) x' ≠ −∞ ∧ (λi. expectation p (X i)) x' ≠ +∞’ >> gvs [] \\
+         Q.X_GEN_TAC ‘i’ >> rw []
+         >- (fs [real_random_variable, p_space_def]) \\
+         METIS_TAC [integrable_imp_finite_expectation]) >> Rewr \\
+     HO_MATCH_MP_TAC EXTREAL_SUM_IMAGE_EQ' \\
+     rw [Abbr ‘Y’] >> METIS_TAC [expectation_center, sub_rzero])
+ >> gvs []
 QED
 
 val _ = html_theory "central_limit";

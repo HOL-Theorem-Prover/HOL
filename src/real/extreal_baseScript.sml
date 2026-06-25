@@ -310,7 +310,7 @@ val _ = overload_on (UnicodeChars.sup_3, “\x :extreal. x pow 3”);
 val _ = add_rule {fixity = Suffix 2100,
                   term_name = UnicodeChars.sup_4,
                   block_style = (AroundEachPhrase,(PP.CONSISTENT, 0)),
-                  paren_style = OnlyIfNecessary,
+                  paren_style = ParoundPrec,
                   pp_elements = [TOK UnicodeChars.sup_4]};
 
 val _ = overload_on (UnicodeChars.sup_4, “\x :extreal. x pow 4”);
@@ -4091,4 +4091,197 @@ Proof
                 >> Q.EXISTS_TAC `x''`
                 >> RW_TAC std_ss [] ))
   >> METIS_TAC [INSERT_SING_UNION,UNION_COMM]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(*  Contract and expand (extreal to/from real, order-preserving)             *)
+(* ------------------------------------------------------------------------- *)
+
+(* The function “contract” and “expand” maps [-inf,+inf] to/from [-1,1]. [5] *)
+Definition contract_def :
+    contract (Normal r) = r / (1 + abs r) /\
+    contract PosInf = 1 /\
+    contract NegInf = -1
+End
+
+Theorem contract_lemma[local] :
+    !r. -1 < r / (1 + abs r) /\ r / (1 + abs r) < (1 :real)
+Proof
+    Q.X_GEN_TAC ‘r’
+ >> ‘0 <= abs r’ by simp [ABS_POS]
+ >> ‘0 < 1 + abs r’ by REAL_ASM_ARITH_TAC
+ >> ‘1 + abs r <> 0’ by simp [REAL_LT_IMP_NE]
+ >> MP_TAC (Q.SPECL [‘-1’, ‘r’, ‘1 + abs r’] REAL_LT_RDIV_EQ) >> simp []
+ >> Cases_on ‘0 <= r’
+ >- (‘abs r = r’ by simp [ABS_REFL] >> POP_ORW >> simp [] \\
+     POP_ASSUM MP_TAC >> REAL_ARITH_TAC)
+ >> fs [REAL_NOT_LE]
+ >> ‘abs r = -r’ by simp [ABS_EQ_NEG] >> POP_ORW
+ >> POP_ASSUM MP_TAC >> REAL_ARITH_TAC
+QED
+
+Theorem abs_contract_lt_1 :
+    !r. abs (contract (Normal r)) < 1
+Proof
+    rw [ABS_BOUNDS_LT, contract_def, contract_lemma]
+QED
+
+Theorem abs_contract_le_1 :
+    !x. abs (contract x) <= 1
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> Cases_on ‘x’ >> simp [contract_def, ABS_BOUNDS]
+ >> CONJ_TAC >> MATCH_MP_TAC REAL_LT_IMP_LE
+ >> REWRITE_TAC [contract_lemma]
+QED
+
+Theorem contract_le_eq_lemma1[local] :
+    !(r :real). 0 <= r ==> r / (1 + r) = 1 - inv (1 + r)
+Proof
+    rpt STRIP_TAC
+ >> ‘1 + r <> 0’ by REAL_ASM_ARITH_TAC
+ >> ‘1 - inv (1 + r) = (1 + r) / (1 + r) - inv (1 + r)’ by simp [REAL_DIV_REFL]
+ >> POP_ORW
+ >> REWRITE_TAC [REAL_INV_1OVER]
+ >> simp [REAL_DIV_SUB]
+ >> REAL_ARITH_TAC
+QED
+
+Theorem contract_le_eq_lemma2[local] :
+    !(r :real). r < 0 ==> r / (1 - r) = inv (1 - r) - 1
+Proof
+    rpt STRIP_TAC
+ >> ‘1 - r <> 0’ by REAL_ASM_ARITH_TAC
+ >> ‘inv (1 - r) - 1 = inv (1 - r) - (1 - r) / (1 - r)’ by simp [REAL_DIV_REFL]
+ >> POP_ORW
+ >> REWRITE_TAC [REAL_INV_1OVER]
+ >> simp [REAL_DIV_SUB]
+ >> REAL_ARITH_TAC
+QED
+
+Theorem contract_le_eq :
+    !x y. contract x <= contract y <=> x <= y
+Proof
+    rpt GEN_TAC
+ >> Cases_on ‘x’ >> Cases_on ‘y’
+ >> simp [contract_def, le_infty, REAL_NOT_LE]
+ >> simp [contract_lemma, REAL_LT_IMP_LE, extreal_le_eq]
+ >> Cases_on ‘0 <= r’
+ >- (‘abs r = r’ by simp [ABS_REFL] >> POP_ORW >> simp [] \\
+     reverse (Cases_on ‘0 <= r'’)
+     >- (fs [REAL_NOT_LE] \\
+        ‘~(r <= r')’ by REAL_ASM_ARITH_TAC >> POP_ORW \\
+         simp [REAL_NOT_LE] \\
+         Q_TAC (TRANS_TAC REAL_LTE_TRANS) ‘0’ \\
+         reverse CONJ_TAC
+         >- (MATCH_MP_TAC REAL_LE_DIV >> simp [] \\
+             REAL_ASM_ARITH_TAC) \\
+        ‘0 <= abs r'’ by simp [ABS_POS] \\
+        ‘0 < 1 + abs r'’ by REAL_ASM_ARITH_TAC \\
+         MP_TAC (Q.SPECL [‘r'’, ‘0’, ‘1 + abs r'’] REAL_LT_LDIV_EQ) \\
+         simp []) \\
+    ‘abs r' = r'’ by simp [ABS_REFL] >> POP_ORW \\
+     simp [contract_le_eq_lemma1] \\
+     simp [REAL_ARITH “1 - a <= 1 - b <=> b <= (a :real)”] \\
+     Know ‘inv (1 + r') <= inv (1 + r) <=> 1 + r <= 1 + r'’
+     >- (MATCH_MP_TAC REAL_INV_LE_ANTIMONO \\
+         REAL_ASM_ARITH_TAC) >> Rewr' \\
+     REAL_ARITH_TAC)
+ >> fs [REAL_NOT_LE]
+ >> ‘abs r = -r’ by simp [ABS_EQ_NEG] >> POP_ORW
+ >> Cases_on ‘0 <= r'’
+ >- (‘abs r' = r'’ by simp [ABS_REFL] >> POP_ORW \\
+     ‘r <= r'’ by REAL_ASM_ARITH_TAC >> POP_ORW \\
+     simp [GSYM real_sub] \\
+     Suff ‘r / (1 - r) < 0 /\ 0 <= r' / (1 + r')’ >- REAL_ARITH_TAC \\
+     reverse CONJ_TAC
+     >- (MATCH_MP_TAC REAL_LE_DIV >> art [] \\
+         REAL_ASM_ARITH_TAC) \\
+    ‘0 < 1 - r’ by REAL_ASM_ARITH_TAC \\
+    ‘1 - r <> 0’ by PROVE_TAC [REAL_LT_IMP_NE] \\
+     MP_TAC (Q.SPECL [‘r’, ‘0’, ‘1 - r’] REAL_LT_LDIV_EQ) >> simp [])
+ >> fs [REAL_NOT_LE]
+ >> ‘abs r' = -r'’ by simp [ABS_EQ_NEG] >> POP_ORW
+ >> simp [GSYM real_sub]
+ >> simp [contract_le_eq_lemma2]
+ >> simp [REAL_ARITH “a - 1 <= b - 1 <=> a <= (b :real)”]
+ >> Know ‘inv (1 - r) <= inv (1 - r') <=> 1 - r' <= 1 - r’
+ >- (MATCH_MP_TAC REAL_INV_LE_ANTIMONO \\
+     REAL_ASM_ARITH_TAC)
+ >> Rewr'
+ >> REAL_ARITH_TAC
+QED
+
+Theorem contract_11 :
+    !x y. contract x = contract y <=> x = y
+Proof
+    METIS_TAC [le_antisym, contract_le_eq]
+QED
+
+Theorem contract_neg :
+    !x. contract (-x) = -contract x
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> Cases_on ‘x’ >> simp [contract_def, extreal_ainv_def]
+QED
+
+Definition expand_def :
+    expand c = if 1 <= c then PosInf
+               else if c <= -1 then NegInf
+               else Normal (c / (1 - abs c))
+End
+
+Theorem expand_contract :
+    !x. expand (contract x) = x
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> Cases_on ‘x’ >> simp [contract_def, expand_def]
+ >> Cases_on ‘r = 0’ >- simp []
+ >> ‘0 < r \/ r < 0’ by PROVE_TAC [REAL_LT_TOTAL]
+ >| [ (* goal 1 (of 2) *)
+     ‘0 <= r’ by simp [REAL_LT_IMP_LE] \\
+     ‘abs r = r’ by simp [ABS_REFL] >> POP_ORW \\
+     ‘0 < 1 + r’ by REAL_ASM_ARITH_TAC \\
+     ‘0 < r / (1 + r)’ by simp [REAL_LT_DIV] \\
+      Know ‘r / (1 + r) < 1’
+      >- (MP_TAC (Q.SPECL [‘r’, ‘1’, ‘1 + r’] REAL_LT_LDIV_EQ) >> simp []) \\
+      DISCH_TAC \\
+     ‘~(1 <= r / (1 + r))’ by REAL_ASM_ARITH_TAC \\
+     ‘~(r / (1 + r) <= -1)’ by REAL_ASM_ARITH_TAC \\
+      ASM_SIMP_TAC real_ss [extreal_11] \\
+      qabbrev_tac ‘z = r / (1 + r)’ \\
+     ‘0 <= z’ by simp [REAL_LT_IMP_LE] \\
+     ‘abs z = z’ by simp [ABS_REFL] >> POP_ORW \\
+     ‘1 + r <> 0’ by simp [REAL_LT_IMP_NE] \\
+      Know ‘(1 + r) / (1 + r) - z = 1 / (1 + r)’
+      >- (qunabbrev_tac ‘z’ \\
+          simp [REAL_DIV_SUB, REAL_ADD_SUB_ALT]) \\
+      ASM_SIMP_TAC std_ss [REAL_DIV_REFL] \\
+      DISCH_THEN K_TAC \\
+      simp [div_ratr, Abbr ‘z’],
+      (* goal 2 (of 2) *)
+     ‘r <= 0’ by simp [REAL_LT_IMP_LE] \\
+     ‘abs r = -r’ by simp [ABS_EQ_NEG] >> POP_ORW \\
+      simp [GSYM real_sub] \\
+     ‘0 < 1 - r’ by REAL_ASM_ARITH_TAC \\
+      Know ‘r / (1 - r) < 0’
+      >- (MP_TAC (Q.SPECL [‘r’, ‘0’, ‘1 - r’] REAL_LT_LDIV_EQ) >> simp []) \\
+      DISCH_TAC \\
+     ‘1 - r <> 0’ by PROVE_TAC [REAL_LT_IMP_NE] \\
+      Know ‘-1 < r / (1 - r)’
+      >- (MP_TAC (Q.SPECL [‘-1’, ‘r’, ‘1 - r’] REAL_LT_RDIV_EQ) >> simp [] \\
+          REAL_ARITH_TAC) >> DISCH_TAC \\
+     ‘~(1 <= r / (1 - r))’ by REAL_ASM_ARITH_TAC \\
+     ‘~(r / (1 - r) <= -1)’ by REAL_ASM_ARITH_TAC \\
+      ASM_SIMP_TAC real_ss [extreal_11] \\
+      qabbrev_tac ‘z = r / (1 - r)’ \\
+     ‘z <= 0’ by PROVE_TAC [REAL_LT_IMP_LE] \\
+     ‘abs z = -z’ by simp [ABS_EQ_NEG] >> POP_ORW \\
+      simp [REAL_SUB_RNEG] \\
+      Know ‘(1 - r) / (1 - r) + z = 1 / (1 - r)’
+      >- (qunabbrev_tac ‘z’ \\
+          simp [REAL_DIV_ADD, REAL_SUB_ADD]) \\
+      ASM_SIMP_TAC std_ss [REAL_DIV_REFL] \\
+      DISCH_THEN K_TAC \\
+      simp [div_ratr, Abbr ‘z’] ]
 QED

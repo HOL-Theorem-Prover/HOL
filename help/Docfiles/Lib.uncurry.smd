@@ -1,0 +1,33 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `uncurry`
+
+``` hol4
+Lib.uncurry : ('a -> 'b -> 'c) -> ('a * 'b) -> 'c
+```
+
+------------------------------------------------------------------------
+
+Converts a function taking two arguments into a function taking a single
+paired argument.
+
+The application `uncurry f` returns `fn (x,y) => f x y`, so that
+
+``` hol4
+   uncurry f (x,y) = f x y
+```
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>> fun add x y = x + y
+
+>> uncurry add (3,4);
+```
+
+### See also
+
+[`Lib`](#Lib), [`Lib.curry`](#Lib.curry)

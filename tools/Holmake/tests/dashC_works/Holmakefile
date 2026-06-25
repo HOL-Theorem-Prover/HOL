@@ -1,0 +1,8 @@
+dashC_works-selftest.log: selftest.exe
+	@$(tee ./$<, $@)
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe dashC_works-selftest.log dashC_works-output \
+               subdir/.hol/

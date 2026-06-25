@@ -7,8 +7,9 @@ Libs
 (* calling nominal_datatype *)
 val _ = (repcode := "ctrep");
 val _ = (rprefix := "ct");
+val _ = (tpm_name_pfx := ["ct"]);
 
-val {tynames, rep_t, lp} =
+val {tynames, tyinfo, consinfo, tpminfo, rep_t, lp} =
     nominal_datatype
       ‘cterm = VAR 'free | APP cterm cterm | LAM 'bound cterm | CONST 'a’;
 
@@ -20,78 +21,20 @@ Definition is_ctc_def[simp]:
 End
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
-     termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
-    new_type_step1 tyname 0 [] {lp = lp};
+     termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty} =
+    hd tyinfo;
 
-val glam = genind_lam
+val [LAM_def, APP_def, APP_def', VAR_def, VAR_def', CONST_def, CONST_def'] =
+    List.map (DB.fetch "-") ["LAM_def", "APP_def", "APP_def'",
+                             "VAR_def", "VAR_def'",
+                             "CONST_def", "CONST_def'"];
 
-val LAM_t = mk_var("LAM", ``:string -> ^newty -> ^newty``)
-val LAM_def = new_definition(
-  "LAM_def",
-  ``^LAM_t v t = ^term_ABS_t (GLAM v [] ctLAM [^term_REP_t t] [])``)
-val LAM_termP = prove(
-  mk_comb(termP, LAM_def |> SPEC_ALL |> concl |> rhs |> rand),
-  match_mp_tac glam >> srw_tac [][genind_term_REP]);
-val LAM_t = defined_const LAM_def
+val cons_info = hd consinfo;
+val [VAR_termP, APP_termP, LAM_termP, CONST_termP] =
+    List.map #con_termP cons_info;
 
-val APP_t = mk_var("APP", ``:^newty -> ^newty -> ^newty``)
-val APP_def = new_definition(
-  "APP_def",
-  ``^APP_t t1 t2 =
-       ^term_ABS_t (GLAM ARB [] ctAPP [] [^term_REP_t t1; ^term_REP_t t2])``);
-val APP_termP = prove(
-  ``^termP (GLAM x [] ctAPP [] [^term_REP_t t1; ^term_REP_t t2])``,
-  match_mp_tac glam >> srw_tac [][genind_term_REP])
-val APP_t = defined_const APP_def
-
-val APP_def' = prove(
-  ``^term_ABS_t (GLAM v [] ctAPP [] [^term_REP_t t1; ^term_REP_t t2]) =
-    ^APP_t t1 t2``,
-  srw_tac [][APP_def, GLAM_NIL_EQ, term_ABS_pseudo11, APP_termP]);
-
-val VAR_t = mk_var("VAR", ``:string -> ^newty``)
-val VAR_def = new_definition(
-  "VAR_def",
-  ``^VAR_t s = ^term_ABS_t (GLAM ARB [s] ctVAR [][])``);
-Theorem VAR_termP[local]:
-  ^termP (GLAM u [v] ctVAR [][])
-Proof
-  srw_tac [][genind_rules]
-QED
-val VAR_t = defined_const VAR_def
-Theorem VAR_def':
-  ^term_ABS_t (GLAM u [v] ctVAR [][]) = VAR v
-Proof
-  srw_tac[][VAR_def, GLAM_NIL_EQ, term_ABS_pseudo11, VAR_termP]
-QED
-
-val CONST_t = mk_var("CONST", “:'a -> ^newty”)
-val CONST_def = new_definition(
-  "CONST_def",
-  “^CONST_t a = ^term_ABS_t (GLAM ARB [] (ctCONST a) [][])”);
-val CONST_termP = prove(
-  “^termP (GLAM v [] (ctCONST a) [][])”,
-  srw_tac[][genind_rules]);
-val CONST_t = defined_const CONST_def
-
-val CONST_def' = prove(
-  “^term_ABS_t (GLAM v [] (ctCONST a) [] []) = ^CONST_t a”,
-  srw_tac[][CONST_def, GLAM_NIL_EQ, term_ABS_pseudo11, CONST_termP]);
-
-val cons_info =
-    [{con_termP = VAR_termP, con_def = SYM VAR_def'},
-     {con_termP = APP_termP, con_def = SYM APP_def'},
-     {con_termP = LAM_termP, con_def = LAM_def},
-     {con_termP = CONST_termP, con_def = SYM CONST_def'}]
-
-val tpm_name_pfx = "ct"
-val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} =
-    define_permutation {name_pfx = "ct", name = tyname,
-                        term_REP_t = term_REP_t,
-                        term_ABS_t = term_ABS_t, absrep_id = absrep_id,
-                        repabs_pseudo_id = repabs_pseudo_id,
-                        cons_info = cons_info, newty = newty,
-                        genind_term_REP = genind_term_REP}
+(* tpm *)
+val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} = List.nth (tpminfo,0);
 
 (* support *)
 val term_REP_eqv = prove(

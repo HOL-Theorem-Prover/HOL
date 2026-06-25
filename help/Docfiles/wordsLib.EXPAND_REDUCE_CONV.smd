@@ -1,0 +1,24 @@
+>>__ load "wordsLib"; Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"};
+## `EXPAND_REDUCE_CONV`
+
+``` hol4
+wordsLib.EXPAND_REDUCE_CONV : conv
+```
+
+------------------------------------------------------------------------
+
+The conversion `EXPAND_REDUCE_CONV` expands out applications of
+`reduce_and`, `reduce_or`, `reduce_xor`, `reduce_nand`, `reduce_nor` and
+`reduce_xnor`.
+
+### Example
+
+``` hol4
+>>__ load "wordsLib";
+
+>>+ wordsLib.EXPAND_REDUCE_CONV “reduce_and (w: word4)”;
+```
+
+### See also
+
+[`wordsLib.WORD_EVAL_CONV`](#wordsLib.WORD_EVAL_CONV)

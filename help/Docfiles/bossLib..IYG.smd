@@ -1,0 +1,50 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+---
+aliases:
+  - BasicProvers.&&
+title: bossLib.&&
+---
+
+## `&&`
+
+``` hol4
+op bossLib.&& : simpset * thm list -> simpset
+```
+
+------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`BasicProvers.&&`](#BasicProvers..IYG).*
+
+<!-- END aliases-block -->
+
+Infix operator for adding theorems into a simpset.
+
+It is occasionally necessary to extend an existing simpset `ss` with a
+collection `rwlist` of new rewrite rules. To achieve this, one applies
+the `&&` function via `ss && rwlist`.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+##linecount_limit 0 10
+>> val ss = boolSimps.bool_ss && pairLib.pair_rws;
+##linecount_limit 0 _
+```
+
+### Comments
+
+Of limited applicability since most of the tactics for rewriting already
+include this functionality. However, applications of `ZAP_TAC` can
+benefit.
+
+### See also
+
+[`simpLib.++`](#simpLib..KAL),
+[`simpLib.SIMP_CONV`](#simpLib.SIMP_CONV),
+[`bossLib.RW_TAC`](#bossLib.RW_TAC)

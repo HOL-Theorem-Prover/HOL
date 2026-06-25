@@ -172,7 +172,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                          failed_script_cache :=
                            Binaryset.add(!failed_script_cache, s)
                        else
-                         (case HM_Cachekey.compute_for_deps deps of
+                         (case #1 (HM_Cachekey.compute_for_deps g deps) of
                               HM_Cachekey.Key k =>
                                 HM_Cachekey.write_stamp stamp_path k
                             | HM_Cachekey.Missing _ => ())

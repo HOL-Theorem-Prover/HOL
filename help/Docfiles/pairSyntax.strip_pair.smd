@@ -1,0 +1,31 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `strip_pair`
+
+``` hol4
+pairSyntax.strip_pair : term -> term list
+```
+
+------------------------------------------------------------------------
+
+Recursively breaks a paired structure into its constituent pieces.
+
+### Example
+
+``` hol4
+>>__ load "pairSyntax";
+
+>> pairSyntax.strip_pair (Term `((1,2),(3,4))`);
+```
+
+### Comments
+
+Note that `strip_pair` is similar, but not identical, to `spine_pair`
+which does not work recursively.
+
+### Failure
+
+Never fails.
+
+### See also
+
+[`pairSyntax.spine_pair`](#pairSyntax.spine_pair)

@@ -1,0 +1,28 @@
+>>__ load "wordsLib"; Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"};
+## `WORD_MOD_BITS_CONV`
+
+``` hol4
+wordsLib.WORD_MOD_BITS_CONV : conv
+```
+
+------------------------------------------------------------------------
+
+The conversion `WORD_MOD_BITS_CONV` replaces instances of `word_mod` by
+a power of two with applications of `word_bits`.
+
+### Example
+
+``` hol4
+>>__ load "wordsLib";
+
+>>+ wordsLib.WORD_MOD_BITS_CONV “word_mod w 8w : word16”;
+```
+
+### Comments
+
+This conversion requires the word length to be known.
+
+### See also
+
+[`wordsLib.WORD_DIV_LSR_CONV`](#wordsLib.WORD_DIV_LSR_CONV),
+[`wordsLib.BITS_INTRO_CONV`](#wordsLib.BITS_INTRO_CONV)

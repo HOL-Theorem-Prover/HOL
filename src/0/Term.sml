@@ -841,15 +841,17 @@ fun break_abs(Abs(_,Body)) = Body
   | break_abs _ = raise ERR "break_abs" "not an abstraction";
 
 fun dest_thy_const (Const(id,ty)) =
-      let val {Name,Thy} = name_of_id id
-      in {Thy=Thy, Name=Name, Ty=to_hol_type ty}
-      end
+      {Thy = seg_of id, Name = display_name_of_id id, Ty = to_hol_type ty}
   | dest_thy_const _ = raise ERR"dest_thy_const" "not a const"
 
 fun break_const (Const p) = (I##to_hol_type) p
   | break_const _ = raise ERR "break_const" "not a const"
 
-fun dest_const (Const(id,ty)) = (name_of id, to_hol_type ty)
+fun dest_const (c as Const _) =
+    let val {Name,Ty,...} = dest_thy_const c
+    in
+      (Name,Ty)
+    end
   | dest_const _ = raise ERR "dest_const" "not a const"
 end
 

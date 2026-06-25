@@ -1,0 +1,3 @@
+A_VAR = a
+include nested_b
+A_AFTER = a

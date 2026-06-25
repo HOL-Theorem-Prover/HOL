@@ -182,7 +182,8 @@ in
    "val release ="  --> ("val release = "^quote release_string^"\n"),
    "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n"),
    "val MV ="       --> ("val MV = " ^ quote MV^"\n"),
-   "val CP ="       --> ("val CP = " ^ quote CP^"\n")
+   "val CP ="       --> ("val CP = " ^ quote CP^"\n"),
+   "val clone_cmd =" --> "val clone_cmd = NONE\n"
   ];
   use destfile
 end;
@@ -305,9 +306,19 @@ val _ =
     FileSys.chDir "../parsing";
     print "Calling mllex on HolLex\n";
     systeml [mllex, "HolLex"];
-    FileSys.chDir "../Holmake/hfs";
-    compile [] "holpathdb.sig";
-    compile [] "holpathdb.sml";
+    FileSys.chDir "../Holmake/toml";
+    compile [] "TOMLerror.sml";
+    compile [] "TOMLvalue_dtype.sml";
+    compile [] "TOMLvalue.sig";
+    compile [] "TOMLvalue.sml";
+    compile [] "parseTOMLUtil.sml";
+    compile ["-toplevel"] "parseTOMLFunctor.sml";
+    compile ["parseTOMLFunctor.ui"] "parseTOML.sml";
+    compile [] "TOML.sig";
+    compile [] "TOML.sml";
+    FileSys.chDir "../hfs";
+    compile ["-I", "../toml"] "holpathdb.sig";
+    compile ["-I", "../toml"] "holpathdb.sml";
     FileSys.chDir "../../util";
     compile ["-I", "../Holmake"] "regexpMatch.sig";
     compile ["-I", "../Holmake"] "regexpMatch.sml";
@@ -343,6 +354,8 @@ val _ =
     FileSys.chDir "util";
     compile ["-I", ".."] "terminal_primitives.sig";
     compile ["-I", ".."] "terminal_primitives.sml";
+    compile [] "fspathTrie.sig";
+    compile [] "fspathTrie.sml";
     FileSys.chDir "../core";
     compile [] "Holmake_tools_dtype.sml";
     FileSys.chDir "../../../src/portableML";
@@ -409,12 +422,16 @@ val _ =
     compile ["-I", "..", "-I", "../core", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "HM_DepGraph.sig";
     compile ["-I", "..", "-I", "../core", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "HM_DepGraph.sml";
     FileSys.chDir "../core";
+    compile ["-I", "..", "-I", "../hfs"] "HM_TheoryDat.sig";
+    compile ["-I", "..", "-I", "../hfs"] "HM_TheoryDat.sml";
     compile ["-I", "..", "-I", "../deps", "-I", "../hfs", "-I", "../../parsing", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "HM_Cachekey.sig";
     compile ["-I", "..", "-I", "../deps", "-I", "../hfs", "-I", "../../parsing", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "HM_Cachekey.sml";
     compile ["-I", ".."] "HM_BuildLock.sig";
     FileSys.chDir "../mosml";
     compile ["-I", "..", "-I", "../core"] "HM_BuildLock.sml";
     FileSys.chDir "../core";
+    compile ["-I", "../deps"] "HM_Progress.sig";
+    compile ["-I", "../deps"] "HM_Progress.sml";
     compile ["-I", "..", "-I", "../deps", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "HM_GraphBuildJ1.sig";
     compile ["-I", "..", "-I", "../deps", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "HM_GraphBuildJ1.sml";
     FileSys.chDir "..";
@@ -430,11 +447,17 @@ val _ =
     FileSys.chDir "mosml";
     compile ["-I", "..", "-I", "../core", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "BuildCommand.sml";
     FileSys.chDir "../core";
-    compile ["-I", "..", "-I", "../mosml", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "Holmake.sml";
+    compile [] "HostName.sig";
+    FileSys.chDir "../mosml";
+    compile ["-I", "..", "-I", "../core"] "HostName.sml";
+    FileSys.chDir "../core";
+    compile ["-I", "..", "-I", "../toml"] "HMProject.sig";
+    compile ["-I", "..", "-I", "../toml"] "HMProject.sml";
+    compile ["-I", "..", "-I", "../mosml", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf", "-I", "../toml", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "Holmake.sml";
     FileSys.chDir "../mosml";
     compile ["-I", "..", "-I", "../core"] "mosml_Holmake.sml";
     FileSys.chDir "..";
-    link{extras = ["-I", "mosml", "-I", "core", "-I", "deps", "-I", "util", "-I", "../util", "-I", "../parsing", "-I", "hfs", "-I", "hmf", "-I", "../../src/portableML", "-I", "../../src/portableML/mosml"], tgt = bin, srcobj = "mosml/mosml_Holmake.uo"};
+    link{extras = ["-I", "mosml", "-I", "core", "-I", "deps", "-I", "util", "-I", "../util", "-I", "../parsing", "-I", "hfs", "-I", "hmf", "-I", "toml", "-I", "../../src/portableML", "-I", "../../src/portableML/mosml"], tgt = bin, srcobj = "mosml/mosml_Holmake.uo"};
     mk_xable bin;
     FileSys.chDir cdir
   end
@@ -485,14 +508,23 @@ val _ = let
   val _ = let
     val utilsig = "buildutils.sig"
     val utilsml = "buildutils.sml"
+    val checkregsig = "checkRegressions.sig"
+    val checkregsml = "checkRegressions.sml"
     val coredir = Path.concat(holmakedir, "core")
     val depsdir = Path.concat(holmakedir, "deps")
     val hfsdir = Path.concat(holmakedir, "hfs")
     val hmfdir = Path.concat(holmakedir, "hmf")
+    val tomldir = Path.concat(holmakedir, "toml")
     val parsingdir = Path.concat(holdir, "tools/parsing")
+    val incs = ["-I", holmakedir, "-I", coredir, "-I", depsdir,
+                "-I", hfsdir, "-I", hmfdir, "-I", tomldir, "-I", parsingdir,
+                "-I", utildir, "-I", hmutildir,
+                "-I", Path.concat(holdir, "src/portableML")]
   in
-    if compile ["-I", holmakedir, "-I", coredir, "-I", depsdir, "-I", hfsdir, "-I", hmfdir, "-I", parsingdir, "-I", utildir, "-I", hmutildir, "-I", Path.concat(holdir, "src/portableML")] utilsig andalso
-       compile ["-I", holmakedir, "-I", coredir, "-I", depsdir, "-I", hfsdir, "-I", hmfdir, "-I", parsingdir, "-I", utildir, "-I", hmutildir, "-I", Path.concat(holdir, "src/portableML")] utilsml
+    if compile incs checkregsig andalso
+       compile incs checkregsml andalso
+       compile incs utilsig andalso
+       compile incs utilsml
     then ()
     else die "Failed to build buildutils module"
   end
@@ -506,6 +538,7 @@ val _ = let
        "-I", Path.concat(holmakedir, "deps"),
        "-I", Path.concat(holmakedir, "hfs"),
        "-I", Path.concat(holmakedir, "hmf"),
+       "-I", Path.concat(holmakedir, "toml"),
        "-I", Path.concat(holdir, "tools/parsing"),
        "-I", Path.concat(holdir, "src/portableML"),
        "-I", utildir,

@@ -31,6 +31,8 @@ hmf/parse_glob.sig
 hmf/parse_glob.sml
 util/tailbuffer.sig
 util/tailbuffer.sml
+util/fspathTrie.sig
+util/fspathTrie.sml
 core/Holmake_tools_dtype.sml
 core/HM_Cachekey_dtype.sml
 util/terminal_primitives.sig
@@ -43,6 +45,8 @@ hmf/Holmake_types.sig
 hmf/Holmake_types.sml
 hmf/ReadHMF.sig
 hmf/ReadHMF.sml
+../../src/portableML/UTF8.sig
+../../src/portableML/UTF8.sml
 ../../src/portableML/poly/SHA1_ML.sig
 ../../src/portableML/poly/w64-SHA1.ML
 ../../src/portableML/SHA1.sig
@@ -55,6 +59,8 @@ hmf/ReadHMF.sml
 ../../src/portableML/json/JSONParser.sml
 ../../src/portableML/json/JSONUtil.sig
 ../../src/portableML/json/JSONUtil.sml
+core/HMProject.sig
+core/HMProject.sml
 ../util/GetOpt.sig
 ../util/GetOpt.sml
 ../util/FunctionalRecordUpdate.sml

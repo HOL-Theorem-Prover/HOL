@@ -1,0 +1,33 @@
+>>__ load "wordsLib"; Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"};
+## `guess_lengths`
+
+``` hol4
+wordsLib.guess_lengths : unit -> unit
+```
+
+------------------------------------------------------------------------
+
+Turns on word length guessing.
+
+A call to `guess_lengths` adds a post-prcessing stage to the term
+parser: the function `inst_word_lengths` is used to instantiate type
+variables that are the return type of `word_concat` and `word_extract`.
+
+### Example
+
+``` hol4
+>> show_types := true;
+
+>> val t1 = “(7 >< 5) a @@ (4 >< 0) a”;
+
+>> wordsLib.guess_lengths();
+
+>> val t2 = “(7 >< 5) a @@ (4 >< 0) a”;
+>> type_of t2;
+```
+
+### See also
+
+[`wordsLib.inst_word_lengths`](#wordsLib.inst_word_lengths),
+[`wordsLib.notify_on_word_length_guess`](#wordsLib.notify_on_word_length_guess)
+>>__ show_types := false;

@@ -33,7 +33,7 @@ val map_CONG = new_axiom (
   “!f g y. (!x. x IN setF y ==> f x = g x) ==> mapF f y = mapF g y”)
 
 val _ = add_rule{block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
-                 fixity = Suffix 2100, paren_style = OnlyIfNecessary,
+                 fixity = Suffix 2100, paren_style = ParoundPrec,
                  pp_elements = [TOK "ᴾ"], term_name = "UNCURRY"}
 
 val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),

@@ -127,7 +127,8 @@ fun inst_var_in_coeffs (v:string,c) coeffsl =
    then []
    else let val (const,bind) = hd coeffsl
             val ((_,coeff),bind') =
-               (remove (fn (name,_) => name = v) bind handle _ => ((v,zero),bind))
+               (remove (fn (name,_) => name = v) bind
+                handle _ => ((v,zero),bind))
         in  (const + (c * coeff),bind')::
                (inst_var_in_coeffs (v,c) (tl coeffsl))
         end

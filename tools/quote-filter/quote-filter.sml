@@ -14,6 +14,10 @@ val {instrm = instream, outstrm = outstream, interactive = intp,
 fun read _ = TextIO.input instream
 fun write s = (TextIO.output (outstream, s); TextIO.flushOut outstream)
 
+val {print = errPrint, hadError} =
+    HOLSourceParser.trackingPrint
+      (fn s => TextIO.output (TextIO.stdErr, s))
+
 val _ = if qfixp then
   quotefix.run read write
 else let
@@ -21,10 +25,10 @@ else let
   val {read = read', ...} = mkPullTranslator {
     read = read,
     filename = infilename,
-    parseError = HOLSourceParser.filelineParseError (fn s => TextIO.output (TextIO.stdErr, s)),
+    parseError = HOLSourceParser.filelineParseError errPrint,
     quietOpen = qopn }
   fun loop () = case read' () of "" => () | s => (write s; loop ())
   in loop () end
 
 val _ = callback()
-val _ = exit success
+val _ = exit (if hadError () then failure else success)

@@ -33,29 +33,10 @@ fun gen_sml_dfa r =
      final = final}
  end;
 
-val numeral_cmp_thm = Q.prove
-(`(num_cmp (NUMERAL x) (NUMERAL y) = num_cmp x y) /\
-  (num_cmp (NUMERAL x) y = num_cmp x y) /\
-  (num_cmp x (NUMERAL y) = num_cmp x y) /\
-  (num_cmp 0 n = num_cmp ZERO n) /\
-  (num_cmp n 0 = num_cmp n ZERO) /\
-  (num_cmp ZERO ZERO = Equal) /\
-  (num_cmp ZERO (BIT1 y) = Less) /\
-  (num_cmp ZERO (BIT2 y) = Less) /\
-  (num_cmp (BIT1 x) ZERO = Greater) /\
-  (num_cmp (BIT2 x) ZERO = Greater) /\
-  (num_cmp (BIT1 x) (BIT1 y) = num_cmp x y) /\
-  (num_cmp (BIT2 x) (BIT2 y) = num_cmp x y) /\
-  (num_cmp (BIT1 x) (BIT2 y) = case num_cmp x y of Greater => Greater | _ => Less) /\
-  (num_cmp (BIT2 x) (BIT1 y) = case num_cmp x y of Less => Less | _ => Greater)`,
- METIS_TAC [arithmeticTheory.NUMERAL_DEF,comparisonTheory.num_cmp_numOrd,
-            totoTheory.numeralOrd,arithmeticTheory.ALT_ZERO]);
-
 val vector_defs =
  let (* open ml_translatorTheory *)
  in [fromList_def, sub_def, length_def]
  end;
-
 
 val exec_dfa_thms = exec_dfa_def :: vector_defs;
 
@@ -112,9 +93,31 @@ fun chsets_of regexp =
 
 val alphabet_tms = map numSyntax.term_of_int (upto 0 255)
 
+(*---------------------------------------------------------------------------*)
+(* building blocks for bypassing HOL term parser when constructing inputs    *)
+(* for library functions                                                     *)
+(*---------------------------------------------------------------------------*)
+
+val charset_ty = regexpSyntax.charset_ty
+val regexp_ty  = regexpSyntax.regexp_ty
+val ordering_ty =
+    mk_thy_type{Args = [],
+                Thy = "ternaryComparisons", Tyop = "ordering"};
+val balanced_map_ty =
+    mk_thy_type{Args = [alpha,beta],
+                Thy = "balanced_map", Tyop = "balanced_map"};
+
+val charset_tyinfo  = valOf $ TypeBase.fetch charset_ty
+val regexp_tyinfo   = valOf $ TypeBase.fetch regexp_ty
+val ordering_tyinfo = valOf $ TypeBase.fetch ordering_ty
+val balanced_map_tyinfo = valOf $ TypeBase.fetch balanced_map_ty
+
 val charset_mem_tm = prim_mk_const{Name="charset_mem",Thy="charset"};
+val charset_union_tm = prim_mk_const{Name="charset_union",Thy="charset"};
 val smart_deriv_tm = prim_mk_const{Name="smart_deriv",Thy="regexp"};
 val build_or_tm    = prim_mk_const{Name="build_or",   Thy="regexp"};
+val normalize_tm   = prim_mk_const{Name="normalize",  Thy="regexp"};
+val regexp_compare_tm = prim_mk_const{Name="regexp_compare",Thy = "regexp"}
 val transitions_tm = prim_mk_const{Name="transitions",Thy="regexp_compiler"};
 
 val Empty_charset =
@@ -124,11 +127,12 @@ val DOT_charset = DOT_def |> concl |> rhs |> EVAL |> concl |> rhs |> rand
 
 val charset_mem_conv =
  let val cs_memEval =
-      let open computeLib
-          val compset = copy listLib.list_compset
-          val compset = wordsLib.add_words_compset true compset
-          val compset = add_datatype_info compset (valOf(TypeBase.fetch ``:charset``))
-          val compset = add_thms [alphabet_size_def, words4_bit_def, charset_mem_def] compset
+     let open computeLib
+         val compset = copy listLib.list_compset
+         val compset = wordsLib.add_words_compset true compset
+         val compset = add_datatype_info compset charset_tyinfo
+         val compset =
+             add_thms [alphabet_size_def, words4_bit_def, charset_mem_def] compset
       in
           computeLib.CBV_CONV compset
       end
@@ -163,7 +167,7 @@ val charset_union_conv =
         let open computeLib
             val compset = copy listLib.list_compset
             val compset = wordsLib.add_words_compset true compset
-            val compset = add_datatype_info compset (valOf(TypeBase.fetch ``:charset``))
+            val compset = add_datatype_info compset charset_tyinfo
             val compset = add_thms [charset_union_def, charset_empty_def] compset
         in
             CBV_CONV compset
@@ -181,7 +185,6 @@ val charset_union_conv =
         end
    end
 end;
-
 
 (*---------------------------------------------------------------------------*)
 (* Assumes that input tm has form "transitions r"                            *)
@@ -242,37 +245,83 @@ fun base_compset() =
      val compset = pred_setLib.add_pred_set_compset compset
      val compset = wordsLib.add_words_compset true compset
      val compset = stringLib.add_string_compset compset
-     val compset = add_datatype_info compset (valOf(TypeBase.fetch ``:ordering``))
-     val compset = add_datatype_info compset (valOf(TypeBase.fetch ``:('a,'b)balanced_map``))
-     val compset = add_datatype_info compset (valOf(TypeBase.fetch ``:charset``))
-     val compset = add_datatype_info compset (valOf(TypeBase.fetch ``:regexp``))
+     val compset = add_datatype_info compset ordering_tyinfo
+     val compset = add_datatype_info compset balanced_map_tyinfo
+     val compset = add_datatype_info compset charset_tyinfo
+     val compset = add_datatype_info compset regexp_tyinfo
      val compset = add_thms base_compute_thms compset
-     val compset = add_conv(``charset_mem``, 2, charset_mem_conv ()) compset
-     val compset = add_conv(``charset_union``, 2, charset_union_conv()) compset
-     val compset = add_conv(``transitions``, 1, transitions_conv compset) compset
+     val compset = add_conv(charset_mem_tm, 2, charset_mem_conv ()) compset
+     val compset = add_conv(charset_union_tm, 2, charset_union_conv()) compset
+     val compset = add_conv(transitions_tm, 1, transitions_conv compset) compset
  in
    compset
  end;
 
+(*---------------------------------------------------------------------------*)
+(* Programmatic construction of terms is good practice in HOL library code   *)
+(*---------------------------------------------------------------------------*)
+
+val Brzozo_tm =
+    prim_mk_const{Name = "Brzozowski", Thy = "regexp_compiler"}
+val dom_Brz_alt_tm =
+    prim_mk_const{Name = "dom_Brz_alt", Thy = "regexp_compiler"}
+val regexp_set_ty =
+    mk_thy_type{Tyop = "balanced_map",Thy = "balanced_map",
+                Args = [regexp_ty, oneSyntax.one_ty]}
+val regexp_num_map_ty =
+    mk_thy_type{Tyop = "balanced_map",Thy = "balanced_map",
+                Args = [regexp_ty, numSyntax.num]}
+val empty_regexp_set_tm =
+    mk_thy_const{Name = "empty", Thy = "balanced_map", Ty = regexp_set_ty}
+val unit_tm = oneSyntax.one_tm;
+val singleton_set_tm =
+    mk_thy_const{Name = "singleton", Thy = "balanced_map",
+     Ty = regexp_ty --> oneSyntax.one_ty --> regexp_set_ty}
+val singleton_map_tm =
+    mk_thy_const{Name = "singleton", Thy = "balanced_map",
+     Ty = regexp_ty --> numSyntax.num --> regexp_num_map_ty}
+
 fun gen_dfa_conv r =
  let val regexp_tm = regexp_to_term r
+     val norm_regexp_tm = mk_comb(normalize_tm,regexp_tm)
+          (* ``normalize ^regexp_tm`` *)
      val compset = base_compset()
      val baseEval = computeLib.CBV_CONV compset
-     val dom_Brz_alt_conv = REPEATC (time (REWR_CONV dom_Brz_alt_eqns THENC baseEval))
+     val dom_Brz_alt_conv =
+         REPEATC (time (REWR_CONV dom_Brz_alt_eqns THENC baseEval))
+
+    (* ``dom_Brz_alt empty (singleton (normalize ^regexp_tm) ())`` *)
+    val dom_Brz_tm =
+         list_mk_comb
+            (dom_Brz_alt_tm,
+             [empty_regexp_set_tm,
+              list_mk_comb (singleton_set_tm, [norm_regexp_tm, unit_tm])])
+
      val dom_Brz_thm =
          HOL_PROGRESS_MESG
            ("Proving domain property...", "---> done.")
            (fn t => EQT_ELIM (apply dom_Brz_alt_conv t))
-           ``dom_Brz_alt empty (singleton (normalize ^regexp_tm) ())``
+           dom_Brz_tm
 
      val _ = print "Compiling regexp ..."
      val exec_Brz_conv = REPEATC (time (REWR_CONV exec_Brz_def THENC baseEval))
      fun compile_regexp_conv regexp_tm =
-       let val th1 = baseEval ``normalize ^regexp_tm``
+       let val th1 = baseEval $ norm_regexp_tm
            val nr = th1 |> concl |> rhs
+           val nr_set_tm = list_mk_comb(singleton_set_tm,[nr,unit_tm])
+           val nr_map_tm = list_mk_comb(singleton_map_tm,[nr,numSyntax.zero_tm])
+           open numSyntax listSyntax pairSyntax
+           val arg3_tm =
+               list_mk_pair
+                 [term_of_int 1,
+                  nr_map_tm,
+                  mk_nil (mk_prod(num, mk_list_type (mk_prod(num,num))))]
+           val Brzozo_call_tm =
+               list_mk_comb(Brzozo_tm, [empty_regexp_set_tm, nr_set_tm, arg3_tm])
            val th2 = (PURE_REWRITE_CONV [Brzozowski_exec_Brz, MAXNUM_32_def]
                       THENC exec_Brz_conv)
-                ``Brzozowski empty (singleton ^nr ()) (1,singleton ^nr 0,[])``
+                     Brzozo_call_tm
+              (* ``Brzozowski empty (singleton ^nr ()) (1,singleton ^nr 0,[])`` *)
            val _ = print "State transitions computed; now building DFA."
        in
            compile_regexp_def
@@ -286,7 +335,18 @@ fun gen_dfa_conv r =
      val _ = print "---> done."
      val triple = rhs (concl compile_thm)
      val [t1,t2,t3] = strip_pair triple
-     val start_state_thm = baseEval ``lookup regexp_compare (normalize ^regexp_tm) ^t1``
+     val lookup_tm =
+         mk_thy_const{Name="lookup", Thy = "balanced_map",
+           Ty = (regexp_ty --> regexp_ty --> ordering_ty) -->
+                regexp_ty -->
+                regexp_num_map_ty -->
+                optionSyntax.mk_option numSyntax.num
+      (* “:(regexp -> regexp -> ordering) ->
+           regexp -> (regexp, num) balanced_map -> num option” *)
+     val init_regexp_tm =
+         list_mk_comb(lookup_tm,[regexp_compare_tm,norm_regexp_tm,t1])
+         (* ``lookup regexp_compare (normalize ^regexp_tm) ^t1`` *)
+     val start_state_thm = baseEval init_regexp_tm
      val hyps_thm = LIST_CONJ [compile_thm, start_state_thm,dom_Brz_thm]
      val thm = SIMP_RULE list_ss [fromList_Vector,ORD_BOUND,alphabet_size_def]
                        (SPEC regexp_tm Brzozowski_partial_eval_conseq)
@@ -294,6 +354,7 @@ fun gen_dfa_conv r =
  in
    (dfa_thm,hyps_thm)
  end
+ handle e => raise wrap_exn "regexpLib" "gen_dfa_conv" e
 
 fun exec_dfa_compset() =
  let open computeLib
@@ -309,7 +370,6 @@ val exec_dfa_conv = computeLib.CBV_CONV (exec_dfa_compset());
 
 val Brzozowski_partial_eval_alt =
    SIMP_RULE bool_ss [dom_Brz_alt_equal] Brzozowski_partial_eval;
-
 
 fun gen_hol_dfa r =
  let open listSyntax regexpSyntax
@@ -347,7 +407,8 @@ fun gen_hol_dfa r =
       table = Vector.fromList (map Vector.fromList itable),
       start = istart,
       final = Vector.fromList ifinal}
- end;
+ end
+ handle e => raise wrap_exn "regexpLib" "gen_hol_dfa" e
 
 datatype evaluator = HOL | SML ;
 
@@ -369,9 +430,11 @@ fun dfa_by_proof (name,r) =
      val finals_def = Define `^finals_var = ^finals`
      val table_def  = Define `^table_var = ^table`
      val start_def  = Define `^start_var = ^start`
-     val thm' = CONV_RULE (BINDER_CONV
-                  (LHS_CONV (REWRITE_CONV [GSYM finals_def, GSYM table_def, GSYM start_def])))
-                  thm
+     val thm' =
+         CONV_RULE (BINDER_CONV
+            (LHS_CONV
+              (REWRITE_CONV [GSYM finals_def, GSYM table_def, GSYM start_def])))
+          thm
      val thm'' = LIST_CONJ [thm',table_def, finals_def, start_def]
  in
    save_thm(name^"_regexp_compilation",thm'')
@@ -392,12 +455,10 @@ fun dfa_by_proof (name,r) =
 fun charset_term_elts (cs:term) =
   Regexp_Type.charset_elts (regexpSyntax.term_to_charset cs);
 
-val csvar = mk_var("cs",regexpSyntax.charset_ty);
-val regexp_chset_pat = ``regexp$regexp_lang ^(regexpSyntax.mk_chset csvar)``;
-
 fun char_tac (asl,c) =
     let val ctm = fst(dest_eq (last (strip_conj (snd (dest_exists c)))))
-    in Q.EXISTS_TAC `ORD ^ctm` >> EVAL_TAC
+        val ord_tm = stringSyntax.mk_ord ctm
+    in EXISTS_TAC ord_tm >> EVAL_TAC
     end
 
 val tactic =
@@ -407,16 +468,22 @@ val tactic =
            charsetTheory.charset_mem_def,
            charsetTheory.alphabet_size_def,EQ_IMP_THM]
     >> TRY (ntac 2 (pop_assum mp_tac)
-            >> Q.ID_SPEC_TAC `c`
+            >> ID_SPEC_TAC (mk_var("c", stringSyntax.char_ty))
             >> REPEAT (CONV_TAC (numLib.BOUNDED_FORALL_CONV EVAL))
             >> rw_tac bool_ss []
             >> NO_TAC)
     >> W char_tac;
 
+val csvar =  mk_var("cs",regexpSyntax.charset_ty)
+
+val regexp_chset_pat =
+    mk_comb (prim_mk_const {Name = "regexp_lang", Thy = "regexp"},
+             regexpSyntax.mk_chset csvar)
+
 fun charset_conv tm =
  case total (match_term regexp_chset_pat) tm
   of NONE => raise ERR "charset_conv"
-                    "expected ``regexp_lang (Chset cs)`` term"
+                       "expected \"regexp_lang (Chset cs)\" term"
   | SOME (theta, _) =>
      let open pred_setSyntax
          val chars = charset_term_elts (subst theta csvar)
@@ -426,6 +493,7 @@ fun charset_conv tm =
   in
      prove(the_goal,tactic)
   end
+  handle e => raise wrap_exn "regexpLib" "charset_conv" e
 
 val charset_conv_ss =
   simpLib.std_conv_ss

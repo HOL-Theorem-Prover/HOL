@@ -1,0 +1,40 @@
+[book]
+title = "HOL: Developers"
+authors = ["The HOL Development Team"]
+language = "en"
+src = "."
+# `description` is read by Manual/Tools/gen_lander when generating
+# the top-level Manual/book/index.html; mdbook itself ignores it.
+description = "Documentation for developing HOL4 itself: building and configuring the system, and assorted internals."
+
+[output.html]
+mathjax-support = true
+theme = "../theme"
+additional-css = ["custom.css"]
+# See Manual/Description/book.toml for the smart-punctuation rationale.
+smart-punctuation = false
+# Cross-book search; see Manual/Description/book.toml for the
+# additional-js / symlink rationale.
+additional-js = ["hol-searcher.js"]
+
+[output.html.fold]
+enable = true
+level = 0
+
+# These chapters are hand-authored Markdown (not .smd) and use none
+# of the .smd LaTeX-command conventions, so run smdpp in
+# --plain-markdown mode: it drops the pandoc YAML frontmatter, runs
+# protectMath and the leak/ref/link checks, but skips loading the HOL
+# heap *and* the \index/\label/\ref/\refentry/\cite rewriters.  That
+# last part matters for manual-authoring.md, which documents the .smd
+# pipeline using literal `\ref{}`/`\label{}` examples inside code
+# spans that the (non-code-aware) rewriters would otherwise eat.
+[preprocessor.smdpp]
+command = "../Tools/smdpp --plain-markdown"
+renderers = ["html"]
+
+[build]
+# Outside the source directory so mdbook serve's watcher doesn't loop
+# rebuilding on its own output.
+build-dir = "../book/Developers"
+create-missing = false

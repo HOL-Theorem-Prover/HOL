@@ -1,0 +1,9 @@
+# Produces labels.tsv via a simple shell recipe.  The recipe uses
+# `../tools/echo' to verify that the recipe runs with cwd = tutorial
+# (so `..' resolves to cross_dir_rule/, not to the sibling that
+# referenced this file).
+
+labels.tsv:
+	echo "tutorial-label" > $@
+
+EXTRA_CLEANS = labels.tsv

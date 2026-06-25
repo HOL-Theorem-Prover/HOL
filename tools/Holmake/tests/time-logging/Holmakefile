@@ -20,4 +20,7 @@ badlog:
 
 
 
-EXTRA_CLEANS = goodlog badlog
+# The good/ and bad/ subdir builds are driven inline (not via INCLUDES)
+# so build cleanAll doesn't recurse there.  List their .hol/ trees so
+# build cleanAll removes them.
+EXTRA_CLEANS = goodlog badlog bad/.hol/ good/.hol/

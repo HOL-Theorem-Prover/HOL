@@ -1,0 +1,33 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `int_to_string`
+
+``` hol4
+Lib.int_to_string : int -> string
+```
+
+------------------------------------------------------------------------
+
+Translates an integer into a string.
+
+An application `int_to_string i` returns the printable form of `i`.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>> int_to_string 12323;
+
+>> int_to_string ~1;
+```
+
+### Comments
+
+Equivalent functionality can be found in the Standard ML Basis Library
+function `Int.toString`.
+
+### See also
+
+[`Lib.string_to_int`](#Lib.string_to_int)

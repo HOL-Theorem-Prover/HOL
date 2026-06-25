@@ -153,10 +153,10 @@ Proof
 QED
 
 Theorem GCD_ADD_R:
-                        !a b. gcd a (a+b) = gcd a b
+  !a b. gcd a (a+b) = gcd a b
 Proof
-                        ARW[] THEN MATCH_MP_TAC (SPECL[Term `a:num`, Term `a+b`] IS_GCD_UNIQUE)
-                        THEN ARW[GCD_IS_GCD,SPECL [Term `a:num`, Term `a+b`] IS_GCD_MINUS_R]
+  ARW[] THEN MATCH_MP_TAC (SPECL[Term `a:num`, Term `a+b`] IS_GCD_UNIQUE)
+  THEN ARW[GCD_IS_GCD,SPECL [Term `a:num`, Term `a+b`] IS_GCD_MINUS_R]
 QED
 
 Theorem GCD_ADD_R_THM[simp] =
@@ -545,7 +545,6 @@ QED
 (* Basic GCD, LCM Theorems (from examples/algebra)                           *)
 (* ------------------------------------------------------------------------- *)
 
-(* Theorem: If 0 < n, 0 < m, let g = gcd n m, then 0 < g and n MOD g = 0 and m MOD g = 0 *)
 (* Proof:
    0 < n ==> n <> 0, 0 < m ==> m <> 0,              by NOT_ZERO_LT_ZERO
    hence  g = gcd n m <> 0, or 0 < g.               by GCD_EQ_0
@@ -553,7 +552,8 @@ QED
                ==> (n MOD g = 0) /\ (m MOD g = 0)   by DIVIDES_MOD_0
 *)
 Theorem GCD_DIVIDES:
-    !m n. 0 < n /\ 0 < m ==> 0 < gcd n m /\ (n MOD (gcd n m) = 0) /\ (m MOD (gcd n m) = 0)
+  !m n. 0 < n /\ 0 < m ==>
+        0 < gcd n m /\ (n MOD (gcd n m) = 0) /\ (m MOD (gcd n m) = 0)
 Proof
   ntac 3 strip_tac >>
   conj_asm1_tac >-
@@ -611,7 +611,8 @@ Proof
 QED
 
 (* temporarily make divides an infix *)
-val _ = temp_set_fixity "divides" (Infixl 480); (* relation is 450, +/- is 500, * is 600. *)
+val _ = temp_set_fixity "divides" (Infixl 480);
+           (* relation is 450, +/- is 500, * is 600. *)
 
 (* Theorem: m divides (lcm m n) /\ n divides (lcm m n) *)
 (* Proof: by LCM_IS_LEAST_COMMON_MULTIPLE *)
@@ -673,14 +674,10 @@ QED
 (* Theorem: a divides n /\ b divides n ==> (lcm a b) divides n *)
 (* Proof: same as LCM_IS_LCM *)
 Theorem LCM_DIVIDES:
-    !n a b. a divides n /\ b divides n ==> (lcm a b) divides n
+  !n a b. a divides n /\ b divides n ==> (lcm a b) divides n
 Proof
   rw[LCM_IS_LCM]
 QED
-(*
-> LCM_IS_LCM |> ISPEC ``a:num`` |> ISPEC ``b:num`` |> ISPEC ``n:num`` |> GEN_ALL;
-val it = |- !n b a. a divides n /\ b divides n ==> lcm a b divides n: thm
-*)
 
 (* Theorem: 0 < m \/ 0 < n ==> 0 < gcd m n *)
 (* Proof: by GCD_EQ_0, NOT_ZERO_LT_ZERO *)
@@ -770,7 +767,8 @@ Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   metis_tac[ZERO_DIVIDES, LCM_0] >>
-  metis_tac[GCD_LCM, MULT_LEFT_CANCEL, MULT_RIGHT_CANCEL, divides_iff_gcd_fix, ALL_DIVIDES_0]
+  metis_tac[GCD_LCM, MULT_LEFT_CANCEL, MULT_RIGHT_CANCEL, divides_iff_gcd_fix,
+            ALL_DIVIDES_0]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -807,8 +805,6 @@ Proof
   metis_tac[GCD_EFFICIENTLY, GCD_SYM]
 QED
 
-(* Theorem: (c = gcd a b) <=>
-            c divides a /\ c divides b /\ !x. x divides a /\ x divides b ==> x divides c *)
 (* Proof:
    By GCD_IS_GREATEST_COMMON_DIVISOR
        (gcd a b) divides a     [1]
@@ -820,8 +816,9 @@ QED
    Therefore c = gcd a b         by DIVIDES_ANTISYM
 *)
 Theorem GCD_PROPERTY:
-    !a b c. (c = gcd a b) <=>
-   c divides a /\ c divides b /\ !x. x divides a /\ x divides b ==> x divides c
+  !a b c.
+    c = gcd a b ⇔
+      c divides a ∧ c divides b ∧ ∀x. x divides a ∧ x divides b ⇒ x divides c
 Proof
   rw[GCD_IS_GREATEST_COMMON_DIVISOR, DIVIDES_ANTISYM, EQ_IMP_THM]
 QED
@@ -874,8 +871,6 @@ Proof
   metis_tac[GCD_ASSOC, GCD_SYM]
 QED
 
-(* Theorem: (c = lcm a b) <=>
-            a divides c /\ b divides c /\ !x. a divides x /\ b divides x ==> c divides x *)
 (* Proof:
    By LCM_IS_LEAST_COMMON_MULTIPLE
        a divides (lcm a b)    [1]
@@ -887,8 +882,9 @@ QED
    Therefore c = lcm a b         by DIVIDES_ANTISYM
 *)
 Theorem LCM_PROPERTY:
-    !a b c. (c = lcm a b) <=>
-   a divides c /\ b divides c /\ !x. a divides x /\ b divides x ==> c divides x
+  ∀a b c.
+    c = lcm a b ⇔
+      a divides c ∧ b divides c ∧ ∀x. a divides x ∧ b divides x ⇒ c divides x
 Proof
   rw[LCM_IS_LEAST_COMMON_MULTIPLE, DIVIDES_ANTISYM, EQ_IMP_THM]
 QED
@@ -982,9 +978,13 @@ QED
      If n = 0, b ** 0 = 1   by EXP
      Hence true.
      If n <> 0, 0 < n,
-     If part: a divides b /\ 0 < n ==> (a divides b <=> a divides (b ** n)) ==> a divides (b ** n)
+     If part: a divides b /\ 0 < n ==>
+              (a divides b <=> a divides (b ** n)) ==>
+              a divides (b ** n)
        True by DIVIDES_MULT.
-     Only-if part: a divides (b * b ** n) /\ 0 < n ==> (a divides b <=> a divides (b ** n)) ==> a divides (b ** n)
+     Only-if part: a divides (b * b ** n) /\ 0 < n ==>
+                   (a divides b <=> a divides (b ** n)) ==>
+                   a divides (b ** n)
        Since prime a, a divides b, or a divides (b ** n)  by P_EUCLIDES
        Either case is true.
 *)
@@ -1277,7 +1277,7 @@ QED
    But coprime n k means gcd n k = 1, so k <> 0.
    By contradiction.
    If p divides k, and given p divides n,
-   then p divides gcd n k = 1   by GCD_IS_GREATEST_COMMON_DIVISOR, n <> 0 and k <> 0
+   then p divides gcd n k = 1   by GCD_IS_GREATEST_COMMON_DIVISOR, n≠0 and k≠0
    or   p = 1                   by DIVIDES_ONE
    which contradicts 1 < p.
 *)
@@ -1294,7 +1294,8 @@ QED
    Let d = gcd m k.
    Then d divides m /\ d divides k    by GCD_IS_GREATEST_COMMON_DIVISOR
     ==> d divides n                   by DIVIDES_TRANS
-     so d divides 1                   by GCD_IS_GREATEST_COMMON_DIVISOR, coprime n k
+     so d divides 1                   by GCD_IS_GREATEST_COMMON_DIVISOR,
+                                         coprime n k
     ==> d = 1                         by DIVIDES_ONE
 *)
 Theorem coprime_factor_coprime:
@@ -1361,7 +1362,6 @@ Proof
   metis_tac[prime_not_divides_coprime]
 QED
 
-(* Theorem: 1 < n /\ prime p /\ p divides n ==> !k. coprime n k ==> coprime p k *)
 (* Proof:
    Since coprime n k /\ p divides n
      ==> ~(p divides k)               by coprime_factor_not_divides
@@ -1387,7 +1387,8 @@ coprime_factor_coprime
       By contradiction, suppose p divides m /\ p divides n.
       Then p = 1                   by coprime_common_factor
       This contradicts prime p     by NOT_PRIME_1
-   Only-if part: !p. prime p ==> ~(p divides m) \/ ~(p divides m) ==> coprime m n
+   Only-if part:
+     !p. prime p ==> ~(p divides m) \/ ~(p divides m) ==> coprime m n
       Let d = gcd m n.
       By contradiction, suppose d <> 1.
       Then ?p. prime p /\ p divides d    by PRIME_FACTOR, d <> 1.
@@ -1407,7 +1408,8 @@ Proof
   metis_tac[DIVIDES_TRANS]
 QED
 
-(* Idea: coprime_by_prime_factor with reduced testing of primes, useful in practice. *)
+(* Idea: coprime_by_prime_factor with reduced testing of primes, useful in
+   practice. *)
 
 (* Theorem: 0 < m /\ 0 < n ==>
            (coprime m n <=>
@@ -1417,7 +1419,8 @@ QED
       By contradiction, suppose p divides m /\ p divides n.
       Then p = 1                   by coprime_common_factor
       This contradicts prime p     by NOT_PRIME_1
-   Only-if part: !p. prime p /\ p <= m /\ p <= n ==> ~(p divides m) \/ ~(p divides m) ==> coprime m n
+   Only-if part: !p. prime p /\ p <= m /\ p <= n ==>
+                     ~(p divides m) \/ ~(p divides m) ==> coprime m n
       Let d = gcd m n.
       By contradiction, suppose d <> 1.
       Then ?p. prime p /\ p divides d    by PRIME_FACTOR, d <> 1.
@@ -1500,7 +1503,8 @@ QED
    = gcd m n                        by MULT_RIGHT_1
 
    Simple proof of GCD_CANCEL_MULT:
-   (a*c, b) = (a*c , b*1) = (a * c, b * (c, 1)) = (a * c, b * c, b) = ((a, b) * c, b) = (c, b) since (a,b) = 1.
+   (a*c, b) = (a*c , b*1) = (a * c, b * (c, 1)) = (a * c, b * c, b) =
+   ((a, b) * c, b) = (c, b) since (a,b) = 1.
 *)
 Theorem gcd_coprime_cancel[allow_rebind]:
   !m n p. coprime p n ==> (gcd (p * m) n = gcd m n)
@@ -1654,7 +1658,8 @@ Proof
   `?g. g = gcd n k` by rw[] >>
   `n <> 0 /\ q*n + 1 <> 0` by decide_tac >>
   `k <> 0` by metis_tac[MULT_EQ_0] >>
-  `0 < g /\ (n MOD g = 0) /\ (k MOD g = 0)` by metis_tac[GCD_DIVIDES, NOT_ZERO_LT_ZERO] >>
+  `0 < g /\ (n MOD g = 0) /\ (k MOD g = 0)`
+    by metis_tac[GCD_DIVIDES, NOT_ZERO_LT_ZERO] >>
   `g divides n /\ g divides k` by rw[DIVIDES_MOD_0] >>
   `g divides (n * q) /\ g divides (k*x)` by rw[DIVIDES_MULT] >>
   `g divides (n * q + 1)` by metis_tac [MULT_COMM] >>
@@ -1682,7 +1687,8 @@ Proof
   `_ = k * ((gcd m n) * lcm (k * m) (k * n))` by rw_tac arith_ss[] >>
   Cases_on `k = 0` >-
   rw[] >>
-  `(gcd m n) * lcm (k * m) (k * n) = k * (m * n)` by metis_tac[MULT_LEFT_CANCEL] >>
+  `(gcd m n) * lcm (k * m) (k * n) = k * (m * n)`
+    by metis_tac[MULT_LEFT_CANCEL] >>
   `_ = k * ((gcd m n) * (lcm m n))` by rw_tac std_ss[GCD_LCM] >>
   `_ = (gcd m n) * (k * (lcm m n))` by rw_tac arith_ss[] >>
   Cases_on `n = 0` >-
@@ -1831,8 +1837,10 @@ Proof
   ]
 QED
 
-(* Theorem: [Euclid's Lemma] A prime a divides product iff the prime a divides factor.
-            [in MOD notation] For prime p, x*y MOD p = 0 <=> x MOD p = 0 or y MOD p = 0 *)
+(* Theorem:
+     [Euclid's Lemma] A prime a divides product iff the prime a divides factor.
+     [in MOD notation] For prime p, x*y MOD p = 0 <=> x MOD p = 0 or y MOD p = 0
+*)
 (* Proof:
    The if part is already in P_EUCLIDES:
    !p a b. prime p /\ divides p (a * b) ==> p divides a \/ p divides b

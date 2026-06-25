@@ -1,13 +1,25 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+EXTRA_CLEANS = selftest.exe relation-selftest.log
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
-all: $(TARGETS)
+all: $(TARGETS) selftest.exe
 .PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
 
 ifeq ($(KERNELID),otknl)
 all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 
 relation.art: relation.otd
 
+endif
+
+ifdef HOLSELFTESTLEVEL
+all: relation-selftest.log
+
+relation-selftest.log: selftest.exe
+	$(tee ./$<,$@)
 endif

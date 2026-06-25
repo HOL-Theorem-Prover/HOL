@@ -448,7 +448,8 @@ fun one_line_ify heuristic def =
       val ((f,args1),rhs1) = hd fs_args
       val _ = List.all (aconv f o #1 o #1) fs_args orelse
               raise ERR "one_line_ify"
-                    "Clauses defining more than one function/same fn at different types"
+                    "Clauses defining more than one function/same fn \
+                    \at different types"
       fun rowfoldthis i arg (A as (patcols,patfvs)) =
           if is_var arg then A
           else (HOLset.add(patcols,i), FVL [arg] patfvs)
@@ -625,10 +626,11 @@ fun LIST_HALF_MK_ABS th =
 
 local
 fun get_locn (locn.Loc_Near loc) = get_locn loc
-  | get_locn (locn.Loc (locn.LocA start, locn.LocA (l,c))) = SOME (start, (l,c+1))
+  | get_locn (locn.Loc (locn.LocA start, locn.LocA (l,c))) = SOME(start,(l,c+1))
   | get_locn _ = NONE
 
-datatype preterm_or_pretype = PTM of Preterm.preterm list * Preterm.preterm | PTY of Pretype.pretype
+datatype preterm_or_pretype = PTM of Preterm.preterm list * Preterm.preterm
+                            | PTY of Pretype.pretype
 
 fun leLC (l,c) (l',c') = l <= l' andalso (l <> l' orelse c <= c')
 fun fixup a NONE = a
@@ -644,7 +646,8 @@ fun navigateTo lines startTarget endTarget = let
       else fail ()
     | _ => fail ()
   and navigateToTys [] fail = fail ()
-    | navigateToTys (ty::tys) fail = navigateToTy ty (fn () => navigateToTys tys fail)
+    | navigateToTys (ty::tys) fail =
+        navigateToTy ty (fn () => navigateToTys tys fail)
   and navigateToTyCore pos ty =
     fixup (pos, PTY ty) (case ty of
       Pretype.Tyop {Args,...} => navigateToTys Args (fn () => NONE)
@@ -694,7 +697,9 @@ fun gotoDefinition tag ({lines, plugins, fromFileLine, ...}, target) = let
   | SOME ds => ds
   val out = case navigateTo lines target target ds of
     SOME ((loc, PTY ty), env) => let
-    val ty = case Pretype.toTypeM ty env of errormonad.Some (_, ty) => ty | _ => raise Empty
+    val ty = case Pretype.toTypeM ty env of
+                 errormonad.Some (_, ty) => ty
+               | _ => raise Empty
     val {Thy, Tyop, ...} = Type.dest_thy_type ty
     (* TODO *)
     val _ = (loc, Thy, Tyop)
@@ -709,7 +714,8 @@ fun gotoDefinition tag ({lines, plugins, fromFileLine, ...}, target) = let
           errormonad.Some (_, tm) =>
           if term_eq tm hd then
             case get_locn (Preterm.locn bv) of
-              SOME tgt => [{uri = NONE, origin = SOME loc, range = tgt, selRange = tgt}]
+              SOME tgt =>
+                [{uri = NONE, origin = SOME loc, range = tgt, selRange = tgt}]
             | _ => []
           else findVar bvs
         | _ => findVar bvs
@@ -746,8 +752,12 @@ fun hover tag ({lines, plugins, ppToString, ...}, (start, stop)) = let
     val typp = Parse.pp_type_without_colon (type_of tm)
     val tmpp = with_flag (Globals.max_print_depth, 4) Parse.pp_term tm
     open HOLPP
-    in PrettyBlock(0, true, [], [tmpp, PrettyString ":", PrettyBreak(1, 2), typp]) end
-  val s = with_flag (Parse.current_backend, PPBackEnd.raw_terminal) (ppToString o f) ()
+  in
+    PrettyBlock(0, true, [], [tmpp, PrettyString ":", PrettyBreak(1, 2), typp])
+  end
+  val s =
+      with_flag (Parse.current_backend, PPBackEnd.raw_terminal)
+                (ppToString o f) ()
   in [{range = SOME range, markdown = s}] end
   handle HOL_ERR _ => [] | Empty => []
 
@@ -763,8 +773,10 @@ val _ = LSPExtension.fixupTheoremLink := (fn {uri, text, start, stop} => let
   val basename = String.extract (uri, lastIndexOf #"/" uri + 1, NONE)
   val stem = String.extract (basename, 0, SOME (lastIndexOf #"." basename))
   in
-    if 6 <= size stem andalso String.extract (stem, size stem - 6, NONE) = "Theory" then
-      case DB.lookup {Name = id, Thy = String.extract (stem, 0, SOME (size stem - 6))} of
+    if 6 <= size stem andalso
+       String.extract (stem, size stem - 6, NONE) = "Theory"
+    then
+      case DB.lookup{Name=id, Thy=String.extract(stem,0,SOME(size stem - 6))} of
         SOME (_, {loc = DB.Located {scriptpath, linenum, ...}, ...}) =>
         SOME {file = holpathdb.subst_pathvars scriptpath, line = linenum - 1}
       | _ => NONE
@@ -774,8 +786,11 @@ val _ = LSPExtension.fixupTheoremLink := (fn {uri, text, start, stop} => let
 val _ = LSPExtension.registerPlugin true {
   name = "DefnBase",
   init = fn tag => (
-    Listener.add_listener Preterm.typecheck_listener ("LSP", lspTypecheckListener)
-    handle HOL_ERR _ => !WARNING_outstream "<<warning: failed to add typecheck listener>>\n";
+    Listener.add_listener
+      Preterm.typecheck_listener
+      ("LSP", lspTypecheckListener)
+      handle HOL_ERR _ =>
+        !WARNING_outstream "<<warning: failed to add typecheck listener>>\n";
     LSPExtension.gotoDefinition := gotoDefinition tag;
     LSPExtension.hover := hover tag),
   beforeCompile = fn () => ThreadLocal.set (checkLog, []),

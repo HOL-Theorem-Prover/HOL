@@ -402,31 +402,31 @@ fun ONE_PASS_SORT_CONV tm =
   then ((RAND_CONV ONE_PASS_SORT_CONV) THENC
         (fn tm' =>
           let val (tm1,tm2) = dest_plus tm'
-          in  if (is_plus tm2) then
-                 (let val tm2' = arg1 tm2
-                  in  if ((is_num_const tm1) andalso (is_num_const tm2')) then
-                         IN_LINE_SUM_CONV ADD_CONV tm'
-                      else if (is_num_const tm1) then ALL_CONV tm'
-                      else if (is_num_const tm2') then
-                         IN_LINE_SUM_CONV ADD_SYM_CONV tm'
-                      else let val name1 = var_of_prod tm1
-                               and name2 = var_of_prod tm2'
-                           in  if (name1 = name2) then
-                                  IN_LINE_SUM_CONV GATHER_CONV tm'
-                               else if (name2 << name1) then
-                                  IN_LINE_SUM_CONV ADD_SYM_CONV tm'
-                               else ALL_CONV tm'
-                           end
-                  end)
-              else if ((is_num_const tm1) andalso (is_num_const tm2)) then ADD_CONV tm'
-              else if (is_num_const tm1) then ALL_CONV tm'
-              else if (is_num_const tm2) then ADD_SYM_CONV tm'
-              else let val name1 = var_of_prod tm1
-                       and name2 = var_of_prod tm2
-                   in  if (name1 = name2) then GATHER_CONV tm'
-                       else if (name2 << name1) then ADD_SYM_CONV tm'
-                       else ALL_CONV tm'
-                   end
+          in if (is_plus tm2) then
+                (let val tm2' = arg1 tm2
+                 in  if ((is_num_const tm1) andalso (is_num_const tm2')) then
+                        IN_LINE_SUM_CONV ADD_CONV tm'
+                     else if (is_num_const tm1) then ALL_CONV tm'
+                     else if (is_num_const tm2') then
+                        IN_LINE_SUM_CONV ADD_SYM_CONV tm'
+                     else let val name1 = var_of_prod tm1
+                              and name2 = var_of_prod tm2'
+                          in  if (name1 = name2) then
+                                 IN_LINE_SUM_CONV GATHER_CONV tm'
+                              else if (name2 << name1) then
+                                 IN_LINE_SUM_CONV ADD_SYM_CONV tm'
+                              else ALL_CONV tm'
+                          end
+                 end)
+             else if is_num_const tm1 andalso is_num_const tm2 then ADD_CONV tm'
+             else if (is_num_const tm1) then ALL_CONV tm'
+             else if (is_num_const tm2) then ADD_SYM_CONV tm'
+             else let val name1 = var_of_prod tm1
+                      and name2 = var_of_prod tm2
+                  in  if (name1 = name2) then GATHER_CONV tm'
+                      else if (name2 << name1) then ADD_SYM_CONV tm'
+                      else ALL_CONV tm'
+                  end
           end)) tm
   else ALL_CONV tm
  ) handle (Feedback.HOL_ERR _) => failwith "ONE_PASS_SORT_CONV";

@@ -106,6 +106,10 @@ sig
 
   val unique_tmp_suffix : unit -> string
 
+  (* Save a Poly/ML heap (child of the currently-loaded state) to the
+     given path.  A no-op under Moscow ML. *)
+  val save_heap : string -> unit
+
   val assoc1 : ''a -> (''a * 'b) list -> (''a * 'b) option
   val assoc2 : ''a -> ('b * ''a) list -> ('b * ''a) option
 
@@ -251,6 +255,10 @@ sig
 
   type 'a quotation = 'a HOLPP.quotation
   val pprint : 'a HOLPP.pprinter -> 'a -> unit
+  (* Outstream used by `pprint`.  Defaults to `TextIO.print`; clients
+     that want pprint's output captured (e.g. polyscripter) can rebind
+     this ref. *)
+  val pprint_outstream : (string -> unit) ref
   val norm_quote : 'a quotation -> 'a quotation
   val quote_to_string : ('a -> string) -> 'a quotation -> string
   val quote_to_string_list : string quotation -> string list

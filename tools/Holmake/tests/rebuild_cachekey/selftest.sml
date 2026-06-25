@@ -12,13 +12,19 @@ val holstate_args =
       ["--holstate", Globals.HOLDIR ++ "bin" ++ "hol.state0"]
     else []
 
+(* These scenarios exercise the cachekey-based rebuild decision, which
+   is opt-in: pass --use-cache so the strategy actually fires.  A
+   later --rebuild=mtime (scenario 5) still overrides as expected. *)
+val cache_args = ["--use-cache"]
+
 fun run_holmake args =
-    Systeml.systeml ([Holmake] @ holstate_args @ args)
+    Systeml.systeml ([Holmake] @ holstate_args @ cache_args @ args)
 
 fun run_holmake_out args =
     let val tmp = OS.FileSys.tmpName ()
         val res = Systeml.systeml_out {outfile = tmp}
-                                      ([Holmake] @ holstate_args @ args)
+                                      ([Holmake] @ holstate_args @
+                                       cache_args @ args)
     in
       OS.FileSys.remove tmp handle OS.SysErr _ => ();
       res

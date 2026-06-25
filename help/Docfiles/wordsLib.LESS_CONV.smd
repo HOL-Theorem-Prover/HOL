@@ -1,0 +1,20 @@
+>>__ load "wordsLib"; Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"};
+## `LESS_CONV`
+
+``` hol4
+wordsLib.LESS_CONV : conv
+```
+
+------------------------------------------------------------------------
+
+Converts terms of the form `n < m` into
+`(n = m - 1) \/ ... \/ (n = 1) \/ (n = 0)`, provided that `m` is a
+natural number literal.
+
+### Example
+
+``` hol4
+>>__ load "wordsLib";
+
+>>+ wordsLib.LESS_CONV “n < 4n”;
+```

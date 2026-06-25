@@ -1,0 +1,9 @@
+# Has a dependency on the sibling tutorial's labels.tsv.  Pre-fix
+# Holmake didn't know how to build `../tutorial/labels.tsv' because
+# rule lookup was scoped to cwd's (= description's) Holmakefile only.
+
+out.txt: ../tutorial/labels.tsv
+	cat $< > $@
+	echo "consumed by description" >> $@
+
+EXTRA_CLEANS = out.txt

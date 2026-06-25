@@ -14,6 +14,16 @@ struct
  | UpdBinding of string * {thm:Thm.thm, old: thminfo, new:thminfo}
  | DelBinding of string
 
+(* Events whose effect on a downstream "is this stored delta still
+   up-to-date?" scan is wholly explained by KernelSig.retire_epoch.
+   Listeners that only care about retire-state can skip a scan on such
+   an event when the epoch is unchanged since their last scan. *)
+fun retire_memoable (NewConstant _) = true
+  | retire_memoable (NewTypeOp _) = true
+  | retire_memoable (DelConstant _) = true
+  | retire_memoable (DelTypeOp _) = true
+  | retire_memoable _ = false
+
 local
   fun ksOp opnm ks = opnm ^ "(" ^ KernelSig.name_toString ks ^ ")"
   fun sOp opnm s = opnm ^ "(" ^ s ^ ")"

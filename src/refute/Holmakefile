@@ -1,3 +1,4 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
 selftest.exe: selftest.uo refuteLib.uo Canon.uo AC.uo
 	$(HOLMOSMLC) -o $@ $<
 

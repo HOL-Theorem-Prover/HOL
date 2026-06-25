@@ -9,6 +9,8 @@ src/q
 src/combin
 src/lite
 src/refute
+[poly]src/simp/src/poly
+[mosml]src/simp/src/mosml
 src/simp/src
 src/metis
 src/meson/src

@@ -1,3 +1,4 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
 EXTRA_CLEANS = selftest.exe arith-selftest.log
 BOOLLIB = $(dprot $(SIGOBJ)/boolLib.ui)
 NUMTHY = $(dprot $(SIGOBJ)/numeralTheory.uo)

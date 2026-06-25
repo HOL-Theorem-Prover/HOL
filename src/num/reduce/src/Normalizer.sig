@@ -33,8 +33,8 @@ sig
   |- (!x:'a. neg x = (neg r1) * x) /\
      (!x y. sub x y = add x ((neg r1) mul y))
 
-    - is_semiring_constant tests if a term is a literal numeral. For :num, it can
-      be numSyntax.is_numeral
+    - is_semiring_constant tests if a term is a literal numeral. For :num, it
+      can be numSyntax.is_numeral
 
      (NOTE: is_semiring_constant (neg r1) is expected to return true when "rth"
             is provided.)
@@ -43,10 +43,11 @@ sig
 
     - SEMIRING_ADD_CONV, SEMIRING_MUL_CONV and SEMIRING_POW_CONV are conversions
       that simplifies ‘add’, ‘mul’ and ‘pow’ of literal numerals (one-step). For
-      :num, they can be ADD_CONV, MULT_CONV and EXP_CONV of reduceLib (or Arithconv).
+      :num, they can be ADD_CONV, MULT_CONV and EXP_CONV of reduceLib (or
+      Arithconv).
 
-      SEMIRING_NORMALIZERS_CONV returns 6 conversions correspoding to the following
-      simplification tasks: (the last one subsumes the other five.)
+      SEMIRING_NORMALIZERS_CONV returns 6 conversions correspoding to the
+      following simplification tasks: (the last one subsumes the other five.)
 
       POLYNOMIAL_NEG_CONV,
       POLYNOMIAL_ADD_CONV,
@@ -56,7 +57,8 @@ sig
       POLYNOMIAL_CONV
     *)
    val SEMIRING_NORMALIZERS_CONV :
-       thm -> thm -> (term -> bool) * conv * conv * conv -> (term -> term -> bool) ->
+       thm -> thm -> (term -> bool) * conv * conv * conv ->
+       (term -> term -> bool) ->
        conv * conv * conv * conv * conv * conv;
 
    (* Sample application of SEMIRING_NORMALIZERS_CONV for :num *)

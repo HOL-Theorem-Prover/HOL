@@ -1,12 +1,14 @@
 ifneq($(OS),winNT)
 
-INCLUDES = $(HOLDIR)/tools/unicode-grep
+INCLUDES = $(HOLDIR)/tools/h4pedant
 CLINE_OPTIONS = --no_overlay
+ifdef POLY
+CLINE_OPTIONS += --poly_not_hol
+endif
 
 .PHONY: all
 
-all: $(dprot $(HOLDIR)/tools/unicode-grep/unicode-grep)
-	$(protect $(HOLDIR)/tools/unicode-grep/unicode-grep) --nolinelen -u $(protect $(HOLDIR)/src) $(protect $(HOLDIR)/help/Docfiles)
-	$(protect $(HOLDIR)/tools/unicode-grep/unicode-grep) --nolinelen -u $(protect $(HOLDIR)/examples)
+all: $(dprot $(HOLDIR)/tools/h4pedant/h4pedant)
+	$(protect $(HOLDIR)/tools/h4pedant/h4pedant)
 
 endif

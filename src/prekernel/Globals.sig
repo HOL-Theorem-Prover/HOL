@@ -22,7 +22,7 @@ sig
   val thm_pp_prefix           : string ref
   val thm_pp_suffix           : string ref
   val goal_line               : string ref
-  val old                     : string -> string
+  val oldify                  : int -> string -> string
   val pp_flags                : {show_types         : bool ref,
                                  show_numeral_types : bool ref}
 
@@ -34,6 +34,7 @@ sig
 
   val interactive             : bool ref
   val print_thy_loads         : bool ref
+  val dumpheap_on_failure     : bool ref
 
   val hol_clock               : Timer.cpu_timer
   val emitMLDir               : string ref

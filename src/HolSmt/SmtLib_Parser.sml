@@ -637,14 +637,13 @@ in
      terms, respectively, declared in the benchmark, and a list of
      "assert"ed formulae *)
 
-  (* FIXME: We only parse "set-logic", "declare-sort", "declare-fun",
-            "define-fun" and "assert" commands.  We ignore some and
-            disallow most other SMT-LIB 2 commands.  We do NOT perform
-            assertion stack management (cf. "push"/"pop" in the
-            SMT-LIB 2 standard).  Our implementation, although
-            oversimplified, happens to work for most benchmarks
-            currently (as of 2011-05-20) found in the SMT-LIB
-            library. *)
+  (* This parser handles a restricted subset of SMT-LIB 2.  Recognised
+     commands: set-info (content discarded), set-logic, declare-sort,
+     declare-const, declare-fun, define-fun, assert, check-sat (no
+     answer produced), get-proof (no proof produced), and exit.  Any
+     other command is rejected with "unknown command".  Assertion
+     stack management ("push"/"pop" in the SMT-LIB 2 standard) is
+     not supported. *)
 
   fun parse_file (path : string)
     : string * Type.hol_type dict * Term.term dict * Term.term list =

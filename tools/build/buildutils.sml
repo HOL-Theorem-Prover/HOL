@@ -21,6 +21,18 @@ fun quote s = String.concat["\"", s, "\""];
 
 fun safedelete s = HOLFileSys.remove s handle OS.SysErr _ => ()
 
+fun extract_cache_args argv =
+  let
+    fun loop acc [] = List.rev acc
+      | loop acc ("--no-cache" :: rest) = loop ("--no-cache" :: acc) rest
+      | loop acc ("--use-cache" :: rest) = loop ("--use-cache" :: acc) rest
+      | loop acc ("--cache-dir" :: v :: rest) =
+          loop (v :: "--cache-dir" :: acc) rest
+      | loop acc (a :: rest) =
+          if String.isPrefix "--cache-dir=" a then loop (a :: acc) rest
+          else loop acc rest
+  in loop [] argv end
+
 (* message emission *)
 fun die s =
     let open TextIO
@@ -303,6 +315,17 @@ fun write_kernelid s =
     TextIO.closeOut strm
   end handle IO.Io _ => die "Couldn't write kernelid to HOLDIR"
 
+fun read_kernelid () =
+  let
+    val strm = TextIO.openIn Holmake_tools.kernelid_fname
+    val s = case TextIO.inputLine strm of
+                NONE => ""
+              | SOME s => hd (String.tokens Char.isSpace s)
+                          handle Empty => ""
+  in
+    s before TextIO.closeIn strm
+  end handle IO.Io _ => ""
+
 fun cline_die s = die ("Command line option error: " ^ s)
 fun apply_updates l t =
   case l of
@@ -354,27 +377,39 @@ fun get_cline () = let
                        \    use one of --expk, --stdknl, --otknl, --trknl to override");
                  String.extract(s,2,NONE)))
   val _ = write_kernelid knlspec
+  (* Build the theory graph by default; --graph is now redundant
+     (kept for backwards-compatible argv) since the only way to
+     disable graph generation is via --no-mdbook / --no-helpdocs,
+     which build_help consults directly. *)
   val buildgraph =
       case #build_theory_graph option_record of
-          NONE =>
-          (case List.find (fn s => s = "--graph" orelse s = "--nograph") oldopts
-            of
-               NONE => true
-             | SOME "--graph" =>
-               (warn "Using --graph option from earlier build; \
-                     \use --nograph to override"; true)
-             | SOME "--nograph" =>
-               (warn "Using --nograph option from earlier build; \
-                     \use --graph to override"; false)
-             | SOME _ => raise Fail "Really can't happen")
+          NONE => true
         | SOME b => b
-  val bgoption = if buildgraph then [] else ["--nograph"]
   val jcount = #jobcount option_record
   val _ =
       if seqspec = dfltbuildseq then
-        write_options ("--"^knlspec::bgoption)
+        write_options ["--"^knlspec]
       else
-        write_options ("--"^knlspec::"--seq"::seqspec::bgoption)
+        let
+          val seqspec_abs =
+              if OS.Path.isAbsolute seqspec then seqspec
+              else OS.Path.mkAbsolute
+                     {path = seqspec, relativeTo = OS.FileSys.getDir()}
+        in
+          write_options ["--"^knlspec, "--seq", seqspec_abs]
+        end
+  (* Polyscripter `>>` directives in help/Docfiles entries can do
+     things like `load "realLib"`; under a reduced --seq those
+     libraries haven't been built and the help-doc pass aborts on the
+     first miss.  Warn only when actually overriding so the message
+     doesn't double up for `--no-helpdocs --seq ...`. *)
+  val partial_seq = seqspec <> dfltbuildseq
+  val user_no_helpdocs = #no_helpdocs option_record
+  val no_helpdocs = user_no_helpdocs orelse partial_seq
+  val () = if partial_seq andalso not user_no_helpdocs then
+             warn ("Reduced build sequence (" ^ seqspec ^
+                   "); skipping help-doc build.")
+           else ()
 in
   Normal {build_theory_graph = buildgraph,
           cmdline = rest,
@@ -389,7 +424,9 @@ in
           cache_dir = #cache_dir option_record,
           relocbuild = #relocbuild option_record,
           thmsrc = #thmsrc option_record,
-          timelimit = #timelimit option_record}
+          timelimit = #timelimit option_record,
+          no_mdbook = #no_mdbook option_record,
+          no_helpdocs = no_helpdocs}
 end handle DoClean s => (Clean s before safedelete Holmake_tools.kernelid_fname)
 
 (* ----------------------------------------------------------------------
@@ -481,9 +518,8 @@ fun hmakefile_data HOLDIR =
             base_environment()
               |> env_extend ("HOLSELFTESTLEVEL", [LIT "3"])
               |> env_extend ("KERNELID", [LIT "stdknl"])
-        val (env, _, _) = ReadHMF.diagread qdiags "Holmakefile" env0
-        fun envlist id =
-            map dequote (tokenize (perform_substitution env [VREF id]))
+        val (env, _, _, _) = ReadHMF.diagread qdiags "Holmakefile" env0
+        val envlist = Holmake_types.envlist qdiags env
       in
         {includes = envlist "PRE_INCLUDES" @ envlist "INCLUDES",
          extra_cleans = envlist "EXTRA_CLEANS",
@@ -852,12 +888,11 @@ fun write_theory_graph () =
               \***\n\
               \*** (Under Poly/ML you will have to delete bin/hol.state0 as \
               \well)\n***\n\
-              \*** (Or: build with --nograph to stop this \
-              \message from appearing again)\n")
+              \*** (Or: build with --no-mdbook or --no-helpdocs to \
+              \stop this message from appearing again)\n")
       else
         let
-          val _ = print "Generating theory-graph; this may take a while\n"
-          val _ = print "  (Use build's --nograph option to skip this step.)\n"
+          val _ = print "Generating theory-graph.\n"
           val theorytool =
               fullPath [HOLDIR, "src", "portableML", "rawtheory", "theorytool"]
           val svgfile = theorygraph_dir ++ "theories.svg"
@@ -880,20 +915,17 @@ fun write_theory_graph () =
     | NONE => warn "If you had a copy of the dot tool installed, I might try\n\
                    \*** to build a theory graph at this point"
 
-fun Poly_compilehelp() = let
-  open Systeml
-in
-  system_ps (fullPath [HOLDIR, "tools", "mllex", "mllex.exe"] ^ " Lexer.lex");
-  system_ps (fullPath [HOLDIR, "tools", "mlyacc", "src", "mlyacc.exe"] ^ " Parser.grm");
-  system_ps (POLYC ^ " poly-makebase.ML -o makebase.exe");
-  system_ps (POLYC ^ " poly-Doc2Html.ML -o gen_extra_docfiles");
-  system_ps (POLYC ^ " poly-AliasGen.ML -o AliasGen.exe")
-end
-
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
 val ML_SYSNAME = Systeml.ML_SYSNAME
 
-fun mosml_compilehelp () = ignore (SYSTEML [HOLMAKE, "all"])
+(* Holmake all in help/src-sml/ builds the per-SML-implementation set
+   of help tools: AliasGen.exe, makebase.exe under both, plus
+   process_docfiles under poly (which needs bin/hol.state for
+   polyscripter and is therefore declared inside an `ifdef POLY`
+   block in help/src-sml/Holmakefile). *)
+fun compile_help_tools () =
+  if SYSTEML [HOLMAKE, "all"] then ()
+  else die "Couldn't build help tools"
 
 fun build_adoc_files () = true
   (* for the moment, use markdown files as our "ASCII" documentation *)
@@ -920,40 +952,224 @@ in
   List.all make_adocs docdirs
 end *)
 
-fun build_help graph =
+(* Does an executable of the given name exist on PATH? *)
+fun which arg =
+  let
+    open OS.FileSys
+    val sepc = if Systeml.isUnix then #":" else #";"
+    fun check p =
+      let val fname = OS.Path.concat(p, arg)
+      in if access (fname, [A_READ, A_EXEC]) then SOME fname else NONE end
+    fun first [] = NONE
+      | first (p::ps) = (case check p of NONE => first ps | sm => sm)
+  in
+    case OS.Process.getEnv "PATH" of
+        NONE => if Systeml.isUnix then NONE else check "."
+      | SOME path =>
+        let val paths = (if Systeml.isUnix then [] else ["."]) @
+                        String.fields (fn c => c = sepc) path
+        in first paths end
+  end
+
+fun build_help {graph, no_mdbook, no_helpdocs} =
+ (* Skip the theory graph alongside any other doc-build skip:
+    `--no-mdbook` and `--no-helpdocs` are the only ways to opt out
+    of doc work now, and the theory graph is doc work. *)
+ let val want_graph = graph andalso not no_mdbook andalso not no_helpdocs
+ in
+ if no_helpdocs then
+   (print "Skipping help documentation build (--no-helpdocs).\n";
+    if want_graph then write_theory_graph() else ())
+ else
  let val dir = OS.Path.concat(OS.Path.concat (HOLDIR,"help"),"src-sml")
      val _ = HOLFileSys.chDir dir
 
-     (* builds the documentation tools called below *)
-     val _ = if ML_SYSNAME = "poly" then ignore (Poly_compilehelp())
-             else if ML_SYSNAME = "mosml" then mosml_compilehelp()
-             else raise Fail "Bogus ML_SYSNAME"
+     val _ = compile_help_tools()
 
-     val doc2html = fullPath [dir,"gen_extra_docfiles"]
-     val docpath  = fullPath [HOLDIR, "help", "Docfiles"]
-     val htmlpath = fullPath [docpath, "HTML"]
-     val _        = if (HOLFileSys.isDir htmlpath handle _ => false) then ()
-                    else (print ("Creating directory "^htmlpath^"\n");
-                          HOLFileSys.mkDir htmlpath)
-     val cmd1     = [doc2html, docpath, htmlpath]
-     val cmd2     = [fullPath [dir,"makebase.exe"]]
-     val cmd3     = [fullPath [dir,"AliasGen.exe"], "--check", docpath]
+     val process_docfiles = fullPath [dir, "process_docfiles"]
+     val docpath          = fullPath [HOLDIR, "help", "Docfiles"]
+     val processed_dir    = fullPath [HOLDIR, "Manual", "build",
+                                       "Docfiles-processed"]
+     val htmlpath         = fullPath [docpath, "HTML"]
+
+     val cmd_alias        = [fullPath [dir, "AliasGen.exe"], "--check", docpath]
+
+     val poly = ML_SYSNAME = "poly"
+     val mdbook_present = poly andalso
+                          (case which "mdbook" of SOME _ => true
+                                                | NONE => false)
+     val use_mdbook = poly andalso not no_mdbook andalso mdbook_present
+     val use_html_fallback = poly andalso not use_mdbook
+
+     (* URL bases relative to Manual/book/htmlsigs/<struct>.html (where
+        the sig-page links from -- makebase writes the htmlsigs tree
+        there as part of the unified Manual/book/ deploy snapshot).
+        See help/src-sml/Htmlsigs.sml. *)
+     val entry_url_base =
+         if use_mdbook then "../Reference/"
+         else if use_html_fallback then "../../../help/Docfiles/HTML/"
+         else ""  (* mosml: sig-pages omit per-entry hrefs *)
+     (* Theory URL base.  Empty -> Htmlsigs computes a source-tree
+        relative path (legacy/local).  "../theories/" matches where
+        stage_references.py stages per-theory pages under book/. *)
+     val theory_url_base =
+         if use_mdbook then "../theories/" else ""
+
+     (* "Source File" URL base.  The htmlsigs are deployed outside the
+        source tree, so the legacy file:// path is dead on the web.
+        For the mdbook/deploy build, point the links at GitHub, pinned
+        to the commit the docs were built from when this is a git
+        checkout; fall back to the release tag (the release-tarball
+        case, where that tag is exactly the right ref).  Empty for
+        local builds, where Htmlsigs keeps the file:// path. *)
+     val source_url_base =
+         if not use_mdbook then ""
+         else
+           let
+             val tmp = OS.FileSys.tmpName ()
+             val ok = OS.Process.isSuccess
+                        (OS.Process.system
+                           ("git -C \"" ^ HOLDIR ^ "\" rev-parse HEAD > \"" ^
+                            tmp ^ "\" 2>/dev/null"))
+             val sha =
+                 if ok then
+                   (let val is = TextIO.openIn tmp
+                        val l = TextIO.inputLine is
+                        val () = TextIO.closeIn is
+                    in case l of
+                           SOME s =>
+                             let val s = Substring.string
+                                   (Substring.dropr Char.isSpace
+                                                    (Substring.full s))
+                             in if s = "" then NONE else SOME s end
+                         | NONE => NONE
+                    end handle _ => NONE)
+                 else NONE
+             val () = (OS.FileSys.remove tmp handle _ => ())
+             val gitref =
+                 case sha of
+                     SOME s => s
+                   | NONE => CharVector.map Char.toLower Systeml.release ^
+                             "-" ^ Int.toString Systeml.version
+           in
+             "https://github.com/HOL-Theorem-Prover/HOL/blob/" ^ gitref ^ "/"
+           end
+
+     local
+       open Holmake_types
+       fun quietly _ = ()
+       val qdiags = {info = quietly, die = quietly, warn = quietly}
+     in
+       fun mdbook_manuals () =
+         let
+           val path = fullPath [HOLDIR, "Manual", "mdbook.mk"]
+           val (env, _, _, _) =
+               ReadHMF.diagread qdiags path (base_environment())
+         in
+           case envlist qdiags env "MANUALS" of
+             [] => die ("Couldn't find MANUALS in " ^ path)
+           | ms => ms
+         end
+
+       fun manual_uses_chapter_stems m =
+         let
+           val hmf = fullPath [HOLDIR, "Manual", m, "Holmakefile"]
+         in
+           HOLFileSys.access (hmf, [HOLFileSys.A_READ]) andalso
+           let
+             val (env, rdb, _, _) =
+                 ReadHMF.diagread qdiags hmf (base_environment())
+           in
+             isSome (get_rule_info qdiags rdb env "chapter-stems.mk")
+           end
+         end
+     end
  in
-   if SYSTEML cmd3 then ()
+   if SYSTEML cmd_alias then ()
    else die "AliasGen --check failed: alias entries are out of sync. \
             \Run help/src-sml/AliasGen.exe --regen help/Docfiles to fix."
  ;
-   if ML_SYSNAME <> "mosml" then (
-     print "Generating HTML and plain text versions of Docfiles...\n" ;
-     if SYSTEML cmd1 then print "...docfile translation done\n"
-     else die "Couldn't translate Docfiles"
+   if poly then (
+     let
+       val pdoc_args =
+           [process_docfiles, "--show-progress", docpath, processed_dir] @
+           (if use_html_fallback then [htmlpath] else [])
+       val () = print "Polyscripting Docfiles and generating .txt outputs...\n"
+     in
+       if SYSTEML pdoc_args then
+         (* Touch the .stamp the Manual/Reference Holmakefile keys
+            its $(Processed) rule off, so the follow-up Holmake
+            mdbook pass sees a fresh tree. *)
+         let val stamp = fullPath [processed_dir, ".stamp"]
+             val ostrm = TextIO.openOut stamp
+                         handle IO.Io {cause, ...} =>
+                           die ("Couldn't write " ^ stamp ^ ": " ^
+                                General.exnMessage cause)
+         in TextIO.closeOut ostrm end
+       else die "process_docfiles failed.  If you're running a partial \
+                \build sequence and don't need up-to-date help \
+                \documentation, re-run with --no-helpdocs to skip the \
+                \help-docs step entirely."
+     end ;
+     (* Pre-build chapter-stems.mk in each manual that `sinclude`s it,
+        so subsequent Holmake invocations there don't print the
+        `chapter-stems.mk not yet built' warning -- and so the
+        labels.tsv pass below doesn't either.  Stop-gap until Holmake
+        learns to generate these itself. *)
+     let
+       val manuals = mdbook_manuals ()
+       val stem_manuals = List.filter manual_uses_chapter_stems manuals
+       val () = print ("Generating chapter-stems.mk in " ^
+                       String.concatWith ", " stem_manuals ^ "...\n")
+       fun build_stems m =
+         let val mdir = fullPath [HOLDIR, "Manual", m]
+         in if SYSTEML [HOLMAKE, "-C", mdir, "chapter-stems.mk"] then ()
+            else die ("Couldn't build Manual/" ^ m ^ "/chapter-stems.mk")
+         end
+       val () = List.app build_stems stem_manuals
+     in
+       if use_mdbook then
+         let
+           val refdir = fullPath [HOLDIR, "Manual", "Reference"]
+           (* The Reference mdbook target depends on each sibling
+              manual's labels.tsv (for cross-book \ref{Book:label}
+              resolution -- see Manual/mdbook.mk SIBLING_LABELS).
+              Build those first. *)
+           val sibling_manuals = List.filter (fn m => m <> "Reference") manuals
+           val () = print "Building sibling labels for Reference mdbook...\n"
+           fun build_labels m =
+             let val mdir = fullPath [HOLDIR, "Manual", m]
+             in if SYSTEML [HOLMAKE, "-C", mdir, "labels.tsv"] then ()
+                else die ("Couldn't build Manual/" ^ m ^ "/labels.tsv")
+             end
+           val () = List.app build_labels sibling_manuals
+           val () = print "Building Reference mdbook (mdbook detected \
+                          \in PATH)...\n"
+         in
+           if SYSTEML [HOLMAKE, "-C", refdir, "mdbook"] then ()
+           else die "Reference mdbook build failed"
+         end
+       else ()
+     end
    ) else ()
  ;
-   if (print "Building Help DB\n"; SYSTEML cmd2) then ()
-   else die "Couldn't make help database"
+   let
+     val makebase = fullPath [dir, "makebase.exe"]
+     fun urlFlag (flag, base) =
+         if base <> "" then [flag ^ "=" ^ base] else []
+     val makebase_args =
+         makebase ::
+         urlFlag ("--entry-url-base", entry_url_base) @
+         urlFlag ("--theory-url-base", theory_url_base) @
+         urlFlag ("--source-url-base", source_url_base)
+   in
+     if (print "Building Help DB\n"; SYSTEML makebase_args) then ()
+     else die "Couldn't make help database"
+   end
  ;
-   if graph then write_theory_graph()
+   if want_graph then write_theory_graph()
    else ()
+ end
  end
 
 fun cleanDirP P d =
@@ -1031,12 +1247,15 @@ fun process_cline () =
       end
     | Normal {extra = {seqname,kernelspec}, cmdline, multithread,
               build_theory_graph, jobcount, relocbuild, debug, keepgoing,
-              cache_dir, selftest_level, thmsrc, timelimit} =>
+              cache_dir, selftest_level, thmsrc, timelimit,
+              no_mdbook, no_helpdocs} =>
       let
         val SRCDIRS = read_buildsequence {kernelname = kernelspec} seqname
       in
         if mem "help" cmdline then
-          (build_help build_theory_graph;
+          (build_help {graph = build_theory_graph,
+                       no_mdbook = no_mdbook,
+                       no_helpdocs = no_helpdocs};
            Process.exit Process.success)
         else
           {build_theory_graph=build_theory_graph,
@@ -1050,7 +1269,9 @@ fun process_cline () =
            relocbuild = relocbuild,
            selftest_level = selftest_level,
            thmsrc = thmsrc,
-           timelimit = timelimit
+           timelimit = timelimit,
+           no_mdbook = no_mdbook,
+           no_helpdocs = no_helpdocs
           }
       end
 
@@ -1124,12 +1345,7 @@ fun remove_all_holmkdirs () =
 
 val logdir = Systeml.build_log_dir
 val logfilename = Systeml.build_log_file
-val hostname = if Systeml.isUnix then
-                 case Mosml.run "hostname" [] "" of
-                   Mosml.Success s => String.substring(s,0,size s - 1) ^ "-"
-                                      (* substring to drop \n in output *)
-                 | _ => ""
-               else "" (* what to do under windows? *)
+val hostname = if Systeml.isUnix then HostName.get () ^ "-" else ""
 
 fun setup_logfile () = let
   open HOLFileSys
@@ -1152,14 +1368,19 @@ end handle IO.Io _ => warn "Couldn't set up build-logs"
 
 fun finish_logging buildok = let
 in
-  if HOLFileSys.access(logfilename, []) then let
-      open Date
-      val timestamp = fmt "%Y-%m-%dT%H%M" (fromTimeLocal (Time.now()))
-      val newname0 = hostname^timestamp
-      val newname = (if buildok then "" else "bad-") ^ newname0
-    in
-      HOLFileSys.rename {old = logfilename, new = fullPath [logdir, newname]}
-    end
+  if HOLFileSys.access(logfilename, []) then
+    if buildok then let
+        open Date
+        val timestamp = fmt "%Y-%m-%dT%H%M" (fromTimeLocal (Time.now()))
+        val knl = read_kernelid ()
+        val knl_suffix = if knl = "" then "" else "-" ^ knl
+        val newname = hostname^timestamp^knl_suffix
+        val newpath = fullPath [logdir, newname]
+      in
+        HOLFileSys.rename {old = logfilename, new = newpath};
+        checkRegressions.run {logdir = logdir, latest = newpath, kernel = knl}
+      end
+    else safedelete logfilename
   else ()
 end handle IO.Io _ => warn "Had problems making permanent record of build log"
 

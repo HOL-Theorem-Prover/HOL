@@ -1,0 +1,32 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `cv_eval_raw`
+
+``` hol4
+cv_transLib.cv_eval_raw : term -> thm
+```
+
+------------------------------------------------------------------------
+
+Uses `cv_computeLib` to evaluate closed terms, equipped with
+translations from `cv_transLib`.
+
+Like `cv_transLib.cv_eval`, except it omits the potentially expensive
+evaluation out of the `:cv` type.
+
+### Failure
+
+Fails in the same ways as `cv_transLib.cv_eval`.
+
+### Example
+
+``` hol4
+>>__ load "cv_transLib";
+
+>> cv_transLib.cv_trans rich_listTheory.REPLICATE;
+>> cv_transLib.cv_eval “REPLICATE 3 (3:num)”;
+>> cv_transLib.cv_eval_raw “REPLICATE 3 (3:num)”;
+```
+
+### See also
+
+[`cv_transLib.cv_eval`](#cv_transLib.cv_eval)

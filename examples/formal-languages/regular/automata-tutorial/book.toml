@@ -1,0 +1,7 @@
+[book]
+title = "Finite State Automata"
+authors = []
+language = "en"
+
+[output.html]
+mathjax-support = true

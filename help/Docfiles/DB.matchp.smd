@@ -1,0 +1,37 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `matchp`
+
+``` hol4
+DB.matchp : (thm -> bool) -> string list -> data list
+```
+
+------------------------------------------------------------------------
+
+All theory elements satisfying a predicate.
+
+An invocation `matchp P [thy1,...,thyn]` collects all elements of the
+theory segments `thy1`,...,`thyn` that `P` holds of. If the list of
+theory segments is empty, then all currently loaded segments are
+examined. The string `"-"` may be used to designate the current theory
+segment.
+
+### Failure
+
+Fails if `P` fails when applied to a theorem in one of the theories
+being searched.
+
+### Example
+
+The following query returns all unconditional rewrite rules in the
+theory `pair`.
+
+``` hol4
+##linecount_limit 0 15
+>> matchp (is_eq o snd o strip_forall o concl) ["pair"];
+##poplinecount_limit
+```
+
+### See also
+
+[`DB.match`](#DB.match), [`DB.matcher`](#DB.matcher),
+[`DB.apropos`](#DB.apropos), [`DB.find`](#DB.find)

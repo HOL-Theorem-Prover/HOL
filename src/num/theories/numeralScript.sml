@@ -165,8 +165,8 @@ Theorem numeral_add: !n m.
    (iiSUC (BIT2 n + BIT1 m) = BIT1 (iiSUC (n + m))) /\
    (iiSUC (BIT2 n + BIT2 m) = BIT2 (iiSUC (n + m)))
 Proof
-  SIMP_TAC bool_ss [BIT1, BIT2, iZ, iiSUC,ADD_CLAUSES, INV_SUC_EQ, ALT_ZERO] THEN
-  REPEAT GEN_TAC THEN CONV_TAC (AC_CONV(ADD_ASSOC, ADD_SYM))
+  SIMP_TAC bool_ss [BIT1, BIT2, iZ, iiSUC,ADD_CLAUSES, INV_SUC_EQ, ALT_ZERO] >>
+  REPEAT GEN_TAC >> CONV_TAC (AC_CONV(ADD_ASSOC, ADD_SYM))
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -591,7 +591,8 @@ Proof
   ]
 QED
 
-Theorem numeral_sub: !n m. NUMERAL (n - m) = if m < n then NUMERAL (iSUB T n m) else 0
+Theorem numeral_sub:
+  !n m. NUMERAL (n - m) = if m < n then NUMERAL (iSUB T n m) else 0
 Proof
   SIMP_TAC bool_ss [iSUB_correct, COND_OUT_THMS,
                     REWRITE_RULE [NUMERAL_DEF] SUB_EQ_0, LESS_EQ_CASES,
@@ -657,9 +658,10 @@ QED
 val _ = print "Factorial for numerals\n"
 
 Theorem numeral_fact:
-  (FACT 0 = 1)
-  /\  (!n. FACT (NUMERAL (BIT1 n)) = NUMERAL (BIT1 n) * FACT (PRE(NUMERAL(BIT1 n))))
-  /\  (!n. FACT (NUMERAL (BIT2 n)) = NUMERAL (BIT2 n) * FACT (NUMERAL (BIT1 n)))
+  (FACT 0 = 1) /\
+  (!n. FACT (NUMERAL (BIT1 n)) =
+       NUMERAL (BIT1 n) * FACT (PRE(NUMERAL(BIT1 n)))) /\
+  (!n. FACT (NUMERAL (BIT2 n)) = NUMERAL (BIT2 n) * FACT (NUMERAL (BIT1 n)))
 Proof
  REPEAT STRIP_TAC THEN REWRITE_TAC [FACT] THEN
  (STRIP_ASSUME_TAC (SPEC (Term`n:num`) num_CASES) THENL [
@@ -673,8 +675,8 @@ val _ = print "funpow for numerals\n"
 
 Theorem numeral_funpow:
   (FUNPOW f 0 x = x) /\
-        (FUNPOW f (NUMERAL (BIT1 n)) x = FUNPOW f (PRE (NUMERAL (BIT1 n))) (f x)) /\
-        (FUNPOW f (NUMERAL (BIT2 n)) x = FUNPOW f (NUMERAL (BIT1 n)) (f x))
+  (FUNPOW f (NUMERAL (BIT1 n)) x = FUNPOW f (PRE (NUMERAL (BIT1 n))) (f x)) /\
+  (FUNPOW f (NUMERAL (BIT2 n)) x = FUNPOW f (NUMERAL (BIT1 n)) (f x))
 Proof
  REPEAT STRIP_TAC THEN REWRITE_TAC [FUNPOW] THEN
  (STRIP_ASSUME_TAC (SPEC (Term`n:num`) num_CASES) THENL [

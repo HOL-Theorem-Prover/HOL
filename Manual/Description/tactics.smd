@@ -50,7 +50,7 @@ The third device is the tactic as a means of organizing the construction of proo
 Even with recourse to derived inference rules, it is still surprisingly awkward to work forward,
 \index{forward proof!compared to goal-directed}
 to find a chain of theorems that culminates in a desired theorem.
-This is in part because chains have no structure, while "proof efforts" do.
+This is in part because chains have no structure, while “proof efforts” do.
 For instance, if within one sequence, two chains of steps are to be combined in the end by conjunction, then one chain must follow or be interspersed with the other in the overall sequence.
 It can also be difficult to direct the proof toward its object when starting from only hypotheses (if any), lemmas (if any), axioms, and theorems following from no hypotheses (*e.g.*, by `ASSUME` or `REFL`).
 \index{tactics!as documentation of proofs}
@@ -62,7 +62,7 @@ is a simple one, well known in artificial intelligence: to organize the search
 \index{proof construction!as tree search}
 as a tree, and to reverse the process and *begin* with the objective.
 The goal is then decomposed, successively if necessary, into what one hopes are more tractable subgoals, each decomposition accompanied by a plan for translating the solution of subgoals into a solution of the goal.
-The choice of decomposition is an explicit way of expressing a proof "strategy".
+The choice of decomposition is an explicit way of expressing a proof “strategy”.
 \index{strategies, for proof}
 
 Thus, for example, instead of the linear sequencing of two branches of the proof of the conjunction, each branch starting from scratch, the proof task is organized as a tree search, starting with a conjunctive goal and decomposing it into the two conjunct subgoals (undertaken in optional order), with the intention of conjoining the two solutions when and if found.
@@ -101,10 +101,10 @@ A tactic is said to *solve*
 a goal if it reduces the goal to the empty set of subgoals.
 This depends, obviously, on there being at least one tactic that maps a goal to the empty subgoal list.
 The simplest tactic that does this is one that can recognize when a goal is achieved by an axiom or an existing theorem; in HOL, the function `ACCEPT_TAC`
-\index{ACCEPT_TAC@`ACCEPT_TAC`}
+\index{ACCEPT_TAC@\ml{ACCEPT\_TAC}}
 does this.
 `ACCEPT_TAC` takes a theorem $\mathit{th}$ and produces a tactic that maps a value of type `thm` to the empty list of subgoals.
-It justifies this "decomposition" by a validation function that maps the empty list of theorems to the theorem $\mathit{th}$.
+It justifies this “decomposition” by a validation function that maps the empty list of theorems to the theorem $\mathit{th}$.
 The use of this technical device, or other such tactics, ends the decomposition of subgoals, and allows the proof to be built up.
 \index{tactics!purpose of|)}
 
@@ -113,9 +113,9 @@ Thus, an ML type abbreviation is introduced for goals.
 The operations on goals are therefore just the ordinary pair selectors and constructor.
 Likewise, type abbreviations are introduced for validations and tactics.
 Conceptually, the following abbreviations are made in HOL:
-\index{goal@`goal`}
-\index{tactic@`tactic`}
-\index{proof@`proof`}
+\index{goal@\ml{goal}}
+\index{tactic@\ml{tactic}}
+\index{proof@\ml{proof}}
 \index{tactics!ML type of@ML type of}
 ```
    goal       = term list * term
@@ -158,7 +158,7 @@ $$
 $$
 
 For example, the tactic for decomposing conjunctions into two conjunct subgoals is called `conj_tac`.
-\index{conj_tac@`conj_tac`}
+\index{conj_tac@\ml{conj\_tac}}
 (The tactic is also available under the name `CONJ_TAC`.)
 It is described by:
 
@@ -171,7 +171,7 @@ The fact that the assumptions of the original goal are propagated unchanged to t
 The notation gives no indication of the proof function.
 
 Another example is `numLib.INDUCT_TAC`, a low-level tactic for performing mathematical induction on the natural numbers:
-\index{INDUCT_TAC@`INDUCT_TAC`}
+\index{INDUCT_TAC@\ml{INDUCT\_TAC}}
 \index{induction tactics}
 
 $$
@@ -186,7 +186,7 @@ Tactics fail
 (in the ML sense) if they are applied to inappropriate goals.
 For example, `conj_tac` will fail if it is applied to a goal whose conclusion is not a conjunction.
 Some tactics never fail; for example
-\index{all_tac@`all_tac`}
+\index{all_tac@\ml{all\_tac}}
 `all_tac`
 
 $$
@@ -199,7 +199,7 @@ it reduces a goal `(`$\Gamma$`,`$t$`)` to the single subgoal `(`$\Gamma$`,`$t$`)
 The `all_tac` tactic is useful for writing compound tactics, as discussed later (see [§Tacticals](#tacticals)).
 
 In just the way that the derived rule `REWRITE_RULE`
-\index{rewrite_tac@`rewrite_tac`|(}
+\index{rewrite_tac@\ml{rewrite\_tac}|(}
 can be used in forward proof, the corresponding tactic `rewrite_tac`
 \index{rewriting!main tactic for|(}
 \index{rewriting!importance of, in goal directed proof|(}
@@ -213,7 +213,7 @@ The transformation of the goal is justified in each case by the appropriate chai
 Rewriting is a simple implementation of an extremely powerful idea.
 The more sophisticated simplification functions (*e.g.*, `simp`) often do a very large share of the work in goal directed proof searches.
 \index{goal directed proof search!concepts of|)}
-\index{rewrite_tac@`rewrite_tac`|)}
+\index{rewrite_tac@\ml{rewrite\_tac}|)}
 \index{simplification}
 \index{rewriting!importance of, in goal directed proof|)}
 \index{rewriting!main tactic for|)}
@@ -221,7 +221,7 @@ The more sophisticated simplification functions (*e.g.*, `simp`) often do a very
 A simple example from list theory illustrates the use of tactics.
 A conjunctive goal is declared, and `conj_tac` applied to it:
 
-```
+```repl
 >> val gl0 = ([]:term list,``(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])``);
 
 >> val (gl1,p1) = conj_tac gl0;
@@ -229,7 +229,7 @@ A conjunctive goal is declared, and `conj_tac` applied to it:
 
 The subgoals are each rewritten, using the definitions of `HD` and `TL`:
 
-```
+```repl
 >>_ open listTheory;
 
 >> HD;
@@ -244,7 +244,7 @@ The subgoals are each rewritten, using the definitions of `HD` and `TL`:
 Both of the two subgoals are now solved, so the decomposition is complete and the proof can be built up in stages.
 First the theorems achieving the subgoals are proved, then from those, the theorem achieving the original goal:
 
-```
+```repl
 >> val th1 = p1_1[];
 
 >> val th2 = p1_2[];
@@ -252,7 +252,7 @@ First the theorems achieving the subgoals are proved, then from those, the theor
 >> p1[th1,th2];
 ```
 
-Although only the theorems achieving the subgoals are "seen" here, the proof functions of the three tactic applications together perform the entire chain
+Although only the theorems achieving the subgoals are “seen” here, the proof functions of the three tactic applications together perform the entire chain
 \index{goal directed proof search!generation of proofs by}
 \index{proofs, in HOL logic@proofs, in HOL logic!as generated by tactics}
 of inferences leading to the theorem achieving the goal.
@@ -272,7 +272,7 @@ This typically involves references to axioms and primitive and defined inference
 A simple example of a tactic written in ML
 \index{proofs, in HOL logic@proofs, in HOL logic!as ML function applications@as ML function applications}
 is afforded by `conj_tac`, whose definition in HOL is as follows:
-\index{conj_tac@`conj_tac`!ML implementation of@ML implementation of}
+\index{conj_tac@\ml{conj\_tac}!ML implementation of@ML implementation of}
 ```
    fun conj_tac (asl,w) =
      let val (l,r) = dest_conj w
@@ -294,14 +294,14 @@ For example, two existing tactics can be sequenced
 \index{sequencing!of tactics}
 \index{tactics!sequencing of}
 by use of the tactical `>>` (the function can also be written as `THEN` or as `\\`):
-\index{THEN@`THEN`}
+\index{THEN@\ml{THEN}}
 if $T_1$ and $T_2$ are tactics, then the ML expression $T_1$ ` >> ` $T_2$ evaluates to a tactic that first applies $T_1$ to a goal and then applies $T_2$ to each subgoal produced by $T_1$.
 The tactical `>>` is an infixed ML function.
 Complex and powerful tactics can be constructed in this way; and new tacticals can also be defined, although this is unusual.
 
 The example from earlier is continued, to illustrate the use of the tactical `>>`:
 
-```
+```repl
 >> val (gl2,p2) = (conj_tac >> rewrite_tac [HD, TL]) gl0;
 
 >> p2 [];
@@ -340,8 +340,8 @@ It should be recalled that the ML type `thm_tactic` abbreviates `thm->tactic`, a
 ### Specialization
 \index{universal quantifier, in HOL logic@universal quantifier, in HOL logic!tactics for}
 
-\index{gen_tac@`gen_tac`|pin}
-```
+\index{gen_tac@\ml{gen\_tac}|pin}
+```repl
 >>__ printNameAndType 4 "Tactic" "gen_tac";
 ```
 
@@ -361,8 +361,8 @@ where $x'$ is a variant of $x$ not free in either goal or assumptions.
 
 ### Conjunction
 
-\index{conj_tac@`conj_tac`|pin}
-```
+\index{conj_tac@\ml{conj\_tac}|pin}
+```repl
 >>__ printNameAndType 4 "Tactic" "conj_tac";
 ```
 
@@ -378,8 +378,8 @@ $$
 
 ### Combined simple decompositions
 
-\index{strip_tac@`strip_tac`|pin}
-```
+\index{strip_tac@\ml{strip\_tac}|pin}
+```repl
 >>__ printNameAndType 4 "Tactic" "strip_tac";
 ```
 
@@ -393,8 +393,8 @@ Often the best thing to do first is `rpt strip_tac`, where `rpt` is the tactical
 ### Case analysis
 \index{case analysis, in HOL logic@case analysis, in HOL logic!tactics for|(}
 
-\index{Cases_on@`Cases_on`|(}
-```
+\index{Cases_on@\ml{Cases\_on}|(}
+```repl
 >>__ printNameAndType 4 "bossLib" "Cases_on";
 ```
 
@@ -413,13 +413,13 @@ $$
 $$
 
 **Use:** Case analysis.
-\index{Cases_on@`Cases_on`|)}
+\index{Cases_on@\ml{Cases\_on}|)}
 
 ### Rewriting
 
 \index{rewriting!main tactic for|(}
-\index{rewrite_tac@`rewrite_tac`|pin}
-```
+\index{rewrite_tac@\ml{rewrite\_tac}|pin}
+```repl
 >>__ printNameAndType 4 "Rewrite" "rewrite_tac";
 ```
 
@@ -438,17 +438,17 @@ where $t'$ is obtained from $t$ as described.
 **Other rewriting tactics** (based on `rewrite_tac`) are:
 
 1. `asm_rewrite_tac`
-\index{asm_rewrite_tac@`asm_rewrite_tac`}
+\index{asm_rewrite_tac@\ml{asm\_rewrite\_tac}}
 adds the assumptions of the goal to the list of theorems used for rewriting.
 Also written `ASM_REWRITE_TAC`.
 
-2. \index{PURE_ASM_REWRITE_TAC@`PURE_ASM_REWRITE_TAC`}
+2. \index{PURE_ASM_REWRITE_TAC@\ml{PURE\_ASM\_REWRITE\_TAC}}
 `PURE_ASM_REWRITE_TAC` is like `asm_rewrite_tac`, but it doesn't use any built-in rewrites.
 
-3. \index{PURE_REWRITE_TAC@`PURE_REWRITE_TAC`}
+3. \index{PURE_REWRITE_TAC@\ml{PURE\_REWRITE\_TAC}}
 `PURE_REWRITE_TAC` uses neither the assumptions nor the built-in rewrites.
 
-4. \index{FILTER_ASM_REWRITE_TAC@`FILTER_ASM_REWRITE_TAC`}
+4. \index{FILTER_ASM_REWRITE_TAC@\ml{FILTER\_ASM\_REWRITE\_TAC}}
 `FILTER_ASM_REWRITE_TAC `$p$` [`$\mathit{th}_1$`,`$\dots$`,`$\mathit{th}_n$`]` simplifies the goal by rewriting it with the explicitly given theorems $\mathit{th}_1$, $\dots$, $\mathit{th}_n$, together with those assumptions of the goal which satisfy the predicate $p$ and also the standard rewrites.
 
 See also the more powerful simplification tactics described in the simplifier chapter.
@@ -458,21 +458,21 @@ See also the more powerful simplification tactics described in the simplifier ch
 
 ### Resolution by Modus Ponens
 \index{implication, in HOL logic@implication, in HOL logic!tactics for}
-\index{imp_res_tac@`imp_res_tac`|pin}
+\index{imp_res_tac@\ml{imp\_res\_tac}|pin}
 
-```
+```repl
 >>__ printNameAndType 4 "Tactic" "imp_res_tac";
 ```
 
 \index{resolution tactics}
-**Summary:** `imp_res_tac `$\mathit{th}$ does a limited amount of automated theorem proving in the form of forward inference; it "resolves" the theorem $\mathit{th}$ with the assumptions of the goal and adds any new results to the assumptions.
+**Summary:** `imp_res_tac `$\mathit{th}$ does a limited amount of automated theorem proving in the form of forward inference; it “resolves” the theorem $\mathit{th}$ with the assumptions of the goal and adds any new results to the assumptions.
 The specification for `imp_res_tac` is:
 
 $$
 \dfrac{\{t_1,\ldots,t_m\}t}{\{t_1,\ldots,t_m,u_1,\ldots,u_n\}t}
 $$
 
-where $u_1$, $\dots$, $u_n$ are derived by "resolving" the theorem $\mathit{th}$ with the existing assumptions $t_1$, $\dots$, $t_m$.
+where $u_1$, $\dots$, $u_n$ are derived by “resolving” the theorem $\mathit{th}$ with the existing assumptions $t_1$, $\dots$, $t_m$.
 Resolution in HOL is not classical resolution, but just Modus Ponens with one-way pattern matching (not unification) and term and type instantiation.
 The general case is where $\mathit{th}$ is of the canonical form
 
@@ -498,34 +498,34 @@ For a more detailed description of resolution and `imp_res_tac`, see §REFERENCE
 
 ### Identity
 
-\index{all_tac@`all_tac`|pin}
-```
+\index{all_tac@\ml{all\_tac}|pin}
+```repl
 >>__ printNameAndType 4 "Tactical" "all_tac";
 ```
 
 \index{identity tactic}
 \index{tactics!identity for}
-\index{THEN@`THEN`}
+\index{THEN@\ml{THEN}}
 **Summary:** The identity tactic for the tactical `>>` (see the example in [§Tactics, Goals and Validations](#tactics-goals-and-validations), and [§Sequencing](#sequencing)).
 Useful for writing tactics.
 
 **Use:**
 
-1. \index{REPEAT@`REPEAT`}
+1. \index{REPEAT@\ml{REPEAT}}
 Writing tacticals (see description of `rpt` in [§Repetition](#repetition)).
 
-2. \index{THENL@`THENL`}
+2. \index{THENL@\ml{THENL}}
 With `THENL` (see [§Selective sequencing](#selective-sequencing)); for example, if tactic $T$ produces two subgoals and $T_1$ is to be applied to the first while nothing is to be done to the second, then $T$ ` THENL ` $[T_1,$` all_tac`$]$ is the tactic required.
 
 ### Splitting logical equivalences
 
-\index{eq_tac@`eq_tac`|pin}
+\index{eq_tac@\ml{eq\_tac}|pin}
 \index{equality, in HOL logic@equality, in HOL logic!tactic for splitting}
-```
+```repl
 >>__ printNameAndType 4 "Tactic" "eq_tac";
 ```
 
-**Summary:** `eq_tac` splits an equational goal into two implications (the "if-case" and the "only-if" case):
+**Summary:** `eq_tac` splits an equational goal into two implications (the “if-case” and the “only-if” case):
 
 $$
 \dfrac{u \Leftrightarrow v}{u\Rightarrow v\qquad v\Rightarrow u}
@@ -537,9 +537,9 @@ $$ \vdash (u \Leftrightarrow v) \Leftrightarrow (u \Rightarrow v) \land (v \Righ
 
 ### Solving existential goals
 
-\index{EXISTS_TAC@`EXISTS_TAC`|pin}
+\index{EXISTS_TAC@\ml{EXISTS\_TAC}|pin}
 \index{existential quantifier, in HOL logic@existential quantifier, in HOL logic!tactic for}
-```
+```repl
 >>__ printNameAndType 4 "Tactic" "EXISTS_TAC";
 ```
 
@@ -573,8 +573,8 @@ For a complete list of the tacticals in HOL see §REFERENCE.
 \index{alternation!of tactics|(}
 \index{tactics!alternation of}
 
-\index{ORELSE@`ORELSE`|pin}
-```
+\index{ORELSE@\ml{ORELSE}|pin}
+```repl
 >>__ printNameAndType 4 "Tactical" "ORELSE";
 ```
 
@@ -591,8 +591,8 @@ then the ML expression $T_1$ ` ORELSE ` $T_2$ evaluates to a tactic which applie
 
 ### First success
 
-\index{FIRST@`FIRST`|pin}
-```
+\index{FIRST@\ml{FIRST}|pin}
+```repl
 >>__ printNameAndType 4 "Tactical" "FIRST";
 ```
 
@@ -604,8 +604,8 @@ The tactical `FIRST` applies the first tactic, in a list of tactics, that succee
 
 ### Change detection
 
-\index{CHANGED_TAC@`CHANGED_TAC`|pin}
-```
+\index{CHANGED_TAC@\ml{CHANGED\_TAC}|pin}
+```repl
 >>__ printNameAndType 4 "Tactical" "CHANGED_TAC";
 ```
 
@@ -630,9 +630,9 @@ tests whether two lists denote the same set (*i.e.*, contain the same elements).
 \index{sequencing!of tactics|(}
 \index{tacticals!for sequencing|(}
 \index{tactics!sequencing of|(}
-\index{THEN@`THEN`}
+\index{THEN@\ml{THEN}}
 
-```
+```repl
 >>>   : tactic -> tactic -> tactic
    THEN : tactic -> tactic -> tactic
    \\   : tactic -> tactic -> tactic
@@ -652,7 +652,7 @@ will apply $T_3$ to *all* of the leaf sub-goals generated by the sequencing of $
 
 ### Selective sequencing
 
-\index{THENL@`THENL`}
+\index{THENL@\ml{THENL}}
 ```
    THENL : tactic -> tactic list -> tactic
    >|    : tactic -> tactic list -> tactic
@@ -665,8 +665,8 @@ The tactical `THENL` is useful if one wants to apply different tactics to differ
 
 ### Successive application
 
-\index{EVERY, the ML function@`EVERY`, the ML function|pin}
-```
+\index{EVERY, the ML function@\ml{EVERY}, the ML function|pin}
+```repl
 >>__ printNameAndType 4 "Tactical" "EVERY";
 ```
 
@@ -680,9 +680,9 @@ The tactical `EVERY` applies a list of tactics one after the other.
 
 ### Repetition
 
-\index{REPEAT@`REPEAT`|pin}
-\index{rpt@`rpt`|see{`REPEAT`}}
-```
+\index{REPEAT@\ml{REPEAT}|pin}
+\index{rpt@\ml{rpt}|see{\ml{REPEAT}}}
+```repl
 >>__ printNameAndType 4 "Tactical" "REPEAT";
 >>__ printNameAndType 4 "Tactical" "rpt";
 ```
@@ -712,11 +712,11 @@ There are in general two kinds of tactics
 in HOL: those that transform the conclusion of a goal without affecting the assumptions, and those that do (also or only) affect the assumptions.
 The various tactics that rewrite
 \index{rewriting!main tactic for}
-are typical of the first class; those that do "resolution"
+are typical of the first class; those that do “resolution”
 \index{resolution tactics}
 belong to the second.
-Often, many of the steps of a proof in HOL are carried out "behind the scenes" on the assumptions, by tactics of the second sort.
-A tactic that in some way changes the assumptions must also have a justification that "knows how" to restore the corresponding hypotheses of the theorem achieving the subgoal.
+Often, many of the steps of a proof in HOL are carried out “behind the scenes” on the assumptions, by tactics of the second sort.
+A tactic that in some way changes the assumptions must also have a justification that “knows how” to restore the corresponding hypotheses of the theorem achieving the subgoal.
 All of this is explicit, and can be examined by a user moving about the subgoal-proof tree.
 Using these tactics in the most straightforward way, the assumptions at any point in a goal-directed proof, *i.e.*, at any node in the subgoal tree,
 \index{subgoal tree!in proof construction}
@@ -768,13 +768,13 @@ The two approaches can be combined in HOL interactions.
 
 The first proof style, that of popping assumptions
 \index{popping, of assumptions}
-from the assumption "stack",
+from the assumption “stack”,
 \index{assumptions!as stack}
 \index{stack, of assumptions}
 is illustrated using its main tool: the tactical `POP_ASSUM`.
 
-\index{POP_ASSUM@`POP_ASSUM`|pin}
-```
+\index{POP_ASSUM@\ml{POP\_ASSUM}|pin}
+```repl
 >>__ printNameAndType 4 "Tactical" "POP_ASSUM";
 >>__ printNameAndType 4 "Tactical" "pop_assum";
 ```
@@ -785,21 +785,21 @@ Given a function $f$`:thm -> tactic`, the tactic `pop_assum `$f$ applies $f$ to 
 ```
 
 ML functions such as $f$, with type `thm -> tactic`, abbreviated to `thm_tactic`,
-\index{thm_tactic@`thm_tactic`}
+\index{thm_tactic@\ml{thm\_tactic}}
 are called theorem continuations,
 \index{theorem continuations}
 suggesting the fact that they take theorems and then continue the proof.
 The use of `pop_assum` can be illustrated by applying it to a particular tactic, namely `DISCH_TAC`.
 
-\index{DISCH_TAC@`DISCH_TAC`}
-```
+\index{DISCH_TAC@\ml{DISCH\_TAC}}
+```repl
 >>__ printNameAndType 4 "Tactic" "DISCH_TAC";
 ```
 
 On a goal whose conclusion is an implication $u \Rightarrow v$, `DISCH_TAC` reflects the natural strategy of attempting to prove $v$ under the assumption $u$, the discharged antecedent.
 For example, suppose it were required to prove that $(n = 0) \Rightarrow (n\times n = n)$:
 
-```
+```repl
 >> g `(n = 0) ==> (n * n = n)`;
 
 >> e DISCH_TAC;
@@ -808,8 +808,8 @@ For example, suppose it were required to prove that $(n = 0) \Rightarrow (n\time
 Application of `DISCH_TAC` to the goal produces one subgoal, as shown, with the added assumption.
 To engage the assumption as a simple substitution, the tactic `SUBST1_TAC` is useful (see §REFERENCE for details).
 
-\index{SUBST1_TAC@`SUBST1_TAC`|pin}
-```
+\index{SUBST1_TAC@\ml{SUBST1\_TAC}|pin}
+```repl
 >>__ printNameAndType 4 "Tactic" "SUBST1_TAC";
 ```
 
@@ -817,7 +817,7 @@ To engage the assumption as a simple substitution, the tactic `SUBST1_TAC` is us
 At this point in the session, the tactical `POP_ASSUM` is applied to `SUBST1_TAC` to form a new tactic.
 The new tactic is applied to the current subgoal.
 
-```
+```repl
 >> p();
 
 >> e(pop_assum SUBST1_TAC);
@@ -828,9 +828,9 @@ The result, as shown, is that the assumption is used as a substitution rule and 
 \index{assumptions!discarding of, in proofs}
 The one subgoal therefore has no assumptions on its stack.
 The two tactics used thus far could be combined into one using the tactical `>>`:
-\index{THEN@`THEN`}
+\index{THEN@\ml{THEN}}
 
-```
+```repl
 >>__ drop()
 >> g `(n = 0) ==> (n * n = n)`;
 
@@ -839,14 +839,14 @@ The two tactics used thus far could be combined into one using the tactical `>>`
 
 The goal can now be solved by simplification of arithmetic:
 
-```
+```repl
 >> e(simp[]);
 ##assert can top_thm()
 ```
 
 A single tactic can, of course, be written to solve the goal (indeed, the tactic `simp[]` solves the entire goal from the outset):
 
-```
+```repl
 >>_ restart();
 
 >> e(DISCH_TAC >> pop_assum SUBST1_TAC >> simp[]);
@@ -855,12 +855,12 @@ A single tactic can, of course, be written to solve the goal (indeed, the tactic
 This example illustrates how the tactical `pop_assum` provides access
 \index{assumptions!denoting of, in proofs}
 \index{denoting assumptions}
-to the top of the assumption "stack" (a capability that is useful, obviously, only when the most recently pushed assumption is the very one required).
+to the top of the assumption “stack” (a capability that is useful, obviously, only when the most recently pushed assumption is the very one required).
 To accomplish this access in the straightforward way would require some more awkward
 \index{assumptions!explicit}
 construct, with explicit assumptions:
 
-```
+```repl
 >>__ drop();
 >> g `(n = 0) ==> (n * n = n)`;
 
@@ -886,7 +886,7 @@ splits a goal into two subgoals that have $p$ and $q$, respectively, as new assu
 
 Simply using `DISCH_TAC` does not cause the disjunction to split when it becomes an assumption.
 
-```
+```repl
 >>__ drop()
 >> g `((n = 0) \/ (n = 1)) ==> (n * n = n)`;
 
@@ -895,7 +895,7 @@ Simply using `DISCH_TAC` does not cause the disjunction to split when it becomes
 
 So, we can combine `pop_assum` and `DISJ_CASES_TAC` to apply the latter to the theorem corresponding to the disjunctive assumption:
 
-```
+```repl
 >>_ restart();
 
 >> e(DISCH_TAC >> pop_assum DISJ_CASES_TAC);
@@ -903,7 +903,7 @@ So, we can combine `pop_assum` and `DISJ_CASES_TAC` to apply the latter to the t
 
 Indeed, we can then combine this with our earlier use of `SUBST1_TAC` to have both branches make progress at once:
 
-```
+```repl
 >>_ restart();
 
 >> e(DISCH_TAC >> pop_assum DISJ_CASES_TAC >> pop_assum SUBST1_TAC);
@@ -914,18 +914,18 @@ However, it is often necessary to access assumptions made at arbitrary previous 
 
 Two other useful tacticals that can be used to manipulate the assumption list are `first_assum` and `qpat_assum`.
 The first has an easy characterisation:
-\index{FIRST_ASSUM@`FIRST_ASSUM`}
+\index{FIRST_ASSUM@\ml{FIRST\_ASSUM}}
 ```
    first_assum f ([t1, ..., tn], t) =
     (f(ASSUME t1) ORELSE ... ORELSE f(ASSUME tn)) ([t1, ..., tn], t)
 ```
 
 The
-\index{FIRST_X_ASSUM@`FIRST_X_ASSUM`}
+\index{FIRST_X_ASSUM@\ml{FIRST\_X\_ASSUM}}
 `first_x_assum` tactical is similar to `first_assum`, but in addition to assuming one of the goal's assumptions as a theorem and passing this to the function $f$, the goal-state that $f\,(t_i\vdash t_i)$ acts upon has had $t_i$ removed from the assumption list.
-It is a "popping" version of `first_assum`.
+It is a “popping” version of `first_assum`.
 
-\index{qpat_assum@`qpat_assum`}
+\index{qpat_assum@\ml{qpat\_assum}}
 The `qpat_assum` tactical takes a pattern-quotation as its first argument.
 The second `thm_tactic` parameter is then passed the first assumption that matches this pattern.
 
@@ -935,7 +935,7 @@ Thus:
 ```
 where $t_p$ is the first assumption that matches the pattern `pat`.
 
-Just as with `first_assum`, there is a "popping" version called `qpat_x_assum` that removes the matching assumption from the list.
+Just as with `first_assum`, there is a “popping” version called `qpat_x_assum` that removes the matching assumption from the list.
 Thus:
 ```
    qpat_x_assum pat f ([t1, ..., tp, ..., tn], t) =
@@ -957,7 +957,7 @@ The original example for `pop_assum` illustrates this: namely, to show that $(n 
 Here, instead of discharging the antecedent by applying `DISCH_TAC` to the goal, which adds the antecedent as an assumption and returns the consequent as the conclusion, and *then* supplying the (assumed) added assumption to the theorem continuation `SUBST1_TAC` and discarding it at the same time, a tactical called `disch_then` is applied to `SUBST1_TAC` directly.
 `disch_then` transforms `SUBST1_TAC` into a new tactic: one that applies `SUBST1_TAC` directly to the (assumed) antecedent, and the resulting tactic to a subgoal with no new assumptions and the consequent as its conclusion:
 
-```
+```repl
 >>__ drop();
 >> disch_then;
 
@@ -974,7 +974,7 @@ If the result were only needed later, it *would* have to be held as an assumptio
 However, results can be manipulated when they are available, and their results either held as assumptions or used immediately.
 For example, to prove $(0 = n) \Rightarrow (n \times n = n)$, the result $n=0$ could be reversed immediately:
 
-```
+```repl
 >>__ drop();
 >> g `(0 = n) ==> (n * n = n)`;
 >> e(disch_then(SUBST1_TAC o SYM));
@@ -989,7 +989,7 @@ In other words, the subgoal tree here has one node fewer than before, when an ex
 
 On the goal with the disjunctive antecedent, this method again provides a compact tactic:
 
-```
+```repl
 >>__ drop();
 >> g `((n = 0) \/ (n = 1)) ==> (n * n = n)`;
 
@@ -999,7 +999,7 @@ On the goal with the disjunctive antecedent, this method again provides a compac
 
 This avoids the repeated popping and pushing of the stack solution, and likewise, gives a shorter ML expression.
 Both give a shorter expression than the direct method, which is:
-```
+```repl
    DISCH_TAC
     >> DISJ_CASES_TAC(ASSUME ``(n = 0) \/ (n = 1)``)
     >| [SUBST1_TAC(ASSUME ``n = 0``);
@@ -1010,7 +1010,7 @@ To summarize, there are so far at least five ways to solve a goal (and these are
 All of the following work
 \index{assumptions!compared methods of handling}
 on the goal $(n=0) \Rightarrow (n \times n = n)$:
-```
+```repl
    DISCH_TAC
     >> SUBST1_TAC(ASSUME ``n = 0``)
     >> simp[]
@@ -1038,8 +1038,8 @@ HOL provides several other theorem continuation functions analogous to `disch_th
 Some of these do convenient inferences for the user.
 For example:
 
-\index{CHOOSE_THEN@`CHOOSE_THEN`|pin}
-```
+\index{CHOOSE_THEN@\ml{CHOOSE\_THEN}|pin}
+```repl
 >>__ printNameAndType 4 "Thm_cont" "CHOOSE_THEN";
 ```
 
@@ -1083,15 +1083,15 @@ See §REFERENCE for full details.
 ### Proof Suspension and Resumption
 
 HOL's proof suspension and resumption facilities offer users the ability to structure large source files and proof effort by separating out sub-goals to be proved in separate `Theorem`-`Proof`-`QED` blocks.
-The first step of the process is to use the `suspend` tactic to "solve" a subgoal arising in the middle of a normal proof.
+The first step of the process is to use the `suspend` tactic to “solve” a subgoal arising in the middle of a normal proof.
 This tactic has type:
-```
+```repl
 >>__ printNameAndType0 true 4 "bossLib" "suspend"
 ```
 The `suspend` tactic's `string` argument is the label for the subgoal that is being suspended.
 When applied, this tactic immediately ends work on this subgoal as if it had been genuinely proved.
 Interactively, the goal stack will move on to any remaining subgoals in the proof.
-Theorems that have been "proved" with the help of this tactic are not stored/saved to the current segment (as they are incomplete), and instead a message is emitted indicating as much:
+Theorems that have been “proved” with the help of this tactic are not stored/saved to the current segment (as they are incomplete), and instead a message is emitted indicating as much:
 
     >> Theorem to_suspend:
           p /\ q ==> q /\ p
@@ -1104,7 +1104,7 @@ Theorems that have been "proved" with the help of this tactic are not stored/sav
 Here the user has decided to suspend the subgoal that has assumptions `p` and `q` (these are produced through the `strip_tac` application) and conclusion `q` (the first goal produced by `conj_tac`).
 A theorem is bound to the provided name in the SML namespace, but is not yet saved for export (it is incomplete).
 \index{theorem resumption}
-\index{special syntactic forms for scripts!Resume@`Resume`}
+\index{special syntactic forms for scripts!Resume@\ml{Resume}}
 To resume work on the unproven subgoal, it is necessary to use the `Resume` form, specifying the theorem name first, and then providing the subgoal name as if it were a theorem/proof attribute.
 (See Chapter \ref{chap:modern-syntax} for more on the syntax of
 attributes.)
@@ -1117,8 +1117,8 @@ Thus:
        QED
 
 The optional `smlname` attribute allows for inspection of the theorem corresponding to the sub-goal.
-\index{special syntactic forms for scripts!Finalise@`Finalise`}
-To finish their work on the whole theorem, the user must now "finalise" it.
+\index{special syntactic forms for scripts!Finalise@\ml{Finalise}}
+To finish their work on the whole theorem, the user must now “finalise” it.
 This step checks that the theorem has indeed had all of its subgoals proved and saves it, possibly alongside the usual collection of attributes:
 
     >> Finalise to_suspend[simp]
@@ -1131,9 +1131,9 @@ Also, if a theorem has not been finalised by the end of the containing script-fi
 
 - If the `suspend` tactic is called multiple times with the same name within the same goal, resumption at that label will present the user with a complicated looking encoding of multiple goals within just one.
   In order to convert this one goal back into the multiple goals that were originally saved, the user should use the `RESUME_TAC` tactic.
-  \index{RESUME_TAC@`RESUME_TAC`}
+  \index{RESUME_TAC@\ml{RESUME\_TAC}}
 - Goals that have been resumed can again be `suspend`-ed, reusing subgoal names, or not.
 - Editor modes should make it easy to create appropriate goals when working interactively; this functionality is in turn making use of the underlying function
-  ```
+  ```repl
          >>__ printNameAndType 4 "markerLib" "set_suspended_goal"
   ```

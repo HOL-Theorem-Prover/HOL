@@ -14,11 +14,17 @@
 ==                                                                         ==
 == DATE:        January 1999                                               ==
 ==                                                                         ==
-== NOTE:        The original functionality in this file was provided by    ==
-==              carefully written CONVs.  With the use of proper numerals  ==
-==              (see numeralTheory), this is no longer necessary, and      ==
-==              simple rewriting can be used for most tasks.               ==
-==              It is the (untested) claim that this will be as efficient. ==
+== NOTE:        The carefully-written CONVs in this file have been         ==
+==              replaced for everyday use by a simpler                     ==
+==              rewriting-based implementation in                          ==
+==              ../conv/Arithconv.sml; the standard (stdknl),              ==
+==              experimental (expk), and tracing (trknl) kernel            ==
+==              builds all use the new version.  This file is              ==
+==              retained for the OpenTheory logging kernel                 ==
+==              (otknl), which still needs the explicit proof              ==
+==              constructions that these original CONVs produce;           ==
+==              see tools/sequences/core-theories for the kernel           ==
+==              dispatch.                                                  ==
 ============================================================================*)
 
 structure Arithconv :> Arithconv =

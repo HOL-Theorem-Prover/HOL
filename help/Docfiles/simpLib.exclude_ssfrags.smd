@@ -1,0 +1,52 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"}; open simpLib;
+## `exclude_ssfrags`
+
+``` hol4
+simpLib.exclude_ssfrags : string list -> simpset -> simpset
+```
+
+------------------------------------------------------------------------
+
+Removes named simpset fragments and records the exclusion in the simpset.
+
+A call to `exclude_ssfrags fragnames simpset` returns a simpset that is
+the same as `simpset` except that
+1.  every fragment with a name in `fragnames` has been removed from the
+    simpset's history (as with `remove_ssfrags`); and
+2.  the names in `fragnames` are recorded in the simpset's *excluded*
+    set, so that any subsequent attempt to add a fragment with one of
+    those names via the `++` operator is a silent no-op.
+
+Use `force_add` (or, in user-facing thm-list arguments to simplification
+tactics, the `SF` marker) to opt back in: it adds a fragment and removes
+its name from the excluded set in one step.
+
+This is the function used to implement the `Proof[exclude_frags = ...]`
+attribute on theorem proofs.
+
+### Failure
+
+Never fails (unlike `remove_ssfrags`, no `Conv.UNCHANGED` is raised when
+none of the names match a fragment in the simpset).
+
+### Example
+
+##linecount_limit 0 30
+``` hol4
+>> val base = simpLib.exclude_ssfrags ["ARITH"] (srw_ss());
+
+>> List.exists (fn n => n = "ARITH")
+              (simpLib.ssfrag_names_of (base ++ numSimps.ARITH_ss));
+
+>> List.exists (fn n => n = "ARITH")
+              (simpLib.ssfrag_names_of
+                 (simpLib.force_add base numSimps.ARITH_ss));
+```
+
+### See also
+
+[`simpLib.remove_ssfrags`](#simpLib.remove_ssfrags),
+[`simpLib.force_add`](#simpLib.force_add),
+[`bossLib.SF`](#bossLib.SF)
+
+##poplinecount_limit

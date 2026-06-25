@@ -11,6 +11,9 @@ Description	 : LaTeX source files for the manual volume containing
 		   a systematic description of the HOL system
 
 Developers       : notes on how HOL is built and written for developers
+                   (developers.md); also Manual/Developers/manual-authoring.md
+                   for the .smd-source-to-PDF/mdbook pipeline used by
+                   Description, Tutorial, etc.
 
 Guide		 : style manual for writing HOL documentation.
 

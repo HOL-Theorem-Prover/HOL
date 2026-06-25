@@ -161,7 +161,7 @@ local
     ; use (nm ^ ".sml")
     end
 in
-  val _ = HOL_Interactive.print_banner()
+  val _ = HOL_Interactive.print_banner print
   val lpsize0 = length (!loadPath)
   val () =
     ( hol_use ("help" ++ "src-sml") "Database"

@@ -1,6 +1,15 @@
-.PHONY: all
+INCLUDES = ../Tools
 
-TARGETS = developers.pdf developers.html
+# Cross-manual labels.tsv prereq list for the mdbook target.
+# See Manual/mdbook.mk for MANUALS / SIBLING_LABELS.
+THIS = Developers
+include ../mdbook.mk
+
+.PHONY: all mdbook
+
+# Standalone pandoc artefacts (independent of the mdbook site).
+TARGETS = developers.pdf developers.html \
+          manual-authoring.pdf manual-authoring.html
 
 all: $(TARGETS)
 
@@ -10,4 +19,36 @@ developers.pdf: developers.md hol4.latex
 developers.html: developers.md
 	pandoc -s $< -o $@
 
-EXTRA_CLEANS = $(TARGETS)
+manual-authoring.pdf: manual-authoring.md hol4.latex
+	pandoc --template=hol4 $< -o $@
+
+manual-authoring.html: manual-authoring.md
+	pandoc -s $< -o $@
+
+# mdbook site.  Chapters are hand-authored Markdown (no .smd / no
+# polyscripter), listed in the committed SUMMARY.md; smdpp runs in
+# --plain-markdown mode (set in book.toml), which skips the LaTeX-
+# command rewriters.  That lets manual-authoring.md -- which documents
+# the .smd pipeline with literal \ref{}/\cite{}/\label{} examples in
+# code spans -- render verbatim rather than having those examples
+# eaten by the (non-code-aware) rewriters.
+MDBOOK_CHAPTERS = developers.md manual-authoring.md lsp-server.md
+
+mdbook: ../book/Developers/index.html
+
+../book/Developers/index.html: ../Tools/smdpp SUMMARY.md \
+        $(MDBOOK_CHAPTERS) \
+        labels.tsv $(SIBLING_LABELS)
+	mdbook build
+	# See Manual/Description/Holmakefile for the rationale.
+	cd ../book/Developers && \
+	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
+	../Tools/smdpp check-html ../book/Developers
+	../Tools/smdpp check-refs ../book/Developers
+	../Tools/smdpp check-links ../book/Developers
+
+# Scan-only label dump for cross-book `\ref{Book:label}` resolution.
+labels.tsv: ../Tools/smdpp SUMMARY.md $(MDBOOK_CHAPTERS)
+	../Tools/smdpp dump-labels .
+
+EXTRA_CLEANS = $(TARGETS) labels.tsv ../book/Developers/

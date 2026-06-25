@@ -1,0 +1,13 @@
+# Numbered-chapter ordering for the Interaction (emacs) manual.
+#
+# Each top-level (un-indented) line is a chapter stem.  Lines
+# starting with `#` and blank lines are ignored.  The order here
+# determines both the mdbook sidebar order (via SUMMARY.md, built
+# by Manual/Tools/gen_chap_lists) and the PDF \input order in
+# manual.tex.
+
+intro
+emacs
+search
+tactics
+reading

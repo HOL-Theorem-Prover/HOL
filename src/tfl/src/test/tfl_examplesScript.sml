@@ -1,5 +1,7 @@
 Theory tfl_examples
 
+val ERR = Feedback.mk_HOL_ERR "tfl_examples";
+
 fun function s q = Count.apply (bossLib.xDefine s) q; (* tries termination *)
 
 val nested_function = LIST_CONJ o map #1 o #extracta o
@@ -169,3 +171,42 @@ val _ = tDefine "foo"
 `foo x = if (\x. x) x then foo F else ()`
 (WF_REL_TAC `measure (\x. if x then 1 else 0)`);
 
+
+(*---------------------------------------------------------------------------*)
+(* Test for bug in extraction. The "y" in the definition of bar clashes      *)
+(* with a "y" in pair_case_cong, ie, a name in a congruence rule being used  *)
+(* in extraction overlapped with user-given names and caused a bad           *)
+(* extraction, resulting in the "v = (y,j)" conjunct going missing from the  *)
+(* generated termination problem.                                            *)
+(*---------------------------------------------------------------------------*)
+
+Definition foo_def:
+  foo s i = if LENGTH s ≤ i then NONE else SOME (9:num, i + 1)
+End
+
+val bar_defn = Hol_defn "bar"
+ ‘bar x s i =
+     case foo s i of
+          NONE => SOME (x, i)
+        | SOME (y,j) => bar 0 s j’
+
+val _ =
+ let val [tc,wfr] = Defn.tcs_of bar_defn
+     val imp = snd $ strip_forall $ tc
+ in
+   if Lib.can (find_term (aconv “v = (y:num,j:num)”)) imp
+      then ()
+   else raise ERR "bar_defn" "bad TC extraction"
+end
+
+(*
+Definition bar_def:
+  bar x s i =
+     case foo s i of
+          NONE => SOME (x, i)
+        | SOME (y,j) => bar 0 s j
+Termination
+  WF_REL_TAC ‘measure \(x,s,i). LENGTH s - i’ >>
+  rw [foo_def]
+End
+*)

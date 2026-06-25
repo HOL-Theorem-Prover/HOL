@@ -1,12 +1,30 @@
 [book]
-title = "The HOL System Description"
+title = "HOL: Description"
 authors = ["The HOL Development Team"]
 language = "en"
 src = "."
+# `description` is read by Manual/Tools/gen_lander when generating
+# the top-level Manual/book/index.html; mdbook itself ignores it.
+description = "Reference description of the HOL system: the kernel, the libraries, and the theories distributed with HOL."
 
 [output.html]
 mathjax-support = true
-additional-css = ["theme/custom.css"]
+theme = "../theme"
+additional-css = ["custom.css"]
+# Disable pulldown-cmark's smart-punctuation pass: it transforms
+# straight ASCII `'` into curly `’` even inside `$$ ... $$` math
+# blocks, which breaks e.g. libraries.smd's HOL type-variable
+# tokens (`'a`, `'b`, ...).  Curly quotes in prose are written
+# explicitly as Unicode in the .smd source where wanted.
+smart-punctuation = false
+# Cross-book search: hol-searcher.js is a symlink to ../theme/
+# hol-searcher.js (the shared source), referenced here by its
+# in-book filename because mdbook copies additional-js entries
+# by URL-path-as-string, not by following relative paths.  The
+# name avoids collision with mdbook's bundled `searcher.js`
+# resource, which is still emitted but unreferenced (index.hbs
+# drops its <script> tag).
+additional-js = ["hol-searcher.js"]
 
 # Sidebar entries fold by default beyond the top level: top-level
 # chapters stay visible, per-chapter section sub-entries (1.1, 1.2,

@@ -1,6 +1,11 @@
 .PHONY: all
 
 HAVE_MLTON = $(if $(NO_MLTON),,$(which mlton))
+
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
+
 ifneq ($(HAVE_MLTON),)
 replay-test: replay-test.mlb replay-test.sml
 	mlton -default-type intinf $<
@@ -13,6 +18,11 @@ all: pft-replay-test replay-test
 else
 all: pft-replay-test
 endif
+
+else
+
+$(info *** Doing nothing when no mlton)
+all:
 endif
 
 EXTRA_CLEANS = replay-test pft-replay-test

@@ -1,0 +1,40 @@
+[book]
+title = "HOL: Tutorial"
+authors = ["The HOL Development Team"]
+language = "en"
+src = "."
+# `description` is read by Manual/Tools/gen_lander when generating
+# the top-level Manual/book/index.html; mdbook itself ignores it.
+description = "Step-by-step introduction to HOL through worked examples."
+
+[output.html]
+mathjax-support = true
+theme = "../theme"
+additional-css = ["custom.css"]
+# See Manual/Description/book.toml for the smart-punctuation
+# rationale: pulldown-cmark smart-quotes straight `'` inside
+# math blocks, which we don't want.  Source uses Unicode curly
+# quotes explicitly where needed.
+smart-punctuation = false
+# Cross-book search; see Manual/Description/book.toml for the
+# additional-js / symlink rationale.
+additional-js = ["hol-searcher.js"]
+
+# Sidebar entries fold by default beyond the top level: top-level
+# chapters stay visible, per-chapter section sub-entries (1.1, 1.2,
+# ...) are collapsed under a chevron until clicked.  mdbook's
+# `level` is the deepest depth that stays unfolded (0 = only the
+# top level stays open).
+[output.html.fold]
+enable = true
+level = 0
+
+[preprocessor.smdpp]
+command = "../Tools/smdpp"
+renderers = ["html"]
+
+[build]
+# Outside the source directory so mdbook serve's watcher doesn't loop
+# rebuilding on its own output.
+build-dir = "../book/Tutorial"
+create-missing = false

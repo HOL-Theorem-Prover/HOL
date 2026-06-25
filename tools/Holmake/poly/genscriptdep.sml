@@ -18,9 +18,8 @@ fun get_includes () =
   if FileSys.access ("Holmakefile", [FileSys.A_READ]) then
     let
       open Holmake_types
-      val (env, _, _) = ReadHMF.read "Holmakefile" (base_environment())
-      fun envlist id =
-        map dequote (tokenize (perform_substitution env [VREF id]))
+      val (env, _, _, _) = ReadHMF.read "Holmakefile" (base_environment())
+      val envlist = Holmake_types.envlist internal_functions.default_diags env
     in
       envlist "PRE_INCLUDES" @ envlist "INCLUDES"
     end

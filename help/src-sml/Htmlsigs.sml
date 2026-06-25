@@ -7,11 +7,49 @@ fun die s =
     (TextIO.output(TextIO.stdErr, s ^ "\n");
      OS.Process.exit OS.Process.failure)
 
+(* URL prefix for per-entry docfile hyperlinks.  See Htmlsigs.sig. *)
+val entry_url_base = ref ""
 
-fun indexbar out srcpath = out (String.concat
+(* URL prefix for per-theory hyperlinks in TheoryIndex.html.  See
+   Htmlsigs.sig. *)
+val theory_url_base = ref ""
+
+(* URL prefix for the per-page "Source File" hyperlink.  See
+   Htmlsigs.sig. *)
+val source_url_base = ref ""
+
+
+(* Target for the per-page "Source File" link.  With source_url_base
+   set (web/deploy builds -- e.g. a GitHub blob URL), emit
+   <base><path-relative-to-HOLDIR>, stripping any `.hol/objs/`
+   object-directory indirection so the link lands on the committed
+   source/Script file.  Otherwise fall back to a local file:// URL,
+   which is what a developer browsing a local build wants. *)
+fun sourceHref HOLpath srcpath =
+    if !source_url_base = "" then "file://" ^ srcpath
+    else
+      case (if String.isPrefix HOLpath srcpath
+            then SOME (String.extract (srcpath, String.size HOLpath, NONE))
+            else NONE)
+       of NONE => "file://" ^ srcpath  (* not under HOLDIR; best effort *)
+        | SOME rest =>
+          let
+            val rel = if String.isPrefix "/" rest
+                      then String.extract (rest, 1, NONE) else rest
+            (* drop a ".hol/objs/" path segment (length 10) if present *)
+            val (pre, suf) =
+                Substring.position ".hol/objs/" (Substring.full rel)
+            val rel = if Substring.isEmpty suf then rel
+                      else Substring.string pre ^
+                           String.extract (Substring.string suf, 10, NONE)
+          in
+            !source_url_base ^ rel
+          end
+
+fun indexbar out HOLpath srcpath = out (String.concat
    ["<hr><table width=\"100%\">",
     "<tr align = center>\n",
-    "<th><a href=\"file://", srcpath,
+    "<th><a href=\"", sourceHref HOLpath srcpath,
     "\" type=\"text/plain\">Source File</a>\n",
     "<th><a href=\"idIndex.html\">Identifier index</A>\n",
     "<th><a href=\"TheoryIndex.html\">Theory binding index</A>\n",
@@ -49,18 +87,29 @@ fun find_most_appealing HOLpath docfile =
   let open OS.Path OS.FileSys
       val {dir,file} = splitDirFile docfile
       val {base,ext} = splitBaseExt file
-      val docfile_dir = concat(HOLpath,dir)
-      val htmldir  = concat(docfile_dir,"HTML")
-      val htmlfile = joinBaseExt{base=base,ext=SOME "html"}
-      val adocfile = joinBaseExt{base=base,ext=SOME "txt"}
-      val htmlpath = concat(htmldir,htmlfile)
-      val adocpath = concat(docfile_dir,adocfile)
-      val docpath  = concat(docfile_dir,file)
   in
-     if OS.FileSys.access(htmlpath,[A_READ]) then SOME htmlpath else
-     if OS.FileSys.access(adocpath,[A_READ]) then SOME adocpath else
-     if OS.FileSys.access(file,[A_READ]) then SOME docpath
-     else NONE
+    (* When entry_url_base is set, callers want hyperlinks that resolve
+       relative to the generated htmlsigs/ page -- not absolute file://
+       paths.  The chosen base (e.g. mdbook Reference output, or the
+       fallback Docfiles/HTML directory) was decided by build_help and
+       passed in via makebase's --entry-url-base flag. *)
+    if !entry_url_base <> "" then
+      SOME (!entry_url_base ^ base ^ ".html")
+    else
+      let
+        val docfile_dir = concat(HOLpath,dir)
+        val htmldir  = concat(docfile_dir,"HTML")
+        val htmlfile = joinBaseExt{base=base,ext=SOME "html"}
+        val adocfile = joinBaseExt{base=base,ext=SOME "txt"}
+        val htmlpath = concat(htmldir,htmlfile)
+        val adocpath = concat(docfile_dir,adocfile)
+        val docpath  = concat(docfile_dir,file)
+      in
+        if OS.FileSys.access(htmlpath,[A_READ]) then SOME htmlpath else
+        if OS.FileSys.access(adocpath,[A_READ]) then SOME adocpath else
+        if OS.FileSys.access(file,[A_READ]) then SOME docpath
+        else NONE
+      end
   end;
 
 fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
@@ -70,6 +119,76 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 	val lines = Substring.fields (fn c => c = #"\n")
 	                             (Substring.full (TextIO.inputAll is))
 	val _ = TextIO.closeIn is
+
+	(* Line-scan for "structure X : sig" ... "end" so that per-id docfile
+	   resolution inside such a block can use the inner structure's name
+	   as the qualifier.  Only handles one-line opens; comments and string
+	   literals are not parsed, but real signature files don't put either
+	   "structure ... sig" or a bare "end" inside them. *)
+	val substructRanges : (string * int * int) list =
+	    let open Substring
+		fun openStruct line =
+		    let val ws = dropl Char.isSpace line
+		    in
+		      if isPrefix "structure " ws then
+			let val rest = dropl Char.isSpace (triml 10 ws)
+			    val (id, after) = splitl smlIdChar rest
+			    val after = dropl Char.isSpace after
+			in
+			  if not (isEmpty id) andalso isPrefix ":" after
+			  then let val tail =
+				       dropl Char.isSpace (triml 1 after)
+			       in
+				 if isPrefix "sig" tail andalso
+				    (size tail = 3 orelse
+				     not (smlIdChar (sub (tail, 3))))
+				 then SOME (string id)
+				 else NONE
+			       end
+			  else NONE
+			end
+		      else NONE
+		    end
+		fun isCloser line =
+		    let val ws = dropl Char.isSpace line
+		    in isPrefix "end" ws andalso
+		       (size ws = 3 orelse not (smlIdChar (sub (ws, 3))))
+		    end
+		fun scan _ stack acc [] = acc
+		  | scan lineno stack acc (line :: rest) =
+		    case openStruct line of
+			SOME name =>
+			  let val prefix =
+				  case stack of [] => ""
+					      | (q, _) :: _ => q ^ "."
+			  in scan (lineno + 1)
+				  ((prefix ^ name, lineno) :: stack) acc rest
+			  end
+		      | NONE =>
+			  if isCloser line then
+			    case stack of
+				[] => scan (lineno + 1) stack acc rest
+			      | (qname, startLine) :: stack' =>
+				  scan (lineno + 1) stack'
+				       ((qname, startLine, lineno) :: acc) rest
+			  else scan (lineno + 1) stack acc rest
+	    in
+		scan 1 [] [] lines
+	    end
+
+	fun currentStruct lineno =
+	    let
+	      fun fits (_, s, e) = s <= lineno andalso lineno <= e
+	      fun smaller ((_, s, e), (_, s', e')) = e - s < e' - s'
+	      fun pick (entry, NONE) = if fits entry then SOME entry else NONE
+		| pick (entry, best as SOME b) =
+		    if fits entry andalso smaller (entry, b) then SOME entry
+		    else best
+	    in
+	      case List.foldl pick NONE substructRanges of
+		  NONE => strName
+		| SOME (n, _, _) => n
+	    end
 
 	fun comp2str comp =
 	    let open Database
@@ -173,8 +292,15 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 
 	fun idhref link id =
 	    (out "<a href=\"#"; out link; out "\">"; out id; out"</a>")
+	(* When entry_url_base is set, find_most_appealing has already
+	   produced a complete URL; otherwise `link` is a filesystem path
+	   that needs the file:// scheme. *)
 	fun idhref_full link id =
-	    (out "<a href=\"file://"; out link; out "\">"; out id; out"</a>")
+	    let val scheme = if !entry_url_base <> "" then "" else "file://"
+	    in
+	      (out "<a href=\""; out scheme; out link;
+	       out "\">"; out id; out"</a>")
+	    end
 
         fun removeTrailingColon id =
            let
@@ -186,17 +312,16 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
            end
 
         val aliasStrName =
-           fn "DefinitionDoc" => "Definition"
-            | "FinalType" => "Type"
+           fn "FinalType" => "Type"
             | "FinalTerm" => "Term"
             | "FinalThm" => "Thm"
             | "HolKernelDoc" => "HolKernel"
             | s => s
 
-        fun locate_docfile id =
+        fun locate_docfile curStr id =
            let open OS.FileSys OS.Path Database
                val id = removeTrailingColon id
-               val qualid = aliasStrName strName ^ "." ^ id
+               val qualid = aliasStrName curStr ^ "." ^ id
                fun trav [] = NONE
                  | trav({comp=Database.Term(x,SOME "HOL"),file,line}::rst)
                    = if x=qualid
@@ -222,7 +347,7 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 		if id = "" then ()
                  else if not (Binaryset.member (!anchors, link))
                       then if isThryFile then out id (* shouldn't happen *)
-                           else case locate_docfile id
+                           else case locate_docfile (currentStruct lineno) id
                                  of NONE => out id
                                   | SOME (file, id2) =>
                                       (idhref_full file id2
@@ -301,11 +426,11 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
         out "</head>\n";
         out "<body>\n";
         out "<h1>Structure "; out strName; out "</h1>\n";
-        indexbar out srcfile;
+        indexbar out HOLpath srcfile;
         out "<pre>\n";
         traverse (pass2 (isTheorysig sigfile));
         out "</pre>";
-        indexbar out srcfile;
+        indexbar out HOLpath srcfile;
         out "<p><em>"; out version; out "</em></p>";
         out "</body></html>\n";
         TextIO.closeOut os
@@ -393,11 +518,19 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
                             firstsymb := false)
                       else ()
 	    end
-	(* Resolve sigobj/<thy>Theory.sig to the per-theory doc URL relative
-	   to the file we are currently writing.  Returns NONE for non-theory
-	   files or if the symlink resolution fails. *)
+	(* Per-theory doc URL.  When theory_url_base is set (the mdbook
+	   layout, where staged theory pages all live at
+	   <book>/theories/<thy>Theory.html), emit a flat
+	   `<base><thy_file>.html` href.  Otherwise resolve
+	   sigobj/<thy>Theory.sig to the source tree's `.hol/docs/`
+	   location, relative to the file we are currently writing.
+	   Returns NONE for non-theory files or if the legacy symlink
+	   resolution fails. *)
 	val outfile_dir = OS.Path.dir outfile
 	fun theory_doc_url thy_file =
+	    if !theory_url_base <> "" then
+	      SOME (!theory_url_base ^ thy_file ^ ".html")
+	    else
 	    let val sigobj_sig =
 		    OS.Path.concat (HOLpath,
 		      OS.Path.concat ("sigobj", thy_file ^ ".sig"))

@@ -3,6 +3,7 @@ hol.state0
 hol.state.min
 Holmake
 build
+comparelogs
 hol
 unquote
 recode32

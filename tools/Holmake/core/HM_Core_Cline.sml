@@ -3,25 +3,28 @@ struct
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate28 z
+  fun makeUpdateT z = makeUpdate31 z
 in
 fun updateT z = let
-  fun from cache_dir cachekey debug do_logging fast help hmakefile holdir includes
+  fun from cache_dir cachekey debug dirs do_logging fast force_lastmaker
+           help hmakefile holdir includes
            interactive jobs json keep_going no_action no_hmakefile
            no_lastmaker_check no_overlay
-           no_preexecs no_prereqs opentheory quiet
+           no_preexecs no_prereqs no_project opentheory quiet
            quit_on_failure rebuild rebuild_deps recursive_build recursive_clean
            thmsrc verbose =
     {
       cache_dir = cache_dir,
       cachekey = cachekey,
-      debug = debug, do_logging = do_logging,
-      fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
+      debug = debug, dirs = dirs, do_logging = do_logging,
+      fast = fast, force_lastmaker = force_lastmaker,
+      help = help, hmakefile = hmakefile, holdir = holdir,
       includes = includes, interactive = interactive, jobs = jobs,
       json = json, keep_going = keep_going,
       no_action = no_action, no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_preexecs = no_preexecs, no_prereqs = no_prereqs,
+      no_project = no_project,
       opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
       rebuild = rebuild,
@@ -31,37 +34,42 @@ fun updateT z = let
   fun from' verbose thmsrc recursive_clean recursive_build rebuild_deps
             rebuild
             quit_on_failure
-            quiet opentheory no_prereqs no_preexecs
+            quiet opentheory no_project no_prereqs no_preexecs
             no_overlay no_lastmaker_check no_hmakefile no_action keep_going
             json jobs interactive
             includes holdir
-            hmakefile help fast do_logging debug cachekey cache_dir =
+            hmakefile help force_lastmaker fast do_logging dirs debug
+            cachekey cache_dir =
     {
       cache_dir = cache_dir,
       cachekey = cachekey,
-      debug = debug, do_logging = do_logging,
-      fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
+      debug = debug, dirs = dirs, do_logging = do_logging,
+      fast = fast, force_lastmaker = force_lastmaker,
+      help = help, hmakefile = hmakefile, holdir = holdir,
       includes = includes, interactive = interactive, jobs = jobs,
       json = json, keep_going = keep_going,
       no_action = no_action, no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_preexecs = no_preexecs, no_prereqs = no_prereqs,
+      no_project = no_project,
       opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
       rebuild = rebuild,
       rebuild_deps = rebuild_deps, recursive_build = recursive_build,
       recursive_clean = recursive_clean, thmsrc = thmsrc, verbose = verbose
     }
-  fun to f {cache_dir, cachekey, debug, do_logging, fast, help, hmakefile, holdir,
+  fun to f {cache_dir, cachekey, debug, dirs, do_logging, fast,
+            force_lastmaker, help, hmakefile, holdir,
             includes, interactive, jobs, json, keep_going, no_action,
             no_hmakefile, no_lastmaker_check,
-            no_overlay, no_preexecs, no_prereqs, opentheory,
+            no_overlay, no_preexecs, no_prereqs, no_project, opentheory,
             quiet, quit_on_failure, rebuild, rebuild_deps, recursive_build,
             recursive_clean, thmsrc, verbose} =
-    f cache_dir cachekey debug do_logging fast help hmakefile holdir includes
+    f cache_dir cachekey debug dirs do_logging fast force_lastmaker
+      help hmakefile holdir includes
       interactive jobs json keep_going no_action no_hmakefile
       no_lastmaker_check no_overlay no_preexecs
-      no_prereqs opentheory quiet
+      no_prereqs no_project opentheory quiet
       quit_on_failure rebuild rebuild_deps recursive_build recursive_clean
       thmsrc verbose
 in
@@ -78,8 +86,10 @@ type t = {
   cache_dir : string option,
   cachekey : string option,
   debug : {ins : string list, outs : string list} option,
+  dirs : bool,
   do_logging : bool,
   fast : bool,
+  force_lastmaker : bool,
   help : bool,
   hmakefile : string option,
   holdir : string option,
@@ -94,6 +104,7 @@ type t = {
   no_overlay : bool,
   no_preexecs : bool,
   no_prereqs : bool,
+  no_project : bool,
   opentheory : string option,
   quiet : bool,
   quit_on_failure : bool,
@@ -111,13 +122,17 @@ val default_cache_dir =
       | (NONE, SOME h) => SOME (OS.Path.concat(OS.Path.concat(h, ".cache"), "HOL"))
       | (NONE, NONE) => NONE
 
+(* Defaults are conservative: caching off, mtime-based rebuild.
+   Opt into the cache + cachekey machinery with `--use-cache`. *)
 val default_core_options : t =
 {
-  cache_dir = default_cache_dir,
+  cache_dir = NONE,
   cachekey = NONE,
   debug = NONE,
+  dirs = false,
   do_logging = false,
   fast = false,
+  force_lastmaker = false,
   help = false,
   hmakefile = NONE,
   holdir = NONE,
@@ -132,10 +147,11 @@ val default_core_options : t =
   no_overlay = false,
   no_preexecs = false,
   no_prereqs = false,
+  no_project = false,
   opentheory = NONE,
   quiet = false,
   quit_on_failure = true,
-  rebuild = HM_Cachekey_dtype.Cachekey,
+  rebuild = HM_Cachekey_dtype.Mtime,
   rebuild_deps = false,
   recursive_build = false,
   recursive_clean = false,
@@ -176,6 +192,24 @@ fun set_hmakefile s =
                  else ();
                  updateT t (U #hmakefile (SOME s)) $$),
     hmakefile = SOME s, no_hmf = false }
+(* -C/--directory's update has a side effect (chdir) but apply_updates
+   runs twice (once before reading the Holmakefile, once after to
+   layer cmdline overrides on top of CLINE_OPTIONS). Each option
+   occurrence caches its absolute target on first run and reuses it
+   on subsequent runs, keeping the update idempotent. *)
+fun set_cwd s = let
+  val resolved = ref (NONE : string option)
+in
+  resfn (fn (wn, t) =>
+            ((case !resolved of
+                  SOME abs => OS.FileSys.chDir abs
+                | NONE =>
+                    (OS.FileSys.chDir s;
+                     resolved := SOME (OS.FileSys.getDir())))
+             handle OS.SysErr (msg, _) =>
+               Holmake_tools.die_with ("-C " ^ s ^ ": " ^ msg);
+             t))
+end
 fun set_holdir s =
   resfn (fn (wn, t) =>
             (if isSome (#holdir t) then
@@ -238,15 +272,29 @@ val core_option_descriptions = [
   { help = "set cache directory", long = ["cache-dir"], short = "",
     desc = ReqArg (fn s => resfn (fn (wn,t) =>
                updateT t (U #cache_dir (SOME s)) $$), "directory") },
-  { help = "disable build caching", long = ["no-cache"], short = "",
+  { help = "disable build caching (default)", long = ["no-cache"], short = "",
     desc = NoArg (fn () => resfn (fn (wn,t) =>
                updateT t (U #cache_dir NONE) $$)) },
+  { help = "enable build caching: use default cache directory and \
+           \cachekey-based rebuild decisions",
+    long = ["use-cache"], short = "",
+    desc = NoArg (fn () => resfn (fn (wn,t) =>
+               updateT t (U #cache_dir default_cache_dir)
+                         (U #rebuild HM_Cachekey_dtype.Cachekey) $$)) },
   { help = "print cache key for a theory target", long = ["cachekey"],
     short = "", desc = ReqArg (set_cachekey, "theory") },
+  { help = "change to DIR before doing anything",
+    long = ["directory"], short = "C",
+    desc = ReqArg (set_cwd, "DIR") },
   { help = "turn on diagnostic messages", long = ["dbg"], short = "d",
     desc = OptArg (addDbg, "diag-cat")},
+  { help = "treat positional args as root directories",
+    long = ["dirs"], short = "", desc = mkBoolT #dirs },
   { help = "fast build (replace tactics w/cheat)", long = ["fast"], short = "",
     desc = mkBoolT #fast },
+  { help = "overwrite any conflicting .hol/make-deps/lastmaker without prompting",
+    long = ["force-lastmaker"], short = "",
+    desc = mkBoolT #force_lastmaker },
   { help = "show this message", long = ["help"], short = "h",
     desc = mkBoolT #help },
   { help = "use different HOLDIR", long = ["holdir"], short = "",
@@ -277,6 +325,8 @@ val core_option_descriptions = [
     short = "", desc = mkBoolT #no_preexecs },
   { help = "don't build recursively in INCLUDES",
     long = ["no_prereqs"], short = "", desc = mkBoolT #no_prereqs },
+  { help = "ignore holproject.toml even if present",
+    long = ["no-project"], short = "", desc = mkBoolT #no_project },
   { help = "don't quit on failure", long = ["noqof"], short = "",
     desc = mkBoolF #quit_on_failure },
   { help = "use file as opentheory logging .uo",
@@ -295,7 +345,7 @@ val core_option_descriptions = [
   { help = "rebuild cached dependency files", short = "",
     long = ["rebuild_deps"], desc = mkBoolT #rebuild_deps },
   { help = "rebuild-decision strategy for theory targets \
-           \(mtime or cachekey [default])",
+           \(mtime [default] or cachekey)",
     short = "", long = ["rebuild"],
     desc = ReqArg (set_rebuild, "strategy") },
   { help = "both --recursive-{build,clean}", short = "r", long = [],

@@ -44,14 +44,18 @@ type dir = Holmake_tools.hmdir.t
 type 'a nodeInfo = { target : dep, status : target_status, extra : 'a,
                      command : command, phony : bool,
                      seqnum : int, dir : dir,
-                     dependencies : (node * Holmake_tools.dep) list  }
+                     dependencies : (node * Holmake_tools.dep) list,
+                     mtime : Time.time option,
+                     local_parallelism_limit : int option }
 
 fun fupdStatus f (nI: 'a nodeInfo) : 'a nodeInfo =
   let
-    val {target,command,status,dependencies,seqnum,phony,dir,extra} = nI
+    val {target,command,status,dependencies,seqnum,phony,dir,extra,mtime,
+         local_parallelism_limit} = nI
   in
     {target = target, status = f status, command = command, seqnum = seqnum,
-     dependencies = dependencies, phony = phony, dir = dir, extra = extra}
+     dependencies = dependencies, phony = phony, dir = dir, extra = extra,
+     mtime = mtime, local_parallelism_limit = local_parallelism_limit}
   end
 
 fun setStatus s = fupdStatus (fn _ => s)
@@ -70,9 +74,18 @@ fun command_compare (NoCmd, NoCmd) = EQUAL
   | command_compare (BuiltInCmd _, SomeCmd _) = GREATER
   | command_compare (BuiltInCmd (b1,_), BuiltInCmd (b2,_)) = bic_compare(b1,b2)
 
+(* file_hashes memoises SHA1.sha1_file results during a Holmake
+   invocation.  Lives on the dep graph because the graph already
+   threads through every place that needs to ask "what's this dep
+   file's hash?", and because (in shape) it's keyed by the same
+   [dep] identifier the graph uses for target_map.  Plain dict, no
+   ref: updates return a new graph in the existing functional
+   style. *)
 type 'a t = { nodes : (node, 'a nodeInfo) Map.dict,
               target_map : (dep,node) Map.dict,
-              command_map : (dir * command,node list) Map.dict }
+              command_map : (dir * command,node list) Map.dict,
+              file_hashes : (dep, string) Map.dict,
+              theories_built : int }
 
 
 fun fold f (g:'a t) A =
@@ -81,9 +94,28 @@ fun fold f (g:'a t) A =
 fun empty() : 'a t =
     { nodes = Map.mkDict node_compare,
       target_map = Map.mkDict hm_target.compare,
-      command_map = Map.mkDict (pair_compare(hmdir.compare, command_compare)) }
-fun fupd_nodes f ({nodes, target_map, command_map}: 'a t) : 'a t =
-  {nodes = f nodes, target_map = target_map, command_map = command_map}
+      command_map = Map.mkDict (pair_compare(hmdir.compare, command_compare)),
+      file_hashes = Map.mkDict hm_target.compare,
+      theories_built = 0 }
+fun fupd_nodes f ({nodes, target_map, command_map, file_hashes,
+                   theories_built}: 'a t) : 'a t =
+  {nodes = f nodes, target_map = target_map,
+   command_map = command_map, file_hashes = file_hashes,
+   theories_built = theories_built}
+
+fun theories_built (g : 'a t) = #theories_built g
+
+fun is_theory_dat_node (nI : 'a nodeInfo) =
+    case (#command nI, hm_target.filepart (#target nI)) of
+        (BuiltInCmd (BIC_BuildScript _, _), DAT _) => true
+      | _ => false
+
+fun peek_file_hash (g : 'a t) d = Map.peek (#file_hashes g, d)
+fun set_file_hash (g : 'a t) d h : 'a t =
+    {nodes = #nodes g, target_map = #target_map g,
+     command_map = #command_map g,
+     file_hashes = Map.insert (#file_hashes g, d, h),
+     theories_built = #theories_built g}
 
 fun find_nodes_by_command (g : 'a t) dc =
   case Map.peek (#command_map g, dc) of
@@ -120,7 +152,9 @@ fun add_node (nI : 'a nodeInfo) (g :'a t) =
       in
         ({ nodes = Map.insert(#nodes g,n,nI),
            target_map = Map.insert(#target_map g, #target nI, n),
-           command_map = extend_map_list (#command_map g) (#dir nI,copt) n },
+           command_map = extend_map_list (#command_map g) (#dir nI,copt) n,
+           file_hashes = #file_hashes g,
+           theories_built = #theories_built g },
          n)
       end
     val {target=tgt,dir,...} = nI
@@ -134,14 +168,29 @@ fun add_node (nI : 'a nodeInfo) (g :'a t) =
     newNode (#command nI)
   end
 
-fun updnode (n, st) (g : 'a t) : 'a t =
+fun bump_built_count (old_nI, new_st) g =
+    if #status old_nI <> Succeeded andalso new_st = Succeeded andalso
+       is_theory_dat_node old_nI
+    then {nodes = #nodes g, target_map = #target_map g,
+          command_map = #command_map g, file_hashes = #file_hashes g,
+          theories_built = #theories_built g + 1}
+    else g
+
+fun updnode_tgtstatus (n, st) (g : 'a t) : 'a t =
   case peeknode g n of
       NONE => raise NoSuchNode
-    | SOME nI => fupd_nodes (fn m => Map.insert(m, n, setStatus st nI)) g
+    | SOME nI => bump_built_count (nI, st)
+                   (fupd_nodes (fn m => Map.insert(m, n, setStatus st nI)) g)
 
-fun find_runnable (g : 'a t) =
+fun updnode_fully (n, nInfo) (g : 'a t) : 'a t =
+    case peeknode g n of
+        NONE => raise NoSuchNode
+      | SOME old_nI =>
+        bump_built_count (old_nI, #status nInfo)
+          (fupd_nodes (fn m => Map.insert(m, n, nInfo)) g)
+
+fun find_runnable_pred P (g : 'a t) =
   let
-    val sz = size g
     fun hasSucceeded (i,_) = #status (valOf (peeknode g i)) = Succeeded
     (* relying on invariant that all nodes up to size are in map *)
     fun search i =
@@ -149,12 +198,15 @@ fun find_runnable (g : 'a t) =
           NONE => NONE
         | SOME nI =>
           if #status nI = Pending{needed=true} andalso
-             List.all hasSucceeded (#dependencies nI)
+             List.all hasSucceeded (#dependencies nI) andalso
+             P nI
           then SOME (i,nI)
           else search (i + 1)
   in
     search 0
   end
+
+fun find_runnable g = find_runnable_pred (fn _ => true) g
 
 fun target_node (g:'a t) t = Map.peek(#target_map g,t)
 fun listNodes (g:'a t) = Map.foldr (fn (k,v,acc) => (k,v)::acc) [] (#nodes g)
@@ -190,9 +242,11 @@ fun pr_list s [] = apNIL
 fun nodeInfo_toJSON (n, nI : 'a nodeInfo) =
     let
       open Holmake_tools
-      val {target,status,command,dependencies,seqnum,phony,dir,...} = nI
+      val {target,status,command,dependencies,seqnum,phony,dir,mtime,...} = nI
       fun field fnm f v = apSING ("  \"" ^ fnm ^ "\" : " ^ f v)
       fun quote f x = "\"" ^ f x ^ "\""
+      fun mtimeJSON NONE = "null"
+        | mtimeJSON (SOME t) = Time.toString t
     in
       apSING "{\n" ++
       pr_list ",\n" [
@@ -207,6 +261,7 @@ fun nodeInfo_toJSON (n, nI : 'a nodeInfo) =
               dependencies,
         field "command" (fn c => "\"" ^ command_toString c ^ "\"") command,
         field "dir" (quote hmdir.toString) dir,
+        field "mtime" mtimeJSON mtime,
         field "needs_rebuild" (fn s => Bool.toString (s <> Succeeded)) status
       ] ++
       apSING "\n}"
@@ -214,7 +269,7 @@ fun nodeInfo_toJSON (n, nI : 'a nodeInfo) =
 
 fun mkneeded tgts g =
     let
-      fun setneeded f n g = updnode(n,f{needed=true}) g
+      fun setneeded f n g = updnode_tgtstatus(n,f{needed=true}) g
       fun work visited wlist g =
           case wlist of
               [] => g

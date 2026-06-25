@@ -1,0 +1,30 @@
+# Cross-directory rule lookup regression.
+#
+# `description' and `tutorial' are sibling subdirectories.  Each has
+# its own Holmakefile with its own rules.  `description' depends on a
+# file produced by `tutorial' (via a `../tutorial/labels.tsv'-style
+# prereq path).  The aggregator's INCLUDES is alphabetical, so
+# `description' is processed *before* `tutorial': the bug manifests
+# only when the sibling target's file doesn't exist on disk yet at
+# the moment `description's' dep graph is being built.
+#
+# Before the fix Holmake aborted with
+#   `Don't know how to build necessary target(s): .../tutorial/labels.tsv'
+# because rule lookup was always keyed off cwd's Holmakefile, missing
+# `tutorial/Holmakefile's' rule entirely.  After the fix `local_rule_info'
+# consults the target's home directory's Holmakefile, finds the rule,
+# and the target gets built in the right working directory.
+
+# The recipes here are plain `echo`/`cat`; no HOL compilation is
+# involved, so --poly_not_hol skips the implicit hol.state dep that
+# would otherwise be added when Holmake runs in HOLDIR.
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
+
+INCLUDES = description tutorial
+
+all: description/out.txt
+.PHONY: all
+
+EXTRA_CLEANS = description/out.txt tutorial/labels.tsv

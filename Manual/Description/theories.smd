@@ -117,7 +117,7 @@ built.  Further basic types are developed in the theory of pairs
 At start-up, the initial theory for users of the HOL system is called
 `bool`\index{HOL@\HOL{}}, which is constructed when the HOL system is
 built.  The theory `bool` is an extension of the combination of the
-"conceptual" theories `LOG` and `INIT`, described in the LOGIC manual.
+“conceptual” theories `LOG` and `INIT`, described in the LOGIC manual.
 Thus it contains the four axioms
 \index{axioms!in bool theory@in \ml{bool} theory}
 for higher order logic.  These axioms, together with the rules of
@@ -205,7 +205,7 @@ the first three are the following:
 \index{axiom of choice}
 \index{axioms!of choice}
 \index{choice operator, in HOL logic@choice operator, in \HOL{} logic!primitive axiom for}
-```
+```repl
 ##thm BOOL_CASES_AX
 
 ##thm ETA_AX
@@ -221,7 +221,7 @@ of the function properties `ONE_ONE` and `ONTO`.  The definitions are:
 \index{ONTO_DEF@\ml{ONTO\_DEF}}
 \index{one-to-one predicate, in HOL logic@one-to-one predicate, in \HOL{} logic!definitional axiom for}
 \index{onto predicate, in HOL logic@onto predicate, in \HOL{} logic!definitional axiom for}
-```
+```repl
 ##thm ONE_ONE_DEF
 ##thm ONTO_DEF
 ```
@@ -232,7 +232,7 @@ is
 \index{INFINITY_AX@\ml{INFINITY\_AX}}
 \index{axiom of infinity}
 \index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!in infinity axiom}
-```
+```repl
 ##thm INFINITY_AX
 ```
 
@@ -250,7 +250,7 @@ system should never need to make a non-definitional
 \index{definitional theories}
 theory.  In practice, it is often very tempting to take the risk of
 introducing new axioms because deriving them from definitions can be
-tedious---proving that 'axioms' follow from definitions amounts to
+tedious---proving that ‘axioms’ follow from definitions amounts to
 proving their consistency.
 
 **Further definitions.**
@@ -260,7 +260,7 @@ constants.
 \index{COND, the HOL constant@\holtxt{COND}, the \HOL{} constant}
 \index{LET, the HOL constant@\ml{LET}, the \HOL{} constant}
 \index{conditionals, in HOL logic@conditionals, in \HOL{} logic!definitional axiom for}
-```
+```repl
 ##thm LET_DEF
 ##thm COND_DEF
 ##thm IN_DEF
@@ -285,7 +285,7 @@ the application `COND `$t_1$` `$t_2$` `$t_3$.
 The constant `IN` (written as an infix) is the basis of the modelling
 of sets by their characteristic functions.  The term $x$` IN `$P$ can
 be read as "$x$ is an element of the set $P$", or (more in line with
-its definition) as "the predicate $P$ is true of $x$".
+its definition) as “the predicate $P$ is true of $x$”.
 
 Finally, the polymorphic constant `ARB`$:\alpha$ denotes a fixed but
 arbitrary element.  `ARB` is occasionally useful when attempting to
@@ -299,7 +299,7 @@ quantification*.  This provides a means of simulating subtypes and
 dependent types with predicates.  The most heavily used are
 restrictions of the existential and universal quantifiers:
 
-```
+```repl
 ##thm RES_FORALL_DEF
 ##thm RES_EXISTS_DEF
 
@@ -316,7 +316,7 @@ than a direct equation.  There are two important properties
 For completeness, restricted versions of unique existence and
 indefinite description are provided, although hardly used.
 
-```
+```repl
 ##thm RES_EXISTS_UNIQUE_DEF
 ##thm RES_SELECT_DEF
 ```
@@ -530,7 +530,7 @@ and the combinators `S`,
 and `C`.
 \index{C, the HOL constant@\ml{C}, the \HOL{} constant}
 
-```
+```repl
 >>__ open combinTheory
 ##thm o_DEF
 ##thm APP_DEF
@@ -544,7 +544,7 @@ and `C`.
 
 The following elementary properties are proved in the theory `combin`:
 
-```
+```repl
 ##thm o_THM
 ##thm o_ASSOC
 
@@ -565,11 +565,11 @@ update terms.  As per the definition above (`UPDATE_def`), the infix
 function, which when in turn is passed a function $f$, returns a
 version of that function that has been updated to return $v$ when
 applied to $k$, and is otherwise the same as $f$.  The same effect
-can be achieved with the "substitution style" syntax:
+can be achieved with the “substitution style” syntax:
 $f\llparenthesis k\mapsto v\rrparenthesis$.  There is an ASCII form
 of this notation as well:
 
-```
+```repl
 >> ``(k2 =+ v2) ((k1 =+ v1) f)``;
 >> ``f (| k |-> v |)``;
 ```
@@ -594,7 +594,7 @@ names for variables (e.g., `S` to range over sets and `o` to range
 over outputs).[^combin-shadow]  Variables with these names can be
 used in the current system if `o`, `S`, `K`, `I`, `W`, and `C` are
 first hidden (see Section \ref{hidden}).  In fact, this happens so
-often with the constant `C` that the name `C` is "hidden" by
+often with the constant `C` that the name `C` is “hidden” by
 default.
 \index{flip, as alias for HOL constant C@\holtxt{flip}, as alias for \HOL{} constant \holtxt{C}}
 Instead, it can be written in fully-qualified form, as `combin$C`,
@@ -665,7 +665,7 @@ with this theorem which results in the definitional axiom
 \index{axioms!in bool theory@in \ml{bool} theory}
 `prod_TY_DEF` shown below being asserted in the theory `pair`.
 
-```
+```repl
 >>__ open pairTheory
 ##thm prod_TY_DEF
 ```
@@ -675,7 +675,7 @@ Next, the representation and abstraction functions `REP_prod` and
 characterizing theorem, by use of the function
 `define_new_type_bijections`.
 
-```
+```repl
 ##thm ABS_REP_prod
 ```
 
@@ -692,7 +692,7 @@ decomposed into a pair of terms.
 \index{pairing constructor, in HOL logic@pairing constructor, in \HOL{} logic!definition of}
 \index{PAIR_EQ@\ml{PAIR\_EQ}}
 \index{ABS_PAIR_THM@\ml{ABS\_PAIR\_THM}}
-```
+```repl
 ##thm COMMA_DEF
 ##thm PAIR_EQ
 ##thm ABS_PAIR_THM
@@ -705,7 +705,7 @@ By Skolemizing `ABS_PAIR_THM` and making constant specifications for
 \index{FST, the HOL constant@\ml{FST}, the \HOL{} constant!definition of}
 \index{SND, the HOL constant@\ml{SND}, the \HOL{} constant!definition of}
 \index{selectors, in HOL logic@selectors, in \HOL{} logic!for pairs}
-```
+```repl
 ##thm PAIR
 ##thm FST
 ##thm SND
@@ -722,7 +722,7 @@ This conversion is accomplished by the functions `CURRY` and
 
 \index{CURRY, the HOL constant@\ml{CURRY}, the \HOL{} constant}
 \index{UNCURRY, the HOL constant@\ml{UNCURRY}, the \HOL{} constant}
-```
+```repl
 ##thm CURRY_DEF
 ##thm UNCURRY_DEF
 
@@ -737,7 +737,7 @@ $\alpha\#\beta$ to obtain a pair of type $\gamma_1\#\gamma_2$.
 
 \index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for pairs}
 \index{ PAIR_MAP function@\ml{\#\#} (\holtxt{PAIR\_MAP} function)}
-```
+```repl
 ##thm PAIR_MAP_THM
 ```
 
@@ -748,7 +748,7 @@ with a product type.  It may be convenient in subsequent reasoning
 steps to replace the variables with tuples of variables.  The
 following theorems support this.
 
-```
+```repl
 ##thm FORALL_PROD
 ##thm EXISTS_PROD
 ##thm LAMBDA_PROD
@@ -766,7 +766,7 @@ functions.  For pairs, the lexicographic combination of relations
 the theorem that lexicographic combination of wellfounded relations
 delivers a wellfounded relation is easy to prove.
 
-```
+```repl
 ##thm LEX_DEF
 ##thm WF_LEX
 ```
@@ -836,7 +836,7 @@ This can lead to unexpected errors (accompanied by obscure error
 messages).  For example, antiquoting a pair into the bound variable
 position of a lambda abstraction fails:
 
-```
+```repl
 >> ``\(x,y).x+y``;
 
 >> val p = Term `(x:num,y:num)`;
@@ -903,7 +903,7 @@ $$
 The underlying structure of the term can be seen by applying
 destructor operations.  For example:
 
-```
+```repl
 >> Term `let x = 1; y = 2; in x+y`;
 
 >> dest_comb it;
@@ -965,7 +965,7 @@ The following theorem is proved in the theory `sum`.  It provides a
 complete and abstract characterization of the disjoint sum type, and
 is used to justify the definition of functions over sums.
 
-```
+```repl
 >>__ open sumTheory
 ##thm sum_Axiom
 ```
@@ -973,7 +973,7 @@ is used to justify the definition of functions over sums.
 Also provided are the following theorems having to do with the
 discriminator functions `ISL` and `ISR`:
 
-```
+```repl
 ##thm ISL
 ##thm ISR
 
@@ -983,7 +983,7 @@ discriminator functions `ISL` and `ISR`:
 The `sum` theory also provides the following theorems relating the
 projection functions and the discriminators.
 
-```
+```repl
 ##thm OUTL
 ##thm OUTR
 
@@ -992,10 +992,10 @@ projection functions and the discriminators.
 ```
 
 The sum type operator can be seen as functorial over its arguments
-and so has a "map" function, `SUM_MAP`, with definition and results
+and so has a “map” function, `SUM_MAP`, with definition and results
 showing its functoriality:
 
-```
+```repl
 ##thm SUM_MAP_def
 ##thm SUM_MAP_I
 ##thm SUM_MAP_o
@@ -1017,7 +1017,7 @@ constant is `()`.[^one-paren-syntax]  The pre-proved theorems in the
 theory `one` are:
 
 \index{one_Axiom@\ml{one\_Axiom}}
-```
+```repl
 >>__ open oneTheory; show_types := true;
 ##thm one_axiom
 ##thm one
@@ -1073,7 +1073,7 @@ construction that underlies the fixed-width word type (see Section
 
 \index{options, the HOL theory of@options, the \HOL{} theory of}
 
-The theory `option` defines a type operator `option` that 'lifts'
+The theory `option` defines a type operator `option` that ‘lifts’
 its argument type, creating a type with all of the values of the
 argument and one other, specially distinguished value.  The
 constructors of this type are
@@ -1092,13 +1092,13 @@ undefined $\alpha$ values to `NONE`.
 An inductive type, options have a recursion theorem supporting the
 definition of primitive recursive functions over option values.
 
-```
+```repl
 >>__ open optionTheory
 ##thm option_Axiom
 ```
 
 The `option` theory also defines a case constant that allows one to
-inspect option values in a "pattern-matching" style.
+inspect option values in a “pattern-matching” style.
 
 ```
    case e of
@@ -1109,21 +1109,21 @@ inspect option values in a "pattern-matching" style.
 The constant underlying this syntactic sugar is `option_CASE` with
 definition
 
-```
+```repl
 ##thm option_case_def
 ```
 
 Another useful function maps a function over an option:
 \index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for options}
 
-```
+```repl
 ##thm OPTION_MAP_DEF
 ```
 
 Finally, the `THE` function takes a `SOME` value to that
 constructor's argument, and is unspecified on `NONE`:
 
-```
+```repl
 ##thm THE_DEF
 ```
 
@@ -1163,7 +1163,7 @@ pre-proved in the form:
 \index{NOT_SUC@\ml{NOT\_SUC}}
 \index{INV_SUC@\ml{INV\_SUC}}
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for natural numbers}
-```
+```repl
 >>__ open numTheory
 ##thm NOT_SUC
 ##thm INV_SUC
@@ -1211,7 +1211,7 @@ axioms.
 
 \index{num_Axiom@\ml{num\_Axiom}}
 \index{characterizing theorem!for numbers}
-```
+```repl
 >>__ open prim_recTheory
 ##thm num_Axiom
 ```
@@ -1236,7 +1236,7 @@ theorem, so it must be defined before definition by primitive
 recursion is available.  The theory `prim_rec` therefore contains
 the following non-recursive definition of `<`:
 
-```
+```repl
 ##thm LESS_DEF
 ```
 
@@ -1367,7 +1367,7 @@ of justifying recursive definitions.  For example, the theory
 
 \index{axiom of dependent choice (DC)@axiom of dependent choice (\ml{DC})}
 \index{axioms!of choice}
-```
+```repl
 ##thm DC
 ```
 
@@ -1378,7 +1378,7 @@ relation.  For example, one way to define the wellfoundedness of a
 relation $R$ is to say that it has no infinite decreasing $R$
 chains.
 
-```
+```repl
 ##thm wellfounded_def
 ##thm WF_IFF_WELLFOUNDED
 ```
@@ -1392,7 +1392,7 @@ and the less-than relation, as well as the wellfoundedness of
 measure functions are also proved in `prim_rec`.
 
 \index{measure, the HOL constant@\holtxt{measure}, the \HOL{} constant}
-```
+```repl
 ##thm WF_PRED
 ##thm WF_LESS
 
@@ -1417,7 +1417,7 @@ of the following standard arithmetic operators.
 \index{subtraction, in HOL logic@subtraction, in \HOL{} logic}
 \index{multiplication, in HOL logic@multiplication, in \HOL{} logic!on natural numbers}
 \index{exponentiation, in HOL logic@exponentiation, in \HOL{} logic!on natural numbers}
-```
+```repl
 >>__ open arithmeticTheory
 ##thm ADD
 
@@ -1440,14 +1440,14 @@ A full set of comparison operators is defined in terms of `<`.
 \index{ greater than, in HOL logic@\ml{>} (greater than, in \HOL{} logic)}
 \index{ less or equal, in HOL logic@\ml{<=} (less or equal, in \HOL{} logic)}
 \index{ greater or equal, in HOL logic@\ml{>=} (greater or equal, in \HOL{} logic)}
-```
+```repl
 ##thm GREATER_DEF
 ##thm LESS_OR_EQ
 ##thm GREATER_OR_EQ
 ```
 
 Note that in all of HOL's standard numeric theories, it is usual
-practice to avoid uses of the "greater-than" constants and to
+practice to avoid uses of the “greater-than” constants and to
 express everything with either $<$ or $\le$.
 
 **Division and modulus.**
@@ -1457,7 +1457,7 @@ characterizing property.
 
 \index{MOD, the HOL constant@\ml{MOD}, the \HOL{} constant}
 \index{DIV, the HOL constant@\ml{DIV}, the \HOL{} constant}
-```
+```repl
 ##thm DIVISION
 ```
 
@@ -1467,7 +1467,7 @@ recursively.
 
 \index{EVEN, the HOL constant@\ml{EVEN}, the \HOL{} constant}
 \index{ODD, the HOL constant@\ml{ODD}, the \HOL{} constant}
-```
+```repl
 ##thm EVEN
 
 ##thm ODD
@@ -1479,7 +1479,7 @@ way.
 
 \index{MIN, the HOL constant@\ml{MIN}, the \HOL{} constant}
 \index{MAX, the HOL constant@\ml{MAX}, the \HOL{} constant}
-```
+```repl
 ##thm MAX_DEF
 ##thm MIN_DEF
 ```
@@ -1488,7 +1488,7 @@ way.
 \index{FACT, the HOL constant@\ml{FACT}, the \HOL{} constant}
 The factorial of a number is a primitive recursive definition.
 
-```
+```repl
 ##thm FACT
 ```
 
@@ -1500,7 +1500,7 @@ tail-recursive, which can be awkward to reason about.  An
 alternative characterization (`FUNPOW_SUC`) may be easier to apply
 when doing proofs.
 
-```
+```repl
 ##thm FUNPOW
 ##thm FUNPOW_SUC
 ```
@@ -1544,7 +1544,7 @@ to define such infinite families of constants; instead, all numerals
 other than $0$ are actually built up from the constants introduced
 by the following definitions:
 
-```
+```repl
 >>__ temp_remove_user_printer ("num.numeral_computations",“n:num”)
 ##thm NUMERAL_DEF
 
@@ -1569,7 +1569,7 @@ arithmetic calculations are performed by deductive steps in HOL.
 For example the following calculation of $2^{(1023+14)/9}$ takes
 approximately 4,200 primitive inference steps and returns quickly:
 
-```
+```repl
 >> Count.apply reduceLib.REDUCE_CONV ``2 EXP ((1023 + 14) DIV 9)``;
 ```
 
@@ -1587,7 +1587,7 @@ structure `Arbnum` provides a full collection of arithmetic
 operations, using the usual names for the operations, e.g., `+`,
 `*`, `-`, etc.
 
-```
+```repl
 >> numSyntax.mk_numeral
      (Arbnum.fromString "3432432423423423234");
 
@@ -1604,7 +1604,7 @@ Simple digit sequences are parsed as decimal numbers, but the
 parser also supports the input of numbers in binary, octal and
 hexadecimal notation.  Numbers may be written in binary and
 hexadecimal form by prefixing them with the strings `0b` and `0x`
-respectively.  The 'digits' `A`–`F` in hexadecimal numbers may be
+respectively.  The ‘digits’ `A`–`F` in hexadecimal numbers may be
 written in upper or lower case.  Binary numbers have their most
 significant digits left-most.  In the interests of backwards
 compatibility, octal numbers are not enabled by default, but if the
@@ -1617,7 +1617,7 @@ have no semantic effect.
 
 Thus
 
-```
+```repl
 >> ``0xAA``;
 
 >> ``0b1010_1011``;
@@ -1640,7 +1640,7 @@ derived inference rule `num_CONV`, found in the `numLib` library.
 `num_CONV` can be used to generate the '`SUC`' equation for any
 non-zero numeral.  For example:
 
-```
+```repl
 >>_ open numLib;
 >> num_CONV ``2``;
 
@@ -1661,7 +1661,7 @@ attempts to determine the actual type to give to a numeral.  For
 example, in the following session, the theory of integers is
 loaded, whereupon the numeral `2` is taken to be an integer.
 
-```
+```repl
 >> load "integerTheory";
 
 >> ``2``;
@@ -1673,7 +1673,7 @@ In order to precisely specify the desired type, the user can use
 single character suffixes ('`n`' for the natural numbers, and
 '`i`' for the integers):
 
-```
+```repl
 >> type_of ``2n``;
 
 >> type_of ``42i``;
@@ -1725,7 +1725,7 @@ The overloaded symbol `& : num -> int` denotes the injection
 function from natural numbers to integers.  The following session
 illustrates how overloading and integers literals are treated.
 
-```
+```repl
 >> “1i = &(1n + 0n)”;
 
 >> show_numeral_types := true;
@@ -1736,7 +1736,7 @@ illustrates how overloading and integers literals are treated.
 
 In addition, there is an absolute value function `ABS`:
 
-```
+```repl
 ##thm integerTheory.INT_ABS
 ```
 
@@ -1746,7 +1746,7 @@ This then characterises the `Num` function which maps from
 integers back into natural numbers (of type `:int -> num`
 therefore):
 
-```
+```repl
 ##thm integerTheory.Num_EQ_ABS
 ```
 
@@ -1803,8 +1803,8 @@ Harrison \cite{jrh:thesis}.  We will only give a sketchy overview
 of the development; the interested reader should consult the
 REFERENCE manual and Harrison's thesis.
 
-The axioms for the real numbers are derived from the 'half reals'
-which are constructed from the 'half rationals'.  This part of the
+The axioms for the real numbers are derived from the ‘half reals’
+which are constructed from the ‘half rationals’.  This part of the
 development is recorded in `hratTheory` and `hrealTheory`, but is
 not used once the reals have been constructed.  The real axioms
 are derived in the theory `realaxTheory`.  A standard collection
@@ -1967,7 +1967,7 @@ $-\infty$, respectively.  In order to precisely specify extreals
 corresponding to natural numbers, the user can use the single
 character suffix '`x`':
 
-```
+```repl
 >>__ load "extrealTheory";
 >>__ open extrealTheory;
 >> type_of ``0x``;
@@ -1982,7 +1982,7 @@ overloaded on the corresponding operators of real numbers, shown
 in Table \ref{tab:extrealOp}.
 
 [^extreal-divzero]: Note that, unlike the case of real numbers in
-    HOL, $0/0 = 0$ (or "division by zero" in general) does not
+    HOL, $0/0 = 0$ (or “division by zero” in general) does not
     hold on extreals.  This particular design choice sometimes
     makes proofs of extreal-related theorems a bit harder (but
     more aligned with their textbook proofs), as whenever terms
@@ -2026,7 +2026,7 @@ defined (see Table \ref{tab:extrealAdd}).  To swap the elements of
 additions, the user must avoid mixing of PosInf and NegInf in the
 involved elements (e.g., by letting one of them be normal):
 
-```
+```repl
 ##thm add_comm
 ##thm add_comm_normal
 ##thm add_assoc
@@ -2040,7 +2040,7 @@ has a supremum (`extreal_sup` or `sup`) and an infimum
 (`extreal_inf` or `inf`).  In particular, for empty sets (of
 extreals) we have:
 
-```
+```repl
 ##thm sup_empty
 ##thm inf_empty
 ```
@@ -2050,7 +2050,7 @@ The sum of extreals over a finite set (`EXTREAL_SUM_IMAGE`,
 overloaded on `SIGMA`), $\sum_{i\in s} f(i)$, is defined by
 `pred_set.ITSET` (see Section \ref{sec:theory-of-sets}):
 
-```
+```repl
 ##thm EXTREAL_SUM_IMAGE_DEF
 ```
 
@@ -2060,7 +2060,7 @@ the values of `f`, i.e., either all $f(i)$ are not $+\infty$ or
 they are not $-\infty$ ($i \in s$).  The following theorem fully
 captures the properties of `EXTREAL_SUM_IMAGE`:
 
-```
+```repl
 >>__ val oldwidth = !Globals.linewidth;
      val _ = Globals.linewidth := oldwidth - 10;
 ##thm EXTREAL_SUM_IMAGE_THM
@@ -2072,7 +2072,7 @@ on `suminf`), $\sum_{i\in\mathbb{N}} f(i)$, is only defined on
 non-negative function $f$ as the supremum of the $n$th partial
 sum:
 
-```
+```repl
 ##thm ext_suminf_def
 ```
 
@@ -2083,7 +2083,7 @@ positive series is *divergent*, other normal extreals (i.e.,
 extreal).  A fundamental result for positive series says that it
 converges if and only if its $n$th partial sums are bounded:
 
-```
+```repl
 ##thm pos_summable
 ```
 
@@ -2093,7 +2093,7 @@ $\sum_{i\in\mathbb{N}} \sum_{j\in\mathbb{N}} f(i,j)$ given an
 arbitrary bijection between $\mathbb{N}$ and
 $\mathbb{N}\times\mathbb{N}$:
 
-```
+```repl
 ##thm ext_suminf_2d_full
 ```
 
@@ -2102,20 +2102,20 @@ For a sequence of extreal numbers, the *limes inferior* or *lower
 limit* is defined as (see, e.g., Appendix A of
 \cite{Schilling:2017} for more details.)
 
-```
+```repl
 ##thm ext_liminf_def
 ```
 
 and the *limes superior* or *upper limit* is defined as
 
-```
+```repl
 ##thm ext_limsup_def
 ```
 
 Some basic properties of `ext_limsup` and `ext_liminf` are
 provided in `extreal` theory:
 
-```
+```repl
 ##thm ext_liminf_alt_limsup
 ##thm ext_liminf_pos
 ##thm ext_liminf_le_limsup
@@ -2129,7 +2129,7 @@ numbers) coincides with its upper and lower limits (in this case
 they are also the same), together with useful lemmas, are provided
 in `martingale` theory:
 
-```
+```repl
 >>__ load "martingaleTheory";
 >>__ open martingaleTheory;
 ##thm ext_limsup_thm
@@ -2211,7 +2211,7 @@ The following theorem shows that two Cartesian products `x` and
 `y` are equal if, and only if, all of their components `x ' i`
 and `y ' i` are equal:
 
-```
+```repl
 >>__ load "fcpTheory"; open fcpTheory;
 ##thm CART_EQ
 ```
@@ -2220,7 +2220,7 @@ In order to construct Cartesian products, the theory `fcp`
 introduces a binder `FCP`, which is characterised by the following
 theorems:
 
-```
+```repl
 ##thm FCP_BETA
 ##thm FCP_ETA
 ```
@@ -2250,7 +2250,7 @@ unbounded length.  The operations in `bit` are primarily defined
 using `DIV`, `MOD` and `EXP`.  For example, from the definition
 of `BIT`, the following theorem holds:
 
-```
+```repl
 >>__ load "bitTheory"; open bitTheory;
 ##thm BIT_DEF
 ```
@@ -2266,7 +2266,7 @@ represents the *single* $n$-th bit value indicated by the Boolean
 value $b$, to be accumulated for constructing the destination
 number:
 
-```
+```repl
 ##thm SBIT_def
 ```
 
@@ -2309,7 +2309,7 @@ The length of a word (the number $n$) is given by the function
 and the function `w2n:` $\worda \to \mathit{num}$ maps from a
 word to a number.  They are defined in HOL by:
 
-```
+```repl
 >>__ load "wordsTheory"; open wordsTheory;
 ##thm n2w_def
 ##thm w2n_def
@@ -2321,7 +2321,7 @@ the same as `n2w 255`.
 The function `w2w:` $\worda \to \wordb$ provides word-to-word
 conversion (casting):
 
-```
+```repl
 ##thm w2w_def
 ```
 
@@ -2382,8 +2382,8 @@ however with word-to-word conversion, orderings, division and
 right shifting, where signed and unsigned variants are needed.
 When operating over the natural numbers, some of the two's
 complement versions have slightly unnatural looking presentations.
-For example, with the signed (two's complement) version of "less
-than" we have `255w < (0w:word8)` because the word `255w` is
+For example, with the signed (two's complement) version of “less
+than” we have `255w < (0w:word8)` because the word `255w` is
 actually taken to be representing the integer $-1$, whereas the
 unsigned version is more natural: `0w <+ (255w:word8)`.
 
@@ -2486,6 +2486,24 @@ word\_rrx (c,v)}.}
 \end{figure}
 ```
 
+```{=mdbook}
+<figure style="text-align:center">
+<table style="margin:0 auto"><tbody>
+<tr><td><img src="figs/lsl.svg" alt="Logical shift left"></td>
+    <td><img src="figs/lsr.svg" alt="Logical shift right"></td></tr>
+<tr><td>(a) Logical shift left: <code>w = v &lt;&lt; x</code>.</td>
+    <td>(b) Logical shift right: <code>w = v &gt;&gt;&gt; x</code>.</td></tr>
+<tr><td><img src="figs/asr.svg" alt="Arithmetic shift right"></td>
+    <td><img src="figs/ror.svg" alt="Rotate right"></td></tr>
+<tr><td>(c) Arithmetic shift right: <code>w = v &gt;&gt; x</code>.</td>
+    <td>(d) Rotate right: <code>w = v #&gt;&gt; x</code>.</td></tr>
+<tr><td colspan="2" style="text-align:center"><img src="figs/rrx.svg" alt="Rotate right extended by 1 place"></td></tr>
+<tr><td colspan="2" style="text-align:center">(e) Rotate right extended by 1 place: <code>(d,w) = word_rrx (c,v)</code>.</td></tr>
+</tbody></table>
+<figcaption>Shift operations.</figcaption>
+</figure>
+```
+
 **Arithmetic and orderings.**
 The arithmetic operations are: addition, subtraction, unary
 minus (two's complement), logarithm (base-2), multiplication,
@@ -2503,7 +2521,7 @@ it is natural number addition.
 All of the standard word orderings are provided, with signed and
 unsigned versions of $<$, $\leq$, $>$ and $\geq$.  The unsigned
 versions are suffixed with a plus; for example, `<+` is unsigned
-"less than".
+“less than”.
 
 **Constants.**
 The word theory also defines a few word constants:
@@ -2517,7 +2535,7 @@ The word theory also defines a few word constants:
 **List of bit vector operations.**
 A list of operations is provided in the table below.
 
-<div class="wide-table">
+<div class=“wide-table”>
 
 | Operation              | Symbol  | Type                                                | Description                       |
 |------------------------|---------|-----------------------------------------------------|-----------------------------------|
@@ -2572,14 +2590,14 @@ A list of operations is provided in the table below.
 | `word_ror`             | `#>>`  | $\worda\to\mathit{num}\to\worda$                         | Rotate right                       |
 | `word_rol`             | `#<<`  | $\worda\to\mathit{num}\to\worda$                         | Rotate left                        |
 | `word_rrx`             |        | $\mathit{bool}\#\worda\to\mathit{bool}\#\worda$          | Rotate right extended by 1 place   |
-| `word_lt`              | `<`    | $\worda\to\worda\to\mathit{bool}$                        | Signed "less than"                 |
-| `word_le`              | `<=`   | $\worda\to\worda\to\mathit{bool}$                        | Signed "less than or equal"        |
-| `word_gt`              | `>`    | $\worda\to\worda\to\mathit{bool}$                        | Signed "greater than"              |
-| `word_ge`              | `>=`   | $\worda\to\worda\to\mathit{bool}$                        | Signed "greater than or equal"     |
-| `word_lo`              | `<+`   | $\worda\to\worda\to\mathit{bool}$                        | Unsigned "less than"               |
-| `word_ls`              | `<=+`  | $\worda\to\worda\to\mathit{bool}$                        | Unsigned "less than or equal"      |
-| `word_hi`              | `>+`   | $\worda\to\worda\to\mathit{bool}$                        | Unsigned "greater than"            |
-| `word_hs`              | `>=+`  | $\worda\to\worda\to\mathit{bool}$                        | Unsigned "greater than or equal"   |
+| `word_lt`              | `<`    | $\worda\to\worda\to\mathit{bool}$                        | Signed “less than”                 |
+| `word_le`              | `<=`   | $\worda\to\worda\to\mathit{bool}$                        | Signed “less than or equal”        |
+| `word_gt`              | `>`    | $\worda\to\worda\to\mathit{bool}$                        | Signed “greater than”              |
+| `word_ge`              | `>=`   | $\worda\to\worda\to\mathit{bool}$                        | Signed “greater than or equal”     |
+| `word_lo`              | `<+`   | $\worda\to\worda\to\mathit{bool}$                        | Unsigned “less than”               |
+| `word_ls`              | `<=+`  | $\worda\to\worda\to\mathit{bool}$                        | Unsigned “less than or equal”      |
+| `word_hi`              | `>+`   | $\worda\to\worda\to\mathit{bool}$                        | Unsigned “greater than”            |
+| `word_hs`              | `>=+`  | $\worda\to\worda\to\mathit{bool}$                        | Unsigned “greater than or equal”   |
 
 </div>
 
@@ -2637,7 +2655,7 @@ theory `list`.
 \index{characterizing theorem!for lists}
 \index{lists, the HOL theory of@lists the \HOL{} theory of!initiality theorem}
 \index{lists, the HOL theory of@lists the \HOL{} theory of!induction theorem}
-```
+```repl
 ##thm list_Axiom
 ##thm list_INDUCT
 ##thm list_CASES
@@ -2677,7 +2695,7 @@ The predicate `NULL` and the selectors
 \index{NULL, the HOL constant@\ml{NULL}, the \HOL{} constant}
 \index{HD, the HOL constant@\ml{HD}, the \HOL{} constant}
 \index{TL, the HOL constant@\ml{TL}, the \HOL{} constant}
-```
+```repl
 ##thm NULL
 ##thm HD
 ##thm TL_DEF
@@ -2687,7 +2705,7 @@ The nil-clause for the `TL` constant is included to make the
 function total, but does represent a case that often needs to be
 excluded.  For example:
 
-```
+```repl
 ##thm LIST_NOT_NIL
 ```
 
@@ -2710,7 +2728,7 @@ Such an expression is translated to
 $\mathtt{list\_CASE}\;e_1\;e_2\;(\lambda h\;t.\;e_3)$ where the
 constant `list_CASE` is defined as follows:
 
-```
+```repl
 ##thm list_case_def
 ```
 
@@ -2719,7 +2737,7 @@ constant `list_CASE` is defined as follows:
 Membership in a list, written using the `MEM` syntax, is
 characterised as follows:
 
-```
+```repl
 ##thm MEM
 ```
 
@@ -2733,11 +2751,11 @@ Binary list concatenation (`APPEND`) may also be denoted by the
 infix operator `++`; thus the expression `L1 ++ L2` is translated
 into `APPEND L1 L2`.  The concatenation of a list of lists into a
 list is achieved by `FLAT`.  The special case where a single
-element is appended to the end of a list (the "opposite" of
+element is appended to the end of a list (the “opposite” of
 `CONS`, which adds elements to the front of a list), is
 implemented by `SNOC`.
 
-```
+```repl
 ##thm APPEND
 ##thm FLAT
 ##thm SNOC
@@ -2755,7 +2773,7 @@ element.  The alternate length definition (`LEN`) is
 tail-recursive.  Numbers can also be used to index into lists,
 extracting the element at the specified position.
 \index{EL, the HOL constant@\holtxt{EL}, the \HOL{} constant}
-```
+```repl
 ##thm LENGTH
 ##thm LEN_DEF
 ##thm list_size_def
@@ -2776,7 +2794,7 @@ particular size, where the value of each element is independently
 determined by reference to a function that takes natural numbers
 (the set $\{0\dots n-1\}$) to element values:
 
-```
+```repl
 ##thm GENLIST
 ##thm EL_GENLIST
 ```
@@ -2786,11 +2804,11 @@ Working with `SNOC`, and thus the definition above, can
 occasionally be awkward, so a characterisation of `GENLIST`'s
 `SUC` clause in terms of `CONS` can also be useful:
 
-```
+```repl
 ##thm GENLIST_CONS
 ```
 
-For more on the "indexed" treatment of lists, see Section
+For more on the “indexed” treatment of lists, see Section
 \ref{sec:indexed-lists} below.
 
 **Mapping functions over lists.**
@@ -2800,11 +2818,11 @@ For more on the "indexed" treatment of lists, see Section
 \index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for lists}
 
 There are functions for mapping a function $f:\alpha\to\beta$ over
-a single list (`MAP`), a "partial" function
+a single list (`MAP`), a “partial” function
 $f:\alpha\to\beta\,\mathsf{option}$ over a list (`mapPartial`), or
 a function $f:\alpha\to\beta\to\gamma$ over two lists (`MAP2`):
 
-```
+```repl
 ##thm MAP
 ##thm mapPartial_def
 ##thm MAP2_DEF
@@ -2827,7 +2845,7 @@ list).  This functionality is supported by `EVERY` and `EXISTS`,
 respectively.  The elimination of all elements in list not
 satisfying a given predicate is performed by `FILTER`.
 
-```
+```repl
 ##thm EVERY_DEF
 ##thm EXISTS_DEF
 ##thm FILTER
@@ -2838,30 +2856,30 @@ The predicate `ALL_DISTINCT` holds on a list just in case no
 element in the list is equal to any other.  A list can have its
 duplicates removed through the use of the `nub` constant:
 
-```
+```repl
 ##thm nub_def
 ```
 
 **Relations over lists.**
 \index{EVERY2@\ml{EVERY2}|see{\ml{LIST\_REL}}}
 \index{LIST_REL, the HOL constant@\ml{LIST\_REL}, the \HOL{} constant}
-A binary relation on elements can be "lifted" to a relation on
+A binary relation on elements can be “lifted” to a relation on
 lists of such elements with the `LIST_REL` constant:
 
-```
+```repl
 ##thm LIST_REL_def
 ```
 
 This can be viewed as an application of `EVERY`:
 
-```
+```repl
 ##thm LIST_REL_EVERY_ZIP
 ```
 
 Acknowledging this view, the system overloads the name `EVERY2`
 to map to the same constant.
 
-```
+```repl
 >> “EVERY2 (λm n. EVEN (m + n)) [1;2;3] [3;4;5]”;
 ```
 
@@ -2870,7 +2888,7 @@ Some theorems in `listTheory` have names that reflect this.
 Equally, `LIST_REL` can be seen as a test that checks the
 relation at all relevant indices:
 
-```
+```repl
 ##thm LIST_REL_EL_EQN
 ```
 
@@ -2878,7 +2896,7 @@ Finally, there is a natural induction principle for this constant
 (as *per* Section \ref{sec:proofs-with-inductive-relations}, the
 tactic ``Induct_on `LIST_REL``` applies it):
 
-```
+```repl
 ##thm LIST_REL_strongind
 ```
 
@@ -2892,7 +2910,7 @@ At times, it is necessary to do this operation from left-to-right
 (`FOLDL`), and at others the right-to-left direction (`FOLDR`) is
 required.
 
-```
+```repl
 ##thm FOLDL
 ##thm FOLDR
 ```
@@ -2915,7 +2933,7 @@ Lists can be converted to sets with the `LIST_TO_SET` constant,
 which is overloaded to the prettier name `set`.  The definition is
 made by primitive recursion in `listTheory`:
 
-```
+```repl
 >> listTheory.LIST_TO_SET;
 ```
 
@@ -2934,7 +2952,7 @@ unequal lengths is a list whose length is that of the shorter
 argument.  The inverse operation, `UNZIP`, translates a list of
 pairs into a pair of lists.
 
-```
+```repl
 ##thm ZIP_def
 ##thm UNZIP_THM
 ```
@@ -2948,7 +2966,7 @@ at times it is convenient to access the last element (`LAST`) of
 a non-empty list directly.  The last element of a non-empty list
 is dropped by `FRONT`.
 
-```
+```repl
 ##thm LAST_DEF
 ##thm FRONT_DEF
 ##thm APPEND_FRONT_LAST
@@ -2997,7 +3015,7 @@ members, and each member has the same number of occurrences in
 both lists.  One definition (`PERM`) that captures this
 relationship is the following:
 
-```
+```repl
 >>__ load "sortingTheory"; open sortingTheory
 ##thm PERM_DEF
 ##thm PERM_IND
@@ -3019,7 +3037,7 @@ is a sorting function (`SORTS`) with respect to $R$ if it
 delivers a permutation of its input, and the result is
 $R$-sorted.
 
-```
+```repl
 ##thm SORTED_DEF
 ##thm SORTS_DEF
 ```
@@ -3028,7 +3046,7 @@ Quicksort is defined in the usual functional programming style,
 and it is indeed a sorting function, provided $R$ is a transitive
 and total relation.
 
-```
+```repl
 ##thm QSORT_DEF
 ##thm QSORT_SORTS
 ```
@@ -3039,7 +3057,7 @@ expressed using the predicate `adjacent`, where
 $\mathtt{adjacent}\;\ell\;a\;b$ holds if values $a$ and $b$
 appear together (in that order) in list $\ell$.  Then, we have
 
-```
+```repl
 ##thm SORTED_adjacent
 ```
 
@@ -3048,7 +3066,7 @@ relation-subset (see Section \ref{def:rsubset}).  There are a
 number of other theorems in `listTheory` about adjacency,
 including for example:
 
-```
+```repl
 ##thm adjacent_REVERSE
 ##thm adjacent_MAP
 ```
@@ -3064,7 +3082,7 @@ As mentioned earlier, lists can be indexed with the constant
 (starting at 0!) into the element type.  The definition is given
 by primitive recursion over the index argument, in theorem `EL`:
 
-```
+```repl
 ##thm EL
 ```
 
@@ -3072,7 +3090,7 @@ by primitive recursion over the index argument, in theorem `EL`:
 The term underlying the pretty presentation $\ell\lbrbrak n\rbrbrak$
 is $\mathtt{EL}\;n\;\ell$; and both forms can be used when
 writing terms.  If desired, the pretty-printing with the
-"array-subscript" notation can be turned off by the invocation
+“array-subscript” notation can be turned off by the invocation
 
 ```
    val _ = clear_overloads_on "fEL"
@@ -3086,7 +3104,7 @@ involving `EL` have preconditions to preclude this possibility.
 For example, these theorems describing the relationship between
 `EL`, `MAP` and `MEM`:
 
-```
+```repl
 ##thm EL_MAP
 ##thm MEM_EL
 ```
@@ -3102,7 +3120,7 @@ The definition illustrates the pretty syntax for the above
 ($\ell\lbrbrak n\mapsto e\rbrbrak$), and is given in three
 clauses:
 
-```
+```repl
 ##thm LUPDATE_def
 ```
 
@@ -3113,23 +3131,23 @@ unchanged.
 The basic characterisation of the link between `EL` and `LUPDATE`
 is
 
-```
+```repl
 ##thm EL_LUPDATE
 ```
 
 The pretty syntax supports chained or nested `LUPDATE`
 applications using a list-like notation:
 
-```
+```repl
 >> “LUPDATE v1 k1 (LUPDATE v2 k2 ℓ)”;
 ```
 
 **The `indexedLists` theory.**
 The `indexedLists` theory defines a number of extra constants
-that are "aware" of lists as indexed values.  Some of these
+that are “aware” of lists as indexed values.  Some of these
 constants are:
 
-```
+```repl
    >>__ open indexedListsTheory
    delN      : num -> 'a list -> 'a list
    findi     : 'a -> 'a list -> num
@@ -3145,7 +3163,7 @@ element $e$ within list $\ell$, or a number equal to $\ell$'s
 length, if $e$ is not present.  The definition is by recursion
 over the structure of the input list:
 
-```
+```repl
 ##thm findi_def
 ```
 
@@ -3155,7 +3173,7 @@ The `delN` constant
 is used to remove the $n$-th element from a list.  It is also
 defined by recursion over the structure of the input list:
 
-```
+```repl
 ##thm delN_def
 ```
 
@@ -3173,7 +3191,7 @@ applied to the list `[a;c;d]` the resulting value would be
 
 An example theorem about `MAPi` relates it to `MEM`:
 
-```
+```repl
 ##thm MEM_MAPi
 ```
 \index{lists, the HOL theory of@lists, the \HOL{} theory of|)}
@@ -3184,7 +3202,7 @@ An example theorem about `MAPi` relates it to `MEM`:
 \index{lazy lists, the HOL theory of@``lazy'' lists, the \HOL{} theory of|(}
 
 The theory `llist` contains the definition of a type of possibly
-infinite sequences.  This type is similar to the "lazy lists" of
+infinite sequences.  This type is similar to the “lazy lists” of
 programming languages like Haskell, hence the name of the theory.
 The `llist` theory has a number of constants that are analogous
 to constants in the theory of finite lists.  The `llist` versions
@@ -3210,14 +3228,14 @@ have domains of type `llist`.  Rather, `llist` is a coinductive
 type, and has an axiom that justifies the definition of
 (co-)recursive functions that map *into* the `llist` type:
 
-```
+```repl
    >>__ load "llistTheory"; open llistTheory
    ##thm llist_Axiom
 ```
 
 An equivalent form of the above is
 
-```
+```repl
 ##thm llist_Axiom_1
 ```
 
@@ -3236,7 +3254,7 @@ Other constants in the theory `llist` include `LMAP`, `LFINITE`,
 
 They are characterised by the following theorems
 
-```
+```repl
 ##thm LMAP
 ##thm LFINITE_THM
 ##thm LNTH_THM
@@ -3252,7 +3270,7 @@ is infinite, elements of the second are inaccessible in the
 result.  A lazy list of lazy lists can be flattened to a lazy
 list by `LFLATTEN`.
 
-```
+```repl
 ##thm LAPPEND
 ##thm LFLATTEN_THM
 ```
@@ -3261,7 +3279,7 @@ list by `LFLATTEN`.
 Mapping back and forth from lists to lazy lists is accomplished
 by `fromList` and `toList`:
 
-```
+```repl
 ##thm fromList_def
 ##thm toList_THM
 ```
@@ -3274,14 +3292,14 @@ proving that two `llist` values are equal.  The first states that
 two sequences are equal if they return the same prefixes of
 length $n$ for all possible values of $n$:
 
-```
+```repl
 ##thm LTAKE_EQ
 ```
 
 This theorem is subsequently used to derive the bisimulation
 principle:
 
-```
+```repl
 ##thm LLIST_BISIMULATION
 ```
 
@@ -3319,7 +3337,7 @@ $$
 $$
 
 The `path` type is thus an appropriate model for reduction
-sequences, where the $\alpha$ parameter corresponds to "states",
+sequences, where the $\alpha$ parameter corresponds to “states”,
 and the $\beta$ parameter corresponds to the labels on the
 arrows.
 
@@ -3334,7 +3352,7 @@ of paths has two constructors:
 
 The `stopped_at` constructor returns a path containing just one
 state, and no transitions.  (Thus, the reduction sequence has
-"stopped at" this state.)  The `pcons` constructor takes a
+“stopped at” this state.)  The `pcons` constructor takes a
 state, a label, and a path, and returns a path which is now
 headed by the state argument, and which moves from that state
 via the label argument to the path.  Graphically,
@@ -3363,7 +3381,7 @@ Other constants defined in theory `path` include
 The `first` function returns the first element of a path.  There
 always is such an element, and the defining equations are
 
-```
+```repl
 >>__ load "pathTheory"
 >>__ open pathTheory;
 ##thm first_thm
@@ -3373,7 +3391,7 @@ On the other hand, the `last` function does not always have a
 well-specified value, though it still has nice characterising
 equations:
 
-```
+```repl
 ##thm last_thm
 ```
 
@@ -3381,7 +3399,7 @@ The theorem for `finite` has a similar feel, but has a definite
 value (`F`, or *false*) on infinite paths, whereas the value of
 `last` on such paths is unspecified:
 
-```
+```repl
 ##thm finite_thm
 ```
 
@@ -3389,7 +3407,7 @@ The function `pconcat` concatenates two paths, linking them with
 a provided label.  If the first path is infinite, then the result
 is equal to that first path.  The defining equation is
 
-```
+```repl
 ##thm pconcat_thm
 ```
 
@@ -3400,21 +3418,21 @@ The `okpath` predicate tests whether or not a path is a valid
 transition given a ternary transition relation.  Its
 characterising theorem is
 
-```
+```repl
 ##thm okpath_thm
 ```
 
 There is also an induction principle that simplifies reasoning
 about finite $R$-paths:
 
-```
+```repl
 ##thm finite_okpath_ind
 ```
 
 One can show that a set `P` of paths are all $R$-paths with the
 co-induction principle:
 
-```
+```repl
 ##thm okpath_co_ind
 ```
 \index{labelled paths, the HOL theory of@labelled paths, the \HOL{} theory of|)}
@@ -3447,7 +3465,7 @@ Character literals can also be entered using ML syntax, with a
 hash character immediately followed by a string literal of length
 one.  Thus:
 
-```
+```repl
 >> load "stringTheory";
 >> val t = ``f #"c" #"\n"``;
 
@@ -3484,7 +3502,7 @@ $$
 
 Of course, one could also write
 
-```
+```repl
 >> ``[#"a"; #"b"]``;
 ```
 
@@ -3493,7 +3511,7 @@ escape sequences that are used in ML.  For example, `\n` for the
 newline character, and a backslash followed by three decimal
 digits for characters of the given number.
 
-```
+```repl
 >> val t = ``"foo bar\n\001"``;
 ```
 
@@ -3514,7 +3532,7 @@ facility, see the REFERENCE manual's description of the
 There is also a destructor function `DEST_STRING` for strings
 which returns an `option` type:
 
-```
+```repl
 >>__ open stringTheory;
 ##thm DEST_STRING_def
 ```
@@ -3575,14 +3593,14 @@ are also available under the (overloaded) names `toString` and
 `toNum`.  The natural theorem expressing these last two are
 inverse is
 
-```
+```repl
 ##thm toNum_toString
 ```
 
 and there is also a theorem specifying how long the strings
 produced by `toString` will be:
 
-```
+```repl
 ##thm LENGTH_num_to_dec_string
 ```
 \index{strings, the HOL theory of@strings, the \HOL{} theory of|)}
@@ -3612,7 +3630,7 @@ of the elements in a set must have the same type.
 is based on.  In HOL, membership is represented by a the infix
 constant `IN`, defined in theory `bool` for convenience.
 
-```
+```repl
 ##thm IN_DEF
 ```
 
@@ -3620,13 +3638,13 @@ The `IN` operator is merely a way of applying the characteristic
 function to an item, as the following trivial consequence of the
 definition shows:
 
-```
+```repl
 ##thm SPECIFICATION
 ```
 
 Two sets are equal if they have the same elements.
 
-```
+```repl
 ##thm EXTENSION
 ```
 
@@ -3643,7 +3661,7 @@ written as `{}` and `∅` (U+2205).  The universal set, `UNIV`, on
 a type is the characteristic function that is always true for
 elements of that type.
 
-```
+```repl
 ##thm EMPTY_DEF
 ##thm UNIV_DEF
 ```
@@ -3680,7 +3698,7 @@ discussed in the next subsection.  Set union (`UNION`, written
 infix) and intersection (`INTER`, also infix) are given their
 usual definitions by set comprehension.
 
-```
+```repl
 ##thm INSERT_DEF
 ##thm UNION_DEF
 ##thm INTER_DEF
@@ -3691,7 +3709,7 @@ intersection operations, i.e., $\bigcup_{i\in P}$ and
 $\bigcap_{i\in P}$ are provided by the definitions of `BIGUNION`
 and `BIGINTER`.
 
-```
+```repl
 ##thm BIGUNION
 ##thm BIGINTER
 ```
@@ -3704,7 +3722,7 @@ $((\alpha\to\konst{bool})\to\konst{bool})\to(\alpha\to\konst{bool})$.
 Set inclusion (`SUBSET`, infix), proper set inclusion (`PSUBSET`,
 infix), and power set (`POW`) are defined as follows:
 
-```
+```repl
 ##thm SUBSET_DEF
 ##thm PSUBSET_DEF
 ##thm POW_DEF
@@ -3717,7 +3735,7 @@ element (`DELETE`, infix) from a set is straightforward.  Since
 the universe of a type is always available via `UNIV`, the
 complement (`COMPL`) of a set may be taken.
 
-```
+```repl
 ##thm DIFF_DEF
 ##thm DELETE_DEF
 ##thm COMPL_DEF
@@ -3727,14 +3745,14 @@ complement (`COMPL`) of a set may be taken.
 The image of a function $f:\alpha\to\beta$ on a set (`IMAGE`) is
 defined with a set comprehension.
 
-```
+```repl
 ##thm IMAGE_DEF
 ```
 
 Injections, surjections, and bijections between sets are defined
 as follows:
 
-```
+```repl
 ##thm INJ_DEF
 ##thm68 SURJ_DEF
 ##thm BIJ_DEF
@@ -3745,7 +3763,7 @@ as follows:
 The finite sets (`FINITE`) are defined inductively as those built
 from the empty set by a finite number of insertions.
 
-```
+```repl
 ##thm FINITE_DEF
 ```
 
@@ -3756,7 +3774,7 @@ abbreviation in the system that parses `"INFINITE s"` into
 The finite sets have an induction theorem:
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for finite sets}
 
-```
+```repl
 ##thm FINITE_INDUCT
 ```
 
@@ -3767,7 +3785,7 @@ are only defined for finite sets.  (See Section
 infinite sets.)
 \index{cardinality of (finite) sets}
 
-```
+```repl
 ##thm CARD_DEF
 ```
 
@@ -3777,7 +3795,7 @@ explicitly include constraints about finiteness.  For example
 the following theorem relating cardinality and subsets is only
 true for finite sets.
 
-```
+```repl
 ##thm CARD_PSUBSET
 ```
 
@@ -3788,14 +3806,14 @@ cardinality is available in `pred_set`.
 The product of two sets (`CROSS`, infix) is defined with a set
 comprehension.
 
-```
+```repl
 ##thm CROSS_DEF
 ```
 
 Cardinality and cross product are related by the following
 theorem:
 
-```
+```repl
 ##thm CARD_CROSS
 ```
 
@@ -3809,7 +3827,7 @@ obeys a condition known as *left-commutativity*, namely,
 $f\;x\;(f\;y\;z) = f\;y\;(f\;x\;z)$, then $f$ can be applied by
 folding it on the set in a tail-recursive fashion.
 
-```
+```repl
 ##thm ITSET_THM
 
 ##thm ITSET_EMPTY
@@ -3819,7 +3837,7 @@ folding it on the set in a tail-recursive fashion.
 
 A recursive version is also available:
 
-```
+```repl
 ##thm COMMUTING_ITSET_RECURSES
 ```
 
@@ -3829,7 +3847,7 @@ summing the results of a function on a finite set of elements,
 from which a recursive characterization and other useful
 theorems are derived.
 
-```
+```repl
 ##thm SUM_IMAGE_DEF
 ##thm SUM_IMAGE_THM
 ```
@@ -3850,7 +3868,7 @@ the finite-ness or otherwise of elements reachable using a
 relation `R`.  Then the following version of Koenig's Lemma is
 stated and proved:
 
-```
+```repl
 ##thm KoenigsLemma
 ```
 
@@ -3901,7 +3919,7 @@ parses to:
 
 where `GSPEC` is characterized by:
 
-```
+```repl
 ##thm GSPECIFICATION
 ```
 
@@ -3957,7 +3975,7 @@ the variables mentioned in `vs` must satisfy the constraint
 ```
 
 is the set of numbers from `y` up to but not including `2 * y`.
-The set can be "read" computationally: draw out all those `x`
+The set can be “read” computationally: draw out all those `x`
 that are less than `y`, and to each such `x` add `y`, thereby
 generating a set of numbers.
 
@@ -3968,7 +3986,7 @@ In the example above, the underlying `GSPEC` term will be
 ```
 
 The `vs` component of the unambiguous notation must be a single
-"variable structure" that might appear underneath a possibly
+“variable structure” that might appear underneath a possibly
 paired abstraction as in Section \ref{HOL-varstruct}.  In other
 words, this
 
@@ -4044,7 +4062,7 @@ $\alpha\to\konst{num}$.
 The empty bag has no elements.  Thus, the function implementing
 it returns $0$ for every input.
 
-```
+```repl
 >>__ load "bagTheory"; open bagTheory;
 ##thm EMPTY_BAG
 ```
@@ -4060,14 +4078,14 @@ bag.  There are two notions: does an element occur at least $n$
 times in a bag (`BAG_INN`); and does an element occur in a bag
 at all (`BAG_IN`).
 
-```
+```repl
 ##thm BAG_INN
 ##thm BAG_IN
 ```
 
 Two bags are equal if all elements have the same tally.
 
-```
+```repl
 ##thm BAG_EXTENSION
 ```
 
@@ -4077,7 +4095,7 @@ provided that every element in $b_1$ occurs at least as often in
 $b_2$.  The notion of a proper sub-bag (`PSUB_BAG`) is easily
 defined.
 
-```
+```repl
 ##thm SUB_BAG
 ##thm PSUB_BAG
 ```
@@ -4086,7 +4104,7 @@ defined.
 Inserting an element into a bag (`BAG_INSERT`) updates the tally
 for that element and leaves the others unchanged.
 
-```
+```repl
 ##thm BAG_INSERT
 ```
 
@@ -4113,7 +4131,7 @@ argument than the last.  This is not the same as using
 `BAG_DIFF` to remove a one-element bag because it insists that
 the element being removed actually appear in the larger bag.
 
-```
+```repl
 ##thm BAG_UNION
 ##thm BAG_DIFF
 ##thm BAG_DELETE
@@ -4122,11 +4140,11 @@ the element being removed actually appear in the larger bag.
 **Intersection, merge, and filter.**
 The intersection of two bags (`BAG_INTER`) takes the pointwise
 minimum.  The dual operation, merging (`BAG_MERGE`), takes the
-pointwise maximum.  A bag can be 'filtered' by a set to return
+pointwise maximum.  A bag can be ‘filtered’ by a set to return
 the bag where all the elements not in the set have been dropped
 (`BAG_FILTER`).
 
-```
+```repl
 ##thm BAG_INTER
 ##thm BAG_MERGE
 ##thm BAG_FILTER_DEF
@@ -4136,7 +4154,7 @@ the bag where all the elements not in the set have been dropped
 Moving between bags and sets is accomplished by the following
 two definitions.
 
-```
+```repl
 ##thm SET_OF_BAG
 ##thm BAG_OF_SET
 ```
@@ -4155,7 +4173,7 @@ finite.  Such conditions would be onerous in proof; the
 compromise is to map the multipicity of problematic elements to
 $0$.
 
-```
+```repl
 ##thm BAG_IMAGE_DEF
 ```
 
@@ -4164,7 +4182,7 @@ $0$.
 The finite multisets (`FINITE_BAG`) are defined inductively as
 those built from the empty bag by a finite number of insertions.
 
-```
+```repl
 ##thm FINITE_BAG
 ```
 
@@ -4172,7 +4190,7 @@ The finite multisets have an induction theorem, and also a
 strong induction theorem.
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for finite bags}
 
-```
+```repl
 ##thm FINITE_BAG_INDUCT
 
 ##thm STRONG_FINITE_BAG_INDUCT
@@ -4182,7 +4200,7 @@ The cardinality (`BAG_CARD`) of a multiset counts the total
 number of occurrences.  It is only specified for finite
 multisets.
 
-```
+```repl
 ##thm BAG_CARD_THM
 ```
 
@@ -4196,14 +4214,14 @@ known as *left-commutativity*, namely,
 $f\;x\;(f\;y\;z) = f\;y\;(f\;x\;z)$, then $f$ can be applied by
 folding it on the multiset in a tail-recursive fashion.
 
-```
+```repl
 ##thm ITBAG_EMPTY
 ##thm COMMUTING_ITBAG_INSERT
 ```
 
 A recursive version is also available:
 
-```
+```repl
 ##thm COMMUTING_ITBAG_RECURSES
 ```
 
@@ -4224,7 +4242,7 @@ results used in Term Rewriting.
 **Basic properties.**
 The following basic properties of relations are defined.
 
-```
+```repl
 >>__ open relationTheory
 ##thm transitive_def
 ##thm reflexive_def
@@ -4240,10 +4258,10 @@ The following basic properties of relations are defined.
 The following basic operations on relations are defined: the
 empty relation (`EMPTY_REL`, or $\emptyset\subr$), relation
 composition (`O`, or $\circ\subr$, infix), inversion (`inv`, or
-$\_^{\mathsf{T}}$ (suffix superscript 'T')), domain (`RDOM`),
+$\_^{\mathsf{T}}$ (suffix superscript ‘T’)), domain (`RDOM`),
 and range (`RRANGE`).
 
-```
+```repl
 ##thm EMPTY_REL_DEF
 ##thm O_DEF
 ##thm inv_DEF
@@ -4258,7 +4276,7 @@ infix), complement (`RCOMPL`), and universe (`RUNIV`, or
 $\mathbb{U}\subr$).
 \label{def:rsubset}
 
-```
+```repl
 ##thm RSUBSET
 ##thm RUNION
 ##thm RINTER
@@ -4270,7 +4288,7 @@ $\mathbb{U}\subr$).
 A sequence of definitions capturing various notions of order are
 made in `relation`.
 
-```
+```repl
 ##thm PreOrder
 ##thm Order
 ##thm WeakOrder
@@ -4295,7 +4313,7 @@ will print as a superscript asterisk.
 From the underlying definitions, one can recover the initial
 rules:
 
-```
+```repl
 ##thm TC_RULES
 ##thm RTC_RULES
 ##thm RTC_RULES_RIGHT1
@@ -4312,7 +4330,7 @@ For example, `TC_CASES1` and `TC_CASES2` in the following
 decompose `R+ x z` to either `R x y` followed by `R+ y z`
 (`TC_CASES1`) or `R+ x y` followed by `R y z` (`TC_CASES2`).
 
-```
+```repl
 ##thm TC_CASES1
 ##thm TC_CASES2
 
@@ -4325,7 +4343,7 @@ As well as the basic induction theorems for `TC` and `RTC`,
 there are so-called *strong* induction theorems, which have
 stronger induction hypotheses.
 
-```
+```repl
 ##thm TC_INDUCT
 ##thm68 RTC_INDUCT
 ##thm TC_STRONG_INDUCT
@@ -4345,7 +4363,7 @@ than function application, so that in `EQC_DEF`, `RC` really is
 applied to the transitive closure of the symmetric closure of
 `R`.
 
-```
+```repl
 ##thm RC_DEF
 ##thm SC_DEF
 ##thm EQC_DEF
@@ -4358,7 +4376,7 @@ A relation $R$ is wellfounded (`WF`) if every non-empty set has
 an $R$-minimal element.  Wellfoundedness is used to justify the
 principle of wellfounded induction (`WF_INDUCTION_THM`).
 
-```
+```repl
 ##thm WF_DEF
 ##thm WF_INDUCTION_THM
 ```
@@ -4367,7 +4385,7 @@ The *wellfounded part* (`WFP`) of a relation can be inductively
 defined, from which its rules, case-analysis theorem and
 induction theorems may be derived.
 
-```
+```repl
 ##thm WFP_DEF
 ##thm WFP_RULES
 ##thm WFP_CASES
@@ -4391,7 +4409,7 @@ use the notion of a function restriction (`RESTRICT`) in order
 to force the recursive function to be applied to $R$-smaller
 arguments in recursive calls.
 
-```
+```repl
 ##thm RESTRICT_DEF
 ##thm WFREC_COROLLARY
 
@@ -4404,7 +4422,7 @@ basic operators for wellfounded relations are also defined,
 along with theorems stating that they propagate
 wellfoundedness.
 
-```
+```repl
 ##thm inv_image_def
 
 ##thm WF_inv_image
@@ -4419,7 +4437,7 @@ A few basic definitions from Term Rewriting theory (the diamond
 property (`diamond`), the Church-Rosser property (`CR` and
 `WCR`), and Strong Normalization (`SN`)) appear in `relation`.
 
-```
+```repl
 ##thm diamond_def
 ##thm CR_def
 ##thm WCR_def
@@ -4428,7 +4446,7 @@ property (`diamond`), the Church-Rosser property (`CR` and
 
 From those, Newman's Lemma is proved.
 
-```
+```repl
 ##thm Newmans_lemma
 ```
 
@@ -4447,7 +4465,7 @@ $p\overset{l}{\longrightarrow}q$.  A binary relation $R$ is
 called a *bisimulation* if `BISIM ts R` holds under the
 following definition:
 
-```
+```repl
 >>__ load "bisimulationTheory";
 >>__ open bisimulationTheory;
 ##thm BISIM_def
@@ -4459,7 +4477,7 @@ of `RUNION`) of all bisimulations in this LTS, and it can be
 proven to be an equivalence relation: (the *original* definition
 hereafter)
 
-```
+```repl
 ##thm BISIM_REL_def
 ##thm BISIM_REL_IS_EQUIV_REL
 ```
@@ -4483,7 +4501,7 @@ End
 which automatically generates the following coinduction
 principle:
 
-```
+```repl
 ##thm BISIM_REL_coind
 ```
 
@@ -4491,7 +4509,7 @@ A simple rewrite by `BISIM_def` shows that `BISIM_REL` defined
 in this way is actually equivalent to the original definition
 (which now becomes a theorem):[^bisim-original]
 
-```
+```repl
 >> Q.SPECL [`ts`, `R`]
            (REWRITE_RULE [GSYM BISIM_def, GSYM RSUBSET] BISIM_REL_coind);
 ```
@@ -4509,7 +4527,7 @@ unique action to be *invisible* (usually denoted by $\tau$).
 An *empty* transition (`ETS`) is the reflexive-transitive
 closure (`RTC`) of (one-step) invisible transitions:
 
-```
+```repl
 ##thm ETS_def
 ```
 
@@ -4517,7 +4535,7 @@ Then a *weak* transition (`WTS`) is a one-step transition (the
 action may be invisible) concatenated with two empty
 transitions:
 
-```
+```repl
 ##thm WTS_def
 ```
 
@@ -4554,7 +4572,7 @@ bisimulation relation (`WBISIM_REL`) and the theorem saying
 `WBISIM_REL ts tau` is indeed an equivalence relation (in the
 LTS given by `ts` and `tau`):
 
-```
+```repl
 ##thm WBISIM_def
 ##thm WBISIM_REL_def
 ##thm WBISIM_REL_IS_EQUIV_REL
@@ -4618,7 +4636,7 @@ finite map is just the cardinality of its domain (`FCARD_DEF`);
 from this a recursive characterization (`FCARD_FUPDATE`) is
 derived.
 
-```
+```repl
    ##thm FAPPLY_FUPDATE_THM
    ##thm fmap_EXT
    ##thm fmap_INDUCT
@@ -4631,7 +4649,7 @@ infix notation `|++` may also be used.  For example,
 `fm |++ [(k1,v1); (k2,v2)]` is equal to
 `(fm |+ (k1,v1)) |+ (k2,v2)`.
 
-```
+```repl
    ##thm FUPDATE_LIST
    ##thm FUPDATE_LIST_THM
 ```
@@ -4642,7 +4660,7 @@ applies to; this can be characterized recursively
 (`FDOM_FUPDATE`).  The range of a map is defined in the usual
 way.
 
-```
+```repl
    ##thm FDOM_FUPDATE
    ##thm FRANGE_DEF
 ```
@@ -4652,7 +4670,7 @@ A finite map may have its domain (`DRESTRICT`) or range
 notions have recursive versions as well (`DRESTRICT_FUPDATE` and
 `RRESTRICT_FUPDATE`).
 
-```
+```repl
    ##thm DRESTRICT_DEF
    ##thm RRESTRICT_DEF
    ##thm DRESTRICT_FUPDATE
@@ -4664,7 +4682,7 @@ infix) is a simple application of `DRESTRICT`, but sufficiently
 useful to deserve its own definition.  Again, this concept has a
 alternate recursive presentation (`DOMSUB_FUPDATE_THM`).
 
-```
+```repl
    ##thm fmap_domsub
    ##thm DOMSUB_FUPDATE_THM
 ```
@@ -4673,7 +4691,7 @@ Similarly, the removal of multiple elements from the domain of a
 map (`FDIFF`) is defined in terms of `DRESTRICT`.  It too has an
 alternate recursive presentation.
 
-```
+```repl
    ##thm FDIFF_def
    ##thm FDIFF_FUPDATE
 ```
@@ -4684,7 +4702,7 @@ symmetric: the domain of the first map takes precedence.  The
 notion of a finite map being a submap of another (`SUBMAP`,
 infix) is an extension of how subsets are formalized.
 
-```
+```repl
    ##thm FUNION_DEF
    ##thm SUBMAP_DEF
 ```
@@ -4696,14 +4714,14 @@ In `FMERGE_WITH_KEY f m1 m2`, rather than the domain of `m1`
 taking precedence (as in `FUNION`), overlapping keys and their
 associated values are processed by the function parameter `f`.
 
-```
+```repl
    ##thm FMERGE_WITH_KEY_DEF
 ```
 
 The key-ignorant merge of two finite maps (`FMERGE`) specialises
 `FMERGE_WITH_KEY`, and is itself a generalisation of `FUNION`.
 
-```
+```repl
    ##thm FMERGE_WITH_KEY_FMERGE
    ##thm FMERGE_FUNION
 ```
@@ -4718,7 +4736,7 @@ option type.  An ordinary function can be turned into a finite
 map by restricting the function to a finite set of arguments
 (`FUN_FMAP_DEF`).
 
-```
+```repl
    ##thm FLOOKUP_DEF
 
    ##thm FUN_FMAP_DEF
@@ -4737,7 +4755,7 @@ with a finite map (`f_o`, infix) applies the ordinary function
 and then the finite map; the application of the ordinary
 function is achieved by turning it into a finite map.
 
-```
+```repl
    ##thm f_o_f_DEF
    ##thm o_f_DEF
    ##thm f_o_DEF
@@ -4753,14 +4771,14 @@ don't seem total, at least from a computational perspective.
 An example is `WHILE`-loops.  The following equation is derived
 in theory `While`:
 
-```
+```repl
 >>__ open WhileTheory
 ##thm WHILE
 ```
 
 Clearly, if `P` in this theorem was instantiated to
 $\lambda x.\;\konst{T}$, the resulting instance of `WHILE` would
-'run forever' if executed.  Why is such an "obviously" partial
+‘run forever’ if executed.  Why is such an “obviously” partial
 function definable in HOL?  The answer lies in a subtle
 definition of `WHILE`,[^while-jmoore] which uses the expressive
 power of HOL to surprising effect.  Consider the following total
@@ -4782,7 +4800,7 @@ which `P` holds (i.e., when the iteration stops); the infinite
 ones are mapped to `ARB`.  This function is used as the witness
 for `f` in the proof of the following theorem:
 
-```
+```repl
 ##thm ITERATION
 ```
 
@@ -4797,7 +4815,7 @@ instantiations for `B` and `C` must be known before a
 wellfounded relation for `R` is found and used to eliminate the
 constraints.
 
-```
+```repl
 ##thm WHILE_INDUCTION
 ```
 
@@ -4805,7 +4823,7 @@ A more refined level of support is provided by the standard
 Hoare Logic `WHILE` rule, phrased in terms of Hoare triples
 (`HOARE_SPEC`).
 
-```
+```repl
 ##thm HOARE_SPEC_DEF
 ##thm WHILE_RULE
 ```
@@ -4813,7 +4831,7 @@ Hoare Logic `WHILE` rule, phrased in terms of Hoare triples
 As a follow-on, an operator for finding the least number with
 property `P` is defined.
 
-```
+```repl
 ##thm LEAST_DEF
 ```
 
@@ -4821,14 +4839,14 @@ The `LEAST` constant is treated as a binder by the parser, which
 explains the special printing of the name above.  Its use as a
 binder can be seen in:
 
-```
+```repl
 ##thm LEAST_LESS_EQ
 ```
 
 A fundamental result, the operation of which is embodied in the
 tactic `LEAST_ELIM_TAC` is:
 
-```
+```repl
 ##thm LEAST_ELIM
 ```
 
@@ -4836,7 +4854,7 @@ If one wants a specified result even when the predicate is
 everywhere false, the `OLEAST` function (also treated as a
 binder by the parser and pretty-printer) may be helpful:
 
-```
+```repl
 ##thm OLEAST_def
 ```
 
@@ -4856,12 +4874,12 @@ those types that leverage this view.  Equally, it is useful to
 be able to declare monads of one's own that can use the same
 syntactic facilities.
 
-Monads are defined by their "unit" and "bind" functions, and
+Monads are defined by their “unit” and “bind” functions, and
 these can be composed in expressive ways.  In particular, HOL
 supports a syntax inspired by Haskell's do notation, wherein it
 is possible to write such functions as
 
-```
+```repl
 >>__ load "monadsyntax";
 >>__ monadsyntax.add_monadsyntax();
 >>__ monadsyntax.enable_monad "list";
@@ -4883,7 +4901,7 @@ a particular monad instance.  In this case, the monad instance
 is that of lists.  We can use the `mapM` function to implement
 what one might term a cross-product operation on lists:
 
-```
+```repl
 >> EVAL “mapM I [[1;2;3]; [a;b]; [x;y;z]]”;
 ```
 
@@ -4940,7 +4958,7 @@ their parsing and pretty-printing.  The function responsible is
 \index{declare_monad@\ml{declare\_monad}}
 `declare_monad` in the `monadsyntax` module.
 
-```
+```repl
 >>__ val SOME ms_struct =
        #lookupStruct PolyML.globalNameSpace "monadsyntax";
 >>__ val ms_ns = PolyML.NameSpace.Structures.contents ms_struct;
@@ -4963,7 +4981,7 @@ implementing the corresponding monad functions.  For example,
 the bind function for the option function is `OPTION_BIND`,
 characterised by its defining theorem:
 
-```
+```repl
 >>__ open optionTheory
 ##thm OPTION_BIND_def
 ```
@@ -4987,7 +5005,7 @@ situation.  For example, the system's encoding of the option
 monad uses a separate constant with exactly the definition one
 would expect:
 
-```
+```repl
 ##thm OPTION_IGNORE_BIND_def
 ```
 
@@ -5013,10 +5031,10 @@ monads will look similar.  If one views `fail` as throwing an
 exception, then the `choice` notation allows for catching an
 exception and trying another computation.  The overload is to
 the infix `++` syntax, meaning that one can write
-$M_1\;\mathtt{++}\;M_2$ to represent the "choice" between $M_1$
+$M_1\;\mathtt{++}\;M_2$ to represent the “choice” between $M_1$
 and $M_2$.  (Note that in the list monad, `++` is `APPEND`.
 This explains the choice of notation, though in the list monad,
-viewing "choice" as throwing and catching exceptions is actually
+viewing “choice” as throwing and catching exceptions is actually
 harder to motivate.)
 
 Finally, the `guard` term (if given) overloads to the term
@@ -5063,7 +5081,7 @@ any specific instances enabled the output will be unhelpful (the
 `monad_bind` printed in the session below is actually a
 variable):
 
-```
+```repl
 >>__ monadsyntax.disable_monadsyntax();
 >>__ List.app (monadsyntax.disable_monad o #1)
               (monadsyntax.all_monads());
@@ -5074,7 +5092,7 @@ variable):
 One can see which monads have been declared with a call to
 `all_monads`:
 
-```
+```repl
 >> monadsyntax.all_monads()
 ```
 
@@ -5082,7 +5100,7 @@ Particular monads can be enabled with calls to `enable_monad`.
 The most recently enabled is preferred when the context makes
 the choice ambiguous.
 
-```
+```repl
 >> List.app monadsyntax.enable_monad ["list", "option"];
 
 >> val t = “do x <- M; return (x + 1) od”;
@@ -5096,7 +5114,7 @@ Thanks to the persistence features of these API points, loading
 fresh theories may cause more monads to be declared and/or
 enabled:
 
-```
+```repl
 >> load "errorStateMonadTheory";
 >> monadsyntax.all_monads();
 ```
@@ -5122,7 +5140,7 @@ of theories.
 \begin{figure}[hbtp]
 ```
 
-```
+```repl
 >>__ app load ["readerMonadTheory", "state_transformerTheory",
                "errorStateMonadTheory"];
 >>__ List.app (fn (s,_) => monadsyntax.disable_monad s)

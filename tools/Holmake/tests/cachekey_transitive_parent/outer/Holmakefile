@@ -1,0 +1,18 @@
+INCLUDES = ../inner
+
+ifdef POLY
+CLINE_OPTIONS = --holstate=$(HOLDIR)/bin/hol.state0
+endif
+
+# qux is a side product of consumeScript.  Holmake's product-cache
+# upload rejects any BuildScript whose target group contains a
+# non-theory output (see is_theory_output in HM_CacheFetch.sml), so
+# this coproduct keeps consumeScript out of the cache entirely --
+# guaranteeing the script actually runs on rebuild, which is what
+# surfaces the stale wrapping_child.dat as a link_parents failure.
+qux: *consumeScript.sml
+
+all: consumeTheory.uo qux
+.PHONY: all
+
+EXTRA_CLEANS = qux

@@ -29,9 +29,9 @@ fun b2status true = HM_DepGraph.Succeeded
   | b2status false = HM_DepGraph.Failed{needed=true}
 
 fun updall nodes st g =
-  List.foldl (fn (n,g) => HM_DepGraph.updnode(n,st) g) g nodes
+  List.foldl (fn (n,g) => HM_DepGraph.updnode_tgtstatus(n,st) g) g nodes
 
-fun upd1 node st g = HM_DepGraph.updnode(node,st) g
+fun upd1 node st g = HM_DepGraph.updnode_tgtstatus(node,st) g
 
 fun 'a graphbuildj1 static_info =
   let
@@ -58,7 +58,8 @@ fun 'a graphbuildj1 static_info =
                 NONE => HM_BuildLock.nolock
               | SOME key =>
                   HM_BuildLock.acquire
-                    {dir = hmdir.toAbsPath (#dir nI), key = key, warn = warn}
+                    {dir = hmdir.toAbsPath (#dir nI), key = key,
+                     warn = warn, diag = diagK}
         fun recurse retval g =
           case find_runnable g of
               NONE => (retval, g)
@@ -77,6 +78,13 @@ fun 'a graphbuildj1 static_info =
                   let
                     val _ = HM_BuildLock.release lh
                     val g = upd (b2status res) g
+                    val _ =
+                        case (HM_Progress.note_completion g res (#command nI),
+                              #command nI) of
+                            (SOME knstr,
+                             BuiltInCmd (BIC_BuildScript thyname, _)) =>
+                              info (knstr ^ " " ^ OS.Path.file thyname)
+                          | _ => ()
                   in
                     if res then recurse retval g
                     else if keep_going then recurse OS.Process.failure g

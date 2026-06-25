@@ -1,0 +1,44 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `non_type_theorems`
+
+``` hol4
+EmitTeX.non_type_theorems : string -> (string * thm) list
+```
+
+------------------------------------------------------------------------
+
+A versions of `theorems` that attempts to filter out theorems created by
+`Hol_datatype`.
+
+An invocation `non_type_theorems thy`, where `thy` is the name of a
+currently loaded theory segment, will return a list of the theorems
+stored in that theory. Axioms and definitions are excluded. Each theorem
+is paired with its name in the result.
+
+### Failure
+
+Never fails. If `thy` is not the name of a currently loaded theory
+segment, the empty list is returned.
+
+### Example
+
+``` hol4
+>>__ load "EmitTeX";
+
+>> new_theory "example";
+>> val _ = Hol_datatype `example = First | Second`;
+>> val example_def = Define
+    `(example First = Second) /\ (example Second = First)`;
+>> save_thm("example_thm",
+   METIS_PROVE [example_def, theorem "example_nchotomy"]
+     ``!x. example (example x) = x``);
+
+>> theorems "example";
+
+>> EmitTeX.non_type_theorems "example";
+```
+
+### See also
+
+[`DB.theorems`](#DB.theorems),
+[`bossLib.Hol_datatype`](#bossLib.Hol_datatype)

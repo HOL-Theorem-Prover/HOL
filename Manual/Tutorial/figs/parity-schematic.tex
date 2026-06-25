@@ -1,0 +1,45 @@
+\documentclass{standalone}
+\input{../../LaTeX/pic-macros}
+\begin{document}
+{\setlength{\unitlength}{5mm}%
+\begin{picture}(14,30)(0,0.5)
+\put(8,20){\framebox(2,2){\small{\tt NOT}}}
+\put(6,16){\framebox(6,2){\small{\tt MUX}}}
+\put(2,16){\framebox(2,2){\small{\tt ONE}}}
+\put(2,12){\framebox(2,2){\small{\tt REG}}}
+\put(6,8){\framebox(6,2){\small{\tt MUX}}}
+\put(8,4){\framebox(2,2){\small{\tt REG}}}
+
+\puthrule(9,24){4}
+\puthrule(3,15){8}
+\puthrule(3,11){4}
+\puthrule(7,7){2}
+\puthrule(9,3){4}
+
+\putvrule(3,11){1}
+\putvrule(3,14){2}
+\putvrule(7,2){5}
+\putvrule(7,10){1}
+\putvrule(7,18){8}
+\putvrule(9,3){1}
+\putvrule(9,6){2}
+\putvrule(9,10){6}
+\putvrule(9,18){2}
+\putvrule(9,22){2}
+\putvrule(11,10){5}
+\putvrule(11,18){6}
+\putvrule(13,3){21}
+
+\put(6,26){\makebox(2,2){\small{\tt in}}}
+\put(6,0){\makebox(2,2){\small{\tt out}}}
+\put(9,18){\makebox(1.8,2){\small{\tt l1}}}
+\put(13,18){\makebox(1.8,2){\small{\tt l2}}}
+\put(9,12){\makebox(1.8,2){\small{\tt l3}}}
+\put(11,12){\makebox(1.8,2){\small{\tt l4}}}
+\put(4,11){\makebox(3,1){\small{\tt l5}}}
+
+\put(10,23){\makebox(2,2){$\bullet$}}
+\put(8,6){\makebox(2,2){$\bullet$}}
+\put(2,14){\makebox(2,2){$\bullet$}}
+\end{picture}}%
+\end{document}

@@ -25,11 +25,13 @@ datatype phase = Initial | Bare | Full
 val cline_record = process_cline ()
 val {cmdline,build_theory_graph,selftest_level,...} = cline_record
 val {debug,jobcount,relocbuild,extra={SRCDIRS,...},...} = cline_record
-val {multithread,keepgoing,timelimit,thmsrc,cache_dir,...} = cline_record
+val {multithread,keepgoing,timelimit,thmsrc,...} = cline_record
 
-val _ = case cache_dir of
-            SOME d => print ("Using cache directory: " ^ d ^ "\n")
-          | NONE => ()
+(* Forward only the cache options the user actually wrote, so that a
+   Holmakefile's CLINE_OPTIONS = --no-cache (etc.) isn't quietly
+   overridden by a synthesised default at the sub-Holmake command-line.
+   Defaults are left to each sub-Holmake to compute for itself. *)
+val cache_args = extract_cache_args (CommandLine.arguments())
 
 open Systeml;
 
@@ -84,9 +86,7 @@ in
               (case thmsrc of
                    NONE => []
                  | SOME s => ["--thmsrc="^s]) @
-              (case cache_dir of
-                   NONE => ["--no-cache"]
-                 | SOME d => ["--cache-dir", d]) @
+              cache_args @
               phase_extras())
     analysis selftest_level
 end
@@ -159,7 +159,9 @@ in
     handle SML90.Interrupt => (finish_logging false; die "Interrupted");
   finish_logging true;
   make_buildstamp();
-  build_help build_theory_graph;
+  build_help {graph = build_theory_graph,
+              no_mdbook = #no_mdbook cline_record,
+              no_helpdocs = #no_helpdocs cline_record};
   print "\nHol built successfully.\n"
 end
 

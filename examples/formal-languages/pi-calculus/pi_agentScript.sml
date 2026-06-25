@@ -20,8 +20,9 @@ Libs
 
 (* calling nominal_datatype *)
 val _ = (repcode := "repcode");
+val _ = (tpm_name_pfx := ["t", "r"]);
 
-val {tynames, rep_t, lp} =
+val {tynames, tyinfo, consinfo, tpminfo, rep_t, lp} =
     nominal_datatype
           ‘pi   = Nil                         (* 0 *)
                 | Tau pi                      (* tau.P *)
@@ -41,10 +42,9 @@ val {tynames, rep_t, lp} =
 val tyname1 = List.nth (tynames,0);
 val tyname2 = List.nth (tynames,1);
 
-val d_tm = mk_var("d", rep_t);
-
 (* This is often useful for debugging purposes *)
 Overload LP = lp;
+Overload pilp[local] = “genind ^lp”
 
 (* type 1 (:pi) *)
 val {term_ABS_pseudo11 = term_ABS_pseudo11_1,
@@ -56,7 +56,7 @@ val {term_ABS_pseudo11 = term_ABS_pseudo11_1,
      repabs_pseudo_id = repabs_pseudo_id1,
      term_REP_t = term_REP_t1,
      term_ABS_t = term_ABS_t1,
-     newty = newty1, ...} = new_type_step1 tyname1 0 [] {lp = lp};
+     newty = newty1} = List.nth (tyinfo,0);
 
 (* type 2 (:residual) *)
 val {term_ABS_pseudo11 = term_ABS_pseudo11_2,
@@ -68,236 +68,48 @@ val {term_ABS_pseudo11 = term_ABS_pseudo11_2,
      repabs_pseudo_id = repabs_pseudo_id2,
      term_REP_t = term_REP_t2,
      term_ABS_t = term_ABS_t2,
-     newty = newty2, ...} =
-     new_type_step1 tyname2 1 [genind_exists1] {lp = lp};
+     newty = newty2} = List.nth (tyinfo,1);
 
 (* ----------------------------------------------------------------------
     Pi-calculus operators
    ---------------------------------------------------------------------- *)
 
-val glam = genind_lam
-Overload pilp[local] = “genind ^lp”
-fun toArb t = subst [“uu:string” |-> “ARB:string”] t
+val [Nil_def, Nil_def',
+     Tau_def, Tau_def', Input_def,
+     Output_def, Output_def',
+     Match_def, Match_def',
+     Mismatch_def, Mismatch_def',
+     Sum_def, Sum_def',
+     Par_def, Par_def', Res_def,
+     TauR_def, TauR_def',
+     InputS_def, BoundOutput_def,
+     FreeOutput_def, FreeOutput_def'] =
+    List.map (DB.fetch "-") ["Nil_def", "Nil_def'",
+                             "Tau_def", "Tau_def'", "Input_def",
+                             "Output_def", "Output_def'",
+                             "Match_def", "Match_def'",
+                             "Mismatch_def", "Mismatch_def'",
+                             "Sum_def", "Sum_def'",
+                             "Par_def", "Par_def'", "Res_def",
+                             "TauR_def", "TauR_def'",
+                             "InputS_def", "BoundOutput_def",
+                             "FreeOutput_def", "FreeOutput_def'"];
 
-(* Nil *)
-val Nil_t = mk_var("Nil", “:^newty1”);
-val Nil_pattern = “GLAM uu [] rNil [][]”;
-val Nil_def = new_definition(
-   "Nil_def",
-  “^Nil_t = ^term_ABS_t1 ^(toArb Nil_pattern)”);
-val Nil_termP = prove(
-    mk_comb(termP1, Nil_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
-val Nil_t = defined_const Nil_def;
-val Nil_def' = prove(
-  “^term_ABS_t1 ^Nil_pattern = ^Nil_t”,
-    srw_tac [][Nil_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Nil_termP]);
+val  cons_info = List.nth (consinfo, 0);
+val rcons_info = List.nth (consinfo, 1);
 
-(* Tau prefix *)
-val Tau_t = mk_var("Tau", “:^newty1 -> ^newty1”);
-val Tau_pattern = “GLAM uu [] rTau [] [^term_REP_t1 P]”;
-val Tau_def = new_definition(
-   "Tau_def",
-  “^Tau_t P = ^term_ABS_t1 ^(toArb Tau_pattern)”);
-val Tau_termP = prove(
-    mk_comb(termP1, Tau_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
-val Tau_t = defined_const Tau_def;
-val Tau_def' = prove(
-  “^term_ABS_t1 ^Tau_pattern = ^Tau_t P”,
-    srw_tac [][Tau_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Tau_termP]);
+val [Nil_termP, Tau_termP, Input_termP, Output_termP, Match_termP,
+     Mismatch_termP, Sum_termP, Par_termP, Res_termP] =
+    List.map #con_termP cons_info;
 
-(* Input prefix *)
-val Input_t = mk_var("Input", “:string -> string -> ^newty1 -> ^newty1”);
-val Input_pattern = “GLAM x [a] rInput [^term_REP_t1 P] []”;
-val Input_def = new_definition(
-   "Input_def",
-  “^Input_t a x P = ^term_ABS_t1 ^Input_pattern”);
-val Input_termP = prove(
-    mk_comb(termP1, Input_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
-val Input_t = defined_const Input_def;
-
-(* Output prefix *)
-val Output_t = mk_var("Output", “:string -> string -> ^newty1 -> ^newty1”);
-val Output_pattern = “GLAM uu [a; b] rOutput [] [^term_REP_t1 P]”;
-val Output_def = new_definition(
-   "Output_def",
-  “^Output_t a b P = ^term_ABS_t1 ^(toArb Output_pattern)”);
-val Output_termP = prove(
-    mk_comb(termP1, Output_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
-val Output_t = defined_const Output_def;
-val Output_def' = prove(
-  “^term_ABS_t1 ^Output_pattern = ^Output_t a b P”,
-    srw_tac [][Output_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Output_termP]);
-
-(* Match *)
-val Match_t = mk_var("Match", “:string -> string -> ^newty1 -> ^newty1”);
-val Match_pattern = “GLAM uu [a; b] rMatch [] [^term_REP_t1 P]”;
-val Match_def = new_definition(
-   "Match_def",
-  “^Match_t a b P = ^term_ABS_t1 ^(toArb Match_pattern)”);
-val Match_termP = prove(
-    mk_comb(termP1, Match_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
-val Match_t = defined_const Match_def;
-val Match_def' = prove(
-  “^term_ABS_t1 ^Match_pattern = ^Match_t a b P”,
-    srw_tac [][Match_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Match_termP]);
-
-(* Mismatch *)
-val Mismatch_t = mk_var("Mismatch", “:string -> string -> ^newty1 -> ^newty1”);
-val Mismatch_pattern = “GLAM uu [a; b] rMismatch [] [^term_REP_t1 P]”;
-val Mismatch_def = new_definition(
-   "Mismatch_def",
-  “^Mismatch_t a b P = ^term_ABS_t1 ^(toArb Mismatch_pattern)”);
-val Mismatch_termP = prove(
-    mk_comb(termP1, Mismatch_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
-val Mismatch_t = defined_const Mismatch_def;
-val Mismatch_def' = prove(
-  “^term_ABS_t1 ^Mismatch_pattern = ^Mismatch_t a b P”,
-    srw_tac [][Mismatch_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Mismatch_termP]);
-
-(* Sum (Choice) *)
-val Sum_t = mk_var("Sum", “:^newty1 -> ^newty1 -> ^newty1”);
-val Sum_pattern = “GLAM uu [] rSum [] [^term_REP_t1 P; ^term_REP_t1 Q]”;
-val Sum_def = new_definition(
-   "Sum_def",
-  “^Sum_t P Q = ^term_ABS_t1 ^(toArb Sum_pattern)”);
-val Sum_termP = prove(
-    mk_comb(termP1, Sum_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
-val Sum_t = defined_const Sum_def;
-val Sum_def' = prove(
-  “^term_ABS_t1 ^Sum_pattern = ^Sum_t P Q”,
-    srw_tac [][Sum_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Sum_termP]);
-
-(* Parallel Composition *)
-val Par_t = mk_var("Par", “:^newty1 -> ^newty1 -> ^newty1”);
-val Par_pattern = “GLAM uu [] rPar [] [^term_REP_t1 P; ^term_REP_t1 Q]”;
-val Par_def = new_definition(
-   "Par_def",
-  “^Par_t P Q = ^term_ABS_t1 ^(toArb Par_pattern)”);
-val Par_termP = prove(
-    mk_comb(termP1, Par_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
-val Par_t = defined_const Par_def;
-val Par_def' = prove(
-  “^term_ABS_t1 ^Par_pattern = ^Par_t P Q”,
-    srw_tac [][Par_def, GLAM_NIL_EQ, term_ABS_pseudo11_1, Par_termP]);
-
-(* Restriction *)
-val Res_t = mk_var("Res", “:string -> ^newty1 -> ^newty1”);
-val Res_pattern = “GLAM v [] rRes [^term_REP_t1 P] []”;
-val Res_def = new_definition(
-   "Res_def",
-  “^Res_t v P = ^term_ABS_t1 ^Res_pattern”);
-val Res_termP = prove(
-    mk_comb (termP1, Res_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
-val Res_t = defined_const Res_def;
-
-(* TauR *)
-val TauR_t = mk_var("TauR", “:^newty1 -> ^newty2”);
-val TauR_pattern = “GLAM uu [] rTauR [] [^term_REP_t1 P]”;
-val TauR_def = new_definition(
-   "TauR_def",
-  “^TauR_t P = ^term_ABS_t2 ^(toArb TauR_pattern)”);
-val TauR_termP = prove(
-    mk_comb(termP2, TauR_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
-val TauR_t = defined_const TauR_def;
-val TauR_def' = prove(
-  “^term_ABS_t2 ^TauR_pattern = ^TauR_t P”,
-    srw_tac [][TauR_def, GLAM_NIL_EQ, term_ABS_pseudo11_2, TauR_termP]);
-
-(* Bound output (residual) *)
-val BoundOutput_t =
-    mk_var("BoundOutput", “:string -> string -> ^newty1 -> ^newty2”);
-val BoundOutput_pattern = “GLAM x [a] rBoundOutput [^term_REP_t1 P] []”;
-val BoundOutput_def = new_definition(
-   "BoundOutput_def",
-  “^BoundOutput_t a x P = ^term_ABS_t2 ^BoundOutput_pattern”);
-val BoundOutput_termP = prove(
-    mk_comb(termP2, BoundOutput_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
-val BoundOutput_t = defined_const BoundOutput_def;
-
-(* Input residual *)
-val InputS_t = mk_var("InputS", “:string -> string -> ^newty1 -> ^newty2”);
-val InputS_pattern = “GLAM x [a] rInputS [^term_REP_t1 P] []”;
-val InputS_def = new_definition(
-   "InputS_def",
-  “^InputS_t a x P = ^term_ABS_t2 ^InputS_pattern”);
-val InputS_termP = prove(
-    mk_comb(termP2, InputS_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
-val InputS_t = defined_const InputS_def;
-
-(* Free output (residual) *)
-val FreeOutput_t =
-    mk_var("FreeOutput", “:string -> string -> ^newty1 -> ^newty2”);
-val FreeOutput_pattern = “GLAM uu [a; b] rFreeOutput [] [^term_REP_t1 P]”;
-val FreeOutput_def = new_definition(
-   "FreeOutput_def",
-  “^FreeOutput_t a b P = ^term_ABS_t2 ^(toArb FreeOutput_pattern)”);
-val FreeOutput_termP = prove(
-    mk_comb(termP2, FreeOutput_pattern),
-    match_mp_tac glam >> srw_tac [][genind_term_REP1]);
-val FreeOutput_t = defined_const FreeOutput_def;
-val FreeOutput_def' = prove(
-  “^term_ABS_t2 ^FreeOutput_pattern = ^FreeOutput_t a b P”,
-    srw_tac [][FreeOutput_def, GLAM_NIL_EQ, term_ABS_pseudo11_2,
-               FreeOutput_termP]);
+val [TauR_termP, InputS_termP, BoundOutput_termP, FreeOutput_termP] =
+    List.map #con_termP rcons_info;
 
 (* ----------------------------------------------------------------------
     tpm - permutation of pi-calculus binding variables
    ---------------------------------------------------------------------- *)
 
-val cons_info =
-    [{con_termP = Nil_termP,      con_def = SYM Nil_def'},
-     {con_termP = Tau_termP,      con_def = SYM Tau_def'},
-     {con_termP = Input_termP,    con_def = Input_def},
-     {con_termP = Output_termP,   con_def = SYM Output_def'},
-     {con_termP = Match_termP,    con_def = SYM Match_def'},
-     {con_termP = Mismatch_termP, con_def = SYM Mismatch_def'},
-     {con_termP = Sum_termP,      con_def = SYM Sum_def'},
-     {con_termP = Par_termP,      con_def = SYM Par_def'},
-     {con_termP = Res_termP,      con_def = Res_def}];
-
-val tpm_name_pfx = "t";
-val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} =
-    define_permutation {name_pfx = tpm_name_pfx, name = tyname1,
-                        term_REP_t = term_REP_t1,
-                        term_ABS_t = term_ABS_t1,
-                        absrep_id = absrep_id1,
-                        repabs_pseudo_id = repabs_pseudo_id1,
-                        cons_info = cons_info,
-                        newty = newty1,
-                        genind_term_REP = genind_term_REP1};
-
-(* |- (!pi. tpm pi Nil = Nil) /\ (!pi P. tpm pi (Tau P) = Tau (tpm pi P)) /\
-      (!x pi a P.
-         tpm pi (Input a x P) =
-         Input (lswapstr pi a) (lswapstr pi x) (tpm pi P)) /\
-      (!pi b a P.
-         tpm pi (Output a b P) =
-         Output (lswapstr pi a) (lswapstr pi b) (tpm pi P)) /\
-      (!pi b a P.
-         tpm pi (Match a b P) =
-         Match (lswapstr pi a) (lswapstr pi b) (tpm pi P)) /\
-      (!pi b a P.
-         tpm pi (Mismatch a b P) =
-         Mismatch (lswapstr pi a) (lswapstr pi b) (tpm pi P)) /\
-      (!pi Q P. tpm pi (Sum P Q) = Sum (tpm pi P) (tpm pi Q)) /\
-      (!pi Q P. tpm pi (Par P Q) = Par (tpm pi P) (tpm pi Q)) /\
-      !v pi P. tpm pi (Res v P) = Res (lswapstr pi v) (tpm pi P)
- *)
-Theorem tpm_thm[allow_rebind] =
-        tpm_thm |> REWRITE_RULE [GSYM Input_def, Output_def',
-                                 Match_def', Mismatch_def'];
+val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} = List.nth (tpminfo,0);
 
 Theorem tpm_eqr :
     t = tpm pi u <=> tpm (REVERSE pi) t = (u :pi)
@@ -321,26 +133,10 @@ QED
     rpm - permutation of pi-calculus residuals
    ---------------------------------------------------------------------- *)
 
-val rcons_info =
-    [{con_termP = TauR_termP,        con_def = SYM TauR_def'},
-     {con_termP = BoundOutput_termP, con_def = BoundOutput_def},
-     {con_termP = InputS_termP,      con_def = InputS_def},
-     {con_termP = FreeOutput_termP,  con_def = SYM FreeOutput_def'}];
-
-val rpm_name_pfx = "r";
-
 val {tpm_thm = rpm_thm,
      term_REP_tpm = term_REP_rpm,
      t_pmact_t = r_pmact_t,
-     tpm_t = rpm_t} =
-    define_permutation {name_pfx = rpm_name_pfx, name = tyname2,
-                        term_REP_t = term_REP_t2,
-                        term_ABS_t = term_ABS_t2,
-                        absrep_id = absrep_id2,
-                        repabs_pseudo_id = repabs_pseudo_id2,
-                        cons_info = rcons_info,
-                        newty = newty2,
-                        genind_term_REP = genind_term_REP2};
+     tpm_t = rpm_t} = List.nth (tpminfo,1);
 
 (* |- (!pi P. rpm pi (TauR P) = TauR (tpm pi P)) /\
       (!x pi a P.

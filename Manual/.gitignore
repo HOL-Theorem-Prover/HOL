@@ -1,2 +1,4 @@
 *.fls
 book/
+build/
+chapter-stems.mk

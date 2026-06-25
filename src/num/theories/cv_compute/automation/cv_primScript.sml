@@ -339,8 +339,9 @@ Theorem int_div[local]:
     if j < 0 then
       if i < 0 then &(Num i DIV Num j)
       else -&(Num i DIV Num j) + if Num i MOD Num j = 0 then 0 else -1
-    else if i < 0 then -&(Num i DIV Num j) + if Num i MOD Num j = 0 then 0 else -1
-         else &(Num i DIV Num j)
+    else if i < 0 then
+      -&(Num i DIV Num j) + if Num i MOD Num j = 0 then 0 else -1
+    else &(Num i DIV Num j)
 Proof
   strip_tac >> simp[int_div] >>
   Cases_on `j < 0` >> Cases_on `i < 0` >> gvs[] >>
@@ -482,7 +483,8 @@ Proof
   strip_tac >> gvs[] >> Cases_on `r < 0` >> gvs[]
   >- (
     `rat_sgn r = 1` by (CCONTR_TAC >> gvs[RAT_LEQ_LES, RAT_LEQ_ANTISYM]) >>
-    `rat_of_int (ABS (RATN r)) = &Num (RATN r)` by (Cases_on `RATN r` >> gvs[]) >>
+    `rat_of_int (ABS (RATN r)) = &Num (RATN r)`
+      by (Cases_on `RATN r` >> gvs[]) >>
     simp[from_rat_def] >>
     qspecl_then [`int_of_num $ RATD r`,`Num (RATN r)`]
       mp_tac $ GEN_ALL RATND_suff_eq >>
@@ -498,7 +500,8 @@ Proof
       ) >>
     simp[RAT_MUL_NUM_CALCULATE] >>
     simp[GSYM RAT_DIV_AINV, Num_neg] >>
-    `rat_of_int (ABS (RATN r)) = &Num (RATN r)` by (Cases_on `RATN r` >> gvs[]) >>
+    `rat_of_int (ABS (RATN r)) = &Num (RATN r)`
+      by (Cases_on `RATN r` >> gvs[]) >>
     qspecl_then [`int_of_num $ RATD r`,`Num (RATN r)`]
       mp_tac $ GEN_ALL RATND_suff_eq >>
     simp[Once gcdTheory.GCD_SYM]
@@ -541,7 +544,8 @@ QED
 Definition cv_rat_add_def:
   cv_rat_add r1 r2 =
     cv_rat_norm $ Pair
-      (cv_int_add (cv_int_mul (cv_fst r1) (cv_snd r2)) (cv_int_mul (cv_fst r2) (cv_snd r1)))
+      (cv_int_add (cv_int_mul (cv_fst r1) (cv_snd r2))
+                  (cv_int_mul (cv_fst r2) (cv_snd r1)))
       (cv_mul (cv_snd r1) (cv_snd r2))
 End
 
@@ -549,13 +553,14 @@ Theorem cv_rat_add[cv_rep]:
   from_rat (r1 + r2) = cv_rat_add (from_rat r1) (from_rat r2)
 Proof
   simp[cv_rat_add_def] >> irule from_rat_eq_cv_rat_norm_suff >>
-  qexistsl [`RATD r1 * RATD r2`,`(RATN r1 * &RATD r2) + (RATN r2 * &RATD r1)`] >>
+  qexistsl [`RATD r1 * RATD r2`,`(RATN r1 * &RATD r2) + (RATN r2 * &RATD r1)`]>>
   simp[from_rat_def] >> rw[]
   >- (
     simp[cv_int_add] >> rpt MK_COMB_TAC >> simp[] >>
     simp[cv_int_mul] >> rpt MK_COMB_TAC >> simp[from_int_def]
     ) >>
-  qspecl_then [`&RATD r1`,`rat_of_int $ RATN r1`,`&RATD r2`,`rat_of_int $ RATN r2`]
+  qspecl_then [`&RATD r1`,`rat_of_int $ RATN r1`,`&RATD r2`,
+               `rat_of_int $ RATN r2`]
     mp_tac $ GEN_ALL $ GSYM RAT_DIVDIV_ADD >> simp[] >>
   once_rewrite_tac[GSYM rat_of_int_of_num] >>
   rewrite_tac[rat_of_int_MUL, rat_of_int_ADD, INT_MUL_CALCULATE] >> simp[]
@@ -580,7 +585,8 @@ Proof
   simp[cv_rat_mul_def] >> irule from_rat_eq_cv_rat_norm_suff >>
   qexistsl [`RATD r1 * RATD r2`,`RATN r1 * RATN r2`] >>
   simp[from_rat_def, cv_int_mul] >>
-  qspecl_then [`&RATD r2`,`rat_of_int $ RATN r2`,`&RATD r1`,`rat_of_int $ RATN r1`]
+  qspecl_then [`&RATD r2`,`rat_of_int $ RATN r2`,`&RATD r1`,
+               `rat_of_int $ RATN r1`]
     mp_tac $ GEN_ALL $ GSYM RAT_DIVDIV_MUL >>
   simp[rat_of_int_MUL, RAT_MUL_NUM_CALCULATE]
 QED
@@ -749,7 +755,9 @@ QED
 
 Theorem cv_inline_word_sw2sw[cv_inline]:
  sw2sw (w : 'a word) =
-  let v = w in (if word_msb v then -1w << dimindex (:'a) else 0w) + w2w v : 'b word
+  let v = w
+  in
+    (if word_msb v then -1w << dimindex (:'a) else 0w) + w2w v : 'b word
 Proof
   rw[sw2sw_w2w_add]
 QED
@@ -1012,7 +1020,7 @@ Theorem cv_word_lt_thm[cv_rep]:
 Proof
   rewrite_tac [GSYM cv_rep_word_msb] \\ simp [Once EQ_SYM_EQ]
   \\ gvs [cv_word_lt_def]
-  \\ ‘!b1 b2. (c2b (cv_eq (b2c b1) (b2c b2)) = (b1 = b2)) /\ (c2b (b2c b1) = b1)’ by
+  \\ ‘!b1 b2. (c2b (cv_eq (b2c b1) (b2c b2)) ⇔ b1 = b2) ∧ c2b (b2c b1) = b1’ by
     (Cases \\ Cases \\ gvs [])
   \\ simp [GSYM cv_word_lo_thm,GSYM cv_rep_not,wordsTheory.WORD_LT,WORD_LO]
   \\ rw [] \\ gvs []
@@ -1083,7 +1091,8 @@ Theorem cv_word_bits_thm[cv_rep]:
   from_word (word_bits h l (w:'a word))
   =
   cv_div (cv_mod (from_word w)
-                 (cv_exp (Num 2) (cv_min (cv_add (Num h) (Num 1)) (Num (dimindex (:'a))))))
+                 (cv_exp (Num 2) (cv_min (cv_add (Num h) (Num 1))
+                                         (Num (dimindex (:'a))))))
          (cv_exp (Num 2) (Num l))
 Proof
   simp [Once EQ_SYM_EQ]
@@ -1106,7 +1115,9 @@ Theorem cv_word_slice_thm[cv_rep]:
   =
   cv_mod (cv_mul
     (cv_div (cv_mod (from_word w)
-                   (cv_exp (Num 2) (cv_min (cv_add (Num h) (Num 1)) (Num (dimindex (:'a))))))
+                    (cv_exp (Num 2)
+                            (cv_min (cv_add (Num h) (Num 1))
+                                    (Num (dimindex (:'a))))))
             (cv_exp (Num 2) (Num l)))
     (cv_exp (Num 2) (Num l))) (Num (dimword (:'a)))
 Proof
@@ -1171,7 +1182,8 @@ Theorem cv_word_concat_thm[cv_rep] =
 Definition cv_word_or_loop_def:
   cv_word_or_loop x y =
     if c2b (cv_lt (Num 0) x) then
-      cv_add (cv_mul (Num 2) (cv_word_or_loop (cv_div x (Num 2)) (cv_div y (Num 2))))
+      cv_add (cv_mul (Num 2)
+                     (cv_word_or_loop (cv_div x (Num 2)) (cv_div y (Num 2))))
              (cv_max (cv_mod x (Num 2)) (cv_mod y (Num 2)))
     else y
 Termination
@@ -1191,7 +1203,8 @@ End
 Definition cv_word_and_loop_def:
   cv_word_and_loop x y =
     if c2b (cv_lt (Num 0) x) then
-      cv_add (cv_mul (Num 2) (cv_word_and_loop (cv_div x (Num 2)) (cv_div y (Num 2))))
+      cv_add (cv_mul (Num 2)
+                     (cv_word_and_loop (cv_div x (Num 2)) (cv_div y (Num 2))))
              (cv_div (cv_add (cv_mod x (Num 2)) (cv_mod y (Num 2))) (Num 2))
     else (Num 0)
 Termination
@@ -1211,7 +1224,8 @@ End
 Definition cv_word_xor_loop_def:
   cv_word_xor_loop x y =
     if c2b (cv_lt (Num 0) x) then
-      cv_add (cv_mul (Num 2) (cv_word_xor_loop (cv_div x (Num 2)) (cv_div y (Num 2))))
+      cv_add (cv_mul (Num 2)
+                     (cv_word_xor_loop (cv_div x (Num 2)) (cv_div y (Num 2))))
              (cv_mod (cv_add (cv_mod x (Num 2)) (cv_mod y (Num 2))) (Num 2))
     else y
 Termination
@@ -1236,7 +1250,8 @@ Theorem BITWISE_ADD:
 Proof
   Induct_on ‘k’
   \\ fs [bitTheory.BITWISE_def,arithmeticTheory.ADD_CLAUSES]
-  \\ rw [] \\ rewrite_tac [arithmeticTheory.ADD_ASSOC,arithmeticTheory.EQ_ADD_RCANCEL]
+  \\ rw []
+  \\ rewrite_tac [arithmeticTheory.ADD_ASSOC,arithmeticTheory.EQ_ADD_RCANCEL]
   \\ simp_tac std_ss [AC arithmeticTheory.ADD_ASSOC arithmeticTheory.ADD_COMM]
   \\ simp_tac std_ss [AC arithmeticTheory.MULT_ASSOC arithmeticTheory.MULT_COMM]
   \\ simp_tac std_ss [arithmeticTheory.LEFT_ADD_DISTRIB]
@@ -1263,7 +1278,8 @@ Theorem cv_word_and_loop_thm:
     m <= n /\ n < dimword (:'a) ==>
     cv_word_and_loop (Num m) (Num n) = Num (w2n (n2w m && n2w n :'a word))
 Proof
-  simp [wordsTheory.word_and_n2w,wordsTheory.dimword_def,bitTheory.BITWISE_LT_2EXP]
+  simp [wordsTheory.word_and_n2w,wordsTheory.dimword_def,
+        bitTheory.BITWISE_LT_2EXP]
   \\ Q.SPEC_TAC (‘dimindex (:'a)’,‘l’)
   \\ completeInduct_on ‘m’
   \\ simp [Once cv_word_and_loop_def]
@@ -1288,7 +1304,8 @@ Theorem cv_word_or_loop_thm:
     m <= n /\ n < dimword (:'a) ==>
     cv_word_or_loop (Num m) (Num n) = Num (w2n (n2w m || n2w n :'a word))
 Proof
-  simp [wordsTheory.word_or_n2w,wordsTheory.dimword_def,bitTheory.BITWISE_LT_2EXP]
+  simp [wordsTheory.word_or_n2w,wordsTheory.dimword_def,
+        bitTheory.BITWISE_LT_2EXP]
   \\ Q.SPEC_TAC (‘dimindex (:'a)’,‘l’)
   \\ completeInduct_on ‘m’
   \\ simp [Once cv_word_or_loop_def]
@@ -1327,9 +1344,11 @@ QED
 Theorem cv_word_xor_loop_thm:
   !m n.
     m <= n /\ n < dimword (:'a) ==>
-    cv_word_xor_loop (Num m) (Num n) = Num (w2n (word_xor (n2w m) (n2w n) :'a word))
+    cv_word_xor_loop (Num m) (Num n) =
+    Num (w2n (word_xor (n2w m) (n2w n) :'a word))
 Proof
-  simp [wordsTheory.word_xor_n2w,wordsTheory.dimword_def,bitTheory.BITWISE_LT_2EXP]
+  simp [wordsTheory.word_xor_n2w,wordsTheory.dimword_def,
+        bitTheory.BITWISE_LT_2EXP]
   \\ Q.SPEC_TAC (‘dimindex (:'a)’,‘l’)
   \\ completeInduct_on ‘m’
   \\ simp [Once cv_word_xor_loop_def]

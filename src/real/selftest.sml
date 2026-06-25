@@ -101,7 +101,7 @@ val _ = List.app (shouldfail {testfn = s, printresult = thm_to_string,
 val _ = List.app
           (fn (s1,s2) => tpp_expected
                            {testf=standard_tpp_message, input=s1, output=s2})
-          [("realinv 2", "2⁻¹"), ("inv (TC R)", "R⁺ ᵀ")]
+          [("realinv 2", "2⁻¹"), ("inv (TC R)", "(R⁺)ᵀ")]
 val _ = tpp "¬p ∧ q"
 
 fun nftest (r as (n,c,t1,t2)) =

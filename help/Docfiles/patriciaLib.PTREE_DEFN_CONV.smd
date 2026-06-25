@@ -1,0 +1,38 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `PTREE_DEFN_CONV`
+
+``` hol4
+patriciaLib.PTREE_DEFN_CONV : conv
+```
+
+------------------------------------------------------------------------
+
+Conversion for evaluating applications of `ADD` and `REMOVE` to Patricia
+tree constants.
+
+Given a constant `c` defined using `Define_mk_ptree`, the conversion
+`PTREE_DEFN_CONV` will evaluate term of the form `c |+ (k,x)`, `c \\ k`
+and `c` where `k` is a natural number literal.
+
+### Example
+
+``` hol4
+>>__ load "patriciaLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
+
+>> val ptree = patriciaLib.Define_mk_ptree "ptree" (patriciaLib.int_ptree_of_list [(1,``1``), (2, ``2``)]);
+
+>> patriciaLib.PTREE_DEFN_CONV ``ptree \\ 1``;
+
+>> patriciaLib.PTREE_DEFN_CONV ``ptree |+ (3,3)``;
+```
+
+### Comments
+
+The conversion `PTREE_DEFN_CONV` has limited uses and is mostly used
+internally by the conversion `PTREE_CONV`.
+
+### See also
+
+[`patriciaLib.Define_mk_ptree`](#patriciaLib.Define_mk_ptree),
+[`patriciaLib.PTREE_CONV`](#patriciaLib.PTREE_CONV)

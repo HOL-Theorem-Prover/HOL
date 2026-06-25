@@ -5,28 +5,238 @@ open HolKernel liteLib Abbrev boolSyntax boolLib
 open Trace
 
 type key = term
-type hypinfo = {hyps : term HOLset.set, thms : term HOLset.set}
+
+type hypinfo = {hyps  : term HOLset.set,
+                thms  : term HOLset.set,
+                bloom : BloomApprox.t}
 type data = (hypinfo * thm option) list
 
-type table = data Termtab.table
-val empty_table : table = Termtab.empty
+(* A DLL node carrying its data + position.  `datatype` (not `type`)
+   because SML disallows recursive type aliases.  prev/next refs are
+   mutated in place during promotion / eviction. *)
+datatype node = N of {
+  key  : key,
+  data : data ref,
+  prev : node option ref,  (* NONE iff this node is head (MRU) *)
+  next : node option ref   (* NONE iff this node is tail (LRU) *)
+}
 
-type cache = table Sref.t
-fun c_insert c (k,v) = Sref.update c (fn t => Termtab.update (k,v) t)
-fun cvalue (c:cache) = Sref.value c
-fun new_cache() : cache = Sref.new empty_table
+(* State invariants maintained by every mutator below:
+   - head = NONE  iff  tail = NONE  iff  Termtab.size store = 0
+   - Following next from head reaches tail; symmetric for prev from tail.
+   - Termtab.lookup store k = SOME n  implies  n is in the list and
+     #key n = k. *)
+type state = {
+  store       : node Termtab.table,
+  head        : node option,   (* MRU *)
+  tail        : node option,   (* LRU *)
+  capacity    : int,
+  per_key_cap : int
+}
 
-val empty_hypinfo = {hyps = empty_tmset, thms = empty_tmset}
-fun hypinfo_addth (th, {hyps,thms}) =
-    {hyps = HOLset.union(hyps, hypset th), thms = HOLset.add(thms, concl th)}
+type cache = state Sref.t
+type capacity_info = {capacity:int, per_key_cap:int}
+
+fun empty_state (caps:capacity_info) : state =
+    {store = Termtab.empty, head = NONE, tail = NONE,
+     capacity = #capacity caps, per_key_cap = #per_key_cap caps}
+
+fun new_cache caps : cache = Sref.new (empty_state caps)
+
+(* A node is at head iff its prev ref holds NONE, and at tail iff its
+   next ref holds NONE.  Node-identity comparisons via prev/next state
+   only — `=` doesn't work because term keys are not equality types. *)
+
+fun with_state {store, head, tail} (st : state) : state =
+    {store = store, head = head, tail = tail,
+     capacity = #capacity st, per_key_cap = #per_key_cap st}
+
+(* Move node `n` to the head (MRU) of the list.  Combined unlink +
+   link-at-head: rewrites neighbours' prev/next refs in place and
+   builds exactly one new state record.  Caller must have verified
+   that `n` is in the list and not already at head. *)
+fun move_to_head (st : state, n as N {prev, next, ...} : node) : state =
+    let
+      val p = !prev
+      val q = !next
+      val () = case p of NONE   => ()
+                       | SOME (N {next = pn, ...}) => pn := q
+      val () = case q of NONE   => ()
+                       | SOME (N {prev = qp, ...}) => qp := p
+      (* if n was tail, its predecessor becomes the new tail *)
+      val tail' = case q of NONE   => p
+                          | SOME _ => #tail st
+      val old_head = #head st
+      val () = prev := NONE
+      val () = next := old_head
+      val () = case old_head of NONE   => ()
+                              | SOME (N {prev = hp, ...}) => hp := SOME n
+    in
+      with_state {store = #store st, head = SOME n, tail = tail'} st
+    end
+
+(* Splice a *detached* node into the list at head (MRU).  Used only by
+   c_insert when inserting a fresh node. *)
+fun link_fresh_at_head (st : state, n as N {prev, next, ...} : node) : state =
+    let
+      val old_head = #head st
+      val () = prev := NONE
+      val () = next := old_head
+      val () = case old_head of NONE   => ()
+                              | SOME (N {prev = hp, ...}) => hp := SOME n
+      val tail' = case #tail st of NONE => SOME n   (* list was empty *)
+                                 | t    => t
+    in
+      with_state {store = #store st, head = SOME n, tail = tail'} st
+    end
+
+(* Drop the LRU tail node, returning the new state. *)
+fun evict_tail (st : state) : state =
+    case #tail st of
+      NONE => st
+    | SOME (N {key = k, prev = tprev, ...}) =>
+        let
+          val store' = Termtab.delete_safe k (#store st)
+          val _ = trace(2, REDUCE("Cache: evicting LRU entry", k))
+          val p = !tprev
+          val () = case p of NONE   => ()
+                           | SOME (N {next = pn, ...}) => pn := NONE
+          val head' = case p of NONE   => NONE
+                              | SOME _ => #head st
+        in
+          with_state {store = store', head = head', tail = p} st
+        end
+
+(* Loop evict_tail until at or under capacity. *)
+fun evict_to_fit (st : state) : state =
+    if Termtab.size (#store st) <= #capacity st then st
+    else evict_to_fit (evict_tail st)
+
+(* Read without bumping: callers that immediately follow with c_insert
+   on the same key let the c_insert do the bump.  Lock-free
+   (Sref.value): the snapshot is internally consistent and node.data
+   is a stable ref the caller may dereference safely. *)
+fun peek (c : cache) k : data option =
+    case Termtab.lookup (#store (Sref.value c)) k of
+      NONE                  => NONE
+    | SOME (N {data, ...})  => SOME (!data)
+
+(* Bump k to most-recently-used without changing its data.  Used at
+   terminal cache-hit sites where no insert follows.  Short-circuits if
+   k is already at head: avoids the Sref lock + store altogether when
+   no DLL movement is needed. *)
+fun bump (c : cache) k : unit =
+    case Termtab.lookup (#store (Sref.value c)) k of
+      NONE => ()
+    | SOME (N {prev, ...}) =>
+        (case !prev of
+           NONE   => ()  (* already at head; no lock needed *)
+         | SOME _ =>
+             Sref.update c (fn st =>
+               case Termtab.lookup (#store st) k of
+                 NONE => st  (* evicted between read and write *)
+               | SOME (n as N {prev = prev', ...}) =>
+                   case !prev' of
+                     NONE   => st  (* promoted by another thread *)
+                   | SOME _ => move_to_head (st, n)))
+
+(* Per-key cap bounds the (hypinfo, thm option) list under a single key.
+   Without it, "hot" keys (notably boolSyntax.F, which prove_false_context
+   writes on every failed-contradiction attempt) accumulate thousands of
+   entries that get scanned linearly at every consultation.  Capping
+   turns that linear scan into a constant; the occasional re-prove from
+   dropping an evicted entry is slower but always correct. *)
+fun take_at_most n xs =
+    let
+      fun loop _ acc [] = List.rev acc
+        | loop 0 acc _  = List.rev acc
+        | loop i acc (x :: rest) = loop (i - 1) (x :: acc) rest
+    in
+      loop n [] xs
+    end
+
+(* Insert/update k -> v, promote it, then evict if over capacity. *)
+fun c_insert (c : cache) (k, v) : unit =
+    Sref.update c (fn st =>
+      let
+        val v' = take_at_most (#per_key_cap st) v
+      in
+        case Termtab.lookup (#store st) k of
+          SOME (n as N {data, prev, ...}) =>
+            (data := v';
+             case !prev of
+               NONE   => st  (* already at head *)
+             | SOME _ => move_to_head (st, n))
+        | NONE =>
+            let
+              val n = N {key  = k,         data = ref v',
+                         prev = ref NONE,  next = ref NONE}
+              val store' = Termtab.update (k, n) (#store st)
+              val st1 = link_fresh_at_head
+                          (with_state {store = store', head = #head st,
+                                       tail = #tail st} st,
+                           n)
+            in
+              evict_to_fit st1
+            end
+      end)
+
+fun clear_cache (c : cache) : unit =
+    Sref.update c (fn st => empty_state {capacity    = #capacity st,
+                                         per_key_cap = #per_key_cap st})
+
+fun cache_capacity    (c : cache) : int = #capacity (Sref.value c)
+fun cache_per_key_cap (c : cache) : int = #per_key_cap (Sref.value c)
+
+(* Reducing either cap purges in place immediately, so cache_values and
+   cache_capacity reflect the new bound straight away. *)
+fun set_capacity (c : cache) n =
+    Sref.update c (fn st =>
+      evict_to_fit
+        {store = #store st, head = #head st, tail = #tail st,
+         capacity = n, per_key_cap = #per_key_cap st})
+
+fun set_per_key_cap (c : cache) n =
+    Sref.update c (fn st =>
+      let
+        val () = Termtab.fold
+                   (fn (_, N {data, ...}) => fn () =>
+                       data := take_at_most n (!data))
+                   (#store st)
+                   ()
+      in
+        {store = #store st, head = #head st, tail = #tail st,
+         capacity = #capacity st, per_key_cap = n}
+      end)
+
+val empty_hypinfo : hypinfo =
+    {hyps = empty_tmset, thms = empty_tmset, bloom = BloomApprox.empty}
+
+fun hypinfo_addth (th, {hyps, thms, bloom} : hypinfo) : hypinfo =
+    let
+      val newhyps = hypset th
+      val c       = concl th
+      val newbits =
+          HOLset.foldl
+            (fn (h, acc) => BloomApprox.union (acc, BloomApprox.from_term h))
+            (BloomApprox.from_term c) newhyps
+    in
+      {hyps  = HOLset.union (hyps, newhyps),
+       thms  = HOLset.add (thms, c),
+       bloom = BloomApprox.union (bloom, newbits)}
+    end
 val all_hyps = List.foldl hypinfo_addth empty_hypinfo
 
-infix <<;  (* A subsetof B *)
-fun {hyps=h1,thms=ths1} << {hyps=h2,thms=ths2} =
-    HOLset.isSubset(h1,h2) andalso HOLset.isSubset(ths1, ths2)
+(* A subsetof B: Bloom-mask reject, then HOLset.isSubset. *)
+infix <<;
+fun {hyps=h1, thms=ths1, bloom=b1} << {hyps=h2, thms=ths2, bloom=b2} =
+    BloomApprox.maybeSubset (b1, b2) andalso
+    HOLset.isSubset (h1, h2) andalso
+    HOLset.isSubset (ths1, ths2)
 val _ = op<< : hypinfo * hypinfo -> bool
-fun hypinfo_list {hyps,thms} = HOLset.foldl op:: (HOLset.listItems hyps) thms
-fun hypinfo_isEmpty ({hyps,thms}:hypinfo) =
+fun hypinfo_list ({hyps, thms, ...} : hypinfo) =
+    HOLset.foldl op:: (HOLset.listItems hyps) thms
+fun hypinfo_isEmpty ({hyps, thms, ...} : hypinfo) =
     HOLset.isEmpty hyps andalso HOLset.isEmpty thms
 
 exception NOT_FOUND
@@ -34,19 +244,23 @@ exception FIRST
 fun first p [] = raise FIRST
   | first p (h::t) = if p h then h else first p t
 
-fun CACHE (filt,conv) = let
-  val cache = new_cache()
+fun CACHE (spec : {capacity:int, per_key_cap:int}) (filt,conv) = let
+  val cache = new_cache spec
   fun cache_proc thms tm = let
     val _ = if (filt tm) then ()
             else failwith "CACHE_CCONV: not applicable"
-    val prevs = Option.getOpt (Termtab.lookup (cvalue cache) tm, [])
+    val prevs = Option.getOpt (peek cache tm, [])
     val curr = all_hyps thms
     fun ok (prev,SOME thm) = prev << curr
       | ok (prev,NONE) = curr << prev
   in
-    (case snd (first ok prevs) of
-       SOME x => (trace(1,PRODUCE(tm,"cache hit!",x)); x)
-     | NONE => failwith "cache hit was failure")
+    let val (_, res) = first ok prevs
+        val () = bump cache tm
+    in
+      case res of
+        SOME x => (trace(1,PRODUCE(tm,"cache hit!",x)); x)
+      | NONE => failwith "cache hit was failure"
+    end
     handle FIRST => let
              val thm = conv thms tm
                  handle e as (HOL_ERR _) =>
@@ -68,12 +282,10 @@ in
   (cache_proc, cache)
 end
 
-fun clear_cache cache = (Sref.update cache (fn c => empty_table))
-
 fun cache_values (cache : cache) = let
-  val items = Termtab.dest (cvalue cache)
+  val items = Termtab.dest (#store (Sref.value cache))
   fun tolist (set, thmopt) = (hypinfo_list set, thmopt)
-  fun ToList (k, stlist) = (k, map tolist stlist)
+  fun ToList (k, N {data, ...}) = (k, map tolist (!data))
 in
   map ToList items
 end
@@ -210,9 +422,12 @@ in
   mk_eq(t, if ty = bool then T else mk_arb ty)
 end
 
-fun consider_false_context_cache table original_goal (ctxtlist:context list) =
+(* Note: takes the cache ref (not a snapshot) so that a contradiction hit
+   can bump the F key. *)
+fun consider_false_context_cache (cache:cache) original_goal
+                                 (ctxtlist:context list) =
     let
-      val cache_F = Option.getOpt (Termtab.lookup table boolSyntax.F, [])
+      val cache_F = Option.getOpt (peek cache boolSyntax.F, [])
       fun recurse acc ctxts =
           case ctxts of
             [] => possible_ctxts acc
@@ -226,6 +441,7 @@ fun consider_false_context_cache table original_goal (ctxtlist:context list) =
               | SOME (_, SOME th) =>
                 (trace(1,PRODUCE(original_goal,
                                  "cache hit for contradiction", th));
+                 bump cache boolSyntax.F;
                  proved_it (CCONTR (mk_goal original_goal) (EQT_ELIM th)))
             end
     in
@@ -238,7 +454,7 @@ fun prove_false_context (conv:thm list -> conv) (cache:cache) (ctxtlist:context 
         [] => raise mk_HOL_ERR "Cache" "RCACHE"
                                "No (more) possibly false contexts"
       | (hyps,thms)::cs => let
-          val oldval = Option.getOpt (Termtab.lookup (cvalue cache) F, [])
+          val oldval = Option.getOpt (peek cache F, [])
           val conjs = list_mk_conj (map concl thms)
         in
           case Lib.total (conv thms) boolSyntax.F of
@@ -259,9 +475,9 @@ in
   recurse ctxtlist
 end
 
-fun RCACHE (dpfvs, check, conv) = let
+fun RCACHE (spec : {capacity:int, per_key_cap:int}) (dpfvs, check, conv) = let
   open Uref
-  val cache = new_cache()
+  val cache = new_cache spec
   fun build_up_ctxt mp th = let
     val c = concl th
   in
@@ -277,35 +493,36 @@ fun RCACHE (dpfvs, check, conv) = let
   fun decider ctxt t = let
     val _ = if check t then ()
             else raise mk_HOL_ERR "Cache" "RCACHE" "not applicable"
-    val prevs = Option.getOpt (Termtab.lookup (cvalue cache) t, [])
+    val prevs = Option.getOpt (peek cache t, [])
     val curr = all_hyps ctxt
     fun oksome (prev, SOME thm) = prev << curr
       | oksome (_, NONE) = false
   in
     case List.find oksome prevs of
-      SOME (_, SOME x) => (trace(1,PRODUCE(t, "cache hit!", x)); x)
+      SOME (_, SOME x) =>
+        (trace(1,PRODUCE(t, "cache hit!", x)); bump cache t; x)
     | SOME (_, NONE) => raise Fail "RCACHE: Invariant failure"
     | NONE => let
-        (* do connected component analysis to test for false *)
-        fun foldthis (th, (ctxt_ts, ground_ths)) = let
-          val c = concl th
-        in
-          if null (dpfvs c) then (ctxt_ts, th::ground_ths)
-          else (c::ctxt_ts, ground_ths)
-        end
-        val (ctxt_ts,ground_ctxt_ths) =
-            List.foldl foldthis ([], []) ctxt
+        (* No cached success matches the full hypothesis union; we have
+           to do real work.  Begin with the connected-component
+           analysis: split context theorems by which Presburger variables
+           they mention, plus collect any ground (variable-free)
+           hypotheses as singleton contexts. *)
+        fun split (th, (ctxt_ts, ground_ths)) =
+            let val c = concl th in
+              if null (dpfvs c) then (ctxt_ts, th::ground_ths)
+              else (c::ctxt_ts, ground_ths)
+            end
+        val (ctxt_ts, ground_ctxt_ths) = List.foldl split ([], []) ctxt
         val G = build_graph dpfvs (t::ctxt_ts)
-                (* G a map from v to v's neighbours *)
         val vs = Termtab.fold (fn (k,_) => fn acc => k::acc) G []
         val (comps, _) = ccs G vs
-                (* a list of lists of variables *)
         val group_map = build_var_to_group_map comps
         val _ = app (build_up_ctxt group_map) ctxt
-                  (* group map is a map from variables to all the
-                     ctxts (theorems) that are in that variable's component *)
 
-        (* now extract the ctxt relevant for the goal statement *)
+        (* extract the goal-relevant component, if any.  For goals with
+           no DP-variables (notably t = F), glstmtref stays as a fresh
+           empty Uref since no context theorem references it. *)
         val (group_map', glstmtref) =
           case dpfvs t of
             [] => (group_map, Uref.new (empty_hypinfo, []))
@@ -313,65 +530,62 @@ fun RCACHE (dpfvs, check, conv) = let
               let val r = valOf (Termtab.lookup group_map glvar)
               in (Termtab.delete glvar group_map, r) end
 
-        (* and the remaining contexts, ensuring there are no
-           duplicate copies *)
-        fun foldthis (k, v) (acc as (setlist, seenreflist)) =
-            if mem v seenreflist then acc
-            else (!v::setlist, v::seenreflist)
+        (* every non-goal component plus each ground hypothesis as its
+           own singleton — the list to try for a contradiction proof *)
+        fun unique (_, v) (acc as (setlist, seen)) =
+            if mem v seen then acc
+            else (!v::setlist, v::seen)
         val (divided_clist0, _) =
-            Termtab.fold foldthis group_map' ([], [glstmtref])
-
-        (* fold in every ground hypothesis as a separate context, entire
-           unto itself *)
+            Termtab.fold unique group_map' ([], [glstmtref])
         val divided_clist =
             divided_clist0 @
             map (fn th => (hypinfo_addth(th, empty_hypinfo), [th]))
                 ground_ctxt_ths
 
         val (glhyps, thmlist) = !glstmtref
-        fun oknone (prev, NONE) = glhyps << prev
-          | oknone _ = false
-      in
-        case List.find oknone prevs of
-          NONE => let
-            (* nothing cached, but should still try cache for proving
-               false from the context *)
-          in
-            case consider_false_context_cache (cvalue cache) t divided_clist
-            of
-              proved_it th => th
-            | possible_ctxts cs => let
-                (* cs is the list of things worth trying to prove, but
-                   in this situation should first try conv on the original
-                   goal because there's nothing in the cache about it *)
-              in
-                case Lib.total (conv thmlist) t of
-                  SOME th => let
-                  in
-                    trace(2,PRODUCE(t,"Inserting into cache:", th));
-                    c_insert cache (t, (glhyps,SOME th)::prevs);
-                    th
-                  end
-                | NONE => let
-                  in
-                    trace(2, REDUCE("Inserting failure to prove",
-                                    if hypinfo_isEmpty glhyps then t
-                                    else mk_imp(list_mk_conj
-                                                  (map concl thmlist), t)));
-                    c_insert cache (t, (glhyps, NONE)::prevs);
-                    prove_false_context conv cache cs t
-                  end
-              end
-          end
-        | SOME (_, NONE) => let
-            (* with the relevant context, our goal doesn't resolve one
-               way or the other.  However, it's possible that part of the
-               rest of the context goes to false *)
-          in
-            case consider_false_context_cache (cvalue cache) t divided_clist of
+
+        (* Look for any component already covered by a cached F-proof
+           (return early via CCONTR) or already shown to be a subset of
+           a cached failure (drop it).  If every component is dropped,
+           prove_false_context raises and the d.p. is skipped entirely. *)
+        fun by_contradiction () =
+            case consider_false_context_cache cache t divided_clist of
               proved_it th => th
             | possible_ctxts cs => prove_false_context conv cache cs t
-          end
+
+        (* Same as by_contradiction, but with a direct d.p. attempt
+           on the goal-relevant context inserted between the cache
+           check and the per-component fall-through. *)
+        fun direct_then_contradiction () =
+            case consider_false_context_cache cache t divided_clist of
+              proved_it th => th
+            | possible_ctxts cs =>
+                (case Lib.total (conv thmlist) t of
+                   SOME th =>
+                     (trace(2, PRODUCE(t, "Inserting into cache:", th));
+                      c_insert cache (t, (glhyps, SOME th)::prevs);
+                      th)
+                 | NONE =>
+                     (trace(2,
+                            REDUCE("Inserting failure to prove",
+                                   if hypinfo_isEmpty glhyps then t
+                                   else mk_imp(list_mk_conj
+                                                 (map concl thmlist), t)));
+                      c_insert cache (t, (glhyps, NONE)::prevs);
+                      prove_false_context conv cache cs t))
+
+        (* Has `conv thmlist t` already been tried (and failed) on a
+           superset of glhyps?  For goals with no DP-vars, glhyps is
+           empty, so any cached NONE matches — and that's intentional:
+           the first call still runs the direct conv (some such goals,
+           e.g. `?b. b <> 0 /\ b <> 1`, are provable from no context),
+           but a cached failure short-circuits the retry. *)
+        fun oknone (prev, NONE) = glhyps << prev
+          | oknone _            = false
+      in
+        case List.find oknone prevs of
+          SOME (_, NONE) => by_contradiction ()
+        | NONE           => direct_then_contradiction ()
         | SOME _ => raise Fail "RCACHE: invariant failure the second"
       end
   end

@@ -4,4 +4,9 @@ selftest.log: selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.log selftest.exe
+# selftest drives Holmake in testdir/ and testdir2/ -- subdirs build does
+# not visit via parallel_tests INCLUDES.  List their artifacts here so
+# build cleanAll (which DOES reach this Holmakefile) removes them.
+EXTRA_CLEANS = selftest.log selftest.exe \
+               testdir/foo testdir/bar testdir/master \
+               testdir/.hol/ testdir2/.hol/

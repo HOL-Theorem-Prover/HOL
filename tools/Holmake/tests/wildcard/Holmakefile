@@ -1,3 +1,6 @@
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
 .PHONY: all test1 test2 test3 test4 test5 test6 test7 test8
 
 all:        test1 test2 test3 test4 test5 test6 test7 test8

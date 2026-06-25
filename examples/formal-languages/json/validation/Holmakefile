@@ -1,0 +1,8 @@
+INCLUDES = ..
+
+EXTRA_CLEANS = validate
+
+all: validate
+
+validate: validate.uo
+	$(protect $(HOLDIR)/bin/hol) buildheap -o $@ --exe main validate.uo

@@ -336,13 +336,13 @@ fun pop_context L th =
 fun no_change V L tm =
   NO_CHANGE (itlist GEN V (pop_context L (REFL tm)))
 
-(*---------------------------------------------------------------------------*)
-(* Extraction on an antecedent that is not universally quantified.           *)
-(*---------------------------------------------------------------------------*)
-
 fun entering fname tm =
   lztrace(2, "Extracting from:\n\n",
       fn () => ppstring (indent_pp 3 o pp_term) tm)
+
+(*---------------------------------------------------------------------------*)
+(* Extraction on an antecedent that is not universally quantified.           *)
+(*---------------------------------------------------------------------------*)
 
 fun simple cnv cps (ant,rst) =
   case total ((I##dest_eq) o strip_imp_only) ant
@@ -371,33 +371,45 @@ fun simple cnv cps (ant,rst) =
        end
 
 (*---------------------------------------------------------------------------*)
-(* Congruence rule antecedent of the form !vs. P vs ==> f vs = f' vs         *)
-(* The f' is a variable found by recursively extracting from the beta-reduct *)
-(* of "f vs". f can be a lambda term (\p1..pk. M[p1,...,pk]) where the pi    *)
-(* can be varstructs. In order to use the names given in the original        *)
-(* input, there is a step where v1...vk are replaced by the corrresponding   *)
-(* p1,...,pk before extraction occurs. This has to be undone, ie, the pi are *)
-(* replaced by the corresponding vi, in the last step of proving the         *)
-(* antecedent.                                                               *)
+(* Prove a congruence rule antecedent of the form                            *)
+(*                                                                           *)
+(*   ∀vs. P vs ==> f vs = f' vs                                              *)
+(*                                                                           *)
+(* where vs = v1 ... vk. The f' is a variable that gets instantiated by a    *)
+(* term found by recursively extracting from the beta-reduct of "f vs". f    *)
+(* can be a lambda term (\p1..pk. M[p1,...,pk]) where the pi can be          *)
+(* varstructs. In order to use the names used in the original user input,    *)
+(* there is a step where v1...vk are replaced by the corrresponding          *)
+(* p1,...,pk before extraction occurs. This has to be undone at the end, ie, *)
+(* the pi are replaced by the corresponding vi in the last step of proving   *)
+(* the antecedent.                                                           *)
 (*---------------------------------------------------------------------------*)
 
+fun lhsFn_locals ant =
+  let val (_,ceqn) = strip_forall ant
+      val (lhs,rhs) = dest_eq $ snd $ strip_imp_only ceqn
+      val args = snd $ strip_comb rhs
+      val lhsFn = fst $ dest_combn lhs (length args)
+      val vstructs = fst $ strip_pabs lhsFn
+  in free_varsl vstructs end
+
 fun complex cnv cps (ant,rst) =
-  let val context_frees = free_varsl (#context cps)
-    val ant' = rename_forall_prefix context_frees ant
-    val ant_frees = Term.free_vars ant'
+  let val ant_frees = Term.free_vars ant
+    val context_frees = free_varsl (#context cps)
+    val taken_vars = op_U aconv [lhsFn_locals ant, context_frees]
+    val ant' = rename_forall_prefix taken_vars ant
     val (vlist,ceqn) = strip_forall ant'
-    val (_,eq) = strip_imp_only ceqn
-    val (lhs,rhs) = dest_eq eq
-    val (rhsFnVar,args) = strip_comb rhs
-    val nargs = length args
-    val lhsFn = fst(dest_combn lhs nargs)
+    val (left,right) = dest_eq $ snd $ strip_imp_only ceqn
+    val (rhsFnVar,vs) = strip_comb right
+    val nargs = length vs
+    val lhsFn = fst(dest_combn left nargs)
     val vstructs =
-       fst(vstruct_variants
-             (op_union aconv ant_frees context_frees)
-             (fst(strip_pabs lhsFn)))
+        fst(vstruct_variants
+              (op_U aconv [ant_frees,context_frees])
+              (fst(strip_pabs lhsFn)))
 
     (* Adopt user-given names and introduce tuple args *)
-    val theta = map2_total (curry op|->) args vstructs
+    val theta = map2_total (curry op|->) vs vstructs
     val ceqn' = subst theta ceqn
     val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp_only ceqn')
 
@@ -405,8 +417,8 @@ fun complex cnv cps (ant,rst) =
        beta-reducts that need to be unbeta'ed in order for this antecedent
        to be proved. *)
     val outcome =
-       if aconv lhs rhs
-        then no_change vlist L lhs
+       if aconv lhs rhs then
+          no_change vlist L lhs
        else
        let val lhs_beta_maybe = Conv.QCONV (Conv.DEPTH_CONV GEN_BETA_CONV) lhs
            val lhs' = boolSyntax.rhs(concl lhs_beta_maybe)
@@ -440,7 +452,7 @@ fun complex cnv cps (ant,rst) =
           (* succeed.                                                   *)
           (*------------------------------------------------------------*)
          val nbetas = Int.min(length vstructs,nargs)
-         val rhs_args = snd (strip_comb rhs)
+         val args = snd $ strip_comb rhs
 
          fun unbeta_rhs th =
            let val r = boolSyntax.rhs(concl th)
@@ -454,13 +466,12 @@ fun complex cnv cps (ant,rst) =
                       val etas = List.take(vstructs, nbetas)
                       val rhsFn = list_mk_pabs(etas,fnbody)
                   in
-                    (rhsFn,list_mk_comb(rhsFn,rhs_args))
+                    (rhsFn,list_mk_comb(rhsFn,args))
                   end
                val rhs_eq =
                   if null vstructs then
                     REFL rhsFnapp
-                  else SYM(Conv.QCONV (DEPTH_CONV GEN_BETA_CONV) rhsFnapp)
-
+                  else SYM (Conv.QCONV (DEPTH_CONV GEN_BETA_CONV) rhsFnapp)
                val th1 = TRANS th rhs_eq (* |- lhsFn vstructs = rhsFn vstructs *)
             in
               (rhsFn,th1)
@@ -468,13 +479,16 @@ fun complex cnv cps (ant,rst) =
 
          val (rhsFn,th1) = unbeta_rhs th
          val th2 = pop_context L th1
+         (* th2 is ceqn' in thm form. It remains to
+            derive ceqn as a thm and quantify it *)
 
          fun generalize v thm =
-            (case subst_assoc (aconv v) theta
+             case subst_assoc (aconv v) theta
               of SOME tup => pairTools.PGEN v tup thm
-               | NONE => GEN v thm)
-
+               | NONE => GEN v thm
          val th3 = itlist generalize vlist th2
+         val _ = lztrace(4,"compare extraction results (ant' vs derived thm):\n",
+                 fn () => ppstring (indent_pp 3 o pp_terms) [ant', concl th3])
       in
         (CHANGE th3, map (subst [rhsFnVar |-> rhsFn]) rst)
       end
@@ -483,32 +497,30 @@ fun complex cnv cps (ant,rst) =
  (* complex *)
 
 fun try_cong cnv cps tm =
- let val icong = CONG_STEP (#simpls cps) tm
-  val _ = lztrace(4,"Congruence Step:\n", fn () => ppstring pp_thm icong)
+  let val icong = CONG_STEP (#simpls cps) tm
+   val _ = lztrace(4,"Congruence Step:\n", fn () => ppstring pp_thm icong)
 
-  (* loop proves each antecedent in turn and propagates
-     instantiations to the remainder. *)
-  fun loop [] = []
-    | loop (ant::rst) =
-      let val (outcome,rst') =
+   (* loop proves each antecedent in turn and propagates
+      instantiations to the remainder. *)
+   fun loop [] = []
+     | loop (ant::rst) =
+       let val (outcome,rst') =
            if is_forall ant
              then complex cnv cps (ant,rst)
              else simple cnv cps (ant,rst)
-      in
-        outcome::loop rst'
-      end
-  val ants = strip_conj (fst (dest_imp (concl icong)))
+       in
+        outcome::loop rst' end
+  val ants = strip_conj $ fst $ dest_imp $ concl icong
   val outcomes = loop ants
  in
-   if Lib.all unchanged outcomes
-     then raise UNCHANGED
-     else
-     let val ant_conj_thm = LIST_CONJ (map dest_change outcomes)
-         val _ = lztrace(4,"All congruence antecedents proved\n",
-                 fn () => ppstring pp_thm ant_conj_thm)
-     in
-       MATCH_MP icong ant_conj_thm  (* should not fail *)
-     end
+   if Lib.all unchanged outcomes then
+      raise UNCHANGED
+   else
+   let val ant_conj_thm = LIST_CONJ (map dest_change outcomes)
+       val _ = lztrace(4,"All congruence antecedents proved\n",
+               fn () => ppstring pp_thm ant_conj_thm)
+   in
+     MATCH_MP icong ant_conj_thm  (* should not fail *) end
  end
 
 fun SUB_QCONV cnv cps tm =
@@ -590,18 +602,19 @@ fun capture (restrf,f,G,nref) context tm =
   end
 end
 
-fun extract FV cong_simpls (proto_def,WFR) =
+fun extract FV congs (proto_def,WFR) =
  let val R = rand WFR
      val f = boolSyntax.lhs proto_def
      val CUT_LEM = ISPECL [f,R] relationTheory.RESTRICT_LEMMA
      val restr_fR = rator(rator(lhs(snd(dest_imp (concl (SPEC_ALL CUT_LEM))))))
-     val init_simpls = insert_cut_lem cong_simpls CUT_LEM
+     val simpls = insert_cut_lem (simpls_of_congs congs) CUT_LEM
  in fn (p,th) =>
     let val _ = lztrace(3,"------------------------\nTC extraction on clause:\n\n",
                 fn () => ppstring pp_term (concl th))
         val nested_ref = ref false
         val FV' = FV@free_vars(concl th)
-        val cps0 = {simpls = init_simpls,context = []:term list,
+        val cps0 = {simpls = simpls,
+                    context = []:term list,
                     prover = capture (mk_comb(restr_fR, p), f, FV', nested_ref)}
 (*        val th' = CONV_RULE (QCONV EXTRACT_QCONV cps0) th *)
         val th' = CONV_RULE (QCONV RE_EXTRACT_QCONV cps0) th

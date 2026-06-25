@@ -2,6 +2,25 @@ structure internal_functions :> internal_functions =
 struct
 
 structure FileSys = HOLFileSys
+
+exception HolmakeError of string
+
+type loc = {file : string, line : int}
+
+type diags = {info : string -> unit,
+              warn : string -> unit,
+              die  : string -> unit}
+
+val default_diags : diags =
+    {info = HOLFileSys.println,
+     warn = fn s => HOLFileSys.stdErr_out (s ^ "\n"),
+     die  = fn s => (HOLFileSys.stdErr_out (s ^ "\n");
+                     OS.Process.exit OS.Process.failure)}
+
+fun loc_prefix (NONE : loc option) = ""
+  | loc_prefix (SOME {file,line}) =
+      file ^ ":" ^ Int.toString line ^ ": "
+
 fun member e [] = false
   | member e (h::t) = e = h orelse member e t
 
@@ -260,7 +279,9 @@ fun which arg =
       let
         val fname = OS.Path.concat(p, arg)
       in
-        if access (fname, [A_READ, A_EXEC]) then SOME fname else NONE
+        if access (fname, [A_READ, A_EXEC]) andalso not (isDir fname) then
+          SOME fname
+        else NONE
       end
     fun smash NONE = "" | smash (SOME s) = s
   in
@@ -312,8 +333,9 @@ fun hol2fs s =
         NONE => s
       | SOME {fullfile,...} => fullfile
 
-fun function_call (fnname, args, eval) = let
+fun function_call (diags : diags) (fnname, args, eval, loc) = let
   open Substring
+  fun rejoin args = String.concatWith "," (map eval args)
 in
   case fnname of
     "if" =>
@@ -403,6 +425,12 @@ in
                   in
                     hol2fs (hd args_evalled)
                   end
+  | "info" =>
+      (#info diags (rejoin args); "")
+  | "warning" =>
+      (#warn diags (loc_prefix loc ^ rejoin args); "")
+  | "error" =>
+      raise HolmakeError (loc_prefix loc ^ "*** " ^ rejoin args ^ ".  Stop.")
   | _ => raise Fail ("Unknown function name: "^fnname)
 end
 

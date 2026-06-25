@@ -1,5 +1,17 @@
-* The Makefile assumes that you have pdflatex.
+The Quick Reference is a compact summary of the tactics, rules,
+conversions, and support functions used most often in day-to-day HOL4
+proof.
 
-* To produce a Postscript file you can use: make quick.ps
+* The single source is quickref.md.  It feeds both outputs:
+  - the mdbook page (part of the unified manual site): `Holmake mdbook`
+  - the PDF reference sheet: `Holmake quick.pdf` (needs pandoc + a
+    LaTeX installation).
 
-* The file quick.tex can be edited to link to a local copy of the on-line help.
+* Entries are written as \refentry{Module.entry}; these become links
+  to the corresponding Reference manual page (relative links in the
+  mdbook build, links to the online Reference manual in the PDF).
+  Names with no separate Reference entry are written as plain code
+  spans instead.
+
+* This manual is wired into the unified mdbook site via the MANUALS
+  list in Manual/mdbook.mk and the navigation in Manual/theme/index.hbs.

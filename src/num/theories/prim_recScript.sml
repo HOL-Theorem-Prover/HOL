@@ -77,7 +77,10 @@ val LESS_DEF = new_definition (
   “$< m n = ?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~(P n)”)
 val _ = set_fixity "<" (Infix(NONASSOC, 450))
 val _ = TeX_notation {hol = "<", TeX = ("\\HOLTokenLt{}", 1)}
-val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="<"},name=(["Number","Natural"],"<")}
+val _ = OpenTheoryMap.OpenTheory_const_name{
+          const={Thy="prim_rec",Name="<"},
+          name=(["Number","Natural"],"<")
+        }
 
 Theorem INV_SUC_EQ =
    GENL [“m:num”, “n:num”]
@@ -94,7 +97,10 @@ Theorem INV_SUC_EQ =
  *---------------------------------------------------------------------------*)
 val PRE_DEF = new_definition("PRE_DEF",
     “PRE m = (if (m=0) then 0 else @n. m = SUC n)”);
-val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="PRE"},name=(["Number","Natural"],"pre")}
+val _ = OpenTheoryMap.OpenTheory_const_name{
+          const={Thy="prim_rec",Name="PRE"},
+          name=(["Number","Natural"],"pre")
+        }
 
 Theorem PRE:
     (PRE 0 = 0) /\ (!m. PRE(SUC m) = m)
@@ -667,7 +673,10 @@ QED
  *---------------------------------------------------------------------------*)
 
 val measure_def = Q.new_definition ("measure_def", `measure = inv_image $<`);
-val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="measure"},name=(["Relation"],"measure")}
+val _ = OpenTheoryMap.OpenTheory_const_name{
+              const={Thy="prim_rec",Name="measure"},
+              name=(["Relation"],"measure")
+        }
 
 Theorem WF_measure[simp]:  !m. WF (measure m)
 Proof

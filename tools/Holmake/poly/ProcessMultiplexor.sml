@@ -15,56 +15,60 @@ struct
   type command = {executable: string, nm_args : string list, env : string list}
   type 'a job = {tag : string, command : command, dir : string,
                  try_cache : unit -> bool,
-                 update : 'a * bool * Time.time -> 'a}
+                 update : 'a * bool * Time.time -> 'a * string option,
+                 ignore_error : bool}
   datatype 'a genjob_result =
            NoMoreJobs of 'a | NewJob of ('a job * 'a) | GiveUpAndDie of 'a
-  type 'a workprovider = { initial : 'a, genjob : 'a -> 'a genjob_result }
+  type sched_ctxt = { jobs_running : int }
+  type 'a workprovider =
+       { initial : 'a, genjob : sched_ctxt -> 'a -> 'a genjob_result }
 
   type 'a working_job = {
     tag : string,
     dir : string,
     command : command,
-    update : 'a * bool * Time.time -> 'a,
+    update : 'a * bool * Time.time -> 'a * string option,
     starttime : Time.time,
     lastevent : Time.time,
     out : TextIO.instream,
     err : TextIO.instream,
     outeof : bool,
     erreof : bool,
-    pid : pid
+    pid : pid,
+    ignore_error : bool
   }
   type jobkey = pid * {dir:string, tag : string}
   datatype strmtype = OUT | ERR
   datatype monitor_message =
            Output of jobkey * Time.time * strmtype * string
          | NothingSeen of jobkey * {delay: Time.time, total_elapsed : Time.time}
-         | Terminated of jobkey * exit_status * Time.time
+         | Terminated of jobkey * exit_status * Time.time * string option
          | MonitorKilled of jobkey * Time.time
          | EOF of jobkey * strmtype * Time.time
-         | StartJob of jobkey * {dir:string}
+         | StartJob of jobkey * {dir:string, ignore_error:bool}
   datatype client_cmd = Kill of jobkey | KillAll
   type monitor = monitor_message -> client_cmd option
 
   local
     open FunctionalRecordUpdate
-    fun makeUpdateWJ z = makeUpdate11 z (* 10 fields *)
+    fun makeUpdateWJ z = makeUpdate12 z (* 12 fields *)
     fun makeUpdateWL z = makeUpdate5 z (* 5 fields *)
   in
     fun updateWJ z = let
       fun from dir tag command update starttime lastevent out err
-               outeof erreof pid =
+               outeof erreof pid ignore_error =
           {tag = tag, command = command, update = update, starttime = starttime,
            lastevent = lastevent, out = out, err = err, outeof = outeof,
-           erreof = erreof, pid = pid, dir = dir}
-      fun from' pid erreof outeof err out lastevent starttime update command
-                tag dir =
+           erreof = erreof, pid = pid, dir = dir, ignore_error = ignore_error}
+      fun from' ignore_error pid erreof outeof err out lastevent starttime
+                update command tag dir =
           {tag = tag, command = command, update = update, starttime = starttime,
            lastevent = lastevent, out = out, err = err, outeof = outeof,
-           erreof = erreof, pid = pid, dir = dir}
+           erreof = erreof, pid = pid, dir = dir, ignore_error = ignore_error}
       fun to f {tag, command, update, starttime, lastevent, out,
-                err, outeof, erreof, pid, dir} =
+                err, outeof, erreof, pid, dir, ignore_error} =
         f dir tag command update starttime lastevent out err
-          outeof erreof pid
+          outeof erreof pid ignore_error
     in
       makeUpdateWJ (from, from', to)
     end z
@@ -113,7 +117,7 @@ struct
     current_state : 'a,
     worklimit : int,
     last_cutime : Time.time,
-    genjob : 'a -> 'a genjob_result
+    genjob : sched_ctxt -> 'a -> 'a genjob_result
   }
 
   fun inStreamInPoll (strm : TextIO.instream) =
@@ -168,7 +172,7 @@ struct
   fun start_job (j : 'a job) : 'a working_job =
     let
       open Posix.Process Posix.IO
-      val {tag, command, update, try_cache, dir} = j
+      val {tag, command, update, try_cache, dir, ignore_error} = j
       val _ = OS.Path.isAbsolute dir orelse
               raise Fail "Relative path in job directory"
       val {executable,env,nm_args} = command
@@ -188,7 +192,29 @@ struct
             val _ = OS.FileSys.chDir dir
           in
             if try_cache () then
-              OS.Process.exit OS.Process.success
+              (* Don't call OS.Process.exit or Posix.Process.exit here:
+                 both hang in the forked child on this PolyML build
+                 (poly 5.9.2 / aarch64) -- exit appears to try to
+                 coordinate with PolyML runtime threads that were
+                 duplicated by fork() but aren't running, so the
+                 child sleeps in futex forever and the parent's
+                 waitpid never returns.  Cache-hit children would
+                 silently deadlock the whole build, with no useful
+                 diagnostic.
+                 Also, OS.Process.exit would run atExit handlers
+                 inherited from the parent: in Holmake's case that
+                 includes finish_logging false on its
+                 current-make-log, which races the parent's
+                 postmortem and renames the log to hmlog-bad-*
+                 even on a successful cache hit (see
+                 commit 37986571c).
+                 Both problems are sidestepped by exec'ing a no-op
+                 binary: exec replaces the whole process image, no
+                 PolyML cleanup runs, and the resulting process
+                 just exits 0. *)
+              exece("/usr/bin/true", ["true"], Posix.ProcEnv.environ())
+              handle OS.SysErr _ =>
+                exece("/bin/true", ["true"], Posix.ProcEnv.environ())
             else
               exece(executable,nm_args,env)
           end
@@ -207,7 +233,8 @@ struct
               err = err, erreof = false,
               pid = pid,
               starttime = Time.now(),
-              lastevent = Time.now()
+              lastevent = Time.now(),
+              ignore_error = ignore_error
             }
           end
     end
@@ -219,8 +246,10 @@ struct
   fun shellcommand s =
     let
       open Posix.Process
-      val j :int job = {tag = s, command = simple_shell s, update = K 0,
-                        try_cache = K false, dir = "."}
+      val j :int job = {tag = s, command = simple_shell s,
+                        update = K (0, NONE),
+                        try_cache = K false, dir = ".",
+                        ignore_error = false}
       val wj = start_job j
       fun read pfx acc strm k =
         case TextIO.inputLine strm of
@@ -244,16 +273,19 @@ struct
   fun fill_workq monitorfn (acc as (cmds, wl : 'a worklist)) =
     let
       val {current_jobs,current_state,genjob,worklimit,...} = wl
+      val running = Binarymap.numItems current_jobs
     in
-      if Binarymap.numItems current_jobs >= worklimit then acc
+      if running >= worklimit then acc
       else
-        case genjob current_state of
+        case genjob {jobs_running = running} current_state of
             NoMoreJobs s' => (cmds, updstate s' wl)
           | NewJob (job, state') =>
             let
               val wj = start_job job
               val cmds' =
-                  case monitorfn (StartJob (wjkey wj, {dir= #dir job})) of
+                  case monitorfn (StartJob (wjkey wj,
+                                            {dir = #dir job,
+                                             ignore_error = #ignore_error job})) of
                       NONE => cmds
                     | SOME c => c::cmds
             in
@@ -276,7 +308,7 @@ struct
             p tag t ("["^chan_name chan^"]: " ^ s)
         | NothingSeen ((pid,{tag,...}), {delay,total_elapsed}) =>
             p tag total_elapsed ("delayed " ^ Time.toString delay)
-        | Terminated((pid,{tag,...}), st, t) =>
+        | Terminated((pid,{tag,...}), st, t, _) =>
           p0 tag t ("exited " ^ (if st = W_EXITED then "OK" else "FAILED"))
              (if st = W_EXITED then NONE else SOME KillAll)
         | MonitorKilled((pid,{tag,...}), t) => p tag t "monitor-killed"
@@ -298,7 +330,7 @@ struct
                                  (fn () =>
                                      (kill (K_PROC pid, Posix.Signal.kill);
                                       ignore (waitpid(W_CHILD pid, []))))
-      val state = #update job (#current_state wl, false, ct)
+      val (state, _) = #update job (#current_state wl, false, ct)
     in
       TextIO.closeIn (#out job);
       TextIO.closeIn (#err job);
@@ -318,7 +350,7 @@ struct
         [] => wl
       | KillAll :: rest =>
           wl |> killall mfn
-             |> (fn wl => updateWL wl (U #genjob NoMoreJobs) $$)
+             |> (fn wl => updateWL wl (U #genjob (fn _ => NoMoreJobs)) $$)
              |> execute_cmds mfn rest
       | Kill jk :: rest =>
           wl |> killjob mfn jk |> execute_cmds mfn rest
@@ -344,11 +376,32 @@ struct
       fun exitstatus wj status (cs, wl) =
         let
           val {cutime,...} = Posix.ProcEnv.times()
-          val elapsed = Time.-(cutime, #last_cutime wl)
-          val msg = Terminated (wjkey wj, status, elapsed)
+          val elapsed_t = Time.-(cutime, #last_cutime wl)
+          (* The child has been waitpid'd, so its pipes' writer ends are
+             closed by the kernel.  Any buffered output the child produced
+             between the last poll round and the moment of exit is still in
+             the pipe buffer.  TextIO.closeIn would discard it -- and the
+             corresponding tag's tailbuffer in MB_Monitor would never see
+             it, so the failure-reporting summary would lose the child's
+             last words.  Drain both pipes here, emitting one Output event
+             per non-empty read, so the Terminated event that follows sees
+             a tailbuffer that includes the trailing data.  Since the
+             writer is gone, TextIO.input returns "" promptly at EOF
+             rather than blocking. *)
+          fun drain chan strm cs =
+              let val s = TextIO.input strm handle _ => ""
+              in
+                if size s = 0 then cs
+                else
+                  let val msg = Output(wjkey wj, elapsed wj, chan, s)
+                  in drain chan strm (monitor msg cs) end
+              end
+          val cs = drain OUT (#out wj) cs
+          val cs = drain ERR (#err wj) cs
+          val (newstate, marker) =
+              #update wj (#current_state wl, status = W_EXITED, elapsed_t)
+          val msg = Terminated (wjkey wj, status, elapsed_t, marker)
           val cs' = monitor msg cs
-          val newstate =
-              #update wj (#current_state wl, status = W_EXITED, elapsed)
           val _ = TextIO.closeIn (#out wj)
           val _ = TextIO.closeIn (#err wj)
           val wl' = updateWL wl
@@ -440,7 +493,7 @@ struct
             ([], 65)
             cmds0
       val cmds = List.rev cmds00
-      fun genjob clist =
+      fun genjob (_ : sched_ctxt) clist =
         let
           val (cdata, l) = findUpd (fn (_, (_, s)) => s = Waiting)
                                    (fn (k, (c, _)) => (k, (c, Running)))
@@ -452,10 +505,11 @@ struct
             | SOME (t, (c, _)) =>
               let
                 fun upd(clist, b, _) =
-                    fupdAlist t (fn (c,_) => (c,Done b)) clist
+                    (fupdAlist t (fn (c,_) => (c,Done b)) clist, NONE)
               in
                 NewJob ({tag = t, command = simple_shell c, update = upd,
-                         try_cache = K false, dir = "."}, l)
+                         try_cache = K false, dir = ".",
+                         ignore_error = false}, l)
               end
         end
       val wl =

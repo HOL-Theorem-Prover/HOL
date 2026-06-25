@@ -1,0 +1,36 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `parents`
+
+``` hol4
+Theory.parents : string -> string list
+```
+
+------------------------------------------------------------------------
+
+Lists the parent theories of a named theory.
+
+If `s` is the name of the current theory or an ancestor of the current
+theory, the call `parents s` returns a list of strings that identify the
+parent theories of `s`. The shorthand `"-"` may be used to denote the
+name of the current theory segment.
+
+### Failure
+
+Fails if the named theory is not an ancestor of the current theory.
+
+### Example
+
+``` hol4
+>> parents "bool";
+
+>> parents "min";
+
+>> current_theory();
+
+>> parents "-";
+```
+
+### See also
+
+[`Theory.ancestry`](#Theory.ancestry),
+[`Theory.current_theory`](#Theory.current_theory)

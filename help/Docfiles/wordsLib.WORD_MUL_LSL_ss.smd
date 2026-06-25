@@ -1,0 +1,43 @@
+>>__ load "wordsLib"; Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"}; open simpLib;
+## `WORD_MUL_LSL_ss`
+
+``` hol4
+wordsLib.WORD_MUL_LSL_ss : ssfrag
+```
+
+------------------------------------------------------------------------
+
+Simplification fragment for words.
+
+The fragment `WORD_MUL_LSL_ss` simplifies a multiplication by a word
+literal into a sum of left shifts.
+
+### Example
+
+``` hol4
+>>__ load "wordsLib";
+
+>>+ SIMP_CONV (std_ss++wordsLib.WORD_MUL_LSL_ss) [] “49w * a”
+
+>>+ SIMP_CONV (std_ss++wordsLib.WORD_ss++wordsLib.WORD_MUL_LSL_ss) [] “2w * a + a << 1”
+```
+
+### Comments
+
+This fragment is not included in `WORDS_ss`. It should not be used in
+combination with `WORD_ARITH_EQ_ss` or `wordsLib.WORD_ARITH_CONV`, since
+these convert left shifts into multiplications.
+
+### See also
+
+[`wordsLib.WORD_MUL_LSL_CONV`](#wordsLib.WORD_MUL_LSL_CONV),
+[`fcpLib.FCP_ss`](#fcpLib.FCP_ss),
+[`wordsLib.BIT_ss`](#wordsLib.BIT_ss),
+[`wordsLib.SIZES_ss`](#wordsLib.SIZES_ss),
+[`wordsLib.WORD_ARITH_ss`](#wordsLib.WORD_ARITH_ss),
+[`wordsLib.WORD_LOGIC_ss`](#wordsLib.WORD_LOGIC_ss),
+[`wordsLib.WORD_ARITH_EQ_ss`](#wordsLib.WORD_ARITH_EQ_ss),
+[`wordsLib.WORD_BIT_EQ_ss`](#wordsLib.WORD_BIT_EQ_ss),
+[`wordsLib.WORD_SHIFT_ss`](#wordsLib.WORD_SHIFT_ss),
+[`wordsLib.WORD_EXTRACT_ss`](#wordsLib.WORD_EXTRACT_ss),
+[`wordsLib.WORD_ss`](#wordsLib.WORD_ss)

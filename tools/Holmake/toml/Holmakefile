@@ -1,0 +1,18 @@
+# Presence of this Holmakefile is really only to reassure Moscow ML build, which will
+# dive in here and transfer all relevant files out to sigobj
+
+CLINE_OPTIONS = --no_overlay
+
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
+parseTOMLFunctor.uo parseTOMLFunctor.ui: parseTOMLFunctor.sml parseTOMLUtil.uo
+	$(MOSMLC) -toplevel -c $<
+
+parseTOML.uo parseTOML.ui: parseTOML.sml parseTOMLFunctor.ui TOMLvalue.ui
+	$(MOSMLC) -toplevel -c parseTOMLFunctor.ui $<
+
+TOML.uo: TOML.sml parseTOML.ui TOML.ui
+	$(MOSMLC) parseTOML.ui -c $<
+
+parseTOMLUtil.uo: TOMLerror.uo

@@ -1,0 +1,216 @@
+# Introduction to ML
+
+\label{ML}
+
+>>__ proofManagerLib.drop_all();
+
+This chapter is a brief introduction to the meta-language SML.
+The aim is just to give a feel for what it is like to interact
+with the language.  A more detailed introduction can be found in
+numerous textbooks and web-pages; see for example the list of
+resources on the MoscowML home-page[^ml-mosml-home], or the
+`comp.lang.ml` FAQ.[^ml-faq]
+
+[^ml-mosml-home]: <http://mosml.org>
+[^ml-faq]: <http://www.faqs.org/faqs/meta-lang-faq/>
+
+## How to interact with ML
+
+SML is an interactive programming language like Lisp.  At top
+level one can evaluate expressions and perform declarations.  The
+former results in the expression's value and type being printed,
+the latter in a value being bound to a name.
+
+A standard way to interact with SML is to configure the
+workstation screen so that there are two windows:
+
+  1. An editor window into which SML commands are initially typed
+     and recorded.
+  2. A shell window (or non-Unix equivalent) which is used to
+     evaluate the commands.
+
+A common way to achieve this is to work inside `Emacs` with a
+text window and a shell window.
+
+After typing a command into the edit (text) window it can be
+transferred to the shell and evaluated in HOL by ‘cut-and-paste’.
+In `Emacs` this is done by copying the text into a buffer and
+then ‘yanking’ it into the shell.  The advantage of working via
+an editor is that if the command has an error, then the text can
+simply be edited and used again; it also records the commands in
+a file which can then be used again (via a batch load) later.  In
+`Emacs`, the shell window also records the session, including
+both input from the user and the system's response.  The sessions
+in this tutorial were produced this way.  These sessions are
+split into segments displayed in boxes with a number in their top
+right hand corner (to indicate their position in the complete
+session).
+
+The interactions in these boxes should be understood as occurring
+in sequence.  For example, variable bindings made in earlier
+boxes are assumed to persist to later ones.  To enter the HOL
+system, one types `hol` at the command-line, possibly preceded by
+path information if the HOL system's `bin` directory is not in
+one's path.  The HOL system then prints a sign-on message and
+puts one into SML.  The SML prompt varies depending on the
+implementation.  In Poly/ML, the implementation assumed for our
+sessions here, the prompt is `` `>` ``, so lines beginning with
+`` `>` `` are typed by the user, and other lines are the system's
+responses.
+
+```repl
+$ bin/hol
+>>__ HOL_Interactive.print_banner (!scriptPrint);
+
+>> 1 :: [2,3,4,5];
+```
+
+The SML expression `1 :: [2,3,4,5]` has the form $e_1\ op\ e_2$
+where $e_1$ is the expression `1` (whose value is the integer
+$1$), $e_2$ is the expression `[2,3,4,5]` (whose value is a list
+of four integers) and $op$ is the infixed operator `::` which is
+like Lisp's *cons* function.  Other list processing functions
+include `hd` (*car* in Lisp), `tl` (*cdr* in Lisp) and `null`
+(*null* in Lisp).  The semicolon `;` terminates a top-level
+phrase.  The system's response is shown on the line starting with
+the word `val`.  It consists of the value of the expression
+followed, after a colon, by its type.  The SML type checker
+infers the type of expressions using methods invented by Robin
+Milner \cite{Milner-types}.  The type `int list` is the type of
+‘lists of integers’; `list` is a unary type operator.  The type
+system of SML is very similar to the type system of the HOL
+logic.
+
+The value of the last expression evaluated at the top-level not
+otherwise bound to a name is always remembered in a variable
+called `it`.
+
+```repl
+>> val l = it;
+
+>> tl l;
+
+>> hd it;
+
+>> tl(tl(tl(tl(tl l))));
+```
+
+Following standard $\lambda$-calculus usage, the application of a
+function $f$ to an argument $x$ can be written without brackets
+as $f\ x$ (although the more conventional $f$`(`$x$`)` is also
+allowed).  The expression $f\ x_1\ x_2\ \cdots\ x_n$ abbreviates
+the less intelligible expression
+`(`$\cdots$`((`$f\ x_1$`)`$x_2$`)`$\cdots$`)`$x_n$ (function
+application is left associative).
+
+Declarations have the form
+`val `$x_1$`=`$e_1$` and `$\cdots$` and `$x_n$`=`$e_n$
+and result in the value of each expression $e_i$ being bound to
+the name $x_i$.
+
+```repl
+>> val l1 = [1,2,3] and l2 = ["a","b","c"];
+```
+
+SML expressions like `"a"`, `"b"`, `"foo"` etc. are *strings* and
+have type `string`.  Any sequence of ASCII characters can be
+written between the quotes.[^ml-string-escapes]  The function
+`explode` splits a string into a list of single characters, which
+are written like single character strings, with a `#` character
+prepended.
+
+[^ml-string-escapes]: Newlines must be written as `\n`, and
+    quotes as `\"`.
+
+```repl
+>> explode "a b c";
+```
+
+An expression of the form `(`$e_1$`,`$e_2$`)` evaluates to a pair
+of the values of $e_1$ and $e_2$.  If $e_1$ has type $\sigma_1$
+and $e_2$ has type $\sigma_2$ then `(`$e_1$`,`$e_2$`)` has type
+$\sigma_1$`*`$\sigma_2$.  The first and second components of a
+pair can be extracted with the SML functions `#1` and `#2`
+respectively.  If a tuple has more than two components, its $n$-th
+component can be extracted with a function `#`$n$.
+
+The values `(1,2,3)`, `(1,(2,3))` and `((1,2), 3)` are all
+distinct and have types `int * int * int`, `int * (int * int)`
+and `(int * int) * int` respectively.
+
+```repl
+>> val triple1 = (1,true,"abc");
+
+>> #2 triple1;
+
+>> val triple2 = (1, (true, "abc"));
+
+>> #2 triple2;
+```
+
+The SML expressions `true` and `false` denote the two truth
+values of type `bool`.
+
+SML types can contain the *type variables* `'a`, `'b`, `'c`, etc.
+Such types are called *polymorphic*.  A function with a
+polymorphic type should be thought of as possessing all the types
+obtainable by replacing type variables by types.  This is
+illustrated below with the function `zip`.
+
+Functions are defined with declarations of the form
+`fun`$\ f\ v_1\ \ldots\ v_n$ `=` $e$ where each $v_i$ is either a
+variable or a pattern built out of variables.
+
+The function `zip`, below, converts a pair of lists
+`([`$x_1$`,`$\ldots$`,`$x_n$`], [`$y_1$`,`$\ldots$`,`$y_n$`])`
+to a list of pairs
+`[(`$x_1$`,`$y_1$`),`$\ldots$`,(`$x_n$`,`$y_n$`)]`.
+
+```repl
+>> fun zip(l1,l2) =
+    if null l1 orelse null l2 then []
+    else (hd l1,hd l2) :: zip(tl l1,tl l2);
+
+>> zip([1,2,3],["a","b","c"]);
+```
+
+Functions may be *curried*, i.e. take their arguments 'one at a
+time' instead of as a tuple.  This is illustrated with the
+function `curried_zip` below:
+
+```repl
+>> fun curried_zip l1 l2 = zip(l1,l2);
+
+>> fun zip_num l2 = curried_zip [0,1,2] l2;
+
+>> zip_num ["a","b","c"];
+```
+
+The evaluation of an expression either *succeeds* or *fails*.  In
+the former case, the evaluation returns a value; in the latter
+case the evaluation is aborted and an *exception* is raised.
+This exception passed to whatever invoked the evaluation.  This
+context can either propagate the failure (this is the default)
+or it can *trap* it.  These two possibilities are illustrated
+below.  An exception trap is an expression of the form
+$e_1$` handle _ => `$e_2$.  An expression of this form is
+evaluated by first evaluating $e_1$.  If the evaluation succeeds
+(i.e. doesn't fail) then the value of the whole expression is
+the value of $e_1$.  If the evaluation of $e_1$ raises an
+exception, then the value of the whole is obtained by evaluating
+$e_2$.[^ml-exception-handling]
+
+[^ml-exception-handling]: This description of exception handling
+    is actually a gross simplification of the way exceptions can
+    be handled in SML; consult a proper text for a better
+    explanation.
+
+```repl
+>>+ 3 div 0;
+
+>> 3 div 0 handle _ => 0;
+```
+
+The sessions above are enough to give a feel for SML.  In the
+next chapter, the syntax of the logic supported by the HOL system
+(higher order logic) will be introduced.

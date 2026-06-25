@@ -1,0 +1,34 @@
+holmake = false
+
+# Source-style checks (run by tools/h4pedant) are restricted to the
+# directories that historically were scanned: src/ and examples/.  In
+# both, unicode is permitted and the line-length check is off.  All
+# other top-level directories are excluded -- tools/ and friends
+# contain long-line legacy code and embedded TABs that pre-date the
+# style rules.
+[h4pedant]
+linelen = 80
+unicode_ok = false
+exclude = ["bin", "sigobj", "tools", "tools-poly",
+           "developers", "Manual", "help",
+           "examples/l3-machine-code/arm8/asl-equiv/armv8.6-asl-snapshot/"]
+
+[[h4pedant.dir]]
+path = "src"
+unicode_ok = true
+linelen = 0
+
+[[h4pedant.dir]]
+path = "examples"
+unicode_ok = true
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/coretypes"
+unicode_ok = true
+linelen = 80
+
+[[h4pedant.dir]]
+path = "src/num"
+unicode_ok = true
+linelen = 80

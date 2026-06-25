@@ -79,7 +79,7 @@ val TC_DEF = Q.new_definition
         (!x y z. P x y /\ P y z ==> P x z)  ==> P a b`);
 val _ = add_rule { fixity = Suffix 2100,
                    block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
-                   paren_style = OnlyIfNecessary,
+                   paren_style = ParoundPrec,
                    pp_elements = [TOK "^+"],
                    term_name = "TC" }
 val _ = Unicode.unicode_version {u = Unicode.UChar.sup_plus, tmnm = "TC"}
@@ -98,7 +98,7 @@ Inductive RTC:
 End
 val _ = add_rule { fixity = Suffix 2100,
                    block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
-                   paren_style = OnlyIfNecessary,
+                   paren_style = ParoundPrec,
                    pp_elements = [TOK "^*"],
                    term_name = "RTC" }
 val _ = Unicode.unicode_version {u = UTF8.chr 0xA673, tmnm = "RTC"}
@@ -118,7 +118,7 @@ val EQC_DEF = new_definition(
   ``EQC (R:'a->'a->bool) = RC (TC (SC R))``);
 val _ = add_rule { fixity = Suffix 2100,
                    block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
-                   paren_style = OnlyIfNecessary,
+                   paren_style = ParoundPrec,
                    pp_elements = [TOK "^="],
                    term_name = "EQC" }
 
@@ -1803,7 +1803,7 @@ val inv_DEF = new_definition(
 (* superscript suffix T, for "transpose" *)
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    fixity = Suffix 2100,
-                   paren_style = OnlyIfNecessary,
+                   paren_style = ParoundPrec,
                    pp_elements = [TOK (UTF8.chr 0x1D40)],
                    term_name = "relinv"}
 Overload relinv = ``inv``

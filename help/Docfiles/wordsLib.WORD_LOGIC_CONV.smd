@@ -1,0 +1,30 @@
+>>__ load "wordsLib"; Parse.temp_set_grammars $ valOf $ grammarDB {thyname="words"};
+## `WORD_LOGIC_CONV`
+
+``` hol4
+wordsLib.WORD_LOGIC_CONV : conv
+```
+
+------------------------------------------------------------------------
+
+Conversion based on `WORD_LOGIC_ss`.
+
+The conversion `WORD_LOGIC_CONV` converts word logic expressions into a
+canonical form.
+
+### Example
+
+``` hol4
+>>__ load "wordsLib";
+
+>>+ wordsLib.WORD_LOGIC_CONV “a && (b !! ~a !! c)”
+```
+
+### See also
+
+[`wordsLib.WORD_LOGIC_ss`](#wordsLib.WORD_LOGIC_ss),
+[`wordsLib.WORD_ARITH_CONV`](#wordsLib.WORD_ARITH_CONV),
+[`wordsLib.WORD_MUL_LSL_CONV`](#wordsLib.WORD_MUL_LSL_CONV),
+[`wordsLib.WORD_CONV`](#wordsLib.WORD_CONV),
+[`wordsLib.WORD_BIT_EQ_CONV`](#wordsLib.WORD_BIT_EQ_CONV),
+[`wordsLib.WORD_EVAL_CONV`](#wordsLib.WORD_EVAL_CONV)

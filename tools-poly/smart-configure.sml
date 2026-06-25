@@ -340,6 +340,15 @@ verdict ("GNUMAKE", GNUMAKE);
 
 val MV = dfltverdict ("MV", find_in_bin_or_path "mv");
 val CP = dfltverdict ("CP", find_in_bin_or_path "cp");
+(* Reflink-capable cp invocation, used by the Holmake product cache to
+   stage cache entries with independent inodes (so a sibling repo
+   fetching the same cache entry can't bump our local file's mtime).
+   On non-CoW filesystems the underlying cp falls back to a byte-copy. *)
+val clone_cmd =
+    case OS of
+        "macosx" => SOME (CP ^ " -c")
+      | "linux"  => SOME (CP ^ " --reflink=auto")
+      | _        => NONE;
 val SHASUM =
     if SHASUM = "" then
       dfltverdict (

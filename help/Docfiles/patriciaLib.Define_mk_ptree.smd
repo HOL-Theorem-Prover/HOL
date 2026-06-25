@@ -1,0 +1,73 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `Define_mk_ptree`
+
+``` hol4
+patriciaLib.Define_mk_ptree : string -> term_ptree -> thm
+```
+
+------------------------------------------------------------------------
+
+Define a new Patricia tree constant.
+
+A call to `Define_mk_ptree c t` builds a HOL Patricia tree from the ML
+tree `t` and uses this to define a new constant `c`. This provides and
+efficient mechanism to define large patricia trees in HOL: the trees can
+be quickly built in ML and then imported into HOL via
+`patriciaLib.mk_ptree`. Provided the tree is not too large, a
+side-effect of `Define_mk_ptree` is to prove the theorem
+`|- IS_PTREE c`. This is controlled by the reference
+`is_ptree_term_size_limit`.
+
+To avoid producing large terms, a call to `EVAL` will not expand out the
+definition of the new constant `c`. However, it will efficiently
+evaluate operations performed on `c`, e.g. `PEEK c n` for ground `n`.
+
+### Failure
+
+`Define_mk_ptree` will fail when `patriciaLib.mk_ptree` fails.
+
+### Example
+
+The following session shows the construction of Patricia trees in ML,
+which are then imported into HOL.
+
+``` hol4
+>>__ load "patriciaLib";
+>>__ val dmp_initial_grammars = (Parse.type_grammar(), Parse.term_grammar());
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="patricia"};
+
+>> open patriciaLib;
+>> val ptree = patriciaLib.Define_mk_ptree "ptree" (int_ptree_of_list [(1,``1``), (2, ``2``)]);
+>> DB.fetch "-" "ptree_def";
+
+>> val _ = Globals.max_print_depth := 7;
+  let
+    fun pp _ _ (_: term_ptree) = PolyML.PrettyString "<ptree>"
+  in
+    PolyML.addPrettyPrinter pp
+  end;
+
+>> val random_ptree =
+  real_time patriciaLib.ptree_of_ints
+    (Random.rangelist (0,100000) (10000,Random.newgenseed 1.0));
+
+>> val random = real_time (patriciaLib.Define_mk_ptree "random") random_ptree;
+
+>> patriciaLib.size random_ptree;
+>> real_time EVAL ``SIZE random``;
+
+>> int_peek random_ptree 3;
+>> real_time PTREE_CONV ``random ' 3``;
+
+>> int_peek random_ptree 100;
+>> real_time EVAL ``random ' 100``;
+>>__ Parse.temp_set_grammars dmp_initial_grammars;
+```
+
+### See also
+
+[`patriciaLib.mk_ptree`](#patriciaLib.mk_ptree),
+[`patriciaLib.PTREE_CONV`](#patriciaLib.PTREE_CONV),
+[`patriciaLib.PTREE_DEFN_CONV`](#patriciaLib.PTREE_DEFN_CONV)
+
+>>__ Globals.max_print_depth := ~1

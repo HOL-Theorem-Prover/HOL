@@ -1,17 +1,93 @@
 structure HM_CacheFetch =
 struct
 
-fun copy src dest =
+(* The PID has to be sampled per call: Holmake is delivered as a
+   polyc-compiled binary whose saved Poly heap freezes any top-level
+   val.  A val pid_s computed at module load thus captures the build-
+   time PID, and every Holmake invocation that loads the heap sees the
+   same value -- so two concurrent Holmakes write to the same
+   ".tmp.<pid>" path and race on rename. *)
+fun pid_s () = SysWord.toString
+                 (Posix.Process.pidToWord (Posix.ProcEnv.getpid()))
+
+(* Byte-copy [src] to [dst]; returns true on success.  Used as a
+   fallback when no reflink-capable cp is available, or when the
+   reflink invocation fails (e.g. filesystem doesn't support it and
+   the cp variant doesn't fall back internally). *)
+fun byte_copy src dst =
     let val instr  = BinIO.openIn src
-        val outstr = BinIO.openOut dest
+        val outstr = BinIO.openOut dst
         fun loop () =
             let val v = BinIO.inputN (instr, 1024)
             in  if Word8Vector.length v = 0
-                then (BinIO.flushOut outstr; BinIO.closeOut outstr; BinIO.closeIn instr)
+                then (BinIO.flushOut outstr; BinIO.closeOut outstr;
+                      BinIO.closeIn instr; true)
                 else (BinIO.output (outstr, v); loop ())
             end
-    in  loop (); true end
+    in loop () end
     handle _ => false
+
+(* Stage [src]'s contents at [dst] with an independent inode.  Tries
+   the platform's reflink-capable cp first (gives hardlink-style space
+   efficiency on CoW filesystems like APFS/btrfs/XFS-with-reflink
+   while keeping inodes separate); falls back to a byte-copy when
+   no clone command is configured or it fails.
+
+   Independent inodes matter for the Holmake product cache: a previous
+   implementation hard-linked into the cache, so a subsequent
+   setTime(dst, NONE) bumped the mtime on the *shared* inode, which
+   propagated to any sibling repo whose local Theory.* was also hard-
+   linked to the same cache entry.  The sibling would then see its
+   local Theory.* as newer than its derived .ui/.uo and spuriously
+   rebuild them.
+
+   The explicit existence check on [src] avoids cp printing its own
+   "cannot stat ..." stderr noise in the normal cache-miss path, where
+   the caller is probing for a key file that's expected to be absent. *)
+fun clone_or_copy src dst =
+    OS.FileSys.access(src, []) andalso
+    (case Systeml.clone_cmd of
+        SOME cmd =>
+          if OS.Process.isSuccess
+               (OS.Process.system (cmd ^ " " ^ Systeml.protect src ^
+                                   " " ^ Systeml.protect dst))
+          then true
+          else byte_copy src dst
+      | NONE => byte_copy src dst)
+
+(* Stage [src]'s contents at a per-pid temp file next to [dest] and
+   return the temp path on success.  The caller is responsible for
+   either committing the temp to [dest] via [commit_staged] or
+   discarding it via [discard_staged]. *)
+fun stage src dest =
+    let
+      val tmp = dest ^ ".tmp." ^ pid_s ()
+      val _ = OS.FileSys.remove tmp handle _ => ()
+    in
+      if not (clone_or_copy src tmp) then
+        (OS.FileSys.remove tmp handle _ => (); NONE)
+      else
+        (* Touch tmp's (independent) inode to "now" so the cache hit
+           looks newer than any in-tree dependency to downstream
+           timestamp-based rebuild checks. *)
+        (OS.FileSys.setTime (tmp, NONE) handle _ => ();
+         SOME tmp)
+    end
+
+fun commit_staged tmp dest =
+    (OS.FileSys.rename {old = tmp, new = dest}; true)
+    handle _ => (OS.FileSys.remove tmp handle _ => (); false)
+
+fun discard_staged tmp =
+    OS.FileSys.remove tmp handle _ => ()
+
+(* Place [src]'s contents at [dest] atomically: stage then commit.
+   Kept for upload's per-file copy into the cache's data/ directory
+   where staged validation isn't needed. *)
+fun copy src dest =
+    case stage src dest of
+        NONE => false
+      | SOME tmp => commit_staged tmp dest
 
 val mkDir = HOLFS_dtype.createDirIfNecessary
 
@@ -22,6 +98,36 @@ fun is_theory_output f =
     String.isSuffix "Theory.sml" f orelse
     String.isSuffix "Theory.sig" f orelse
     String.isSuffix "Theory.dat" f
+
+(* --- Fetch-time parent-hash validation -------------------------------
+
+   The cachekey can miss transitive theory parents (see GitHub #1980),
+   so a cache hit may return a Theory.dat whose recorded parent hashes
+   no longer match the current on-disk parents.  Loading that .dat
+   would fail link_parents.  Detect and treat as a cache miss.
+
+   The textual scan of the .dat header lives in core/HM_TheoryDat so
+   that HM_Cachekey can use the same parser without picking up a
+   dependency on this poly-only module. *)
+
+(* Validate that the parent hashes recorded in [dat_path] match the
+   hashes of the current on-disk parents.  An empty extracted-parents
+   list means we couldn't parse the .dat header at all (every real
+   theory has at least one parent in its .dat -- bool records "min"
+   even though "min" has no .dat of its own) so we fail-safe and
+   reject the cache. *)
+fun validate_dat search_dirs dat_path =
+    let
+      val parents = HM_TheoryDat.extract_parents dat_path
+      fun check (thy, recorded_hash) =
+          case HM_TheoryDat.find_parent_dat search_dirs thy of
+              NONE => false   (* can't locate current parent; fail-safe *)
+            | SOME path =>
+                (SHA1.sha1_file {filename = path} = recorded_hash
+                 handle _ => false)
+    in
+      not (List.null parents) andalso List.all check parents
+    end
 
 fun upload base_url cachekey dir filenames (ofns : Holmake_tools.output_functions) =
     case cachekey of
@@ -74,7 +180,7 @@ fun upload base_url cachekey dir filenames (ofns : Holmake_tools.output_function
         else (warn "Cache upload: not all files found; skipping"; false)
     end handle _ => false
 
-fun fetch base_url cachekey (ofns : Holmake_tools.output_functions) =
+fun fetch base_url cachekey search_dirs (ofns : Holmake_tools.output_functions) =
     case cachekey of
         HM_Cachekey.Missing _ => false
       | HM_Cachekey.Key key =>
@@ -108,15 +214,55 @@ fun fetch base_url cachekey (ofns : Holmake_tools.output_functions) =
                       | SOME {fullfile, dir} =>
                         (mkDir dir handle _ => ();
                          fullfile)
-                val ok = List.all
-                             (fn {name, url} =>
-                                 fetch_to_file (base_url ^ url) (to_dest_dir name))
-                             files
-                val _ = if ok
-                        then info "Cache hit! local theory building can be skipped."
-                        else warn "Only managed a partial cache hit; theory will be built locally."
+                (* Stage all files to tmp paths first (NOT yet visible
+                   at their dest paths).  Validate from tmp.  Only
+                   commit (rename tmp -> dest) if validation passes.
+                   This avoids exposing potentially-stale cache contents
+                   to concurrent Holmake processes that might read the
+                   dest paths while validation is still in progress. *)
+                val staged = map (fn {name, url} =>
+                                    let val dest = to_dest_dir name
+                                        val tmp_opt = stage
+                                                       (base_url ^ url) dest
+                                    in {name = name, dest = dest,
+                                        tmp = tmp_opt}
+                                    end)
+                                  files
+                fun discard_all () =
+                    List.app (fn {tmp = SOME t, ...} => discard_staged t
+                               | _ => ())
+                             staged
+                val all_staged = List.all (fn {tmp, ...} => isSome tmp) staged
             in
-                ok
+                if not all_staged then
+                  (discard_all ();
+                   warn "Only managed a partial cache hit; theory will \
+                        \be built locally.";
+                   false)
+                else
+                  let
+                    val all_valid =
+                        List.all
+                          (fn {name, tmp = SOME t, ...} =>
+                              not (String.isSuffix "Theory.dat" name)
+                              orelse validate_dat search_dirs t
+                            | _ => false)
+                          staged
+                  in
+                    if all_valid then
+                      (List.app (fn {tmp = SOME t, dest, ...} =>
+                                    ignore (commit_staged t dest)
+                                  | _ => ())
+                                staged;
+                       info "Cache hit! local theory building can be skipped.";
+                       true)
+                    else
+                      (discard_all ();
+                       warn "Cache hit ignored: parent hashes do not match \
+                            \current on-disk parents; theory will be built \
+                            \locally.";
+                       false)
+                  end
             end
             handle _ => let
                 val _ = warn "Something went wrong; theory will be built locally."

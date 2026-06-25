@@ -1,0 +1,40 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"}; open simpLib;
+## `type_ssfrag`
+
+``` hol4
+simpLib.type_ssfrag : hol_type -> ssfrag
+```
+
+------------------------------------------------------------------------
+
+Returns a simpset fragment for simplifying types' constructors.
+
+A call to `type_ssfrag ty` function returns a simpset fragment that
+embodies simplification routines for the type `ty`.
+The fragment includes rewrites that express injectivity and disjointness
+of constructors, and which simplify `case` expressions applied to terms
+that have constructors at the outermost level.
+
+### Failure
+
+Fails if the string argument does not correspond to a type stored in the
+`TypeBase`.
+
+### Example
+
+``` hol4
+>> val ss = simpLib.type_ssfrag “:'a list”;
+
+>> SIMP_CONV (bool_ss ++ ss) [] ``h::t = []``;
+```
+
+### Comments
+
+`RW_TAC` and `SRW_TAC` automatically include these simpset fragments.
+
+### See also
+
+[`BasicProvers.RW_TAC`](#BasicProvers.RW_TAC),
+[`BasicProvers.srw_ss`](#BasicProvers.srw_ss),
+[`bossLib.type_rws`](#bossLib.type_rws),
+[`simpLib.SIMP_CONV`](#simpLib.SIMP_CONV), [`TypeBase`](#TypeBase)

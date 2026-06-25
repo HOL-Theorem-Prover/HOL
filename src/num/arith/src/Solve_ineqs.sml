@@ -292,16 +292,16 @@ fun VAR_ELIM coeffsl =
         else from::(upto (from + one) to)
      fun left_ineqs var icoeffsl =
         let fun left_ineq icoeffs =
-                         (List.exists
-                          (fn (name,coeff) => (name = var) andalso (coeff < zero))
-                          (snd (snd icoeffs)))
+                List.exists
+                  (fn (name,coeff) => (name = var) andalso (coeff < zero))
+                  (snd (snd icoeffs))
         in  filter left_ineq icoeffsl
         end
      fun right_ineqs var icoeffsl =
         let fun right_ineq icoeffs =
-                         (List.exists
-                          (fn (name,coeff) => (name = var) andalso (coeff > zero))
-                          (snd (snd icoeffs)))
+                List.exists
+                  (fn (name,coeff) => (name = var) andalso (coeff > zero))
+                  (snd (snd icoeffs))
         in  filter right_ineq icoeffsl
         end
      fun no_var_ineqs var icoeffsl =

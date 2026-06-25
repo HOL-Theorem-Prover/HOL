@@ -1,25 +1,187 @@
-INCLUDES = ../Tools
+INCLUDES = ../Tools ../Reference
 
-EXTRA_CLEANS = tutorial.pdf euclid.tex parity.tex ml.tex combin.tex \
-               proof-tools.tex writinghol.tex $(wildcard *.aux)
+# Cross-manual labels.tsv prereq list for the mdbook target.
+# See Manual/mdbook.mk for MANUALS / SIBLING_LABELS.
+THIS = Tutorial
+include ../mdbook.mk
 
-tutorial.pdf: tutorial.tex euclid.tex logic.tex preface.tex proof-tools.tex theories.tex combin.tex parity.tex ml.tex more-examples.tex intro.tex writinghol.tex
-	latexmk -pdf tutorial
+# Pull CHAPTER_STEMS in from a generated chapter-stems.mk so
+# TEX_CORES tracks chapters.txt automatically.  The .mk is built
+# by the rule below from gen_chap_lists; on a fresh checkout run
+# `Holmake chapter-stems.mk' once before the PDF or mdbook
+# targets (sinclude lets that bootstrap step succeed).
+sinclude chapter-stems.mk
+$(if $(CHAPTER_STEMS),,\
+  $(warning chapter-stems.mk not yet built; \
+            run `Holmake chapter-stems.mk' first))
 
-euclid.tex: euclid.stex ../Tools/umap ../Tools/polyscripter euclid-extras.ML
-	../Tools/polyscripter ../Tools/umap < $< > $@
+# Core LaTeX file stems that contribute to tutorial.pdf.  Front
+# matter (title, preface) is hand-coded in tutorial.tex; the
+# chapter stems come from chapters.txt via CHAPTER_STEMS.  The
+# bibliography is produced from tutorial.bib via natbib (see
+# tutorial.pdf recipe below), mirroring Manual/Description/.
+TEX_CORES = tutorial title preface $(CHAPTER_STEMS)
 
-parity.tex: parity.stex ../Tools/umap ../Tools/polyscripter
-	../Tools/polyscripter ../Tools/umap < $< > $@
+TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex \
+              chapters-include.tex book-title.tex tutorial.bib \
+              $(patsubst %,%.tex,$(TEX_CORES))
 
-writinghol.tex: writinghol.stex ../Tools/umap ../Tools/polyscripter
-	../Tools/polyscripter ../Tools/umap < $< > $@
+PS_ROOT = ../Tools/polyscripter
+PS_STUFF = $(PS_ROOT) ../Tools/umap
+PS_NOUMAP = $(PS_ROOT) -md < $< > $@
 
-ml.tex: ml.stex ../Tools/umap ../Tools/polyscripter
-	../Tools/polyscripter ../Tools/umap < $< > $@
+# pandoc invocation for the .md -> .tex stage.  Same as the
+# Description Holmakefile uses.
+PANDOC_MD = pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=../Tools/pdf-macros.lua -t latex $< > $@
 
-combin.tex: combin.stex ../Tools/umap ../Tools/polyscripter
-	../Tools/polyscripter ../Tools/umap < $< > $@
+.PHONY: all mdbook
 
-proof-tools.tex: proof-tools.stex ../Tools/umap ../Tools/polyscripter ../../examples/dpll.sml
-	../Tools/polyscripter ../Tools/umap < $< > $@
+all: tutorial.pdf
+
+# All .smd files in the directory; pick them up automatically so
+# adding a new .smd doesn't require a Holmakefile edit just to wire
+# its dependencies into the mdbook prereq chain.
+SMDS = $(wildcard *.smd)
+SMD_MDS = $(patsubst %.smd,%.md,$(SMDS))
+
+# SVG renderings of the chapter figures, for the mdbook side.  The
+# matching \input{} of each figure's standalone TikZ source lives
+# inside the {=latex} blocks of the chapter .smd files and is
+# picked up by the PDF pipeline as usual.  (Holmake pattern rules
+# don't support directory-prefixed targets, so each figure gets an
+# explicit rule.)
+SVG_FIGS = figs/combin-confluence.svg \
+           figs/combin-confluence-complete.svg \
+           figs/parity-schematic.svg
+
+figs/combin-confluence.svg: figs/combin-confluence.tex
+	cd figs && pdflatex -interaction=batchmode combin-confluence.tex
+	pdftocairo -svg figs/combin-confluence.pdf $@
+	rm -f figs/combin-confluence.aux figs/combin-confluence.log \
+	      figs/combin-confluence.pdf
+
+figs/combin-confluence-complete.svg: figs/combin-confluence-complete.tex
+	cd figs && pdflatex -interaction=batchmode combin-confluence-complete.tex
+	pdftocairo -svg figs/combin-confluence-complete.pdf $@
+	rm -f figs/combin-confluence-complete.aux \
+	      figs/combin-confluence-complete.log \
+	      figs/combin-confluence-complete.pdf
+
+figs/parity-schematic.svg: figs/parity-schematic.tex ../LaTeX/pic-macros.tex
+	cd figs && pdflatex -interaction=batchmode parity-schematic.tex
+	pdftocairo -svg figs/parity-schematic.pdf $@
+	rm -f figs/parity-schematic.aux figs/parity-schematic.log \
+	      figs/parity-schematic.pdf
+
+# Build the mdbook output for the chapters listed in SUMMARY.md;
+# afterwards, scan the rendered HTML for raw-LaTeX leak patterns and
+# cross-reference number drift.
+# Recipe-less PHONY alias; the real gate is the file target below.
+# See Manual/Description/Holmakefile for the rationale.
+mdbook: ../book/Tutorial/index.html
+
+../book/Tutorial/index.html: ../Tools/smdpp SUMMARY.md \
+        $(SMD_MDS) \
+        $(SVG_FIGS) references.md cite-labels.tsv \
+        ../Reference/entries.list \
+        labels.tsv $(SIBLING_LABELS)
+	mdbook build
+	# See Manual/Description/Holmakefile for the rationale.
+	cd ../book/Tutorial && \
+	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
+	../Tools/smdpp check-html ../book/Tutorial
+	../Tools/smdpp check-refs ../book/Tutorial
+	../Tools/smdpp check-links ../book/Tutorial
+
+# Scan-only label dump for cross-book `\ref{Book:label}` resolution.
+# See Manual/Description/Holmakefile for the rationale.
+labels.tsv: ../Tools/smdpp SUMMARY.md $(SMDS)
+	../Tools/smdpp dump-labels .
+
+# Render the bibliography chapter + per-call-site cite label table
+# in one shot via pandoc citeproc.  See Manual/Description/Holmakefile
+# for the rationale; this rule mirrors that one.
+CSL = ../Tools/csl/chicago-author-date.csl
+references.md cite-labels.tsv: tutorial.bib $(CSL) $(SMDS) ../Tools/smdpp
+	../Tools/smdpp render-bib tutorial.bib $(CSL) $(SMDS)
+
+# SUMMARY.md and chapters-include.tex are generated from
+# chapters.txt by Manual/Tools/gen_chap_lists.  The mdbook H1 at
+# the top of the sidebar uses the book title from book.toml so
+# there's a single canonical source for the manual's name (also
+# read by book-title.tex for the PDF; see below).
+SUMMARY.md: ../Tools/gen_chap_lists chapters.txt book.toml $(SMDS)
+	../Tools/gen_chap_lists summary \
+	   "$$(awk -F\" '/^title/ {print $$2; exit}' book.toml)" > $@
+
+chapters-include.tex: ../Tools/gen_chap_lists chapters.txt
+	../Tools/gen_chap_lists latex-include > $@
+
+chapter-stems.mk: ../Tools/gen_chap_lists chapters.txt
+	../Tools/gen_chap_lists stems > $@
+
+# Generate a one-line LaTeX macro file whose body is the book
+# title from book.toml; title.tex and tutorial.tex (via
+# \HOLbookTitle) consume it.  Keeps the PDF cover and the
+# hyperref pdftitle in sync with the mdbook title automatically.
+book-title.tex: book.toml
+	printf '\\providecommand{\\HOLbookTitle}{%s}\n' \
+	   "$$(awk -F\" '/^title/ {print $$2; exit}' book.toml)" > $@
+
+# latexmk-side flags mirror Manual/Description/Holmakefile:
+#   -bibtex: this latexmk (4.79) doesn't auto-invoke bibtex from
+#     the .aux's \bibdata line on its own; the explicit flag forces
+#     it through.
+#   -f: pdflatex returns exit 1 on natbib warnings about undefined
+#     citations in early passes, which without -f makes latexmk
+#     abort the loop; we treat the actual PDF's existence as the
+#     success signal.
+# Trailing pdflatex pass: latexmk's convergence loop sometimes
+# stops one pass too early when the second bibtex run produces
+# the same .bbl as the first -- but pdflatex still needs another
+# pass to incorporate the \bibcite entries it has only just
+# written to its own .aux for early-document citations.
+tutorial.pdf: $(TEX_SOURCES)
+	rm -f $@; \
+	latexmk -pdf -bibtex -f -interaction=nonstopmode tutorial; \
+	pdflatex -interaction=nonstopmode tutorial > /dev/null; \
+	test -s $@
+
+# Pattern rules for the per-chapter .smd -> .md -> .tex pipeline.
+# Hand-rolled .tex front matter (tutorial.tex, title.tex,
+# preface.tex) is safe: Holmake skips pattern rules whose prereqs
+# don't exist (see Manual/Description/misc.smd's pattern-rule
+# applicability note).
+%.md: %.smd
+	$(PS_NOUMAP)
+
+%.tex: %.md ../Tools/pdf-macros.lua
+	$(PANDOC_MD)
+
+# $(PS_STUFF) lives in ../Tools/ and is only built on demand, so the
+# pattern rule's applicability check (local rules + files only)
+# would reject %.md before ../Tools/polyscripter exists.  Declare it
+# as a recipe-less extra prereq on every .md, leaving the pattern
+# recipe to apply.
+$(SMD_MDS): $(PS_STUFF)
+
+# Per-chapter extra prerequisites: side files polyscripter reads
+# from a chapter's .smd via `##use`.  Recipe-less rules slot in on
+# top of the pattern rule above (see "additional prerequisites"
+# under pattern rules in Manual/Description/misc.smd).
+euclid.md: euclid-extras.ML
+proof-tools.md: ../../examples/dpll.sml
+
+EXTRA_CLEANS = $(SMD_MDS) $(patsubst %.smd,%.tex,$(SMDS)) \
+               tutorial.pdf SUMMARY.md chapters-include.tex \
+               chapter-stems.mk book-title.tex \
+               references.md cite-labels.tsv labels.tsv \
+               $(patsubst %,%.aux,$(TEX_CORES)) \
+               tutorial.log tutorial.out tutorial.toc \
+               tutorial.fls tutorial.idx tutorial.ilg tutorial.ind \
+               tutorial.blg tutorial.bbl tutorial.fdb_latexmk \
+               $(SVG_FIGS) \
+               $(patsubst %.svg,%.pdf,$(SVG_FIGS)) \
+               $(patsubst %.svg,%.aux,$(SVG_FIGS)) \
+               $(patsubst %.svg,%.log,$(SVG_FIGS)) \
+               ../book/Tutorial/

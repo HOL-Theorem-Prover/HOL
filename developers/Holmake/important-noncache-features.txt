@@ -1,0 +1,17 @@
+- **`-C` flag**: this allows Holmake to be invoked from somewhere but to begin its operation in another working directory.
+
+- **pattern rules**: GNU make style pattern rules featuring `%` as a pattern variable in rules
+
+- **lastmaker propagation**: writing lastmaker information into all directories visited by Holmake as it starts up
+
+- **`--dirs` flag**: run in a context that merges targets and rules from multiple root directories
+
+- **new info, warn and error functions**
+
+- **mtime reported in JSON output**
+
+- **better reporting on failures in concurrent settings**
+
+- **report case-similar filename collisions**
+
+- **`LOCAL_PARALLELISM_LIMIT`**

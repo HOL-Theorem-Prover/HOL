@@ -1,0 +1,38 @@
+[book]
+title = "HOL: Quick Reference"
+authors = ["The HOL Development Team"]
+language = "en"
+src = "."
+# `description` is read by Manual/Tools/gen_lander when generating
+# the top-level Manual/book/index.html; mdbook itself ignores it.
+description = "A compact summary of the tactics, rules, conversions, and support functions used most often in day-to-day HOL4 proof, with links into the Reference manual."
+
+[output.html]
+mathjax-support = true
+theme = "../theme"
+additional-css = ["custom.css"]
+# See Manual/Description/book.toml for the smart-punctuation rationale.
+smart-punctuation = false
+# Cross-book search; see Manual/Description/book.toml for the
+# additional-js / symlink rationale.
+additional-js = ["hol-searcher.js"]
+
+[output.html.fold]
+enable = true
+level = 0
+
+# quickref.md is hand-authored Markdown with no polyscripter
+# directives, so run smdpp in --no-polyscripter mode: it skips loading
+# a HOL heap but still runs the command rewriters -- in particular
+# \refentry{Mod.entry}, which becomes a link to the matching Reference
+# manual page (validated against ../Reference/entries.list).  This is
+# NOT --plain-markdown, which would additionally skip \refentry.
+[preprocessor.smdpp]
+command = "../Tools/smdpp --no-polyscripter"
+renderers = ["html"]
+
+[build]
+# Outside the source directory so mdbook serve's watcher doesn't loop
+# rebuilding on its own output.
+build-dir = "../book/Quick"
+create-missing = false

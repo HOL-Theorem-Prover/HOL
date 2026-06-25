@@ -217,9 +217,9 @@ stored in the database.
 - distinctness of the constructors
 - structural induction theorem
 - case analysis theorem
-- definition of the 'case' constant for the type
+- definition of the ‘case’ constant for the type
 - congruence theorem for the case constant
-- definition of the 'size' of the type
+- definition of the ‘size’ of the type
 
 When the HOL system starts up, the `TypeBase` already contains the
 relevant entries for the types `bool`, `prod`, `num`, `option`, and
@@ -251,7 +251,7 @@ is an ML declaration, so the above should really appear as
 To reduce the verbiage of the above, there is a special syntax (akin
 to `Theorem` and `Definition`), allowing one to instead write
 
-```
+```repl
 >> Datatype:
      btree = Leaf 'a | Node btree 'b btree
    End
@@ -290,7 +290,7 @@ that may be defined by `Datatype`.
 To start, enumerated types can be defined as in the following
 example:
 
-```
+```repl
 >> Datatype:
      enum = A1  | A2  | A3  | A4  | A5
           | A6  | A7  | A8  | A9  | A10
@@ -303,7 +303,7 @@ example:
 
 Other non-recursive types may be defined as well:
 
-```
+```repl
 >> Datatype:
      foo = N num | B bool | Fn ('a -> 'b) | Pr ('a # 'b)
    End
@@ -311,9 +311,9 @@ Other non-recursive types may be defined as well:
 
 Turning to recursive types, we have already seen a type of binary
 trees having polymorphic values at internal nodes.  This time, we
-will declare it in "paired" format.
+will declare it in “paired” format.
 
-```
+```repl
 >> Datatype:
      tree = Leaf2 'a | Node2 (tree # 'b # tree)
    End
@@ -325,7 +325,7 @@ curried format used above.
 
 The basic syntax of the named lambda calculus is easy to describe:
 
-```
+```repl
 >> Datatype:
      lambda = Var string
             | Const 'a
@@ -334,9 +334,9 @@ The basic syntax of the named lambda calculus is easy to describe:
    End
 ```
 
-The syntax for 'de Bruijn' terms is roughly similar:
+The syntax for ‘de Bruijn’ terms is roughly similar:
 
-```
+```repl
 >> Datatype:
      dB = Var2 string
         | Const2 'a
@@ -350,15 +350,15 @@ Arbitrarily branching trees may be defined by allowing a node to
 hold the list of its subtrees.  In such a case, leaf nodes do not
 need to be explicitly declared.
 
-```
+```repl
 >> Datatype:
      ntree = Node3 'a (ntree list)
    End
 ```
 
-A type of 'first order terms' can be declared as follows:
+A type of ‘first order terms’ can be declared as follows:
 
-```
+```repl
 >> Datatype:
      term = Var3 string | Fnapp (string # term list)
    End
@@ -368,7 +368,7 @@ Mutually recursive types may also be defined.  The following,
 extracted by Elsa Gunter from the Definition of Standard ML,
 captures a subset of Core ML.
 
-```
+```repl
 >> Datatype:
       atexp = var_exp string
             | let_exp dec exp ;
@@ -398,7 +398,7 @@ captures a subset of Core ML.
 Simple record types may be introduced using the `<| ... |>`
 notation.
 
-```
+```repl
 >> Datatype:
      state = <| Reg1 : num; Reg2 : num; Waiting : bool |>
    End
@@ -408,7 +408,7 @@ The use of record types may be recursive.  For example, the
 following declaration could be used to formalize a simple file
 system.
 
-```
+```repl
 >> Datatype:
       file = Text string | Dir directory
         ;
@@ -427,15 +427,15 @@ the definition.
 First, an empty type is not allowed in HOL, so the following attempt
 is doomed to fail.
 
-```
+```repl
 >>+ Datatype: tyfail1 = A tyfail1
     End
 ```
 
-So called 'nested types', which are occasionally quite useful,
+So called ‘nested types’, which are occasionally quite useful,
 cannot at present be built with `Datatype`:
 
-```
+```repl
 >>+ Datatype: tyfail2 = LeafX 'a | NodeX (('a # 'a) tyfail2)
     End
 ```
@@ -445,7 +445,7 @@ on the right is consistent (see the theory `inftree`), but
 `Datatype` is not capable of defining algebraic types that require
 it.  Thus, examples such as the following will fail:
 
-```
+```repl
 >>+ Datatype: tyfail3 = Nil | Cons 'a ('b -> tyfail3)
     End
 ```
@@ -455,7 +455,7 @@ example, HOL does not allow the following attempt to model the
 untyped lambda calculus (note the `->` in the clause for the `Abs`
 constructor):
 
-```
+```repl
 >>+ Datatype: tyfail4 = VarX string
                       | ConstX 'a
                       | CombX tyfail4 tyfail4
@@ -475,18 +475,18 @@ Thus, for a type named `ty`, the primitive recursion theorem is
 stored under `ty_Axiom` and the induction theorem is put under
 `ty_induction`.  Other consequences include the distinctness of
 constructors (`ty_distinct`), and the injectivity of constructors
-(`ty_11`).  A 'degenerate' version of `ty_induction` is also stored
+(`ty_11`).  A ‘degenerate’ version of `ty_induction` is also stored
 under `ty_nchotomy`: it provides for reasoning by cases on the
 construction of elements of `ty`.  Finally, some special-purpose
 theorems are stored: for example, `ty_case_cong` holds a congruence
-theorem for "case" statements on elements of `ty`.  These case
+theorem for “case” statements on elements of `ty`.  These case
 statements are defined by `ty_case_def`.  Also, a definition of the
-"size" of the type is added to the current theory, under the name
+“size” of the type is added to the current theory, under the name
 `ty_size_def`.
 
 For example, invoking
 
-```
+```repl
 >> Datatype:
      ntree2 = NLeaf num | NNode ntree2 ntree2
    End
@@ -494,7 +494,7 @@ For example, invoking
 
 results in the definitions
 
-```
+```repl
 >> val ntree2_case_def = DB.fetch "-" "ntree2_case_def";
    val ntree2_size_def = DB.fetch "-" "ntree2_size_def";
 ```
@@ -508,7 +508,7 @@ pretty case expressions; see Section \ref{CaseExp} below.  The
 following theorems about the datatype are also proved and
 stored in the current theory.
 
-```
+```repl
 >> val ntree2_Axiom     = DB.fetch "-" "ntree2_Axiom";
    val ntree2_induction = DB.fetch "-" "ntree2_induction";
    val ntree2_nchotomy  = DB.fetch "-" "ntree2_nchotomy";
@@ -562,7 +562,7 @@ previously discussed.  For example, to create a record type called
 `person` with boolean, string and number fields called `employed`,
 `name` and `age`, one would enter:
 
-```
+```repl
 >> Datatype:
      person = <| employed : bool ; age : num ; name : string |>
    End
@@ -593,7 +593,7 @@ specified field has had the given function applied to it to
 generate the new value for that field.  They can be written with
 the keyword `with` and the `updated_by` operator.  Thus
 
-```
+```repl
 >> ``bob with employed updated_by $~``;
 ```
 
@@ -606,7 +606,7 @@ Additionally, there is syntactic sugar available to let one write
 a record with one of its fields replaced by a specific value.
 This is done by using the `:=` operator instead of `updated_by`:
 
-```
+```repl
 >> ``bob with employed := T``;
 ```
 
@@ -615,20 +615,20 @@ corresponding functional update, along with a use of the
 $\mathsf{K}$-combinator from the `combin` theory.  Thus, the above
 example is really
 
-```
+```repl
 >> ``bob with employed updated_by (K T)``;
 ```
 
 which is in turn a pretty form of
 
-```
+```repl
 >> ``person_employed_fupd (K T) bob``;
 ```
 
 If a chain of updates is desired, then multiple updates can be
 specified inside `<|`-`|>` pairs, separated by semi-colons, thus:
 
-```
+```repl
 >> ``bob with <| age := 10; name := "Child labourer" |>``;
 ```
 
@@ -643,7 +643,7 @@ The parser accepts lists of field specifications between
 sequences of updates of an arbitrary value (literally, the HOL
 value `ARB`), and are treated as literals.  Thus,
 
-```
+```repl
 >> ``<| age := 21; employed := F; name := "Layabout" |>``;
 ```
 
@@ -717,15 +717,15 @@ their records are getting too large.
 
 HOL provides a library for defining new types which are quotients
 of existing types, with respect to partial equivalence relations.
-This library is described in *"Higher Order Quotients in Higher
-Order Logic"* [HOQ], from which the following description is
+This library is described in *“Higher Order Quotients in Higher
+Order Logic”* [HOQ], from which the following description is
 taken.
 
 The quotient library is accessed by opening `quotientLib`, which
 makes all its tools and theorems accessible.
 
 The definition of new types corresponding to the quotients of
-existing types by equivalence relations is called "lifting" the
+existing types by equivalence relations is called “lifting” the
 types from a lower, more representational level to a higher, more
 abstract level.  Both levels describe similar objects, but some
 details which are apparent at the lower level are no longer
@@ -951,11 +951,11 @@ A simple example of a case expression is
             | _ => "many"
 ```
 
-This could have been expressed using several "if-then-else"
+This could have been expressed using several “if-then-else”
 constructs, but the case expression is much more compact and
 clean, with the selection between various choices made clearly
 evident.  Internally though, it is compiled to nested
-"if-then-else" statements.
+“if-then-else” statements.
 
 In addition to literals as patterns, as above, patterns may be
 constructor expressions.  Many standard HOL types have
@@ -1006,7 +1006,7 @@ expression invalid.  Deleting either group of rows would resolve
 the conflict, and make the expression valid.  Note that the
 pattern `0` is acceptable to either group.
 
-```
+```repl
 >>+ “case n of
         0 => "none"
       | 1 => "one"
@@ -1054,7 +1054,7 @@ of equality tests with if-then-else and the case constant for
 products that this term produces can be seen by turning off the
 case-expression pretty-printer:
 
-```
+```repl
 >>_ set_trace "pp_cases" 0;
 >> “case a of
        (1,y,z) => y + z
@@ -1064,7 +1064,7 @@ case-expression pretty-printer:
 
 Other heuristics result in more complicated terms:
 
-```
+```repl
 >>__ set_trace "pp_cases" 1;
 >>_ Pmatch.set_classic_heuristic ();
 >> “case a of
@@ -1100,7 +1100,7 @@ expression.  If pmatch syntax is enabled (via
 pretty-printing, we can see how the example expression we used
 earlier is rendered:
 
-```
+```repl
 >>_ patternMatchesSyntax.temp_enable_pmatch();
 >>_ set_trace "use pmatch_pp" 0;
 >> “pmatch a of
@@ -1188,7 +1188,7 @@ This evaluation usually destroys the case expression view.  This
 is illustrated by the following example, which adds a row that is
 subsumed by a later one to our running example:
 
-```
+```repl
 >>__ set_trace "use pmatch_pp" 1
 >>__ SIMP_CONV (srw_ss()) [] ``SUC 0``
 >> SIMP_CONV (srw_ss()) []
@@ -1241,7 +1241,7 @@ more details.)  The technology underlying `Definition` and
 `Hol_defn` is explained in detail in Slind \cite{slind-thesis}.
 For example,
 
-```
+```repl
 >> Definition last0_def:
      (last0 [] = 0) /\
      (last0 [x] = x) /\
@@ -1354,7 +1354,7 @@ original input.  In this particular case, the post-processing needs
 only drop the last conjunct, which was not part of the original
 user-specification, yielding:
 
-```
+```repl
 >>- val f_def = f_def
 ```
 
@@ -1383,13 +1383,13 @@ since that theorem would be identical to the induction theorem
 resulting from the declaration of the datatype.
 
 Part of the process of the automatic termination proof involves
-the use of "termination simplification" theorems.  These encode
+the use of “termination simplification” theorems.  These encode
 facts about the way in which arguments to desired functions may be
 smaller than originals.  For example, with the theory of
 fixed-width words (see Section \ref{sec:bit-vectors}) in the
 context, the theorem `WORD_PRED_THM` is included in this set:
 
-```
+```repl
 >>__ load "wordsTheory";
 ##thm wordsTheory.WORD_PRED_THM
 ```
@@ -1421,9 +1421,9 @@ associated induction theorem, its name is derived as follows:
 
 We will give a number of examples that display the range of
 functions that may be defined with `Definition`.  First, we have a
-recursive function that uses "destructors" in the recursive call.
+recursive function that uses “destructors” in the recursive call.
 
-```
+```repl
 >> Definition fact_def:
      fact x = if x = 0 then 1 else x * fact(x-1)
    End
@@ -1432,15 +1432,15 @@ recursive function that uses "destructors" in the recursive call.
 Since `fact` is not primitive recursive, an induction theorem for
 `fact` is generated and stored in the current theory.
 
-```
+```repl
 >> fact_ind; (* DB.fetch "-" "fact_ind" would also work *)
 ```
 
 Next we have a recursive function with relatively complex
-pattern-matching.  We use the `induction=` "attribute" to require a
+pattern-matching.  We use the `induction=` “attribute” to require a
 non-standard name for the generated induction theorem.
 
-```
+```repl
 >> Definition flatten[induction=flat_ind]:
       (flatten  []           = [])
    /\ (flatten ([]::rst)     = flatten rst)
@@ -1452,7 +1452,7 @@ non-standard name for the generated induction theorem.
 Next we define a curried recursive function, which uses wildcard
 expansion and pattern-matching pre-processing.
 
-```
+```repl
 >> Definition min_def: (min (SUC x) (SUC y) = min x y + 1)
                   /\   (min  ____    ____   = 0)
    End
@@ -1461,7 +1461,7 @@ expansion and pattern-matching pre-processing.
 Next we make a primitive recursive definition.  Note that no
 induction theorem is generated in this case.
 
-```
+```repl
 >> Definition filter:
      (filter P [] = [])
      /\    (filter P (h::t) = if P h then h::filter P t
@@ -1475,7 +1475,7 @@ and a function for putting a proposition into negation normal form
 as follows.  First we define a datatype, named `prop`, of boolean
 formulas:
 
-```
+```repl
 >> Datatype:
      prop = VARp 'a | NOTp prop | ANDp prop prop
           | ORp  prop prop
@@ -1485,7 +1485,7 @@ formulas:
 Then two mutually recursive functions `nnfpos` and `nnfneg` are
 defined:
 
-```
+```repl
 >> Definition nnfpos_def:
       (nnfpos (VARp x)    = VARp x)
    /\ (nnfpos (NOTp p)    = nnfneg p)
@@ -1501,7 +1501,7 @@ defined:
 
 `Definition` may also be used to define non-recursive functions:
 
-```
+```repl
 >> Definition fdef: fdef x (y,z) = (x + 1 = y DIV z)
    End
 ```
@@ -1551,7 +1551,7 @@ will currently fail, since the termination proof is currently
 beyond the capabilities of the naive termination prover.  Instead,
 we make an application of `Hol_defn`:
 
-```
+```repl
 >>__ Feedback.emit_WARNING := false;
 >> val qsort_defn =
      Hol_defn "qsort"
@@ -1572,7 +1572,7 @@ understandable format.  Although it is possible to directly work
 with elements of type `defn`, it is more convenient to invoke
 `Defn.tgoal`, which sets up a termination proof in a goalstack.
 
-```
+```repl
 >> Defn.tgoal qsort_defn;
 ```
 
@@ -1587,7 +1587,7 @@ because the list argument gets shorter.  Invoking `WF_REL_TAC` with
 the appropriate measure function results in two subgoals, both of
 which are easy to prove.
 
-```
+```repl
 >> e (WF_REL_TAC `measure (LENGTH o SND)`);
 ```
 
@@ -1603,7 +1603,7 @@ termination conditions, the recursion equations and induction
 theorem are stored in the current theory segment before the
 recursion equations are returned:
 
-```
+```repl
 >>__ proofManagerLib.drop_all();
 >>__ delete_const "qsort"; Feedback.emit_WARNING := false;
 >> Definition qsort_def:
@@ -1625,7 +1625,7 @@ the specified theory.[^fetch]
 [^fetch]: In a call to `fetch`, the first argument denotes a
 theory; the current theory may be specified by `"-"`.
 
-```
+```repl
 >> DB.fetch "-" "qsort_ind";
 ```
 
@@ -1652,7 +1652,7 @@ For a very simple starter example, consider the following
 definition of a function that computes the greatest common divisor
 of two numbers:
 
-```
+```repl
 >> val gcd_defn =
       Hol_defn "gcd"
          `(gcd (0,n) = n) /\
@@ -1668,14 +1668,14 @@ HOL is to use a `measure` function to map from the domain of
 `gcd` — a pair of numbers — to a number.  The definition of
 `measure` in HOL is equivalent to
 
-```
+```repl
 ##thm prim_recTheory.measure_thm
 ```
 
 Now we must pick out the argument position to measure and invoke
 `WF_REL_TAC`:
 
-```
+```repl
 >> e (WF_REL_TAC ‘measure FST’);
 >>__ val th = top_thm(); (* throws exn if not all proved *)
 >>__ proofManagerLib.drop_all();
@@ -1692,7 +1692,7 @@ it gets a `LeafB` in the left branch, then it recurses into the
 right branch.  At the end of execution the tree has been
 linearized.
 
-```
+```repl
 >>_ Datatype: btreeB = LeafB | BrhB btreeB btreeB
     End
 
@@ -1706,7 +1706,7 @@ linearized.
 The termination conditions above can be turned into an interactive
 goal with `Defn.tgoal`:
 
-```
+```repl
 >> Defn.tgoal Unbal_defn;
 ```
 
@@ -1716,7 +1716,7 @@ Instead, we can assign weights to nodes in the tree such that the
 recursive calls of `Unbal` decrease the total weight in every
 case.  One such assignment is
 
-```
+```repl
 >> Definition Weight_def:
      (Weight (LeafB) = 0) /\
      (Weight (BrhB x y) = (2 * Weight x) + (Weight y) + 1)
@@ -1725,14 +1725,14 @@ case.  One such assignment is
 
 Now we can invoke `WF_REL_TAC`:
 
-```
+```repl
 >> e (WF_REL_TAC `measure Weight`);
 >>__ proofManagerLib.drop_all();
 ```
 
 Both conjuncts of this goal are quite easy to prove.
 
-The technique of "weighting" nodes in a datatype in order to prove
+The technique of “weighting” nodes in a datatype in order to prove
 termination also goes by the name of *polynomial interpretation*.
 It must be admitted that finding the correct weighting for a
 termination proof is more an art than a science.  Typically, one
@@ -1751,7 +1751,7 @@ searched.  The third argument, $p_0$, holds the original pattern
 to be matched.  The fourth argument, $s$, is the string being
 searched.
 
-```
+```repl
 >>_ val match_defn =
        Hol_defn "match"
          `(match [] __ __ __ = T)  /\
@@ -1779,10 +1779,10 @@ means that $p$ has failed to match, so the algorithm advances one
 character ahead in $s$ and starts matching from the beginning of
 $p_0$.  If $s$ is empty, however, then we return `F`.  Note that
 $\mathit{rst}$ and $s$ both represent the string being searched:
-$\mathit{rst}$ is a "local" version of $s$: we recurse into
+$\mathit{rst}$ is a “local” version of $s$: we recurse into
 $\mathit{rst}$ as long as there are matches with the pattern $p$.
 However, if the search eventually fails, then $s$, which
-"remembers" where the search started from, is used to restart the
+“remembers” where the search started from, is used to restart the
 search.
 
 So much for the behaviour of the function.  Why does it terminate?
@@ -1795,7 +1795,7 @@ reduced in some recursive calls, and some others are reduced in
 other recursive calls.  Recall that `LEX` is an infix operator,
 defined in `pairTheory` as follows:
 
-```
+```repl
 ##thm pairTheory.LEX_DEF
 ```
 
@@ -1807,7 +1807,7 @@ Formally, we want to map from the four-tuple of arguments into a
 lexicographic combination of relations.  This is enabled by
 `inv_image` from `relationTheory`:
 
-```
+```repl
 ##thm relationTheory.inv_image_def
 ```
 
@@ -1817,7 +1817,7 @@ argument, and $n$ is the length of the second argument.  These
 lengths are then compared lexicographically with respect to
 less-than ($<$).
 
-```
+```repl
 >>_ Defn.tgoal match_defn;
 
 >> e (WF_REL_TAC `inv_image($< LEX $<) (\(w,x,y,z). (LENGTH z,LENGTH x))`);
@@ -1844,7 +1844,7 @@ definition of factorial:
   fact n = if n=0 then 1 else n * fact (n-1)
 ```
 
-In the absence of knowledge of how the "if-then-else" construct
+In the absence of knowledge of how the “if-then-else” construct
 affects the *context* of recursive calls, `Hol_defn` would extract
 the termination constraints:
 
@@ -1868,7 +1868,7 @@ to `Hol_defn`:
 
 This theorem is understood by `Hol_defn` as an ordered sequence of
 instructions to follow when the termination condition extractor
-hits an "if-then-else".  The theorem is read as follows: when an
+hits an “if-then-else”.  The theorem is read as follows: when an
 instance "`if `$B$` then `$X$` else `$Y$" is encountered while the
 extractor traverses the function definition, do the following:
 
@@ -1907,16 +1907,16 @@ and are easy to prove.  The notion of *context* of a recursive
 call is defined by the set of congruence rules used in extracting
 termination conditions.  This set can be obtained by invoking
 `DefnBase.read_congs`, and manipulated by `DefnBase.add_cong`,
-`DefnBase.drop_cong` and `DefnBase.export_cong`.  The "add" and
-"drop" functions only affect the current state of the congruence
-database; in contrast, the "export" function provides a way for
+`DefnBase.drop_cong` and `DefnBase.export_cong`.  The “add” and
+“drop” functions only affect the current state of the congruence
+database; in contrast, the “export” function provides a way for
 theories to specify that a particular theorem should be added to
 the congruence database in all descendant theories.
 \index{congruence rules!in termination analysis|)}
 
 #### Higher-order recursion and congruence rules
 
-A "higher-order" recursion is one in which a higher-order function
+A “higher-order” recursion is one in which a higher-order function
 is used to apply the recursive function to arguments.  In order
 for the correct termination conditions to be proved for such a
 recursion, congruence rules for the higher order function must be
@@ -1929,7 +1929,7 @@ a congruence theorem for a new user-defined higher-order function.
 For example, suppose we define a higher-order function `SIGMA` for
 summing the results of a function in a list.
 
-```
+```repl
 >>_ Definition SIGMA_def:
      (SIGMA f [] = 0) /\
      (SIGMA f (h::t) = f h + SIGMA f t)
@@ -1939,7 +1939,7 @@ summing the results of a function in a list.
 We then use `SIGMA` in the definition of a function for summing the
 results of a function in a arbitrarily (finitely) branching tree.
 
-```
+```repl
 >>_ Datatype: ltree = LNode 'a (ltree list)
     End
 ```
@@ -1957,7 +1957,7 @@ is called a *higher-order recursion*.  Since the recursive call of
 made to extract the correct termination conditions.  Otherwise, the
 following unhappy situation results:
 
-```
+```repl
 >>- with_flag(Feedback.emit_WARNING, false) (Defn.Hol_defn
       "ltree_sigma")
       `ltree_sigma f (LNode v tl) = f v + SIGMA (ltree_sigma f) tl`;
@@ -1994,7 +1994,7 @@ attribute on a theorem when it is saved,
 the termination conditions extracted for the definition are now
 provable, since `a` is a proper subterm of `LNode v tl`.
 
-```
+```repl
 >>__ structure Defn = struct open Defn val Hol_defn = fn s => with_flag(Feedback.emit_WARNING, false) (Hol_defn s) end;
 >> val _ = DefnBase.add_cong SIGMA_CONG;
 >> Defn.Hol_defn "ltree_sigma"
@@ -2038,7 +2038,7 @@ On the $\mathsf{linRec}$ example it behaves as follows (note that
 the schematic variables should only occur on the right-hand side
 of the definition when making the definition of a schema):
 
-```
+```repl
 >>__ delete_const "f";
 >> Definition linRec_def[schematic]:
      linRec (x:'a) = if d(x) then e(x) else f(linRec(g x))
@@ -2049,7 +2049,7 @@ The hypotheses of the returned theorem hold the abstract
 termination constraints.  A similarly constrained induction
 theorem is also stored in the current theory segment.
 
-```
+```repl
 >> hyp linRec_def;
 ```
 
@@ -2100,7 +2100,7 @@ $$
 $$
 
 The (optional) $\mathit{sv}_i$ terms that appear after a constant
-name are so-called "schematic variables".  The same variables must
+name are so-called “schematic variables”.  The same variables must
 always follow all new constants throughout the definition.  These
 variables and the names of the constants-to-be must not be
 quantified over in each $\langle\mathit{clause}\rangle$.  A
@@ -2125,7 +2125,7 @@ segment.
   `Inductive` syntax.
 - $\mathit{ind}$ is the induction principle for the relations,
   saved under the name `<stem>_ind`.
-- $\mathit{cases}$ is the so-called "cases" or "inversion"
+- $\mathit{cases}$ is the so-called “cases” or “inversion”
   theorem for the relations, saved under the name
   `<stem>_cases`.  A cases theorem is of the form
 
@@ -2144,7 +2144,7 @@ segment.
 
 \index{xHol_reln, defining inductive relations@\ml{xHol\_reln}, defining inductive relations}
 \index{inductive relations!xHol_reln (ML function)@\ml{xHol\_reln} (ML function)}
-If the "stem" of the first constant defined in a set of clauses is
+If the “stem” of the first constant defined in a set of clauses is
 such that resulting ML bindings in an exported theory file will
 result in illegal ML, then the `xHol_reln` function should be
 used.  The `xHol_reln` function is analogous to the `xDefine`
@@ -2192,7 +2192,7 @@ will export rules as `rule1` and `foo_rule2`.
 
 #### Strong induction principles
 
-So called "strong" versions of induction principles (in which
+So called “strong” versions of induction principles (in which
 instances of the relation being defined appear as extra
 hypotheses), are automatically proved when an inductive definition
 is made.
@@ -2265,7 +2265,7 @@ is subsequently reloaded.
 A simple example of defining two mutually recursive relations is
 the following:
 
-```
+```repl
 >> Inductive EVEN_ODD:
      EVEN 0 /\
      (!n. ODD n ==> EVEN (n + 1)) /\
@@ -2279,7 +2279,7 @@ Note that `R`, as a schematic variable, is not quantified in the
 rules.  This is appropriate because it is `rtc R` that has the
 inductive characterisation, not `rtc` itself.
 
-```
+```repl
 >> Inductive rtc:
      (!x. rtc R x x) /\
      (!x z. (?y. R x y /\ rtc R y z) ==> rtc R x z)
@@ -2296,14 +2296,14 @@ need not be contiguous.
 \label{sec:proofs-with-inductive-relations}
 \index{inductive relations!performing proofs}
 
-The "rules" theorem of an inductive relation provides a
+The “rules” theorem of an inductive relation provides a
 straightforward way of proving arguments belong to a relation.  If
 confronted with a goal of the form `R x y`, one might make
 progress by performing a `MATCH_MP_TAC` (or perhaps, an
-`HO_MATCH_MP_TAC`) with one of the implications in the "rules"
+`HO_MATCH_MP_TAC`) with one of the implications in the “rules”
 theorem.
 
-The "cases" theorem can be used for the same purpose because it is
+The “cases” theorem can be used for the same purpose because it is
 an equality, of the general form `R x y` $\Leftrightarrow$ $\ldots$.
 Because the right-hand side of this theorem will often include
 other occurrences of the relation, it is generally not safe to
@@ -2317,7 +2317,7 @@ simply rewrite with it.
 The rewriting-control directives `Once`, `SimpLHS` and `SimpRHS`
 can be useful here.
 \index{FULL_SIMP_TAC@\ml{FULL\_SIMP\_TAC}}
-In addition, the "cases" theorem can be used as an "elimination"
+In addition, the “cases” theorem can be used as an “elimination”
 form: if one has an assumption of the form `R x y`, rewriting this
 (perhaps with `FULL_SIMP_TAC` if the term occurs in the goal's
 assumptions) into the possible ways it may have come about is
@@ -2343,7 +2343,7 @@ The low-level approach to goals of this form is to apply
 \index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
 A slightly more high-level approach is use the `Induct_on`
 tactic, which will actually use the automatically generated
-"strong" induction principle.[^strongind]
+“strong” induction principle.[^strongind]
 (This tactic is also used to perform structural inductions over
 algebraic data types; see the `bossLib` section of the Libraries
 chapter.)  When
@@ -2386,15 +2386,17 @@ current theory segment.
   `CoInductive` syntax.
 - $\mathit{coind}$ is the coinduction principle for the relations,
   saved under the name `<stem>_coind`.
-- $\mathit{cases}$ is the so-called "cases" or "inversion"
+- $\mathit{cases}$ is the so-called “cases” or “inversion”
   theorem for the relations, saved under the name
   `<stem>_cases`, and is used to decompose an element in the
   relation into the possible ways of obtaining it by the rules.
 
-Note that "schematic variables" are also supported by
-`Hol_coreln`, while there is no concept of "strong coinduction
-principles" here.  HOL's core coalgebra types (`llist`, `path` and
+Note that “schematic variables” are also supported by
+`Hol_coreln`, while there is no concept of “strong coinduction
+principles” here.  HOL's core coalgebra types (`llist`, `path` and
 `lbtree`) are all based on coinductive relations.  See Section
 \ref{bisimulation} for a sample usage of coinductive relations on
 bisimulation.
 \index{coinductive relations|)}
+
+>>__ Parse.temp_set_grammars definitions_initial_grammars;

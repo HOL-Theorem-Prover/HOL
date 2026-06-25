@@ -2152,4 +2152,26 @@ Proof
   \\ simp[IN_DEF]
 QED
 
+Theorem numeral_cmp_thm:
+  (num_cmp (NUMERAL x) (NUMERAL y) = num_cmp x y) /\
+  (num_cmp (NUMERAL x) y = num_cmp x y) /\
+  (num_cmp x (NUMERAL y) = num_cmp x y) /\
+  (num_cmp 0 n = num_cmp ZERO n) /\
+  (num_cmp n 0 = num_cmp n ZERO) /\
+  (num_cmp ZERO ZERO = Equal) /\
+  (num_cmp ZERO (BIT1 y) = Less) /\
+  (num_cmp ZERO (BIT2 y) = Less) /\
+  (num_cmp (BIT1 x) ZERO = Greater) /\
+  (num_cmp (BIT2 x) ZERO = Greater) /\
+  (num_cmp (BIT1 x) (BIT1 y) = num_cmp x y) /\
+  (num_cmp (BIT2 x) (BIT2 y) = num_cmp x y) /\
+  (num_cmp (BIT1 x) (BIT2 y) =
+    case num_cmp x y of Greater => Greater | _ => Less) /\
+  (num_cmp (BIT2 x) (BIT1 y) =
+    case num_cmp x y of Less => Less | _ => Greater)
+Proof
+ metis_tac [arithmeticTheory.NUMERAL_DEF,comparisonTheory.num_cmp_numOrd,
+            totoTheory.numeralOrd,arithmeticTheory.ALT_ZERO]
+QED
+
 (* val _ = EmitTeX.tex_theory"-"; *)

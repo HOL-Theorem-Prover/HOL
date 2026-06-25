@@ -101,8 +101,9 @@ Proof
   SUBGOAL_THEN “!m (n:num) (x:'a). pwr x (m + n) :'a = mul (pwr x m) (pwr x n)”
   ASSUME_TAC
   >- (GEN_TAC THEN INDUCT_TAC THEN ASM_SIMP_TAC bool_ss [ADD_CLAUSES]) \\
-  SUBGOAL_THEN “!(x:'a) (y:'a) (n:num). pwr (mul x y) n = mul (pwr x n) (pwr y n)”
-  ASSUME_TAC
+  SUBGOAL_THEN
+    “!(x:'a) (y:'a) (n:num). pwr (mul x y) n = mul (pwr x n) (pwr y n)”
+    ASSUME_TAC
   >- (GEN_TAC THEN GEN_TAC THEN INDUCT_TAC THEN ASM_SIMP_TAC bool_ss []) \\
   FILTER_ASM_REWRITE_TAC (not o is_comm) [] >>
   ID_SPEC_TAC “q:num” THEN INDUCT_TAC THEN ASM_SIMP_TAC bool_ss[MULT_CLAUSES]

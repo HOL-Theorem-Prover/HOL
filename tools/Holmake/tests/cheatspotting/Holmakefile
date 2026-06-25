@@ -6,4 +6,9 @@ cheatspotting-selftest.log: selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = cheatspotting-selftest.log selftest.exe
+# selftest drives Holmake in testdir/ -- a subdir build does not visit
+# via parallel_tests INCLUDES.  List its artifacts here so build
+# cleanAll removes them.
+EXTRA_CLEANS = cheatspotting-selftest.log selftest.exe \
+               testdir/.hol/ testdir/output \
+               testdir/usedCheat.anon_1.dumpedheap

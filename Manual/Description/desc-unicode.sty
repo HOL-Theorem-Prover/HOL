@@ -1,3 +1,25 @@
+% Wrap left/right white brace-brackets (U+2983 / U+2984) in
+% accsupp's BeginAccSupp/EndAccSupp so PDF copy-paste round-trips
+% to the original Unicode codepoint rather than to the OMS-font
+% characters we composite the visual glyph from.  The DeclareUnicode
+% rules for 2983/2984 below reference these macros, so we need to
+% load accsupp and define them before the Declare lines run.
+\RequirePackage{accsupp}
+\newcommand*{\llbrace}{%
+  \BeginAccSupp{method=hex,unicode,ActualText=2983}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char102}%
+    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
+  \EndAccSupp{}%
+}
+\newcommand*{\rrbrace}{%
+  \BeginAccSupp{method=hex,unicode,ActualText=2984}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
+    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char103}%
+  \EndAccSupp{}%
+}
+
 \DeclareUnicodeCharacter{00AC}{\ensuremath{\neg}}
 \DeclareUnicodeCharacter{00B2}{\ensuremath{{}\sp{2}}}
 \DeclareUnicodeCharacter{00B3}{\ensuremath{{}\sp{3}}}
@@ -9,13 +31,16 @@
 \DeclareUnicodeCharacter{393}{\ensuremath{\Gamma}}
 \DeclareUnicodeCharacter{394}{\ensuremath{\Delta}}
 \DeclareUnicodeCharacter{2013}{\textendash}
+\DeclareUnicodeCharacter{2016}{\ensuremath{\|}}
 \DeclareUnicodeCharacter{2014}{\textemdash}
 \DeclareUnicodeCharacter{2113}{\ensuremath{\ell}}
 \DeclareUnicodeCharacter{2097}{\ensuremath{{}\sb{\ell}}}
 \DeclareUnicodeCharacter{3B1}{$\alpha$}
 \DeclareUnicodeCharacter{3B2}{$\beta$}
 \DeclareUnicodeCharacter{3B3}{\ensuremath{\gamma}}
+\DeclareUnicodeCharacter{3B4}{\ensuremath{\delta}}
 \DeclareUnicodeCharacter{3B5}{\ensuremath{\varepsilon}}
+\DeclareUnicodeCharacter{3B6}{\ensuremath{\zeta}}
 \DeclareUnicodeCharacter{3BB}{$\lambda$}
 \DeclareUnicodeCharacter{3C3}{\ensuremath{\sigma}}
 \DeclareUnicodeCharacter{3C4}{\ensuremath{\tau}}
@@ -34,6 +59,9 @@
 \DeclareUnicodeCharacter{214B}{\ensuremath{\upand}}
 \DeclareUnicodeCharacter{2192}{\ensuremath{\to}}
 \DeclareUnicodeCharacter{21A6}{$\mapsto$}
+\DeclareUnicodeCharacter{21AA}{\ensuremath{\hookrightarrow}}
+\DeclareUnicodeCharacter{21C4}{\ensuremath{\rightleftarrows}}
+\DeclareUnicodeCharacter{21C6}{\ensuremath{\leftrightarrows}}
 \DeclareUnicodeCharacter{21CE}{\ensuremath{\not\Leftrightarrow}}
 \DeclareUnicodeCharacter{21D2}{$\Rightarrow$}
 \DeclareUnicodeCharacter{21D4}{$\Leftrightarrow$}
@@ -49,6 +77,11 @@
 \DeclareUnicodeCharacter{221E}{\ensuremath{\infty}}
 \DeclareUnicodeCharacter{222B}{\ensuremath{\int}}
 \DeclareUnicodeCharacter{226A}{\ensuremath{\ll}}
+\DeclareUnicodeCharacter{226B}{\ensuremath{\gg}}
+\DeclareUnicodeCharacter{22D9}{\ensuremath{\ggg}}
+% HOL's pretty-printer uses ₊ as a subscript suffix on the unsigned
+% word comparisons (<+, >+, <=+, >=+) → <₊, >₊, ≤₊, ≥₊.
+\DeclareUnicodeCharacter{208A}{\ensuremath{{}_+}}
 \DeclareUnicodeCharacter{2217}{\ensuremath{*}}
 \DeclareUnicodeCharacter{2218}{\ensuremath{\circ}}
 \DeclareUnicodeCharacter{2227}{$\land$}
