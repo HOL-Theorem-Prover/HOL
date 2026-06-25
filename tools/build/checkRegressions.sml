@@ -63,11 +63,15 @@ fun same_path (p, q) =
   let val canon = OS.Path.mkCanonical
   in canon p = canon q end
 
-(* Up to N most-recently-modified ordinary files in `logdir`, excluding
-   `latest`.  Returned newest-first as (path, mtime) pairs. *)
-fun prior_logs {logdir, latest, n} =
+(* Up to N most-recently-modified ordinary files in `logdir` whose names
+   end in `-{kernel}`, excluding `latest`.  Returned newest-first as
+   (path, mtime) pairs.  The kernel suffix ensures baselines are only
+   drawn from logs produced by the same kernel as the current run;
+   timings across kernels are not comparable. *)
+fun prior_logs {logdir, latest, kernel, n} =
   let
     open OS.FileSys
+    val suffix = "-" ^ kernel
     val dstrm = openDir logdir
     fun harvest acc =
       case readDir dstrm of
@@ -76,7 +80,8 @@ fun prior_logs {logdir, latest, n} =
             let
               val full = OS.Path.concat (logdir, f)
             in
-              if same_path (full, latest) then harvest acc
+              if not (String.isSuffix suffix f) then harvest acc
+              else if same_path (full, latest) then harvest acc
               else if not (access (full, [A_READ])) orelse isDir full
                 then harvest acc
                 else harvest ((full, modTime full) :: acc)
@@ -206,10 +211,10 @@ fun report_total NONE = ()
              fmt2 sum_new ^ "s (+" ^ fmt2 delta ^ "s, +" ^
              fmt_pct ratio ^ ")\n")
 
-fun run {logdir, latest} =
+fun run {logdir, latest, kernel} =
   let
     val priors = prior_logs {logdir = logdir, latest = latest,
-                             n = baseline_window}
+                             kernel = kernel, n = baseline_window}
   in
     if null priors then ()
     else

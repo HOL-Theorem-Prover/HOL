@@ -315,6 +315,17 @@ fun write_kernelid s =
     TextIO.closeOut strm
   end handle IO.Io _ => die "Couldn't write kernelid to HOLDIR"
 
+fun read_kernelid () =
+  let
+    val strm = TextIO.openIn Holmake_tools.kernelid_fname
+    val s = case TextIO.inputLine strm of
+                NONE => ""
+              | SOME s => hd (String.tokens Char.isSpace s)
+                          handle Empty => ""
+  in
+    s before TextIO.closeIn strm
+  end handle IO.Io _ => ""
+
 fun cline_die s = die ("Command line option error: " ^ s)
 fun apply_updates l t =
   case l of
@@ -1361,11 +1372,13 @@ in
     if buildok then let
         open Date
         val timestamp = fmt "%Y-%m-%dT%H%M" (fromTimeLocal (Time.now()))
-        val newname = hostname^timestamp
+        val knl = read_kernelid ()
+        val knl_suffix = if knl = "" then "" else "-" ^ knl
+        val newname = hostname^timestamp^knl_suffix
         val newpath = fullPath [logdir, newname]
       in
         HOLFileSys.rename {old = logfilename, new = newpath};
-        checkRegressions.run {logdir = logdir, latest = newpath}
+        checkRegressions.run {logdir = logdir, latest = newpath, kernel = knl}
       end
     else safedelete logfilename
   else ()
