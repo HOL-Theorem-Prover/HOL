@@ -57,6 +57,17 @@ table td {
   display: none;
 }
 
+/* mdbook's general.css centres tables at their natural pulldown-cmark
+   width, which is fine for the occasional table in prose but produces
+   ragged left/right edges when many small tables are stacked, as in
+   the Quick reference's quickref.md.  Stretch each table to the full
+   content width so both column edges line up across the page. */
+body.hol-book-quick main table {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
 /* Polyscripter REPL interactions in the .smd sources are tagged as
    ```repl, which pulldown-cmark emits as <pre><code class="language-repl">.
    The HTML counterpart of the LaTeX `session` box: a left bar +
