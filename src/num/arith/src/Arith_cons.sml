@@ -58,7 +58,7 @@ and is_mult  = numSyntax.is_mult
 (*===========================================================================*)
 
 (*---------------------------------------------------------------------------*)
-(* mk_less, mk_leq, mk_greater, mk_geq                                         *)
+(* mk_less, mk_leq, mk_greater, mk_geq                                       *)
 (*---------------------------------------------------------------------------*)
 
 val mk_less  = numSyntax.mk_less
@@ -67,7 +67,7 @@ and mk_greater = numSyntax.mk_greater
 and mk_geq   = numSyntax.mk_geq
 
 (*---------------------------------------------------------------------------*)
-(* dest_less, dest_leq, dest_greater, dest_geq                                 *)
+(* dest_less, dest_leq, dest_greater, dest_geq                               *)
 (*---------------------------------------------------------------------------*)
 
 val dest_less  = numSyntax.dest_less
@@ -76,7 +76,7 @@ and dest_greater = numSyntax.dest_greater
 and dest_geq   = numSyntax.dest_geq
 
 (*---------------------------------------------------------------------------*)
-(* is_less, is_leq, is_greater, is_geq, is_num_reln                            *)
+(* is_less, is_leq, is_greater, is_geq, is_num_reln                          *)
 (*---------------------------------------------------------------------------*)
 
 val is_less  = numSyntax.is_less

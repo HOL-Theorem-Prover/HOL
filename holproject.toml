@@ -27,3 +27,8 @@ linelen = 0
 path = "src/coretypes"
 unicode_ok = true
 linelen = 80
+
+[[h4pedant.dir]]
+path = "src/num"
+unicode_ok = true
+linelen = 80

@@ -166,7 +166,7 @@ val _ = add_rule {fixity = Suffix 2100,
                   pp_elements = [TOK UnicodeChars.sup_2]};
 
 val _ = overload_on (UnicodeChars.sup_2, “\x. x ** 2”);
-val _ = TeX_notation {hol = UnicodeChars.sup_2, TeX = ("\\HOLTokenSupTwo{}", 1)};
+val _ = TeX_notation{hol = UnicodeChars.sup_2, TeX = ("\\HOLTokenSupTwo{}", 1)};
 
 val _ = add_rule {fixity = Suffix 2100,
                   term_name = UnicodeChars.sup_3,
@@ -175,7 +175,7 @@ val _ = add_rule {fixity = Suffix 2100,
                   pp_elements = [TOK UnicodeChars.sup_3]};
 
 val _ = overload_on (UnicodeChars.sup_3, “\x. x ** 3”);
-val _ = TeX_notation {hol = UnicodeChars.sup_3, TeX = ("\\HOLTokenSupThree{}", 1)};
+val _ = TeX_notation{hol = UnicodeChars.sup_3, TeX= ("\\HOLTokenSupThree{}",1)};
 
 val GREATER_DEF = new_definition("GREATER_DEF", “$> m n <=> n < m”)
 val _ = set_fixity ">" (Infix(NONASSOC, 450))
@@ -3236,15 +3236,15 @@ QED
 Theorem MOD_EQ_0_DIVISOR:
  0 < n ==> ((k MOD n = 0) = (?d. k = d * n))
 Proof
-DISCH_TAC THEN
-EQ_TAC THEN1 (
-  DISCH_TAC THEN
-  EXISTS_TAC “k DIV n” THEN
-  MATCH_MP_TAC EQ_SYM THEN
-  SRW_TAC [][Once MULT_SYM] THEN
-  MATCH_MP_TAC (MP_CANON (DISCH_ALL (#2(EQ_IMP_RULE (UNDISCH MULT_EQ_DIV))))) THEN
-  SRW_TAC [][] ) THEN
-SRW_TAC [][] THEN SRW_TAC [][MOD_EQ_0]
+  DISCH_TAC >> EQ_TAC
+  >- (DISCH_TAC >>
+      EXISTS_TAC “k DIV n” >>
+      MATCH_MP_TAC EQ_SYM >>
+      SRW_TAC [][Once MULT_SYM] >>
+      MATCH_MP_TAC
+        (MP_CANON (DISCH_ALL (#2(EQ_IMP_RULE (UNDISCH MULT_EQ_DIV))))) >>
+      SRW_TAC [][] ) >>
+  SRW_TAC [][] THEN SRW_TAC [][MOD_EQ_0]
 QED
 
 Theorem MOD_SUC:
@@ -5167,14 +5167,14 @@ QED
 Theorem MODEQ_PLUS_CONG:
    MODEQ n x0 x1 ==> MODEQ n y0 y1 ==> MODEQ n (x0 + y0) (x1 + y1)
 Proof
-  Q.ID_SPEC_TAC `n` THEN SIMP_TAC (srw_ss() ++ DNF_ss)[MODEQ_THM, LESS_REFL] THEN
+  Q.ID_SPEC_TAC `n` THEN SIMP_TAC (srw_ss() ++ DNF_ss)[MODEQ_THM, LESS_REFL] >>
   SRW_TAC [][Once (GSYM MOD_PLUS)] THEN SRW_TAC [][MOD_PLUS]
 QED
 
 Theorem MODEQ_MULT_CONG:
    MODEQ n x0 x1 ==> MODEQ n y0 y1 ==> MODEQ n (x0 * y0) (x1 * y1)
 Proof
-  Q.ID_SPEC_TAC `n` THEN SIMP_TAC (srw_ss() ++ DNF_ss)[MODEQ_THM, LESS_REFL] THEN
+  Q.ID_SPEC_TAC `n` THEN SIMP_TAC (srw_ss() ++ DNF_ss)[MODEQ_THM, LESS_REFL] >>
   SRW_TAC [][Once (GSYM MOD_TIMES2)] THEN SRW_TAC [][MOD_TIMES2]
 QED
 
@@ -5204,7 +5204,10 @@ QED
        (a MOD n) ** 0 MOD n
      = 1 MOD n              by EXP
      = a ** 0 MOD n         by EXP
-   Step case: (a MOD n) ** m MOD n = a ** m MOD n ==> (a MOD n) ** SUC m MOD n = a ** SUC m MOD n
+   Step case:
+     (a MOD n) ** m MOD n = a ** m MOD n ==>
+     (a MOD n) ** SUC m MOD n = a ** SUC m MOD n
+
        (a MOD n) ** SUC m MOD n
      = ((a MOD n) * (a MOD n) ** m) MOD n             by EXP
      = ((a MOD n) * (((a MOD n) ** m) MOD n)) MOD n   by MOD_TIMES2, MOD_MOD
@@ -5221,7 +5224,8 @@ Proof
   Induct_on `m` >-
   rw[EXP] >>
   `(a MOD n) ** SUC m MOD n = ((a MOD n) * (a MOD n) ** m) MOD n` by rw[EXP] >>
-  `_ = ((a MOD n) * (((a MOD n) ** m) MOD n)) MOD n` by metis_tac[MOD_TIMES2, MOD_MOD] >>
+  `_ = ((a MOD n) * (((a MOD n) ** m) MOD n)) MOD n`
+    by metis_tac[MOD_TIMES2, MOD_MOD] >>
   `_ = ((a MOD n) * (a ** m MOD n)) MOD n` by rw[] >>
   `_ = (a * a ** m) MOD n` by rw[MOD_TIMES2] >>
   rw[EXP]
@@ -5398,7 +5402,8 @@ Proof
   \\ rpt strip_tac
   \\ drule_then (Q.SPEC_THEN ‘n’ mp_tac) DIVISION
   \\ strip_tac
-  \\ PAT_X_ASSUM “n = _:num” (fn th => CONV_TAC (RATOR_CONV (SIMP_CONV bool_ss [Once th])))
+  \\ PAT_X_ASSUM “n = _:num”
+                 (fn th => CONV_TAC (RATOR_CONV (SIMP_CONV bool_ss [Once th])))
   \\ rewrite_tac [GSYM ADD_ASSOC]
   \\ imp_res_tac ADD_DIV_ADD_DIV
   \\ asm_rewrite_tac [EQ_ADD_LCANCEL]
@@ -5645,7 +5650,7 @@ QED
    = (x MOD n + y MOD n + z MOD n) MOD n           by MOD_MOD
 *)
 Theorem MOD_PLUS3:
-    !n. 0 < n ==> !x y z. (x + y + z) MOD n = (x MOD n + y MOD n + z MOD n) MOD n
+  !n. 0 < n ==> !x y z. (x + y + z) MOD n = (x MOD n + y MOD n + z MOD n) MOD n
 Proof
   metis_tac[MOD_PLUS, MOD_MOD]
 QED
@@ -5712,9 +5717,10 @@ QED
    = 0                                  by MOD_EQ_0
 *)
 Theorem MOD_ADD_INV:
-    !n x. 0 < n /\ x < n ==> (((n - x) MOD n + x) MOD n = 0)
+  !n x. 0 < n /\ x < n ==> (((n - x) MOD n + x) MOD n = 0)
 Proof
-  metis_tac[LESS_MOD, MOD_PLUS, SUB_ADD, LESS_IMP_LESS_OR_EQ, MOD_EQ_0, MULT_LEFT_1]
+  metis_tac[LESS_MOD, MOD_PLUS, SUB_ADD, LESS_IMP_LESS_OR_EQ, MOD_EQ_0,
+            MULT_LEFT_1]
 QED
 
 (* Theorem: n < m ==> ((n MOD m = 0) <=> (n = 0)) *)

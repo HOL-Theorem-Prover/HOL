@@ -278,7 +278,8 @@ fun SEMIRING_NORMALIZERS_CORE
                                     rx_tm |-> rx, ry_tm |-> ry] pthm_15
                     val (tm1,tm2) = dest_comb(rand(concl th1))
                     val (tm3,tm4) = dest_comb tm1
-                    val th2 = AP_THM (AP_TERM tm3 (QCONV POWVAR_MUL_CONV tm4)) tm2
+                    val th2 = AP_THM (AP_TERM tm3 (QCONV POWVAR_MUL_CONV tm4))
+                                     tm2
                     val th3 = TRANS th1 th2
                     val (tm5,tm6) = dest_comb(rand(concl th3))
                     val (tm7,tm8) = dest_comb tm6
@@ -299,14 +300,18 @@ fun SEMIRING_NORMALIZERS_CORE
                (let val vr = powvar r
                     val ord = vorder vl vr in
                 if ord = 0 then
-                  let val th1 = INST [lx_tm |-> lx, ly_tm |-> ly, rx_tm |-> r] pthm_18
+                  let val th1 = INST [lx_tm |-> lx, ly_tm |-> ly, rx_tm |-> r]
+                                     pthm_18
                       val (tm1,tm2) = dest_comb(rand(concl th1))
                       val (tm3,tm4) = dest_comb tm1
-                      val th2 = AP_THM (AP_TERM tm3 (QCONV POWVAR_MUL_CONV tm4)) tm2 in
+                      val th2 = AP_THM (AP_TERM tm3 (QCONV POWVAR_MUL_CONV tm4))
+                                       tm2
+                  in
                     TRANS th1 th2
                   end
                 else if ord < 0 then
-                  let val th1 = INST [lx_tm |-> lx, ly_tm |-> ly, rx_tm |-> r] pthm_19
+                  let val th1 = INST [lx_tm |-> lx, ly_tm |-> ly, rx_tm |-> r]
+                                     pthm_19
                       val (tm1,tm2) = dest_comb(rand(concl th1))
                       val (tm3,tm4) = dest_comb tm2 in
                     TRANS th1 (AP_TERM tm1 (MONOMIAL_MUL tm2 (rand tm3) tm4))
@@ -321,7 +326,8 @@ fun SEMIRING_NORMALIZERS_CORE
                  val ord = vorder vl vr
              in
                 if ord = 0 then
-                  let val th1 = INST [lx_tm |-> l, rx_tm |-> rx, ry_tm |-> ry] pthm_21
+                  let val th1 = INST [lx_tm |-> l, rx_tm |-> rx, ry_tm |-> ry]
+                                     pthm_21
                       val (tm1,tm2) = dest_comb(rand(concl th1))
                       val (tm3,tm4) = dest_comb tm1
                       val th2 = QCONV POWVAR_MUL_CONV tm4
@@ -329,7 +335,8 @@ fun SEMIRING_NORMALIZERS_CORE
                     TRANS th1 (AP_THM (AP_TERM tm3 th2) tm2)
                   end
                 else if ord > 0 then
-                  let val th1 = INST [lx_tm |-> l, rx_tm |-> rx, ry_tm |-> ry] pthm_22
+                  let val th1 = INST [lx_tm |-> l, rx_tm |-> rx, ry_tm |-> ry]
+                                     pthm_22
                       val (tm1,tm2) = dest_comb(rand(concl th1))
                       val (tm3,tm4) = dest_comb tm2 in
                     TRANS th1 (AP_TERM tm1 (MONOMIAL_MUL tm2 (rand tm3) tm4))
@@ -395,7 +402,8 @@ fun SEMIRING_NORMALIZERS_CORE
       val th2 = AP_TERM tm3 (QCONV SEMIRING_ADD_CONV tm4)
       val th3 = TRANS th1 (AP_THM th2 tm2)
       val tm5 = rand(concl th3) in
-        if lhand tm5 ~~ zero_tm then TRANS th3 (INST [m_tm |-> rand tm5] pthm_06)
+        if lhand tm5 ~~ zero_tm then
+          TRANS th3 (INST [m_tm |-> rand tm5] pthm_06)
         else MONOMIAL_DEONE th3
       end
     end
@@ -465,8 +473,9 @@ fun SEMIRING_NORMALIZERS_CORE
             let val (c,d) = dest_add r
                 val ord = morder a c in
             if ord = 0 then
-              let val th1 = INST [a_tm |-> a, b_tm |-> b, c_tm |-> c, d_tm |-> d]
-                                 pthm_23
+              let val th1 =
+                      INST [a_tm |-> a, b_tm |-> b, c_tm |-> c, d_tm |-> d]
+                           pthm_23
                   val (tm1,tm2) = dest_comb(rand(concl th1))
                   val (tm3,tm4) = dest_comb tm1
                   val th2 = AP_TERM tm3 (MONOMIAL_ADD_CONV tm4) in
@@ -474,8 +483,9 @@ fun SEMIRING_NORMALIZERS_CORE
               end
             else
               let val th1 = if ord > 0 then
-                                INST [a_tm |-> a, b_tm |-> b, c_tm |-> r] pthm_24
-                            else INST [a_tm |-> l, c_tm |-> c, d_tm |-> d] pthm_25
+                              INST [a_tm |-> a, b_tm |-> b, c_tm |-> r] pthm_24
+                            else
+                              INST [a_tm |-> l, c_tm |-> c, d_tm |-> d] pthm_25
                   val (tm1,tm2) = dest_comb(rand(concl th1)) in
                 DEZERO_RULE (TRANS th1 (AP_TERM tm1 (PADD tm2)))
               end

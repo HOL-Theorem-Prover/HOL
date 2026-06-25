@@ -30,13 +30,15 @@ End
 Definition TIMES_2EXP_def[nocompute]:    TIMES_2EXP x n = n * 2 ** x
 End
 
-Definition DIVMOD_2EXP_def[nocompute]:   DIVMOD_2EXP x n = (n DIV 2 ** x,n MOD 2 ** x)
+Definition DIVMOD_2EXP_def[nocompute]:
+  DIVMOD_2EXP x n = (n DIV 2 ** x,n MOD 2 ** x)
 End
 
 Definition SBIT_def[nocompute]:    SBIT b n = if b then 2 ** n else 0
 End
 
-Definition BITS_def[nocompute]:    BITS h l n = MOD_2EXP (SUC h - l) (DIV_2EXP l n)
+Definition BITS_def[nocompute]:
+  BITS h l n = MOD_2EXP (SUC h - l) (DIV_2EXP l n)
 End
 
 Definition BITV_def[nocompute]:    BITV n b = BITS b b n
@@ -45,7 +47,8 @@ End
 Definition BIT_def[nocompute]:     BIT b n = (BITS b b n = 1)
 End
 
-Definition SLICE_def[nocompute]:   SLICE h l n = MOD_2EXP (SUC h) n - MOD_2EXP l n
+Definition SLICE_def[nocompute]:
+  SLICE h l n = MOD_2EXP (SUC h) n - MOD_2EXP l n
 End
 
 Definition LOG2_def[nocompute]:    LOG2 = LOG 2

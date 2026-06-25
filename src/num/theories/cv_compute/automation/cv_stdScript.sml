@@ -185,12 +185,14 @@ Proof
 QED
 
 val all_distinct =
-  ALL_DISTINCT |> DefnBase.one_line_ify NONE |> PURE_REWRITE_RULE [conj_eq_if,if_not]
+  ALL_DISTINCT |> DefnBase.one_line_ify NONE
+               |> PURE_REWRITE_RULE [conj_eq_if,if_not]
 
 val res = cv_trans all_distinct;
 
 val is_prefix =
-  isPREFIX |> DefnBase.one_line_ify NONE |> PURE_REWRITE_RULE [conj_eq_if,if_not]
+  isPREFIX |> DefnBase.one_line_ify NONE
+           |> PURE_REWRITE_RULE [conj_eq_if,if_not]
 
 val res = cv_trans is_prefix;
 
@@ -284,10 +286,10 @@ Theorem genlist_eq_GENLIST[cv_inline]:
   GENLIST = genlist 0
 Proof
   qsuff_tac ‘!i f n. genlist i f n = GENLIST (f o (λk. k + i)) n’
-  >- (gvs [FUN_EQ_THM] \\ rw [] \\ AP_THM_TAC \\ AP_TERM_TAC \\ gvs [FUN_EQ_THM])
+  >- (gvs [FUN_EQ_THM] \\ rw [] \\ AP_THM_TAC \\ AP_TERM_TAC \\ gvs[FUN_EQ_THM])
   \\ Induct_on ‘n’ \\ gvs [genlist_def]
   \\ rewrite_tac [listTheory.GENLIST_CONS] \\ gvs []
-  \\ rw [] \\ AP_THM_TAC \\ AP_TERM_TAC \\ gvs [FUN_EQ_THM,arithmeticTheory.ADD1]
+  \\ rw [] \\ AP_THM_TAC \\ AP_TERM_TAC \\ gvs[FUN_EQ_THM,arithmeticTheory.ADD1]
 QED
 
 Definition count_loop_def:
@@ -412,7 +414,8 @@ Proof
 QED
 
 val res = cv_trans
-  (sptreeTheory.toAList_def |> REWRITE_RULE [GSYM toAList_foldi_def,FUN_EQ_THM]);
+  (sptreeTheory.toAList_def
+     |> REWRITE_RULE [GSYM toAList_foldi_def,FUN_EQ_THM]);
 
 Definition cv_right_depth_def:
   cv_right_depth (Num _) = 0:num /\
@@ -459,15 +462,17 @@ QED
 Theorem cv_rep_FLOOKUP[cv_rep]:
   from_option f (FLOOKUP m n) = cv_lookup (Num n) (from_fmap f m)
 Proof
-  gvs [from_fmap_def,GSYM $ fetch "-" "cv_lookup_thm",sptreeTheory.lookup_fromAList]
+  gvs [from_fmap_def,GSYM $ fetch "-" "cv_lookup_thm",
+       sptreeTheory.lookup_fromAList]
 QED
 
 Theorem cv_rep_FUPDATE[cv_rep]:
   from_fmap f (m |+ (k,v)) = cv_insert (Num k) (f v) (from_fmap f m)
 Proof
   gvs [from_fmap_def,GSYM $ fetch "-" "cv_insert_thm"] \\ AP_TERM_TAC
-  \\ dep_rewrite.DEP_REWRITE_TAC [sptreeTheory.spt_eq_thm,sptreeTheory.wf_insert]
-  \\ gvs [wf_fromAList,lookup_insert,lookup_fromAList,finite_mapTheory.FLOOKUP_SIMP]
+  \\ dep_rewrite.DEP_REWRITE_TAC[sptreeTheory.spt_eq_thm,sptreeTheory.wf_insert]
+  \\ gvs [wf_fromAList,lookup_insert,lookup_fromAList,
+          finite_mapTheory.FLOOKUP_SIMP]
   \\ rw []
 QED
 
@@ -647,7 +652,8 @@ val _ = cv_trans num_of_bytes_def;
 val _ = cv_trans bytes_of_num_def;
 val _ = cv_trans be_bytes_def;
 
-(* Theorem connecting word_of_bytes (little-endian, starting at 0w) to num_of_bytes.
+(* Theorem connecting word_of_bytes (little-endian, starting at 0w) to
+   num_of_bytes.
    This can be instantiated at any word type and then cv_trans'd. *)
 Theorem word_of_bytes_le_eq_num_of_bytes:
   8 ≤ dimindex(:'a) ∧ divides 8 (dimindex(:'a)) ⇒
@@ -684,7 +690,8 @@ Proof
   \\ rw[] \\ gvs[]
 QED
 
-(* Theorem connecting word_of_bytes (big-endian, starting at 0w) to num_of_bytes via be_bytes *)
+(* Theorem connecting word_of_bytes (big-endian, starting at 0w) to num_of_bytes
+   via be_bytes *)
 Theorem word_of_bytes_be_eq_num_of_bytes:
   8 ≤ dimindex(:'a) ∧ divides 8 (dimindex (:'a)) ⇒
   word_of_bytes_be bs =
@@ -707,7 +714,8 @@ Proof
       \\ simp[EXP_EXP_MULT] )
   \\ simp[]
   \\ qmatch_goalsub_abbrev_tac `x MOD _ DIV _`
-  \\ qspecl_then[`x`,`256 ** (k - 1 - j)`,`256 ** (j + 1)`]mp_tac DIV_MOD_MOD_DIV
+  \\ qspecl_then[`x`,`256 ** (k - 1 - j)`,`256 ** (j + 1)`] mp_tac
+                DIV_MOD_MOD_DIV
   \\ impl_tac >- rw[]
   \\ simp[GSYM EXP_ADD]
   \\ disch_then $ SUBST_ALL_TAC o SYM
@@ -718,7 +726,8 @@ Proof
   \\ simp[GSYM EXP, ADD1]
   \\ disch_then kall_tac
   \\ simp[Abbr`x`, num_of_bytes_DIV_EXP_MOD, LENGTH_be_bytes]
-  \\ simp[be_bytes_thm, EL_REVERSE, LENGTH_TAKE_EQ, EL_TAKE, EL_APPEND_EQN, EL_REPLICATE]
+  \\ simp[be_bytes_thm, EL_REVERSE, LENGTH_TAKE_EQ, EL_TAKE, EL_APPEND_EQN,
+          EL_REPLICATE]
   \\ rw[] \\ gvs[PRE_SUB1]
 QED
 

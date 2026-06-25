@@ -56,7 +56,8 @@ local
   val one_size_info = (one_size_tm,TypeBasePure.ORIG one_size_def)
   val ty = mk_vartype "'type"
   val tm = mk_vartype "'term"
-  val lift_one_var = mk_var("oneSyntax.lift_one", ty --> oneSyntax.one_ty --> tm)
+  val lift_one_var =
+      mk_var("oneSyntax.lift_one", ty --> oneSyntax.one_ty --> tm)
   val one_info' =
       one_info
          |> TypeBasePure.put_size one_size_info

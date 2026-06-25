@@ -60,7 +60,8 @@ fun tm_to_cv hyps tm = let
       SOME th =>
        (if not (is_imp (concl th)) then th else
         let
-          val th = th |> CONV_RULE ((RATOR_CONV o RAND_CONV) (DEPTH_CONV BETA_CONV))
+          val th =
+              th |> CONV_RULE ((RATOR_CONV o RAND_CONV) (DEPTH_CONV BETA_CONV))
           val (l,r) = dest_imp (concl th)
           val xs = strip_conj l
           (*
@@ -76,17 +77,20 @@ fun tm_to_cv hyps tm = let
             else let
               val (vs,t) = strip_forall x
               val th1 = tm_to_cv_debug (tm::stack) hyps (rand t)
-              val args = t |> rator |> rator |> rand |> strip_comb |> snd |> map rand
-              val cv_args = args |> map (fn tm => mk_comb(from_for (type_of tm),tm))
+              val args =
+                  t |> rator |> rator |> rand |> strip_comb |> snd |> map rand
+              val cv_args =
+                  args |> map (fn tm => mk_comb(from_for (type_of tm),tm))
               fun LIST_UNBETA_CONV [] = ALL_CONV
                 | LIST_UNBETA_CONV xs =
                     UNBETA_CONV (last xs) THENC
                     RATOR_CONV (LIST_UNBETA_CONV (butlast xs))
-              val th2 = th1 |> CONV_RULE
-                                 ((RATOR_CONV o RATOR_CONV o RAND_CONV)
-                                     (LIST_UNBETA_CONV cv_args) THENC
-                                  (RATOR_CONV o RATOR_CONV o RATOR_CONV o RAND_CONV)
-                                     (LIST_UNBETA_CONV args))
+              val th2 =
+                  th1 |> CONV_RULE
+                           ((RATOR_CONV o RATOR_CONV o RAND_CONV)
+                              (LIST_UNBETA_CONV cv_args) THENC
+                            (RATOR_CONV o RATOR_CONV o RATOR_CONV o RAND_CONV)
+                              (LIST_UNBETA_CONV args))
               in GENL vs th2 end
           val thms = map inst_assum xs
           val lemma = LIST_CONJ thms
@@ -160,10 +164,14 @@ fun cv_rep_for hyps tm = let
         in (pat::pats,rest) end handle HOL_ERR _ => ([],tm)
       val (pats,rest) = list_dest_pabs tm
       val new_v = numvariant (free_vars rest)
-      val vs = mapi (fn i => fn v => if is_var v then (v,v)
-                                     else (v,new_v (mk_var("p_" ^ int_to_string i,type_of v)))) pats
+      val vs = mapi (fn i => fn v =>
+                        if is_var v then (v,v)
+                        else (v,new_v(mk_var("p_" ^ Int.toString i,type_of v))))
+                    pats
       fun mk_pair_case x v1 v2 rhs = let
-        val pat_ty = pairSyntax.pair_case_tm |> type_of |> dest_type |> snd |> tl |> hd |> dest_type |> snd |> hd
+        val pat_ty = pairSyntax.pair_case_tm
+                       |> type_of |> dest_type |> snd
+                       |> tl |> hd |> dest_type |> snd |> hd
         val f_tm = mk_abs(v1,mk_abs(v2,rhs))
         val i = match_type pat_ty (type_of f_tm)
         val right_pair_case  = inst i pairSyntax.pair_case_tm
@@ -177,14 +185,16 @@ fun cv_rep_for hyps tm = let
              val case_tm = mk_tuple_case gv v2 rhs
              in mk_pair_case x v1 gv case_tm end end
       fun create [] rest = rest
-        | create ((pat,x)::pats) rest = if is_var pat then create pats rest else let
+        | create ((pat,x)::pats) rest = if is_var pat then create pats rest
+                                        else let
             val fixed_tm = create pats rest
             in mk_tuple_case x pat fixed_tm end
       val fixed_tm = create vs rest
       val new_tm = list_mk_abs(map snd vs,fixed_tm)
       val goal = mk_eq(tm,new_tm)
       val lemma = TAC_PROOF(([],goal),
-        simp_tac std_ss [FUN_EQ_THM,pairTheory.FORALL_PROD,pairTheory.pair_CASE_def])
+        simp_tac std_ss [FUN_EQ_THM,pairTheory.FORALL_PROD,
+                         pairTheory.pair_CASE_def])
       in (REWR_CONV lemma THENC ABS_CONV fix_lam_pairs_conv) tm end else fail())
     handle HOL_ERR _ =>
       if is_var tm orelse is_const tm then ALL_CONV tm else

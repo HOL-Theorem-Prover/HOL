@@ -95,7 +95,8 @@ fun formulate_cv_rep th =
     val th4 = th3 |> CONV_RULE (cv_rep_cv_tm_conv BETA_CONV)
     in lift_each vs th4 end
   val th7 = lift_each joint th1
-  val th8 = th7 |> DISCH_ALL |> PURE_REWRITE_RULE [AND_IMP_INTRO,GSYM CONJ_ASSOC]
+  val th8 = th7 |> DISCH_ALL
+                |> PURE_REWRITE_RULE [AND_IMP_INTRO,GSYM CONJ_ASSOC]
   in th8 end;
 
 fun formulate_cv_reps th = let
@@ -105,7 +106,8 @@ fun formulate_cv_reps th = let
 fun show_cv_rep cv_rep_th = let
   val pat = cv_rep_th |> UNDISCH_ALL |> concl |> rand
   val s = map (fn v => v |-> mk_var("_",type_of v)) (free_vars pat)
-  val _ = (cv_print Verbose "Able to translate: "; cv_print_term Verbose (subst s pat))
+  val _ = (cv_print Verbose "Able to translate: ";
+           cv_print_term Verbose (subst s pat))
   in (pat, cv_rep_th) end
 
 fun prepare th = let
@@ -129,12 +131,14 @@ fun insert_cv_inline th = (
   cv_print Verbose "\ncv_inline:\n\n";
   cv_print_thm Verbose th;
   cv_print Verbose "\n\n"; [th])
-val (cv_inline_thms, cv_inline_add) = register_ThmSetData_list "cv_inline" insert_cv_inline;
+val (cv_inline_thms, cv_inline_add) =
+    register_ThmSetData_list "cv_inline" insert_cv_inline;
 
 fun insert_cv_from_to th = (
   cv_print Verbose "\ncv_from_to:\n\n";
   cv_print_thm Verbose th;
   cv_print Verbose "\n\n"; [th])
-val (cv_from_to_thms, cv_from_to_add) = register_ThmSetData_list "cv_from_to" insert_cv_from_to;
+val (cv_from_to_thms, cv_from_to_add) =
+    register_ThmSetData_list "cv_from_to" insert_cv_from_to;
 
 end
