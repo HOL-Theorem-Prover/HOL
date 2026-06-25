@@ -1931,13 +1931,27 @@ fun diag_built_graph targets depgraph =
       );
      diag "core" (fn _ => "Dep.graph =\n" ^ HM_DepGraph.toString depgraph))
 
+(* A theory_dat sibling group (same dir, same BIC_BuildScript command)
+   is bumped as a unit when its script runs, so count any theory_dat in
+   a group with a needed member -- not just theory_dats mkneeded itself
+   reached.  Otherwise side-effect theory_dats from starred-dep rules
+   that use a `Theory T` script as a code generator (EmitML pattern)
+   bump theories_built past the announced total. *)
 fun count_needed_theories depgraph =
-    HM_DepGraph.fold
-      (fn (_, nI) => fn n =>
-          if HM_DepGraph.is_theory_dat_node nI andalso
-             #status nI = Pending {needed=true}
-          then n + 1 else n)
-      depgraph 0
+    let
+      fun group_has_needed nI =
+          List.exists
+            (fn n => #status (valOf (HM_DepGraph.peeknode depgraph n))
+                       = Pending {needed=true})
+            (HM_DepGraph.find_nodes_by_command depgraph
+                                               (#dir nI, #command nI))
+    in
+      HM_DepGraph.fold
+        (fn (_, nI) => fn n =>
+            if HM_DepGraph.is_theory_dat_node nI andalso group_has_needed nI
+            then n + 1 else n)
+        depgraph 0
+    end
 
 fun dispatch_built_graph depgraph =
     if cline_nobuild then
