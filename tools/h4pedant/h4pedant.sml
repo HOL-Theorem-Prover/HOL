@@ -347,11 +347,19 @@ fun main() =
     val cfg_opt = h4pedantConfig.load { start = OS.FileSys.getDir() }
                   handle Fail msg => die ("holproject.toml: " ^ msg)
     val opts = updateT cli_opts (U #config_opt cfg_opt) $$
+    (* Symlink-resolve scan_dirs so prefix comparison against config
+       paths (which are themselves symlink-resolved via the upward
+       walk from `OS.FileSys.getDir`) actually matches.  On macOS
+       `/var/tmp` and `/private/var/tmp` would otherwise look like
+       different subtrees. *)
+    fun resolve p = OS.FileSys.fullPath p
+                    handle OS.SysErr _ => p
     val scan_dirs =
-        if not (null args) then args
-        else case cfg_opt of
-                 SOME cfg => [#root cfg]
-               | NONE => [OS.FileSys.getDir()]
+        List.map resolve
+          (if not (null args) then args
+           else case cfg_opt of
+                    SOME cfg => [#root cfg]
+                  | NONE => [OS.FileSys.getDir()])
   in
     if #help opts then succeed (usage_str())
     else
