@@ -1,0 +1,17 @@
+OPTIONS = NO_OVERLAY
+EXTRA_CLEANS = h4pedant
+
+.PHONY: all
+all: h4pedant
+
+ifdef POLY
+
+h4pedant: poly-h4pedant.ML h4pedant.sml
+	$(POLYC) $< -o $@
+
+else
+
+h4pedant: h4pedant_mosml.uo h4pedant.uo
+	$(MOSMLC) -o $@ $<
+
+endif
