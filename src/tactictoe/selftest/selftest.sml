@@ -65,7 +65,8 @@ val _ = check "TacticToe recording API type-checks"
      val _ : unit -> unit = ttt_clean_record
      val _ : unit -> unit = ttt_clean_savestate
      val _ : unit -> unit = ttt_record_savestate
-     val _ : record_option list -> unit = ttt_record_incremental_opts
+     val _ : record_option list -> unit = ttt_record_opts
+     val _ : record_config -> unit = ttt_record_cfg
      val _ : record_scope ->
        {stale : (string * reason) list, up_to_date : string list,
         out_of_scope_ancestors : string list} = ttt_record_plan
@@ -114,10 +115,10 @@ val _ =
 val plan0 = ttt_record_plan (Theories ["ConseqConv"])
 val covered0 = map fst (#stale plan0) @ #up_to_date plan0
 
-val _ = check "incremental record plan covers ConseqConv"
+val _ = check "record plan covers ConseqConv"
   (List.exists (fn thy => thy = "ConseqConv") covered0)
 
-val _ = check "incremental record plan has non-empty scope"
+val _ = check "record plan has non-empty scope"
   (not (null covered0))
 
 val _ = check "manifest version matches tactic-data format"
@@ -135,8 +136,8 @@ val _ = check "sha256_string is deterministic"
      h1 = h2 andalso h1 <> h3 andalso size h1 = 64
    end)
 
-val _ = passok "incrementally record ConseqConv tactic data"
-  (fn () => ttt_record_incremental_opts [Scope (Theories ["ConseqConv"])])
+val _ = passok "record ConseqConv tactic data"
+  (fn () => ttt_record_opts [Scope (Theories ["ConseqConv"])])
 
 val _ = check "ConseqConv tactic data exists"
   (mlTacticData.exists_tacdata_thy "ConseqConv" andalso
@@ -145,12 +146,12 @@ val _ = check "ConseqConv tactic data exists"
 val _ = check "ConseqConv tactic data is non-empty"
   (Position.toInt (OS.FileSys.fileSize datafile) > 0)
 
-val _ = passok "incremental dry-run over ConseqConv"
-  (fn () => ttt_record_incremental_opts
+val _ = passok "record dry-run over ConseqConv"
+  (fn () => ttt_record_opts
     [Scope (Theories ["ConseqConv"]), DryRun true])
 
-val _ = passok "forced incremental dry-run over ConseqConv"
-  (fn () => ttt_record_incremental_opts
+val _ = passok "forced record dry-run over ConseqConv"
+  (fn () => ttt_record_opts
     [Scope (Theories ["ConseqConv"]), Force true, DryRun true])
 
 open metisTools ConseqConvTheory
@@ -239,11 +240,11 @@ fun proves_by msg tm tac =
 
 val proof_theories = ["arithmetic", "divides", "gcd"]
 
-val _ = passok "incrementally record proof.sml tactic data"
-  (fn () => ttt_record_incremental_opts [Scope (Theories proof_theories)])
+val _ = passok "record proof.sml tactic data"
+  (fn () => ttt_record_opts [Scope (Theories proof_theories)])
 
 val _ = passok "proof.sml data is up-to-date after recording"
-  (fn () => ttt_record_incremental_opts
+  (fn () => ttt_record_opts
     [Scope (Theories proof_theories), DryRun true])
 
 val _ = clean_ttt_tacdata_cache ()
@@ -278,8 +279,8 @@ open listTheory rich_listTheory
 
 val demo_theories = ["arithmetic", "list", "rich_list", "indexedLists"]
 
-val _ = passok "incrementally record ttt_demo tactic data"
-  (fn () => ttt_record_incremental_opts [Scope (Theories demo_theories)])
+val _ = passok "record ttt_demo tactic data"
+  (fn () => ttt_record_opts [Scope (Theories demo_theories)])
 
 val _ = clean_ttt_tacdata_cache ()
 val _ = set_timeout 30.0

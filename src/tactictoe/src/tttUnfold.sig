@@ -53,9 +53,8 @@ sig
       src_hashes : (string * string) list, recorded_stale : string list }
 
   val default_record_config : record_config
-  val ttt_record_incremental : unit -> unit
-  val ttt_record_incremental_opts : record_option list -> unit
-  val ttt_record_incremental_cfg : record_config -> unit
+  val ttt_record_opts : record_option list -> unit
+  val ttt_record_cfg : record_config -> unit
   val ttt_record_plan : record_scope ->
     {stale : (string * reason) list, up_to_date : string list,
      out_of_scope_ancestors : string list}
@@ -63,8 +62,8 @@ sig
   val manifest_format_version : int
 
   (* Internal support for external parallel workers. *)
-  val incremental_parallel_dir : string ref
-  val incremental_record_extspec : unit ->
+  val record_parallel_dir : string ref
+  val record_extspec : unit ->
     (record_worker_param,string,string) smlParallel.extspec
 
   (* creating savestates before each proof

@@ -33,8 +33,8 @@
    ttt_record () skips a theory whose recording raises, logs it, and
    continues with the rest, so a single un-recordable theory (e.g.
    pred_set, which the TacticToe rewriter mishandles) no longer aborts
-   the whole run.  Incremental re-runs also just work: already-recorded
-   theories are skipped, and a theory that can't be recorded is retried
+   the whole run.  Re-runs use the manifest to skip up-to-date theories
+   and re-record stale ones; a theory that can't be recorded is retried
    and skipped again.
 
    Prerequisites
@@ -50,8 +50,9 @@
 
    ttt_clean_record () is called first, so any previously recorded (or
    downloaded) data in the TacticToe cache is wiped before recording
-   afresh.  Comment out the ttt_clean_record () line below to
-   instead accumulate / skip already-recorded theories.
+   afresh.  Comment out the ttt_clean_record () line below to instead
+   let ttt_record () reuse up-to-date manifest entries and re-record
+   stale theories.
 *)
 
 load "aiLib";

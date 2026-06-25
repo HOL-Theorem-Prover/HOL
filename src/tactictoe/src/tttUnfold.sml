@@ -1177,11 +1177,7 @@ fun ttt_rewrite_thy thy =
 fun ttt_ancestry thy =
   filter (fn x => not (mem x ["min","bool"])) (sort_thyl (ancestry thy))
 
-fun exists_tacdata_ancestry thy =
-  exists_tacdata_thy thy andalso
-  all exists_tacdata_thy (ttt_ancestry thy)
-
-fun ttt_record_thy thy = with_tactictoe_cache (fn () =>
+fun record_thy_raw thy = with_tactictoe_cache (fn () =>
   if mem thy ["min","bool"] then () else
   let
     val _ = ttt_rewrite_thy thy
@@ -1212,24 +1208,14 @@ fun ttt_clean_record () =
 fun ttt_clean_savestate () =
   (ttt_clean_temp (); clean_dir (tactictoe_dir_of () ^ "/savestate"))
 
-(* ttt_record_thy may raise on a theory the rewriter cannot handle
-   (upstream limitations in tttUnfold's script rewriting).  For the
-   batch drivers below we don't want one such theory to abort the
-   whole run, so wrap each call: skip the theory, log why, and
-   continue. *)
+(* record_thy_raw may raise on a theory the rewriter cannot handle
+   (upstream limitations in tttUnfold's script rewriting).  Savestate
+   recording is not manifest-managed, so wrap each raw call: skip the
+   theory, log why, and continue. *)
 fun try_record_thy thy =
-  ttt_record_thy thy
+  record_thy_raw thy
   handle e =>
     print_endline ("ttt_record_thy: skipped " ^ thy ^ ": " ^ exnMessage e)
-
-fun ttt_record () =
-  let
-    val thyl1 = ttt_ancestry (current_theory ())
-    val thyl2 = filter (not o exists_tacdata_ancestry) thyl1
-    val ((),t) = add_time (app try_record_thy) thyl2
-  in
-    print_endline ("ttt_record time: " ^ rts_round 4 t)
-  end
 
 (* used to record savestates with record_flag := false *)
 fun ttt_record_savestate () =
@@ -1242,7 +1228,7 @@ fun ttt_record_savestate () =
   end
 
 (* -------------------------------------------------------------------------
-   Incremental recording
+   Manifest-based recording
    ------------------------------------------------------------------------ *)
 
 datatype record_scope =
@@ -1296,11 +1282,11 @@ val default_record_config =
   { scope = CurrentAncestry, parallel = 1, force = false, dry_run = false,
     max_lock_age = Time.fromSeconds 7200 }
 
-val incremental_parallel_dir = ref ""
-fun incremental_parallel_dir_of () =
-  if !incremental_parallel_dir = ""
-  then tactictoe_scratch_dir_of () ^ "/parallel/ttt_record_incremental"
-  else !incremental_parallel_dir
+val record_parallel_dir = ref ""
+fun record_parallel_dir_of () =
+  if !record_parallel_dir = ""
+  then tactictoe_scratch_dir_of () ^ "/parallel/ttt_record"
+  else !record_parallel_dir
 
 fun apply_record_option opt (cfg : record_config) =
   let val {scope,parallel,force,dry_run,max_lock_age} = cfg in
@@ -1322,13 +1308,22 @@ fun apply_record_option opt (cfg : record_config) =
          dry_run = dry_run, max_lock_age = max_lock_age'}
   end
 
-fun ttt_record_incremental_opts opts =
-  ttt_record_incremental_cfg
+fun ttt_record_opts opts =
+  ttt_record_cfg
     (foldl (fn (opt,cfg) => apply_record_option opt cfg)
        default_record_config opts)
 
-and ttt_record_incremental () =
-  ttt_record_incremental_cfg default_record_config
+and ttt_record () =
+  ttt_record_cfg default_record_config
+
+and ttt_record_thy thy =
+  if mem thy ["min","bool"] then () else
+  (ttt_record_cfg
+     (apply_record_option (Scope (Theories [thy])) default_record_config);
+   let val plan = compute_record_plan false (Theories [thy]) in
+     if mem thy (#up_to_date plan) then ()
+     else raise ERR "ttt_record_thy" thy
+   end)
 
 and manifest_file () = ttt_tacdata_dir_of () ^ "/MANIFEST"
 
@@ -1434,7 +1429,7 @@ and manifest_lines (prov : provenance) entries =
          its (#anc_version e), its (#recorded_at e)]
   in
     ["# TacticToe tactic-data manifest. DO NOT EDIT by hand; managed by",
-     "# ttt_record_incremental. Format version: 2.",
+     "# ttt_record. Format version: 2.",
      "format " ^ its manifest_format_version ^ " " ^ #format_hash prov,
      "global " ^ #global_hash prov,
      "hol " ^ #hol_hash prov] @ map line entries'
@@ -1721,7 +1716,7 @@ and record_one (cfg : record_config) prov src_hashes recorded_stale thy =
         | SOME r =>
           ((print_endline ("recording: " ^ thy ^
                "  reason: " ^ reason_to_string r);
-            ttt_record_thy thy;
+            record_thy_raw thy;
             if not (exists_file (tacdata_file thy))
             then raise ERR "record_one" ("missing data after recording " ^ thy)
             else ();
@@ -1757,7 +1752,7 @@ and sml_string_literal s =
     (fn #"\\" => "\\\\" | #"\"" => "\\\"" | #"\n" => "\\n"
       | c => str c) s ^ "\""
 
-and incremental_record_worker (p : record_worker_param) thy =
+and record_worker (p : record_worker_param) thy =
   let
     val cfg =
       { scope = Theories [], parallel = 1, force = #force p, dry_run = false,
@@ -1773,14 +1768,14 @@ and incremental_record_worker (p : record_worker_param) thy =
   end
   handle e => "fail " ^ thy ^ "  " ^ exnMessage e
 
-and incremental_record_extspec () =
+and record_extspec () =
   {
   self_dir = "$(HOLDIR)/src/tactictoe/src",
-  self = "(tttUnfold.incremental_record_extspec ())",
-  parallel_dir = incremental_parallel_dir_of (),
-  reflect_globals = "tttUnfold.incremental_parallel_dir := " ^
-    sml_string_literal (incremental_parallel_dir_of ()),
-  function = incremental_record_worker,
+  self = "(tttUnfold.record_extspec ())",
+  parallel_dir = record_parallel_dir_of (),
+  reflect_globals = "tttUnfold.record_parallel_dir := " ^
+    sml_string_literal (record_parallel_dir_of ()),
+  function = record_worker,
   write_param = write_worker_param,
   read_param = read_worker_param,
   write_arg = (fn file => fn thy => writel file [thy]),
@@ -1789,7 +1784,7 @@ and incremental_record_extspec () =
   read_result = read_worker_result
   }
 
-and ttt_record_incremental_cfg (cfg : record_config) =
+and ttt_record_cfg (cfg : record_config) =
   let
     val {scope,parallel,force,dry_run,max_lock_age} = cfg
     val plan = compute_record_plan force scope
@@ -1800,7 +1795,7 @@ and ttt_record_incremental_cfg (cfg : record_config) =
       ("stale: " ^ thy ^ "  reason: " ^ reason_to_string r)) stale
   in
     if dry_run then
-      print_endline ("ttt_record_incremental dry-run: " ^ its (length stale) ^
+      print_endline ("ttt_record dry-run: " ^ its (length stale) ^
         " stale, " ^ its (length up) ^ " up-to-date")
     else
       let
@@ -1809,8 +1804,8 @@ and ttt_record_incremental_cfg (cfg : record_config) =
         val stale_names = map fst stale
         val _ = if parallel <= 1 then () else
           (mkDir_err (tactictoe_scratch_dir_of () ^ "/parallel");
-           incremental_parallel_dir :=
-             tactictoe_scratch_dir_of () ^ "/parallel/ttt_record_incremental_" ^
+           record_parallel_dir :=
+             tactictoe_scratch_dir_of () ^ "/parallel/ttt_record_" ^
              current_pid ())
         fun deps_failed failed thy =
           List.find (fn dep => mem dep failed) (ttt_ancestry thy)
@@ -1823,7 +1818,7 @@ and ttt_record_incremental_cfg (cfg : record_config) =
             val (readyl,later) = List.partition (ready done) pending
           in
             if null readyl then
-              raise ERR "ttt_record_incremental_cfg" "dependency cycle"
+              raise ERR "ttt_record_cfg" "dependency cycle"
             else readyl :: make_batches (done @ readyl) later
           end
         val batches = make_batches [] stale_names
@@ -1849,7 +1844,7 @@ and ttt_record_incremental_cfg (cfg : record_config) =
             if ncore <= 1 then map (serial_record done) batch else
             let
               val results = parmap_queue_extern ncore
-                (incremental_record_extspec ()) param batch
+                (record_extspec ()) param batch
             in
               app (fn s => print_endline ("parallel result: " ^ s)) results;
               results
@@ -1877,7 +1872,7 @@ and ttt_record_incremental_cfg (cfg : record_config) =
           ignore (foldl (fn (batch,acc) => run_batch batch acc)
             ([],[]) batches)) ()
       in
-        print_endline ("ttt_record_incremental time: " ^ rts_round 4 t)
+        print_endline ("ttt_record time: " ^ rts_round 4 t)
       end
   end
 

@@ -10,20 +10,15 @@ SKIPPING RECORDING of the HOL4 standard library:
   3) Optionally download from the same location
      "tnn_for_tactictoe" to a file "path_to_tnn"
 
-RECORDING all ancestor theories not recorded yet:
+RECORDING all ancestor theories with manifest-based cache validation:
   load "tttUnfold"; open tttUnfold;
   load "fooTheory";
   ttt_record (); (* takes about 8 hours for the full standard library *)
-  (* tip: use ttt_record_thy "foo" to only record the "foo" Theory *)
+  (* tip: use ttt_record_thy "foo" to record/update the "foo" Theory *)
 
-INCREMENTAL RECORDING (recommended for repeated local updates):
-  load "tttUnfold"; open tttUnfold;
-  load "fooTheory";
-  ttt_record_incremental ();
-
-The incremental recorder writes ttt_tacdata/MANIFEST under the TacticToe
-cache root ($HOME/.cache/tactictoe by default, or HOL4_TACTICTOE_CACHE) with
-content hashes for each recorded theory, the recorder sources, and hol.state0.
+The recorder writes ttt_tacdata/MANIFEST under the TacticToe cache root
+($HOME/.cache/tactictoe by default, or HOL4_TACTICTOE_CACHE) with content
+hashes for each recorded theory, the recorder sources, and hol.state0.
 The cache root can also be changed in ML after loading:
   tttSetup.set_tactictoe_cache_dir "/path/to/tactictoe-cache";
 If TacticToe has already loaded tactic data, also clear the in-memory cache:
@@ -34,12 +29,12 @@ matches the manifest, or when global recorder/format provenance changes.  It
 logs every up-to-date, stale, recorded, skipped, and failed decision.
 
 Useful variants:
-  ttt_record_incremental_opts [Scope (Theories ["foo"]), DryRun true];
-  ttt_record_incremental_opts [Scope (Ancestry "foo"), Force true];
-  ttt_record_incremental_opts [Scope (Ancestry "foo"), Parallel 4];
+  ttt_record_opts [Scope (Theories ["foo"]), DryRun true];
+  ttt_record_opts [Scope (Ancestry "foo"), Force true];
+  ttt_record_opts [Scope (Ancestry "foo"), Parallel 4];
 
 Recording publishes tactic data and thmdata through atomic renames, and
-incremental runs use per-theory locks under ttt_tacdata/.locks plus a manifest
+recording runs use per-theory locks under ttt_tacdata/.locks plus a manifest
 lock, so concurrent readers never see a partially-written data file.
 
 WARNING: if fooTheory depends on structures not available in sigobj (or in the
@@ -75,8 +70,8 @@ USAGE after failure:
 CLEANING:
   TacticToe depends on data stored in the TacticToe cache root
   ($HOME/.cache/tactictoe by default, or HOL4_TACTICTOE_CACHE).
-  It is usually necessary to remove cached tactic data before re-recording.
-  This can be done by calling tttUnfold.ttt_clean_record ().
+  The manifest-based recorder re-records stale tactic data automatically.
+  To force a fresh cache, call tttUnfold.ttt_clean_record ().
 
 EXAMPLE: see examples in src/tactictoe/examples.
 
