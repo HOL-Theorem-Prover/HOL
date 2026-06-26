@@ -39,12 +39,21 @@ mdbook: $(MDBOOK_TARGETS) book/index.html book/.references.stamp
 # Holmakefile-managed target -- it's owned by the help/ subtree.
 LANDER_FRAGMENT = $(HOLDIR)/help/HOL.LanderFragment.html
 
-# Static landing page produced by Manual/Tools/gen_lander.  Cards
-# for each manual whose book.toml is passed on the command line,
-# followed by the reference fragment from $(LANDER_FRAGMENT).
-book/index.html: Tools/gen_lander $(BOOK_TOMLS) $(LANDER_FRAGMENT)
+# Editorial getting-started intro: arbitrary Markdown rendered to an HTML
+# fragment by pandoc (commonmark_x-smart, as the cheatsheet uses).
+GS_MD = Tools/getting-started.md
+GS_HTML = build/getting-started.html
+$(GS_HTML): $(GS_MD)
+	mkdir -p build
+	pandoc --from commonmark_x-smart --to html --wrap=none $< -o $@
+
+# Static landing page produced by Manual/Tools/gen_lander: the editorial
+# intro fragment above, a card for each manual whose book.toml is passed
+# on the command line, then the reference fragment from $(LANDER_FRAGMENT).
+book/index.html: Tools/gen_lander $(GS_HTML) $(BOOK_TOMLS) $(LANDER_FRAGMENT)
 	mkdir -p book
-	./Tools/gen_lander --fragment $(LANDER_FRAGMENT) $(BOOK_TOMLS) > $@
+	./Tools/gen_lander --fragment $(LANDER_FRAGMENT) \
+	    --getting-started $(GS_HTML) $(BOOK_TOMLS) > $@
 
 # Stage the targets the Reference section links to.  stage_references
 # copies the per-theory HTML pages (rewriting their parent-doc URLs so
@@ -58,6 +67,6 @@ book/.references.stamp: $(LANDER_FRAGMENT) Tools/stage_references.py
 	touch $@
 
 EXTRA_CLEANS = book/index.html book/htmlsigs book/theory-graph \
-               book/.references.stamp \
+               book/.references.stamp build/getting-started.html \
                build/Docfiles-processed/
 

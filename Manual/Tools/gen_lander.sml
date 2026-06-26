@@ -130,9 +130,23 @@ fun renderCard path =
       "    </li>\n"
     end
 
-fun renderPage (paths, fragment) =
+(* The getting-started block is editorial content authored as arbitrary
+   Markdown in Tools/getting-started.md and rendered to an HTML fragment
+   by pandoc (see Manual/Holmakefile).  gen_lander inlines that fragment
+   verbatim -- just as it does the reference --fragment -- so the markup
+   is whatever pandoc produced.  The block shows both on the live website
+   and in a local docs build, so links to website pages should be
+   absolute URLs (e.g. https://hol-theorem-prover.org/faq.html) while
+   in-docs links stay relative (e.g. Tutorial/index.html). *)
+
+fun renderPage (paths, fragment, intro) =
     let
       val cards = String.concat (List.map renderCard paths)
+      val introSection =
+          case intro of
+              NONE => ""
+            | SOME body =>
+                "  <section class=\"lander-intro\">\n" ^ body ^ "  </section>\n"
       val refSection =
           case fragment of
               NONE => ""
@@ -227,6 +241,59 @@ fun renderPage (paths, fragment) =
       \        \"Liberation Mono\", monospace;\n\
       \      font-size: 0.95em;\n\
       \    }\n\
+      \    /* Editorial intro: arbitrary pandoc-rendered Markdown. */\n\
+      \    .lander-intro h1, .lander-intro h2 {\n\
+      \      font-weight: 500; margin-top: 2em;\n\
+      \      padding-bottom: 0.3em; border-bottom: 1px solid #e0e0e0;\n\
+      \    }\n\
+      \    .lander-intro a { color: #4183c4; text-decoration: none; }\n\
+      \    .lander-intro a:hover { text-decoration: underline; }\n\
+      \    /* Website nav strip -- echoes the strip on the site sub-pages.\n\
+      \       Hidden until the progressive-enhancement script confirms we\n\
+      \       are running inside the website. */\n\
+      \    .subheader { text-align: center; margin: 0 0 2em; }\n\
+      \    .subheader_home {\n\
+      \      display: inline-block; vertical-align: middle;\n\
+      \      font-family: Georgia, \"Times New Roman\", serif;\n\
+      \      font-weight: bold; font-size: 1.4em;\n\
+      \      background: #fff; color: #000;\n\
+      \      border: 1px solid #bbb; border-radius: 8px;\n\
+      \      padding: 2px 12px; text-decoration: none;\n\
+      \    }\n\
+      \    .subnav { display: inline-block; vertical-align: middle; }\n\
+      \    .subnav a {\n\
+      \      display: inline-block; background: rgba(0, 0, 0, 0.75);\n\
+      \      color: #fff; border-radius: 12px; padding: 4px 12px;\n\
+      \      margin: 4px; text-decoration: none; font-size: 0.9em;\n\
+      \    }\n\
+      \    .subnav a:hover { background: rgba(0, 0, 0, 0.9); }\n\
+      \    .subnav a.current { background: rgba(230, 0, 0, 0.85); }\n\
+      \    /* Augmented (in-website) presentation: lake photo behind a white\n\
+      \       content card, mirroring the main site.  Forced light palette so\n\
+      \       the card stays readable even under a dark OS theme. */\n\
+      \    html.web-context {\n\
+      \      background: url(/images/trindemossen.jpg) center center / cover\n\
+      \        fixed no-repeat;\n\
+      \      min-height: 100vh;\n\
+      \    }\n\
+      \    html.web-context body {\n\
+      \      background: #fff; color: #222;\n\
+      \      border-radius: 14px; box-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);\n\
+      \      margin: 3em auto; padding: 1.5em 2.5em 2.5em;\n\
+      \    }\n\
+      \    html.web-context .sub { color: #555; }\n\
+      \    html.web-context h2.section { border-color: #e0e0e0; }\n\
+      \    html.web-context ul.manuals li { border-color: #e0e0e0; }\n\
+      \    html.web-context ul.manuals li:hover { border-color: #4183c4; }\n\
+      \    html.web-context ul.manuals strong { color: #4183c4; }\n\
+      \    html.web-context ul.manuals p { color: #555; }\n\
+      \    html.web-context section.ref-section h2 small { color: #888; }\n\
+      \    html.web-context section.ref-section h2 small a,\n\
+      \    html.web-context ul.refs a,\n\
+      \    html.web-context .lander-intro a { color: #4183c4; }\n\
+      \    html.web-context .lander-intro h1,\n\
+      \    html.web-context .lander-intro h2 { border-color: #e0e0e0; }\n\
+      \    html.web-context ul.refs .nolink { color: #999; }\n\
       \    @media (prefers-color-scheme: dark) {\n\
       \      body { background: #1a1a1a; color: #e0e0e0; }\n\
       \      .sub { color: #aaa; }\n\
@@ -239,38 +306,73 @@ fun renderPage (paths, fragment) =
       \      section.ref-section h2 small a,\n\
       \      ul.refs a { color: #66aaff; }\n\
       \      ul.refs .nolink { color: #707070; }\n\
+      \      .lander-intro h1, .lander-intro h2 { border-color: #333; }\n\
+      \      .lander-intro a { color: #66aaff; }\n\
       \    }\n\
       \  </style>\n\
       \</head>\n\
       \<body>\n\
+      \  <div class=\"subheader\" hidden data-web-only>\n\
+      \    <a class=\"subheader_home\" href=\"/\">HOL</a>\n\
+      \    <nav class=\"subnav\">\n\
+      \      <a href=\"/about.html\">About</a>\n\
+      \      <a href=\"/install.html\">Download &amp; Install</a>\n\
+      \      <a href=\"/docs/latest/\" class=\"current\">Documentation</a>\n\
+      \      <a href=\"/community.html\">Community</a>\n\
+      \    </nav>\n\
+      \  </div>\n\
       \  <h1>HOL4 Documentation</h1>\n\
-      \  <p class=\"sub\">Documentation for the HOL4 theorem prover.</p>\n\
-      \  <h2 class=\"section\">Manuals</h2>\n\
+      \  <p class=\"sub\">Documentation for the HOL4 theorem prover.</p>\n" ^
+      introSection ^
+      "  <h2 class=\"section\">Manuals</h2>\n\
       \  <ul class=\"manuals\">\n" ^
       cards ^
       "  </ul>\n" ^
       refSection ^
-      "</body>\n\
+      "  <script>\n\
+      \    /* Progressive enhancement: this page is a self-contained docs\n\
+      \       landing that works when browsed straight from book/.  When it\n\
+      \       is actually served within the HOL website (so /about.html\n\
+      \       exists at the site root), reveal the website nav strip, the\n\
+      \       website-only learning links, and the lake background. */\n\
+      \    (function () {\n\
+      \      if (location.protocol === 'file:') return;\n\
+      \      fetch('/about.html', { method: 'HEAD' }).then(function (r) {\n\
+      \        if (!r.ok) return;\n\
+      \        document.documentElement.classList.add('web-context');\n\
+      \        var els = document.querySelectorAll('[data-web-only]');\n\
+      \        for (var i = 0; i < els.length; i++) els[i].hidden = false;\n\
+      \      }).catch(function () {});\n\
+      \    })();\n\
+      \  </script>\n\
+      \</body>\n\
       \</html>\n"
     end
 
-(* Parse leading `--fragment <path>` flag.
-   Returns (fragment_path_opt, rest). *)
-fun parseArgs ("--fragment" :: path :: rest) = (SOME path, rest)
-  | parseArgs args = (NONE, args)
+(* Parse leading `--fragment <path>` and `--getting-started <path>`
+   flags, in any order.  Returns (fragment_opt, getting_started_opt,
+   rest). *)
+fun parseArgs args =
+    let
+      fun loop (frag, gs) ("--fragment" :: p :: rest) = loop (SOME p, gs) rest
+        | loop (frag, gs) ("--getting-started" :: p :: rest) =
+            loop (frag, SOME p) rest
+        | loop (frag, gs) rest = (frag, gs, rest)
+    in loop (NONE, NONE) args end
+
+fun readOpt what NONE = NONE
+  | readOpt what (SOME p) =
+      SOME (readFile p
+            handle IO.Io _ => die ("gen_lander: cannot read " ^ what ^ " " ^ p))
 
 fun main () =
     let
-      val (fragPath, paths) = parseArgs (CommandLine.arguments ())
-      val fragment =
-          case fragPath of
-              NONE => NONE
-            | SOME p =>
-                SOME (readFile p
-                      handle IO.Io _ =>
-                        die ("gen_lander: cannot read fragment " ^ p))
+      val (fragPath, gsPath, paths) = parseArgs (CommandLine.arguments ())
+      val fragment = readOpt "fragment" fragPath
+      val intro = readOpt "getting-started" gsPath
     in
       case paths of
-          [] => die "Usage: gen_lander [--fragment <path>] BOOK_TOML..."
-        | _  => emit (renderPage (paths, fragment))
+          [] => die "Usage: gen_lander [--fragment <path>] \
+                    \[--getting-started <path>] BOOK_TOML..."
+        | _  => emit (renderPage (paths, fragment, intro))
     end
