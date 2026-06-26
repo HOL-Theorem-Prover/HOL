@@ -276,11 +276,23 @@ fun renderPage (paths, fragment, intro) =
       \        fixed no-repeat;\n\
       \      min-height: 100vh;\n\
       \    }\n\
-      \    html.web-context body { background: transparent; margin: 0 auto; }\n\
+      \    html.web-context body {\n\
+      \      background: transparent; margin: 0; max-width: none; padding: 0;\n\
+      \    }\n\
+      \    /* Match the content-frame width of the website sub-pages\n\
+      \       (.textbox in new-look/style.css): 85vw on mobile, 60% on\n\
+      \       desktop with 45pt side padding. */\n\
       \    html.web-context .lander {\n\
       \      background: #fff; color: #222;\n\
       \      border-radius: 14px; box-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);\n\
-      \      padding: 1.5em 2.5em 2.5em;\n\
+      \      margin: 10pt auto 20pt; max-width: 85vw;\n\
+      \      padding: 8pt 5vw 30pt;\n\
+      \    }\n\
+      \    @media screen and (min-width: 600px) {\n\
+      \      html.web-context .lander {\n\
+      \        width: 60%; min-width: 400px; max-width: none;\n\
+      \        padding-left: 45pt; padding-right: 45pt;\n\
+      \      }\n\
       \    }\n\
       \    html.web-context .sub { color: #555; }\n\
       \    html.web-context h2.section { border-color: #e0e0e0; }\n\
