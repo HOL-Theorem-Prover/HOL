@@ -276,7 +276,7 @@ fun renderPage (paths, fragment, intro) =
       \        fixed no-repeat;\n\
       \      min-height: 100vh;\n\
       \    }\n\
-      \    html.web-context body { background: transparent; }\n\
+      \    html.web-context body { background: transparent; margin: 0 auto; }\n\
       \    html.web-context .lander {\n\
       \      background: #fff; color: #222;\n\
       \      border-radius: 14px; box-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);\n\
