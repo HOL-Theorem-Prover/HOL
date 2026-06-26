@@ -300,6 +300,7 @@ fun renderPage (paths, fragment, intro) =
       \      font-family: 'Bree Serif', serif;\n\
       \    }\n\
       \    html.web-context h1 { font-size: 32pt; font-weight: bold; }\n\
+      \    html.web-context h2 { color: rgba(230, 0, 0, 1.0); }\n\
       \    html.web-context .sub { color: #555; }\n\
       \    html.web-context h2.section { border-color: #e0e0e0; }\n\
       \    html.web-context ul.manuals li { border-color: #e0e0e0; }\n\

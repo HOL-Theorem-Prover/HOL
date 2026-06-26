@@ -9,5 +9,4 @@ step-by-step introduction through worked examples, then keep these handy:
 - [Interaction (Emacs)](Interaction-emacs/index.html) — driving HOL from the editor.
 - [Cheatsheet](https://hol-theorem-prover.org/cheatsheet.html) — a one-page tactic crib sheet.
 - [FAQ](https://hol-theorem-prover.org/faq.html) — answers to common problems.
-- [Guidebook](https://hol-theorem-prover.org/guidebook) — a gentle, broader introduction (work in progress).
 - [KTH course](https://kth-step.github.io/itppv-course/) — lecture slides and exercises.
