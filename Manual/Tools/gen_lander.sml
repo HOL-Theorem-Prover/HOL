@@ -162,6 +162,7 @@ fun renderPage (paths, fragment, intro) =
       \  <meta charset=\"utf-8\">\n\
       \  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
       \  <link href=\"https://fonts.googleapis.com/css?family=Lora\" rel=\"stylesheet\">\n\
+      \  <link href=\"https://fonts.googleapis.com/css?family=Bree+Serif\" rel=\"stylesheet\">\n\
       \  <title>HOL4 Documentation</title>\n\
       \  <style>\n\
       \    body {\n\
@@ -252,7 +253,7 @@ fun renderPage (paths, fragment, intro) =
       \    /* Website nav strip -- echoes the strip on the site sub-pages.\n\
       \       Hidden until the progressive-enhancement script confirms we\n\
       \       are running inside the website. */\n\
-      \    .subheader { text-align: center; padding: 12pt 10pt; }\n\
+      \    .subheader { text-align: center; padding: 12pt 10pt; line-height: normal; }\n\
       \    .subheader_home {\n\
       \      font-family: 'Lora', serif; font-size: 24pt; font-weight: bold;\n\
       \      background: rgba(255, 255, 255, 1.0); color: black;\n\
@@ -293,6 +294,9 @@ fun renderPage (paths, fragment, intro) =
       \        width: 60%; min-width: 400px; max-width: none;\n\
       \        padding-left: 45pt; padding-right: 45pt;\n\
       \      }\n\
+      \    }\n\
+      \    html.web-context h1, html.web-context h2 {\n\
+      \      font-family: 'Bree Serif', serif;\n\
       \    }\n\
       \    html.web-context .sub { color: #555; }\n\
       \    html.web-context h2.section { border-color: #e0e0e0; }\n\
