@@ -253,7 +253,7 @@ fun renderPage (paths, fragment, intro) =
       \    /* Website nav strip -- echoes the strip on the site sub-pages.\n\
       \       Hidden until the progressive-enhancement script confirms we\n\
       \       are running inside the website. */\n\
-      \    .subheader { text-align: center; padding: 12pt 10pt; line-height: normal; }\n\
+      \    .subheader { display: none; text-align: center; padding: 12pt 10pt; line-height: normal; }\n\
       \    .subheader_home {\n\
       \      font-family: 'Lora', serif; font-size: 24pt; font-weight: bold;\n\
       \      background: rgba(255, 255, 255, 1.0); color: black;\n\
@@ -295,9 +295,11 @@ fun renderPage (paths, fragment, intro) =
       \        padding-left: 45pt; padding-right: 45pt;\n\
       \      }\n\
       \    }\n\
+      \    html.web-context .subheader { display: block; }\n\
       \    html.web-context h1, html.web-context h2 {\n\
       \      font-family: 'Bree Serif', serif;\n\
       \    }\n\
+      \    html.web-context h1 { font-size: 32pt; font-weight: bold; }\n\
       \    html.web-context .sub { color: #555; }\n\
       \    html.web-context h2.section { border-color: #e0e0e0; }\n\
       \    html.web-context ul.manuals li { border-color: #e0e0e0; }\n\
@@ -327,9 +329,20 @@ fun renderPage (paths, fragment, intro) =
       \      .lander-intro a { color: #66aaff; }\n\
       \    }\n\
       \  </style>\n\
+      \  <script>\n\
+      \    /* Decide synchronously, before first paint, whether this page is\n\
+      \       served inside the HOL website (docs always live under /docs/...)\n\
+      \       rather than as a standalone/local docs build (file:, or book/\n\
+      \       served at the root by Tools/mdbook-preview.py).  Setting the\n\
+      \       class here in <head> styles the first paint and avoids a flash. */\n\
+      \    if (location.protocol !== 'file:' &&\n\
+      \        location.pathname.indexOf('/docs/') === 0) {\n\
+      \      document.documentElement.className += ' web-context';\n\
+      \    }\n\
+      \  </script>\n\
       \</head>\n\
       \<body>\n\
-      \  <div class=\"subheader\" hidden data-web-only>\n\
+      \  <div class=\"subheader\">\n\
       \    <a class=\"subheader_home\" href=\"/\">HOL</a>\n\
       \    <nav class=\"subnav\">\n\
       \      <a href=\"/about.html\">About</a>\n\
@@ -348,22 +361,6 @@ fun renderPage (paths, fragment, intro) =
       "  </ul>\n" ^
       refSection ^
       "  </main>\n\
-      \  <script>\n\
-      \    /* Progressive enhancement: this page is a self-contained docs\n\
-      \       landing that works when browsed straight from book/.  When it\n\
-      \       is actually served within the HOL website (so /about.html\n\
-      \       exists at the site root), reveal the website nav strip, the\n\
-      \       website-only learning links, and the lake background. */\n\
-      \    (function () {\n\
-      \      if (location.protocol === 'file:') return;\n\
-      \      fetch('/about.html', { method: 'HEAD' }).then(function (r) {\n\
-      \        if (!r.ok) return;\n\
-      \        document.documentElement.classList.add('web-context');\n\
-      \        var els = document.querySelectorAll('[data-web-only]');\n\
-      \        for (var i = 0; i < els.length; i++) els[i].hidden = false;\n\
-      \      }).catch(function () {});\n\
-      \    })();\n\
-      \  </script>\n\
       \</body>\n\
       \</html>\n"
     end
