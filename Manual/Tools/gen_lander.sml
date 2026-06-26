@@ -161,6 +161,7 @@ fun renderPage (paths, fragment, intro) =
       \<head>\n\
       \  <meta charset=\"utf-8\">\n\
       \  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
+      \  <link href=\"https://fonts.googleapis.com/css?family=Lora\" rel=\"stylesheet\">\n\
       \  <title>HOL4 Documentation</title>\n\
       \  <style>\n\
       \    body {\n\
@@ -251,22 +252,21 @@ fun renderPage (paths, fragment, intro) =
       \    /* Website nav strip -- echoes the strip on the site sub-pages.\n\
       \       Hidden until the progressive-enhancement script confirms we\n\
       \       are running inside the website. */\n\
-      \    .subheader { text-align: center; margin: 0 0 2em; }\n\
+      \    .subheader { text-align: center; padding: 12pt 10pt; }\n\
       \    .subheader_home {\n\
+      \      font-family: 'Lora', serif; font-size: 24pt; font-weight: bold;\n\
+      \      background: rgba(255, 255, 255, 1.0); color: black;\n\
+      \      border-radius: 10pt; padding: 4pt 14pt; text-decoration: none;\n\
       \      display: inline-block; vertical-align: middle;\n\
-      \      font-family: Georgia, \"Times New Roman\", serif;\n\
-      \      font-weight: bold; font-size: 1.4em;\n\
-      \      background: #fff; color: #000;\n\
-      \      border: 1px solid #bbb; border-radius: 8px;\n\
-      \      padding: 2px 12px; text-decoration: none;\n\
       \    }\n\
       \    .subnav { display: inline-block; vertical-align: middle; }\n\
       \    .subnav a {\n\
-      \      display: inline-block; background: rgba(0, 0, 0, 0.75);\n\
-      \      color: #fff; border-radius: 12px; padding: 4px 12px;\n\
-      \      margin: 4px; text-decoration: none; font-size: 0.9em;\n\
+      \      display: inline-block; background: rgba(0, 0, 0, 0.7);\n\
+      \      color: white; border-radius: 1.5vh; padding: 6pt 12pt;\n\
+      \      margin: 4pt; text-decoration: none;\n\
+      \      font-family: Arial, Helvetica, sans-serif;\n\
       \    }\n\
-      \    .subnav a:hover { background: rgba(0, 0, 0, 0.9); }\n\
+      \    .subnav a:hover { background: rgba(0, 0, 0, 0.85); }\n\
       \    .subnav a.current { background: rgba(230, 0, 0, 0.85); }\n\
       \    /* Augmented (in-website) presentation: lake photo behind a white\n\
       \       content card, mirroring the main site.  Forced light palette so\n\
@@ -276,10 +276,11 @@ fun renderPage (paths, fragment, intro) =
       \        fixed no-repeat;\n\
       \      min-height: 100vh;\n\
       \    }\n\
-      \    html.web-context body {\n\
+      \    html.web-context body { background: transparent; }\n\
+      \    html.web-context .lander {\n\
       \      background: #fff; color: #222;\n\
       \      border-radius: 14px; box-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);\n\
-      \      margin: 3em auto; padding: 1.5em 2.5em 2.5em;\n\
+      \      padding: 1.5em 2.5em 2.5em;\n\
       \    }\n\
       \    html.web-context .sub { color: #555; }\n\
       \    html.web-context h2.section { border-color: #e0e0e0; }\n\
@@ -321,6 +322,7 @@ fun renderPage (paths, fragment, intro) =
       \      <a href=\"/community.html\">Community</a>\n\
       \    </nav>\n\
       \  </div>\n\
+      \  <main class=\"lander\">\n\
       \  <h1>HOL4 Documentation</h1>\n\
       \  <p class=\"sub\">Documentation for the HOL4 theorem prover.</p>\n" ^
       introSection ^
@@ -329,7 +331,8 @@ fun renderPage (paths, fragment, intro) =
       cards ^
       "  </ul>\n" ^
       refSection ^
-      "  <script>\n\
+      "  </main>\n\
+      \  <script>\n\
       \    /* Progressive enhancement: this page is a self-contained docs\n\
       \       landing that works when browsed straight from book/.  When it\n\
       \       is actually served within the HOL website (so /about.html\n\
