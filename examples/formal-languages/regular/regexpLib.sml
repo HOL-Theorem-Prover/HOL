@@ -340,7 +340,7 @@ fun gen_dfa_conv r =
            Ty = (regexp_ty --> regexp_ty --> ordering_ty) -->
                 regexp_ty -->
                 regexp_num_map_ty -->
-                optionSyntax.mk_option numSyntax.num
+                optionSyntax.mk_option numSyntax.num}
       (* “:(regexp -> regexp -> ordering) ->
            regexp -> (regexp, num) balanced_map -> num option” *)
      val init_regexp_tm =
