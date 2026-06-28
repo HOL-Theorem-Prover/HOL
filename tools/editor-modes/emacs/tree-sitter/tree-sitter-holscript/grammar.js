@@ -880,7 +880,7 @@ module.exports = grammar({
         quoted_type: $ => seq('“', ':', $._hol_type, '”'),
 
         _quote_content: $ => choice(
-            alias(/([^\^`‘’]|\^\^|\^\`)+/, $.quoted),
+            alias(/([^\^`‘’]|\^\^|\^`)+/, $.quoted),
             $.antiquoted
         ),
 

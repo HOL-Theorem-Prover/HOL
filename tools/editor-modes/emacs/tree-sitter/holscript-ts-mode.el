@@ -190,10 +190,164 @@ For a description of OVERRIDE, START, and END, see `treesit-font-lock-rules'."
    '(;; SML
      [(integer_scon) (word_scon) (real_scon)] @font-lock-number-face)))
 
+(defconst holscript-ts-mode--defun-type-regexp
+  (regexp-opt '("hol_theorem_with_proof"
+                "hol_definition"
+                "hol_definition_with_proof"
+                "hol_datatype"
+                "fun_dec"
+                "val_dec"
+                "type_dec"
+                "datatype_dec"
+                "exception_dec"
+                "strbind"
+                "sigbind"
+                "fctbind"))
+  "Regexp matching tree-sitter node types that `holscript-ts-mode'
+treats as defuns for `C-M-a' / `C-M-e' / `narrow-to-defun' etc.")
+
+(defun holscript-ts-mode--defun-name (node)
+  "Return the user-visible name of NODE, or nil if NODE has none.
+Used as `treesit-defun-name-function'."
+  (pcase (treesit-node-type node)
+    ("hol_theorem_with_proof"
+     (when-let ((n (treesit-search-subtree node "\\`hol_thmname\\'")))
+       (treesit-node-text n t)))
+    ((or "hol_definition" "hol_definition_with_proof")
+     (when-let ((n (treesit-search-subtree node "\\`hol_defname\\'")))
+       (treesit-node-text n t)))
+    ("hol_datatype"
+     ;; Datatype: foo = ... End — name is the first hol_identifier
+     ;; inside the hol_binding child.
+     (when-let* ((binding (treesit-search-subtree node "\\`hol_binding\\'"))
+                 (ident (treesit-search-subtree binding "\\`hol_identifier\\'")))
+       (treesit-node-text ident t)))
+    ((or "valbind" "fmrule" "strbind" "sigbind" "fctbind")
+     (when-let ((n (treesit-node-child-by-field-name node "name")))
+       (treesit-node-text n t)))
+    ("val_dec"
+     ;; A val_dec wraps one or more valbinds; report the first pattern.
+     (when-let* ((b (treesit-search-subtree node "\\`valbind\\'"))
+                 (p (treesit-node-child-by-field-name b "pat")))
+       (treesit-node-text p t)))
+    ("fun_dec"
+     (when-let* ((r (treesit-search-subtree node "\\`fmrule\\'"))
+                 (n (treesit-node-child-by-field-name r "name")))
+       (treesit-node-text n t)))
+    ((or "type_dec" "datatype_dec" "exception_dec")
+     ;; These wrap a typbind/datbind/exbind whose `name' field carries
+     ;; the user-visible label.
+     (when-let ((n (treesit-search-subtree node "\\`tycon\\'\\|\\`vid\\'")))
+       (treesit-node-text n t)))))
+
+(defconst holscript-ts-mode--imenu-settings
+  `(("Theorem"    "\\`hol_theorem_with_proof\\'"      nil nil)
+    ("Definition" "\\`hol_definition\\(_with_proof\\)?\\'" nil nil)
+    ("Datatype"   "\\`hol_datatype\\'"                nil nil)
+    ("Function"   "\\`fun_dec\\'"                     nil nil)
+    ("Value"      "\\`val_dec\\'"                     nil nil)
+    ("Structure"  "\\`strbind\\'"                     nil nil)
+    ("Signature"  "\\`sigbind\\'"                     nil nil)
+    ("Functor"    "\\`fctbind\\'"                     nil nil))
+  "Categories for `treesit-simple-imenu-settings'.")
+
+(defconst holscript-ts-mode--block-keywords
+  '("Theorem" "Triviality" "Proof" "QED"
+    "Definition" "Inductive" "CoInductive" "Datatype:"
+    "End" "Termination"
+    "Quote" "Theory" "Ancestors" "Libs"
+    "Type" "Overload" "Resume" "Finalise")
+  "HOL block keywords that always sit in column 0.")
+
+(defconst holscript-ts-mode--indent-rules
+  `((holscript
+     ;; HOL block keywords always go to column 0 of the buffer.
+     ((node-is ,(regexp-opt holscript-ts-mode--block-keywords))
+      column-0 0)
+     ;; The body of a HOL block (statement, tactic, definition spec,
+     ;; datatype binding) indents 2 from the block's start column.
+     ((parent-is "hol_theorem_with_proof")        parent-bol 2)
+     ((parent-is "hol_definition")                parent-bol 2)
+     ((parent-is "hol_definition_with_proof")     parent-bol 2)
+     ((parent-is "hol_datatype")                  parent-bol 2)
+     ;; Tactic chains: keep each tactic aligned with the first.
+     ((parent-is "tactic")                        parent-bol 0)
+     ;; SML let / in / end.
+     ((node-is "in")                              parent-bol 0)
+     ((node-is "end")                             parent-bol 0)
+     ((parent-is "let_dec")                       parent-bol 2)
+     ((parent-is "let_exp")                       parent-bol 2)
+     ;; case / of: align match clauses with the case keyword.
+     ((node-is "|")                               parent-bol 2)
+     ((parent-is "case_exp")                      parent-bol 4)
+     ;; if / then / else.
+     ((node-is "then")                            parent-bol 0)
+     ((node-is "else")                            parent-bol 0)
+     ((parent-is "if_exp")                        parent-bol 4)
+     ;; Don't auto-reindent inside HOL terms or quoted material;
+     ;; leave the user's choices alone (the parser may not have full
+     ;; precedence information yet — see grammar.js TODOs).
+     ((parent-is "hol_term")                      no-indent 0)
+     ((parent-is "hol_thmstmt")                   no-indent 0)
+     ((parent-is "backquote")                     no-indent 0)
+     ((parent-is "quoted_term")                   no-indent 0)
+     ;; Inside ERROR regions, leave indent alone so the user can edit
+     ;; without it jumping under them.
+     ((node-is "ERROR")                           no-indent 0)
+     ((parent-is "ERROR")                         no-indent 0)
+     ;; Catch-all: leave the current indent unchanged.
+     ((lambda (&rest _) t)                        no-indent 0))))
+
+(defconst holscript-ts-mode--thing-settings
+  `((holscript
+     (sexp ,(regexp-opt
+             '("hol_theorem_with_proof"
+               "hol_definition"
+               "hol_definition_with_proof"
+               "hol_datatype"
+               "hol_term"
+               "hol_application"
+               "hol_binary_term"
+               "hol_binder"
+               "tuple_exp"
+               "list_exp"
+               "record_exp"
+               "paren_exp"
+               "let_exp"
+               "case_exp"
+               "fn_exp"
+               "if_exp"
+               "app_exp"
+               "valbind"
+               "fmrule"
+               "tactic"
+               "block_comment"
+               "string_scon"
+               "hol_string")))
+     (sentence ,(regexp-opt
+                 '("hol_theorem_with_proof"
+                   "hol_definition"
+                   "hol_definition_with_proof"
+                   "hol_datatype"
+                   "val_dec" "fun_dec" "type_dec" "datatype_dec"
+                   "open_dec" "exception_dec"
+                   "strbind" "sigbind" "fctbind")))))
+  "Settings for `treesit-thing-settings' (sexp + sentence).")
+
 ;;;###autoload
 (define-derived-mode holscript-ts-mode prog-mode "HOLScript[ts]"
   "Major mode for editing HOL Script.sml files with tree-sitter."
   :syntax-table holscript-ts-mode--syntax-table
+
+  ;; Comments — same shape as `holscript-mode-variables' uses.
+  (setq-local comment-start "(* "
+              comment-end " *)"
+              comment-start-skip "(\\*+\\s-*"
+              comment-end-skip "\\s-*\\*+)"
+              comment-quote-nested nil
+              parse-sexp-ignore-comments t)
+  (setq-local font-lock-multiline t)
+  (setq-local indent-tabs-mode nil)
 
   (when (treesit-ready-p 'holscript)
     (treesit-parser-create 'holscript)
@@ -203,6 +357,25 @@ For a description of OVERRIDE, START, and END, see `treesit-font-lock-rules'."
                 holscript-ts-mode--font-lock-settings)
     (setq-local treesit-font-lock-feature-list
                 holscript-ts-mode--font-lock-feature-list)
+
+    ;; Defun navigation
+    (setq-local treesit-defun-type-regexp
+                holscript-ts-mode--defun-type-regexp)
+    (setq-local treesit-defun-name-function
+                #'holscript-ts-mode--defun-name)
+
+    ;; Imenu
+    (setq-local treesit-simple-imenu-settings
+                holscript-ts-mode--imenu-settings)
+
+    ;; `treesit-thing-settings' is the source of truth for sexp /
+    ;; sentence motion (C-M-f / C-M-b / M-a / M-e) in Emacs 30+.
+    (setq-local treesit-thing-settings
+                holscript-ts-mode--thing-settings)
+
+    ;; Indent
+    (setq-local treesit-simple-indent-rules
+                holscript-ts-mode--indent-rules)
 
     (treesit-major-mode-setup)))
 
