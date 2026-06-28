@@ -140,16 +140,11 @@ evaluations.")
             (setq hol-term-end-delim (match-string 0))
             (goto-char (match-beginning 0)))))))
 (defvar hol-beg-pos nil) ; ugh, global, but easiest this way
-(defvar hol-name-attrs-colon-re
-  "[[:space:]]+[A-Za-z0-9'_]+\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
-(defvar hol-quoted-theorem-proof-re-begin
-  (concat "\\(Theorem\\|Triviality\\)" hol-name-attrs-colon-re))
-(defvar hol-quoted-definition-re-begin
-  (concat "\\(Definition\\|\\(Co\\)?Inductive\\)" hol-name-attrs-colon-re))
-(defvar hol-quoted-datatype-re-begin "\\(Datatype[[:space:]]*:\\)")
-(defvar hol-quoted-Quote-re-begin
-  (concat "\\(Quote[[:space:]]+\\([A-Za-z0-9_']+[[:space:]]*=[[:space:]]*\\)?"
-          "[A-Za-z0-9_'.]+[[:space:]]*:\\)"))
+;; hol-name-attrs-colon-re, hol-quoted-{theorem-proof,definition,
+;; datatype,Quote}-re-begin are editing-side, defined in
+;; holscript-mode.el; referenced below in put forms and in the
+;; REPL-destined regex around the "send Script content to HOL" code.
+
 (put 'hol-term 'beginning-op
      (function
       (lambda ()
@@ -2051,43 +2046,8 @@ second is to show the new term.
             (message "Running HOL SML hook")
 ))
 
-(defun hol-find-quoted-material (limit)
-  (let ((beginmatch (re-search-forward hol-term-begin-re limit t))
-        (ppss (syntax-ppss)))
-    (while (and beginmatch (or (nth 3 ppss) (nth 4 ppss)))
-      (setq beginmatch (re-search-forward hol-term-begin-re limit t))
-      (setq ppss (syntax-ppss)))
-    (if (not beginmatch) nil
-      (let* ((start-delim (match-string-no-properties 0))
-             (begin-marker
-              (if (= (length start-delim) 1)
-                  (set-marker (make-marker) (1- (point)))
-                (point-marker)))
-             (endre (hol-term-matching-delim start-delim))
-             (endmatch (if endre (re-search-forward endre limit t)
-                         (message (format "No end-delim for %s" start-delim))
-                         nil)))
-        (if (not endmatch) nil
-          (if (= (length start-delim) 1) nil (goto-char (match-beginning 0)))
-          (set-match-data (list begin-marker (point-marker)))
-          t)))))
-;  (re-search-forward "^Theorem[[:space:]]+[A-Za-z0-9'_]+\\(?:\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:\\(\\(?:\n  \\|.\\)+\\)\nProof" limit t))
-
-(defun hol-thm-prefix (s)
-  (or (string-prefix-p "Theorem" s) (string-prefix-p "Triviality" s)))
-(defun hol-defn-prefix (s) (string-prefix-p "Definition" s))
-(defun hol-indn-prefix (s)
-  (or (string-prefix-p "Inductive" s) (string-prefix-p "CoInductive" s)))
-
-(defun hol-term-matching-delim (start-delim)
-  (pcase start-delim
-    ("“" "”")
-    ("‘" "’")
-    ("Datatype:" "^End\\>")
-    ((pred hol-thm-prefix) "^Proof\\>")
-    ((pred hol-indn-prefix) "^End\\>")
-    ((pred hol-defn-prefix) "^Termination\\>\\|^End\\>")))
-
+;; hol-find-quoted-material (font-lock matcher for HOL quoted
+;; material) and hol-term-matching-delim moved to holscript-mode.el.
 
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
   :group 'faces
@@ -2141,38 +2101,6 @@ second is to show the new term.
     (lpr-region beg end)
     (shell-command (concat "ps2pdf " temp-ps-file " " filename))
     (delete-file temp-ps-file)))
-
-(setq hol-term-beginend-re
-      (concat
-       (regexp-opt
-        '("Theorem" "End" "Definition" "Inductive" "Termination" "Proof"
-          "CoInductive" "Datatype" "Triviality") "^\\(")
-       "\\|"
-       (regexp-opt '("“" "‘" "”" "’"))))
-(defvar hol-term-end-re (regexp-opt '("End" "Termination" "Proof" "”" "’")))
-(defvar hol-term-begin-re
-  (concat
-   (regexp-opt '("“" "‘")) "\\|"
-   hol-quoted-theorem-proof-re-begin "\\|"
-   hol-quoted-definition-re-begin "\\|"
-   "Datatype[[:space:]]*:"))
-
-(defun hol-fl-term-bump-backwards (pos)
-  (save-excursion
-    (goto-char pos)
-    (let ((match (re-search-backward hol-term-beginend-re nil t)))
-      (if (not match) pos
-        (if (looking-at hol-term-end-re) pos
-          (if (looking-at hol-term-begin-re) (match-beginning 0) pos))))))
-
-(defun hol-fl-term-bump-forwards (pos)
-  (save-excursion
-    (goto-char pos)
-    (let ((match (re-search-forward hol-term-beginend-re nil t)))
-      (if (not match) pos
-        (goto-char (match-beginning 0))
-        (if (looking-at hol-term-begin-re) pos
-          (if (looking-at hol-term-end-re) (match-end 0) pos))))))
 
 (defun hol-select-pattern-list-tactic (begin end)
   "Send current region (which must include the delimiting square
