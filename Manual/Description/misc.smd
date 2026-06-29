@@ -987,8 +987,13 @@ Under `--fast` the tactic is never evaluated, so no dump is
 produced.  The mechanism is also a no-op under Moscow ML, which
 has no equivalent of Poly/ML's `SaveState.saveChild`.
 
-Dumped heaps are not removed automatically; they can be deleted
-freely once the failing proof has been resolved.
+When `Holmake` next rebuilds a theory script, any
+`<theory>.*.dumpedheap` file in the script's directory is swept
+along with the previous run's `Theory.sml`/`.sig`/`.dat` outputs,
+so stale dumps do not accumulate across iterations.  Dumps
+produced by `bin/hol run` outside the build system are left in
+place and can be deleted freely once the failing proof has been
+resolved.
 
 ### Using a make-file with `Holmake`
 
