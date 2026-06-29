@@ -328,6 +328,32 @@ fun renderPage (paths, fragment, intro) =
       \      ul.refs .nolink { color: #707070; }\n\
       \      .lander-intro h1, .lander-intro h2 { border-color: #333; }\n\
       \      .lander-intro a { color: #66aaff; }\n\
+      \      /* In-website dark: dark card over a dimmed photo, matching the\n\
+      \         website's dark theme. */\n\
+      \      html.web-context body::before {\n\
+      \        content: \"\"; position: fixed; inset: 0;\n\
+      \        background: rgba(0, 0, 0, 0.55); z-index: -1; pointer-events: none;\n\
+      \      }\n\
+      \      html.web-context .lander {\n\
+      \        background: rgba(28, 28, 28, 0.95); color: #e6e6e6;\n\
+      \      }\n\
+      \      html.web-context .sub { color: #aaa; }\n\
+      \      html.web-context h2 { color: #ff6b6b; }\n\
+      \      html.web-context h2.section,\n\
+      \      html.web-context .lander-intro h1,\n\
+      \      html.web-context .lander-intro h2 { border-color: #444; }\n\
+      \      html.web-context ul.manuals li { border-color: #444; }\n\
+      \      html.web-context ul.manuals li:hover { border-color: #6fa8ff; }\n\
+      \      html.web-context ul.manuals strong { color: #6fa8ff; }\n\
+      \      html.web-context ul.manuals p { color: #bbb; }\n\
+      \      html.web-context section.ref-section h2 small { color: #aaa; }\n\
+      \      html.web-context section.ref-section h2 small a,\n\
+      \      html.web-context ul.refs a,\n\
+      \      html.web-context .lander-intro a { color: #6fa8ff; }\n\
+      \      html.web-context ul.refs .nolink { color: #888; }\n\
+      \      html.web-context .subheader_home {\n\
+      \        background: rgba(20, 20, 20, 0.92); color: #f0f0f0;\n\
+      \      }\n\
       \    }\n\
       \  </style>\n\
       \  <script>\n\
