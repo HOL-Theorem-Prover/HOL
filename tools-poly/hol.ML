@@ -141,6 +141,8 @@ end
 
 fun mk_quiet (OR r) = OR (updateT r (U #quietp true) $$);
 
+val keepGoingFlag = "keep-going-on-parse-errors"
+
 local
   open GetOpt
  fun mkBoolT sel = NoArg (fn () => fn (OR r) => OR (updateT r (U sel true) $$))
@@ -194,6 +196,10 @@ val cline_opts = [
    desc = mkBoolT #help},
   {help = "load holstate as base", long = ["holstate"], short = "b",
    desc = setStringOpt "filename" #base_state},
+  {help = "list every parse error rather than aborting on the first \
+          \(run only)",
+   long = [keepGoingFlag], short = "",
+   desc = NoArg (fn () => fn r => r)}, (* see RUN case *)
   {help = "thread count", long = ["mt"], short = "",
    desc = OptArg (set_threadcount, "c")},
   {help = "Don't use user config file in HOL repl", long = ["noconfig"], short = "",
@@ -491,6 +497,7 @@ in
                            String.concatWith ", " search_these)
             | SOME p => p
       in
+        QUse.failOnError := true;
         heapname := SOME s;
         case exe of
             NONE =>
@@ -514,6 +521,7 @@ in
       end
     | LSP =>
       let in
+        QUse.failOnError := false; (* heap may carry true from BUILDHEAP *)
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;
@@ -527,6 +535,7 @@ in
       end
     | REPL =>
       let in
+        QUse.failOnError := false; (* heap may carry true from BUILDHEAP *)
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;
@@ -552,7 +561,18 @@ in
         HOL_REPL.topLevel {diag = diag, zeroTerm = z_repl}
       end
     | RUN =>
-      let in
+      let
+        (* The cline_opts NoArg writes a ref defined in this module,
+           but that ref lives inside the saved heap; loading
+           `--holstate=...` between option parsing and this point
+           resets it to false.  Check argv directly instead.
+           `CommandLine.arguments()` reads the real process argv
+           regardless of heap state. *)
+        val keep_going =
+            List.exists (fn s => s = "--" ^ keepGoingFlag)
+                        (CommandLine.arguments())
+      in
+        QUse.failOnError := not keep_going;
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;
