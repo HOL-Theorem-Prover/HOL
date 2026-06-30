@@ -112,6 +112,22 @@ fun find_most_appealing HOLpath docfile =
       end
   end;
 
+(* Generated pages carry an inline stylesheet rather than linking a shared
+   one: they are served standalone and live at varying depths.  Keep the
+   historical light background, but honour the reader's dark-mode preference
+   via prefers-color-scheme, so the pages aren't a bright panel when the rest
+   of the browser is dark. *)
+fun emit_head_style out bgcolor =
+    (out "<style type=\"text/css\">\n";
+     out "  body {background: "; out bgcolor; out "}\n";
+     out "  @media (prefers-color-scheme: dark) {\n";
+     out "    body {background: #1b1d23; color: #d6d6d6}\n";
+     out "    a {color: #6cb6ff}\n";
+     out "    a:visited {color: #d2a8ff}\n";
+     out "    hr {border-color: #444}\n";
+     out "  }\n";
+     out "</style>\n")
+
 fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
     let val strName = OS.Path.base (OS.Path.file sigfile)
 	val is = TextIO.openIn sigfile
@@ -420,9 +436,7 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
         out "<meta charset=\"utf-8\">\n";
         out "<title>Structure ";
         out strName; out "</title>\n";
-        out "<style type=\"text/css\">\n";
-        out "<!--\n";
-        out "  body {background: "; out bgcolor; out "}\n-->\n</style>";
+        emit_head_style out bgcolor;
         out "</head>\n";
         out "<body>\n";
         out "<h1>Structure "; out strName; out "</h1>\n";
@@ -612,8 +626,10 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
                 end))
         val seps = Listsort.sort Char.compare (separators db [])
     in
-	out "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>"; out header; out "</title></head>\n";
-	out "<body bgcolor=\""; out bgcolor; out "\">\n";
+	out "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>"; out header; out "</title>\n";
+	emit_head_style out bgcolor;
+	out "</head>\n";
+	out "<body>\n";
 	out "<h1>"; out header; out "</h1>\n";
 	mkalphaindex seps;
 	prtree db;

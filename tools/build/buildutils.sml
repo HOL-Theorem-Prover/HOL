@@ -862,6 +862,13 @@ fun write_theorygraph_html () =
         \         color: #1f2328; margin: 1.5rem; }\n\
         \  h1 { font-size: 1.5rem; }\n\
         \  object { display: block; max-width: 100%; }\n\
+        \  @media (prefers-color-scheme: dark) {\n\
+        \    body { background: #1b1d23; color: #d6d6d6; }\n\
+        \    /* the graph is black-on-white with a transparent backing;\n\
+        \       invert it (re-rotating hue) so its edges and labels stay\n\
+        \       visible against the dark page */\n\
+        \    object { filter: invert(1) hue-rotate(180deg); }\n\
+        \  }\n\
         \</style>\n\
         \</head>\n\
         \<body>\n\

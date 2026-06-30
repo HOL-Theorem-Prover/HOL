@@ -159,3 +159,22 @@ body {
     }
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
 h1.title { display: none; }
+@media (prefers-color-scheme: dark) {
+  html {
+    color: #d6d6d6;
+    background-color: #1b1d23;
+  }
+  a, a:visited {
+    color: #d6d6d6;
+  }
+  hr {
+    border-top-color: #555;
+  }
+  tbody, th {
+    border-color: #555;
+  }
+  blockquote {
+    border-left-color: #555;
+    color: #9aa0a6;
+  }
+}
