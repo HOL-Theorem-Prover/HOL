@@ -42,7 +42,7 @@ the regression harness goes through `selftest.sml`.
   - No trailing whitespace.
   - Strongly prefer < 80 columns.
 
-`tools/unicode-grep` enforces tabs/whitespace as part of the
+`tools/h4pedant` enforces tabs/whitespace as part of the
 regression suite.
 
 ## Inside a sandboxed Linux VM

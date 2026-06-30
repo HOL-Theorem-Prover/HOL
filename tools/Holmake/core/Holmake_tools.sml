@@ -7,7 +7,14 @@ open terminal_primitives
 open Holmake_tools_dtype
 open HOLFileSys
 
-structure FileSys = HOLFileSys
+(* Within Holmake, getDir is routed through the cwd cache (HOLFileSys's
+   cached_getDir): the dependency scan calls it tens of thousands of times
+   and macOS getcwd(3) walks the tree.  Safe here because Holmake is a fresh
+   process (no saved state to bake a stale cwd into) and every chDir
+   invalidates the cache.  HOLFileSys.getDir itself stays uncached for the
+   bin/hol runtime, which loads from a saved poly state. *)
+val getDir = cached_getDir
+structure FileSys = struct open HOLFileSys val getDir = cached_getDir end
 fun K x y = x
 
 fun |>(x,f) = f x
@@ -43,6 +50,23 @@ end
 
 
 structure Path = OS.Path
+
+(* All cwd operations must go through HOLFileSys, which caches getDir and
+   invalidates on chDir (macOS getcwd is ~60% of warm-scan CPU otherwise).
+   Poison the raw OS.FileSys cwd primitives here so any stray direct use is
+   a compile-time error rather than a silent re-introduction of per-call
+   getcwd.  getDir/chDir below resolve to HOLFileSys's (via `open' above);
+   other OS.FileSys operations remain available. *)
+structure OS =
+struct
+  open OS
+  structure FileSys =
+  struct
+    open OS.FileSys
+    val getDir = ()
+    val chDir = ()
+  end
+end
 
 val DEFAULT_OVERLAY = "Overlay.ui"
 fun member m [] = false
@@ -586,7 +610,7 @@ fun recursive_act ofns file_act dir_act name =
 fun clean1 (ofns : output_functions) s =
     let val _ = #diag ofns "tools"
                       (fn () => "clean1 " ^ s ^
-                                " [In: " ^ OS.FileSys.getDir() ^ "]")
+                                " [In: " ^ getDir() ^ "]")
     in
       if OS.FileSys.access (s, []) then
         if OS.FileSys.isDir s then
@@ -816,19 +840,31 @@ fun find_files ds P =
 local
   val mtime_stash : (string, Time.time option) Binarymap.dict ref =
       ref (Binarymap.mkDict String.compare)
+  fun canon path =
+      if path <> "" andalso OS.Path.isAbsolute path then
+        OS.Path.mkCanonical path
+      else
+        OS.Path.mkCanonical (
+          OS.Path.mkAbsolute
+            {path = if path = "" then "." else path,
+             relativeTo = cached_getDir ()})
 in
   fun clear_mtime_cache () =
       mtime_stash := Binarymap.mkDict String.compare
+  (* Stat one path and (re)record it in the memo.  Called after runholdep
+     writes a .d file mid-scan: the memo may already hold that file's
+     pre-write (absent) mtime, and the closure walk re-checks the same
+     depfile, so without this the staleness test re-fires runholdep on
+     every revisit (observed ~5x redundant analysis on a cold scan).
+     We insert the fresh mtime here rather than just evicting, so the
+     next check is a cache hit rather than another stat. *)
+  fun record_modTime path =
+      let val key = canon path
+          val r = (SOME (HOLFileSys.modTime key)) handle _ => NONE
+      in mtime_stash := Binarymap.insert (!mtime_stash, key, r) end
   fun cached_modTime path =
       let
-        val key =
-            if path <> "" andalso OS.Path.isAbsolute path then
-              OS.Path.mkCanonical path
-            else
-              OS.Path.mkCanonical (
-                OS.Path.mkAbsolute
-                  {path = if path = "" then "." else path,
-                   relativeTo = OS.FileSys.getDir ()})
+        val key = canon path
       in
         case Binarymap.peek (!mtime_stash, key) of
             SOME r => r
@@ -925,7 +961,7 @@ in
               OS.Path.mkCanonical (
                 OS.Path.mkAbsolute
                   {path = if dir = "" then "." else dir,
-                   relativeTo = OS.FileSys.getDir ()})
+                   relativeTo = cached_getDir ()})
       in
         Binaryset.member (dir_listing absdir, file)
       end
@@ -971,7 +1007,11 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
   val outstr = openOut (normPath destination)
 in
   output(outstr, Holdep.encode_for_HOLMKfile holdep_result);
-  closeOut outstr
+  closeOut outstr;
+  (* the depfile now exists; record its mtime so a subsequent staleness
+     check sees the modtime of the freshly-written file instead of a
+     memoised absence *)
+  record_modTime destination
 end
 
 (* pull out a list of files that target depends on from depfile.  *)
@@ -1152,7 +1192,7 @@ fun warn_case_collisions warn src_files =
                               src_files
       fun report (_, fs as _::_::_) =
             warn ("case-only filename collision in " ^
-                  OS.FileSys.getDir() ^ ": " ^
+                  getDir() ^ ": " ^
                   String.concatWith ", " (List.rev fs) ^
                   " (the same file on case-insensitive filesystems)")
         | report _ = ()

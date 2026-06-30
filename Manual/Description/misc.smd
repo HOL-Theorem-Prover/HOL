@@ -477,6 +477,14 @@ The full schema (all keys optional except `name`):
 ```
 name = "myproject"
 
+# Opt out of project mode without giving up the file's other
+# facilities.  Defaults to true; setting false suppresses the
+# directory-set widening, cross-dir rule resolution, and source-
+# name clash check, while leaving holpathdb registration (via
+# `name`/`holpath`) and `external_includes` inheritance in place.
+# See "Inheritance-only mode" below.
+holmake = true
+
 # Directories under the project root to keep out of the project
 # directory set.  Paths are relative to the project root.  Useful
 # for excluding scratch dirs, in-progress sub-projects, etc.
@@ -509,6 +517,48 @@ can sit alongside `holproject.toml` and carry the same
 `[projects.<id>]` tables.  Entries with the same `id` in the local
 file override entries in the committed file, letting individual
 developers point externals at their own local paths.
+
+#### `[h4pedant]`: style-check configuration
+
+\index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}!h4pedant section@\texttt{[h4pedant]} section}
+\index{h4pedant@\texttt{h4pedant}!holproject.toml configuration}
+The optional `[h4pedant]` section configures the `h4pedant`
+style-check tool (`tools/h4pedant`).  When `h4pedant` is invoked
+with no positional directory arguments, it walks up from the
+current directory to find a `holproject.toml`; if one is found it
+scans the project tree below it under whatever settings the
+`[h4pedant]` section declares.  With no project file in the
+ancestor chain, `h4pedant` falls back to scanning the current
+directory.  Positional directory arguments override the default
+choice of scan root but per-directory settings from the project
+file still apply.
+
+```
+[h4pedant]
+linelen = 80           # max line length; 0 disables the check
+unicode_ok = false     # if true, do not flag non-ASCII characters
+exclude = ["scratch"]  # subtrees to skip entirely
+
+[[h4pedant.dir]]
+path = "src"
+unicode_ok = true
+linelen = 0
+```
+
+The `[[h4pedant.dir]]` array entries are per-subdirectory overrides
+keyed by `path` (relative to the project root); each setting that
+is present takes precedence over the global `[h4pedant]` default.
+Overrides apply recursively to everything below the named
+directory; where multiple overrides apply to a file, the deepest
+match wins key-by-key with shallower matches contributing any
+settings they declare and the deeper match leaves untouched.
+
+CLI flags continue to take precedence over the project file:
+`--nolinelen` disables the line-length check everywhere even in
+directories whose override sets a positive `linelen`, and
+`--unicodeok` similarly suppresses the Unicode check globally.
+The project file can never re-enable a check that the CLI has
+turned off.
 
 #### `name` and the path database
 
@@ -586,6 +636,33 @@ If a `Holmakefile` in a project dir explicitly writes
 `../foo`, `Holmake` aborts with a message naming both the
 contradictory `Holmakefile` and the `[exclude]` entry.  The user
 must reconcile.
+
+#### Inheritance-only mode: `holmake = false`
+
+\index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}!holmake key@\texttt{holmake} key}
+A `holproject.toml` containing `holmake = false` is parsed and its
+`name`/`holpath` and `external_includes` keys take effect as
+usual, but project mode is **not** activated: there is no
+directory-set widening, no cross-directory rule resolution, and no
+source-name clash check.  The file behaves as a lightweight
+inheritance shim — useful when the top of a larger tree wants to
+share `holpathdb` registrations or `external_includes` with every
+`Holmake` invocation below, without forcing the whole tree into a
+single project.
+
+Concretely, the canonical use is a shim at the root of a multi-
+project repository (the HOL repository itself is shipped with one):
+its presence stops `find_root`'s upward walk, supplies any
+`external_includes` declared in it, and otherwise lets each
+sub-development behave classically.
+
+Under `holmake = false` the project-mode-only keys `exclude` and
+`[projects.<id>]` are inert; `Holmake` warns at startup naming any
+that are present so the inconsistency can be removed.
+
+This is distinct from the `--no-project` command-line flag, which
+ignores the file entirely (no `external_includes`, no holpathdb
+registration from it).
 
 #### When project mode does **not** activate
 
@@ -910,8 +987,13 @@ Under `--fast` the tactic is never evaluated, so no dump is
 produced.  The mechanism is also a no-op under Moscow ML, which
 has no equivalent of Poly/ML's `SaveState.saveChild`.
 
-Dumped heaps are not removed automatically; they can be deleted
-freely once the failing proof has been resolved.
+When `Holmake` next rebuilds a theory script, any
+`<theory>.*.dumpedheap` file in the script's directory is swept
+along with the previous run's `Theory.sml`/`.sig`/`.dat` outputs,
+so stale dumps do not accumulate across iterations.  Dumps
+produced by `bin/hol run` outside the build system are left in
+place and can be deleted freely once the failing proof has been
+resolved.
 
 ### Using a make-file with `Holmake`
 

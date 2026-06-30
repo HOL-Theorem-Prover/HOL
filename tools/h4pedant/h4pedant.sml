@@ -1,20 +1,20 @@
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate4 z
+  fun makeUpdateT z = makeUpdate5 z
 in
 fun updateT z = let
-  fun from chattiness files_wmatches help tests =
+  fun from chattiness config_opt files_wmatches help tests =
     {
-      chattiness = chattiness, files_wmatches = files_wmatches, help = help,
-      tests = tests
+      chattiness = chattiness, config_opt = config_opt,
+      files_wmatches = files_wmatches, help = help, tests = tests
     }
-  fun from' tests help files_wmatches chattiness =
+  fun from' tests help files_wmatches config_opt chattiness =
     {
-      chattiness = chattiness, files_wmatches = files_wmatches, help = help,
-      tests = tests
+      chattiness = chattiness, config_opt = config_opt,
+      files_wmatches = files_wmatches, help = help, tests = tests
     }
-  fun to f {chattiness, files_wmatches, help, tests} =
-    f chattiness files_wmatches help tests
+  fun to f {chattiness, config_opt, files_wmatches, help, tests} =
+    f chattiness config_opt files_wmatches help tests
 in
   makeUpdateT (from, from', to)
 end z
@@ -31,6 +31,7 @@ type checkfn = bool -> string -> int -> (string * Substring.substring) -> bool
 
 type t = {
   chattiness : int,
+  config_opt : h4pedantConfig.config option,
   files_wmatches : bool,
   help : bool,
   tests : (string * (checkfn * string)) list
@@ -115,12 +116,16 @@ fun check_tabs qp fname linenum (line,ss) =
       line_error qp fname linenum "Includes TAB" (highlightTAB line)
   end
 
-fun check_length qp fname linenum (line,ss) =
+(* mk_check_length n - a check function that flags lines whose
+   visible length exceeds `n` characters.  The `+1` accounts for the
+   trailing newline that `TextIO.inputLine` includes. *)
+fun mk_check_length limit qp fname linenum (line,ss) =
   let
     val sz = UTF8.size line
   in
-    if sz > 81 then (* allowing for NL character on end of line *)
-      line_error qp fname linenum "Line-length > 80" line
+    if sz > limit + 1 then
+      line_error qp fname linenum
+                 ("Line-length > " ^ Int.toString limit) line
     else true
   end
 
@@ -192,8 +197,55 @@ fun is_generated opts fname =
   end
 
 
+fun remove_test s sl =
+  case sl of
+      [] => []
+    | (s',f) :: rest => if s' = s then rest else (s',f) :: remove_test s rest
+
+(* Per-directory effective tests.  CLI flags have already pruned the
+   global tests list; per-dir overrides may further prune (Unicode
+   silenced, line-length disabled) or substitute (a different
+   line-length limit).  Per-dir cannot re-enable a check the CLI
+   removed. *)
+fun derive_tests opts_tests (pd : h4pedantConfig.per_dir) =
+    let
+      val ts =
+          if #unicode_ok pd then remove_test "unicode" opts_tests
+          else opts_tests
+      val limit = #linelen pd
+    in
+      if not (List.exists (fn (s, _) => s = "linelength") ts) then ts
+      else if limit <= 0 then remove_test "linelength" ts
+      else
+        List.map
+          (fn entry as (s, _) =>
+              if s = "linelength" then
+                ("linelength", (mk_check_length limit, "Line too long"))
+              else entry)
+          ts
+    end
+
+(* Compute the effective per-file opts for files directly under
+   `dname`.  Returns `opts` unchanged if no project config is in
+   scope. *)
+fun opts_for_dir (opts : t) (dname : string) : t =
+    case #config_opt opts of
+        NONE => opts
+      | SOME cfg =>
+          let
+            val pd = h4pedantConfig.effective_for cfg dname
+          in
+            updateT opts (U #tests (derive_tests (#tests opts) pd)) $$
+          end
+
+fun is_excluded_path (opts : t) path =
+    case #config_opt opts of
+        NONE => false
+      | SOME cfg => h4pedantConfig.is_excluded cfg path
+
 fun do_dirstream opts dname ds sofar wlist =
   let
+    val opts_here = opts_for_dir opts dname
     fun recurse sofar dworklist =
       case OS.FileSys.readDir ds of
           NONE => (OS.FileSys.closeDir ds; (sofar, dworklist))
@@ -202,17 +254,19 @@ fun do_dirstream opts dname ds sofar wlist =
             val fullp = OS.Path.concat(dname, fname)
           in
             if OS.FileSys.isLink fullp then recurse sofar dworklist
-            else if OS.FileSys.isDir fullp then recurse sofar (fullp::dworklist)
+            else if OS.FileSys.isDir fullp then
+              if is_excluded_path opts fullp then recurse sofar dworklist
+              else recurse sofar (fullp::dworklist)
             else
               let
                 val {base,ext} = OS.Path.splitBaseExt fname
               in
                 if (ext = SOME "sml" orelse ext = SOME "sig") andalso
-                   not (is_generated opts fname) andalso
+                   not (is_generated opts_here fname) andalso
                    fname <> "selftest.sml" andalso
                    fname <> "EmitTeX.sml"
                 then
-                  recurse (checkfile opts sofar fullp) dworklist
+                  recurse (checkfile opts_here sofar fullp) dworklist
                 else
                   recurse sofar dworklist
               end
@@ -234,19 +288,19 @@ and do_dirs (opts:t) sofar wlist =
 
 fun fupdbool sel b t = updateT t (U sel b) $$
 fun fupdchattiness c t = updateT t (U #chattiness c) $$
+fun fupdconfig c t = updateT t (U #config_opt c) $$
 
 val default : t =
-    { help = false, chattiness = 1, files_wmatches = false,
-      tests = [("unicode", (check_unicode, "Unicode present")),
-               ("tabs", (check_tabs, "TAB present")),
-               ("linelength", (check_length, "Line too long")),
-               ("trailing_wspace", (check_twspace, "Trailing whitespace"))]
+    { help = false, chattiness = 1, config_opt = NONE,
+      files_wmatches = false,
+      tests =
+        [("unicode", (check_unicode, "Unicode present")),
+         ("tabs", (check_tabs, "TAB present")),
+         ("linelength",
+          (mk_check_length (#linelen h4pedantConfig.builtin_default),
+           "Line too long")),
+         ("trailing_wspace", (check_twspace, "Trailing whitespace"))]
     }
-
-fun remove_test s sl =
-  case sl of
-      [] => []
-    | (s',f) :: rest => if s' = s then rest else (s',f) :: remove_test s rest
 
 fun fupdtests f t = updateT t (U #tests (f (#tests t))) $$
 
@@ -289,13 +343,28 @@ fun read_cline args =
 fun main() =
   let
     val (upds, args) = read_cline(CommandLine.arguments())
-    val opts = List.foldl (fn (f,a) => f a) default upds
+    val cli_opts = List.foldl (fn (f,a) => f a) default upds
+    val cfg_opt = h4pedantConfig.load { start = OS.FileSys.getDir() }
+                  handle Fail msg => die ("holproject.toml: " ^ msg)
+    val opts = updateT cli_opts (U #config_opt cfg_opt) $$
+    (* Symlink-resolve scan_dirs so prefix comparison against config
+       paths (which are themselves symlink-resolved via the upward
+       walk from `OS.FileSys.getDir`) actually matches.  On macOS
+       `/var/tmp` and `/private/var/tmp` would otherwise look like
+       different subtrees. *)
+    fun resolve p = OS.FileSys.fullPath p
+                    handle OS.SysErr _ => p
+    val scan_dirs =
+        List.map resolve
+          (if not (null args) then args
+           else case cfg_opt of
+                    SOME cfg => [#root cfg]
+                  | NONE => [OS.FileSys.getDir()])
   in
     if #help opts then succeed (usage_str())
-    else if null args then die (usage_str())
     else
       let
-        val result = do_dirs opts true args
+        val result = do_dirs opts true scan_dirs
       in
         OS.Process.exit
           (if result then OS.Process.success else OS.Process.failure)

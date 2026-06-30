@@ -372,24 +372,54 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
   "Regular expression marking the beginning of the special syntax that marks
 a store_thm equivalent.")
 
+(defvar hol-quoted-block-opener-keywords
+  '("Theorem" "Triviality" "Definition" "Inductive" "CoInductive" "Datatype")
+  "Column-0 keywords that open a HOL block requiring a matching closer
+from `hol-quoted-block-closer-keywords'.")
+
+(defvar hol-quoted-block-closer-keywords
+  '("End" "Proof" "Termination")
+  "Column-0 keywords that close a HOL block opened by one of
+`hol-quoted-block-opener-keywords'.  `Proof' closes Theorem/Triviality;
+`Termination'/`End' close Definition; `End' closes
+Inductive/CoInductive/Datatype.")
+
 (defconst holscript-quoteddeclaration-end
-  (regexp-opt (list "End" "Proof" "Termination")))
+  (regexp-opt hol-quoted-block-closer-keywords))
 
 (defconst holscript-quotedmaterial-delimiter-fullregexp
   (concat holscript-quoteddeclaration-begin "\\|"
           holscript-quoteddeclaration-end "\\|[“”‘’]"))
 
-(defun holscript-in-quotedmaterialp (p)
+(defcustom holscript-quoted-search-max-distance 20000
+  "Maximum distance (in characters) that `holscript-in-quotedmaterialp'
+will scan backward looking for a quoted-block opener.  Capping the
+scan keeps the SMIE tokeniser and font-lock matchers responsive when
+the buffer has an unterminated block above point.  A quoted block
+whose opener exceeds the cap will not be detected as containing
+point."
+  :type 'integer
+  :group 'holscript)
+
+(defun holscript-in-quotedmaterialp (p &optional limit)
+  "Return non-nil if buffer position P lies inside a HOL quoted-material
+block.  Searches backward from P for a delimiter; the search is bounded
+to LIMIT (a buffer position) when supplied, otherwise to
+`holscript-quoted-search-max-distance' characters back from P."
   (save-match-data
     (save-mark-and-excursion
       (goto-char p)
-      (let ((beginmatch
-             (re-search-backward
-              holscript-quotedmaterial-delimiter-fullregexp nil t))
-            (ppss (syntax-ppss)))
+      (let* ((limit (or limit
+                        (max (point-min)
+                             (- p holscript-quoted-search-max-distance))))
+             (beginmatch
+              (re-search-backward
+               holscript-quotedmaterial-delimiter-fullregexp limit t))
+             (ppss (syntax-ppss)))
         (while (and beginmatch (or (nth 3 ppss) (nth 4 ppss)))
           (setq beginmatch (re-search-backward
-                         holscript-quotedmaterial-delimiter-fullregexp nil t))
+                            holscript-quotedmaterial-delimiter-fullregexp
+                            limit t))
           (setq ppss (syntax-ppss)))
         (and beginmatch
              (or (and (looking-at holscript-quoteddeclaration-begin)
@@ -728,6 +758,111 @@ a store_thm equivalent.")
 (defun hol-add-unicode () (interactive) (hol-unicode-replacements 't))
 (defun hol-remove-unicode () (interactive) (hol-unicode-replacements nil))
 
+;; Editing-side syntactic knowledge of HOL declaration shapes.
+;; holscript-mode is self-contained for editing; hol-mode
+;; forward-references these for REPL-destined parsing.
+
+(defvar hol-name-attrs-colon-re
+  "[[:space:]]+[A-Za-z0-9'_]+\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
+(defvar hol-quoted-theorem-proof-re-begin
+  (concat "\\(Theorem\\|Triviality\\)" hol-name-attrs-colon-re))
+(defvar hol-quoted-definition-re-begin
+  (concat "\\(Definition\\|\\(Co\\)?Inductive\\)" hol-name-attrs-colon-re))
+(defvar hol-quoted-datatype-re-begin "\\(Datatype[[:space:]]*:\\)")
+(defvar hol-quoted-Quote-re-begin
+  (concat "\\(Quote[[:space:]]+\\([A-Za-z0-9_']+[[:space:]]*=[[:space:]]*\\)?"
+          "[A-Za-z0-9_'.]+[[:space:]]*:\\)"))
+
+(defvar hol-term-begin-re
+  (concat
+   (regexp-opt '("“" "‘")) "\\|"
+   hol-quoted-theorem-proof-re-begin "\\|"
+   hol-quoted-definition-re-begin "\\|"
+   "Datatype[[:space:]]*:")
+  "Regular expression matching the opening delimiter of a HOL block
+or quoted-material region.  Used by `hol-find-quoted-material' and
+by `hol-fl-term-bump-{backwards,forwards}'.")
+
+(defcustom hol-fl-term-bump-max-distance 40000
+  "Maximum distance (in characters) that `hol-fl-term-bump-backwards'
+and `hol-fl-term-bump-forwards' will scan looking for an enclosing
+HOL block delimiter.  Capping the scan keeps font-locking responsive
+on large buffers whose nearest delimiter is far away (typically
+because the user has just typed an unterminated block).  A multi-line
+construct whose delimiter exceeds the cap will be fontified without
+full context near the cap boundary."
+  :type 'integer
+  :group 'holscript)
+
+(defvar hol-term-beginend-re
+  (concat
+   (regexp-opt
+    (append hol-quoted-block-opener-keywords
+            hol-quoted-block-closer-keywords)
+    "^\\(")
+   "\\|"
+   (regexp-opt '("“" "‘" "”" "’")))
+  "Regular expression for delimiters that begin or end a HOL block
+or quoted-material region.  Used by `hol-fl-term-bump-backwards' and
+`hol-fl-term-bump-forwards' to widen the font-lock region.")
+
+(defvar hol-term-end-re
+  (concat holscript-quoteddeclaration-end "\\|" (regexp-opt '("”" "’")))
+  "Regular expression matching the closing delimiter of a HOL block
+or quoted-material region.")
+
+(defun hol-fl-term-bump-backwards (pos)
+  (save-excursion
+    (goto-char pos)
+    (let* ((limit (max (point-min) (- pos hol-fl-term-bump-max-distance)))
+           (match (re-search-backward hol-term-beginend-re limit t)))
+      (if (not match) pos
+        (if (looking-at hol-term-end-re) pos
+          (if (looking-at hol-term-begin-re) (match-beginning 0) pos))))))
+
+(defun hol-fl-term-bump-forwards (pos)
+  (save-excursion
+    (goto-char pos)
+    (let* ((limit (min (point-max) (+ pos hol-fl-term-bump-max-distance)))
+           (match (re-search-forward hol-term-beginend-re limit t)))
+      (if (not match) pos
+        (goto-char (match-beginning 0))
+        (if (looking-at hol-term-begin-re) pos
+          (if (looking-at hol-term-end-re) (match-end 0) pos))))))
+
+(defun hol-term-matching-delim (start-delim)
+  (cond
+   ((equal start-delim "“") "”")
+   ((equal start-delim "‘") "’")
+   ((equal start-delim "Datatype:") "^End\\>")
+   ((or (string-prefix-p "Theorem" start-delim)
+        (string-prefix-p "Triviality" start-delim)) "^Proof\\>")
+   ((or (string-prefix-p "Inductive" start-delim)
+        (string-prefix-p "CoInductive" start-delim)) "^End\\>")
+   ((string-prefix-p "Definition" start-delim)
+    "^Termination\\>\\|^End\\>")))
+
+(defun hol-find-quoted-material (limit)
+  (let ((beginmatch (re-search-forward hol-term-begin-re limit t))
+        (ppss (syntax-ppss)))
+    (while (and beginmatch (or (nth 3 ppss) (nth 4 ppss)))
+      (setq beginmatch (re-search-forward hol-term-begin-re limit t))
+      (setq ppss (syntax-ppss)))
+    (if (not beginmatch) nil
+      (let* ((start-delim (match-string-no-properties 0))
+             (begin-marker
+              (if (= (length start-delim) 1)
+                  (set-marker (make-marker) (1- (point)))
+                (point-marker)))
+             (endre (hol-term-matching-delim start-delim))
+             (endmatch (if endre (re-search-forward endre limit t)
+                         (message (format "No end-delim for %s" start-delim))
+                         nil)))
+        (if (not endmatch) nil
+          (if (= (length start-delim) 1) nil (goto-char (match-beginning 0)))
+          (set-match-data (list begin-marker (point-marker)))
+          t)))))
+
 (defun hol-fl-extend-region ()
   (let ((newbeg (hol-fl-term-bump-backwards font-lock-beg))
         (newend (hol-fl-term-bump-forwards font-lock-end))
@@ -740,12 +875,19 @@ a store_thm equivalent.")
       (setq changed t))
     changed))
 
+(defvar hol-proof-beginend-re
+  (regexp-opt (cons "QED" hol-quoted-block-closer-keywords) "^\\(")
+  "Regular expression matching column-0 keywords that begin or end a
+HOL proof or definition body.  Used by `hol-movement-in-proof-p'.")
+
 (defun hol-movement-in-proof-p (pos)
   (save-excursion
     (goto-char pos)
-    (let ((pp (syntax-ppss)))
+    (let* ((pp (syntax-ppss))
+           (limit (max (point-min)
+                       (- pos holscript-quoted-search-max-distance))))
       (and (not (nth 3 pp)) (not (nth 4 pp))
-           (let ((nextre (re-search-backward hol-proof-beginend-re nil t)))
+           (let ((nextre (re-search-backward hol-proof-beginend-re limit t)))
              (and nextre
                   (let ((s (match-string-no-properties 0)))
                     (and (not (equal s "QED")) (not (equal s "End"))
@@ -776,11 +918,50 @@ a store_thm equivalent.")
 
 (defun holscript-fix-quotations (start end)
   (interactive "r")
+  (unless (boundp 'hol-executable)
+    (user-error
+     "holscript-fix-quotations needs `hol-executable' (set by hol-mode)"))
   (shell-command-on-region start end
                            (concat (file-name-directory hol-executable)
                                    "unquote --quotefix")
                            nil
                            t))
+
+(defun holscript--blink-without-smie (orig &rest args)
+  "Around `blink-matching-open' in holscript-mode buffers: bind
+`forward-sexp-function' to nil so blink uses the raw C-level paren
+scanner instead of the SMIE token walker installed by `smie-setup'.
+Blink-matching only needs to match `(' to `)', not navigate HOL
+block structure; SMIE-driven backward-sexp across a large buffer
+with an unmatched paren is hundreds of times slower."
+  (if (derived-mode-p 'holscript-mode)
+      (let ((forward-sexp-function nil)) (apply orig args))
+    (apply orig args)))
+(advice-add 'blink-matching-open :around #'holscript--blink-without-smie)
+
+(defcustom holscript-show-paren-max-distance 10000
+  "Maximum distance (in characters) that show-paren-mode's
+SMIE-driven block-pair matcher will search forward or backward from
+point.  Capping it keeps the show-paren idle timer responsive when
+the buffer has an unmatched paren; SMIE block pairs (`Theorem'
+/ `QED', `let' / `end', etc.) more than this many characters from
+point will not be highlighted, but `(' / `)' / `[' / `]' matching
+continues to work via the underlying `show-paren--default'."
+  :type 'integer
+  :group 'holscript)
+
+(defun holscript--show-paren-bounded (orig &rest args)
+  "Around the local `show-paren-data-function' chain in
+holscript-mode buffers: narrow to a window of width
+`holscript-show-paren-max-distance' around point before running
+the rest of the chain (which includes `smie--matching-block-data'
+installed by `smie-setup').  This bounds how far
+`smie-backward-sexp' walks looking for a structural match."
+  (save-restriction
+    (narrow-to-region
+     (max (point-min) (- (point) holscript-show-paren-max-distance))
+     (min (point-max) (+ (point) holscript-show-paren-max-distance)))
+    (apply orig args)))
 
 (defun holscript-mode-variables ()
   (set-syntax-table holscript-mode-syntax-table)
@@ -788,6 +969,17 @@ a store_thm equivalent.")
   (smie-setup holscript-smie-grammar #'holscript-smie-rules
               :backward-token #'holscript-smie-backward-token
               :forward-token #'holscript-smie-forward-token)
+  ;; Bound the SMIE-driven `show-paren-data-function' advice that
+  ;; `smie-setup' installs.  Without a bound, on a large *Script.sml
+  ;; with an unmatched paren the advice calls `smie-backward-sexp'
+  ;; which walks the entire buffer's SMIE token stream looking for a
+  ;; structural match — ~500 ms per call, blocking the show-paren
+  ;; idle timer and any keystroke queued behind it.  Narrowing to a
+  ;; window around point keeps SMIE block-pair highlighting
+  ;; (`Theorem'/`QED', `let'/`end') for pairs within the window and
+  ;; fails fast when there is no match.
+  (add-function :around (local 'show-paren-data-function)
+                #'holscript--show-paren-bounded)
   (set (make-local-variable 'parse-sexp-ignore-comments) t)
   (set (make-local-variable 'comment-start) "(* ")
   (set (make-local-variable 'comment-end) " *)")
@@ -930,7 +1122,17 @@ class characters.")
 
 (defun holscript-can-find-earlier-quantifier (pp)
   (let* ((pstk (nth 9 pp))
-         (limit (car (last pstk)))
+         (raw-limit (car (last pstk)))
+         ;; Cap the scan distance even when there is no enclosing paren
+         ;; (or when the outermost paren is far away because of an
+         ;; unbalanced `(' at the top of the buffer).  HOL declarations
+         ;; like `Definition foo: ... End' are not bracketed by
+         ;; paren-syntax characters, so the paren stack can legitimately
+         ;; be empty inside a HOL term: we must keep searching past
+         ;; raw-limit, just not to point-min.
+         (cap (max (point-min)
+                   (- (point) holscript-quoted-search-max-distance)))
+         (limit (if raw-limit (max raw-limit cap) cap))
          (case-fold-search nil))
     (save-mark-and-excursion
       (catch 'found-one
@@ -951,7 +1153,7 @@ class characters.")
                   (progn (forward-char -1)
                          (if (or (looking-at "∃!") (looking-at "?!"))
                              (throw 'found-one (point))))
-                (if (equal (car (last (nth 9 pp1))) limit)
+                (if (equal (car (last (nth 9 pp1))) raw-limit)
                     (if (or (looking-at holscript-quantifier-regexp)
                             (looking-at holscript-lambda-regexp)
                             (looking-at "\\\\"))
@@ -1123,12 +1325,14 @@ class characters.")
               (buffer-substring-no-properties p (point)))))))))
 
 (defun holscript-maybe-skip-attr-list-backward ()
-  (if (char-equal (char-before) ?\])
-      (progn (forward-char -1)
-             (skip-chars-backward "A-Za-z0-9_'.,= \t\n")
-             (if (char-equal (char-before) ?\[) (progn (forward-char -1) t)
-               nil))
-    t))
+  (let ((c (char-before)))
+    (cond
+     ((null c) t)
+     ((char-equal c ?\])
+      (forward-char -1)
+      (skip-chars-backward "A-Za-z0-9_'.,= \t\n")
+      (and (eq (char-before) ?\[) (progn (forward-char -1) t)))
+     (t t))))
 
 (defun holscript-smie-backward-token ()
   (let ((case-fold-search nil))

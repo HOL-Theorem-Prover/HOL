@@ -22,13 +22,24 @@ sig
      -- typically other `examples/...' subtrees.  Each entry is
      resolved at load time: `$(HOLDIR)` is substituted with the
      configure-time HOLDIR; non-absolute paths are resolved against
-     `root`. *)
+     `root`.
+
+     `holmake` is the top-level `holmake = true|false` switch (default
+     `true`).  `false` opts out of project mode while leaving
+     `holpathdb` registration (via `name`/`holpath`) and
+     `external_includes` inheritance intact -- the file acts as a
+     lightweight inheritance shim rather than a project root.  Under
+     `holmake = false` the project-mode-only keys `exclude` and
+     `[projects.<id>]` are skipped during parsing and listed in
+     `dead_keys` so the caller can warn the user. *)
   type config = {
     root : string,
     name : string option,
     exclude : string list,
     externals : external_project list,
-    external_includes : string list
+    external_includes : string list,
+    holmake : bool,
+    dead_keys : string list
   }
 
   (* find_root {start} - walk upward from `start` looking for a
@@ -69,5 +80,26 @@ sig
      name-clash detector that runs as new project contexts get
      discovered.  Returns [] on a non-readable directory. *)
   val source_files : string -> string list
+
+  (* Typed lookup helpers for `holproject.toml`-shaped TOML tables.
+     Each returns NONE only when the key is absent; if the key is
+     present but the value is the wrong variant, raises Fail with a
+     message naming the offending key.  Exposed so other readers of
+     `holproject.toml` (e.g. `h4pedant`) can reuse the same idiom. *)
+  val lookup_string : TOML.table -> TOML.key -> string option
+  val lookup_string_array : TOML.table -> TOML.key -> string list option
+  val lookup_bool : TOML.table -> TOML.key -> bool option
+  val lookup_int : TOML.table -> TOML.key -> int option
+  val lookup_table : TOML.table -> TOML.key -> TOML.table option
+
+  (* tag_path pf f - run `f`; if it raises Fail, re-raise with `pf:` as
+     a prefix so the message names the offending file.  Used to wrap
+     top-level key lookups during `load`-style parsing. *)
+  val tag_path : string -> (unit -> 'a) -> 'a
+
+  (* abs_relative_to base p - canonicalise `p`, resolving against
+     `base` if `p` is relative.  Exposed for path normalisation in
+     other holproject.toml consumers. *)
+  val abs_relative_to : string -> string -> string
 
 end

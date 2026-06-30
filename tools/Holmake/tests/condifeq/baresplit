@@ -1,0 +1,5 @@
+ifeq (a,a)
+RESULT = matched
+else
+RESULT = nomatch
+endif

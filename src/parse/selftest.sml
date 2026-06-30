@@ -595,6 +595,30 @@ val _ = tpp "Printing empty list form (var)" "[]" lf_g NIL_t
 val _ = tpp "Printing CONS-list form [x] (var)" "[x]" lf_g (mk_list "x")
 val _ = tpp "Printing CONS-list form [x;y] (var)" "[x; y]" lf_g (mk_list "xy")
 
+(* ParoundPrec parenthesises a suffix whose argument is printed by a rule
+   at the *same* precedence level (HOL issue #486).  Two distinct suffixes
+   at one level show the discriminator is precedence, not name -- the case
+   ParoundName cannot express. *)
+local
+  open term_grammar term_grammar_dtype
+  fun suffix_rule (nm, tok) =
+      add_rule {term_name = nm, fixity = Suffix 920,
+                pp_elements = [mTOK tok], paren_style = ParoundPrec,
+                block_style = (AroundEachPhrase, (CONSISTENT, 0))}
+  val pp_g = g0 |> suffix_rule ("sufA", "@") |> suffix_rule ("sufB", "#")
+  val b2b = bool --> bool
+  val xt = mk_var("x", bool)
+  fun sufA t = mk_comb(mk_var("sufA", b2b), t)
+  fun sufB t = mk_comb(mk_var("sufB", b2b), t)
+in
+val _ = tpp "ParoundPrec: lone suffix is unparenthesised at top"
+            "x@" pp_g (sufA xt)
+val _ = tpp "ParoundPrec: stacked same-name suffix parenthesises inner"
+            "(x@)@" pp_g (sufA (sufA xt))
+val _ = tpp "ParoundPrec: stacked same-prec suffixes parenthesise inner"
+            "(x@)#" pp_g (sufB (sufA xt))
+end
+
 val cCONS_t =
     Term.prim_new_const {Thy = "min", Name = "CONS"} (bool --> (bool --> bool))
 val cNIL_t = Term.prim_new_const {Thy = "min", Name = "NIL"} bool

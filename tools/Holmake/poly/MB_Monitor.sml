@@ -279,7 +279,16 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
         | SOME info => f info
     fun taginfo {tag,dir} dirstr timestr marker (colour,verdict) =
         let
-          val tagstr = delsml_sfx tag
+          (* tag is a bare filename when the target is built in its rule's
+             own directory, but an absolute path when it lives elsewhere
+             (e.g. the mdbook book/<Manual>/index.html outputs, whose rule
+             sits in Manual/<Manual>).  Show the basename as the name and the
+             target's own directory -- prettified, so HOLDIR is stripped just
+             as in the same-directory case -- in the dimmed column, rather
+             than dumping the whole path into the name. *)
+          val {dir = tagdir, file = tagfile} = OS.Path.splitDirFile tag
+          val tagstr = delsml_sfx tagfile
+          val dirstr = if tagdir <> "" then prettydir tagdir else dirstr
           val tagsz = size tagstr
           val verdict_w = 7
           val knfield_w = 7  (* enough for "[dd/dd]" or "[↓ddddd]" *)

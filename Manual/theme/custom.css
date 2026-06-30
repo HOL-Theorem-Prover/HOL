@@ -57,6 +57,17 @@ table td {
   display: none;
 }
 
+/* mdbook's general.css centres tables at their natural pulldown-cmark
+   width, which is fine for the occasional table in prose but produces
+   ragged left/right edges when many small tables are stacked, as in
+   the Quick reference's quickref.md.  Stretch each table to the full
+   content width so both column edges line up across the page. */
+body.hol-book-quick main table {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
 /* Polyscripter REPL interactions in the .smd sources are tagged as
    ```repl, which pulldown-cmark emits as <pre><code class="language-repl">.
    The HTML counterpart of the LaTeX `session` box: a left bar +
@@ -160,4 +171,16 @@ body.hol-book-reference main .section-num {
    visual gap.  Restore a one-line gap between entries. */
 div.csl-bib-body > div.csl-entry + div.csl-entry {
   margin-top: 0.8em;
+}
+
+/* Embedded manual figures live under figs/ and are vector line-art
+   (MetaPost / TeX): black strokes on a transparent background, so they
+   disappear on the dark mdbook themes (coal, navy, ayu).  Invert them --
+   re-rotating the hue so any accent colours stay roughly recognisable --
+   so they read as light-on-dark.  The light themes (light, rust) are left
+   untouched, and the figs/ scope leaves any photographic images alone. */
+html.coal img[src*="figs/"],
+html.navy img[src*="figs/"],
+html.ayu img[src*="figs/"] {
+  filter: invert(1) hue-rotate(180deg);
 }

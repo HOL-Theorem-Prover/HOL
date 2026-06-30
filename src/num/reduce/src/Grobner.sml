@@ -22,7 +22,8 @@ open arithmeticTheory Num_conv numSyntax mesonLib metisLib simpLib
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB{thyname="arithmetic"}
+  val (Type,Term) =
+      parse_from_grammars $ valOf $ grammarDB{thyname="arithmetic"}
 end
 
 open Parse
@@ -660,7 +661,8 @@ fun RING_AND_IDEAL_CONV (
       val km = map (fn x => num_0) vars
       val execache = ref []
       fun memoize prf x = (execache := (prf,x)::(!execache); x)
-      fun run_scaled_proof vars prf = assoceq prf (!execache) handle HOL_ERR _ =>
+      fun run_scaled_proof vars prf = assoceq prf (!execache)
+        handle HOL_ERR _ =>
         (case prf of
           Start NONE => failwith "impossible"
         | Start (SOME m) => (Arbnum.one,List.nth (initpols,m))
@@ -702,13 +704,14 @@ fun RING_AND_IDEAL_CONV (
           val (l,cert) = grobner_weak vars pols
           in (vars,l,cert,NOT_EQ_01) end
         else let
-          val nth = end_itlist (fn th1 => fn th2 => IDOM_RULE(CONJ th1 th2)) nths
+          val nth = end_itlist(fn th1 => fn th2 => IDOM_RULE(CONJ th1 th2)) nths
           val (vars,xs) =
             grobify_equations (list_mk_conj (rand (concl nth)::map concl eths))
           val pol = hd xs and pols = tl xs
           val (deg,l,cert) = grobner_strong vars pols pol
           val th1 = CONV_RULE(RAND_CONV(BINOP_CONV RING_NORMALIZE_CONV)) nth
-          (* NOTE: Arbnum.toInt may fail if deg (very unlikely) exceeds Int.maxInt *)
+          (* NOTE: Arbnum.toInt may fail if deg (very unlikely)
+             exceeds Int.maxInt *)
           val th2 = funpow (Arbnum.toInt deg) (IDOM_RULE o CONJ th1) NOT_EQ_01
           in (vars,l,cert,th2) end
         val _ = print_verbose "Translating certificate to HOL inferences\n";
@@ -731,7 +734,7 @@ fun RING_AND_IDEAL_CONV (
         val th4 = CONV_RULE (RAND_CONV (BINOP_CONV RING_NORMALIZE_CONV))
           (INE_RULE l th3)
         val (l,r) = dest_eq (rand (concl th4))
-        in EQ_MP (EQF_INTRO th4) (REFL l) end (* let val (vars,l,cert,noteqth) *)
+        in EQ_MP (EQF_INTRO th4) (REFL l) end (* let val (vars,l,cert,noteqth)*)
     end (* let val (nths0,eths0) ... *)
 
   val ring_ty = snd(dest_fun_ty(snd(dest_fun_ty(type_of ring_add_tm))))

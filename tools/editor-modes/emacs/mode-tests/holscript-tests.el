@@ -113,7 +113,7 @@
   (holscript-fixture-both "sampleScript.sml" 'holscript-sexp-movement-test))
 
 (defconst point4359-expected
-  " (*#loc 261 10 *)\ninv (2r pow (e + 1)) < inv (2r pow e)")
+  "(*#loc 262 10*)inv (2r pow (e + 1)) < inv (2r pow e)")
 (defun holscript-tap-test ()
   (should (save-excursion
             (and

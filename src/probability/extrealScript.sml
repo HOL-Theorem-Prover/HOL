@@ -5620,7 +5620,7 @@ End
 
 val _ = add_rule { fixity = Suffix 2100,
                    block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
-                   paren_style = OnlyIfNecessary,
+                   paren_style = ParoundPrec,
                    pp_elements = [TOK "^-"],
                    term_name = "fn_minus"};
 

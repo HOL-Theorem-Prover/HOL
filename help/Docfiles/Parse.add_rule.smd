@@ -156,7 +156,11 @@ the given `term_name` and where this term is not the argument of a
 function with the same head name. This style of parenthesisation is used
 with tuples, for example. The `ParoundPrec` value is similar, but causes
 parentheses to be added when the term is the argument to a function with
-a different precedence level. The `IfNotTop` value will cause
+the same precedence level. This is useful for forcing the
+parenthesisation of stacked suffixes that share a precedence level, so
+that, for example, the transpose of a transitive closure prints as
+`(R⁺)ᵀ` rather than `R⁺ ᵀ`, and `inv (inv 2)` prints as `(2⁻¹)⁻¹`. The
+`IfNotTop` value will cause
 parentheses to appear whenever the term is not being printed as the
 "top" term. A term is considered to be "top" if it is the whole term
 being printed (and this is known as the "real top"), or if it occurs

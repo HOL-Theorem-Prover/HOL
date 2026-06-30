@@ -5,8 +5,6 @@ Ancestors
 Libs
   congLib boolSimps ConseqConv quantHeuristicsLib
 
-val _ = ParseExtras.temp_loose_equality()
-
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
@@ -19,18 +17,18 @@ val _ = type_abbrev("bin_option_function",
 
 
 Definition OPTION_IS_LEFT_CANCELLATIVE_def:
-      OPTION_IS_LEFT_CANCELLATIVE (f:'a bin_option_function) =
+  OPTION_IS_LEFT_CANCELLATIVE (f:'a bin_option_function) ⇔
       (!x1 x2 x3. ((f x1 x2 = f x1 x3) /\ IS_SOME (f x1 x2)) ==> (x2 = x3))
 End
 
 Definition OPTION_IS_RIGHT_CANCELLATIVE_def:
-      OPTION_IS_RIGHT_CANCELLATIVE (f:'a bin_option_function) =
+  OPTION_IS_RIGHT_CANCELLATIVE (f:'a bin_option_function) ⇔
       (!x1 x2 x3. ((f x2 x1 = f x3 x1) /\ IS_SOME (f x2 x1)) ==> (x2 = x3))
 End
 
 
 Definition IS_SEPARATION_ALGEBRA_def:
-   IS_SEPARATION_ALGEBRA f u =
+  IS_SEPARATION_ALGEBRA f u ⇔
    (!x. f NONE x = NONE) /\
    (!x. (f (SOME u) (SOME x) = (SOME x))) /\
    COMM f /\ ASSOC f /\
@@ -39,12 +37,11 @@ End
 
 
 Definition IS_SEPARATION_COMBINATOR_def:
-   IS_SEPARATION_COMBINATOR f =
-
-   (!x. f NONE x = NONE) /\
-   (!x. ?u. f (SOME u) (SOME x) = (SOME x)) /\
-   COMM f /\ ASSOC f /\
-   OPTION_IS_LEFT_CANCELLATIVE f
+   IS_SEPARATION_COMBINATOR f ⇔
+     (!x. f NONE x = NONE) /\
+     (!x. ?u. f (SOME u) (SOME x) = (SOME x)) /\
+     COMM f /\ ASSOC f /\
+     OPTION_IS_LEFT_CANCELLATIVE f
 End
 
 
@@ -73,7 +70,7 @@ QED
 
 Theorem IS_SEPARATION_COMBINATOR___NEURAL_ELEMENT_IDEMPOTENT:
   !f. IS_SEPARATION_COMBINATOR f ==>
-!x u. (f (SOME u) (SOME x) = (SOME x)) ==> (f (SOME u) (SOME u) = SOME u)
+      !x u. (f (SOME u) (SOME x) = (SOME x)) ==> (f (SOME u) (SOME u) = SOME u)
 Proof
 
 SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_def] THEN
@@ -89,9 +86,9 @@ QED
 Theorem IS_SEPARATION_COMBINATOR___NEURAL_ELEMENT_IS_NEUTRAL:
   !f. IS_SEPARATION_COMBINATOR f ==>
 
-!x1 x2 x3 u. (((f (SOME u) (SOME x1) = (SOME x1)) /\
-          (f (SOME u) (SOME x2) = (SOME x3))) ==>
-(x3 = x2))
+      !x1 x2 x3 u. f (SOME u) (SOME x1) = SOME x1 ∧
+                   f (SOME u) (SOME x2) = SOME x3 ==>
+                   x3 = x2
 Proof
 
 REPEAT STRIP_TAC THEN
@@ -106,7 +103,7 @@ QED
 
 
 Definition IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION_def:
- IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f uf =
+ IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f uf ⇔
    (!x. (f (SOME (uf x)) (SOME x) = (SOME x)))
 End
 
@@ -120,7 +117,7 @@ End
 Theorem IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION_THM:
 
   !f uf. IS_SEPARATION_COMBINATOR f ==>
-(IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f uf =
+(IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f uf ⇔
    (!x. (f (SOME (uf x)) (SOME x) = (SOME x))) /\ (!x. (f (SOME x) (SOME (uf x)) = (SOME x))) /\
    (!x1 x2 x3. (f (SOME (uf x1)) (SOME x2) = (SOME x3)) = ((x2 = x3) /\ (uf x1 = uf x2))) /\
    (!x1 x2 x3. (f (SOME x2) (SOME (uf x1)) = (SOME x3)) = ((x2 = x3) /\ (uf x1 = uf x2))) /\
@@ -176,15 +173,18 @@ QED
 
 
 Theorem IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION___WITH_COMBINATOR_THM:
-
-  !f uf.(IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION___WITH_COMBINATOR f uf =
-   IS_SEPARATION_COMBINATOR f /\
-   (!x. (f (SOME (uf x)) (SOME x) = (SOME x))) /\ (!x. (f (SOME x) (SOME (uf x)) = (SOME x))) /\
-   (!x1 x2 x3. (f (SOME (uf x1)) (SOME x2) = (SOME x3)) = ((x2 = x3) /\ (uf x1 = uf x2))) /\
-   (!x1 x2 x3. (f (SOME x2) (SOME (uf x1)) = (SOME x3)) = ((x2 = x3) /\ (uf x1 = uf x2))) /\
-   (!x. f (SOME (uf x)) (SOME (uf x)) = SOME (uf x)) /\
-   (!x y. (f (SOME x) (SOME y) = SOME x) = (y = uf x)) /\
-   (!x y. (f (SOME y) (SOME x) = SOME x) = (y = uf x)))
+  !f uf.
+    IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION___WITH_COMBINATOR f uf ⇔
+      IS_SEPARATION_COMBINATOR f /\
+      (!x. f (SOME (uf x)) (SOME x) = SOME x) /\
+      (!x. f (SOME x) (SOME (uf x)) = SOME x) /\
+      (!x1 x2 x3.
+         f (SOME (uf x1)) (SOME x2) = SOME x3 ⇔ x2 = x3 ∧ uf x1 = uf x2) /\
+      (!x1 x2 x3.
+         f (SOME x2) (SOME (uf x1)) = SOME x3 ⇔ x2 = x3 ∧ uf x1 = uf x2) /\
+      (!x. f (SOME (uf x)) (SOME (uf x)) = SOME (uf x)) /\
+      (!x y. f (SOME x) (SOME y) = SOME x ⇔ y = uf x) /\
+      (!x y. f (SOME y) (SOME x) = SOME x ⇔ y = uf x)
 Proof
 
    REWRITE_TAC [IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION___WITH_COMBINATOR_def] THEN
@@ -242,14 +242,13 @@ QED
 
 
 Theorem IS_SEPARATION_COMBINATOR_HALF_EXPAND_THM:
-  !f. IS_SEPARATION_COMBINATOR f =
-
-   (!x. f x NONE = NONE) /\
-   (!x. f NONE x = NONE) /\
-   (?uf. IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f uf) /\
-   COMM f /\ ASSOC f /\
-   OPTION_IS_LEFT_CANCELLATIVE f /\
-   OPTION_IS_RIGHT_CANCELLATIVE f
+  !f. IS_SEPARATION_COMBINATOR f ⇔
+        (!x. f x NONE = NONE) /\
+        (!x. f NONE x = NONE) /\
+        (?uf. IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f uf) /\
+        COMM f /\ ASSOC f /\
+        OPTION_IS_LEFT_CANCELLATIVE f /\
+        OPTION_IS_RIGHT_CANCELLATIVE f
 Proof
 
 
@@ -284,21 +283,24 @@ QED
 
 
 
-
 Theorem IS_SEPARATION_COMBINATOR_EXPAND_THM:
-  !f.   IS_SEPARATION_COMBINATOR f =
-
-   (!x. f x NONE = NONE) /\
-   (!x. f NONE x = NONE) /\
-   (?uf. (!x. (f (SOME (uf x)) (SOME x) = (SOME x))) /\ (!x. (f (SOME x) (SOME (uf x)) = (SOME x))) /\
-      (!x1 x2 x3. (f (SOME (uf x1)) (SOME x2) = (SOME x3)) = ((x2 = x3) /\ (uf x1 = uf x2))) /\
-      (!x1 x2 x3. (f (SOME x2) (SOME (uf x1)) = (SOME x3)) = ((x2 = x3) /\ (uf x1 = uf x2))) /\
-      (!x. f (SOME (uf x)) (SOME (uf x)) = SOME (uf x)) /\
-      (!x y. (f (SOME x) (SOME y) = SOME x) = (y = uf x)) /\
-      (!x y. (f (SOME y) (SOME x) = SOME x) = (y = uf x))) /\
-   COMM f /\ ASSOC f /\
-   OPTION_IS_LEFT_CANCELLATIVE f /\
-   OPTION_IS_RIGHT_CANCELLATIVE f
+  !f.
+    IS_SEPARATION_COMBINATOR f ⇔
+      (!x. f x NONE = NONE) /\
+      (!x. f NONE x = NONE) /\
+      (?uf.
+         (!x. (f (SOME (uf x)) (SOME x) = (SOME x))) /\
+         (!x. (f (SOME x) (SOME (uf x)) = (SOME x))) /\
+         (!x1 x2 x3.
+            f (SOME (uf x1)) (SOME x2) = SOME x3 ⇔ x2 = x3 ∧ uf x1 = uf x2) /\
+         (!x1 x2 x3.
+            f (SOME x2) (SOME (uf x1)) = SOME x3 ⇔ x2 = x3 ∧ uf x1 = uf x2) /\
+         (!x. f (SOME (uf x)) (SOME (uf x)) = SOME (uf x)) /\
+         (!x y. (f (SOME x) (SOME y) = SOME x) = (y = uf x)) /\
+         (!x y. (f (SOME y) (SOME x) = SOME x) = (y = uf x))) /\
+      COMM f /\ ASSOC f /\
+      OPTION_IS_LEFT_CANCELLATIVE f /\
+      OPTION_IS_RIGHT_CANCELLATIVE f
 Proof
 
 REPEAT STRIP_TAC THEN
@@ -314,14 +316,13 @@ QED
 
 
 Theorem IS_SEPARATION_ALGEBRA_HALF_EXPAND_THM:
-  !f u. IS_SEPARATION_ALGEBRA f u =
-
-   (!x. f x NONE = NONE) /\
-   (!x. f NONE x = NONE) /\
-   (IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f (K u)) /\
-   COMM f /\ ASSOC f /\
-   OPTION_IS_LEFT_CANCELLATIVE f /\
-   OPTION_IS_RIGHT_CANCELLATIVE f
+  !f u. IS_SEPARATION_ALGEBRA f u ⇔
+          (!x. f x NONE = NONE) /\
+          (!x. f NONE x = NONE) /\
+          (IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f (K u)) /\
+          COMM f /\ ASSOC f /\
+          OPTION_IS_LEFT_CANCELLATIVE f /\
+          OPTION_IS_RIGHT_CANCELLATIVE f
 Proof
 
 
@@ -339,18 +340,17 @@ QED
 
 
 Theorem IS_SEPARATION_ALGEBRA_EXPAND_THM:
-  !f u. IS_SEPARATION_ALGEBRA f u =
-
-   (!x. f x NONE = NONE) /\
-   (!x. f NONE x = NONE) /\
-   (!x. (f (SOME u) (SOME x) = (SOME x))) /\
-   (!x. (f (SOME x) (SOME u) = (SOME x))) /\
-   (f (SOME u) (SOME u) = SOME u) /\
-   (!x y. (f (SOME x) (SOME y) = SOME x) = (y = u)) /\
-   (!x y. (f (SOME y) (SOME x) = SOME x) = (y = u)) /\
-   COMM f /\ ASSOC f /\
-   OPTION_IS_LEFT_CANCELLATIVE f /\
-   OPTION_IS_RIGHT_CANCELLATIVE f
+  !f u. IS_SEPARATION_ALGEBRA f u ⇔
+          (!x. f x NONE = NONE) /\
+          (!x. f NONE x = NONE) /\
+          (!x. (f (SOME u) (SOME x) = (SOME x))) /\
+          (!x. (f (SOME x) (SOME u) = (SOME x))) /\
+          (f (SOME u) (SOME u) = SOME u) /\
+          (!x y. (f (SOME x) (SOME y) = SOME x) = (y = u)) /\
+          (!x y. (f (SOME y) (SOME x) = SOME x) = (y = u)) /\
+          COMM f /\ ASSOC f /\
+          OPTION_IS_LEFT_CANCELLATIVE f /\
+          OPTION_IS_RIGHT_CANCELLATIVE f
 Proof
 
 REPEAT STRIP_TAC THEN
@@ -363,11 +363,14 @@ FULL_SIMP_TAC std_ss [IS_SEPARATION_ALGEBRA_HALF_EXPAND_THM,
 QED
 
 
-Definition asl_emp_def:   asl_emp f = \u. ?x:'a. f (SOME (u:'a)) (SOME x) = (SOME x)
+Definition asl_emp_def:
+  asl_emp f = \u. ?x:'a. f (SOME (u:'a)) (SOME x) = (SOME x)
 End
 
 Definition asl_star_def:
-asl_star = (\(f:'a option -> 'a option -> 'a option) P Q x. ?p q. (SOME x = f (SOME p) (SOME q)) /\ (p IN P) /\ (q IN Q))
+  asl_star =
+  (λ(f:'a option -> 'a option -> 'a option) P Q x.
+     ?p q. SOME x = f (SOME p) (SOME q) /\ p IN P /\ q IN Q)
 End
 
 
@@ -393,10 +396,10 @@ QED
 
 
 Theorem IS_SEPARATION_ALGEBRA___ALT_DEF:
-
-  !f u . IS_SEPARATION_ALGEBRA f u =
-(IS_SEPARATION_COMBINATOR f /\
-(!uf. IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f uf = (uf = K u)))
+  !f u . IS_SEPARATION_ALGEBRA f u ⇔
+           IS_SEPARATION_COMBINATOR f /\
+           !uf. IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f uf ⇔
+                uf = K u
 Proof
 
 REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -449,27 +452,30 @@ End
 
 
 Theorem BIN_OPTION_MAP_THM:
-    (BIN_OPTION_MAP f c (SOME x1) (SOME x2) =
-      if (~(c x1 x2)) then NONE else
-      SOME (f x1 x2)) /\
+  (BIN_OPTION_MAP f c (SOME x1) (SOME x2) =
+   if ~c x1 x2 then NONE else SOME (f x1 x2)) /\
   (BIN_OPTION_MAP f c NONE x = NONE) /\
   (BIN_OPTION_MAP f c x NONE = NONE) /\
-  ((BIN_OPTION_MAP f c s1 s2 = SOME x3) = (?x1 x2. (s1 = SOME x1) /\ (s2 = SOME x2) /\ (c x1 x2) /\ (x3 = f x1 x2))) /\
-  ((BIN_OPTION_MAP f c s1 s2 = NONE) = ((s1 = NONE) \/ (s2 = NONE) \/ ~(c (THE s1) (THE s2)))) /\
-  (RIGHT_ID (BIN_OPTION_MAP f c) s1 = (IS_SOME s1 /\ (RIGHT_ID f (THE s1)) /\ !x2. c x2 (THE s1))) /\
-  (LEFT_ID (BIN_OPTION_MAP f c) s1 = ((IS_SOME s1) /\ (LEFT_ID f (THE s1)) /\ !x2. c (THE s1) x2)) /\
-  (COMM (BIN_OPTION_MAP f c) =
-   ((COMM c) /\
-   !x1 x2. c x1 x2 ==> (f x1 x2 = f x2 x1))) /\
-  (ASSOC (BIN_OPTION_MAP f c) =
-   (!x1 x2 x3.
-      (c x2 x3 /\ c x1 (f x2 x3) = c x1 x2 /\ c (f x1 x2) x3) /\
-      ((c x2 x3 /\ c x1 (f x2 x3)) ==> (f x1 (f x2 x3) = f (f x1 x2) x3)))) /\
-  (OPTION_IS_LEFT_CANCELLATIVE (BIN_OPTION_MAP f c) =
+  (BIN_OPTION_MAP f c s1 s2 = SOME x3 ⇔
+     ?x1 x2. s1 = SOME x1 ∧ s2 = SOME x2 /\ c x1 x2 /\ x3 = f x1 x2) /\
+  ((BIN_OPTION_MAP f c s1 s2 = NONE) ⇔
+     ((s1 = NONE) \/ (s2 = NONE) \/ ~(c (THE s1) (THE s2)))) /\
+  (RIGHT_ID (BIN_OPTION_MAP f c) s1 ⇔
+     (IS_SOME s1 /\ (RIGHT_ID f (THE s1)) /\ !x2. c x2 (THE s1))) /\
+  (LEFT_ID (BIN_OPTION_MAP f c) s1 ⇔
+     (IS_SOME s1 /\ LEFT_ID f (THE s1) /\ !x2. c (THE s1) x2)) /\
+  (COMM (BIN_OPTION_MAP f c) ⇔
+     COMM c /\
+     !x1 x2. c x1 x2 ==> (f x1 x2 = f x2 x1)) /\
+  (ASSOC (BIN_OPTION_MAP f c) ⇔
+     (!x1 x2 x3.
+        (c x2 x3 /\ c x1 (f x2 x3) ⇔ c x1 x2 /\ c (f x1 x2) x3) /\
+        (c x2 x3 /\ c x1 (f x2 x3) ==> (f x1 (f x2 x3) = f (f x1 x2) x3)))) /\
+  (OPTION_IS_LEFT_CANCELLATIVE (BIN_OPTION_MAP f c) ⇔
    (!x1 x2 x3. (c x1 x2 /\ c x1 x3 /\ (f x1 x2 = f x1 x3)) ==> (x2 = x3))) /\
-  (OPTION_IS_RIGHT_CANCELLATIVE (BIN_OPTION_MAP f c) =
+  (OPTION_IS_RIGHT_CANCELLATIVE (BIN_OPTION_MAP f c) ⇔
    (!x1 x2 x3. (c x2 x1 /\ c x3 x1 /\ (f x2 x1 = f x3 x1)) ==> (x2 = x3))) /\
-  (IS_SOME (BIN_OPTION_MAP f c s1 s2) =
+  (IS_SOME (BIN_OPTION_MAP f c s1 s2) ⇔
    ((IS_SOME s1) /\ (IS_SOME s2) /\ c (THE s1) (THE s2)))
 Proof
 
@@ -740,12 +746,12 @@ QED
 
 
 Definition COMM_MONOID_def:
-   COMM_MONOID f e = MONOID f e /\ COMM f
+   COMM_MONOID f e ⇔ MONOID f e /\ COMM f
 End
 
 
 Theorem COMM_MONOID_THM:
-     COMM_MONOID f e = ASSOC f /\ COMM f /\ LEFT_ID f e
+     COMM_MONOID f e ⇔ ASSOC f /\ COMM f /\ LEFT_ID f e
 Proof
 
 SIMP_TAC std_ss [COMM_MONOID_def, MONOID_DEF] THEN
@@ -757,7 +763,7 @@ QED
 
 Theorem IS_COMM_MONOID___asl_star_emp:
   !f. IS_SEPARATION_COMBINATOR f ==>
-(COMM_MONOID (asl_star f) (asl_emp f))
+      (COMM_MONOID (asl_star f) (asl_emp f))
 Proof
 
 REWRITE_TAC [COMM_MONOID_THM] THEN
@@ -808,15 +814,17 @@ QED
 (******************************************************************************)
 
 Definition DISJOINT_FMAP_UNION_def:
-DISJOINT_FMAP_UNION =
-BIN_OPTION_MAP FUNION (\m1 m2. DISJOINT (FDOM m1) (FDOM m2))
+  DISJOINT_FMAP_UNION =
+  BIN_OPTION_MAP FUNION (\m1 m2. DISJOINT (FDOM m1) (FDOM m2))
 End
 
 
-val DISJOINT_FMAP_UNION___REWRITE_helper = prove (
-   ``!x1 x2. COMM (DISJOINT_FMAP_UNION:('a |-> 'b) bin_option_function) /\
-   ((DISJOINT_FMAP_UNION:('a |-> 'b) bin_option_function (SOME x1) (SOME x2) = (SOME x1)) = (x2 = FEMPTY)) /\
-   ((DISJOINT_FMAP_UNION (SOME x1) (SOME x2) = (SOME x2)) = (x1 = FEMPTY))``,
+Theorem DISJOINT_FMAP_UNION___REWRITE_helper[local]:
+  !x1 x2.
+    COMM (DISJOINT_FMAP_UNION:('a |-> 'b) bin_option_function) /\
+    ((DISJOINT_FMAP_UNION:('a |-> 'b) bin_option_function (SOME x1) (SOME x2) = (SOME x1)) ⇔ x2 = FEMPTY) /\
+   ((DISJOINT_FMAP_UNION (SOME x1) (SOME x2) = (SOME x2)) ⇔ (x1 = FEMPTY))
+Proof
 
 SIMP_TAC std_ss [FORALL_AND_THM] THEN
 MATCH_MP_TAC (prove (``(((A /\ B) ==> C) /\ A /\ B) ==> (A /\ B /\ C)``, METIS_TAC[])) THEN
@@ -836,7 +844,8 @@ REPEAT CONJ_TAC THENL [
       ASM_SIMP_TAC std_ss [FUNION_FEMPTY_2, FDOM_FEMPTY,
          DISJOINT_EMPTY]
    ]
-]);
+]
+QED
 
 
 Theorem DISJOINT_FMAP_UNION___REWRITE:
@@ -844,24 +853,25 @@ Theorem DISJOINT_FMAP_UNION___REWRITE:
    (if ~DISJOINT (FDOM x1) (FDOM x2) then
       NONE
     else
-      SOME (FUNION x1 x2))) /\ (DISJOINT_FMAP_UNION NONE x = NONE) /\
-       (DISJOINT_FMAP_UNION x NONE = NONE) /\
-       ((DISJOINT_FMAP_UNION s1 s2 = SOME x3) =
+      SOME (FUNION x1 x2))) /\
+  (DISJOINT_FMAP_UNION NONE x = NONE) /\
+  (DISJOINT_FMAP_UNION x NONE = NONE) /\
+  ((DISJOINT_FMAP_UNION s1 s2 = SOME x3) ⇔
    ?x1 x2.
      (s1 = SOME x1) /\ (s2 = SOME x2) /\
      DISJOINT (FDOM x1) (FDOM x2) /\ (x3 = FUNION x1 x2)) /\
-       ((DISJOINT_FMAP_UNION s1 s2 = NONE) =
-   (s1 = NONE) \/ (s2 = NONE) \/
-   ~DISJOINT (FDOM (THE s1)) (FDOM (THE s2))) /\
-   ((DISJOINT_FMAP_UNION (SOME x1) (SOME x2) = (SOME x1)) = (x2 = FEMPTY)) /\
-   ((DISJOINT_FMAP_UNION (SOME x1) (SOME x2) = (SOME x2)) = (x1 = FEMPTY)) /\
-       (COMM DISJOINT_FMAP_UNION) /\
-       (ASSOC DISJOINT_FMAP_UNION) /\
-       (OPTION_IS_LEFT_CANCELLATIVE DISJOINT_FMAP_UNION) /\
-       (OPTION_IS_RIGHT_CANCELLATIVE DISJOINT_FMAP_UNION) /\
-       (IS_SOME (DISJOINT_FMAP_UNION s1 s2) =
-   IS_SOME s1 /\ IS_SOME s2 /\
-   DISJOINT (FDOM (THE s1)) (FDOM (THE s2)))
+  ((DISJOINT_FMAP_UNION s1 s2 = NONE) ⇔
+     (s1 = NONE) \/ (s2 = NONE) \/
+     ~DISJOINT (FDOM (THE s1)) (FDOM (THE s2))) /\
+  ((DISJOINT_FMAP_UNION (SOME x1) (SOME x2) = SOME x1) ⇔ x2 = FEMPTY) /\
+  ((DISJOINT_FMAP_UNION (SOME x1) (SOME x2) = SOME x2) ⇔ x1 = FEMPTY) /\
+  (COMM DISJOINT_FMAP_UNION) /\
+  (ASSOC DISJOINT_FMAP_UNION) /\
+  (OPTION_IS_LEFT_CANCELLATIVE DISJOINT_FMAP_UNION) /\
+  (OPTION_IS_RIGHT_CANCELLATIVE DISJOINT_FMAP_UNION) /\
+  (IS_SOME (DISJOINT_FMAP_UNION s1 s2) ⇔
+     IS_SOME s1 /\ IS_SOME s2 /\
+     DISJOINT (FDOM (THE s1)) (FDOM (THE s2)))
 Proof
 
 REWRITE_TAC [DISJOINT_FMAP_UNION___REWRITE_helper] THEN
@@ -912,7 +922,7 @@ QED
 
 
 Theorem DISJOINT_FMAP_UNION___EQ_FEMPTY:
-  !x y. (DISJOINT_FMAP_UNION x y = (SOME FEMPTY)) =
+  !x y. (DISJOINT_FMAP_UNION x y = (SOME FEMPTY)) ⇔
         (x = SOME FEMPTY) /\ (y = SOME FEMPTY)
 Proof
 
@@ -940,9 +950,9 @@ QED
 
 Theorem ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION:
   !s1 s2.
-ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s1 s2 =
-(FDOM s1 SUBSET FDOM s2 /\
-(!x. x IN FDOM s1 ==> (s1 ' x = s2 ' x)))
+    ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s1 s2 ⇔
+      FDOM s1 SUBSET FDOM s2 /\
+      (!x. x IN FDOM s1 ==> (s1 ' x = s2 ' x))
 Proof
 
 SIMP_TAC std_ss [ASL_IS_SUBSTATE_def,
@@ -1000,14 +1010,12 @@ QED
 
 
 Theorem ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___FUNION:
-
   !s s1 s2.
-DISJOINT (FDOM s1) (FDOM s2) ==>
+    DISJOINT (FDOM s1) (FDOM s2) ==>
+    (ASL_IS_SUBSTATE DISJOINT_FMAP_UNION (FUNION s1 s2) s ⇔
 
-(ASL_IS_SUBSTATE DISJOINT_FMAP_UNION (FUNION s1 s2) s =
-
-(ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s1 s /\
- ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s2 s))
+       ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s1 s /\
+       ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s2 s)
 Proof
 
 SIMP_TAC std_ss [ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION,
@@ -1555,21 +1563,21 @@ QED
 Theorem asl_bool_EVAL:
   (asl_true x) /\ (x IN asl_true) /\
   ~(asl_false x) /\ ~(x IN asl_false) /\
-  ((K c) x = c) /\ (x IN (K c) = c) /\
-  ((asl_and p1 p2) x = (x IN p1) /\ (x IN p2)) /\
-  (x IN (asl_and p1 p2) = (x IN p1) /\ (x IN p2)) /\
-  ((asl_or p1 p2) x = (x IN p1) \/ (x IN p2)) /\
-  (x IN (asl_or p1 p2) = (x IN p1) \/ (x IN p2)) /\
-  ((asl_imp p1 p2) x = ((x IN p1) ==> (x IN p2))) /\
-  (x IN (asl_imp p1 p2) = ((x IN p1) ==> (x IN p2))) /\
+  ((K c) x = c) /\ (x IN (K c) ⇔ c) /\
+  ((asl_and p1 p2) x ⇔ (x IN p1) /\ (x IN p2)) /\
+  (x IN (asl_and p1 p2) ⇔ x IN p1 /\ x IN p2) /\
+  ((asl_or p1 p2) x ⇔ (x IN p1) \/ (x IN p2)) /\
+  (x IN (asl_or p1 p2) ⇔ (x IN p1) \/ (x IN p2)) /\
+  ((asl_imp p1 p2) x ⇔ (x IN p1 ==> x IN p2)) /\
+  (x IN (asl_imp p1 p2) ⇔ ((x IN p1) ==> (x IN p2))) /\
   ((asl_neg p) x = (~(x IN p))) /\
-  (x IN (asl_neg p) = (~(x IN p))) /\
-  ((asl_forall y. (qp y)) x = (!y. x IN (qp y))) /\
-  (x IN (asl_forall y. (qp y)) = (!y. x IN (qp y))) /\
-  ((asl_exists y. (qp y)) x = (?y. x IN (qp y))) /\
-  (x IN (asl_exists y. (qp y)) = (?y. x IN (qp y))) /\
-  (x IN asl_trivial_cond c p = c /\ x IN p) /\
-  (asl_trivial_cond c p x = c /\ x IN p)
+  (x IN (asl_neg p) ⇔ (~(x IN p))) /\
+  ((asl_forall y. (qp y)) x ⇔ (!y. x IN (qp y))) /\
+  (x IN (asl_forall y. (qp y)) ⇔ (!y. x IN (qp y))) /\
+  ((asl_exists y. (qp y)) x ⇔ (?y. x IN (qp y))) /\
+  (x IN (asl_exists y. (qp y)) ⇔ (?y. x IN (qp y))) /\
+  (x IN asl_trivial_cond c p ⇔ c /\ x IN p) /\
+  (asl_trivial_cond c p x ⇔ c /\ x IN p)
 Proof
 
 SIMP_TAC std_ss [asl_true_def, asl_false_def, asl_and_def,
@@ -1796,17 +1804,18 @@ End
 
 Theorem PRODUCT_SEPARATION_COMBINATOR_REWRITE:
   (PRODUCT_SEPARATION_COMBINATOR f1 f2 X NONE = NONE) /\
-(PRODUCT_SEPARATION_COMBINATOR f1 f2 NONE X = NONE) /\
-(PRODUCT_SEPARATION_COMBINATOR f1 f2 (SOME x) (SOME y) =
-   let z1 = f1 (SOME (FST x)) (SOME (FST y)) in
-   let z2 = f2 (SOME (SND x)) (SOME (SND y)) in
-   if (IS_SOME z1 /\ IS_SOME z2) then
-      SOME (THE z1, THE z2)
-   else
-      NONE) /\
-((PRODUCT_SEPARATION_COMBINATOR f1 f2 (SOME x) (SOME y) = SOME z) =
-   (f1 (SOME (FST x)) (SOME (FST y)) = SOME (FST z)) /\
-   (f2 (SOME (SND x)) (SOME (SND y)) =  SOME (SND z)))
+  (PRODUCT_SEPARATION_COMBINATOR f1 f2 NONE X = NONE) /\
+  (PRODUCT_SEPARATION_COMBINATOR f1 f2 (SOME x) (SOME y) =
+   let z1 = f1 (SOME (FST x)) (SOME (FST y)) ;
+       z2 = f2 (SOME (SND x)) (SOME (SND y))
+   in
+     if (IS_SOME z1 /\ IS_SOME z2) then
+       SOME (THE z1, THE z2)
+     else
+       NONE) /\
+  (PRODUCT_SEPARATION_COMBINATOR f1 f2 (SOME x) (SOME y) = SOME z ⇔
+     f1 (SOME (FST x)) (SOME (FST y)) = SOME (FST z) /\
+     f2 (SOME (SND x)) (SOME (SND y)) =  SOME (SND z))
 Proof
 
 REPEAT STRIP_TAC THENL [
@@ -1980,9 +1989,9 @@ QED
 
 Theorem ASL_IS_SUBSTATE___PRODUCT_SEPARATION_COMBINATOR:
   !f1 f2 s1 s2.
-ASL_IS_SUBSTATE (PRODUCT_SEPARATION_COMBINATOR f1 f2) s1 s2 =
-ASL_IS_SUBSTATE f1 (FST s1) (FST s2) /\
-ASL_IS_SUBSTATE f2 (SND s1) (SND s2)
+    ASL_IS_SUBSTATE (PRODUCT_SEPARATION_COMBINATOR f1 f2) s1 s2 ⇔
+    ASL_IS_SUBSTATE f1 (FST s1) (FST s2) /\
+    ASL_IS_SUBSTATE f2 (SND s1) (SND s2)
 Proof
 
 Cases_on `s1` THEN
@@ -2162,10 +2171,11 @@ QED
 
 
 Theorem IS_SOME___PRODUCT_SEPARATION_COMBINATOR:
-  !f1 f2 s1 s2. IS_SOME (PRODUCT_SEPARATION_COMBINATOR f1 f2 s1 s2) =
-   IS_SOME s1 /\ IS_SOME s2 /\
-   (IS_SOME (f1 (SOME (FST (THE s1))) (SOME (FST (THE s2)))) /\
-    IS_SOME (f2 (SOME (SND (THE s1))) (SOME (SND (THE s2)))))
+  !f1 f2 s1 s2.
+    IS_SOME (PRODUCT_SEPARATION_COMBINATOR f1 f2 s1 s2) ⇔
+      IS_SOME s1 /\ IS_SOME s2 /\
+      (IS_SOME (f1 (SOME (FST (THE s1))) (SOME (FST (THE s2)))) /\
+       IS_SOME (f2 (SOME (SND (THE s1))) (SOME (SND (THE s2)))))
 Proof
 Cases_on `s1` THEN Cases_on `s2` THEN
 SIMP_TAC std_ss [PRODUCT_SEPARATION_COMBINATOR_REWRITE,
@@ -2194,7 +2204,7 @@ Theorem fasl_order_THM:
      (fasl_order NONE x = (x = NONE)) /\
      (fasl_order x NONE) /\
      (fasl_order x (SOME s2) = (?s1. (x = SOME s1) /\ (s1 SUBSET s2))) /\
-     (fasl_order (SOME s1) x = (x = NONE) \/ (?s2. (x = SOME s2) /\ (s1 SUBSET s2)))
+     (fasl_order (SOME s1) x ⇔ (x = NONE) \/ (?s2. (x = SOME s2) /\ (s1 SUBSET s2)))
 Proof
 
 Cases_on `x` THEN SIMP_TAC std_ss [fasl_order_def]
@@ -2214,7 +2224,7 @@ QED
 
 Theorem fasl_order_EVAL:
   !x y. fasl_order x y =
-   (!y'. (SOME y' = y) ==> ?x'. (x = SOME x') /\ (x' SUBSET y'))
+        (!y'. (SOME y' = y) ==> ?x'. (x = SOME x') /\ (x' SUBSET y'))
 Proof
 Cases_on `y` THEN SIMP_TAC std_ss [fasl_order_THM2]
 QED
@@ -2258,7 +2268,7 @@ QED
 
 
 Definition SUP_fasl_order_def:
-   SUP_fasl_order M = if (NONE IN M) then NONE else SOME (BIGUNION (IMAGE THE M))
+  SUP_fasl_order M = if NONE IN M then NONE else SOME (BIGUNION (IMAGE THE M))
 End
 
 
@@ -2554,10 +2564,9 @@ End
 
 
 Theorem LOCALITY_CHARACTERISATION:
-
-     !f op. (ASL_IS_LOCAL_ACTION f op =
-      TRANS_FUNC_SAFETY_MONOTONICITY f op /\
-      TRANS_FUNC_FRAME_PROPERTY f op)
+  !f op. ASL_IS_LOCAL_ACTION f op ⇔
+         TRANS_FUNC_SAFETY_MONOTONICITY f op /\
+         TRANS_FUNC_FRAME_PROPERTY f op
 Proof
 
 REPEAT STRIP_TAC THEN
@@ -3534,12 +3543,11 @@ QED
 
 
 Theorem SOME___best_local_action:
-
-(best_local_action f P1 P2 s = SOME Q) =
-(?s0 s1. (SOME s = f (SOME s0) (SOME s1)) /\ s1 IN P1) /\
-(Q = (\x. (!s0 s1.
-     (SOME s = f (SOME s0) (SOME s1)) /\ s1 IN P1 ==>
-     x IN asl_star f P2 {s0})))
+  (best_local_action f P1 P2 s = SOME Q) ⇔
+    (?s0 s1. (SOME s = f (SOME s0) (SOME s1)) /\ s1 IN P1) /\
+    (Q = (\x. (!s0 s1.
+                 (SOME s = f (SOME s0) (SOME s1)) /\ s1 IN P1 ==>
+                 x IN asl_star f P2 {s0})))
 Proof
 
 SIMP_TAC std_ss [best_local_action_def, LET_THM,
@@ -4767,7 +4775,7 @@ End
 
 Theorem asl_predicate_IS_DECIDED_IN_STATE___EXPAND_REWRITE:
   IS_SEPARATION_COMBINATOR f ==>
-  (asl_predicate_IS_DECIDED_IN_STATE f s c =
+  (asl_predicate_IS_DECIDED_IN_STATE f s c ⇔
    (s IN (EVAL_asl_predicate f c) /\
     ~(s IN (EVAL_asl_predicate f (asl_pred_neg c)))) \/
    (~(s IN (EVAL_asl_predicate f c)) /\
@@ -4815,13 +4823,12 @@ QED
 
 
 Theorem asl_predicate_IS_DECIDED_IN_STATE___REWRITE:
-
   !f s c.
-   IS_SEPARATION_COMBINATOR f ==>
-(asl_predicate_IS_DECIDED_IN_STATE f s c =
- !s'. ASL_IS_SUBSTATE f s s' ==>
-      (s IN EVAL_asl_predicate f c =
-       s' IN EVAL_asl_predicate f c))
+    IS_SEPARATION_COMBINATOR f ==>
+    (asl_predicate_IS_DECIDED_IN_STATE f s c ⇔
+     !s'. ASL_IS_SUBSTATE f s s' ==>
+          (s IN EVAL_asl_predicate f c ⇔
+           s' IN EVAL_asl_predicate f c))
 Proof
 
 SIMP_TAC std_ss [asl_predicate_IS_DECIDED_IN_STATE_def,
@@ -4922,9 +4929,9 @@ QED
 
 Theorem asl_predicate_IS_DECIDED_IN_STATE___pred_neg_is_neg:
   !f s p.
-IS_SEPARATION_COMBINATOR f /\ asl_predicate_IS_DECIDED_IN_STATE f s p ==>
-(s IN EVAL_asl_predicate f (asl_pred_neg p) =
- ~(s IN EVAL_asl_predicate f p))
+    IS_SEPARATION_COMBINATOR f /\ asl_predicate_IS_DECIDED_IN_STATE f s p ==>
+    (s IN EVAL_asl_predicate f (asl_pred_neg p) ⇔
+       s NOTIN EVAL_asl_predicate f p)
 Proof
 
 SIMP_TAC std_ss [asl_predicate_IS_DECIDED_IN_STATE_def,
@@ -5463,11 +5470,13 @@ QED
 
 Theorem ASL_TRACE_SEM___check:
   !f lock_env pc1 pc2 t s.
-ASL_TRACE_SEM (f, lock_env) (asl_aa_check pc1 pc2::t) s =
-(if (?s1 s2. (SOME s = f (SOME s1) (SOME s2)) /\
-   IS_SOME (EVAL_asl_prim_command f pc1 s1) /\
-   IS_SOME (EVAL_asl_prim_command f pc2 s2))  then
-   ASL_TRACE_SEM (f, lock_env) t s else NONE)
+    ASL_TRACE_SEM (f, lock_env) (asl_aa_check pc1 pc2::t) s =
+    (if (?s1 s2. (SOME s = f (SOME s1) (SOME s2)) /\
+                 IS_SOME (EVAL_asl_prim_command f pc1 s1) /\
+                 IS_SOME (EVAL_asl_prim_command f pc2 s2))
+     then
+       ASL_TRACE_SEM (f, lock_env) t s
+     else NONE)
 Proof
 
 REPEAT GEN_TAC THEN
@@ -5492,10 +5501,11 @@ QED
 
 
 Theorem ASL_TRACE_ZIP___SEM_COMM:
-  !xenv t t1 t2. IS_SEPARATION_COMBINATOR (FST xenv) ==>
-        (t IN (ASL_TRACE_ZIP t1 t2) ==>
-   ?t'. t' IN (ASL_TRACE_ZIP t2 t1) /\
-        (ASL_TRACE_SEM xenv t' = ASL_TRACE_SEM xenv t))
+  !xenv t t1 t2.
+    IS_SEPARATION_COMBINATOR (FST xenv) ==>
+    (t IN (ASL_TRACE_ZIP t1 t2) ==>
+     ?t'. t' IN (ASL_TRACE_ZIP t2 t1) /\
+          (ASL_TRACE_SEM xenv t' = ASL_TRACE_SEM xenv t))
 Proof
 
 GEN_TAC THEN
@@ -5509,9 +5519,10 @@ Induct_on `t2` THEN1 (
 SIMP_TAC std_ss [ASL_TRACE_ZIP_def, LET_THM] THEN
 REPEAT GEN_TAC THEN
 Q.ABBREV_TAC `AAC =
-      (ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h /\
-      ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h')` THEN
-`ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h' /\ ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h = AAC` by METIS_TAC[] THEN
+   (ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h /\
+    ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h')` THEN
+‘ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h' /\ ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h ⇔
+   AAC’ by METIS_TAC[] THEN
 ASM_SIMP_TAC std_ss [] THEN
 POP_ASSUM MP_TAC THEN
 Q.SPEC_TAC (`t`, `t`) THEN
@@ -6480,27 +6491,36 @@ QED
 
 
 Theorem ASL_PROTO_TRACES_EVAL_PROC_IN_THM:
+  ((t IN (ASL_PROTO_TRACES_EVAL_PROC n penv (asl_pt_prim_command pc))) ⇔
+     (t = [asl_aa_pc pc])) /\
+  (t IN (ASL_PROTO_TRACES_EVAL_PROC n penv (asl_pt_seq p1 p2)) ⇔
+   ?t1 t2. (t = t1 ++ t2) /\ t1 IN ASL_PROTO_TRACES_EVAL_PROC n penv p1 /\
+           t2 IN ASL_PROTO_TRACES_EVAL_PROC n penv p2) /\
+  (t IN (ASL_PROTO_TRACES_EVAL_PROC n penv (asl_pt_parallel p1 p2)) ⇔
+   ?t1 t2. t IN ASL_TRACE_ZIP t1 t2 /\
+           t1 IN (ASL_PROTO_TRACES_EVAL_PROC n penv p1) /\
+           t2 IN (ASL_PROTO_TRACES_EVAL_PROC n penv p2)) /\
 
-   ((t IN (ASL_PROTO_TRACES_EVAL_PROC n penv (asl_pt_prim_command pc))) = (t = [asl_aa_pc pc])) /\
-   (t IN (ASL_PROTO_TRACES_EVAL_PROC n penv (asl_pt_seq p1 p2)) =
-      ?t1 t2. (t = t1 ++ t2) /\ t1 IN ASL_PROTO_TRACES_EVAL_PROC n penv p1 /\ t2 IN ASL_PROTO_TRACES_EVAL_PROC n penv p2) /\
-   (t IN (ASL_PROTO_TRACES_EVAL_PROC n penv (asl_pt_parallel p1 p2)) =
-      ?t1 t2. (t IN ASL_TRACE_ZIP t1 t2) /\ (t1 IN (ASL_PROTO_TRACES_EVAL_PROC n penv p1)) /\ (t2 IN (ASL_PROTO_TRACES_EVAL_PROC n penv p2))) /\
+   (t IN (ASL_PROTO_TRACES_EVAL_PROC n penv (asl_pt_lock_declaration l p)) ⇔
+      ?t'. t = ASL_TRACE_REMOVE_LOCKS {l}
+                 ([asl_aa_verhoog l]++t'++[asl_aa_prolaag l]) /\
+           t' IN (ASL_PROTO_TRACES_EVAL_PROC n penv p) /\
+           ASL_TRACE_IS_LOCK_SYNCHRONISED l t') /\
 
-   (t IN (ASL_PROTO_TRACES_EVAL_PROC n penv (asl_pt_lock_declaration l p)) =
-      ?t'. (t = ASL_TRACE_REMOVE_LOCKS {l} ([asl_aa_verhoog l]++t'++[asl_aa_prolaag l])) /\
-        t' IN (ASL_PROTO_TRACES_EVAL_PROC n penv p) /\ ASL_TRACE_IS_LOCK_SYNCHRONISED l t') /\
+   (t IN (ASL_PROTO_TRACES_EVAL_PROC n penv (asl_pt_critical_section l p)) ⇔
+      ?t'. (t = [asl_aa_prolaag l]++t'++[asl_aa_verhoog l]) /\
+           (t' IN ASL_PROTO_TRACES_EVAL_PROC n penv p)) /\
 
-   (t IN (ASL_PROTO_TRACES_EVAL_PROC n penv (asl_pt_critical_section l p)) =
-   ?t'. (t = [asl_aa_prolaag l]++t'++[asl_aa_verhoog l]) /\
-        (t' IN ASL_PROTO_TRACES_EVAL_PROC n penv p)) /\
-
-   (t IN (ASL_PROTO_TRACES_EVAL_PROC 0 penv (asl_pt_procedure_call name arg)) =
+   (t IN (ASL_PROTO_TRACES_EVAL_PROC 0 penv (asl_pt_procedure_call name arg)) ⇔
       (~(name IN (FDOM penv)) /\ (t= [asl_aa_fail]))) /\
 
-   (t IN (ASL_PROTO_TRACES_EVAL_PROC (SUC n) penv (asl_pt_procedure_call name arg)) =
-   (if ~(name IN (FDOM penv)) then (t= [asl_aa_fail]) else
-    (t IN (ASL_PROGRAM_TRACES_PROC n penv ((penv ' name) arg)))))
+   (t IN (ASL_PROTO_TRACES_EVAL_PROC
+          (SUC n)
+          penv
+          (asl_pt_procedure_call name arg)) ⇔
+      (if ~(name IN (FDOM penv)) then (t= [asl_aa_fail])
+       else
+         t IN (ASL_PROGRAM_TRACES_PROC n penv ((penv ' name) arg))))
 Proof
 
 
@@ -6583,25 +6603,30 @@ QED
 
 
 Theorem ASL_PROTO_TRACES_EVAL_IN_THM:
+  ((t IN (ASL_PROTO_TRACES_EVAL penv (asl_pt_prim_command pc))) ⇔
+     (t = [asl_aa_pc pc])) /\
+  (t IN (ASL_PROTO_TRACES_EVAL penv (asl_pt_seq p1 p2)) ⇔
+     ?t1 t2. (t = t1 ++ t2) /\ t1 IN ASL_PROTO_TRACES_EVAL penv p1 /\
+             t2 IN ASL_PROTO_TRACES_EVAL penv p2) /\
 
-   ((t IN (ASL_PROTO_TRACES_EVAL penv (asl_pt_prim_command pc))) = (t = [asl_aa_pc pc])) /\
-   (t IN (ASL_PROTO_TRACES_EVAL penv (asl_pt_seq p1 p2)) =
-      ?t1 t2. (t = t1 ++ t2) /\ t1 IN ASL_PROTO_TRACES_EVAL penv p1 /\ t2 IN ASL_PROTO_TRACES_EVAL penv p2) /\
+  (t IN (ASL_PROTO_TRACES_EVAL penv (asl_pt_parallel p1 p2)) ⇔
+     ?t1 t2. t IN ASL_TRACE_ZIP t1 t2 ∧ t1 IN (ASL_PROTO_TRACES_EVAL penv p1) ∧
+             t2 IN (ASL_PROTO_TRACES_EVAL penv p2)) /\
 
-   (t IN (ASL_PROTO_TRACES_EVAL penv (asl_pt_parallel p1 p2)) =
-      ?t1 t2. (t IN ASL_TRACE_ZIP t1 t2) /\ (t1 IN (ASL_PROTO_TRACES_EVAL penv p1)) /\ (t2 IN (ASL_PROTO_TRACES_EVAL penv p2))) /\
+   (t IN (ASL_PROTO_TRACES_EVAL penv (asl_pt_lock_declaration l p)) ⇔
+      ?t'.
+        t = ASL_TRACE_REMOVE_LOCKS {l}
+              ([asl_aa_verhoog l]++t'++[asl_aa_prolaag l]) /\
+        t' IN ASL_PROTO_TRACES_EVAL penv p /\
+        ASL_TRACE_IS_LOCK_SYNCHRONISED l t') /\
 
-   (t IN (ASL_PROTO_TRACES_EVAL penv (asl_pt_lock_declaration l p)) =
-      ?t'. (t = ASL_TRACE_REMOVE_LOCKS {l} ([asl_aa_verhoog l]++t'++[asl_aa_prolaag l])) /\
-        t' IN (ASL_PROTO_TRACES_EVAL penv p) /\ ASL_TRACE_IS_LOCK_SYNCHRONISED l t') /\
+   (t IN (ASL_PROTO_TRACES_EVAL penv (asl_pt_critical_section l p)) ⇔
+      ?t'. (t = [asl_aa_prolaag l]++t'++[asl_aa_verhoog l]) /\
+           (t' IN ASL_PROTO_TRACES_EVAL penv p)) /\
 
-   (t IN (ASL_PROTO_TRACES_EVAL penv (asl_pt_critical_section l p)) =
-   ?t'. (t = [asl_aa_prolaag l]++t'++[asl_aa_verhoog l]) /\
-        (t' IN ASL_PROTO_TRACES_EVAL penv p)) /\
-
-   (t IN (ASL_PROTO_TRACES_EVAL penv (asl_pt_procedure_call name arg)) =
-    if (~(name IN FDOM penv)) then (t = [asl_aa_fail]) else
-    (t IN ASL_PROGRAM_TRACES penv ((penv ' name) arg)))
+   (t IN (ASL_PROTO_TRACES_EVAL penv (asl_pt_procedure_call name arg)) ⇔
+      if (~(name IN FDOM penv)) then (t = [asl_aa_fail]) else
+        (t IN ASL_PROGRAM_TRACES penv ((penv ' name) arg)))
 Proof
 
 
@@ -6672,35 +6697,45 @@ end);
 
 
 Theorem ASL_PROGRAM_TRACES_PROC_IN_THM:
+  (~(t IN (ASL_PROGRAM_TRACES_PROC n penv {}))) /\
+  ((t IN (ASL_PROGRAM_TRACES_PROC n penv (asl_prog_prim_command pc))) ⇔
+     (t = [asl_aa_pc pc])) /\
+  (t IN (ASL_PROGRAM_TRACES_PROC n penv (asl_prog_seq p1 p2)) ⇔
+     ?t1 t2.
+       (t = t1 ++ t2) /\ t1 IN (ASL_PROGRAM_TRACES_PROC n penv p1) /\
+       t2 IN ([asl_aa_diverge] INSERT ASL_PROGRAM_TRACES_PROC n penv p2)) /\
 
-   (~(t IN (ASL_PROGRAM_TRACES_PROC n penv {}))) /\
-   ((t IN (ASL_PROGRAM_TRACES_PROC n penv (asl_prog_prim_command pc))) = (t = [asl_aa_pc pc])) /\
-   (t IN (ASL_PROGRAM_TRACES_PROC n penv (asl_prog_seq p1 p2)) =
-      ?t1 t2. (t = t1 ++ t2) /\ t1 IN (ASL_PROGRAM_TRACES_PROC n penv p1) /\ t2 IN ([asl_aa_diverge] INSERT ASL_PROGRAM_TRACES_PROC n penv p2)) /\
+  (t IN (ASL_PROGRAM_TRACES_PROC n penv (asl_prog_choice p1 p2)) ⇔
+     (t IN ((ASL_PROGRAM_TRACES_PROC n penv p1) UNION
+            (ASL_PROGRAM_TRACES_PROC n penv p2)))) /\
 
-   (t IN (ASL_PROGRAM_TRACES_PROC n penv (asl_prog_choice p1 p2)) =
-      (t IN ((ASL_PROGRAM_TRACES_PROC n penv p1) UNION (ASL_PROGRAM_TRACES_PROC n penv p2)))) /\
+  (t IN (ASL_PROGRAM_TRACES_PROC n penv (asl_prog_kleene_star p)) ⇔
+     t IN (IMAGE (\t. t ++ [asl_aa_skip])
+                 (LIST_SET_STAR (ASL_PROGRAM_TRACES_PROC n penv p)))) /\
 
-   (t IN (ASL_PROGRAM_TRACES_PROC n penv (asl_prog_kleene_star p)) =
-      t IN (IMAGE (\t. t ++ [asl_aa_skip]) (LIST_SET_STAR (ASL_PROGRAM_TRACES_PROC n penv p)))) /\
+  (t IN (ASL_PROGRAM_TRACES_PROC n penv (asl_prog_parallel p1 p2)) ⇔
+     ?t1 t2. t IN ASL_TRACE_ZIP t1 t2 /\
+             t1 IN (ASL_PROGRAM_TRACES_PROC n penv p1) /\
+             t2 IN (ASL_PROGRAM_TRACES_PROC n penv p2)) /\
 
-   (t IN (ASL_PROGRAM_TRACES_PROC n penv (asl_prog_parallel p1 p2)) =
-      ?t1 t2. (t IN ASL_TRACE_ZIP t1 t2) /\ (t1 IN (ASL_PROGRAM_TRACES_PROC n penv p1)) /\ (t2 IN (ASL_PROGRAM_TRACES_PROC n penv p2))) /\
+  (t IN (ASL_PROGRAM_TRACES_PROC n penv (asl_prog_lock_declaration l p)) ⇔
+     ?t'. t = ASL_TRACE_REMOVE_LOCKS {l}
+                ([asl_aa_verhoog l]++t'++[asl_aa_prolaag l]) /\
+          t' IN (ASL_PROGRAM_TRACES_PROC n penv p) /\
+          ASL_TRACE_IS_LOCK_SYNCHRONISED l t') /\
 
-   (t IN (ASL_PROGRAM_TRACES_PROC n penv (asl_prog_lock_declaration l p)) =
-      ?t'. (t = ASL_TRACE_REMOVE_LOCKS {l} ([asl_aa_verhoog l]++t'++[asl_aa_prolaag l])) /\
-   t' IN (ASL_PROGRAM_TRACES_PROC n penv p) /\ ASL_TRACE_IS_LOCK_SYNCHRONISED l t') /\
+   (t IN (ASL_PROGRAM_TRACES_PROC n penv (asl_prog_critical_section l p)) ⇔
+      ?t'. (t = [asl_aa_prolaag l]++t'++[asl_aa_verhoog l]) /\
+           (t' IN ASL_PROGRAM_TRACES_PROC n penv p)) /\
 
-   (t IN (ASL_PROGRAM_TRACES_PROC n penv (asl_prog_critical_section l p)) =
-   ?t'. (t = [asl_aa_prolaag l]++t'++[asl_aa_verhoog l]) /\
-   (t' IN ASL_PROGRAM_TRACES_PROC n penv p)) /\
+   (t IN (ASL_PROGRAM_TRACES_PROC 0 penv (asl_prog_procedure_call name arg)) ⇔
+      (~(name IN FDOM penv)) /\ (t = [asl_aa_fail])) /\
 
-   (t IN (ASL_PROGRAM_TRACES_PROC 0 penv (asl_prog_procedure_call name arg)) =
-    (~(name IN FDOM penv)) /\ (t = [asl_aa_fail])) /\
-
-   (t IN (ASL_PROGRAM_TRACES_PROC (SUC n) penv (asl_prog_procedure_call name arg)) =
-    if (~(name IN FDOM penv)) then (t = [asl_aa_fail]) else
-    t IN ASL_PROGRAM_TRACES_PROC n penv ((penv ' name) arg))
+   (t IN (ASL_PROGRAM_TRACES_PROC (SUC n) penv
+              (asl_prog_procedure_call name arg)) ⇔
+      if (~(name IN FDOM penv)) then (t = [asl_aa_fail])
+      else
+        t IN ASL_PROGRAM_TRACES_PROC n penv ((penv ' name) arg))
 Proof
 
 SIMP_TAC std_ss [ASL_PROGRAM_TRACES_PROC_def, IN_BIGUNION, IN_IMAGE,
@@ -6831,31 +6866,39 @@ QED
 
 Theorem ASL_PROGRAM_TRACES_IN_THM:
 
-   (~(t IN (ASL_PROGRAM_TRACES penv {}))) /\
-   ((t IN (ASL_PROGRAM_TRACES penv (asl_prog_prim_command pc))) = (t = [asl_aa_pc pc])) /\
-   (t IN (ASL_PROGRAM_TRACES penv (asl_prog_seq p1 p2)) =
-      ?t1 t2. (t = t1 ++ t2) /\ t1 IN ASL_PROGRAM_TRACES penv p1 /\ t2 IN [asl_aa_diverge] INSERT ASL_PROGRAM_TRACES penv p2) /\
+  (~(t IN (ASL_PROGRAM_TRACES penv {}))) /\
+  ((t IN (ASL_PROGRAM_TRACES penv (asl_prog_prim_command pc))) ⇔
+     (t = [asl_aa_pc pc])) /\
+  (t IN (ASL_PROGRAM_TRACES penv (asl_prog_seq p1 p2)) ⇔
+     ?t1 t2. (t = t1 ++ t2) /\ t1 IN ASL_PROGRAM_TRACES penv p1 /\
+             t2 IN [asl_aa_diverge] INSERT ASL_PROGRAM_TRACES penv p2) /\
 
-   (t IN (ASL_PROGRAM_TRACES penv (asl_prog_choice p1 p2)) =
-      (t IN ((ASL_PROGRAM_TRACES penv p1) UNION (ASL_PROGRAM_TRACES penv p2)))) /\
+  (t IN (ASL_PROGRAM_TRACES penv (asl_prog_choice p1 p2)) ⇔
+     t IN ((ASL_PROGRAM_TRACES penv p1) UNION (ASL_PROGRAM_TRACES penv p2))) ∧
 
-   (t IN (ASL_PROGRAM_TRACES penv (asl_prog_kleene_star p)) =
-      t IN (IMAGE (\t. t ++ [asl_aa_skip]) (LIST_SET_STAR (ASL_PROGRAM_TRACES penv p)))) /\
+  (t IN (ASL_PROGRAM_TRACES penv (asl_prog_kleene_star p)) ⇔
+     t IN (IMAGE (\t. t ++ [asl_aa_skip])
+                 (LIST_SET_STAR (ASL_PROGRAM_TRACES penv p)))) /\
 
-   (t IN (ASL_PROGRAM_TRACES penv (asl_prog_parallel p1 p2)) =
-      ?t1 t2. (t IN ASL_TRACE_ZIP t1 t2) /\ (t1 IN (ASL_PROGRAM_TRACES penv p1)) /\ (t2 IN (ASL_PROGRAM_TRACES penv p2))) /\
+  (t IN (ASL_PROGRAM_TRACES penv (asl_prog_parallel p1 p2)) ⇔
+     ?t1 t2. (t IN ASL_TRACE_ZIP t1 t2) /\
+             t1 IN (ASL_PROGRAM_TRACES penv p1) /\
+             t2 IN (ASL_PROGRAM_TRACES penv p2)) /\
 
-   (t IN (ASL_PROGRAM_TRACES penv (asl_prog_lock_declaration l p)) =
-      ?t'. (t = ASL_TRACE_REMOVE_LOCKS {l} ([asl_aa_verhoog l]++t'++[asl_aa_prolaag l])) /\
-   t' IN (ASL_PROGRAM_TRACES penv p) /\ ASL_TRACE_IS_LOCK_SYNCHRONISED l t') /\
+  (t IN (ASL_PROGRAM_TRACES penv (asl_prog_lock_declaration l p)) ⇔
+     ?t'. (t = ASL_TRACE_REMOVE_LOCKS {l}
+                 ([asl_aa_verhoog l]++t'++[asl_aa_prolaag l])) /\
+          t' IN (ASL_PROGRAM_TRACES penv p) /\
+          ASL_TRACE_IS_LOCK_SYNCHRONISED l t') /\
 
-   (t IN (ASL_PROGRAM_TRACES penv (asl_prog_critical_section l p)) =
-   ?t'. (t = [asl_aa_prolaag l]++t'++[asl_aa_verhoog l]) /\
-   (t' IN ASL_PROGRAM_TRACES penv p)) /\
+  (t IN (ASL_PROGRAM_TRACES penv (asl_prog_critical_section l p)) ⇔
+     ?t'. (t = [asl_aa_prolaag l]++t'++[asl_aa_verhoog l]) /\
+          (t' IN ASL_PROGRAM_TRACES penv p)) /\
 
-   (t IN (ASL_PROGRAM_TRACES penv (asl_prog_procedure_call name arg)) =
-    if (~(name IN FDOM penv)) then (t = [asl_aa_fail]) else
-    t IN ASL_PROGRAM_TRACES penv ((penv ' name) arg))
+  (t IN (ASL_PROGRAM_TRACES penv (asl_prog_procedure_call name arg)) ⇔
+     if (~(name IN FDOM penv)) then (t = [asl_aa_fail])
+     else
+       t IN ASL_PROGRAM_TRACES penv ((penv ' name) arg))
 Proof
 
 
@@ -7087,26 +7130,26 @@ End
 
 
 Definition ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_def:
-   (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n [] = (n = 0)) /\
+  (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n [] ⇔ (n = 0)) /\
 
-   (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n ((asl_aa_prolaag l')::t) =
+  (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n ((asl_aa_prolaag l')::t) =
       if (l = l') then
          ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l (SUC n) t
       else
          ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n t
-   ) /\
+  ) /\
 
-   (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l 0 ((asl_aa_verhoog l')::t) =
-      ~(l = l') /\ ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l 0 t) /\
+  (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l 0 ((asl_aa_verhoog l')::t) ⇔
+     ~(l = l') /\ ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l 0 t) /\
 
-   (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l (SUC n) ((asl_aa_verhoog l')::t) =
+  (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l (SUC n) ((asl_aa_verhoog l')::t) ⇔
       if (l = l') then
          ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n t
       else
          ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l (SUC n) t
    ) /\
 
-   (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n (_::t) =
+  (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n (_::t) ⇔
          ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n t)
 End
 
@@ -7114,16 +7157,16 @@ End
 
 Theorem ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM:
 
-        (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n [] = (n = 0)) /\
-   ((~ASL_IS_SING_LOCK_ATOMIC_ACTION l aa) ==>
-      (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n (aa::t) =
+  (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n [] ⇔ (n = 0)) /\
+  ((~ASL_IS_SING_LOCK_ATOMIC_ACTION l aa) ==>
+   (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n (aa::t) ⇔
       ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n t)) /\
 
-   (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n ((asl_aa_prolaag l)::t) =
+  (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n ((asl_aa_prolaag l)::t) =
       ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l (SUC n) t) /\
 
-   ((ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n ((asl_aa_verhoog l)::t)) =
-   (~(n = 0) /\ ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l (PRE n) t))
+  (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n ((asl_aa_verhoog l)::t) ⇔
+     ~(n = 0) /\ ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l (PRE n) t)
 Proof
 
 Cases_on `n` THEN
@@ -7912,13 +7955,15 @@ QED
 Theorem ASL_TRACE_ZIP___IN_CONS_NO_CHECK:
   !aa t1 t2 t.
 
-   ~(ASL_IS_CHECK_ATOMIC_ACTION aa) ==>
-(
-   (aa::t IN ASL_TRACE_ZIP t1 t2) =
-   ~(~(t1 = []) /\ ~(t2 = []) /\ ASL_IS_PRIM_COMMAND_ATOMIC_ACTION (HD t1)
-      /\ ASL_IS_PRIM_COMMAND_ATOMIC_ACTION (HD t2)) /\
-   ((~(t1 = []) /\ (aa = HD t1) /\ (t IN ASL_TRACE_ZIP (TL t1) t2)) \/
-   (~(t2 = [])) /\ (aa = HD t2) /\ (t IN ASL_TRACE_ZIP t1 (TL t2))))
+    ~ASL_IS_CHECK_ATOMIC_ACTION aa ==>
+    (
+    (aa::t) IN ASL_TRACE_ZIP t1 t2 ⇔
+      ~(~(t1 = []) /\ ~(t2 = []) /\
+        ASL_IS_PRIM_COMMAND_ATOMIC_ACTION (HD t1) /\
+        ASL_IS_PRIM_COMMAND_ATOMIC_ACTION (HD t2)) /\
+      ((~(t1 = []) /\ (aa = HD t1) /\ (t IN ASL_TRACE_ZIP (TL t1) t2)) \/
+       (~(t2 = [])) /\ (aa = HD t2) /\ (t IN ASL_TRACE_ZIP t1 (TL t2)))
+    )
 Proof
 
 Cases_on `t1` THEN1 (
@@ -7940,62 +7985,63 @@ QED
 
 
 Theorem ASL_TRACE_ZIP___STRONG_LOCK_BALANCED_LOCK:
-
-  !l t n1 n2 t1 t2. ((t IN (ASL_TRACE_ZIP t1 t2)) /\
-   (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n1 t1) /\
-   (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n2 t2))
- ==> (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l (n1+n2) t)
+  !l t n1 n2 t1 t2.
+    ((t IN (ASL_TRACE_ZIP t1 t2)) /\
+     (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n1 t1) /\
+     (ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l n2 t2))
+    ==>
+    ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l (n1+n2) t
 Proof
 
-Induct_on `t1` THEN1 (
-   SIMP_TAC std_ss [ASL_TRACE_ZIP_THM, IN_SING, ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM]
-) THEN
-Induct_on `t2` THEN1 (
-   SIMP_TAC std_ss [ASL_TRACE_ZIP_THM, IN_SING, ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM]
-) THEN
-SIMP_TAC std_ss [ASL_TRACE_ZIP_def, LET_THM] THEN
-REPEAT GEN_TAC THEN
-Q.ABBREV_TAC `aa_cond = ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h' /\
-       ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h` THEN
-Q.ABBREV_TAC `z = IMAGE (\x. h'::x) (ASL_TRACE_ZIP t1 (h::t2)) UNION
-       IMAGE (\x. h::x) (ASL_TRACE_ZIP (h'::t1) t2)` THEN
-REPEAT STRIP_TAC THEN
+  Induct_on `t1` THEN1 (
+  SIMP_TAC std_ss [ASL_TRACE_ZIP_THM, IN_SING, ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM]
+  ) THEN
+  Induct_on `t2` THEN1 (
+  SIMP_TAC std_ss [ASL_TRACE_ZIP_THM, IN_SING, ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM]
+  ) THEN
+  SIMP_TAC std_ss [ASL_TRACE_ZIP_def, LET_THM] THEN
+  REPEAT GEN_TAC THEN
+  Q.ABBREV_TAC ‘aa_cond ⇔ ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h' /\
+                          ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h’ THEN
+  Q.ABBREV_TAC ‘z = IMAGE (\x. h'::x) (ASL_TRACE_ZIP t1 (h::t2)) UNION
+                          IMAGE (\x. h::x) (ASL_TRACE_ZIP (h'::t1) t2)’ THEN
+  REPEAT STRIP_TAC THEN
 
 `!t. t IN z ==> ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l (n1 + n2) t` suffices_by (STRIP_TAC THEN
-   Cases_on `aa_cond` THEN (
-      FULL_SIMP_TAC list_ss [IN_IMAGE, ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM,
-         ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE]
-   )
-) THEN
-Q.PAT_X_ASSUM `t IN X` (K ALL_TAC) THEN
-bossLib.UNABBREV_ALL_TAC THEN
-SIMP_TAC std_ss [IN_UNION, IN_IMAGE, DISJ_IMP_THM, FORALL_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
-REPEAT STRIP_TAC THENL [
-   Cases_on `~(ASL_IS_SING_LOCK_ATOMIC_ACTION l h')` THEN1 (
-      FULL_SIMP_TAC std_ss [ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM] THEN
-      METIS_TAC[]
-   ) THEN
-   FULL_SIMP_TAC std_ss [ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE2] THEN FULL_SIMP_TAC std_ss [ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM] THENL [
+                                                                                   Cases_on `aa_cond` THEN (
+                                                                                    FULL_SIMP_TAC list_ss [IN_IMAGE, ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM,
+                                                                                                           ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE]
+                                                                                    )
+                                                                                  ) THEN
+  Q.PAT_X_ASSUM `t IN X` (K ALL_TAC) THEN
+  bossLib.UNABBREV_ALL_TAC THEN
+  SIMP_TAC std_ss [IN_UNION, IN_IMAGE, DISJ_IMP_THM, FORALL_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
+  REPEAT STRIP_TAC THENL [
+    Cases_on `~(ASL_IS_SING_LOCK_ATOMIC_ACTION l h')` THEN1 (
+    FULL_SIMP_TAC std_ss [ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM] THEN
+    METIS_TAC[]
+    ) THEN
+    FULL_SIMP_TAC std_ss [ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE2] THEN FULL_SIMP_TAC std_ss [ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM] THENL [
       METIS_TAC[ADD_CLAUSES],
 
       Cases_on `n1` THEN FULL_SIMP_TAC arith_ss [] THEN
-      `PRE (n2 + SUC n) = (n + n2)` by DECIDE_TAC THEN
+`PRE (n2 + SUC n) = (n + n2)` by DECIDE_TAC THEN
       METIS_TAC[]
-   ],
+    ],
 
 
-   Cases_on `~(ASL_IS_SING_LOCK_ATOMIC_ACTION l h)` THEN1 (
+    Cases_on `~(ASL_IS_SING_LOCK_ATOMIC_ACTION l h)` THEN1 (
       FULL_SIMP_TAC std_ss [ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM] THEN
       METIS_TAC[]
-   ) THEN
-   FULL_SIMP_TAC std_ss [ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE2] THEN FULL_SIMP_TAC std_ss [ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM] THENL [
-      METIS_TAC[ADD_CLAUSES],
+      ) THEN
+    FULL_SIMP_TAC std_ss [ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE2] THEN FULL_SIMP_TAC std_ss [ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM] THENL [
+        METIS_TAC[ADD_CLAUSES],
 
-      Cases_on `n2` THEN FULL_SIMP_TAC arith_ss [] THEN
-      `PRE (n1 + SUC n) = (n1 + n)` by DECIDE_TAC THEN
-      METIS_TAC[]
-   ]
-]
+        Cases_on `n2` THEN FULL_SIMP_TAC arith_ss [] THEN
+`PRE (n1 + SUC n) = (n1 + n)` by DECIDE_TAC THEN
+        METIS_TAC[]
+      ]
+  ]
 QED
 
 Theorem ASL_TRACE_ZIP___EMPTY:
@@ -8003,24 +8049,24 @@ Theorem ASL_TRACE_ZIP___EMPTY:
   !t1 t2. [] IN (ASL_TRACE_ZIP t1 t2) ==> (t1 = []) /\ (t2 = [])
 Proof
 
-Induct_on `t1` THEN1 (
-   SIMP_TAC std_ss [ASL_TRACE_ZIP_THM, IN_SING]
-) THEN
-Cases_on `t2` THEN1 (
-   SIMP_TAC list_ss [ASL_TRACE_ZIP_THM, IN_SING]
-) THEN
-SIMP_TAC list_ss [ASL_TRACE_ZIP_def, LET_THM, COND_RAND, COND_RATOR,
-   IN_IMAGE, IN_UNION]
+  Induct_on `t1` THEN1 (
+  SIMP_TAC std_ss [ASL_TRACE_ZIP_THM, IN_SING]
+  ) THEN
+  Cases_on `t2` THEN1 (
+  SIMP_TAC list_ss [ASL_TRACE_ZIP_THM, IN_SING]
+  ) THEN
+  SIMP_TAC list_ss [ASL_TRACE_ZIP_def, LET_THM, COND_RAND, COND_RATOR,
+                    IN_IMAGE, IN_UNION]
 QED
 
 
 
 Theorem ASL_TRACE_ZIP___FILTER:
   !P. (!pc1 pc2. ~(P (asl_aa_check pc1 pc2))) ==>
-(!t t1 t2.
-((t IN ASL_TRACE_ZIP t1 t2) ==>
-?t'. (t' IN ASL_TRACE_ZIP (FILTER P t1) (FILTER P t2)) /\
-     (FILTER P t = FILTER P t')))
+      !t t1 t2.
+        t IN ASL_TRACE_ZIP t1 t2 ==>
+        ?t'. t' IN ASL_TRACE_ZIP (FILTER P t1) (FILTER P t2) /\
+             (FILTER P t = FILTER P t')
 Proof
 
 
@@ -8036,8 +8082,8 @@ Induct_on `t2` THEN1 (
 
 SIMP_TAC std_ss [ASL_TRACE_ZIP_def, LET_THM] THEN
 REPEAT GEN_TAC THEN
-Q.ABBREV_TAC `aa_cond = ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h' /\
-            ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h` THEN
+Q.ABBREV_TAC `aa_cond ⇔ ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h' /\
+                        ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h` THEN
 Q.ABBREV_TAC `z = IMAGE (\x. h'::x) (ASL_TRACE_ZIP t1 (h::t2)) UNION
        IMAGE (\x. h::x) (ASL_TRACE_ZIP (h'::t1) t2)` THEN
 `!t. t IN z ==> ?t'.
@@ -8381,7 +8427,10 @@ QED
 
 
 Theorem ASL_TRACE_ZIP___SIMPLE_APPEND:
-  !t1 t2. ?t. t IN (ASL_TRACE_ZIP t1 t2) /\ (ASL_TRACE_REMOVE_CHECKS t = ASL_TRACE_REMOVE_CHECKS (t1++t2))
+  !t1 t2.
+    ?t.
+      t IN (ASL_TRACE_ZIP t1 t2) /\
+      (ASL_TRACE_REMOVE_CHECKS t = ASL_TRACE_REMOVE_CHECKS (t1++t2))
 Proof
 
 Induct_on `t1` THEN1 (
@@ -8393,8 +8442,8 @@ Cases_on `t2` THEN1 (
 
 SIMP_TAC list_ss [ASL_TRACE_ZIP_def, LET_THM] THEN
 REPEAT GEN_TAC THEN
-Q.ABBREV_TAC `aa_cond = ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h' /\
-            ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h` THEN
+Q.ABBREV_TAC `aa_cond ⇔ ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h' /\
+                        ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h` THEN
 Q.ABBREV_TAC `X = IMAGE (\x. h'::x) (ASL_TRACE_ZIP t1 (h::t)) UNION
     IMAGE (\x. h::x) (ASL_TRACE_ZIP (h'::t1) t)` THEN
 `?u. u IN X /\
@@ -10925,13 +10974,12 @@ QED
 
 
 Theorem ASL_INFERENCE_asl_bool:
-
-(ASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_or P1 P2)  p Q =
- ASL_PROGRAM_HOARE_TRIPLE xenv penv P1  p Q /\
- ASL_PROGRAM_HOARE_TRIPLE xenv penv P2  p Q) /\
-(ASL_PROGRAM_HOARE_TRIPLE xenv penv P  p (asl_and Q1 Q2) =
- ASL_PROGRAM_HOARE_TRIPLE xenv penv P  p Q1 /\
- ASL_PROGRAM_HOARE_TRIPLE xenv penv P  p Q2)
+  (ASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_or P1 P2) p Q ⇔
+     ASL_PROGRAM_HOARE_TRIPLE xenv penv P1  p Q /\
+     ASL_PROGRAM_HOARE_TRIPLE xenv penv P2  p Q) /\
+  (ASL_PROGRAM_HOARE_TRIPLE xenv penv P  p (asl_and Q1 Q2) ⇔
+     ASL_PROGRAM_HOARE_TRIPLE xenv penv P  p Q1 /\
+     ASL_PROGRAM_HOARE_TRIPLE xenv penv P  p Q2)
 Proof
 
 SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_REWRITE,
@@ -12438,10 +12486,10 @@ QED
 
 Theorem ASL_PROGRAM_IS_ABSTRACTION___assume_and___LOST_INFORMATION:
   !xenv penv P1 P2 s.
-IS_SEPARATION_COMBINATOR (FST xenv) /\
-asl_predicate_IS_DECIDED_IN_STATE (FST xenv) s P1 /\
-(s IN EVAL_asl_predicate (FST xenv) P1 ==>
- asl_predicate_IS_DECIDED_IN_STATE (FST xenv) s P2) ==>
+    IS_SEPARATION_COMBINATOR (FST xenv) /\
+    asl_predicate_IS_DECIDED_IN_STATE (FST xenv) s P1 /\
+    (s IN EVAL_asl_predicate (FST xenv) P1 ==>
+     asl_predicate_IS_DECIDED_IN_STATE (FST xenv) s P2) ==>
 
     (ASL_PROGRAM_SEM xenv penv
        (asl_prog_seq (asl_prog_assume P1) (asl_prog_assume P2)) s =

@@ -130,9 +130,23 @@ fun renderCard path =
       "    </li>\n"
     end
 
-fun renderPage (paths, fragment) =
+(* The getting-started block is editorial content authored as arbitrary
+   Markdown in Tools/getting-started.md and rendered to an HTML fragment
+   by pandoc (see Manual/Holmakefile).  gen_lander inlines that fragment
+   verbatim -- just as it does the reference --fragment -- so the markup
+   is whatever pandoc produced.  The block shows both on the live website
+   and in a local docs build, so links to website pages should be
+   absolute URLs (e.g. https://hol-theorem-prover.org/faq.html) while
+   in-docs links stay relative (e.g. Tutorial/index.html). *)
+
+fun renderPage (paths, fragment, intro) =
     let
       val cards = String.concat (List.map renderCard paths)
+      val introSection =
+          case intro of
+              NONE => ""
+            | SOME body =>
+                "  <section class=\"lander-intro\">\n" ^ body ^ "  </section>\n"
       val refSection =
           case fragment of
               NONE => ""
@@ -147,6 +161,8 @@ fun renderPage (paths, fragment) =
       \<head>\n\
       \  <meta charset=\"utf-8\">\n\
       \  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
+      \  <link href=\"https://fonts.googleapis.com/css?family=Lora\" rel=\"stylesheet\">\n\
+      \  <link href=\"https://fonts.googleapis.com/css?family=Bree+Serif\" rel=\"stylesheet\">\n\
       \  <title>HOL4 Documentation</title>\n\
       \  <style>\n\
       \    body {\n\
@@ -227,6 +243,77 @@ fun renderPage (paths, fragment) =
       \        \"Liberation Mono\", monospace;\n\
       \      font-size: 0.95em;\n\
       \    }\n\
+      \    /* Editorial intro: arbitrary pandoc-rendered Markdown. */\n\
+      \    .lander-intro h1, .lander-intro h2 {\n\
+      \      font-weight: 500; margin-top: 2em;\n\
+      \      padding-bottom: 0.3em; border-bottom: 1px solid #e0e0e0;\n\
+      \    }\n\
+      \    .lander-intro a { color: #4183c4; text-decoration: none; }\n\
+      \    .lander-intro a:hover { text-decoration: underline; }\n\
+      \    /* Website nav strip -- echoes the strip on the site sub-pages.\n\
+      \       Hidden until the progressive-enhancement script confirms we\n\
+      \       are running inside the website. */\n\
+      \    .subheader { display: none; text-align: center; padding: 12pt 10pt; line-height: normal; }\n\
+      \    .subheader_home {\n\
+      \      font-family: 'Lora', serif; font-size: 24pt; font-weight: bold;\n\
+      \      background: rgba(255, 255, 255, 1.0); color: black;\n\
+      \      border-radius: 10pt; padding: 4pt 14pt; text-decoration: none;\n\
+      \      display: inline-block; vertical-align: middle;\n\
+      \    }\n\
+      \    .subnav { display: inline-block; vertical-align: middle; }\n\
+      \    .subnav a {\n\
+      \      display: inline-block; background: rgba(0, 0, 0, 0.7);\n\
+      \      color: white; border-radius: 1.5vh; padding: 6pt 12pt;\n\
+      \      margin: 4pt; text-decoration: none;\n\
+      \      font-family: Arial, Helvetica, sans-serif;\n\
+      \    }\n\
+      \    .subnav a:hover { background: rgba(0, 0, 0, 0.85); }\n\
+      \    .subnav a.current { background: rgba(230, 0, 0, 0.85); }\n\
+      \    /* Augmented (in-website) presentation: lake photo behind a white\n\
+      \       content card, mirroring the main site.  Forced light palette so\n\
+      \       the card stays readable even under a dark OS theme. */\n\
+      \    html.web-context {\n\
+      \      background: url(/images/trindemossen.jpg) center center / cover\n\
+      \        fixed no-repeat;\n\
+      \      min-height: 100vh;\n\
+      \    }\n\
+      \    html.web-context body {\n\
+      \      background: transparent; margin: 0; max-width: none; padding: 0;\n\
+      \    }\n\
+      \    /* Match the content-frame width of the website sub-pages\n\
+      \       (.textbox in new-look/style.css): 85vw on mobile, 60% on\n\
+      \       desktop with 45pt side padding. */\n\
+      \    html.web-context .lander {\n\
+      \      background: #fff; color: #222;\n\
+      \      border-radius: 14px; box-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);\n\
+      \      margin: 10pt auto 20pt; max-width: 85vw;\n\
+      \      padding: 8pt 5vw 30pt;\n\
+      \    }\n\
+      \    @media screen and (min-width: 600px) {\n\
+      \      html.web-context .lander {\n\
+      \        width: 60%; min-width: 400px; max-width: none;\n\
+      \        padding-left: 45pt; padding-right: 45pt;\n\
+      \      }\n\
+      \    }\n\
+      \    html.web-context .subheader { display: block; }\n\
+      \    html.web-context h1, html.web-context h2 {\n\
+      \      font-family: 'Bree Serif', serif;\n\
+      \    }\n\
+      \    html.web-context h1 { font-size: 32pt; font-weight: bold; }\n\
+      \    html.web-context h2 { color: rgba(230, 0, 0, 1.0); }\n\
+      \    html.web-context .sub { color: #555; }\n\
+      \    html.web-context h2.section { border-color: #e0e0e0; }\n\
+      \    html.web-context ul.manuals li { border-color: #e0e0e0; }\n\
+      \    html.web-context ul.manuals li:hover { border-color: #4183c4; }\n\
+      \    html.web-context ul.manuals strong { color: #4183c4; }\n\
+      \    html.web-context ul.manuals p { color: #555; }\n\
+      \    html.web-context section.ref-section h2 small { color: #888; }\n\
+      \    html.web-context section.ref-section h2 small a,\n\
+      \    html.web-context ul.refs a,\n\
+      \    html.web-context .lander-intro a { color: #4183c4; }\n\
+      \    html.web-context .lander-intro h1,\n\
+      \    html.web-context .lander-intro h2 { border-color: #e0e0e0; }\n\
+      \    html.web-context ul.refs .nolink { color: #999; }\n\
       \    @media (prefers-color-scheme: dark) {\n\
       \      body { background: #1a1a1a; color: #e0e0e0; }\n\
       \      .sub { color: #aaa; }\n\
@@ -239,38 +326,96 @@ fun renderPage (paths, fragment) =
       \      section.ref-section h2 small a,\n\
       \      ul.refs a { color: #66aaff; }\n\
       \      ul.refs .nolink { color: #707070; }\n\
+      \      .lander-intro h1, .lander-intro h2 { border-color: #333; }\n\
+      \      .lander-intro a { color: #66aaff; }\n\
+      \      /* In-website dark: dark card over a dimmed photo, matching the\n\
+      \         website's dark theme. */\n\
+      \      html.web-context body::before {\n\
+      \        content: \"\"; position: fixed; inset: 0;\n\
+      \        background: rgba(0, 0, 0, 0.55); z-index: -1; pointer-events: none;\n\
+      \      }\n\
+      \      html.web-context .lander {\n\
+      \        background: rgba(28, 28, 28, 0.95); color: #e6e6e6;\n\
+      \      }\n\
+      \      html.web-context .sub { color: #aaa; }\n\
+      \      html.web-context h2 { color: #ff6b6b; }\n\
+      \      html.web-context h2.section,\n\
+      \      html.web-context .lander-intro h1,\n\
+      \      html.web-context .lander-intro h2 { border-color: #444; }\n\
+      \      html.web-context ul.manuals li { border-color: #444; }\n\
+      \      html.web-context ul.manuals li:hover { border-color: #6fa8ff; }\n\
+      \      html.web-context ul.manuals strong { color: #6fa8ff; }\n\
+      \      html.web-context ul.manuals p { color: #bbb; }\n\
+      \      html.web-context section.ref-section h2 small { color: #aaa; }\n\
+      \      html.web-context section.ref-section h2 small a,\n\
+      \      html.web-context ul.refs a,\n\
+      \      html.web-context .lander-intro a { color: #6fa8ff; }\n\
+      \      html.web-context ul.refs .nolink { color: #888; }\n\
+      \      html.web-context .subheader_home {\n\
+      \        background: rgba(20, 20, 20, 0.92); color: #f0f0f0;\n\
+      \      }\n\
       \    }\n\
       \  </style>\n\
+      \  <script>\n\
+      \    /* Decide synchronously, before first paint, whether this page is\n\
+      \       served inside the HOL website (docs always live under /docs/...)\n\
+      \       rather than as a standalone/local docs build (file:, or book/\n\
+      \       served at the root by Tools/mdbook-preview.py).  Setting the\n\
+      \       class here in <head> styles the first paint and avoids a flash. */\n\
+      \    if (location.protocol !== 'file:' &&\n\
+      \        location.pathname.indexOf('/docs/') === 0) {\n\
+      \      document.documentElement.className += ' web-context';\n\
+      \    }\n\
+      \  </script>\n\
       \</head>\n\
       \<body>\n\
+      \  <div class=\"subheader\">\n\
+      \    <a class=\"subheader_home\" href=\"/\">HOL</a>\n\
+      \    <nav class=\"subnav\">\n\
+      \      <a href=\"/about.html\">About</a>\n\
+      \      <a href=\"/install.html\">Download &amp; Install</a>\n\
+      \      <a href=\"/docs/latest/\" class=\"current\">Documentation</a>\n\
+      \      <a href=\"/community.html\">Community</a>\n\
+      \    </nav>\n\
+      \  </div>\n\
+      \  <main class=\"lander\">\n\
       \  <h1>HOL4 Documentation</h1>\n\
-      \  <p class=\"sub\">Documentation for the HOL4 theorem prover.</p>\n\
-      \  <h2 class=\"section\">Manuals</h2>\n\
+      \  <p class=\"sub\">Documentation for the HOL4 theorem prover.</p>\n" ^
+      introSection ^
+      "  <h2 class=\"section\">Manuals</h2>\n\
       \  <ul class=\"manuals\">\n" ^
       cards ^
       "  </ul>\n" ^
       refSection ^
-      "</body>\n\
+      "  </main>\n\
+      \</body>\n\
       \</html>\n"
     end
 
-(* Parse leading `--fragment <path>` flag.
-   Returns (fragment_path_opt, rest). *)
-fun parseArgs ("--fragment" :: path :: rest) = (SOME path, rest)
-  | parseArgs args = (NONE, args)
+(* Parse leading `--fragment <path>` and `--getting-started <path>`
+   flags, in any order.  Returns (fragment_opt, getting_started_opt,
+   rest). *)
+fun parseArgs args =
+    let
+      fun loop (frag, gs) ("--fragment" :: p :: rest) = loop (SOME p, gs) rest
+        | loop (frag, gs) ("--getting-started" :: p :: rest) =
+            loop (frag, SOME p) rest
+        | loop (frag, gs) rest = (frag, gs, rest)
+    in loop (NONE, NONE) args end
+
+fun readOpt what NONE = NONE
+  | readOpt what (SOME p) =
+      SOME (readFile p
+            handle IO.Io _ => die ("gen_lander: cannot read " ^ what ^ " " ^ p))
 
 fun main () =
     let
-      val (fragPath, paths) = parseArgs (CommandLine.arguments ())
-      val fragment =
-          case fragPath of
-              NONE => NONE
-            | SOME p =>
-                SOME (readFile p
-                      handle IO.Io _ =>
-                        die ("gen_lander: cannot read fragment " ^ p))
+      val (fragPath, gsPath, paths) = parseArgs (CommandLine.arguments ())
+      val fragment = readOpt "fragment" fragPath
+      val intro = readOpt "getting-started" gsPath
     in
       case paths of
-          [] => die "Usage: gen_lander [--fragment <path>] BOOK_TOML..."
-        | _  => emit (renderPage (paths, fragment))
+          [] => die "Usage: gen_lander [--fragment <path>] \
+                    \[--getting-started <path>] BOOK_TOML..."
+        | _  => emit (renderPage (paths, fragment, intro))
     end

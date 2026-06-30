@@ -14,11 +14,42 @@ val entry_url_base = ref ""
    Htmlsigs.sig. *)
 val theory_url_base = ref ""
 
+(* URL prefix for the per-page "Source File" hyperlink.  See
+   Htmlsigs.sig. *)
+val source_url_base = ref ""
 
-fun indexbar out srcpath = out (String.concat
+
+(* Target for the per-page "Source File" link.  With source_url_base
+   set (web/deploy builds -- e.g. a GitHub blob URL), emit
+   <base><path-relative-to-HOLDIR>, stripping any `.hol/objs/`
+   object-directory indirection so the link lands on the committed
+   source/Script file.  Otherwise fall back to a local file:// URL,
+   which is what a developer browsing a local build wants. *)
+fun sourceHref HOLpath srcpath =
+    if !source_url_base = "" then "file://" ^ srcpath
+    else
+      case (if String.isPrefix HOLpath srcpath
+            then SOME (String.extract (srcpath, String.size HOLpath, NONE))
+            else NONE)
+       of NONE => "file://" ^ srcpath  (* not under HOLDIR; best effort *)
+        | SOME rest =>
+          let
+            val rel = if String.isPrefix "/" rest
+                      then String.extract (rest, 1, NONE) else rest
+            (* drop a ".hol/objs/" path segment (length 10) if present *)
+            val (pre, suf) =
+                Substring.position ".hol/objs/" (Substring.full rel)
+            val rel = if Substring.isEmpty suf then rel
+                      else Substring.string pre ^
+                           String.extract (Substring.string suf, 10, NONE)
+          in
+            !source_url_base ^ rel
+          end
+
+fun indexbar out HOLpath srcpath = out (String.concat
    ["<hr><table width=\"100%\">",
     "<tr align = center>\n",
-    "<th><a href=\"file://", srcpath,
+    "<th><a href=\"", sourceHref HOLpath srcpath,
     "\" type=\"text/plain\">Source File</a>\n",
     "<th><a href=\"idIndex.html\">Identifier index</A>\n",
     "<th><a href=\"TheoryIndex.html\">Theory binding index</A>\n",
@@ -80,6 +111,22 @@ fun find_most_appealing HOLpath docfile =
         else NONE
       end
   end;
+
+(* Generated pages carry an inline stylesheet rather than linking a shared
+   one: they are served standalone and live at varying depths.  Keep the
+   historical light background, but honour the reader's dark-mode preference
+   via prefers-color-scheme, so the pages aren't a bright panel when the rest
+   of the browser is dark. *)
+fun emit_head_style out bgcolor =
+    (out "<style type=\"text/css\">\n";
+     out "  body {background: "; out bgcolor; out "}\n";
+     out "  @media (prefers-color-scheme: dark) {\n";
+     out "    body {background: #1b1d23; color: #d6d6d6}\n";
+     out "    a {color: #6cb6ff}\n";
+     out "    a:visited {color: #d2a8ff}\n";
+     out "    hr {border-color: #444}\n";
+     out "  }\n";
+     out "</style>\n")
 
 fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
     let val strName = OS.Path.base (OS.Path.file sigfile)
@@ -389,17 +436,15 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
         out "<meta charset=\"utf-8\">\n";
         out "<title>Structure ";
         out strName; out "</title>\n";
-        out "<style type=\"text/css\">\n";
-        out "<!--\n";
-        out "  body {background: "; out bgcolor; out "}\n-->\n</style>";
+        emit_head_style out bgcolor;
         out "</head>\n";
         out "<body>\n";
         out "<h1>Structure "; out strName; out "</h1>\n";
-        indexbar out srcfile;
+        indexbar out HOLpath srcfile;
         out "<pre>\n";
         traverse (pass2 (isTheorysig sigfile));
         out "</pre>";
-        indexbar out srcfile;
+        indexbar out HOLpath srcfile;
         out "<p><em>"; out version; out "</em></p>";
         out "</body></html>\n";
         TextIO.closeOut os
@@ -581,8 +626,10 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
                 end))
         val seps = Listsort.sort Char.compare (separators db [])
     in
-	out "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>"; out header; out "</title></head>\n";
-	out "<body bgcolor=\""; out bgcolor; out "\">\n";
+	out "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>"; out header; out "</title>\n";
+	emit_head_style out bgcolor;
+	out "</head>\n";
+	out "<body>\n";
 	out "<h1>"; out header; out "</h1>\n";
 	mkalphaindex seps;
 	prtree db;

@@ -221,7 +221,8 @@ val cv_snd_def = recdef("cv_snd_def",
 val cv_ispair_def = recdef("cv_ispair_def",
                            “cv_ispair (Pair p q) = Num (SUC 0) /\
                             cv_ispair (Num m) = Num 0”);
-val _ = export_rewrites ["cv_fst_def", "cv_snd_def", "cv_ispair_def", "cv_size_def"];
+val _ = export_rewrites ["cv_fst_def", "cv_snd_def", "cv_ispair_def",
+                         "cv_size_def"];
 
 val b2c_def = Prim_rec.new_recursive_definition{
   def = “b2c T = Num (SUC 0) /\ b2c F = Num 0”,
@@ -558,12 +559,13 @@ Proof
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
   \\ rewrite_tac [cv_mul_def,cv_mod_def,cv_if_def]
   \\ Cases_on ‘SUC n MOD 2’
-  \\ rewrite_tac [cv_if_def,Num_11,GSYM EXP_ADD, GSYM TIMES2,cv_div_def,cv_sub_def,
-       GSYM PRE_SUB1,prim_recTheory.PRE,c2n_def]
+  \\ rewrite_tac [cv_if_def,Num_11,GSYM EXP_ADD, GSYM TIMES2,cv_div_def,
+                  cv_sub_def, GSYM PRE_SUB1,prim_recTheory.PRE,c2n_def]
   \\ rewrite_tac [GSYM EXP]
   >-
    (AP_TERM_TAC
-    \\ ‘0 < 2’ by rewrite_tac [numeralTheory.numeral_distrib,numeralTheory.numeral_lt]
+    \\ ‘0 < 2’
+      by rewrite_tac [numeralTheory.numeral_distrib,numeralTheory.numeral_lt]
     \\ imp_res_tac DIVISION
     \\ pop_assum (K ALL_TAC)
     \\ first_x_assum $ Q.SPEC_THEN ‘SUC n’ mp_tac

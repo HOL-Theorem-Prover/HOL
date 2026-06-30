@@ -192,7 +192,8 @@ end;
 
 fun flat_vstruct tuple rhs =
   let
-    (* behaviour of mk_fst and mk_snd should match PairedLambda.GEN_BETA_CONV in LET_INTRO *)
+    (* behaviour of mk_fst and mk_snd should match PairedLambda.GEN_BETA_CONV in
+       LET_INTRO *)
     val mk_fst = fn tm => if is_pair tm then #1 (dest_pair tm) else mk_fst tm
     val mk_snd = fn tm => if is_pair tm then #2 (dest_pair tm) else mk_snd tm
     fun flat tuple (v,rhs) =
@@ -361,12 +362,13 @@ val is_universal   = same_const boolSyntax.universal
 val is_existential = same_const boolSyntax.existential;
 
 local
-  val ELIM_PEXISTS2 = prove (``(?p:('a#'b). P (FST p) (SND p) p) = ?p1 p2. P p1 p2 (p1,p2)``,
-                         CONV_TAC (LHS_CONV (HO_REWR_CONV EXISTS_PROD)) THEN
-                         REWRITE_TAC[FST, SND])
-  val ELIM_PFORALL2 = prove (``(!p:('a#'b). P (FST p) (SND p) p) = !p1 p2. P p1 p2 (p1,p2)``,
-                         CONV_TAC (LHS_CONV (HO_REWR_CONV FORALL_PROD)) THEN
-                         REWRITE_TAC[FST, SND]);
+  val ELIM_PEXISTS2 = prove (
+    “(?p:('a#'b). P (FST p) (SND p) p) = ?p1 p2. P p1 p2 (p1,p2)”,
+    CONV_TAC (LHS_CONV (HO_REWR_CONV EXISTS_PROD)) THEN REWRITE_TAC[FST, SND])
+  val ELIM_PFORALL2 = prove (
+    “(!p:('a#'b). P (FST p) (SND p) p) = !p1 p2. P p1 p2 (p1,p2)”,
+    CONV_TAC (LHS_CONV (HO_REWR_CONV FORALL_PROD)) THEN
+    REWRITE_TAC[FST, SND]);
 
   val ELIM_PEXISTS_CONV = HO_REWR_CONV ELIM_PEXISTS2;
   val ELIM_PFORALL_CONV = HO_REWR_CONV ELIM_PFORALL2;
@@ -405,8 +407,10 @@ in
                  if is_universal (rator tm) then ELIM_PFORALL_CONV else
                  if is_existential (rator tm) then ELIM_PEXISTS_CONV else
                  raise PERR "SPLIT_QUANT_CONV" ""
-         val (v, _) = dest_abs (rand tm) handle HOL_ERR _ => raise PERR "SPLIT_QUANT_CONV" ""
-         val _ = if (type_of vc = type_of v) then () else raise PERR "SPLIT_QUANT_CONV" "";
+         val (v, _) = dest_abs (rand tm)
+                      handle HOL_ERR _ => raise PERR "SPLIT_QUANT_CONV" ""
+         val _ = if (type_of vc = type_of v) then ()
+                 else raise PERR "SPLIT_QUANT_CONV" "";
       in
          PQUANT_ELIM_CONV quant_elim vc tm
       end;

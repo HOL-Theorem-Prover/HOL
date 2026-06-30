@@ -53,8 +53,10 @@ sig
 
    type apidefn = (defn * thm option, phase * exn) Lib.verdict
 
-   val apiDefine      : (defn->term list) -> (unit -> tactic) -> string * term -> apidefn
-   val apiDefineq     : (defn->term list) -> (unit -> tactic) -> term quotation -> apidefn
+   val apiDefine      : (defn->term list) -> (unit -> tactic) ->
+                        string * term -> apidefn
+   val apiDefineq     : (defn->term list) -> (unit -> tactic) ->
+                        term quotation -> apidefn
    val std_apiDefine  : string * term -> apidefn
    val std_apiDefineq : term quotation -> apidefn
 

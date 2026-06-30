@@ -225,7 +225,7 @@ fun pneeded_by_style (rr: term_grammar.rule_record, pgrav, fname, fprec) =
   | OnlyIfNecessary => false
   | NotEvenIfRand => false
   | ParoundName => grav_name pgrav <> fname
-  | ParoundPrec => grav_prec pgrav <> fprec
+  | ParoundPrec => grav_prec pgrav = fprec
   | IfNotTop {realonly=true} => pgrav <> RealTop
   | IfNotTop {realonly=false} => pgrav <> RealTop andalso pgrav <> Top
 

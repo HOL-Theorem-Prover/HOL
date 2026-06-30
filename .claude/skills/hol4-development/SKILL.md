@@ -17,7 +17,7 @@ maintenance reasons without touching the proof logic. That's still
 development. Use judgement: if the answer to "is this proof correct?"
 matters, you're past this skill's scope.
 
-## Style rules (enforced by `tools/unicode-grep`)
+## Style rules (enforced by `tools/h4pedant`)
 
 These are checked by the regression machinery, so getting them wrong
 costs a build later:
@@ -217,7 +217,7 @@ look at it.)
 - `src/` — the core system. Most maintenance work happens here.
 - `examples/` — extensive worked examples and downstream developments.
   Quality is variable and uneven across the tree.
-- `tools/` — build infrastructure (`Holmake`, `unicode-grep`,
+- `tools/` — build infrastructure (`Holmake`, `h4pedant`,
   sequence files, etc.) and supporting libraries.
 - `Manual/` — user-facing documentation, including
   `Manual/Developers/` which is the authoritative source for some

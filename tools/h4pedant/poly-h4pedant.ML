@@ -17,4 +17,5 @@ use "../../tools/util/GetOpt.sig";
 use "../../tools/util/GetOpt.sml";
 use "../../src/portableML/UTF8.sig";
 use "../../src/portableML/UTF8.sml";
-use "ugrep.sml";
+use "h4pedantConfig.sml";
+use "h4pedant.sml";

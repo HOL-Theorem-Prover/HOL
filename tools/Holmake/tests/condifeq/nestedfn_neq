@@ -1,0 +1,5 @@
+ifneq ($(patsubst %,%.c,a b),a.c b.c)
+RESULT = neqtrue
+else
+RESULT = neqfalse
+endif

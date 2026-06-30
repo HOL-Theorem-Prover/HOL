@@ -1,4 +1,59 @@
-quick.pdf: quick.tex
-	latexmk -pdf quick
+INCLUDES = ../Tools ../Reference
 
-EXTRA_CLEANS = $(patsubst %,quick.%,aux fdb_latexmk fls log out pdf)
+# Cross-manual labels.tsv prereq list for the mdbook target, and the
+# MANUALS list this manual is a member of.  See Manual/mdbook.mk.
+# ../Reference is in INCLUDES so the entries.list prerequisite (used
+# to validate \refentry{} cross-links) is built on demand.
+THIS = Quick
+include ../mdbook.mk
+
+# pandoc .md -> .tex for the PDF side.  --top-level-division=section
+# because this manual is a single reference sheet, not a chaptered
+# book (the source H1 becomes a \section).  pdf-macros.lua plus the
+# \refentry definition in quick.tex handle the inline macros.
+PANDOC_MD = pandoc --top-level-division=section --table-caption-position=below --lua-filter=../Tools/pdf-macros.lua -t latex $< > $@
+
+.PHONY: all mdbook
+all: quick.pdf
+
+# ---- mdbook side ----
+# quickref.md is hand-authored Markdown with no polyscripter
+# directives, so smdpp runs --no-polyscripter (set in book.toml): it
+# still runs the \refentry rewriter -- turning \refentry{Mod.entry}
+# into a link to ../Reference/Mod.entry.html, validated against
+# ../Reference/entries.list -- but skips loading a HOL heap.
+# SUMMARY.md is hand-written (single chapter).
+mdbook: ../book/Quick/index.html
+
+../book/Quick/index.html: ../Tools/smdpp SUMMARY.md quickref.md \
+        ../Reference/entries.list \
+        labels.tsv $(SIBLING_LABELS)
+	mdbook build
+	# See Manual/Description/Holmakefile for the rationale.
+	cd ../book/Quick && \
+	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
+	../Tools/smdpp check-html ../book/Quick
+	../Tools/smdpp check-refs ../book/Quick
+	../Tools/smdpp check-links ../book/Quick
+
+# Scan-only label dump for cross-book `\ref{Book:label}` resolution.
+# See Manual/Description/Holmakefile for the rationale.
+labels.tsv: ../Tools/smdpp SUMMARY.md quickref.md
+	../Tools/smdpp dump-labels .
+
+# ---- PDF side ----
+# A single dense reference sheet built from the same quickref.md
+# source as the mdbook page.  quick.tex is the hand-written driver
+# (compact layout + the PDF-side \refentry definition); quickref.tex
+# is generated from quickref.md by pandoc.
+quickref.tex: quickref.md ../Tools/pdf-macros.lua
+	$(PANDOC_MD)
+
+quick.pdf: quick.tex quickref.tex
+	rm -f $@; \
+	latexmk -pdf -f -interaction=nonstopmode quick; \
+	test -s $@
+
+EXTRA_CLEANS = quickref.tex labels.tsv quick.pdf \
+               quick.aux quick.log quick.out quick.toc \
+               quick.fls quick.fdb_latexmk ../book/Quick/

@@ -164,7 +164,8 @@ Proof
   rfs[EXP_EQ_SELF]
 QED
 
-(* Theorem: 0 < a /\ n < m /\ (a ** n * b = a ** m * c) ==> ?d. 0 < d /\ (b = a ** d * c) *)
+(* Theorem: 0 < a /\ n < m /\ (a ** n * b = a ** m * c) ==>
+            ?d. 0 < d /\ (b = a ** d * c) *)
 (* Proof:
    Let d = m - n.
    Then 0 < d, and  m = n + d       by arithmetic
@@ -176,7 +177,8 @@ QED
    The result follows               by MULT_LEFT_CANCEL
 *)
 Theorem EXP_LCANCEL:
-    !a b c n m. 0 < a /\ n < m /\ (a ** n * b = a ** m * c) ==> ?d. 0 < d /\ (b = a ** d * c)
+  !a b c n m. 0 < a /\ n < m /\ (a ** n * b = a ** m * c) ==>
+              ?d. 0 < d /\ (b = a ** d * c)
 Proof
   rpt strip_tac >>
   `0 < m - n /\ (m = n + (m - n))` by decide_tac >>
@@ -185,10 +187,9 @@ Proof
   metis_tac[EXP_ADD, MULT_ASSOC, MULT_LEFT_CANCEL]
 QED
 
-(* Theorem: 0 < a /\ n < m /\ (a ** n * b = a ** m * c) ==> ?d. 0 < d /\ (b = a ** d * c) *)
-(* Proof: by EXP_LCANCEL, MULT_COMM. *)
 Theorem EXP_RCANCEL:
-    !a b c n m. 0 < a /\ n < m /\ (b * a ** n = c * a ** m) ==> ?d. 0 < d /\ (b = c * a ** d)
+  !a b c n m. 0 < a /\ n < m /\ (b * a ** n = c * a ** m) ==>
+              ?d. 0 < d /\ (b = c * a ** d)
 Proof
   metis_tac[EXP_LCANCEL, MULT_COMM]
 QED
@@ -749,7 +750,7 @@ Proof
 QED
 
 
-Definition SQRTd_def[nocompute]:   SQRTd n = (ROOT 2 n, n - (ROOT 2 n * ROOT 2 n))
+Definition SQRTd_def[nocompute]: SQRTd n = (ROOT 2 n, n - (ROOT 2 n * ROOT 2 n))
 End
 
 Definition iSQRTd_def[nocompute]:
@@ -941,7 +942,6 @@ Proof
   rw[ROOT_FROM_POWER]
 QED
 
-(* Theorem: 0 < r ==> !n p. (ROOT r n = p) <=> (p ** r <= n /\ n < SUC p ** r) *)
 (* Proof:
    If part: 0 < r ==> ROOT r n ** r <= n /\ n < SUC (ROOT r n) ** r
       This is true             by ROOT, 0 < r
@@ -985,8 +985,6 @@ Proof
   rw[ROOT_UNIQUE]
 QED
 
-(* Theorem: 0 < r ==>
-            (ROOT r (SUC n) = ROOT r n + if SUC n = (SUC (ROOT r n)) ** r then 1 else 0) *)
 (* Proof:
    Let x = ROOT r n, y = ROOT r (SUC n).  x <= y.
    Note n < (SUC x) ** r /\ x ** r <= n          by ROOT_THM
@@ -1026,22 +1024,6 @@ Proof
   ]
 QED
 
-(*
-ROOT_SUC;
-|- !r n. 0 < r ==> ROOT r (SUC n) = ROOT r n + if SUC n = SUC (ROOT r n) ** r then 1 else 0
-Let z = ROOT r n.
-
-   z(n)
-   -------------------------------------------------
-                      n   (n+1=(z+1)**r)
-
-> EVAL ``MAP (ROOT 2) [1 .. 20]``;
-val it = |- MAP (ROOT 2) [1 .. 20] =
-      [1; 1; 1; 2; 2; 2; 2; 2; 3; 3; 3; 3; 3; 3; 3; 4; 4; 4; 4; 4]: thm
-       1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
-*)
-
-(* Theorem: 0 < m ==> !n. (ROOT m n = 1) <=> (0 < n /\ n < 2 ** m) *)
 (* Proof:
        ROOT m n = 1
    <=> 1 ** m <= n /\ n < (SUC 1) ** m    by ROOT_THM, 0 < m
@@ -1101,7 +1083,8 @@ Proof
 QED
 
 (*
-EVAL ``MAP (\k. ROOT k 100)  [1 .. 10]``; = [100; 10; 4; 3; 2; 2; 1; 1; 1; 1]: thm
+EVAL “MAP (\k. ROOT k 100)  [1 .. 10]”;
+ |- ... = [100; 10; 4; 3; 2; 2; 1; 1; 1; 1]: thm
 
 This shows (ROOT k) is a decreasing function of k,
 but this is very hard to prove without some real number theory.
@@ -1156,13 +1139,12 @@ Proof
 QED
 
 (* Get a useful theorem *)
+(* |- !n p. p ** 2 <= n /\ n < SUC p ** 2 ==> SQRT n = p *)
 Theorem SQRT_UNIQUE = ROOT_UNIQUE |> SPEC ``2``;
-(* val SQRT_UNIQUE = |- !n p. p ** 2 <= n /\ n < SUC p ** 2 ==> SQRT n = p: thm *)
 
-(* Obtain a theorem *)
+(* |- !n p. (SQRT n = p) <=> p ** 2 <= n /\ n < SUC p ** 2 *)
 Theorem SQRT_THM =
     ROOT_THM |> SPEC ``2`` |> SIMP_RULE (srw_ss())[];
-(* val SQRT_THM = |- !n p. (SQRT n = p) <=> p ** 2 <= n /\ n < SUC p ** 2: thm *)
 
 (* Theorem: n <= m ==> SQRT n <= SQRT m *)
 (* Proof: by ROOT_LE_MONO *)
@@ -1400,7 +1382,6 @@ Proof
   metis_tac[LOG_LE_MONO, LOG_EXACT_EXP]
 QED
 
-(* Theorem: 1 < a /\ 0 < n ==> !p. (LOG a n = p) <=> (a ** p <= n /\ n < a ** SUC p) *)
 (* Proof:
    If part: 1 < a /\ 0 < n ==> a ** LOG a n <= n /\ n < a ** SUC (LOG a n)
       This is true by LOG.
@@ -1408,7 +1389,7 @@ QED
       This is true by LOG_UNIQUE
 *)
 Theorem LOG_THM:
-    !a n. 1 < a /\ 0 < n ==> !p. (LOG a n = p) <=> (a ** p <= n /\ n < a ** SUC p)
+  !a n. 1 < a /\ 0 < n ==> !p. (LOG a n = p) <=> a ** p <= n /\ n < a ** SUC p
 Proof
   metis_tac[LOG, LOG_UNIQUE]
 QED
@@ -1428,7 +1409,8 @@ QED
 > EVAL ``MAP (LOG 3) [1 .. 20]``; =
       [0; 0; 1; 1; 1; 1; 1; 1; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2]: thm
 > EVAL ``MAP (LOG 3) [1 .. 30]``; =
-      [0; 0; 1; 1; 1; 1; 1; 1; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 3; 3; 3; 3]: thm
+      [0; 0; 1; 1; 1; 1; 1; 1; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2;
+       2; 2; 3; 3; 3; 3]: thm
 *)
 
 (* Theorem: 1 < a /\ 0 < n ==>
@@ -1458,22 +1440,23 @@ QED
 
 (* For continuous functions, log_b (x ** y) = y * log_b x. *)
 
-(* Theorem: 1 < b /\ 0 < x /\ 0 < n ==>
-           n * LOG b x <= LOG b (x ** n) /\ LOG b (x ** n) < n * SUC (LOG b x) *)
 (* Proof:
    Note:
+
 > LOG_THM |> SPEC ``b:num`` |> SPEC ``x:num``;
-val it = |- 1 < b /\ 0 < x ==> !p. LOG b x = p <=> b ** p <= x /\ x < b ** SUC p: thm
+val it = |- 1 < b /\ 0 < x ==> !p. LOG b x = p <=> b ** p <= x /\ x < b ** SUC p
 > LOG_THM |> SPEC ``b:num`` |> SPEC ``(x:num) ** n``;
 val it = |- 1 < b /\ 0 < x ** n ==>
-   !p. LOG b (x ** n) = p <=> b ** p <= x ** n /\ x ** n < b ** SUC p: thm
+   !p. LOG b (x ** n) = p <=> b ** p <= x ** n /\ x ** n < b ** SUC p
 
    Let y = LOG b x, z = LOG b (x ** n).
    Then b ** y <= x /\ x < b ** SUC y              by LOG_THM, (1)
     and b ** z <= x ** n /\ x ** n < b ** SUC z    by LOG_THM, (2)
    From (1),
-        b ** (n * y) <= x ** n /\                  by EXP_EXP_LE_MONO, EXP_EXP_MULT
-        x ** n < b ** (n * SUC y)                  by EXP_EXP_LT_MONO, EXP_EXP_MULT, 0 < n
+        b ** (n * y) <= x ** n /\                  by EXP_EXP_LE_MONO,
+                                                      EXP_EXP_MULT
+        x ** n < b ** (n * SUC y)                  by EXP_EXP_LT_MONO,
+                                                      EXP_EXP_MULT, 0 < n
    Cross combine with (2),
         b ** (n * y) <= x ** n < b ** SUC z
     and b ** z <= x ** n < b ** (n * y)
@@ -1612,14 +1595,12 @@ Proof
   rw[LOG_BASE]
 QED
 
-(* Obtain a theorem *)
 Theorem LOG2_THM =
     LOG_THM |> SPEC ``2`` |> SIMP_RULE (srw_ss())[];
-(* val LOG2_THM = |- !n. 0 < n ==> !p. (LOG2 n = p) <=> 2 ** p <= n /\ n < 2 ** SUC p: thm *)
+(* = |- !n. 0 < n ==> !p. (LOG2 n = p) <=> 2 ** p <= n /\ n < 2 ** SUC p *)
 
-(* Obtain a theorem *)
 Theorem LOG2_PROPERTY = LOG |> SPEC ``2`` |> SIMP_RULE (srw_ss())[];
-(* val LOG2_PROPERTY =  |- !n. 0 < n ==> 2 ** LOG2 n <= n /\ n < 2 ** SUC (LOG2 n): thm *)
+(* = |- !n. 0 < n ==> 2 ** LOG2 n <= n /\ n < 2 ** SUC (LOG2 n) *)
 
 (* Theorem: 0 < n ==> 2 ** LOG2 n <= n) *)
 (* Proof: by LOG2_PROPERTY *)
@@ -1629,10 +1610,9 @@ Proof
   rw[LOG2_PROPERTY]
 QED
 
-(* Obtain a theorem *)
 Theorem LOG2_UNIQUE =
     LOG_UNIQUE |> SPEC ``2`` |> SPEC ``n:num`` |> SPEC ``m:num`` |> GEN_ALL;
-(* val LOG2_UNIQUE = |- !n m. 2 ** m <= n /\ n < 2 ** SUC m ==> LOG2 n = m: thm *)
+(* = |- !n m. 2 ** m <= n /\ n < 2 ** SUC m ==> LOG2 n = m *)
 
 (* Theorem: 0 < n ==> ((LOG2 n = 0) <=> (n = 1)) *)
 (* Proof:
@@ -1810,11 +1790,11 @@ Theorem LOG2_SUC_TWICE_SQ:
 Proof
   rpt strip_tac >>
   `LOG2 1 = 0` by rw[] >>
-  `1 <= n` by decide_tac >>
+  `1 ≤ n` by decide_tac >>
   `LOG2 1 <= LOG2 n` by rw[LOG2_LE] >>
-  `1 <= SUC (LOG2 n)` by decide_tac >>
-  `2 <= 2 * SUC (LOG2 n)` by rw_tac arith_ss[LE_MULT_LCANCEL, DECIDE``0 < 2``] >>
-  `2 ** 2 <= (2 * SUC (LOG2 n)) ** 2` by rw[EXP_EXP_LE_MONO, DECIDE``0 < 2``] >>
+  `1 ≤ SUC (LOG2 n)` by decide_tac >>
+  `2 ≤ 2 * SUC (LOG2 n)` by rw_tac arith_ss[LE_MULT_LCANCEL, DECIDE``0 < 2``] >>
+  `2 ** 2 ≤ (2 * SUC (LOG2 n)) ** 2` by rw[EXP_EXP_LE_MONO, DECIDE``0 < 2``] >>
   `2 ** 2 = 4` by rw_tac arith_ss[] >>
   decide_tac
 QED

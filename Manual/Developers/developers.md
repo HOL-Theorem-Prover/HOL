@@ -273,11 +273,11 @@ Unless otherwise noted, they are built by the configuration process.
     This is used interactively (*via* a Unix filter that preprocesses all user-input under Moscow ML, or built into the Poly/ML REPL), and non-interactively (by being applied to source files).
     The core sources are in `tools/Holmake`, but the standalone executable is built in `tools/quote-filter` and it is moved to `bin/` as part of configuration.
 
-`unicode-grep`
+`h4pedant`
 :   Our tool for enforcing code style ([as documented below](#coding-standardsrequirements)).
     The command-line specifies the directories to scan, and options dictate which requirements are enforced/checked for.
     The enforcing of style is done by the `Holmakefile` in `src/portableML/testsrc`.
-    The executable is in `tools/unicode-grep`.
+    The executable is in `tools/h4pedant`.
 
 ## Other Tools Directories
 

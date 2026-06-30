@@ -18,9 +18,12 @@ DIRNAMES = \
   rebuild_cachekey \
   theorytarget \
   commandmacros \
+  condifeq \
   doublecrnl \
   projclean_loop \
+  h4pedant_config \
   projfile_basic \
+  projfile_holmake_false \
   projfile_holpath_override \
   projfile_open_resolution \
   projfile_name_clash \
@@ -42,6 +45,7 @@ DIRNAMES = \
   gh679 \
   gh1353 \
   gh1993 \
+  gh1993-lib \
   ignore_errors/j1 \
   qfreadTheoremsyntax \
   use-fnf \

@@ -10,7 +10,10 @@ struct
 open Systeml Holmake_tools Holmake_types HOLFileSys
 infix forces_update_of depforces_update_of cached_depforces_update_of |>
 
-structure FileSys = HOLFileSys
+(* Route getDir through HOLFileSys's cwd cache during the scan; see the note
+   in Holmake_tools.  Holmake is a fresh process and every chDir invalidates,
+   so this can't go stale the way the shared (bin/hol) getDir would. *)
+structure FileSys = struct open HOLFileSys val getDir = cached_getDir end
 structure Path = OS.Path
 structure Process = OS.Process
 
@@ -329,10 +332,33 @@ local
                             " ignored: " ^ msg);
                      NONE))
 
-  val project_dirs : string list =
+  (* `holmake = false` keeps the parsed config available for
+     external_includes inheritance and holpathdb registration but
+     suppresses project mode: the discovery walk, name-clash check,
+     and projects_work() dispatch. *)
+  val project_modep =
       case project_config of
-          NONE => []
-        | SOME cfg => HMProject.discover_dirs cfg
+          NONE => false
+        | SOME cfg => #holmake cfg
+
+  val () =
+      case project_config of
+          SOME cfg =>
+            if #holmake cfg then ()
+            else
+              List.app
+                (fn k =>
+                    warn0 ("holproject.toml at " ^ #root cfg ^
+                           ": `" ^ k ^ "` ignored under holmake = false"))
+                (#dead_keys cfg)
+        | NONE => ()
+
+  val project_dirs : string list =
+      if project_modep then
+        case project_config of
+            NONE => []
+          | SOME cfg => HMProject.discover_dirs cfg
+      else []
 
   val project_externals : string list =
       case project_config of
@@ -340,7 +366,8 @@ local
         | SOME cfg => #external_includes cfg
 
   (* Every dir that build-time machinery treats as an implicit
-     INCLUDES of every project dir.  Empty when project mode is off. *)
+     INCLUDES of every project dir.  Empty when no holproject.toml is
+     in effect. *)
   val project_active_dirs : string list = project_dirs @ project_externals
 
   (* For find_rule's known-dirs gate: project dirs and their external
@@ -351,7 +378,8 @@ local
      namespace separation, so any clash among reachable sources is
      ambiguous for `open Foo`).  Run once at startup; externals are
      not absorbed -- they live outside the project's source-namespace
-     responsibility. *)
+     responsibility.  Skipped under holmake = false (project_dirs is
+     empty there anyway). *)
   val () =
       if null project_dirs then ()
       else
@@ -397,19 +425,25 @@ local
             fun ext_to_str (e : HMProject.external_project) =
                 #id e ^ " -> " ^ #path e
           in
-            pmsg ("Project '" ^ name ^ "' rooted at " ^ #root cfg);
-            plist "externals" (List.map ext_to_str (#externals cfg));
-            List.app
-              (fn {id, exclude, path = _} =>
-                  if null exclude then ()
-                  else plist ("external " ^ id ^ " exclude") exclude)
-              (#externals cfg);
-            plist "exclude" (#exclude cfg);
-            plist "external_includes" project_externals;
-            pmsg ("  discovered " ^
-                  Int.toString (List.length project_dirs) ^
-                  " project directories");
-            List.app (fn d => pmsg ("    " ^ d)) project_dirs
+            if #holmake cfg then
+              (pmsg ("Project '" ^ name ^ "' rooted at " ^ #root cfg);
+               plist "externals" (List.map ext_to_str (#externals cfg));
+               List.app
+                 (fn {id, exclude, path = _} =>
+                     if null exclude then ()
+                     else plist ("external " ^ id ^ " exclude") exclude)
+                 (#externals cfg);
+               plist "exclude" (#exclude cfg);
+               plist "external_includes" project_externals;
+               pmsg ("  discovered " ^
+                     Int.toString (List.length project_dirs) ^
+                     " project directories");
+               List.app (fn d => pmsg ("    " ^ d)) project_dirs)
+            else
+              (pmsg ("holproject.toml at " ^ #root cfg ^
+                     " with holmake = false: " ^
+                     "external_includes inherited, project mode off");
+               plist "external_includes" project_externals)
           end
 
   (* Absolute excludes that apply when checking INCLUDES against the
@@ -493,11 +527,12 @@ fun is_known_dir absdir = Binaryset.member(!known_dirs, absdir)
        config asks to skip;
      project_active_root: the project root, for diag messages. *)
 
-(* first two bindings look redundant; this is to escape the local-in-end *)
+(* These bindings look redundant; they rebind so the values escape the
+   surrounding `local ... in'. *)
 val project_active_dirs = project_active_dirs
 val project_excludes = project_excludes
+val project_modep = project_modep
 val project_active_root = Option.map #root project_config
-val project_modep = isSome project_config
 
 (* `limit_for_dir' must not trigger a Holmakefile read here: doing
    so would chdir under code in `build_depgraph' that captures
@@ -1896,13 +1931,27 @@ fun diag_built_graph targets depgraph =
       );
      diag "core" (fn _ => "Dep.graph =\n" ^ HM_DepGraph.toString depgraph))
 
+(* A theory_dat sibling group (same dir, same BIC_BuildScript command)
+   is bumped as a unit when its script runs, so count any theory_dat in
+   a group with a needed member -- not just theory_dats mkneeded itself
+   reached.  Otherwise side-effect theory_dats from starred-dep rules
+   that use a `Theory T` script as a code generator (EmitML pattern)
+   bump theories_built past the announced total. *)
 fun count_needed_theories depgraph =
-    HM_DepGraph.fold
-      (fn (_, nI) => fn n =>
-          if HM_DepGraph.is_theory_dat_node nI andalso
-             #status nI = Pending {needed=true}
-          then n + 1 else n)
-      depgraph 0
+    let
+      fun group_has_needed nI =
+          List.exists
+            (fn n => #status (valOf (HM_DepGraph.peeknode depgraph n))
+                       = Pending {needed=true})
+            (HM_DepGraph.find_nodes_by_command depgraph
+                                               (#dir nI, #command nI))
+    in
+      HM_DepGraph.fold
+        (fn (_, nI) => fn n =>
+            if HM_DepGraph.is_theory_dat_node nI andalso group_has_needed nI
+            then n + 1 else n)
+        depgraph 0
+    end
 
 fun dispatch_built_graph depgraph =
     if cline_nobuild then

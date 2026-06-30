@@ -16,10 +16,12 @@ all:  process_docfiles
 # mdbook isn't available -- see tools/build/buildutils.sml).  It needs
 # the HOL heap to run polyscripter's `>>` ML directives, so it's built
 # via buildheap, like smdpp.
-process_docfiles: $(HOLDIR)/Manual/Tools/polyscripter.sml process_docfiles.sml \
+process_docfiles: $(HOLDIR)/Manual/Tools/polyscripter.sml \
+                  Flash.sig Flash.sml process_docfiles.sml \
                   $(dprot $(HOLDIR)/bin/hol.state)
 	env HOL_CONFIG='' $(protect $(HOLDIR)/bin/hol) buildheap Arbrat \
-	    $(HOLDIR)/Manual/Tools/polyscripter.sml process_docfiles.sml \
+	    $(HOLDIR)/Manual/Tools/polyscripter.sml \
+	    Flash.sig Flash.sml process_docfiles.sml \
 	    -o $@ --exe main
 
 makebase.exe: poly-makebase.ML makebase.sml HOLPage.sml \

@@ -119,7 +119,8 @@ fun EXISTS_ARITH_CONV tm =
        in  EQT_INTRO (WITNESS binding tm)
        end
       ) handle (HOL_ERR _) =>
-        raise mk_HOL_ERR "Exists_arith" "EXISTS_ARITH_CONV" "cannot prove formula"
+        raise mk_HOL_ERR "Exists_arith" "EXISTS_ARITH_CONV"
+                "cannot prove formula"
   end
  );
 

@@ -643,7 +643,8 @@ Proof
 QED
 
 Theorem cv_rep_string_FLOOKUP[cv_rep]:
-  from_option f (FLOOKUP m n) = cv_st_get (from_string_fmap f m) (from_list from_char n)
+  from_option f (FLOOKUP m n) =
+  cv_st_get (from_string_fmap f m) (from_list from_char n)
 Proof
   gvs [from_string_fmap_def, GSYM $ fetch "-" "cv_st_get_thm"]
   \\ simp [st_get_st_sets, st_get_Nothing]
@@ -651,7 +652,8 @@ Proof
 QED
 
 Theorem cv_rep_string_FUPDATE[cv_rep]:
-  from_string_fmap f (m |+ (k,v)) = cv_st_set (from_string_fmap f m) (from_list from_char k) (f v)
+  from_string_fmap f (m |+ (k,v)) =
+  cv_st_set (from_string_fmap f m) (from_list from_char k) (f v)
 Proof
   gvs [from_string_fmap_def,GSYM $ fetch "-" "cv_st_set_thm"] \\ AP_TERM_TAC
   \\ simp_tac std_ss [GSYM st_sets_def]
@@ -672,7 +674,8 @@ QED
 
 Theorem cv_rep_string_DOMSUB[cv_rep]:
   from_to f t ⇒
-  from_string_fmap f (m \\ k) = cv_st_del (from_string_fmap f m) (from_list from_char k)
+  from_string_fmap f (m \\ k) =
+  cv_st_del (from_string_fmap f m) (from_list from_char k)
 Proof
   rw[from_string_fmap_def]
   \\ drule (GSYM (theorem "cv_st_del_thm" |> DISCH_ALL))

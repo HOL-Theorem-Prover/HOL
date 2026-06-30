@@ -2,14 +2,19 @@ structure QUse :> QUse =
 struct
 
 val {print = emit, hadError} = HOLSourceParser.trackingPrint print
+val failOnError = ref false
 
 fun use_reader fname {read = infn, fileline, eof} =
   let
     open PolyML
     fun line () = #line (fileline ()) + 1
   in
-    while not (eof()) do
-      compiler (infn, [Compiler.CPFileName fname, Compiler.CPLineNo line]) ()
+    while not (eof()) do (
+      compiler (infn, [Compiler.CPFileName fname, Compiler.CPLineNo line]) ();
+      if !failOnError andalso hadError () then
+        OS.Process.exit OS.Process.failure
+      else ()
+    )
   end
 
 fun prim_use {quietOpen} fname =

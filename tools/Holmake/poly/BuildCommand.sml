@@ -319,6 +319,28 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         fun safedelete s =
             (diag (fn _ => "cleaning up " ^ s ^ " for script " ^ script);
              FileSys.remove s handle OS.SysErr _ => ())
+        val script_part =
+            if String.isSuffix "Script" script then
+              String.substring(script, 0, size script - 6)
+            else raise Fail "Invariant failure in run_script"
+        (* Sweep stale <theory>.<thmname>.dumpedheap files left by a
+           prior failing run of this script: with the rebuild imminent
+           those snapshots no longer correspond to the current sources.
+           Anchor on "<script_part>." prefix + ".dumpedheap" suffix so
+           sibling theories whose names start with the same letters
+           are not affected. *)
+        fun sweep_dumpedheaps () =
+            let
+              val prefix = OS.Path.file script_part ^ "."
+              val suffix = ".dumpedheap"
+              val minlen = size prefix + size suffix
+              fun matches f =
+                  size f > minlen andalso
+                  String.isPrefix prefix f andalso
+                  String.isSuffix suffix f
+            in
+              FileSys.read_files {dirname = "."} matches safedelete
+            end handle HOLFileSys.DirNotFound => ()
         (* The safedelete pass is defensive: with the build about to run
            and write fresh outputs, deleting any pre-existing copies first
            guards against a theory script that fails part-way through and
@@ -326,8 +348,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
            without it.  But if we keep it, it must only fire on the
            cache-miss path: on a cache hit the expected files have just
            been put in place (possibly by a concurrent peer Holmake whose
-           lock we inherited) and we must not delete them. *)
-        fun prep_for_build () = app safedelete expecteds
+           lock we inherited) and we must not delete them.  The
+           dumpedheap sweep above shares this cache-miss-only invariant. *)
+        fun prep_for_build () =
+            (app safedelete expecteds; sweep_dumpedheaps ())
         val useScript = fullPath [HOLDIR, "bin", "hol"]
         (* Poly/ML runtime options (--gcthreads, --maxheap) must come before subcommand *)
         val cline =
@@ -361,10 +385,6 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           in
             isSuccess res
           end
-        val script_part =
-            if String.isSuffix "Script" script then
-              String.substring(script, 0, size script - 6)
-            else raise Fail "Invariant failure in run_script"
         val other_nodes = let
           open HM_DepGraph
         in

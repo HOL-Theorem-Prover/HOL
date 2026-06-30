@@ -315,6 +315,17 @@ fun write_kernelid s =
     TextIO.closeOut strm
   end handle IO.Io _ => die "Couldn't write kernelid to HOLDIR"
 
+fun read_kernelid () =
+  let
+    val strm = TextIO.openIn Holmake_tools.kernelid_fname
+    val s = case TextIO.inputLine strm of
+                NONE => ""
+              | SOME s => hd (String.tokens Char.isSpace s)
+                          handle Empty => ""
+  in
+    s before TextIO.closeIn strm
+  end handle IO.Io _ => ""
+
 fun cline_die s = die ("Command line option error: " ^ s)
 fun apply_updates l t =
   case l of
@@ -851,6 +862,13 @@ fun write_theorygraph_html () =
         \         color: #1f2328; margin: 1.5rem; }\n\
         \  h1 { font-size: 1.5rem; }\n\
         \  object { display: block; max-width: 100%; }\n\
+        \  @media (prefers-color-scheme: dark) {\n\
+        \    body { background: #1b1d23; color: #d6d6d6; }\n\
+        \    /* the graph is black-on-white with a transparent backing;\n\
+        \       invert it (re-rotating hue) so its edges and labels stay\n\
+        \       visible against the dark page */\n\
+        \    object { filter: invert(1) hue-rotate(180deg); }\n\
+        \  }\n\
         \</style>\n\
         \</head>\n\
         \<body>\n\
@@ -1004,6 +1022,46 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
      val theory_url_base =
          if use_mdbook then "../theories/" else ""
 
+     (* "Source File" URL base.  The htmlsigs are deployed outside the
+        source tree, so the legacy file:// path is dead on the web.
+        For the mdbook/deploy build, point the links at GitHub, pinned
+        to the commit the docs were built from when this is a git
+        checkout; fall back to the release tag (the release-tarball
+        case, where that tag is exactly the right ref).  Empty for
+        local builds, where Htmlsigs keeps the file:// path. *)
+     val source_url_base =
+         if not use_mdbook then ""
+         else
+           let
+             val tmp = OS.FileSys.tmpName ()
+             val ok = OS.Process.isSuccess
+                        (OS.Process.system
+                           ("git -C \"" ^ HOLDIR ^ "\" rev-parse HEAD > \"" ^
+                            tmp ^ "\" 2>/dev/null"))
+             val sha =
+                 if ok then
+                   (let val is = TextIO.openIn tmp
+                        val l = TextIO.inputLine is
+                        val () = TextIO.closeIn is
+                    in case l of
+                           SOME s =>
+                             let val s = Substring.string
+                                   (Substring.dropr Char.isSpace
+                                                    (Substring.full s))
+                             in if s = "" then NONE else SOME s end
+                         | NONE => NONE
+                    end handle _ => NONE)
+                 else NONE
+             val () = (OS.FileSys.remove tmp handle _ => ())
+             val gitref =
+                 case sha of
+                     SOME s => s
+                   | NONE => CharVector.map Char.toLower Systeml.release ^
+                             "-" ^ Int.toString Systeml.version
+           in
+             "https://github.com/HOL-Theorem-Prover/HOL/blob/" ^ gitref ^ "/"
+           end
+
      local
        open Holmake_types
        fun quietly _ = ()
@@ -1041,9 +1099,7 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
    if poly then (
      let
        val pdoc_args =
-           process_docfiles ::
-           docpath ::
-           processed_dir ::
+           [process_docfiles, "--show-progress", docpath, processed_dir] @
            (if use_html_fallback then [htmlpath] else [])
        val () = print "Polyscripting Docfiles and generating .txt outputs...\n"
      in
@@ -1111,7 +1167,8 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
      val makebase_args =
          makebase ::
          urlFlag ("--entry-url-base", entry_url_base) @
-         urlFlag ("--theory-url-base", theory_url_base)
+         urlFlag ("--theory-url-base", theory_url_base) @
+         urlFlag ("--source-url-base", source_url_base)
    in
      if (print "Building Help DB\n"; SYSTEML makebase_args) then ()
      else die "Couldn't make help database"
@@ -1322,11 +1379,13 @@ in
     if buildok then let
         open Date
         val timestamp = fmt "%Y-%m-%dT%H%M" (fromTimeLocal (Time.now()))
-        val newname = hostname^timestamp
+        val knl = read_kernelid ()
+        val knl_suffix = if knl = "" then "" else "-" ^ knl
+        val newname = hostname^timestamp^knl_suffix
         val newpath = fullPath [logdir, newname]
       in
         HOLFileSys.rename {old = logfilename, new = newpath};
-        checkRegressions.run {logdir = logdir, latest = newpath}
+        checkRegressions.run {logdir = logdir, latest = newpath, kernel = knl}
       end
     else safedelete logfilename
   else ()

@@ -82,11 +82,21 @@ val _ =
                 else die ("got " ^ r ^ ", expected " ^ proj)
     | NONE => die "got NONE"
 
+(* Run this check from a fresh tmp dir well outside the HOL tree, so the
+   HOL-root holproject.toml shim (and any other in-tree project file)
+   doesn't make find_root walk up past `scratch` and find an unrelated
+   hit. *)
+val outside = OS.FileSys.tmpName ()
+val () = (OS.FileSys.remove outside handle OS.SysErr _ => ())
+val () = OS.FileSys.mkDir outside
+
 val _ = tprint "HMProject.find_root returns NONE outside any project"
 val _ =
-  case HMProject.find_root { start = scratch } of
+  case HMProject.find_root { start = outside } of
       NONE => OK ()
     | SOME r => die ("unexpected hit: " ^ r)
+
+val () = (OS.FileSys.rmDir outside handle OS.SysErr _ => ())
 
 (* ---- load ---- *)
 
@@ -393,5 +403,72 @@ val _ =
     if String.isSubstring ei_ext s
     then OK ()
     else die ("Fail raised but external root not in message: " ^ s)
+
+(* ---- holmake = false: parse, default, error on wrong type, dead keys ---- *)
+
+val hmf_dir = scratch ++ "hmfalse"
+val hmf_inc = scratch ++ "hmfalse_inc"
+val () = List.app mkdirs [hmf_dir, hmf_inc]
+
+val hmf_inc_rel = OS.Path.mkRelative {path = hmf_inc, relativeTo = hmf_dir}
+val () = write (hmf_dir ++ "holproject.toml")
+  ("holmake = false\n\
+   \external_includes = [\"" ^ String.toString hmf_inc_rel ^ "\"]\n")
+
+val hmf_cfg = HMProject.load { root = hmf_dir }
+
+val _ = tprint "HMProject.load reads holmake = false"
+val _ = if #holmake hmf_cfg = false then OK ()
+        else die "expected holmake = false in config"
+
+val _ = tprint "external_includes still resolved under holmake = false"
+val _ = if excl_contains (ext_inc hmf_cfg) hmf_inc then OK ()
+        else die ("got [" ^ String.concatWith ", " (ext_inc hmf_cfg) ^ "]")
+
+val _ = tprint "default holmake = true when key is absent"
+val _ = if #holmake cfg then OK ()
+        else die "default should be true"
+
+val () = write (hmf_dir ++ "holproject.toml") "holmake = \"no\"\n"
+val _ = tprint "wrong-type holmake key aborts load with file path"
+val _ =
+  (HMProject.load { root = hmf_dir };
+   die "expected load to abort")
+  handle Fail s =>
+    if String.isSubstring "holmake" s andalso
+       String.isSubstring (hmf_dir ++ "holproject.toml") s
+    then OK ()
+    else die ("Fail raised but message missing key or path: " ^ s)
+
+val hmf_ext_dir = scratch ++ "hmfalse_ext_target"
+val () = mkdirs hmf_ext_dir
+val () = touch (hmf_ext_dir ++ "holproject.toml")
+val hmf_ext_rel =
+    OS.Path.mkRelative {path = hmf_ext_dir, relativeTo = hmf_dir}
+val () = write (hmf_dir ++ "holproject.toml")
+  ("holmake = false\n\
+   \exclude = [\"some\"]\n\
+   \[projects.x]\n\
+   \path = \"" ^ String.toString hmf_ext_rel ^ "\"\n")
+val hmf_cfg_dead = HMProject.load { root = hmf_dir }
+
+val _ = tprint
+  "holmake = false: project-mode-only keys listed in dead_keys"
+val _ =
+  let
+    val dk = #dead_keys hmf_cfg_dead
+    val has_excl = List.exists (fn k => k = "exclude") dk
+    val has_proj = List.exists (fn k => String.isSubstring "projects.x" k) dk
+  in
+    if has_excl andalso has_proj then OK ()
+    else die ("dead_keys = [" ^ String.concatWith ", " dk ^ "]")
+  end
+
+val _ = tprint
+  "holmake = false: exclude/externals stripped from returned config"
+val _ =
+  if null (#exclude hmf_cfg_dead) andalso null (#externals hmf_cfg_dead)
+  then OK ()
+  else die "expected empty exclude and externals under holmake = false"
 
 val () = rm_rf scratch
