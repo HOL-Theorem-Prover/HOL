@@ -13,8 +13,8 @@ echo "Running TacticToe selftests only..."
 rm -f src/tactictoe/src/tactictoe-selftest.log
 rm -f src/tactictoe/selftest/tactictoe2-selftest.log
 
-bin/Holmake -C src/tactictoe/src tactictoe-selftest.log
-bin/Holmake -C src/tactictoe/selftest tactictoe2-selftest.log
+bin/Holmake --no-project -C src/tactictoe/src tactictoe-selftest.log
+bin/Holmake --no-project -C src/tactictoe/selftest tactictoe2-selftest.log
 
 echo "TacticToe selftests passed."
 echo "Logs:"
