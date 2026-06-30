@@ -1,5 +1,5 @@
 (*---------------------------------------------------------------------------*)
-(*    Tests                                                                  *)
+(*  Tests (SML based)                                                        *)
 (*---------------------------------------------------------------------------*)
 
 app load ["regexpLib"];
@@ -447,9 +447,9 @@ val () = Regexp_Type.set_intervalFn default_intervalFn;
  * VDOP (positional accuracy) Byte 6, 7 (LSB, MSB) 0 ... 999 "m" (0.1 m)
  *)
 
-val match_1800        = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}`;
-val match_1801        = matcher `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`;
-val match_1802    = matcher `\i{0,9999}\i{0,3599}.{4}`;
+val match_1800 = matcher`\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}`;
+val match_1801 = matcher`\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`;
+val match_1802 = matcher`\i{0,9999}\i{0,3599}.{4}`;
 val test_1802_alt = matcher `\i{0,9999}\i{0,3599}\k{0}{4}`;
 val match_1803    = matcher `\i{0,12}\i{0,16}\i{0,999}\i{0,999}\i{0,999}`;
 
@@ -460,7 +460,8 @@ val match_18xx_concat = matcher
  `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}\i{0,9999}\i{0,3599}\i{0,12}\i{0,16}\i{0,999}\i{0,999}\i{0,999}`;
 
 (*---------------------------------------------------------------------------*)
-(* Hard cases for Brzozowski? These seem to take exponential time.           *)
+(* Hard cases for Brzozowski? These used to take exponential time, but       *)
+(* "range" regexps are translated more efficiently now.                      *)
 (*---------------------------------------------------------------------------*)
 
 time matcher `\w{1,20}`;
@@ -468,6 +469,7 @@ time matcher `\w{1,50}`;
 time matcher `\w{1,75}`;
 time matcher `\w{1,100}`;
 time matcher `\w{1,200}`;
+time matcher `\w{1,1000}`;
 
 set_trace "regexp-compiler" 0;
 
