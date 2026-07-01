@@ -189,7 +189,7 @@ cat > /tmp/setup-locked-vm.lockdown.sh <<'INSIDE'
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "[lockdown 1/4] writing /etc/nftables.conf"
+echo "[lockdown 1/5] writing /etc/nftables.conf"
 sudo tee /etc/nftables.conf > /dev/null <<'NFT'
 #!/usr/sbin/nft -f
 flush ruleset
@@ -205,7 +205,10 @@ table inet filter {
     ct state established,related                            accept
     # DNS from applications to the local dnsmasq stub
     udp dport 53  ip  daddr 127.0.0.1                       accept
-    # DNS from dnsmasq itself to its upstream resolvers
+    # Upstream DNS to Cloudflare.  dns-tcp-proxy uses the tcp/53 rules
+    # (it forwards over TCP, which survives networks that drop outbound
+    # UDP/53 -- see LOCKED-VM.md); the udp/53 rules stay so a plain UDP
+    # upstream still works on networks that permit it.
     udp dport 53  ip  daddr 1.1.1.1                         accept
     udp dport 53  ip  daddr 1.0.0.1                         accept
     tcp dport 53  ip  daddr 1.1.1.1                         accept
@@ -220,14 +223,19 @@ table inet filter {
 }
 NFT
 
-echo "[lockdown 2/4] writing /etc/dnsmasq.d/anthropic.conf"
+echo "[lockdown 2/5] writing /etc/dnsmasq.d/anthropic.conf"
 sudo tee /etc/dnsmasq.d/anthropic.conf > /dev/null <<'DNSMASQ'
 listen-address=127.0.0.1
 bind-interfaces
 no-resolv
 no-poll
-server=1.1.1.1
-server=1.0.0.1
+# Forward upstream through the local UDP->TCP proxy (dns-tcp-proxy.service)
+# instead of straight to 1.1.1.1:53.  Many Wi-Fi networks silently drop
+# outbound UDP/53 to public resolvers while still permitting TCP/53, so a
+# UDP upstream breaks the moment the host switches from wired to such a
+# network.  The proxy speaks TCP, so DNS keeps working across the switch.
+# See developers/claude/LOCKED-VM.md ("DNS breaks after switching networks").
+server=127.0.0.1#5335
 # OrbStack gives the guest a link-local IPv6 default route but no working
 # global IPv6 egress, so AAAA answers send clients (node/Claude Code) down
 # an IPv6 path whose SYNs the firewall silently drops -> connect timeouts
@@ -240,7 +248,96 @@ nftset=/claude.ai/4#inet#filter#anthropic_ips_v4
 nftset=/claude.ai/6#inet#filter#anthropic_ips_v6
 DNSMASQ
 
-echo "[lockdown 3/4] disabling systemd-resolved stub, pointing resolv.conf at dnsmasq"
+echo "[lockdown 3/5] installing dns-tcp-proxy (UDP->TCP DNS forwarder)"
+# dnsmasq has no "force TCP upstream" option and cannot re-frame UDP<->TCP
+# DNS itself (TCP frames each message with a 2-byte length prefix that UDP
+# lacks), so a small stdlib-only Python daemon does the forwarding.  No
+# extra packages: python3 is already installed by bootstrap.
+sudo tee /usr/local/sbin/dns-tcp-proxy.py > /dev/null <<'PYPROXY'
+#!/usr/bin/env python3
+"""dns-tcp-proxy: accept DNS queries over UDP on a local port and forward
+them upstream over TCP/53, returning the answers back over UDP.
+
+Rationale: some networks (notably UDP-53-filtering Wi-Fi, common on campus
+and corporate access points) silently drop dnsmasq's UDP queries to public
+resolvers while still permitting TCP/53.  dnsmasq has no "force TCP upstream"
+option and cannot itself re-frame UDP<->TCP DNS, so it points its `server=`
+at this proxy, which speaks TCP to Cloudflare.  See developers/claude/
+LOCKED-VM.md for the full story."""
+import socket, struct, sys, threading
+
+LISTEN = ("127.0.0.1", 5335)
+UPSTREAMS = [("1.1.1.1", 53), ("1.0.0.1", 53)]
+TIMEOUT = 5
+
+def _recvn(sock, n):
+    buf = b""
+    while len(buf) < n:
+        chunk = sock.recv(n - len(buf))
+        if not chunk:
+            raise EOFError("upstream closed early")
+        buf += chunk
+    return buf
+
+def resolve_tcp(query):
+    framed = struct.pack("!H", len(query)) + query
+    last = None
+    for host, port in UPSTREAMS:
+        try:
+            with socket.create_connection((host, port), timeout=TIMEOUT) as t:
+                t.settimeout(TIMEOUT)
+                t.sendall(framed)
+                (n,) = struct.unpack("!H", _recvn(t, 2))
+                return _recvn(t, n)
+        except Exception as exc:              # try the next upstream
+            last = exc
+    raise last
+
+def handle(sock, data, addr):
+    try:
+        sock.sendto(resolve_tcp(data), addr)
+    except Exception as exc:
+        sys.stderr.write("dns-tcp-proxy: %s\n" % exc)
+
+def main():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(LISTEN)
+    sys.stderr.write("dns-tcp-proxy: listening on %s:%d\n" % LISTEN)
+    while True:
+        data, addr = s.recvfrom(65535)
+        threading.Thread(target=handle, args=(s, data, addr),
+                         daemon=True).start()
+
+if __name__ == "__main__":
+    main()
+PYPROXY
+sudo chmod 0755 /usr/local/sbin/dns-tcp-proxy.py
+
+sudo tee /etc/systemd/system/dns-tcp-proxy.service > /dev/null <<'UNITFILE'
+[Unit]
+Description=DNS UDP->TCP forwarder (for UDP/53-filtering networks)
+Documentation=file:///repo/developers/claude/LOCKED-VM.md
+Before=dnsmasq.service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/sbin/dns-tcp-proxy.py
+DynamicUser=yes
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
+UNITFILE
+sudo systemctl daemon-reload
+
+echo "[lockdown 4/5] disabling systemd-resolved stub, pointing resolv.conf at dnsmasq"
 sudo systemctl disable --now systemd-resolved 2>/dev/null || true
 # /etc/resolv.conf may be a symlink to a stub-resolv file managed by
 # systemd-resolved; replace it with a static file pointing at dnsmasq.
@@ -250,8 +347,9 @@ nameserver 127.0.0.1
 options edns0 trust-ad
 RESOLV
 
-echo "[lockdown 4/4] enabling firewall + dnsmasq services"
+echo "[lockdown 5/5] enabling firewall + DNS proxy + dnsmasq services"
 sudo systemctl enable --now nftables.service
+sudo systemctl enable --now dns-tcp-proxy.service
 sudo systemctl enable      dnsmasq.service
 sudo systemctl restart     dnsmasq.service
 

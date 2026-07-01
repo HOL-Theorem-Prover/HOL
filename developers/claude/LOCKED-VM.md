@@ -413,9 +413,11 @@ again (device-flow as the `claude` user).
 
   - **Egress firewall (`nftables` + `dnsmasq`):** HTTPS to
     `api.anthropic.com` + `claude.ai` only, plus loopback and DNS to
-    1.1.1.1.  Bypassable by `sudo systemctl stop nftables` — so we
-    keep that out of Claude's reach by running Claude as the no-sudo
-    `claude` user.
+    1.1.1.1 (dnsmasq forwards its upstream lookups over TCP via the
+    local `dns-tcp-proxy`, so resolution survives Wi-Fi networks that
+    drop UDP/53 — see troubleshooting).  Bypassable by `sudo systemctl
+    stop nftables` — so we keep that out of Claude's reach by running
+    Claude as the no-sudo `claude` user.
   - **VM ext4 filesystem perms:** `/etc/`, `/home/<default-user>/`,
     `/etc/sudoers.d/` etc. follow normal Linux semantics.  Claude
     can't write `/etc/nftables.conf`, can't read `/etc/sudoers`,
@@ -506,6 +508,37 @@ Confirm dnsmasq is up and the nftables set has IPs for
 If the set is empty, force a lookup to populate it:
 
     orb -m hol4 python3 -c "import socket; print(socket.gethostbyname('api.anthropic.com'))"
+
+### DNS stops resolving after the host switches networks (e.g. wired → Wi-Fi)
+
+Symptom: Claude worked on a wired connection, then goes "Network error"
+after you move the laptop to Wi-Fi.  `getent hosts api.anthropic.com`
+inside the VM returns nothing and `journalctl -u dnsmasq` shows
+`Maximum number of concurrent DNS queries reached (max: 150)`.
+
+Cause: the VM's IP connectivity is fine — OrbStack follows the host's
+network change transparently.  What breaks is DNS *transport*.  dnsmasq's
+upstream lookups go to Cloudflare, and many Wi-Fi networks (campus,
+corporate, hotel) silently drop outbound **UDP/53** to public resolvers
+while still permitting TCP/53 and 443.  A wired network usually doesn't,
+so the switch is what surfaces it.  Confirm:
+
+    # UDP path (what a naive dnsmasq uses) — times out on such networks:
+    orb -m hol4 python3 -c "import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);s.settimeout(4);s.sendto(b'\x00\x00\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03api\x09anthropic\x03com\x00\x00\x01\x00\x01',('1.1.1.1',53));print('reply',len(s.recvfrom(512)[0]))"
+
+The setup script handles this by routing dnsmasq's upstream through a
+local UDP→TCP forwarder (`dns-tcp-proxy.service`, listening on
+`127.0.0.1:5335`) that re-issues each query over TCP/53 — which these
+networks leave open.  A VM provisioned before this change (dnsmasq with
+`server=1.1.1.1` instead of `server=127.0.0.1#5335`) can be upgraded in
+place by re-running `developers/claude/setup-locked-vm.sh`, or manually:
+
+    orb -m hol4 sudo systemctl status dns-tcp-proxy   # present + active?
+    # if absent, re-run the setup script (idempotent).
+
+Note this only covers networks that filter UDP/53; a network that also
+blocks outbound TCP/53 to public resolvers would need a DoH/DoT upstream
+instead (not currently wired in).
 
 ### Claude times out / retries even though the IPv4 set is populated
 
