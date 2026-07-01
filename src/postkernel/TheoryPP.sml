@@ -342,6 +342,19 @@ in
       \    font-size: 0.92rem;\n\
       \    line-height: 1.5;\n\
       \  }\n\
+      \  @media (prefers-color-scheme: dark) {\n\
+      \    :root {\n\
+      \      --bg: #0d1117;\n\
+      \      --fg: #c9d1d9;\n\
+      \      --muted: #8b949e;\n\
+      \      --accent: #58a6ff;\n\
+      \      --pre-bg: #161b22;\n\
+      \      --pre-border: #30363d;\n\
+      \      --rule: #30363d;\n\
+      \    }\n\
+      \    ul.parents a:hover { background: #21262d; }\n\
+      \    .thm:target { background: #4d3a00; }\n\
+      \  }\n\
       \</style>\n\
       \</head>\n\
       \<body>\n\
@@ -475,6 +488,10 @@ fun write_script_html {script_path, out_path} =
           \              padding-right: 1em; text-align: right;\n\
           \              color: var(--muted); user-select: none; }\n\
           \  .line:target { background: var(--hl); }\n\
+          \  @media (prefers-color-scheme: dark) {\n\
+          \    :root { --bg:#0d1117; --fg:#c9d1d9; --muted:#8b949e;\n\
+          \            --pre-bg:#161b22; --pre-border:#30363d; --hl:#4d3a00; }\n\
+          \  }\n\
           \</style>\n\
           \</head>\n\
           \<body>\n\
