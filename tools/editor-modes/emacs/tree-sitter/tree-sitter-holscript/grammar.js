@@ -308,11 +308,6 @@ module.exports = grammar({
             $.wheretype_sigexp,
         ],
         // HOL
-        // `[~r:] A ∧ B' is ambiguous: the inner term could extend
-        // through the binary ∧, or the labelled_term could close at
-        // A.  Dynamic precedence on hol_labelled_term picks the
-        // close-at-A interpretation (label covers one conjunct).
-        [$.hol_labelled_term, $.hol_binary_term],
         // `nl³' could stand alone as a _hol_term or sit as the lhs of
         // an application (`nl³ x').  Both readings are valid; we want
         // the GLR parser to keep both alive and pick lhs when followed
