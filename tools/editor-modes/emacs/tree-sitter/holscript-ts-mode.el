@@ -39,9 +39,14 @@
   "SML keywords for tree-sitter font-locking.")
 
 (defconst holscript-ts-mode--hol-keywords
-  '("Definition" "Theorem" "Termination" "Proof" "Datatype:" "End" "QED"
+  '("Definition" "Theorem" "Triviality" "Termination" "Proof" "QED"
+    "Datatype" "Inductive" "CoInductive"
+    "Theory" "Ancestors" "Libs" "Overload" "Type" "Resume" "Finalise"
+    "End"
     "if" "then" "else" "case" "of")
-  "HOL keywords for tree-sitter font-locking.")
+  "HOL keywords for tree-sitter font-locking.  These must be literal
+anonymous nodes in the grammar; block keywords like `Quote' whose
+whole span is a single lexical token are highlighted separately.")
 
 (defconst holscript-ts-mode--sml-builtins
   '("abs" "app" "before" "ceil" "chr" "concat" "exnMessage" "exnName" "explode"
@@ -345,56 +350,64 @@ Used as `treesit-defun-name-function'."
      ;; Catch-all: leave the current indent unchanged.
      ((lambda (&rest _) t)                        no-indent 0))))
 
+(defconst holscript-ts-mode--sexp-node-regexp
+  (regexp-opt
+   '("hol_theorem_with_proof"
+     "hol_theorem_alias"
+     "hol_definition"
+     "hol_definition_with_proof"
+     "hol_inductive"
+     "hol_type_alias"
+     "hol_datatype"
+     "hol_overload"
+     "hol_quote_block"
+     "hol_theory_dec"
+     "hol_ancestors_dec"
+     "hol_libs_dec"
+     "hol_term"
+     "hol_application"
+     "hol_binary_term"
+     "hol_binder"
+     "tuple_exp"
+     "list_exp"
+     "record_exp"
+     "paren_exp"
+     "let_exp"
+     "case_exp"
+     "fn_exp"
+     "if_exp"
+     "app_exp"
+     "valbind"
+     "fmrule"
+     "tactic"
+     "block_comment"
+     "string_scon"
+     "hol_string"))
+  "Regexp matching node types treated as sexps by `forward-sexp'.")
+
+(defconst holscript-ts-mode--sentence-node-regexp
+  (regexp-opt
+   '("hol_theorem_with_proof"
+     "hol_theorem_alias"
+     "hol_definition"
+     "hol_definition_with_proof"
+     "hol_inductive"
+     "hol_type_alias"
+     "hol_datatype"
+     "hol_overload"
+     "hol_quote_block"
+     "hol_theory_dec"
+     "hol_ancestors_dec"
+     "hol_libs_dec"
+     "val_dec" "fun_dec" "type_dec" "datatype_dec"
+     "open_dec" "exception_dec"
+     "strbind" "sigbind" "fctbind"))
+  "Regexp matching node types treated as sentences by `forward-sentence'.")
+
 (defconst holscript-ts-mode--thing-settings
   `((holscript
-     (sexp ,(regexp-opt
-             '("hol_theorem_with_proof"
-               "hol_theorem_alias"
-               "hol_definition"
-               "hol_definition_with_proof"
-               "hol_inductive"
-               "hol_type_alias"
-               "hol_datatype"
-               "hol_overload"
-               "hol_quote_block"
-               "hol_theory_dec"
-               "hol_ancestors_dec"
-               "hol_libs_dec"
-               "hol_term"
-               "hol_application"
-               "hol_binary_term"
-               "hol_binder"
-               "tuple_exp"
-               "list_exp"
-               "record_exp"
-               "paren_exp"
-               "let_exp"
-               "case_exp"
-               "fn_exp"
-               "if_exp"
-               "app_exp"
-               "valbind"
-               "fmrule"
-               "tactic"
-               "block_comment"
-               "string_scon"
-               "hol_string")))
-     (sentence ,(regexp-opt
-                 '("hol_theorem_with_proof"
-                   "hol_theorem_alias"
-                   "hol_definition"
-                   "hol_definition_with_proof"
-                   "hol_inductive"
-                   "hol_type_alias"
-                   "hol_datatype"
-                   "hol_overload"
-                   "hol_quote_block"
-                   "hol_theory_dec"
-                   "hol_ancestors_dec"
-                   "hol_libs_dec"
-                   "val_dec" "fun_dec" "type_dec" "datatype_dec"
-                   "open_dec" "exception_dec"
-                   "strbind" "sigbind" "fctbind")))))
+     (sexp ,holscript-ts-mode--sexp-node-regexp)
+     (sentence ,holscript-ts-mode--sentence-node-regexp)))
   "Settings for `treesit-thing-settings' (sexp + sentence).")
 
 ;;;###autoload
@@ -431,15 +444,26 @@ Used as `treesit-defun-name-function'."
     (setq-local treesit-simple-imenu-settings
                 holscript-ts-mode--imenu-settings)
 
-    ;; `treesit-thing-settings' is the source of truth for sexp /
-    ;; sentence motion (C-M-f / C-M-b / M-a / M-e) in Emacs 30+.
+    ;; Sexp / sentence motion.  Emacs 30 reads `treesit-thing-settings';
+    ;; Emacs 29 reads the per-thing regexp variables.  Set both, and
+    ;; pin `forward-sexp-function' after setup because Emacs 29's
+    ;; `treesit-major-mode-setup' does not always wire it.
     (setq-local treesit-thing-settings
                 holscript-ts-mode--thing-settings)
+    (when (boundp 'treesit-sexp-type-regexp)
+      (setq-local treesit-sexp-type-regexp
+                  holscript-ts-mode--sexp-node-regexp))
+    (when (boundp 'treesit-sentence-type-regexp)
+      (setq-local treesit-sentence-type-regexp
+                  holscript-ts-mode--sentence-node-regexp))
 
     ;; Indent
     (setq-local treesit-simple-indent-rules
                 holscript-ts-mode--indent-rules)
 
-    (treesit-major-mode-setup)))
+    (treesit-major-mode-setup)
+
+    (when (fboundp 'treesit-forward-sexp)
+      (setq-local forward-sexp-function #'treesit-forward-sexp))))
 
 (provide 'holscript-ts-mode)
