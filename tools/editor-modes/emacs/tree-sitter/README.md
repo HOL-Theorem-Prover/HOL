@@ -70,10 +70,10 @@ release from <https://github.com/tree-sitter/tree-sitter/releases>).
 
 ### Route B: Build with make, install manually
 
-The Makefile expects the generated `src/parser.c` and
-`src/grammar.json` to already exist — those are the output of
-`tree-sitter generate` and are gitignored, so a fresh checkout
-doesn't have them.
+The Makefile expects the outputs of `tree-sitter generate`
+(`src/parser.c`, `src/grammar.json`, `src/node-types.json`, and the
+runtime headers under `src/tree_sitter/`) to already exist — they
+are gitignored, so a fresh checkout doesn't have them.
 
 ```
 cd tools/editor-modes/emacs/tree-sitter/tree-sitter-holscript
