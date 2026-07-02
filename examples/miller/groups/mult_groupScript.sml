@@ -666,7 +666,8 @@ Proof
            (\n.
               binomial (SUC n') (SUC (SUC n)) *
               (g EXP (n' - SUC n) *
-               (SUC (SUC n') * (SUC n' * g * (1 + (SUC (SUC n') - y MOD SUC (SUC n'))))) EXP
+               (SUC (SUC n') *
+                (SUC n' * g * (1 + (SUC (SUC n') - y MOD SUC (SUC n'))))) EXP
                n))))`
    ++ R_TAC []
    ++ ONCE_REWRITE_TAC [LEFT_ADD_DISTRIB]

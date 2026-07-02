@@ -310,7 +310,8 @@ fun subtype_check ccache congs stricttypechecking depth =
           assert (not stricttypechecking orelse not (null cond_results))
           (ERR "subtypecheck"
            ("no basic type for subterm:\n" ^ term_to_string tm))
-        fun process_result ((vars', sub'), th') = (vars', MP (PINST sub' th) th')
+        fun process_result ((vars', sub'), th') =
+            (vars', MP (PINST sub' th) th')
       in
         partial_map (total process_result) cond_results
       end
@@ -671,7 +672,8 @@ local
       val l_body = N n rator l
       val tm_pretty_abs = alpha_align l_body tm_abs
       val tm' = fold (C (curry mk_comb)) tm_pretty_abs bvars
-      val tm_th = QCONV (N n (fn c => RATOR_CONV c THENC BETA_CONV) ALL_CONV) tm'
+      val tm_th =
+          QCONV (N n (fn c => RATOR_CONV c THENC BETA_CONV) ALL_CONV) tm'
       val (r_var, r_bvs) = list_dest_comb r
       val _ = assert (tml_eq bvars (rev r_bvs)) (BUG "match_align" "bvar panic")
       val res = (([r_var |-> tm_pretty_abs], []), SYM tm_th)

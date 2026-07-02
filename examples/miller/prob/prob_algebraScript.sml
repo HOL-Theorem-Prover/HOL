@@ -61,14 +61,16 @@ End
 Definition premeasurable_def:
     premeasurable a b = {f | algebra a /\ algebra b /\
                              f IN (space a -> space b) /\
-                             !s. s IN subsets b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a}
+                             !s. s IN subsets b ==>
+                                 ((PREIMAGE f s)INTER(space a)) IN subsets a}
 End
 
 Theorem IN_PREMEASURABLE:
      !a b f. f IN premeasurable a b =
                 algebra a /\ algebra b /\
                 f IN (space a -> space b) /\
-                (!s. s IN subsets b ==> (PREIMAGE f s) INTER (space a) IN subsets a)
+                (!s. s IN subsets b ==>
+                     (PREIMAGE f s) INTER (space a) IN subsets a)
 Proof
    RW_TAC std_ss [premeasurable_def, GSPECIFICATION]
 QED
@@ -86,10 +88,11 @@ Proof
 QED
 
 Theorem MEASURABLE_IS_PREMEASURABLE:
-    !a b. sigma_algebra a /\ sigma_algebra b ==> (measurable a b = premeasurable a b)
+  !a b. sigma_algebra a /\ sigma_algebra b ==>
+        (measurable a b = premeasurable a b)
 Proof
    rpt STRIP_TAC
-   >> RW_TAC std_ss [EXTENSION, measurable_def, premeasurable_def, GSPECIFICATION]
+   >> RW_TAC std_ss [EXTENSION,measurable_def,premeasurable_def,GSPECIFICATION]
    >> IMP_RES_TAC SIGMA_ALGEBRA_ALGEBRA
    >> METIS_TAC []
 QED
@@ -144,7 +147,7 @@ Proof
                   algebra_def, space_def, subsets_def, GSPECIFICATION]
    >> `PREIMAGE f (PREIMAGE g s) INTER space a =
        PREIMAGE f (PREIMAGE g s INTER space b) INTER space a`
-        by (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_PREIMAGE] >> METIS_TAC [])
+        by (RW_TAC std_ss[Once EXTENSION,IN_INTER,IN_PREIMAGE] >> METIS_TAC [])
    >> METIS_TAC []
 QED
 
@@ -152,7 +155,8 @@ QED
 Definition prob_preserving_def:
     prob_preserving m1 m2 =
    {f |
-    f IN premeasurable (m_space m1, measurable_sets m1) (m_space m2, measurable_sets m2) /\
+    f IN premeasurable (m_space m1, measurable_sets m1)
+                       (m_space m2, measurable_sets m2) /\
     !s.
       s IN measurable_sets m2 ==>
            (measure m1 ((PREIMAGE f s)INTER(m_space m1)) = measure m2 s)}
@@ -163,7 +167,8 @@ Theorem PROB_PRESERVING:
        prob_preserving p1 p2 =
        {f |
         f IN premeasurable (p_space p1, events p1) (p_space p2, events p2) /\
-        !s. s IN events p2 ==> (prob p1 ((PREIMAGE f s) INTER (p_space p1)) = prob p2 s)}
+        !s. s IN events p2 ==>
+            (prob p1 ((PREIMAGE f s) INTER (p_space p1)) = prob p2 s)}
 Proof
    REPEAT GEN_TAC
    >> REWRITE_TAC [EXTENSION]
@@ -171,14 +176,16 @@ Proof
    >> REWRITE_TAC [GSPECIFICATION]
    >> BETA_TAC
    >> REWRITE_TAC [PAIR_EQ]
-   >> RW_TAC std_ss [prob_preserving_def, events_def, prob_def, p_space_def, GSPECIFICATION]
+   >> RW_TAC std_ss [prob_preserving_def, events_def, prob_def, p_space_def,
+                     GSPECIFICATION]
 QED
 
 Theorem IN_PROB_PRESERVING:
      !p1 p2 f.
        f IN prob_preserving p1 p2 =
        f IN premeasurable (p_space p1, events p1) (p_space p2, events p2) /\
-       !s. s IN events p2 ==> (prob p1 ((PREIMAGE f s) INTER (p_space p1)) = prob p2 s)
+       !s. s IN events p2 ==>
+           (prob p1 ((PREIMAGE f s) INTER (p_space p1)) = prob p2 s)
 Proof
    RW_TAC std_ss [PROB_PRESERVING, GSPECIFICATION]
 QED
@@ -207,21 +214,24 @@ Proof
    RW_TAC std_ss []
    >> reverse (Cases_on `algebra (p_space p2, a)`)
    >- ( Q.PAT_X_ASSUM `f IN P`
-          (ASSUME_TAC o (REWRITE_RULE [IN_PROB_PRESERVING, events_def, p_space_def, m_space_def,
-                                       measurable_sets_def, prob_def, measure_def])) \\
+          (ASSUME_TAC o
+           REWRITE_RULE [IN_PROB_PRESERVING, events_def, p_space_def,
+                         m_space_def, measurable_sets_def, prob_def,
+                         measure_def]) \\
         POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [IN_PREMEASURABLE])) \\
         FULL_SIMP_TAC std_ss [p_space_def] )
    >> Suff `f IN prob_preserving p1 (p_space p2, events p2, prob p2)`
    >- RW_TAC std_ss [PROB_SPACE_REDUCE]
    >> ASM_REWRITE_TAC []
    >> Q.PAT_X_ASSUM `f IN X` MP_TAC
-   >> REWRITE_TAC [IN_PROB_PRESERVING, measurable_sets_def, measure_def, m_space_def,
-                   p_space_def, events_def, prob_def]
+   >> REWRITE_TAC [IN_PROB_PRESERVING, measurable_sets_def, measure_def,
+                   m_space_def, p_space_def, events_def, prob_def]
    >> STRIP_TAC
    >> STRONG_CONJ_TAC
    >- (REWRITE_TAC [SIGMA_REDUCE]
        >> POP_ASSUM K_TAC
-       >> Know `(sigma (m_space p2) a) = sigma (space (m_space p2, a)) (subsets (m_space p2, a))`
+       >> Know `sigma (m_space p2) a =
+                sigma (space (m_space p2, a)) (subsets (m_space p2, a))`
        >- RW_TAC std_ss [space_def, subsets_def]
        >> STRIP_TAC >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
        >> MATCH_MP_TAC PREMEASURABLE_LIFT
@@ -231,48 +241,56 @@ Proof
    >> REWRITE_TAC [IN_PREMEASURABLE, space_def, subsets_def]
    >> STRIP_TAC
    >> Suff `subsets (sigma (m_space p2) a) SUBSET
-                 {s | measure p1 ((PREIMAGE f s) INTER (m_space p1)) = measure p2 s}`
+                 {s | measure p1 (PREIMAGE f s ∩ m_space p1) = measure p2 s}`
    >- RW_TAC std_ss [SUBSET_DEF, GSPECIFICATION]
    >> MATCH_MP_TAC SIGMA_PROPERTY_DISJOINT
    >> FULL_SIMP_TAC std_ss [p_space_def, prob_space_def, events_def]
    >> RW_TAC std_ss [GSPECIFICATION, SUBSET_DEF, IN_INTER, IN_FUNSET,
-                     IN_UNIV, PREIMAGE_COMPL, PREIMAGE_BIGUNION, IMAGE_IMAGE] >| (* 3 sub-goals here *)
+                     IN_UNIV, PREIMAGE_COMPL, PREIMAGE_BIGUNION, IMAGE_IMAGE]
+   >| (* 3 sub-goals here *)
    [(* goal 1 (of 3) *)
     Q.PAT_X_ASSUM `mersurable_sets p2 = subsets (sigma (m_space p2) a)`
         (fn thm => FULL_SIMP_TAC std_ss [SYM thm])
     >> RW_TAC std_ss [MEASURE_COMPL]
     >> Q.PAT_X_ASSUM `measure p1 (PREIMAGE f s INTER m_space p1) = measure p2 s`
         (fn thm => ONCE_REWRITE_TAC [GSYM thm])
-    >> Know `m_space p2 IN a` >- PROVE_TAC [ALGEBRA_SPACE, subsets_def, space_def]
+    >> Know `m_space p2 IN a`
+    >- PROVE_TAC [ALGEBRA_SPACE, subsets_def, space_def]
     >> STRIP_TAC
     >> Q.PAT_X_ASSUM `measure p2 (m_space p2) = 1` K_TAC
     >> Q.PAT_X_ASSUM `measure p1 (m_space p1) = 1` (REWRITE_TAC o wrap o SYM)
     >> Know `PREIMAGE f (m_space p2) INTER m_space p1 = m_space p1`
-    >- (FULL_SIMP_TAC std_ss [Once EXTENSION, IN_INTER, IN_PREIMAGE, IN_FUNSET] >> METIS_TAC [])
+    >- (FULL_SIMP_TAC std_ss [Once EXTENSION,IN_INTER,IN_PREIMAGE,IN_FUNSET] >>
+        METIS_TAC [])
     >> RW_TAC std_ss [PREIMAGE_DIFF]
     >> `((PREIMAGE f (m_space p2) DIFF PREIMAGE f s) INTER m_space p1) =
-        ((PREIMAGE f (m_space p2) INTER m_space p1) DIFF (PREIMAGE f s INTER m_space p1))`
-        by (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_DIFF, IN_PREIMAGE] >> DECIDE_TAC)
+        ((PREIMAGE f (m_space p2) ∩ m_space p1) DIFF
+           (PREIMAGE f s ∩ m_space p1))`
+        by (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_DIFF, IN_PREIMAGE] >>
+            DECIDE_TAC)
     >> RW_TAC std_ss [MEASURE_COMPL],
     (* goal 2 (of 3) *)
     `BIGUNION (IMAGE (PREIMAGE f o f') UNIV) INTER m_space p1 =
      BIGUNION (IMAGE (\x:num. (PREIMAGE f o f') x INTER m_space p1) UNIV)`
-        by (RW_TAC std_ss [Once EXTENSION, IN_BIGUNION, IN_INTER, IN_IMAGE, IN_UNIV]
+        by (RW_TAC std_ss [Once EXTENSION,IN_BIGUNION,IN_INTER,IN_IMAGE,IN_UNIV]
             >> FULL_SIMP_TAC std_ss [IN_FUNSET]
             >> EQ_TAC
-            >- (RW_TAC std_ss [] >> Q.EXISTS_TAC `PREIMAGE f (f' x') INTER m_space p1`
-                >> ASM_REWRITE_TAC [IN_INTER] >> Q.EXISTS_TAC `x'` >> RW_TAC std_ss [])
+            >- (RW_TAC std_ss []
+                >> Q.EXISTS_TAC `PREIMAGE f (f' x') INTER m_space p1`
+                >> ASM_REWRITE_TAC [IN_INTER] >> Q.EXISTS_TAC `x'`
+                >> RW_TAC std_ss [])
             >> RW_TAC std_ss [] >> METIS_TAC [IN_PREIMAGE, IN_INTER])
     >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
     >> Suff
     `(measure p2 o f') --> measure p2 (BIGUNION (IMAGE f' UNIV)) /\
      (measure p2 o f') -->
-     measure p1 (BIGUNION (IMAGE (\x. (PREIMAGE f o f') x INTER m_space p1) UNIV))`
+     measure p1 (BIGUNION (IMAGE (\x. (PREIMAGE f o f') x ∩ m_space p1) UNIV))`
     >- PROVE_TAC [SEQ_UNIQ]
     >> CONJ_TAC
     >- (MATCH_MP_TAC MEASURE_COUNTABLE_INCREASING
         >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, SUBSET_DEF])
-    >> Know `measure p2 o f' = measure p1 o (\x. (PREIMAGE f o f') x INTER m_space p1)`
+    >> Know `measure p2 o f' =
+             measure p1 o (\x. (PREIMAGE f o f') x ∩ m_space p1)`
     >- (RW_TAC std_ss [FUN_EQ_THM]
         >> RW_TAC std_ss [o_THM])
     >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
@@ -285,27 +303,31 @@ Proof
     (* goal 3 (of 3) *)
     `BIGUNION (IMAGE (PREIMAGE f o f') UNIV) INTER m_space p1 =
      BIGUNION (IMAGE (\x:num. (PREIMAGE f o f') x INTER m_space p1) UNIV)`
-        by (RW_TAC std_ss [Once EXTENSION, IN_BIGUNION, IN_INTER, IN_IMAGE, IN_UNIV]
+        by (RW_TAC std_ss [Once EXTENSION,IN_BIGUNION,IN_INTER,IN_IMAGE,IN_UNIV]
             >> FULL_SIMP_TAC std_ss [IN_FUNSET]
             >> EQ_TAC
-            >- (RW_TAC std_ss [] >> Q.EXISTS_TAC `PREIMAGE f (f' x') INTER m_space p1`
-                >> ASM_REWRITE_TAC [IN_INTER] >> Q.EXISTS_TAC `x'` >> RW_TAC std_ss [])
+            >- (RW_TAC std_ss []
+                >> Q.EXISTS_TAC `PREIMAGE f (f' x') INTER m_space p1`
+                >> ASM_REWRITE_TAC [IN_INTER] >> Q.EXISTS_TAC `x'`
+                >> RW_TAC std_ss [])
             >> RW_TAC std_ss [] >> METIS_TAC [IN_PREIMAGE, IN_INTER])
     >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
     >> Suff
     `(measure p2 o f') sums measure p2 (BIGUNION (IMAGE f' UNIV)) /\
      (measure p2 o f') sums
-     measure p1 (BIGUNION (IMAGE (\x. (PREIMAGE f o f') x INTER m_space p1) UNIV))`
+     measure p1 (BIGUNION (IMAGE (\x. (PREIMAGE f o f') x ∩ m_space p1) UNIV))`
     >- PROVE_TAC [SUM_UNIQ]
     >> CONJ_TAC
     >- (MATCH_MP_TAC MEASURE_COUNTABLY_ADDITIVE
         >> RW_TAC std_ss [IN_FUNSET, IN_UNIV])
-    >> Know `measure p2 o f' = measure p1 o (\x. (PREIMAGE f o f') x INTER m_space p1)`
+    >> Know `measure p2 o f' =
+             measure p1 o (\x. (PREIMAGE f o f') x ∩ m_space p1)`
     >- (RW_TAC std_ss [FUN_EQ_THM]
         >> RW_TAC std_ss [o_THM])
     >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
     >> MATCH_MP_TAC MEASURE_COUNTABLY_ADDITIVE
-    >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, o_THM, IN_DISJOINT, PREIMAGE_DISJOINT, IN_INTER]
+    >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, o_THM, IN_DISJOINT, PREIMAGE_DISJOINT,
+                      IN_INTER]
     >> METIS_TAC [IN_DISJOINT, PREIMAGE_DISJOINT]]
 QED
 
@@ -325,7 +347,8 @@ Theorem PREMEASURABLE_UP_LIFT:
      !sp a b c f. f IN premeasurable (sp, a) c /\
                algebra (sp, b) /\ a SUBSET b ==> f IN premeasurable (sp, b) c
 Proof
-   RW_TAC std_ss [IN_PREMEASURABLE, GSPECIFICATION, SUBSET_DEF, IN_FUNSET, space_def, subsets_def]
+  RW_TAC std_ss [IN_PREMEASURABLE, GSPECIFICATION, SUBSET_DEF, IN_FUNSET,
+                 space_def, subsets_def]
 QED
 
 Theorem PREMEASURABLE_UP_SUBSET:
@@ -339,9 +362,10 @@ Proof
 QED
 
 Theorem PREMEASURABLE_UP_SIGMA:
-     !a b. premeasurable a b SUBSET premeasurable (sigma (space a) (subsets a)) b
+  !a b. premeasurable a b SUBSET premeasurable (sigma (space a) (subsets a)) b
 Proof
-   RW_TAC std_ss [SUBSET_DEF, IN_PREMEASURABLE, space_def, subsets_def, SPACE_SIGMA]
+   RW_TAC std_ss [SUBSET_DEF, IN_PREMEASURABLE, space_def, subsets_def,
+                  SPACE_SIGMA]
    >- ( MATCH_MP_TAC SIGMA_ALGEBRA_ALGEBRA \\
         MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> FULL_SIMP_TAC std_ss [algebra_def])
    >> PROVE_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF]
@@ -354,8 +378,9 @@ Theorem PROB_PRESERVING_UP_LIFT:
        a SUBSET events p1 ==>
        f IN prob_preserving p1 p2
 Proof
-   RW_TAC std_ss [prob_preserving_def, GSPECIFICATION, SUBSET_DEF, events_def, p_space_def,
-                  measure_def, measurable_sets_def, m_space_def, SPACE, prob_def]
+   RW_TAC std_ss [prob_preserving_def, GSPECIFICATION, SUBSET_DEF, events_def,
+                  p_space_def, measure_def, measurable_sets_def, m_space_def,
+                  SPACE, prob_def]
    >> MATCH_MP_TAC PREMEASURABLE_UP_LIFT
    >> Q.EXISTS_TAC `a`
    >> RW_TAC std_ss [SUBSET_DEF]
@@ -383,8 +408,8 @@ Proof
    >> MATCH_MP_TAC PROB_PRESERVING_UP_LIFT
    >> ASM_REWRITE_TAC [SIGMA_SUBSET_SUBSETS, SIGMA_REDUCE]
    >> FULL_SIMP_TAC std_ss [IN_PROB_PRESERVING, IN_PREMEASURABLE, p_space_def,
-                            measurable_sets_def, space_def, subsets_def, prob_def,
-                            events_def, measure_def, m_space_def]
+                            measurable_sets_def, space_def, subsets_def,
+                            prob_def, events_def, measure_def, m_space_def]
    >> Q.EXISTS_TAC `a` >> ASM_REWRITE_TAC []
    >> CONJ_TAC
    >- ( MATCH_MP_TAC SIGMA_ALGEBRA_ALGEBRA \\
@@ -824,11 +849,13 @@ QED
 
 Theorem PROB_ALGEBRA_ALGEBRA:   algebra prob_algebra
 Proof
-    RW_TAC std_ss [algebra_def, subset_class_def, prob_algebra_def, space_def, subsets_def,
-                   PROB_ALGEBRA_EMPTY, PROB_ALGEBRA_UNION, IN_UNIV, SUBSET_UNIV]
+    RW_TAC std_ss [algebra_def, subset_class_def, prob_algebra_def, space_def,
+                   subsets_def, PROB_ALGEBRA_EMPTY, PROB_ALGEBRA_UNION, IN_UNIV,
+                   SUBSET_UNIV]
  >> REWRITE_TAC [GSYM COMPL_DEF]
  >> POP_ASSUM MP_TAC
- >> REWRITE_TAC [GSYM (REWRITE_CONV [subsets_def, prob_algebra_def] ``subsets prob_algebra``)]
+ >> REWRITE_TAC [GSYM (REWRITE_CONV [subsets_def, prob_algebra_def]
+                                    “subsets prob_algebra”)]
  >> REWRITE_TAC [PROB_ALGEBRA_COMPL]
 QED
 
@@ -928,10 +955,10 @@ Proof
 QED
 
 Theorem PROB_ALGEBRA_HALVES:
-     !p q.
-       (halfspace T INTER p) UNION (halfspace F INTER q) IN (subsets prob_algebra) =
-       (halfspace T INTER p) IN (subsets prob_algebra) /\
-       (halfspace F INTER q) IN (subsets prob_algebra)
+  !p q.
+    (halfspace T ∩ p) ∪ (halfspace F ∩ q) ∈ (subsets prob_algebra) =
+       (halfspace T ∩ p) IN (subsets prob_algebra) /\
+       (halfspace F ∩ q) IN (subsets prob_algebra)
 Proof
    REPEAT STRIP_TAC
    >> reverse EQ_TAC >- PROVE_TAC [PROB_ALGEBRA_UNION]
@@ -953,7 +980,9 @@ Proof
 QED
 
 Theorem PROB_ALGEBRA_INTER_SHD:
-     !b p. (halfspace b INTER p o stl) IN (subsets prob_algebra) = p IN (subsets prob_algebra)
+  !b p.
+    (halfspace b INTER p o stl) ∈ (subsets prob_algebra) ⇔
+      p ∈ (subsets prob_algebra)
 Proof
    RW_TAC std_ss []
    >> reverse EQ_TAC
@@ -966,7 +995,8 @@ Proof
          (!v. (shd v = b) /\ stl v IN p = v IN prob_embed c) ==>
          ?d. !v. v IN p = v IN prob_embed d`
    >- (DISCH_THEN (MP_TAC o Q.SPEC `prob_canon b'`)
-       >> RW_TAC std_ss [PROB_CANON_EMBED, PROB_CANON_IDEMPOT, prob_canonical_def])
+       >> RW_TAC std_ss [PROB_CANON_EMBED, PROB_CANON_IDEMPOT,
+                         prob_canonical_def])
    >> HO_MATCH_MP_TAC PROB_CANONICAL_CASES
    >> CONJ_TAC
    >- (PSET_TAC [PROB_EMBED_BASIC, EXTENSION]
@@ -1015,7 +1045,8 @@ Proof
 QED
 
 Theorem PROB_PREMEASURE_APPEND:
-     !l1 l2. prob_premeasure (APPEND l1 l2) = prob_premeasure l1 + prob_premeasure l2
+  !l1 l2.
+    prob_premeasure (APPEND l1 l2) = prob_premeasure l1 + prob_premeasure l2
 Proof
    NTAC 2 STRIP_TAC
    >> Induct_on `l1`
@@ -1084,7 +1115,7 @@ Proof
    Induct_on `b` >- RW_TAC real_ss [prob_canon_merge_def, REAL_LE_REFL]
    >> RW_TAC real_ss [prob_canon_merge_def, prob_twin_def]
    >> RW_TAC std_ss [BUTLAST]
-   >> Suff `prob_premeasure (l'::b) <= prob_premeasure (SNOC T l'::SNOC F l'::b)`
+   >> Suff `prob_premeasure (l'::b) ≤ prob_premeasure (SNOC T l'::SNOC F l'::b)`
    >- PROVE_TAC [REAL_LE_TRANS]
    >> KILL_TAC
    >> RW_TAC std_ss [prob_premeasure_def, REAL_ADD_ASSOC, PROB_TWINS_MEASURE,
@@ -1243,8 +1274,8 @@ Proof
    >- (PSET_TAC [PROB_PREMEASURE_BASIC, PROB_EMBED_BASIC, EXTENSION]
        >> Suff `d = APPEND (MAP (CONS T) b) (MAP (CONS F) b')`
        >- RW_TAC real_ss []
-       >> Suff
-          `prob_canon d = prob_canon (APPEND (MAP (CONS T) b) (MAP (CONS F) b'))`
+       >> Suff ‘prob_canon d =
+                prob_canon (APPEND (MAP (CONS T) b) (MAP (CONS F) b'))’
        >- PROVE_TAC [prob_canonical_def]
        >> PSET_TAC [PROB_CANON_REP, EXTENSION])
    >> CONJ_TAC
@@ -1276,8 +1307,8 @@ Proof
    >> Know `!a b : real. (2 * a = 2 * b) ==> (a = b)`
    >- REAL_ARITH_TAC
    >> DISCH_THEN MATCH_MP_TAC
-   >> RW_TAC std_ss [REAL_ADD_LDISTRIB, PROB_PREMEASURE_APPEND, PROB_PREMEASURE_TLS,
-                     PROB_EMBED_APPEND]
+   >> RW_TAC std_ss [REAL_ADD_LDISTRIB, PROB_PREMEASURE_APPEND,
+                     PROB_PREMEASURE_TLS, PROB_EMBED_APPEND]
    >> Suff
       `(prob_premeasure b = prob_premeasure l1 + prob_premeasure l1') /\
        (prob_premeasure b' = prob_premeasure l2 + prob_premeasure l2')`
@@ -1448,7 +1479,7 @@ Proof
 QED
 
 Theorem IN_PROB_ALGEBRA_CANONICAL:
-     !x. x IN (subsets prob_algebra) = ?b. prob_canonical b /\ (x = prob_embed b)
+  !x. x ∈ subsets prob_algebra ⇔ ?b. prob_canonical b ∧ (x = prob_embed b)
 Proof
    RW_TAC std_ss [IN_PROB_ALGEBRA]
    >> reverse EQ_TAC >- PROVE_TAC []
@@ -1663,10 +1694,12 @@ Proof
  >> DISCH_THEN (REWRITE_TAC o wrap)
  >> STRIP_TAC
  >> (MP_TAC o Q.SPECL [`f`, `N`])
-       (ISPEC ``(space prob_algebra, subsets prob_algebra, prob_measure)`` ADDITIVE_SUM)
+       (ISPEC ``(space prob_algebra, subsets prob_algebra, prob_measure)``
+              ADDITIVE_SUM)
  >> ASSUME_TAC SPACE_SUBSETS_PROB_ALGEBRA
  >> RW_TAC std_ss [PROB_ALGEBRA_ALGEBRA, PROB_MEASURE_POSITIVE,
-                   PROB_MEASURE_ADDITIVE, measure_def, measurable_sets_def, m_space_def]
+                   PROB_MEASURE_ADDITIVE, measure_def, measurable_sets_def,
+                   m_space_def]
  >> POP_ASSUM (REWRITE_TAC o wrap o GSYM)
  >> MATCH_MP_TAC SER_0
  >> RW_TAC std_ss [o_THM, PROB_MEASURE_BASIC]
@@ -1696,7 +1729,7 @@ Theorem PREMEASURABLE_PROB_ALGEBRA_STL:
     stl IN premeasurable prob_algebra prob_algebra
 Proof
     RW_TAC std_ss [IN_PREMEASURABLE, PROB_ALGEBRA_ALGEBRA, PREIMAGE_def,
-                   SPACE_PROB_ALGEBRA, space_def, subsets_def, IN_FUNSET, IN_UNIV]
+                   SPACE_PROB_ALGEBRA,space_def,subsets_def,IN_FUNSET,IN_UNIV]
  >> Suff `{x | stl x IN s} = (s o stl)`
  >- PROVE_TAC [PROB_ALGEBRA_STL, PROB_ALGEBRA_UNIV, INTER_COMM, INTER_UNIV]
  >> ONCE_REWRITE_TAC [EXTENSION]
@@ -1714,7 +1747,7 @@ Proof
 QED
 
 Theorem PROB_ALGEBRA_SCONS:
-     !p. (!b. (p o scons b) IN (subsets prob_algebra)) = p IN (subsets prob_algebra)
+  !p. (!b. (p o scons b) ∈ subsets prob_algebra) ⇔ p ∈ subsets prob_algebra
 Proof
    RW_TAC std_ss [IN_PROB_ALGEBRA]
    >> EQ_TAC
@@ -1751,7 +1784,8 @@ Theorem PREMEASURABLE_PROB_ALGEBRA_SCONS:
     !b. scons b IN premeasurable prob_algebra prob_algebra
 Proof
     ASSUME_TAC SPACE_PROB_ALGEBRA
- >> RW_TAC std_ss [IN_PREMEASURABLE, PROB_ALGEBRA_ALGEBRA, PREIMAGE_def, IN_FUNSET, IN_UNIV]
+ >> RW_TAC std_ss [IN_PREMEASURABLE, PROB_ALGEBRA_ALGEBRA, PREIMAGE_def,
+                   IN_FUNSET, IN_UNIV]
  >> Suff `{x | scons b x IN s} = s o scons b`
  >- PROVE_TAC [PROB_ALGEBRA_SCONS, INTER_UNIV]
  >> ONCE_REWRITE_TAC [EXTENSION]
@@ -1759,10 +1793,11 @@ Proof
 QED
 
 Theorem PROB_MEASURE_STL:
-     !a. a IN (subsets prob_algebra) ==> (prob_measure (a o stl) = prob_measure a)
+  !a. a IN (subsets prob_algebra) ==> (prob_measure (a o stl) = prob_measure a)
 Proof
    RW_TAC std_ss []
-   >> Know `(a o stl) IN (subsets prob_algebra)` >- RW_TAC std_ss [PROB_ALGEBRA_STL]
+   >> Know `(a o stl) IN (subsets prob_algebra)`
+   >- RW_TAC std_ss [PROB_ALGEBRA_STL]
    >> RW_TAC std_ss [GSYM PREIMAGE_ALT]
    >> REPEAT (POP_ASSUM MP_TAC)
    >> RW_TAC std_ss [IN_PROB_ALGEBRA]
@@ -1815,16 +1850,16 @@ Proof
 QED
 
 Theorem PROB_MEASURE_SDROP:
-     !n a.
-       a IN (subsets prob_algebra) ==> (prob_measure (a o sdrop n) = prob_measure a)
+  !n a.
+    a ∈ (subsets prob_algebra) ==> (prob_measure (a o sdrop n) = prob_measure a)
 Proof
    Induct >- RW_TAC std_ss' [sdrop_def, o_DEF, I_THM]
    >> RW_TAC bool_ss [sdrop_def, o_ASSOC, PROB_MEASURE_STL, PROB_ALGEBRA_SDROP]
 QED
 
 Theorem PROB_PRESERVING_PROB_ALGEBRA_STL:
-    stl IN prob_preserving (space prob_algebra, subsets prob_algebra, prob_measure)
-                           (space prob_algebra, subsets prob_algebra, prob_measure)
+  stl ∈ prob_preserving (space prob_algebra, subsets prob_algebra, prob_measure)
+                        (space prob_algebra, subsets prob_algebra, prob_measure)
 Proof
     ASSUME_TAC SPACE_SUBSETS_PROB_ALGEBRA
  >> RW_TAC std_ss [PROB_PRESERVING, GSPECIFICATION, EVENTS, PROB,
@@ -1907,14 +1942,14 @@ Theorem PROB_ALGEBRA_MIRROR:
     !p. p o mirror IN (subsets prob_algebra) = p IN (subsets prob_algebra)
 Proof
     MP_TAC PREMEASURABLE_PROB_ALGEBRA_MIRROR
- >> RW_TAC std_ss [IN_PREMEASURABLE, PREIMAGE_ALT, INTER_UNIV, SPACE_PROB_ALGEBRA]
+ >> RW_TAC std_ss [IN_PREMEASURABLE,PREIMAGE_ALT,INTER_UNIV,SPACE_PROB_ALGEBRA]
  >> reverse EQ_TAC >- PROVE_TAC []
  >> POP_ASSUM (MP_TAC o Q.SPEC `p o mirror`)
  >> RW_TAC std_ss [GSYM o_ASSOC, MIRROR_o_MIRROR, I_o_ID]
 QED
 
 Theorem PROB_MEASURE_MIRROR:
-     !a. a IN (subsets prob_algebra) ==> (prob_measure (a o mirror) = prob_measure a)
+  !a. a ∈ (subsets prob_algebra) ⇒ (prob_measure (a o mirror) = prob_measure a)
 Proof
    RW_TAC std_ss [IN_PROB_ALGEBRA_CANONICAL, GSYM PREIMAGE_ALT]
    >> POP_ASSUM MP_TAC

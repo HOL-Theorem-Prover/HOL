@@ -668,7 +668,8 @@ Proof
  >- RW_TAC std_ss [prob_canon_merge_def, prob_twinfree_def]
  >> NTAC 3 STRIP_TAC
  >> Know `prob_twinfree b` >- PROVE_TAC [PROB_TWINFREE_TL]
- >> RW_TAC std_ss [prob_canon_merge_def, prob_twinfree_def, prob_twin_def] (* 3 sub-goals here *)
+ >> RW_TAC std_ss [prob_canon_merge_def, prob_twinfree_def, prob_twin_def]
+ (* 3 sub-goals here *)
  >> (Know `prob_sorted (l'::b)`
      >- (Know `prob_sorted (SNOC T l'::b)`
          >- PROVE_TAC [PROB_SORTED_MONO]
@@ -923,7 +924,8 @@ Theorem PROB_CANONICAL_STEP1:
      !l1 l2. prob_canonical (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))
              ==> prob_canonical l1 /\ prob_canonical l2
 Proof
-   RW_TAC std_ss [PROB_CANONICAL_DEF_ALT, PROB_SORTED_STEP, PROB_PREFIXFREE_STEP]
+   RW_TAC std_ss [PROB_CANONICAL_DEF_ALT, PROB_SORTED_STEP,
+                  PROB_PREFIXFREE_STEP]
    >> PROVE_TAC [PROB_TWINFREE_STEP1]
 QED
 

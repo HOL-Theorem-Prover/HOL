@@ -274,7 +274,8 @@ Proof
    >> Cases_on `?n. !m. m >= n ==> ~(f m = e)` >|
    [POP_ASSUM MP_TAC
     >> STRIP_TAC
-    >> Q.PAT_X_ASSUM `!f. (!n. P f n) ==> Q f` (MP_TAC o Q.SPEC `(\x. f (x + n))`)
+    >> Q.PAT_X_ASSUM ‘!f. (!n. P f n) ==> Q f’
+        (MP_TAC o Q.SPEC `(\x. f (x + n))`)
     >> Know `!n'. f (n + n') IN s`
     >- (STRIP_TAC
         >> Suff `n + n' >= n` >- PROVE_TAC []
@@ -338,8 +339,8 @@ Theorem BIJ_INSERT:
 Proof
    RW_TAC std_ss [BIJ_ALT]
    >> Q.EXISTS_TAC `t DELETE f e`
-   >> FULL_SIMP_TAC std_ss [IN_FUNSET, DELETE_THEN_INSERT, ELT_IN_DELETE, IN_INSERT,
-              DISJ_IMP_THM]
+   >> FULL_SIMP_TAC std_ss [IN_FUNSET, DELETE_THEN_INSERT, ELT_IN_DELETE,
+                            IN_INSERT, DISJ_IMP_THM]
    >> RESQ_TAC
    >> SIMP_TAC std_ss [IN_DELETE]
    >> REPEAT STRIP_TAC
@@ -573,7 +574,8 @@ Proof
    >> Q.SPEC_TAC (`s`, `s`)
    >> KILL_TAC
    >> HO_MATCH_MP_TAC FINITE_INDUCT
-   >> CONJ_TAC >- (RW_TAC std_ss [CARD_EMPTY, SUBSET_EMPTY] >> PROVE_TAC [CARD_EQ_0])
+   >> CONJ_TAC
+   >- (RW_TAC std_ss [CARD_EMPTY, SUBSET_EMPTY] >> PROVE_TAC [CARD_EQ_0])
    >> RW_TAC std_ss []
    >> Know `?t'. ~(e IN t') /\ (t = e INSERT t')`
    >- (Q.EXISTS_TAC `t DELETE e`

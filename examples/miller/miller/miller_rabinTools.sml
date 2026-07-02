@@ -83,7 +83,8 @@ HOL primitive inference steps: 8652867.
 Total: 8652867.
 > val it = |- ~prime (2 EXP 2 EXP 6 + 1) : thm
 
-- > val it = |- 2 EXP 2 EXP 7 + 1 = 340282366920938463463374607431768211457 : thm
+> val it =
+  |- 2 EXP 2 EXP 7 + 1 = 340282366920938463463374607431768211457 : thm
 - runtime: 2842.920s,    gctime: 409.620s,     systime: 12.210s.
 Axioms asserted: 0.
 Definitions made: 0.
@@ -93,10 +94,10 @@ HOL primitive inference steps: 65736911.
 Total: 65736911.
 > val it = |- ~prime (2 EXP 2 EXP 7 + 1) : thm
 
-- - > val it =
-    |- 2 EXP 2 EXP 8 + 1 =
-       115792089237316195423570985008687907853269984665640564039457584007913129639937
-     : thm
+> val it =
+|- 2 EXP 2 EXP 8 + 1 =
+  115792089237316195423570985008687907853269984665640564039457584007913129639937
+ : thm
 - - - runtime: 22095.770s,    gctime: 3170.780s,     systime: 12.570s.
 Axioms asserted: 0.
 Definitions made: 0.
