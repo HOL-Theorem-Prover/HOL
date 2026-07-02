@@ -151,8 +151,11 @@ For a description of OVERRIDE, START, and END, see `treesit-font-lock-rules'."
        ;;  (:match "^[A-Z].*" @font-lock-type-face))
        ;; HOL
        ((hol_defname) @font-lock-variable-name-face)
-       (hol_eqn (hol_identifier) @font-lock-function-name-face)
-       ((hol_variable) @font-lock-variable-name-face)))
+       ;; A Definition body is now a bare `_hol_term' — the eqn shape
+       ;; is a hol_binary_term with `=' as operator.  Font-locking the
+       ;; function name requires a deep query and is deferred.
+       ;; TODO: restore function-name highlighting.
+       ((hol_alphanumeric) @font-lock-variable-name-face)))
 
    :language 'holscript
    :feature 'constant
@@ -192,9 +195,17 @@ For a description of OVERRIDE, START, and END, see `treesit-font-lock-rules'."
 
 (defconst holscript-ts-mode--defun-type-regexp
   (regexp-opt '("hol_theorem_with_proof"
+                "hol_theorem_alias"
                 "hol_definition"
                 "hol_definition_with_proof"
                 "hol_datatype"
+                "hol_inductive"
+                "hol_type_alias"
+                "hol_overload"
+                "hol_quote_block"
+                "hol_theory_dec"
+                "hol_ancestors_dec"
+                "hol_libs_dec"
                 "fun_dec"
                 "val_dec"
                 "type_dec"
@@ -210,12 +221,31 @@ treats as defuns for `C-M-a' / `C-M-e' / `narrow-to-defun' etc.")
   "Return the user-visible name of NODE, or nil if NODE has none.
 Used as `treesit-defun-name-function'."
   (pcase (treesit-node-type node)
-    ("hol_theorem_with_proof"
+    ((or "hol_theorem_with_proof" "hol_theorem_alias")
      (when-let ((n (treesit-search-subtree node "\\`hol_thmname\\'")))
        (treesit-node-text n t)))
-    ((or "hol_definition" "hol_definition_with_proof")
+    ((or "hol_definition" "hol_definition_with_proof" "hol_inductive")
      (when-let ((n (treesit-search-subtree node "\\`hol_defname\\'")))
        (treesit-node-text n t)))
+    ("hol_type_alias"
+     (when-let ((n (treesit-search-subtree node "\\`hol_typename\\'")))
+       (treesit-node-text n t)))
+    ("hol_overload"
+     (when-let ((n (treesit-search-subtree node "\\`hol_overloadname\\'")))
+       (treesit-node-text n t)))
+    ("hol_theory_dec"
+     (when-let ((n (treesit-search-subtree node "\\`hol_theoryname\\'")))
+       (treesit-node-text n t)))
+    ("hol_quote_block"
+     ;; Single lexical token; name extracted from the head of the
+     ;; token's text via regex.  Substring caps the regex input so
+     ;; multi-kilobyte Quote bodies don't get scanned needlessly.
+     (let ((text (buffer-substring-no-properties
+                  (treesit-node-start node)
+                  (min (treesit-node-end node)
+                       (+ (treesit-node-start node) 256)))))
+       (and (string-match "\\`Quote[ \t]+\\([A-Za-z][A-Za-z0-9_']*\\)" text)
+            (match-string 1 text))))
     ("hol_datatype"
      ;; Datatype: foo = ... End — name is the first hol_identifier
      ;; inside the hol_binding child.
@@ -241,9 +271,14 @@ Used as `treesit-defun-name-function'."
        (treesit-node-text n t)))))
 
 (defconst holscript-ts-mode--imenu-settings
-  `(("Theorem"    "\\`hol_theorem_with_proof\\'"      nil nil)
+  `(("Theorem"    "\\`hol_theorem\\(_with_proof\\|_alias\\)\\'" nil nil)
     ("Definition" "\\`hol_definition\\(_with_proof\\)?\\'" nil nil)
+    ("Inductive"  "\\`hol_inductive\\'"               nil nil)
     ("Datatype"   "\\`hol_datatype\\'"                nil nil)
+    ("Type"       "\\`hol_type_alias\\'"              nil nil)
+    ("Overload"   "\\`hol_overload\\'"                nil nil)
+    ("Quote"      "\\`hol_quote_block\\'"             nil nil)
+    ("Theory"     "\\`hol_theory_dec\\'"              nil nil)
     ("Function"   "\\`fun_dec\\'"                     nil nil)
     ("Value"      "\\`val_dec\\'"                     nil nil)
     ("Structure"  "\\`strbind\\'"                     nil nil)
@@ -253,7 +288,7 @@ Used as `treesit-defun-name-function'."
 
 (defconst holscript-ts-mode--block-keywords
   '("Theorem" "Triviality" "Proof" "QED"
-    "Definition" "Inductive" "CoInductive" "Datatype:"
+    "Definition" "Inductive" "CoInductive" "Datatype"
     "End" "Termination"
     "Quote" "Theory" "Ancestors" "Libs"
     "Type" "Overload" "Resume" "Finalise")
@@ -267,9 +302,21 @@ Used as `treesit-defun-name-function'."
      ;; The body of a HOL block (statement, tactic, definition spec,
      ;; datatype binding) indents 2 from the block's start column.
      ((parent-is "hol_theorem_with_proof")        parent-bol 2)
+     ((parent-is "hol_theorem_alias")             parent-bol 2)
      ((parent-is "hol_definition")                parent-bol 2)
      ((parent-is "hol_definition_with_proof")     parent-bol 2)
+     ((parent-is "hol_inductive")                 parent-bol 2)
      ((parent-is "hol_datatype")                  parent-bol 2)
+     ((parent-is "hol_type_alias")                parent-bol 2)
+     ((parent-is "hol_overload")                  parent-bol 2)
+     ((parent-is "hol_theory_dec")                parent-bol 2)
+     ((parent-is "hol_ancestors_dec")             parent-bol 2)
+     ((parent-is "hol_libs_dec")                  parent-bol 2)
+     ;; hol_quote_block is a single token with no inner structure;
+     ;; treesit-indent won't recurse into it but if asked to indent
+     ;; lines whose containing node IS the block, leave them alone.
+     ((node-is "hol_quote_block")                 no-indent 0)
+     ((parent-is "hol_quote_block")               no-indent 0)
      ;; Tactic chains: keep each tactic aligned with the first.
      ((parent-is "tactic")                        parent-bol 0)
      ;; SML let / in / end.
@@ -302,9 +349,17 @@ Used as `treesit-defun-name-function'."
   `((holscript
      (sexp ,(regexp-opt
              '("hol_theorem_with_proof"
+               "hol_theorem_alias"
                "hol_definition"
                "hol_definition_with_proof"
+               "hol_inductive"
+               "hol_type_alias"
                "hol_datatype"
+               "hol_overload"
+               "hol_quote_block"
+               "hol_theory_dec"
+               "hol_ancestors_dec"
+               "hol_libs_dec"
                "hol_term"
                "hol_application"
                "hol_binary_term"
@@ -326,9 +381,17 @@ Used as `treesit-defun-name-function'."
                "hol_string")))
      (sentence ,(regexp-opt
                  '("hol_theorem_with_proof"
+                   "hol_theorem_alias"
                    "hol_definition"
                    "hol_definition_with_proof"
+                   "hol_inductive"
+                   "hol_type_alias"
                    "hol_datatype"
+                   "hol_overload"
+                   "hol_quote_block"
+                   "hol_theory_dec"
+                   "hol_ancestors_dec"
+                   "hol_libs_dec"
                    "val_dec" "fun_dec" "type_dec" "datatype_dec"
                    "open_dec" "exception_dec"
                    "strbind" "sigbind" "fctbind")))))

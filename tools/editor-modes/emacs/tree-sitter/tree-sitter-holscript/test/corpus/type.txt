@@ -51,3 +51,70 @@ val _ = “:'a -> ('a -> 'b) -> 'b”
               (hol_atomic_type)
               (hol_atomic_type))
             (hol_atomic_type)))))))
+
+
+================================================================================
+Bracketed Type Parameter
+================================================================================
+
+Theorem foo:
+   !x:'a['b]. P x
+Proof rw[]
+QED
+
+--------------------------------------------------------------------------------
+
+; `'a['b]' is HOL's postfix bracketed type-parameter form used by
+; n-bit / FCP.  Binds tightest of the type operators.
+(source_file
+  (hol_theorem_with_proof
+    (hol_thmname)
+    (hol_thmstmt
+      (hol_binder
+        (hol_bvar
+          (hol_alphanumeric)
+          (hol_bracket_ty
+            (hol_atomic_type)
+            (hol_atomic_type)))
+        (hol_application
+          (hol_identifier)
+          (hol_identifier))))
+    (tactic
+      (app_exp
+        (vid_exp
+          (longvid
+            (vid)))
+        (list_exp)))))
+
+
+================================================================================
+Cartesian Type Operator
+================================================================================
+
+Theorem foo:
+   !w:bool ** 'a. P w
+Proof rw[]
+QED
+
+--------------------------------------------------------------------------------
+
+; `**' is the cartesian type operator, prec 60 R.
+(source_file
+  (hol_theorem_with_proof
+    (hol_thmname)
+    (hol_thmstmt
+      (hol_binder
+        (hol_bvar
+          (hol_alphanumeric)
+          (hol_cart_ty
+            (hol_atomic_type)
+            (hol_atomic_type)))
+        (hol_application
+          (hol_identifier)
+          (hol_identifier))))
+    (tactic
+      (app_exp
+        (vid_exp
+          (longvid
+            (vid)))
+        (list_exp)))))

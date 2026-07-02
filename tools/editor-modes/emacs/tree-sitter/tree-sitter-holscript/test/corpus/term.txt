@@ -1,511 +1,487 @@
-===============
+================================================================================
 String Literal
-===============
+================================================================================
 
 Definition strlit_def:
   strlit = "cake"
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_identifier)
           (hol_string))))))
 
-
-==================
+================================================================================
 Character Literal
-==================
+================================================================================
 
 Definition charlit_def:
   charlit = #"c"
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_identifier)
           (hol_character))))))
 
-
-========
+================================================================================
 0-Tuple
-========
+================================================================================
 
 Definition tuple0_def:
   tuple0 = ()
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_identifier)
           (hol_tuple))))))
 
-
-========
+================================================================================
 2-Tuple
-========
+================================================================================
 
 Definition tuple2_def:
   tuple2 x y = (x, y)
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_variable))
-        (hol_pat
-          (hol_variable))
-        (hol_term
-          (hol_tuple
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_application
+              (hol_identifier)
+              (hol_identifier))
+            (hol_identifier))
+          (hol_binary_term
             (hol_identifier)
             (hol_identifier)))))))
 
-
-========
+================================================================================
 3-Tuple
-========
+================================================================================
 
 Definition tuple3_def:
   tuple3 x y = (x, y, 1)
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_variable))
-        (hol_pat
-          (hol_variable))
-        (hol_term
-          (hol_tuple
-            (hol_identifier)
-            (hol_identifier)
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_application
+              (hol_identifier)
+              (hol_identifier))
+            (hol_identifier))
+          (hol_binary_term
+            (hol_binary_term
+              (hol_identifier)
+              (hol_identifier))
             (hol_number)))))))
 
-
-===========
+================================================================================
 Empty List
-===========
+================================================================================
 
 Definition empty_list_def:
   empty_list = []
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_identifier)
           (hol_list))))))
 
-===============
+================================================================================
 Singleton List
-===============
+================================================================================
 
 Definition singleton_list_def:
   singleton_list = [1]
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_identifier)
           (hol_list
             (hol_number)))))))
 
-
-==========
+================================================================================
 Cons List
-==========
+================================================================================
 
 Definition foo_def:
   foo = (x::1::[])
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_identifier)
           (hol_binary_term
             (hol_identifier)
             (hol_binary_term
               (hol_number)
               (hol_list))))))))
-=====
+
+================================================================================
 List
-=====
+================================================================================
 
 Definition list_def:
   list x = [1; x]
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_variable))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
           (hol_list
             (hol_number)
             (hol_identifier)))))))
 
-
-==========
+================================================================================
 Increment
-==========
+================================================================================
 
 Definition incr_def:
   incr x = x + 1
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_variable))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
           (hol_binary_term
             (hol_identifier)
             (hol_number)))))))
 
-
-===================
+================================================================================
 Empty List Pattern
-===================
+================================================================================
 
 Definition empty_def:
   empty [] = 0
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_plist))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_list))
           (hol_number))))))
 
-
-=======================
+================================================================================
 Singleton List Pattern
-=======================
+================================================================================
 
 Definition singleton_def:
   singleton [e] = 0
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_plist
-            (hol_pat
-              (hol_variable))))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_list
+              (hol_identifier)))
           (hol_number))))))
 
-
-=============
+================================================================================
 List Pattern
-=============
+================================================================================
 
 Definition list_def:
   list [e; f] = 0
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_plist
-            (hol_pat
-              (hol_variable))
-            (hol_pat
-              (hol_variable))))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_list
+              (hol_identifier)
+              (hol_identifier)))
           (hol_number))))))
 
-
-=============
+================================================================================
 Cons Pattern
-=============
+================================================================================
 
 Definition cons_def:
   cons (x::xs) = 0
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_pcons
-            (hol_pat
-              (hol_variable))
-            (hol_pat
-              (hol_variable))))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_binary_term
+              (hol_identifier)
+              (hol_identifier)))
           (hol_number))))))
 
-
-===================
+================================================================================
 More Cons Patterns
-===================
+================================================================================
 
 Definition cons_def:
   cons (x::x'::[]) = 0
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_pcons
-            (hol_pat
-              (hol_variable))
-            (hol_pat
-              (hol_variable))
-            (hol_pat
-              (hol_plist))))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_binary_term
+              (hol_identifier)
+              (hol_binary_term
+                (hol_identifier)
+                (hol_list))))
           (hol_number))))))
 
-
-=======================
+================================================================================
 Number Literal Pattern
-=======================
+================================================================================
 
 Definition foo_def:
   foo 2 = 2
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_number))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_number))
           (hol_number))))))
 
-
-==========================
+================================================================================
 Character Literal Pattern
-==========================
+================================================================================
 
 Definition foo_def:
   foo #"c" = 2
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_character))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_character))
           (hol_number))))))
 
-
-=======================
+================================================================================
 String Literal Pattern
-=======================
+================================================================================
 
 Definition foo_def:
   foo "foo" = 2
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_string))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_string))
           (hol_number))))))
 
-
-=====================
+================================================================================
 Function Application
-=====================
+================================================================================
 
 Definition foo_def:
   foo x = incr x
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_variable))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
           (hol_application
             (hol_identifier)
             (hol_identifier)))))))
 
-
-==========================
+================================================================================
 More Function Application
-==========================
+================================================================================
 
 Definition foo_def:
   foo x = add x 2
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_variable))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
           (hol_application
             (hol_application
               (hol_identifier)
               (hol_identifier))
             (hol_number)))))))
 
-
-==================
+================================================================================
 Annotated Pattern
-==================
+================================================================================
 
 Definition foo_def:
   foo (x : num) = 2
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_variable)
-          (hol_pannotation
-            (hol_atomic_type)))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_annotated
+              (hol_identifier)
+              (hol_atomic_type)))
           (hol_number))))))
 
-
-============
+================================================================================
 Conditional
-============
+================================================================================
 
 Definition foo_def:
   foo x = if bar x then 0 else 1
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_variable))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
           (hol_cond
             (hol_application
               (hol_identifier)
@@ -513,46 +489,44 @@ End
             (hol_number)
             (hol_number)))))))
 
-
-=================
+================================================================================
 Case Distinction
-=================
+================================================================================
 
 Definition foo_def:
   foo x = case x of SOME x => x | NONE => ARB
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_variable))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
           (hol_case
             (hol_term
               (hol_identifier))
             (hol_match
-              (hol_pat
-                (hol_cname_alphanumeric)
-                (hol_pat
-                  (hol_variable)))
+              (hol_term
+                (hol_application
+                  (hol_identifier)
+                  (hol_identifier)))
               (hol_term
                 (hol_identifier)))
             (hol_match
-              (hol_pat
-                (hol_cname_alphanumeric))
+              (hol_term
+                (hol_identifier))
               (hol_term
                 (hol_identifier)))))))))
 
-
-=================================
+================================================================================
 Case Distinction with Extra Pipe
-=================================
+================================================================================
 
 Definition foo_def:
   foo x = case x of
@@ -560,76 +534,74 @@ Definition foo_def:
     | NONE => ARB
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_variable))
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
           (hol_case
             (hol_term
               (hol_identifier))
             (hol_match
-              (hol_pat
-                (hol_cname_alphanumeric)
-                (hol_pat
-                  (hol_variable)))
+              (hol_term
+                (hol_application
+                  (hol_identifier)
+                  (hol_identifier)))
               (hol_term
                 (hol_identifier)))
             (hol_match
-              (hol_pat
-                (hol_cname_alphanumeric))
+              (hol_term
+                (hol_identifier))
               (hol_term
                 (hol_identifier)))))))))
 
-
-============
+================================================================================
 Nested Case
-============
+================================================================================
 
 Definition foo_def:
   foo = case x of NONE => case x of NONE => ARB | NONE => ARB
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_term
+      (hol_term
+        (hol_binary_term
+          (hol_identifier)
           (hol_case
             (hol_term
               (hol_identifier))
             (hol_match
-              (hol_pat
-                (hol_cname_alphanumeric))
+              (hol_term
+                (hol_identifier))
               (hol_term
                 (hol_case
                   (hol_term
                     (hol_identifier))
                   (hol_match
-                    (hol_pat
-                       (hol_cname_alphanumeric))
+                    (hol_term
+                      (hol_identifier))
                     (hol_term
                       (hol_identifier)))
                   (hol_match
-                    (hol_pat
-                       (hol_cname_alphanumeric))
+                    (hol_term
+                      (hol_identifier))
                     (hol_term
                       (hol_identifier))))))))))))
 
-
-==============================
+================================================================================
 Implication + Less Than Equal
-==============================
+================================================================================
 
 Theorem foo:
   ∀x. read_quoted_aux cs acc = foo ⇒ LENGTH y ≤ LENGTH cs
@@ -637,15 +609,15 @@ Proof
   cheat
 QED
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_theorem_with_proof
     (hol_thmname)
     (hol_thmstmt
       (hol_binder
-      (hol_bvar
-            (hol_alphanumeric))
+        (hol_bvar
+          (hol_alphanumeric))
         (hol_binary_term
           (hol_binary_term
             (hol_application
@@ -666,14 +638,13 @@ QED
         (longvid
           (vid))))))
 
-
-=======
+================================================================================
 Dollar
-=======
+================================================================================
 
 val _ = “a $ b $ c”
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (val_dec
@@ -686,14 +657,13 @@ val _ = “a $ b $ c”
             (hol_identifier)
             (hol_identifier)))))))
 
-
-============
+================================================================================
 Composition
-============
+================================================================================
 
 val _ = “a o b o c”
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (val_dec
@@ -706,14 +676,13 @@ val _ = “a o b o c”
             (hol_identifier)
             (hol_identifier)))))))
 
-
-============
+================================================================================
 Parentheses
-============
+================================================================================
 
 val _ = “(hello)”
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (val_dec
@@ -722,14 +691,13 @@ val _ = “(hello)”
       (quoted_term
         (hol_identifier)))))
 
-
-=====
+================================================================================
 True
-=====
+================================================================================
 
 val _ = “T”
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (val_dec
@@ -738,14 +706,13 @@ val _ = “T”
       (quoted_term
         (hol_true)))))
 
-
-======
+================================================================================
 False
-======
+================================================================================
 
 val _ = “F”
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (val_dec
@@ -754,14 +721,13 @@ val _ = “F”
       (quoted_term
         (hol_false)))))
 
-
-=======
+================================================================================
 Forall
-=======
+================================================================================
 
 val _ = “∀h t. P h t”
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (val_dec
@@ -779,14 +745,13 @@ val _ = “∀h t. P h t”
               (hol_identifier))
             (hol_identifier)))))))
 
-
-=============
+================================================================================
 Forall ASCII
-=============
+================================================================================
 
 val _ = “!h t. P h t”
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (val_dec
@@ -804,14 +769,13 @@ val _ = “!h t. P h t”
               (hol_identifier))
             (hol_identifier)))))))
 
-
-===================
+================================================================================
 Forall (Annotated)
-===================
+================================================================================
 
 val _ = “∀x:num. T”
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (val_dec
@@ -824,14 +788,13 @@ val _ = “∀x:num. T”
             (hol_atomic_type))
           (hol_true))))))
 
-
-==================================
+================================================================================
 Forall (Annotated, Parenthesized)
-==================================
+================================================================================
 
 val _ = “∀(x:num). T”
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (val_dec
@@ -844,14 +807,13 @@ val _ = “∀(x:num). T”
             (hol_atomic_type))
           (hol_true))))))
 
-
-============================
+================================================================================
 Conjunction and Disjunction
-============================
+================================================================================
 
 val _ = “T ∧ F ∨ T”
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (val_dec
@@ -864,14 +826,13 @@ val _ = “T ∧ F ∨ T”
             (hol_false))
           (hol_true))))))
 
-
-=======
+================================================================================
 Lambda
-=======
+================================================================================
 
 val _ = “λx. x + 1”
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (val_dec
@@ -885,14 +846,13 @@ val _ = “λx. x + 1”
             (hol_identifier)
             (hol_number)))))))
 
-
-====
+================================================================================
 Not
-====
+================================================================================
 
 val _ = “¬F”
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (val_dec
@@ -902,14 +862,13 @@ val _ = “¬F”
         (hol_left_unary_term
           (hol_false))))))
 
-
-==========
+================================================================================
 Empty Set
-==========
+================================================================================
 
 val _ = “{}”
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (val_dec
@@ -918,14 +877,13 @@ val _ = “{}”
       (quoted_term
         (hol_set)))))
 
-
-====
+================================================================================
 Set
-====
+================================================================================
 
 val _ = “{1; 2}”
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (val_dec
@@ -936,14 +894,13 @@ val _ = “{1; 2}”
           (hol_number)
           (hol_number))))))
 
-
-================
+================================================================================
 Type Annotation
-================
+================================================================================
 
 val _ = “x:num”
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (val_dec
@@ -953,3 +910,909 @@ val _ = “x:num”
         (hol_annotated
           (hol_identifier)
           (hol_atomic_type))))))
+
+================================================================================
+Field Selection
+================================================================================
+
+val _ = “r.fld”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_field_select
+          (hol_identifier)
+          (hol_dot_field))))))
+
+================================================================================
+Field Selection Nested
+================================================================================
+
+val _ = “r.a.b”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_field_select
+          (hol_field_select
+            (hol_identifier)
+            (hol_dot_field))
+          (hol_dot_field))))))
+
+================================================================================
+Field Selection vs Binder Dot
+================================================================================
+
+val _ = “∀x. P x”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_binder
+          (hol_bvar
+            (hol_alphanumeric))
+          (hol_application
+            (hol_identifier)
+            (hol_identifier)))))))
+
+================================================================================
+Postfix Plus (TC)
+================================================================================
+
+val _ = “R⁺”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_postfix_term
+          (hol_identifier))))))
+
+================================================================================
+Postfix Combined with App
+================================================================================
+
+val _ = “nl³ MAXP2”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_application
+          (hol_postfix_term
+            (hol_identifier))
+          (hol_identifier))))))
+
+================================================================================
+Universe ASCII
+================================================================================
+
+val _ = “univ s”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_universe
+          (hol_identifier))))))
+
+================================================================================
+Postfix Right of App
+================================================================================
+
+val _ = “f x²”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_application
+          (hol_identifier)
+          (hol_postfix_term
+            (hol_identifier)))))))
+
+================================================================================
+Type Quotation Universe
+================================================================================
+
+val _ = “FINITE univ(:β)”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_application
+          (hol_identifier)
+          (hol_universe
+            (hol_type_quotation
+              (hol_atomic_type))))))))
+
+================================================================================
+Type Quotation Compound
+================================================================================
+
+val _ = “(:'a list)”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_type_quotation
+          (hol_list_ty
+            (hol_atomic_type)))))))
+
+================================================================================
+Bracketed Access Right of App
+================================================================================
+
+val _ = “f l❲i❳”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_application
+          (hol_identifier)
+          (hol_list_index
+            (hol_identifier)
+            (hol_identifier)))))))
+
+================================================================================
+Lowercase Identifier As Case Head
+================================================================================
+
+val _ = “case x of error e => e”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_case
+          (hol_term
+            (hol_identifier))
+          (hol_match
+            (hol_term
+              (hol_application
+                (hol_identifier)
+                (hol_identifier)))
+            (hol_term
+              (hol_identifier))))))))
+
+================================================================================
+CakeML Application Binder
+================================================================================
+
+val _ = “POSTv v. P v”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_binder
+          (hol_bvar
+            (hol_alphanumeric))
+          (hol_application
+            (hol_identifier)
+            (hol_identifier)))))))
+
+================================================================================
+Subscript Identifier Continuation
+================================================================================
+
+val _ = “floatₜ”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_identifier)))))
+
+================================================================================
+Compound Type Quotation (Numeric)
+================================================================================
+
+val _ = “(:(52,11) float)”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_type_quotation
+          (hol_tycon_app_tuple
+            (hol_atomic_type)
+            (hol_atomic_type)
+            (hol_tycon)))))))
+
+================================================================================
+Word Literal
+================================================================================
+
+val _ = “1w”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_number)))))
+
+================================================================================
+Real Literal
+================================================================================
+
+val _ = “0r”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_number)))))
+
+================================================================================
+Hex Literal
+================================================================================
+
+val _ = “0xFF”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_number)))))
+
+================================================================================
+Paren-Term Lhs of App
+================================================================================
+
+val _ = “(y) foo z”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_application
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
+          (hol_identifier))))))
+
+================================================================================
+Unicode Math Identifiers
+================================================================================
+
+val _ = “s ≠ ∅”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_binary_term
+          (hol_identifier)
+          (hol_identifier))))))
+
+================================================================================
+Signed Infinity
+================================================================================
+
+val _ = “x ≠ +∞”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_binary_term
+          (hol_identifier)
+          (hol_signed_inf))))))
+
+================================================================================
+Double-Backtick Type Quotation
+================================================================================
+
+val _ = ``:num``
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_type
+        (hol_atomic_type)))))
+
+================================================================================
+Division Op
+================================================================================
+
+val _ = “1 / 2”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_binary_term
+          (hol_number)
+          (hol_number))))))
+
+================================================================================
+Substitution Application
+================================================================================
+
+val _ = “[P/v] M”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_application
+          (hol_list
+            (hol_binary_term
+              (hol_identifier)
+              (hol_identifier)))
+          (hol_identifier))))))
+
+================================================================================
+HOL Multi-Binding Let
+================================================================================
+
+val _ = “let M0 = principal_hnf M;
+             N0 = principal_hnf N
+         in M0 = N0”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_let
+          (hol_let_binding
+            (hol_term
+              (hol_binary_term
+                (hol_identifier)
+                (hol_application
+                  (hol_identifier)
+                  (hol_identifier)))))
+          (hol_let_binding
+            (hol_term
+              (hol_binary_term
+                (hol_identifier)
+                (hol_application
+                  (hol_identifier)
+                  (hol_identifier)))))
+          (hol_binary_term
+            (hol_identifier)
+            (hol_identifier)))))))
+
+================================================================================
+Type Annotation in Pattern
+================================================================================
+
+Definition foo:
+   foo (Ms :term list) = Ms
+End
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_annotated
+              (hol_identifier)
+              (hol_list_ty
+                (hol_atomic_type))))
+          (hol_identifier))))))
+
+================================================================================
+Lambda with Tuple Bvar
+================================================================================
+
+val _ = “λ(x, y). x”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_binder
+          (hol_bvar
+            (hol_bvar
+              (hol_alphanumeric))
+            (hol_bvar
+              (hol_alphanumeric)))
+          (hol_identifier))))))
+
+================================================================================
+HOL Monad Do-Notation
+================================================================================
+
+val _ = “do x <- m; y <- f x; return (x + y) od”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_do
+          (hol_do_term
+            (hol_binary_term
+              (hol_identifier)
+              (hol_identifier)))
+          (hol_do_term
+            (hol_binary_term
+              (hol_identifier)
+              (hol_application
+                (hol_identifier)
+                (hol_identifier))))
+          (hol_do_term
+            (hol_application
+              (hol_identifier)
+              (hol_binary_term
+                (hol_identifier)
+                (hol_identifier)))))))))
+
+================================================================================
+Nested Constructor in Tuple Pat
+================================================================================
+
+val _ = “case x of (SOME (a, b), NONE) => T”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_case
+          (hol_term
+            (hol_identifier))
+          (hol_match
+            (hol_term
+              (hol_binary_term
+                (hol_application
+                  (hol_identifier)
+                  (hol_binary_term
+                    (hol_identifier)
+                    (hol_identifier)))
+                (hol_identifier)))
+            (hol_term
+              (hol_true))))))))
+
+================================================================================
+Set Comprehension Two-Arg
+================================================================================
+
+val _ = “{x | x < 5}”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_set
+          (hol_identifier)
+          (hol_binary_term
+            (hol_identifier)
+            (hol_number)))))))
+
+================================================================================
+Set Comprehension Tuple LHS
+================================================================================
+
+val _ = “{a, b | F}”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_set
+          (hol_binary_term
+            (hol_identifier)
+            (hol_identifier))
+          (hol_false))))))
+
+================================================================================
+Set Comprehension Three-Arg
+================================================================================
+
+val _ = “{x | y | x = 2 * y}”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_set
+          (hol_identifier)
+          (hol_identifier)
+          (hol_binary_term
+            (hol_identifier)
+            (hol_binary_term
+              (hol_number)
+              (hol_identifier))))))))
+
+================================================================================
+Set as Application Lhs
+================================================================================
+
+val _ = “{x} foo y”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_application
+          (hol_application
+            (hol_set
+              (hol_identifier))
+            (hol_identifier))
+          (hol_identifier))))))
+
+================================================================================
+Range Operator
+================================================================================
+
+val _ = “{m..n}”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_set
+          (hol_binary_term
+            (hol_identifier)
+            (hol_identifier)))))))
+
+================================================================================
+Qualified Identifier
+================================================================================
+
+val _ = “cv$Pair x”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_application
+          (hol_identifier)
+          (hol_identifier))))))
+
+================================================================================
+Superscript-Letter Identifier
+================================================================================
+
+val _ = “⊢ⁱ x”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_application
+          (hol_identifier)
+          (hol_identifier))))))
+
+================================================================================
+Operator with Superscript
+================================================================================
+
+val _ = “Γ ⊢ⁱ a ⇒ⁱ b”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_application
+          (hol_application
+            (hol_application
+              (hol_application
+                (hol_identifier)
+                (hol_identifier))
+              (hol_identifier))
+            (hol_identifier))
+          (hol_identifier))))))
+
+================================================================================
+Symbolic with Subscript
+================================================================================
+
+val _ = “A -->ₐ B”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_application
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
+          (hol_identifier))))))
+
+================================================================================
+Bare Cons Pattern in Case
+================================================================================
+
+val _ = “case l of [] => 0 | 0::t => 1 | x::xs => 2”
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_term
+        (hol_case
+          (hol_term
+            (hol_identifier))
+          (hol_match
+            (hol_term
+              (hol_list))
+            (hol_term
+              (hol_number)))
+          (hol_match
+            (hol_term
+              (hol_binary_term
+                (hol_number)
+                (hol_identifier)))
+            (hol_term
+              (hol_number)))
+          (hol_match
+            (hol_term
+              (hol_binary_term
+                (hol_identifier)
+                (hol_identifier)))
+            (hol_term
+              (hol_number))))))))
+
+================================================================================
+Parallel Let (and Separator)
+================================================================================
+
+Theorem foo:
+   x = let a = e1 and b = e2 in a + b
+Proof rw[]
+QED
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (hol_theorem_with_proof
+    (hol_thmname)
+    (hol_thmstmt
+      (hol_binary_term
+        (hol_identifier)
+        (hol_let
+          (hol_let_binding
+            (hol_term
+              (hol_binary_term
+                (hol_identifier)
+                (hol_identifier))))
+          (hol_let_binding
+            (hol_term
+              (hol_binary_term
+                (hol_identifier)
+                (hol_identifier))))
+          (hol_binary_term
+            (hol_identifier)
+            (hol_identifier)))))
+    (tactic
+      (app_exp
+        (vid_exp
+          (longvid
+            (vid)))
+        (list_exp)))))
+
+================================================================================
+Underscore-Prefixed Variables
+================================================================================
+
+Theorem foo:
+  _abc = _1
+Proof rw[]
+QED
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (hol_theorem_with_proof
+    (hol_thmname)
+    (hol_thmstmt
+      (hol_binary_term
+        (hol_identifier)
+        (hol_identifier)))
+    (tactic
+      (app_exp
+        (vid_exp
+          (longvid
+            (vid)))
+        (list_exp)))))
+
+================================================================================
+FCP Bit-Select `'
+================================================================================
+
+Theorem foo:
+  (w:word32) ' 0 = F
+Proof rw[]
+QED
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (hol_theorem_with_proof
+    (hol_thmname)
+    (hol_thmstmt
+      (hol_binary_term
+        (hol_binary_term
+          (hol_annotated
+            (hol_identifier)
+            (hol_atomic_type))
+          (hol_number))
+        (hol_false)))
+    (tactic
+      (app_exp
+        (vid_exp
+          (longvid
+            (vid)))
+        (list_exp)))))
+
+================================================================================
+Shared-Type Bvar Group
+================================================================================
+
+Theorem foo:
+  !(r s):'a field. P r s
+Proof rw[]
+QED
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (hol_theorem_with_proof
+    (hol_thmname)
+    (hol_thmstmt
+      (hol_binder
+        (hol_bvar
+          (hol_alphanumeric)
+          (hol_alphanumeric)
+          (hol_tycon_app
+            (hol_atomic_type)
+            (hol_tycon)))
+        (hol_application
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
+          (hol_identifier))))
+    (tactic
+      (app_exp
+        (vid_exp
+          (longvid
+            (vid)))
+        (list_exp)))))
+
+================================================================================
+Underscore-Suffix Operator (Parallel-Variant)
+================================================================================
+
+Definition foo:
+  foo x = a **_ b
+End
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
+          (hol_application
+            (hol_application
+              (hol_identifier)
+              (hol_identifier))
+            (hol_identifier)))))))

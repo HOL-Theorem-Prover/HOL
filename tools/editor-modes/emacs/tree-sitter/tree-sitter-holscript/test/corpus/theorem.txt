@@ -82,3 +82,31 @@ QED
       (vid_exp
           (longvid
             (vid))))))
+
+
+===========================
+Subgoal-By Tactic
+===========================
+
+Theorem foo:
+  P x
+Proof
+  STRIP_TAC >> ‘Q’ by simp[]
+QED
+
+---
+
+(source_file
+  (hol_theorem_with_proof
+    (hol_thmname)
+    (hol_thmstmt
+      (hol_application
+        (hol_identifier)
+        (hol_identifier)))
+    (tactic
+      (THEN
+        (vid_exp (longvid (vid)))
+        (backquote (quoted))
+        (app_exp
+          (vid_exp (longvid (vid)))
+          (list_exp))))))

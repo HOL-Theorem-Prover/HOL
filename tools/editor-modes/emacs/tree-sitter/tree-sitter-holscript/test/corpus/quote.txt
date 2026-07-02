@@ -87,3 +87,22 @@ val _ = ‘foo ^x ^(x) bar’
             (longvid
               (vid))))
         (quoted)))))
+
+
+==========================
+ASCII Body Starting With ~
+==========================
+
+val _ = `~p`
+
+---
+
+; `` `~p` '' must not lex `` `~ '' as a 2-char SML symbolic
+; identifier (backtick is in the symbolic-vid class per the SML
+; Definition, but HOL4 reserves it for term quotes).
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (backquote
+        (quoted)))))
