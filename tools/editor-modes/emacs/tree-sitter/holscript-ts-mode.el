@@ -351,38 +351,42 @@ Used as `treesit-defun-name-function'."
      ((lambda (&rest _) t)                        no-indent 0))))
 
 (defconst holscript-ts-mode--sexp-node-regexp
-  (regexp-opt
-   '("hol_theorem_with_proof"
-     "hol_theorem_alias"
-     "hol_definition"
-     "hol_definition_with_proof"
-     "hol_inductive"
-     "hol_type_alias"
-     "hol_datatype"
-     "hol_overload"
-     "hol_quote_block"
-     "hol_theory_dec"
-     "hol_ancestors_dec"
-     "hol_libs_dec"
-     "hol_term"
-     "hol_application"
-     "hol_binary_term"
-     "hol_binder"
-     "tuple_exp"
-     "list_exp"
-     "record_exp"
-     "paren_exp"
-     "let_exp"
-     "case_exp"
-     "fn_exp"
-     "if_exp"
-     "app_exp"
-     "valbind"
-     "fmrule"
-     "tactic"
-     "block_comment"
-     "string_scon"
-     "hol_string"))
+  (concat
+   ;; Any HOL semantic node is a sexp — motion should honour the
+   ;; whole HOL grammar (identifiers, atomic types, binders,
+   ;; applications, block declarations, ...).
+   "\\`hol_[a-z_]+\\'"
+   "\\|"
+   ;; SML surface node types worth stepping over as units.
+   (regexp-opt
+    '("tuple_exp"
+      "list_exp"
+      "record_exp"
+      "paren_exp"
+      "let_exp"
+      "case_exp"
+      "fn_exp"
+      "if_exp"
+      "app_exp"
+      "vid_exp"
+      "valbind"
+      "fmrule"
+      "tactic"
+      "block_comment"
+      "string_scon"
+      "char_scon"
+      "integer_scon"
+      "word_scon"
+      "real_scon"
+      ;; Top-level SML declarations — the units between semicolons at
+      ;; file scope.
+      "val_dec" "fun_dec" "type_dec" "datatype_dec" "datarepl_dec"
+      "abstype_dec" "exception_dec" "open_dec"
+      "infix_dec" "infixr_dec" "nonfix_dec"
+      "local_dec" "do_dec"
+      "strbind" "sigbind" "fctbind"
+      "structure_strdec" "signature_sigdec" "functor_fctdec"
+      "local_strdec")))
   "Regexp matching node types treated as sexps by `forward-sexp'.")
 
 (defconst holscript-ts-mode--sentence-node-regexp
@@ -410,10 +414,177 @@ Used as `treesit-defun-name-function'."
      (sentence ,holscript-ts-mode--sentence-node-regexp)))
   "Settings for `treesit-thing-settings' (sexp + sentence).")
 
+(defun holscript-ts-mode--sexp-ancestor (node &optional min-start max-end)
+  "Walk up from NODE to the nearest ancestor whose type matches
+`holscript-ts-mode--sexp-node-regexp'.  If MIN-START is given, also
+require that the ancestor's start is < MIN-START; if MAX-END is given,
+that its end is > MAX-END.  Return nil if none."
+  (let ((re holscript-ts-mode--sexp-node-regexp))
+    (while (and node
+                (not (and (string-match-p re
+                                          (or (treesit-node-type node) ""))
+                          (or (null min-start)
+                              (< (treesit-node-start node) min-start))
+                          (or (null max-end)
+                              (> (treesit-node-end node) max-end)))))
+      (setq node (treesit-node-parent node)))
+    node))
+
+(defun holscript-ts-mode--next-sexp-sibling (node backward)
+  "Return the nearest sexp-typed sibling of NODE in the given direction.
+BACKWARD non-nil looks at previous siblings.  Only searches at NODE's
+level — does not ascend to ancestors' siblings."
+  (let ((sib-fn (if backward
+                    #'treesit-node-prev-sibling
+                  #'treesit-node-next-sibling))
+        (re holscript-ts-mode--sexp-node-regexp)
+        (sib nil))
+    (setq sib (funcall sib-fn node))
+    (while (and sib (not (string-match-p re
+                                         (or (treesit-node-type sib) ""))))
+      (setq sib (funcall sib-fn sib)))
+    sib))
+
+(defun holscript-ts-mode--gap-sexp-sibling (node backward)
+  "Find the nearest sexp-typed sibling of NODE or of an ancestor.
+Used when NODE is punctuation with no sexp ancestor (e.g. a top-level
+`;'): walks up until it finds an ancestor with a sexp-typed sibling
+in the given direction."
+  (let ((found nil))
+    (while (and node (not found))
+      (setq found (holscript-ts-mode--next-sexp-sibling node backward))
+      (unless found (setq node (treesit-node-parent node))))
+    found))
+
+(defun holscript-ts-mode--backward-up-list (&optional arg)
+  "Move point to the start of the innermost sexp ancestor whose start
+is strictly before point.  Repeat ARG times.  Overrides `up-list' so
+`C-M-u' walks structural levels directly instead of iterating
+`forward-sexp' (which would descend through every intermediate sexp
+sibling on the way)."
+  (interactive "^p")
+  (setq arg (or arg 1))
+  (dotimes (_ arg)
+    (let* ((pos (point))
+           (target (holscript-ts-mode--sexp-ancestor
+                    (treesit-node-at pos) pos nil)))
+      (if target
+          (goto-char (treesit-node-start target))
+        (signal 'scan-error
+                (list "Not enclosed by a sexp" pos pos))))))
+
+(defun holscript-ts-mode--expand-at-boundary (node pos sign)
+  "If NODE sits at a sexp boundary shared with an ancestor (SIGN > 0:
+its end equals POS; SIGN < 0: its start equals POS), walk up through
+sexp-typed ancestors that share the same boundary and return the
+outermost.  Otherwise return NODE unchanged.  This makes motion at
+the boundary of a nested chain treat the whole chain as one unit."
+  (let ((boundary (if (> sign 0) #'treesit-node-end #'treesit-node-start))
+        (result node))
+    (when (and node (= (funcall boundary node) pos))
+      (let ((up (holscript-ts-mode--sexp-ancestor
+                 (treesit-node-parent node))))
+        (while (and up (= (funcall boundary up) pos))
+          (setq result up)
+          (setq up (holscript-ts-mode--sexp-ancestor
+                    (treesit-node-parent up))))))
+    result))
+
+(defun holscript-ts-mode--forward-sexp (&optional arg)
+  "Move point ARG sexps forward, or backward if ARG is negative.
+Bound to `forward-sexp-function' so `C-M-f' / `C-M-b' step over
+tree-sitter nodes.  When motion is blocked, signal `scan-error'
+with the enclosing sexp's bounds so `up-list' (`C-M-u') has a
+sensible target.  Only uses primitives available in Emacs 29."
+  (interactive "^p")
+  (setq arg (or arg 1))
+  (let ((sign (if (< arg 0) -1 1)))
+    (dotimes (_ (abs arg))
+      (let* ((pos (point))
+             (n (or
+                 ;; For backward motion, look at the node ending at
+                 ;; point (i.e., containing char pos-1): the "thing
+                 ;; just behind the cursor".  This lets `C-M-b' step
+                 ;; over the last atom when point sits between it and
+                 ;; a closing delimiter (e.g. after `tint_1' in
+                 ;; `... tint_1)').  Only consult it if it actually
+                 ;; ends at pos — otherwise fall through to the
+                 ;; leaf-at-pos path so opening delimiters still
+                 ;; behave as "outside the group".  When it does end
+                 ;; at pos, expand outward to the OUTERMOST sexp that
+                 ;; also ends at pos, so a chain of nested nodes
+                 ;; sharing the same end (e.g. vid_exp inside
+                 ;; hol_theorem_alias) is treated as one unit.
+                 (and (< sign 0)
+                      (> pos (point-min))
+                      (let ((leaf-n (holscript-ts-mode--sexp-ancestor
+                                     (treesit-node-at (1- pos)))))
+                        (when (and leaf-n (= (treesit-node-end leaf-n) pos))
+                          ;; Expand to the outermost sexp also ending
+                          ;; at pos — but only when the character at
+                          ;; point is not a closing delimiter.  At a
+                          ;; closing delim (`)', `]', `”', ...), the
+                          ;; user's mental model is "I'm inside the
+                          ;; brackets, move over the last atom", so
+                          ;; the innermost end-here match wins.
+                          (unless (memq (char-after pos)
+                                        '(?\) ?\] ?\} ?” ?’ ?⟧ ?⦈ ?❳ ?⟩))
+                            (let ((up (holscript-ts-mode--sexp-ancestor
+                                       (treesit-node-parent leaf-n))))
+                              (while (and up (= (treesit-node-end up) pos))
+                                (setq leaf-n up)
+                                (setq up (holscript-ts-mode--sexp-ancestor
+                                          (treesit-node-parent up))))))
+                          leaf-n)))
+                 (holscript-ts-mode--sexp-ancestor
+                  (treesit-node-at pos))))
+             ;; Expand to the outermost sexp sharing the same
+             ;; boundary as N (forward: same end; backward at start:
+             ;; same start), so nested-chain-of-single-ends is
+             ;; treated as a single unit.
+             (n (holscript-ts-mode--expand-at-boundary n pos sign))
+             (target
+              (cond
+               ;; Gap: leaf is punctuation with no sexp ancestor
+               ;; (e.g. a top-level `;').  Walk up until finding a
+               ;; sexp-typed sibling somewhere along the ancestry.
+               ((null n)
+                (holscript-ts-mode--gap-sexp-sibling
+                 (treesit-node-at pos) (< sign 0)))
+               ((> sign 0)
+                (if (> (treesit-node-end n) pos) n
+                  ;; Skip past non-sexp siblings (`;', `|', etc.).
+                  (holscript-ts-mode--next-sexp-sibling n nil)))
+               (t
+                (if (< (treesit-node-start n) pos) n
+                  (holscript-ts-mode--next-sexp-sibling n t))))))
+        (if (null target)
+            (let ((outer (and n
+                              (if (> sign 0)
+                                  (holscript-ts-mode--sexp-ancestor
+                                   (treesit-node-parent n) nil pos)
+                                (holscript-ts-mode--sexp-ancestor
+                                 (treesit-node-parent n) pos nil)))))
+              (signal 'scan-error
+                      (list "No more sexp to move across"
+                            (if outer (treesit-node-start outer) pos)
+                            (if outer (treesit-node-end outer) pos))))
+          (goto-char (if (> sign 0)
+                         (treesit-node-end target)
+                       (treesit-node-start target))))))))
+
+(defvar holscript-ts-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [remap backward-up-list]
+                #'holscript-ts-mode--backward-up-list)
+    map)
+  "Keymap for `holscript-ts-mode'.")
+
 ;;;###autoload
 (define-derived-mode holscript-ts-mode prog-mode "HOLScript[ts]"
   "Major mode for editing HOL Script.sml files with tree-sitter."
   :syntax-table holscript-ts-mode--syntax-table
+  :keymap holscript-ts-mode-map
 
   ;; Comments — same shape as `holscript-mode-variables' uses.
   (setq-local comment-start "(* "
@@ -445,14 +616,9 @@ Used as `treesit-defun-name-function'."
                 holscript-ts-mode--imenu-settings)
 
     ;; Sexp / sentence motion.  Emacs 30 reads `treesit-thing-settings';
-    ;; Emacs 29 reads the per-thing regexp variables.  Set both, and
-    ;; pin `forward-sexp-function' after setup because Emacs 29's
-    ;; `treesit-major-mode-setup' does not always wire it.
+    ;; keep it set for feature-parity with modes that rely on things.
     (setq-local treesit-thing-settings
                 holscript-ts-mode--thing-settings)
-    (when (boundp 'treesit-sexp-type-regexp)
-      (setq-local treesit-sexp-type-regexp
-                  holscript-ts-mode--sexp-node-regexp))
     (when (boundp 'treesit-sentence-type-regexp)
       (setq-local treesit-sentence-type-regexp
                   holscript-ts-mode--sentence-node-regexp))
@@ -463,7 +629,11 @@ Used as `treesit-defun-name-function'."
 
     (treesit-major-mode-setup)
 
-    (when (fboundp 'treesit-forward-sexp)
-      (setq-local forward-sexp-function #'treesit-forward-sexp))))
+    ;; `C-M-f' / `C-M-b'.  Wire a local mover that walks the parse
+    ;; tree using only primitives available in Emacs 29; the built-in
+    ;; `treesit-forward-sexp' relies on `treesit-thing-defined-p'
+    ;; (Emacs 30 only) to resolve the `sexp' thing, and silently
+    ;; falls back to word-level motion on 29 when it errors.
+    (setq-local forward-sexp-function #'holscript-ts-mode--forward-sexp)))
 
 (provide 'holscript-ts-mode)
