@@ -5,6 +5,63 @@
 ;; * https://github.com/HOL-Theorem-Prover/HOL (holscript-mode.el)
 ;; * https://www.masteringemacs.org/article/lets-write-a-treesitter-major-mode
 
+;; --- Faces ---------------------------------------------------------
+;; Mirror the palette from the SMIE-based `holscript-mode' so the
+;; two modes look the same.  `defface' is a no-op when the face is
+;; already defined with the same spec, so duplication is safe.
+
+(defface holscript-theorem-syntax
+  '((((class color)) :foreground "blueviolet"))
+  "Face for Theorem/Proof/QED and related block-delimiter keywords."
+  :group 'holscript-faces)
+
+(defface holscript-thmname-syntax
+  '((((class color)) :weight bold))
+  "Face for theorem, definition, and datatype names."
+  :group 'holscript-faces)
+
+(defface holscript-cheat-face
+  '((((class color)) :foreground "orange" :weight ultra-bold :box t))
+  "Face for occurrences of the `cheat' tactic."
+  :group 'holscript-faces)
+
+(defface holscript-definition-syntax
+  '((((class color)) :foreground "indianred"))
+  "Face for Definition/End/Datatype and related block-delimiter keywords."
+  :group 'holscript-faces)
+
+(defface holscript-quoted-material
+  '((((class color)) :foreground "brown" :weight bold))
+  "Face for HOL quoted material (theorem statements, definition bodies,
+term quotations)."
+  :group 'holscript-faces)
+
+(defface holscript-then-syntax
+  '((((class color)) :foreground "DarkSlateGray4" :weight bold))
+  "Face for `THEN' and other tactic combinators."
+  :group 'holscript-faces)
+
+(defface holscript-smlsyntax
+  '((((class color)) :foreground "DarkOliveGreen" :weight bold))
+  "Face for SML keywords that appear in script files."
+  :group 'holscript-faces)
+
+(defface holscript-definition-label-face
+  '((((class color))
+     :foreground "PaleVioletRed4"
+     :box (:line-width 1 :color "PaleVioletRed4" :style released-button)
+     :slant normal :weight light))
+  "Face for `[~label:]' inside inductive/definition clauses."
+  :group 'holscript-faces)
+
+(defface holscript-hol-keyword
+  '((((class color)) :foreground "brown" :weight bold :slant italic))
+  "Face for HOL-context keywords (`if', `then', `else', `case', `of',
+`let', `in', `with', ...).  A variant of `holscript-quoted-material'
+with an italic slant so keywords stand out from surrounding HOL
+identifiers while staying in the same colour family."
+  :group 'holscript-faces)
+
 (defvar holscript-ts-mode--syntax-table
   (let ((st (make-syntax-table)))
     (modify-syntax-entry ?\* ". 23n" st)
@@ -55,10 +112,29 @@ whole span is a single lexical token are highlighted separately.")
     "tl" "trunc" "valOf" "vector")
   "SML builtin functions for tree-sitter font-locking.")
 
+(defconst holscript-ts-mode--theorem-block-keywords
+  '("Theorem" "Triviality" "Proof" "QED"
+    "Resume" "Finalise"
+    "Theory" "Ancestors" "Libs")
+  "HOL block-delimiter keywords faced with `holscript-theorem-syntax'.")
+
+(defconst holscript-ts-mode--definition-block-keywords
+  '("Definition" "Inductive" "CoInductive" "Termination"
+    "Datatype" "End" "Type" "Overload")
+  "HOL block-delimiter keywords faced with `holscript-definition-syntax'.")
+
+(defconst holscript-ts-mode--tactic-combinators
+  '("THEN" "THEN1" "THENL" "THEN_LT"
+    ">>" ">-" ">|" ">~" "\\\\"
+    "by" "suffices_by")
+  "SML-side tactic combinators highlighted with `holscript-then-syntax'.
+Must match the anonymous-token literals in the grammar's `THEN' rule.")
+
 (defvar holscript-ts-mode--font-lock-feature-list
-  '((comment definition)
-    (keyword string)
-    (builtin constant number type property)
+  '((comment)
+    (hol-material string)
+    (keyword hol-keyword name label tactic cheat definition builtin
+             constant number type property)
     (assignment bracket delimiter operator))
   "Font-lock features for `treesit-font-lock-feature-list' in `holscript-ts-mode'.")
 
@@ -85,41 +161,105 @@ For a description of OVERRIDE, START, and END, see `treesit-font-lock-rules'."
 (defvar holscript-ts-mode--font-lock-settings
   (treesit-font-lock-rules
    :language 'holscript
-   :feature 'comment ; SML and HOL
+   :feature 'comment
    '((block_comment) @font-lock-comment-face)
+
+   ;; HOL background — paint every HOL semantic region brown/bold so
+   ;; theorem statements, definition bodies, quoted terms and Quote
+   ;; blocks look uniform.  No :override, so later rules (keyword,
+   ;; name, ...) layer on top.
+   :language 'holscript
+   :feature 'hol-material
+   '((hol_term) @holscript-quoted-material
+     (hol_thmstmt) @holscript-quoted-material
+     (hol_fn_spec) @holscript-quoted-material
+     (hol_inductive_body) @holscript-quoted-material
+     (hol_binding) @holscript-quoted-material
+     (quoted_term) @holscript-quoted-material
+     (quoted_type) @holscript-quoted-material
+     (backquote) @holscript-quoted-material
+     (hol_quote_block) @holscript-quoted-material
+     (hol_type_quotation) @holscript-quoted-material)
 
    :language 'holscript
    :feature 'string
-   '(;; SML
-     (string_scon) @font-lock-string-face
+   :override t
+   '((string_scon) @font-lock-string-face
      (char_scon) @font-lock-constant-face
-     ;; HOL
      (hol_string) @font-lock-string-face
      (hol_character) @font-lock-constant-face)
 
    :language 'holscript
    :feature 'keyword
-   `(;; SML
-     [,@holscript-ts-mode--sml-keywords] @font-lock-keyword-face
-     ;; Misinterpreted identifiers, eg. val x = struct
-     ;; See notes from highlights.scm (MatthewFluet/tree-sitter-sml)
+   :override t
+   `(;; SML keywords — DarkOliveGreen bold.
+     [,@holscript-ts-mode--sml-keywords] @holscript-smlsyntax
+     ;; Theorem-block delimiters — blueviolet.
+     [,@holscript-ts-mode--theorem-block-keywords] @holscript-theorem-syntax
+     ;; Definition-block delimiters — indianred.
+     [,@holscript-ts-mode--definition-block-keywords] @holscript-definition-syntax
+     ;; Misinterpreted identifiers matching SML reserved words.
      ([(vid) (tycon) (strid) (sigid) (fctid)] @font-lock-warning-face
       (:match ,(rx-to-string `(seq bos (or ,@holscript-ts-mode--sml-keywords) eos))
               @font-lock-warning-face))
-     ;; As an additional special case, The Defn of SML excludes `*` from tycon.
+     ;; The Definition of SML excludes `*' from tycon.
      ([(tycon)] @font-lock-warning-face
-      (:match ,(rx bos "*" eos) @font-lock-warning-face))
-     ;; HOL
-     [,@holscript-ts-mode--hol-keywords] @font-lock-keyword-face)
+      (:match ,(rx bos "*" eos) @font-lock-warning-face)))
 
+   ;; Names of Theorems, Definitions, Datatypes, ...  — bold.
    :language 'holscript
-   :feature 'builtin
-   `(;; SML
-     ((vid_exp) @font-lock-builtin-face
-      (:match ,(rx-to-string `(seq bos (or ,@holscript-ts-mode--sml-builtins) eos))
-              @font-lock-builtin-face))
-     ((vid_exp) @font-lock-preprocessor-face
-      (:match ,(rx bos (or "use") eos) @font-lock-preprocessor-face)))
+   :feature 'name
+   :override t
+   '((hol_thmname) @holscript-thmname-syntax
+     (hol_defname) @holscript-thmname-syntax
+     (hol_typename) @holscript-thmname-syntax
+     (hol_overloadname) @holscript-thmname-syntax
+     (hol_theoryname) @holscript-thmname-syntax
+     (hol_ancestor_name) @holscript-thmname-syntax
+     (hol_lib_name) @holscript-thmname-syntax)
+
+   ;; Definition clause labels `[~foo:]', `[/\]', ...
+   :language 'holscript
+   :feature 'label
+   :override t
+   '((hol_clause_label) @holscript-definition-label-face)
+
+   ;; HOL-context keywords — brown bold italic.  Matched by their
+   ;; enclosing HOL construct so the SML-side `if'/`then'/`else',
+   ;; `case'/`of', `let'/`in', `with', etc. keep their SML face.
+   ;; Runs after `keyword' so the SML face applied to shared
+   ;; anonymous tokens is overridden inside HOL constructs.
+   :language 'holscript
+   :feature 'hol-keyword
+   :override t
+   '((hol_cond ["if" "then" "else"] @holscript-hol-keyword)
+     (hol_case ["case" "of"] @holscript-hol-keyword)
+     (hol_let ["let" "in" "and"] @holscript-hol-keyword)
+     (hol_do ["do" "od"] @holscript-hol-keyword)
+     (hol_record_update "with" @holscript-hol-keyword))
+
+   ;; Tactic combinators — DarkSlateGray4 bold.  They show up in two
+   ;; guises: as anonymous keyword tokens inside a `tactic' node
+   ;; (`THEN' / `THENL' / `>>' etc.  between tactics), and as ordinary
+   ;; `vid_exp' identifiers when they appear elsewhere in SML code
+   ;; (e.g. `(op THEN)').
+   :language 'holscript
+   :feature 'tactic
+   :override t
+   `(;; Anonymous-token form: literals inside a `tactic'.
+     [,@holscript-ts-mode--tactic-combinators] @holscript-then-syntax
+     ;; Identifier form: `THEN' etc. used as an SML expression.
+     ((vid_exp (longvid (vid) @holscript-then-syntax))
+      (:match ,(rx-to-string
+                `(seq bos (or ,@holscript-ts-mode--tactic-combinators) eos))
+              @holscript-then-syntax)))
+
+   ;; `cheat' — orange boxed.
+   :language 'holscript
+   :feature 'cheat
+   :override t
+   `((vid_exp (longvid (vid) @holscript-cheat-face)
+      (:match ,(rx bos "cheat" eos) @holscript-cheat-face)))
 
    :language 'holscript
    :feature 'definition
@@ -150,37 +290,33 @@ For a description of OVERRIDE, START, and END, see `treesit-font-lock-rules'."
        (type_dec (typbind name: (tycon) @font-lock-type-def-face))
        (type_spec (typbind name: (tycon) @font-lock-type-def-face))
        (typedesc name: (_) @font-lock-type-def-face)
-       (infix_dec (vid) @font-lock-function-name-face)
-       ;; Uppercase does not mean we have a type
-       ;; ((vid) @font-lock-type-face
-       ;;  (:match "^[A-Z].*" @font-lock-type-face))
-       ;; HOL
-       ((hol_defname) @font-lock-variable-name-face)
-       ;; A Definition body is now a bare `_hol_term' — the eqn shape
-       ;; is a hol_binary_term with `=' as operator.  Font-locking the
-       ;; function name requires a deep query and is deferred.
-       ;; TODO: restore function-name highlighting.
-       ((hol_alphanumeric) @font-lock-variable-name-face)))
+       (infix_dec (vid) @font-lock-function-name-face)))
+
+   :language 'holscript
+   :feature 'builtin
+   `(((vid_exp) @font-lock-builtin-face
+      (:match ,(rx-to-string `(seq bos (or ,@holscript-ts-mode--sml-builtins) eos))
+              @font-lock-builtin-face))
+     ((vid_exp) @font-lock-preprocessor-face
+      (:match ,(rx bos (or "use") eos) @font-lock-preprocessor-face)))
 
    :language 'holscript
    :feature 'constant
-   `(;; SML
-     ((vid) @font-lock-constant-face
+   `(((vid) @font-lock-constant-face
       (:match ,(rx bos (or "true" "false" "nil" "ref") eos)
               @font-lock-constant-face))
      (recordsel_exp ((lab) @font-lock-constant-face
                      (:match "^[0-9]+$" @font-lock-constant-face))))
 
    :language 'holscript
-   :feature 'property  ; SML only?
+   :feature 'property
    `((tyrow (lab) @font-lock-property-name-face)
      (patrow (lab) @font-lock-property-use-face)
      (exprow (lab) @font-lock-property-use-face))
 
    :language 'holscript
    :feature 'type
-   `(;; SML
-     (fn_ty "->" @font-lock-type-face)
+   `((fn_ty "->" @font-lock-type-face)
      (tuple_ty "*" @font-lock-type-face)
      (paren_ty ["(" ")"] @font-lock-type-face)
      (tyvar) @font-lock-type-face
@@ -189,14 +325,11 @@ For a description of OVERRIDE, START, and END, see `treesit-font-lock-rules'."
                 (tyrow [(lab) ":"] @font-lock-type-face) :?
                 (ellipsis_tyrow ["..." ":"] @font-lock-type-face) :?)
      (tycon_ty (tyseq ["(" "," ")"] @font-lock-type-face) :?
-               (longtycon) @font-lock-type-face)
-     ;; HOL
-     ([(hol_atomic_type) (hol_list_ty) (hol_fun_ty)] @font-lock-type-face))
+               (longtycon) @font-lock-type-face))
 
    :language 'holscript
    :feature 'number
-   '(;; SML
-     [(integer_scon) (word_scon) (real_scon)] @font-lock-number-face)))
+   '([(integer_scon) (word_scon) (real_scon)] @font-lock-number-face)))
 
 (defconst holscript-ts-mode--defun-type-regexp
   (regexp-opt '("hol_theorem_with_proof"
