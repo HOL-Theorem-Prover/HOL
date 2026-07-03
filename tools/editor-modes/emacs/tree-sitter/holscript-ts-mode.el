@@ -1,4 +1,28 @@
 (require 'treesit)
+(require 'elec-pair)
+
+;; `hol-input.el' and `holscript-mode.el' live in the parent
+;; directory of this file; put that on `load-path' too so we can
+;; find them when ts-mode is loaded standalone (the pick-mode
+;; dispatcher already handles the load-path when ts-mode is loaded
+;; via `holscript-pick-mode').
+(eval-and-compile
+  (when load-file-name
+    (let ((parent (file-name-directory
+                   (directory-file-name
+                    (file-name-directory load-file-name)))))
+      (when (file-directory-p parent)
+        (add-to-list 'load-path parent)))))
+
+;; `hol-input' registers the "Hol" Quail input method used for
+;; ASCII-to-Unicode substitutions (`\<=>' → `⇔' etc.).  Same import
+;; and behaviour as the SMIE-based `holscript-mode'.
+(require 'hol-input)
+;; `holscript-dbl-backquote' is defined in the SMIE-based mode file
+;; and reused here.  Autoload it so ts-mode can be loaded on its
+;; own without pulling all of `holscript-mode' up-front — the SMIE
+;; mode file will be lazy-loaded the first time the key fires.
+(autoload 'holscript-dbl-backquote "holscript-mode" nil t)
 
 ;; References
 ;; * https://github.com/nverno/sml-ts-mode
@@ -62,6 +86,13 @@ with an italic slant so keywords stand out from surrounding HOL
 identifiers while staying in the same colour family."
   :group 'holscript-faces)
 
+(defface holscript-syntax-error-face
+  '((((class color)) :foreground "red" :background "yellow"
+     :weight bold :box t))
+  "Face for likely syntax errors (e.g. two adjacent tactic
+combinators like `THEN THEN')."
+  :group 'holscript-faces)
+
 (defvar holscript-ts-mode--syntax-table
   (let ((st (make-syntax-table)))
     (modify-syntax-entry ?\* ". 23n" st)
@@ -123,18 +154,79 @@ whole span is a single lexical token are highlighted separately.")
     "Datatype" "End" "Type" "Overload")
   "HOL block-delimiter keywords faced with `holscript-definition-syntax'.")
 
+(defconst holscript-ts-mode--single-arg-tactics
+  '(;; Simplifiers / rewriters — take a theorem list.
+    "simp" "gs" "gvs" "gns" "fs" "rfs"
+    "rw" "REWRITE_TAC" "ASM_REWRITE_TAC"
+    "ONCE_REWRITE_TAC" "ONCE_ASM_REWRITE_TAC"
+    "PURE_REWRITE_TAC" "PURE_ASM_REWRITE_TAC"
+    ;; First-order provers — take a theorem list.
+    "metis_tac" "METIS_TAC" "MESON_TAC"
+    ;; Renamers — one list or one quotation.
+    "rename" "rename1"
+    ;; Existential witnesses — one quotation.
+    "qexists_tac" "qexists"
+    ;; MP-style — take one theorem.
+    "irule" "ho_match_mp_tac" "HO_MATCH_MP_TAC" "MATCH_MP_TAC")
+  "Tactics that take exactly one argument.  When one of these
+appears inside an `app_exp' with 3+ children, everything after
+the first argument is flagged as a likely missing THEN.
+Extendable via `add-to-list' for project-specific tactics.")
+
+(defconst holscript-ts-mode--two-arg-tactics
+  '(;; Simpset + theorem list.
+    "simp_tac" "asm_simp_tac" "full_simp_tac"
+    "SIMP_TAC" "ASM_SIMP_TAC" "FULL_SIMP_TAC"
+    ;; Simpset fragment list + theorem list.
+    "srw_tac" "SRW_TAC"
+    ;; Position + theorem.
+    "irule_at")
+  "Tactics that take exactly two arguments.  Anything after the
+second inside the same `app_exp' is flagged as a likely missing
+THEN.")
+
+(defun holscript-ts-mode--not-in-error-p (node)
+  "Return non-nil unless NODE has an ERROR ancestor.  Used to
+suppress noisy warnings inside parse-recovered regions where an
+upstream typo has re-lexed nearby text.  The recovery is
+transient during editing — flagging text far from the actual
+error is misleading."
+  (let ((n (treesit-node-parent node)))
+    (while (and n (not (equal (treesit-node-type n) "ERROR")))
+      (setq n (treesit-node-parent n)))
+    (not n)))
+
+(defun holscript-ts-mode--in-tactic-context-p (node)
+  "Return non-nil if NODE has a `tactic' ancestor.  Used by the
+missing-THEN font-lock predicates to suppress false positives
+that arise mid-edit — an unfinished `Overload' or similar can
+swallow following text into a non-tactic parent, and firing the
+missing-THEN heuristic there produces jarring red-on-yellow
+highlighting far from the cursor."
+  (let ((n (treesit-node-parent node)))
+    (while (and n (not (equal (treesit-node-type n) "tactic")))
+      (setq n (treesit-node-parent n)))
+    n))
+
 (defconst holscript-ts-mode--tactic-combinators
-  '("THEN" "THEN1" "THENL" "THEN_LT"
-    ">>" ">-" ">|" ">~" "\\\\"
-    "by" "suffices_by")
+  '(;; THEN family — apply tactics in sequence.
+    "THEN" "THEN1" "THENL" "THEN_LT" "THENC"
+    "THEN_TCL"
+    ;; ORELSE family — alternative tactics.
+    "ORELSE" "ORELSE_LT" "ORELSEC" "ORELSE_TCL"
+    ;; Symbolic tactic combinators (Overlay.sml line 18).
+    ">>" ">-" ">|" ">~" ">>~" ">>~-" ">>>" ">>-"
+    "??" "?>" "\\\\"
+    ;; Subgoal introducers.
+    "by" "suffices_by" "via")
   "SML-side tactic combinators highlighted with `holscript-then-syntax'.
-Must match the anonymous-token literals in the grammar's `THEN' rule.")
+Must match the anonymous-token literals in the grammar.")
 
 (defvar holscript-ts-mode--font-lock-feature-list
   '((comment)
     (hol-material string)
     (keyword hol-keyword name label tactic cheat definition builtin
-             constant number type property)
+             constant number type property syntax-error)
     (assignment bracket delimiter operator))
   "Font-lock features for `treesit-font-lock-feature-list' in `holscript-ts-mode'.")
 
@@ -198,13 +290,34 @@ For a description of OVERRIDE, START, and END, see `treesit-font-lock-rules'."
      [,@holscript-ts-mode--theorem-block-keywords] @holscript-theorem-syntax
      ;; Definition-block delimiters — indianred.
      [,@holscript-ts-mode--definition-block-keywords] @holscript-definition-syntax
+     ;; Fallback: when an upstream parse error re-lexes a block
+     ;; keyword as a plain `vid' (mid-edit `>>' or unbalanced `['
+     ;; makes the recovery consume `Theorem' at the start of a
+     ;; later declaration into an ongoing expression), keep it
+     ;; blueviolet / indianred anyway.  Real HOL code doesn't use
+     ;; these words as identifiers.
+     ((vid) @holscript-theorem-syntax
+      (:match ,(rx-to-string
+                `(seq bos (or ,@holscript-ts-mode--theorem-block-keywords) eos))
+              @holscript-theorem-syntax))
+     ((vid) @holscript-definition-syntax
+      (:match ,(rx-to-string
+                `(seq bos (or ,@holscript-ts-mode--definition-block-keywords) eos))
+              @holscript-definition-syntax))
      ;; Misinterpreted identifiers matching SML reserved words.
+     ;; Suppressed inside ERROR nodes so mid-edit parse recovery
+     ;; (which re-lexes recovered text as identifiers) doesn't
+     ;; splatter warnings across regions far from the actual typo.
      ([(vid) (tycon) (strid) (sigid) (fctid)] @font-lock-warning-face
       (:match ,(rx-to-string `(seq bos (or ,@holscript-ts-mode--sml-keywords) eos))
-              @font-lock-warning-face))
+              @font-lock-warning-face)
+      (:pred holscript-ts-mode--not-in-error-p
+             @font-lock-warning-face))
      ;; The Definition of SML excludes `*' from tycon.
      ([(tycon)] @font-lock-warning-face
-      (:match ,(rx bos "*" eos) @font-lock-warning-face)))
+      (:match ,(rx bos "*" eos) @font-lock-warning-face)
+      (:pred holscript-ts-mode--not-in-error-p
+             @font-lock-warning-face)))
 
    ;; Names of Theorems, Definitions, Datatypes, ...  — bold.
    :language 'holscript
@@ -246,8 +359,16 @@ For a description of OVERRIDE, START, and END, see `treesit-font-lock-rules'."
    :language 'holscript
    :feature 'tactic
    :override t
-   `(;; Anonymous-token form: literals inside a `tactic'.
-     [,@holscript-ts-mode--tactic-combinators] @holscript-then-syntax
+   `(;; Anonymous-token form: literals inside an `infix_exp' or the
+     ;; tactic-specific `THEN' grammar rule.  Parent-constrained so a
+     ;; HOL-level `\\' (set difference — Overlay.sml has `\\' at
+     ;; both HOL infix 0 AND as a hol_binary_term operator at prec
+     ;; 600) doesn't get flagged as a tactic combinator when it
+     ;; appears inside a HOL term.
+     ((infix_exp [,@holscript-ts-mode--tactic-combinators]
+                 @holscript-then-syntax))
+     ((THEN [,@holscript-ts-mode--tactic-combinators]
+            @holscript-then-syntax))
      ;; Identifier form: `THEN' etc. used as an SML expression.
      ((vid_exp (longvid (vid) @holscript-then-syntax))
       (:match ,(rx-to-string
@@ -260,6 +381,64 @@ For a description of OVERRIDE, START, and END, see `treesit-font-lock-rules'."
    :override t
    `((vid_exp (longvid (vid) @holscript-cheat-face)
       (:match ,(rx bos "cheat" eos) @holscript-cheat-face)))
+
+   ;; Two tactic-composition mistakes flagged in red-on-yellow:
+   ;;
+   ;; 1. Successive combinators (`TAC1 THEN THEN TAC2') — the
+   ;;    misplaced second combinator is absorbed by the parser into
+   ;;    an `app_exp' following the correctly-parsed operator, so
+   ;;    the flag is "app_exp inside infix_exp whose first
+   ;;    identifier is a combinator name".
+   ;;
+   ;; 2. Missing combinator between two tactics — `simp [th1]
+   ;;    metis_tac [th2]' parses as one 4-child `app_exp' inside a
+   ;;    `tactic'.  When a known list-taking tactic (`simp', `gs',
+   ;;    `metis_tac', ...) is followed by a `list_exp' and any
+   ;;    further child, that further child is the "orphan next
+   ;;    tactic" the user probably forgot to separate.  Each such
+   ;;    extra child is flagged individually.
+   :language 'holscript
+   :feature 'syntax-error
+   :override t
+   `(((infix_exp
+       _
+       (app_exp
+        :anchor
+        (vid_exp (longvid (vid) @holscript-syntax-error-face))))
+      (:match ,(rx-to-string
+                `(seq bos (or ,@holscript-ts-mode--tactic-combinators) eos))
+              @holscript-syntax-error-face))
+     ;; Single-argument tactic (`simp TH', `irule TH', ...) with
+     ;; anything beyond its one argument inside the same app_exp.
+     ;; Gated on `:pred' so a mid-edit misparse that puts the
+     ;; pattern under some non-tactic ancestor (e.g. a half-typed
+     ;; `Overload' swallowing a nearby proof body) doesn't flag.
+     ((app_exp
+       :anchor
+       (vid_exp (longvid (vid) @one-tac))
+       :anchor
+       (_)
+       (_) @holscript-syntax-error-face)
+      (:match ,(rx-to-string
+                `(seq bos (or ,@holscript-ts-mode--single-arg-tactics) eos))
+              @one-tac)
+      (:pred holscript-ts-mode--in-tactic-context-p
+             @holscript-syntax-error-face))
+     ;; Two-argument tactic (`simp_tac SS TH', `irule_at pos TH', ...)
+     ;; with anything beyond its two arguments.
+     ((app_exp
+       :anchor
+       (vid_exp (longvid (vid) @two-tac))
+       :anchor
+       (_)
+       :anchor
+       (_)
+       (_) @holscript-syntax-error-face)
+      (:match ,(rx-to-string
+                `(seq bos (or ,@holscript-ts-mode--two-arg-tactics) eos))
+              @two-tac)
+      (:pred holscript-ts-mode--in-tactic-context-p
+             @holscript-syntax-error-face)))
 
    :language 'holscript
    :feature 'definition
@@ -432,54 +611,178 @@ Used as `treesit-defun-name-function'."
     "Type" "Overload" "Resume" "Finalise")
   "HOL block keywords that always sit in column 0.")
 
+(defun holscript-ts-mode--line-starts-block-keyword-p (_node _parent bol)
+  "Non-nil when the smallest node at BOL is a HOL block keyword.
+Used by the indent rule that snaps such lines back to column 0.
+Checks the SMALLEST node at BOL rather than the walked-up
+`node' argument, so a mis-indented `Theorem' whose surrounding
+parse is broken (`ERROR' parent) still gets recognised.  Also
+covers `hol_quote_block' (which is a single lexical token whose
+text starts with `Quote')."
+  (let ((leaf (treesit-node-at bol)))
+    (and leaf
+         (or (member (treesit-node-type leaf)
+                     holscript-ts-mode--block-keywords)
+             (and (equal (treesit-node-type leaf) "hol_quote_block")
+                  (= (treesit-node-start leaf) bol))))))
+
+(defun holscript-ts-mode--inside-error-p (_node _parent bol)
+  "Non-nil when the node at BOL has an `ERROR' ancestor.
+Used to suppress the ordinary parse-tree indent rules while the
+buffer is mid-edit — an unfinished `Theorem foo:' can make the
+recovery re-parse a large prefix as a nested `hol_application'
+chain, and firing `(parent-is hol_application) parent 0' there
+throws TAB to a nonsensical column."
+  (let ((n (treesit-node-at bol)))
+    (while (and n (not (equal (treesit-node-type n) "ERROR")))
+      (setq n (treesit-node-parent n)))
+    n))
+
 (defconst holscript-ts-mode--indent-rules
   `((holscript
-     ;; HOL block keywords always go to column 0 of the buffer.
-     ((node-is ,(regexp-opt holscript-ts-mode--block-keywords))
-      column-0 0)
+     ;; HOL block keywords always go to column 0 of the buffer,
+     ;; even when the enclosing parse is broken (mid-edit).  The
+     ;; matcher checks the smallest node at bol rather than the
+     ;; walked-up node so `    Theorem foo:' inside an ERROR
+     ;; region still snaps to column 0.
+     (holscript-ts-mode--line-starts-block-keyword-p column-0 0)
+     ;; Otherwise, inside a parse-recovered region (any `ERROR'
+     ;; ancestor), leave the current indent alone.  A mid-edit
+     ;; `Theorem foo:' without a body can make the recovery
+     ;; re-parse a large chunk of preceding text as a nested
+     ;; `hol_application' chain; the ordinary parent-based rules
+     ;; then anchor TAB to a nonsensical column.
+     (holscript-ts-mode--inside-error-p             no-indent 0)
      ;; The body of a HOL block (statement, tactic, definition spec,
      ;; datatype binding) indents 2 from the block's start column.
-     ((parent-is "hol_theorem_with_proof")        parent-bol 2)
-     ((parent-is "hol_theorem_alias")             parent-bol 2)
-     ((parent-is "hol_definition")                parent-bol 2)
-     ((parent-is "hol_definition_with_proof")     parent-bol 2)
-     ((parent-is "hol_inductive")                 parent-bol 2)
-     ((parent-is "hol_datatype")                  parent-bol 2)
-     ((parent-is "hol_type_alias")                parent-bol 2)
-     ((parent-is "hol_overload")                  parent-bol 2)
-     ((parent-is "hol_theory_dec")                parent-bol 2)
-     ((parent-is "hol_ancestors_dec")             parent-bol 2)
-     ((parent-is "hol_libs_dec")                  parent-bol 2)
-     ;; hol_quote_block is a single token with no inner structure;
-     ;; treesit-indent won't recurse into it but if asked to indent
-     ;; lines whose containing node IS the block, leave them alone.
-     ((node-is "hol_quote_block")                 no-indent 0)
-     ((parent-is "hol_quote_block")               no-indent 0)
+     ((parent-is "\\`hol_theorem_with_proof\\'")    parent-bol 2)
+     ((parent-is "\\`hol_theorem_alias\\'")         parent-bol 2)
+     ((parent-is "\\`hol_definition\\'")            parent-bol 2)
+     ((parent-is "\\`hol_definition_with_proof\\'") parent-bol 2)
+     ((parent-is "\\`hol_inductive\\'")             parent-bol 2)
+     ((parent-is "\\`hol_datatype\\'")              parent-bol 2)
+     ((parent-is "\\`hol_type_alias\\'")            parent-bol 2)
+     ((parent-is "\\`hol_overload\\'")              parent-bol 2)
+     ((parent-is "\\`hol_theory_dec\\'")            parent-bol 2)
+     ((parent-is "\\`hol_ancestors_dec\\'")         parent-bol 2)
+     ((parent-is "\\`hol_libs_dec\\'")              parent-bol 2)
+     ;; hol_quote_block is a single token with no inner structure.
+     ((node-is   "\\`hol_quote_block\\'")           no-indent 0)
+     ((parent-is "\\`hol_quote_block\\'")           no-indent 0)
      ;; Tactic chains: keep each tactic aligned with the first.
-     ((parent-is "tactic")                        parent-bol 0)
+     ((parent-is "\\`tactic\\'")                    parent-bol 0)
+     ;; Inside a THEN chain, align continuation lines with the
+     ;; previous line's first non-blank column.  The grammar keeps
+     ;; the whole chain as a single flat `THEN' node with atomic
+     ;; tactics and operator tokens as siblings; each atomic on its
+     ;; own line should sit at the same column as the previous.
+     ((parent-is "\\`THEN\\'")                      prev-line 0)
+     ;; SML application chains that span multiple lines.  Align
+     ;; with the previous line's first non-blank column so `|>'
+     ;; stacks under `|>'.
+     ((parent-is "\\`app_exp\\'")                   prev-line 0)
+     ;; SML infix chains.  Three sub-cases:
+     ;;   • `by' / `suffices_by' / `via' broken onto their own line
+     ;;     (subgoal-introducing infixes): indent +2 under the left
+     ;;     argument, so ``goal‘\n  by tac' visually attaches the
+     ;;     tactic to the quotation.
+     ;;   • Any other OPERATOR on its own line (`|>' below `|>'):
+     ;;     match the previous line's column so operators stack.
+     ;;   • OPERAND on its own line (`simp[...]' after a `>>' on
+     ;;     the previous line): align with the chain's start
+     ;;     column, so operands stack at the chain regardless of
+     ;;     any irregular indent between (e.g. a multi-line
+     ;;     quotation continuation).
+     ((and (parent-is "\\`infix_exp\\'")
+           (node-is "\\`\\(by\\|suffices_by\\|via\\)\\'"))
+      prev-line 2)
+     ((and (parent-is "\\`infix_exp\\'")
+           (node-is ,(concat
+                      "\\`"
+                      (regexp-opt
+                       '("using"
+                         "*" "/" "div" "mod" "+" "-" "^" "::" "@"
+                         "=" "<>" "<" ">" "<=" ">="
+                         ":=" "o" "-->" "$"
+                         "++" "&&" "|->"
+                         "THEN" "THEN1" "THENL" "THEN_LT" "THENC"
+                         "ORELSE" "ORELSE_LT" "ORELSEC"
+                         "THEN_TCL" "ORELSE_TCL"
+                         "?>" "|>" "|>>" "||>" "||->"
+                         ">>" ">-" ">|" "\\\\"
+                         ">>>" ">>-" "??" ">~" ">>~" ">>~-"
+                         "~~" "!~" "Un" "Isct" "--" "IN" "-*"
+                         "##" "?"))
+                      "\\'")))
+      prev-line 0)
+     ((parent-is "\\`infix_exp\\'")                 parent 0)
      ;; SML let / in / end.
-     ((node-is "in")                              parent-bol 0)
-     ((node-is "end")                             parent-bol 0)
-     ((parent-is "let_dec")                       parent-bol 2)
-     ((parent-is "let_exp")                       parent-bol 2)
-     ;; case / of: align match clauses with the case keyword.
-     ((node-is "|")                               parent-bol 2)
-     ((parent-is "case_exp")                      parent-bol 4)
-     ;; if / then / else.
-     ((node-is "then")                            parent-bol 0)
-     ((node-is "else")                            parent-bol 0)
-     ((parent-is "if_exp")                        parent-bol 4)
-     ;; Don't auto-reindent inside HOL terms or quoted material;
-     ;; leave the user's choices alone (the parser may not have full
-     ;; precedence information yet — see grammar.js TODOs).
-     ((parent-is "hol_term")                      no-indent 0)
-     ((parent-is "hol_thmstmt")                   no-indent 0)
-     ((parent-is "backquote")                     no-indent 0)
-     ((parent-is "quoted_term")                   no-indent 0)
+     ((node-is   "\\`in\\'")                        parent-bol 0)
+     ((node-is   "\\`end\\'")                       parent-bol 0)
+     ((parent-is "\\`let_dec\\'")                   parent-bol 2)
+     ((parent-is "\\`let_exp\\'")                   parent-bol 2)
+     ;; `|' inside a `case'-shape (SML or HOL): align with `case'
+     ;; itself.  In other contexts (datatype constructor, disjunct
+     ;; pattern) `|' inherits the surrounding block's line-start
+     ;; column +2.
+     ((and (node-is "\\`|\\'")
+           (or (parent-is "\\`case_exp\\'")
+               (parent-is "\\`hol_case\\'")))
+      parent 0)
+     ((parent-is "\\`case_exp\\'")                  parent 2)
+     ((node-is   "\\`|\\'")                         parent-bol 2)
+     ;; SML if / then / else: branch bodies indent +2 from the
+     ;; enclosing `if'.  (The grammar names this rule `cond_exp',
+     ;; not `if_exp'.)
+     ((node-is   "\\`then\\'")                      parent-bol 0)
+     ((node-is   "\\`else\\'")                      parent-bol 0)
+     ((parent-is "\\`cond_exp\\'")                  parent 2)
+     ;; SML while ... do: body indents +2 from `while'.
+     ((parent-is "\\`iter_exp\\'")                  parent 2)
+     ;; HOL term structure — align continuation lines to the column
+     ;; of the governing HOL subtree.  A one-line `A ==> B' doesn't
+     ;; change; a two-line `A ==>\n  B' pulls B back to A's column
+     ;; because they share the same parent `hol_binary_term'.
+     ((parent-is "\\`hol_binary_term\\'")         parent 0)
+     ((parent-is "\\`hol_application\\'")         parent 0)
+     ;; The body of a quantifier (`!x. BODY', `?y. BODY') on a
+     ;; continuation line indents 2 to the right of the binder.
+     ((parent-is "\\`hol_binder\\'")              parent 2)
+     ((parent-is "\\`hol_labelled_term\\'")       parent 0)
+     ((parent-is "\\`hol_annotated\\'")           parent 0)
+     ((parent-is "\\`hol_left_unary_term\\'")     parent 0)
+     ((parent-is "\\`hol_postfix_term\\'")        parent 0)
+     ((parent-is "\\`hol_universe\\'")            parent 0)
+     ;; HOL if / case / let / do: bodies indent +2 from the
+     ;; keyword.  For `hol_case', the `|' separators align with
+     ;; `case' itself (see the SML/HOL shared `|' rule up above) —
+     ;; a leading `| NONE => …' on the first row sits under `c',
+     ;; while a leading `NONE => …' (no `|') sits under `s'.
+     ((parent-is "\\`hol_cond\\'")                parent 2)
+     ((parent-is "\\`hol_case\\'")                parent 2)
+     ((parent-is "\\`hol_let\\'")                 parent 2)
+     ((parent-is "\\`hol_do\\'")                  parent 2)
+     ((parent-is "\\`hol_match\\'")               parent 0)
+     ((parent-is "\\`hol_tuple\\'")               parent 0)
+     ((parent-is "\\`hol_list\\'")                parent 0)
+     ((parent-is "\\`hol_set\\'")                 parent 0)
+     ((parent-is "\\`hol_record_literal\\'")      parent 0)
+     ((parent-is "\\`hol_record_update\\'")       parent 0)
+     ((parent-is "\\`hol_paren_op\\'")            parent 0)
+     ((parent-is "\\`hol_type_quotation\\'")      parent 0)
+     ;; HOL wrappers with single meaningful child — same anchor.
+     ((parent-is "\\`hol_term\\'")                parent 0)
+     ((parent-is "\\`hol_thmstmt\\'")             parent 0)
+     ((parent-is "\\`hol_fn_spec\\'")             parent 0)
+     ((parent-is "\\`hol_inductive_body\\'")      parent 0)
+     ((parent-is "\\`hol_binding\\'")             parent 0)
+     ;; Term-quotation wrappers don't dictate indent themselves.
+     ((parent-is "\\`backquote\\'")               no-indent 0)
+     ((parent-is "\\`quoted_term\\'")             no-indent 0)
      ;; Inside ERROR regions, leave indent alone so the user can edit
      ;; without it jumping under them.
-     ((node-is "ERROR")                           no-indent 0)
-     ((parent-is "ERROR")                         no-indent 0)
+     ((node-is   "\\`ERROR\\'")                   no-indent 0)
+     ((parent-is "\\`ERROR\\'")                   no-indent 0)
      ;; Catch-all: leave the current indent unchanged.
      ((lambda (&rest _) t)                        no-indent 0))))
 
@@ -710,6 +1013,10 @@ sensible target.  Only uses primitives available in Emacs 29."
   (let ((map (make-sparse-keymap)))
     (define-key map [remap backward-up-list]
                 #'holscript-ts-mode--backward-up-list)
+    ;; `\`' inserts `‘’' and positions cursor between.  Pressing it
+    ;; again on an existing `‘’' converts to `“”' (and vice versa).
+    ;; See `holscript-dbl-backquote' in holscript-mode.el.
+    (define-key map (kbd "`") #'holscript-dbl-backquote)
     map)
   "Keymap for `holscript-ts-mode'.")
 
@@ -728,6 +1035,18 @@ sensible target.  Only uses primitives available in Emacs 29."
               parse-sexp-ignore-comments t)
   (setq-local font-lock-multiline t)
   (setq-local indent-tabs-mode nil)
+
+  ;; Unicode substitutions (`\<=>' → `⇔' etc.) — same input method
+  ;; the SMIE-based mode enables.
+  (set-input-method "Hol")
+
+  ;; Auto-pair for the HOL quotation delimiters.  Deleting the
+  ;; opener of an empty `‘’' / `“”' pair also removes the closer,
+  ;; matching what most editors do for `()' / `[]' / `{}'.  The
+  ;; syntax table already declares these characters as balanced
+  ;; open/close, so `electric-pair-mode' recognises them without
+  ;; further configuration.
+  (electric-pair-local-mode 1)
 
   (when (treesit-ready-p 'holscript)
     (treesit-parser-create 'holscript)
