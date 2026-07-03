@@ -308,6 +308,15 @@ module.exports = grammar({
     externals: $ => [
         $.block_comment,
         $.line_comment,
+        // BOL-anchored HOL block delimiters (produced by scanner.c only
+        // when the keyword sits at column 0 with no leading whitespace).
+        // Anchoring `Proof' and `QED' keeps the tactic parse (SML) from
+        // absorbing a following block delimiter as an ordinary
+        // identifier and cascading a broken parse into the rest of the
+        // file.  Aliased back to anonymous-literal counterparts at each
+        // use site so downstream queries key on `"Proof"' / `"QED"'.
+        $._bol_Proof,
+        $._bol_QED,
     ],
 
     supertypes: $ => [
@@ -356,6 +365,13 @@ module.exports = grammar({
         // by context.
         [$._hol_term, $._hol_tight],
         [$._hol_term, $._hol_application_lhs, $._hol_tight],
+        // Nested optionals in `hol_theorem_with_proof' let a mid-edit
+        // theorem terminate at any body position: after `:', after
+        // `Proof', after `tactic', or (well-formed) after `QED'.  GLR
+        // keeps competing parses alive; the BOL-anchored external
+        // tokens for `Proof'/`QED'/`Theorem' break ties by forcing
+        // block delimiters to sit at column 0.
+        [$.hol_theorem_with_proof],
     ],
 
     // HACK Causes problem when we add HOL things
@@ -1147,15 +1163,65 @@ module.exports = grammar({
             'End'
         ),
 
-        hol_theorem_with_proof: $ => seq(
-            choice('Theorem', 'Triviality'),
-            alias($._alphaAlphaNumeric_ident, $.hol_thmname),
-            optional($.hol_attributes),
-            ':',
-            alias($._hol_term, $.hol_thmstmt),
-            'Proof',
-            $.tactic,
-            'QED'
+        // `Theorem NAME [attrs] : STMT Proof tac QED', where each
+        // block-delimiter after `:' is optional.  Nested `optional's
+        // let a mid-edit theorem terminate at any point (after `:',
+        // after `Proof', after `tactic') so the rest of the file still
+        // parses as fresh top-level declarations.  `Proof' and `QED'
+        // are BOL-anchored via the external scanner, so the tactic
+        // parse (SML expressions) can't absorb them or a following
+        // `Theorem'/`Triviality' opener as ordinary identifiers.
+        //
+        // `Theorem' / `Triviality' openers keep both external
+        // (BOL-anchored) and literal tokens so a floating, non-column-0
+        // keyword still produces the same anonymous node — otherwise
+        // TAB-reindent-to-column-0 loses the node it keys on.
+        hol_theorem_with_proof: $ => choice(
+            seq(
+                choice('Theorem', 'Triviality'),
+                alias($._alphaAlphaNumeric_ident, $.hol_thmname),
+                optional($.hol_attributes),
+                ':',
+                alias($._hol_term, $.hol_thmstmt),
+                choice(alias($._bol_Proof, 'Proof'), 'Proof'),
+                $.tactic,
+                choice(alias($._bol_QED, 'QED'), 'QED')
+            ),
+            // Mid-edit recovery forms.  `prec.dynamic(1, …)' biases GLR
+            // to prefer these when both a completion form (which would
+            // silently absorb subsequent `Theorem'/`Definition'/etc.
+            // keywords as ordinary HOL-term or SML identifiers) *and*
+            // one of these forms are viable — i.e. the following text
+            // parses as a fresh top-level declaration.  Where a
+            // completion form is the only viable parse (a real theorem
+            // with a body), it wins by default.
+            //
+            //   `Theorem NAME [attrs] :'
+            prec.dynamic(1, seq(
+                choice('Theorem', 'Triviality'),
+                alias($._alphaAlphaNumeric_ident, $.hol_thmname),
+                optional($.hol_attributes),
+                ':'
+            )),
+            //   `Theorem NAME [attrs] : STMT Proof'
+            prec.dynamic(1, seq(
+                choice('Theorem', 'Triviality'),
+                alias($._alphaAlphaNumeric_ident, $.hol_thmname),
+                optional($.hol_attributes),
+                ':',
+                alias($._hol_term, $.hol_thmstmt),
+                alias($._bol_Proof, 'Proof')
+            )),
+            //   `Theorem NAME [attrs] : STMT Proof tactic'
+            prec.dynamic(1, seq(
+                choice('Theorem', 'Triviality'),
+                alias($._alphaAlphaNumeric_ident, $.hol_thmname),
+                optional($.hol_attributes),
+                ':',
+                alias($._hol_term, $.hol_thmstmt),
+                choice(alias($._bol_Proof, 'Proof'), 'Proof'),
+                $.tactic
+            ))
         ),
 
         // `Resume <thm>[<label>]:' / `Resume <thm>:' opens the body of
