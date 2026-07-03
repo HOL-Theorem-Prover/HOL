@@ -117,6 +117,32 @@ const HOL_IDENT_CONT =
 const HOL_IDENT_DOLLAR_TAIL =
     `(\\$[${HOL_IDENT_STARTER}][${HOL_IDENT_CONT}]*)?`;
 
+// Unicode blocks accepted as symbolic-identifier characters —
+// HOL users define infixes and constants freely from these ranges
+// (`❬', `∶', `⋆', arrows, misc math, ...).  Reserved code points
+// used by the grammar itself as brackets or quotation marks are
+// omitted so tree-sitter's anonymous-literal tokens still win on
+// them:
+//   ‘’“” U+2018-U+201D  (HOL quotation delimiters)
+//   ⟦⟧   U+27E6-U+27E7  (hol_denotation_bracket)
+//   ⟨⟩   U+27E8-U+27E9  (hol_fmap_update)
+//   ⦇⦈   U+2987-U+2988  (hol_func_update)
+//   ❲❳   U+2772-U+2773  (hol_list_update)
+const HOL_UNICODE_SYM =
+    '∀-⋿'  // Mathematical Operators
+  + '⌀-⏿'  // Misc Technical
+  + '■-◿'  // Geometric Shapes
+  + '☀-⛿'  // Miscellaneous Symbols
+  + '✀-❱'  // Dingbats (up to just before ❲)
+  + '❴-➿'  // Dingbats (after ❳, through end of block)
+  + '⟀-⟥'  // Misc Math A (up to just before ⟦)
+  + '⟰-⟿'  // Supplemental Arrows-A
+  + '⤀-⥿'  // Supplemental Arrows-B
+  + '⦀-⦆'  // Misc Math B (up to just before ⦇)
+  + '⦉-⧿'  // Misc Math B (after ⦈, through end of block)
+  + '⨀-⫿'  // Supplemental Math Operators
+  + '⬀-⯿'; // Misc Symbols & Arrows
+
 // ******************************************************** //
 // "Separated By"
 // ******************************************************** //
@@ -307,6 +333,11 @@ module.exports = grammar({
             // Two tokens of lookahead required.
             $.wheretype_sigexp,
         ],
+        // `x : int * int' — `*' is a tuple-type separator inside
+        // a type ascription, not multiplication.
+        [$._tuple_ty, $.tuple_ty],
+        // `x : int * int * bool' — the multi-`*' tuple continues.
+        [$.tuple_ty],
         // HOL
         // `nl³' could stand alone as a _hol_term or sit as the lhs of
         // an application (`nl³ x').  Both readings are valid; we want
@@ -447,6 +478,7 @@ module.exports = grammar({
             $.iter_exp,
             $.case_exp,
             $.fn_exp,
+            $.infix_exp,
         ),
 
         app_exp: $ => prec(10, seq($._atexp, repeat1($._atexp))),
@@ -465,6 +497,77 @@ module.exports = grammar({
         iter_exp: $ => prec(3, seq('while', field('while_exp', $._exp), 'do', field('do_exp', $._exp))),
         case_exp: $ => prec(2, seq('case', $._exp, 'of', $._match)),
         fn_exp: $ => prec(1, seq('fn', $._match)),
+
+        // SML-level infix operators.  Both standard SML and the
+        // HOL library declarations from `src/thm/Overlay.sml' —
+        // static tree-sitter grammars can't consult the runtime
+        // `infix' / `infixr N' declarations, so we hardcode the
+        // set.  Parsing structurally (rather than as flat `app_exp'
+        // curried application) lets font-lock and indent key off
+        // the operator boundary.
+        //
+        // Precedence levels mirror the SML/HOL `infix N' hierarchy,
+        // shifted so every level sits above `app_exp' (prec 10):
+        // otherwise `f x + g y' would extend `app_exp' rather than
+        // reduce to `(f x) + (g y)'.
+        //
+        //   ts prec   fixity          operators
+        //   ────────────────────────────────────────────────────
+        //   20  L     HOL   infix 9   using
+        //   19  L     HOL   infix 8   via by suffices_by
+        //   18  L     SML   infix 7   * / mod div
+        //   17  L     SML   infix 6   + - ^
+        //   16  R     SML   infixr 5  :: @
+        //   15  L     SML   infix 4   = <> < > <= >=
+        //   14  L     SML   infix 3   := o
+        //   14  R     HOL   infixr 3  -->
+        //   12  R     HOL   infixr 1  $
+        //   11  L     HOL   infix 0   many (see Overlay.sml line 9,18,20)
+        //   11  R     HOL   infixr 0  ## ?
+        //
+        // `andalso' and `orelse' are keyword forms handled
+        // separately (see `conj_exp' / `disj_exp'); they sit
+        // looser than every infix here.
+        infix_exp: $ => choice(
+            prec.left (20, seq($._exp, field('op', 'using'), $._exp)),
+            prec.left (19, seq($._exp,
+                               field('op', choice('via', 'by', 'suffices_by')),
+                               $._exp)),
+            prec.left (18, seq($._exp,
+                               field('op', choice('*', '/', 'div', 'mod')),
+                               $._exp)),
+            prec.left (17, seq($._exp,
+                               field('op', choice('+', '-', '^')),
+                               $._exp)),
+            prec.right(16, seq($._exp,
+                               field('op', choice('::', '@')),
+                               $._exp)),
+            prec.left (15, seq($._exp,
+                               field('op', choice('=', '<>', '<', '>', '<=', '>=')),
+                               $._exp)),
+            prec.left (14, seq($._exp,
+                               field('op', choice(':=', 'o')),
+                               $._exp)),
+            prec.right(14, seq($._exp, field('op', '-->'), $._exp)),
+            prec.right(12, seq($._exp, field('op', '$'), $._exp)),
+            // HOL infix 0 — Overlay.sml lines 9 & 18 & 20.
+            prec.left (11, seq(
+                $._exp,
+                field('op', choice(
+                    '++', '&&', '|->',
+                    'THEN', 'THEN1', 'THENL', 'THEN_LT', 'THENC',
+                    'ORELSE', 'ORELSE_LT', 'ORELSEC',
+                    'THEN_TCL', 'ORELSE_TCL',
+                    '?>', '|>', '|>>', '||>', '||->',
+                    '>>', '>-', '>|', '\\\\',
+                    '>>>', '>>-', '??', '>~', '>>~', '>>~-',
+                    '~~', '!~', 'Un', 'Isct', '--', 'IN', '-*')),
+                $._exp)),
+            // HOL infixr 0 — Overlay.sml line 11.
+            prec.right(11, seq($._exp,
+                               field('op', choice('##', '?')),
+                               $._exp)),
+        ),
 
         _match: $ => prec.right(seq(optBar, mkSepBy1('|', $.mrule))),
         mrule: $ => seq($._pat, '=>', $._exp),
@@ -1372,9 +1475,16 @@ module.exports = grammar({
         _hol_symbolic: $ => token(
             choice(
                 seq(
+                    // Sequence of symbolic-ident characters: ASCII
+                    // symbolic set plus any Unicode symbol/math char
+                    // that isn't already reserved as a bracket or
+                    // quotation delimiter — so user-defined notation
+                    // like `❬', `∶', `⋆' etc. parses as an identifier
+                    // rather than as `ERROR'.
                     // TODO Add support for ^ and `
-                    repeat1(choice('#', '?', '+', '*', '/', '\\', '=', '<', '>',
-                                   '&', '%', '@', '!', ':', '|', '-', '~')),
+                    repeat1(
+                        new RegExp(
+                            `[#?+*/\\\\=<>&%@!:|\\-~${HOL_UNICODE_SYM}]`)),
                     // Trailing modifiers: subscripts, superscript letters,
                     // `_' (parallel-variant marker: `**_', `+_').
                     repeat(new RegExp(`[${HOL_SUB}${HOL_SUP_LETTERS}_]`)),
