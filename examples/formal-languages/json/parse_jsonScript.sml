@@ -407,7 +407,7 @@ Definition lex_frac_def:
 End
 
 Definition lex_plus_def:
-  lex_plus [] = SOME (NONE, []) /\
+  lex_plus [] = NONE /\
   (lex_plus (c::cs) =
     if c = #"+" then
       if is_next_digit cs then
