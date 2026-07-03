@@ -721,16 +721,25 @@ throws TAB to a nonsensical column."
      ((node-is   "\\`end\\'")                       parent-bol 0)
      ((parent-is "\\`let_dec\\'")                   parent-bol 2)
      ((parent-is "\\`let_exp\\'")                   parent-bol 2)
-     ;; `|' inside a `case'-shape (SML or HOL): align with `case'
-     ;; itself.  In other contexts (datatype constructor, disjunct
-     ;; pattern) `|' inherits the surrounding block's line-start
-     ;; column +2.
+     ;; `case'-shape (SML or HOL): a `|' aligns with the `case'
+     ;; keyword itself; other children indent +2.
      ((and (node-is "\\`|\\'")
            (or (parent-is "\\`case_exp\\'")
                (parent-is "\\`hol_case\\'")))
       parent 0)
      ((parent-is "\\`case_exp\\'")                  parent 2)
      ((node-is   "\\`|\\'")                         parent-bol 2)
+     ;; An SML compound expression (`case', `if', `let', `while',
+     ;; `fn') opening a continuation line under `fun'/`val'/etc.
+     ;; indents +2 from the enclosing declaration's line-start.
+     ;; `treesit--indent-1' hands us the whole compound as `node'
+     ;; when it sits at BOL, so this rule captures the "keyword at
+     ;; column 0 after an unclosed opener" cases.
+     ((node-is ,(concat "\\`" (regexp-opt
+                               '("case_exp" "cond_exp" "iter_exp"
+                                 "let_exp" "fn_exp"))
+                        "\\'"))
+      parent-bol 2)
      ;; SML if / then / else: branch bodies indent +2 from the
      ;; enclosing `if'.  (The grammar names this rule `cond_exp',
      ;; not `if_exp'.)
@@ -739,6 +748,30 @@ throws TAB to a nonsensical column."
      ((parent-is "\\`cond_exp\\'")                  parent 2)
      ;; SML while ... do: body indents +2 from `while'.
      ((parent-is "\\`iter_exp\\'")                  parent 2)
+     ;; SML record / tuple / list.  When an element sits on its own
+     ;; line inside the container's brackets:
+     ;;   • the first element anchors at the start of the *expression
+     ;;     containing the brace* + 2 — the container's own parent
+     ;;     node.  For `add_rule {…}' that's the enclosing app_exp
+     ;;     `add_rule {}' at the column of `add_rule'.  For
+     ;;     `f (g x y {…})' it's the inner app_exp `g x y {}',
+     ;;     because the surrounding parens end the walk.
+     ;;   • later elements align with the first (so `hol = …' on the
+     ;;     line after `TeX = …' sits under `TeX').
+     ;; Lambda anchors because Emacs 30 `treesit--simple-indent-eval'
+     ;; rejects `t' as an `nth-sibling' argument.
+     ((and (parent-is "\\`\\(record_exp\\|tuple_exp\\|list_exp\\)\\'")
+           ,(lambda (node &rest _)
+              (null (treesit-node-prev-sibling node t))))
+      ,(lambda (_n parent &rest _)
+         (or (and (treesit-node-parent parent)
+                  (treesit-node-start (treesit-node-parent parent)))
+             (treesit-node-start parent)))
+      2)
+     ((parent-is "\\`\\(record_exp\\|tuple_exp\\|list_exp\\)\\'")
+      ,(lambda (_n parent &rest _)
+         (treesit-node-start (treesit-node-child parent 0 t)))
+      0)
      ;; HOL term structure — align continuation lines to the column
      ;; of the governing HOL subtree.  A one-line `A ==> B' doesn't
      ;; change; a two-line `A ==>\n  B' pulls B back to A's column
