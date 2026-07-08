@@ -42,7 +42,20 @@ fun ttt_closes msg tm =
 
 val cache_dir = HOLDIR ^ "/src/tactictoe/selftest/.hol/tactictoe-cache"
 val _ = set_tactictoe_cache_dir cache_dir
-fun datafile () = mlTacticData.current_tacdata_file "ConseqConv"
+fun tacdata_file thy = mlTacticData.current_tacdata_file thy
+fun datafile () = tacdata_file "ConseqConv"
+
+fun read_file file =
+  let
+    val ins = TextIO.openIn file
+    fun loop acc =
+      case TextIO.inputLine ins of
+        NONE => (TextIO.closeIn ins; String.concat (rev acc))
+      | SOME line => loop (line :: acc)
+  in
+    loop []
+    handle e => (TextIO.closeIn ins; raise e)
+  end
 
 val _ = check "tacticToe public API type-checks"
   (let
@@ -226,6 +239,29 @@ val _ = check "find_script locates ConseqConvScript.sml"
 
 val _ = check "nonexistent tactic data is reported absent"
   (not (mlTacticData.exists_tacdata_thy "no_such_theory_for_ttt"))
+
+open ttt_regressionTheory
+
+fun rewrite_record_raw thy =
+  let
+    val _ = ttt_rewrite_thy thy
+    val scriptorg = find_script thy
+    val tttsml =
+      tactictoe_scratch_dir_of () ^ "/scripts/" ^
+      OS.Path.base scriptorg ^ "_ttt.sml"
+  in
+    smlExecScripts.exec_tttrecord_in_dir (OS.Path.dir scriptorg) tttsml
+  end
+
+val _ = passok "record rewriter regression tactic data"
+  (fn () => rewrite_record_raw "ttt_regression")
+
+val regression_data = read_file (tacdata_file "ttt_regression")
+
+val _ = check "Q_TAC quotation step is recorded"
+  (String.isSubstring "Q_TAC" regression_data andalso
+   String.isSubstring "SUFF_TAC" regression_data andalso
+   String.isSubstring "QUOTE" regression_data)
 
 open arithmeticTheory dividesTheory gcdTheory
 

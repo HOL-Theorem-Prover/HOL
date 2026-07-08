@@ -527,15 +527,19 @@ fun sketch sl = case sl of
       Infix infl :: sketch cont
     end
   | "val" :: m    => (bval := true; sketch_pattern "val" "=" m)
-  | "fun" :: m    => (bval := false; bfun := true; sketch_pattern "fun" "=" m)
+  | "fun" :: m    =>
+    (bval := false; bfun := true; sketch_pattern_bfun "fun" "=" true m)
   | "and" :: m    => if !bval
                      then sketch_pattern "val" "=" m
-                     else sketch_pattern "fun" "=" m
+                     else sketch_pattern_bfun "fun" "=" true m
     (* todo: support for mutually recursive functions *)
-  | "fn"  :: m    => (bfun := false; sketch_pattern "fn" "=>" m)
-  | "|"   :: m    => sketch_pattern "|" (if !bfun then "=" else "=>") m
-  | "of"  :: m    => (bfun := false; sketch_pattern "of" "=>" m)
-  | "handle" :: m => (bfun := false; sketch_pattern "handle" "=>" m)
+  | "fn"  :: m    => sketch_pattern_bfun "fn" "=>" false m
+  | "|"   :: m    =>
+    let val in_fun = !bfun in
+      sketch_pattern_bfun "|" (if in_fun then "=" else "=>") in_fun m
+    end
+  | "of"  :: m    => sketch_pattern_bfun "of" "=>" false m
+  | "handle" :: m => sketch_pattern_bfun "handle" "=>" false m
   | "local" :: m  => Start "local" :: sketch m
   | "let" :: m    => Start "let" :: sketch m
   | "structure" :: a :: "=" :: "struct" :: m =>
@@ -555,6 +559,17 @@ and sketch_pattern s sep m =
     val (head,body,cont) = extract_pattern sep m
       handle _ => extract_pattern "=" m
     val new_body = sketch body
+  in
+    Pattern (s, map (Code o undecided) head, sep, new_body) :: sketch cont
+  end
+and sketch_pattern_bfun s sep body_bfun m =
+  let
+    val old_bfun = !bfun
+    val (head,body,cont) = extract_pattern sep m
+      handle _ => extract_pattern "=" m
+    val _ = bfun := body_bfun
+    val new_body = sketch body
+    val _ = bfun := old_bfun
   in
     Pattern (s, map (Code o undecided) head, sep, new_body) :: sketch cont
   end
