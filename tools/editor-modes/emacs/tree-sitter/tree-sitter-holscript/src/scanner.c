@@ -1,11 +1,58 @@
 // Adapted tree-sitter-sml by Matthew Fluet, released under the MIT license.
 #include <wctype.h>
+#include <string.h>
 #include <tree_sitter/parser.h>
 
 enum TokenType {
   BLOCK_COMMENT,
   LINE_COMMENT,
+  BOL_PROOF,
+  BOL_QED,
 };
+
+// BOL-anchored HOL block keywords.  When one of these tokens is
+// listed as valid in the current parser state, we consume the word
+// at the current position only if (a) we're at column 0 (no leading
+// whitespace on the line) and (b) the word matches the keyword text
+// exactly.  This anchors block delimiters at BOL so a greedy term or
+// tactic parse can't silently absorb them as identifiers.
+static const struct { const char* text; int len; enum TokenType tok; } BOL_KEYWORDS[] = {
+  {"Proof", 5, BOL_PROOF},
+  {"QED",   3, BOL_QED},
+};
+static const int BOL_KEYWORD_COUNT = 2;
+
+static bool is_ident_cont(int32_t c) {
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+         (c >= '0' && c <= '9') || c == '_' || c == '\'';
+}
+
+static bool scan_bol_keyword(TSLexer *lexer, const bool *valid_symbols) {
+  bool any_wanted = false;
+  for (int i = 0; i < BOL_KEYWORD_COUNT; i++) {
+    if (valid_symbols[BOL_KEYWORDS[i].tok]) { any_wanted = true; break; }
+  }
+  if (!any_wanted) return false;
+  if (lexer->get_column(lexer) != 0) return false;
+
+  char buf[32];
+  int len = 0;
+  while (len < 30 && !lexer->eof(lexer) && is_ident_cont(lexer->lookahead)) {
+    buf[len++] = (char)lexer->lookahead;
+    lexer->advance(lexer, false);
+  }
+  buf[len] = 0;
+
+  for (int i = 0; i < BOL_KEYWORD_COUNT; i++) {
+    if (valid_symbols[BOL_KEYWORDS[i].tok] &&
+        len == BOL_KEYWORDS[i].len &&
+        strcmp(buf, BOL_KEYWORDS[i].text) == 0) {
+      lexer->result_symbol = BOL_KEYWORDS[i].tok;
+      return true;
+    }
+  }
+  return false;
+}
 
 void * tree_sitter_holscript_external_scanner_create() {
   return NULL;
@@ -128,8 +175,9 @@ bool tree_sitter_holscript_external_scanner_scan_comment(TSLexer *lexer, bool bl
 
 bool tree_sitter_holscript_external_scanner_scan(__attribute__ ((unused)) void *payload, TSLexer *lexer, const bool *valid_symbols) {
   if (valid_symbols[BLOCK_COMMENT] || valid_symbols[LINE_COMMENT]) {
-    return tree_sitter_holscript_external_scanner_scan_comment(lexer, valid_symbols[BLOCK_COMMENT], valid_symbols[LINE_COMMENT]);
-  } else {
-    return false;
+    if (tree_sitter_holscript_external_scanner_scan_comment(lexer, valid_symbols[BLOCK_COMMENT], valid_symbols[LINE_COMMENT])) {
+      return true;
+    }
   }
+  return scan_bol_keyword(lexer, valid_symbols);
 }

@@ -1681,7 +1681,30 @@ class characters.")
   "The face for highlighting definition labels in HOL material."
   :group 'holscript-faces)
 
-(setq auto-mode-alist (cons '("Script\\.sml" . holscript-mode)
+;; The sibling holscript-ts-mode.el lives in a sub-directory so that
+;; loading it is optional (it depends on Emacs 29+ `treesit' and a
+;; compiled `holscript' parser library).  Make it visible to
+;; `require' regardless of how the user wired their load-path.
+(eval-and-compile
+  (when load-file-name
+    (let ((ts-dir (expand-file-name
+                   "tree-sitter"
+                   (file-name-directory load-file-name))))
+      (when (file-directory-p ts-dir)
+        (add-to-list 'load-path ts-dir)))))
+
+(defun holscript-pick-mode ()
+  "Choose between `holscript-ts-mode' and `holscript-mode' for the
+current buffer.  Prefers `holscript-ts-mode' when its tree-sitter
+parser is available; otherwise falls back to the SMIE-based
+`holscript-mode'.  Bound to *Script.sml files via `auto-mode-alist'."
+  (if (and (require 'treesit nil 'noerror)
+           (treesit-ready-p 'holscript 'quiet)
+           (require 'holscript-ts-mode nil 'noerror))
+      (holscript-ts-mode)
+    (holscript-mode)))
+
+(setq auto-mode-alist (cons '("Script\\.sml" . holscript-pick-mode)
                             auto-mode-alist))
 
 (if (boundp 'yas-snippet-dirs)

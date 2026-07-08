@@ -32,3 +32,8 @@ linelen = 80
 path = "src/num"
 unicode_ok = true
 linelen = 80
+
+[[h4pedant.dir]]
+path = "examples/miller"
+linelen = 80
+

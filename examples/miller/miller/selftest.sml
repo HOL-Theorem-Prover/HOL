@@ -20,8 +20,8 @@ fun test (N n) = test0 (mkN n)
 open Systeml
 val _ = app (ignore o test)
             [N 91, N 123, T 5,
-             T 6, (* takes ~3s on 2014 Macbook Pro *)
-             T 7 (* takes ~25s on 2014 Macbook Pro *)
-               (* , T 8 takes 194s on 2014 Macbook Pro *)
+             T 6, (* takes ~3s on 2014 Macbook Pro;   1.3s on 2021 MBP *)
+             T 7 (* takes ~25s on 2014 Macbook Pro;  10.2s on 2021 MBP *)
+           (*, T 8 (* takes 194s on 2014 Macbook Pro;  80.5s on 2021 MBP *) *)
             ]
 ;

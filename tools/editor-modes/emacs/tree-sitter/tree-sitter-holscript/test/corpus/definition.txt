@@ -1,244 +1,223 @@
-=============
+================================================================================
 Alphanumeric
-=============
+================================================================================
 
 Definition foo_def:
   foo = 0
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_term
-            (hol_number))))))
+      (hol_term
+        (hol_binary_term
+          (hol_identifier)
+          (hol_number))))))
 
-
-==============
+================================================================================
 Parenthesized
-==============
+================================================================================
 
 Definition foo_def:
   (foo = 0)
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_term
-            (hol_number))))))
+      (hol_term
+        (hol_binary_term
+          (hol_identifier)
+          (hol_number))))))
 
-
-========
+================================================================================
 Dollars
-========
+================================================================================
 
 Definition dollars_def:
   $$ = 0
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_term
-            (hol_number))))))
+      (hol_term
+        (hol_binary_term
+          (hol_identifier)
+          (hol_number))))))
 
-
-============
-Bad Dollars
-
-:error
-============
-
-Definition dollars_def:
-  $dollar$dollar = 0
-End
-
-
-=========
+================================================================================
 Symbolic
-=========
+================================================================================
 
 Definition symbols_def:
   #?+*/\=<>&%@!:|- = 0
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_term
-            (hol_number))))))
+      (hol_term
+        (hol_binary_term
+          (hol_identifier)
+          (hol_number))))))
 
-=========
+================================================================================
 Variable
-=========
+================================================================================
 
 Definition foo_def:
   foo x = 0
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_variable))
-        (hol_term
-            (hol_number))))))
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
+          (hol_number))))))
 
-=========
+================================================================================
 Wildcard
-=========
+================================================================================
 
 Definition foo_def:
   foo _ x = 0
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_wildcard))
-        (hol_pat
-          (hol_variable))
-        (hol_term
-            (hol_number))))))
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_application
+              (hol_identifier)
+              (hol_wildcard))
+            (hol_identifier))
+          (hol_number))))))
 
-
-=========================
+================================================================================
 Alphanumeric Constructor
-=========================
+================================================================================
 
 Definition foo_def:
   foo NONE = 0
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_cname_alphanumeric))
-        (hol_term
-            (hol_number))))))
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
+          (hol_number))))))
 
-
-==============
+================================================================================
 Tuple Pattern
-==============
+================================================================================
 
 Definition fst_def:
   fst (a, b) = a
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_ptuple
-            (hol_pat
-              (hol_variable))
-            (hol_pat
-              (hol_variable))))
-        (hol_term
-            (hol_identifier))))))
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_binary_term
+              (hol_identifier)
+              (hol_identifier)))
+          (hol_identifier))))))
 
-
-================
+================================================================================
 Nested Patterns
-================
+================================================================================
 
 Definition foo_def:
   foo (SOME x) = 0
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_cname_alphanumeric)
-          (hol_pat
-            (hol_variable)))
-        (hol_term
-            (hol_number))))))
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_application
+              (hol_identifier)
+              (hol_identifier)))
+          (hol_number))))))
 
-
-===================
+================================================================================
 Multiple Equations
-===================
+================================================================================
 
 Definition foo_def:
   foo (SOME x) = 0 ∧
   foo NONE = 1
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_cname_alphanumeric)
-          (hol_pat
-            (hol_variable)))
-        (hol_term
-            (hol_number)))
-      (hol_eqn
-        (hol_identifier)
-        (hol_pat
-          (hol_cname_alphanumeric))
-        (hol_term
-            (hol_number))))))
+      (hol_term
+        (hol_binary_term
+          (hol_binary_term
+            (hol_application
+              (hol_identifier)
+              (hol_application
+                (hol_identifier)
+                (hol_identifier)))
+            (hol_number))
+          (hol_binary_term
+            (hol_application
+              (hol_identifier)
+              (hol_identifier))
+            (hol_number)))))))
 
-
-=================
+================================================================================
 With Termination
-=================
+================================================================================
 
 Definition foo_def:
   foo = 0
@@ -246,31 +225,30 @@ Termination
   gvs
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition_with_proof
     (hol_defname)
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_term
-            (hol_number))))
+      (hol_term
+        (hol_binary_term
+          (hol_identifier)
+          (hol_number))))
     (tactic
       (vid_exp
-            (longvid
-              (vid))))))
+        (longvid
+          (vid))))))
 
-
-===========
+================================================================================
 Attributes
-===========
+================================================================================
 
 Definition foo_def[simp, bar]:
   foo = 0
 End
 
----
+--------------------------------------------------------------------------------
 
 (source_file
   (hol_definition
@@ -279,7 +257,93 @@ End
       (attribute)
       (attribute))
     (hol_fn_spec
-      (hol_eqn
-        (hol_identifier)
-        (hol_term
-            (hol_number))))))
+      (hol_term
+        (hol_binary_term
+          (hol_identifier)
+          (hol_number))))))
+
+================================================================================
+CoInductive Clauses Sans Conj
+================================================================================
+
+CoInductive reln:
+[~rule:] ∀x. reln (f x)
+[rule2:] ∀y. reln (y 3)
+End
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (hol_inductive
+    (hol_defname)
+    (hol_inductive_body
+      (hol_labelled_term
+        (hol_clause_label)
+        (hol_binder
+          (hol_bvar
+            (hol_alphanumeric))
+          (hol_application
+            (hol_identifier)
+            (hol_application
+              (hol_identifier)
+              (hol_identifier)))))
+      (hol_labelled_term
+        (hol_clause_label)
+        (hol_binder
+          (hol_bvar
+            (hol_alphanumeric))
+          (hol_application
+            (hol_identifier)
+            (hol_application
+              (hol_identifier)
+              (hol_number))))))))
+
+================================================================================
+Biconditional Definition Body
+================================================================================
+
+Definition foo_def:
+  foo x ⇔ P x ∧ Q x
+End
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_term
+        (hol_binary_term
+          (hol_application
+            (hol_identifier)
+            (hol_identifier))
+          (hol_binary_term
+            (hol_application
+              (hol_identifier)
+              (hol_identifier))
+            (hol_application
+              (hol_identifier)
+              (hol_identifier))))))))
+
+================================================================================
+Eqn with Result Type Annotation
+================================================================================
+
+Definition foo_def :
+    foo y :boehm_tree = Branch
+End
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (hol_definition
+    (hol_defname)
+    (hol_fn_spec
+      (hol_term
+        (hol_binary_term
+          (hol_annotated
+            (hol_application
+              (hol_identifier)
+              (hol_identifier))
+            (hol_atomic_type))
+          (hol_identifier))))))

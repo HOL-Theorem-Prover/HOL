@@ -215,7 +215,8 @@ fun ho_REWR_CONV th =
     ho_subst_REWR th' o var_ho_match vars pat
   end;
 
-fun ho_REWRITE_CONV ths = QCONV (TOP_DEPTH_CONV (FIRSTC (map ho_REWR_CONV ths)));
+fun ho_REWRITE_CONV ths =
+    QCONV (TOP_DEPTH_CONV (FIRSTC (map ho_REWR_CONV ths)));
 
 fun ho_REWRITE_TAC ths = CONV_TAC (ho_REWRITE_CONV ths);
 

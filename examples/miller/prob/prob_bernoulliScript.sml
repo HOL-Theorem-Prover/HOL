@@ -87,7 +87,8 @@ Proof
                       BIND_RIGHT_UNIT, o_THM]
    >> MP_TAC (Q.SPEC `{x | ISR x} o FST o prob_bernoulli_iter x`
               (GSYM PROB_BERN_INTER_HALVES))
-   >> impl_tac >- RW_TAC std_ss [INDEP_FN_FST_EVENTS, INDEP_FN_PROB_BERNOULLI_ITER]
+   >> impl_tac
+   >- RW_TAC std_ss [INDEP_FN_FST_EVENTS, INDEP_FN_PROB_BERNOULLI_ITER]
    >> Rewr'
    >> RW_TAC std_ss [prob_bernoulli_iter_def] \\ (* 2 sub-goals here *)
  ( Know `!f b.

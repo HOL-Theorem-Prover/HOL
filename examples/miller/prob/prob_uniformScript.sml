@@ -248,7 +248,7 @@ Proof
        >> PROVE_TAC [POW_HALF_POS, REAL_INV_POS])
    >> RW_TAC std_ss [POW_HALF_EXP, REAL_INVINV_ALL, GSYM REAL_INV_1OVER]
    >> Know
-      `!x y : real. (0:real) < &(SUC n) /\ &(SUC n) * x <= &(SUC n) * y ==> x <= y`
+      `!x y : real. (0:real) < &(SUC n) /\ &(SUC n) * x ≤ &(SUC n) * y ⇒ x ≤ y`
    >- PROVE_TAC [REAL_LE_LMUL]
    >> DISCH_THEN MATCH_MP_TAC
    >> RW_TAC arith_ss [REAL_LT, REAL_MUL_RINV, REAL_MUL_ASSOC, REAL_MUL_LID]
@@ -480,9 +480,11 @@ Proof
    >- (PSET_TAC [o_DEF, EXTENSION]
        >> RW_TAC bool_ss [SPECIFICATION])
    >> Rewr
-   >> ASSUME_TAC (Q.ISPECL [`bern`, `(\m. m < SUC n) o FST o prob_unif n`, `(1 :real) / 2`]
+   >> ASSUME_TAC (Q.ISPECL [`bern`, `(\m. m < SUC n) o FST o prob_unif n`,
+                            `(1 :real) / 2`]
                            PROB_COMPL_LE1)
-   >> POP_ASSUM (MP_TAC o (REWRITE_RULE [PROB_SPACE_BERN, SPACE_BERN_UNIV, GSYM COMPL_DEF]))
+   >> POP_ASSUM (MP_TAC o
+                 REWRITE_RULE [PROB_SPACE_BERN,SPACE_BERN_UNIV,GSYM COMPL_DEF])
    >> MP_TAC (Q.ISPEC `prob_unif n` INDEP_FN_FST_EVENTS)
    >> RW_TAC bool_ss [INDEP_FN_PROB_UNIF, o_ASSOC, PROB_SPACE_BERN]
    >> KILL_TAC

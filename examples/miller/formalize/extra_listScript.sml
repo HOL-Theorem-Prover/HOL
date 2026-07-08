@@ -306,8 +306,9 @@ Proof
 QED
 
 Theorem ALL_DISTINCT_MAP2 :
-    !l f. ALL_DISTINCT l /\ (!x y. MEM x l /\ MEM y l /\ (f x = f y) ==> (x = y)) ==>
-          ALL_DISTINCT (MAP f l)
+  !l f.
+    ALL_DISTINCT l /\ (!x y. MEM x l /\ MEM y l /\ (f x = f y) ==> (x = y)) ==>
+    ALL_DISTINCT (MAP f l)
 Proof
     Induct >> RW_TAC std_ss [MAP, ALL_DISTINCT, MEM_MAP, MEM]
  >> METIS_TAC []

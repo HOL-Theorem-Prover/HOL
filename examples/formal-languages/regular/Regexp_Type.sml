@@ -159,13 +159,30 @@ fun ranged r i j =
  else Or (map (replicate r) (upto i j));
 
 (*---------------------------------------------------------------------------*)
-(* compressed version of ranged. Not used since it is hard for derivative    *)
-(* taker to do well with the nesting.                                        *)
+(* Following version of "ranged" adapts Horners method to range regexps, so  *)
+(* that r{1,n} = r | r^2 | ... | r^n is expressed as                         *)
+(*                                                                           *)
+(*   r(EPSILON | r (EPSILON + ... + r (EPSILON + r)))                        *)
+(*                                                                           *)
+(* which works better with the taking of Brzozowski derivatives.             *)
 (*---------------------------------------------------------------------------*)
 
+fun horner r n =
+    if n <= 0 then
+       r
+    else Cat(r, Or[EPSILON, horner r (n-1)])
+
 fun ranged_alt r i j =
- if j < i then EMPTY
- else Cat (replicate r i,replicate (Or [EPSILON,r]) (j-i))
+ if j < i then
+    EMPTY else
+ if j = i then
+    replicate r i else
+ if i = 0 then
+   Or [EPSILON, ranged_alt r 1 j] else
+ if i = 1 then
+    horner r (j-i)
+ else
+    Cat(replicate r (i-1),horner r (j-i))
 
 (*---------------------------------------------------------------------------*)
 (* Prettyprinting                                                            *)
@@ -759,8 +776,8 @@ fun tree_to_regexp intervalFn =
    of Ident ch => Chset (charset_of [ch])
     | Cset cset => Chset cset
     | Power(t,i) => replicate (t2r t) i
-    | Range(t,SOME i,SOME j) => ranged (t2r t) i j
-    | Range(t,NONE,SOME j) => ranged (t2r t) 0 j
+    | Range(t,SOME i,SOME j) => ranged_alt (t2r t) i j
+    | Range(t,NONE,SOME j) => ranged_alt (t2r t) 0 j
     | Range(t,SOME i,NONE) =>
       let val r = t2r t
       in Cat(replicate r i, Star r)

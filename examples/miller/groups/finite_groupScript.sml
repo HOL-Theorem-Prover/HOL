@@ -513,7 +513,8 @@ Proof
    >> Know `0 < m * n` >- R_TAC []
    >> S_TAC
    >> Induct_on `a` >- R_TAC []
-   >> Suff `(if divides (m * n) (SUC a) then 0 else SUC (a MOD (m * n))) MOD n = SUC a MOD n`
+   >> Suff `(if divides (m * n) (SUC a) then 0 else SUC (a MOD (m * n))) MOD n =
+            SUC a MOD n`
    >- R_TAC [SUC_MOD]
    >> REVERSE (Cases_on `divides (m * n) (SUC a)`)
    >- R_TAC [MOD_SUC_MOD]
