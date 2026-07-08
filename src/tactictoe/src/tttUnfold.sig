@@ -45,7 +45,8 @@ sig
 
   type manifest_entry =
     { thy : string, data_sha256 : string, src_sha256 : string,
-      anc_version : int, recorded_at : int, failed : bool }
+      anc_version : int, recorded_at : int, failed : bool,
+      format_hash : string, global_hash : string, hol_hash : string }
 
   type record_worker_param =
     { force : bool, max_lock_age_seconds : int,

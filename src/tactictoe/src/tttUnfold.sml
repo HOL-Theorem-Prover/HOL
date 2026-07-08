@@ -1054,6 +1054,8 @@ fun output_header oc cthy =
   (* search *)
   reflect_time oc "tttSetup.ttt_search_time" ttt_search_time;
   reflect_time oc "tttSetup.ttt_tactic_time" ttt_tactic_time;
+  osn oc ("val _ = mlTacticData.ttt_tacdata_file_override := SOME " ^
+          mlquote (mlTacticData.current_tacdata_file cthy));
   (* hook *)
   osn oc ("val _ = tttRecord.start_record_thy " ^ mlquote cthy)
   )
@@ -1263,7 +1265,8 @@ datatype reason =
 
 type manifest_entry =
   { thy : string, data_sha256 : string, src_sha256 : string,
-    anc_version : int, recorded_at : int, failed : bool }
+    anc_version : int, recorded_at : int, failed : bool,
+    format_hash : string, global_hash : string, hol_hash : string }
 
 type record_worker_param =
   { force : bool, max_lock_age_seconds : int,
@@ -1329,7 +1332,7 @@ and manifest_file () = ttt_tacdata_dir_of () ^ "/MANIFEST"
 
 and locks_dir () = ttt_tacdata_dir_of () ^ "/.locks"
 
-and tacdata_file thy = ttt_tacdata_dir_of () ^ "/" ^ thy
+and tacdata_file thy = mlTacticData.current_tacdata_file thy
 
 and safe_sha256_file file = if exists_file file then sha256_file file else ""
 
@@ -1390,7 +1393,23 @@ and parse_manifest_line line (m : manifest) =
             val entry = {thy = thy, data_sha256 = data, src_sha256 = src,
                          anc_version = int_of_string anc,
                          recorded_at = recorded_at,
-                         failed = data = "failed" orelse recorded_at < 0}
+                         failed = data = "failed" orelse recorded_at < 0,
+                         format_hash = #format_hash m,
+                         global_hash = #global_hash m,
+                         hol_hash = #hol_hash m}
+          in
+            {format_version = #format_version m, format_hash = #format_hash m,
+             global_hash = #global_hash m, hol_hash = #hol_hash m,
+             entries = entry :: #entries m}
+          end
+      | ["thy",thy,data,src,anc,t,fmt,glob,hol] =>
+          let
+            val recorded_at = int_of_string t
+            val entry = {thy = thy, data_sha256 = data, src_sha256 = src,
+                         anc_version = int_of_string anc,
+                         recorded_at = recorded_at,
+                         failed = data = "failed" orelse recorded_at < 0,
+                         format_hash = fmt, global_hash = glob, hol_hash = hol}
           in
             {format_version = #format_version m, format_hash = #format_hash m,
              global_hash = #global_hash m, hol_hash = #hol_hash m,
@@ -1418,7 +1437,11 @@ and read_manifest () =
   case read_manifest_full () of NONE => NONE | SOME m => SOME (#entries m)
 
 and entry_compare (e1 : manifest_entry, e2 : manifest_entry) =
-  String.compare (#thy e1, #thy e2)
+  list_compare String.compare
+    ([#thy e1, #src_sha256 e1, its (#anc_version e1), #format_hash e1,
+      #global_hash e1, #hol_hash e1],
+     [#thy e2, #src_sha256 e2, its (#anc_version e2), #format_hash e2,
+      #global_hash e2, #hol_hash e2])
 
 and manifest_lines (prov : provenance) entries =
   let
@@ -1426,10 +1449,11 @@ and manifest_lines (prov : provenance) entries =
     fun line (e : manifest_entry) =
       String.concatWith " "
         ["thy", #thy e, #data_sha256 e, #src_sha256 e,
-         its (#anc_version e), its (#recorded_at e)]
+         its (#anc_version e), its (#recorded_at e),
+         #format_hash e, #global_hash e, #hol_hash e]
   in
     ["# TacticToe tactic-data manifest. DO NOT EDIT by hand; managed by",
-     "# ttt_record. Format version: 2.",
+     "# ttt_record. Format version: 3.",
      "format " ^ its manifest_format_version ^ " " ^ #format_hash prov,
      "global " ^ #global_hash prov,
      "hol " ^ #hol_hash prov] @ map line entries'
@@ -1442,8 +1466,16 @@ and write_manifest_full prov entries =
 and find_entry thy entries =
   List.find (fn (e : manifest_entry) => #thy e = thy) entries
 
+and same_entry_identity (e1 : manifest_entry) (e2 : manifest_entry) =
+  #thy e1 = #thy e2 andalso
+  #src_sha256 e1 = #src_sha256 e2 andalso
+  #anc_version e1 = #anc_version e2 andalso
+  #format_hash e1 = #format_hash e2 andalso
+  #global_hash e1 = #global_hash e2 andalso
+  #hol_hash e1 = #hol_hash e2
+
 and update_entry entry entries =
-  entry :: filter (fn (e : manifest_entry) => #thy e <> #thy entry) entries
+  entry :: filter (fn e => not (same_entry_identity e entry)) entries
 
 and current_pid () =
   let
@@ -1526,7 +1558,7 @@ and update_manifest_entry max_lock_age prov entry =
     let
       val entries = case read_manifest_full () of
           NONE => []
-        | SOME m => if manifest_current prov m then #entries m else []
+        | SOME m => #entries m
     in
       write_manifest_full prov (update_entry entry entries)
     end)
@@ -1537,6 +1569,17 @@ and source_hash thy = safe_sha256_file (find_script thy)
 
 and assoc_opt key l =
   case List.find (fn (a,_) => a = key) l of NONE => NONE | SOME (_,b) => SOME b
+
+and entry_matches prov src_hash thy (e : manifest_entry) =
+  #thy e = thy andalso
+  #src_sha256 e = src_hash andalso
+  #anc_version e = length (ttt_ancestry thy) andalso
+  #format_hash e = #format_hash prov andalso
+  #global_hash e = #global_hash prov andalso
+  #hol_hash e = #hol_hash prov
+
+and find_current_entry prov src_hash thy entries =
+  List.find (entry_matches prov src_hash thy) entries
 
 and theories_of_scope scope =
   let
@@ -1565,12 +1608,12 @@ and stale_reason force (prov : provenance) manOpt src_hashes stale thy =
   case manOpt of
     NONE => SOME TierC_global
   | SOME (m : manifest) =>
-    if #format_version m <> manifest_format_version orelse
-       #format_hash m <> #format_hash prov
+    if #format_version m <> manifest_format_version
     then SOME TierC_format
-    else if #global_hash m <> #global_hash prov then SOME TierC_global
-    else if #hol_hash m <> #hol_hash prov then SOME TierC_holstate
-    else case find_entry thy (#entries m) of
+    else case assoc_opt thy src_hashes of
+      NONE => SOME Missing_manifest_line
+    | SOME src_hash =>
+    case find_current_entry prov src_hash thy (#entries m) of
       NONE => SOME Missing_manifest_line
     | SOME (e : manifest_entry) =>
       let
@@ -1580,7 +1623,10 @@ and stale_reason force (prov : provenance) manOpt src_hashes stale thy =
         val src_ok = assoc_opt thy src_hashes = SOME (#src_sha256 e)
         val ancestors = ttt_ancestry thy
         fun ancestor_src_changed dep =
-          case find_entry dep (#entries m) of
+          case assoc_opt dep src_hashes of
+            NONE => true
+          | SOME dep_src =>
+          case find_current_entry prov dep_src dep (#entries m) of
             NONE => true
           | SOME (de : manifest_entry) =>
               assoc_opt dep src_hashes <> SOME (#src_sha256 de)
@@ -1621,14 +1667,17 @@ and ttt_record_plan scope =
      out_of_scope_ancestors = #out_of_scope_ancestors p}
   end
 
-and manifest_success_entry thy data_hash src_hash =
+and manifest_success_entry (prov : provenance) thy data_hash src_hash =
   {thy = thy, data_sha256 = data_hash, src_sha256 = src_hash,
    anc_version = length (ttt_ancestry thy), recorded_at = now_unix (),
-   failed = false}
+   failed = false, format_hash = #format_hash prov, global_hash = #global_hash prov,
+   hol_hash = #hol_hash prov}
 
-and manifest_failed_entry thy src_hash =
+and manifest_failed_entry (prov : provenance) thy src_hash =
   {thy = thy, data_sha256 = "failed", src_sha256 = src_hash,
-   anc_version = length (ttt_ancestry thy), recorded_at = ~1, failed = true}
+   anc_version = length (ttt_ancestry thy), recorded_at = ~1, failed = true,
+   format_hash = #format_hash prov, global_hash = #global_hash prov,
+   hol_hash = #hol_hash prov}
 
 and worker_bool_to_string b = if b then "true" else "false"
 
@@ -1723,7 +1772,7 @@ and record_one (cfg : record_config) prov src_hashes recorded_stale thy =
             let
               val data_hash = sha256_file (tacdata_file thy)
               val src_hash = source_hash thy
-              val entry = manifest_success_entry thy data_hash src_hash
+              val entry = manifest_success_entry prov thy data_hash src_hash
             in
               let val msg = "recorded: " ^ thy ^
                     "  data=" ^ data_hash ^ "  src=" ^ src_hash in
@@ -1735,7 +1784,7 @@ and record_one (cfg : record_config) prov src_hashes recorded_stale thy =
            handle e =>
              let
                val src_hash = source_hash thy handle _ => ""
-               val entry = manifest_failed_entry thy src_hash
+               val entry = manifest_failed_entry prov thy src_hash
              in
                let val msg = "failed: " ^ thy ^ "  " ^ exnMessage e in
                  print_endline msg;

@@ -42,7 +42,7 @@ fun ttt_closes msg tm =
 
 val cache_dir = HOLDIR ^ "/src/tactictoe/selftest/.hol/tactictoe-cache"
 val _ = set_tactictoe_cache_dir cache_dir
-val datafile = cache_dir ^ "/ttt_tacdata/ConseqConv"
+fun datafile () = mlTacticData.current_tacdata_file "ConseqConv"
 
 val _ = check "tacticToe public API type-checks"
   (let
@@ -141,10 +141,10 @@ val _ = passok "record ConseqConv tactic data"
 
 val _ = check "ConseqConv tactic data exists"
   (mlTacticData.exists_tacdata_thy "ConseqConv" andalso
-   OS.FileSys.access (datafile, []))
+   OS.FileSys.access (datafile (), []))
 
 val _ = check "ConseqConv tactic data is non-empty"
-  (Position.toInt (OS.FileSys.fileSize datafile) > 0)
+  (Position.toInt (OS.FileSys.fileSize (datafile ())) > 0)
 
 val _ = passok "record dry-run over ConseqConv"
   (fn () => ttt_record_opts

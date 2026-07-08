@@ -27,6 +27,9 @@ sig
   (* tactictoe database *)
   val ttt_tacdata_dir : string
   val ttt_tacdata_dir_of : unit -> string
+  val ttt_tacdata_file_override : string option ref
+  val current_tacdata_file : string -> string
+  val tacdata_file_for_thy : string -> string option
   val exists_tacdata_thy : string -> bool
   val create_tacdata : unit -> tacdata
   val ttt_update_tacdata : ((loc * call) * tacdata) -> tacdata

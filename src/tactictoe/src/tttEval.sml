@@ -307,7 +307,11 @@ val cheat_flag = ref false
 fun prepare_global_data (thy,n) =
   let
     val _ = print_endline ("prepare_data: " ^ thy ^ " " ^ its n)
-    val calls = mlTacticData.import_calls (ttt_tacdata_dir_of () ^ "/" ^ thy)
+    val file = case mlTacticData.tacdata_file_for_thy thy of
+        SOME file => file
+      | NONE => raise ERR "prepare_global_data"
+          ("missing tactic data for " ^ thy)
+    val calls = mlTacticData.import_calls file
     val m = if !cheat_flag then n + 1 else n
     val calls_before = filter (fn ((_,x,_),_) => x < m) calls
   in

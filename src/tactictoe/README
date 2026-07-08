@@ -19,6 +19,12 @@ RECORDING all ancestor theories with manifest-based cache validation:
 The recorder writes ttt_tacdata/MANIFEST under the TacticToe cache root
 ($HOME/.cache/tactictoe by default, or HOL4_TACTICTOE_CACHE) with content
 hashes for each recorded theory, the recorder sources, and hol.state0.
+Tactic-data files are stored under ttt_tacdata/data using an identity key
+derived from the theory name, Script.sml hash, ancestry version, tactic-data
+format hash, global recorder hash, and hol.state0 hash.  Same-name theories
+from different projects therefore do not share data unless this full identity
+matches; old flat ttt_tacdata/<theory> files are not used for current
+manifest-validated loads.
 The cache root can also be changed in ML after loading:
   tttSetup.set_tactictoe_cache_dir "/path/to/tactictoe-cache";
 If TacticToe has already loaded tactic data, also clear the in-memory cache:
