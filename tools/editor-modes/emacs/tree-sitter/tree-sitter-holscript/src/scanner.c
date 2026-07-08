@@ -37,7 +37,7 @@ static bool scan_bol_keyword(TSLexer *lexer, const bool *valid_symbols) {
 
   char buf[32];
   int len = 0;
-  while (len < 30 && is_ident_cont(lexer->lookahead)) {
+  while (len < 30 && !lexer->eof(lexer) && is_ident_cont(lexer->lookahead)) {
     buf[len++] = (char)lexer->lookahead;
     lexer->advance(lexer, false);
   }
