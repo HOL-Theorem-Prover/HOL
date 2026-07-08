@@ -720,6 +720,19 @@ throws TAB to a nonsensical column."
      ((node-is   "\\`in\\'")                        parent-bol 0)
      ((node-is   "\\`end\\'")                       parent-bol 0)
      ((parent-is "\\`let_dec\\'")                   parent-bol 2)
+     ;; Non-first `dec' in a `let_exp' aligns with the first `dec'
+     ;; — so `let val tok1 = …\n    val tok2 = …' puts `val tok2'
+     ;; under `val tok1' (indent 5 relative to `let''s line).
+     ;; When the first `dec' sits on its own line, the two rules
+     ;; agree: `parent-bol 2' below already puts the first `dec'
+     ;; where later `dec's now anchor.
+     ((and (parent-is "\\`let_exp\\'")
+           (node-is "\\`\\(val\\|fun\\|type\\|datatype\\|datarepl\\|abstype\\|exception\\|open\\|local\\|infix\\|infixr\\|nonfix\\)_dec\\'")
+           ,(lambda (node &rest _)
+              (treesit-node-prev-sibling node t)))
+      ,(lambda (_n parent &rest _)
+         (treesit-node-start (treesit-node-child parent 0 t)))
+      0)
      ((parent-is "\\`let_exp\\'")                   parent-bol 2)
      ;; `case'-shape (SML or HOL): a `|' aligns with the `case'
      ;; keyword itself; other children indent +2.
