@@ -304,12 +304,22 @@ For a description of OVERRIDE, START, and END, see `treesit-font-lock-rules'."
       (:match ,(rx-to-string
                 `(seq bos (or ,@holscript-ts-mode--definition-block-keywords) eos))
               @holscript-definition-syntax))
-     ;; Misinterpreted identifiers matching SML reserved words.
-     ;; Suppressed inside ERROR nodes so mid-edit parse recovery
-     ;; (which re-lexes recovered text as identifiers) doesn't
-     ;; splatter warnings across regions far from the actual typo.
+     ;; Misinterpreted identifiers matching SML reserved words or
+     ;; HOL block-delimiter keywords.  Real HOL code doesn't use any
+     ;; of these words as identifiers, so seeing one as a `vid' /
+     ;; `tycon' / etc. means the surrounding parse has swallowed a
+     ;; declaration keyword into an expression (e.g. an `Overload
+     ;; foo =' missing its RHS absorbs the following `Theorem bar =
+     ;; …' declaration).  Suppressed inside ERROR nodes so mid-edit
+     ;; parse recovery — which re-lexes recovered text as
+     ;; identifiers — doesn't splatter warnings across regions far
+     ;; from the actual typo.
      ([(vid) (tycon) (strid) (sigid) (fctid)] @font-lock-warning-face
-      (:match ,(rx-to-string `(seq bos (or ,@holscript-ts-mode--sml-keywords) eos))
+      (:match ,(rx-to-string
+                `(seq bos (or ,@holscript-ts-mode--sml-keywords
+                              ,@holscript-ts-mode--theorem-block-keywords
+                              ,@holscript-ts-mode--definition-block-keywords)
+                      eos))
               @font-lock-warning-face)
       (:pred holscript-ts-mode--not-in-error-p
              @font-lock-warning-face))
