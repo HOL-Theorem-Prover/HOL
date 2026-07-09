@@ -934,7 +934,11 @@ happens to have been absorbed upstream."
      ((parent-is "\\`hol_fn_spec\\'")             parent 0)
      ((parent-is "\\`hol_inductive_body\\'")      parent 0)
      ((parent-is "\\`hol_binding\\'")             parent 0)
-     ;; Term-quotation wrappers don't dictate indent themselves.
+     ;; Term-quotation wrappers.  A continuation line inside a
+     ;; `‘…’' / `` ``…`` '' quotation aligns with the first
+     ;; content character (right after the opening delimiter), so
+     ;; `‘p ∧\n  q’' puts `q' under `p'.
+     ((parent-is "\\`quoted\\'")                  parent 0)
      ((parent-is "\\`backquote\\'")               no-indent 0)
      ((parent-is "\\`quoted_term\\'")             no-indent 0)
      ;; Inside ERROR regions, leave indent alone so the user can edit
