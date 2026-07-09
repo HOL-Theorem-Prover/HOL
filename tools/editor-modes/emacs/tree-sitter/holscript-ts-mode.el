@@ -291,16 +291,19 @@ For a description of OVERRIDE, START, and END, see `treesit-font-lock-rules'."
      ;; Definition-block delimiters — indianred.
      [,@holscript-ts-mode--definition-block-keywords] @holscript-definition-syntax
      ;; Fallback: when an upstream parse error re-lexes a block
-     ;; keyword as a plain `vid' (mid-edit `>>' or unbalanced `['
-     ;; makes the recovery consume `Theorem' at the start of a
-     ;; later declaration into an ongoing expression), keep it
-     ;; blueviolet / indianred anyway.  Real HOL code doesn't use
-     ;; these words as identifiers.
-     ((vid) @holscript-theorem-syntax
+     ;; keyword as a plain `vid' or a `hol_identifier' (mid-edit `>>'
+     ;; or unbalanced `[' makes the recovery consume `Theorem' at
+     ;; the start of a later declaration into an ongoing
+     ;; expression; a broken `Definition foo: … End' can cascade
+     ;; into an `hol_identifier' for `Theorem'/`Proof'/`QED'/`End'
+     ;; on subsequent lines), keep the block-delimiter colour
+     ;; anyway.  Real HOL code doesn't use these words as
+     ;; identifiers.
+     ([(vid) (hol_identifier)] @holscript-theorem-syntax
       (:match ,(rx-to-string
                 `(seq bos (or ,@holscript-ts-mode--theorem-block-keywords) eos))
               @holscript-theorem-syntax))
-     ((vid) @holscript-definition-syntax
+     ([(vid) (hol_identifier)] @holscript-definition-syntax
       (:match ,(rx-to-string
                 `(seq bos (or ,@holscript-ts-mode--definition-block-keywords) eos))
               @holscript-definition-syntax))
