@@ -69,6 +69,13 @@ fun find_tttheapname file = find_tttheapname_in_dir (OS.Path.dir file) file
    ------------------------------------------------------------------------- *)
 
 val genscriptdep_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/genscriptdep")
+val script_includes = ref ([] : string list)
+
+fun genscriptdep_env_prefix () =
+  case !script_includes of
+    [] => ""
+  | l => "HOL_GENSCRIPTDEP_INCLUDES=" ^
+         shell_quote (String.concatWith ":" l) ^ " "
 
 fun find_genscriptdep_in_dir dir file =
   let
@@ -76,7 +83,8 @@ fun find_genscriptdep_in_dir dir file =
     val genscriptdep_bin = HOLDIR ^ "/bin/genscriptdep"
     val fileout = !genscriptdep_dir ^ "/genscriptdep_" ^ bare file
     val cmd = String.concatWith " "
-      [shell_quote genscriptdep_bin, shell_quote (script_arg file), ">",
+      [genscriptdep_env_prefix () ^ shell_quote genscriptdep_bin,
+       shell_quote (script_arg file), ">",
        shell_quote fileout]
   in
     cmd_in_dir dir cmd;
@@ -112,6 +120,8 @@ fun exec_scriptb_in_dir b dir script =
   end
 
 fun exec_scriptb b script = exec_scriptb_in_dir b (OS.Path.dir script) script
+
+fun exec_script_in_dir dir script = exec_scriptb_in_dir false dir script
 
 val exec_script = exec_scriptb false
 

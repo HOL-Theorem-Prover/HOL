@@ -16,20 +16,21 @@ val ERR = mk_HOL_ERR "smlTimeout"
    Interrupt a thread and wait for it to terminate to continue.
    ------------------------------------------------------------------------- *)
 
-(* todo: include small waiting time in the loop to reduce busing waiting
-   using condition wait *)
 fun interruptkill worker =
   let
-    val _ = Thread.interrupt worker handle Thread _ => ()
+    val delay = Time.fromReal 0.01
     fun loop n =
       if not (Thread.isActive worker) then () else
         if n > 0
-        then loop (n-1)
-        else (Feedback.HOL_WARNING "smlTimeout" "interruptkill"
-                                   "thread killed";
-              Thread.kill worker)
+        then
+          (Thread.interrupt worker handle Thread _ => ();
+           OS.Process.sleep delay;
+           loop (n-1))
+        else
+          Feedback.HOL_WARNING "smlTimeout" "interruptkill"
+            "thread did not stop after interrupts; abandoning it"
   in
-    loop 100000000
+    loop 20
   end
 
 (* -------------------------------------------------------------------------
@@ -46,7 +47,7 @@ fun capture f x = Res (f x)
 fun release (Res y) = y
   | release (Exn x) = raise x
 
-val attrib_async = [Thread.InterruptState Thread.InterruptAsynchOnce,
+val attrib_async = [Thread.InterruptState Thread.InterruptAsynch,
   Thread.EnableBroadcastInterrupt true]
 
 val attrib_sync = [Thread.InterruptState Thread.InterruptSynch,
@@ -97,4 +98,3 @@ fun loop () = loop ();
 fun g () = (timeout 0.01 loop ()) handle FunctionTimeout => ();
 val (_,t2) = add_time g ();
 *)
-

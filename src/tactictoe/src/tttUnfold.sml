@@ -824,7 +824,11 @@ fun open_struct_aux stack s'=
       let
         val l0 = String.tokens (fn x => x = #".") s
         val (l1,l2,l3,l4) = view_struct_cached s
-          handle Interrupt => raise Interrupt | _ => ([],[],[],[])
+          handle Interrupt => raise Interrupt
+               | OpenStruct (s,e) =>
+                   raise ERR "open_struct"
+                     ("could not analyse open structure " ^ s ^ ": " ^
+                      General.exnMessage e)
         fun f constr a =
           let fun g l =
             (String.concatWith "." (l @ [a]), constr (s ^ "." ^ a))
@@ -1176,16 +1180,54 @@ fun find_script x =
     dir ^ "/" ^ x ^ "Script.sml"
   end
 
-fun ttt_rewrite_thy thy =
-  if mem thy ["bool","min"] then () else
+fun full_path dir = OS.FileSys.fullPath dir handle _ => dir
+
+fun with_saved_ref r v f =
+  let val old = !r in
+    r := v;
+    (let val x = f () in r := old; x end
+     handle e => (r := old; raise e))
+  end
+
+fun record_context_includes scriptorg =
+  let
+    val scriptdir = OS.Path.dir scriptorg
+    val loaded_dirs = map (full_path o snd) (Binarymap.listItems (fileDirMap()))
+    val loadpath_dirs = map full_path (!loadPath)
+  in
+    mk_sameorder_set String.compare
+      (full_path scriptdir :: loaded_dirs @ loadpath_dirs)
+  end
+
+type record_context =
+  {scriptorg : string, dirorg : string, includes : string list}
+
+fun mk_record_context thy =
   let
     val scriptorg = find_script thy
     val dirorg = OS.Path.dir scriptorg
+  in
+    {scriptorg = scriptorg, dirorg = dirorg,
+     includes = record_context_includes scriptorg}
+  end
+
+fun ttt_rewrite_thy_in_context thy
+    ({scriptorg,dirorg,includes} : record_context) =
+  let
     val _ = print_endline ("ttt_rewrite_thy: " ^ thy ^ "\n  " ^ scriptorg)
-    val (_,t) = add_time (rewrite_script thy) scriptorg
+    fun rewrite_with_context script =
+      with_saved_ref smlOpen.openscript_run_dir (SOME dirorg)
+        (fn () =>
+           with_saved_ref smlOpen.openscript_includes includes
+             (fn () => rewrite_script thy script))
+    val (_,t) = add_time rewrite_with_context scriptorg
   in
     print_endline ("ttt_rewrite_thy time: " ^ rts_round 4 t)
   end
+
+fun ttt_rewrite_thy thy =
+  if mem thy ["bool","min"] then () else
+    ttt_rewrite_thy_in_context thy (mk_record_context thy)
 
 (* -------------------------------------------------------------------------
    Recording (includes rewriting)
@@ -1197,11 +1239,11 @@ fun ttt_ancestry thy =
 fun record_thy_raw thy = with_tactictoe_cache (fn () =>
   if mem thy ["min","bool"] then () else
   let
-    val _ = ttt_rewrite_thy thy
-    val scriptorg = find_script thy
+    val context as {scriptorg,dirorg,...} = mk_record_context thy
+    val _ = ttt_rewrite_thy_in_context thy context
     val _ = print_endline ("ttt_record_thy: " ^ thy ^ "\n  " ^ scriptorg)
     val (_,t) = add_time
-      (smlExecScripts.exec_tttrecord_in_dir (OS.Path.dir scriptorg))
+      (smlExecScripts.exec_tttrecord_in_dir dirorg)
       (tttsml_of scriptorg)
   in
     print_endline ("ttt_record_thy time: " ^ rts_round 4 t);

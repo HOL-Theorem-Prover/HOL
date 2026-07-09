@@ -15,7 +15,14 @@ fun warn s = (TextIO.output(TextIO.stdErr, s ^ "\n");
 fun die s = (warn s; OS.Process.exit OS.Process.failure)
 
 fun get_includes () =
-  if FileSys.access ("Holmakefile", [FileSys.A_READ]) then
+  let
+    fun env_includes () =
+      case OS.Process.getEnv "HOL_GENSCRIPTDEP_INCLUDES" of
+        NONE => []
+      | SOME s => String.tokens (fn c => c = #":") s
+  in
+  env_includes () @
+  (if FileSys.access ("Holmakefile", [FileSys.A_READ]) then
     let
       open Holmake_types
       val (env, _, _, _) = ReadHMF.read "Holmakefile" (base_environment())
@@ -25,7 +32,8 @@ fun get_includes () =
     end
     handle e => (warn "[bogus Holmakefile in current directory - ignoring it]";
                  [])
-  else []
+  else [])
+  end
 
 fun usage_str nm =
   "Usage:\n  " ^ nm ^ " [-h|-?|filename]\n"

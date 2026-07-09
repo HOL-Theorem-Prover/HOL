@@ -14,6 +14,10 @@ open HolKernel boolLib aiLib smlExecScripts
 val ERR = mk_HOL_ERR "smlOpen"
 val open_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/open")
 val openscript_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/openscript")
+val openscript_run_dir = ref (NONE : string option)
+val openscript_includes = ref ([] : string list)
+
+exception OpenStruct of string * exn
 
 (* -------------------------------------------------------------------------
    Generate SML code for exporting values of a structure
@@ -75,14 +79,27 @@ fun export_struct_code s =
    Run previous code
    ------------------------------------------------------------------------- *)
 
-fun export_struct s =
+fun with_saved_ref r v f =
+  let val old = !r in
+    r := v;
+    (let val x = f () in r := old; x end
+     handle e => (r := old; raise e))
+  end
+
+fun export_struct_in_context {dir,includes} s =
   let
     val _ = mkDir_err (!openscript_dir)
     val script = !openscript_dir ^ "/" ^ s ^ "__open__sml.sml"
   in
     writel script (export_struct_code s);
-    exec_script script
+    with_saved_ref smlExecScripts.script_includes includes
+      (fn () => exec_script_in_dir dir script)
   end
+
+fun export_struct s =
+  export_struct_in_context
+    {dir = getOpt (!openscript_run_dir,!openscript_dir),
+     includes = !openscript_includes} s
 
 fun import_struct s =
   let val dir = !open_dir ^ "/" ^ s in
@@ -90,7 +107,16 @@ fun import_struct s =
      readl (dir ^ "/exceptions"), readl (dir ^ "/structures"))
   end
 
-fun view_struct s = (export_struct s; import_struct s)
+fun view_struct_in_context context s =
+  (export_struct_in_context context s; import_struct s)
+  handle Interrupt => raise Interrupt | e => raise OpenStruct (s,e)
+
+fun view_struct s =
+  (export_struct s; import_struct s)
+  handle Interrupt => raise Interrupt | e => raise OpenStruct (s,e)
+
+fun view_struct_cached_in_context context s =
+  import_struct s handle Io _ => view_struct_in_context context s
 
 fun view_struct_cached s = import_struct s handle Io _ => view_struct s
 
