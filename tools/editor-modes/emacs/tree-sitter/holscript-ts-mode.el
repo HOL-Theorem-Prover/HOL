@@ -978,6 +978,9 @@ happens to have been absorbed upstream."
       "if_exp"
       "app_exp"
       "vid_exp"
+      "infix_exp"
+      "backquote"
+      "quoted_term"
       "valbind"
       "fmrule"
       "tactic"
@@ -1099,6 +1102,16 @@ the boundary of a nested chain treat the whole chain as one unit."
                     (treesit-node-parent up))))))
     result))
 
+(defun holscript-ts-mode--inside-opaque-quoted-p (pos)
+  "Non-nil if POS is strictly inside a `quoted' or `hol_quote_block'
+opaque region — i.e. the tree-sitter parse doesn't cover the interior
+structure.  Standard syntax-based sexp motion is more useful there."
+  (let ((n (treesit-node-at pos)))
+    (and n
+         (member (treesit-node-type n) '("quoted" "hol_quote_block"))
+         (< (treesit-node-start n) pos)
+         (< pos (treesit-node-end n)))))
+
 (defun holscript-ts-mode--forward-sexp (&optional arg)
   "Move point ARG sexps forward, or backward if ARG is negative.
 Bound to `forward-sexp-function' so `C-M-f' / `C-M-b' step over
@@ -1107,6 +1120,13 @@ with the enclosing sexp's bounds so `up-list' (`C-M-u') has a
 sensible target.  Only uses primitives available in Emacs 29."
   (interactive "^p")
   (setq arg (or arg 1))
+  ;; When strictly inside an opaque HOL quotation (`quoted' /
+  ;; `hol_quote_block' — tree-sitter treats their interior as a
+  ;; single lexical blob), fall back to syntax-based sexp motion so
+  ;; brackets and words inside the quotation still step properly.
+  (if (holscript-ts-mode--inside-opaque-quoted-p (point))
+      (let ((forward-sexp-function nil))
+        (forward-sexp arg))
   (let ((sign (if (< arg 0) -1 1)))
     (dotimes (_ (abs arg))
       (let* ((pos (point))
@@ -1180,7 +1200,7 @@ sensible target.  Only uses primitives available in Emacs 29."
                             (if outer (treesit-node-end outer) pos))))
           (goto-char (if (> sign 0)
                          (treesit-node-end target)
-                       (treesit-node-start target))))))))
+                       (treesit-node-start target)))))))))
 
 (defvar holscript-ts-mode-map
   (let ((map (make-sparse-keymap)))
