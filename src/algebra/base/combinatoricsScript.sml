@@ -2534,124 +2534,6 @@ Proof
   simp[SUM_GENLIST, SUM_IMAGE_count, listRangeINC_to_LHI]
 QED
 
-(* ------------------------------------------------------------------------- *)
-(* MAP of function with 3 list arguments                                     *)
-(* ------------------------------------------------------------------------- *)
-
-(* Define MAP3 similar to MAP2 in listTheory. *)
-Definition MAP3_DEF[simp]:
-  (MAP3 f (h1::t1) (h2::t2) (h3::t3) = f h1 h2 h3::MAP3 f t1 t2 t3) /\
-  (MAP3 f x y z = [])
-End
-Theorem MAP3:
-  (!f. MAP3 f [] [] [] = []) /\
-  (!f h1 t1 h2 t2 h3 t3. MAP3 f (h1::t1) (h2::t2) (h3::t3) = f h1 h2 h3::MAP3 f t1 t2 t3)
-Proof
-  METIS_TAC[MAP3_DEF]
-QED
-
-(*
-LENGTH_MAP   |- !l f. LENGTH (MAP f l) = LENGTH l
-LENGTH_MAP2  |- !xs ys. LENGTH (MAP2 f xs ys) = MIN (LENGTH xs) (LENGTH ys)
-*)
-
-(* Theorem: LENGTH (MAP3 f lx ly lz) = MIN (MIN (LENGTH lx) (LENGTH ly)) (LENGTH lz) *)
-(* Proof:
-   By induction on lx.
-   Base: !ly lz f. LENGTH (MAP3 f [] ly lz) = MIN (MIN (LENGTH []) (LENGTH ly)) (LENGTH lz)
-      LHS = LENGTH [] = 0                         by MAP3, LENGTH
-      RHS = MIN (MIN 0 (LENGTH ly)) (LENGTH lz)   by LENGTH
-          = MIN 0 (LENGTH lz) = 0 = LHS           by MIN_DEF
-   Step: !ly lz f. LENGTH (MAP3 f lx ly lz) = MIN (MIN (LENGTH lx) (LENGTH ly)) (LENGTH lz) ==>
-         !h ly lz f. LENGTH (MAP3 f (h::lx) ly lz) = MIN (MIN (LENGTH (h::lx)) (LENGTH ly)) (LENGTH lz)
-      If ly = [],
-         LHS = LENGTH (MAP3 f (h::lx) [] lz) = 0  by MAP3, LENGTH
-         RHS = MIN (MIN (LENGTH (h::lx)) (LENGTH [])) (LENGTH lz)
-             = MIN 0 (LENGTH lz) = 0 = LHS        by MIN_DEF
-      Otherwise, ly = h'::t.
-      If lz = [],
-         LHS = LENGTH (MAP3 f (h::lx) (h'::t) []) = 0  by MAP3, LENGTH
-         RHS = MIN (MIN (LENGTH (h::lx)) (LENGTH (h'::t))) (LENGTH [])
-             = 0 = LHS                                 by MIN_DEF
-      Otherwise, lz = h''::t'.
-         LHS = LENGTH (MAP3 f (h::lx) (h'::t) (h''::t'))
-             = LENGTH (f h' h''::MAP3 lx t t'')        by MAP3
-             = SUC (LENGTH MAP3 lx t t'')              by LENGTH
-             = SUC (MIN (MIN (LENGTH lx) (LENGTH t)) (LENGTH t''))   by induction hypothesis
-         RHS = MIN (MIN (LENGTH (h::lx)) (LENGTH (h'::t))) (LENGTH (h''::t'))
-             = MIN (MIN (SUC (LENGTH lx)) (SUC (LENGTH t))) (SUC (LENGTH t'))  by LENGTH
-             = MIN (SUC (MIN (LENGTH lx) (LENGTH t))) (SUC (LESS_TWICE t'))    by MIN_DEF
-             = SUC (MIN (MIN (LENGTH lx) (LENGTH t)) (LENGTH t'')) = LHS       by MIN_DEF
-*)
-Theorem LENGTH_MAP3:
-    !lx ly lz f. LENGTH (MAP3 f lx ly lz) = MIN (MIN (LENGTH lx) (LENGTH ly)) (LENGTH lz)
-Proof
-  Induct_on `lx` >-
-  rw[] >>
-  rpt strip_tac >>
-  Cases_on `ly` >-
-  rw[] >>
-  Cases_on `lz` >-
-  rw[] >>
-  rw[MIN_DEF]
-QED
-
-(*
-EL_MAP   |- !n l. n < LENGTH l ==> !f. EL n (MAP f l) = f (EL n l)
-EL_MAP2  |- !ts tt n. n < MIN (LENGTH ts) (LENGTH tt) ==> (EL n (MAP2 f ts tt) = f (EL n ts) (EL n tt))
-*)
-
-(* Theorem: n < MIN (MIN (LENGTH lx) (LENGTH ly)) (LENGTH lz) ==>
-           !f. EL n (MAP3 f lx ly lz) = f (EL n lx) (EL n ly) (EL n lz) *)
-(* Proof:
-   By induction on n.
-   Base: !lx ly lz. 0 < MIN (MIN (LENGTH lx) (LENGTH ly)) (LENGTH lz) ==>
-         !f. EL 0 (MAP3 f lx ly lz) = f (EL 0 lx) (EL 0 ly) (EL 0 lz)
-      Note ?x tx. lx = x::tx             by LENGTH_EQ_0, list_CASES
-       and ?y ty. ly = y::ty             by LENGTH_EQ_0, list_CASES
-       and ?z tz. lz = z::tz             by LENGTH_EQ_0, list_CASES
-          EL 0 (MAP3 f lx ly lz)
-        = EL 0 (MAP3 f (x::lx) (y::ty) (z::tz))
-        = EL 0 (f x y z::MAP3 f tx ty tz)    by MAP3
-        = f x y z                            by EL
-        = f (EL 0 lx) (EL 0 ly) (EL 0 lz)    by EL
-   Step: !lx ly lz. n < MIN (MIN (LENGTH lx) (LENGTH ly)) (LENGTH lz) ==>
-             !f. EL n (MAP3 f lx ly lz) = f (EL n lx) (EL n ly) (EL n lz) ==>
-         !lx ly lz. SUC n < MIN (MIN (LENGTH lx) (LENGTH ly)) (LENGTH lz) ==>
-             !f. EL (SUC n) (MAP3 f lx ly lz) = f (EL (SUC n) lx) (EL (SUC n) ly) (EL (SUC n) lz)
-      Note ?x tx. lx = x::tx             by LENGTH_EQ_0, list_CASES
-       and ?y ty. ly = y::ty             by LENGTH_EQ_0, list_CASES
-       and ?z tz. lz = z::tz             by LENGTH_EQ_0, list_CASES
-      Also n < LENGTH tx /\ n < LENGTH ty /\ n < LENGTH tz    by LENGTH
-      Thus n < MIN (MIN (LENGTH tx) (LENGTH ty)) (LENGTH tz)  by MIN_DEF
-          EL (SUC n) (MAP3 f lx ly lz)
-        = EL (SUC n) (MAP3 f (x::lx) (y::ty) (z::tz))
-        = EL (SUC n) (f x y z::MAP3 f tx ty tz)    by MAP3
-        = EL n (MAP3 f tx ty tz)                   by EL
-        = f (EL n tx) (EL n ty) (EL n tz)          by induction hypothesis
-        = f (EL (SUC n) lx) (EL (SUC n) ly) (EL (SUC n) lz)
-                                                   by EL
-*)
-Theorem EL_MAP3:
-    !lx ly lz n. n < MIN (MIN (LENGTH lx) (LENGTH ly)) (LENGTH lz) ==>
-   !f. EL n (MAP3 f lx ly lz) = f (EL n lx) (EL n ly) (EL n lz)
-Proof
-  Induct_on `n` >| [
-    rw[] >>
-    `?x tx. lx = x::tx` by metis_tac[LENGTH_EQ_0, list_CASES, NOT_ZERO_LT_ZERO] >>
-    `?y ty. ly = y::ty` by metis_tac[LENGTH_EQ_0, list_CASES, NOT_ZERO_LT_ZERO] >>
-    `?z tz. lz = z::tz` by metis_tac[LENGTH_EQ_0, list_CASES, NOT_ZERO_LT_ZERO] >>
-    rw[],
-    rw[] >>
-    `!a. SUC n < a ==> a <> 0` by decide_tac >>
-    `?x tx. lx = x::tx` by metis_tac[LENGTH_EQ_0, list_CASES] >>
-    `?y ty. ly = y::ty` by metis_tac[LENGTH_EQ_0, list_CASES] >>
-    `?z tz. lz = z::tz` by metis_tac[LENGTH_EQ_0, list_CASES] >>
-    `n < LENGTH tx /\ n < LENGTH ty /\ n < LENGTH tz` by fs[] >>
-    rw[]
-  ]
-QED
-
 (*
 MEM_MAP  |- !l f x. MEM x (MAP f l) <=> ?y. x = f y /\ MEM y l
 *)
@@ -2815,51 +2697,15 @@ Proof
   rw[ADD1, MIN_DEF]
 QED
 
-(* Theorem: SUM (MAP3 (\x y z. c) lx ly lz) = c * LENGTH (MAP3 (\x y z. c) lx ly lz) *)
-(* Proof:
-   By induction on lx.
-   Base: !ly lz c. SUM (MAP3 (\x y z. c) [] ly lz) = c * LENGTH (MAP3 (\x y z. c) [] ly lz)
-      LHS = SUM (MAP3 (\x y z. c) [] ly lz)
-          = SUM [] = 0             by MAP3_DEF, SUM
-      RHS = c * LENGTH (MAP3 (\x y z. c) [] ly lz)
-          = c * 0 = 0 = LHS        by MAP3_DEF, LENGTH
-   Step: !ly lz c. SUM (MAP3 (\x y z. c) lx ly lz) = c * LENGTH (MAP3 (\x y z. c) lx ly lz) ==>
-         !h ly lz c. SUM (MAP3 (\x y z. c) (h::lx) ly lz) = c * LENGTH (MAP3 (\x y z. c) (h::lx) ly lz)
-      If ly = [],
-         to show: SUM (MAP3 (\x y z. c) (h::lx) [] lz) = c * LENGTH (MAP3 (\x y z. c) (h::lx) [] lz)
-         LHS = SUM (MAP3 (\x y z. c) (h::lx) [] lz)
-             = SUM [] = 0          by MAP3_DEF, SUM
-         RHS = c * LENGTH (MAP3 (\x y z. c) (h::lx) [] lz)
-             = c * 0 = 0 = LHS     by MAP3_DEF, LENGTH
-      Otherwise, ly = h'::t,
-        to show: SUM (MAP3 (\x y z. c) (h::lx) (h'::t) lz) = c * LENGTH (MAP3 (\x y z. c) (h::lx) (h'::t) lz)
-        If lz = [],
-           to show: SUM (MAP3 (\x y z. c) (h::lx) (h'::t) []) = c * LENGTH (MAP3 (\x y z. c) (h::lx) (h'::t) [])
-           LHS = SUM (MAP3 (\x y z. c) (h::lx) (h'::t) [])
-               = SUM [] = 0                  by MAP3_DEF, SUM
-           RHS = c * LENGTH (MAP3 (\x y z. c) (h::lx) (h'::t) [])
-               = c * 0 = 0                   by MAP3_DEF, LENGTH
-        Otherwise, lz = h''::t',
-           to show: SUM (MAP3 (\x y z. c) (h::lx) (h'::t) (h''::t')) = c * LENGTH (MAP3 (\x y z. c) (h::lx) (h'::t) (h''::t'))
-              SUM (MAP3 (\x y z. c) (h::lx) (h'::t) (h''::t'))
-            = SUM (c :: MAP3 (\x y z. c) lx t t')                      by MAP3_DEF
-            = c + SUM (MAP3 (\x y z. c) lx t t')                       by SUM
-            = c + c * LENGTH (MAP3 (\x y z. c) lx t t')                by induction hypothesis
-            = c * (1 + LENGTH (MAP3 (\x y z. c) lx t t')               by RIGHT_ADD_DISTRIB
-            = c * (SUC (LENGTH (MAP3 (\x y z. c) lx t t'))             by ADD1
-            = c * LENGTH (MAP3 (\x y z. c) (h::lx) (h'::t) (h''::t'))  by LENGTH
-*)
 Theorem SUM_MAP3_K:
-    !lx ly lz c. SUM (MAP3 (\x y z. c) lx ly lz) = c * LENGTH (MAP3 (\x y z. c) lx ly lz)
+  !lx ly lz c.
+    SUM (MAP3 (\x y z. c) lx ly lz) = c * LENGTH (MAP3 (\x y z. c) lx ly lz)
 Proof
-  Induct >-
-  rw[] >>
+  Induct >- rw[] >>
   rpt strip_tac >>
-  Cases_on `ly` >-
-  rw[] >>
-  Cases_on `lz` >-
-  rw[] >>
-  rw[ADD1]
+  Cases_on `ly` >- rw[] >>
+  Cases_on `lz` >- rw[] >>
+  simp[] >> rw[MIN_DEF, ADD1]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -2887,13 +2733,15 @@ QED
 Theorem SUM_UPPER:
     !ls. SUM ls <= (MAX_LIST ls) * LENGTH ls
 Proof
-  Induct_on `ls` >-
-  rw[] >>
+  Induct_on `ls` >- rw[] >>
   strip_tac >>
   `SUM (h::ls) <= h + MAX_LIST ls * LENGTH ls` by rw[] >>
-  `h + MAX_LIST ls * LENGTH ls <= MAX_LIST (h::ls) + MAX_LIST ls * LENGTH ls` by rw[] >>
-  `MAX_LIST (h::ls) + MAX_LIST ls * LENGTH ls <= MAX_LIST (h::ls) + MAX_LIST (h::ls) * LENGTH ls` by rw[] >>
-  `MAX_LIST (h::ls) + MAX_LIST (h::ls) * LENGTH ls = MAX_LIST (h::ls) * (1 + LENGTH ls)` by rw[] >>
+  `h + MAX_LIST ls * LENGTH ls <= MAX_LIST (h::ls) + MAX_LIST ls * LENGTH ls`
+    by rw[] >>
+  `MAX_LIST (h::ls) + MAX_LIST ls * LENGTH ls ≤
+   MAX_LIST (h::ls) + MAX_LIST (h::ls) * LENGTH ls` by rw[] >>
+  `MAX_LIST (h::ls) + MAX_LIST (h::ls) * LENGTH ls =
+   MAX_LIST (h::ls) * (1 + LENGTH ls)` by rw[] >>
   `_ = MAX_LIST (h::ls) * LENGTH (h::ls)` by rw[] >>
   decide_tac
 QED

@@ -291,16 +291,21 @@ For a description of OVERRIDE, START, and END, see `treesit-font-lock-rules'."
      ;; Definition-block delimiters — indianred.
      [,@holscript-ts-mode--definition-block-keywords] @holscript-definition-syntax
      ;; Fallback: when an upstream parse error re-lexes a block
-     ;; keyword as a plain `vid' (mid-edit `>>' or unbalanced `['
-     ;; makes the recovery consume `Theorem' at the start of a
-     ;; later declaration into an ongoing expression), keep it
-     ;; blueviolet / indianred anyway.  Real HOL code doesn't use
-     ;; these words as identifiers.
-     ((vid) @holscript-theorem-syntax
+     ;; keyword as a plain `vid' or a `hol_identifier' (mid-edit `>>'
+     ;; or unbalanced `[' makes the recovery consume `Theorem' at
+     ;; the start of a later declaration into an ongoing
+     ;; expression; a broken `Definition foo: … End' can cascade
+     ;; into an `hol_identifier' for `Theorem'/`Proof'/`QED'/`End'
+     ;; on subsequent lines), keep the block-delimiter colour
+     ;; anyway.  Real HOL code doesn't use these words as
+     ;; identifiers.
+     ([(vid) (hol_identifier) (hol_tycon) (hol_alphanumeric)]
+      @holscript-theorem-syntax
       (:match ,(rx-to-string
                 `(seq bos (or ,@holscript-ts-mode--theorem-block-keywords) eos))
               @holscript-theorem-syntax))
-     ((vid) @holscript-definition-syntax
+     ([(vid) (hol_identifier) (hol_tycon) (hol_alphanumeric)]
+      @holscript-definition-syntax
       (:match ,(rx-to-string
                 `(seq bos (or ,@holscript-ts-mode--definition-block-keywords) eos))
               @holscript-definition-syntax))
@@ -621,20 +626,30 @@ Used as `treesit-defun-name-function'."
     "Type" "Overload" "Resume" "Finalise")
   "HOL block keywords that always sit in column 0.")
 
+(defvar holscript-ts-mode--block-kw-line-re nil
+  "Cached regex matching a HOL block keyword at the start of a line.")
+
 (defun holscript-ts-mode--line-starts-block-keyword-p (_node _parent bol)
-  "Non-nil when the smallest node at BOL is a HOL block keyword.
-Used by the indent rule that snaps such lines back to column 0.
-Checks the SMALLEST node at BOL rather than the walked-up
-`node' argument, so a mis-indented `Theorem' whose surrounding
-parse is broken (`ERROR' parent) still gets recognised.  Also
-covers `hol_quote_block' (which is a single lexical token whose
-text starts with `Quote')."
+  "Non-nil when the line at BOL begins with a HOL block keyword.
+Checks the smallest node at BOL and falls back to a buffer text
+match, so a `Theorem'/`Definition' recovered as an identifier
+inside an ERROR still gets recognised.  Also covers `hol_quote_block'
+(which is a single lexical token whose text starts with `Quote')."
+  (unless holscript-ts-mode--block-kw-line-re
+    (setq holscript-ts-mode--block-kw-line-re
+          (rx-to-string
+           `(seq (or ,@holscript-ts-mode--block-keywords) symbol-end))))
   (let ((leaf (treesit-node-at bol)))
-    (and leaf
-         (or (member (treesit-node-type leaf)
-                     holscript-ts-mode--block-keywords)
-             (and (equal (treesit-node-type leaf) "hol_quote_block")
-                  (= (treesit-node-start leaf) bol))))))
+    (or (and leaf
+             (or (member (treesit-node-type leaf)
+                         holscript-ts-mode--block-keywords)
+                 (and (equal (treesit-node-type leaf) "hol_quote_block")
+                      (= (treesit-node-start leaf) bol))))
+        (save-excursion
+          (goto-char bol)
+          (skip-chars-forward " \t")
+          (let ((case-fold-search nil))
+            (looking-at-p holscript-ts-mode--block-kw-line-re))))))
 
 (defun holscript-ts-mode--inside-error-p (_node _parent bol)
   "Non-nil when the node at BOL has an `ERROR' ancestor.
@@ -648,6 +663,75 @@ throws TAB to a nonsensical column."
       (setq n (treesit-node-parent n)))
     n))
 
+(defvar holscript-ts-mode--block-opener-re nil
+  "Cached regex matching a column-0 HOL block-opener keyword.")
+
+(defun holscript-ts-mode--last-block-opener-pos (bol)
+  "Position of the last column-0 HOL block-opener keyword strictly
+before BOL, or nil.  A rough backward text scan — doesn't attempt
+to detect closed blocks; the caller relies on this only as a
+fallback when the parse tree is already broken."
+  (unless holscript-ts-mode--block-opener-re
+    (setq holscript-ts-mode--block-opener-re
+          (rx-to-string
+           `(seq line-start
+                 (or ,@holscript-ts-mode--block-keywords)
+                 word-end))))
+  (save-excursion
+    (goto-char bol)
+    (forward-line 0)
+    (let ((case-fold-search nil))
+      (when (re-search-backward holscript-ts-mode--block-opener-re nil t)
+        (point)))))
+
+(defun holscript-ts-mode--matching-if-pos (bol)
+  "Position of the `if' matching an `else' or `then' at BOL, by
+backward text scan.  Each `else' seen going backward increments
+the count of unmatched `else's; each `if' balances one.  Returns
+nil if no matching `if' precedes BOL.  Used as a fallback when
+the parse can't reach a `cond_exp' — e.g. a mid-edit
+`if x then 10' with no `else' yet."
+  (save-excursion
+    (goto-char bol)
+    (skip-chars-forward " \t")
+    (let ((depth 1)
+          (found nil)
+          (case-fold-search nil))
+      (while (and (not found)
+                  (re-search-backward "\\_<\\(if\\|else\\)\\_>" nil t))
+        (cond
+         ((looking-at "if\\_>")
+          (setq depth (1- depth))
+          (when (zerop depth) (setq found (point))))
+         ((looking-at "else\\_>")
+          (setq depth (1+ depth)))))
+      found)))
+
+(defun holscript-ts-mode--line-starts-else-or-then-p (_node _parent bol)
+  "Non-nil if the first non-whitespace text at BOL is `else' / `then'."
+  (save-excursion
+    (goto-char bol)
+    (skip-chars-forward " \t")
+    (let ((case-fold-search nil))
+      (looking-at-p "\\_<\\(else\\|then\\)\\_>"))))
+
+(defun holscript-ts-mode--line-starts-sml-topdec-kw-p (_node _parent bol)
+  "Non-nil if the first non-whitespace text at BOL is an SML
+top-level declaration keyword (`fun', `val', `local', ...).  Used
+to keep such lines at their existing column when the surrounding
+parse is broken — the swallowed decl is a real topdec that just
+happens to have been absorbed upstream."
+  (save-excursion
+    (goto-char bol)
+    (skip-chars-forward " \t")
+    (let ((case-fold-search nil))
+      (looking-at-p (rx-to-string
+                     `(seq (or "fun" "val" "local" "type" "datatype"
+                               "structure" "signature" "functor"
+                               "exception" "open" "abstype" "infix"
+                               "infixr" "nonfix")
+                           symbol-end))))))
+
 (defconst holscript-ts-mode--indent-rules
   `((holscript
      ;; HOL block keywords always go to column 0 of the buffer,
@@ -656,12 +740,32 @@ throws TAB to a nonsensical column."
      ;; walked-up node so `    Theorem foo:' inside an ERROR
      ;; region still snaps to column 0.
      (holscript-ts-mode--line-starts-block-keyword-p column-0 0)
-     ;; Otherwise, inside a parse-recovered region (any `ERROR'
-     ;; ancestor), leave the current indent alone.  A mid-edit
-     ;; `Theorem foo:' without a body can make the recovery
-     ;; re-parse a large chunk of preceding text as a nested
-     ;; `hol_application' chain; the ordinary parent-based rules
-     ;; then anchor TAB to a nonsensical column.
+     ;; A line starting with `else' / `then' aligns with the `if'
+     ;; that would match it — backward text scan counting nested
+     ;; if-then-else pairs.  Fires regardless of parse state, so a
+     ;; broken `if x then 10' with `else' typed on the next line
+     ;; still snaps `else' under `if'.
+     ((and holscript-ts-mode--line-starts-else-or-then-p
+           ,(lambda (_n _p bol)
+              (holscript-ts-mode--matching-if-pos bol)))
+      ,(lambda (_n _p bol) (holscript-ts-mode--matching-if-pos bol))
+      0)
+     ;; Inside a parse-recovered region (any `ERROR' ancestor), use
+     ;; the last column-0 HOL block-opener line as anchor + 2 — a
+     ;; mid-edit `Definition foo:' with an incomplete body still
+     ;; puts continuation text at the natural body-column.  Falls
+     ;; through to the next rule (leave current indent alone) if no
+     ;; block opener precedes this position.  Skipped when the line
+     ;; starts with an SML top-level keyword: such lines are
+     ;; genuine declarations swallowed by an upstream broken block,
+     ;; and forcing them to indent would drift established code.
+     ((and holscript-ts-mode--inside-error-p
+           ,(lambda (n p bol)
+              (not (holscript-ts-mode--line-starts-sml-topdec-kw-p n p bol)))
+           ,(lambda (_n _p bol)
+              (holscript-ts-mode--last-block-opener-pos bol)))
+      ,(lambda (_n _p bol) (holscript-ts-mode--last-block-opener-pos bol))
+      2)
      (holscript-ts-mode--inside-error-p             no-indent 0)
      ;; The body of a HOL block (statement, tactic, definition spec,
      ;; datatype binding) indents 2 from the block's start column.
@@ -832,13 +936,28 @@ throws TAB to a nonsensical column."
      ((parent-is "\\`hol_fn_spec\\'")             parent 0)
      ((parent-is "\\`hol_inductive_body\\'")      parent 0)
      ((parent-is "\\`hol_binding\\'")             parent 0)
-     ;; Term-quotation wrappers don't dictate indent themselves.
+     ;; Term-quotation wrappers.  A continuation line inside a
+     ;; `‘…’' / `` ``…`` '' quotation aligns with the first
+     ;; content character (right after the opening delimiter), so
+     ;; `‘p ∧\n  q’' puts `q' under `p'.
+     ((parent-is "\\`quoted\\'")                  parent 0)
      ((parent-is "\\`backquote\\'")               no-indent 0)
      ((parent-is "\\`quoted_term\\'")             no-indent 0)
      ;; Inside ERROR regions, leave indent alone so the user can edit
      ;; without it jumping under them.
      ((node-is   "\\`ERROR\\'")                   no-indent 0)
      ((parent-is "\\`ERROR\\'")                   no-indent 0)
+     ;; Fallback for a blank line with no leaf node — a
+     ;; continuation inside a top-level declaration whose parse
+     ;; hasn't closed yet.  Use the last column-0 HOL block-opener
+     ;; line as anchor + 2.  Restricted to `node' being nil so a
+     ;; legitimate top-level `fun'/`val'/etc. isn't caught.
+     ((and ,(lambda (node &rest _) (null node))
+           (parent-is "\\`source_file\\'")
+           ,(lambda (_n _p bol)
+              (holscript-ts-mode--last-block-opener-pos bol)))
+      ,(lambda (_n _p bol) (holscript-ts-mode--last-block-opener-pos bol))
+      2)
      ;; Catch-all: leave the current indent unchanged.
      ((lambda (&rest _) t)                        no-indent 0))))
 
@@ -861,6 +980,9 @@ throws TAB to a nonsensical column."
       "if_exp"
       "app_exp"
       "vid_exp"
+      "infix_exp"
+      "backquote"
+      "quoted_term"
       "valbind"
       "fmrule"
       "tactic"
@@ -982,6 +1104,16 @@ the boundary of a nested chain treat the whole chain as one unit."
                     (treesit-node-parent up))))))
     result))
 
+(defun holscript-ts-mode--inside-opaque-quoted-p (pos)
+  "Non-nil if POS is strictly inside a `quoted' or `hol_quote_block'
+opaque region — i.e. the tree-sitter parse doesn't cover the interior
+structure.  Standard syntax-based sexp motion is more useful there."
+  (let ((n (treesit-node-at pos)))
+    (and n
+         (member (treesit-node-type n) '("quoted" "hol_quote_block"))
+         (< (treesit-node-start n) pos)
+         (< pos (treesit-node-end n)))))
+
 (defun holscript-ts-mode--forward-sexp (&optional arg)
   "Move point ARG sexps forward, or backward if ARG is negative.
 Bound to `forward-sexp-function' so `C-M-f' / `C-M-b' step over
@@ -990,6 +1122,13 @@ with the enclosing sexp's bounds so `up-list' (`C-M-u') has a
 sensible target.  Only uses primitives available in Emacs 29."
   (interactive "^p")
   (setq arg (or arg 1))
+  ;; When strictly inside an opaque HOL quotation (`quoted' /
+  ;; `hol_quote_block' — tree-sitter treats their interior as a
+  ;; single lexical blob), fall back to syntax-based sexp motion so
+  ;; brackets and words inside the quotation still step properly.
+  (if (holscript-ts-mode--inside-opaque-quoted-p (point))
+      (let ((forward-sexp-function nil))
+        (forward-sexp arg))
   (let ((sign (if (< arg 0) -1 1)))
     (dotimes (_ (abs arg))
       (let* ((pos (point))
@@ -1063,7 +1202,7 @@ sensible target.  Only uses primitives available in Emacs 29."
                             (if outer (treesit-node-end outer) pos))))
           (goto-char (if (> sign 0)
                          (treesit-node-end target)
-                       (treesit-node-start target))))))))
+                       (treesit-node-start target)))))))))
 
 (defvar holscript-ts-mode-map
   (let ((map (make-sparse-keymap)))

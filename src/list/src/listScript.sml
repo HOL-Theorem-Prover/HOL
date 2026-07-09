@@ -290,6 +290,41 @@ Proof Induct >> Cases_on ‘xs1’ >> fs [MAP2]
 QED
 
 (* ----------------------------------------------------------------------
+    The same thing for 3 arguments, made total for all list lengths
+   ---------------------------------------------------------------------- *)
+
+Definition MAP3_def:
+  MAP3 f (h1::t1) (h2::t2) (h3::t3) = f h1 h2 h3 :: MAP3 f t1 t2 t3 ∧
+  MAP3 f xs ys zs = []
+End
+
+Theorem MAP3_CONS3[simp] = cj 1 MAP3_def
+Theorem MAP3_NIL[simp]:
+  MAP3 f [] ys zs = [] ∧
+  MAP3 f xs [] zs = [] ∧
+  MAP3 f xs ys [] = []
+Proof
+  map_every Cases_on [‘xs’, ‘ys’, ‘zs’] >> simp[MAP3_def]
+QED
+
+Theorem LENGTH_MAP3[simp]:
+  LENGTH (MAP3 f xs ys zs) = MIN (MIN (LENGTH xs) (LENGTH ys)) (LENGTH zs)
+Proof
+  MAP_EVERY Q.ID_SPEC_TAC [‘zs’, ‘ys’, ‘xs’, ‘f’] >>
+  Induction.recInduct MAP3_ind >> simp[] >>
+  rw[arithmeticTheory.MIN_DEF]
+QED
+
+Theorem EL_MAP3:
+  n < MIN (MIN (LENGTH xs) (LENGTH ys)) (LENGTH zs) ⇒
+  EL n (MAP3 f xs ys zs) = f (EL n xs) (EL n ys) (EL n zs)
+Proof
+  MAP_EVERY Q.ID_SPEC_TAC [‘n’, ‘zs’, ‘ys’, ‘xs’, ‘f’] >>
+  Induction.recInduct MAP3_ind >> simp[] >> rpt strip_tac >> Cases_on ‘n’ >>
+  fs[EL]
+QED
+
+(* ----------------------------------------------------------------------
     mapPartial : ('a -> 'b option) -> 'a list -> 'b list
    ---------------------------------------------------------------------- *)
 
