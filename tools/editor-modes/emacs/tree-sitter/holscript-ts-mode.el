@@ -299,11 +299,13 @@ For a description of OVERRIDE, START, and END, see `treesit-font-lock-rules'."
      ;; on subsequent lines), keep the block-delimiter colour
      ;; anyway.  Real HOL code doesn't use these words as
      ;; identifiers.
-     ([(vid) (hol_identifier)] @holscript-theorem-syntax
+     ([(vid) (hol_identifier) (hol_tycon) (hol_alphanumeric)]
+      @holscript-theorem-syntax
       (:match ,(rx-to-string
                 `(seq bos (or ,@holscript-ts-mode--theorem-block-keywords) eos))
               @holscript-theorem-syntax))
-     ([(vid) (hol_identifier)] @holscript-definition-syntax
+     ([(vid) (hol_identifier) (hol_tycon) (hol_alphanumeric)]
+      @holscript-definition-syntax
       (:match ,(rx-to-string
                 `(seq bos (or ,@holscript-ts-mode--definition-block-keywords) eos))
               @holscript-definition-syntax))
