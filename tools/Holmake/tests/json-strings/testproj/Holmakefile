@@ -1,0 +1,5 @@
+CLINE_OPTIONS = --poly_not_hol
+
+faketarget: fakedep
+	command with 	literal tab
+	and a newline to boot
