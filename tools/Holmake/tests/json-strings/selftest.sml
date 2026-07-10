@@ -1,14 +1,21 @@
+open testutils
+
 val _ = OS.FileSys.chDir "testproj"
 
 infix ++
 val op++ = OS.Path.concat
 
-fun die s = (TextIO.output(TextIO.stdErr, "Failure: " ^ s ^ "\n");
-             OS.Process.exit OS.Process.failure)
+val _ = tprint "Generating JSON graph"
+val _ = require (check_result OS.Process.isSuccess) OS.Process.system
+                (Systeml.HOLDIR ++ "bin" ++ "Holmake" ^ " --json > graph.json")
 
-val _ = OS.Process.system(Systeml.HOLDIR ++ "bin" ++ "Holmake" ^ " --json > graph.json")
-
-val jfile = JSONParser.parseFile "graph.json"
-              handle Fail s => die ("JSONParser error: " ^ s)
-
-val _ = OS.Process.exit OS.Process.success
+val _ = tprint "Loading JSON-encoded dep. graph"
+fun checkjson j = let
+  open JSON
+in
+  case j of
+      ARRAY objs => length objs = 3
+    | _ => false
+end
+val _ = require (check_result checkjson)
+                JSONParser.parseFile "graph.json"
