@@ -10,7 +10,6 @@ DIRNAMES = \
   depchain1/dir3 \
   depchain2/dir1 \
   holdep \
-  json-strings \
   longcmdlock \
   nullary_tgt \
   phony_tgt \
@@ -68,6 +67,7 @@ DIRNAMES += cache_reflink \
             ignore_errors/j4 \
             hollogs \
             issue1903 \
+            json-strings \
             local_parallelism_limit \
             gh1979 \
             projfile_module
