@@ -1,0 +1,601 @@
+diff --git a/src/postkernel/prooftrace/PFTEmit.sml b/src/postkernel/prooftrace/PFTEmit.sml
+index a35fb57bd..3a13c0ad4 100644
+--- a/src/postkernel/prooftrace/PFTEmit.sml
++++ b/src/postkernel/prooftrace/PFTEmit.sml
+@@ -117,10 +117,46 @@ val candle_preamble_axiom : (string * string) list = [
+ 
+ fun emit_theory {trace, output, binary, ruleset} = let
+   val thyname = thyname_of_path trace
++  val diag = OS.Process.getEnv "PFTEMIT_DIAG" = SOME "1"
++  val diag_large_export_tm =
++    case OS.Process.getEnv "PFTEMIT_DIAG_LARGE_TM" of
++      SOME s => (case Int.fromString s of SOME n => n | NONE => 50000)
++    | NONE => 50000
++  val diag_large_export_th =
++    case OS.Process.getEnv "PFTEMIT_DIAG_LARGE_TH" of
++      SOME s => (case Int.fromString s of SOME n => n | NONE => 50000)
++    | NONE => 50000
++  fun diag_read_status_field field =
++    if not diag then NONE else
++    let
++      fun scan ins =
++        case TextIO.inputLine ins of
++          NONE => NONE
++        | SOME line =>
++            if String.isPrefix field line then
++              (case String.tokens Char.isSpace line of
++                 _ :: n :: _ => Int.fromString n
++               | _ => NONE)
++            else scan ins
++    in SOME (let val ins = TextIO.openIn "/proc/self/status"
++             in scan ins before TextIO.closeIn ins end)
++       handle _ => NONE
++    end
++  fun diag_mem_string () =
++    case (diag_read_status_field "VmRSS:", diag_read_status_field "VmHWM:") of
++      (SOME (SOME rss), SOME (SOME hwm)) =>
++        " rss_kb=" ^ Int.toString rss ^ " hwm_kb=" ^ Int.toString hwm
++    | (SOME (SOME rss), _) => " rss_kb=" ^ Int.toString rss
++    | _ => ""
++  fun diag_log s =
++    if diag then (print (s ^ diag_mem_string () ^ "\n"); TextIO.flushOut TextIO.stdOut) else ()
++  val () = diag_log ("PFTEmit[" ^ thyname ^ "]: begin trace=" ^ trace)
+   val is_candle = case ruleset of Candle => true | HOL4 => false
+   val tr_name = if is_candle then candle_translate_name else I
+   val fun_tyname = tr_name "min$fun"
+   val (root_ptr, heap) = parse trace
++  val () = diag_log ("PFTEmit[" ^ thyname ^ "]: parsed heap_size=" ^
++                     Int.toString (heapSize heap))
+   val {all_thms, anon_thms, constants, types, ...} = shRoot heap root_ptr
+ 
+   (* --- Walk pass --------------------------------------------------------- *)
+@@ -140,6 +176,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
+        named_thms = all_thms, anon_thms = anon_thms,
+        incr = K (), on_def_thm = K (),
+        on_fv = on_fv}
++  val () = diag_log ("PFTEmit[" ^ thyname ^ "]: walked heap_size=" ^
++                     Int.toString (heapSize heap))
+ 
+   (* --- Free variable analysis for binder naming -------------------------- *)
+ 
+@@ -170,6 +208,15 @@ fun emit_theory {trace, output, binary, ruleset} = let
+     { fvs = Redblackset.union(fvs1, fvs2),
+       open_bvs = Redblackset.union(ob1, ob2) }
+ 
++  val diag_fi_queries = ref 0
++  val diag_fi_misses = ref 0
++  val diag_fi_nonempty_fvs = ref 0
++  val diag_fi_total_fvs = ref 0
++  val diag_fi_max_fvs = ref 0
++  val diag_fi_nonempty_open_bvs = ref 0
++  val diag_fi_total_open_bvs = ref 0
++  val diag_fi_max_open_bvs = ref 0
++
+   (* Memoization table for free_info, keyed by heap term pointer *)
+   val fi_memo : free_info option array = Array.array(heapSize heap, NONE)
+ 
+@@ -193,13 +240,25 @@ fun emit_theory {trace, output, binary, ruleset} = let
+ 
+   (* Compute free variable info for a heap term *)
+   fun free_info_of (tm_ptr: Term.term ptr) : free_info =
+-    if not (isPtr tm_ptr) then empty_fi
+-    else let val k = ptr tm_ptr
+-    in case Array.sub(fi_memo, k) of
+-         SOME fi => fi
+-       | NONE => let val fi = free_info_compute tm_ptr
+-                 in Array.update(fi_memo, k, SOME fi); fi end
+-    end
++    (if diag then diag_fi_queries := !diag_fi_queries + 1 else ();
++     if not (isPtr tm_ptr) then empty_fi
++     else let val k = ptr tm_ptr
++     in case Array.sub(fi_memo, k) of
++          SOME fi => fi
++        | NONE => let val fi as {fvs, open_bvs} = free_info_compute tm_ptr
++                      val () = if diag then let
++                          val nf = Redblackset.numItems fvs
++                          val no = Redblackset.numItems open_bvs
++                          val () = diag_fi_misses := !diag_fi_misses + 1
++                          val () = diag_fi_total_fvs := !diag_fi_total_fvs + nf
++                          val () = diag_fi_total_open_bvs := !diag_fi_total_open_bvs + no
++                          val () = if nf > 0 then diag_fi_nonempty_fvs := !diag_fi_nonempty_fvs + 1 else ()
++                          val () = if no > 0 then diag_fi_nonempty_open_bvs := !diag_fi_nonempty_open_bvs + 1 else ()
++                          val () = if nf > !diag_fi_max_fvs then diag_fi_max_fvs := nf else ()
++                          val () = if no > !diag_fi_max_open_bvs then diag_fi_max_open_bvs := no else ()
++                        in () end else ()
++                  in Array.update(fi_memo, k, SOME fi); fi end
++     end)
+ 
+   and free_info_compute (tm_ptr: Term.term ptr) : free_info =
+     case shTerm heap tm_ptr of
+@@ -286,6 +345,56 @@ fun emit_theory {trace, output, binary, ruleset} = let
+   val next_tm = ref 0
+   val next_th = ref 0
+ 
++  val diag_var_alloc = ref 0
++  val diag_const_alloc = ref 0
++  val diag_comb_alloc = ref 0
++  val diag_abs_alloc = ref 0
++  val diag_would_capture_calls = ref 0
++  val diag_would_capture_heap_hits = ref 0
++  val diag_would_capture_env_checks = ref 0
++  val diag_would_capture_env_hits = ref 0
++  val diag_pft_fv_queries = ref 0
++  val diag_pft_fv_misses = ref 0
++  val diag_pft_fv_nonempty = ref 0
++  val diag_pft_fv_total_size = ref 0
++  val diag_pft_fv_max_size = ref 0
++
++  val diag_prim_names = [
++    "load", "refl", "trans", "mk_comb", "abs", "beta", "assume", "eq_mp",
++    "deduct", "inst", "inst_type", "sym", "prove_hyp", "new_spec", "new_type_def",
++    "compute"]
++  val diag_prim_counts = Array.array(length diag_prim_names, 0)
++  val diag_refl_memo_hits = ref 0
++  val diag_refl_memo_misses = ref 0
++  val diag_tm_memo_hits = ref 0
++  val diag_tm_memo_misses = ref 0
++  val diag_tm_memo_sets = ref 0
++  val diag_th_memo_hits = ref 0
++  val diag_th_memo_misses = ref 0
++  val diag_th_memo_sets = ref 0
++  val diag_ty_memo_hits = ref 0
++  val diag_ty_memo_misses = ref 0
++  val diag_ty_memo_sets = ref 0
++  fun diag_prim_index name = let
++    fun go _ [] = ~1
++      | go i (x::xs) = if x = name then i else go (i+1) xs
++  in go 0 diag_prim_names end
++  fun diag_bump_prim name =
++    if diag then let val i = diag_prim_index name
++                 in if i >= 0 then Array.update(diag_prim_counts, i, Array.sub(diag_prim_counts, i) + 1)
++                    else ()
++                 end
++    else ()
++  fun diag_prim_snapshot () = Array.tabulate(length diag_prim_names, fn i => Array.sub(diag_prim_counts, i))
++  fun diag_prim_delta snap = let
++    fun loop i acc =
++      if i >= length diag_prim_names then String.concat (rev acc)
++      else let val d = Array.sub(diag_prim_counts, i) - Array.sub(snap, i)
++               val piece = if d = 0 then "" else " " ^ List.nth(diag_prim_names, i) ^ "=" ^ Int.toString d
++           in loop (i+1) (piece::acc) end
++  in loop 0 [] end
++  fun diag_prim_totals () = diag_prim_delta (Array.array(length diag_prim_names, 0))
++
+   fun alloc_ty () = let val id = !next_ty in next_ty := id + 1; id end
+   fun alloc_tm () = let val id = !next_tm in next_tm := id + 1; id end
+   fun alloc_th () = let val id = !next_th in next_th := id + 1; id end
+@@ -298,12 +407,20 @@ fun emit_theory {trace, output, binary, ruleset} = let
+   val th_memo : int PIntMap.t ref = ref PIntMap.empty
+   val hol4_compute_init_key = ref ~1
+ 
+-  fun ty_memo_get k = PIntMap.find k (!ty_memo)
+-                      handle PIntMap.NotFound => ~1
+-  fun ty_memo_set k v = ty_memo := PIntMap.add k v (!ty_memo)
+-  fun th_memo_get k = PIntMap.find k (!th_memo)
+-                      handle PIntMap.NotFound => ~1
+-  fun th_memo_set k v = th_memo := PIntMap.add k v (!th_memo)
++  fun ty_memo_get k =
++    (case (SOME (PIntMap.find k (!ty_memo)) handle PIntMap.NotFound => NONE) of
++       SOME v => (if diag then diag_ty_memo_hits := !diag_ty_memo_hits + 1 else (); v)
++     | NONE => (if diag then diag_ty_memo_misses := !diag_ty_memo_misses + 1 else (); ~1))
++  fun ty_memo_set k v =
++    (if diag andalso not (PIntMap.mem k (!ty_memo)) then diag_ty_memo_sets := !diag_ty_memo_sets + 1 else ();
++     ty_memo := PIntMap.add k v (!ty_memo))
++  fun th_memo_get k =
++    (case (SOME (PIntMap.find k (!th_memo)) handle PIntMap.NotFound => NONE) of
++       SOME v => (if diag then diag_th_memo_hits := !diag_th_memo_hits + 1 else (); v)
++     | NONE => (if diag then diag_th_memo_misses := !diag_th_memo_misses + 1 else (); ~1))
++  fun th_memo_set k v =
++    (if diag andalso not (PIntMap.mem k (!th_memo)) then diag_th_memo_sets := !diag_th_memo_sets + 1 else ();
++     th_memo := PIntMap.add k v (!th_memo))
+ 
+   (* --- Structural hash-cons tables -------------------------------------- *)
+ 
+@@ -449,10 +566,18 @@ fun emit_theory {trace, output, binary, ruleset} = let
+   end
+ 
+   fun pft_free_vars (id: int) : fv_set =
+-    (pft_fv_memo_ensure id;
++    (if diag then diag_pft_fv_queries := !diag_pft_fv_queries + 1 else ();
++     pft_fv_memo_ensure id;
+      case DArray.sub(pft_fv_memo, id) of
+        SOME fvs => fvs
+      | NONE => let val fvs = pft_free_vars_compute id
++                   val () = if diag then let
++                       val sz = Redblackset.numItems fvs
++                       val () = diag_pft_fv_misses := !diag_pft_fv_misses + 1
++                       val () = diag_pft_fv_total_size := !diag_pft_fv_total_size + sz
++                       val () = if sz > 0 then diag_pft_fv_nonempty := !diag_pft_fv_nonempty + 1 else ()
++                       val () = if sz > !diag_pft_fv_max_size then diag_pft_fv_max_size := sz else ()
++                     in () end else ()
+                in DArray.update(pft_fv_memo, id, SOME fvs); fvs end)
+ 
+   and pft_free_vars_compute (id: int) : fv_set =
+@@ -515,7 +640,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
+       SOME id => id
+     | NONE => let
+         val id = alloc_th ()
+-      in PFTWriter.load out id name;
++      in diag_bump_prim "load";
++         PFTWriter.load out id name;
+          candle_pths := insert(!candle_pths, name, id);
+          id
+       end
+@@ -580,8 +706,10 @@ fun emit_theory {trace, output, binary, ruleset} = let
+     if not (isPtr tm_ptr) then raise Fail "emit_term: not a ptr"
+     else let val k = ptr tm_ptr
+              val cached = Array.sub(tm_memo, k)
+-    in if cached >= 0 then cached
+-       else emit_term_sub Subst.id tm_ptr
++    in if cached >= 0 then
++         (if diag then diag_tm_memo_hits := !diag_tm_memo_hits + 1 else (); cached)
++       else (if diag then diag_tm_memo_misses := !diag_tm_memo_misses + 1 else ();
++             emit_term_sub Subst.id tm_ptr)
+     end
+ 
+   and emit_term_sub env (tm_ptr : Term.term ptr) : int =
+@@ -591,10 +719,13 @@ fun emit_theory {trace, output, binary, ruleset} = let
+   and emit_term_closed (tm_ptr : Term.term ptr) : int = let
+     val k = ptr tm_ptr
+     val cached = Array.sub(tm_memo, k)
+-  in if cached >= 0 then cached
++  in if cached >= 0 then
++       (if diag then diag_tm_memo_hits := !diag_tm_memo_hits + 1 else (); cached)
+      else let
++       val () = if diag then diag_tm_memo_misses := !diag_tm_memo_misses + 1 else ()
+        val id = emit_term_core Subst.id tm_ptr
+      in
++       if diag then diag_tm_memo_sets := !diag_tm_memo_sets + 1 else ();
+        Array.update(tm_memo, k, id);
+        id
+      end
+@@ -608,17 +739,23 @@ fun emit_theory {trace, output, binary, ruleset} = let
+      2. The heap term has an escaping de Bruijn index n > 0 that resolves
+         (via env) to a PFT term containing (s, ty_id) free. *)
+   and would_capture (s: string, ty_id: int) (env: int Subst.subs) (tm_ptr: Term.term ptr) : bool =
+-    let val {fvs, open_bvs} = free_info_of tm_ptr
++    let val () = if diag then diag_would_capture_calls := !diag_would_capture_calls + 1 else ()
++        val {fvs, open_bvs} = free_info_of tm_ptr
+         (* Check heap fvs: any Fv with same name and type? *)
+         val heap_conflict = isSome (Redblackset.find
+           (fn (s', typ') => s = s' andalso emit_type typ' = ty_id) fvs)
++        val () = if diag andalso heap_conflict then diag_would_capture_heap_hits := !diag_would_capture_heap_hits + 1 else ()
+         (* Check env: for escaping indices n > 0, does env map them to
+            PFT terms containing (s, ty_id) free? 
+            Note: n=0 will refer to our new binder, so we only check n > 0 *)
+         fun env_conflict n =
+           if n = 0 then false
+           else case Subst.exp_rel(env, n - 1) of
+-                 (_, SOME tm_id) => Redblackset.member(pft_free_vars tm_id, (s, ty_id))
++                 (_, SOME tm_id) =>
++                   let val () = if diag then diag_would_capture_env_checks := !diag_would_capture_env_checks + 1 else ()
++                       val hit = Redblackset.member(pft_free_vars tm_id, (s, ty_id))
++                       val () = if diag andalso hit then diag_would_capture_env_hits := !diag_would_capture_env_hits + 1 else ()
++                   in hit end
+                | (_, NONE) => false  (* still unresolved, no conflict from env *)
+         val env_has_conflict = isSome (Redblackset.find env_conflict open_bvs)
+     in heap_conflict orelse env_has_conflict end
+@@ -632,7 +769,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
+            SOME id => id
+          | NONE => let
+              val id = alloc_tm ()
+-           in PFTWriter.var out id s ty_id;
++           in if diag then diag_var_alloc := !diag_var_alloc + 1 else ();
++              PFTWriter.var out id s ty_id;
+               var_insert key id;
+               tm_types_set id ty_id;
+               var_names_set id s;
+@@ -653,7 +791,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
+            SOME id => id
+          | NONE => let
+              val id = alloc_tm ()
+-           in PFTWriter.const out id qname ty_id;
++           in if diag then diag_const_alloc := !diag_const_alloc + 1 else ();
++              PFTWriter.const out id qname ty_id;
+               const_insert key id;
+               tm_types_set id ty_id;
+               id
+@@ -670,7 +809,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
+            SOME id => id
+          | NONE => let
+              val id = alloc_tm ()
+-           in PFTWriter.comb out id id1 id2;
++           in if diag then diag_comb_alloc := !diag_comb_alloc + 1 else ();
++              PFTWriter.comb out id id1 id2;
+               IntPairTable.insert comb_ht (id1, id2) id;
+               tm_parts_set id (id1, id2);
+               tm_types_set id (pft_ret_type (pft_type_of id1));
+@@ -746,38 +886,40 @@ fun emit_theory {trace, output, binary, ruleset} = let
+     val refl_memo : int PIntMap.t ref = ref PIntMap.empty
+     fun c_refl a =
+       case (SOME (PIntMap.find a (!refl_memo)) handle PIntMap.NotFound => NONE) of
+-        SOME id => id
++        SOME id => (if diag then diag_refl_memo_hits := !diag_refl_memo_hits + 1 else (); id)
+       | NONE => let val id = alloc_th ()
+-        in PFTWriter.Candle.refl out id a;
++        in if diag then diag_refl_memo_misses := !diag_refl_memo_misses + 1 else ();
++           diag_bump_prim "refl";
++           PFTWriter.Candle.refl out id a;
+            refl_memo := PIntMap.add a id (!refl_memo);
+            id
+         end
+-    fun c_trans a b        = let val id = alloc_th () in PFTWriter.Candle.trans out id a b; id end
+-    fun c_mk_comb a b      = let val id = alloc_th () in PFTWriter.Candle.mk_comb out id a b; id end
+-    fun c_abs v th         = let val id = alloc_th () in PFTWriter.Candle.abs_thm out id v th; id end
+-    fun c_beta a           = let val id = alloc_th () in PFTWriter.Candle.beta out id a; id end
+-    fun c_assume a         = let val id = alloc_th () in PFTWriter.Candle.assume out id a; id end
+-    fun c_eq_mp a b        = let val id = alloc_th () in PFTWriter.Candle.eq_mp out id a b; id end
+-    fun c_deduct a b       = let val id = alloc_th () in PFTWriter.Candle.deduct_antisym_rule out id a b; id end
+-    fun c_inst th ps       = let val id = alloc_th () in PFTWriter.Candle.inst out id th ps; id end
+-    fun c_inst_type th ps  = let val id = alloc_th () in PFTWriter.Candle.inst_type out id th ps; id end
+-    fun c_sym a            = let val id = alloc_th () in PFTWriter.Candle.sym out id a; id end
+-    fun c_prove_hyp a b    = let val id = alloc_th () in PFTWriter.Candle.prove_hyp out id a b; id end
+-    fun c_new_spec a ns    = let val id = alloc_th () in PFTWriter.Candle.new_specification out id a ns; id end
++    fun c_trans a b        = let val id = alloc_th () in diag_bump_prim "trans"; PFTWriter.Candle.trans out id a b; id end
++    fun c_mk_comb a b      = let val id = alloc_th () in diag_bump_prim "mk_comb"; PFTWriter.Candle.mk_comb out id a b; id end
++    fun c_abs v th         = let val id = alloc_th () in diag_bump_prim "abs"; PFTWriter.Candle.abs_thm out id v th; id end
++    fun c_beta a           = let val id = alloc_th () in diag_bump_prim "beta"; PFTWriter.Candle.beta out id a; id end
++    fun c_assume a         = let val id = alloc_th () in diag_bump_prim "assume"; PFTWriter.Candle.assume out id a; id end
++    fun c_eq_mp a b        = let val id = alloc_th () in diag_bump_prim "eq_mp"; PFTWriter.Candle.eq_mp out id a b; id end
++    fun c_deduct a b       = let val id = alloc_th () in diag_bump_prim "deduct"; PFTWriter.Candle.deduct_antisym_rule out id a b; id end
++    fun c_inst th ps       = let val id = alloc_th () in diag_bump_prim "inst"; PFTWriter.Candle.inst out id th ps; id end
++    fun c_inst_type th ps  = let val id = alloc_th () in diag_bump_prim "inst_type"; PFTWriter.Candle.inst_type out id th ps; id end
++    fun c_sym a            = let val id = alloc_th () in diag_bump_prim "sym"; PFTWriter.Candle.sym out id a; id end
++    fun c_prove_hyp a b    = let val id = alloc_th () in diag_bump_prim "prove_hyp"; PFTWriter.Candle.prove_hyp out id a b; id end
++    fun c_new_spec a ns    = let val id = alloc_th () in diag_bump_prim "new_spec"; PFTWriter.Candle.new_specification out id a ns; id end
+ 
+     (* Write a command to the pre-allocated result_id (for the final step). *)
+-    fun r_refl a           = (PFTWriter.Candle.refl out result_id a; result_id)
+-    fun r_trans a b        = (PFTWriter.Candle.trans out result_id a b; result_id)
+-    fun r_mk_comb a b      = (PFTWriter.Candle.mk_comb out result_id a b; result_id)
+-    fun r_abs v th         = (PFTWriter.Candle.abs_thm out result_id v th; result_id)
+-    fun r_beta a           = (PFTWriter.Candle.beta out result_id a; result_id)
+-    fun r_assume a         = (PFTWriter.Candle.assume out result_id a; result_id)
+-    fun r_eq_mp a b        = (PFTWriter.Candle.eq_mp out result_id a b; result_id)
+-    fun r_deduct a b       = (PFTWriter.Candle.deduct_antisym_rule out result_id a b; result_id)
+-    fun r_inst th ps       = (PFTWriter.Candle.inst out result_id th ps; result_id)
+-    fun r_inst_type th ps  = (PFTWriter.Candle.inst_type out result_id th ps; result_id)
+-    fun r_sym a            = (PFTWriter.Candle.sym out result_id a; result_id)
+-    fun r_prove_hyp a b    = (PFTWriter.Candle.prove_hyp out result_id a b; result_id)
++    fun r_refl a           = (diag_bump_prim "refl"; PFTWriter.Candle.refl out result_id a; result_id)
++    fun r_trans a b        = (diag_bump_prim "trans"; PFTWriter.Candle.trans out result_id a b; result_id)
++    fun r_mk_comb a b      = (diag_bump_prim "mk_comb"; PFTWriter.Candle.mk_comb out result_id a b; result_id)
++    fun r_abs v th         = (diag_bump_prim "abs"; PFTWriter.Candle.abs_thm out result_id v th; result_id)
++    fun r_beta a           = (diag_bump_prim "beta"; PFTWriter.Candle.beta out result_id a; result_id)
++    fun r_assume a         = (diag_bump_prim "assume"; PFTWriter.Candle.assume out result_id a; result_id)
++    fun r_eq_mp a b        = (diag_bump_prim "eq_mp"; PFTWriter.Candle.eq_mp out result_id a b; result_id)
++    fun r_deduct a b       = (diag_bump_prim "deduct"; PFTWriter.Candle.deduct_antisym_rule out result_id a b; result_id)
++    fun r_inst th ps       = (diag_bump_prim "inst"; PFTWriter.Candle.inst out result_id th ps; result_id)
++    fun r_inst_type th ps  = (diag_bump_prim "inst_type"; PFTWriter.Candle.inst_type out result_id th ps; result_id)
++    fun r_sym a            = (diag_bump_prim "sym"; PFTWriter.Candle.sym out result_id a; result_id)
++    fun r_prove_hyp a b    = (diag_bump_prim "prove_hyp"; PFTWriter.Candle.prove_hyp out result_id a b; result_id)
+ 
+     (* Preamble variable term IDs — memoized via emit_var hash-cons *)
+     val bool_tyid = emit_tyop "bool" []
+@@ -1281,7 +1423,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
+              val eq_tm = emit_comb (emit_comb (emit_const "=" eq_ty)
+                            (emit_var cname rhs_ty_id)) rhs_id
+              val () = mark_const cname
+-           in PFTWriter.Candle.new_specification out result_id
++           in diag_bump_prim "new_spec";
++              PFTWriter.Candle.new_specification out result_id
+                 (c_assume eq_tm) [cname]; result_id end
+       end
+ 
+@@ -1341,7 +1484,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
+                 the bare v_old's and from each other), the parallel
+                 and sequential forms coincide. *)
+              val a_th'   = if null subs then a_th else c_inst a_th subs
+-           in PFTWriter.Candle.new_specification out result_id a_th' cnames;
++           in diag_bump_prim "new_spec";
++              PFTWriter.Candle.new_specification out result_id a_th' cnames;
+               result_id end
+       end
+ 
+@@ -1483,7 +1627,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
+           v_eqs
+ 
+         val final_th = c_eq_mp (cong body_raw) th_closed
+-      in PFTWriter.Candle.new_specification out result_id final_th cnames;
++      in diag_bump_prim "new_spec";
++         PFTWriter.Candle.new_specification out result_id final_th cnames;
+          result_id
+       end
+ 
+@@ -1507,6 +1652,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
+            implicitly-created second theorem. *)
+         val tydef_id = alloc_th ()
+         val tydef_id2 = alloc_th ()
++        val () = diag_bump_prim "new_type_def"
+         val () = PFTWriter.Candle.new_type_definition out tydef_id th_pw
+             tyname absname repname
+ 
+@@ -1734,7 +1880,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
+             else
+               (* TRANS th_id rhs_xlate_th: lhs = rhs_candle *)
+               let val id = alloc_th ()
+-              in PFTWriter.Candle.trans out id th_id rhs_xlate_th; id end
++              in diag_bump_prim "trans"; PFTWriter.Candle.trans out id th_id rhs_xlate_th; id end
+           end) ths_ptr
+ 
+           (* The input term from the trace *)
+@@ -1761,6 +1907,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
+           (* Call COMPUTE: candle_input_tm, code_eqn_ths
+              Returns theorem: candle_input_tm = candle_result *)
+           val compute_th_id = alloc_th ()
++          val () = diag_bump_prim "compute"
+           val () = PFTWriter.Candle.compute out compute_th_id
+                      candle_input_tm code_eqn_ths
+           (* compute_th_id: candle_input_tm = candle_result *)
+@@ -1772,7 +1919,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
+           val step1_th =
+             if input_xlate_th < 0 then compute_th_id
+             else let val id = alloc_th ()
+-              in PFTWriter.Candle.trans out id input_xlate_th compute_th_id; id end
++              in diag_bump_prim "trans"; PFTWriter.Candle.trans out id input_xlate_th compute_th_id; id end
+           (* step1_th: input_tm = candle_result *)
+ 
+           (* Now translate the result back from Candle to HOL4 form.
+@@ -1791,10 +1938,10 @@ fun emit_theory {trace, output, binary, ruleset} = let
+             else let
+               (* SYM result_xlate_th: candle_result = expected_result *)
+               val sym_th = let val id = alloc_th ()
+-                in PFTWriter.Candle.sym out id result_xlate_th; id end
++                in diag_bump_prim "sym"; PFTWriter.Candle.sym out id result_xlate_th; id end
+               (* TRANS step1_th sym_th: input_tm = expected_result *)
+               val id = alloc_th ()
+-            in PFTWriter.Candle.trans out id step1_th sym_th; id end
++            in diag_bump_prim "trans"; PFTWriter.Candle.trans out id step1_th sym_th; id end
+         in
+           final_th
+         end
+@@ -2247,7 +2394,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
+                else NONE
+            in case preamble_name of
+                 SOME (_, load_name) =>
+-                  (PFTWriter.load out id load_name; id)
++                  (diag_bump_prim "load"; PFTWriter.load out id load_name; id)
+               | NONE => let
+                   val c = emit_term concl_ptr
+                 in PFTWriter.axiom out id c name; id end
+@@ -2255,7 +2402,7 @@ fun emit_theory {trace, output, binary, ruleset} = let
+          | Disk_prf (dep_thy, b) => let
+              val dep_id = thmId heap b
+              val save_name = disk_save_name dep_thy dep_id
+-           in PFTWriter.load out id save_name; id end
++           in diag_bump_prim "load"; PFTWriter.load out id save_name; id end
+          | _ => let
+              val actual_id = emit_thm_candle id concl_ptr proof
+              val () = th_memo_set k actual_id
+@@ -2469,7 +2616,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
+   and emit_binder name ty_id =
+     let val id = alloc_tm ()
+         val bname = fresh_binder_name name
+-    in PFTWriter.var out id bname ty_id;
++    in if diag then diag_var_alloc := !diag_var_alloc + 1 else ();
++       PFTWriter.var out id bname ty_id;
+        tm_types_set id ty_id;
+        var_names_set id bname;
+        id
+@@ -2480,7 +2628,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
+     in case const_lookup key of
+          SOME id => id
+        | NONE => let val id = alloc_tm ()
+-         in PFTWriter.const out id name ty_id;
++         in if diag then diag_const_alloc := !diag_const_alloc + 1 else ();
++            PFTWriter.const out id name ty_id;
+             const_insert key id;
+             tm_types_set id ty_id; id
+          end
+@@ -2490,7 +2639,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
+     case IntPairTable.lookup abs_ht (var_id, body_id) of
+       SOME id => id
+     | NONE => let val id = alloc_tm ()
+-      in PFTWriter.abs out id var_id body_id;
++      in if diag then diag_abs_alloc := !diag_abs_alloc + 1 else ();
++         PFTWriter.abs out id var_id body_id;
+          IntPairTable.insert abs_ht (var_id, body_id) id;
+          tm_parts_set id (var_id, body_id);
+          tm_types_set id (emit_tyop fun_tyname
+@@ -2502,7 +2652,8 @@ fun emit_theory {trace, output, binary, ruleset} = let
+     case IntPairTable.lookup comb_ht (rator_id, rand_id) of
+       SOME id => id
+     | NONE => let val id = alloc_tm ()
+-      in PFTWriter.comb out id rator_id rand_id;
++      in if diag then diag_comb_alloc := !diag_comb_alloc + 1 else ();
++         PFTWriter.comb out id rator_id rand_id;
+          IntPairTable.insert comb_ht (rator_id, rand_id) id;
+          tm_parts_set id (rator_id, rand_id);
+          tm_types_set id (pft_ret_type (pft_type_of rator_id));
+@@ -2611,17 +2762,41 @@ fun emit_theory {trace, output, binary, ruleset} = let
+   (* Process exports                                                         *)
+   (* ======================================================================= *)
+ 
++  val named_idx = ref 0
++  fun emit_export save_name thp = let
++    val ty0 = !next_ty
++    val tm0 = !next_tm
++    val th0 = !next_th
++    val prim0 = diag_prim_snapshot ()
++    val () = diag_log ("PFTEmit[" ^ thyname ^ "]: export_begin " ^ save_name)
++    val thm_id = emit_thm thp
++    val dty = !next_ty - ty0
++    val dtm = !next_tm - tm0
++    val dth = !next_th - th0
++    val () =
++      if diag andalso (dtm >= diag_large_export_tm orelse dth >= diag_large_export_th) then
++        diag_log ("PFTEmit[" ^ thyname ^ "]: large_export " ^ save_name ^
++                  " d_ty=" ^ Int.toString dty ^
++                  " d_tm=" ^ Int.toString dtm ^
++                  " d_th=" ^ Int.toString dth ^
++                  " n_ty=" ^ Int.toString (!next_ty) ^
++                  " n_tm=" ^ Int.toString (!next_tm) ^
++                  " n_th=" ^ Int.toString (!next_th) ^
++                  " prim_delta=" ^ diag_prim_delta prim0)
++      else ()
++  in PFTWriter.save out save_name thm_id end
++
+   val () = appList heap (fn p => let
++    val i = !named_idx
++    val () = named_idx := i + 1
+     val (nm, (thp, _)) = tuple3 heap (str heap, I, I) p
+-    val thm_id = emit_thm thp
+-  in PFTWriter.save out (thyname ^ "$" ^ nm) thm_id end) all_thms
++  in emit_export (thyname ^ "$" ^ nm) thp end) all_thms
+ 
+   val anon_idx = ref 0
+   val () = appList heap (fn p => let
+     val i = !anon_idx
+     val () = anon_idx := i + 1
+-    val thm_id = emit_thm p
+-  in PFTWriter.save out (thyname ^ "#" ^ Int.toString i) thm_id end) anon_thms
++  in emit_export (thyname ^ "#" ^ Int.toString i) p end) anon_thms
+ 
+   (* Ensure all theory constants/types are introduced *)
+ 
+@@ -2651,6 +2826,45 @@ fun emit_theory {trace, output, binary, ruleset} = let
+   val n_tm = !next_tm
+   val n_th = !next_th
+ 
++  val () = diag_log ("PFTEmit[" ^ thyname ^ "]: summary" ^
++    " heap_size=" ^ Int.toString (heapSize heap) ^
++    " n_ty=" ^ Int.toString n_ty ^
++    " n_tm=" ^ Int.toString n_tm ^
++    " n_th=" ^ Int.toString n_th ^
++    " var_alloc=" ^ Int.toString (!diag_var_alloc) ^
++    " const_alloc=" ^ Int.toString (!diag_const_alloc) ^
++    " comb_alloc=" ^ Int.toString (!diag_comb_alloc) ^
++    " abs_alloc=" ^ Int.toString (!diag_abs_alloc) ^
++    " would_capture_calls=" ^ Int.toString (!diag_would_capture_calls) ^
++    " would_capture_heap_hits=" ^ Int.toString (!diag_would_capture_heap_hits) ^
++    " would_capture_env_checks=" ^ Int.toString (!diag_would_capture_env_checks) ^
++    " would_capture_env_hits=" ^ Int.toString (!diag_would_capture_env_hits) ^
++    " pft_fv_queries=" ^ Int.toString (!diag_pft_fv_queries) ^
++    " pft_fv_misses=" ^ Int.toString (!diag_pft_fv_misses) ^
++    " pft_fv_nonempty=" ^ Int.toString (!diag_pft_fv_nonempty) ^
++    " pft_fv_total_size=" ^ Int.toString (!diag_pft_fv_total_size) ^
++    " pft_fv_max_size=" ^ Int.toString (!diag_pft_fv_max_size) ^
++    " fi_queries=" ^ Int.toString (!diag_fi_queries) ^
++    " fi_misses=" ^ Int.toString (!diag_fi_misses) ^
++    " fi_nonempty_fvs=" ^ Int.toString (!diag_fi_nonempty_fvs) ^
++    " fi_total_fvs=" ^ Int.toString (!diag_fi_total_fvs) ^
++    " fi_max_fvs=" ^ Int.toString (!diag_fi_max_fvs) ^
++    " fi_nonempty_open_bvs=" ^ Int.toString (!diag_fi_nonempty_open_bvs) ^
++    " fi_total_open_bvs=" ^ Int.toString (!diag_fi_total_open_bvs) ^
++    " fi_max_open_bvs=" ^ Int.toString (!diag_fi_max_open_bvs) ^
++    " tm_memo_hits=" ^ Int.toString (!diag_tm_memo_hits) ^
++    " tm_memo_misses=" ^ Int.toString (!diag_tm_memo_misses) ^
++    " tm_memo_sets=" ^ Int.toString (!diag_tm_memo_sets) ^
++    " th_memo_hits=" ^ Int.toString (!diag_th_memo_hits) ^
++    " th_memo_misses=" ^ Int.toString (!diag_th_memo_misses) ^
++    " th_memo_sets=" ^ Int.toString (!diag_th_memo_sets) ^
++    " ty_memo_hits=" ^ Int.toString (!diag_ty_memo_hits) ^
++    " ty_memo_misses=" ^ Int.toString (!diag_ty_memo_misses) ^
++    " ty_memo_sets=" ^ Int.toString (!diag_ty_memo_sets) ^
++    " refl_memo_hits=" ^ Int.toString (!diag_refl_memo_hits) ^
++    " refl_memo_misses=" ^ Int.toString (!diag_refl_memo_misses) ^
++    " prim_totals=" ^ diag_prim_totals ())
++
+ in
+   PFTWriter.closeOut out
+     {n_ty = n_ty, n_tm = n_tm, n_th = n_th}
