@@ -239,12 +239,29 @@ fun pr_list s [] = apNIL
   | pr_list s [x] = x
   | pr_list s (x::xs) = x ++ apSING s ++ pr_list s xs
 
+fun JSONstring s =
+    let fun ctrans c =
+            case c of
+                #"\n" => "\\n"
+              | #"\t" => "\\t"
+              | #"\\" => "\\\\"
+              | #"\"" => "\\\""
+              | _ => if Char.ord c < 32 then
+                       "\\u" ^
+                       StringCvt.padLeft #"0" 4
+                                         (Int.fmt StringCvt.HEX (Char.ord c))
+                     else str c
+    in
+      "\"" ^ String.translate ctrans s ^ "\""
+      (* behaves incorrectly if there are non-UTF8 high bytes in the string *)
+    end
+
 fun nodeInfo_toJSON (n, nI : 'a nodeInfo) =
     let
       open Holmake_tools
       val {target,status,command,dependencies,seqnum,phony,dir,mtime,...} = nI
       fun field fnm f v = apSING ("  \"" ^ fnm ^ "\" : " ^ f v)
-      fun quote f x = "\"" ^ f x ^ "\""
+      fun quote f x = JSONstring (f x)
       fun mtimeJSON NONE = "null"
         | mtimeJSON (SOME t) = Time.toString t
     in
@@ -259,7 +276,7 @@ fun nodeInfo_toJSON (n, nI : 'a nodeInfo) =
                   "[" ^
                   String.concatWith ", " (map (Int.toString o #1) ds) ^ "]")
               dependencies,
-        field "command" (fn c => "\"" ^ command_toString c ^ "\"") command,
+        field "command" (quote command_toString) command,
         field "dir" (quote hmdir.toString) dir,
         field "mtime" mtimeJSON mtime,
         field "needs_rebuild" (fn s => Bool.toString (s <> Succeeded)) status

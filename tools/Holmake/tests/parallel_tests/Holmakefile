@@ -67,6 +67,7 @@ DIRNAMES += cache_reflink \
             ignore_errors/j4 \
             hollogs \
             issue1903 \
+            json-strings \
             local_parallelism_limit \
             gh1979 \
             projfile_module
