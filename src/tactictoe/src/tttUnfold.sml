@@ -1312,9 +1312,9 @@ datatype record_option =
 datatype reason =
     TierA_direct
   | TierB_cascade of string
-  | TierC_global
-  | TierC_format
-  | TierC_holstate
+  | TierC_manifest
+  | TierC_tacdata
+  | TierC_tactictoe
   | Missing_data
   | Missing_manifest_line
   | Tampered_data
@@ -1323,20 +1323,20 @@ datatype reason =
 type manifest_entry =
   { thy : string, data_sha256 : string, src_sha256 : string,
     anc_version : int, recorded_at : int, failed : bool,
-    format_hash : string, global_hash : string, hol_hash : string }
+    tacdata_version : int, tactictoe_version : int }
 
 type record_worker_param =
   { force : bool, max_lock_age_seconds : int,
-    format_hash : string, global_hash : string, hol_hash : string,
+    tacdata_version : int, tactictoe_version : int,
     src_hashes : (string * string) list, recorded_stale : string list }
 
 type manifest =
-  { format_version : int, format_hash : string, global_hash : string,
-    hol_hash : string, entries : manifest_entry list }
+  { manifest_version : int, tacdata_version : int,
+    tactictoe_version : int, entries : manifest_entry list }
 
-type provenance = {format_hash : string, global_hash : string, hol_hash : string}
+type provenance = {tacdata_version : int, tactictoe_version : int}
 
-val manifest_format_version = mlTacticData.format_version
+val manifest_format_version = 4
 
 val default_record_config =
   { scope = CurrentAncestry, parallel = 1, force = false, dry_run = false,
@@ -1393,31 +1393,9 @@ and tacdata_file thy = mlTacticData.current_tacdata_file thy
 
 and safe_sha256_file file = if exists_file file then sha256_file file else ""
 
-and global_srcs () =
-  ["src/AI/machine_learning/mlFeature.sml",
-   "src/AI/sml_inspection/smlLexer.sml",
-   "src/AI/sml_inspection/smlParser.sml",
-   "src/tactictoe/src/tttToken.sml",
-   "src/tactictoe/src/tttRecord.sml",
-   "src/tactictoe/src/tttUnfold.sml",
-   "src/AI/machine_learning/mlTacticData.sml",
-   "src/AI/machine_learning/mlThmData.sml",
-   "src/tactictoe/src/tttLearn.sml",
-   "src/AI/sml_inspection/infix_file.sml",
-   "bin/hol.state0"]
-
-and global_hash () =
-  let
-    fun h rel = rel ^ " " ^ safe_sha256_file (HOLDIR ^ "/" ^ rel)
-  in
-    sha256_string (String.concatWith "\n" (map h (global_srcs ())) ^ "\n")
-  end
-
 and current_provenance () =
-  { format_hash =
-      safe_sha256_file (HOLDIR ^ "/src/AI/machine_learning/mlTacticData.sml"),
-    global_hash = global_hash (),
-    hol_hash = safe_sha256_file (HOLDIR ^ "/bin/hol.state0") }
+  {tacdata_version = mlTacticData.format_version,
+   tactictoe_version = mlTacticData.tactictoe_version}
 
 and int_of_string s =
   case Int.fromString s of
@@ -1431,19 +1409,18 @@ and parse_manifest_line line (m : manifest) =
     | a :: _ =>
       if String.isPrefix "#" a then m else
       case tok of
-        ["format",v,h] =>
-          {format_version = int_of_string v, format_hash = h,
-           global_hash = #global_hash m, hol_hash = #hol_hash m,
-           entries = #entries m}
-      | ["global",h] =>
-          {format_version = #format_version m, format_hash = #format_hash m,
-           global_hash = h, hol_hash = #hol_hash m, entries = #entries m}
-      | ["hol"] =>
-          {format_version = #format_version m, format_hash = #format_hash m,
-           global_hash = #global_hash m, hol_hash = "", entries = #entries m}
-      | ["hol",h] =>
-          {format_version = #format_version m, format_hash = #format_hash m,
-           global_hash = #global_hash m, hol_hash = h, entries = #entries m}
+        ["format",v] =>
+          {manifest_version = int_of_string v,
+           tacdata_version = #tacdata_version m,
+           tactictoe_version = #tactictoe_version m, entries = #entries m}
+      | ["tacdata",v] =>
+          {manifest_version = #manifest_version m,
+           tacdata_version = int_of_string v,
+           tactictoe_version = #tactictoe_version m, entries = #entries m}
+      | ["tactictoe",v] =>
+          {manifest_version = #manifest_version m,
+           tacdata_version = #tacdata_version m,
+           tactictoe_version = int_of_string v, entries = #entries m}
       | ["thy",thy,data,src,anc,t] =>
           let
             val recorded_at = int_of_string t
@@ -1451,26 +1428,26 @@ and parse_manifest_line line (m : manifest) =
                          anc_version = int_of_string anc,
                          recorded_at = recorded_at,
                          failed = data = "failed" orelse recorded_at < 0,
-                         format_hash = #format_hash m,
-                         global_hash = #global_hash m,
-                         hol_hash = #hol_hash m}
+                         tacdata_version = #tacdata_version m,
+                         tactictoe_version = #tactictoe_version m}
           in
-            {format_version = #format_version m, format_hash = #format_hash m,
-             global_hash = #global_hash m, hol_hash = #hol_hash m,
-             entries = entry :: #entries m}
+            {manifest_version = #manifest_version m,
+             tacdata_version = #tacdata_version m,
+             tactictoe_version = #tactictoe_version m, entries = entry :: #entries m}
           end
-      | ["thy",thy,data,src,anc,t,fmt,glob,hol] =>
+      | ["thy",thy,data,src,anc,t,tacdata_v,tactictoe_v] =>
           let
             val recorded_at = int_of_string t
             val entry = {thy = thy, data_sha256 = data, src_sha256 = src,
                          anc_version = int_of_string anc,
                          recorded_at = recorded_at,
                          failed = data = "failed" orelse recorded_at < 0,
-                         format_hash = fmt, global_hash = glob, hol_hash = hol}
+                         tacdata_version = int_of_string tacdata_v,
+                         tactictoe_version = int_of_string tactictoe_v}
           in
-            {format_version = #format_version m, format_hash = #format_hash m,
-             global_hash = #global_hash m, hol_hash = #hol_hash m,
-             entries = entry :: #entries m}
+            {manifest_version = #manifest_version m,
+             tacdata_version = #tacdata_version m,
+             tactictoe_version = #tactictoe_version m, entries = entry :: #entries m}
           end
       | _ => raise ERR "parse_manifest_line" line
   end
@@ -1478,14 +1455,15 @@ and parse_manifest_line line (m : manifest) =
 and read_manifest_full () =
   if not (exists_file (manifest_file ())) then NONE else
   let
-    val empty = {format_version = ~1, format_hash = "", global_hash = "",
-                 hol_hash = "", entries = []}
+    val empty = {manifest_version = ~1, tacdata_version = ~1,
+                 tactictoe_version = ~1, entries = []}
     val m = foldl (fn (line,m) => parse_manifest_line line m)
       empty (readl (manifest_file ()))
   in
-    if #format_version m < 0 then NONE
-    else SOME {format_version = #format_version m, format_hash = #format_hash m,
-               global_hash = #global_hash m, hol_hash = #hol_hash m,
+    if #manifest_version m < 0 then NONE
+    else SOME {manifest_version = #manifest_version m,
+               tacdata_version = #tacdata_version m,
+               tactictoe_version = #tactictoe_version m,
                entries = rev (#entries m)}
   end
   handle _ => NONE
@@ -1495,10 +1473,10 @@ and read_manifest () =
 
 and entry_compare (e1 : manifest_entry, e2 : manifest_entry) =
   list_compare String.compare
-    ([#thy e1, #src_sha256 e1, its (#anc_version e1), #format_hash e1,
-      #global_hash e1, #hol_hash e1],
-     [#thy e2, #src_sha256 e2, its (#anc_version e2), #format_hash e2,
-      #global_hash e2, #hol_hash e2])
+    ([#thy e1, #src_sha256 e1, its (#anc_version e1),
+      its (#tacdata_version e1), its (#tactictoe_version e1)],
+     [#thy e2, #src_sha256 e2, its (#anc_version e2),
+      its (#tacdata_version e2), its (#tactictoe_version e2)])
 
 and manifest_lines (prov : provenance) entries =
   let
@@ -1507,13 +1485,13 @@ and manifest_lines (prov : provenance) entries =
       String.concatWith " "
         ["thy", #thy e, #data_sha256 e, #src_sha256 e,
          its (#anc_version e), its (#recorded_at e),
-         #format_hash e, #global_hash e, #hol_hash e]
+         its (#tacdata_version e), its (#tactictoe_version e)]
   in
     ["# TacticToe tactic-data manifest. DO NOT EDIT by hand; managed by",
-     "# ttt_record. Format version: 3.",
-     "format " ^ its manifest_format_version ^ " " ^ #format_hash prov,
-     "global " ^ #global_hash prov,
-     "hol " ^ #hol_hash prov] @ map line entries'
+     "# ttt_record. Manifest format version: 4.",
+     "format " ^ its manifest_format_version,
+     "tacdata " ^ its (#tacdata_version prov),
+     "tactictoe " ^ its (#tactictoe_version prov)] @ map line entries'
   end
 
 and write_manifest_full prov entries =
@@ -1527,9 +1505,8 @@ and same_entry_identity (e1 : manifest_entry) (e2 : manifest_entry) =
   #thy e1 = #thy e2 andalso
   #src_sha256 e1 = #src_sha256 e2 andalso
   #anc_version e1 = #anc_version e2 andalso
-  #format_hash e1 = #format_hash e2 andalso
-  #global_hash e1 = #global_hash e2 andalso
-  #hol_hash e1 = #hol_hash e2
+  #tacdata_version e1 = #tacdata_version e2 andalso
+  #tactictoe_version e1 = #tactictoe_version e2
 
 and update_entry entry entries =
   entry :: filter (fn e => not (same_entry_identity e entry)) entries
@@ -1604,12 +1581,6 @@ and with_manifest_lock max_lock_age f =
     loop 60
   end
 
-and manifest_current (prov : provenance) (m : manifest) =
-  #format_version m = manifest_format_version andalso
-  #format_hash m = #format_hash prov andalso
-  #global_hash m = #global_hash prov andalso
-  #hol_hash m = #hol_hash prov
-
 and update_manifest_entry max_lock_age prov entry =
   with_manifest_lock max_lock_age (fn () =>
     let
@@ -1631,9 +1602,8 @@ and entry_matches prov src_hash thy (e : manifest_entry) =
   #thy e = thy andalso
   #src_sha256 e = src_hash andalso
   #anc_version e = length (ttt_ancestry thy) andalso
-  #format_hash e = #format_hash prov andalso
-  #global_hash e = #global_hash prov andalso
-  #hol_hash e = #hol_hash prov
+  #tacdata_version e = #tacdata_version prov andalso
+  #tactictoe_version e = #tactictoe_version prov
 
 and find_current_entry prov src_hash thy entries =
   List.find (entry_matches prov src_hash thy) entries
@@ -1652,9 +1622,9 @@ and theories_of_scope scope =
 and reason_to_string reason = case reason of
     TierA_direct => "source hash changed"
   | TierB_cascade dep => "ancestor was recorded this run: " ^ dep
-  | TierC_global => "global recorder provenance changed or manifest missing"
-  | TierC_format => "tactic-data format changed"
-  | TierC_holstate => "HOL state changed"
+  | TierC_manifest => "manifest format changed or manifest missing"
+  | TierC_tacdata => "tactic-data format version changed"
+  | TierC_tactictoe => "TacticToe version changed"
   | Missing_data => "tactic data file is missing or failed"
   | Missing_manifest_line => "manifest line is missing"
   | Tampered_data => "data hash differs from manifest"
@@ -1663,10 +1633,14 @@ and reason_to_string reason = case reason of
 and stale_reason force (prov : provenance) manOpt src_hashes stale thy =
   if force then SOME Forced else
   case manOpt of
-    NONE => SOME TierC_global
+    NONE => SOME TierC_manifest
   | SOME (m : manifest) =>
-    if #format_version m <> manifest_format_version
-    then SOME TierC_format
+    if #manifest_version m <> manifest_format_version
+    then SOME TierC_manifest
+    else if #tacdata_version m <> #tacdata_version prov
+    then SOME TierC_tacdata
+    else if #tactictoe_version m <> #tactictoe_version prov
+    then SOME TierC_tactictoe
     else case assoc_opt thy src_hashes of
       NONE => SOME Missing_manifest_line
     | SOME src_hash =>
@@ -1727,14 +1701,14 @@ and ttt_record_plan scope =
 and manifest_success_entry (prov : provenance) thy data_hash src_hash =
   {thy = thy, data_sha256 = data_hash, src_sha256 = src_hash,
    anc_version = length (ttt_ancestry thy), recorded_at = now_unix (),
-   failed = false, format_hash = #format_hash prov, global_hash = #global_hash prov,
-   hol_hash = #hol_hash prov}
+   failed = false, tacdata_version = #tacdata_version prov,
+   tactictoe_version = #tactictoe_version prov}
 
 and manifest_failed_entry (prov : provenance) thy src_hash =
   {thy = thy, data_sha256 = "failed", src_sha256 = src_hash,
    anc_version = length (ttt_ancestry thy), recorded_at = ~1, failed = true,
-   format_hash = #format_hash prov, global_hash = #global_hash prov,
-   hol_hash = #hol_hash prov}
+   tacdata_version = #tacdata_version prov,
+   tactictoe_version = #tactictoe_version prov}
 
 and worker_bool_to_string b = if b then "true" else "false"
 
@@ -1765,9 +1739,8 @@ and write_worker_param file (p : record_worker_param) =
     writel file
       (["force " ^ worker_bool_to_string (#force p),
         "max_lock_age_seconds " ^ its (#max_lock_age_seconds p),
-        "format_hash " ^ worker_encode (#format_hash p),
-        "global_hash " ^ worker_encode (#global_hash p),
-        "hol_hash " ^ worker_encode (#hol_hash p)] @
+        "tacdata_version " ^ its (#tacdata_version p),
+        "tactictoe_version " ^ its (#tactictoe_version p)] @
        map src_line (#src_hashes p) @ map stale_line (#recorded_stale p))
   end
 
@@ -1784,9 +1757,8 @@ and read_worker_param file =
     { force = worker_bool_from_string (worker_value "force" sl),
       max_lock_age_seconds = int_of_string
         (worker_value "max_lock_age_seconds" sl),
-      format_hash = worker_decode (worker_value "format_hash" sl),
-      global_hash = worker_decode (worker_value "global_hash" sl),
-      hol_hash = worker_decode (worker_value "hol_hash" sl),
+      tacdata_version = int_of_string (worker_value "tacdata_version" sl),
+      tactictoe_version = int_of_string (worker_value "tactictoe_version" sl),
       src_hashes = List.mapPartial src sl,
       recorded_stale = List.mapPartial stale sl }
   end
@@ -1864,8 +1836,8 @@ and record_worker (p : record_worker_param) thy =
       { scope = Theories [], parallel = 1, force = #force p, dry_run = false,
         max_lock_age = Time.fromSeconds
           (Int.toLarge (#max_lock_age_seconds p)) }
-    val prov = {format_hash = #format_hash p, global_hash = #global_hash p,
-                hol_hash = #hol_hash p}
+    val prov = {tacdata_version = #tacdata_version p,
+                tactictoe_version = #tactictoe_version p}
     val _ = load (thy ^ "Theory") handle _ => ()
   in
     let val (ok,msg) = record_one cfg prov (#src_hashes p)
@@ -1932,9 +1904,8 @@ and ttt_record_cfg (cfg : record_config) =
           { force = force,
             max_lock_age_seconds = IntInf.toInt (Time.toSeconds max_lock_age)
               handle _ => 7200,
-            format_hash = #format_hash prov,
-            global_hash = #global_hash prov,
-            hol_hash = #hol_hash prov,
+            tacdata_version = #tacdata_version prov,
+            tactictoe_version = #tactictoe_version prov,
             src_hashes = src_hashes,
             recorded_stale = done }
         fun outcome_ok s = String.isPrefix "ok " s

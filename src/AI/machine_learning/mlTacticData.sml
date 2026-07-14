@@ -39,7 +39,11 @@ val empty_tacdata : tacdata =
   symfreq = dempty Int.compare
   }
 
+(* Bump format_version when the on-disk tactic-data representation changes.
+   Bump tactictoe_version when recorder, feature, or learning changes make
+   existing tactic data unsuitable. *)
 val format_version = 3
+val tactictoe_version = 1
 
 (* -------------------------------------------------------------------------
    Exporting tactic data
@@ -119,16 +123,16 @@ fun ttt_tacdata_dir_of () = current_tactictoe_cache_dir () ^ "/ttt_tacdata"
 fun ttt_tacdata_data_dir_of () = ttt_tacdata_dir_of () ^ "/data"
 val ttt_tacdata_file_override = ref (NONE : string option)
 
-type provenance = {format_hash : string, global_hash : string, hol_hash : string}
+type provenance = {tacdata_version : int, tactictoe_version : int}
 
 type manifest_entry =
   { thy : string, data_sha256 : string, src_sha256 : string,
     anc_version : int, recorded_at : int, failed : bool,
-    format_hash : string, global_hash : string, hol_hash : string }
+    tacdata_version : int, tactictoe_version : int }
 
 type manifest =
-  { format_version : int, format_hash : string, global_hash : string,
-    hol_hash : string, entries : manifest_entry list }
+  { manifest_version : int, tacdata_version : int,
+    tactictoe_version : int, entries : manifest_entry list }
 
 fun safe_sha256_file file = if exists_file file then sha256_file file else ""
 
@@ -145,31 +149,8 @@ fun ttt_ancestry thy =
 
 fun source_hash thy = safe_sha256_file (find_script thy)
 
-fun global_srcs () =
-  ["src/AI/machine_learning/mlFeature.sml",
-   "src/AI/sml_inspection/smlLexer.sml",
-   "src/AI/sml_inspection/smlParser.sml",
-   "src/tactictoe/src/tttToken.sml",
-   "src/tactictoe/src/tttRecord.sml",
-   "src/tactictoe/src/tttUnfold.sml",
-   "src/AI/machine_learning/mlTacticData.sml",
-   "src/AI/machine_learning/mlThmData.sml",
-   "src/tactictoe/src/tttLearn.sml",
-   "src/AI/sml_inspection/infix_file.sml",
-   "bin/hol.state0"]
-
-fun global_hash () =
-  let
-    fun h rel = rel ^ " " ^ safe_sha256_file (HOLDIR ^ "/" ^ rel)
-  in
-    sha256_string (String.concatWith "\n" (map h (global_srcs ())) ^ "\n")
-  end
-
 fun current_provenance () =
-  { format_hash =
-      safe_sha256_file (HOLDIR ^ "/src/AI/machine_learning/mlTacticData.sml"),
-    global_hash = global_hash (),
-    hol_hash = safe_sha256_file (HOLDIR ^ "/bin/hol.state0") }
+  {tacdata_version = format_version, tactictoe_version = tactictoe_version}
 
 fun int_of_string s =
   case Int.fromString s of
@@ -181,9 +162,8 @@ fun identity_hash thy src anc (prov : provenance) =
     ["thy=" ^ thy,
      "src_sha256=" ^ src,
      "anc_version=" ^ its anc,
-     "format_hash=" ^ #format_hash prov,
-     "global_hash=" ^ #global_hash prov,
-     "hol_hash=" ^ #hol_hash prov] ^ "\n")
+     "tacdata_version=" ^ its (#tacdata_version prov),
+     "tactictoe_version=" ^ its (#tactictoe_version prov)] ^ "\n")
 
 fun tacdata_file_of_identity thy src anc prov =
   ttt_tacdata_data_dir_of () ^ "/" ^ thy ^ "-" ^ identity_hash thy src anc prov
@@ -201,19 +181,18 @@ fun parse_manifest_line line (m : manifest) =
     | a :: _ =>
       if String.isPrefix "#" a then m else
       case tok of
-        ["format",v,h] =>
-          {format_version = int_of_string v, format_hash = h,
-           global_hash = #global_hash m, hol_hash = #hol_hash m,
-           entries = #entries m}
-      | ["global",h] =>
-          {format_version = #format_version m, format_hash = #format_hash m,
-           global_hash = h, hol_hash = #hol_hash m, entries = #entries m}
-      | ["hol"] =>
-          {format_version = #format_version m, format_hash = #format_hash m,
-           global_hash = #global_hash m, hol_hash = "", entries = #entries m}
-      | ["hol",h] =>
-          {format_version = #format_version m, format_hash = #format_hash m,
-           global_hash = #global_hash m, hol_hash = h, entries = #entries m}
+        ["format",v] =>
+          {manifest_version = int_of_string v,
+           tacdata_version = #tacdata_version m,
+           tactictoe_version = #tactictoe_version m, entries = #entries m}
+      | ["tacdata",v] =>
+          {manifest_version = #manifest_version m,
+           tacdata_version = int_of_string v,
+           tactictoe_version = #tactictoe_version m, entries = #entries m}
+      | ["tactictoe",v] =>
+          {manifest_version = #manifest_version m,
+           tacdata_version = #tacdata_version m,
+           tactictoe_version = int_of_string v, entries = #entries m}
       | ["thy",thy,data,src,anc,t] =>
           let
             val recorded_at = int_of_string t
@@ -221,26 +200,26 @@ fun parse_manifest_line line (m : manifest) =
                          anc_version = int_of_string anc,
                          recorded_at = recorded_at,
                          failed = data = "failed" orelse recorded_at < 0,
-                         format_hash = #format_hash m,
-                         global_hash = #global_hash m,
-                         hol_hash = #hol_hash m}
+                         tacdata_version = #tacdata_version m,
+                         tactictoe_version = #tactictoe_version m}
           in
-            {format_version = #format_version m, format_hash = #format_hash m,
-             global_hash = #global_hash m, hol_hash = #hol_hash m,
-             entries = entry :: #entries m}
+            {manifest_version = #manifest_version m,
+             tacdata_version = #tacdata_version m,
+             tactictoe_version = #tactictoe_version m, entries = entry :: #entries m}
           end
-      | ["thy",thy,data,src,anc,t,fmt,glob,hol] =>
+      | ["thy",thy,data,src,anc,t,tacdata_v,tactictoe_v] =>
           let
             val recorded_at = int_of_string t
             val entry = {thy = thy, data_sha256 = data, src_sha256 = src,
                          anc_version = int_of_string anc,
                          recorded_at = recorded_at,
                          failed = data = "failed" orelse recorded_at < 0,
-                         format_hash = fmt, global_hash = glob, hol_hash = hol}
+                         tacdata_version = int_of_string tacdata_v,
+                         tactictoe_version = int_of_string tactictoe_v}
           in
-            {format_version = #format_version m, format_hash = #format_hash m,
-             global_hash = #global_hash m, hol_hash = #hol_hash m,
-             entries = entry :: #entries m}
+            {manifest_version = #manifest_version m,
+             tacdata_version = #tacdata_version m,
+             tactictoe_version = #tactictoe_version m, entries = entry :: #entries m}
           end
       | _ => raise ERR "parse_manifest_line" line
   end
@@ -248,28 +227,28 @@ fun parse_manifest_line line (m : manifest) =
 fun read_manifest_full () =
   if not (exists_file (manifest_file ())) then NONE else
   let
-    val empty = {format_version = ~1, format_hash = "", global_hash = "",
-                 hol_hash = "", entries = []}
+    val empty = {manifest_version = ~1, tacdata_version = ~1,
+                 tactictoe_version = ~1, entries = []}
     val m = foldl (fn (line,m) => parse_manifest_line line m)
       empty (readl (manifest_file ()))
   in
-    if #format_version m < 0 then NONE
-    else SOME {format_version = #format_version m, format_hash = #format_hash m,
-               global_hash = #global_hash m, hol_hash = #hol_hash m,
+    if #manifest_version m < 0 then NONE
+    else SOME {manifest_version = #manifest_version m,
+               tacdata_version = #tacdata_version m,
+               tactictoe_version = #tactictoe_version m,
                entries = rev (#entries m)}
   end
   handle _ => NONE
 
 fun same_identity thy src anc (prov : provenance) (e : manifest_entry) =
   #thy e = thy andalso #src_sha256 e = src andalso #anc_version e = anc andalso
-  #format_hash e = #format_hash prov andalso
-  #global_hash e = #global_hash prov andalso
-  #hol_hash e = #hol_hash prov
+  #tacdata_version e = #tacdata_version prov andalso
+  #tactictoe_version e = #tactictoe_version prov
 
 fun entry_file (e : manifest_entry) =
   let
-    val prov = {format_hash = #format_hash e, global_hash = #global_hash e,
-                hol_hash = #hol_hash e}
+    val prov = {tacdata_version = #tacdata_version e,
+                tactictoe_version = #tactictoe_version e}
   in
     tacdata_file_of_identity (#thy e) (#src_sha256 e) (#anc_version e) prov
   end

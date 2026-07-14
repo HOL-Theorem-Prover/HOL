@@ -17,6 +17,7 @@ sig
     }
   val empty_tacdata : tacdata
   val format_version : int
+  val tactictoe_version : int
 
   (* I/O *)
   val export_calls : string -> (loc * call) list -> unit

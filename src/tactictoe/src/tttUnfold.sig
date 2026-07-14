@@ -35,9 +35,9 @@ sig
   datatype reason =
       TierA_direct
     | TierB_cascade of string
-    | TierC_global
-    | TierC_format
-    | TierC_holstate
+    | TierC_manifest
+    | TierC_tacdata
+    | TierC_tactictoe
     | Missing_data
     | Missing_manifest_line
     | Tampered_data
@@ -46,11 +46,11 @@ sig
   type manifest_entry =
     { thy : string, data_sha256 : string, src_sha256 : string,
       anc_version : int, recorded_at : int, failed : bool,
-      format_hash : string, global_hash : string, hol_hash : string }
+      tacdata_version : int, tactictoe_version : int }
 
   type record_worker_param =
     { force : bool, max_lock_age_seconds : int,
-      format_hash : string, global_hash : string, hol_hash : string,
+      tacdata_version : int, tactictoe_version : int,
       src_hashes : (string * string) list, recorded_stale : string list }
 
   val default_record_config : record_config

@@ -134,8 +134,8 @@ val _ = check "record plan covers ConseqConv"
 val _ = check "record plan has non-empty scope"
   (not (null covered0))
 
-val _ = check "manifest version matches tactic-data format"
-  (manifest_format_version = mlTacticData.format_version)
+val _ = check "manifest version is current"
+  (manifest_format_version = 4)
 
 val _ = check "read_manifest is callable before recording"
   (case read_manifest () of NONE => true | SOME _ => true)
