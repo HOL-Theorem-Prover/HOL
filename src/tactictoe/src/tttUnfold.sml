@@ -1241,7 +1241,8 @@ fun ttt_clean_savestate () =
    theory, log why, and continue. *)
 fun try_record_thy thy =
   record_thy_raw thy
-  handle e =>
+  handle Interrupt => raise Interrupt
+       | e =>
     print_endline ("ttt_record_thy: skipped " ^ thy ^ ": " ^ exnMessage e)
 
 (* used to record savestates with record_flag := false *)
@@ -1349,21 +1350,15 @@ fun theories_of_scope scope =
 
 fun locks_dir () = tacdata_dir () ^ "/.locks"
 
-fun pid_alive pid =
-  let val numeric = pid <> "" andalso List.all Char.isDigit (explode pid) in
-    numeric andalso
-    OS.Process.isSuccess
-      (OS.Process.system ("kill -0 " ^ pid ^ " >/dev/null 2>&1"))
-  end
-  handle Interrupt => raise Interrupt | _ => false
-
+(* unique_tmp_suffix is only an owner token: it is not a portable decimal PID.
+   Consequently stale detection is deliberately age-based and never removes a
+   young lock merely because its token cannot be used for process liveness. *)
 fun lock_stale max_lock_age lock =
   let
-    val pid = hd (readl (lock ^ "/holder")) handle _ => ""
     val age = Time.- (Time.now (), OS.FileSys.modTime lock)
       handle _ => Time.zeroTime
   in
-    not (pid_alive pid) orelse Time.compare (age,max_lock_age) = GREATER
+    Time.compare (age,max_lock_age) = GREATER
   end
 
 fun release_lock lock =
@@ -1560,7 +1555,8 @@ fun record_one (cfg : record_config) prov src_hashes recorded_stale thy =
               print_endline msg;
               release_lock lock; (true,msg)
             end)
-           handle e =>
+           handle Interrupt => raise Interrupt
+                | e =>
              let
                val src_hash = source_hash thy handle _ => ""
                val entry = failed_entry prov thy src_hash
@@ -1634,21 +1630,25 @@ fun record_worker (p : record_worker_param) thy =
       Time.fromSeconds (Int.toLarge (#max_lock_age_seconds p)))
     val prov = {tacdata_version = #tacdata_version p,
                 tactictoe_version = #tactictoe_version p}
-    val _ = load (thy ^ "Theory") handle _ => ()
+    val _ = load (thy ^ "Theory")
+      handle Interrupt => raise Interrupt | _ => ()
     val (ok,msg) =
       record_one cfg prov (#src_hashes p) (#recorded_stale p) thy
   in
     (if ok then "ok " else "fail ") ^ thy ^ "  " ^ msg
   end
-  handle e => "fail " ^ thy ^ "  " ^ exnMessage e
+  handle Interrupt => raise Interrupt
+       | e => "fail " ^ thy ^ "  " ^ exnMessage e
 
 fun record_extspec () =
   {
   self_dir = "$(HOLDIR)/src/tactictoe/src",
   self = "(tttUnfold.record_extspec ())",
   parallel_dir = record_parallel_dir_of (),
-  reflect_globals = "tttUnfold.record_parallel_dir := " ^
-    mlquote (record_parallel_dir_of ()),
+  reflect_globals =
+    "(tttUnfold.record_parallel_dir := " ^
+    mlquote (record_parallel_dir_of ()) ^
+    "; aiLib.tactictoe_cache_dir := " ^ mlquote (!tactictoe_cache_dir) ^ ")",
   function = record_worker,
   write_param = write_worker_param,
   read_param = read_worker_param,

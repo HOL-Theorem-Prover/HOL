@@ -1068,7 +1068,8 @@ fun write_texgraph file (s1,s2) l =
 
 fun writel_atomic file sl =
   let
-    val _ = mkDir_err (OS.Path.dir file)
+    val dir = OS.Path.dir file
+    val _ = if dir = "" then () else mkDir_err dir
     val tmp = file ^ "." ^ Portable.unique_tmp_suffix () ^ ".tmp"
   in
     (writel tmp sl;
@@ -1396,8 +1397,9 @@ fun sigobj_theories () =
     val _    = mkDir_err codedir
     val file = codedir ^ "/theory_list"
     val sigdir = HOLDIR ^ "/sigobj"
-    val cmd0 = "cd " ^ sigdir
-    val cmd1 = "readlink -f $(find -regex \".*[^/]Theory.sig\") > " ^ file
+    val cmd0 = "cd " ^ shell_quote sigdir
+    val cmd1 = "readlink -f $(find -regex \".*[^/]Theory.sig\") > " ^
+      shell_quote file
   in
     ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1 ^ "; "));
     readl file

@@ -50,15 +50,21 @@ fun find_script thy =
     dir ^ "/" ^ thy ^ "Script.sml"
   end
 
-(* A theory's ancestry cannot change once the theory is loaded, and
-   sort_thyl topologically sorts it (calling ancestry once per ancestor),
-   so memoize: the staleness scan asks for the same ancestries repeatedly. *)
+(* A completed theory's ancestry cannot change, and sort_thyl topologically
+   sorts it (calling ancestry once per ancestor), so memoize completed
+   theories: the staleness scan asks for the same ancestries repeatedly.
+   The current theory is a graph fringe whose ancestry can still grow. *)
 val ancestry_cache = ref (dempty String.compare)
 
-fun ttt_ancestry thy =
-  dfind thy (!ancestry_cache) handle NotFound =>
+fun compute_ancestry thy =
   let val l = filter (fn x => not (mem x ["min","bool"]))
                 (sort_thyl (ancestry thy))
+  in l end
+
+fun ttt_ancestry thy =
+  if thy = current_theory () then compute_ancestry thy else
+  dfind thy (!ancestry_cache) handle NotFound =>
+  let val l = compute_ancestry thy
   in
     ancestry_cache := dadd thy l (!ancestry_cache); l
   end

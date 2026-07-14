@@ -46,6 +46,17 @@ fun read_file file =
     TextIO.inputAll ins before TextIO.closeIn ins
   end
 
+val atomic_file = "ttt_writel_atomic_selftest"
+val _ = passok "atomic write accepts a bare filename"
+  (fn () =>
+    (aiLib.writel_atomic atomic_file ["atomic"];
+     if read_file atomic_file = "atomic\n" then ()
+     else raise Fail "atomic-write content mismatch")
+    before aiLib.remove_file atomic_file)
+
+val _ = check "parallel workers inherit configured cache root"
+  (String.isSubstring cache_dir (#reflect_globals (record_extspec ())))
+
 val _ = check "tacticToe public API type-checks"
   (let
      val _ : tactic = ttt

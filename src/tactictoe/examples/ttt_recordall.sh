@@ -51,7 +51,10 @@ fmt_mem() {
 
 print_memory_cgroup() {
   local cg cur part val effective
-  cg="$(awk -F: '$1 == "0" { print $3; exit }' /proc/self/cgroup)"
+  cg=""
+  if [ -r /proc/self/cgroup ]; then
+    cg="$(awk -F: '$1 == "0" { print $3; exit }' /proc/self/cgroup)"
+  fi
   [ -n "${cg}" ] || cg="/"
 
   echo "Memory/cgroup diagnostics:"
