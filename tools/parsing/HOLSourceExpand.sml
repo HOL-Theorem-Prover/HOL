@@ -3,6 +3,8 @@ open HOLSourceAST
 
 exception Unreachable
 
+val goal_dummy = "HOL__GOAL__foo"
+
 fun pluck _ [] = NONE
   | pluck p (h::t) =
     if p h then SOME(h,t)
@@ -72,7 +74,7 @@ fun doProofAttrs p (SOME {attrs = {args = kvs, seps=_, stop=_}, left=_, right=_,
   | doProofAttrs _ _ tac = tac
 
 fun wrapTac (p, tac) = let
-  val dummy = mkIdent (p, "HOL__GOAL__foo")
+  val dummy = mkIdent (p, goal_dummy)
   in Fn {fn_ = p,
        elems = [{bar = NONE, pat = dummy, arrow = NONE, exp = App (tac, dummy)}],
        stop = expStop tac} end

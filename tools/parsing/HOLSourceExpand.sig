@@ -1,5 +1,10 @@
 signature HOLSourceExpand = sig
 
+(* Name of the bound variable in the goal-lambda that wrapTac emits around a
+   Proof tactic.  Consumers of expanded source use this to recover the user's
+   tactic. *)
+val goal_dummy : string
+
 val mkSemi: HOLSourceAST.dec list -> HOLSourceAST.dec list
 
 val expandDec:

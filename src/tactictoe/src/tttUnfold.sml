@@ -373,7 +373,7 @@ fun extract_store_thm sl =
     val name = original_code (last namel)
   in
     if is_quoted name
-    then SOME (rm_bbra_str (rm_squote name), namel, term, qtac, cont)
+    then SOME (rm_squote name, namel, term, qtac, cont)
     else NONE
   end
   handle HOL_ERR _ =>
@@ -386,7 +386,8 @@ fun extract_store_thm sl =
 (* For the modern Theorem/Proof/QED syntax, sketch_wrap feeds HOL's
    source-expander output, which desugars each Theorem block to
      val id = Q.store_thm_at (loc) ("name[attrs]", term, tac)
-   where tac = fn HOL__GOAL__foo => <user-tactic> HOL__GOAL__foo
+   where tac = fn HOLSourceExpand.goal_dummy => <user-tactic>
+                 HOLSourceExpand.goal_dummy
    (the expander wraps the user's tactic via wrapTac).  The store_thm
    recognizer above does not see `store_thm_at` and cannot parse the
    curried (loc)(args) shape, so such scripts record zero proofs.
@@ -411,13 +412,14 @@ fun take_group (Code(a,_) :: m) =
       else raise ERR "take_group" ("expected (, got " ^ a)
   | take_group _ = raise ERR "take_group" "not a paren"
 
-(* unwrap_fn: drop the `fn HOL__GOAL__foo => <tac> HOL__GOAL__foo` wrapper
-   that wrapTac produces, returning the user's tactic (sketch list).
+(* unwrap_fn: drop the `fn goal_dummy => <tac> goal_dummy` wrapper that
+   HOLSourceExpand.wrapTac produces, returning the user's tactic (sketch list).
    The sketcher renders `fn X => BODY` as
    Pattern ("fn", [X], "=>", sketched BODY), so match on Pattern. *)
 fun drop_goalarg_sketch sk =
   case rev sk of
-    Code ("HOL__GOAL__foo",_) :: rest => rev rest
+    Code (name,_) :: rest =>
+      if name = HOLSourceExpand.goal_dummy then rev rest else sk
   | _ => sk
 
 fun unwrap_fn sk =
@@ -428,11 +430,9 @@ fun unwrap_fn sk =
        | _ => drop_goalarg_sketch body)
   | _ => sk
 
-(* strip_attrs: drop a `[attrs]` suffix from a theorem name, e.g.
-   "o_THM[compute]" -> "o_THM", so tactic data is keyed by the real
-   theorem name (Q.store_thm_at applies the attrs separately). *)
-fun strip_attrs s =
-  case String.fields (fn c => c = #"[") s of (h :: _) => h | _ => s
+(* Match the attribute grammar used by the theorem store itself, so recorder
+   keys agree with DB.fetch for every supported theorem name. *)
+fun theorem_name s = #1 (AttributeSyntax.dest_name_attrs s)
 
 fun extract_store_thm_at sl =
   let
@@ -447,7 +447,7 @@ fun extract_store_thm_at sl =
     val name = original_code (last namel)
   in
     if is_quoted name
-    then SOME (rm_bbra_str (rm_squote name), locg, namel, term, qtac, cont)
+    then SOME (rm_squote name, locg, namel, term, qtac, cont)
     else NONE
   end
   handle HOL_ERR _ =>
@@ -728,7 +728,7 @@ fun modified_program (h,d) p =
         in
           [a,"("] @ original_program locg @ [")","("] @
           original_program namel @ [","] @ original_program term @ [","] @
-          record_wrapper (strip_attrs name) qtac @ [")"]
+          record_wrapper (theorem_name name) qtac @ [")"]
           @ continue cont
         end
     else if mem (drop_sig a) store_thm_list andalso hd_code_par m
@@ -742,7 +742,7 @@ fun modified_program (h,d) p =
         in
           [a,"("] @ original_program namel @ [","] @
           original_program term @ [","] @
-          record_wrapper name qtac @ [")"]
+          record_wrapper (theorem_name name) qtac @ [")"]
           @ continue cont
         end
     else if mem (drop_sig a) prove_list andalso hd_code_par m
@@ -854,7 +854,7 @@ fun replace_fetch l = case l of
     then
       case extract_store_thm_at (tl m) of
         SOME (name,_,_,_,_,cont) =>
-        mk_fetch (strip_attrs name) @ replace_fetch cont
+        mk_fetch (theorem_name name) @ replace_fetch cont
       | NONE => Code(a,Watch) :: replace_fetch m
     else if is_watch_name a andalso hd_code_par2 m
     then

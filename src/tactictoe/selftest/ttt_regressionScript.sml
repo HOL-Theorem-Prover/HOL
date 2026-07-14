@@ -19,4 +19,10 @@ Proof
   SRW_TAC [][FUN_EQ_THM, one]
 QED
 
+Theorem ATTR_REGRESSION[simp]:
+  T
+Proof
+  SIMP_TAC bool_ss []
+QED
+
 val _ = export_theory ()

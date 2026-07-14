@@ -234,12 +234,14 @@ fun rewrite_record_raw thy =
     val tttsml =
       tactictoe_scratch_dir_of () ^ "/scripts/" ^
       OS.Path.base scriptorg ^ "_ttt.sml"
+    val _ = smlExecScripts.exec_tttrecord_in_dir (OS.Path.dir scriptorg) tttsml
   in
-    smlExecScripts.exec_tttrecord_in_dir (OS.Path.dir scriptorg) tttsml
+    tactictoe_dir_of () ^ "/log/scripts/" ^ thy
   end
 
-val _ = passok "record rewriter regression tactic data"
-  (fn () => rewrite_record_raw "ttt_regression")
+val regression_script =
+  (tprint "record rewriter regression tactic data";
+   read_file (rewrite_record_raw "ttt_regression") before OK ())
 
 val regression_data = read_file (tacdata_file "ttt_regression")
 
@@ -247,6 +249,16 @@ val _ = check "Q_TAC quotation step is recorded"
   (String.isSubstring "Q_TAC" regression_data andalso
    String.isSubstring "SUFF_TAC" regression_data andalso
    String.isSubstring "QUOTE" regression_data)
+
+val _ = check "expanded proof wrapper is removed before recording"
+  (not (String.isSubstring "HOL__GOAL__" regression_data) andalso
+   not (String.isSubstring "HOL__GOAL__" regression_script))
+
+val _ = check "attributed theorem is recorded under its bare name"
+  (String.isSubstring
+     "tttRecord.app_wrap_proof \"ATTR_REGRESSION\"" regression_script andalso
+   String.isSubstring
+     "tttRecord.record_proof \"ATTR_REGRESSION\"" regression_script)
 
 open arithmeticTheory dividesTheory gcdTheory
 
