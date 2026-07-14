@@ -37,33 +37,17 @@ val name_glob = ref ""
    verbatim would re-run the proof/definition it reproduces and re-store
    the result, causing a DUP crash (e.g. `SIMPLE_GUESS_FORALL_def` in
    quantHeuristics, whose reps re-runs `TotalDefn.located_qDefine`).
-   These cover the storing forms the TacticToe rewriter emits: theorem
-   stores (`store_thm_at`, `store_thm`, `save_thm_at`, ...) and
-   definition forms (`qDefine`, `xDefine`, `located_qDefine`, ...). *)
+   Matching is by substring, so each entry below also covers its own
+   prefixed and suffixed variants: "Define" covers qDefine/xDefine/
+   located_Define/multiDefine/..., and "store_thm" covers store_thm_at. *)
 val dangerous_store_substrings = [
-  "store_thm_at",
-  "save_thm_at",
   "store_thm",
   "save_thm",
-  "located_qDefine",
-  "located_xDefine",
-  "located_zDefine",
-  "located_bDefine",
-  "located_tDefine",
-  "located_dDefine",
-  "located_Define",
-  "qDefine",
-  "xDefine",
-  "zDefine",
-  "bDefine",
-  "tDefine",
-  "dDefine",
+  "Define",
   "new_definition",
   "new_specification",
   "new_type_definition",
   "store_definition",
-  "Define",
-  "multiDefine",
   "Hol_reln",
   "Hol_coreln",
   "new_binder_definition",

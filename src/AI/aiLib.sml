@@ -76,12 +76,17 @@ fun mkDir_err dir =
       if exists_file dir then () else raise ERR "mkDir_err" dir
   end
 
-fun home_dir () =
-  case OS.Process.getEnv "HOME" of
+(* Cache root, following the same convention as the rest of HOL4
+   (see HM_Core_Cline): $XDG_CACHE_HOME if set, else $HOME/.cache. *)
+fun cache_root () =
+  case OS.Process.getEnv "XDG_CACHE_HOME" of
     SOME dir => dir
-  | NONE => raise ERR "home_dir" "HOME is not set"
+  | NONE =>
+    case OS.Process.getEnv "HOME" of
+      SOME dir => dir ^ "/.cache"
+    | NONE => raise ERR "cache_root" "neither XDG_CACHE_HOME nor HOME is set"
 
-fun home_cache_dir name = home_dir () ^ "/.cache/" ^ name
+fun home_cache_dir name = cache_root () ^ "/" ^ name
 
 fun tool_cache_dir env name =
   case OS.Process.getEnv env of
@@ -89,13 +94,17 @@ fun tool_cache_dir env name =
   | NONE => home_cache_dir name
 
 val tactictoe_cache_dir =
-  tool_cache_dir "HOL4_TACTICTOE_CACHE" "tactictoe"
-
-val tactictoe_cache_dir_ref = ref tactictoe_cache_dir
-fun current_tactictoe_cache_dir () = !tactictoe_cache_dir_ref
+  ref (tool_cache_dir "HOL4_TACTICTOE_CACHE" "tactictoe")
 
 val holyhammer_cache_dir =
-  tool_cache_dir "HOL4_HOLYHAMMER_CACHE" "holyhammer"
+  ref (tool_cache_dir "HOL4_HOLYHAMMER_CACHE" "holyhammer")
+
+(* Root for the throwaway files the SML-inspection machinery generates
+   (opened-structure dumps, generated scripts, heap and dependency
+   probes, redirected output).  Everything under it is derived from this
+   one ref, so a client that needs a private scratch area -- e.g. a
+   parallel TacticToe recording worker -- rebinds only this. *)
+val scratch_dir = ref (tool_cache_dir "HOL4_SCRATCH" "hol4/scratch")
 
 fun remove_file file =
   if exists_file file then ignore (OS.FileSys.remove file) else ()
@@ -1067,29 +1076,23 @@ fun writel_atomic file sl =
     handle e => (remove_file tmp; raise e)
   end
 
-fun read_file_atomic file = readl_empty file
+(* Content hashes for cache identity.  SHA-1 is what the rest of HOL4
+   already uses for this (see HM_Cachekey and Theory.sml).  Note these are
+   unrelated to hash_string above, which is a feature hash. *)
+fun sha1_file file =
+  SHA1.sha1_file {filename = file}
+  handle Interrupt => raise Interrupt | _ => raise ERR "sha1_file" file
 
-fun sha256_file file =
+fun sha1_string s =
   let
-    val tmp = OS.FileSys.tmpName ()
-    val cmd = "sha256sum " ^ shell_quote file ^ " > " ^ shell_quote tmp
-    val status = OS.Process.system cmd
-    val ok = OS.Process.isSuccess status
-    val line = if ok then hd (readl tmp) else ""
-    val hash = hd (String.tokens Char.isSpace line)
-      handle _ => (remove_file tmp; raise ERR "sha256_file" file)
+    val v = Byte.stringToBytes s
+    val n = Word8Vector.length v
+    fun reader (i,k) =
+      let val m = Int.min (k, n - i) in
+        (Word8VectorSlice.vector (Word8VectorSlice.slice (v,i,SOME m)), i + m)
+      end
   in
-    remove_file tmp;
-    if ok then hash else raise ERR "sha256_file" file
-  end
-
-fun sha256_string s =
-  let
-    val tmp = OS.FileSys.tmpName ()
-    val _ = write_file tmp s
-    val hash = sha256_file tmp
-  in
-    remove_file tmp; hash
+    SHA1.sha1String reader 0
   end
 
 fun readl_rm file =
@@ -1387,13 +1390,11 @@ fun gamma_noise_gen alpha =
    Theories of the standard library (sigobj)
    ------------------------------------------------------------------------ *)
 
-val sigobj_theories_dir = ref (HOLDIR ^ "/src/tactictoe/code")
-
 fun sigobj_theories () =
   let
-    val ttt_code_dir = !sigobj_theories_dir
-    val _    = mkDir_err ttt_code_dir
-    val file = ttt_code_dir ^ "/theory_list"
+    val codedir = !scratch_dir ^ "/code"
+    val _    = mkDir_err codedir
+    val file = codedir ^ "/theory_list"
     val sigdir = HOLDIR ^ "/sigobj"
     val cmd0 = "cd " ^ sigdir
     val cmd1 = "readlink -f $(find -regex \".*[^/]Theory.sig\") > " ^ file

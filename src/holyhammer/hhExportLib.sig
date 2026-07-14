@@ -4,7 +4,6 @@ sig
 include Abbrev
 
   type thmid = string * string
-  val hh_dir : string
 
   type formula_info = {
     cval : (term * int) list,

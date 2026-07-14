@@ -17,47 +17,17 @@ open HolKernel Abbrev boolLib aiLib
 
 val infix_file = HOLDIR ^ "/src/AI/sml_inspection/infix_file.sml"
 val tactictoe_session_id = Portable.unique_tmp_suffix ()
-val tactictoe_cache_dir = tactictoe_cache_dir_ref
-fun tactictoe_dir_of () = current_tactictoe_cache_dir ()
+fun tactictoe_dir_of () = !tactictoe_cache_dir
 fun ttt_eval_dir_of () = tactictoe_dir_of () ^ "/eval"
 fun tactictoe_scratch_dir_of () =
   tactictoe_dir_of () ^ "/tmp/" ^ tactictoe_session_id
 fun set_tactictoe_cache_dir dir = tactictoe_cache_dir := dir
 
-val tactictoe_dir = tactictoe_dir_of ()
-val ttt_eval_dir = ttt_eval_dir_of ()
-val tactictoe_scratch_dir = tactictoe_scratch_dir_of ()
-
-fun with_saved_ref r v f =
-  let val old = !r in
-    r := v;
-    (let val x = f () in r := old; x end
-     handle e => (r := old; raise e))
-  end
-
+(* Give the SML-inspection machinery a scratch area private to this
+   session, so that concurrent recording processes cannot collide.  All
+   of its scratch subdirectories hang off aiLib.scratch_dir. *)
 fun with_tactictoe_cache f =
-  let val scratch = tactictoe_scratch_dir_of () in
-  with_saved_ref sigobj_theories_dir (scratch ^ "/code")
-  (fn () =>
-  with_saved_ref smlOpen.open_dir
-    (scratch ^ "/sml_inspection/open")
-  (fn () =>
-  with_saved_ref smlOpen.openscript_dir
-    (scratch ^ "/sml_inspection/openscript")
-  (fn () =>
-  with_saved_ref smlExecScripts.heapname_dir
-    (scratch ^ "/sml_inspection/heapname")
-  (fn () =>
-  with_saved_ref smlExecScripts.genscriptdep_dir
-    (scratch ^ "/sml_inspection/genscriptdep")
-  (fn () =>
-  with_saved_ref smlExecScripts.buildheap_dir
-    (scratch ^ "/sml_inspection/buildheap")
-  (fn () =>
-  with_saved_ref smlRedirect.hide_file
-    (scratch ^ "/sml_inspection/hide_file")
-    f))))))
-  end
+  with_flag (scratch_dir, tactictoe_scratch_dir_of ()) f ()
 
 (* -------------------------------------------------------------------------
    Nearest neighbor parameters

@@ -25,9 +25,10 @@ derived from the theory name, Script.sml hash, ancestry version, tactic-data
 format version, and TacticToe version. Same-name theories from different
 projects therefore do not share data unless this full identity matches; old
 flat ttt_tacdata/<theory> files are not used for current manifest-validated
-loads. Bump `mlTacticData.format_version` when the on-disk format changes,
-and `mlTacticData.tactictoe_version` when recorder, feature, or learning
-changes invalidate recorded data.
+loads. The on-disk format and the identity key are owned by tttManifest:
+bump `tttManifest.format_version` when the on-disk format changes, and
+`tttManifest.tactictoe_version` when recorder, feature, or learning changes
+invalidate recorded data.
 The cache root can also be changed in ML after loading:
   tttSetup.set_tactictoe_cache_dir "/path/to/tactictoe-cache";
 If TacticToe has already loaded tactic data, also clear the in-memory cache:

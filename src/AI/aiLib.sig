@@ -45,13 +45,12 @@ sig
 
   (* commands *)
   val mkDir_err : string -> unit
-  val home_dir : unit -> string
+  val cache_root : unit -> string
   val home_cache_dir : string -> string
   val tool_cache_dir : string -> string -> string
-  val tactictoe_cache_dir : string
-  val tactictoe_cache_dir_ref : string ref
-  val current_tactictoe_cache_dir : unit -> string
-  val holyhammer_cache_dir : string
+  val tactictoe_cache_dir : string ref
+  val holyhammer_cache_dir : string ref
+  val scratch_dir : string ref
   val run_cmd : string -> unit
   val cmd_in_dir : string -> string -> unit
   val exists_file : string -> bool
@@ -185,9 +184,8 @@ sig
     string -> string * string -> (int * int) list -> unit
   val readl_rm : string -> string list
   val writel_atomic : string -> string list -> unit
-  val read_file_atomic : string -> string list
-  val sha256_file : string -> string
-  val sha256_string : string -> string
+  val sha1_file : string -> string
+  val sha1_string : string -> string
   val listDir : string -> string list
   val listDir_all : string -> string list
 
@@ -272,7 +270,6 @@ sig
   val import_goal : string -> goal
 
   (* sigobj *)
-  val sigobj_theories_dir : string ref
   val sigobj_theories : unit -> string list
   val load_sigobj : unit -> unit
   val link_sigobj : string -> unit

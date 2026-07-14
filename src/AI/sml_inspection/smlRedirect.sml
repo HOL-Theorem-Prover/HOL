@@ -75,9 +75,9 @@ fun hide_in_file file f x =
     )
   )
 
-val hide_file = ref (HOLDIR ^ "/src/AI/sml_inspection/hide_file")
+fun hide_file () = !scratch_dir ^ "/sml_inspection/hide_file"
 
-fun hidef f x = hide_in_file (!hide_file) f x
+fun hidef f x = hide_in_file (hide_file ()) f x
 
 
 

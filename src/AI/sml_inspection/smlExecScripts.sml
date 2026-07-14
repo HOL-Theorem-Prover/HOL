@@ -18,18 +18,12 @@ val ERR = mk_HOL_ERR "smlExecScripts"
 
 fun bare file = OS.Path.base (OS.Path.file file)
 fun remove_err s = FileSys.remove s handle SysErr _ => ()
-(* Literal (un-munged) existence check, matching what a shell `cp` sees.
-   aiLib.exists_file uses HOLFileSys.access, which silently rewrites
-   `dir/fooTheory.sml` to `dir/.hol/objs/fooTheory.sml`; that munged path
-   may exist even though the literal path passed to `cp` does not.  Use
-   this for the save/restore cp guards so the guard agrees with `cp`. *)
-fun lit_exists file = OS.FileSys.access (file, [])
 
 (* -------------------------------------------------------------------------
    Find the right heap for running a script
    ------------------------------------------------------------------------- *)
 
-val heapname_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/heapname")
+fun heapname_dir () = !scratch_dir ^ "/sml_inspection/heapname"
 val use_state0 = ref false
 val hol_bin = HOLDIR ^ "/bin/hol"
 
@@ -38,8 +32,8 @@ fun script_arg file = if OS.Path.isAbsolute file then file else OS.Path.file fil
 fun find_heapname_in_dir dir file =
   if !use_state0 then HOLDIR ^ "/bin/hol.state0" else
   let
-    val _ = mkDir_err (!heapname_dir)
-    val fileout = !heapname_dir ^ "/heapname_" ^ bare file
+    val _ = mkDir_err (heapname_dir ())
+    val fileout = heapname_dir () ^ "/heapname_" ^ bare file
     val cmd = String.concatWith " "
       [shell_quote hol_bin, "heapname", ">", shell_quote fileout]
   in
@@ -62,13 +56,11 @@ fun find_tttheapname_in_dir dir file =
   then HOLDIR ^ "/bin/hol.state0"
   else find_heapname_in_dir dir file
 
-fun find_tttheapname file = find_tttheapname_in_dir (OS.Path.dir file) file
-
 (* -------------------------------------------------------------------------
    Find script dependencies
    ------------------------------------------------------------------------- *)
 
-val genscriptdep_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/genscriptdep")
+fun genscriptdep_dir () = !scratch_dir ^ "/sml_inspection/genscriptdep"
 val script_includes = ref ([] : string list)
 
 fun genscriptdep_env_prefix () =
@@ -79,9 +71,9 @@ fun genscriptdep_env_prefix () =
 
 fun find_genscriptdep_in_dir dir file =
   let
-    val _ = mkDir_err (!genscriptdep_dir)
+    val _ = mkDir_err (genscriptdep_dir ())
     val genscriptdep_bin = HOLDIR ^ "/bin/genscriptdep"
-    val fileout = !genscriptdep_dir ^ "/genscriptdep_" ^ bare file
+    val fileout = genscriptdep_dir () ^ "/genscriptdep_" ^ bare file
     val cmd = String.concatWith " "
       [genscriptdep_env_prefix () ^ shell_quote genscriptdep_bin,
        shell_quote (script_arg file), ">",
@@ -100,12 +92,12 @@ fun find_genscriptdep file = find_genscriptdep_in_dir (OS.Path.dir file) file
    ------------------------------------------------------------------------- *)
 
 val buildheap_options = ref ""
-val buildheap_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/buildheap")
+fun buildheap_dir () = !scratch_dir ^ "/sml_inspection/buildheap"
 
 fun exec_scriptb_in_dir b dir script =
   let
-    val _ = mkDir_err (!buildheap_dir)
-    val fileout = !buildheap_dir ^ "/buildheap_" ^ bare script
+    val _ = mkDir_err (buildheap_dir ())
+    val fileout = buildheap_dir () ^ "/buildheap_" ^ bare script
     val depl = find_genscriptdep_in_dir dir script
     val heap = if b then find_tttheapname_in_dir dir script
                else find_heapname_in_dir dir script
@@ -119,53 +111,9 @@ fun exec_scriptb_in_dir b dir script =
     cmd_in_dir dir cmd
   end
 
-fun exec_scriptb b script = exec_scriptb_in_dir b (OS.Path.dir script) script
-
 fun exec_script_in_dir dir script = exec_scriptb_in_dir false dir script
 
-val exec_script = exec_scriptb false
-
-(* -------------------------------------------------------------------------
-   Restore theory files in case they were modified  during
-   the execution of a tactictoe script (unlikely as
-   export_theory is edited out from the modified script)
-   ------------------------------------------------------------------------- *)
-
-fun theory_files script =
-  let
-    val base      = fst (split_string "Script_ttt." script)
-    val theory    = base ^ "Theory"
-    val theoryuo  = theory ^ ".uo"
-    val theoryui  = theory ^ ".ui"
-    val theorydat = theory ^ ".dat"
-    val theorysml = theory ^ ".sml"
-  in
-    [theorysml,theorydat,theoryuo,theoryui]
-  end
-
-fun save_file file =
-  if lit_exists file then
-    let
-      val dir = #dir (OS.Path.splitDirFile file)
-      val cmd = "cp -p " ^ file ^ " " ^ (file ^ ".tttsave")
-    in
-      cmd_in_dir dir cmd
-    end
-  else ()
-
-fun restore_file file =
-  if lit_exists (file ^ ".tttsave") then
-    let
-      val dir = #dir (OS.Path.splitDirFile file)
-      val cmd1 = "cp -p " ^ (file ^ ".tttsave") ^ " " ^ file
-      val cmd2 = "rm " ^ (file ^ ".tttsave")
-    in
-      cmd_in_dir dir (cmd1 ^ "; " ^ cmd2)
-    end
-  else ()
-
-fun save_thyfiles script = app save_file (theory_files script)
-fun restore_thyfiles script = app restore_file (theory_files script)
+fun exec_script script = exec_script_in_dir (OS.Path.dir script) script
 
 (* -------------------------------------------------------------------------
    Execute tactictoe scripts.

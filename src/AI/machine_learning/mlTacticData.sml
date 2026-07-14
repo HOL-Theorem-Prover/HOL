@@ -8,7 +8,7 @@
 structure mlTacticData :> mlTacticData =
 struct
 
-open HolKernel boolLib Abbrev aiLib smlLexer mlFeature
+open HolKernel boolLib Abbrev aiLib smlLexer mlFeature tttManifest
 
 val ERR = mk_HOL_ERR "mlTacticData"
 
@@ -38,12 +38,6 @@ val empty_tacdata : tacdata =
   taccov = dempty String.compare,
   symfreq = dempty Int.compare
   }
-
-(* Bump format_version when the on-disk tactic-data representation changes.
-   Bump tactictoe_version when recorder, feature, or learning changes make
-   existing tactic data unsuitable. *)
-val format_version = 3
-val tactictoe_version = 1
 
 (* -------------------------------------------------------------------------
    Exporting tactic data
@@ -118,168 +112,16 @@ fun import_tacdata filel =
    Tactictoe database management
    ------------------------------------------------------------------------- *)
 
-val ttt_tacdata_dir = tactictoe_cache_dir ^ "/ttt_tacdata"
-fun ttt_tacdata_dir_of () = current_tactictoe_cache_dir () ^ "/ttt_tacdata"
-fun ttt_tacdata_data_dir_of () = ttt_tacdata_dir_of () ^ "/data"
 val ttt_tacdata_file_override = ref (NONE : string option)
-
-type provenance = {tacdata_version : int, tactictoe_version : int}
-
-type manifest_entry =
-  { thy : string, data_sha256 : string, src_sha256 : string,
-    anc_version : int, recorded_at : int, failed : bool,
-    tacdata_version : int, tactictoe_version : int }
-
-type manifest =
-  { manifest_version : int, tacdata_version : int,
-    tactictoe_version : int, entries : manifest_entry list }
-
-fun safe_sha256_file file = if exists_file file then sha256_file file else ""
-
-fun find_script thy =
-  let val dir =
-    Binarymap.find(fileDirMap(),thy ^ "Theory.sml")
-    handle NotFound => raise ERR "find_script" ("please load " ^ thy ^ "Theory")
-  in
-    dir ^ "/" ^ thy ^ "Script.sml"
-  end
-
-fun ttt_ancestry thy =
-  filter (fn x => not (mem x ["min","bool"])) (sort_thyl (ancestry thy))
-
-fun source_hash thy = safe_sha256_file (find_script thy)
-
-fun current_provenance () =
-  {tacdata_version = format_version, tactictoe_version = tactictoe_version}
-
-fun int_of_string s =
-  case Int.fromString s of
-    SOME i => i
-  | NONE => raise ERR "int_of_string" s
-
-fun identity_hash thy src anc (prov : provenance) =
-  sha256_string (String.concatWith "\n"
-    ["thy=" ^ thy,
-     "src_sha256=" ^ src,
-     "anc_version=" ^ its anc,
-     "tacdata_version=" ^ its (#tacdata_version prov),
-     "tactictoe_version=" ^ its (#tactictoe_version prov)] ^ "\n")
-
-fun tacdata_file_of_identity thy src anc prov =
-  ttt_tacdata_data_dir_of () ^ "/" ^ thy ^ "-" ^ identity_hash thy src anc prov
-
-fun current_tacdata_file thy =
-  tacdata_file_of_identity thy (source_hash thy) (length (ttt_ancestry thy))
-    (current_provenance ())
-
-fun manifest_file () = ttt_tacdata_dir_of () ^ "/MANIFEST"
-
-fun parse_manifest_line line (m : manifest) =
-  let val tok = String.tokens Char.isSpace line in
-    case tok of
-      [] => m
-    | a :: _ =>
-      if String.isPrefix "#" a then m else
-      case tok of
-        ["format",v] =>
-          {manifest_version = int_of_string v,
-           tacdata_version = #tacdata_version m,
-           tactictoe_version = #tactictoe_version m, entries = #entries m}
-      | ["tacdata",v] =>
-          {manifest_version = #manifest_version m,
-           tacdata_version = int_of_string v,
-           tactictoe_version = #tactictoe_version m, entries = #entries m}
-      | ["tactictoe",v] =>
-          {manifest_version = #manifest_version m,
-           tacdata_version = #tacdata_version m,
-           tactictoe_version = int_of_string v, entries = #entries m}
-      | ["thy",thy,data,src,anc,t] =>
-          let
-            val recorded_at = int_of_string t
-            val entry = {thy = thy, data_sha256 = data, src_sha256 = src,
-                         anc_version = int_of_string anc,
-                         recorded_at = recorded_at,
-                         failed = data = "failed" orelse recorded_at < 0,
-                         tacdata_version = #tacdata_version m,
-                         tactictoe_version = #tactictoe_version m}
-          in
-            {manifest_version = #manifest_version m,
-             tacdata_version = #tacdata_version m,
-             tactictoe_version = #tactictoe_version m, entries = entry :: #entries m}
-          end
-      | ["thy",thy,data,src,anc,t,tacdata_v,tactictoe_v] =>
-          let
-            val recorded_at = int_of_string t
-            val entry = {thy = thy, data_sha256 = data, src_sha256 = src,
-                         anc_version = int_of_string anc,
-                         recorded_at = recorded_at,
-                         failed = data = "failed" orelse recorded_at < 0,
-                         tacdata_version = int_of_string tacdata_v,
-                         tactictoe_version = int_of_string tactictoe_v}
-          in
-            {manifest_version = #manifest_version m,
-             tacdata_version = #tacdata_version m,
-             tactictoe_version = #tactictoe_version m, entries = entry :: #entries m}
-          end
-      | _ => raise ERR "parse_manifest_line" line
-  end
-
-fun read_manifest_full () =
-  if not (exists_file (manifest_file ())) then NONE else
-  let
-    val empty = {manifest_version = ~1, tacdata_version = ~1,
-                 tactictoe_version = ~1, entries = []}
-    val m = foldl (fn (line,m) => parse_manifest_line line m)
-      empty (readl (manifest_file ()))
-  in
-    if #manifest_version m < 0 then NONE
-    else SOME {manifest_version = #manifest_version m,
-               tacdata_version = #tacdata_version m,
-               tactictoe_version = #tactictoe_version m,
-               entries = rev (#entries m)}
-  end
-  handle _ => NONE
-
-fun same_identity thy src anc (prov : provenance) (e : manifest_entry) =
-  #thy e = thy andalso #src_sha256 e = src andalso #anc_version e = anc andalso
-  #tacdata_version e = #tacdata_version prov andalso
-  #tactictoe_version e = #tactictoe_version prov
-
-fun entry_file (e : manifest_entry) =
-  let
-    val prov = {tacdata_version = #tacdata_version e,
-                tactictoe_version = #tactictoe_version e}
-  in
-    tacdata_file_of_identity (#thy e) (#src_sha256 e) (#anc_version e) prov
-  end
-
-fun tacdata_file_for_thy thy =
-  let
-    val src = source_hash thy
-    val anc = length (ttt_ancestry thy)
-    val prov = current_provenance ()
-    val current_file = tacdata_file_of_identity thy src anc prov
-  in
-    case read_manifest_full () of
-      NONE => if exists_file current_file then SOME current_file else NONE
-    | SOME m =>
-      case List.find (same_identity thy src anc prov) (#entries m) of
-        NONE => if exists_file current_file then SOME current_file else NONE
-      | SOME e =>
-        let val file = entry_file e in
-          if #failed e then NONE
-          else if exists_file file andalso safe_sha256_file file = #data_sha256 e
-          then SOME file
-          else NONE
-        end
-  end handle _ => NONE
 
 fun exists_tacdata_thy thy = isSome (tacdata_file_for_thy thy)
 
 fun create_tacdata () =
   let
     val thyl = ancestry (current_theory ())
-    val resolved = map (fn thy => (thy, tacdata_file_for_thy thy)) thyl
+    (* read the manifest once, not once per ancestor *)
+    val man = read_manifest ()
+    val resolved = map (fn thy => (thy, tacdata_file_for_thy_in man thy)) thyl
     val filel = List.mapPartial (fn (_,SOME file) => SOME file | _ => NONE)
       resolved
     val thyl2 = List.mapPartial (fn (thy,NONE) => SOME thy | _ => NONE)
@@ -307,8 +149,7 @@ fun ttt_update_tacdata ((loc,call),{calld,taccov,symfreq}) =
 
 fun ttt_export_tacdata thy tacdata =
   let
-    val dir = ttt_tacdata_data_dir_of ()
-    val _ = mkDir_err dir
+    val _ = mkDir_err (tacdata_data_dir ())
     val file = case !ttt_tacdata_file_override of
         SOME file => file
       | NONE => current_tacdata_file thy

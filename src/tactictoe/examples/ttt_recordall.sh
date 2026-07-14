@@ -102,7 +102,30 @@ print_memory_cgroup
 
 # --- help ------------------------------------------------------------------
 usage() {
-  sed -n '2,39p' "${BASH_SOURCE[0]}"
+  cat <<'EOF'
+Record a TacticToe tactic database for the ENTIRE HOL4 standard library.
+
+Runs the companion script ttt_recordall.sml under hol, which loads every
+theory in $HOLDIR/sigobj (the whole standard library) via
+tttUnfold.load_sigobj () and then records tactic data for all of them via
+tttUnfold.ttt_record ().
+
+Usage:
+  export HOLDIR=/path/to/HOL
+  ttt_recordall.sh [--no-build] [--keep] [--output DIR]
+
+  --no-build    Skip the full HOL4 build; record from the current sigobj.
+                By default a `bin/build -F` runs first, to populate sigobj.
+  --keep        Keep existing tactic data: only record theories that are
+                missing or stale.  Without it the cache is wiped first.
+  --output DIR  Use DIR as the TacticToe cache root instead of
+                $HOME/.cache/tactictoe.  The tactic database is written to
+                DIR/ttt_tacdata.  Exported to hol as HOL4_TACTICTOE_CACHE.
+
+Recording opens many files; the script raises the soft open-file limit to
+20000 (as recommended by src/tactictoe/EVALUATION).  If the hard limit is
+lower than 20000, raise it first in the launching shell (ulimit -Hn 20000).
+EOF
 }
 
 # --- parse arguments (before any environment checks) ----------------------
@@ -222,17 +245,15 @@ export HOL4_TACTICTOE_CACHE="${cache_root}"
 tacdata_path="${cache_root}/ttt_tacdata"
 echo "TacticToe cache root: ${HOL4_TACTICTOE_CACHE}"
 
-# --- decide whether the SML feed should clean first ------------------------
+# --- keep or clean ---------------------------------------------------------
+# ttt_recordall.sml reads TTT_RECORDALL_KEEP to decide whether to call
+# ttt_clean_record () first.
 if [ "${keep}" -eq 1 ]; then
-  feed="$(grep -v 'ttt_clean_record ();' "${sml_file}")"
+  export TTT_RECORDALL_KEEP=1
+  echo "--keep: preserving existing tactic data; only recording missing"
+  echo "        or stale theories."
 else
-  feed="$(cat "${sml_file}")"
-fi
-
-if [ "${keep}" -eq 1 ]; then
-  echo "--keep: preserving existing tactic data; only recording"
-  echo "         theories not yet recorded."
-else
+  export TTT_RECORDALL_KEEP=0
   echo "cleaning tactic database: ${tacdata_path}"
 fi
 
@@ -243,18 +264,4 @@ echo "standard library."
 echo "Output: ${tacdata_path}"
 echo
 
-# `hol run` evaluates an SML file for side effects.  It rejects
-# /dev/stdin (it looks for a matching .ui file), so write the feed to a
-# temp file and clean it up on exit.  mktemp with a bare template returns
-# a relative path, so resolve it to absolute (we must not `cd` away from
-# it before invoking hol).
-tmp_sml="$(mktemp --suffix=.sml ttt_recordall.XXXXXX)"
-tmp_sml="$(readlink -f "${tmp_sml}")"
-# Capture hol's exit status so the script can propagate it, then clean up
-# the temp file on exit -- whether hol succeeded, failed, or was interrupted.
-hol_rc=0
-trap 'rm -f "${tmp_sml}"' EXIT
-printf '%s\n' "${feed}" > "${tmp_sml}"
-
-"${hol_bin}" run "${tmp_sml}" || hol_rc=$?
-exit ${hol_rc}
+exec "${hol_bin}" run "${sml_file}"

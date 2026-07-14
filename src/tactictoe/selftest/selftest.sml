@@ -12,15 +12,11 @@ fun passok msg f =
   handle e => die ("FAILED: " ^ exnMessage e)
 
 fun expect_holerr msg structname msgsub f =
-  (tprint msg;
-   (f (); die "FAILED: no exception")
-   handle HOL_ERR herr =>
-     if top_structure_of herr = structname andalso
-        String.isSubstring msgsub (message_of herr)
-     then OK ()
-     else die ("FAILED: wrong HOL_ERR: " ^ top_structure_of herr ^
-               "/" ^ message_of herr)
-   | e => die ("FAILED: wrong exception: " ^ exnMessage e))
+  shouldfail
+    {printarg = K msg, printresult = K "", testfn = f,
+     checkexn = check_HOL_ERRexn
+       (fn (st,_,m) => st = structname andalso String.isSubstring msgsub m)}
+    ()
 
 fun proves msg tm =
   (tprint msg;
@@ -42,19 +38,12 @@ fun ttt_closes msg tm =
 
 val cache_dir = HOLDIR ^ "/src/tactictoe/selftest/.hol/tactictoe-cache"
 val _ = set_tactictoe_cache_dir cache_dir
-fun tacdata_file thy = mlTacticData.current_tacdata_file thy
+val tacdata_file = tttManifest.current_tacdata_file
 fun datafile () = tacdata_file "ConseqConv"
 
 fun read_file file =
-  let
-    val ins = TextIO.openIn file
-    fun loop acc =
-      case TextIO.inputLine ins of
-        NONE => (TextIO.closeIn ins; String.concat (rev acc))
-      | SOME line => loop (line :: acc)
-  in
-    loop []
-    handle e => (TextIO.closeIn ins; raise e)
+  let val ins = TextIO.openIn file in
+    TextIO.inputAll ins before TextIO.closeIn ins
   end
 
 val _ = check "tacticToe public API type-checks"
@@ -81,9 +70,9 @@ val _ = check "TacticToe recording API type-checks"
      val _ : record_option list -> unit = ttt_record_opts
      val _ : record_config -> unit = ttt_record_cfg
      val _ : record_scope ->
-       {stale : (string * reason) list, up_to_date : string list,
-        out_of_scope_ancestors : string list} = ttt_record_plan
-     val _ : unit -> manifest_entry list option = read_manifest
+       {stale : (string * reason) list, up_to_date : string list} =
+       ttt_record_plan
+     val _ : unit -> tttManifest.manifest option = tttManifest.read_manifest
    in true end)
 
 val saved_search_time = !ttt_search_time
@@ -134,19 +123,16 @@ val _ = check "record plan covers ConseqConv"
 val _ = check "record plan has non-empty scope"
   (not (null covered0))
 
-val _ = check "manifest version is current"
-  (manifest_format_version = 4)
+val _ = passok "read_manifest is callable before recording"
+  (fn () => ignore (tttManifest.read_manifest ()))
 
-val _ = check "read_manifest is callable before recording"
-  (case read_manifest () of NONE => true | SOME _ => true)
-
-val _ = check "sha256_string is deterministic"
+val _ = check "sha1_string is deterministic"
   (let
-     val h1 = aiLib.sha256_string "tactictoe\n"
-     val h2 = aiLib.sha256_string "tactictoe\n"
-     val h3 = aiLib.sha256_string "tactictoe changed\n"
+     val h1 = aiLib.sha1_string "tactictoe\n"
+     val h2 = aiLib.sha1_string "tactictoe\n"
+     val h3 = aiLib.sha1_string "tactictoe changed\n"
    in
-     h1 = h2 andalso h1 <> h3 andalso size h1 = 64
+     h1 = h2 andalso h1 <> h3 andalso size h1 = 40
    end)
 
 val _ = passok "record ConseqConv tactic data"
@@ -208,16 +194,15 @@ val _ =
   | SOME stree =>
       let
         val visl = vistreel_of_searchtree stree
-        fun count_ok (VisNode (_,n,_,_,_)) = n >= 0
         val total = List.foldl
           (fn (v,acc) => acc + length_vistree v) 0 visl
       in
-        check "search-tree view has sane counts"
-          (List.all count_ok visl andalso total >= 0);
+        check "search-tree view has nodes"
+          (not (null visl) andalso total > 0);
         passok "print_vistree does not raise"
           (fn () => List.app print_vistree visl);
-        check "suggest_proof returns a string"
-          (size (suggest_proof stree) >= 0)
+        passok "suggest_proof does not raise"
+          (fn () => ignore (suggest_proof stree))
       end
 
 val _ = passok "suggest with bounded depth does not raise"

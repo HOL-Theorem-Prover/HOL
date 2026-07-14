@@ -307,7 +307,7 @@ val cheat_flag = ref false
 fun prepare_global_data (thy,n) =
   let
     val _ = print_endline ("prepare_data: " ^ thy ^ " " ^ its n)
-    val file = case mlTacticData.tacdata_file_for_thy thy of
+    val file = case tttManifest.tacdata_file_for_thy thy of
         SOME file => file
       | NONE => raise ERR "prepare_global_data"
           ("missing tactic data for " ^ thy)

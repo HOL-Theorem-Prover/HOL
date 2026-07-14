@@ -54,7 +54,7 @@ fun pathl sl = case sl of
 
 val hhdir = pathl [HOLDIR,"src","holyhammer"]
 val bindir = pathl [hhdir,"provers"]
-val hh_cache_dir = ref holyhammer_cache_dir
+val hh_cache_dir = holyhammer_cache_dir
 fun prover_work_dir () = pathl [!hh_cache_dir,"provers"]
 fun fof_dir dir atp = pathl [dir, name_of atp ^ "_files"]
 

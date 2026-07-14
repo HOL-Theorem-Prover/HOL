@@ -48,11 +48,11 @@
    -----
         hol > use "src/tactictoe/examples/ttt_recordall.sml";
 
-   ttt_clean_record () is called first, so any previously recorded (or
-   downloaded) data in the TacticToe cache is wiped before recording
-   afresh.  Comment out the ttt_clean_record () line below to instead
-   let ttt_record () reuse up-to-date manifest entries and re-record
-   stale theories.
+   By default any previously recorded (or downloaded) data in the
+   TacticToe cache is wiped before recording afresh.  Set
+   TTT_RECORDALL_KEEP=1 (what ttt_recordall.sh --keep does) to instead
+   let ttt_record () reuse up-to-date manifest entries and re-record only
+   the stale theories.
 *)
 
 load "aiLib";
@@ -61,11 +61,15 @@ load "tttUnfold";
 open aiLib;       (* load_sigobj                                            *)
 open tttUnfold;   (* ttt_record, ttt_clean_record                           *)
 
+val keep_existing =
+  case OS.Process.getEnv "TTT_RECORDALL_KEEP" of
+    SOME s => s <> "" andalso s <> "0"
+  | NONE => false;
+
 (* Load every theory in $HOLDIR/sigobj = the entire standard library. *)
 load_sigobj ();
 
-(* Fresh recording of tactic data for all loaded theories. *)
 tttSetup.record_flag := true;
 tttSetup.record_savestate_flag := false;
-ttt_clean_record ();
+if keep_existing then () else ttt_clean_record ();
 ttt_record ();

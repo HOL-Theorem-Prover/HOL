@@ -16,8 +16,6 @@ sig
     symfreq : (int,int) Redblackmap.dict
     }
   val empty_tacdata : tacdata
-  val format_version : int
-  val tactictoe_version : int
 
   (* I/O *)
   val export_calls : string -> (loc * call) list -> unit
@@ -25,12 +23,9 @@ sig
   val import_tacdata : string list -> tacdata
   val export_tacdata : string -> string -> tacdata -> unit
 
-  (* tactictoe database *)
-  val ttt_tacdata_dir : string
-  val ttt_tacdata_dir_of : unit -> string
+  (* tactictoe database; the on-disk identity and manifest live in
+     tttManifest *)
   val ttt_tacdata_file_override : string option ref
-  val current_tacdata_file : string -> string
-  val tacdata_file_for_thy : string -> string option
   val exists_tacdata_thy : string -> bool
   val create_tacdata : unit -> tacdata
   val ttt_update_tacdata : ((loc * call) * tacdata) -> tacdata

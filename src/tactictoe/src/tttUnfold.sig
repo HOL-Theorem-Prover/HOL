@@ -32,21 +32,19 @@ sig
     | DryRun of bool
     | MaxLockAge of Time.time
 
+  (* why a theory has to be re-recorded *)
   datatype reason =
-      TierA_direct
-    | TierB_cascade of string
-    | TierC_manifest
-    | TierC_tacdata
-    | TierC_tactictoe
+      Source_changed
+    | Ancestor_recorded of string
+    | Manifest_incompatible
+    | Tacdata_version_changed
+    | Tactictoe_version_changed
     | Missing_data
     | Missing_manifest_line
     | Tampered_data
     | Forced
 
-  type manifest_entry =
-    { thy : string, data_sha256 : string, src_sha256 : string,
-      anc_version : int, recorded_at : int, failed : bool,
-      tacdata_version : int, tactictoe_version : int }
+  val reason_to_string : reason -> string
 
   type record_worker_param =
     { force : bool, max_lock_age_seconds : int,
@@ -57,10 +55,7 @@ sig
   val ttt_record_opts : record_option list -> unit
   val ttt_record_cfg : record_config -> unit
   val ttt_record_plan : record_scope ->
-    {stale : (string * reason) list, up_to_date : string list,
-     out_of_scope_ancestors : string list}
-  val read_manifest : unit -> manifest_entry list option
-  val manifest_format_version : int
+    {stale : (string * reason) list, up_to_date : string list}
 
   (* Internal support for external parallel workers. *)
   val record_parallel_dir : string ref

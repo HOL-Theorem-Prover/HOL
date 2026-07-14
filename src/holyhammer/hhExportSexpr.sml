@@ -199,7 +199,7 @@ fun sexpr_thmdef oc thy ((name,thm),role) =
    Exporting theories using one of the format defined above.
    ------------------------------------------------------------------------- *)
 
-fun sexpr_dir () = !holyHammer.hh_cache_dir ^ "/export_sexpr"
+fun sexpr_dir () = !holyhammer_cache_dir ^ "/export_sexpr"
 
 (* -------------------------------------------------------------------------
    Standard export
