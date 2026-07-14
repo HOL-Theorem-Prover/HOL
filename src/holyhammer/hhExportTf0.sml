@@ -562,7 +562,7 @@ fun tf0_write_pb dir (thmid,(depthyl,depl)) =
 load "hhExportTf0"; open hhExportTf0;
 val thmid = ("arithmetic","ADD1");
 val depl = valOf (hhExportLib.depo_of_thmid thmid);
-val dir = !holyHammer.hh_cache_dir ^ "/export_tf0_test";
+val dir = HOLDIR ^ "/src/holyhammer/export_tf0_test";
 tf0_write_pb dir (thmid,depl);
 *)
 

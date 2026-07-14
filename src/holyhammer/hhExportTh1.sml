@@ -236,7 +236,7 @@ fun th1_write_pb dir (thmid,(depthyl,depl)) =
 load "hhExportTh1"; open hhExportTh1;
 val thmid = ("bool","RES_SELECT_THM");
 val depl = valOf (hhExportLib.depo_of_thmid thmid);
-val dir = !holyHammer.hh_cache_dir ^ "/export_th1_test";
+val dir = HOLDIR ^ "/src/holyhammer/export_th1_test";
 th1_write_pb dir (thmid,([],depl));
 *)
 

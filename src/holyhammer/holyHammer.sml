@@ -54,24 +54,19 @@ fun pathl sl = case sl of
 
 val hhdir = pathl [HOLDIR,"src","holyhammer"]
 val bindir = pathl [hhdir,"provers"]
-val hh_cache_dir = holyhammer_cache_dir
-fun prover_work_dir () = pathl [!hh_cache_dir,"provers"]
 fun fof_dir dir atp = pathl [dir, name_of atp ^ "_files"]
 
 (* ---------------------------------------------------------------------------
    Evaluation log
    ------------------------------------------------------------------------- *)
 
-fun hh_eval_dir () = pathl [!hh_cache_dir,"eval"]
+val hh_eval_dir = pathl [hhdir,"eval"];
 val eval_flag = ref false
 val eval_thy = ref "scratch"
 fun log_eval s =
   if !eval_flag then
-    let
-      val dir = hh_eval_dir ()
-      val file = dir ^ "/" ^ (!eval_thy)
-    in
-      mkDir_err dir;
+    let val file = hh_eval_dir ^ "/" ^ (!eval_thy) in
+      mkDir_err hh_eval_dir;
       append_endline file s
     end
   else print_endline s
@@ -114,7 +109,7 @@ val atp_ref = ref ""
 fun launch_atp fofdir atp t =
   let
     val cmd = "sh " ^ name_of atp ^ ".sh " ^ int_to_string t ^ " " ^
-      shell_quote fofdir ^ " > /dev/null 2> /dev/null"
+      fofdir ^ " > /dev/null 2> /dev/null"
     val _ = cmd_in_dir bindir cmd
     val r = get_lemmas (fofdir ^ "/status", fofdir ^ "/out")
   in
@@ -204,7 +199,7 @@ fun hh_goal goal =
   then raise ERR "hh_goal" "a term is not of type bool"
   else
     let val thmdata = hidef create_thmdata () in
-      main_hh (prover_work_dir ()) thmdata goal
+      main_hh bindir thmdata goal
     end
 
 fun hh_fork goal = Thread.fork (fn () => ignore (hh_goal goal), attrib)
@@ -228,8 +223,7 @@ fun hh_pb_eval_thm atpl (s,thm) =
     if not b then (print_endline "  broken_dependencies (not tested)";
                    log_eval "  broken dependencies (not tested)")
     else
-      let val (_,t) = add_time
-        (can (hh_pb (prover_work_dir ()) atpl premises)) goal in
+      let val (_,t) = add_time (can (hh_pb bindir atpl premises)) goal in
         log_eval ("  time: " ^ Real.toString t)
       end
   end
@@ -237,8 +231,8 @@ fun hh_pb_eval_thm atpl (s,thm) =
 fun hh_pb_eval_thy atpl thy =
   let val b = !premise_selection_flag in
     premise_selection_flag := false; eval_flag := true; eval_thy := thy;
-    mkDir_err (hh_eval_dir ());
-    remove_file (hh_eval_dir () ^ "/" ^ thy);
+    mkDir_err hh_eval_dir;
+    remove_file (hh_eval_dir ^ "/" ^ thy);
     app (hh_pb_eval_thm atpl) (DB.theorems thy);
     premise_selection_flag := b; eval_flag := false; eval_thy := "scratch"
   end
@@ -251,7 +245,7 @@ fun hh_pb_eval_thy atpl thy =
 fun hh_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
   let val b = !hide_flag in
     hide_flag := false;
-    mkDir_err (hh_eval_dir ());
+    mkDir_err hh_eval_dir;
     log_eval ("Goal: " ^ string_of_goal goal);
     ignore (main_hh thmdata goal);
     eval_flag := false; hide_flag := b;

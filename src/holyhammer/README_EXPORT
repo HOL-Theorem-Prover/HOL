@@ -1,22 +1,19 @@
-To export the problems run:
+Exporting HOL4 problems to TPTP formats:
 
-load "holyHammer";
-load "hhExportTh1";
-load "hhExportTf1";
-load "hhExportFof";
-load "hhExportTh0";
-load "hhExportTf0";
-open hhExportTh1 hhExportTf1 hhExportFof hhExportTh0 hhExportTf0;
-tttUnfold.load_sigobj ();
-val thyl = ancestry (current_theory ());
-val hh_cache = !holyHammer.hh_cache_dir;
-th1_export_bushy (hh_cache ^ "/th1_bushy") thyl;
-th1_export_chainy (hh_cache ^ "/th1_chainy") thyl;
-tf1_export_bushy (hh_cache ^ "/tf1_bushy") thyl;
-tf1_export_chainy (hh_cache ^ "/tf1_chainy") thyl;
-fof_export_bushy (hh_cache ^ "/fof_bushy") thyl;
-fof_export_chainy (hh_cache ^ "/fof_chainy") thyl;
-tf0_export_bushy (hh_cache ^ "/tf0_bushy") thyl;
-tf0_export_chainy (hh_cache ^ "/tf0_chainy") thyl;
-th0_export_bushy (hh_cache ^ "/th0_bushy") thyl;
-th0_export_chainy (hh_cache ^ "/th0_chainy") thyl;
+  load "hhExportTh1"; open hhExportTh1;
+  load "hhExportTf1"; open hhExportTf1;
+  load "hhExportFof"; open hhExportFof;
+  load "hhExportTf0"; open hhExportTf0;
+  load "hhExportTh0"; open hhExportTh0;
+  load "tttUnfold"; tttUnfold.load_sigobj ();
+  val thyl = ancestry (current_theory ());
+  th1_export_bushy (HOLDIR ^ "/src/holyhammer/th1_bushy") thyl;
+  th1_export_chainy (HOLDIR ^ "/src/holyhammer/th1_chainy") thyl;
+  tf1_export_bushy (HOLDIR ^ "/src/holyhammer/tf1_bushy") thyl;
+  tf1_export_chainy (HOLDIR ^ "/src/holyhammer/tf1_chainy") thyl;
+  fof_export_bushy (HOLDIR ^ "/src/holyhammer/fof_bushy") thyl;
+  fof_export_chainy (HOLDIR ^ "/src/holyhammer/fof_chainy") thyl;
+  tf0_export_bushy (HOLDIR ^ "/src/holyhammer/tf0_bushy") thyl;
+  tf0_export_chainy (HOLDIR ^ "/src/holyhammer/tf0_chainy") thyl;
+  th0_export_bushy (HOLDIR ^ "/src/holyhammer/th0_bushy") thyl;
+  th0_export_chainy (HOLDIR ^ "/src/holyhammer/th0_chainy") thyl;

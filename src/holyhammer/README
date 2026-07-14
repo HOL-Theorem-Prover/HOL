@@ -9,11 +9,6 @@ Usage (requires at least one installed external prover):
   hh ([],``1+1=2``);
   holyhammer ``1+1=2``; (* alternatively *)
 
-Cache directory:
-  By default, HOLyHammer writes ATP problem/output files and evaluation logs
-  under $HOME/.cache/holyhammer.  Set HOL4_HOLYHAMMER_CACHE before starting
-  HOL, or assign holyHammer.hh_cache_dir in ML, to choose another directory.
-
 Install external provers:
   1) Download provers
   - Eprover 2.0 (latest version should work too):

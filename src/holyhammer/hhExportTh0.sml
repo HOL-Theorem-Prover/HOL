@@ -618,7 +618,7 @@ fun th0_write_pb dir (thmid,(depthyl,depl)) =
 load "hhExportTh0"; open hhExportTh0;
 val thmid = ("arithmetic","ADD1");
 val depl = valOf (hhExportLib.depo_of_thmid thmid);
-val dir = !holyHammer.hh_cache_dir ^ "/export_th0_test";
+val dir = HOLDIR ^ "/src/holyhammer/export_th0_test";
 th0_write_pb dir (thmid,depl);
 *)
 

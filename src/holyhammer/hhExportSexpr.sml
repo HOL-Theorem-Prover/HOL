@@ -199,7 +199,8 @@ fun sexpr_thmdef oc thy ((name,thm),role) =
    Exporting theories using one of the format defined above.
    ------------------------------------------------------------------------- *)
 
-fun sexpr_dir () = !holyhammer_cache_dir ^ "/export_sexpr"
+val hh_dir = HOLDIR ^ "/src/holyhammer"
+val sexpr_dir = hh_dir ^ "/export_sexpr"
 
 (* -------------------------------------------------------------------------
    Standard export
@@ -253,13 +254,12 @@ fun write_thy (f_tydef,f_constdef,f_thmdef,fb_thm) export_dir thy =
 
 fun sexpr_export thyl =
   let
-    val dir = sexpr_dir ()
-    val file = dir ^ "/theory_order.info"
+    val file = sexpr_dir ^ "/theory_order.info"
     val fl = (sexpr_tydef, sexpr_constdef, sexpr_thmdef, sexprb_thm)
     val thyl = sorted_ancestry thyl
   in
-    mkDir_err dir;
-    app (write_thy fl dir) thyl;
+    mkDir_err sexpr_dir;
+    app (write_thy fl sexpr_dir) thyl;
     writel file [String.concatWith " " (sorted_ancestry thyl)]
   end
 
