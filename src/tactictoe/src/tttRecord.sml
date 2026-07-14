@@ -37,22 +37,10 @@ val name_glob = ref ""
    verbatim would re-run the proof/definition it reproduces and re-store
    the result, causing a DUP crash (e.g. `SIMPLE_GUESS_FORALL_def` in
    quantHeuristics, whose reps re-runs `TotalDefn.located_qDefine`).
-   Matching is by substring, so each entry below also covers its own
-   prefixed and suffixed variants: "Define" covers qDefine/xDefine/
-   located_Define/multiDefine/..., and "store_thm" covers store_thm_at. *)
-val dangerous_store_substrings = [
-  "store_thm",
-  "save_thm",
-  "Define",
-  "new_definition",
-  "new_specification",
-  "new_type_definition",
-  "store_definition",
-  "Hol_reln",
-  "Hol_coreln",
-  "new_binder_definition",
-  "define_new_type_bijections"
-]
+   Matching is by substring, so each entry also covers its prefixed and
+   suffixed variants.  Keep this list shared with tttUnfold: every
+   operation its rewriter watches is unsafe to replay here. *)
+val dangerous_store_substrings = watched_store_operations
 
 fun reps_is_dangerous reps =
   List.exists (fn sub => String.isSubstring sub reps)

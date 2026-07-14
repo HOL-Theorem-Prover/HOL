@@ -78,18 +78,21 @@ fun mkDir_err dir =
 
 (* Cache root, following the same convention as the rest of HOL4
    (see HM_Core_Cline): $XDG_CACHE_HOME if set, else $HOME/.cache. *)
+fun get_nonempty_env env =
+  case OS.Process.getEnv env of SOME "" => NONE | value => value
+
 fun cache_root () =
-  case OS.Process.getEnv "XDG_CACHE_HOME" of
+  case get_nonempty_env "XDG_CACHE_HOME" of
     SOME dir => dir
   | NONE =>
-    case OS.Process.getEnv "HOME" of
-      SOME dir => dir ^ "/.cache"
-    | NONE => raise ERR "cache_root" "neither XDG_CACHE_HOME nor HOME is set"
+    case get_nonempty_env "HOME" of
+      NONE => raise ERR "cache_root" "neither XDG_CACHE_HOME nor HOME is set"
+    | SOME dir => dir ^ "/.cache"
 
 fun home_cache_dir name = cache_root () ^ "/" ^ name
 
 fun tool_cache_dir env name =
-  case OS.Process.getEnv env of
+  case get_nonempty_env env of
     SOME dir => dir
   | NONE => home_cache_dir name
 

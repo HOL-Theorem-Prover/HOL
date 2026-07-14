@@ -6,6 +6,7 @@ sig
   (* directories *)
   val infix_file : string
   val set_tactictoe_cache_dir : string -> unit
+  val watched_store_operations : string list
   val tactictoe_dir_of : unit -> string
   val ttt_eval_dir_of : unit -> string
   val tactictoe_scratch_dir_of : unit -> string

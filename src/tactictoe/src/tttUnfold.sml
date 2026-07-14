@@ -304,32 +304,7 @@ val name_thm_list =
 val prove_list = ["prove","TAC_PROOF"]
 
 
-val watch_list_init =
-  store_thm_list @
-  store_thm_at_list @
-  name_thm_list @
-  prove_list @
-  ["tprove"] @
-  ["store_definition",
-   "zDefine","qDefine","bDefine","tDefine","xDefine","dDefine",
-   "export_rewrites"] @
-  ["save_defn","defnDefine","primDefine","tDefine","xDefine","Define",
-   "multiDefine","apiDefine","apiDefineq","std_apiDefine","std_apiDefineq",
-   "xDefineSchema","DefineSchema"] @
-  ["mk_fp_encoding"] @
-  ["Hol_reln","xHol_reln","Hol_mono_reln","add_mono_thm","export_mono",
-   "add_rule_induction","export_rule_induction"] @
-  ["Hol_coreln","xHol_coreln","Hol_mono_coreln","new_coinductive_definition"] @
-  ["new_list_rec_definition"] @
-  ["define_new_type_bijections"] @
-  ["new_binder_definition"] @
-  ["new_recursive_definition","define_case_constant"] @
-  ["define_equivalence_type"] @
-  ["define_quotient_type","define_quotient_lifted_function",
-   "define_quotient_types_rule","define_quotient_types_full",
-   "define_quotient_types_full_rule","define_quotient_types_std",
-   "define_quotient_types_std_rule","define_equivalence_type",
-   "define_subset_types","define_subset_types_rule"]
+val watch_list_init = watched_store_operations
 
 val watch_dict = dnew String.compare (map (fn x => (x,())) watch_list_init)
 

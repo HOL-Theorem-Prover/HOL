@@ -209,9 +209,11 @@ fun read_status status = case status of
    Interface
    ------------------------------------------------------------------------- *)
 
-val ttt_tacdata_cache = ref (dempty (list_compare String.compare))
+val tacdata_cache_compare =
+  cpl_compare String.compare (list_compare String.compare)
+val ttt_tacdata_cache = ref (dempty tacdata_cache_compare)
 fun clean_ttt_tacdata_cache () =
-  ttt_tacdata_cache := dempty (list_compare String.compare)
+  ttt_tacdata_cache := dempty tacdata_cache_compare
 
 fun has_boolty x = type_of x = bool
 fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
@@ -224,11 +226,12 @@ fun tactictoe_aux vnno goal = with_tactictoe_cache (fn () =>
   else
   let
     val cthyl = current_theory () :: ancestry (current_theory ())
+    val cache_key = (tactictoe_dir_of (),cthyl)
     val thmdata = hidef create_thmdata ()
     val tacdata =
-      dfind cthyl (!ttt_tacdata_cache) handle NotFound =>
+      dfind cache_key (!ttt_tacdata_cache) handle NotFound =>
       let val tacdata_aux = create_tacdata () in
-        ttt_tacdata_cache := dadd cthyl tacdata_aux (!ttt_tacdata_cache);
+        ttt_tacdata_cache := dadd cache_key tacdata_aux (!ttt_tacdata_cache);
         tacdata_aux
       end
     val (proofstatus,tree) = hidef
