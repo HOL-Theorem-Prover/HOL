@@ -407,7 +407,13 @@ fun eta_normalize sk =
     [Pattern ("fn", [Code (x,_)], "=>", body)] =>
       (case rev body of
          Code (y,_) :: tac_rev =>
-           if x = y andalso not (null tac_rev) then
+           (* This is eta-reduction only if x is absent from tac.  In
+              particular, `fn x => f x x` must retain its original
+              wrapper: removing the last x would leave the first one
+              unbound in the fallback.  Treating every occurrence as
+              non-free is deliberately conservative around nested scopes. *)
+           if x = y andalso not (null tac_rev) andalso
+              not (mem x (original_program (rev tac_rev))) then
              let
                val tac = rev tac_rev
                val fresh = fresh_eta_name tac

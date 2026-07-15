@@ -27,8 +27,9 @@ fun interruptkill worker =
            OS.Process.sleep delay;
            loop (n-1))
         else
-          Feedback.HOL_WARNING "smlTimeout" "interruptkill"
-            "thread did not stop after interrupts; abandoning it"
+          (Feedback.HOL_WARNING "smlTimeout" "interruptkill"
+             "thread did not stop after interrupts; terminating it";
+           Thread.kill worker handle Thread _ => ())
   in
     loop 20
   end
