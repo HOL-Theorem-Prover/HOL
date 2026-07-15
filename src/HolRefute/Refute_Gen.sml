@@ -25,50 +25,37 @@ structure Refute_Gen = struct
 
   exception NoGenerator of hol_type * string
 
-  type cache_key = string * string
-  type cache_entry = cache_key * hol_type * genspec
+  val spec_cache : (hol_type, genspec) Redblackmap.dict ref =
+    ref (Redblackmap.mkDict Type.compare)
 
-  val spec_cache : cache_entry list ref = ref []
+  val cardinality_cache : (hol_type, int option) Redblackmap.dict ref =
+    ref (Redblackmap.mkDict Type.compare)
+
+  val enumerate_cache : (hol_type, term list option) Redblackmap.dict ref =
+    ref (Redblackmap.mkDict Type.compare)
 
   val user_generators : (hol_type * custom_gen) list ref = ref []
   val abstract_specs : (hol_type * genspec) list ref = ref []
   val abstract_predicates : (hol_type * term) list ref = ref []
 
-  fun type_key ty =
-    if Type.is_vartype ty then ("", Type.dest_vartype ty)
-    else
-      let
-        val {Thy, Tyop, ...} = Type.dest_thy_type ty
-      in
-        (Thy, Tyop)
-      end
-
   fun same_type (ty1, ty2) = Type.compare (ty1, ty2) = EQUAL
 
   fun lookup_type entries ty =
-    case List.find (fn (entry_ty, _) => same_type (entry_ty, ty)) entries of
-      SOME (_, value) => SOME value
-    | NONE => NONE
+    Option.map #2
+      (List.find (fn (entry_ty, _) => same_type (entry_ty, ty)) entries)
 
   fun remove_type ty entries =
     List.filter (fn (entry_ty, _) => not (same_type (entry_ty, ty))) entries
 
-  fun cached_spec ty =
-    let
-      fun find [] = NONE
-        | find ((key, cached_ty, spec) :: rest) =
-            if key = type_key ty andalso same_type (cached_ty, ty) then
-              SOME spec
-            else
-              find rest
-    in
-      find (!spec_cache)
-    end
+  fun cached_spec ty = Redblackmap.peek (!spec_cache, ty)
 
   fun cache_spec ty spec =
-    spec_cache := (type_key ty, ty, spec) :: !spec_cache
+    spec_cache := Redblackmap.insert (!spec_cache, ty, spec)
 
-  fun invalidate_cache _ = spec_cache := []
+  fun invalidate_cache _ =
+    (spec_cache := Redblackmap.mkDict Type.compare;
+     cardinality_cache := Redblackmap.mkDict Type.compare;
+     enumerate_cache := Redblackmap.mkDict Type.compare)
 
   val _ = Theory.register_hook
     ("Refute_Gen.spec_of", invalidate_cache)
@@ -449,6 +436,9 @@ structure Refute_Gen = struct
     end
 
   fun cardinality ty =
+    case Redblackmap.peek (!cardinality_cache, ty) of
+        SOME cached => cached
+      | NONE =>
     let
       fun datatype_cardinality (constrs, recursive) =
         let
@@ -478,9 +468,14 @@ structure Refute_Gen = struct
             datatype_cardinality (constrs, recursive)
         | from_spec (GenCustom _) = NONE
     in
-      from_spec (spec_of ty)
+      let
+        val result = from_spec (spec_of ty) handle NoGenerator _ => NONE
+      in
+        cardinality_cache :=
+          Redblackmap.insert (!cardinality_cache, ty, result);
+        result
+      end
     end
-    handle NoGenerator _ => NONE
 
   fun choices 0 _ = [[]]
     | choices count values =
@@ -498,6 +493,9 @@ structure Refute_Gen = struct
                List.map (fn tail => value :: tail) tails) values)))
 
   fun enumerate ty =
+    case Redblackmap.peek (!enumerate_cache, ty) of
+        SOME cached => cached
+      | NONE =>
     let
       fun word_terms width =
         List.tabulate (int_power 2 width, fn value =>
@@ -553,9 +551,16 @@ structure Refute_Gen = struct
             datatype_terms (constrs, recursive)
         | from_spec (GenCustom _) = NONE
     in
-      case cardinality ty of
-        NONE => NONE
-      | SOME _ => from_spec (spec_of ty)
+      let
+        val result =
+          (case cardinality ty of
+             NONE => NONE
+           | SOME _ => from_spec (spec_of ty))
+          handle NoGenerator _ => NONE
+      in
+        enumerate_cache :=
+          Redblackmap.insert (!enumerate_cache, ty, result);
+        result
+      end
     end
-    handle NoGenerator _ => NONE
 end
