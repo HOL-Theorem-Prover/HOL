@@ -49,7 +49,6 @@ sig
   val home_cache_dir : string -> string
   val tool_cache_dir : string -> string -> string
   val tactictoe_cache_dir : string ref
-  val holyhammer_cache_dir : string ref
   val scratch_dir : string ref
   val run_cmd : string -> unit
   val cmd_in_dir : string -> string -> unit

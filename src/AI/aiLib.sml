@@ -99,9 +99,6 @@ fun tool_cache_dir env name =
 val tactictoe_cache_dir =
   ref (tool_cache_dir "HOL4_TACTICTOE_CACHE" "tactictoe")
 
-val holyhammer_cache_dir =
-  ref (tool_cache_dir "HOL4_HOLYHAMMER_CACHE" "holyhammer")
-
 (* Root for the throwaway files the SML-inspection machinery generates
    (opened-structure dumps, generated scripts, heap and dependency
    probes, redirected output).  Everything under it is derived from this
