@@ -126,7 +126,15 @@ structure Refute_Gen = struct
     end
     handle Feedback.HOL_ERR _ => []
 
+  fun is_named_quotient ty =
+    case Type.dest_type ty of
+        ("real", []) => true
+      | ("rat", []) => true
+      | _ => false
+    handle Feedback.HOL_ERR _ => false
+
   fun is_quotient_type ty =
+    is_named_quotient ty orelse
     List.exists (fn quotient_ty => same_type (quotient_ty, ty))
       (quotient_types ())
 

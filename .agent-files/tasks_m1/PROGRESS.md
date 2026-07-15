@@ -13,13 +13,13 @@
 - TASK_09 Interpreter + exhaustive — done
 - TASK_10 Random strategy — done
 - TASK_11 Certification — done
-- TASK_12 Orchestration + API — unblocked
-- TASK_13 Selftest corpus — blocked (12)
-- TASK_14 Integration + exit checklist — blocked (13)
+- TASK_12 Orchestration + API — done
+- TASK_13 Selftest corpus — done
+- TASK_14 Integration + exit checklist — unblocked
 
 ## Next unblocked task
 
-.agent-files/tasks_m1/TASK_12.md.
+.agent-files/tasks_m1/TASK_14.md.
 
 ## Completion log
 
@@ -37,3 +37,5 @@ Append exactly ONE line per task as it lands, e.g.
 - TASK_09 done (2026-07-15): implemented and verified the compute interpreter, exhaustive strategy, schedule, and substrate seam.
 - TASK_10 done (2026-07-15): implemented and verified the seeded random QC strategy.
 - TASK_11 done (2026-07-15): added EVAL certification and potential retry flow.
+- TASK_12 done (2026-07-15): implemented orchestration, public API, expectations, and tactic facade.
+- TASK_13 done (2026-07-15): added the gated full Refute selftest corpus.

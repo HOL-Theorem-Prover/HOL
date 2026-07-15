@@ -1,4 +1,4 @@
-INCLUDES = $(HOLDIR)/src/portableML/poly/concurrent ../n-bit
+INCLUDES = $(HOLDIR)/src/portableML/poly/concurrent ../n-bit ../sort ../real
 
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
@@ -26,7 +26,7 @@ ifdef POLY
 HOLHEAP = refuteheap
 EXTRA_CLEANS += $(HOLHEAP)
 
-REFUTE_DEPS = boss/bossLib n-bit/wordsLib
+REFUTE_DEPS = boss/bossLib n-bit/wordsLib sort/sortingTheory real/realTheory
 BARE_DEPS = $(patsubst %,../%,$(REFUTE_DEPS))
 DEPS = $(patsubst %,%.uo,$(BARE_DEPS))
 

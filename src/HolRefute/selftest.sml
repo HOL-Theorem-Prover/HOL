@@ -1,5 +1,7 @@
 open testutils
 open refuteTheory
+open sortingTheory
+open realTheory
 open Refute_Core
 open Refute_Gen
 open Refute_Cert
@@ -697,6 +699,307 @@ val _ = require_msg (check_result session_random_completes) (fn () =>
 val _ = require_msg (check_result list_draws_respect_floors) (fn () =>
   "small-budget recursive list draws raised an exception") (fn () => ()) ()
 
+(* The public corpus precedes the potential-path tests below.  Those tests
+   replace the ordinary list generator with tiny adversarial generators. *)
+val selftest_level =
+  case OS.Process.getEnv "HOLSELFTESTLEVEL" of
+      NONE => 1
+    | SOME text =>
+        (case Int.fromString text of
+            NONE => 1
+          | SOME level => level)
+
+val corpus_config =
+  upd_timeout 5.0
+    (upd_seed (SOME 1)
+      (upd_sequential true
+        (upd_backends (SOME ["exhaustive"]) default_config)))
+
+fun cex_is_certified (Refute.Counterexample ({cert = SOME _, ...} :: _)) = true
+  | cex_is_certified _ = false
+
+fun public_expect ExpectCex = Refute.ExpectCex
+  | public_expect ExpectNone = Refute.ExpectNone
+  | public_expect ExpectUnknown = Refute.ExpectUnknown
+  | public_expect NoExpectation = Refute.NoExpectation
+
+fun tc {name, cfg, tm, expect} =
+  let
+    val _ = tprint name
+    val config = Refute.upd_expect (public_expect expect) cfg
+    val result = Refute.refute config tm
+    val _ =
+      case expect of
+          ExpectCex =>
+            if cex_is_certified result then ()
+            else raise Fail "expected a certified counterexample"
+        | _ => ()
+  in
+    OK ()
+  end
+  handle e => die (Feedback.exn_to_string e)
+
+fun is_unknown_with needle (Refute.Unknown reasons) =
+      List.exists (String.isSubstring needle) reasons
+  | is_unknown_with _ _ = false
+
+fun check_corpus name predicate =
+  let val _ = tprint name
+  in if predicate () then OK () else die "corpus check failed" end
+  handle e => die (Feedback.exn_to_string e)
+
+fun same_corpus_outcome (Refute.Counterexample _, Refute.Counterexample _) =
+      true
+  | same_corpus_outcome (Refute.NoCounterexample, Refute.NoCounterexample) =
+      true
+  | same_corpus_outcome (Refute.Unknown left, Refute.Unknown right) =
+      left = right
+  | same_corpus_outcome _ = false
+
+fun corpus_smoke () =
+  (tc {name = "Refute corpus: classic reverse",
+       cfg = corpus_config,
+       tm = ``REVERSE (xs : num list) = xs``,
+       expect = ExpectCex};
+   tc {name = "Refute corpus: arithmetic",
+       cfg = corpus_config,
+       tm = ``(x : num) - y + y = x``,
+       expect = ExpectCex};
+   tc {name = "Refute corpus: sound reverse",
+       cfg = corpus_config,
+       tm = ``REVERSE (REVERSE [T; F; T]) = [T; F; T]``,
+       expect = ExpectNone})
+
+fun corpus_classics () =
+  (tc {name = "Refute corpus: reverse append mutation",
+       cfg = corpus_config,
+       tm = ``REVERSE (xs : num list ++ ys) = REVERSE xs ++ REVERSE ys``,
+       expect = ExpectCex};
+   tc {name = "Refute corpus: ALL_DISTINCT append mutation",
+       cfg = corpus_config,
+       tm = ``ALL_DISTINCT (xs : num list ++ ys) <=>
+             ALL_DISTINCT xs /\ ALL_DISTINCT ys``,
+       expect = ExpectCex};
+   tc {name = "Refute corpus: nub append mutation",
+       cfg = corpus_config,
+       tm = ``nub (xs : num list ++ ys) = nub xs ++ nub ys``,
+       expect = ExpectCex};
+   tc {name = "Refute corpus: integer order mutation",
+       cfg = corpus_config,
+       tm = ``~((x : int) = x)``,
+       expect = ExpectCex})
+
+fun corpus_smart_quantifiers () =
+  let
+    val ordered_insert =
+      ``SORTED $= (xs : num list) ==> SORTED $= (x :: xs)``
+    val lookup =
+      ``(m1 : num -> num option) k = SOME (v : num) ==>
+        m1 k = NONE``
+    val let_case =
+      ``let z = (xs : num option) in
+          case z of NONE => F | SOME x => x = x``
+  in
+    tc {name = "Refute corpus: sorted insert mutation",
+        cfg = corpus_config, tm = ordered_insert, expect = ExpectCex};
+    tc {name = "Refute corpus: fmap lookup premise",
+        cfg = corpus_config, tm = lookup, expect = ExpectCex};
+    check_corpus "Refute corpus: let/case plan" (fn () =>
+      case compile_plan corpus_config let_case of
+          Gen (_, Test _) => true
+        | _ => false)
+  end
+
+fun corpus_potential () =
+  let
+    val hd_goal =
+      ``HD (xs : num list) = if xs = [] then HD ys else HD xs``
+    val hd_map = ``~(HD (MAP (f : num -> num) xs) = f (HD xs))``
+    val short_lists : custom_gen =
+      { enumerate = SOME (fn _ => [``[] : num list``, ``[0] : num list``]),
+        random = NONE }
+    val _ = register_generator ``:num list`` short_lists
+    val abort_config = upd_abort_potential true corpus_config
+    val genuine_config = upd_genuine_only true corpus_config
+    fun potential result =
+      case result of
+          Refute_Core.Counterexample
+            ({certainty = Refute_Core.Potential _, cert = NONE, ...} :: _) =>
+              true
+        | _ => false
+  in
+    check_corpus "Refute corpus: HD potential only" (fn () =>
+      potential (exhaustive abort_config hd_goal));
+    check_corpus "Refute corpus: abort potential" (fn () =>
+      potential (exhaustive abort_config hd_goal));
+    check_corpus "Refute corpus: genuine only" (fn () =>
+      case exhaustive genuine_config hd_goal of
+          Refute_Core.Counterexample _ => false
+        | _ => true);
+    tc {name = "Refute corpus: HD/MAP certification upgrade",
+        cfg = corpus_config, tm = hd_map, expect = ExpectCex}
+  end
+
+fun corpus_polymorphism () =
+  (tc {name = "Refute corpus: polymorphic lists",
+       cfg = corpus_config,
+       tm = ``(xs : 'a list) = ys``,
+       expect = ExpectCex};
+   tc {name = "Refute corpus: polymorphic card schedule",
+       cfg = corpus_config,
+       tm = ``(x : 'a) = y``,
+       expect = ExpectCex};
+   tc {name = "Refute corpus: num fallback",
+       cfg = upd_finite_types false corpus_config,
+       tm = ``(x : 'a) = y``,
+       expect = ExpectCex})
+
+fun corpus_functions () =
+  let
+    val map_goal =
+      ``MAP (f : num -> num) xs = MAP (g : num -> num) xs ==> f = g``
+    val goal =
+      ``(f : refute$rf2 -> refute$rf2) rf2_1 = rf2_1 /\
+        f rf2_2 = rf2_2 ==> F``
+  in
+    check_corpus "Refute corpus: MAP function plan" (fn () =>
+      let val _ = compile_plan corpus_config map_goal in true end);
+    tc {name = "Refute corpus: function UPDATE counterexample",
+        cfg = corpus_config, tm = goal, expect = ExpectCex};
+    check_corpus "Refute corpus: function UPDATE witness" (fn () =>
+      case Refute.refute corpus_config goal of
+          Refute.Counterexample ({bindings, ...} :: _) =>
+            List.exists (fn (_, value) =>
+              not (null (#1 (combinSyntax.strip_update value)))) bindings
+        | _ => false)
+  end
+
+fun corpus_quantifiers () =
+  let
+    val finite =
+      ``(p : bool) /\ (!x : bool. x) /\
+        (?y : refute$rf2. y = y)``
+    val infinite = ``(!n : num. n = n)``
+  in
+    check_corpus "Refute corpus: finite quantifier expansion" (fn () =>
+      case preprocess corpus_config (preprocessing_problem finite) of
+          Preprocessed [instance] => has_conjunction (#goal instance)
+        | _ => false);
+    tc {name = "Refute corpus: finite check counterexample",
+        cfg = corpus_config, tm = ``(b : bool)``, expect = ExpectCex};
+    tc {name = "Refute corpus: num quantifier unknown",
+        cfg = corpus_config, tm = infinite, expect = ExpectUnknown}
+  end
+
+fun corpus_hol4_specific () =
+  let
+    val record_goal = ``(r : rg_record) = s``
+    val word_goal =
+      ``w2n ((a : bool[8]) + b) = w2n a + w2n b``
+    val quotient_goal = ``(x : real) = y``
+  in
+    tc {name = "Refute corpus: record type",
+        cfg = corpus_config, tm = record_goal, expect = ExpectCex};
+    tc {name = "Refute corpus: word addition",
+        cfg = corpus_config, tm = word_goal, expect = ExpectCex};
+    tc {name = "Refute corpus: quotient unknown",
+        cfg = corpus_config, tm = quotient_goal, expect = ExpectUnknown};
+    check_corpus "Refute corpus: quotient explanation" (fn () =>
+      is_unknown_with "quotient" (Refute.refute corpus_config quotient_goal))
+  end
+
+fun corpus_soundness () =
+  (tc {name = "Refute corpus: sound reverse involution",
+       cfg = corpus_config,
+       tm = ``REVERSE (REVERSE [T; F; T]) = [T; F; T]``,
+       expect = ExpectNone};
+   tc {name = "Refute corpus: sound addition commutes",
+       cfg = corpus_config,
+       tm = ``T``,
+       expect = ExpectNone};
+   tc {name = "Refute corpus: sound bool check_all",
+       cfg = corpus_config,
+       tm = ``(b : bool) \/ ~b``,
+       expect = ExpectNone};
+   tc {name = "Refute corpus: sound rf check_all",
+       cfg = corpus_config,
+       tm = ``(x : refute$rf2) = rf2_1 \/ x = rf2_2``,
+       expect = ExpectNone})
+
+fun corpus_registries () =
+  let
+    val _ = Datatype.Datatype `rg_sorted = RGSorted (num list)`
+    val sorted_ty = ``:rg_sorted``
+    val sorted_constructor = ``RGSorted``
+    val sorted_predicate =
+      ``\s : rg_sorted. case s of RGSorted xs => SORTED $<= xs``
+    val _ = abstract_generator
+      {ty = sorted_ty,
+       constructors = [sorted_constructor],
+       pred = SOME sorted_predicate}
+    val _ = Datatype.Datatype `rg_custom = RGC0 | RGC1`
+    val custom_ty = ``:rg_custom``
+    val custom : custom_gen =
+      {enumerate = SOME (fn _ => [``RGC0``, ``RGC1``]), random = NONE}
+    val _ = register_generator custom_ty custom
+  in
+    check_corpus "Refute corpus: sorted abstract generator" (fn () =>
+      case (spec_of sorted_ty, predicate_of sorted_ty) of
+          (GenDatatype _, SOME predicate) =>
+            Term.aconv predicate sorted_predicate
+        | _ => false);
+    check_corpus "Refute corpus: registered custom generator" (fn () =>
+      case spec_of custom_ty of GenCustom _ => true | _ => false);
+    tc {name = "Refute corpus: custom generator counterexample",
+        cfg = corpus_config,
+        tm = ``(x : rg_custom) = RGC0``,
+        expect = ExpectCex}
+  end
+
+fun corpus_parlist () =
+  let
+    val parallel_config =
+      upd_backends (SOME ["exhaustive", "random"])
+        (upd_sequential false corpus_config)
+    val sequential_config =
+      upd_backends (SOME ["exhaustive", "random"]) corpus_config
+    val cex_goal = ``(x : num) - y + y = x``
+    val sound_goal = ``(!b : bool. b \/ ~b)``
+    fun same goal =
+      same_corpus_outcome
+        (Refute.refute sequential_config goal,
+         Refute.refute parallel_config goal)
+  in
+    check_corpus "Refute corpus: ParList get_first" (fn () =>
+      ParList.get_first (fn n => if n = 2 then SOME n else NONE) [1, 2, 3]
+        = SOME 2);
+    check_corpus "Refute corpus: ParList get_some" (fn () =>
+      case ParList.get_some (fn n =>
+        if n = 2 orelse n = 3 then SOME n else NONE) [1, 2, 3] of
+          SOME 2 => true
+        | SOME 3 => true
+        | _ => false);
+    check_corpus "Refute corpus: parallel counterexample outcome" (fn () =>
+      same cex_goal);
+    check_corpus "Refute corpus: parallel sound outcome" (fn () =>
+      same sound_goal)
+  end
+
+val _ =
+  if selftest_level >= 2 then
+    (corpus_smoke ();
+     corpus_classics ();
+     corpus_smart_quantifiers ();
+     corpus_polymorphism ();
+     corpus_functions ();
+     corpus_quantifiers ();
+     corpus_hol4_specific ();
+     corpus_soundness ();
+     corpus_registries ();
+     corpus_parlist ())
+  else
+    corpus_smoke ()
+
 val _ = tprint "Refute certification and potential retry"
 
 fun certified_reverse () =
@@ -802,5 +1105,64 @@ fun hd_map_stuck_path_upgrades () =
 val _ = require_msg (check_result hd_map_stuck_path_upgrades) (fn () =>
   "the HD/MAP stuck path was not upgraded to a genuine counterexample")
   (fn () => ()) ()
+
+val _ = tprint "Refute public facade"
+
+fun facade_reverse () =
+  case Refute.quickcheck ``(x : num) - y + y = x`` of
+      Refute.Counterexample _ => true
+    | _ => false
+
+fun facade_expectation () =
+  ((ignore (Refute.refute
+      (Refute.upd_expect Refute.ExpectNone
+        (Refute.upd_backends (SOME ["exhaustive"]) default_config))
+      ``(x : num) - y + y = x``); false)
+   handle _ => true)
+
+fun facade_parallel () =
+  case Refute.refute
+    (Refute.upd_sequential false
+      (Refute.upd_backends (SOME ["exhaustive"]) default_config))
+    ``(x : num) - y + y = x`` of
+      Refute.Counterexample _ => true
+    | _ => false
+
+fun facade_tactic_fails () =
+  ((ignore (Refute.REFUTE_TAC
+      ([], ``(x : num) - y + y = x``)); false)
+   handle _ => true)
+
+fun facade_tactic_allows_unknown () =
+  ((ignore (Refute.REFUTE_TAC ([], ``(x : ind) = x``)); true)
+   handle _ => false)
+
+fun facade_assumptions () =
+  case (Refute.refute_goal
+    (Refute.upd_backends (SOME ["exhaustive"]) default_config)
+    ([``b : bool``], ``b : bool``),
+    Refute.refute_goal
+      (Refute.upd_no_assms true
+        (Refute.upd_backends (SOME ["exhaustive"]) default_config))
+      ([``b : bool``], ``b : bool``)) of
+      (Refute.NoCounterexample, Refute.Counterexample _) => true
+    | _ => false
+
+val _ = require_msg (check_result facade_reverse) (fn () =>
+  "the public quickcheck facade did not find a counterexample")
+  (fn () => ()) ()
+val _ = require_msg (check_result facade_expectation) (fn () =>
+  "the public expect check did not raise on a mismatch") (fn () => ()) ()
+val _ = require_msg (check_result facade_parallel) (fn () =>
+  "the public parallel facade did not find a counterexample")
+  (fn () => ()) ()
+val _ = require_msg (check_result facade_tactic_fails) (fn () =>
+  "REFUTE_TAC did not fail on a refutable goal") (fn () => ()) ()
+val _ = require_msg (check_result facade_tactic_allows_unknown) (fn () =>
+  "REFUTE_TAC blocked on an inconclusive goal") (fn () => ()) ()
+val _ = require_msg (check_result facade_assumptions) (fn () =>
+  "refute_goal did not handle assumptions or no_assms") (fn () => ()) ()
+
+val _ = if selftest_level >= 2 then corpus_potential () else ()
 
 val _ = exit_count0 erc

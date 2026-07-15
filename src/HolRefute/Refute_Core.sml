@@ -794,4 +794,114 @@ structure Refute_Core = struct
   fun report_outcome (cfg : config) result =
     Private.say 1 (format_outcome cfg result ^ "\n")
   val report = report_outcome
+
+  fun decisive (Counterexample _) = true
+    | decisive _ = false
+
+  fun has_no_counterexample jobs =
+    List.exists (fn (_, result_ref) =>
+      case !result_ref of
+          SOME NoCounterexample => true
+        | _ => false) jobs
+
+  fun exception_reason e = Feedback.exn_to_string e
+
+  fun no_generator_reason (ty, reason) =
+    "no generator for " ^ Parse.type_to_string ty ^ ": " ^ reason
+
+  fun run_backend (cfg : config) problem (backend, result_ref) =
+    let
+      val name = #name backend
+      val timeout =
+        if #timeout cfg <= 0.0 then Time.fromReal 0.0
+        else Time.fromReal (#timeout cfg)
+      val result =
+        (Timeout.apply timeout (#run backend) cfg problem
+         handle Timeout.TIMEOUT _ =>
+           Unknown [name ^ " timed out"]
+              | Refute_Gen.NoGenerator pair =>
+                  Unknown [name ^ ": " ^ no_generator_reason pair]
+              | e => Unknown [name ^ ": " ^ exception_reason e])
+      val _ = result_ref := SOME result
+    in
+      if decisive result then SOME result else NONE
+    end
+
+  fun unknown_results jobs =
+    let
+      fun one (backend, result_ref) =
+        case !result_ref of
+            SOME (Unknown reasons) =>
+              map (fn reason => #name backend ^ ": " ^ reason) reasons
+          | SOME _ => []
+          | NONE => [#name backend ^ " was interrupted"]
+    in
+      List.concat (map one jobs)
+    end
+
+  fun expected_name ExpectCex = "ExpectCex"
+    | expected_name ExpectNone = "ExpectNone"
+    | expected_name ExpectUnknown = "ExpectUnknown"
+    | expected_name NoExpectation = "NoExpectation"
+
+  fun actual_name (Counterexample _) = "ExpectCex"
+    | actual_name NoCounterexample = "ExpectNone"
+    | actual_name (Unknown _) = "ExpectUnknown"
+
+  fun check_expect cfg result =
+    case #expect cfg of
+        NoExpectation => ()
+      | expectation =>
+          if expected_name expectation = actual_name result then ()
+          else raise Feedback.mk_HOL_ERR "Refute" "expect"
+            ("expected " ^ expected_name expectation ^ ", got " ^
+             actual_name result ^ "\n" ^ format_outcome cfg result)
+
+  fun refute_problem (cfg : config) (problem : problem) =
+    let
+      val selected = selected_backends (#backends cfg)
+      fun finish result =
+        (report_outcome cfg result; check_expect cfg result; result)
+      fun execute () =
+        case preprocess cfg problem of
+            NotExecutable reasons => Unknown reasons
+          | Preprocessed _ =>
+              if null selected then Unknown ["no configured backend"]
+              else
+                let
+                  val jobs = map (fn backend =>
+                    (backend, ref NONE : outcome option ref)) selected
+                  val winner =
+                    if #sequential cfg then
+                      ParList.get_first
+                        (run_backend cfg problem) jobs
+                    else
+                      ParList.get_some
+                        (run_backend cfg problem) jobs
+                in
+                  case winner of
+                      SOME result => result
+                    | NONE =>
+                        if has_no_counterexample jobs then NoCounterexample
+                        else
+                          let
+                            val reasons = unknown_results jobs
+                          in
+                            if null reasons then
+                              Unknown
+                                ["all selected backends returned no result"]
+                            else Unknown reasons
+                          end
+                end
+      val result =
+        (execute ()
+         handle Refute_Gen.NoGenerator pair =>
+           Unknown [no_generator_reason pair]
+              | e => Unknown [exception_reason e])
+    in
+      finish result
+    end
+
+  fun refute cfg tm =
+    refute_problem cfg {goal = tm, assumptions = [], evals = []}
 end
