@@ -1,6 +1,6 @@
-open HolKernel boolLib bossLib oneTheory
-
-val _ = new_theory "ttt_regression"
+Theory ttt_regression
+Ancestors
+  one
 
 local
   fun classify 0 =
@@ -24,5 +24,3 @@ Theorem ATTR_REGRESSION[simp]:
 Proof
   SIMP_TAC bool_ss []
 QED
-
-val _ = export_theory ()
