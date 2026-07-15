@@ -1005,6 +1005,10 @@ fun reflect_time oc s x =
 val metis_theories =
   ["sat", "marker", "combin", "min", "bool", "normalForms"]
 
+(* Set only while producing a recording script.  The child writes this
+   unpublished attempt path; record_thy_raw publishes it after success. *)
+val record_tacdata_file = ref (NONE : string option)
+
 fun output_header oc cthy =
   (
   app (osn oc)
@@ -1036,7 +1040,9 @@ fun output_header oc cthy =
   reflect_time oc "tttSetup.ttt_search_time" ttt_search_time;
   reflect_time oc "tttSetup.ttt_tactic_time" ttt_tactic_time;
   osn oc ("val _ = mlTacticData.ttt_tacdata_file_override := SOME " ^
-          mlquote (current_tacdata_file cthy));
+          mlquote (case !record_tacdata_file of
+              SOME file => file
+            | NONE => current_tacdata_file cthy));
   (* hook *)
   osn oc ("val _ = tttRecord.start_record_thy " ^ mlquote cthy)
   )
@@ -1181,26 +1187,34 @@ fun ttt_rewrite_thy thy =
    Recording (includes rewriting)
    ------------------------------------------------------------------------ *)
 
-fun record_thy_raw thy = with_tactictoe_cache (fn () =>
+fun record_thy_raw thy =
   if mem thy ["min","bool"] then () else
   let
-    val context as {scriptorg,dirorg,...} = mk_record_context thy
-    val _ = ttt_rewrite_thy_in_context thy context
-    (* The manifest may still resolve this identity to an older recording.
-       Remove it so only output produced by this child can satisfy the check. *)
-    val attempt_file = current_tacdata_file thy
-    val _ = remove_file attempt_file
-    val _ = print_endline ("ttt_record_thy: " ^ thy ^ "\n  " ^ scriptorg)
-    val (_,t) = add_time
-      (smlExecScripts.exec_tttrecord_in_dir dirorg)
-      (tttsml_of scriptorg)
+    val current_file = current_tacdata_file thy
+    val attempt_file = current_file ^ "." ^
+      Portable.unique_tmp_suffix () ^ ".attempt"
+    fun record_attempt () = with_tactictoe_cache (fn () =>
+      let
+        val context as {scriptorg,dirorg,...} = mk_record_context thy
+        val _ = with_flag (record_tacdata_file, SOME attempt_file)
+          (ttt_rewrite_thy_in_context thy) context
+        val _ = remove_file attempt_file
+        val _ = print_endline ("ttt_record_thy: " ^ thy ^ "\n  " ^ scriptorg)
+        val (_,t) = add_time
+          (smlExecScripts.exec_tttrecord_in_dir dirorg)
+          (tttsml_of scriptorg)
+      in
+        print_endline ("ttt_record_thy time: " ^ rts_round 4 t);
+        if not (exists_file attempt_file)
+        then (print_endline "ttt_record_thy: failed";
+              raise ERR "ttt_record_thy" thy)
+        else ()
+      end)
   in
-    print_endline ("ttt_record_thy time: " ^ rts_round 4 t);
-    if not (exists_file attempt_file)
-    then (print_endline "ttt_record_thy: failed";
-          raise ERR "ttt_record_thy" thy)
-    else ()
-  end)
+    ((record_attempt ();
+      OS.FileSys.rename {old = attempt_file, new = current_file})
+     handle e => (remove_file attempt_file; raise e))
+  end
 
 fun ttt_clean_temp () =
   (
@@ -1401,6 +1415,8 @@ type scan =
     prov : provenance,
     man : manifest option,
     src : (string,string) Redblackmap.dict,
+    (* ancestry identities computed from src, without re-reading scripts *)
+    identities : (string, int * string) Redblackmap.dict,
     (* entries of the manifest, grouped by theory *)
     entries : (string, entry list) Redblackmap.dict,
     (* theories whose current source has no matching manifest entry *)
@@ -1411,25 +1427,45 @@ fun src_hash_of (sc : scan) thy =
 
 fun entries_of (sc : scan) thy = dfind thy (#entries sc) handle NotFound => []
 
+fun identity_of (sc : scan) thy =
+  dfind thy (#identities sc) handle NotFound =>
+    (ancestry_version thy, ancestry_hash thy)
+
+fun scan_entry_matches (sc : scan) src thy (e : entry) =
+  let val (anc_version,anc_hash) = identity_of sc thy in
+    #thy e = thy andalso
+    #src_hash e = src andalso
+    #anc_version e = anc_version andalso
+    #anc_hash e = anc_hash andalso
+    #tacdata_version e = #tacdata_version (#prov sc) andalso
+    #tactictoe_version e = #tactictoe_version (#prov sc)
+  end
+
 fun lookup_entry (sc : scan) thy =
   case src_hash_of sc thy of
     NONE => NONE
-  | SOME src => List.find (entry_matches (#prov sc) src thy) (entries_of sc thy)
+  | SOME src => List.find (scan_entry_matches sc src thy) (entries_of sc thy)
 
 fun mk_scan force prov man src_hashes work =
   let
     val src = dnew String.compare src_hashes
+    fun indexed_source_hash thy =
+      dfind thy src handle NotFound => source_hash thy
+    fun identity thy =
+      (ancestry_version thy, ancestry_hash_from indexed_source_hash thy)
+    val identities = dnew String.compare (map (fn thy => (thy,identity thy)) work)
     val entries = case man of NONE => [] | SOME m => #entries m
     fun add (e : entry, d) =
       dadd (#thy e) (e :: (dfind (#thy e) d handle NotFound => [])) d
     val index = foldl add (dempty String.compare) entries
     val sc0 = {force = force, prov = prov, man = man, src = src,
+               identities = identities,
                entries = index, changed = HOLset.empty String.compare}
     val changed = HOLset.addList (HOLset.empty String.compare,
       filter (fn thy => not (isSome (lookup_entry sc0 thy))) work)
   in
-    {force = force, prov = prov, man = man, src = src, entries = index,
-     changed = changed}
+    {force = force, prov = prov, man = man, src = src,
+     identities = identities, entries = index, changed = changed}
   end
 
 fun stale_reason (sc : scan) stale_set thy =
@@ -1519,34 +1555,50 @@ fun record_one (cfg : record_config) prov src_hashes recorded_stale thy =
               print_endline msg; release_lock lock; (true,msg)
             end
         | SOME r =>
-          ((print_endline
-              ("recording: " ^ thy ^ "  reason: " ^ reason_to_string r);
-            record_thy_raw thy;
-            let
-              val file = current_tacdata_file thy
-              val _ = if exists_file file then () else
-                raise ERR "record_one" ("missing data after recording " ^ thy)
-              val data_hash = sha1_file file
-              val src_hash = source_hash thy
-              val entry = success_entry prov thy data_hash src_hash
-              val msg = "recorded: " ^ thy ^
-                "  data=" ^ data_hash ^ "  src=" ^ src_hash
-            in
-              update_manifest_entry max_lock_age prov entry;
-              print_endline msg;
-              release_lock lock; (true,msg)
-            end)
-           handle Interrupt => raise Interrupt
-                | e =>
-             let
-               val src_hash = source_hash thy handle _ => ""
-               val entry = failed_entry prov thy src_hash
-               val msg = "failed: " ^ thy ^ "  " ^ exnMessage e
-             in
-               print_endline msg;
-               update_manifest_entry max_lock_age prov entry handle _ => ();
-               release_lock lock; (false,msg)
-             end)
+          let
+            (* A forced attempt may target the same identity.  Keep its valid
+               manifest entry if the replacement fails. *)
+            fun usable e =
+              not (#failed e) andalso exists_file (entry_file e) andalso
+              sha1_file (entry_file e) = #data_hash e
+              handle Interrupt => raise Interrupt | _ => false
+            val previous =
+              case lookup_entry sc thy of
+                SOME e => if usable e then SOME e else NONE
+              | NONE => NONE
+          in
+            ((print_endline
+                ("recording: " ^ thy ^ "  reason: " ^ reason_to_string r);
+              record_thy_raw thy;
+              let
+                val file = current_tacdata_file thy
+                val _ = if exists_file file then () else
+                  raise ERR "record_one" ("missing data after recording " ^ thy)
+                val data_hash = sha1_file file
+                val src_hash = source_hash thy
+                val entry = success_entry prov thy data_hash src_hash
+                val msg = "recorded: " ^ thy ^
+                  "  data=" ^ data_hash ^ "  src=" ^ src_hash
+              in
+                update_manifest_entry max_lock_age prov entry;
+                print_endline msg;
+                release_lock lock; (true,msg)
+              end)
+             handle Interrupt => raise Interrupt
+                  | e =>
+               let
+                 val src_hash = source_hash thy handle _ => ""
+                 val msg = "failed: " ^ thy ^ "  " ^ exnMessage e
+                 val _ = case previous of
+                     SOME _ => ()
+                   | NONE =>
+                       update_manifest_entry max_lock_age prov
+                         (failed_entry prov thy src_hash) handle _ => ()
+               in
+                 print_endline msg;
+                 release_lock lock; (false,msg)
+               end)
+          end
       end
       handle e => (release_lock lock; raise e))
   end
@@ -1632,7 +1684,7 @@ fun record_extspec () =
     val globals =
       ["tttUnfold.record_parallel_dir := " ^
          mlquote (record_parallel_dir_of ()),
-       "aiLib.tactictoe_cache_dir := " ^ mlquote (!tactictoe_cache_dir),
+       "tttSetup.set_tactictoe_cache_dir " ^ mlquote (tactictoe_dir_of ()),
        set_bool "aiLib.debug_flag" debug_flag,
        set_bool "tttSetup.record_flag" record_flag,
        set_bool "tttSetup.record_prove_flag" record_prove_flag,

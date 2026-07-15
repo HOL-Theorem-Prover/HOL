@@ -36,6 +36,13 @@ fun ttt_closes msg tm =
    end)
   handle e => die ("FAILED: " ^ exnMessage e)
 
+val relative_cache_dir = ".hol/relative-tactictoe-cache"
+val expected_relative_cache_dir = OS.Path.mkAbsolute
+  {path = relative_cache_dir, relativeTo = OS.FileSys.getDir ()}
+val _ = set_tactictoe_cache_dir relative_cache_dir
+val _ = check "relative cache root is normalized at configuration time"
+  (tactictoe_dir_of () = expected_relative_cache_dir)
+
 val cache_dir = HOLDIR ^ "/src/tactictoe/selftest/.hol/tactictoe-cache"
 val _ = set_tactictoe_cache_dir cache_dir
 val tacdata_file = tttManifest.current_tacdata_file
@@ -246,6 +253,15 @@ val _ = check "ancestor identity hash is deterministic"
      val h1 = tttManifest.ancestry_hash "ConseqConv"
      val h2 = tttManifest.ancestry_hash "ConseqConv"
    in h1 = h2 andalso size h1 = 40 end)
+
+val _ = check "ancestor identity accepts indexed source hashes"
+  (let
+     val hashes = map (fn thy => (thy,tttManifest.source_hash thy))
+       (tttManifest.ttt_ancestry "ConseqConv")
+     val index = aiLib.dnew String.compare hashes
+     val indexed = tttManifest.ancestry_hash_from
+       (fn thy => aiLib.dfind thy index) "ConseqConv"
+   in indexed = tttManifest.ancestry_hash "ConseqConv" end)
 
 val _ = passok "record ConseqConv tactic data"
   (fn () => ttt_record_opts [Scope (Theories ["ConseqConv"])])

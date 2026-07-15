@@ -23,7 +23,7 @@ fun remove_err s = FileSys.remove s handle SysErr _ => ()
    Find the right heap for running a script
    ------------------------------------------------------------------------- *)
 
-fun heapname_dir () = !scratch_dir ^ "/sml_inspection/heapname"
+fun heapname_dir () = scratch_dir_of () ^ "/sml_inspection/heapname"
 val use_state0 = ref false
 val hol_bin = HOLDIR ^ "/bin/hol"
 
@@ -60,7 +60,7 @@ fun find_tttheapname_in_dir dir file =
    Find script dependencies
    ------------------------------------------------------------------------- *)
 
-fun genscriptdep_dir () = !scratch_dir ^ "/sml_inspection/genscriptdep"
+fun genscriptdep_dir () = scratch_dir_of () ^ "/sml_inspection/genscriptdep"
 val script_includes = ref ([] : string list)
 
 fun genscriptdep_env_prefix () =
@@ -92,7 +92,7 @@ fun find_genscriptdep file = find_genscriptdep_in_dir (OS.Path.dir file) file
    ------------------------------------------------------------------------- *)
 
 val buildheap_options = ref ""
-fun buildheap_dir () = !scratch_dir ^ "/sml_inspection/buildheap"
+fun buildheap_dir () = scratch_dir_of () ^ "/sml_inspection/buildheap"
 
 fun exec_scriptb_in_dir b dir script =
   let

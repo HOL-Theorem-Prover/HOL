@@ -17,11 +17,22 @@ open HolKernel Abbrev boolLib aiLib
 
 val infix_file = HOLDIR ^ "/src/AI/sml_inspection/infix_file.sml"
 val tactictoe_session_id = Portable.unique_tmp_suffix ()
-fun tactictoe_dir_of () = !tactictoe_cache_dir
+
+fun absolute_dir dir =
+  if OS.Path.isAbsolute dir then dir
+  else OS.Path.mkAbsolute {path = dir, relativeTo = OS.FileSys.getDir ()}
+
+(* Resolve environment configuration while still in the caller's working
+   directory.  Recording children later change to a theory source directory. *)
+val _ = if !tactictoe_cache_dir = "" then ()
+        else tactictoe_cache_dir := absolute_dir (!tactictoe_cache_dir)
+
+fun tactictoe_dir_of () =
+  require_dir "tactictoe_dir_of" (!tactictoe_cache_dir)
 fun ttt_eval_dir_of () = tactictoe_dir_of () ^ "/eval"
 fun tactictoe_scratch_dir_of () =
   tactictoe_dir_of () ^ "/tmp/" ^ tactictoe_session_id
-fun set_tactictoe_cache_dir dir = tactictoe_cache_dir := dir
+fun set_tactictoe_cache_dir dir = tactictoe_cache_dir := absolute_dir dir
 
 (* Operations watched by tttUnfold because replaying them can create or
    otherwise mutate theory state.  tttRecord uses the same list to avoid

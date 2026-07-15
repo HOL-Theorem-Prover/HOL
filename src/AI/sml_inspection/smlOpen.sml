@@ -12,8 +12,8 @@ struct
 open HolKernel boolLib aiLib smlExecScripts
 
 val ERR = mk_HOL_ERR "smlOpen"
-fun open_dir () = !scratch_dir ^ "/sml_inspection/open"
-fun openscript_dir () = !scratch_dir ^ "/sml_inspection/openscript"
+fun open_dir () = scratch_dir_of () ^ "/sml_inspection/open"
+fun openscript_dir () = scratch_dir_of () ^ "/sml_inspection/openscript"
 val openscript_run_dir = ref (NONE : string option)
 val openscript_includes = ref ([] : string list)
 
@@ -69,7 +69,7 @@ fun sml_exportstruct s =
 fun export_struct_code s =
   [
    "open smlOpen;",
-   "aiLib.scratch_dir := " ^ mlquote (!scratch_dir) ^ ";",
+   "aiLib.scratch_dir := " ^ mlquote (scratch_dir_of ()) ^ ";",
    "sml_cleanval ();",
    "sml_cleanstruct " ^ mlquote s ^ ";",
    "open " ^ s ^ ";",

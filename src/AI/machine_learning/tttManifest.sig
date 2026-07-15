@@ -32,6 +32,7 @@ sig
   val find_script : string -> string
   val ttt_ancestry : string -> string list
   val ancestry_version : string -> int
+  val ancestry_hash_from : (string -> string) -> string -> string
   val ancestry_hash : string -> string
   val source_hash : string -> string
   val current_provenance : unit -> provenance

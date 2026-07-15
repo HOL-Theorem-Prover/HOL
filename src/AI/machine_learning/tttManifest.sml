@@ -34,7 +34,8 @@ fun current_provenance () =
    Directories
    ------------------------------------------------------------------------- *)
 
-fun tacdata_dir () = !tactictoe_cache_dir ^ "/ttt_tacdata"
+fun tacdata_dir () =
+  require_dir "tacdata_dir" (!tactictoe_cache_dir) ^ "/ttt_tacdata"
 fun tacdata_data_dir () = tacdata_dir () ^ "/data"
 fun manifest_file () = tacdata_dir () ^ "/MANIFEST"
 
@@ -75,9 +76,11 @@ fun safe_sha1_file file = if exists_file file then sha1_file file else ""
 
 fun source_hash thy = safe_sha1_file (find_script thy)
 
-fun ancestry_hash thy =
+fun ancestry_hash_from hash_of thy =
   sha1_string (String.concatWith "\n"
-    (map (fn anc => anc ^ "=" ^ source_hash anc) (ttt_ancestry thy)) ^ "\n")
+    (map (fn anc => anc ^ "=" ^ hash_of anc) (ttt_ancestry thy)) ^ "\n")
+
+fun ancestry_hash thy = ancestry_hash_from source_hash thy
 
 fun identity_hash thy src anc anc_hash (prov : provenance) =
   sha1_string (String.concatWith "\n"

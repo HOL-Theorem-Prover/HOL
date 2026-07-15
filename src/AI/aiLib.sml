@@ -77,17 +77,24 @@ fun mkDir_err dir =
   end
 
 (* Cache root, following the same convention as the rest of HOL4
-   (see HM_Core_Cline): $XDG_CACHE_HOME if set, else $HOME/.cache. *)
+   (see HM_Core_Cline): $XDG_CACHE_HOME if set, else $HOME/.cache.  A
+   missing default is not an error until a client actually needs it. *)
 fun get_nonempty_env env =
   case OS.Process.getEnv env of SOME "" => NONE | value => value
 
-fun cache_root () =
+fun cache_root_opt () =
   case get_nonempty_env "XDG_CACHE_HOME" of
-    SOME dir => dir
+    SOME dir => SOME dir
   | NONE =>
     case get_nonempty_env "HOME" of
-      NONE => raise ERR "cache_root" "neither XDG_CACHE_HOME nor HOME is set"
-    | SOME dir => dir ^ "/.cache"
+      NONE => NONE
+    | SOME dir => SOME (dir ^ "/.cache")
+
+fun cache_root () =
+  case cache_root_opt () of
+    SOME dir => dir
+  | NONE => raise ERR "cache_root"
+      "neither XDG_CACHE_HOME nor HOME is set"
 
 fun home_cache_dir name = cache_root () ^ "/" ^ name
 
@@ -96,15 +103,37 @@ fun tool_cache_dir env name =
     SOME dir => dir
   | NONE => home_cache_dir name
 
-val tactictoe_cache_dir =
-  ref (tool_cache_dir "HOL4_TACTICTOE_CACHE" "tactictoe")
+fun tool_cache_dir_opt env name =
+  case get_nonempty_env env of
+    SOME dir => SOME dir
+  | NONE => Option.map (fn root => root ^ "/" ^ name) (cache_root_opt ())
+
+val tactictoe_default =
+  tool_cache_dir_opt "HOL4_TACTICTOE_CACHE" "tactictoe"
+
+(* The empty string represents an unconfigured optional directory.  Keep the
+   public refs string-valued for compatibility; accessors reject the sentinel
+   when an operation actually needs the directory. *)
+val tactictoe_cache_dir = ref (Option.getOpt (tactictoe_default, ""))
 
 (* Root for the throwaway files the SML-inspection machinery generates
    (opened-structure dumps, generated scripts, heap and dependency
    probes, redirected output).  Everything under it is derived from this
    one ref, so a client that needs a private scratch area -- e.g. a
    parallel TacticToe recording worker -- rebinds only this. *)
-val scratch_dir = ref (tool_cache_dir "HOL4_SCRATCH" "hol4/scratch")
+val scratch_dir = ref
+  (case tool_cache_dir_opt "HOL4_SCRATCH" "hol4/scratch" of
+     SOME dir => dir
+   | NONE =>
+       case tactictoe_default of
+         SOME dir => dir ^ "/tmp/scratch"
+       | NONE => "")
+
+fun require_dir what dir =
+  if dir <> "" then dir else raise ERR what
+      "no cache directory configured and neither XDG_CACHE_HOME nor HOME is set"
+
+fun scratch_dir_of () = require_dir "scratch_dir_of" (!scratch_dir)
 
 fun remove_file file =
   if exists_file file then ignore (OS.FileSys.remove file) else ()
@@ -1393,7 +1422,7 @@ fun gamma_noise_gen alpha =
 
 fun sigobj_theories () =
   let
-    val codedir = !scratch_dir ^ "/code"
+    val codedir = scratch_dir_of () ^ "/code"
     val _    = mkDir_err codedir
     val file = codedir ^ "/theory_list"
     val sigdir = HOLDIR ^ "/sigobj"

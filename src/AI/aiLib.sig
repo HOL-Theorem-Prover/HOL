@@ -50,6 +50,8 @@ sig
   val tool_cache_dir : string -> string -> string
   val tactictoe_cache_dir : string ref
   val scratch_dir : string ref
+  val require_dir : string -> string -> string
+  val scratch_dir_of : unit -> string
   val run_cmd : string -> unit
   val cmd_in_dir : string -> string -> unit
   val exists_file : string -> bool

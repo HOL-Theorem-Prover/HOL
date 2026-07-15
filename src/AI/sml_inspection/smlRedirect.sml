@@ -75,7 +75,7 @@ fun hide_in_file file f x =
     )
   )
 
-fun hide_file () = !scratch_dir ^ "/sml_inspection/hide_file"
+fun hide_file () = scratch_dir_of () ^ "/sml_inspection/hide_file"
 
 fun hidef f x = hide_in_file (hide_file ()) f x
 
