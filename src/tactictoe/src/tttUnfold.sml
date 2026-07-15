@@ -361,13 +361,11 @@ fun extract_store_thm sl =
 (* For the modern Theorem/Proof/QED syntax, sketch_wrap feeds HOL's
    source-expander output, which desugars each Theorem block to
      val id = Q.store_thm_at (loc) ("name[attrs]", term, tac)
-   where tac = fn HOLSourceExpand.goal_dummy => <user-tactic>
-                 HOLSourceExpand.goal_dummy
-   (the expander wraps the user's tactic via wrapTac).  The store_thm
-   recognizer above does not see `store_thm_at` and cannot parse the
-   curried (loc)(args) shape, so such scripts record zero proofs.
-   extract_store_thm_at handles the curried form and unwraps the
-   goal-lambda so the recorded tactic is the user's tactic. *)
+   The store_thm recognizer above does not see `store_thm_at` and cannot
+   parse the curried (loc)(args) shape, so such scripts record zero proofs.
+   extract_store_thm_at handles that form.  The expander may eta-expand the
+   tactic; we normalize that structurally below, without depending on a name
+   chosen by the expander. *)
 
 (* take_group: given a sketch list starting with "(" (or "[" / "{"),
    return the tokens inside that one balanced group (without the outer
@@ -387,23 +385,41 @@ fun take_group (Code(a,_) :: m) =
       else raise ERR "take_group" ("expected (, got " ^ a)
   | take_group _ = raise ERR "take_group" "not a paren"
 
-(* unwrap_fn: drop the `fn goal_dummy => <tac> goal_dummy` wrapper that
-   HOLSourceExpand.wrapTac produces, returning the user's tactic (sketch list).
-   The sketcher renders `fn X => BODY` as
-   Pattern ("fn", [X], "=>", sketched BODY), so match on Pattern. *)
-fun drop_goalarg_sketch sk =
-  case rev sk of
-    Code (name,_) :: rest =>
-      if name = HOLSourceExpand.goal_dummy then rev rest else sk
-  | _ => sk
+(* eta_normalize: recognize exactly `fn x => tac x`, using the binding
+   structure rather than a magic variable name.  The learner gets `tac`; the
+   fallback gets an alpha-equivalent eta wrapper with a fresh TacticToe name,
+   preserving delayed evaluation without retaining an expander implementation
+   detail.  The sketcher represents `fn X => BODY` as
+   Pattern ("fn", [X], "=>", sketched BODY). *)
+fun fresh_eta_name sk =
+  let
+    val names = original_program sk
+    fun loop n =
+      let val candidate = "tactictoe_eta_goal_" ^ int_to_string n in
+        if mem candidate names then loop (n + 1) else candidate
+      end
+  in
+    loop 0
+  end
 
-fun unwrap_fn sk =
+fun eta_normalize sk =
   case sk of
-    Pattern ("fn", _, "=>", body) :: _ =>
-      (case body of
-         Code ("(",_) :: _ => #1 (take_group body)
-       | _ => drop_goalarg_sketch body)
-  | _ => sk
+    [Pattern ("fn", [Code (x,_)], "=>", body)] =>
+      (case rev body of
+         Code (y,_) :: tac_rev =>
+           if x = y andalso not (null tac_rev) then
+             let
+               val tac = rev tac_rev
+               val fresh = fresh_eta_name tac
+               val fallback =
+                 [Pattern ("fn", [Code (fresh,Undecided)], "=>",
+                   tac @ [Code (fresh,Undecided)])]
+             in
+               SOME (fallback,tac)
+             end
+           else NONE
+       | _ => NONE)
+  | _ => NONE
 
 (* Match the attribute grammar used by the theorem store itself, so recorder
    keys agree with DB.fetch for every supported theorem name. *)
@@ -417,12 +433,16 @@ fun extract_store_thm_at sl =
     val (locg, rest1) = split_codelevel ")" sl
     val (argsg, cont) = take_group rest1
     val (namel, l0)  = split_codelevel "," argsg
-    val (term, qtacw) = split_codelevel "," l0
-    val qtac = unwrap_fn qtacw
+    val (term, qtac_raw) = split_codelevel "," l0
+    val (qtac_fallback, qtac_learning) =
+      case eta_normalize qtac_raw of
+        SOME result => result
+      | NONE => (qtac_raw,qtac_raw)
     val name = original_code (last namel)
   in
     if is_quoted name
-    then SOME (rm_squote name, locg, namel, term, qtac, cont)
+    then SOME (rm_squote name, locg, namel, term,
+               qtac_fallback, qtac_learning, cont)
     else NONE
   end
   handle HOL_ERR _ =>
@@ -652,11 +672,11 @@ val is_thm_flag = ref false
    both to record_proof, which replays the wrapper and falls back to the
    original tactic if it fails.  Shared by the store_thm_at, store_thm and
    prove branches below, which differ only in what precedes the tactic. *)
-fun record_wrapper name qtac =
+fun record_wrapper name raw_tac learning_tac =
   let
-    val tac1 = original_program qtac
+    val tac1 = original_program raw_tac
     val lflag_name = if mem "let" tac1 then "true" else "false"
-    val tac2 = ppstring_stac qtac
+    val tac2 = ppstring_stac learning_tac
   in
     ["let","val","tactictoe_tac1","="] @ tac1 @
     ["val","tactictoe_tac2","=","(","tttRecord.app_wrap_proof",
@@ -696,14 +716,14 @@ fun modified_program (h,d) p =
       then
       case extract_store_thm_at (tl m) of
         NONE => a :: continue m
-      | SOME (name,locg,namel,term,qtac,cont) =>
+      | SOME (name,locg,namel,term,raw_tac,learning_tac,cont) =>
         let
           val _ = is_thm_flag := true
           val _ = incr n_store_thm
         in
           [a,"("] @ original_program locg @ [")","("] @
           original_program namel @ [","] @ original_program term @ [","] @
-          record_wrapper (theorem_name name) qtac @ [")"]
+          record_wrapper (theorem_name name) raw_tac learning_tac @ [")"]
           @ continue cont
         end
     else if mem (drop_sig a) store_thm_list andalso hd_code_par m
@@ -717,7 +737,7 @@ fun modified_program (h,d) p =
         in
           [a,"("] @ original_program namel @ [","] @
           original_program term @ [","] @
-          record_wrapper (theorem_name name) qtac @ [")"]
+          record_wrapper (theorem_name name) qtac qtac @ [")"]
           @ continue cont
         end
     else if mem (drop_sig a) prove_list andalso hd_code_par m
@@ -731,7 +751,7 @@ fun modified_program (h,d) p =
           val _ = incr n_store_thm
         in
           [a,"("] @ original_program term @ [","] @
-          record_wrapper name qtac @ [")"]
+          record_wrapper name qtac qtac @ [")"]
           @ continue cont
         end
     else a :: continue m
@@ -828,7 +848,7 @@ fun replace_fetch l = case l of
     if is_store_thm_at a andalso hd_code_par m
     then
       case extract_store_thm_at (tl m) of
-        SOME (name,_,_,_,_,cont) =>
+        SOME (name,_,_,_,_,_,cont) =>
         mk_fetch (theorem_name name) @ replace_fetch cont
       | NONE => Code(a,Watch) :: replace_fetch m
     else if is_watch_name a andalso hd_code_par2 m
