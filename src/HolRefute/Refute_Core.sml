@@ -615,9 +615,6 @@ structure Refute_Core = struct
 
     fun option_to_string f NONE = "NONE"
       | option_to_string f (SOME x) = "SOME " ^ f x
-
-    fun bool_to_string true = "true"
-      | bool_to_string false = "false"
   end
 
   fun show_config () =
@@ -634,10 +631,10 @@ structure Refute_Core = struct
         [ "timeout = " ^ Real.toString timeout ^ "\n",
           "backends = " ^ Private.option_to_string
             (String.concatWith ", ") backends ^ "\n",
-          "sequential = " ^ Private.bool_to_string sequential ^ "\n",
-          "genuine_only = " ^ Private.bool_to_string genuine_only ^ "\n",
-          "abort_potential = " ^ Private.bool_to_string abort_potential ^ "\n",
-          "no_assms = " ^ Private.bool_to_string no_assms ^ "\n",
+          "sequential = " ^ Bool.toString sequential ^ "\n",
+          "genuine_only = " ^ Bool.toString genuine_only ^ "\n",
+          "abort_potential = " ^ Bool.toString abort_potential ^ "\n",
+          "no_assms = " ^ Bool.toString no_assms ^ "\n",
           "evals = " ^ Int.toString (length evals) ^ " terms\n",
           "expect = " ^ Private.expectation_to_string expect ^ "\n",
           "max_counterexamples = " ^ Int.toString max_counterexamples ^ "\n",
@@ -645,7 +642,7 @@ structure Refute_Core = struct
           "size = " ^ Int.toString (#size q) ^ "\n",
           "iterations = " ^ Int.toString (#iterations q) ^ "\n",
           "depth = " ^ Int.toString (#depth q) ^ "\n",
-          "finite_types = " ^ Private.bool_to_string (#finite_types q) ^
+          "finite_types = " ^ Bool.toString (#finite_types q) ^
             "\n",
           "finite_type_size = " ^ Int.toString (#finite_type_size q) ^
             "\n",
@@ -653,15 +650,15 @@ structure Refute_Core = struct
           "substrate = " ^ Private.substrate_to_string (#substrate q) ^
             "\n",
           "allow_function_inversion = " ^
-            Private.bool_to_string (#allow_function_inversion q) ^ "\n",
-          "use_subtype = " ^ Private.bool_to_string (#use_subtype q) ^
+            Bool.toString (#allow_function_inversion q) ^ "\n",
+          "use_subtype = " ^ Bool.toString (#use_subtype q) ^
             "\n",
           "seed = " ^ Private.option_to_string Int.toString (#seed q) ^
             "\n",
           "smart_quantifier = " ^
-            Private.bool_to_string (#smart_quantifier q) ^ "\n",
+            Bool.toString (#smart_quantifier q) ^ "\n",
           "optimise_equality = " ^
-            Private.bool_to_string (#optimise_equality q) ^ "\n" ]
+            Bool.toString (#optimise_equality q) ^ "\n" ]
     end
 
   val backend_registry : (string * backend) list ref = ref []
@@ -702,13 +699,8 @@ structure Refute_Core = struct
         (!backend_registry))
     end
 
-  val select_backends = selected_backends
-  fun configured_backends () = selected_backends NONE
-
   fun lookup_stat key stats =
-    case List.find (fn (name, _) => name = key) stats of
-        NONE => NONE
-      | SOME (_, value) => SOME value
+    Option.map #2 (List.find (fn (name, _) => name = key) stats)
 
   fun format_stats stats =
     let
@@ -794,7 +786,6 @@ structure Refute_Core = struct
 
   fun report_outcome (cfg : config) result =
     Private.say 1 (format_outcome cfg result ^ "\n")
-  val report = report_outcome
 
   fun decisive (Counterexample _) = true
     | decisive _ = false
@@ -841,11 +832,6 @@ structure Refute_Core = struct
       List.concat (map one jobs)
     end
 
-  fun expected_name ExpectCex = "ExpectCex"
-    | expected_name ExpectNone = "ExpectNone"
-    | expected_name ExpectUnknown = "ExpectUnknown"
-    | expected_name NoExpectation = "NoExpectation"
-
   fun actual_name (Counterexample _) = "ExpectCex"
     | actual_name NoCounterexample = "ExpectNone"
     | actual_name (Unknown _) = "ExpectUnknown"
@@ -854,10 +840,12 @@ structure Refute_Core = struct
     case #expect cfg of
         NoExpectation => ()
       | expectation =>
-          if expected_name expectation = actual_name result then ()
+          if Private.expectation_to_string expectation = actual_name result
+          then ()
           else raise Feedback.mk_HOL_ERR "Refute" "expect"
-            ("expected " ^ expected_name expectation ^ ", got " ^
-             actual_name result ^ "\n" ^ format_outcome cfg result)
+            ("expected " ^ Private.expectation_to_string expectation ^
+             ", got " ^ actual_name result ^ "\n" ^
+             format_outcome cfg result)
 
   fun refute_problem (cfg : config) (problem : problem) =
     let
