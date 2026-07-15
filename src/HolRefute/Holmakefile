@@ -1,0 +1,38 @@
+INCLUDES = $(HOLDIR)/src/portableML/poly/concurrent ../n-bit
+
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: holrefute-selftest.log
+
+holrefute-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1,$@)
+endif
+
+EXTRA_CLEANS = selftest.exe holrefute-selftest.log
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif
+
+ifdef POLY
+HOLHEAP = refuteheap
+EXTRA_CLEANS += $(HOLHEAP)
+
+REFUTE_DEPS = boss/bossLib n-bit/wordsLib
+BARE_DEPS = $(patsubst %,../%,$(REFUTE_DEPS))
+DEPS = $(patsubst %,%.uo,$(BARE_DEPS))
+
+all: $(HOLHEAP) selftest.exe
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) -F -o $@ \
+		-b $(dprot $(HOLDIR)/bin/hol.state) $(BARE_DEPS)
+endif

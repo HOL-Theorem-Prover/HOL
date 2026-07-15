@@ -1,0 +1,14 @@
+HolRefute provides counterexample generation for HOL4.  M1 supplies the
+Quickcheck (QC) backend; the model-finding (MF) backend is planned for
+M3--M4.
+
+Module layout:
+
+* Refute_Core: shared types, configuration, registry, and orchestration.
+* Refute_Gen: generator derivation and enumeration support.
+* Refute_QC: QC test planning and random/exhaustive execution.
+* Refute_Cert: EVAL-based counterexample certification.
+* Refute.sig and Refute.sml: the public API facade.
+
+The refute_simp, refute_psimp, and refute_unfold theorem sets are defined
+by the support theory and consumed by the M3 MF backend.
