@@ -1026,10 +1026,12 @@ fun output_header oc cthy =
   reflect_flag oc "tttSetup.record_let_flag" record_let_flag;
   reflect_flag oc "tttSetup.ttt_ex_flag" ttt_ex_flag;
   reflect_flag oc "tttSetup.record_savestate_flag" record_savestate_flag;
+  reflect_flag oc "tttSetup.record_ortho_flag" record_ortho_flag;
   reflect_flag oc "tttSetup.export_thmdata_flag" export_thmdata_flag;
   reflect_flag oc "tttSetup.learn_abstract_term" learn_abstract_term;
   reflect_time oc "tttSetup.record_tactic_time" record_tactic_time;
   reflect_time oc "tttSetup.record_proof_time" record_proof_time;
+  reflect_time oc "tttSetup.learn_tactic_time" learn_tactic_time;
   (* search *)
   reflect_time oc "tttSetup.ttt_search_time" ttt_search_time;
   reflect_time oc "tttSetup.ttt_tactic_time" ttt_tactic_time;
@@ -1184,13 +1186,17 @@ fun record_thy_raw thy = with_tactictoe_cache (fn () =>
   let
     val context as {scriptorg,dirorg,...} = mk_record_context thy
     val _ = ttt_rewrite_thy_in_context thy context
+    (* The manifest may still resolve this identity to an older recording.
+       Remove it so only output produced by this child can satisfy the check. *)
+    val attempt_file = current_tacdata_file thy
+    val _ = remove_file attempt_file
     val _ = print_endline ("ttt_record_thy: " ^ thy ^ "\n  " ^ scriptorg)
     val (_,t) = add_time
       (smlExecScripts.exec_tttrecord_in_dir dirorg)
       (tttsml_of scriptorg)
   in
     print_endline ("ttt_record_thy time: " ^ rts_round 4 t);
-    if not (exists_tacdata_thy thy)
+    if not (exists_file attempt_file)
     then (print_endline "ttt_record_thy: failed";
           raise ERR "ttt_record_thy" thy)
     else ()
@@ -1616,14 +1622,37 @@ fun record_worker (p : record_worker_param) thy =
        | e => "fail " ^ thy ^ "  " ^ exnMessage e
 
 fun record_extspec () =
+  let
+    val loaded_dirs = map snd (Binarymap.listItems (fileDirMap ()))
+    val includes = mk_sameorder_set String.compare
+      (map full_path
+        (HOLDIR ^ "/src/tactictoe/src" :: loaded_dirs @ !loadPath))
+    fun set_bool name r = name ^ " := " ^ bts (!r)
+    fun set_real name r = name ^ " := " ^ Real.toString (!r)
+    val globals =
+      ["tttUnfold.record_parallel_dir := " ^
+         mlquote (record_parallel_dir_of ()),
+       "aiLib.tactictoe_cache_dir := " ^ mlquote (!tactictoe_cache_dir),
+       set_bool "aiLib.debug_flag" debug_flag,
+       set_bool "tttSetup.record_flag" record_flag,
+       set_bool "tttSetup.record_prove_flag" record_prove_flag,
+       set_bool "tttSetup.record_let_flag" record_let_flag,
+       set_bool "tttSetup.record_ortho_flag" record_ortho_flag,
+       set_bool "tttSetup.ttt_ex_flag" ttt_ex_flag,
+       set_bool "tttSetup.record_savestate_flag" record_savestate_flag,
+       set_bool "tttSetup.export_thmdata_flag" export_thmdata_flag,
+       set_bool "tttSetup.learn_abstract_term" learn_abstract_term,
+       set_real "tttSetup.record_tactic_time" record_tactic_time,
+       set_real "tttSetup.record_proof_time" record_proof_time,
+       set_real "tttSetup.learn_tactic_time" learn_tactic_time,
+       set_real "tttSetup.ttt_search_time" ttt_search_time,
+       set_real "tttSetup.ttt_tactic_time" ttt_tactic_time]
+  in
   {
-  self_dir = "$(HOLDIR)/src/tactictoe/src",
+  self_dir = String.concatWith " " includes,
   self = "(tttUnfold.record_extspec ())",
   parallel_dir = record_parallel_dir_of (),
-  reflect_globals =
-    "(tttUnfold.record_parallel_dir := " ^
-    mlquote (record_parallel_dir_of ()) ^
-    "; aiLib.tactictoe_cache_dir := " ^ mlquote (!tactictoe_cache_dir) ^ ")",
+  reflect_globals = "(" ^ String.concatWith "; " globals ^ ")",
   function = record_worker,
   write_param = write_worker_param,
   read_param = read_worker_param,
@@ -1632,6 +1661,7 @@ fun record_extspec () =
   write_result = (fn file => fn s => writel file [s]),
   read_result = (fn file => hd (readl_rm file))
   }
+  end
 
 (* -------------------------------------------------------------------------
    Driver
@@ -1700,6 +1730,14 @@ fun ttt_record_cfg (cfg : record_config) =
             let
               val results = parmap_queue_extern ncore
                 (record_extspec ()) (worker_param done) batch
+                handle Interrupt => raise Interrupt
+                     | e =>
+                       let
+                         val msg = "external worker failure: " ^ exnMessage e
+                         val _ = print_endline ("parallel failure: " ^ msg)
+                       in
+                         map (fn thy => "fail " ^ thy ^ "  " ^ msg) batch
+                       end
             in
               app (fn s => print_endline ("parallel result: " ^ s)) results;
               results

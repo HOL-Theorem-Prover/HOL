@@ -28,7 +28,8 @@
 #       --keep
 #
 # Output:
-#   By default the tactic database is written to
+#   By default the tactic database is written to HOL4_TACTICTOE_CACHE when
+#   that variable is set, otherwise to
 #     $HOME/.cache/tactictoe/ttt_tacdata
 #   Use --output DIR to use DIR as the TacticToe cache root instead
 #   (the tactic database will be written to DIR/ttt_tacdata).
@@ -122,8 +123,9 @@ Usage:
   --keep        Keep existing tactic data: only record theories that are
                 missing or stale.  Without it the cache is wiped first.
   --output DIR  Use DIR as the TacticToe cache root instead of
-                $HOME/.cache/tactictoe.  The tactic database is written to
-                DIR/ttt_tacdata.  Exported to hol as HOL4_TACTICTOE_CACHE.
+                HOL4_TACTICTOE_CACHE (when set) or $HOME/.cache/tactictoe.
+                The tactic database is written to DIR/ttt_tacdata and DIR is
+                exported to hol as HOL4_TACTICTOE_CACHE.
 
 Recording opens many files; the script raises the soft open-file limit to
 20000 (as recommended by src/tactictoe/EVALUATION).  If the hard limit is
@@ -238,11 +240,14 @@ if [ -n "${output_dir}" ]; then
   fi
   cache_root="$(cd "${output_dir}" && pwd)"
 else
-  if [ -z "${HOME:-}" ]; then
+  if [ -n "${HOL4_TACTICTOE_CACHE:-}" ]; then
+    cache_root="${HOL4_TACTICTOE_CACHE}"
+  elif [ -z "${HOME:-}" ]; then
     echo "error: HOME is not set; cannot choose default TacticToe cache" >&2
     exit 1
+  else
+    cache_root="${HOME}/.cache/tactictoe"
   fi
-  cache_root="${HOL4_TACTICTOE_CACHE:-${HOME}/.cache/tactictoe}"
 fi
 export HOL4_TACTICTOE_CACHE="${cache_root}"
 tacdata_path="${cache_root}/ttt_tacdata"

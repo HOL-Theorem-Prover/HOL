@@ -272,6 +272,19 @@ fun boss_stop_workers pd threadl =
     print_endline ("  " ^ its ncore ^ " workers stopped")
   end
 
+(* A failed external process leaves its launcher thread inactive.  Abort is
+   deliberately bounded: notify workers that are still listening, then
+   interrupt their launcher threads instead of waiting forever for a failed
+   pool to become quiescent. *)
+fun boss_abort_workers pd threadl =
+  let
+    fun send_stop wid =
+      writel_atomic (widin_file pd wid) ["stop"] handle _ => ()
+  in
+    app send_stop (List.tabulate (length threadl,I));
+    app smlTimeout.interruptkill threadl
+  end
+
 fun boss_end pd threadl completedl =
   let
     val ncore = length threadl
@@ -318,6 +331,9 @@ and boss_collect pd threadl rr arglv warg (pendingl,runningl,completedl) =
     then boss_end pd threadl completedl
   else
   let
+    fun worker_alive wid = Thread.isActive (List.nth (threadl,wid))
+    fun lost_worker (wid,_) =
+      not (worker_alive wid) andalso not (exists_file (widout_file pd wid))
     fun f (wid,job) =
       if not (exists_file (widout_file pd wid)) then NONE else
       (
@@ -326,6 +342,11 @@ and boss_collect pd threadl rr arglv warg (pendingl,runningl,completedl) =
       SOME (rr wid)
       )
     fun forget_wid ((wid,job),ro) = (job, valOf ro)
+    val _ = case List.find lost_worker runningl of
+        NONE => ()
+      | SOME (wid,job) => raise ERR "boss_collect"
+          ("external worker " ^ its wid ^
+           " terminated during job " ^ its job)
     val (al,bl) = partition (isSome o snd) (map_assoc f runningl)
     val runningl_new = map fst bl
     val completedl_new = map forget_wid al
@@ -350,13 +371,18 @@ fun boss_start_worker pd selfd code_of wid =
 val attrib = [Thread.InterruptState Thread.InterruptAsynch,
   Thread.EnableBroadcastInterrupt true]
 
-fun boss_wait_upl pd widl =
+fun boss_wait_upl pd threadl =
   let fun is_up wid = hd (readl (widout_file pd wid)) = "up"
                       handle Io _ => false
+      val widl = List.tabulate (length threadl,I)
+      fun worker_alive wid = Thread.isActive (List.nth (threadl,wid))
   in
-    if all is_up widl
+    case List.find (not o worker_alive) widl of
+      SOME wid => raise ERR "boss_wait_upl"
+        ("external worker " ^ its wid ^ " terminated during startup")
+    | NONE => if all is_up widl
     then app (remove_file o (widout_file pd)) widl
-    else (mini_sleep (); boss_wait_upl pd widl)
+    else (mini_sleep (); boss_wait_upl pd threadl)
   end
 
 fun clean_parallel_dirs pd widl =
@@ -412,9 +438,11 @@ fun parmap_queue_extern ncore es param argl =
       boss_start_worker pd selfd (code_of_extspec es) wid, attrib)
     val threadl = map fork widl
   in
-    boss_wait_upl pd widl;
-    print_endline ("  " ^ its ncore ^ " workers started");
-    boss_send pd threadl rr arglv warg (pendingl,[],[])
+    ((boss_wait_upl pd threadl;
+      print_endline ("  " ^ its ncore ^ " workers started");
+      boss_send pd threadl rr arglv warg (pendingl,[],[]))
+     handle Interrupt => (boss_abort_workers pd threadl; raise Interrupt)
+          | e => (boss_abort_workers pd threadl; raise e))
   end
 
 (* -------------------------------------------------------------------------

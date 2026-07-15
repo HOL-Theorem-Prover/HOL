@@ -65,6 +65,93 @@ val _ = passok "output redirection accepts a bare filename"
 val _ = check "parallel workers inherit configured cache root"
   (String.isSubstring cache_dir (#reflect_globals (record_extspec ())))
 
+val worker_includes =
+  let
+    val saved = !loadPath
+    val marker = OS.FileSys.fullPath "."
+  in
+    (loadPath := marker :: saved;
+     #self_dir (record_extspec ()))
+    before loadPath := saved
+  end
+
+val _ = check "parallel workers inherit caller load paths"
+  (String.isSubstring (OS.FileSys.fullPath ".") worker_includes)
+
+val worker_settings =
+  let
+    val saved = (!record_prove_flag, !record_let_flag,
+      !learn_abstract_term, !record_tactic_time, !record_proof_time)
+  in
+    (record_prove_flag := false;
+     record_let_flag := true;
+     learn_abstract_term := true;
+     record_tactic_time := 3.25;
+     record_proof_time := 4.5;
+     #reflect_globals (record_extspec ()))
+    before
+      (record_prove_flag := #1 saved;
+       record_let_flag := #2 saved;
+       learn_abstract_term := #3 saved;
+       record_tactic_time := #4 saved;
+       record_proof_time := #5 saved)
+  end
+
+val _ = check "parallel workers inherit recording settings"
+  (List.all (fn s => String.isSubstring s worker_settings)
+    ["record_prove_flag := false", "record_let_flag := true",
+     "learn_abstract_term := true", "record_tactic_time := 3.25",
+     "record_proof_time := 4.5"])
+
+fun example_spec self reflect : (unit,int,int) smlParallel.extspec =
+  let val base = smlParallel.examplespec in
+    { self_dir = #self_dir base,
+      self = self,
+      parallel_dir = #parallel_dir base,
+      reflect_globals = reflect,
+      function = #function base,
+      write_param = #write_param base,
+      read_param = #read_param base,
+      write_arg = #write_arg base,
+      read_arg = #read_arg base,
+      write_result = #write_result base,
+      read_result = #read_result base }
+  end
+
+val dead_worker_spec = example_spec "smlParallel.examplespec"
+  "raise Fail \"worker startup selftest\""
+
+val _ = check "parallel boss detects terminated worker"
+  ((smlTimeout.timeout 10.0
+      (fn () => ignore
+        (smlParallel.parmap_queue_extern 2 dead_worker_spec () [1,2])) () ;
+    false)
+   handle e =>
+     String.isSubstring "external worker" (exnMessage e) andalso
+     String.isSubstring "startup" (exnMessage e))
+
+val dead_job_self = String.concat
+  ["(let val e = smlParallel.examplespec in ",
+   "{self_dir = #self_dir e, self = #self e, ",
+   "parallel_dir = #parallel_dir e, ",
+   "reflect_globals = #reflect_globals e, ",
+   "function = (fn () => fn (_ : int) => ",
+   "raise Fail \"worker job selftest\"), ",
+   "write_param = #write_param e, read_param = #read_param e, ",
+   "write_arg = #write_arg e, read_arg = #read_arg e, ",
+   "write_result = #write_result e, read_result = #read_result e} end)"]
+
+val dead_job_spec = example_spec dead_job_self "()"
+
+val _ = check "parallel boss detects worker termination during job"
+  ((smlTimeout.timeout 10.0
+      (fn () => ignore
+        (smlParallel.parmap_queue_extern 2 dead_job_spec () [1,2])) () ;
+    false)
+   handle e =>
+     String.isSubstring "external worker" (exnMessage e) andalso
+     String.isSubstring "during job" (exnMessage e))
+
 val _ = check "tacticToe public API type-checks"
   (let
      val _ : tactic = ttt
@@ -284,6 +371,16 @@ val _ = check "attributed theorem is recorded under its bare name"
      "tttRecord.app_wrap_proof \"ATTR_REGRESSION\"" regression_script andalso
    String.isSubstring
      "tttRecord.record_proof \"ATTR_REGRESSION\"" regression_script)
+
+(* Both root theories already have same-identity output at this point. *)
+val _ = passok "parallel forced re-record replaces same-identity data"
+  (fn () => ttt_record_opts
+    [Scope (Theories ["sat", "marker"]),
+     Parallel 2, Force true])
+
+val _ = passok "parallel forced re-record leaves data up-to-date"
+  (fn () => ttt_record_opts
+    [Scope (Theories ["sat", "marker"]), DryRun true])
 
 open arithmeticTheory dividesTheory gcdTheory
 

@@ -107,8 +107,12 @@ fun exec_scriptb_in_dir b dir script =
        ["run","--holstate=" ^ shell_quote heap] @
        map shell_quote depl @
        [shell_quote (script_arg script), ">", shell_quote fileout])
+    val status = OS.Process.system
+      ("cd " ^ shell_quote dir ^ "; " ^ cmd)
   in
-    cmd_in_dir dir cmd
+    if OS.Process.isSuccess status then ()
+    else raise ERR "exec_scriptb_in_dir"
+      ("HOL child failed while running " ^ script)
   end
 
 fun exec_script_in_dir dir script = exec_scriptb_in_dir false dir script
@@ -123,7 +127,8 @@ fun exec_script script = exec_script_in_dir (OS.Path.dir script) script
 fun exec_tttrecord_in_dir dir script =
   let fun cleanup () = remove_err script in
     ((exec_scriptb_in_dir true dir script; cleanup ())
-    handle Interrupt => (cleanup (); raise Interrupt) | e => raise e)
+    handle Interrupt => (cleanup (); raise Interrupt)
+         | e => (cleanup (); raise e))
   end
 
 fun exec_tttrecord script = exec_tttrecord_in_dir (OS.Path.dir script) script
