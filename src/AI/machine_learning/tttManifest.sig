@@ -53,10 +53,12 @@ sig
   val success_entry : provenance -> string -> string -> string -> entry
   val failed_entry : provenance -> string -> string -> entry
 
-  (* resolving the tactic-data file of a theory; the _in variant takes an
-     already-read manifest so that a caller resolving a whole ancestry does
-     not re-read and re-parse the manifest once per theory *)
+  (* resolving tactic-data files; the _in variants take an already-read
+     manifest, and the plural variant also shares source hashes and ancestry
+     identities across the whole batch *)
   val tacdata_file_for_thy : string -> string option
   val tacdata_file_for_thy_in : manifest option -> string -> string option
+  val tacdata_files_for_thys_in :
+    manifest option -> string list -> (string * string option) list
 
 end

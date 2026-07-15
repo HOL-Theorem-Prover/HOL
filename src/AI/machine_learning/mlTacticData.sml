@@ -121,7 +121,7 @@ fun create_tacdata () =
     val thyl = ancestry (current_theory ())
     (* read the manifest once, not once per ancestor *)
     val man = read_manifest ()
-    val resolved = map (fn thy => (thy, tacdata_file_for_thy_in man thy)) thyl
+    val resolved = tacdata_files_for_thys_in man thyl
     val filel = List.mapPartial (fn (_,SOME file) => SOME file | _ => NONE)
       resolved
     val thyl2 = List.mapPartial (fn (thy,NONE) => SOME thy | _ => NONE)

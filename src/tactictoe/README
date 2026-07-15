@@ -2,14 +2,6 @@ TacticToe is a tactic-based prover.
 
 It searches for a proof by repeatedly applying suitable tactics for each goal state that it produces.
 
-SKIPPING RECORDING of the HOL4 standard library:
-  1) Download the file ttt_tacdata_kananaskis-14.tar.gz from
-     http://grid01.ciirc.cvut.cz/~thibault/
-  2) Extract it in $HOME/.cache/tactictoe (or in the directory named by
-     HOL4_TACTICTOE_CACHE).  This creates the ttt_tacdata directory.
-  3) Optionally download from the same location
-     "tnn_for_tactictoe" to a file "path_to_tnn"
-
 RECORDING all ancestor theories with manifest-based cache validation:
   load "tttUnfold"; open tttUnfold;
   load "fooTheory";
@@ -25,7 +17,9 @@ derived from the theory name, Script.sml hash, ancestry version, tactic-data
 format version, and TacticToe version. Same-name theories from different
 projects therefore do not share data unless this full identity matches; old
 flat ttt_tacdata/<theory> files are not used for current manifest-validated
-loads. The on-disk format and the identity key are owned by tttManifest:
+loads. In particular, the old ttt_tacdata_kananaskis-14.tar.gz archive uses
+that incompatible flat layout and cannot be used to skip recording. The
+on-disk format and the identity key are owned by tttManifest:
 bump `tttManifest.format_version` when the on-disk format changes, and
 `tttManifest.tactictoe_version` when recorder, feature, or learning changes
 invalidate recorded data.
@@ -55,7 +49,7 @@ open directory with the line:
 Otherwise, the tactics and arguments declared in those structures will not be
 recorded.
 
-DEFAULT USAGE (after RECORDING or SKIPPING RECORDING):
+DEFAULT USAGE (after RECORDING):
   load "tacticToe"; open tacticToe;
   ttt ([],``1+1=2``);
   tactictoe ``1+1=2``; (* alternatively *)

@@ -79,9 +79,12 @@ fun safe_sha1_file file = if exists_file file then sha1_file file else ""
 
 fun source_hash thy = safe_sha1_file (find_script thy)
 
-fun ancestry_hash_from hash_of thy =
+fun ancestry_hash_for hash_of ancestors =
   sha1_string (String.concatWith "\n"
-    (map (fn anc => anc ^ "=" ^ hash_of anc) (ttt_ancestry thy)) ^ "\n")
+    (map (fn anc => anc ^ "=" ^ hash_of anc) ancestors) ^ "\n")
+
+fun ancestry_hash_from hash_of thy =
+  ancestry_hash_for hash_of (ttt_ancestry thy)
 
 fun ancestry_hash thy = ancestry_hash_from source_hash thy
 
@@ -229,6 +232,15 @@ fun entry_matches (prov : provenance) src_hash thy (e : entry) =
 fun find_entry prov src_hash thy (m : manifest) =
   List.find (entry_matches prov src_hash thy) (#entries m)
 
+fun entry_matches_identity (prov : provenance) src_hash thy
+    (anc_version,anc_hash) (e : entry) =
+  #thy e = thy andalso
+  #src_hash e = src_hash andalso
+  #anc_version e = anc_version andalso
+  #anc_hash e = anc_hash andalso
+  #tacdata_version e = #tacdata_version prov andalso
+  #tactictoe_version e = #tactictoe_version prov
+
 fun same_slot (e1 : entry) (e2 : entry) =
   #thy e1 = #thy e2 andalso
   #src_hash e1 = #src_hash e2 andalso
@@ -262,29 +274,78 @@ fun failed_entry (prov : provenance) thy src_hash =
    Resolving a theory's tactic-data file
    ------------------------------------------------------------------------- *)
 
-fun tacdata_file_for_thy_in man thy =
+fun tacdata_files_for_thys_in man thyl =
   let
-    val src = source_hash thy
     val prov = current_provenance ()
-    val current_file =
-      tacdata_file_of_identity thy src (ancestry_version thy) prov
-    fun unvalidated () =
-      if exists_file current_file then SOME current_file else NONE
+    fun find_ancestry thy =
+      SOME (ttt_ancestry thy)
+      handle Interrupt => raise Interrupt | _ => NONE
+    val ancestry_items = map (fn thy => (thy,find_ancestry thy)) thyl
+    val ancestries = dnew String.compare
+      ancestry_items
+    val all_thys = mk_sameorder_set String.compare
+      (thyl @ List.concat
+        (List.mapPartial (fn (_,ancestors) => ancestors)
+          ancestry_items))
+    fun hash_source thy =
+      SOME (source_hash thy)
+      handle Interrupt => raise Interrupt | _ => NONE
+    val sources = dnew String.compare
+      (map (fn thy => (thy,hash_source thy)) all_thys)
+    fun source_of thy = dfind thy sources
+    fun identity thy =
+      case dfind thy ancestries of
+        NONE => NONE
+      | SOME ancestors =>
+          let val hashes = map source_of ancestors in
+            if List.all isSome hashes
+            then SOME (length ancestors,
+              ancestry_hash_for (valOf o source_of) ancestors)
+            else NONE
+          end
+    val identities = dnew String.compare
+      (map (fn thy => (thy,identity thy)) thyl)
+    val manifest_entries = case man of NONE => [] | SOME m => #entries m
+    fun add_entry (e : entry,d) =
+      dadd (#thy e) (e :: (dfind (#thy e) d handle NotFound => [])) d
+    val entries = foldl add_entry (dempty String.compare) manifest_entries
+    fun entries_of thy = dfind thy entries handle NotFound => []
+    fun resolve thy =
+      (case (source_of thy,dfind thy identities) of
+         (SOME src,SOME (anc_version,anc_hash)) =>
+           let
+             val current_file = tacdata_file_of_full_identity thy src
+               anc_version anc_hash prov
+             fun unvalidated () =
+               if exists_file current_file then SOME current_file else NONE
+           in
+             case man of
+               NONE => unvalidated ()
+             | SOME _ =>
+               case List.find
+                 (entry_matches_identity prov src thy
+                   (anc_version,anc_hash))
+                 (entries_of thy) of
+                 NONE => unvalidated ()
+               | SOME e =>
+                   let val file = entry_file e in
+                     if #failed e then NONE
+                     else if exists_file file andalso
+                             safe_sha1_file file = #data_hash e
+                     then SOME file
+                     else NONE
+                   end
+           end
+       | _ => NONE)
+      handle Interrupt => raise Interrupt | _ => NONE
   in
-    case man of
-      NONE => unvalidated ()
-    | SOME m =>
-      case find_entry prov src thy m of
-        NONE => unvalidated ()
-      | SOME e =>
-        let val file = entry_file e in
-          if #failed e then NONE
-          else if exists_file file andalso safe_sha1_file file = #data_hash e
-          then SOME file
-          else NONE
-        end
+    map (fn thy => (thy,resolve thy)) thyl
   end
-  handle Interrupt => raise Interrupt | _ => NONE
+
+fun tacdata_file_for_thy_in man thy =
+  case tacdata_files_for_thys_in man [thy] of
+    [(_,file)] => file
+  | _ => NONE
 
 fun tacdata_file_for_thy thy = tacdata_file_for_thy_in (read_manifest ()) thy
 

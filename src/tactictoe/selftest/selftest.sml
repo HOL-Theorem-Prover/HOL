@@ -318,6 +318,27 @@ val _ = check "stale holderless lock is reclaimed"
      result before cleanup ()
    end)
 
+val _ = check "stale held lock is reclaimed under registry lock"
+  (let
+     val lockdir = tttManifest.tacdata_dir () ^ "/.locks"
+     val lock = lockdir ^ "/marker.lock"
+     fun cleanup () = aiLib.run_cmd ("rm -rf " ^ aiLib.shell_quote lock)
+     val result =
+       ((cleanup ();
+         app aiLib.mkDir_err [tttManifest.tacdata_dir (), lockdir];
+         HOLFileSys.mkDir lock;
+         aiLib.writel (lock ^ "/holder") ["abandoned"];
+         OS.FileSys.setTime
+           (lock, SOME (Time.- (Time.now (), Time.fromSeconds 10)));
+         ttt_record_opts
+           [Scope (Theories ["marker"]), Force true,
+            MaxLockAge Time.zeroTime];
+         not (OS.FileSys.access (lock, [])))
+        handle e => (cleanup (); raise e))
+   in
+     result before cleanup ()
+   end)
+
 val _ = passok "record ConseqConv tactic data"
   (fn () => ttt_record_opts [Scope (Theories ["ConseqConv"])])
 
@@ -327,6 +348,13 @@ val _ = check "ConseqConv tactic data exists"
 
 val _ = check "ConseqConv tactic data is non-empty"
   (Position.toInt (OS.FileSys.fileSize (datafile ())) > 0)
+
+val _ = check "batch tactic-data resolution preserves per-theory results"
+  (case tttManifest.tacdata_files_for_thys_in
+      (tttManifest.read_manifest ()) ["ConseqConv","no_such_theory_for_ttt"] of
+     [("ConseqConv",SOME file),("no_such_theory_for_ttt",NONE)] =>
+       file = datafile ()
+   | _ => false)
 
 val _ = passok "record dry-run over ConseqConv"
   (fn () => ttt_record_opts

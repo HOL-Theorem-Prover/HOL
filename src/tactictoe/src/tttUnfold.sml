@@ -1348,6 +1348,30 @@ fun theories_of_scope scope =
 
 fun locks_dir () = tacdata_dir () ^ "/.locks"
 
+(* Directory-lock metadata operations are serialized by an advisory lock.
+   The kernel releases this lock if a process dies, so it cannot itself go
+   stale.  In particular, checking a holder token and removing its directory
+   is atomic with respect to every acquire/release operation: a completed
+   owner cannot remove the directory and have a new owner recreate it between
+   those two steps. *)
+fun with_lock_registry f =
+  let
+    val _ = app mkDir_err [tacdata_dir (), locks_dir ()]
+    val file = locks_dir () ^ "/.registry"
+    open Posix.FileSys
+    val fd = createf (file, O_WRONLY, O.flags [O.trunc],
+      S.flags [S.irusr, S.iwusr])
+    open Posix.IO
+    val registry_lock = FLock.flock
+      {ltype = F_WRLCK, whence = SEEK_SET, start = 0, len = 0, pid = NONE}
+    fun close () = Posix.IO.close fd handle OS.SysErr _ => ()
+    val _ = setlkw (fd,registry_lock)
+      handle e => (close (); raise e)
+  in
+    (let val result = f () in close (); result end
+     handle e => (close (); raise e))
+  end
+
 (* unique_tmp_suffix is only an owner token: it is not a portable decimal PID.
    Consequently stale detection is deliberately age-based and never removes a
    young lock merely because its token cannot be used for process liveness. *)
@@ -1370,13 +1394,14 @@ fun lock_holder path =
 fun lock_owned ({path,holder} : record_lock) =
   lock_holder path = SOME holder
 
-(* A stale owner may have been replaced at the same path.  Only the owner
-   whose token is still in the holder file may remove the lock. *)
+(* with_lock_registry makes this test-and-remove indivisible with respect to
+   lock replacement. *)
 fun release_lock (lock as {path,...} : record_lock) =
-  if lock_owned lock
-  then (remove_file (path ^ "/holder");
-        OS.FileSys.rmDir path handle _ => remove_file path handle _ => ())
-  else ()
+  with_lock_registry (fn () =>
+    if lock_owned lock
+    then (remove_file (path ^ "/holder");
+          OS.FileSys.rmDir path handle _ => remove_file path handle _ => ())
+    else ())
 
 (* A process can die after creating the directory but before publishing its
    holder token.  Recheck that it is still holderless before removing it;
@@ -1397,20 +1422,26 @@ fun acquire_lock max_lock_age name =
           SOME {path = path, holder = holder})
          handle _ => NONE)
       end
+    fun acquire () =
+      case create () of
+        SOME l => SOME l
+      | NONE =>
+          case lock_holder path of
+            SOME holder =>
+              if lock_stale max_lock_age path
+              then
+                (remove_file (path ^ "/holder");
+                 OS.FileSys.rmDir path
+                   handle _ => remove_file path handle _ => ();
+                 create ())
+              else NONE
+          | NONE =>
+              if lock_stale max_lock_age path andalso
+                 reclaim_holderless_lock path
+              then create ()
+              else NONE
   in
-    case create () of
-      SOME l => SOME l
-    | NONE =>
-        case lock_holder path of
-          SOME holder =>
-            if lock_stale max_lock_age path
-            then (release_lock {path = path, holder = holder}; create ())
-            else NONE
-        | NONE =>
-            if lock_stale max_lock_age path andalso
-               reclaim_holderless_lock path
-            then create ()
-            else NONE
+    with_lock_registry acquire
   end
 
 fun with_manifest_lock max_lock_age f =
