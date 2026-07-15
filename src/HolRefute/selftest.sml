@@ -308,10 +308,18 @@ fun preprocessed_instances result =
       Preprocessed instances => SOME instances
     | NotExecutable _ => NONE
 
-fun two_way_conjunction tm =
+fun has_conjunction tm =
   case Lib.total boolSyntax.dest_conj tm of
       SOME _ => true
-    | NONE => false
+    | NONE =>
+        if Term.is_comb tm then
+          let
+            val (left, right) = Term.dest_comb tm
+          in
+            has_conjunction left orelse has_conjunction right
+          end
+        else
+          false
 
 fun two_way_disjunction tm =
   case Lib.total boolSyntax.dest_disj tm of
@@ -320,12 +328,27 @@ fun two_way_disjunction tm =
 
 fun bool_forall_expands () =
   case preprocessed_instances
-    (preprocess default_config (preprocessing_problem ``!x : bool. x``)) of
-      SOME [instance] => two_way_conjunction (#goal instance)
+    (preprocess default_config
+      (preprocessing_problem ``p /\ (!x : bool. x)``)) of
+      SOME [instance] => has_conjunction (#goal instance)
     | _ => false
 
 val _ = require_msg (check_result bool_forall_expands) (fn () =>
   "a boolean universal did not expand to a two-way conjunction")
+  (fn () => ()) ()
+
+fun explicit_forall_is_stripped () =
+  case preprocessed_instances
+    (preprocess (upd_finite_types false default_config)
+      (preprocessing_problem
+        ``!x : 'a. (f : 'a -> 'a) x = (g x : 'a)``)) of
+      SOME [instance] =>
+        not (boolSyntax.is_forall (#goal instance)) andalso
+        length (#evals instance) = 2
+    | _ => false
+
+val _ = require_msg (check_result explicit_forall_is_stripped) (fn () =>
+  "an explicit outer universal was not stripped before preprocessing")
   (fn () => ()) ()
 
 fun rf2_exists_expands () =
@@ -340,7 +363,8 @@ val _ = require_msg (check_result rf2_exists_expands) (fn () =>
   (fn () => ()) ()
 
 fun num_binder_is_not_executable () =
-  case preprocess default_config (preprocessing_problem ``!n : num. n = 0``) of
+  case preprocess default_config
+    (preprocessing_problem ``q (!n : num. n = 0)``) of
       NotExecutable _ => true
     | Preprocessed _ => false
 
@@ -504,5 +528,87 @@ val _ = require_msg (check_result (plan_is_naive naive_goal)) (fn _ =>
 
 val _ = check_plan plan_has_abstract_guard
   "abstract-generator predicate was not inserted as Guard" abstract_guard_goal
+
+val _ = tprint "Refute QC exhaustive backend"
+
+fun qc_problem goal : problem = {goal = goal, assumptions = [], evals = []}
+
+fun exhaustive config goal =
+  exhaustive_run config (qc_problem goal)
+
+fun has_binding predicate (Counterexample (cex :: _)) =
+      List.exists predicate (#bindings cex)
+  | has_binding _ _ = false
+
+fun reverse_counterexample () =
+  let
+    val config = upd_size 3 (upd_max_counterexamples 1 default_config)
+    val result = exhaustive config ``REVERSE (xs : num list) = xs``
+  in
+    has_binding (fn (_, value) =>
+      case Lib.total listSyntax.dest_list value of
+          SOME (values, _) => length values >= 2 andalso
+            not (Term.aconv (hd values) (List.nth (values, 1)))
+        | NONE => false) result
+  end
+
+val _ = require_msg (check_result reverse_counterexample) (fn () =>
+  "the exhaustive backend did not find a non-palindromic list")
+  (fn () => ()) ()
+
+fun complete_bool_goal () =
+  case exhaustive default_config ``T`` of
+      NoCounterexample => true
+    | _ => false
+
+val _ = require_msg (check_result complete_bool_goal) (fn () =>
+  "a decidable closed boolean goal was not exhausted completely")
+  (fn () => ()) ()
+
+fun stuck_split_counts_failure () =
+  let
+    val result = exhaustive default_config
+      ``(if THE (NONE : bool option) then SOME 0 else NONE) =
+        SOME (x : num) ==> F``
+  in
+    (case result of Unknown _ => true | _ => false) andalso
+    (case lookup_stat "match_failures" (!last_stats) of
+        SOME failures => failures > 0
+      | NONE => false)
+  end
+
+val _ = require_msg (check_result stuck_split_counts_failure) (fn () =>
+  "a stuck Split scrutinee did not increment match_failures")
+  (fn () => ()) ()
+
+fun smart_pruning_works () =
+  let
+    val base = upd_size 3 default_config
+    val smart = exhaustive (upd_smart_quantifier true base)
+      ``(xs : bool list) = REVERSE [T; T; T; T] ==> F``
+    val naive = exhaustive (upd_smart_quantifier false base)
+      ``(xs : bool list) = REVERSE [T; T; T; T] ==> F``
+  in
+    (case smart of Counterexample _ => true | _ => false) andalso
+    (case naive of Unknown _ => true | _ => false)
+  end
+
+val _ = require_msg (check_result smart_pruning_works) (fn () =>
+  "smart premise pruning did not improve the bounded exhaustive search")
+  (fn () => ()) ()
+
+fun update_witness () =
+  let
+    val result = exhaustive (upd_size 2 default_config)
+      ``(f : refute$rf2 -> refute$rf2) rf2_1 = rf2_1 /\
+        f rf2_2 = rf2_2 ==> F``
+  in
+    has_binding (fn (_, value) =>
+      not (null (#1 (combinSyntax.strip_update value)))) result
+  end
+
+val _ = require_msg (check_result update_witness) (fn () =>
+  "a function-variable counterexample was not an UPDATE-chain witness")
+  (fn () => ()) ()
 
 val _ = exit_count0 erc

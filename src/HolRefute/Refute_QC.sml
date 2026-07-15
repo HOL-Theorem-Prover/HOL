@@ -188,4 +188,345 @@ structure Refute_QC = struct
     in
       show 0 plan
     end
+
+  datatype verdict = Continue | Found of
+    {env : (term * term) list, genuine : bool}
+
+  datatype run_result =
+      CexFound of {env : (term * term) list, genuine : bool}
+    | Exhausted of {complete : bool}
+    | GaveUp of string
+
+  type compiled_test =
+    { run : {genuine_only : bool, card : int, size : int} -> run_result }
+
+  type substrate =
+    { name : string,
+      applicable : Refute_Core.problem * plan list -> bool,
+      compile : Refute_Core.config -> plan list -> compiled_test }
+
+  val last_stats : (string * int) list ref = ref []
+
+  fun eval_rhs env tm =
+    let
+      val theorem = computeLib.CBV_CONV (!computeLib.the_compset)
+        (Term.subst (List.map (fn (redex, residue) =>
+          {redex = redex, residue = residue}) env) tm)
+    in
+      SOME (#2 (boolSyntax.dest_eq (Thm.concl theorem)))
+    end
+    handle _ => NONE
+
+  datatype boolean_value = IsTrue | IsFalse | IsStuck
+
+  fun eval_boolean env tm =
+    case eval_rhs env tm of
+        SOME value =>
+          if Term.aconv value boolSyntax.T then IsTrue
+          else if Term.aconv value boolSyntax.F then IsFalse
+          else IsStuck
+      | NONE => IsStuck
+
+  fun constructor_value tm =
+    case fully_applied_constructor tm of
+        SOME result => SOME result
+      | NONE => NONE
+
+  fun numeric_terms Refute_Gen.Num size =
+        List.tabulate (Int.max (0, size) + 1, numSyntax.term_of_int)
+    | numeric_terms Refute_Gen.Int size =
+        List.tabulate (2 * Int.max (0, size) + 1,
+          fn index => intSyntax.term_of_int
+            (Arbint.fromInt (index - Int.max (0, size))))
+    | numeric_terms Refute_Gen.Char _ =
+        List.tabulate (Refute_Gen.enum_cap,
+          fn index => stringSyntax.mk_chr (numSyntax.term_of_int index))
+    | numeric_terms (Refute_Gen.Word width) size =
+        List.tabulate (Int.min (Int.max (0, size),
+          Refute_Gen.int_power 2 width) + 1,
+          fn index => wordsSyntax.mk_wordii (index, width))
+
+  fun enum_args [] _ continuation = continuation []
+    | enum_args (spec :: rest) size continuation =
+        exhaustive_values spec size (fn value =>
+          case enum_args rest size
+            (fn values => continuation (value :: values)) of
+              Continue => Continue
+            | found => found)
+
+  and exhaustive_function dom rng size continuation =
+    case Refute_Gen.enumerate (Type.mk_type ("fun", [dom, rng])) of
+        SOME graphs =>
+          List.foldl (fn (graph, result) =>
+            case result of Continue => continuation graph | found => found)
+            Continue graphs
+      | NONE =>
+          let
+            val variable = Term.mk_var ("x", dom)
+            fun constants () =
+              exhaustive_values (Refute_Gen.spec_of rng) size (fn value =>
+                continuation (Term.mk_abs (variable, value)))
+            fun layers 0 = Continue
+              | layers remaining =
+                  exhaustive_values (Refute_Gen.spec_of dom) size (fn point =>
+                    exhaustive_values (Refute_Gen.spec_of rng) size
+                      (fn value =>
+                      let
+                        fun one base = continuation
+                          (Term.mk_comb
+                            (combinSyntax.mk_update (point, value), base))
+                      in
+                        case exhaustive_function dom rng (remaining - 1) one of
+                            Continue => Continue
+                          | found => found
+                      end))
+          in
+            case constants () of Continue => layers size | found => found
+          end
+
+  and exhaustive_values spec size continuation =
+    case spec of
+        Refute_Gen.GenEnum values =>
+          List.foldl (fn (value, result) =>
+            case result of Continue => continuation value | found => found)
+            Continue values
+      | Refute_Gen.GenNum kind =>
+          List.foldl (fn (value, result) =>
+            case result of Continue => continuation value | found => found)
+            Continue (numeric_terms kind size)
+      | Refute_Gen.GenCustom {enumerate = SOME enum, ...} =>
+          List.foldl (fn (value, result) =>
+            case result of Continue => continuation value | found => found)
+            Continue (enum size)
+      | Refute_Gen.GenCustom _ => Continue
+      | Refute_Gen.GenDatatype {constrs, ...} =>
+          if size <= 0 then Continue
+          else
+            List.foldl (fn ((constructor, args), result) =>
+              case result of
+                  Found _ => result
+                | Continue =>
+                    enum_args (List.map Refute_Gen.spec_of args) (size - 1)
+                      (fn values => continuation
+                        (Term.list_mk_comb (constructor, values))))
+              Continue constrs
+      | Refute_Gen.GenFun (dom, rng) =>
+          exhaustive_function dom rng size continuation
+
+  fun compute_compile (config : Refute_Core.config) plans =
+    let
+      fun run {genuine_only, card, size} =
+        let
+          val complete = ref true
+          val match_failures = ref 0
+          val tests = ref 0
+          val plan = List.nth (plans, card - 1)
+
+          fun visit env genuine current =
+            case current of
+                Prune => Continue
+              | Test tm =>
+                  (tests := !tests + 1;
+                   case eval_boolean env tm of
+                       IsTrue => Continue
+                     | IsFalse =>
+                         if genuine orelse not genuine_only then
+                           Found {env = env, genuine = genuine}
+                         else Continue
+                     | IsStuck =>
+                         (complete := false;
+                          if genuine_only then Continue
+                          else Found {env = env, genuine = false}))
+              | Guard (tm, next) =>
+                  (case eval_boolean env tm of
+                       IsTrue => visit env genuine next
+                     | IsFalse => Continue
+                     | IsStuck =>
+                         (complete := false;
+                          if genuine_only then Continue
+                          else visit env false next))
+              | Bind (variable, tm, fallback, next) =>
+                  (case eval_rhs env tm of
+                       SOME value =>
+                         visit ((variable, value) :: env) genuine next
+                     | NONE =>
+                         (complete := false;
+                          case fallback of
+                              NONE => Continue
+                            | SOME alternative =>
+                                if genuine_only then Continue
+                                else visit env false alternative))
+              | Split (tm, branches) =>
+                  (case eval_rhs env tm of
+                       SOME value =>
+                         (case constructor_value value of
+                              NONE =>
+                                (complete := false;
+                                 match_failures := !match_failures + 1;
+                                 Continue)
+                            | SOME (constructor, args) =>
+                                (case List.find (fn (expected, variables, _) =>
+                                  Term.same_const expected constructor andalso
+                                  length variables = length args) branches of
+                                     NONE =>
+                                       (complete := false;
+                                        match_failures := !match_failures + 1;
+                                        Continue)
+                                   | SOME (_, variables, next) =>
+                                       visit
+                                         (ListPair.zip (variables, args) @ env)
+                                         genuine next))
+                     | NONE =>
+                         (complete := false;
+                          match_failures := !match_failures + 1;
+                          Continue))
+              | Gen (variable, next) =>
+                  let
+                    val ty = Term.type_of variable
+                    val spec = Refute_Gen.spec_of ty
+                    fun try value =
+                      visit ((variable, value) :: env) genuine next
+                  in
+                    case Refute_Gen.enumerate ty of
+                        SOME values =>
+                          List.foldl (fn (value, result) =>
+                            case result of
+                                Continue => try value
+                              | found => found)
+                            Continue values
+                      | NONE =>
+                          (complete := false;
+                           exhaustive_values spec size try)
+                  end
+          val result = visit [] true plan
+          val _ = last_stats := [("tests", !tests),
+            ("match_failures", !match_failures)]
+        in
+          case result of
+              Found candidate => CexFound candidate
+            | Continue => Exhausted {complete = !complete}
+        end
+    in
+      {run = run}
+    end
+
+  fun compute_applicable (problem, _) =
+    null (Refute_Core.nonexecutable_constants
+      (#goal problem :: #evals problem))
+
+  val compute_substrate : substrate =
+    { name = "compute",
+      applicable = compute_applicable,
+      compile = compute_compile }
+
+  val substrates : substrate list ref = ref [compute_substrate]
+
+  fun selected_substrate Refute_Core.Auto = SOME compute_substrate
+    | selected_substrate Refute_Core.Compute = SOME compute_substrate
+    | selected_substrate _ = NONE
+
+  fun schedule instances size =
+    let
+      val cards = List.map #card instances
+      val size_matters = List.exists #size_matters instances
+      fun compare ((card1, size1), (card2, size2)) =
+        case Int.compare (card1 + size1, card2 + size2) of
+            EQUAL => Int.compare (card1, card2)
+          | order => order
+    in
+      if size_matters then
+        Listsort.sort compare (List.concat (List.map (fn card =>
+          List.tabulate (Int.max (0, size), fn index => (card, index + 1)))
+          cards))
+      else
+        List.map (fn card => (card, size)) cards
+    end
+
+  fun certify candidate = candidate
+
+  fun elapsed_msec start =
+    LargeInt.toInt (Time.toMilliseconds (Time.- (Time.now (), start)))
+    handle _ => 0
+
+  fun exhaustive_run (config : Refute_Core.config)
+      (problem : Refute_Core.problem) =
+    case Refute_Core.preprocess config problem of
+        Refute_Core.NotExecutable reasons => Refute_Core.Unknown reasons
+      | Refute_Core.Preprocessed instances =>
+          let
+            val plans = List.map
+              (fn instance => compile_plan config (#goal instance))
+              instances
+          in
+            case selected_substrate (#substrate (#qc config)) of
+                NONE =>
+                  Refute_Core.Unknown ["requested substrate is unavailable"]
+              | SOME substrate =>
+                  if not (#applicable substrate (problem, plans)) then
+                    Refute_Core.Unknown ["not executable"]
+                  else
+                    let
+                      val compiled = #compile substrate config plans
+                      val entries = schedule instances (#size (#qc config))
+                      val complete = ref (not (null entries))
+                      val counterexamples = ref []
+                      fun instance_for card =
+                        List.nth (instances, card - 1)
+                      fun one (card, size) =
+                        let
+                          val start = Time.now ()
+                          val result = #run compiled
+                            {genuine_only = #genuine_only config,
+                             card = card, size = size}
+                          val msec = elapsed_msec start
+                        in
+                          case result of
+                              Exhausted {complete = entry_complete} =>
+                                complete := (!complete andalso entry_complete)
+                            | GaveUp reason => complete := false
+                            | CexFound {env, genuine} =>
+                                let
+                                  val instance = instance_for card
+                                  val bindings = List.filter
+                                    (fn (variable, _) =>
+                                      List.exists
+                                        (fn free => Term.aconv free variable)
+                                        (Term.free_vars_lr (#goal instance)))
+                                    env
+                                  val cex : Refute_Core.counterexample =
+                                    { backend = "exhaustive",
+                                      certainty = if genuine then
+                                        Refute_Core.Potential []
+                                      else Refute_Core.Potential
+                                        ["evaluation stuck during testing"],
+                                      bindings = rev bindings,
+                                      evals = [], cert = NONE, scope = NONE,
+                                      stats = !last_stats @
+                                        [("size", size), ("card", card),
+                                         ("msec", msec)] }
+                                in
+                                  counterexamples :=
+                                    certify cex :: !counterexamples
+                                end
+                        end
+                      fun search [] = ()
+                        | search (entry :: rest) =
+                            if length (!counterexamples) >=
+                              Int.max (1, #max_counterexamples config)
+                            then ()
+                            else (one entry; search rest)
+                      val _ = search entries
+                    in
+                      if not (null (!counterexamples)) then
+                        Refute_Core.Counterexample (rev (!counterexamples))
+                      else if !complete then Refute_Core.NoCounterexample
+                      else Refute_Core.Unknown ["search space not exhausted"]
+                    end
+          end
+
+  val exhaustive_backend : Refute_Core.backend =
+    { name = "exhaustive", weight = 20, configured = fn () => true,
+      run = exhaustive_run }
+
+  val _ = Refute_Core.register_backend exhaustive_backend
 end
