@@ -243,7 +243,7 @@ structure Refute_QC = struct
           fn index => stringSyntax.mk_chr (numSyntax.term_of_int index))
     | numeric_terms (Refute_Gen.Word width) size =
         List.tabulate (Int.min (Int.max (0, size),
-          Refute_Gen.int_power 2 width) + 1,
+          Int.max (0, Refute_Gen.int_power 2 width - 1)) + 1,
           fn index => wordsSyntax.mk_wordii (index, width))
 
   fun enum_args [] _ continuation = continuation []
@@ -448,6 +448,140 @@ structure Refute_QC = struct
     LargeInt.toInt (Time.toMilliseconds (Time.- (Time.now (), start)))
     handle _ => 0
 
+  val session_rng = ref (Random.newgenseed 42.0)
+
+  fun bounded_size size = Int.max (0, size)
+
+  fun random_number Refute_Gen.Num size rng =
+        numSyntax.term_of_int (Random.range (0, bounded_size size + 1) rng)
+    | random_number Refute_Gen.Int size rng =
+        intSyntax.term_of_int (Arbint.fromInt
+          (Random.range (~(bounded_size size), bounded_size size + 1) rng))
+    | random_number Refute_Gen.Char _ rng =
+        stringSyntax.mk_chr (numSyntax.term_of_int (Random.range (0, 256) rng))
+    | random_number (Refute_Gen.Word width) _ rng =
+        wordsSyntax.mk_wordii (Random.range
+          (0, Refute_Gen.int_power 2 width) rng, width)
+
+  fun random_entry spec size rng =
+    let
+      val floor = Refute_Gen.own_floor spec
+    in
+      random_value spec {budget = Int.max (floor, bounded_size size),
+        size = bounded_size size} rng
+    end
+
+  and random_args [] [] _ _ rng = ([], rng)
+    | random_args (ty :: tys) (is_recursive :: recursive) budget size rng =
+        let
+          val (value, rng') =
+            if is_recursive then
+              random_value (Refute_Gen.spec_of ty)
+                {budget = Int.max (0, budget - 1), size = size} rng
+            else
+              random_entry (Refute_Gen.spec_of ty) size rng
+          val (values, rng'') = random_args tys recursive budget size rng'
+        in
+          (value :: values, rng'')
+        end
+    | random_args _ _ _ _ _ =
+        raise Fail "Refute_QC.random_args: malformed datatype generator"
+
+  and random_function dom rng_ty size rng =
+    let
+      val variable = Term.mk_var ("x", dom)
+      val (default, rng') = random_entry (Refute_Gen.spec_of rng_ty) size rng
+      fun draw_points 0 current_rng = ([], current_rng)
+        | draw_points count current_rng =
+            let
+              val (point, next_rng) =
+                random_entry (Refute_Gen.spec_of dom) size current_rng
+              val (points, final_rng) = draw_points (count - 1) next_rng
+            in
+              (point :: points, final_rng)
+            end
+      val (points, rng'') =
+        case Refute_Gen.enumerate dom of
+            SOME values => (values, rng')
+          | NONE => draw_points (bounded_size size) rng'
+      fun add (point, (base, current_rng)) =
+        let
+          val (value, next_rng) =
+            random_entry (Refute_Gen.spec_of rng_ty) size current_rng
+        in
+          (Term.mk_comb (combinSyntax.mk_update (point, value), base),
+           next_rng)
+        end
+      val (result, rng''') = List.foldl add
+        (Term.mk_abs (variable, default), rng'') points
+    in
+      (result, rng''')
+    end
+
+  and random_value spec {budget, size} rng =
+    case spec of
+        Refute_Gen.GenEnum values =>
+          if null values then
+            raise Fail "Refute_QC.random_value: empty enumeration"
+          else (List.nth (values, Random.range (0, length values) rng), rng)
+      | Refute_Gen.GenNum kind => (random_number kind size rng, rng)
+      | Refute_Gen.GenCustom {random = SOME generate, ...} =>
+          (generate size rng, rng)
+      | Refute_Gen.GenCustom _ =>
+          raise Fail "Refute_QC.random_value: no random generator"
+      | Refute_Gen.GenFun (dom, rng_ty) => random_function dom rng_ty size rng
+      | Refute_Gen.GenDatatype {constrs, recursive, min_size, ...} =>
+          let
+            fun weight (flags, floors) =
+              if not (List.exists (fn flag => flag) flags) then 1
+              else
+                let
+                  fun depth (true, floor) = Int.max (0, floor - 1)
+                    | depth (false, _) = 0
+                  val minimum = List.foldl Int.max 0
+                    (ListPair.mapEq depth (flags, floors))
+                in
+                  if minimum = 0 then budget
+                  else if budget > minimum then budget else 0
+                end
+            fun entries [] [] [] = []
+              | entries (constr :: rest) (flags :: more_flags)
+                  (floors :: more_floors) =
+                  let val entry = (constr, flags, weight (flags, floors))
+                  in entry :: entries rest more_flags more_floors end
+              | entries _ _ _ =
+                  raise Fail "Refute_QC.random_value: malformed datatype"
+            val choices = entries constrs recursive min_size
+            val total = List.foldl (fn ((_, _, value), sum) => sum + value)
+              0 choices
+            val choice = Random.range (0, total) rng
+            fun select _ [] =
+                  raise Fail "Refute_QC.random_value: no constructor"
+              | select remaining ((constructor, flags, weight) :: rest) =
+                  if remaining < weight then (constructor, flags)
+                  else select (remaining - weight) rest
+            val ((constructor, arg_types), flags) = select choice choices
+            val (arguments, rng') =
+              random_args arg_types flags budget size rng
+          in
+            (Term.list_mk_comb (constructor, arguments), rng')
+          end
+
+  fun random_term ty size rng = random_entry (Refute_Gen.spec_of ty) size rng
+
+  fun plan_has_gen current =
+    case current of
+        Test _ => false
+      | Gen _ => true
+      | Bind (_, _, fallback, next) =>
+          plan_has_gen next orelse
+          (case fallback of NONE => false | SOME alternative =>
+             plan_has_gen alternative)
+      | Split (_, branches) =>
+          List.exists (fn (_, _, next) => plan_has_gen next) branches
+      | Guard (_, next) => plan_has_gen next
+      | Prune => false
+
   fun exhaustive_run (config : Refute_Core.config)
       (problem : Refute_Core.problem) =
     case Refute_Core.preprocess config problem of
@@ -529,4 +663,167 @@ structure Refute_QC = struct
       run = exhaustive_run }
 
   val _ = Refute_Core.register_backend exhaustive_backend
+
+  fun random_compile plans rng =
+    let
+      fun run {genuine_only, card, size} =
+        let
+          val complete = ref true
+          val match_failures = ref 0
+          val tests = ref 0
+          val plan = List.nth (plans, card - 1)
+
+          fun visit env genuine current =
+            case current of
+                Prune => Continue
+              | Test tm =>
+                  (tests := !tests + 1;
+                   case eval_boolean env tm of
+                       IsTrue => Continue
+                     | IsFalse =>
+                         if genuine orelse not genuine_only then
+                           Found {env = env, genuine = genuine}
+                         else Continue
+                     | IsStuck =>
+                         (complete := false;
+                          if genuine_only then Continue
+                          else Found {env = env, genuine = false}))
+              | Guard (tm, next) =>
+                  (case eval_boolean env tm of
+                       IsTrue => visit env genuine next
+                     | IsFalse => Continue
+                     | IsStuck =>
+                         (complete := false;
+                          if genuine_only then Continue
+                          else visit env false next))
+              | Bind (variable, tm, fallback, next) =>
+                  (case eval_rhs env tm of
+                       SOME value =>
+                         visit ((variable, value) :: env) genuine next
+                     | NONE =>
+                         (complete := false;
+                          case fallback of
+                              NONE => Continue
+                            | SOME alternative =>
+                                if genuine_only then Continue
+                                else visit env false alternative))
+              | Split (tm, branches) =>
+                  (case eval_rhs env tm of
+                       SOME value =>
+                         (case constructor_value value of
+                              NONE =>
+                                (complete := false;
+                                 match_failures := !match_failures + 1;
+                                 Continue)
+                            | SOME (constructor, args) =>
+                                (case List.find
+                                  (fn (expected, variables, _) =>
+                                    Term.same_const expected constructor
+                                      andalso
+                                    length variables = length args) branches of
+                                     NONE =>
+                                       (complete := false;
+                                        match_failures := !match_failures + 1;
+                                        Continue)
+                                   | SOME (_, variables, next) =>
+                                       visit
+                                         (ListPair.zip (variables, args) @ env)
+                                         genuine next))
+                     | NONE =>
+                         (complete := false;
+                          match_failures := !match_failures + 1;
+                          Continue))
+              | Gen (variable, next) =>
+                  let
+                    val (value, _) =
+                      random_term (Term.type_of variable) size rng
+                  in
+                    visit ((variable, value) :: env) genuine next
+                  end
+
+          val result = visit [] true plan
+          val _ = last_stats := [
+            ("tests", !tests), ("match_failures", !match_failures)]
+        in
+          case result of
+              Found candidate => CexFound candidate
+            | Continue => Exhausted {complete = !complete}
+        end
+        handle Refute_Gen.NoGenerator (_, reason) => GaveUp reason
+             | Fail reason => GaveUp reason
+    in
+      {run = run}
+    end
+
+  fun random_run (config : Refute_Core.config)
+      (problem : Refute_Core.problem) =
+    case Refute_Core.preprocess config problem of
+        Refute_Core.NotExecutable reasons => Refute_Core.Unknown reasons
+      | Refute_Core.Preprocessed instances =>
+          let
+            val plans = List.map
+              (fn instance => compile_plan config (#goal instance))
+              instances
+            val rng =
+              case #seed (#qc config) of
+                  SOME seed => Random.newgenseed (Real.fromInt seed)
+                | NONE => !session_rng
+            val compiled = random_compile plans rng
+            val entries = schedule instances (#size (#qc config))
+            val complete = ref (List.all (fn plan => not (plan_has_gen plan))
+              plans)
+            val counterexamples = ref []
+            fun instance_for card = List.nth (instances, card - 1)
+            fun remember card size env genuine =
+              let
+                val instance = instance_for card
+                val bindings = List.filter
+                  (fn (variable, _) =>
+                    List.exists (fn free => Term.aconv free variable)
+                      (Term.free_vars_lr (#goal instance))) env
+                val cex : Refute_Core.counterexample =
+                  { backend = "random",
+                    certainty = if genuine then Refute_Core.Potential []
+                      else Refute_Core.Potential
+                        ["evaluation stuck during testing"],
+                    bindings = rev bindings,
+                    evals = [], cert = NONE, scope = NONE,
+                    stats = !last_stats @ [("size", size), ("card", card)] }
+              in
+                counterexamples := certify cex :: !counterexamples
+              end
+            fun draw card size =
+              case #run compiled
+                { genuine_only = #genuine_only config,
+                  card = card, size = size } of
+                  Exhausted {complete = entry_complete} =>
+                    complete := (!complete andalso entry_complete)
+                | GaveUp _ => complete := false
+                | CexFound {env, genuine} => remember card size env genuine
+            fun draws 0 _ _ = ()
+              | draws remaining card size =
+                  if length (!counterexamples) >=
+                    Int.max (1, #max_counterexamples config)
+                  then ()
+                  else (draw card size; draws (remaining - 1) card size)
+            fun search [] = ()
+              | search ((card, size) :: rest) =
+                  if length (!counterexamples) >=
+                    Int.max (1, #max_counterexamples config)
+                  then ()
+                  else (draws (bounded_size (#iterations (#qc config)))
+                    card size; search rest)
+            val _ = search entries
+          in
+            if not (null (!counterexamples)) then
+              Refute_Core.Counterexample (rev (!counterexamples))
+            else if !complete then Refute_Core.NoCounterexample
+            else Refute_Core.Unknown ["random search exhausted"]
+          end
+
+  val random_backend : Refute_Core.backend =
+    { name = "random", weight = 30, configured = fn () => true,
+      run = random_run }
+
+  val _ = Refute_Core.register_backend random_backend
 end

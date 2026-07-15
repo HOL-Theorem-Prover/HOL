@@ -82,7 +82,8 @@ structure Refute_Gen = struct
       (NONE, NONE) =>
         raise Fail "Refute_Gen.register_generator: empty generator"
     | _ =>
-        (user_generators := (ty, generator) :: remove_type ty (!user_generators)
+        (user_generators :=
+           (ty, generator) :: remove_type ty (!user_generators)
          ; invalidate_cache ())
 
   fun dest_fun ty = Type.dom_rng ty
@@ -186,7 +187,7 @@ structure Refute_Gen = struct
     end
 
   fun own_floor (GenDatatype {min_size, ...}) =
-        List.foldl Int.min 0
+        List.foldl Int.min 1073741823
           (List.map (fn row => List.foldl Int.max 0 row) min_size)
     | own_floor _ = 0
 
@@ -358,8 +359,9 @@ structure Refute_Gen = struct
           (constructor, args)
         end
 
-      val _ = if List.null constructors then bad "constructors must be nonempty"
-              else ()
+      val _ =
+        if List.null constructors then bad "constructors must be nonempty"
+        else ()
       val constrs = List.map instantiate constructors
       val recursive = List.map (fn (_, args) =>
         List.map (type_mentions [ty]) args) constrs

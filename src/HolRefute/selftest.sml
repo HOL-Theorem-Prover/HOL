@@ -611,4 +611,89 @@ val _ = require_msg (check_result update_witness) (fn () =>
   "a function-variable counterexample was not an UPDATE-chain witness")
   (fn () => ()) ()
 
+val _ = tprint "Refute QC random backend"
+
+fun random config goal = random_run config (qc_problem goal)
+
+fun same_bindings [] [] = true
+  | same_bindings ((variable1, value1) :: rest1)
+      ((variable2, value2) :: rest2) =
+      Term.aconv variable1 variable2 andalso Term.aconv value1 value2 andalso
+      same_bindings rest1 rest2
+  | same_bindings _ _ = false
+
+fun same_random_outcome (Counterexample (left :: _))
+      (Counterexample (right :: _)) =
+      #backend left = #backend right andalso #certainty left = #certainty right
+      andalso same_bindings (#bindings left) (#bindings right)
+      andalso #stats left = #stats right
+  | same_random_outcome NoCounterexample NoCounterexample = true
+  | same_random_outcome (Unknown left) (Unknown right) = left = right
+  | same_random_outcome _ _ = false
+
+val random_config = upd_iterations 50
+  (upd_size 4 (upd_seed (SOME 1) default_config))
+
+fun random_is_registered () =
+  case lookup_backend "random" of
+      SOME backend => #weight backend = 30
+    | NONE => false
+
+fun random_reverse_counterexample () =
+  case random random_config ``REVERSE (xs : num list) = xs`` of
+      Counterexample _ => true
+    | _ => false
+
+fun random_arithmetic_counterexample () =
+  case random random_config ``(x : num) - y + y = x`` of
+      Counterexample _ => true
+    | _ => false
+
+fun random_seed_is_reproducible () =
+  let
+    val goal = ``REVERSE (xs : num list) = xs``
+  in
+    same_random_outcome (random random_config goal) (random random_config goal)
+  end
+
+fun session_random_completes () =
+  let
+    val config = upd_iterations 2 (upd_size 2 default_config)
+  in
+    case random config ``(x : num) = x`` of
+        Counterexample _ => true
+      | NoCounterexample => true
+      | Unknown _ => true
+  end
+
+fun list_draws_respect_floors () =
+  let
+    val rng = Random.newgenseed 1.0
+    fun draw 0 = true
+      | draw remaining =
+          let val _ = random_term ``:num list`` 0 rng
+          in draw (remaining - 1) end
+  in
+    draw 100
+  end
+
+val _ = require_msg (check_result random_reverse_counterexample) (fn () =>
+  "the random backend did not refute REVERSE xs = xs") (fn () => ()) ()
+
+val _ = require_msg (check_result random_is_registered) (fn () =>
+  "the random backend was not registered with weight 30") (fn () => ()) ()
+
+val _ = require_msg (check_result random_arithmetic_counterexample) (fn () =>
+  "the random backend did not refute x - y + y = x") (fn () => ()) ()
+
+val _ = require_msg (check_result random_seed_is_reproducible) (fn () =>
+  "the random backend was not reproducible for an explicit seed")
+  (fn () => ()) ()
+
+val _ = require_msg (check_result session_random_completes) (fn () =>
+  "the session random generator did not complete a run") (fn () => ()) ()
+
+val _ = require_msg (check_result list_draws_respect_floors) (fn () =>
+  "small-budget recursive list draws raised an exception") (fn () => ()) ()
+
 val _ = exit_count0 erc
