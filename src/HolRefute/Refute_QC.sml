@@ -234,11 +234,6 @@ structure Refute_QC = struct
           else IsStuck
       | NONE => IsStuck
 
-  fun constructor_value tm =
-    case fully_applied_constructor tm of
-        SOME result => SOME result
-      | NONE => NONE
-
   fun numeric_terms Refute_Gen.Num size =
         List.tabulate (Int.max (0, size) + 1, numSyntax.term_of_int)
     | numeric_terms Refute_Gen.Int size =
@@ -371,7 +366,7 @@ structure Refute_QC = struct
           | Split (tm, branches) =>
               (case eval_rhs env tm of
                    SOME value =>
-                     (case constructor_value value of
+                     (case fully_applied_constructor value of
                           NONE =>
                             (complete := false;
                              match_failures := !match_failures + 1;
@@ -411,7 +406,6 @@ structure Refute_QC = struct
           fun gen visit complete env genuine variable next =
             let
               val ty = Term.type_of variable
-              val spec = Refute_Gen.spec_of ty
               fun try value =
                 visit ((variable, value) :: env) genuine next
             in
@@ -424,7 +418,7 @@ structure Refute_QC = struct
                       Continue values
                 | NONE =>
                     (complete := false;
-                     exhaustive_values spec size try)
+                     exhaustive_values (Refute_Gen.spec_of ty) size try)
             end
           val {result, complete, stats} =
             traverse gen genuine_only ignored plan
@@ -465,11 +459,55 @@ structure Refute_QC = struct
         List.map (fn card => (card, size)) cards
     end
 
-  fun certify candidate = candidate
-
   fun elapsed_msec start =
     LargeInt.toInt (Time.toMilliseconds (Time.- (Time.now (), start)))
     handle _ => 0
+
+  (* Shared certify + retry policy for both QC backends.  Given a witness
+     the compiled search reported, build the counterexample record, run it
+     through Refute_Cert.certify, and apply the Certified/Discarded/
+     Potential policy.  `retry go ig` re-runs the backend's own search with
+     the extended ignore-set (each backend passes its own continuation). *)
+  fun record_candidate
+        {config : Refute_Core.config,
+         backend : string,
+         instance : Refute_Core.instance,
+         stats : (string * int) list,
+         counterexamples : Refute_Core.counterexample list ref,
+         discarded : int ref,
+         retry : bool -> candidate list -> unit}
+        {env, genuine, genuine_only, ignored} =
+    let
+      val bindings = List.filter
+        (fn (variable, _) =>
+          List.exists (fn free => Term.aconv free variable)
+            (Term.free_vars_lr (#goal instance)))
+        env
+      val cex : Refute_Core.counterexample =
+        { backend = backend,
+          certainty = if genuine then Refute_Core.Potential []
+            else Refute_Core.Potential ["evaluation stuck during testing"],
+          bindings = rev bindings,
+          evals = [], cert = NONE, scope = NONE,
+          stats = stats }
+      val next = {env = env, genuine = genuine} :: ignored
+    in
+      case Refute_Cert.certify
+        {original = #original instance, evals = #evals instance,
+         env = env, cex = cex} of
+          Refute_Cert.Certified certified =>
+            counterexamples := certified :: !counterexamples
+        | Refute_Cert.Discarded =>
+            (discarded := !discarded + 1; retry genuine_only next)
+        | Refute_Cert.Potential potential =>
+            if #abort_potential config andalso not genuine_only then
+              counterexamples := potential :: !counterexamples
+            else if genuine_only then retry true next
+            else
+              (Refute_Core.report_outcome config
+                 (Refute_Core.Counterexample [potential]);
+               retry true next)
+    end
 
   val session_rng = ref (Random.newgenseed 42.0)
 
@@ -642,53 +680,18 @@ structure Refute_QC = struct
                                 complete := (!complete andalso entry_complete)
                             | GaveUp reason => complete := false
                             | CexFound {env, genuine} =>
-                                let
-                                  val instance = instance_for card
-                                  val bindings = List.filter
-                                    (fn (variable, _) =>
-                                      List.exists
-                                        (fn free => Term.aconv free variable)
-                                        (Term.free_vars_lr (#goal instance)))
-                                    env
-                                  val cex : Refute_Core.counterexample =
-                                    { backend = "exhaustive",
-                                      certainty = if genuine then
-                                        Refute_Core.Potential []
-                                      else Refute_Core.Potential
-                                        ["evaluation stuck during testing"],
-                                      bindings = rev bindings,
-                                      evals = [], cert = NONE, scope = NONE,
-                                      stats = stats_for size card msec }
-                                in
-                                  case Refute_Cert.certify
-                                    {original = #original instance,
-                                     evals = #evals instance,
-                                     env = env, cex = cex} of
-                                      Refute_Cert.Certified certified =>
-                                        counterexamples :=
-                                          certified :: !counterexamples
-                                    | Refute_Cert.Discarded =>
-                                        (discarded := !discarded + 1;
-                                         one (card, size) genuine_only
-                                           ({env = env, genuine = genuine} ::
-                                             ignored))
-                                    | Refute_Cert.Potential potential =>
-                                        if #abort_potential config andalso
-                                           not genuine_only then
-                                          counterexamples :=
-                                            potential :: !counterexamples
-                                        else if genuine_only then
-                                          one (card, size) true
-                                            ({env = env, genuine = genuine} ::
-                                              ignored)
-                                        else
-                                          (Refute_Core.report_outcome config
-                                             (Refute_Core.Counterexample
-                                               [potential]);
-                                           one (card, size) true
-                                             ({env = env, genuine = genuine} ::
-                                               ignored))
-                                end
+                                record_candidate
+                                  {config = config,
+                                   backend = "exhaustive",
+                                   instance = instance_for card,
+                                   stats = stats_for size card msec,
+                                   counterexamples = counterexamples,
+                                   discarded = discarded,
+                                   retry = fn go => fn ig =>
+                                     one (card, size) go ig}
+                                  {env = env, genuine = genuine,
+                                   genuine_only = genuine_only,
+                                   ignored = ignored}
                         end
                       fun search [] = ()
                         | search (entry :: rest) =
@@ -758,45 +761,7 @@ structure Refute_QC = struct
               !(#last_stats compiled) @
               (if !discarded = 0 then [] else [("discarded", !discarded)]) @
               [("size", size), ("card", card)]
-            fun remember card size env genuine genuine_only ignored =
-              let
-                val instance = instance_for card
-                val bindings = List.filter
-                  (fn (variable, _) =>
-                    List.exists (fn free => Term.aconv free variable)
-                      (Term.free_vars_lr (#goal instance))) env
-                val cex : Refute_Core.counterexample =
-                  { backend = "random",
-                    certainty = if genuine then Refute_Core.Potential []
-                    else Refute_Core.Potential
-                        ["evaluation stuck during testing"],
-                    bindings = rev bindings,
-                    evals = [], cert = NONE, scope = NONE,
-                    stats = stats_for size card }
-              in
-                case Refute_Cert.certify
-                  {original = #original instance,
-                   evals = #evals instance,
-                   env = env, cex = cex} of
-                    Refute_Cert.Certified certified =>
-                      counterexamples := certified :: !counterexamples
-                  | Refute_Cert.Discarded =>
-                      (discarded := !discarded + 1;
-                       draw card size genuine_only
-                         ({env = env, genuine = genuine} :: ignored))
-                  | Refute_Cert.Potential potential =>
-                      if #abort_potential config andalso not genuine_only then
-                        counterexamples := potential :: !counterexamples
-                      else if genuine_only then
-                        draw card size true
-                          ({env = env, genuine = genuine} :: ignored)
-                      else
-                        (Refute_Core.report_outcome config
-                           (Refute_Core.Counterexample [potential]);
-                         draw card size true
-                           ({env = env, genuine = genuine} :: ignored))
-              end
-            and draw card size genuine_only ignored =
+            fun draw card size genuine_only ignored =
               case #run compiled
                 { genuine_only = genuine_only,
                   card = card, size = size, ignored = ignored } of
@@ -804,7 +769,15 @@ structure Refute_QC = struct
                     complete := (!complete andalso entry_complete)
                 | GaveUp _ => complete := false
                 | CexFound {env, genuine} =>
-                    remember card size env genuine genuine_only ignored
+                    record_candidate
+                      {config = config, backend = "random",
+                       instance = instance_for card,
+                       stats = stats_for size card,
+                       counterexamples = counterexamples,
+                       discarded = discarded,
+                       retry = fn go => fn ig => draw card size go ig}
+                      {env = env, genuine = genuine,
+                       genuine_only = genuine_only, ignored = ignored}
             fun draws 0 _ _ = ()
               | draws remaining card size =
                   if length (!counterexamples) >=
