@@ -1,5 +1,6 @@
 structure Refute_QC = struct
   type term = Term.term
+  open Refute_Cert
 
   datatype plan =
       Test of term
@@ -189,16 +190,20 @@ structure Refute_QC = struct
       show 0 plan
     end
 
-  datatype verdict = Continue | Found of
-    {env : (term * term) list, genuine : bool}
+  type candidate = {env : (term * term) list, genuine : bool}
+
+  datatype verdict = Continue | Found of candidate
 
   datatype run_result =
-      CexFound of {env : (term * term) list, genuine : bool}
+      CexFound of candidate
     | Exhausted of {complete : bool}
     | GaveUp of string
 
   type compiled_test =
-    { run : {genuine_only : bool, card : int, size : int} -> run_result }
+    { run : {genuine_only : bool,
+             card : int,
+             size : int,
+             ignored : candidate list} -> run_result }
 
   type substrate =
     { name : string,
@@ -206,6 +211,16 @@ structure Refute_QC = struct
       compile : Refute_Core.config -> plan list -> compiled_test }
 
   val last_stats : (string * int) list ref = ref []
+
+  fun same_env [] [] = true
+    | same_env ((variable1, value1) :: rest1)
+        ((variable2, value2) :: rest2) =
+        Term.aconv variable1 variable2 andalso
+        Term.aconv value1 value2 andalso same_env rest1 rest2
+    | same_env _ _ = false
+
+  fun ignored_candidate env ignored =
+    List.exists (fn candidate => same_env env (#env candidate)) ignored
 
   fun eval_rhs env tm =
     let
@@ -315,12 +330,16 @@ structure Refute_QC = struct
 
   fun compute_compile (config : Refute_Core.config) plans =
     let
-      fun run {genuine_only, card, size} =
+      fun run {genuine_only, card, size, ignored} =
         let
           val complete = ref true
           val match_failures = ref 0
           val tests = ref 0
           val plan = List.nth (plans, card - 1)
+
+          fun candidate env genuine =
+            if ignored_candidate env ignored then Continue
+            else Found {env = env, genuine = genuine}
 
           fun visit env genuine current =
             case current of
@@ -331,12 +350,12 @@ structure Refute_QC = struct
                        IsTrue => Continue
                      | IsFalse =>
                          if genuine orelse not genuine_only then
-                           Found {env = env, genuine = genuine}
+                           candidate env genuine
                          else Continue
                      | IsStuck =>
                          (complete := false;
                           if genuine_only then Continue
-                          else Found {env = env, genuine = false}))
+                          else candidate env false))
               | Guard (tm, next) =>
                   (case eval_boolean env tm of
                        IsTrue => visit env genuine next
@@ -604,14 +623,20 @@ structure Refute_QC = struct
                       val entries = schedule instances (#size (#qc config))
                       val complete = ref (not (null entries))
                       val counterexamples = ref []
+                      val discarded = ref 0
                       fun instance_for card =
                         List.nth (instances, card - 1)
-                      fun one (card, size) =
+                      fun stats_for size card msec =
+                        !last_stats @
+                        (if !discarded = 0 then []
+                         else [("discarded", !discarded)]) @
+                        [("size", size), ("card", card), ("msec", msec)]
+                      fun one (card, size) genuine_only ignored =
                         let
                           val start = Time.now ()
                           val result = #run compiled
-                            {genuine_only = #genuine_only config,
-                             card = card, size = size}
+                            {genuine_only = genuine_only,
+                             card = card, size = size, ignored = ignored}
                           val msec = elapsed_msec start
                         in
                           case result of
@@ -635,12 +660,36 @@ structure Refute_QC = struct
                                         ["evaluation stuck during testing"],
                                       bindings = rev bindings,
                                       evals = [], cert = NONE, scope = NONE,
-                                      stats = !last_stats @
-                                        [("size", size), ("card", card),
-                                         ("msec", msec)] }
+                                      stats = stats_for size card msec }
                                 in
-                                  counterexamples :=
-                                    certify cex :: !counterexamples
+                                  case Refute_Cert.certify
+                                    {original = #original instance,
+                                     evals = #evals instance,
+                                     env = env, cex = cex} of
+                                      Refute_Cert.Certified certified =>
+                                        counterexamples :=
+                                          certified :: !counterexamples
+                                    | Refute_Cert.Discarded =>
+                                        (discarded := !discarded + 1;
+                                         one (card, size) genuine_only
+                                           ({env = env, genuine = genuine} ::
+                                             ignored))
+                                    | Refute_Cert.Potential potential =>
+                                        if #abort_potential config andalso
+                                           not genuine_only then
+                                          counterexamples :=
+                                            potential :: !counterexamples
+                                        else if genuine_only then
+                                          one (card, size) true
+                                            ({env = env, genuine = genuine} ::
+                                              ignored)
+                                        else
+                                          (Refute_Core.report_outcome config
+                                             (Refute_Core.Counterexample
+                                               [potential]);
+                                           one (card, size) true
+                                             ({env = env, genuine = genuine} ::
+                                               ignored))
                                 end
                         end
                       fun search [] = ()
@@ -648,7 +697,8 @@ structure Refute_QC = struct
                             if length (!counterexamples) >=
                               Int.max (1, #max_counterexamples config)
                             then ()
-                            else (one entry; search rest)
+                            else (one entry (#genuine_only config) [];
+                                  search rest)
                       val _ = search entries
                     in
                       if not (null (!counterexamples)) then
@@ -666,12 +716,16 @@ structure Refute_QC = struct
 
   fun random_compile plans rng =
     let
-      fun run {genuine_only, card, size} =
+      fun run {genuine_only, card, size, ignored} =
         let
           val complete = ref true
           val match_failures = ref 0
           val tests = ref 0
           val plan = List.nth (plans, card - 1)
+
+          fun candidate env genuine =
+            if ignored_candidate env ignored then Continue
+            else Found {env = env, genuine = genuine}
 
           fun visit env genuine current =
             case current of
@@ -682,12 +736,12 @@ structure Refute_QC = struct
                        IsTrue => Continue
                      | IsFalse =>
                          if genuine orelse not genuine_only then
-                           Found {env = env, genuine = genuine}
+                           candidate env genuine
                          else Continue
                      | IsStuck =>
                          (complete := false;
                           if genuine_only then Continue
-                          else Found {env = env, genuine = false}))
+                          else candidate env false))
               | Guard (tm, next) =>
                   (case eval_boolean env tm of
                        IsTrue => visit env genuine next
@@ -773,8 +827,13 @@ structure Refute_QC = struct
             val complete = ref (List.all (fn plan => not (plan_has_gen plan))
               plans)
             val counterexamples = ref []
+            val discarded = ref 0
             fun instance_for card = List.nth (instances, card - 1)
-            fun remember card size env genuine =
+            fun stats_for size card =
+              !last_stats @
+              (if !discarded = 0 then [] else [("discarded", !discarded)]) @
+              [("size", size), ("card", card)]
+            fun remember card size env genuine genuine_only ignored =
               let
                 val instance = instance_for card
                 val bindings = List.filter
@@ -784,28 +843,50 @@ structure Refute_QC = struct
                 val cex : Refute_Core.counterexample =
                   { backend = "random",
                     certainty = if genuine then Refute_Core.Potential []
-                      else Refute_Core.Potential
+                    else Refute_Core.Potential
                         ["evaluation stuck during testing"],
                     bindings = rev bindings,
                     evals = [], cert = NONE, scope = NONE,
-                    stats = !last_stats @ [("size", size), ("card", card)] }
+                    stats = stats_for size card }
               in
-                counterexamples := certify cex :: !counterexamples
+                case Refute_Cert.certify
+                  {original = #original instance,
+                   evals = #evals instance,
+                   env = env, cex = cex} of
+                    Refute_Cert.Certified certified =>
+                      counterexamples := certified :: !counterexamples
+                  | Refute_Cert.Discarded =>
+                      (discarded := !discarded + 1;
+                       draw card size genuine_only
+                         ({env = env, genuine = genuine} :: ignored))
+                  | Refute_Cert.Potential potential =>
+                      if #abort_potential config andalso not genuine_only then
+                        counterexamples := potential :: !counterexamples
+                      else if genuine_only then
+                        draw card size true
+                          ({env = env, genuine = genuine} :: ignored)
+                      else
+                        (Refute_Core.report_outcome config
+                           (Refute_Core.Counterexample [potential]);
+                         draw card size true
+                           ({env = env, genuine = genuine} :: ignored))
               end
-            fun draw card size =
+            and draw card size genuine_only ignored =
               case #run compiled
-                { genuine_only = #genuine_only config,
-                  card = card, size = size } of
+                { genuine_only = genuine_only,
+                  card = card, size = size, ignored = ignored } of
                   Exhausted {complete = entry_complete} =>
                     complete := (!complete andalso entry_complete)
                 | GaveUp _ => complete := false
-                | CexFound {env, genuine} => remember card size env genuine
+                | CexFound {env, genuine} =>
+                    remember card size env genuine genuine_only ignored
             fun draws 0 _ _ = ()
               | draws remaining card size =
                   if length (!counterexamples) >=
                     Int.max (1, #max_counterexamples config)
                   then ()
-                  else (draw card size; draws (remaining - 1) card size)
+                  else (draw card size (#genuine_only config) [];
+                        draws (remaining - 1) card size)
             fun search [] = ()
               | search ((card, size) :: rest) =
                   if length (!counterexamples) >=

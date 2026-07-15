@@ -12,14 +12,14 @@
 - TASK_08 Plan compiler — done
 - TASK_09 Interpreter + exhaustive — done
 - TASK_10 Random strategy — done
-- TASK_11 Certification — unblocked
-- TASK_12 Orchestration + API — blocked (11)
+- TASK_11 Certification — done
+- TASK_12 Orchestration + API — unblocked
 - TASK_13 Selftest corpus — blocked (12)
 - TASK_14 Integration + exit checklist — blocked (13)
 
 ## Next unblocked task
 
-.agent-files/tasks_m1/TASK_11.md.
+.agent-files/tasks_m1/TASK_12.md.
 
 ## Completion log
 
@@ -36,3 +36,4 @@ Append exactly ONE line per task as it lands, e.g.
 - TASK_08 done (2026-07-15): implemented the smart-quantifier plan compiler and plan-shape selftests.
 - TASK_09 done (2026-07-15): implemented and verified the compute interpreter, exhaustive strategy, schedule, and substrate seam.
 - TASK_10 done (2026-07-15): implemented and verified the seeded random QC strategy.
+- TASK_11 done (2026-07-15): added EVAL certification and potential retry flow.

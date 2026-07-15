@@ -372,6 +372,7 @@ structure Refute_Core = struct
 
   type instance =
     { goal : term,
+      original : term,
       evals : term list,
       card : int,
       size_matters : bool }
@@ -381,6 +382,8 @@ structure Refute_Core = struct
     | NotExecutable of string list
 
   fun strip_outer_forall tm = boolSyntax.strip_forall tm
+
+  fun strip_outer_forall_body tm = #2 (strip_outer_forall tm)
 
   val normal_rewrites =
     [ boolTheory.NOT_EXISTS_THM,
@@ -546,8 +549,9 @@ structure Refute_Core = struct
     let
       val assumptions =
         if #no_assms cfg then [] else #assumptions problem
-      val initial_goal = boolSyntax.list_mk_imp (assumptions, #goal problem)
-      val normalized_goal = normalize initial_goal
+      val original_goal = boolSyntax.list_mk_imp (assumptions, #goal problem)
+      val initial_goal = strip_outer_forall_body original_goal
+      val normalized_goal = strip_outer_forall_body (normalize initial_goal)
       val expanded_goal = expand_quantifiers normalized_goal
       val input_evals = #evals problem @ #evals cfg
       val types = monomorphic_types (#qc cfg)
@@ -558,10 +562,12 @@ structure Refute_Core = struct
           val theta = map (fn tyvar =>
             {redex = tyvar, residue = replacement}) tyvars
           val goal = Term.inst theta expanded_goal
+          val original = Term.inst theta original_goal
           val evals = map (Term.inst theta) input_evals
           val evals = add_equation_eval_terms goal evals
         in
           { goal = goal,
+            original = original,
             evals = evals,
             card = card,
             size_matters = instance_size_matters goal }

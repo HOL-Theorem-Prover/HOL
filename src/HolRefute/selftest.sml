@@ -2,6 +2,7 @@ open testutils
 open refuteTheory
 open Refute_Core
 open Refute_Gen
+open Refute_Cert
 open Refute_QC
 
 val erc = ref 0
@@ -695,5 +696,111 @@ val _ = require_msg (check_result session_random_completes) (fn () =>
 
 val _ = require_msg (check_result list_draws_respect_floors) (fn () =>
   "small-budget recursive list draws raised an exception") (fn () => ()) ()
+
+val _ = tprint "Refute certification and potential retry"
+
+fun certified_reverse () =
+  case exhaustive (upd_size 3 default_config)
+    ``REVERSE (xs : num list) = xs`` of
+      Counterexample ({certainty = Genuine, cert = SOME theorem, ...} :: _) =>
+        Term.aconv (Thm.concl theorem)
+          ``~(!xs : num list. REVERSE xs = xs)`` andalso
+        null (Tag.axioms_of (Thm.tag theorem))
+    | _ => false
+
+val _ = require_msg (check_result certified_reverse) (fn () =>
+  "REVERSE xs = xs was not certified with a tag-clean theorem")
+  (fn () => ()) ()
+
+fun make_cex genuine : counterexample =
+  { backend = "selftest",
+    certainty = Refute_Core.Potential [],
+    bindings = [],
+    evals = [],
+    cert = NONE,
+    scope = NONE,
+    stats = [("tests", 1)] }
+
+fun upgrade_from_stuck_path () =
+  case Refute_Cert.certify
+    { original = ``F``,
+      evals = [],
+      env = [],
+      cex = make_cex false } of
+      Certified {certainty = Genuine, cert = SOME theorem, ...} =>
+        Term.aconv (Thm.concl theorem) ``~F``
+    | _ => false
+
+val _ = require_msg (check_result upgrade_from_stuck_path) (fn () =>
+  "certification did not upgrade a tainted candidate to Genuine")
+  (fn () => ()) ()
+
+fun false_positive_is_discarded () =
+  case Refute_Cert.certify
+    { original = ``T``,
+      evals = [],
+      env = [],
+      cex = make_cex true } of
+      Discarded => true
+    | _ => false
+
+val _ = require_msg (check_result false_positive_is_discarded) (fn () =>
+  "certification did not discard an EVAL-true candidate") (fn () => ()) ()
+
+val stuck_list_gen : custom_gen =
+  { enumerate = SOME (fn _ => [``[] : num list``]), random = NONE }
+
+val _ = register_generator ``:num list`` stuck_list_gen
+
+val stuck_goal = ``HD (xs : num list) = 0``
+
+fun potential_only config = exhaustive config stuck_goal
+
+fun default_retries_potential () =
+  case potential_only (upd_size 1 default_config) of
+      Counterexample _ => false
+    | Unknown _ => true
+    | NoCounterexample => true
+
+fun abort_returns_potential () =
+  case potential_only (upd_abort_potential true
+    (upd_size 1 default_config)) of
+      Counterexample
+        ({certainty = Refute_Core.Potential _, cert = NONE, ...} :: _) => true
+    | _ => false
+
+fun genuine_only_hides_potential () =
+  case potential_only (upd_genuine_only true
+    (upd_size 1 default_config)) of
+      Counterexample _ => false
+    | Unknown _ => true
+    | NoCounterexample => true
+
+val _ = require_msg (check_result default_retries_potential) (fn () =>
+  "the default flow returned a potential instead of retrying genuinely")
+  (fn () => ()) ()
+
+val _ = require_msg (check_result abort_returns_potential) (fn () =>
+  "abort_potential did not return the potential counterexample")
+  (fn () => ()) ()
+
+val _ = require_msg (check_result genuine_only_hides_potential) (fn () =>
+  "genuine_only surfaced a potential counterexample") (fn () => ()) ()
+
+val hd_map_lists : custom_gen =
+  { enumerate = SOME (fn _ => [``[] : num list``, ``[0] : num list``]),
+    random = NONE }
+
+val _ = register_generator ``:num list`` hd_map_lists
+
+fun hd_map_stuck_path_upgrades () =
+  case exhaustive (upd_size 1 default_config)
+    ``~(HD (MAP (f : num -> num) xs) = f (HD xs))`` of
+      Counterexample ({certainty = Genuine, cert = SOME _, ...} :: _) => true
+    | _ => false
+
+val _ = require_msg (check_result hd_map_stuck_path_upgrades) (fn () =>
+  "the HD/MAP stuck path was not upgraded to a genuine counterexample")
+  (fn () => ()) ()
 
 val _ = exit_count0 erc
