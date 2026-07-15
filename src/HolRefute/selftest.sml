@@ -2,6 +2,7 @@ open testutils
 open refuteTheory
 open Refute_Core
 open Refute_Gen
+open Refute_QC
 
 val erc = ref 0
 val _ = diemode := Remember erc
@@ -426,5 +427,82 @@ val _ = require_msg
   (check_result unmapped_constant_is_not_executable) (fn () =>
   "a constant without a compute-set entry was accepted")
   (fn () => ()) ()
+
+val _ = tprint "Refute QC plan compiler"
+
+fun plan_is_bind_with_fallback plan =
+  case plan of
+      Gen (_, Gen (_, Bind (_, _, SOME (Gen (_, Gen (_, Test _))),
+        Gen (_, Test _)))) => true
+    | _ => false
+
+fun plan_is_single_split plan =
+  case plan of
+      Gen (_, Split (_, [(_, variables, _)])) => length variables = 1
+    | _ => false
+
+fun plan_is_generic_guard plan =
+  case plan of
+      Gen (_, Gen (_, Guard (_, Gen (_, Test _)))) => true
+    | _ => false
+
+fun plan_is_fmap_lookup plan =
+  case plan of
+      Gen (_, Gen (_, Split (_, [(_, variables, _)]))) =>
+        length variables = 1
+    | _ => false
+
+fun plan_is_distinct_zip plan =
+  case plan of
+      Gen (_, Gen (_, Guard (_, Test _))) => true
+    | _ => false
+
+fun plan_is_naive goal plan =
+  case plan of
+      Gen (_, Test tested) => Term.aconv tested goal
+    | _ => false
+
+fun plan_has_abstract_guard plan =
+  case plan of
+      Gen (_, Guard (_, Test _)) => true
+    | _ => false
+
+val bind_goal = ``(x : num) = f (y : num) ==> r (x : num)``
+val split_goal = ``(z : num option) = SOME (x : num) ==> T``
+val guard_goal = ``(p : num -> bool) x ==> q (x : num)``
+val fmap_lookup_goal =
+  ``(m1 : num -> num option) k = SOME (v : num) ==> p m1 k v``
+val distinct_zip_goal =
+  ``ALL_DISTINCT (ZIP (xs : num list, ys : num list)) ==> T``
+val naive_goal = ``(x : num) = 0 ==> F``
+val abstract_guard_goal = ``(r : rg_record) = r``
+
+fun check_plan predicate message goal =
+  require_msg (check_result predicate) (fn plan =>
+    message ^ "\n" ^ pp_plan plan)
+    (fn () => compile_plan default_config goal) ()
+
+val _ = check_plan plan_is_bind_with_fallback
+  "free-variable equality did not compile to Bind with fallback" bind_goal
+
+val _ = check_plan plan_is_single_split
+  "constructor equality did not compile to a single Split branch" split_goal
+
+val _ = check_plan plan_is_generic_guard
+  "generic premise did not compile to Guard" guard_goal
+
+val _ = check_plan plan_is_fmap_lookup
+  "fmap-lookup premise did not compile to the expected Split" fmap_lookup_goal
+
+val _ = check_plan plan_is_distinct_zip
+  "distinct/zip premise did not compile to Guard" distinct_zip_goal
+
+val _ = require_msg (check_result (plan_is_naive naive_goal)) (fn _ =>
+  "smart_quantifier := false did not retain the whole goal")
+  (fn () => compile_plan (upd_smart_quantifier false default_config)
+    naive_goal) ()
+
+val _ = check_plan plan_has_abstract_guard
+  "abstract-generator predicate was not inserted as Guard" abstract_guard_goal
 
 val _ = exit_count0 erc
