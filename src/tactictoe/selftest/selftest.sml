@@ -298,6 +298,26 @@ val _ = check "ancestor identity accepts indexed source hashes"
        (fn thy => aiLib.dfind thy index) "ConseqConv"
    in indexed = tttManifest.ancestry_hash "ConseqConv" end)
 
+val _ = check "stale holderless lock is reclaimed"
+  (let
+     val lockdir = tttManifest.tacdata_dir () ^ "/.locks"
+     val lock = lockdir ^ "/marker.lock"
+     fun cleanup () = aiLib.run_cmd ("rm -rf " ^ aiLib.shell_quote lock)
+     val result =
+       ((cleanup ();
+         app aiLib.mkDir_err [tttManifest.tacdata_dir (), lockdir];
+         HOLFileSys.mkDir lock;
+         OS.FileSys.setTime
+           (lock, SOME (Time.- (Time.now (), Time.fromSeconds 10)));
+         ttt_record_opts
+           [Scope (Theories ["marker"]), Force true,
+            MaxLockAge Time.zeroTime];
+         not (OS.FileSys.access (lock, [])))
+        handle e => (cleanup (); raise e))
+   in
+     result before cleanup ()
+   end)
+
 val _ = passok "record ConseqConv tactic data"
   (fn () => ttt_record_opts [Scope (Theories ["ConseqConv"])])
 

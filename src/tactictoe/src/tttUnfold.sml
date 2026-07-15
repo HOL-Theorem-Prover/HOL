@@ -1378,6 +1378,13 @@ fun release_lock (lock as {path,...} : record_lock) =
         OS.FileSys.rmDir path handle _ => remove_file path handle _ => ())
   else ()
 
+(* A process can die after creating the directory but before publishing its
+   holder token.  Recheck that it is still holderless before removing it;
+   rmDir then fails harmlessly if a live creator publishes the holder first. *)
+fun reclaim_holderless_lock path =
+  lock_holder path = NONE andalso
+  ((OS.FileSys.rmDir path; true) handle _ => false)
+
 fun acquire_lock max_lock_age name =
   let
     val _ = app mkDir_err [tacdata_dir (), locks_dir ()]
@@ -1399,7 +1406,11 @@ fun acquire_lock max_lock_age name =
             if lock_stale max_lock_age path
             then (release_lock {path = path, holder = holder}; create ())
             else NONE
-        | NONE => NONE
+        | NONE =>
+            if lock_stale max_lock_age path andalso
+               reclaim_holderless_lock path
+            then create ()
+            else NONE
   end
 
 fun with_manifest_lock max_lock_age f =

@@ -57,6 +57,9 @@ fun find_script thy =
    The current theory is a graph fringe whose ancestry can still grow. *)
 val ancestry_cache = ref (dempty String.compare)
 
+(* min and bool are foundational theories and deliberately excluded from
+   per-theory cache identities.  We assume they do not change; after changing
+   either one, the TacticToe cache must be cleaned explicitly. *)
 fun compute_ancestry thy =
   let val l = filter (fn x => not (mem x ["min","bool"]))
                 (sort_thyl (ancestry thy))
