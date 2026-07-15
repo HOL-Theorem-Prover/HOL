@@ -16,7 +16,7 @@ sig
 
   type entry =
     { thy : string, data_hash : string, src_hash : string,
-      anc_version : int, recorded_at : int, failed : bool,
+      anc_version : int, anc_hash : string, recorded_at : int, failed : bool,
       tacdata_version : int, tactictoe_version : int }
 
   type manifest =
@@ -26,11 +26,13 @@ sig
   val tacdata_dir : unit -> string
   val tacdata_data_dir : unit -> string
   val manifest_file : unit -> string
+  val manifest_generation : unit -> string
 
   (* theory identity *)
   val find_script : string -> string
   val ttt_ancestry : string -> string list
   val ancestry_version : string -> int
+  val ancestry_hash : string -> string
   val source_hash : string -> string
   val current_provenance : unit -> provenance
   val tacdata_file_of_identity :

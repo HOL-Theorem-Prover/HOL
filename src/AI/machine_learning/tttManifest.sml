@@ -15,13 +15,13 @@ val ERR = mk_HOL_ERR "tttManifest"
 
 val format_version = 3
 val tactictoe_version = 1
-val manifest_format_version = 4
+val manifest_format_version = 5
 
 type provenance = {tacdata_version : int, tactictoe_version : int}
 
 type entry =
   { thy : string, data_hash : string, src_hash : string,
-    anc_version : int, recorded_at : int, failed : bool,
+    anc_version : int, anc_hash : string, recorded_at : int, failed : bool,
     tacdata_version : int, tactictoe_version : int }
 
 type manifest =
@@ -75,23 +75,33 @@ fun safe_sha1_file file = if exists_file file then sha1_file file else ""
 
 fun source_hash thy = safe_sha1_file (find_script thy)
 
-fun identity_hash thy src anc (prov : provenance) =
+fun ancestry_hash thy =
+  sha1_string (String.concatWith "\n"
+    (map (fn anc => anc ^ "=" ^ source_hash anc) (ttt_ancestry thy)) ^ "\n")
+
+fun identity_hash thy src anc anc_hash (prov : provenance) =
   sha1_string (String.concatWith "\n"
     ["thy=" ^ thy,
      "src_hash=" ^ src,
      "anc_version=" ^ its anc,
+     "anc_hash=" ^ anc_hash,
      "tacdata_version=" ^ its (#tacdata_version prov),
      "tactictoe_version=" ^ its (#tactictoe_version prov)] ^ "\n")
 
+fun tacdata_file_of_full_identity thy src anc anc_hash prov =
+  tacdata_data_dir () ^ "/" ^ thy ^ "-" ^
+    identity_hash thy src anc anc_hash prov
+
 fun tacdata_file_of_identity thy src anc prov =
-  tacdata_data_dir () ^ "/" ^ thy ^ "-" ^ identity_hash thy src anc prov
+  tacdata_file_of_full_identity thy src anc (ancestry_hash thy) prov
 
 fun current_tacdata_file thy =
   tacdata_file_of_identity thy (source_hash thy) (ancestry_version thy)
     (current_provenance ())
 
 fun entry_file (e : entry) =
-  tacdata_file_of_identity (#thy e) (#src_hash e) (#anc_version e)
+  tacdata_file_of_full_identity (#thy e) (#src_hash e) (#anc_version e)
+    (#anc_hash e)
     {tacdata_version = #tacdata_version e,
      tactictoe_version = #tactictoe_version e}
 
@@ -102,7 +112,8 @@ fun entry_file (e : entry) =
      format    <manifest_format_version>
      tacdata   <tacdata_version>
      tactictoe <tactictoe_version>
-     thy <thy> <data_hash> <src_hash> <anc> <recorded_at> <tacdata_v> <ttt_v>
+     thy <thy> <data_hash> <src_hash> <anc> <anc_hash> <recorded_at>
+         <tacdata_v> <ttt_v>
    ------------------------------------------------------------------------- *)
 
 type partial =
@@ -127,12 +138,13 @@ fun parse_line line (m : partial) : partial =
         {manifest_version = #manifest_version m,
          tacdata_version = #tacdata_version m,
          tactictoe_version = string_to_int v, entries = #entries m}
-    | ["thy",thy,data,src,anc,t,tacdata_v,tactictoe_v] =>
+    | ["thy",thy,data,src,anc,anc_hash,t,tacdata_v,tactictoe_v] =>
         let
           val recorded_at = string_to_int t
           val entry =
             {thy = thy, data_hash = data, src_hash = src,
-             anc_version = string_to_int anc, recorded_at = recorded_at,
+             anc_version = string_to_int anc, anc_hash = anc_hash,
+             recorded_at = recorded_at,
              failed = data = "failed" orelse recorded_at < 0,
              tacdata_version = string_to_int tacdata_v,
              tactictoe_version = string_to_int tactictoe_v}
@@ -163,9 +175,9 @@ fun read_manifest () =
 
 fun entry_compare (e1 : entry, e2 : entry) =
   list_compare String.compare
-    ([#thy e1, #src_hash e1, its (#anc_version e1),
+    ([#thy e1, #src_hash e1, its (#anc_version e1), #anc_hash e1,
       its (#tacdata_version e1), its (#tactictoe_version e1)],
-     [#thy e2, #src_hash e2, its (#anc_version e2),
+     [#thy e2, #src_hash e2, its (#anc_version e2), #anc_hash e2,
       its (#tacdata_version e2), its (#tactictoe_version e2)])
 
 fun manifest_lines (prov : provenance) entries =
@@ -173,7 +185,7 @@ fun manifest_lines (prov : provenance) entries =
     fun line (e : entry) =
       String.concatWith " "
         ["thy", #thy e, #data_hash e, #src_hash e, its (#anc_version e),
-         its (#recorded_at e), its (#tacdata_version e),
+         #anc_hash e, its (#recorded_at e), its (#tacdata_version e),
          its (#tactictoe_version e)]
   in
     ["# TacticToe tactic-data manifest. DO NOT EDIT by hand; managed by",
@@ -188,6 +200,8 @@ fun write_manifest prov entries =
   (mkDir_err (tacdata_dir ());
    writel_atomic (manifest_file ()) (manifest_lines prov entries))
 
+fun manifest_generation () = safe_sha1_file (manifest_file ())
+
 (* -------------------------------------------------------------------------
    Entry lookup and construction
    ------------------------------------------------------------------------- *)
@@ -196,6 +210,7 @@ fun entry_matches (prov : provenance) src_hash thy (e : entry) =
   #thy e = thy andalso
   #src_hash e = src_hash andalso
   #anc_version e = ancestry_version thy andalso
+  #anc_hash e = ancestry_hash thy andalso
   #tacdata_version e = #tacdata_version prov andalso
   #tactictoe_version e = #tactictoe_version prov
 
@@ -206,6 +221,7 @@ fun same_slot (e1 : entry) (e2 : entry) =
   #thy e1 = #thy e2 andalso
   #src_hash e1 = #src_hash e2 andalso
   #anc_version e1 = #anc_version e2 andalso
+  #anc_hash e1 = #anc_hash e2 andalso
   #tacdata_version e1 = #tacdata_version e2 andalso
   #tactictoe_version e1 = #tactictoe_version e2
 
@@ -218,13 +234,15 @@ fun now_unix () =
 
 fun success_entry (prov : provenance) thy data_hash src_hash =
   {thy = thy, data_hash = data_hash, src_hash = src_hash,
-   anc_version = ancestry_version thy, recorded_at = now_unix (),
+   anc_version = ancestry_version thy, anc_hash = ancestry_hash thy,
+   recorded_at = now_unix (),
    failed = false, tacdata_version = #tacdata_version prov,
    tactictoe_version = #tactictoe_version prov}
 
 fun failed_entry (prov : provenance) thy src_hash =
   {thy = thy, data_hash = "failed", src_hash = src_hash,
-   anc_version = ancestry_version thy, recorded_at = ~1, failed = true,
+   anc_version = ancestry_version thy, anc_hash = ancestry_hash thy,
+   recorded_at = ~1, failed = true,
    tacdata_version = #tacdata_version prov,
    tactictoe_version = #tactictoe_version prov}
 

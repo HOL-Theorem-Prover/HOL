@@ -210,7 +210,8 @@ fun read_status status = case status of
    ------------------------------------------------------------------------- *)
 
 val tacdata_cache_compare =
-  cpl_compare String.compare (list_compare String.compare)
+  cpl_compare String.compare
+    (cpl_compare (list_compare String.compare) String.compare)
 val ttt_tacdata_cache = ref (dempty tacdata_cache_compare)
 fun clean_ttt_tacdata_cache () =
   ttt_tacdata_cache := dempty tacdata_cache_compare
@@ -226,7 +227,8 @@ fun tactictoe_aux vnno goal = with_tactictoe_cache (fn () =>
   else
   let
     val cthyl = current_theory () :: ancestry (current_theory ())
-    val cache_key = (tactictoe_dir_of (),cthyl)
+    val cache_key =
+      (tactictoe_dir_of (), (cthyl,tttManifest.manifest_generation ()))
     val thmdata = hidef create_thmdata ()
     val tacdata =
       dfind cache_key (!ttt_tacdata_cache) handle NotFound =>

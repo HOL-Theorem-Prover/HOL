@@ -54,6 +54,14 @@ val _ = passok "atomic write accepts a bare filename"
      else raise Fail "atomic-write content mismatch")
     before aiLib.remove_file atomic_file)
 
+val redirect_file = "ttt_hide_in_file_selftest"
+val _ = passok "output redirection accepts a bare filename"
+  (fn () =>
+    (if smlRedirect.hide_in_file redirect_file (fn x => x + 1) 1 = 2 andalso
+        OS.FileSys.access (redirect_file, [])
+     then () else raise Fail "bare redirection failed")
+    before aiLib.remove_file redirect_file)
+
 val _ = check "parallel workers inherit configured cache root"
   (String.isSubstring cache_dir (#reflect_globals (record_extspec ())))
 
@@ -145,6 +153,12 @@ val _ = check "sha1_string is deterministic"
    in
      h1 = h2 andalso h1 <> h3 andalso size h1 = 40
    end)
+
+val _ = check "ancestor identity hash is deterministic"
+  (let
+     val h1 = tttManifest.ancestry_hash "ConseqConv"
+     val h2 = tttManifest.ancestry_hash "ConseqConv"
+   in h1 = h2 andalso size h1 = 40 end)
 
 val _ = passok "record ConseqConv tactic data"
   (fn () => ttt_record_opts [Scope (Theories ["ConseqConv"])])

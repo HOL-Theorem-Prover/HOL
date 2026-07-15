@@ -67,7 +67,7 @@ fun pop_output_file () =
 val hide_flag = ref true
 fun hide_in_file file f x =
   if not (!hide_flag) then f x else
-  (mkDir_err (OS.Path.dir file);
+  (if OS.Path.dir file = "" then () else mkDir_err (OS.Path.dir file);
    push_output_file {name=file, append=false};
     (
     let val r = f x in (pop_output_file (); r) end
