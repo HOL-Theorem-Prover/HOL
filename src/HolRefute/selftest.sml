@@ -297,4 +297,134 @@ val _ = require_msg (check_result abstract_generator_works) (fn () =>
   "abstract generator or predicate registry was not populated")
   (fn () => ()) ()
 
+val _ = tprint "Refute preprocessing and executability"
+
+fun preprocessing_problem goal : problem =
+  { goal = goal, assumptions = [], evals = [] }
+
+fun preprocessed_instances result =
+  case result of
+      Preprocessed instances => SOME instances
+    | NotExecutable _ => NONE
+
+fun two_way_conjunction tm =
+  case Lib.total boolSyntax.dest_conj tm of
+      SOME _ => true
+    | NONE => false
+
+fun two_way_disjunction tm =
+  case Lib.total boolSyntax.dest_disj tm of
+      SOME _ => true
+    | NONE => false
+
+fun bool_forall_expands () =
+  case preprocessed_instances
+    (preprocess default_config (preprocessing_problem ``!x : bool. x``)) of
+      SOME [instance] => two_way_conjunction (#goal instance)
+    | _ => false
+
+val _ = require_msg (check_result bool_forall_expands) (fn () =>
+  "a boolean universal did not expand to a two-way conjunction")
+  (fn () => ()) ()
+
+fun rf2_exists_expands () =
+  case preprocessed_instances
+    (preprocess default_config
+      (preprocessing_problem ``?x : refute$rf2. x = rf2_1``)) of
+      SOME [instance] => two_way_disjunction (#goal instance)
+    | _ => false
+
+val _ = require_msg (check_result rf2_exists_expands) (fn () =>
+  "an rf2 existential did not expand to a two-way disjunction")
+  (fn () => ()) ()
+
+fun num_binder_is_not_executable () =
+  case preprocess default_config (preprocessing_problem ``!n : num. n = 0``) of
+      NotExecutable _ => true
+    | Preprocessed _ => false
+
+val _ = require_msg (check_result num_binder_is_not_executable) (fn () =>
+  "a universal over num was accepted as executable")
+  (fn () => ()) ()
+
+fun negated_exists_normalizes () =
+  let
+    val normalized = normalize ``~(?x : bool. x)``
+    val (variables, body) = strip_outer_forall normalized
+  in
+    length variables = 1 andalso not (boolSyntax.is_forall body)
+  end
+
+val _ = require_msg (check_result negated_exists_normalizes) (fn () =>
+  "a negated existential did not normalize and strip as a universal")
+  (fn () => ()) ()
+
+fun all_same_type ty variables =
+  List.all (fn variable => Type.compare (Term.type_of variable, ty) = EQUAL)
+    variables
+
+val polymorphic_goal = ``p (x : 'a) /\ q (y : 'b)``
+
+fun value_variable_types tm =
+  List.map Term.type_of (List.filter (fn variable =>
+    case Lib.total Type.dom_rng (Term.type_of variable) of
+        NONE => true
+      | SOME _ => false) (Term.free_vars_lr tm))
+
+fun finite_type_instances () =
+  case preprocessed_instances
+    (preprocess (upd_finite_type_size 3 default_config)
+      (preprocessing_problem polymorphic_goal)) of
+      SOME instances =>
+        length instances = 3 andalso
+        List.all (fn instance =>
+          all_same_type (rf_type (#card instance))
+            (List.map (fn ty => Term.mk_var ("x", ty))
+              (value_variable_types (#goal instance)))) instances
+    | NONE => false
+
+val _ = require_msg (check_result finite_type_instances) (fn () =>
+  "finite-type monomorphization did not produce rf1 through rf3")
+  (fn () => ()) ()
+
+fun default_type_instance () =
+  case preprocessed_instances
+    (preprocess (upd_finite_types false default_config)
+      (preprocessing_problem polymorphic_goal)) of
+      SOME [instance] =>
+        #card instance = 1 andalso
+        all_same_type numSyntax.num
+          (List.map (fn ty => Term.mk_var ("x", ty))
+            (value_variable_types (#goal instance)))
+    | _ => false
+
+val _ = require_msg (check_result default_type_instance) (fn () =>
+  "default-type monomorphization did not use num")
+  (fn () => ()) ()
+
+fun equation_adds_evals () =
+  case preprocessed_instances
+    (preprocess default_config
+      (preprocessing_problem ``(f : bool -> bool) x = (g x : bool)``)) of
+      SOME [instance] => length (#evals instance) = 2
+    | _ => false
+
+val _ = require_msg (check_result equation_adds_evals) (fn () =>
+  "an equational conclusion did not add both evaluation terms")
+  (fn () => ()) ()
+
+val _ = Theory.new_constant ("refute_task07_unmapped", ``:bool``)
+
+fun unmapped_constant_is_not_executable () =
+  case preprocess default_config
+    (preprocessing_problem ``refute_task07_unmapped``) of
+      NotExecutable [reason] =>
+        String.isSubstring "refute_task07_unmapped" reason
+    | _ => false
+
+val _ = require_msg
+  (check_result unmapped_constant_is_not_executable) (fn () =>
+  "a constant without a compute-set entry was accepted")
+  (fn () => ()) ()
+
 val _ = exit_count0 erc

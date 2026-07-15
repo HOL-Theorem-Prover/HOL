@@ -370,6 +370,225 @@ structure Refute_Core = struct
       use_subtype = #use_subtype qc, seed = #seed qc,
       smart_quantifier = #smart_quantifier qc, optimise_equality = value })
 
+  type instance =
+    { goal : term,
+      evals : term list,
+      card : int,
+      size_matters : bool }
+
+  datatype preprocess_result =
+      Preprocessed of instance list
+    | NotExecutable of string list
+
+  fun strip_outer_forall tm = boolSyntax.strip_forall tm
+
+  val normal_rewrites =
+    [ boolTheory.NOT_EXISTS_THM,
+      boolTheory.NOT_FORALL_THM,
+      boolTheory.AND_IMP_INTRO,
+      boolTheory.FUN_EQ_THM ] @
+    Drule.CONJUNCTS boolTheory.PULL_EXISTS @
+    Drule.CONJUNCTS boolTheory.PULL_FORALL
+
+  fun normalize tm =
+    #2 (boolSyntax.dest_eq (Thm.concl
+      (Ho_Rewrite.REWRITE_CONV normal_rewrites tm)))
+    handle _ => tm
+
+  fun expand_quantifiers tm =
+    let
+      fun expand tm =
+        if boolSyntax.is_forall tm then
+          let
+            val (variable, body) = boolSyntax.dest_forall tm
+            val body = expand body
+          in
+            case Refute_Gen.enumerate (Term.type_of variable) of
+                NONE => boolSyntax.mk_forall (variable, body)
+              | SOME values =>
+                  boolSyntax.list_mk_conj
+                    (map (fn value => Term.subst
+                      [{redex = variable, residue = value}] body)
+                      values)
+          end
+        else if boolSyntax.is_exists tm then
+          let
+            val (variable, body) = boolSyntax.dest_exists tm
+            val body = expand body
+          in
+            case Refute_Gen.enumerate (Term.type_of variable) of
+                NONE => boolSyntax.mk_exists (variable, body)
+              | SOME values =>
+                  boolSyntax.list_mk_disj
+                    (map (fn value => Term.subst
+                      [{redex = variable, residue = value}] body)
+                      values)
+          end
+        else if Term.is_comb tm then
+          let
+            val (left, right) = Term.dest_comb tm
+          in
+            Term.mk_comb (expand left, expand right)
+          end
+        else if Term.is_abs tm then
+          let
+            val (variable, body) = Term.dest_abs tm
+          in
+            Term.mk_abs (variable, expand body)
+          end
+        else
+          tm
+    in
+      expand tm
+    end
+
+  fun has_unexpanded_binder tm =
+    if boolSyntax.is_forall tm orelse boolSyntax.is_exists tm orelse
+       boolSyntax.is_select tm then
+      true
+    else if Term.is_abs tm then
+      let
+        val (variable, body) = Term.dest_abs tm
+      in
+        not (Option.isSome
+          (Refute_Gen.enumerate (Term.type_of variable))) orelse
+        has_unexpanded_binder body
+      end
+    else if Term.is_comb tm then
+      let
+        val (left, right) = Term.dest_comb tm
+      in
+        has_unexpanded_binder left orelse has_unexpanded_binder right
+      end
+    else
+      false
+
+  fun term_constants tm =
+    let
+      fun collect seen tm =
+        if Term.is_const tm then
+          if List.exists (fn old => Term.same_const old tm) seen then seen
+          else tm :: seen
+        else if Term.is_comb tm then
+          let
+            val (left, right) = Term.dest_comb tm
+          in
+            collect (collect seen left) right
+          end
+        else if Term.is_abs tm then
+          collect seen (Term.body tm)
+        else
+          seen
+    in
+      collect [] tm
+    end
+
+  fun executable_constant comp_items constant =
+    if TypeBase.is_constructor constant then
+      true
+    else
+      let
+        val {Name, Thy, ...} = Term.dest_thy_const constant
+      in
+        List.exists (fn ((name, thy), transforms) =>
+          name = Name andalso thy = Thy andalso not (null transforms))
+          comp_items
+      end
+
+  fun nonexecutable_constants terms =
+    let
+      val comp_items = computeLib.listItems (!computeLib.the_compset)
+      fun add (term, constants) =
+        List.foldl (fn (constant, collected) =>
+          if List.exists (fn old => Term.same_const old constant) collected
+          then collected
+          else constant :: collected) constants (term_constants term)
+      val constants = List.foldl add [] terms
+    in
+      List.filter (not o executable_constant comp_items) constants
+    end
+
+  fun show_constants constants =
+    String.concatWith ", "
+      (Listsort.sort String.compare
+        (map Parse.term_to_string constants))
+
+  fun rf_type number =
+    Type.mk_thy_type
+      { Thy = "refute", Tyop = "rf" ^ Int.toString number, Args = [] }
+
+  fun clamped_finite_type_size size = Int.max (1, Int.min (6, size))
+
+  fun monomorphic_types qc =
+    if #finite_types qc then
+      List.tabulate (clamped_finite_type_size (#finite_type_size qc),
+        fn index => rf_type (index + 1))
+    else
+      #default_type qc
+
+  fun add_equation_eval_terms goal evals =
+    let
+      val (_, conclusion) = boolSyntax.strip_imp goal
+    in
+      case Lib.total boolSyntax.dest_eq conclusion of
+          SOME (left, right) =>
+            if Term.is_var left orelse Term.is_var right then evals
+            else evals @ [left, right]
+        | NONE => evals
+    end
+
+  fun instance_size_matters goal =
+    List.exists (fn variable =>
+      not (Option.isSome (Refute_Gen.enumerate (Term.type_of variable))))
+      (Term.free_vars_lr goal)
+
+  fun preprocess (cfg : config) (problem : problem) =
+    let
+      val assumptions =
+        if #no_assms cfg then [] else #assumptions problem
+      val initial_goal = boolSyntax.list_mk_imp (assumptions, #goal problem)
+      val normalized_goal = normalize initial_goal
+      val expanded_goal = expand_quantifiers normalized_goal
+      val input_evals = #evals problem @ #evals cfg
+      val types = monomorphic_types (#qc cfg)
+      val tyvars = Lib.U
+        (map Term.type_vars_in_term (expanded_goal :: input_evals))
+      fun make_instance (card, replacement) =
+        let
+          val theta = map (fn tyvar =>
+            {redex = tyvar, residue = replacement}) tyvars
+          val goal = Term.inst theta expanded_goal
+          val evals = map (Term.inst theta) input_evals
+          val evals = add_equation_eval_terms goal evals
+        in
+          { goal = goal,
+            evals = evals,
+            card = card,
+            size_matters = instance_size_matters goal }
+        end
+      val instances =
+        if null tyvars then
+          [make_instance (1, Type.bool)]
+        else
+          List.map (fn (card, replacement) =>
+            make_instance (card, replacement))
+            (ListPair.zip (List.tabulate (length types, fn index => index + 1),
+              types))
+      val binders_remain = has_unexpanded_binder expanded_goal
+      val constants =
+        if binders_remain then []
+        else nonexecutable_constants
+          (List.concat (map (fn instance =>
+            #goal instance :: #evals instance) instances))
+    in
+      if binders_remain then
+        NotExecutable ["not executable: unexpanded binder"]
+      else if null constants then
+        Preprocessed instances
+      else
+        NotExecutable ["not executable: " ^ show_constants constants]
+    end
+
   structure Private = struct
     val trace = ref 1
     val _ = Feedback.register_trace ("Refute", trace, 4)
