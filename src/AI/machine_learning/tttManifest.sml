@@ -115,13 +115,18 @@ fun entry_file (e : entry) =
      format    <manifest_format_version>
      tacdata   <tacdata_version>
      tactictoe <tactictoe_version>
-     thy <thy> <data_hash> <src_hash> <anc> <anc_hash> <recorded_at>
+     thy <thy> <data_hash> <src_hash-or-dash> <anc> <anc_hash> <recorded_at>
          <tacdata_v> <ttt_v>
    ------------------------------------------------------------------------- *)
 
 type partial =
   {manifest_version : int, tacdata_version : int, tactictoe_version : int,
    entries : entry list}
+
+(* A source hash is empty when a loaded theory's Script.sml is not on disk.
+   Keep that value as an explicit field in the whitespace-separated format. *)
+fun hash_encode s = if s = "" then "-" else s
+fun hash_decode s = if s = "-" then "" else s
 
 fun parse_line line (m : partial) : partial =
   case String.tokens Char.isSpace line of
@@ -145,7 +150,7 @@ fun parse_line line (m : partial) : partial =
         let
           val recorded_at = string_to_int t
           val entry =
-            {thy = thy, data_hash = data, src_hash = src,
+            {thy = thy, data_hash = data, src_hash = hash_decode src,
              anc_version = string_to_int anc, anc_hash = anc_hash,
              recorded_at = recorded_at,
              failed = data = "failed" orelse recorded_at < 0,
@@ -187,7 +192,8 @@ fun manifest_lines (prov : provenance) entries =
   let
     fun line (e : entry) =
       String.concatWith " "
-        ["thy", #thy e, #data_hash e, #src_hash e, its (#anc_version e),
+        ["thy", #thy e, #data_hash e, hash_encode (#src_hash e),
+         its (#anc_version e),
          #anc_hash e, its (#recorded_at e), its (#tacdata_version e),
          its (#tactictoe_version e)]
   in

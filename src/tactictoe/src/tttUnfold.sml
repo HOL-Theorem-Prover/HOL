@@ -1359,27 +1359,47 @@ fun lock_stale max_lock_age lock =
     Time.compare (age,max_lock_age) = GREATER
   end
 
-fun release_lock lock =
-  (remove_file (lock ^ "/holder");
-   OS.FileSys.rmDir lock handle _ => remove_file lock handle _ => ())
+type record_lock = {path : string, holder : string}
+
+fun lock_holder path =
+  (case readl (path ^ "/holder") of
+     holder :: _ => SOME holder
+   | [] => NONE)
+  handle _ => NONE
+
+fun lock_owned ({path,holder} : record_lock) =
+  lock_holder path = SOME holder
+
+(* A stale owner may have been replaced at the same path.  Only the owner
+   whose token is still in the holder file may remove the lock. *)
+fun release_lock (lock as {path,...} : record_lock) =
+  if lock_owned lock
+  then (remove_file (path ^ "/holder");
+        OS.FileSys.rmDir path handle _ => remove_file path handle _ => ())
+  else ()
 
 fun acquire_lock max_lock_age name =
   let
     val _ = app mkDir_err [tacdata_dir (), locks_dir ()]
-    val lock = locks_dir () ^ "/" ^ name ^ ".lock"
+    val path = locks_dir () ^ "/" ^ name ^ ".lock"
     fun create () =
-      ((HOLFileSys.mkDir lock;
-        writel (lock ^ "/holder")
-          [Portable.unique_tmp_suffix (), Time.toString (Time.now ())];
-        SOME lock)
-       handle _ => NONE)
+      let val holder = Portable.unique_tmp_suffix () in
+        ((HOLFileSys.mkDir path;
+          writel (path ^ "/holder")
+            [holder, Time.toString (Time.now ())];
+          SOME {path = path, holder = holder})
+         handle _ => NONE)
+      end
   in
     case create () of
       SOME l => SOME l
     | NONE =>
-        if exists_file lock andalso lock_stale max_lock_age lock
-        then (release_lock lock; create ())
-        else NONE
+        case lock_holder path of
+          SOME holder =>
+            if lock_stale max_lock_age path
+            then (release_lock {path = path, holder = holder}; create ())
+            else NONE
+        | NONE => NONE
   end
 
 fun with_manifest_lock max_lock_age f =

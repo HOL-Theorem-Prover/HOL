@@ -53,6 +53,41 @@ fun read_file file =
     TextIO.inputAll ins before TextIO.closeIn ins
   end
 
+val manifest_roundtrip_cache = cache_dir ^ "-manifest-roundtrip"
+val manifest_roundtrip =
+  let
+    val prov = tttManifest.current_provenance ()
+    val empty_entry : tttManifest.entry =
+      {thy = "missing_script", data_hash = "failed", src_hash = "",
+       anc_version = 0, anc_hash = "empty-ancestor-hash", recorded_at = ~1,
+       failed = true, tacdata_version = #tacdata_version prov,
+       tactictoe_version = #tactictoe_version prov}
+    val valid_entry : tttManifest.entry =
+      {thy = "present_script", data_hash = "failed", src_hash = "source-hash",
+       anc_version = 0, anc_hash = "empty-ancestor-hash", recorded_at = ~1,
+       failed = true, tacdata_version = #tacdata_version prov,
+       tactictoe_version = #tactictoe_version prov}
+    fun cleanup () = aiLib.run_cmd
+      ("rm -rf " ^ aiLib.shell_quote manifest_roundtrip_cache)
+    fun restore () = (set_tactictoe_cache_dir cache_dir; cleanup ())
+    val result =
+      ((cleanup ();
+        set_tactictoe_cache_dir manifest_roundtrip_cache;
+        tttManifest.write_manifest prov [empty_entry,valid_entry];
+        case tttManifest.read_manifest () of
+          NONE => false
+        | SOME m =>
+            length (#entries m) = 2 andalso
+            List.exists (fn e => #thy e = "missing_script" andalso
+              #src_hash e = "") (#entries m))
+       handle e => (restore (); raise e))
+  in
+    result before restore ()
+  end
+
+val _ = check "manifest round-trips an empty source hash"
+  manifest_roundtrip
+
 val atomic_file = "ttt_writel_atomic_selftest"
 val _ = passok "atomic write accepts a bare filename"
   (fn () =>
