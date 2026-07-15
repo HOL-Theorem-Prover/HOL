@@ -211,4 +211,90 @@ val _ = require_msg (check_result (fn () => has_no_generator real_ty))
 val _ = require_msg (check_result (fn () => has_no_generator ``:ind``))
   (fn () => "unknown type unexpectedly has a generator") (fn () => ()) ()
 
+val _ = tprint "Refute enumeration and registries"
+
+fun check_cardinality ty expected =
+  require_msg (check_result (fn () => cardinality ty = expected))
+    (fn () => "unexpected cardinality") (fn () => ()) ()
+
+val _ = check_cardinality ``:bool`` (SOME 2)
+val _ = check_cardinality ``:refute$rf3`` (SOME 3)
+val _ = check_cardinality ``:bool[8]`` (SOME 256)
+val _ = check_cardinality ``:refute$rf2 # bool`` (SOME 4)
+val _ = check_cardinality ``:bool -> bool`` (SOME 4)
+val _ = check_cardinality ``:bool[8] -> bool`` NONE
+val _ = check_cardinality ``:num`` NONE
+
+fun is_enumerated ty count =
+  case enumerate ty of
+    SOME values => length values = count
+  | NONE => false
+
+val _ = require_msg (check_result (fn () => is_enumerated ``:bool`` 2))
+  (fn () => "bool was not completely enumerated") (fn () => ()) ()
+val _ = require_msg (check_result (fn () =>
+  is_enumerated ``:refute$rf3`` 3))
+  (fn () => "rf3 was not completely enumerated") (fn () => ()) ()
+val _ = require_msg (check_result (fn () =>
+  is_enumerated ``:refute$rf2 # bool`` 4))
+  (fn () => "product was not completely enumerated") (fn () => ()) ()
+
+fun eval_rhs tm =
+  let
+    val theorem = computeLib.CBV_CONV (!computeLib.the_compset) tm
+  in
+    #2 (boolSyntax.dest_eq (Thm.concl theorem))
+  end
+
+fun function_graphs_work () =
+  case (enumerate ``:bool -> refute$rf2``, enumerate ``:refute$rf2``) of
+    (SOME graphs, SOME values) =>
+      length graphs = 4 andalso
+      List.all (fn graph =>
+        List.all (fn input =>
+          List.exists (fn value =>
+            Term.aconv (eval_rhs (Term.mk_comb (graph, input))) value)
+            values) [boolSyntax.T, boolSyntax.F]) graphs
+  | _ => false
+
+val _ = require_msg (check_result function_graphs_work) (fn () =>
+  "function graphs did not EVAL on both boolean inputs") (fn () => ()) ()
+
+val empty_custom : custom_gen = {enumerate = NONE, random = NONE}
+val finite_custom : custom_gen =
+  {enumerate = SOME (fn _ => [``0``]), random = NONE}
+
+fun rejects_empty_custom () =
+  ((register_generator ``:ind`` empty_custom; false)
+   handle Fail _ => true)
+
+val _ = require_msg (check_result rejects_empty_custom) (fn () =>
+  "an empty custom generator was accepted") (fn () => ()) ()
+val _ = register_generator ``:ind`` finite_custom
+val _ = require_msg (check_result (fn () =>
+  case spec_of ``:ind`` of GenCustom _ => true | _ => false))
+  (fn () => "custom generator was not registered") (fn () => ()) ()
+
+val abstract_ty = ``:rg_record``
+val abstract_predicate = ``\x : rg_record. T``
+val abstract_constructor =
+  hd (TypeBasePure.constructors_of (valOf (TypeBase.fetch abstract_ty)))
+val _ = abstract_generator
+  {ty = abstract_ty,
+   constructors = [abstract_constructor],
+   pred = SOME abstract_predicate}
+
+fun abstract_generator_works () =
+  (case spec_of abstract_ty of
+     GenDatatype {constrs, family, ...} =>
+       length constrs = 1 andalso family = [abstract_ty]
+   | _ => false) andalso
+  (case predicate_of abstract_ty of
+     SOME predicate => Term.aconv predicate abstract_predicate
+   | NONE => false)
+
+val _ = require_msg (check_result abstract_generator_works) (fn () =>
+  "abstract generator or predicate registry was not populated")
+  (fn () => ()) ()
+
 val _ = exit_count0 erc
