@@ -1190,6 +1190,7 @@ fun ttt_rewrite_thy thy =
 fun record_thy_raw thy =
   if mem thy ["min","bool"] then () else
   let
+    val publish_tacdata = !record_flag
     val current_file = current_tacdata_file thy
     val attempt_file = current_file ^ "." ^
       Portable.unique_tmp_suffix () ^ ".attempt"
@@ -1205,14 +1206,16 @@ fun record_thy_raw thy =
           (tttsml_of scriptorg)
       in
         print_endline ("ttt_record_thy time: " ^ rts_round 4 t);
-        if not (exists_file attempt_file)
+        if publish_tacdata andalso not (exists_file attempt_file)
         then (print_endline "ttt_record_thy: failed";
               raise ERR "ttt_record_thy" thy)
         else ()
       end)
   in
     ((record_attempt ();
-      OS.FileSys.rename {old = attempt_file, new = current_file})
+      if publish_tacdata
+      then OS.FileSys.rename {old = attempt_file, new = current_file}
+      else ())
      handle e => (remove_file attempt_file; raise e))
   end
 
@@ -1402,6 +1405,29 @@ fun update_manifest_entry max_lock_age prov entry =
       write_manifest prov (update_entry entry entries)
     end)
 
+(* Preserve a valid same-identity recording while a forced replacement is
+   being published.  Use binary I/O so restoring the copy also restores the
+   hash recorded in the old manifest entry exactly. *)
+fun copy_file src dst =
+  let
+    val ins = BinIO.openIn src
+    val outs =
+      BinIO.openOut dst
+      handle e => (BinIO.closeIn ins; raise e)
+    fun loop () =
+      let val bytes = BinIO.inputN (ins, 65536) in
+        if Word8Vector.length bytes = 0 then ()
+        else (BinIO.output (outs,bytes); loop ())
+      end
+  in
+    ((loop (); BinIO.closeIn ins; BinIO.closeOut outs)
+     handle e =>
+       ((BinIO.closeIn ins handle _ => ());
+        (BinIO.closeOut outs handle _ => ());
+        remove_file dst;
+        raise e))
+  end
+
 (* -------------------------------------------------------------------------
    Staleness
 
@@ -1566,9 +1592,36 @@ fun record_one (cfg : record_config) prov src_hashes recorded_stale thy =
               case lookup_entry sc thy of
                 SOME e => if usable e then SOME e else NONE
               | NONE => NONE
+            val backup = ref (NONE : (string * string) option)
+            val committed = ref false
+            fun preserve_previous () =
+              case previous of
+                NONE => ()
+              | SOME e =>
+                  let
+                    val file = entry_file e
+                    val saved = file ^ "." ^
+                      Portable.unique_tmp_suffix () ^ ".rollback"
+                  in
+                    copy_file file saved;
+                    backup := SOME (file,saved)
+                  end
+            fun discard_backup () =
+              case !backup of
+                NONE => ()
+              | SOME (_,saved) =>
+                  ((remove_file saved handle _ => ()); backup := NONE)
+            fun restore_previous () =
+              if !committed then () else
+              case !backup of
+                NONE => ()
+              | SOME (file,saved) =>
+                  (OS.FileSys.rename {old = saved, new = file};
+                   backup := NONE)
           in
             ((print_endline
                 ("recording: " ^ thy ^ "  reason: " ^ reason_to_string r);
+              preserve_previous ();
               record_thy_raw thy;
               let
                 val file = current_tacdata_file thy
@@ -1581,12 +1634,16 @@ fun record_one (cfg : record_config) prov src_hashes recorded_stale thy =
                   "  data=" ^ data_hash ^ "  src=" ^ src_hash
               in
                 update_manifest_entry max_lock_age prov entry;
+                committed := true;
+                discard_backup ();
                 print_endline msg;
                 release_lock lock; (true,msg)
               end)
-             handle Interrupt => raise Interrupt
+             handle Interrupt =>
+                    ((restore_previous () handle _ => ()); raise Interrupt)
                   | e =>
                let
+                 val _ = restore_previous ()
                  val src_hash = source_hash thy handle _ => ""
                  val msg = "failed: " ^ thy ^ "  " ^ exnMessage e
                  val _ = case previous of

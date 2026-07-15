@@ -29,8 +29,9 @@
 #
 # Output:
 #   By default the tactic database is written to HOL4_TACTICTOE_CACHE when
-#   that variable is set, otherwise to
-#     $HOME/.cache/tactictoe/ttt_tacdata
+#   that variable is set, otherwise under XDG_CACHE_HOME when set, and
+#   finally under $HOME/.cache:
+#     ${XDG_CACHE_HOME:-$HOME/.cache}/tactictoe/ttt_tacdata
 #   Use --output DIR to use DIR as the TacticToe cache root instead
 #   (the tactic database will be written to DIR/ttt_tacdata).
 #   The script exports HOL4_TACTICTOE_CACHE for the hol process; HOLDIR
@@ -123,7 +124,9 @@ Usage:
   --keep        Keep existing tactic data: only record theories that are
                 missing or stale.  Without it the cache is wiped first.
   --output DIR  Use DIR as the TacticToe cache root instead of
-                HOL4_TACTICTOE_CACHE (when set) or $HOME/.cache/tactictoe.
+                HOL4_TACTICTOE_CACHE (when set),
+                $XDG_CACHE_HOME/tactictoe (when set), or
+                $HOME/.cache/tactictoe.
                 The tactic database is written to DIR/ttt_tacdata and DIR is
                 exported to hol as HOL4_TACTICTOE_CACHE.
 
@@ -242,8 +245,11 @@ if [ -n "${output_dir}" ]; then
 else
   if [ -n "${HOL4_TACTICTOE_CACHE:-}" ]; then
     cache_root="${HOL4_TACTICTOE_CACHE}"
+  elif [ -n "${XDG_CACHE_HOME:-}" ]; then
+    cache_root="${XDG_CACHE_HOME}/tactictoe"
   elif [ -z "${HOME:-}" ]; then
-    echo "error: HOME is not set; cannot choose default TacticToe cache" >&2
+    echo "error: neither XDG_CACHE_HOME nor HOME is set;" >&2
+    echo "       cannot choose default TacticToe cache" >&2
     exit 1
   else
     cache_root="${HOME}/.cache/tactictoe"

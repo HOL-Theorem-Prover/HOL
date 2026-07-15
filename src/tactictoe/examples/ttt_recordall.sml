@@ -8,7 +8,8 @@
    Goal
    ----
    Produce a TacticToe tactic database (under
-   $HOME/.cache/tactictoe/ttt_tacdata by default) covering every theory
+   ${XDG_CACHE_HOME:-$HOME/.cache}/tactictoe/ttt_tacdata by default) covering
+   every theory
    of the HOL4 standard library.
 
    How it works
