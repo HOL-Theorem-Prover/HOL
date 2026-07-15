@@ -3,7 +3,7 @@ INCLUDES = $(HOLDIR)/src/portableML/poly/concurrent ../n-bit
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
-selftest.exe: selftest.uo
+selftest.exe: selftest.uo refuteTheory.uo
 	$(HOLMOSMLC) -o $@ $<
 
 ifdef HOLSELFTESTLEVEL
