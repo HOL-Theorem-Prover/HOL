@@ -1,6 +1,7 @@
 open testutils
 open refuteTheory
 open Refute_Core
+open Refute_Gen
 
 val erc = ref 0
 val _ = diemode := Remember erc
@@ -121,5 +122,93 @@ fun silent_report () =
 
 val _ = require_msg (check_result silent_report) (fn () =>
   "reporting failed at trace level zero") (fn () => ()) ()
+
+val _ = tprint "Refute generator derivation"
+
+fun check_gen name predicate ty =
+  require_msg (check_result (fn () => predicate (spec_of ty)))
+    (fn () => "unexpected generator specification for " ^ name)
+    (fn () => ()) ()
+
+fun is_num_kind kind (GenNum actual) = kind = actual
+  | is_num_kind _ _ = false
+
+fun datatype_info (GenDatatype info) = SOME info
+  | datatype_info _ = NONE
+
+fun has_no_generator ty =
+  ((ignore (spec_of ty); false)
+   handle NoGenerator (_, reason) => String.size reason > 0)
+
+val _ = check_gen "num" (is_num_kind Num) ``:num``
+val _ = check_gen "char" (is_num_kind Char) ``:char``
+val _ = check_gen "word" (fn GenNum (Word 8) => true | _ => false)
+  ``:bool[8]``
+val _ = check_gen "function" (fn GenFun _ => true | _ => false)
+  ``:num -> bool``
+val _ = check_gen "rf3" (fn GenEnum values => length values = 3 | _ => false)
+  ``:refute$rf3``
+
+fun list_shape () =
+  case datatype_info (spec_of ``:'a list``) of
+    SOME {constrs, recursive, min_size, family} =>
+      length constrs = 2 andalso recursive = [[], [false, true]] andalso
+      min_size = [[], [0, 1]] andalso length family = 1
+  | NONE => false
+
+fun option_shape () =
+  case datatype_info (spec_of ``:'a option``) of
+    SOME {constrs, recursive, min_size, family} =>
+      length constrs = 2 andalso recursive = [[], [false]] andalso
+      min_size = [[], [0]] andalso length family = 1
+  | NONE => false
+
+val _ = require_msg (check_result list_shape) (fn () =>
+  "list generator has an unexpected recursive shape") (fn () => ()) ()
+val _ = require_msg (check_result option_shape) (fn () =>
+  "option generator has an unexpected recursive shape") (fn () => ()) ()
+
+val _ = Datatype.Datatype `rg_rose = RGLeaf | RGNode ((rg_rose) list)`
+val _ = Datatype.Datatype `rg_left = RGLeft | RGToRight rg_right;
+                           rg_right = RGRight rg_left`
+val _ = Datatype.Datatype `rg_record = <| rg_field : num |>`
+val _ = Datatype.Datatype `rg_enum = RGRed | RGGreen | RGBlue`
+
+val _ = require_msg (check_result (fn () =>
+  case cached_spec ``:refute$rf3`` of NONE => true | SOME _ => false))
+  (fn () => "generator cache was not invalidated") (fn () => ()) ()
+
+fun rose_shape () =
+  case datatype_info (spec_of ``:rg_rose``) of
+    SOME {recursive, min_size, family, ...} =>
+      recursive = [[], [true]] andalso min_size = [[], [1]] andalso
+      length family = 1
+  | NONE => false
+
+fun mutual_shape () =
+  case datatype_info (spec_of ``:rg_right``) of
+    SOME {recursive, min_size, family, ...} =>
+      recursive = [[true]] andalso min_size = [[1]] andalso
+      length family = 2
+  | NONE => false
+
+val _ = require_msg (check_result rose_shape) (fn () =>
+  "rose generator has an unexpected recursive shape") (fn () => ()) ()
+val _ = require_msg (check_result mutual_shape) (fn () =>
+  "mutual generator has an unexpected recursive shape") (fn () => ()) ()
+val _ = check_gen "record" (fn GenDatatype _ => true | _ => false)
+  ``:rg_record``
+val _ = check_gen "enum" (fn GenEnum values => length values = 3 | _ => false)
+  ``:rg_enum``
+val _ = require_msg (check_result (fn () =>
+  recursive_under_function [``:rg_rose``] ``:rg_rose -> bool``))
+  (fn () => "recursive function occurrence was not detected")
+  (fn () => ()) ()
+val real_ty = Type.mk_thy_type {Thy = "real", Tyop = "real", Args = []}
+  handle Feedback.HOL_ERR _ => ``:ind``
+val _ = require_msg (check_result (fn () => has_no_generator real_ty))
+  (fn () => "real unexpectedly has a generator") (fn () => ()) ()
+val _ = require_msg (check_result (fn () => has_no_generator ``:ind``))
+  (fn () => "unknown type unexpectedly has a generator") (fn () => ()) ()
 
 val _ = exit_count0 erc
