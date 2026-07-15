@@ -71,11 +71,18 @@ structure Refute_Core = struct
       tag : string,
       qc : qc_config }
 
+  type instance =
+    { goal : term,
+      original : term,
+      evals : term list,
+      card : int,
+      size_matters : bool }
+
   type backend =
     { name : string,
       weight : int,
       configured : unit -> bool,
-      run : config -> problem -> outcome }
+      run : config -> instance list -> outcome }
 
   val default_qc_config : qc_config =
     { size = 10,
@@ -370,13 +377,6 @@ structure Refute_Core = struct
       use_subtype = #use_subtype qc, seed = #seed qc,
       smart_quantifier = #smart_quantifier qc, optimise_equality = value })
 
-  type instance =
-    { goal : term,
-      original : term,
-      evals : term list,
-      card : int,
-      size_matters : bool }
-
   datatype preprocess_result =
       Preprocessed of instance list
     | NotExecutable of string list
@@ -486,21 +486,22 @@ structure Refute_Core = struct
       collect [] tm
     end
 
-  fun executable_constant comp_items constant =
-    if TypeBase.is_constructor constant then
-      true
-    else
-      let
-        val {Name, Thy, ...} = Term.dest_thy_const constant
-      in
-        List.exists (fn ((name, thy), transforms) =>
-          name = Name andalso thy = Thy andalso not (null transforms))
-          comp_items
-      end
-
   fun nonexecutable_constants terms =
     let
       val comp_items = computeLib.listItems (!computeLib.the_compset)
+      val executable_keys =
+        List.foldl (fn ((key, transforms), keys) =>
+          if null transforms then keys else Redblackset.add (keys, key))
+          (Redblackset.empty
+            (Portable.pair_compare (String.compare, String.compare)))
+          comp_items
+      fun executable_constant constant =
+        TypeBase.is_constructor constant orelse
+        let
+          val {Name, Thy, ...} = Term.dest_thy_const constant
+        in
+          Redblackset.member (executable_keys, (Name, Thy))
+        end
       fun add (term, constants) =
         List.foldl (fn (constant, collected) =>
           if List.exists (fn old => Term.same_const old constant) collected
@@ -508,7 +509,7 @@ structure Refute_Core = struct
           else constant :: collected) constants (term_constants term)
       val constants = List.foldl add [] terms
     in
-      List.filter (not o executable_constant comp_items) constants
+      List.filter (not o executable_constant) constants
     end
 
   fun show_constants constants =
@@ -809,18 +810,19 @@ structure Refute_Core = struct
   fun no_generator_reason (ty, reason) =
     "no generator for " ^ Parse.type_to_string ty ^ ": " ^ reason
 
-  fun run_backend (cfg : config) problem (backend, result_ref) =
+  fun run_backend (cfg : config) instances (backend, result_ref) =
     let
       val name = #name backend
       val timeout =
         if #timeout cfg <= 0.0 then Time.fromReal 0.0
         else Time.fromReal (#timeout cfg)
       val result =
-        (Timeout.apply timeout (#run backend) cfg problem
+        (Timeout.apply timeout (#run backend cfg) instances
          handle Timeout.TIMEOUT _ =>
            Unknown [name ^ " timed out"]
               | Refute_Gen.NoGenerator pair =>
                   Unknown [name ^ ": " ^ no_generator_reason pair]
+              | Interrupt => raise Interrupt
               | e => Unknown [name ^ ": " ^ exception_reason e])
       val _ = result_ref := SOME result
     in
@@ -865,7 +867,7 @@ structure Refute_Core = struct
       fun execute () =
         case preprocess cfg problem of
             NotExecutable reasons => Unknown reasons
-          | Preprocessed _ =>
+          | Preprocessed instances =>
               if null selected then Unknown ["no configured backend"]
               else
                 let
@@ -874,10 +876,10 @@ structure Refute_Core = struct
                   val winner =
                     if #sequential cfg then
                       ParList.get_first
-                        (run_backend cfg problem) jobs
+                        (run_backend cfg instances) jobs
                     else
                       ParList.get_some
-                        (run_backend cfg problem) jobs
+                        (run_backend cfg instances) jobs
                 in
                   case winner of
                       SOME result => result
@@ -897,6 +899,7 @@ structure Refute_Core = struct
         (execute ()
          handle Refute_Gen.NoGenerator pair =>
            Unknown [no_generator_reason pair]
+              | Interrupt => raise Interrupt
               | e => Unknown [exception_reason e])
     in
       finish result

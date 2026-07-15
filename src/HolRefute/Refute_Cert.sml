@@ -35,7 +35,8 @@ structure Refute_Cert = struct
 
   fun eval_term env tm =
     (rhs_of (eval (instantiate env tm))
-     handle _ => Term.mk_var ("?", Term.type_of tm))
+     handle Interrupt => raise Interrupt
+          | _ => Term.mk_var ("?", Term.type_of tm))
 
   fun closure_of tm =
     let
@@ -61,7 +62,8 @@ structure Refute_Cert = struct
       val (variables, closure, body) = closure_of original
       val instance = instantiate env body
     in
-      case (SOME (eval instance) handle _ => NONE) of
+      case (SOME (eval instance)
+            handle Interrupt => raise Interrupt | _ => NONE) of
           NONE =>
             Potential (replace cex
               (Refute_Core.Potential

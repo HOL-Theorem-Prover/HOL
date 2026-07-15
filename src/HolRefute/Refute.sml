@@ -15,6 +15,12 @@ structure Refute :> Refute = struct
   type custom_gen = Refute_Gen.custom_gen
   type rng = Refute_Gen.rng
 
+  (* Registering the built-in exhaustive/random backends is a load-time
+     side effect in Refute_QC.  Call it here so the backends are available
+     through this public entry point; without this reference Refute_QC is
+     never loaded and no backend is registered. *)
+  val () = Refute_QC.register_backends ()
+
   val refute = Refute_Core.refute
   fun refute_def tm = refute (!Refute_Core.the_config) tm
 

@@ -534,10 +534,26 @@ val _ = check_plan plan_has_abstract_guard
 
 val _ = tprint "Refute QC exhaustive backend"
 
+fun compute_is_only_substrate () =
+  case !substrates of
+      [substrate] => #name substrate = "compute"
+    | _ => false
+
+val _ = require_msg (check_result compute_is_only_substrate) (fn () =>
+  "the M2 substrate seam did not contain exactly the compute substrate")
+  (fn () => ()) ()
+
 fun qc_problem goal : problem = {goal = goal, assumptions = [], evals = []}
 
+fun qc_instances config goal =
+  case preprocess config (qc_problem goal) of
+      Preprocessed instances => instances
+    | NotExecutable _ => []
+
 fun exhaustive config goal =
-  exhaustive_run config (qc_problem goal)
+  case preprocess config (qc_problem goal) of
+      NotExecutable reasons => Unknown reasons
+    | Preprocessed instances => exhaustive_run config instances
 
 fun has_binding predicate (Counterexample (cex :: _)) =
       List.exists predicate (#bindings cex)
@@ -570,12 +586,21 @@ val _ = require_msg (check_result complete_bool_goal) (fn () =>
 
 fun stuck_split_counts_failure () =
   let
-    val result = exhaustive default_config
+    val config = default_config
+    val goal =
       ``(if THE (NONE : bool option) then SOME 0 else NONE) =
         SOME (x : num) ==> F``
+    val result = exhaustive config goal
+    val instances = qc_instances config goal
+    val plans = List.map (fn i => compile_plan config (#goal i)) instances
+    val compiled = compute_compile config plans
+    val _ = List.app (fn (card, size) =>
+      ignore (#run compiled
+        {genuine_only = false, card = card, size = size, ignored = []}))
+      (schedule instances (#size (#qc config)))
   in
     (case result of Unknown _ => true | _ => false) andalso
-    (case lookup_stat "match_failures" (!last_stats) of
+    (case lookup_stat "match_failures" (!(#last_stats compiled)) of
         SOME failures => failures > 0
       | NONE => false)
   end
@@ -616,7 +641,10 @@ val _ = require_msg (check_result update_witness) (fn () =>
 
 val _ = tprint "Refute QC random backend"
 
-fun random config goal = random_run config (qc_problem goal)
+fun random config goal =
+  case preprocess config (qc_problem goal) of
+      NotExecutable reasons => Unknown reasons
+    | Preprocessed instances => random_run config instances
 
 fun same_bindings [] [] = true
   | same_bindings ((variable1, value1) :: rest1)
@@ -718,6 +746,11 @@ val corpus_config =
 fun cex_is_certified (Refute.Counterexample ({cert = SOME _, ...} :: _)) = true
   | cex_is_certified _ = false
 
+fun cex_is_genuine_certified
+      (Refute.Counterexample
+        ({certainty = Refute.Genuine, cert = SOME _, ...} :: _)) = true
+  | cex_is_genuine_certified _ = false
+
 fun public_expect ExpectCex = Refute.ExpectCex
   | public_expect ExpectNone = Refute.ExpectNone
   | public_expect ExpectUnknown = Refute.ExpectUnknown
@@ -808,6 +841,28 @@ fun corpus_smart_quantifiers () =
       case compile_plan corpus_config let_case of
           Gen (_, Test _) => true
         | _ => false)
+  end
+
+fun corpus_default_quickcheck () =
+  let
+    fun check name tm =
+      check_corpus ("Refute default quickcheck: " ^ name) (fn () =>
+        cex_is_genuine_certified (Refute.quickcheck tm))
+  in
+    check "classic reverse" ``REVERSE (xs : num list) = xs``;
+    check "reverse append mutation"
+      ``REVERSE (xs : num list ++ ys) = REVERSE xs ++ REVERSE ys``;
+    check "ALL_DISTINCT append mutation"
+      ``ALL_DISTINCT (xs : num list ++ ys) <=>
+        ALL_DISTINCT xs /\ ALL_DISTINCT ys``;
+    check "nub append mutation"
+      ``nub (xs : num list ++ ys) = nub xs ++ nub ys``;
+    check "integer order mutation" ``~((x : int) = x)``;
+    check "sorted insert mutation"
+      ``SORTED $= (xs : num list) ==> SORTED $= (x :: xs)``;
+    check "fmap lookup premise"
+      ``(m1 : num -> num option) k = SOME (v : num) ==>
+        m1 k = NONE``
   end
 
 fun corpus_potential () =
@@ -990,6 +1045,7 @@ val _ =
     (corpus_smoke ();
      corpus_classics ();
      corpus_smart_quantifiers ();
+     corpus_default_quickcheck ();
      corpus_polymorphism ();
      corpus_functions ();
      corpus_quantifiers ();

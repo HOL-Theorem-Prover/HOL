@@ -13,8 +13,8 @@ structure Refute_QC = struct
   fun member tm = List.exists (fn other => Term.aconv tm other)
 
   fun union_terms left right =
-    List.foldl (fn (tm, acc) =>
-      if member tm acc then acc else acc @ [tm]) left right
+    List.rev (List.foldl (fn (tm, acc) =>
+      if member tm acc then acc else tm :: acc) (List.rev left) right)
 
   fun subtract_terms left right =
     List.filter (fn tm => not (member tm right)) left
@@ -50,7 +50,7 @@ structure Refute_QC = struct
       val avoid_variables = List.concat (List.map Term.free_vars_lr avoids)
       fun fresh avoid ty =
         let val variable = Term.variant avoid (Term.mk_var ("x", ty))
-        in (variable, avoid @ [variable]) end
+        in (variable, variable :: avoid) end
 
       fun loop [] avoid variables = rev variables
         | loop (ty :: rest) avoid variables =
@@ -203,14 +203,12 @@ structure Refute_QC = struct
     { run : {genuine_only : bool,
              card : int,
              size : int,
-             ignored : candidate list} -> run_result }
+             ignored : candidate list} -> run_result,
+      last_stats : (string * int) list ref }
 
   type substrate =
     { name : string,
-      applicable : Refute_Core.problem * plan list -> bool,
       compile : Refute_Core.config -> plan list -> compiled_test }
-
-  val last_stats : (string * int) list ref = ref []
 
   fun same_env [] [] = true
     | same_env ((variable1, value1) :: rest1)
@@ -223,14 +221,8 @@ structure Refute_QC = struct
     List.exists (fn candidate => same_env env (#env candidate)) ignored
 
   fun eval_rhs env tm =
-    let
-      val theorem = computeLib.CBV_CONV (!computeLib.the_compset)
-        (Term.subst (List.map (fn (redex, residue) =>
-          {redex = redex, residue = residue}) env) tm)
-    in
-      SOME (#2 (boolSyntax.dest_eq (Thm.concl theorem)))
-    end
-    handle _ => NONE
+    SOME (rhs_of (eval (instantiate env tm)))
+    handle Interrupt => raise Interrupt | _ => NONE
 
   datatype boolean_value = IsTrue | IsFalse | IsStuck
 
@@ -328,114 +320,126 @@ structure Refute_QC = struct
       | Refute_Gen.GenFun (dom, rng) =>
           exhaustive_function dom rng size continuation
 
+  (* Shared plan traversal for both backends.  Every plan node is handled
+     identically; the two backends differ only in how they instantiate a
+     Gen binder, which is supplied as the [gen] callback.  Returns the
+     search verdict together with the stats gathered for this run. *)
+  fun traverse gen genuine_only ignored plan =
+    let
+      val complete = ref true
+      val match_failures = ref 0
+      val tests = ref 0
+
+      fun candidate env genuine =
+        if ignored_candidate env ignored then Continue
+        else Found {env = env, genuine = genuine}
+
+      fun visit env genuine current =
+        case current of
+            Prune => Continue
+          | Test tm =>
+              (tests := !tests + 1;
+               case eval_boolean env tm of
+                   IsTrue => Continue
+                 | IsFalse =>
+                     if genuine orelse not genuine_only then
+                       candidate env genuine
+                     else Continue
+                 | IsStuck =>
+                     (complete := false;
+                      if genuine_only then Continue
+                      else candidate env false))
+          | Guard (tm, next) =>
+              (case eval_boolean env tm of
+                   IsTrue => visit env genuine next
+                 | IsFalse => Continue
+                 | IsStuck =>
+                     (complete := false;
+                      if genuine_only then Continue
+                      else visit env false next))
+          | Bind (variable, tm, fallback, next) =>
+              (case eval_rhs env tm of
+                   SOME value =>
+                     visit ((variable, value) :: env) genuine next
+                 | NONE =>
+                     (complete := false;
+                      case fallback of
+                          NONE => Continue
+                        | SOME alternative =>
+                            if genuine_only then Continue
+                            else visit env false alternative))
+          | Split (tm, branches) =>
+              (case eval_rhs env tm of
+                   SOME value =>
+                     (case constructor_value value of
+                          NONE =>
+                            (complete := false;
+                             match_failures := !match_failures + 1;
+                             Continue)
+                        | SOME (constructor, args) =>
+                            (case List.find (fn (expected, variables, _) =>
+                              Term.same_const expected constructor andalso
+                              length variables = length args) branches of
+                                 NONE =>
+                                   (complete := false;
+                                    match_failures := !match_failures + 1;
+                                    Continue)
+                               | SOME (_, variables, next) =>
+                                   visit
+                                     (ListPair.zip (variables, args) @ env)
+                                     genuine next))
+                 | NONE =>
+                     (complete := false;
+                      match_failures := !match_failures + 1;
+                      Continue))
+          | Gen (variable, next) =>
+              gen visit complete env genuine variable next
+      val result = visit [] true plan
+    in
+      { result = result,
+        complete = !complete,
+        stats = [("tests", !tests),
+          ("match_failures", !match_failures)] }
+    end
+
   fun compute_compile (config : Refute_Core.config) plans =
     let
+      val last_stats = ref []
       fun run {genuine_only, card, size, ignored} =
         let
-          val complete = ref true
-          val match_failures = ref 0
-          val tests = ref 0
           val plan = List.nth (plans, card - 1)
-
-          fun candidate env genuine =
-            if ignored_candidate env ignored then Continue
-            else Found {env = env, genuine = genuine}
-
-          fun visit env genuine current =
-            case current of
-                Prune => Continue
-              | Test tm =>
-                  (tests := !tests + 1;
-                   case eval_boolean env tm of
-                       IsTrue => Continue
-                     | IsFalse =>
-                         if genuine orelse not genuine_only then
-                           candidate env genuine
-                         else Continue
-                     | IsStuck =>
-                         (complete := false;
-                          if genuine_only then Continue
-                          else candidate env false))
-              | Guard (tm, next) =>
-                  (case eval_boolean env tm of
-                       IsTrue => visit env genuine next
-                     | IsFalse => Continue
-                     | IsStuck =>
-                         (complete := false;
-                          if genuine_only then Continue
-                          else visit env false next))
-              | Bind (variable, tm, fallback, next) =>
-                  (case eval_rhs env tm of
-                       SOME value =>
-                         visit ((variable, value) :: env) genuine next
-                     | NONE =>
-                         (complete := false;
-                          case fallback of
-                              NONE => Continue
-                            | SOME alternative =>
-                                if genuine_only then Continue
-                                else visit env false alternative))
-              | Split (tm, branches) =>
-                  (case eval_rhs env tm of
-                       SOME value =>
-                         (case constructor_value value of
-                              NONE =>
-                                (complete := false;
-                                 match_failures := !match_failures + 1;
-                                 Continue)
-                            | SOME (constructor, args) =>
-                                (case List.find (fn (expected, variables, _) =>
-                                  Term.same_const expected constructor andalso
-                                  length variables = length args) branches of
-                                     NONE =>
-                                       (complete := false;
-                                        match_failures := !match_failures + 1;
-                                        Continue)
-                                   | SOME (_, variables, next) =>
-                                       visit
-                                         (ListPair.zip (variables, args) @ env)
-                                         genuine next))
-                     | NONE =>
-                         (complete := false;
-                          match_failures := !match_failures + 1;
-                          Continue))
-              | Gen (variable, next) =>
-                  let
-                    val ty = Term.type_of variable
-                    val spec = Refute_Gen.spec_of ty
-                    fun try value =
-                      visit ((variable, value) :: env) genuine next
-                  in
-                    case Refute_Gen.enumerate ty of
-                        SOME values =>
-                          List.foldl (fn (value, result) =>
-                            case result of
-                                Continue => try value
-                              | found => found)
-                            Continue values
-                      | NONE =>
-                          (complete := false;
-                           exhaustive_values spec size try)
-                  end
-          val result = visit [] true plan
-          val _ = last_stats := [("tests", !tests),
-            ("match_failures", !match_failures)]
+          fun gen visit complete env genuine variable next =
+            let
+              val ty = Term.type_of variable
+              val spec = Refute_Gen.spec_of ty
+              fun try value =
+                visit ((variable, value) :: env) genuine next
+            in
+              case Refute_Gen.enumerate ty of
+                  SOME values =>
+                    List.foldl (fn (value, result) =>
+                      case result of
+                          Continue => try value
+                        | found => found)
+                      Continue values
+                | NONE =>
+                    (complete := false;
+                     exhaustive_values spec size try)
+            end
+          val {result, complete, stats} =
+            traverse gen genuine_only ignored plan
+          val _ = last_stats := stats
         in
           case result of
               Found candidate => CexFound candidate
-            | Continue => Exhausted {complete = !complete}
+            | Continue => Exhausted {complete = complete}
         end
     in
-      {run = run}
+      {run = run, last_stats = last_stats}
     end
-
-  fun compute_applicable (problem, _) =
-    null (Refute_Core.nonexecutable_constants
-      (#goal problem :: #evals problem))
 
   val compute_substrate : substrate =
     { name = "compute",
-      applicable = compute_applicable,
       compile = compute_compile }
 
   val substrates : substrate list ref = ref [compute_substrate]
@@ -602,10 +606,7 @@ structure Refute_QC = struct
       | Prune => false
 
   fun exhaustive_run (config : Refute_Core.config)
-      (problem : Refute_Core.problem) =
-    case Refute_Core.preprocess config problem of
-        Refute_Core.NotExecutable reasons => Refute_Core.Unknown reasons
-      | Refute_Core.Preprocessed instances =>
+      (instances : Refute_Core.instance list) =
           let
             val plans = List.map
               (fn instance => compile_plan config (#goal instance))
@@ -615,9 +616,6 @@ structure Refute_QC = struct
                 NONE =>
                   Refute_Core.Unknown ["requested substrate is unavailable"]
               | SOME substrate =>
-                  if not (#applicable substrate (problem, plans)) then
-                    Refute_Core.Unknown ["not executable"]
-                  else
                     let
                       val compiled = #compile substrate config plans
                       val entries = schedule instances (#size (#qc config))
@@ -627,7 +625,7 @@ structure Refute_QC = struct
                       fun instance_for card =
                         List.nth (instances, card - 1)
                       fun stats_for size card msec =
-                        !last_stats @
+                        !(#last_stats compiled) @
                         (if !discarded = 0 then []
                          else [("discarded", !discarded)]) @
                         [("size", size), ("card", card), ("msec", msec)]
@@ -712,108 +710,35 @@ structure Refute_QC = struct
     { name = "exhaustive", weight = 20, configured = fn () => true,
       run = exhaustive_run }
 
-  val _ = Refute_Core.register_backend exhaustive_backend
-
   fun random_compile plans rng =
     let
+      val last_stats = ref []
       fun run {genuine_only, card, size, ignored} =
         let
-          val complete = ref true
-          val match_failures = ref 0
-          val tests = ref 0
           val plan = List.nth (plans, card - 1)
-
-          fun candidate env genuine =
-            if ignored_candidate env ignored then Continue
-            else Found {env = env, genuine = genuine}
-
-          fun visit env genuine current =
-            case current of
-                Prune => Continue
-              | Test tm =>
-                  (tests := !tests + 1;
-                   case eval_boolean env tm of
-                       IsTrue => Continue
-                     | IsFalse =>
-                         if genuine orelse not genuine_only then
-                           candidate env genuine
-                         else Continue
-                     | IsStuck =>
-                         (complete := false;
-                          if genuine_only then Continue
-                          else candidate env false))
-              | Guard (tm, next) =>
-                  (case eval_boolean env tm of
-                       IsTrue => visit env genuine next
-                     | IsFalse => Continue
-                     | IsStuck =>
-                         (complete := false;
-                          if genuine_only then Continue
-                          else visit env false next))
-              | Bind (variable, tm, fallback, next) =>
-                  (case eval_rhs env tm of
-                       SOME value =>
-                         visit ((variable, value) :: env) genuine next
-                     | NONE =>
-                         (complete := false;
-                          case fallback of
-                              NONE => Continue
-                            | SOME alternative =>
-                                if genuine_only then Continue
-                                else visit env false alternative))
-              | Split (tm, branches) =>
-                  (case eval_rhs env tm of
-                       SOME value =>
-                         (case constructor_value value of
-                              NONE =>
-                                (complete := false;
-                                 match_failures := !match_failures + 1;
-                                 Continue)
-                            | SOME (constructor, args) =>
-                                (case List.find
-                                  (fn (expected, variables, _) =>
-                                    Term.same_const expected constructor
-                                      andalso
-                                    length variables = length args) branches of
-                                     NONE =>
-                                       (complete := false;
-                                        match_failures := !match_failures + 1;
-                                        Continue)
-                                   | SOME (_, variables, next) =>
-                                       visit
-                                         (ListPair.zip (variables, args) @ env)
-                                         genuine next))
-                     | NONE =>
-                         (complete := false;
-                          match_failures := !match_failures + 1;
-                          Continue))
-              | Gen (variable, next) =>
-                  let
-                    val (value, _) =
-                      random_term (Term.type_of variable) size rng
-                  in
-                    visit ((variable, value) :: env) genuine next
-                  end
-
-          val result = visit [] true plan
-          val _ = last_stats := [
-            ("tests", !tests), ("match_failures", !match_failures)]
+          fun gen visit _ env genuine variable next =
+            let
+              val (value, _) =
+                random_term (Term.type_of variable) size rng
+            in
+              visit ((variable, value) :: env) genuine next
+            end
+          val {result, complete, stats} =
+            traverse gen genuine_only ignored plan
+          val _ = last_stats := stats
         in
           case result of
               Found candidate => CexFound candidate
-            | Continue => Exhausted {complete = !complete}
+            | Continue => Exhausted {complete = complete}
         end
         handle Refute_Gen.NoGenerator (_, reason) => GaveUp reason
              | Fail reason => GaveUp reason
     in
-      {run = run}
+      {run = run, last_stats = last_stats}
     end
 
   fun random_run (config : Refute_Core.config)
-      (problem : Refute_Core.problem) =
-    case Refute_Core.preprocess config problem of
-        Refute_Core.NotExecutable reasons => Refute_Core.Unknown reasons
-      | Refute_Core.Preprocessed instances =>
+      (instances : Refute_Core.instance list) =
           let
             val plans = List.map
               (fn instance => compile_plan config (#goal instance))
@@ -830,7 +755,7 @@ structure Refute_QC = struct
             val discarded = ref 0
             fun instance_for card = List.nth (instances, card - 1)
             fun stats_for size card =
-              !last_stats @
+              !(#last_stats compiled) @
               (if !discarded = 0 then [] else [("discarded", !discarded)]) @
               [("size", size), ("card", card)]
             fun remember card size env genuine genuine_only ignored =
@@ -906,5 +831,14 @@ structure Refute_QC = struct
     { name = "random", weight = 30, configured = fn () => true,
       run = random_run }
 
-  val _ = Refute_Core.register_backend random_backend
+  (* Register the built-in backends.  register_backend de-duplicates by
+     name, so calling this more than once is idempotent.  Refute.sml calls
+     it as well, so the backends are registered through the public entry
+     point and not only when Refute_QC is opened directly (e.g. in
+     selftest). *)
+  fun register_backends () =
+    (Refute_Core.register_backend exhaustive_backend;
+     Refute_Core.register_backend random_backend)
+
+  val _ = register_backends ()
 end
