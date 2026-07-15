@@ -272,18 +272,72 @@ fun boss_stop_workers pd threadl =
     print_endline ("  " ^ its ncore ^ " workers stopped")
   end
 
-(* A failed external process leaves its launcher thread inactive.  Abort is
-   deliberately bounded: notify workers that are still listening, then
-   interrupt their launcher threads instead of waiting forever for a failed
-   pool to become quiescent. *)
-fun boss_abort_workers pd threadl =
+(* A failed external process leaves its launcher thread inactive.  Keep the
+   live child pids so abort can terminate the actual HOL processes; killing a
+   launcher thread blocked in waitpid would merely orphan its child. *)
+type worker_control =
+  {mutex : Mutex.mutex, cancel_signal : int option ref,
+   pid : Posix.Process.pid option ref}
+
+fun new_worker_control () : worker_control =
+  {mutex = Mutex.mutex (), cancel_signal = ref NONE, pid = ref NONE}
+
+fun with_deferred_interrupts f =
   let
+    val attributes = Thread.getAttributes ()
+    val _ = Thread.setAttributes
+      [Thread.InterruptState Thread.InterruptDefer]
+    fun restore () = Thread.setAttributes attributes
+  in
+    (let val result = f () in restore (); result end
+     handle e => (restore (); raise e))
+  end
+
+fun with_control ({mutex,...} : worker_control) f =
+  with_deferred_interrupts (fn () =>
+    (Mutex.lock mutex;
+     (let val r = f () in Mutex.unlock mutex; r end
+      handle e => (Mutex.unlock mutex; raise e))))
+
+fun signal_pid pid sigv =
+  ((Posix.Process.kill (Posix.Process.K_GROUP pid,sigv) handle _ => ());
+   Posix.Process.kill (Posix.Process.K_PROC pid,sigv) handle _ => ())
+
+fun register_worker_pid (ctl as {cancel_signal,pid,...} : worker_control)
+    child =
+  with_control ctl (fn () =>
+    (pid := SOME child;
+     case !cancel_signal of NONE => () | SOME sigv => signal_pid child sigv))
+
+fun clear_worker_pid (ctl as {pid,...} : worker_control) child =
+  with_control ctl (fn () =>
+    case !pid of
+      SOME current =>
+        if Posix.Process.pidToWord current = Posix.Process.pidToWord child
+        then pid := NONE else ()
+    | NONE => ())
+
+fun cancel_worker (ctl as {cancel_signal,pid,...} : worker_control) sigv =
+  with_control ctl (fn () =>
+    (cancel_signal := SOME sigv;
+     case !pid of NONE => () | SOME child => signal_pid child sigv))
+
+fun boss_abort_workers pd threadl controll =
+  with_deferred_interrupts (fn () => let
     fun send_stop wid =
       writel_atomic (widin_file pd wid) ["stop"] handle _ => ()
+    fun wait_for n =
+      if not (exists Thread.isActive threadl) then true
+      else if n <= 0 then false
+      else (mini_sleep (); wait_for (n-1))
   in
     app send_stop (List.tabulate (length threadl,I));
-    app smlTimeout.interruptkill threadl
-  end
+    app (fn ctl => cancel_worker ctl Posix.Signal.int) controll;
+    if wait_for 50 then ()
+    else
+      (app (fn ctl => cancel_worker ctl Posix.Signal.kill) controll;
+       while exists Thread.isActive threadl do mini_sleep ())
+  end)
 
 fun boss_end pd threadl completedl =
   let
@@ -361,11 +415,13 @@ and boss_collect pd threadl rr arglv warg (pendingl,runningl,completedl) =
    Starting threads and external calls
    ------------------------------------------------------------------------- *)
 
-fun boss_start_worker pd selfd code_of wid =
+fun boss_start_worker pd selfd code_of ctl wid =
   (
   writel (widholmake_file pd wid) ["INCLUDES = " ^ selfd];
   writel (widscript_file pd wid) (code_of wid);
-  smlExecScripts.exec_script (widscript_file pd wid)
+  smlExecScripts.exec_script_with_pid
+    (register_worker_pid ctl) (clear_worker_pid ctl)
+    (widscript_file pd wid)
   )
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch,
@@ -434,15 +490,17 @@ fun parmap_queue_extern ncore es param argl =
     val arglv = Vector.fromList argl
     val pendingl = List.tabulate (Vector.length arglv,I)
     val _ = print_endline ("start " ^ its ncore ^ " workers")
-    fun fork wid = Thread.fork (fn () =>
-      boss_start_worker pd selfd (code_of_extspec es) wid, attrib)
-    val threadl = map fork widl
+    val controll = map (fn _ => new_worker_control ()) widl
+    fun fork (wid,ctl) = Thread.fork (fn () =>
+      boss_start_worker pd selfd (code_of_extspec es) ctl wid, attrib)
+    val threadl = map fork (combine (widl,controll))
   in
     ((boss_wait_upl pd threadl;
       print_endline ("  " ^ its ncore ^ " workers started");
       boss_send pd threadl rr arglv warg (pendingl,[],[]))
-     handle Interrupt => (boss_abort_workers pd threadl; raise Interrupt)
-          | e => (boss_abort_workers pd threadl; raise e))
+     handle Interrupt =>
+       (boss_abort_workers pd threadl controll; raise Interrupt)
+          | e => (boss_abort_workers pd threadl controll; raise e))
   end
 
 (* -------------------------------------------------------------------------

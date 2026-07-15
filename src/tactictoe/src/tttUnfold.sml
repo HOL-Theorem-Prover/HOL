@@ -17,6 +17,17 @@ val ERR = mk_HOL_ERR "tttUnfold"
 
 fun load_sigobj () = with_tactictoe_cache aiLib.load_sigobj
 
+fun with_deferred_interrupts f =
+  let
+    val attributes = Thread.getAttributes ()
+    val _ = Thread.setAttributes
+      [Thread.InterruptState Thread.InterruptDefer]
+    fun restore () = Thread.setAttributes attributes
+  in
+    (let val result = f () in restore (); result end
+     handle e => (restore (); raise e))
+  end
+
 (* -----------------------------------------------------------------------
    Program representation and stack
    ----------------------------------------------------------------------- *)
@@ -1441,12 +1452,26 @@ fun acquire_lock max_lock_age name =
     val _ = app mkDir_err [tacdata_dir (), locks_dir ()]
     val path = locks_dir () ^ "/" ^ name ^ ".lock"
     fun create () =
-      let val holder = Portable.unique_tmp_suffix () in
-        ((HOLFileSys.mkDir path;
-          writel (path ^ "/holder")
-            [holder, Time.toString (Time.now ())];
-          SOME {path = path, holder = holder})
-         handle _ => NONE)
+      let
+        val holder = Portable.unique_tmp_suffix ()
+        val made = ref false
+        fun cleanup () =
+          if !made then
+            (remove_file (path ^ "/holder");
+             OS.FileSys.rmDir path
+               handle _ => remove_file path handle _ => ())
+          else ()
+        fun attempt () =
+          (with_deferred_interrupts (fn () =>
+             (HOLFileSys.mkDir path; made := true));
+           writel (path ^ "/holder")
+             [holder, Time.toString (Time.now ())];
+           SOME {path = path, holder = holder})
+      in
+        attempt ()
+        handle Interrupt =>
+          (with_deferred_interrupts cleanup; raise Interrupt)
+             | _ => (with_deferred_interrupts cleanup; NONE)
       end
     fun acquire () =
       case create () of
@@ -1483,15 +1508,19 @@ fun with_manifest_lock max_lock_age f =
     loop 60
   end
 
-fun update_manifest_entry max_lock_age prov entry =
+fun publish_manifest_entry max_lock_age prov entry after_publish =
   with_manifest_lock max_lock_age (fn () =>
     let
       val entries = case read_manifest () of
           NONE => []
         | SOME m => #entries m
     in
-      write_manifest prov (update_entry entry entries)
+      with_deferred_interrupts (fn () =>
+        (write_manifest prov (update_entry entry entries); after_publish ()))
     end)
+
+fun update_manifest_entry max_lock_age prov entry =
+  publish_manifest_entry max_lock_age prov entry (fn () => ())
 
 (* Preserve a valid same-identity recording while a forced replacement is
    being published.  Use binary I/O so restoring the copy also restores the
@@ -1721,8 +1750,8 @@ fun record_one (cfg : record_config) prov src_hashes recorded_stale thy =
                 val msg = "recorded: " ^ thy ^
                   "  data=" ^ data_hash ^ "  src=" ^ src_hash
               in
-                update_manifest_entry max_lock_age prov entry;
-                committed := true;
+                publish_manifest_entry max_lock_age prov entry
+                  (fn () => committed := true);
                 discard_backup ();
                 print_endline msg;
                 release_lock lock; (true,msg)
@@ -1925,8 +1954,9 @@ fun ttt_record_cfg (cfg : record_config) =
           let val ncore = Int.min (parallel, length batch) in
             if ncore <= 1 then map (serial_record done) batch else
             let
-              val results = parmap_queue_extern ncore
-                (record_extspec ()) (worker_param done) batch
+              val results = with_tactictoe_cache (fn () =>
+                parmap_queue_extern ncore
+                  (record_extspec ()) (worker_param done) batch)
                 handle Interrupt => raise Interrupt
                      | e =>
                        let

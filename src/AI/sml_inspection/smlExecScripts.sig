@@ -8,6 +8,9 @@ sig
   val find_genscriptdep : string -> string list
 
   val buildheap_options : string ref (* see buildheap --help *)
+  val exec_script_with_pid :
+    (Posix.Process.pid -> unit) ->
+    (Posix.Process.pid -> unit) -> string -> unit
   val exec_script_in_dir : string -> string -> unit
   val exec_script : string -> unit
 

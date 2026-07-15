@@ -23,15 +23,14 @@ fun interruptkill worker =
       if not (Thread.isActive worker) then () else
         if n > 0
         then
-          (Thread.interrupt worker handle Thread _ => ();
-           OS.Process.sleep delay;
-           loop (n-1))
+          (OS.Process.sleep delay; loop (n-1))
         else
           (Feedback.HOL_WARNING "smlTimeout" "interruptkill"
-             "thread did not stop after interrupts; terminating it";
+             "thread did not stop after interrupt; terminating it";
            Thread.kill worker handle Thread _ => ())
   in
-    loop 20
+    Thread.interrupt worker handle Thread _ => ();
+    loop 100
   end
 
 (* -------------------------------------------------------------------------

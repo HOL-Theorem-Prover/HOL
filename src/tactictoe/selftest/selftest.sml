@@ -194,6 +194,33 @@ val _ = check "parallel boss detects worker termination during job"
      String.isSubstring "external worker" (exnMessage e) andalso
      String.isSubstring "during job" (exnMessage e))
 
+val cancelled_job_marker = cache_dir ^ "-cancelled-worker-finished"
+val cancelled_job_self = String.concat
+  ["(let val e = smlParallel.examplespec in ",
+   "{self_dir = #self_dir e, self = #self e, ",
+   "parallel_dir = #parallel_dir e, ",
+   "reflect_globals = #reflect_globals e, ",
+   "function = (fn () => fn (_ : int) => ",
+   "(OS.Process.sleep (Time.fromSeconds 20); aiLib.writel ",
+   Portable.mlquote cancelled_job_marker, " [\"finished\"]; 0)), ",
+   "write_param = #write_param e, read_param = #read_param e, ",
+   "write_arg = #write_arg e, read_arg = #read_arg e, ",
+   "write_result = #write_result e, read_result = #read_result e} end)"]
+val cancelled_job_spec = example_spec cancelled_job_self "()"
+
+val _ = aiLib.remove_file cancelled_job_marker
+val cancelled_parallel_call =
+  ((smlTimeout.timeout 5.0
+      (fn () => ignore (smlParallel.parmap_queue_extern 2
+        cancelled_job_spec () [1,2])) () ;
+    false)
+   handle smlTimeout.FunctionTimeout => true | _ => false)
+val _ = OS.Process.sleep (Time.fromReal 0.25)
+val _ = check "interrupting parallel boss terminates external workers"
+  (cancelled_parallel_call andalso
+   not (OS.FileSys.access (cancelled_job_marker, [])))
+val _ = aiLib.remove_file cancelled_job_marker
+
 val _ = check "tacticToe public API type-checks"
   (let
      val _ : tactic = ttt

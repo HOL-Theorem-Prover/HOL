@@ -94,7 +94,64 @@ fun find_genscriptdep file = find_genscriptdep_in_dir (OS.Path.dir file) file
 val buildheap_options = ref ""
 fun buildheap_dir () = scratch_dir_of () ^ "/sml_inspection/buildheap"
 
-fun exec_scriptb_in_dir b dir script =
+fun with_deferred_interrupts f =
+  let
+    val attributes = Thread.getAttributes ()
+    val _ = Thread.setAttributes
+      [Thread.InterruptState Thread.InterruptDefer]
+    fun restore () = Thread.setAttributes attributes
+  in
+    (let val result = f () in restore (); result end
+     handle e => (restore (); raise e))
+  end
+
+(* Fork the command ourselves rather than using OS.Process.system so callers
+   can terminate a long-running HOL child.  A private process group includes
+   any commands the child starts while running the script; the shell then
+   immediately execs HOL. *)
+fun run_with_pid private_group started finished dir cmd =
+  case Posix.Process.fork () of
+    NONE =>
+      ((if private_group
+        then ((ignore (Posix.ProcEnv.setsid ())) handle _ => ())
+        else ());
+       (OS.FileSys.chDir dir;
+        Posix.Process.exec ("/bin/sh", ["sh", "-c", "exec " ^ cmd]))
+       handle _ => Posix.Process.exit 0w127)
+  | SOME pid =>
+      let
+        fun signal sigv =
+          ((if private_group
+            then Posix.Process.kill (Posix.Process.K_GROUP pid,sigv)
+                   handle _ => ()
+            else ());
+           Posix.Process.kill (Posix.Process.K_PROC pid,sigv) handle _ => ())
+        fun reap () = #2 (Posix.Process.waitpid
+          (Posix.Process.W_CHILD pid,[]))
+        fun finish () = finished pid handle _ => ()
+        fun abort e = with_deferred_interrupts (fn () =>
+          (signal Posix.Signal.kill;
+           (reap () handle _ => Posix.Process.W_SIGNALED Posix.Signal.kill);
+           finish ();
+           raise e))
+        val _ =
+          (with_deferred_interrupts (fn () =>
+             ((if private_group
+               then Posix.ProcEnv.setpgid {pid = SOME pid, pgid = SOME pid}
+                      handle _ => ()
+               else ());
+              started pid))
+           handle e => abort e)
+        val status = reap ()
+          handle e => abort e
+        val _ = finish ()
+      in
+        case status of
+          Posix.Process.W_EXITED => ()
+        | _ => raise ERR "run_with_pid" "external command failed"
+      end
+
+fun exec_scriptb_in_dir_with_pid private_group started finished b dir script =
   let
     val _ = mkDir_err (buildheap_dir ())
     val fileout = buildheap_dir () ^ "/buildheap_" ^ bare script
@@ -107,13 +164,21 @@ fun exec_scriptb_in_dir b dir script =
        ["run","--holstate=" ^ shell_quote heap] @
        map shell_quote depl @
        [shell_quote (script_arg script), ">", shell_quote fileout])
-    val status = OS.Process.system
-      ("cd " ^ shell_quote dir ^ "; " ^ cmd)
+    val _ = run_with_pid private_group started finished dir cmd
   in
-    if OS.Process.isSuccess status then ()
-    else raise ERR "exec_scriptb_in_dir"
-      ("HOL child failed while running " ^ script)
+    ()
   end
+  handle Interrupt => raise Interrupt
+       | e => raise ERR "exec_scriptb_in_dir"
+           ("HOL child failed while running " ^ script ^ ": " ^
+            exnMessage e)
+
+fun exec_script_with_pid started finished script =
+  exec_scriptb_in_dir_with_pid true started finished false
+    (OS.Path.dir script) script
+
+fun exec_scriptb_in_dir b dir script =
+  exec_scriptb_in_dir_with_pid false (fn _ => ()) (fn _ => ()) b dir script
 
 fun exec_script_in_dir dir script = exec_scriptb_in_dir false dir script
 
